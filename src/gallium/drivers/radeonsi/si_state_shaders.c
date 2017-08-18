@@ -1876,7 +1876,11 @@ void si_init_shader_selector_async(void *job, int thread_index)
 	}
 
 	/* Pre-compilation. */
-	if (sscreen->b.debug_flags & DBG_PRECOMPILE) {
+	if (sscreen->b.debug_flags & DBG_PRECOMPILE &&
+	    /* GFX9 needs LS or ES for compilation, which we don't have here. */
+	    (sscreen->b.chip_class <= VI ||
+	     (sel->type != PIPE_SHADER_TESS_CTRL &&
+	      sel->type != PIPE_SHADER_GEOMETRY))) {
 		struct si_shader_ctx_state state = {sel};
 		struct si_shader_key key;
 
@@ -1884,6 +1888,12 @@ void si_init_shader_selector_async(void *job, int thread_index)
 		si_parse_next_shader_property(&sel->info,
 					      sel->so.num_outputs != 0,
 					      &key);
+
+		/* GFX9 doesn't have LS and ES. */
+		if (sscreen->b.chip_class >= GFX9) {
+			key.as_ls = 0;
+			key.as_es = 0;
+		}
 
 		/* Set reasonable defaults, so that the shader key doesn't
 		 * cause any code to be eliminated.
