@@ -495,7 +495,7 @@ static void r600_flush_dma_ring(void *ctx, unsigned flags,
 void radeon_save_cs(struct radeon_winsys *ws, struct radeon_winsys_cs *cs,
 		    struct radeon_saved_cs *saved, bool get_buffer_list)
 {
-	void *buf;
+	uint32_t *buf;
 	unsigned i;
 
 	/* Save the IB chunks. */
