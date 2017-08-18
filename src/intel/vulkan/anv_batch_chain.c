@@ -1424,11 +1424,13 @@ setup_execbuf_for_cmd_buffer(struct anv_execbuf *execbuf,
    return VK_SUCCESS;
 }
 
-static void
+static VkResult
 setup_empty_execbuf(struct anv_execbuf *execbuf, struct anv_device *device)
 {
-   anv_execbuf_add_bo(execbuf, &device->trivial_batch_bo, NULL, 0,
-                      &device->alloc);
+   VkResult result = anv_execbuf_add_bo(execbuf, &device->trivial_batch_bo,
+                                        NULL, 0, &device->alloc);
+   if (result != VK_SUCCESS)
+      return result;
 
    execbuf->execbuf = (struct drm_i915_gem_execbuffer2) {
       .buffers_ptr = (uintptr_t) execbuf->objects,
@@ -1439,6 +1441,8 @@ setup_empty_execbuf(struct anv_execbuf *execbuf, struct anv_device *device)
       .rsvd1 = device->context_id,
       .rsvd2 = 0,
    };
+
+   return VK_SUCCESS;
 }
 
 VkResult
@@ -1541,13 +1545,13 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
       }
    }
 
-   if (cmd_buffer) {
+   if (cmd_buffer)
       result = setup_execbuf_for_cmd_buffer(&execbuf, cmd_buffer);
-      if (result != VK_SUCCESS)
-         return result;
-   } else {
-      setup_empty_execbuf(&execbuf, device);
-   }
+   else
+      result = setup_empty_execbuf(&execbuf, device);
+
+   if (result != VK_SUCCESS)
+      return result;
 
    if (execbuf.fence_count > 0) {
       assert(device->instance->physicalDevice.has_syncobj);
