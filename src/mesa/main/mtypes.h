@@ -4972,6 +4972,9 @@ struct gl_context
    GLboolean RasterDiscard;  /**< GL_RASTERIZER_DISCARD */
    GLboolean IntelConservativeRasterization; /**< GL_INTEL_CONSERVATIVE_RASTERIZATION */
 
+   /** Does glVertexAttrib(0) alias glVertex()? */
+   bool _AttribZeroAliasesVertex;
+
    /**
     * \name Hooks for module contexts.  
     *
