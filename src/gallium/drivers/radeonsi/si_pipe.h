@@ -611,4 +611,27 @@ si_saved_cs_reference(struct si_saved_cs **dst, struct si_saved_cs *src)
 	*dst = src;
 }
 
+static inline void
+si_make_CB_shader_coherent(struct si_context *sctx, unsigned num_samples)
+{
+	sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
+			 SI_CONTEXT_INV_VMEM_L1;
+
+	/* Single-sample color is coherent with shaders on GFX9. */
+	if (sctx->b.chip_class <= VI || num_samples >= 2)
+		sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
+}
+
+static inline void
+si_make_DB_shader_coherent(struct si_context *sctx, unsigned num_samples,
+			   bool include_stencil)
+{
+	sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_DB |
+			 SI_CONTEXT_INV_VMEM_L1;
+
+	/* Single-sample depth (not stencil) is coherent with shaders on GFX9. */
+	if (sctx->b.chip_class <= VI || num_samples >= 2 || include_stencil)
+		sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
+}
+
 #endif

@@ -2572,11 +2572,9 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	 * Only flush and wait for CB if there is actually a bound color buffer.
 	 */
 	if (sctx->framebuffer.nr_samples <= 1 &&
-	    sctx->framebuffer.state.nr_cbufs) {
-		sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
-				 SI_CONTEXT_INV_GLOBAL_L2 |
-				 SI_CONTEXT_FLUSH_AND_INV_CB;
-	}
+	    sctx->framebuffer.state.nr_cbufs)
+		si_make_CB_shader_coherent(sctx, sctx->framebuffer.nr_samples);
+
 	sctx->b.flags |= SI_CONTEXT_CS_PARTIAL_FLUSH;
 
 	/* u_blitter doesn't invoke depth decompression when it does multiple
@@ -2585,11 +2583,8 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	 * individual generate_mipmap blits.
 	 * Note that lower mipmap levels aren't compressed.
 	 */
-	if (sctx->generate_mipmap_for_depth) {
-		sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
-				 SI_CONTEXT_INV_GLOBAL_L2 |
-				 SI_CONTEXT_FLUSH_AND_INV_DB;
-	}
+	if (sctx->generate_mipmap_for_depth)
+		si_make_DB_shader_coherent(sctx, 1, false);
 
 	/* Take the maximum of the old and new count. If the new count is lower,
 	 * dirtying is needed to disable the unbound colorbuffers.
@@ -4026,11 +4021,8 @@ static void si_texture_barrier(struct pipe_context *ctx, unsigned flags)
 
 	/* Multisample surfaces are flushed in si_decompress_textures. */
 	if (sctx->framebuffer.nr_samples <= 1 &&
-	    sctx->framebuffer.state.nr_cbufs) {
-		sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
-				 SI_CONTEXT_INV_GLOBAL_L2 |
-				 SI_CONTEXT_FLUSH_AND_INV_CB;
-	}
+	    sctx->framebuffer.state.nr_cbufs)
+		si_make_CB_shader_coherent(sctx, sctx->framebuffer.nr_samples);
 }
 
 /* This only ensures coherency for shader image/buffer stores. */
@@ -4073,8 +4065,11 @@ static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
 	if (flags & PIPE_BARRIER_FRAMEBUFFER &&
 	    sctx->framebuffer.nr_samples <= 1 &&
 	    sctx->framebuffer.state.nr_cbufs) {
-		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
-				 SI_CONTEXT_WRITEBACK_GLOBAL_L2;
+		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB;
+
+		/* Single-sample color is coherent with TC on GFX9. */
+		if (sctx->screen->b.chip_class <= VI)
+			sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
 	}
 
 	/* Indirect buffers use TC L2 on GFX9, but not older hw. */

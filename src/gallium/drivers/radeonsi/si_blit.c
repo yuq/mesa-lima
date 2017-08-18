@@ -391,29 +391,29 @@ si_decompress_depth(struct si_context *sctx,
 		/* Only in-place decompression needs to flush DB caches, or
 		 * when we don't decompress but TC-compatible planes are dirty.
 		 */
-		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_DB |
-				 SI_CONTEXT_INV_GLOBAL_L2 |
-				 SI_CONTEXT_INV_VMEM_L1;
+		si_make_DB_shader_coherent(sctx, tex->resource.b.b.nr_samples,
+					   inplace_planes & PIPE_MASK_S);
 
 		/* If we flush DB caches for TC-compatible depth, the dirty
 		 * state becomes 0 for the whole mipmap tree and all planes.
 		 * (there is nothing else to flush)
 		 */
 		if (tex->tc_compatible_htile) {
-			if (r600_can_sample_zs(tex, false))
+			/* Only clear the mask that we are flushing, because
+			 * si_make_DB_shader_coherent() can treat depth and
+			 * stencil differently.
+			 */
+			if (inplace_planes & PIPE_MASK_Z)
 				tex->dirty_level_mask = 0;
-			if (r600_can_sample_zs(tex, true))
+			if (inplace_planes & PIPE_MASK_S)
 				tex->stencil_dirty_level_mask = 0;
 		}
 	}
 	/* set_framebuffer_state takes care of coherency for single-sample.
 	 * The DB->CB copy uses CB for the final writes.
 	 */
-	if (copy_planes && tex->resource.b.b.nr_samples > 1) {
-		sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
-				 SI_CONTEXT_INV_GLOBAL_L2 |
-				 SI_CONTEXT_FLUSH_AND_INV_CB;
-	}
+	if (copy_planes && tex->resource.b.b.nr_samples > 1)
+		si_make_CB_shader_coherent(sctx, tex->resource.b.b.nr_samples);
 }
 
 static void
@@ -524,10 +524,7 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 	}
 
 	sctx->decompression_enabled = false;
-
-	sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
-			 SI_CONTEXT_INV_GLOBAL_L2 |
-			 SI_CONTEXT_INV_VMEM_L1;
+	si_make_CB_shader_coherent(sctx, rtex->resource.b.b.nr_samples);
 }
 
 static void
@@ -1216,9 +1213,7 @@ static void si_do_CB_resolve(struct si_context *sctx,
 	si_blitter_end(&sctx->b.b);
 
 	/* Flush caches for possible texturing. */
-	sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
-			 SI_CONTEXT_INV_GLOBAL_L2 |
-			 SI_CONTEXT_INV_VMEM_L1;
+	si_make_CB_shader_coherent(sctx, 1);
 }
 
 static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
