@@ -418,6 +418,8 @@ The integer capabilities:
   set when binding that buffer as constant buffer 0. If the buffer doesn't have
   those bits set, pipe_context::set_constant_buffer(.., 0, ..) is ignored
   by the driver, and the driver can throw assertion failures.
+* ``PIPE_CAP_PACKED_UNIFORMS``: True if the driver supports packed uniforms
+  as opposed to padding to vec4s.
 
 
 .. _pipe_capf:
