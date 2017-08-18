@@ -26,6 +26,14 @@
 
 #include "ac_debug.h"
 
+#ifdef HAVE_VALGRIND
+#include <valgrind.h>
+#include <memcheck.h>
+#define VG(x) x
+#else
+#define VG(x)
+#endif
+
 #include "sid.h"
 #include "gfx9d.h"
 #include "sid_tables.h"
@@ -149,6 +157,18 @@ static uint32_t ac_ib_get(struct ac_ib_parser *ib)
 
 	if (ib->cur_dw < ib->num_dw) {
 		v = ib->ib[ib->cur_dw];
+#ifdef HAVE_VALGRIND
+		/* Help figure out where garbage data is written to IBs.
+		 *
+		 * Arguably we should do this already when the IBs are written,
+		 * see RADEON_VALGRIND. The problem is that client-requests to
+		 * Valgrind have an overhead even when Valgrind isn't running,
+		 * and radeon_emit is performance sensitive...
+		 */
+		if (VALGRIND_CHECK_VALUE_IS_DEFINED(v))
+			fprintf(ib->f, COLOR_RED "Valgrind: The next DWORD is garbage"
+				COLOR_RESET "\n");
+#endif
 		fprintf(ib->f, "\n\035#%08x ", v);
 	} else {
 		fprintf(ib->f, "\n\035#???????? ");
