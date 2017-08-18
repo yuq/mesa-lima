@@ -66,6 +66,8 @@ struct u_log_context;
 /* special primitive types */
 #define R600_PRIM_RECTANGLE_LIST	PIPE_PRIM_MAX
 
+#define R600_NOT_QUERY		0xffffffff
+
 /* Debug flags. */
 /* logging and features */
 #define DBG_TEX			(1 << 0)
