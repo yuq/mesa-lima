@@ -263,6 +263,13 @@ SWR_FUNC(void, SwrSync,
     uint64_t userData3);
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief Stall cmd. Stalls the backend until all previous work has been completed.
+///        Frontend work can continue to make progress
+/// @param hContext - Handle passed back from SwrCreateContext
+SWR_FUNC(void, SwrStallBE,
+    HANDLE hContext);
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief Blocks until all rendering has been completed.
 /// @param hContext - Handle passed back from SwrCreateContext
 SWR_FUNC(void, SwrWaitForIdle,
@@ -709,6 +716,7 @@ struct SWR_INTERFACE
     PFNSwrSaveState pfnSwrSaveState;
     PFNSwrRestoreState pfnSwrRestoreState;
     PFNSwrSync pfnSwrSync;
+    PFNSwrStallBE pfnSwrStallBE;
     PFNSwrWaitForIdle pfnSwrWaitForIdle;
     PFNSwrWaitForIdleFE pfnSwrWaitForIdleFE;
     PFNSwrSetVertexBuffers pfnSwrSetVertexBuffers;

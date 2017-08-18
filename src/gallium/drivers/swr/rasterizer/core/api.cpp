@@ -458,6 +458,14 @@ void SwrSync(HANDLE hContext, PFN_CALLBACK_FUNC pfnFunc, uint64_t userData, uint
     AR_API_END(APISync, 1);
 }
 
+void SwrStallBE(HANDLE hContext)
+{
+    SWR_CONTEXT* pContext = GetContext(hContext);
+    DRAW_CONTEXT* pDC = GetDrawContext(pContext);
+
+    pDC->dependent = true;
+}
+
 void SwrWaitForIdle(HANDLE hContext)
 {
     SWR_CONTEXT *pContext = GetContext(hContext);
@@ -1672,6 +1680,7 @@ void SwrGetInterface(SWR_INTERFACE &out_funcs)
     out_funcs.pfnSwrSaveState = SwrSaveState;
     out_funcs.pfnSwrRestoreState = SwrRestoreState;
     out_funcs.pfnSwrSync = SwrSync;
+    out_funcs.pfnSwrStallBE = SwrStallBE;
     out_funcs.pfnSwrWaitForIdle = SwrWaitForIdle;
     out_funcs.pfnSwrWaitForIdleFE = SwrWaitForIdleFE;
     out_funcs.pfnSwrSetVertexBuffers = SwrSetVertexBuffers;
