@@ -299,7 +299,7 @@ static const struct {
 
 static bool
 modifier_is_supported(const struct gen_device_info *devinfo,
-                      struct intel_image_format *fmt, int dri_format,
+                      const struct intel_image_format *fmt, int dri_format,
                       uint64_t modifier)
 {
    const struct isl_drm_modifier_info *modinfo =
