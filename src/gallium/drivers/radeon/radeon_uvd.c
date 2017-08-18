@@ -1397,7 +1397,7 @@ void ruvd_set_dt_surfaces(struct ruvd_msg *msg, struct radeon_surf *luma,
 	switch (type) {
 	default:
 	case RUVD_SURFACE_TYPE_LEGACY:
-		msg->body.decode.dt_pitch = luma->u.legacy.level[0].nblk_x;
+		msg->body.decode.dt_pitch = luma->u.legacy.level[0].nblk_x * luma->blk_w;
 		switch (luma->u.legacy.level[0].mode) {
 		case RADEON_SURF_MODE_LINEAR_ALIGNED:
 			msg->body.decode.dt_tiling_mode = RUVD_TILE_LINEAR;
@@ -1435,7 +1435,7 @@ void ruvd_set_dt_surfaces(struct ruvd_msg *msg, struct radeon_surf *luma,
 		msg->body.decode.dt_surf_tile_config |= RUVD_MACRO_TILE_ASPECT_RATIO(macro_tile_aspect(luma->u.legacy.mtilea));
 		break;
 	case RUVD_SURFACE_TYPE_GFX9:
-		msg->body.decode.dt_pitch = luma->u.gfx9.surf_pitch * luma->bpe;
+		msg->body.decode.dt_pitch = luma->u.gfx9.surf_pitch * luma->blk_w;
 		/* SWIZZLE LINEAR MODE */
 		msg->body.decode.dt_tiling_mode = RUVD_TILE_LINEAR;
 		msg->body.decode.dt_array_mode = RUVD_ARRAY_MODE_LINEAR;
