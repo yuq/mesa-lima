@@ -138,38 +138,15 @@ static struct gl_program *brwNewProgram(struct gl_context *ctx, GLenum target,
                                         GLuint id, bool is_arb_asm)
 {
    struct brw_context *brw = brw_context(ctx);
+   struct brw_program *prog = rzalloc(NULL, struct brw_program);
 
-   switch (target) {
-   case GL_VERTEX_PROGRAM_ARB:
-   case GL_TESS_CONTROL_PROGRAM_NV:
-   case GL_TESS_EVALUATION_PROGRAM_NV:
-   case GL_GEOMETRY_PROGRAM_NV:
-   case GL_COMPUTE_PROGRAM_NV: {
-      struct brw_program *prog = rzalloc(NULL, struct brw_program);
-      if (prog) {
-	 prog->id = get_new_program_id(brw->screen);
+   if (prog) {
+      prog->id = get_new_program_id(brw->screen);
 
-         return _mesa_init_gl_program(&prog->program, target, id, is_arb_asm);
-      }
-      else
-	 return NULL;
+      return _mesa_init_gl_program(&prog->program, target, id, is_arb_asm);
    }
 
-   case GL_FRAGMENT_PROGRAM_ARB: {
-      struct brw_program *prog = rzalloc(NULL, struct brw_program);
-
-      if (prog) {
-	 prog->id = get_new_program_id(brw->screen);
-
-         return _mesa_init_gl_program(&prog->program, target, id, is_arb_asm);
-      }
-      else
-	 return NULL;
-   }
-
-   default:
-      unreachable("Unsupported target in brwNewProgram()");
-   }
+   return NULL;
 }
 
 static void brwDeleteProgram( struct gl_context *ctx,
