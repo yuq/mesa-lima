@@ -387,7 +387,7 @@ brw_predraw_resolve_inputs(struct brw_context *brw)
       if (!aux_supported && brw->gen >= 9 &&
           intel_disable_rb_aux_buffer(brw, tex_obj->mt->bo)) {
          perf_debug("Sampling renderbuffer with non-compressible format - "
-                    "turning off compression");
+                    "turning off compression\n");
       }
 
       brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
@@ -414,7 +414,7 @@ brw_predraw_resolve_inputs(struct brw_context *brw)
                if (tex_obj->mt->aux_usage == ISL_AUX_USAGE_CCS_E &&
                    intel_disable_rb_aux_buffer(brw, tex_obj->mt->bo)) {
                   perf_debug("Using renderbuffer as shader image - turning "
-                             "off lossless compression");
+                             "off lossless compression\n");
                }
 
                brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);

@@ -3686,7 +3686,7 @@ genX(upload_3dstate_streamout)(struct brw_context *brw, bool active,
                sos.RenderingDisable = true;
             } else {
                perf_debug("Rasterizer discard with a GL_PRIMITIVES_GENERATED "
-                          "query active relies on the clipper.");
+                          "query active relies on the clipper.\n");
             }
          }
 
