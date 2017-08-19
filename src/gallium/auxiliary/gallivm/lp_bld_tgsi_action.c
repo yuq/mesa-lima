@@ -159,34 +159,6 @@ static struct lp_build_tgsi_action dp2_action = {
    dp2_emit	 /* emit */
 };
 
-/* TGSI_OPCODE_DP2A */
-static void
-dp2a_fetch_args(
-   struct lp_build_tgsi_context * bld_base,
-   struct lp_build_emit_data * emit_data)
-{
-   dp_fetch_args(bld_base, emit_data, 2);
-   emit_data->args[5] = lp_build_emit_fetch(bld_base, emit_data->inst,
-                                            2, TGSI_CHAN_X);
-}
-
-static void
-dp2a_emit(
-   const struct lp_build_tgsi_action * action,
-   struct lp_build_tgsi_context * bld_base,
-   struct lp_build_emit_data * emit_data)
-{
-   LLVMValueRef tmp;
-   tmp = lp_build_emit_llvm(bld_base, TGSI_OPCODE_DP2, emit_data);
-   emit_data->output[emit_data->chan] = lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_ADD,
-                                    emit_data->args[5], tmp);
-}
-
-static struct lp_build_tgsi_action dp2a_action = {
-   dp2a_fetch_args,	 /* fetch_args */
-   dp2a_emit	 /* emit */
-};
-
 /* TGSI_OPCODE_DP3 */
 static void
 dp3_fetch_args(
@@ -1286,7 +1258,6 @@ lp_set_default_actions(struct lp_build_tgsi_context * bld_base)
    bld_base->op_actions[TGSI_OPCODE_DP2] = dp2_action;
    bld_base->op_actions[TGSI_OPCODE_DP3] = dp3_action;
    bld_base->op_actions[TGSI_OPCODE_DP4] = dp4_action;
-   bld_base->op_actions[TGSI_OPCODE_DP2A] = dp2a_action;
    bld_base->op_actions[TGSI_OPCODE_DPH] = dph_action;
    bld_base->op_actions[TGSI_OPCODE_DST] = dst_action;
    bld_base->op_actions[TGSI_OPCODE_EXP] = exp_action;

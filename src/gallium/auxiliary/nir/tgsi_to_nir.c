@@ -1001,15 +1001,6 @@ ttn_xpd(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
 }
 
 static void
-ttn_dp2a(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
-{
-   ttn_move_dest(b, dest,
-                 ttn_channel(b, nir_fadd(b, nir_fdot2(b, src[0], src[1]),
-                                         src[2]),
-                             X));
-}
-
-static void
 ttn_dp2(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
 {
    ttn_move_dest(b, dest, nir_fdot2(b, src[0], src[1]));
@@ -1536,7 +1527,6 @@ static const nir_op op_trans[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_MAD] = nir_op_ffma,
    [TGSI_OPCODE_LRP] = 0,
    [TGSI_OPCODE_SQRT] = nir_op_fsqrt,
-   [TGSI_OPCODE_DP2A] = 0,
    [TGSI_OPCODE_FRC] = nir_op_ffract,
    [TGSI_OPCODE_FLR] = nir_op_ffloor,
    [TGSI_OPCODE_ROUND] = nir_op_fround_even,
@@ -1771,10 +1761,6 @@ ttn_emit_instruction(struct ttn_compile *c)
 
    case TGSI_OPCODE_DP4:
       ttn_dp4(b, op_trans[tgsi_op], dest, src);
-      break;
-
-   case TGSI_OPCODE_DP2A:
-      ttn_dp2a(b, op_trans[tgsi_op], dest, src);
       break;
 
    case TGSI_OPCODE_DPH:

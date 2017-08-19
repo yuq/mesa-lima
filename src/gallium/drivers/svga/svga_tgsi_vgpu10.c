@@ -3578,55 +3578,6 @@ emit_cmp(struct svga_shader_emitter_v10 *emit,
 
 
 /**
- * Emit code for TGSI_OPCODE_DP2A instruction.
- */
-static boolean
-emit_dp2a(struct svga_shader_emitter_v10 *emit,
-          const struct tgsi_full_instruction *inst)
-{
-   /* dst.x = src0.x * src1.x + src0.y * src1.y + src2.x
-    * dst.y = src0.x * src1.x + src0.y * src1.y + src2.x
-    * dst.z = src0.x * src1.x + src0.y * src1.y + src2.x
-    * dst.w = src0.x * src1.x + src0.y * src1.y + src2.x
-    * Translate into
-    *   MAD tmp.x, s0.y, s1.y, s2.x
-    *   MAD tmp.x, s0.x, s1.x, tmp.x
-    *   MOV dst.xyzw, tmp.xxxx
-    */
-   unsigned tmp = get_temp_index(emit);
-   struct tgsi_full_src_register tmp_src = make_src_temp_reg(tmp);
-   struct tgsi_full_dst_register tmp_dst = make_dst_temp_reg(tmp);
-
-   struct tgsi_full_src_register tmp_src_xxxx =
-      scalar_src(&tmp_src, TGSI_SWIZZLE_X);
-   struct tgsi_full_dst_register tmp_dst_x =
-      writemask_dst(&tmp_dst, TGSI_WRITEMASK_X);
-
-   struct tgsi_full_src_register src0_xxxx =
-      scalar_src(&inst->Src[0], TGSI_SWIZZLE_X);
-   struct tgsi_full_src_register src0_yyyy =
-      scalar_src(&inst->Src[0], TGSI_SWIZZLE_Y);
-   struct tgsi_full_src_register src1_xxxx =
-      scalar_src(&inst->Src[1], TGSI_SWIZZLE_X);
-   struct tgsi_full_src_register src1_yyyy =
-      scalar_src(&inst->Src[1], TGSI_SWIZZLE_Y);
-   struct tgsi_full_src_register src2_xxxx =
-      scalar_src(&inst->Src[2], TGSI_SWIZZLE_X);
-
-   emit_instruction_op3(emit, VGPU10_OPCODE_MAD, &tmp_dst_x, &src0_yyyy,
-                        &src1_yyyy, &src2_xxxx, FALSE);
-   emit_instruction_op3(emit, VGPU10_OPCODE_MAD, &tmp_dst_x, &src0_xxxx,
-                        &src1_xxxx, &tmp_src_xxxx, FALSE);
-   emit_instruction_op1(emit, VGPU10_OPCODE_MOV, &inst->Dst[0],
-                        &tmp_src_xxxx, inst->Instruction.Saturate);
-
-   free_temp_indexes(emit);
-
-   return TRUE;
-}
-
-
-/**
  * Emit code for TGSI_OPCODE_DPH instruction.
  */
 static boolean
@@ -5761,8 +5712,6 @@ emit_vgpu10_instruction(struct svga_shader_emitter_v10 *emit,
       return emit_cmp(emit, inst);
    case TGSI_OPCODE_COS:
       return emit_sincos(emit, inst);
-   case TGSI_OPCODE_DP2A:
-      return emit_dp2a(emit, inst);
    case TGSI_OPCODE_DPH:
       return emit_dph(emit, inst);
    case TGSI_OPCODE_DST:

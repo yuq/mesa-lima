@@ -3185,31 +3185,6 @@ exec_dp4(struct tgsi_exec_machine *mach,
 }
 
 static void
-exec_dp2a(struct tgsi_exec_machine *mach,
-          const struct tgsi_full_instruction *inst)
-{
-   unsigned int chan;
-   union tgsi_exec_channel arg[3];
-
-   fetch_source(mach, &arg[0], &inst->Src[0], TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-   fetch_source(mach, &arg[1], &inst->Src[1], TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-   micro_mul(&arg[2], &arg[0], &arg[1]);
-
-   fetch_source(mach, &arg[0], &inst->Src[0], TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-   fetch_source(mach, &arg[1], &inst->Src[1], TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-   micro_mad(&arg[0], &arg[0], &arg[1], &arg[2]);
-
-   fetch_source(mach, &arg[1], &inst->Src[2], TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-   micro_add(&arg[0], &arg[0], &arg[1]);
-
-   for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
-      if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
-         store_dest(mach, &arg[0], &inst->Dst[0], inst, chan, TGSI_EXEC_DATA_FLOAT);
-      }
-   }
-}
-
-static void
 exec_dph(struct tgsi_exec_machine *mach,
          const struct tgsi_full_instruction *inst)
 {
@@ -5181,10 +5156,6 @@ exec_instruction(
 
    case TGSI_OPCODE_SQRT:
       exec_scalar_unary(mach, inst, micro_sqrt, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
-      break;
-
-   case TGSI_OPCODE_DP2A:
-      exec_dp2a(mach, inst);
       break;
 
    case TGSI_OPCODE_FRC:

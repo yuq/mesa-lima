@@ -920,14 +920,11 @@ transform_log(struct tgsi_transform_context *tctx,
  * DP2 - 2-component Dot Product
  *   dst = src0.x \times src1.x + src0.y \times src1.y
  *
- * DP2A - 2-component Dot Product And Add
- *   dst = src0.x \times src1.x + src0.y \times src1.y + src2.x
- *
  * NOTE: these are translated into sequence of MUL/MAD(/ADD) scalar
  * operations, which is what you'd prefer for a ISA that is natively
  * scalar.  Probably a native vector ISA would at least already have
  * DP4/DP3 instructions, but perhaps there is room for an alternative
- * translation for DPH/DP2/DP2A using vector instructions.
+ * translation for DPH/DP2 using vector instructions.
  *
  * ; needs: 1 tmp
  * MUL tmpA.x, src0.x, src1.x
@@ -939,8 +936,6 @@ transform_log(struct tgsi_transform_context *tctx,
  *   } else if (DP4) {
  *     MAD tmpA.x, src0.w, src1.w, tmpA.x
  *   }
- * } else if (DP2A) {
- *   ADD tmpA.x, src2.x, tmpA.x
  * }
  * ; fixup last instruction to replicate into dst
  */
@@ -948,7 +943,6 @@ transform_log(struct tgsi_transform_context *tctx,
 #define DP3_GROW  (NINST(2) + NINST(3) + NINST(3) - OINST(2))
 #define DPH_GROW  (NINST(2) + NINST(3) + NINST(3) + NINST(2) - OINST(2))
 #define DP2_GROW  (NINST(2) + NINST(3) - OINST(2))
-#define DP2A_GROW (NINST(2) + NINST(3) + NINST(2) - OINST(3))
 #define DOTP_TMP  1
 static void
 transform_dotp(struct tgsi_transform_context *tctx,
@@ -958,7 +952,6 @@ transform_dotp(struct tgsi_transform_context *tctx,
    struct tgsi_full_dst_register *dst  = &inst->Dst[0];
    struct tgsi_full_src_register *src0 = &inst->Src[0];
    struct tgsi_full_src_register *src1 = &inst->Src[1];
-   struct tgsi_full_src_register *src2 = &inst->Src[2]; /* only DP2A */
    struct tgsi_full_instruction new_inst;
    unsigned opcode = inst->Instruction.Opcode;
 
@@ -1026,17 +1019,6 @@ transform_dotp(struct tgsi_transform_context *tctx,
             reg_src(&new_inst.Src[1], src1, SWIZ(W, W, W, W));
             reg_src(&new_inst.Src[2], &ctx->tmp[A].src, SWIZ(X, X, X, X));
          }
-      } else if (opcode == TGSI_OPCODE_DP2A) {
-         tctx->emit_instruction(tctx, &new_inst);
-
-         /* ADD tmpA.x, src2.x, tmpA.x */
-         new_inst = tgsi_default_full_instruction();
-         new_inst.Instruction.Opcode = TGSI_OPCODE_ADD;
-         new_inst.Instruction.NumDstRegs = 1;
-         reg_dst(&new_inst.Dst[0], &ctx->tmp[A].dst, TGSI_WRITEMASK_X);
-         new_inst.Instruction.NumSrcRegs = 2;
-         reg_src(&new_inst.Src[0], src2, SWIZ(X, X, X, X));
-         reg_src(&new_inst.Src[1], &ctx->tmp[A].src, SWIZ(X, X, X, X));
       }
 
       /* fixup last instruction to write to dst: */
@@ -1562,11 +1544,6 @@ transform_instr(struct tgsi_transform_context *tctx,
          goto skip;
       transform_dotp(tctx, inst);
       break;
-   case TGSI_OPCODE_DP2A:
-      if (!ctx->config->lower_DP2A)
-         goto skip;
-      transform_dotp(tctx, inst);
-      break;
    case TGSI_OPCODE_FLR:
       if (!ctx->config->lower_FLR)
          goto skip;
@@ -1657,7 +1634,6 @@ tgsi_transform_lowering(const struct tgsi_lowering_config *config,
          OPCS(DP3) ||
          OPCS(DPH) ||
          OPCS(DP2) ||
-         OPCS(DP2A) ||
          OPCS(FLR) ||
          OPCS(CEIL) ||
          OPCS(TRUNC) ||
@@ -1723,10 +1699,6 @@ tgsi_transform_lowering(const struct tgsi_lowering_config *config,
    }
    if (OPCS(DP2)) {
       newlen += DP2_GROW * OPCS(DP2);
-      numtmp = MAX2(numtmp, DOTP_TMP);
-   }
-   if (OPCS(DP2A)) {
-      newlen += DP2A_GROW * OPCS(DP2A);
       numtmp = MAX2(numtmp, DOTP_TMP);
    }
    if (OPCS(FLR)) {

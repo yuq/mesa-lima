@@ -67,7 +67,6 @@ struct tgsi_lowering_config
    unsigned lower_DP3:1;
    unsigned lower_DPH:1;
    unsigned lower_DP2:1;
-   unsigned lower_DP2A:1;
    unsigned lower_FLR:1;
    unsigned lower_CEIL:1;
    unsigned lower_TRUNC:1;

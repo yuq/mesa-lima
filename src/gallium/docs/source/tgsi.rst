@@ -285,19 +285,6 @@ Perform a * b + c with no intermediate rounding step.
   dst.w = src0.w \times src1.w + src2.w
 
 
-.. opcode:: DP2A - 2-component Dot Product And Add
-
-.. math::
-
-  dst.x = src0.x \times src1.x + src0.y \times src1.y + src2.x
-
-  dst.y = src0.x \times src1.x + src0.y \times src1.y + src2.x
-
-  dst.z = src0.x \times src1.x + src0.y \times src1.y + src2.x
-
-  dst.w = src0.x \times src1.x + src0.y \times src1.y + src2.x
-
-
 .. opcode:: FRC - Fraction
 
 .. math::

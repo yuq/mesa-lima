@@ -554,9 +554,6 @@ lp_emit_instruction_aos(
       dst0 = lp_build_add(&bld->bld_base.base, tmp0, src2);
       break;
 
-   case TGSI_OPCODE_DP2A:
-      return FALSE;
-
    case TGSI_OPCODE_FRC:
       src0 = lp_build_emit_fetch(&bld->bld_base, inst, 0, LP_CHAN_ALL);
       tmp0 = lp_build_floor(&bld->bld_base.base, src0);
