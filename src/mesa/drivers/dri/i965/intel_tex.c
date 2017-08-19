@@ -94,7 +94,7 @@ intel_alloc_texture_image_buffer(struct gl_context *ctx,
    } else {
       intel_image->mt = intel_miptree_create_for_teximage(brw, intel_texobj,
                                                           intel_image,
-                                                          1 /* samples */);
+                                                          MIPTREE_CREATE_DEFAULT);
       if (!intel_image->mt)
          return false;
 
