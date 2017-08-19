@@ -3031,7 +3031,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		ctx.file_offset[i] = 0;
 	}
 
-	if (ctx.type == PIPE_SHADER_VERTEX) {
+	if (ctx.type == PIPE_SHADER_VERTEX && ctx.info.num_inputs) {
 		ctx.file_offset[TGSI_FILE_INPUT] = 1;
 		r600_bytecode_add_cfinst(ctx.bc, CF_OP_CALL_FS);
 	}

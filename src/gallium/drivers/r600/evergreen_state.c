@@ -2298,6 +2298,9 @@ static void evergreen_emit_vertex_fetch_shader(struct r600_context *rctx, struct
 	struct r600_cso_state *state = (struct r600_cso_state*)a;
 	struct r600_fetch_shader *shader = (struct r600_fetch_shader*)state->cso;
 
+	if (!shader)
+		return;
+
 	radeon_set_context_reg(cs, R_0288A4_SQ_PGM_START_FS,
 			       (shader->buffer->gpu_address + shader->offset) >> 8);
 	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
