@@ -620,7 +620,7 @@ make_separate_stencil_surface(struct brw_context *brw,
                                  mt->surf.samples, ISL_TILING_W_BIT,
                                  ISL_SURF_USAGE_STENCIL_BIT |
                                  ISL_SURF_USAGE_TEXTURE_BIT,
-                                 BO_ALLOC_FOR_RENDER, 0, NULL);
+                                 BO_ALLOC_BUSY, 0, NULL);
 
    if (!mt->stencil_mt)
       return false;
@@ -648,7 +648,7 @@ miptree_create(struct brw_context *brw,
                           ISL_TILING_W_BIT,
                           ISL_SURF_USAGE_STENCIL_BIT |
                           ISL_SURF_USAGE_TEXTURE_BIT,
-                          BO_ALLOC_FOR_RENDER,
+                          BO_ALLOC_BUSY,
                           0,
                           NULL);
 
@@ -666,7 +666,7 @@ miptree_create(struct brw_context *brw,
          first_level, last_level,
          width0, height0, depth0, num_samples, ISL_TILING_Y0_BIT,
          ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT,
-         BO_ALLOC_FOR_RENDER, 0, NULL);
+         BO_ALLOC_BUSY, 0, NULL);
 
       if (needs_separate_stencil(brw, mt, format) &&
           !make_separate_stencil_surface(brw, mt)) {
@@ -689,7 +689,7 @@ miptree_create(struct brw_context *brw,
    etc_format = (format != tex_format) ? tex_format : MESA_FORMAT_NONE;
 
    if (flags & MIPTREE_CREATE_BUSY)
-      alloc_flags |= BO_ALLOC_FOR_RENDER;
+      alloc_flags |= BO_ALLOC_BUSY;
 
    isl_tiling_flags_t tiling_flags = (flags & MIPTREE_CREATE_LINEAR) ?
       ISL_TILING_LINEAR_BIT : ISL_TILING_ANY_MASK;
@@ -773,7 +773,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
                         brw->gen >= 6 ? depth_only_format : format,
                         0, 0, width, height, depth, 1, ISL_TILING_Y0_BIT,
                         ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT,
-                        BO_ALLOC_FOR_RENDER, pitch, bo);
+                        BO_ALLOC_BUSY, pitch, bo);
       if (!mt)
          return NULL;
 
@@ -789,7 +789,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
                         ISL_TILING_W_BIT,
                         ISL_SURF_USAGE_STENCIL_BIT |
                         ISL_SURF_USAGE_TEXTURE_BIT,
-                        BO_ALLOC_FOR_RENDER, pitch, bo);
+                        BO_ALLOC_BUSY, pitch, bo);
       if (!mt)
          return NULL;
 
@@ -1746,7 +1746,7 @@ intel_miptree_alloc_ccs(struct brw_context *brw,
     * fast-clear operation.  In that case, being hot in caches more useful.
     */
    const uint32_t alloc_flags = mt->aux_usage == ISL_AUX_USAGE_CCS_E ?
-                                BO_ALLOC_ZEROED : BO_ALLOC_FOR_RENDER;
+                                BO_ALLOC_ZEROED : BO_ALLOC_BUSY;
    mt->mcs_buf = intel_alloc_aux_buffer(brw, "ccs-miptree",
                                         &temp_ccs_surf, alloc_flags, mt);
    if (!mt->mcs_buf) {
@@ -1811,7 +1811,7 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
       isl_surf_get_hiz_surf(&brw->isl_dev, &mt->surf, &temp_hiz_surf);
    assert(ok);
 
-   const uint32_t alloc_flags = BO_ALLOC_FOR_RENDER;
+   const uint32_t alloc_flags = BO_ALLOC_BUSY;
    mt->hiz_buf = intel_alloc_aux_buffer(brw, "hiz-miptree",
                                         &temp_hiz_surf, alloc_flags, mt);
 
@@ -2967,7 +2967,7 @@ intel_update_r8stencil(struct brw_context *brw,
                             src->surf.samples,
                             ISL_TILING_Y0_BIT,
                             ISL_SURF_USAGE_TEXTURE_BIT,
-                            BO_ALLOC_FOR_RENDER, 0, NULL);
+                            BO_ALLOC_BUSY, 0, NULL);
       assert(mt->r8stencil_mt);
    }
 

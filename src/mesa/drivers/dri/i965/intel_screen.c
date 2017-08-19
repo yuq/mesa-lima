@@ -2485,7 +2485,7 @@ intelAllocateBuffer(__DRIscreen *dri_screen,
                                            height,
                                            cpp,
                                            I915_TILING_X, &pitch,
-                                           BO_ALLOC_FOR_RENDER);
+                                           BO_ALLOC_BUSY);
 
    if (intelBuffer->bo == NULL) {
 	   free(intelBuffer);

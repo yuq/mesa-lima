@@ -256,20 +256,19 @@ bo_alloc_internal(struct brw_bufmgr *bufmgr,
    struct bo_cache_bucket *bucket;
    bool alloc_from_cache;
    uint64_t bo_size;
-   bool for_render = false;
+   bool busy = false;
    bool zeroed = false;
 
-   if (flags & BO_ALLOC_FOR_RENDER)
-      for_render = true;
+   if (flags & BO_ALLOC_BUSY)
+      busy = true;
 
    if (flags & BO_ALLOC_ZEROED)
       zeroed = true;
 
-   /* FOR_RENDER really means "I'm ok with a busy BO".  This doesn't really
-    * jive with ZEROED as we have to wait for it to be idle before we can
-    * memset.  Just disallow that combination.
+   /* BUSY does doesn't really jive with ZEROED as we have to wait for it to
+    * be idle before we can memset.  Just disallow that combination.
     */
-   assert(!(for_render && zeroed));
+   assert(!(busy && zeroed));
 
    /* Round the allocated size up to a power of two number of pages. */
    bucket = bucket_for_size(bufmgr, size);
@@ -290,7 +289,7 @@ bo_alloc_internal(struct brw_bufmgr *bufmgr,
 retry:
    alloc_from_cache = false;
    if (bucket != NULL && !list_empty(&bucket->head)) {
-      if (for_render && !zeroed) {
+      if (busy && !zeroed) {
          /* Allocate new render-target BOs from the tail (MRU)
           * of the list, as it will likely be hot in the GPU
           * cache and in the aperture for us.  If the caller
