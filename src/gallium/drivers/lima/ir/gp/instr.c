@@ -26,6 +26,16 @@
 
 #include "gpir.h"
 
+bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
+{
+   if (!instr->slots[node->sched_pos]) {
+      instr->slots[node->sched_pos] = node;
+      return true;
+   }
+
+   return false;
+}
+
 void gpir_instr_print_prog(gpir_compiler *comp)
 {
    struct {
