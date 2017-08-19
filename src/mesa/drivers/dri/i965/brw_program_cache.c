@@ -387,7 +387,7 @@ brw_init_caches(struct brw_context *brw)
    cache->items =
       calloc(cache->size, sizeof(struct brw_cache_item *));
 
-   cache->bo = brw_bo_alloc(brw->bufmgr, "program cache",  4096, 64);
+   cache->bo = brw_bo_alloc(brw->bufmgr, "program cache", 16384, 64);
    if (can_do_exec_capture(brw->screen))
       cache->bo->kflags = EXEC_OBJECT_CAPTURE;
 
