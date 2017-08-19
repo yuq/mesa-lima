@@ -452,7 +452,6 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_FSNE                111
 
 #define TGSI_OPCODE_MEMBAR              112
-#define TGSI_OPCODE_CALLNZ              113
                                 /* gap */
 #define TGSI_OPCODE_BREAKC              115
 #define TGSI_OPCODE_KILL_IF             116  /* conditional kill */

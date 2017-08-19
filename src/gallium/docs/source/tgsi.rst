@@ -835,19 +835,6 @@ This instruction replicates its result.
   dst = texture\_sample(unit, coord, lod)
 
 
-.. opcode:: CALLNZ - Subroutine Call If Not Zero
-
-   TBD
-
-.. note::
-
-   Considered for cleanup.
-
-.. note::
-
-   Considered for removal.
-
-
 Compute ISA
 ^^^^^^^^^^^^^^^^^^^^^^^^
 

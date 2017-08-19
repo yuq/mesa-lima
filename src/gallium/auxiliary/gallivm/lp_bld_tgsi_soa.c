@@ -2664,7 +2664,6 @@ near_end_of_shader(struct lp_build_tgsi_soa_context *bld,
          opcode == TGSI_OPCODE_SAMPLE_L ||
          opcode == TGSI_OPCODE_SVIEWINFO ||
          opcode == TGSI_OPCODE_CAL ||
-         opcode == TGSI_OPCODE_CALLNZ ||
          opcode == TGSI_OPCODE_IF ||
          opcode == TGSI_OPCODE_UIF ||
          opcode == TGSI_OPCODE_BGNLOOP ||

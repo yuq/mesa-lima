@@ -150,7 +150,7 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 1, 2, 0, 0, 0, 0, 0, COMP, "FSLT", TGSI_OPCODE_FSLT },
    { 1, 2, 0, 0, 0, 0, 0, COMP, "FSNE", TGSI_OPCODE_FSNE },
    { 0, 1, 0, 0, 0, 0, 0, OTHR, "MEMBAR", TGSI_OPCODE_MEMBAR },
-   { 0, 1, 0, 0, 0, 0, 0, NONE, "CALLNZ", TGSI_OPCODE_CALLNZ },
+   { 0, 1, 0, 0, 0, 0, 0, NONE, "", 113 }, /* removed */
    { 0, 1, 0, 0, 0, 0, 0, NONE, "", 114 },     /* removed */
    { 0, 1, 0, 0, 0, 0, 0, NONE, "BREAKC", TGSI_OPCODE_BREAKC },
    { 0, 1, 0, 0, 0, 0, 0, NONE, "KILL_IF", TGSI_OPCODE_KILL_IF },
