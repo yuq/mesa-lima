@@ -72,7 +72,7 @@ struct u_log_context;
 #define DBG_NIR			(1 << 1)
 #define DBG_COMPUTE		(1 << 2)
 #define DBG_VM			(1 << 3)
-#define DBG_CE			(1 << 4)
+/* gap */
 /* shader logging */
 #define DBG_FS			(1 << 5)
 #define DBG_VS			(1 << 6)
@@ -108,7 +108,7 @@ struct u_log_context;
 #define DBG_NO_RB_PLUS		(1ull << 45)
 #define DBG_SI_SCHED		(1ull << 46)
 #define DBG_MONOLITHIC_SHADERS	(1ull << 47)
-#define DBG_NO_CE		(1ull << 48)
+/* gap */
 #define DBG_UNSAFE_MATH		(1ull << 49)
 #define DBG_NO_DCC_FB		(1ull << 50)
 #define DBG_TEST_VMFAULT_CP	(1ull << 51)
@@ -375,7 +375,6 @@ union r600_mmio_counters {
 		struct r600_mmio_counter surf_sync;
 		struct r600_mmio_counter cp_dma;
 		struct r600_mmio_counter scratch_ram;
-		struct r600_mmio_counter ce;
 	} named;
 	unsigned array[0];
 };

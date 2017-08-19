@@ -59,10 +59,8 @@ struct amdgpu_cs_buffer {
 };
 
 enum ib_type {
-   IB_CONST_PREAMBLE = 0,
-   IB_CONST = 1, /* the const IB must be first */
-   IB_MAIN = 2,
-   IB_NUM
+   IB_MAIN,
+   IB_NUM,
 };
 
 struct amdgpu_ib {
@@ -117,8 +115,6 @@ struct amdgpu_cs_context {
 
 struct amdgpu_cs {
    struct amdgpu_ib main; /* must be first because this is inherited */
-   struct amdgpu_ib const_ib; /* optional constant engine IB */
-   struct amdgpu_ib const_preamble_ib;
    struct amdgpu_ctx *ctx;
    enum ring_type ring_type;
 
@@ -199,10 +195,6 @@ amdgpu_cs_from_ib(struct amdgpu_ib *ib)
    switch (ib->ib_type) {
    case IB_MAIN:
       return get_container(ib, struct amdgpu_cs, main);
-   case IB_CONST:
-      return get_container(ib, struct amdgpu_cs, const_ib);
-   case IB_CONST_PREAMBLE:
-      return get_container(ib, struct amdgpu_cs, const_preamble_ib);
    default:
       unreachable("bad ib_type");
    }

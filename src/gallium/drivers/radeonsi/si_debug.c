@@ -274,7 +274,6 @@ struct si_log_chunk_cs {
 	struct si_saved_cs *cs;
 	bool dump_bo_list;
 	unsigned gfx_begin, gfx_end;
-	unsigned ce_begin, ce_end;
 };
 
 static void si_log_chunk_type_cs_destroy(void *data)
@@ -331,7 +330,6 @@ static void si_log_chunk_type_cs_print(void *data, FILE *f)
 	struct si_context *ctx = chunk->ctx;
 	struct si_saved_cs *scs = chunk->cs;
 	int last_trace_id = -1;
-	int last_ce_trace_id = -1;
 
 	/* We are expecting that the ddebug pipe has already
 	 * waited for the context, so this buffer should be idle.
@@ -341,10 +339,8 @@ static void si_log_chunk_type_cs_print(void *data, FILE *f)
 					      NULL,
 					      PIPE_TRANSFER_UNSYNCHRONIZED |
 					      PIPE_TRANSFER_READ);
-	if (map) {
+	if (map)
 		last_trace_id = map[0];
-		last_ce_trace_id = map[1];
-	}
 
 	if (chunk->gfx_end != chunk->gfx_begin) {
 		if (chunk->gfx_begin == 0) {
@@ -372,21 +368,6 @@ static void si_log_chunk_type_cs_print(void *data, FILE *f)
 		}
 	}
 
-	if (chunk->ce_end != chunk->ce_begin) {
-		assert(ctx->ce_ib);
-
-		if (scs->flushed) {
-			ac_parse_ib(f, scs->ce.ib + chunk->ce_begin,
-				    chunk->ce_end - chunk->ce_begin,
-				    last_ce_trace_id, "CE IB", ctx->b.chip_class,
-				    NULL, NULL);
-		} else {
-			si_parse_current_ib(f, ctx->ce_ib, chunk->ce_begin,
-					    chunk->ce_end, last_ce_trace_id, "CE IB",
-					    ctx->b.chip_class);
-		}
-	}
-
 	if (chunk->dump_bo_list) {
 		fprintf(f, "Flushing.\n\n");
 		si_dump_bo_list(ctx, &scs->gfx, f);
@@ -405,14 +386,9 @@ static void si_log_cs(struct si_context *ctx, struct u_log_context *log,
 
 	struct si_saved_cs *scs = ctx->current_saved_cs;
 	unsigned gfx_cur = ctx->b.gfx.cs->prev_dw + ctx->b.gfx.cs->current.cdw;
-	unsigned ce_cur = 0;
-
-	if (ctx->ce_ib)
-		ce_cur = ctx->ce_ib->prev_dw + ctx->ce_ib->current.cdw;
 
 	if (!dump_bo_list &&
-	    gfx_cur == scs->gfx_last_dw &&
-	    ce_cur == scs->ce_last_dw)
+	    gfx_cur == scs->gfx_last_dw)
 		return;
 
 	struct si_log_chunk_cs *chunk = calloc(1, sizeof(*chunk));
@@ -424,10 +400,6 @@ static void si_log_cs(struct si_context *ctx, struct u_log_context *log,
 	chunk->gfx_begin = scs->gfx_last_dw;
 	chunk->gfx_end = gfx_cur;
 	scs->gfx_last_dw = gfx_cur;
-
-	chunk->ce_begin = scs->ce_last_dw;
-	chunk->ce_end = ce_cur;
-	scs->ce_last_dw = ce_cur;
 
 	u_log_chunk(log, &si_log_chunk_type_cs, chunk);
 }

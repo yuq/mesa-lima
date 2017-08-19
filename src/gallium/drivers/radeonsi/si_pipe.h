@@ -266,12 +266,10 @@ struct si_saved_cs {
 	struct pipe_reference	reference;
 	struct si_context	*ctx;
 	struct radeon_saved_cs	gfx;
-	struct radeon_saved_cs	ce;
 	struct r600_resource	*trace_buf;
 	unsigned		trace_id;
 
 	unsigned		gfx_last_dw;
-	unsigned		ce_last_dw;
 	bool			flushed;
 };
 
@@ -288,15 +286,7 @@ struct si_context {
 	struct si_shader_ctx_state	fixed_func_tcs_shader;
 	struct r600_resource		*wait_mem_scratch;
 	unsigned			wait_mem_number;
-
-	struct radeon_winsys_cs		*ce_ib;
-	struct radeon_winsys_cs		*ce_preamble_ib;
-	struct r600_resource		*ce_ram_saved_buffer;
-	struct u_suballocator		*ce_suballocator;
-	unsigned			ce_ram_saved_offset;
-	uint16_t			total_ce_ram_allocated;
 	uint16_t			prefetch_L2_mask;
-	bool				ce_need_synchronization:1;
 
 	bool				gfx_flush_in_progress:1;
 	bool				compute_is_busy:1;

@@ -97,11 +97,6 @@ static uint32_t null_image_descriptor[8] = {
 	 * descriptor */
 };
 
-static uint16_t si_ce_ram_size(struct si_context *sctx)
-{
-	return sctx->b.chip_class >= GFX9 ? 4096 : 32768;
-}
-
 static void si_init_descriptor_list(uint32_t *desc_list,
 				    unsigned element_dw_size,
 				    unsigned num_elements,
@@ -117,112 +112,21 @@ static void si_init_descriptor_list(uint32_t *desc_list,
 	}
 }
 
-static void si_init_descriptors(struct si_context *sctx,
-				struct si_descriptors *desc,
+static void si_init_descriptors(struct si_descriptors *desc,
 				unsigned shader_userdata_index,
 				unsigned element_dw_size,
-				unsigned num_elements,
-				unsigned first_ce_slot,
-				unsigned num_ce_slots,
-				unsigned *ce_offset)
+				unsigned num_elements)
 {
 	desc->list = CALLOC(num_elements, element_dw_size * 4);
 	desc->element_dw_size = element_dw_size;
 	desc->num_elements = num_elements;
-	desc->first_ce_slot = sctx->ce_ib ? first_ce_slot : 0;
-	desc->num_ce_slots = sctx->ce_ib ? num_ce_slots : 0;
-	desc->dirty_mask = 0;
 	desc->shader_userdata_offset = shader_userdata_index * 4;
-
-	if (desc->num_ce_slots) {
-		assert(num_elements <= sizeof(desc->dirty_mask)*8);
-
-		desc->uses_ce = true;
-		desc->ce_offset = *ce_offset;
-		desc->dirty_mask = u_bit_consecutive64(0, num_elements);
-
-		*ce_offset += element_dw_size * desc->num_ce_slots * 4;
-	}
 }
 
 static void si_release_descriptors(struct si_descriptors *desc)
 {
 	r600_resource_reference(&desc->buffer, NULL);
 	FREE(desc->list);
-}
-
-static bool si_ce_upload(struct si_context *sctx, unsigned ce_offset, unsigned size,
-			 unsigned *out_offset, struct r600_resource **out_buf)
-{
-	uint64_t va;
-	unsigned cache_line_size = sctx->screen->b.info.tcc_cache_line_size;
-
-	/* The base and size should be aligned to the L2 cache line size
-	 * for optimal performance. (all dumps should rewrite whole lines)
-	 */
-	size = align(size, cache_line_size);
-
-	(void)si_ce_ram_size; /* silence an "unused" warning */
-	assert(ce_offset + size <= si_ce_ram_size(sctx));
-
-	u_suballocator_alloc(sctx->ce_suballocator, size, cache_line_size,
-			     out_offset, (struct pipe_resource**)out_buf);
-	if (!out_buf)
-			return false;
-
-	va = (*out_buf)->gpu_address + *out_offset;
-
-	radeon_emit(sctx->ce_ib, PKT3(PKT3_DUMP_CONST_RAM, 3, 0));
-	radeon_emit(sctx->ce_ib, ce_offset);
-	radeon_emit(sctx->ce_ib, size / 4);
-	radeon_emit(sctx->ce_ib, va);
-	radeon_emit(sctx->ce_ib, va >> 32);
-
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, *out_buf,
-	                       RADEON_USAGE_READWRITE, RADEON_PRIO_DESCRIPTORS);
-
-	sctx->ce_need_synchronization = true;
-	return true;
-}
-
-void si_ce_save_all_descriptors_at_ib_end(struct si_context* sctx)
-{
-	bool success = si_ce_upload(sctx, 0, sctx->total_ce_ram_allocated,
-				    &sctx->ce_ram_saved_offset,
-				    &sctx->ce_ram_saved_buffer);
-	(void)success;
-	assert(success);
-}
-
-void si_ce_restore_all_descriptors_at_ib_start(struct si_context *sctx)
-{
-	if (!sctx->ce_ram_saved_buffer)
-		return;
-
-	struct radeon_winsys_cs *ib = sctx->ce_preamble_ib;
-	if (!ib)
-		ib = sctx->ce_ib;
-
-	uint64_t va = sctx->ce_ram_saved_buffer->gpu_address +
-		      sctx->ce_ram_saved_offset;
-
-	radeon_emit(ib, PKT3(PKT3_LOAD_CONST_RAM, 3, 0));
-	radeon_emit(ib, va);
-	radeon_emit(ib, va >> 32);
-	radeon_emit(ib, sctx->total_ce_ram_allocated / 4);
-	radeon_emit(ib, 0);
-
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-				  sctx->ce_ram_saved_buffer,
-				  RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
-}
-
-void si_ce_enable_loads(struct radeon_winsys_cs *ib)
-{
-	radeon_emit(ib, PKT3(PKT3_CONTEXT_CONTROL, 1, 0));
-	radeon_emit(ib, CONTEXT_CONTROL_LOAD_ENABLE(1) |
-	                CONTEXT_CONTROL_LOAD_CE_RAM(1));
-	radeon_emit(ib, CONTEXT_CONTROL_SHADOW_ENABLE(1));
 }
 
 static bool si_upload_descriptors(struct si_context *sctx,
@@ -240,55 +144,24 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	if (!upload_size)
 		return true;
 
-	if (desc->uses_ce) {
-		const uint32_t *list = desc->list +
-				       desc->first_ce_slot * desc->element_dw_size;
-		uint64_t mask = (desc->dirty_mask >> desc->first_ce_slot) &
-				u_bit_consecutive64(0, desc->num_ce_slots);
+	uint32_t *ptr;
+	u_upload_alloc(sctx->b.b.const_uploader, 0, upload_size,
+		       si_optimal_tcc_alignment(sctx, upload_size),
+		       (unsigned*)&desc->buffer_offset,
+		       (struct pipe_resource**)&desc->buffer,
+		       (void**)&ptr);
+	if (!desc->buffer)
+		return false; /* skip the draw call */
 
+	util_memcpy_cpu_to_le32(ptr, (char*)desc->list + first_slot_offset,
+				upload_size);
+	desc->gpu_list = ptr - first_slot_offset / 4;
 
-		while (mask) {
-			int begin, count;
-			u_bit_scan_consecutive_range64(&mask, &begin, &count);
-
-			begin *= desc->element_dw_size;
-			count *= desc->element_dw_size;
-
-			radeon_emit(sctx->ce_ib,
-			            PKT3(PKT3_WRITE_CONST_RAM, count, 0));
-			radeon_emit(sctx->ce_ib, desc->ce_offset + begin * 4);
-			radeon_emit_array(sctx->ce_ib, list + begin, count);
-		}
-
-		if (!si_ce_upload(sctx,
-				  desc->ce_offset +
-				  (first_slot_offset - desc->first_ce_slot * slot_size),
-				  upload_size, (unsigned*)&desc->buffer_offset,
-				  &desc->buffer))
-			return false;
-	} else {
-		uint32_t *ptr;
-
-		u_upload_alloc(sctx->b.b.const_uploader, 0, upload_size,
-			       si_optimal_tcc_alignment(sctx, upload_size),
-			       (unsigned*)&desc->buffer_offset,
-			       (struct pipe_resource**)&desc->buffer,
-			       (void**)&ptr);
-		if (!desc->buffer)
-			return false; /* skip the draw call */
-
-		util_memcpy_cpu_to_le32(ptr, (char*)desc->list + first_slot_offset,
-					upload_size);
-		desc->gpu_list = ptr - first_slot_offset / 4;
-
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc->buffer,
-	                            RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
-	}
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc->buffer,
+                            RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
 
 	/* The shader pointer should point to slot 0. */
 	desc->buffer_offset -= first_slot_offset;
-
-	desc->dirty_mask = 0;
 
 	if (atom)
 		si_mark_atom_dirty(sctx, atom);
@@ -598,7 +471,6 @@ static void si_set_sampler_view(struct si_context *sctx,
 		views->enabled_mask &= ~(1u << slot);
 	}
 
-	descs->dirty_mask |= 1ull << desc_slot;
 	sctx->descriptors_dirty |= 1u << si_sampler_and_image_descriptors_idx(shader);
 }
 
@@ -750,8 +622,6 @@ si_disable_shader_image(struct si_context *ctx, unsigned shader, unsigned slot)
 
 		memcpy(descs->list + desc_slot*8, null_image_descriptor, 8*4);
 		images->enabled_mask &= ~(1u << slot);
-		/* two 8-byte images share one 16-byte slot */
-		descs->dirty_mask |= 1u << (desc_slot / 2);
 		ctx->descriptors_dirty |= 1u << si_sampler_and_image_descriptors_idx(shader);
 	}
 }
@@ -887,8 +757,6 @@ static void si_set_shader_image(struct si_context *ctx,
 	}
 
 	images->enabled_mask |= 1u << slot;
-	/* two 8-byte images share one 16-byte slot */
-	descs->dirty_mask |= 1u << (desc_slot / 2);
 	ctx->descriptors_dirty |= 1u << si_sampler_and_image_descriptors_idx(shader);
 
 	/* Since this can flush, it must be done after enabled_mask is updated. */
@@ -984,25 +852,20 @@ static void si_bind_sampler_states(struct pipe_context *ctx,
 			continue;
 
 		memcpy(desc->list + desc_slot * 16 + 12, sstates[i]->val, 4*4);
-		desc->dirty_mask |= 1ull << desc_slot;
 		sctx->descriptors_dirty |= 1u << si_sampler_and_image_descriptors_idx(shader);
 	}
 }
 
 /* BUFFER RESOURCES */
 
-static void si_init_buffer_resources(struct si_context *sctx,
-				     struct si_buffer_resources *buffers,
+static void si_init_buffer_resources(struct si_buffer_resources *buffers,
 				     struct si_descriptors *descs,
 				     unsigned num_buffers,
-				     unsigned first_ce_slot,
-				     unsigned num_ce_slots,
 				     unsigned shader_userdata_index,
 				     enum radeon_bo_usage shader_usage,
 				     enum radeon_bo_usage shader_usage_constbuf,
 				     enum radeon_bo_priority priority,
-				     enum radeon_bo_priority priority_constbuf,
-				     unsigned *ce_offset)
+				     enum radeon_bo_priority priority_constbuf)
 {
 	buffers->shader_usage = shader_usage;
 	buffers->shader_usage_constbuf = shader_usage_constbuf;
@@ -1010,8 +873,7 @@ static void si_init_buffer_resources(struct si_context *sctx,
 	buffers->priority_constbuf = priority_constbuf;
 	buffers->buffers = CALLOC(num_buffers, sizeof(struct pipe_resource*));
 
-	si_init_descriptors(sctx, descs, shader_userdata_index, 4, num_buffers,
-			    first_ce_slot, num_ce_slots, ce_offset);
+	si_init_descriptors(descs, shader_userdata_index, 4, num_buffers);
 }
 
 static void si_release_buffer_resources(struct si_buffer_resources *buffers,
@@ -1277,7 +1139,6 @@ static void si_set_constant_buffer(struct si_context *sctx,
 		buffers->enabled_mask &= ~(1u << slot);
 	}
 
-	descs->dirty_mask |= 1u << slot;
 	sctx->descriptors_dirty |= 1u << descriptors_idx;
 }
 
@@ -1339,7 +1200,6 @@ static void si_set_shader_buffers(struct pipe_context *ctx,
 			pipe_resource_reference(&buffers->buffers[slot], NULL);
 			memset(desc, 0, sizeof(uint32_t) * 4);
 			buffers->enabled_mask &= ~(1u << slot);
-			descs->dirty_mask |= 1u << slot;
 			sctx->descriptors_dirty |=
 				1u << si_const_and_shader_buffer_descriptors_idx(shader);
 			continue;
@@ -1366,7 +1226,6 @@ static void si_set_shader_buffers(struct pipe_context *ctx,
 		buf->bind_history |= PIPE_BIND_SHADER_BUFFER;
 
 		buffers->enabled_mask |= 1u << slot;
-		descs->dirty_mask |= 1u << slot;
 		sctx->descriptors_dirty |=
 			1u << si_const_and_shader_buffer_descriptors_idx(shader);
 
@@ -1486,7 +1345,6 @@ void si_set_ring_buffer(struct pipe_context *ctx, uint slot,
 		buffers->enabled_mask &= ~(1u << slot);
 	}
 
-	descs->dirty_mask |= 1u << slot;
 	sctx->descriptors_dirty |= 1u << SI_DESCS_RW_BUFFERS;
 }
 
@@ -1591,7 +1449,6 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 						NULL);
 			buffers->enabled_mask &= ~(1u << bufidx);
 		}
-		descs->dirty_mask |= 1u << bufidx;
 	}
 	for (; i < old_num_targets; i++) {
 		bufidx = SI_VS_STREAMOUT_BUF0 + i;
@@ -1599,7 +1456,6 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 		memset(descs->list + bufidx*4, 0, sizeof(uint32_t) * 4);
 		pipe_resource_reference(&buffers->buffers[bufidx], NULL);
 		buffers->enabled_mask &= ~(1u << bufidx);
-		descs->dirty_mask |= 1u << bufidx;
 	}
 
 	sctx->descriptors_dirty |= 1u << SI_DESCS_RW_BUFFERS;
@@ -1718,7 +1574,6 @@ static void si_reset_buffer_resources(struct si_context *sctx,
 			si_desc_reset_buffer_offset(&sctx->b.b,
 						    descs->list + i*4,
 						    old_va, buf);
-			descs->dirty_mask |= 1u << i;
 			sctx->descriptors_dirty |= 1u << descriptors_idx;
 
 			radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
@@ -1772,7 +1627,6 @@ static void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf
 
 			si_desc_reset_buffer_offset(ctx, descs->list + i*4,
 						    old_va, buf);
-			descs->dirty_mask |= 1u << i;
 			sctx->descriptors_dirty |= 1u << SI_DESCS_RW_BUFFERS;
 
 			radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
@@ -1827,7 +1681,6 @@ static void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf
 								    descs->list +
 								    desc_slot * 16 + 4,
 								    old_va, buf);
-					descs->dirty_mask |= 1ull << desc_slot;
 					sctx->descriptors_dirty |=
 						1u << si_sampler_and_image_descriptors_idx(shader);
 
@@ -1860,8 +1713,6 @@ static void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf
 					si_desc_reset_buffer_offset(
 						ctx, descs->list + desc_slot * 8 + 4,
 						old_va, buf);
-					/* two 8-byte images share one 16-byte slot */
-					descs->dirty_mask |= 1u << (desc_slot / 2);
 					sctx->descriptors_dirty |=
 						1u << si_sampler_and_image_descriptors_idx(shader);
 
@@ -2328,8 +2179,7 @@ static void si_init_bindless_descriptors(struct si_context *sctx,
 					 unsigned shader_userdata_index,
 					 unsigned num_elements)
 {
-	si_init_descriptors(sctx, desc, shader_userdata_index, 16, num_elements,
-			    0, 0, NULL);
+	si_init_descriptors(desc, shader_userdata_index, 16, num_elements);
 	sctx->bindless_descriptors.num_active_slots = num_elements;
 
 	/* The first bindless descriptor is stored at slot 1, because 0 is not
@@ -2753,52 +2603,9 @@ void si_all_resident_buffers_begin_new_cs(struct si_context *sctx)
 
 /* INIT/DEINIT/UPLOAD */
 
-/* GFX9 has only 4KB of CE, while previous chips had 32KB. In order
- * to make CE RAM as useful as possible, this defines limits
- * for the number slots that can be in CE RAM on GFX9. If a shader
- * is using more, descriptors will be uploaded to memory directly and
- * CE won't be used.
- *
- * These numbers are based on shader-db.
- */
-static unsigned gfx9_max_ce_samplers[SI_NUM_SHADERS] = {
-	[PIPE_SHADER_VERTEX] = 0,
-	[PIPE_SHADER_TESS_CTRL] = 0,
-	[PIPE_SHADER_TESS_EVAL] = 1,
-	[PIPE_SHADER_GEOMETRY] = 0,
-	[PIPE_SHADER_FRAGMENT] = 24,
-	[PIPE_SHADER_COMPUTE] = 16,
-};
-static unsigned gfx9_max_ce_images[SI_NUM_SHADERS] = {
-	/* these must be even due to slot alignment */
-	[PIPE_SHADER_VERTEX] = 0,
-	[PIPE_SHADER_TESS_CTRL] = 0,
-	[PIPE_SHADER_TESS_EVAL] = 0,
-	[PIPE_SHADER_GEOMETRY] = 0,
-	[PIPE_SHADER_FRAGMENT] = 2,
-	[PIPE_SHADER_COMPUTE] = 8,
-};
-static unsigned gfx9_max_ce_const_buffers[SI_NUM_SHADERS] = {
-	[PIPE_SHADER_VERTEX] = 9,
-	[PIPE_SHADER_TESS_CTRL] = 3,
-	[PIPE_SHADER_TESS_EVAL] = 5,
-	[PIPE_SHADER_GEOMETRY] = 0,
-	[PIPE_SHADER_FRAGMENT] = 8,
-	[PIPE_SHADER_COMPUTE] = 6,
-};
-static unsigned gfx9_max_ce_shader_buffers[SI_NUM_SHADERS] = {
-	[PIPE_SHADER_VERTEX] = 0,
-	[PIPE_SHADER_TESS_CTRL] = 0,
-	[PIPE_SHADER_TESS_EVAL] = 0,
-	[PIPE_SHADER_GEOMETRY] = 0,
-	[PIPE_SHADER_FRAGMENT] = 12,
-	[PIPE_SHADER_COMPUTE] = 13,
-};
-
 void si_init_all_descriptors(struct si_context *sctx)
 {
 	int i;
-	unsigned ce_offset = 0;
 
 	STATIC_ASSERT(GFX9_SGPR_TCS_CONST_AND_SHADER_BUFFERS % 2 == 0);
 	STATIC_ASSERT(GFX9_SGPR_GS_CONST_AND_SHADER_BUFFERS % 2 == 0);
@@ -2809,49 +2616,28 @@ void si_init_all_descriptors(struct si_context *sctx)
 		unsigned num_sampler_slots = SI_NUM_IMAGES / 2 + SI_NUM_SAMPLERS;
 		unsigned num_buffer_slots = SI_NUM_SHADER_BUFFERS + SI_NUM_CONST_BUFFERS;
 
-		unsigned first_sampler_ce_slot = 0;
-		unsigned num_sampler_ce_slots = num_sampler_slots;
-
-		unsigned first_buffer_ce_slot = 0;
-		unsigned num_buffer_ce_slots = num_buffer_slots;
-
-		/* Adjust CE slot ranges based on GFX9 CE RAM limits. */
 		if (sctx->b.chip_class >= GFX9) {
 			gfx9_tcs = i == PIPE_SHADER_TESS_CTRL;
 			gfx9_gs = i == PIPE_SHADER_GEOMETRY;
-
-			first_sampler_ce_slot =
-				si_get_image_slot(gfx9_max_ce_images[i] - 1) / 2;
-			num_sampler_ce_slots = gfx9_max_ce_images[i] / 2 +
-					       gfx9_max_ce_samplers[i];
-
-			first_buffer_ce_slot =
-				si_get_shaderbuf_slot(gfx9_max_ce_shader_buffers[i] - 1);
-			num_buffer_ce_slots = gfx9_max_ce_shader_buffers[i] +
-					      gfx9_max_ce_const_buffers[i];
 		}
 
-		si_init_buffer_resources(sctx, &sctx->const_and_shader_buffers[i],
+		si_init_buffer_resources(&sctx->const_and_shader_buffers[i],
 					 si_const_and_shader_buffer_descriptors(sctx, i),
 					 num_buffer_slots,
-					 first_buffer_ce_slot, num_buffer_ce_slots,
 					 gfx9_tcs ? GFX9_SGPR_TCS_CONST_AND_SHADER_BUFFERS :
 					 gfx9_gs ? GFX9_SGPR_GS_CONST_AND_SHADER_BUFFERS :
 						   SI_SGPR_CONST_AND_SHADER_BUFFERS,
 					 RADEON_USAGE_READWRITE,
 					 RADEON_USAGE_READ,
 					 RADEON_PRIO_SHADER_RW_BUFFER,
-					 RADEON_PRIO_CONST_BUFFER,
-					 &ce_offset);
+					 RADEON_PRIO_CONST_BUFFER);
 
 		struct si_descriptors *desc = si_sampler_and_image_descriptors(sctx, i);
-		si_init_descriptors(sctx, desc,
+		si_init_descriptors(desc,
 				    gfx9_tcs ? GFX9_SGPR_TCS_SAMPLERS_AND_IMAGES :
 				    gfx9_gs ? GFX9_SGPR_GS_SAMPLERS_AND_IMAGES :
 					      SI_SGPR_SAMPLERS_AND_IMAGES,
-				    16, num_sampler_slots,
-				    first_sampler_ce_slot, num_sampler_ce_slots,
-				    &ce_offset);
+				    16, num_sampler_slots);
 
 		int j;
 		for (j = 0; j < SI_NUM_IMAGES; j++)
@@ -2860,19 +2646,17 @@ void si_init_all_descriptors(struct si_context *sctx)
 			memcpy(desc->list + j * 8, null_texture_descriptor, 8 * 4);
 	}
 
-	si_init_buffer_resources(sctx, &sctx->rw_buffers,
+	si_init_buffer_resources(&sctx->rw_buffers,
 				 &sctx->descriptors[SI_DESCS_RW_BUFFERS],
-				 SI_NUM_RW_BUFFERS, 0, SI_NUM_RW_BUFFERS,
-				 SI_SGPR_RW_BUFFERS,
+				 SI_NUM_RW_BUFFERS, SI_SGPR_RW_BUFFERS,
 				 /* The second set of usage/priority is used by
 				  * const buffers in RW buffer slots. */
 				 RADEON_USAGE_READWRITE, RADEON_USAGE_READ,
-				 RADEON_PRIO_SHADER_RINGS, RADEON_PRIO_CONST_BUFFER,
-				 &ce_offset);
+				 RADEON_PRIO_SHADER_RINGS, RADEON_PRIO_CONST_BUFFER);
 	sctx->descriptors[SI_DESCS_RW_BUFFERS].num_active_slots = SI_NUM_RW_BUFFERS;
 
-	si_init_descriptors(sctx, &sctx->vertex_buffers, SI_SGPR_VERTEX_BUFFERS,
-			    4, SI_NUM_VERTEX_BUFFERS, 0, 0, NULL);
+	si_init_descriptors(&sctx->vertex_buffers, SI_SGPR_VERTEX_BUFFERS,
+			    4, SI_NUM_VERTEX_BUFFERS);
 	FREE(sctx->vertex_buffers.list); /* not used */
 	sctx->vertex_buffers.list = NULL;
 
@@ -2884,9 +2668,6 @@ void si_init_all_descriptors(struct si_context *sctx)
 				     1024);
 
 	sctx->descriptors_dirty = u_bit_consecutive(0, SI_NUM_DESCS);
-	sctx->total_ce_ram_allocated = ce_offset;
-
-	assert(ce_offset <= si_ce_ram_size(sctx));
 
 	/* Set pipe_context functions. */
 	sctx->b.b.bind_sampler_states = si_bind_sampler_states;
@@ -3025,26 +2806,6 @@ void si_set_active_descriptors(struct si_context *sctx, unsigned desc_idx,
 	if (first < desc->first_active_slot ||
 	    first + count > desc->first_active_slot + desc->num_active_slots)
 		sctx->descriptors_dirty |= 1u << desc_idx;
-
-	/* Enable or disable CE for this descriptor array. */
-	bool used_ce = desc->uses_ce;
-	desc->uses_ce = desc->first_ce_slot <= first &&
-			desc->first_ce_slot + desc->num_ce_slots >= first + count;
-
-	if (desc->uses_ce != used_ce) {
-		/* Upload or dump descriptors if we're disabling or enabling CE,
-		 * respectively. */
-		sctx->descriptors_dirty |= 1u << desc_idx;
-
-		/* If we're enabling CE, re-upload all descriptors to CE RAM.
-		 * When CE was disabled, uploads to CE RAM stopped.
-		 */
-		if (desc->uses_ce) {
-			desc->dirty_mask |=
-				u_bit_consecutive64(desc->first_ce_slot,
-						    desc->num_ce_slots);
-		}
-	}
 
 	desc->first_active_slot = first;
 	desc->num_active_slots = count;
