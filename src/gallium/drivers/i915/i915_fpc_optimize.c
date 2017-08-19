@@ -85,7 +85,6 @@ static const struct {
    [ TGSI_OPCODE_DP2     ] = { false,   true,   TGSI_SWIZZLE_ONE,  1,  2 },
    [ TGSI_OPCODE_DP3     ] = { false,   true,   TGSI_SWIZZLE_ONE,  1,  2 },
    [ TGSI_OPCODE_DP4     ] = { false,   true,   TGSI_SWIZZLE_ONE,  1,  2 },
-   [ TGSI_OPCODE_DPH     ] = { false,  false,                  0,  1,  2 },
    [ TGSI_OPCODE_DST     ] = { false,  false,                  0,  1,  2 },
    [ TGSI_OPCODE_END     ] = { false,  false,                  0,  0,  0 },
    [ TGSI_OPCODE_EX2     ] = { false,  false,                  0,  1,  1 },

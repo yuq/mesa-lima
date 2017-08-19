@@ -274,10 +274,6 @@ tgsi_util_get_inst_usage_mask(const struct tgsi_full_instruction *inst,
       read_mask = TGSI_WRITEMASK_XYZW;
       break;
 
-   case TGSI_OPCODE_DPH:
-      read_mask = src_idx == 0 ? TGSI_WRITEMASK_XYZ : TGSI_WRITEMASK_XYZW;
-      break;
-
    case TGSI_OPCODE_TEX:
    case TGSI_OPCODE_TXD:
    case TGSI_OPCODE_TXB:

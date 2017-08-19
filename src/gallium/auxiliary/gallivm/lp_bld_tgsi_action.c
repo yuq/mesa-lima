@@ -234,22 +234,6 @@ static struct lp_build_tgsi_action dp4_action = {
    dp4_emit	 /* emit */
 };
 
-/* TGSI_OPCODE_DPH */
-static void
-dph_fetch_args(
-   struct lp_build_tgsi_context * bld_base,
-   struct lp_build_emit_data * emit_data)
-{
-   dp_fetch_args(bld_base, emit_data, 4);
-   /* src0.w */
-   emit_data->args[3] = bld_base->base.one;
-}
-
-const struct lp_build_tgsi_action dph_action = {
-   dph_fetch_args,	 /* fetch_args */
-   dp4_emit	 /* emit */
-};
-
 /* TGSI_OPCODE_DST */
 static void
 dst_fetch_args(
@@ -1258,7 +1242,6 @@ lp_set_default_actions(struct lp_build_tgsi_context * bld_base)
    bld_base->op_actions[TGSI_OPCODE_DP2] = dp2_action;
    bld_base->op_actions[TGSI_OPCODE_DP3] = dp3_action;
    bld_base->op_actions[TGSI_OPCODE_DP4] = dp4_action;
-   bld_base->op_actions[TGSI_OPCODE_DPH] = dph_action;
    bld_base->op_actions[TGSI_OPCODE_DST] = dst_action;
    bld_base->op_actions[TGSI_OPCODE_EXP] = exp_action;
    bld_base->op_actions[TGSI_OPCODE_LIT] = lit_action;

@@ -3185,35 +3185,6 @@ exec_dp4(struct tgsi_exec_machine *mach,
 }
 
 static void
-exec_dph(struct tgsi_exec_machine *mach,
-         const struct tgsi_full_instruction *inst)
-{
-   unsigned int chan;
-   union tgsi_exec_channel arg[3];
-
-   fetch_source(mach, &arg[0], &inst->Src[0], TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-   fetch_source(mach, &arg[1], &inst->Src[1], TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-   micro_mul(&arg[2], &arg[0], &arg[1]);
-
-   fetch_source(mach, &arg[0], &inst->Src[0], TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-   fetch_source(mach, &arg[1], &inst->Src[1], TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-   micro_mad(&arg[2], &arg[0], &arg[1], &arg[2]);
-
-   fetch_source(mach, &arg[0], &inst->Src[0], TGSI_CHAN_Z, TGSI_EXEC_DATA_FLOAT);
-   fetch_source(mach, &arg[1], &inst->Src[1], TGSI_CHAN_Z, TGSI_EXEC_DATA_FLOAT);
-   micro_mad(&arg[0], &arg[0], &arg[1], &arg[2]);
-
-   fetch_source(mach, &arg[1], &inst->Src[1], TGSI_CHAN_W, TGSI_EXEC_DATA_FLOAT);
-   micro_add(&arg[0], &arg[0], &arg[1]);
-
-   for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
-      if (inst->Dst[0].Register.WriteMask & (1 << chan)) {
-         store_dest(mach, &arg[0], &inst->Dst[0], inst, chan, TGSI_EXEC_DATA_FLOAT);
-      }
-   }
-}
-
-static void
 exec_dp2(struct tgsi_exec_machine *mach,
          const struct tgsi_full_instruction *inst)
 {
@@ -5184,10 +5155,6 @@ exec_instruction(
 
    case TGSI_OPCODE_XPD:
       exec_xpd(mach, inst);
-      break;
-
-   case TGSI_OPCODE_DPH:
-      exec_dph(mach, inst);
       break;
 
    case TGSI_OPCODE_COS:

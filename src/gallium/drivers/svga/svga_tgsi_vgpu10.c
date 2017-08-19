@@ -3578,40 +3578,6 @@ emit_cmp(struct svga_shader_emitter_v10 *emit,
 
 
 /**
- * Emit code for TGSI_OPCODE_DPH instruction.
- */
-static boolean
-emit_dph(struct svga_shader_emitter_v10 *emit,
-         const struct tgsi_full_instruction *inst)
-{
-   /*
-    * DP3 tmp, s0, s1
-    * ADD dst, tmp, s1.wwww
-    */
-
-   struct tgsi_full_src_register s1_wwww =
-      swizzle_src(&inst->Src[1], TGSI_SWIZZLE_W, TGSI_SWIZZLE_W,
-                  TGSI_SWIZZLE_W, TGSI_SWIZZLE_W);
-
-   unsigned tmp = get_temp_index(emit);
-   struct tgsi_full_src_register tmp_src = make_src_temp_reg(tmp);
-   struct tgsi_full_dst_register tmp_dst = make_dst_temp_reg(tmp);
-
-   /* DP3 tmp, s0, s1 */
-   emit_instruction_op2(emit, VGPU10_OPCODE_DP3, &tmp_dst, &inst->Src[0],
-                        &inst->Src[1], FALSE);
-
-   /* ADD dst, tmp, s1.wwww */
-   emit_instruction_op2(emit, VGPU10_OPCODE_ADD, &inst->Dst[0], &tmp_src,
-                        &s1_wwww, inst->Instruction.Saturate);
-
-   free_temp_indexes(emit);
-
-   return TRUE;
-}
-
-
-/**
  * Emit code for TGSI_OPCODE_DST instruction.
  */
 static boolean
@@ -5712,8 +5678,6 @@ emit_vgpu10_instruction(struct svga_shader_emitter_v10 *emit,
       return emit_cmp(emit, inst);
    case TGSI_OPCODE_COS:
       return emit_sincos(emit, inst);
-   case TGSI_OPCODE_DPH:
-      return emit_dph(emit, inst);
    case TGSI_OPCODE_DST:
       return emit_dst(emit, inst);
    case TGSI_OPCODE_EX2:

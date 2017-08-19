@@ -277,7 +277,6 @@ unsigned int Instruction::srcMask(unsigned int s) const
    case TGSI_OPCODE_DP3:
       return 0x7;
    case TGSI_OPCODE_DP4:
-   case TGSI_OPCODE_DPH:
    case TGSI_OPCODE_KILL_IF: /* WriteMask ignored */
       return 0xf;
    case TGSI_OPCODE_DST:
@@ -3318,13 +3317,6 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       break;
    case TGSI_OPCODE_DP4:
       val0 = buildDot(4);
-      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi)
-         mkMov(dst0[c], val0);
-      break;
-   case TGSI_OPCODE_DPH:
-      val0 = buildDot(3);
-      src1 = fetchSrc(1, 3);
-      mkOp2(OP_ADD, TYPE_F32, val0, val0, src1);
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi)
          mkMov(dst0[c], val0);
       break;

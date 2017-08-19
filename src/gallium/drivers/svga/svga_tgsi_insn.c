@@ -1237,39 +1237,6 @@ emit_dp2(struct svga_shader_emitter *emit,
 
 
 /**
- * Translate the following TGSI DPH instruction.
- *    DPH  DST, SRC1, SRC2
- * To the following SVGA3D instruction sequence.
- *    DP3  TMP, SRC1, SRC2
- *    ADD  DST, TMP, SRC2.wwww
- */
-static boolean
-emit_dph(struct svga_shader_emitter *emit,
-         const struct tgsi_full_instruction *insn )
-{
-   SVGA3dShaderDestToken dst = translate_dst_register( emit, insn, 0 );
-   const struct src_register src0 = translate_src_register(
-      emit, &insn->Src[0] );
-   struct src_register src1 =
-      translate_src_register(emit, &insn->Src[1]);
-   SVGA3dShaderDestToken temp = get_temp( emit );
-
-   /* DP3  TMP, SRC1, SRC2 */
-   if (!submit_op2( emit, inst_token( SVGA3DOP_DP3 ), temp, src0, src1 ))
-      return FALSE;
-
-   src1 = scalar(src1, TGSI_SWIZZLE_W);
-
-   /* ADD  DST, TMP, SRC2.wwww */
-   if (!submit_op2( emit, inst_token( SVGA3DOP_ADD ), dst,
-                    src( temp ), src1 ))
-      return FALSE;
-
-   return TRUE;
-}
-
-
-/**
  * Sine / Cosine helper function.
  */
 static boolean
@@ -2923,9 +2890,6 @@ svga_emit_instruction(struct svga_shader_emitter *emit,
 
    case TGSI_OPCODE_DP2:
       return emit_dp2( emit, insn );
-
-   case TGSI_OPCODE_DPH:
-      return emit_dph( emit, insn );
 
    case TGSI_OPCODE_COS:
       return emit_cos( emit, insn );

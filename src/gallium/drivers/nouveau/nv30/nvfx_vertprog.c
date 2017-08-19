@@ -588,9 +588,6 @@ nvfx_vertprog_parse_instruction(struct nvfx_vpc *vpc,
    case TGSI_OPCODE_DP4:
       nvfx_vp_emit(vpc, arith(sat, VEC, DP4, dst, mask, src[0], src[1], none));
       break;
-   case TGSI_OPCODE_DPH:
-      nvfx_vp_emit(vpc, arith(sat, VEC, DPH, dst, mask, src[0], src[1], none));
-      break;
    case TGSI_OPCODE_DST:
       nvfx_vp_emit(vpc, arith(sat, VEC, DST, dst, mask, src[0], src[1], none));
       break;

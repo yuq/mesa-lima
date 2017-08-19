@@ -591,11 +591,6 @@ nvfx_fragprog_parse_instruction(struct nvfx_fpc *fpc,
    case TGSI_OPCODE_DP4:
       nvfx_fp_emit(fpc, arith(sat, DP4, dst, mask, src[0], src[1], none));
       break;
-   case TGSI_OPCODE_DPH:
-      tmp = nvfx_src(temp(fpc));
-      nvfx_fp_emit(fpc, arith(0, DP3, tmp.reg, NVFX_FP_MASK_X, src[0], src[1], none));
-      nvfx_fp_emit(fpc, arith(sat, ADD, dst, mask, swz(tmp, X, X, X, X), swz(src[1], W, W, W, W), none));
-      break;
    case TGSI_OPCODE_DST:
       nvfx_fp_emit(fpc, arith(sat, DST, dst, mask, src[0], src[1], none));
       break;

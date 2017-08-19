@@ -58,7 +58,6 @@ static unsigned translate_opcode(unsigned opcode)
         case TGSI_OPCODE_LG2: return RC_OPCODE_LG2;
         case TGSI_OPCODE_POW: return RC_OPCODE_POW;
         case TGSI_OPCODE_XPD: return RC_OPCODE_XPD;
-        case TGSI_OPCODE_DPH: return RC_OPCODE_DPH;
         case TGSI_OPCODE_COS: return RC_OPCODE_COS;
         case TGSI_OPCODE_DDX: return RC_OPCODE_DDX;
         case TGSI_OPCODE_DDY: return RC_OPCODE_DDY;

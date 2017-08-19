@@ -6617,13 +6617,6 @@ static int tgsi_dp(struct r600_shader_ctx *ctx)
 				alu.src[0].chan = alu.src[1].chan = 0;
 			}
 			break;
-		case TGSI_OPCODE_DPH:
-			if (i == 3) {
-				alu.src[0].sel = V_SQ_ALU_SRC_1;
-				alu.src[0].chan = 0;
-				alu.src[0].neg = 0;
-			}
-			break;
 		default:
 			break;
 		}
@@ -9103,7 +9096,7 @@ static const struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[] 
 	[32]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[33]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[34]			= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_DPH]	= { ALU_OP2_DOT4_IEEE, tgsi_dp},
+	[35]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_COS]	= { ALU_OP1_COS, tgsi_trig},
 	[TGSI_OPCODE_DDX]	= { FETCH_OP_GET_GRADIENTS_H, tgsi_tex},
 	[TGSI_OPCODE_DDY]	= { FETCH_OP_GET_GRADIENTS_V, tgsi_tex},
@@ -9301,7 +9294,7 @@ static const struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = 
 	[32]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[33]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[34]			= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_DPH]	= { ALU_OP2_DOT4_IEEE, tgsi_dp},
+	[35]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_COS]	= { ALU_OP1_COS, tgsi_trig},
 	[TGSI_OPCODE_DDX]	= { FETCH_OP_GET_GRADIENTS_H, tgsi_tex},
 	[TGSI_OPCODE_DDY]	= { FETCH_OP_GET_GRADIENTS_V, tgsi_tex},
@@ -9524,7 +9517,7 @@ static const struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = 
 	[32]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[33]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[34]			= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_DPH]	= { ALU_OP2_DOT4_IEEE, tgsi_dp},
+	[35]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_COS]	= { ALU_OP1_COS, cayman_trig},
 	[TGSI_OPCODE_DDX]	= { FETCH_OP_GET_GRADIENTS_H, tgsi_tex},
 	[TGSI_OPCODE_DDY]	= { FETCH_OP_GET_GRADIENTS_V, tgsi_tex},

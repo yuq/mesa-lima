@@ -372,7 +372,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_U2I64               32
 #define TGSI_OPCODE_CLOCK               33
 #define TGSI_OPCODE_I2I64               34
-#define TGSI_OPCODE_DPH                 35
+/* gap */
 #define TGSI_OPCODE_COS                 36
 #define TGSI_OPCODE_DDX                 37
 #define TGSI_OPCODE_DDY                 38

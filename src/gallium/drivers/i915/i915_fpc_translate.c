@@ -604,17 +604,6 @@ i915_translate_instruction(struct i915_fp_compile *p,
       emit_simple_arith(p, inst, A0_DP4, 2, fs);
       break;
 
-   case TGSI_OPCODE_DPH:
-      src0 = src_vector(p, &inst->Src[0], fs);
-      src1 = src_vector(p, &inst->Src[1], fs);
-
-      i915_emit_arith(p,
-                      A0_DP4,
-                      get_result_vector(p, &inst->Dst[0]),
-                      get_result_flags(inst), 0,
-                      swizzle(src0, X, Y, Z, ONE), src1, 0);
-      break;
-
    case TGSI_OPCODE_DST:
       src0 = src_vector(p, &inst->Src[0], fs);
       src1 = src_vector(p, &inst->Src[1], fs);

@@ -457,8 +457,6 @@ translate_opcode( unsigned op )
       return TGSI_OPCODE_DP3;
    case OPCODE_DP4:
       return TGSI_OPCODE_DP4;
-   case OPCODE_DPH:
-      return TGSI_OPCODE_DPH;
    case OPCODE_DST:
       return TGSI_OPCODE_DST;
    case OPCODE_EX2:
@@ -588,6 +586,17 @@ compile_instruction(
    case OPCODE_SUB:
       ureg_ADD(ureg, dst[0], src[0], ureg_negate(src[1]));
       break;
+
+   case OPCODE_DPH: {
+      struct ureg_dst temp = ureg_DECL_temporary(ureg);
+
+      /* DPH = DP4(src0, src1) where src0.w = 1. */
+      ureg_MOV(ureg, ureg_writemask(temp, TGSI_WRITEMASK_XYZ), src[0]);
+      ureg_MOV(ureg, ureg_writemask(temp, TGSI_WRITEMASK_W),
+               ureg_imm1f(ureg, 1));
+      ureg_DP4(ureg, dst[0], ureg_src(temp), src[1]);
+      break;
+   }
 
    default:
       ureg_insn( ureg, 
