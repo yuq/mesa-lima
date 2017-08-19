@@ -656,27 +656,14 @@ static void emit_pk2h(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	LLVMContextRef context = bld_base->base.gallivm->context;
-	struct lp_build_context *uint_bld = &bld_base->uint_bld;
-	LLVMTypeRef fp16, i16;
-	LLVMValueRef const16, comp[2];
-	unsigned i;
-
-	fp16 = LLVMHalfTypeInContext(context);
-	i16 = LLVMInt16TypeInContext(context);
-	const16 = lp_build_const_int32(uint_bld->gallivm, 16);
-
-	for (i = 0; i < 2; i++) {
-		comp[i] = LLVMBuildFPTrunc(builder, emit_data->args[i], fp16, "");
-		comp[i] = LLVMBuildBitCast(builder, comp[i], i16, "");
-		comp[i] = LLVMBuildZExt(builder, comp[i], uint_bld->elem_type, "");
-	}
-
-	comp[1] = LLVMBuildShl(builder, comp[1], const16, "");
-	comp[0] = LLVMBuildOr(builder, comp[0], comp[1], "");
-
-	emit_data->output[emit_data->chan] = comp[0];
+	/* From the GLSL 4.50 spec:
+	 *   "The rounding mode cannot be set and is undefined."
+	 *
+	 * v_cvt_pkrtz_f16 rounds to zero, but it's fastest.
+	 */
+	emit_data->output[emit_data->chan] =
+		ac_build_cvt_pkrtz_f16(&si_shader_context(bld_base)->ac,
+				       emit_data->args);
 }
 
 static void up2h_fetch_args(struct lp_build_tgsi_context *bld_base,
