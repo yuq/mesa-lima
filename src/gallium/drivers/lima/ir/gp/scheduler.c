@@ -129,6 +129,66 @@ static gpir_instr *gpir_instr_array_grow(struct util_dynarray *instrs, int pos)
    return gpir_instr_array_e(instrs, pos);
 }
 
+static bool gpir_try_insert_node(gpir_block *block, gpir_node *node)
+{
+   gpir_instr *instr = gpir_instr_array_grow(&block->instrs, node->sched_instr);
+   return gpir_instr_try_insert_node(instr, node);
+}
+
+/*
+ * Finds a position for node.
+ * Success is set to false if no position could be found for node
+ * that satisfies all the constraints, in which case node is still
+ * scheduled and an intermediate move must be inserted.
+ */
+static bool gpir_try_place_node(gpir_block *block, gpir_node *node, bool *success)
+{
+   int *slots = gpir_op_infos[node->op].slots;
+
+   /* Pass 1: find a perfect place to insert this node to instr.
+    * no additional node needs be inserted
+    */
+   for (int i = 0; slots[i] != GPIR_INSTR_SLOT_END; i++) {
+      int start = 0, end = INT_MAX;
+      bool was_successful = true;
+
+      node->sched_pos = slots[i];
+
+      /* find legal instr range contrained by successors */
+      gpir_node_foreach_succ(node, entry) {
+         gpir_node *succ = gpir_node_from_entry(entry, succ);
+         gpir_dep_info *dep = gpir_dep_from_entry(entry);
+         int min = succ->sched_instr + gpir_get_min_dist(dep);
+         int max = succ->sched_instr + gpir_get_max_dist(dep);
+
+         if (min > end || max < start) {
+            was_successful = false;
+            break;
+         }
+
+         if (min > start)
+            start = min;
+         if (max < end)
+            end = max;
+      }
+
+      if (was_successful) {
+         while (start <= end) {
+            node->sched_instr = start;
+
+            if (gpir_try_insert_node(block, node)) {
+               *success = true;
+               return true;
+            }
+
+            start++;
+         }
+      }
+   }
+
+   return false;
+}
+
 static void gpir_schedule_node(gpir_block *block, gpir_node *node)
 {
    node->scheduled = true;
@@ -139,43 +199,9 @@ static void gpir_schedule_node(gpir_block *block, gpir_node *node)
    if (!slots)
       return;
 
-   int i, start = 0, end = INT_MAX;
-
-   /* find legal instr range contrained by successors */
-   gpir_node_foreach_succ(node, entry) {
-      gpir_node *succ = gpir_node_from_entry(entry, succ);
-      gpir_dep_info *dep = gpir_dep_from_entry(entry);
-      int min = succ->sched_instr + gpir_get_min_dist(dep);
-      int max = succ->sched_instr + gpir_get_max_dist(dep);
-
-      if (min > end || max < start)
-         goto err_out;
-
-      if (min > start)
-         start = min;
-      if (max < end)
-         end = max;
-   }
-
-   while (start <= end) {
-      gpir_instr *instr = gpir_instr_array_grow(&block->instrs, start);
-
-      /* find an idle slot to insert the node */
-      for (i = 0; slots[i] != GPIR_INSTR_SLOT_END; i++) {
-         if (!instr->slots[slots[i]]) {
-            instr->slots[slots[i]] = node;
-            break;
-         }
-      }
-
-      if (slots[i] != GPIR_INSTR_SLOT_END) {
-         node->sched_instr = start;
-         node->sched_pos = slots[i];
-         return;
-      }
-
-      start++;
-   }
+   bool success;
+   if (gpir_try_place_node(block, node, &success) && success)
+      return;
 
 err_out:
    fprintf(stderr, "gpir: fail to schedule node %s %d\n",
