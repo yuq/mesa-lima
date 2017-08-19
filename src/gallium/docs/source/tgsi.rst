@@ -2635,36 +2635,6 @@ These opcodes are intended for communication between threads running
 within the same compute grid.  For now they're only valid in compute
 programs.
 
-.. opcode:: MFENCE - Memory fence
-
-  Syntax: ``MFENCE resource``
-
-  Example: ``MFENCE RES[0]``
-
-  This opcode forces strong ordering between any memory access
-  operations that affect the specified resource.  This means that
-  previous loads and stores (and only those) will be performed and
-  visible to other threads before the program execution continues.
-
-
-.. opcode:: LFENCE - Load memory fence
-
-  Syntax: ``LFENCE resource``
-
-  Example: ``LFENCE RES[0]``
-
-  Similar to MFENCE, but it only affects the ordering of memory loads.
-
-
-.. opcode:: SFENCE - Store memory fence
-
-  Syntax: ``SFENCE resource``
-
-  Example: ``SFENCE RES[0]``
-
-  Similar to MFENCE, but it only affects the ordering of memory stores.
-
-
 .. opcode:: BARRIER - Thread group barrier
 
   ``BARRIER``

@@ -994,9 +994,6 @@ static nv50_ir::operation translateOpcode(uint opcode)
 static uint16_t opcodeToSubOp(uint opcode)
 {
    switch (opcode) {
-   case TGSI_OPCODE_LFENCE:   return NV50_IR_SUBOP_MEMBAR(L, GL);
-   case TGSI_OPCODE_SFENCE:   return NV50_IR_SUBOP_MEMBAR(S, GL);
-   case TGSI_OPCODE_MFENCE:   return NV50_IR_SUBOP_MEMBAR(M, GL);
    case TGSI_OPCODE_ATOMUADD: return NV50_IR_SUBOP_ATOM_ADD;
    case TGSI_OPCODE_ATOMXCHG: return NV50_IR_SUBOP_ATOM_EXCH;
    case TGSI_OPCODE_ATOMCAS:  return NV50_IR_SUBOP_ATOM_CAS;
@@ -3782,13 +3779,6 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       geni = mkOp2(OP_BAR, TYPE_U32, NULL, mkImm(0), mkImm(0));
       geni->fixed = 1;
       geni->subOp = NV50_IR_SUBOP_BAR_SYNC;
-      break;
-   case TGSI_OPCODE_MFENCE:
-   case TGSI_OPCODE_LFENCE:
-   case TGSI_OPCODE_SFENCE:
-      geni = mkOp(OP_MEMBAR, TYPE_NONE, NULL);
-      geni->fixed = 1;
-      geni->subOp = tgsi::opcodeToSubOp(tgsi.getOpcode());
       break;
    case TGSI_OPCODE_MEMBAR:
    {

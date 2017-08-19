@@ -506,10 +506,7 @@ struct tgsi_property_data {
 
 #define TGSI_OPCODE_LOAD                161
 #define TGSI_OPCODE_STORE               162
-
-#define TGSI_OPCODE_MFENCE              163
-#define TGSI_OPCODE_LFENCE              164
-#define TGSI_OPCODE_SFENCE              165
+/* gap */
 #define TGSI_OPCODE_BARRIER             166
 
 #define TGSI_OPCODE_ATOMUADD            167
