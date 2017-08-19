@@ -27,25 +27,19 @@
 #include "gpir.h"
 
 
-static void *gpir_node_create_ssa(gpir_compiler *comp, gpir_op op, nir_ssa_def *ssa)
+static inline void *gpir_node_create_ssa(gpir_compiler *comp, gpir_op op, nir_ssa_def *ssa)
 {
-   int max_parent = list_length(&ssa->uses) + list_length(&ssa->if_uses);
-   int index = ssa->index;
-
-   return gpir_node_create(comp, op, index, max_parent);
+   return gpir_node_create(comp, op, ssa->index);
 }
 
-static void *gpir_node_create_reg(gpir_compiler *comp, gpir_op op, nir_reg_dest *reg)
+static inline void *gpir_node_create_reg(gpir_compiler *comp, gpir_op op, nir_reg_dest *reg)
 {
-   int max_parent = list_length(&reg->reg->uses) + list_length(&reg->reg->if_uses);
-   int index = reg->reg->index + comp->reg_base;
-
-   return gpir_node_create(comp, op, index, max_parent);
+   return gpir_node_create(comp, op, reg->reg->index + comp->reg_base);
 }
 
 static void *gpir_node_create_dest(gpir_compiler *comp, gpir_op op, nir_dest *dest)
 {
-   unsigned max_parent = 0, index = -1;
+   unsigned index = -1;
 
    if (dest) {
       if (dest->is_ssa)
@@ -54,7 +48,7 @@ static void *gpir_node_create_dest(gpir_compiler *comp, gpir_op op, nir_dest *de
          return gpir_node_create_reg(comp, op, &dest->reg);
    }
 
-   return gpir_node_create(comp, op, index, max_parent);
+   return gpir_node_create(comp, op, index);
 }
 
 static gpir_node *gpir_node_find(gpir_compiler *comp, nir_src *src)
@@ -101,7 +95,8 @@ static gpir_node *gpir_emit_alu(gpir_compiler *comp, nir_alu_instr *instr)
       return NULL;
 
    unsigned num_child = nir_op_infos[instr->op].num_inputs;
-   assert(num_child <= ARRAY_SIZE(node->children_component));
+   assert(num_child <= ARRAY_SIZE(node->children));
+   node->num_child = num_child;
 
    for (int i = 0; i < num_child; i++) {
       nir_alu_src *src = instr->src + i;
@@ -109,6 +104,8 @@ static gpir_node *gpir_emit_alu(gpir_compiler *comp, nir_alu_instr *instr)
       node->children_component[i] = src->swizzle[0];
 
       gpir_node *child = gpir_node_find(comp, &src->src);
+      node->children[i] = child;
+
       gpir_node_add_child(&node->node, child);
    }
 
@@ -135,11 +132,12 @@ static gpir_node *gpir_emit_intrinsic(gpir_compiler *comp, nir_intrinsic_instr *
       lnode->index = instr->const_index[NIR_INTRINSIC_BASE];
       lnode->component = instr->num_components;
       child = gpir_node_find(comp, instr->src);
+      lnode->child = child;
       gpir_node_add_child(&lnode->node, child);
 
       if (instr->intrinsic == nir_intrinsic_load_input) {
          /* TODO: only support fix address input load, not sure if the hardware limit */
-         assert(lnode->node.children[0]->op == gpir_op_const);
+         assert(lnode->child->op == gpir_op_const);
       }
 
       return &lnode->node;
@@ -149,8 +147,11 @@ static gpir_node *gpir_emit_intrinsic(gpir_compiler *comp, nir_intrinsic_instr *
       if (!snode)
          return NULL;
 
+      snode->num_child = 2;
+
       for (int i = 0; i < 2; i++) {
          child = gpir_node_find(comp, instr->src + i);
+         snode->children[i] = child;
          gpir_node_add_child(&snode->node, child);
       }
       return &snode->node;
