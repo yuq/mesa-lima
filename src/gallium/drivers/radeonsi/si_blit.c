@@ -381,13 +381,27 @@ si_decompress_depth(struct si_context *sctx,
 	}
 
 	if (inplace_planes) {
+		bool has_htile = r600_htile_enabled(tex, first_level);
 		bool tc_compat_htile = vi_tc_compat_htile_enabled(tex, first_level);
 
-		if (!tc_compat_htile) {
+		/* Don't decompress if there is no HTILE or when HTILE is
+		 * TC-compatible. */
+		if (has_htile && !tc_compat_htile) {
 			si_blit_decompress_zs_in_place(
 						sctx, tex,
 						levels_z, levels_s,
 						first_layer, last_layer);
+		} else {
+			/* This is only a cache flush.
+			 *
+			 * Only clear the mask that we are flushing, because
+			 * si_make_DB_shader_coherent() treats different levels
+			 * and depth and stencil differently.
+			 */
+			if (inplace_planes & PIPE_MASK_Z)
+				tex->dirty_level_mask &= ~levels_z;
+			if (inplace_planes & PIPE_MASK_S)
+				tex->stencil_dirty_level_mask &= ~levels_s;
 		}
 
 		/* Only in-place decompression needs to flush DB caches, or
@@ -396,17 +410,6 @@ si_decompress_depth(struct si_context *sctx,
 		si_make_DB_shader_coherent(sctx, tex->resource.b.b.nr_samples,
 					   inplace_planes & PIPE_MASK_S,
 					   tc_compat_htile);
-
-		if (tc_compat_htile) {
-			/* Only clear the mask that we are flushing, because
-			 * si_make_DB_shader_coherent() can treat depth and
-			 * stencil differently.
-			 */
-			if (inplace_planes & PIPE_MASK_Z)
-				tex->dirty_level_mask &= ~levels_z;
-			if (inplace_planes & PIPE_MASK_S)
-				tex->stencil_dirty_level_mask &= ~levels_s;
-		}
 	}
 	/* set_framebuffer_state takes care of coherency for single-sample.
 	 * The DB->CB copy uses CB for the final writes.
