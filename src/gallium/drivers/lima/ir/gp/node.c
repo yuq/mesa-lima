@@ -25,7 +25,9 @@
 #include <stdio.h>
 
 #include "util/u_math.h"
-#include "util/u_memory.h"
+#include "util/ralloc.h"
+#include "util/hash_table.h"
+
 #include "gpir.h"
 
 const gpir_op_info gpir_op_infos[] = {
@@ -204,7 +206,7 @@ const gpir_op_info gpir_op_infos[] = {
    },
 };
 
-void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index, int max_parent)
+void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index)
 {
    static const int node_size[] = {
       [gpir_node_type_alu] = sizeof(gpir_alu_node),
@@ -216,17 +218,16 @@ void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index, int max_paren
 
    gpir_node_type type = gpir_op_infos[op].type;
    int size = node_size[type];
-   gpir_node *node = CALLOC(1, size);
+   gpir_node *node = rzalloc_size(NULL, size);
    if (!node)
       return NULL;
 
-   if (max_parent) {
-      max_parent = util_next_power_of_two(max_parent);
-      node->parents = CALLOC(1, max_parent * sizeof(gpir_node *));
-      if (!node->parents)
-         goto err_out;
-   }
-   node->max_parent = max_parent;
+   node->preds = _mesa_set_create(node, _mesa_hash_pointer, _mesa_key_pointer_equal);
+   if (!node->preds)
+      goto err_out;
+   node->succs = _mesa_set_create(node, _mesa_hash_pointer, _mesa_key_pointer_equal);
+   if (!node->succs)
+      goto err_out;
 
    if (index >= 0)
       comp->var_nodes[index] = node;
@@ -234,76 +235,68 @@ void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index, int max_paren
    node->op = op;
    node->type = type;
    node->index = comp->cur_index++;
-   node->distance = -1;
+   node->sched_dist = -1;
 
    return node;
 
 err_out:
-   FREE(node);
+   ralloc_free(node);
    return NULL;
 }
 
-static void gpir_node_add_parent(gpir_node *parent, gpir_node *child)
+static void gpir_node_create_dep(gpir_node *succ, gpir_node *pred,
+                                 bool is_child_dep, bool is_offset)
 {
-   for (int i = 0; i < child->num_parent; i++) {
-      if (child->parents[i] == parent)
+   /* don't add duplicated dep */
+   gpir_node_foreach_pred(succ, entry) {
+      gpir_node *node = gpir_node_from_entry(entry, pred);
+      if (node == pred)
          return;
    }
 
-   child->parents[child->num_parent++] = parent;
-   assert(child->num_parent <= child->max_parent);
+   gpir_dep_info *dep = ralloc(succ, gpir_dep_info);
+
+   dep->pred = pred;
+   dep->succ = succ;
+   dep->is_child_dep = is_child_dep;
+   dep->is_offset = is_offset;
+
+   _mesa_set_add(succ->preds, dep);
+   _mesa_set_add(pred->succs, dep);
 }
 
 void gpir_node_add_child(gpir_node *parent, gpir_node *child)
 {
-   parent->children[parent->num_child++] = child;
-   gpir_node_add_parent(parent, child);
+   gpir_node_create_dep(parent, child, true, false);
 }
 
-void gpir_node_remove_parent_cleanup(gpir_node *node)
+void gpir_node_remove_entry(struct set_entry *entry)
 {
-   int i, j;
+   uint32_t hash = entry->hash;
+   gpir_dep_info *dep = gpir_dep_from_entry(entry);
 
-   /* remove holes in parents array */
-   for (i = 0; i < node->num_parent; i++) {
-      for (j = i; !node->parents[j]; j++);
-      if (j != i) {
-         node->parents[i] = node->parents[j];
-         node->parents[j] = NULL;
-      }
-   }
+   struct set *set = dep->pred->succs;
+   _mesa_set_remove(set, _mesa_set_search_pre_hashed(set, hash, dep));
+
+   set = dep->succ->preds;
+   _mesa_set_remove(set, _mesa_set_search_pre_hashed(set, hash, dep));
+
+   ralloc_free(dep);
 }
 
-void gpir_node_replace_parent(gpir_node *child, gpir_node *parent)
+void gpir_node_merge_succ(gpir_node *dst, gpir_node *src)
 {
-   for (int i = 0; i < child->num_parent; i++) {
-      if (child->parents[i] == parent) {
-         child->parents[i] = parent->parents[0];
-         break;
-      }
-   }
-
-   int n = parent->num_parent - 1;
-   if (n) {
-      int max_parent = child->num_parent + n;
-      if (child->max_parent < max_parent) {
-         max_parent = util_next_power_of_two(max_parent);
-         child->parents = REALLOC(child->parents,
-                                  child->max_parent * sizeof(gpir_node *),
-                                  max_parent * sizeof(gpir_node *));
-         child->max_parent = max_parent;
-      }
-      for (int i = 0; i < n; i++)
-         gpir_node_add_parent(parent->parents[i + 1], child);
+   gpir_node_foreach_succ(src, entry) {
+      gpir_node *succ = gpir_node_from_entry(entry, succ);
+      gpir_dep_info *dep = gpir_dep_from_entry(entry);
+      gpir_node_create_dep(succ, dst, dep->is_child_dep, dep->is_offset);
    }
 }
 
 void gpir_node_delete(gpir_node *node)
 {
    list_del(&node->list);
-   if (node->max_parent)
-      FREE(node->parents);
-   FREE(node);
+   ralloc_free(node);
 }
 
 static void gpir_node_print_node(gpir_node *node, int space)
@@ -312,8 +305,10 @@ static void gpir_node_print_node(gpir_node *node, int space)
       printf(" ");
    printf("%s %d\n", gpir_op_infos[node->op].name, node->index);
 
-   for (int i = 0; i < node->num_child; i++)
-      gpir_node_print_node(node->children[i], space + 2);
+   gpir_node_foreach_pred(node, entry) {
+      gpir_node *pred = gpir_node_from_entry(entry, pred);
+      gpir_node_print_node(pred, space + 2);
+   }
 }
 
 void gpir_node_print_prog(gpir_compiler *comp)
@@ -322,7 +317,7 @@ void gpir_node_print_prog(gpir_compiler *comp)
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
       printf("-------block------\n");
       list_for_each_entry(gpir_node, node, &block->node_list, list) {
-         if (!node->num_parent)
+         if (gpir_node_is_root(node))
             gpir_node_print_node(node, 0);
       }
    }
