@@ -27,9 +27,9 @@
 
 #include "gpir.h"
 
-static int gpir_min_dist_alu(gpir_node *node)
+static int gpir_min_dist_alu(gpir_dep_info *dep)
 {
-   switch (node->op) {
+   switch (dep->pred->op) {
    case gpir_op_load_attribute:
       return 0;
 
@@ -38,56 +38,68 @@ static int gpir_min_dist_alu(gpir_node *node)
    }
 }
 
-static int gpir_get_min_dist(gpir_node *parent, gpir_node *child)
+static int gpir_get_min_dist(gpir_dep_info *dep)
 {
-   switch (parent->op) {
-   case gpir_op_store_varying:
-      return 0;
+   if (dep->is_child_dep) {
+      switch (dep->succ->op) {
+      case gpir_op_store_varying:
+         return 0;
 
-   case gpir_op_mov:
-   case gpir_op_mul:
-   case gpir_op_add:
-   case gpir_op_sub:
-      return gpir_min_dist_alu(child);
+      case gpir_op_mov:
+      case gpir_op_mul:
+      case gpir_op_add:
+      case gpir_op_sub:
+         return gpir_min_dist_alu(dep);
 
-   default:
-      return 0;
+      default:
+         return 0;
+      }
    }
+
+   return 0;
 }
 
-static int gpir_max_dist_alu(gpir_node *node)
+static int gpir_max_dist_alu(gpir_dep_info *dep)
 {
-   switch (node->op) {
+   switch (dep->pred->op) {
    case gpir_op_load_attribute:
       return 1;
    default:
-      return 2;
+      break;
    }
+
+   return 2;
 }
 
-static int gpir_get_max_dist(gpir_node *parent, gpir_node *child)
+static int gpir_get_max_dist(gpir_dep_info *dep)
 {
-   switch (parent->op) {
-   case gpir_op_store_varying:
-      return 0;
+   if (dep->is_child_dep) {
+      switch (dep->succ->op) {
+      case gpir_op_store_varying:
+         return 0;
 
-   case gpir_op_mov:
-   case gpir_op_mul:
-   case gpir_op_add:
-   case gpir_op_sub:
-      return gpir_max_dist_alu(child);
+      case gpir_op_mov:
+      case gpir_op_mul:
+      case gpir_op_add:
+      case gpir_op_sub:
+         return gpir_max_dist_alu(dep);
 
-   default:
-      return 0;
+      default:
+         return 0;
+      }
    }
+
+   return INT_MAX >> 2; /* Don't want to overflow... */
 }
 
 static void gpir_update_distance(gpir_node *node, int d)
 {
-   if (d > node->distance) {
-      node->distance = d;
-      for (int i = 0; i < node->num_parent; i++)
-         gpir_update_distance(node->parents[i], d + gpir_get_min_dist(node->parents[i], node));
+   if (d > node->sched_dist) {
+      node->sched_dist = d;
+      gpir_node_foreach_succ(node, entry) {
+         gpir_node *succ = gpir_node_from_entry(entry, succ);
+         gpir_update_distance(succ, d + gpir_get_min_dist(gpir_dep_from_entry(entry)));
+      }
    }
 }
 
@@ -96,7 +108,7 @@ static void gpir_insert_ready_list(struct list_head *ready_list, gpir_node *inse
    struct list_head *insert_pos = ready_list;
 
    list_for_each_entry(gpir_node, node, ready_list, ready) {
-      if (insert_node->distance > node->distance) {
+      if (insert_node->sched_dist > node->sched_dist) {
          insert_pos = &node->ready;
          break;
       }
@@ -129,11 +141,12 @@ static void gpir_schedule_node(gpir_block *block, gpir_node *node)
 
    int i, start = 0, end = INT_MAX;
 
-   /* find legal instr range contrained by parents */
-   for (i = 0; i < node->num_parent; i++) {
-      gpir_node *parent = node->parents[i];
-      int min = parent->instr_index + gpir_get_min_dist(parent, node);
-      int max = parent->instr_index + gpir_get_max_dist(parent, node);
+   /* find legal instr range contrained by successors */
+   gpir_node_foreach_succ(node, entry) {
+      gpir_node *succ = gpir_node_from_entry(entry, succ);
+      gpir_dep_info *dep = gpir_dep_from_entry(entry);
+      int min = succ->sched_instr + gpir_get_min_dist(dep);
+      int max = succ->sched_instr + gpir_get_max_dist(dep);
 
       if (min > end || max < start)
          goto err_out;
@@ -156,7 +169,8 @@ static void gpir_schedule_node(gpir_block *block, gpir_node *node)
       }
 
       if (slots[i] != GPIR_INSTR_SLOT_END) {
-         node->instr_index = start;
+         node->sched_instr = start;
+         node->sched_pos = slots[i];
          return;
       }
 
@@ -178,28 +192,21 @@ static void gpir_schedule_ready_list(gpir_block *block, struct list_head *ready_
 
    gpir_schedule_node(block, node);
 
-   for (int i = 0; i < node->num_child; i++) {
-      gpir_node *child = node->children[i];
-      /* process same child node only once */
-      for (int j = 0; j < i; j++) {
-         if (child == node->children[j]) {
-            child = NULL;
-            break;
-         }
-      }
-      if (!child)
-         continue;
-
+   gpir_node_foreach_pred(node, entry) {
+      gpir_node *pred = gpir_node_from_entry(entry, pred);
       bool ready = true;
-      /* after all parents has been scheduled */
-      for (int j = 0; j < child->num_parent; j++) {
-         if (!child->parents[j]->scheduled) {
+
+      /* after all successor has been scheduled */
+      gpir_node_foreach_succ(pred, _entry) {
+         gpir_node *succ = gpir_node_from_entry(_entry, succ);
+         if (!succ->scheduled) {
             ready = false;
             break;
          }
       }
+
       if (ready)
-         gpir_insert_ready_list(ready_list, child);
+         gpir_insert_ready_list(ready_list, pred);
    }
 
    gpir_schedule_ready_list(block, ready_list);
@@ -216,7 +223,7 @@ static void gpir_schedule_block(gpir_block *block)
 
    /* calculate distance start from leaf nodes */
    list_for_each_entry(gpir_node, node, &block->node_list, list) {
-      if (!node->num_child)
+      if (gpir_node_is_leaf(node))
          gpir_update_distance(node, 0);
    }
 
@@ -225,7 +232,7 @@ static void gpir_schedule_block(gpir_block *block)
 
    /* construct the ready list from root nodes */
    list_for_each_entry(gpir_node, node, &block->node_list, list) {
-      if (!node->num_parent)
+      if (gpir_node_is_root(node))
          gpir_insert_ready_list(&ready_list, node);
    }
 
