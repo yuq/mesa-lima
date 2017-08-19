@@ -214,7 +214,6 @@ tgsi_util_get_inst_usage_mask(const struct tgsi_full_instruction *inst,
    case TGSI_OPCODE_AND:
    case TGSI_OPCODE_OR:
    case TGSI_OPCODE_XOR:
-   case TGSI_OPCODE_SAD:
    case TGSI_OPCODE_FSEQ:
    case TGSI_OPCODE_FSGE:
    case TGSI_OPCODE_FSLT:

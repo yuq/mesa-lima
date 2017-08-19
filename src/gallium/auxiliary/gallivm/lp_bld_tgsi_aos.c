@@ -776,18 +776,6 @@ lp_emit_instruction_aos(
    case TGSI_OPCODE_ENDSUB:
       return FALSE;
 
-   case TGSI_OPCODE_PUSHA:
-      /* deprecated? */
-      assert(0);
-      return FALSE;
-      break;
-
-   case TGSI_OPCODE_POPA:
-      /* deprecated? */
-      assert(0);
-      return FALSE;
-      break;
-
    case TGSI_OPCODE_CEIL:
       src0 = lp_build_emit_fetch(&bld->bld_base, inst, 0, LP_CHAN_ALL);
       dst0 = lp_build_ceil(&bld->bld_base.base, src0);
@@ -834,11 +822,6 @@ lp_emit_instruction_aos(
       break;
 
    case TGSI_OPCODE_XOR:
-      assert(0);
-      return FALSE;
-      break;
-
-   case TGSI_OPCODE_SAD:
       assert(0);
       return FALSE;
       break;

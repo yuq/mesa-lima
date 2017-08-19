@@ -620,7 +620,6 @@ nv50_ir::DataType Instruction::inferSrcType() const
    case TGSI_OPCODE_ISHR:
    case TGSI_OPCODE_ISLT:
    case TGSI_OPCODE_ISSG:
-   case TGSI_OPCODE_SAD: // not sure about SAD, but no one has a float version
    case TGSI_OPCODE_MOD:
    case TGSI_OPCODE_UARL:
    case TGSI_OPCODE_ATOMIMIN:
@@ -845,7 +844,6 @@ static nv50_ir::operation translateOpcode(uint opcode)
    NV50_IR_OPCODE_CASE(OR, OR);
    NV50_IR_OPCODE_CASE(MOD, MOD);
    NV50_IR_OPCODE_CASE(XOR, XOR);
-   NV50_IR_OPCODE_CASE(SAD, SAD);
    NV50_IR_OPCODE_CASE(TXF, TXF);
    NV50_IR_OPCODE_CASE(TXF_LZ, TXF);
    NV50_IR_OPCODE_CASE(TXQ, TXQ);
@@ -3198,7 +3196,6 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       break;
    case TGSI_OPCODE_MAD:
    case TGSI_OPCODE_UMAD:
-   case TGSI_OPCODE_SAD:
    case TGSI_OPCODE_FMA:
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
          src0 = fetchSrc(0, c);

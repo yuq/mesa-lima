@@ -835,37 +835,6 @@ This instruction replicates its result.
   dst = texture\_sample(unit, coord, lod)
 
 
-.. opcode:: PUSHA - Push Address Register On Stack
-
-  push(src.x)
-  push(src.y)
-  push(src.z)
-  push(src.w)
-
-.. note::
-
-   Considered for cleanup.
-
-.. note::
-
-   Considered for removal.
-
-.. opcode:: POPA - Pop Address Register From Stack
-
-  dst.w = pop()
-  dst.z = pop()
-  dst.y = pop()
-  dst.x = pop()
-
-.. note::
-
-   Considered for cleanup.
-
-.. note::
-
-   Considered for removal.
-
-
 .. opcode:: CALLNZ - Subroutine Call If Not Zero
 
    TBD
@@ -932,19 +901,6 @@ XXX doesn't look like most of the opcodes really belong here.
   destination register, which is assumed to be an address (ADDR) register.
 
 
-.. opcode:: SAD - Sum Of Absolute Differences
-
-.. math::
-
-  dst.x = |src0.x - src1.x| + src2.x
-
-  dst.y = |src0.y - src1.y| + src2.y
-
-  dst.z = |src0.z - src1.z| + src2.z
-
-  dst.w = |src0.w - src1.w| + src2.w
-
-
 .. opcode:: TXF - Texel Fetch
 
   As per NV_gpu_shader4, extract a single texel from a specified texture
@@ -959,12 +915,6 @@ XXX doesn't look like most of the opcodes really belong here.
   state.
 
   TXF(uint_vec coord, int_vec offset).
-
-
-.. opcode:: TXF_LZ - Texel Fetch
-
-  This is the same as TXF with level = 0. Like TXF, it obeys
-  pipe_sampler_view::u.tex.first_level.
 
 
 .. opcode:: TXQ - Texture Size Query

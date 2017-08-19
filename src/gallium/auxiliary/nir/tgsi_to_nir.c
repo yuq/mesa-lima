@@ -1588,9 +1588,6 @@ static const nir_op op_trans[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_DDX_FINE] = nir_op_fddx_fine,
    [TGSI_OPCODE_DDY_FINE] = nir_op_fddy_fine,
 
-   [TGSI_OPCODE_PUSHA] = 0, /* XXX */
-   [TGSI_OPCODE_POPA] = 0, /* XXX */
-
    [TGSI_OPCODE_CEIL] = nir_op_fceil,
    [TGSI_OPCODE_I2F] = nir_op_i2f32,
    [TGSI_OPCODE_NOT] = nir_op_inot,
@@ -1600,7 +1597,6 @@ static const nir_op op_trans[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_OR] = nir_op_ior,
    [TGSI_OPCODE_MOD] = nir_op_umod,
    [TGSI_OPCODE_XOR] = nir_op_ixor,
-   [TGSI_OPCODE_SAD] = 0, /* XXX */
    [TGSI_OPCODE_TXF] = 0,
    [TGSI_OPCODE_TXQ] = 0,
 
@@ -1614,7 +1610,6 @@ static const nir_op op_trans[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_ENDLOOP] = 0,
    [TGSI_OPCODE_ENDSUB] = 0, /* XXX: no function calls */
 
-   [TGSI_OPCODE_TXQ_LZ] = 0,
    [TGSI_OPCODE_NOP] = 0,
    [TGSI_OPCODE_FSEQ] = nir_op_feq,
    [TGSI_OPCODE_FSGE] = nir_op_fge,
@@ -1835,7 +1830,6 @@ ttn_emit_instruction(struct ttn_compile *c)
    case TGSI_OPCODE_TEX2:
    case TGSI_OPCODE_TXL2:
    case TGSI_OPCODE_TXB2:
-   case TGSI_OPCODE_TXQ_LZ:
    case TGSI_OPCODE_TXF:
    case TGSI_OPCODE_TG4:
    case TGSI_OPCODE_LODQ:

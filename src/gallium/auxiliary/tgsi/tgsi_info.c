@@ -118,8 +118,8 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 0, 0, 0, 0, 0, 1, 0, NONE, "ENDIF", TGSI_OPCODE_ENDIF },
    { 1, 1, 0, 0, 0, 0, 0, COMP, "DDX_FINE", TGSI_OPCODE_DDX_FINE },
    { 1, 1, 0, 0, 0, 0, 0, COMP, "DDY_FINE", TGSI_OPCODE_DDY_FINE },
-   { 0, 1, 0, 0, 0, 0, 0, NONE, "PUSHA", TGSI_OPCODE_PUSHA },
-   { 1, 0, 0, 0, 0, 0, 0, NONE, "POPA", TGSI_OPCODE_POPA },
+   { 0, 1, 0, 0, 0, 0, 0, NONE, "", 81 }, /* removed */
+   { 1, 0, 0, 0, 0, 0, 0, NONE, "", 82 }, /* removed */
    { 1, 1, 0, 0, 0, 0, 0, COMP, "CEIL", TGSI_OPCODE_CEIL },
    { 1, 1, 0, 0, 0, 0, 0, COMP, "I2F", TGSI_OPCODE_I2F },
    { 1, 1, 0, 0, 0, 0, 0, COMP, "NOT", TGSI_OPCODE_NOT },
@@ -130,7 +130,7 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 1, 2, 0, 0, 0, 0, 0, COMP, "OR", TGSI_OPCODE_OR },
    { 1, 2, 0, 0, 0, 0, 0, COMP, "MOD", TGSI_OPCODE_MOD },
    { 1, 2, 0, 0, 0, 0, 0, COMP, "XOR", TGSI_OPCODE_XOR },
-   { 1, 3, 0, 0, 0, 0, 0, COMP, "SAD", TGSI_OPCODE_SAD },
+   { 1, 3, 0, 0, 0, 0, 0, COMP, "", 93 }, /* removed */
    { 1, 2, 1, 0, 0, 0, 0, OTHR, "TXF", TGSI_OPCODE_TXF },
    { 1, 2, 1, 0, 0, 0, 0, OTHR, "TXQ", TGSI_OPCODE_TXQ },
    { 0, 0, 0, 0, 0, 0, 0, NONE, "CONT", TGSI_OPCODE_CONT },
@@ -140,7 +140,7 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 0, 0, 0, 0, 0, 0, 1, NONE, "BGNSUB", TGSI_OPCODE_BGNSUB },
    { 0, 0, 0, 0, 1, 1, 0, NONE, "ENDLOOP", TGSI_OPCODE_ENDLOOP },
    { 0, 0, 0, 0, 0, 1, 0, NONE, "ENDSUB", TGSI_OPCODE_ENDSUB },
-   { 1, 1, 1, 0, 0, 0, 0, OTHR, "TXQ_LZ", TGSI_OPCODE_TXQ_LZ },
+   { 1, 1, 1, 0, 0, 0, 0, OTHR, "", 103 }, /* removed */
    { 1, 1, 1, 0, 0, 0, 0, OTHR, "TXQS", TGSI_OPCODE_TXQS },
    { 1, 1, 0, 0, 0, 0, 0, OTHR, "RESQ", TGSI_OPCODE_RESQ },
    { 1, 1, 0, 0, 0, 0, 0, COMP, "READ_FIRST", TGSI_OPCODE_READ_FIRST },
@@ -356,9 +356,7 @@ tgsi_opcode_infer_type( uint opcode )
    case TGSI_OPCODE_AND:
    case TGSI_OPCODE_OR:
    case TGSI_OPCODE_XOR:
-   case TGSI_OPCODE_SAD: /* XXX some src args may be signed for SAD ? */
    case TGSI_OPCODE_TXQ:
-   case TGSI_OPCODE_TXQ_LZ:
    case TGSI_OPCODE_TXQS:
    case TGSI_OPCODE_F2U:
    case TGSI_OPCODE_UDIV:
@@ -499,7 +497,6 @@ tgsi_opcode_infer_src_type( uint opcode )
       return TGSI_TYPE_SIGNED;
    case TGSI_OPCODE_ARL:
    case TGSI_OPCODE_ARR:
-   case TGSI_OPCODE_TXQ_LZ:
    case TGSI_OPCODE_F2D:
    case TGSI_OPCODE_F2I:
    case TGSI_OPCODE_F2U:

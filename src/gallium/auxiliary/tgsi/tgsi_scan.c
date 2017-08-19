@@ -60,7 +60,6 @@ is_mem_query_inst(unsigned opcode)
    return opcode == TGSI_OPCODE_RESQ ||
           opcode == TGSI_OPCODE_TXQ ||
           opcode == TGSI_OPCODE_TXQS ||
-          opcode == TGSI_OPCODE_TXQ_LZ ||
           opcode == TGSI_OPCODE_LODQ;
 }
 
@@ -92,7 +91,6 @@ computes_derivative(unsigned opcode)
              opcode != TGSI_OPCODE_TXL &&
              opcode != TGSI_OPCODE_TXL2 &&
              opcode != TGSI_OPCODE_TXQ &&
-             opcode != TGSI_OPCODE_TXQ_LZ &&
              opcode != TGSI_OPCODE_TXQS;
    }
 

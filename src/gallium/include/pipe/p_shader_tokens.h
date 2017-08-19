@@ -419,9 +419,7 @@ struct tgsi_property_data {
 
 #define TGSI_OPCODE_DDX_FINE            79
 #define TGSI_OPCODE_DDY_FINE            80
-
-#define TGSI_OPCODE_PUSHA               81
-#define TGSI_OPCODE_POPA                82
+/* gap */
 #define TGSI_OPCODE_CEIL                83
 #define TGSI_OPCODE_I2F                 84
 #define TGSI_OPCODE_NOT                 85
@@ -432,7 +430,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_OR                  90
 #define TGSI_OPCODE_MOD                 91
 #define TGSI_OPCODE_XOR                 92
-#define TGSI_OPCODE_SAD                 93
+/* gap */
 #define TGSI_OPCODE_TXF                 94
 #define TGSI_OPCODE_TXQ                 95
 #define TGSI_OPCODE_CONT                96
@@ -442,7 +440,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_BGNSUB              100
 #define TGSI_OPCODE_ENDLOOP             101
 #define TGSI_OPCODE_ENDSUB              102
-#define TGSI_OPCODE_TXQ_LZ              103 /* TXQ for mipmap level 0 */
+/* gap */
 #define TGSI_OPCODE_TXQS                104
 #define TGSI_OPCODE_RESQ                105
 #define TGSI_OPCODE_READ_FIRST          106

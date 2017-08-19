@@ -5528,14 +5528,6 @@ exec_instruction(
       *pc = -1;
       break;
 
-   case TGSI_OPCODE_PUSHA:
-      assert (0);
-      break;
-
-   case TGSI_OPCODE_POPA:
-      assert (0);
-      break;
-
    case TGSI_OPCODE_CEIL:
       exec_vector_unary(mach, inst, micro_ceil, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
       break;
@@ -5570,10 +5562,6 @@ exec_instruction(
 
    case TGSI_OPCODE_XOR:
       exec_vector_binary(mach, inst, micro_xor, TGSI_EXEC_DATA_UINT, TGSI_EXEC_DATA_UINT);
-      break;
-
-   case TGSI_OPCODE_SAD:
-      assert (0);
       break;
 
    case TGSI_OPCODE_TXF:
