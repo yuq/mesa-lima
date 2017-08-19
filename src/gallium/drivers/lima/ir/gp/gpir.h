@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017 Lima Project
+ * Copyright (c) 2013 Connor Abbott
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +28,7 @@
 #include "util/list.h"
 #include "util/u_math.h"
 #include "util/u_dynarray.h"
+#include "util/set.h"
 
 /* list of operations that a node can do. */
 typedef enum {
@@ -116,32 +118,54 @@ typedef struct {
 
 extern const gpir_op_info gpir_op_infos[];
 
+struct gpir_node;
+typedef struct gpir_node gpir_node;
+
+/* structure for storing information about a given dependency
+ * Combined with info about instruction placement, should be enough to
+ * allow the scheduler to determine if the placement is legal.
+ */
+typedef struct {
+   /* predecessor - node which must be excecuted first */
+   gpir_node *pred;
+   /* successor - node which must be excecuted last */
+   gpir_node *succ;
+
+   /* true - is a dependency between a child and parent node
+    * false - is a read/write ordering dependency
+    */
+   bool is_child_dep;
+
+   /* For temp stores, tells us whether this is an input or an offset.
+    * We need to know this because offsets and inputs must be scheduled
+    * differently.
+    */
+   bool is_offset;
+} gpir_dep_info;
+
 typedef struct gpir_node {
    struct list_head list;
    gpir_op op;
    gpir_node_type type;
    int index;
 
-   struct gpir_node *children[4];
-   unsigned num_child;
-
-   /* point to the end of the sub-struct */
-   struct gpir_node **parents;
-   unsigned num_parent;
-   unsigned max_parent;
-
    /* for scheduler */
-   int distance;
-   struct list_head ready;
+   struct set *preds, *succs;
+   int sched_dist;
+   int sched_instr, sched_pos;
    bool scheduled;
-   int instr_index;
+   struct list_head ready;
 } gpir_node;
 
 typedef struct {
    gpir_node node;
-   bool dest_negate;
+
+   gpir_node *children[4];
+   int children_component[4];
    bool children_negate[4];
-   uint8_t children_component[4];
+   int num_child;
+
+   bool dest_negate;
 } gpir_alu_node;
 
 typedef struct {
@@ -152,6 +176,8 @@ typedef struct {
 
 typedef struct {
    gpir_node node;
+
+   gpir_node *child;
    unsigned index;
    unsigned component;
 
@@ -162,9 +188,12 @@ typedef struct {
 
 typedef struct {
    gpir_node node;
+
    unsigned index; /* must be 0 when storing temporaries */
-   bool write_mask[4]; /* which components to store to */
-   uint8_t children_component[4];
+   bool write_mask[4];
+   gpir_node *children[4];
+   int children_component[4];
+   int num_child;
 } gpir_store_node;
 
 enum gpir_instr_slot {
@@ -218,12 +247,40 @@ typedef struct nir_shader nir_shader;
 
 gpir_prog *gpir_compile_nir(nir_shader *nir);
 
-void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index, int max_parent);
+void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index);
 void gpir_node_add_child(gpir_node *parent, gpir_node *child);
-void gpir_node_remove_parent_cleanup(gpir_node *node);
-void gpir_node_replace_parent(gpir_node *child, gpir_node *parent);
+void gpir_node_remove_entry(struct set_entry *entry);
+void gpir_node_merge_succ(gpir_node *dst, gpir_node *src);
 void gpir_node_delete(gpir_node *node);
 void gpir_node_print_prog(gpir_compiler *comp);
+
+static inline bool gpir_node_is_root(gpir_node *node)
+{
+   return !node->succs->entries;
+}
+
+static inline bool gpir_node_is_leaf(gpir_node *node)
+{
+   return !node->preds->entries;
+}
+
+#define gpir_dep_from_entry(entry) ((gpir_dep_info *)(entry->key))
+#define gpir_node_from_entry(entry, direction) (gpir_dep_from_entry(entry)->direction)
+
+#define gpir_node_foreach_pred(node, entry)                                \
+   for (struct set_entry *entry = _mesa_set_next_entry(node->preds, NULL); \
+        entry != NULL;                                                     \
+        entry = _mesa_set_next_entry(node->preds, entry))
+
+#define gpir_node_foreach_succ(node, entry)                                \
+   for (struct set_entry *entry = _mesa_set_next_entry(node->succs, NULL); \
+        entry != NULL;                                                     \
+        entry = _mesa_set_next_entry(node->succs, entry))
+
+#define gpir_node_to_alu(node) ((gpir_alu_node *)(node))
+#define gpir_node_to_const(node) ((gpir_const_node *)(node))
+#define gpir_node_to_load(node) ((gpir_load_node *)(node))
+#define gpir_node_to_store(node) ((gpir_store_node *)(node))
 
 void gpir_instr_print_prog(gpir_compiler *comp);
 
