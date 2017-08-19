@@ -282,6 +282,7 @@ static inline bool gpir_node_is_leaf(gpir_node *node)
 #define gpir_node_to_load(node) ((gpir_load_node *)(node))
 #define gpir_node_to_store(node) ((gpir_store_node *)(node))
 
+bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node);
 void gpir_instr_print_prog(gpir_compiler *comp);
 
 void gpir_lower_prog(gpir_compiler *comp);
