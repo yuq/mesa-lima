@@ -988,13 +988,12 @@ void si_emit_cache_flush(struct si_context *sctx)
 		 * TC    | TC_MD         = writeback & invalidate L2 metadata (DCC, etc.)
 		 * TCL1                  = invalidate L1
 		 */
+		tc_flags = 0;
 
-		/* When flushing CB or DB, L2 metadata should always be invali-
-		 * dated before texturing. Invalidating L2 data is not needed
-		 * in some cases.
-		 */
-		tc_flags = EVENT_TC_ACTION_ENA |
-			   EVENT_TC_MD_ACTION_ENA;
+		if (rctx->flags & SI_CONTEXT_INV_L2_METADATA) {
+			tc_flags = EVENT_TC_ACTION_ENA |
+				   EVENT_TC_MD_ACTION_ENA;
+		}
 
 		/* Ideally flush TC together with CB/DB. */
 		if (rctx->flags & SI_CONTEXT_INV_GLOBAL_L2) {

@@ -58,7 +58,10 @@
 /* Write dirty L2 lines back to memory (shader and CP DMA stores), but don't
  * invalidate L2. SI-CIK can't do it, so they will do complete invalidation. */
 #define SI_CONTEXT_WRITEBACK_GLOBAL_L2	(R600_CONTEXT_PRIVATE_FLAG << 4)
-/* gaps */
+/* Writeback & invalidate the L2 metadata cache. It can only be coupled with
+ * a CB or DB flush. */
+#define SI_CONTEXT_INV_L2_METADATA	(R600_CONTEXT_PRIVATE_FLAG << 5)
+/* gap */
 /* Framebuffer caches. */
 #define SI_CONTEXT_FLUSH_AND_INV_DB	(R600_CONTEXT_PRIVATE_FLAG << 7)
 #define SI_CONTEXT_FLUSH_AND_INV_CB	(R600_CONTEXT_PRIVATE_FLAG << 8)
@@ -198,6 +201,7 @@ struct si_framebuffer {
 	ubyte				dirty_cbufs;
 	bool				dirty_zsbuf;
 	bool				any_dst_linear;
+	bool				CB_has_shader_readable_metadata;
 };
 
 struct si_clip_state {
@@ -612,14 +616,25 @@ si_saved_cs_reference(struct si_saved_cs **dst, struct si_saved_cs *src)
 }
 
 static inline void
-si_make_CB_shader_coherent(struct si_context *sctx, unsigned num_samples)
+si_make_CB_shader_coherent(struct si_context *sctx, unsigned num_samples,
+			   bool shaders_read_metadata)
 {
 	sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
 			 SI_CONTEXT_INV_VMEM_L1;
 
-	/* Single-sample color is coherent with shaders on GFX9. */
-	if (sctx->b.chip_class <= VI || num_samples >= 2)
+	if (sctx->b.chip_class >= GFX9) {
+		/* Single-sample color is coherent with shaders on GFX9, but
+		 * L2 metadata must be flushed if shaders read metadata.
+		 * (DCC, CMASK).
+		 */
+		if (num_samples >= 2)
+			sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
+		else if (shaders_read_metadata)
+			sctx->b.flags |= SI_CONTEXT_INV_L2_METADATA;
+	} else {
+		/* SI-CI-VI */
 		sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
+	}
 }
 
 static inline void

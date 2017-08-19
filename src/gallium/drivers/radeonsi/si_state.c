@@ -2573,7 +2573,8 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	 */
 	if (sctx->framebuffer.nr_samples <= 1 &&
 	    sctx->framebuffer.state.nr_cbufs)
-		si_make_CB_shader_coherent(sctx, sctx->framebuffer.nr_samples);
+		si_make_CB_shader_coherent(sctx, sctx->framebuffer.nr_samples,
+					   sctx->framebuffer.CB_has_shader_readable_metadata);
 
 	sctx->b.flags |= SI_CONTEXT_CS_PARTIAL_FLUSH;
 
@@ -2608,6 +2609,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	sctx->framebuffer.nr_samples = util_framebuffer_get_num_samples(state);
 	sctx->framebuffer.log_samples = util_logbase2(sctx->framebuffer.nr_samples);
 	sctx->framebuffer.any_dst_linear = false;
+	sctx->framebuffer.CB_has_shader_readable_metadata = false;
 
 	for (i = 0; i < state->nr_cbufs; i++) {
 		if (!state->cbufs[i])
@@ -2641,6 +2643,9 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 
 		if (rtex->surface.is_linear)
 			sctx->framebuffer.any_dst_linear = true;
+
+		if (vi_dcc_enabled(rtex, surf->base.u.tex.level))
+			sctx->framebuffer.CB_has_shader_readable_metadata = true;
 
 		r600_context_add_resource_size(ctx, surf->base.texture);
 
@@ -4022,7 +4027,8 @@ static void si_texture_barrier(struct pipe_context *ctx, unsigned flags)
 	/* Multisample surfaces are flushed in si_decompress_textures. */
 	if (sctx->framebuffer.nr_samples <= 1 &&
 	    sctx->framebuffer.state.nr_cbufs)
-		si_make_CB_shader_coherent(sctx, sctx->framebuffer.nr_samples);
+		si_make_CB_shader_coherent(sctx, sctx->framebuffer.nr_samples,
+					   sctx->framebuffer.CB_has_shader_readable_metadata);
 }
 
 /* This only ensures coherency for shader image/buffer stores. */
@@ -4067,8 +4073,7 @@ static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
 	    sctx->framebuffer.state.nr_cbufs) {
 		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB;
 
-		/* Single-sample color is coherent with TC on GFX9. */
-		if (sctx->screen->b.chip_class <= VI)
+		if (sctx->b.chip_class <= VI)
 			sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
 	}
 
