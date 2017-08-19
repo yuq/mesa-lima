@@ -590,9 +590,6 @@ lp_emit_instruction_aos(
       dst0 = lp_build_pow(&bld->bld_base.base, src0, src1);
       break;
 
-   case TGSI_OPCODE_XPD:
-      return FALSE;
-
    case TGSI_OPCODE_COS:
       src0 = lp_build_emit_fetch(&bld->bld_base, inst, 0, LP_CHAN_ALL);
       tmp0 = swizzle_scalar_aos(bld, src0, TGSI_SWIZZLE_X);

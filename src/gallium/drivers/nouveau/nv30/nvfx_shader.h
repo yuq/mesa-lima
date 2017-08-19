@@ -164,7 +164,6 @@
  *   RSQ - LG2 + EX2
  *   POW - LG2 + MUL + EX2
  *   SCS - COS + SIN
- *   XPD
  *
  * NV40 Looping
  *   Loops appear to be fairly expensive on NV40 at least, the proprietary

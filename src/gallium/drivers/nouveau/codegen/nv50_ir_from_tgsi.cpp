@@ -346,14 +346,6 @@ unsigned int Instruction::srcMask(unsigned int s) const
       return mask;
    case TGSI_OPCODE_TXQ:
       return 1;
-   case TGSI_OPCODE_XPD:
-   {
-      unsigned int x = 0;
-      if (mask & 1) x |= 0x6;
-      if (mask & 2) x |= 0x5;
-      if (mask & 4) x |= 0x3;
-      return x;
-   }
    case TGSI_OPCODE_D2I:
    case TGSI_OPCODE_D2U:
    case TGSI_OPCODE_D2F:
@@ -3346,25 +3338,6 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       break;
    case TGSI_OPCODE_LIT:
       handleLIT(dst0);
-      break;
-   case TGSI_OPCODE_XPD:
-      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
-         if (c < 3) {
-            val0 = getSSA();
-            src0 = fetchSrc(1, (c + 1) % 3);
-            src1 = fetchSrc(0, (c + 2) % 3);
-            mkOp2(OP_MUL, TYPE_F32, val0, src0, src1)
-               ->dnz = info->io.mul_zero_wins;
-            mkOp1(OP_NEG, TYPE_F32, val0, val0);
-
-            src0 = fetchSrc(0, (c + 1) % 3);
-            src1 = fetchSrc(1, (c + 2) % 3);
-            mkOp3(OP_MAD, TYPE_F32, dst0[c], src0, src1, val0)
-               ->dnz = info->io.mul_zero_wins;
-         } else {
-            loadImm(dst0[c], 1.0f);
-         }
-      }
       break;
    case TGSI_OPCODE_ISSG:
    case TGSI_OPCODE_SSG:

@@ -350,18 +350,6 @@ This instruction replicates its result.
 
   dst = src0.x^{src1.x}
 
-.. opcode:: XPD - Cross Product
-
-.. math::
-
-  dst.x = src0.y \times src1.z - src1.y \times src0.z
-
-  dst.y = src0.z \times src1.x - src1.z \times src0.x
-
-  dst.z = src0.x \times src1.y - src1.x \times src0.y
-
-  dst.w = 1
-
 
 .. opcode:: COS - Cosine
 
@@ -3663,7 +3651,7 @@ of the operands are equal to 0. That means that 0 * Inf = 0. This
 should be set the same way for an entire pipeline. Note that this
 applies not only to the literal MUL TGSI opcode, but all FP32
 multiplications implied by other operations, such as MAD, FMA, DP2,
-DP3, DP4, DST, LOG, LRP, XPD, and possibly others. If there is a
+DP3, DP4, DST, LOG, LRP, and possibly others. If there is a
 mismatch between shaders, then it is unspecified whether this behavior
 will be enabled.
 

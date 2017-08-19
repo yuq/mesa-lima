@@ -1027,32 +1027,6 @@ i915_translate_instruction(struct i915_fp_compile *p,
       emit_tex(p, inst, T0_TEXLDP, fs);
       break;
 
-   case TGSI_OPCODE_XPD:
-      /* Cross product:
-       *      result.x = src0.y * src1.z - src0.z * src1.y;
-       *      result.y = src0.z * src1.x - src0.x * src1.z;
-       *      result.z = src0.x * src1.y - src0.y * src1.x;
-       *      result.w = undef;
-       */
-      src0 = src_vector(p, &inst->Src[0], fs);
-      src1 = src_vector(p, &inst->Src[1], fs);
-      tmp = i915_get_utemp(p);
-
-      i915_emit_arith(p,
-                      A0_MUL,
-                      tmp, A0_DEST_CHANNEL_ALL, 0,
-                      swizzle(src0, Z, X, Y, ONE),
-                      swizzle(src1, Y, Z, X, ONE), 0);
-
-      i915_emit_arith(p,
-                      A0_MAD,
-                      get_result_vector(p, &inst->Dst[0]),
-                      get_result_flags(inst), 0,
-                      swizzle(src0, Y, Z, X, ONE),
-                      swizzle(src1, Z, X, Y, ONE),
-                      negate(tmp, 1, 1, 1, 0));
-      break;
-
    default:
       i915_program_error(p, "bad opcode %d", inst->Instruction.Opcode);
       p->error = 1;

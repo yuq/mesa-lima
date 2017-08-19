@@ -858,61 +858,6 @@ static void fmin_emit(
                                    emit_data->args[1], emit_data->args[0], "");
 }
 
-/* TGSI_OPCODE_XPD */
-
-static void
-xpd_fetch_args(
-   struct lp_build_tgsi_context * bld_base,
-   struct lp_build_emit_data * emit_data)
-{
-   dp_fetch_args(bld_base, emit_data, 3);
-}
-
-/**
- * (a * b) - (c * d)
- */
-static LLVMValueRef
-xpd_helper(
-  struct lp_build_tgsi_context * bld_base,
-  LLVMValueRef a,
-  LLVMValueRef b,
-  LLVMValueRef c,
-  LLVMValueRef d)
-{
-   LLVMValueRef tmp0, tmp1;
-
-   tmp0 = lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_MUL, a, b);
-   tmp1 = lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_MUL, c, d);
-
-   return lp_build_sub(&bld_base->base, tmp0, tmp1);
-}
-
-static void
-xpd_emit(
-   const struct lp_build_tgsi_action * action,
-   struct lp_build_tgsi_context * bld_base,
-   struct lp_build_emit_data * emit_data)
-{
-   emit_data->output[TGSI_CHAN_X] = xpd_helper(bld_base,
-              emit_data->args[1] /* src0.y */, emit_data->args[5] /* src1.z */,
-              emit_data->args[4] /* src1.y */, emit_data->args[2] /* src0.z */);
-
-   emit_data->output[TGSI_CHAN_Y] = xpd_helper(bld_base,
-              emit_data->args[2] /* src0.z */, emit_data->args[3] /* src1.x */,
-              emit_data->args[5] /* src1.z */, emit_data->args[0] /* src0.x */);
-
-   emit_data->output[TGSI_CHAN_Z] = xpd_helper(bld_base,
-              emit_data->args[0] /* src0.x */, emit_data->args[4] /* src1.y */,
-              emit_data->args[3] /* src1.x */, emit_data->args[1] /* src0.y */);
-
-   emit_data->output[TGSI_CHAN_W] = bld_base->base.one;
-}
-
-const struct lp_build_tgsi_action xpd_action = {
-   xpd_fetch_args,	 /* fetch_args */
-   xpd_emit	 /* emit */
-};
-
 /* TGSI_OPCODE_D2F */
 static void
 d2f_emit(
@@ -1252,7 +1197,6 @@ lp_set_default_actions(struct lp_build_tgsi_context * bld_base)
    bld_base->op_actions[TGSI_OPCODE_POW] = pow_action;
    bld_base->op_actions[TGSI_OPCODE_SCS] = scs_action;
    bld_base->op_actions[TGSI_OPCODE_UP2H] = up2h_action;
-   bld_base->op_actions[TGSI_OPCODE_XPD] = xpd_action;
 
    bld_base->op_actions[TGSI_OPCODE_BREAKC].fetch_args = scalar_unary_fetch_args;
    bld_base->op_actions[TGSI_OPCODE_SWITCH].fetch_args = scalar_unary_fetch_args;

@@ -2196,63 +2196,6 @@ emit_pow(struct svga_shader_emitter *emit,
 
 
 /**
- * Translate/emit TGSI XPD (vector cross product) instruction.
- */
-static boolean
-emit_xpd(struct svga_shader_emitter *emit,
-         const struct tgsi_full_instruction *insn)
-{
-   SVGA3dShaderDestToken dst = translate_dst_register( emit, insn, 0 );
-   const struct src_register src0 = translate_src_register(
-      emit, &insn->Src[0] );
-   const struct src_register src1 = translate_src_register(
-      emit, &insn->Src[1] );
-   boolean need_dst_tmp = FALSE;
-
-   /* XPD can only output to a temporary */
-   if (SVGA3dShaderGetRegType(dst.value) != SVGA3DREG_TEMP)
-      need_dst_tmp = TRUE;
-
-   /* The dst reg must not be the same as src0 or src1*/
-   if (alias_src_dst(src0, dst) ||
-       alias_src_dst(src1, dst))
-      need_dst_tmp = TRUE;
-
-   if (need_dst_tmp) {
-      SVGA3dShaderDestToken tmp = get_temp( emit );
-
-      /* Obey DX9 restrictions on mask:
-       */
-      tmp.mask = dst.mask & TGSI_WRITEMASK_XYZ;
-
-      if (!submit_op2(emit, inst_token( SVGA3DOP_CRS ), tmp, src0, src1))
-         return FALSE;
-
-      if (!submit_op1(emit, inst_token( SVGA3DOP_MOV ), dst, src( tmp )))
-         return FALSE;
-   }
-   else {
-      if (!submit_op2(emit, inst_token( SVGA3DOP_CRS ), dst, src0, src1))
-         return FALSE;
-   }
-
-   /* Need to emit 1.0 to dst.w?
-    */
-   if (dst.mask & TGSI_WRITEMASK_W) {
-      struct src_register one = get_one_immediate( emit );
-
-      if (!submit_op1(emit,
-                      inst_token( SVGA3DOP_MOV ),
-                      writemask(dst, TGSI_WRITEMASK_W),
-                      one))
-         return FALSE;
-   }
-
-   return TRUE;
-}
-
-
-/**
  * Emit a LRP (linear interpolation) instruction.
  */
 static boolean
@@ -2986,9 +2929,6 @@ svga_emit_instruction(struct svga_shader_emitter *emit,
    case TGSI_OPCODE_BRK:
       return emit_brk( emit, insn );
 
-   case TGSI_OPCODE_XPD:
-      return emit_xpd( emit, insn );
-
    case TGSI_OPCODE_KILL:
       return emit_kill( emit, insn );
 
@@ -3604,7 +3544,6 @@ needs_to_create_common_immediate(const struct svga_shader_emitter *emit)
        emit->info.opcode_count[TGSI_OPCODE_SEQ] >= 1 ||
        emit->info.opcode_count[TGSI_OPCODE_EXP] >= 1 ||
        emit->info.opcode_count[TGSI_OPCODE_LOG] >= 1 ||
-       emit->info.opcode_count[TGSI_OPCODE_XPD] >= 1 ||
        emit->info.opcode_count[TGSI_OPCODE_KILL] >= 1)
       return TRUE;
 

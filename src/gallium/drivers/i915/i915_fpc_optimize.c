@@ -118,7 +118,6 @@ static const struct {
    [ TGSI_OPCODE_TRUNC   ] = { false,  false,                  0,  1,  1 },
    [ TGSI_OPCODE_TXB     ] = {  true,  false,                  0,  1,  2 },
    [ TGSI_OPCODE_TXP     ] = {  true,  false,                  0,  1,  2 },
-   [ TGSI_OPCODE_XPD     ] = { false,  false,                  0,  1,  2 },
 };
 
 static boolean op_has_dst(unsigned opcode)

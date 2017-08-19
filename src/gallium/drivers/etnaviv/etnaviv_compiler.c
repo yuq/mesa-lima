@@ -2317,7 +2317,6 @@ etna_compile_shader(struct etna_shader_variant *v)
       .lower_LOG = true,
       .lower_DP2 = true,
       .lower_TRUNC = true,
-      .lower_XPD = true
    };
 
    c = CALLOC_STRUCT(etna_compile);

@@ -986,21 +986,6 @@ ttn_sgt(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
 }
 
 static void
-ttn_xpd(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
-{
-   ttn_move_dest_masked(b, dest,
-                        nir_fsub(b,
-                                 nir_fmul(b,
-                                          ttn_swizzle(b, src[0], Y, Z, X, X),
-                                          ttn_swizzle(b, src[1], Z, X, Y, X)),
-                                 nir_fmul(b,
-                                          ttn_swizzle(b, src[1], Y, Z, X, X),
-                                          ttn_swizzle(b, src[0], Z, X, Y, X))),
-                        TGSI_WRITEMASK_XYZ);
-   ttn_move_dest_masked(b, dest, nir_imm_float(b, 1.0), TGSI_WRITEMASK_W);
-}
-
-static void
 ttn_dp2(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
 {
    ttn_move_dest(b, dest, nir_fdot2(b, src[0], src[1]));
@@ -1526,7 +1511,6 @@ static const nir_op op_trans[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_EX2] = nir_op_fexp2,
    [TGSI_OPCODE_LG2] = nir_op_flog2,
    [TGSI_OPCODE_POW] = nir_op_fpow,
-   [TGSI_OPCODE_XPD] = 0,
    [TGSI_OPCODE_COS] = nir_op_fcos,
    [TGSI_OPCODE_DDX] = nir_op_fddx,
    [TGSI_OPCODE_DDY] = nir_op_fddy,
@@ -1737,10 +1721,6 @@ ttn_emit_instruction(struct ttn_compile *c)
 
    case TGSI_OPCODE_LIT:
       ttn_lit(b, op_trans[tgsi_op], dest, src);
-      break;
-
-   case TGSI_OPCODE_XPD:
-      ttn_xpd(b, op_trans[tgsi_op], dest, src);
       break;
 
    case TGSI_OPCODE_DP2:

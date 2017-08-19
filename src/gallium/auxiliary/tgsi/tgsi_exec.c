@@ -3313,51 +3313,6 @@ exec_scs(struct tgsi_exec_machine *mach,
 }
 
 static void
-exec_xpd(struct tgsi_exec_machine *mach,
-         const struct tgsi_full_instruction *inst)
-{
-   union tgsi_exec_channel r[6];
-   union tgsi_exec_channel d[3];
-
-   fetch_source(mach, &r[0], &inst->Src[0], TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-   fetch_source(mach, &r[1], &inst->Src[1], TGSI_CHAN_Z, TGSI_EXEC_DATA_FLOAT);
-
-   micro_mul(&r[2], &r[0], &r[1]);
-
-   fetch_source(mach, &r[3], &inst->Src[0], TGSI_CHAN_Z, TGSI_EXEC_DATA_FLOAT);
-   fetch_source(mach, &r[4], &inst->Src[1], TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-
-   micro_mul(&r[5], &r[3], &r[4] );
-   micro_sub(&d[TGSI_CHAN_X], &r[2], &r[5]);
-
-   fetch_source(mach, &r[2], &inst->Src[1], TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-
-   micro_mul(&r[3], &r[3], &r[2]);
-
-   fetch_source(mach, &r[5], &inst->Src[0], TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-
-   micro_mul(&r[1], &r[1], &r[5]);
-   micro_sub(&d[TGSI_CHAN_Y], &r[3], &r[1]);
-
-   micro_mul(&r[5], &r[5], &r[4]);
-   micro_mul(&r[0], &r[0], &r[2]);
-   micro_sub(&d[TGSI_CHAN_Z], &r[5], &r[0]);
-
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_X) {
-      store_dest(mach, &d[TGSI_CHAN_X], &inst->Dst[0], inst, TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-   }
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_Y) {
-      store_dest(mach, &d[TGSI_CHAN_Y], &inst->Dst[0], inst, TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-   }
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_Z) {
-      store_dest(mach, &d[TGSI_CHAN_Z], &inst->Dst[0], inst, TGSI_CHAN_Z, TGSI_EXEC_DATA_FLOAT);
-   }
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_W) {
-      store_dest(mach, &OneVec, &inst->Dst[0], inst, TGSI_CHAN_W, TGSI_EXEC_DATA_FLOAT);
-   }
-}
-
-static void
 exec_dst(struct tgsi_exec_machine *mach,
          const struct tgsi_full_instruction *inst)
 {
@@ -5151,10 +5106,6 @@ exec_instruction(
 
    case TGSI_OPCODE_POW:
       exec_scalar_binary(mach, inst, micro_pow, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
-      break;
-
-   case TGSI_OPCODE_XPD:
-      exec_xpd(mach, inst);
       break;
 
    case TGSI_OPCODE_COS:

@@ -258,65 +258,6 @@ transform_dst(struct tgsi_transform_context *tctx,
    }
 }
 
-/* XPD - Cross Product
- *   dst.x = src0.y \times src1.z - src1.y \times src0.z
- *   dst.y = src0.z \times src1.x - src1.z \times src0.x
- *   dst.z = src0.x \times src1.y - src1.x \times src0.y
- *   dst.w = 1.0
- *
- * ; needs: 1 tmp, imm{1.0}
- * MUL tmpA.xyz, src1.yzx, src0.zxy
- * MAD dst.xyz, src0.yzx, src1.zxy, -tmpA.xyz
- * MOV dst.w, imm{1.0}
- */
-#define XPD_GROW (NINST(2) + NINST(3) + NINST(1) - OINST(2))
-#define XPD_TMP  1
-static void
-transform_xpd(struct tgsi_transform_context *tctx,
-              struct tgsi_full_instruction *inst)
-{
-   struct tgsi_lowering_context *ctx = tgsi_lowering_context(tctx);
-   struct tgsi_full_dst_register *dst  = &inst->Dst[0];
-   struct tgsi_full_src_register *src0 = &inst->Src[0];
-   struct tgsi_full_src_register *src1 = &inst->Src[1];
-   struct tgsi_full_instruction new_inst;
-
-   if (dst->Register.WriteMask & TGSI_WRITEMASK_XYZ) {
-      /* MUL tmpA.xyz, src1.yzx, src0.zxy */
-      new_inst = tgsi_default_full_instruction();
-      new_inst.Instruction.Opcode = TGSI_OPCODE_MUL;
-      new_inst.Instruction.NumDstRegs = 1;
-      reg_dst(&new_inst.Dst[0], &ctx->tmp[A].dst, TGSI_WRITEMASK_XYZ);
-      new_inst.Instruction.NumSrcRegs = 2;
-      reg_src(&new_inst.Src[0], src1, SWIZ(Y, Z, X, _));
-      reg_src(&new_inst.Src[1], src0, SWIZ(Z, X, Y, _));
-      tctx->emit_instruction(tctx, &new_inst);
-
-      /* MAD dst.xyz, src0.yzx, src1.zxy, -tmpA.xyz */
-      new_inst = tgsi_default_full_instruction();
-      new_inst.Instruction.Opcode = TGSI_OPCODE_MAD;
-      new_inst.Instruction.NumDstRegs = 1;
-      reg_dst(&new_inst.Dst[0], dst, TGSI_WRITEMASK_XYZ);
-      new_inst.Instruction.NumSrcRegs = 3;
-      reg_src(&new_inst.Src[0], src0, SWIZ(Y, Z, X, _));
-      reg_src(&new_inst.Src[1], src1, SWIZ(Z, X, Y, _));
-      reg_src(&new_inst.Src[2], &ctx->tmp[A].src, SWIZ(X, Y, Z, _));
-      new_inst.Src[2].Register.Negate = true;
-      tctx->emit_instruction(tctx, &new_inst);
-   }
-
-   if (dst->Register.WriteMask & TGSI_WRITEMASK_W) {
-      /* MOV dst.w, imm{1.0} */
-      new_inst = tgsi_default_full_instruction();
-      new_inst.Instruction.Opcode = TGSI_OPCODE_MOV;
-      new_inst.Instruction.NumDstRegs = 1;
-      reg_dst(&new_inst.Dst[0], dst, TGSI_WRITEMASK_W);
-      new_inst.Instruction.NumSrcRegs = 1;
-      reg_src(&new_inst.Src[0], &ctx->imm, SWIZ(_, _, _, Y));
-      tctx->emit_instruction(tctx, &new_inst);
-   }
-}
-
 /* SCS - Sine Cosine
  *   dst.x = \cos{src.x}
  *   dst.y = \sin{src.x}
@@ -1466,11 +1407,6 @@ transform_instr(struct tgsi_transform_context *tctx,
          goto skip;
       transform_dst(tctx, inst);
       break;
-   case TGSI_OPCODE_XPD:
-      if (!ctx->config->lower_XPD)
-         goto skip;
-      transform_xpd(tctx, inst);
-      break;
    case TGSI_OPCODE_SCS:
       if (!ctx->config->lower_SCS)
          goto skip;
@@ -1599,7 +1535,6 @@ tgsi_transform_lowering(const struct tgsi_lowering_config *config,
 #define OPCS(x) ((config->lower_ ## x) ? info->opcode_count[TGSI_OPCODE_ ## x] : 0)
    /* if there are no instructions to lower, then we are done: */
    if (!(OPCS(DST) ||
-         OPCS(XPD) ||
          OPCS(SCS) ||
          OPCS(LRP) ||
          OPCS(FRC) ||
@@ -1628,10 +1563,6 @@ tgsi_transform_lowering(const struct tgsi_lowering_config *config,
    if (OPCS(DST)) {
       newlen += DST_GROW * OPCS(DST);
       numtmp = MAX2(numtmp, DST_TMP);
-   }
-   if (OPCS(XPD)) {
-      newlen += XPD_GROW * OPCS(XPD);
-      numtmp = MAX2(numtmp, XPD_TMP);
    }
    if (OPCS(SCS)) {
       newlen += SCS_GROW * OPCS(SCS);

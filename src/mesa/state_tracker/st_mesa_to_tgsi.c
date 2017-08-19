@@ -505,8 +505,6 @@ translate_opcode( unsigned op )
       return TGSI_OPCODE_TXB;
    case OPCODE_TXP:
       return TGSI_OPCODE_TXP;
-   case OPCODE_XPD:
-      return TGSI_OPCODE_XPD;
    case OPCODE_END:
       return TGSI_OPCODE_END;
    default:
@@ -568,11 +566,17 @@ compile_instruction(
       break;
 
    case OPCODE_XPD:
-      dst[0] = ureg_writemask(dst[0], TGSI_WRITEMASK_XYZ );
-      ureg_insn( ureg, 
-                 translate_opcode( inst->Opcode ), 
-                 dst, num_dst, 
-                 src, num_src, 0 );
+      ureg_MUL(ureg, ureg_writemask(dst[0], TGSI_WRITEMASK_XYZ),
+               ureg_swizzle(src[0], TGSI_SWIZZLE_Y, TGSI_SWIZZLE_Z,
+                            TGSI_SWIZZLE_X, 0),
+               ureg_swizzle(src[1], TGSI_SWIZZLE_Z, TGSI_SWIZZLE_X,
+                            TGSI_SWIZZLE_Y, 0));
+      ureg_MAD(ureg, ureg_writemask(dst[0], TGSI_WRITEMASK_XYZ),
+               ureg_swizzle(src[0], TGSI_SWIZZLE_Z, TGSI_SWIZZLE_X,
+                            TGSI_SWIZZLE_Y, 0),
+               ureg_negate(ureg_swizzle(src[1], TGSI_SWIZZLE_Y,
+                                        TGSI_SWIZZLE_Z, TGSI_SWIZZLE_X, 0)),
+               ureg_src(dst[0]));
       break;
 
    case OPCODE_RSQ:

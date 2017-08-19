@@ -68,7 +68,7 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 1, 1, 0, 0, 0, 0, 0, REPL, "EX2", TGSI_OPCODE_EX2 },
    { 1, 1, 0, 0, 0, 0, 0, REPL, "LG2", TGSI_OPCODE_LG2 },
    { 1, 2, 0, 0, 0, 0, 0, REPL, "POW", TGSI_OPCODE_POW },
-   { 1, 2, 0, 0, 0, 0, 0, COMP, "XPD", TGSI_OPCODE_XPD },
+   { 1, 2, 0, 0, 0, 0, 0, COMP, "", 31 }, /* removed */
    { 1, 1, 0, 0, 0, 0, 0, COMP, "U2I64", TGSI_OPCODE_U2I64 },
    { 1, 0, 0, 0, 0, 0, 0, OTHR, "CLOCK", TGSI_OPCODE_CLOCK },
    { 1, 1, 0, 0, 0, 0, 0, COMP, "I2I64", TGSI_OPCODE_I2I64 },
