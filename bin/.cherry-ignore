@@ -1,0 +1,4 @@
+# fixes:  The commits are too invasive for stable. Instead the offending patches
+#         causing regressions have been reverted.
+365d34540f331df57780dddf8da87235be0a6bcb mesa: correctly calculate the storage offset for i915
+de0e62e1065e2d9172acf3ab7c70bba0160125c8 st/mesa: correctly calculate the storage offset
