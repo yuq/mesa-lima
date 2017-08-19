@@ -651,19 +651,6 @@ This instruction replicates its result.
   Unconditional discard.  Allowed in fragment shaders only.
 
 
-.. opcode:: SCS - Sine Cosine
-
-.. math::
-
-  dst.x = \cos{src.x}
-
-  dst.y = \sin{src.x}
-
-  dst.z = 0
-
-  dst.w = 1
-
-
 .. opcode:: TXB - Texture Lookup With Bias
 
   for cube map array textures and shadow cube maps, the bias value

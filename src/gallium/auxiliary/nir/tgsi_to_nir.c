@@ -956,23 +956,6 @@ ttn_lit(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
    }
 }
 
-/* SCS - Sine Cosine
- *   dst.x = \cos{src.x}
- *   dst.y = \sin{src.x}
- *   dst.z = 0.0
- *   dst.w = 1.0
- */
-static void
-ttn_scs(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
-{
-   ttn_move_dest_masked(b, dest, nir_fcos(b, ttn_channel(b, src[0], X)),
-                        TGSI_WRITEMASK_X);
-   ttn_move_dest_masked(b, dest, nir_fsin(b, ttn_channel(b, src[0], X)),
-                        TGSI_WRITEMASK_Y);
-   ttn_move_dest_masked(b, dest, nir_imm_float(b, 0.0), TGSI_WRITEMASK_Z);
-   ttn_move_dest_masked(b, dest, nir_imm_float(b, 1.0), TGSI_WRITEMASK_W);
-}
-
 static void
 ttn_sle(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
 {
@@ -1539,7 +1522,6 @@ static const nir_op op_trans[TGSI_OPCODE_LAST] = {
 
    [TGSI_OPCODE_SSG] = nir_op_fsign,
    [TGSI_OPCODE_CMP] = 0,
-   [TGSI_OPCODE_SCS] = 0,
    [TGSI_OPCODE_TXB] = 0,
    [TGSI_OPCODE_DIV] = nir_op_fdiv,
    [TGSI_OPCODE_DP2] = 0,
@@ -1754,10 +1736,6 @@ ttn_emit_instruction(struct ttn_compile *c)
 
    case TGSI_OPCODE_UCMP:
       ttn_ucmp(b, op_trans[tgsi_op], dest, src);
-      break;
-
-   case TGSI_OPCODE_SCS:
-      ttn_scs(b, op_trans[tgsi_op], dest, src);
       break;
 
    case TGSI_OPCODE_SGT:

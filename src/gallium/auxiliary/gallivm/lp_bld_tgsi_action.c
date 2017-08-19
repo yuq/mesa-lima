@@ -686,31 +686,6 @@ const struct lp_build_tgsi_action sqrt_action = {
    sqrt_emit	 /* emit */
 };
 
-/* TGSI_OPCODE_SCS */
-static void
-scs_emit(
-   const struct lp_build_tgsi_action * action,
-   struct lp_build_tgsi_context * bld_base,
-   struct lp_build_emit_data * emit_data)
-{
-   /* dst.x */
-   emit_data->output[TGSI_CHAN_X] = lp_build_emit_llvm_unary(bld_base,
-                                           TGSI_OPCODE_COS, emit_data->args[0]);
-   /* dst.y */
-   emit_data->output[TGSI_CHAN_Y] = lp_build_emit_llvm_unary(bld_base,
-                                           TGSI_OPCODE_SIN, emit_data->args[0]);
-   /* dst.z */
-   emit_data->output[TGSI_CHAN_Z] = bld_base->base.zero;
-
-   /* dst.w */
-   emit_data->output[TGSI_CHAN_W] = bld_base->base.one;
-}
-
-const struct lp_build_tgsi_action scs_action = {
-   scalar_unary_fetch_args,	 /* fetch_args */
-   scs_emit	 /* emit */
-};
-
 /* TGSI_OPCODE_F2U */
 static void
 f2u_emit(
@@ -1195,7 +1170,6 @@ lp_set_default_actions(struct lp_build_tgsi_context * bld_base)
    bld_base->op_actions[TGSI_OPCODE_RSQ] = rsq_action;
    bld_base->op_actions[TGSI_OPCODE_SQRT] = sqrt_action;
    bld_base->op_actions[TGSI_OPCODE_POW] = pow_action;
-   bld_base->op_actions[TGSI_OPCODE_SCS] = scs_action;
    bld_base->op_actions[TGSI_OPCODE_UP2H] = up2h_action;
 
    bld_base->op_actions[TGSI_OPCODE_SWITCH].fetch_args = scalar_unary_fetch_args;

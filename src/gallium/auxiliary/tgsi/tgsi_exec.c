@@ -3286,33 +3286,6 @@ exec_ucmp(struct tgsi_exec_machine *mach,
 }
 
 static void
-exec_scs(struct tgsi_exec_machine *mach,
-         const struct tgsi_full_instruction *inst)
-{
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_XY) {
-      union tgsi_exec_channel arg;
-      union tgsi_exec_channel result;
-
-      fetch_source(mach, &arg, &inst->Src[0], TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-
-      if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_X) {
-         micro_cos(&result, &arg);
-         store_dest(mach, &result, &inst->Dst[0], inst, TGSI_CHAN_X, TGSI_EXEC_DATA_FLOAT);
-      }
-      if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_Y) {
-         micro_sin(&result, &arg);
-         store_dest(mach, &result, &inst->Dst[0], inst, TGSI_CHAN_Y, TGSI_EXEC_DATA_FLOAT);
-      }
-   }
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_Z) {
-      store_dest(mach, &ZeroVec, &inst->Dst[0], inst, TGSI_CHAN_Z, TGSI_EXEC_DATA_FLOAT);
-   }
-   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_W) {
-      store_dest(mach, &OneVec, &inst->Dst[0], inst, TGSI_CHAN_W, TGSI_EXEC_DATA_FLOAT);
-   }
-}
-
-static void
 exec_dst(struct tgsi_exec_machine *mach,
          const struct tgsi_full_instruction *inst)
 {
@@ -5332,10 +5305,6 @@ exec_instruction(
 
    case TGSI_OPCODE_CMP:
       exec_vector_trinary(mach, inst, micro_cmp, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
-      break;
-
-   case TGSI_OPCODE_SCS:
-      exec_scs(mach, inst);
       break;
 
    case TGSI_OPCODE_DIV:

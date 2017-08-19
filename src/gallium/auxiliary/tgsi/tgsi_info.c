@@ -104,7 +104,7 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 0, 0, 0, 0, 0, 0, 0, NONE, "RET", TGSI_OPCODE_RET },
    { 1, 1, 0, 0, 0, 0, 0, COMP, "SSG", TGSI_OPCODE_SSG },
    { 1, 3, 0, 0, 0, 0, 0, COMP, "CMP", TGSI_OPCODE_CMP },
-   { 1, 1, 0, 0, 0, 0, 0, CHAN, "SCS", TGSI_OPCODE_SCS },
+   { 1, 1, 0, 0, 0, 0, 0, CHAN, "", 67 }, /* removed */
    { 1, 2, 1, 0, 0, 0, 0, OTHR, "TXB", TGSI_OPCODE_TXB },
    { 1, 1, 0, 0, 0, 0, 0, OTHR, "FBFETCH", TGSI_OPCODE_FBFETCH },
    { 1, 2, 0, 0, 0, 0, 0, COMP, "DIV", TGSI_OPCODE_DIV },

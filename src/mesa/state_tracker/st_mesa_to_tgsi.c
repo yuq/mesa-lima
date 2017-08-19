@@ -491,8 +491,6 @@ translate_opcode( unsigned op )
       return TGSI_OPCODE_POW;
    case OPCODE_RCP:
       return TGSI_OPCODE_RCP;
-   case OPCODE_SCS:
-      return TGSI_OPCODE_SCS;
    case OPCODE_SGE:
       return TGSI_OPCODE_SGE;
    case OPCODE_SIN:
@@ -558,11 +556,10 @@ compile_instruction(
       return;
 
    case OPCODE_SCS:
-      dst[0] = ureg_writemask(dst[0], TGSI_WRITEMASK_XY );
-      ureg_insn( ureg, 
-                 translate_opcode( inst->Opcode ), 
-                 dst, num_dst, 
-                 src, num_src, 0 );
+      ureg_COS(ureg, ureg_writemask(dst[0], TGSI_WRITEMASK_X),
+               ureg_scalar(src[0], TGSI_SWIZZLE_X));
+      ureg_SIN(ureg, ureg_writemask(dst[0], TGSI_WRITEMASK_Y),
+               ureg_scalar(src[0], TGSI_SWIZZLE_X));
       break;
 
    case OPCODE_XPD:

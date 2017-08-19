@@ -55,7 +55,6 @@ struct tgsi_lowering_config
     * enable lowering of TGSI_OPCODE_<opc>
     */
    unsigned lower_DST:1;
-   unsigned lower_SCS:1;
    unsigned lower_LRP:1;
    unsigned lower_FRC:1;
    unsigned lower_POW:1;

@@ -1250,29 +1250,6 @@ do_emit_sincos(struct svga_shader_emitter *emit,
 
 
 /**
- * Translate/emit a TGSI SIN, COS or CSC instruction.
- */
-static boolean
-emit_sincos(struct svga_shader_emitter *emit,
-            const struct tgsi_full_instruction *insn)
-{
-   SVGA3dShaderDestToken dst = translate_dst_register( emit, insn, 0 );
-   struct src_register src0 = translate_src_register(emit, &insn->Src[0]);
-   SVGA3dShaderDestToken temp = get_temp( emit );
-
-   /* SCS TMP SRC */
-   if (!do_emit_sincos(emit, writemask(temp, TGSI_WRITEMASK_XY), src0 ))
-      return FALSE;
-
-   /* MOV DST TMP */
-   if (!submit_op1( emit, inst_token( SVGA3DOP_MOV ), dst, src( temp ) ))
-      return FALSE;
-
-   return TRUE;
-}
-
-
-/**
  * Translate TGSI SIN instruction into:
  * SCS TMP SRC
  * MOV DST TMP.yyyy
@@ -2839,9 +2816,6 @@ svga_emit_instruction(struct svga_shader_emitter *emit,
 
    case TGSI_OPCODE_SIN:
       return emit_sin( emit, insn );
-
-   case TGSI_OPCODE_SCS:
-      return emit_sincos( emit, insn );
 
    case TGSI_OPCODE_END:
       /* TGSI always finishes the main func with an END */

@@ -689,23 +689,6 @@ nvfx_fragprog_parse_instruction(struct nvfx_fpc *fpc,
          nvfx_fp_emit(fpc, arith(sat, EX2, dst, mask, neg(swz(tmp, X, X, X, X)), none, none));
       }
       break;
-   case TGSI_OPCODE_SCS:
-      /* avoid overwriting the source */
-      if(src[0].swz[NVFX_SWZ_X] != NVFX_SWZ_X)
-      {
-         if (mask & NVFX_FP_MASK_X)
-            nvfx_fp_emit(fpc, arith(sat, COS, dst, NVFX_FP_MASK_X, swz(src[0], X, X, X, X), none, none));
-         if (mask & NVFX_FP_MASK_Y)
-            nvfx_fp_emit(fpc, arith(sat, SIN, dst, NVFX_FP_MASK_Y, swz(src[0], X, X, X, X), none, none));
-      }
-      else
-      {
-         if (mask & NVFX_FP_MASK_Y)
-            nvfx_fp_emit(fpc, arith(sat, SIN, dst, NVFX_FP_MASK_Y, swz(src[0], X, X, X, X), none, none));
-         if (mask & NVFX_FP_MASK_X)
-            nvfx_fp_emit(fpc, arith(sat, COS, dst, NVFX_FP_MASK_X, swz(src[0], X, X, X, X), none, none));
-      }
-      break;
    case TGSI_OPCODE_SEQ:
       nvfx_fp_emit(fpc, arith(sat, SEQ, dst, mask, src[0], src[1], none));
       break;

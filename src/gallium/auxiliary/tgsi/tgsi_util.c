@@ -253,10 +253,6 @@ tgsi_util_get_inst_usage_mask(const struct tgsi_full_instruction *inst,
       read_mask = TGSI_WRITEMASK_X;
       break;
 
-   case TGSI_OPCODE_SCS:
-      read_mask = write_mask & TGSI_WRITEMASK_XY ? TGSI_WRITEMASK_X : 0;
-      break;
-
    case TGSI_OPCODE_EXP:
    case TGSI_OPCODE_LOG:
       read_mask = write_mask & TGSI_WRITEMASK_XYZ ? TGSI_WRITEMASK_X : 0;

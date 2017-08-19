@@ -4279,42 +4279,6 @@ emit_rsq(struct svga_shader_emitter_v10 *emit,
 
 
 /**
- * Emit code for TGSI_OPCODE_SCS instruction.
- */
-static boolean
-emit_scs(struct svga_shader_emitter_v10 *emit,
-         const struct tgsi_full_instruction *inst)
-{
-   /* dst.x = cos(src.x)
-    * dst.y = sin(src.x)
-    * dst.z = 0.0
-    * dst.w = 1.0
-    */
-   struct tgsi_full_dst_register dst_x =
-      writemask_dst(&inst->Dst[0], TGSI_WRITEMASK_X);
-   struct tgsi_full_dst_register dst_y =
-      writemask_dst(&inst->Dst[0], TGSI_WRITEMASK_Y);
-   struct tgsi_full_dst_register dst_zw =
-      writemask_dst(&inst->Dst[0], TGSI_WRITEMASK_ZW);
-
-   struct tgsi_full_src_register zero_one =
-      make_immediate_reg_float4(emit, 0.0f, 0.0f, 0.0f, 1.0f);
-
-   begin_emit_instruction(emit);
-   emit_opcode(emit, VGPU10_OPCODE_SINCOS, inst->Instruction.Saturate);
-   emit_dst_register(emit, &dst_y);
-   emit_dst_register(emit, &dst_x);
-   emit_src_register(emit, &inst->Src[0]);
-   end_emit_instruction(emit);
-
-   emit_instruction_op1(emit, VGPU10_OPCODE_MOV,
-                        &dst_zw, &zero_one, inst->Instruction.Saturate);
-
-   return TRUE;
-}
-
-
-/**
  * Emit code for TGSI_OPCODE_SEQ (Set Equal) instruction.
  */
 static boolean
@@ -5593,8 +5557,6 @@ emit_vgpu10_instruction(struct svga_shader_emitter_v10 *emit,
       return emit_rsq(emit, inst);
    case TGSI_OPCODE_SAMPLE:
       return emit_sample(emit, inst);
-   case TGSI_OPCODE_SCS:
-      return emit_scs(emit, inst);
    case TGSI_OPCODE_SEQ:
       return emit_seq(emit, inst);
    case TGSI_OPCODE_SGE:

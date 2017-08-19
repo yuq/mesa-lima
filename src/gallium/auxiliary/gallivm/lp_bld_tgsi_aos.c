@@ -719,9 +719,6 @@ lp_emit_instruction_aos(
       dst0 = lp_build_select(&bld->bld_base.base, tmp0, src1, src2);
       break;
 
-   case TGSI_OPCODE_SCS:
-      return FALSE;
-
    case TGSI_OPCODE_TXB:
       dst0 = emit_tex(bld, inst, LP_BLD_TEX_MODIFIER_LOD_BIAS);
       break;

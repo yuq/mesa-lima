@@ -105,7 +105,6 @@ static const struct {
    [ TGSI_OPCODE_RCP     ] = { false,  false,                  0,  1,  1 },
    [ TGSI_OPCODE_RET     ] = { false,  false,                  0,  0,  0 },
    [ TGSI_OPCODE_RSQ     ] = { false,  false,                  0,  1,  1 },
-   [ TGSI_OPCODE_SCS     ] = { false,  false,                  0,  1,  1 },
    [ TGSI_OPCODE_SEQ     ] = { false,  false,                  0,  1,  2 },
    [ TGSI_OPCODE_SGE     ] = { false,  false,                  0,  1,  2 },
    [ TGSI_OPCODE_SGT     ] = { false,  false,                  0,  1,  2 },
