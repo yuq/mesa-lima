@@ -330,7 +330,7 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 			}
 
 			meta_va |= (uint32_t)tex->surface.tile_swizzle << 8;
-		} else if (tex->tc_compatible_htile && first_level == 0) {
+		} else if (vi_tc_compat_htile_enabled(tex, first_level)) {
 			meta_va = tex->resource.gpu_address + tex->htile_offset;
 		}
 

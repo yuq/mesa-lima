@@ -1392,8 +1392,7 @@ static void evergreen_init_depth_surface(struct r600_context *rctx,
 					S_028044_FORMAT(V_028044_STENCIL_8);
 	}
 
-	/* use htile only for first level */
-	if (rtex->htile_offset && !level) {
+	if (r600_htile_enabled(rtex, level)) {
 		uint64_t va = rtex->resource.gpu_address + rtex->htile_offset;
 		surf->db_htile_data_base = va >> 8;
 		surf->db_htile_surface = S_028ABC_HTILE_WIDTH(1) |

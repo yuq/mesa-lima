@@ -1006,6 +1006,19 @@ vi_dcc_enabled(struct r600_texture *tex, unsigned level)
 	return tex->dcc_offset && level < tex->surface.num_dcc_levels;
 }
 
+static inline bool
+r600_htile_enabled(struct r600_texture *tex, unsigned level)
+{
+	return tex->htile_offset && level == 0;
+}
+
+static inline bool
+vi_tc_compat_htile_enabled(struct r600_texture *tex, unsigned level)
+{
+	assert(!tex->tc_compatible_htile || tex->htile_offset);
+	return tex->tc_compatible_htile && level == 0;
+}
+
 #define COMPUTE_DBG(rscreen, fmt, args...) \
 	do { \
 		if ((rscreen->b.debug_flags & DBG_COMPUTE)) fprintf(stderr, fmt, ##args); \

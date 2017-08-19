@@ -1060,8 +1060,7 @@ static void r600_init_depth_surface(struct r600_context *rctx,
 	surf->db_depth_size = S_028000_PITCH_TILE_MAX(pitch) | S_028000_SLICE_TILE_MAX(slice);
 	surf->db_prefetch_limit = (rtex->surface.u.legacy.level[level].nblk_y / 8) - 1;
 
-	/* use htile only for first level */
-	if (rtex->htile_offset && !level) {
+	if (r600_htile_enabled(rtex, level)) {
 		surf->db_htile_data_base = rtex->htile_offset >> 8;
 		surf->db_htile_surface = S_028D24_HTILE_WIDTH(1) |
 					 S_028D24_HTILE_HEIGHT(1) |

@@ -2327,8 +2327,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 		surf->db_depth_size = S_02801C_X_MAX(rtex->resource.b.b.width0 - 1) |
 				      S_02801C_Y_MAX(rtex->resource.b.b.height0 - 1);
 
-		/* Only use HTILE for the first level. */
-		if (rtex->htile_offset && !level) {
+		if (r600_htile_enabled(rtex, level)) {
 			z_info |= S_028038_TILE_SURFACE_ENABLE(1) |
 				  S_028038_ALLOW_EXPCLEAR(1);
 
@@ -2406,8 +2405,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 		surf->db_depth_slice = S_02805C_SLICE_TILE_MAX((levelinfo->nblk_x *
 								levelinfo->nblk_y) / 64 - 1);
 
-		/* Only use HTILE for the first level. */
-		if (rtex->htile_offset && !level) {
+		if (r600_htile_enabled(rtex, level)) {
 			z_info |= S_028040_TILE_SURFACE_ENABLE(1) |
 				  S_028040_ALLOW_EXPCLEAR(1);
 
@@ -2668,7 +2666,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 			si_init_depth_surface(sctx, surf);
 		}
 
-		if (rtex->tc_compatible_htile && !surf->base.u.tex.level)
+		if (vi_tc_compat_htile_enabled(rtex, surf->base.u.tex.level))
 			sctx->framebuffer.DB_has_shader_readable_metadata = true;
 
 		r600_context_add_resource_size(ctx, surf->base.texture);

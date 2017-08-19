@@ -381,7 +381,9 @@ si_decompress_depth(struct si_context *sctx,
 	}
 
 	if (inplace_planes) {
-		if (!tex->tc_compatible_htile) {
+		bool tc_compat_htile = vi_tc_compat_htile_enabled(tex, first_level);
+
+		if (!tc_compat_htile) {
 			si_blit_decompress_zs_in_place(
 						sctx, tex,
 						levels_z, levels_s,
@@ -393,10 +395,9 @@ si_decompress_depth(struct si_context *sctx,
 		 */
 		si_make_DB_shader_coherent(sctx, tex->resource.b.b.nr_samples,
 					   inplace_planes & PIPE_MASK_S,
-					   tex->tc_compatible_htile &&
-					   first_level == 0);
+					   tc_compat_htile);
 
-		if (tex->tc_compatible_htile) {
+		if (tc_compat_htile) {
 			/* Only clear the mask that we are flushing, because
 			 * si_make_DB_shader_coherent() can treat depth and
 			 * stencil differently.
@@ -859,8 +860,8 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 		}
 	}
 
-	if (zstex && zstex->htile_offset &&
-	    zsbuf->u.tex.level == 0 &&
+	if (zstex &&
+	    r600_htile_enabled(zstex, zsbuf->u.tex.level) &&
 	    zsbuf->u.tex.first_layer == 0 &&
 	    zsbuf->u.tex.last_layer == util_max_layer(&zstex->resource.b.b, 0)) {
 		/* TC-compatible HTILE only supports depth clears to 0 or 1. */
