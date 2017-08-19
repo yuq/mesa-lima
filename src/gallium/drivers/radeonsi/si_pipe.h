@@ -202,6 +202,7 @@ struct si_framebuffer {
 	bool				dirty_zsbuf;
 	bool				any_dst_linear;
 	bool				CB_has_shader_readable_metadata;
+	bool				DB_has_shader_readable_metadata;
 };
 
 struct si_clip_state {
@@ -639,14 +640,24 @@ si_make_CB_shader_coherent(struct si_context *sctx, unsigned num_samples,
 
 static inline void
 si_make_DB_shader_coherent(struct si_context *sctx, unsigned num_samples,
-			   bool include_stencil)
+			   bool include_stencil, bool shaders_read_metadata)
 {
 	sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_DB |
 			 SI_CONTEXT_INV_VMEM_L1;
 
-	/* Single-sample depth (not stencil) is coherent with shaders on GFX9. */
-	if (sctx->b.chip_class <= VI || num_samples >= 2 || include_stencil)
+	if (sctx->b.chip_class >= GFX9) {
+		/* Single-sample depth (not stencil) is coherent with shaders
+		 * on GFX9, but L2 metadata must be flushed if shaders read
+		 * metadata.
+		 */
+		if (num_samples >= 2 || include_stencil)
+			sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
+		else if (shaders_read_metadata)
+			sctx->b.flags |= SI_CONTEXT_INV_L2_METADATA;
+	} else {
+		/* SI-CI-VI */
 		sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
+	}
 }
 
 #endif

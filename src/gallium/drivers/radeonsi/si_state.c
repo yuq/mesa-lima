@@ -2585,7 +2585,8 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	 * Note that lower mipmap levels aren't compressed.
 	 */
 	if (sctx->generate_mipmap_for_depth)
-		si_make_DB_shader_coherent(sctx, 1, false);
+		si_make_DB_shader_coherent(sctx, 1, false,
+					   sctx->framebuffer.DB_has_shader_readable_metadata);
 
 	/* Take the maximum of the old and new count. If the new count is lower,
 	 * dirtying is needed to disable the unbound colorbuffers.
@@ -2610,6 +2611,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	sctx->framebuffer.log_samples = util_logbase2(sctx->framebuffer.nr_samples);
 	sctx->framebuffer.any_dst_linear = false;
 	sctx->framebuffer.CB_has_shader_readable_metadata = false;
+	sctx->framebuffer.DB_has_shader_readable_metadata = false;
 
 	for (i = 0; i < state->nr_cbufs; i++) {
 		if (!state->cbufs[i])
@@ -2665,6 +2667,10 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		if (!surf->depth_initialized) {
 			si_init_depth_surface(sctx, surf);
 		}
+
+		if (rtex->tc_compatible_htile && !surf->base.u.tex.level)
+			sctx->framebuffer.DB_has_shader_readable_metadata = true;
+
 		r600_context_add_resource_size(ctx, surf->base.texture);
 	}
 

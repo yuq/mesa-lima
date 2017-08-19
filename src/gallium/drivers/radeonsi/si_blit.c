@@ -392,21 +392,19 @@ si_decompress_depth(struct si_context *sctx,
 		 * when we don't decompress but TC-compatible planes are dirty.
 		 */
 		si_make_DB_shader_coherent(sctx, tex->resource.b.b.nr_samples,
-					   inplace_planes & PIPE_MASK_S);
+					   inplace_planes & PIPE_MASK_S,
+					   tex->tc_compatible_htile &&
+					   first_level == 0);
 
-		/* If we flush DB caches for TC-compatible depth, the dirty
-		 * state becomes 0 for the whole mipmap tree and all planes.
-		 * (there is nothing else to flush)
-		 */
 		if (tex->tc_compatible_htile) {
 			/* Only clear the mask that we are flushing, because
 			 * si_make_DB_shader_coherent() can treat depth and
 			 * stencil differently.
 			 */
 			if (inplace_planes & PIPE_MASK_Z)
-				tex->dirty_level_mask = 0;
+				tex->dirty_level_mask &= ~levels_z;
 			if (inplace_planes & PIPE_MASK_S)
-				tex->stencil_dirty_level_mask = 0;
+				tex->stencil_dirty_level_mask &= ~levels_s;
 		}
 	}
 	/* set_framebuffer_state takes care of coherency for single-sample.
