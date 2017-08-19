@@ -356,7 +356,7 @@ recalculate_input_bindings(struct gl_context *ctx)
          else if (array[VERT_ATTRIB_POS].Enabled)
             inputs[0] = &vertexAttrib[VERT_ATTRIB_POS];
          else {
-            inputs[0] = &vbo->currval[VBO_ATTRIB_POS];
+            inputs[0] = &vbo->currval[VBO_ATTRIB_GENERIC0];
             const_inputs |= VERT_BIT_POS;
          }
 
