@@ -8733,45 +8733,6 @@ static int tgsi_endloop(struct r600_shader_ctx *ctx)
 	return 0;
 }
 
-static int tgsi_loop_breakc(struct r600_shader_ctx *ctx)
-{
-	int r;
-	unsigned int fscp;
-
-	for (fscp = ctx->bc->fc_sp; fscp > 0; fscp--)
-	{
-		if (FC_LOOP == ctx->bc->fc_stack[fscp - 1].type)
-			break;
-	}
-	if (fscp == 0) {
-		R600_ERR("BREAKC not inside loop/endloop pair\n");
-		return -EINVAL;
-	}
-
-	if (ctx->bc->chip_class == EVERGREEN &&
-	    ctx->bc->family != CHIP_CYPRESS &&
-	    ctx->bc->family != CHIP_JUNIPER) {
-		/* HW bug: ALU_BREAK does not save the active mask correctly */
-		r = tgsi_uif(ctx);
-		if (r)
-			return r;
-
-		r = r600_bytecode_add_cfinst(ctx->bc, CF_OP_LOOP_BREAK);
-		if (r)
-			return r;
-		fc_set_mid(ctx, fscp - 1);
-
-		return tgsi_endif(ctx);
-	} else {
-		r = emit_logic_pred(ctx, ALU_OP2_PRED_SETE_INT, CF_OP_ALU_BREAK);
-		if (r)
-			return r;
-		fc_set_mid(ctx, fscp - 1);
-	}
-
-	return 0;
-}
-
 static int tgsi_loop_brk_cont(struct r600_shader_ctx *ctx)
 {
 	unsigned int fscp;
@@ -9104,7 +9065,7 @@ static const struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[] 
 	[TGSI_OPCODE_MEMBAR]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[113]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[114]			= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_BREAKC]	= { ALU_OP0_NOP, tgsi_loop_breakc},
+	[115]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_KILL_IF]	= { ALU_OP2_KILLGT, tgsi_kill},  /* conditional kill */
 	[TGSI_OPCODE_END]	= { ALU_OP0_NOP, tgsi_end},  /* aka HALT */
 	[TGSI_OPCODE_DFMA]	= { ALU_OP0_NOP, tgsi_unsupported},
@@ -9302,7 +9263,7 @@ static const struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_MEMBAR]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[113]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[114]			= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_BREAKC]	= { ALU_OP0_NOP, tgsi_unsupported},
+	[115]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_KILL_IF]	= { ALU_OP2_KILLGT, tgsi_kill},  /* conditional kill */
 	[TGSI_OPCODE_END]	= { ALU_OP0_NOP, tgsi_end},  /* aka HALT */
 	/* Refer below for TGSI_OPCODE_DFMA */
@@ -9525,7 +9486,7 @@ static const struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_MEMBAR]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[113]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[114]			= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_BREAKC]	= { ALU_OP0_NOP, tgsi_unsupported},
+	[115]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_KILL_IF]	= { ALU_OP2_KILLGT, tgsi_kill},  /* conditional kill */
 	[TGSI_OPCODE_END]	= { ALU_OP0_NOP, tgsi_end},  /* aka HALT */
 	/* Refer below for TGSI_OPCODE_DFMA */

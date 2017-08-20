@@ -1596,7 +1596,7 @@ GLSL ISA
 
 These opcodes are part of :term:`GLSL`'s opcode set. Support for these
 opcodes is determined by a special capability bit, ``GLSL``.
-Some require glsl version 1.30 (UIF/BREAKC/SWITCH/CASE/DEFAULT/ENDSWITCH).
+Some require glsl version 1.30 (UIF/SWITCH/CASE/DEFAULT/ENDSWITCH).
 
 .. opcode:: CAL - Subroutine Call
 
@@ -1650,20 +1650,6 @@ Some require glsl version 1.30 (UIF/BREAKC/SWITCH/CASE/DEFAULT/ENDSWITCH).
   Unconditionally moves the point of execution to the instruction after the
   next endloop or endswitch. The instruction must appear within a loop/endloop
   or switch/endswitch.
-
-
-.. opcode:: BREAKC - Break Conditional
-
-  Conditionally moves the point of execution to the instruction after the
-  next endloop or endswitch. The instruction must appear within a loop/endloop
-  or switch/endswitch.
-  Condition evaluates to true if src0.x != 0 where src0.x is interpreted
-  as an integer register.
-
-.. note::
-
-   Considered for removal as it's quite inconsistent wrt other opcodes
-   (could emulate with UIF/BRK/ENDIF). 
 
 
 .. opcode:: IF - Float If

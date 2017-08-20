@@ -1582,9 +1582,6 @@ static const nir_op op_trans[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_FSLT] = nir_op_flt,
    [TGSI_OPCODE_FSNE] = nir_op_fne,
 
-   /* No control flow yet */
-   [TGSI_OPCODE_BREAKC] = 0, /* not emitted by glsl_to_tgsi.cpp */
-
    [TGSI_OPCODE_KILL_IF] = 0,
 
    [TGSI_OPCODE_END] = 0,

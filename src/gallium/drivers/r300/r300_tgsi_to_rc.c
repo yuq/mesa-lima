@@ -115,7 +115,6 @@ static unsigned translate_opcode(unsigned opcode)
      /* case TGSI_OPCODE_ENDLOOP2: return RC_OPCODE_ENDLOOP2; */
      /* case TGSI_OPCODE_ENDSUB: return RC_OPCODE_ENDSUB; */
         case TGSI_OPCODE_NOP: return RC_OPCODE_NOP;
-     /* case TGSI_OPCODE_BREAKC: return RC_OPCODE_BREAKC; */
         case TGSI_OPCODE_KILL_IF: return RC_OPCODE_KIL;
     }
 

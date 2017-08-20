@@ -578,8 +578,6 @@ translate_opcode(unsigned opcode)
       return VGPU10_OPCODE_RET;
    case TGSI_OPCODE_NOP:
       return VGPU10_OPCODE_NOP;
-   case TGSI_OPCODE_BREAKC:
-      return VGPU10_OPCODE_BREAKC;
    case TGSI_OPCODE_END:
       return VGPU10_OPCODE_RET;
    case TGSI_OPCODE_F2I:

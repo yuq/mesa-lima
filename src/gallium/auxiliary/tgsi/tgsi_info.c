@@ -151,8 +151,8 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 1, 2, 0, 0, 0, 0, 0, COMP, "FSNE", TGSI_OPCODE_FSNE },
    { 0, 1, 0, 0, 0, 0, 0, OTHR, "MEMBAR", TGSI_OPCODE_MEMBAR },
    { 0, 1, 0, 0, 0, 0, 0, NONE, "", 113 }, /* removed */
-   { 0, 1, 0, 0, 0, 0, 0, NONE, "", 114 },     /* removed */
-   { 0, 1, 0, 0, 0, 0, 0, NONE, "BREAKC", TGSI_OPCODE_BREAKC },
+   { 0, 1, 0, 0, 0, 0, 0, NONE, "", 114 }, /* removed */
+   { 0, 1, 0, 0, 0, 0, 0, NONE, "", 115 }, /* removed */
    { 0, 1, 0, 0, 0, 0, 0, NONE, "KILL_IF", TGSI_OPCODE_KILL_IF },
    { 0, 0, 0, 0, 0, 0, 0, NONE, "END", TGSI_OPCODE_END },
    { 1, 3, 0, 0, 0, 0, 0, COMP, "DFMA", TGSI_OPCODE_DFMA },
@@ -477,7 +477,6 @@ tgsi_opcode_infer_src_type( uint opcode )
    case TGSI_OPCODE_UIF:
    case TGSI_OPCODE_TXF:
    case TGSI_OPCODE_TXF_LZ:
-   case TGSI_OPCODE_BREAKC:
    case TGSI_OPCODE_U2F:
    case TGSI_OPCODE_U2D:
    case TGSI_OPCODE_UADD:

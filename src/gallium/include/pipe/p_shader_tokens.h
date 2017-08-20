@@ -453,7 +453,6 @@ struct tgsi_property_data {
 
 #define TGSI_OPCODE_MEMBAR              112
                                 /* gap */
-#define TGSI_OPCODE_BREAKC              115
 #define TGSI_OPCODE_KILL_IF             116  /* conditional kill */
 #define TGSI_OPCODE_END                 117  /* aka HALT */
 #define TGSI_OPCODE_DFMA                118
