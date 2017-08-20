@@ -152,6 +152,9 @@ static bool gpir_try_place_node(gpir_block *block, gpir_node *node)
    for (int i = 0; slots[i] != GPIR_INSTR_SLOT_END; i++) {
       int start = 0, end = INT_MAX;
 
+      /* TODO: only gpir_op_load_reg need to determine the sched_pos before
+       * calculate max, we can make it seperate path
+       */
       node->sched_pos = slots[i];
 
       /* find legal instr range contrained by successors */
@@ -241,13 +244,72 @@ pass2:
    return false;
 }
 
+static gpir_node *gpir_try_insert_move(gpir_node *node)
+{
+   return NULL;
+}
+
+static bool gpir_try_place_move_node(gpir_block *block, gpir_node *node, bool *done)
+{
+   return false;
+}
+
+static void gpir_undo_move(gpir_block *block, gpir_node *node)
+{
+   
+}
+
+static bool gpir_try_add_move_nodes(gpir_block *block, gpir_node *node)
+{
+   gpir_node *cur_node = node;
+   struct util_dynarray inserted_moves;
+
+   util_dynarray_init(&inserted_moves);
+
+   /* TODO: we may use the distance of node and all its successors to
+    * predicate if using a reg instead of so many moves
+    */
+   for (int i = 1; true; i++) {
+      gpir_node *move_node = gpir_try_insert_move(cur_node);
+      if (!move_node)
+         break;
+
+      util_dynarray_append(&inserted_moves, gpir_node *, move_node);
+
+      bool done;
+      if (!gpir_try_place_move_node(block, move_node, &done))
+         break;
+
+      if (done) {
+         fprintf(stderr, "gpir: add %d moves for node %s %d\n",
+                 i, gpir_op_infos[node->op].name, node->index);
+
+         util_dynarray_fini(&inserted_moves);
+         return true;
+      }
+
+      cur_node = move_node;
+   }
+
+   /* fail to satisfy all constraints by inserting move nodes */
+   for (gpir_node *m = util_dynarray_begin(&inserted_moves);
+        m != util_dynarray_end(&inserted_moves); m++)
+      gpir_undo_move(block, m);
+
+   util_dynarray_fini(&inserted_moves);
+   return false;
+}
+
 /*
  * tries to schedule a node, placing it and then inserting any intermediate
  * moves necessary.
  */
 static bool gpir_try_schedule_node_move(gpir_block *block, gpir_node *node)
 {
-   return gpir_try_place_node(block, node);
+   if (gpir_try_place_node(block, node))
+      return true;
+
+   return gpir_try_add_move_nodes(block, node);
 }
 
 static void gpir_schedule_node(gpir_block *block, gpir_node *node)
