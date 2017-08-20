@@ -943,37 +943,6 @@ glsl_to_tgsi_visitor::get_opcode(unsigned op,
       else \
          op = TGSI_OPCODE_##f; \
       break;
-#define case5(c, f, i, u, d)                    \
-   case TGSI_OPCODE_##c: \
-      if (type == GLSL_TYPE_DOUBLE)           \
-         op = TGSI_OPCODE_##d; \
-      else if (type == GLSL_TYPE_INT)       \
-         op = TGSI_OPCODE_##i; \
-      else if (type == GLSL_TYPE_UINT) \
-         op = TGSI_OPCODE_##u; \
-      else \
-         op = TGSI_OPCODE_##f; \
-      break;
-
-#define case4(c, f, i, u)                    \
-   case TGSI_OPCODE_##c: \
-      if (type == GLSL_TYPE_INT) \
-         op = TGSI_OPCODE_##i; \
-      else if (type == GLSL_TYPE_UINT) \
-         op = TGSI_OPCODE_##u; \
-      else \
-         op = TGSI_OPCODE_##f; \
-      break;
-
-#define case3(f, i, u)  case4(f, f, i, u)
-#define case6d(f, i, u, d, i64, u64)  case7(f, f, i, u, d, i64, u64)
-#define case3fid(f, i, d) case5(f, f, i, i, d)
-#define case3fid64(f, i, d, i64) case7(f, f, i, i, d, i64, i64)
-#define case2fi(f, i)   case4(f, f, i, i)
-#define case2iu(i, u)   case4(i, LAST, i, u)
-
-#define case2iu64(i, i64)   case7(i, LAST, i, i, LAST, i64, i64)
-#define case4iu64(i, u, i64, u64)   case7(i, LAST, i, u, LAST, i64, u64)
 
 #define casecomp(c, f, i, u, d, i64, ui64)           \
    case TGSI_OPCODE_##c: \
@@ -994,42 +963,41 @@ glsl_to_tgsi_visitor::get_opcode(unsigned op,
       break;
 
    switch(op) {
-      case3fid64(ADD, UADD, DADD, U64ADD);
-      case3fid64(MUL, UMUL, DMUL, U64MUL);
-      case3fid(MAD, UMAD, DMAD);
-      case3fid(FMA, UMAD, DFMA);
-      case6d(DIV, IDIV, UDIV, DDIV, I64DIV, U64DIV);
-      case6d(MAX, IMAX, UMAX, DMAX, I64MAX, U64MAX);
-      case6d(MIN, IMIN, UMIN, DMIN, I64MIN, U64MIN);
-      case4iu64(MOD, UMOD, I64MOD, U64MOD);
+      /* Some instructions are initially selected without considering the type.
+       * This fixes the type:
+       *
+       *    INIT     FLOAT SINT     UINT     DOUBLE   SINT64   UINT64
+       */
+      case7(ADD,     ADD,  UADD,    UADD,    DADD,    U64ADD,  U64ADD);
+      case7(CEIL,    CEIL, LAST,    LAST,    DCEIL,   LAST,    LAST);
+      case7(DIV,     DIV,  IDIV,    UDIV,    DDIV,    I64DIV,  U64DIV);
+      case7(FMA,     FMA,  UMAD,    UMAD,    DFMA,    LAST,    LAST);
+      case7(FLR,     FLR,  LAST,    LAST,    DFLR,    LAST,    LAST);
+      case7(FRC,     FRC,  LAST,    LAST,    DFRAC,   LAST,    LAST);
+      case7(MUL,     MUL,  UMUL,    UMUL,    DMUL,    U64MUL,  U64MUL);
+      case7(MAD,     MAD,  UMAD,    UMAD,    DMAD,    LAST,    LAST);
+      case7(MAX,     MAX,  IMAX,    UMAX,    DMAX,    I64MAX,  U64MAX);
+      case7(MIN,     MIN,  IMIN,    UMIN,    DMIN,    I64MIN,  U64MIN);
+      case7(RCP,     RCP,  LAST,    LAST,    DRCP,    LAST,    LAST);
+      case7(ROUND,   ROUND,LAST,    LAST,    DROUND,  LAST,    LAST);
+      case7(RSQ,     RSQ,  LAST,    LAST,    DRSQ,    LAST,    LAST);
+      case7(SQRT,    SQRT, LAST,    LAST,    DSQRT,   LAST,    LAST);
+      case7(SSG,     SSG,  ISSG,    ISSG,    DSSG,    I64SSG,  I64SSG);
+      case7(TRUNC,   TRUNC,LAST,    LAST,    DTRUNC,  LAST,    LAST);
+
+      case7(MOD,     LAST, MOD,     UMOD,    LAST,    I64MOD,  U64MOD);
+      case7(SHL,     LAST, SHL,     SHL,     LAST,    U64SHL,  U64SHL);
+      case7(IBFE,    LAST, IBFE,    UBFE,    LAST,    LAST,    LAST);
+      case7(IMSB,    LAST, IMSB,    UMSB,    LAST,    LAST,    LAST);
+      case7(IMUL_HI, LAST, IMUL_HI, UMUL_HI, LAST,    LAST,    LAST);
+      case7(ISHR,    LAST, ISHR,    USHR,    LAST,    I64SHR,  U64SHR);
+      case7(ATOMIMAX,LAST, ATOMIMAX,ATOMUMAX,LAST,    LAST,    LAST);
+      case7(ATOMIMIN,LAST, ATOMIMIN,ATOMUMIN,LAST,    LAST,    LAST);
 
       casecomp(SEQ, FSEQ, USEQ, USEQ, DSEQ, U64SEQ, U64SEQ);
       casecomp(SNE, FSNE, USNE, USNE, DSNE, U64SNE, U64SNE);
       casecomp(SGE, FSGE, ISGE, USGE, DSGE, I64SGE, U64SGE);
       casecomp(SLT, FSLT, ISLT, USLT, DSLT, I64SLT, U64SLT);
-
-      case2iu64(SHL, U64SHL);
-      case4iu64(ISHR, USHR, I64SHR, U64SHR);
-
-      case3fid64(SSG, ISSG, DSSG, I64SSG);
-
-      case2iu(IBFE, UBFE);
-      case2iu(IMSB, UMSB);
-      case2iu(IMUL_HI, UMUL_HI);
-
-      case3fid(SQRT, SQRT, DSQRT);
-
-      case3fid(RCP, RCP, DRCP);
-      case3fid(RSQ, RSQ, DRSQ);
-
-      case3fid(FRC, FRC, DFRAC);
-      case3fid(TRUNC, TRUNC, DTRUNC);
-      case3fid(CEIL, CEIL, DCEIL);
-      case3fid(FLR, FLR, DFLR);
-      case3fid(ROUND, ROUND, DROUND);
-
-      case2iu(ATOMIMAX, ATOMUMAX);
-      case2iu(ATOMIMIN, ATOMUMIN);
 
       default: break;
    }
