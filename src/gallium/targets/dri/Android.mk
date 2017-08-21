@@ -32,6 +32,13 @@ LOCAL_SRC_FILES := target.c
 
 LOCAL_CFLAGS :=
 
+# We need --undefined-version as some functions in dri.sym may be missing
+# depending on which drivers are enabled or not. Otherwise, we get the error:
+# "version script assignment of  to symbol FOO failed: symbol not defined"
+LOCAL_LDFLAGS := \
+	-Wl,--version-script=$(LOCAL_PATH)/dri.sym \
+	-Wl,--undefined-version
+
 LOCAL_SHARED_LIBRARIES := \
 	libdl \
 	libglapi \
