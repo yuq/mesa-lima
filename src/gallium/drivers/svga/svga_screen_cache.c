@@ -69,7 +69,7 @@ surface_size(const struct svga_host_surface_cache_key *key)
       total_size += img_size;
    }
 
-   total_size *= key->numFaces * key->arraySize;
+   total_size *= key->numFaces * key->arraySize * MAX2(1, key->sampleCount);
 
    return total_size;
 }
