@@ -42,23 +42,25 @@ void gpir_instr_print_prog(gpir_compiler *comp)
       int len;
       char *name;
    } fields[] = {
-      [GPIR_INSTR_SLOT_MUL0] = { 8, "mul0" },
-      [GPIR_INSTR_SLOT_MUL1] = { 8, "mul1" },
-      [GPIR_INSTR_SLOT_ADD0] = { 8, "add0" },
-      [GPIR_INSTR_SLOT_ADD1] = { 8, "add1" },
-      [GPIR_INSTR_SLOT_LOAD0] = { 10, "load0" },
-      [GPIR_INSTR_SLOT_LOAD1] = { 10, "load1" },
-      [GPIR_INSTR_SLOT_LOAD2] = { 10, "load2" },
-      [GPIR_INSTR_SLOT_BRANCH] = { 8, "branch" },
-      [GPIR_INSTR_SLOT_STORE] = { 10, "store" },
-      [GPIR_INSTR_SLOT_COMPLEX] = { 10, "complex" },
-      [GPIR_INSTR_SLOT_PASS] = { 8, "pass" },
+      [GPIR_INSTR_SLOT_MUL0] = { 4, "mul0" },
+      [GPIR_INSTR_SLOT_MUL1] = { 4, "mul1" },
+      [GPIR_INSTR_SLOT_ADD0] = { 4, "add0" },
+      [GPIR_INSTR_SLOT_ADD1] = { 4, "add1" },
+      [GPIR_INSTR_SLOT_REG0_LOAD3] = { 15, "load0" },
+      [GPIR_INSTR_SLOT_REG1_LOAD3] = { 15, "load1" },
+      [GPIR_INSTR_SLOT_MEM_LOAD3] = { 15, "load2" },
+      [GPIR_INSTR_SLOT_BRANCH] = { 4, "bnch" },
+      [GPIR_INSTR_SLOT_STORE3] = { 15, "store" },
+      [GPIR_INSTR_SLOT_COMPLEX] = { 4, "cmpl" },
+      [GPIR_INSTR_SLOT_PASS] = { 4, "pass" },
    };
 
    printf("========prog instr========\n");
    printf("     ");
-   for (int i = 0; i < GPIR_INSTR_SLOT_NUM; i++)
-      printf("%-*s ", fields[i].len, fields[i].name);
+   for (int i = 0; i < GPIR_INSTR_SLOT_NUM; i++) {
+      if (fields[i].len)
+         printf("%-*s ", fields[i].len, fields[i].name);
+   }
    printf("\n");
 
    int index = 0;
@@ -66,13 +68,25 @@ void gpir_instr_print_prog(gpir_compiler *comp)
       printf("-------block instr------\n");
       for (int i = gpir_instr_array_n(&block->instrs) - 1; i >= 0; i--) {
          printf("%03d: ", index++);
+
          gpir_instr *instr = gpir_instr_array_e(&block->instrs, i);
+         char buff[16] = "null";
+         int start = 0;
          for (int j = 0; j < GPIR_INSTR_SLOT_NUM; j++) {
             gpir_node *node = instr->slots[j];
-            char buff[32] = "null";
-            if (node)
-               snprintf(buff, sizeof(buff), "%d|%s", node->index, gpir_op_infos[node->op].name);
-            printf("%-*s ", fields[j].len, buff);
+            if (fields[j].len) {
+               if (node)
+                  snprintf(buff + start, sizeof(buff) - start, "%d", node->index);
+               printf("%-*s ", fields[j].len, buff);
+
+               strcpy(buff, "null");
+               start = 0;
+            }
+            else {
+               if (node)
+                  start += snprintf(buff + start, sizeof(buff) - start, "%d", node->index);
+               start += snprintf(buff + start, sizeof(buff) - start, "|");
+            }
          }
          printf("\n");
       }
