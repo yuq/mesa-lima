@@ -2033,6 +2033,11 @@ _mesa_GetUnsignedBytevEXT(GLenum pname, GLubyte *data)
 
    GET_CURRENT_CONTEXT(ctx);
 
+   if (!ctx->Extensions.EXT_memory_object) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(unsupported)", func);
+      return;
+   }
+
    d = find_value(func, pname, &p, &v);
    size = get_value_size(d->type, &v);
    if (size >= 0) {
@@ -2811,6 +2816,11 @@ _mesa_GetUnsignedBytei_vEXT(GLenum target, GLuint index, GLubyte *data)
    const char *func = "glGetUnsignedBytei_vEXT";
 
    GET_CURRENT_CONTEXT(ctx);
+
+   if (!ctx->Extensions.EXT_memory_object) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(unsupported)", func);
+      return;
+   }
 
    type = find_value_indexed(func, target, index, &v);
    size = get_value_size(type, &v);
