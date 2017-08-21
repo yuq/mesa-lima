@@ -1928,15 +1928,15 @@ nir_intrinsic_from_system_value(gl_system_value val)
    case SYSTEM_VALUE_SUBGROUP_INVOCATION:
       return nir_intrinsic_load_subgroup_invocation;
    case SYSTEM_VALUE_SUBGROUP_EQ_MASK:
-	return nir_intrinsic_load_subgroup_eq_mask;
+      return nir_intrinsic_load_subgroup_eq_mask;
    case SYSTEM_VALUE_SUBGROUP_GE_MASK:
-	return nir_intrinsic_load_subgroup_ge_mask;
+      return nir_intrinsic_load_subgroup_ge_mask;
    case SYSTEM_VALUE_SUBGROUP_GT_MASK:
-	return nir_intrinsic_load_subgroup_gt_mask;
+      return nir_intrinsic_load_subgroup_gt_mask;
    case SYSTEM_VALUE_SUBGROUP_LE_MASK:
-	return nir_intrinsic_load_subgroup_le_mask;
+      return nir_intrinsic_load_subgroup_le_mask;
    case SYSTEM_VALUE_SUBGROUP_LT_MASK:
-	return nir_intrinsic_load_subgroup_lt_mask;
+      return nir_intrinsic_load_subgroup_lt_mask;
    default:
       unreachable("system value does not directly correspond to intrinsic");
    }
