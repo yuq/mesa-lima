@@ -876,6 +876,7 @@ radv_image_view_make_descriptor(struct radv_image_view *iview,
 	uint32_t blk_w;
 	uint32_t *descriptor;
 	uint32_t *fmask_descriptor;
+	uint32_t hw_level = 0;
 
 	if (is_storage_image) {
 		descriptor = iview->storage_descriptor;
@@ -888,11 +889,13 @@ radv_image_view_make_descriptor(struct radv_image_view *iview,
 	assert(image->surface.blk_w % vk_format_get_blockwidth(image->vk_format) == 0);
 	blk_w = image->surface.blk_w / vk_format_get_blockwidth(image->vk_format) * vk_format_get_blockwidth(iview->vk_format);
 
+	if (device->physical_device->rad_info.chip_class >= GFX9)
+		hw_level = iview->base_mip;
 	si_make_texture_descriptor(device, image, is_storage_image,
 				   iview->type,
 				   iview->vk_format,
 				   components,
-				   0, iview->level_count - 1,
+				   hw_level, hw_level + iview->level_count - 1,
 				   iview->base_layer,
 				   iview->base_layer + iview->layer_count - 1,
 				   iview->extent.width,
