@@ -1305,6 +1305,7 @@ struct radv_image_view {
 	uint32_t base_layer;
 	uint32_t layer_count;
 	uint32_t base_mip;
+	uint32_t level_count;
 	VkExtent3D extent; /**< Extent of VkImageViewCreateInfo::baseMipLevel. */
 
 	uint32_t descriptor[8];

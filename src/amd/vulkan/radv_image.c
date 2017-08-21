@@ -862,11 +862,10 @@ radv_image_create(VkDevice _device,
 static void
 radv_image_view_make_descriptor(struct radv_image_view *iview,
 				struct radv_device *device,
-				const VkImageViewCreateInfo* pCreateInfo,
+				const VkComponentMapping *components,
 				bool is_storage_image)
 {
-	RADV_FROM_HANDLE(radv_image, image, pCreateInfo->image);
-	const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
+	struct radv_image *image = iview->image;
 	bool is_stencil = iview->aspect_mask == VK_IMAGE_ASPECT_STENCIL_BIT;
 	uint32_t blk_w;
 	uint32_t *descriptor;
@@ -886,20 +885,27 @@ radv_image_view_make_descriptor(struct radv_image_view *iview,
 	si_make_texture_descriptor(device, image, is_storage_image,
 				   iview->type,
 				   iview->vk_format,
-				   &pCreateInfo->components,
-				   0, radv_get_levelCount(image, range) - 1,
-				   range->baseArrayLayer,
-				   range->baseArrayLayer + radv_get_layerCount(image, range) - 1,
+				   components,
+				   0, iview->level_count - 1,
+				   iview->base_layer,
+				   iview->base_layer + iview->layer_count - 1,
 				   iview->extent.width,
 				   iview->extent.height,
 				   iview->extent.depth,
 				   descriptor,
 				   fmask_descriptor);
+
+	const struct legacy_surf_level *base_level_info = NULL;
+	if (device->physical_device->rad_info.chip_class <= GFX9) {
+		if (is_stencil)
+			base_level_info = &image->surface.u.legacy.stencil_level[iview->base_mip];
+		else
+			base_level_info = &image->surface.u.legacy.level[iview->base_mip];
+	}
 	si_set_mutable_tex_desc_fields(device, image,
-				       is_stencil ? &image->surface.u.legacy.stencil_level[range->baseMipLevel]
-				                  : &image->surface.u.legacy.level[range->baseMipLevel],
-				       range->baseMipLevel,
-				       range->baseMipLevel,
+				       base_level_info,
+				       iview->base_mip,
+				       iview->base_mip,
 				       blk_w, is_stencil, descriptor);
 }
 
@@ -949,9 +955,10 @@ radv_image_view_init(struct radv_image_view *iview,
 	iview->base_layer = range->baseArrayLayer;
 	iview->layer_count = radv_get_layerCount(image, range);
 	iview->base_mip = range->baseMipLevel;
+	iview->level_count = radv_get_levelCount(image, range);
 
-	radv_image_view_make_descriptor(iview, device, pCreateInfo, false);
-	radv_image_view_make_descriptor(iview, device, pCreateInfo, true);
+	radv_image_view_make_descriptor(iview, device, &pCreateInfo->components, false);
+	radv_image_view_make_descriptor(iview, device, &pCreateInfo->components, true);
 }
 
 bool radv_layout_has_htile(const struct radv_image *image,
