@@ -61,6 +61,9 @@ lima_program_optimize_nir(struct nir_shader *s)
 {
    bool progress;
 
+   NIR_PASS_V(s, nir_lower_load_const_to_scalar);
+   NIR_PASS_V(s, nir_lower_io_to_scalar, nir_var_shader_in|nir_var_shader_out);
+
    do {
       progress = false;
 
