@@ -593,6 +593,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    struct pipe_screen *screen;
    bool interlaced;
    bool realloc = false;
+   enum pipe_format format;
 
    if (!ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
@@ -628,6 +629,17 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
       surf->templat.interlaced = screen->get_video_param(screen, context->decoder->profile,
                                                          PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
                                                          PIPE_VIDEO_CAP_PREFERS_INTERLACED);
+      realloc = true;
+   }
+
+   format = screen->get_video_param(screen, context->decoder->profile,
+                                    PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
+                                    PIPE_VIDEO_CAP_PREFERED_FORMAT);
+
+   if (surf->buffer->buffer_format != format &&
+       surf->buffer->buffer_format == PIPE_FORMAT_NV12) {
+      /* check originally as NV12 only */
+      surf->templat.buffer_format = format;
       realloc = true;
    }
 
