@@ -324,13 +324,17 @@ static rvcn_dec_message_hevc_t get_h265_msg(struct radeon_decoder *dec,
 			result.direct_reflist[i][j] = pic->RefPicList[i][j];
 	}
 
-	if ((pic->base.profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10) &&
-		(target->buffer_format == PIPE_FORMAT_NV12)) {
-		result.p010_mode = 0;
-		result.luma_10to8 = 5;
-		result.chroma_10to8 = 5;
-		result.hevc_reserved[0] = 4; /* sclr_luma10to8 */
-		result.hevc_reserved[1] = 4; /* sclr_chroma10to8 */
+	if (pic->base.profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10) {
+		if (target->buffer_format == PIPE_FORMAT_P016) {
+			result.p010_mode = 1;
+			result.msb_mode = 1;
+		} else {
+			result.p010_mode = 0;
+			result.luma_10to8 = 5;
+			result.chroma_10to8 = 5;
+			result.hevc_reserved[0] = 4; /* sclr_luma10to8 */
+			result.hevc_reserved[1] = 4; /* sclr_chroma10to8 */
+		}
 	}
 
 	return result;
