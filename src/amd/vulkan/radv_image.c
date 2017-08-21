@@ -414,7 +414,7 @@ si_make_texture_descriptor(struct radv_device *device,
 		state[4] |= S_008F20_BC_SWIZZLE(bc_swizzle);
 		state[5] |= S_008F24_MAX_MIP(image->info.samples > 1 ?
 					     util_logbase2(image->info.samples) :
-					     last_level);
+					     image->info.levels - 1);
 	} else {
 		state[3] |= S_008F1C_POW2_PAD(image->info.levels > 1);
 		state[4] |= S_008F20_DEPTH(depth - 1);
