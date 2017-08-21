@@ -560,6 +560,12 @@ _mesa_ImportMemoryFdEXT(GLuint memory,
 {
    GET_CURRENT_CONTEXT(ctx);
 
+   if (!ctx->Extensions.EXT_memory_object_fd) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glImportMemoryFdEXT(unsupported)");
+      return;
+   }
+
    if (handleType != GL_HANDLE_TYPE_OPAQUE_FD_EXT) {
       _mesa_error(ctx, GL_INVALID_VALUE, "glImportMemoryFdEXT(handleType=%u)",
                   handleType);
