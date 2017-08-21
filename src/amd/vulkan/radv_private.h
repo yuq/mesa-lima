@@ -1026,7 +1026,7 @@ struct radv_depth_stencil_state {
 struct radv_blend_state {
 	uint32_t cb_color_control;
 	uint32_t cb_target_mask;
-	uint32_t sx_mrt0_blend_opt[8];
+	uint32_t sx_mrt_blend_opt[8];
 	uint32_t cb_blend_control[8];
 
 	uint32_t spi_shader_col_format;
