@@ -947,10 +947,12 @@ radv_image_view_init(struct radv_image_view *iview,
 		.depth  = radv_minify(image->info.depth , range->baseMipLevel),
 	};
 
-	iview->extent.width = round_up_u32(iview->extent.width * vk_format_get_blockwidth(iview->vk_format),
-					   vk_format_get_blockwidth(image->vk_format));
-	iview->extent.height = round_up_u32(iview->extent.height * vk_format_get_blockheight(iview->vk_format),
-					    vk_format_get_blockheight(image->vk_format));
+	if (iview->vk_format != image->vk_format) {
+		iview->extent.width = round_up_u32(iview->extent.width * vk_format_get_blockwidth(iview->vk_format),
+						   vk_format_get_blockwidth(image->vk_format));
+		iview->extent.height = round_up_u32(iview->extent.height * vk_format_get_blockheight(iview->vk_format),
+						    vk_format_get_blockheight(image->vk_format));
+	}
 
 	iview->base_layer = range->baseArrayLayer;
 	iview->layer_count = radv_get_layerCount(image, range);
