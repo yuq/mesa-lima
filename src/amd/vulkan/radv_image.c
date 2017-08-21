@@ -941,11 +941,19 @@ radv_image_view_init(struct radv_image_view *iview,
 		iview->vk_format = vk_format_depth_only(iview->vk_format);
 	}
 
-	iview->extent = (VkExtent3D) {
-		.width  = radv_minify(image->info.width , range->baseMipLevel),
-		.height = radv_minify(image->info.height, range->baseMipLevel),
-		.depth  = radv_minify(image->info.depth , range->baseMipLevel),
-	};
+	if (device->physical_device->rad_info.chip_class >= GFX9) {
+		iview->extent = (VkExtent3D) {
+			.width = image->info.width,
+			.height = image->info.height,
+			.depth = image->info.depth,
+		};
+	} else {
+		iview->extent = (VkExtent3D) {
+			.width  = radv_minify(image->info.width , range->baseMipLevel),
+			.height = radv_minify(image->info.height, range->baseMipLevel),
+			.depth  = radv_minify(image->info.depth , range->baseMipLevel),
+		};
+	}
 
 	if (iview->vk_format != image->vk_format) {
 		iview->extent.width = round_up_u32(iview->extent.width * vk_format_get_blockwidth(iview->vk_format),
