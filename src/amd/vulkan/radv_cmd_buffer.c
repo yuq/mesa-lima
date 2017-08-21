@@ -1247,9 +1247,13 @@ radv_emit_framebuffer_state(struct radv_cmd_buffer *cmd_buffer)
 		}
 		radv_load_depth_clear_regs(cmd_buffer, image);
 	} else {
-		radeon_set_context_reg_seq(cmd_buffer->cs, R_028040_DB_Z_INFO, 2);
-		radeon_emit(cmd_buffer->cs, S_028040_FORMAT(V_028040_Z_INVALID)); /* R_028040_DB_Z_INFO */
-		radeon_emit(cmd_buffer->cs, S_028044_FORMAT(V_028044_STENCIL_INVALID)); /* R_028044_DB_STENCIL_INFO */
+		if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9)
+			radeon_set_context_reg_seq(cmd_buffer->cs, R_028038_DB_Z_INFO, 2);
+		else
+			radeon_set_context_reg_seq(cmd_buffer->cs, R_028040_DB_Z_INFO, 2);
+
+		radeon_emit(cmd_buffer->cs, S_028040_FORMAT(V_028040_Z_INVALID)); /* DB_Z_INFO */
+		radeon_emit(cmd_buffer->cs, S_028044_FORMAT(V_028044_STENCIL_INVALID)); /* DB_STENCIL_INFO */
 	}
 	radeon_set_context_reg(cmd_buffer->cs, R_028208_PA_SC_WINDOW_SCISSOR_BR,
 			       S_028208_BR_X(framebuffer->width) |
