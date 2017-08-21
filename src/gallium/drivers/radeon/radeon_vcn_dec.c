@@ -631,7 +631,7 @@ static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec,
 	decode->db_pitch = align(dec->base.width, 32);
 	decode->db_surf_tile_config = 0;
 
-	decode->dt_pitch = luma->surface.u.gfx9.surf_pitch * luma->surface.bpe;;
+	decode->dt_pitch = luma->surface.u.gfx9.surf_pitch * luma->surface.blk_w;
 	decode->dt_uv_pitch = decode->dt_pitch / 2;
 
 	decode->dt_tiling_mode = 0;
