@@ -2708,7 +2708,7 @@ void radv_CmdDrawIndexed(
 
 	radv_cmd_buffer_flush_state(cmd_buffer, true, (instanceCount > 1), false, indexCount);
 
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 15);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 16);
 
 	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
 		radeon_set_uconfig_reg_idx(cmd_buffer->cs, R_03090C_VGT_INDEX_TYPE,
