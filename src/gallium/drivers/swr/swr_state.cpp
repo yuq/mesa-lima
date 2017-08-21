@@ -1158,14 +1158,6 @@ swr_update_derived(struct pipe_context *pipe,
       rastState->depthClipEnable = rasterizer->depth_clip;
       rastState->clipHalfZ = rasterizer->clip_halfz;
 
-      rastState->clipDistanceMask =
-         ctx->vs->info.base.num_written_clipdistance ?
-         ctx->vs->info.base.clipdist_writemask & rasterizer->clip_plane_enable :
-         rasterizer->clip_plane_enable;
-
-      rastState->cullDistanceMask =
-         ctx->vs->info.base.culldist_writemask << ctx->vs->info.base.num_written_clipdistance;
-
       ctx->api.pfnSwrSetRastState(ctx->swrContext, rastState);
    }
 
@@ -1765,6 +1757,14 @@ swr_update_derived(struct pipe_context *pipe,
    backendState.readRenderTargetArrayIndex = pLastFE->writes_layer;
    backendState.readViewportArrayIndex = pLastFE->writes_viewport_index;
    backendState.vertexAttribOffset = VERTEX_ATTRIB_START_SLOT; // TODO: optimize
+
+   backendState.clipDistanceMask =
+      ctx->vs->info.base.num_written_clipdistance ?
+      ctx->vs->info.base.clipdist_writemask & ctx->rasterizer->clip_plane_enable :
+      ctx->rasterizer->clip_plane_enable;
+
+   backendState.cullDistanceMask =
+      ctx->vs->info.base.culldist_writemask << ctx->vs->info.base.num_written_clipdistance;
 
    ctx->api.pfnSwrSetBackendState(ctx->swrContext, &backendState);
 

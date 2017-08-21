@@ -1035,10 +1035,6 @@ struct SWR_RASTSTATE
     uint32_t pixelLocation;     // UL or Center
     SWR_MULTISAMPLE_POS samplePositions;    // @llvm_struct
     bool bIsCenterPattern;   // @llvm_enum
-
-    // user clip/cull distance enables
-    uint8_t cullDistanceMask;
-    uint8_t clipDistanceMask;
 };
 
 
@@ -1074,6 +1070,10 @@ struct SWR_BACKEND_STATE
     bool readRenderTargetArrayIndex;    // Forward render target array index from last FE stage to the backend
     bool readViewportArrayIndex;        // Read viewport array index from last FE stage during binning
     
+    // user clip/cull distance enables
+    uint8_t cullDistanceMask;
+    uint8_t clipDistanceMask;
+
 	// Offset to the start of the attributes of the input vertices, in simdvector units
     uint32_t vertexAttribOffset;
 };

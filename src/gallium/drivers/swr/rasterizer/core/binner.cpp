@@ -868,11 +868,11 @@ endBinTriangles:
         SIMD128::store_ps(&desc.pTriBuffer[12], vHorizW[triIndex]);
 
         // store user clip distances
-        if (rastState.clipDistanceMask)
+        if (state.backendState.clipDistanceMask)
         {
-            uint32_t numClipDist = _mm_popcnt_u32(rastState.clipDistanceMask);
+            uint32_t numClipDist = _mm_popcnt_u32(state.backendState.clipDistanceMask);
             desc.pUserClipBuffer = (float*)pArena->Alloc(numClipDist * 3 * sizeof(float));
-            ProcessUserClipDist<3>(pa, triIndex, rastState.clipDistanceMask, &desc.pTriBuffer[12], desc.pUserClipBuffer);
+            ProcessUserClipDist<3>(pa, triIndex, state.backendState.clipDistanceMask, &desc.pTriBuffer[12], desc.pUserClipBuffer);
         }
 
         for (uint32_t y = aMTTop[triIndex]; y <= aMTBottom[triIndex]; ++y)
@@ -1242,13 +1242,13 @@ void BinPostSetupPointsImpl(
             *pTriBuffer = aPrimVertsZ[primIndex];
 
             // store user clip distances
-            if (rastState.clipDistanceMask)
+            if (backendState.clipDistanceMask)
             {
-                uint32_t numClipDist = _mm_popcnt_u32(rastState.clipDistanceMask);
+                uint32_t numClipDist = _mm_popcnt_u32(backendState.clipDistanceMask);
                 desc.pUserClipBuffer = (float*)pArena->Alloc(numClipDist * 3 * sizeof(float));
                 float dists[8];
                 float one = 1.0f;
-                ProcessUserClipDist<1>(pa, primIndex, rastState.clipDistanceMask, &one, dists);
+                ProcessUserClipDist<1>(pa, primIndex, backendState.clipDistanceMask, &one, dists);
                 for (uint32_t i = 0; i < numClipDist; i++) {
                     desc.pUserClipBuffer[3 * i + 0] = 0.0f;
                     desc.pUserClipBuffer[3 * i + 1] = 0.0f;
@@ -1573,11 +1573,11 @@ void BinPostSetupLinesImpl(
         _mm_store_ps(&desc.pTriBuffer[12], vHorizW[primIndex]);
 
         // store user clip distances
-        if (rastState.clipDistanceMask)
+        if (state.backendState.clipDistanceMask)
         {
-            uint32_t numClipDist = _mm_popcnt_u32(rastState.clipDistanceMask);
+            uint32_t numClipDist = _mm_popcnt_u32(state.backendState.clipDistanceMask);
             desc.pUserClipBuffer = (float*)pArena->Alloc(numClipDist * 2 * sizeof(float));
-            ProcessUserClipDist<2>(pa, primIndex, rastState.clipDistanceMask, &desc.pTriBuffer[12], desc.pUserClipBuffer);
+            ProcessUserClipDist<2>(pa, primIndex, state.backendState.clipDistanceMask, &desc.pTriBuffer[12], desc.pUserClipBuffer);
         }
 
         MacroTileMgr *pTileMgr = pDC->pTileMgr;

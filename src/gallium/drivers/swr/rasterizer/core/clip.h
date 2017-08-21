@@ -371,7 +371,7 @@ public:
 
     int ComputeUserClipCullMask(PA_STATE &pa, typename SIMD_T::Vec4 prim[])
     {
-        uint8_t cullMask = state.rastState.cullDistanceMask;
+        uint8_t cullMask = state.backendState.cullDistanceMask;
         typename SIMD_T::Float vClipCullMask = SIMD_T::setzero_ps();
 
         typename SIMD_T::Vec4 vClipCullDistLo[3];
@@ -408,7 +408,7 @@ public:
         }
 
         // clipper should also discard any primitive with NAN clip distance
-        uint8_t clipMask = state.rastState.clipDistanceMask;
+        uint8_t clipMask = state.backendState.clipDistanceMask;
         while (_BitScanForward(&index, clipMask))
         {
             clipMask &= ~(1 << index);
@@ -488,7 +488,7 @@ public:
         }
 
         // assemble user clip distances if enabled
-        if (state.rastState.clipDistanceMask & 0xf)
+        if (state.backendState.clipDistanceMask & 0xf)
         {
             pa.Assemble(VERTEX_CLIPCULL_DIST_LO_SLOT, tmpVector);
             for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
@@ -497,7 +497,7 @@ public:
             }
         }
 
-        if (state.rastState.clipDistanceMask & 0xf0)
+        if (state.backendState.clipDistanceMask & 0xf0)
         {
             pa.Assemble(VERTEX_CLIPCULL_DIST_HI_SLOT, tmpVector);
             for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
@@ -613,7 +613,7 @@ public:
             }
 
             // transpose user clip distances if enabled
-            if (state.rastState.clipDistanceMask & 0x0f)
+            if (state.backendState.clipDistanceMask & 0x0f)
             {
                 pBase = reinterpret_cast<uint8_t *>(&vertices[0].attrib[VERTEX_CLIPCULL_DIST_LO_SLOT]) + sizeof(float) * inputPrim;
 
@@ -625,7 +625,7 @@ public:
                 }
             }
 
-            if (state.rastState.clipDistanceMask & 0xf0)
+            if (state.backendState.clipDistanceMask & 0xf0)
             {
                 pBase = reinterpret_cast<uint8_t *>(&vertices[0].attrib[VERTEX_CLIPCULL_DIST_HI_SLOT]) + sizeof(float) * inputPrim;
 
@@ -703,7 +703,7 @@ public:
         primMask &= ~ComputeNaNMask(prim);
 
         // user cull distance cull 
-        if (this->state.rastState.cullDistanceMask)
+        if (state.backendState.cullDistanceMask)
         {
             primMask &= ~ComputeUserClipCullMask(pa, prim);
         }
@@ -867,7 +867,7 @@ private:
         }
 
         // interpolate clip distance if enabled
-        if (this->state.rastState.clipDistanceMask & 0xf)
+        if (this->state.backendState.clipDistanceMask & 0xf)
         {
             uint32_t attribSlot = VERTEX_CLIPCULL_DIST_LO_SLOT;
             for (uint32_t c = 0; c < 4; ++c)
@@ -879,7 +879,7 @@ private:
             }
         }
 
-        if (this->state.rastState.clipDistanceMask & 0xf0)
+        if (this->state.backendState.clipDistanceMask & 0xf0)
         {
             uint32_t attribSlot = VERTEX_CLIPCULL_DIST_HI_SLOT;
             for (uint32_t c = 0; c < 4; ++c)
@@ -963,7 +963,7 @@ private:
                 }
 
                 // store clip distance if enabled
-                if (this->state.rastState.clipDistanceMask & 0xf)
+                if (this->state.backendState.clipDistanceMask & 0xf)
                 {
                     uint32_t attribSlot = VERTEX_CLIPCULL_DIST_LO_SLOT;
                     for (uint32_t c = 0; c < 4; ++c)
@@ -973,7 +973,7 @@ private:
                     }
                 }
 
-                if (this->state.rastState.clipDistanceMask & 0xf0)
+                if (this->state.backendState.clipDistanceMask & 0xf0)
                 {
                     uint32_t attribSlot = VERTEX_CLIPCULL_DIST_HI_SLOT;
                     for (uint32_t c = 0; c < 4; ++c)
