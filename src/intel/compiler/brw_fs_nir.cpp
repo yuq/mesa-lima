@@ -81,8 +81,11 @@ fs_visitor::nir_setup_outputs()
 void
 fs_visitor::nir_setup_uniforms()
 {
-   if (dispatch_width != min_dispatch_width)
+   /* Only the first compile gets to set up uniforms. */
+   if (push_constant_loc) {
+      assert(pull_constant_loc);
       return;
+   }
 
    uniforms = nir->num_uniforms / 4;
 }

@@ -1956,8 +1956,10 @@ void
 fs_visitor::assign_constant_locations()
 {
    /* Only the first compile gets to decide on locations. */
-   if (dispatch_width != min_dispatch_width)
+   if (push_constant_loc) {
+      assert(pull_constant_loc);
       return;
+   }
 
    bool is_live[uniforms];
    memset(is_live, 0, sizeof(is_live));
