@@ -140,9 +140,6 @@ def _init_exts_from_xml(xml):
 
         ext.type = ext_elem.attrib['type']
 
-    for ext in EXTENSIONS:
-        assert ext.type == 'instance' or ext.type == 'device'
-
 _TEMPLATE = Template(COPYRIGHT + """
 #include "anv_private.h"
 
@@ -234,10 +231,18 @@ VkResult anv_EnumerateDeviceExtensionProperties(
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--out', help='Output C file.', required=True)
-    parser.add_argument('--xml', help='Vulkan API XML file.', required=True)
+    parser.add_argument('--xml',
+                        help='Vulkan API XML file.',
+                        required=True,
+                        action='append',
+                        dest='xml_files')
     args = parser.parse_args()
 
-    _init_exts_from_xml(args.xml)
+    for filename in args.xml_files:
+        _init_exts_from_xml(filename)
+
+    for ext in EXTENSIONS:
+        assert ext.type == 'instance' or ext.type == 'device'
 
     template_env = {
         'MAX_API_VERSION': MAX_API_VERSION,

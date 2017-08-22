@@ -253,7 +253,7 @@ def cal_hash(name):
         lambda h, c: (h * PRIME_FACTOR + ord(c)) & U32_MASK, name, 0)
 
 
-def get_entrypoints(doc, entrypoints_to_defines):
+def get_entrypoints(doc, entrypoints_to_defines, start_index):
     """Extract the entry points from the registry."""
     entrypoints = []
 
@@ -275,7 +275,7 @@ def get_entrypoints(doc, entrypoints_to_defines):
         for command in extension.findall('./require/command'):
             enabled_commands.add(command.attrib['name'])
 
-    index = 0
+    index = start_index
     for command in doc.findall('./commands/command'):
         type = command.find('./proto/type').text
         fullname = command.find('./proto/name').text
@@ -344,11 +344,19 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--outdir', help='Where to write the files.',
                         required=True)
-    parser.add_argument('--xml', help='Vulkan API XML file.', required=True)
+    parser.add_argument('--xml',
+                        help='Vulkan API XML file.',
+                        required=True,
+                        action='append',
+                        dest='xml_files')
     args = parser.parse_args()
 
-    doc = et.parse(args.xml)
-    entrypoints = get_entrypoints(doc, get_entrypoints_defines(doc))
+    entrypoints = []
+
+    for filename in args.xml_files:
+        doc = et.parse(filename)
+        entrypoints += get_entrypoints(doc, get_entrypoints_defines(doc),
+                                       start_index=len(entrypoints))
 
     # Manually add CreateDmaBufImageINTEL for which we don't have an extension
     # defined.
