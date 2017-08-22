@@ -3764,12 +3764,10 @@ get_image_qualifiers(ir_dereference *ir, const glsl_type **type,
    switch (ir->ir_type) {
    case ir_type_dereference_record: {
       ir_dereference_record *deref_record = ir->as_dereference_record();
-
-      *type = deref_record->type;
-
-      const glsl_type *struct_type =
-         deref_record->record->type->without_array();
+      const glsl_type *struct_type = deref_record->record->type;
       int fild_idx = deref_record->field_idx;
+
+      *type = struct_type->fields.structure[fild_idx].type->without_array();
       *memory_coherent =
          struct_type->fields.structure[fild_idx].memory_coherent;
       *memory_volatile =
