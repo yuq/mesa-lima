@@ -2416,7 +2416,8 @@ namespace {
 
 class add_uniform_to_shader : public program_resource_visitor {
 public:
-   add_uniform_to_shader(struct gl_shader_program *shader_program,
+   add_uniform_to_shader(struct gl_context *ctx,
+                         struct gl_shader_program *shader_program,
 			 struct gl_program_parameter_list *params)
       : ctx(ctx), params(params), idx(-1)
    {
@@ -2482,13 +2483,14 @@ add_uniform_to_shader::visit_field(const glsl_type *type, const char *name,
  * \param params         Parameter list to be filled in.
  */
 void
-_mesa_generate_parameters_list_for_uniforms(struct gl_shader_program
+_mesa_generate_parameters_list_for_uniforms(struct gl_context *ctx,
+                                            struct gl_shader_program
 					    *shader_program,
 					    struct gl_linked_shader *sh,
 					    struct gl_program_parameter_list
 					    *params)
 {
-   add_uniform_to_shader add(shader_program, params);
+   add_uniform_to_shader add(ctx, shader_program, params);
 
    foreach_in_list(ir_instruction, node, sh->ir) {
       ir_variable *var = node->as_variable();
@@ -2850,7 +2852,7 @@ get_mesa_program(struct gl_context *ctx,
    v.shader_program = shader_program;
    v.options = options;
 
-   _mesa_generate_parameters_list_for_uniforms(shader_program, shader,
+   _mesa_generate_parameters_list_for_uniforms(ctx, shader_program, shader,
 					       prog->Parameters);
 
    /* Emit Mesa IR for main(). */
