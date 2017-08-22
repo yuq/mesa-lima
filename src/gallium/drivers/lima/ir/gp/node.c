@@ -301,6 +301,38 @@ void gpir_node_merge_succ(gpir_node *dst, gpir_node *src)
    }
 }
 
+void gpir_node_merge_pred(gpir_node *dst, gpir_node *src)
+{
+   gpir_node_foreach_pred(src, entry) {
+      gpir_node *pred = gpir_node_from_entry(entry, pred);
+      gpir_dep_info *dep = gpir_dep_from_entry(entry);
+      gpir_node_create_dep(pred, dst, dep->is_child_dep, dep->is_offset);
+   }
+}
+
+void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child, gpir_node *new_child)
+{
+   if (parent->type == gpir_node_type_alu) {
+      gpir_alu_node *alu = gpir_node_to_alu(parent);
+      for (int i = 0; i < alu->num_child; i++) {
+         if (alu->children[i] == old_child)
+            alu->children[i] = new_child;
+      }
+   }
+   else if (parent->type == gpir_node_type_load) {
+      gpir_load_node *load = gpir_node_to_load(parent);
+      if (load->child == old_child)
+         load->child = new_child;
+   }
+   else if (parent->type == gpir_node_type_store) {
+      gpir_store_node *store = gpir_node_to_store(parent);
+      for (int i = 0; i < store->num_child; i++) {
+         if (store->children[i] == old_child)
+            store->children[i] = new_child;
+      }
+   }
+}
+
 void gpir_node_delete(gpir_node *node)
 {
    list_del(&node->list);
