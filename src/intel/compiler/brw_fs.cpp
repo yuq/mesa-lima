@@ -6866,7 +6866,6 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
          cfg = v8.cfg;
          cs_set_simd_size(prog_data, 8);
          cs_fill_push_const_info(compiler->devinfo, prog_data);
-         prog_data->base.dispatch_grf_start_reg = v8.payload.num_regs;
       }
    }
 
@@ -6894,7 +6893,6 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
          cfg = v16.cfg;
          cs_set_simd_size(prog_data, 16);
          cs_fill_push_const_info(compiler->devinfo, prog_data);
-         prog_data->dispatch_grf_start_reg_16 = v16.payload.num_regs;
       }
    }
 
