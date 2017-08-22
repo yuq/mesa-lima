@@ -1893,7 +1893,7 @@ private:
 
 namespace linker {
 
-static void
+void
 populate_consumer_input_sets(void *mem_ctx, exec_list *ir,
                              hash_table *consumer_inputs,
                              hash_table *consumer_interface_inputs,
@@ -1951,7 +1951,7 @@ populate_consumer_input_sets(void *mem_ctx, exec_list *ir,
  * This function only finds inputs with names that match.  There is no
  * validation (here) that the types, etc. are compatible.
  */
-static ir_variable *
+ir_variable *
 get_matching_input(void *mem_ctx,
                    const ir_variable *output_var,
                    hash_table *consumer_inputs,

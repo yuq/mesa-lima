@@ -44,7 +44,7 @@ get_storage(struct gl_shader_program *prog, const char *name)
    return NULL;
 }
 
-static void
+void
 copy_constant_to_storage(union gl_constant_value *storage,
                          const ir_constant *val,
                          const enum glsl_base_type base_type,
@@ -199,7 +199,7 @@ set_block_binding(gl_shader_program *prog, const char *block_name,
    unreachable("Failed to initialize block binding");
 }
 
-static void
+void
 set_uniform_initializer(void *mem_ctx, gl_shader_program *prog,
                         const char *name, const glsl_type *type,
                         ir_constant *val, unsigned int boolean_true)
