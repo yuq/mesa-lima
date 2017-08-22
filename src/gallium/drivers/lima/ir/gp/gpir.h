@@ -232,6 +232,7 @@ typedef struct gpir_block {
    struct list_head list;
    struct list_head node_list;
    struct util_dynarray instrs;
+   struct gpir_compiler *comp;
 } gpir_block;
 
 #define gpir_instr_array_n(buf) ((buf)->size / sizeof(gpir_instr))
@@ -263,6 +264,8 @@ void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index);
 void gpir_node_add_child(gpir_node *parent, gpir_node *child);
 void gpir_node_remove_entry(struct set_entry *entry);
 void gpir_node_merge_succ(gpir_node *dst, gpir_node *src);
+void gpir_node_merge_pred(gpir_node *dst, gpir_node *src);
+void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child, gpir_node *new_child);
 void gpir_node_delete(gpir_node *node);
 void gpir_node_print_prog(gpir_compiler *comp);
 
@@ -298,6 +301,6 @@ bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node);
 void gpir_instr_print_prog(gpir_compiler *comp);
 
 void gpir_lower_prog(gpir_compiler *comp);
-void gpir_schedule_prog(gpir_compiler *comp);
+bool gpir_schedule_prog(gpir_compiler *comp);
 
 #endif
