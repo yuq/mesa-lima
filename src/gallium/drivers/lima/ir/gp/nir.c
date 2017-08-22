@@ -117,6 +117,7 @@ static gpir_node *gpir_emit_intrinsic(gpir_compiler *comp, nir_intrinsic_instr *
    gpir_node *child;
    gpir_load_node *lnode;
    gpir_store_node *snode;
+   const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];
    int op;
 
    switch (instr->intrinsic) {
@@ -129,8 +130,8 @@ static gpir_node *gpir_emit_intrinsic(gpir_compiler *comp, nir_intrinsic_instr *
       if (!lnode)
          return NULL;
 
-      lnode->index = instr->const_index[NIR_INTRINSIC_BASE];
-      lnode->component = instr->num_components;
+      lnode->index = instr->const_index[info->index_map[NIR_INTRINSIC_BASE] - 1];
+      lnode->component = instr->const_index[info->index_map[NIR_INTRINSIC_COMPONENT] - 1];
       child = gpir_node_find(comp, instr->src);
       lnode->child = child;
       gpir_node_add_child(&lnode->node, child);

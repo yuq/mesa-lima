@@ -226,6 +226,10 @@ enum gpir_instr_slot {
 
 typedef struct {
    gpir_node *slots[GPIR_INSTR_SLOT_NUM];
+
+   bool reg0_is_used;
+   bool reg0_is_attr;
+   int reg0_index;
 } gpir_instr;
 
 typedef struct gpir_block {
