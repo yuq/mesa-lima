@@ -6824,6 +6824,20 @@ cs_set_simd_size(struct brw_cs_prog_data *cs_prog_data, unsigned size)
    cs_prog_data->threads = (group_size + size - 1) / size;
 }
 
+static nir_shader *
+compile_cs_to_nir(const struct brw_compiler *compiler,
+                  void *mem_ctx,
+                  const struct brw_cs_prog_key *key,
+                  struct brw_cs_prog_data *prog_data,
+                  const nir_shader *src_shader,
+                  unsigned dispatch_width)
+{
+   nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
+   shader = brw_nir_apply_sampler_key(shader, compiler, &key->tex, true);
+   brw_nir_lower_cs_intrinsics(shader);
+   return brw_postprocess_nir(shader, compiler, true);
+}
+
 const unsigned *
 brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
@@ -6833,17 +6847,12 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                int shader_time_index,
                char **error_str)
 {
-   nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
-   shader = brw_nir_apply_sampler_key(shader, compiler, &key->tex, true);
-   brw_nir_lower_cs_intrinsics(shader);
-   shader = brw_postprocess_nir(shader, compiler, true);
-
-   prog_data->local_size[0] = shader->info.cs.local_size[0];
-   prog_data->local_size[1] = shader->info.cs.local_size[1];
-   prog_data->local_size[2] = shader->info.cs.local_size[2];
+   prog_data->local_size[0] = src_shader->info.cs.local_size[0];
+   prog_data->local_size[1] = src_shader->info.cs.local_size[1];
+   prog_data->local_size[2] = src_shader->info.cs.local_size[2];
    unsigned local_workgroup_size =
-      shader->info.cs.local_size[0] * shader->info.cs.local_size[1] *
-      shader->info.cs.local_size[2];
+      src_shader->info.cs.local_size[0] * src_shader->info.cs.local_size[1] *
+      src_shader->info.cs.local_size[2];
 
    unsigned min_dispatch_width =
       DIV_ROUND_UP(local_workgroup_size, compiler->devinfo->max_cs_threads);
@@ -6851,39 +6860,47 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
    min_dispatch_width = util_next_power_of_two(min_dispatch_width);
    assert(min_dispatch_width <= 32);
 
+   fs_visitor *v8 = NULL, *v16 = NULL, *v32 = NULL;
    cfg_t *cfg = NULL;
    const char *fail_msg = NULL;
+   unsigned promoted_constants;
 
    /* Now the main event: Visit the shader IR and generate our CS IR for it.
     */
-   fs_visitor v8(compiler, log_data, mem_ctx, key, &prog_data->base,
-                 NULL, /* Never used in core profile */
-                 shader, 8, shader_time_index);
    if (min_dispatch_width <= 8) {
-      if (!v8.run_cs(min_dispatch_width)) {
-         fail_msg = v8.fail_msg;
+      nir_shader *nir8 = compile_cs_to_nir(compiler, mem_ctx, key,
+                                           prog_data, src_shader, 8);
+      v8 = new fs_visitor(compiler, log_data, mem_ctx, key, &prog_data->base,
+                          NULL, /* Never used in core profile */
+                          nir8, 8, shader_time_index);
+      if (!v8->run_cs(min_dispatch_width)) {
+         fail_msg = v8->fail_msg;
       } else {
          /* We should always be able to do SIMD32 for compute shaders */
-         assert(v8.max_dispatch_width >= 32);
+         assert(v8->max_dispatch_width >= 32);
 
-         cfg = v8.cfg;
+         cfg = v8->cfg;
          cs_set_simd_size(prog_data, 8);
          cs_fill_push_const_info(compiler->devinfo, prog_data);
+         promoted_constants = v8->promoted_constants;
       }
    }
 
-   fs_visitor v16(compiler, log_data, mem_ctx, key, &prog_data->base,
-                 NULL, /* Never used in core profile */
-                 shader, 16, shader_time_index);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
        !fail_msg && min_dispatch_width <= 16) {
       /* Try a SIMD16 compile */
-      if (min_dispatch_width <= 8)
-         v16.import_uniforms(&v8);
-      if (!v16.run_cs(min_dispatch_width)) {
+      nir_shader *nir16 = compile_cs_to_nir(compiler, mem_ctx, key,
+                                            prog_data, src_shader, 16);
+      v16 = new fs_visitor(compiler, log_data, mem_ctx, key, &prog_data->base,
+                           NULL, /* Never used in core profile */
+                           nir16, 16, shader_time_index);
+      if (v8)
+         v16->import_uniforms(v8);
+
+      if (!v16->run_cs(min_dispatch_width)) {
          compiler->shader_perf_log(log_data,
                                    "SIMD16 shader failed to compile: %s",
-                                   v16.fail_msg);
+                                   v16->fail_msg);
          if (!cfg) {
             fail_msg =
                "Couldn't generate SIMD16 program and not "
@@ -6891,37 +6908,44 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
          }
       } else {
          /* We should always be able to do SIMD32 for compute shaders */
-         assert(v16.max_dispatch_width >= 32);
+         assert(v16->max_dispatch_width >= 32);
 
-         cfg = v16.cfg;
+         cfg = v16->cfg;
          cs_set_simd_size(prog_data, 16);
          cs_fill_push_const_info(compiler->devinfo, prog_data);
+         promoted_constants = v16->promoted_constants;
       }
    }
 
-   fs_visitor v32(compiler, log_data, mem_ctx, key, &prog_data->base,
-                 NULL, /* Never used in core profile */
-                 shader, 32, shader_time_index);
+   /* We should always be able to do SIMD32 for compute shaders */
+   assert(!v16 || v16->max_dispatch_width >= 32);
+
    if (!fail_msg && (min_dispatch_width > 16 || (INTEL_DEBUG & DEBUG_DO32))) {
       /* Try a SIMD32 compile */
-      if (min_dispatch_width <= 8)
-         v32.import_uniforms(&v8);
-      else if (min_dispatch_width <= 16)
-         v32.import_uniforms(&v16);
+      nir_shader *nir32 = compile_cs_to_nir(compiler, mem_ctx, key,
+                                            prog_data, src_shader, 32);
+      v32 = new fs_visitor(compiler, log_data, mem_ctx, key, &prog_data->base,
+                           NULL, /* Never used in core profile */
+                           nir32, 32, shader_time_index);
+      if (v8)
+         v32->import_uniforms(v8);
+      else if (v16)
+         v32->import_uniforms(v16);
 
-      if (!v32.run_cs(min_dispatch_width)) {
+      if (!v32->run_cs(min_dispatch_width)) {
          compiler->shader_perf_log(log_data,
                                    "SIMD32 shader failed to compile: %s",
-                                   v16.fail_msg);
+                                   v16->fail_msg);
          if (!cfg) {
             fail_msg =
                "Couldn't generate SIMD32 program and not "
                "enough threads for SIMD16";
          }
       } else {
-         cfg = v32.cfg;
+         cfg = v32->cfg;
          cs_set_simd_size(prog_data, 32);
          cs_fill_push_const_info(compiler->devinfo, prog_data);
+         promoted_constants = v32->promoted_constants;
       }
    }
 
@@ -6932,12 +6956,12 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
          *error_str = ralloc_strdup(mem_ctx, fail_msg);
    } else {
       fs_generator g(compiler, log_data, mem_ctx, (void*) key, &prog_data->base,
-                     v8.promoted_constants, false, MESA_SHADER_COMPUTE);
+                     promoted_constants, false, MESA_SHADER_COMPUTE);
       if (INTEL_DEBUG & DEBUG_CS) {
          char *name = ralloc_asprintf(mem_ctx, "%s compute shader %s",
-                                      shader->info.label ? shader->info.label :
-                                                           "unnamed",
-                                      shader->info.name);
+                                      src_shader->info.label ?
+                                         src_shader->info.label : "unnamed",
+                                      src_shader->info.name);
          g.enable_debug(name);
       }
 
@@ -6945,6 +6969,10 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
 
       ret = g.get_assembly(&prog_data->base.program_size);
    }
+
+   delete v8;
+   delete v16;
+   delete v32;
 
    return ret;
 }
