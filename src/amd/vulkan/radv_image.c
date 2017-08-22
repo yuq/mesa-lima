@@ -35,7 +35,7 @@
 #include "util/debug.h"
 #include "util/u_atomic.h"
 static unsigned
-radv_choose_tiling(struct radv_device *Device,
+radv_choose_tiling(struct radv_device *device,
 		   const struct radv_image_create_info *create_info)
 {
 	const VkImageCreateInfo *pCreateInfo = create_info->vk_info;
@@ -46,14 +46,15 @@ radv_choose_tiling(struct radv_device *Device,
 	}
 
 	if (!vk_format_is_compressed(pCreateInfo->format) &&
-	    !vk_format_is_depth_or_stencil(pCreateInfo->format)) {
+	    !vk_format_is_depth_or_stencil(pCreateInfo->format)
+	    && device->physical_device->rad_info.chip_class <= VI) {
+		/* this causes hangs in some VK CTS tests on GFX9. */
 		/* Textures with a very small height are recommended to be linear. */
 		if (pCreateInfo->imageType == VK_IMAGE_TYPE_1D ||
 		    /* Only very thin and long 2D textures should benefit from
 		     * linear_aligned. */
 		    (pCreateInfo->extent.width > 8 && pCreateInfo->extent.height <= 2))
 			return RADEON_SURF_MODE_LINEAR_ALIGNED;
-
 	}
 
 	/* MSAA resources must be 2D tiled. */
