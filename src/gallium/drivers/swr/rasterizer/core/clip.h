@@ -372,13 +372,15 @@ public:
     int ComputeUserClipCullMask(PA_STATE &pa, typename SIMD_T::Vec4 prim[])
     {
         uint8_t cullMask = state.backendState.cullDistanceMask;
+        uint32_t vertexClipCullOffset = state.backendState.vertexClipCullOffset;
+
         typename SIMD_T::Float vClipCullMask = SIMD_T::setzero_ps();
 
         typename SIMD_T::Vec4 vClipCullDistLo[3];
         typename SIMD_T::Vec4 vClipCullDistHi[3];
 
-        pa.Assemble(VERTEX_CLIPCULL_DIST_LO_SLOT, vClipCullDistLo);
-        pa.Assemble(VERTEX_CLIPCULL_DIST_HI_SLOT, vClipCullDistHi);
+        pa.Assemble(vertexClipCullOffset, vClipCullDistLo);
+        pa.Assemble(vertexClipCullOffset + 1, vClipCullDistHi);
 
         DWORD index;
         while (_BitScanForward(&index, cullMask))
@@ -488,21 +490,22 @@ public:
         }
 
         // assemble user clip distances if enabled
+        uint32_t vertexClipCullSlot = state.backendState.vertexClipCullOffset;
         if (state.backendState.clipDistanceMask & 0xf)
         {
-            pa.Assemble(VERTEX_CLIPCULL_DIST_LO_SLOT, tmpVector);
+            pa.Assemble(vertexClipCullSlot, tmpVector);
             for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
             {
-                vertices[i].attrib[VERTEX_CLIPCULL_DIST_LO_SLOT] = tmpVector[i];
+                vertices[i].attrib[vertexClipCullSlot] = tmpVector[i];
             }
         }
 
         if (state.backendState.clipDistanceMask & 0xf0)
         {
-            pa.Assemble(VERTEX_CLIPCULL_DIST_HI_SLOT, tmpVector);
+            pa.Assemble(vertexClipCullSlot + 1, tmpVector);
             for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
             {
-                vertices[i].attrib[VERTEX_CLIPCULL_DIST_HI_SLOT] = tmpVector[i];
+                vertices[i].attrib[vertexClipCullSlot + 1] = tmpVector[i];
             }
         }
 
@@ -613,26 +616,27 @@ public:
             }
 
             // transpose user clip distances if enabled
+            uint32_t vertexClipCullSlot = backendState.vertexClipCullOffset;
             if (state.backendState.clipDistanceMask & 0x0f)
             {
-                pBase = reinterpret_cast<uint8_t *>(&vertices[0].attrib[VERTEX_CLIPCULL_DIST_LO_SLOT]) + sizeof(float) * inputPrim;
+                pBase = reinterpret_cast<uint8_t *>(&vertices[0].attrib[vertexClipCullSlot]) + sizeof(float) * inputPrim;
 
                 for (uint32_t c = 0; c < 4; ++c)
                 {
                     SIMD256::Float temp = SIMD256::template mask_i32gather_ps<typename SIMD_T::ScaleFactor(1)>(SIMD256::setzero_ps(), reinterpret_cast<const float *>(pBase), vOffsets, vMask);
-                    transposedPrims[0].attrib[VERTEX_CLIPCULL_DIST_LO_SLOT][c] = SimdHelper<SIMD_T>::insert_lo_ps(temp);
+                    transposedPrims[0].attrib[vertexClipCullSlot][c] = SimdHelper<SIMD_T>::insert_lo_ps(temp);
                     pBase += sizeof(typename SIMD_T::Float);
                 }
             }
 
             if (state.backendState.clipDistanceMask & 0xf0)
             {
-                pBase = reinterpret_cast<uint8_t *>(&vertices[0].attrib[VERTEX_CLIPCULL_DIST_HI_SLOT]) + sizeof(float) * inputPrim;
+                pBase = reinterpret_cast<uint8_t *>(&vertices[0].attrib[vertexClipCullSlot + 1]) + sizeof(float) * inputPrim;
 
                 for (uint32_t c = 0; c < 4; ++c)
                 {
                     SIMD256::Float temp = SIMD256::template mask_i32gather_ps<typename SIMD_T::ScaleFactor(1)>(SIMD256::setzero_ps(), reinterpret_cast<const float *>(pBase), vOffsets, vMask);
-                    transposedPrims[0].attrib[VERTEX_CLIPCULL_DIST_HI_SLOT][c] = SimdHelper<SIMD_T>::insert_lo_ps(temp);
+                    transposedPrims[0].attrib[vertexClipCullSlot + 1][c] = SimdHelper<SIMD_T>::insert_lo_ps(temp);
                     pBase += sizeof(typename SIMD_T::Float);
                 }
             }
@@ -692,6 +696,7 @@ public:
 
             // OOB indices => forced to zero.
             typename SIMD_T::Integer vpai = SIMD_T::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
+            vpai = SIMD_T::max_epi32(vpai, SIMD_T::setzero_si());
             typename SIMD_T::Integer vNumViewports = SIMD_T::set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
             typename SIMD_T::Integer vClearMask = SIMD_T::cmplt_epi32(vpai, vNumViewports);
             viewportIdx = SIMD_T::and_si(vClearMask, vpai);
@@ -822,6 +827,7 @@ private:
         float *pOutVerts)                           // array of output positions. We'll write our new intersection point at i*4.
     {
         uint32_t vertexAttribOffset = this->state.backendState.vertexAttribOffset;
+        uint32_t vertexClipCullOffset = this->state.backendState.vertexClipCullOffset;
 
         // compute interpolation factor
         typename SIMD_T::Float t;
@@ -869,7 +875,7 @@ private:
         // interpolate clip distance if enabled
         if (this->state.backendState.clipDistanceMask & 0xf)
         {
-            uint32_t attribSlot = VERTEX_CLIPCULL_DIST_LO_SLOT;
+            uint32_t attribSlot = vertexClipCullOffset;
             for (uint32_t c = 0; c < 4; ++c)
             {
                 typename SIMD_T::Float vAttrib0 = GatherComponent(pInVerts, attribSlot, vActiveMask, s, c);
@@ -881,7 +887,7 @@ private:
 
         if (this->state.backendState.clipDistanceMask & 0xf0)
         {
-            uint32_t attribSlot = VERTEX_CLIPCULL_DIST_HI_SLOT;
+            uint32_t attribSlot = vertexClipCullOffset + 1;
             for (uint32_t c = 0; c < 4; ++c)
             {
                 typename SIMD_T::Float vAttrib0 = GatherComponent(pInVerts, attribSlot, vActiveMask, s, c);
@@ -963,9 +969,10 @@ private:
                 }
 
                 // store clip distance if enabled
+                uint32_t vertexClipCullSlot = this->state.backendState.vertexClipCullOffset;
                 if (this->state.backendState.clipDistanceMask & 0xf)
                 {
-                    uint32_t attribSlot = VERTEX_CLIPCULL_DIST_LO_SLOT;
+                    uint32_t attribSlot = vertexClipCullSlot;
                     for (uint32_t c = 0; c < 4; ++c)
                     {
                         typename SIMD_T::Float vAttrib = GatherComponent(pInVerts, attribSlot, s_in, s, c);
@@ -975,7 +982,7 @@ private:
 
                 if (this->state.backendState.clipDistanceMask & 0xf0)
                 {
-                    uint32_t attribSlot = VERTEX_CLIPCULL_DIST_HI_SLOT;
+                    uint32_t attribSlot = vertexClipCullSlot + 1;
                     for (uint32_t c = 0; c < 4; ++c)
                     {
                         typename SIMD_T::Float vAttrib = GatherComponent(pInVerts, attribSlot, s_in, s, c);
