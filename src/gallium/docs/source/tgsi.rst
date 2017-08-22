@@ -2199,9 +2199,9 @@ two-component vectors with 64-bits in each component.
 
 .. math::
 
-   dst.xy = (uint64_t) src0.x
+   dst.xy = (int64_t) src0.x
 
-   dst.zw = (uint64_t) src0.y
+   dst.zw = (int64_t) src0.y
 
 .. opcode:: I2I64 - Signed Integer to 64-bit Integer
 
