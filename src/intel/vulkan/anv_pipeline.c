@@ -381,6 +381,11 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    if (stage != MESA_SHADER_COMPUTE)
       NIR_PASS_V(nir, anv_nir_lower_multiview, pipeline->subpass->view_mask);
 
+   if (stage == MESA_SHADER_COMPUTE) {
+      NIR_PASS_V(nir, brw_nir_lower_cs_shared);
+      prog_data->total_shared = nir->num_shared;
+   }
+
    nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir));
 
    /* Figure out the number of parameters */

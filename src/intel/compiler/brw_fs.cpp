@@ -6751,8 +6751,6 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
 {
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
    shader = brw_nir_apply_sampler_key(shader, compiler, &key->tex, true);
-   brw_nir_lower_cs_shared(shader);
-   prog_data->base.total_shared += shader->num_shared;
 
    /* Now that we cloned the nir_shader, we can update num_uniforms based on
     * the thread_local_id_index.
