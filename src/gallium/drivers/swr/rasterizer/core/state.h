@@ -1070,12 +1070,15 @@ struct SWR_BACKEND_STATE
     bool readRenderTargetArrayIndex;    // Forward render target array index from last FE stage to the backend
     bool readViewportArrayIndex;        // Read viewport array index from last FE stage during binning
     
-    // user clip/cull distance enables
+	// Offset to the start of the attributes of the input vertices, in simdvector units
+    uint32_t vertexAttribOffset;
+
+    // User clip/cull distance enables
     uint8_t cullDistanceMask;
     uint8_t clipDistanceMask;
 
-	// Offset to the start of the attributes of the input vertices, in simdvector units
-    uint32_t vertexAttribOffset;
+    // Offset to clip/cull attrib section of the vertex, in simdvector units
+    uint32_t vertexClipCullOffset;
 };
 
 

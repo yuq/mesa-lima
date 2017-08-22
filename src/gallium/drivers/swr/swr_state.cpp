@@ -1766,6 +1766,9 @@ swr_update_derived(struct pipe_context *pipe,
    backendState.cullDistanceMask =
       ctx->vs->info.base.culldist_writemask << ctx->vs->info.base.num_written_clipdistance;
 
+   // Assume old layout of SGV, POSITION, CLIPCULL, ATTRIB
+   backendState.vertexClipCullOffset = backendState.vertexAttribOffset - 2;
+
    ctx->api.pfnSwrSetBackendState(ctx->swrContext, &backendState);
 
    /* Ensure that any in-progress attachment change StoreTiles finish */
