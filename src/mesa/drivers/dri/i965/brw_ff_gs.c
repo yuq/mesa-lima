@@ -170,6 +170,8 @@ brw_ff_gs_populate_key(struct brw_context *brw,
 
    struct gl_context *ctx = &brw->ctx;
 
+   assert(brw->gen < 7);
+
    memset(key, 0, sizeof(*key));
 
    /* BRW_NEW_VS_PROG_DATA (part of VUE map) */
@@ -187,10 +189,7 @@ brw_ff_gs_populate_key(struct brw_context *brw,
       key->pv_first = true;
    }
 
-   if (brw->gen >= 7) {
-      /* On Gen7 and later, we don't use GS (yet). */
-      key->need_gs_prog = false;
-   } else if (brw->gen == 6) {
+   if (brw->gen == 6) {
       /* On Gen6, GS is used for transform feedback. */
       /* BRW_NEW_TRANSFORM_FEEDBACK */
       if (_mesa_is_xfb_active_and_unpaused(ctx)) {
