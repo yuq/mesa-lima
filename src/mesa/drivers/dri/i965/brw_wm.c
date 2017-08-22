@@ -531,7 +531,9 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
       key->stats_wm = brw->stats_wm;
 
    /* _NEW_LIGHT */
-   key->flat_shade = (ctx->Light.ShadeModel == GL_FLAT);
+   key->flat_shade =
+      (prog->info.inputs_read & (VARYING_BIT_COL0 | VARYING_BIT_COL1)) &&
+      (ctx->Light.ShadeModel == GL_FLAT);
 
    /* _NEW_FRAG_CLAMP | _NEW_BUFFERS */
    key->clamp_fragment_color = ctx->Color._ClampFragmentColor;
