@@ -1055,11 +1055,12 @@ void st_init_extensions(struct pipe_screen *screen,
       extensions->EXT_framebuffer_multisample_blit_scaled = GL_TRUE;
    }
 
-   if (consts->MaxSamples == 0 && screen->get_param(screen, PIPE_CAP_FAKE_SW_MSAA)) {
-	consts->FakeSWMSAA = GL_TRUE;
-        extensions->EXT_framebuffer_multisample = GL_TRUE;
-        extensions->EXT_framebuffer_multisample_blit_scaled = GL_TRUE;
-        extensions->ARB_texture_multisample = GL_TRUE;
+   if (consts->MaxSamples == 0 &&
+       screen->get_param(screen, PIPE_CAP_FAKE_SW_MSAA)) {
+      consts->FakeSWMSAA = GL_TRUE;
+      extensions->EXT_framebuffer_multisample = GL_TRUE;
+      extensions->EXT_framebuffer_multisample_blit_scaled = GL_TRUE;
+      extensions->ARB_texture_multisample = GL_TRUE;
    }
 
    if (consts->MaxDualSourceDrawBuffers > 0 &&
