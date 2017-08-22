@@ -246,6 +246,7 @@ static bool gpir_emit_block(gpir_compiler *comp, nir_block *nblock)
       return false;
 
    list_addtail(&block->list, &comp->block_list);
+   block->comp = comp;
 
    nir_foreach_instr(instr, nblock) {
       gpir_node *node = gpir_emit_instr(comp, instr);
