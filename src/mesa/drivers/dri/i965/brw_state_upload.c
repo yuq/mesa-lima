@@ -400,10 +400,13 @@ brw_upload_programs(struct brw_context *brw,
       brw_upload_vs_prog(brw);
       brw_upload_tess_programs(brw);
 
-      if (devinfo->gen < 6)
-         brw_upload_ff_gs_prog(brw);
-      else
+      if (brw->geometry_program) {
          brw_upload_gs_prog(brw);
+      } else {
+         brw->gs.base.prog_data = NULL;
+         if (devinfo->gen < 7)
+            brw_upload_ff_gs_prog(brw);
+      }
 
       /* Update the VUE map for data exiting the GS stage of the pipeline.
        * This comes from the last enabled shader stage.

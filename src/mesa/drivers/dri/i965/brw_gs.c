@@ -207,22 +207,6 @@ brw_upload_gs_prog(struct brw_context *brw)
    if (!brw_gs_state_dirty(brw))
       return;
 
-   if (gp == NULL) {
-      /* No geometry shader.  Vertex data just passes straight through. */
-      if (devinfo->gen == 6 &&
-          (brw->ctx.NewDriverState & BRW_NEW_TRANSFORM_FEEDBACK)) {
-         brw_upload_ff_gs_prog(brw);
-         return;
-      }
-
-      /* Other state atoms had better not try to access prog_data, since
-       * there's no GS program.
-       */
-      brw->gs.base.prog_data = NULL;
-
-      return;
-   }
-
    brw_gs_populate_key(brw, &key);
 
    if (!brw_search_cache(&brw->cache, BRW_CACHE_GS_PROG,
