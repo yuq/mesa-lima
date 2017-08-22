@@ -26,14 +26,38 @@
 
 #include "gpir.h"
 
-bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
+static bool gpir_try_insert_attr(gpir_instr *instr, gpir_node *node)
 {
-   if (!instr->slots[node->sched_pos]) {
-      instr->slots[node->sched_pos] = node;
-      return true;
+   gpir_load_node *load = gpir_node_to_load(node);
+
+   if (instr->reg0_is_used &&
+       (!instr->reg0_is_attr || instr->reg0_index != load->index))
+      return false;
+
+   if (!instr->reg0_is_used) {
+      instr->reg0_is_used = true;
+      instr->reg0_is_attr = true;
+      instr->reg0_index = load->index;
    }
 
-   return false;
+   instr->slots[node->sched_pos] = node;
+   return true;
+}
+
+bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
+{
+   if (instr->slots[node->sched_pos])
+      return false;
+
+   switch (node->op) {
+   case gpir_op_load_attribute:
+      return gpir_try_insert_attr(instr, node);
+   default:
+      break;
+   }
+
+   instr->slots[node->sched_pos] = node;
+   return true;
 }
 
 void gpir_instr_print_prog(gpir_compiler *comp)
