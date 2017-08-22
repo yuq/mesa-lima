@@ -211,7 +211,7 @@ brw_upload_gs_prog(struct brw_context *brw)
       /* No geometry shader.  Vertex data just passes straight through. */
       if (devinfo->gen == 6 &&
           (brw->ctx.NewDriverState & BRW_NEW_TRANSFORM_FEEDBACK)) {
-         gen6_brw_upload_ff_gs_prog(brw);
+         brw_upload_ff_gs_prog(brw);
          return;
       }
 

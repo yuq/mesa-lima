@@ -258,8 +258,3 @@ brw_upload_ff_gs_prog(struct brw_context *brw)
       }
    }
 }
-
-void gen6_brw_upload_ff_gs_prog(struct brw_context *brw)
-{
-   brw_upload_ff_gs_prog(brw);
-}
