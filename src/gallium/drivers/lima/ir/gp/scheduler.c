@@ -30,8 +30,14 @@
 static int gpir_min_dist_alu(gpir_dep_info *dep)
 {
    switch (dep->pred->op) {
+   case gpir_op_load_uniform:
+   case gpir_op_load_temp:
+   case gpir_op_load_reg:
    case gpir_op_load_attribute:
       return 0;
+
+   case gpir_op_complex1:
+      return 2;
 
    default:
       return 1;
@@ -42,6 +48,13 @@ static int gpir_get_min_dist(gpir_dep_info *dep)
 {
    if (dep->is_child_dep) {
       switch (dep->succ->op) {
+      case gpir_op_store_temp:
+         if (dep->is_offset)
+            return gpir_min_dist_alu(dep);
+         else
+            return 0;
+
+      case gpir_op_store_reg:
       case gpir_op_store_varying:
          return 0;
 
@@ -49,24 +62,95 @@ static int gpir_get_min_dist(gpir_dep_info *dep)
       case gpir_op_mul:
       case gpir_op_add:
       case gpir_op_sub:
+      case gpir_op_select:
+      case gpir_op_complex1:
+      case gpir_op_complex2:
+      case gpir_op_floor:
+      case gpir_op_sign:
+      case gpir_op_ge:
+      case gpir_op_lt:
+      case gpir_op_min:
+      case gpir_op_max:
+      case gpir_op_neg:
+      case gpir_op_clamp_const:
+      case gpir_op_preexp2:
+      case gpir_op_postlog2:
+      case gpir_op_exp2_impl:
+      case gpir_op_log2_impl:
+      case gpir_op_rcp_impl:
+      case gpir_op_rsqrt_impl:
+      case gpir_op_branch_cond:
+      case gpir_op_store_temp_load_off0:
+      case gpir_op_store_temp_load_off1:
+      case gpir_op_store_temp_load_off2:
          return gpir_min_dist_alu(dep);
 
       default:
-         return 0;
+         assert(0);
       }
+   }
+   else {
+      if (dep->pred->op == gpir_op_store_temp && dep->succ->op == gpir_op_load_temp)
+         return 4;
+      else if (dep->pred->op == gpir_op_store_reg && dep->succ->op == gpir_op_load_reg)
+         return 3;
+      else if ((dep->pred->op == gpir_op_store_temp_load_off0 ||
+                dep->pred->op == gpir_op_store_temp_load_off1 ||
+                dep->pred->op == gpir_op_store_temp_load_off2) &&
+               dep->succ->op == gpir_op_load_uniform)
+         return 4;
+      else
+         return 1;
    }
 
    return 0;
 }
 
-static int gpir_max_dist_alu(gpir_dep_info *dep)
+static bool gpir_is_sched_complex(gpir_node *node)
 {
-   switch (dep->pred->op) {
-   case gpir_op_load_attribute:
-      return 1;
+   switch (node->op) {
+   case gpir_op_exp2_impl:
+   case gpir_op_log2_impl:
+   case gpir_op_rcp_impl:
+   case gpir_op_rsqrt_impl:
+   case gpir_op_store_temp_load_off0:
+   case gpir_op_store_temp_load_off1:
+   case gpir_op_store_temp_load_off2:
+      return true;
+   case gpir_op_mov:
+      if (node->sched_pos == GPIR_INSTR_SLOT_COMPLEX)
+         return true;
+      break;
    default:
       break;
    }
+
+   return false;
+}
+
+static int gpir_max_dist_alu(gpir_dep_info *dep)
+{
+   switch (dep->pred->op) {
+   case gpir_op_load_uniform:
+   case gpir_op_load_temp:
+      return 0;
+   case gpir_op_load_attribute:
+      return 1;
+   case gpir_op_load_reg:
+      if (dep->pred->sched_pos >= GPIR_INSTR_SLOT_REG0_LOAD0 &&
+          dep->pred->sched_pos <= GPIR_INSTR_SLOT_REG0_LOAD3)
+         return 1;
+      else
+         return 0;
+   default:
+      break;
+   }
+
+   if (dep->succ->op == gpir_op_complex1)
+      return 1;
+
+   if (gpir_is_sched_complex(dep->pred))
+      return 1;
 
    return 2;
 }
@@ -77,10 +161,17 @@ static int gpir_get_max_dist(gpir_dep_info *dep)
     * lima_gp_ir_op_load_reg
     * lima_gp_ir_op_mov
     *
-    * so these two nodes as pred must call this function with sched_pos set
+    * so these two nodes as pred must call this function with sched_pos set first
     */
    if (dep->is_child_dep) {
       switch (dep->succ->op) {
+      case gpir_op_store_temp:
+         if (dep->is_offset)
+            return gpir_max_dist_alu(dep);
+         else
+            return 0;
+
+      case gpir_op_store_reg:
       case gpir_op_store_varying:
          return 0;
 
@@ -88,10 +179,31 @@ static int gpir_get_max_dist(gpir_dep_info *dep)
       case gpir_op_mul:
       case gpir_op_add:
       case gpir_op_sub:
+      case gpir_op_select:
+      case gpir_op_complex1:
+      case gpir_op_complex2:
+      case gpir_op_floor:
+      case gpir_op_sign:
+      case gpir_op_ge:
+      case gpir_op_lt:
+      case gpir_op_min:
+      case gpir_op_max:
+      case gpir_op_neg:
+      case gpir_op_clamp_const:
+      case gpir_op_preexp2:
+      case gpir_op_postlog2:
+      case gpir_op_exp2_impl:
+      case gpir_op_log2_impl:
+      case gpir_op_rcp_impl:
+      case gpir_op_rsqrt_impl:
+      case gpir_op_branch_cond:
+      case gpir_op_store_temp_load_off0:
+      case gpir_op_store_temp_load_off1:
+      case gpir_op_store_temp_load_off2:
          return gpir_max_dist_alu(dep);
 
       default:
-         return 0;
+         assert(0);
       }
    }
 
