@@ -541,7 +541,7 @@ init_format_extensions(struct pipe_screen *screen,
 static unsigned
 get_max_samples_for_formats(struct pipe_screen *screen,
                             unsigned num_formats,
-                            enum pipe_format *formats,
+                            const enum pipe_format *formats,
                             unsigned max_samples,
                             unsigned bind)
 {
@@ -995,23 +995,23 @@ void st_init_extensions(struct pipe_screen *screen,
 
    /* Maximum sample count. */
    {
-      enum pipe_format color_formats[] = {
+      static const enum pipe_format color_formats[] = {
          PIPE_FORMAT_R8G8B8A8_UNORM,
          PIPE_FORMAT_B8G8R8A8_UNORM,
          PIPE_FORMAT_A8R8G8B8_UNORM,
          PIPE_FORMAT_A8B8G8R8_UNORM,
       };
-      enum pipe_format depth_formats[] = {
+      static const enum pipe_format depth_formats[] = {
          PIPE_FORMAT_Z16_UNORM,
          PIPE_FORMAT_Z24X8_UNORM,
          PIPE_FORMAT_X8Z24_UNORM,
          PIPE_FORMAT_Z32_UNORM,
          PIPE_FORMAT_Z32_FLOAT
       };
-      enum pipe_format int_formats[] = {
+      static const enum pipe_format int_formats[] = {
          PIPE_FORMAT_R8G8B8A8_SINT
       };
-      enum pipe_format void_formats[] = {
+      static const enum pipe_format void_formats[] = {
          PIPE_FORMAT_NONE
       };
 
