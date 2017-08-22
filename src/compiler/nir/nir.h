@@ -1835,9 +1835,6 @@ typedef struct nir_shader_compiler_options {
    bool lower_extract_byte;
    bool lower_extract_word;
 
-   bool lower_vote_trivial;
-   bool lower_subgroup_masks;
-
    /**
     * Does the driver support real 32-bit integers?  (Otherwise, integers
     * are simulated by floats.)
@@ -2478,6 +2475,15 @@ bool nir_lower_samplers(nir_shader *shader,
                         const struct gl_shader_program *shader_program);
 bool nir_lower_samplers_as_deref(nir_shader *shader,
                                  const struct gl_shader_program *shader_program);
+
+typedef struct nir_lower_subgroups_options {
+   bool lower_to_scalar:1;
+   bool lower_vote_trivial:1;
+   bool lower_subgroup_masks:1;
+} nir_lower_subgroups_options;
+
+bool nir_lower_subgroups(nir_shader *shader,
+                         const nir_lower_subgroups_options *options);
 
 bool nir_lower_system_values(nir_shader *shader);
 
