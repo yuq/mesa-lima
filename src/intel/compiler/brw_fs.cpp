@@ -6860,6 +6860,9 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
       if (!v8.run_cs(min_dispatch_width)) {
          fail_msg = v8.fail_msg;
       } else {
+         /* We should always be able to do SIMD32 for compute shaders */
+         assert(v8.max_dispatch_width >= 32);
+
          cfg = v8.cfg;
          cs_set_simd_size(prog_data, 8);
          cs_fill_push_const_info(compiler->devinfo, prog_data);
@@ -6871,8 +6874,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                  NULL, /* Never used in core profile */
                  shader, 16, shader_time_index);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
-       !fail_msg && v8.max_dispatch_width >= 16 &&
-       min_dispatch_width <= 16) {
+       !fail_msg && min_dispatch_width <= 16) {
       /* Try a SIMD16 compile */
       if (min_dispatch_width <= 8)
          v16.import_uniforms(&v8);
@@ -6886,6 +6888,9 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                "enough threads for SIMD8";
          }
       } else {
+         /* We should always be able to do SIMD32 for compute shaders */
+         assert(v16.max_dispatch_width >= 32);
+
          cfg = v16.cfg;
          cs_set_simd_size(prog_data, 16);
          cs_fill_push_const_info(compiler->devinfo, prog_data);
@@ -6896,8 +6901,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
    fs_visitor v32(compiler, log_data, mem_ctx, key, &prog_data->base,
                  NULL, /* Never used in core profile */
                  shader, 32, shader_time_index);
-   if (!fail_msg && v8.max_dispatch_width >= 32 &&
-       (min_dispatch_width > 16 || (INTEL_DEBUG & DEBUG_DO32))) {
+   if (!fail_msg && (min_dispatch_width > 16 || (INTEL_DEBUG & DEBUG_DO32))) {
       /* Try a SIMD32 compile */
       if (min_dispatch_width <= 8)
          v32.import_uniforms(&v8);
