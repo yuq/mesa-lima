@@ -1762,7 +1762,7 @@ two-component vectors with doubled precision in each component.
 
   dst.z = src0.zw == src1.zw ? \sim 0 : 0
 
-.. opcode:: DSNE - Set on Equal
+.. opcode:: DSNE - Set on Not Equal
 
 .. math::
 
