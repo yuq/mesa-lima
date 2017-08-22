@@ -136,8 +136,18 @@ def _init_exts_from_xml(xml):
         ext_name = ext_elem.attrib['name']
         if ext_name not in ext_name_map:
             continue
-        ext = ext_name_map[ext_name]
 
+        # Workaround for VK_ANDROID_native_buffer. Its <extension> element in
+        # vk.xml lists it as supported="disabled" and provides only a stub
+        # definition.  Its <extension> element in Mesa's custom
+        # vk_android_native_buffer.xml, though, lists it as
+        # supported='android-vendor' and fully defines the extension. We want
+        # to skip the <extension> element in vk.xml.
+        if ext_elem.attrib['supported'] == 'disabled':
+            assert ext_name == 'VK_ANDROID_native_buffer'
+            continue
+
+        ext = ext_name_map[ext_name]
         ext.type = ext_elem.attrib['type']
 
 _TEMPLATE = Template(COPYRIGHT + """
