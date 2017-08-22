@@ -5912,7 +5912,7 @@ fs_visitor::fixup_3src_null_dest()
 }
 
 void
-fs_visitor::allocate_registers(bool allow_spilling)
+fs_visitor::allocate_registers(unsigned min_dispatch_width, bool allow_spilling)
 {
    bool allocated_without_spills;
 
@@ -6047,7 +6047,7 @@ fs_visitor::run_vs()
    assign_vs_urb_setup();
 
    fixup_3src_null_dest();
-   allocate_registers(true);
+   allocate_registers(8, true);
 
    return !failed;
 }
@@ -6127,7 +6127,7 @@ fs_visitor::run_tcs_single_patch()
    assign_tcs_single_patch_urb_setup();
 
    fixup_3src_null_dest();
-   allocate_registers(true);
+   allocate_registers(8, true);
 
    return !failed;
 }
@@ -6161,7 +6161,7 @@ fs_visitor::run_tes()
    assign_tes_urb_setup();
 
    fixup_3src_null_dest();
-   allocate_registers(true);
+   allocate_registers(8, true);
 
    return !failed;
 }
@@ -6210,7 +6210,7 @@ fs_visitor::run_gs()
    assign_gs_urb_setup();
 
    fixup_3src_null_dest();
-   allocate_registers(true);
+   allocate_registers(8, true);
 
    return !failed;
 }
@@ -6310,7 +6310,7 @@ fs_visitor::run_fs(bool allow_spilling, bool do_rep_send)
       assign_urb_setup();
 
       fixup_3src_null_dest();
-      allocate_registers(allow_spilling);
+      allocate_registers(8, allow_spilling);
 
       if (failed)
          return false;
@@ -6320,9 +6320,10 @@ fs_visitor::run_fs(bool allow_spilling, bool do_rep_send)
 }
 
 bool
-fs_visitor::run_cs()
+fs_visitor::run_cs(unsigned min_dispatch_width)
 {
    assert(stage == MESA_SHADER_COMPUTE);
+   assert(dispatch_width >= min_dispatch_width);
 
    setup_cs_payload();
 
@@ -6353,7 +6354,7 @@ fs_visitor::run_cs()
    assign_curb_setup();
 
    fixup_3src_null_dest();
-   allocate_registers(true);
+   allocate_registers(min_dispatch_width, true);
 
    if (failed)
       return false;
@@ -6841,8 +6842,11 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
       shader->info.cs.local_size[0] * shader->info.cs.local_size[1] *
       shader->info.cs.local_size[2];
 
-   unsigned max_cs_threads = compiler->devinfo->max_cs_threads;
-   unsigned simd_required = DIV_ROUND_UP(local_workgroup_size, max_cs_threads);
+   unsigned min_dispatch_width =
+      DIV_ROUND_UP(local_workgroup_size, compiler->devinfo->max_cs_threads);
+   min_dispatch_width = MAX2(8, min_dispatch_width);
+   min_dispatch_width = util_next_power_of_two(min_dispatch_width);
+   assert(min_dispatch_width <= 32);
 
    cfg_t *cfg = NULL;
    const char *fail_msg = NULL;
@@ -6852,8 +6856,8 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
    fs_visitor v8(compiler, log_data, mem_ctx, key, &prog_data->base,
                  NULL, /* Never used in core profile */
                  shader, 8, shader_time_index);
-   if (simd_required <= 8) {
-      if (!v8.run_cs()) {
+   if (min_dispatch_width <= 8) {
+      if (!v8.run_cs(min_dispatch_width)) {
          fail_msg = v8.fail_msg;
       } else {
          cfg = v8.cfg;
@@ -6868,11 +6872,11 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                  shader, 16, shader_time_index);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
        !fail_msg && v8.max_dispatch_width >= 16 &&
-       simd_required <= 16) {
+       min_dispatch_width <= 16) {
       /* Try a SIMD16 compile */
-      if (simd_required <= 8)
+      if (min_dispatch_width <= 8)
          v16.import_uniforms(&v8);
-      if (!v16.run_cs()) {
+      if (!v16.run_cs(min_dispatch_width)) {
          compiler->shader_perf_log(log_data,
                                    "SIMD16 shader failed to compile: %s",
                                    v16.fail_msg);
@@ -6893,14 +6897,14 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                  NULL, /* Never used in core profile */
                  shader, 32, shader_time_index);
    if (!fail_msg && v8.max_dispatch_width >= 32 &&
-       (simd_required > 16 || (INTEL_DEBUG & DEBUG_DO32))) {
+       (min_dispatch_width > 16 || (INTEL_DEBUG & DEBUG_DO32))) {
       /* Try a SIMD32 compile */
-      if (simd_required <= 8)
+      if (min_dispatch_width <= 8)
          v32.import_uniforms(&v8);
-      else if (simd_required <= 16)
+      else if (min_dispatch_width <= 16)
          v32.import_uniforms(&v16);
 
-      if (!v32.run_cs()) {
+      if (!v32.run_cs(min_dispatch_width)) {
          compiler->shader_perf_log(log_data,
                                    "SIMD32 shader failed to compile: %s",
                                    v16.fail_msg);
