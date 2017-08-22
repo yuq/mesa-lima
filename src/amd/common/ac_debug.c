@@ -44,6 +44,7 @@
 #define INDENT_PKT 8
 
 struct ac_ib_parser {
+	FILE *f;
 	uint32_t *ib;
 	unsigned num_dw;
 	int trace_id;
@@ -144,10 +145,14 @@ void ac_dump_reg(FILE *file, unsigned offset, uint32_t value,
 
 static uint32_t ac_ib_get(struct ac_ib_parser *ib)
 {
-	uint32_t v = 0xdeadbeef;
+	uint32_t v = 0;
 
-	if (ib->cur_dw < ib->num_dw)
+	if (ib->cur_dw < ib->num_dw) {
 		v = ib->ib[ib->cur_dw];
+		fprintf(ib->f, "\n\035#%08x ", v);
+	} else {
+		fprintf(ib->f, "\n\035#???????? ");
+	}
 
 	ib->cur_dw++;
 	return v;
@@ -318,10 +323,7 @@ static void ac_parse_packet3(FILE *f, uint32_t header, struct ac_ib_parser *ib)
 		ac_dump_reg(f, R_370_CONTROL, ac_ib_get(ib), ~0);
 		ac_dump_reg(f, R_371_DST_ADDR_LO, ac_ib_get(ib), ~0);
 		ac_dump_reg(f, R_372_DST_ADDR_HI, ac_ib_get(ib), ~0);
-		for (i = 2; i < count; i++) {
-			print_spaces(f, INDENT_PKT);
-			fprintf(f, "0x%08x\n", ac_ib_get(ib));
-		}
+		/* The payload is written automatically */
 		break;
 	case PKT3_CP_DMA:
 		ac_dump_reg(f, R_410_CP_DMA_WORD0, ac_ib_get(ib), ~0);
@@ -369,9 +371,9 @@ static void ac_parse_packet3(FILE *f, uint32_t header, struct ac_ib_parser *ib)
 		ib_recurse.num_dw = G_3F2_IB_SIZE(control_dw);
 		ib_recurse.cur_dw = 0;
 
-		fprintf(f, "------------------ nested begin ------------------\n");
+		fprintf(f, "\n\035>------------------ nested begin ------------------\n");
 		ac_do_parse_ib(f, &ib_recurse);
-		fprintf(f, "------------------- nested end -------------------\n");
+		fprintf(f, "\n\035<------------------- nested end -------------------\n");
 		break;
 	}
 	case PKT3_CLEAR_STATE:
@@ -417,13 +419,11 @@ static void ac_parse_packet3(FILE *f, uint32_t header, struct ac_ib_parser *ib)
 	}
 
 	/* print additional dwords */
-	while (ib->cur_dw <= first_dw + count) {
-		print_spaces(f, INDENT_PKT);
-		fprintf(f, "0x%08x\n", ac_ib_get(ib));
-	}
+	while (ib->cur_dw <= first_dw + count)
+		ac_ib_get(ib);
 
 	if (ib->cur_dw > first_dw + count + 1)
-		fprintf(f, COLOR_RED "!!!!! count in header too low !!!!!"
+		fprintf(f, COLOR_RED "\n!!!!! count in header too low !!!!!"
 			COLOR_RESET "\n");
 }
 
@@ -449,13 +449,45 @@ static void ac_do_parse_ib(FILE *f, struct ac_ib_parser *ib)
 			/* fall through */
 		default:
 			fprintf(f, "Unknown packet type %i\n", type);
-			return;
+			break;
 		}
 	}
+}
 
-	if (ib->cur_dw > ib->num_dw) {
-		printf("\nPacket ends after the end of IB.\n");
-		exit(0);
+static void format_ib_output(FILE *f, char *out)
+{
+	unsigned depth = 0;
+
+	for (;;) {
+		char op = 0;
+
+		if (out[0] == '\n' && out[1] == '\035')
+			out++;
+		if (out[0] == '\035') {
+			op = out[1];
+			out += 2;
+		}
+
+		if (op == '<')
+			depth--;
+
+		unsigned indent = 4 * depth;
+		if (op != '#')
+			indent += 9;
+
+		if (indent)
+			print_spaces(f, indent);
+
+		char *end = strchrnul(out, '\n');
+		fwrite(out, end - out, 1, f);
+		fputc('\n', f); /* always end with a new line */
+		if (!*end)
+			break;
+
+		out = end + 1;
+
+		if (op == '>')
+			depth++;
 	}
 }
 
@@ -483,7 +515,23 @@ void ac_parse_ib_chunk(FILE *f, uint32_t *ib_ptr, int num_dw, int trace_id,
 	ib.chip_class = chip_class;
 	ib.addr_callback = addr_callback;
 	ib.addr_callback_data = addr_callback_data;
-	ac_do_parse_ib(f, &ib);
+
+	char *out;
+	size_t outsize;
+	FILE *memf = open_memstream(&out, &outsize);
+	ib.f = memf;
+	ac_do_parse_ib(memf, &ib);
+	fclose(memf);
+
+	if (out) {
+		format_ib_output(f, out);
+		free(out);
+	}
+
+	if (ib.cur_dw > ib.num_dw) {
+		printf("\nPacket ends after the end of IB.\n");
+		exit(1);
+	}
 }
 
 /**
