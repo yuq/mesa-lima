@@ -132,14 +132,6 @@ static gpir_node *gpir_emit_intrinsic(gpir_compiler *comp, nir_intrinsic_instr *
 
       lnode->index = instr->const_index[info->index_map[NIR_INTRINSIC_BASE] - 1];
       lnode->component = instr->const_index[info->index_map[NIR_INTRINSIC_COMPONENT] - 1];
-      child = gpir_node_find(comp, instr->src);
-      lnode->child = child;
-      gpir_node_add_child(&lnode->node, child);
-
-      if (instr->intrinsic == nir_intrinsic_load_input) {
-         /* TODO: only support fix address input load, not sure if the hardware limit */
-         assert(lnode->child->op == gpir_op_const);
-      }
 
       return &lnode->node;
 
@@ -148,13 +140,13 @@ static gpir_node *gpir_emit_intrinsic(gpir_compiler *comp, nir_intrinsic_instr *
       if (!snode)
          return NULL;
 
-      snode->num_child = 2;
+      snode->index = instr->const_index[info->index_map[NIR_INTRINSIC_BASE] - 1];
+      snode->component = instr->const_index[info->index_map[NIR_INTRINSIC_COMPONENT] - 1];
 
-      for (int i = 0; i < 2; i++) {
-         child = gpir_node_find(comp, instr->src + i);
-         snode->children[i] = child;
-         gpir_node_add_child(&snode->node, child);
-      }
+      child = gpir_node_find(comp, instr->src);
+      snode->child = child;
+      gpir_node_add_child(&snode->node, child);
+
       return &snode->node;
 
    default:
@@ -170,10 +162,9 @@ static gpir_node *gpir_emit_load_const(gpir_compiler *comp, nir_load_const_instr
       return NULL;
 
    assert(instr->def.bit_size == 32);
-   node->num_components = instr->def.num_components;
+   assert(instr->def.num_components == 1);
 
-   for (int i = 0; i < node->num_components; i++)
-      node->value[i].i = instr->value.i32[i];
+   node->value.i = instr->value.i32[0];
 
    return &node->node;
 }
