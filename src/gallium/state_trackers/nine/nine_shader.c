@@ -91,7 +91,7 @@ static inline const char *d3dsio_to_string(unsigned opcode);
    TGSI_SWIZZLE_##x, TGSI_SWIZZLE_##y, TGSI_SWIZZLE_##z, TGSI_SWIZZLE_##w
 
 #define NINE_CONSTANT_SRC(index) \
-   ureg_src_register(TGSI_FILE_CONSTANT, index)
+   ureg_src_dimension(ureg_src_register(TGSI_FILE_CONSTANT, index), 0)
 
 #define NINE_APPLY_SWIZZLE(src, s) \
    ureg_swizzle(src, NINE_SWIZZLE4(s, s, s, s))
@@ -1009,7 +1009,7 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
                     src = ureg_src_dimension(src, 0);
                 }
             } else
-                src = ureg_src_register(TGSI_FILE_CONSTANT, param->idx);
+                src = NINE_CONSTANT_SRC(param->idx);
         }
         if (!IS_VS && tx->version.major < 2) {
             /* ps 1.X clamps constants */
@@ -1035,8 +1035,7 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
                 src = ureg_src_register(TGSI_FILE_CONSTANT, param->idx);
                 src = ureg_src_dimension(src, 2);
             } else
-                src = ureg_src_register(TGSI_FILE_CONSTANT,
-                                        tx->info->const_i_base + param->idx);
+                src = NINE_CONSTANT_SRC(tx->info->const_i_base + param->idx);
         }
         break;
     case D3DSPR_CONSTBOOL:
@@ -1049,8 +1048,7 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
                src = ureg_src_register(TGSI_FILE_CONSTANT, r);
                src = ureg_src_dimension(src, 3);
            } else
-               src = ureg_src_register(TGSI_FILE_CONSTANT,
-                                       tx->info->const_b_base + r);
+               src = NINE_CONSTANT_SRC(tx->info->const_b_base + r);
            src = ureg_swizzle(src, s, s, s, s);
         }
         break;
