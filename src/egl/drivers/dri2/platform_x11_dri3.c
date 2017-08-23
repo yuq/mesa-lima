@@ -101,6 +101,7 @@ dri3_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
 
    loader_dri3_drawable_fini(&dri3_surf->loader_drawable);
 
+   dri2_fini_surface(surf);
    free(surf);
 
    return EGL_TRUE;
@@ -137,7 +138,7 @@ dri3_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
       return NULL;
    }
 
-   if (!_eglInitSurface(&dri3_surf->base, disp, type, conf, attrib_list))
+   if (!dri2_init_surface(&dri3_surf->base, disp, type, conf, attrib_list, false))
       goto cleanup_surf;
 
    if (type == EGL_PBUFFER_BIT) {

@@ -124,7 +124,7 @@ dri2_surfaceless_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
       return NULL;
    }
 
-   if (!_eglInitSurface(&dri2_surf->base, disp, type, conf, attrib_list))
+   if (!dri2_init_surface(&dri2_surf->base, disp, type, conf, attrib_list, false))
       goto cleanup_surface;
 
    config = dri2_get_dri_config(dri2_conf, type,
@@ -165,6 +165,7 @@ surfaceless_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *sur
 
    dri2_dpy->core->destroyDrawable(dri2_surf->dri_drawable);
 
+   dri2_fini_surface(surf);
    free(dri2_surf);
    return EGL_TRUE;
 }
