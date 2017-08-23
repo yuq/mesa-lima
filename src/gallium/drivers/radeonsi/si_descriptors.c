@@ -2179,6 +2179,8 @@ static void si_init_bindless_descriptors(struct si_context *sctx,
 					 unsigned shader_userdata_index,
 					 unsigned num_elements)
 {
+	MAYBE_UNUSED unsigned desc_slot;
+
 	si_init_descriptors(desc, shader_userdata_index, 16, num_elements);
 	sctx->bindless_descriptors.num_active_slots = num_elements;
 
@@ -2192,7 +2194,8 @@ static void si_init_bindless_descriptors(struct si_context *sctx,
 	util_idalloc_resize(&sctx->bindless_used_slots, num_elements);
 
 	/* Reserve slot 0 because it's an invalid handle for bindless. */
-	assert(!util_idalloc_alloc(&sctx->bindless_used_slots));
+	desc_slot = util_idalloc_alloc(&sctx->bindless_used_slots);
+	assert(desc_slot != 0);
 }
 
 static void si_release_bindless_descriptors(struct si_context *sctx)
