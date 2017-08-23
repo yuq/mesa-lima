@@ -43,6 +43,26 @@ extern "C" {
 
 typedef uint8_t cache_key[CACHE_KEY_SIZE];
 
+/* WARNING: 3rd party applications might be reading the cache item metadata.
+ * Do not change these values without making the change widely known.
+ * Please contact Valve developers and make them aware of this change.
+ */
+#define CACHE_ITEM_TYPE_UNKNOWN  0x0
+#define CACHE_ITEM_TYPE_GLSL     0x1
+
+struct cache_item_metadata {
+   /**
+    * The cache item type. This could be used to identify a GLSL cache item,
+    * a certain type of IR (tgsi, nir, etc), or signal that it is the final
+    * binary form of the shader.
+    */
+   uint32_t type;
+
+   /** GLSL cache item metadata */
+   cache_key *keys;   /* sha1 list of shaders that make up the cache item */
+   uint32_t num_keys;
+};
+
 struct disk_cache;
 
 static inline bool
