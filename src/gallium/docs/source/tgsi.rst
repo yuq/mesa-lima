@@ -3397,7 +3397,7 @@ A bit mask of ``bit index <= TGSI_SEMANTIC_SUBGROUP_INVOCATION``, i.e.
 TGSI_SEMANTIC_SUBGROUP_LT_MASK
 """"""""""""""""""""""""""""""
 
-A bit mask of ``bit index > TGSI_SEMANTIC_SUBGROUP_INVOCATION``, i.e.
+A bit mask of ``bit index < TGSI_SEMANTIC_SUBGROUP_INVOCATION``, i.e.
 ``(1 << subgroup_invocation) - 1`` in arbitrary precision arithmetic.
 
 
