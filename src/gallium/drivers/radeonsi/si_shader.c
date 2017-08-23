@@ -1851,10 +1851,11 @@ static LLVMValueRef fetch_constant(
 		return lp_build_gather_values(&ctx->gallivm, values, 4);
 	}
 
-	buf = reg->Register.Dimension ? reg->Dimension.Index : 0;
+	assert(reg->Register.Dimension);
+	buf = reg->Dimension.Index;
 	idx = reg->Register.Index * 4 + swizzle;
 
-	if (reg->Register.Dimension && reg->Dimension.Indirect) {
+	if (reg->Dimension.Indirect) {
 		LLVMValueRef ptr = LLVMGetParam(ctx->main_fn, ctx->param_const_and_shader_buffers);
 		LLVMValueRef index;
 		index = si_get_bounded_indirect_index(ctx, &reg->DimIndirect,
