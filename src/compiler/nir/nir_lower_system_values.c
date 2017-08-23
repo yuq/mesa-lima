@@ -126,6 +126,7 @@ convert_block(nir_block *block, nir_builder *b)
             nir_intrinsic_from_system_value(var->data.location);
          nir_intrinsic_instr *load = nir_intrinsic_instr_create(b->shader, op);
          nir_ssa_dest_init(&load->instr, &load->dest, 1, 64, NULL);
+         load->num_components = 1;
          nir_builder_instr_insert(b, &load->instr);
          sysval = &load->dest.ssa;
          break;
