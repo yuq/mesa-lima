@@ -61,6 +61,8 @@ typedef uint32_t xcb_window_t;
 struct anv_buffer;
 struct anv_buffer_view;
 struct anv_image_view;
+struct anv_instance;
+struct anv_debug_report_callback;
 
 struct gen_l3_config;
 
@@ -236,6 +238,15 @@ void __anv_perf_warn(const char *file, int line, const char *format, ...)
    anv_printflike(3, 4);
 void anv_loge(const char *format, ...) anv_printflike(1, 2);
 void anv_loge_v(const char *format, va_list va);
+
+void anv_debug_report(struct anv_instance *instance,
+                      VkDebugReportFlagsEXT flags,
+                      VkDebugReportObjectTypeEXT object_type,
+                      uint64_t handle,
+                      size_t location,
+                      int32_t messageCode,
+                      const char* pLayerPrefix,
+                      const char *pMessage);
 
 /**
  * Print a FINISHME message, including its source location.
@@ -666,6 +677,14 @@ struct anv_physical_device {
     int                                         local_fd;
 };
 
+struct anv_debug_report_callback {
+   /* Link in the 'callbacks' list in anv_instance struct. */
+   struct list_head                             link;
+   VkDebugReportFlagsEXT                        flags;
+   PFN_vkDebugReportCallbackEXT                 callback;
+   void *                                       data;
+};
+
 struct anv_instance {
     VK_LOADER_DATA                              _loader_data;
 
@@ -674,6 +693,11 @@ struct anv_instance {
     uint32_t                                    apiVersion;
     int                                         physicalDeviceCount;
     struct anv_physical_device                  physicalDevice;
+
+    /* VK_EXT_debug_report debug callbacks */
+    pthread_mutex_t                             callbacks_mutex;
+    struct list_head                            callbacks;
+    struct anv_debug_report_callback            destroy_debug_cb;
 };
 
 VkResult anv_init_wsi(struct anv_physical_device *physical_device);
@@ -2493,6 +2517,7 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_render_pass, VkRenderPass)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_sampler, VkSampler)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_semaphore, VkSemaphore)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_shader_module, VkShaderModule)
+ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_debug_report_callback, VkDebugReportCallbackEXT)
 
 /* Gen-specific function declarations */
 #ifdef genX

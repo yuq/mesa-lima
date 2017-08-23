@@ -75,6 +75,7 @@ EXTENSIONS = [
     Extension('VK_KHR_xcb_surface',                       6, 'VK_USE_PLATFORM_XCB_KHR'),
     Extension('VK_KHR_xlib_surface',                      6, 'VK_USE_PLATFORM_XLIB_KHR'),
     Extension('VK_KHX_multiview',                         1, True),
+    Extension('VK_EXT_debug_report',                      8, True),
 ]
 
 class VkVersion:

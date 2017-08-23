@@ -446,6 +446,13 @@ VkResult anv_CreateInstance(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO);
 
+   /* Check if user passed a debug report callback to be used during
+    * Create/Destroy of instance.
+    */
+   const VkDebugReportCallbackCreateInfoEXT *ctor_cb =
+      vk_find_struct_const(pCreateInfo->pNext,
+                           DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT);
+
    uint32_t client_version;
    if (pCreateInfo->pApplicationInfo &&
        pCreateInfo->pApplicationInfo->apiVersion != 0) {
@@ -456,6 +463,17 @@ VkResult anv_CreateInstance(
 
    if (VK_MAKE_VERSION(1, 0, 0) > client_version ||
        client_version > VK_MAKE_VERSION(1, 0, 0xfff)) {
+
+      if (ctor_cb && ctor_cb->flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+         ctor_cb->pfnCallback(VK_DEBUG_REPORT_ERROR_BIT_EXT,
+                              VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
+                              VK_NULL_HANDLE, /* No handle available yet. */
+                              __LINE__,
+                              0,
+                              "anv",
+                              "incompatible driver version",
+                              ctor_cb->pUserData);
+
       return vk_errorf(VK_ERROR_INCOMPATIBLE_DRIVER,
                        "Client requested version %d.%d.%d",
                        VK_VERSION_MAJOR(client_version),
@@ -484,6 +502,20 @@ VkResult anv_CreateInstance(
    instance->apiVersion = client_version;
    instance->physicalDeviceCount = -1;
 
+   if (pthread_mutex_init(&instance->callbacks_mutex, NULL) != 0) {
+      vk_free2(&default_alloc, pAllocator, instance);
+      return vk_error(VK_ERROR_INITIALIZATION_FAILED);
+   }
+
+   list_inithead(&instance->callbacks);
+
+   /* Store report debug callback to be used during DestroyInstance. */
+   if (ctor_cb) {
+      instance->destroy_debug_cb.flags = ctor_cb->flags;
+      instance->destroy_debug_cb.callback = ctor_cb->pfnCallback;
+      instance->destroy_debug_cb.data = ctor_cb->pUserData;
+   }
+
    _mesa_locale_init();
 
    VG(VALGRIND_CREATE_MEMPOOL(instance, 0, false));
@@ -509,6 +541,8 @@ void anv_DestroyInstance(
    }
 
    VG(VALGRIND_DESTROY_MEMPOOL(instance));
+
+   pthread_mutex_destroy(&instance->callbacks_mutex);
 
    _mesa_locale_fini();
 
