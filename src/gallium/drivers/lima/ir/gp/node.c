@@ -319,17 +319,10 @@ void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child, gpir_node 
             alu->children[i] = new_child;
       }
    }
-   else if (parent->type == gpir_node_type_load) {
-      gpir_load_node *load = gpir_node_to_load(parent);
-      if (load->child == old_child)
-         load->child = new_child;
-   }
    else if (parent->type == gpir_node_type_store) {
       gpir_store_node *store = gpir_node_to_store(parent);
-      for (int i = 0; i < store->num_child; i++) {
-         if (store->children[i] == old_child)
-            store->children[i] = new_child;
-      }
+      if (store->child == old_child)
+         store->child = new_child;
    }
 }
 
