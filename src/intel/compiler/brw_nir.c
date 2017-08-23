@@ -637,6 +637,8 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    OPT(nir_lower_system_values);
 
    const nir_lower_subgroups_options subgroups_options = {
+      .subgroup_size = nir->info.stage == MESA_SHADER_COMPUTE ? 32 :
+                       nir->info.stage == MESA_SHADER_FRAGMENT ? 16 : 8,
       .ballot_bit_size = 32,
       .lower_to_scalar = true,
       .lower_subgroup_masks = true,
