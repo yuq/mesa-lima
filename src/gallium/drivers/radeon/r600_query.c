@@ -1459,7 +1459,7 @@ static void r600_create_query_result_shader(struct r600_common_context *rctx)
 		"DCL BUFFER[0]\n"
 		"DCL BUFFER[1]\n"
 		"DCL BUFFER[2]\n"
-		"DCL CONST[0..1]\n"
+		"DCL CONST[0][0..1]\n"
 		"DCL TEMP[0..5]\n"
 		"IMM[0] UINT32 {0, 31, 2147483647, 4294967295}\n"
 		"IMM[1] UINT32 {1, 2, 4, 8}\n"
@@ -1467,10 +1467,10 @@ static void r600_create_query_result_shader(struct r600_common_context *rctx)
 		"IMM[3] UINT32 {1000000, 0, %u, 0}\n" /* for timestamp conversion */
 		"IMM[4] UINT32 {256, 0, 0, 0}\n"
 
-		"AND TEMP[5], CONST[0].wwww, IMM[2].xxxx\n"
+		"AND TEMP[5], CONST[0][0].wwww, IMM[2].xxxx\n"
 		"UIF TEMP[5]\n"
 			/* Check result availability. */
-			"LOAD TEMP[1].x, BUFFER[0], CONST[1].xxxx\n"
+			"LOAD TEMP[1].x, BUFFER[0], CONST[0][1].xxxx\n"
 			"ISHR TEMP[0].z, TEMP[1].xxxx, IMM[0].yyyy\n"
 			"MOV TEMP[1], TEMP[0].zzzz\n"
 			"NOT TEMP[0].z, TEMP[0].zzzz\n"
@@ -1482,7 +1482,7 @@ static void r600_create_query_result_shader(struct r600_common_context *rctx)
 		"ELSE\n"
 			/* Load previously accumulated result if requested. */
 			"MOV TEMP[0], IMM[0].xxxx\n"
-			"AND TEMP[4], CONST[0].wwww, IMM[1].xxxx\n"
+			"AND TEMP[4], CONST[0][0].wwww, IMM[1].xxxx\n"
 			"UIF TEMP[4]\n"
 				"LOAD TEMP[0].xyz, BUFFER[1], IMM[0].xxxx\n"
 			"ENDIF\n"
@@ -1495,13 +1495,13 @@ static void r600_create_query_result_shader(struct r600_common_context *rctx)
 				"ENDIF\n"
 
 				/* Break if result_index >= result_count. */
-				"USGE TEMP[5], TEMP[1].xxxx, CONST[0].zzzz\n"
+				"USGE TEMP[5], TEMP[1].xxxx, CONST[0][0].zzzz\n"
 				"UIF TEMP[5]\n"
 					"BRK\n"
 				"ENDIF\n"
 
 				/* Load fence and check result availability */
-				"UMAD TEMP[5].x, TEMP[1].xxxx, CONST[0].yyyy, CONST[1].xxxx\n"
+				"UMAD TEMP[5].x, TEMP[1].xxxx, CONST[0][0].yyyy, CONST[0][1].xxxx\n"
 				"LOAD TEMP[5].x, BUFFER[0], TEMP[5].xxxx\n"
 				"ISHR TEMP[0].z, TEMP[5].xxxx, IMM[0].yyyy\n"
 				"NOT TEMP[0].z, TEMP[0].zzzz\n"
@@ -1512,16 +1512,16 @@ static void r600_create_query_result_shader(struct r600_common_context *rctx)
 				"MOV TEMP[1].y, IMM[0].xxxx\n"
 				"BGNLOOP\n"
 					/* Load start and end. */
-					"UMUL TEMP[5].x, TEMP[1].xxxx, CONST[0].yyyy\n"
-					"UMAD TEMP[5].x, TEMP[1].yyyy, CONST[1].yyyy, TEMP[5].xxxx\n"
+					"UMUL TEMP[5].x, TEMP[1].xxxx, CONST[0][0].yyyy\n"
+					"UMAD TEMP[5].x, TEMP[1].yyyy, CONST[0][1].yyyy, TEMP[5].xxxx\n"
 					"LOAD TEMP[2].xy, BUFFER[0], TEMP[5].xxxx\n"
 
-					"UADD TEMP[5].y, TEMP[5].xxxx, CONST[0].xxxx\n"
+					"UADD TEMP[5].y, TEMP[5].xxxx, CONST[0][0].xxxx\n"
 					"LOAD TEMP[3].xy, BUFFER[0], TEMP[5].yyyy\n"
 
 					"U64ADD TEMP[4].xy, TEMP[3], -TEMP[2]\n"
 
-					"AND TEMP[5].z, CONST[0].wwww, IMM[4].xxxx\n"
+					"AND TEMP[5].z, CONST[0][0].wwww, IMM[4].xxxx\n"
 					"UIF TEMP[5].zzzz\n"
 						/* Load second start/end half-pair and
 						 * take the difference
@@ -1538,7 +1538,7 @@ static void r600_create_query_result_shader(struct r600_common_context *rctx)
 
 					/* Increment pair index */
 					"UADD TEMP[1].y, TEMP[1].yyyy, IMM[1].xxxx\n"
-					"USGE TEMP[5], TEMP[1].yyyy, CONST[1].zzzz\n"
+					"USGE TEMP[5], TEMP[1].yyyy, CONST[0][1].zzzz\n"
 					"UIF TEMP[5]\n"
 						"BRK\n"
 					"ENDIF\n"
@@ -1549,19 +1549,19 @@ static void r600_create_query_result_shader(struct r600_common_context *rctx)
 			"ENDLOOP\n"
 		"ENDIF\n"
 
-		"AND TEMP[4], CONST[0].wwww, IMM[1].yyyy\n"
+		"AND TEMP[4], CONST[0][0].wwww, IMM[1].yyyy\n"
 		"UIF TEMP[4]\n"
 			/* Store accumulated data for chaining. */
 			"STORE BUFFER[2].xyz, IMM[0].xxxx, TEMP[0]\n"
 		"ELSE\n"
-			"AND TEMP[4], CONST[0].wwww, IMM[1].zzzz\n"
+			"AND TEMP[4], CONST[0][0].wwww, IMM[1].zzzz\n"
 			"UIF TEMP[4]\n"
 				/* Store result availability. */
 				"NOT TEMP[0].z, TEMP[0]\n"
 				"AND TEMP[0].z, TEMP[0].zzzz, IMM[1].xxxx\n"
 				"STORE BUFFER[2].x, IMM[0].xxxx, TEMP[0].zzzz\n"
 
-				"AND TEMP[4], CONST[0].wwww, IMM[2].zzzz\n"
+				"AND TEMP[4], CONST[0][0].wwww, IMM[2].zzzz\n"
 				"UIF TEMP[4]\n"
 					"STORE BUFFER[2].y, IMM[0].xxxx, IMM[0].xxxx\n"
 				"ENDIF\n"
@@ -1570,21 +1570,21 @@ static void r600_create_query_result_shader(struct r600_common_context *rctx)
 				"NOT TEMP[4], TEMP[0].zzzz\n"
 				"UIF TEMP[4]\n"
 					/* Apply timestamp conversion */
-					"AND TEMP[4], CONST[0].wwww, IMM[2].yyyy\n"
+					"AND TEMP[4], CONST[0][0].wwww, IMM[2].yyyy\n"
 					"UIF TEMP[4]\n"
 						"U64MUL TEMP[0].xy, TEMP[0], IMM[3].xyxy\n"
 						"U64DIV TEMP[0].xy, TEMP[0], IMM[3].zwzw\n"
 					"ENDIF\n"
 
 					/* Convert to boolean */
-					"AND TEMP[4], CONST[0].wwww, IMM[1].wwww\n"
+					"AND TEMP[4], CONST[0][0].wwww, IMM[1].wwww\n"
 					"UIF TEMP[4]\n"
 						"U64SNE TEMP[0].x, TEMP[0].xyxy, IMM[4].zwzw\n"
 						"AND TEMP[0].x, TEMP[0].xxxx, IMM[1].xxxx\n"
 						"MOV TEMP[0].y, IMM[0].xxxx\n"
 					"ENDIF\n"
 
-					"AND TEMP[4], CONST[0].wwww, IMM[2].zzzz\n"
+					"AND TEMP[4], CONST[0][0].wwww, IMM[2].zzzz\n"
 					"UIF TEMP[4]\n"
 						"STORE BUFFER[2].xy, IMM[0].xxxx, TEMP[0].xyxy\n"
 					"ELSE\n"
@@ -1593,7 +1593,7 @@ static void r600_create_query_result_shader(struct r600_common_context *rctx)
 							"MOV TEMP[0].x, IMM[0].wwww\n"
 						"ENDIF\n"
 
-						"AND TEMP[4], CONST[0].wwww, IMM[2].wwww\n"
+						"AND TEMP[4], CONST[0][0].wwww, IMM[2].wwww\n"
 						"UIF TEMP[4]\n"
 							"UMIN TEMP[0].x, TEMP[0].xxxx, IMM[0].zzzz\n"
 						"ENDIF\n"
