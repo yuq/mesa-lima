@@ -280,6 +280,7 @@ int rvid_get_video_param(struct pipe_screen *screen,
 					profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10);
 			else if (rscreen->family >= CHIP_CARRIZO)
 				return profile == PIPE_VIDEO_PROFILE_HEVC_MAIN;
+			return false;
 		case PIPE_VIDEO_FORMAT_JPEG:
 			if (rscreen->family < CHIP_CARRIZO || rscreen->family >= CHIP_VEGA10)
 				return false;
