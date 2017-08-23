@@ -96,6 +96,8 @@ struct radeon_info {
 	uint32_t                    num_tile_pipes; /* pipe count from PIPE_CONFIG */
 	uint32_t                    pipe_interleave_bytes;
 	uint32_t                    enabled_rb_mask; /* GCN harvest config */
+	uint32_t                    pa_sc_raster_config[4]; /* per SE */
+	uint32_t                    pa_sc_raster_config_1;
 
 	uint64_t                    max_alignment; /* from addrlib */
 	/* Tile modes. */
