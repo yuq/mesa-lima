@@ -622,7 +622,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
 
    screen = context->decoder->context->screen;
    interlaced = screen->get_video_param(screen, context->decoder->profile,
-                                        PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
+                                        context->decoder->entrypoint,
                                         PIPE_VIDEO_CAP_SUPPORTS_INTERLACED);
 
    if (surf->buffer->interlaced != interlaced) {
