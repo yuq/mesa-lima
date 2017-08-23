@@ -334,7 +334,6 @@ static gpir_node *_gpir_create_from_node(gpir_block *block, gpir_node *node, gpi
       gpir_load_node *dst = gpir_node_to_load(ret);
       gpir_load_node *src = gpir_node_to_load(load);
 
-      dst->child = src->child;
       dst->index = src->index;
       dst->component = src->component;
       dst->offset = src->offset;
