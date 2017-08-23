@@ -2186,14 +2186,13 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       if (const_uniform_block) {
          /* Constant constant buffer */
          cbuf.reladdr2 = NULL;
-         cbuf.has_index2 = true;
       }
       else {
          /* Relative/variable constant buffer */
          cbuf.reladdr2 = ralloc(mem_ctx, st_src_reg);
          memcpy(cbuf.reladdr2, &op[0], sizeof(st_src_reg));
-         cbuf.has_index2 = true;
       }
+      cbuf.has_index2 = true;
 
       cbuf.swizzle = swizzle_for_size(ir->type->vector_elements);
       if (glsl_base_type_is_64bit(cbuf.type))
