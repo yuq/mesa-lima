@@ -242,6 +242,8 @@ static gpir_instr *gpir_instr_array_grow(struct util_dynarray *instrs, int pos)
       int size = (pos + 1 - n) * sizeof(gpir_instr);
       util_dynarray_grow(instrs, size);
       memset(gpir_instr_array_e(instrs, n), 0, size);
+      for (int i = n; i <= pos; i++)
+         gpir_instr_init(gpir_instr_array_e(instrs, i));
    }
 
    return gpir_instr_array_e(instrs, pos);
