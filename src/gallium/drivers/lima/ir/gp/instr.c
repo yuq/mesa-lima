@@ -34,6 +34,20 @@ void gpir_instr_init(gpir_instr *instr)
 
 static bool gpir_instr_insert_alu_check(gpir_instr *instr, gpir_node *node)
 {
+   /* check if this node is child of one store node */
+   for (int i = GPIR_INSTR_SLOT_STORE0; i < GPIR_INSTR_SLOT_STORE3; i++) {
+      gpir_store_node *s = gpir_node_to_store(instr->slots[i]);
+      if (s && s->child == node) {
+         instr->alu_num_slot_needed_by_store--;
+         instr->alu_num_slot_free--;
+         return true;
+      }
+   }
+
+   /* not a child of any store node, so must reserve alu slot for store node */
+   if (instr->alu_num_slot_free <= instr->alu_num_slot_needed_by_store)
+      return false;
+
    instr->alu_num_slot_free--;
    return true;
 }
@@ -100,6 +114,21 @@ static bool gpir_instr_insert_store_check(gpir_instr *instr, gpir_node *node)
 
    instr->store_is_used[i] = true;
    instr->store_index[i] = store->index;
+
+   /* check if any store node has the same child as this node */
+   for (i = GPIR_INSTR_SLOT_STORE0; i <= GPIR_INSTR_SLOT_STORE3; i++) {
+      gpir_store_node *s = gpir_node_to_store(instr->slots[i]);
+      if (s && s->child == store->child)
+         return true;
+   }
+
+   /* no store node has the same child as this node, so instr must
+    * have some free alu slot to insert this node's child
+    */
+   if (!instr->alu_num_slot_free)
+      return false;
+
+   instr->alu_num_slot_needed_by_store++;
    return true;
 }
 

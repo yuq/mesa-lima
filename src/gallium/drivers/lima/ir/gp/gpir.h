@@ -224,6 +224,7 @@ typedef struct {
    gpir_node *slots[GPIR_INSTR_SLOT_NUM];
 
    int alu_num_slot_free;
+   int alu_num_slot_needed_by_store;
 
    bool reg0_is_used;
    bool reg0_is_attr;
