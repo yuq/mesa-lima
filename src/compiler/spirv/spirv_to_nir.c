@@ -2957,36 +2957,132 @@ vtn_handle_composite(struct vtn_builder *b, SpvOp opcode,
 }
 
 static void
+vtn_emit_barrier(struct vtn_builder *b, nir_intrinsic_op op)
+{
+   nir_intrinsic_instr *intrin = nir_intrinsic_instr_create(b->shader, op);
+   nir_builder_instr_insert(&b->nb, &intrin->instr);
+}
+
+static void
+vtn_emit_memory_barrier(struct vtn_builder *b, SpvScope scope,
+                        SpvMemorySemanticsMask semantics)
+{
+   static const SpvMemorySemanticsMask all_memory_semantics =
+      SpvMemorySemanticsUniformMemoryMask |
+      SpvMemorySemanticsWorkgroupMemoryMask |
+      SpvMemorySemanticsAtomicCounterMemoryMask |
+      SpvMemorySemanticsImageMemoryMask;
+
+   /* If we're not actually doing a memory barrier, bail */
+   if (!(semantics & all_memory_semantics))
+      return;
+
+   /* GL and Vulkan don't have these */
+   vtn_assert(scope != SpvScopeCrossDevice);
+
+   if (scope == SpvScopeSubgroup)
+      return; /* Nothing to do here */
+
+   if (scope == SpvScopeWorkgroup) {
+      vtn_emit_barrier(b, nir_intrinsic_group_memory_barrier);
+      return;
+   }
+
+   /* There's only two scopes thing left */
+   vtn_assert(scope == SpvScopeInvocation || scope == SpvScopeDevice);
+
+   if ((semantics & all_memory_semantics) == all_memory_semantics) {
+      vtn_emit_barrier(b, nir_intrinsic_memory_barrier);
+      return;
+   }
+
+   /* Issue a bunch of more specific barriers */
+   uint32_t bits = semantics;
+   while (bits) {
+      SpvMemorySemanticsMask semantic = 1 << u_bit_scan(&bits);
+      switch (semantic) {
+      case SpvMemorySemanticsUniformMemoryMask:
+         vtn_emit_barrier(b, nir_intrinsic_memory_barrier_buffer);
+         break;
+      case SpvMemorySemanticsWorkgroupMemoryMask:
+         vtn_emit_barrier(b, nir_intrinsic_memory_barrier_shared);
+         break;
+      case SpvMemorySemanticsAtomicCounterMemoryMask:
+         vtn_emit_barrier(b, nir_intrinsic_memory_barrier_atomic_counter);
+         break;
+      case SpvMemorySemanticsImageMemoryMask:
+         vtn_emit_barrier(b, nir_intrinsic_memory_barrier_image);
+         break;
+      default:
+         break;;
+      }
+   }
+}
+
+static void
 vtn_handle_barrier(struct vtn_builder *b, SpvOp opcode,
                    const uint32_t *w, unsigned count)
 {
-   nir_intrinsic_op intrinsic_op;
    switch (opcode) {
    case SpvOpEmitVertex:
    case SpvOpEmitStreamVertex:
-      intrinsic_op = nir_intrinsic_emit_vertex;
-      break;
    case SpvOpEndPrimitive:
-   case SpvOpEndStreamPrimitive:
-      intrinsic_op = nir_intrinsic_end_primitive;
+   case SpvOpEndStreamPrimitive: {
+      nir_intrinsic_op intrinsic_op;
+      switch (opcode) {
+      case SpvOpEmitVertex:
+      case SpvOpEmitStreamVertex:
+         intrinsic_op = nir_intrinsic_emit_vertex;
+         break;
+      case SpvOpEndPrimitive:
+      case SpvOpEndStreamPrimitive:
+         intrinsic_op = nir_intrinsic_end_primitive;
+         break;
+      default:
+         unreachable("Invalid opcode");
+      }
+
+      nir_intrinsic_instr *intrin =
+         nir_intrinsic_instr_create(b->shader, intrinsic_op);
+
+      switch (opcode) {
+      case SpvOpEmitStreamVertex:
+      case SpvOpEndStreamPrimitive:
+         nir_intrinsic_set_stream_id(intrin, w[1]);
+         break;
+      default:
+         break;
+      }
+
+      nir_builder_instr_insert(&b->nb, &intrin->instr);
       break;
-   case SpvOpMemoryBarrier:
-      intrinsic_op = nir_intrinsic_memory_barrier;
-      break;
-   case SpvOpControlBarrier:
-      intrinsic_op = nir_intrinsic_barrier;
-      break;
-   default:
-      vtn_fail("unknown barrier instruction");
    }
 
-   nir_intrinsic_instr *intrin =
-      nir_intrinsic_instr_create(b->shader, intrinsic_op);
+   case SpvOpMemoryBarrier: {
+      SpvScope scope = vtn_constant_value(b, w[1])->values[0].u32[0];
+      SpvMemorySemanticsMask semantics =
+         vtn_constant_value(b, w[2])->values[0].u32[0];
+      vtn_emit_memory_barrier(b, scope, semantics);
+      return;
+   }
 
-   if (opcode == SpvOpEmitStreamVertex || opcode == SpvOpEndStreamPrimitive)
-      nir_intrinsic_set_stream_id(intrin, w[1]);
+   case SpvOpControlBarrier: {
+      SpvScope execution_scope =
+         vtn_constant_value(b, w[1])->values[0].u32[0];
+      if (execution_scope == SpvScopeWorkgroup)
+         vtn_emit_barrier(b, nir_intrinsic_barrier);
 
-   nir_builder_instr_insert(&b->nb, &intrin->instr);
+      SpvScope memory_scope =
+         vtn_constant_value(b, w[2])->values[0].u32[0];
+      SpvMemorySemanticsMask memory_semantics =
+         vtn_constant_value(b, w[3])->values[0].u32[0];
+      vtn_emit_memory_barrier(b, memory_scope, memory_semantics);
+      break;
+   }
+
+   default:
+      unreachable("unknown barrier instruction");
+   }
 }
 
 static unsigned
