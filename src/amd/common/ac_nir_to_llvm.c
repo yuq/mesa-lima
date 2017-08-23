@@ -1806,10 +1806,12 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		break;
 	case nir_op_i2f32:
 	case nir_op_i2f64:
+		src[0] = to_integer(&ctx->ac, src[0]);
 		result = LLVMBuildSIToFP(ctx->ac.builder, src[0], to_float_type(&ctx->ac, def_type), "");
 		break;
 	case nir_op_u2f32:
 	case nir_op_u2f64:
+		src[0] = to_integer(&ctx->ac, src[0]);
 		result = LLVMBuildUIToFP(ctx->ac.builder, src[0], to_float_type(&ctx->ac, def_type), "");
 		break;
 	case nir_op_f2f64:
@@ -1820,6 +1822,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		break;
 	case nir_op_u2u32:
 	case nir_op_u2u64:
+		src[0] = to_integer(&ctx->ac, src[0]);
 		if (get_elem_bits(&ctx->ac, LLVMTypeOf(src[0])) < get_elem_bits(&ctx->ac, def_type))
 			result = LLVMBuildZExt(ctx->ac.builder, src[0], def_type, "");
 		else
@@ -1827,6 +1830,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		break;
 	case nir_op_i2i32:
 	case nir_op_i2i64:
+		src[0] = to_integer(&ctx->ac, src[0]);
 		if (get_elem_bits(&ctx->ac, LLVMTypeOf(src[0])) < get_elem_bits(&ctx->ac, def_type))
 			result = LLVMBuildSExt(ctx->ac.builder, src[0], def_type, "");
 		else
@@ -1836,18 +1840,25 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		result = emit_bcsel(&ctx->ac, src[0], src[1], src[2]);
 		break;
 	case nir_op_find_lsb:
+		src[0] = to_integer(&ctx->ac, src[0]);
 		result = emit_find_lsb(&ctx->ac, src[0]);
 		break;
 	case nir_op_ufind_msb:
+		src[0] = to_integer(&ctx->ac, src[0]);
 		result = emit_ufind_msb(&ctx->ac, src[0]);
 		break;
 	case nir_op_ifind_msb:
+		src[0] = to_integer(&ctx->ac, src[0]);
 		result = emit_ifind_msb(&ctx->ac, src[0]);
 		break;
 	case nir_op_uadd_carry:
+		src[0] = to_integer(&ctx->ac, src[0]);
+		src[1] = to_integer(&ctx->ac, src[1]);
 		result = emit_uint_carry(&ctx->ac, "llvm.uadd.with.overflow.i32", src[0], src[1]);
 		break;
 	case nir_op_usub_borrow:
+		src[0] = to_integer(&ctx->ac, src[0]);
+		src[1] = to_integer(&ctx->ac, src[1]);
 		result = emit_uint_carry(&ctx->ac, "llvm.usub.with.overflow.i32", src[0], src[1]);
 		break;
 	case nir_op_b2f:
@@ -1860,15 +1871,20 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		result = emit_b2i(&ctx->ac, src[0]);
 		break;
 	case nir_op_i2b:
+		src[0] = to_integer(&ctx->ac, src[0]);
 		result = emit_i2b(&ctx->ac, src[0]);
 		break;
 	case nir_op_fquantize2f16:
 		result = emit_f2f16(ctx->nctx, src[0]);
 		break;
 	case nir_op_umul_high:
+		src[0] = to_integer(&ctx->ac, src[0]);
+		src[1] = to_integer(&ctx->ac, src[1]);
 		result = emit_umul_high(&ctx->ac, src[0], src[1]);
 		break;
 	case nir_op_imul_high:
+		src[0] = to_integer(&ctx->ac, src[0]);
+		src[1] = to_integer(&ctx->ac, src[1]);
 		result = emit_imul_high(&ctx->ac, src[0], src[1]);
 		break;
 	case nir_op_pack_half_2x16:
