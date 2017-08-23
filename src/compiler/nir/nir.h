@@ -1854,8 +1854,6 @@ typedef struct nir_shader_compiler_options {
     */
    bool use_interpolated_input_intrinsics;
 
-   unsigned max_subgroup_size;
-
    unsigned max_unroll_iterations;
 } nir_shader_compiler_options;
 
@@ -2486,6 +2484,7 @@ bool nir_lower_samplers_as_deref(nir_shader *shader,
                                  const struct gl_shader_program *shader_program);
 
 typedef struct nir_lower_subgroups_options {
+   uint8_t ballot_bit_size;
    bool lower_to_scalar:1;
    bool lower_vote_trivial:1;
    bool lower_subgroup_masks:1;
