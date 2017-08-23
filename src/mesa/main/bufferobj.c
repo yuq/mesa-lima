@@ -4055,9 +4055,6 @@ bind_xfb_buffers(struct gl_context *ctx,
       GLsizeiptr size = 0;
 
       if (range) {
-         offset = offsets[i];
-         size = sizes[i];
-
          if (!bind_buffers_check_offset_and_size(ctx, i, offsets, sizes))
             continue;
 
