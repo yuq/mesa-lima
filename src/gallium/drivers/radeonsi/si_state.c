@@ -4274,6 +4274,25 @@ void si_init_screen_state_functions(struct si_screen *sscreen)
 	sscreen->b.apply_opaque_metadata = si_apply_opaque_metadata;
 }
 
+static void si_set_grbm_gfx_index(struct si_context *sctx,
+				  struct si_pm4_state *pm4,  unsigned value)
+{
+	unsigned reg = sctx->b.chip_class >= CIK ? R_030800_GRBM_GFX_INDEX :
+						   GRBM_GFX_INDEX;
+	si_pm4_set_reg(pm4, reg, value);
+}
+
+static void si_set_grbm_gfx_index_se(struct si_context *sctx,
+				     struct si_pm4_state *pm4, unsigned se)
+{
+	assert(se == ~0 || se < sctx->screen->b.info.max_se);
+	si_set_grbm_gfx_index(sctx, pm4,
+			      (se == ~0 ? S_030800_SE_BROADCAST_WRITES(1) :
+					  S_030800_SE_INDEX(se)) |
+			      S_030800_SH_BROADCAST_WRITES(1) |
+			      S_030800_INSTANCE_BROADCAST_WRITES(1));
+}
+
 static void
 si_write_harvested_raster_configs(struct si_context *sctx,
 				  struct si_pm4_state *pm4,
@@ -4376,28 +4395,12 @@ si_write_harvested_raster_configs(struct si_context *sctx,
 			}
 		}
 
-		/* GRBM_GFX_INDEX has a different offset on SI and CI+ */
-		if (sctx->b.chip_class < CIK)
-			si_pm4_set_reg(pm4, GRBM_GFX_INDEX,
-				       SE_INDEX(se) | SH_BROADCAST_WRITES |
-				       INSTANCE_BROADCAST_WRITES);
-		else
-			si_pm4_set_reg(pm4, R_030800_GRBM_GFX_INDEX,
-				       S_030800_SE_INDEX(se) | S_030800_SH_BROADCAST_WRITES(1) |
-				       S_030800_INSTANCE_BROADCAST_WRITES(1));
+		si_set_grbm_gfx_index_se(sctx, pm4, se);
 		si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, raster_config_se);
 	}
+	si_set_grbm_gfx_index(sctx, pm4, ~0);
 
-	/* GRBM_GFX_INDEX has a different offset on SI and CI+ */
-	if (sctx->b.chip_class < CIK)
-		si_pm4_set_reg(pm4, GRBM_GFX_INDEX,
-			       SE_BROADCAST_WRITES | SH_BROADCAST_WRITES |
-			       INSTANCE_BROADCAST_WRITES);
-	else {
-		si_pm4_set_reg(pm4, R_030800_GRBM_GFX_INDEX,
-			       S_030800_SE_BROADCAST_WRITES(1) | S_030800_SH_BROADCAST_WRITES(1) |
-			       S_030800_INSTANCE_BROADCAST_WRITES(1));
-
+	if (sctx->b.chip_class >= CIK) {
 		if ((num_se > 2) && ((!se_mask[0] && !se_mask[1]) ||
 		                     (!se_mask[2] && !se_mask[3]))) {
 			raster_config_1 &= C_028354_SE_PAIR_MAP;
