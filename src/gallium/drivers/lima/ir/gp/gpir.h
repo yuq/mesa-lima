@@ -170,14 +170,12 @@ typedef struct {
 
 typedef struct {
    gpir_node node;
-   union fi value[4];
-   unsigned num_components;
+   union fi value;
 } gpir_const_node;
 
 typedef struct {
    gpir_node node;
 
-   gpir_node *child;
    unsigned index;
    unsigned component;
 
@@ -189,11 +187,9 @@ typedef struct {
 typedef struct {
    gpir_node node;
 
-   unsigned index; /* must be 0 when storing temporaries */
-   bool write_mask[4];
-   gpir_node *children[4];
-   int children_component[4];
-   int num_child;
+   unsigned index;
+   gpir_node *child;
+   unsigned component;
 } gpir_store_node;
 
 enum gpir_instr_slot {
