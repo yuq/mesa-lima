@@ -446,20 +446,15 @@ support different features.
 * ``PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE``: The maximum size per constant buffer in bytes.
 * ``PIPE_SHADER_CAP_MAX_CONST_BUFFERS``: Maximum number of constant buffers that can be bound
   to any shader stage using ``set_constant_buffer``. If 0 or 1, the pipe will
-  only permit binding one constant buffer per shader, and the shaders will
-  not permit two-dimensional access to constants.
+  only permit binding one constant buffer per shader.
 
 If a value greater than 0 is returned, the driver can have multiple
-constant buffers bound to shader stages. The CONST register file can
-be accessed with two-dimensional indices, like in the example below.
+constant buffers bound to shader stages. The CONST register file is
+accessed with two-dimensional indices, like in the example below.
 
 DCL CONST[0][0..7]       # declare first 8 vectors of constbuf 0
 DCL CONST[3][0]          # declare first vector of constbuf 3
 MOV OUT[0], CONST[0][3]  # copy vector 3 of constbuf 0
-
-For backwards compatibility, one-dimensional access to CONST register
-file is still supported. In that case, the constbuf index is assumed
-to be 0.
 
 * ``PIPE_SHADER_CAP_MAX_TEMPS``: The maximum number of temporary registers.
 * ``PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED``: Whether the continue opcode is supported.
