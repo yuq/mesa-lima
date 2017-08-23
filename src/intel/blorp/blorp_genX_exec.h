@@ -395,8 +395,8 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
 #else
       .Component1Control = VFCOMP_STORE_0,
 #endif
-      .Component2Control = VFCOMP_STORE_SRC,
-      .Component3Control = VFCOMP_STORE_SRC,
+      .Component2Control = VFCOMP_STORE_0,
+      .Component3Control = VFCOMP_STORE_0,
 #if GEN_GEN <= 5
       .DestinationElementOffset = slot * 4,
 #endif
