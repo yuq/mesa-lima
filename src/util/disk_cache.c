@@ -990,6 +990,7 @@ disk_cache_get(struct disk_cache *cache, const cache_key key, size_t *size)
    char *filename = NULL;
    uint8_t *data = NULL;
    uint8_t *uncompressed_data = NULL;
+   uint8_t *file_header = NULL;
 
    if (size)
       *size = 0;
@@ -1010,29 +1011,20 @@ disk_cache_get(struct disk_cache *cache, const cache_key key, size_t *size)
       goto fail;
 
    size_t ck_size = cache->driver_keys_blob_size;
-#ifndef NDEBUG
-   uint8_t *file_header = malloc(ck_size);
+   file_header = malloc(ck_size);
    if (!file_header)
       goto fail;
 
-   assert(sb.st_size > ck_size);
-   ret = read_all(fd, file_header, ck_size);
-   if (ret == -1) {
-      free(file_header);
+   if (sb.st_size < ck_size)
       goto fail;
-   }
 
-   assert(memcmp(cache->driver_keys_blob, file_header, ck_size) == 0);
-
-   free(file_header);
-#else
-   /* The cache keys are currently just used for distributing precompiled
-    * shaders, they are not used by Mesa so just skip them for now.
-    */
-   ret = lseek(fd, ck_size, SEEK_CUR);
+   ret = read_all(fd, file_header, ck_size);
    if (ret == -1)
       goto fail;
-#endif
+
+   /* Check for extremely unlikely hash collisions */
+   if (memcmp(cache->driver_keys_blob, file_header, ck_size) != 0)
+      goto fail;
 
    /* Load the CRC that was created when the file was written. */
    struct cache_entry_file_data cf_data;
@@ -1074,6 +1066,8 @@ disk_cache_get(struct disk_cache *cache, const cache_key key, size_t *size)
       free(uncompressed_data);
    if (filename)
       free(filename);
+   if (file_header)
+      free(file_header);
    if (fd != -1)
       close(fd);
 
