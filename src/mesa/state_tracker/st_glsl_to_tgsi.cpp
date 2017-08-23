@@ -5736,85 +5736,6 @@ dst_register(struct st_translate *t, gl_register_file file, unsigned index,
 }
 
 /**
- * Map a glsl_to_tgsi src register to a TGSI ureg_src register.
- */
-static struct ureg_src
-src_register(struct st_translate *t, const st_src_reg *reg)
-{
-   int index = reg->index;
-   int double_reg2 = reg->double_reg2 ? 1 : 0;
-
-   switch(reg->file) {
-   case PROGRAM_UNDEFINED:
-      return ureg_imm4f(t->ureg, 0, 0, 0, 0);
-
-   case PROGRAM_TEMPORARY:
-   case PROGRAM_ARRAY:
-      return ureg_src(dst_register(t, reg->file, reg->index, reg->array_id));
-
-   case PROGRAM_OUTPUT: {
-      struct ureg_dst dst = dst_register(t, reg->file, reg->index, reg->array_id);
-      assert(dst.WriteMask != 0);
-      unsigned shift = ffs(dst.WriteMask) - 1;
-      return ureg_swizzle(ureg_src(dst),
-                          shift,
-                          MIN2(shift + 1, 3),
-                          MIN2(shift + 2, 3),
-                          MIN2(shift + 3, 3));
-   }
-
-   case PROGRAM_UNIFORM:
-      assert(reg->index >= 0);
-      return reg->index < t->num_constants ?
-               t->constants[reg->index] : ureg_imm4f(t->ureg, 0, 0, 0, 0);
-   case PROGRAM_STATE_VAR:
-   case PROGRAM_CONSTANT:       /* ie, immediate */
-      if (reg->has_index2)
-         return ureg_src_register(TGSI_FILE_CONSTANT, reg->index);
-      else
-         return reg->index >= 0 && reg->index < t->num_constants ?
-                  t->constants[reg->index] : ureg_imm4f(t->ureg, 0, 0, 0, 0);
-
-   case PROGRAM_IMMEDIATE:
-      assert(reg->index >= 0 && reg->index < t->num_immediates);
-      return t->immediates[reg->index];
-
-   case PROGRAM_INPUT:
-      /* GLSL inputs are 64-bit containers, so we have to
-       * map back to the original index and add the offset after
-       * mapping. */
-      index -= double_reg2;
-      if (!reg->array_id) {
-         assert(t->inputMapping[index] < ARRAY_SIZE(t->inputs));
-         assert(t->inputs[t->inputMapping[index]].File != TGSI_FILE_NULL);
-         return t->inputs[t->inputMapping[index] + double_reg2];
-      }
-      else {
-         struct inout_decl *decl = find_inout_array(t->input_decls, t->num_input_decls, reg->array_id);
-         unsigned mesa_index = decl->mesa_index;
-         int slot = t->inputMapping[mesa_index];
-
-         assert(slot != -1 && t->inputs[slot].File == TGSI_FILE_INPUT);
-
-         struct ureg_src src = t->inputs[slot];
-         src.ArrayID = reg->array_id;
-         return ureg_src_array_offset(src, index + double_reg2 - mesa_index);
-      }
-
-   case PROGRAM_ADDRESS:
-      return ureg_src(t->address[reg->index]);
-
-   case PROGRAM_SYSTEM_VALUE:
-      assert(reg->index < (int) ARRAY_SIZE(t->systemValues));
-      return t->systemValues[reg->index];
-
-   default:
-      assert(!"unknown src register file");
-      return ureg_src_undef();
-   }
-}
-
-/**
  * Create a TGSI ureg_dst register from an st_dst_reg.
  */
 static struct ureg_dst
@@ -5855,7 +5776,88 @@ translate_dst(struct st_translate *t,
 static struct ureg_src
 translate_src(struct st_translate *t, const st_src_reg *src_reg)
 {
-   struct ureg_src src = src_register(t, src_reg);
+   struct ureg_src src;
+   int index = src_reg->index;
+   int double_reg2 = src_reg->double_reg2 ? 1 : 0;
+
+   switch(src_reg->file) {
+   case PROGRAM_UNDEFINED:
+      src = ureg_imm4f(t->ureg, 0, 0, 0, 0);
+      break;
+
+   case PROGRAM_TEMPORARY:
+   case PROGRAM_ARRAY:
+      src = ureg_src(dst_register(t, src_reg->file, src_reg->index, src_reg->array_id));
+      break;
+
+   case PROGRAM_OUTPUT: {
+      struct ureg_dst dst = dst_register(t, src_reg->file, src_reg->index, src_reg->array_id);
+      assert(dst.WriteMask != 0);
+      unsigned shift = ffs(dst.WriteMask) - 1;
+      src = ureg_swizzle(ureg_src(dst),
+                         shift,
+                         MIN2(shift + 1, 3),
+                         MIN2(shift + 2, 3),
+                         MIN2(shift + 3, 3));
+      break;
+   }
+
+   case PROGRAM_UNIFORM:
+      assert(src_reg->index >= 0);
+      src = src_reg->index < t->num_constants ?
+               t->constants[src_reg->index] : ureg_imm4f(t->ureg, 0, 0, 0, 0);
+      break;
+   case PROGRAM_STATE_VAR:
+   case PROGRAM_CONSTANT:       /* ie, immediate */
+      if (src_reg->has_index2)
+         src = ureg_src_register(TGSI_FILE_CONSTANT, src_reg->index);
+      else
+         src = src_reg->index >= 0 && src_reg->index < t->num_constants ?
+                  t->constants[src_reg->index] : ureg_imm4f(t->ureg, 0, 0, 0, 0);
+      break;
+
+   case PROGRAM_IMMEDIATE:
+      assert(src_reg->index >= 0 && src_reg->index < t->num_immediates);
+      src = t->immediates[src_reg->index];
+      break;
+
+   case PROGRAM_INPUT:
+      /* GLSL inputs are 64-bit containers, so we have to
+       * map back to the original index and add the offset after
+       * mapping. */
+      index -= double_reg2;
+      if (!src_reg->array_id) {
+         assert(t->inputMapping[index] < ARRAY_SIZE(t->inputs));
+         assert(t->inputs[t->inputMapping[index]].File != TGSI_FILE_NULL);
+         src = t->inputs[t->inputMapping[index] + double_reg2];
+      }
+      else {
+         struct inout_decl *decl = find_inout_array(t->input_decls, t->num_input_decls,
+                                                    src_reg->array_id);
+         unsigned mesa_index = decl->mesa_index;
+         int slot = t->inputMapping[mesa_index];
+
+         assert(slot != -1 && t->inputs[slot].File == TGSI_FILE_INPUT);
+
+         src = t->inputs[slot];
+         src.ArrayID = src_reg->array_id;
+         src = ureg_src_array_offset(src, index + double_reg2 - mesa_index);
+      }
+      break;
+
+   case PROGRAM_ADDRESS:
+      src = ureg_src(t->address[src_reg->index]);
+      break;
+
+   case PROGRAM_SYSTEM_VALUE:
+      assert(src_reg->index < (int) ARRAY_SIZE(t->systemValues));
+      src = t->systemValues[src_reg->index];
+      break;
+
+   default:
+      assert(!"unknown src register file");
+      return ureg_src_undef();
+   }
 
    if (src_reg->has_index2) {
       /* 2D indexes occur with geometry shader inputs (attrib, vertex)
