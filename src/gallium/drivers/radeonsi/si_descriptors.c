@@ -1866,7 +1866,7 @@ static void si_upload_bindless_descriptors(struct si_context *sctx)
 }
 
 /* Update mutable image descriptor fields of all resident textures. */
-static void si_update_resident_texture_descriptor(struct si_context *sctx,
+static void si_update_bindless_texture_descriptor(struct si_context *sctx,
 						  struct si_texture_handle *tex_handle)
 {
 	struct si_sampler_view *sview = (struct si_sampler_view *)tex_handle->view;
@@ -1888,7 +1888,7 @@ static void si_update_resident_texture_descriptor(struct si_context *sctx,
 	}
 }
 
-static void si_update_resident_image_descriptor(struct si_context *sctx,
+static void si_update_bindless_image_descriptor(struct si_context *sctx,
 						struct si_image_handle *img_handle)
 {
 	struct si_descriptors *desc = &sctx->bindless_descriptors;
@@ -1915,12 +1915,12 @@ static void si_update_all_resident_texture_descriptors(struct si_context *sctx)
 {
 	util_dynarray_foreach(&sctx->resident_tex_handles,
 			      struct si_texture_handle *, tex_handle) {
-		si_update_resident_texture_descriptor(sctx, *tex_handle);
+		si_update_bindless_texture_descriptor(sctx, *tex_handle);
 	}
 
 	util_dynarray_foreach(&sctx->resident_img_handles,
 			      struct si_image_handle *, img_handle) {
-		si_update_resident_image_descriptor(sctx, *img_handle);
+		si_update_bindless_image_descriptor(sctx, *img_handle);
 	}
 
 	si_upload_bindless_descriptors(sctx);
@@ -2253,11 +2253,11 @@ si_create_bindless_descriptor(struct si_context *sctx, uint32_t *desc_list,
 	return desc_slot;
 }
 
-static void si_invalidate_bindless_buf_desc(struct si_context *sctx,
-					    unsigned desc_slot,
-					    struct pipe_resource *resource,
-					    uint64_t offset,
-					    bool *desc_dirty)
+static void si_update_bindless_buffer_descriptor(struct si_context *sctx,
+						 unsigned desc_slot,
+						 struct pipe_resource *resource,
+						 uint64_t offset,
+						 bool *desc_dirty)
 {
 	struct si_descriptors *desc = &sctx->bindless_descriptors;
 	struct r600_resource *buf = r600_resource(resource);
@@ -2389,13 +2389,13 @@ static void si_make_texture_handle_resident(struct pipe_context *ctx,
 			    p_atomic_read(&rtex->framebuffers_bound))
 				sctx->need_check_render_feedback = true;
 
-			si_update_resident_texture_descriptor(sctx, tex_handle);
+			si_update_bindless_texture_descriptor(sctx, tex_handle);
 		} else {
-			si_invalidate_bindless_buf_desc(sctx,
-							tex_handle->desc_slot,
-							sview->base.texture,
-							sview->base.u.buf.offset,
-							&tex_handle->desc_dirty);
+			si_update_bindless_buffer_descriptor(sctx,
+							     tex_handle->desc_slot,
+							     sview->base.texture,
+							     sview->base.u.buf.offset,
+							     &tex_handle->desc_dirty);
 		}
 
 		/* Re-upload the descriptor if it has been updated while it
@@ -2525,13 +2525,13 @@ static void si_make_image_handle_resident(struct pipe_context *ctx,
 			    p_atomic_read(&rtex->framebuffers_bound))
 				sctx->need_check_render_feedback = true;
 
-			si_update_resident_image_descriptor(sctx, img_handle);
+			si_update_bindless_image_descriptor(sctx, img_handle);
 		} else {
-			si_invalidate_bindless_buf_desc(sctx,
-							img_handle->desc_slot,
-							view->resource,
-							view->u.buf.offset,
-							&img_handle->desc_dirty);
+			si_update_bindless_buffer_descriptor(sctx,
+							     img_handle->desc_slot,
+							     view->resource,
+							     view->u.buf.offset,
+							     &img_handle->desc_dirty);
 		}
 
 		/* Re-upload the descriptor if it has been updated while it
