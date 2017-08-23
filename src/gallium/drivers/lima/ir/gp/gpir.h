@@ -226,6 +226,11 @@ typedef struct {
    bool reg0_is_used;
    bool reg0_is_attr;
    int reg0_index;
+
+   bool store_is_used[2];
+   bool store_is_temp;
+   bool store_is_reg[2];
+   int store_index[2];
 } gpir_instr;
 
 typedef struct gpir_block {
