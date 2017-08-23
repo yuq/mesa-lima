@@ -1406,23 +1406,37 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
 
    write_program_resource_list(metadata, prog);
 
+   struct cache_item_metadata cache_item_metadata;
+   cache_item_metadata.type = CACHE_ITEM_TYPE_GLSL;
+   cache_item_metadata.keys =
+      (cache_key *) malloc(prog->NumShaders * sizeof(cache_key));
+   cache_item_metadata.num_keys = prog->NumShaders;
+
+   if (!cache_item_metadata.keys)
+      goto fail;
+
    char sha1_buf[41];
    for (unsigned i = 0; i < prog->NumShaders; i++) {
       disk_cache_put_key(cache, prog->Shaders[i]->sha1);
+      memcpy(cache_item_metadata.keys[i], prog->Shaders[i]->sha1,
+             sizeof(cache_key));
       if (ctx->_Shader->Flags & GLSL_CACHE_INFO) {
          _mesa_sha1_format(sha1_buf, prog->Shaders[i]->sha1);
          fprintf(stderr, "marking shader: %s\n", sha1_buf);
       }
    }
 
-   disk_cache_put(cache, prog->data->sha1, metadata->data, metadata->size);
-
-   blob_destroy(metadata);
+   disk_cache_put(cache, prog->data->sha1, metadata->data, metadata->size,
+                  &cache_item_metadata);
 
    if (ctx->_Shader->Flags & GLSL_CACHE_INFO) {
       _mesa_sha1_format(sha1_buf, prog->data->sha1);
       fprintf(stderr, "putting program metadata in cache: %s\n", sha1_buf);
    }
+
+fail:
+   free(cache_item_metadata.keys);
+   blob_destroy(metadata);
 }
 
 bool

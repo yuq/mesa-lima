@@ -268,7 +268,7 @@ test_put_and_get(void)
    expect_equal(size, 0, "disk_cache_get with non-existent item (size)");
 
    /* Simple test of put and get. */
-   disk_cache_put(cache, blob_key, blob, sizeof(blob));
+   disk_cache_put(cache, blob_key, blob, sizeof(blob), NULL);
 
    /* disk_cache_put() hands things off to a thread give it some time to
     * finish.
@@ -283,7 +283,7 @@ test_put_and_get(void)
 
    /* Test put and get of a second item. */
    disk_cache_compute_key(cache, string, sizeof(string), string_key);
-   disk_cache_put(cache, string_key, string, sizeof(string));
+   disk_cache_put(cache, string_key, string, sizeof(string), NULL);
 
    /* disk_cache_put() hands things off to a thread give it some time to
     * finish.
@@ -324,7 +324,7 @@ test_put_and_get(void)
    disk_cache_compute_key(cache, one_KB, 1024, one_KB_key);
    one_KB_key[0] = blob_key[0];
 
-   disk_cache_put(cache, one_KB_key, one_KB, 1024);
+   disk_cache_put(cache, one_KB_key, one_KB, 1024, NULL);
 
    free(one_KB);
 
@@ -367,8 +367,8 @@ test_put_and_get(void)
    setenv("MESA_GLSL_CACHE_MAX_SIZE", "1M", 1);
    cache = disk_cache_create("test", "make_check", 0);
 
-   disk_cache_put(cache, blob_key, blob, sizeof(blob));
-   disk_cache_put(cache, string_key, string, sizeof(string));
+   disk_cache_put(cache, blob_key, blob, sizeof(blob), NULL);
+   disk_cache_put(cache, string_key, string, sizeof(string), NULL);
 
    /* disk_cache_put() hands things off to a thread give it some time to
     * finish.
@@ -394,7 +394,7 @@ test_put_and_get(void)
    disk_cache_compute_key(cache, one_MB, 1024 * 1024, one_MB_key);
    one_MB_key[0] = blob_key[0];
 
-   disk_cache_put(cache, one_MB_key, one_MB, 1024 * 1024);
+   disk_cache_put(cache, one_MB_key, one_MB, 1024 * 1024, NULL);
 
    free(one_MB);
 

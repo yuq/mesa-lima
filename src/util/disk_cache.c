@@ -768,7 +768,8 @@ deflate_and_write_to_disk(const void *in_data, size_t in_data_size, int dest,
 
 static struct disk_cache_put_job *
 create_put_job(struct disk_cache *cache, const cache_key key,
-               const void *data, size_t size)
+               const void *data, size_t size,
+               struct cache_item_metadata *cache_item_metadata)
 {
    struct disk_cache_put_job *dc_job = (struct disk_cache_put_job *)
       malloc(sizeof(struct disk_cache_put_job) + size);
@@ -931,10 +932,11 @@ cache_put(void *job, int thread_index)
 
 void
 disk_cache_put(struct disk_cache *cache, const cache_key key,
-               const void *data, size_t size)
+               const void *data, size_t size,
+               struct cache_item_metadata *cache_item_metadata)
 {
    struct disk_cache_put_job *dc_job =
-      create_put_job(cache, key, data, size);
+      create_put_job(cache, key, data, size, cache_item_metadata);
 
    if (dc_job) {
       util_queue_fence_init(&dc_job->fence);

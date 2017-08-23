@@ -141,7 +141,8 @@ disk_cache_remove(struct disk_cache *cache, const cache_key key);
  */
 void
 disk_cache_put(struct disk_cache *cache, const cache_key key,
-               const void *data, size_t size);
+               const void *data, size_t size,
+               struct cache_item_metadata *cache_item_metadata);
 
 /**
  * Retrieve an item previously stored in the cache with the name <key>.
@@ -207,7 +208,8 @@ disk_cache_destroy(struct disk_cache *cache) {
 
 static inline void
 disk_cache_put(struct disk_cache *cache, const cache_key key,
-          const void *data, size_t size)
+               const void *data, size_t size,
+               struct cache_item_metadata *cache_item_metadata)
 {
    return;
 }

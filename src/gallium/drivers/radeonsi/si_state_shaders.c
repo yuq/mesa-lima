@@ -213,7 +213,7 @@ static bool si_shader_cache_insert_shader(struct si_screen *sscreen,
 		disk_cache_compute_key(sscreen->b.disk_shader_cache, tgsi_binary,
 				       *((uint32_t *)tgsi_binary), key);
 		disk_cache_put(sscreen->b.disk_shader_cache, key, hw_binary,
-			       *((uint32_t *) hw_binary));
+			       *((uint32_t *) hw_binary), NULL);
 	}
 
 	return true;
