@@ -639,6 +639,12 @@ bool
 vtn_set_instruction_result_type(struct vtn_builder *b, SpvOp opcode,
                                 const uint32_t *w, unsigned count);
 
+static inline nir_constant *
+vtn_constant_value(struct vtn_builder *b, uint32_t value_id)
+{
+   return vtn_value(b, value_id, vtn_value_type_constant)->constant;
+}
+
 struct vtn_ssa_value *vtn_ssa_value(struct vtn_builder *b, uint32_t value_id);
 
 struct vtn_ssa_value *vtn_create_ssa_value(struct vtn_builder *b,
