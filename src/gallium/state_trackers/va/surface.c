@@ -43,8 +43,6 @@
 
 #include "va_private.h"
 
-DEBUG_GET_ONCE_BOOL_OPTION(nointerlace, "VAAPI_DISABLE_INTERLACE", FALSE);
-
 #include <va/va_drmcommon.h>
 
 static const enum pipe_format vpp_surface_formats[] = {
@@ -709,8 +707,6 @@ vlVaCreateSurfaces2(VADriverContextP ctx, unsigned int format,
 
    templat.width = width;
    templat.height = height;
-   if (debug_get_option_nointerlace())
-      templat.interlaced = false;
 
    memset(surfaces, VA_INVALID_ID, num_surfaces * sizeof(VASurfaceID));
 
