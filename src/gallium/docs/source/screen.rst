@@ -417,6 +417,10 @@ The integer capabilities:
 * ``PIPE_CAP_SIGNED_VERTEX_BUFFER_OFFSET``:
   Whether pipe_vertex_buffer::buffer_offset is treated as signed. The u_vbuf
   module needs this for optimal performance in workstation applications.
+* ``PIPE_CAP_CONTEXT_PRIORITY_MASK``: For drivers that support per-context
+  priorities, this returns a bitmask of PIPE_CONTEXT_PRIORITY_x for the
+  supported priority levels.  A driver that does not support prioritized
+  contexts can return 0.
 
 
 .. _pipe_capf:
