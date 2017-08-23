@@ -4415,63 +4415,14 @@ si_write_harvested_raster_configs(struct si_context *sctx,
 	}
 }
 
-static void si_init_config(struct si_context *sctx)
+static void si_set_raster_config(struct si_context *sctx, struct si_pm4_state *pm4)
 {
 	struct si_screen *sscreen = sctx->screen;
 	unsigned num_rb = MIN2(sctx->screen->b.info.num_render_backends, 16);
 	unsigned rb_mask = sctx->screen->b.info.enabled_rb_mask;
 	unsigned raster_config, raster_config_1;
-	uint64_t border_color_va = sctx->border_color_buffer->gpu_address;
-	bool has_clear_state = sscreen->has_clear_state;
-	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 
-	/* Only SI can disable CLEAR_STATE for now. */
-	assert(has_clear_state || sscreen->b.chip_class == SI);
-
-	if (!pm4)
-		return;
-
-	si_pm4_cmd_begin(pm4, PKT3_CONTEXT_CONTROL);
-	si_pm4_cmd_add(pm4, CONTEXT_CONTROL_LOAD_ENABLE(1));
-	si_pm4_cmd_add(pm4, CONTEXT_CONTROL_SHADOW_ENABLE(1));
-	si_pm4_cmd_end(pm4, false);
-
-	if (has_clear_state) {
-		si_pm4_cmd_begin(pm4, PKT3_CLEAR_STATE);
-		si_pm4_cmd_add(pm4, 0);
-		si_pm4_cmd_end(pm4, false);
-	}
-
-	si_pm4_set_reg(pm4, R_028A18_VGT_HOS_MAX_TESS_LEVEL, fui(64));
-	if (!has_clear_state)
-		si_pm4_set_reg(pm4, R_028A1C_VGT_HOS_MIN_TESS_LEVEL, fui(0));
-
-	/* FIXME calculate these values somehow ??? */
-	if (sctx->b.chip_class <= VI) {
-		si_pm4_set_reg(pm4, R_028A54_VGT_GS_PER_ES, SI_GS_PER_ES);
-		si_pm4_set_reg(pm4, R_028A58_VGT_ES_PER_GS, 0x40);
-	}
-
-	if (!has_clear_state) {
-		si_pm4_set_reg(pm4, R_028A5C_VGT_GS_PER_VS, 0x2);
-		si_pm4_set_reg(pm4, R_028A8C_VGT_PRIMITIVEID_RESET, 0x0);
-		si_pm4_set_reg(pm4, R_028B98_VGT_STRMOUT_BUFFER_CONFIG, 0x0);
-	}
-
-	si_pm4_set_reg(pm4, R_028AA0_VGT_INSTANCE_STEP_RATE_0, 1);
-	if (!has_clear_state)
-		si_pm4_set_reg(pm4, R_028AB8_VGT_VTX_CNT_EN, 0x0);
-	if (sctx->b.chip_class < CIK)
-		si_pm4_set_reg(pm4, R_008A14_PA_CL_ENHANCE, S_008A14_NUM_CLIP_SEQ(3) |
-			       S_008A14_CLIP_VTX_REORDER_ENA(1));
-
-	si_pm4_set_reg(pm4, R_028BD4_PA_SC_CENTROID_PRIORITY_0, 0x76543210);
-	si_pm4_set_reg(pm4, R_028BD8_PA_SC_CENTROID_PRIORITY_1, 0xfedcba98);
-
-	if (!has_clear_state)
-		si_pm4_set_reg(pm4, R_02882C_PA_SU_PRIM_FILTER_CNTL, 0);
-
-	switch (sctx->screen->b.family) {
+	switch (sctx->b.family) {
 	case CHIP_TAHITI:
 	case CHIP_PITCAIRN:
 		raster_config = 0x2a00126a;
@@ -4543,29 +4494,81 @@ static void si_init_config(struct si_context *sctx)
 		raster_config_1 = 0x00000000;
 		break;
 	default:
-		if (sctx->b.chip_class <= VI) {
-			fprintf(stderr,
-				"radeonsi: Unknown GPU, using 0 for raster_config\n");
-			raster_config = 0x00000000;
-			raster_config_1 = 0x00000000;
-		}
-		break;
+		fprintf(stderr,
+			"radeonsi: Unknown GPU, using 0 for raster_config\n");
+		raster_config = 0x00000000;
+		raster_config_1 = 0x00000000;
 	}
 
-	if (sctx->b.chip_class <= VI) {
-		if (!rb_mask || util_bitcount(rb_mask) >= num_rb) {
-			/* Always use the default config when all backends are enabled
-			 * (or when we failed to determine the enabled backends).
-			 */
-			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG,
-				       raster_config);
-			if (sctx->b.chip_class >= CIK)
-				si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1,
-					       raster_config_1);
-		} else {
-			si_write_harvested_raster_configs(sctx, pm4, raster_config, raster_config_1);
-		}
+	if (!rb_mask || util_bitcount(rb_mask) >= num_rb) {
+		/* Always use the default config when all backends are enabled
+		 * (or when we failed to determine the enabled backends).
+		 */
+		si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG,
+			       raster_config);
+		if (sctx->b.chip_class >= CIK)
+			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1,
+				       raster_config_1);
+	} else {
+		si_write_harvested_raster_configs(sctx, pm4, raster_config, raster_config_1);
 	}
+}
+
+static void si_init_config(struct si_context *sctx)
+{
+	struct si_screen *sscreen = sctx->screen;
+	uint64_t border_color_va = sctx->border_color_buffer->gpu_address;
+	bool has_clear_state = sscreen->has_clear_state;
+	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
+
+	/* Only SI can disable CLEAR_STATE for now. */
+	assert(has_clear_state || sscreen->b.chip_class == SI);
+
+	if (!pm4)
+		return;
+
+	si_pm4_cmd_begin(pm4, PKT3_CONTEXT_CONTROL);
+	si_pm4_cmd_add(pm4, CONTEXT_CONTROL_LOAD_ENABLE(1));
+	si_pm4_cmd_add(pm4, CONTEXT_CONTROL_SHADOW_ENABLE(1));
+	si_pm4_cmd_end(pm4, false);
+
+	if (has_clear_state) {
+		si_pm4_cmd_begin(pm4, PKT3_CLEAR_STATE);
+		si_pm4_cmd_add(pm4, 0);
+		si_pm4_cmd_end(pm4, false);
+	}
+
+	if (sctx->b.chip_class <= VI)
+		si_set_raster_config(sctx, pm4);
+
+	si_pm4_set_reg(pm4, R_028A18_VGT_HOS_MAX_TESS_LEVEL, fui(64));
+	if (!has_clear_state)
+		si_pm4_set_reg(pm4, R_028A1C_VGT_HOS_MIN_TESS_LEVEL, fui(0));
+
+	/* FIXME calculate these values somehow ??? */
+	if (sctx->b.chip_class <= VI) {
+		si_pm4_set_reg(pm4, R_028A54_VGT_GS_PER_ES, SI_GS_PER_ES);
+		si_pm4_set_reg(pm4, R_028A58_VGT_ES_PER_GS, 0x40);
+	}
+
+	if (!has_clear_state) {
+		si_pm4_set_reg(pm4, R_028A5C_VGT_GS_PER_VS, 0x2);
+		si_pm4_set_reg(pm4, R_028A8C_VGT_PRIMITIVEID_RESET, 0x0);
+		si_pm4_set_reg(pm4, R_028B98_VGT_STRMOUT_BUFFER_CONFIG, 0x0);
+	}
+
+	si_pm4_set_reg(pm4, R_028AA0_VGT_INSTANCE_STEP_RATE_0, 1);
+	if (!has_clear_state)
+		si_pm4_set_reg(pm4, R_028AB8_VGT_VTX_CNT_EN, 0x0);
+	if (sctx->b.chip_class < CIK)
+		si_pm4_set_reg(pm4, R_008A14_PA_CL_ENHANCE, S_008A14_NUM_CLIP_SEQ(3) |
+			       S_008A14_CLIP_VTX_REORDER_ENA(1));
+
+	si_pm4_set_reg(pm4, R_028BD4_PA_SC_CENTROID_PRIORITY_0, 0x76543210);
+	si_pm4_set_reg(pm4, R_028BD8_PA_SC_CENTROID_PRIORITY_1, 0xfedcba98);
+
+	if (!has_clear_state)
+		si_pm4_set_reg(pm4, R_02882C_PA_SU_PRIM_FILTER_CNTL, 0);
 
 	/* CLEAR_STATE doesn't clear these correctly on certain generations.
 	 * I don't know why. Deduced by trial and error.
