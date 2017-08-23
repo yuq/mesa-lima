@@ -197,9 +197,9 @@ enum gpir_instr_slot {
    GPIR_INSTR_SLOT_MUL1,
    GPIR_INSTR_SLOT_ADD0,
    GPIR_INSTR_SLOT_ADD1,
-   GPIR_INSTR_SLOT_BRANCH,
    GPIR_INSTR_SLOT_COMPLEX,
    GPIR_INSTR_SLOT_PASS,
+   GPIR_INSTR_SLOT_BRANCH,
    GPIR_INSTR_SLOT_REG0_LOAD0,
    GPIR_INSTR_SLOT_REG0_LOAD1,
    GPIR_INSTR_SLOT_REG0_LOAD2,
@@ -222,6 +222,8 @@ enum gpir_instr_slot {
 
 typedef struct {
    gpir_node *slots[GPIR_INSTR_SLOT_NUM];
+
+   int alu_num_slot_free;
 
    bool reg0_is_used;
    bool reg0_is_attr;
@@ -302,6 +304,7 @@ static inline bool gpir_node_is_leaf(gpir_node *node)
 #define gpir_node_to_load(node) ((gpir_load_node *)(node))
 #define gpir_node_to_store(node) ((gpir_store_node *)(node))
 
+void gpir_instr_init(gpir_instr *instr);
 bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node);
 void gpir_instr_print_prog(gpir_compiler *comp);
 

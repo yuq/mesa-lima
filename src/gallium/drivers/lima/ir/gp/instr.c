@@ -23,28 +23,46 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
 #include "gpir.h"
 
-static bool gpir_try_insert_attr(gpir_instr *instr, gpir_node *node)
+void gpir_instr_init(gpir_instr *instr)
 {
-   gpir_load_node *load = gpir_node_to_load(node);
+   instr->alu_num_slot_free = 6;
+}
 
-   if (instr->reg0_is_used &&
-       (!instr->reg0_is_attr || instr->reg0_index != load->index))
-      return false;
-
-   if (!instr->reg0_is_used) {
-      instr->reg0_is_used = true;
-      instr->reg0_is_attr = true;
-      instr->reg0_index = load->index;
-   }
-
-   instr->slots[node->sched_pos] = node;
+static bool gpir_instr_insert_alu_check(gpir_instr *instr, gpir_node *node)
+{
+   instr->alu_num_slot_free--;
    return true;
 }
 
-static bool gpir_try_insert_store(gpir_instr *instr, gpir_node *node)
+static bool gpir_instr_insert_reg0_check(gpir_instr *instr, gpir_node *node)
+{
+   gpir_load_node *load = gpir_node_to_load(node);
+   int i = node->sched_pos - GPIR_INSTR_SLOT_REG0_LOAD0;
+
+   if (load->component != i)
+      return false;
+
+   if (instr->reg0_is_attr && node->op != gpir_op_load_attribute)
+      return false;
+
+   if (instr->reg0_is_used) {
+       if (instr->reg0_index != load->index)
+          return false;
+   }
+   else {
+      instr->reg0_is_used = true;
+      instr->reg0_is_attr = node->op == gpir_op_load_attribute;
+      instr->reg0_index = load->index;
+   }
+
+   return true;
+}
+
+static bool gpir_instr_insert_store_check(gpir_instr *instr, gpir_node *node)
 {
    gpir_store_node *store = gpir_node_to_store(node);
    int i = node->sched_pos - GPIR_INSTR_SLOT_STORE0;
@@ -82,7 +100,6 @@ static bool gpir_try_insert_store(gpir_instr *instr, gpir_node *node)
 
    instr->store_is_used[i] = true;
    instr->store_index[i] = store->index;
-   instr->slots[node->sched_pos] = node;
    return true;
 }
 
@@ -91,17 +108,20 @@ bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
    if (instr->slots[node->sched_pos])
       return false;
 
-   switch (node->op) {
-   case gpir_op_load_attribute:
-      return gpir_try_insert_attr(instr, node);
-
-   case gpir_op_store_varying:
-   case gpir_op_store_reg:
-   case gpir_op_store_temp:
-      return gpir_try_insert_store(instr, node);
-
-   default:
-      break;
+   if (node->sched_pos >= GPIR_INSTR_SLOT_MUL0 &&
+       node->sched_pos <= GPIR_INSTR_SLOT_PASS) {
+      if (!gpir_instr_insert_alu_check(instr, node))
+         return false;
+   }
+   else if (node->sched_pos >= GPIR_INSTR_SLOT_REG0_LOAD0 &&
+            node->sched_pos <= GPIR_INSTR_SLOT_REG0_LOAD3) {
+      if (!gpir_instr_insert_reg0_check(instr, node))
+         return false;
+   }
+   else if (node->sched_pos >= GPIR_INSTR_SLOT_STORE0 &&
+            node->sched_pos <= GPIR_INSTR_SLOT_STORE3) {
+      if (!gpir_instr_insert_store_check(instr, node))
+         return false;
    }
 
    instr->slots[node->sched_pos] = node;
