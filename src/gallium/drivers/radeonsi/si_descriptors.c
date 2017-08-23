@@ -2278,7 +2278,6 @@ static void si_invalidate_bindless_buf_desc(struct si_context *sctx,
 		si_set_buf_desc_address(buf, offset, &desc_list[0]);
 
 		*desc_dirty = true;
-		sctx->bindless_descriptors_dirty = true;
 	}
 }
 
@@ -2390,12 +2389,7 @@ static void si_make_texture_handle_resident(struct pipe_context *ctx,
 			    p_atomic_read(&rtex->framebuffers_bound))
 				sctx->need_check_render_feedback = true;
 
-			/* Re-upload the descriptor if it has been updated
-			 * while it wasn't resident.
-			 */
 			si_update_resident_texture_descriptor(sctx, tex_handle);
-			if (tex_handle->desc_dirty)
-				sctx->bindless_descriptors_dirty = true;
 		} else {
 			si_invalidate_bindless_buf_desc(sctx,
 							tex_handle->desc_slot,
@@ -2403,6 +2397,12 @@ static void si_make_texture_handle_resident(struct pipe_context *ctx,
 							sview->base.u.buf.offset,
 							&tex_handle->desc_dirty);
 		}
+
+		/* Re-upload the descriptor if it has been updated while it
+		 * wasn't resident.
+		 */
+		if (tex_handle->desc_dirty)
+			sctx->bindless_descriptors_dirty = true;
 
 		/* Add the texture handle to the per-context list. */
 		util_dynarray_append(&sctx->resident_tex_handles,
@@ -2525,13 +2525,7 @@ static void si_make_image_handle_resident(struct pipe_context *ctx,
 			    p_atomic_read(&rtex->framebuffers_bound))
 				sctx->need_check_render_feedback = true;
 
-			/* Re-upload the descriptor if it has been updated
-			 * while it wasn't resident.
-			 */
 			si_update_resident_image_descriptor(sctx, img_handle);
-			if (img_handle->desc_dirty)
-				sctx->bindless_descriptors_dirty = true;
-
 		} else {
 			si_invalidate_bindless_buf_desc(sctx,
 							img_handle->desc_slot,
@@ -2539,6 +2533,12 @@ static void si_make_image_handle_resident(struct pipe_context *ctx,
 							view->u.buf.offset,
 							&img_handle->desc_dirty);
 		}
+
+		/* Re-upload the descriptor if it has been updated while it
+		 * wasn't resident.
+		 */
+		if (img_handle->desc_dirty)
+			sctx->bindless_descriptors_dirty = true;
 
 		/* Add the image handle to the per-context list. */
 		util_dynarray_append(&sctx->resident_img_handles,
