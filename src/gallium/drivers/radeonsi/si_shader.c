@@ -5036,7 +5036,18 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 	unsigned code_size = si_get_shader_binary_size(shader);
 	unsigned lds_increment = sscreen->b.chip_class >= CIK ? 512 : 256;
 	unsigned lds_per_wave = 0;
-	unsigned max_simd_waves = 10;
+	unsigned max_simd_waves;
+
+	switch (sscreen->b.family) {
+	/* These always have 8 waves: */
+	case CHIP_POLARIS10:
+	case CHIP_POLARIS11:
+	case CHIP_POLARIS12:
+		max_simd_waves = 8;
+		break;
+	default:
+		max_simd_waves = 10;
+	}
 
 	/* Compute LDS usage for PS. */
 	switch (processor) {
