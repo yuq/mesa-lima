@@ -44,6 +44,48 @@ static bool gpir_try_insert_attr(gpir_instr *instr, gpir_node *node)
    return true;
 }
 
+static bool gpir_try_insert_store(gpir_instr *instr, gpir_node *node)
+{
+   gpir_store_node *store = gpir_node_to_store(node);
+   int i = node->sched_pos - GPIR_INSTR_SLOT_STORE0;
+
+   if (store->component != i)
+      return false;
+
+   if (instr->store_is_temp && node->op != gpir_op_store_temp)
+      return false;
+
+   i >>= 1;
+   if (instr->store_is_reg[i] && node->op != gpir_op_store_reg)
+      return false;
+
+   if (node->op == gpir_op_store_temp) {
+      bool is_used = instr->store_is_used[0] | instr->store_is_used[1];
+
+      if (is_used) {
+         int index = instr->store_is_used[0] ?
+            instr->store_index[0] : instr->store_index[1];
+         if (store->index != index)
+            return false;
+      }
+      else
+         instr->store_is_temp = true;
+   }
+   else {
+      if (instr->store_is_used[i]) {
+         if (store->index != instr->store_index[i])
+            return false;
+      }
+      else
+         instr->store_is_reg[i] = node->op == gpir_op_store_reg;
+   }
+
+   instr->store_is_used[i] = true;
+   instr->store_index[i] = store->index;
+   instr->slots[node->sched_pos] = node;
+   return true;
+}
+
 bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
 {
    if (instr->slots[node->sched_pos])
@@ -52,6 +94,12 @@ bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
    switch (node->op) {
    case gpir_op_load_attribute:
       return gpir_try_insert_attr(instr, node);
+
+   case gpir_op_store_varying:
+   case gpir_op_store_reg:
+   case gpir_op_store_temp:
+      return gpir_try_insert_store(instr, node);
+
    default:
       break;
    }
