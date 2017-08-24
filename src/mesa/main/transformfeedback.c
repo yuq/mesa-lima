@@ -1062,10 +1062,26 @@ _mesa_IsTransformFeedback(GLuint name)
  * Bind the given transform feedback object.
  * Part of GL_ARB_transform_feedback2.
  */
+static ALWAYS_INLINE void
+bind_transform_feedback(struct gl_context *ctx, GLuint name, bool no_error)
+{
+   struct gl_transform_feedback_object *obj;
+
+   obj = _mesa_lookup_transform_feedback_object(ctx, name);
+   if (!no_error && !obj) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glBindTransformFeedback(name=%u)", name);
+      return;
+   }
+
+   reference_transform_feedback_object(&ctx->TransformFeedback.CurrentObject,
+                                       obj);
+}
+
+
 void GLAPIENTRY
 _mesa_BindTransformFeedback(GLenum target, GLuint name)
 {
-   struct gl_transform_feedback_object *obj;
    GET_CURRENT_CONTEXT(ctx);
 
    if (target != GL_TRANSFORM_FEEDBACK) {
@@ -1079,15 +1095,7 @@ _mesa_BindTransformFeedback(GLenum target, GLuint name)
       return;
    }
 
-   obj = _mesa_lookup_transform_feedback_object(ctx, name);
-   if (!obj) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glBindTransformFeedback(name=%u)", name);
-      return;
-   }
-
-   reference_transform_feedback_object(&ctx->TransformFeedback.CurrentObject,
-                                       obj);
+   bind_transform_feedback(ctx, name, false);
 }
 
 
