@@ -227,6 +227,65 @@ fs_visitor::nir_emit_system_values()
    }
 }
 
+/*
+ * Returns a type based on a reference_type (word, float, half-float) and a
+ * given bit_size.
+ *
+ * Reference BRW_REGISTER_TYPE are HF,F,DF,W,D,UW,UD.
+ *
+ * @FIXME: 64-bit return types are always DF on integer types to maintain
+ * compability with uses of DF previously to the introduction of int64
+ * support.
+ */
+static brw_reg_type
+brw_reg_type_from_bit_size(const unsigned bit_size,
+                           const brw_reg_type reference_type)
+{
+   switch(reference_type) {
+   case BRW_REGISTER_TYPE_HF:
+   case BRW_REGISTER_TYPE_F:
+   case BRW_REGISTER_TYPE_DF:
+      switch(bit_size) {
+      case 16:
+         return BRW_REGISTER_TYPE_HF;
+      case 32:
+         return BRW_REGISTER_TYPE_F;
+      case 64:
+         return BRW_REGISTER_TYPE_DF;
+      default:
+         unreachable("Invalid bit size");
+      }
+   case BRW_REGISTER_TYPE_W:
+   case BRW_REGISTER_TYPE_D:
+   case BRW_REGISTER_TYPE_Q:
+      switch(bit_size) {
+      case 16:
+         return BRW_REGISTER_TYPE_W;
+      case 32:
+         return BRW_REGISTER_TYPE_D;
+      case 64:
+         return BRW_REGISTER_TYPE_DF;
+      default:
+         unreachable("Invalid bit size");
+      }
+   case BRW_REGISTER_TYPE_UW:
+   case BRW_REGISTER_TYPE_UD:
+   case BRW_REGISTER_TYPE_UQ:
+      switch(bit_size) {
+      case 16:
+         return BRW_REGISTER_TYPE_UW;
+      case 32:
+         return BRW_REGISTER_TYPE_UD;
+      case 64:
+         return BRW_REGISTER_TYPE_DF;
+      default:
+         unreachable("Invalid bit size");
+      }
+   default:
+      unreachable("Unknown type");
+   }
+}
+
 void
 fs_visitor::nir_emit_impl(nir_function_impl *impl)
 {
@@ -240,7 +299,7 @@ fs_visitor::nir_emit_impl(nir_function_impl *impl)
          reg->num_array_elems == 0 ? 1 : reg->num_array_elems;
       unsigned size = array_elems * reg->num_components;
       const brw_reg_type reg_type =
-         reg->bit_size == 32 ? BRW_REGISTER_TYPE_F : BRW_REGISTER_TYPE_DF;
+         brw_reg_type_from_bit_size(reg->bit_size, BRW_REGISTER_TYPE_F);
       nir_locals[reg->index] = bld.vgrf(reg_type, size);
    }
 
@@ -1341,7 +1400,7 @@ fs_visitor::nir_emit_load_const(const fs_builder &bld,
                                 nir_load_const_instr *instr)
 {
    const brw_reg_type reg_type =
-      instr->def.bit_size == 32 ? BRW_REGISTER_TYPE_D : BRW_REGISTER_TYPE_DF;
+      brw_reg_type_from_bit_size(instr->def.bit_size, BRW_REGISTER_TYPE_D);
    fs_reg reg = bld.vgrf(reg_type, instr->def.num_components);
 
    switch (instr->def.bit_size) {
@@ -1369,8 +1428,8 @@ fs_visitor::get_nir_src(const nir_src &src)
    fs_reg reg;
    if (src.is_ssa) {
       if (src.ssa->parent_instr->type == nir_instr_type_ssa_undef) {
-         const brw_reg_type reg_type = src.ssa->bit_size == 32 ?
-            BRW_REGISTER_TYPE_D : BRW_REGISTER_TYPE_DF;
+         const brw_reg_type reg_type =
+            brw_reg_type_from_bit_size(src.ssa->bit_size, BRW_REGISTER_TYPE_D);
          reg = bld.vgrf(reg_type, src.ssa->num_components);
       } else {
          reg = nir_ssa_values[src.ssa->index];
@@ -1404,7 +1463,7 @@ fs_visitor::get_nir_dest(const nir_dest &dest)
 {
    if (dest.is_ssa) {
       const brw_reg_type reg_type =
-         dest.ssa.bit_size == 32 ? BRW_REGISTER_TYPE_F : BRW_REGISTER_TYPE_DF;
+         brw_reg_type_from_bit_size(dest.ssa.bit_size, BRW_REGISTER_TYPE_F);
       nir_ssa_values[dest.ssa.index] =
          bld.vgrf(reg_type, dest.ssa.num_components);
       return nir_ssa_values[dest.ssa.index];
