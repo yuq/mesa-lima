@@ -778,12 +778,11 @@ _mesa_BindBufferOffsetEXT(GLenum target, GLuint index, GLuint buffer,
       bufObj = ctx->Shared->NullBufferObj;
    } else {
       bufObj = _mesa_lookup_bufferobj(ctx, buffer);
-   }
-
-   if (!bufObj) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glBindBufferOffsetEXT(invalid buffer=%u)", buffer);
-      return;
+      if (!bufObj) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glBindBufferOffsetEXT(invalid buffer=%u)", buffer);
+         return;
+      }
    }
 
    _mesa_bind_buffer_range_xfb(ctx, obj, index, bufObj, offset, 0);
