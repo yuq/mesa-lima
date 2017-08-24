@@ -527,8 +527,6 @@ lp_build_tgsi_llvm(
    while (bld_base->pc != -1) {
       const struct tgsi_full_instruction *instr =
          bld_base->instructions + bld_base->pc;
-      const struct tgsi_opcode_info *opcode_info =
-         tgsi_get_opcode_info(instr->Instruction.Opcode);
       if (!lp_build_tgsi_inst_llvm(bld_base, instr)) {
          _debug_printf("warning: failed to translate tgsi opcode %s to LLVM\n",
                        tgsi_get_opcode_name(instr->Instruction.Opcode));
