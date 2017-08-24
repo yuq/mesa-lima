@@ -26,6 +26,7 @@
 
 struct lower_intrinsics_state {
    nir_shader *nir;
+   unsigned dispatch_width;
    nir_function_impl *impl;
    bool progress;
    nir_builder builder;
@@ -56,12 +57,14 @@ lower_cs_intrinsics_convert_block(struct lower_intrinsics_state *state,
           *    gl_LocalInvocationIndex =
           *       cs_thread_local_id + subgroup_invocation;
           */
-         nir_ssa_def *thread_local_id;
-         if (state->local_workgroup_size <= 8)
-            thread_local_id = nir_imm_int(b, 0);
+         nir_ssa_def *subgroup_id;
+         if (state->local_workgroup_size <= state->dispatch_width)
+            subgroup_id = nir_imm_int(b, 0);
          else
-            thread_local_id = nir_load_intel_thread_local_id(b);
+            subgroup_id = nir_load_subgroup_id(b);
 
+         nir_ssa_def *thread_local_id =
+            nir_imul(b, subgroup_id, nir_imm_int(b, state->dispatch_width));
          nir_ssa_def *channel = nir_load_subgroup_invocation(b);
          sysval = nir_iadd(b, channel, thread_local_id);
          break;
@@ -127,7 +130,8 @@ lower_cs_intrinsics_convert_impl(struct lower_intrinsics_state *state)
 }
 
 bool
-brw_nir_lower_cs_intrinsics(nir_shader *nir)
+brw_nir_lower_cs_intrinsics(nir_shader *nir,
+                            unsigned dispatch_width)
 {
    assert(nir->info.stage == MESA_SHADER_COMPUTE);
 
@@ -135,6 +139,7 @@ brw_nir_lower_cs_intrinsics(nir_shader *nir)
    struct lower_intrinsics_state state;
    memset(&state, 0, sizeof(state));
    state.nir = nir;
+   state.dispatch_width = dispatch_width;
    state.local_workgroup_size = nir->info.cs.local_size[0] *
                                 nir->info.cs.local_size[1] *
                                 nir->info.cs.local_size[2];

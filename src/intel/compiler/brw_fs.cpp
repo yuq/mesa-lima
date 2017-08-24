@@ -996,7 +996,7 @@ fs_visitor::import_uniforms(fs_visitor *v)
    this->push_constant_loc = v->push_constant_loc;
    this->pull_constant_loc = v->pull_constant_loc;
    this->uniforms = v->uniforms;
-   this->thread_local_id = v->thread_local_id;
+   this->subgroup_id = v->subgroup_id;
 }
 
 void
@@ -1931,14 +1931,14 @@ set_push_pull_constant_loc(unsigned uniform, int *chunk_start,
 }
 
 static int
-get_thread_local_id_param_index(const brw_stage_prog_data *prog_data)
+get_subgroup_id_param_index(const brw_stage_prog_data *prog_data)
 {
    if (prog_data->nr_params == 0)
       return -1;
 
    /* The local thread id is always the last parameter in the list */
    uint32_t last_param = prog_data->param[prog_data->nr_params - 1];
-   if (last_param == BRW_PARAM_BUILTIN_THREAD_LOCAL_ID)
+   if (last_param == BRW_PARAM_BUILTIN_SUBGROUP_ID)
       return prog_data->nr_params - 1;
 
    return -1;
@@ -2019,7 +2019,7 @@ fs_visitor::assign_constant_locations()
       }
    }
 
-   int thread_local_id_index = get_thread_local_id_param_index(stage_prog_data);
+   int subgroup_id_index = get_subgroup_id_param_index(stage_prog_data);
 
    /* Only allow 16 registers (128 uniform components) as push constants.
     *
@@ -2030,7 +2030,7 @@ fs_visitor::assign_constant_locations()
     * brw_curbe.c.
     */
    unsigned int max_push_components = 16 * 8;
-   if (thread_local_id_index >= 0)
+   if (subgroup_id_index >= 0)
       max_push_components--; /* Save a slot for the thread ID */
 
    /* We push small arrays, but no bigger than 16 floats.  This is big enough
@@ -2075,8 +2075,8 @@ fs_visitor::assign_constant_locations()
       if (!is_live[u])
          continue;
 
-      /* Skip thread_local_id_index to put it in the last push register. */
-      if (thread_local_id_index == (int)u)
+      /* Skip subgroup_id_index to put it in the last push register. */
+      if (subgroup_id_index == (int)u)
          continue;
 
       set_push_pull_constant_loc(u, &chunk_start, &max_chunk_bitsize,
@@ -2090,8 +2090,8 @@ fs_visitor::assign_constant_locations()
    }
 
    /* Add the CS local thread ID uniform at the end of the push constants */
-   if (thread_local_id_index >= 0)
-      push_constant_loc[thread_local_id_index] = num_push_constants++;
+   if (subgroup_id_index >= 0)
+      push_constant_loc[subgroup_id_index] = num_push_constants++;
 
    /* As the uniforms are going to be reordered, stash the old array and
     * create two new arrays for push/pull params.
@@ -6778,20 +6778,20 @@ cs_fill_push_const_info(const struct gen_device_info *devinfo,
                         struct brw_cs_prog_data *cs_prog_data)
 {
    const struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
-   int thread_local_id_index = get_thread_local_id_param_index(prog_data);
+   int subgroup_id_index = get_subgroup_id_param_index(prog_data);
    bool cross_thread_supported = devinfo->gen > 7 || devinfo->is_haswell;
 
    /* The thread ID should be stored in the last param dword */
-   assert(thread_local_id_index == -1 ||
-          thread_local_id_index == (int)prog_data->nr_params - 1);
+   assert(subgroup_id_index == -1 ||
+          subgroup_id_index == (int)prog_data->nr_params - 1);
 
    unsigned cross_thread_dwords, per_thread_dwords;
    if (!cross_thread_supported) {
       cross_thread_dwords = 0u;
       per_thread_dwords = prog_data->nr_params;
-   } else if (thread_local_id_index >= 0) {
+   } else if (subgroup_id_index >= 0) {
       /* Fill all but the last register with cross-thread payload */
-      cross_thread_dwords = 8 * (thread_local_id_index / 8);
+      cross_thread_dwords = 8 * (subgroup_id_index / 8);
       per_thread_dwords = prog_data->nr_params - cross_thread_dwords;
       assert(per_thread_dwords > 0 && per_thread_dwords <= 8);
    } else {
@@ -6834,7 +6834,7 @@ compile_cs_to_nir(const struct brw_compiler *compiler,
 {
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
    shader = brw_nir_apply_sampler_key(shader, compiler, &key->tex, true);
-   brw_nir_lower_cs_intrinsics(shader);
+   brw_nir_lower_cs_intrinsics(shader, dispatch_width);
    return brw_postprocess_nir(shader, compiler, true);
 }
 

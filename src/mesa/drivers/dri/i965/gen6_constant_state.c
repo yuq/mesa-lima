@@ -317,7 +317,7 @@ brw_upload_cs_push_constants(struct brw_context *brw,
       for (unsigned i = 0;
            i < cs_prog_data->push.cross_thread.dwords;
            i++) {
-         assert(prog_data->param[i] != BRW_PARAM_BUILTIN_THREAD_LOCAL_ID);
+         assert(prog_data->param[i] != BRW_PARAM_BUILTIN_SUBGROUP_ID);
          param_copy[i] = brw_param_value(brw, prog, stage_state,
                                          prog_data->param[i]);
       }
@@ -330,8 +330,8 @@ brw_upload_cs_push_constants(struct brw_context *brw,
                  cs_prog_data->push.cross_thread.regs);
          unsigned src = cs_prog_data->push.cross_thread.dwords;
          for ( ; src < prog_data->nr_params; src++, dst++) {
-            if (prog_data->param[src] == BRW_PARAM_BUILTIN_THREAD_LOCAL_ID) {
-               param[dst] = t * cs_prog_data->simd_size;
+            if (prog_data->param[src] == BRW_PARAM_BUILTIN_SUBGROUP_ID) {
+               param[dst] = t;
             } else {
                param[dst] = brw_param_value(brw, prog, stage_state,
                                             prog_data->param[src]);

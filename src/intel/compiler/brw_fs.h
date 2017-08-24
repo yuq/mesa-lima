@@ -315,7 +315,7 @@ public:
     */
    int *push_constant_loc;
 
-   fs_reg thread_local_id;
+   fs_reg subgroup_id;
    fs_reg frag_depth;
    fs_reg frag_stencil;
    fs_reg sample_mask;

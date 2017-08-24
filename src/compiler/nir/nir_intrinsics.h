@@ -355,6 +355,7 @@ SYSTEM_VALUE(subgroup_ge_mask, 1, 0, xx, xx, xx)
 SYSTEM_VALUE(subgroup_gt_mask, 1, 0, xx, xx, xx)
 SYSTEM_VALUE(subgroup_le_mask, 1, 0, xx, xx, xx)
 SYSTEM_VALUE(subgroup_lt_mask, 1, 0, xx, xx, xx)
+SYSTEM_VALUE(subgroup_id, 1, 0, xx, xx, xx)
 
 /* Blend constant color values.  Float values are clamped. */
 SYSTEM_VALUE(blend_const_color_r_float, 1, 0, xx, xx, xx)
@@ -363,9 +364,6 @@ SYSTEM_VALUE(blend_const_color_b_float, 1, 0, xx, xx, xx)
 SYSTEM_VALUE(blend_const_color_a_float, 1, 0, xx, xx, xx)
 SYSTEM_VALUE(blend_const_color_rgba8888_unorm, 1, 0, xx, xx, xx)
 SYSTEM_VALUE(blend_const_color_aaaa8888_unorm, 1, 0, xx, xx, xx)
-
-/* Intel specific system values */
-SYSTEM_VALUE(intel_thread_local_id, 1, 0, xx, xx, xx)
 
 /**
  * Barycentric coordinate intrinsics.
