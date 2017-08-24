@@ -391,7 +391,7 @@ compute_version(const struct gl_extensions *extensions,
                          /* extensions->ARB_spirv_extensions */ 0 &&
                          extensions->ARB_indirect_parameters &&
                          extensions->ARB_pipeline_statistics_query &&
-                         /* extensions->ARB_polygon_offset_clamp */ 0 &&
+                         extensions->ARB_polygon_offset_clamp &&
                          extensions->ARB_shader_atomic_counter_ops &&
                          extensions->ARB_shader_draw_parameters &&
                          extensions->ARB_shader_group_vote &&

@@ -66,6 +66,7 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.ARB_occlusion_query = true;
    ctx->Extensions.ARB_occlusion_query2 = true;
    ctx->Extensions.ARB_point_sprite = true;
+   ctx->Extensions.ARB_polygon_offset_clamp = true;
    ctx->Extensions.ARB_seamless_cube_map = true;
    ctx->Extensions.ARB_shader_bit_encoding = true;
    ctx->Extensions.ARB_shader_draw_parameters = true;
@@ -100,7 +101,6 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.EXT_packed_float = true;
    ctx->Extensions.EXT_pixel_buffer_object = true;
    ctx->Extensions.EXT_point_parameters = true;
-   ctx->Extensions.EXT_polygon_offset_clamp = true;
    ctx->Extensions.EXT_provoking_vertex = true;
    ctx->Extensions.EXT_stencil_two_side = true;
    ctx->Extensions.EXT_texture_array = true;
