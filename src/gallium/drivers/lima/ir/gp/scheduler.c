@@ -397,13 +397,114 @@ static void gpir_remove_load_node(gpir_node *load, gpir_node *node)
    gpir_node_delete(load);
 }
 
+static bool gpir_insert_move_for_store_load(gpir_block *block, gpir_node *node)
+{
+   struct list_head store_list;
+   list_inithead(&store_list);
+
+   /* find all success store node of load node */
+   gpir_node_foreach_succ(node, entry) {
+      gpir_node *succ = gpir_node_from_entry(entry, succ);
+      if (succ->type == gpir_node_type_store) {
+         gpir_store_node *store = gpir_node_to_store(succ);
+         if (store->child == node) {
+            /* sort the store_list for the following move node insertion order */
+            struct list_head *insert_pos = &store_list;
+            list_for_each_entry(gpir_node, s, &store_list, ready) {
+               if (s->sched_instr > succ->sched_instr) {
+                  insert_pos = &s->ready;
+                  break;
+               }
+            }
+            list_addtail(&succ->ready, insert_pos);
+            _mesa_set_remove(node->succs, entry);
+         }
+      }
+   }
+
+   /* create move node and replace store node child to it */
+   while (!list_empty(&store_list)) {
+      int instr = -1;
+      gpir_node *move = _gpir_create_from_node(block, node, NULL);
+      if (!move)
+         return false;
+
+      /* insert store node in the same instr to this move */
+      list_for_each_entry_safe(gpir_node, store, &store_list, ready) {
+         if (instr < 0)
+            instr = store->sched_instr;
+
+         if (store->sched_instr == instr) {
+            gpir_store_node *s = gpir_node_to_store(store);
+            s->child = move;
+
+            gpir_node_foreach_pred(store, entry) {
+               gpir_dep_info *dep = gpir_dep_from_entry(entry);
+               gpir_node *pred = gpir_node_from_entry(entry, pred);
+
+               if (pred == node) {
+                  dep->pred = move;
+                  _mesa_set_add_pre_hashed(move->succs, entry->hash, dep);
+                  break;
+               }
+            }
+
+            list_del(&store->ready);
+         }
+         else
+            break;
+      }
+
+      /* insert alu node for store node must succeed */
+      if (!gpir_try_place_node(block, move, instr, instr + 1))
+         assert(0);
+
+      /* check load node successors for using this move node
+       * including previous inserted move node, so the check order should
+       * be from small to big (ensured by the sorting of store node)
+       */
+      gpir_node_foreach_succ(node, entry) {
+         gpir_dep_info *dep = gpir_dep_from_entry(entry);
+         gpir_node *succ = gpir_node_from_entry(entry, succ);
+
+         /* move is already successor of load node */
+         if (succ != move) {
+            gpir_dep_info tmp = {
+               .pred = move,
+               .succ = succ,
+               .is_child_dep = true,
+               .is_offset = false,
+            };
+            int min = succ->sched_instr + gpir_get_min_dist(&tmp);
+            int max = succ->sched_instr + gpir_get_max_dist(&tmp);
+
+            if (move->sched_instr >= min && move->sched_instr <= max) {
+               dep->pred = move;
+               _mesa_set_add_pre_hashed(move->succs, entry->hash, dep);
+               _mesa_set_remove(node->succs, entry);
+               gpir_node_replace_child(succ, node, move);
+            }
+         }
+      }
+   }
+
+   return true;
+}
+
 static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
 {
    int start = gpir_get_max_start(node), end = INT_MAX;
 
    if (node->type == gpir_node_type_load) {
-      gpir_node *load = node, *current = NULL;
+      /* store node can only accept alu child, so insert a move node
+       * between load node and store node. The reason do this here
+       * instead of pre-schedule is only at this point can we know
+       * if two store node can share a single move node
+       */
+      if (!gpir_insert_move_for_store_load(block, node))
+         return false;
 
+      gpir_node *load = node, *current = NULL;
       while (true) {
          /* first time this must be true because end is INT_MAX */
          if (gpir_try_place_node(block, load, start, end))
