@@ -1441,20 +1441,35 @@ fs_visitor::get_nir_src(const nir_src &src)
                    src.reg.base_offset * src.reg.reg->num_components);
    }
 
-   /* to avoid floating-point denorm flushing problems, set the type by
-    * default to D - instructions that need floating point semantics will set
-    * this to F if they need to
-    */
-   return retype(reg, BRW_REGISTER_TYPE_D);
+   if (nir_src_bit_size(src) == 64 && devinfo->gen == 7) {
+      /* The only 64-bit type available on gen7 is DF, so use that. */
+      reg.type = BRW_REGISTER_TYPE_DF;
+   } else {
+      /* To avoid floating-point denorm flushing problems, set the type by
+       * default to an integer type - instructions that need floating point
+       * semantics will set this to F if they need to
+       */
+      reg.type = brw_reg_type_from_bit_size(nir_src_bit_size(src),
+                                            BRW_REGISTER_TYPE_D);
+   }
+
+   return reg;
 }
 
 /**
  * Return an IMM for constants; otherwise call get_nir_src() as normal.
+ *
+ * This function should not be called on any value which may be 64 bits.
+ * We could theoretically support 64-bit on gen8+ but we choose not to
+ * because it wouldn't work in general (no gen7 support) and there are
+ * enough restrictions in 64-bit immediates that you can't take the return
+ * value and treat it the same as the result of get_nir_src().
  */
 fs_reg
 fs_visitor::get_nir_src_imm(const nir_src &src)
 {
    nir_const_value *val = nir_src_as_const_value(src);
+   assert(nir_src_bit_size(src) == 32);
    return val ? fs_reg(brw_imm_d(val->i32[0])) : get_nir_src(src);
 }
 
@@ -2648,8 +2663,7 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
                 */
                unsigned channel = iter * 2 + i;
                fs_reg dest = shuffle_64bit_data_for_32bit_write(bld,
-                  retype(offset(value, bld, 2 * channel), BRW_REGISTER_TYPE_DF),
-                  1);
+                  offset(value, bld, channel), 1);
 
                srcs[header_regs + (i + first_component) * 2] = dest;
                srcs[header_regs + (i + first_component) * 2 + 1] =
@@ -3505,8 +3519,7 @@ fs_visitor::nir_emit_cs_intrinsic(const fs_builder &bld,
       if (nir_src_bit_size(instr->src[0]) == 64) {
          type_size = 8;
          val_reg = shuffle_64bit_data_for_32bit_write(bld,
-            retype(val_reg, BRW_REGISTER_TYPE_DF),
-            instr->num_components);
+            val_reg, instr->num_components);
       }
 
       unsigned type_slots = type_size / 4;
@@ -4005,8 +4018,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       if (nir_src_bit_size(instr->src[0]) == 64) {
          type_size = 8;
          val_reg = shuffle_64bit_data_for_32bit_write(bld,
-            retype(val_reg, BRW_REGISTER_TYPE_DF),
-            instr->num_components);
+            val_reg, instr->num_components);
       }
 
       unsigned type_slots = type_size / 4;
@@ -4062,8 +4074,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       unsigned num_components = instr->num_components;
       unsigned first_component = nir_intrinsic_component(instr);
       if (nir_src_bit_size(instr->src[0]) == 64) {
-         src = shuffle_64bit_data_for_32bit_write(bld,
-            retype(src, BRW_REGISTER_TYPE_DF), num_components);
+         src = shuffle_64bit_data_for_32bit_write(bld, src, num_components);
          num_components *= 2;
       }
 
