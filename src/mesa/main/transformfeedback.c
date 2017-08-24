@@ -1193,6 +1193,20 @@ _mesa_DeleteTransformFeedbacks(GLsizei n, const GLuint *names)
  * Pause transform feedback.
  * Part of GL_ARB_transform_feedback2.
  */
+static void
+pause_transform_feedback(struct gl_context *ctx,
+                         struct gl_transform_feedback_object *obj)
+{
+   FLUSH_VERTICES(ctx, 0);
+   ctx->NewDriverState |= ctx->DriverFlags.NewTransformFeedback;
+
+   assert(ctx->Driver.PauseTransformFeedback);
+   ctx->Driver.PauseTransformFeedback(ctx, obj);
+
+   obj->Paused = GL_TRUE;
+}
+
+
 void GLAPIENTRY
 _mesa_PauseTransformFeedback(void)
 {
@@ -1207,13 +1221,7 @@ _mesa_PauseTransformFeedback(void)
       return;
    }
 
-   FLUSH_VERTICES(ctx, 0);
-   ctx->NewDriverState |= ctx->DriverFlags.NewTransformFeedback;
-
-   assert(ctx->Driver.PauseTransformFeedback);
-   ctx->Driver.PauseTransformFeedback(ctx, obj);
-
-   obj->Paused = GL_TRUE;
+   pause_transform_feedback(ctx, obj);
 }
 
 
