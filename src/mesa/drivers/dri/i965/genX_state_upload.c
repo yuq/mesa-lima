@@ -563,7 +563,7 @@ genX(emit_vertices)(struct brw_context *brw)
           * vertex element may poke over the end of the buffer by 2 bytes.
           */
          const unsigned padding =
-            (GEN_GEN <= 7 && !brw->is_baytrail && !brw->is_haswell) * 2;
+            (GEN_GEN <= 7 && !GEN_IS_HASWELL && !brw->is_baytrail) * 2;
          const unsigned end = buffer->offset + buffer->size + padding;
          dw = genX(emit_vertex_buffer_state)(brw, dw, i, buffer->bo,
                                              buffer->offset,
@@ -4191,7 +4191,7 @@ genX(upload_cs_state)(struct brw_context *brw)
       .BindingTablePointer = stage_state->bind_bo_offset,
       .ConstantURBEntryReadLength = cs_prog_data->push.per_thread.regs,
       .NumberofThreadsinGPGPUThreadGroup = cs_prog_data->threads,
-      .SharedLocalMemorySize = encode_slm_size(devinfo->gen,
+      .SharedLocalMemorySize = encode_slm_size(GEN_GEN,
                                                prog_data->total_shared),
       .BarrierEnable = cs_prog_data->uses_barrier,
 #if GEN_GEN >= 8 || GEN_IS_HASWELL
@@ -4682,9 +4682,9 @@ genX(upload_default_color)(struct brw_context *brw,
       color.ui[3] = float_as_int(1.0);
 
    int alignment = 32;
-   if (brw->gen >= 8) {
+   if (GEN_GEN >= 8) {
       alignment = 64;
-   } else if (brw->is_haswell && (is_integer_format || is_stencil_sampling)) {
+   } else if (GEN_IS_HASWELL && (is_integer_format || is_stencil_sampling)) {
       alignment = 512;
    }
 
