@@ -207,7 +207,11 @@ static struct gl_transform_feedback_object *
 new_transform_feedback(struct gl_context *ctx, GLuint name)
 {
    struct gl_transform_feedback_object *obj;
+
    obj = CALLOC_STRUCT(gl_transform_feedback_object);
+   if (!obj)
+      return NULL;
+
    _mesa_init_transform_feedback_object(obj, name);
    return obj;
 }
