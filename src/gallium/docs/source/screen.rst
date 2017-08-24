@@ -739,9 +739,9 @@ For cube maps this must be 6, for other textures 1.
 **nr_samples** the nr of msaa samples. 0 (or 1) specifies a resource
 which isn't multisampled.
 
-**usage** one of the PIPE_USAGE flags.
+**usage** one of the :ref:`PIPE_USAGE` flags.
 
-**bind** bitmask of the PIPE_BIND flags.
+**bind** bitmask of the :ref:`PIPE_BIND` flags.
 
 **flags** bitmask of PIPE_RESOURCE_FLAG flags.
 
