@@ -259,10 +259,17 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 {
 	struct fd_screen *screen = fd_screen(pscreen);
 	struct pipe_context *pctx;
+	unsigned prio = 1;
 	int i;
 
+	/* lower numerical value == higher priority: */
+	if (flags & PIPE_CONTEXT_HIGH_PRIORITY)
+		prio = 0;
+	else if (flags & PIPE_CONTEXT_LOW_PRIORITY)
+		prio = 2;
+
 	ctx->screen = screen;
-	ctx->pipe = fd_pipe_new(screen->dev, FD_PIPE_3D);
+	ctx->pipe = fd_pipe_new2(screen->dev, FD_PIPE_3D, prio);
 
 	ctx->primtypes = primtypes;
 	ctx->primtype_mask = 0;

@@ -339,8 +339,10 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TILE_RASTER_ORDER:
 	case PIPE_CAP_MAX_COMBINED_SHADER_OUTPUT_RESOURCES:
 	case PIPE_CAP_SIGNED_VERTEX_BUFFER_OFFSET:
-	case PIPE_CAP_CONTEXT_PRIORITY_MASK:
 		return 0;
+
+	case PIPE_CAP_CONTEXT_PRIORITY_MASK:
+		return screen->priority_mask;
 
 	case PIPE_CAP_DRAW_INDIRECT:
 		if (is_a4xx(screen) || is_a5xx(screen))
@@ -841,6 +843,14 @@ fd_screen_create(struct fd_device *dev)
 			((major & 0xff) << 16) | ((core & 0xff) << 24);
 	}
 	screen->chip_id = val;
+
+	if (fd_pipe_get_param(screen->pipe, FD_NR_RINGS, &val)) {
+		DBG("could not get # of rings");
+		screen->priority_mask = 0;
+	} else {
+		/* # of rings equates to number of unique priority values: */
+		screen->priority_mask = (1 << val) - 1;
+	}
 
 	DBG("Pipe Info:");
 	DBG(" GPU-id:          %d", screen->gpu_id);
