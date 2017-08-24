@@ -670,7 +670,7 @@ get_paramf
 
 Get a floating-point screen parameter.
 
-**param** is one of the :ref:`PIPE_CAP` names.
+**param** is one of the :ref:`PIPE_CAPF` names.
 
 context_create
 ^^^^^^^^^^^^^^
