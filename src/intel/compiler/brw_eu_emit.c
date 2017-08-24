@@ -736,26 +736,8 @@ brw_alu3(struct brw_codegen *p, unsigned opcode, struct brw_reg dest,
        * may send us mixed D and UD types and want us to ignore that and use
        * the destination type.
        */
-      switch (dest.type) {
-      case BRW_REGISTER_TYPE_F:
-         brw_inst_set_3src_a16_src_hw_type(devinfo, inst, BRW_3SRC_TYPE_F);
-         brw_inst_set_3src_a16_dst_hw_type(devinfo, inst, BRW_3SRC_TYPE_F);
-         break;
-      case BRW_REGISTER_TYPE_DF:
-         brw_inst_set_3src_a16_src_hw_type(devinfo, inst, BRW_3SRC_TYPE_DF);
-         brw_inst_set_3src_a16_dst_hw_type(devinfo, inst, BRW_3SRC_TYPE_DF);
-         break;
-      case BRW_REGISTER_TYPE_D:
-         brw_inst_set_3src_a16_src_hw_type(devinfo, inst, BRW_3SRC_TYPE_D);
-         brw_inst_set_3src_a16_dst_hw_type(devinfo, inst, BRW_3SRC_TYPE_D);
-         break;
-      case BRW_REGISTER_TYPE_UD:
-         brw_inst_set_3src_a16_src_hw_type(devinfo, inst, BRW_3SRC_TYPE_UD);
-         brw_inst_set_3src_a16_dst_hw_type(devinfo, inst, BRW_3SRC_TYPE_UD);
-         break;
-      default:
-         unreachable("not reached");
-      }
+      brw_inst_set_3src_a16_src_type(devinfo, inst, dest.type);
+      brw_inst_set_3src_a16_dst_type(devinfo, inst, dest.type);
    }
 
    return inst;

@@ -246,6 +246,27 @@ F(3src_access_mode,      8,  8)
 F(3src_opcode,           6,  0)
 /** @} */
 
+#define REG_TYPE(reg)                                                         \
+static inline void                                                            \
+brw_inst_set_3src_a16_##reg##_type(const struct gen_device_info *devinfo,     \
+                                   brw_inst *inst, enum brw_reg_type type)    \
+{                                                                             \
+   unsigned hw_type = brw_reg_type_to_hw_3src_type(devinfo, type);            \
+   brw_inst_set_3src_a16_##reg##_hw_type(devinfo, inst, hw_type);             \
+}                                                                             \
+                                                                              \
+static inline enum brw_reg_type                                               \
+brw_inst_3src_a16_##reg##_type(const struct gen_device_info *devinfo,         \
+                               const brw_inst *inst)                          \
+{                                                                             \
+   unsigned hw_type = brw_inst_3src_a16_##reg##_hw_type(devinfo, inst);       \
+   return brw_hw_3src_type_to_reg_type(devinfo, hw_type);                     \
+}
+
+REG_TYPE(dst)
+REG_TYPE(src)
+#undef REG_TYPE
+
 /**
  * Flow control instruction bits:
  *  @{
