@@ -1252,6 +1252,14 @@ resume_transform_feedback(struct gl_context *ctx,
 
 
 void GLAPIENTRY
+_mesa_ResumeTransformFeedback_no_error(void)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   resume_transform_feedback(ctx, ctx->TransformFeedback.CurrentObject);
+}
+
+
+void GLAPIENTRY
 _mesa_ResumeTransformFeedback(void)
 {
    struct gl_transform_feedback_object *obj;

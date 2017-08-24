@@ -126,6 +126,9 @@ _mesa_PauseTransformFeedback_no_error(void);
 extern void GLAPIENTRY
 _mesa_PauseTransformFeedback(void);
 
+void GLAPIENTRY
+_mesa_ResumeTransformFeedback_no_error(void);
+
 extern void GLAPIENTRY
 _mesa_ResumeTransformFeedback(void);
 

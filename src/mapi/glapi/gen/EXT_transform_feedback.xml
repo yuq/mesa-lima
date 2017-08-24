@@ -105,7 +105,7 @@
   <function name="PauseTransformFeedback" es2="3.0" no_error="true">
   </function>
 
-  <function name="ResumeTransformFeedback" es2="3.0">
+  <function name="ResumeTransformFeedback" es2="3.0" no_error="true">
   </function>
 
   <function name="DrawTransformFeedback" exec="dynamic" marshal="draw">
