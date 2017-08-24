@@ -102,7 +102,7 @@
     <return type="GLboolean"/>
   </function>
 
-  <function name="PauseTransformFeedback" es2="3.0">
+  <function name="PauseTransformFeedback" es2="3.0" no_error="true">
   </function>
 
   <function name="ResumeTransformFeedback" es2="3.0">

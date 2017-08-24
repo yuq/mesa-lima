@@ -120,6 +120,9 @@ _mesa_BindTransformFeedback(GLenum target, GLuint name);
 extern void GLAPIENTRY
 _mesa_DeleteTransformFeedbacks(GLsizei n, const GLuint *names);
 
+void GLAPIENTRY
+_mesa_PauseTransformFeedback_no_error(void);
+
 extern void GLAPIENTRY
 _mesa_PauseTransformFeedback(void);
 
