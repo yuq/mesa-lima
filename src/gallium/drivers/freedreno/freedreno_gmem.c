@@ -226,7 +226,7 @@ calculate_tiles(struct fd_batch *batch)
 	/* configure pipes: */
 	xoff = yoff = 0;
 	for (i = 0; i < npipes; i++) {
-		struct fd_vsc_pipe *pipe = &ctx->pipe[i];
+		struct fd_vsc_pipe *pipe = &ctx->vsc_pipe[i];
 
 		if (xoff >= nbins_x) {
 			xoff = 0;
@@ -246,7 +246,7 @@ calculate_tiles(struct fd_batch *batch)
 	}
 
 	for (; i < npipes; i++) {
-		struct fd_vsc_pipe *pipe = &ctx->pipe[i];
+		struct fd_vsc_pipe *pipe = &ctx->vsc_pipe[i];
 		pipe->x = pipe->y = pipe->w = pipe->h = 0;
 	}
 

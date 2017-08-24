@@ -136,8 +136,8 @@ fd_context_destroy(struct pipe_context *pctx)
 
 	slab_destroy_child(&ctx->transfer_pool);
 
-	for (i = 0; i < ARRAY_SIZE(ctx->pipe); i++) {
-		struct fd_vsc_pipe *pipe = &ctx->pipe[i];
+	for (i = 0; i < ARRAY_SIZE(ctx->vsc_pipe); i++) {
+		struct fd_vsc_pipe *pipe = &ctx->vsc_pipe[i];
 		if (!pipe->bo)
 			break;
 		fd_bo_del(pipe->bo);
