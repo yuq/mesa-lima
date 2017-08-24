@@ -832,6 +832,42 @@ _mesa_BindBufferOffsetEXT(GLenum target, GLuint index, GLuint buffer,
  * This function specifies the transform feedback outputs to be written
  * to the feedback buffer(s), and in what order.
  */
+static ALWAYS_INLINE void
+transform_feedback_varyings(struct gl_context *ctx,
+                            struct gl_shader_program *shProg, GLsizei count,
+                            const GLchar *const *varyings, GLenum bufferMode)
+{
+   GLint i;
+
+   /* free existing varyings, if any */
+   for (i = 0; i < (GLint) shProg->TransformFeedback.NumVarying; i++) {
+      free(shProg->TransformFeedback.VaryingNames[i]);
+   }
+   free(shProg->TransformFeedback.VaryingNames);
+
+   /* allocate new memory for varying names */
+   shProg->TransformFeedback.VaryingNames =
+      malloc(count * sizeof(GLchar *));
+
+   if (!shProg->TransformFeedback.VaryingNames) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glTransformFeedbackVaryings()");
+      return;
+   }
+
+   /* Save the new names and the count */
+   for (i = 0; i < count; i++) {
+      shProg->TransformFeedback.VaryingNames[i] = strdup(varyings[i]);
+   }
+   shProg->TransformFeedback.NumVarying = count;
+
+   shProg->TransformFeedback.BufferMode = bufferMode;
+
+   /* No need to invoke FLUSH_VERTICES or flag NewTransformFeedback since
+    * the varyings won't be used until shader link time.
+    */
+}
+
+
 void GLAPIENTRY
 _mesa_TransformFeedbackVaryings(GLuint program, GLsizei count,
                                 const GLchar * const *varyings,
@@ -907,32 +943,7 @@ _mesa_TransformFeedbackVaryings(GLuint program, GLsizei count,
       }
    }
 
-   /* free existing varyings, if any */
-   for (i = 0; i < (GLint) shProg->TransformFeedback.NumVarying; i++) {
-      free(shProg->TransformFeedback.VaryingNames[i]);
-   }
-   free(shProg->TransformFeedback.VaryingNames);
-
-   /* allocate new memory for varying names */
-   shProg->TransformFeedback.VaryingNames =
-      malloc(count * sizeof(GLchar *));
-
-   if (!shProg->TransformFeedback.VaryingNames) {
-      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glTransformFeedbackVaryings()");
-      return;
-   }
-
-   /* Save the new names and the count */
-   for (i = 0; i < count; i++) {
-      shProg->TransformFeedback.VaryingNames[i] = strdup(varyings[i]);
-   }
-   shProg->TransformFeedback.NumVarying = count;
-
-   shProg->TransformFeedback.BufferMode = bufferMode;
-
-   /* No need to invoke FLUSH_VERTICES or flag NewTransformFeedback since
-    * the varyings won't be used until shader link time.
-    */
+   transform_feedback_varyings(ctx, shProg, count, varyings, bufferMode);
 }
 
 
