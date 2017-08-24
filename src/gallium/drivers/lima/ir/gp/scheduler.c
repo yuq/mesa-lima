@@ -298,7 +298,7 @@ static bool gpir_try_place_move_node(gpir_block *block, gpir_node *node, int sta
    if (min < start)
       min = start;
 
-   return gpir_try_place_node(block, node, min, max);
+   return gpir_try_place_node(block, node, min, max + 1);
 }
 
 static int gpir_get_new_start(gpir_node *node)
