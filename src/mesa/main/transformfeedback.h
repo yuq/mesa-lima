@@ -78,6 +78,10 @@ _mesa_bind_buffer_base_transform_feedback(struct gl_context *ctx,
 					  struct gl_buffer_object *bufObj,
 					  bool dsa);
 
+void GLAPIENTRY
+_mesa_BindBufferOffsetEXT_no_error(GLenum target, GLuint index, GLuint buffer,
+                                   GLintptr offset);
+
 extern void GLAPIENTRY
 _mesa_BindBufferOffsetEXT(GLenum target, GLuint index, GLuint buffer,
                           GLintptr offset);

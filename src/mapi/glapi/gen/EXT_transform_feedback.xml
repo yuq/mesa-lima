@@ -32,7 +32,7 @@
     <param name="size" type="GLsizeiptr"/>
   </function>
 
-  <function name="BindBufferOffsetEXT">
+  <function name="BindBufferOffsetEXT" no_error="true">
     <param name="target" type="GLenum"/>
     <param name="index" type="GLuint"/>
     <param name="buffer" type="GLuint"/>

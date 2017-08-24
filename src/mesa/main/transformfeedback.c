@@ -802,6 +802,16 @@ bind_buffer_offset(struct gl_context *ctx,
 
 
 void GLAPIENTRY
+_mesa_BindBufferOffsetEXT_no_error(GLenum target, GLuint index, GLuint buffer,
+                                   GLintptr offset)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   bind_buffer_offset(ctx, ctx->TransformFeedback.CurrentObject, index, buffer,
+                      offset, true);
+}
+
+
+void GLAPIENTRY
 _mesa_BindBufferOffsetEXT(GLenum target, GLuint index, GLuint buffer,
                           GLintptr offset)
 {
