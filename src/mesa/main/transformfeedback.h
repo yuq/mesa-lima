@@ -53,6 +53,9 @@ _mesa_compute_max_transform_feedback_vertices( struct gl_context *ctx,
 
 /*** GL_EXT_transform_feedback ***/
 
+void GLAPIENTRY
+_mesa_BeginTransformFeedback_no_error(GLenum mode);
+
 extern void GLAPIENTRY
 _mesa_BeginTransformFeedback(GLenum mode);
 

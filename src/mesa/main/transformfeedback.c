@@ -480,6 +480,14 @@ begin_transform_feedback(struct gl_context *ctx, GLenum mode, bool no_error)
 
 
 void GLAPIENTRY
+_mesa_BeginTransformFeedback_no_error(GLenum mode)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   begin_transform_feedback(ctx, mode, true);
+}
+
+
+void GLAPIENTRY
 _mesa_BeginTransformFeedback(GLenum mode)
 {
    GET_CURRENT_CONTEXT(ctx);

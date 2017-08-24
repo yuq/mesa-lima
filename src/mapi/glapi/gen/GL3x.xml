@@ -206,7 +206,7 @@
     <param name="name" type="const GLchar *"/>
   </function>
 
-  <function name="BeginTransformFeedback" es2="3.0">
+  <function name="BeginTransformFeedback" es2="3.0" no_error="true">
     <param name="mode" type="GLenum"/>
   </function>
 
