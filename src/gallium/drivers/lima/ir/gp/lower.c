@@ -90,8 +90,53 @@ static void gpir_lower_copy(gpir_compiler *comp)
    }
 }
 
+static void gpir_lower_store(gpir_compiler *comp)
+{
+   list_for_each_entry(gpir_block, block, &comp->block_list, list) {
+      list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
+         if (node->type == gpir_node_type_store) {
+            gpir_store_node *s = gpir_node_to_store(node);
+            gpir_node *child = s->child;
+
+            /* store node can only accept alu child, so insert a move node
+             * between load node and store node
+             */
+            if (child->type == gpir_node_type_load) {
+               gpir_node *move = gpir_node_create(comp, gpir_op_mov, -1);
+
+               fprintf(stderr, "gpir: lower store create move %d for %s %d and %s %d\n",
+                       move->index, gpir_op_infos[node->op].name, node->index,
+                       gpir_op_infos[child->op].name, child->index);
+
+               gpir_alu_node *m = gpir_node_to_alu(move);
+               m->children[0] = child;
+               m->num_child = 1;
+               gpir_node_add_child(move, child);
+
+               s->child = move;
+
+               gpir_node_foreach_succ(child, entry) {
+                  gpir_dep_info *dep = gpir_dep_from_entry(entry);
+                  gpir_node *succ = gpir_node_from_entry(entry, succ);
+
+                  if (succ == node) {
+                     dep->pred = move;
+                     _mesa_set_add_pre_hashed(move->succs, entry->hash, dep);
+                     _mesa_set_remove(child->succs, entry);
+                     break;
+                  }
+               }
+
+               list_addtail(&move->list, &block->node_list);
+            }
+         }
+      }
+   }
+}
+
 void gpir_lower_prog(gpir_compiler *comp)
 {
    gpir_lower_const(comp);
    gpir_lower_copy(comp);
+   gpir_lower_store(comp);
 }
