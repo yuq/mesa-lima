@@ -289,19 +289,6 @@ type_sz(unsigned type)
    }
 }
 
-static inline bool
-brw_reg_type_is_floating_point(enum brw_reg_type type)
-{
-   switch (type) {
-   case BRW_REGISTER_TYPE_F:
-   case BRW_REGISTER_TYPE_HF:
-   case BRW_REGISTER_TYPE_DF:
-      return true;
-   default:
-      return false;
-   }
-}
-
 static inline enum brw_reg_type
 get_exec_type(const enum brw_reg_type type)
 {

@@ -24,6 +24,8 @@
 #ifndef BRW_REG_TYPE_H
 #define BRW_REG_TYPE_H
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -64,6 +66,19 @@ enum PACKED brw_reg_type {
 
    BRW_REGISTER_TYPE_LAST = BRW_REGISTER_TYPE_UV
 };
+
+static inline bool
+brw_reg_type_is_floating_point(enum brw_reg_type type)
+{
+   switch (type) {
+   case BRW_REGISTER_TYPE_DF:
+   case BRW_REGISTER_TYPE_F:
+   case BRW_REGISTER_TYPE_HF:
+      return true;
+   default:
+      return false;
+   }
+}
 
 unsigned
 brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
