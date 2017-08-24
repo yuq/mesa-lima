@@ -779,12 +779,33 @@ _mesa_TransformFeedbackBufferRange(GLuint xfb, GLuint index, GLuint buffer,
  * offset in the buffer to start placing results.
  * This function is part of GL_EXT_transform_feedback, but not GL3.
  */
+static ALWAYS_INLINE void
+bind_buffer_offset(struct gl_context *ctx,
+                   struct gl_transform_feedback_object *obj, GLuint index,
+                   GLuint buffer, GLintptr offset, bool no_error)
+{
+   struct gl_buffer_object *bufObj;
+
+   if (buffer == 0) {
+      bufObj = ctx->Shared->NullBufferObj;
+   } else {
+      bufObj = _mesa_lookup_bufferobj(ctx, buffer);
+      if (!no_error && !bufObj) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glBindBufferOffsetEXT(invalid buffer=%u)", buffer);
+         return;
+      }
+   }
+
+   _mesa_bind_buffer_range_xfb(ctx, obj, index, bufObj, offset, 0);
+}
+
+
 void GLAPIENTRY
 _mesa_BindBufferOffsetEXT(GLenum target, GLuint index, GLuint buffer,
                           GLintptr offset)
 {
    struct gl_transform_feedback_object *obj;
-   struct gl_buffer_object *bufObj;
    GET_CURRENT_CONTEXT(ctx);
 
    if (target != GL_TRANSFORM_FEEDBACK_BUFFER) {
@@ -813,18 +834,7 @@ _mesa_BindBufferOffsetEXT(GLenum target, GLuint index, GLuint buffer,
       return;
    }
 
-   if (buffer == 0) {
-      bufObj = ctx->Shared->NullBufferObj;
-   } else {
-      bufObj = _mesa_lookup_bufferobj(ctx, buffer);
-      if (!bufObj) {
-         _mesa_error(ctx, GL_INVALID_OPERATION,
-                     "glBindBufferOffsetEXT(invalid buffer=%u)", buffer);
-         return;
-      }
-   }
-
-   _mesa_bind_buffer_range_xfb(ctx, obj, index, bufObj, offset, 0);
+   bind_buffer_offset(ctx, obj, index, buffer, offset, false);
 }
 
 
