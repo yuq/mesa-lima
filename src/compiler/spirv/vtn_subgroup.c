@@ -180,7 +180,52 @@ vtn_handle_subgroup(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpGroupNonUniformAll:
    case SpvOpGroupNonUniformAny:
-   case SpvOpGroupNonUniformAllEqual:
+   case SpvOpGroupNonUniformAllEqual: {
+      vtn_fail_if(val->type->type != glsl_bool_type(),
+                  "OpGroupNonUniform(All|Any|AllEqual) must return a bool");
+      nir_intrinsic_op op;
+      switch (opcode) {
+      case SpvOpGroupNonUniformAll:
+         op = nir_intrinsic_vote_all;
+         break;
+      case SpvOpGroupNonUniformAny:
+         op = nir_intrinsic_vote_any;
+         break;
+      case SpvOpGroupNonUniformAllEqual: {
+         switch (glsl_get_base_type(val->type->type)) {
+         case GLSL_TYPE_FLOAT:
+         case GLSL_TYPE_DOUBLE:
+            op = nir_intrinsic_vote_feq;
+            break;
+         case GLSL_TYPE_UINT:
+         case GLSL_TYPE_INT:
+         case GLSL_TYPE_UINT64:
+         case GLSL_TYPE_INT64:
+         case GLSL_TYPE_BOOL:
+            op = nir_intrinsic_vote_ieq;
+            break;
+         default:
+            unreachable("Unhandled type");
+         }
+         break;
+      }
+      default:
+         unreachable("Unhandled opcode");
+      }
+
+      nir_ssa_def *src0 = vtn_ssa_value(b, w[4])->def;
+
+      nir_intrinsic_instr *intrin =
+         nir_intrinsic_instr_create(b->nb.shader, op);
+      intrin->num_components = src0->num_components;
+      intrin->src[0] = nir_src_for_ssa(src0);
+      nir_ssa_dest_init(&intrin->instr, &intrin->dest, 1, 32, NULL);
+      nir_builder_instr_insert(&b->nb, &intrin->instr);
+
+      val->ssa->def = &intrin->dest.ssa;
+      break;
+   }
+
    case SpvOpGroupNonUniformShuffle:
    case SpvOpGroupNonUniformShuffleXor:
    case SpvOpGroupNonUniformShuffleUp:

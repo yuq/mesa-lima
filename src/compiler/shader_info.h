@@ -47,6 +47,7 @@ struct spirv_supported_capabilities {
    bool shader_viewport_index_layer;
    bool subgroup_ballot;
    bool subgroup_basic;
+   bool subgroup_vote;
 };
 
 typedef struct shader_info {
