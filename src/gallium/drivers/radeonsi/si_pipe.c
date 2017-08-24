@@ -734,7 +734,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen,
 			return PIPE_SHADER_IR_NIR;
 		return PIPE_SHADER_IR_TGSI;
 	case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
-		return 3;
+		return 4;
 
 	/* Supported boolean features. */
 	case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:
