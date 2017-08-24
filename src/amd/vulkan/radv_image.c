@@ -185,7 +185,7 @@ radv_make_buffer_descriptor(struct radv_device *device,
 	state[1] = S_008F04_BASE_ADDRESS_HI(va >> 32) |
 		S_008F04_STRIDE(stride);
 
-	if (device->physical_device->rad_info.chip_class < VI && stride) {
+	if (device->physical_device->rad_info.chip_class != VI && stride) {
 		range /= stride;
 	}
 
