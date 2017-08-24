@@ -69,7 +69,7 @@ boolean fd_fence_finish(struct pipe_screen *pscreen,
 		return ret == 0;
 	}
 
-	if (fd_pipe_wait_timeout(fence->screen->pipe, fence->timestamp, timeout))
+	if (fd_pipe_wait_timeout(fence->ctx->pipe, fence->timestamp, timeout))
 		return false;
 
 	return true;

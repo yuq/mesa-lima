@@ -194,7 +194,7 @@ fd5_clear_lrz(struct fd_batch *batch, struct fd_resource *zsbuf, double depth)
 	// draw
 
 	if (!batch->lrz_clear) {
-		batch->lrz_clear = fd_ringbuffer_new(batch->ctx->screen->pipe, 0x1000);
+		batch->lrz_clear = fd_ringbuffer_new(batch->ctx->pipe, 0x1000);
 		fd_ringbuffer_set_parent(batch->lrz_clear, batch->gmem);
 	}
 

@@ -512,7 +512,7 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		 */
 		bool needs_flush = pending(rsc, !!(usage & PIPE_TRANSFER_WRITE));
 		bool busy = needs_flush || (0 != fd_bo_cpu_prep(rsc->bo,
-				ctx->screen->pipe, op | DRM_FREEDRENO_PREP_NOSYNC));
+				ctx->pipe, op | DRM_FREEDRENO_PREP_NOSYNC));
 
 		/* if we need to flush/stall, see if we can make a shadow buffer
 		 * to avoid this:
@@ -553,7 +553,7 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		 * completed.
 		 */
 		if (busy) {
-			ret = fd_bo_cpu_prep(rsc->bo, ctx->screen->pipe, op);
+			ret = fd_bo_cpu_prep(rsc->bo, ctx->pipe, op);
 			if (ret)
 				goto fail;
 		}

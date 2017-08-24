@@ -72,6 +72,11 @@ struct fd_screen {
 	void *compiler;          /* currently unused for a2xx */
 
 	struct fd_device *dev;
+
+	/* NOTE: we still need a pipe associated with the screen in a few
+	 * places, like screen->get_timestamp().  For anything context
+	 * related, use ctx->pipe instead.
+	 */
 	struct fd_pipe *pipe;
 
 	int64_t cpu_gpu_time_delta;

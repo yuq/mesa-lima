@@ -53,9 +53,9 @@ batch_init(struct fd_batch *batch)
 		size = 0x100000;
 	}
 
-	batch->draw    = fd_ringbuffer_new(ctx->screen->pipe, size);
-	batch->binning = fd_ringbuffer_new(ctx->screen->pipe, size);
-	batch->gmem    = fd_ringbuffer_new(ctx->screen->pipe, size);
+	batch->draw    = fd_ringbuffer_new(ctx->pipe, size);
+	batch->binning = fd_ringbuffer_new(ctx->pipe, size);
+	batch->gmem    = fd_ringbuffer_new(ctx->pipe, size);
 
 	fd_ringbuffer_set_parent(batch->gmem, NULL);
 	fd_ringbuffer_set_parent(batch->draw, batch->gmem);

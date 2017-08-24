@@ -156,6 +156,7 @@ struct fd_context {
 
 	struct fd_device *dev;
 	struct fd_screen *screen;
+	struct fd_pipe *pipe;
 
 	struct util_queue flush_queue;
 

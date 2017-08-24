@@ -144,6 +144,7 @@ fd_context_destroy(struct pipe_context *pctx)
 	}
 
 	fd_device_del(ctx->dev);
+	fd_pipe_del(ctx->pipe);
 
 	if (fd_mesa_debug & (FD_DBG_BSTAT | FD_DBG_MSGS)) {
 		printf("batch_total=%u, batch_sysmem=%u, batch_gmem=%u, batch_restore=%u\n",
@@ -251,6 +252,7 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 	int i;
 
 	ctx->screen = screen;
+	ctx->pipe = fd_pipe_new(screen->dev, FD_PIPE_3D);
 
 	ctx->primtypes = primtypes;
 	ctx->primtype_mask = 0;
