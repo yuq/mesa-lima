@@ -109,6 +109,12 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 	unsigned op = EVENT_TYPE(event) |
 		      EVENT_INDEX(5) |
 		      event_flags;
+	unsigned sel = EOP_DATA_SEL(data_sel);
+
+	/* Wait for write confirmation before writing data, but don't send
+	 * an interrupt. */
+	if (ctx->chip_class >= SI && data_sel != EOP_DATA_SEL_DISCARD)
+		sel |= EOP_INT_SEL(EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM);
 
 	if (ctx->chip_class >= GFX9) {
 		/* A ZPASS_DONE or PIXEL_STAT_DUMP_EVENT (of the DB occlusion
@@ -136,7 +142,7 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 
 		radeon_emit(cs, PKT3(PKT3_RELEASE_MEM, 6, 0));
 		radeon_emit(cs, op);
-		radeon_emit(cs, EOP_DATA_SEL(data_sel));
+		radeon_emit(cs, sel);
 		radeon_emit(cs, va);		/* address lo */
 		radeon_emit(cs, va >> 32);	/* address hi */
 		radeon_emit(cs, new_fence);	/* immediate data lo */
@@ -155,7 +161,7 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
 			radeon_emit(cs, op);
 			radeon_emit(cs, va);
-			radeon_emit(cs, ((va >> 32) & 0xffff) | EOP_DATA_SEL(data_sel));
+			radeon_emit(cs, ((va >> 32) & 0xffff) | sel);
 			radeon_emit(cs, 0); /* immediate data */
 			radeon_emit(cs, 0); /* unused */
 
@@ -166,7 +172,7 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
 		radeon_emit(cs, op);
 		radeon_emit(cs, va);
-		radeon_emit(cs, ((va >> 32) & 0xffff) | EOP_DATA_SEL(data_sel));
+		radeon_emit(cs, ((va >> 32) & 0xffff) | sel);
 		radeon_emit(cs, new_fence); /* immediate data */
 		radeon_emit(cs, 0); /* unused */
 	}
