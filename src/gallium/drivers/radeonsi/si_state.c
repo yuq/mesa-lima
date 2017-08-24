@@ -4639,26 +4639,39 @@ static void si_init_config(struct si_context *sctx)
 		}
 		si_pm4_set_reg(pm4, R_00B21C_SPI_SHADER_PGM_RSRC3_GS, S_00B21C_CU_EN(0xffff));
 
-		if (sscreen->b.info.num_good_compute_units /
-		    (sscreen->b.info.max_se * sscreen->b.info.max_sh_per_se) <= 4) {
+		/* Compute LATE_ALLOC_VS.LIMIT. */
+		unsigned num_cu_per_sh = sscreen->b.info.num_good_compute_units /
+					 (sscreen->b.info.max_se *
+					  sscreen->b.info.max_sh_per_se);
+		unsigned late_alloc_limit; /* The limit is per SH. */
+
+		if (sctx->b.family == CHIP_KABINI) {
+			late_alloc_limit = 0; /* Potential hang on Kabini. */
+		} else if (num_cu_per_sh <= 4) {
 			/* Too few available compute units per SH. Disallowing
-			 * VS to run on CU0 could hurt us more than late VS
+			 * VS to run on one CU could hurt us more than late VS
 			 * allocation would help.
 			 *
-			 * LATE_ALLOC_VS = 2 is the highest safe number.
+			 * 2 is the highest safe number that allows us to keep
+			 * all CUs enabled.
 			 */
-			si_pm4_set_reg(pm4, R_00B118_SPI_SHADER_PGM_RSRC3_VS, S_00B118_CU_EN(0xffff));
-			si_pm4_set_reg(pm4, R_00B11C_SPI_SHADER_LATE_ALLOC_VS, S_00B11C_LIMIT(2));
+			late_alloc_limit = 2;
 		} else {
-			/* Set LATE_ALLOC_VS == 31. It should be less than
-			 * the number of scratch waves. Limitations:
-			 * - VS can't execute on CU0.
-			 * - If HS writes outputs to LDS, LS can't execute on CU0.
+			/* This is a good initial value, allowing 1 late_alloc
+			 * wave per SIMD on num_cu - 2.
 			 */
-			si_pm4_set_reg(pm4, R_00B118_SPI_SHADER_PGM_RSRC3_VS, S_00B118_CU_EN(0xfffe));
-			si_pm4_set_reg(pm4, R_00B11C_SPI_SHADER_LATE_ALLOC_VS, S_00B11C_LIMIT(31));
+			late_alloc_limit = (num_cu_per_sh - 2) * 4;
+
+			/* The limit is 0-based, so 0 means 1. */
+			assert(late_alloc_limit > 0 && late_alloc_limit <= 64);
+			late_alloc_limit -= 1;
 		}
 
+		/* VS can't execute on one CU if the limit is > 2. */
+		si_pm4_set_reg(pm4, R_00B118_SPI_SHADER_PGM_RSRC3_VS,
+			       S_00B118_CU_EN(late_alloc_limit > 2 ? 0xfffe : 0xffff));
+		si_pm4_set_reg(pm4, R_00B11C_SPI_SHADER_LATE_ALLOC_VS,
+			       S_00B11C_LIMIT(late_alloc_limit));
 		si_pm4_set_reg(pm4, R_00B01C_SPI_SHADER_PGM_RSRC3_PS, S_00B01C_CU_EN(0xffff));
 	}
 
