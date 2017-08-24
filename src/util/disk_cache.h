@@ -39,6 +39,8 @@ extern "C" {
 /* Size of cache keys in bytes. */
 #define CACHE_KEY_SIZE 20
 
+#define CACHE_DIR_NAME "mesa_shader_cache"
+
 typedef uint8_t cache_key[CACHE_KEY_SIZE];
 
 struct disk_cache;

@@ -185,7 +185,8 @@ test_disk_cache_create(void)
    cache = disk_cache_create("test", "make_check", 0);
    expect_non_null(cache, "disk_cache_create with XDG_CACHE_HOME set");
 
-   check_directories_created(CACHE_TEST_TMP "/xdg-cache-home/mesa");
+   check_directories_created(CACHE_TEST_TMP "/xdg-cache-home/"
+                             CACHE_DIR_NAME);
 
    disk_cache_destroy(cache);
 
@@ -202,7 +203,8 @@ test_disk_cache_create(void)
    cache = disk_cache_create("test", "make_check", 0);
    expect_non_null(cache, "disk_cache_create with MESA_GLSL_CACHE_DIR set");
 
-   check_directories_created(CACHE_TEST_TMP "/mesa-glsl-cache-dir/mesa");
+   check_directories_created(CACHE_TEST_TMP "/mesa-glsl-cache-dir/"
+                             CACHE_DIR_NAME);
 
    disk_cache_destroy(cache);
 }
