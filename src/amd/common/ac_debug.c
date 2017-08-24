@@ -39,6 +39,7 @@
 #include "sid_tables.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
+#include "util/u_string.h"
 
 /* Parsed IBs are difficult to read without colors. Use "less -R file" to
  * read them, or use "aha -b -f file" to convert them to html.
@@ -498,7 +499,7 @@ static void format_ib_output(FILE *f, char *out)
 		if (indent)
 			print_spaces(f, indent);
 
-		char *end = strchrnul(out, '\n');
+		char *end = util_strchrnul(out, '\n');
 		fwrite(out, end - out, 1, f);
 		fputc('\n', f); /* always end with a new line */
 		if (!*end)
