@@ -1251,6 +1251,10 @@ void st_init_extensions(struct pipe_screen *screen,
       }
    }
 
+   if (extensions->EXT_texture_filter_anisotropic &&
+       screen->get_paramf(screen, PIPE_CAPF_MAX_TEXTURE_ANISOTROPY) >= 16.0)
+      extensions->ARB_texture_filter_anisotropic = GL_TRUE;
+
    extensions->KHR_robustness = extensions->ARB_robust_buffer_access_behavior;
 
    /* If we support ES 3.1, we support the ES3_1_compatibility ext. However

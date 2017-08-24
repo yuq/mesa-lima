@@ -395,7 +395,7 @@ compute_version(const struct gl_extensions *extensions,
                          extensions->ARB_shader_atomic_counter_ops &&
                          extensions->ARB_shader_draw_parameters &&
                          extensions->ARB_shader_group_vote &&
-                         /* extensions->ARB_texture_filter_anisotropic */ 0 &&
+                         extensions->ARB_texture_filter_anisotropic &&
                          extensions->ARB_transform_feedback_overflow_query);
 
    if (ver_4_6) {

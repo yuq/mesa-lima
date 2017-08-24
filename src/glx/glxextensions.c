@@ -190,6 +190,7 @@ static const struct extension_info known_gl_extensions[] = {
    { GL(ARB_texture_env_combine),        VER(1,3), Y, N, N, N },
    { GL(ARB_texture_env_crossbar),       VER(1,4), Y, N, N, N },
    { GL(ARB_texture_env_dot3),           VER(1,3), Y, N, N, N },
+   { GL(ARB_texture_filter_anisotropic), VER(0,0), Y, N, N, N },
    { GL(ARB_texture_mirrored_repeat),    VER(1,4), Y, N, N, N },
    { GL(ARB_texture_non_power_of_two),   VER(1,5), Y, N, N, N },
    { GL(ARB_texture_rectangle),          VER(0,0), Y, N, N, N },
