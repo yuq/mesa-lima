@@ -495,6 +495,22 @@ _mesa_BeginTransformFeedback(GLenum mode)
 }
 
 
+static void
+end_transform_feedback(struct gl_context *ctx,
+                       struct gl_transform_feedback_object *obj)
+{
+   FLUSH_VERTICES(ctx, 0);
+   ctx->NewDriverState |= ctx->DriverFlags.NewTransformFeedback;
+
+   assert(ctx->Driver.EndTransformFeedback);
+   ctx->Driver.EndTransformFeedback(ctx, obj);
+
+   ctx->TransformFeedback.CurrentObject->Active = GL_FALSE;
+   ctx->TransformFeedback.CurrentObject->Paused = GL_FALSE;
+   ctx->TransformFeedback.CurrentObject->EndedAnytime = GL_TRUE;
+}
+
+
 void GLAPIENTRY
 _mesa_EndTransformFeedback(void)
 {
@@ -509,15 +525,7 @@ _mesa_EndTransformFeedback(void)
       return;
    }
 
-   FLUSH_VERTICES(ctx, 0);
-   ctx->NewDriverState |= ctx->DriverFlags.NewTransformFeedback;
-
-   assert(ctx->Driver.EndTransformFeedback);
-   ctx->Driver.EndTransformFeedback(ctx, obj);
-
-   ctx->TransformFeedback.CurrentObject->Active = GL_FALSE;
-   ctx->TransformFeedback.CurrentObject->Paused = GL_FALSE;
-   ctx->TransformFeedback.CurrentObject->EndedAnytime = GL_TRUE;
+   end_transform_feedback(ctx, obj);
 }
 
 
