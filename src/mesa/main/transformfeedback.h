@@ -82,6 +82,11 @@ extern void GLAPIENTRY
 _mesa_BindBufferOffsetEXT(GLenum target, GLuint index, GLuint buffer,
                           GLintptr offset);
 
+void GLAPIENTRY
+_mesa_TransformFeedbackVaryings_no_error(GLuint program, GLsizei count,
+                                         const GLchar *const *varyings,
+                                         GLenum bufferMode);
+
 extern void GLAPIENTRY
 _mesa_TransformFeedbackVaryings(GLuint program, GLsizei count,
                                 const GLchar * const *varyings,

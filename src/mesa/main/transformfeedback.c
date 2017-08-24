@@ -869,6 +869,17 @@ transform_feedback_varyings(struct gl_context *ctx,
 
 
 void GLAPIENTRY
+_mesa_TransformFeedbackVaryings_no_error(GLuint program, GLsizei count,
+                                         const GLchar *const *varyings,
+                                         GLenum bufferMode)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   struct gl_shader_program *shProg = _mesa_lookup_shader_program(ctx, program);
+   transform_feedback_varyings(ctx, shProg, count, varyings, bufferMode);
+}
+
+void GLAPIENTRY
 _mesa_TransformFeedbackVaryings(GLuint program, GLsizei count,
                                 const GLchar * const *varyings,
                                 GLenum bufferMode)

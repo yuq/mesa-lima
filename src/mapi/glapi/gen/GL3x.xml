@@ -227,7 +227,7 @@
     <param name="buffer" type="GLuint"/>
   </function>
 
-  <function name="TransformFeedbackVaryings" es2="3.0">
+  <function name="TransformFeedbackVaryings" es2="3.0" no_error="true">
     <param name="program" type="GLuint"/>
     <param name="count" type="GLsizei"/>
     <param name="varyings" type="const GLchar * const *"/>
