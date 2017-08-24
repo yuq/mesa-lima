@@ -1080,6 +1080,14 @@ bind_transform_feedback(struct gl_context *ctx, GLuint name, bool no_error)
 
 
 void GLAPIENTRY
+_mesa_BindTransformFeedback_no_error(GLenum target, GLuint name)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   bind_transform_feedback(ctx, name, true);
+}
+
+
+void GLAPIENTRY
 _mesa_BindTransformFeedback(GLenum target, GLuint name)
 {
    GET_CURRENT_CONTEXT(ctx);

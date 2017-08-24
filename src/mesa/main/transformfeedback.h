@@ -105,6 +105,9 @@ _mesa_CreateTransformFeedbacks(GLsizei n, GLuint *names);
 extern GLboolean GLAPIENTRY
 _mesa_IsTransformFeedback(GLuint name);
 
+void GLAPIENTRY
+_mesa_BindTransformFeedback_no_error(GLenum target, GLuint name);
+
 extern void GLAPIENTRY
 _mesa_BindTransformFeedback(GLenum target, GLuint name);
 
