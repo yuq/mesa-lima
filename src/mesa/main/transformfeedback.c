@@ -201,7 +201,7 @@ _mesa_init_transform_feedback_object(struct gl_transform_feedback_object *obj,
 
 /** Default fallback for ctx->Driver.NewTransformFeedback() */
 static struct gl_transform_feedback_object *
-new_transform_feedback(struct gl_context *ctx, GLuint name)
+new_transform_feedback_fallback(struct gl_context *ctx, GLuint name)
 {
    struct gl_transform_feedback_object *obj;
 
@@ -215,8 +215,8 @@ new_transform_feedback(struct gl_context *ctx, GLuint name)
 
 /** Default fallback for ctx->Driver.DeleteTransformFeedback() */
 static void
-delete_transform_feedback(struct gl_context *ctx,
-                          struct gl_transform_feedback_object *obj)
+delete_transform_feedback_fallback(struct gl_context *ctx,
+                                   struct gl_transform_feedback_object *obj)
 {
    GLuint i;
 
@@ -231,32 +231,32 @@ delete_transform_feedback(struct gl_context *ctx,
 
 /** Default fallback for ctx->Driver.BeginTransformFeedback() */
 static void
-begin_transform_feedback(struct gl_context *ctx, GLenum mode,
-                         struct gl_transform_feedback_object *obj)
+begin_transform_feedback_fallback(struct gl_context *ctx, GLenum mode,
+                                  struct gl_transform_feedback_object *obj)
 {
    /* nop */
 }
 
 /** Default fallback for ctx->Driver.EndTransformFeedback() */
 static void
-end_transform_feedback(struct gl_context *ctx,
-                       struct gl_transform_feedback_object *obj)
+end_transform_feedback_fallback(struct gl_context *ctx,
+                                struct gl_transform_feedback_object *obj)
 {
    /* nop */
 }
 
 /** Default fallback for ctx->Driver.PauseTransformFeedback() */
 static void
-pause_transform_feedback(struct gl_context *ctx,
-                         struct gl_transform_feedback_object *obj)
+pause_transform_feedback_fallback(struct gl_context *ctx,
+                                  struct gl_transform_feedback_object *obj)
 {
    /* nop */
 }
 
 /** Default fallback for ctx->Driver.ResumeTransformFeedback() */
 static void
-resume_transform_feedback(struct gl_context *ctx,
-                          struct gl_transform_feedback_object *obj)
+resume_transform_feedback_fallback(struct gl_context *ctx,
+                                   struct gl_transform_feedback_object *obj)
 {
    /* nop */
 }
@@ -269,12 +269,12 @@ resume_transform_feedback(struct gl_context *ctx,
 void
 _mesa_init_transform_feedback_functions(struct dd_function_table *driver)
 {
-   driver->NewTransformFeedback = new_transform_feedback;
-   driver->DeleteTransformFeedback = delete_transform_feedback;
-   driver->BeginTransformFeedback = begin_transform_feedback;
-   driver->EndTransformFeedback = end_transform_feedback;
-   driver->PauseTransformFeedback = pause_transform_feedback;
-   driver->ResumeTransformFeedback = resume_transform_feedback;
+   driver->NewTransformFeedback = new_transform_feedback_fallback;
+   driver->DeleteTransformFeedback = delete_transform_feedback_fallback;
+   driver->BeginTransformFeedback = begin_transform_feedback_fallback;
+   driver->EndTransformFeedback = end_transform_feedback_fallback;
+   driver->PauseTransformFeedback = pause_transform_feedback_fallback;
+   driver->ResumeTransformFeedback = resume_transform_feedback_fallback;
 }
 
 
