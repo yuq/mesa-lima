@@ -193,9 +193,6 @@ void
 _mesa_init_transform_feedback_object(struct gl_transform_feedback_object *obj,
                                      GLuint name)
 {
-   if (!obj)
-      return;
-
    obj->Name = name;
    obj->RefCount = 1;
    obj->EverBound = GL_FALSE;
