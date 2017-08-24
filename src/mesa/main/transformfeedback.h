@@ -59,6 +59,9 @@ _mesa_BeginTransformFeedback_no_error(GLenum mode);
 extern void GLAPIENTRY
 _mesa_BeginTransformFeedback(GLenum mode);
 
+void GLAPIENTRY
+_mesa_EndTransformFeedback_no_error(void);
+
 extern void GLAPIENTRY
 _mesa_EndTransformFeedback(void);
 

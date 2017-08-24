@@ -210,7 +210,7 @@
     <param name="mode" type="GLenum"/>
   </function>
 
-  <function name="EndTransformFeedback" es2="3.0">
+  <function name="EndTransformFeedback" es2="3.0" no_error="true">
   </function>
 
   <function name="BindBufferRange" es2="3.0" no_error="true">
