@@ -1237,6 +1237,20 @@ _mesa_PauseTransformFeedback(void)
  * Resume transform feedback.
  * Part of GL_ARB_transform_feedback2.
  */
+static void
+resume_transform_feedback(struct gl_context *ctx,
+                          struct gl_transform_feedback_object *obj)
+{
+   FLUSH_VERTICES(ctx, 0);
+   ctx->NewDriverState |= ctx->DriverFlags.NewTransformFeedback;
+
+   obj->Paused = GL_FALSE;
+
+   assert(ctx->Driver.ResumeTransformFeedback);
+   ctx->Driver.ResumeTransformFeedback(ctx, obj);
+}
+
+
 void GLAPIENTRY
 _mesa_ResumeTransformFeedback(void)
 {
@@ -1262,13 +1276,7 @@ _mesa_ResumeTransformFeedback(void)
       return;
    }
 
-   FLUSH_VERTICES(ctx, 0);
-   ctx->NewDriverState |= ctx->DriverFlags.NewTransformFeedback;
-
-   obj->Paused = GL_FALSE;
-
-   assert(ctx->Driver.ResumeTransformFeedback);
-   ctx->Driver.ResumeTransformFeedback(ctx, obj);
+   resume_transform_feedback(ctx, obj);
 }
 
 extern void GLAPIENTRY
