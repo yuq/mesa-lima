@@ -27,6 +27,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <android/native_window.h>
 #include <errno.h>
 #include <dlfcn.h>
 #include <fcntl.h>
