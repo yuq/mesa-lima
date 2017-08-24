@@ -94,7 +94,7 @@ fd4_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 	fd4_prog_init(pctx);
 	fd4_emit_init(pctx);
 
-	pctx = fd_context_init(&fd4_ctx->base, pscreen, primtypes, priv);
+	pctx = fd_context_init(&fd4_ctx->base, pscreen, primtypes, priv, flags);
 	if (!pctx)
 		return NULL;
 
