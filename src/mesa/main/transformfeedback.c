@@ -121,21 +121,6 @@ reference_transform_feedback_object(struct gl_transform_feedback_object **ptr,
 
 
 /**
- * Check that all the buffer objects currently bound for transform
- * feedback actually exist.  Raise a GL_INVALID_OPERATION error if
- * any buffers are missing.
- * \return GL_TRUE for success, GL_FALSE if error
- */
-GLboolean
-_mesa_validate_transform_feedback_buffers(struct gl_context *ctx)
-{
-   /* XXX to do */
-   return GL_TRUE;
-}
-
-
-
-/**
  * Per-context init for transform feedback.
  */
 void

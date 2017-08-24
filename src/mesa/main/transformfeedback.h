@@ -42,10 +42,6 @@ _mesa_init_transform_feedback(struct gl_context *ctx);
 extern void
 _mesa_free_transform_feedback(struct gl_context *ctx);
 
-extern GLboolean
-_mesa_validate_transform_feedback_buffers(struct gl_context *ctx);
-
-
 extern void
 _mesa_init_transform_feedback_functions(struct dd_function_table *driver);
 
