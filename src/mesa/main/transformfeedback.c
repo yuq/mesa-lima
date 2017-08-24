@@ -381,22 +381,22 @@ get_xfb_source(struct gl_context *ctx)
 }
 
 
-void GLAPIENTRY
-_mesa_BeginTransformFeedback(GLenum mode)
+static ALWAYS_INLINE void
+begin_transform_feedback(struct gl_context *ctx, GLenum mode, bool no_error)
 {
    struct gl_transform_feedback_object *obj;
    struct gl_transform_feedback_info *info = NULL;
+   struct gl_program *source;
    GLuint i;
    unsigned vertices_per_prim;
-   GET_CURRENT_CONTEXT(ctx);
 
    obj = ctx->TransformFeedback.CurrentObject;
 
    /* Figure out what pipeline stage is the source of data for transform
     * feedback.
     */
-   struct gl_program *source = get_xfb_source(ctx);
-   if (source == NULL) {
+   source = get_xfb_source(ctx);
+   if (!no_error && source == NULL) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glBeginTransformFeedback(no program active)");
       return;
@@ -404,7 +404,7 @@ _mesa_BeginTransformFeedback(GLenum mode)
 
    info = source->sh.LinkedTransformFeedback;
 
-   if (info->NumOutputs == 0) {
+   if (!no_error && info->NumOutputs == 0) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glBeginTransformFeedback(no varyings to record)");
       return;
@@ -421,23 +421,30 @@ _mesa_BeginTransformFeedback(GLenum mode)
       vertices_per_prim = 3;
       break;
    default:
-      _mesa_error(ctx, GL_INVALID_ENUM, "glBeginTransformFeedback(mode)");
-      return;
+      if (!no_error) {
+         _mesa_error(ctx, GL_INVALID_ENUM, "glBeginTransformFeedback(mode)");
+         return;
+      } else {
+         /* Stop compiler warnings */
+         unreachable("Error in API use when using KHR_no_error");
+      }
    }
 
-   if (obj->Active) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "glBeginTransformFeedback(already active)");
-      return;
-   }
+   if (!no_error) {
+      if (obj->Active) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "glBeginTransformFeedback(already active)");
+         return;
+      }
 
-   for (i = 0; i < ctx->Const.MaxTransformFeedbackBuffers; i++) {
-      if ((info->ActiveBuffers >> i) & 1) {
-         if (obj->BufferNames[i] == 0) {
-            _mesa_error(ctx, GL_INVALID_OPERATION,
-                        "glBeginTransformFeedback(binding point %d does not "
-                        "have a buffer object bound)", i);
-            return;
+      for (i = 0; i < ctx->Const.MaxTransformFeedbackBuffers; i++) {
+         if ((info->ActiveBuffers >> i) & 1) {
+            if (obj->BufferNames[i] == 0) {
+               _mesa_error(ctx, GL_INVALID_OPERATION,
+                           "glBeginTransformFeedback(binding point %d does not "
+                           "have a buffer object bound)", i);
+               return;
+            }
          }
       }
    }
@@ -469,6 +476,14 @@ _mesa_BeginTransformFeedback(GLenum mode)
 
    assert(ctx->Driver.BeginTransformFeedback);
    ctx->Driver.BeginTransformFeedback(ctx, mode, obj);
+}
+
+
+void GLAPIENTRY
+_mesa_BeginTransformFeedback(GLenum mode)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   begin_transform_feedback(ctx, mode, false);
 }
 
 
