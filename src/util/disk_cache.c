@@ -1085,8 +1085,10 @@ disk_cache_get(struct disk_cache *cache, const cache_key key, size_t *size)
       goto fail;
 
    /* Check for extremely unlikely hash collisions */
-   if (memcmp(cache->driver_keys_blob, file_header, ck_size) != 0)
+   if (memcmp(cache->driver_keys_blob, file_header, ck_size) != 0) {
+      assert(!"Mesa cache keys mismatch!");
       goto fail;
+   }
 
    size_t cache_item_md_size = sizeof(uint32_t);
    uint32_t md_type;
