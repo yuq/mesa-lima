@@ -1337,8 +1337,10 @@ tc_improve_map_buffer_flags(struct threaded_context *tc,
       usage &= ~PIPE_TRANSFER_DISCARD_RANGE;
 
    /* Unsychronized buffer mappings don't have to synchronize the thread. */
-   if (usage & PIPE_TRANSFER_UNSYNCHRONIZED)
+   if (usage & PIPE_TRANSFER_UNSYNCHRONIZED) {
+      usage &= ~PIPE_TRANSFER_DISCARD_RANGE;
       usage |= TC_TRANSFER_MAP_THREADED_UNSYNC; /* notify the driver */
+   }
 
    /* Never invalidate inside the driver and never infer "unsynchronized". */
    return usage |
