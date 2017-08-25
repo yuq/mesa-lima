@@ -43,53 +43,6 @@ static void gpir_lower_const(gpir_compiler *comp)
    }
 }
 
-static void gpir_lower_copy(gpir_compiler *comp)
-{
-   list_for_each_entry(gpir_block, block, &comp->block_list, list) {
-      list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
-         if (node->op == gpir_op_copy) {
-            gpir_alu_node *copy = gpir_node_to_alu(node);
-            assert(copy->num_child == 1);
-
-            /* add copy node succ to copy node pred's succ */
-            gpir_node_foreach_pred(node, entry) {
-               gpir_node *pred = gpir_node_from_entry(entry, pred);
-               gpir_node_merge_succ(pred, node);
-               gpir_node_remove_entry(entry);
-            }
-
-            /* update copy node succ to use copy node pred */
-            gpir_node_foreach_succ(node, entry) {
-               gpir_node *succ = gpir_node_from_entry(entry, succ);
-
-               if (succ->type == gpir_node_type_alu) {
-                  gpir_alu_node *alu = gpir_node_to_alu(succ);
-                  assert(alu->num_child == 1);
-
-                  for (int i = 0; i < alu->num_child; i++) {
-                     if (alu->children[i] == node) {
-                        alu->children[i] = copy->children[0];
-                        alu->children_component[i] = copy->children_component[0];
-                        break;
-                     }
-                  }
-               }
-               else {
-                  assert(succ->type == gpir_node_type_store);
-                  gpir_store_node *store = gpir_node_to_store(succ);
-                  store->child = copy->children[0];
-                  store->component = copy->children_component[0];
-               }
-
-               gpir_node_remove_entry(entry);
-            }
-
-            gpir_node_delete(node);
-         }
-      }
-   }
-}
-
 static void gpir_lower_negate(gpir_compiler *comp)
 {
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
@@ -157,5 +110,4 @@ void gpir_lower_prog(gpir_compiler *comp)
 {
    gpir_lower_negate(comp);
    gpir_lower_const(comp);
-   gpir_lower_copy(comp);
 }
