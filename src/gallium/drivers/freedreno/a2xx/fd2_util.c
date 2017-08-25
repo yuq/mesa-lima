@@ -309,14 +309,14 @@ fd2_tex_swiz(enum pipe_format format, unsigned swizzle_r, unsigned swizzle_g,
 {
 	const struct util_format_description *desc =
 			util_format_description(format);
-	uint8_t swiz[] = {
-			swizzle_r, swizzle_g, swizzle_b, swizzle_a,
-			PIPE_SWIZZLE_0, PIPE_SWIZZLE_1,
-			PIPE_SWIZZLE_1, PIPE_SWIZZLE_1,
-	};
+	unsigned char swiz[4] = {
+		swizzle_r, swizzle_g, swizzle_b, swizzle_a,
+	}, rswiz[4];
 
-	return A2XX_SQ_TEX_3_SWIZ_X(tex_swiz(swiz[desc->swizzle[0]])) |
-			A2XX_SQ_TEX_3_SWIZ_Y(tex_swiz(swiz[desc->swizzle[1]])) |
-			A2XX_SQ_TEX_3_SWIZ_Z(tex_swiz(swiz[desc->swizzle[2]])) |
-			A2XX_SQ_TEX_3_SWIZ_W(tex_swiz(swiz[desc->swizzle[3]]));
+	util_format_compose_swizzles(desc->swizzle, swiz, rswiz);
+
+	return A2XX_SQ_TEX_3_SWIZ_X(tex_swiz(rswiz[0])) |
+			A2XX_SQ_TEX_3_SWIZ_Y(tex_swiz(rswiz[1])) |
+			A2XX_SQ_TEX_3_SWIZ_Z(tex_swiz(rswiz[2])) |
+			A2XX_SQ_TEX_3_SWIZ_W(tex_swiz(rswiz[3]));
 }
