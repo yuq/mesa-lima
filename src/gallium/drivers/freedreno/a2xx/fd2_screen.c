@@ -53,7 +53,9 @@ fd2_screen_is_format_supported(struct pipe_screen *pscreen,
 	/* TODO figure out how to render to other formats.. */
 	if ((usage & PIPE_BIND_RENDER_TARGET) &&
 			((format != PIPE_FORMAT_B8G8R8A8_UNORM) &&
-			 (format != PIPE_FORMAT_B8G8R8X8_UNORM))) {
+			 (format != PIPE_FORMAT_B8G8R8X8_UNORM) &&
+			 (format != PIPE_FORMAT_R8G8B8A8_UNORM) &&
+			 (format != PIPE_FORMAT_R8G8B8X8_UNORM))) {
 		DBG("not supported render target: format=%s, target=%d, sample_count=%d, usage=%x",
 				util_format_name(format), target, sample_count, usage);
 		return FALSE;
