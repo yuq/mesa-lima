@@ -454,6 +454,11 @@ struct r600_common_screen {
 		 */
 		unsigned cp_to_L2;
 
+		/* Context flags to set so that all writes from earlier jobs
+		 * that end in L2 are seen by CP.
+		 */
+		unsigned L2_to_cp;
+
 		/* Context flags to set so that all writes from earlier
 		 * compute jobs are seen by L2 clients.
 		 */

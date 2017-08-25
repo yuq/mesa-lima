@@ -1833,6 +1833,10 @@ static void r600_render_condition(struct pipe_context *ctx,
 				ctx, query, true, PIPE_QUERY_TYPE_U64, 0,
 				&rquery->workaround_buf->b.b, rquery->workaround_offset);
 
+			/* Settings this in the render cond atom is too late,
+			 * so set it here. */
+			rctx->flags |= rctx->screen->barrier_flags.L2_to_cp;
+
 			atom->num_dw = 5;
 
 			rctx->render_cond_force_off = old_force_off;
