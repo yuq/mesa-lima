@@ -18,7 +18,9 @@ COMMON_FILES = \
 	common/gen_l3_config.c \
 	common/gen_l3_config.h \
 	common/gen_urb_config.c \
-	common/gen_sample_positions.h
+	common/gen_sample_positions.h \
+	common/intel_log.c \
+	common/intel_log.h
 
 COMPILER_FILES = \
 	compiler/brw_cfg.cpp \

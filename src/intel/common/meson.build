@@ -32,6 +32,7 @@ files_libintel_common = files(
   'gen_l3_config.h',
   'gen_urb_config.c',
   'gen_sample_positions.h',
+  'intel_log.c',
 )
 
 libintel_common = static_library(
