@@ -1346,7 +1346,7 @@ has_color_buffer_write_enabled(const struct anv_pipeline *pipeline)
       if (bind_map->surface_to_descriptor[i].set !=
           ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS)
          continue;
-      if (bind_map->surface_to_descriptor[i].index != UINT8_MAX)
+      if (bind_map->surface_to_descriptor[i].index != UINT32_MAX)
          return true;
    }
 

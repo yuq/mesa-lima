@@ -1246,10 +1246,10 @@ struct anv_pipeline_binding {
    uint8_t set;
 
    /* Binding in the descriptor set */
-   uint8_t binding;
+   uint32_t binding;
 
    /* Index in the binding */
-   uint8_t index;
+   uint32_t index;
 
    /* Input attachment index (relative to the subpass) */
    uint8_t input_attachment_index;
