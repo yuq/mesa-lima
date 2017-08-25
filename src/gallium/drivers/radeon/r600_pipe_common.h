@@ -61,7 +61,8 @@ struct u_log_context;
 /* Pipeline & streamout query controls. */
 #define R600_CONTEXT_START_PIPELINE_STATS	(1u << 1)
 #define R600_CONTEXT_STOP_PIPELINE_STATS	(1u << 2)
-#define R600_CONTEXT_PRIVATE_FLAG		(1u << 3)
+#define R600_CONTEXT_FLUSH_FOR_RENDER_COND	(1u << 3)
+#define R600_CONTEXT_PRIVATE_FLAG		(1u << 4)
 
 /* special primitive types */
 #define R600_PRIM_RECTANGLE_LIST	PIPE_PRIM_MAX

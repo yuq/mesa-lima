@@ -1392,9 +1392,13 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		 * the wait and the draw)
 		 */
 		struct r600_atom *shader_pointers = &sctx->shader_pointers.atom;
+		unsigned masked_atoms = 1u << shader_pointers->id;
 
-		/* Emit all states except shader pointers. */
-		si_emit_all_states(sctx, info, 1 << shader_pointers->id);
+		if (unlikely(sctx->b.flags & R600_CONTEXT_FLUSH_FOR_RENDER_COND))
+			masked_atoms |= 1u << sctx->b.render_cond_atom.id;
+
+		/* Emit all states except shader pointers and render condition. */
+		si_emit_all_states(sctx, info, masked_atoms);
 		si_emit_cache_flush(sctx);
 
 		/* <-- CUs are idle here. */
@@ -1402,10 +1406,11 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 			return;
 
 		/* Set shader pointers after descriptors are uploaded. */
-		if (si_is_atom_dirty(sctx, shader_pointers)) {
+		if (si_is_atom_dirty(sctx, shader_pointers))
 			shader_pointers->emit(&sctx->b, NULL);
-			sctx->dirty_atoms = 0;
-		}
+		if (si_is_atom_dirty(sctx, &sctx->b.render_cond_atom))
+			sctx->b.render_cond_atom.emit(&sctx->b, NULL);
+		sctx->dirty_atoms = 0;
 
 		si_emit_draw_packets(sctx, info, indexbuf, index_size, index_offset);
 		/* <-- CUs are busy here. */

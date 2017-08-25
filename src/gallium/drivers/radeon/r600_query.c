@@ -1835,11 +1835,14 @@ static void r600_render_condition(struct pipe_context *ctx,
 
 			/* Settings this in the render cond atom is too late,
 			 * so set it here. */
-			rctx->flags |= rctx->screen->barrier_flags.L2_to_cp;
-
-			atom->num_dw = 5;
+			rctx->flags |= rctx->screen->barrier_flags.L2_to_cp |
+				       R600_CONTEXT_FLUSH_FOR_RENDER_COND;
 
 			rctx->render_cond_force_off = old_force_off;
+		}
+
+		if (needs_workaround) {
+			atom->num_dw = 5;
 		} else {
 			for (qbuf = &rquery->buffer; qbuf; qbuf = qbuf->previous)
 				atom->num_dw += (qbuf->results_end / rquery->result_size) * 5;
