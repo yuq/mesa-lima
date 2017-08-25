@@ -69,11 +69,6 @@ static gpir_node *gpir_node_find(gpir_compiler *comp, nir_src *src)
 static int nir_to_gpir_opcodes[nir_num_opcodes] = {
    /* not supported */
    [0 ... nir_last_opcode] = -1,
-   /* convert */
-   [nir_op_imov] = gpir_op_copy,
-   [nir_op_vec2] = gpir_op_copy,
-   [nir_op_vec3] = gpir_op_copy,
-   [nir_op_vec4] = gpir_op_copy,
 
    [nir_op_fmul] = gpir_op_mul,
    [nir_op_fadd] = gpir_op_add,
