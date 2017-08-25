@@ -1639,6 +1639,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
        * and empirically this affects CHV as well.
        */
       if (devinfo->gen >= 8 &&
+          devinfo->gen <= 9 &&
           p->nr_insn > 1 &&
           brw_inst_opcode(devinfo, brw_last_inst) == BRW_OPCODE_MATH &&
           brw_inst_math_function(devinfo, brw_last_inst) == BRW_MATH_FUNCTION_POW &&
