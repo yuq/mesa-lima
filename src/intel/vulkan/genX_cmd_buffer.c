@@ -280,7 +280,8 @@ color_attachment_compute_aux_usage(struct anv_device * device,
           */
          if (cmd_state->pass->attachments[att].first_subpass_layout ==
              VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-            anv_perf_warn("Not temporarily enabling CCS_E.");
+            anv_perf_warn(device->instance, iview->image,
+                          "Not temporarily enabling CCS_E.");
          }
       } else {
          att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
@@ -325,7 +326,8 @@ color_attachment_compute_aux_usage(struct anv_device * device,
           anv_image_aux_layers(iview->image, iview->isl.base_level)) {
          att_state->fast_clear = false;
          if (GEN_GEN == 7) {
-            anv_perf_warn("Not fast-clearing the first layer in "
+            anv_perf_warn(device->instance, iview->image,
+                          "Not fast-clearing the first layer in "
                           "a multi-layer fast clear.");
          }
       }
@@ -692,7 +694,8 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
        */
       if ((GEN_GEN >= 9 && image->samples == 1) || image->samples > 1) {
          if (image->samples == 4 || image->samples == 16) {
-            anv_perf_warn("Doing a potentially unnecessary fast-clear to "
+            anv_perf_warn(cmd_buffer->device->instance, image,
+                          "Doing a potentially unnecessary fast-clear to "
                           "define an MCS buffer.");
          }
 
@@ -713,7 +716,8 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
          /* The CCS_D buffer may not be enabled in the final layout. Continue
           * executing this function to perform a resolve.
           */
-          anv_perf_warn("Performing an additional resolve for CCS_D layout "
+          anv_perf_warn(cmd_buffer->device->instance, image,
+                        "Performing an additional resolve for CCS_D layout "
                         "transition. Consider always leaving it on or "
                         "performing an ambiguation pass.");
       } else {

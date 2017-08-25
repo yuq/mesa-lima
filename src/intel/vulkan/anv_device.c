@@ -64,7 +64,8 @@ anv_compute_heap_size(int fd, uint64_t *heap_size)
       /* If, for whatever reason, we can't actually get the GTT size from the
        * kernel (too old?) fall back to the aperture size.
        */
-      anv_perf_warn("Failed to get I915_CONTEXT_PARAM_GTT_SIZE: %m");
+      anv_perf_warn(NULL, NULL,
+                    "Failed to get I915_CONTEXT_PARAM_GTT_SIZE: %m");
 
       if (anv_gem_get_aperture(fd, &gtt_size) == -1) {
          return vk_errorf(VK_ERROR_INITIALIZATION_FAILED,

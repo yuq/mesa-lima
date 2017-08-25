@@ -65,15 +65,29 @@ __anv_finishme(const char *file, int line, const char *format, ...)
    fprintf(stderr, "%s:%d: FINISHME: %s\n", file, line, buffer);
 }
 
-void anv_printflike(3, 4)
-__anv_perf_warn(const char *file, int line, const char *format, ...)
+void anv_printflike(6, 7)
+__anv_perf_warn(struct anv_instance *instance, const void *object,
+                VkDebugReportObjectTypeEXT type,
+                const char *file, int line, const char *format, ...)
 {
    va_list ap;
    char buffer[256];
+   char report[256];
 
    va_start(ap, format);
    vsnprintf(buffer, sizeof(buffer), format, ap);
    va_end(ap);
+
+   snprintf(report, sizeof(report), "%s: %s", file, buffer);
+
+   anv_debug_report(instance,
+                    VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT,
+                    type,
+                    (uint64_t) (uintptr_t) object,
+                    line,
+                    0,
+                    "anv",
+                    report);
 
    fprintf(stderr, "%s:%d: PERF: %s\n", file, line, buffer);
 }

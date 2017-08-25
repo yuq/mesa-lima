@@ -197,6 +197,107 @@ vk_to_isl_color(VkClearColorValue color)
    memcpy((dest), (src), (count) * sizeof(*(src))); \
 })
 
+/* Mapping from anv object to VkDebugReportObjectTypeEXT. New types need
+ * to be added here in order to utilize mapping in debug/error/perf macros.
+ */
+#define REPORT_OBJECT_TYPE(o)                                                      \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_instance*),              \
+   VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,                                       \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_physical_device*),       \
+   VK_DEBUG_REPORT_OBJECT_TYPE_PHYSICAL_DEVICE_EXT,                                \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_device*),                \
+   VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,                                         \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), const struct anv_device*),          \
+   VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_EXT,                                         \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_queue*),                 \
+   VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT,                                          \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_semaphore*),             \
+   VK_DEBUG_REPORT_OBJECT_TYPE_SEMAPHORE_EXT,                                      \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_cmd_buffer*),            \
+   VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_BUFFER_EXT,                                 \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_fence*),                 \
+   VK_DEBUG_REPORT_OBJECT_TYPE_FENCE_EXT,                                          \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_device_memory*),         \
+   VK_DEBUG_REPORT_OBJECT_TYPE_DEVICE_MEMORY_EXT,                                  \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_buffer*),                \
+   VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,                                         \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_image*),                 \
+   VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,                                          \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), const struct anv_image*),           \
+   VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,                                          \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_event*),                 \
+   VK_DEBUG_REPORT_OBJECT_TYPE_EVENT_EXT,                                          \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_query_pool*),            \
+   VK_DEBUG_REPORT_OBJECT_TYPE_QUERY_POOL_EXT,                                     \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_buffer_view*),           \
+   VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_VIEW_EXT,                                    \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_image_view*),            \
+   VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_VIEW_EXT,                                     \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_shader_module*),         \
+   VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT,                                  \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_pipeline_cache*),        \
+   VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_CACHE_EXT,                                 \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_pipeline_layout*),       \
+   VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT,                                \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_render_pass*),           \
+   VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,                                    \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_pipeline*),              \
+   VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,                                       \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_descriptor_set_layout*), \
+   VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,                          \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_sampler*),               \
+   VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT,                                        \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_descriptor_pool*),       \
+   VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_POOL_EXT,                                \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_descriptor_set*),        \
+   VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_EXT,                                 \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_framebuffer*),           \
+   VK_DEBUG_REPORT_OBJECT_TYPE_FRAMEBUFFER_EXT,                                    \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_cmd_pool*),              \
+   VK_DEBUG_REPORT_OBJECT_TYPE_COMMAND_POOL_EXT,                                   \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_surface*),               \
+   VK_DEBUG_REPORT_OBJECT_TYPE_SURFACE_KHR_EXT,                                    \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct wsi_swapchain*),             \
+   VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,                                  \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), struct anv_debug_callback*),        \
+   VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_CALLBACK_EXT_EXT,                      \
+   __builtin_choose_expr (                                                         \
+   __builtin_types_compatible_p (__typeof (o), void*),                             \
+   VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,                                        \
+   /* The void expression results in a compile-time error                          \
+      when assigning the result to something.  */                                  \
+   (void)0)))))))))))))))))))))))))))))))
+
 /* Whenever we generate an error, pass it through this function. Useful for
  * debugging, where we can break on it. Only call at error site, not when
  * propagating errors. Might be useful to plug in a stack trace here.
@@ -234,8 +335,10 @@ VkResult __vk_errorf(VkResult error, const char *file, int line, const char *for
 
 void __anv_finishme(const char *file, int line, const char *format, ...)
    anv_printflike(3, 4);
-void __anv_perf_warn(const char *file, int line, const char *format, ...)
-   anv_printflike(3, 4);
+void __anv_perf_warn(struct anv_instance *instance, const void *object,
+                     VkDebugReportObjectTypeEXT type, const char *file,
+                     int line, const char *format, ...)
+   anv_printflike(6, 7);
 void anv_loge(const char *format, ...) anv_printflike(1, 2);
 void anv_loge_v(const char *format, va_list va);
 
@@ -263,11 +366,12 @@ void anv_debug_report(struct anv_instance *instance,
 /**
  * Print a perf warning message.  Set INTEL_DEBUG=perf to see these.
  */
-#define anv_perf_warn(format, ...) \
+#define anv_perf_warn(instance, obj, format, ...) \
    do { \
       static bool reported = false; \
       if (!reported && unlikely(INTEL_DEBUG & DEBUG_PERF)) { \
-         __anv_perf_warn(__FILE__, __LINE__, format, ##__VA_ARGS__); \
+         __anv_perf_warn(instance, obj, REPORT_OBJECT_TYPE(obj), __FILE__, __LINE__,\
+                         format, ##__VA_ARGS__); \
          reported = true; \
       } \
    } while (0)
