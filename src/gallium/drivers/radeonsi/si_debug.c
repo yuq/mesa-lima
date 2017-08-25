@@ -60,6 +60,7 @@ struct si_log_chunk_shader {
 	 */
 	struct si_context *ctx;
 	struct si_shader *shader;
+	enum pipe_shader_type processor;
 
 	/* For keep-alive reference counts */
 	struct si_shader_selector *sel;
@@ -80,7 +81,7 @@ si_log_chunk_shader_print(void *data, FILE *f)
 {
 	struct si_log_chunk_shader *chunk = data;
 	struct si_screen *sscreen = chunk->ctx->screen;
-	si_dump_shader(sscreen, chunk->shader->selector->info.processor,
+	si_dump_shader(sscreen, chunk->processor,
 		       chunk->shader, f);
 }
 
@@ -100,18 +101,23 @@ static void si_dump_gfx_shader(struct si_context *ctx,
 
 	struct si_log_chunk_shader *chunk = CALLOC_STRUCT(si_log_chunk_shader);
 	chunk->ctx = ctx;
+	chunk->processor = state->cso->info.processor;
 	chunk->shader = current;
 	si_shader_selector_reference(ctx, &chunk->sel, current->selector);
 	u_log_chunk(log, &si_log_chunk_type_shader, chunk);
 }
 
-static void si_dump_compute_shader(const struct si_cs_shader_state *state,
+static void si_dump_compute_shader(struct si_context *ctx,
 				   struct u_log_context *log)
 {
-	if (!state->program || state->program != state->emitted_program)
+	const struct si_cs_shader_state *state = &ctx->cs_shader_state;
+
+	if (!state->program)
 		return;
 
 	struct si_log_chunk_shader *chunk = CALLOC_STRUCT(si_log_chunk_shader);
+	chunk->ctx = ctx;
+	chunk->processor = PIPE_SHADER_COMPUTE;
 	chunk->shader = &state->program->shader;
 	si_compute_reference(&chunk->program, state->program);
 	u_log_chunk(log, &si_log_chunk_type_shader, chunk);
@@ -745,8 +751,7 @@ static void si_dump_gfx_descriptors(struct si_context *sctx,
 static void si_dump_compute_descriptors(struct si_context *sctx,
 					struct u_log_context *log)
 {
-	if (!sctx->cs_shader_state.program ||
-	    sctx->cs_shader_state.program != sctx->cs_shader_state.emitted_program)
+	if (!sctx->cs_shader_state.program)
 		return;
 
 	si_dump_descriptors(sctx, PIPE_SHADER_COMPUTE, NULL, log);
@@ -1068,7 +1073,7 @@ void si_log_compute_state(struct si_context *sctx, struct u_log_context *log)
 	if (!log)
 		return;
 
-	si_dump_compute_shader(&sctx->cs_shader_state, log);
+	si_dump_compute_shader(sctx, log);
 	si_dump_compute_descriptors(sctx, log);
 }
 
