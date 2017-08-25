@@ -309,6 +309,15 @@ fd2_emit_state(struct fd_context *ctx, const enum fd_dirty_3d_state dirty)
 		OUT_RING(ring, blend->rb_colormask);
 	}
 
+	if (dirty & FD_DIRTY_BLEND_COLOR) {
+		OUT_PKT3(ring, CP_SET_CONSTANT, 5);
+		OUT_RING(ring, CP_REG(REG_A2XX_RB_BLEND_RED));
+		OUT_RING(ring, float_to_ubyte(ctx->blend_color.color[0]));
+		OUT_RING(ring, float_to_ubyte(ctx->blend_color.color[1]));
+		OUT_RING(ring, float_to_ubyte(ctx->blend_color.color[2]));
+		OUT_RING(ring, float_to_ubyte(ctx->blend_color.color[3]));
+	}
+
 	if (dirty & (FD_DIRTY_TEX | FD_DIRTY_PROG))
 		emit_textures(ring, ctx);
 }
