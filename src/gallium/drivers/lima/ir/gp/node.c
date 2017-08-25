@@ -60,11 +60,6 @@ const gpir_op_info gpir_op_infos[] = {
       .src_neg = {true, true, false, false},
       .slots = (int []) { GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_ADD1, GPIR_INSTR_SLOT_END },
    },
-   [gpir_op_sub] = {
-      .name = "sub",
-      .src_neg = {true, true, false, false},
-      .slots = (int []) { GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_ADD1, GPIR_INSTR_SLOT_END },
-   },
    [gpir_op_floor] = {
       .name = "floor",
       .src_neg = {true, false, false, false},
@@ -326,8 +321,26 @@ void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child, gpir_node 
    }
 }
 
+void gpir_node_replace_succ(gpir_node *dst, gpir_node *src)
+{
+   gpir_node_foreach_succ(src, entry) {
+      gpir_dep_info *dep = gpir_dep_from_entry(entry);
+      gpir_node *succ = gpir_node_from_entry(entry, succ);
+
+      gpir_node_create_dep(succ, dst, dep->is_child_dep, dep->is_offset);
+      gpir_node_replace_child(succ, src, dst);
+      gpir_node_remove_entry(entry);
+   }
+}
+
 void gpir_node_delete(gpir_node *node)
 {
+   gpir_node_foreach_succ(node, entry)
+      gpir_node_remove_entry(entry);
+
+   gpir_node_foreach_pred(node, entry)
+      gpir_node_remove_entry(entry);
+
    list_del(&node->list);
    ralloc_free(node);
 }
