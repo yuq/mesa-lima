@@ -263,7 +263,9 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 	int i;
 
 	/* lower numerical value == higher priority: */
-	if (flags & PIPE_CONTEXT_HIGH_PRIORITY)
+	if (fd_mesa_debug & FD_DBG_HIPRIO)
+		prio = 0;
+	else if (flags & PIPE_CONTEXT_HIGH_PRIORITY)
 		prio = 0;
 	else if (flags & PIPE_CONTEXT_LOW_PRIORITY)
 		prio = 2;
