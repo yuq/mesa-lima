@@ -95,7 +95,6 @@ static gpir_node *gpir_emit_alu(gpir_compiler *comp, nir_alu_instr *instr)
    for (int i = 0; i < num_child; i++) {
       nir_alu_src *src = instr->src + i;
       node->children_negate[i] = src->negate;
-      node->children_component[i] = src->swizzle[0];
 
       gpir_node *child = gpir_node_find(comp, &src->src);
       node->children[i] = child;

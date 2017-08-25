@@ -156,9 +156,8 @@ typedef struct gpir_node {
 typedef struct {
    gpir_node node;
 
-   gpir_node *children[4];
-   int children_component[4];
-   bool children_negate[4];
+   gpir_node *children[3];
+   bool children_negate[3];
    int num_child;
 
    bool dest_negate;
