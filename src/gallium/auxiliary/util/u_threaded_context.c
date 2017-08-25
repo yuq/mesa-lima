@@ -1300,7 +1300,7 @@ tc_improve_map_buffer_flags(struct threaded_context *tc,
       /* Drivers aren't allowed to do buffer invalidations. */
       return (usage & ~PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) |
              TC_TRANSFER_MAP_NO_INVALIDATE |
-             TC_TRANSFER_MAP_IGNORE_VALID_RANGE;
+             TC_TRANSFER_MAP_NO_INFER_UNSYNCHRONIZED;
    }
 
    /* See if the buffer range being mapped has never been initialized,
@@ -1345,7 +1345,7 @@ tc_improve_map_buffer_flags(struct threaded_context *tc,
    /* Never invalidate inside the driver and never infer "unsynchronized". */
    return usage |
           TC_TRANSFER_MAP_NO_INVALIDATE |
-          TC_TRANSFER_MAP_IGNORE_VALID_RANGE;
+          TC_TRANSFER_MAP_NO_INFER_UNSYNCHRONIZED;
 }
 
 static void *
