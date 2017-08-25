@@ -1832,7 +1832,7 @@ radv_cmd_buffer_set_subpass(struct radv_cmd_buffer *cmd_buffer,
 	cmd_buffer->state.dirty |= RADV_CMD_DIRTY_RENDER_TARGETS;
 }
 
-static void
+static VkResult
 radv_cmd_state_setup_attachments(struct radv_cmd_buffer *cmd_buffer,
 				 struct radv_render_pass *pass,
 				 const VkRenderPassBeginInfo *info)
@@ -1841,7 +1841,7 @@ radv_cmd_state_setup_attachments(struct radv_cmd_buffer *cmd_buffer,
 
 	if (pass->attachment_count == 0) {
 		state->attachments = NULL;
-		return;
+		return VK_SUCCESS;
 	}
 
 	state->attachments = vk_alloc(&cmd_buffer->pool->alloc,
@@ -1849,8 +1849,8 @@ radv_cmd_state_setup_attachments(struct radv_cmd_buffer *cmd_buffer,
 					sizeof(state->attachments[0]),
 					8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 	if (state->attachments == NULL) {
-		/* FIXME: Propagate VK_ERROR_OUT_OF_HOST_MEMORY to vkEndCommandBuffer */
-		abort();
+		cmd_buffer->record_result = VK_ERROR_OUT_OF_HOST_MEMORY;
+		return cmd_buffer->record_result;
 	}
 
 	for (uint32_t i = 0; i < pass->attachment_count; ++i) {
@@ -1887,6 +1887,8 @@ radv_cmd_state_setup_attachments(struct radv_cmd_buffer *cmd_buffer,
 
 		state->attachments[i].current_layout = att->initial_layout;
 	}
+
+	return VK_SUCCESS;
 }
 
 VkResult radv_AllocateCommandBuffers(
@@ -1980,6 +1982,8 @@ VkResult radv_BeginCommandBuffer(
 	const VkCommandBufferBeginInfo *pBeginInfo)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	VkResult result = VK_SUCCESS;
+
 	radv_reset_cmd_buffer(cmd_buffer);
 
 	memset(&cmd_buffer->state, 0, sizeof(cmd_buffer->state));
@@ -2008,12 +2012,15 @@ VkResult radv_BeginCommandBuffer(
 		struct radv_subpass *subpass =
 			&cmd_buffer->state.pass->subpasses[pBeginInfo->pInheritanceInfo->subpass];
 
-		radv_cmd_state_setup_attachments(cmd_buffer, cmd_buffer->state.pass, NULL);
+		result = radv_cmd_state_setup_attachments(cmd_buffer, cmd_buffer->state.pass, NULL);
+		if (result != VK_SUCCESS)
+			return result;
+
 		radv_cmd_buffer_set_subpass(cmd_buffer, subpass, false);
 	}
 
 	radv_cmd_buffer_trace_emit(cmd_buffer);
-	return VK_SUCCESS;
+	return result;
 }
 
 void radv_CmdBindVertexBuffers(
@@ -2642,11 +2649,14 @@ void radv_CmdBeginRenderPass(
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
 							   cmd_buffer->cs, 2048);
+	MAYBE_UNUSED VkResult result;
 
 	cmd_buffer->state.framebuffer = framebuffer;
 	cmd_buffer->state.pass = pass;
 	cmd_buffer->state.render_area = pRenderPassBegin->renderArea;
-	radv_cmd_state_setup_attachments(cmd_buffer, pass, pRenderPassBegin);
+	result = radv_cmd_state_setup_attachments(cmd_buffer, pass, pRenderPassBegin);
+	if (result != VK_SUCCESS)
+		cmd_buffer->record_result = result;
 
 	radv_cmd_buffer_set_subpass(cmd_buffer, pass->subpasses, true);
 	assert(cmd_buffer->cs->cdw <= cdw_max);
