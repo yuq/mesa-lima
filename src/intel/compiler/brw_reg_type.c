@@ -40,6 +40,18 @@ enum hw_reg_type {
    BRW_HW_REG_TYPE_B   = 5,
    GEN7_HW_REG_TYPE_DF = 6,
    GEN8_HW_REG_TYPE_HF = 10,
+
+   GEN11_HW_REG_TYPE_UD = 0,
+   GEN11_HW_REG_TYPE_D  = 1,
+   GEN11_HW_REG_TYPE_UW = 2,
+   GEN11_HW_REG_TYPE_W  = 3,
+   GEN11_HW_REG_TYPE_UB = 4,
+   GEN11_HW_REG_TYPE_B  = 5,
+   GEN11_HW_REG_TYPE_UQ = 6,
+   GEN11_HW_REG_TYPE_Q  = 7,
+   GEN11_HW_REG_TYPE_HF = 8,
+   GEN11_HW_REG_TYPE_F  = 9,
+   GEN11_HW_REG_TYPE_DF = 10,
 };
 
 enum hw_imm_type {
@@ -56,9 +68,22 @@ enum hw_imm_type {
    BRW_HW_IMM_TYPE_V   = 6,
    GEN8_HW_IMM_TYPE_DF = 10,
    GEN8_HW_IMM_TYPE_HF = 11,
+
+   GEN11_HW_IMM_TYPE_UD = 0,
+   GEN11_HW_IMM_TYPE_D  = 1,
+   GEN11_HW_IMM_TYPE_UW = 2,
+   GEN11_HW_IMM_TYPE_W  = 3,
+   GEN11_HW_IMM_TYPE_UV = 4,
+   GEN11_HW_IMM_TYPE_V  = 5,
+   GEN11_HW_IMM_TYPE_UQ = 6,
+   GEN11_HW_IMM_TYPE_Q  = 7,
+   GEN11_HW_IMM_TYPE_HF = 8,
+   GEN11_HW_IMM_TYPE_F  = 9,
+   GEN11_HW_IMM_TYPE_DF = 10,
+   GEN11_HW_IMM_TYPE_VF = 11,
 };
 
-static const struct {
+static const struct hw_type {
    enum hw_reg_type reg_type;
    enum hw_imm_type imm_type;
 } gen4_hw_type[] = {
@@ -77,6 +102,22 @@ static const struct {
    [BRW_REGISTER_TYPE_UB] = { BRW_HW_REG_TYPE_UB,  INVALID             },
    [BRW_REGISTER_TYPE_V]  = { INVALID,             BRW_HW_IMM_TYPE_V   },
    [BRW_REGISTER_TYPE_UV] = { INVALID,             BRW_HW_IMM_TYPE_UV  },
+}, gen11_hw_type[] = {
+   [BRW_REGISTER_TYPE_DF] = { GEN11_HW_REG_TYPE_DF, GEN11_HW_IMM_TYPE_DF },
+   [BRW_REGISTER_TYPE_F]  = { GEN11_HW_REG_TYPE_F,  GEN11_HW_IMM_TYPE_F  },
+   [BRW_REGISTER_TYPE_HF] = { GEN11_HW_REG_TYPE_HF, GEN11_HW_IMM_TYPE_HF },
+   [BRW_REGISTER_TYPE_VF] = { INVALID,              GEN11_HW_IMM_TYPE_VF },
+
+   [BRW_REGISTER_TYPE_Q]  = { GEN11_HW_REG_TYPE_Q,  GEN11_HW_IMM_TYPE_Q  },
+   [BRW_REGISTER_TYPE_UQ] = { GEN11_HW_REG_TYPE_UQ, GEN11_HW_IMM_TYPE_UQ },
+   [BRW_REGISTER_TYPE_D]  = { GEN11_HW_REG_TYPE_D,  GEN11_HW_IMM_TYPE_D  },
+   [BRW_REGISTER_TYPE_UD] = { GEN11_HW_REG_TYPE_UD, GEN11_HW_IMM_TYPE_UD },
+   [BRW_REGISTER_TYPE_W]  = { GEN11_HW_REG_TYPE_W,  GEN11_HW_IMM_TYPE_W  },
+   [BRW_REGISTER_TYPE_UW] = { GEN11_HW_REG_TYPE_UW, GEN11_HW_IMM_TYPE_UW },
+   [BRW_REGISTER_TYPE_B]  = { GEN11_HW_REG_TYPE_B,  INVALID              },
+   [BRW_REGISTER_TYPE_UB] = { GEN11_HW_REG_TYPE_UB, INVALID              },
+   [BRW_REGISTER_TYPE_V]  = { INVALID,              GEN11_HW_IMM_TYPE_V  },
+   [BRW_REGISTER_TYPE_UV] = { INVALID,              GEN11_HW_IMM_TYPE_UV },
 };
 
 /* SNB adds 3-src instructions (MAD and LRP) that only operate on floats, so
@@ -147,14 +188,22 @@ brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
                         enum brw_reg_file file,
                         enum brw_reg_type type)
 {
-   assert(type < ARRAY_SIZE(gen4_hw_type));
+   const struct hw_type *table;
+
+   if (devinfo->gen >= 11) {
+      assert(type < ARRAY_SIZE(gen11_hw_type));
+      table = gen11_hw_type;
+   } else {
+      assert(type < ARRAY_SIZE(gen4_hw_type));
+      table = gen4_hw_type;
+   }
 
    if (file == BRW_IMMEDIATE_VALUE) {
-      assert(gen4_hw_type[type].imm_type != (enum hw_imm_type)INVALID);
-      return gen4_hw_type[type].imm_type;
+      assert(table[type].imm_type != (enum hw_imm_type)INVALID);
+      return table[type].imm_type;
    } else {
-      assert(gen4_hw_type[type].reg_type != (enum hw_reg_type)INVALID);
-      return gen4_hw_type[type].reg_type;
+      assert(table[type].reg_type != (enum hw_reg_type)INVALID);
+      return table[type].reg_type;
    }
 }
 
@@ -167,15 +216,23 @@ enum brw_reg_type
 brw_hw_type_to_reg_type(const struct gen_device_info *devinfo,
                         enum brw_reg_file file, unsigned hw_type)
 {
+   const struct hw_type *table;
+
+   if (devinfo->gen >= 11) {
+      table = gen11_hw_type;
+   } else {
+      table = gen4_hw_type;
+   }
+
    if (file == BRW_IMMEDIATE_VALUE) {
       for (enum brw_reg_type i = 0; i <= BRW_REGISTER_TYPE_LAST; i++) {
-         if (gen4_hw_type[i].imm_type == (enum hw_imm_type)hw_type) {
+         if (table[i].imm_type == (enum hw_imm_type)hw_type) {
             return i;
          }
       }
    } else {
       for (enum brw_reg_type i = 0; i <= BRW_REGISTER_TYPE_LAST; i++) {
-         if (gen4_hw_type[i].reg_type == (enum hw_reg_type)hw_type) {
+         if (table[i].reg_type == (enum hw_reg_type)hw_type) {
             return i;
          }
       }
