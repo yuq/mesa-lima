@@ -214,8 +214,8 @@ F(3src_dst_reg_nr,          63,  56) /* same in align1 */
 F(3src_a16_dst_subreg_nr,   55,  53)
 F(3src_a16_dst_writemask,   52,  49)
 F8(3src_a16_nib_ctrl,       47, 47, 11, 11) /* only exists on IVB+ */
-F8(3src_a16_dst_type,       45, 44, 48, 46) /* only exists on IVB+ */
-F8(3src_a16_src_type,       43, 42, 45, 43)
+F8(3src_a16_dst_hw_type,    45, 44, 48, 46) /* only exists on IVB+ */
+F8(3src_a16_src_hw_type,    43, 42, 45, 43)
 F8(3src_src2_negate,        41, 41, 42, 42)
 F8(3src_src2_abs,           40, 40, 41, 41)
 F8(3src_src1_negate,        39, 39, 40, 40)
