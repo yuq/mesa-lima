@@ -1803,11 +1803,13 @@ static void r600_render_condition(struct pipe_context *ctx,
 	if (query) {
 		bool needs_workaround = false;
 
-		/* There is a firmware regression in VI which causes successive
+		/* There was a firmware regression in VI which causes successive
 		 * SET_PREDICATION packets to give the wrong answer for
 		 * non-inverted stream overflow predication.
 		 */
-		if (rctx->chip_class >= VI && !condition &&
+		if (((rctx->chip_class == VI && rctx->screen->info.pfp_fw_feature < 49) ||
+		     (rctx->chip_class == GFX9 && rctx->screen->info.pfp_fw_feature < 38)) &&
+		    !condition &&
 		    (rquery->b.type == PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE ||
 		     (rquery->b.type == PIPE_QUERY_SO_OVERFLOW_PREDICATE &&
 		      (rquery->buffer.previous ||
