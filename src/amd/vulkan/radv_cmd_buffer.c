@@ -2029,7 +2029,7 @@ void radv_CmdBindVertexBuffers(
 	/* We have to defer setting up vertex buffer since we need the buffer
 	 * stride from the pipeline. */
 
-	assert(firstBinding + bindingCount < MAX_VBS);
+	assert(firstBinding + bindingCount <= MAX_VBS);
 	for (uint32_t i = 0; i < bindingCount; i++) {
 		vb[firstBinding + i].buffer = radv_buffer_from_handle(pBuffers[i]);
 		vb[firstBinding + i].offset = pOffsets[i];
