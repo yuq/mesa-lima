@@ -120,8 +120,8 @@ TEMPLATE_C = Template(textwrap.dedent(u"""\
     ;
 
     static const struct anv_entrypoint entrypoints[] = {
-    % for _, _, _, num, h, _ in entrypoints:
-        { ${offsets[num]}, ${'{:0=#8x}'.format(h)} },
+    % for _, name, _, num, h, _ in entrypoints:
+        [${num}] = { ${offsets[num]}, ${'{:0=#8x}'.format(h)} }, /* vk${name} */
     % endfor
     };
 
