@@ -751,9 +751,6 @@ VkResult anv_ImportSemaphoreFdKHR(
       anv_semaphore_impl_cleanup(device, &semaphore->temporary);
       semaphore->temporary = new_impl;
    } else {
-      /* SYNC_FILE must be a temporary import */
-      assert(new_impl.type != ANV_SEMAPHORE_TYPE_SYNC_FILE);
-
       anv_semaphore_impl_cleanup(device, &semaphore->permanent);
       semaphore->permanent = new_impl;
    }
