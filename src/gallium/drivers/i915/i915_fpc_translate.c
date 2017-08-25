@@ -77,21 +77,6 @@ static unsigned passthrough_program[] =
    0
 };
 
-
-/* 1, -1/3!, 1/5!, -1/7! */
-static const float scs_sin_constants[4] = { 1.0,
-   -1.0f / (3 * 2 * 1),
-   1.0f / (5 * 4 * 3 * 2 * 1),
-   -1.0f / (7 * 6 * 5 * 4 * 3 * 2 * 1)
-};
-
-/* 1, -1/2!, 1/4!, -1/6! */
-static const float scs_cos_constants[4] = { 1.0,
-   -1.0f / (2 * 1),
-   1.0f / (4 * 3 * 2 * 1),
-   -1.0f / (6 * 5 * 4 * 3 * 2 * 1)
-};
-
 /* 2*pi, -(2*pi)^3/3!, (2*pi)^5/5!, -(2*pi)^7/7! */
 static const float sin_constants[4] = { 2.0 * M_PI,
    -8.0f * M_PI * M_PI * M_PI / (3 * 2 * 1),
@@ -495,7 +480,6 @@ i915_translate_instruction(struct i915_fp_compile *p,
                            const struct i915_full_instruction *inst,
                            struct i915_fragment_shader *fs)
 {
-   uint writemask;
    uint src0, src1, src2, flags;
    uint tmp = 0;
 
