@@ -582,7 +582,7 @@ VkResult anv_CreateSemaphore(
       assert(handleTypes == VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR);
       if (device->instance->physicalDevice.has_syncobj) {
          semaphore->permanent.type = ANV_SEMAPHORE_TYPE_DRM_SYNCOBJ;
-         semaphore->permanent.syncobj = anv_gem_syncobj_create(device);
+         semaphore->permanent.syncobj = anv_gem_syncobj_create(device, 0);
          if (!semaphore->permanent.syncobj) {
             vk_free2(&device->alloc, pAllocator, semaphore);
             return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
