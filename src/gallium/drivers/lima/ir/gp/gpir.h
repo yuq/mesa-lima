@@ -42,7 +42,6 @@ typedef enum {
 
    /* add ops */
    gpir_op_add,
-   gpir_op_sub,
    gpir_op_floor,
    gpir_op_sign,
    gpir_op_ge,
@@ -272,6 +271,7 @@ void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index);
 void gpir_node_add_child(gpir_node *parent, gpir_node *child);
 void gpir_node_remove_entry(struct set_entry *entry);
 void gpir_node_merge_succ(gpir_node *dst, gpir_node *src);
+void gpir_node_replace_succ(gpir_node *dst, gpir_node *src);
 void gpir_node_merge_pred(gpir_node *dst, gpir_node *src);
 void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child, gpir_node *new_child);
 void gpir_node_delete(gpir_node *node);

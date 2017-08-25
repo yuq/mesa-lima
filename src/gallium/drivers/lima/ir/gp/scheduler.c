@@ -61,7 +61,6 @@ static int gpir_get_min_dist(gpir_dep_info *dep)
       case gpir_op_mov:
       case gpir_op_mul:
       case gpir_op_add:
-      case gpir_op_sub:
       case gpir_op_select:
       case gpir_op_complex1:
       case gpir_op_complex2:
@@ -178,7 +177,6 @@ static int gpir_get_max_dist(gpir_dep_info *dep)
       case gpir_op_mov:
       case gpir_op_mul:
       case gpir_op_add:
-      case gpir_op_sub:
       case gpir_op_select:
       case gpir_op_complex1:
       case gpir_op_complex2:
