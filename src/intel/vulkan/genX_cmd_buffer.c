@@ -2492,7 +2492,8 @@ verify_cmd_parser(const struct anv_device *device,
                   const char *function)
 {
    if (device->instance->physicalDevice.cmd_parser_version < required_version) {
-      return vk_errorf(VK_ERROR_FEATURE_NOT_PRESENT,
+      return vk_errorf(device->instance, device->instance,
+                       VK_ERROR_FEATURE_NOT_PRESENT,
                        "cmd parser version %d is required for %s",
                        required_version, function);
    } else {

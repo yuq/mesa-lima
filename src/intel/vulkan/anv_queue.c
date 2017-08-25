@@ -43,7 +43,8 @@ anv_device_execbuf(struct anv_device *device,
    if (ret != 0) {
       /* We don't know the real error. */
       device->lost = true;
-      return vk_errorf(VK_ERROR_DEVICE_LOST, "execbuf2 failed: %m");
+      return vk_errorf(device->instance, device, VK_ERROR_DEVICE_LOST,
+                       "execbuf2 failed: %m");
    }
 
    struct drm_i915_gem_exec_object2 *objects =
@@ -239,7 +240,8 @@ out:
        * VK_ERROR_DEVICE_LOST to ensure that clients do not attempt to
        * submit the same job again to this device.
        */
-      result = vk_errorf(VK_ERROR_DEVICE_LOST, "vkQueueSubmit() failed");
+      result = vk_errorf(device->instance, device, VK_ERROR_DEVICE_LOST,
+                         "vkQueueSubmit() failed");
       device->lost = true;
    }
 
@@ -429,7 +431,7 @@ VkResult anv_GetFenceStatus(
          } else {
             /* We don't know the real error. */
             device->lost = true;
-            return vk_errorf(VK_ERROR_DEVICE_LOST,
+            return vk_errorf(device->instance, device, VK_ERROR_DEVICE_LOST,
                              "drm_syncobj_wait failed: %m");
          }
       } else {
@@ -509,7 +511,7 @@ anv_wait_for_syncobj_fences(struct anv_device *device,
       } else {
          /* We don't know the real error. */
          device->lost = true;
-         return vk_errorf(VK_ERROR_DEVICE_LOST,
+         return vk_errorf(device->instance, device, VK_ERROR_DEVICE_LOST,
                           "drm_syncobj_wait failed: %m");
       }
    } else {
@@ -751,7 +753,8 @@ VkResult anv_ImportFenceFdKHR(
 
       if (anv_gem_syncobj_import_sync_file(device, new_impl.syncobj, fd)) {
          anv_gem_syncobj_destroy(device, new_impl.syncobj);
-         return vk_errorf(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR,
+         return vk_errorf(device->instance, NULL,
+                          VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR,
                           "syncobj sync file import failed: %m");
       }
       break;

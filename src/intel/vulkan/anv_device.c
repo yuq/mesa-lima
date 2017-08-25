@@ -68,7 +68,7 @@ anv_compute_heap_size(int fd, uint64_t *heap_size)
                     "Failed to get I915_CONTEXT_PARAM_GTT_SIZE: %m");
 
       if (anv_gem_get_aperture(fd, &gtt_size) == -1) {
-         return vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+         return vk_errorf(NULL, NULL, VK_ERROR_INITIALIZATION_FAILED,
                           "failed to get aperture size: %m");
       }
    }
@@ -210,13 +210,15 @@ anv_physical_device_init_uuids(struct anv_physical_device *device)
 {
    const struct build_id_note *note = build_id_find_nhdr("libvulkan_intel.so");
    if (!note) {
-      return vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+      return vk_errorf(device->instance, device,
+                       VK_ERROR_INITIALIZATION_FAILED,
                        "Failed to find build-id");
    }
 
    unsigned build_id_len = build_id_length(note);
    if (build_id_len < 20) {
-      return vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+      return vk_errorf(device->instance, device,
+                       VK_ERROR_INITIALIZATION_FAILED,
                        "build-id too short.  It needs to be a SHA");
    }
 
@@ -298,7 +300,8 @@ anv_physical_device_init(struct anv_physical_device *device,
       /* Broadwell, Cherryview, Skylake, Broxton, Kabylake is as fully
        * supported as anything */
    } else {
-      result = vk_errorf(VK_ERROR_INCOMPATIBLE_DRIVER,
+      result = vk_errorf(device->instance, device,
+                         VK_ERROR_INCOMPATIBLE_DRIVER,
                          "Vulkan not yet supported on %s", device->name);
       goto fail;
    }
@@ -308,27 +311,31 @@ anv_physical_device_init(struct anv_physical_device *device,
       device->cmd_parser_version =
          anv_gem_get_param(fd, I915_PARAM_CMD_PARSER_VERSION);
       if (device->cmd_parser_version == -1) {
-         result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+         result = vk_errorf(device->instance, device,
+                            VK_ERROR_INITIALIZATION_FAILED,
                             "failed to get command parser version");
          goto fail;
       }
    }
 
    if (!anv_gem_get_param(fd, I915_PARAM_HAS_WAIT_TIMEOUT)) {
-      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+      result = vk_errorf(device->instance, device,
+                         VK_ERROR_INITIALIZATION_FAILED,
                          "kernel missing gem wait");
       goto fail;
    }
 
    if (!anv_gem_get_param(fd, I915_PARAM_HAS_EXECBUF2)) {
-      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+      result = vk_errorf(device->instance, device,
+                         VK_ERROR_INITIALIZATION_FAILED,
                          "kernel missing execbuf2");
       goto fail;
    }
 
    if (!device->info.has_llc &&
        anv_gem_get_param(fd, I915_PARAM_MMAP_VERSION) < 1) {
-      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+      result = vk_errorf(device->instance, device,
+                         VK_ERROR_INITIALIZATION_FAILED,
                          "kernel missing wc mmap");
       goto fail;
    }
@@ -475,7 +482,7 @@ VkResult anv_CreateInstance(
                               "incompatible driver version",
                               ctor_cb->pUserData);
 
-      return vk_errorf(VK_ERROR_INCOMPATIBLE_DRIVER,
+      return vk_errorf(NULL, NULL, VK_ERROR_INCOMPATIBLE_DRIVER,
                        "Client requested version %d.%d.%d",
                        VK_VERSION_MAJOR(client_version),
                        VK_VERSION_MINOR(client_version),
@@ -1362,16 +1369,17 @@ anv_device_query_status(struct anv_device *device)
    if (ret == -1) {
       /* We don't know the real error. */
       device->lost = true;
-      return vk_errorf(VK_ERROR_DEVICE_LOST, "get_reset_stats failed: %m");
+      return vk_errorf(device->instance, device, VK_ERROR_DEVICE_LOST,
+                       "get_reset_stats failed: %m");
    }
 
    if (active) {
       device->lost = true;
-      return vk_errorf(VK_ERROR_DEVICE_LOST,
+      return vk_errorf(device->instance, device, VK_ERROR_DEVICE_LOST,
                        "GPU hung on one of our command buffers");
    } else if (pending) {
       device->lost = true;
-      return vk_errorf(VK_ERROR_DEVICE_LOST,
+      return vk_errorf(device->instance, device, VK_ERROR_DEVICE_LOST,
                        "GPU hung with commands in-flight");
    }
 
@@ -1391,7 +1399,8 @@ anv_device_bo_busy(struct anv_device *device, struct anv_bo *bo)
    } else if (ret == -1) {
       /* We don't know the real error. */
       device->lost = true;
-      return vk_errorf(VK_ERROR_DEVICE_LOST, "gem wait failed: %m");
+      return vk_errorf(device->instance, device, VK_ERROR_DEVICE_LOST,
+                       "gem wait failed: %m");
    }
 
    /* Query for device status after the busy call.  If the BO we're checking
@@ -1413,7 +1422,8 @@ anv_device_wait(struct anv_device *device, struct anv_bo *bo,
    } else if (ret == -1) {
       /* We don't know the real error. */
       device->lost = true;
-      return vk_errorf(VK_ERROR_DEVICE_LOST, "gem wait failed: %m");
+      return vk_errorf(device->instance, device, VK_ERROR_DEVICE_LOST,
+                       "gem wait failed: %m");
    }
 
    /* Query for device status after the wait.  If the BO we're waiting on got

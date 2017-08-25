@@ -361,12 +361,14 @@ anv_block_pool_expand_range(struct anv_block_pool *pool,
               MAP_SHARED | MAP_POPULATE, pool->fd,
               BLOCK_POOL_MEMFD_CENTER - center_bo_offset);
    if (map == MAP_FAILED)
-      return vk_errorf(VK_ERROR_MEMORY_MAP_FAILED, "mmap failed: %m");
+      return vk_errorf(pool->device->instance, pool->device,
+                       VK_ERROR_MEMORY_MAP_FAILED, "mmap failed: %m");
 
    gem_handle = anv_gem_userptr(pool->device, map, size);
    if (gem_handle == 0) {
       munmap(map, size);
-      return vk_errorf(VK_ERROR_TOO_MANY_OBJECTS, "userptr failed: %m");
+      return vk_errorf(pool->device->instance, pool->device,
+                       VK_ERROR_TOO_MANY_OBJECTS, "userptr failed: %m");
    }
 
    cleanup->map = map;
@@ -1190,7 +1192,7 @@ anv_bo_cache_init(struct anv_bo_cache *cache)
 
    if (pthread_mutex_init(&cache->mutex, NULL)) {
       _mesa_hash_table_destroy(cache->bo_map, NULL);
-      return vk_errorf(VK_ERROR_OUT_OF_HOST_MEMORY,
+      return vk_errorf(NULL, NULL, VK_ERROR_OUT_OF_HOST_MEMORY,
                        "pthread_mutex_init failed: %m");
    }
 

@@ -248,7 +248,8 @@ anv_wsi_image_create(VkDevice device_h,
                                 surface->isl.row_pitch, I915_TILING_X);
    if (ret) {
       /* FINISHME: Choose a better error. */
-      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+      result = vk_errorf(device->instance, device,
+                         VK_ERROR_OUT_OF_DEVICE_MEMORY,
                          "set_tiling failed: %m");
       goto fail_alloc_memory;
    }
@@ -256,7 +257,8 @@ anv_wsi_image_create(VkDevice device_h,
    int fd = anv_gem_handle_to_fd(device, memory->bo->gem_handle);
    if (fd == -1) {
       /* FINISHME: Choose a better error. */
-      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+      result = vk_errorf(device->instance, device,
+                         VK_ERROR_OUT_OF_DEVICE_MEMORY,
                          "handle_to_fd failed: %m");
       goto fail_alloc_memory;
    }
