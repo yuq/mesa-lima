@@ -1012,6 +1012,17 @@ static void get_mjpeg_slice_header(struct ruvd_decoder *dec, struct pipe_mjpeg_p
 
 	saved_size = size;
 
+	/* DRI */
+	if (pic->slice_parameter.restart_interval) {
+		buf[size++] = 0xff;
+		buf[size++] = 0xdd;
+		buf[size++] = 0x00;
+		buf[size++] = 0x04;
+		bs = (uint16_t*)&buf[size++];
+		*bs = util_bswap16(pic->slice_parameter.restart_interval);
+		saved_size = ++size;
+	}
+
 	/* SOF */
 	buf[size++] = 0xff;
 	buf[size++] = 0xc0;
