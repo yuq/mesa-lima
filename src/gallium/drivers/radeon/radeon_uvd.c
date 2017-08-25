@@ -969,7 +969,7 @@ static void get_mjpeg_slice_header(struct ruvd_decoder *dec, struct pipe_mjpeg_p
 			continue;
 
 		buf[size++] = i;
-		memcpy((buf + size), &pic->quantization_table.quantiser_table, 64);
+		memcpy((buf + size), &pic->quantization_table.quantiser_table[i], 64);
 		size += 64;
 	}
 
