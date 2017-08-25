@@ -255,13 +255,13 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return 1;
 
    /* MSAA support
-    * If user has explicitly set max_sample_count = 0 (via SWR_MSAA_MAX_COUNT)
-    * then disable all MSAA support and go back to old caps. */
+    * If user has explicitly set max_sample_count = 1 (via SWR_MSAA_MAX_COUNT)
+    * then disable all MSAA support and go back to old (FAKE_SW_MSAA) caps. */
    case PIPE_CAP_TEXTURE_MULTISAMPLE:
    case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
-      return swr_screen(screen)->msaa_max_count ? 1 : 0;
+      return (swr_screen(screen)->msaa_max_count > 1) ? 1 : 0;
    case PIPE_CAP_FAKE_SW_MSAA:
-      return swr_screen(screen)->msaa_max_count ? 0 : 1;
+      return (swr_screen(screen)->msaa_max_count > 1) ? 0 : 1;
 
       /* unsupported features */
    case PIPE_CAP_ANISOTROPIC_FILTER:
@@ -1079,22 +1079,22 @@ swr_validate_env_options(struct swr_screen *screen)
       screen->client_copy_limit = client_copy_limit;
 
    /* XXX msaa under development, disable by default for now */
-   screen->msaa_max_count = 0; /* was SWR_MAX_NUM_MULTISAMPLES; */
+   screen->msaa_max_count = 1; /* was SWR_MAX_NUM_MULTISAMPLES; */
 
    /* validate env override values, within range and power of 2 */
-   int msaa_max_count = debug_get_num_option("SWR_MSAA_MAX_COUNT", 0);
-   if (msaa_max_count) {
-      if ((msaa_max_count < 0) || (msaa_max_count > SWR_MAX_NUM_MULTISAMPLES)
+   int msaa_max_count = debug_get_num_option("SWR_MSAA_MAX_COUNT", 1);
+   if (msaa_max_count != 1) {
+      if ((msaa_max_count < 1) || (msaa_max_count > SWR_MAX_NUM_MULTISAMPLES)
             || !util_is_power_of_two(msaa_max_count)) {
          fprintf(stderr, "SWR_MSAA_MAX_COUNT invalid: %d\n", msaa_max_count);
          fprintf(stderr, "must be power of 2 between 1 and %d" \
-                         " (or 0 to disable msaa)\n",
+                         " (or 1 to disable msaa)\n",
                SWR_MAX_NUM_MULTISAMPLES);
-         msaa_max_count = 0;
+         msaa_max_count = 1;
       }
 
       fprintf(stderr, "SWR_MSAA_MAX_COUNT: %d\n", msaa_max_count);
-      if (!msaa_max_count)
+      if (msaa_max_count == 1)
          fprintf(stderr, "(msaa disabled)\n");
 
       screen->msaa_max_count = msaa_max_count;
