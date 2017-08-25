@@ -833,7 +833,7 @@ struct radv_cmd_buffer {
 	bool tess_rings_needed;
 	bool sample_positions_needed;
 
-	bool record_fail;
+	VkResult record_result;
 
 	int ring_offsets_idx; /* just used for verification */
 	uint32_t gfx9_fence_offset;

@@ -231,7 +231,7 @@ static void  radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
 						      cmd_buffer->upload.upload_bo, 8);
 	cmd_buffer->upload.offset = 0;
 
-	cmd_buffer->record_fail = false;
+	cmd_buffer->record_result = VK_SUCCESS;
 
 	cmd_buffer->ring_offsets_idx = -1;
 
@@ -262,7 +262,7 @@ radv_cmd_buffer_resize_upload_buf(struct radv_cmd_buffer *cmd_buffer,
 				       RADEON_FLAG_CPU_ACCESS);
 
 	if (!bo) {
-		cmd_buffer->record_fail = true;
+		cmd_buffer->record_result = VK_ERROR_OUT_OF_DEVICE_MEMORY;
 		return false;
 	}
 
@@ -271,7 +271,7 @@ radv_cmd_buffer_resize_upload_buf(struct radv_cmd_buffer *cmd_buffer,
 		upload = malloc(sizeof(*upload));
 
 		if (!upload) {
-			cmd_buffer->record_fail = true;
+			cmd_buffer->record_result = VK_ERROR_OUT_OF_DEVICE_MEMORY;
 			device->ws->buffer_destroy(bo);
 			return false;
 		}
@@ -286,7 +286,7 @@ radv_cmd_buffer_resize_upload_buf(struct radv_cmd_buffer *cmd_buffer,
 	cmd_buffer->upload.map = device->ws->buffer_map(cmd_buffer->upload.upload_bo);
 
 	if (!cmd_buffer->upload.map) {
-		cmd_buffer->record_fail = true;
+		cmd_buffer->record_result = VK_ERROR_OUT_OF_DEVICE_MEMORY;
 		return false;
 	}
 
@@ -2136,7 +2136,7 @@ static bool radv_init_push_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
 
 		if (!set->mapped_ptr) {
 			cmd_buffer->push_descriptors.capacity = 0;
-			cmd_buffer->record_fail = true;
+			cmd_buffer->record_result = VK_ERROR_OUT_OF_DEVICE_MEMORY;
 			return false;
 		}
 
@@ -2252,10 +2252,10 @@ VkResult radv_EndCommandBuffer(
 		si_emit_cache_flush(cmd_buffer);
 	}
 
-	if (!cmd_buffer->device->ws->cs_finalize(cmd_buffer->cs) ||
-	    cmd_buffer->record_fail)
+	if (!cmd_buffer->device->ws->cs_finalize(cmd_buffer->cs))
 		return VK_ERROR_OUT_OF_DEVICE_MEMORY;
-	return VK_SUCCESS;
+
+	return cmd_buffer->record_result;
 }
 
 static void
