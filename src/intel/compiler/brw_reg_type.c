@@ -111,13 +111,13 @@ brw_hw_type_to_reg_type(const struct gen_device_info *devinfo,
 {
    if (file == BRW_IMMEDIATE_VALUE) {
       for (enum brw_reg_type i = 0; i <= BRW_REGISTER_TYPE_LAST; i++) {
-         if (gen4_hw_type[i].imm_type == hw_type) {
+         if (gen4_hw_type[i].imm_type == (enum hw_imm_type)hw_type) {
             return i;
          }
       }
    } else {
       for (enum brw_reg_type i = 0; i <= BRW_REGISTER_TYPE_LAST; i++) {
-         if (gen4_hw_type[i].reg_type == hw_type) {
+         if (gen4_hw_type[i].reg_type == (enum hw_reg_type)hw_type) {
             return i;
          }
       }
