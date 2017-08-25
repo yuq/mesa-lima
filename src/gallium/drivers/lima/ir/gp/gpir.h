@@ -82,9 +82,6 @@ typedef enum {
    /* const (emulated) */
    gpir_op_const,
 
-   /* copy (emulated) */
-   gpir_op_copy,
-
    /* emulated ops */
    gpir_op_exp2,
    gpir_op_log2,
@@ -270,7 +267,6 @@ gpir_prog *gpir_compile_nir(nir_shader *nir);
 void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index);
 void gpir_node_add_child(gpir_node *parent, gpir_node *child);
 void gpir_node_remove_entry(struct set_entry *entry);
-void gpir_node_merge_succ(gpir_node *dst, gpir_node *src);
 void gpir_node_replace_succ(gpir_node *dst, gpir_node *src);
 void gpir_node_merge_pred(gpir_node *dst, gpir_node *src);
 void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child, gpir_node *new_child);

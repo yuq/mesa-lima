@@ -170,9 +170,6 @@ const gpir_op_info gpir_op_infos[] = {
       .name = "const",
       .type = gpir_node_type_const,
    },
-   [gpir_op_copy] = {
-      .name = "copy",
-   },
    [gpir_op_exp2] = {
       .name = "exp2",
    },
@@ -285,15 +282,6 @@ void gpir_node_remove_entry(struct set_entry *entry)
    _mesa_set_remove(set, _mesa_set_search_pre_hashed(set, hash, dep));
 
    ralloc_free(dep);
-}
-
-void gpir_node_merge_succ(gpir_node *dst, gpir_node *src)
-{
-   gpir_node_foreach_succ(src, entry) {
-      gpir_node *succ = gpir_node_from_entry(entry, succ);
-      gpir_dep_info *dep = gpir_dep_from_entry(entry);
-      gpir_node_create_dep(succ, dst, dep->is_child_dep, dep->is_offset);
-   }
 }
 
 void gpir_node_merge_pred(gpir_node *dst, gpir_node *src)
