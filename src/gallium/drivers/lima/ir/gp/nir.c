@@ -110,21 +110,33 @@ static gpir_node *gpir_emit_intrinsic(gpir_compiler *comp, nir_intrinsic_instr *
    gpir_node *child;
    gpir_load_node *lnode;
    gpir_store_node *snode;
-   const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];
-   int op;
 
    switch (instr->intrinsic) {
-   case nir_intrinsic_load_uniform:
    case nir_intrinsic_load_input:
-      op = instr->intrinsic == nir_intrinsic_load_input ?
-         gpir_op_load_attribute : gpir_op_load_uniform;
-
-      lnode = gpir_node_create_dest(comp, op, &instr->dest);
+      lnode = gpir_node_create_dest(comp, gpir_op_load_attribute, &instr->dest);
       if (!lnode)
          return NULL;
 
-      lnode->index = instr->const_index[info->index_map[NIR_INTRINSIC_BASE] - 1];
-      lnode->component = instr->const_index[info->index_map[NIR_INTRINSIC_COMPONENT] - 1];
+      lnode->index = nir_intrinsic_base(instr);
+      lnode->component = nir_intrinsic_component(instr);
+
+      return &lnode->node;
+
+   case nir_intrinsic_load_uniform:
+      lnode = gpir_node_create_dest(comp, gpir_op_load_uniform, &instr->dest);
+      if (!lnode)
+         return NULL;
+
+      lnode->index = nir_intrinsic_base(instr);
+      lnode->component = nir_intrinsic_component(instr);
+
+      child = gpir_node_find(comp, instr->src);
+      if (child->type == gpir_node_type_const) {
+         gpir_const_node *c = gpir_node_to_const(child);
+         lnode->index += c->value.i;
+      }
+      else
+         gpir_node_add_read_after_write_dep(&lnode->node, child);
 
       return &lnode->node;
 
@@ -133,8 +145,8 @@ static gpir_node *gpir_emit_intrinsic(gpir_compiler *comp, nir_intrinsic_instr *
       if (!snode)
          return NULL;
 
-      snode->index = instr->const_index[info->index_map[NIR_INTRINSIC_BASE] - 1];
-      snode->component = instr->const_index[info->index_map[NIR_INTRINSIC_COMPONENT] - 1];
+      snode->index = nir_intrinsic_base(instr);
+      snode->component = nir_intrinsic_component(instr);
 
       child = gpir_node_find(comp, instr->src);
       snode->child = child;
