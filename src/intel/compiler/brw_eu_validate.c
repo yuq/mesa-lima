@@ -555,7 +555,7 @@ general_restrictions_on_region_parameters(const struct gen_device_info *devinfo,
 
       if (i == 0) {
          DO_SRC(0);
-      } else if (i == 1) {
+      } else {
          DO_SRC(1);
       }
 #undef DO_SRC
@@ -758,7 +758,7 @@ region_alignment_rules(const struct gen_device_info *devinfo,
 
       if (i == 0) {
          DO_SRC(0);
-      } else if (i == 1) {
+      } else {
          DO_SRC(1);
       }
 #undef DO_SRC
@@ -950,7 +950,7 @@ region_alignment_rules(const struct gen_device_info *devinfo,
 
          if (i == 0) {
             DO_SRC(0);
-         } else if (i == 1) {
+         } else {
             DO_SRC(1);
          }
 #undef DO_SRC
@@ -1011,7 +1011,7 @@ region_alignment_rules(const struct gen_device_info *devinfo,
 
          if (i == 0) {
             DO_SRC(0);
-         } else if (i == 1) {
+         } else {
             DO_SRC(1);
          }
 #undef DO_SRC
