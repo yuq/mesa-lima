@@ -144,6 +144,8 @@ typedef struct gpir_node {
    gpir_op op;
    gpir_node_type type;
    int index;
+   char name[16];
+   bool printed;
 
    /* for scheduler */
    struct set *preds, *succs;
