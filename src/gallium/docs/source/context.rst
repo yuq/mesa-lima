@@ -118,7 +118,7 @@ If texture format is different than template format, it is said the texture
 is being cast to another format. Casting can be done only between compatible
 formats, that is formats that have matching component order and sizes.
 
-Swizzle fields specify they way in which fetched texel components are placed
+Swizzle fields specify the way in which fetched texel components are placed
 in the result register. For example, ``swizzle_r`` specifies what is going to be
 placed in first component of result register.
 
