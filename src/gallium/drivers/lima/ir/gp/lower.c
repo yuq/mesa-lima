@@ -33,11 +33,11 @@ static void gpir_lower_const(gpir_compiler *comp)
          if (node->op == gpir_op_const) {
             gpir_const_node *c = gpir_node_to_const(node);
 
-            if (gpir_node_is_root(node))
-               gpir_node_delete(node);
-
             fprintf(stderr, "gpir: const lower not implemented node %d value %x\n",
                     node->index, c->value.ui);
+
+            if (gpir_node_is_root(node))
+               gpir_node_delete(node);
          }
       }
    }
