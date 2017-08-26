@@ -397,7 +397,7 @@ brw_get_num_logical_layers(const struct intel_mipmap_tree *mt, unsigned level)
       return mt->surf.logical_level0_px.array_len;
 }
 
-static unsigned
+UNUSED static unsigned
 get_num_phys_layers(const struct isl_surf *surf, unsigned level)
 {
    /* In case of physical dimensions one needs to consider also the layout.

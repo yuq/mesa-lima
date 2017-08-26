@@ -119,7 +119,7 @@ ro_bo(struct brw_bo *bo, uint32_t offset)
    };
 }
 
-static struct brw_address
+UNUSED static struct brw_address
 ggtt_bo(struct brw_bo *bo, uint32_t offset)
 {
    return (struct brw_address) {
@@ -3036,7 +3036,7 @@ genX(upload_push_constant_packets)(struct brw_context *brw)
 
    for (int stage = 0; stage <= MESA_SHADER_FRAGMENT; stage++) {
       struct brw_stage_state *stage_state = stage_states[stage];
-      struct gl_program *prog = ctx->_Shader->CurrentProgram[stage];
+      UNUSED struct gl_program *prog = ctx->_Shader->CurrentProgram[stage];
 
       if (!stage_state->push_constants_dirty)
          continue;
