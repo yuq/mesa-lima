@@ -418,8 +418,8 @@ BARYCENTRIC(at_offset, 1, 2)
 #define LOAD(name, srcs, num_indices, idx0, idx1, idx2, flags) \
    INTRINSIC(load_##name, srcs, ARR(1, 1, 1, 1), true, 0, 0, num_indices, idx0, idx1, idx2, flags)
 
-/* src[] = { offset }. const_index[] = { base, range } */
-LOAD(uniform, 1, 2, BASE, RANGE, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+/* src[] = { offset }. const_index[] = { base, range, component } */
+LOAD(uniform, 1, 3, BASE, RANGE, COMPONENT, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* src[] = { buffer_index, offset }. No const_index */
 LOAD(ubo, 2, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* src[] = { offset }. const_index[] = { base, component } */
