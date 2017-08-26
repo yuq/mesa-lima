@@ -3458,9 +3458,7 @@ fs_visitor::nir_emit_cs_intrinsic(const fs_builder &bld,
        * expected by our 32-bit write messages.
        */
       unsigned type_size = 4;
-      unsigned bit_size = instr->src[0].is_ssa ?
-         instr->src[0].ssa->bit_size : instr->src[0].reg.reg->bit_size;
-      if (bit_size == 64) {
+      if (nir_src_bit_size(instr->src[0]) == 64) {
          type_size = 8;
          fs_reg tmp =
            fs_reg(VGRF, alloc.allocate(alloc.sizes[val_reg.nr]), val_reg.type);
@@ -3965,9 +3963,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
        * expected by our 32-bit write messages.
        */
       unsigned type_size = 4;
-      unsigned bit_size = instr->src[0].is_ssa ?
-         instr->src[0].ssa->bit_size : instr->src[0].reg.reg->bit_size;
-      if (bit_size == 64) {
+      if (nir_src_bit_size(instr->src[0]) == 64) {
          type_size = 8;
          fs_reg tmp =
            fs_reg(VGRF, alloc.allocate(alloc.sizes[val_reg.nr]), val_reg.type);
@@ -4032,9 +4028,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
 
       unsigned num_components = instr->num_components;
       unsigned first_component = nir_intrinsic_component(instr);
-      unsigned bit_size = instr->src[0].is_ssa ?
-         instr->src[0].ssa->bit_size : instr->src[0].reg.reg->bit_size;
-      if (bit_size == 64) {
+      if (nir_src_bit_size(instr->src[0]) == 64) {
          fs_reg tmp =
             fs_reg(VGRF, alloc.allocate(2 * num_components),
                    BRW_REGISTER_TYPE_F);
