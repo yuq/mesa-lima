@@ -382,7 +382,6 @@ bool si_update_shaders(struct si_context *sctx);
 void si_init_shader_functions(struct si_context *sctx);
 bool si_init_shader_cache(struct si_screen *sscreen);
 void si_destroy_shader_cache(struct si_screen *sscreen);
-void si_init_shader_selector_async(void *job, int thread_index);
 void si_get_active_slot_masks(const struct tgsi_shader_info *info,
 			      uint32_t *const_and_shader_buffers,
 			      uint64_t *samplers_and_images);

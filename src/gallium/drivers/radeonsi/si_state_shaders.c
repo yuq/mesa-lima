@@ -1786,7 +1786,7 @@ static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
  * si_shader_selector initialization. Since it can be done asynchronously,
  * there is no way to report compile failures to applications.
  */
-void si_init_shader_selector_async(void *job, int thread_index)
+static void si_init_shader_selector_async(void *job, int thread_index)
 {
 	struct si_shader_selector *sel = (struct si_shader_selector *)job;
 	struct si_screen *sscreen = sel->screen;
