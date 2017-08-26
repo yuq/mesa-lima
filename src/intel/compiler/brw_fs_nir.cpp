@@ -2568,7 +2568,6 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
          instr->src[0].ssa->bit_size : instr->src[0].reg.reg->bit_size) == 64;
       fs_reg indirect_offset = get_indirect_offset(instr);
       unsigned imm_offset = instr->const_index[0];
-      unsigned swiz = BRW_SWIZZLE_XYZW;
       unsigned mask = instr->const_index[1];
       unsigned header_regs = 0;
       fs_reg srcs[7];
@@ -2597,13 +2596,6 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
             iter_components = 2;
          }
       }
-
-      /* 64-bit data needs to me shuffled before we can write it to the URB.
-       * We will use this temporary to shuffle the components in each
-       * iteration.
-       */
-      fs_reg tmp =
-         fs_reg(VGRF, alloc.allocate(2 * iter_components), value.type);
 
       mask = mask << first_component;
 
@@ -2648,26 +2640,21 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
                continue;
 
             if (!is_64bit) {
-               srcs[header_regs + i + first_component] =
-                  offset(value, bld, BRW_GET_SWZ(swiz, i));
+               srcs[header_regs + i + first_component] = offset(value, bld, i);
             } else {
                /* We need to shuffle the 64-bit data to match the layout
                 * expected by our 32-bit URB write messages. We use a temporary
                 * for that.
                 */
-               unsigned channel = BRW_GET_SWZ(swiz, iter * 2 + i);
+               fs_reg dest = fs_reg(VGRF, alloc.allocate(2), value.type);
+               unsigned channel = iter * 2 + i;
                shuffle_64bit_data_for_32bit_write(bld,
-                  retype(offset(tmp, bld, 2 * i), BRW_REGISTER_TYPE_F),
+                  retype(dest, BRW_REGISTER_TYPE_F),
                   retype(offset(value, bld, 2 * channel), BRW_REGISTER_TYPE_DF),
                   1);
 
-               /* Now copy the data to the destination */
-               fs_reg dest = fs_reg(VGRF, alloc.allocate(2), value.type);
-               unsigned idx = 2 * i;
-               bld.MOV(dest, offset(tmp, bld, idx));
-               bld.MOV(offset(dest, bld, 1), offset(tmp, bld, idx + 1));
-               srcs[header_regs + idx + first_component * 2] = dest;
-               srcs[header_regs + idx + 1 + first_component * 2] =
+               srcs[header_regs + (i + first_component) * 2] = dest;
+               srcs[header_regs + (i + first_component) * 2 + 1] =
                   offset(dest, bld, 1);
             }
          }
