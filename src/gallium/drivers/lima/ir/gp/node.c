@@ -234,8 +234,15 @@ void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index)
    if (!node->succs)
       goto err_out;
 
-   if (index >= 0)
+   if (index >= 0) {
       comp->var_nodes[index] = node;
+      if (index < comp->reg_base)
+         snprintf(node->name, sizeof(node->name), "ssa%d", index);
+      else
+         snprintf(node->name, sizeof(node->name), "reg%d", index - comp->reg_base);
+   }
+   else
+      snprintf(node->name, sizeof(node->name), "new");
 
    node->op = op;
    node->type = type;
@@ -347,16 +354,27 @@ static void gpir_node_print_node(gpir_node *node, int space)
 {
    for (int i = 0; i < space; i++)
       printf(" ");
-   printf("%s %d\n", gpir_op_infos[node->op].name, node->index);
+   printf("%s%s %d %s\n", node->printed && !gpir_node_is_leaf(node) ? "+" : "",
+          gpir_op_infos[node->op].name, node->index, node->name);
 
-   gpir_node_foreach_pred(node, entry) {
-      gpir_node *pred = gpir_node_from_entry(entry, pred);
-      gpir_node_print_node(pred, space + 2);
+   if (!node->printed) {
+      gpir_node_foreach_pred(node, entry) {
+         gpir_node *pred = gpir_node_from_entry(entry, pred);
+         gpir_node_print_node(pred, space + 2);
+      }
+
+      node->printed = true;
    }
 }
 
 void gpir_node_print_prog(gpir_compiler *comp)
 {
+   list_for_each_entry(gpir_block, block, &comp->block_list, list) {
+      list_for_each_entry(gpir_node, node, &block->node_list, list) {
+         node->printed = false;
+      }
+   }
+
    printf("========prog========\n");
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
       printf("-------block------\n");
