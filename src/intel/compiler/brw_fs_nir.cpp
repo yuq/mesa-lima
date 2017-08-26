@@ -2646,10 +2646,8 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
                 * expected by our 32-bit URB write messages. We use a temporary
                 * for that.
                 */
-               fs_reg dest = fs_reg(VGRF, alloc.allocate(2), value.type);
                unsigned channel = iter * 2 + i;
-               shuffle_64bit_data_for_32bit_write(bld,
-                  retype(dest, BRW_REGISTER_TYPE_F),
+               fs_reg dest = shuffle_64bit_data_for_32bit_write(bld,
                   retype(offset(value, bld, 2 * channel), BRW_REGISTER_TYPE_DF),
                   1);
 
@@ -3506,14 +3504,9 @@ fs_visitor::nir_emit_cs_intrinsic(const fs_builder &bld,
       unsigned type_size = 4;
       if (nir_src_bit_size(instr->src[0]) == 64) {
          type_size = 8;
-         fs_reg tmp =
-           fs_reg(VGRF, alloc.allocate(alloc.sizes[val_reg.nr]), val_reg.type);
-         shuffle_64bit_data_for_32bit_write(
-            bld,
-            retype(tmp, BRW_REGISTER_TYPE_F),
+         val_reg = shuffle_64bit_data_for_32bit_write(bld,
             retype(val_reg, BRW_REGISTER_TYPE_DF),
             instr->num_components);
-         val_reg = tmp;
       }
 
       unsigned type_slots = type_size / 4;
@@ -4011,13 +4004,9 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       unsigned type_size = 4;
       if (nir_src_bit_size(instr->src[0]) == 64) {
          type_size = 8;
-         fs_reg tmp =
-           fs_reg(VGRF, alloc.allocate(alloc.sizes[val_reg.nr]), val_reg.type);
-         shuffle_64bit_data_for_32bit_write(bld,
-            retype(tmp, BRW_REGISTER_TYPE_F),
+         val_reg = shuffle_64bit_data_for_32bit_write(bld,
             retype(val_reg, BRW_REGISTER_TYPE_DF),
             instr->num_components);
-         val_reg = tmp;
       }
 
       unsigned type_slots = type_size / 4;
@@ -4075,11 +4064,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       unsigned num_components = instr->num_components;
       unsigned first_component = nir_intrinsic_component(instr);
       if (nir_src_bit_size(instr->src[0]) == 64) {
-         fs_reg tmp =
-            fs_reg(VGRF, alloc.allocate(2 * num_components),
-                   BRW_REGISTER_TYPE_F);
-         shuffle_64bit_data_for_32bit_write(
-            bld, tmp, retype(src, BRW_REGISTER_TYPE_DF), num_components);
+         fs_reg tmp = shuffle_64bit_data_for_32bit_write(bld,
+            retype(src, BRW_REGISTER_TYPE_DF), num_components);
          src = retype(tmp, src.type);
          num_components *= 2;
       }
@@ -4767,24 +4753,22 @@ shuffle_32bit_load_result_to_64bit_data(const fs_builder &bld,
  * 64-bit data they are about to write. Because of this the function checks
  * that the src and dst regions involved in the operation do not overlap.
  */
-void
+fs_reg
 shuffle_64bit_data_for_32bit_write(const fs_builder &bld,
-                                   const fs_reg &dst,
                                    const fs_reg &src,
                                    uint32_t components)
 {
    assert(type_sz(src.type) == 8);
-   assert(type_sz(dst.type) == 4);
 
-   assert(!regions_overlap(
-             dst, 2 * components * dst.component_size(bld.dispatch_width()),
-             src, components * src.component_size(bld.dispatch_width())));
+   fs_reg dst = bld.vgrf(BRW_REGISTER_TYPE_D, 2 * components);
 
    for (unsigned i = 0; i < components; i++) {
       const fs_reg component_i = offset(src, bld, i);
       bld.MOV(offset(dst, bld, 2 * i), subscript(component_i, dst.type, 0));
       bld.MOV(offset(dst, bld, 2 * i + 1), subscript(component_i, dst.type, 1));
    }
+
+   return dst;
 }
 
 fs_reg
