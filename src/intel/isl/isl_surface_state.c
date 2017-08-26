@@ -268,7 +268,7 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       assert(surf_fmtl->bh == view_fmtl->bh);
    }
 
-   s.SurfaceFormat = info->view->format;
+   s.SurfaceFormat = (enum GENX(SURFACE_FORMAT)) info->view->format;
 
 #if GEN_GEN <= 5
    s.ColorBufferComponentWriteDisables = info->write_disables;
@@ -277,7 +277,8 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
 #endif
 
 #if GEN_IS_HASWELL
-   s.IntegerSurfaceFormat = isl_format_has_int_channel(s.SurfaceFormat);
+   s.IntegerSurfaceFormat =
+      isl_format_has_int_channel((enum isl_format) s.SurfaceFormat);
 #endif
 
    assert(info->surf->logical_level0_px.width > 0 &&
@@ -505,10 +506,10 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
        */
       assert(info->view->swizzle.a == ISL_CHANNEL_SELECT_ALPHA);
    }
-   s.ShaderChannelSelectRed = info->view->swizzle.r;
-   s.ShaderChannelSelectGreen = info->view->swizzle.g;
-   s.ShaderChannelSelectBlue = info->view->swizzle.b;
-   s.ShaderChannelSelectAlpha = info->view->swizzle.a;
+   s.ShaderChannelSelectRed = (enum GENX(ShaderChannelSelect)) info->view->swizzle.r;
+   s.ShaderChannelSelectGreen = (enum GENX(ShaderChannelSelect)) info->view->swizzle.g;
+   s.ShaderChannelSelectBlue = (enum GENX(ShaderChannelSelect)) info->view->swizzle.b;
+   s.ShaderChannelSelectAlpha = (enum GENX(ShaderChannelSelect)) info->view->swizzle.a;
 #endif
 
    s.SurfaceBaseAddress = info->address;
@@ -701,7 +702,7 @@ isl_genX(buffer_fill_state_s)(void *state,
    struct GENX(RENDER_SURFACE_STATE) s = { 0, };
 
    s.SurfaceType = SURFTYPE_BUFFER;
-   s.SurfaceFormat = info->format;
+   s.SurfaceFormat = (enum GENX(SURFACE_FORMAT)) info->format;
 
 #if GEN_GEN >= 6
    s.SurfaceVerticalAlignment = isl_to_gen_valign[4];
@@ -759,7 +760,7 @@ isl_genX(null_fill_state)(void *state, struct isl_extent3d size)
 {
    struct GENX(RENDER_SURFACE_STATE) s = {
       .SurfaceType = SURFTYPE_NULL,
-      .SurfaceFormat = ISL_FORMAT_B8G8R8A8_UNORM,
+      .SurfaceFormat = (enum GENX(SURFACE_FORMAT)) ISL_FORMAT_B8G8R8A8_UNORM,
 #if GEN_GEN >= 7
       .SurfaceArray = size.depth > 0,
 #endif
