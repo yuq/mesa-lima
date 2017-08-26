@@ -351,21 +351,23 @@ static gpir_node *_gpir_create_from_node(gpir_block *block, gpir_node *node, gpi
    return ret;
 }
 
-static bool gpir_create_from_node(gpir_block *block, gpir_node *node, gpir_node *load,
-                                  gpir_node **output)
+static gpir_node *gpir_create_from_node(gpir_block *block, gpir_node *node, gpir_node *load)
 {
-   gpir_node *ret = NULL;
+   gpir_node *ret = _gpir_create_from_node(block, node, load);
+   if (!ret)
+      return NULL;
 
    /* get remain unsatisfied nodes */
    gpir_node_foreach_succ(node, entry) {
-      gpir_dep_info *dep = gpir_dep_from_entry(entry);
       gpir_node *succ = gpir_node_from_entry(entry, succ);
+
+      /* ret is already successor of node */
+      if (succ == ret)
+         continue;
+
+      gpir_dep_info *dep = gpir_dep_from_entry(entry);
       int max = succ->sched_instr + gpir_get_max_dist(dep);
-
       if (max < node->sched_instr) {
-         if (!ret && !(ret = _gpir_create_from_node(block, node, load)))
-            return false;
-
          dep->pred = ret;
          _mesa_set_add_pre_hashed(ret->succs, entry->hash, dep);
          _mesa_set_remove(node->succs, entry);
@@ -373,8 +375,7 @@ static bool gpir_create_from_node(gpir_block *block, gpir_node *node, gpir_node 
       }
    }
 
-   *output = ret;
-   return true;
+   return ret;
 }
 
 static void gpir_remove_load_node(gpir_node *load, gpir_node *node)
@@ -388,9 +389,6 @@ static void gpir_remove_load_node(gpir_node *load, gpir_node *node)
       _mesa_set_remove(load->succs, entry);
       gpir_node_replace_child(succ, load, node);
    }
-
-   gpir_node_foreach_pred(load, entry)
-      gpir_node_remove_entry(entry);
 
    gpir_node_delete(load);
 }
@@ -462,26 +460,27 @@ static bool gpir_insert_move_for_store_load(gpir_block *block, gpir_node *node)
        * be from small to big (ensured by the sorting of store node)
        */
       gpir_node_foreach_succ(node, entry) {
-         gpir_dep_info *dep = gpir_dep_from_entry(entry);
          gpir_node *succ = gpir_node_from_entry(entry, succ);
 
          /* move is already successor of load node */
-         if (succ != move) {
-            gpir_dep_info tmp = {
-               .pred = move,
-               .succ = succ,
-               .is_child_dep = true,
-               .is_offset = false,
-            };
-            int min = succ->sched_instr + gpir_get_min_dist(&tmp);
-            int max = succ->sched_instr + gpir_get_max_dist(&tmp);
+         if (succ == move)
+            continue;
 
-            if (move->sched_instr >= min && move->sched_instr <= max) {
-               dep->pred = move;
-               _mesa_set_add_pre_hashed(move->succs, entry->hash, dep);
-               _mesa_set_remove(node->succs, entry);
-               gpir_node_replace_child(succ, node, move);
-            }
+         gpir_dep_info tmp = {
+            .pred = move,
+            .succ = succ,
+            .is_child_dep = true,
+            .is_offset = false,
+         };
+         gpir_dep_info *dep = gpir_dep_from_entry(entry);
+         int min = succ->sched_instr + gpir_get_min_dist(&tmp);
+         int max = succ->sched_instr + gpir_get_max_dist(&tmp);
+
+         if (move->sched_instr >= min && move->sched_instr <= max) {
+            dep->pred = move;
+            _mesa_set_add_pre_hashed(move->succs, entry->hash, dep);
+            _mesa_set_remove(node->succs, entry);
+            gpir_node_replace_child(succ, node, move);
          }
       }
    }
@@ -582,17 +581,16 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
                break;
             }
 
-            gpir_node *move, *start_node = gpir_move_get_start_node(current);
-            if (!gpir_create_from_node(block, start_node, NULL, &move))
-               return false;
-
-            if (!gpir_try_place_move_node(block, move, start))
+            gpir_node *start_node = gpir_move_get_start_node(current);
+            gpir_node *move = gpir_create_from_node(block, start_node, NULL);
+            if (!move || !gpir_try_place_move_node(block, move, start))
                return false;
 
             current = move;
          }
 
-         if (!gpir_create_from_node(block, current, node, &load))
+         load = gpir_create_from_node(block, current, node);
+         if (!load)
             return false;
       }
    }
@@ -614,11 +612,8 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
             return true;
          }
 
-         gpir_node *move;
-         if (!gpir_create_from_node(block, current, NULL, &move))
-            return false;
-
-         if (!gpir_try_place_move_node(block, move, start))
+         gpir_node *move = gpir_create_from_node(block, current, NULL);
+         if (!move || !gpir_try_place_move_node(block, move, start))
             return false;
 
          current = move;
