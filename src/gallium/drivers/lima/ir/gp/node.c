@@ -114,6 +114,11 @@ const gpir_op_info gpir_op_infos[] = {
    },
    [gpir_op_load_uniform] = {
       .name = "ld_uni",
+      .slots = (int []) {
+         GPIR_INSTR_SLOT_MEM_LOAD0, GPIR_INSTR_SLOT_MEM_LOAD1,
+         GPIR_INSTR_SLOT_MEM_LOAD2, GPIR_INSTR_SLOT_MEM_LOAD3,
+         GPIR_INSTR_SLOT_END
+      },
       .type = gpir_node_type_load,
    },
    [gpir_op_load_temp] = {
@@ -268,6 +273,11 @@ static void gpir_node_create_dep(gpir_node *succ, gpir_node *pred,
 void gpir_node_add_child(gpir_node *parent, gpir_node *child)
 {
    gpir_node_create_dep(parent, child, true, false);
+}
+
+void gpir_node_add_read_after_write_dep(gpir_node *read, gpir_node *write)
+{
+   gpir_node_create_dep(read, write, false, false);
 }
 
 void gpir_node_remove_entry(struct set_entry *entry)

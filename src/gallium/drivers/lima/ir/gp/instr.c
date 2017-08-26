@@ -76,6 +76,30 @@ static bool gpir_instr_insert_reg0_check(gpir_instr *instr, gpir_node *node)
    return true;
 }
 
+static bool gpir_instr_insert_mem_check(gpir_instr *instr, gpir_node *node)
+{
+   gpir_load_node *load = gpir_node_to_load(node);
+   int i = node->sched_pos - GPIR_INSTR_SLOT_MEM_LOAD0;
+
+   if (load->component != i)
+      return false;
+
+   if (instr->mem_is_temp && node->op != gpir_op_load_temp)
+      return false;
+
+   if (instr->mem_is_used) {
+       if (instr->mem_index != load->index)
+          return false;
+   }
+   else {
+      instr->mem_is_used = true;
+      instr->mem_is_temp = node->op == gpir_op_load_temp;
+      instr->mem_index = load->index;
+   }
+
+   return true;
+}
+
 static bool gpir_instr_insert_store_check(gpir_instr *instr, gpir_node *node)
 {
    gpir_store_node *store = gpir_node_to_store(node);
@@ -145,6 +169,11 @@ bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
    else if (node->sched_pos >= GPIR_INSTR_SLOT_REG0_LOAD0 &&
             node->sched_pos <= GPIR_INSTR_SLOT_REG0_LOAD3) {
       if (!gpir_instr_insert_reg0_check(instr, node))
+         return false;
+   }
+   else if (node->sched_pos >= GPIR_INSTR_SLOT_MEM_LOAD0 &&
+            node->sched_pos <= GPIR_INSTR_SLOT_MEM_LOAD3) {
+      if (!gpir_instr_insert_mem_check(instr, node))
          return false;
    }
    else if (node->sched_pos >= GPIR_INSTR_SLOT_STORE0 &&
