@@ -739,7 +739,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties2KHR(
        *    the implementation for use in vkCreateImage, then all members of
        *    imageFormatProperties will be filled with zero.
        */
-      base_props->imageFormatProperties = (VkImageFormatProperties) {0};
+      base_props->imageFormatProperties = (VkImageFormatProperties) {};
    }
 
    return result;
