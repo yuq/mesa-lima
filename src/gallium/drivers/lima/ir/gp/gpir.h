@@ -225,6 +225,10 @@ typedef struct {
    bool reg0_is_attr;
    int reg0_index;
 
+   bool mem_is_used;
+   bool mem_is_temp;
+   int mem_index;
+
    bool store_is_used[2];
    bool store_is_temp;
    bool store_is_reg[2];
@@ -265,6 +269,7 @@ gpir_prog *gpir_compile_nir(nir_shader *nir);
 
 void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index);
 void gpir_node_add_child(gpir_node *parent, gpir_node *child);
+void gpir_node_add_read_after_write_dep(gpir_node *read, gpir_node *write);
 void gpir_node_remove_entry(struct set_entry *entry);
 void gpir_node_replace_succ(gpir_node *dst, gpir_node *src);
 void gpir_node_merge_pred(gpir_node *dst, gpir_node *src);
