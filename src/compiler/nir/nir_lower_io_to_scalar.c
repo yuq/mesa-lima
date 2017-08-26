@@ -26,8 +26,8 @@
 
 /** @file nir_lower_io_to_scalar.c
  *
- * Replaces nir_load_input/nir_store_output operations with num_components !=
- * 1 with individual per-channel operations.
+ * Replaces nir_load_input/nir_store_output/nir_load_uniform operations
+ * with num_components != 1 with individual per-channel operations.
  */
 
 static void
@@ -48,6 +48,39 @@ lower_load_input_to_scalar(nir_builder *b, nir_intrinsic_instr *intr)
 
       nir_intrinsic_set_base(chan_intr, nir_intrinsic_base(intr));
       nir_intrinsic_set_component(chan_intr, nir_intrinsic_component(intr) + i);
+      /* offset */
+      nir_src_copy(&chan_intr->src[0], &intr->src[0], chan_intr);
+
+      nir_builder_instr_insert(b, &chan_intr->instr);
+
+      loads[i] = &chan_intr->dest.ssa;
+   }
+
+   nir_ssa_def_rewrite_uses(&intr->dest.ssa,
+                            nir_src_for_ssa(nir_vec(b, loads,
+                                                    intr->num_components)));
+   nir_instr_remove(&intr->instr);
+}
+
+static void
+lower_load_uniform_to_scalar(nir_builder *b, nir_intrinsic_instr *intr)
+{
+   b->cursor = nir_before_instr(&intr->instr);
+
+   assert(intr->dest.is_ssa);
+
+   nir_ssa_def *loads[4];
+
+   for (unsigned i = 0; i < intr->num_components; i++) {
+      nir_intrinsic_instr *chan_intr =
+         nir_intrinsic_instr_create(b->shader, intr->intrinsic);
+      nir_ssa_dest_init(&chan_intr->instr, &chan_intr->dest,
+                        1, intr->dest.ssa.bit_size, NULL);
+      chan_intr->num_components = 1;
+
+      nir_intrinsic_set_base(chan_intr, nir_intrinsic_base(intr));
+      nir_intrinsic_set_component(chan_intr, nir_intrinsic_component(intr) + i);
+      nir_intrinsic_set_range(chan_intr, nir_intrinsic_range(intr));
       /* offset */
       nir_src_copy(&chan_intr->src[0], &intr->src[0], chan_intr);
 
@@ -118,6 +151,10 @@ nir_lower_io_to_scalar(nir_shader *shader, nir_variable_mode mask)
                case nir_intrinsic_store_output:
                   if (mask & nir_var_shader_out)
                      lower_store_output_to_scalar(&b, intr);
+                  break;
+               case nir_intrinsic_load_uniform:
+                  if (mask & nir_var_uniform)
+                     lower_load_uniform_to_scalar(&b, intr);
                   break;
                default:
                   break;
