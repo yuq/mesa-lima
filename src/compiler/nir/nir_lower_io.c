@@ -208,7 +208,7 @@ lower_load(nir_intrinsic_instr *intrin, struct lower_io_state *state,
    load->num_components = intrin->num_components;
 
    nir_intrinsic_set_base(load, var->data.driver_location);
-   if (mode == nir_var_shader_in || mode == nir_var_shader_out)
+   if (mode == nir_var_shader_in || mode == nir_var_shader_out || mode == nir_var_uniform)
       nir_intrinsic_set_component(load, component);
 
    if (load->intrinsic == nir_intrinsic_load_uniform)
