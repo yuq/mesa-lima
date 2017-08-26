@@ -505,8 +505,8 @@ def load(name, num_srcs, indices=[], flags=[]):
     intrinsic("load_" + name, [1] * num_srcs, dest_comp=0, indices=indices,
               flags=flags)
 
-# src[] = { offset }. const_index[] = { base, range }
-load("uniform", 1, [BASE, RANGE], [CAN_ELIMINATE, CAN_REORDER])
+# src[] = { offset }. const_index[] = { base, range, component }
+load("uniform", 1, [BASE, RANGE, COMPONENT], [CAN_ELIMINATE, CAN_REORDER])
 # src[] = { buffer_index, offset }. No const_index
 load("ubo", 2, flags=[CAN_ELIMINATE, CAN_REORDER])
 # src[] = { offset }. const_index[] = { base, component }
