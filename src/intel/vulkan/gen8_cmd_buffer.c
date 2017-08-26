@@ -167,7 +167,7 @@ genX(cmd_buffer_enable_pma_fix)(struct anv_cmd_buffer *cmd_buffer, bool enable)
    }
 }
 
-static bool
+UNUSED static bool
 want_depth_pma_fix(struct anv_cmd_buffer *cmd_buffer)
 {
    assert(GEN_GEN == 8);
@@ -256,7 +256,7 @@ want_depth_pma_fix(struct anv_cmd_buffer *cmd_buffer)
           wm_prog_data->computed_depth_mode != PSCDEPTH_OFF;
 }
 
-static bool
+UNUSED static bool
 want_stencil_pma_fix(struct anv_cmd_buffer *cmd_buffer)
 {
    assert(GEN_GEN == 9);

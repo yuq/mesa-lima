@@ -1219,7 +1219,7 @@ anv_bo_cache_lookup_locked(struct anv_bo_cache *cache, uint32_t gem_handle)
    return bo;
 }
 
-static struct anv_bo *
+UNUSED static struct anv_bo *
 anv_bo_cache_lookup(struct anv_bo_cache *cache, uint32_t gem_handle)
 {
    pthread_mutex_lock(&cache->mutex);

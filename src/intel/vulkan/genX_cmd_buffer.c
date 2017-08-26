@@ -629,7 +629,7 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
    /* Ensure the subresource range is valid. */
    uint64_t last_level_num = base_level + level_count;
    const uint32_t max_depth = anv_minify(image->extent.depth, base_level);
-   const uint32_t image_layers = MAX2(image->array_size, max_depth);
+   UNUSED const uint32_t image_layers = MAX2(image->array_size, max_depth);
    assert((uint64_t)base_layer + layer_count  <= image_layers);
    assert(last_level_num <= image->levels);
    /* The spec disallows these final layouts. */

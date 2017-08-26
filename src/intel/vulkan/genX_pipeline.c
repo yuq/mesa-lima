@@ -1115,7 +1115,7 @@ get_urb_output_offset()
    return 1;
 }
 
-static uint32_t
+UNUSED static uint32_t
 get_urb_output_length(const struct anv_shader_bin *bin)
 {
    const struct brw_vue_prog_data *prog_data =
@@ -1418,7 +1418,7 @@ emit_3dstate_wm(struct anv_pipeline *pipeline, struct anv_subpass *subpass,
    }
 }
 
-static bool
+UNUSED static bool
 is_dual_src_blend_factor(VkBlendFactor factor)
 {
    return factor == VK_BLEND_FACTOR_SRC1_COLOR ||
