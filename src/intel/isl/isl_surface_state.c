@@ -130,7 +130,7 @@ get_surftype(enum isl_surf_dim dim, isl_surf_usage_flags_t usage)
  * hardware.  Note that this does NOT give you the actual hardware enum values
  * but an index into the isl_to_gen_[hv]align arrays above.
  */
-static struct isl_extent3d
+UNUSED static struct isl_extent3d
 get_image_alignment(const struct isl_surf *surf)
 {
    if (GEN_GEN >= 9) {
