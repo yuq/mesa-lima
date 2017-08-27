@@ -190,7 +190,7 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
    dri2_surf->wl_surface_wrapper = get_wl_surface_proxy(window);
    if (!dri2_surf->wl_surface_wrapper) {
       _eglError(EGL_BAD_ALLOC, "dri2_create_surface");
-      goto cleanup_drm;
+      goto cleanup_dpy_wrapper;
    }
    wl_proxy_set_queue((struct wl_proxy *)dri2_surf->wl_surface_wrapper,
                       dri2_surf->wl_queue);
@@ -218,13 +218,17 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
                                                   dri2_surf);
     if (dri2_surf->dri_drawable == NULL) {
       _eglError(EGL_BAD_ALLOC, "createNewDrawable");
-       goto cleanup_surf;
+       goto cleanup_surf_wrapper;
     }
 
    dri2_surf->base.SwapInterval = dri2_dpy->default_swap_interval;
 
    return &dri2_surf->base;
 
+ cleanup_surf_wrapper:
+   wl_proxy_wrapper_destroy(dri2_surf->wl_surface_wrapper);
+ cleanup_dpy_wrapper:
+   wl_proxy_wrapper_destroy(dri2_surf->wl_dpy_wrapper);
  cleanup_drm:
    if (dri2_surf->wl_drm_wrapper)
       wl_proxy_wrapper_destroy(dri2_surf->wl_drm_wrapper);
