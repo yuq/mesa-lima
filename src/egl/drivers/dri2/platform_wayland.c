@@ -198,9 +198,6 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
    dri2_surf->wl_win->private = dri2_surf;
    dri2_surf->wl_win->destroy_window_callback = destroy_window_callback;
 
-   dri2_surf->base.Width =  -1;
-   dri2_surf->base.Height = -1;
-
    config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
                                 dri2_surf->base.GLColorspace);
 
