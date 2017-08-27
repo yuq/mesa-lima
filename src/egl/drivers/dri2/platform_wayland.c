@@ -293,10 +293,10 @@ dri2_wl_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
       dri2_surf->wl_win->destroy_window_callback = NULL;
    }
 
-   if (dri2_surf->wl_drm_wrapper)
-      wl_proxy_wrapper_destroy(dri2_surf->wl_drm_wrapper);
    wl_proxy_wrapper_destroy(dri2_surf->wl_surface_wrapper);
    wl_proxy_wrapper_destroy(dri2_surf->wl_dpy_wrapper);
+   if (dri2_surf->wl_drm_wrapper)
+      wl_proxy_wrapper_destroy(dri2_surf->wl_drm_wrapper);
    wl_event_queue_destroy(dri2_surf->wl_queue);
 
    free(surf);
