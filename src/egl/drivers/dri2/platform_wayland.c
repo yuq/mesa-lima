@@ -162,7 +162,6 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
          dri2_surf->format = WL_SHM_FORMAT_ARGB8888;
    }
 
-   dri2_surf->wl_win = window;
    dri2_surf->wl_queue = wl_display_create_queue(dri2_dpy->wl_dpy);
    if (!dri2_surf->wl_queue) {
       _eglError(EGL_BAD_ALLOC, "dri2_create_surface");
@@ -195,14 +194,14 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
    wl_proxy_set_queue((struct wl_proxy *)dri2_surf->wl_surface_wrapper,
                       dri2_surf->wl_queue);
 
+   dri2_surf->wl_win = window;
    dri2_surf->wl_win->private = dri2_surf;
    dri2_surf->wl_win->destroy_window_callback = destroy_window_callback;
+   if (dri2_dpy->flush)
+      dri2_surf->wl_win->resize_callback = resize_callback;
 
    config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
                                 dri2_surf->base.GLColorspace);
-
-   if (dri2_dpy->flush)
-      dri2_surf->wl_win->resize_callback = resize_callback;
 
    if (dri2_dpy->image_driver)
       createNewDrawable = dri2_dpy->image_driver->createNewDrawable;
