@@ -1057,12 +1057,15 @@ dmabuf_handle_modifier(void *data, struct zwp_linux_dmabuf_v1 *dmabuf,
    switch (format) {
    case WL_DRM_FORMAT_ARGB8888:
       mod = u_vector_add(&dri2_dpy->wl_modifiers.argb8888);
+      dri2_dpy->formats |= HAS_ARGB8888;
       break;
    case WL_DRM_FORMAT_XRGB8888:
       mod = u_vector_add(&dri2_dpy->wl_modifiers.xrgb8888);
+      dri2_dpy->formats |= HAS_XRGB8888;
       break;
    case WL_DRM_FORMAT_RGB565:
       mod = u_vector_add(&dri2_dpy->wl_modifiers.rgb565);
+      dri2_dpy->formats |= HAS_RGB565;
       break;
    default:
       break;
