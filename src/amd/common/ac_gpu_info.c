@@ -301,9 +301,6 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	memcpy(info->si_tile_mode_array, amdinfo->gb_tile_mode,
 		sizeof(amdinfo->gb_tile_mode));
 	info->enabled_rb_mask = amdinfo->enabled_rb_pipes_mask;
-	memcpy(info->pa_sc_raster_config, amdinfo->pa_sc_raster_cfg,
-	       sizeof(info->pa_sc_raster_config));
-	info->pa_sc_raster_config_1 = amdinfo->pa_sc_raster_cfg1[0];
 
 	memcpy(info->cik_macrotile_mode_array, amdinfo->gb_macro_tile_mode,
 		sizeof(amdinfo->gb_macro_tile_mode));

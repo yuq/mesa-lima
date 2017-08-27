@@ -4421,23 +4421,6 @@ si_write_harvested_raster_configs(struct si_context *sctx,
 static void si_set_raster_config(struct si_context *sctx, struct si_pm4_state *pm4)
 {
 	struct si_screen *sscreen = sctx->screen;
-
-	/* On SI, set the raster config value from AMDGPU. */
-	if (sscreen->b.info.drm_major == 3 && sscreen->b.chip_class == SI) {
-		if (sscreen->b.info.max_se == 1) {
-			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG,
-				       sscreen->b.info.pa_sc_raster_config[0]);
-		} else {
-			for (unsigned se = 0; se < sscreen->b.info.max_se; se++) {
-				si_set_grbm_gfx_index_se(sctx, pm4, se);
-				si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG,
-					       sscreen->b.info.pa_sc_raster_config[se]);
-			}
-			si_set_grbm_gfx_index_se(sctx, pm4, ~0);
-		}
-		return;
-	}
-
 	unsigned num_rb = MIN2(sctx->screen->b.info.num_render_backends, 16);
 	unsigned rb_mask = sctx->screen->b.info.enabled_rb_mask;
 	unsigned raster_config, raster_config_1;
