@@ -932,7 +932,7 @@ dri2_wl_create_wayland_buffer_from_image(_EGLDriver *drv,
    buffer = create_wl_buffer(dri2_dpy, NULL, image);
 
    /* The buffer object will have been created with our internal event queue
-    * because it is using the wl_drm object as a proxy factory. We want the
+    * because it is using wl_dmabuf/wl_drm as a proxy factory. We want the
     * buffer to be used by the application so we'll reset it to the display's
     * default event queue. This isn't actually racy, as the only event the
     * buffer can get is a buffer release, which doesn't happen with an explicit
