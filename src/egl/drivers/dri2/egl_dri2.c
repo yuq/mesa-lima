@@ -905,17 +905,13 @@ dri2_initialize(_EGLDriver *drv, _EGLDisplay *disp)
       return EGL_FALSE;
    }
 
-   if (ret) {
-      dri2_dpy = dri2_egl_display(disp);
+   if (!ret)
+      return EGL_FALSE;
 
-      if (!dri2_dpy) {
-         return EGL_FALSE;
-      }
+   dri2_dpy = dri2_egl_display(disp);
+   dri2_dpy->ref_count++;
 
-      dri2_dpy->ref_count++;
-   }
-
-   return ret;
+   return EGL_TRUE;
 }
 
 /**
