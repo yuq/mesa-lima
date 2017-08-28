@@ -434,6 +434,27 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
                               dst_aux_usage);
 }
 
+void
+brw_blorp_copy_buffers(struct brw_context *brw,
+                       struct brw_bo *src_bo,
+                       unsigned src_offset,
+                       struct brw_bo *dst_bo,
+                       unsigned dst_offset,
+                       unsigned size)
+{
+   DBG("%s %d bytes from %p[%d] to %p[%d]",
+       __func__, size, src_bo, src_offset, dst_bo, dst_offset);
+
+   struct blorp_batch batch;
+   struct blorp_address src = { .buffer = src_bo, .offset = src_offset };
+   struct blorp_address dst = { .buffer = dst_bo, .offset = dst_offset };
+
+   blorp_batch_init(&brw->blorp, &batch, brw, 0);
+   blorp_buffer_copy(&batch, src, dst, size);
+   blorp_batch_finish(&batch);
+}
+
+
 static struct intel_mipmap_tree *
 find_miptree(GLbitfield buffer_bit, struct intel_renderbuffer *irb)
 {

@@ -60,6 +60,14 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
                         unsigned src_width, unsigned src_height);
 
 void
+brw_blorp_copy_buffers(struct brw_context *brw,
+                       struct brw_bo *src_bo,
+                       unsigned src_offset,
+                       struct brw_bo *dst_bo,
+                       unsigned dst_offset,
+                       unsigned size);
+
+void
 brw_blorp_clear_color(struct brw_context *brw, struct gl_framebuffer *fb,
                       GLbitfield mask, bool partial_clear, bool encode_srgb);
 void
