@@ -3856,7 +3856,7 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 	interp_param = lookup_interp_param(ctx, instr->variables[0]->var->data.interpolation, location);
 	attr_number = LLVMConstInt(ctx->i32, input_index, false);
 
-	if (location == INTERP_SAMPLE || location == INTERP_CENTER) {
+	if (location == INTERP_CENTER) {
 		LLVMValueRef ij_out[2];
 		LLVMValueRef ddxy_out = emit_ddxy_interp(ctx->nir, interp_param);
 
