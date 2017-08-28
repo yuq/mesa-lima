@@ -2513,3 +2513,122 @@ blorp_copy(struct blorp_batch *batch,
 
    do_blorp_blit(batch, &params, &wm_prog_key, &coords);
 }
+
+static enum isl_format
+isl_format_for_size(unsigned size_B)
+{
+   switch (size_B) {
+   case 1:  return ISL_FORMAT_R8_UINT;
+   case 2:  return ISL_FORMAT_R8G8_UINT;
+   case 4:  return ISL_FORMAT_R8G8B8A8_UINT;
+   case 8:  return ISL_FORMAT_R16G16B16A16_UINT;
+   case 16: return ISL_FORMAT_R32G32B32A32_UINT;
+   default:
+      unreachable("Not a power-of-two format size");
+   }
+}
+
+/**
+ * Returns the greatest common divisor of a and b that is a power of two.
+ */
+static uint64_t
+gcd_pow2_u64(uint64_t a, uint64_t b)
+{
+   assert(a > 0 || b > 0);
+
+   unsigned a_log2 = ffsll(a) - 1;
+   unsigned b_log2 = ffsll(b) - 1;
+
+   /* If either a or b is 0, then a_log2 or b_log2 till be UINT_MAX in which
+    * case, the MIN2() will take the other one.  If both are 0 then we will
+    * hit the assert above.
+    */
+   return 1 << MIN2(a_log2, b_log2);
+}
+
+static void
+do_buffer_copy(struct blorp_batch *batch,
+               struct blorp_address *src,
+               struct blorp_address *dst,
+               int width, int height, int block_size)
+{
+   /* The actual format we pick doesn't matter as blorp will throw it away.
+    * The only thing that actually matters is the size.
+    */
+   enum isl_format format = isl_format_for_size(block_size);
+
+   UNUSED bool ok;
+   struct isl_surf surf;
+   ok = isl_surf_init(batch->blorp->isl_dev, &surf,
+                      .dim = ISL_SURF_DIM_2D,
+                      .format = format,
+                      .width = width,
+                      .height = height,
+                      .depth = 1,
+                      .levels = 1,
+                      .array_len = 1,
+                      .samples = 1,
+                      .row_pitch = width * block_size,
+                      .usage = ISL_SURF_USAGE_TEXTURE_BIT |
+                               ISL_SURF_USAGE_RENDER_TARGET_BIT,
+                      .tiling_flags = ISL_TILING_LINEAR_BIT);
+   assert(ok);
+
+   struct blorp_surf src_blorp_surf = {
+      .surf = &surf,
+      .addr = *src,
+   };
+
+   struct blorp_surf dst_blorp_surf = {
+      .surf = &surf,
+      .addr = *dst,
+   };
+
+   blorp_copy(batch, &src_blorp_surf, 0, 0, &dst_blorp_surf, 0, 0,
+              0, 0, 0, 0, width, height);
+}
+
+/* This is maximum possible width/height our HW can handle */
+#define MAX_SURFACE_DIM (1ull << 14)
+
+void
+blorp_buffer_copy(struct blorp_batch *batch,
+                  struct blorp_address src,
+                  struct blorp_address dst,
+                  uint64_t size)
+{
+   uint64_t copy_size = size;
+
+   /* First, we compute the biggest format that can be used with the
+    * given offsets and size.
+    */
+   int bs = 16;
+   bs = gcd_pow2_u64(bs, src.offset);
+   bs = gcd_pow2_u64(bs, dst.offset);
+   bs = gcd_pow2_u64(bs, size);
+
+   /* First, we make a bunch of max-sized copies */
+   uint64_t max_copy_size = MAX_SURFACE_DIM * MAX_SURFACE_DIM * bs;
+   while (copy_size >= max_copy_size) {
+      do_buffer_copy(batch, &src, &dst, MAX_SURFACE_DIM, MAX_SURFACE_DIM, bs);
+      copy_size -= max_copy_size;
+      src.offset += max_copy_size;
+      dst.offset += max_copy_size;
+   }
+
+   /* Now make a max-width copy */
+   uint64_t height = copy_size / (MAX_SURFACE_DIM * bs);
+   assert(height < MAX_SURFACE_DIM);
+   if (height != 0) {
+      uint64_t rect_copy_size = height * MAX_SURFACE_DIM * bs;
+      do_buffer_copy(batch, &src, &dst, MAX_SURFACE_DIM, height, bs);
+      copy_size -= rect_copy_size;
+      src.offset += rect_copy_size;
+      dst.offset += rect_copy_size;
+   }
+
+   /* Finally, make a small copy to finish it off */
+   if (copy_size != 0) {
+      do_buffer_copy(batch, &src, &dst, copy_size / bs, 1, bs);
+   }
+}

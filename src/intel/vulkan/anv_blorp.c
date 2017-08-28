@@ -541,56 +541,6 @@ isl_format_for_size(unsigned size_B)
    }
 }
 
-static void
-do_buffer_copy(struct blorp_batch *batch,
-               struct anv_bo *src, uint64_t src_offset,
-               struct anv_bo *dst, uint64_t dst_offset,
-               int width, int height, int block_size)
-{
-   struct anv_device *device = batch->blorp->driver_ctx;
-
-   /* The actual format we pick doesn't matter as blorp will throw it away.
-    * The only thing that actually matters is the size.
-    */
-   enum isl_format format = isl_format_for_size(block_size);
-
-   UNUSED bool ok;
-   struct isl_surf surf;
-   ok = isl_surf_init(&device->isl_dev, &surf,
-                      .dim = ISL_SURF_DIM_2D,
-                      .format = format,
-                      .width = width,
-                      .height = height,
-                      .depth = 1,
-                      .levels = 1,
-                      .array_len = 1,
-                      .samples = 1,
-                      .row_pitch = width * block_size,
-                      .usage = ISL_SURF_USAGE_TEXTURE_BIT |
-                               ISL_SURF_USAGE_RENDER_TARGET_BIT,
-                      .tiling_flags = ISL_TILING_LINEAR_BIT);
-   assert(ok);
-
-   struct blorp_surf src_blorp_surf = {
-      .surf = &surf,
-      .addr = {
-         .buffer = src,
-         .offset = src_offset,
-      },
-   };
-
-   struct blorp_surf dst_blorp_surf = {
-      .surf = &surf,
-      .addr = {
-         .buffer = dst,
-         .offset = dst_offset,
-      },
-   };
-
-   blorp_copy(batch, &src_blorp_surf, 0, 0, &dst_blorp_surf, 0, 0,
-              0, 0, 0, 0, width, height);
-}
-
 /**
  * Returns the greatest common divisor of a and b that is a power of two.
  */
@@ -627,48 +577,16 @@ void anv_CmdCopyBuffer(
    blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
 
    for (unsigned r = 0; r < regionCount; r++) {
-      uint64_t src_offset = src_buffer->offset + pRegions[r].srcOffset;
-      uint64_t dst_offset = dst_buffer->offset + pRegions[r].dstOffset;
-      uint64_t copy_size = pRegions[r].size;
+      struct blorp_address src = {
+         .buffer = src_buffer->bo,
+         .offset = src_buffer->offset + pRegions[r].srcOffset,
+      };
+      struct blorp_address dst = {
+         .buffer = dst_buffer->bo,
+         .offset = dst_buffer->offset + pRegions[r].dstOffset,
+      };
 
-      /* First, we compute the biggest format that can be used with the
-       * given offsets and size.
-       */
-      int bs = 16;
-      bs = gcd_pow2_u64(bs, src_offset);
-      bs = gcd_pow2_u64(bs, dst_offset);
-      bs = gcd_pow2_u64(bs, pRegions[r].size);
-
-      /* First, we make a bunch of max-sized copies */
-      uint64_t max_copy_size = MAX_SURFACE_DIM * MAX_SURFACE_DIM * bs;
-      while (copy_size >= max_copy_size) {
-         do_buffer_copy(&batch, src_buffer->bo, src_offset,
-                        dst_buffer->bo, dst_offset,
-                        MAX_SURFACE_DIM, MAX_SURFACE_DIM, bs);
-         copy_size -= max_copy_size;
-         src_offset += max_copy_size;
-         dst_offset += max_copy_size;
-      }
-
-      /* Now make a max-width copy */
-      uint64_t height = copy_size / (MAX_SURFACE_DIM * bs);
-      assert(height < MAX_SURFACE_DIM);
-      if (height != 0) {
-         uint64_t rect_copy_size = height * MAX_SURFACE_DIM * bs;
-         do_buffer_copy(&batch, src_buffer->bo, src_offset,
-                        dst_buffer->bo, dst_offset,
-                        MAX_SURFACE_DIM, height, bs);
-         copy_size -= rect_copy_size;
-         src_offset += rect_copy_size;
-         dst_offset += rect_copy_size;
-      }
-
-      /* Finally, make a small copy to finish it off */
-      if (copy_size != 0) {
-         do_buffer_copy(&batch, src_buffer->bo, src_offset,
-                        dst_buffer->bo, dst_offset,
-                        copy_size / bs, 1, bs);
-      }
+      blorp_buffer_copy(&batch, src, dst, pRegions[r].size);
    }
 
    blorp_batch_finish(&batch);
@@ -710,15 +628,16 @@ void anv_CmdUpdateBuffer(
 
       anv_state_flush(cmd_buffer->device, tmp_data);
 
-      int bs = 16;
-      bs = gcd_pow2_u64(bs, dstOffset);
-      bs = gcd_pow2_u64(bs, copy_size);
+      struct blorp_address src = {
+         .buffer = &cmd_buffer->device->dynamic_state_pool.block_pool.bo,
+         .offset = tmp_data.offset,
+      };
+      struct blorp_address dst = {
+         .buffer = dst_buffer->bo,
+         .offset = dst_buffer->offset + dstOffset,
+      };
 
-      do_buffer_copy(&batch,
-                     &cmd_buffer->device->dynamic_state_pool.block_pool.bo,
-                     tmp_data.offset,
-                     dst_buffer->bo, dst_buffer->offset + dstOffset,
-                     copy_size / bs, 1, bs);
+      blorp_buffer_copy(&batch, src, dst, copy_size);
 
       dataSize -= copy_size;
       dstOffset += copy_size;

@@ -133,6 +133,12 @@ blorp_copy(struct blorp_batch *batch,
            uint32_t src_width, uint32_t src_height);
 
 void
+blorp_buffer_copy(struct blorp_batch *batch,
+                  struct blorp_address src,
+                  struct blorp_address dst,
+                  uint64_t size);
+
+void
 blorp_fast_clear(struct blorp_batch *batch,
                  const struct blorp_surf *surf, enum isl_format format,
                  uint32_t level, uint32_t start_layer, uint32_t num_layers,
