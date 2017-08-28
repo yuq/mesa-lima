@@ -37,7 +37,7 @@
 #include "x86/common_x86_asm.h"
 
 #include "brw_context.h"
-#include "intel_blit.h"
+#include "brw_blorp.h"
 #include "intel_buffer_objects.h"
 #include "intel_batchbuffer.h"
 #include "intel_tiled_memcpy.h"
@@ -294,9 +294,9 @@ brw_buffer_subdata(struct gl_context *ctx,
 
          brw_bo_subdata(temp_bo, 0, size, data);
 
-         intel_emit_linear_blit(brw,
-                                intel_obj->buffer, offset,
+         brw_blorp_copy_buffers(brw,
                                 temp_bo, 0,
+                                intel_obj->buffer, offset,
                                 size);
          brw_emit_mi_flush(brw);
 
@@ -533,11 +533,11 @@ brw_flush_mapped_buffer_range(struct gl_context *ctx,
     * another blit of that area and the complete newer data will land the
     * second time.
     */
-   intel_emit_linear_blit(brw,
-                          intel_obj->buffer,
-                          obj->Mappings[index].Offset + offset,
+   brw_blorp_copy_buffers(brw,
                           intel_obj->range_map_bo[index],
                           intel_obj->map_extra[index] + offset,
+                          intel_obj->buffer,
+                          obj->Mappings[index].Offset + offset,
                           length);
    mark_buffer_gpu_usage(intel_obj,
                          obj->Mappings[index].Offset + offset,
@@ -565,10 +565,10 @@ brw_unmap_buffer(struct gl_context *ctx,
       brw_bo_unmap(intel_obj->range_map_bo[index]);
 
       if (!(obj->Mappings[index].AccessFlags & GL_MAP_FLUSH_EXPLICIT_BIT)) {
-         intel_emit_linear_blit(brw,
-                                intel_obj->buffer, obj->Mappings[index].Offset,
+         brw_blorp_copy_buffers(brw,
                                 intel_obj->range_map_bo[index],
                                 intel_obj->map_extra[index],
+                                intel_obj->buffer, obj->Mappings[index].Offset,
                                 obj->Mappings[index].Length);
          mark_buffer_gpu_usage(intel_obj, obj->Mappings[index].Offset,
                                obj->Mappings[index].Length);
@@ -646,9 +646,9 @@ brw_copy_buffer_subdata(struct gl_context *ctx,
    dst_bo = intel_bufferobj_buffer(brw, intel_dst, write_offset, size, true);
    src_bo = intel_bufferobj_buffer(brw, intel_src, read_offset, size, false);
 
-   intel_emit_linear_blit(brw,
-                          dst_bo, write_offset,
-                          src_bo, read_offset, size);
+   brw_blorp_copy_buffers(brw,
+                          src_bo, read_offset,
+                          dst_bo, write_offset, size);
 
    /* Since we've emitted some blits to buffers that will (likely) be used
     * in rendering operations in other cache domains in this batch, emit a
