@@ -41,6 +41,7 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/include/drm-uapi \
 	$(DEFINES) \
 	$(VISIBILITY_CFLAGS) \
+	$(WNO_OVERRIDE_INIT) \
 	$(LIBDRM_CFLAGS) \
 	$(VALGRIND_CFLAGS) \
 	-msse2
