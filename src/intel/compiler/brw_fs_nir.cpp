@@ -4058,18 +4058,17 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
 
       nir_const_value *const_offset = nir_src_as_const_value(instr->src[1]);
       assert(const_offset && "Indirect output stores not allowed");
-      fs_reg new_dest = retype(offset(outputs[instr->const_index[0]], bld,
-                                      4 * const_offset->u32[0]), src.type);
 
       unsigned num_components = instr->num_components;
       unsigned first_component = nir_intrinsic_component(instr);
       if (nir_src_bit_size(instr->src[0]) == 64) {
-         fs_reg tmp = shuffle_64bit_data_for_32bit_write(bld,
+         src = shuffle_64bit_data_for_32bit_write(bld,
             retype(src, BRW_REGISTER_TYPE_DF), num_components);
-         src = retype(tmp, src.type);
          num_components *= 2;
       }
 
+      fs_reg new_dest = retype(offset(outputs[instr->const_index[0]], bld,
+                                      4 * const_offset->u32[0]), src.type);
       for (unsigned j = 0; j < num_components; j++) {
          bld.MOV(offset(new_dest, bld, j + first_component),
                  offset(src, bld, j));
