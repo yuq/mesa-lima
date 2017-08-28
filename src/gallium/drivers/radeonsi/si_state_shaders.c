@@ -2484,6 +2484,7 @@ void si_destroy_shader_selector(struct si_context *sctx,
 	util_queue_fence_destroy(&sel->ready);
 	mtx_destroy(&sel->mutex);
 	free(sel->tokens);
+	ralloc_free(sel->nir);
 	free(sel);
 }
 
