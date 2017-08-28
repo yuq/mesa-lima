@@ -91,12 +91,8 @@ struct _egl_driver
 };
 
 
-extern _EGLDriver *
-_eglBuiltInDriverDRI2(const char *args);
-
-
 extern _EGLDriver*
-_eglBuiltInDriverHaiku(const char* args);
+_eglBuiltInDriver(void);
 
 
 extern _EGLDriver *

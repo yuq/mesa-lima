@@ -322,7 +322,7 @@ haiku_unload(_EGLDriver* drv)
  */
 extern "C"
 _EGLDriver*
-_eglBuiltInDriverHaiku(const char *args)
+_eglBuiltInDriver(void)
 {
 	CALLED();
 
