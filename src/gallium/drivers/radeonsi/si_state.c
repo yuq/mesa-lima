@@ -115,7 +115,7 @@ static void si_emit_cb_render_state(struct si_context *sctx, struct r600_atom *a
 	/* GFX9: Flush DFSM when CB_TARGET_MASK changes.
 	 * I think we don't have to do anything between IBs.
 	 */
-	if (sctx->b.chip_class >= GFX9 &&
+	if (sctx->screen->dfsm_allowed &&
 	    sctx->last_cb_target_mask != cb_target_mask) {
 		sctx->last_cb_target_mask = cb_target_mask;
 
@@ -2959,7 +2959,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 	radeon_set_context_reg(cs, R_028208_PA_SC_WINDOW_SCISSOR_BR,
 			       S_028208_BR_X(state->width) | S_028208_BR_Y(state->height));
 
-	if (sctx->b.chip_class >= GFX9) {
+	if (sctx->screen->dfsm_allowed) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_BREAK_BATCH) | EVENT_INDEX(0));
 	}
@@ -3037,7 +3037,7 @@ static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
 				sc_mode_cntl_1);
 
 	/* GFX9: Flush DFSM when the AA mode changes. */
-	if (sctx->b.chip_class >= GFX9) {
+	if (sctx->screen->dfsm_allowed) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_DFSM) | EVENT_INDEX(0));
 	}
