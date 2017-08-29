@@ -2195,8 +2195,11 @@ parse_devid_override(const char *devid_override)
       { "hsw", 0x0d2e },
       { "byt", 0x0f33 },
       { "bdw", 0x162e },
+      { "chv", 0x22B3 },
       { "skl", 0x1912 },
+      { "bxt", 0x5A85 },
       { "kbl", 0x5912 },
+      { "glk", 0x3185 },
       { "cnl", 0x5a52 },
    };
 
