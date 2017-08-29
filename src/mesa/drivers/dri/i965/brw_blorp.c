@@ -182,6 +182,13 @@ blorp_surf_for_miptree(struct brw_context *brw,
 
       surf->aux_addr.buffer = aux_buf->bo;
       surf->aux_addr.offset = aux_buf->offset;
+
+      if (devinfo->gen >= 10) {
+         surf->clear_color_addr = (struct blorp_address) {
+            .buffer = aux_buf->clear_color_bo,
+            .offset = aux_buf->clear_color_offset,
+         };
+      }
    } else {
       surf->aux_addr = (struct blorp_address) {
          .buffer = NULL,
