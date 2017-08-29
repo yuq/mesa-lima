@@ -70,20 +70,19 @@ struct u_log_context;
 #define R600_NOT_QUERY		0xffffffff
 
 /* Debug flags. */
-/* logging and features */
-#define DBG_TEX			(1 << 0)
-#define DBG_NIR			(1 << 1)
-#define DBG_COMPUTE		(1 << 2)
-#define DBG_VM			(1 << 3)
+#define DBG_VS			(1 << PIPE_SHADER_VERTEX)
+#define DBG_PS			(1 << PIPE_SHADER_FRAGMENT)
+#define DBG_GS			(1 << PIPE_SHADER_GEOMETRY)
+#define DBG_TCS			(1 << PIPE_SHADER_TESS_CTRL)
+#define DBG_TES			(1 << PIPE_SHADER_TESS_EVAL)
+#define DBG_CS			(1 << PIPE_SHADER_COMPUTE)
+#define DBG_ALL_SHADERS		(DBG_FS - 1)
+#define DBG_FS			(1 << 6) /* fetch shader */
+#define DBG_TEX			(1 << 7)
+#define DBG_NIR			(1 << 8)
+#define DBG_COMPUTE		(1 << 9)
 /* gap */
-/* shader logging */
-#define DBG_FS			(1 << 5)
-#define DBG_VS			(1 << 6)
-#define DBG_GS			(1 << 7)
-#define DBG_PS			(1 << 8)
-#define DBG_CS			(1 << 9)
-#define DBG_TCS			(1 << 10)
-#define DBG_TES			(1 << 11)
+#define DBG_VM			(1 << 11)
 #define DBG_NO_IR		(1 << 12)
 #define DBG_NO_TGSI		(1 << 13)
 #define DBG_NO_ASM		(1 << 14)

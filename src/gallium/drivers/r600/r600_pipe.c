@@ -666,7 +666,7 @@ struct pipe_screen *r600_screen_create(struct radeon_winsys *ws,
 	if (debug_get_bool_option("R600_DEBUG_COMPUTE", FALSE))
 		rscreen->b.debug_flags |= DBG_COMPUTE;
 	if (debug_get_bool_option("R600_DUMP_SHADERS", FALSE))
-		rscreen->b.debug_flags |= DBG_FS | DBG_VS | DBG_GS | DBG_PS | DBG_CS | DBG_TCS | DBG_TES;
+		rscreen->b.debug_flags |= DBG_ALL_SHADERS | DBG_FS;
 	if (!debug_get_bool_option("R600_HYPERZ", TRUE))
 		rscreen->b.debug_flags |= DBG_NO_HYPERZ;
 

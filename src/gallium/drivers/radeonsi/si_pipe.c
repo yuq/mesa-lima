@@ -371,8 +371,7 @@ static struct pipe_context *si_pipe_create_context(struct pipe_screen *screen,
 
 	/* When shaders are logged to stderr, asynchronous compilation is
 	 * disabled too. */
-	if (sscreen->b.debug_flags & (DBG_VS | DBG_TCS | DBG_TES | DBG_GS |
-				      DBG_PS | DBG_CS))
+	if (sscreen->b.debug_flags & DBG_ALL_SHADERS)
 		return ctx;
 
 	return threaded_context_create(ctx, &sscreen->b.pool_transfers,
@@ -1086,7 +1085,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	sscreen->b.barrier_flags.compute_to_L2 = SI_CONTEXT_CS_PARTIAL_FLUSH;
 
 	if (debug_get_bool_option("RADEON_DUMP_SHADERS", false))
-		sscreen->b.debug_flags |= DBG_FS | DBG_VS | DBG_GS | DBG_PS | DBG_CS;
+		sscreen->b.debug_flags |= DBG_ALL_SHADERS;
 
 	for (i = 0; i < num_compiler_threads; i++)
 		sscreen->tm[i] = si_create_llvm_target_machine(sscreen);

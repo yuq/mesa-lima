@@ -899,8 +899,7 @@ static const char *r600_get_family_name(const struct r600_common_screen *rscreen
 static void r600_disk_cache_create(struct r600_common_screen *rscreen)
 {
 	/* Don't use the cache if shader dumping is enabled. */
-	if (rscreen->debug_flags &
-	    (DBG_FS | DBG_VS | DBG_TCS | DBG_TES | DBG_GS | DBG_PS | DBG_CS))
+	if (rscreen->debug_flags & DBG_ALL_SHADERS)
 		return;
 
 	uint32_t mesa_timestamp;
@@ -1535,22 +1534,7 @@ void r600_destroy_common_screen(struct r600_common_screen *rscreen)
 bool r600_can_dump_shader(struct r600_common_screen *rscreen,
 			  unsigned processor)
 {
-	switch (processor) {
-	case PIPE_SHADER_VERTEX:
-		return (rscreen->debug_flags & DBG_VS) != 0;
-	case PIPE_SHADER_TESS_CTRL:
-		return (rscreen->debug_flags & DBG_TCS) != 0;
-	case PIPE_SHADER_TESS_EVAL:
-		return (rscreen->debug_flags & DBG_TES) != 0;
-	case PIPE_SHADER_GEOMETRY:
-		return (rscreen->debug_flags & DBG_GS) != 0;
-	case PIPE_SHADER_FRAGMENT:
-		return (rscreen->debug_flags & DBG_PS) != 0;
-	case PIPE_SHADER_COMPUTE:
-		return (rscreen->debug_flags & DBG_CS) != 0;
-	default:
-		return false;
-	}
+	return rscreen->debug_flags & (1 << processor);
 }
 
 bool r600_extra_shader_checks(struct r600_common_screen *rscreen, unsigned processor)
