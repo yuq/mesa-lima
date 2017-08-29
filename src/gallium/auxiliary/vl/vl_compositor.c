@@ -1215,6 +1215,37 @@ vl_compositor_render(struct vl_compositor_state *s,
    draw_layers(c, s, dirty_area);
 }
 
+void
+vl_compositor_yuv_deint(struct vl_compositor_state *s,
+                        struct vl_compositor *c,
+                        struct pipe_video_buffer *src,
+                        struct pipe_video_buffer *dst)
+{
+   struct pipe_surface **dst_surfaces;
+   struct u_rect dst_rect;
+
+   dst_surfaces = dst->get_surfaces(dst);
+   vl_compositor_clear_layers(s);
+
+   dst_rect.x0 = 0;
+   dst_rect.x1 = src->width;
+   dst_rect.y0 = 0;
+   dst_rect.y1 = src->height;
+
+   vl_compositor_set_yuv_layer(s, c, 0, src, NULL, NULL, true);
+   vl_compositor_set_layer_dst_area(s, 0, &dst_rect);
+   vl_compositor_render(s, c, dst_surfaces[0], NULL, false);
+
+   dst_rect.x1 /= 2;
+   dst_rect.y1 /= 2;
+
+   vl_compositor_set_yuv_layer(s, c, 0, src, NULL, NULL, false);
+   vl_compositor_set_layer_dst_area(s, 0, &dst_rect);
+   vl_compositor_render(s, c, dst_surfaces[1], NULL, false);
+
+   s->pipe->flush(s->pipe, NULL, 0);
+}
+
 bool
 vl_compositor_init(struct vl_compositor *c, struct pipe_context *pipe)
 {
