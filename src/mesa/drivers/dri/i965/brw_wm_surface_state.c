@@ -187,6 +187,15 @@ brw_emit_surface_state(struct brw_context *brw,
                                  brw->isl_dev.ss.align,
                                  surf_offset);
 
+   bool use_clear_address = devinfo->gen >= 10 && aux_surf;
+
+   struct brw_bo *clear_bo = NULL;
+   uint32_t clear_offset = 0;
+   if (use_clear_address) {
+      clear_bo = aux_buf->clear_color_bo;
+      clear_offset = aux_buf->clear_color_offset;
+   }
+
    isl_surf_fill_state(&brw->isl_dev, state, .surf = &surf, .view = &view,
                        .address = brw_state_reloc(&brw->batch,
                                                   *surf_offset + brw->isl_dev.ss.addr_offset,
@@ -195,6 +204,8 @@ brw_emit_surface_state(struct brw_context *brw,
                        .aux_address = aux_offset,
                        .mocs = brw_get_bo_mocs(devinfo, mt->bo),
                        .clear_color = clear_color,
+                       .use_clear_address = use_clear_address,
+                       .clear_address = clear_offset,
                        .x_offset_sa = tile_x, .y_offset_sa = tile_y);
    if (aux_surf) {
       /* On gen7 and prior, the upper 20 bits of surface state DWORD 6 are the
@@ -223,6 +234,17 @@ brw_emit_surface_state(struct brw_context *brw,
                                      reloc_flags);
 
       }
+   }
+
+   if (use_clear_address) {
+      /* Make sure the offset is aligned with a cacheline. */
+      assert((clear_offset & 0x3f) == 0);
+      uint32_t *clear_address =
+            state + brw->isl_dev.ss.clear_color_state_offset;
+      *clear_address = brw_state_reloc(&brw->batch,
+                                       *surf_offset +
+                                       brw->isl_dev.ss.clear_color_state_offset,
+                                       clear_bo, *clear_address, reloc_flags);
    }
 }
 
