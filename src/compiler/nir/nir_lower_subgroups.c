@@ -156,6 +156,29 @@ lower_shuffle(nir_builder *b, nir_intrinsic_instr *intrin,
       assert(intrin->src[1].is_ssa);
       index = nir_iadd(b, index, intrin->src[1].ssa);
       break;
+   case nir_intrinsic_quad_broadcast:
+      assert(intrin->src[1].is_ssa);
+      index = nir_ior(b, nir_iand(b, index, nir_imm_int(b, ~0x3)),
+                         intrin->src[1].ssa);
+      break;
+   case nir_intrinsic_quad_swap_horizontal:
+      /* For Quad operations, subgroups are divided into quads where
+       * (invocation % 4) is the index to a square arranged as follows:
+       *
+       *    +---+---+
+       *    | 0 | 1 |
+       *    +---+---+
+       *    | 2 | 3 |
+       *    +---+---+
+       */
+      index = nir_ixor(b, index, nir_imm_int(b, 0x1));
+      break;
+   case nir_intrinsic_quad_swap_vertical:
+      index = nir_ixor(b, index, nir_imm_int(b, 0x2));
+      break;
+   case nir_intrinsic_quad_swap_diagonal:
+      index = nir_ixor(b, index, nir_imm_int(b, 0x3));
+      break;
    default:
       unreachable("Invalid intrinsic");
    }
@@ -334,6 +357,16 @@ lower_subgroups_intrin(nir_builder *b, nir_intrinsic_instr *intrin,
    case nir_intrinsic_shuffle_up:
    case nir_intrinsic_shuffle_down:
       if (options->lower_shuffle)
+         return lower_shuffle(b, intrin, options->lower_to_scalar);
+      else if (options->lower_to_scalar && intrin->num_components > 1)
+         return lower_subgroup_op_to_scalar(b, intrin);
+      break;
+
+   case nir_intrinsic_quad_broadcast:
+   case nir_intrinsic_quad_swap_horizontal:
+   case nir_intrinsic_quad_swap_vertical:
+   case nir_intrinsic_quad_swap_diagonal:
+      if (options->lower_quad)
          return lower_shuffle(b, intrin, options->lower_to_scalar);
       else if (options->lower_to_scalar && intrin->num_components > 1)
          return lower_subgroup_op_to_scalar(b, intrin);

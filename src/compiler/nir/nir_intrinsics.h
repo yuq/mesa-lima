@@ -167,6 +167,16 @@ INTRINSIC(shuffle_up, 2, ARR(0, 1), true, 0, 0,
 INTRINSIC(shuffle_down, 2, ARR(0, 1), true, 0, 0,
           0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 
+/** Quad operations from SPIR-V. */
+INTRINSIC(quad_broadcast, 2, ARR(0, 1), true, 0, 0,
+          0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(quad_swap_horizontal, 1, ARR(0), true, 0, 0,
+          0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(quad_swap_vertical, 1, ARR(0), true, 0, 0,
+          0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(quad_swap_diagonal, 1, ARR(0), true, 0, 0,
+          0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+
 /**
  * Basic Geometry Shader intrinsics.
  *
