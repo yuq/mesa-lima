@@ -252,6 +252,30 @@ vtn_handle_subgroup(struct vtn_builder *b, SpvOp opcode,
       break;
    }
 
+   case SpvOpGroupNonUniformQuadBroadcast:
+      vtn_build_subgroup_instr(b, nir_intrinsic_quad_broadcast,
+                               val->ssa, vtn_ssa_value(b, w[4]),
+                               vtn_ssa_value(b, w[5])->def);
+      break;
+
+   case SpvOpGroupNonUniformQuadSwap: {
+      unsigned direction = vtn_constant_value(b, w[5])->values[0].u32[0];
+      nir_intrinsic_op op;
+      switch (direction) {
+      case 0:
+         op = nir_intrinsic_quad_swap_horizontal;
+         break;
+      case 1:
+         op = nir_intrinsic_quad_swap_vertical;
+         break;
+      case 2:
+         op = nir_intrinsic_quad_swap_diagonal;
+         break;
+      }
+      vtn_build_subgroup_instr(b, op, val->ssa, vtn_ssa_value(b, w[4]), NULL);
+      break;
+   }
+
    case SpvOpGroupNonUniformIAdd:
    case SpvOpGroupNonUniformFAdd:
    case SpvOpGroupNonUniformIMul:
@@ -268,8 +292,6 @@ vtn_handle_subgroup(struct vtn_builder *b, SpvOp opcode,
    case SpvOpGroupNonUniformLogicalAnd:
    case SpvOpGroupNonUniformLogicalOr:
    case SpvOpGroupNonUniformLogicalXor:
-   case SpvOpGroupNonUniformQuadBroadcast:
-   case SpvOpGroupNonUniformQuadSwap:
    default:
       unreachable("Invalid SPIR-V opcode");
    }

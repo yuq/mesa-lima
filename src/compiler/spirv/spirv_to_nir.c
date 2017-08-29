@@ -3310,6 +3310,9 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
          spv_check_supported(subgroup_shuffle, cap);
          break;
 
+      case SpvCapabilityGroupNonUniformQuad:
+         spv_check_supported(subgroup_quad, cap);
+
       case SpvCapabilityVariablePointersStorageBuffer:
       case SpvCapabilityVariablePointers:
          spv_check_supported(variable_pointers, cap);
