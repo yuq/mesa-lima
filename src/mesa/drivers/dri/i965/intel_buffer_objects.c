@@ -298,6 +298,7 @@ brw_buffer_subdata(struct gl_context *ctx,
                                 intel_obj->buffer, offset,
                                 temp_bo, 0,
                                 size);
+         brw_emit_mi_flush(brw);
 
          brw_bo_unreference(temp_bo);
          mark_buffer_valid_data(intel_obj, offset, size);
@@ -541,6 +542,7 @@ brw_flush_mapped_buffer_range(struct gl_context *ctx,
    mark_buffer_gpu_usage(intel_obj,
                          obj->Mappings[index].Offset + offset,
                          length);
+   brw_emit_mi_flush(brw);
 }
 
 
@@ -570,6 +572,7 @@ brw_unmap_buffer(struct gl_context *ctx,
                                 obj->Mappings[index].Length);
          mark_buffer_gpu_usage(intel_obj, obj->Mappings[index].Offset,
                                obj->Mappings[index].Length);
+         brw_emit_mi_flush(brw);
       }
 
       /* Since we've emitted some blits to buffers that will (likely) be used
@@ -577,7 +580,6 @@ brw_unmap_buffer(struct gl_context *ctx,
        * flush.  Once again, we wish for a domain tracker in libdrm to cover
        * usage inside of a batchbuffer.
        */
-      brw_emit_mi_flush(brw);
 
       brw_bo_unreference(intel_obj->range_map_bo[index]);
       intel_obj->range_map_bo[index] = NULL;
