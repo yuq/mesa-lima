@@ -91,8 +91,13 @@ struct si_dsa_stencil_ref_part {
 
 struct si_state_dsa {
 	struct si_pm4_state		pm4;
-	unsigned			alpha_func;
 	struct si_dsa_stencil_ref_part	stencil_ref;
+	ubyte				alpha_func:3;
+	bool				depth_enabled:1;
+	bool				depth_write_enabled:1;
+	bool				stencil_enabled:1;
+	bool				stencil_write_enabled:1;
+	bool				db_can_write:1;
 };
 
 struct si_stencil_ref {

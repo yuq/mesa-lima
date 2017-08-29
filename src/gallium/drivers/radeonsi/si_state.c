@@ -1044,6 +1044,14 @@ static uint32_t si_translate_stencil_op(int s_op)
 	return 0;
 }
 
+static bool si_dsa_writes_stencil(const struct pipe_stencil_state *s)
+{
+	return s->enabled && s->writemask &&
+	       (s->fail_op  != PIPE_STENCIL_OP_KEEP ||
+		s->zfail_op != PIPE_STENCIL_OP_KEEP ||
+		s->zpass_op != PIPE_STENCIL_OP_KEEP);
+}
+
 static void *si_create_dsa_state(struct pipe_context *ctx,
 				 const struct pipe_depth_stencil_alpha_state *state)
 {
@@ -1101,6 +1109,15 @@ static void *si_create_dsa_state(struct pipe_context *ctx,
 		si_pm4_set_reg(pm4, R_028024_DB_DEPTH_BOUNDS_MAX, fui(state->depth.bounds_max));
 	}
 
+	dsa->depth_enabled = state->depth.enabled;
+	dsa->depth_write_enabled = state->depth.enabled &&
+				   state->depth.writemask;
+	dsa->stencil_enabled = state->stencil[0].enabled;
+	dsa->stencil_write_enabled = state->stencil[0].enabled &&
+				     (si_dsa_writes_stencil(&state->stencil[0]) ||
+				      si_dsa_writes_stencil(&state->stencil[1]));
+	dsa->db_can_write = dsa->depth_write_enabled ||
+			    dsa->stencil_write_enabled;
 	return dsa;
 }
 
