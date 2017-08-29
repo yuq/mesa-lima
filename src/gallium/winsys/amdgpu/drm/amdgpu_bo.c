@@ -38,6 +38,10 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#ifndef AMDGPU_GEM_CREATE_VM_ALWAYS_VALID
+#define AMDGPU_GEM_CREATE_VM_ALWAYS_VALID (1 << 6)
+#endif
+
 /* Set to 1 for verbose output showing committed sparse buffer ranges. */
 #define DEBUG_SPARSE_COMMITS 0
 
@@ -406,6 +410,9 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
       request.flags |= AMDGPU_GEM_CREATE_NO_CPU_ACCESS;
    if (flags & RADEON_FLAG_GTT_WC)
       request.flags |= AMDGPU_GEM_CREATE_CPU_GTT_USWC;
+   if (flags & RADEON_FLAG_NO_INTERPROCESS_SHARING &&
+       ws->info.drm_minor >= 20)
+      request.flags |= AMDGPU_GEM_CREATE_VM_ALWAYS_VALID;
 
    r = amdgpu_bo_alloc(ws->dev, &request, &buf_handle);
    if (r) {
@@ -439,6 +446,7 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
    bo->u.real.va_handle = va_handle;
    bo->initial_domain = initial_domain;
    bo->unique_id = __sync_fetch_and_add(&ws->next_bo_unique_id, 1);
+   bo->is_local = !!(request.flags & AMDGPU_GEM_CREATE_VM_ALWAYS_VALID);
 
    if (initial_domain & RADEON_DOMAIN_VRAM)
       ws->allocated_vram += align64(size, ws->info.gart_page_size);

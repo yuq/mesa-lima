@@ -1121,6 +1121,8 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
       free(handles);
       mtx_unlock(&ws->global_bo_list_lock);
    } else {
+      unsigned num_handles;
+
       if (!amdgpu_add_sparse_backing_buffers(cs)) {
          r = -ENOMEM;
          goto bo_list_error;
@@ -1140,21 +1142,31 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
          }
       }
 
+      num_handles = 0;
       for (i = 0; i < cs->num_real_buffers; ++i) {
          struct amdgpu_cs_buffer *buffer = &cs->real_buffers[i];
 
+	 if (buffer->bo->is_local)
+            continue;
+
          assert(buffer->u.real.priority_usage != 0);
 
-         cs->handles[i] = buffer->bo->bo;
-         cs->flags[i] = (util_last_bit64(buffer->u.real.priority_usage) - 1) / 4;
+         cs->handles[num_handles] = buffer->bo->bo;
+         cs->flags[num_handles] = (util_last_bit64(buffer->u.real.priority_usage) - 1) / 4;
+	 ++num_handles;
       }
 
       if (acs->ring_type == RING_GFX)
          ws->gfx_bo_list_counter += cs->num_real_buffers;
 
-      r = amdgpu_bo_list_create(ws->dev, cs->num_real_buffers,
-                                cs->handles, cs->flags,
-                                &cs->request.resources);
+      if (num_handles) {
+         r = amdgpu_bo_list_create(ws->dev, num_handles,
+                                   cs->handles, cs->flags,
+                                   &cs->request.resources);
+      } else {
+         r = 0;
+	 cs->request.resources = 0;
+      }
    }
 bo_list_error:
 
