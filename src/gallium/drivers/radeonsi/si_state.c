@@ -441,6 +441,8 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 		blend->need_src_alpha_4bit |= 0xf;
 
 	blend->cb_target_mask = 0;
+	blend->cb_target_enabled_4bit = 0;
+
 	for (int i = 0; i < 8; i++) {
 		/* state->rt entries > 0 only written if independent blending */
 		const int j = state->independent_blend_enable ? i : 0;
@@ -482,6 +484,8 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 
 		/* cb_render_state will disable unused ones */
 		blend->cb_target_mask |= (unsigned)state->rt[j].colormask << (4 * i);
+		if (state->rt[j].colormask)
+			blend->cb_target_enabled_4bit |= 0xf << (4 * i);
 
 		if (!state->rt[j].colormask || !state->rt[j].blend_enable) {
 			si_pm4_set_reg(pm4, R_028780_CB_BLEND0_CONTROL + i * 4, blend_cntl);

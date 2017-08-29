@@ -55,6 +55,7 @@ struct si_state_blend {
 	/* Set 0xf or 0x0 (4 bits) per render target if the following is
 	 * true. ANDed with spi_shader_col_format.
 	 */
+	unsigned		cb_target_enabled_4bit;
 	unsigned		blend_enable_4bit;
 	unsigned		need_src_alpha_4bit;
 };

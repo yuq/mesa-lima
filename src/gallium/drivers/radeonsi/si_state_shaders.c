@@ -1355,6 +1355,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 				 sctx->framebuffer.spi_shader_col_format_alpha) |
 				(~blend->blend_enable_4bit & ~blend->need_src_alpha_4bit &
 				 sctx->framebuffer.spi_shader_col_format);
+			key->part.ps.epilog.spi_shader_col_format &= blend->cb_target_enabled_4bit;
 
 			/* The output for dual source blending should have
 			 * the same format as the first output.
