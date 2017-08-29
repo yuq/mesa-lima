@@ -579,34 +579,6 @@ static void vid_dec_FillOutput(vid_dec_PrivateType *priv, struct pipe_video_buff
    }
 }
 
-static void vid_dec_deint(vid_dec_PrivateType *priv, struct pipe_video_buffer *src_buf,
-                          struct pipe_video_buffer *dst_buf)
-{
-   struct vl_compositor *compositor = &priv->compositor;
-   struct vl_compositor_state *s = &priv->cstate;
-   struct pipe_surface **dst_surface;
-   struct u_rect dst_rect;
-
-   dst_surface = dst_buf->get_surfaces(dst_buf);
-   vl_compositor_clear_layers(s);
-
-   dst_rect.x0 = 0;
-   dst_rect.x1 = src_buf->width;
-   dst_rect.y0 = 0;
-   dst_rect.y1 = src_buf->height;
-
-   vl_compositor_set_yuv_layer(s, compositor, 0, src_buf, NULL, NULL, true);
-   vl_compositor_set_layer_dst_area(s, 0, &dst_rect);
-   vl_compositor_render(s, compositor, dst_surface[0], NULL, false);
-
-   dst_rect.x1 /= 2;
-   dst_rect.y1 /= 2;
-
-   vl_compositor_set_yuv_layer(s, compositor, 0, src_buf, NULL, NULL, false);
-   vl_compositor_set_layer_dst_area(s, 0, &dst_rect);
-   vl_compositor_render(s, compositor, dst_surface[1], NULL, false);
-}
-
 static void vid_dec_FrameDecoded(OMX_COMPONENTTYPE *comp, OMX_BUFFERHEADERTYPE* input,
                                  OMX_BUFFERHEADERTYPE* output)
 {
@@ -642,8 +614,8 @@ static void vid_dec_FrameDecoded(OMX_COMPONENTTYPE *comp, OMX_BUFFERHEADERTYPE* 
             new_vbuf = priv->pipe->create_video_buffer(priv->pipe, &templat);
 
             /* convert the interlaced to the progressive */
-            vid_dec_deint(priv, input->pInputPortPrivate, new_vbuf);
-            priv->pipe->flush(priv->pipe, NULL, 0);
+            vl_compositor_yuv_deint(&priv->cstate, &priv->compositor,
+                                    input->pInputPortPrivate, new_vbuf);
 
             /* set the progrssive buffer for next round */
             vbuf->destroy(vbuf);
