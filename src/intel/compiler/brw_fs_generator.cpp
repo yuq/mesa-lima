@@ -541,6 +541,106 @@ fs_generator::generate_mov_indirect(fs_inst *inst,
 }
 
 void
+fs_generator::generate_shuffle(fs_inst *inst,
+                               struct brw_reg dst,
+                               struct brw_reg src,
+                               struct brw_reg idx)
+{
+   /* Ivy bridge has some strange behavior that makes this a real pain to
+    * implement for 64-bit values so we just don't bother.
+    */
+   assert(devinfo->gen >= 8 || devinfo->is_haswell || type_sz(src.type) <= 4);
+
+   /* Because we're using the address register, we're limited to 8-wide
+    * execution on gen7.  On gen8, we're limited to 16-wide by the address
+    * register file and 8-wide for 64-bit types.  We could try and make this
+    * instruction splittable higher up in the compiler but that gets weird
+    * because it reads all of the channels regardless of execution size.  It's
+    * easier just to split it here.
+    */
+   const unsigned lower_width =
+      (devinfo->gen <= 7 || type_sz(src.type) > 4) ?
+      8 : MIN2(16, inst->exec_size);
+
+   brw_set_default_exec_size(p, cvt(lower_width) - 1);
+   for (unsigned group = 0; group < inst->exec_size; group += lower_width) {
+      brw_set_default_group(p, group);
+
+      if ((src.vstride == 0 && src.hstride == 0) ||
+          idx.file == BRW_IMMEDIATE_VALUE) {
+         /* Trivial, the source is already uniform or the index is a constant.
+          * We will typically not get here if the optimizer is doing its job,
+          * but asserting would be mean.
+          */
+         const unsigned i = idx.file == BRW_IMMEDIATE_VALUE ? idx.ud : 0;
+         brw_MOV(p, suboffset(dst, group), stride(suboffset(src, i), 0, 1, 0));
+      } else {
+         /* We use VxH indirect addressing, clobbering a0.0 through a0.7. */
+         struct brw_reg addr = vec8(brw_address_reg(0));
+
+         struct brw_reg group_idx = suboffset(idx, group);
+
+         if (lower_width == 8 && group_idx.width == BRW_WIDTH_16) {
+            /* Things get grumpy if the register is too wide. */
+            group_idx.width--;
+            group_idx.vstride--;
+         }
+
+         assert(type_sz(group_idx.type) <= 4);
+         if (type_sz(group_idx.type) == 4) {
+            /* The destination stride of an instruction (in bytes) must be
+             * greater than or equal to the size of the rest of the
+             * instruction.  Since the address register is of type UW, we
+             * can't use a D-type instruction.  In order to get around this,
+             * re retype to UW and use a stride.
+             */
+            group_idx = retype(spread(group_idx, 2), BRW_REGISTER_TYPE_W);
+         }
+
+         /* Take into account the component size and horizontal stride. */
+         assert(src.vstride == src.hstride + src.width);
+         brw_SHL(p, addr, group_idx,
+                 brw_imm_uw(_mesa_logbase2(type_sz(src.type)) +
+                            src.hstride - 1));
+
+         /* Add on the register start offset */
+         brw_ADD(p, addr, addr, brw_imm_uw(src.nr * REG_SIZE + src.subnr));
+
+         if (type_sz(src.type) > 4 &&
+             ((devinfo->gen == 7 && !devinfo->is_haswell) ||
+              devinfo->is_cherryview || gen_device_info_is_9lp(devinfo))) {
+            /* IVB has an issue (which we found empirically) where it reads
+             * two address register components per channel for indirectly
+             * addressed 64-bit sources.
+             *
+             * From the Cherryview PRM Vol 7. "Register Region Restrictions":
+             *
+             *    "When source or destination datatype is 64b or operation is
+             *    integer DWord multiply, indirect addressing must not be
+             *    used."
+             *
+             * To work around both of these, we do two integer MOVs insead of
+             * one 64-bit MOV.  Because no double value should ever cross a
+             * register boundary, it's safe to use the immediate offset in the
+             * indirect here to handle adding 4 bytes to the offset and avoid
+             * the extra ADD to the register file.
+             */
+            struct brw_reg gdst = suboffset(dst, group);
+            struct brw_reg dst_d = retype(spread(gdst, 2),
+                                          BRW_REGISTER_TYPE_D);
+            brw_MOV(p, dst_d,
+                    retype(brw_VxH_indirect(0, 0), BRW_REGISTER_TYPE_D));
+            brw_MOV(p, byte_offset(dst_d, 4),
+                    retype(brw_VxH_indirect(0, 4), BRW_REGISTER_TYPE_D));
+         } else {
+            brw_MOV(p, suboffset(dst, group),
+                    retype(brw_VxH_indirect(0, 0), src.type));
+         }
+      }
+   }
+}
+
+void
 fs_generator::generate_urb_read(fs_inst *inst,
                                 struct brw_reg dst,
                                 struct brw_reg header)
@@ -2187,6 +2287,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case SHADER_OPCODE_BROADCAST:
          assert(inst->force_writemask_all);
          brw_broadcast(p, dst, src[0], src[1]);
+         break;
+
+      case SHADER_OPCODE_SHUFFLE:
+         generate_shuffle(inst, dst, src[0], src[1]);
          break;
 
       case FS_OPCODE_SET_SAMPLE_ID:

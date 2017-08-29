@@ -656,6 +656,7 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
       .lower_to_scalar = true,
       .lower_subgroup_masks = true,
       .lower_vote_trivial = !is_scalar,
+      .lower_shuffle = true,
    };
    OPT(nir_lower_subgroups, &subgroups_options);
 

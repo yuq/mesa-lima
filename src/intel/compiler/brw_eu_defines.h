@@ -451,6 +451,15 @@ enum opcode {
     */
    SHADER_OPCODE_BROADCAST,
 
+   /* Pick the channel from its first source register given by the index
+    * specified as second source.
+    *
+    * This is similar to the BROADCAST instruction except that it takes a
+    * dynamic index and potentially puts a different value in each output
+    * channel.
+    */
+   SHADER_OPCODE_SHUFFLE,
+
    SHADER_OPCODE_GET_BUFFER_SIZE,
 
    VEC4_OPCODE_MOV_BYTES,

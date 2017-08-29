@@ -4507,6 +4507,14 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_shuffle: {
+      const fs_reg value = get_nir_src(instr->src[0]);
+      const fs_reg index = get_nir_src(instr->src[1]);
+
+      bld.emit(SHADER_OPCODE_SHUFFLE, retype(dest, value.type), value, index);
+      break;
+   }
+
    case nir_intrinsic_first_invocation: {
       fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_UD);
       bld.exec_all().emit(SHADER_OPCODE_FIND_LIVE_CHANNEL, tmp);

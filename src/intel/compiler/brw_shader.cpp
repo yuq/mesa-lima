@@ -330,6 +330,8 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
       return "find_live_channel";
    case SHADER_OPCODE_BROADCAST:
       return "broadcast";
+   case SHADER_OPCODE_SHUFFLE:
+      return "shuffle";
 
    case SHADER_OPCODE_GET_BUFFER_SIZE:
       return "get_buffer_size";

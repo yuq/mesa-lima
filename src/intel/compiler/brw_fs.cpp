@@ -310,6 +310,13 @@ fs_inst::has_source_and_destination_hazard() const
    case FS_OPCODE_PACK_HALF_2x16_SPLIT:
       /* Multiple partial writes to the destination */
       return true;
+   case SHADER_OPCODE_SHUFFLE:
+      /* This instruction returns an arbitrary channel from the source and
+       * gets split into smaller instructions in the generator.  It's possible
+       * that one of the instructions will read from a channel corresponding
+       * to an earlier instruction.
+       */
+      return true;
    default:
       /* The SIMD16 compressed instruction
        *
@@ -2527,6 +2534,20 @@ fs_visitor::opt_algebraic()
             inst->src[0] = component(inst->src[0], comp);
             inst->sources = 1;
             inst->force_writemask_all = true;
+            progress = true;
+         }
+         break;
+
+      case SHADER_OPCODE_SHUFFLE:
+         if (is_uniform(inst->src[0])) {
+            inst->opcode = BRW_OPCODE_MOV;
+            inst->sources = 1;
+            progress = true;
+         } else if (inst->src[1].file == IMM) {
+            inst->opcode = BRW_OPCODE_MOV;
+            inst->src[0] = component(inst->src[0],
+                                     inst->src[1].ud);
+            inst->sources = 1;
             progress = true;
          }
          break;

@@ -471,6 +471,11 @@ private:
                               struct brw_reg reg,
                               struct brw_reg indirect_byte_offset);
 
+   void generate_shuffle(fs_inst *inst,
+                         struct brw_reg dst,
+                         struct brw_reg src,
+                         struct brw_reg idx);
+
    bool patch_discard_jumps_to_fb_writes();
 
    const struct brw_compiler *compiler;
