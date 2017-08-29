@@ -591,7 +591,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    vlVaSurface *surf;
    void *feedback;
    struct pipe_screen *screen;
-   bool interlaced;
+   bool supported;
    bool realloc = false;
    enum pipe_format format;
 
@@ -621,14 +621,17 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    context->mpeg4.frame_num++;
 
    screen = context->decoder->context->screen;
-   interlaced = screen->get_video_param(screen, context->decoder->profile,
-                                        context->decoder->entrypoint,
-                                        PIPE_VIDEO_CAP_SUPPORTS_INTERLACED);
+   supported = screen->get_video_param(screen, context->decoder->profile,
+                                       context->decoder->entrypoint,
+                                       surf->buffer->interlaced ?
+                                       PIPE_VIDEO_CAP_SUPPORTS_INTERLACED :
+                                       PIPE_VIDEO_CAP_SUPPORTS_PROGRESSIVE);
 
-   if (surf->buffer->interlaced != interlaced) {
-      surf->templat.interlaced = screen->get_video_param(screen, context->decoder->profile,
-                                                         PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
-                                                         PIPE_VIDEO_CAP_PREFERS_INTERLACED);
+   if (!supported) {
+      surf->templat.interlaced = screen->get_video_param(screen,
+                                       context->decoder->profile,
+                                       context->decoder->entrypoint,
+                                       PIPE_VIDEO_CAP_PREFERS_INTERLACED);
       realloc = true;
    }
 
