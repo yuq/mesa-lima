@@ -2420,6 +2420,11 @@ struct anv_image {
        */
       struct anv_bo *bo;
       VkDeviceSize bo_offset;
+
+      /**
+       * When destroying the image, also free the bo.
+       * */
+      bool bo_is_owned;
    } planes[3];
 };
 

@@ -565,6 +565,13 @@ anv_DestroyImage(VkDevice _device, VkImage _image,
    if (!image)
       return;
 
+   for (uint32_t p = 0; p < image->n_planes; ++p) {
+      if (image->planes[p].bo_is_owned) {
+         assert(image->planes[p].bo != NULL);
+         anv_bo_cache_release(device, &device->bo_cache, image->planes[p].bo);
+      }
+   }
+
    vk_free2(&device->alloc, pAllocator, image);
 }
 
@@ -574,6 +581,8 @@ static void anv_image_bind_memory_plane(struct anv_device *device,
                                         struct anv_device_memory *memory,
                                         uint32_t memory_offset)
 {
+   assert(!image->planes[plane].bo_is_owned);
+
    if (!memory) {
       image->planes[plane].bo = NULL;
       image->planes[plane].bo_offset = 0;
