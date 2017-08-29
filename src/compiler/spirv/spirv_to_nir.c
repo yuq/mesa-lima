@@ -3305,6 +3305,11 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
          spv_check_supported(subgroup_ballot, cap);
          break;
 
+      case SpvCapabilityGroupNonUniformShuffle:
+      case SpvCapabilityGroupNonUniformShuffleRelative:
+         spv_check_supported(subgroup_shuffle, cap);
+         break;
+
       case SpvCapabilityVariablePointersStorageBuffer:
       case SpvCapabilityVariablePointers:
          spv_check_supported(variable_pointers, cap);

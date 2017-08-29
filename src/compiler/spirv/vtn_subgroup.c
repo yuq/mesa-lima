@@ -229,7 +229,29 @@ vtn_handle_subgroup(struct vtn_builder *b, SpvOp opcode,
    case SpvOpGroupNonUniformShuffle:
    case SpvOpGroupNonUniformShuffleXor:
    case SpvOpGroupNonUniformShuffleUp:
-   case SpvOpGroupNonUniformShuffleDown:
+   case SpvOpGroupNonUniformShuffleDown: {
+      nir_intrinsic_op op;
+      switch (opcode) {
+      case SpvOpGroupNonUniformShuffle:
+         op = nir_intrinsic_shuffle;
+         break;
+      case SpvOpGroupNonUniformShuffleXor:
+         op = nir_intrinsic_shuffle_xor;
+         break;
+      case SpvOpGroupNonUniformShuffleUp:
+         op = nir_intrinsic_shuffle_up;
+         break;
+      case SpvOpGroupNonUniformShuffleDown:
+         op = nir_intrinsic_shuffle_down;
+         break;
+      default:
+         unreachable("Invalid opcode");
+      }
+      vtn_build_subgroup_instr(b, op, val->ssa, vtn_ssa_value(b, w[4]),
+                               vtn_ssa_value(b, w[5])->def);
+      break;
+   }
+
    case SpvOpGroupNonUniformIAdd:
    case SpvOpGroupNonUniformFAdd:
    case SpvOpGroupNonUniformIMul:
