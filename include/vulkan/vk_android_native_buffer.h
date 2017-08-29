@@ -17,8 +17,13 @@
 #ifndef __VK_ANDROID_NATIVE_BUFFER_H__
 #define __VK_ANDROID_NATIVE_BUFFER_H__
 
+/* MESA: A hack to avoid #ifdefs in driver code. */
+#ifdef ANDROID
 #include <system/window.h>
 #include <vulkan/vulkan.h>
+#else
+typedef void *buffer_handle_t;
+#endif
 
 #ifdef __cplusplus
 extern "C" {
