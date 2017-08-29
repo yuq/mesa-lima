@@ -2588,16 +2588,17 @@ do_buffer_copy(struct blorp_batch *batch,
               0, 0, 0, 0, width, height);
 }
 
-/* This is maximum possible width/height our HW can handle */
-#define MAX_SURFACE_DIM (1ull << 14)
-
 void
 blorp_buffer_copy(struct blorp_batch *batch,
                   struct blorp_address src,
                   struct blorp_address dst,
                   uint64_t size)
 {
+   const struct gen_device_info *devinfo = batch->blorp->isl_dev->info;
    uint64_t copy_size = size;
+
+   /* This is maximum possible width/height our HW can handle */
+   uint64_t max_surface_dim = 1 << (devinfo->gen >= 7 ? 14 : 13);
 
    /* First, we compute the biggest format that can be used with the
     * given offsets and size.
@@ -2608,20 +2609,20 @@ blorp_buffer_copy(struct blorp_batch *batch,
    bs = gcd_pow2_u64(bs, size);
 
    /* First, we make a bunch of max-sized copies */
-   uint64_t max_copy_size = MAX_SURFACE_DIM * MAX_SURFACE_DIM * bs;
+   uint64_t max_copy_size = max_surface_dim * max_surface_dim * bs;
    while (copy_size >= max_copy_size) {
-      do_buffer_copy(batch, &src, &dst, MAX_SURFACE_DIM, MAX_SURFACE_DIM, bs);
+      do_buffer_copy(batch, &src, &dst, max_surface_dim, max_surface_dim, bs);
       copy_size -= max_copy_size;
       src.offset += max_copy_size;
       dst.offset += max_copy_size;
    }
 
    /* Now make a max-width copy */
-   uint64_t height = copy_size / (MAX_SURFACE_DIM * bs);
-   assert(height < MAX_SURFACE_DIM);
+   uint64_t height = copy_size / (max_surface_dim * bs);
+   assert(height < max_surface_dim);
    if (height != 0) {
-      uint64_t rect_copy_size = height * MAX_SURFACE_DIM * bs;
-      do_buffer_copy(batch, &src, &dst, MAX_SURFACE_DIM, height, bs);
+      uint64_t rect_copy_size = height * max_surface_dim * bs;
+      do_buffer_copy(batch, &src, &dst, max_surface_dim, height, bs);
       copy_size -= rect_copy_size;
       src.offset += rect_copy_size;
       dst.offset += rect_copy_size;
