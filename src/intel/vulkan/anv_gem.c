@@ -192,6 +192,22 @@ anv_gem_execbuffer(struct anv_device *device,
       return anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_EXECBUFFER2, execbuf);
 }
 
+/** Return -1 on error. */
+int
+anv_gem_get_tiling(struct anv_device *device, uint32_t gem_handle)
+{
+   struct drm_i915_gem_get_tiling get_tiling = {
+      .handle = gem_handle,
+   };
+
+   if (anv_ioctl(device->fd, DRM_IOCTL_I915_GEM_GET_TILING, &get_tiling)) {
+      assert(!"Failed to get BO tiling");
+      return -1;
+   }
+
+   return get_tiling.tiling_mode;
+}
+
 int
 anv_gem_set_tiling(struct anv_device *device,
                    uint32_t gem_handle, uint32_t stride, uint32_t tiling)
