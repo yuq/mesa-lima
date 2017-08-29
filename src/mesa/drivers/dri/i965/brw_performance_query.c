@@ -2144,7 +2144,8 @@ brw_init_perf_query_info(struct gl_context *ctx)
        */
       oa_register(brw);
 
-      if (kernel_has_dynamic_config_support(brw, sysfs_dev_dir))
+      if (likely((INTEL_DEBUG & DEBUG_NO_OACONFIG) == 0) &&
+          kernel_has_dynamic_config_support(brw, sysfs_dev_dir))
          init_oa_configs(brw, sysfs_dev_dir);
       else
          enumerate_sysfs_metrics(brw, sysfs_dev_dir);

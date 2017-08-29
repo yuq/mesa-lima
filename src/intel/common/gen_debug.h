@@ -69,7 +69,7 @@ extern uint64_t INTEL_DEBUG;
 #define DEBUG_OPTIMIZER           (1ull << 25)
 #define DEBUG_ANNOTATION          (1ull << 26)
 #define DEBUG_NO8                 (1ull << 27)
-/* Hole - feel free to reuse      (1ull << 28) */
+#define DEBUG_NO_OACONFIG         (1ull << 28)
 #define DEBUG_SPILL_FS            (1ull << 29)
 #define DEBUG_SPILL_VEC4          (1ull << 30)
 #define DEBUG_CS                  (1ull << 31)
