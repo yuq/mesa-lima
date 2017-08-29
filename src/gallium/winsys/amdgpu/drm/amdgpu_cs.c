@@ -903,8 +903,6 @@ static unsigned amdgpu_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
     return cs->num_real_buffers;
 }
 
-DEBUG_GET_ONCE_BOOL_OPTION(all_bos, "RADEON_ALL_BOS", false)
-
 static void amdgpu_add_fence_dependency(struct amdgpu_cs *acs,
                                         struct amdgpu_cs_buffer *buffer)
 {
@@ -1097,7 +1095,7 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
    /* Create the buffer list.
     * Use a buffer list containing all allocated buffers if requested.
     */
-   if (debug_get_option_all_bos()) {
+   if (ws->debug_all_bos) {
       struct amdgpu_winsys_bo *bo;
       amdgpu_bo_handle *handles;
       unsigned num = 0;

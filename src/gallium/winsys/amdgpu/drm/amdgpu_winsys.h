@@ -79,6 +79,7 @@ struct amdgpu_winsys {
    ADDR_HANDLE addrlib;
 
    bool check_vm;
+   bool debug_all_bos;
 
    /* List of all allocated buffers */
    mtx_t global_bo_list_lock;

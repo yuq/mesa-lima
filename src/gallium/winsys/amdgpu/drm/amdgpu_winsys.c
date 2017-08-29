@@ -50,6 +50,8 @@
 static struct util_hash_table *dev_tab = NULL;
 static mtx_t dev_tab_mutex = _MTX_INITIALIZER_NP;
 
+DEBUG_GET_ONCE_BOOL_OPTION(all_bos, "RADEON_ALL_BOS", false)
+
 /* Helper function to do the ioctls needed for setup and init. */
 static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
 {
@@ -70,6 +72,7 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
    }
 
    ws->check_vm = strstr(debug_get_option("R600_DEBUG", ""), "check_vm") != NULL;
+   ws->debug_all_bos = debug_get_option_all_bos();
 
    return true;
 

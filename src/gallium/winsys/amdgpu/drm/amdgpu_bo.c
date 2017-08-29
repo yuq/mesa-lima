@@ -167,10 +167,12 @@ void amdgpu_bo_destroy(struct pb_buffer *_buf)
 
    assert(bo->bo && "must not be called for slab entries");
 
-   mtx_lock(&bo->ws->global_bo_list_lock);
-   LIST_DEL(&bo->u.real.global_list_item);
-   bo->ws->num_buffers--;
-   mtx_unlock(&bo->ws->global_bo_list_lock);
+   if (bo->ws->debug_all_bos) {
+      mtx_lock(&bo->ws->global_bo_list_lock);
+      LIST_DEL(&bo->u.real.global_list_item);
+      bo->ws->num_buffers--;
+      mtx_unlock(&bo->ws->global_bo_list_lock);
+   }
 
    amdgpu_bo_va_op(bo->bo, 0, bo->base.size, bo->va, 0, AMDGPU_VA_OP_UNMAP);
    amdgpu_va_range_free(bo->u.real.va_handle);
@@ -360,10 +362,12 @@ static void amdgpu_add_buffer_to_global_list(struct amdgpu_winsys_bo *bo)
 
    assert(bo->bo);
 
-   mtx_lock(&ws->global_bo_list_lock);
-   LIST_ADDTAIL(&bo->u.real.global_list_item, &ws->global_bo_list);
-   ws->num_buffers++;
-   mtx_unlock(&ws->global_bo_list_lock);
+   if (ws->debug_all_bos) {
+      mtx_lock(&ws->global_bo_list_lock);
+      LIST_ADDTAIL(&bo->u.real.global_list_item, &ws->global_bo_list);
+      ws->num_buffers++;
+      mtx_unlock(&ws->global_bo_list_lock);
+   }
 }
 
 static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
