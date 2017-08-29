@@ -660,13 +660,22 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    }
 
    if (realloc) {
-      surf->buffer->destroy(surf->buffer);
+      struct pipe_video_buffer *old_buf = surf->buffer;
 
       if (vlVaHandleSurfaceAllocate(ctx, surf, &surf->templat) != VA_STATUS_SUCCESS) {
          mtx_unlock(&drv->mutex);
          return VA_STATUS_ERROR_ALLOCATION_FAILED;
       }
 
+      if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
+         if (old_buf->interlaced)
+            vl_compositor_yuv_deint(&drv->cstate, &drv->compositor, old_buf, surf->buffer);
+         else
+            /* Can't convert from progressive to interlaced yet */
+            return VA_STATUS_ERROR_INVALID_SURFACE;
+      }
+
+      old_buf->destroy(old_buf);
       context->target = surf->buffer;
    }
 
