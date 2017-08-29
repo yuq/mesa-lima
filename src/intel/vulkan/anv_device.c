@@ -268,6 +268,8 @@ anv_physical_device_init(struct anv_physical_device *device,
    VkResult result;
    int fd;
 
+   brw_process_intel_debug_variable();
+
    fd = open(path, O_RDWR | O_CLOEXEC);
    if (fd < 0)
       return vk_error(VK_ERROR_INCOMPATIBLE_DRIVER);
@@ -379,8 +381,6 @@ anv_physical_device_init(struct anv_physical_device *device,
       if (max_cs_threads > device->info.max_cs_threads)
          device->info.max_cs_threads = max_cs_threads;
    }
-
-   brw_process_intel_debug_variable();
 
    device->compiler = brw_compiler_create(NULL, &device->info);
    if (device->compiler == NULL) {
