@@ -211,7 +211,7 @@ brw_buffer_data(struct gl_context *ctx,
          return false;
 
       if (data != NULL) {
-	 brw_bo_subdata(intel_obj->buffer, 0, size, data);
+         brw_bo_subdata(intel_obj->buffer, 0, size, data);
          mark_buffer_valid_data(intel_obj, 0, size);
       }
    }
@@ -277,9 +277,9 @@ brw_buffer_subdata(struct gl_context *ctx,
       if (size == intel_obj->Base.Size ||
           (intel_obj->valid_data_start >= offset &&
            intel_obj->valid_data_end <= offset + size)) {
-	 /* Replace the current busy bo so the subdata doesn't stall. */
-	 brw_bo_unreference(intel_obj->buffer);
-	 alloc_buffer_object(brw, intel_obj);
+         /* Replace the current busy bo so the subdata doesn't stall. */
+         brw_bo_unreference(intel_obj->buffer);
+         alloc_buffer_object(brw, intel_obj);
       } else if (!intel_obj->prefer_stall_to_blit) {
          perf_debug("Using a blit copy to avoid stalling on "
                     "glBufferSubData(%ld, %ld) (%ldkb) to a busy "
@@ -289,17 +289,17 @@ brw_buffer_subdata(struct gl_context *ctx,
                     intel_obj->gpu_active_end,
                     intel_obj->valid_data_start,
                     intel_obj->valid_data_end);
-	 struct brw_bo *temp_bo =
-	    brw_bo_alloc(brw->bufmgr, "subdata temp", size, 64);
+         struct brw_bo *temp_bo =
+            brw_bo_alloc(brw->bufmgr, "subdata temp", size, 64);
 
-	 brw_bo_subdata(temp_bo, 0, size, data);
+         brw_bo_subdata(temp_bo, 0, size, data);
 
-	 intel_emit_linear_blit(brw,
-				intel_obj->buffer, offset,
-				temp_bo, 0,
-				size);
+         intel_emit_linear_blit(brw,
+                                intel_obj->buffer, offset,
+                                temp_bo, 0,
+                                size);
 
-	 brw_bo_unreference(temp_bo);
+         brw_bo_unreference(temp_bo);
          mark_buffer_valid_data(intel_obj, offset, size);
          return;
       } else {
@@ -423,18 +423,18 @@ brw_map_buffer_range(struct gl_context *ctx,
     */
    if (!(access & GL_MAP_UNSYNCHRONIZED_BIT)) {
       if (brw_batch_references(&brw->batch, intel_obj->buffer)) {
-	 if (access & GL_MAP_INVALIDATE_BUFFER_BIT) {
-	    brw_bo_unreference(intel_obj->buffer);
-	    alloc_buffer_object(brw, intel_obj);
-	 } else {
+         if (access & GL_MAP_INVALIDATE_BUFFER_BIT) {
+            brw_bo_unreference(intel_obj->buffer);
+            alloc_buffer_object(brw, intel_obj);
+         } else {
             perf_debug("Stalling on the GPU for mapping a busy buffer "
                        "object\n");
-	    intel_batchbuffer_flush(brw);
-	 }
+            intel_batchbuffer_flush(brw);
+         }
       } else if (brw_bo_busy(intel_obj->buffer) &&
-		 (access & GL_MAP_INVALIDATE_BUFFER_BIT)) {
-	 brw_bo_unreference(intel_obj->buffer);
-	 alloc_buffer_object(brw, intel_obj);
+                 (access & GL_MAP_INVALIDATE_BUFFER_BIT)) {
+         brw_bo_unreference(intel_obj->buffer);
+         alloc_buffer_object(brw, intel_obj);
       }
    }
 
@@ -459,11 +459,9 @@ brw_map_buffer_range(struct gl_context *ctx,
       const unsigned alignment = ctx->Const.MinMapBufferAlignment;
 
       intel_obj->map_extra[index] = (uintptr_t) offset % alignment;
-      intel_obj->range_map_bo[index] = brw_bo_alloc(brw->bufmgr,
-                                                          "BO blit temp",
-                                                          length +
-                                                          intel_obj->map_extra[index],
-                                                          alignment);
+      intel_obj->range_map_bo[index] =
+         brw_bo_alloc(brw->bufmgr, "BO blit temp",
+                      length + intel_obj->map_extra[index], alignment);
       void *map = brw_bo_map(brw, intel_obj->range_map_bo[index], access);
       obj->Mappings[index].Pointer = map + intel_obj->map_extra[index];
       return obj->Mappings[index].Pointer;
@@ -535,11 +533,11 @@ brw_flush_mapped_buffer_range(struct gl_context *ctx,
     * second time.
     */
    intel_emit_linear_blit(brw,
-			  intel_obj->buffer,
+                          intel_obj->buffer,
                           obj->Mappings[index].Offset + offset,
-			  intel_obj->range_map_bo[index],
+                          intel_obj->range_map_bo[index],
                           intel_obj->map_extra[index] + offset,
-			  length);
+                          length);
    mark_buffer_gpu_usage(intel_obj,
                          obj->Mappings[index].Offset + offset,
                          length);
@@ -647,8 +645,8 @@ brw_copy_buffer_subdata(struct gl_context *ctx,
    src_bo = intel_bufferobj_buffer(brw, intel_src, read_offset, size, false);
 
    intel_emit_linear_blit(brw,
-			  dst_bo, write_offset,
-			  src_bo, read_offset, size);
+                          dst_bo, write_offset,
+                          src_bo, read_offset, size);
 
    /* Since we've emitted some blits to buffers that will (likely) be used
     * in rendering operations in other cache domains in this batch, emit a
