@@ -111,6 +111,32 @@ lower_read_invocation_to_scalar(nir_builder *b, nir_intrinsic_instr *intrin)
 }
 
 static nir_ssa_def *
+lower_vote_eq_to_scalar(nir_builder *b, nir_intrinsic_instr *intrin)
+{
+   assert(intrin->src[0].is_ssa);
+   nir_ssa_def *value = intrin->src[0].ssa;
+
+   nir_ssa_def *result = NULL;
+   for (unsigned i = 0; i < intrin->num_components; i++) {
+      nir_intrinsic_instr *chan_intrin =
+         nir_intrinsic_instr_create(b->shader, intrin->intrinsic);
+      nir_ssa_dest_init(&chan_intrin->instr, &chan_intrin->dest,
+                        1, intrin->dest.ssa.bit_size, NULL);
+      chan_intrin->num_components = 1;
+      chan_intrin->src[0] = nir_src_for_ssa(nir_channel(b, value, i));
+      nir_builder_instr_insert(b, &chan_intrin->instr);
+
+      if (result) {
+         result = nir_iand(b, result, &chan_intrin->dest.ssa);
+      } else {
+         result = &chan_intrin->dest.ssa;
+      }
+   }
+
+   return result;
+}
+
+static nir_ssa_def *
 lower_subgroups_intrin(nir_builder *b, nir_intrinsic_instr *intrin,
                        const nir_lower_subgroups_options *options)
 {
@@ -125,6 +151,9 @@ lower_subgroups_intrin(nir_builder *b, nir_intrinsic_instr *intrin,
    case nir_intrinsic_vote_ieq:
       if (options->lower_vote_trivial)
          return nir_imm_int(b, NIR_TRUE);
+
+      if (options->lower_to_scalar && intrin->num_components > 1)
+         return lower_vote_eq_to_scalar(b, intrin);
       break;
 
    case nir_intrinsic_load_subgroup_size:
