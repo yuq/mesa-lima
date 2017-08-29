@@ -116,6 +116,8 @@ struct u_log_context;
 #define DBG_TEST_VMFAULT_CP	(1ull << 51)
 #define DBG_TEST_VMFAULT_SDMA	(1ull << 52)
 #define DBG_TEST_VMFAULT_SHADER	(1ull << 53)
+#define DBG_NO_DPBB		(1ull << 54)
+#define DBG_NO_DFSM		(1ull << 55)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
 #define R600_MAX_VIEWPORTS        16

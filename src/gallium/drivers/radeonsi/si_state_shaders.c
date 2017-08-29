@@ -3285,6 +3285,8 @@ bool si_update_shaders(struct si_context *sctx)
 		if (sctx->ps_db_shader_control != db_shader_control) {
 			sctx->ps_db_shader_control = db_shader_control;
 			si_mark_atom_dirty(sctx, &sctx->db_render_state);
+			if (sctx->screen->dpbb_allowed)
+				si_mark_atom_dirty(sctx, &sctx->dpbb_state);
 		}
 
 		if (sctx->smoothing_enabled != sctx->ps_shader.current->key.part.ps.epilog.poly_line_smoothing) {

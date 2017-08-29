@@ -239,6 +239,8 @@ void si_begin_new_cs(struct si_context *ctx)
 	if (!has_clear_state || ctx->blend_color.any_nonzeros)
 		si_mark_atom_dirty(ctx, &ctx->blend_color.atom);
 	si_mark_atom_dirty(ctx, &ctx->db_render_state);
+	if (ctx->b.chip_class >= GFX9)
+		si_mark_atom_dirty(ctx, &ctx->dpbb_state);
 	si_mark_atom_dirty(ctx, &ctx->stencil_ref.atom);
 	si_mark_atom_dirty(ctx, &ctx->spi_map);
 	si_mark_atom_dirty(ctx, &ctx->b.streamout.enable_atom);
