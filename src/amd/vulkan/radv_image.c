@@ -120,6 +120,7 @@ radv_init_surface(struct radv_device *device,
 	                           VK_IMAGE_USAGE_STORAGE_BIT)) ||
 	    (pCreateInfo->flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) ||
             (pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) ||
+            pCreateInfo->mipLevels > 1 || pCreateInfo->arrayLayers > 1 ||
             device->physical_device->rad_info.chip_class < VI ||
             create_info->scanout || (device->debug_flags & RADV_DEBUG_NO_DCC) ||
             !radv_is_colorbuffer_format_supported(pCreateInfo->format, &blendable))
