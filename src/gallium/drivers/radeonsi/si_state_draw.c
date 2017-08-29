@@ -195,11 +195,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	 */
 	*num_patches = MIN2(*num_patches, 40);
 
-	if (sctx->b.chip_class == SI ||
-	    /* TODO: fix GFX9 where a threadgroup contains more than 1 wave and
-	     * LS vertices per patch > HS vertices per patch. Piglit: 16in-1out */
-	    (sctx->b.chip_class == GFX9 &&
-	     num_tcs_input_cp > num_tcs_output_cp)) {
+	if (sctx->b.chip_class == SI) {
 		/* SI bug workaround, related to power management. Limit LS-HS
 		 * threadgroups to only one wave.
 		 */
@@ -1262,6 +1258,27 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (rast_prim != sctx->current_rast_prim) {
 		sctx->current_rast_prim = rast_prim;
 		sctx->do_update_shaders = true;
+	}
+
+	if (sctx->tes_shader.cso &&
+	    (sctx->b.family == CHIP_VEGA10 || sctx->b.family == CHIP_RAVEN)) {
+		/* Determine whether the LS VGPR fix should be applied.
+		 *
+		 * It is only required when num input CPs > num output CPs,
+		 * which cannot happen with the fixed function TCS. We should
+		 * also update this bit when switching from TCS to fixed
+		 * function TCS.
+		 */
+		struct si_shader_selector *tcs = sctx->tcs_shader.cso;
+		bool ls_vgpr_fix =
+			tcs &&
+			info->vertices_per_patch >
+			tcs->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT];
+
+		if (ls_vgpr_fix != sctx->ls_vgpr_fix) {
+			sctx->ls_vgpr_fix = ls_vgpr_fix;
+			sctx->do_update_shaders = true;
+		}
 	}
 
 	if (sctx->gs_shader.cso) {

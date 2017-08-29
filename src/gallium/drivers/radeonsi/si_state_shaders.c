@@ -1283,6 +1283,15 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			si_shader_selector_key_vs(sctx, sctx->vs_shader.cso,
 						  key, &key->part.tcs.ls_prolog);
 			key->part.tcs.ls = sctx->vs_shader.cso;
+
+			/* When the LS VGPR fix is needed, monolithic shaders
+			 * can:
+			 *  - avoid initializing EXEC in both the LS prolog
+			 *    and the LS main part when !vs_needs_prolog
+			 *  - remove the fixup for unused input VGPRs
+			 */
+			key->part.tcs.ls_prolog.ls_vgpr_fix = sctx->ls_vgpr_fix;
+			key->opt.prefer_mono = sctx->ls_vgpr_fix;
 		}
 
 		key->part.tcs.epilog.prim_mode =

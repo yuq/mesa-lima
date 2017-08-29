@@ -398,6 +398,7 @@ struct si_vs_prolog_bits {
 	 */
 	uint16_t	instance_divisor_is_one;     /* bitmask of inputs */
 	uint16_t	instance_divisor_is_fetched; /* bitmask of inputs */
+	unsigned	ls_vgpr_fix:1;
 };
 
 /* Common TCS bits between the shader key and the epilog key. */

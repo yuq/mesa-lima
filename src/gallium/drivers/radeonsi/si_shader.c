@@ -5444,6 +5444,8 @@ static void si_dump_shader_key_vs(const struct si_shader_key *key,
 		prefix, prolog->instance_divisor_is_one);
 	fprintf(f, "  %s.instance_divisor_is_fetched = %u\n",
 		prefix, prolog->instance_divisor_is_fetched);
+	fprintf(f, "  %s.ls_vgpr_fix = %u\n",
+		prefix, prolog->ls_vgpr_fix);
 
 	fprintf(f, "  mono.vs.fix_fetch = {");
 	for (int i = 0; i < SI_MAX_ATTRIBS; i++)
@@ -5636,6 +5638,14 @@ static void si_init_exec_from_input(struct si_shader_context *ctx,
 			   ctx->voidt, args, 2, LP_FUNC_ATTR_CONVERGENT);
 }
 
+static bool si_vs_needs_prolog(const struct si_shader_selector *sel,
+			       const struct si_vs_prolog_bits *key)
+{
+	/* VGPR initialization fixup for Vega10 and Raven is always done in the
+	 * VS prolog. */
+	return sel->vs_needs_prolog || key->ls_vgpr_fix;
+}
+
 static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 				 bool is_monolithic)
 {
@@ -5712,7 +5722,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		    (shader->key.as_es || shader->key.as_ls) &&
 		    (ctx->type == PIPE_SHADER_TESS_EVAL ||
 		     (ctx->type == PIPE_SHADER_VERTEX &&
-		      !sel->vs_needs_prolog))) {
+		      !si_vs_needs_prolog(sel, &shader->key.part.vs.prolog)))) {
 			si_init_exec_from_input(ctx,
 						ctx->param_merged_wave_info, 0);
 		} else if (ctx->type == PIPE_SHADER_TESS_CTRL ||
@@ -6364,6 +6374,8 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		if (sscreen->b.chip_class >= GFX9) {
 			struct si_shader_selector *ls = shader->key.part.tcs.ls;
 			LLVMValueRef parts[4];
+			bool vs_needs_prolog =
+				si_vs_needs_prolog(ls, &shader->key.part.tcs.ls_prolog);
 
 			/* TCS main part */
 			parts[2] = ctx.main_fn;
@@ -6376,7 +6388,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			parts[3] = ctx.main_fn;
 
 			/* VS prolog */
-			if (ls->vs_needs_prolog) {
+			if (vs_needs_prolog) {
 				union si_shader_part_key vs_prolog_key;
 				si_get_vs_prolog_key(&ls->info,
 						     shader->info.num_input_sgprs,
@@ -6407,9 +6419,9 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			ctx.type = PIPE_SHADER_TESS_CTRL;
 
 			si_build_wrapper_function(&ctx,
-						  parts + !ls->vs_needs_prolog,
-						  4 - !ls->vs_needs_prolog, 0,
-						  ls->vs_needs_prolog ? 2 : 1);
+						  parts + !vs_needs_prolog,
+						  4 - !vs_needs_prolog, 0,
+						  vs_needs_prolog ? 2 : 1);
 		} else {
 			LLVMValueRef parts[2];
 			union si_shader_part_key epilog_key;
@@ -6746,9 +6758,9 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 	LLVMTypeRef *returns;
 	LLVMValueRef ret, func;
 	int num_returns, i;
-	unsigned first_vs_vgpr = key->vs_prolog.num_input_sgprs +
-				 key->vs_prolog.num_merged_next_stage_vgprs;
+	unsigned first_vs_vgpr = key->vs_prolog.num_merged_next_stage_vgprs;
 	unsigned num_input_vgprs = key->vs_prolog.num_merged_next_stage_vgprs + 4;
+	LLVMValueRef input_vgprs[9];
 	unsigned num_all_input_regs = key->vs_prolog.num_input_sgprs +
 				      num_input_vgprs;
 	unsigned user_sgpr_base = key->vs_prolog.num_merged_next_stage_vgprs ? 8 : 0;
@@ -6768,12 +6780,9 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 
 	/* Preloaded VGPRs (outputs must be floats) */
 	for (i = 0; i < num_input_vgprs; i++) {
-		add_arg(&fninfo, ARG_VGPR, ctx->i32);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &input_vgprs[i]);
 		returns[num_returns++] = ctx->f32;
 	}
-
-	fninfo.assign[first_vs_vgpr] = &ctx->abi.vertex_id;
-	fninfo.assign[first_vs_vgpr + (key->vs_prolog.as_ls ? 2 : 1)] = &ctx->abi.instance_id;
 
 	/* Vertex load indices. */
 	for (i = 0; i <= key->vs_prolog.last_input; i++)
@@ -6783,9 +6792,33 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 	si_create_function(ctx, "vs_prolog", returns, num_returns, &fninfo, 0);
 	func = ctx->main_fn;
 
-	if (key->vs_prolog.num_merged_next_stage_vgprs &&
-	    !key->vs_prolog.is_monolithic)
-		si_init_exec_from_input(ctx, 3, 0);
+	if (key->vs_prolog.num_merged_next_stage_vgprs) {
+		if (!key->vs_prolog.is_monolithic)
+			si_init_exec_from_input(ctx, 3, 0);
+
+		if (key->vs_prolog.as_ls &&
+		    (ctx->screen->b.family == CHIP_VEGA10 ||
+		     ctx->screen->b.family == CHIP_RAVEN)) {
+			/* If there are no HS threads, SPI loads the LS VGPRs
+			 * starting at VGPR 0. Shift them back to where they
+			 * belong.
+			 */
+			LLVMValueRef has_hs_threads =
+				LLVMBuildICmp(gallivm->builder, LLVMIntNE,
+				    unpack_param(ctx, 3, 8, 8),
+				    ctx->i32_0, "");
+
+			for (i = 4; i > 0; --i) {
+				input_vgprs[i + 1] =
+					LLVMBuildSelect(gallivm->builder, has_hs_threads,
+						        input_vgprs[i + 1],
+						        input_vgprs[i - 1], "");
+			}
+		}
+	}
+
+	ctx->abi.vertex_id = input_vgprs[first_vs_vgpr];
+	ctx->abi.instance_id = input_vgprs[first_vs_vgpr + (key->vs_prolog.as_ls ? 2 : 1)];
 
 	/* Copy inputs to outputs. This should be no-op, as the registers match,
 	 * but it will prevent the compiler from overwriting them unintentionally.
@@ -6795,10 +6828,11 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 		LLVMValueRef p = LLVMGetParam(func, i);
 		ret = LLVMBuildInsertValue(gallivm->builder, ret, p, i, "");
 	}
-	for (; i < fninfo.num_params; i++) {
-		LLVMValueRef p = LLVMGetParam(func, i);
+	for (i = 0; i < num_input_vgprs; i++) {
+		LLVMValueRef p = input_vgprs[i];
 		p = LLVMBuildBitCast(gallivm->builder, p, ctx->f32, "");
-		ret = LLVMBuildInsertValue(gallivm->builder, ret, p, i, "");
+		ret = LLVMBuildInsertValue(gallivm->builder, ret, p,
+					   key->vs_prolog.num_input_sgprs + i, "");
 	}
 
 	/* Compute vertex load indices from instance divisors. */
@@ -6859,8 +6893,7 @@ static bool si_get_vs_prolog(struct si_screen *sscreen,
 {
 	struct si_shader_selector *vs = main_part->selector;
 
-	/* The prolog is a no-op if there are no inputs. */
-	if (!vs->vs_needs_prolog)
+	if (!si_vs_needs_prolog(vs, key))
 		return true;
 
 	/* Get the prolog. */
