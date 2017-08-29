@@ -4423,7 +4423,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       bld.MOV(retype(dest, BRW_REGISTER_TYPE_D), component(res1, 0));
       break;
    }
-   case nir_intrinsic_vote_eq: {
+   case nir_intrinsic_vote_ieq: {
       fs_reg value = get_nir_src(instr->src[0]);
       fs_reg uniformized = bld.emit_uniformize(value);
       const fs_builder ubld = bld.exec_all().group(1, 0);

@@ -4563,7 +4563,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = LLVMBuildSExt(ctx->ac.builder, tmp, ctx->ac.i32, "");
 		break;
 	}
-	case nir_intrinsic_vote_eq: {
+	case nir_intrinsic_vote_ieq: {
 		LLVMValueRef tmp = ac_build_vote_eq(&ctx->ac, get_src(ctx, instr->src[0]));
 		result = LLVMBuildSExt(ctx->ac.builder, tmp, ctx->ac.i32, "");
 		break;
