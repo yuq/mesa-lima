@@ -337,7 +337,7 @@ VkResult __vk_errorf(struct anv_instance *instance, const void *object,
  *    defined by extensions supported by that component.
  */
 #define anv_debug_ignored_stype(sType) \
-   anv_debug("debug: %s: ignored VkStructureType %u\n", __func__, (sType))
+   anv_debug("%s: ignored VkStructureType %u\n", __func__, (sType))
 
 void __anv_finishme(const char *file, int line, const char *format, ...)
    anv_printflike(3, 4);
