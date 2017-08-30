@@ -1195,7 +1195,7 @@ void BinPostSetupPointsImpl(
         }
 
         OSALIGNSIMD16(float) aPointSize[SIMD_WIDTH];
-        _simd16_store_ps(reinterpret_cast<float *>(aPointSize), vPointSize);
+        SIMD_T::store_ps(reinterpret_cast<float *>(aPointSize), vPointSize);
 
         uint32_t *pPrimID = (uint32_t *)&primID;
 
