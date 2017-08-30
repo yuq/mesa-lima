@@ -860,7 +860,6 @@ brwCreateContext(gl_api api,
 
    brw->has_hiz = devinfo->has_hiz_and_separate_stencil;
    brw->has_separate_stencil = devinfo->has_hiz_and_separate_stencil;
-   brw->has_pln = devinfo->has_pln;
    brw->has_surface_tile_offset = devinfo->has_surface_tile_offset;
    brw->needs_unlit_centroid_workaround =
       devinfo->needs_unlit_centroid_workaround;

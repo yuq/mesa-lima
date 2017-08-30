@@ -750,7 +750,6 @@ struct brw_context
    bool has_separate_stencil;
    bool has_swizzling;
    bool has_surface_tile_offset;
-   bool has_pln;
    bool no_simd8;
 
    /**
