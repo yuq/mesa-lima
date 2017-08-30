@@ -3573,7 +3573,7 @@ use_intel_mipree_map_blit(struct brw_context *brw,
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
-   if (brw->has_llc &&
+   if (devinfo->has_llc &&
       /* It's probably not worth swapping to the blit ring because of
        * all the overhead involved.
        */

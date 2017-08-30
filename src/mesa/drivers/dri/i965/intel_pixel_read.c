@@ -92,7 +92,7 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
     * a 2D BGRA, RGBA, L8 or A8 texture. It could be generalized to support
     * more types.
     */
-   if (!brw->has_llc ||
+   if (!devinfo->has_llc ||
        !(type == GL_UNSIGNED_BYTE || type == GL_UNSIGNED_INT_8_8_8_8_REV) ||
        pixels == NULL ||
        _mesa_is_bufferobj(pack->BufferObj) ||

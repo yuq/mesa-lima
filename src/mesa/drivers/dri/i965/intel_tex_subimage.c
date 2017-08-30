@@ -99,7 +99,7 @@ intel_texsubimage_tiled_memcpy(struct gl_context * ctx,
     * with _mesa_image_row_stride. However, before removing the restrictions
     * we need tests.
     */
-   if (!brw->has_llc ||
+   if (!devinfo->has_llc ||
        !(type == GL_UNSIGNED_BYTE || type == GL_UNSIGNED_INT_8_8_8_8_REV) ||
        !(texImage->TexObject->Target == GL_TEXTURE_2D ||
          texImage->TexObject->Target == GL_TEXTURE_RECTANGLE) ||

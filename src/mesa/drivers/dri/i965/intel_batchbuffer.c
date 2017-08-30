@@ -178,7 +178,9 @@ intel_batchbuffer_reset(struct intel_batchbuffer *batch,
 static void
 intel_batchbuffer_reset_and_clear_render_cache(struct brw_context *brw)
 {
-   intel_batchbuffer_reset(&brw->batch, brw->bufmgr, brw->has_llc);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   intel_batchbuffer_reset(&brw->batch, brw->bufmgr, devinfo->has_llc);
    brw_render_cache_set_clear(brw);
 }
 
@@ -634,7 +636,7 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
    struct intel_batchbuffer *batch = &brw->batch;
    int ret = 0;
 
-   if (brw->has_llc) {
+   if (devinfo->has_llc) {
       brw_bo_unmap(batch->bo);
    } else {
       ret = brw_bo_subdata(batch->bo, 0, 4 * USED_BATCH(*batch), batch->map);
