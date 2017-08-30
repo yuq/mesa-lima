@@ -333,6 +333,7 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
    if (inst->header_size != 0) {
       brw_push_insn_state(p);
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+      brw_set_default_exec_size(p, BRW_EXECUTE_1);
       brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
       brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
       brw_set_default_flag_reg(p, 0, 0);
@@ -405,11 +406,14 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
 
       /* Check runtime bit to detect if we have to send AA data or not */
       brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
+      brw_push_insn_state(p);
+      brw_inst_set_exec_size(p->devinfo, brw_last_inst, BRW_EXECUTE_1);
       brw_AND(p,
               v1_null_ud,
               retype(brw_vec1_grf(1, 6), BRW_REGISTER_TYPE_UD),
               brw_imm_ud(1<<26));
       brw_inst_set_cond_modifier(p->devinfo, brw_last_inst, BRW_CONDITIONAL_NZ);
+      brw_pop_insn_state(p);
 
       int jmp = brw_JMPI(p, brw_imm_ud(0), BRW_PREDICATE_NORMAL) - p->store;
       {
@@ -956,6 +960,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
          /* Explicitly set up the message header by copying g0 to the MRF. */
          brw_MOV(p, header_reg, brw_vec8_grf(0, 0));
 
+         brw_set_default_exec_size(p, BRW_EXECUTE_1);
          if (inst->offset) {
             /* Set the offset bits in DWord 2. */
             brw_MOV(p, get_element_ud(header_reg, 2),
@@ -1009,6 +1014,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
       brw_push_insn_state(p);
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
       brw_set_default_access_mode(p, BRW_ALIGN_1);
+      brw_set_default_exec_size(p, BRW_EXECUTE_1);
 
       if (brw_regs_equal(&surface_reg, &sampler_reg)) {
          brw_MUL(p, addr, sampler_reg, brw_imm_uw(0x101));
@@ -1456,6 +1462,7 @@ fs_generator::generate_mov_dispatch_to_flags(fs_inst *inst)
 
    brw_push_insn_state(p);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+   brw_set_default_exec_size(p, BRW_EXECUTE_1);
    brw_MOV(p, flags, dispatch_mask);
    brw_pop_insn_state(p);
 }

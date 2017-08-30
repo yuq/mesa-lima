@@ -4298,7 +4298,7 @@ emit_surface_header(const fs_builder &bld, const fs_reg &sample_mask)
    fs_builder ubld = bld.exec_all().group(8, 0);
    const fs_reg dst = ubld.vgrf(BRW_REGISTER_TYPE_UD);
    ubld.MOV(dst, brw_imm_d(0));
-   ubld.MOV(component(dst, 7), sample_mask);
+   ubld.group(1, 0).MOV(component(dst, 7), sample_mask);
    return dst;
 }
 

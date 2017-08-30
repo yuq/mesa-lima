@@ -4201,7 +4201,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       unreachable("not reached");
 
    case nir_intrinsic_vote_any: {
-      const fs_builder ubld = bld.exec_all();
+      const fs_builder ubld = bld.exec_all().group(1, 0);
 
       /* The any/all predicates do not consider channel enables. To prevent
        * dead channels from affecting the result, we initialize the flag with
@@ -4233,7 +4233,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
    case nir_intrinsic_vote_all: {
-      const fs_builder ubld = bld.exec_all();
+      const fs_builder ubld = bld.exec_all().group(1, 0);
 
       /* The any/all predicates do not consider channel enables. To prevent
        * dead channels from affecting the result, we initialize the flag with
@@ -4267,7 +4267,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_vote_eq: {
       fs_reg value = get_nir_src(instr->src[0]);
       fs_reg uniformized = bld.emit_uniformize(value);
-      const fs_builder ubld = bld.exec_all();
+      const fs_builder ubld = bld.exec_all().group(1, 0);
 
       /* The any/all predicates do not consider channel enables. To prevent
        * dead channels from affecting the result, we initialize the flag with
@@ -4312,7 +4312,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       if (dispatch_width == 32)
          flag.type = BRW_REGISTER_TYPE_UD;
 
-      bld.exec_all().MOV(flag, brw_imm_ud(0u));
+      bld.exec_all().group(1, 0).MOV(flag, brw_imm_ud(0u));
       bld.CMP(bld.null_reg_ud(), value, brw_imm_ud(0u), BRW_CONDITIONAL_NZ);
 
       if (instr->dest.ssa.bit_size > 32) {
