@@ -41,7 +41,6 @@ i965_FILES = \
 	brw_queryobj.c \
 	brw_reset.c \
 	brw_sf.c \
-	brw_state_batch.c \
 	brw_state.h \
 	brw_state_upload.c \
 	brw_structs.h \

@@ -825,6 +825,52 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
    return entry->offset + target_offset;
 }
 
+uint32_t
+brw_state_batch_size(struct brw_context *brw, uint32_t offset)
+{
+   struct hash_entry *entry =
+      _mesa_hash_table_search(brw->batch.state_batch_sizes,
+                              (void *) (uintptr_t) offset);
+   return entry ? (uintptr_t) entry->data : 0;
+}
+
+/**
+ * Allocates a block of space in the batchbuffer for indirect state.
+ */
+void *
+brw_state_batch(struct brw_context *brw,
+                int size,
+                int alignment,
+                uint32_t *out_offset)
+{
+   struct intel_batchbuffer *batch = &brw->batch;
+   uint32_t offset;
+
+   assert(size < batch->bo->size);
+   offset = ROUND_DOWN_TO(batch->state_batch_offset - size, alignment);
+
+   /* If allocating from the top would wrap below the batchbuffer, or
+    * if the batch's used space (plus the reserved pad) collides with our
+    * space, then flush and try again.
+    */
+   if (batch->state_batch_offset < size ||
+       offset < 4 * USED_BATCH(*batch) + batch->reserved_space) {
+      intel_batchbuffer_flush(brw);
+      offset = ROUND_DOWN_TO(batch->state_batch_offset - size, alignment);
+   }
+
+   batch->state_batch_offset = offset;
+
+   if (unlikely(INTEL_DEBUG & DEBUG_BATCH)) {
+      _mesa_hash_table_insert(batch->state_batch_sizes,
+                              (void *) (uintptr_t) offset,
+                              (void *) (uintptr_t) size);
+   }
+
+   *out_offset = offset;
+   return batch->map + (offset>>2);
+}
+
 void
 intel_batchbuffer_data(struct brw_context *brw,
                        const void *data, GLuint bytes, enum brw_gpu_ring ring)
