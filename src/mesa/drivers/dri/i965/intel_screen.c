@@ -1882,7 +1882,6 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
    };
 
    static const uint8_t singlesample_samples[1] = {0};
-   static const uint8_t multisample_samples[2]  = {4, 8};
 
    struct intel_screen *screen = dri_screen->driverPrivate;
    const struct gen_device_info *devinfo = &screen->devinfo;
@@ -1966,6 +1965,7 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
       __DRIconfig **new_configs;
       const int num_depth_stencil_bits = 2;
       int num_msaa_modes = 0;
+      const uint8_t *multisample_samples = NULL;
 
       depth_bits[0] = 0;
       stencil_bits[0] = 0;
@@ -1978,10 +1978,23 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
          stencil_bits[1] = 8;
       }
 
-      if (devinfo->gen >= 7)
-         num_msaa_modes = 2;
-      else if (devinfo->gen == 6)
-         num_msaa_modes = 1;
+      if (devinfo->gen >= 9) {
+         static const uint8_t multisample_samples_gen9[] = {2, 4, 8, 16};
+         multisample_samples = multisample_samples_gen9;
+         num_msaa_modes = ARRAY_SIZE(multisample_samples_gen9);
+      } else if (devinfo->gen == 8) {
+         static const uint8_t multisample_samples_gen8[] = {2, 4, 8};
+         multisample_samples = multisample_samples_gen8;
+         num_msaa_modes = ARRAY_SIZE(multisample_samples_gen8);
+      } else if (devinfo->gen == 7) {
+         static const uint8_t multisample_samples_gen7[] = {4, 8};
+         multisample_samples = multisample_samples_gen7;
+         num_msaa_modes = ARRAY_SIZE(multisample_samples_gen7);
+      } else if (devinfo->gen == 6) {
+         static const uint8_t multisample_samples_gen6[] = {4};
+         multisample_samples = multisample_samples_gen6;
+         num_msaa_modes = ARRAY_SIZE(multisample_samples_gen6);
+      }
 
       new_configs = driCreateConfigs(formats[i],
                                      depth_bits,
