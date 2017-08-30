@@ -704,7 +704,7 @@ brw_initialize_cs_context_constants(struct brw_context *brw)
    struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    /* FINISHME: Do this for all platforms that the kernel supports */
-   if (brw->is_cherryview &&
+   if (devinfo->is_cherryview &&
        screen->subslice_total > 0 && screen->eu_total > 0) {
       /* Logical CS threads = EUs per subslice * 7 threads per EU */
       uint32_t max_cs_threads = screen->eu_total / screen->subslice_total * 7;
@@ -858,7 +858,6 @@ brwCreateContext(gl_api api,
    brw->screen = screen;
    brw->bufmgr = screen->bufmgr;
 
-   brw->is_cherryview = devinfo->is_cherryview;
    brw->is_broxton = devinfo->is_broxton || devinfo->is_geminilake;
    brw->has_llc = devinfo->has_llc;
    brw->has_hiz = devinfo->has_hiz_and_separate_stencil;
