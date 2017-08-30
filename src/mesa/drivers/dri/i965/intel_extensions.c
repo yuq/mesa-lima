@@ -288,7 +288,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_post_depth_coverage = true;
    }
 
-   if (brw->is_broxton)
+   if (gen_device_info_is_9lp(devinfo))
       ctx->Extensions.KHR_texture_compression_astc_hdr = true;
 
    if (devinfo->gen >= 6)

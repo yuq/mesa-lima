@@ -746,8 +746,6 @@ struct brw_context
 
    uint64_t max_gtt_map_object_size;
 
-   bool is_broxton;
-
    bool has_hiz;
    bool has_separate_stencil;
    bool must_use_separate_stencil;

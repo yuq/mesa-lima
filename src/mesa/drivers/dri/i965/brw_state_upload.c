@@ -75,7 +75,7 @@ brw_upload_initial_gpu_state(struct brw_context *brw)
                 GEN9_PARTIAL_RESOLVE_DISABLE_IN_VC);
       ADVANCE_BATCH();
 
-      if (brw->is_broxton) {
+      if (gen_device_info_is_9lp(devinfo)) {
          BEGIN_BATCH(3);
          OUT_BATCH(MI_LOAD_REGISTER_IMM | (3 - 2));
          OUT_BATCH(GEN7_GT_MODE);

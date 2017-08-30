@@ -858,7 +858,6 @@ brwCreateContext(gl_api api,
    brw->screen = screen;
    brw->bufmgr = screen->bufmgr;
 
-   brw->is_broxton = devinfo->is_broxton || devinfo->is_geminilake;
    brw->has_llc = devinfo->has_llc;
    brw->has_hiz = devinfo->has_hiz_and_separate_stencil;
    brw->has_separate_stencil = devinfo->has_hiz_and_separate_stencil;
