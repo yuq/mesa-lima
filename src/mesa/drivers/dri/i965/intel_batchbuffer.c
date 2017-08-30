@@ -806,7 +806,7 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
    }
 
    /* Check args */
-   assert(batch_offset <= BATCH_SZ - sizeof(uint32_t));
+   assert(batch_offset <= batch->bo->size - sizeof(uint32_t));
 
    unsigned int index = add_exec_bo(batch, target);
    struct drm_i915_gem_exec_object2 *entry = &batch->validation_list[index];
