@@ -750,15 +750,6 @@ struct brw_context
    bool has_separate_stencil;
    bool has_swizzling;
 
-   /**
-    * Some versions of Gen hardware don't do centroid interpolation correctly
-    * on unlit pixels, causing incorrect values for derivatives near triangle
-    * edges.  Enabling this flag causes the fragment shader to use
-    * non-centroid interpolation for unlit pixels, at the expense of two extra
-    * fragment shader instructions.
-    */
-   bool needs_unlit_centroid_workaround;
-
    /** Derived stencil states. */
    bool stencil_enabled;
    bool stencil_two_sided;
