@@ -232,7 +232,7 @@ dri2_x11_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
       return NULL;
    }
    
-   if (!dri2_init_surface(&dri2_surf->base, disp, type, conf, attrib_list, false))
+   if (!_eglInitSurface(&dri2_surf->base, disp, type, conf, attrib_list))
       goto cleanup_surf;
 
    dri2_surf->region = XCB_NONE;
@@ -394,7 +394,6 @@ dri2_x11_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
    if (surf->Type == EGL_PBUFFER_BIT)
       xcb_free_pixmap (dri2_dpy->conn, dri2_surf->drawable);
 
-   dri2_fini_surface(surf);
    free(surf);
 
    return EGL_TRUE;
