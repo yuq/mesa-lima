@@ -27,6 +27,7 @@
 
 #include "util/mesa-sha1.h"
 #include "util/u_atomic.h"
+#include "radv_debug.h"
 #include "radv_private.h"
 #include "nir/nir.h"
 #include "nir/nir_builder.h"

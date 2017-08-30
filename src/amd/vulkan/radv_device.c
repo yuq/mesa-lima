@@ -29,6 +29,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include "radv_debug.h"
 #include "radv_private.h"
 #include "radv_cs.h"
 #include "util/disk_cache.h"
@@ -1214,13 +1215,7 @@ VkResult radv_CreateDevice(
 	}
 
 	if (getenv("RADV_TRACE_FILE")) {
-		device->trace_bo = device->ws->buffer_create(device->ws, 4096, 8,
-							     RADEON_DOMAIN_VRAM, RADEON_FLAG_CPU_ACCESS);
-		if (!device->trace_bo)
-			goto fail;
-
-		device->trace_id_ptr = device->ws->buffer_map(device->trace_bo);
-		if (!device->trace_id_ptr)
+		if (!radv_init_trace(device))
 			goto fail;
 	}
 
@@ -1376,21 +1371,6 @@ void radv_GetDeviceQueue(
 	RADV_FROM_HANDLE(radv_device, device, _device);
 
 	*pQueue = radv_queue_to_handle(&device->queues[queueFamilyIndex][queueIndex]);
-}
-
-static void radv_dump_trace(struct radv_device *device,
-			    struct radeon_winsys_cs *cs)
-{
-	const char *filename = getenv("RADV_TRACE_FILE");
-	FILE *f = fopen(filename, "w");
-	if (!f) {
-		fprintf(stderr, "Failed to write trace dump to %s\n", filename);
-		return;
-	}
-
-	fprintf(f, "Trace ID: %x\n", *device->trace_id_ptr);
-	device->ws->cs_dump(cs, f, (const int*)device->trace_id_ptr, 2);
-	fclose(f);
 }
 
 static void

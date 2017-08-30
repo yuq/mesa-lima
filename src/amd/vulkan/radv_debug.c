@@ -1,5 +1,9 @@
 /*
- * Copyright © 2017 Google.
+ * Copyright © 2016 Red Hat.
+ * Copyright © 2016 Bas Nieuwenhuizen
+ *
+ * based in part on anv driver which is:
+ * Copyright © 2015 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,33 +25,40 @@
  * IN THE SOFTWARE.
  */
 
-#ifndef RADV_DEBUG_H
-#define RADV_DEBUG_H
+#include <stdlib.h>
+#include <stdio.h>
 
-#include "radv_private.h"
-
-enum {
-	RADV_DEBUG_NO_FAST_CLEARS    =   0x1,
-	RADV_DEBUG_NO_DCC            =   0x2,
-	RADV_DEBUG_DUMP_SHADERS      =   0x4,
-	RADV_DEBUG_NO_CACHE          =   0x8,
-	RADV_DEBUG_DUMP_SHADER_STATS =  0x10,
-	RADV_DEBUG_NO_HIZ            =  0x20,
-	RADV_DEBUG_NO_COMPUTE_QUEUE  =  0x40,
-	RADV_DEBUG_UNSAFE_MATH       =  0x80,
-	RADV_DEBUG_ALL_BOS           = 0x100,
-	RADV_DEBUG_NO_IBS            = 0x200,
-};
-
-enum {
-	RADV_PERFTEST_BATCHCHAIN     =   0x1,
-	RADV_PERFTEST_SISCHED        =   0x2,
-};
+#include "radv_debug.h"
 
 bool
-radv_init_trace(struct radv_device *device);
+radv_init_trace(struct radv_device *device)
+{
+	struct radeon_winsys *ws = device->ws;
+
+	device->trace_bo = ws->buffer_create(ws, 4096, 8, RADEON_DOMAIN_VRAM,
+					     RADEON_FLAG_CPU_ACCESS);
+	if (!device->trace_bo)
+		return false;
+
+	device->trace_id_ptr = ws->buffer_map(device->trace_bo);
+	if (!device->trace_id_ptr)
+		return false;
+
+	return true;
+}
 
 void
-radv_dump_trace(struct radv_device *device, struct radeon_winsys_cs *cs);
+radv_dump_trace(struct radv_device *device, struct radeon_winsys_cs *cs)
+{
+	const char *filename = getenv("RADV_TRACE_FILE");
+	FILE *f = fopen(filename, "w");
 
-#endif
+	if (!f) {
+		fprintf(stderr, "Failed to write trace dump to %s\n", filename);
+		return;
+	}
+
+	fprintf(f, "Trace ID: %x\n", *device->trace_id_ptr);
+	device->ws->cs_dump(cs, f, (const int*)device->trace_id_ptr, 2);
+	fclose(f);
+}
