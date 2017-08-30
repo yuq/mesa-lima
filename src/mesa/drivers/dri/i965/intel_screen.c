@@ -1882,7 +1882,7 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
    };
 
    static const uint8_t singlesample_samples[1] = {0};
-   static const uint8_t multisample_samples_2_4_8_16[]  = {2, 4, 8, 16};
+   static const uint8_t multisample_samples[2]  = {4, 8};
 
    struct intel_screen *screen = dri_screen->driverPrivate;
    const struct gen_device_info *devinfo = &screen->devinfo;
@@ -1966,7 +1966,6 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
       __DRIconfig **new_configs;
       const int num_depth_stencil_bits = 2;
       int num_msaa_modes = 0;
-      const uint8_t *multisample_samples = NULL;
 
       depth_bits[0] = 0;
       stencil_bits[0] = 0;
@@ -1979,16 +1978,10 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
          stencil_bits[1] = 8;
       }
 
-      if (devinfo->gen >= 9) {
-         multisample_samples = multisample_samples_2_4_8_16;
-         num_msaa_modes = 4;
-      } else if (devinfo->gen >= 7) {
-         multisample_samples = multisample_samples_2_4_8_16 + 1;
+      if (devinfo->gen >= 7)
          num_msaa_modes = 2;
-      } else if (devinfo->gen == 6) {
-         multisample_samples = multisample_samples_2_4_8_16 + 1;
+      else if (devinfo->gen == 6)
          num_msaa_modes = 1;
-      }
 
       new_configs = driCreateConfigs(formats[i],
                                      depth_bits,
