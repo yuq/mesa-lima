@@ -2064,6 +2064,8 @@ bool nir_deref_foreach_leaf(nir_deref_var *deref,
 nir_load_const_instr *
 nir_deref_get_const_initializer_load(nir_shader *shader, nir_deref_var *deref);
 
+nir_const_value nir_alu_binop_identity(nir_op binop, unsigned bit_size);
+
 /**
  * NIR Cursors and Instruction Insertion API
  * @{
