@@ -454,7 +454,7 @@ brw_new_batch(struct brw_context *brw)
    }
    brw->batch.reloc_count = 0;
    brw->batch.exec_count = 0;
-   brw->batch.aperture_space = BATCH_SZ;
+   brw->batch.aperture_space = 0;
 
    /* Create a new batchbuffer and reset the associated state: */
    intel_batchbuffer_reset_and_clear_render_cache(brw);
