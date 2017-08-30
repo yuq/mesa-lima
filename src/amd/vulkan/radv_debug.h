@@ -37,6 +37,7 @@ enum {
 	RADV_DEBUG_UNSAFE_MATH       =  0x80,
 	RADV_DEBUG_ALL_BOS           = 0x100,
 	RADV_DEBUG_NO_IBS            = 0x200,
+	RADV_DEBUG_DUMP_SPIRV        = 0x400,
 };
 
 enum {
@@ -49,5 +50,8 @@ radv_init_trace(struct radv_device *device);
 
 void
 radv_dump_trace(struct radv_device *device, struct radeon_winsys_cs *cs);
+
+void
+radv_print_spirv(struct radv_shader_module *module, FILE *fp);
 
 #endif

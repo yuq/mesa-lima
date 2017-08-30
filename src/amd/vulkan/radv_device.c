@@ -409,6 +409,7 @@ static const struct debug_control radv_debug_options[] = {
 	{"unsafemath", RADV_DEBUG_UNSAFE_MATH},
 	{"allbos", RADV_DEBUG_ALL_BOS},
 	{"noibs", RADV_DEBUG_NO_IBS},
+	{"spirv", RADV_DEBUG_DUMP_SPIRV},
 	{NULL, 0}
 };
 

@@ -62,3 +62,34 @@ radv_dump_trace(struct radv_device *device, struct radeon_winsys_cs *cs)
 	device->ws->cs_dump(cs, f, (const int*)device->trace_id_ptr, 2);
 	fclose(f);
 }
+
+void
+radv_print_spirv(struct radv_shader_module *module, FILE *fp)
+{
+	char path[] = "/tmp/fileXXXXXX";
+	char line[2048], command[128];
+	FILE *p;
+	int fd;
+
+	/* Dump the binary into a temporary file. */
+	fd = mkstemp(path);
+	if (fd < 0)
+		return;
+
+	if (write(fd, module->data, module->size) == -1)
+		goto fail;
+
+	sprintf(command, "spirv-dis %s", path);
+
+	/* Disassemble using spirv-dis if installed. */
+	p = popen(command, "r");
+	if (p) {
+		while (fgets(line, sizeof(line), p))
+			fprintf(fp, "%s", line);
+		pclose(p);
+	}
+
+fail:
+	close(fd);
+	unlink(path);
+}
