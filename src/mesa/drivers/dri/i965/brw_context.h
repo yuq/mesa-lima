@@ -746,7 +746,6 @@ struct brw_context
 
    uint64_t max_gtt_map_object_size;
 
-   int gen;
    int gt;
 
    bool is_g4x;

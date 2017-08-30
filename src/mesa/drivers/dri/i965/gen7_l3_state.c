@@ -69,6 +69,7 @@ get_pipeline_state_l3_weights(const struct brw_context *brw)
 static void
 setup_l3_config(struct brw_context *brw, const struct gen_l3_config *cfg)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const bool has_dc = cfg->n[GEN_L3P_DC] || cfg->n[GEN_L3P_ALL];
    const bool has_is = cfg->n[GEN_L3P_IS] || cfg->n[GEN_L3P_RO] ||
                        cfg->n[GEN_L3P_ALL];
@@ -116,7 +117,7 @@ setup_l3_config(struct brw_context *brw, const struct gen_l3_config *cfg)
                                PIPE_CONTROL_NO_WRITE |
                                PIPE_CONTROL_CS_STALL);
 
-   if (brw->gen >= 8) {
+   if (devinfo->gen >= 8) {
       assert(!cfg->n[GEN_L3P_IS] && !cfg->n[GEN_L3P_C] && !cfg->n[GEN_L3P_T]);
 
       BEGIN_BATCH(3);

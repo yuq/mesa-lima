@@ -231,9 +231,11 @@ void
 intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
                                 enum brw_gpu_ring ring)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
    /* If we're switching rings, implicitly flush the batch. */
    if (unlikely(ring != brw->batch.ring) && brw->batch.ring != UNKNOWN_RING &&
-       brw->gen >= 6) {
+       devinfo->gen >= 6) {
       intel_batchbuffer_flush(brw);
    }
 
@@ -290,6 +292,7 @@ decode_structs(struct brw_context *brw, struct gen_spec *spec,
 static void
 do_batch_dump(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct intel_batchbuffer *batch = &brw->batch;
    struct gen_spec *spec = gen_spec_load(&brw->screen->devinfo);
 
@@ -407,10 +410,10 @@ do_batch_dump(struct brw_context *brw)
                         gtt_offset, p[1] & ~0x3fu, 8 * 4, color);
          break;
       case _3DSTATE_CC_STATE_POINTERS:
-         if (brw->gen >= 7) {
+         if (devinfo->gen >= 7) {
             decode_struct(brw, spec, "COLOR_CALC_STATE", data,
                           gtt_offset, p[1] & ~0x3fu, color);
-         } else if (brw->gen == 6) {
+         } else if (devinfo->gen == 6) {
             decode_structs(brw, spec, "BLEND_STATE", data,
                            gtt_offset, p[1] & ~0x3fu, 2 * 4, color);
             decode_struct(brw, spec, "DEPTH_STENCIL_STATE", data,
@@ -488,6 +491,8 @@ brw_new_batch(struct brw_context *brw)
 static void
 brw_finish_batch(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
    /* Capture the closing pipeline statistics register values necessary to
     * support query objects (in the non-hardware context world).
     */
@@ -498,7 +503,7 @@ brw_finish_batch(struct brw_context *brw)
        * assume that the L3 cache is configured according to the hardware
        * defaults.
        */
-      if (brw->gen >= 7)
+      if (devinfo->gen >= 7)
          gen7_restore_default_l3_config(brw);
 
       if (brw->is_haswell) {
@@ -624,6 +629,7 @@ execbuffer(int fd,
 static int
 do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    __DRIscreen *dri_screen = brw->screen->driScrnPriv;
    struct intel_batchbuffer *batch = &brw->batch;
    int ret = 0;
@@ -655,7 +661,7 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
        */
       int flags = I915_EXEC_NO_RELOC;
 
-      if (brw->gen >= 6 && batch->ring == BLT_RING) {
+      if (devinfo->gen >= 6 && batch->ring == BLT_RING) {
          flags |= I915_EXEC_BLT;
       } else {
          flags |= I915_EXEC_RENDER;
@@ -845,12 +851,13 @@ load_sized_register_mem(struct brw_context *brw,
                         uint32_t offset,
                         int size)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    int i;
 
    /* MI_LOAD_REGISTER_MEM only exists on Gen7+. */
-   assert(brw->gen >= 7);
+   assert(devinfo->gen >= 7);
 
-   if (brw->gen >= 8) {
+   if (devinfo->gen >= 8) {
       BEGIN_BATCH(4 * size);
       for (i = 0; i < size; i++) {
          OUT_BATCH(GEN7_MI_LOAD_REGISTER_MEM | (4 - 2));
@@ -894,9 +901,11 @@ void
 brw_store_register_mem32(struct brw_context *brw,
                          struct brw_bo *bo, uint32_t reg, uint32_t offset)
 {
-   assert(brw->gen >= 6);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
-   if (brw->gen >= 8) {
+   assert(devinfo->gen >= 6);
+
+   if (devinfo->gen >= 8) {
       BEGIN_BATCH(4);
       OUT_BATCH(MI_STORE_REGISTER_MEM | (4 - 2));
       OUT_BATCH(reg);
@@ -918,12 +927,14 @@ void
 brw_store_register_mem64(struct brw_context *brw,
                          struct brw_bo *bo, uint32_t reg, uint32_t offset)
 {
-   assert(brw->gen >= 6);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   assert(devinfo->gen >= 6);
 
    /* MI_STORE_REGISTER_MEM only stores a single 32-bit value, so to
     * read a full 64-bit register, we need to do two of them.
     */
-   if (brw->gen >= 8) {
+   if (devinfo->gen >= 8) {
       BEGIN_BATCH(8);
       OUT_BATCH(MI_STORE_REGISTER_MEM | (4 - 2));
       OUT_BATCH(reg);
@@ -950,7 +961,9 @@ brw_store_register_mem64(struct brw_context *brw,
 void
 brw_load_register_imm32(struct brw_context *brw, uint32_t reg, uint32_t imm)
 {
-   assert(brw->gen >= 6);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   assert(devinfo->gen >= 6);
 
    BEGIN_BATCH(3);
    OUT_BATCH(MI_LOAD_REGISTER_IMM | (3 - 2));
@@ -965,7 +978,9 @@ brw_load_register_imm32(struct brw_context *brw, uint32_t reg, uint32_t imm)
 void
 brw_load_register_imm64(struct brw_context *brw, uint32_t reg, uint64_t imm)
 {
-   assert(brw->gen >= 6);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   assert(devinfo->gen >= 6);
 
    BEGIN_BATCH(5);
    OUT_BATCH(MI_LOAD_REGISTER_IMM | (5 - 2));
@@ -982,7 +997,9 @@ brw_load_register_imm64(struct brw_context *brw, uint32_t reg, uint64_t imm)
 void
 brw_load_register_reg(struct brw_context *brw, uint32_t src, uint32_t dest)
 {
-   assert(brw->gen >= 8 || brw->is_haswell);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   assert(devinfo->gen >= 8 || brw->is_haswell);
 
    BEGIN_BATCH(3);
    OUT_BATCH(MI_LOAD_REGISTER_REG | (3 - 2));
@@ -997,7 +1014,9 @@ brw_load_register_reg(struct brw_context *brw, uint32_t src, uint32_t dest)
 void
 brw_load_register_reg64(struct brw_context *brw, uint32_t src, uint32_t dest)
 {
-   assert(brw->gen >= 8 || brw->is_haswell);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   assert(devinfo->gen >= 8 || brw->is_haswell);
 
    BEGIN_BATCH(6);
    OUT_BATCH(MI_LOAD_REGISTER_REG | (3 - 2));
@@ -1016,11 +1035,13 @@ void
 brw_store_data_imm32(struct brw_context *brw, struct brw_bo *bo,
                      uint32_t offset, uint32_t imm)
 {
-   assert(brw->gen >= 6);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   assert(devinfo->gen >= 6);
 
    BEGIN_BATCH(4);
    OUT_BATCH(MI_STORE_DATA_IMM | (4 - 2));
-   if (brw->gen >= 8)
+   if (devinfo->gen >= 8)
       OUT_RELOC64(bo, RELOC_WRITE, offset);
    else {
       OUT_BATCH(0); /* MBZ */
@@ -1037,11 +1058,13 @@ void
 brw_store_data_imm64(struct brw_context *brw, struct brw_bo *bo,
                      uint32_t offset, uint64_t imm)
 {
-   assert(brw->gen >= 6);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   assert(devinfo->gen >= 6);
 
    BEGIN_BATCH(5);
    OUT_BATCH(MI_STORE_DATA_IMM | (5 - 2));
-   if (brw->gen >= 8)
+   if (devinfo->gen >= 8)
       OUT_RELOC64(bo, 0, offset);
    else {
       OUT_BATCH(0); /* MBZ */

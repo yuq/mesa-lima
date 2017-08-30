@@ -634,6 +634,7 @@ static void
 intel_validate_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb)
 {
    struct brw_context *brw = brw_context(ctx);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct intel_renderbuffer *depthRb =
       intel_get_renderbuffer(fb, BUFFER_DEPTH);
    struct intel_renderbuffer *stencilRb =
@@ -654,7 +655,7 @@ intel_validate_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb)
    }
 
    if (depth_mt && stencil_mt) {
-      if (brw->gen >= 6) {
+      if (devinfo->gen >= 6) {
          const unsigned d_width = depth_mt->surf.phys_level0_sa.width;
          const unsigned d_height = depth_mt->surf.phys_level0_sa.height;
          const unsigned d_depth = depth_mt->surf.dim == ISL_SURF_DIM_3D ?
@@ -707,7 +708,7 @@ intel_validate_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb)
                            "instead of S8\n",
                            _mesa_get_format_name(stencil_mt->format));
 	 }
-	 if (brw->gen < 7 && !intel_renderbuffer_has_hiz(depthRb)) {
+	 if (devinfo->gen < 7 && !intel_renderbuffer_has_hiz(depthRb)) {
 	    /* Before Gen7, separate depth and stencil buffers can be used
 	     * only if HiZ is enabled. From the Sandybridge PRM, Volume 2,
 	     * Part 1, Bit 3DSTATE_DEPTH_BUFFER.SeparateStencilBufferEnable:
@@ -869,6 +870,7 @@ intel_blit_framebuffer(struct gl_context *ctx,
                        GLbitfield mask, GLenum filter)
 {
    struct brw_context *brw = brw_context(ctx);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    /* Page 679 of OpenGL 4.4 spec says:
     *    "Added BlitFramebuffer to commands affected by conditional rendering in
@@ -877,7 +879,7 @@ intel_blit_framebuffer(struct gl_context *ctx,
    if (!_mesa_check_conditional_render(ctx))
       return;
 
-   if (brw->gen < 6) {
+   if (devinfo->gen < 6) {
       /* On gen4-5, try BLT first.
        *
        * Gen4-5 have a single ring for both 3D and BLT operations, so there's
@@ -907,7 +909,7 @@ intel_blit_framebuffer(struct gl_context *ctx,
    if (mask == 0x0)
       return;
 
-   if (brw->gen >= 8 && (mask & GL_STENCIL_BUFFER_BIT)) {
+   if (devinfo->gen >= 8 && (mask & GL_STENCIL_BUFFER_BIT)) {
       assert(!"Invalid blit");
    }
 
@@ -997,10 +999,12 @@ brw_render_cache_set_add_bo(struct brw_context *brw, struct brw_bo *bo)
 void
 brw_render_cache_set_check_flush(struct brw_context *brw, struct brw_bo *bo)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
    if (!_mesa_set_search(brw->render_cache, bo))
       return;
 
-   if (brw->gen >= 6) {
+   if (devinfo->gen >= 6) {
       brw_emit_pipe_control_flush(brw,
                                   PIPE_CONTROL_DEPTH_CACHE_FLUSH |
                                   PIPE_CONTROL_RENDER_TARGET_FLUSH |

@@ -74,10 +74,12 @@ static void
 brw_lower_packing_builtins(struct brw_context *brw,
                            exec_list *ir)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
    /* Gens < 7 don't have instructions to convert to or from half-precision,
     * and Gens < 6 don't expose that functionality.
     */
-   if (brw->gen != 6)
+   if (devinfo->gen != 6)
       return;
 
    lower_packing_builtins(ir, LOWER_PACK_HALF_2x16 | LOWER_UNPACK_HALF_2x16);
@@ -88,6 +90,7 @@ process_glsl_ir(struct brw_context *brw,
                 struct gl_shader_program *shader_prog,
                 struct gl_linked_shader *shader)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
 
    /* Temporary memory context for any new IR. */
@@ -108,7 +111,7 @@ process_glsl_ir(struct brw_context *brw,
                                      EXP_TO_EXP2 |
                                      LOG_TO_LOG2 |
                                      DFREXP_DLDEXP_TO_ARITH);
-   if (brw->gen < 7) {
+   if (devinfo->gen < 7) {
       instructions_to_lower |= BIT_COUNT_TO_MATH |
                                EXTRACT_TO_SHIFTS |
                                INSERT_TO_SHIFTS |
@@ -120,7 +123,7 @@ process_glsl_ir(struct brw_context *brw,
    /* Pre-gen6 HW can only nest if-statements 16 deep.  Beyond this,
     * if-statements need to be flattened.
     */
-   if (brw->gen < 6)
+   if (devinfo->gen < 6)
       lower_if_to_cond_assign(shader->Stage, shader->ir, 16);
 
    do_lower_texture_projection(shader->ir);

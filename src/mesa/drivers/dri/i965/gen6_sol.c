@@ -280,6 +280,7 @@ void
 brw_save_primitives_written_counters(struct brw_context *brw,
                                      struct brw_transform_feedback_object *obj)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const struct gl_context *ctx = &brw->ctx;
    const int streams = ctx->Const.MaxVertexStreams;
 
@@ -295,7 +296,7 @@ brw_save_primitives_written_counters(struct brw_context *brw,
    brw_emit_mi_flush(brw);
 
    /* Emit MI_STORE_REGISTER_MEM commands to write the values. */
-   if (brw->gen >= 7) {
+   if (devinfo->gen >= 7) {
       for (int i = 0; i < streams; i++) {
          int offset = (obj->prim_count_buffer_index + i) * sizeof(uint64_t);
          brw_store_register_mem64(brw, obj->prim_count_bo,
@@ -384,6 +385,7 @@ brw_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
 			     struct gl_transform_feedback_object *obj)
 {
    struct brw_context *brw = brw_context(ctx);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const struct gl_program *prog;
    const struct gl_transform_feedback_info *linked_xfb_info;
    struct gl_transform_feedback_object *xfb_obj =
@@ -391,7 +393,7 @@ brw_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
    struct brw_transform_feedback_object *brw_obj =
       (struct brw_transform_feedback_object *) xfb_obj;
 
-   assert(brw->gen == 6);
+   assert(devinfo->gen == 6);
 
    if (ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY]) {
       /* BRW_NEW_GEOMETRY_PROGRAM */

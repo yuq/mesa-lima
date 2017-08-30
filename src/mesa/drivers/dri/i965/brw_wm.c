@@ -307,6 +307,7 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
                                    struct brw_sampler_prog_key_data *key)
 {
    struct brw_context *brw = brw_context(ctx);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    GLbitfield mask = prog->SamplersUsed;
 
    while (mask) {
@@ -329,10 +330,10 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
          /* Haswell handles texture swizzling as surface format overrides
           * (except for GL_ALPHA); all other platforms need MOVs in the shader.
           */
-         if (alpha_depth || (brw->gen < 8 && !brw->is_haswell))
+         if (alpha_depth || (devinfo->gen < 8 && !brw->is_haswell))
             key->swizzles[s] = brw_get_texture_swizzle(ctx, t);
 
-         if (brw->gen < 8 &&
+         if (devinfo->gen < 8 &&
              sampler->MinFilter != GL_NEAREST &&
              sampler->MagFilter != GL_NEAREST) {
             if (sampler->WrapS == GL_CLAMP)
@@ -344,7 +345,7 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
          }
 
          /* gather4 for RG32* is broken in multiple ways on Gen7. */
-         if (brw->gen == 7 && prog->nir->info.uses_texture_gather) {
+         if (devinfo->gen == 7 && prog->nir->info.uses_texture_gather) {
             switch (img->InternalFormat) {
             case GL_RG32I:
             case GL_RG32UI: {
@@ -382,7 +383,7 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
          /* Gen6's gather4 is broken for UINT/SINT; we treat them as
           * UNORM/FLOAT instead and fix it in the shader.
           */
-         if (brw->gen == 6 && prog->nir->info.uses_texture_gather) {
+         if (devinfo->gen == 6 && prog->nir->info.uses_texture_gather) {
             key->gen6_gather_wa[s] = gen6_gather_workaround(img->InternalFormat);
          }
 
@@ -397,14 +398,14 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
           * compressed. These don't need ld2dms sampling along with mcs fetch.
           */
          if (intel_tex->mt->aux_usage == ISL_AUX_USAGE_MCS) {
-            assert(brw->gen >= 7);
+            assert(devinfo->gen >= 7);
             assert(intel_tex->mt->surf.samples > 1);
             assert(intel_tex->mt->mcs_buf);
             assert(intel_tex->mt->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY);
             key->compressed_multisample_layout_mask |= 1 << s;
 
             if (intel_tex->mt->surf.samples >= 16) {
-               assert(brw->gen >= 9);
+               assert(devinfo->gen >= 9);
                key->msaa_16 |= 1 << s;
             }
          }
@@ -456,6 +457,7 @@ brw_wm_state_dirty(const struct brw_context *brw)
 void
 brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FRAGMENT_PROGRAM */
    const struct brw_program *fp = brw_program_const(brw->fragment_program);
@@ -467,7 +469,7 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
 
    /* Build the index for table lookup
     */
-   if (brw->gen < 6) {
+   if (devinfo->gen < 6) {
       /* _NEW_COLOR */
       if (prog->info.fs.uses_discard || ctx->Color.AlphaEnabled) {
          lookup |= BRW_WM_IZ_PS_KILL_ALPHATEST_BIT;
@@ -527,7 +529,7 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
    key->high_quality_derivatives =
       ctx->Hint.FragmentShaderDerivative == GL_NICEST;
 
-   if (brw->gen < 6)
+   if (devinfo->gen < 6)
       key->stats_wm = brw->stats_wm;
 
    /* _NEW_LIGHT */
@@ -565,8 +567,8 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
    }
 
    /* BRW_NEW_VUE_MAP_GEOM_OUT */
-   if (brw->gen < 6 || _mesa_bitcount_64(prog->info.inputs_read &
-                                         BRW_FS_VARYING_INPUT_MASK) > 16) {
+   if (devinfo->gen < 6 || _mesa_bitcount_64(prog->info.inputs_read &
+                                             BRW_FS_VARYING_INPUT_MASK) > 16) {
       key->input_slots_valid = brw->vue_map_geom_out.slots_valid;
    }
 
@@ -576,7 +578,7 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
     * like GL requires.  Fix that by building the alpha test into the
     * shader, and we'll skip enabling the fixed function alpha test.
     */
-   if (brw->gen < 6 && ctx->DrawBuffer->_NumColorDrawBuffers > 1 &&
+   if (devinfo->gen < 6 && ctx->DrawBuffer->_NumColorDrawBuffers > 1 &&
        ctx->Color.AlphaEnabled) {
       key->alpha_test_func = ctx->Color.AlphaFunc;
       key->alpha_test_ref = ctx->Color.AlphaRef;
@@ -615,6 +617,7 @@ bool
 brw_fs_precompile(struct gl_context *ctx, struct gl_program *prog)
 {
    struct brw_context *brw = brw_context(ctx);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct brw_wm_prog_key key;
 
    struct brw_program *bfp = brw_program(prog);
@@ -623,7 +626,7 @@ brw_fs_precompile(struct gl_context *ctx, struct gl_program *prog)
 
    uint64_t outputs_written = prog->info.outputs_written;
 
-   if (brw->gen < 6) {
+   if (devinfo->gen < 6) {
       if (prog->info.fs.uses_discard)
          key.iz_lookup |= BRW_WM_IZ_PS_KILL_ALPHATEST_BIT;
 
@@ -635,8 +638,8 @@ brw_fs_precompile(struct gl_context *ctx, struct gl_program *prog)
       key.iz_lookup |= BRW_WM_IZ_DEPTH_WRITE_ENABLE_BIT;
    }
 
-   if (brw->gen < 6 || _mesa_bitcount_64(prog->info.inputs_read &
-                                         BRW_FS_VARYING_INPUT_MASK) > 16) {
+   if (devinfo->gen < 6 || _mesa_bitcount_64(prog->info.inputs_read &
+                                             BRW_FS_VARYING_INPUT_MASK) > 16) {
       key.input_slots_valid = prog->info.inputs_read | VARYING_BIT_POS;
    }
 
@@ -656,7 +659,7 @@ brw_fs_precompile(struct gl_context *ctx, struct gl_program *prog)
    struct brw_stage_prog_data *old_prog_data = brw->wm.base.prog_data;
 
    struct brw_vue_map vue_map;
-   if (brw->gen < 6) {
+   if (devinfo->gen < 6) {
       brw_compute_vue_map(&brw->screen->devinfo, &vue_map,
                           prog->info.inputs_read | VARYING_BIT_POS,
                           false);

@@ -273,6 +273,7 @@ hsw_result_to_gpr0(struct gl_context *ctx, struct brw_query_object *query,
                    GLenum pname, GLenum ptype)
 {
    struct brw_context *brw = brw_context(ctx);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    assert(query->bo);
    assert(pname != GL_QUERY_TARGET);
@@ -338,7 +339,7 @@ hsw_result_to_gpr0(struct gl_context *ctx, struct brw_query_object *query,
        * and correctly emitted the number of pixel shader invocations, but,
        * whomever forgot to undo the multiply by 4.
        */
-      if (brw->gen == 8 || brw->is_haswell)
+      if (devinfo->gen == 8 || brw->is_haswell)
          shr_gpr0_by_2_bits(brw);
       break;
    case GL_TIME_ELAPSED:
@@ -410,9 +411,10 @@ store_query_result_reg(struct brw_context *brw, struct brw_bo *bo,
                        uint32_t offset, GLenum ptype, uint32_t reg,
                        const bool pipelined)
 {
-   uint32_t cmd_size = brw->gen >= 8 ? 4 : 3;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   uint32_t cmd_size = devinfo->gen >= 8 ? 4 : 3;
    uint32_t dwords = (ptype == GL_INT || ptype == GL_UNSIGNED_INT) ? 1 : 2;
-   assert(brw->gen >= 6);
+   assert(devinfo->gen >= 6);
 
    BEGIN_BATCH(dwords * cmd_size);
    for (int i = 0; i < dwords; i++) {
@@ -420,7 +422,7 @@ store_query_result_reg(struct brw_context *brw, struct brw_bo *bo,
                 (pipelined ? MI_STORE_REGISTER_MEM_PREDICATE : 0) |
                 (cmd_size - 2));
       OUT_BATCH(reg + 4 * i);
-      if (brw->gen >= 8) {
+      if (devinfo->gen >= 8) {
          OUT_RELOC64(bo, RELOC_WRITE, offset + 4 * i);
       } else {
          OUT_RELOC(bo, RELOC_WRITE | RELOC_NEEDS_GGTT, offset + 4 * i);

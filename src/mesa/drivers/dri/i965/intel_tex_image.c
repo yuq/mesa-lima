@@ -36,7 +36,7 @@
  * Choose the original base level dimension when shifted dimensions agree.
  * Otherwise assume real resize is intended and use the new shifted value.
  */
-static unsigned 
+static unsigned
 get_base_dim(unsigned old_base_dim, unsigned new_level_dim, unsigned level)
 {
    const unsigned old_level_dim = old_base_dim >> level;
@@ -382,6 +382,7 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
                                   const struct gl_pixelstore_attrib *packing)
 {
    struct brw_context *brw = brw_context(ctx);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct intel_texture_image *image = intel_texture_image(texImage);
    int dst_pitch;
 
@@ -445,7 +446,7 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
     * parts of the memory aren't swizzled at all. Userspace just can't handle
     * that.
     */
-   if (brw->gen < 5 && brw->has_swizzling)
+   if (devinfo->gen < 5 && brw->has_swizzling)
       return false;
 
    int level = texImage->Level + texImage->TexObject->MinLevel;
@@ -624,7 +625,8 @@ intelCompressedTexSubImage(struct gl_context *ctx, GLuint dims,
    bool is_linear_astc = _mesa_is_astc_format(gl_format) &&
                         !_mesa_is_srgb_format(gl_format);
    struct brw_context *brw = (struct brw_context*) ctx;
-   if (brw->gen == 9 && is_linear_astc)
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   if (devinfo->gen == 9 && is_linear_astc)
       flush_astc_denorms(ctx, dims, texImage,
                          xoffset, yoffset, zoffset,
                          width, height, depth);

@@ -66,11 +66,13 @@ brw_blorp_upload_shader(struct blorp_context *blorp,
 void
 brw_blorp_init(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
    blorp_init(&brw->blorp, brw, &brw->isl_dev);
 
    brw->blorp.compiler = brw->screen->compiler;
 
-   switch (brw->gen) {
+   switch (devinfo->gen) {
    case 4:
       if (brw->is_g4x) {
          brw->blorp.exec = gen45_blorp_exec;
@@ -91,7 +93,7 @@ brw_blorp_init(struct brw_context *brw)
       brw->blorp.mocs.tex = GEN7_MOCS_L3;
       brw->blorp.mocs.rb = GEN7_MOCS_L3;
       brw->blorp.mocs.vb = GEN7_MOCS_L3;
-      if (brw->is_haswell) {
+      if (devinfo->is_haswell) {
          brw->blorp.exec = gen75_blorp_exec;
       } else {
          brw->blorp.exec = gen7_blorp_exec;
@@ -269,6 +271,8 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
                         GLenum filter, bool mirror_x, bool mirror_y,
                         bool decode_srgb, bool encode_srgb)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
    DBG("%s from %dx %s mt %p %d %d (%f,%f) (%f,%f)"
        "to %dx %s mt %p %d %d (%f,%f) (%f,%f) (flip %d,%d)\n",
        __func__,
@@ -293,7 +297,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
     * shouldn't affect rendering correctness, since the destination format is
     * R32_FLOAT, so only the contents of the red channel matters.
     */
-   if (brw->gen == 6 &&
+   if (devinfo->gen == 6 &&
        src_mt->surf.samples > 1 && dst_mt->surf.samples <= 1 &&
        src_mt->format == dst_mt->format &&
        (dst_format == MESA_FORMAT_L_FLOAT32 ||
@@ -360,6 +364,8 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
                         unsigned dst_x, unsigned dst_y,
                         unsigned src_width, unsigned src_height)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
    DBG("%s from %dx %s mt %p %d %d (%d,%d) %dx%d"
        "to %dx %s mt %p %d %d (%d,%d)\n",
        __func__,
@@ -380,7 +386,7 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
        * with a different number of components, we can't handle clear colors
        * until gen9.
        */
-      src_clear_supported = brw->gen >= 9;
+      src_clear_supported = devinfo->gen >= 9;
       break;
    default:
       src_aux_usage = ISL_AUX_USAGE_NONE;
@@ -397,7 +403,7 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
        * with a different number of components, we can't handle clear colors
        * until gen9.
        */
-      dst_clear_supported = brw->gen >= 9;
+      dst_clear_supported = devinfo->gen >= 9;
       break;
    default:
       dst_aux_usage = ISL_AUX_USAGE_NONE;
@@ -483,6 +489,7 @@ try_blorp_blit(struct brw_context *brw,
                GLfloat dstX0, GLfloat dstY0, GLfloat dstX1, GLfloat dstY1,
                GLenum filter, GLbitfield buffer_bit)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
 
    /* Sync up the state of window system buffers.  We need to do this before
@@ -548,7 +555,7 @@ try_blorp_blit(struct brw_context *brw,
       /* Blorp doesn't support combined depth stencil which is all we have
        * prior to gen6.
        */
-      if (brw->gen < 6)
+      if (devinfo->gen < 6)
          return false;
 
       src_irb =
@@ -1142,6 +1149,7 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
 {
    assert(intel_miptree_level_has_hiz(mt, level));
    assert(op != BLORP_HIZ_OP_NONE);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const char *opname = NULL;
 
    switch (op) {
@@ -1166,7 +1174,7 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
     * HiZ clear operations.  However, they also seem to be required for
     * resolve operations.
     */
-   if (brw->gen == 6) {
+   if (devinfo->gen == 6) {
       /* From the Sandy Bridge PRM, volume 2 part 1, page 313:
        *
        *   "If other rendering operations have preceded this clear, a
@@ -1178,7 +1186,7 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
                                    PIPE_CONTROL_RENDER_TARGET_FLUSH |
                                    PIPE_CONTROL_DEPTH_CACHE_FLUSH |
                                    PIPE_CONTROL_CS_STALL);
-   } else if (brw->gen >= 7) {
+   } else if (devinfo->gen >= 7) {
       /*
        * From the Ivybridge PRM, volume 2, "Depth Buffer Clear":
        *
@@ -1223,7 +1231,7 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
     * HiZ clear operations.  However, they also seem to be required for
     * resolve operations.
     */
-   if (brw->gen == 6) {
+   if (devinfo->gen == 6) {
       /* From the Sandy Bridge PRM, volume 2 part 1, page 314:
        *
        *     "DevSNB, DevSNB-B{W/A}]: Depth buffer clear pass must be
@@ -1236,7 +1244,7 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
       brw_emit_pipe_control_flush(brw,
                                   PIPE_CONTROL_DEPTH_CACHE_FLUSH |
                                   PIPE_CONTROL_CS_STALL);
-   } else if (brw->gen >= 8) {
+   } else if (devinfo->gen >= 8) {
       /*
        * From the Broadwell PRM, volume 7, "Depth Buffer Clear":
        *

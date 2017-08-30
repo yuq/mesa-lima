@@ -73,6 +73,7 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
 {
    struct brw_context *brw = brw_context(ctx);
    struct gl_renderbuffer *rb = ctx->ReadBuffer->_ColorReadBuffer;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    /* This path supports reading from color buffers only */
    if (rb == NULL)
@@ -141,7 +142,7 @@ intel_readpixels_tiled_memcpy(struct gl_context * ctx,
     * parts of the memory aren't swizzled at all. Userspace just can't handle
     * that.
     */
-   if (brw->gen < 5 && brw->has_swizzling)
+   if (devinfo->gen < 5 && brw->has_swizzling)
       return false;
 
    /* Since we are going to read raw data to the miptree, we need to resolve

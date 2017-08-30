@@ -71,7 +71,9 @@ gen8_add_cs_stall_workaround_bits(uint32_t *flags)
 static uint32_t
 gen7_cs_stall_every_four_pipe_controls(struct brw_context *brw, uint32_t flags)
 {
-   if (brw->gen == 7 && !brw->is_haswell) {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   if (devinfo->gen == 7 && !brw->is_haswell) {
       if (flags & PIPE_CONTROL_CS_STALL) {
          /* If we're doing a CS stall, reset the counter and carry on. */
          brw->pipe_controls_since_last_cs_stall = 0;
@@ -91,11 +93,13 @@ static void
 brw_emit_pipe_control(struct brw_context *brw, uint32_t flags,
                       struct brw_bo *bo, uint32_t offset, uint64_t imm)
 {
-   if (brw->gen >= 8) {
-      if (brw->gen == 8)
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   if (devinfo->gen >= 8) {
+      if (devinfo->gen == 8)
          gen8_add_cs_stall_workaround_bits(&flags);
 
-      if (brw->gen == 9 &&
+      if (devinfo->gen == 9 &&
           (flags & PIPE_CONTROL_VF_CACHE_INVALIDATE)) {
          /* Hardware workaround: SKL
           *
@@ -117,8 +121,8 @@ brw_emit_pipe_control(struct brw_context *brw, uint32_t flags,
       OUT_BATCH(imm);
       OUT_BATCH(imm >> 32);
       ADVANCE_BATCH();
-   } else if (brw->gen >= 6) {
-      if (brw->gen == 6 &&
+   } else if (devinfo->gen >= 6) {
+      if (devinfo->gen == 6 &&
           (flags & PIPE_CONTROL_RENDER_TARGET_FLUSH)) {
          /* Hardware workaround: SNB B-Spec says:
           *
@@ -134,7 +138,7 @@ brw_emit_pipe_control(struct brw_context *brw, uint32_t flags,
       /* PPGTT/GGTT is selected by DW2 bit 2 on Sandybridge, but DW1 bit 24
        * on later platforms.  We always use PPGTT on Gen7+.
        */
-      unsigned gen6_gtt = brw->gen == 6 ? PIPE_CONTROL_GLOBAL_GTT_WRITE : 0;
+      unsigned gen6_gtt = devinfo->gen == 6 ? PIPE_CONTROL_GLOBAL_GTT_WRITE : 0;
 
       BEGIN_BATCH(5);
       OUT_BATCH(_3DSTATE_PIPE_CONTROL | (5 - 2));
@@ -170,7 +174,9 @@ brw_emit_pipe_control(struct brw_context *brw, uint32_t flags,
 void
 brw_emit_pipe_control_flush(struct brw_context *brw, uint32_t flags)
 {
-   if (brw->gen >= 6 &&
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   if (devinfo->gen >= 6 &&
        (flags & PIPE_CONTROL_CACHE_FLUSH_BITS) &&
        (flags & PIPE_CONTROL_CACHE_INVALIDATE_BITS)) {
       /* A pipe control command with flush and invalidate bits set
@@ -222,14 +228,16 @@ brw_emit_pipe_control_write(struct brw_context *brw, uint32_t flags,
 void
 brw_emit_depth_stall_flushes(struct brw_context *brw)
 {
-   assert(brw->gen >= 6);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   assert(devinfo->gen >= 6);
 
    /* Starting on BDW, these pipe controls are unnecessary.
     *
     *   WM HW will internally manage the draining pipe and flushing of the caches
     *   when this command is issued. The PIPE_CONTROL restrictions are removed.
     */
-   if (brw->gen >= 8)
+   if (devinfo->gen >= 8)
       return;
 
    brw_emit_pipe_control_flush(brw, PIPE_CONTROL_DEPTH_STALL);
@@ -248,7 +256,9 @@ brw_emit_depth_stall_flushes(struct brw_context *brw)
 void
 gen7_emit_vs_workaround_flush(struct brw_context *brw)
 {
-   assert(brw->gen == 7);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   assert(devinfo->gen == 7);
    brw_emit_pipe_control_write(brw,
                                PIPE_CONTROL_WRITE_IMMEDIATE
                                | PIPE_CONTROL_DEPTH_STALL,
@@ -337,12 +347,14 @@ brw_emit_post_sync_nonzero_flush(struct brw_context *brw)
  *
  *  SW can track the completion of the end-of-pipe-synchronization by
  *  using "Notify Enable" and "PostSync Operation - Write Immediate
- *  Data" in the PIPE_CONTROL command. 
+ *  Data" in the PIPE_CONTROL command.
  */
 void
 brw_emit_end_of_pipe_sync(struct brw_context *brw, uint32_t flags)
 {
-   if (brw->gen >= 6) {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   if (devinfo->gen >= 6) {
       /* From Sandybridge PRM, volume 2, "1.7.3.1 Writing a Value to Memory":
        *
        *    "The most common action to perform upon reaching a synchronization
@@ -423,7 +435,9 @@ brw_emit_end_of_pipe_sync(struct brw_context *brw, uint32_t flags)
 void
 brw_emit_mi_flush(struct brw_context *brw)
 {
-   if (brw->batch.ring == BLT_RING && brw->gen >= 6) {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   if (brw->batch.ring == BLT_RING && devinfo->gen >= 6) {
       BEGIN_BATCH_BLT(4);
       OUT_BATCH(MI_FLUSH_DW);
       OUT_BATCH(0);
@@ -432,7 +446,7 @@ brw_emit_mi_flush(struct brw_context *brw)
       ADVANCE_BATCH();
    } else {
       int flags = PIPE_CONTROL_NO_WRITE | PIPE_CONTROL_RENDER_TARGET_FLUSH;
-      if (brw->gen >= 6) {
+      if (devinfo->gen >= 6) {
          flags |= PIPE_CONTROL_INSTRUCTION_INVALIDATE |
                   PIPE_CONTROL_CONST_CACHE_INVALIDATE |
                   PIPE_CONTROL_DEPTH_CACHE_FLUSH |

@@ -49,7 +49,8 @@ emit_depth_packets(struct brw_context *brw,
                    uint32_t lod,
                    uint32_t min_array_element)
 {
-   uint32_t mocs_wb = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   uint32_t mocs_wb = devinfo->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
 
    /* Skip repeated NULL depth/stencil emits (think 2D rendering). */
    if (!depth_mt && !stencil_mt && brw->no_depth_or_stencil) {
@@ -138,6 +139,7 @@ gen8_emit_depth_stencil_hiz(struct brw_context *brw,
                             uint32_t width, uint32_t height,
                             uint32_t tile_x, uint32_t tile_y)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    struct gl_framebuffer *fb = ctx->DrawBuffer;
    uint32_t surftype;
@@ -178,7 +180,7 @@ gen8_emit_depth_stencil_hiz(struct brw_context *brw,
       break;
    case GL_TEXTURE_1D_ARRAY:
    case GL_TEXTURE_1D:
-      if (brw->gen >= 9) {
+      if (devinfo->gen >= 9) {
          /* WaDisable1DDepthStencil. Skylake+ doesn't support 1D depth
           * textures but it does allow pretending it's a 2D texture
           * instead.
@@ -349,9 +351,10 @@ gen8_write_pma_stall_bits(struct brw_context *brw, uint32_t pma_stall_bits)
 static void
 gen8_emit_pma_stall_workaround(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    uint32_t bits = 0;
 
-   if (brw->gen >= 9)
+   if (devinfo->gen >= 9)
       return;
 
    if (pma_fix_enable(brw))

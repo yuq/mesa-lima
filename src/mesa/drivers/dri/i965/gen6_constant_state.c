@@ -49,6 +49,7 @@ gen6_upload_push_constants(struct brw_context *brw,
                            const struct brw_stage_prog_data *prog_data,
                            struct brw_stage_state *stage_state)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
 
    if (prog_data->nr_params == 0) {
@@ -64,7 +65,7 @@ gen6_upload_push_constants(struct brw_context *brw,
       int i;
       const int size = prog_data->nr_params * sizeof(gl_constant_value);
       gl_constant_value *param;
-      if (brw->gen >= 8 || brw->is_haswell) {
+      if (devinfo->gen >= 8 || brw->is_haswell) {
          param = intel_upload_space(brw, size, 32,
                                     &stage_state->push_const_bo,
                                     &stage_state->push_const_offset);

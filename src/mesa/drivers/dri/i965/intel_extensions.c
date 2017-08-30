@@ -37,8 +37,9 @@ void
 intelInitExtensions(struct gl_context *ctx)
 {
    struct brw_context *brw = brw_context(ctx);
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
-   assert(brw->gen >= 4);
+   assert(devinfo->gen >= 4);
 
    ctx->Extensions.ARB_arrays_of_arrays = true;
    ctx->Extensions.ARB_buffer_storage = true;
@@ -135,13 +136,13 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.OES_texture_half_float = true;
    ctx->Extensions.OES_texture_half_float_linear = true;
 
-   if (brw->gen >= 8)
+   if (devinfo->gen >= 8)
       ctx->Const.GLSLVersion = 450;
    else if (brw->is_haswell && can_do_pipelined_register_writes(brw->screen))
       ctx->Const.GLSLVersion = 450;
-   else if (brw->gen >= 7 && can_do_pipelined_register_writes(brw->screen))
+   else if (devinfo->gen >= 7 && can_do_pipelined_register_writes(brw->screen))
       ctx->Const.GLSLVersion = 420;
-   else if (brw->gen >= 6)
+   else if (devinfo->gen >= 6)
       ctx->Const.GLSLVersion = 330;
    else
       ctx->Const.GLSLVersion = 120;
@@ -150,21 +151,21 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.EXT_shader_integer_mix = ctx->Const.GLSLVersion >= 130;
    ctx->Extensions.MESA_shader_integer_functions = ctx->Const.GLSLVersion >= 130;
 
-   if (brw->is_g4x || brw->gen >= 5) {
+   if (brw->is_g4x || devinfo->gen >= 5) {
       ctx->Extensions.MESA_shader_framebuffer_fetch_non_coherent = true;
       ctx->Extensions.KHR_blend_equation_advanced = true;
    }
 
-   if (brw->gen >= 5) {
+   if (devinfo->gen >= 5) {
       ctx->Extensions.ARB_texture_query_levels = ctx->Const.GLSLVersion >= 130;
       ctx->Extensions.ARB_texture_query_lod = true;
       ctx->Extensions.EXT_timer_query = true;
    }
 
-   if (brw->gen == 6)
+   if (devinfo->gen == 6)
       ctx->Extensions.ARB_transform_feedback2 = true;
 
-   if (brw->gen >= 6) {
+   if (devinfo->gen >= 6) {
       ctx->Extensions.ARB_blend_func_extended =
          !driQueryOptionb(&brw->optionCache, "disable_blend_func_extended");
       ctx->Extensions.ARB_conditional_render_inverted = true;
@@ -206,7 +207,7 @@ intelInitExtensions(struct gl_context *ctx)
 
    brw->predicate.supported = false;
 
-   if (brw->gen >= 7) {
+   if (devinfo->gen >= 7) {
       ctx->Extensions.ARB_conservative_depth = true;
       ctx->Extensions.ARB_derivative_control = true;
       ctx->Extensions.ARB_framebuffer_no_attachments = true;
@@ -238,7 +239,7 @@ intelInitExtensions(struct gl_context *ctx)
              ctx->Const.MaxComputeWorkGroupSize[0] >= 1024) {
             ctx->Extensions.ARB_compute_shader = true;
             ctx->Extensions.ARB_ES3_1_compatibility =
-               brw->gen >= 8 || brw->is_haswell;
+               devinfo->gen >= 8 || brw->is_haswell;
          }
 
          if (can_do_predicate_writes(brw->screen))
@@ -246,7 +247,7 @@ intelInitExtensions(struct gl_context *ctx)
       }
    }
 
-   if (brw->gen >= 8 || brw->is_haswell) {
+   if (devinfo->gen >= 8 || brw->is_haswell) {
       ctx->Extensions.ARB_stencil_texturing = true;
       ctx->Extensions.ARB_texture_stencil8 = true;
       ctx->Extensions.OES_geometry_shader = true;
@@ -254,7 +255,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.OES_viewport_array = true;
    }
 
-   if (brw->gen >= 8 || brw->is_haswell || brw->is_baytrail) {
+   if (devinfo->gen >= 8 || brw->is_haswell || brw->is_baytrail) {
       ctx->Extensions.ARB_robust_buffer_access_behavior = true;
    }
 
@@ -262,7 +263,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_query_buffer_object = true;
    }
 
-   if (brw->gen >= 8 || brw->is_baytrail) {
+   if (devinfo->gen >= 8 || brw->is_baytrail) {
       /* For now, we only enable OES_copy_image on platforms that support
        * ETC2 natively in hardware.  We would need more hacks to support it
        * elsewhere.
@@ -270,13 +271,13 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.OES_copy_image = true;
    }
 
-   if (brw->gen >= 8) {
+   if (devinfo->gen >= 8) {
       ctx->Extensions.ARB_gpu_shader_int64 = true;
       ctx->Extensions.ARB_shader_ballot = true; /* requires ARB_gpu_shader_int64 */
       ctx->Extensions.ARB_ES3_2_compatibility = true;
    }
 
-   if (brw->gen >= 9) {
+   if (devinfo->gen >= 9) {
       ctx->Extensions.ANDROID_extension_pack_es31a = true;
       ctx->Extensions.ARB_shader_stencil_export = true;
       ctx->Extensions.KHR_blend_equation_advanced_coherent = true;
@@ -290,7 +291,7 @@ intelInitExtensions(struct gl_context *ctx)
    if (brw->is_broxton)
       ctx->Extensions.KHR_texture_compression_astc_hdr = true;
 
-   if (brw->gen >= 6)
+   if (devinfo->gen >= 6)
       ctx->Extensions.INTEL_performance_query = true;
 
    if (ctx->API == API_OPENGL_CORE)

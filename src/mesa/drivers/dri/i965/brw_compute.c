@@ -37,6 +37,7 @@
 static void
 prepare_indirect_gpgpu_walker(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    GLintptr indirect_offset = brw->compute.num_work_groups_offset;
    struct brw_bo *bo = brw->compute.num_work_groups_bo;
 
@@ -44,7 +45,7 @@ prepare_indirect_gpgpu_walker(struct brw_context *brw)
    brw_load_register_mem(brw, GEN7_GPGPU_DISPATCHDIMY, bo, indirect_offset + 4);
    brw_load_register_mem(brw, GEN7_GPGPU_DISPATCHDIMZ, bo, indirect_offset + 8);
 
-   if (brw->gen > 7)
+   if (devinfo->gen > 7)
       return;
 
    /* Clear upper 32-bits of SRC0 and all 64-bits of SRC1 */
@@ -103,6 +104,7 @@ prepare_indirect_gpgpu_walker(struct brw_context *brw)
 static void
 brw_emit_gpgpu_walker(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const struct brw_cs_prog_data *prog_data =
       brw_cs_prog_data(brw->cs.base.prog_data);
 
@@ -114,7 +116,7 @@ brw_emit_gpgpu_walker(struct brw_context *brw)
    } else {
       indirect_flag =
          GEN7_GPGPU_INDIRECT_PARAMETER_ENABLE |
-         (brw->gen == 7 ? GEN7_GPGPU_PREDICATE_ENABLE : 0);
+         (devinfo->gen == 7 ? GEN7_GPGPU_PREDICATE_ENABLE : 0);
       prepare_indirect_gpgpu_walker(brw);
    }
 
@@ -129,11 +131,11 @@ brw_emit_gpgpu_walker(struct brw_context *brw)
    if (right_non_aligned != 0)
       right_mask >>= (simd_size - right_non_aligned);
 
-   uint32_t dwords = brw->gen < 8 ? 11 : 15;
+   uint32_t dwords = devinfo->gen < 8 ? 11 : 15;
    BEGIN_BATCH(dwords);
    OUT_BATCH(GPGPU_WALKER << 16 | (dwords - 2) | indirect_flag);
    OUT_BATCH(0);
-   if (brw->gen >= 8) {
+   if (devinfo->gen >= 8) {
       OUT_BATCH(0);                     /* Indirect Data Length */
       OUT_BATCH(0);                     /* Indirect Data Start Address */
    }
@@ -141,11 +143,11 @@ brw_emit_gpgpu_walker(struct brw_context *brw)
    OUT_BATCH(SET_FIELD(simd_size / 16, GPGPU_WALKER_SIMD_SIZE) |
              SET_FIELD(thread_width_max - 1, GPGPU_WALKER_THREAD_WIDTH_MAX));
    OUT_BATCH(0);                        /* Thread Group ID Starting X */
-   if (brw->gen >= 8)
+   if (devinfo->gen >= 8)
       OUT_BATCH(0);                     /* MBZ */
    OUT_BATCH(num_groups[0]);            /* Thread Group ID X Dimension */
    OUT_BATCH(0);                        /* Thread Group ID Starting Y */
-   if (brw->gen >= 8)
+   if (devinfo->gen >= 8)
       OUT_BATCH(0);                     /* MBZ */
    OUT_BATCH(num_groups[1]);            /* Thread Group ID Y Dimension */
    OUT_BATCH(0);                        /* Thread Group ID Starting/Resume Z */

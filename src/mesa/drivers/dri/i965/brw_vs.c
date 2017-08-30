@@ -73,13 +73,14 @@ GLbitfield64
 brw_vs_outputs_written(struct brw_context *brw, struct brw_vs_prog_key *key,
                        GLbitfield64 user_varyings)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    GLbitfield64 outputs_written = user_varyings;
 
    if (key->copy_edgeflag) {
       outputs_written |= BITFIELD64_BIT(VARYING_SLOT_EDGE);
    }
 
-   if (brw->gen < 6) {
+   if (devinfo->gen < 6) {
       /* Put dummy slots into the VUE for the SF to put the replaced
        * point sprite coords in.  We shouldn't need these dummy slots,
        * which take up precious URB space, but it would mean that the SF
@@ -306,6 +307,7 @@ brw_vs_populate_key(struct brw_context *brw,
    /* BRW_NEW_VERTEX_PROGRAM */
    struct brw_program *vp = (struct brw_program *)brw->vertex_program;
    struct gl_program *prog = (struct gl_program *) brw->vertex_program;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    memset(key, 0, sizeof(*key));
 
@@ -321,7 +323,7 @@ brw_vs_populate_key(struct brw_context *brw,
          _mesa_logbase2(ctx->Transform.ClipPlanesEnabled) + 1;
    }
 
-   if (brw->gen < 6) {
+   if (devinfo->gen < 6) {
       /* _NEW_POLYGON */
       key->copy_edgeflag = (ctx->Polygon.FrontMode != GL_FILL ||
                             ctx->Polygon.BackMode != GL_FILL);
@@ -343,7 +345,7 @@ brw_vs_populate_key(struct brw_context *brw,
    brw_populate_sampler_prog_key_data(ctx, prog, &key->tex);
 
    /* BRW_NEW_VS_ATTRIB_WORKAROUNDS */
-   if (brw->gen < 8 && !brw->is_haswell) {
+   if (devinfo->gen < 8 && !brw->is_haswell) {
       memcpy(key->gl_attrib_wa_flags, brw->vb.attrib_wa_flags,
              sizeof(brw->vb.attrib_wa_flags));
    }

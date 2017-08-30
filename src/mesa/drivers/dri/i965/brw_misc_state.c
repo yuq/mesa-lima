@@ -54,7 +54,9 @@
 static void
 upload_pipelined_state_pointers(struct brw_context *brw)
 {
-   if (brw->gen == 5) {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   if (devinfo->gen == 5) {
       /* Need to flush before changing clip max threads for errata. */
       BEGIN_BATCH(1);
       OUT_BATCH(MI_FLUSH);
@@ -195,6 +197,7 @@ void
 brw_workaround_depthstencil_alignment(struct brw_context *brw,
                                       GLbitfield clear_mask)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    struct gl_framebuffer *fb = ctx->DrawBuffer;
    struct intel_renderbuffer *depth_irb = intel_get_renderbuffer(fb, BUFFER_DEPTH);
@@ -215,7 +218,7 @@ brw_workaround_depthstencil_alignment(struct brw_context *brw,
    /* Gen6+ doesn't require the workarounds, since we always program the
     * surface state at the start of the whole surface.
     */
-   if (brw->gen >= 6)
+   if (devinfo->gen >= 6)
       return;
 
    /* Check if depth buffer is in depth/stencil format.  If so, then it's only
@@ -253,6 +256,7 @@ brw_workaround_depthstencil_alignment(struct brw_context *brw,
 void
 brw_emit_depthbuffer(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    struct gl_framebuffer *fb = ctx->DrawBuffer;
    /* _NEW_BUFFERS */
@@ -273,7 +277,7 @@ brw_emit_depthbuffer(struct brw_context *brw)
       separate_stencil = stencil_mt->format == MESA_FORMAT_S_UINT8;
 
       /* Gen7 supports only separate stencil */
-      assert(separate_stencil || brw->gen < 7);
+      assert(separate_stencil || devinfo->gen < 7);
    }
 
    /* If there's a packed depth/stencil bound to stencil only, we need to
@@ -293,14 +297,14 @@ brw_emit_depthbuffer(struct brw_context *brw)
        * set to the same value. Gens after 7 implicitly always set
        * Separate_Stencil_Enable; software cannot disable it.
        */
-      if ((brw->gen < 7 && hiz) || brw->gen >= 7) {
+      if ((devinfo->gen < 7 && hiz) || devinfo->gen >= 7) {
          assert(!_mesa_is_format_packed_depth_stencil(depth_mt->format));
       }
 
       /* Prior to Gen7, if using separate stencil, hiz must be enabled. */
-      assert(brw->gen >= 7 || !separate_stencil || hiz);
+      assert(devinfo->gen >= 7 || !separate_stencil || hiz);
 
-      assert(brw->gen < 6 || depth_mt->surf.tiling == ISL_TILING_Y0);
+      assert(devinfo->gen < 6 || depth_mt->surf.tiling == ISL_TILING_Y0);
       assert(!hiz || depth_mt->surf.tiling == ISL_TILING_Y0);
 
       depthbuffer_format = brw_depthbuffer_format(brw);
@@ -370,7 +374,8 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
    assert(!hiz);
    assert(!separate_stencil);
 
-   const unsigned len = (brw->is_g4x || brw->gen == 5) ? 6 : 5;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   const unsigned len = (brw->is_g4x || devinfo->gen == 5) ? 6 : 5;
 
    BEGIN_BATCH(len);
    OUT_BATCH(_3DSTATE_DEPTH_BUFFER << 16 | (len - 2));
@@ -390,12 +395,12 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
              ((height + tile_y - 1) << 19));
    OUT_BATCH(0);
 
-   if (brw->is_g4x || brw->gen >= 5)
+   if (brw->is_g4x || devinfo->gen >= 5)
       OUT_BATCH(tile_x | (tile_y << 16));
    else
       assert(tile_x == 0 && tile_y == 0);
 
-   if (brw->gen >= 6)
+   if (devinfo->gen >= 6)
       OUT_BATCH(0);
 
    ADVANCE_BATCH();
@@ -413,11 +418,12 @@ const struct brw_tracked_state brw_depthbuffer = {
 void
 brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
 {
-   const bool is_965 = brw->gen == 4 && !brw->is_g4x;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   const bool is_965 = devinfo->gen == 4 && !brw->is_g4x;
    const uint32_t _3DSTATE_PIPELINE_SELECT =
       is_965 ? CMD_PIPELINE_SELECT_965 : CMD_PIPELINE_SELECT_GM45;
 
-   if (brw->gen >= 8 && brw->gen < 10) {
+   if (devinfo->gen >= 8 && devinfo->gen < 10) {
       /* From the Broadwell PRM, Volume 2a: Instructions, PIPELINE_SELECT:
        *
        *   Software must clear the COLOR_CALC_STATE Valid field in
@@ -437,7 +443,7 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
       }
    }
 
-   if (brw->gen >= 6) {
+   if (devinfo->gen >= 6) {
       /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]
        * PIPELINE_SELECT [DevBWR+]":
        *
@@ -449,7 +455,7 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
        *   MI_PIPELINE_SELECT command to change the Pipeline Select Mode.
        */
       const unsigned dc_flush =
-         brw->gen >= 7 ? PIPE_CONTROL_DATA_CACHE_FLUSH : 0;
+         devinfo->gen >= 7 ? PIPE_CONTROL_DATA_CACHE_FLUSH : 0;
 
       brw_emit_pipe_control_flush(brw,
                                   PIPE_CONTROL_RENDER_TARGET_FLUSH |
@@ -482,11 +488,11 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
    /* Select the pipeline */
    BEGIN_BATCH(1);
    OUT_BATCH(_3DSTATE_PIPELINE_SELECT << 16 |
-             (brw->gen >= 9 ? (3 << 8) : 0) |
+             (devinfo->gen >= 9 ? (3 << 8) : 0) |
              (pipeline == BRW_COMPUTE_PIPELINE ? 2 : 0));
    ADVANCE_BATCH();
 
-   if (brw->gen == 7 && !brw->is_haswell &&
+   if (devinfo->gen == 7 && !brw->is_haswell &&
        pipeline == BRW_RENDER_PIPELINE) {
       /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]
        * PIPELINE_SELECT [DevBWR+]":
@@ -517,12 +523,13 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
 void
 brw_upload_invariant_state(struct brw_context *brw)
 {
-   const bool is_965 = brw->gen == 4 && !brw->is_g4x;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   const bool is_965 = devinfo->gen == 4 && !brw->is_g4x;
 
    brw_emit_select_pipeline(brw, BRW_RENDER_PIPELINE);
    brw->last_pipeline = BRW_RENDER_PIPELINE;
 
-   if (brw->gen >= 8) {
+   if (devinfo->gen >= 8) {
       BEGIN_BATCH(3);
       OUT_BATCH(CMD_STATE_SIP << 16 | (3 - 2));
       OUT_BATCH(0);
@@ -574,6 +581,8 @@ const struct brw_tracked_state brw_invariant_state = {
 void
 brw_upload_state_base_address(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
    if (brw->batch.state_base_address_emitted)
       return;
 
@@ -586,9 +595,9 @@ brw_upload_state_base_address(struct brw_context *brw)
     * maybe this isn't required for us in particular.
     */
 
-   if (brw->gen >= 6) {
+   if (devinfo->gen >= 6) {
       const unsigned dc_flush =
-         brw->gen >= 7 ? PIPE_CONTROL_DATA_CACHE_FLUSH : 0;
+         devinfo->gen >= 7 ? PIPE_CONTROL_DATA_CACHE_FLUSH : 0;
 
       /* Emit a render target cache flush.
        *
@@ -617,9 +626,9 @@ brw_upload_state_base_address(struct brw_context *brw)
                                 dc_flush);
    }
 
-   if (brw->gen >= 8) {
-      uint32_t mocs_wb = brw->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
-      int pkt_len = brw->gen >= 9 ? 19 : 16;
+   if (devinfo->gen >= 8) {
+      uint32_t mocs_wb = devinfo->gen >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
+      int pkt_len = devinfo->gen >= 9 ? 19 : 16;
 
       BEGIN_BATCH(pkt_len);
       OUT_BATCH(CMD_STATE_BASE_ADDRESS << 16 | (pkt_len - 2));
@@ -645,14 +654,14 @@ brw_upload_state_base_address(struct brw_context *brw)
       OUT_BATCH(0xfffff001);
       /* Instruction access upper bound */
       OUT_BATCH(ALIGN(brw->cache.bo->size, 4096) | 1);
-      if (brw->gen >= 9) {
+      if (devinfo->gen >= 9) {
          OUT_BATCH(1);
          OUT_BATCH(0);
          OUT_BATCH(0);
       }
       ADVANCE_BATCH();
-   } else if (brw->gen >= 6) {
-      uint8_t mocs = brw->gen == 7 ? GEN7_MOCS_L3 : 0;
+   } else if (devinfo->gen >= 6) {
+      uint8_t mocs = devinfo->gen == 7 ? GEN7_MOCS_L3 : 0;
 
        BEGIN_BATCH(10);
        OUT_BATCH(CMD_STATE_BASE_ADDRESS << 16 | (10 - 2));
@@ -691,7 +700,7 @@ brw_upload_state_base_address(struct brw_context *brw)
        OUT_BATCH(1); /* Indirect object upper bound */
        OUT_BATCH(1); /* Instruction access upper bound */
        ADVANCE_BATCH();
-   } else if (brw->gen == 5) {
+   } else if (devinfo->gen == 5) {
        BEGIN_BATCH(8);
        OUT_BATCH(CMD_STATE_BASE_ADDRESS << 16 | (8 - 2));
        OUT_BATCH(1); /* General state base address */
@@ -713,7 +722,7 @@ brw_upload_state_base_address(struct brw_context *brw)
        ADVANCE_BATCH();
    }
 
-   if (brw->gen >= 6) {
+   if (devinfo->gen >= 6) {
       brw_emit_pipe_control_flush(brw,
                                   PIPE_CONTROL_INSTRUCTION_INVALIDATE |
                                   PIPE_CONTROL_STATE_CACHE_INVALIDATE |
