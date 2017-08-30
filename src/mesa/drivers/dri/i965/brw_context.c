@@ -865,7 +865,6 @@ brwCreateContext(gl_api api,
    brw->needs_unlit_centroid_workaround =
       devinfo->needs_unlit_centroid_workaround;
 
-   brw->must_use_separate_stencil = devinfo->must_use_separate_stencil;
    brw->has_swizzling = screen->hw_has_swizzling;
 
    brw->isl_dev = screen->isl_dev;

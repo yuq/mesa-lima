@@ -249,6 +249,7 @@ static mesa_format
 intel_renderbuffer_format(struct gl_context * ctx, GLenum internalFormat)
 {
    struct brw_context *brw = brw_context(ctx);
+   MAYBE_UNUSED const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    switch (internalFormat) {
    default:
@@ -270,7 +271,7 @@ intel_renderbuffer_format(struct gl_context * ctx, GLenum internalFormat)
       if (brw->has_separate_stencil) {
 	 return MESA_FORMAT_S_UINT8;
       } else {
-	 assert(!brw->must_use_separate_stencil);
+	 assert(!devinfo->must_use_separate_stencil);
 	 return MESA_FORMAT_Z24_UNORM_S8_UINT;
       }
    }

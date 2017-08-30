@@ -315,10 +315,12 @@ needs_separate_stencil(const struct brw_context *brw,
                        struct intel_mipmap_tree *mt,
                        mesa_format format)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
    if (_mesa_get_format_base_format(format) != GL_DEPTH_STENCIL)
       return false;
 
-   if (brw->must_use_separate_stencil)
+   if (devinfo->must_use_separate_stencil)
       return true;
 
    return brw->has_separate_stencil &&
