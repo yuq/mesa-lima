@@ -238,9 +238,6 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
       intel_batchbuffer_flush(brw);
    }
 
-#ifdef DEBUG
-   assert(sz < BATCH_SZ - BATCH_RESERVED);
-#endif
    if (intel_batchbuffer_space(&brw->batch) < sz)
       intel_batchbuffer_flush(brw);
 
