@@ -177,6 +177,13 @@ INTRINSIC(quad_swap_vertical, 1, ARR(0), true, 0, 0,
 INTRINSIC(quad_swap_diagonal, 1, ARR(0), true, 0, 0,
           0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 
+INTRINSIC(reduce, 1, ARR(0), true, 0, 0,
+          2, REDUCTION_OP, CLUSTER_SIZE, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(inclusive_scan, 1, ARR(0), true, 0, 0,
+          1, REDUCTION_OP, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(exclusive_scan, 1, ARR(0), true, 0, 0,
+          1, REDUCTION_OP, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+
 /**
  * Basic Geometry Shader intrinsics.
  *

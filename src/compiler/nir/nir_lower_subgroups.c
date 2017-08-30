@@ -104,6 +104,9 @@ lower_subgroup_op_to_scalar(nir_builder *b, nir_intrinsic_instr *intrin)
          nir_src_copy(&chan_intrin->src[1], &intrin->src[1], chan_intrin);
       }
 
+      chan_intrin->const_index[0] = intrin->const_index[0];
+      chan_intrin->const_index[1] = intrin->const_index[1];
+
       nir_builder_instr_insert(b, &chan_intrin->instr);
 
       reads[i] = &chan_intrin->dest.ssa;
@@ -369,6 +372,13 @@ lower_subgroups_intrin(nir_builder *b, nir_intrinsic_instr *intrin,
       if (options->lower_quad)
          return lower_shuffle(b, intrin, options->lower_to_scalar);
       else if (options->lower_to_scalar && intrin->num_components > 1)
+         return lower_subgroup_op_to_scalar(b, intrin);
+      break;
+
+   case nir_intrinsic_reduce:
+   case nir_intrinsic_inclusive_scan:
+   case nir_intrinsic_exclusive_scan:
+      if (options->lower_to_scalar && intrin->num_components > 1)
          return lower_subgroup_op_to_scalar(b, intrin);
       break;
 

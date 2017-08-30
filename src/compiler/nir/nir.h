@@ -1081,6 +1081,16 @@ typedef enum {
     */
    NIR_INTRINSIC_INTERP_MODE = 9,
 
+   /**
+    * A binary nir_op to use when performing a reduction or scan operation
+    */
+   NIR_INTRINSIC_REDUCTION_OP = 10,
+
+   /**
+    * Cluster size for reduction operations
+    */
+   NIR_INTRINSIC_CLUSTER_SIZE = 11,
+
    NIR_INTRINSIC_NUM_INDEX_FLAGS,
 
 } nir_intrinsic_index_flag;
@@ -1149,6 +1159,8 @@ INTRINSIC_IDX_ACCESSORS(desc_set, DESC_SET, unsigned)
 INTRINSIC_IDX_ACCESSORS(binding, BINDING, unsigned)
 INTRINSIC_IDX_ACCESSORS(component, COMPONENT, unsigned)
 INTRINSIC_IDX_ACCESSORS(interp_mode, INTERP_MODE, unsigned)
+INTRINSIC_IDX_ACCESSORS(reduction_op, REDUCTION_OP, unsigned)
+INTRINSIC_IDX_ACCESSORS(cluster_size, CLUSTER_SIZE, unsigned)
 
 /**
  * \group texture information
