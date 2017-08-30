@@ -313,8 +313,7 @@ int brw_bo_busy(struct brw_bo *bo);
 int brw_bo_madvise(struct brw_bo *bo, int madv);
 
 /* drm_bacon_bufmgr_gem.c */
-struct brw_bufmgr *brw_bufmgr_init(struct gen_device_info *devinfo,
-                                   int fd, int batch_size);
+struct brw_bufmgr *brw_bufmgr_init(struct gen_device_info *devinfo, int fd);
 struct brw_bo *brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
                                            const char *name,
                                            unsigned int handle);

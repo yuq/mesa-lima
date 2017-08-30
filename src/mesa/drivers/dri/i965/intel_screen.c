@@ -1613,7 +1613,7 @@ intel_init_bufmgr(struct intel_screen *screen)
    if (getenv("INTEL_NO_HW") != NULL)
       screen->no_hw = true;
 
-   screen->bufmgr = brw_bufmgr_init(&screen->devinfo, dri_screen->fd, BATCH_SZ);
+   screen->bufmgr = brw_bufmgr_init(&screen->devinfo, dri_screen->fd);
    if (screen->bufmgr == NULL) {
       fprintf(stderr, "[%s:%u] Error initializing buffer manager.\n",
 	      __func__, __LINE__);

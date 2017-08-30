@@ -1331,7 +1331,7 @@ gem_param(int fd, int name)
  * \param fd File descriptor of the opened DRM device.
  */
 struct brw_bufmgr *
-brw_bufmgr_init(struct gen_device_info *devinfo, int fd, int batch_size)
+brw_bufmgr_init(struct gen_device_info *devinfo, int fd)
 {
    struct brw_bufmgr *bufmgr;
 
