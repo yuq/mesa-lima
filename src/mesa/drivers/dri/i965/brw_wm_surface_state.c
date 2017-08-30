@@ -77,8 +77,9 @@ get_isl_surf(struct brw_context *brw, struct intel_mipmap_tree *mt,
 {
    *surf = mt->surf;
 
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const enum isl_dim_layout dim_layout =
-      get_isl_dim_layout(&brw->screen->devinfo, mt->surf.tiling, target);
+      get_isl_dim_layout(devinfo, mt->surf.tiling, target);
 
    if (surf->dim_layout == dim_layout)
       return;
@@ -92,7 +93,7 @@ get_isl_surf(struct brw_context *brw, struct intel_mipmap_tree *mt,
     * texel of the level instead of relying on the usual base level/layer
     * controls.
     */
-   assert(brw->has_surface_tile_offset);
+   assert(devinfo->has_surface_tile_offset);
    assert(view->levels == 1 && view->array_len == 1);
    assert(*tile_x == 0 && *tile_y == 0);
 
@@ -910,7 +911,7 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
    mesa_format rb_format = _mesa_get_render_format(ctx, intel_rb_format(irb));
    /* BRW_NEW_FS_PROG_DATA */
 
-   if (rb->TexImage && !brw->has_surface_tile_offset) {
+   if (rb->TexImage && !devinfo->has_surface_tile_offset) {
       intel_renderbuffer_get_tile_offsets(irb, &tile_x, &tile_y);
 
       if (tile_x != 0 || tile_y != 0) {
@@ -954,7 +955,7 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
 
    surf[4] = brw_get_surface_num_multisamples(mt->surf.samples);
 
-   assert(brw->has_surface_tile_offset || (tile_x == 0 && tile_y == 0));
+   assert(devinfo->has_surface_tile_offset || (tile_x == 0 && tile_y == 0));
    /* Note that the low bits of these fields are missing, so
     * there's the possibility of getting in trouble.
     */

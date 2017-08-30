@@ -1043,7 +1043,8 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
     * for EGL images from non-tile aligned sufaces in gen4 hw and earlier which has
     * trouble resolving back to destination image due to alignment issues.
     */
-   if (!brw->has_surface_tile_offset) {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   if (!devinfo->has_surface_tile_offset) {
       uint32_t draw_x, draw_y;
       intel_miptree_get_tile_offsets(mt, 0, 0, &draw_x, &draw_y);
 

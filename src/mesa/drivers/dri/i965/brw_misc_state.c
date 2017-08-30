@@ -136,6 +136,7 @@ static bool
 rebase_depth_stencil(struct brw_context *brw, struct intel_renderbuffer *irb,
                      bool invalidate)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    uint32_t tile_mask_x = 0, tile_mask_y = 0;
 
@@ -156,7 +157,7 @@ rebase_depth_stencil(struct brw_context *brw, struct intel_renderbuffer *irb,
    bool rebase = tile_x & 7 || tile_y & 7;
 
    /* We didn't even have intra-tile offsets before g45. */
-   rebase |= (!brw->has_surface_tile_offset && (tile_x || tile_y));
+   rebase |= (!devinfo->has_surface_tile_offset && (tile_x || tile_y));
 
    if (rebase) {
       perf_debug("HW workaround: blitting depth level %d to a temporary "
