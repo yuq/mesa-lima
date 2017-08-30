@@ -32,6 +32,8 @@ enum subgen {
    IS_CHV,
    IS_BXT,
    IS_KBL,
+   IS_GLK,
+   IS_CFL,
 };
 
 static const struct gen_info {
@@ -51,6 +53,9 @@ static const struct gen_info {
    { "skl", 9 },
    { "bxt", 9, IS_BXT },
    { "kbl", 9, IS_KBL },
+   { "glk", 9, IS_GLK },
+   { "cfl", 9, IS_CFL },
+   { "cnl", 10 },
 };
 
 class validation_test: public ::testing::TestWithParam<struct gen_info> {
@@ -86,6 +91,8 @@ void validation_test::SetUp()
    devinfo.is_cherryview = info.subgen == IS_CHV;
    devinfo.is_broxton    = info.subgen == IS_BXT;
    devinfo.is_kabylake   = info.subgen == IS_KBL;
+   devinfo.is_geminilake = info.subgen == IS_GLK;
+   devinfo.is_coffeelake = info.subgen == IS_CFL;
 
    brw_init_codegen(&devinfo, p, p);
 }
