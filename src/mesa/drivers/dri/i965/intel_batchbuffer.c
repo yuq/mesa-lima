@@ -662,30 +662,28 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
       if (batch->needs_sol_reset)
          flags |= I915_EXEC_GEN7_SOL_RESET;
 
-      if (ret == 0) {
-         uint32_t hw_ctx = batch->ring == RENDER_RING ? brw->hw_ctx : 0;
+      uint32_t hw_ctx = batch->ring == RENDER_RING ? brw->hw_ctx : 0;
 
-         struct drm_i915_gem_exec_object2 *entry = &batch->validation_list[0];
-         assert(entry->handle == batch->bo->gem_handle);
-         entry->relocation_count = batch->reloc_count;
-         entry->relocs_ptr = (uintptr_t) batch->relocs;
+      struct drm_i915_gem_exec_object2 *entry = &batch->validation_list[0];
+      assert(entry->handle == batch->bo->gem_handle);
+      entry->relocation_count = batch->reloc_count;
+      entry->relocs_ptr = (uintptr_t) batch->relocs;
 
-         if (batch->use_batch_first) {
-            flags |= I915_EXEC_BATCH_FIRST | I915_EXEC_HANDLE_LUT;
-         } else {
-            /* Move the batch to the end of the validation list */
-            struct drm_i915_gem_exec_object2 tmp;
-            const unsigned index = batch->exec_count - 1;
+      if (batch->use_batch_first) {
+         flags |= I915_EXEC_BATCH_FIRST | I915_EXEC_HANDLE_LUT;
+      } else {
+         /* Move the batch to the end of the validation list */
+         struct drm_i915_gem_exec_object2 tmp;
+         const unsigned index = batch->exec_count - 1;
 
-            tmp = *entry;
-            *entry = batch->validation_list[index];
-            batch->validation_list[index] = tmp;
-         }
-
-         ret = execbuffer(dri_screen->fd, batch, hw_ctx,
-                          4 * USED_BATCH(*batch),
-                          in_fence_fd, out_fence_fd, flags);
+         tmp = *entry;
+         *entry = batch->validation_list[index];
+         batch->validation_list[index] = tmp;
       }
+
+      ret = execbuffer(dri_screen->fd, batch, hw_ctx,
+                       4 * USED_BATCH(*batch),
+                       in_fence_fd, out_fence_fd, flags);
 
       throttle(brw);
    }
