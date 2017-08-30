@@ -858,7 +858,6 @@ brwCreateContext(gl_api api,
    brw->screen = screen;
    brw->bufmgr = screen->bufmgr;
 
-   brw->is_baytrail = devinfo->is_baytrail;
    brw->is_haswell = devinfo->is_haswell;
    brw->is_cherryview = devinfo->is_cherryview;
    brw->is_broxton = devinfo->is_broxton || devinfo->is_geminilake;

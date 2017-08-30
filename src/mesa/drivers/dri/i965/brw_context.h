@@ -746,7 +746,6 @@ struct brw_context
 
    uint64_t max_gtt_map_object_size;
 
-   bool is_baytrail;
    bool is_haswell;
    bool is_cherryview;
    bool is_broxton;

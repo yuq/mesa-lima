@@ -371,7 +371,7 @@ intel_lower_compressed_format(struct brw_context *brw, mesa_format format)
    /* No need to lower ETC formats on these platforms,
     * they are supported natively.
     */
-   if (devinfo->gen >= 8 || brw->is_baytrail)
+   if (devinfo->gen >= 8 || devinfo->is_baytrail)
       return format;
 
    switch (format) {

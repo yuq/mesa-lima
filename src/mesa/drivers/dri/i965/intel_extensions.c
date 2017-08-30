@@ -255,7 +255,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.OES_viewport_array = true;
    }
 
-   if (devinfo->gen >= 8 || brw->is_haswell || brw->is_baytrail) {
+   if (devinfo->gen >= 8 || brw->is_haswell || devinfo->is_baytrail) {
       ctx->Extensions.ARB_robust_buffer_access_behavior = true;
    }
 
@@ -263,7 +263,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_query_buffer_object = true;
    }
 
-   if (devinfo->gen >= 8 || brw->is_baytrail) {
+   if (devinfo->gen >= 8 || devinfo->is_baytrail) {
       /* For now, we only enable OES_copy_image on platforms that support
        * ETC2 natively in hardware.  We would need more hacks to support it
        * elsewhere.

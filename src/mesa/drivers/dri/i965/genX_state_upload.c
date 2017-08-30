@@ -431,6 +431,7 @@ upload_format_size(uint32_t upload_format)
 static void
 genX(emit_vertices)(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    uint32_t *dw;
 
    brw_prepare_vertices(brw);
@@ -563,7 +564,7 @@ genX(emit_vertices)(struct brw_context *brw)
           * vertex element may poke over the end of the buffer by 2 bytes.
           */
          const unsigned padding =
-            (GEN_GEN <= 7 && !GEN_IS_HASWELL && !brw->is_baytrail) * 2;
+            (GEN_GEN <= 7 && !GEN_IS_HASWELL && !devinfo->is_baytrail) * 2;
          const unsigned end = buffer->offset + buffer->size + padding;
          dw = genX(emit_vertex_buffer_state)(brw, dw, i, buffer->bo,
                                              buffer->offset,
@@ -3018,6 +3019,7 @@ UNUSED static const uint32_t push_constant_opcodes[] = {
 static void
 genX(upload_push_constant_packets)(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
 
    UNUSED uint32_t mocs = GEN_GEN < 8 ? GEN7_MOCS_L3 : 0;
@@ -3030,7 +3032,7 @@ genX(upload_push_constant_packets)(struct brw_context *brw)
       &brw->wm.base,
    };
 
-   if (GEN_GEN == 7 && !GEN_IS_HASWELL && !brw->is_baytrail &&
+   if (GEN_GEN == 7 && !GEN_IS_HASWELL && !devinfo->is_baytrail &&
        stage_states[MESA_SHADER_VERTEX]->push_constants_dirty)
       gen7_emit_vs_workaround_flush(brw);
 

@@ -146,7 +146,7 @@ gen7_emit_push_constant_state(struct brw_context *brw, unsigned vs_size,
     *
     * No such restriction exists for Haswell or Baytrail.
     */
-   if (devinfo->gen < 8 && !brw->is_haswell && !brw->is_baytrail)
+   if (devinfo->gen < 8 && !brw->is_haswell && !devinfo->is_baytrail)
       gen7_emit_cs_stall_flush(brw);
 }
 
@@ -224,7 +224,7 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
    gen_get_urb_config(devinfo, 1024 * push_size_kB, 1024 * brw->urb.size,
                       tess_present, gs_present, entry_size, entries, start);
 
-   if (devinfo->gen == 7 && !brw->is_haswell && !brw->is_baytrail)
+   if (devinfo->gen == 7 && !brw->is_haswell && !devinfo->is_baytrail)
       gen7_emit_vs_workaround_flush(brw);
 
    BEGIN_BATCH(8);

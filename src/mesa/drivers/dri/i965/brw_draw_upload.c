@@ -254,7 +254,7 @@ brw_get_vertex_surface_type(struct brw_context *brw,
    int size = glarray->Size;
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const bool is_ivybridge_or_older =
-      devinfo->gen <= 7 && !brw->is_baytrail && !brw->is_haswell;
+      devinfo->gen <= 7 && !devinfo->is_baytrail && !brw->is_haswell;
 
    if (unlikely(INTEL_DEBUG & DEBUG_VERTS))
       fprintf(stderr, "type %s size %d normalized %d\n",
