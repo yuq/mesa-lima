@@ -750,7 +750,6 @@ struct brw_context
    bool has_separate_stencil;
    bool has_swizzling;
    bool has_surface_tile_offset;
-   bool no_simd8;
 
    /**
     * Some versions of Gen hardware don't do centroid interpolation correctly
