@@ -2551,7 +2551,7 @@ genX(upload_gs_state)(struct brw_context *brw)
     * whole fixed function pipeline" means to emit a PIPE_CONTROL with the "CS
     * Stall" bit set.
     */
-   if (brw->gt == 2 && brw->gs.enabled != active)
+   if (devinfo->gt == 2 && brw->gs.enabled != active)
       gen7_emit_cs_stall_flush(brw);
 #endif
 

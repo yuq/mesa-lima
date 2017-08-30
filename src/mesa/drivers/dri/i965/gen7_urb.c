@@ -72,7 +72,7 @@ gen7_allocate_push_constants(struct brw_context *brw)
 
    unsigned avail_size = 16;
    unsigned multiplier =
-      (devinfo->gen >= 8 || (brw->is_haswell && brw->gt == 3)) ? 2 : 1;
+      (devinfo->gen >= 8 || (brw->is_haswell && devinfo->gt == 3)) ? 2 : 1;
 
    int stages = 2 + gs_present + 2 * tess_present;
 
@@ -181,7 +181,7 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const int push_size_kB =
-      (devinfo->gen >= 8 || (brw->is_haswell && brw->gt == 3)) ? 32 : 16;
+      (devinfo->gen >= 8 || (brw->is_haswell && devinfo->gt == 3)) ? 32 : 16;
 
    /* BRW_NEW_{VS,TCS,TES,GS}_PROG_DATA */
    struct brw_vue_prog_data *prog_data[4] = {

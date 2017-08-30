@@ -95,7 +95,7 @@ brw_write_timestamp(struct brw_context *brw, struct brw_bo *query_bo, int idx)
 
    uint32_t flags = PIPE_CONTROL_WRITE_TIMESTAMP;
 
-   if (devinfo->gen == 9 && brw->gt == 4)
+   if (devinfo->gen == 9 && devinfo->gt == 4)
       flags |= PIPE_CONTROL_CS_STALL;
 
    brw_emit_pipe_control_write(brw, flags,
@@ -111,7 +111,7 @@ brw_write_depth_count(struct brw_context *brw, struct brw_bo *query_bo, int idx)
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    uint32_t flags = PIPE_CONTROL_WRITE_DEPTH_COUNT | PIPE_CONTROL_DEPTH_STALL;
 
-   if (devinfo->gen == 9 && brw->gt == 4)
+   if (devinfo->gen == 9 && devinfo->gt == 4)
       flags |= PIPE_CONTROL_CS_STALL;
 
    if (devinfo->gen >= 10) {
