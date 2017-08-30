@@ -302,23 +302,23 @@ do_batch_dump(struct brw_context *brw)
    if (batch->ring != RENDER_RING)
       return;
 
-   void *map = brw_bo_map(brw, batch->bo, MAP_READ);
-   if (map == NULL) {
-      fprintf(stderr,
-              "WARNING: failed to map batchbuffer, "
-              "dumping uploaded data instead.\n");
+   uint32_t *batch_data = brw_bo_map(brw, batch->bo, MAP_READ);
+   uint32_t *state = batch_data;
+   if (batch == NULL || state == NULL) {
+      fprintf(stderr, "WARNING: failed to map batchbuffer/statebuffer\n");
+      return;
    }
 
-   uint32_t *data = map ? map : batch->map;
-   uint32_t *end = data + USED_BATCH(*batch);
-   uint32_t gtt_offset = map ? batch->bo->gtt_offset : 0;
+   uint32_t *end = batch_data + USED_BATCH(*batch);
+   uint32_t batch_gtt_offset = batch->bo->gtt_offset;
+   uint32_t state_gtt_offset = batch->bo->gtt_offset;
    int length;
 
    bool color = INTEL_DEBUG & DEBUG_COLOR;
    const char *header_color = color ? BLUE_HEADER : "";
    const char *reset_color  = color ? NORMAL : "";
 
-   for (uint32_t *p = data; p < end; p += length) {
+   for (uint32_t *p = batch_data; p < end; p += length) {
       struct gen_group *inst = gen_spec_find_instruction(spec, p);
       length = gen_group_get_length(inst, p);
       assert(inst == NULL || length > 0);
@@ -328,7 +328,7 @@ do_batch_dump(struct brw_context *brw)
          continue;
       }
 
-      uint64_t offset = gtt_offset + 4 * (p - data);
+      uint64_t offset = batch_gtt_offset + 4 * (p - batch_data);
 
       fprintf(stderr, "%s0x%08"PRIx64":  0x%08x:  %-80s%s\n", header_color,
               offset, p[0], gen_group_get_name(inst), reset_color);
@@ -338,26 +338,26 @@ do_batch_dump(struct brw_context *brw)
       switch (gen_group_get_opcode(inst) >> 16) {
       case _3DSTATE_PIPELINED_POINTERS:
          /* Note: these Gen4-5 pointers are full relocations rather than
-          * offsets from the start of the batch.  So we need to subtract
-          * gtt_offset (the start of the batch) to obtain an offset we
+          * offsets from the start of the statebuffer.  So we need to subtract
+          * gtt_offset (the start of the statebuffer) to obtain an offset we
           * can add to the map and get at the data.
           */
-         decode_struct(brw, spec, "VS_STATE", data, gtt_offset,
-                       (p[1] & ~0x1fu) - gtt_offset, color);
+         decode_struct(brw, spec, "VS_STATE", state, state_gtt_offset,
+                       (p[1] & ~0x1fu) - state_gtt_offset, color);
          if (p[2] & 1) {
-            decode_struct(brw, spec, "GS_STATE", data, gtt_offset,
-                          (p[2] & ~0x1fu) - gtt_offset, color);
+            decode_struct(brw, spec, "GS_STATE", state, state_gtt_offset,
+                          (p[2] & ~0x1fu) - state_gtt_offset, color);
          }
          if (p[3] & 1) {
-            decode_struct(brw, spec, "CLIP_STATE", data, gtt_offset,
-                          (p[3] & ~0x1fu) - gtt_offset, color);
+            decode_struct(brw, spec, "CLIP_STATE", state, state_gtt_offset,
+                          (p[3] & ~0x1fu) - state_gtt_offset, color);
          }
-         decode_struct(brw, spec, "SF_STATE", data, gtt_offset,
-                       (p[4] & ~0x1fu) - gtt_offset, color);
-         decode_struct(brw, spec, "WM_STATE", data, gtt_offset,
-                       (p[5] & ~0x1fu) - gtt_offset, color);
-         decode_struct(brw, spec, "COLOR_CALC_STATE", data, gtt_offset,
-                       (p[6] & ~0x3fu) - gtt_offset, color);
+         decode_struct(brw, spec, "SF_STATE", state, state_gtt_offset,
+                       (p[4] & ~0x1fu) - state_gtt_offset, color);
+         decode_struct(brw, spec, "WM_STATE", state, state_gtt_offset,
+                       (p[5] & ~0x1fu) - state_gtt_offset, color);
+         decode_struct(brw, spec, "COLOR_CALC_STATE", state, state_gtt_offset,
+                       (p[6] & ~0x3fu) - state_gtt_offset, color);
          break;
       case _3DSTATE_BINDING_TABLE_POINTERS_VS:
       case _3DSTATE_BINDING_TABLE_POINTERS_HS:
@@ -371,11 +371,11 @@ do_batch_dump(struct brw_context *brw)
 
          uint32_t bt_offset = p[1] & ~0x1fu;
          int bt_entries = brw_state_batch_size(brw, bt_offset) / 4;
-         uint32_t *bt_pointers = &data[bt_offset / 4];
+         uint32_t *bt_pointers = &state[bt_offset / 4];
          for (int i = 0; i < bt_entries; i++) {
             fprintf(stderr, "SURFACE_STATE - BTI = %d\n", i);
-            gen_print_group(stderr, group, gtt_offset + bt_pointers[i],
-                            &data[bt_pointers[i] / 4], color);
+            gen_print_group(stderr, group, state_gtt_offset + bt_pointers[i],
+                            &state[bt_pointers[i] / 4], color);
          }
          break;
       }
@@ -384,57 +384,55 @@ do_batch_dump(struct brw_context *brw)
       case _3DSTATE_SAMPLER_STATE_POINTERS_DS:
       case _3DSTATE_SAMPLER_STATE_POINTERS_GS:
       case _3DSTATE_SAMPLER_STATE_POINTERS_PS:
-         decode_structs(brw, spec, "SAMPLER_STATE", data,
-                        gtt_offset, p[1] & ~0x1fu, 4 * 4, color);
+         decode_structs(brw, spec, "SAMPLER_STATE", state,
+                        state_gtt_offset, p[1] & ~0x1fu, 4 * 4, color);
          break;
       case _3DSTATE_VIEWPORT_STATE_POINTERS:
-         decode_structs(brw, spec, "CLIP_VIEWPORT", data,
-                        gtt_offset, p[1] & ~0x3fu, 4 * 4, color);
-         decode_structs(brw, spec, "SF_VIEWPORT", data,
-                        gtt_offset, p[1] & ~0x3fu, 8 * 4, color);
-         decode_structs(brw, spec, "CC_VIEWPORT", data,
-                        gtt_offset, p[3] & ~0x3fu, 2 * 4, color);
+         decode_structs(brw, spec, "CLIP_VIEWPORT", state,
+                        state_gtt_offset, p[1] & ~0x3fu, 4 * 4, color);
+         decode_structs(brw, spec, "SF_VIEWPORT", state,
+                        state_gtt_offset, p[1] & ~0x3fu, 8 * 4, color);
+         decode_structs(brw, spec, "CC_VIEWPORT", state,
+                        state_gtt_offset, p[3] & ~0x3fu, 2 * 4, color);
          break;
       case _3DSTATE_VIEWPORT_STATE_POINTERS_CC:
-         decode_structs(brw, spec, "CC_VIEWPORT", data,
-                        gtt_offset, p[1] & ~0x3fu, 2 * 4, color);
+         decode_structs(brw, spec, "CC_VIEWPORT", state,
+                        state_gtt_offset, p[1] & ~0x3fu, 2 * 4, color);
          break;
       case _3DSTATE_VIEWPORT_STATE_POINTERS_SF_CL:
-         decode_structs(brw, spec, "SF_CLIP_VIEWPORT", data,
-                        gtt_offset, p[1] & ~0x3fu, 16 * 4, color);
+         decode_structs(brw, spec, "SF_CLIP_VIEWPORT", state,
+                        state_gtt_offset, p[1] & ~0x3fu, 16 * 4, color);
          break;
       case _3DSTATE_SCISSOR_STATE_POINTERS:
-         decode_structs(brw, spec, "SCISSOR_RECT", data,
-                        gtt_offset, p[1] & ~0x1fu, 2 * 4, color);
+         decode_structs(brw, spec, "SCISSOR_RECT", state,
+                        state_gtt_offset, p[1] & ~0x1fu, 2 * 4, color);
          break;
       case _3DSTATE_BLEND_STATE_POINTERS:
          /* TODO: handle Gen8+ extra dword at the beginning */
-         decode_structs(brw, spec, "BLEND_STATE", data,
-                        gtt_offset, p[1] & ~0x3fu, 8 * 4, color);
+         decode_structs(brw, spec, "BLEND_STATE", state,
+                        state_gtt_offset, p[1] & ~0x3fu, 8 * 4, color);
          break;
       case _3DSTATE_CC_STATE_POINTERS:
          if (devinfo->gen >= 7) {
-            decode_struct(brw, spec, "COLOR_CALC_STATE", data,
-                          gtt_offset, p[1] & ~0x3fu, color);
+            decode_struct(brw, spec, "COLOR_CALC_STATE", state,
+                          state_gtt_offset, p[1] & ~0x3fu, color);
          } else if (devinfo->gen == 6) {
-            decode_structs(brw, spec, "BLEND_STATE", data,
-                           gtt_offset, p[1] & ~0x3fu, 2 * 4, color);
-            decode_struct(brw, spec, "DEPTH_STENCIL_STATE", data,
-                          gtt_offset, p[2] & ~0x3fu, color);
-            decode_struct(brw, spec, "COLOR_CALC_STATE", data,
-                          gtt_offset, p[3] & ~0x3fu, color);
+            decode_structs(brw, spec, "BLEND_STATE", state,
+                           state_gtt_offset, p[1] & ~0x3fu, 2 * 4, color);
+            decode_struct(brw, spec, "DEPTH_STENCIL_STATE", state,
+                          state_gtt_offset, p[2] & ~0x3fu, color);
+            decode_struct(brw, spec, "COLOR_CALC_STATE", state,
+                          state_gtt_offset, p[3] & ~0x3fu, color);
          }
          break;
       case _3DSTATE_DEPTH_STENCIL_STATE_POINTERS:
-         decode_struct(brw, spec, "DEPTH_STENCIL_STATE", data,
-                       gtt_offset, p[1] & ~0x3fu, color);
+         decode_struct(brw, spec, "DEPTH_STENCIL_STATE", state,
+                       state_gtt_offset, p[1] & ~0x3fu, color);
          break;
       }
    }
 
-   if (map != NULL) {
-      brw_bo_unmap(batch->bo);
-   }
+   brw_bo_unmap(batch->bo);
 }
 #else
 static void do_batch_dump(struct brw_context *brw) { }
