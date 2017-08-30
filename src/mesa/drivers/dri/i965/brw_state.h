@@ -187,9 +187,6 @@ void brw_print_program_cache(struct brw_context *brw);
 /***********************************************************************
  * brw_state_batch.c
  */
-#define BRW_BATCH_STRUCT(brw, s) \
-   intel_batchbuffer_data(brw, (s), sizeof(*(s)), RENDER_RING)
-
 void *brw_state_batch(struct brw_context *brw,
                       int size, int alignment, uint32_t *out_offset);
 uint32_t brw_state_batch_size(struct brw_context *brw, uint32_t offset);
