@@ -320,8 +320,19 @@ static void radv_dump_pipeline_stats(struct radv_device *device, struct radv_pip
 	struct ac_shader_config *conf;
 	int i;
 	FILE *file = stderr;
-	unsigned max_simd_waves = 10;
+	unsigned max_simd_waves;
 	unsigned lds_per_wave = 0;
+
+	switch (device->physical_device->rad_info.family) {
+	/* These always have 8 waves: */
+	case CHIP_POLARIS10:
+	case CHIP_POLARIS11:
+	case CHIP_POLARIS12:
+		max_simd_waves = 8;
+		break;
+	default:
+		max_simd_waves = 10;
+	}
 
 	for (i = 0; i < MESA_SHADER_STAGES; i++) {
 		if (!pipeline->shaders[i])
