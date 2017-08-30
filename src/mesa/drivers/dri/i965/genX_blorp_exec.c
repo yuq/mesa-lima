@@ -57,8 +57,18 @@ blorp_emit_reloc(struct blorp_batch *batch,
 {
    assert(batch->blorp->driver_ctx == batch->driver_batch);
    struct brw_context *brw = batch->driver_batch;
+   uint32_t offset;
 
-   uint32_t offset = (char *)location - (char *)brw->batch.map;
+   if (GEN_GEN < 6 && brw_ptr_in_state_buffer(&brw->batch, location)) {
+      offset = (char *)location - (char *)brw->batch.state_map;
+      return brw_state_reloc(&brw->batch, offset,
+                             address.buffer, address.offset + delta,
+                             address.reloc_flags);
+   }
+
+   assert(!brw_ptr_in_state_buffer(&brw->batch, location));
+
+   offset = (char *)location - (char *)brw->batch.map;
    return brw_batch_reloc(&brw->batch, offset,
                           address.buffer, address.offset + delta,
                           address.reloc_flags);
@@ -76,7 +86,7 @@ blorp_surface_reloc(struct blorp_batch *batch, uint32_t ss_offset,
       brw_state_reloc(&brw->batch, ss_offset, bo, address.offset + delta,
                       address.reloc_flags);
 
-   void *reloc_ptr = (void *)brw->batch.map + ss_offset;
+   void *reloc_ptr = (void *)brw->batch.state_map + ss_offset;
 #if GEN_GEN >= 8
    *(uint64_t *)reloc_ptr = reloc_val;
 #else
@@ -140,7 +150,7 @@ blorp_alloc_vertex_buffer(struct blorp_batch *batch, uint32_t size,
    void *data = brw_state_batch(brw, size, 64, &offset);
 
    *addr = (struct blorp_address) {
-      .buffer = brw->batch.bo,
+      .buffer = brw->batch.state_bo,
       .offset = offset,
    };
 
@@ -216,7 +226,7 @@ retry:
    intel_batchbuffer_save_state(brw);
    struct brw_bo *saved_bo = brw->batch.bo;
    uint32_t saved_used = USED_BATCH(brw->batch);
-   uint32_t saved_state_batch_offset = brw->batch.state_batch_offset;
+   uint32_t saved_state_used = brw->batch.state_used;
 
 #if GEN_GEN == 6
    /* Emit workaround flushes when we switch from drawing to blorping. */
@@ -249,12 +259,12 @@ retry:
     */
    assert(brw->batch.bo == saved_bo);
    assert((USED_BATCH(brw->batch) - saved_used) * 4 +
-          (saved_state_batch_offset - brw->batch.state_batch_offset) <
+          (brw->batch.state_used - saved_state_used) <
           estimated_max_batch_usage);
    /* Shut up compiler warnings on release build */
    (void)saved_bo;
    (void)saved_used;
-   (void)saved_state_batch_offset;
+   (void)saved_state_used;
 
    /* Check if the blorp op we just did would make our batch likely to fail to
     * map all the BOs into the GPU at batch exec time later.  If so, flush the

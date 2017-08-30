@@ -95,25 +95,9 @@ static inline uint32_t float_as_int(float f)
    return fi.d;
 }
 
-/* Inline functions - might actually be better off with these
- * non-inlined.  Certainly better off switching all command packets to
- * be passed as structs rather than dwords, but that's a little bit of
- * work...
- */
-static inline unsigned
-intel_batchbuffer_space(struct intel_batchbuffer *batch)
-{
-   return (batch->state_batch_offset - batch->reserved_space)
-      - USED_BATCH(*batch) * 4;
-}
-
-
 static inline void
 intel_batchbuffer_emit_dword(struct intel_batchbuffer *batch, GLuint dword)
 {
-#ifdef DEBUG
-   assert(intel_batchbuffer_space(batch) >= 4);
-#endif
    *batch->map_next++ = dword;
    assert(batch->ring != UNKNOWN_RING);
 }
@@ -151,6 +135,13 @@ intel_batchbuffer_advance(struct brw_context *brw)
 #else
    (void) brw;
 #endif
+}
+
+static inline bool
+brw_ptr_in_state_buffer(struct intel_batchbuffer *batch, void *p)
+{
+   return (char *) p >= (char *) batch->state_map &&
+          (char *) p < (char *) batch->state_map + batch->state_bo->size;
 }
 
 #define BEGIN_BATCH(n) do {                            \

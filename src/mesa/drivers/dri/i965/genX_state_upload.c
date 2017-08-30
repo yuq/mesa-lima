@@ -82,13 +82,23 @@ static uint64_t
 __gen_combine_address(struct brw_context *brw, void *location,
                       struct brw_address address, uint32_t delta)
 {
+   struct intel_batchbuffer *batch = &brw->batch;
+   uint32_t offset;
+
    if (address.bo == NULL) {
       return address.offset + delta;
    } else {
-      uint32_t offset = (char *) location - (char *) brw->batch.map;
+      if (GEN_GEN < 6 && brw_ptr_in_state_buffer(batch, location)) {
+         offset = (char *) location - (char *) brw->batch.state_map;
+         return brw_state_reloc(batch, offset, address.bo,
+                                address.offset + delta,
+                                address.reloc_flags);
+      }
 
-      /* TODO: Use brw_state_reloc for some things on Gen4-5 */
-      return brw_batch_reloc(&brw->batch, offset, address.bo,
+      assert(!brw_ptr_in_state_buffer(batch, location));
+
+      offset = (char *) location - (char *) brw->batch.map;
+      return brw_batch_reloc(batch, offset, address.bo,
                              address.offset + delta,
                              address.reloc_flags);
    }
@@ -1272,7 +1282,7 @@ genX(upload_clip_state)(struct brw_context *brw)
       clip.GuardbandClipTestEnable = true;
 
       clip.ClipperViewportStatePointer =
-         ro_bo(brw->batch.bo, brw->clip.vp_offset);
+         ro_bo(brw->batch.state_bo, brw->clip.vp_offset);
 
       clip.ScreenSpaceViewportXMin = -1;
       clip.ScreenSpaceViewportXMax = 1;
@@ -1488,7 +1498,8 @@ genX(upload_sf)(struct brw_context *brw)
        * something loaded through the GPE (L2 ISC), so it's INSTRUCTION
        * domain.
        */
-      sf.SetupViewportStateOffset = ro_bo(brw->batch.bo, brw->sf.vp_offset);
+      sf.SetupViewportStateOffset =
+         ro_bo(brw->batch.state_bo, brw->sf.vp_offset);
 
       sf.PointRasterizationRule = RASTRULE_UPPER_RIGHT;
 
@@ -1781,7 +1792,7 @@ genX(upload_wm)(struct brw_context *brw)
 
       if (stage_state->sampler_count)
          wm.SamplerStatePointer =
-            ro_bo(brw->batch.bo, stage_state->sampler_offset);
+            ro_bo(brw->batch.state_bo, stage_state->sampler_offset);
 #if GEN_GEN == 5
       if (wm_prog_data->prog_offset_2)
          wm.GRFRegisterCount2 = wm_prog_data->reg_blocks_2;
@@ -2074,7 +2085,7 @@ genX(upload_vs_state)(struct brw_context *brw)
 
       vs.StatisticsEnable = false;
       vs.SamplerStatePointer =
-         ro_bo(brw->batch.bo, stage_state->sampler_offset);
+         ro_bo(brw->batch.state_bo, stage_state->sampler_offset);
 #endif
 
 #if GEN_GEN == 5
@@ -3318,7 +3329,8 @@ genX(upload_color_calc_state)(struct brw_context *brw)
 
       cc.StatisticsEnable = brw->stats_wm;
 
-      cc.CCViewportStatePointer = ro_bo(brw->batch.bo, brw->cc.vp_offset);
+      cc.CCViewportStatePointer =
+         ro_bo(brw->batch.state_bo, brw->cc.vp_offset);
 #else
       /* _NEW_COLOR */
       cc.BlendConstantColorRed = ctx->Color.BlendColorUnclamped[0];
@@ -5010,7 +5022,8 @@ genX(update_sampler_state)(struct brw_context *brw,
                                  &border_color_offset);
    }
 #if GEN_GEN < 6
-      samp_st.BorderColorPointer = ro_bo(brw->batch.bo, border_color_offset);
+      samp_st.BorderColorPointer =
+         ro_bo(brw->batch.state_bo, border_color_offset);
 #else
       samp_st.BorderColorPointer = border_color_offset;
 #endif

@@ -447,6 +447,8 @@ struct intel_batchbuffer {
    struct brw_bo *bo;
    /** Last BO submitted to the hardware.  Used for glFinish(). */
    struct brw_bo *last_bo;
+   /** Current statebuffer being queued up. */
+   struct brw_bo *state_bo;
 
 #ifdef DEBUG
    uint16_t emit, total;
@@ -454,15 +456,18 @@ struct intel_batchbuffer {
    uint16_t reserved_space;
    uint32_t *map_next;
    uint32_t *map;
-   uint32_t *cpu_map;
+   uint32_t *batch_cpu_map;
+   uint32_t *state_cpu_map;
+   uint32_t *state_map;
+   uint32_t state_used;
 
-   uint32_t state_batch_offset;
    enum brw_gpu_ring ring;
    bool use_batch_first;
    bool needs_sol_reset;
    bool state_base_address_emitted;
 
    struct brw_reloc_list batch_relocs;
+   struct brw_reloc_list state_relocs;
    unsigned int valid_reloc_flags;
 
    /** The validation list */
@@ -477,6 +482,7 @@ struct intel_batchbuffer {
    struct {
       uint32_t *map_next;
       int batch_reloc_count;
+      int state_reloc_count;
       int exec_count;
    } saved;
 
