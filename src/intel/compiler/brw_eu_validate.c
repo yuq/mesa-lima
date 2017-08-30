@@ -64,6 +64,9 @@ cat(struct string *dest, const struct string src)
       }                                                  \
    } while (0)
 
+#define STRIDE(stride) (stride != 0 ? 1 << ((stride) - 1) : 0)
+#define WIDTH(width)   (1 << (width))
+
 static bool
 inst_is_send(const struct gen_device_info *devinfo, const brw_inst *inst)
 {
@@ -418,7 +421,7 @@ general_restrictions_based_on_operand_types(const struct gen_device_info *devinf
     * In fact, checking it would weaken testing of the other rules.
     */
 
-   unsigned dst_stride = 1 << (brw_inst_dst_hstride(devinfo, inst) - 1);
+   unsigned dst_stride = STRIDE(brw_inst_dst_hstride(devinfo, inst));
    enum brw_reg_type dst_type = brw_inst_dst_type(devinfo, inst);
    bool dst_type_is_byte =
       brw_inst_dst_type(devinfo, inst) == BRW_REGISTER_TYPE_B ||
@@ -542,11 +545,9 @@ general_restrictions_on_region_parameters(const struct gen_device_info *devinfo,
           BRW_IMMEDIATE_VALUE)                                                 \
          continue;                                                             \
                                                                                \
-      vstride = brw_inst_src ## n ## _vstride(devinfo, inst) ?                 \
-                (1 << (brw_inst_src ## n ## _vstride(devinfo, inst) - 1)) : 0; \
-      width = 1 << brw_inst_src ## n ## _width(devinfo, inst);                 \
-      hstride = brw_inst_src ## n ## _hstride(devinfo, inst) ?                 \
-                (1 << (brw_inst_src ## n ## _hstride(devinfo, inst) - 1)) : 0; \
+      vstride = STRIDE(brw_inst_src ## n ## _vstride(devinfo, inst));          \
+      width = WIDTH(brw_inst_src ## n ## _width(devinfo, inst));               \
+      hstride = STRIDE(brw_inst_src ## n ## _hstride(devinfo, inst));          \
       type = brw_inst_src ## n ## _type(devinfo, inst);                        \
       element_size = brw_reg_type_to_size(type);                               \
       subreg = brw_inst_src ## n ## _da1_subreg_nr(devinfo, inst)
@@ -742,11 +743,9 @@ region_alignment_rules(const struct gen_device_info *devinfo,
           BRW_IMMEDIATE_VALUE)                                                 \
          continue;                                                             \
                                                                                \
-      vstride = brw_inst_src ## n ## _vstride(devinfo, inst) ?                 \
-                (1 << (brw_inst_src ## n ## _vstride(devinfo, inst) - 1)) : 0; \
-      width = 1 << brw_inst_src ## n ## _width(devinfo, inst);                 \
-      hstride = brw_inst_src ## n ## _hstride(devinfo, inst) ?                 \
-                (1 << (brw_inst_src ## n ## _hstride(devinfo, inst) - 1)) : 0; \
+      vstride = STRIDE(brw_inst_src ## n ## _vstride(devinfo, inst));          \
+      width = WIDTH(brw_inst_src ## n ## _width(devinfo, inst));               \
+      hstride = STRIDE(brw_inst_src ## n ## _hstride(devinfo, inst));          \
       type = brw_inst_src ## n ## _type(devinfo, inst);                        \
       element_size = brw_reg_type_to_size(type);                               \
       subreg = brw_inst_src ## n ## _da1_subreg_nr(devinfo, inst);             \
@@ -774,7 +773,7 @@ region_alignment_rules(const struct gen_device_info *devinfo,
    if (desc->ndst == 0 || dst_is_null(devinfo, inst))
       return error_msg;
 
-   unsigned stride = 1 << (brw_inst_dst_hstride(devinfo, inst) - 1);
+   unsigned stride = STRIDE(brw_inst_dst_hstride(devinfo, inst));
    enum brw_reg_type dst_type = brw_inst_dst_type(devinfo, inst);
    unsigned element_size = brw_reg_type_to_size(dst_type);
    unsigned subreg = brw_inst_dst_da1_subreg_nr(devinfo, inst);
@@ -990,11 +989,9 @@ region_alignment_rules(const struct gen_device_info *devinfo,
       for (unsigned i = 0; i < num_sources; i++) {
 #define DO_SRC(n)                                                                  \
          unsigned vstride, width, hstride;                                         \
-         vstride = brw_inst_src ## n ## _vstride(devinfo, inst) ?                  \
-                   (1 << (brw_inst_src ## n ## _vstride(devinfo, inst) - 1)) : 0;  \
-         width = 1 << brw_inst_src ## n ## _width(devinfo, inst);                  \
-         hstride = brw_inst_src ## n ## _hstride(devinfo, inst) ?                  \
-                   (1 << (brw_inst_src ## n ## _hstride(devinfo, inst) - 1)) : 0;  \
+         vstride = STRIDE(brw_inst_src ## n ## _vstride(devinfo, inst));           \
+         width = WIDTH(brw_inst_src ## n ## _width(devinfo, inst));                \
+         hstride = STRIDE(brw_inst_src ## n ## _hstride(devinfo, inst));           \
          bool src ## n ## _is_packed_word =                                        \
             is_packed(vstride, width, hstride) &&                                  \
             (brw_inst_src ## n ## _type(devinfo, inst) == BRW_REGISTER_TYPE_W ||   \
@@ -1039,7 +1036,7 @@ vector_immediate_restrictions(const struct gen_device_info *devinfo,
    unsigned dst_type_size = brw_reg_type_to_size(dst_type);
    unsigned dst_subreg = brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1 ?
                          brw_inst_dst_da1_subreg_nr(devinfo, inst) : 0;
-   unsigned dst_stride = 1 << (brw_inst_dst_hstride(devinfo, inst) - 1);
+   unsigned dst_stride = STRIDE(brw_inst_dst_hstride(devinfo, inst));
    enum brw_reg_type type = num_sources == 1 ?
                             brw_inst_src0_type(devinfo, inst) :
                             brw_inst_src1_type(devinfo, inst);
