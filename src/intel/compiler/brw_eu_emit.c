@@ -1983,6 +1983,7 @@ void brw_oword_block_write_scratch(struct brw_codegen *p,
       brw_MOV(p, mrf, retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
 
       /* set message header global offset field (reg 0, element 2) */
+      brw_set_default_exec_size(p, BRW_EXECUTE_1);
       brw_MOV(p,
 	      retype(brw_vec1_reg(BRW_MESSAGE_REGISTER_FILE,
 				  mrf.nr,
@@ -2102,6 +2103,7 @@ brw_oword_block_read_scratch(struct brw_codegen *p,
       brw_MOV(p, mrf, retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
 
       /* set message header global offset field (reg 0, element 2) */
+      brw_set_default_exec_size(p, BRW_EXECUTE_1);
       brw_MOV(p, get_element_ud(mrf, 2), brw_imm_ud(offset));
 
       brw_pop_insn_state(p);
@@ -2200,6 +2202,7 @@ void brw_oword_block_read(struct brw_codegen *p,
    brw_MOV(p, mrf, retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
 
    /* set message header global offset field (reg 0, element 2) */
+   brw_set_default_exec_size(p, BRW_EXECUTE_1);
    brw_MOV(p,
 	   retype(brw_vec1_reg(BRW_MESSAGE_REGISTER_FILE,
 			       mrf.nr,
@@ -2448,6 +2451,7 @@ void brw_urb_WRITE(struct brw_codegen *p,
       brw_push_insn_state(p);
       brw_set_default_access_mode(p, BRW_ALIGN_1);
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+      brw_set_default_exec_size(p, BRW_EXECUTE_1);
       brw_OR(p, retype(brw_vec1_reg(BRW_MESSAGE_REGISTER_FILE, msg_reg_nr, 5),
 		       BRW_REGISTER_TYPE_UD),
 	        retype(brw_vec1_grf(0, 5), BRW_REGISTER_TYPE_UD),
@@ -2507,6 +2511,7 @@ brw_send_indirect_message(struct brw_codegen *p,
       brw_push_insn_state(p);
       brw_set_default_access_mode(p, BRW_ALIGN_1);
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+      brw_set_default_exec_size(p, BRW_EXECUTE_1);
       brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
 
       /* Load the indirect descriptor to an address register using OR so the
@@ -2551,6 +2556,7 @@ brw_send_indirect_surface_message(struct brw_codegen *p,
       brw_push_insn_state(p);
       brw_set_default_access_mode(p, BRW_ALIGN_1);
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+      brw_set_default_exec_size(p, BRW_EXECUTE_1);
       brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
 
       /* Mask out invalid bits from the surface index to avoid hangs e.g. when
@@ -3278,6 +3284,7 @@ brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst,
          struct brw_reg exec_mask =
             retype(brw_mask_reg(0), BRW_REGISTER_TYPE_UD);
 
+         brw_set_default_exec_size(p, BRW_EXECUTE_1);
          if (mask.file != BRW_IMMEDIATE_VALUE || mask.ud != 0xffffffff) {
             /* Unfortunately, ce0 does not take into account the thread
              * dispatch mask, which may be a problem in cases where it's not
@@ -3299,6 +3306,7 @@ brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst,
       } else {
          const struct brw_reg flag = brw_flag_reg(1, 0);
 
+         brw_set_default_exec_size(p, BRW_EXECUTE_1);
          brw_MOV(p, retype(flag, BRW_REGISTER_TYPE_UD), brw_imm_ud(0));
 
          /* Run enough instructions returning zero with execution masking and
@@ -3324,6 +3332,7 @@ brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst,
           * instructions.
           */
          const enum brw_reg_type type = brw_int_type(exec_size / 8, false);
+         brw_set_default_exec_size(p, BRW_EXECUTE_1);
          brw_FBL(p, vec1(dst), byte_offset(retype(flag, type), qtr_control));
       }
    } else {
