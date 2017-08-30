@@ -324,7 +324,7 @@ emit:
     *
     * BRW_NEW_FRAGMENT_PROGRAM
     */
-   if (devinfo->gen == 4 && !brw->is_g4x &&
+   if (devinfo->gen == 4 && !devinfo->is_g4x &&
        (brw->fragment_program->info.inputs_read & (1 << VARYING_SLOT_POS))) {
       BEGIN_BATCH(2);
       OUT_BATCH(_3DSTATE_GLOBAL_DEPTH_OFFSET_CLAMP << 16 | (2 - 2));

@@ -528,7 +528,7 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->Const.MaxPointSizeAA = 255.0;
    ctx->Const.PointSizeGranularity = 1.0;
 
-   if (devinfo->gen >= 5 || brw->is_g4x)
+   if (devinfo->gen >= 5 || devinfo->is_g4x)
       ctx->Const.MaxClipPlanes = 8;
 
    ctx->Const.GLSLTessLevelsAsInputs = true;
@@ -858,7 +858,6 @@ brwCreateContext(gl_api api,
    brw->screen = screen;
    brw->bufmgr = screen->bufmgr;
 
-   brw->is_g4x = devinfo->is_g4x;
    brw->is_baytrail = devinfo->is_baytrail;
    brw->is_haswell = devinfo->is_haswell;
    brw->is_cherryview = devinfo->is_cherryview;

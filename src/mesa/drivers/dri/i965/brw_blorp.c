@@ -74,7 +74,7 @@ brw_blorp_init(struct brw_context *brw)
 
    switch (devinfo->gen) {
    case 4:
-      if (brw->is_g4x) {
+      if (devinfo->is_g4x) {
          brw->blorp.exec = gen45_blorp_exec;
       } else {
          brw->blorp.exec = gen4_blorp_exec;

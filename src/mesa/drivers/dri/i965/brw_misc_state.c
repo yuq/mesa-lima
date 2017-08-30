@@ -375,7 +375,7 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
    assert(!separate_stencil);
 
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   const unsigned len = (brw->is_g4x || devinfo->gen == 5) ? 6 : 5;
+   const unsigned len = (devinfo->is_g4x || devinfo->gen == 5) ? 6 : 5;
 
    BEGIN_BATCH(len);
    OUT_BATCH(_3DSTATE_DEPTH_BUFFER << 16 | (len - 2));
@@ -395,7 +395,7 @@ brw_emit_depth_stencil_hiz(struct brw_context *brw,
              ((height + tile_y - 1) << 19));
    OUT_BATCH(0);
 
-   if (brw->is_g4x || devinfo->gen >= 5)
+   if (devinfo->is_g4x || devinfo->gen >= 5)
       OUT_BATCH(tile_x | (tile_y << 16));
    else
       assert(tile_x == 0 && tile_y == 0);
@@ -419,7 +419,7 @@ void
 brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   const bool is_965 = devinfo->gen == 4 && !brw->is_g4x;
+   const bool is_965 = devinfo->gen == 4 && !devinfo->is_g4x;
    const uint32_t _3DSTATE_PIPELINE_SELECT =
       is_965 ? CMD_PIPELINE_SELECT_965 : CMD_PIPELINE_SELECT_GM45;
 
@@ -524,7 +524,7 @@ void
 brw_upload_invariant_state(struct brw_context *brw)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   const bool is_965 = devinfo->gen == 4 && !brw->is_g4x;
+   const bool is_965 = devinfo->gen == 4 && !devinfo->is_g4x;
 
    brw_emit_select_pipeline(brw, BRW_RENDER_PIPELINE);
    brw->last_pipeline = BRW_RENDER_PIPELINE;

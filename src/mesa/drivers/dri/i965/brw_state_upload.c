@@ -188,7 +188,7 @@ void brw_init_state( struct brw_context *brw )
       gen6_init_atoms(brw);
    else if (devinfo->gen >= 5)
       gen5_init_atoms(brw);
-   else if (brw->is_g4x)
+   else if (devinfo->is_g4x)
       gen45_init_atoms(brw);
    else
       gen4_init_atoms(brw);
