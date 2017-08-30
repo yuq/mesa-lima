@@ -40,6 +40,8 @@
 
 #define FILE_DEBUG_FLAG DEBUG_BUFMGR
 
+#define BATCH_SZ (8192*sizeof(uint32_t))
+
 static void
 intel_batchbuffer_reset(struct intel_batchbuffer *batch,
                         struct brw_bufmgr *bufmgr,
