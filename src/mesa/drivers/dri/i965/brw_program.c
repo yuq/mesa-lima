@@ -292,7 +292,7 @@ brw_memory_barrier(struct gl_context *ctx, GLbitfield barriers)
    /* Typed surface messages are handled by the render cache on IVB, so we
     * need to flush it too.
     */
-   if (devinfo->gen == 7 && !brw->is_haswell)
+   if (devinfo->gen == 7 && !devinfo->is_haswell)
       bits |= PIPE_CONTROL_RENDER_TARGET_FLUSH;
 
    brw_emit_pipe_control_flush(brw, bits);
@@ -647,7 +647,7 @@ brw_setup_tex_for_precompile(struct brw_context *brw,
                              struct gl_program *prog)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   const bool has_shader_channel_select = brw->is_haswell || devinfo->gen >= 8;
+   const bool has_shader_channel_select = devinfo->is_haswell || devinfo->gen >= 8;
    unsigned sampler_count = util_last_bit(prog->SamplersUsed);
    for (unsigned i = 0; i < sampler_count; i++) {
       if (!has_shader_channel_select && (prog->ShadowSamplers & (1 << i))) {

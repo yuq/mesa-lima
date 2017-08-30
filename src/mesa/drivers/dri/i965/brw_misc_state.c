@@ -492,7 +492,7 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
              (pipeline == BRW_COMPUTE_PIPELINE ? 2 : 0));
    ADVANCE_BATCH();
 
-   if (devinfo->gen == 7 && !brw->is_haswell &&
+   if (devinfo->gen == 7 && !devinfo->is_haswell &&
        pipeline == BRW_RENDER_PIPELINE) {
       /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]
        * PIPELINE_SELECT [DevBWR+]":

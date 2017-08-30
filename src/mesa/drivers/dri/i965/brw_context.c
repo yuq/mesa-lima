@@ -294,7 +294,7 @@ brw_init_driver_functions(struct brw_context *brw,
 
    brwInitFragProgFuncs( functions );
    brw_init_common_queryobj_functions(functions);
-   if (devinfo->gen >= 8 || brw->is_haswell)
+   if (devinfo->gen >= 8 || devinfo->is_haswell)
       hsw_init_queryobj_functions(functions);
    else if (devinfo->gen >= 6)
       gen6_init_queryobj_functions(functions);
@@ -360,7 +360,7 @@ brw_initialize_context_constants(struct brw_context *brw)
    }
 
    unsigned max_samplers =
-      devinfo->gen >= 8 || brw->is_haswell ? BRW_MAX_TEX_UNIT : 16;
+      devinfo->gen >= 8 || devinfo->is_haswell ? BRW_MAX_TEX_UNIT : 16;
 
    ctx->Const.MaxDualSourceDrawBuffers = 1;
    ctx->Const.MaxDrawBuffers = BRW_MAX_DRAW_BUFFERS;
@@ -858,7 +858,6 @@ brwCreateContext(gl_api api,
    brw->screen = screen;
    brw->bufmgr = screen->bufmgr;
 
-   brw->is_haswell = devinfo->is_haswell;
    brw->is_cherryview = devinfo->is_cherryview;
    brw->is_broxton = devinfo->is_broxton || devinfo->is_geminilake;
    brw->has_llc = devinfo->has_llc;

@@ -138,7 +138,7 @@ intelInitExtensions(struct gl_context *ctx)
 
    if (devinfo->gen >= 8)
       ctx->Const.GLSLVersion = 450;
-   else if (brw->is_haswell && can_do_pipelined_register_writes(brw->screen))
+   else if (devinfo->is_haswell && can_do_pipelined_register_writes(brw->screen))
       ctx->Const.GLSLVersion = 450;
    else if (devinfo->gen >= 7 && can_do_pipelined_register_writes(brw->screen))
       ctx->Const.GLSLVersion = 420;
@@ -239,7 +239,7 @@ intelInitExtensions(struct gl_context *ctx)
              ctx->Const.MaxComputeWorkGroupSize[0] >= 1024) {
             ctx->Extensions.ARB_compute_shader = true;
             ctx->Extensions.ARB_ES3_1_compatibility =
-               devinfo->gen >= 8 || brw->is_haswell;
+               devinfo->gen >= 8 || devinfo->is_haswell;
          }
 
          if (can_do_predicate_writes(brw->screen))
@@ -247,7 +247,7 @@ intelInitExtensions(struct gl_context *ctx)
       }
    }
 
-   if (devinfo->gen >= 8 || brw->is_haswell) {
+   if (devinfo->gen >= 8 || devinfo->is_haswell) {
       ctx->Extensions.ARB_stencil_texturing = true;
       ctx->Extensions.ARB_texture_stencil8 = true;
       ctx->Extensions.OES_geometry_shader = true;
@@ -255,7 +255,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.OES_viewport_array = true;
    }
 
-   if (devinfo->gen >= 8 || brw->is_haswell || devinfo->is_baytrail) {
+   if (devinfo->gen >= 8 || devinfo->is_haswell || devinfo->is_baytrail) {
       ctx->Extensions.ARB_robust_buffer_access_behavior = true;
    }
 

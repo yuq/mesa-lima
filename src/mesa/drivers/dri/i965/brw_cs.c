@@ -155,7 +155,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
     * number of threads per subslice.
     */
    const unsigned scratch_ids_per_subslice =
-      brw->is_haswell ? 16 * 8 : devinfo->max_cs_threads;
+      devinfo->is_haswell ? 16 * 8 : devinfo->max_cs_threads;
 
    brw_alloc_stage_scratch(brw, &brw->cs.base,
                            prog_data.base.total_scratch,

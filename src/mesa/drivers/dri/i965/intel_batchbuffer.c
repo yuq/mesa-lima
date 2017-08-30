@@ -506,7 +506,7 @@ brw_finish_batch(struct brw_context *brw)
       if (devinfo->gen >= 7)
          gen7_restore_default_l3_config(brw);
 
-      if (brw->is_haswell) {
+      if (devinfo->is_haswell) {
          /* From the Haswell PRM, Volume 2b, Command Reference: Instructions,
           * 3DSTATE_CC_STATE_POINTERS > "Note":
           *
@@ -999,7 +999,7 @@ brw_load_register_reg(struct brw_context *brw, uint32_t src, uint32_t dest)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
-   assert(devinfo->gen >= 8 || brw->is_haswell);
+   assert(devinfo->gen >= 8 || devinfo->is_haswell);
 
    BEGIN_BATCH(3);
    OUT_BATCH(MI_LOAD_REGISTER_REG | (3 - 2));
@@ -1016,7 +1016,7 @@ brw_load_register_reg64(struct brw_context *brw, uint32_t src, uint32_t dest)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
-   assert(devinfo->gen >= 8 || brw->is_haswell);
+   assert(devinfo->gen >= 8 || devinfo->is_haswell);
 
    BEGIN_BATCH(6);
    OUT_BATCH(MI_LOAD_REGISTER_REG | (3 - 2));

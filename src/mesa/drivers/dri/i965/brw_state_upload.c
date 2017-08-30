@@ -180,7 +180,7 @@ void brw_init_state( struct brw_context *brw )
       gen9_init_atoms(brw);
    else if (devinfo->gen >= 8)
       gen8_init_atoms(brw);
-   else if (brw->is_haswell)
+   else if (devinfo->is_haswell)
       gen75_init_atoms(brw);
    else if (devinfo->gen >= 7)
       gen7_init_atoms(brw);

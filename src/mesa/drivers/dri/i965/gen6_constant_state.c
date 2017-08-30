@@ -65,7 +65,7 @@ gen6_upload_push_constants(struct brw_context *brw,
       int i;
       const int size = prog_data->nr_params * sizeof(gl_constant_value);
       gl_constant_value *param;
-      if (devinfo->gen >= 8 || brw->is_haswell) {
+      if (devinfo->gen >= 8 || devinfo->is_haswell) {
          param = intel_upload_space(brw, size, 32,
                                     &stage_state->push_const_bo,
                                     &stage_state->push_const_offset);

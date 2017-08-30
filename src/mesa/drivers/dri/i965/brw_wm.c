@@ -330,7 +330,7 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
          /* Haswell handles texture swizzling as surface format overrides
           * (except for GL_ALPHA); all other platforms need MOVs in the shader.
           */
-         if (alpha_depth || (devinfo->gen < 8 && !brw->is_haswell))
+         if (alpha_depth || (devinfo->gen < 8 && !devinfo->is_haswell))
             key->swizzles[s] = brw_get_texture_swizzle(ctx, t);
 
          if (devinfo->gen < 8 &&
@@ -359,7 +359,7 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
                 * leaving normal texture swizzling to SCS.
                 */
                unsigned src_swizzle =
-                  brw->is_haswell ? t->_Swizzle : key->swizzles[s];
+                  devinfo->is_haswell ? t->_Swizzle : key->swizzles[s];
                for (int i = 0; i < 4; i++) {
                   unsigned src_comp = GET_SWZ(src_swizzle, i);
                   if (src_comp == SWIZZLE_ONE || src_comp == SWIZZLE_W) {
@@ -374,7 +374,7 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
                 * request blue.  Haswell can use SCS for this, but Ivybridge
                 * needs a shader workaround.
                 */
-               if (!brw->is_haswell)
+               if (!devinfo->is_haswell)
                   key->gather_channel_quirk_mask |= 1 << s;
                break;
             }

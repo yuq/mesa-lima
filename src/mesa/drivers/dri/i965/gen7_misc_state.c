@@ -39,6 +39,7 @@ gen7_emit_depth_stencil_hiz(struct brw_context *brw,
                             uint32_t width, uint32_t height,
                             uint32_t tile_x, uint32_t tile_y)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    const uint8_t mocs = GEN7_MOCS_L3;
    struct gl_framebuffer *fb = ctx->DrawBuffer;
@@ -161,7 +162,7 @@ gen7_emit_depth_stencil_hiz(struct brw_context *brw,
       ADVANCE_BATCH();
    } else {
       stencil_mt->r8stencil_needs_update = true;
-      const int enabled = brw->is_haswell ? HSW_STENCIL_ENABLED : 0;
+      const int enabled = devinfo->is_haswell ? HSW_STENCIL_ENABLED : 0;
 
       BEGIN_BATCH(3);
       OUT_BATCH(GEN7_3DSTATE_STENCIL_BUFFER << 16 | (3 - 2));

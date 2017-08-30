@@ -196,8 +196,9 @@ hsw_pause_transform_feedback(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
    struct brw_transform_feedback_object *brw_obj =
       (struct brw_transform_feedback_object *) obj;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
-   if (brw->is_haswell) {
+   if (devinfo->is_haswell) {
       /* Flush any drawing so that the counters have the right values. */
       brw_emit_mi_flush(brw);
 
@@ -225,8 +226,9 @@ hsw_resume_transform_feedback(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
    struct brw_transform_feedback_object *brw_obj =
       (struct brw_transform_feedback_object *) obj;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
-   if (brw->is_haswell) {
+   if (devinfo->is_haswell) {
       /* Reload the SOL buffer offset registers. */
       for (int i = 0; i < BRW_MAX_XFB_STREAMS; i++) {
          BEGIN_BATCH(3);

@@ -153,7 +153,7 @@ setup_l3_config(struct brw_context *brw, const struct gen_l3_config *cfg)
 
       /* Demote any clients with no ways assigned to LLC. */
       OUT_BATCH(GEN7_L3SQCREG1);
-      OUT_BATCH((brw->is_haswell ? HSW_L3SQCREG1_SQGHPCI_DEFAULT :
+      OUT_BATCH((devinfo->is_haswell ? HSW_L3SQCREG1_SQGHPCI_DEFAULT :
                  devinfo->is_baytrail ? VLV_L3SQCREG1_SQGHPCI_DEFAULT :
                  IVB_L3SQCREG1_SQGHPCI_DEFAULT) |
                 (has_dc ? 0 : GEN7_L3SQCREG1_CONV_DC_UC) |

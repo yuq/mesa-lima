@@ -73,7 +73,7 @@ gen7_cs_stall_every_four_pipe_controls(struct brw_context *brw, uint32_t flags)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
-   if (devinfo->gen == 7 && !brw->is_haswell) {
+   if (devinfo->gen == 7 && !devinfo->is_haswell) {
       if (flags & PIPE_CONTROL_CS_STALL) {
          /* If we're doing a CS stall, reset the counter and carry on. */
          brw->pipe_controls_since_last_cs_stall = 0;
@@ -383,7 +383,7 @@ brw_emit_end_of_pipe_sync(struct brw_context *brw, uint32_t flags)
                                   PIPE_CONTROL_WRITE_IMMEDIATE,
                                   brw->workaround_bo, 0, 0);
 
-      if (brw->is_haswell) {
+      if (devinfo->is_haswell) {
          /* Haswell needs addition work-arounds:
           *
           * From Haswell PRM, volume 2, part 1, "End-of-Pipe Synchronization":
