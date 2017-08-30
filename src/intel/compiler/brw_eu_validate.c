@@ -1085,6 +1085,174 @@ vector_immediate_restrictions(const struct gen_device_info *devinfo,
    return error_msg;
 }
 
+static struct string
+special_requirements_for_handling_double_precision_data_types(
+                                       const struct gen_device_info *devinfo,
+                                       const brw_inst *inst)
+{
+   unsigned num_sources = num_sources_from_inst(devinfo, inst);
+   struct string error_msg = { .str = NULL, .len = 0 };
+
+   if (num_sources == 3 || num_sources == 0)
+      return (struct string){};
+
+   enum brw_reg_type exec_type = execution_type(devinfo, inst);
+   unsigned exec_type_size = brw_reg_type_to_size(exec_type);
+
+   enum brw_reg_file dst_file = brw_inst_dst_reg_file(devinfo, inst);
+   enum brw_reg_type dst_type = brw_inst_dst_type(devinfo, inst);
+   unsigned dst_type_size = brw_reg_type_to_size(dst_type);
+   unsigned dst_hstride = STRIDE(brw_inst_dst_hstride(devinfo, inst));
+   unsigned dst_reg = brw_inst_dst_da_reg_nr(devinfo, inst);
+   unsigned dst_subreg = brw_inst_dst_da1_subreg_nr(devinfo, inst);
+   unsigned dst_address_mode = brw_inst_dst_address_mode(devinfo, inst);
+
+   bool is_integer_dword_multiply =
+      devinfo->gen >= 8 &&
+      brw_inst_opcode(devinfo, inst) == BRW_OPCODE_MUL &&
+      (brw_inst_src0_type(devinfo, inst) == BRW_REGISTER_TYPE_D ||
+       brw_inst_src0_type(devinfo, inst) == BRW_REGISTER_TYPE_UD) &&
+      (brw_inst_src1_type(devinfo, inst) == BRW_REGISTER_TYPE_D ||
+       brw_inst_src1_type(devinfo, inst) == BRW_REGISTER_TYPE_UD);
+
+   if (dst_type_size != 8 && exec_type_size != 8 && !is_integer_dword_multiply)
+      return (struct string){};
+
+   for (unsigned i = 0; i < num_sources; i++) {
+      unsigned vstride, width, hstride, type_size, reg, subreg, address_mode;
+      bool is_scalar_region;
+      enum brw_reg_file file;
+      enum brw_reg_type type;
+
+#define DO_SRC(n)                                                              \
+      if (brw_inst_src ## n ## _reg_file(devinfo, inst) ==                     \
+          BRW_IMMEDIATE_VALUE)                                                 \
+         continue;                                                             \
+                                                                               \
+      is_scalar_region = src ## n ## _has_scalar_region(devinfo, inst);        \
+      vstride = STRIDE(brw_inst_src ## n ## _vstride(devinfo, inst));          \
+      width = WIDTH(brw_inst_src ## n ## _width(devinfo, inst));               \
+      hstride = STRIDE(brw_inst_src ## n ## _hstride(devinfo, inst));          \
+      file = brw_inst_src ## n ## _reg_file(devinfo, inst);                    \
+      type = brw_inst_src ## n ## _type(devinfo, inst);                        \
+      type_size = brw_reg_type_to_size(type);                                  \
+      reg = brw_inst_src ## n ## _da_reg_nr(devinfo, inst);                    \
+      subreg = brw_inst_src ## n ## _da1_subreg_nr(devinfo, inst);             \
+      address_mode = brw_inst_src ## n ## _address_mode(devinfo, inst)
+
+      if (i == 0) {
+         DO_SRC(0);
+      } else {
+         DO_SRC(1);
+      }
+#undef DO_SRC
+
+      /* The PRMs say that for CHV, BXT:
+       *
+       *    When source or destination datatype is 64b or operation is integer
+       *    DWord multiply, regioning in Align1 must follow these rules:
+       *
+       *    1. Source and Destination horizontal stride must be aligned to the
+       *       same qword.
+       *    2. Regioning must ensure Src.Vstride = Src.Width * Src.Hstride.
+       *    3. Source and Destination offset must be the same, except the case
+       *       of scalar source.
+       *
+       * We assume that the restriction applies to GLK as well.
+       */
+      if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1 &&
+          (devinfo->is_cherryview || gen_device_info_is_9lp(devinfo))) {
+         unsigned src_stride = hstride * type_size;
+         unsigned dst_stride = dst_hstride * dst_type_size;
+
+         ERROR_IF(!is_scalar_region &&
+                  (src_stride % 8 != 0 ||
+                   dst_stride % 8 != 0 ||
+                   src_stride != dst_stride),
+                  "Source and destination horizontal stride must equal and a "
+                  "multiple of a qword when the execution type is 64-bit");
+
+         ERROR_IF(vstride != width * hstride,
+                  "Vstride must be Width * Hstride when the execution type is "
+                  "64-bit");
+
+         ERROR_IF(!is_scalar_region && dst_subreg != subreg,
+                  "Source and destination offset must be the same when the "
+                  "execution type is 64-bit");
+      }
+
+      /* The PRMs say that for CHV, BXT:
+       *
+       *    When source or destination datatype is 64b or operation is integer
+       *    DWord multiply, indirect addressing must not be used.
+       *
+       * We assume that the restriction applies to GLK as well.
+       */
+      if (devinfo->is_cherryview || gen_device_info_is_9lp(devinfo)) {
+         ERROR_IF(BRW_ADDRESS_REGISTER_INDIRECT_REGISTER == address_mode ||
+                  BRW_ADDRESS_REGISTER_INDIRECT_REGISTER == dst_address_mode,
+                  "Indirect addressing is not allowed when the execution type "
+                  "is 64-bit");
+      }
+
+      /* The PRMs say that for CHV, BXT:
+       *
+       *    ARF registers must never be used with 64b datatype or when
+       *    operation is integer DWord multiply.
+       *
+       * We assume that the restriction applies to GLK as well.
+       *
+       * We assume that the restriction does not apply to the null register.
+       */
+      if (devinfo->is_cherryview || gen_device_info_is_9lp(devinfo)) {
+         ERROR_IF(brw_inst_opcode(devinfo, inst) == BRW_OPCODE_MAC ||
+                  brw_inst_acc_wr_control(devinfo, inst) ||
+                  (BRW_ARCHITECTURE_REGISTER_FILE == file &&
+                   reg != BRW_ARF_NULL) ||
+                  (BRW_ARCHITECTURE_REGISTER_FILE == dst_file &&
+                   dst_reg != BRW_ARF_NULL),
+                  "Architecture registers cannot be used when the execution "
+                  "type is 64-bit");
+      }
+   }
+
+   /* The PRMs say that for BDW, SKL:
+    *
+    *    If Align16 is required for an operation with QW destination and non-QW
+    *    source datatypes, the execution size cannot exceed 2.
+    *
+    * We assume that the restriction applies to all Gen8+ parts.
+    */
+   if (devinfo->gen >= 8) {
+      enum brw_reg_type src0_type = brw_inst_src0_type(devinfo, inst);
+      enum brw_reg_type src1_type = brw_inst_src1_type(devinfo, inst);
+      unsigned src0_type_size = brw_reg_type_to_size(src0_type);
+      unsigned src1_type_size = brw_reg_type_to_size(src1_type);
+
+      ERROR_IF(brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_16 &&
+               dst_type_size == 8 &&
+               (src0_type_size != 8 || src1_type_size != 8) &&
+               brw_inst_exec_size(devinfo, inst) > BRW_EXECUTE_2,
+               "In Align16 exec size cannot exceed 2 with a QWord destination "
+               "and a non-QWord source");
+   }
+
+   /* The PRMs say that for CHV, BXT:
+    *
+    *    When source or destination datatype is 64b or operation is integer
+    *    DWord multiply, DepCtrl must not be used.
+    *
+    * We assume that the restriction applies to GLK as well.
+    */
+   if (devinfo->is_cherryview || gen_device_info_is_9lp(devinfo)) {
+      ERROR_IF(brw_inst_no_dd_check(devinfo, inst) ||
+               brw_inst_no_dd_clear(devinfo, inst),
+               "DepCtrl is not allowed when the execution type is 64-bit");
+   }
+
+   return error_msg;
+}
+
 bool
 brw_validate_instructions(const struct gen_device_info *devinfo,
                           void *assembly, int start_offset, int end_offset,
@@ -1113,6 +1281,7 @@ brw_validate_instructions(const struct gen_device_info *devinfo,
          CHECK(general_restrictions_on_region_parameters);
          CHECK(region_alignment_rules);
          CHECK(vector_immediate_restrictions);
+         CHECK(special_requirements_for_handling_double_precision_data_types);
       }
 
       if (error_msg.str && annotation) {

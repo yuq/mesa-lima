@@ -138,6 +138,7 @@ validate(struct brw_codegen *p)
 
 #define last_inst    (&p->store[p->nr_insn - 1])
 #define g0           brw_vec8_grf(0, 0)
+#define acc0         brw_acc_reg(8)
 #define null         brw_null_reg()
 #define zero         brw_imm_f(0.0f)
 
@@ -931,6 +932,628 @@ TEST_P(validation_test, vector_immediate_destination_stride)
       brw_inst_set_dst_hstride(&devinfo, last_inst, move[i].stride);
 
       EXPECT_EQ(move[i].expected_result, validate(p));
+
+      clear_instructions(p);
+   }
+}
+
+TEST_P(validation_test, qword_low_power_align1_regioning_restrictions)
+{
+   static const struct {
+      enum opcode opcode;
+      unsigned exec_size;
+
+      enum brw_reg_type dst_type;
+      unsigned dst_subreg;
+      unsigned dst_stride;
+
+      enum brw_reg_type src_type;
+      unsigned src_subreg;
+      unsigned src_vstride;
+      unsigned src_width;
+      unsigned src_hstride;
+
+      bool expected_result;
+   } inst[] = {
+#define INST(opcode, exec_size, dst_type, dst_subreg, dst_stride, src_type,    \
+             src_subreg, src_vstride, src_width, src_hstride, expected_result) \
+      {                                                                        \
+         BRW_OPCODE_##opcode,                                                  \
+         BRW_EXECUTE_##exec_size,                                              \
+         BRW_REGISTER_TYPE_##dst_type,                                         \
+         dst_subreg,                                                           \
+         BRW_HORIZONTAL_STRIDE_##dst_stride,                                   \
+         BRW_REGISTER_TYPE_##src_type,                                         \
+         src_subreg,                                                           \
+         BRW_VERTICAL_STRIDE_##src_vstride,                                    \
+         BRW_WIDTH_##src_width,                                                \
+         BRW_HORIZONTAL_STRIDE_##src_hstride,                                  \
+         expected_result,                                                      \
+      }
+
+      /* Some instruction that violate no restrictions, as a control */
+      INST(MOV, 4, DF, 0, 1, DF, 0, 4, 4, 1, true ),
+      INST(MOV, 4, Q,  0, 1, Q,  0, 4, 4, 1, true ),
+      INST(MOV, 4, UQ, 0, 1, UQ, 0, 4, 4, 1, true ),
+
+      INST(MOV, 4, DF, 0, 1, F,  0, 8, 4, 2, true ),
+      INST(MOV, 4, Q,  0, 1, D,  0, 8, 4, 2, true ),
+      INST(MOV, 4, UQ, 0, 1, UD, 0, 8, 4, 2, true ),
+
+      INST(MOV, 4, F,  0, 2, DF, 0, 4, 4, 1, true ),
+      INST(MOV, 4, D,  0, 2, Q,  0, 4, 4, 1, true ),
+      INST(MOV, 4, UD, 0, 2, UQ, 0, 4, 4, 1, true ),
+
+      INST(MUL, 8, D,  0, 2, D,  0, 8, 4, 2, true ),
+      INST(MUL, 8, UD, 0, 2, UD, 0, 8, 4, 2, true ),
+
+      /* Something with subreg nrs */
+      INST(MOV, 2, DF, 8, 1, DF, 8, 2, 2, 1, true ),
+      INST(MOV, 2, Q,  8, 1, Q,  8, 2, 2, 1, true ),
+      INST(MOV, 2, UQ, 8, 1, UQ, 8, 2, 2, 1, true ),
+
+      INST(MUL, 2, D,  4, 2, D,  4, 4, 2, 2, true ),
+      INST(MUL, 2, UD, 4, 2, UD, 4, 4, 2, 2, true ),
+
+      /* The PRMs say that for CHV, BXT:
+       *
+       *    When source or destination datatype is 64b or operation is integer
+       *    DWord multiply, regioning in Align1 must follow these rules:
+       *
+       *    1. Source and Destination horizontal stride must be aligned to the
+       *       same qword.
+       */
+      INST(MOV, 4, DF, 0, 2, DF, 0, 4, 4, 1, false),
+      INST(MOV, 4, Q,  0, 2, Q,  0, 4, 4, 1, false),
+      INST(MOV, 4, UQ, 0, 2, UQ, 0, 4, 4, 1, false),
+
+      INST(MOV, 4, DF, 0, 2, F,  0, 8, 4, 2, false),
+      INST(MOV, 4, Q,  0, 2, D,  0, 8, 4, 2, false),
+      INST(MOV, 4, UQ, 0, 2, UD, 0, 8, 4, 2, false),
+
+      INST(MOV, 4, DF, 0, 2, F,  0, 4, 4, 1, false),
+      INST(MOV, 4, Q,  0, 2, D,  0, 4, 4, 1, false),
+      INST(MOV, 4, UQ, 0, 2, UD, 0, 4, 4, 1, false),
+
+      INST(MUL, 4, D,  0, 2, D,  0, 4, 4, 1, false),
+      INST(MUL, 4, UD, 0, 2, UD, 0, 4, 4, 1, false),
+
+      INST(MUL, 4, D,  0, 1, D,  0, 8, 4, 2, false),
+      INST(MUL, 4, UD, 0, 1, UD, 0, 8, 4, 2, false),
+
+      /*    2. Regioning must ensure Src.Vstride = Src.Width * Src.Hstride. */
+      INST(MOV, 4, DF, 0, 1, DF, 0, 0, 2, 1, false),
+      INST(MOV, 4, Q,  0, 1, Q,  0, 0, 2, 1, false),
+      INST(MOV, 4, UQ, 0, 1, UQ, 0, 0, 2, 1, false),
+
+      INST(MOV, 4, DF, 0, 1, F,  0, 0, 2, 2, false),
+      INST(MOV, 4, Q,  0, 1, D,  0, 0, 2, 2, false),
+      INST(MOV, 4, UQ, 0, 1, UD, 0, 0, 2, 2, false),
+
+      INST(MOV, 8, F,  0, 2, DF, 0, 0, 2, 1, false),
+      INST(MOV, 8, D,  0, 2, Q,  0, 0, 2, 1, false),
+      INST(MOV, 8, UD, 0, 2, UQ, 0, 0, 2, 1, false),
+
+      INST(MUL, 8, D,  0, 2, D,  0, 0, 4, 2, false),
+      INST(MUL, 8, UD, 0, 2, UD, 0, 0, 4, 2, false),
+
+      INST(MUL, 8, D,  0, 2, D,  0, 0, 4, 2, false),
+      INST(MUL, 8, UD, 0, 2, UD, 0, 0, 4, 2, false),
+
+      /*    3. Source and Destination offset must be the same, except the case
+       *       of scalar source.
+       */
+      INST(MOV, 2, DF, 8, 1, DF, 0, 2, 2, 1, false),
+      INST(MOV, 2, Q,  8, 1, Q,  0, 2, 2, 1, false),
+      INST(MOV, 2, UQ, 8, 1, UQ, 0, 2, 2, 1, false),
+
+      INST(MOV, 2, DF, 0, 1, DF, 8, 2, 2, 1, false),
+      INST(MOV, 2, Q,  0, 1, Q,  8, 2, 2, 1, false),
+      INST(MOV, 2, UQ, 0, 1, UQ, 8, 2, 2, 1, false),
+
+      INST(MUL, 4, D,  4, 2, D,  0, 4, 2, 2, false),
+      INST(MUL, 4, UD, 4, 2, UD, 0, 4, 2, 2, false),
+
+      INST(MUL, 4, D,  0, 2, D,  4, 4, 2, 2, false),
+      INST(MUL, 4, UD, 0, 2, UD, 4, 4, 2, 2, false),
+
+      INST(MOV, 2, DF, 8, 1, DF, 0, 0, 1, 0, true ),
+      INST(MOV, 2, Q,  8, 1, Q,  0, 0, 1, 0, true ),
+      INST(MOV, 2, UQ, 8, 1, UQ, 0, 0, 1, 0, true ),
+
+      INST(MOV, 2, DF, 8, 1, F,  4, 0, 1, 0, true ),
+      INST(MOV, 2, Q,  8, 1, D,  4, 0, 1, 0, true ),
+      INST(MOV, 2, UQ, 8, 1, UD, 4, 0, 1, 0, true ),
+
+      INST(MUL, 4, D,  4, 1, D,  0, 0, 1, 0, true ),
+      INST(MUL, 4, UD, 4, 1, UD, 0, 0, 1, 0, true ),
+
+      INST(MUL, 4, D,  0, 1, D,  4, 0, 1, 0, true ),
+      INST(MUL, 4, UD, 0, 1, UD, 4, 0, 1, 0, true ),
+
+#undef INST
+   };
+
+   /* These restrictions only apply to Gen8+ */
+   if (devinfo.gen < 8)
+      return;
+
+   for (unsigned i = 0; i < sizeof(inst) / sizeof(inst[0]); i++) {
+      if (inst[i].opcode == BRW_OPCODE_MOV) {
+         brw_MOV(p, retype(g0, inst[i].dst_type),
+                    retype(g0, inst[i].src_type));
+      } else {
+         assert(inst[i].opcode == BRW_OPCODE_MUL);
+         brw_MUL(p, retype(g0, inst[i].dst_type),
+                    retype(g0, inst[i].src_type),
+                    retype(zero, inst[i].src_type));
+      }
+      brw_inst_set_exec_size(&devinfo, last_inst, inst[i].exec_size);
+
+      brw_inst_set_dst_da1_subreg_nr(&devinfo, last_inst, inst[i].dst_subreg);
+      brw_inst_set_src0_da1_subreg_nr(&devinfo, last_inst, inst[i].src_subreg);
+
+      brw_inst_set_dst_hstride(&devinfo, last_inst, inst[i].dst_stride);
+
+      brw_inst_set_src0_vstride(&devinfo, last_inst, inst[i].src_vstride);
+      brw_inst_set_src0_width(&devinfo, last_inst, inst[i].src_width);
+      brw_inst_set_src0_hstride(&devinfo, last_inst, inst[i].src_hstride);
+
+      if (devinfo.is_cherryview || gen_device_info_is_9lp(&devinfo)) {
+         EXPECT_EQ(inst[i].expected_result, validate(p));
+      } else {
+         EXPECT_TRUE(validate(p));
+      }
+
+      clear_instructions(p);
+   }
+}
+
+TEST_P(validation_test, qword_low_power_no_indirect_addressing)
+{
+   static const struct {
+      enum opcode opcode;
+      unsigned exec_size;
+
+      enum brw_reg_type dst_type;
+      bool dst_is_indirect;
+      unsigned dst_stride;
+
+      enum brw_reg_type src_type;
+      bool src_is_indirect;
+      unsigned src_vstride;
+      unsigned src_width;
+      unsigned src_hstride;
+
+      bool expected_result;
+   } inst[] = {
+#define INST(opcode, exec_size, dst_type, dst_is_indirect, dst_stride,         \
+             src_type, src_is_indirect, src_vstride, src_width, src_hstride,   \
+             expected_result)                                                  \
+      {                                                                        \
+         BRW_OPCODE_##opcode,                                                  \
+         BRW_EXECUTE_##exec_size,                                              \
+         BRW_REGISTER_TYPE_##dst_type,                                         \
+         dst_is_indirect,                                                      \
+         BRW_HORIZONTAL_STRIDE_##dst_stride,                                   \
+         BRW_REGISTER_TYPE_##src_type,                                         \
+         src_is_indirect,                                                      \
+         BRW_VERTICAL_STRIDE_##src_vstride,                                    \
+         BRW_WIDTH_##src_width,                                                \
+         BRW_HORIZONTAL_STRIDE_##src_hstride,                                  \
+         expected_result,                                                      \
+      }
+
+      /* Some instruction that violate no restrictions, as a control */
+      INST(MOV, 4, DF, 0, 1, DF, 0, 4, 4, 1, true ),
+      INST(MOV, 4, Q,  0, 1, Q,  0, 4, 4, 1, true ),
+      INST(MOV, 4, UQ, 0, 1, UQ, 0, 4, 4, 1, true ),
+
+      INST(MUL, 8, D,  0, 2, D,  0, 8, 4, 2, true ),
+      INST(MUL, 8, UD, 0, 2, UD, 0, 8, 4, 2, true ),
+
+      INST(MOV, 4, F,  1, 1, F,  0, 4, 4, 1, true ),
+      INST(MOV, 4, F,  0, 1, F,  1, 4, 4, 1, true ),
+      INST(MOV, 4, F,  1, 1, F,  1, 4, 4, 1, true ),
+
+      /* The PRMs say that for CHV, BXT:
+       *
+       *    When source or destination datatype is 64b or operation is integer
+       *    DWord multiply, indirect addressing must not be used.
+       */
+      INST(MOV, 4, DF, 1, 1, DF, 0, 4, 4, 1, false),
+      INST(MOV, 4, Q,  1, 1, Q,  0, 4, 4, 1, false),
+      INST(MOV, 4, UQ, 1, 1, UQ, 0, 4, 4, 1, false),
+
+      INST(MOV, 4, DF, 0, 1, DF, 1, 4, 4, 1, false),
+      INST(MOV, 4, Q,  0, 1, Q,  1, 4, 4, 1, false),
+      INST(MOV, 4, UQ, 0, 1, UQ, 1, 4, 4, 1, false),
+
+      INST(MOV, 4, DF, 1, 1, F,  0, 8, 4, 2, false),
+      INST(MOV, 4, Q,  1, 1, D,  0, 8, 4, 2, false),
+      INST(MOV, 4, UQ, 1, 1, UD, 0, 8, 4, 2, false),
+
+      INST(MOV, 4, DF, 0, 1, F,  1, 8, 4, 2, false),
+      INST(MOV, 4, Q,  0, 1, D,  1, 8, 4, 2, false),
+      INST(MOV, 4, UQ, 0, 1, UD, 1, 8, 4, 2, false),
+
+      INST(MOV, 4, F,  1, 2, DF, 0, 4, 4, 1, false),
+      INST(MOV, 4, D,  1, 2, Q,  0, 4, 4, 1, false),
+      INST(MOV, 4, UD, 1, 2, UQ, 0, 4, 4, 1, false),
+
+      INST(MOV, 4, F,  0, 2, DF, 1, 4, 4, 1, false),
+      INST(MOV, 4, D,  0, 2, Q,  1, 4, 4, 1, false),
+      INST(MOV, 4, UD, 0, 2, UQ, 1, 4, 4, 1, false),
+
+      INST(MUL, 8, D,  1, 2, D,  0, 8, 4, 2, false),
+      INST(MUL, 8, UD, 1, 2, UD, 0, 8, 4, 2, false),
+
+      INST(MUL, 8, D,  0, 2, D,  1, 8, 4, 2, false),
+      INST(MUL, 8, UD, 0, 2, UD, 1, 8, 4, 2, false),
+
+#undef INST
+   };
+
+   /* These restrictions only apply to Gen8+ */
+   if (devinfo.gen < 8)
+      return;
+
+   for (unsigned i = 0; i < sizeof(inst) / sizeof(inst[0]); i++) {
+      if (inst[i].opcode == BRW_OPCODE_MOV) {
+         brw_MOV(p, retype(g0, inst[i].dst_type),
+                    retype(g0, inst[i].src_type));
+      } else {
+         assert(inst[i].opcode == BRW_OPCODE_MUL);
+         brw_MUL(p, retype(g0, inst[i].dst_type),
+                    retype(g0, inst[i].src_type),
+                    retype(zero, inst[i].src_type));
+      }
+      brw_inst_set_exec_size(&devinfo, last_inst, inst[i].exec_size);
+
+      brw_inst_set_dst_address_mode(&devinfo, last_inst, inst[i].dst_is_indirect);
+      brw_inst_set_src0_address_mode(&devinfo, last_inst, inst[i].src_is_indirect);
+
+      brw_inst_set_dst_hstride(&devinfo, last_inst, inst[i].dst_stride);
+
+      brw_inst_set_src0_vstride(&devinfo, last_inst, inst[i].src_vstride);
+      brw_inst_set_src0_width(&devinfo, last_inst, inst[i].src_width);
+      brw_inst_set_src0_hstride(&devinfo, last_inst, inst[i].src_hstride);
+
+      if (devinfo.is_cherryview || gen_device_info_is_9lp(&devinfo)) {
+         EXPECT_EQ(inst[i].expected_result, validate(p));
+      } else {
+         EXPECT_TRUE(validate(p));
+      }
+
+      clear_instructions(p);
+   }
+}
+
+TEST_P(validation_test, qword_low_power_no_64bit_arf)
+{
+   static const struct {
+      enum opcode opcode;
+      unsigned exec_size;
+
+      struct brw_reg dst;
+      enum brw_reg_type dst_type;
+      unsigned dst_stride;
+
+      struct brw_reg src;
+      enum brw_reg_type src_type;
+      unsigned src_vstride;
+      unsigned src_width;
+      unsigned src_hstride;
+
+      bool acc_wr;
+      bool expected_result;
+   } inst[] = {
+#define INST(opcode, exec_size, dst, dst_type, dst_stride,                     \
+             src, src_type, src_vstride, src_width, src_hstride,               \
+             acc_wr, expected_result)                                          \
+      {                                                                        \
+         BRW_OPCODE_##opcode,                                                  \
+         BRW_EXECUTE_##exec_size,                                              \
+         dst,                                                                  \
+         BRW_REGISTER_TYPE_##dst_type,                                         \
+         BRW_HORIZONTAL_STRIDE_##dst_stride,                                   \
+         src,                                                                  \
+         BRW_REGISTER_TYPE_##src_type,                                         \
+         BRW_VERTICAL_STRIDE_##src_vstride,                                    \
+         BRW_WIDTH_##src_width,                                                \
+         BRW_HORIZONTAL_STRIDE_##src_hstride,                                  \
+         acc_wr,                                                               \
+         expected_result,                                                      \
+      }
+
+      /* Some instruction that violate no restrictions, as a control */
+      INST(MOV, 4, g0,   DF, 1, g0,   F,  4, 2, 2, 0, true ),
+      INST(MOV, 4, g0,   F,  2, g0,   DF, 4, 4, 1, 0, true ),
+
+      INST(MOV, 4, g0,   Q,  1, g0,   D,  4, 2, 2, 0, true ),
+      INST(MOV, 4, g0,   D,  2, g0,   Q,  4, 4, 1, 0, true ),
+
+      INST(MOV, 4, g0,   UQ, 1, g0,   UD, 4, 2, 2, 0, true ),
+      INST(MOV, 4, g0,   UD, 2, g0,   UQ, 4, 4, 1, 0, true ),
+
+      INST(MOV, 4, null, F,  1, g0,   F,  4, 4, 1, 0, true ),
+      INST(MOV, 4, acc0, F,  1, g0,   F,  4, 4, 1, 0, true ),
+      INST(MOV, 4, g0,   F,  1, acc0, F,  4, 4, 1, 0, true ),
+
+      INST(MOV, 4, null, D,  1, g0,   D,  4, 4, 1, 0, true ),
+      INST(MOV, 4, acc0, D,  1, g0,   D,  4, 4, 1, 0, true ),
+      INST(MOV, 4, g0,   D,  1, acc0, D,  4, 4, 1, 0, true ),
+
+      INST(MOV, 4, null, UD, 1, g0,   UD, 4, 4, 1, 0, true ),
+      INST(MOV, 4, acc0, UD, 1, g0,   UD, 4, 4, 1, 0, true ),
+      INST(MOV, 4, g0,   UD, 1, acc0, UD, 4, 4, 1, 0, true ),
+
+      INST(MUL, 4, g0,   D,  2, g0,   D,  4, 2, 2, 0, true ),
+      INST(MUL, 4, g0,   UD, 2, g0,   UD, 4, 2, 2, 0, true ),
+
+      /* The PRMs say that for CHV, BXT:
+       *
+       *    ARF registers must never be used with 64b datatype or when
+       *    operation is integer DWord multiply.
+       */
+      INST(MOV, 4, acc0, DF, 1, g0,   F,  4, 2, 2, 0, false),
+      INST(MOV, 4, g0,   DF, 1, acc0, F,  4, 2, 2, 0, false),
+
+      INST(MOV, 4, acc0, Q,  1, g0,   D,  4, 2, 2, 0, false),
+      INST(MOV, 4, g0,   Q,  1, acc0, D,  4, 2, 2, 0, false),
+
+      INST(MOV, 4, acc0, UQ, 1, g0,   UD, 4, 2, 2, 0, false),
+      INST(MOV, 4, g0,   UQ, 1, acc0, UD, 4, 2, 2, 0, false),
+
+      INST(MOV, 4, acc0, F,  2, g0,   DF, 4, 4, 1, 0, false),
+      INST(MOV, 4, g0,   F,  2, acc0, DF, 4, 4, 1, 0, false),
+
+      INST(MOV, 4, acc0, D,  2, g0,   Q,  4, 4, 1, 0, false),
+      INST(MOV, 4, g0,   D,  2, acc0, Q,  4, 4, 1, 0, false),
+
+      INST(MOV, 4, acc0, UD, 2, g0,   UQ, 4, 4, 1, 0, false),
+      INST(MOV, 4, g0,   UD, 2, acc0, UQ, 4, 4, 1, 0, false),
+
+      INST(MUL, 4, acc0, D,  2, g0,   D,  4, 2, 2, 0, false),
+      INST(MUL, 4, acc0, UD, 2, g0,   UD, 4, 2, 2, 0, false),
+      /* MUL cannot have integer accumulator sources, so don't test that */
+
+      /* We assume that the restriction does not apply to the null register */
+      INST(MOV, 4, null, DF, 1, g0,   F,  4, 2, 2, 0, true ),
+      INST(MOV, 4, null, Q,  1, g0,   D,  4, 2, 2, 0, true ),
+      INST(MOV, 4, null, UQ, 1, g0,   UD, 4, 2, 2, 0, true ),
+
+      /* Check implicit accumulator write control */
+      INST(MOV, 4, null, DF, 1, g0,   F,  4, 2, 2, 1, false),
+      INST(MUL, 4, null, DF, 1, g0,   F,  4, 2, 2, 1, false),
+
+#undef INST
+   };
+
+   /* These restrictions only apply to Gen8+ */
+   if (devinfo.gen < 8)
+      return;
+
+   for (unsigned i = 0; i < sizeof(inst) / sizeof(inst[0]); i++) {
+      if (inst[i].opcode == BRW_OPCODE_MOV) {
+         brw_MOV(p, retype(inst[i].dst, inst[i].dst_type),
+                    retype(inst[i].src, inst[i].src_type));
+      } else {
+         assert(inst[i].opcode == BRW_OPCODE_MUL);
+         brw_MUL(p, retype(inst[i].dst, inst[i].dst_type),
+                    retype(inst[i].src, inst[i].src_type),
+                    retype(zero, inst[i].src_type));
+         brw_inst_set_opcode(&devinfo, last_inst, inst[i].opcode);
+      }
+      brw_inst_set_exec_size(&devinfo, last_inst, inst[i].exec_size);
+      brw_inst_set_acc_wr_control(&devinfo, last_inst, inst[i].acc_wr);
+
+      brw_inst_set_dst_hstride(&devinfo, last_inst, inst[i].dst_stride);
+
+      brw_inst_set_src0_vstride(&devinfo, last_inst, inst[i].src_vstride);
+      brw_inst_set_src0_width(&devinfo, last_inst, inst[i].src_width);
+      brw_inst_set_src0_hstride(&devinfo, last_inst, inst[i].src_hstride);
+
+      if (devinfo.is_cherryview || gen_device_info_is_9lp(&devinfo)) {
+         EXPECT_EQ(inst[i].expected_result, validate(p));
+      } else {
+         EXPECT_TRUE(validate(p));
+      }
+
+      clear_instructions(p);
+   }
+
+   /* MAC implicitly reads the accumulator */
+   brw_MAC(p, retype(g0, BRW_REGISTER_TYPE_DF),
+              retype(stride(g0, 4, 4, 1), BRW_REGISTER_TYPE_DF),
+              retype(stride(g0, 4, 4, 1), BRW_REGISTER_TYPE_DF));
+   if (devinfo.is_cherryview || gen_device_info_is_9lp(&devinfo)) {
+      EXPECT_FALSE(validate(p));
+   } else {
+      EXPECT_TRUE(validate(p));
+   }
+}
+
+TEST_P(validation_test, align16_64_bit_integer)
+{
+   static const struct {
+      enum opcode opcode;
+      unsigned exec_size;
+
+      enum brw_reg_type dst_type;
+      enum brw_reg_type src_type;
+
+      bool expected_result;
+   } inst[] = {
+#define INST(opcode, exec_size, dst_type, src_type, expected_result)           \
+      {                                                                        \
+         BRW_OPCODE_##opcode,                                                  \
+         BRW_EXECUTE_##exec_size,                                              \
+         BRW_REGISTER_TYPE_##dst_type,                                         \
+         BRW_REGISTER_TYPE_##src_type,                                         \
+         expected_result,                                                      \
+      }
+
+      /* Some instruction that violate no restrictions, as a control */
+      INST(MOV, 2, Q,  D,  true ),
+      INST(MOV, 2, UQ, UD, true ),
+      INST(MOV, 2, DF, F,  true ),
+
+      INST(ADD, 2, Q,  D,  true ),
+      INST(ADD, 2, UQ, UD, true ),
+      INST(ADD, 2, DF, F,  true ),
+
+      /* The PRMs say that for BDW, SKL:
+       *
+       *    If Align16 is required for an operation with QW destination and non-QW
+       *    source datatypes, the execution size cannot exceed 2.
+       */
+
+      INST(MOV, 4, Q,  D,  false),
+      INST(MOV, 4, UQ, UD, false),
+      INST(MOV, 4, DF, F,  false),
+
+      INST(ADD, 4, Q,  D,  false),
+      INST(ADD, 4, UQ, UD, false),
+      INST(ADD, 4, DF, F,  false),
+
+#undef INST
+   };
+
+   /* 64-bit integer types exist on Gen8+ */
+   if (devinfo.gen < 8)
+      return;
+
+   brw_set_default_access_mode(p, BRW_ALIGN_16);
+
+   for (unsigned i = 0; i < sizeof(inst) / sizeof(inst[0]); i++) {
+      if (inst[i].opcode == BRW_OPCODE_MOV) {
+         brw_MOV(p, retype(g0, inst[i].dst_type),
+                    retype(g0, inst[i].src_type));
+      } else {
+         assert(inst[i].opcode == BRW_OPCODE_ADD);
+         brw_ADD(p, retype(g0, inst[i].dst_type),
+                    retype(g0, inst[i].src_type),
+                    retype(g0, inst[i].src_type));
+      }
+      brw_inst_set_exec_size(&devinfo, last_inst, inst[i].exec_size);
+
+      EXPECT_EQ(inst[i].expected_result, validate(p));
+
+      clear_instructions(p);
+   }
+}
+
+TEST_P(validation_test, qword_low_power_no_depctrl)
+{
+   static const struct {
+      enum opcode opcode;
+      unsigned exec_size;
+
+      enum brw_reg_type dst_type;
+      unsigned dst_stride;
+
+      enum brw_reg_type src_type;
+      unsigned src_vstride;
+      unsigned src_width;
+      unsigned src_hstride;
+
+      bool no_dd_check;
+      bool no_dd_clear;
+
+      bool expected_result;
+   } inst[] = {
+#define INST(opcode, exec_size, dst_type, dst_stride,                          \
+             src_type, src_vstride, src_width, src_hstride,                    \
+             no_dd_check, no_dd_clear, expected_result)                        \
+      {                                                                        \
+         BRW_OPCODE_##opcode,                                                  \
+         BRW_EXECUTE_##exec_size,                                              \
+         BRW_REGISTER_TYPE_##dst_type,                                         \
+         BRW_HORIZONTAL_STRIDE_##dst_stride,                                   \
+         BRW_REGISTER_TYPE_##src_type,                                         \
+         BRW_VERTICAL_STRIDE_##src_vstride,                                    \
+         BRW_WIDTH_##src_width,                                                \
+         BRW_HORIZONTAL_STRIDE_##src_hstride,                                  \
+         no_dd_check,                                                          \
+         no_dd_clear,                                                          \
+         expected_result,                                                      \
+      }
+
+      /* Some instruction that violate no restrictions, as a control */
+      INST(MOV, 4, DF, 1, F,  8, 4, 2, 0, 0, true ),
+      INST(MOV, 4, Q,  1, D,  8, 4, 2, 0, 0, true ),
+      INST(MOV, 4, UQ, 1, UD, 8, 4, 2, 0, 0, true ),
+
+      INST(MOV, 4, F,  2, DF, 4, 4, 1, 0, 0, true ),
+      INST(MOV, 4, D,  2, Q,  4, 4, 1, 0, 0, true ),
+      INST(MOV, 4, UD, 2, UQ, 4, 4, 1, 0, 0, true ),
+
+      INST(MUL, 8, D,  2, D,  8, 4, 2, 0, 0, true ),
+      INST(MUL, 8, UD, 2, UD, 8, 4, 2, 0, 0, true ),
+
+      INST(MOV, 4, F,  1, F,  4, 4, 1, 1, 1, true ),
+
+      /* The PRMs say that for CHV, BXT:
+       *
+       *    When source or destination datatype is 64b or operation is integer
+       *    DWord multiply, DepCtrl must not be used.
+       */
+      INST(MOV, 4, DF, 1, F,  8, 4, 2, 1, 0, false),
+      INST(MOV, 4, Q,  1, D,  8, 4, 2, 1, 0, false),
+      INST(MOV, 4, UQ, 1, UD, 8, 4, 2, 1, 0, false),
+
+      INST(MOV, 4, F,  2, DF, 4, 4, 1, 1, 0, false),
+      INST(MOV, 4, D,  2, Q,  4, 4, 1, 1, 0, false),
+      INST(MOV, 4, UD, 2, UQ, 4, 4, 1, 1, 0, false),
+
+      INST(MOV, 4, DF, 1, F,  8, 4, 2, 0, 1, false),
+      INST(MOV, 4, Q,  1, D,  8, 4, 2, 0, 1, false),
+      INST(MOV, 4, UQ, 1, UD, 8, 4, 2, 0, 1, false),
+
+      INST(MOV, 4, F,  2, DF, 4, 4, 1, 0, 1, false),
+      INST(MOV, 4, D,  2, Q,  4, 4, 1, 0, 1, false),
+      INST(MOV, 4, UD, 2, UQ, 4, 4, 1, 0, 1, false),
+
+      INST(MUL, 8, D,  2, D,  8, 4, 2, 1, 0, false),
+      INST(MUL, 8, UD, 2, UD, 8, 4, 2, 1, 0, false),
+
+      INST(MUL, 8, D,  2, D,  8, 4, 2, 0, 1, false),
+      INST(MUL, 8, UD, 2, UD, 8, 4, 2, 0, 1, false),
+
+#undef INST
+   };
+
+   /* These restrictions only apply to Gen8+ */
+   if (devinfo.gen < 8)
+      return;
+
+   for (unsigned i = 0; i < sizeof(inst) / sizeof(inst[0]); i++) {
+      if (inst[i].opcode == BRW_OPCODE_MOV) {
+         brw_MOV(p, retype(g0, inst[i].dst_type),
+                    retype(g0, inst[i].src_type));
+      } else {
+         assert(inst[i].opcode == BRW_OPCODE_MUL);
+         brw_MUL(p, retype(g0, inst[i].dst_type),
+                    retype(g0, inst[i].src_type),
+                    retype(zero, inst[i].src_type));
+      }
+      brw_inst_set_exec_size(&devinfo, last_inst, inst[i].exec_size);
+
+      brw_inst_set_dst_hstride(&devinfo, last_inst, inst[i].dst_stride);
+
+      brw_inst_set_src0_vstride(&devinfo, last_inst, inst[i].src_vstride);
+      brw_inst_set_src0_width(&devinfo, last_inst, inst[i].src_width);
+      brw_inst_set_src0_hstride(&devinfo, last_inst, inst[i].src_hstride);
+
+      brw_inst_set_no_dd_check(&devinfo, last_inst, inst[i].no_dd_check);
+      brw_inst_set_no_dd_clear(&devinfo, last_inst, inst[i].no_dd_clear);
+
+      if (devinfo.is_cherryview || gen_device_info_is_9lp(&devinfo)) {
+         EXPECT_EQ(inst[i].expected_result, validate(p));
+      } else {
+         EXPECT_TRUE(validate(p));
+      }
 
       clear_instructions(p);
    }
