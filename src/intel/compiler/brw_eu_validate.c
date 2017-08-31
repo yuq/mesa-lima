@@ -300,15 +300,13 @@ execution_type(const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    unsigned num_sources = num_sources_from_inst(devinfo, inst);
    enum brw_reg_type src0_exec_type, src1_exec_type;
-   enum brw_reg_type src0_type = brw_inst_src0_type(devinfo, inst);
-   enum brw_reg_type src1_type = brw_inst_src1_type(devinfo, inst);
 
    /* Execution data type is independent of destination data type, except in
     * mixed F/HF instructions on CHV and SKL+.
     */
    enum brw_reg_type dst_exec_type = brw_inst_dst_type(devinfo, inst);
 
-   src0_exec_type = execution_type_for_type(src0_type);
+   src0_exec_type = execution_type_for_type(brw_inst_src0_type(devinfo, inst));
    if (num_sources == 1) {
       if ((devinfo->gen >= 9 || devinfo->is_cherryview) &&
           src0_exec_type == BRW_REGISTER_TYPE_HF) {
@@ -317,7 +315,7 @@ execution_type(const struct gen_device_info *devinfo, const brw_inst *inst)
       return src0_exec_type;
    }
 
-   src1_exec_type = execution_type_for_type(src1_type);
+   src1_exec_type = execution_type_for_type(brw_inst_src1_type(devinfo, inst));
    if (src0_exec_type == src1_exec_type)
       return src0_exec_type;
 
