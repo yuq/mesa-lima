@@ -41,6 +41,7 @@
 #include "prog_parameter.h"
 #include "main/samplerobj.h"
 #include "main/framebuffer.h"
+#include "main/viewport.h"
 
 
 #define ONE_DIV_SQRT_LN2 (1.201122408786449815)
@@ -601,6 +602,30 @@ _mesa_fetch_state(struct gl_context *ctx, const gl_state_index state[],
          val[0].i = ctx->Color.BlendEnabled ? ctx->Color._AdvancedBlendMode : 0;
          return;
 
+      case STATE_VIEWPORT_SCALE:
+         {
+            float scale[3];
+            _mesa_get_viewport_xform(ctx, 0, scale, NULL);
+            if (_mesa_is_winsys_fbo(ctx->DrawBuffer))
+               scale[1] = -scale[1];
+            value[0] = scale[0];
+            value[1] = scale[1];
+            value[2] = scale[2];
+            return;
+         }
+
+      case STATE_VIEWPORT_TRANSLATE:
+         {
+            float translate[3];
+            _mesa_get_viewport_xform(ctx, 0, NULL, translate);
+            if (_mesa_is_winsys_fbo(ctx->DrawBuffer))
+               translate[1] = (GLfloat)ctx->DrawBuffer->Height - translate[1];
+            value[0] = translate[0];
+            value[1] = translate[1];
+            value[2] = translate[2];
+            return;
+         }
+
       /* XXX: make sure new tokens added here are also handled in the 
        * _mesa_program_state_flags() switch, below.
        */
@@ -711,6 +736,10 @@ _mesa_program_state_flags(const gl_state_index state[STATE_LENGTH])
 
       case STATE_ADVANCED_BLENDING_MODE:
          return _NEW_COLOR;
+
+      case STATE_VIEWPORT_SCALE:
+      case STATE_VIEWPORT_TRANSLATE:
+         return _NEW_BUFFERS | _NEW_VIEWPORT | _NEW_TRANSFORM;
 
       default:
          /* unknown state indexes are silently ignored and
@@ -917,6 +946,12 @@ append_token(char *dst, gl_state_index k)
       break;
    case STATE_ADVANCED_BLENDING_MODE:
       append(dst, "AdvancedBlendingMode");
+      break;
+   case STATE_VIEWPORT_SCALE:
+      append(dst, "viewportScale");
+      break;
+   case STATE_VIEWPORT_TRANSLATE:
+      append(dst, "viewportTranslate");
       break;
    default:
       /* probably STATE_INTERNAL_DRIVER+i (driver private state) */
