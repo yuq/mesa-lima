@@ -65,6 +65,16 @@ struct brw_codegen {
    bool compressed_stack[BRW_EU_MAX_INSN_STACK];
    brw_inst *current;
 
+   /** Whether or not the user wants automatic exec sizes
+    *
+    * If true, codegen will try to automatically infer the exec size of an
+    * instruction from the width of the destination register.  If false, it
+    * will take whatever is set by brw_set_default_exec_size verbatim.
+    *
+    * This is set to true by default in brw_init_codegen.
+    */
+   bool automatic_exec_sizes;
+
    bool single_program_flow;
    const struct gen_device_info *devinfo;
 
