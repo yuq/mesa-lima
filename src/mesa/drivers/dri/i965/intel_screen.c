@@ -868,6 +868,9 @@ intel_dup_image(__DRIimage *orig_image, void *loaderPrivate)
    image->tile_y          = orig_image->tile_y;
    image->has_depthstencil = orig_image->has_depthstencil;
    image->data            = loaderPrivate;
+   image->dma_buf_imported = orig_image->dma_buf_imported;
+   image->aux_offset      = orig_image->aux_offset;
+   image->aux_pitch       = orig_image->aux_pitch;
 
    memcpy(image->strides, orig_image->strides, sizeof(image->strides));
    memcpy(image->offsets, orig_image->offsets, sizeof(image->offsets));
