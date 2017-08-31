@@ -555,6 +555,9 @@ struct radv_device {
 	uint32_t fmask_mrt_offset_counter;
 	struct list_head shader_slabs;
 	mtx_t shader_slab_mutex;
+
+	/* For detecting VM faults reported by dmesg. */
+	uint64_t dmesg_timestamp;
 };
 
 struct radv_device_memory {

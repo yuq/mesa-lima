@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "ac_debug.h"
 #include "radv_debug.h"
 
 bool
@@ -43,6 +44,9 @@ radv_init_trace(struct radv_device *device)
 	device->trace_id_ptr = ws->buffer_map(device->trace_bo);
 	if (!device->trace_id_ptr)
 		return false;
+
+	ac_vm_fault_occured(device->physical_device->rad_info.chip_class,
+			    &device->dmesg_timestamp, NULL);
 
 	return true;
 }
@@ -80,8 +84,17 @@ radv_gpu_hang_occured(struct radv_queue *queue)
 void
 radv_check_gpu_hangs(struct radv_queue *queue, struct radeon_winsys_cs *cs)
 {
+	struct radv_device *device = queue->device;
+	uint64_t addr;
+
 	if (!radv_gpu_hang_occured(queue))
 		return;
+
+	if (ac_vm_fault_occured(device->physical_device->rad_info.chip_class,
+				&device->dmesg_timestamp, &addr)) {
+		fprintf(stderr, "VM fault report.\n\n");
+		fprintf(stderr, "Failing VM page: 0x%08"PRIx64"\n\n", addr);
+	}
 
 	radv_dump_trace(queue->device, cs);
 	abort();
