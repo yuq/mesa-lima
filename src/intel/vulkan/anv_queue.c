@@ -169,7 +169,7 @@ VkResult anv_QueueSubmit(
 
    for (uint32_t i = 0; i < submitCount; i++) {
       /* Fence for this submit.  NULL for all but the last one */
-      VkFence submit_fence = (i == submitCount - 1) ? fence : NULL;
+      VkFence submit_fence = (i == submitCount - 1) ? fence : VK_NULL_HANDLE;
 
       if (pSubmits[i].commandBufferCount == 0) {
          /* If we don't have any command buffers, we need to submit a dummy
@@ -197,7 +197,8 @@ VkResult anv_QueueSubmit(
 
          /* Fence for this execbuf.  NULL for all but the last one */
          VkFence execbuf_fence =
-            (j == pSubmits[i].commandBufferCount - 1) ? submit_fence : NULL;
+            (j == pSubmits[i].commandBufferCount - 1) ?
+            submit_fence : VK_NULL_HANDLE;
 
          const VkSemaphore *in_semaphores = NULL, *out_semaphores = NULL;
          uint32_t num_in_semaphores = 0, num_out_semaphores = 0;
