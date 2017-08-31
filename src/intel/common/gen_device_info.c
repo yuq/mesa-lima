@@ -574,17 +574,6 @@ static const struct gen_device_info gen_device_info_kbl_gt1 = {
    .l3_banks = 2,
 };
 
-static const struct gen_device_info gen_device_info_kbl_gt1_5 = {
-   GEN9_FEATURES,
-   .is_kabylake = true,
-   .gt = 1,
-
-   .max_cs_threads = 7 * 6,
-   .num_slices = 1,
-   .num_subslices = { 3, },
-   .l3_banks = 4,
-};
-
 static const struct gen_device_info gen_device_info_kbl_gt2 = {
    GEN9_FEATURES,
    .is_kabylake = true,
