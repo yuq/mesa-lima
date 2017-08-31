@@ -267,6 +267,18 @@ st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
          _mesa_add_state_reference(prog->Parameters, wposTransformState);
       }
    }
+   else if (stage == MESA_SHADER_VERTEX) {
+      if (pscreen->get_param(pscreen, PIPE_CAP_TGSI_VS_LOWER_VIEWPORT_TRANSFORM)) {
+         static const nir_lower_viewport_transform_options viewport_options = {
+            .scale = { STATE_INTERNAL, STATE_VIEWPORT_SCALE },
+            .translate = { STATE_INTERNAL, STATE_VIEWPORT_TRANSLATE },
+         };
+
+         NIR_PASS_V(nir, nir_lower_viewport_transform, &viewport_options);
+         _mesa_add_state_reference(prog->Parameters, (gl_state_index *)viewport_options.scale);
+         _mesa_add_state_reference(prog->Parameters, (gl_state_index *)viewport_options.translate);
+      }
+   }
 
    if (st->ctx->_Shader->Flags & GLSL_DUMP) {
       _mesa_log("\n");
