@@ -2574,6 +2574,14 @@ bool nir_lower_wpos_ytransform(nir_shader *shader,
                                const nir_lower_wpos_ytransform_options *options);
 bool nir_lower_wpos_center(nir_shader *shader, const bool for_sample_shading);
 
+typedef struct nir_lower_viewport_transform_options {
+   int scale[5];
+   int translate[5];
+} nir_lower_viewport_transform_options;
+
+void nir_lower_viewport_transform(nir_shader *shader,
+                                  const nir_lower_viewport_transform_options *options);
+
 typedef struct nir_lower_drawpixels_options {
    int texcoord_state_tokens[5];
    int scale_state_tokens[5];
