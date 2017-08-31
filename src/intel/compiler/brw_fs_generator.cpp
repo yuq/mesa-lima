@@ -200,6 +200,12 @@ fs_generator::fs_generator(const struct brw_compiler *compiler, void *log_data,
 {
    p = rzalloc(mem_ctx, struct brw_codegen);
    brw_init_codegen(devinfo, p, mem_ctx);
+
+   /* In the FS code generator, we are very careful to ensure that we always
+    * set the right execution size so we don't need the EU code to "help" us
+    * by trying to infer it.  Sometimes, it infers the wrong thing.
+    */
+   p->automatic_exec_sizes = false;
 }
 
 fs_generator::~fs_generator()
@@ -405,17 +411,17 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
       struct brw_reg v1_null_ud = vec1(retype(brw_null_reg(), BRW_REGISTER_TYPE_UD));
 
       /* Check runtime bit to detect if we have to send AA data or not */
-      brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
       brw_push_insn_state(p);
-      brw_inst_set_exec_size(p->devinfo, brw_last_inst, BRW_EXECUTE_1);
+      brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
+      brw_set_default_exec_size(p, BRW_EXECUTE_1);
       brw_AND(p,
               v1_null_ud,
               retype(brw_vec1_grf(1, 6), BRW_REGISTER_TYPE_UD),
               brw_imm_ud(1<<26));
       brw_inst_set_cond_modifier(p->devinfo, brw_last_inst, BRW_CONDITIONAL_NZ);
-      brw_pop_insn_state(p);
 
       int jmp = brw_JMPI(p, brw_imm_ud(0), BRW_PREDICATE_NORMAL) - p->store;
+      brw_pop_insn_state(p);
       {
          /* Don't send AA data */
          fire_fb_write(inst, offset(payload, 1), implied_header, inst->mlen-1);
