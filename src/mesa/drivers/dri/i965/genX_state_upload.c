@@ -87,9 +87,10 @@ __gen_combine_address(struct brw_context *brw, void *location,
    } else {
       uint32_t offset = (char *) location - (char *) brw->batch.map;
 
-      return brw_emit_reloc(&brw->batch, offset, address.bo,
-                            address.offset + delta,
-                            address.reloc_flags);
+      /* TODO: Use brw_state_reloc for some things on Gen4-5 */
+      return brw_batch_reloc(&brw->batch, offset, address.bo,
+                             address.offset + delta,
+                             address.reloc_flags);
    }
 }
 

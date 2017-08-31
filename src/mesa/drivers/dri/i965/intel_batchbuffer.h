@@ -71,11 +71,16 @@ bool brw_batch_references(struct intel_batchbuffer *batch, struct brw_bo *bo);
 
 #define RELOC_WRITE EXEC_OBJECT_WRITE
 #define RELOC_NEEDS_GGTT EXEC_OBJECT_NEEDS_GTT
-uint64_t brw_emit_reloc(struct intel_batchbuffer *batch,
-                        uint32_t batch_offset,
-                        struct brw_bo *target,
-                        uint32_t target_offset,
-                        unsigned flags);
+uint64_t brw_batch_reloc(struct intel_batchbuffer *batch,
+                         uint32_t batch_offset,
+                         struct brw_bo *target,
+                         uint32_t target_offset,
+                         unsigned flags);
+uint64_t brw_state_reloc(struct intel_batchbuffer *batch,
+                         uint32_t batch_offset,
+                         struct brw_bo *target,
+                         uint32_t target_offset,
+                         unsigned flags);
 
 #define USED_BATCH(batch) ((uintptr_t)((batch).map_next - (batch).map))
 
@@ -164,7 +169,7 @@ intel_batchbuffer_advance(struct brw_context *brw)
 #define OUT_RELOC(buf, flags, delta) do {          \
    uint32_t __offset = (__map - brw->batch.map) * 4;                    \
    uint32_t reloc =                                                     \
-      brw_emit_reloc(&brw->batch, __offset, (buf), (delta), (flags));   \
+      brw_batch_reloc(&brw->batch, __offset, (buf), (delta), (flags));  \
    OUT_BATCH(reloc);                                                    \
 } while (0)
 
@@ -172,7 +177,7 @@ intel_batchbuffer_advance(struct brw_context *brw)
 #define OUT_RELOC64(buf, flags, delta) do {        \
    uint32_t __offset = (__map - brw->batch.map) * 4;                    \
    uint64_t reloc64 =                                                   \
-      brw_emit_reloc(&brw->batch, __offset, (buf), (delta), (flags));   \
+      brw_batch_reloc(&brw->batch, __offset, (buf), (delta), (flags));  \
    OUT_BATCH(reloc64);                                                  \
    OUT_BATCH(reloc64 >> 32);                                            \
 } while (0)

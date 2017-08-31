@@ -794,13 +794,12 @@ brw_batch_references(struct intel_batchbuffer *batch, struct brw_bo *bo)
 
 /*  This is the only way buffers get added to the validate list.
  */
-uint64_t
-brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
-               struct brw_bo *target, uint32_t target_offset,
-               unsigned int reloc_flags)
+static uint64_t
+emit_reloc(struct intel_batchbuffer *batch,
+           struct brw_reloc_list *rlist, uint32_t offset,
+           struct brw_bo *target, uint32_t target_offset,
+           unsigned int reloc_flags)
 {
-   struct brw_reloc_list *rlist = &batch->batch_relocs;
-
    assert(target != NULL);
 
    if (rlist->reloc_count == rlist->reloc_array_size) {
@@ -810,9 +809,6 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
                               sizeof(struct drm_i915_gem_relocation_entry));
    }
 
-   /* Check args */
-   assert(batch_offset <= batch->bo->size - sizeof(uint32_t));
-
    unsigned int index = add_exec_bo(batch, target);
    struct drm_i915_gem_exec_object2 *entry = &batch->validation_list[index];
 
@@ -821,7 +817,7 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
 
    rlist->relocs[rlist->reloc_count++] =
       (struct drm_i915_gem_relocation_entry) {
-         .offset = batch_offset,
+         .offset = offset,
          .delta = target_offset,
          .target_handle = batch->use_batch_first ? index : target->gem_handle,
          .presumed_offset = entry->offset,
@@ -833,6 +829,29 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
     */
    return entry->offset + target_offset;
 }
+
+uint64_t
+brw_batch_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
+                struct brw_bo *target, uint32_t target_offset,
+                unsigned int reloc_flags)
+{
+   assert(batch_offset <= batch->bo->size - sizeof(uint32_t));
+
+   return emit_reloc(batch, &batch->batch_relocs, batch_offset,
+                     target, target_offset, reloc_flags);
+}
+
+uint64_t
+brw_state_reloc(struct intel_batchbuffer *batch, uint32_t state_offset,
+                struct brw_bo *target, uint32_t target_offset,
+                unsigned int reloc_flags)
+{
+   assert(state_offset <= batch->bo->size - sizeof(uint32_t));
+
+   return emit_reloc(batch, &batch->batch_relocs, state_offset,
+                     target, target_offset, reloc_flags);
+}
+
 
 uint32_t
 brw_state_batch_size(struct brw_context *brw, uint32_t offset)
