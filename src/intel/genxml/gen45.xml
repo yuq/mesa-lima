@@ -593,7 +593,7 @@
     <field name="TCX Address Control Mode" start="38" end="40" type="Texture_Coordinate_Mode"/>
     <field name="TCY Address Control Mode" start="35" end="37" type="Texture_Coordinate_Mode"/>
     <field name="TCZ Address Control Mode" start="32" end="34" type="Texture_Coordinate_Mode"/>
-    <field name="Border Color Pointer" start="69" end="95" type="offset"/>
+    <field name="Border Color Pointer" start="69" end="95" type="address"/>
     <field name="Monochrome Filter Height" start="125" end="127" type="uint"/>
     <field name="Monochrome Filter Width" start="122" end="124" type="uint"/>
     <field name="ChromaKey Enable" start="121" end="121" type="bool"/>
