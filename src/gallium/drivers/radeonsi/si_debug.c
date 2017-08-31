@@ -1092,106 +1092,6 @@ static void si_dump_dma(struct si_context *sctx,
 	fprintf(f, "SDMA Dump Done.\n");
 }
 
-static bool si_vm_fault_occured(struct si_context *sctx, uint64_t *out_addr)
-{
-	char line[2000];
-	unsigned sec, usec;
-	int progress = 0;
-	uint64_t timestamp = 0;
-	bool fault = false;
-
-	FILE *p = popen("dmesg", "r");
-	if (!p)
-		return false;
-
-	while (fgets(line, sizeof(line), p)) {
-		char *msg, len;
-
-		if (!line[0] || line[0] == '\n')
-			continue;
-
-		/* Get the timestamp. */
-		if (sscanf(line, "[%u.%u]", &sec, &usec) != 2) {
-			static bool hit = false;
-			if (!hit) {
-				fprintf(stderr, "%s: failed to parse line '%s'\n",
-					__func__, line);
-				hit = true;
-			}
-			continue;
-		}
-		timestamp = sec * 1000000ull + usec;
-
-		/* If just updating the timestamp. */
-		if (!out_addr)
-			continue;
-
-		/* Process messages only if the timestamp is newer. */
-		if (timestamp <= sctx->dmesg_timestamp)
-			continue;
-
-		/* Only process the first VM fault. */
-		if (fault)
-			continue;
-
-		/* Remove trailing \n */
-		len = strlen(line);
-		if (len && line[len-1] == '\n')
-			line[len-1] = 0;
-
-		/* Get the message part. */
-		msg = strchr(line, ']');
-		if (!msg) {
-			assert(0);
-			continue;
-		}
-		msg++;
-
-		const char *header_line, *addr_line_prefix, *addr_line_format;
-
-		if (sctx->b.chip_class >= GFX9) {
-			/* Match this:
-			 * ..: [gfxhub] VMC page fault (src_id:0 ring:158 vm_id:2 pas_id:0)
-			 * ..:   at page 0x0000000219f8f000 from 27
-			 * ..: VM_L2_PROTECTION_FAULT_STATUS:0x0020113C
-			 */
-			header_line = "VMC page fault";
-			addr_line_prefix = "   at page";
-			addr_line_format = "%"PRIx64;
-		} else {
-			header_line = "GPU fault detected:";
-			addr_line_prefix = "VM_CONTEXT1_PROTECTION_FAULT_ADDR";
-			addr_line_format = "%"PRIX64;
-		}
-
-		switch (progress) {
-		case 0:
-			if (strstr(msg, header_line))
-				progress = 1;
-			break;
-		case 1:
-			msg = strstr(msg, addr_line_prefix);
-			if (msg) {
-				msg = strstr(msg, "0x");
-				if (msg) {
-					msg += 2;
-					if (sscanf(msg, addr_line_format, out_addr) == 1)
-						fault = true;
-				}
-			}
-			progress = 0;
-			break;
-		default:
-			progress = 0;
-		}
-	}
-	pclose(p);
-
-	if (timestamp > sctx->dmesg_timestamp)
-		sctx->dmesg_timestamp = timestamp;
-	return fault;
-}
-
 void si_check_vm_faults(struct r600_common_context *ctx,
 			struct radeon_saved_cs *saved, enum ring_type ring)
 {
@@ -1201,7 +1101,8 @@ void si_check_vm_faults(struct r600_common_context *ctx,
 	uint64_t addr;
 	char cmd_line[4096];
 
-	if (!si_vm_fault_occured(sctx, &addr))
+	if (!ac_vm_fault_occured(sctx->b.chip_class,
+				 &sctx->dmesg_timestamp, &addr))
 		return;
 
 	f = dd_get_debug_file(false);
@@ -1255,5 +1156,6 @@ void si_init_debug_functions(struct si_context *sctx)
 	 * only new messages will be checked for VM faults.
 	 */
 	if (sctx->screen->b.debug_flags & DBG_CHECK_VM)
-		si_vm_fault_occured(sctx, NULL);
+		ac_vm_fault_occured(sctx->b.chip_class,
+				    &sctx->dmesg_timestamp, NULL);
 }
