@@ -59,6 +59,15 @@ uint_key_hash(const void *key)
    return (uintptr_t) key;
 }
 
+static void
+init_reloc_list(struct brw_reloc_list *rlist, int count)
+{
+   rlist->reloc_count = 0;
+   rlist->reloc_array_size = count;
+   rlist->relocs = malloc(rlist->reloc_array_size *
+                          sizeof(struct drm_i915_gem_relocation_entry));
+}
+
 void
 intel_batchbuffer_init(struct intel_screen *screen,
                        struct intel_batchbuffer *batch)
@@ -72,10 +81,8 @@ intel_batchbuffer_init(struct intel_screen *screen,
       batch->map_next = batch->cpu_map;
    }
 
-   batch->reloc_count = 0;
-   batch->reloc_array_size = 250;
-   batch->relocs = malloc(batch->reloc_array_size *
-                          sizeof(struct drm_i915_gem_relocation_entry));
+   init_reloc_list(&batch->batch_relocs, 250);
+
    batch->exec_count = 0;
    batch->exec_array_size = 100;
    batch->exec_bos =
@@ -189,7 +196,7 @@ void
 intel_batchbuffer_save_state(struct brw_context *brw)
 {
    brw->batch.saved.map_next = brw->batch.map_next;
-   brw->batch.saved.reloc_count = brw->batch.reloc_count;
+   brw->batch.saved.batch_reloc_count = brw->batch.batch_relocs.reloc_count;
    brw->batch.saved.exec_count = brw->batch.exec_count;
 }
 
@@ -200,7 +207,7 @@ intel_batchbuffer_reset_to_saved(struct brw_context *brw)
         i < brw->batch.exec_count; i++) {
       brw_bo_unreference(brw->batch.exec_bos[i]);
    }
-   brw->batch.reloc_count = brw->batch.saved.reloc_count;
+   brw->batch.batch_relocs.reloc_count = brw->batch.saved.batch_reloc_count;
    brw->batch.exec_count = brw->batch.saved.exec_count;
 
    brw->batch.map_next = brw->batch.saved.map_next;
@@ -216,7 +223,7 @@ intel_batchbuffer_free(struct intel_batchbuffer *batch)
    for (int i = 0; i < batch->exec_count; i++) {
       brw_bo_unreference(batch->exec_bos[i]);
    }
-   free(batch->relocs);
+   free(batch->batch_relocs.relocs);
    free(batch->exec_bos);
    free(batch->validation_list);
 
@@ -444,7 +451,7 @@ brw_new_batch(struct brw_context *brw)
       brw_bo_unreference(brw->batch.exec_bos[i]);
       brw->batch.exec_bos[i] = NULL;
    }
-   brw->batch.reloc_count = 0;
+   brw->batch.batch_relocs.reloc_count = 0;
    brw->batch.exec_count = 0;
    brw->batch.aperture_space = 0;
 
@@ -666,8 +673,8 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
 
       struct drm_i915_gem_exec_object2 *entry = &batch->validation_list[0];
       assert(entry->handle == batch->bo->gem_handle);
-      entry->relocation_count = batch->reloc_count;
-      entry->relocs_ptr = (uintptr_t) batch->relocs;
+      entry->relocation_count = batch->batch_relocs.reloc_count;
+      entry->relocs_ptr = (uintptr_t) batch->batch_relocs.relocs;
 
       if (batch->use_batch_first) {
          flags |= I915_EXEC_BATCH_FIRST | I915_EXEC_HANDLE_LUT;
@@ -792,12 +799,14 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
                struct brw_bo *target, uint32_t target_offset,
                unsigned int reloc_flags)
 {
+   struct brw_reloc_list *rlist = &batch->batch_relocs;
+
    assert(target != NULL);
 
-   if (batch->reloc_count == batch->reloc_array_size) {
-      batch->reloc_array_size *= 2;
-      batch->relocs = realloc(batch->relocs,
-                              batch->reloc_array_size *
+   if (rlist->reloc_count == rlist->reloc_array_size) {
+      rlist->reloc_array_size *= 2;
+      rlist->relocs = realloc(rlist->relocs,
+                              rlist->reloc_array_size *
                               sizeof(struct drm_i915_gem_relocation_entry));
    }
 
@@ -810,7 +819,7 @@ brw_emit_reloc(struct intel_batchbuffer *batch, uint32_t batch_offset,
    if (reloc_flags)
       entry->flags |= reloc_flags & batch->valid_reloc_flags;
 
-   batch->relocs[batch->reloc_count++] =
+   rlist->relocs[rlist->reloc_count++] =
       (struct drm_i915_gem_relocation_entry) {
          .offset = batch_offset,
          .delta = target_offset,

@@ -436,6 +436,12 @@ enum brw_gpu_ring {
    BLT_RING,
 };
 
+struct brw_reloc_list {
+   struct drm_i915_gem_relocation_entry *relocs;
+   int reloc_count;
+   int reloc_array_size;
+};
+
 struct intel_batchbuffer {
    /** Current batchbuffer being queued up. */
    struct brw_bo *bo;
@@ -456,9 +462,7 @@ struct intel_batchbuffer {
    bool needs_sol_reset;
    bool state_base_address_emitted;
 
-   struct drm_i915_gem_relocation_entry *relocs;
-   int reloc_count;
-   int reloc_array_size;
+   struct brw_reloc_list batch_relocs;
    unsigned int valid_reloc_flags;
 
    /** The validation list */
@@ -472,7 +476,7 @@ struct intel_batchbuffer {
 
    struct {
       uint32_t *map_next;
-      int reloc_count;
+      int batch_reloc_count;
       int exec_count;
    } saved;
 
