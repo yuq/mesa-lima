@@ -156,7 +156,7 @@ oa_generator = generator(
 
 i965_oa_sources = []
 foreach hw : ['hsw', 'bdw', 'chv', 'sklgt2', 'sklgt3', 'sklgt4', 'bxt',
-              'kblgt2', 'kblgt3', 'glk']
+              'kblgt2', 'kblgt3', 'glk', 'cflgt2']
   _xml = 'brw_oa_@0@.xml'.format(hw)
   i965_oa_sources += oa_generator.process(_xml, extra_args : hw)
 endforeach

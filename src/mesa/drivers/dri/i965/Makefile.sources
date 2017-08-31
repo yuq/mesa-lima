@@ -168,4 +168,6 @@ i965_oa_GENERATED_FILES = \
 	brw_oa_kblgt3.h \
 	brw_oa_kblgt3.c \
 	brw_oa_glk.h \
-	brw_oa_glk.c
+	brw_oa_glk.c \
+	brw_oa_cflgt2.h \
+	brw_oa_cflgt2.c
