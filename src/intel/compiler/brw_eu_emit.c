@@ -1190,7 +1190,7 @@ brw_JMPI(struct brw_codegen *p, struct brw_reg index,
    struct brw_reg ip = brw_ip_reg();
    brw_inst *inst = brw_alu2(p, BRW_OPCODE_JMPI, ip, ip, index);
 
-   brw_inst_set_exec_size(devinfo, inst, BRW_EXECUTE_2);
+   brw_inst_set_exec_size(devinfo, inst, BRW_EXECUTE_1);
    brw_inst_set_qtr_control(devinfo, inst, BRW_COMPRESSION_NONE);
    brw_inst_set_mask_control(devinfo, inst, BRW_MASK_DISABLE);
    brw_inst_set_pred_control(devinfo, inst, predicate_control);
