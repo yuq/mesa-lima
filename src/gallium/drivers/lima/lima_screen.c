@@ -246,6 +246,9 @@ lima_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_TGSI_BALLOT:
    case PIPE_CAP_TGSI_TES_LAYER_VIEWPORT:
       return 0;
+
+   case PIPE_CAP_TGSI_VS_LOWER_VIEWPORT_TRANSFORM:
+      return 1;
    }
 
    return 0;
