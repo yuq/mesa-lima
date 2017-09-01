@@ -519,6 +519,8 @@ vgpu9_get_shader_param(struct pipe_screen *screen,
          return 0;
       case PIPE_SHADER_CAP_INTEGERS:
          return 0;
+      case PIPE_SHADER_CAP_FP16:
+         return 0;
       case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
       case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
          return 16;
@@ -579,6 +581,8 @@ vgpu9_get_shader_param(struct pipe_screen *screen,
       case PIPE_SHADER_CAP_SUBROUTINES:
          return 0;
       case PIPE_SHADER_CAP_INTEGERS:
+         return 0;
+      case PIPE_SHADER_CAP_FP16:
          return 0;
       case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
       case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
@@ -675,6 +679,8 @@ vgpu10_get_shader_param(struct pipe_screen *screen,
    case PIPE_SHADER_CAP_SUBROUTINES:
    case PIPE_SHADER_CAP_INTEGERS:
       return TRUE;
+   case PIPE_SHADER_CAP_FP16:
+      return FALSE;
    case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
    case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
       return SVGA3D_DX_MAX_SAMPLERS;

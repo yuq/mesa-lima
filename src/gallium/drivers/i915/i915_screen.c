@@ -157,6 +157,7 @@ i915_get_shader_param(struct pipe_screen *screen,
       case PIPE_SHADER_CAP_SUBROUTINES:
          return 0;
       case PIPE_SHADER_CAP_INTEGERS:
+      case PIPE_SHADER_CAP_FP16:
          return 0;
       case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
       case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:

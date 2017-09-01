@@ -345,6 +345,7 @@ nv50_screen_get_shader_param(struct pipe_screen *pscreen,
       return 1;
    case PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED:
       return 1;
+   case PIPE_SHADER_CAP_FP16:
    case PIPE_SHADER_CAP_SUBROUTINES:
       return 0; /* please inline, or provide function declarations */
    case PIPE_SHADER_CAP_INTEGERS:

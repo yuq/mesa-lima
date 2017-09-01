@@ -527,6 +527,8 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen,
 		if (glsl120)
 			return 0;
 		return is_ir3(screen) ? 1 : 0;
+	case PIPE_SHADER_CAP_FP16:
+		return 0;
 	case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
 	case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
 		return 16;

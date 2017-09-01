@@ -428,6 +428,7 @@ etna_screen_get_shader_param(struct pipe_screen *pscreen,
    case PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED:
       return VIV_FEATURE(screen, chipMinorFeatures0, HAS_SQRT_TRIG);
    case PIPE_SHADER_CAP_INTEGERS:
+   case PIPE_SHADER_CAP_FP16:
       return 0;
    case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
    case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:

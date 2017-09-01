@@ -407,6 +407,7 @@ vc4_screen_get_shader_param(struct pipe_screen *pscreen,
                 return 0;
         case PIPE_SHADER_CAP_INTEGERS:
                 return 1;
+        case PIPE_SHADER_CAP_FP16:
         case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
         case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
         case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
