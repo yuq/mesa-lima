@@ -30,6 +30,7 @@
 
 #include "ac_debug.h"
 #include "radv_debug.h"
+#include "radv_shader.h"
 
 bool
 radv_init_trace(struct radv_device *device)

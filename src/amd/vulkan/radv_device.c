@@ -31,6 +31,7 @@
 #include <fcntl.h>
 #include "radv_debug.h"
 #include "radv_private.h"
+#include "radv_shader.h"
 #include "radv_cs.h"
 #include "util/disk_cache.h"
 #include "util/strtod.h"

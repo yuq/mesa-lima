@@ -27,6 +27,7 @@
 
 #include "radv_private.h"
 #include "radv_radeon_winsys.h"
+#include "radv_shader.h"
 #include "radv_cs.h"
 #include "sid.h"
 #include "gfx9d.h"
@@ -398,33 +399,6 @@ static unsigned radv_pack_float_12p4(float x)
 {
 	return x <= 0    ? 0 :
 	       x >= 4096 ? 0xffff : x * 16;
-}
-
-uint32_t
-radv_shader_stage_to_user_data_0(gl_shader_stage stage, bool has_gs, bool has_tess)
-{
-	switch (stage) {
-	case MESA_SHADER_FRAGMENT:
-		return R_00B030_SPI_SHADER_USER_DATA_PS_0;
-	case MESA_SHADER_VERTEX:
-		if (has_tess)
-			return R_00B530_SPI_SHADER_USER_DATA_LS_0;
-		else
-			return has_gs ? R_00B330_SPI_SHADER_USER_DATA_ES_0 : R_00B130_SPI_SHADER_USER_DATA_VS_0;
-	case MESA_SHADER_GEOMETRY:
-		return R_00B230_SPI_SHADER_USER_DATA_GS_0;
-	case MESA_SHADER_COMPUTE:
-		return R_00B900_COMPUTE_USER_DATA_0;
-	case MESA_SHADER_TESS_CTRL:
-		return R_00B430_SPI_SHADER_USER_DATA_HS_0;
-	case MESA_SHADER_TESS_EVAL:
-		if (has_gs)
-			return R_00B330_SPI_SHADER_USER_DATA_ES_0;
-		else
-			return R_00B130_SPI_SHADER_USER_DATA_VS_0;
-	default:
-		unreachable("unknown shader");
-	}
 }
 
 struct ac_userdata_info *

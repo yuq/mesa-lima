@@ -27,6 +27,7 @@
 #define RADV_META_H
 
 #include "radv_private.h"
+#include "radv_shader.h"
 
 #ifdef __cplusplus
 extern "C" {
