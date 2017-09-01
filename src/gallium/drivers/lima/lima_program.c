@@ -164,39 +164,9 @@ lima_create_vs_state(struct pipe_context *pctx,
 
    so->shader = prog->prog;
    so->shader_size = prog->prog_size;
+   so->prefetch = prog->prefetch;
    so->constant = prog->constants;
    so->constant_size = prog->num_constant * sizeof(union fi);
-
-/*
-  uniform.load(2), acc[1].pass(uniform.x);
-  uniform.load(0), attribute.load(0), mul[0].mul(attribute.z, uniform.z), mul[1].mul(attribute.y, uniform.y);
-  uniform.load(0), attribute.load(0), mul[0].mul(attribute.x, uniform.x), mul[1].mul(mul[0].out[1], acc[1].out[2]), acc[1].pass(acc[1].out[2]);
-  uniform.load(1), mul[0].mul(mul[1].out[2], acc[1].out[1]), mul[1].mul(mul[0].out[1], acc[1].out[1]), acc[1].add(mul[1].out[1], uniform.z);
-  uniform.load(1), mul[1].pass(acc[1].out[2]), acc[0].add(mul[0].out[1], uniform.y), acc[1].add(mul[1].out[1], uniform.x), complex.pass(acc[1].out[1]), store[0].varying(0, acc[1].out, acc[0].out), store[1].varying(0, complex.out, mul[1].out);
-
-  void main()
-  {
-  004: varying[0].x = (((attribute[0].x * temp[0].x) * temp[2].x) + temp[1].x);
-  004: varying[0].y = (((attribute[0].y * temp[0].y) * temp[2].x) + temp[1].y);
-  004: varying[0].z = (((attribute[0].z * temp[0].z) * temp[2].x) + temp[1].z);
-  004: varying[0].w = temp[2].x;
-  }
-
-  sx * x * s = vx
-  sy * y * s = vy
-  sz * z * s = vz
-  s = vw
- */
-   static uint32_t vs[] = {
-      0xad4ad6b5, 0x0380a2cc, 0x0007ff80, 0x000ad500, /* 0x00000000 */
-      0xad4685c2, 0x438002b5, 0x0007ff80, 0x000ad500, /* 0x00000010 */
-      0xad4cc980, 0x438022d9, 0x0007ff80, 0x000ad500, /* 0x00000020 */
-      0xad48ca3b, 0x038041d3, 0x0007ff80, 0x000ad500, /* 0x00000030 */
-      0x6c8b66b5, 0x03804193, 0x4243c080, 0x000ac508, /* 0x00000040 */
-   };
-
-   so->shader = vs;
-   so->shader_size = sizeof(vs);
 
    return so;
 }

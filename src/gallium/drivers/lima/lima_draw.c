@@ -223,7 +223,7 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    vs_cmd[i++] = 0x40000000 | ((ctx->vs->shader_size >> 4) << 16); /* SHADER_ADDRESS */
 
    /* 3 is prefetch, what's it? */
-   vs_cmd[i++] = ((3 - 1) << 20) | ((align(ctx->vs->shader_size, 16) / 16 - 1) << 10);
+   vs_cmd[i++] = (ctx->vs->prefetch << 20) | ((align(ctx->vs->shader_size, 16) / 16 - 1) << 10);
    vs_cmd[i++] = 0x10000040; /* SHADER_INFO */
 
    /* assume to 1 before vs compiler is ready */
