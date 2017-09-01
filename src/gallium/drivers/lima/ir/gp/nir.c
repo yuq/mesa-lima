@@ -23,6 +23,7 @@
  */
 
 #include "util/u_memory.h"
+#include "util/ralloc.h"
 #include "compiler/nir/nir.h"
 #include "gpir.h"
 
@@ -322,17 +323,22 @@ static void gpir_compiler_delete(gpir_compiler *comp)
    FREE(comp);
 }
 
-gpir_prog *gpir_compile_nir(nir_shader *nir)
+gpir_prog *gpir_compile_nir(void *mem_ctx, nir_shader *nir)
 {
+   gpir_prog *prog = rzalloc(mem_ctx, gpir_prog);
+   if (!prog)
+      return NULL;
+
    nir_function_impl *func = nir_shader_get_entrypoint(nir);
    gpir_compiler *comp = gpir_compiler_create(func->reg_alloc, func->ssa_alloc);
    if (!comp)
-      return NULL;
+      goto err_out0;
 
-   if (!gpir_emit_cf_list(comp, &func->body)) {
-      gpir_compiler_delete(comp);
-      return NULL;
-   }
+   comp->prog = prog;
+   comp->constant_base = nir->num_uniforms;
+
+   if (!gpir_emit_cf_list(comp, &func->body))
+      goto err_out1;
 
    gpir_node_print_prog(comp);
    gpir_lower_prog(comp);
@@ -341,6 +347,12 @@ gpir_prog *gpir_compile_nir(nir_shader *nir)
    gpir_instr_print_prog(comp);
 
    gpir_compiler_delete(comp);
+   return prog;
+
+err_out1:
+   gpir_compiler_delete(comp);
+err_out0:
+   ralloc_free(prog);
    return NULL;
 }
 
