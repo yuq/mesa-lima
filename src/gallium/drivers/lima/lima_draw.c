@@ -589,6 +589,23 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       ctx->dirty &= ~(LIMA_CONTEXT_DIRTY_VERTEX_ELEM|LIMA_CONTEXT_DIRTY_VERTEX_BUFF);
    }
 
+   bool vs_need_update_const = false;
+   void *vs_const_buff = ctx->gp_buffer->map + gp_uniform_offset;
+
+   if (ctx->dirty & LIMA_CONTEXT_DIRTY_CONST_BUFF) {
+      if (ctx->const_buffer[PIPE_SHADER_VERTEX].dirty) {
+         struct lima_context_constant_buffer *cbs = ctx->const_buffer + PIPE_SHADER_VERTEX;
+
+         if (cbs->buffer)
+            memcpy(vs_const_buff, cbs->buffer, cbs->size);
+
+         cbs->dirty = false;
+         vs_need_update_const = true;
+      }
+
+      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_CONST_BUFF;
+   }
+
    if (ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_VERT) {
       struct lima_vs_shader_state *vs = ctx->vs;
       uint32_t *varying = ctx->gp_buffer->map + gp_varying_info_offset;
@@ -602,26 +619,18 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       varying[n++] = ctx->share_buffer->va + sh_varying_offset;
       varying[n++] = 0x8020;
 
+      vs_need_update_const = true;
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_SHADER_VERT;
    }
 
-   if (ctx->dirty & LIMA_CONTEXT_DIRTY_VIEWPORT) {
-      /* should update uniform */
-      float *trans = ctx->gp_buffer->map + gp_uniform_offset;
-      struct pipe_viewport_state *vp = &ctx->viewport.transform;
-      trans[0] = vp->scale[0];
-      trans[1] = vp->scale[1];
-      trans[2] = vp->scale[2];
-      trans[3] = 1;
-      trans[4] = vp->translate[0];
-      trans[5] = vp->translate[1];
-      trans[6] = vp->translate[2];
-      trans[7] = 0;
-      trans[8] = 1;
-      trans[9] = 0;
-      trans[10] = 0;
-      trans[11] = 0;
+   if (vs_need_update_const) {
+      struct lima_context_constant_buffer *cbs = ctx->const_buffer + PIPE_SHADER_VERTEX;
+      struct lima_vs_shader_state *vs = ctx->vs;
+      if (vs->constant)
+         memcpy(vs_const_buff + cbs->size, vs->constant, vs->constant_size);
+   }
 
+   if (ctx->dirty & LIMA_CONTEXT_DIRTY_VIEWPORT) {
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_VIEWPORT;
    }
 
