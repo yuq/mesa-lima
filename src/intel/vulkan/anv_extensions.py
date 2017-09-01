@@ -44,6 +44,11 @@ class Extension:
         else:
             self.enable = enable;
 
+# On Android, we disable all surface and swapchain extensions. Android's Vulkan
+# loader implements VK_KHR_surface and VK_KHR_swapchain, and applications
+# cannot access the driver's implementation. Moreoever, if the driver exposes
+# the those extension strings, then tests dEQP-VK.api.info.instance.extensions
+# and dEQP-VK.api.info.device fail due to the duplicated strings.
 EXTENSIONS = [
     Extension('VK_KHR_bind_memory2',                      1, True),
     Extension('VK_KHR_dedicated_allocation',              1, True),
@@ -61,7 +66,7 @@ EXTENSIONS = [
     Extension('VK_KHR_external_semaphore_fd',             1, True),
     Extension('VK_KHR_get_memory_requirements2',          1, True),
     Extension('VK_KHR_get_physical_device_properties2',   1, True),
-    Extension('VK_KHR_get_surface_capabilities2',         1, True),
+    Extension('VK_KHR_get_surface_capabilities2',         1, 'ANV_HAS_SURFACE'),
     Extension('VK_KHR_image_format_list',                 1, True),
     Extension('VK_KHR_incremental_present',               1, True),
     Extension('VK_KHR_maintenance1',                      1, True),
@@ -70,8 +75,8 @@ EXTENSIONS = [
     Extension('VK_KHR_sampler_mirror_clamp_to_edge',      1, True),
     Extension('VK_KHR_shader_draw_parameters',            1, True),
     Extension('VK_KHR_storage_buffer_storage_class',      1, True),
-    Extension('VK_KHR_surface',                          25, True),
-    Extension('VK_KHR_swapchain',                        68, True),
+    Extension('VK_KHR_surface',                          25, 'ANV_HAS_SURFACE'),
+    Extension('VK_KHR_swapchain',                        68, 'ANV_HAS_SURFACE'),
     Extension('VK_KHR_variable_pointers',                 1, True),
     Extension('VK_KHR_wayland_surface',                   6, 'VK_USE_PLATFORM_WAYLAND_KHR'),
     Extension('VK_KHR_xcb_surface',                       6, 'VK_USE_PLATFORM_XCB_KHR'),
@@ -164,6 +169,18 @@ _TEMPLATE = Template(COPYRIGHT + """
 #   define VK_USE_PLATFORM_${platform}_KHR false
 #endif
 %endfor
+
+/* And ANDROID too */
+#ifdef ANDROID
+#   undef ANDROID
+#   define ANDROID true
+#else
+#   define ANDROID false
+#endif
+
+#define ANV_HAS_SURFACE (VK_USE_PLATFORM_WAYLAND_KHR || \\
+                         VK_USE_PLATFORM_XCB_KHR || \\
+                         VK_USE_PLATFORM_XLIB_KHR)
 
 bool
 anv_instance_extension_supported(const char *name)
