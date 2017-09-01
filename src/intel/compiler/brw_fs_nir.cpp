@@ -231,6 +231,24 @@ fs_visitor::nir_emit_system_values()
       nir_system_values[i] = fs_reg();
    }
 
+   /* Always emit SUBGROUP_INVOCATION.  Dead code will clean it up if we
+    * never end up using it.
+    */
+   {
+      const fs_builder abld = bld.annotate("gl_SubgroupInvocation", NULL);
+      fs_reg &reg = nir_system_values[SYSTEM_VALUE_SUBGROUP_INVOCATION];
+      reg = abld.vgrf(BRW_REGISTER_TYPE_W);
+
+      const fs_builder allbld8 = abld.group(8, 0).exec_all();
+      allbld8.MOV(reg, brw_imm_v(0x76543210));
+      if (dispatch_width > 8)
+         allbld8.ADD(byte_offset(reg, 16), reg, brw_imm_uw(8u));
+      if (dispatch_width > 16) {
+         const fs_builder allbld16 = abld.group(16, 0).exec_all();
+         allbld16.ADD(byte_offset(reg, 32), reg, brw_imm_uw(16u));
+      }
+   }
+
    nir_foreach_function(function, nir) {
       assert(strcmp(function->name, "main") == 0);
       assert(function->impl);
@@ -4170,20 +4188,10 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       bld.MOV(retype(dest, BRW_REGISTER_TYPE_D), brw_imm_d(dispatch_width));
       break;
 
-   case nir_intrinsic_load_subgroup_invocation: {
-      fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_UW);
-      dest = retype(dest, BRW_REGISTER_TYPE_UD);
-      const fs_builder allbld8 = bld.group(8, 0).exec_all();
-      allbld8.MOV(tmp, brw_imm_v(0x76543210));
-      if (dispatch_width > 8)
-         allbld8.ADD(byte_offset(tmp, 16), tmp, brw_imm_uw(8u));
-      if (dispatch_width > 16) {
-         const fs_builder allbld16 = bld.group(16, 0).exec_all();
-         allbld16.ADD(byte_offset(tmp, 32), tmp, brw_imm_uw(16u));
-      }
-      bld.MOV(dest, tmp);
+   case nir_intrinsic_load_subgroup_invocation:
+      bld.MOV(retype(dest, BRW_REGISTER_TYPE_D),
+              nir_system_values[SYSTEM_VALUE_SUBGROUP_INVOCATION]);
       break;
-   }
 
    case nir_intrinsic_load_subgroup_eq_mask:
    case nir_intrinsic_load_subgroup_ge_mask:
