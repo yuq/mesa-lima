@@ -574,6 +574,13 @@ struct radeon_winsys {
     void (*cs_sync_flush)(struct radeon_winsys_cs *cs);
 
     /**
+     * Add a fence dependency to the CS, so that the CS will wait for
+     * the fence before execution.
+     */
+    void (*cs_add_fence_dependency)(struct radeon_winsys_cs *cs,
+                                    struct pipe_fence_handle *fence);
+
+    /**
      * Wait for the fence and return true if the fence has been signalled.
      * The timeout of 0 will only return the status.
      * The timeout of PIPE_TIMEOUT_INFINITE will always wait until the fence

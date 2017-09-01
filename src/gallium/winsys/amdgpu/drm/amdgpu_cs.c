@@ -936,6 +936,21 @@ static bool is_noop_fence_dependency(struct amdgpu_cs *acs,
    return amdgpu_fence_wait((void *)fence, 0, false);
 }
 
+static void amdgpu_cs_add_fence_dependency(struct radeon_winsys_cs *rws,
+                                           struct pipe_fence_handle *pfence)
+{
+   struct amdgpu_cs *acs = amdgpu_cs(rws);
+   struct amdgpu_cs_context *cs = acs->csc;
+   struct amdgpu_fence *fence = (struct amdgpu_fence*)pfence;
+
+   if (is_noop_fence_dependency(acs, fence))
+      return;
+
+   unsigned idx = add_fence_dependency_entry(cs);
+   amdgpu_fence_reference(&cs->fence_dependencies[idx],
+                          (struct pipe_fence_handle*)fence);
+}
+
 static void amdgpu_add_bo_fence_dependencies(struct amdgpu_cs *acs,
                                              struct amdgpu_cs_buffer *buffer)
 {
@@ -1397,6 +1412,7 @@ void amdgpu_cs_init_functions(struct amdgpu_winsys *ws)
    ws->base.cs_get_next_fence = amdgpu_cs_get_next_fence;
    ws->base.cs_is_buffer_referenced = amdgpu_bo_is_referenced;
    ws->base.cs_sync_flush = amdgpu_cs_sync_flush;
+   ws->base.cs_add_fence_dependency = amdgpu_cs_add_fence_dependency;
    ws->base.fence_wait = amdgpu_fence_wait_rel_timeout;
    ws->base.fence_reference = amdgpu_fence_reference;
 }
