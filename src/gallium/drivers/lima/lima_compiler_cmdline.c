@@ -219,7 +219,7 @@ main(int argc, char **argv)
 
    nir_print_shader(nir, stdout);
 
-   gpir_prog *gpir = gpir_compile_nir(nir);
+   gpir_prog *gpir = gpir_compile_nir(nir, nir);
    if (gpir) {
       printf("convert to gpir\n");
    }
