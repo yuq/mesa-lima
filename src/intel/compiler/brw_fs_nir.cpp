@@ -4588,6 +4588,100 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_quad_broadcast: {
+      const fs_reg value = get_nir_src(instr->src[0]);
+      nir_const_value *index = nir_src_as_const_value(instr->src[1]);
+      assert(nir_src_bit_size(instr->src[1]) == 32);
+
+      bld.emit(SHADER_OPCODE_CLUSTER_BROADCAST, retype(dest, value.type),
+               value, brw_imm_ud(index->u32[0]), brw_imm_ud(4));
+      break;
+   }
+
+   case nir_intrinsic_quad_swap_horizontal: {
+      const fs_reg value = get_nir_src(instr->src[0]);
+      const fs_reg tmp = bld.vgrf(value.type);
+      const fs_builder ubld = bld.exec_all().group(dispatch_width / 2, 0);
+
+      const fs_reg src_left = horiz_stride(value, 2);
+      const fs_reg src_right = horiz_stride(horiz_offset(value, 1), 2);
+      const fs_reg tmp_left = horiz_stride(tmp, 2);
+      const fs_reg tmp_right = horiz_stride(horiz_offset(tmp, 1), 2);
+
+      /* From the Cherryview PRM Vol. 7, "Register Region Restrictiosn":
+       *
+       *    "When source or destination datatype is 64b or operation is
+       *    integer DWord multiply, regioning in Align1 must follow
+       *    these rules:
+       *
+       *    [...]
+       *
+       *    3. Source and Destination offset must be the same, except
+       *       the case of scalar source."
+       *
+       * In order to work around this, we have to emit two 32-bit MOVs instead
+       * of a single 64-bit MOV to do the shuffle.
+       */
+      if (type_sz(value.type) > 4 &&
+          (devinfo->is_cherryview || gen_device_info_is_9lp(devinfo))) {
+         ubld.MOV(subscript(tmp_left, BRW_REGISTER_TYPE_D, 0),
+                  subscript(src_right, BRW_REGISTER_TYPE_D, 0));
+         ubld.MOV(subscript(tmp_left, BRW_REGISTER_TYPE_D, 1),
+                  subscript(src_right, BRW_REGISTER_TYPE_D, 1));
+         ubld.MOV(subscript(tmp_right, BRW_REGISTER_TYPE_D, 0),
+                  subscript(src_left, BRW_REGISTER_TYPE_D, 0));
+         ubld.MOV(subscript(tmp_right, BRW_REGISTER_TYPE_D, 1),
+                  subscript(src_left, BRW_REGISTER_TYPE_D, 1));
+      } else {
+         ubld.MOV(tmp_left, src_right);
+         ubld.MOV(tmp_right, src_left);
+      }
+      bld.MOV(retype(dest, value.type), tmp);
+      break;
+   }
+
+   case nir_intrinsic_quad_swap_vertical: {
+      const fs_reg value = get_nir_src(instr->src[0]);
+      if (nir_src_bit_size(instr->src[0]) == 32) {
+         /* For 32-bit, we can use a SIMD4x2 instruction to do this easily */
+         const fs_reg tmp = bld.vgrf(value.type);
+         const fs_builder ubld = bld.exec_all();
+         ubld.emit(SHADER_OPCODE_QUAD_SWIZZLE, tmp, value,
+                   brw_imm_ud(BRW_SWIZZLE4(2,3,0,1)));
+         bld.MOV(retype(dest, value.type), tmp);
+      } else {
+         /* For larger data types, we have to either emit dispatch_width many
+          * MOVs or else fall back to doing indirects.
+          */
+         fs_reg idx = bld.vgrf(BRW_REGISTER_TYPE_W);
+         bld.XOR(idx, nir_system_values[SYSTEM_VALUE_SUBGROUP_INVOCATION],
+                      brw_imm_w(0x2));
+         bld.emit(SHADER_OPCODE_SHUFFLE, retype(dest, value.type), value, idx);
+      }
+      break;
+   }
+
+   case nir_intrinsic_quad_swap_diagonal: {
+      const fs_reg value = get_nir_src(instr->src[0]);
+      if (nir_src_bit_size(instr->src[0]) == 32) {
+         /* For 32-bit, we can use a SIMD4x2 instruction to do this easily */
+         const fs_reg tmp = bld.vgrf(value.type);
+         const fs_builder ubld = bld.exec_all();
+         ubld.emit(SHADER_OPCODE_QUAD_SWIZZLE, tmp, value,
+                   brw_imm_ud(BRW_SWIZZLE4(3,2,1,0)));
+         bld.MOV(retype(dest, value.type), tmp);
+      } else {
+         /* For larger data types, we have to either emit dispatch_width many
+          * MOVs or else fall back to doing indirects.
+          */
+         fs_reg idx = bld.vgrf(BRW_REGISTER_TYPE_W);
+         bld.XOR(idx, nir_system_values[SYSTEM_VALUE_SUBGROUP_INVOCATION],
+                      brw_imm_w(0x3));
+         bld.emit(SHADER_OPCODE_SHUFFLE, retype(dest, value.type), value, idx);
+      }
+      break;
+   }
+
    case nir_intrinsic_reduce: {
       fs_reg src = get_nir_src(instr->src[0]);
       nir_op redop = (nir_op)nir_intrinsic_reduction_op(instr);

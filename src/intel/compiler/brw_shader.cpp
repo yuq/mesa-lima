@@ -334,6 +334,8 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
       return "shuffle";
    case SHADER_OPCODE_SEL_EXEC:
       return "sel_exec";
+   case SHADER_OPCODE_QUAD_SWIZZLE:
+      return "quad_swizzle";
    case SHADER_OPCODE_CLUSTER_BROADCAST:
       return "cluster_broadcast";
 

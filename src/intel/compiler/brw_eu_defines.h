@@ -467,6 +467,11 @@ enum opcode {
     */
    SHADER_OPCODE_SEL_EXEC,
 
+   /* This turns into an align16 mov from src0 to dst with a swizzle
+    * provided as an immediate in src1.
+    */
+   SHADER_OPCODE_QUAD_SWIZZLE,
+
    /* Take every Nth element in src0 and broadcast it to the group of N
     * channels in which it lives in the destination.  The offset within the
     * cluster is given by src1 and the cluster size is given by src2.

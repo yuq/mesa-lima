@@ -2301,6 +2301,26 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          brw_MOV(p, dst, src[0]);
          break;
 
+      case SHADER_OPCODE_QUAD_SWIZZLE:
+         /* This only works on 8-wide 32-bit values */
+         assert(inst->exec_size == 8);
+         assert(type_sz(src[0].type) == 4);
+         assert(inst->force_writemask_all);
+         assert(src[1].file == BRW_IMMEDIATE_VALUE);
+         assert(src[1].type == BRW_REGISTER_TYPE_UD);
+
+         if (src[0].file == BRW_IMMEDIATE_VALUE ||
+             (src[0].vstride == 0 && src[0].hstride == 0)) {
+            /* The value is uniform across all channels */
+            brw_MOV(p, dst, src[0]);
+         } else {
+            brw_set_default_access_mode(p, BRW_ALIGN_16);
+            struct brw_reg swiz_src = stride(src[0], 4, 4, 1);
+            swiz_src.swizzle = inst->src[1].ud;
+            brw_MOV(p, dst, swiz_src);
+         }
+         break;
+
       case SHADER_OPCODE_CLUSTER_BROADCAST: {
          assert(src[0].type == dst.type);
          assert(!src[0].negate && !src[0].abs);
