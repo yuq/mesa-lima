@@ -3,7 +3,9 @@
 
 #include <wayland-server.h>
 
+struct wl_display;
 struct wl_drm;
+struct wl_resource;
 
 struct wl_drm_buffer {
 	struct wl_resource *resource;
