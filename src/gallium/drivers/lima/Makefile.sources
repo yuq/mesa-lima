@@ -4,7 +4,9 @@ gpir_SOURCES := \
 	  ir/gp/node.c \
 	  ir/gp/lower.c \
 	  ir/gp/scheduler.c \
-	  ir/gp/instr.c
+	  ir/gp/instr.c \
+	  ir/gp/codegen.h \
+	  ir/gp/codegen.c
 
 C_SOURCES := \
 	  lima_screen.c \
