@@ -25,8 +25,6 @@
  *    Kristian Høgsberg <krh@bitplanet.net>
  */
 
-#define WL_HIDE_DEPRECATED
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdbool.h>

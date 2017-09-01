@@ -1718,7 +1718,7 @@ for plat in $platforms; do
         if test "x$have_wayland_protocols" = xno; then
                 AC_MSG_ERROR([wayland-protocols >= $WAYLAND_PROTOCOLS_REQUIRED is needed to compile the wayland platform])
         fi
-        DEFINES="$DEFINES -DHAVE_WAYLAND_PLATFORM"
+        DEFINES="$DEFINES -DHAVE_WAYLAND_PLATFORM -DWL_HIDE_DEPRECATED"
         ;;
 
     x11)
