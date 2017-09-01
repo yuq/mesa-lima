@@ -40,8 +40,26 @@
 
 #define FILE_DEBUG_FLAG DEBUG_BUFMGR
 
+/**
+ * Target sizes of the batch and state buffers.  We create the initial
+ * buffers at these sizes, and flush when they're nearly full.  If we
+ * underestimate how close we are to the end, and suddenly need more space
+ * in the middle of a draw, we can grow the buffers, and finish the draw.
+ * At that point, we'll be over our target size, so the next operation
+ * should flush.  Each time we flush the batch, we recreate both buffers
+ * at the original target size, so it doesn't grow without bound.
+ */
 #define BATCH_SZ (8192*sizeof(uint32_t))
 #define STATE_SZ (8192*sizeof(uint32_t))
+
+/* The kernel assumes batchbuffers are smaller than 256kB. */
+#define MAX_BATCH_SIZE (256 * 1024)
+
+/* 3DSTATE_BINDING_TABLE_POINTERS has a U16 offset from Surface State Base
+ * Address, which means that we can't put binding tables beyond 64kB.  This
+ * effectively limits the maximum statebuffer size to 64kB.
+ */
+#define MAX_STATE_SIZE (64 * 1024)
 
 static void
 intel_batchbuffer_reset(struct intel_batchbuffer *batch,
@@ -252,6 +270,93 @@ intel_batchbuffer_free(struct intel_batchbuffer *batch)
       _mesa_hash_table_destroy(batch->state_batch_sizes, NULL);
 }
 
+static void
+replace_bo_in_reloc_list(struct brw_reloc_list *rlist,
+                         uint32_t old_handle, uint32_t new_handle)
+{
+   for (int i = 0; i < rlist->reloc_count; i++) {
+      if (rlist->relocs[i].target_handle == old_handle)
+         rlist->relocs[i].target_handle = new_handle;
+   }
+}
+
+/**
+ * Grow either the batch or state buffer to a new larger size.
+ *
+ * We can't actually grow buffers, so we allocate a new one, copy over
+ * the existing contents, and update our lists to refer to the new one.
+ *
+ * Note that this is only temporary - each new batch recreates the buffers
+ * at their original target size (BATCH_SZ or STATE_SZ).
+ */
+static void
+grow_buffer(struct brw_context *brw,
+            struct brw_bo **bo_ptr,
+            uint32_t **map_ptr,
+            uint32_t **cpu_map_ptr,
+            unsigned existing_bytes,
+            unsigned new_size)
+{
+   struct intel_batchbuffer *batch = &brw->batch;
+   struct brw_bufmgr *bufmgr = brw->bufmgr;
+
+   uint32_t *old_map = *map_ptr;
+   struct brw_bo *old_bo = *bo_ptr;
+
+   struct brw_bo *new_bo = brw_bo_alloc(bufmgr, old_bo->name, new_size, 4096);
+   uint32_t *new_map;
+
+   perf_debug("Growing %s - ran out of space\n", old_bo->name);
+
+   /* Copy existing data to the new larger buffer */
+   if (*cpu_map_ptr) {
+      *cpu_map_ptr = new_map = realloc(*cpu_map_ptr, new_size);
+   } else {
+      new_map = brw_bo_map(brw, new_bo, MAP_READ | MAP_WRITE);
+      memcpy(new_map, old_map, existing_bytes);
+   }
+
+   /* Try to put the new BO at the same GTT offset as the old BO (which
+    * we're throwing away, so it doesn't need to be there).
+    *
+    * This guarantees that our relocations continue to work: values we've
+    * already written into the buffer, values we're going to write into the
+    * buffer, and the validation/relocation lists all will match.
+    */
+   new_bo->gtt_offset = old_bo->gtt_offset;
+   new_bo->index = old_bo->index;
+
+   /* Batch/state buffers are per-context, and if we've run out of space,
+    * we must have actually used them before, so...they will be in the list.
+    */
+   assert(old_bo->index < batch->exec_count);
+   assert(batch->exec_bos[old_bo->index] == old_bo);
+
+   /* Update the validation list to use the new BO. */
+   batch->exec_bos[old_bo->index] = new_bo;
+   batch->validation_list[old_bo->index].handle = new_bo->gem_handle;
+   brw_bo_reference(new_bo);
+   brw_bo_unreference(old_bo);
+
+   if (!batch->use_batch_first) {
+      /* We're not using I915_EXEC_HANDLE_LUT, which means we need to go
+       * update the relocation list entries to point at the new BO as well.
+       * (With newer kernels, the "handle" is an offset into the validation
+       * list, which remains unchanged, so we can skip this.)
+       */
+      replace_bo_in_reloc_list(&batch->batch_relocs,
+                               old_bo->gem_handle, new_bo->gem_handle);
+      replace_bo_in_reloc_list(&batch->state_relocs,
+                               old_bo->gem_handle, new_bo->gem_handle);
+   }
+
+   /* Drop the *bo_ptr reference.  This should free the old BO. */
+   brw_bo_unreference(old_bo);
+
+   *bo_ptr = new_bo;
+   *map_ptr = new_map;
+}
+
 void
 intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
                                 enum brw_gpu_ring ring)
@@ -266,9 +371,21 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
    }
 
    /* For now, flush as if the batch and state buffers still shared a BO */
-   if (USED_BATCH(*batch) * 4 + sz >=
-       BATCH_SZ - batch->reserved_space - batch->state_used)
-      intel_batchbuffer_flush(brw);
+   const unsigned batch_used = USED_BATCH(*batch) * 4;
+   if (batch_used + sz >=
+       BATCH_SZ - batch->reserved_space - batch->state_used) {
+      if (!brw->no_batch_wrap) {
+         intel_batchbuffer_flush(brw);
+      } else {
+         const unsigned new_size =
+            MIN2(batch->bo->size + batch->bo->size / 2, MAX_BATCH_SIZE);
+         grow_buffer(brw, &batch->bo, &batch->map, &batch->batch_cpu_map,
+                     batch_used, new_size);
+         batch->map_next = (void *) batch->map + batch_used;
+         assert(batch_used + sz <
+                batch->bo->size - batch->reserved_space - batch->state_used);
+      }
+   }
 
    /* The intel_batchbuffer_flush() calls above might have changed
     * brw->batch.ring to UNKNOWN_RING, so we need to set it here at the end.
@@ -918,8 +1035,17 @@ brw_state_batch(struct brw_context *brw,
    int batch_space = batch->reserved_space + USED_BATCH(*batch) * 4;
 
    if (offset + size >= STATE_SZ - batch_space) {
-      intel_batchbuffer_flush(brw);
-      offset = ALIGN(batch->state_used, alignment);
+      if (!brw->no_batch_wrap) {
+         intel_batchbuffer_flush(brw);
+         offset = ALIGN(batch->state_used, alignment);
+      } else {
+         const unsigned new_size =
+            MIN2(batch->state_bo->size + batch->state_bo->size / 2,
+                 MAX_STATE_SIZE);
+         grow_buffer(brw, &batch->state_bo, &batch->state_map,
+                     &batch->state_cpu_map, batch->state_used, new_size);
+         assert(offset + size < batch->state_bo->size - batch_space);
+      }
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_BATCH)) {
