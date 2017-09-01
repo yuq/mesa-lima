@@ -385,6 +385,26 @@ lima_set_constant_buffer(struct pipe_context *pctx,
 {
    printf("dummy %s\n", __func__);
 
+   struct lima_context *ctx = lima_context(pctx);
+   struct lima_context_constant_buffer *so = ctx->const_buffer + shader;
+
+   assert(index == 0);
+
+   if (unlikely(!cb)) {
+      so->buffer = NULL;
+      so->size = 0;
+
+   }
+   else {
+      assert(!cb->buffer);
+
+      so->buffer = cb->user_buffer + cb->buffer_offset;
+      so->size = cb->buffer_size;
+   }
+
+   so->dirty = true;
+   ctx->dirty |= LIMA_CONTEXT_DIRTY_CONST_BUFF;
+
    printf("shader %d index %u cb buffer %p offset %x size %x\n",
           shader, index, cb->buffer, cb->buffer_offset, cb->buffer_size);
 }
