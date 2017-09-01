@@ -252,22 +252,29 @@ typedef struct {
    gpir_block *dest;
 } gpir_branch_node;
 
-typedef struct gpir_compiler {
-   struct list_head block_list;
-   int cur_index;
-   /* array for searching ssa/reg node */
-   gpir_node **var_nodes;
-   unsigned reg_base;
-} gpir_compiler;
-
 typedef struct gpir_prog {
    void *prog;
    unsigned prog_size;
+
+   union fi *constants;
+   int num_constant;
 } gpir_prog;
+
+typedef struct gpir_compiler {
+   struct list_head block_list;
+   int cur_index;
+
+   /* array for searching ssa/reg node */
+   gpir_node **var_nodes;
+   unsigned reg_base;
+
+   gpir_prog *prog;
+   int constant_base;
+} gpir_compiler;
 
 typedef struct nir_shader nir_shader;
 
-gpir_prog *gpir_compile_nir(nir_shader *nir);
+gpir_prog *gpir_compile_nir(void *mem_ctx, nir_shader *nir);
 
 void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index);
 void gpir_node_add_child(gpir_node *parent, gpir_node *child);
