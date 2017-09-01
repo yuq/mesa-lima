@@ -95,6 +95,12 @@ struct lima_context_viewport_state {
    float near, far;
 };
 
+struct lima_context_constant_buffer {
+   const void *buffer;
+   uint32_t size;
+   bool dirty;
+};
+
 struct lima_context {
    struct pipe_context base;
 
@@ -113,6 +119,7 @@ struct lima_context {
       LIMA_CONTEXT_DIRTY_BLEND_COLOR  = (1 << 11),
       LIMA_CONTEXT_DIRTY_BLEND        = (1 << 12),
       LIMA_CONTEXT_DIRTY_STENCIL_REF  = (1 << 13),
+      LIMA_CONTEXT_DIRTY_CONST_BUFF   = (1 << 14),
    } dirty;
 
    struct u_upload_mgr *uploader;
@@ -133,6 +140,7 @@ struct lima_context {
    struct pipe_blend_color blend_color;
    struct lima_blend_state *blend;
    struct pipe_stencil_ref stencil_ref;
+   struct lima_context_constant_buffer const_buffer[PIPE_SHADER_TYPES];
 
    struct lima_buffer *share_buffer;
    #define sh_plb_offset             0x00000
