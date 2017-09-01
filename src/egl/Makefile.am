@@ -79,10 +79,12 @@ if HAVE_PLATFORM_WAYLAND
 drivers/dri2/linux-dmabuf-unstable-v1-protocol.lo: drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h
 drivers/dri2/egl_dri2.lo: drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h
 
-AM_CFLAGS += $(WAYLAND_CFLAGS)
-libEGL_common_la_LIBADD += $(WAYLAND_LIBS)
+AM_CFLAGS += $(WAYLAND_CLIENT_CFLAGS)
+libEGL_common_la_LIBADD += $(WAYLAND_CLIENT_LIBS)
 libEGL_common_la_LIBADD += $(LIBDRM_LIBS)
+AM_CFLAGS += $(WAYLAND_SERVER_CFLAGS)
 libEGL_common_la_LIBADD += $(top_builddir)/src/egl/wayland/wayland-drm/libwayland-drm.la
+libEGL_common_la_LIBADD += $(WAYLAND_SERVER_LIBS)
 dri2_backend_FILES += \
 	drivers/dri2/platform_wayland.c	\
 	drivers/dri2/linux-dmabuf-unstable-v1-protocol.c \
