@@ -589,12 +589,12 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
    if (ib) {
       struct svga_buffer *sbuf = svga_buffer(ib);
 
-      assert(sbuf->key.flags & SVGA3D_SURFACE_BIND_INDEX_BUFFER);
-      (void) sbuf; /* silence unused var warning */
-
       ib_handle = svga_buffer_handle(svga, ib, PIPE_BIND_INDEX_BUFFER);
       if (!ib_handle)
          return PIPE_ERROR_OUT_OF_MEMORY;
+
+      assert(sbuf->key.flags & SVGA3D_SURFACE_BIND_INDEX_BUFFER);
+      (void) sbuf; /* silence unused var warning */
    }
    else {
       ib_handle = NULL;
