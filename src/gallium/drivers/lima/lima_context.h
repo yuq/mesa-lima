@@ -65,6 +65,9 @@ struct lima_fs_shader_state {
 struct lima_vs_shader_state {
    void *shader;
    int shader_size;
+
+   void *constant;
+   int constant_size;
 };
 
 struct lima_rasterizer_state {

@@ -24,20 +24,43 @@
 
 #include <stdio.h>
 
+#include "util/ralloc.h"
 #include "gpir.h"
 
 static void gpir_lower_const(gpir_compiler *comp)
 {
+   int num_constant = 0;
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
       list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
-         if (node->op == gpir_op_const) {
-            gpir_const_node *c = gpir_node_to_const(node);
+         if (node->op == gpir_op_const && !gpir_node_is_root(node))
+            num_constant++;
+      }
+   }
 
-            fprintf(stderr, "gpir: const lower not implemented node %d value %x\n",
-                    node->index, c->value.ui);
+   if (num_constant) {
+      comp->prog->constants = ralloc_array(comp->prog, union fi, num_constant);
+      comp->prog->num_constant = num_constant;
 
-            if (gpir_node_is_root(node))
+      int index = 0;
+      list_for_each_entry(gpir_block, block, &comp->block_list, list) {
+         list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
+            if (node->op == gpir_op_const) {
+               gpir_const_node *c = gpir_node_to_const(node);
+
+               if (!gpir_node_is_root(node)) {
+                  gpir_load_node *load = gpir_node_create(comp, gpir_op_load_uniform, -1);
+                  load->index = comp->constant_base + (index >> 2);
+                  load->component = index % 4;
+                  comp->prog->constants[index++] = c->value;
+                  gpir_node_replace_succ(&load->node, node);
+                  list_addtail(&load->node.list, &block->node_list);
+
+                  fprintf(stderr, "gpir: lower const create uniform %d for const %d\n",
+                          load->node.index, node->index);
+               }
+
                gpir_node_delete(node);
+            }
          }
       }
    }
