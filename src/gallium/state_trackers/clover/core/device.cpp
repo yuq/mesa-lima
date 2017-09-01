@@ -191,6 +191,12 @@ device::has_doubles() const {
 }
 
 bool
+device::has_halves() const {
+   return pipe->get_shader_param(pipe, PIPE_SHADER_COMPUTE,
+                                 PIPE_SHADER_CAP_FP16);
+}
+
+bool
 device::has_unified_memory() const {
    return pipe->get_param(pipe, PIPE_CAP_UMA);
 }
