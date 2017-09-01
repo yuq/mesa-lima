@@ -460,6 +460,19 @@ enum opcode {
     */
    SHADER_OPCODE_SHUFFLE,
 
+   /* Select between src0 and src1 based on channel enables.
+    *
+    * This instruction copies src0 into the enabled channels of the
+    * destination and copies src1 into the disabled channels.
+    */
+   SHADER_OPCODE_SEL_EXEC,
+
+   /* Take every Nth element in src0 and broadcast it to the group of N
+    * channels in which it lives in the destination.  The offset within the
+    * cluster is given by src1 and the cluster size is given by src2.
+    */
+   SHADER_OPCODE_CLUSTER_BROADCAST,
+
    SHADER_OPCODE_GET_BUFFER_SIZE,
 
    VEC4_OPCODE_MOV_BYTES,

@@ -2293,6 +2293,53 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          generate_shuffle(inst, dst, src[0], src[1]);
          break;
 
+      case SHADER_OPCODE_SEL_EXEC:
+         assert(inst->force_writemask_all);
+         brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+         brw_MOV(p, dst, src[1]);
+         brw_set_default_mask_control(p, BRW_MASK_ENABLE);
+         brw_MOV(p, dst, src[0]);
+         break;
+
+      case SHADER_OPCODE_CLUSTER_BROADCAST: {
+         assert(src[0].type == dst.type);
+         assert(!src[0].negate && !src[0].abs);
+         assert(src[1].file == BRW_IMMEDIATE_VALUE);
+         assert(src[1].type == BRW_REGISTER_TYPE_UD);
+         assert(src[2].file == BRW_IMMEDIATE_VALUE);
+         assert(src[2].type == BRW_REGISTER_TYPE_UD);
+         const unsigned component = src[1].ud;
+         const unsigned cluster_size = src[2].ud;
+         struct brw_reg strided = stride(suboffset(src[0], component),
+                                         cluster_size, cluster_size, 0);
+         if (type_sz(src[0].type) > 4 &&
+             (devinfo->is_cherryview || gen_device_info_is_9lp(devinfo))) {
+            /* IVB has an issue (which we found empirically) where it reads
+             * two address register components per channel for indirectly
+             * addressed 64-bit sources.
+             *
+             * From the Cherryview PRM Vol 7. "Register Region Restrictions":
+             *
+             *    "When source or destination datatype is 64b or operation is
+             *    integer DWord multiply, indirect addressing must not be
+             *    used."
+             *
+             * To work around both of these, we do two integer MOVs insead of
+             * one 64-bit MOV.  Because no double value should ever cross a
+             * register boundary, it's safe to use the immediate offset in the
+             * indirect here to handle adding 4 bytes to the offset and avoid
+             * the extra ADD to the register file.
+             */
+            brw_MOV(p, subscript(dst, BRW_REGISTER_TYPE_D, 0),
+                       subscript(strided, BRW_REGISTER_TYPE_D, 0));
+            brw_MOV(p, subscript(dst, BRW_REGISTER_TYPE_D, 1),
+                       subscript(strided, BRW_REGISTER_TYPE_D, 1));
+         } else {
+            brw_MOV(p, dst, strided);
+         }
+         break;
+      }
+
       case FS_OPCODE_SET_SAMPLE_ID:
          generate_set_sample_id(inst, dst, src[0], src[1]);
          break;

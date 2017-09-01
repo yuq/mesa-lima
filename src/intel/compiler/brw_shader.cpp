@@ -332,6 +332,10 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
       return "broadcast";
    case SHADER_OPCODE_SHUFFLE:
       return "shuffle";
+   case SHADER_OPCODE_SEL_EXEC:
+      return "sel_exec";
+   case SHADER_OPCODE_CLUSTER_BROADCAST:
+      return "cluster_broadcast";
 
    case SHADER_OPCODE_GET_BUFFER_SIZE:
       return "get_buffer_size";
@@ -847,6 +851,7 @@ backend_instruction::can_do_source_mods() const
    case BRW_OPCODE_FBL:
    case BRW_OPCODE_SUBB:
    case SHADER_OPCODE_BROADCAST:
+   case SHADER_OPCODE_CLUSTER_BROADCAST:
    case SHADER_OPCODE_MOV_INDIRECT:
       return false;
    default:
