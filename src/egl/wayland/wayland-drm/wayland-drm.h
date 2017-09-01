@@ -38,10 +38,4 @@ wayland_drm_init(struct wl_display *display, char *device_name,
 void
 wayland_drm_uninit(struct wl_drm *drm);
 
-uint32_t
-wayland_drm_buffer_get_format(struct wl_drm_buffer *buffer);
-
-void *
-wayland_drm_buffer_get_buffer(struct wl_drm_buffer *buffer);
-
 #endif

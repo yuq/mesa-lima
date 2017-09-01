@@ -292,15 +292,3 @@ wayland_drm_uninit(struct wl_drm *drm)
 
 	free(drm);
 }
-
-uint32_t
-wayland_drm_buffer_get_format(struct wl_drm_buffer *buffer)
-{
-	return buffer->format;
-}
-
-void *
-wayland_drm_buffer_get_buffer(struct wl_drm_buffer *buffer)
-{
-	return buffer->driver_buffer;
-}
