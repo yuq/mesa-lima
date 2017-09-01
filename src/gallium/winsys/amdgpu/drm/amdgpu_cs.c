@@ -904,6 +904,38 @@ static unsigned amdgpu_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
     return cs->num_real_buffers;
 }
 
+static unsigned add_fence_dependency_entry(struct amdgpu_cs_context *cs)
+{
+   unsigned idx = cs->num_fence_dependencies++;
+
+   if (idx >= cs->max_fence_dependencies) {
+      unsigned size;
+      const unsigned increment = 8;
+
+      cs->max_fence_dependencies = idx + increment;
+      size = cs->max_fence_dependencies * sizeof(cs->fence_dependencies[0]);
+      cs->fence_dependencies = realloc(cs->fence_dependencies, size);
+      /* Clear the newly-allocated elements. */
+      memset(cs->fence_dependencies + idx, 0,
+             increment * sizeof(cs->fence_dependencies[0]));
+   }
+   return idx;
+}
+
+static bool is_noop_fence_dependency(struct amdgpu_cs *acs,
+                                     struct amdgpu_fence *fence)
+{
+   struct amdgpu_cs_context *cs = acs->csc;
+
+   if (fence->ctx == acs->ctx &&
+       fence->fence.ip_type == cs->request.ip_type &&
+       fence->fence.ip_instance == cs->request.ip_instance &&
+       fence->fence.ring == cs->request.ring)
+      return true;
+
+   return amdgpu_fence_wait((void *)fence, 0, false);
+}
+
 static void amdgpu_add_bo_fence_dependencies(struct amdgpu_cs *acs,
                                              struct amdgpu_cs_buffer *buffer)
 {
@@ -913,15 +945,8 @@ static void amdgpu_add_bo_fence_dependencies(struct amdgpu_cs *acs,
 
    for (unsigned j = 0; j < bo->num_fences; ++j) {
       struct amdgpu_fence *bo_fence = (void *)bo->fences[j];
-      unsigned idx;
 
-      if (bo_fence->ctx == acs->ctx &&
-         bo_fence->fence.ip_type == cs->request.ip_type &&
-         bo_fence->fence.ip_instance == cs->request.ip_instance &&
-         bo_fence->fence.ring == cs->request.ring)
-         continue;
-
-      if (amdgpu_fence_wait((void *)bo_fence, 0, false))
+      if (is_noop_fence_dependency(acs, bo_fence))
          continue;
 
       amdgpu_fence_reference(&bo->fences[new_num_fences], bo->fences[j]);
@@ -930,19 +955,7 @@ static void amdgpu_add_bo_fence_dependencies(struct amdgpu_cs *acs,
       if (!(buffer->usage & RADEON_USAGE_SYNCHRONIZED))
          continue;
 
-      idx = cs->num_fence_dependencies++;
-      if (idx >= cs->max_fence_dependencies) {
-         unsigned size;
-         const unsigned increment = 8;
-
-         cs->max_fence_dependencies = idx + increment;
-         size = cs->max_fence_dependencies * sizeof(cs->fence_dependencies[0]);
-         cs->fence_dependencies = realloc(cs->fence_dependencies, size);
-         /* Clear the newly-allocated elements. */
-         memset(cs->fence_dependencies + idx, 0,
-                increment * sizeof(cs->fence_dependencies[0]));
-      }
-
+      unsigned idx = add_fence_dependency_entry(cs);
       amdgpu_fence_reference(&cs->fence_dependencies[idx],
                              (struct pipe_fence_handle*)bo_fence);
    }
