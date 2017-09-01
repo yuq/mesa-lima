@@ -941,7 +941,7 @@ region_alignment_rules(const struct gen_device_info *devinfo,
             }                                                                 \
          }                                                                    \
                                                                               \
-         ERROR_IF(offset_0 != offset_1,                                       \
+         ERROR_IF(num_sources == 2 && offset_0 != offset_1,                   \
                   "The offset from the two source registers "                 \
                   "must be the same")
 
