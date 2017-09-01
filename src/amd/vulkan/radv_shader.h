@@ -66,8 +66,7 @@ radv_shader_compile_to_nir(struct radv_device *device,
 			   struct radv_shader_module *module,
 			   const char *entrypoint_name,
 			   gl_shader_stage stage,
-			   const VkSpecializationInfo *spec_info,
-			   bool dump);
+			   const VkSpecializationInfo *spec_info);
 
 void *
 radv_alloc_shader_memory(struct radv_device *device,
@@ -82,13 +81,12 @@ radv_shader_variant_create(struct radv_device *device,
 			   struct radv_pipeline_layout *layout,
 			   const struct ac_shader_variant_key *key,
 			   void ** code_out,
-			   unsigned *code_size_out,
-			   bool dump);
+			   unsigned *code_size_out);
 
 struct radv_shader_variant *
 radv_create_gs_copy_shader(struct radv_device *device, struct nir_shader *nir,
 			   void **code_out, unsigned *code_size_out,
-			   bool dump_shader, bool multiview);
+			   bool multiview);
 
 void
 radv_shader_variant_destroy(struct radv_device *device,

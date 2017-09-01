@@ -150,8 +150,7 @@ radv_shader_compile_to_nir(struct radv_device *device,
 			   struct radv_shader_module *module,
 			   const char *entrypoint_name,
 			   gl_shader_stage stage,
-			   const VkSpecializationInfo *spec_info,
-			   bool dump)
+			   const VkSpecializationInfo *spec_info)
 {
 	if (strcmp(entrypoint_name, "main") != 0) {
 		radv_finishme("Multiple shaders per module not really supported");
@@ -263,7 +262,7 @@ radv_shader_compile_to_nir(struct radv_device *device,
 	nir_remove_dead_variables(nir, nir_var_local);
 	radv_optimize_nir(nir);
 
-	if (dump)
+	if (device->debug_flags & RADV_DEBUG_DUMP_SHADERS)
 		nir_print_shader(nir, stderr);
 
 	return nir;
@@ -381,8 +380,7 @@ radv_shader_variant_create(struct radv_device *device,
 			   struct radv_pipeline_layout *layout,
 			   const struct ac_shader_variant_key *key,
 			   void **code_out,
-			   unsigned *code_size_out,
-			   bool dump)
+			   unsigned *code_size_out)
 {
 	struct radv_shader_variant *variant = calloc(1, sizeof(struct radv_shader_variant));
 	enum radeon_family chip_family = device->physical_device->rad_info.family;
@@ -407,7 +405,8 @@ radv_shader_variant_create(struct radv_device *device,
 		tm_options |= AC_TM_SISCHED;
 	tm = ac_create_target_machine(chip_family, tm_options);
 	ac_compile_nir_shader(tm, &binary, &variant->config,
-			      &variant->info, shader, &options, dump);
+			      &variant->info, shader, &options,
+			      device->debug_flags & RADV_DEBUG_DUMP_SHADERS);
 	LLVMDisposeTargetMachine(tm);
 
 	radv_fill_shader_variant(device, variant, &binary, shader->stage);
@@ -429,7 +428,7 @@ radv_shader_variant_create(struct radv_device *device,
 struct radv_shader_variant *
 radv_create_gs_copy_shader(struct radv_device *device, struct nir_shader *nir,
 			   void **code_out, unsigned *code_size_out,
-			   bool dump_shader, bool multiview)
+			   bool multiview)
 {
 	struct radv_shader_variant *variant = calloc(1, sizeof(struct radv_shader_variant));
 	enum radeon_family chip_family = device->physical_device->rad_info.family;
@@ -448,7 +447,9 @@ radv_create_gs_copy_shader(struct radv_device *device, struct nir_shader *nir,
 	if (device->instance->perftest_flags & RADV_PERFTEST_SISCHED)
 		tm_options |= AC_TM_SISCHED;
 	tm = ac_create_target_machine(chip_family, tm_options);
-	ac_create_gs_copy_shader(tm, nir, &binary, &variant->config, &variant->info, &options, dump_shader);
+	ac_create_gs_copy_shader(tm, nir, &binary, &variant->config,
+				 &variant->info, &options,
+				 device->debug_flags & RADV_DEBUG_DUMP_SHADERS);
 	LLVMDisposeTargetMachine(tm);
 
 	radv_fill_shader_variant(device, variant, &binary, MESA_SHADER_VERTEX);

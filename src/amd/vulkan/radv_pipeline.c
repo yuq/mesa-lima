@@ -166,7 +166,6 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 	nir_shader *nir;
 	void *code = NULL;
 	unsigned code_size = 0;
-	bool dump = (pipeline->device->debug_flags & RADV_DEBUG_DUMP_SHADERS);
 
 	if (module->nir)
 		_mesa_sha1_compute(module->nir->info.name,
@@ -196,14 +195,14 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 
 	nir = radv_shader_compile_to_nir(pipeline->device,
 				         module, entrypoint, stage,
-					 spec_info, dump);
+					 spec_info);
 	if (nir == NULL)
 		return NULL;
 
 	if (!variant) {
 		variant = radv_shader_variant_create(pipeline->device, nir,
 						     layout, key, &code,
-						     &code_size, dump);
+						     &code_size);
 	}
 
 	if (stage == MESA_SHADER_GEOMETRY && !pipeline->gs_copy_shader) {
@@ -211,7 +210,7 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 		unsigned gs_copy_code_size = 0;
 		pipeline->gs_copy_shader = radv_create_gs_copy_shader(
 			pipeline->device, nir, &gs_copy_code,
-			&gs_copy_code_size, dump, key->has_multiview_view_index);
+			&gs_copy_code_size, key->has_multiview_view_index);
 
 		if (pipeline->gs_copy_shader) {
 			pipeline->gs_copy_shader =
@@ -278,7 +277,6 @@ radv_tess_pipeline_compile(struct radv_pipeline *pipeline,
 	unsigned tes_code_size = 0, tcs_code_size = 0;
 	struct ac_shader_variant_key tes_key;
 	struct ac_shader_variant_key tcs_key;
-	bool dump = (pipeline->device->debug_flags & RADV_DEBUG_DUMP_SHADERS);
 
 	tes_key = radv_compute_tes_key(radv_pipeline_has_gs(pipeline),
 				       pipeline->shaders[MESA_SHADER_FRAGMENT]->info.fs.prim_id_input);
@@ -316,13 +314,13 @@ radv_tess_pipeline_compile(struct radv_pipeline *pipeline,
 
 	tes_nir = radv_shader_compile_to_nir(pipeline->device,
 					     tes_module, tes_entrypoint, MESA_SHADER_TESS_EVAL,
-					     tes_spec_info, dump);
+					     tes_spec_info);
 	if (tes_nir == NULL)
 		return;
 
 	tcs_nir = radv_shader_compile_to_nir(pipeline->device,
 					     tcs_module, tcs_entrypoint, MESA_SHADER_TESS_CTRL,
-					     tcs_spec_info, dump);
+					     tcs_spec_info);
 	if (tcs_nir == NULL)
 		return;
 
@@ -331,7 +329,7 @@ radv_tess_pipeline_compile(struct radv_pipeline *pipeline,
 
 	tes_variant = radv_shader_variant_create(pipeline->device, tes_nir,
 						 layout, &tes_key, &tes_code,
-						 &tes_code_size, dump);
+						 &tes_code_size);
 
 	tcs_key = radv_compute_tcs_key(tes_nir->info.tess.primitive_mode, input_vertices);
 	if (tcs_module->nir)
@@ -343,7 +341,7 @@ radv_tess_pipeline_compile(struct radv_pipeline *pipeline,
 
 	tcs_variant = radv_shader_variant_create(pipeline->device, tcs_nir,
 						 layout, &tcs_key, &tcs_code,
-						 &tcs_code_size, dump);
+						 &tcs_code_size);
 
 	if (!tes_module->nir)
 		ralloc_free(tes_nir);
