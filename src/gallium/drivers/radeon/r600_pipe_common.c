@@ -453,8 +453,11 @@ static void r600_flush_from_st(struct pipe_context *ctx,
 	if (fence) {
 		struct r600_multi_fence *multi_fence =
 			CALLOC_STRUCT(r600_multi_fence);
-		if (!multi_fence)
-			return;
+		if (!multi_fence) {
+			ws->fence_reference(&sdma_fence, NULL);
+			ws->fence_reference(&gfx_fence, NULL);
+			goto finish;
+		}
 
 		multi_fence->reference.count = 1;
 		/* If both fences are NULL, fence_finish will always return true. */
@@ -469,7 +472,7 @@ static void r600_flush_from_st(struct pipe_context *ctx,
 		screen->fence_reference(screen, fence, NULL);
 		*fence = (struct pipe_fence_handle*)multi_fence;
 	}
-
+finish:
 	if (!(flags & PIPE_FLUSH_DEFERRED)) {
 		if (rctx->dma.cs)
 			ws->cs_sync_flush(rctx->dma.cs);
