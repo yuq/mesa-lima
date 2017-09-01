@@ -679,11 +679,8 @@ TEST_P(validation_test, two_src_two_dst_source_offsets_must_be_same)
    EXPECT_TRUE(validate(p));
 }
 
-#if 0
 TEST_P(validation_test, two_src_two_dst_each_dst_must_be_derived_from_one_src)
 {
-   // mov (16) r10.0<2>:w r12.4<4;4,1>:w
-
    brw_MOV(p, g0, g0);
    brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_16);
    brw_inst_set_dst_file_type(&devinfo, last_inst, BRW_GENERAL_REGISTER_FILE, BRW_REGISTER_TYPE_W);
@@ -692,23 +689,29 @@ TEST_P(validation_test, two_src_two_dst_each_dst_must_be_derived_from_one_src)
    brw_inst_set_src0_da1_subreg_nr(&devinfo, last_inst, 8);
    brw_inst_set_src0_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_4);
    brw_inst_set_src0_width(&devinfo, last_inst, BRW_WIDTH_4);
-   brw_inst_set_src0_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_4);
+   brw_inst_set_src0_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
 
-   EXPECT_FALSE(validate(p));
+   if (devinfo.gen <= 7) {
+      EXPECT_FALSE(validate(p));
+   } else {
+      EXPECT_TRUE(validate(p));
+   }
 
    clear_instructions(p);
 
-#if 0
-   brw_ADD(p, g0, g0, g0);
-   brw_inst_set_src1_da1_subreg_nr(&devinfo, last_inst, 16);
-   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_4);
-   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_4);
-   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
+   brw_MOV(p, g0, g0);
+   brw_inst_set_dst_da1_subreg_nr(&devinfo, last_inst, 16);
+   brw_inst_set_src0_da1_subreg_nr(&devinfo, last_inst, 8);
+   brw_inst_set_src0_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_2);
+   brw_inst_set_src0_width(&devinfo, last_inst, BRW_WIDTH_2);
+   brw_inst_set_src0_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
 
-   EXPECT_FALSE(validate(p));
-   #endif
+   if (devinfo.gen <= 7) {
+      EXPECT_FALSE(validate(p));
+   } else {
+      EXPECT_TRUE(validate(p));
+   }
 }
-#endif
 
 TEST_P(validation_test, one_src_two_dst)
 {
