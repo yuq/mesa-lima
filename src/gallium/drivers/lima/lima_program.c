@@ -23,6 +23,7 @@
  */
 
 #include "util/u_memory.h"
+#include "util/ralloc.h"
 #include "tgsi/tgsi_dump.h"
 #include "compiler/nir/nir.h"
 #include "nir/tgsi_to_nir.h"
@@ -142,7 +143,7 @@ static void *
 lima_create_vs_state(struct pipe_context *pctx,
                      const struct pipe_shader_state *cso)
 {
-   struct lima_vs_shader_state *so = CALLOC_STRUCT(lima_vs_shader_state);
+   struct lima_vs_shader_state *so = rzalloc(NULL, struct lima_vs_shader_state);
 
    if (!so)
       return NULL;
@@ -154,7 +155,17 @@ lima_create_vs_state(struct pipe_context *pctx,
    nir_shader *nir = cso->ir.nir;
    lima_program_optimize_nir(nir);
    nir_print_shader(nir, stdout);
-   gpir_compile_nir(nir);
+
+   gpir_prog *prog = gpir_compile_nir(so, nir);
+   if (!prog) {
+      ralloc_free(so);
+      return NULL;
+   }
+
+   so->shader = prog->prog;
+   so->shader_size = prog->prog_size;
+   so->constant = prog->constants;
+   so->constant_size = prog->num_constant * sizeof(union fi);
 
 /*
   uniform.load(2), acc[1].pass(uniform.x);
@@ -206,7 +217,7 @@ lima_delete_vs_state(struct pipe_context *pctx, void *hwcso)
 {
    struct lima_vs_shader_state *so = hwcso;
 
-   FREE(so);
+   ralloc_free(so);
 }
 
 void
