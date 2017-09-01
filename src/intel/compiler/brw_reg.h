@@ -590,6 +590,14 @@ brw_imm_df(double df)
 }
 
 static inline struct brw_reg
+brw_imm_u64(uint64_t u64)
+{
+   struct brw_reg imm = brw_imm_reg(BRW_REGISTER_TYPE_UQ);
+   imm.u64 = u64;
+   return imm;
+}
+
+static inline struct brw_reg
 brw_imm_f(float f)
 {
    struct brw_reg imm = brw_imm_reg(BRW_REGISTER_TYPE_F);
