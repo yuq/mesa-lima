@@ -425,8 +425,14 @@ shader_variant_create(struct radv_device *device,
 	free(binary.rodata);
 	free(binary.global_symbol_offsets);
 	free(binary.relocs);
-	free(binary.disasm_string);
 	variant->ref_count = 1;
+
+	if (device->trace_bo) {
+		variant->disasm_string = binary.disasm_string;
+	} else {
+		free(binary.disasm_string);
+	}
+
 	return variant;
 }
 
@@ -477,6 +483,7 @@ radv_shader_variant_destroy(struct radv_device *device,
 	list_del(&variant->slab_list);
 	mtx_unlock(&device->shader_slab_mutex);
 
+	free(variant->disasm_string);
 	free(variant);
 }
 

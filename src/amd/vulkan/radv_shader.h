@@ -49,6 +49,7 @@ struct radv_shader_variant {
 	struct ac_shader_variant_info info;
 	unsigned rsrc1;
 	unsigned rsrc2;
+	char *disasm_string; /* debug only */
 
 	struct list_head slab_list;
 };
