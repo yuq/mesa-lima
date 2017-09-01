@@ -49,7 +49,7 @@ bool
 radv_init_trace(struct radv_device *device);
 
 void
-radv_dump_trace(struct radv_device *device, struct radeon_winsys_cs *cs);
+radv_check_gpu_hangs(struct radv_queue *queue, struct radeon_winsys_cs *cs);
 
 void
 radv_print_spirv(struct radv_shader_module *module, FILE *fp);

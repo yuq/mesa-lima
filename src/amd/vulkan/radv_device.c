@@ -2129,16 +2129,7 @@ VkResult radv_QueueSubmit(
 			}
 			fence_emitted = true;
 			if (queue->device->trace_bo) {
-				bool success = queue->device->ws->ctx_wait_idle(
-							queue->hw_ctx,
-							radv_queue_family_to_ring(
-								queue->queue_family_index),
-							queue->queue_idx);
-
-				if (!success) { /* Hang */
-					radv_dump_trace(queue->device, cs_array[j]);
-					abort();
-				}
+				radv_check_gpu_hangs(queue, cs_array[j]);
 			}
 		}
 

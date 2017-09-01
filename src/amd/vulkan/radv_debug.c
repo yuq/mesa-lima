@@ -47,7 +47,7 @@ radv_init_trace(struct radv_device *device)
 	return true;
 }
 
-void
+static void
 radv_dump_trace(struct radv_device *device, struct radeon_winsys_cs *cs)
 {
 	const char *filename = getenv("RADV_TRACE_FILE");
@@ -61,6 +61,30 @@ radv_dump_trace(struct radv_device *device, struct radeon_winsys_cs *cs)
 	fprintf(f, "Trace ID: %x\n", *device->trace_id_ptr);
 	device->ws->cs_dump(cs, f, (const int*)device->trace_id_ptr, 2);
 	fclose(f);
+}
+
+static bool
+radv_gpu_hang_occured(struct radv_queue *queue)
+{
+	struct radeon_winsys *ws = queue->device->ws;
+	enum ring_type ring;
+
+	ring = radv_queue_family_to_ring(queue->queue_family_index);
+
+	if (!ws->ctx_wait_idle(queue->hw_ctx, ring, queue->queue_idx))
+		return true;
+
+	return false;
+}
+
+void
+radv_check_gpu_hangs(struct radv_queue *queue, struct radeon_winsys_cs *cs)
+{
+	if (!radv_gpu_hang_occured(queue))
+		return;
+
+	radv_dump_trace(queue->device, cs);
+	abort();
 }
 
 void
