@@ -255,6 +255,7 @@ typedef struct {
 typedef struct gpir_prog {
    void *prog;
    unsigned prog_size;
+   int prefetch;
 
    union fi *constants;
    int num_constant;
@@ -320,5 +321,6 @@ void gpir_instr_print_prog(gpir_compiler *comp);
 
 void gpir_lower_prog(gpir_compiler *comp);
 bool gpir_schedule_prog(gpir_compiler *comp);
+bool gpir_codegen_prog(gpir_compiler *comp);
 
 #endif
