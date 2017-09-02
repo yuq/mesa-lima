@@ -115,8 +115,7 @@ add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
          return index;
    }
 
-   if (bo != batch->bo)
-      brw_bo_reference(bo);
+   brw_bo_reference(bo);
 
    if (batch->exec_count == batch->exec_array_size) {
       batch->exec_array_size *= 2;
@@ -199,9 +198,7 @@ intel_batchbuffer_reset_to_saved(struct brw_context *brw)
 {
    for (int i = brw->batch.saved.exec_count;
         i < brw->batch.exec_count; i++) {
-      if (brw->batch.exec_bos[i] != brw->batch.bo) {
-         brw_bo_unreference(brw->batch.exec_bos[i]);
-      }
+      brw_bo_unreference(brw->batch.exec_bos[i]);
    }
    brw->batch.reloc_count = brw->batch.saved.reloc_count;
    brw->batch.exec_count = brw->batch.saved.exec_count;
@@ -217,9 +214,7 @@ intel_batchbuffer_free(struct intel_batchbuffer *batch)
    free(batch->cpu_map);
 
    for (int i = 0; i < batch->exec_count; i++) {
-      if (batch->exec_bos[i] != batch->bo) {
-         brw_bo_unreference(batch->exec_bos[i]);
-      }
+      brw_bo_unreference(batch->exec_bos[i]);
    }
    free(batch->relocs);
    free(batch->exec_bos);
@@ -449,9 +444,7 @@ brw_new_batch(struct brw_context *brw)
 {
    /* Unreference any BOs held by the previous batch, and reset counts. */
    for (int i = 0; i < brw->batch.exec_count; i++) {
-      if (brw->batch.exec_bos[i] != brw->batch.bo) {
-         brw_bo_unreference(brw->batch.exec_bos[i]);
-      }
+      brw_bo_unreference(brw->batch.exec_bos[i]);
       brw->batch.exec_bos[i] = NULL;
    }
    brw->batch.reloc_count = 0;
