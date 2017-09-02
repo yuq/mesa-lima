@@ -432,3 +432,18 @@ bool gpir_codegen_prog(gpir_compiler *comp)
    comp->prog->prog_size = num_instr * sizeof(gpir_codegen_instr);
    return true;
 }
+
+void gpir_codegen_print_prog(gpir_compiler *comp)
+{
+   uint32_t *data = comp->prog->prog;
+   int size = comp->prog->prog_size;
+   int num_instr = size / sizeof(gpir_codegen_instr);
+   int num_dword_per_instr = sizeof(gpir_codegen_instr) / sizeof(uint32_t);
+
+   for (int i = 0; i < num_instr; i++) {
+      printf("%03d: ", i);
+      for (int j = 0; j < num_dword_per_instr; j++)
+         printf("%08x ", data[i * num_dword_per_instr + j]);
+      printf("\n");
+   }
+}
