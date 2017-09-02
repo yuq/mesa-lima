@@ -2423,8 +2423,17 @@ fs_visitor::opt_algebraic()
             progress = true;
          } else if (inst->src[1].file == IMM) {
             inst->opcode = BRW_OPCODE_MOV;
-            inst->src[0] = component(inst->src[0],
-                                     inst->src[1].ud);
+            /* It's possible that the selected component will be too large and
+             * overflow the register.  This can happen if someone does a
+             * readInvocation() from GLSL or SPIR-V and provides an OOB
+             * invocationIndex.  If this happens and we some how manage
+             * to constant fold it in and get here, then component() may cause
+             * us to start reading outside of the VGRF which will lead to an
+             * assert later.  Instead, just let it wrap around if it goes over
+             * exec_size.
+             */
+            const unsigned comp = inst->src[1].ud & (inst->exec_size - 1);
+            inst->src[0] = component(inst->src[0], comp);
             inst->sources = 1;
             inst->force_writemask_all = true;
             progress = true;
