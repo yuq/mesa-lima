@@ -635,6 +635,8 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    /* Lower a bunch of stuff */
    OPT(nir_lower_var_copies);
 
+   OPT(nir_lower_system_values);
+
    OPT(nir_lower_clip_cull_distance_arrays);
 
    nir_variable_mode indirect_mask = 0;
