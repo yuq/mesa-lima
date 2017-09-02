@@ -26,6 +26,7 @@
 
 #include "util/ralloc.h"
 #include "gpir.h"
+#include "lima_context.h"
 
 static void gpir_lower_const(gpir_compiler *comp)
 {
@@ -38,8 +39,9 @@ static void gpir_lower_const(gpir_compiler *comp)
    }
 
    if (num_constant) {
-      comp->prog->constants = ralloc_array(comp->prog, union fi, num_constant);
-      comp->prog->num_constant = num_constant;
+      union fi *constant = ralloc_array(comp->prog, union fi, num_constant);
+      comp->prog->constant = constant;
+      comp->prog->constant_size = num_constant * sizeof(union fi);
 
       int index = 0;
       list_for_each_entry(gpir_block, block, &comp->block_list, list) {
@@ -51,7 +53,7 @@ static void gpir_lower_const(gpir_compiler *comp)
                   gpir_load_node *load = gpir_node_create(comp, gpir_op_load_uniform, -1);
                   load->index = comp->constant_base + (index >> 2);
                   load->component = index % 4;
-                  comp->prog->constants[index++] = c->value;
+                  constant[index++] = c->value;
                   gpir_node_replace_succ(&load->node, node);
                   list_addtail(&load->node.list, &block->node_list);
 

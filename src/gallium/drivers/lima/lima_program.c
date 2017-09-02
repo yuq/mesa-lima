@@ -32,7 +32,7 @@
 
 #include "lima_context.h"
 #include "lima_program.h"
-#include "ir/gp/gpir.h"
+#include "ir/gp/nir.h"
 
 
 static const nir_shader_compiler_options vs_nir_options = {
@@ -156,17 +156,10 @@ lima_create_vs_state(struct pipe_context *pctx,
    lima_program_optimize_nir(nir);
    nir_print_shader(nir, stdout);
 
-   gpir_prog *prog = gpir_compile_nir(so, nir);
-   if (!prog) {
+   if (!gpir_compile_nir(so, nir)) {
       ralloc_free(so);
       return NULL;
    }
-
-   so->shader = prog->prog;
-   so->shader_size = prog->prog_size;
-   so->prefetch = prog->prefetch;
-   so->constant = prog->constants;
-   so->constant_size = prog->num_constant * sizeof(union fi);
 
    return so;
 }
