@@ -414,7 +414,7 @@ static const struct debug_control radv_debug_options[] = {
 };
 
 static const struct debug_control radv_perftest_options[] = {
-	{"batchchain", RADV_PERFTEST_BATCHCHAIN},
+	{"nobatchchain", RADV_PERFTEST_NO_BATCHCHAIN},
 	{"sisched", RADV_PERFTEST_SISCHED},
 	{NULL, 0}
 };

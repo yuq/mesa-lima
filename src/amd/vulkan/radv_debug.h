@@ -41,7 +41,7 @@ enum {
 };
 
 enum {
-	RADV_PERFTEST_BATCHCHAIN     =   0x1,
+	RADV_PERFTEST_NO_BATCHCHAIN  =   0x1,
 	RADV_PERFTEST_SISCHED        =   0x2,
 };
 
