@@ -231,9 +231,12 @@ typedef struct {
    bool mem_is_temp;
    int mem_index;
 
-   bool store_is_used[2];
-   bool store_is_temp;
-   bool store_is_reg[2];
+   enum {
+      GPIR_INSTR_STORE_NONE,
+      GPIR_INSTR_STORE_VARYING,
+      GPIR_INSTR_STORE_REG,
+      GPIR_INSTR_STORE_TEMP,
+   } store_content[2];
    int store_index[2];
 } gpir_instr;
 
