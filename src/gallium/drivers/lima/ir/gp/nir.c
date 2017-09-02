@@ -346,6 +346,7 @@ gpir_prog *gpir_compile_nir(void *mem_ctx, nir_shader *nir)
    gpir_schedule_prog(comp);
    gpir_instr_print_prog(comp);
    gpir_codegen_prog(comp);
+   gpir_codegen_print_prog(comp);
 
    gpir_compiler_delete(comp);
    return prog;
