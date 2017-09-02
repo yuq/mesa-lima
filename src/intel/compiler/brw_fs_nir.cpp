@@ -4307,15 +4307,13 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       bld.exec_all().emit(SHADER_OPCODE_BROADCAST, tmp, value,
                           bld.emit_uniformize(invocation));
 
-      bld.MOV(retype(dest, BRW_REGISTER_TYPE_D),
-              fs_reg(component(tmp, 0)));
+      bld.MOV(retype(dest, value.type), fs_reg(component(tmp, 0)));
       break;
    }
 
    case nir_intrinsic_read_first_invocation: {
       const fs_reg value = get_nir_src(instr->src[0]);
-      bld.MOV(retype(dest, BRW_REGISTER_TYPE_D),
-              bld.emit_uniformize(value));
+      bld.MOV(retype(dest, value.type), bld.emit_uniformize(value));
       break;
    }
 
