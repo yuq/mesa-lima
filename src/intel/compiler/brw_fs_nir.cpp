@@ -4305,7 +4305,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       fs_reg tmp = bld.vgrf(value.type);
 
       bld.exec_all().emit(SHADER_OPCODE_BROADCAST, tmp, value,
-                          component(invocation, 0));
+                          bld.emit_uniformize(invocation));
 
       bld.MOV(retype(dest, BRW_REGISTER_TYPE_D),
               fs_reg(component(tmp, 0)));
