@@ -4199,12 +4199,18 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
        * dead channels from affecting the result, we initialize the flag with
        * with the identity value for the logical operation.
        */
-      ubld.MOV(brw_flag_reg(0, 0), brw_imm_uw(0));
+      if (dispatch_width == 32) {
+         /* For SIMD32, we use a UD type so we fill both f0.0 and f0.1. */
+         ubld.MOV(retype(brw_flag_reg(0, 0), BRW_REGISTER_TYPE_UD),
+                         brw_imm_ud(0));
+      } else {
+         ubld.MOV(brw_flag_reg(0, 0), brw_imm_uw(0));
+      }
       bld.CMP(bld.null_reg_d(), get_nir_src(instr->src[0]), brw_imm_d(0), BRW_CONDITIONAL_NZ);
       bld.MOV(dest, brw_imm_d(-1));
-      set_predicate(dispatch_width == 8 ?
-                    BRW_PREDICATE_ALIGN1_ANY8H :
-                    BRW_PREDICATE_ALIGN1_ANY16H,
+      set_predicate(dispatch_width == 8  ? BRW_PREDICATE_ALIGN1_ANY8H :
+                    dispatch_width == 16 ? BRW_PREDICATE_ALIGN1_ANY16H :
+                                           BRW_PREDICATE_ALIGN1_ANY32H,
                     bld.SEL(dest, dest, brw_imm_d(0)));
       break;
    }
@@ -4215,12 +4221,18 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
        * dead channels from affecting the result, we initialize the flag with
        * with the identity value for the logical operation.
        */
-      ubld.MOV(brw_flag_reg(0, 0), brw_imm_uw(0xffff));
+      if (dispatch_width == 32) {
+         /* For SIMD32, we use a UD type so we fill both f0.0 and f0.1. */
+         ubld.MOV(retype(brw_flag_reg(0, 0), BRW_REGISTER_TYPE_UD),
+                         brw_imm_ud(0xffffffff));
+      } else {
+         ubld.MOV(brw_flag_reg(0, 0), brw_imm_uw(0xffff));
+      }
       bld.CMP(bld.null_reg_d(), get_nir_src(instr->src[0]), brw_imm_d(0), BRW_CONDITIONAL_NZ);
       bld.MOV(dest, brw_imm_d(-1));
-      set_predicate(dispatch_width == 8 ?
-                    BRW_PREDICATE_ALIGN1_ALL8H :
-                    BRW_PREDICATE_ALIGN1_ALL16H,
+      set_predicate(dispatch_width == 8  ? BRW_PREDICATE_ALIGN1_ALL8H :
+                    dispatch_width == 16 ? BRW_PREDICATE_ALIGN1_ALL16H :
+                                           BRW_PREDICATE_ALIGN1_ALL32H,
                     bld.SEL(dest, dest, brw_imm_d(0)));
       break;
    }
@@ -4233,12 +4245,18 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
        * dead channels from affecting the result, we initialize the flag with
        * with the identity value for the logical operation.
        */
-      ubld.MOV(brw_flag_reg(0, 0), brw_imm_uw(0xffff));
+      if (dispatch_width == 32) {
+         /* For SIMD32, we use a UD type so we fill both f0.0 and f0.1. */
+         ubld.MOV(retype(brw_flag_reg(0, 0), BRW_REGISTER_TYPE_UD),
+                         brw_imm_ud(0xffffffff));
+      } else {
+         ubld.MOV(brw_flag_reg(0, 0), brw_imm_uw(0xffff));
+      }
       bld.CMP(bld.null_reg_d(), value, uniformized, BRW_CONDITIONAL_Z);
       bld.MOV(dest, brw_imm_d(-1));
-      set_predicate(dispatch_width == 8 ?
-                    BRW_PREDICATE_ALIGN1_ALL8H :
-                    BRW_PREDICATE_ALIGN1_ALL16H,
+      set_predicate(dispatch_width == 8  ? BRW_PREDICATE_ALIGN1_ALL8H :
+                    dispatch_width == 16 ? BRW_PREDICATE_ALIGN1_ALL16H :
+                                           BRW_PREDICATE_ALIGN1_ALL32H,
                     bld.SEL(dest, dest, brw_imm_d(0)));
       break;
    }
