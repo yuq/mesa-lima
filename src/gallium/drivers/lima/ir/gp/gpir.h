@@ -255,14 +255,7 @@ typedef struct {
    gpir_block *dest;
 } gpir_branch_node;
 
-typedef struct gpir_prog {
-   void *prog;
-   unsigned prog_size;
-   int prefetch;
-
-   union fi *constants;
-   int num_constant;
-} gpir_prog;
+struct lima_vs_shader_state;
 
 typedef struct gpir_compiler {
    struct list_head block_list;
@@ -272,13 +265,9 @@ typedef struct gpir_compiler {
    gpir_node **var_nodes;
    unsigned reg_base;
 
-   gpir_prog *prog;
+   struct lima_vs_shader_state *prog;
    int constant_base;
 } gpir_compiler;
-
-typedef struct nir_shader nir_shader;
-
-gpir_prog *gpir_compile_nir(void *mem_ctx, nir_shader *nir);
 
 void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index);
 void gpir_node_add_child(gpir_node *parent, gpir_node *child);

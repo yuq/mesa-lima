@@ -32,7 +32,8 @@
 #include "mesa/state_tracker/st_glsl_types.h"
 
 #include "lima_program.h"
-#include "ir/gp/gpir.h"
+#include "lima_context.h"
+#include "ir/gp/nir.h"
 
 static void
 print_usage(void)
@@ -219,10 +220,8 @@ main(int argc, char **argv)
 
    nir_print_shader(nir, stdout);
 
-   gpir_prog *gpir = gpir_compile_nir(nir, nir);
-   if (gpir) {
-      printf("convert to gpir\n");
-   }
+   struct lima_vs_shader_state *vs = ralloc(nir, struct lima_vs_shader_state);
+   gpir_compile_nir(vs, nir);
 
    ralloc_free(nir);
    return 0;
