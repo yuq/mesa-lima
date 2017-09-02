@@ -89,6 +89,8 @@ brw_create_nir(struct brw_context *brw,
 
    nir = brw_preprocess_nir(brw->screen->compiler, nir);
 
+   NIR_PASS_V(nir, nir_lower_system_values);
+
    if (stage == MESA_SHADER_FRAGMENT) {
       static const struct nir_lower_wpos_ytransform_options wpos_options = {
          .state_tokens = {STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM, 0, 0, 0},
@@ -104,7 +106,6 @@ brw_create_nir(struct brw_context *brw,
       }
    }
 
-   NIR_PASS_V(nir, nir_lower_system_values);
    NIR_PASS_V(nir, brw_nir_lower_uniforms, is_scalar);
 
    return nir;
