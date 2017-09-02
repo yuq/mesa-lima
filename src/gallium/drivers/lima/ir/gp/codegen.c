@@ -28,6 +28,7 @@
 
 #include "gpir.h"
 #include "codegen.h"
+#include "lima_context.h"
 
 static gpir_codegen_src gpir_get_alu_input(gpir_node *parent, gpir_node *child)
 {
@@ -428,15 +429,15 @@ bool gpir_codegen_prog(gpir_compiler *comp)
          comp->prog->prefetch = i;
    }
 
-   comp->prog->prog = code;
-   comp->prog->prog_size = num_instr * sizeof(gpir_codegen_instr);
+   comp->prog->shader = code;
+   comp->prog->shader_size = num_instr * sizeof(gpir_codegen_instr);
    return true;
 }
 
 void gpir_codegen_print_prog(gpir_compiler *comp)
 {
-   uint32_t *data = comp->prog->prog;
-   int size = comp->prog->prog_size;
+   uint32_t *data = comp->prog->shader;
+   int size = comp->prog->shader_size;
    int num_instr = size / sizeof(gpir_codegen_instr);
    int num_dword_per_instr = sizeof(gpir_codegen_instr) / sizeof(uint32_t);
 
