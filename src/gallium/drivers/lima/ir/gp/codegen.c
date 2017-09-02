@@ -365,13 +365,21 @@ static void gpir_codegen_store_slot(gpir_codegen_instr *code, gpir_instr *instr)
    else
       code->store1_src_w = gpir_codegen_store_src_none;
 
-   if (instr->store_is_used[0]) {
-      code->store0_varying = true;
+   if (instr->store_content[0] == GPIR_INSTR_STORE_TEMP) {
+      code->store0_temporary = true;
+      code->unknown_1 = 12;
+   }
+   else {
+      code->store0_varying = instr->store_content[0] == GPIR_INSTR_STORE_VARYING;
       code->store0_addr = instr->store_index[0];
    }
 
-   if (instr->store_is_used[1]) {
-      code->store1_varying = true;
+   if (instr->store_content[1] == GPIR_INSTR_STORE_TEMP) {
+      code->store1_temporary = true;
+      code->unknown_1 = 12;
+   }
+   else {
+      code->store1_varying = instr->store_content[1] == GPIR_INSTR_STORE_VARYING;
       code->store1_addr = instr->store_index[1];
    }
 }
