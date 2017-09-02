@@ -108,36 +108,43 @@ static bool gpir_instr_insert_store_check(gpir_instr *instr, gpir_node *node)
    if (store->component != i)
       return false;
 
-   if (instr->store_is_temp && node->op != gpir_op_store_temp)
-      return false;
-
    i >>= 1;
-   if (instr->store_is_reg[i] && node->op != gpir_op_store_reg)
-      return false;
+   switch (instr->store_content[i]) {
+   case GPIR_INSTR_STORE_NONE:
+      /* store temp has only one address reg for two store unit */
+      if (node->op == gpir_op_store_temp &&
+          instr->store_content[!i] == GPIR_INSTR_STORE_TEMP &&
+          instr->store_index[!i] != store->index)
+         return false;
 
-   if (node->op == gpir_op_store_temp) {
-      bool is_used = instr->store_is_used[0] | instr->store_is_used[1];
-
-      if (is_used) {
-         int index = instr->store_is_used[0] ?
-            instr->store_index[0] : instr->store_index[1];
-         if (store->index != index)
-            return false;
-      }
+      if (node->op == gpir_op_store_varying)
+         instr->store_content[i] = GPIR_INSTR_STORE_VARYING;
+      else if (node->op == gpir_op_store_reg)
+         instr->store_content[i] = GPIR_INSTR_STORE_REG;
       else
-         instr->store_is_temp = true;
-   }
-   else {
-      if (instr->store_is_used[i]) {
-         if (store->index != instr->store_index[i])
-            return false;
-      }
-      else
-         instr->store_is_reg[i] = node->op == gpir_op_store_reg;
-   }
+         instr->store_content[i] = GPIR_INSTR_STORE_TEMP;
 
-   instr->store_is_used[i] = true;
-   instr->store_index[i] = store->index;
+      instr->store_index[i] = store->index;
+      break;
+
+   case GPIR_INSTR_STORE_VARYING:
+      if (node->op != gpir_op_store_varying ||
+          instr->store_index[i] != store->index)
+         return false;
+      break;
+
+   case GPIR_INSTR_STORE_REG:
+      if (node->op != gpir_op_store_reg ||
+          instr->store_index[i] != store->index)
+         return false;
+      break;
+
+   case GPIR_INSTR_STORE_TEMP:
+      if (node->op != gpir_op_store_temp ||
+          instr->store_index[i] != store->index)
+         return false;
+      break;
+   }
 
    /* check if any store node has the same child as this node */
    for (i = GPIR_INSTR_SLOT_STORE0; i <= GPIR_INSTR_SLOT_STORE3; i++) {
