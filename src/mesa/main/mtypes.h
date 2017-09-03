@@ -990,8 +990,8 @@ struct gl_sampler_object
    GLboolean CubeMapSeamless;   /**< GL_AMD_seamless_cubemap_per_texture */
 
    /** GL_ARB_bindless_texture */
-   struct util_dynarray Handles;
    bool HandleAllocated;
+   struct util_dynarray Handles;
 };
 
 
