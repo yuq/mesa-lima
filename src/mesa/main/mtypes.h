@@ -2567,8 +2567,9 @@ struct gl_shader
    GLchar *Label;   /**< GL_KHR_debug */
    unsigned char sha1[20]; /**< SHA1 hash of pre-processed source */
    GLboolean DeletePending;
-   enum gl_compile_status CompileStatus;
    bool IsES;              /**< True if this shader uses GLSL ES */
+
+   enum gl_compile_status CompileStatus;
 
 #ifdef DEBUG
    unsigned SourceChecksum;       /**< for debug/logging purposes */
@@ -2581,13 +2582,13 @@ struct gl_shader
 
    unsigned Version;       /**< GLSL version used for linking */
 
-   struct exec_list *ir;
-   struct glsl_symbol_table *symbols;
-
    /**
     * A bitmask of gl_advanced_blend_mode values
     */
    GLbitfield BlendSupport;
+
+   struct exec_list *ir;
+   struct glsl_symbol_table *symbols;
 
    /**
     * Whether early fragment tests are enabled as defined by
