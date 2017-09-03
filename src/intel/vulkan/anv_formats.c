@@ -253,7 +253,7 @@ static const struct anv_format anv_formats[] = {
 static bool
 format_supported(VkFormat vk_format)
 {
-   if (vk_format > ARRAY_SIZE(anv_formats))
+   if (vk_format >= ARRAY_SIZE(anv_formats))
       return false;
 
    return anv_formats[vk_format].isl_format != ISL_FORMAT_UNSUPPORTED;
