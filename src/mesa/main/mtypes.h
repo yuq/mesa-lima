@@ -4342,8 +4342,8 @@ union gl_dlist_node;
 struct gl_display_list
 {
    GLuint Name;
-   GLchar *Label;     /**< GL_KHR_debug */
    GLbitfield Flags;  /**< DLIST_x flags */
+   GLchar *Label;     /**< GL_KHR_debug */
    /** The dlist commands are in a linked list of nodes */
    union gl_dlist_node *Head;
 };
@@ -4354,11 +4354,10 @@ struct gl_display_list
  */
 struct gl_dlist_state
 {
-   GLuint CallDepth;		/**< Current recursion calling depth */
-
    struct gl_display_list *CurrentList; /**< List currently being compiled */
    union gl_dlist_node *CurrentBlock; /**< Pointer to current block of nodes */
    GLuint CurrentPos;		/**< Index into current block of nodes */
+   GLuint CallDepth;		/**< Current recursion calling depth */
 
    GLvertexformat ListVtxfmt;
 
