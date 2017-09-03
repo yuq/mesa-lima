@@ -2853,9 +2853,9 @@ struct gl_shader_program_data
    struct gl_uniform_storage *UniformStorage;
 
    unsigned NumUniformBlocks;
-   struct gl_uniform_block *UniformBlocks;
-
    unsigned NumShaderStorageBlocks;
+
+   struct gl_uniform_block *UniformBlocks;
    struct gl_uniform_block *ShaderStorageBlocks;
 
    struct gl_active_atomic_buffer *AtomicBuffers;
@@ -2873,13 +2873,13 @@ struct gl_shader_program_data
     * lands we should switch to using the cache_fallback support.
     */
    bool skip_cache;
+   GLboolean Validated;
 
    /** List of all active resources after linking. */
    struct gl_program_resource *ProgramResourceList;
    unsigned NumProgramResourceList;
 
    enum gl_link_status LinkStatus;   /**< GL_LINK_STATUS */
-   GLboolean Validated;
    GLchar *InfoLog;
 
    unsigned Version;       /**< GLSL version used for linking */
