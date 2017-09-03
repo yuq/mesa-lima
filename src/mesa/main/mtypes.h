@@ -1012,7 +1012,6 @@ struct gl_texture_object
    struct gl_sampler_object Sampler;
 
    GLenum DepthMode;           /**< GL_ARB_depth_texture */
-   bool StencilSampling;       /**< Should we sample stencil instead of depth? */
 
    GLfloat Priority;           /**< in [0,1] */
    GLint BaseLevel;            /**< min mipmap level, OpenGL 1.2 */
@@ -1033,11 +1032,16 @@ struct gl_texture_object
    GLboolean Immutable;        /**< GL_ARB_texture_storage */
    GLboolean _IsFloat;         /**< GL_OES_float_texture */
    GLboolean _IsHalfFloat;     /**< GL_OES_half_float_texture */
+   bool StencilSampling;       /**< Should we sample stencil instead of depth? */
+   bool HandleAllocated;       /**< GL_ARB_bindless_texture */
 
    GLuint MinLevel;            /**< GL_ARB_texture_view */
    GLuint MinLayer;            /**< GL_ARB_texture_view */
    GLuint NumLevels;           /**< GL_ARB_texture_view */
    GLuint NumLayers;           /**< GL_ARB_texture_view */
+
+   /** GL_EXT_memory_object */
+   GLenum TextureTiling;
 
    /** Actual texture images, indexed by [cube face] and [mipmap level] */
    struct gl_texture_image *Image[MAX_FACES][MAX_TEXTURE_LEVELS];
@@ -1057,13 +1061,9 @@ struct gl_texture_object
    /** GL_ARB_shader_image_load_store */
    GLenum ImageFormatCompatibilityType;
 
-   /** GL_EXT_memory_object */
-   GLenum TextureTiling;
-
    /** GL_ARB_bindless_texture */
    struct util_dynarray SamplerHandles;
    struct util_dynarray ImageHandles;
-   bool HandleAllocated;
 };
 
 
