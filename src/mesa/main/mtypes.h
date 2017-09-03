@@ -2000,11 +2000,11 @@ struct gl_bindless_sampler
    /** Texture unit (set by glUniform1()). */
    GLubyte unit;
 
-   /** Texture Target (TEXTURE_1D/2D/3D/etc_INDEX). */
-   gl_texture_index target;
-
    /** Whether this bindless sampler is bound to a unit. */
    GLboolean bound;
+
+   /** Texture Target (TEXTURE_1D/2D/3D/etc_INDEX). */
+   gl_texture_index target;
 
    /** Pointer to the base of the data. */
    GLvoid *data;
@@ -2018,11 +2018,11 @@ struct gl_bindless_image
    /** Image unit (set by glUniform1()). */
    GLubyte unit;
 
-   /** Access qualifier (GL_READ_WRITE, GL_READ_ONLY, GL_WRITE_ONLY) */
-   GLenum access;
-
    /** Whether this bindless image is bound to a unit. */
    GLboolean bound;
+
+   /** Access qualifier (GL_READ_WRITE, GL_READ_ONLY, GL_WRITE_ONLY) */
+   GLenum access;
 
    /** Pointer to the base of the data. */
    GLvoid *data;
