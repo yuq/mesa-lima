@@ -11,12 +11,6 @@ SUBDIRS += auxiliary/pipe-loader
 ## Gallium pipe drivers and their respective winsys'
 ##
 
-SUBDIRS += \
-	drivers/ddebug \
-	drivers/noop \
-	drivers/trace \
-	drivers/rbug
-
 ## freedreno/msm/kgsl
 if HAVE_GALLIUM_FREEDRENO
 SUBDIRS += drivers/freedreno winsys/freedreno/drm
@@ -188,6 +182,12 @@ endif
 
 EXTRA_DIST += \
 	include \
+	drivers/noop/SConscript \
+	drivers/rbug/README \
+	drivers/rbug/SConscript \
+	drivers/trace/trace.xsl \
+	drivers/trace/README \
+	drivers/trace/SConscript \
 	state_trackers/README \
 	state_trackers/wgl targets/libgl-gdi \
 	targets/graw-gdi targets/graw-null  targets/graw-xlib \

@@ -1,4 +1,8 @@
 include Makefile.sources
+include $(top_srcdir)/src/gallium/drivers/ddebug/Makefile.sources
+include $(top_srcdir)/src/gallium/drivers/noop/Makefile.sources
+include $(top_srcdir)/src/gallium/drivers/rbug/Makefile.sources
+include $(top_srcdir)/src/gallium/drivers/trace/Makefile.sources
 include $(top_srcdir)/src/gallium/Automake.inc
 
 noinst_LTLIBRARIES = libgallium.la
@@ -19,7 +23,11 @@ AM_CXXFLAGS = \
 libgallium_la_SOURCES = \
 	$(C_SOURCES) \
 	$(NIR_SOURCES) \
-	$(GENERATED_SOURCES)
+	$(GENERATED_SOURCES) \
+	$(DDEBUG_SOURCES) \
+	$(NOOP_SOURCES) \
+	$(RBUG_SOURCES) \
+	$(TRACE_SOURCES)
 
 if HAVE_LIBDRM
 

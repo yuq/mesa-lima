@@ -1,4 +1,4 @@
-C_SOURCES := \
-	noop_pipe.c \
-	noop_public.h \
-	noop_state.c
+NOOP_SOURCES := \
+	$(top_srcdir)/src/gallium/drivers/noop/noop_pipe.c \
+	$(top_srcdir)/src/gallium/drivers/noop/noop_public.h \
+	$(top_srcdir)/src/gallium/drivers/noop/noop_state.c
