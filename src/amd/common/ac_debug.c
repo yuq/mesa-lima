@@ -101,54 +101,69 @@ static void print_named_value(FILE *file, const char *name, uint32_t value,
 	print_value(file, value, bits);
 }
 
+static const struct si_reg *find_register(const struct si_reg *table,
+					  unsigned table_size,
+					  unsigned offset)
+{
+	for (unsigned i = 0; i < table_size; i++) {
+		const struct si_reg *reg = &table[i];
+
+		if (reg->offset == offset)
+			return reg;
+	}
+
+	return NULL;
+}
+
 void ac_dump_reg(FILE *file, enum chip_class chip_class, unsigned offset,
 		 uint32_t value, uint32_t field_mask)
 {
-	int r, f;
+	const struct si_reg *reg = NULL;
 
-	for (r = 0; r < ARRAY_SIZE(sid_reg_table); r++) {
-		const struct si_reg *reg = &sid_reg_table[r];
+	if (chip_class >= GFX9)
+		reg = find_register(gfx9d_reg_table, ARRAY_SIZE(gfx9d_reg_table), offset);
+	if (!reg)
+		reg = find_register(sid_reg_table, ARRAY_SIZE(sid_reg_table), offset);
+
+	if (reg) {
 		const char *reg_name = sid_strings + reg->name_offset;
+		bool first_field = true;
 
-		if (reg->offset == offset) {
-			bool first_field = true;
+		print_spaces(file, INDENT_PKT);
+		fprintf(file, COLOR_YELLOW "%s" COLOR_RESET " <- ",
+			reg_name);
 
-			print_spaces(file, INDENT_PKT);
-			fprintf(file, COLOR_YELLOW "%s" COLOR_RESET " <- ",
-				reg_name);
-
-			if (!reg->num_fields) {
-				print_value(file, value, 32);
-				return;
-			}
-
-			for (f = 0; f < reg->num_fields; f++) {
-				const struct si_field *field = sid_fields_table + reg->fields_offset + f;
-				const int *values_offsets = sid_strings_offsets + field->values_offset;
-				uint32_t val = (value & field->mask) >>
-					       (ffs(field->mask) - 1);
-
-				if (!(field->mask & field_mask))
-					continue;
-
-				/* Indent the field. */
-				if (!first_field)
-					print_spaces(file,
-						     INDENT_PKT + strlen(reg_name) + 4);
-
-				/* Print the field. */
-				fprintf(file, "%s = ", sid_strings + field->name_offset);
-
-				if (val < field->num_values && values_offsets[val] >= 0)
-					fprintf(file, "%s\n", sid_strings + values_offsets[val]);
-				else
-					print_value(file, val,
-						    util_bitcount(field->mask));
-
-				first_field = false;
-			}
+		if (!reg->num_fields) {
+			print_value(file, value, 32);
 			return;
 		}
+
+		for (unsigned f = 0; f < reg->num_fields; f++) {
+			const struct si_field *field = sid_fields_table + reg->fields_offset + f;
+			const int *values_offsets = sid_strings_offsets + field->values_offset;
+			uint32_t val = (value & field->mask) >>
+				       (ffs(field->mask) - 1);
+
+			if (!(field->mask & field_mask))
+				continue;
+
+			/* Indent the field. */
+			if (!first_field)
+				print_spaces(file,
+					     INDENT_PKT + strlen(reg_name) + 4);
+
+			/* Print the field. */
+			fprintf(file, "%s = ", sid_strings + field->name_offset);
+
+			if (val < field->num_values && values_offsets[val] >= 0)
+				fprintf(file, "%s\n", sid_strings + values_offsets[val]);
+			else
+				print_value(file, val,
+					    util_bitcount(field->mask));
+
+			first_field = false;
+		}
+		return;
 	}
 
 	print_spaces(file, INDENT_PKT);

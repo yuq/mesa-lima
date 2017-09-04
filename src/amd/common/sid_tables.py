@@ -27,8 +27,10 @@ CopyRight = '''
 
 import collections
 import functools
-import sys
+import itertools
+import os.path
 import re
+import sys
 
 
 class StringTable:
@@ -217,78 +219,116 @@ class Reg:
         self.name = strip_prefix(r_name)
         self.fields = []
 
+    def __eq__(self, other):
+        if not isinstance(other, Reg):
+            return False
+        return (self.r_name == other.r_name and
+                self.name == other.name and
+                len(self.fields) == len(other.fields) and
+                all(a == b for a, b in zip(self.fields, other.fields)))
+
+    def __ne__(self, other):
+        return not (self == other)
+
 
 def strip_prefix(s):
     '''Strip prefix in the form ._.*_, e.g. R_001234_'''
     return s[s[2:].find('_')+3:]
 
-def parse(filename, regs, packets):
-    stream = open(filename)
 
-    for line in stream:
-        if not line.startswith('#define '):
-            continue
+class Asic:
+    """
+    Store the registers of one ASIC class / group of classes.
+    """
+    def __init__(self, name):
+        self.name = name
+        self.registers = []
 
-        line = line[8:].strip()
+    def parse(self, filp, packets, older_asics):
+        """
+        Parse registers from the given header file. Packets are separately
+        stored in the packets array.
+        """
+        for line in filp:
+            if not line.startswith('#define '):
+                continue
 
-        if line.startswith('R_'):
-            name = line.split()[0]
+            line = line[8:].strip()
 
-            for it in regs:
-                if it.r_name == name:
-                    reg = it
-                    break
-            else:
-                reg = Reg(name)
-                regs.append(reg)
+            if line.startswith('R_'):
+                name = line.split()[0]
 
-        elif line.startswith('S_'):
-            name = line[:line.find('(')]
+                for it in self.registers:
+                    if it.r_name == name:
+                        sys.exit('Duplicate register define: %s' % (name))
+                else:
+                    reg = Reg(name)
+                    self.registers.append(reg)
 
-            for it in reg.fields:
-                if it.s_name == name:
-                    field = it
-                    break
-            else:
-                field = Field(reg, name)
-                reg.fields.append(field)
+            elif line.startswith('S_'):
+                name = line[:line.find('(')]
 
-        elif line.startswith('V_'):
-            split = line.split()
-            name = split[0]
-            value = int(split[1], 0)
+                for it in reg.fields:
+                    if it.s_name == name:
+                        sys.exit('Duplicate field define: %s' % (name))
+                else:
+                    field = Field(reg, name)
+                    reg.fields.append(field)
 
-            for (n,v) in field.values:
-                if n == name:
-                    if v != value:
-                        sys.exit('Value mismatch: name = ' + name)
+            elif line.startswith('V_'):
+                split = line.split()
+                name = split[0]
+                value = int(split[1], 0)
 
-            field.values.append((name, value))
+                for (n,v) in field.values:
+                    if n == name:
+                        sys.exit('Duplicate value define: name = ' + name)
 
-        elif line.startswith('PKT3_') and line.find('0x') != -1 and line.find('(') == -1:
-            packets.append(line.split()[0])
+                field.values.append((name, value))
 
-    # Copy fields to indexed registers which have their fields only defined
-    # at register index 0.
-    # For example, copy fields from CB_COLOR0_INFO to CB_COLORn_INFO, n > 0.
-    match_number = re.compile('[0-9]+')
-    reg_dict = dict()
+            elif line.startswith('PKT3_') and line.find('0x') != -1 and line.find('(') == -1:
+                packets.append(line.split()[0])
 
-    # Create a dict of registers with fields and '0' in their name
-    for reg in regs:
-        if len(reg.fields) and reg.name.find('0') != -1:
-            reg_dict[reg.name] = reg
+        # Copy values for corresponding fields from older ASICs if they were
+        # not redefined
+        for reg in self.registers:
+            old_reg = False
+            for field in reg.fields:
+                if len(field.values) > 0:
+                    continue
+                if old_reg is False:
+                    for old_reg in itertools.chain(
+                            *(asic.registers for asic in reversed(older_asics))):
+                        if old_reg.name == reg.name:
+                            break
+                    else:
+                        old_reg = None
+                if old_reg is not None:
+                    for old_field in old_reg.fields:
+                        if old_field.name == field.name:
+                            field.values = old_field.values
+                            break
 
-    # Assign fields
-    for reg in regs:
-        if not len(reg.fields):
-            reg0 = reg_dict.get(match_number.sub('0', reg.name))
-            if reg0 != None:
-                reg.fields = reg0.fields
+        # Copy fields to indexed registers which have their fields only defined
+        # at register index 0.
+        # For example, copy fields from CB_COLOR0_INFO to CB_COLORn_INFO, n > 0.
+        match_number = re.compile('[0-9]+')
+        reg_dict = dict()
+
+        # Create a dict of registers with fields and '0' in their name
+        for reg in self.registers:
+            if len(reg.fields) and reg.name.find('0') != -1:
+                reg_dict[reg.name] = reg
+
+        # Assign fields
+        for reg in self.registers:
+            if not len(reg.fields):
+                reg0 = reg_dict.get(match_number.sub('0', reg.name))
+                if reg0 != None:
+                    reg.fields = reg0.fields
 
 
-def write_tables(regs, packets):
-
+def write_tables(asics, packets):
     strings = StringTable()
     strings_offsets = IntTable("int")
     fields = FieldTable()
@@ -326,15 +366,25 @@ struct si_packet3 {
     print '};'
     print
 
-    print 'static const struct si_reg sid_reg_table[] = {'
-    for reg in regs:
-        if len(reg.fields):
-            print '\t{%s, %s, %s, %s},' % (strings.add(reg.name), reg.r_name,
-                len(reg.fields), fields.add(reg.fields))
-        else:
-            print '\t{%s, %s},' % (strings.add(reg.name), reg.r_name)
-    print '};'
-    print
+    regs = {}
+    for asic in asics:
+        print 'static const struct si_reg %s_reg_table[] = {' % (asic.name)
+        for reg in asic.registers:
+            # Only output a register that was changed or added relative to
+            # the previous generation
+            previous = regs.get(reg.r_name, None)
+            if previous == reg:
+                continue
+
+            if len(reg.fields):
+                print '\t{%s, %s, %s, %s},' % (strings.add(reg.name), reg.r_name,
+                    len(reg.fields), fields.add(reg.fields))
+            else:
+                print '\t{%s, %s},' % (strings.add(reg.name), reg.r_name)
+
+            regs[reg.r_name] = reg
+        print '};'
+        print
 
     fields.emit(sys.stdout, strings, strings_offsets)
 
@@ -351,11 +401,16 @@ struct si_packet3 {
 
 
 def main():
-    regs = []
+    asics = []
     packets = []
     for arg in sys.argv[1:]:
-        parse(arg, regs, packets)
-    write_tables(regs, packets)
+        basename = os.path.basename(arg)
+        m = re.match(r'(.*)\.h', basename)
+        asic = Asic(m.group(1))
+        with open(arg) as filp:
+            asic.parse(filp, packets, asics)
+        asics.append(asic)
+    write_tables(asics, packets)
 
 
 if __name__ == '__main__':
