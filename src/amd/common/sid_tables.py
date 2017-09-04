@@ -131,7 +131,6 @@ class Field:
         self.s_name = s_name
         self.name = strip_prefix(s_name)
         self.values = []
-        self.varname_values = '%s__%s__values' % (reg.r_name.lower(), self.name.lower())
 
 class Reg:
     def __init__(self, r_name):
