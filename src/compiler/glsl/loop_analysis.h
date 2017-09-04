@@ -55,7 +55,7 @@ public:
    class loop_variable *get(const ir_variable *);
    class loop_variable *insert(ir_variable *);
    class loop_variable *get_or_insert(ir_variable *, bool in_assignee);
-   class loop_terminator *insert(ir_if *);
+   class loop_terminator *insert(ir_if *, bool continue_from_then);
 
 
    /**
@@ -210,6 +210,9 @@ public:
     * terminate the loop (if that is a fixed value).  Otherwise -1.
     */
    int iterations;
+
+   /* Does the if continue from the then branch or the else branch */
+   bool continue_from_then;
 };
 
 
