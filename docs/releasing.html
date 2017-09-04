@@ -428,6 +428,7 @@ Here is one solution that I've been using.
 </p>
 
 <pre>
+	# Set MAKEFLAGS if you haven't already
 	git clean -fXd; git clean -nxd
 	read # quick cross check any outstanding files
 	export __version=`cat VERSION`
@@ -438,7 +439,7 @@ Here is one solution that I've been using.
 
 	# For the distcheck, you may want to specify which LLVM to use:
 	# export LLVM_CONFIG=/usr/lib/llvm-3.9/bin/llvm-config
-	$__mesa_root/autogen.sh &amp;&amp; make -j2 distcheck
+	$__mesa_root/autogen.sh &amp;&amp; make distcheck
 
 	# Build check the tarballs (scons, linux)
 	tar -xaf mesa-$__version.tar.xz &amp;&amp; cd mesa-$__version
@@ -466,7 +467,7 @@ Here is one solution that I've been using.
 		--enable-gbm \
 		--enable-egl \
 		--with-platforms=x11,drm,wayland,surfaceless
-	make -j2 &amp;&amp; DESTDIR=`pwd`/test make -j6 install
+	make &amp;&amp; DESTDIR=`pwd`/test make install
 	__glxinfo_cmd='glxinfo 2>&amp;1 | egrep -o "Mesa.*|Gallium.*|.*dri\.so"'
 	__glxgears_cmd='glxgears 2>&amp;1 | grep -v "configuration file"'
 	__es2info_cmd='es2_info 2>&amp;1 | egrep "GL_VERSION|GL_RENDERER|.*dri\.so"'
