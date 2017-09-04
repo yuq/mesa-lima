@@ -2611,9 +2611,18 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	 * individual generate_mipmap blits.
 	 * Note that lower mipmap levels aren't compressed.
 	 */
-	if (sctx->generate_mipmap_for_depth)
+	if (sctx->generate_mipmap_for_depth) {
 		si_make_DB_shader_coherent(sctx, 1, false,
 					   sctx->framebuffer.DB_has_shader_readable_metadata);
+	} else if (sctx->b.chip_class == GFX9) {
+		/* It appears that DB metadata "leaks" in a sequence of:
+		 *  - depth clear
+		 *  - DCC decompress for shader image writes (with DB disabled)
+		 *  - render with DEPTH_BEFORE_SHADER=1
+		 * Flushing DB metadata works around the problem.
+		 */
+		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_DB_META;
+	}
 
 	/* Take the maximum of the old and new count. If the new count is lower,
 	 * dirtying is needed to disable the unbound colorbuffers.
