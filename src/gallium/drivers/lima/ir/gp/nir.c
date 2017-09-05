@@ -221,7 +221,7 @@ static gpir_block *gpir_block_create(void)
       return NULL;
 
    list_inithead(&block->node_list);
-   util_dynarray_init(&block->instrs);
+   util_dynarray_init(&block->instrs, NULL);
 
    return block;
 }
