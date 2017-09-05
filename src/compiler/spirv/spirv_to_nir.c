@@ -239,7 +239,7 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
    }
 
    default:
-      unreachable("bad constant type");
+      vtn_fail("bad constant type");
    }
 
    return val;
@@ -267,7 +267,7 @@ vtn_ssa_value(struct vtn_builder *b, uint32_t value_id)
       return ssa;
 
    default:
-      unreachable("Invalid type for an SSA value");
+      vtn_fail("Invalid type for an SSA value");
    }
 }
 
@@ -344,7 +344,7 @@ vtn_handle_extension(struct vtn_builder *b, SpvOp opcode,
       if (strcmp((const char *)&w[2], "GLSL.std.450") == 0) {
          val->ext_handler = vtn_handle_glsl450_instruction;
       } else {
-         unreachable("Unsupported extension");
+         vtn_fail("Unsupported extension");
       }
       break;
    }
@@ -357,7 +357,7 @@ vtn_handle_extension(struct vtn_builder *b, SpvOp opcode,
    }
 
    default:
-      unreachable("Unhandled opcode");
+      vtn_fail("Unhandled opcode");
    }
 }
 
@@ -446,7 +446,7 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
          dec->scope = VTN_DEC_EXECUTION_MODE;
          break;
       default:
-         unreachable("Invalid decoration opcode");
+         vtn_fail("Invalid decoration opcode");
       }
       dec->decoration = *(w++);
       dec->literals = w;
@@ -481,7 +481,7 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
    }
 
    default:
-      unreachable("Unhandled opcode");
+      vtn_fail("Unhandled opcode");
    }
 }
 
@@ -645,7 +645,7 @@ struct_member_decoration_cb(struct vtn_builder *b,
       break;
 
    default:
-      unreachable("Unhandled decoration");
+      vtn_fail("Unhandled decoration");
    }
 }
 
@@ -756,12 +756,12 @@ type_decoration_cb(struct vtn_builder *b,
       break;
 
    default:
-      unreachable("Unhandled decoration");
+      vtn_fail("Unhandled decoration");
    }
 }
 
 static unsigned
-translate_image_format(SpvImageFormat format)
+translate_image_format(struct vtn_builder *b, SpvImageFormat format)
 {
    switch (format) {
    case SpvImageFormatUnknown:      return 0;      /* GL_NONE */
@@ -805,8 +805,7 @@ translate_image_format(SpvImageFormat format)
    case SpvImageFormatR16ui:        return 0x8234; /* GL_R16UI */
    case SpvImageFormatR8ui:         return 0x8232; /* GL_R8UI */
    default:
-      unreachable("Invalid image format");
-      return 0;
+      vtn_fail("Invalid image format");
    }
 }
 
@@ -980,7 +979,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       case SpvDimBuffer:   dim = GLSL_SAMPLER_DIM_BUF;   break;
       case SpvDimSubpassData: dim = GLSL_SAMPLER_DIM_SUBPASS; break;
       default:
-         unreachable("Invalid SPIR-V Sampler dimension");
+         vtn_fail("Invalid SPIR-V Sampler dimension");
       }
 
       bool is_shadow = w[4];
@@ -1000,10 +999,10 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
          else if (dim == GLSL_SAMPLER_DIM_SUBPASS)
             dim = GLSL_SAMPLER_DIM_SUBPASS_MS;
          else
-            unreachable("Unsupported multisampled image type");
+            vtn_fail("Unsupported multisampled image type");
       }
 
-      val->type->image_format = translate_image_format(format);
+      val->type->image_format = translate_image_format(b, format);
 
       if (sampled == 1) {
          val->type->sampled = true;
@@ -1015,7 +1014,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
          val->type->type = glsl_image_type(dim, is_array,
                                            glsl_get_base_type(sampled_type));
       } else {
-         unreachable("We need to know if the image will be sampled");
+         vtn_fail("We need to know if the image will be sampled");
       }
       break;
    }
@@ -1041,7 +1040,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
    case SpvOpTypeQueue:
    case SpvOpTypePipe:
    default:
-      unreachable("Unhandled opcode");
+      vtn_fail("Unhandled opcode");
    }
 
    vtn_foreach_decoration(b, val, type_decoration_cb, NULL);
@@ -1089,7 +1088,7 @@ vtn_null_constant(struct vtn_builder *b, const struct glsl_type *type)
       break;
 
    default:
-      unreachable("Invalid type for null constant");
+      vtn_fail("Invalid type for null constant");
    }
 
    return c;
@@ -1250,7 +1249,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
          break;
 
       default:
-         unreachable("Unsupported type for constants");
+         vtn_fail("Unsupported type for constants");
       }
       break;
    }
@@ -1386,7 +1385,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                continue;
 
             default:
-               unreachable("Invalid constant type");
+               vtn_fail("Invalid constant type");
             }
          }
 
@@ -1429,7 +1428,9 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
          bool swap;
          nir_alu_type dst_alu_type = nir_get_nir_type_for_glsl_type(val->const_type);
          nir_alu_type src_alu_type = dst_alu_type;
-         nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap, src_alu_type, dst_alu_type);
+         nir_op op = vtn_nir_alu_op_for_spirv_opcode(b, opcode, &swap,
+                                                     src_alu_type,
+                                                     dst_alu_type);
 
          unsigned num_components = glsl_get_vector_elements(val->const_type);
          unsigned bit_size =
@@ -1459,11 +1460,11 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpConstantSampler:
-      unreachable("OpConstantSampler requires Kernel Capability");
+      vtn_fail("OpConstantSampler requires Kernel Capability");
       break;
 
    default:
-      unreachable("Unhandled opcode");
+      vtn_fail("Unhandled opcode");
    }
 
    /* Now that we have the value, update the workgroup size if needed */
@@ -1547,7 +1548,7 @@ vtn_create_ssa_value(struct vtn_builder *b, const struct glsl_type *type)
             child_type = glsl_get_struct_field(type, i);
             break;
          default:
-            unreachable("unkown base type");
+            vtn_fail("unkown base type");
          }
 
          val->elems[i] = vtn_create_ssa_value(b, child_type);
@@ -1660,7 +1661,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       break;
 
    default:
-      unreachable("Unhandled opcode");
+      vtn_fail("Unhandled opcode");
    }
 
    nir_tex_src srcs[8]; /* 8 should be enough */
@@ -1699,7 +1700,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
          coord_components = 3;
          break;
       default:
-         unreachable("Invalid sampler type");
+         vtn_fail("Invalid sampler type");
       }
 
       if (is_array && texop != nir_texop_lod)
@@ -1820,7 +1821,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    case GLSL_TYPE_UINT:    instr->dest_type = nir_type_uint;  break;
    case GLSL_TYPE_BOOL:    instr->dest_type = nir_type_bool;      break;
    default:
-      unreachable("Invalid base type for sampler result");
+      vtn_fail("Invalid base type for sampler result");
    }
 
    nir_deref_var *sampler = vtn_pointer_to_deref(b, sampled.sampler);
@@ -1854,7 +1855,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       instr->sampler = NULL;
       break;
    case nir_texop_txf_ms_mcs:
-      unreachable("unexpected nir_texop_txf_ms_mcs");
+      vtn_fail("unexpected nir_texop_txf_ms_mcs");
    }
 
    nir_ssa_dest_init(&instr->instr, &instr->dest,
@@ -1960,7 +1961,7 @@ fill_common_atomic_sources(struct vtn_builder *b, SpvOp opcode,
       break;
 
    default:
-      unreachable("Invalid SPIR-V atomic");
+      vtn_fail("Invalid SPIR-V atomic");
    }
 }
 
@@ -2052,7 +2053,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
       break;
 
    default:
-      unreachable("Invalid image opcode");
+      vtn_fail("Invalid image opcode");
    }
 
    nir_intrinsic_op op;
@@ -2078,7 +2079,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
    OP(AtomicXor,              atomic_xor)
 #undef OP
    default:
-      unreachable("Invalid image opcode");
+      vtn_fail("Invalid image opcode");
    }
 
    nir_intrinsic_instr *intrin = nir_intrinsic_instr_create(b->shader, op);
@@ -2128,7 +2129,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
       break;
 
    default:
-      unreachable("Invalid image opcode");
+      vtn_fail("Invalid image opcode");
    }
 
    if (opcode != SpvOpImageWrite) {
@@ -2155,7 +2156,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
 }
 
 static nir_intrinsic_op
-get_ssbo_nir_atomic_op(SpvOp opcode)
+get_ssbo_nir_atomic_op(struct vtn_builder *b, SpvOp opcode)
 {
    switch (opcode) {
    case SpvOpAtomicLoad:      return nir_intrinsic_load_ssbo;
@@ -2176,12 +2177,12 @@ get_ssbo_nir_atomic_op(SpvOp opcode)
    OP(AtomicXor,              atomic_xor)
 #undef OP
    default:
-      unreachable("Invalid SSBO atomic");
+      vtn_fail("Invalid SSBO atomic");
    }
 }
 
 static nir_intrinsic_op
-get_shared_nir_atomic_op(SpvOp opcode)
+get_shared_nir_atomic_op(struct vtn_builder *b, SpvOp opcode)
 {
    switch (opcode) {
    case SpvOpAtomicLoad:      return nir_intrinsic_load_var;
@@ -2202,7 +2203,7 @@ get_shared_nir_atomic_op(SpvOp opcode)
    OP(AtomicXor,              atomic_xor)
 #undef OP
    default:
-      unreachable("Invalid shared atomic");
+      vtn_fail("Invalid shared atomic");
    }
 }
 
@@ -2237,7 +2238,7 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
       break;
 
    default:
-      unreachable("Invalid SPIR-V atomic");
+      vtn_fail("Invalid SPIR-V atomic");
    }
 
    /*
@@ -2248,7 +2249,7 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
    if (ptr->mode == vtn_variable_mode_workgroup) {
       nir_deref_var *deref = vtn_pointer_to_deref(b, ptr);
       const struct glsl_type *deref_type = nir_deref_tail(&deref->deref)->type;
-      nir_intrinsic_op op = get_shared_nir_atomic_op(opcode);
+      nir_intrinsic_op op = get_shared_nir_atomic_op(b, opcode);
       atomic = nir_intrinsic_instr_create(b->nb.shader, op);
       atomic->variables[0] = nir_deref_var_clone(deref, atomic);
 
@@ -2281,7 +2282,7 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
          break;
 
       default:
-         unreachable("Invalid SPIR-V atomic");
+         vtn_fail("Invalid SPIR-V atomic");
 
       }
    } else {
@@ -2289,7 +2290,7 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
       nir_ssa_def *offset, *index;
       offset = vtn_pointer_to_offset(b, ptr, &index, NULL);
 
-      nir_intrinsic_op op = get_ssbo_nir_atomic_op(opcode);
+      nir_intrinsic_op op = get_ssbo_nir_atomic_op(b, opcode);
 
       atomic = nir_intrinsic_instr_create(b->nb.shader, op);
 
@@ -2328,7 +2329,7 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
          break;
 
       default:
-         unreachable("Invalid SPIR-V atomic");
+         vtn_fail("Invalid SPIR-V atomic");
       }
    }
 
@@ -2349,7 +2350,7 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
 }
 
 static nir_alu_instr *
-create_vec(nir_shader *shader, unsigned num_components, unsigned bit_size)
+create_vec(struct vtn_builder *b, unsigned num_components, unsigned bit_size)
 {
    nir_op op;
    switch (num_components) {
@@ -2357,10 +2358,10 @@ create_vec(nir_shader *shader, unsigned num_components, unsigned bit_size)
    case 2: op = nir_op_vec2; break;
    case 3: op = nir_op_vec3; break;
    case 4: op = nir_op_vec4; break;
-   default: unreachable("bad vector size");
+   default: vtn_fail("bad vector size");
    }
 
-   nir_alu_instr *vec = nir_alu_instr_create(shader, op);
+   nir_alu_instr *vec = nir_alu_instr_create(b->shader, op);
    nir_ssa_dest_init(&vec->instr, &vec->dest.dest, num_components,
                      bit_size, NULL);
    vec->dest.write_mask = (1 << num_components) - 1;
@@ -2378,9 +2379,8 @@ vtn_ssa_transpose(struct vtn_builder *b, struct vtn_ssa_value *src)
       vtn_create_ssa_value(b, glsl_transposed_type(src->type));
 
    for (unsigned i = 0; i < glsl_get_matrix_columns(dest->type); i++) {
-      nir_alu_instr *vec = create_vec(b->shader,
-                                      glsl_get_matrix_columns(src->type),
-                                      glsl_get_bit_size(src->type));
+      nir_alu_instr *vec = create_vec(b, glsl_get_matrix_columns(src->type),
+                                         glsl_get_bit_size(src->type));
       if (glsl_type_is_vector_or_scalar(src->type)) {
           vec->src[0].src = nir_src_for_ssa(src->def);
           vec->src[0].swizzle[0] = i;
@@ -2410,7 +2410,7 @@ nir_ssa_def *
 vtn_vector_insert(struct vtn_builder *b, nir_ssa_def *src, nir_ssa_def *insert,
                   unsigned index)
 {
-   nir_alu_instr *vec = create_vec(b->shader, src->num_components,
+   nir_alu_instr *vec = create_vec(b, src->num_components,
                                    src->bit_size);
 
    for (unsigned i = 0; i < src->num_components; i++) {
@@ -2456,7 +2456,7 @@ vtn_vector_shuffle(struct vtn_builder *b, unsigned num_components,
                    nir_ssa_def *src0, nir_ssa_def *src1,
                    const uint32_t *indices)
 {
-   nir_alu_instr *vec = create_vec(b->shader, num_components, src0->bit_size);
+   nir_alu_instr *vec = create_vec(b, num_components, src0->bit_size);
 
    for (unsigned i = 0; i < num_components; i++) {
       uint32_t index = indices[i];
@@ -2484,8 +2484,7 @@ static nir_ssa_def *
 vtn_vector_construct(struct vtn_builder *b, unsigned num_components,
                      unsigned num_srcs, nir_ssa_def **srcs)
 {
-   nir_alu_instr *vec = create_vec(b->shader, num_components,
-                                   srcs[0]->bit_size);
+   nir_alu_instr *vec = create_vec(b, num_components, srcs[0]->bit_size);
 
    /* From the SPIR-V 1.1 spec for OpCompositeConstruct:
     *
@@ -2648,7 +2647,7 @@ vtn_handle_composite(struct vtn_builder *b, SpvOp opcode,
       break;
 
    default:
-      unreachable("unknown composite operation");
+      vtn_fail("unknown composite operation");
    }
 }
 
@@ -2673,7 +2672,7 @@ vtn_handle_barrier(struct vtn_builder *b, SpvOp opcode,
       intrinsic_op = nir_intrinsic_barrier;
       break;
    default:
-      unreachable("unknown barrier instruction");
+      vtn_fail("unknown barrier instruction");
    }
 
    nir_intrinsic_instr *intrin =
@@ -2686,7 +2685,8 @@ vtn_handle_barrier(struct vtn_builder *b, SpvOp opcode,
 }
 
 static unsigned
-gl_primitive_from_spv_execution_mode(SpvExecutionMode mode)
+gl_primitive_from_spv_execution_mode(struct vtn_builder *b,
+                                     SpvExecutionMode mode)
 {
    switch (mode) {
    case SpvExecutionModeInputPoints:
@@ -2709,13 +2709,13 @@ gl_primitive_from_spv_execution_mode(SpvExecutionMode mode)
    case SpvExecutionModeOutputTriangleStrip:
       return 5; /* GL_TRIANGLE_STRIP */
    default:
-      unreachable("Invalid primitive type");
-      return 4;
+      vtn_fail("Invalid primitive type");
    }
 }
 
 static unsigned
-vertices_in_from_spv_execution_mode(SpvExecutionMode mode)
+vertices_in_from_spv_execution_mode(struct vtn_builder *b,
+                                    SpvExecutionMode mode)
 {
    switch (mode) {
    case SpvExecutionModeInputPoints:
@@ -2729,13 +2729,12 @@ vertices_in_from_spv_execution_mode(SpvExecutionMode mode)
    case SpvExecutionModeInputTrianglesAdjacency:
       return 6;
    default:
-      unreachable("Invalid GS input mode");
-      return 0;
+      vtn_fail("Invalid GS input mode");
    }
 }
 
 static gl_shader_stage
-stage_for_execution_model(SpvExecutionModel model)
+stage_for_execution_model(struct vtn_builder *b, SpvExecutionModel model)
 {
    switch (model) {
    case SpvExecutionModelVertex:
@@ -2751,7 +2750,7 @@ stage_for_execution_model(SpvExecutionModel model)
    case SpvExecutionModelGLCompute:
       return MESA_SHADER_COMPUTE;
    default:
-      unreachable("Unsupported execution model");
+      vtn_fail("Unsupported execution model");
    }
 }
 
@@ -2893,7 +2892,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
          break;
 
       default:
-         unreachable("Unhandled capability");
+         vtn_fail("Unhandled capability");
       }
       break;
    }
@@ -2915,7 +2914,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       entry_point->name = vtn_string_literal(b, &w[3], count - 3, &name_words);
 
       if (strcmp(entry_point->name, b->entry_point_name) != 0 ||
-          stage_for_execution_model(w[1]) != b->entry_point_stage)
+          stage_for_execution_model(b, w[1]) != b->entry_point_stage)
          break;
 
       vtn_assert(b->entry_point == NULL);
@@ -3021,11 +3020,11 @@ vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
       if (b->shader->info.stage == MESA_SHADER_TESS_CTRL ||
           b->shader->info.stage == MESA_SHADER_TESS_EVAL) {
          b->shader->info.tess.primitive_mode =
-            gl_primitive_from_spv_execution_mode(mode->exec_mode);
+            gl_primitive_from_spv_execution_mode(b, mode->exec_mode);
       } else {
          vtn_assert(b->shader->info.stage == MESA_SHADER_GEOMETRY);
          b->shader->info.gs.vertices_in =
-            vertices_in_from_spv_execution_mode(mode->exec_mode);
+            vertices_in_from_spv_execution_mode(b, mode->exec_mode);
       }
       break;
 
@@ -3034,7 +3033,7 @@ vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
    case SpvExecutionModeOutputTriangleStrip:
       vtn_assert(b->shader->info.stage == MESA_SHADER_GEOMETRY);
       b->shader->info.gs.output_primitive =
-         gl_primitive_from_spv_execution_mode(mode->exec_mode);
+         gl_primitive_from_spv_execution_mode(b, mode->exec_mode);
       break;
 
    case SpvExecutionModeSpacingEqual:
@@ -3073,7 +3072,7 @@ vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
       break;
 
    case SpvExecutionModeXfb:
-      unreachable("Unhandled execution mode");
+      vtn_fail("Unhandled execution mode");
       break;
 
    case SpvExecutionModeVecTypeHint:
@@ -3081,7 +3080,7 @@ vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
       break; /* OpenCL */
 
    default:
-      unreachable("Unhandled execution mode");
+      vtn_fail("Unhandled execution mode");
    }
 }
 
@@ -3107,7 +3106,7 @@ vtn_handle_variable_or_type_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpMemberDecorate:
    case SpvOpGroupDecorate:
    case SpvOpGroupMemberDecorate:
-      unreachable("Invalid opcode types and variables section");
+      vtn_fail("Invalid opcode types and variables section");
       break;
 
    case SpvOpTypeVoid:
@@ -3407,7 +3406,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    default:
-      unreachable("Unhandled opcode");
+      vtn_fail("Unhandled opcode");
    }
 
    return true;
@@ -3458,7 +3457,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
                                    vtn_handle_preamble_instruction);
 
    if (b->entry_point == NULL) {
-      assert(!"Entry point not found");
+      vtn_fail("Entry point not found");
       ralloc_free(b);
       return NULL;
    }

@@ -206,7 +206,7 @@ vtn_handle_matrix_alu(struct vtn_builder *b, SpvOp opcode,
       }
       break;
 
-   default: unreachable("unknown matrix opcode");
+   default: vtn_fail("unknown matrix opcode");
    }
 }
 
@@ -273,7 +273,8 @@ vtn_handle_bitcast(struct vtn_builder *b, struct vtn_ssa_value *dest,
 }
 
 nir_op
-vtn_nir_alu_op_for_spirv_opcode(SpvOp opcode, bool *swap,
+vtn_nir_alu_op_for_spirv_opcode(struct vtn_builder *b,
+                                SpvOp opcode, bool *swap,
                                 nir_alu_type src, nir_alu_type dst)
 {
    /* Indicates that the first two arguments should be swapped.  This is
@@ -366,7 +367,7 @@ vtn_nir_alu_op_for_spirv_opcode(SpvOp opcode, bool *swap,
    case SpvOpDPdyCoarse:   return nir_op_fddy_coarse;
 
    default:
-      unreachable("No NIR equivalent");
+      vtn_fail("No NIR equivalent");
    }
 }
 
@@ -421,7 +422,7 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
          case 2:  op = nir_op_bany_inequal2; break;
          case 3:  op = nir_op_bany_inequal3; break;
          case 4:  op = nir_op_bany_inequal4; break;
-         default: unreachable("invalid number of components");
+         default: vtn_fail("invalid number of components");
          }
          val->ssa->def = nir_build_alu(&b->nb, op, src[0],
                                        nir_imm_int(&b->nb, NIR_FALSE),
@@ -438,7 +439,7 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
          case 2:  op = nir_op_ball_iequal2;  break;
          case 3:  op = nir_op_ball_iequal3;  break;
          case 4:  op = nir_op_ball_iequal4;  break;
-         default: unreachable("invalid number of components");
+         default: vtn_fail("invalid number of components");
          }
          val->ssa->def = nir_build_alu(&b->nb, op, src[0],
                                        nir_imm_int(&b->nb, NIR_TRUE),
@@ -521,7 +522,8 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
       bool swap;
       nir_alu_type src_alu_type = nir_get_nir_type_for_glsl_type(vtn_src[0]->type);
       nir_alu_type dst_alu_type = nir_get_nir_type_for_glsl_type(type);
-      nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap, src_alu_type, dst_alu_type);
+      nir_op op = vtn_nir_alu_op_for_spirv_opcode(b, opcode, &swap,
+                                                  src_alu_type, dst_alu_type);
 
       if (swap) {
          nir_ssa_def *tmp = src[0];
@@ -547,7 +549,8 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
       bool swap;
       nir_alu_type src_alu_type = nir_get_nir_type_for_glsl_type(vtn_src[0]->type);
       nir_alu_type dst_alu_type = nir_get_nir_type_for_glsl_type(type);
-      nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap, src_alu_type, dst_alu_type);
+      nir_op op = vtn_nir_alu_op_for_spirv_opcode(b, opcode, &swap,
+                                                  src_alu_type, dst_alu_type);
 
       if (swap) {
          nir_ssa_def *tmp = src[0];
@@ -572,7 +575,8 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
       bool swap;
       nir_alu_type src_alu_type = nir_get_nir_type_for_glsl_type(vtn_src[0]->type);
       nir_alu_type dst_alu_type = nir_get_nir_type_for_glsl_type(type);
-      nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap, src_alu_type, dst_alu_type);
+      nir_op op = vtn_nir_alu_op_for_spirv_opcode(b, opcode, &swap,
+                                                  src_alu_type, dst_alu_type);
 
       if (swap) {
          nir_ssa_def *tmp = src[0];

@@ -405,7 +405,7 @@ vtn_cfg_walk_blocks(struct vtn_builder *b, struct list_head *cf_list,
             }
             continue;
          }
-         unreachable("Should have returned or continued");
+         vtn_fail("Should have returned or continued");
       }
 
       case SpvOpSwitch: {
@@ -475,7 +475,7 @@ vtn_cfg_walk_blocks(struct vtn_builder *b, struct list_head *cf_list,
          return;
 
       default:
-         unreachable("Unhandled opcode");
+         vtn_fail("Unhandled opcode");
       }
    }
 }
@@ -577,7 +577,7 @@ vtn_emit_branch(struct vtn_builder *b, enum vtn_branch_type branch_type,
       break;
    }
    default:
-      unreachable("Invalid branch type");
+      vtn_fail("Invalid branch type");
    }
 }
 
@@ -758,7 +758,7 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list,
       }
 
       default:
-         unreachable("Invalid CF node type");
+         vtn_fail("Invalid CF node type");
       }
    }
 }

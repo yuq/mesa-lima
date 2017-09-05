@@ -209,7 +209,7 @@ vtn_ssa_offset_pointer_dereference(struct vtn_builder *b,
       }
 
       default:
-         unreachable("Invalid type for deref");
+         vtn_fail("Invalid type for deref");
       }
    }
 
@@ -344,7 +344,7 @@ vtn_pointer_to_deref(struct vtn_builder *b, struct vtn_pointer *ptr)
          break;
       }
       default:
-         unreachable("Invalid type for deref");
+         vtn_fail("Invalid type for deref");
       }
    }
 
@@ -547,7 +547,7 @@ vtn_pointer_to_offset(struct vtn_builder *b, struct vtn_pointer *ptr,
       }
 
       default:
-         unreachable("Invalid type for deref");
+         vtn_fail("Invalid type for deref");
       }
    }
 
@@ -605,7 +605,7 @@ vtn_type_block_size(struct vtn_builder *b, struct vtn_type *type)
       return type->stride * glsl_get_length(type->type);
 
    default:
-      unreachable("Invalid block type");
+      vtn_fail("Invalid block type");
       return 0;
    }
 }
@@ -810,7 +810,7 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
    }
 
    default:
-      unreachable("Invalid block member type");
+      vtn_fail("Invalid block member type");
    }
 }
 
@@ -832,7 +832,7 @@ vtn_block_load(struct vtn_builder *b, struct vtn_pointer *src)
                                        &access_offset, &access_size);
       break;
    default:
-      unreachable("Invalid block variable mode");
+      vtn_fail("Invalid block variable mode");
    }
 
    nir_ssa_def *offset, *index = NULL;
@@ -918,7 +918,7 @@ _vtn_variable_load_store(struct vtn_builder *b, bool load,
    }
 
    default:
-      unreachable("Invalid access chain type");
+      vtn_fail("Invalid access chain type");
    }
 }
 
@@ -991,7 +991,7 @@ _vtn_variable_copy(struct vtn_builder *b, struct vtn_pointer *dest,
    }
 
    default:
-      unreachable("Invalid access chain type");
+      vtn_fail("Invalid access chain type");
    }
 }
 
@@ -1071,7 +1071,7 @@ vtn_get_builtin_location(struct vtn_builder *b,
       else if (b->shader->info.stage == MESA_SHADER_GEOMETRY)
          *mode = nir_var_shader_out;
       else
-         unreachable("invalid stage for SpvBuiltInLayer");
+         vtn_fail("invalid stage for SpvBuiltInLayer");
       break;
    case SpvBuiltInViewportIndex:
       *location = VARYING_SLOT_VIEWPORT;
@@ -1080,7 +1080,7 @@ vtn_get_builtin_location(struct vtn_builder *b,
       else if (b->shader->info.stage == MESA_SHADER_FRAGMENT)
          *mode = nir_var_shader_in;
       else
-         unreachable("invalid stage for SpvBuiltInViewportIndex");
+         vtn_fail("invalid stage for SpvBuiltInViewportIndex");
       break;
    case SpvBuiltInTessLevelOuter:
       *location = VARYING_SLOT_TESS_LEVEL_OUTER;
@@ -1138,7 +1138,7 @@ vtn_get_builtin_location(struct vtn_builder *b,
       break;
    case SpvBuiltInWorkgroupSize:
       /* This should already be handled */
-      unreachable("unsupported builtin");
+      vtn_fail("unsupported builtin");
       break;
    case SpvBuiltInWorkgroupId:
       *location = SYSTEM_VALUE_WORK_GROUP_ID;
@@ -1173,7 +1173,7 @@ vtn_get_builtin_location(struct vtn_builder *b,
       set_mode_system_value(b, mode);
       break;
    default:
-      unreachable("unsupported builtin");
+      vtn_fail("unsupported builtin");
    }
 }
 
@@ -1271,7 +1271,7 @@ apply_var_decoration(struct vtn_builder *b, nir_variable *nir_var,
       break;
 
    case SpvDecorationLocation:
-      unreachable("Handled above");
+      vtn_fail("Handled above");
 
    case SpvDecorationBlock:
    case SpvDecorationBufferBlock:
@@ -1305,7 +1305,7 @@ apply_var_decoration(struct vtn_builder *b, nir_variable *nir_var,
       break;
 
    default:
-      unreachable("Unhandled decoration");
+      vtn_fail("Unhandled decoration");
    }
 }
 
@@ -1417,7 +1417,8 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
 }
 
 static enum vtn_variable_mode
-vtn_storage_class_to_mode(SpvStorageClass class,
+vtn_storage_class_to_mode(struct vtn_builder *b,
+                          SpvStorageClass class,
                           struct vtn_type *interface_type,
                           nir_variable_mode *nir_mode_out)
 {
@@ -1432,7 +1433,7 @@ vtn_storage_class_to_mode(SpvStorageClass class,
          mode = vtn_variable_mode_ssbo;
          nir_mode = 0;
       } else {
-         unreachable("Invalid uniform variable type");
+         vtn_fail("Invalid uniform variable type");
       }
       break;
    case SpvStorageClassStorageBuffer:
@@ -1447,7 +1448,7 @@ vtn_storage_class_to_mode(SpvStorageClass class,
          mode = vtn_variable_mode_sampler;
          nir_mode = nir_var_uniform;
       } else {
-         unreachable("Invalid uniform constant variable type");
+         vtn_fail("Invalid uniform constant variable type");
       }
       break;
    case SpvStorageClassPushConstant:
@@ -1478,7 +1479,7 @@ vtn_storage_class_to_mode(SpvStorageClass class,
    case SpvStorageClassGeneric:
    case SpvStorageClassAtomicCounter:
    default:
-      unreachable("Unhandled variable storage class");
+      vtn_fail("Unhandled variable storage class");
    }
 
    if (nir_mode_out)
@@ -1524,7 +1525,7 @@ vtn_pointer_from_ssa(struct vtn_builder *b, nir_ssa_def *ssa,
    vtn_assert(ptr_type->type);
 
    struct vtn_pointer *ptr = rzalloc(b, struct vtn_pointer);
-   ptr->mode = vtn_storage_class_to_mode(ptr_type->storage_class,
+   ptr->mode = vtn_storage_class_to_mode(b, ptr_type->storage_class,
                                          ptr_type, NULL);
    ptr->type = ptr_type->deref;
    ptr->ptr_type = ptr_type;
@@ -1566,7 +1567,7 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
 
    enum vtn_variable_mode mode;
    nir_variable_mode nir_mode;
-   mode = vtn_storage_class_to_mode(storage_class, without_array, &nir_mode);
+   mode = vtn_storage_class_to_mode(b, storage_class, without_array, &nir_mode);
 
    switch (mode) {
    case vtn_variable_mode_ubo:
@@ -1702,7 +1703,7 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
    }
 
    case vtn_variable_mode_param:
-      unreachable("Not created through OpVariable");
+      vtn_fail("Not created through OpVariable");
 
    case vtn_variable_mode_ubo:
    case vtn_variable_mode_ssbo:
@@ -1901,6 +1902,6 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpCopyMemorySized:
    default:
-      unreachable("Unhandled opcode");
+      vtn_fail("Unhandled opcode");
    }
 }
