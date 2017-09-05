@@ -842,7 +842,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 	{
 		unsigned idx;
 		for (idx = decl->Range.First; idx <= decl->Range.Last; idx++) {
-			ctx->load_system_value(ctx, idx, decl);
+			si_load_system_value(ctx, idx, decl);
 		}
 	}
 	break;
@@ -870,7 +870,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 	}
 
 	case TGSI_FILE_MEMORY:
-		ctx->declare_memory_region(ctx, decl);
+		si_declare_compute_memory(ctx, decl);
 		break;
 
 	default:

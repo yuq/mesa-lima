@@ -1493,9 +1493,9 @@ static LLVMValueRef load_sample_position(struct si_shader_context *ctx, LLVMValu
 	return lp_build_gather_values(gallivm, pos, 4);
 }
 
-static void declare_system_value(struct si_shader_context *ctx,
-				 unsigned index,
-				 const struct tgsi_full_declaration *decl)
+void si_load_system_value(struct si_shader_context *ctx,
+			  unsigned index,
+			  const struct tgsi_full_declaration *decl)
 {
 	struct lp_build_context *bld = &ctx->bld_base.base;
 	struct gallivm_state *gallivm = &ctx->gallivm;
@@ -1770,8 +1770,8 @@ static void declare_system_value(struct si_shader_context *ctx,
 	ctx->system_values[index] = value;
 }
 
-static void declare_compute_memory(struct si_shader_context *ctx,
-                                   const struct tgsi_full_declaration *decl)
+void si_declare_compute_memory(struct si_shader_context *ctx,
+			       const struct tgsi_full_declaration *decl)
 {
 	struct si_shader_selector *sel = ctx->shader->selector;
 	struct gallivm_state *gallivm = &ctx->gallivm;
@@ -5691,7 +5691,6 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		bld_base->emit_epilogue = si_tgsi_emit_epilogue;
 		break;
 	case PIPE_SHADER_COMPUTE:
-		ctx->declare_memory_region = declare_compute_memory;
 		break;
 	default:
 		assert(!"Unsupported shader type");
@@ -6344,8 +6343,6 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	       sizeof(shader->info.vs_output_param_offset));
 
 	shader->info.uses_instanceid = sel->info.uses_instanceid;
-
-	ctx.load_system_value = declare_system_value;
 
 	if (!si_compile_tgsi_main(&ctx, is_monolithic)) {
 		si_llvm_dispose(&ctx);
