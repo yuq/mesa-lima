@@ -138,6 +138,7 @@
 #include "math/m_matrix.h"
 #include "main/dispatch.h" /* for _gloffset_COUNT */
 #include "macros.h"
+#include "git_sha1.h"
 
 #ifdef USE_SPARC_ASM
 #include "sparc/sparc.h"
@@ -398,10 +399,13 @@ one_time_init( struct gl_context *ctx )
 
       atexit(one_time_fini);
 
-#if defined(DEBUG) && defined(__DATE__) && defined(__TIME__)
+#if defined(DEBUG)
       if (MESA_VERBOSE != 0) {
-         _mesa_debug(ctx, "Mesa " PACKAGE_VERSION " DEBUG build %s %s\n",
-                     __DATE__, __TIME__);
+         _mesa_debug(ctx, "Mesa " PACKAGE_VERSION " DEBUG build"
+#ifdef MESA_GIT_SHA1
+                     " (" MESA_GIT_SHA1 ")"
+#endif
+                     "\n");
       }
 #endif
    }
