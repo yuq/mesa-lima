@@ -327,6 +327,7 @@ struct si_shader_selector {
 	struct nir_shader       *nir;
 	struct pipe_stream_output_info  so;
 	struct tgsi_shader_info		info;
+	struct tgsi_tessctrl_info	tcs_info;
 
 	/* PIPE_SHADER_[VERTEX|FRAGMENT|...] */
 	unsigned	type;
@@ -404,6 +405,7 @@ struct si_vs_prolog_bits {
 /* Common TCS bits between the shader key and the epilog key. */
 struct si_tcs_epilog_bits {
 	unsigned	prim_mode:3;
+	unsigned	invoc0_tess_factors_are_def:1;
 	unsigned	tes_reads_tess_factors:1;
 };
 

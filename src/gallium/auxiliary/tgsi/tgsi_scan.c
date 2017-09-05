@@ -1139,7 +1139,6 @@ tgsi_scan_tess_ctrl(const struct tgsi_token *tokens,
          if (main_block_tf_writemask || cond_block_tf_writemask) {
             /* Accumulate the result: */
             out->tessfactors_are_def_in_all_invocs &=
-               main_block_tf_writemask &&
                !(cond_block_tf_writemask & ~main_block_tf_writemask);
 
             /* Analyze the next code segment from scratch. */
@@ -1155,7 +1154,6 @@ tgsi_scan_tess_ctrl(const struct tgsi_token *tokens,
    /* Accumulate the result for the last code segment separated by a barrier. */
    if (main_block_tf_writemask || cond_block_tf_writemask) {
       out->tessfactors_are_def_in_all_invocs &=
-         main_block_tf_writemask &&
          !(cond_block_tf_writemask & ~main_block_tf_writemask);
    }
 

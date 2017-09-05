@@ -1150,7 +1150,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 	LLVMValueRef buffer, base, buf_addr;
 	LLVMValueRef values[4];
 	bool skip_lds_store;
-	bool is_tess_factor = false;
+	bool is_tess_factor = false, is_tess_inner = false;
 
 	/* Only handle per-patch and per-vertex outputs here.
 	 * Vectors will be lowered to scalars and this function will be called again.
@@ -1177,8 +1177,11 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 			/* Always write tess factors into LDS for the TCS epilog. */
 			if (name == TGSI_SEMANTIC_TESSINNER ||
 			    name == TGSI_SEMANTIC_TESSOUTER) {
-				skip_lds_store = false;
+				/* The epilog doesn't read LDS if invocation 0 defines tess factors. */
+				skip_lds_store = !sh_info->reads_tessfactor_outputs &&
+						 ctx->shader->selector->tcs_info.tessfactors_are_def_in_all_invocs;
 				is_tess_factor = true;
+				is_tess_inner = name == TGSI_SEMANTIC_TESSINNER;
 			}
 		}
 	}
@@ -1206,6 +1209,18 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 			ac_build_buffer_store_dword(&ctx->ac, buffer, value, 1,
 						    buf_addr, base,
 						    4 * chan_index, 1, 0, true, false);
+		}
+
+		/* Write tess factors into VGPRs for the epilog. */
+		if (is_tess_factor &&
+		    ctx->shader->selector->tcs_info.tessfactors_are_def_in_all_invocs) {
+			if (!is_tess_inner) {
+				LLVMBuildStore(gallivm->builder, value, /* outer */
+					       ctx->invoc0_tess_factors[chan_index]);
+			} else if (chan_index < 2) {
+				LLVMBuildStore(gallivm->builder, value, /* inner */
+					       ctx->invoc0_tess_factors[4 + chan_index]);
+			}
 		}
 	}
 
@@ -2671,7 +2686,9 @@ static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 				  LLVMValueRef rel_patch_id,
 				  LLVMValueRef invocation_id,
-				  LLVMValueRef tcs_out_current_patch_data_offset)
+				  LLVMValueRef tcs_out_current_patch_data_offset,
+				  LLVMValueRef invoc0_tf_outer[4],
+				  LLVMValueRef invoc0_tf_inner[2])
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = &ctx->gallivm;
@@ -2682,7 +2699,9 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 	unsigned stride, outer_comps, inner_comps, i, offset;
 	struct lp_build_if_state if_ctx, inner_if_ctx;
 
-	si_llvm_emit_barrier(NULL, bld_base, NULL);
+	/* Add a barrier before loading tess factors from LDS. */
+	if (!shader->key.part.tcs.epilog.invoc0_tess_factors_are_def)
+		si_llvm_emit_barrier(NULL, bld_base, NULL);
 
 	/* Do this only for invocation 0, because the tess levels are per-patch,
 	 * not per-vertex.
@@ -2716,32 +2735,32 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 		return;
 	}
 
-	/* Load tess_inner and tess_outer from LDS.
-	 * Any invocation can write them, so we can't get them from a temporary.
-	 */
-	tess_inner_index = si_shader_io_get_unique_index_patch(TGSI_SEMANTIC_TESSINNER, 0);
-	tess_outer_index = si_shader_io_get_unique_index_patch(TGSI_SEMANTIC_TESSOUTER, 0);
-
-	lds_base = tcs_out_current_patch_data_offset;
-	lds_inner = LLVMBuildAdd(gallivm->builder, lds_base,
-				 LLVMConstInt(ctx->i32,
-					      tess_inner_index * 4, 0), "");
-	lds_outer = LLVMBuildAdd(gallivm->builder, lds_base,
-				 LLVMConstInt(ctx->i32,
-					      tess_outer_index * 4, 0), "");
-
 	for (i = 0; i < 4; i++) {
 		inner[i] = LLVMGetUndef(ctx->i32);
 		outer[i] = LLVMGetUndef(ctx->i32);
 	}
 
-	if (shader->key.part.tcs.epilog.prim_mode == PIPE_PRIM_LINES) {
-		/* For isolines, the hardware expects tess factors in the
-		 * reverse order from what GLSL / TGSI specify.
-		 */
-		outer[0] = out[1] = lds_load(bld_base, TGSI_TYPE_SIGNED, 0, lds_outer);
-		outer[1] = out[0] = lds_load(bld_base, TGSI_TYPE_SIGNED, 1, lds_outer);
+	if (shader->key.part.tcs.epilog.invoc0_tess_factors_are_def) {
+		/* Tess factors are in VGPRs. */
+		for (i = 0; i < outer_comps; i++)
+			outer[i] = out[i] = invoc0_tf_outer[i];
+		for (i = 0; i < inner_comps; i++)
+			inner[i] = out[outer_comps+i] = invoc0_tf_inner[i];
 	} else {
+		/* Load tess_inner and tess_outer from LDS.
+		 * Any invocation can write them, so we can't get them from a temporary.
+		 */
+		tess_inner_index = si_shader_io_get_unique_index_patch(TGSI_SEMANTIC_TESSINNER, 0);
+		tess_outer_index = si_shader_io_get_unique_index_patch(TGSI_SEMANTIC_TESSOUTER, 0);
+
+		lds_base = tcs_out_current_patch_data_offset;
+		lds_inner = LLVMBuildAdd(gallivm->builder, lds_base,
+					 LLVMConstInt(ctx->i32,
+						      tess_inner_index * 4, 0), "");
+		lds_outer = LLVMBuildAdd(gallivm->builder, lds_base,
+					 LLVMConstInt(ctx->i32,
+						      tess_outer_index * 4, 0), "");
+
 		for (i = 0; i < outer_comps; i++) {
 			outer[i] = out[i] =
 				lds_load(bld_base, TGSI_TYPE_SIGNED, i, lds_outer);
@@ -2750,6 +2769,15 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 			inner[i] = out[outer_comps+i] =
 				lds_load(bld_base, TGSI_TYPE_SIGNED, i, lds_inner);
 		}
+	}
+
+	if (shader->key.part.tcs.epilog.prim_mode == PIPE_PRIM_LINES) {
+		/* For isolines, the hardware expects tess factors in the
+		 * reverse order from what GLSL / TGSI specify.
+		 */
+		LLVMValueRef tmp = out[0];
+		out[0] = out[1];
+		out[1] = tmp;
 	}
 
 	/* Convert the outputs to vectors for stores. */
@@ -2946,7 +2974,18 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 
 	ret = LLVMBuildInsertValue(builder, ret, rel_patch_id, vgpr++, "");
 	ret = LLVMBuildInsertValue(builder, ret, invocation_id, vgpr++, "");
-	ret = LLVMBuildInsertValue(builder, ret, tf_lds_offset, vgpr++, "");
+
+	if (ctx->shader->selector->tcs_info.tessfactors_are_def_in_all_invocs) {
+		vgpr++; /* skip the tess factor LDS offset */
+		for (unsigned i = 0; i < 6; i++) {
+			LLVMValueRef value =
+				LLVMBuildLoad(builder, ctx->invoc0_tess_factors[i], "");
+			value = bitcast(bld_base, TGSI_TYPE_FLOAT, value);
+			ret = LLVMBuildInsertValue(builder, ret, value, vgpr++, "");
+		}
+	} else {
+		ret = LLVMBuildInsertValue(builder, ret, tf_lds_offset, vgpr++, "");
+	}
 	ctx->return_value = ret;
 }
 
@@ -4330,7 +4369,7 @@ static void create_function(struct si_shader_context *ctx)
 		 */
 		for (i = 0; i < GFX6_TCS_NUM_USER_SGPR + 2; i++)
 			returns[num_returns++] = ctx->i32; /* SGPRs */
-		for (i = 0; i < 5; i++)
+		for (i = 0; i < 11; i++)
 			returns[num_returns++] = ctx->f32; /* VGPRs */
 		break;
 
@@ -4387,7 +4426,7 @@ static void create_function(struct si_shader_context *ctx)
 			 */
 			for (i = 0; i <= 8 + GFX9_SGPR_TCS_FACTOR_ADDR_BASE64K; i++)
 				returns[num_returns++] = ctx->i32; /* SGPRs */
-			for (i = 0; i < 5; i++)
+			for (i = 0; i < 11; i++)
 				returns[num_returns++] = ctx->f32; /* VGPRs */
 		}
 		break;
@@ -5692,6 +5731,14 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		}
 	}
 
+	if (ctx->type == PIPE_SHADER_TESS_CTRL &&
+	    sel->tcs_info.tessfactors_are_def_in_all_invocs) {
+		for (unsigned i = 0; i < 6; i++) {
+			ctx->invoc0_tess_factors[i] =
+				lp_build_alloca_undef(&ctx->gallivm, ctx->i32, "");
+		}
+	}
+
 	if (ctx->type == PIPE_SHADER_GEOMETRY) {
 		int i;
 		for (i = 0; i < 4; i++) {
@@ -6926,16 +6973,24 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 	add_arg(&fninfo, ARG_VGPR, ctx->i32); /* invocation ID within the patch */
 	add_arg(&fninfo, ARG_VGPR, ctx->i32); /* LDS offset where tess factors should be loaded from */
 
+	for (unsigned i = 0; i < 6; i++)
+		add_arg(&fninfo, ARG_VGPR, ctx->i32); /* tess factors */
+
 	/* Create the function. */
 	si_create_function(ctx, "tcs_epilog", NULL, 0, &fninfo,
 			   ctx->screen->b.chip_class >= CIK ? 128 : 64);
 	declare_lds_as_pointer(ctx);
 	func = ctx->main_fn;
 
+	LLVMValueRef invoc0_tess_factors[6];
+	for (unsigned i = 0; i < 6; i++)
+		invoc0_tess_factors[i] = LLVMGetParam(func, tess_factors_idx + 3 + i);
+
 	si_write_tess_factors(bld_base,
 			      LLVMGetParam(func, tess_factors_idx),
 			      LLVMGetParam(func, tess_factors_idx + 1),
-			      LLVMGetParam(func, tess_factors_idx + 2));
+			      LLVMGetParam(func, tess_factors_idx + 2),
+			      invoc0_tess_factors, invoc0_tess_factors + 4);
 
 	LLVMBuildRetVoid(gallivm->builder);
 }
