@@ -937,3 +937,227 @@ tgsi_scan_arrays(const struct tgsi_token *tokens,
 
    return;
 }
+
+static void
+check_no_subroutines(const struct tgsi_full_instruction *inst)
+{
+   switch (inst->Instruction.Opcode) {
+   case TGSI_OPCODE_BGNSUB:
+   case TGSI_OPCODE_ENDSUB:
+   case TGSI_OPCODE_CAL:
+      unreachable("subroutines unhandled");
+   }
+}
+
+static unsigned
+get_inst_tessfactor_writemask(const struct tgsi_shader_info *info,
+                              const struct tgsi_full_instruction *inst)
+{
+   unsigned writemask = 0;
+
+   for (unsigned i = 0; i < inst->Instruction.NumDstRegs; i++) {
+      const struct tgsi_full_dst_register *dst = &inst->Dst[i];
+
+      if (dst->Register.File == TGSI_FILE_OUTPUT &&
+          !dst->Register.Indirect) {
+         unsigned name = info->output_semantic_name[dst->Register.Index];
+
+         if (name == TGSI_SEMANTIC_TESSINNER)
+            writemask |= dst->Register.WriteMask;
+         else if (name == TGSI_SEMANTIC_TESSOUTER)
+            writemask |= dst->Register.WriteMask << 4;
+      }
+   }
+   return writemask;
+}
+
+static unsigned
+get_block_tessfactor_writemask(const struct tgsi_shader_info *info,
+                               struct tgsi_parse_context *parse,
+                               unsigned end_opcode)
+{
+   struct tgsi_full_instruction *inst;
+   unsigned writemask = 0;
+
+   do {
+      tgsi_parse_token(parse);
+      assert(parse->FullToken.Token.Type == TGSI_TOKEN_TYPE_INSTRUCTION);
+      inst = &parse->FullToken.FullInstruction;
+      check_no_subroutines(inst);
+
+      /* Recursively process nested blocks. */
+      switch (inst->Instruction.Opcode) {
+      case TGSI_OPCODE_IF:
+      case TGSI_OPCODE_UIF:
+         writemask |=
+            get_block_tessfactor_writemask(info, parse, TGSI_OPCODE_ENDIF);
+         continue;
+
+      case TGSI_OPCODE_BGNLOOP:
+         writemask |=
+            get_block_tessfactor_writemask(info, parse, TGSI_OPCODE_ENDLOOP);
+         continue;
+
+      case TGSI_OPCODE_BARRIER:
+         unreachable("nested BARRIER is illegal");
+         continue;
+      }
+
+      writemask |= get_inst_tessfactor_writemask(info, inst);
+   } while (inst->Instruction.Opcode != end_opcode);
+
+   return writemask;
+}
+
+static void
+get_if_block_tessfactor_writemask(const struct tgsi_shader_info *info,
+                                  struct tgsi_parse_context *parse,
+                                  unsigned *upper_block_tf_writemask,
+                                  unsigned *cond_block_tf_writemask)
+{
+   struct tgsi_full_instruction *inst;
+   unsigned then_tessfactor_writemask = 0;
+   unsigned else_tessfactor_writemask = 0;
+   bool is_then = true;
+
+   do {
+      tgsi_parse_token(parse);
+      assert(parse->FullToken.Token.Type == TGSI_TOKEN_TYPE_INSTRUCTION);
+      inst = &parse->FullToken.FullInstruction;
+      check_no_subroutines(inst);
+
+      switch (inst->Instruction.Opcode) {
+      case TGSI_OPCODE_ELSE:
+         is_then = false;
+         continue;
+
+      /* Recursively process nested blocks. */
+      case TGSI_OPCODE_IF:
+      case TGSI_OPCODE_UIF:
+         get_if_block_tessfactor_writemask(info, parse,
+                                           is_then ? &then_tessfactor_writemask :
+                                                     &else_tessfactor_writemask,
+                                           cond_block_tf_writemask);
+         continue;
+
+      case TGSI_OPCODE_BGNLOOP:
+         *cond_block_tf_writemask |=
+            get_block_tessfactor_writemask(info, parse, TGSI_OPCODE_ENDLOOP);
+         continue;
+
+      case TGSI_OPCODE_BARRIER:
+         unreachable("nested BARRIER is illegal");
+         continue;
+      }
+
+      /* Process an instruction in the current block. */
+      unsigned writemask = get_inst_tessfactor_writemask(info, inst);
+
+      if (writemask) {
+         if (is_then)
+            then_tessfactor_writemask |= writemask;
+         else
+            else_tessfactor_writemask |= writemask;
+      }
+   } while (inst->Instruction.Opcode != TGSI_OPCODE_ENDIF);
+
+   if (then_tessfactor_writemask || else_tessfactor_writemask) {
+      /* If both statements write the same tess factor channels,
+       * we can say that the upper block writes them too. */
+      *upper_block_tf_writemask |= then_tessfactor_writemask &
+                                   else_tessfactor_writemask;
+      *cond_block_tf_writemask |= then_tessfactor_writemask |
+                                  else_tessfactor_writemask;
+   }
+}
+
+void
+tgsi_scan_tess_ctrl(const struct tgsi_token *tokens,
+                    const struct tgsi_shader_info *info,
+                    struct tgsi_tessctrl_info *out)
+{
+   memset(out, 0, sizeof(*out));
+
+   if (info->processor != PIPE_SHADER_TESS_CTRL)
+      return;
+
+   struct tgsi_parse_context parse;
+   if (tgsi_parse_init(&parse, tokens) != TGSI_PARSE_OK) {
+      debug_printf("tgsi_parse_init() failed in tgsi_scan_arrays()!\n");
+      return;
+   }
+
+   /* The pass works as follows:
+    * If all codepaths write tess factors, we can say that all invocations
+    * define tess factors.
+    *
+    * Each tess factor channel is tracked separately.
+    */
+   unsigned main_block_tf_writemask = 0; /* if main block writes tess factors */
+   unsigned cond_block_tf_writemask = 0; /* if cond block writes tess factors */
+
+   /* Initial value = true. Here the pass will accumulate results from multiple
+    * segments surrounded by barriers. If tess factors aren't written at all,
+    * it's a shader bug and we don't care if this will be true.
+    */
+   out->tessfactors_are_def_in_all_invocs = true;
+
+   while (!tgsi_parse_end_of_tokens(&parse)) {
+      tgsi_parse_token(&parse);
+
+      if (parse.FullToken.Token.Type != TGSI_TOKEN_TYPE_INSTRUCTION)
+         continue;
+
+      struct tgsi_full_instruction *inst = &parse.FullToken.FullInstruction;
+      check_no_subroutines(inst);
+
+      /* Process nested blocks. */
+      switch (inst->Instruction.Opcode) {
+      case TGSI_OPCODE_IF:
+      case TGSI_OPCODE_UIF:
+         get_if_block_tessfactor_writemask(info, &parse,
+                                           &main_block_tf_writemask,
+                                           &cond_block_tf_writemask);
+         continue;
+
+      case TGSI_OPCODE_BGNLOOP:
+         cond_block_tf_writemask |=
+            get_block_tessfactor_writemask(info, &parse, TGSI_OPCODE_ENDIF);
+         continue;
+
+      case TGSI_OPCODE_BARRIER:
+         /* The following case must be prevented:
+          *    gl_TessLevelInner = ...;
+          *    barrier();
+          *    if (gl_InvocationID == 1)
+          *       gl_TessLevelInner = ...;
+          *
+          * If you consider disjoint code segments separated by barriers, each
+          * such segment that writes tess factor channels should write the same
+          * channels in all codepaths within that segment.
+          */
+         if (main_block_tf_writemask || cond_block_tf_writemask) {
+            /* Accumulate the result: */
+            out->tessfactors_are_def_in_all_invocs &=
+               main_block_tf_writemask &&
+               !(cond_block_tf_writemask & ~main_block_tf_writemask);
+
+            /* Analyze the next code segment from scratch. */
+            main_block_tf_writemask = 0;
+            cond_block_tf_writemask = 0;
+         }
+         continue;
+      }
+
+      main_block_tf_writemask |= get_inst_tessfactor_writemask(info, inst);
+   }
+
+   /* Accumulate the result for the last code segment separated by a barrier. */
+   if (main_block_tf_writemask || cond_block_tf_writemask) {
+      out->tessfactors_are_def_in_all_invocs &=
+         main_block_tf_writemask &&
+         !(cond_block_tf_writemask & ~main_block_tf_writemask);
+   }
+
+   tgsi_parse_free(&parse);
+}
