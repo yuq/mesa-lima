@@ -27,9 +27,6 @@
 
 #include "pipe/p_defines.h"
 
-struct nir_shader;
-
-void lima_program_optimize_nir(struct nir_shader *s);
 const void *lima_program_get_compiler_options(enum pipe_shader_type shader);
 
 #endif
