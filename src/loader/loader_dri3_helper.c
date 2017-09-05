@@ -348,6 +348,7 @@ dri3_handle_present_event(struct loader_dri3_drawable *draw,
       draw->width = ce->width;
       draw->height = ce->height;
       draw->vtable->set_drawable_size(draw, draw->width, draw->height);
+      draw->ext->flush->invalidate(draw->dri_drawable);
       break;
    }
    case XCB_PRESENT_COMPLETE_NOTIFY: {
@@ -1592,6 +1593,7 @@ loader_dri3_update_drawable_geometry(struct loader_dri3_drawable *draw)
       draw->width = geom_reply->width;
       draw->height = geom_reply->height;
       draw->vtable->set_drawable_size(draw, draw->width, draw->height);
+      draw->ext->flush->invalidate(draw->dri_drawable);
 
       free(geom_reply);
    }
