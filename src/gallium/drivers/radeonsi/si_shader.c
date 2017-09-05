@@ -385,6 +385,19 @@ get_tcs_out_current_patch_data_offset(struct si_shader_context *ctx)
 			    "");
 }
 
+static LLVMValueRef get_num_tcs_out_vertices(struct si_shader_context *ctx)
+{
+	unsigned tcs_out_vertices =
+		ctx->shader->selector ?
+		ctx->shader->selector->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT] : 0;
+
+	/* If !tcs_out_vertices, it's either the fixed-func TCS or the TCS epilog. */
+	if (ctx->type == PIPE_SHADER_TESS_CTRL && tcs_out_vertices)
+		return LLVMConstInt(ctx->i32, tcs_out_vertices, 0);
+
+	return unpack_param(ctx, ctx->param_tcs_offchip_layout, 6, 6);
+}
+
 static LLVMValueRef get_instance_index_for_fetch(
 	struct si_shader_context *ctx,
 	unsigned param_start_instance, LLVMValueRef divisor)
@@ -804,7 +817,7 @@ static LLVMValueRef get_tcs_tes_buffer_address(struct si_shader_context *ctx,
 	LLVMValueRef base_addr, vertices_per_patch, num_patches, total_vertices;
 	LLVMValueRef param_stride, constant16;
 
-	vertices_per_patch = unpack_param(ctx, ctx->param_tcs_offchip_layout, 6, 6);
+	vertices_per_patch = get_num_tcs_out_vertices(ctx);
 	num_patches = unpack_param(ctx, ctx->param_tcs_offchip_layout, 0, 6);
 	total_vertices = LLVMBuildMul(gallivm->builder, vertices_per_patch,
 	                              num_patches, "");
@@ -1622,7 +1635,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 		if (ctx->type == PIPE_SHADER_TESS_CTRL)
 			value = unpack_param(ctx, ctx->param_tcs_out_lds_layout, 26, 6);
 		else if (ctx->type == PIPE_SHADER_TESS_EVAL)
-			value = unpack_param(ctx, ctx->param_tcs_offchip_layout, 6, 6);
+			value = get_num_tcs_out_vertices(ctx);
 		else
 			assert(!"invalid shader stage for TGSI_SEMANTIC_VERTICESIN");
 		break;
