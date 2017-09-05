@@ -1291,7 +1291,12 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			 *  - remove the fixup for unused input VGPRs
 			 */
 			key->part.tcs.ls_prolog.ls_vgpr_fix = sctx->ls_vgpr_fix;
-			key->opt.prefer_mono = sctx->ls_vgpr_fix;
+
+			/* The LS output / HS input layout can be communicated
+			 * directly instead of via user SGPRs for merged LS-HS.
+			 * The LS VGPR fix prefers this too.
+			 */
+			key->opt.prefer_mono = 1;
 		}
 
 		key->part.tcs.epilog.prim_mode =
