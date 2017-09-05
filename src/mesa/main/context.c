@@ -400,8 +400,8 @@ one_time_init( struct gl_context *ctx )
 
 #if defined(DEBUG) && defined(__DATE__) && defined(__TIME__)
       if (MESA_VERBOSE != 0) {
-         _mesa_debug(ctx, "Mesa %s DEBUG build %s %s\n",
-                     PACKAGE_VERSION, __DATE__, __TIME__);
+         _mesa_debug(ctx, "Mesa " PACKAGE_VERSION " DEBUG build %s %s\n",
+                     __DATE__, __TIME__);
       }
 #endif
    }
