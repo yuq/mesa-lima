@@ -320,12 +320,6 @@ get_tcs_in_patch_stride(struct si_shader_context *ctx)
 	return unpack_param(ctx, ctx->param_vs_state_bits, 8, 13);
 }
 
-static LLVMValueRef
-get_tcs_out_patch_stride(struct si_shader_context *ctx)
-{
-	return unpack_param(ctx, ctx->param_tcs_out_lds_layout, 0, 13);
-}
-
 static unsigned get_tcs_out_vertex_dw_stride_constant(struct si_shader_context *ctx)
 {
 	assert(ctx->type == PIPE_SHADER_TESS_CTRL);
@@ -341,6 +335,20 @@ static LLVMValueRef get_tcs_out_vertex_dw_stride(struct si_shader_context *ctx)
 	unsigned stride = get_tcs_out_vertex_dw_stride_constant(ctx);
 
 	return LLVMConstInt(ctx->i32, stride, 0);
+}
+
+static LLVMValueRef get_tcs_out_patch_stride(struct si_shader_context *ctx)
+{
+	if (ctx->shader->key.mono.u.ff_tcs_inputs_to_copy)
+		return unpack_param(ctx, ctx->param_tcs_out_lds_layout, 0, 13);
+
+	const struct tgsi_shader_info *info = &ctx->shader->selector->info;
+	unsigned tcs_out_vertices = info->properties[TGSI_PROPERTY_TCS_VERTICES_OUT];
+	unsigned vertex_dw_stride = get_tcs_out_vertex_dw_stride_constant(ctx);
+	unsigned num_patch_outputs = util_last_bit64(ctx->shader->selector->patch_outputs_written);
+	unsigned patch_dw_stride = tcs_out_vertices * vertex_dw_stride +
+				   num_patch_outputs * 4;
+	return LLVMConstInt(ctx->i32, patch_dw_stride, 0);
 }
 
 static LLVMValueRef
