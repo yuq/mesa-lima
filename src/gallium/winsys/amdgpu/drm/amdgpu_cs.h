@@ -34,6 +34,7 @@
 
 #include "amdgpu_bo.h"
 #include "util/u_memory.h"
+#include <amdgpu_drm.h>
 
 struct amdgpu_ctx {
    struct amdgpu_winsys *ws;
@@ -76,8 +77,7 @@ struct amdgpu_ib {
 };
 
 struct amdgpu_cs_context {
-   struct amdgpu_cs_request    request;
-   struct amdgpu_cs_ib_info    ib[IB_NUM];
+   struct drm_amdgpu_cs_chunk_ib ib[IB_NUM];
 
    /* Buffers. */
    unsigned                    max_real_buffers;
@@ -117,6 +117,7 @@ struct amdgpu_cs {
    struct amdgpu_ib main; /* must be first because this is inherited */
    struct amdgpu_ctx *ctx;
    enum ring_type ring_type;
+   struct drm_amdgpu_cs_chunk_fence fence_chunk;
 
    /* We flip between these two CS. While one is being consumed
     * by the kernel in another thread, the other one is being filled
