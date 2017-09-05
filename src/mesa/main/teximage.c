@@ -1133,7 +1133,8 @@ error_check_subtexture_dimensions(struct gl_context *ctx, GLuint dims,
    }
 
    if (xoffset + subWidth > (GLint) destImage->Width) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "%s(xoffset+width)", func);
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(xoffset %d + width %d > %u)", func,
+                  xoffset, subWidth, destImage->Width);
       return GL_TRUE;
    }
 
@@ -1145,7 +1146,8 @@ error_check_subtexture_dimensions(struct gl_context *ctx, GLuint dims,
          return GL_TRUE;
       }
       if (yoffset + subHeight > (GLint) destImage->Height) {
-         _mesa_error(ctx, GL_INVALID_VALUE, "%s(yoffset+height)", func);
+         _mesa_error(ctx, GL_INVALID_VALUE, "%s(yoffset %d + height %d > %u)",
+                     func, yoffset, subHeight, destImage->Height);
          return GL_TRUE;
       }
    }
@@ -1166,7 +1168,8 @@ error_check_subtexture_dimensions(struct gl_context *ctx, GLuint dims,
       if (target == GL_TEXTURE_CUBE_MAP)
          depth = 6;
       if (zoffset + subDepth  > depth) {
-         _mesa_error(ctx, GL_INVALID_VALUE, "%s(zoffset+depth)", func);
+         _mesa_error(ctx, GL_INVALID_VALUE, "%s(zoffset %d + depth %d > %u)",
+                     func, zoffset, subDepth, depth);
          return GL_TRUE;
       }
    }
@@ -2151,8 +2154,8 @@ texsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
    texImage = _mesa_select_tex_image(texObj, target, level);
    if (!texImage) {
       /* non-existant texture level */
-      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(invalid texture image)",
-                  callerName);
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(invalid texture level %d)",
+                  callerName, level);
       return GL_TRUE;
    }
 
@@ -2533,7 +2536,7 @@ copytexsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
    if (!texImage) {
       /* destination image does not exist */
       _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(invalid texture image)", caller);
+                  "%s(invalid texture level %d)", caller, level);
       return GL_TRUE;
    }
 
@@ -4764,9 +4767,8 @@ compressed_subtexture_error_check(struct gl_context *ctx, GLint dims,
 
    texImage = _mesa_select_tex_image(texObj, target, level);
    if (!texImage) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(invalid texture image)",
-                  callerName);
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(invalid texture level %d)",
+                  callerName, level);
       return GL_TRUE;
    }
 
