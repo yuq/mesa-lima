@@ -224,9 +224,7 @@ genX(blorp_exec)(struct blorp_batch *batch,
 retry:
    intel_batchbuffer_require_space(brw, estimated_max_batch_usage, RENDER_RING);
    intel_batchbuffer_save_state(brw);
-   struct brw_bo *saved_bo = brw->batch.bo;
-   uint32_t saved_used = USED_BATCH(brw->batch);
-   uint32_t saved_state_used = brw->batch.state_used;
+   brw->no_batch_wrap = true;
 
 #if GEN_GEN == 6
    /* Emit workaround flushes when we switch from drawing to blorping. */
@@ -254,17 +252,7 @@ retry:
 
    blorp_exec(batch, params);
 
-   /* Make sure we didn't wrap the batch unintentionally, and make sure we
-    * reserved enough space that a wrap will never happen.
-    */
-   assert(brw->batch.bo == saved_bo);
-   assert((USED_BATCH(brw->batch) - saved_used) * 4 +
-          (brw->batch.state_used - saved_state_used) <
-          estimated_max_batch_usage);
-   /* Shut up compiler warnings on release build */
-   (void)saved_bo;
-   (void)saved_used;
-   (void)saved_state_used;
+   brw->no_batch_wrap = false;
 
    /* Check if the blorp op we just did would make our batch likely to fail to
     * map all the BOs into the GPU at batch exec time later.  If so, flush the
