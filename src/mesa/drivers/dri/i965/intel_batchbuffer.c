@@ -204,7 +204,6 @@ intel_batchbuffer_reset(struct intel_batchbuffer *batch,
    add_exec_bo(batch, batch->bo);
    assert(batch->bo->index == 0);
 
-   batch->reserved_space = BATCH_RESERVED;
    batch->needs_sol_reset = false;
    batch->state_base_address_emitted = false;
 
@@ -372,8 +371,7 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
 
    /* For now, flush as if the batch and state buffers still shared a BO */
    const unsigned batch_used = USED_BATCH(*batch) * 4;
-   if (batch_used + sz >=
-       BATCH_SZ - batch->reserved_space - batch->state_used) {
+   if (batch_used + sz >= BATCH_SZ - batch->state_used) {
       if (!brw->no_batch_wrap) {
          intel_batchbuffer_flush(brw);
       } else {
@@ -382,8 +380,7 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
          grow_buffer(brw, &batch->bo, &batch->map, &batch->batch_cpu_map,
                      batch_used, new_size);
          batch->map_next = (void *) batch->map + batch_used;
-         assert(batch_used + sz <
-                batch->bo->size - batch->reserved_space - batch->state_used);
+         assert(batch_used + sz < batch->bo->size - batch->state_used);
       }
    }
 
@@ -896,8 +893,6 @@ _intel_batchbuffer_flush_fence(struct brw_context *brw,
               bytes_for_state, 100.0f * bytes_for_state / STATE_SZ);
    }
 
-   brw->batch.reserved_space = 0;
-
    brw_finish_batch(brw);
 
    /* Mark the end of the buffer. */
@@ -1032,7 +1027,7 @@ brw_state_batch(struct brw_context *brw,
    uint32_t offset = ALIGN(batch->state_used, alignment);
 
    /* For now, follow the old flushing behavior. */
-   int batch_space = batch->reserved_space + USED_BATCH(*batch) * 4;
+   int batch_space = USED_BATCH(*batch) * 4;
 
    if (offset + size >= STATE_SZ - batch_space) {
       if (!brw->no_batch_wrap) {
