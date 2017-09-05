@@ -2631,6 +2631,9 @@ exec_sample(struct tgsi_exec_machine *mach,
          lod = &c1;
          control = TGSI_SAMPLER_LOD_EXPLICIT;
       }
+      else if (modifier == TEX_MODIFIER_GATHER) {
+         control = TGSI_SAMPLER_GATHER;
+      }
       else {
          assert(modifier == TEX_MODIFIER_LEVEL_ZERO);
          control = TGSI_SAMPLER_LOD_ZERO;
@@ -5687,7 +5690,7 @@ exec_instruction(
       break;
 
    case TGSI_OPCODE_GATHER4:
-      assert(0);
+      exec_sample(mach, inst, TEX_MODIFIER_GATHER, FALSE);
       break;
 
    case TGSI_OPCODE_SVIEWINFO:

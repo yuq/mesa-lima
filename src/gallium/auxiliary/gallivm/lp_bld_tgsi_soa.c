@@ -2232,6 +2232,7 @@ emit_sample(struct lp_build_tgsi_soa_context *bld,
             const struct tgsi_full_instruction *inst,
             enum lp_build_tex_modifier modifier,
             boolean compare,
+            enum lp_sampler_op_type sample_type,
             LLVMValueRef *texel)
 {
    struct gallivm_state *gallivm = bld->bld_base.base.gallivm;
@@ -2245,7 +2246,7 @@ emit_sample(struct lp_build_tgsi_soa_context *bld,
 
    unsigned num_offsets, num_derivs, i;
    unsigned layer_coord = 0;
-   unsigned sample_key = LP_SAMPLER_OP_TEXTURE << LP_SAMPLER_OP_TYPE_SHIFT;
+   unsigned sample_key = sample_type << LP_SAMPLER_OP_TYPE_SHIFT;
 
    memset(&params, 0, sizeof(params));
 
@@ -3186,7 +3187,7 @@ sample_emit(
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
 
    emit_sample(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_NONE,
-               FALSE, emit_data->output);
+               FALSE, LP_SAMPLER_OP_TEXTURE, emit_data->output);
 }
 
 static void
@@ -3198,7 +3199,7 @@ sample_b_emit(
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
 
    emit_sample(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_LOD_BIAS,
-               FALSE, emit_data->output);
+               FALSE, LP_SAMPLER_OP_TEXTURE, emit_data->output);
 }
 
 static void
@@ -3210,7 +3211,7 @@ sample_c_emit(
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
 
    emit_sample(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_NONE,
-               TRUE, emit_data->output);
+               TRUE, LP_SAMPLER_OP_TEXTURE, emit_data->output);
 }
 
 static void
@@ -3222,7 +3223,7 @@ sample_c_lz_emit(
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
 
    emit_sample(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_LOD_ZERO,
-               TRUE, emit_data->output);
+               TRUE, LP_SAMPLER_OP_TEXTURE, emit_data->output);
 }
 
 static void
@@ -3234,7 +3235,7 @@ sample_d_emit(
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
 
    emit_sample(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_EXPLICIT_DERIV,
-               FALSE, emit_data->output);
+               FALSE, LP_SAMPLER_OP_TEXTURE, emit_data->output);
 }
 
 static void
@@ -3246,7 +3247,19 @@ sample_l_emit(
    struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
 
    emit_sample(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_EXPLICIT_LOD,
-               FALSE, emit_data->output);
+               FALSE, LP_SAMPLER_OP_TEXTURE, emit_data->output);
+}
+
+static void
+gather4_emit(
+   const struct lp_build_tgsi_action * action,
+   struct lp_build_tgsi_context * bld_base,
+   struct lp_build_emit_data * emit_data)
+{
+   struct lp_build_tgsi_soa_context * bld = lp_soa_context(bld_base);
+
+   emit_sample(bld, emit_data->inst, LP_BLD_TEX_MODIFIER_NONE,
+               FALSE, LP_SAMPLER_OP_GATHER, emit_data->output);
 }
 
 static void
@@ -3871,6 +3884,7 @@ lp_build_tgsi_soa(struct gallivm_state *gallivm,
    bld.bld_base.op_actions[TGSI_OPCODE_SAMPLE_I].emit = sample_i_emit;
    bld.bld_base.op_actions[TGSI_OPCODE_SAMPLE_I_MS].emit = sample_i_emit;
    bld.bld_base.op_actions[TGSI_OPCODE_SAMPLE_L].emit = sample_l_emit;
+   bld.bld_base.op_actions[TGSI_OPCODE_GATHER4].emit = gather4_emit;
    bld.bld_base.op_actions[TGSI_OPCODE_SVIEWINFO].emit = sviewinfo_emit;
 
    if (gs_iface) {
