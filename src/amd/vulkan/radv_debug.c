@@ -82,7 +82,8 @@ radv_dump_trace(struct radv_device *device, struct radeon_winsys_cs *cs)
 }
 
 static void
-radv_dump_shader(struct radv_shader_variant *shader, gl_shader_stage stage,
+radv_dump_shader(struct radv_pipeline *pipeline,
+		 struct radv_shader_variant *shader, gl_shader_stage stage,
 		 FILE *f)
 {
 	if (!shader)
@@ -90,6 +91,8 @@ radv_dump_shader(struct radv_shader_variant *shader, gl_shader_stage stage,
 
 	fprintf(f, "%s:\n%s\n\n", radv_get_shader_name(shader, stage),
 		shader->disasm_string);
+
+	radv_shader_dump_stats(pipeline->device, shader, stage, f);
 }
 
 static void
@@ -103,10 +106,10 @@ radv_dump_shaders(struct radv_pipeline *pipeline,
 	while (mask) {
 		int stage = u_bit_scan(&mask);
 
-		radv_dump_shader(pipeline->shaders[stage], stage, f);
+		radv_dump_shader(pipeline, pipeline->shaders[stage], stage, f);
 	}
 
-	radv_dump_shader(compute_shader, MESA_SHADER_COMPUTE, f);
+	radv_dump_shader(pipeline, compute_shader, MESA_SHADER_COMPUTE, f);
 }
 
 static void
