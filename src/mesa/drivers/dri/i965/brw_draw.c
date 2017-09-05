@@ -669,26 +669,16 @@ brw_try_draw_prims(struct gl_context *ctx,
    brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
 
    for (i = 0; i < nr_prims; i++) {
-      int estimated_max_prim_size;
-      const int sampler_state_size = 16;
-
-      estimated_max_prim_size = 512; /* batchbuffer commands */
-      estimated_max_prim_size += BRW_MAX_TEX_UNIT *
-         (sampler_state_size + sizeof(struct gen5_sampler_default_color));
-      estimated_max_prim_size += 1024; /* gen6 VS push constants */
-      estimated_max_prim_size += 1024; /* gen6 WM push constants */
-      estimated_max_prim_size += 512; /* misc. pad */
-
       /* Flag BRW_NEW_DRAW_CALL on every draw.  This allows us to have
        * atoms that happen on every draw call.
        */
       brw->ctx.NewDriverState |= BRW_NEW_DRAW_CALL;
 
-      /* Flush the batch if it's approaching full, so that we don't wrap while
-       * we've got validated state that needs to be in the same batch as the
-       * primitives.
+      /* Flush the batch if the batch/state buffers are nearly full.  We can
+       * grow them if needed, but this is not free, so we'd like to avoid it.
        */
-      intel_batchbuffer_require_space(brw, estimated_max_prim_size, RENDER_RING);
+      intel_batchbuffer_require_space(brw, 1500, RENDER_RING);
+      brw_require_statebuffer_space(brw, 2400);
       intel_batchbuffer_save_state(brw);
 
       if (brw->num_instances != prims[i].num_instances ||

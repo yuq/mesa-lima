@@ -205,7 +205,6 @@ genX(blorp_exec)(struct blorp_batch *batch,
    assert(batch->blorp->driver_ctx == batch->driver_batch);
    struct brw_context *brw = batch->driver_batch;
    struct gl_context *ctx = &brw->ctx;
-   const uint32_t estimated_max_batch_usage = GEN_GEN >= 8 ? 1920 : 1700;
    bool check_aperture_failed_once = false;
 
    /* Flush the sampler and render caches.  We definitely need to flush the
@@ -222,7 +221,8 @@ genX(blorp_exec)(struct blorp_batch *batch,
    brw_select_pipeline(brw, BRW_RENDER_PIPELINE);
 
 retry:
-   intel_batchbuffer_require_space(brw, estimated_max_batch_usage, RENDER_RING);
+   intel_batchbuffer_require_space(brw, 1400, RENDER_RING);
+   brw_require_statebuffer_space(brw, 600);
    intel_batchbuffer_save_state(brw);
    brw->no_batch_wrap = true;
 

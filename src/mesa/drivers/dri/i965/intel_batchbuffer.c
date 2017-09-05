@@ -49,8 +49,8 @@
  * should flush.  Each time we flush the batch, we recreate both buffers
  * at the original target size, so it doesn't grow without bound.
  */
-#define BATCH_SZ (8192*sizeof(uint32_t))
-#define STATE_SZ (8192*sizeof(uint32_t))
+#define BATCH_SZ (20 * 1024)
+#define STATE_SZ (16 * 1024)
 
 /* The kernel assumes batchbuffers are smaller than 256kB. */
 #define MAX_BATCH_SIZE (256 * 1024)
@@ -369,9 +369,8 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
       intel_batchbuffer_flush(brw);
    }
 
-   /* For now, flush as if the batch and state buffers still shared a BO */
    const unsigned batch_used = USED_BATCH(*batch) * 4;
-   if (batch_used + sz >= BATCH_SZ - batch->state_used) {
+   if (batch_used + sz >= BATCH_SZ) {
       if (!brw->no_batch_wrap) {
          intel_batchbuffer_flush(brw);
       } else {
@@ -380,7 +379,7 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
          grow_buffer(brw, &batch->bo, &batch->map, &batch->batch_cpu_map,
                      batch_used, new_size);
          batch->map_next = (void *) batch->map + batch_used;
-         assert(batch_used + sz < batch->bo->size - batch->state_used);
+         assert(batch_used + sz < batch->bo->size);
       }
    }
 
@@ -1012,6 +1011,19 @@ brw_state_batch_size(struct brw_context *brw, uint32_t offset)
 }
 
 /**
+ * Reserve some space in the statebuffer, or flush.
+ *
+ * This is used to estimate when we're near the end of the batch,
+ * so we can flush early.
+ */
+void
+brw_require_statebuffer_space(struct brw_context *brw, int size)
+{
+   if (brw->batch.state_used + size >= STATE_SZ)
+      intel_batchbuffer_flush(brw);
+}
+
+/**
  * Allocates a block of space in the batchbuffer for indirect state.
  */
 void *
@@ -1026,10 +1038,7 @@ brw_state_batch(struct brw_context *brw,
 
    uint32_t offset = ALIGN(batch->state_used, alignment);
 
-   /* For now, follow the old flushing behavior. */
-   int batch_space = USED_BATCH(*batch) * 4;
-
-   if (offset + size >= STATE_SZ - batch_space) {
+   if (offset + size >= STATE_SZ) {
       if (!brw->no_batch_wrap) {
          intel_batchbuffer_flush(brw);
          offset = ALIGN(batch->state_used, alignment);
@@ -1039,7 +1048,7 @@ brw_state_batch(struct brw_context *brw,
                  MAX_STATE_SIZE);
          grow_buffer(brw, &batch->state_bo, &batch->state_map,
                      &batch->state_cpu_map, batch->state_used, new_size);
-         assert(offset + size < batch->state_bo->size - batch_space);
+         assert(offset + size < batch->state_bo->size);
       }
    }
 

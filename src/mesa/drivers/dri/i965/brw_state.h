@@ -185,6 +185,7 @@ void brw_destroy_caches( struct brw_context *brw );
 void brw_print_program_cache(struct brw_context *brw);
 
 /* intel_batchbuffer.c */
+void brw_require_statebuffer_space(struct brw_context *brw, int size);
 void *brw_state_batch(struct brw_context *brw,
                       int size, int alignment, uint32_t *out_offset);
 uint32_t brw_state_batch_size(struct brw_context *brw, uint32_t offset);

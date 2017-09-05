@@ -167,7 +167,6 @@ static void
 brw_dispatch_compute_common(struct gl_context *ctx)
 {
    struct brw_context *brw = brw_context(ctx);
-   int estimated_buffer_space_needed;
    bool fail_next = false;
 
    if (!_mesa_check_conditional_render(ctx))
@@ -180,20 +179,11 @@ brw_dispatch_compute_common(struct gl_context *ctx)
 
    brw_predraw_resolve_inputs(brw);
 
-   const int sampler_state_size = 16; /* 16 bytes */
-   estimated_buffer_space_needed = 512; /* batchbuffer commands */
-   estimated_buffer_space_needed += (BRW_MAX_TEX_UNIT *
-                                     (sampler_state_size +
-                                      sizeof(struct gen5_sampler_default_color)));
-   estimated_buffer_space_needed += 1024; /* push constants */
-   estimated_buffer_space_needed += 512; /* misc. pad */
-
-   /* Flush the batch if it's approaching full, so that we don't wrap while
-    * we've got validated state that needs to be in the same batch as the
-    * primitives.
+   /* Flush the batch if the batch/state buffers are nearly full.  We can
+    * grow them if needed, but this is not free, so we'd like to avoid it.
     */
-   intel_batchbuffer_require_space(brw, estimated_buffer_space_needed,
-                                   RENDER_RING);
+   intel_batchbuffer_require_space(brw, 600, RENDER_RING);
+   brw_require_statebuffer_space(brw, 2500);
    intel_batchbuffer_save_state(brw);
 
  retry:
