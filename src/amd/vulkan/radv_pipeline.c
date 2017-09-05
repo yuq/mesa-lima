@@ -78,75 +78,13 @@ void radv_DestroyPipeline(
 
 static void radv_dump_pipeline_stats(struct radv_device *device, struct radv_pipeline *pipeline)
 {
-	unsigned lds_increment = device->physical_device->rad_info.chip_class >= CIK ? 512 : 256;
-	struct radv_shader_variant *var;
-	struct ac_shader_config *conf;
 	int i;
-	FILE *file = stderr;
-	unsigned max_simd_waves;
-	unsigned lds_per_wave = 0;
-
-	switch (device->physical_device->rad_info.family) {
-	/* These always have 8 waves: */
-	case CHIP_POLARIS10:
-	case CHIP_POLARIS11:
-	case CHIP_POLARIS12:
-		max_simd_waves = 8;
-		break;
-	default:
-		max_simd_waves = 10;
-	}
 
 	for (i = 0; i < MESA_SHADER_STAGES; i++) {
 		if (!pipeline->shaders[i])
 			continue;
-		var = pipeline->shaders[i];
 
-		conf = &var->config;
-
-		if (i == MESA_SHADER_FRAGMENT) {
-			lds_per_wave = conf->lds_size * lds_increment +
-				align(var->info.fs.num_interp * 48, lds_increment);
-		}
-
-		if (conf->num_sgprs) {
-			if (device->physical_device->rad_info.chip_class >= VI)
-				max_simd_waves = MIN2(max_simd_waves, 800 / conf->num_sgprs);
-			else
-				max_simd_waves = MIN2(max_simd_waves, 512 / conf->num_sgprs);
-		}
-
-		if (conf->num_vgprs)
-			max_simd_waves = MIN2(max_simd_waves, 256 / conf->num_vgprs);
-
-		/* LDS is 64KB per CU (4 SIMDs), divided into 16KB blocks per SIMD
-		 * that PS can use.
-		 */
-		if (lds_per_wave)
-			max_simd_waves = MIN2(max_simd_waves, 16384 / lds_per_wave);
-
-		fprintf(file, "\n%s:\n",
-			radv_get_shader_name(var, i));
-		if (i == MESA_SHADER_FRAGMENT) {
-			fprintf(file, "*** SHADER CONFIG ***\n"
-				"SPI_PS_INPUT_ADDR = 0x%04x\n"
-				"SPI_PS_INPUT_ENA  = 0x%04x\n",
-				conf->spi_ps_input_addr, conf->spi_ps_input_ena);
-		}
-		fprintf(file, "*** SHADER STATS ***\n"
-			"SGPRS: %d\n"
-			"VGPRS: %d\n"
-		        "Spilled SGPRs: %d\n"
-			"Spilled VGPRs: %d\n"
-			"Code Size: %d bytes\n"
-			"LDS: %d blocks\n"
-			"Scratch: %d bytes per wave\n"
-			"Max Waves: %d\n"
-			"********************\n\n\n",
-			conf->num_sgprs, conf->num_vgprs,
-			conf->spilled_sgprs, conf->spilled_vgprs, var->code_size,
-			conf->lds_size, conf->scratch_bytes_per_wave,
-			max_simd_waves);
+		radv_shader_dump_stats(device, pipeline->shaders[i], i, stderr);
 	}
 }
 
