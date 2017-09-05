@@ -398,6 +398,24 @@ static LLVMValueRef get_num_tcs_out_vertices(struct si_shader_context *ctx)
 	return unpack_param(ctx, ctx->param_tcs_offchip_layout, 6, 6);
 }
 
+static LLVMValueRef get_tcs_in_vertex_dw_stride(struct si_shader_context *ctx)
+{
+	unsigned stride;
+
+	switch (ctx->type) {
+	case PIPE_SHADER_VERTEX:
+		stride = util_last_bit64(ctx->shader->selector->outputs_written);
+		return LLVMConstInt(ctx->i32, stride * 4, 0);
+
+	case PIPE_SHADER_TESS_CTRL:
+		return unpack_param(ctx, ctx->param_vs_state_bits, 24, 8);
+
+	default:
+		assert(0);
+		return NULL;
+	}
+}
+
 static LLVMValueRef get_instance_index_for_fetch(
 	struct si_shader_context *ctx,
 	unsigned param_start_instance, LLVMValueRef divisor)
@@ -1047,7 +1065,7 @@ static LLVMValueRef fetch_input_tcs(
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMValueRef dw_addr, stride;
 
-	stride = unpack_param(ctx, ctx->param_vs_state_bits, 24, 8);
+	stride = get_tcs_in_vertex_dw_stride(ctx);
 	dw_addr = get_tcs_in_current_patch_offset(ctx);
 	dw_addr = get_dw_address(ctx, NULL, reg, stride, dw_addr);
 
@@ -2595,7 +2613,7 @@ static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 	buffer = desc_from_addr_base64k(ctx, ctx->param_tcs_offchip_addr_base64k);
 	buffer_offset = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 
-	lds_vertex_stride = unpack_param(ctx, ctx->param_vs_state_bits, 24, 8);
+	lds_vertex_stride = get_tcs_in_vertex_dw_stride(ctx);
 	lds_vertex_offset = LLVMBuildMul(gallivm->builder, invocation_id,
 	                                 lds_vertex_stride, "");
 	lds_base = get_tcs_in_current_patch_offset(ctx);
@@ -2982,8 +3000,7 @@ static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context *bld_base)
 	unsigned i, chan;
 	LLVMValueRef vertex_id = LLVMGetParam(ctx->main_fn,
 					      ctx->param_rel_auto_id);
-	LLVMValueRef vertex_dw_stride =
-		unpack_param(ctx, ctx->param_vs_state_bits, 24, 8);
+	LLVMValueRef vertex_dw_stride = get_tcs_in_vertex_dw_stride(ctx);
 	LLVMValueRef base_dw_addr = LLVMBuildMul(gallivm->builder, vertex_id,
 						 vertex_dw_stride, "");
 
