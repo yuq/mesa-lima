@@ -326,6 +326,23 @@ get_tcs_out_patch_stride(struct si_shader_context *ctx)
 	return unpack_param(ctx, ctx->param_tcs_out_lds_layout, 0, 13);
 }
 
+static unsigned get_tcs_out_vertex_dw_stride_constant(struct si_shader_context *ctx)
+{
+	assert(ctx->type == PIPE_SHADER_TESS_CTRL);
+
+	if (ctx->shader->key.mono.u.ff_tcs_inputs_to_copy)
+		return util_last_bit64(ctx->shader->key.mono.u.ff_tcs_inputs_to_copy) * 4;
+
+	return util_last_bit64(ctx->shader->selector->outputs_written) * 4;
+}
+
+static LLVMValueRef get_tcs_out_vertex_dw_stride(struct si_shader_context *ctx)
+{
+	unsigned stride = get_tcs_out_vertex_dw_stride_constant(ctx);
+
+	return LLVMConstInt(ctx->i32, stride, 0);
+}
+
 static LLVMValueRef
 get_tcs_out_patch0_offset(struct si_shader_context *ctx)
 {
@@ -1086,7 +1103,7 @@ static LLVMValueRef fetch_output_tcs(
 	LLVMValueRef dw_addr, stride;
 
 	if (reg->Register.Dimension) {
-		stride = unpack_param(ctx, ctx->param_tcs_out_lds_layout, 13, 8);
+		stride = get_tcs_out_vertex_dw_stride(ctx);
 		dw_addr = get_tcs_out_current_patch_offset(ctx);
 		dw_addr = get_dw_address(ctx, NULL, reg, stride, dw_addr);
 	} else {
@@ -1139,7 +1156,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 	}
 
 	if (reg->Register.Dimension) {
-		stride = unpack_param(ctx, ctx->param_tcs_out_lds_layout, 13, 8);
+		stride = get_tcs_out_vertex_dw_stride(ctx);
 		dw_addr = get_tcs_out_current_patch_offset(ctx);
 		dw_addr = get_dw_address(ctx, reg, NULL, stride, dw_addr);
 		skip_lds_store = !sh_info->reads_pervertex_outputs;

@@ -161,8 +161,6 @@ struct si_shader_context {
 	/* Layout of TCS outputs / TES inputs:
 	 *   [0:12] = stride between output patches in DW, num_outputs * num_vertices * 4
 	 *            max = 32*32*4 + 32*4
-	 *   [13:20] = stride between output vertices in DW = num_inputs * 4
-	 *             max = 32*4
 	 *   [26:31] = gl_PatchVerticesIn, max = 32
 	 */
 	int param_tcs_out_lds_layout;
