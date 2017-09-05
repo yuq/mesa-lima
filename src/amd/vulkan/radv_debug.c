@@ -38,6 +38,8 @@
  *
  * [0]: primary trace ID
  * [1]: secondary trace ID
+ * [2-3]: 64-bit GFX pipeline pointer
+ * [4-5]: 64-bit COMPUTE pipeline pointer
  */
 
 bool

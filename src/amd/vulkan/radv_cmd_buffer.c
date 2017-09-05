@@ -330,6 +330,19 @@ radv_cmd_buffer_upload_data(struct radv_cmd_buffer *cmd_buffer,
 	return true;
 }
 
+static void
+radv_emit_write_data_packet(struct radeon_winsys_cs *cs, uint64_t va,
+			    unsigned count, const uint32_t *data)
+{
+	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 2 + count, 0));
+	radeon_emit(cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
+		    S_370_WR_CONFIRM(1) |
+		    S_370_ENGINE_SEL(V_370_ME));
+	radeon_emit(cs, va);
+	radeon_emit(cs, va >> 32);
+	radeon_emit_array(cs, data, count);
+}
+
 void radv_cmd_buffer_trace_emit(struct radv_cmd_buffer *cmd_buffer)
 {
 	struct radv_device *device = cmd_buffer->device;
@@ -347,15 +360,44 @@ void radv_cmd_buffer_trace_emit(struct radv_cmd_buffer *cmd_buffer)
 
 	++cmd_buffer->state.trace_id;
 	device->ws->cs_add_buffer(cs, device->trace_bo, 8);
-	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
-	radeon_emit(cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
-		    S_370_WR_CONFIRM(1) |
-		    S_370_ENGINE_SEL(V_370_ME));
-	radeon_emit(cs, va);
-	radeon_emit(cs, va >> 32);
-	radeon_emit(cs, cmd_buffer->state.trace_id);
+	radv_emit_write_data_packet(cs, va, 1, &cmd_buffer->state.trace_id);
 	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 	radeon_emit(cs, AC_ENCODE_TRACE_POINT(cmd_buffer->state.trace_id));
+}
+
+static void
+radv_save_pipeline(struct radv_cmd_buffer *cmd_buffer,
+		   struct radv_pipeline *pipeline, enum ring_type ring)
+{
+	struct radv_device *device = cmd_buffer->device;
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
+	uint32_t data[2];
+	uint64_t va;
+
+	if (!device->trace_bo)
+		return;
+
+	va = device->ws->buffer_get_va(device->trace_bo);
+
+	switch (ring) {
+	case RING_GFX:
+		va += 8;
+		break;
+	case RING_COMPUTE:
+		va += 16;
+		break;
+	default:
+		assert(!"invalid ring type");
+	}
+
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(device->ws,
+							   cmd_buffer->cs, 6);
+
+	data[0] = (uintptr_t)pipeline;
+	data[1] = (uintptr_t)pipeline >> 32;
+
+	device->ws->cs_add_buffer(cs, device->trace_bo, 8);
+	radv_emit_write_data_packet(cs, va, 2, data);
 }
 
 static void
@@ -897,6 +939,8 @@ radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer)
 		radeon_set_config_reg(cmd_buffer->cs, R_008958_VGT_PRIMITIVE_TYPE, pipeline->graphics.prim);
 	}
 	radeon_set_context_reg(cmd_buffer->cs, R_028A6C_VGT_GS_OUT_PRIM_TYPE, pipeline->graphics.gs_out);
+
+	radv_save_pipeline(cmd_buffer, pipeline, RING_GFX);
 
 	cmd_buffer->state.emitted_pipeline = pipeline;
 }
@@ -2330,6 +2374,7 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 		    S_00B81C_NUM_THREAD_FULL(compute_shader->info.cs.block_size[2]));
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
+	radv_save_pipeline(cmd_buffer, pipeline, RING_COMPUTE);
 }
 
 static void radv_mark_descriptor_sets_dirty(struct radv_cmd_buffer *cmd_buffer)
