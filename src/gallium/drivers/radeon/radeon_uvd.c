@@ -1588,9 +1588,11 @@ void ruvd_set_dt_surfaces(struct ruvd_msg *msg, struct radeon_surf *luma,
 			msg->body.decode.dt_chroma_bottom_offset = msg->body.decode.dt_chroma_top_offset;
 		}
 
-		assert(luma->u.legacy.bankw == chroma->u.legacy.bankw);
-		assert(luma->u.legacy.bankh == chroma->u.legacy.bankh);
-		assert(luma->u.legacy.mtilea == chroma->u.legacy.mtilea);
+		if (chroma) {
+			assert(luma->u.legacy.bankw == chroma->u.legacy.bankw);
+			assert(luma->u.legacy.bankh == chroma->u.legacy.bankh);
+			assert(luma->u.legacy.mtilea == chroma->u.legacy.mtilea);
+		}
 
 		msg->body.decode.dt_surf_tile_config |= RUVD_BANK_WIDTH(bank_wh(luma->u.legacy.bankw));
 		msg->body.decode.dt_surf_tile_config |= RUVD_BANK_HEIGHT(bank_wh(luma->u.legacy.bankh));
