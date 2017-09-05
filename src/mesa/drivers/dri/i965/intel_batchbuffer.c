@@ -731,7 +731,7 @@ _intel_batchbuffer_flush_fence(struct brw_context *brw,
       brw_bo_reference(brw->throttle_batch[0]);
    }
 
-   if (unlikely(INTEL_DEBUG & DEBUG_BATCH)) {
+   if (unlikely(INTEL_DEBUG & (DEBUG_BATCH | DEBUG_SUBMIT))) {
       int bytes_for_commands = 4 * USED_BATCH(brw->batch);
       int bytes_for_state = brw->batch.bo->size - brw->batch.state_batch_offset;
       int total_bytes = bytes_for_commands + bytes_for_state;

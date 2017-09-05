@@ -57,7 +57,7 @@ extern uint64_t INTEL_DEBUG;
 #define DEBUG_VERTS               (1ull << 13)
 #define DEBUG_DRI                 (1ull << 14)
 #define DEBUG_SF                  (1ull << 15)
-/* Hole - feel free to reuse      (1ull << 16) */
+#define DEBUG_SUBMIT              (1ull << 16)
 #define DEBUG_WM                  (1ull << 17)
 #define DEBUG_URB                 (1ull << 18)
 #define DEBUG_VS                  (1ull << 19)
