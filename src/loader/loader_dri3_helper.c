@@ -181,10 +181,13 @@ dri3_fence_trigger(xcb_connection_t *c, struct loader_dri3_buffer *buffer)
 }
 
 static inline void
-dri3_fence_await(xcb_connection_t *c, struct loader_dri3_buffer *buffer)
+dri3_fence_await(xcb_connection_t *c, struct loader_dri3_drawable *draw,
+                 struct loader_dri3_buffer *buffer)
 {
    xcb_flush(c);
    xshmfence_await(buffer->shm_fence);
+   if (draw)
+      dri3_flush_present_events(draw);
 }
 
 static void
@@ -662,9 +665,9 @@ loader_dri3_copy_sub_buffer(struct loader_dri3_drawable *draw,
                      dri3_drawable_gc(draw),
                      x, y, x, y, width, height);
       dri3_fence_trigger(draw->conn, dri3_fake_front_buffer(draw));
-      dri3_fence_await(draw->conn, dri3_fake_front_buffer(draw));
+      dri3_fence_await(draw->conn, NULL, dri3_fake_front_buffer(draw));
    }
-   dri3_fence_await(draw->conn, back);
+   dri3_fence_await(draw->conn, draw, back);
 }
 
 void
@@ -680,7 +683,7 @@ loader_dri3_copy_drawable(struct loader_dri3_drawable *draw,
                   dri3_drawable_gc(draw),
                   0, 0, 0, 0, draw->width, draw->height);
    dri3_fence_trigger(draw->conn, dri3_fake_front_buffer(draw));
-   dri3_fence_await(draw->conn, dri3_fake_front_buffer(draw));
+   dri3_fence_await(draw->conn, draw, dri3_fake_front_buffer(draw));
 }
 
 void
@@ -1374,7 +1377,7 @@ dri3_get_buffer(__DRIdrawable *driDrawable,
          if (buffer) {
             if (!buffer->linear_buffer) {
                dri3_fence_reset(draw->conn, new_buffer);
-               dri3_fence_await(draw->conn, buffer);
+               dri3_fence_await(draw->conn, draw, buffer);
                dri3_copy_area(draw->conn,
                               buffer->pixmap,
                               new_buffer->pixmap,
@@ -1405,7 +1408,7 @@ dri3_get_buffer(__DRIdrawable *driDrawable,
 
          if (new_buffer->linear_buffer &&
              draw->vtable->in_current_context(draw)) {
-            dri3_fence_await(draw->conn, new_buffer);
+            dri3_fence_await(draw->conn, draw, new_buffer);
             (void) loader_dri3_blit_image(draw,
                                           new_buffer->image,
                                           new_buffer->linear_buffer,
@@ -1417,7 +1420,7 @@ dri3_get_buffer(__DRIdrawable *driDrawable,
       buffer = new_buffer;
       draw->buffers[buf_id] = buffer;
    }
-   dri3_fence_await(draw->conn, buffer);
+   dri3_fence_await(draw->conn, draw, buffer);
 
    /*
     * Do we need to preserve the content of a previous buffer?
