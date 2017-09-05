@@ -273,8 +273,9 @@ lima_set_vertex_buffers(struct pipe_context *pctx,
    unsigned i;
 
    for (i = 0; i < count; i++)
-      lima_update_resource(ctx->gp_submit, so->vb[start_slot + i].buffer,
-                           vb ? vb[i].buffer : NULL,
+      lima_update_resource(ctx->gp_submit,
+                           so->vb[start_slot + i].buffer.resource,
+                           vb ? vb[i].buffer.resource : NULL,
                            LIMA_SUBMIT_BO_FLAG_READ);
 
    util_set_vertex_buffers_mask(so->vb + start_slot, &so->enabled_mask,
@@ -282,26 +283,6 @@ lima_set_vertex_buffers(struct pipe_context *pctx,
    so->count = util_last_bit(so->enabled_mask);
 
    ctx->dirty |= LIMA_CONTEXT_DIRTY_VERTEX_BUFF;
-}
-
-static void
-lima_set_index_buffer(struct pipe_context *pctx,
-                      const struct pipe_index_buffer *ib)
-{
-   printf("dummy %s\n", __func__);
-
-   struct lima_context *ctx = lima_context(pctx);
-
-   if (ib) {
-      pipe_resource_reference(&ctx->index_buffer.buffer, ib->buffer);
-      ctx->index_buffer.index_size = ib->index_size;
-      ctx->index_buffer.offset = ib->offset;
-      ctx->index_buffer.user_buffer = ib->user_buffer;
-   } else {
-      pipe_resource_reference(&ctx->index_buffer.buffer, NULL);
-   }
-
-   ctx->dirty |= LIMA_CONTEXT_DIRTY_INDEX_BUFF;
 }
 
 static void
@@ -420,7 +401,6 @@ lima_state_init(struct lima_context *ctx)
    ctx->base.set_stencil_ref = lima_set_stencil_ref;
 
    ctx->base.set_vertex_buffers = lima_set_vertex_buffers;
-   ctx->base.set_index_buffer = lima_set_index_buffer;
    ctx->base.set_constant_buffer = lima_set_constant_buffer;
 
    ctx->base.create_depth_stencil_alpha_state = lima_create_depth_stencil_alpha_state;
@@ -450,6 +430,4 @@ lima_state_fini(struct lima_context *ctx)
 
    pipe_surface_reference(&ctx->framebuffer.cbuf, NULL);
    pipe_surface_reference(&ctx->framebuffer.zsbuf, NULL);
-
-   pipe_resource_reference(&ctx->index_buffer.buffer, NULL);
 }

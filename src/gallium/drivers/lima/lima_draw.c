@@ -207,7 +207,7 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    int i = 0;
    uint32_t *vs_cmd = ctx->gp_buffer->map + gp_vs_cmd_offset;
 
-   if (!info->indexed) {
+   if (!info->index_size) {
       vs_cmd[i++] = 0x00028000; /* ARRAYS_SEMAPHORE_BEGIN_1 */
       vs_cmd[i++] = 0x50000000; /* ARRAYS_SEMAPHORE */
       vs_cmd[i++] = 0x00000001; /* ARRAYS_SEMAPHORE_BEGIN_2 */
@@ -240,13 +240,13 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    vs_cmd[i++] = ctx->gp_buffer->va + gp_varying_info_offset;
    vs_cmd[i++] = 0x20000008 | (num_varryings << 17); /* VARYINGS_ADDRESS */
 
-   vs_cmd[i++] = (info->count << 24) | (info->indexed ? 1 : 0);
+   vs_cmd[i++] = (info->count << 24) | (info->index_size ? 1 : 0);
    vs_cmd[i++] = 0x00000000 | (info->count >> 8); /* DRAW */
 
    vs_cmd[i++] = 0x00000000;
    vs_cmd[i++] = 0x60000000; /* ?? */
 
-   vs_cmd[i++] = info->indexed ? 0x00018000 : 0x00000000; /* ARRAYS_SEMAPHORE_NEXT : ARRAYS_SEMAPHORE_END */
+   vs_cmd[i++] = info->index_size ? 0x00018000 : 0x00000000; /* ARRAYS_SEMAPHORE_NEXT : ARRAYS_SEMAPHORE_END */
    vs_cmd[i++] = 0x50000000; /* ARRAYS_SEMAPHORE */
 
    return i << 2;
@@ -286,7 +286,7 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    plbu_cmd[i++] = fui(ctx->viewport.height);
    plbu_cmd[i++] = 0x10000106; /* VIEWPORT_H */
 
-   if (!info->indexed) {
+   if (!info->index_size) {
       plbu_cmd[i++] = 0x00010002; /* ARRAYS_SEMAPHORE_BEGIN */
       plbu_cmd[i++] = 0x60000000; /* ARRAYS_SEMAPHORE */
    }
@@ -301,7 +301,7 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
          cull |= ccw ? 0x00020000 : 0x00040000;
    }
    plbu_cmd[i++] = 0x00002000 | 0x00000200 | cull |
-      (info->indexed && ctx->index_buffer.index_size == 2 ? 0x00000400 : 0);
+      (info->index_size == 2 ? 0x00000400 : 0);
    plbu_cmd[i++] = 0x1000010B; /* PRIMITIVE_SETUP */
 
    /* before we have a compiler, assume gl_position here */
@@ -318,14 +318,14 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    plbu_cmd[i++] = fui(ctx->viewport.far);
    plbu_cmd[i++] = 0x1000010F; /* DEPTH_RANGE_FAR */
 
-   if (info->indexed) {
+   if (info->index_size) {
       plbu_cmd[i++] = gl_position_va;
       plbu_cmd[i++] = 0x10000100; /* INDEXED_DEST */
 
-      struct lima_resource *res = lima_resource(ctx->index_buffer.buffer);
+      struct lima_resource *res = lima_resource(info->index.resource);
       lima_buffer_update(res->buffer, LIMA_BUFFER_ALLOC_VA);
-      plbu_cmd[i++] = res->buffer->va + ctx->index_buffer.offset +
-         info->start_instance * ctx->index_buffer.index_size;
+      plbu_cmd[i++] = res->buffer->va + info->start +
+         info->start_instance * info->index_size;
       plbu_cmd[i++] = 0x10000101; /* INDICES */
    }
    else {
@@ -338,7 +338,7 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    plbu_cmd[i++] = 0x00010001; /* ARRAYS_SEMAPHORE_END */
    plbu_cmd[i++] = 0x60000000; /* ARRAYS_SEMAPHORE */
 
-   if (info->indexed) {
+   if (info->index_size) {
       plbu_cmd[i++] = (info->count << 24) | info->start;
       plbu_cmd[i++] = 0x00000000 | 0x00200000 |
          ((info->mode & 0x1F) << 16) | (info->count >> 8); /* DRAW | DRAW_ELEMENTS */
@@ -569,7 +569,7 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
          assert(vb->enabled_mask & (1 << pve->vertex_buffer_index));
 
          struct pipe_vertex_buffer *pvb = vb->vb + pve->vertex_buffer_index;
-         struct lima_resource *res = lima_resource(pvb->buffer);
+         struct lima_resource *res = lima_resource(pvb->buffer.resource);
          lima_buffer_update(res->buffer, LIMA_BUFFER_ALLOC_VA);
 
          /* draw_info start vertex should also be here which is very bad
@@ -685,10 +685,6 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    if (ctx->dirty & LIMA_CONTEXT_DIRTY_SCISSOR) {
       ctx->dirty &= ~LIMA_CONTEXT_DIRTY_SCISSOR;
-   }
-
-   if (ctx->dirty & LIMA_CONTEXT_DIRTY_INDEX_BUFF) {
-      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_INDEX_BUFF;
    }
 
    if (ctx->dirty & LIMA_CONTEXT_DIRTY_RASTERIZER) {

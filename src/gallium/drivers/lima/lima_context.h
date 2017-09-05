@@ -114,13 +114,12 @@ struct lima_context {
       LIMA_CONTEXT_DIRTY_VERTEX_BUFF  = (1 << 5),
       LIMA_CONTEXT_DIRTY_VIEWPORT     = (1 << 6),
       LIMA_CONTEXT_DIRTY_SCISSOR      = (1 << 7),
-      LIMA_CONTEXT_DIRTY_INDEX_BUFF   = (1 << 8),
-      LIMA_CONTEXT_DIRTY_RASTERIZER   = (1 << 9),
-      LIMA_CONTEXT_DIRTY_ZSA          = (1 << 10),
-      LIMA_CONTEXT_DIRTY_BLEND_COLOR  = (1 << 11),
-      LIMA_CONTEXT_DIRTY_BLEND        = (1 << 12),
-      LIMA_CONTEXT_DIRTY_STENCIL_REF  = (1 << 13),
-      LIMA_CONTEXT_DIRTY_CONST_BUFF   = (1 << 14),
+      LIMA_CONTEXT_DIRTY_RASTERIZER   = (1 << 8),
+      LIMA_CONTEXT_DIRTY_ZSA          = (1 << 9),
+      LIMA_CONTEXT_DIRTY_BLEND_COLOR  = (1 << 10),
+      LIMA_CONTEXT_DIRTY_BLEND        = (1 << 11),
+      LIMA_CONTEXT_DIRTY_STENCIL_REF  = (1 << 12),
+      LIMA_CONTEXT_DIRTY_CONST_BUFF   = (1 << 13),
    } dirty;
 
    struct u_upload_mgr *uploader;
@@ -135,7 +134,6 @@ struct lima_context {
    struct lima_fs_shader_state *fs;
    struct lima_vertex_element_state *vertex_elements;
    struct lima_context_vertex_buffer vertex_buffers;
-   struct pipe_index_buffer index_buffer;
    struct lima_rasterizer_state *rasterizer;
    struct lima_depth_stencil_alpha_state *zsa;
    struct pipe_blend_color blend_color;
