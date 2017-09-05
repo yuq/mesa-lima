@@ -168,7 +168,6 @@ struct _egl_display
    char ClientAPIsString[100];                     /**< EGL_CLIENT_APIS */
    char ExtensionsString[_EGL_MAX_EXTENSIONS_LEN]; /**< EGL_EXTENSIONS */
 
-   _EGLArray *Screens;
    _EGLArray *Configs;
 
    /* lists of resources */
