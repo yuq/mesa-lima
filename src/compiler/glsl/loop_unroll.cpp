@@ -53,13 +53,6 @@ public:
 
 } /* anonymous namespace */
 
-static bool
-is_break(ir_instruction *ir)
-{
-   return ir != NULL && ir->ir_type == ir_type_loop_jump
-		     && ((ir_loop_jump *) ir)->is_break();
-}
-
 class loop_unroll_count : public ir_hierarchical_visitor {
 public:
    int nodes;
@@ -333,15 +326,34 @@ loop_unroll_visitor::visit_leave(ir_loop *ir)
     * bound, then that terminates the loop, so we don't even need the limiting
     * terminator.
     */
-   foreach_in_list(loop_terminator, t, &ls->terminators) {
+   foreach_in_list_safe(loop_terminator, t, &ls->terminators) {
       if (t->iterations < 0)
          continue;
 
+      exec_list *branch_instructions;
       if (t != ls->limiting_terminator) {
+         ir_instruction *ir_if_last = (ir_instruction *)
+            t->ir->then_instructions.get_tail();
+         if (is_break(ir_if_last)) {
+            branch_instructions = &t->ir->else_instructions;
+         } else {
+            branch_instructions = &t->ir->then_instructions;
+            assert(is_break((ir_instruction *)
+                            t->ir->else_instructions.get_tail()));
+         }
+
+         exec_list copy_list;
+         copy_list.make_empty();
+         clone_ir_list(ir, &copy_list, branch_instructions);
+
+         t->ir->insert_before(&copy_list);
          t->ir->remove();
 
          assert(ls->num_loop_jumps > 0);
          ls->num_loop_jumps--;
+
+         /* Also remove it from the terminator list */
+         t->remove();
 
          this->progress = true;
       }

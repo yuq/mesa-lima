@@ -34,6 +34,13 @@
 extern class loop_state *
 analyze_loop_variables(exec_list *instructions);
 
+static inline bool
+is_break(ir_instruction *ir)
+{
+   return ir != NULL && ir->ir_type == ir_type_loop_jump &&
+      ((ir_loop_jump *) ir)->is_break();
+}
+
 
 extern bool
 unroll_loops(exec_list *instructions, loop_state *ls,
