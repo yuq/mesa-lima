@@ -213,7 +213,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	 * doesn't work correctly on SI when there is no other
 	 * SE to switch to.
 	 */
-	if (has_primid_instancing_bug)
+	if (has_primid_instancing_bug && tess_uses_primid)
 		*num_patches = 1;
 
 	sctx->last_num_patches = *num_patches;
