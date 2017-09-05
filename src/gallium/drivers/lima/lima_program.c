@@ -58,8 +58,8 @@ lima_program_get_compiler_options(enum pipe_shader_type shader)
    }
 }
 
-void
-lima_program_optimize_nir(struct nir_shader *s)
+static void
+lima_program_optimize_vs_nir(struct nir_shader *s)
 {
    bool progress;
 
@@ -94,6 +94,38 @@ lima_program_optimize_nir(struct nir_shader *s)
    nir_sweep(s);
 }
 
+static void
+lima_program_optimize_fs_nir(struct nir_shader *s)
+{
+   bool progress;
+
+   do {
+      progress = false;
+
+      NIR_PASS_V(s, nir_lower_vars_to_ssa);
+      //NIR_PASS(progress, s, nir_lower_alu_to_scalar);
+      NIR_PASS(progress, s, nir_lower_phis_to_scalar);
+      NIR_PASS(progress, s, nir_copy_prop);
+      NIR_PASS(progress, s, nir_opt_remove_phis);
+      NIR_PASS(progress, s, nir_opt_dce);
+      NIR_PASS(progress, s, nir_opt_dead_cf);
+      NIR_PASS(progress, s, nir_opt_cse);
+      NIR_PASS(progress, s, nir_opt_peephole_select, 8);
+      NIR_PASS(progress, s, nir_opt_algebraic);
+      NIR_PASS(progress, s, nir_opt_constant_folding);
+      NIR_PASS(progress, s, nir_opt_undef);
+      NIR_PASS(progress, s, nir_opt_loop_unroll,
+               nir_var_shader_in |
+               nir_var_shader_out |
+               nir_var_local);
+   } while (progress);
+
+   NIR_PASS_V(s, nir_lower_locals_to_regs);
+   NIR_PASS_V(s, nir_convert_from_ssa, true);
+   NIR_PASS_V(s, nir_remove_dead_variables, nir_var_local);
+   nir_sweep(s);
+}
+
 static void *
 lima_create_fs_state(struct pipe_context *pctx,
                      const struct pipe_shader_state *cso)
@@ -105,9 +137,11 @@ lima_create_fs_state(struct pipe_context *pctx,
 
    printf("dummy %s\n", __func__);
 
-   assert(cso->type == PIPE_SHADER_IR_TGSI);
+   assert(cso->type == PIPE_SHADER_IR_NIR);
 
-   tgsi_dump(cso->tokens, 0);
+   nir_shader *nir = cso->ir.nir;
+   lima_program_optimize_fs_nir(nir);
+   nir_print_shader(nir, stdout);
 
    static uint32_t fs[] = {
       0x00021025, 0x0000014c, 0x03c007cf, 0x00000000, /* 0x00000000 */
@@ -153,7 +187,7 @@ lima_create_vs_state(struct pipe_context *pctx,
    assert(cso->type == PIPE_SHADER_IR_NIR);
 
    nir_shader *nir = cso->ir.nir;
-   lima_program_optimize_nir(nir);
+   lima_program_optimize_vs_nir(nir);
    nir_print_shader(nir, stdout);
 
    if (!gpir_compile_nir(so, nir)) {
