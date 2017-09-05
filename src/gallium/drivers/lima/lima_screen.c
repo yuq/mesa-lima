@@ -371,6 +371,8 @@ get_fragment_shader_param(struct lima_screen *screen,
       return 16; /* need investigate */
 
    case PIPE_SHADER_CAP_PREFERRED_IR:
+      return PIPE_SHADER_IR_NIR;
+
    case PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED:
    case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
    case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
