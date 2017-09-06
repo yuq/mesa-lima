@@ -30,7 +30,7 @@
 #include "pipe/p_context.h"
 #include "pipe/p_state.h"
 
-#include <lima.h>
+#include "lima.h"
 
 struct pipe_screen;
 struct pipe_surface;
