@@ -40,6 +40,8 @@
 #include <array>
 #include <sstream>
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
 // Function pointer to different storing functions for color, depth, and stencil based on incoming formats.
 typedef void(*PFN_STORE_TILES)(uint8_t*, SWR_SURFACE_STATE*, uint32_t, uint32_t, uint32_t);
 
@@ -1523,7 +1525,7 @@ struct OptStoreRasterTile< TilingTraits<SWR_TILE_NONE, 64>, SrcFormat, DstFormat
 
             pSrc += KNOB_SIMD16_WIDTH * SRC_BYTES_PER_PIXEL;
 
-            for (uint32_t i = 0; i < sizeof(ppDsts) / sizeof(ppDsts[0]); i += 1)
+            for (uint32_t i = 0; i < ARRAY_SIZE(ppDsts); i += 1)
             {
                 ppDsts[i] += dy;
             }
@@ -1641,7 +1643,7 @@ struct OptStoreRasterTile< TilingTraits<SWR_TILE_NONE, 128>, SrcFormat, DstForma
 
             pSrc += KNOB_SIMD16_WIDTH * SRC_BYTES_PER_PIXEL;
 
-            for (uint32_t i = 0; i < sizeof(ppDsts) / sizeof(ppDsts[0]); i += 1)
+            for (uint32_t i = 0; i < ARRAY_SIZE(ppDsts); i += 1)
             {
                 ppDsts[i] += dy;
             }
@@ -2124,7 +2126,7 @@ struct OptStoreRasterTile< TilingTraits<SWR_TILE_MODE_YMAJOR, 64>, SrcFormat, Ds
 
             pSrc += KNOB_SIMD16_WIDTH * SRC_BYTES_PER_PIXEL;
 
-            for (uint32_t i = 0; i < sizeof(ppDsts) / sizeof(ppDsts[0]); i += 1)
+            for (uint32_t i = 0; i < ARRAY_SIZE(ppDsts); i += 1)
             {
                 ppDsts[i] += dy;
             }
@@ -2253,7 +2255,7 @@ struct OptStoreRasterTile< TilingTraits<SWR_TILE_MODE_YMAJOR, 128>, SrcFormat, D
 
             pSrc += KNOB_SIMD16_WIDTH * SRC_BYTES_PER_PIXEL;
 
-            for (uint32_t i = 0; i < sizeof(ppDsts) / sizeof(ppDsts[0]); i += 1)
+            for (uint32_t i = 0; i < ARRAY_SIZE(ppDsts); i += 1)
             {
                 ppDsts[i] += dy;
             }
