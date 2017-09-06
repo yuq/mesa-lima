@@ -123,6 +123,7 @@
 #include "shared.h"
 #include "shaderobj.h"
 #include "shaderimage.h"
+#include "util/debug.h"
 #include "util/disk_cache.h"
 #include "util/strtod.h"
 #include "stencil.h"
@@ -1217,7 +1218,7 @@ _mesa_initialize_context(struct gl_context *ctx,
    /* KHR_no_error is likely to crash, overflow memory, etc if an application
     * has errors so don't enable it for setuid processes.
     */
-   if (getenv("MESA_NO_ERROR")) {
+   if (env_var_as_boolean("MESA_NO_ERROR", false)) {
 #if !defined(_WIN32)
       if (geteuid() == getuid())
 #endif
