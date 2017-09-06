@@ -763,6 +763,7 @@ struct radv_cmd_state {
 	uint32_t                                      vb_dirty;
 	radv_cmd_dirty_mask_t                         dirty;
 	bool                                          push_descriptors_dirty;
+	bool predicating;
 
 	struct radv_pipeline *                        pipeline;
 	struct radv_pipeline *                        emitted_pipeline;
@@ -777,8 +778,8 @@ struct radv_cmd_state {
 	struct radv_attachment_state *                attachments;
 	VkRect2D                                     render_area;
 	uint32_t                                     index_type;
-	uint64_t                                     index_va;
 	uint32_t                                     max_index_count;
+	uint64_t                                     index_va;
 	int32_t                                      last_primitive_reset_en;
 	uint32_t                                     last_primitive_reset_index;
 	enum radv_cmd_flush_bits                     flush_bits;
@@ -787,7 +788,6 @@ struct radv_cmd_state {
 	uint32_t                                      descriptors_dirty;
 	uint32_t                                      trace_id;
 	uint32_t                                      last_ia_multi_vgt_param;
-	bool predicating;
 };
 
 struct radv_cmd_pool {
