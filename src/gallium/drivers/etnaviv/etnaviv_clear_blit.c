@@ -727,6 +727,33 @@ etna_copy_resource(struct pipe_context *pctx, struct pipe_resource *dst,
 }
 
 void
+etna_copy_resource_box(struct pipe_context *pctx, struct pipe_resource *dst,
+                       struct pipe_resource *src, int level,
+                       struct pipe_box *box)
+{
+   assert(src->format == dst->format);
+   assert(src->array_size == dst->array_size);
+
+   struct pipe_blit_info blit = {};
+   blit.mask = util_format_get_mask(dst->format);
+   blit.filter = PIPE_TEX_FILTER_NEAREST;
+   blit.src.resource = src;
+   blit.src.format = src->format;
+   blit.src.box = *box;
+   blit.dst.resource = dst;
+   blit.dst.format = dst->format;
+   blit.dst.box = *box;
+
+   blit.dst.box.depth = blit.src.box.depth = 1;
+   blit.src.level = blit.dst.level = level;
+
+   for (int layer = 0; layer < dst->array_size; layer++) {
+      blit.src.box.z = blit.dst.box.z = layer;
+      pctx->blit(pctx, &blit);
+   }
+}
+
+void
 etna_clear_blit_init(struct pipe_context *pctx)
 {
    pctx->clear = etna_clear;
