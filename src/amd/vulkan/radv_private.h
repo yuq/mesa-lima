@@ -760,7 +760,7 @@ struct radv_attachment_state {
 };
 
 struct radv_cmd_state {
-	uint32_t                                      vb_dirty;
+	bool                                          vb_dirty;
 	radv_cmd_dirty_mask_t                         dirty;
 	bool                                          push_descriptors_dirty;
 	bool predicating;

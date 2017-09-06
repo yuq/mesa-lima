@@ -1623,7 +1623,7 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer)
 		radv_emit_userdata_address(cmd_buffer, cmd_buffer->state.pipeline, MESA_SHADER_VERTEX,
 					   AC_UD_VS_VERTEX_BUFFERS, va);
 	}
-	cmd_buffer->state.vb_dirty = 0;
+	cmd_buffer->state.vb_dirty = false;
 }
 
 static void
@@ -2043,8 +2043,9 @@ void radv_CmdBindVertexBuffers(
 	for (uint32_t i = 0; i < bindingCount; i++) {
 		vb[firstBinding + i].buffer = radv_buffer_from_handle(pBuffers[i]);
 		vb[firstBinding + i].offset = pOffsets[i];
-		cmd_buffer->state.vb_dirty |= 1 << (firstBinding + i);
 	}
+
+	cmd_buffer->state.vb_dirty = true;
 }
 
 void radv_CmdBindIndexBuffer(
