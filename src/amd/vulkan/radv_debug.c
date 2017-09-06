@@ -28,6 +28,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "sid.h"
+#include "gfx9d.h"
 #include "ac_debug.h"
 #include "radv_debug.h"
 #include "radv_shader.h"
@@ -79,6 +81,59 @@ radv_dump_trace(struct radv_device *device, struct radeon_winsys_cs *cs)
 	fprintf(f, "Trace ID: %x\n", *device->trace_id_ptr);
 	device->ws->cs_dump(cs, f, (const int*)device->trace_id_ptr, 2);
 	fclose(f);
+}
+
+static void
+radv_dump_mmapped_reg(struct radv_device *device, FILE *f, unsigned offset)
+{
+	struct radeon_winsys *ws = device->ws;
+	uint32_t value;
+
+	if (ws->read_registers(ws, offset, 1, &value))
+		ac_dump_reg(f, device->physical_device->rad_info.chip_class,
+			    offset, value, ~0);
+}
+
+static void
+radv_dump_debug_registers(struct radv_device *device, FILE *f)
+{
+	struct radeon_info *info = &device->physical_device->rad_info;
+
+	if (info->drm_major == 2 && info->drm_minor < 42)
+		return; /* no radeon support */
+
+	fprintf(f, "Memory-mapped registers:\n");
+	radv_dump_mmapped_reg(device, f, R_008010_GRBM_STATUS);
+
+	/* No other registers can be read on DRM < 3.1.0. */
+	if (info->drm_major < 3 || info->drm_minor < 1) {
+		fprintf(f, "\n");
+		return;
+	}
+
+	radv_dump_mmapped_reg(device, f, R_008008_GRBM_STATUS2);
+	radv_dump_mmapped_reg(device, f, R_008014_GRBM_STATUS_SE0);
+	radv_dump_mmapped_reg(device, f, R_008018_GRBM_STATUS_SE1);
+	radv_dump_mmapped_reg(device, f, R_008038_GRBM_STATUS_SE2);
+	radv_dump_mmapped_reg(device, f, R_00803C_GRBM_STATUS_SE3);
+	radv_dump_mmapped_reg(device, f, R_00D034_SDMA0_STATUS_REG);
+	radv_dump_mmapped_reg(device, f, R_00D834_SDMA1_STATUS_REG);
+	if (info->chip_class <= VI) {
+		radv_dump_mmapped_reg(device, f, R_000E50_SRBM_STATUS);
+		radv_dump_mmapped_reg(device, f, R_000E4C_SRBM_STATUS2);
+		radv_dump_mmapped_reg(device, f, R_000E54_SRBM_STATUS3);
+	}
+	radv_dump_mmapped_reg(device, f, R_008680_CP_STAT);
+	radv_dump_mmapped_reg(device, f, R_008674_CP_STALLED_STAT1);
+	radv_dump_mmapped_reg(device, f, R_008678_CP_STALLED_STAT2);
+	radv_dump_mmapped_reg(device, f, R_008670_CP_STALLED_STAT3);
+	radv_dump_mmapped_reg(device, f, R_008210_CP_CPC_STATUS);
+	radv_dump_mmapped_reg(device, f, R_008214_CP_CPC_BUSY_STAT);
+	radv_dump_mmapped_reg(device, f, R_008218_CP_CPC_STALLED_STAT1);
+	radv_dump_mmapped_reg(device, f, R_00821C_CP_CPF_STATUS);
+	radv_dump_mmapped_reg(device, f, R_008220_CP_CPF_BUSY_STAT);
+	radv_dump_mmapped_reg(device, f, R_008224_CP_CPF_STALLED_STAT1);
+	fprintf(f, "\n");
 }
 
 static void
@@ -187,6 +242,8 @@ radv_check_gpu_hangs(struct radv_queue *queue, struct radeon_winsys_cs *cs)
 		fprintf(stderr, "VM fault report.\n\n");
 		fprintf(stderr, "Failing VM page: 0x%08"PRIx64"\n\n", addr);
 	}
+
+	radv_dump_debug_registers(device, stderr);
 
 	switch (ring) {
 	case RING_GFX:
