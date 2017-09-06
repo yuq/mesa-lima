@@ -30,6 +30,7 @@
 #include <pthread.h>
 
 #include "util/list.h"
+#include "util/u_hash_table.h"
 
 #define LIMA_PAGE_SIZE 4096
 
@@ -51,8 +52,8 @@ struct lima_device {
    struct lima_va_mgr vamgr;
 
    pthread_mutex_t bo_table_mutex;
-   void *bo_handles;
-   void *bo_flink_names;
+   struct util_hash_table *bo_handles;
+   struct util_hash_table *bo_flink_names;
 };
 
 struct lima_bo {
