@@ -29,6 +29,18 @@
 #include "lima_priv.h"
 #include "lima.h"
 
+#define PTR_TO_UINT(x) ((unsigned)((intptr_t)(x)))
+
+static unsigned handle_hash(void *key)
+{
+    return PTR_TO_UINT(key);
+}
+
+static int handle_compare(void *key1, void *key2)
+{
+    return PTR_TO_UINT(key1) != PTR_TO_UINT(key2);
+}
+
 int lima_device_create(int fd, lima_device_handle *dev)
 {
    int err;
@@ -43,13 +55,13 @@ int lima_device_create(int fd, lima_device_handle *dev)
    if (err)
       goto err_out0;
 
-   ldev->bo_handles = drmHashCreate();
+   ldev->bo_handles = util_hash_table_create(handle_hash, handle_compare);
    if (!ldev->bo_handles) {
       err = -ENOMEM;
       goto err_out1;
    }
 
-   ldev->bo_flink_names = drmHashCreate();
+   ldev->bo_flink_names = util_hash_table_create(handle_hash, handle_compare);
    if (!ldev->bo_flink_names) {
       err = -ENOMEM;
       goto err_out2;
@@ -60,7 +72,7 @@ int lima_device_create(int fd, lima_device_handle *dev)
    return 0;
 
 err_out2:
-   drmHashDestroy(ldev->bo_handles);
+   util_hash_table_destroy(ldev->bo_handles);
 err_out1:
    lima_vamgr_fini(&ldev->vamgr);
 err_out0:
@@ -71,8 +83,8 @@ err_out0:
 void lima_device_delete(lima_device_handle dev)
 {
    pthread_mutex_destroy(&dev->bo_table_mutex);
-   drmHashDestroy(dev->bo_handles);
-   drmHashDestroy(dev->bo_flink_names);
+   util_hash_table_destroy(dev->bo_handles);
+   util_hash_table_destroy(dev->bo_flink_names);
    lima_vamgr_fini(&dev->vamgr);
    free(dev);
 }

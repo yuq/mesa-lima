@@ -71,9 +71,9 @@ int lima_bo_free(lima_bo_handle bo)
       return 0;
 
    pthread_mutex_lock(&bo->dev->bo_table_mutex);
-   drmHashDelete(bo->dev->bo_handles, bo->handle);
+   util_hash_table_remove(bo->dev->bo_handles, (void *)bo->handle);
    if (bo->flink_name)
-      drmHashDelete(bo->dev->bo_flink_names, bo->flink_name);
+      util_hash_table_remove(bo->dev->bo_flink_names, (void *)bo->flink_name);
    pthread_mutex_unlock(&bo->dev->bo_table_mutex);
 
    err = drmIoctl(bo->dev->fd, DRM_IOCTL_GEM_CLOSE, &req);
@@ -157,14 +157,15 @@ int lima_bo_export(lima_bo_handle bo, enum lima_bo_handle_type type,
          bo->flink_name = flink.name;
 
          pthread_mutex_lock(&bo->dev->bo_table_mutex);
-         drmHashInsert(bo->dev->bo_flink_names, bo->flink_name, bo);
+         util_hash_table_set(bo->dev->bo_flink_names, (void *)bo->flink_name, bo);
          pthread_mutex_unlock(&bo->dev->bo_table_mutex);
       }
       *handle = bo->flink_name;
       return 0;
+
    case lima_bo_handle_type_kms:
       pthread_mutex_lock(&bo->dev->bo_table_mutex);
-      drmHashInsert(bo->dev->bo_handles, bo->handle, bo);
+      util_hash_table_set(bo->dev->bo_handles, (void *)bo->handle, bo);
       pthread_mutex_unlock(&bo->dev->bo_table_mutex);
 
       *handle = bo->handle;
@@ -184,10 +185,10 @@ int lima_bo_import(lima_device_handle dev, enum lima_bo_handle_type type,
    pthread_mutex_lock(&dev->bo_table_mutex);
    switch (type) {
    case lima_bo_handle_type_gem_flink_name:
-      drmHashLookup(dev->bo_flink_names, handle, (void **)&bo);
+      bo = util_hash_table_get(dev->bo_flink_names, (void *)handle);
       break;
    case lima_bo_handle_type_kms:
-      drmHashLookup(dev->bo_handles, handle, (void **)&bo);
+      bo = util_hash_table_get(dev->bo_handles, (void *)handle);
       break;
    }
    pthread_mutex_unlock(&dev->bo_table_mutex);
@@ -219,7 +220,7 @@ int lima_bo_import(lima_device_handle dev, enum lima_bo_handle_type type,
       bo->size = req.size;
 
       pthread_mutex_lock(&dev->bo_table_mutex);
-      drmHashInsert(bo->dev->bo_flink_names, bo->flink_name, bo);
+      util_hash_table_set(bo->dev->bo_flink_names, (void *)bo->flink_name, bo);
       pthread_mutex_unlock(&dev->bo_table_mutex);
       break;
    case lima_bo_handle_type_kms:
