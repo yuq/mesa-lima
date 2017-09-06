@@ -274,6 +274,8 @@ dd_init_draw_functions(struct dd_context *dctx);
 int
 dd_thread_pipelined_hang_detect(void *input);
 
+FILE *
+dd_get_file_stream(struct dd_screen *dscreen, unsigned apitrace_call_number);
 
 static inline struct dd_context *
 dd_context(struct pipe_context *pipe)

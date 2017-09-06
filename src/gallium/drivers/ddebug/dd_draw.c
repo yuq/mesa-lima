@@ -39,7 +39,7 @@
 #include <inttypes.h>
 
 
-static FILE *
+FILE *
 dd_get_file_stream(struct dd_screen *dscreen, unsigned apitrace_call_number)
 {
    struct pipe_screen *screen = dscreen->screen;

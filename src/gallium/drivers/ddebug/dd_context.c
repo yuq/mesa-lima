@@ -584,8 +584,19 @@ dd_context_destroy(struct pipe_context *_pipe)
       pipe_resource_reference(&dctx->fence, NULL);
    }
 
-   if (pipe->set_log_context)
+   if (pipe->set_log_context) {
       pipe->set_log_context(pipe, NULL);
+
+      if (dd_screen(dctx->base.screen)->mode == DD_DUMP_ALL_CALLS) {
+         FILE *f = dd_get_file_stream(dd_screen(dctx->base.screen), 0);
+         if (f) {
+            fprintf(f, "Remainder of driver log:\n\n");
+         }
+
+         u_log_new_page_print(&dctx->log, f);
+         fclose(f);
+      }
+   }
    u_log_context_destroy(&dctx->log);
 
    pipe->destroy(pipe);
