@@ -1227,17 +1227,16 @@ struct radv_image {
 	 */
 	VkFormat vk_format;
 	VkImageAspectFlags aspects;
-	struct ac_surf_info info;
 	VkImageUsageFlags usage; /**< Superset of VkImageCreateInfo::usage. */
+	struct ac_surf_info info;
 	VkImageTiling tiling; /** VkImageCreateInfo::tiling */
 	VkImageCreateFlags flags; /** VkImageCreateInfo::flags */
 
 	VkDeviceSize size;
 	uint32_t alignment;
 
-	bool exclusive;
 	unsigned queue_family_mask;
-
+	bool exclusive;
 	bool shareable;
 
 	/* Set when bound */
