@@ -29,7 +29,7 @@
 
 #include "pipe/p_screen.h"
 
-#include <lima.h>
+#include "lima.h"
 
 #define LIMA_MAX_MIP_LEVELS 12
 

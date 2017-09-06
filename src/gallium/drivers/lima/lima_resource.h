@@ -27,7 +27,7 @@
 
 #include "pipe/p_state.h"
 
-#include <lima.h>
+#include "lima.h"
 
 struct lima_screen;
 struct lima_context;
