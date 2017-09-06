@@ -223,7 +223,7 @@ void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index)
 
    gpir_node_type type = gpir_op_infos[op].type;
    int size = node_size[type];
-   gpir_node *node = rzalloc_size(NULL, size);
+   gpir_node *node = rzalloc_size(comp, size);
    if (!node)
       return NULL;
 

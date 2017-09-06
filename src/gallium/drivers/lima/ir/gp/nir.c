@@ -214,32 +214,21 @@ static gpir_node *gpir_emit_instr(gpir_compiler *comp, nir_instr *instr)
    }
 }
 
-static gpir_block *gpir_block_create(void)
+static gpir_block *gpir_block_create(gpir_compiler *comp)
 {
-   gpir_block *block = MALLOC(sizeof(*block));
+   gpir_block *block = ralloc(comp, gpir_block);
    if (!block)
       return NULL;
 
    list_inithead(&block->node_list);
-   util_dynarray_init(&block->instrs, NULL);
+   util_dynarray_init(&block->instrs, block);
 
    return block;
 }
 
-static void gpir_block_delete(gpir_block *block)
-{
-   list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
-      gpir_node_delete(node);
-   }
-
-   util_dynarray_fini(&block->instrs);
-
-   FREE(block);
-}
-
 static bool gpir_emit_block(gpir_compiler *comp, nir_block *nblock)
 {
-   gpir_block *block = gpir_block_create();
+   gpir_block *block = gpir_block_create(comp);
    if (!block)
       return false;
 
@@ -303,34 +292,27 @@ static bool gpir_emit_cf_list(gpir_compiler *comp, struct exec_list *list)
    return true;
 }
 
-static gpir_compiler *gpir_compiler_create(unsigned num_reg, unsigned num_ssa)
+static gpir_compiler *gpir_compiler_create(void *prog, unsigned num_reg, unsigned num_ssa)
 {
-   gpir_compiler *comp = CALLOC(1, sizeof(*comp) + (num_reg + num_ssa) * sizeof(gpir_node *));
+   gpir_compiler *comp = rzalloc_size(
+      prog, sizeof(*comp) + (num_reg + num_ssa) * sizeof(gpir_node *));
    if (!comp)
       return NULL;
 
    list_inithead(&comp->block_list);
    comp->var_nodes = (gpir_node **)(comp + 1);
    comp->reg_base = num_ssa;
+   comp->prog = prog;
    return comp;
-}
-
-static void gpir_compiler_delete(gpir_compiler *comp)
-{
-   list_for_each_entry_safe(gpir_block, block, &comp->block_list, list) {
-      gpir_block_delete(block);
-   }
-   FREE(comp);
 }
 
 bool gpir_compile_nir(struct lima_vs_shader_state *prog, nir_shader *nir)
 {
    nir_function_impl *func = nir_shader_get_entrypoint(nir);
-   gpir_compiler *comp = gpir_compiler_create(func->reg_alloc, func->ssa_alloc);
+   gpir_compiler *comp = gpir_compiler_create(prog, func->reg_alloc, func->ssa_alloc);
    if (!comp)
       return false;
 
-   comp->prog = prog;
    comp->constant_base = nir->num_uniforms;
 
    if (!gpir_emit_cf_list(comp, &func->body))
@@ -344,11 +326,11 @@ bool gpir_compile_nir(struct lima_vs_shader_state *prog, nir_shader *nir)
    gpir_codegen_prog(comp);
    gpir_codegen_print_prog(comp);
 
-   gpir_compiler_delete(comp);
+   ralloc_free(comp);
    return true;
 
 err_out0:
-   gpir_compiler_delete(comp);
+   ralloc_free(comp);
    return false;
 }
 
