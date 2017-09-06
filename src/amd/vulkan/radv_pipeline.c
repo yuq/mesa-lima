@@ -2408,6 +2408,8 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 
 	const VkPipelineVertexInputStateCreateInfo *vi_info =
 		pCreateInfo->pVertexInputState;
+	struct radv_vertex_elements_info *velems = &pipeline->vertex_elements;
+
 	for (uint32_t i = 0; i < vi_info->vertexAttributeDescriptionCount; i++) {
 		const VkVertexInputAttributeDescription *desc =
 			&vi_info->pVertexAttributeDescriptions[i];
@@ -2421,16 +2423,16 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		num_format = radv_translate_buffer_numformat(format_desc, first_non_void);
 		data_format = radv_translate_buffer_dataformat(format_desc, first_non_void);
 
-		pipeline->va_rsrc_word3[loc] = S_008F0C_DST_SEL_X(si_map_swizzle(format_desc->swizzle[0])) |
+		velems->rsrc_word3[loc] = S_008F0C_DST_SEL_X(si_map_swizzle(format_desc->swizzle[0])) |
 			S_008F0C_DST_SEL_Y(si_map_swizzle(format_desc->swizzle[1])) |
 			S_008F0C_DST_SEL_Z(si_map_swizzle(format_desc->swizzle[2])) |
 			S_008F0C_DST_SEL_W(si_map_swizzle(format_desc->swizzle[3])) |
 			S_008F0C_NUM_FORMAT(num_format) |
 			S_008F0C_DATA_FORMAT(data_format);
-		pipeline->va_format_size[loc] = format_desc->block.bits / 8;
-		pipeline->va_offset[loc] = desc->offset;
-		pipeline->va_binding[loc] = desc->binding;
-		pipeline->num_vertex_attribs = MAX2(pipeline->num_vertex_attribs, loc + 1);
+		velems->format_size[loc] = format_desc->block.bits / 8;
+		velems->offset[loc] = desc->offset;
+		velems->binding[loc] = desc->binding;
+		velems->count = MAX2(velems->count, loc + 1);
 	}
 
 	for (uint32_t i = 0; i < vi_info->vertexBindingDescriptionCount; i++) {

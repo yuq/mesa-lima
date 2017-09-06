@@ -1584,37 +1584,38 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer)
 	struct radv_device *device = cmd_buffer->device;
 
 	if ((cmd_buffer->state.pipeline != cmd_buffer->state.emitted_pipeline || cmd_buffer->state.vb_dirty) &&
-	    cmd_buffer->state.pipeline->num_vertex_attribs &&
+	    cmd_buffer->state.pipeline->vertex_elements.count &&
 	    cmd_buffer->state.pipeline->shaders[MESA_SHADER_VERTEX]->info.info.vs.has_vertex_buffers) {
+		struct radv_vertex_elements_info *velems = &cmd_buffer->state.pipeline->vertex_elements;
 		unsigned vb_offset;
 		void *vb_ptr;
 		uint32_t i = 0;
-		uint32_t num_attribs = cmd_buffer->state.pipeline->num_vertex_attribs;
+		uint32_t count = velems->count;
 		uint64_t va;
 
 		/* allocate some descriptor state for vertex buffers */
-		radv_cmd_buffer_upload_alloc(cmd_buffer, num_attribs * 16, 256,
+		radv_cmd_buffer_upload_alloc(cmd_buffer, count * 16, 256,
 					     &vb_offset, &vb_ptr);
 
-		for (i = 0; i < num_attribs; i++) {
+		for (i = 0; i < count; i++) {
 			uint32_t *desc = &((uint32_t *)vb_ptr)[i * 4];
 			uint32_t offset;
-			int vb = cmd_buffer->state.pipeline->va_binding[i];
+			int vb = velems->binding[i];
 			struct radv_buffer *buffer = cmd_buffer->state.vertex_bindings[vb].buffer;
 			uint32_t stride = cmd_buffer->state.pipeline->binding_stride[vb];
 
 			device->ws->cs_add_buffer(cmd_buffer->cs, buffer->bo, 8);
 			va = device->ws->buffer_get_va(buffer->bo);
 
-			offset = cmd_buffer->state.vertex_bindings[vb].offset + cmd_buffer->state.pipeline->va_offset[i];
+			offset = cmd_buffer->state.vertex_bindings[vb].offset + velems->offset[i];
 			va += offset + buffer->offset;
 			desc[0] = va;
 			desc[1] = S_008F04_BASE_ADDRESS_HI(va >> 32) | S_008F04_STRIDE(stride);
 			if (cmd_buffer->device->physical_device->rad_info.chip_class <= CIK && stride)
-				desc[2] = (buffer->size - offset - cmd_buffer->state.pipeline->va_format_size[i]) / stride + 1;
+				desc[2] = (buffer->size - offset - velems->format_size[i]) / stride + 1;
 			else
 				desc[2] = buffer->size - offset;
-			desc[3] = cmd_buffer->state.pipeline->va_rsrc_word3[i];
+			desc[3] = velems->rsrc_word3[i];
 		}
 
 		va = device->ws->buffer_get_va(cmd_buffer->upload.upload_bo);
