@@ -1578,7 +1578,7 @@ static void radv_emit_primitive_reset_state(struct radv_cmd_buffer *cmd_buffer,
 	}
 }
 
-static void
+static bool
 radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer)
 {
 	struct radv_device *device = cmd_buffer->device;
@@ -1594,8 +1594,9 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer)
 		uint64_t va;
 
 		/* allocate some descriptor state for vertex buffers */
-		radv_cmd_buffer_upload_alloc(cmd_buffer, count * 16, 256,
-					     &vb_offset, &vb_ptr);
+		if (!radv_cmd_buffer_upload_alloc(cmd_buffer, count * 16, 256,
+						  &vb_offset, &vb_ptr))
+			return false;
 
 		for (i = 0; i < count; i++) {
 			uint32_t *desc = &((uint32_t *)vb_ptr)[i * 4];
@@ -1625,6 +1626,8 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer)
 					   AC_UD_VS_VERTEX_BUFFERS, va);
 	}
 	cmd_buffer->state.vb_dirty = false;
+
+	return true;
 }
 
 static void
@@ -1639,7 +1642,8 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
 							   cmd_buffer->cs, 4096);
 
-	radv_cmd_buffer_update_vertex_descriptors(cmd_buffer);
+	if (!radv_cmd_buffer_update_vertex_descriptors(cmd_buffer))
+		return;
 
 	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_PIPELINE)
 		radv_emit_graphics_pipeline(cmd_buffer, pipeline);
