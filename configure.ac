@@ -80,7 +80,6 @@ LIBDRM_NVVIEUX_REQUIRED=2.4.66
 LIBDRM_NOUVEAU_REQUIRED=2.4.66
 LIBDRM_FREEDRENO_REQUIRED=2.4.89
 LIBDRM_ETNAVIV_REQUIRED=2.4.82
-LIBDRM_LIMA_REQUIRED=2.4.75
 
 dnl Versions for external dependencies
 DRI2PROTO_REQUIRED=2.8
@@ -2606,7 +2605,6 @@ if test -n "$with_gallium_drivers"; then
             ;;
         xlima)
             HAVE_GALLIUM_LIMA=yes
-            PKG_CHECK_MODULES([LIMA], [libdrm >= $LIBDRM_LIMA_REQUIRED libdrm_lima >= $LIBDRM_LIMA_REQUIRED])
             require_libdrm "lima"
             ;;
         xswrast)
