@@ -886,10 +886,15 @@ _intel_batchbuffer_flush_fence(struct brw_context *brw,
    if (unlikely(INTEL_DEBUG & (DEBUG_BATCH | DEBUG_SUBMIT))) {
       int bytes_for_commands = 4 * USED_BATCH(brw->batch);
       int bytes_for_state = brw->batch.state_used;
-      fprintf(stderr, "%s:%d: Batchbuffer flush with %4db (%0.1f%%) (pkt) + "
-              "%4db (%0.1f%%) (state)\n", file, line,
+      fprintf(stderr, "%19s:%-3d: Batchbuffer flush with %5db (%0.1f%%) (pkt),"
+              " %5db (%0.1f%%) (state), %4d BOs (%0.1fMb aperture),"
+              " %4d batch relocs, %4d state relocs\n", file, line,
               bytes_for_commands, 100.0f * bytes_for_commands / BATCH_SZ,
-              bytes_for_state, 100.0f * bytes_for_state / STATE_SZ);
+              bytes_for_state, 100.0f * bytes_for_state / STATE_SZ,
+              brw->batch.exec_count,
+              (float) brw->batch.aperture_space / (1024 * 1024),
+              brw->batch.batch_relocs.reloc_count,
+              brw->batch.state_relocs.reloc_count);
    }
 
    brw_finish_batch(brw);
