@@ -43,6 +43,13 @@ using std::cerr;
 using std::setw;
 #endif
 
+/* If <windows.h> is included this is defined and clashes with
+ * std::numeric_limits<>::max()
+ */
+#ifdef max
+#undef max
+#endif
+
 using std::numeric_limits;
 
 /* Without c++11 define the nullptr for forward-compatibility
@@ -592,7 +599,8 @@ lifetime temp_comp_access::get_required_lifetime()
 
 /* Helper class for sorting and searching the registers based
  * on life times. */
-struct access_record {
+class access_record {
+public:
    int begin;
    int end;
    int reg;
