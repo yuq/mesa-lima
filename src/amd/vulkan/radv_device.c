@@ -3141,7 +3141,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 	}
 
 	format = radv_translate_dbformat(iview->image->vk_format);
-	stencil_format = iview->image->surface.flags & RADEON_SURF_SBUFFER ?
+	stencil_format = iview->image->surface.has_stencil ?
 		V_028044_STENCIL_8 : V_028044_STENCIL_INVALID;
 
 	uint32_t max_slice = radv_surface_layer_count(iview);
@@ -3176,7 +3176,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 		if (iview->image->surface.htile_size && !level) {
 			ds->db_z_info |= S_028038_TILE_SURFACE_ENABLE(1);
 
-			if (!(iview->image->surface.flags & RADEON_SURF_SBUFFER))
+			if (!iview->image->surface.has_stencil)
 				/* Use all of the htile_buffer for depth if there's no stencil. */
 				ds->db_stencil_info |= S_02803C_TILE_STENCIL_DISABLE(1);
 			va = device->ws->buffer_get_va(iview->bo) + iview->image->offset +
@@ -3239,7 +3239,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 		if (iview->image->surface.htile_size && !level) {
 			ds->db_z_info |= S_028040_TILE_SURFACE_ENABLE(1);
 
-			if (!(iview->image->surface.flags & RADEON_SURF_SBUFFER))
+			if (!iview->image->surface.has_stencil)
 				/* Use all of the htile_buffer for depth if there's no stencil. */
 				ds->db_stencil_info |= S_028044_TILE_STENCIL_DISABLE(1);
 

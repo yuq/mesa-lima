@@ -973,7 +973,7 @@ static void si_decompress_subresource(struct pipe_context *ctx,
 	if (rtex->db_compatible) {
 		planes &= PIPE_MASK_Z | PIPE_MASK_S;
 
-		if (!(rtex->surface.flags & RADEON_SURF_SBUFFER))
+		if (!rtex->surface.has_stencil)
 			planes &= ~PIPE_MASK_S;
 
 		/* If we've rendered into the framebuffer and it's a blitting

@@ -377,7 +377,7 @@ static bool r600_decompress_subresource(struct pipe_context *ctx,
 			r600_blit_decompress_depth_in_place(rctx, rtex, false,
 						   level, level,
 						   first_layer, last_layer);
-			if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
+			if (rtex->surface.has_stencil) {
 				r600_blit_decompress_depth_in_place(rctx, rtex, true,
 							   level, level,
 							   first_layer, last_layer);

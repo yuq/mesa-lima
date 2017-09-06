@@ -160,6 +160,7 @@ struct radeon_surf {
      */
     unsigned                    num_dcc_levels:4;
     unsigned                    is_linear:1;
+    unsigned                    has_stencil:1;
     /* Displayable, thin, depth, rotated. AKA D,S,Z,R swizzle modes. */
     unsigned                    micro_tile_mode:3;
     uint32_t                    flags;

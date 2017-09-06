@@ -203,7 +203,7 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 	struct r600_texture *rtex =
 		(struct r600_texture*)sctx->framebuffer.state.zsbuf->texture;
 	unsigned depth_coeff = dsa->depth_enabled ? 5 : 0;
-	unsigned stencil_coeff = rtex->surface.flags & RADEON_SURF_SBUFFER &&
+	unsigned stencil_coeff = rtex->surface.has_stencil &&
 				 dsa->stencil_enabled ? 1 : 0;
 	unsigned sum = 4 * (depth_coeff + stencil_coeff) *
 		       sctx->framebuffer.nr_samples;

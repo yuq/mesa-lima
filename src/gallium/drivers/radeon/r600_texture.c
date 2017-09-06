@@ -1168,7 +1168,7 @@ void r600_print_texture_info(struct r600_common_screen *rscreen,
 			rtex->surface.u.legacy.level[i].mode,
 			rtex->surface.u.legacy.tiling_index[i]);
 
-	if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
+	if (rtex->surface.has_stencil) {
 		u_log_printf(log, "  StencilLayout: tilesplit=%u\n",
 			rtex->surface.u.legacy.stencil_tile_split);
 		for (i = 0; i <= rtex->resource.b.b.last_level; i++) {
@@ -2120,7 +2120,7 @@ static void r600_clear_texture(struct pipe_context *pipe,
 		clear = PIPE_CLEAR_DEPTH;
 		desc->unpack_z_float(&depth, 0, data, 0, 1, 1);
 
-		if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
+		if (rtex->surface.has_stencil) {
 			clear |= PIPE_CLEAR_STENCIL;
 			desc->unpack_s_8uint(&stencil, 0, data, 0, 1, 1);
 		}

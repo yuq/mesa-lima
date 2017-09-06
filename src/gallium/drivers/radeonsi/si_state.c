@@ -2327,7 +2327,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 	uint32_t z_info, s_info;
 
 	format = si_translate_dbformat(rtex->db_render_format);
-	stencil_format = rtex->surface.flags & RADEON_SURF_SBUFFER ?
+	stencil_format = rtex->surface.has_stencil ?
 				 V_028044_STENCIL_8 : V_028044_STENCIL_INVALID;
 
 	assert(format != V_028040_Z_INVALID);
@@ -2372,7 +2372,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 				s_info |= S_02803C_ITERATE_FLUSH(1);
 			}
 
-			if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
+			if (rtex->surface.has_stencil) {
 				/* Stencil buffer workaround ported from the SI-CI-VI code.
 				 * See that for explanation.
 				 */
@@ -2438,7 +2438,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 			z_info |= S_028040_TILE_SURFACE_ENABLE(1) |
 				  S_028040_ALLOW_EXPCLEAR(1);
 
-			if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
+			if (rtex->surface.has_stencil) {
 				/* Workaround: For a not yet understood reason, the
 				 * combination of MSAA, fast stencil clear and stencil
 				 * decompress messes with subsequent stencil buffer
@@ -2494,7 +2494,7 @@ void si_update_fb_dirtiness_after_rendering(struct si_context *sctx)
 
 		rtex->dirty_level_mask |= 1 << surf->u.tex.level;
 
-		if (rtex->surface.flags & RADEON_SURF_SBUFFER)
+		if (rtex->surface.has_stencil)
 			rtex->stencil_dirty_level_mask |= 1 << surf->u.tex.level;
 	}
 	if (sctx->framebuffer.compressed_cb_mask) {

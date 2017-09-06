@@ -1371,7 +1371,7 @@ static void evergreen_init_depth_surface(struct r600_context *rctx,
 	surf->db_depth_slice = S_02805C_SLICE_TILE_MAX(levelinfo->nblk_x *
 						       levelinfo->nblk_y / 64 - 1);
 
-	if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
+	if (rtex->surface.has_stencil) {
 		uint64_t stencil_offset;
 		unsigned stile_split = rtex->surface.u.legacy.stencil_tile_split;
 
