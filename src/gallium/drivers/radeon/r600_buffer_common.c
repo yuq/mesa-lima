@@ -171,7 +171,9 @@ void r600_init_resource_fields(struct r600_common_screen *rscreen,
 	 * processes. */
 	if (res->b.b.target == PIPE_BUFFER ||
 	    res->b.b.nr_samples >= 2 ||
-	    rtex->surface.micro_tile_mode != RADEON_MICRO_MODE_DISPLAY)
+	    (rtex->surface.micro_tile_mode != RADEON_MICRO_MODE_DISPLAY &&
+	     /* Raven doesn't use display micro mode for 32bpp, so check this: */
+	     !(res->b.b.bind & PIPE_BIND_SCANOUT)))
 		res->flags |= RADEON_FLAG_NO_INTERPROCESS_SHARING;
 
 	/* If VRAM is just stolen system memory, allow both VRAM and
