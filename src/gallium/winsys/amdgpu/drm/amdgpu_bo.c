@@ -411,7 +411,8 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
    if (flags & RADEON_FLAG_GTT_WC)
       request.flags |= AMDGPU_GEM_CREATE_CPU_GTT_USWC;
    if (flags & RADEON_FLAG_NO_INTERPROCESS_SHARING &&
-       ws->info.drm_minor >= 20)
+       ws->info.drm_minor >= 20 &&
+       ws->info.family != CHIP_RAVEN)
       request.flags |= AMDGPU_GEM_CREATE_VM_ALWAYS_VALID;
 
    r = amdgpu_bo_alloc(ws->dev, &request, &buf_handle);
