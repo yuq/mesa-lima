@@ -271,7 +271,7 @@ radv_cmd_buffer_resize_upload_buf(struct radv_cmd_buffer *cmd_buffer,
 		upload = malloc(sizeof(*upload));
 
 		if (!upload) {
-			cmd_buffer->record_result = VK_ERROR_OUT_OF_DEVICE_MEMORY;
+			cmd_buffer->record_result = VK_ERROR_OUT_OF_HOST_MEMORY;
 			device->ws->buffer_destroy(bo);
 			return false;
 		}
