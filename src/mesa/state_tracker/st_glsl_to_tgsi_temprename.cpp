@@ -540,8 +540,8 @@ lifetime temp_comp_access::get_required_lifetime()
    if (enclosing_scope_first_write->contains_range_of(*enclosing_scope))
       enclosing_scope = enclosing_scope_first_write;
 
-   if (enclosing_scope_first_read->contains_range_of(*enclosing_scope))
-      enclosing_scope = enclosing_scope_first_read;
+   if (last_read_scope->contains_range_of(*enclosing_scope))
+      enclosing_scope = last_read_scope;
 
    while (!enclosing_scope->contains_range_of(*enclosing_scope_first_write) ||
           !enclosing_scope->contains_range_of(*last_read_scope)) {
