@@ -107,11 +107,9 @@ public:
    bool is_loop() const;
    bool is_in_loop() const;
    bool is_conditional() const;
-   bool is_conditional_in_loop() const;
 
    bool break_is_for_switchcase() const;
    bool contains_range_of(const prog_scope& other) const;
-   const st_src_reg *switch_register() const;
 
    void set_end(int end);
    void set_loop_break_line(int line);
@@ -124,7 +122,6 @@ private:
    int scope_end;
    int break_loop_line;
    prog_scope *parent_scope;
-   const st_src_reg *switch_reg;
 };
 
 /* Some storage class to encapsulate the prog_scope (de-)allocations */
@@ -201,8 +198,7 @@ prog_scope::prog_scope(prog_scope *parent, prog_scope_type type, int id,
    scope_begin(scope_begin),
    scope_end(-1),
    break_loop_line(numeric_limits<int>::max()),
-   parent_scope(parent),
-   switch_reg(nullptr)
+   parent_scope(parent)
 {
 }
 
@@ -235,11 +231,6 @@ bool prog_scope::is_in_loop() const
       return parent_scope->is_in_loop();
 
    return false;
-}
-
-bool prog_scope::is_conditional_in_loop() const
-{
-   return is_conditional() && is_in_loop();
 }
 
 const prog_scope *prog_scope::innermost_loop() const
@@ -301,11 +292,6 @@ const prog_scope *prog_scope::in_ifelse_scope() const
       return parent_scope->in_ifelse_scope();
 
    return nullptr;
-}
-
-const st_src_reg *prog_scope::switch_register() const
-{
-   return switch_reg;
 }
 
 const prog_scope *prog_scope::in_switchcase_scope() const
