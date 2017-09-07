@@ -570,11 +570,14 @@ make_surface(struct brw_context *brw, GLenum target, mesa_format format,
    if (!isl_surf_init_s(&brw->isl_dev, &mt->surf, &init_info))
       goto fail;
 
-   /* In case caller doesn't specifically request Y-tiling (needed
-    * unconditionally for depth), check for corner cases needing special
-    * treatment.
+   /* Depth surfaces are always Y-tiled and stencil is always W-tiled, although
+    * on gen7 platforms we also need to create Y-tiled copies of stencil for
+    * texturing since the hardware can't sample from W-tiled surfaces. For
+    * everything else, check for corner cases needing special treatment.
     */
-   if (tiling_flags & ~ISL_TILING_Y0_BIT) {
+   bool is_depth_stencil =
+      mt->surf.usage & (ISL_SURF_USAGE_STENCIL_BIT | ISL_SURF_USAGE_DEPTH_BIT);
+   if (!is_depth_stencil) {
       if (need_to_retile_as_linear(brw, mt->surf.row_pitch,
                                    mt->surf.tiling, mt->surf.samples)) {
          init_info.tiling_flags = 1u << ISL_TILING_LINEAR;
