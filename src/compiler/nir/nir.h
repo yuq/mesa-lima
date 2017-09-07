@@ -2417,6 +2417,9 @@ void nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint);
 void nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
                               int (*type_size)(const struct glsl_type *));
 
+/* Some helpers to do very simple linking */
+bool nir_remove_unused_varyings(nir_shader *producer, nir_shader *consumer);
+
 typedef enum {
    /* If set, this forces all non-flat fragment shader inputs to be
     * interpolated as if with the "sample" qualifier.  This requires
