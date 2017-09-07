@@ -281,11 +281,10 @@ _eglError(EGLint errCode, const char *msg)
 {
    if (errCode != EGL_SUCCESS) {
       EGLint type;
-      if (errCode == EGL_BAD_ALLOC) {
+      if (errCode == EGL_BAD_ALLOC)
          type = EGL_DEBUG_MSG_CRITICAL_KHR;
-      } else {
+      else
          type = EGL_DEBUG_MSG_ERROR_KHR;
-      }
 
       _eglDebugReport(errCode, NULL, type, msg);
    } else
@@ -306,9 +305,8 @@ _eglDebugReport(EGLenum error, const char *funcName,
       funcName = thr->CurrentFuncName;
 
    mtx_lock(_eglGlobal.Mutex);
-   if (_eglGlobal.debugTypesEnabled & DebugBitFromType(type)) {
+   if (_eglGlobal.debugTypesEnabled & DebugBitFromType(type))
       callback = _eglGlobal.debugCallback;
-   }
 
    mtx_unlock(_eglGlobal.Mutex);
 
@@ -317,9 +315,8 @@ _eglDebugReport(EGLenum error, const char *funcName,
 
       if (message != NULL) {
          va_start(args, message);
-         if (vasprintf(&buf, message, args) < 0) {
+         if (vasprintf(&buf, message, args) < 0)
             buf = NULL;
-         }
 
          va_end(args);
       }
@@ -327,7 +324,6 @@ _eglDebugReport(EGLenum error, const char *funcName,
       free(buf);
    }
 
-   if (type == EGL_DEBUG_MSG_CRITICAL_KHR || type == EGL_DEBUG_MSG_ERROR_KHR) {
+   if (type == EGL_DEBUG_MSG_CRITICAL_KHR || type == EGL_DEBUG_MSG_ERROR_KHR)
       _eglInternalError(error, funcName);
-   }
 }
