@@ -64,7 +64,7 @@ endif
 # include only conditionally ?
 SUBDIRS += compiler
 
-## Optionally required by GBM, EGL and Vulkan
+## Optionally required by GBM, EGL
 if HAVE_PLATFORM_WAYLAND
 SUBDIRS += egl/wayland/wayland-drm
 endif
