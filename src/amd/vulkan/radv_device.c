@@ -2789,7 +2789,7 @@ VkResult radv_CreateEvent(
 
 	event->bo = device->ws->buffer_create(device->ws, 8, 8,
 					      RADEON_DOMAIN_GTT,
-					      RADEON_FLAG_CPU_ACCESS);
+					      RADEON_FLAG_VA_UNCACHED | RADEON_FLAG_CPU_ACCESS);
 	if (!event->bo) {
 		vk_free2(&device->alloc, pAllocator, event);
 		return VK_ERROR_OUT_OF_DEVICE_MEMORY;
