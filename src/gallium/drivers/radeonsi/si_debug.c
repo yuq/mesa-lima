@@ -829,102 +829,12 @@ static void si_add_split_disasm(const char *disasm,
 	}
 }
 
-#define MAX_WAVES_PER_CHIP (64 * 40)
-
-struct si_wave_info {
-	unsigned se; /* shader engine */
-	unsigned sh; /* shader array */
-	unsigned cu; /* compute unit */
-	unsigned simd;
-	unsigned wave;
-	uint32_t status;
-	uint64_t pc; /* program counter */
-	uint32_t inst_dw0;
-	uint32_t inst_dw1;
-	uint64_t exec;
-	bool matched; /* whether the wave is used by a currently-bound shader */
-};
-
-static int compare_wave(const void *p1, const void *p2)
-{
-	struct si_wave_info *w1 = (struct si_wave_info *)p1;
-	struct si_wave_info *w2 = (struct si_wave_info *)p2;
-
-	/* Sort waves according to PC and then SE, SH, CU, etc. */
-	if (w1->pc < w2->pc)
-		return -1;
-	if (w1->pc > w2->pc)
-		return 1;
-	if (w1->se < w2->se)
-		return -1;
-	if (w1->se > w2->se)
-		return 1;
-	if (w1->sh < w2->sh)
-		return -1;
-	if (w1->sh > w2->sh)
-		return 1;
-	if (w1->cu < w2->cu)
-		return -1;
-	if (w1->cu > w2->cu)
-		return 1;
-	if (w1->simd < w2->simd)
-		return -1;
-	if (w1->simd > w2->simd)
-		return 1;
-	if (w1->wave < w2->wave)
-		return -1;
-	if (w1->wave > w2->wave)
-		return 1;
-
-	return 0;
-}
-
-/* Return wave information. "waves" should be a large enough array. */
-static unsigned si_get_wave_info(struct si_wave_info waves[MAX_WAVES_PER_CHIP])
-{
-	char line[2000];
-	unsigned num_waves = 0;
-
-	FILE *p = popen("umr -wa", "r");
-	if (!p)
-		return 0;
-
-	if (!fgets(line, sizeof(line), p) ||
-	    strncmp(line, "SE", 2) != 0) {
-		pclose(p);
-		return 0;
-	}
-
-	while (fgets(line, sizeof(line), p)) {
-		struct si_wave_info *w;
-		uint32_t pc_hi, pc_lo, exec_hi, exec_lo;
-
-		assert(num_waves < MAX_WAVES_PER_CHIP);
-		w = &waves[num_waves];
-
-		if (sscanf(line, "%u %u %u %u %u %x %x %x %x %x %x %x",
-			   &w->se, &w->sh, &w->cu, &w->simd, &w->wave,
-			   &w->status, &pc_hi, &pc_lo, &w->inst_dw0,
-			   &w->inst_dw1, &exec_hi, &exec_lo) == 12) {
-			w->pc = ((uint64_t)pc_hi << 32) | pc_lo;
-			w->exec = ((uint64_t)exec_hi << 32) | exec_lo;
-			w->matched = false;
-			num_waves++;
-		}
-	}
-
-	qsort(waves, num_waves, sizeof(struct si_wave_info), compare_wave);
-
-	pclose(p);
-	return num_waves;
-}
-
 /* If the shader is being executed, print its asm instructions, and annotate
  * those that are being executed right now with information about waves that
  * execute them. This is most useful during a GPU hang.
  */
 static void si_print_annotated_shader(struct si_shader *shader,
-				      struct si_wave_info *waves,
+				      struct ac_wave_info *waves,
 				      unsigned num_waves,
 				      FILE *f)
 {
@@ -1010,8 +920,8 @@ static void si_print_annotated_shader(struct si_shader *shader,
 
 static void si_dump_annotated_shaders(struct si_context *sctx, FILE *f)
 {
-	struct si_wave_info waves[MAX_WAVES_PER_CHIP];
-	unsigned num_waves = si_get_wave_info(waves);
+	struct ac_wave_info waves[AC_MAX_WAVES_PER_CHIP];
+	unsigned num_waves = ac_get_wave_info(waves);
 
 	fprintf(f, COLOR_CYAN "The number of active waves = %u" COLOR_RESET
 		"\n\n", num_waves);
