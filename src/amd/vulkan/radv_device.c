@@ -411,6 +411,7 @@ static const struct debug_control radv_debug_options[] = {
 	{"allbos", RADV_DEBUG_ALL_BOS},
 	{"noibs", RADV_DEBUG_NO_IBS},
 	{"spirv", RADV_DEBUG_DUMP_SPIRV},
+	{"vmfaults", RADV_DEBUG_VM_FAULTS},
 	{NULL, 0}
 };
 
