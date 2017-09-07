@@ -521,9 +521,9 @@ brw_nir_lower_cs_shared(nir_shader *nir)
    this_progress;                                          \
 })
 
-static nir_shader *
-nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
-             bool is_scalar)
+nir_shader *
+brw_nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
+                 bool is_scalar)
 {
    nir_variable_mode indirect_mask = 0;
    if (compiler->glsl_compiler_options[nir->stage].EmitNoIndirectInput)
@@ -626,7 +626,7 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
 
    OPT(nir_split_var_copies);
 
-   nir = nir_optimize(nir, compiler, is_scalar);
+   nir = brw_nir_optimize(nir, compiler, is_scalar);
 
    if (is_scalar) {
       OPT(nir_lower_load_const_to_scalar);
@@ -652,7 +652,7 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
                         nir_lower_divmod64);
 
    /* Get rid of split copies */
-   nir = nir_optimize(nir, compiler, is_scalar);
+   nir = brw_nir_optimize(nir, compiler, is_scalar);
 
    OPT(nir_remove_dead_variables, nir_var_local);
 
@@ -682,7 +682,7 @@ brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
       OPT(nir_opt_algebraic_before_ffma);
    } while (progress);
 
-   nir = nir_optimize(nir, compiler, is_scalar);
+   nir = brw_nir_optimize(nir, compiler, is_scalar);
 
    if (devinfo->gen >= 6) {
       /* Try and fuse multiply-adds */
@@ -776,7 +776,7 @@ brw_nir_apply_sampler_key(nir_shader *nir,
 
    if (nir_lower_tex(nir, &tex_options)) {
       nir_validate_shader(nir);
-      nir = nir_optimize(nir, compiler, is_scalar);
+      nir = brw_nir_optimize(nir, compiler, is_scalar);
    }
 
    return nir;
