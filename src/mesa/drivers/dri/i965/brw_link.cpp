@@ -253,6 +253,62 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
                                  compiler->scalar_stage[stage]);
    }
 
+   /* Determine first and last stage. */
+   unsigned first = MESA_SHADER_STAGES;
+   unsigned last = 0;
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (!shProg->_LinkedShaders[i])
+         continue;
+      if (first == MESA_SHADER_STAGES)
+         first = i;
+      last = i;
+   }
+
+   /* Linking the stages in the opposite order (from fragment to vertex)
+    * ensures that inter-shader outputs written to in an earlier stage
+    * are eliminated if they are (transitively) not used in a later
+    * stage.
+    */
+    if (first != last) {
+       int next = last;
+       for (int i = next - 1; i >= 0; i--) {
+          if (shProg->_LinkedShaders[i] == NULL)
+             continue;
+
+            nir_shader *producer = shProg->_LinkedShaders[i]->Program->nir;
+            nir_shader *consumer = shProg->_LinkedShaders[next]->Program->nir;
+
+            nir_remove_dead_variables(producer, nir_var_shader_out);
+            nir_remove_dead_variables(consumer, nir_var_shader_in);
+
+            if (nir_remove_unused_varyings(producer, consumer)) {
+               nir_lower_global_vars_to_local(producer);
+               nir_lower_global_vars_to_local(consumer);
+
+               nir_variable_mode indirect_mask = (nir_variable_mode) 0;
+               if (compiler->glsl_compiler_options[i].EmitNoIndirectTemp)
+                  indirect_mask = (nir_variable_mode) nir_var_local;
+
+               /* The backend might not be able to handle indirects on
+                * temporaries so we need to lower indirects on any of the
+                * varyings we have demoted here.
+                */
+               nir_lower_indirect_derefs(producer, indirect_mask);
+               nir_lower_indirect_derefs(consumer, indirect_mask);
+
+               const bool p_is_scalar = compiler->scalar_stage[producer->stage];
+               shProg->_LinkedShaders[i]->Program->nir =
+                 brw_nir_optimize(producer, compiler, p_is_scalar);
+
+               const bool c_is_scalar = compiler->scalar_stage[producer->stage];
+               shProg->_LinkedShaders[next]->Program->nir =
+                 brw_nir_optimize(consumer, compiler, c_is_scalar);
+            }
+
+            next = i;
+       }
+    }
+
    for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {
       struct gl_linked_shader *shader = shProg->_LinkedShaders[stage];
       if (!shader)
