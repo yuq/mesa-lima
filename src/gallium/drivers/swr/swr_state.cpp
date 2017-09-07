@@ -531,7 +531,7 @@ swr_create_vertex_elements_state(struct pipe_context *pipe,
             ? ComponentControl::StoreSrc
             : ComponentControl::Store1Fp;
          velems->fsState.layout[i].ComponentPacking = ComponentEnable::XYZW;
-         velems->fsState.layout[i].InstanceDataStepRate =
+         velems->fsState.layout[i].InstanceAdvancementState =
             attribs[i].instance_divisor;
 
          /* Calculate the pitch of each stream */

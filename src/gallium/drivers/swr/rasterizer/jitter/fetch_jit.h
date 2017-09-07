@@ -45,16 +45,17 @@ struct INPUT_ELEMENT_DESC
             uint32_t            Format : 10;
             uint32_t            StreamIndex : 6;
             uint32_t            InstanceEnable : 1;
+            uint32_t            InstanceStrideEnable : 1;
             uint32_t            ComponentControl0 : 3;
             uint32_t            ComponentControl1 : 3;
             uint32_t            ComponentControl2 : 3;
             uint32_t            ComponentControl3 : 3;
             uint32_t            ComponentPacking : 4;
-            uint32_t            _reserved : 19;
+            uint32_t            _reserved : 18;
         };
         uint64_t bits;
     };
-    uint32_t InstanceDataStepRate;
+    uint32_t InstanceAdvancementState;
 };
 
 // used to set ComponentPacking
@@ -124,7 +125,7 @@ struct FETCH_COMPILE_STATE
         {
             if((layout[i].bits != other.layout[i].bits) ||
                ((layout[i].InstanceEnable == 1) &&
-                (layout[i].InstanceDataStepRate != other.layout[i].InstanceDataStepRate))){
+                (layout[i].InstanceAdvancementState != other.layout[i].InstanceAdvancementState))){
                 return false;
             }
         }

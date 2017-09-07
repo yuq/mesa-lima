@@ -360,7 +360,7 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* str
         Value *startOffset;
         if(ied.InstanceEnable)
         {
-            Value* stepRate = C(ied.InstanceDataStepRate);
+            Value* stepRate = C(ied.InstanceAdvancementState);
 
             // prevent a div by 0 for 0 step rate
             Value* isNonZeroStep = ICMP_UGT(stepRate, C(0));
@@ -375,6 +375,10 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* str
             vCurIndices = VBROADCAST(calcInstance);
 
             startOffset = startInstance;
+        }
+        else if (ied.InstanceStrideEnable)
+        {
+            SWR_ASSERT((0), "TODO: Fill out more once driver sends this down.");
         }
         else
         {
@@ -825,7 +829,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
         Value *startOffset;
         if(ied.InstanceEnable)
         {
-            Value* stepRate = C(ied.InstanceDataStepRate);
+            Value* stepRate = C(ied.InstanceAdvancementState);
 
             // prevent a div by 0 for 0 step rate
             Value* isNonZeroStep = ICMP_UGT(stepRate, C(0));
@@ -840,6 +844,10 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
             vCurIndices = VBROADCAST(calcInstance);
 
             startOffset = startInstance;
+        }
+        else if (ied.InstanceStrideEnable)
+        {
+            SWR_ASSERT((0), "TODO: Fill out more once driver sends this down.");
         }
         else
         {
