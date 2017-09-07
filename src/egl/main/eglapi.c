@@ -2393,13 +2393,6 @@ eglLabelObjectKHR(EGLDisplay dpy, EGLenum objectType, EGLObjectKHR object,
    RETURN_EGL_ERROR(disp, EGL_BAD_PARAMETER, EGL_BAD_PARAMETER);
 }
 
-static EGLBoolean
-_validDebugMessageLevel(EGLAttrib level)
-{
-   return (level >= EGL_DEBUG_MSG_CRITICAL_KHR &&
-           level <= EGL_DEBUG_MSG_INFO_KHR);
-}
-
 static EGLint EGLAPIENTRY
 eglDebugMessageControlKHR(EGLDEBUGPROCKHR callback,
                           const EGLAttrib *attrib_list)
@@ -2415,20 +2408,24 @@ eglDebugMessageControlKHR(EGLDEBUGPROCKHR callback,
       int i;
 
       for (i = 0; attrib_list[i] != EGL_NONE; i += 2) {
-         if (_validDebugMessageLevel(attrib_list[i])) {
+         switch (attrib_list[i]) {
+         case EGL_DEBUG_MSG_CRITICAL_KHR:
+         case EGL_DEBUG_MSG_ERROR_KHR:
+         case EGL_DEBUG_MSG_WARN_KHR:
+         case EGL_DEBUG_MSG_INFO_KHR:
             if (attrib_list[i + 1])
                newEnabled |= DebugBitFromType(attrib_list[i]);
             else
                newEnabled &= ~DebugBitFromType(attrib_list[i]);
-            continue;
+            break;
+         default:
+            // On error, set the last error code, call the current
+            // debug callback, and return the error code.
+            mtx_unlock(_eglGlobal.Mutex);
+            _eglReportError(EGL_BAD_ATTRIBUTE, NULL,
+                  "Invalid attribute 0x%04lx", (unsigned long) attrib_list[i]);
+            return EGL_BAD_ATTRIBUTE;
          }
-
-         // On error, set the last error code, call the current
-         // debug callback, and return the error code.
-         mtx_unlock(_eglGlobal.Mutex);
-         _eglReportError(EGL_BAD_ATTRIBUTE, NULL,
-                         "Invalid attribute 0x%04lx", (unsigned long) attrib_list[i]);
-         return EGL_BAD_ATTRIBUTE;
       }
    }
 
@@ -2451,25 +2448,25 @@ eglQueryDebugKHR(EGLint attribute, EGLAttrib *value)
 
    mtx_lock(_eglGlobal.Mutex);
 
-   do {
-      if (_validDebugMessageLevel(attribute)) {
-         if (_eglGlobal.debugTypesEnabled & DebugBitFromType(attribute))
-            *value = EGL_TRUE;
-         else
-            *value = EGL_FALSE;
-         break;
-      }
-
-      if (attribute == EGL_DEBUG_CALLBACK_KHR) {
-         *value = (EGLAttrib) _eglGlobal.debugCallback;
-         break;
-      }
-
+   switch (attribute) {
+   case EGL_DEBUG_MSG_CRITICAL_KHR:
+   case EGL_DEBUG_MSG_ERROR_KHR:
+   case EGL_DEBUG_MSG_WARN_KHR:
+   case EGL_DEBUG_MSG_INFO_KHR:
+      if (_eglGlobal.debugTypesEnabled & DebugBitFromType(attribute))
+         *value = EGL_TRUE;
+      else
+         *value = EGL_FALSE;
+      break;
+   case EGL_DEBUG_CALLBACK_KHR:
+      *value = (EGLAttrib) _eglGlobal.debugCallback;
+      break;
+   default:
       mtx_unlock(_eglGlobal.Mutex);
       _eglReportError(EGL_BAD_ATTRIBUTE, NULL,
                       "Invalid attribute 0x%04lx", (unsigned long) attribute);
       return EGL_FALSE;
-   } while (0);
+   }
 
    mtx_unlock(_eglGlobal.Mutex);
    return EGL_TRUE;
