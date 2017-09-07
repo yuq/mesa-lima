@@ -4154,6 +4154,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          ubld.MOV(brw_flag_reg(0, 0), brw_imm_uw(0));
       }
       bld.CMP(bld.null_reg_d(), get_nir_src(instr->src[0]), brw_imm_d(0), BRW_CONDITIONAL_NZ);
+
+      dest.type = BRW_REGISTER_TYPE_D;
       bld.MOV(dest, brw_imm_d(-1));
       set_predicate(dispatch_width == 8  ? BRW_PREDICATE_ALIGN1_ANY8H :
                     dispatch_width == 16 ? BRW_PREDICATE_ALIGN1_ANY16H :
@@ -4176,6 +4178,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          ubld.MOV(brw_flag_reg(0, 0), brw_imm_uw(0xffff));
       }
       bld.CMP(bld.null_reg_d(), get_nir_src(instr->src[0]), brw_imm_d(0), BRW_CONDITIONAL_NZ);
+
+      dest.type = BRW_REGISTER_TYPE_D;
       bld.MOV(dest, brw_imm_d(-1));
       set_predicate(dispatch_width == 8  ? BRW_PREDICATE_ALIGN1_ALL8H :
                     dispatch_width == 16 ? BRW_PREDICATE_ALIGN1_ALL16H :
@@ -4200,6 +4204,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          ubld.MOV(brw_flag_reg(0, 0), brw_imm_uw(0xffff));
       }
       bld.CMP(bld.null_reg_d(), value, uniformized, BRW_CONDITIONAL_Z);
+
+      dest.type = BRW_REGISTER_TYPE_D;
       bld.MOV(dest, brw_imm_d(-1));
       set_predicate(dispatch_width == 8  ? BRW_PREDICATE_ALIGN1_ALL8H :
                     dispatch_width == 16 ? BRW_PREDICATE_ALIGN1_ALL16H :
