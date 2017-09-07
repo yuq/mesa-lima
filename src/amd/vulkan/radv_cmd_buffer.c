@@ -2169,6 +2169,7 @@ void radv_meta_push_descriptor_set(
 	struct radv_descriptor_set *push_set = &cmd_buffer->meta_push_descriptors;
 	unsigned bo_offset;
 
+	assert(set == 0);
 	assert(layout->set[set].layout->flags & VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR);
 
 	push_set->size = layout->set[set].layout->size;
