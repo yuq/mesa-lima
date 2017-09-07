@@ -296,10 +296,10 @@ void JitManager::DumpToFile(Function *f, const char *fileName)
 #endif
         fd.flush();
 
-        //raw_fd_ostream fd_cfg(fName, EC, llvm::sys::fs::F_Text);
-        //WriteGraph(fd_cfg, (const Function*)f);
+        raw_fd_ostream fd_cfg(fName, EC, llvm::sys::fs::F_Text);
+        WriteGraph(fd_cfg, (const Function*)f);
 
-        //fd_cfg.flush();
+        fd_cfg.flush();
     }
 }
 
