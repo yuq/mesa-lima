@@ -274,8 +274,7 @@ _eglSetFuncName(const char *funcName, _EGLDisplay *disp, EGLenum objectType, _EG
       return EGL_TRUE;
    }
 
-   _eglDebugReportFull(EGL_BAD_ALLOC, funcName, funcName,
-                       EGL_DEBUG_MSG_CRITICAL_KHR, NULL, NULL);
+   _eglDebugReport(EGL_BAD_ALLOC, funcName, EGL_DEBUG_MSG_CRITICAL_KHR, NULL);
    return EGL_FALSE;
 }
 
