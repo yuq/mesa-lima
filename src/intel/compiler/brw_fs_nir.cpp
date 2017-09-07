@@ -4264,8 +4264,15 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_ballot: {
       const fs_reg value = retype(get_nir_src(instr->src[0]),
                                   BRW_REGISTER_TYPE_UD);
-      const struct brw_reg flag = retype(brw_flag_reg(0, 0),
-                                         BRW_REGISTER_TYPE_UD);
+      struct brw_reg flag = brw_flag_reg(0, 0);
+      /* FIXME: For SIMD32 programs, this causes us to stomp on f0.1 as well
+       * as f0.0.  This is a problem for fragment programs as we currently use
+       * f0.1 for discards.  Fortunately, we don't support SIMD32 fragment
+       * programs yet so this isn't a problem.  When we do, something will
+       * have to change.
+       */
+      if (dispatch_width == 32)
+         flag.type = BRW_REGISTER_TYPE_UD;
 
       bld.exec_all().MOV(flag, brw_imm_ud(0u));
       bld.CMP(bld.null_reg_ud(), value, brw_imm_ud(0u), BRW_CONDITIONAL_NZ);
