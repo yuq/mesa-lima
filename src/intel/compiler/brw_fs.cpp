@@ -5013,7 +5013,9 @@ needs_src_copy(const fs_builder &lbld, const fs_inst *inst, unsigned i)
 {
    return !(is_periodic(inst->src[i], lbld.dispatch_width()) ||
             (inst->components_read(i) == 1 &&
-             lbld.dispatch_width() <= inst->exec_size));
+             lbld.dispatch_width() <= inst->exec_size)) ||
+          (inst->flags_written() &
+           flag_mask(inst->src[i], type_sz(inst->src[i].type)));
 }
 
 /**
