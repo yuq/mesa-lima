@@ -1179,7 +1179,7 @@ struct StoreRasterTile
                     resolveColor[3] *= oneOverNumSamples;
 
                     // Use the resolve surface state
-                    SWR_SURFACE_STATE* pResolveSurface = (SWR_SURFACE_STATE*)pDstSurface->pAuxBaseAddress;
+                    SWR_SURFACE_STATE* pResolveSurface = (SWR_SURFACE_STATE*)pDstSurface->xpAuxBaseAddress;
                     uint8_t *pDst = (uint8_t*)ComputeSurfaceAddress<false, false>((x + rx), (y + ry),
                         pResolveSurface->arrayIndex + renderTargetArrayIndex, pResolveSurface->arrayIndex + renderTargetArrayIndex,
                         0, pResolveSurface->lod, pResolveSurface);
@@ -2390,7 +2390,7 @@ struct StoreMacroTile
             }
         }
 
-        if (pDstSurface->pAuxBaseAddress)
+        if (pDstSurface->xpAuxBaseAddress)
         {
             uint32_t sampleOffset = KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * (FormatTraits<SrcFormat>::bpp / 8);
             // Store each raster tile from the hot tile to the destination surface.

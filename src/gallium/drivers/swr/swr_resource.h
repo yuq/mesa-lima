@@ -92,7 +92,7 @@ swr_resource_data(struct pipe_resource *resource)
 
    assert(!swr_resource_is_texture(resource));
 
-   return swr_r->swr.pBaseAddress;
+   return (uint8_t*)(swr_r->swr.xpBaseAddress);
 }
 
 

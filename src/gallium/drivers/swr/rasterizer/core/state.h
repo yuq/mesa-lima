@@ -29,6 +29,7 @@
 
 #include "common/formats.h"
 #include "common/intrin.h"
+using gfxptr_t = unsigned long long;
 #include <functional>
 #include <algorithm>
 
@@ -513,7 +514,7 @@ enum SWR_AUX_MODE
 //////////////////////////////////////////////////////////////////////////
 struct SWR_SURFACE_STATE
 {
-    uint8_t *pBaseAddress;
+    gfxptr_t xpBaseAddress;
     SWR_SURFACE_TYPE type;  // @llvm_enum
     SWR_FORMAT format;      // @llvm_enum
     uint32_t width;
@@ -536,7 +537,7 @@ struct SWR_SURFACE_STATE
 
     uint32_t lodOffsets[2][15]; // lod offsets for sampled surfaces
 
-    uint8_t *pAuxBaseAddress;   // Used for compression, append/consume counter, etc.
+    gfxptr_t xpAuxBaseAddress;   // Used for compression, append/consume counter, etc.
     SWR_AUX_MODE auxMode;      // @llvm_enum
 
 

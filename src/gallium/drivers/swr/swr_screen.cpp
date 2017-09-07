@@ -652,7 +652,7 @@ swr_displaytarget_layout(struct swr_screen *screen, struct swr_resource *res)
    void *map = winsys->displaytarget_map(winsys, dt, 0);
 
    res->display_target = dt;
-   res->swr.pBaseAddress = (uint8_t*) map;
+   res->swr.xpBaseAddress = (gfxptr_t)map;
 
    /* Clear the display target surface */
    if (map)
@@ -826,7 +826,7 @@ swr_texture_layout(struct swr_screen *screen,
       return false;
 
    if (allocate) {
-      res->swr.pBaseAddress = (uint8_t *)AlignedMalloc(total_size, 64);
+      res->swr.xpBaseAddress = (gfxptr_t)AlignedMalloc(total_size, 64);
 
       if (res->has_depth && res->has_stencil) {
          res->secondary = res->swr;
@@ -841,8 +841,7 @@ swr_texture_layout(struct swr_screen *screen,
          total_size = res->secondary.depth * res->secondary.qpitch *
                       res->secondary.pitch * res->secondary.numSamples;
 
-         res->secondary.pBaseAddress = (uint8_t *) AlignedMalloc(total_size,
-                                                                 64);
+         res->secondary.xpBaseAddress = (gfxptr_t) AlignedMalloc(total_size, 64);
       }
    }
 
@@ -902,7 +901,7 @@ swr_create_resolve_resource(struct pipe_screen *_screen,
 
       /* Hang resolve surface state off the multisample surface state to so
        * StoreTiles knows where to resolve the surface. */
-      msaa_res->swr.pAuxBaseAddress =  (uint8_t *)&swr_resource(alt)->swr;
+      msaa_res->swr.xpAuxBaseAddress = (gfxptr_t)&swr_resource(alt)->swr;
    }
 
    return true; /* success */
@@ -978,10 +977,10 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
       if (spr->swr.numSamples > 1) {
          /* Free an attached resolve resource */
          struct swr_resource *alt = swr_resource(spr->resolve_target);
-         swr_fence_work_free(screen->flush_fence, alt->swr.pBaseAddress, true);
+         swr_fence_work_free(screen->flush_fence, (void*)(alt->swr.xpBaseAddress), true);
 
          /* Free multisample buffer */
-         swr_fence_work_free(screen->flush_fence, spr->swr.pBaseAddress, true);
+         swr_fence_work_free(screen->flush_fence, (void*)(spr->swr.xpBaseAddress), true);
       }
    } else {
       /* For regular resources, defer deletion */
@@ -990,12 +989,12 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
       if (spr->swr.numSamples > 1) {
          /* Free an attached resolve resource */
          struct swr_resource *alt = swr_resource(spr->resolve_target);
-         swr_fence_work_free(screen->flush_fence, alt->swr.pBaseAddress, true);
+         swr_fence_work_free(screen->flush_fence, (void*)(alt->swr.xpBaseAddress), true);
       }
 
-      swr_fence_work_free(screen->flush_fence, spr->swr.pBaseAddress, true);
+      swr_fence_work_free(screen->flush_fence, (void*)(spr->swr.xpBaseAddress), true);
       swr_fence_work_free(screen->flush_fence,
-                          spr->secondary.pBaseAddress, true);
+                          (void*)(spr->secondary.xpBaseAddress), true);
 
       /* If work queue grows too large, submit a fence to force queue to
        * drain.  This is mainly to decrease the amount of memory used by the
@@ -1037,7 +1036,7 @@ swr_flush_frontbuffer(struct pipe_screen *p_screen,
 
       void *map = winsys->displaytarget_map(winsys, spr->display_target,
                                             PIPE_TRANSFER_WRITE);
-      memcpy(map, resolve->pBaseAddress, resolve->pitch * resolve->height);
+      memcpy(map, (void*)(resolve->xpBaseAddress), resolve->pitch * resolve->height);
       winsys->displaytarget_unmap(winsys, spr->display_target);
    }
 
