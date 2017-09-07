@@ -5196,6 +5196,20 @@ fs_visitor::lower_simd_width()
 
          assert(!inst->writes_accumulator && !inst->mlen);
 
+         /* Inserting the zip, unzip, and duplicated instructions in all of
+          * the right spots is somewhat tricky.  All of the unzip and any
+          * instructions from the zip which unzip the destination prior to
+          * writing need to happen before all of the per-group instructions
+          * and the zip instructions need to happen after.  In order to sort
+          * this all out, we insert the unzip instructions before \p inst,
+          * insert the per-group instructions after \p inst (i.e. before
+          * inst->next), and insert the zip instructions before the
+          * instruction after \p inst.  Since we are inserting instructions
+          * after \p inst, inst->next is a moving target and we need to save
+          * it off here so that we insert the zip instructions in the right
+          * place.
+          */
+         exec_node *const after_inst = inst->next;
          for (unsigned i = 0; i < n; i++) {
             /* Emit a copy of the original instruction with the lowered width.
              * If the EOT flag was set throw it away except for the last
@@ -5203,7 +5217,7 @@ fs_visitor::lower_simd_width()
              */
             fs_inst split_inst = *inst;
             split_inst.exec_size = lower_width;
-            split_inst.eot = inst->eot && i == n - 1;
+            split_inst.eot = inst->eot && i == 0;
 
             /* Select the correct channel enables for the i-th group, then
              * transform the sources and destination and emit the lowered
@@ -5215,11 +5229,11 @@ fs_visitor::lower_simd_width()
                split_inst.src[j] = emit_unzip(lbld.at(block, inst), inst, j);
 
             split_inst.dst = emit_zip(lbld.at(block, inst),
-                                      lbld.at(block, inst->next), inst);
+                                      lbld.at(block, after_inst), inst);
             split_inst.size_written =
                split_inst.dst.component_size(lower_width) * dst_size;
 
-            lbld.emit(split_inst);
+            lbld.at(block, inst->next).emit(split_inst);
          }
 
          inst->remove(block);
