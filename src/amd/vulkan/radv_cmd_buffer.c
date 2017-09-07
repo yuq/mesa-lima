@@ -2835,20 +2835,29 @@ radv_cs_emit_indirect_draw_packet(struct radv_cmd_buffer *cmd_buffer,
 	uint32_t base_reg = cmd_buffer->state.pipeline->graphics.vtx_base_sgpr;
 	assert(base_reg);
 
-	radeon_emit(cs, PKT3(indexed ? PKT3_DRAW_INDEX_INDIRECT_MULTI :
-	                               PKT3_DRAW_INDIRECT_MULTI,
-	                     8, false));
-	radeon_emit(cs, 0);
-	radeon_emit(cs, (base_reg - SI_SH_REG_OFFSET) >> 2);
-	radeon_emit(cs, ((base_reg + 4) - SI_SH_REG_OFFSET) >> 2);
-	radeon_emit(cs, (((base_reg + 8) - SI_SH_REG_OFFSET) >> 2) |
-	                S_2C3_DRAW_INDEX_ENABLE(draw_id_enable) |
-	                S_2C3_COUNT_INDIRECT_ENABLE(!!count_va));
-	radeon_emit(cs, draw_count); /* count */
-	radeon_emit(cs, count_va); /* count_addr */
-	radeon_emit(cs, count_va >> 32);
-	radeon_emit(cs, stride); /* stride */
-	radeon_emit(cs, di_src_sel);
+	if (draw_count == 1 && !count_va && !draw_id_enable) {
+		radeon_emit(cs, PKT3(indexed ? PKT3_DRAW_INDEX_INDIRECT :
+				     PKT3_DRAW_INDIRECT, 3, false));
+		radeon_emit(cs, 0);
+		radeon_emit(cs, (base_reg - SI_SH_REG_OFFSET) >> 2);
+		radeon_emit(cs, ((base_reg + 4) - SI_SH_REG_OFFSET) >> 2);
+		radeon_emit(cs, di_src_sel);
+	} else {
+		radeon_emit(cs, PKT3(indexed ? PKT3_DRAW_INDEX_INDIRECT_MULTI :
+				     PKT3_DRAW_INDIRECT_MULTI,
+				     8, false));
+		radeon_emit(cs, 0);
+		radeon_emit(cs, (base_reg - SI_SH_REG_OFFSET) >> 2);
+		radeon_emit(cs, ((base_reg + 4) - SI_SH_REG_OFFSET) >> 2);
+		radeon_emit(cs, (((base_reg + 8) - SI_SH_REG_OFFSET) >> 2) |
+			    S_2C3_DRAW_INDEX_ENABLE(draw_id_enable) |
+			    S_2C3_COUNT_INDIRECT_ENABLE(!!count_va));
+		radeon_emit(cs, draw_count); /* count */
+		radeon_emit(cs, count_va); /* count_addr */
+		radeon_emit(cs, count_va >> 32);
+		radeon_emit(cs, stride); /* stride */
+		radeon_emit(cs, di_src_sel);
+	}
 }
 
 static void
