@@ -679,6 +679,12 @@ static int gfx6_compute_surface(ADDR_HANDLE addrlib,
 			if (level > 0)
 				continue;
 
+			/* Check that we actually got a TC-compatible HTILE if
+			 * we requested it (only for level 0, since we're not
+			 * supporting HTILE on higher mip levels anyway). */
+			assert(AddrSurfInfoOut.tcCompatible ||
+			       !AddrSurfInfoIn.flags.tcCompatible);
+
 			r = gfx6_surface_settings(addrlib, info, config,
 						  &AddrSurfInfoOut, surf);
 			if (r)
