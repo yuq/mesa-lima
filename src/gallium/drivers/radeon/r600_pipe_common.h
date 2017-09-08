@@ -704,7 +704,9 @@ struct r600_common_context {
 			      uint64_t old_gpu_address);
 
 	/* Enable or disable occlusion queries. */
-	void (*set_occlusion_query_state)(struct pipe_context *ctx, bool enable);
+	void (*set_occlusion_query_state)(struct pipe_context *ctx,
+					  bool old_enable,
+					  bool old_perfect_enable);
 
 	void (*save_qbo_state)(struct pipe_context *ctx, struct r600_qbo_state *st);
 

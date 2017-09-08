@@ -2914,7 +2914,9 @@ static void r600_set_active_query_state(struct pipe_context *ctx, boolean enable
 	}
 }
 
-static void r600_set_occlusion_query_state(struct pipe_context *ctx, bool enable)
+static void r600_set_occlusion_query_state(struct pipe_context *ctx,
+					   bool old_enable,
+					   bool old_perfect_enable)
 {
 	struct r600_context *rctx = (struct r600_context*)ctx;
 

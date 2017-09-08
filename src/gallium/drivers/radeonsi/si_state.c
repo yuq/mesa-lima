@@ -1191,7 +1191,9 @@ static void si_set_active_query_state(struct pipe_context *ctx, boolean enable)
 	}
 }
 
-static void si_set_occlusion_query_state(struct pipe_context *ctx, bool enable)
+static void si_set_occlusion_query_state(struct pipe_context *ctx,
+					 bool old_enable,
+					 bool old_perfect_enable)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 
