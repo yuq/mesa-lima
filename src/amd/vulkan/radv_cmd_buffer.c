@@ -2152,7 +2152,7 @@ static bool radv_init_push_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
 
 		if (!set->mapped_ptr) {
 			cmd_buffer->push_descriptors.capacity = 0;
-			cmd_buffer->record_result = VK_ERROR_OUT_OF_DEVICE_MEMORY;
+			cmd_buffer->record_result = VK_ERROR_OUT_OF_HOST_MEMORY;
 			return false;
 		}
 
