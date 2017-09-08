@@ -32,7 +32,10 @@ LOCAL_EXPORT_C_INCLUDE_DIRS := \
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/main
 
-LOCAL_STATIC_LIBRARIES := libmesa_loader
+LOCAL_STATIC_LIBRARIES := \
+	libmesa_util \
+	libmesa_loader
+
 LOCAL_MODULE := libgbm
 
 LOCAL_SRC_FILES := \

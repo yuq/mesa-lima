@@ -48,6 +48,7 @@
 
 #include "gbmint.h"
 #include "loader.h"
+#include "util/debug.h"
 #include "util/macros.h"
 
 /* For importing wl_buffer */
@@ -1336,7 +1337,8 @@ static struct gbm_device *
 dri_device_create(int fd)
 {
    struct gbm_dri_device *dri;
-   int ret, force_sw;
+   int ret;
+   bool force_sw;
 
    dri = calloc(1, sizeof *dri);
    if (!dri)
@@ -1364,7 +1366,7 @@ dri_device_create(int fd)
 
    mtx_init(&dri->mutex, mtx_plain);
 
-   force_sw = getenv("GBM_ALWAYS_SOFTWARE") != NULL;
+   force_sw = env_var_as_boolean("GBM_ALWAYS_SOFTWARE", false);
    if (!force_sw) {
       ret = dri_screen_create(dri);
       if (ret)

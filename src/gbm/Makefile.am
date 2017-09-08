@@ -26,6 +26,7 @@ libgbm_la_LDFLAGS = \
 
 libgbm_la_LIBADD = \
 	$(top_builddir)/src/loader/libloader.la \
+	$(top_builddir)/src/util/libmesautil.la \
 	$(top_builddir)/src/util/libxmlconfig.la \
 	$(DLOPEN_LIBS)
 
