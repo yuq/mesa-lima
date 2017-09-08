@@ -82,7 +82,7 @@ apple_visual_create_pfobj(CGLPixelFormatObj * pfobj, const struct glx_config * m
    int numattr = 0;
    GLint vsref = 0;
    CGLError error = 0;
-   bool use_core_profile = getenv("LIBGL_PROFILE_CORE");
+   bool use_core_profile = env_var_as_boolean("LIBGL_PROFILE_CORE", false);
 
    if (offscreen) {
       apple_glx_diagnostic
