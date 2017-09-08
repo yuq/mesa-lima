@@ -629,17 +629,15 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
    struct intel_batchbuffer *batch = &brw->batch;
    int ret = 0;
 
-   if (devinfo->has_llc) {
-      brw_bo_unmap(batch->bo);
-   } else {
-      ret = brw_bo_subdata(batch->bo, 0, 4 * USED_BATCH(*batch), batch->map);
-      if (ret == 0 && batch->state_batch_offset != batch->bo->size) {
-         ret = brw_bo_subdata(batch->bo,
-                              batch->state_batch_offset,
-                              batch->bo->size - batch->state_batch_offset,
-                              (char *)batch->map + batch->state_batch_offset);
-      }
+   if (batch->cpu_map) {
+      void *bo_map = brw_bo_map(brw, batch->bo, MAP_WRITE);
+      memcpy(bo_map, batch->cpu_map, 4 * USED_BATCH(*batch));
+      memcpy(bo_map + batch->state_batch_offset,
+             (char *) batch->cpu_map + batch->state_batch_offset,
+             batch->bo->size - batch->state_batch_offset);
    }
+
+   brw_bo_unmap(batch->bo);
 
    if (!brw->screen->no_hw) {
       /* The requirement for using I915_EXEC_NO_RELOC are:
