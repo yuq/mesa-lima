@@ -216,26 +216,6 @@ static unsigned shader_io_get_unique_index(gl_varying_slot slot)
 	unreachable("illegal slot in get unique index\n");
 }
 
-static unsigned llvm_get_type_size(LLVMTypeRef type)
-{
-	LLVMTypeKind kind = LLVMGetTypeKind(type);
-
-	switch (kind) {
-	case LLVMIntegerTypeKind:
-		return LLVMGetIntTypeWidth(type) / 8;
-	case LLVMFloatTypeKind:
-		return 4;
-	case LLVMPointerTypeKind:
-		return 8;
-	case LLVMVectorTypeKind:
-		return LLVMGetVectorSize(type) *
-		       llvm_get_type_size(LLVMGetElementType(type));
-	default:
-		assert(0);
-		return 0;
-	}
-}
-
 static void set_llvm_calling_convention(LLVMValueRef func,
                                         gl_shader_stage stage)
 {
@@ -291,7 +271,7 @@ add_sgpr_argument(struct arg_info *info,
 		  LLVMTypeRef type, LLVMValueRef *param_ptr)
 {
 	add_argument(info, type, param_ptr);
-	info->num_sgprs_used += llvm_get_type_size(type) / 4;
+	info->num_sgprs_used += ac_get_type_size(type) / 4;
 	info->sgpr_count++;
 }
 
@@ -301,7 +281,7 @@ add_user_sgpr_argument(struct arg_info *info,
 		       LLVMValueRef *param_ptr)
 {
 	add_sgpr_argument(info, type, param_ptr);
-	info->num_user_sgprs_used += llvm_get_type_size(type) / 4;
+	info->num_user_sgprs_used += ac_get_type_size(type) / 4;
 	info->user_sgpr_count++;
 }
 
@@ -311,7 +291,7 @@ add_vgpr_argument(struct arg_info *info,
 		  LLVMValueRef *param_ptr)
 {
 	add_argument(info, type, param_ptr);
-	info->num_vgprs_used += llvm_get_type_size(type) / 4;
+	info->num_vgprs_used += ac_get_type_size(type) / 4;
 }
 
 static inline void
