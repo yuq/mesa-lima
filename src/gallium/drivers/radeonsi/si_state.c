@@ -1094,6 +1094,7 @@ static bool si_order_invariant_stencil_state(const struct pipe_stencil_state *st
 static void *si_create_dsa_state(struct pipe_context *ctx,
 				 const struct pipe_depth_stencil_alpha_state *state)
 {
+	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_state_dsa *dsa = CALLOC_STRUCT(si_state_dsa);
 	struct si_pm4_state *pm4 = &dsa->pm4;
 	unsigned db_depth_control;
@@ -1186,13 +1187,12 @@ static void *si_create_dsa_state(struct pipe_context *ctx,
 		(state->depth.func == PIPE_FUNC_ALWAYS ||
 		 state->depth.func == PIPE_FUNC_NEVER);
 
-	const bool assume_no_z_fights = false;
-
 	dsa->order_invariance[1].pass_last =
-		assume_no_z_fights && !dsa->stencil_write_enabled &&
+		sctx->screen->assume_no_z_fights &&
+		!dsa->stencil_write_enabled &&
 		dsa->depth_write_enabled && zfunc_is_ordered;
 	dsa->order_invariance[0].pass_last =
-		assume_no_z_fights &&
+		sctx->screen->assume_no_z_fights &&
 		dsa->depth_write_enabled && zfunc_is_ordered;
 
 	return dsa;

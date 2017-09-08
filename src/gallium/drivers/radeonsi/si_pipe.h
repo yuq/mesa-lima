@@ -95,6 +95,7 @@ struct si_screen {
 	bool				has_distributed_tess;
 	bool				has_draw_indirect_multi;
 	bool				has_out_of_order_rast;
+	bool				assume_no_z_fights;
 	bool				has_msaa_sample_loc_bug;
 	bool				dpbb_allowed;
 	bool				dfsm_allowed;
