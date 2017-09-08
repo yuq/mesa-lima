@@ -38,6 +38,8 @@
  */
 
 #include <assert.h>
+#include <stdbool.h>
+
 #include "glxclient.h"
 #include <X11/extensions/Xext.h>
 #include <X11/extensions/extutil.h>
@@ -46,6 +48,8 @@
 #include "apple/apple_visual.h"
 #endif
 #include "glxextensions.h"
+
+#include "util/debug.h"
 
 #include <X11/Xlib-xcb.h>
 #include <xcb/xcb.h>
@@ -577,7 +581,7 @@ __glXInitializeVisualConfigFromTags(struct glx_config * config, int count,
          i = count;
          break;
       default:
-         if(getenv("LIBGL_DIAGNOSTIC")) {
+         if(env_var_as_boolean("LIBGL_DIAGNOSTIC", false)) {
              long int tagvalue = *bp++;
              fprintf(stderr, "WARNING: unknown GLX tag from server: "
                      "tag 0x%lx value 0x%lx\n", tag, tagvalue);
