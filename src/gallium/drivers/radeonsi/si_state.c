@@ -2175,36 +2175,36 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	unsigned color_info, color_attrib, color_view;
 	unsigned format, swap, ntype, endian;
 	const struct util_format_description *desc;
-	int i;
+	int firstchan;
 	unsigned blend_clamp = 0, blend_bypass = 0;
 
 	color_view = S_028C6C_SLICE_START(surf->base.u.tex.first_layer) |
 		     S_028C6C_SLICE_MAX(surf->base.u.tex.last_layer);
 
 	desc = util_format_description(surf->base.format);
-	for (i = 0; i < 4; i++) {
-		if (desc->channel[i].type != UTIL_FORMAT_TYPE_VOID) {
+	for (firstchan = 0; firstchan < 4; firstchan++) {
+		if (desc->channel[firstchan].type != UTIL_FORMAT_TYPE_VOID) {
 			break;
 		}
 	}
-	if (i == 4 || desc->channel[i].type == UTIL_FORMAT_TYPE_FLOAT) {
+	if (firstchan == 4 || desc->channel[firstchan].type == UTIL_FORMAT_TYPE_FLOAT) {
 		ntype = V_028C70_NUMBER_FLOAT;
 	} else {
 		ntype = V_028C70_NUMBER_UNORM;
 		if (desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB)
 			ntype = V_028C70_NUMBER_SRGB;
-		else if (desc->channel[i].type == UTIL_FORMAT_TYPE_SIGNED) {
-			if (desc->channel[i].pure_integer) {
+		else if (desc->channel[firstchan].type == UTIL_FORMAT_TYPE_SIGNED) {
+			if (desc->channel[firstchan].pure_integer) {
 				ntype = V_028C70_NUMBER_SINT;
 			} else {
-				assert(desc->channel[i].normalized);
+				assert(desc->channel[firstchan].normalized);
 				ntype = V_028C70_NUMBER_SNORM;
 			}
-		} else if (desc->channel[i].type == UTIL_FORMAT_TYPE_UNSIGNED) {
-			if (desc->channel[i].pure_integer) {
+		} else if (desc->channel[firstchan].type == UTIL_FORMAT_TYPE_UNSIGNED) {
+			if (desc->channel[firstchan].pure_integer) {
 				ntype = V_028C70_NUMBER_UINT;
 			} else {
-				assert(desc->channel[i].normalized);
+				assert(desc->channel[firstchan].normalized);
 				ntype = V_028C70_NUMBER_UNORM;
 			}
 		}
