@@ -116,9 +116,11 @@ static VAStatus vlVaPostProcBlit(vlVaDriver *drv, vlVaContext *context,
 {
    struct pipe_surface **src_surfaces;
    struct pipe_surface **dst_surfaces;
+   struct u_rect src_rect;
+   struct u_rect dst_rect;
    unsigned i;
 
-   if (src->interlaced != dst->interlaced)
+   if (src->interlaced != dst->interlaced && dst->interlaced)
       return VA_STATUS_ERROR_INVALID_SURFACE;
 
    src_surfaces = src->get_surfaces(src);
@@ -128,6 +130,24 @@ static VAStatus vlVaPostProcBlit(vlVaDriver *drv, vlVaContext *context,
    dst_surfaces = dst->get_surfaces(dst);
    if (!dst_surfaces || !dst_surfaces[0])
       return VA_STATUS_ERROR_INVALID_SURFACE;
+
+   src_rect.x0 = src_region->x;
+   src_rect.y0 = src_region->y;
+   src_rect.x1 = src_region->x + src_region->width;
+   src_rect.y1 = src_region->y + src_region->height;
+
+   dst_rect.x0 = dst_region->x;
+   dst_rect.y0 = dst_region->y;
+   dst_rect.x1 = dst_region->x + dst_region->width;
+   dst_rect.y1 = dst_region->y + dst_region->height;
+
+   if (src->interlaced != dst->interlaced) {
+      vl_compositor_yuv_deint_full(&drv->cstate, &drv->compositor,
+                                   src, dst, &src_rect, &dst_rect,
+                                   deinterlace);
+
+      return VA_STATUS_SUCCESS;
+   }
 
    for (i = 0; i < VL_MAX_SURFACES; ++i) {
       struct pipe_surface *from = src_surfaces[i];
