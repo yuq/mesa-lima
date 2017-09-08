@@ -2993,14 +2993,13 @@ void
 llvmpipe_remove_shader_variant(struct llvmpipe_context *lp,
                                struct lp_fragment_shader_variant *variant)
 {
-   if (gallivm_debug & GALLIVM_DEBUG_IR) {
-      debug_printf("llvmpipe: del fs #%u var #%u v created #%u v cached"
-                   " #%u v total cached #%u\n",
-                   variant->shader->no,
-                   variant->no,
+   if ((LP_DEBUG & DEBUG_FS) || (gallivm_debug & GALLIVM_DEBUG_IR)) {
+      debug_printf("llvmpipe: del fs #%u var %u v created %u v cached %u "
+                   "v total cached %u inst %u total inst %u\n",
+                   variant->shader->no, variant->no,
                    variant->shader->variants_created,
                    variant->shader->variants_cached,
-                   lp->nr_fs_variants);
+                   lp->nr_fs_variants, variant->nr_instrs, lp->nr_fs_instrs);
    }
 
    gallivm_destroy(variant->gallivm);
@@ -3357,7 +3356,7 @@ llvmpipe_update_fs(struct llvmpipe_context *lp)
       unsigned i;
       unsigned variants_to_cull;
 
-      if (0) {
+      if (LP_DEBUG & DEBUG_FS) {
          debug_printf("%u variants,\t%u instrs,\t%u instrs/variant\n",
                       lp->nr_fs_variants,
                       lp->nr_fs_instrs,
@@ -3365,13 +3364,21 @@ llvmpipe_update_fs(struct llvmpipe_context *lp)
       }
 
       /* First, check if we've exceeded the max number of shader variants.
-       * If so, free 25% of them (the least recently used ones).
+       * If so, free 6.25% of them (the least recently used ones).
        */
-      variants_to_cull = lp->nr_fs_variants >= LP_MAX_SHADER_VARIANTS ? LP_MAX_SHADER_VARIANTS / 4 : 0;
+      variants_to_cull = lp->nr_fs_variants >= LP_MAX_SHADER_VARIANTS ? LP_MAX_SHADER_VARIANTS / 16 : 0;
 
       if (variants_to_cull ||
           lp->nr_fs_instrs >= LP_MAX_SHADER_INSTRUCTIONS) {
          struct pipe_context *pipe = &lp->pipe;
+
+         if (gallivm_debug & GALLIVM_DEBUG_PERF) {
+            debug_printf("Evicting FS: %u fs variants,\t%u total variants,"
+                         "\t%u instrs,\t%u instrs/variant\n",
+                         shader->variants_cached,
+                         lp->nr_fs_variants, lp->nr_fs_instrs,
+                         lp->nr_fs_instrs / lp->nr_fs_variants);
+         }
 
          /*
           * XXX: we need to flush the context until we have some sort of
