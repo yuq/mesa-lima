@@ -44,8 +44,7 @@
 
 static void
 intel_batchbuffer_reset(struct intel_batchbuffer *batch,
-                        struct brw_bufmgr *bufmgr,
-                        bool has_llc);
+                        struct intel_screen *screen);
 
 static bool
 uint_key_compare(const void *a, const void *b)
@@ -72,7 +71,6 @@ void
 intel_batchbuffer_init(struct intel_screen *screen,
                        struct intel_batchbuffer *batch)
 {
-   struct brw_bufmgr *bufmgr = screen->bufmgr;
    const struct gen_device_info *devinfo = &screen->devinfo;
 
    if (!devinfo->has_llc) {
@@ -103,7 +101,7 @@ intel_batchbuffer_init(struct intel_screen *screen,
    if (devinfo->gen == 6)
       batch->valid_reloc_flags |= EXEC_OBJECT_NEEDS_GTT;
 
-   intel_batchbuffer_reset(batch, bufmgr, devinfo->has_llc);
+   intel_batchbuffer_reset(batch, screen);
 }
 
 #define READ_ONCE(x) (*(volatile __typeof__(x) *)&(x))
@@ -151,9 +149,11 @@ add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
 
 static void
 intel_batchbuffer_reset(struct intel_batchbuffer *batch,
-                        struct brw_bufmgr *bufmgr,
-                        bool has_llc)
+                        struct intel_screen *screen)
 {
+   struct brw_bufmgr *bufmgr = screen->bufmgr;
+   const struct gen_device_info *devinfo = &screen->devinfo;
+
    if (batch->last_bo != NULL) {
       brw_bo_unreference(batch->last_bo);
       batch->last_bo = NULL;
@@ -161,7 +161,7 @@ intel_batchbuffer_reset(struct intel_batchbuffer *batch,
    batch->last_bo = batch->bo;
 
    batch->bo = brw_bo_alloc(bufmgr, "batchbuffer", BATCH_SZ, 4096);
-   if (has_llc) {
+   if (devinfo->has_llc) {
       batch->map = brw_bo_map(NULL, batch->bo, MAP_READ | MAP_WRITE);
    }
    batch->map_next = batch->map;
@@ -186,9 +186,7 @@ intel_batchbuffer_reset(struct intel_batchbuffer *batch,
 static void
 intel_batchbuffer_reset_and_clear_render_cache(struct brw_context *brw)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-
-   intel_batchbuffer_reset(&brw->batch, brw->bufmgr, devinfo->has_llc);
+   intel_batchbuffer_reset(&brw->batch, brw->screen);
    brw_render_cache_set_clear(brw);
 }
 
