@@ -2421,6 +2421,13 @@ static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 		if (!old_sel ||
 		    old_sel->info.colors_written != sel->info.colors_written)
 			si_mark_atom_dirty(sctx, &sctx->cb_render_state);
+
+		if (sctx->screen->has_out_of_order_rast &&
+		    (!old_sel ||
+		     old_sel->info.writes_memory != sel->info.writes_memory ||
+		     old_sel->info.properties[TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL] !=
+		     sel->info.properties[TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL]))
+			si_mark_atom_dirty(sctx, &sctx->msaa_config);
 	}
 	si_set_active_descriptors_for_shader(sctx, sel);
 }

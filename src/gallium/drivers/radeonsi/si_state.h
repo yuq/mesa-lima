@@ -49,15 +49,16 @@ struct si_shader_selector;
 struct si_state_blend {
 	struct si_pm4_state	pm4;
 	uint32_t		cb_target_mask;
-	bool			alpha_to_coverage;
-	bool			alpha_to_one;
-	bool			dual_src_blend;
 	/* Set 0xf or 0x0 (4 bits) per render target if the following is
 	 * true. ANDed with spi_shader_col_format.
 	 */
 	unsigned		cb_target_enabled_4bit;
 	unsigned		blend_enable_4bit;
 	unsigned		need_src_alpha_4bit;
+	bool			alpha_to_coverage:1;
+	bool			alpha_to_one:1;
+	bool			dual_src_blend:1;
+	bool			logicop_enable:1;
 };
 
 struct si_state_rasterizer {
@@ -89,15 +90,36 @@ struct si_dsa_stencil_ref_part {
 	uint8_t			writemask[2];
 };
 
+struct si_dsa_order_invariance {
+	/** Whether the final result in Z/S buffers is guaranteed to be
+	 * invariant under changes to the order in which fragments arrive. */
+	bool zs:1;
+
+	/** Whether the set of fragments that pass the combined Z/S test is
+	 * guaranteed to be invariant under changes to the order in which
+	 * fragments arrive. */
+	bool pass_set:1;
+
+	/** Whether the last fragment that passes the combined Z/S test at each
+	 * sample is guaranteed to be invariant under changes to the order in
+	 * which fragments arrive. */
+	bool pass_last:1;
+};
+
 struct si_state_dsa {
 	struct si_pm4_state		pm4;
 	struct si_dsa_stencil_ref_part	stencil_ref;
+
+	/* 0 = without stencil buffer, 1 = when both Z and S buffers are present */
+	struct si_dsa_order_invariance	order_invariance[2];
+
 	ubyte				alpha_func:3;
 	bool				depth_enabled:1;
 	bool				depth_write_enabled:1;
 	bool				stencil_enabled:1;
 	bool				stencil_write_enabled:1;
 	bool				db_can_write:1;
+
 };
 
 struct si_stencil_ref {

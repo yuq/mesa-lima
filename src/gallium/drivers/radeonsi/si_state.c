@@ -423,6 +423,7 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 	blend->alpha_to_coverage = state->alpha_to_coverage;
 	blend->alpha_to_one = state->alpha_to_one;
 	blend->dual_src_blend = util_blend_state_is_dual(state, 0);
+	blend->logicop_enable = state->logicop_enable;
 
 	if (state->logicop_enable) {
 		color_control |= S_028808_ROP3(state->logicop_func | (state->logicop_func << 4));
@@ -630,6 +631,13 @@ static void si_bind_blend_state(struct pipe_context *ctx, void *state)
 	     old_blend->blend_enable_4bit != blend->blend_enable_4bit ||
 	     old_blend->cb_target_enabled_4bit != blend->cb_target_enabled_4bit))
 		si_mark_atom_dirty(sctx, &sctx->dpbb_state);
+
+	if (sctx->screen->has_out_of_order_rast &&
+	    (!old_blend ||
+	     (old_blend->blend_enable_4bit != blend->blend_enable_4bit ||
+	      old_blend->cb_target_enabled_4bit != blend->cb_target_enabled_4bit ||
+	      old_blend->logicop_enable != blend->logicop_enable)))
+		si_mark_atom_dirty(sctx, &sctx->msaa_config);
 }
 
 static void si_delete_blend_state(struct pipe_context *ctx, void *state)
@@ -1059,6 +1067,30 @@ static bool si_dsa_writes_stencil(const struct pipe_stencil_state *s)
 		s->zpass_op != PIPE_STENCIL_OP_KEEP);
 }
 
+static bool si_order_invariant_stencil_op(enum pipe_stencil_op op)
+{
+	/* REPLACE is normally order invariant, except when the stencil
+	 * reference value is written by the fragment shader. Tracking this
+	 * interaction does not seem worth the effort, so be conservative. */
+	return op != PIPE_STENCIL_OP_INCR &&
+	       op != PIPE_STENCIL_OP_DECR &&
+	       op != PIPE_STENCIL_OP_REPLACE;
+}
+
+/* Compute whether, assuming Z writes are disabled, this stencil state is order
+ * invariant in the sense that the set of passing fragments as well as the
+ * final stencil buffer result does not depend on the order of fragments. */
+static bool si_order_invariant_stencil_state(const struct pipe_stencil_state *state)
+{
+	return !state->enabled || !state->writemask ||
+	       /* The following assumes that Z writes are disabled. */
+	       (state->func == PIPE_FUNC_ALWAYS &&
+	        si_order_invariant_stencil_op(state->zpass_op) &&
+	        si_order_invariant_stencil_op(state->zfail_op)) ||
+	       (state->func == PIPE_FUNC_NEVER &&
+	        si_order_invariant_stencil_op(state->fail_op));
+}
+
 static void *si_create_dsa_state(struct pipe_context *ctx,
 				 const struct pipe_depth_stencil_alpha_state *state)
 {
@@ -1125,6 +1157,44 @@ static void *si_create_dsa_state(struct pipe_context *ctx,
 				      si_dsa_writes_stencil(&state->stencil[1]));
 	dsa->db_can_write = dsa->depth_write_enabled ||
 			    dsa->stencil_write_enabled;
+
+	bool zfunc_is_ordered =
+		state->depth.func == PIPE_FUNC_NEVER ||
+		state->depth.func == PIPE_FUNC_LESS ||
+		state->depth.func == PIPE_FUNC_LEQUAL ||
+		state->depth.func == PIPE_FUNC_GREATER ||
+		state->depth.func == PIPE_FUNC_GEQUAL;
+
+	bool nozwrite_and_order_invariant_stencil =
+		!dsa->db_can_write ||
+		(!dsa->depth_write_enabled &&
+		 si_order_invariant_stencil_state(&state->stencil[0]) &&
+		 si_order_invariant_stencil_state(&state->stencil[1]));
+
+	dsa->order_invariance[1].zs =
+		nozwrite_and_order_invariant_stencil ||
+		(!dsa->stencil_write_enabled && zfunc_is_ordered);
+	dsa->order_invariance[0].zs = !dsa->depth_write_enabled || zfunc_is_ordered;
+
+	dsa->order_invariance[1].pass_set =
+		nozwrite_and_order_invariant_stencil ||
+		(!dsa->stencil_write_enabled &&
+		 (state->depth.func == PIPE_FUNC_ALWAYS ||
+		  state->depth.func == PIPE_FUNC_NEVER));
+	dsa->order_invariance[0].pass_set =
+		!dsa->depth_write_enabled ||
+		(state->depth.func == PIPE_FUNC_ALWAYS ||
+		 state->depth.func == PIPE_FUNC_NEVER);
+
+	const bool assume_no_z_fights = false;
+
+	dsa->order_invariance[1].pass_last =
+		assume_no_z_fights && !dsa->stencil_write_enabled &&
+		dsa->depth_write_enabled && zfunc_is_ordered;
+	dsa->order_invariance[0].pass_last =
+		assume_no_z_fights &&
+		dsa->depth_write_enabled && zfunc_is_ordered;
+
 	return dsa;
 }
 
@@ -1154,6 +1224,12 @@ static void si_bind_dsa_state(struct pipe_context *ctx, void *state)
 	      old_dsa->stencil_enabled != dsa->stencil_enabled ||
 	      old_dsa->db_can_write != dsa->db_can_write)))
 		si_mark_atom_dirty(sctx, &sctx->dpbb_state);
+
+	if (sctx->screen->has_out_of_order_rast &&
+	    (!old_dsa ||
+	     memcmp(old_dsa->order_invariance, dsa->order_invariance,
+		    sizeof(old_dsa->order_invariance))))
+		si_mark_atom_dirty(sctx, &sctx->msaa_config);
 }
 
 static void si_delete_dsa_state(struct pipe_context *ctx, void *state)
@@ -1198,6 +1274,11 @@ static void si_set_occlusion_query_state(struct pipe_context *ctx,
 	struct si_context *sctx = (struct si_context*)ctx;
 
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
+
+	bool perfect_enable = sctx->b.num_perfect_occlusion_queries != 0;
+
+	if (perfect_enable != old_perfect_enable)
+		si_mark_atom_dirty(sctx, &sctx->msaa_config);
 }
 
 static void si_save_qbo_state(struct pipe_context *ctx, struct r600_qbo_state *st)
@@ -2549,6 +2630,11 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	struct r600_texture *rtex;
 	bool old_any_dst_linear = sctx->framebuffer.any_dst_linear;
 	unsigned old_nr_samples = sctx->framebuffer.nr_samples;
+	unsigned old_colorbuf_enabled_4bit = sctx->framebuffer.colorbuf_enabled_4bit;
+	bool old_has_zsbuf = !!sctx->framebuffer.state.zsbuf;
+	bool old_has_stencil =
+		old_has_zsbuf &&
+		((struct r600_texture*)sctx->framebuffer.state.zsbuf->texture)->surface.has_stencil;
 	bool unbound = false;
 	int i;
 
@@ -2706,15 +2792,17 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		}
 	}
 
+	struct r600_texture *zstex = NULL;
+
 	if (state->zsbuf) {
 		surf = (struct r600_surface*)state->zsbuf;
-		rtex = (struct r600_texture*)surf->base.texture;
+		zstex = (struct r600_texture*)surf->base.texture;
 
 		if (!surf->depth_initialized) {
 			si_init_depth_surface(sctx, surf);
 		}
 
-		if (vi_tc_compat_htile_enabled(rtex, surf->base.u.tex.level))
+		if (vi_tc_compat_htile_enabled(zstex, surf->base.u.tex.level))
 			sctx->framebuffer.DB_has_shader_readable_metadata = true;
 
 		r600_context_add_resource_size(ctx, surf->base.texture);
@@ -2728,6 +2816,12 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		si_mark_atom_dirty(sctx, &sctx->dpbb_state);
 
 	if (sctx->framebuffer.any_dst_linear != old_any_dst_linear)
+		si_mark_atom_dirty(sctx, &sctx->msaa_config);
+
+	if (sctx->screen->has_out_of_order_rast &&
+	    (sctx->framebuffer.colorbuf_enabled_4bit != old_colorbuf_enabled_4bit ||
+	     !!sctx->framebuffer.state.zsbuf != old_has_zsbuf ||
+	     (zstex && zstex->surface.has_stencil != old_has_stencil)))
 		si_mark_atom_dirty(sctx, &sctx->msaa_config);
 
 	if (sctx->framebuffer.nr_samples != old_nr_samples) {
@@ -3066,16 +3160,75 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx,
 	}
 }
 
+static bool si_out_of_order_rasterization(struct si_context *sctx)
+{
+	struct si_state_blend *blend = sctx->queued.named.blend;
+	struct si_state_dsa *dsa = sctx->queued.named.dsa;
+
+	if (!sctx->screen->has_out_of_order_rast)
+		return false;
+
+	unsigned colormask = sctx->framebuffer.colorbuf_enabled_4bit;
+
+	if (blend) {
+		colormask &= blend->cb_target_enabled_4bit;
+	} else {
+		colormask = 0;
+	}
+
+	/* Conservative: No logic op. */
+	if (colormask && blend->logicop_enable)
+		return false;
+
+	struct si_dsa_order_invariance dsa_order_invariant = {
+		.zs = true, .pass_set = true, .pass_last = false
+	};
+
+	if (sctx->framebuffer.state.zsbuf) {
+		struct r600_texture *zstex =
+			(struct r600_texture*)sctx->framebuffer.state.zsbuf->texture;
+		bool has_stencil = zstex->surface.has_stencil;
+		dsa_order_invariant = dsa->order_invariance[has_stencil];
+		if (!dsa_order_invariant.zs)
+			return false;
+
+		/* The set of PS invocations is always order invariant,
+		 * except when early Z/S tests are requested. */
+		if (sctx->ps_shader.cso &&
+		    sctx->ps_shader.cso->info.writes_memory &&
+		    sctx->ps_shader.cso->info.properties[TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL] &&
+		    !dsa_order_invariant.pass_set)
+			return false;
+
+		if (sctx->b.num_perfect_occlusion_queries != 0 &&
+		    !dsa_order_invariant.pass_set)
+			return false;
+	}
+
+	if (!colormask)
+		return true;
+
+	bool blend_enabled = (colormask & blend->blend_enable_4bit) != 0;
+
+	if (blend_enabled)
+		return false; /* TODO */
+
+	return dsa_order_invariant.pass_last;
+}
+
 static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	unsigned num_tile_pipes = sctx->screen->b.info.num_tile_pipes;
 	/* 33% faster rendering to linear color buffers */
 	bool dst_is_linear = sctx->framebuffer.any_dst_linear;
+	bool out_of_order_rast = si_out_of_order_rasterization(sctx);
 	unsigned sc_mode_cntl_1 =
 		S_028A4C_WALK_SIZE(dst_is_linear) |
 		S_028A4C_WALK_FENCE_ENABLE(!dst_is_linear) |
 		S_028A4C_WALK_FENCE_SIZE(num_tile_pipes == 2 ? 2 : 3) |
+		S_028A4C_OUT_OF_ORDER_PRIMITIVE_ENABLE(out_of_order_rast) |
+		S_028A4C_OUT_OF_ORDER_WATER_MARK(0x7) |
 		/* always 1: */
 		S_028A4C_WALK_ALIGN8_PRIM_FITS_ST(1) |
 		S_028A4C_SUPERTILE_WALK_ORDER_ENABLE(1) |

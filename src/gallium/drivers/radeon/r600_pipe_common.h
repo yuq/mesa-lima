@@ -110,7 +110,7 @@ struct u_log_context;
 #define DBG_NO_RB_PLUS		(1ull << 45)
 #define DBG_SI_SCHED		(1ull << 46)
 #define DBG_MONOLITHIC_SHADERS	(1ull << 47)
-/* gap */
+#define DBG_NO_OUT_OF_ORDER	(1ull << 48)
 #define DBG_UNSAFE_MATH		(1ull << 49)
 #define DBG_NO_DCC_FB		(1ull << 50)
 #define DBG_TEST_VMFAULT_CP	(1ull << 51)
