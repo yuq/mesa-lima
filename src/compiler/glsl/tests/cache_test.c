@@ -156,9 +156,9 @@ test_disk_cache_create(void)
    int err;
 
    /* Before doing anything else, ensure that with
-    * MESA_GLSL_CACHE_DISABLE set, that disk_cache_create returns NULL.
+    * MESA_GLSL_CACHE_DISABLE set to true, that disk_cache_create returns NULL.
     */
-   setenv("MESA_GLSL_CACHE_DISABLE", "1", 1);
+   setenv("MESA_GLSL_CACHE_DISABLE", "true", 1);
    cache = disk_cache_create("test", "make_check", 0);
    expect_null(cache, "disk_cache_create with MESA_GLSL_CACHE_DISABLE set");
 
