@@ -1288,7 +1288,7 @@ glXChooseVisual(Display * dpy, int screen, int *attribList)
    }
 
 #ifdef GLX_USE_APPLEGL
-   if(visualList && getenv("LIBGL_DUMP_VISUALID")) {
+   if(visualList && env_var_as_boolean("LIBGL_DUMP_VISUALID", false)) {
       printf("visualid 0x%lx\n", visualList[0].visualid);
    }
 #endif
