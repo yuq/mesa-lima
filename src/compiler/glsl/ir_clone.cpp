@@ -345,21 +345,7 @@ ir_constant::clone(void *mem_ctx, struct hash_table *ht) const
    case GLSL_TYPE_IMAGE:
       return new(mem_ctx) ir_constant(this->type, &this->value);
 
-   case GLSL_TYPE_STRUCT: {
-      ir_constant *c = new(mem_ctx) ir_constant;
-
-      c->type = this->type;
-      for (const exec_node *node = this->components.get_head_raw()
-	      ; !node->is_tail_sentinel()
-	      ; node = node->next) {
-	 ir_constant *const orig = (ir_constant *) node;
-
-	 c->components.push_tail(orig->clone(mem_ctx, NULL));
-      }
-
-      return c;
-   }
-
+   case GLSL_TYPE_STRUCT:
    case GLSL_TYPE_ARRAY: {
       ir_constant *c = new(mem_ctx) ir_constant;
 

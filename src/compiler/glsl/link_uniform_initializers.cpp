@@ -206,17 +206,13 @@ set_uniform_initializer(void *mem_ctx, gl_shader_program *prog,
 {
    const glsl_type *t_without_array = type->without_array();
    if (type->is_record()) {
-      ir_constant *field_constant;
-
-      field_constant = (ir_constant *)val->components.get_head();
-
       for (unsigned int i = 0; i < type->length; i++) {
          const glsl_type *field_type = type->fields.structure[i].type;
          const char *field_name = ralloc_asprintf(mem_ctx, "%s.%s", name,
                                             type->fields.structure[i].name);
          set_uniform_initializer(mem_ctx, prog, field_name,
-                                 field_type, field_constant, boolean_true);
-         field_constant = (ir_constant *)field_constant->next;
+                                 field_type, val->get_record_field(i),
+                                 boolean_true);
       }
       return;
    } else if (t_without_array->is_record() ||
