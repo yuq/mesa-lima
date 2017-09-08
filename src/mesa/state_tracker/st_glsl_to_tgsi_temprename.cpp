@@ -103,15 +103,19 @@ public:
    int begin() const;
    int loop_break_line() const;
 
+   const prog_scope *in_else_scope() const;
    const prog_scope *in_ifelse_scope() const;
-   const prog_scope *in_switchcase_scope() const;
+   const prog_scope *in_parent_ifelse_scope() const;
    const prog_scope *innermost_loop() const;
    const prog_scope *outermost_loop() const;
    const prog_scope *enclosing_conditional() const;
 
    bool is_loop() const;
    bool is_in_loop() const;
+   bool is_switchcase_scope_in_loop() const;
    bool is_conditional() const;
+   bool is_child_of(const prog_scope *scope) const;
+   bool is_child_of_ifelse_id_sibling(const prog_scope *scope) const;
 
    bool break_is_for_switchcase() const;
    bool contains_range_of(const prog_scope& other) const;
@@ -142,25 +146,81 @@ private:
    prog_scope *storage;
 };
 
+/* Class to track the access to a component of a temporary register. */
+
 class temp_comp_access {
 public:
    temp_comp_access();
+
    void record_read(int line, prog_scope *scope);
    void record_write(int line, prog_scope *scope);
    lifetime get_required_lifetime();
 private:
    void propagate_lifetime_to_dominant_write_scope();
+   bool conditional_ifelse_write_in_loop() const;
+
+   void record_ifelse_write(const prog_scope& scope);
+   void record_if_write(const prog_scope& scope);
+   void record_else_write(const prog_scope& scope);
 
    prog_scope *last_read_scope;
    prog_scope *first_read_scope;
    prog_scope *first_write_scope;
+
    int first_write;
    int last_read;
    int last_write;
    int first_read;
-   bool keep_for_full_loop;
+
+   /* This member variable tracks the current resolution of conditional writing
+    * to this temporary in IF/ELSE clauses.
+    *
+    * The initial value "conditionality_untouched" indicates that this
+    * temporary has not yet been written to within an if clause.
+    *
+    * A positive (other than "conditionality_untouched") number refers to the
+    * last loop id for which the write was resolved as unconditional. With each
+    * new loop this value will be overwitten by "conditionality_unresolved"
+    * on entering the first IF clause writing this temporary.
+    *
+    * The value "conditionality_unresolved" indicates that no resolution has
+    * been achieved so far. If the variable is set to this value at the end of
+    * the processing of the whole shader it also indicates a conditional write.
+    *
+    * The value "write_is_conditional" marks that the variable is written
+    * conditionally (i.e. not in all relevant IF/ELSE code path pairs) in at
+    * least one loop.
+    */
+   int conditionality_in_loop_id;
+
+   /* Helper constants to make the tracking code more readable. */
+   static const int write_is_conditional = -1;
+   static const int conditionality_unresolved = 0;
+   static const int conditionality_untouched;
+
+   /* A bit field tracking the nexting levels of if-else clauses where the
+    * temporary has (so far) been written to in the if branch, but not in the
+    * else branch.
+    */
+   unsigned int if_scope_write_flags;
+
+   int next_ifelse_nesting_depth;
+   static const int supported_ifelse_nesting_depth = 32;
+
+   /* Tracks the last if scope in which the temporary was written to
+    * without a write in the correspondig else branch. Is also used
+    * to track read-before-write in the according scope.
+    */
+   const prog_scope *current_unpaired_if_write_scope;
+
+   /* Flag to resolve read-before-write in the else scope. */
+   bool was_written_in_current_else_scope;
 };
 
+const int
+temp_comp_access::conditionality_untouched = numeric_limits<int>::max();
+
+/* Class to track the access to all components of a temporary register. */
 class temp_access {
 public:
    temp_access();
@@ -263,6 +323,32 @@ const prog_scope *prog_scope::outermost_loop() const
    return loop;
 }
 
+bool prog_scope::is_child_of_ifelse_id_sibling(const prog_scope *scope) const
+{
+   const prog_scope *my_parent = in_parent_ifelse_scope();
+   while (my_parent) {
+      /* is a direct child? */
+      if (my_parent == scope)
+         return false;
+      /* is a child of the conditions sibling? */
+      if (my_parent->id() == scope->id())
+         return true;
+      my_parent = my_parent->in_parent_ifelse_scope();
+   }
+   return false;
+}
+
+bool prog_scope::is_child_of(const prog_scope *scope) const
+{
+   const prog_scope *my_parent = parent();
+   while (my_parent) {
+      if (my_parent == scope)
+         return true;
+      my_parent = my_parent->parent();
+   }
+   return false;
+}
+
 const prog_scope *prog_scope::enclosing_conditional() const
 {
    if (is_conditional())
@@ -287,6 +373,25 @@ bool prog_scope::is_conditional() const
          scope_type == switch_default_branch;
 }
 
+const prog_scope *prog_scope::in_else_scope() const
+{
+   if (scope_type == else_branch)
+      return this;
+
+   if (parent_scope)
+      return parent_scope->in_else_scope();
+
+   return nullptr;
+}
+
+const prog_scope *prog_scope::in_parent_ifelse_scope() const
+{
+        if (parent_scope)
+                return parent_scope->in_ifelse_scope();
+        else
+                return nullptr;
+}
+
 const prog_scope *prog_scope::in_ifelse_scope() const
 {
    if (scope_type == if_branch ||
@@ -299,16 +404,11 @@ const prog_scope *prog_scope::in_ifelse_scope() const
    return nullptr;
 }
 
-const prog_scope *prog_scope::in_switchcase_scope() const
+bool prog_scope::is_switchcase_scope_in_loop() const
 {
-   if (scope_type == switch_case_branch ||
-       scope_type == switch_default_branch)
-      return this;
-
-   if (parent_scope)
-      return parent_scope->in_switchcase_scope();
-
-   return nullptr;
+   return (scope_type == switch_case_branch ||
+           scope_type == switch_default_branch) &&
+         is_in_loop();
 }
 
 bool prog_scope::break_is_for_switchcase() const
@@ -447,7 +547,12 @@ temp_comp_access::temp_comp_access():
    first_write(-1),
    last_read(-1),
    last_write(-1),
-   first_read(numeric_limits<int>::max())
+   first_read(numeric_limits<int>::max()),
+   conditionality_in_loop_id(conditionality_untouched),
+   if_scope_write_flags(0),
+   next_ifelse_nesting_depth(0),
+   current_unpaired_if_write_scope(nullptr),
+   was_written_in_current_else_scope(false)
 {
 }
 
@@ -460,6 +565,44 @@ void temp_comp_access::record_read(int line, prog_scope *scope)
       first_read = line;
       first_read_scope = scope;
    }
+
+   /* Check whether we are in a condition within a loop */
+   const prog_scope *ifelse_scope = scope->in_ifelse_scope();
+   const prog_scope *enclosing_loop;
+   if (ifelse_scope && (enclosing_loop = ifelse_scope->innermost_loop())) {
+
+      /* If we have either not yet written to this register nor writes are
+       * resolved as unconditional in the enclosing loop then check whether
+       * we read before write in an IF/ELSE branch.
+       */
+      if ((conditionality_in_loop_id != write_is_conditional) &&
+          (conditionality_in_loop_id != enclosing_loop->id())) {
+
+         if (current_unpaired_if_write_scope)  {
+
+            /* Has been written in this or a parent scope? - this makes the temporary
+             * unconditionally set at this point.
+             */
+            if (scope->is_child_of(current_unpaired_if_write_scope))
+               return;
+
+            /* Has been written in the same scope before it was read? */
+            if (ifelse_scope->type() == if_branch) {
+               if (current_unpaired_if_write_scope->id() == scope->id())
+                  return;
+            } else {
+               if (was_written_in_current_else_scope)
+                  return;
+            }
+         }
+
+         /* The temporary was read (conditionally) before it is written, hence
+          * it should survive a loop. This can be signaled like if it were
+          * conditionally written.
+          */
+         conditionality_in_loop_id = write_is_conditional;
+      }
+   }
 }
 
 void temp_comp_access::record_write(int line, prog_scope *scope)
@@ -470,6 +613,135 @@ void temp_comp_access::record_write(int line, prog_scope *scope)
       first_write = line;
       first_write_scope = scope;
    }
+
+   if (conditionality_in_loop_id == write_is_conditional)
+      return;
+
+   /* If the nesting depth is larger than the supported level,
+    * then we assume conditional writes.
+    */
+   if (next_ifelse_nesting_depth >= supported_ifelse_nesting_depth) {
+      conditionality_in_loop_id = write_is_conditional;
+      return;
+   }
+
+   /* If we are in an IF/ELSE scope within a loop and the loop has not
+    * been resolved already, then record this write.
+    */
+   const prog_scope *ifelse_scope = scope->in_ifelse_scope();
+   if (ifelse_scope && ifelse_scope->innermost_loop() &&
+       ifelse_scope->innermost_loop()->id()  != conditionality_in_loop_id)
+      record_ifelse_write(*ifelse_scope);
+}
+
+void temp_comp_access::record_ifelse_write(const prog_scope& scope)
+{
+   if (scope.type() == if_branch) {
+      /* The first write in an IF branch within a loop implies unresolved
+       * conditionality (if it was untouched or unconditional before).
+       */
+      conditionality_in_loop_id = conditionality_unresolved;
+      was_written_in_current_else_scope = false;
+      record_if_write(scope);
+   } else {
+      was_written_in_current_else_scope = true;
+      record_else_write(scope);
+   }
+}
+
+void temp_comp_access::record_if_write(const prog_scope& scope)
+{
+   /* Don't record write if this IF scope if it ...
+    * - is not the first write in this IF scope,
+    * - has already been written in a parent IF scope.
+    * In both cases this write is a secondary write that doesn't contribute
+    * to resolve conditionality.
+    *
+    * Record the write if it
+    * - is the first one (obviously),
+    * - happens in an IF branch that is a child of the ELSE branch of the
+    *   last active IF/ELSE pair. In this case recording this write is used to
+    *   established whether the write is (un-)conditional in the scope enclosing
+    *   this outer IF/ELSE pair.
+    */
+   if (!current_unpaired_if_write_scope ||
+       (current_unpaired_if_write_scope->id() != scope.id() &&
+        scope.is_child_of_ifelse_id_sibling(current_unpaired_if_write_scope)))  {
+      if_scope_write_flags |= 1 << next_ifelse_nesting_depth;
+      current_unpaired_if_write_scope = &scope;
+      next_ifelse_nesting_depth++;
+   }
+}
+
+void temp_comp_access::record_else_write(const prog_scope& scope)
+{
+   int mask = 1 << (next_ifelse_nesting_depth - 1);
+
+   /* If the temporary was written in an IF branch on the same scope level
+    * and this branch is the sibling of this ELSE branch, then we have a
+    * pair of writes that makes write access to this temporary unconditional
+    * in the enclosing scope.
+    */
+
+   if ((if_scope_write_flags & mask) &&
+       (scope.id() == current_unpaired_if_write_scope->id())) {
+          --next_ifelse_nesting_depth;
+         if_scope_write_flags &= ~mask;
+
+         /* The following code deals with propagating unconditionality from
+          * inner levels of nested IF/ELSE to the outer levels like in
+          *
+          * 1: var t;
+          * 2: if (a) {        <- start scope A
+          * 3:    if (b)
+          * 4:         t = ...
+          * 5:    else
+          * 6:         t = ...
+          * 7: } else {        <- start scope B
+          * 8:    if (c)
+          * 9:         t = ...
+          * A:    else         <- start scope C
+          * B:         t = ...
+          * C: }
+          *
+          */
+
+         const prog_scope *parent_ifelse = scope.parent()->in_ifelse_scope();
+
+         if (1 << (next_ifelse_nesting_depth - 1) & if_scope_write_flags) {
+            /* We are at the end of scope C and already recorded a write
+             * within an IF scope (A), the sibling of the parent ELSE scope B,
+             * and it is not yet resolved. Mark that as the last relevant
+             * IF scope. Below the write will be resolved for the A/B
+             * scope pair.
+             */
+            current_unpaired_if_write_scope = parent_ifelse;
+         } else {
+            current_unpaired_if_write_scope = nullptr;
+         }
+
+         /* If some parent is IF/ELSE and in a loop then propagate the
+          * write to that scope. Otherwise the write is unconditional
+          * because it happens in both corresponding IF/ELSE branches
+          * in this loop, and hence, record the loop id to signal the
+          * resolution.
+          */
+         if (parent_ifelse && parent_ifelse->is_in_loop()) {
+            record_ifelse_write(*parent_ifelse);
+         } else {
+            conditionality_in_loop_id = scope.innermost_loop()->id();
+         }
+   } else {
+     /* The temporary was not written in the IF branch corresponding
+      * to this ELSE branch, hence the write is conditional.
+      */
+      conditionality_in_loop_id = write_is_conditional;
+   }
+}
+
+bool temp_comp_access::conditional_ifelse_write_in_loop() const
+{
+   return conditionality_in_loop_id <= conditionality_unresolved;
 }
 
 void temp_comp_access::propagate_lifetime_to_dominant_write_scope()
@@ -513,15 +785,15 @@ lifetime temp_comp_access::get_required_lifetime()
       enclosing_scope_first_read = first_read_scope->outermost_loop();
    }
 
-   /* A conditional write within a nested loop must survive
-    * the outermost loop, but only if it is read outside
-    * the condition scope where we write.
+   /* A conditional write within a (nested) loop must survive the outermost
+    * loop if the last read was not within the same scope.
     */
    const prog_scope *conditional = enclosing_scope_first_write->enclosing_conditional();
-   if (conditional && conditional->is_in_loop() &&
-       !conditional->contains_range_of(*last_read_scope)) {
-      keep_for_full_loop = true;
-      enclosing_scope_first_write = conditional->outermost_loop();
+   if (conditional && !conditional->contains_range_of(*last_read_scope) &&
+       (conditional->is_switchcase_scope_in_loop() ||
+        conditional_ifelse_write_in_loop())) {
+         keep_for_full_loop = true;
+         enclosing_scope_first_write = conditional->outermost_loop();
    }
 
    /* Evaluate the scope that is shared by all: required first write scope,
@@ -618,8 +890,8 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
                                       int ntemps, struct lifetime *lifetimes)
 {
    int line = 0;
-   int loop_id = 0;
-   int if_id = 0;
+   int loop_id = 1;
+   int if_id = 1;
    int switch_id = 0;
    bool is_at_end = false;
    bool ok = true;
