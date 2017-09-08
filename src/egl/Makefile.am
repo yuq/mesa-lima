@@ -45,6 +45,7 @@ libEGL_common_la_SOURCES = \
 	$(LIBEGL_C_FILES)
 
 libEGL_common_la_LIBADD = \
+	$(top_builddir)/src/util/libmesautil.la \
 	$(EGL_LIB_DEPS)
 
 dri2_backend_FILES =
@@ -82,7 +83,6 @@ AM_CFLAGS += $(WAYLAND_CFLAGS)
 libEGL_common_la_LIBADD += $(WAYLAND_LIBS)
 libEGL_common_la_LIBADD += $(LIBDRM_LIBS)
 libEGL_common_la_LIBADD += $(top_builddir)/src/egl/wayland/wayland-drm/libwayland-drm.la
-libEGL_common_la_LIBADD += $(top_builddir)/src/util/libmesautil.la
 dri2_backend_FILES += \
 	drivers/dri2/platform_wayland.c	\
 	drivers/dri2/linux-dmabuf-unstable-v1-protocol.c \

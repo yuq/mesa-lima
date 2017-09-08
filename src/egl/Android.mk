@@ -48,6 +48,7 @@ LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/src/egl/drivers/dri2
 
 LOCAL_STATIC_LIBRARIES := \
+	libmesa_util \
 	libmesa_loader
 
 LOCAL_SHARED_LIBRARIES := \

@@ -40,6 +40,7 @@
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "util/debug.h"
 #include "util/macros.h"
 
 #include "egl_dri2.h"
@@ -1458,7 +1459,7 @@ dri2_initialize_x11(_EGLDriver *drv, _EGLDisplay *disp)
 {
    EGLBoolean initialized = EGL_FALSE;
 
-   if (!getenv("LIBGL_ALWAYS_SOFTWARE")) {
+   if (!env_var_as_boolean("LIBGL_ALWAYS_SOFTWARE", false)) {
 #ifdef HAVE_DRI3
       if (!getenv("LIBGL_DRI3_DISABLE"))
          initialized = dri2_initialize_x11_dri3(drv, disp);

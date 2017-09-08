@@ -908,7 +908,7 @@ __glXInitialize(Display * dpy)
 
 #if defined(GLX_DIRECT_RENDERING) && !defined(GLX_USE_APPLEGL)
    glx_direct = (getenv("LIBGL_ALWAYS_INDIRECT") == NULL);
-   glx_accel = (getenv("LIBGL_ALWAYS_SOFTWARE") == NULL);
+   glx_accel = !env_var_as_boolean("LIBGL_ALWAYS_SOFTWARE", false);
 
    dpyPriv->drawHash = __glxHashCreate();
 

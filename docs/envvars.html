@@ -30,7 +30,7 @@ sometimes be useful for debugging end-user issues.
    If set to 'verbose' additional information will be printed.
 <li>LIBGL_DRIVERS_PATH - colon-separated list of paths to search for DRI drivers
 <li>LIBGL_ALWAYS_INDIRECT - forces an indirect rendering context/connection.
-<li>LIBGL_ALWAYS_SOFTWARE - if set, always use software rendering
+<li>LIBGL_ALWAYS_SOFTWARE - if set to `true`, always use software rendering
 <li>LIBGL_NO_DRAWARRAYS - if set do not use DrawArrays GLX protocol (for debugging)
 <li>LIBGL_SHOW_FPS - print framerate to stdout based on the number of glXSwapBuffers
     calls per second.
@@ -240,7 +240,7 @@ Mesa EGL supports different sets of environment variables.  See the
     Use kill -10 <pid> to toggle the hud as desired.
 <li>GALLIUM_HUD_DUMP_DIR - specifies a directory for writing the displayed
     hud values into files.
-<li>GALLIUM_DRIVER - useful in combination with LIBGL_ALWAYS_SOFTWARE=1 for
+<li>GALLIUM_DRIVER - useful in combination with LIBGL_ALWAYS_SOFTWARE=true for
     choosing one of the software renderers "softpipe", "llvmpipe" or "swr".
 <li>GALLIUM_LOG_FILE - specifies a file for logging all errors, warnings, etc.
     rather than stderr.

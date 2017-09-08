@@ -90,7 +90,7 @@ apple_visual_create_pfobj(CGLPixelFormatObj * pfobj, const struct glx_config * m
 
       attr[numattr++] = kCGLPFAOffScreen;
    }
-   else if (getenv("LIBGL_ALWAYS_SOFTWARE") != NULL) {
+   else if (env_var_as_boolean("LIBGL_ALWAYS_SOFTWARE", false)) {
       apple_glx_diagnostic
          ("Software rendering requested.  Using kCGLRendererGenericFloatID.\n");
       attr[numattr++] = kCGLPFARendererID;
