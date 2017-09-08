@@ -3073,7 +3073,7 @@ glsl_to_tgsi_visitor::visit(ir_constant *ir)
       in_array++;
 
       for (i = 0; i < ir->type->length; i++) {
-         ir->array_elements[i]->accept(this);
+         ir->const_elements[i]->accept(this);
          src = this->result;
          for (int j = 0; j < size; j++) {
             emit_asm(ir, TGSI_OPCODE_MOV, temp, src);

@@ -1940,7 +1940,7 @@ ir_to_mesa_visitor::visit(ir_constant *ir)
       assert(size > 0);
 
       for (i = 0; i < ir->type->length; i++) {
-	 ir->array_elements[i]->accept(this);
+	 ir->const_elements[i]->accept(this);
 	 src = this->result;
 	 for (int j = 0; j < size; j++) {
 	    emit(ir, OPCODE_MOV, temp, src);

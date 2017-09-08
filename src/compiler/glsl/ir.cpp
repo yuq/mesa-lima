@@ -627,14 +627,14 @@ ir_expression::variable_referenced() const
 ir_constant::ir_constant()
    : ir_rvalue(ir_type_constant)
 {
-   this->array_elements = NULL;
+   this->const_elements = NULL;
 }
 
 ir_constant::ir_constant(const struct glsl_type *type,
 			 const ir_constant_data *data)
    : ir_rvalue(ir_type_constant)
 {
-   this->array_elements = NULL;
+   this->const_elements = NULL;
 
    assert((type->base_type >= GLSL_TYPE_UINT)
 	  && (type->base_type <= GLSL_TYPE_IMAGE));
@@ -737,7 +737,7 @@ ir_constant::ir_constant(bool b, unsigned vector_elements)
 ir_constant::ir_constant(const ir_constant *c, unsigned i)
    : ir_rvalue(ir_type_constant)
 {
-   this->array_elements = NULL;
+   this->const_elements = NULL;
    this->type = c->type->get_base_type();
 
    switch (this->type->base_type) {
@@ -753,19 +753,19 @@ ir_constant::ir_constant(const ir_constant *c, unsigned i)
 ir_constant::ir_constant(const struct glsl_type *type, exec_list *value_list)
    : ir_rvalue(ir_type_constant)
 {
-   this->array_elements = NULL;
+   this->const_elements = NULL;
    this->type = type;
 
    assert(type->is_scalar() || type->is_vector() || type->is_matrix()
 	  || type->is_record() || type->is_array());
 
    if (type->is_array()) {
-      this->array_elements = ralloc_array(this, ir_constant *, type->length);
+      this->const_elements = ralloc_array(this, ir_constant *, type->length);
       unsigned i = 0;
       foreach_in_list(ir_constant, value, value_list) {
 	 assert(value->as_constant() != NULL);
 
-	 this->array_elements[i++] = value;
+	 this->const_elements[i++] = value;
       }
       return;
    }
@@ -924,10 +924,10 @@ ir_constant::zero(void *mem_ctx, const glsl_type *type)
    memset(&c->value, 0, sizeof(c->value));
 
    if (type->is_array()) {
-      c->array_elements = ralloc_array(c, ir_constant *, type->length);
+      c->const_elements = ralloc_array(c, ir_constant *, type->length);
 
       for (unsigned i = 0; i < type->length; i++)
-	 c->array_elements[i] = ir_constant::zero(c, type->fields.array);
+	 c->const_elements[i] = ir_constant::zero(c, type->fields.array);
    }
 
    if (type->is_record()) {
@@ -1100,7 +1100,7 @@ ir_constant::get_array_element(unsigned i) const
    else if (i >= this->type->length)
       i = this->type->length - 1;
 
-   return array_elements[i];
+   return const_elements[i];
 }
 
 ir_constant *
@@ -1181,7 +1181,7 @@ ir_constant::copy_offset(ir_constant *src, int offset)
    case GLSL_TYPE_ARRAY: {
       assert (src->type == this->type);
       for (unsigned i = 0; i < this->type->length; i++) {
-	 this->array_elements[i] = src->array_elements[i]->clone(this, NULL);
+	 this->const_elements[i] = src->const_elements[i]->clone(this, NULL);
       }
       break;
    }
@@ -1243,7 +1243,7 @@ ir_constant::has_value(const ir_constant *c) const
 
    if (this->type->is_array()) {
       for (unsigned i = 0; i < this->type->length; i++) {
-	 if (!this->array_elements[i]->has_value(c->array_elements[i]))
+	 if (!this->const_elements[i]->has_value(c->const_elements[i]))
 	    return false;
       }
       return true;
@@ -1976,7 +1976,7 @@ steal_memory(ir_instruction *ir, void *new_ctx)
 	 }
       } else if (constant->type->is_array()) {
 	 for (unsigned int i = 0; i < constant->type->length; i++) {
-	    steal_memory(constant->array_elements[i], ir);
+	    steal_memory(constant->const_elements[i], ir);
 	 }
       }
    }

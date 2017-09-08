@@ -227,7 +227,7 @@ set_uniform_initializer(void *mem_ctx, gl_shader_program *prog,
          const char *element_name = ralloc_asprintf(mem_ctx, "%s[%d]", name, i);
 
          set_uniform_initializer(mem_ctx, prog, element_name,
-                                 element_type, val->array_elements[i],
+                                 element_type, val->const_elements[i],
                                  boolean_true);
       }
       return;
@@ -240,15 +240,15 @@ set_uniform_initializer(void *mem_ctx, gl_shader_program *prog,
 
    if (val->type->is_array()) {
       const enum glsl_base_type base_type =
-         val->array_elements[0]->type->base_type;
-      const unsigned int elements = val->array_elements[0]->type->components();
+         val->const_elements[0]->type->base_type;
+      const unsigned int elements = val->const_elements[0]->type->components();
       unsigned int idx = 0;
       unsigned dmul = glsl_base_type_is_64bit(base_type) ? 2 : 1;
 
       assert(val->type->length >= storage->array_elements);
       for (unsigned int i = 0; i < storage->array_elements; i++) {
          copy_constant_to_storage(& storage->storage[idx],
-                                  val->array_elements[i],
+                                  val->const_elements[i],
                                   base_type,
                                   elements,
                                   boolean_true);

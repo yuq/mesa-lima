@@ -364,9 +364,9 @@ ir_constant::clone(void *mem_ctx, struct hash_table *ht) const
       ir_constant *c = new(mem_ctx) ir_constant;
 
       c->type = this->type;
-      c->array_elements = ralloc_array(c, ir_constant *, this->type->length);
+      c->const_elements = ralloc_array(c, ir_constant *, this->type->length);
       for (unsigned i = 0; i < this->type->length; i++) {
-	 c->array_elements[i] = this->array_elements[i]->clone(mem_ctx, NULL);
+         c->const_elements[i] = this->const_elements[i]->clone(mem_ctx, NULL);
       }
       return c;
    }

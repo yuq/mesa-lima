@@ -2263,7 +2263,7 @@ public:
    union ir_constant_data value;
 
    /* Array elements */
-   ir_constant **array_elements;
+   ir_constant **const_elements;
 
    /* Structure fields */
    exec_list components;

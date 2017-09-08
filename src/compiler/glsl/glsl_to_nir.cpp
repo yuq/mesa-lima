@@ -302,7 +302,7 @@ constant_copy(ir_constant *ir, void *mem_ctx)
       ret->num_elements = ir->type->length;
 
       for (i = 0; i < ir->type->length; i++)
-         ret->elements[i] = constant_copy(ir->array_elements[i], mem_ctx);
+         ret->elements[i] = constant_copy(ir->const_elements[i], mem_ctx);
       break;
 
    default:
