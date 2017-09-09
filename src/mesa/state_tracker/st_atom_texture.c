@@ -106,7 +106,7 @@ update_textures(struct st_context *st,
 {
    const GLuint old_max = *out_num_textures;
    GLbitfield samplers_used = prog->SamplersUsed;
-   GLbitfield texel_fetch_samplers = prog->TexelFetchSamplers;
+   GLbitfield texel_fetch_samplers = prog->info.textures_used_by_txf;
    GLbitfield free_slots = ~prog->SamplersUsed;
    GLbitfield external_samplers_used = prog->ExternalSamplersUsed;
    GLuint unit;

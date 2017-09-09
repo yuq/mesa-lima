@@ -2088,7 +2088,6 @@ struct gl_program
    GLbitfield TexturesUsed[MAX_COMBINED_TEXTURE_IMAGE_UNITS];  /**< TEXTURE_x_BIT bitmask */
    GLbitfield SamplersUsed;   /**< Bitfield of which samplers are used */
    GLbitfield ShadowSamplers; /**< Texture units used for shadow sampling. */
-   GLbitfield TexelFetchSamplers; /**< Texture units used for texelFetch*(). */
    GLbitfield ExternalSamplersUsed; /**< Texture units used for samplerExternalOES */
 
    /* Fragement shader only fields */
