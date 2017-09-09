@@ -29,6 +29,7 @@
 #include "main/mtypes.h"
 #include "main/formats.h"
 #include "brw_context.h"
+#include "intel_mipmap_tree.h"
 
 void intelInitTextureFuncs(struct dd_function_table *functions);
 
