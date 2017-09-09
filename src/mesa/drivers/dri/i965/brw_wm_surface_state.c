@@ -451,7 +451,7 @@ brw_aux_surface_disabled(const struct brw_context *brw,
    return false;
 }
 
-void
+static void
 brw_update_texture_surface(struct gl_context *ctx,
                            unsigned unit,
                            uint32_t *surf_offset,
