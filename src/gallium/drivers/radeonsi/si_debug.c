@@ -666,6 +666,24 @@ static void si_dump_descriptor_list(struct si_screen *screen,
 	if (!desc->list)
 		return;
 
+	/* In some cases, the caller doesn't know how many elements are really
+	 * uploaded. Reduce num_elements to fit in the range of active slots. */
+	unsigned active_range_dw_begin =
+		desc->first_active_slot * desc->element_dw_size;
+	unsigned active_range_dw_end =
+		active_range_dw_begin + desc->num_active_slots * desc->element_dw_size;
+
+	while (num_elements > 0) {
+		int i = slot_remap(num_elements - 1);
+		unsigned dw_begin = i * element_dw_size;
+		unsigned dw_end = dw_begin + element_dw_size;
+
+		if (dw_begin >= active_range_dw_begin && dw_end <= active_range_dw_end)
+			break;
+
+		num_elements--;
+	}
+
 	struct si_log_chunk_desc_list *chunk =
 		CALLOC_VARIANT_LENGTH_STRUCT(si_log_chunk_desc_list,
 					     4 * element_dw_size * num_elements);
