@@ -299,6 +299,7 @@ lp_build_coord_repeat_npot_linear(struct lp_build_sample_context *bld,
  */
 static void
 lp_build_sample_wrap_linear(struct lp_build_sample_context *bld,
+                            boolean is_gather,
                             LLVMValueRef coord,
                             LLVMValueRef length,
                             LLVMValueRef length_f,
@@ -388,13 +389,29 @@ lp_build_sample_wrap_linear(struct lp_build_sample_context *bld,
          /* clamp to length max */
          coord = lp_build_min_ext(coord_bld, coord, length_f,
                                   GALLIVM_NAN_RETURN_OTHER_SECOND_NONNAN);
-         /* subtract 0.5 */
-         coord = lp_build_sub(coord_bld, coord, half);
-         /* clamp to [0, length - 0.5] */
-         coord = lp_build_max(coord_bld, coord, coord_bld->zero);
-         /* convert to int, compute lerp weight */
-         lp_build_ifloor_fract(&abs_coord_bld, coord, &coord0, &weight);
-         coord1 = lp_build_add(int_coord_bld, coord0, int_coord_bld->one);
+         if (!is_gather) {
+            /* subtract 0.5 */
+            coord = lp_build_sub(coord_bld, coord, half);
+            /* clamp to [0, length - 0.5] */
+            coord = lp_build_max(coord_bld, coord, coord_bld->zero);
+            /* convert to int, compute lerp weight */
+            lp_build_ifloor_fract(&abs_coord_bld, coord, &coord0, &weight);
+            coord1 = lp_build_add(int_coord_bld, coord0, int_coord_bld->one);
+         } else {
+            /*
+             * The non-gather path will end up with coords 0, 1 if coord was
+             * smaller than 0.5 (with corresponding weight 0.0 so it doesn't
+             * really matter what the second coord is). But for gather, we
+             * really need to end up with coords 0, 0.
+             */
+            coord = lp_build_max(coord_bld, coord, coord_bld->zero);
+            coord0 = lp_build_sub(coord_bld, coord, half);
+            coord1 = lp_build_add(coord_bld, coord, half);
+            /* Values range ([-0.5, length_f - 0.5], [0.5, length_f + 0.5] */
+            coord0 = lp_build_itrunc(coord_bld, coord0);
+            coord1 = lp_build_itrunc(coord_bld, coord1);
+            weight = coord_bld->undef;
+         }
          /* coord1 = min(coord1, length-1) */
          coord1 = lp_build_min(int_coord_bld, coord1, length_minus_one);
          break;
@@ -424,6 +441,13 @@ lp_build_sample_wrap_linear(struct lp_build_sample_context *bld,
          coord = lp_build_add(coord_bld, coord, offset);
       }
       /* compute mirror function */
+      /*
+       * XXX: This looks incorrect wrt gather. Due to wrap specification,
+       * it is possible the first coord ends up larger than the second one.
+       * However, with our simplifications the coordinates will be swapped
+       * in this case. (Albeit some other api tests don't like it even
+       * with this fixed...)
+       */
       coord = lp_build_coord_mirror(bld, coord);
 
       /* scale coord to length */
@@ -474,6 +498,20 @@ lp_build_sample_wrap_linear(struct lp_build_sample_context *bld,
             offset = lp_build_int_to_float(coord_bld, offset);
             coord = lp_build_add(coord_bld, coord, offset);
          }
+         /*
+          * XXX: This looks incorrect wrt gather. Due to wrap specification,
+          * the first and second texel actually end up with "different order"
+          * for negative coords. For example, if the scaled coord would
+          * be -0.6, then the first coord should end up as 1
+          * (floor(-0.6 - 0.5) == -2, mirror makes that 1), the second as 0
+          * (floor(-0.6 - 0.5) + 1 == -1, mirror makes that 0).
+          * But with our simplifications the second coord will always be the
+          * larger one. The other two mirror_clamp modes have the same problem.
+          * Moreover, for coords close to zero we should end up with both
+          * coords being 0, but we will end up with coord1 being 1 instead
+          * (with bilinear filtering this is ok as the weight is 0.0) (this
+          * problem is specific to mirror_clamp_to_edge).
+          */
          coord = lp_build_abs(coord_bld, coord);
 
          /* clamp to length max */
@@ -929,7 +967,7 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
     */
 
    if (!seamless_cube_filter) {
-      lp_build_sample_wrap_linear(bld, coords[0], width_vec,
+      lp_build_sample_wrap_linear(bld, is_gather, coords[0], width_vec,
                                   flt_width_vec, offsets[0],
                                   bld->static_texture_state->pot_width,
                                   bld->static_sampler_state->wrap_s,
@@ -940,7 +978,7 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
       x11 = x01;
 
       if (dims >= 2) {
-         lp_build_sample_wrap_linear(bld, coords[1], height_vec,
+         lp_build_sample_wrap_linear(bld, is_gather, coords[1], height_vec,
                                      flt_height_vec, offsets[1],
                                      bld->static_texture_state->pot_height,
                                      bld->static_sampler_state->wrap_t,
@@ -951,7 +989,7 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
          y11 = y10;
 
          if (dims == 3) {
-            lp_build_sample_wrap_linear(bld, coords[2], depth_vec,
+            lp_build_sample_wrap_linear(bld, is_gather, coords[2], depth_vec,
                                         flt_depth_vec, offsets[2],
                                         bld->static_texture_state->pot_depth,
                                         bld->static_sampler_state->wrap_r,
