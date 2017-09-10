@@ -3711,7 +3711,33 @@ static void interp_fetch_args(
 						emit_data->inst, 1, TGSI_CHAN_X);
 		sample_id = LLVMBuildBitCast(gallivm->builder, sample_id,
 					     ctx->i32, "");
-		sample_position = load_sample_position(ctx, sample_id);
+
+		/* Section 8.13.2 (Interpolation Functions) of the OpenGL Shading
+		 * Language 4.50 spec says about interpolateAtSample:
+		 *
+		 *    "Returns the value of the input interpolant variable at
+		 *     the location of sample number sample. If multisample
+		 *     buffers are not available, the input variable will be
+		 *     evaluated at the center of the pixel. If sample sample
+		 *     does not exist, the position used to interpolate the
+		 *     input variable is undefined."
+		 *
+		 * This means that sample_id values outside of the valid are
+		 * in fact valid input, and the usual mechanism for loading the
+		 * sample position doesn't work.
+		 */
+		if (ctx->shader->key.mono.u.ps.interpolate_at_sample_force_center) {
+			LLVMValueRef center[4] = {
+				LLVMConstReal(ctx->f32, 0.5),
+				LLVMConstReal(ctx->f32, 0.5),
+				ctx->ac.f32_0,
+				ctx->ac.f32_0,
+			};
+
+			sample_position = lp_build_gather_values(gallivm, center, 4);
+		} else {
+			sample_position = load_sample_position(ctx, sample_id);
+		}
 
 		emit_data->args[0] = LLVMBuildExtractElement(gallivm->builder,
 							     sample_position,

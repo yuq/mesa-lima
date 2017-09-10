@@ -517,6 +517,9 @@ struct si_shader_key {
 			uint64_t	ff_tcs_inputs_to_copy; /* for fixed-func TCS */
 			/* When PS needs PrimID and GS is disabled. */
 			unsigned	vs_export_prim_id:1;
+			struct {
+				unsigned interpolate_at_sample_force_center:1;
+			} ps;
 		} u;
 	} mono;
 
