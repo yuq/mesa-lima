@@ -366,6 +366,12 @@ void radv_cmd_buffer_trace_emit(struct radv_cmd_buffer *cmd_buffer)
 }
 
 static void
+radv_cmd_buffer_after_draw(struct radv_cmd_buffer *cmd_buffer)
+{
+	radv_cmd_buffer_trace_emit(cmd_buffer);
+}
+
+static void
 radv_save_pipeline(struct radv_cmd_buffer *cmd_buffer,
 		   struct radv_pipeline *pipeline, enum ring_type ring)
 {
@@ -2812,7 +2818,7 @@ void radv_CmdDraw(
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 
-	radv_cmd_buffer_trace_emit(cmd_buffer);
+	radv_cmd_buffer_after_draw(cmd_buffer);
 }
 
 
@@ -2878,7 +2884,7 @@ void radv_CmdDrawIndexed(
 	}
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
-	radv_cmd_buffer_trace_emit(cmd_buffer);
+	radv_cmd_buffer_after_draw(cmd_buffer);
 }
 
 static void
@@ -2963,7 +2969,7 @@ radv_emit_indirect_draw(struct radv_cmd_buffer *cmd_buffer,
 			radv_cs_emit_indirect_draw_packet(cmd_buffer, indexed, draw_count, count_va, stride);
 		}
 	}
-	radv_cmd_buffer_trace_emit(cmd_buffer);
+	radv_cmd_buffer_after_draw(cmd_buffer);
 }
 
 static void
@@ -3115,7 +3121,7 @@ void radv_CmdDispatch(
 	radeon_emit(cmd_buffer->cs, 1);
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
-	radv_cmd_buffer_trace_emit(cmd_buffer);
+	radv_cmd_buffer_after_draw(cmd_buffer);
 }
 
 void radv_CmdDispatchIndirect(
@@ -3168,7 +3174,7 @@ void radv_CmdDispatchIndirect(
 	}
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
-	radv_cmd_buffer_trace_emit(cmd_buffer);
+	radv_cmd_buffer_after_draw(cmd_buffer);
 }
 
 void radv_unaligned_dispatch(
@@ -3225,7 +3231,7 @@ void radv_unaligned_dispatch(
 	                            S_00B800_PARTIAL_TG_EN(1));
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
-	radv_cmd_buffer_trace_emit(cmd_buffer);
+	radv_cmd_buffer_after_draw(cmd_buffer);
 }
 
 void radv_CmdEndRenderPass(
