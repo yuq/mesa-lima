@@ -32,6 +32,7 @@
 #include "sid.h"
 #include "gfx9d.h"
 #include "vk_format.h"
+#include "radv_debug.h"
 #include "radv_meta.h"
 
 #include "ac_debug.h"
@@ -368,6 +369,20 @@ void radv_cmd_buffer_trace_emit(struct radv_cmd_buffer *cmd_buffer)
 static void
 radv_cmd_buffer_after_draw(struct radv_cmd_buffer *cmd_buffer)
 {
+	if (cmd_buffer->device->debug_flags & RADV_DEBUG_SYNC_SHADERS) {
+		enum radv_cmd_flush_bits flags;
+
+		/* Force wait for graphics/compute engines to be idle. */
+		flags = RADV_CMD_FLAG_PS_PARTIAL_FLUSH |
+			RADV_CMD_FLAG_CS_PARTIAL_FLUSH;
+
+		si_cs_emit_cache_flush(cmd_buffer->cs, false,
+				       cmd_buffer->device->physical_device->rad_info.chip_class,
+				       NULL, 0,
+				       radv_cmd_buffer_uses_mec(cmd_buffer),
+				       flags);
+	}
+
 	radv_cmd_buffer_trace_emit(cmd_buffer);
 }
 

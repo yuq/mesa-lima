@@ -413,6 +413,7 @@ static const struct debug_control radv_debug_options[] = {
 	{"spirv", RADV_DEBUG_DUMP_SPIRV},
 	{"vmfaults", RADV_DEBUG_VM_FAULTS},
 	{"zerovram", RADV_DEBUG_ZERO_VRAM},
+	{"syncshaders", RADV_DEBUG_SYNC_SHADERS},
 	{NULL, 0}
 };
 
