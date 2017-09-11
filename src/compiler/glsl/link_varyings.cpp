@@ -325,8 +325,23 @@ cross_validate_types_and_qualifiers(struct gl_shader_program *prog,
     *     "It is a link-time error if, within the same stage, the interpolation
     *     qualifiers of variables of the same name do not match.
     *
+    * Section 4.3.9 (Interpolation) of the GLSL ES 3.00 spec says:
+    *
+    *    "When no interpolation qualifier is present, smooth interpolation
+    *    is used."
+    *
+    * So we match variables where one is smooth and the other has no explicit
+    * qualifier.
     */
-   if (input->data.interpolation != output->data.interpolation &&
+   unsigned input_interpolation = input->data.interpolation;
+   unsigned output_interpolation = output->data.interpolation;
+   if (prog->IsES) {
+      if (input_interpolation == INTERP_MODE_NONE)
+         input_interpolation = INTERP_MODE_SMOOTH;
+      if (output_interpolation == INTERP_MODE_NONE)
+         output_interpolation = INTERP_MODE_SMOOTH;
+   }
+   if (input_interpolation != output_interpolation &&
        prog->data->Version < 440) {
       linker_error(prog,
                    "%s shader output `%s' specifies %s "

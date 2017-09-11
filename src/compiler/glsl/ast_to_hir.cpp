@@ -3126,17 +3126,6 @@ interpret_interpolation_qualifier(const struct ast_type_qualifier *qual,
       interpolation = INTERP_MODE_NOPERSPECTIVE;
    else if (qual->flags.q.smooth)
       interpolation = INTERP_MODE_SMOOTH;
-   else if (state->es_shader &&
-            ((mode == ir_var_shader_in &&
-              state->stage != MESA_SHADER_VERTEX) ||
-             (mode == ir_var_shader_out &&
-              state->stage != MESA_SHADER_FRAGMENT)))
-      /* Section 4.3.9 (Interpolation) of the GLSL ES 3.00 spec says:
-       *
-       *    "When no interpolation qualifier is present, smooth interpolation
-       *    is used."
-       */
-      interpolation = INTERP_MODE_SMOOTH;
    else
       interpolation = INTERP_MODE_NONE;
 
