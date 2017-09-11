@@ -802,12 +802,18 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 		if (SI_GS_PER_ES / primgroup_size >= cmd_buffer->device->gs_table_depth - 3)
 			partial_es_wave = true;
 
-		/* Hw bug with single-primitive instances and SWITCH_ON_EOI
-		 * on multi-SE chips. */
-		if (info->max_se >= 2 && ia_switch_on_eoi &&
-		    ((instanced_draw || indirect_draw) &&
-		     num_prims <= 1))
-			cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_VGT_FLUSH;
+		/* GS hw bug with single-primitive instances and SWITCH_ON_EOI.
+		 * The hw doc says all multi-SE chips are affected, but amdgpu-pro Vulkan
+		 * only applies it to Hawaii. Do what amdgpu-pro Vulkan does.
+		 */
+		if (family == CHIP_HAWAII && ia_switch_on_eoi) {
+			bool set_vgt_flush = indirect_draw;
+			if (!set_vgt_flush && instanced_draw)
+				if (num_prims <= 1)
+					set_vgt_flush = true;
+			if (set_vgt_flush)
+				cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_VGT_FLUSH;
+		}
 	}
 
 	return S_028AA8_SWITCH_ON_EOP(ia_switch_on_eop) |
