@@ -159,82 +159,6 @@ brw_set_dest(struct brw_codegen *p, brw_inst *inst, struct brw_reg dest)
       brw_inst_set_exec_size(devinfo, inst, dest.width);
 }
 
-static void
-validate_reg(const struct gen_device_info *devinfo,
-             brw_inst *inst, struct brw_reg reg)
-{
-   const int hstride_for_reg[] = {0, 1, 2, 4};
-   const int vstride_for_reg[] = {0, 1, 2, 4, 8, 16, 32};
-   const int width_for_reg[] = {1, 2, 4, 8, 16};
-   const int execsize_for_reg[] = {1, 2, 4, 8, 16, 32};
-   int width, hstride, vstride, execsize;
-
-   if (reg.file == BRW_IMMEDIATE_VALUE)
-      return;
-
-   if (reg.file == BRW_ARCHITECTURE_REGISTER_FILE &&
-       reg.file == BRW_ARF_NULL)
-      return;
-
-   /* From the IVB PRM Vol. 4, Pt. 3, Section 3.3.3.5:
-    *
-    *    "Swizzling is not allowed when an accumulator is used as an implicit
-    *    source or an explicit source in an instruction."
-    */
-   if (reg.file == BRW_ARCHITECTURE_REGISTER_FILE &&
-       reg.nr == BRW_ARF_ACCUMULATOR)
-      assert(reg.swizzle == BRW_SWIZZLE_XYZW);
-
-   assert(reg.hstride < ARRAY_SIZE(hstride_for_reg));
-   hstride = hstride_for_reg[reg.hstride];
-
-   if (reg.vstride == 0xf) {
-      vstride = -1;
-   } else {
-      assert(reg.vstride >= 0 && reg.vstride < ARRAY_SIZE(vstride_for_reg));
-      vstride = vstride_for_reg[reg.vstride];
-   }
-
-   assert(reg.width >= 0 && reg.width < ARRAY_SIZE(width_for_reg));
-   width = width_for_reg[reg.width];
-
-   assert(brw_inst_exec_size(devinfo, inst) >= 0 &&
-          brw_inst_exec_size(devinfo, inst) < ARRAY_SIZE(execsize_for_reg));
-   execsize = execsize_for_reg[brw_inst_exec_size(devinfo, inst)];
-
-   /* Restrictions from 3.3.10: Register Region Restrictions. */
-   /* 3. */
-   assert(execsize >= width);
-
-   /* 4. */
-   if (execsize == width && hstride != 0) {
-      assert(vstride == -1 || vstride == width * hstride);
-   }
-
-   /* 5. */
-   if (execsize == width && hstride == 0) {
-      /* no restriction on vstride. */
-   }
-
-   /* 6. */
-   if (width == 1) {
-      assert(hstride == 0);
-   }
-
-   /* 7. */
-   if (execsize == 1 && width == 1) {
-      assert(hstride == 0);
-      assert(vstride == 0);
-   }
-
-   /* 8. */
-   if (vstride == 0 && hstride == 0) {
-      assert(width == 1);
-   }
-
-   /* 10. Check destination issues. */
-}
-
 void
 brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
 {
@@ -257,8 +181,6 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
       assert(!reg.abs);
       assert(reg.address_mode == BRW_ADDRESS_DIRECT);
    }
-
-   validate_reg(devinfo, inst, reg);
 
    brw_inst_set_src0_file_type(devinfo, inst, reg.file, reg.type);
    brw_inst_set_src0_abs(devinfo, inst, reg.abs);
@@ -362,8 +284,6 @@ brw_set_src1(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
 
    gen7_convert_mrf_to_grf(p, &reg);
    assert(reg.file != BRW_MESSAGE_REGISTER_FILE);
-
-   validate_reg(devinfo, inst, reg);
 
    brw_inst_set_src1_file_type(devinfo, inst, reg.file, reg.type);
    brw_inst_set_src1_abs(devinfo, inst, reg.abs);
