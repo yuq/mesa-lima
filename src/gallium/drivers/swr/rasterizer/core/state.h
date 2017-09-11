@@ -301,13 +301,12 @@ struct SWR_DS_CONTEXT
 /////////////////////////////////////////////////////////////////////////
 struct SWR_GS_CONTEXT
 {
-    simdvertex vert[MAX_NUM_VERTS_PER_PRIM]; // IN: input primitive data for SIMD prims
-    simdscalari PrimitiveID;        // IN: input primitive ID generated from the draw call
-    uint32_t InstanceID;            // IN: input instance ID
-    simdscalari mask;               // IN: Active mask for shader
-    uint8_t* pStream;               // OUT: output stream (contains vertices for all output streams)
-    uint8_t* pCutOrStreamIdBuffer;  // OUT: cut or stream id buffer
-    simdscalari vertexCount;        // OUT: num vertices emitted per SIMD lane
+    simdvector* pVerts;                 // IN: input primitive data for SIMD prims
+    uint32_t inputVertStride;           // IN: input vertex stride, in attributes
+    simdscalari PrimitiveID;            // IN: input primitive ID generated from the draw call
+    uint32_t InstanceID;                // IN: input instance ID
+    simdscalari mask;                   // IN: Active mask for shader
+    uint8_t* pStreams[KNOB_SIMD_WIDTH]; // OUT: output stream (contains vertices for all output streams)
 };
 
 struct PixelPositions
@@ -714,30 +713,56 @@ struct SWR_GS_STATE
 {
     bool gsEnable;
 
-    // number of input attributes per vertex. used by the frontend to
+    // Number of input attributes per vertex. Used by the frontend to
     // optimize assembling primitives for GS
     uint32_t numInputAttribs;
 
-    // output topology - can be point, tristrip, or linestrip
+    // Stride of incoming verts in attributes
+    uint32_t inputVertStride;
+
+    // Output topology - can be point, tristrip, or linestrip
     PRIMITIVE_TOPOLOGY outputTopology;      // @llvm_enum
 
-    // maximum number of verts that can be emitted by a single instance of the GS
+    // Maximum number of verts that can be emitted by a single instance of the GS
     uint32_t maxNumVerts;
     
-    // instance count
+    // Instance count
     uint32_t instanceCount;
 
-    // if true, geometry shader emits a single stream, with separate cut buffer.
-    // if false, geometry shader emits vertices for multiple streams to the stream buffer, with a separate StreamID buffer
+    // If true, geometry shader emits a single stream, with separate cut buffer.
+    // If false, geometry shader emits vertices for multiple streams to the stream buffer, with a separate StreamID buffer
     // to map vertices to streams
     bool isSingleStream;
 
-    // when single stream is enabled, singleStreamID dictates which stream is being output.
+    // When single stream is enabled, singleStreamID dictates which stream is being output.
     // field ignored if isSingleStream is false
     uint32_t singleStreamID;
 
-    // Offset to the start of the attributes of the input vertices, in simdvector units
+    // Total amount of memory to allocate for one instance of the shader output in bytes
+    uint32_t allocationSize;
+
+    // Offset to the start of the attributes of the input vertices, in simdvector units, as read by the GS
     uint32_t vertexAttribOffset;
+
+    // Offset to the attributes as stored by the preceding shader stage.
+    uint32_t srcVertexAttribOffset;
+
+    // Size of the control data section which contains cut or streamID data, in simdscalar units. Should be sized to handle
+    // the maximum number of verts output by the GS. Can be 0 if there are no cuts or streamID bits.
+    uint32_t controlDataSize;
+
+    // Offset to the control data section, in bytes
+    uint32_t controlDataOffset;
+
+    // Total size of an output vertex, in simdvector units
+    uint32_t outputVertexSize;
+
+    // Offset to the start of the vertex section, in bytes
+    uint32_t outputVertexOffset;
+
+    // Set this to non-zero to indicate that the shader outputs a static number of verts. If zero, shader is
+    // expected to store the final vertex count in the first dword of the gs output stream.
+    uint32_t staticVertexCount;
 };
 
 
