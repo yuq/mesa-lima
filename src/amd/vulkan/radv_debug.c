@@ -34,6 +34,12 @@
 
 #define TRACE_BO_SIZE 4096
 
+/* Trace BO layout (offsets are 4 bytes):
+ *
+ * [0]: primary trace ID
+ * [1]: secondary trace ID
+ */
+
 bool
 radv_init_trace(struct radv_device *device)
 {
