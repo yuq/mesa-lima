@@ -192,6 +192,16 @@ typedef struct nir_variable {
       unsigned invariant:1;
 
       /**
+       * When separate shader programs are enabled, only input/outputs between
+       * the stages of a multi-stage separate program can be safely removed
+       * from the shader interface. Other input/outputs must remains active.
+       *
+       * This is also used to make sure xfb varyings that are unused by the
+       * fragment shader are not removed.
+       */
+      unsigned always_active_io:1;
+
+      /**
        * Interpolation mode for shader inputs / outputs
        *
        * \sa glsl_interp_mode
