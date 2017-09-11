@@ -5542,6 +5542,17 @@ ast_declarator_list::hir(exec_list *instructions,
                              "GLSL ES");
       }
 
+      /* Section 4.4.6.1 Atomic Counter Layout Qualifiers of the GLSL 4.60 spec:
+       *
+       *    "It is a compile-time error to declare an unsized array of
+       *     atomic_uint"
+       */
+      if (var->type->is_unsized_array() &&
+          var->type->without_array()->base_type == GLSL_TYPE_ATOMIC_UINT) {
+         _mesa_glsl_error(& loc, state,
+                          "Unsized array of atomic_uint is not allowed");
+      }
+
       /* If the declaration is not a redeclaration, there are a few additional
        * semantic checks that must be applied.  In addition, variable that was
        * created for the declaration should be added to the IR stream.
