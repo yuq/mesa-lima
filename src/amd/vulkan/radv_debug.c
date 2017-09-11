@@ -563,6 +563,24 @@ radv_get_saved_compute_pipeline(struct radv_device *device)
 	return (struct radv_pipeline *)ptr[2];
 }
 
+static void
+radv_dump_dmesg(FILE *f)
+{
+	char line[2000];
+	FILE *p;
+
+	p = popen("dmesg | tail -n60", "r");
+	if (!p)
+		return;
+
+	fprintf(f, "\nLast 60 lines of dmesg:\n\n");
+	while (fgets(line, sizeof(line), p))
+		fputs(line, f);
+	fprintf(f, "\n");
+
+	pclose(p);
+}
+
 static bool
 radv_gpu_hang_occured(struct radv_queue *queue, enum ring_type ring)
 {
@@ -594,6 +612,8 @@ radv_check_gpu_hangs(struct radv_queue *queue, struct radeon_winsys_cs *cs)
 
 	graphics_pipeline = radv_get_saved_graphics_pipeline(device);
 	compute_pipeline = radv_get_saved_compute_pipeline(device);
+
+	radv_dump_dmesg(stderr);
 
 	if (vm_fault_occurred) {
 		fprintf(stderr, "VM fault report.\n\n");
