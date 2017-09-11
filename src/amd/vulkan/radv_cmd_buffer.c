@@ -1383,18 +1383,15 @@ static void
 radv_flush_push_descriptors(struct radv_cmd_buffer *cmd_buffer)
 {
 	struct radv_descriptor_set *set = &cmd_buffer->push_descriptors.set;
-	uint32_t *ptr = NULL;
 	unsigned bo_offset;
 
-	if (!radv_cmd_buffer_upload_alloc(cmd_buffer, set->size, 32,
-	                                  &bo_offset,
-	                                  (void**) &ptr))
+	if (!radv_cmd_buffer_upload_data(cmd_buffer, set->size, 32,
+					 set->mapped_ptr,
+					 &bo_offset))
 		return;
 
 	set->va = cmd_buffer->device->ws->buffer_get_va(cmd_buffer->upload.upload_bo);
 	set->va += bo_offset;
-
-	memcpy(ptr, set->mapped_ptr, set->size);
 }
 
 static void
