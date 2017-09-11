@@ -691,7 +691,6 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 	bool ia_switch_on_eoi = false;
 	bool partial_vs_wave = false;
 	bool partial_es_wave = false;
-	uint32_t num_prims = radv_prims_for_vertices(&cmd_buffer->state.pipeline->graphics.prim_vertex_count, draw_vertex_count);
 	bool multi_instances_smaller_than_primgroup;
 
 	if (radv_pipeline_has_tess(cmd_buffer->state.pipeline))
@@ -699,8 +698,13 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 	else if (radv_pipeline_has_gs(cmd_buffer->state.pipeline))
 		primgroup_size = 64;  /* recommended with a GS */
 
-	multi_instances_smaller_than_primgroup = indirect_draw || (instanced_draw &&
-								   num_prims < primgroup_size);
+	multi_instances_smaller_than_primgroup = indirect_draw;
+	if (!multi_instances_smaller_than_primgroup && instanced_draw) {
+		uint32_t num_prims = radv_prims_for_vertices(&cmd_buffer->state.pipeline->graphics.prim_vertex_count, draw_vertex_count);
+		if (num_prims < primgroup_size)
+			multi_instances_smaller_than_primgroup = true;
+	}
+
 	if (cmd_buffer->state.pipeline->shaders[MESA_SHADER_FRAGMENT]->info.fs.prim_id_input)
 		ia_switch_on_eoi = true;
 
@@ -808,9 +812,11 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 		 */
 		if (family == CHIP_HAWAII && ia_switch_on_eoi) {
 			bool set_vgt_flush = indirect_draw;
-			if (!set_vgt_flush && instanced_draw)
+			if (!set_vgt_flush && instanced_draw) {
+				uint32_t num_prims = radv_prims_for_vertices(&cmd_buffer->state.pipeline->graphics.prim_vertex_count, draw_vertex_count);
 				if (num_prims <= 1)
 					set_vgt_flush = true;
+			}
 			if (set_vgt_flush)
 				cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_VGT_FLUSH;
 		}
