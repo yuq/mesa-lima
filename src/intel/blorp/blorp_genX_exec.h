@@ -1454,6 +1454,17 @@ blorp_emit_gen8_hiz_op(struct blorp_batch *batch,
    if (params->stencil.enabled)
       assert(params->hiz_op == BLORP_HIZ_OP_DEPTH_CLEAR);
 
+   /* From the BDW PRM Volume 2, 3DSTATE_WM_HZ_OP:
+    *
+    * 3DSTATE_MULTISAMPLE packet must be used prior to this packet to change
+    * the Number of Multisamples. This packet must not be used to change
+    * Number of Multisamples in a rendering sequence.
+    *
+    * Since HIZ may be the first thing in a batch buffer, play safe and always
+    * emit 3DSTATE_MULTISAMPLE.
+    */
+   blorp_emit_3dstate_multisample(batch, params);
+
    /* If we can't alter the depth stencil config and multiple layers are
     * involved, the HiZ op will fail. This is because the op requires that a
     * new config is emitted for each additional layer.
