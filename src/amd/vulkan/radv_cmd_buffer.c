@@ -202,7 +202,8 @@ radv_cmd_buffer_destroy(struct radv_cmd_buffer *cmd_buffer)
 	vk_free(&cmd_buffer->pool->alloc, cmd_buffer);
 }
 
-static void  radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
+static VkResult
+radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
 {
 
 	cmd_buffer->device->ws->cs_reset(cmd_buffer->cs);
@@ -237,6 +238,8 @@ static void  radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
 					     &fence_ptr);
 		cmd_buffer->gfx9_fence_bo = cmd_buffer->upload.upload_bo;
 	}
+
+	return cmd_buffer->record_result;
 }
 
 static bool
@@ -1888,12 +1891,11 @@ VkResult radv_AllocateCommandBuffers(
 			list_del(&cmd_buffer->pool_link);
 			list_addtail(&cmd_buffer->pool_link, &pool->cmd_buffers);
 
-			radv_reset_cmd_buffer(cmd_buffer);
+			result = radv_reset_cmd_buffer(cmd_buffer);
 			cmd_buffer->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
 			cmd_buffer->level = pAllocateInfo->level;
 
 			pCommandBuffers[i] = radv_cmd_buffer_to_handle(cmd_buffer);
-			result = VK_SUCCESS;
 		} else {
 			result = radv_create_cmd_buffer(device, pool, pAllocateInfo->level,
 			                                &pCommandBuffers[i]);
@@ -1934,8 +1936,7 @@ VkResult radv_ResetCommandBuffer(
 	VkCommandBufferResetFlags flags)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-	radv_reset_cmd_buffer(cmd_buffer);
-	return VK_SUCCESS;
+	return radv_reset_cmd_buffer(cmd_buffer);
 }
 
 static void emit_gfx_buffer_state(struct radv_cmd_buffer *cmd_buffer)
@@ -1957,9 +1958,11 @@ VkResult radv_BeginCommandBuffer(
 	const VkCommandBufferBeginInfo *pBeginInfo)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-	VkResult result = VK_SUCCESS;
+	VkResult result;
 
-	radv_reset_cmd_buffer(cmd_buffer);
+	result = radv_reset_cmd_buffer(cmd_buffer);
+	if (result != VK_SUCCESS)
+		return result;
 
 	memset(&cmd_buffer->state, 0, sizeof(cmd_buffer->state));
 	cmd_buffer->state.last_primitive_reset_en = -1;
@@ -2591,10 +2594,13 @@ VkResult radv_ResetCommandPool(
 	VkCommandPoolResetFlags                     flags)
 {
 	RADV_FROM_HANDLE(radv_cmd_pool, pool, commandPool);
+	VkResult result;
 
 	list_for_each_entry(struct radv_cmd_buffer, cmd_buffer,
 			    &pool->cmd_buffers, pool_link) {
-		radv_reset_cmd_buffer(cmd_buffer);
+		result = radv_reset_cmd_buffer(cmd_buffer);
+		if (result != VK_SUCCESS)
+			return result;
 	}
 
 	return VK_SUCCESS;
