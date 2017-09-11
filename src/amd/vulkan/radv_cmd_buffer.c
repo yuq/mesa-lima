@@ -422,6 +422,35 @@ radv_save_pipeline(struct radv_cmd_buffer *cmd_buffer,
 }
 
 static void
+radv_save_descriptors(struct radv_cmd_buffer *cmd_buffer)
+{
+	struct radv_device *device = cmd_buffer->device;
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
+	uint32_t data[MAX_SETS * 2] = {};
+	uint64_t va;
+
+	if (!device->trace_bo)
+		return;
+
+	va = device->ws->buffer_get_va(device->trace_bo) + 24;
+
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(device->ws,
+							   cmd_buffer->cs, 4 + MAX_SETS * 2);
+
+	for (int i = 0; i < MAX_SETS; i++) {
+		struct radv_descriptor_set *set = cmd_buffer->state.descriptors[i];
+		if (!set)
+			continue;
+
+		data[i * 2] = (uintptr_t)set;
+		data[i * 2 + 1] = (uintptr_t)set >> 32;
+	}
+
+	device->ws->cs_add_buffer(cs, device->trace_bo, 8);
+	radv_emit_write_data_packet(cs, va, MAX_SETS * 2, data);
+}
+
+static void
 radv_emit_graphics_blend_state(struct radv_cmd_buffer *cmd_buffer,
 			       struct radv_pipeline *pipeline)
 {
@@ -1580,6 +1609,9 @@ radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer,
 	}
 	cmd_buffer->state.descriptors_dirty = 0;
 	cmd_buffer->state.push_descriptors_dirty = false;
+
+	radv_save_descriptors(cmd_buffer);
+
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 }
 

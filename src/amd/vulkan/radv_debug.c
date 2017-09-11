@@ -48,6 +48,9 @@
  * [1]: secondary trace ID
  * [2-3]: 64-bit GFX pipeline pointer
  * [4-5]: 64-bit COMPUTE pipeline pointer
+ * [6-7]: 64-bit descriptor set #0 pointer
+ * ...
+ * [68-69]: 64-bit descriptor set #31 pointer
  */
 
 bool
