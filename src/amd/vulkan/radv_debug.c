@@ -145,6 +145,186 @@ radv_dump_debug_registers(struct radv_device *device, FILE *f)
 	fprintf(f, "\n");
 }
 
+static const char *
+radv_get_descriptor_name(enum VkDescriptorType type)
+{
+	switch (type) {
+	case VK_DESCRIPTOR_TYPE_SAMPLER:
+		return "SAMPLER";
+	case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+		return "COMBINED_IMAGE_SAMPLER";
+	case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+		return "SAMPLED_IMAGE";
+	case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+		return "STORAGE_IMAGE";
+	case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+		return "UNIFORM_TEXEL_BUFFER";
+	case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+		return "STORAGE_TEXEL_BUFFER";
+	case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+		return "UNIFORM_BUFFER";
+	case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+		return "STORAGE_BUFFER";
+	case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+		return "UNIFORM_BUFFER_DYNAMIC";
+	case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+		return "STORAGE_BUFFER_DYNAMIC";
+	case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+		return "INPUT_ATTACHMENT";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+static void
+radv_dump_buffer_descriptor(enum chip_class chip_class, const uint32_t *desc,
+			    FILE *f)
+{
+	fprintf(f, COLOR_CYAN "    Buffer:" COLOR_RESET "\n");
+	for (unsigned j = 0; j < 4; j++)
+		ac_dump_reg(f, chip_class, R_008F00_SQ_BUF_RSRC_WORD0 + j * 4,
+			    desc[j], 0xffffffff);
+}
+
+static void
+radv_dump_image_descriptor(enum chip_class chip_class, const uint32_t *desc,
+			   FILE *f)
+{
+	fprintf(f, COLOR_CYAN "    Image:" COLOR_RESET "\n");
+	for (unsigned j = 0; j < 8; j++)
+		ac_dump_reg(f, chip_class, R_008F10_SQ_IMG_RSRC_WORD0 + j * 4,
+			    desc[j], 0xffffffff);
+
+	fprintf(f, COLOR_CYAN "    FMASK:" COLOR_RESET "\n");
+	for (unsigned j = 0; j < 8; j++)
+		ac_dump_reg(f, chip_class, R_008F10_SQ_IMG_RSRC_WORD0 + j * 4,
+			    desc[8 + j], 0xffffffff);
+}
+
+static void
+radv_dump_sampler_descriptor(enum chip_class chip_class, const uint32_t *desc,
+			     FILE *f)
+{
+	fprintf(f, COLOR_CYAN "    Sampler state:" COLOR_RESET "\n");
+	for (unsigned j = 0; j < 4; j++) {
+		ac_dump_reg(f, chip_class, R_008F30_SQ_IMG_SAMP_WORD0 + j * 4,
+			    desc[j], 0xffffffff);
+	}
+}
+
+static void
+radv_dump_combined_image_sampler_descriptor(enum chip_class chip_class,
+					    const uint32_t *desc, FILE *f)
+{
+	radv_dump_image_descriptor(chip_class, desc, f);
+	radv_dump_sampler_descriptor(chip_class, desc + 16, f);
+}
+
+static void
+radv_dump_descriptor_set(enum chip_class chip_class,
+			 struct radv_descriptor_set *set, unsigned id, FILE *f)
+{
+	const struct radv_descriptor_set_layout *layout;
+	int i;
+
+	if (!set)
+		return;
+	layout = set->layout;
+
+	fprintf(f, "** descriptor set (%d) **\n", id);
+	fprintf(f, "va: 0x%"PRIx64"\n", set->va);
+	fprintf(f, "size: %d\n", set->size);
+	fprintf(f, "mapped_ptr:\n");
+
+	for (i = 0; i < set->size / 4; i++) {
+		fprintf(f, "\t[0x%x] = 0x%08x\n", i, set->mapped_ptr[i]);
+	}
+	fprintf(f, "\n");
+
+	fprintf(f, "\t*** layout ***\n");
+	fprintf(f, "\tbinding_count: %d\n", layout->binding_count);
+	fprintf(f, "\tsize: %d\n", layout->size);
+	fprintf(f, "\tshader_stages: %x\n", layout->shader_stages);
+	fprintf(f, "\tdynamic_shader_stages: %x\n",
+		layout->dynamic_shader_stages);
+	fprintf(f, "\tbuffer_count: %d\n", layout->buffer_count);
+	fprintf(f, "\tdynamic_offset_count: %d\n",
+		layout->dynamic_offset_count);
+	fprintf(f, "\n");
+
+	for (i = 0; i < set->layout->binding_count; i++) {
+		uint32_t *desc =
+			set->mapped_ptr + layout->binding[i].offset / 4;
+
+		fprintf(f, "\t\t**** binding layout (%d) ****\n", i);
+		fprintf(f, "\t\ttype: %s\n",
+			radv_get_descriptor_name(layout->binding[i].type));
+		fprintf(f, "\t\tarray_size: %d\n",
+			layout->binding[i].array_size);
+		fprintf(f, "\t\toffset: %d\n",
+			layout->binding[i].offset);
+		fprintf(f, "\t\tbuffer_offset: %d\n",
+			layout->binding[i].buffer_offset);
+		fprintf(f, "\t\tdynamic_offset_offset: %d\n",
+			layout->binding[i].dynamic_offset_offset);
+		fprintf(f, "\t\tdynamic_offset_count: %d\n",
+			layout->binding[i].dynamic_offset_count);
+		fprintf(f, "\t\tsize: %d\n",
+			layout->binding[i].size);
+		fprintf(f, "\t\timmutable_samplers_offset: %d\n",
+			layout->binding[i].immutable_samplers_offset);
+		fprintf(f, "\t\timmutable_samplers_equal: %d\n",
+			layout->binding[i].immutable_samplers_equal);
+		fprintf(f, "\n");
+
+		switch (layout->binding[i].type) {
+		case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+		case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+		case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+		case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+			radv_dump_buffer_descriptor(chip_class, desc, f);
+			break;
+		case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+		case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+		case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+			radv_dump_image_descriptor(chip_class, desc, f);
+			break;
+		case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+			radv_dump_combined_image_sampler_descriptor(chip_class, desc, f);
+			break;
+		case VK_DESCRIPTOR_TYPE_SAMPLER:
+			radv_dump_sampler_descriptor(chip_class, desc, f);
+			break;
+		case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+		case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+			/* todo */
+			break;
+		default:
+			assert(!"unknown descriptor type");
+			break;
+		}
+		fprintf(f, "\n");
+	}
+	fprintf(f, "\n\n");
+}
+
+static void
+radv_dump_descriptors(struct radv_pipeline *pipeline, FILE *f)
+{
+	struct radv_device *device = pipeline->device;
+	enum chip_class chip_class = device->physical_device->rad_info.chip_class;
+	uint64_t *ptr = (uint64_t *)device->trace_id_ptr;
+	int i;
+
+	fprintf(f, "List of descriptors:\n");
+	for (i = 0; i < MAX_SETS; i++) {
+		struct radv_descriptor_set *set =
+			(struct radv_descriptor_set *)ptr[i + 3];
+
+		radv_dump_descriptor_set(chip_class, set, i, f);
+	}
+}
+
 struct radv_shader_inst {
 	char text[160];  /* one disasm line */
 	unsigned offset; /* instruction offset */
@@ -350,6 +530,7 @@ radv_dump_graphics_state(struct radv_pipeline *graphics_pipeline,
 
 	radv_dump_shaders(graphics_pipeline, compute_shader, f);
 	radv_dump_annotated_shaders(graphics_pipeline, compute_shader, f);
+	radv_dump_descriptors(graphics_pipeline, f);
 }
 
 static void
@@ -363,6 +544,7 @@ radv_dump_compute_state(struct radv_pipeline *compute_pipeline, FILE *f)
 	radv_dump_annotated_shaders(compute_pipeline,
 				    compute_pipeline->shaders[MESA_SHADER_COMPUTE],
 				    f);
+	radv_dump_descriptors(compute_pipeline, f);
 }
 
 static struct radv_pipeline *
