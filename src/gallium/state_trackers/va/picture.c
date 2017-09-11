@@ -668,9 +668,17 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
       }
 
       if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
-         if (old_buf->interlaced)
-            vl_compositor_yuv_deint(&drv->cstate, &drv->compositor, old_buf, surf->buffer);
-         else
+         if (old_buf->interlaced) {
+            struct u_rect src_rect;
+
+            src_rect.x0 = 0;
+            src_rect.y0 = 0;
+            src_rect.x1 = surf->templat.width;
+            src_rect.y1 = surf->templat.height;
+            vl_compositor_yuv_deint_full(&drv->cstate, &drv->compositor,
+                                         old_buf, surf->buffer,
+                                         &src_rect, NULL, VL_COMPOSITOR_WEAVE);
+         } else
             /* Can't convert from progressive to interlaced yet */
             return VA_STATUS_ERROR_INVALID_SURFACE;
       }
