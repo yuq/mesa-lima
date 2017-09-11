@@ -1019,17 +1019,6 @@ VkResult anv_ImportSemaphoreFdKHR(
          new_impl.syncobj = anv_gem_syncobj_fd_to_handle(device, fd);
          if (!new_impl.syncobj)
             return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
-
-         /* From the Vulkan spec:
-          *
-          *    "Importing semaphore state from a file descriptor transfers
-          *    ownership of the file descriptor from the application to the
-          *    Vulkan implementation. The application must not perform any
-          *    operations on the file descriptor after a successful import."
-          *
-          * If the import fails, we leave the file descriptor open.
-          */
-         close(pImportSemaphoreFdInfo->fd);
       } else {
          new_impl.type = ANV_SEMAPHORE_TYPE_BO;
 
@@ -1043,6 +1032,17 @@ VkResult anv_ImportSemaphoreFdKHR(
           */
          assert(!(new_impl.bo->flags & EXEC_OBJECT_ASYNC));
       }
+
+      /* From the Vulkan spec:
+       *
+       *    "Importing semaphore state from a file descriptor transfers
+       *    ownership of the file descriptor from the application to the
+       *    Vulkan implementation. The application must not perform any
+       *    operations on the file descriptor after a successful import."
+       *
+       * If the import fails, we leave the file descriptor open.
+       */
+      close(fd);
       break;
 
    case VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_SYNC_FD_BIT_KHR:
