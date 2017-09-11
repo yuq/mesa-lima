@@ -35,8 +35,6 @@
 #include "radv_util.h"
 #include "main/macros.h"
 
-#define SI_GS_PER_ES 128
-
 static void
 si_write_harvested_raster_configs(struct radv_physical_device *physical_device,
                                   struct radeon_winsys_cs *cs,
@@ -689,7 +687,7 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 	bool ia_switch_on_eop = false;
 	bool ia_switch_on_eoi = false;
 	bool partial_vs_wave = false;
-	bool partial_es_wave = false;
+	bool partial_es_wave = cmd_buffer->state.pipeline->graphics.partial_es_wave;
 	bool multi_instances_smaller_than_primgroup;
 
 	multi_instances_smaller_than_primgroup = indirect_draw;
@@ -699,56 +697,11 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 			multi_instances_smaller_than_primgroup = true;
 	}
 
-	if (cmd_buffer->state.pipeline->shaders[MESA_SHADER_FRAGMENT]->info.fs.prim_id_input)
-		ia_switch_on_eoi = true;
-
-	if (radv_pipeline_has_tess(cmd_buffer->state.pipeline)) {
-		/* SWITCH_ON_EOI must be set if PrimID is used. */
-		if (cmd_buffer->state.pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.uses_prim_id ||
-		    cmd_buffer->state.pipeline->shaders[MESA_SHADER_TESS_EVAL]->info.tes.uses_prim_id)
-			ia_switch_on_eoi = true;
-
-		/* Bug with tessellation and GS on Bonaire and older 2 SE chips. */
-		if ((family == CHIP_TAHITI ||
-		     family == CHIP_PITCAIRN ||
-		     family == CHIP_BONAIRE) &&
-		    radv_pipeline_has_gs(cmd_buffer->state.pipeline))
-			partial_vs_wave = true;
-
-		/* Needed for 028B6C_DISTRIBUTION_MODE != 0 */
-		if (cmd_buffer->device->has_distributed_tess) {
-			if (radv_pipeline_has_gs(cmd_buffer->state.pipeline)) {
-				if (chip_class <= VI)
-					partial_es_wave = true;
-
-				if (family == CHIP_TONGA ||
-				    family == CHIP_FIJI ||
-				    family == CHIP_POLARIS10 ||
-				    family == CHIP_POLARIS11 ||
-				    family == CHIP_POLARIS12)
-					partial_vs_wave = true;
-			} else {
-				partial_vs_wave = true;
-			}
-		}
-	}
-	/* TODO linestipple */
+	ia_switch_on_eoi = cmd_buffer->state.pipeline->graphics.ia_switch_on_eoi;
+	partial_vs_wave = cmd_buffer->state.pipeline->graphics.partial_vs_wave;
 
 	if (chip_class >= CIK) {
-		/* WD_SWITCH_ON_EOP has no effect on GPUs with less than
-		 * 4 shader engines. Set 1 to pass the assertion below.
-		 * The other cases are hardware requirements. */
-		if (info->max_se < 4 ||
-		    prim == V_008958_DI_PT_POLYGON ||
-		    prim == V_008958_DI_PT_LINELOOP ||
-		    prim == V_008958_DI_PT_TRIFAN ||
-		    prim == V_008958_DI_PT_TRISTRIP_ADJ ||
-		    (cmd_buffer->state.pipeline->graphics.prim_restart_enable &&
-		     (family < CHIP_POLARIS10 ||
-		      (prim != V_008958_DI_PT_POINTLIST &&
-		      prim != V_008958_DI_PT_LINESTRIP &&
-		       prim != V_008958_DI_PT_TRISTRIP))))
-			wd_switch_on_eop = true;
+		wd_switch_on_eop = cmd_buffer->state.pipeline->graphics.wd_switch_on_eop;
 
 		/* Hawaii hangs if instancing is enabled and WD_SWITCH_ON_EOP is 0.
 		 * We don't know that for indirect drawing, so treat it as
@@ -791,15 +744,6 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 		partial_es_wave = true;
 
 	if (radv_pipeline_has_gs(cmd_buffer->state.pipeline)) {
-
-		if (radv_pipeline_has_gs(cmd_buffer->state.pipeline) &&
-		    cmd_buffer->state.pipeline->shaders[MESA_SHADER_GEOMETRY]->info.gs.uses_prim_id)
-			ia_switch_on_eoi = true;
-
-		/* GS requirement. */
-		if (SI_GS_PER_ES / cmd_buffer->state.pipeline->graphics.primgroup_size >= cmd_buffer->device->gs_table_depth - 3)
-			partial_es_wave = true;
-
 		/* GS hw bug with single-primitive instances and SWITCH_ON_EOI.
 		 * The hw doc says all multi-SE chips are affected, but amdgpu-pro Vulkan
 		 * only applies it to Hawaii. Do what amdgpu-pro Vulkan does.

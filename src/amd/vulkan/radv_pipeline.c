@@ -2014,6 +2014,72 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	else
 		pipeline->graphics.primgroup_size = 128; /* recommended without a GS */
 
+	pipeline->graphics.partial_es_wave = false;
+	if (pipeline->device->has_distributed_tess) {
+		if (radv_pipeline_has_gs(pipeline)) {
+			if (device->physical_device->rad_info.chip_class <= VI)
+				pipeline->graphics.partial_es_wave = true;
+		}
+	}
+	/* GS requirement. */
+	if (SI_GS_PER_ES / pipeline->graphics.primgroup_size >= pipeline->device->gs_table_depth - 3)
+		pipeline->graphics.partial_es_wave = true;
+
+	pipeline->graphics.wd_switch_on_eop = false;
+	if (device->physical_device->rad_info.chip_class >= CIK) {
+		unsigned prim = pipeline->graphics.prim;
+		/* WD_SWITCH_ON_EOP has no effect on GPUs with less than
+		 * 4 shader engines. Set 1 to pass the assertion below.
+		 * The other cases are hardware requirements. */
+		if (device->physical_device->rad_info.max_se < 4 ||
+		    prim == V_008958_DI_PT_POLYGON ||
+		    prim == V_008958_DI_PT_LINELOOP ||
+		    prim == V_008958_DI_PT_TRIFAN ||
+		    prim == V_008958_DI_PT_TRISTRIP_ADJ ||
+		    (pipeline->graphics.prim_restart_enable &&
+		     (device->physical_device->rad_info.family < CHIP_POLARIS10 ||
+		      (prim != V_008958_DI_PT_POINTLIST &&
+		       prim != V_008958_DI_PT_LINESTRIP &&
+		       prim != V_008958_DI_PT_TRISTRIP))))
+			pipeline->graphics.wd_switch_on_eop = true;
+	}
+
+	pipeline->graphics.ia_switch_on_eoi = false;
+	if (pipeline->shaders[MESA_SHADER_FRAGMENT]->info.fs.prim_id_input)
+		pipeline->graphics.ia_switch_on_eoi = true;
+	if (radv_pipeline_has_gs(pipeline) &&
+	    pipeline->shaders[MESA_SHADER_GEOMETRY]->info.gs.uses_prim_id)
+		pipeline->graphics.ia_switch_on_eoi = true;
+	if (radv_pipeline_has_tess(pipeline)) {
+		/* SWITCH_ON_EOI must be set if PrimID is used. */
+		if (pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.uses_prim_id ||
+		    pipeline->shaders[MESA_SHADER_TESS_EVAL]->info.tes.uses_prim_id)
+			pipeline->graphics.ia_switch_on_eoi = true;
+	}
+
+	pipeline->graphics.partial_vs_wave = false;
+	if (radv_pipeline_has_tess(pipeline)) {
+		/* Bug with tessellation and GS on Bonaire and older 2 SE chips. */
+		if ((device->physical_device->rad_info.family == CHIP_TAHITI ||
+		     device->physical_device->rad_info.family == CHIP_PITCAIRN ||
+		     device->physical_device->rad_info.family == CHIP_BONAIRE) &&
+		    radv_pipeline_has_gs(pipeline))
+			pipeline->graphics.partial_vs_wave = true;
+		/* Needed for 028B6C_DISTRIBUTION_MODE != 0 */
+		if (device->has_distributed_tess) {
+			if (radv_pipeline_has_gs(pipeline)) {
+				if (device->physical_device->rad_info.family == CHIP_TONGA ||
+				    device->physical_device->rad_info.family == CHIP_FIJI ||
+				    device->physical_device->rad_info.family == CHIP_POLARIS10 ||
+				    device->physical_device->rad_info.family == CHIP_POLARIS11 ||
+				    device->physical_device->rad_info.family == CHIP_POLARIS12)
+					pipeline->graphics.partial_vs_wave = true;
+			} else {
+				pipeline->graphics.partial_vs_wave = true;
+			}
+		}
+	}
+
 	const VkPipelineVertexInputStateCreateInfo *vi_info =
 		pCreateInfo->pVertexInputState;
 	struct radv_vertex_elements_info *velems = &pipeline->vertex_elements;
