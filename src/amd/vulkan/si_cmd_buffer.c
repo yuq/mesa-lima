@@ -680,8 +680,7 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 	enum chip_class chip_class = cmd_buffer->device->physical_device->rad_info.chip_class;
 	enum radeon_family family = cmd_buffer->device->physical_device->rad_info.family;
 	struct radeon_info *info = &cmd_buffer->device->physical_device->rad_info;
-	unsigned prim = cmd_buffer->state.pipeline->graphics.prim;
-	unsigned max_primgroup_in_wave = 2;
+	const unsigned max_primgroup_in_wave = 2;
 	/* SWITCH_ON_EOP(0) is always preferable. */
 	bool wd_switch_on_eop = false;
 	bool ia_switch_on_eop = false;
@@ -728,6 +727,7 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 		if (ia_switch_on_eoi &&
 		    (family == CHIP_HAWAII ||
 		     (chip_class == VI &&
+		      /* max primgroup in wave is always 2 - leave this for documentation */
 		      (radv_pipeline_has_gs(cmd_buffer->state.pipeline) || max_primgroup_in_wave != 2))))
 			partial_vs_wave = true;
 
@@ -760,17 +760,12 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 		}
 	}
 
-	return S_028AA8_SWITCH_ON_EOP(ia_switch_on_eop) |
+	return cmd_buffer->state.pipeline->graphics.base_ia_multi_vgt_param |
+		S_028AA8_SWITCH_ON_EOP(ia_switch_on_eop) |
 		S_028AA8_SWITCH_ON_EOI(ia_switch_on_eoi) |
 		S_028AA8_PARTIAL_VS_WAVE_ON(partial_vs_wave) |
 		S_028AA8_PARTIAL_ES_WAVE_ON(partial_es_wave) |
-		S_028AA8_PRIMGROUP_SIZE(cmd_buffer->state.pipeline->graphics.primgroup_size - 1) |
-		S_028AA8_WD_SWITCH_ON_EOP(chip_class >= CIK ? wd_switch_on_eop : 0) |
-		/* The following field was moved to VGT_SHADER_STAGES_EN in GFX9. */
-		S_028AA8_MAX_PRIMGRP_IN_WAVE(chip_class == VI ?
-					     max_primgroup_in_wave : 0) |
-		S_030960_EN_INST_OPT_BASIC(chip_class >= GFX9) |
-		S_030960_EN_INST_OPT_ADV(chip_class >= GFX9);
+		S_028AA8_WD_SWITCH_ON_EOP(chip_class >= CIK ? wd_switch_on_eop : 0);
 
 }
 

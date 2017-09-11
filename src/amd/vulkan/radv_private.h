@@ -1086,6 +1086,7 @@ struct radv_pipeline {
 			uint32_t pa_cl_vs_out_cntl;
 			uint32_t vgt_shader_stages_en;
 			uint32_t vtx_base_sgpr;
+			uint32_t base_ia_multi_vgt_param;
 			bool wd_switch_on_eop;
 			bool ia_switch_on_eoi;
 			bool partial_vs_wave;

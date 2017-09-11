@@ -2080,6 +2080,13 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		}
 	}
 
+	pipeline->graphics.base_ia_multi_vgt_param =
+		S_028AA8_PRIMGROUP_SIZE(pipeline->graphics.primgroup_size - 1) |
+		/* The following field was moved to VGT_SHADER_STAGES_EN in GFX9. */
+		S_028AA8_MAX_PRIMGRP_IN_WAVE(device->physical_device->rad_info.chip_class == VI ? 2 : 0) |
+		S_030960_EN_INST_OPT_BASIC(device->physical_device->rad_info.chip_class >= GFX9) |
+		S_030960_EN_INST_OPT_ADV(device->physical_device->rad_info.chip_class >= GFX9);
+
 	const VkPipelineVertexInputStateCreateInfo *vi_info =
 		pCreateInfo->pVertexInputState;
 	struct radv_vertex_elements_info *velems = &pipeline->vertex_elements;
