@@ -861,9 +861,10 @@ static void polaris_set_vgt_vertex_reuse(struct radv_cmd_buffer *cmd_buffer,
 }
 
 static void
-radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer,
-			    struct radv_pipeline *pipeline)
+radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer)
 {
+	struct radv_pipeline *pipeline = cmd_buffer->state.pipeline;
+
 	if (!pipeline || cmd_buffer->state.emitted_pipeline == pipeline)
 		return;
 
@@ -1610,7 +1611,6 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 			    bool indirect_draw,
 			    uint32_t draw_vertex_count)
 {
-	struct radv_pipeline *pipeline = cmd_buffer->state.pipeline;
 	uint32_t ia_multi_vgt_param;
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
@@ -1620,7 +1620,7 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 		return;
 
 	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_PIPELINE)
-		radv_emit_graphics_pipeline(cmd_buffer, pipeline);
+		radv_emit_graphics_pipeline(cmd_buffer);
 
 	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_RENDER_TARGETS)
 		radv_emit_framebuffer_state(cmd_buffer);
