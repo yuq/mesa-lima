@@ -581,6 +581,30 @@ radv_dump_dmesg(FILE *f)
 	pclose(p);
 }
 
+static void
+radv_dump_enabled_options(struct radv_device *device, FILE *f)
+{
+	uint64_t mask;
+
+	fprintf(f, "Enabled debug options: ");
+
+	mask = device->debug_flags;
+	while (mask) {
+		int i = u_bit_scan64(&mask);
+		fprintf(f, "%s, ", radv_get_debug_option_name(i));
+	}
+	fprintf(f, "\n");
+
+	fprintf(f, "Enabled perftest options: ");
+
+	mask = device->instance->perftest_flags;
+	while (mask) {
+		int i = u_bit_scan64(&mask);
+		fprintf(f, "%s, ", radv_get_perftest_option_name(i));
+	}
+	fprintf(f, "\n");
+}
+
 static bool
 radv_gpu_hang_occured(struct radv_queue *queue, enum ring_type ring)
 {
@@ -613,6 +637,7 @@ radv_check_gpu_hangs(struct radv_queue *queue, struct radeon_winsys_cs *cs)
 	graphics_pipeline = radv_get_saved_graphics_pipeline(device);
 	compute_pipeline = radv_get_saved_compute_pipeline(device);
 
+	radv_dump_enabled_options(device, stderr);
 	radv_dump_dmesg(stderr);
 
 	if (vm_fault_occurred) {

@@ -417,11 +417,25 @@ static const struct debug_control radv_debug_options[] = {
 	{NULL, 0}
 };
 
+const char *
+radv_get_debug_option_name(int id)
+{
+	assert(id < ARRAY_SIZE(radv_debug_options) - 1);
+	return radv_debug_options[id].string;
+}
+
 static const struct debug_control radv_perftest_options[] = {
 	{"nobatchchain", RADV_PERFTEST_NO_BATCHCHAIN},
 	{"sisched", RADV_PERFTEST_SISCHED},
 	{NULL, 0}
 };
+
+const char *
+radv_get_perftest_option_name(int id)
+{
+	assert(id < ARRAY_SIZE(radv_debug_options) - 1);
+	return radv_perftest_options[id].string;
+}
 
 VkResult radv_CreateInstance(
 	const VkInstanceCreateInfo*                 pCreateInfo,
