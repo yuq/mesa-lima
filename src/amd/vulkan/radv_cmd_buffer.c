@@ -142,7 +142,6 @@ static VkResult radv_create_cmd_buffer(
 	VkCommandBuffer*                            pCommandBuffer)
 {
 	struct radv_cmd_buffer *cmd_buffer;
-	VkResult result;
 	unsigned ring;
 	cmd_buffer = vk_alloc(&pool->alloc, sizeof(*cmd_buffer), 8,
 				VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -171,8 +170,8 @@ static VkResult radv_create_cmd_buffer(
 
 	cmd_buffer->cs = device->ws->cs_create(device->ws, ring);
 	if (!cmd_buffer->cs) {
-		result = VK_ERROR_OUT_OF_HOST_MEMORY;
-		goto fail;
+		vk_free(&cmd_buffer->pool->alloc, cmd_buffer);
+		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 	}
 
 	*pCommandBuffer = radv_cmd_buffer_to_handle(cmd_buffer);
@@ -182,11 +181,6 @@ static VkResult radv_create_cmd_buffer(
 	list_inithead(&cmd_buffer->upload.list);
 
 	return VK_SUCCESS;
-
-fail:
-	vk_free(&cmd_buffer->pool->alloc, cmd_buffer);
-
-	return result;
 }
 
 static void
