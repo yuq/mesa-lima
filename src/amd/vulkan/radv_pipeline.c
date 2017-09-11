@@ -2007,6 +2007,13 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		calculate_tess_state(pipeline, pCreateInfo);
 	}
 
+	if (radv_pipeline_has_tess(pipeline))
+		pipeline->graphics.primgroup_size = pipeline->graphics.tess.num_patches;
+	else if (radv_pipeline_has_gs(pipeline))
+		pipeline->graphics.primgroup_size = 64;
+	else
+		pipeline->graphics.primgroup_size = 128; /* recommended without a GS */
+
 	const VkPipelineVertexInputStateCreateInfo *vi_info =
 		pCreateInfo->pVertexInputState;
 	struct radv_vertex_elements_info *velems = &pipeline->vertex_elements;

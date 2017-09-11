@@ -683,7 +683,6 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 	enum radeon_family family = cmd_buffer->device->physical_device->rad_info.family;
 	struct radeon_info *info = &cmd_buffer->device->physical_device->rad_info;
 	unsigned prim = cmd_buffer->state.pipeline->graphics.prim;
-	unsigned primgroup_size = 128; /* recommended without a GS */
 	unsigned max_primgroup_in_wave = 2;
 	/* SWITCH_ON_EOP(0) is always preferable. */
 	bool wd_switch_on_eop = false;
@@ -693,15 +692,10 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 	bool partial_es_wave = false;
 	bool multi_instances_smaller_than_primgroup;
 
-	if (radv_pipeline_has_tess(cmd_buffer->state.pipeline))
-		primgroup_size = cmd_buffer->state.pipeline->graphics.tess.num_patches;
-	else if (radv_pipeline_has_gs(cmd_buffer->state.pipeline))
-		primgroup_size = 64;  /* recommended with a GS */
-
 	multi_instances_smaller_than_primgroup = indirect_draw;
 	if (!multi_instances_smaller_than_primgroup && instanced_draw) {
 		uint32_t num_prims = radv_prims_for_vertices(&cmd_buffer->state.pipeline->graphics.prim_vertex_count, draw_vertex_count);
-		if (num_prims < primgroup_size)
+		if (num_prims < cmd_buffer->state.pipeline->graphics.primgroup_size)
 			multi_instances_smaller_than_primgroup = true;
 	}
 
@@ -803,7 +797,7 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 			ia_switch_on_eoi = true;
 
 		/* GS requirement. */
-		if (SI_GS_PER_ES / primgroup_size >= cmd_buffer->device->gs_table_depth - 3)
+		if (SI_GS_PER_ES / cmd_buffer->state.pipeline->graphics.primgroup_size >= cmd_buffer->device->gs_table_depth - 3)
 			partial_es_wave = true;
 
 		/* GS hw bug with single-primitive instances and SWITCH_ON_EOI.
@@ -826,7 +820,7 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 		S_028AA8_SWITCH_ON_EOI(ia_switch_on_eoi) |
 		S_028AA8_PARTIAL_VS_WAVE_ON(partial_vs_wave) |
 		S_028AA8_PARTIAL_ES_WAVE_ON(partial_es_wave) |
-		S_028AA8_PRIMGROUP_SIZE(primgroup_size - 1) |
+		S_028AA8_PRIMGROUP_SIZE(cmd_buffer->state.pipeline->graphics.primgroup_size - 1) |
 		S_028AA8_WD_SWITCH_ON_EOP(chip_class >= CIK ? wd_switch_on_eop : 0) |
 		/* The following field was moved to VGT_SHADER_STAGES_EN in GFX9. */
 		S_028AA8_MAX_PRIMGRP_IN_WAVE(chip_class == VI ?
