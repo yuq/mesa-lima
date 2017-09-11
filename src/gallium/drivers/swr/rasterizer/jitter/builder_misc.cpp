@@ -42,7 +42,7 @@ namespace SwrJit
     ///        number of mantissa bits.
     /// @param val - 32-bit float
     /// @todo Maybe move this outside of this file into a header?
-    static uint16_t Convert32To16Float(float val)
+    static uint16_t ConvertFloat32ToFloat16(float val)
     {
         uint32_t sign, exp, mant;
         uint32_t roundBits;
@@ -112,7 +112,7 @@ namespace SwrJit
     ///        float
     /// @param val - 16-bit float
     /// @todo Maybe move this outside of this file into a header?
-    static float ConvertSmallFloatTo32(uint32_t val)
+    static float ConvertFloat16ToFloat32(uint32_t val)
     {
         uint32_t result;
         if ((val & 0x7fff) == 0)
@@ -888,11 +888,11 @@ namespace SwrJit
         else
         {
             FunctionType* pFuncTy = FunctionType::get(mFP32Ty, mInt16Ty);
-            Function* pCvtPh2Ps = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("ConvertSmallFloatTo32", pFuncTy));
+            Function* pCvtPh2Ps = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("ConvertFloat16ToFloat32", pFuncTy));
 
-            if (sys::DynamicLibrary::SearchForAddressOfSymbol("ConvertSmallFloatTo32") == nullptr)
+            if (sys::DynamicLibrary::SearchForAddressOfSymbol("ConvertFloat16ToFloat32") == nullptr)
             {
-                sys::DynamicLibrary::AddSymbol("ConvertSmallFloatTo32", (void *)&ConvertSmallFloatTo32);
+                sys::DynamicLibrary::AddSymbol("ConvertFloat16ToFloat32", (void *)&ConvertFloat16ToFloat32);
             }
 
             Value* pResult = UndefValue::get(mSimdFP32Ty);
@@ -921,11 +921,11 @@ namespace SwrJit
         {
             // call scalar C function for now
             FunctionType* pFuncTy = FunctionType::get(mInt16Ty, mFP32Ty);
-            Function* pCvtPs2Ph = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("Convert32To16Float", pFuncTy));
+            Function* pCvtPs2Ph = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("ConvertFloat32ToFloat16", pFuncTy));
 
-            if (sys::DynamicLibrary::SearchForAddressOfSymbol("Convert32To16Float") == nullptr)
+            if (sys::DynamicLibrary::SearchForAddressOfSymbol("ConvertFloat32ToFloat16") == nullptr)
             {
-                sys::DynamicLibrary::AddSymbol("Convert32To16Float", (void *)&Convert32To16Float);
+                sys::DynamicLibrary::AddSymbol("ConvertFloat32ToFloat16", (void *)&ConvertFloat32ToFloat16);
             }
 
             Value* pResult = UndefValue::get(mSimdInt16Ty);

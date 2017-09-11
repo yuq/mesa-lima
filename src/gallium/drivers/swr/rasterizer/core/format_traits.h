@@ -1237,7 +1237,7 @@ template<> struct FormatTraits<R11G11B10_FLOAT> :
 /// FormatTraits<R10G10B10_FLOAT_A2_UNORM> - Format traits specialization for R10G10B10_FLOAT_A2_UNORM
 //////////////////////////////////////////////////////////////////////////
 template<> struct FormatTraits<R10G10B10_FLOAT_A2_UNORM> :
-    ComponentTraits<SWR_TYPE_FLOAT, 10, SWR_TYPE_FLOAT, 10, SWR_TYPE_FLOAT, 10, SWR_TYPE_FLOAT, 2>,
+    ComponentTraits<SWR_TYPE_FLOAT, 10, SWR_TYPE_FLOAT, 10, SWR_TYPE_FLOAT, 10, SWR_TYPE_UNORM, 2>,
     FormatSwizzle<0, 1, 2, 3>,
     Defaults<0, 0, 0, 0x3f800000>
 {
