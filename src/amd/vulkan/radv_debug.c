@@ -36,6 +36,12 @@
 
 #define TRACE_BO_SIZE 4096
 
+#define COLOR_RESET	"\033[0m"
+#define COLOR_RED	"\033[31m"
+#define COLOR_GREEN	"\033[1;32m"
+#define COLOR_YELLOW	"\033[1;33m"
+#define COLOR_CYAN	"\033[1;36m"
+
 /* Trace BO layout (offsets are 4 bytes):
  *
  * [0]: primary trace ID
@@ -136,6 +142,168 @@ radv_dump_debug_registers(struct radv_device *device, FILE *f)
 	fprintf(f, "\n");
 }
 
+struct radv_shader_inst {
+	char text[160];  /* one disasm line */
+	unsigned offset; /* instruction offset */
+	unsigned size;   /* instruction size = 4 or 8 */
+};
+
+/* Split a disassembly string into lines and add them to the array pointed
+ * to by "instructions". */
+static void si_add_split_disasm(const char *disasm,
+				uint64_t start_addr,
+				unsigned *num,
+				struct radv_shader_inst *instructions)
+{
+	struct radv_shader_inst *last_inst = *num ? &instructions[*num - 1] : NULL;
+	char *next;
+
+	while ((next = strchr(disasm, '\n'))) {
+		struct radv_shader_inst *inst = &instructions[*num];
+		unsigned len = next - disasm;
+
+		assert(len < ARRAY_SIZE(inst->text));
+		memcpy(inst->text, disasm, len);
+		inst->text[len] = 0;
+		inst->offset = last_inst ? last_inst->offset + last_inst->size : 0;
+
+		const char *semicolon = strchr(disasm, ';');
+		assert(semicolon);
+		/* More than 16 chars after ";" means the instruction is 8 bytes long. */
+		inst->size = next - semicolon > 16 ? 8 : 4;
+
+		snprintf(inst->text + len, ARRAY_SIZE(inst->text) - len,
+			" [PC=0x%"PRIx64", off=%u, size=%u]",
+			start_addr + inst->offset, inst->offset, inst->size);
+
+		last_inst = inst;
+		(*num)++;
+		disasm = next + 1;
+	}
+}
+
+static void
+radv_dump_annotated_shader(struct radv_pipeline *pipeline,
+			   struct radv_shader_variant *shader,
+			   gl_shader_stage stage,
+			   struct ac_wave_info *waves, unsigned num_waves,
+			   FILE *f)
+{
+	struct radv_device *device = pipeline->device;
+	uint64_t start_addr, end_addr;
+	unsigned i;
+
+	if (!shader)
+		return;
+
+	start_addr = device->ws->buffer_get_va(shader->bo) + shader->bo_offset;
+	end_addr = start_addr + shader->code_size;
+
+	/* See if any wave executes the shader. */
+	for (i = 0; i < num_waves; i++) {
+		if (start_addr <= waves[i].pc && waves[i].pc <= end_addr)
+			break;
+	}
+
+	if (i == num_waves)
+		return; /* the shader is not being executed */
+
+	/* Remember the first found wave. The waves are sorted according to PC. */
+	waves = &waves[i];
+	num_waves -= i;
+
+	/* Get the list of instructions.
+	 * Buffer size / 4 is the upper bound of the instruction count.
+	 */
+	unsigned num_inst = 0;
+	struct radv_shader_inst *instructions =
+		calloc(shader->code_size / 4, sizeof(struct radv_shader_inst));
+
+	si_add_split_disasm(shader->disasm_string,
+			    start_addr, &num_inst, instructions);
+
+	fprintf(f, COLOR_YELLOW "%s - annotated disassembly:" COLOR_RESET "\n",
+		radv_get_shader_name(shader, stage));
+
+	/* Print instructions with annotations. */
+	for (i = 0; i < num_inst; i++) {
+		struct radv_shader_inst *inst = &instructions[i];
+
+		fprintf(f, "%s\n", inst->text);
+
+		/* Print which waves execute the instruction right now. */
+		while (num_waves && start_addr + inst->offset == waves->pc) {
+			fprintf(f,
+				"          " COLOR_GREEN "^ SE%u SH%u CU%u "
+				"SIMD%u WAVE%u  EXEC=%016"PRIx64 "  ",
+				waves->se, waves->sh, waves->cu, waves->simd,
+				waves->wave, waves->exec);
+
+			if (inst->size == 4) {
+				fprintf(f, "INST32=%08X" COLOR_RESET "\n",
+					waves->inst_dw0);
+			} else {
+				fprintf(f, "INST64=%08X %08X" COLOR_RESET "\n",
+					waves->inst_dw0, waves->inst_dw1);
+			}
+
+			waves->matched = true;
+			waves = &waves[1];
+			num_waves--;
+		}
+	}
+
+	fprintf(f, "\n\n");
+	free(instructions);
+}
+
+static void
+radv_dump_annotated_shaders(struct radv_pipeline *pipeline,
+			    struct radv_shader_variant *compute_shader,
+			    FILE *f)
+{
+	struct ac_wave_info waves[AC_MAX_WAVES_PER_CHIP];
+	unsigned num_waves = ac_get_wave_info(waves);
+	unsigned mask;
+
+	fprintf(f, COLOR_CYAN "The number of active waves = %u" COLOR_RESET
+		"\n\n", num_waves);
+
+	/* Dump annotated active graphics shaders. */
+	mask = pipeline->active_stages;
+	while (mask) {
+		int stage = u_bit_scan(&mask);
+
+		radv_dump_annotated_shader(pipeline, pipeline->shaders[stage],
+					   stage, waves, num_waves, f);
+	}
+
+	radv_dump_annotated_shader(pipeline, compute_shader,
+				   MESA_SHADER_COMPUTE, waves, num_waves, f);
+
+	/* Print waves executing shaders that are not currently bound. */
+	unsigned i;
+	bool found = false;
+	for (i = 0; i < num_waves; i++) {
+		if (waves[i].matched)
+			continue;
+
+		if (!found) {
+			fprintf(f, COLOR_CYAN
+				"Waves not executing currently-bound shaders:"
+				COLOR_RESET "\n");
+			found = true;
+		}
+		fprintf(f, "    SE%u SH%u CU%u SIMD%u WAVE%u  EXEC=%016"PRIx64
+			"  INST=%08X %08X  PC=%"PRIx64"\n",
+			waves[i].se, waves[i].sh, waves[i].cu, waves[i].simd,
+			waves[i].wave, waves[i].exec, waves[i].inst_dw0,
+			waves[i].inst_dw1, waves[i].pc);
+	}
+	if (found)
+		fprintf(f, "\n\n");
+}
+
 static void
 radv_dump_shader(struct radv_pipeline *pipeline,
 		 struct radv_shader_variant *shader, gl_shader_stage stage,
@@ -178,6 +346,7 @@ radv_dump_graphics_state(struct radv_pipeline *graphics_pipeline,
 		return;
 
 	radv_dump_shaders(graphics_pipeline, compute_shader, f);
+	radv_dump_annotated_shaders(graphics_pipeline, compute_shader, f);
 }
 
 static void
@@ -188,6 +357,9 @@ radv_dump_compute_state(struct radv_pipeline *compute_pipeline, FILE *f)
 
 	radv_dump_shaders(compute_pipeline,
 			  compute_pipeline->shaders[MESA_SHADER_COMPUTE], f);
+	radv_dump_annotated_shaders(compute_pipeline,
+				    compute_pipeline->shaders[MESA_SHADER_COMPUTE],
+				    f);
 }
 
 static struct radv_pipeline *
