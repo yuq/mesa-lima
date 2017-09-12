@@ -438,7 +438,7 @@ intelSetTexBuffer2(__DRIcontext *pDRICtx, GLint target,
       internal_format = GL_RGB;
    }
 
-   intel_miptree_make_shareable(brw, rb->mt);
+   intel_miptree_prepare_external(brw, rb->mt);
 
    _mesa_lock_texture(&brw->ctx, texObj);
    texImage = _mesa_get_tex_image(ctx, texObj, target, 0);
