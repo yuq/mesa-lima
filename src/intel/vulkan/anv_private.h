@@ -317,7 +317,7 @@ VkResult __vk_errorf(struct anv_instance *instance, const void *object,
 #define anv_debug(format, ...) fprintf(stderr, "debug: " format, ##__VA_ARGS__)
 #else
 #define vk_error(error) error
-#define vk_errorf(error, format, ...) error
+#define vk_errorf(instance, obj, error, format, ...) error
 #define anv_debug(format, ...)
 #endif
 
