@@ -583,7 +583,6 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_VERTEXID_NOBASE:
 	case PIPE_CAP_PRIMITIVE_RESTART_FOR_PATCHES:
 	case PIPE_CAP_MAX_WINDOW_RECTANGLES:
-	case PIPE_CAP_NATIVE_FENCE_FD:
 	case PIPE_CAP_TGSI_FS_FBFETCH:
 	case PIPE_CAP_TGSI_MUL_ZERO_WINS:
 	case PIPE_CAP_UMA:
@@ -591,6 +590,9 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_POST_DEPTH_COVERAGE:
 	case PIPE_CAP_TILE_RASTER_ORDER:
 		return 0;
+
+	case PIPE_CAP_NATIVE_FENCE_FD:
+		return sscreen->b.info.has_sync_file;
 
 	case PIPE_CAP_QUERY_BUFFER_OBJECT:
 		return si_have_tgsi_compute(sscreen);

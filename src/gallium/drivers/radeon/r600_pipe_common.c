@@ -39,6 +39,7 @@
 #include "amd/common/sid.h"
 #include <inttypes.h>
 #include <sys/utsname.h>
+#include <libsync.h>
 
 #include <llvm-c/TargetMachine.h>
 
@@ -351,6 +352,75 @@ static void r600_fence_server_sync(struct pipe_context *ctx,
 		r600_add_fence_dependency(rctx, rfence->gfx);
 }
 
+static void r600_create_fence_fd(struct pipe_context *ctx,
+				 struct pipe_fence_handle **pfence, int fd)
+{
+	struct r600_common_screen *rscreen = (struct r600_common_screen*)ctx->screen;
+	struct radeon_winsys *ws = rscreen->ws;
+	struct r600_multi_fence *rfence;
+
+	*pfence = NULL;
+
+	if (!rscreen->info.has_sync_file)
+		return;
+
+	rfence = CALLOC_STRUCT(r600_multi_fence);
+	if (!rfence)
+		return;
+
+	pipe_reference_init(&rfence->reference, 1);
+	rfence->gfx = ws->fence_import_sync_file(ws, fd);
+	if (!rfence->gfx) {
+		FREE(rfence);
+		return;
+	}
+
+	*pfence = (struct pipe_fence_handle*)rfence;
+}
+
+static int r600_fence_get_fd(struct pipe_screen *screen,
+			     struct pipe_fence_handle *fence)
+{
+	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
+	struct radeon_winsys *ws = rscreen->ws;
+	struct r600_multi_fence *rfence = (struct r600_multi_fence *)fence;
+	int gfx_fd = -1, sdma_fd = -1;
+
+	if (!rscreen->info.has_sync_file)
+		return -1;
+
+	/* Deferred fences aren't supported. */
+	assert(!rfence->gfx_unflushed.ctx);
+	if (rfence->gfx_unflushed.ctx)
+		return -1;
+
+	if (rfence->sdma) {
+		sdma_fd = ws->fence_export_sync_file(ws, rfence->sdma);
+		if (sdma_fd == -1)
+			return -1;
+	}
+	if (rfence->gfx) {
+		gfx_fd = ws->fence_export_sync_file(ws, rfence->gfx);
+		if (gfx_fd == -1) {
+			if (sdma_fd != -1)
+				close(sdma_fd);
+			return -1;
+		}
+	}
+
+	/* If we don't have FDs at this point, it means we don't have fences
+	 * either. */
+	if (sdma_fd == -1)
+		return gfx_fd;
+	if (gfx_fd == -1)
+		return sdma_fd;
+
+	/* Get a fence that will be a combination of both fences. */
+	sync_accumulate("radeonsi", &gfx_fd, sdma_fd);
+	close(sdma_fd);
+	return gfx_fd;
+}
+
 static void r600_flush_from_st(struct pipe_context *ctx,
 			       struct pipe_fence_handle **fence,
 			       unsigned flags)
@@ -379,9 +449,12 @@ static void r600_flush_from_st(struct pipe_context *ctx,
 		/* Instead of flushing, create a deferred fence. Constraints:
 		 * - The state tracker must allow a deferred flush.
 		 * - The state tracker must request a fence.
+		 * - fence_get_fd is not allowed.
 		 * Thread safety in fence_finish must be ensured by the state tracker.
 		 */
-		if (flags & PIPE_FLUSH_DEFERRED && fence) {
+		if (flags & PIPE_FLUSH_DEFERRED &&
+		    !(flags & PIPE_FLUSH_FENCE_FD) &&
+		    fence) {
 			gfx_fence = rctx->ws->cs_get_next_fence(rctx->gfx.cs);
 			deferred_fence = true;
 		} else {
@@ -624,6 +697,7 @@ bool si_common_context_init(struct r600_common_context *rctx,
 	rctx->b.memory_barrier = r600_memory_barrier;
 	rctx->b.flush = r600_flush_from_st;
 	rctx->b.set_debug_callback = r600_set_debug_callback;
+	rctx->b.create_fence_fd = r600_create_fence_fd;
 	rctx->b.fence_server_sync = r600_fence_server_sync;
 	rctx->dma_clear_buffer = r600_dma_clear_buffer_fallback;
 	rctx->b.buffer_subdata = si_buffer_subdata;
@@ -1292,6 +1366,7 @@ bool si_common_screen_init(struct r600_common_screen *rscreen,
 	rscreen->b.resource_destroy = u_resource_destroy_vtbl;
 	rscreen->b.resource_from_user_memory = si_buffer_from_user_memory;
 	rscreen->b.query_memory_info = r600_query_memory_info;
+	rscreen->b.fence_get_fd = r600_fence_get_fd;
 
 	if (rscreen->info.has_hw_decode) {
 		rscreen->b.get_video_param = si_vid_get_video_param;
