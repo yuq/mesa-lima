@@ -107,6 +107,19 @@ brw_create_nir(struct brw_context *brw,
    NIR_PASS(progress, nir, nir_lower_system_values);
    NIR_PASS_V(nir, brw_nir_lower_uniforms, is_scalar);
 
+   brw_shader_gather_info(nir, prog);
+
+   if (shader_prog) {
+      NIR_PASS_V(nir, nir_lower_samplers, shader_prog);
+      NIR_PASS_V(nir, nir_lower_atomics, shader_prog);
+   }
+
+   return nir;
+}
+
+void
+brw_shader_gather_info(nir_shader *nir, struct gl_program *prog)
+{
    nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir));
 
    /* Copy the info we just generated back into the gl_program */
@@ -115,13 +128,6 @@ brw_create_nir(struct brw_context *brw,
    prog->info = nir->info;
    prog->info.name = prog_name;
    prog->info.label = prog_label;
-
-   if (shader_prog) {
-      NIR_PASS_V(nir, nir_lower_samplers, shader_prog);
-      NIR_PASS_V(nir, nir_lower_atomics, shader_prog);
-   }
-
-   return nir;
 }
 
 static unsigned

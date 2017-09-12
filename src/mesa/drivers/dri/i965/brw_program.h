@@ -25,6 +25,7 @@
 #define BRW_PROGRAM_H
 
 #include "compiler/brw_compiler.h"
+#include "nir.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,6 +38,8 @@ struct nir_shader *brw_create_nir(struct brw_context *brw,
                                   struct gl_program *prog,
                                   gl_shader_stage stage,
                                   bool is_scalar);
+
+void brw_shader_gather_info(nir_shader *nir, struct gl_program *prog);
 
 void brw_setup_tex_for_precompile(struct brw_context *brw,
                                   struct brw_sampler_prog_key_data *tex,
