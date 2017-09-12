@@ -394,6 +394,12 @@ value of FALSE for cases where COUNTER would result in 0 and TRUE
 for all other cases.
 This query can be used with ``render_condition``.
 
+In cases where a conservative approximation of an occlusion query is enough,
+``PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE`` should be used. It behaves
+like ``PIPE_QUERY_OCCLUSION_PREDICATE``, except that it may return TRUE in
+additional, implementation-dependent cases.
+This query can be used with ``render_condition``.
+
 ``PIPE_QUERY_TIME_ELAPSED`` returns the amount of time, in nanoseconds,
 the context takes to perform operations.
 The result is an unsigned 64-bit integer.

@@ -551,7 +551,8 @@ static bool r600_query_hw_prepare_buffer(struct r600_common_screen *rscreen,
 	memset(results, 0, buffer->b.b.width0);
 
 	if (query->b.type == PIPE_QUERY_OCCLUSION_COUNTER ||
-	    query->b.type == PIPE_QUERY_OCCLUSION_PREDICATE) {
+	    query->b.type == PIPE_QUERY_OCCLUSION_PREDICATE ||
+	    query->b.type == PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE) {
 		unsigned max_rbs = rscreen->info.num_render_backends;
 		unsigned enabled_rb_mask = rscreen->info.enabled_rb_mask;
 		unsigned num_results;
@@ -636,6 +637,7 @@ static struct pipe_query *r600_query_hw_create(struct r600_common_screen *rscree
 	switch (query_type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER:
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
+	case PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE:
 		query->result_size = 16 * rscreen->info.num_render_backends;
 		query->result_size += 16; /* for the fence + alignment */
 		query->num_cs_dw_begin = 6;
@@ -692,7 +694,8 @@ static void r600_update_occlusion_query_state(struct r600_common_context *rctx,
 					      unsigned type, int diff)
 {
 	if (type == PIPE_QUERY_OCCLUSION_COUNTER ||
-	    type == PIPE_QUERY_OCCLUSION_PREDICATE) {
+	    type == PIPE_QUERY_OCCLUSION_PREDICATE ||
+	    type == PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE) {
 		bool old_enable = rctx->num_occlusion_queries != 0;
 		bool old_perfect_enable =
 			rctx->num_perfect_occlusion_queries != 0;
@@ -701,7 +704,7 @@ static void r600_update_occlusion_query_state(struct r600_common_context *rctx,
 		rctx->num_occlusion_queries += diff;
 		assert(rctx->num_occlusion_queries >= 0);
 
-		if (type == PIPE_QUERY_OCCLUSION_COUNTER) {
+		if (type != PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE) {
 			rctx->num_perfect_occlusion_queries += diff;
 			assert(rctx->num_perfect_occlusion_queries >= 0);
 		}
@@ -745,6 +748,7 @@ static void r600_query_hw_do_emit_start(struct r600_common_context *ctx,
 	switch (query->b.type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER:
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
+	case PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE:
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_ZPASS_DONE) | EVENT_INDEX(1));
 		radeon_emit(cs, va);
@@ -839,6 +843,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 	switch (query->b.type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER:
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
+	case PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE:
 		va += 8;
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_ZPASS_DONE) | EVENT_INDEX(1));
@@ -961,6 +966,7 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 		switch (query->b.type) {
 		case PIPE_QUERY_OCCLUSION_COUNTER:
 		case PIPE_QUERY_OCCLUSION_PREDICATE:
+		case PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE:
 			op = PRED_OP(PREDICATION_OP_ZPASS);
 			break;
 		case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
@@ -1139,6 +1145,7 @@ static void r600_get_hw_query_params(struct r600_common_context *rctx,
 	switch (rquery->b.type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER:
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
+	case PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE:
 		params->start_offset = 0;
 		params->end_offset = 8;
 		params->fence_offset = max_rbs * 16;
@@ -1231,7 +1238,8 @@ static void r600_query_hw_add_result(struct r600_common_screen *rscreen,
 		}
 		break;
 	}
-	case PIPE_QUERY_OCCLUSION_PREDICATE: {
+	case PIPE_QUERY_OCCLUSION_PREDICATE:
+	case PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE: {
 		for (unsigned i = 0; i < max_rbs; ++i) {
 			unsigned results_base = i * 16;
 			result->b = result->b ||
@@ -1711,7 +1719,8 @@ static void r600_query_hw_get_result_resource(struct r600_common_context *rctx,
 	consts.config = 0;
 	if (index < 0)
 		consts.config |= 4;
-	if (query->b.type == PIPE_QUERY_OCCLUSION_PREDICATE)
+	if (query->b.type == PIPE_QUERY_OCCLUSION_PREDICATE ||
+	    query->b.type == PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE)
 		consts.config |= 8;
 	else if (query->b.type == PIPE_QUERY_SO_OVERFLOW_PREDICATE ||
 		 query->b.type == PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE)

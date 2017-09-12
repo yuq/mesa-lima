@@ -60,6 +60,7 @@ softpipe_create_query(struct pipe_context *pipe,
 
    assert(type == PIPE_QUERY_OCCLUSION_COUNTER ||
           type == PIPE_QUERY_OCCLUSION_PREDICATE ||
+          type == PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE ||
           type == PIPE_QUERY_TIME_ELAPSED ||
           type == PIPE_QUERY_SO_STATISTICS ||
           type == PIPE_QUERY_SO_OVERFLOW_PREDICATE ||
@@ -93,6 +94,7 @@ softpipe_begin_query(struct pipe_context *pipe, struct pipe_query *q)
    switch (sq->type) {
    case PIPE_QUERY_OCCLUSION_COUNTER:
    case PIPE_QUERY_OCCLUSION_PREDICATE:
+   case PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE:
       sq->start = softpipe->occlusion_count;
       break;
    case PIPE_QUERY_TIME_ELAPSED:
@@ -147,6 +149,7 @@ softpipe_end_query(struct pipe_context *pipe, struct pipe_query *q)
    switch (sq->type) {
    case PIPE_QUERY_OCCLUSION_COUNTER:
    case PIPE_QUERY_OCCLUSION_PREDICATE:
+   case PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE:
       sq->end = softpipe->occlusion_count;
       break;
    case PIPE_QUERY_TIMESTAMP:
@@ -252,6 +255,7 @@ softpipe_get_query_result(struct pipe_context *pipe,
       *result = sq->so.primitives_storage_needed;
       break;
    case PIPE_QUERY_OCCLUSION_PREDICATE:
+   case PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE:
       vresult->b = sq->end - sq->start != 0;
       break;
    default:

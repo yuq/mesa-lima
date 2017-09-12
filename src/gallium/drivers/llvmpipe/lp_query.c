@@ -125,6 +125,7 @@ llvmpipe_get_query_result(struct pipe_context *pipe,
       }
       break;
    case PIPE_QUERY_OCCLUSION_PREDICATE:
+   case PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE:
       for (i = 0; i < num_threads; i++) {
          /* safer (still not guaranteed) when there's an overflow */
          vresult->b = vresult->b || pq->end[i];
@@ -231,6 +232,7 @@ llvmpipe_begin_query(struct pipe_context *pipe, struct pipe_query *q)
       break;
    case PIPE_QUERY_OCCLUSION_COUNTER:
    case PIPE_QUERY_OCCLUSION_PREDICATE:
+   case PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE:
       llvmpipe->active_occlusion_queries++;
       llvmpipe->dirty |= LP_NEW_OCCLUSION_QUERY;
       break;
@@ -294,6 +296,7 @@ llvmpipe_end_query(struct pipe_context *pipe, struct pipe_query *q)
       break;
    case PIPE_QUERY_OCCLUSION_COUNTER:
    case PIPE_QUERY_OCCLUSION_PREDICATE:
+   case PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE:
       assert(llvmpipe->active_occlusion_queries);
       llvmpipe->active_occlusion_queries--;
       llvmpipe->dirty |= LP_NEW_OCCLUSION_QUERY;

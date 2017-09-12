@@ -126,7 +126,8 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 		 */
 		if (ctx->chip_class == GFX9 &&
 		    query_type != PIPE_QUERY_OCCLUSION_COUNTER &&
-		    query_type != PIPE_QUERY_OCCLUSION_PREDICATE) {
+		    query_type != PIPE_QUERY_OCCLUSION_PREDICATE &&
+		    query_type != PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE) {
 			struct r600_resource *scratch = ctx->eop_bug_scratch;
 
 			assert(16 * ctx->screen->info.num_render_backends <=
