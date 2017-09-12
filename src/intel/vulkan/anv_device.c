@@ -208,7 +208,8 @@ anv_physical_device_init_heaps(struct anv_physical_device *device, int fd)
 static VkResult
 anv_physical_device_init_uuids(struct anv_physical_device *device)
 {
-   const struct build_id_note *note = build_id_find_nhdr("libvulkan_intel.so");
+   const struct build_id_note *note =
+      build_id_find_nhdr_for_addr(anv_physical_device_init_uuids);
    if (!note) {
       return vk_errorf(device->instance, device,
                        VK_ERROR_INITIALIZATION_FAILED,
