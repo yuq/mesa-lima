@@ -1125,8 +1125,7 @@ radv_DestroyImageView(VkDevice _device, VkImageView _iview,
 
 void radv_buffer_view_init(struct radv_buffer_view *view,
 			   struct radv_device *device,
-			   const VkBufferViewCreateInfo* pCreateInfo,
-			   struct radv_cmd_buffer *cmd_buffer)
+			   const VkBufferViewCreateInfo* pCreateInfo)
 {
 	RADV_FROM_HANDLE(radv_buffer, buffer, pCreateInfo->buffer);
 
@@ -1153,7 +1152,7 @@ radv_CreateBufferView(VkDevice _device,
 	if (!view)
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-	radv_buffer_view_init(view, device, pCreateInfo, NULL);
+	radv_buffer_view_init(view, device, pCreateInfo);
 
 	*pView = radv_buffer_view_to_handle(view);
 
