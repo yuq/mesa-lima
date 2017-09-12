@@ -275,6 +275,12 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
                                  : JitGatherVertices(fetchState, streams, vIndices, pVtxOut);
 #endif
 
+    if (fetchState.bInstanceIDOffsetEnable)
+    {
+        // TODO: 
+        SWR_ASSERT((0), "Add support for handling InstanceID Offset Enable.");
+    }
+
     RET_VOID();
 
     JitManager::DumpToFile(fetch, "src");

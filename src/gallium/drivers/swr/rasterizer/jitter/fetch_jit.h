@@ -107,6 +107,9 @@ struct FETCH_COMPILE_STATE
     bool bVertexIDOffsetEnable{ false };    // Offset vertexID by StartVertex for non-indexed draws or BaseVertex for indexed draws
     bool bPartialVertexBuffer{ false };     // for indexed draws, map illegal indices to a known resident vertex
 
+    bool bForceSequentialAccessEnable{ false };
+    bool bInstanceIDOffsetEnable{ false };
+
     FETCH_COMPILE_STATE(bool disableVGATHER = false, bool diableIndexOOBCheck = false):
         bDisableVGATHER(disableVGATHER), bDisableIndexOOBCheck(diableIndexOOBCheck){ };
 
@@ -120,11 +123,13 @@ struct FETCH_COMPILE_STATE
         if (cutIndex != other.cutIndex) return false;
         if (bVertexIDOffsetEnable != other.bVertexIDOffsetEnable) return false;
         if (bPartialVertexBuffer != other.bPartialVertexBuffer) return false;
+        if (bForceSequentialAccessEnable != other.bForceSequentialAccessEnable) return false;
+        if (bInstanceIDOffsetEnable != other.bInstanceIDOffsetEnable) return false;
 
         for(uint32_t i = 0; i < numAttribs; ++i)
         {
             if((layout[i].bits != other.layout[i].bits) ||
-               ((layout[i].InstanceEnable == 1) &&
+               (((layout[i].InstanceEnable == 1) || (layout[i].InstanceStrideEnable == 1)) &&
                 (layout[i].InstanceAdvancementState != other.layout[i].InstanceAdvancementState))){
                 return false;
             }
