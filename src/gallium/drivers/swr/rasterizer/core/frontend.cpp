@@ -798,7 +798,7 @@ static void GeometryShaderStage(
     const SWR_GS_STATE* pState = &state.gsState;
     SWR_GS_CONTEXT gsContext;
 
-    static uint8_t sNullBuffer[1024] = { 0 };
+    static uint8_t sNullBuffer[128] = { 0 };
 
     for (uint32_t i = 0; i < KNOB_SIMD_WIDTH; ++i)
     {
