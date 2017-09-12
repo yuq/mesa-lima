@@ -1361,6 +1361,7 @@ bool si_common_screen_init(struct r600_common_screen *rscreen,
 		       rscreen->info.drm_minor, rscreen->info.drm_patchlevel);
 		printf("has_userptr = %i\n", rscreen->info.has_userptr);
 		printf("has_syncobj = %u\n", rscreen->info.has_syncobj);
+		printf("has_sync_file = %u\n", rscreen->info.has_sync_file);
 
 		printf("r600_max_quad_pipes = %i\n", rscreen->info.r600_max_quad_pipes);
 		printf("max_shader_clock = %i\n", rscreen->info.max_shader_clock);
