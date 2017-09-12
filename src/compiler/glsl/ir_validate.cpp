@@ -1043,6 +1043,7 @@ ir_validate::validate_ir(ir_instruction *ir, void *data)
    _mesa_set_add(ir_set, ir);
 }
 
+#ifdef DEBUG
 static void
 check_node_type(ir_instruction *ir, void *data)
 {
@@ -1056,6 +1057,7 @@ check_node_type(ir_instruction *ir, void *data)
    if (value != NULL)
       assert(value->type != glsl_type::error_type);
 }
+#endif
 
 void
 validate_ir_tree(exec_list *instructions)
