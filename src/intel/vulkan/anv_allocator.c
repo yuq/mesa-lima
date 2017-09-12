@@ -1272,12 +1272,9 @@ anv_bo_cache_alloc(struct anv_device *device,
 VkResult
 anv_bo_cache_import(struct anv_device *device,
                     struct anv_bo_cache *cache,
-                    int fd, uint64_t size, struct anv_bo **bo_out)
+                    int fd, struct anv_bo **bo_out)
 {
    pthread_mutex_lock(&cache->mutex);
-
-   /* The kernel is going to give us whole pages anyway */
-   size = align_u64(size, 4096);
 
    uint32_t gem_handle = anv_gem_fd_to_handle(device, fd);
    if (!gem_handle) {
@@ -1287,22 +1284,10 @@ anv_bo_cache_import(struct anv_device *device,
 
    struct anv_cached_bo *bo = anv_bo_cache_lookup_locked(cache, gem_handle);
    if (bo) {
-      if (bo->bo.size != size) {
-         pthread_mutex_unlock(&cache->mutex);
-         return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
-      }
       __sync_fetch_and_add(&bo->refcount, 1);
    } else {
-      /* For security purposes, we reject BO imports where the size does not
-       * match exactly.  This prevents a malicious client from passing a
-       * buffer to a trusted client, lying about the size, and telling the
-       * trusted client to try and texture from an image that goes
-       * out-of-bounds.  This sort of thing could lead to GPU hangs or worse
-       * in the trusted client.  The trusted client can protect itself against
-       * this sort of attack but only if it can trust the buffer size.
-       */
-      off_t import_size = lseek(fd, 0, SEEK_END);
-      if (import_size == (off_t)-1 || import_size < size) {
+      off_t size = lseek(fd, 0, SEEK_END);
+      if (size == (off_t)-1) {
          anv_gem_close(device, gem_handle);
          pthread_mutex_unlock(&cache->mutex);
          return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);

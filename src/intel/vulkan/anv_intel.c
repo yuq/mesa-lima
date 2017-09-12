@@ -76,9 +76,21 @@ VkResult anv_CreateDmaBufImageINTEL(
    image = anv_image_from_handle(image_h);
 
    result = anv_bo_cache_import(device, &device->bo_cache,
-                                pCreateInfo->fd, image->size, &mem->bo);
+                                pCreateInfo->fd, &mem->bo);
    if (result != VK_SUCCESS)
       goto fail_import;
+
+   VkDeviceSize aligned_image_size = align_u64(image->size, 4096);
+
+   if (mem->bo->size < aligned_image_size) {
+      result = vk_errorf(device->instace, device,
+                         VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR,
+                         "dma-buf too small for image in "
+                         "vkCreateDmaBufImageINTEL: %"PRIu64"B < "PRIu64"B",
+                         mem->bo->size, aligned_image_size);
+      anv_bo_cache_release(device, &device->bo_cache, mem->bo);
+      goto fail_import;
+   }
 
    if (device->instance->physicalDevice.supports_48bit_addresses)
       mem->bo->flags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;

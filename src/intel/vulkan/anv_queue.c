@@ -1023,9 +1023,14 @@ VkResult anv_ImportSemaphoreFdKHR(
          new_impl.type = ANV_SEMAPHORE_TYPE_BO;
 
          VkResult result = anv_bo_cache_import(device, &device->bo_cache,
-                                               fd, 4096, &new_impl.bo);
+                                               fd, &new_impl.bo);
          if (result != VK_SUCCESS)
             return result;
+
+         if (new_impl.bo->size < 4096) {
+            anv_bo_cache_release(device, &device->bo_cache, new_impl.bo);
+            return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
+         }
 
          /* If we're going to use this as a fence, we need to *not* have the
           * EXEC_OBJECT_ASYNC bit set.

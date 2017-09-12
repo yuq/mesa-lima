@@ -718,7 +718,7 @@ VkResult anv_bo_cache_alloc(struct anv_device *device,
                             uint64_t size, struct anv_bo **bo);
 VkResult anv_bo_cache_import(struct anv_device *device,
                              struct anv_bo_cache *cache,
-                             int fd, uint64_t size, struct anv_bo **bo);
+                             int fd, struct anv_bo **bo);
 VkResult anv_bo_cache_export(struct anv_device *device,
                              struct anv_bo_cache *cache,
                              struct anv_bo *bo_in, int *fd_out);

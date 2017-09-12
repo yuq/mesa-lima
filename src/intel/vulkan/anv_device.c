@@ -1543,10 +1543,31 @@ VkResult anv_AllocateMemory(
              VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR);
 
       result = anv_bo_cache_import(device, &device->bo_cache,
-                                   fd_info->fd, pAllocateInfo->allocationSize,
-                                   &mem->bo);
+                                   fd_info->fd, &mem->bo);
       if (result != VK_SUCCESS)
          goto fail;
+
+      VkDeviceSize aligned_alloc_size =
+         align_u64(pAllocateInfo->allocationSize, 4096);
+
+      /* For security purposes, we reject importing the bo if it's smaller
+       * than the requested allocation size.  This prevents a malicious client
+       * from passing a buffer to a trusted client, lying about the size, and
+       * telling the trusted client to try and texture from an image that goes
+       * out-of-bounds.  This sort of thing could lead to GPU hangs or worse
+       * in the trusted client.  The trusted client can protect itself against
+       * this sort of attack but only if it can trust the buffer size.
+       */
+      if (mem->bo->size < aligned_alloc_size) {
+         result = vk_errorf(device->instace, device,
+                            VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR,
+                            "aligned allocationSize too large for "
+                            "VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR: "
+                            "%"PRIu64"B > %"PRIu64"B",
+                            aligned_alloc_size, mem->bo->size);
+         anv_bo_cache_release(device, &device->bo_cache, mem->bo);
+         goto fail;
+      }
 
       /* From the Vulkan spec:
        *
