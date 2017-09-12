@@ -2268,6 +2268,9 @@ assign_varying_locations(struct gl_context *ctx,
          return false;
       }
 
+      /* Mark xfb varyings as always active */
+      matched_candidate->toplevel_var->data.always_active_io = 1;
+
       if (matched_candidate->toplevel_var->data.is_unmatched_generic_inout) {
          matched_candidate->toplevel_var->data.is_xfb_only = 1;
          matches.record(matched_candidate->toplevel_var, NULL);
