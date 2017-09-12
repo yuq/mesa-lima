@@ -1075,8 +1075,7 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
        * a worst case of compression.
        */
       enum isl_aux_state initial_state =
-         mod_info->supports_clear_color ? ISL_AUX_STATE_COMPRESSED_CLEAR :
-                                          ISL_AUX_STATE_COMPRESSED_NO_CLEAR;
+         isl_drm_modifier_get_default_aux_state(image->modifier);
 
       if (!create_ccs_buf_for_image(brw, image, mt, initial_state)) {
          intel_miptree_release(&mt);
