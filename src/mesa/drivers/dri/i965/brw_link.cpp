@@ -251,6 +251,20 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage,
                                  compiler->scalar_stage[stage]);
+   }
+
+   for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {
+      struct gl_linked_shader *shader = shProg->_LinkedShaders[stage];
+      if (!shader)
+         continue;
+
+      struct gl_program *prog = shader->Program;
+      nir_shader *nir = shader->Program->nir;
+      brw_shader_gather_info(nir, prog);
+
+      NIR_PASS_V(nir, nir_lower_samplers, shProg);
+      NIR_PASS_V(nir, nir_lower_atomics, shProg);
+
       infos[stage] = &prog->nir->info;
 
       update_xfb_info(prog->sh.LinkedTransformFeedback, infos[stage]);

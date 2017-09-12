@@ -107,13 +107,6 @@ brw_create_nir(struct brw_context *brw,
    NIR_PASS(progress, nir, nir_lower_system_values);
    NIR_PASS_V(nir, brw_nir_lower_uniforms, is_scalar);
 
-   brw_shader_gather_info(nir, prog);
-
-   if (shader_prog) {
-      NIR_PASS_V(nir, nir_lower_samplers, shader_prog);
-      NIR_PASS_V(nir, nir_lower_atomics, shader_prog);
-   }
-
    return nir;
 }
 
@@ -223,6 +216,8 @@ brwProgramStringNotify(struct gl_context *ctx,
 
       prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_FRAGMENT, true);
 
+      brw_shader_gather_info(prog->nir, prog);
+
       brw_fs_precompile(ctx, prog);
       break;
    }
@@ -244,6 +239,8 @@ brwProgramStringNotify(struct gl_context *ctx,
 
       prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_VERTEX,
                                  compiler->scalar_stage[MESA_SHADER_VERTEX]);
+
+      brw_shader_gather_info(prog->nir, prog);
 
       brw_vs_precompile(ctx, prog);
       break;
