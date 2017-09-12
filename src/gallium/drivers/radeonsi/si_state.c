@@ -1292,6 +1292,8 @@ static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *s
 static uint32_t si_translate_colorformat(enum pipe_format format)
 {
 	const struct util_format_description *desc = util_format_description(format);
+	if (!desc)
+		return V_028C70_COLOR_INVALID;
 
 #define HAS_SIZE(x,y,z,w) \
 	(desc->channel[0].size == (x) && desc->channel[1].size == (y) && \
@@ -1796,7 +1798,11 @@ static unsigned si_tex_dim(struct si_screen *sscreen, struct r600_texture *rtex,
 
 static bool si_is_sampler_format_supported(struct pipe_screen *screen, enum pipe_format format)
 {
-	return si_translate_texformat(screen, format, util_format_description(format),
+	const struct util_format_description *desc = util_format_description(format);
+	if (!desc)
+		return false;
+
+	return si_translate_texformat(screen, format, desc,
 				      util_format_get_first_non_void_channel(format)) != ~0U;
 }
 
@@ -1925,6 +1931,8 @@ static unsigned si_is_vertex_format_supported(struct pipe_screen *screen,
 			  PIPE_BIND_VERTEX_BUFFER)) == 0);
 
 	desc = util_format_description(format);
+	if (!desc)
+		return 0;
 
 	/* There are no native 8_8_8 or 16_16_16 data formats, and we currently
 	 * select 8_8_8_8 and 16_16_16_16 instead. This works reasonably well
