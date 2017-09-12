@@ -597,6 +597,18 @@ struct radeon_winsys {
                             struct pipe_fence_handle *src);
 
     /**
+     * Create a new fence object corresponding to the given sync_file.
+     */
+    struct pipe_fence_handle *(*fence_import_sync_file)(struct radeon_winsys *ws,
+							int fd);
+
+    /**
+     * Return a sync_file FD corresponding to the given fence object.
+     */
+    int (*fence_export_sync_file)(struct radeon_winsys *ws,
+				  struct pipe_fence_handle *fence);
+
+    /**
      * Initialize surface
      *
      * \param ws        The winsys this function is called from.

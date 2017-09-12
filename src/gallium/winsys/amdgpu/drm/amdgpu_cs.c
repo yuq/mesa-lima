@@ -47,6 +47,7 @@ amdgpu_fence_create(struct amdgpu_ctx *ctx, unsigned ip_type,
    struct amdgpu_fence *fence = CALLOC_STRUCT(amdgpu_fence);
 
    fence->reference.count = 1;
+   fence->ws = ctx->ws;
    fence->ctx = ctx;
    fence->fence.context = ctx->ctx;
    fence->fence.ip_type = ip_type;
@@ -55,6 +56,61 @@ amdgpu_fence_create(struct amdgpu_ctx *ctx, unsigned ip_type,
    fence->submission_in_progress = true;
    p_atomic_inc(&ctx->refcount);
    return (struct pipe_fence_handle *)fence;
+}
+
+static struct pipe_fence_handle *
+amdgpu_fence_import_sync_file(struct radeon_winsys *rws, int fd)
+{
+   struct amdgpu_winsys *ws = amdgpu_winsys(rws);
+   struct amdgpu_fence *fence = CALLOC_STRUCT(amdgpu_fence);
+
+   if (!fence)
+      return NULL;
+
+   pipe_reference_init(&fence->reference, 1);
+   fence->ws = ws;
+   /* fence->ctx == NULL means that the fence is syncobj-based. */
+
+   /* Convert sync_file into syncobj. */
+   int r = amdgpu_cs_create_syncobj(ws->dev, &fence->syncobj);
+   if (r) {
+      FREE(fence);
+      return NULL;
+   }
+
+   r = amdgpu_cs_syncobj_import_sync_file(ws->dev, fence->syncobj, fd);
+   if (r) {
+      amdgpu_cs_destroy_syncobj(ws->dev, fence->syncobj);
+      FREE(fence);
+      return NULL;
+   }
+   return (struct pipe_fence_handle*)fence;
+}
+
+static int amdgpu_fence_export_sync_file(struct radeon_winsys *rws,
+					 struct pipe_fence_handle *pfence)
+{
+   struct amdgpu_winsys *ws = amdgpu_winsys(rws);
+   struct amdgpu_fence *fence = (struct amdgpu_fence*)pfence;
+
+   if (amdgpu_fence_is_syncobj(fence)) {
+      int fd, r;
+
+      /* Convert syncobj into sync_file. */
+      r = amdgpu_cs_syncobj_export_sync_file(ws->dev, fence->syncobj, &fd);
+      return r ? -1 : fd;
+   }
+
+   os_wait_until_zero(&fence->submission_in_progress, PIPE_TIMEOUT_INFINITE);
+
+   /* Convert the amdgpu fence into a fence FD. */
+   int fd;
+   if (amdgpu_cs_fence_to_handle(ws->dev, &fence->fence,
+                                 AMDGPU_FENCE_TO_HANDLE_GET_SYNC_FILE_FD,
+                                 (uint32_t*)&fd))
+      return -1;
+
+   return fd;
 }
 
 static void amdgpu_fence_submitted(struct pipe_fence_handle *fence,
@@ -87,6 +143,21 @@ bool amdgpu_fence_wait(struct pipe_fence_handle *fence, uint64_t timeout,
 
    if (rfence->signalled)
       return true;
+
+   /* Handle syncobjs. */
+   if (amdgpu_fence_is_syncobj(rfence)) {
+      /* Absolute timeouts are only be used by BO fences, which aren't
+       * backed by syncobjs.
+       */
+      assert(!absolute);
+
+      if (amdgpu_cs_syncobj_wait(rfence->ws->dev, &rfence->syncobj, 1,
+                                 timeout, 0, NULL))
+         return false;
+
+      rfence->signalled = true;
+      return true;
+   }
 
    if (absolute)
       abs_timeout = timeout;
@@ -928,7 +999,8 @@ static bool is_noop_fence_dependency(struct amdgpu_cs *acs,
 {
    struct amdgpu_cs_context *cs = acs->csc;
 
-   if (fence->ctx == acs->ctx &&
+   if (!amdgpu_fence_is_syncobj(fence) &&
+       fence->ctx == acs->ctx &&
        fence->fence.ip_type == cs->ib[IB_MAIN].ip_type &&
        fence->fence.ip_instance == cs->ib[IB_MAIN].ip_instance &&
        fence->fence.ring == cs->ib[IB_MAIN].ring)
@@ -1181,7 +1253,7 @@ bo_list_error:
    if (acs->ctx->num_rejected_cs) {
       r = -ECANCELED;
    } else {
-      struct drm_amdgpu_cs_chunk chunks[3];
+      struct drm_amdgpu_cs_chunk chunks[4];
       unsigned num_chunks = 0;
 
       /* Convert from dwords to bytes. */
@@ -1203,24 +1275,55 @@ bo_list_error:
 
       /* Dependencies */
       unsigned num_dependencies = cs->num_fence_dependencies;
+      unsigned num_syncobj_dependencies = 0;
+
       if (num_dependencies) {
          struct drm_amdgpu_cs_chunk_dep *dep_chunk =
             alloca(num_dependencies * sizeof(*dep_chunk));
+         unsigned num = 0;
 
          for (unsigned i = 0; i < num_dependencies; i++) {
             struct amdgpu_fence *fence =
                (struct amdgpu_fence*)cs->fence_dependencies[i];
 
+            if (amdgpu_fence_is_syncobj(fence)) {
+               num_syncobj_dependencies++;
+               continue;
+            }
+
             assert(!fence->submission_in_progress);
-            amdgpu_cs_chunk_fence_to_dep(&fence->fence, &dep_chunk[i]);
+            amdgpu_cs_chunk_fence_to_dep(&fence->fence, &dep_chunk[num++]);
          }
 
          chunks[num_chunks].chunk_id = AMDGPU_CHUNK_ID_DEPENDENCIES;
-         chunks[num_chunks].length_dw = sizeof(struct drm_amdgpu_cs_chunk_dep) / 4 *
-                                        num_dependencies;
+         chunks[num_chunks].length_dw = sizeof(dep_chunk[0]) / 4 * num;
          chunks[num_chunks].chunk_data = (uintptr_t)dep_chunk;
          num_chunks++;
       }
+
+      /* Syncobj dependencies. */
+      if (num_syncobj_dependencies) {
+         struct drm_amdgpu_cs_chunk_sem *sem_chunk =
+            alloca(num_syncobj_dependencies * sizeof(sem_chunk[0]));
+         unsigned num = 0;
+
+         for (unsigned i = 0; i < num_dependencies; i++) {
+            struct amdgpu_fence *fence =
+               (struct amdgpu_fence*)cs->fence_dependencies[i];
+
+            if (!amdgpu_fence_is_syncobj(fence))
+               continue;
+
+            assert(!fence->submission_in_progress);
+            sem_chunk[num++].handle = fence->syncobj;
+         }
+
+         chunks[num_chunks].chunk_id = AMDGPU_CHUNK_ID_SYNCOBJ_IN;
+         chunks[num_chunks].length_dw = sizeof(sem_chunk[0]) / 4 * num;
+         chunks[num_chunks].chunk_data = (uintptr_t)sem_chunk;
+         num_chunks++;
+      }
+
       assert(num_chunks <= ARRAY_SIZE(chunks));
 
       r = amdgpu_cs_submit_raw(ws->dev, acs->ctx->ctx, bo_list,
@@ -1430,4 +1533,6 @@ void amdgpu_cs_init_functions(struct amdgpu_winsys *ws)
    ws->base.cs_add_fence_dependency = amdgpu_cs_add_fence_dependency;
    ws->base.fence_wait = amdgpu_fence_wait_rel_timeout;
    ws->base.fence_reference = amdgpu_fence_reference;
+   ws->base.fence_import_sync_file = amdgpu_fence_import_sync_file;
+   ws->base.fence_export_sync_file = amdgpu_fence_export_sync_file;
 }

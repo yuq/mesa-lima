@@ -139,7 +139,10 @@ struct amdgpu_cs {
 
 struct amdgpu_fence {
    struct pipe_reference reference;
+   /* If ctx == NULL, this fence is syncobj-based. */
+   uint32_t syncobj;
 
+   struct amdgpu_winsys *ws;
    struct amdgpu_ctx *ctx;  /* submission context */
    struct amdgpu_cs_fence fence;
    uint64_t *user_fence_cpu_address;
@@ -149,6 +152,11 @@ struct amdgpu_fence {
    volatile int submission_in_progress; /* bool (int for atomicity) */
    volatile int signalled;              /* bool (int for atomicity) */
 };
+
+static inline bool amdgpu_fence_is_syncobj(struct amdgpu_fence *fence)
+{
+   return fence->ctx == NULL;
+}
 
 static inline void amdgpu_ctx_unref(struct amdgpu_ctx *ctx)
 {
@@ -166,8 +174,14 @@ static inline void amdgpu_fence_reference(struct pipe_fence_handle **dst,
    struct amdgpu_fence *rsrc = (struct amdgpu_fence *)src;
 
    if (pipe_reference(&(*rdst)->reference, &rsrc->reference)) {
-      amdgpu_ctx_unref((*rdst)->ctx);
-      FREE(*rdst);
+      struct amdgpu_fence *fence = *rdst;
+
+      if (amdgpu_fence_is_syncobj(fence))
+         amdgpu_cs_destroy_syncobj(fence->ws->dev, fence->syncobj);
+      else
+         amdgpu_ctx_unref(fence->ctx);
+
+      FREE(fence);
    }
    *rdst = rsrc;
 }
