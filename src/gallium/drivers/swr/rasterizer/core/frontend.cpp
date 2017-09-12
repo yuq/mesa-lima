@@ -708,8 +708,6 @@ void ProcessStreamIdBuffer(uint32_t stream, uint8_t* pStreamIdBase, uint32_t num
     }
 }
 
-THREAD SWR_GS_CONTEXT tlsGsContext;
-
 // Buffers that are allocated if GS is enabled
 struct GsBuffers
 {
@@ -798,21 +796,22 @@ static void GeometryShaderStage(
 
     const API_STATE& state = GetApiState(pDC);
     const SWR_GS_STATE* pState = &state.gsState;
+    SWR_GS_CONTEXT gsContext;
 
     static uint8_t sNullBuffer[1024] = { 0 };
 
     for (uint32_t i = 0; i < KNOB_SIMD_WIDTH; ++i)
     {
-        tlsGsContext.pStreams[i] = pGsBuffers->pGsOut[i];
+        gsContext.pStreams[i] = pGsBuffers->pGsOut[i];
     }
-    tlsGsContext.pVerts = (simdvector*)pGsBuffers->pGsIn;
-    tlsGsContext.PrimitiveID = primID;
+    gsContext.pVerts = (simdvector*)pGsBuffers->pGsIn;
+    gsContext.PrimitiveID = primID;
 
     uint32_t numVertsPerPrim = NumVertsPerPrim(pa.binTopology, true);
     simdvector attrib[MAX_NUM_VERTS_PER_PRIM];
 
     // assemble all attributes for the input primitive
-    tlsGsContext.inputVertStride = pState->inputVertStride;
+    gsContext.inputVertStride = pState->inputVertStride;
     for (uint32_t slot = 0; slot < pState->numInputAttribs; ++slot)
     {
         uint32_t srcAttribSlot = pState->srcVertexAttribOffset + slot;
@@ -821,7 +820,7 @@ static void GeometryShaderStage(
 
         for (uint32_t i = 0; i < numVertsPerPrim; ++i)
         {
-            tlsGsContext.pVerts[attribSlot + pState->inputVertStride * i] = attrib[i];
+            gsContext.pVerts[attribSlot + pState->inputVertStride * i] = attrib[i];
         }
     }
 
@@ -829,7 +828,7 @@ static void GeometryShaderStage(
     pa.Assemble(VERTEX_POSITION_SLOT, attrib);
     for (uint32_t i = 0; i < numVertsPerPrim; ++i)
     {
-        tlsGsContext.pVerts[VERTEX_POSITION_SLOT + pState->inputVertStride * i] = attrib[i];
+        gsContext.pVerts[VERTEX_POSITION_SLOT + pState->inputVertStride * i] = attrib[i];
     }
 
     // record valid prims from the frontend to avoid over binning the newly generated
@@ -842,15 +841,15 @@ static void GeometryShaderStage(
 
     for (uint32_t instance = 0; instance < pState->instanceCount; ++instance)
     {
-        tlsGsContext.InstanceID = instance;
-        tlsGsContext.mask = GenerateMask(numInputPrims);
+        gsContext.InstanceID = instance;
+        gsContext.mask = GenerateMask(numInputPrims);
 
         // execute the geometry shader
-        state.pfnGsFunc(GetPrivateState(pDC), &tlsGsContext);
+        state.pfnGsFunc(GetPrivateState(pDC), &gsContext);
 
         for (uint32_t i = 0; i < KNOB_SIMD_WIDTH; ++i)
         {
-            tlsGsContext.pStreams[i] += pState->allocationSize;
+            gsContext.pStreams[i] += pState->allocationSize;
         }
     }
 
