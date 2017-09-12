@@ -2653,16 +2653,17 @@ void radv_CmdExecuteCommands(
 				assert(secondary->ring_offsets_idx == primary->ring_offsets_idx);
 		}
 		primary->device->ws->cs_execute_secondary(primary->cs, secondary->cs);
+
+		primary->state.emitted_pipeline = secondary->state.emitted_pipeline;
+		primary->state.emitted_compute_pipeline = secondary->state.emitted_compute_pipeline;
+		primary->state.last_primitive_reset_en = secondary->state.last_primitive_reset_en;
+		primary->state.last_primitive_reset_index = secondary->state.last_primitive_reset_index;
 	}
 
-	/* if we execute secondary we need to re-emit out pipelines */
+	/* if we execute secondary we need to mark some stuff to reset dirty */
 	if (commandBufferCount) {
-		primary->state.emitted_pipeline = NULL;
-		primary->state.emitted_compute_pipeline = NULL;
 		primary->state.dirty |= RADV_CMD_DIRTY_PIPELINE;
 		primary->state.dirty |= RADV_CMD_DIRTY_DYNAMIC_ALL;
-		primary->state.last_primitive_reset_en = -1;
-		primary->state.last_primitive_reset_index = 0;
 		radv_mark_descriptor_sets_dirty(primary);
 	}
 }
