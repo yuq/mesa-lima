@@ -215,6 +215,7 @@ radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
 		free(up);
 	}
 
+	cmd_buffer->push_constant_stages = 0;
 	cmd_buffer->scratch_size_needed = 0;
 	cmd_buffer->compute_scratch_size_needed = 0;
 	cmd_buffer->esgs_ring_size_needed = 0;
