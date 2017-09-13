@@ -32,12 +32,15 @@
 #include "radv_debug.h"
 #include "radv_shader.h"
 
+#define TRACE_BO_SIZE 4096
+
 bool
 radv_init_trace(struct radv_device *device)
 {
 	struct radeon_winsys *ws = device->ws;
 
-	device->trace_bo = ws->buffer_create(ws, 4096, 8, RADEON_DOMAIN_VRAM,
+	device->trace_bo = ws->buffer_create(ws, TRACE_BO_SIZE, 8,
+					     RADEON_DOMAIN_VRAM,
 					     RADEON_FLAG_CPU_ACCESS);
 	if (!device->trace_bo)
 		return false;
@@ -45,6 +48,8 @@ radv_init_trace(struct radv_device *device)
 	device->trace_id_ptr = ws->buffer_map(device->trace_bo);
 	if (!device->trace_id_ptr)
 		return false;
+
+	memset(device->trace_id_ptr, 0, TRACE_BO_SIZE);
 
 	ac_vm_fault_occured(device->physical_device->rad_info.chip_class,
 			    &device->dmesg_timestamp, NULL);
