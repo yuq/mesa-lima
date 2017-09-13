@@ -80,9 +80,10 @@ const struct radv_dynamic_state default_dynamic_state = {
 
 static void
 radv_dynamic_state_copy(struct radv_dynamic_state *dest,
-			const struct radv_dynamic_state *src,
-			uint32_t copy_mask)
+			const struct radv_dynamic_state *src)
 {
+	uint32_t copy_mask = src->mask;
+
 	/* Make sure to copy the number of viewports/scissors because they can
 	 * only be specified at pipeline creation time.
 	 */
@@ -2531,10 +2532,9 @@ void radv_CmdBindPipeline(
 		cmd_buffer->push_constant_stages |= pipeline->active_stages;
 
 		/* Apply the dynamic state from the pipeline */
-		cmd_buffer->state.dirty |= pipeline->dynamic_state_mask;
+		cmd_buffer->state.dirty |= pipeline->dynamic_state.mask;
 		radv_dynamic_state_copy(&cmd_buffer->state.dynamic,
-					&pipeline->dynamic_state,
-					pipeline->dynamic_state_mask);
+					&pipeline->dynamic_state);
 
 		if (pipeline->graphics.esgs_ring_size > cmd_buffer->esgs_ring_size_needed)
 			cmd_buffer->esgs_ring_size_needed = pipeline->graphics.esgs_ring_size;

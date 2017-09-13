@@ -1137,7 +1137,7 @@ radv_pipeline_init_dynamic_state(struct radv_pipeline *pipeline,
 		}
 	}
 
-	pipeline->dynamic_state_mask = states;
+	pipeline->dynamic_state.mask = states;
 }
 
 static void calculate_gfx9_gs_info(const VkGraphicsPipelineCreateInfo *pCreateInfo,

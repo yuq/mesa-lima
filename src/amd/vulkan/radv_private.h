@@ -733,6 +733,12 @@ struct radv_scissor_state {
 };
 
 struct radv_dynamic_state {
+	/**
+	 * Bitmask of (1 << VK_DYNAMIC_STATE_*).
+	 * Defines the set of saved dynamic state.
+	 */
+	uint32_t mask;
+
 	struct radv_viewport_state                        viewport;
 
 	struct radv_scissor_state                         scissor;
@@ -1091,7 +1097,6 @@ struct radv_vertex_elements_info {
 
 struct radv_pipeline {
 	struct radv_device *                          device;
-	uint32_t                                     dynamic_state_mask;
 	struct radv_dynamic_state                     dynamic_state;
 
 	struct radv_pipeline_layout *                 layout;
