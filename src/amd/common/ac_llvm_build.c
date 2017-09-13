@@ -46,9 +46,12 @@
  * The caller is responsible for initializing ctx::module and ctx::builder.
  */
 void
-ac_llvm_context_init(struct ac_llvm_context *ctx, LLVMContextRef context)
+ac_llvm_context_init(struct ac_llvm_context *ctx, LLVMContextRef context,
+		     enum chip_class chip_class)
 {
 	LLVMValueRef args[1];
+
+	ctx->chip_class = chip_class;
 
 	ctx->context = context;
 	ctx->module = NULL;
