@@ -972,7 +972,6 @@ ac_get_thread_id(struct ac_llvm_context *ctx)
  */
 LLVMValueRef
 ac_build_ddxy(struct ac_llvm_context *ctx,
-	      bool has_ds_bpermute,
 	      uint32_t mask,
 	      int idx,
 	      LLVMValueRef val)
@@ -980,7 +979,7 @@ ac_build_ddxy(struct ac_llvm_context *ctx,
 	LLVMValueRef tl, trbl, args[2];
 	LLVMValueRef result;
 
-	if (has_ds_bpermute) {
+	if (ctx->chip_class >= VI) {
 		LLVMValueRef thread_id, tl_tid, trbl_tid;
 		thread_id = ac_get_thread_id(ctx);
 

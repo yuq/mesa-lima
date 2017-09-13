@@ -1414,7 +1414,6 @@ static LLVMValueRef emit_ddxy(struct ac_nir_context *ctx,
 	unsigned mask;
 	int idx;
 	LLVMValueRef result;
-	bool has_ds_bpermute = ctx->abi->chip_class >= VI;
 
 	if (op == nir_op_fddx_fine || op == nir_op_fddx)
 		mask = AC_TID_MASK_LEFT;
@@ -1431,9 +1430,7 @@ static LLVMValueRef emit_ddxy(struct ac_nir_context *ctx,
 	else
 		idx = 2;
 
-	result = ac_build_ddxy(&ctx->ac, has_ds_bpermute,
-			      mask, idx,
-			      src0);
+	result = ac_build_ddxy(&ctx->ac, mask, idx, src0);
 	return result;
 }
 

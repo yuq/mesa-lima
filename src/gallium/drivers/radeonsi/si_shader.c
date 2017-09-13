@@ -3653,8 +3653,7 @@ static void si_llvm_emit_ddxy(
 	idx = (opcode == TGSI_OPCODE_DDX || opcode == TGSI_OPCODE_DDX_FINE) ? 1 : 2;
 
 	val = LLVMBuildBitCast(gallivm->builder, emit_data->args[0], ctx->i32, "");
-	val = ac_build_ddxy(&ctx->ac, ctx->screen->has_ds_bpermute,
-			    mask, idx, val);
+	val = ac_build_ddxy(&ctx->ac, mask, idx, val);
 	emit_data->output[emit_data->chan] = val;
 }
 

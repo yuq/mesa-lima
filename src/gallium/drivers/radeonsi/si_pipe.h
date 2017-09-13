@@ -94,7 +94,6 @@ struct si_screen {
 	bool				has_clear_state;
 	bool				has_distributed_tess;
 	bool				has_draw_indirect_multi;
-	bool				has_ds_bpermute;
 	bool				has_msaa_sample_loc_bug;
 	bool				dpbb_allowed;
 	bool				dfsm_allowed;

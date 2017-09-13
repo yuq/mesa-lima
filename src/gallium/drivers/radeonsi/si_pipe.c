@@ -1045,7 +1045,6 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 		 sscreen->b.info.pfp_fw_version >= 79 &&
 		 sscreen->b.info.me_fw_version >= 142);
 
-	sscreen->has_ds_bpermute = sscreen->b.chip_class >= VI;
 	sscreen->has_msaa_sample_loc_bug = (sscreen->b.family >= CHIP_POLARIS10 &&
 					    sscreen->b.family <= CHIP_POLARIS12) ||
 					   sscreen->b.family == CHIP_VEGA10 ||

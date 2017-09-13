@@ -194,7 +194,6 @@ ac_get_thread_id(struct ac_llvm_context *ctx);
 
 LLVMValueRef
 ac_build_ddxy(struct ac_llvm_context *ctx,
-	      bool has_ds_bpermute,
 	      uint32_t mask,
 	      int idx,
 	      LLVMValueRef val);
