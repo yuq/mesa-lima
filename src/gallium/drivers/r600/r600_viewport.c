@@ -115,8 +115,8 @@ static void r600_scissor_make_union(struct r600_signed_scissor *out,
 	out->maxy = MAX2(out->maxy, in->maxy);
 }
 
-void si_apply_scissor_bug_workaround(struct r600_common_context *rctx,
-				     struct pipe_scissor_state *scissor)
+void evergreen_apply_scissor_bug_workaround(struct r600_common_context *rctx,
+					    struct pipe_scissor_state *scissor)
 {
 	if (rctx->chip_class == EVERGREEN || rctx->chip_class == CAYMAN) {
 		if (scissor->maxx == 0)
@@ -147,7 +147,7 @@ static void r600_emit_one_scissor(struct r600_common_context *rctx,
 	if (scissor)
 		r600_clip_scissor(&final, scissor);
 
-	si_apply_scissor_bug_workaround(rctx, &final);
+	evergreen_apply_scissor_bug_workaround(rctx, &final);
 
 	radeon_emit(cs, S_028250_TL_X(final.minx) |
 			S_028250_TL_Y(final.miny) |
@@ -368,8 +368,8 @@ static void r600_emit_viewport_states(struct r600_common_context *rctx,
 }
 
 /* Set viewport dependencies on pipe_rasterizer_state. */
-void si_viewport_set_rast_deps(struct r600_common_context *rctx,
-			       bool scissor_enable, bool clip_halfz)
+void r600_viewport_set_rast_deps(struct r600_common_context *rctx,
+				 bool scissor_enable, bool clip_halfz)
 {
 	if (rctx->scissor_enabled != scissor_enable) {
 		rctx->scissor_enabled = scissor_enable;
@@ -389,8 +389,8 @@ void si_viewport_set_rast_deps(struct r600_common_context *rctx,
  * is delayed. When a shader with VIEWPORT_INDEX appears, this should be
  * called to emit the rest.
  */
-void si_update_vs_writes_viewport_index(struct r600_common_context *rctx,
-					struct tgsi_shader_info *info)
+void r600_update_vs_writes_viewport_index(struct r600_common_context *rctx,
+					  struct tgsi_shader_info *info)
 {
 	bool vs_window_space;
 
@@ -420,7 +420,7 @@ void si_update_vs_writes_viewport_index(struct r600_common_context *rctx,
 	    rctx->set_atom_dirty(rctx, &rctx->viewports.atom, true);
 }
 
-void si_init_viewport_functions(struct r600_common_context *rctx)
+void r600_init_viewport_functions(struct r600_common_context *rctx)
 {
 	rctx->scissors.atom.emit = r600_emit_scissors;
 	rctx->viewports.atom.emit = r600_emit_viewport_states;

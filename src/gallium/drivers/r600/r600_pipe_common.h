@@ -110,7 +110,7 @@ struct u_log_context;
 #define DBG_NO_RB_PLUS		(1ull << 45)
 #define DBG_SI_SCHED		(1ull << 46)
 #define DBG_MONOLITHIC_SHADERS	(1ull << 47)
-#define DBG_NO_OUT_OF_ORDER	(1ull << 48)
+/* gap */
 #define DBG_UNSAFE_MATH		(1ull << 49)
 #define DBG_NO_DCC_FB		(1ull << 50)
 #define DBG_TEST_VMFAULT_CP	(1ull << 51)
@@ -141,8 +141,8 @@ struct r600_perfcounters;
 struct tgsi_shader_info;
 struct r600_qbo_state;
 
-void si_radeon_shader_binary_init(struct ac_shader_binary *b);
-void si_radeon_shader_binary_clean(struct ac_shader_binary *b);
+void radeon_shader_binary_init(struct ac_shader_binary *b);
+void radeon_shader_binary_clean(struct ac_shader_binary *b);
 
 /* Only 32-bit buffer allocations are supported, gallium doesn't support more
  * at the moment.
@@ -704,9 +704,7 @@ struct r600_common_context {
 			      uint64_t old_gpu_address);
 
 	/* Enable or disable occlusion queries. */
-	void (*set_occlusion_query_state)(struct pipe_context *ctx,
-					  bool old_enable,
-					  bool old_perfect_enable);
+	void (*set_occlusion_query_state)(struct pipe_context *ctx, bool enable);
 
 	void (*save_qbo_state)(struct pipe_context *ctx, struct r600_qbo_state *st);
 
@@ -723,177 +721,168 @@ struct r600_common_context {
 };
 
 /* r600_buffer_common.c */
-bool si_rings_is_buffer_referenced(struct r600_common_context *ctx,
-				   struct pb_buffer *buf,
-				   enum radeon_bo_usage usage);
-void *si_buffer_map_sync_with_rings(struct r600_common_context *ctx,
-				    struct r600_resource *resource,
-				    unsigned usage);
-void si_buffer_subdata(struct pipe_context *ctx,
-		       struct pipe_resource *buffer,
-		       unsigned usage, unsigned offset,
-		       unsigned size, const void *data);
-void si_init_resource_fields(struct r600_common_screen *rscreen,
-			     struct r600_resource *res,
-			     uint64_t size, unsigned alignment);
-bool si_alloc_resource(struct r600_common_screen *rscreen,
-		       struct r600_resource *res);
-struct pipe_resource *si_buffer_create(struct pipe_screen *screen,
-				       const struct pipe_resource *templ,
-				       unsigned alignment);
-struct pipe_resource *si_aligned_buffer_create(struct pipe_screen *screen,
-					       unsigned flags,
-					       unsigned usage,
-					       unsigned size,
-					       unsigned alignment);
+bool r600_rings_is_buffer_referenced(struct r600_common_context *ctx,
+				     struct pb_buffer *buf,
+				     enum radeon_bo_usage usage);
+void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
+                                      struct r600_resource *resource,
+                                      unsigned usage);
+void r600_buffer_subdata(struct pipe_context *ctx,
+			 struct pipe_resource *buffer,
+			 unsigned usage, unsigned offset,
+			 unsigned size, const void *data);
+void r600_init_resource_fields(struct r600_common_screen *rscreen,
+			       struct r600_resource *res,
+			       uint64_t size, unsigned alignment);
+bool r600_alloc_resource(struct r600_common_screen *rscreen,
+			 struct r600_resource *res);
+struct pipe_resource *r600_buffer_create(struct pipe_screen *screen,
+					 const struct pipe_resource *templ,
+					 unsigned alignment);
+struct pipe_resource * r600_aligned_buffer_create(struct pipe_screen *screen,
+						  unsigned flags,
+						  unsigned usage,
+						  unsigned size,
+						  unsigned alignment);
 struct pipe_resource *
-si_buffer_from_user_memory(struct pipe_screen *screen,
-			   const struct pipe_resource *templ,
-			   void *user_memory);
-void si_invalidate_resource(struct pipe_context *ctx,
-			    struct pipe_resource *resource);
-void si_replace_buffer_storage(struct pipe_context *ctx,
-			       struct pipe_resource *dst,
-			       struct pipe_resource *src);
+r600_buffer_from_user_memory(struct pipe_screen *screen,
+			     const struct pipe_resource *templ,
+			     void *user_memory);
+void
+r600_invalidate_resource(struct pipe_context *ctx,
+			 struct pipe_resource *resource);
+void r600_replace_buffer_storage(struct pipe_context *ctx,
+				 struct pipe_resource *dst,
+				 struct pipe_resource *src);
 
 /* r600_common_pipe.c */
-void si_gfx_write_event_eop(struct r600_common_context *ctx,
-			    unsigned event, unsigned event_flags,
-			    unsigned data_sel,
-			    struct r600_resource *buf, uint64_t va,
-			    uint32_t new_fence, unsigned query_type);
-unsigned si_gfx_write_fence_dwords(struct r600_common_screen *screen);
-void si_gfx_wait_fence(struct r600_common_context *ctx,
-		       uint64_t va, uint32_t ref, uint32_t mask);
-void si_draw_rectangle(struct blitter_context *blitter,
-		       int x1, int y1, int x2, int y2,
-		       float depth, unsigned num_instances,
-		       enum blitter_attrib_type type,
-		       const union blitter_attrib *attrib);
-bool si_common_screen_init(struct r600_common_screen *rscreen,
-			   struct radeon_winsys *ws);
-void si_destroy_common_screen(struct r600_common_screen *rscreen);
-void si_preflush_suspend_features(struct r600_common_context *ctx);
-void si_postflush_resume_features(struct r600_common_context *ctx);
-bool si_common_context_init(struct r600_common_context *rctx,
-			    struct r600_common_screen *rscreen,
-			    unsigned context_flags);
-void si_common_context_cleanup(struct r600_common_context *rctx);
-bool si_can_dump_shader(struct r600_common_screen *rscreen,
-			unsigned processor);
-bool si_extra_shader_checks(struct r600_common_screen *rscreen,
-			    unsigned processor);
-void si_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
-			    uint64_t offset, uint64_t size, unsigned value);
-struct pipe_resource *si_resource_create_common(struct pipe_screen *screen,
-						const struct pipe_resource *templ);
-const char *si_get_llvm_processor_name(enum radeon_family family);
-void si_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
-		       struct r600_resource *dst, struct r600_resource *src);
-void si_save_cs(struct radeon_winsys *ws, struct radeon_winsys_cs *cs,
-		struct radeon_saved_cs *saved, bool get_buffer_list);
-void si_clear_saved_cs(struct radeon_saved_cs *saved);
-bool si_check_device_reset(struct r600_common_context *rctx);
+void r600_gfx_write_event_eop(struct r600_common_context *ctx,
+			      unsigned event, unsigned event_flags,
+			      unsigned data_sel,
+			      struct r600_resource *buf, uint64_t va,
+			      uint32_t new_fence, unsigned query_type);
+unsigned r600_gfx_write_fence_dwords(struct r600_common_screen *screen);
+void r600_gfx_wait_fence(struct r600_common_context *ctx,
+			 uint64_t va, uint32_t ref, uint32_t mask);
+void r600_draw_rectangle(struct blitter_context *blitter,
+			 int x1, int y1, int x2, int y2,
+			 float depth, unsigned num_instances,
+			 enum blitter_attrib_type type,
+			 const union blitter_attrib *attrib);
+bool r600_common_screen_init(struct r600_common_screen *rscreen,
+			     struct radeon_winsys *ws);
+void r600_destroy_common_screen(struct r600_common_screen *rscreen);
+void r600_preflush_suspend_features(struct r600_common_context *ctx);
+void r600_postflush_resume_features(struct r600_common_context *ctx);
+bool r600_common_context_init(struct r600_common_context *rctx,
+			      struct r600_common_screen *rscreen,
+			      unsigned context_flags);
+void r600_common_context_cleanup(struct r600_common_context *rctx);
+bool r600_can_dump_shader(struct r600_common_screen *rscreen,
+			  unsigned processor);
+bool r600_extra_shader_checks(struct r600_common_screen *rscreen,
+			      unsigned processor);
+void r600_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
+			      uint64_t offset, uint64_t size, unsigned value);
+struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
+						  const struct pipe_resource *templ);
+const char *r600_get_llvm_processor_name(enum radeon_family family);
+void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
+			 struct r600_resource *dst, struct r600_resource *src);
+void radeon_save_cs(struct radeon_winsys *ws, struct radeon_winsys_cs *cs,
+		    struct radeon_saved_cs *saved, bool get_buffer_list);
+void radeon_clear_saved_cs(struct radeon_saved_cs *saved);
+bool r600_check_device_reset(struct r600_common_context *rctx);
 
 /* r600_gpu_load.c */
-void si_gpu_load_kill_thread(struct r600_common_screen *rscreen);
-uint64_t si_begin_counter(struct r600_common_screen *rscreen, unsigned type);
-unsigned si_end_counter(struct r600_common_screen *rscreen, unsigned type,
-			uint64_t begin);
+void r600_gpu_load_kill_thread(struct r600_common_screen *rscreen);
+uint64_t r600_begin_counter(struct r600_common_screen *rscreen, unsigned type);
+unsigned r600_end_counter(struct r600_common_screen *rscreen, unsigned type,
+			  uint64_t begin);
 
 /* r600_perfcounters.c */
-void si_perfcounters_destroy(struct r600_common_screen *rscreen);
+void r600_perfcounters_destroy(struct r600_common_screen *rscreen);
 
 /* r600_query.c */
-void si_init_screen_query_functions(struct r600_common_screen *rscreen);
-void si_init_query_functions(struct r600_common_context *rctx);
-void si_suspend_queries(struct r600_common_context *ctx);
-void si_resume_queries(struct r600_common_context *ctx);
+void r600_init_screen_query_functions(struct r600_common_screen *rscreen);
+void r600_query_init(struct r600_common_context *rctx);
+void r600_suspend_queries(struct r600_common_context *ctx);
+void r600_resume_queries(struct r600_common_context *ctx);
+void r600_query_fix_enabled_rb_mask(struct r600_common_screen *rscreen);
 
 /* r600_streamout.c */
-void si_streamout_buffers_dirty(struct r600_common_context *rctx);
-void si_common_set_streamout_targets(struct pipe_context *ctx,
-				     unsigned num_targets,
-				     struct pipe_stream_output_target **targets,
-				     const unsigned *offset);
-void si_emit_streamout_end(struct r600_common_context *rctx);
-void si_update_prims_generated_query_state(struct r600_common_context *rctx,
-					   unsigned type, int diff);
-void si_streamout_init(struct r600_common_context *rctx);
+void r600_streamout_buffers_dirty(struct r600_common_context *rctx);
+void r600_set_streamout_targets(struct pipe_context *ctx,
+				unsigned num_targets,
+				struct pipe_stream_output_target **targets,
+				const unsigned *offset);
+void r600_emit_streamout_end(struct r600_common_context *rctx);
+void r600_update_prims_generated_query_state(struct r600_common_context *rctx,
+					     unsigned type, int diff);
+void r600_streamout_init(struct r600_common_context *rctx);
 
 /* r600_test_dma.c */
-void si_test_dma(struct r600_common_screen *rscreen);
+void r600_test_dma(struct r600_common_screen *rscreen);
 
 /* r600_texture.c */
-bool si_prepare_for_dma_blit(struct r600_common_context *rctx,
-			     struct r600_texture *rdst,
-			     unsigned dst_level, unsigned dstx,
-			     unsigned dsty, unsigned dstz,
-			     struct r600_texture *rsrc,
-			     unsigned src_level,
-			     const struct pipe_box *src_box);
-void si_texture_get_fmask_info(struct r600_common_screen *rscreen,
-			       struct r600_texture *rtex,
-			       unsigned nr_samples,
-			       struct r600_fmask_info *out);
-bool si_init_flushed_depth_texture(struct pipe_context *ctx,
-				   struct pipe_resource *texture,
-				   struct r600_texture **staging);
-void si_print_texture_info(struct r600_common_screen *rscreen,
-			   struct r600_texture *rtex, struct u_log_context *log);
-struct pipe_resource *si_texture_create(struct pipe_screen *screen,
+bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,
+				struct r600_texture *rdst,
+				unsigned dst_level, unsigned dstx,
+				unsigned dsty, unsigned dstz,
+				struct r600_texture *rsrc,
+				unsigned src_level,
+				const struct pipe_box *src_box);
+void r600_texture_get_fmask_info(struct r600_common_screen *rscreen,
+				 struct r600_texture *rtex,
+				 unsigned nr_samples,
+				 struct r600_fmask_info *out);
+void r600_texture_get_cmask_info(struct r600_common_screen *rscreen,
+				 struct r600_texture *rtex,
+				 struct r600_cmask_info *out);
+bool r600_init_flushed_depth_texture(struct pipe_context *ctx,
+				     struct pipe_resource *texture,
+				     struct r600_texture **staging);
+void r600_print_texture_info(struct r600_common_screen *rscreen,
+			     struct r600_texture *rtex, struct u_log_context *log);
+struct pipe_resource *r600_texture_create(struct pipe_screen *screen,
 					const struct pipe_resource *templ);
-bool vi_dcc_formats_compatible(enum pipe_format format1,
-			       enum pipe_format format2);
-bool vi_dcc_formats_are_incompatible(struct pipe_resource *tex,
-				     unsigned level,
-				     enum pipe_format view_format);
-void vi_disable_dcc_if_incompatible_format(struct r600_common_context *rctx,
-					   struct pipe_resource *tex,
-					   unsigned level,
-					   enum pipe_format view_format);
-struct pipe_surface *si_create_surface_custom(struct pipe_context *pipe,
-					      struct pipe_resource *texture,
-					      const struct pipe_surface *templ,
-					      unsigned width0, unsigned height0,
-					      unsigned width, unsigned height);
-unsigned si_translate_colorswap(enum pipe_format format, bool do_endian_swap);
-void vi_separate_dcc_start_query(struct pipe_context *ctx,
-				 struct r600_texture *tex);
-void vi_separate_dcc_stop_query(struct pipe_context *ctx,
-				struct r600_texture *tex);
-void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
-					     struct r600_texture *tex);
-void vi_dcc_clear_level(struct r600_common_context *rctx,
-			struct r600_texture *rtex,
-			unsigned level, unsigned clear_value);
-void si_do_fast_color_clear(struct r600_common_context *rctx,
-			    struct pipe_framebuffer_state *fb,
-			    struct r600_atom *fb_state,
-			    unsigned *buffers, ubyte *dirty_cbufs,
-			    const union pipe_color_union *color);
-bool si_texture_disable_dcc(struct r600_common_context *rctx,
-			    struct r600_texture *rtex);
-void si_init_screen_texture_functions(struct r600_common_screen *rscreen);
-void si_init_context_texture_functions(struct r600_common_context *rctx);
+struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
+						struct pipe_resource *texture,
+						const struct pipe_surface *templ,
+						unsigned width0, unsigned height0,
+						unsigned width, unsigned height);
+unsigned r600_translate_colorswap(enum pipe_format format, bool do_endian_swap);
+void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
+				   struct pipe_framebuffer_state *fb,
+				   struct r600_atom *fb_state,
+				   unsigned *buffers, ubyte *dirty_cbufs,
+				   const union pipe_color_union *color);
+bool r600_texture_disable_dcc(struct r600_common_context *rctx,
+			      struct r600_texture *rtex);
+void r600_init_screen_texture_functions(struct r600_common_screen *rscreen);
+void r600_init_context_texture_functions(struct r600_common_context *rctx);
 
 /* r600_viewport.c */
-void si_apply_scissor_bug_workaround(struct r600_common_context *rctx,
-				     struct pipe_scissor_state *scissor);
-void si_viewport_set_rast_deps(struct r600_common_context *rctx,
-			       bool scissor_enable, bool clip_halfz);
-void si_update_vs_writes_viewport_index(struct r600_common_context *rctx,
-					struct tgsi_shader_info *info);
-void si_init_viewport_functions(struct r600_common_context *rctx);
+void evergreen_apply_scissor_bug_workaround(struct r600_common_context *rctx,
+					    struct pipe_scissor_state *scissor);
+void r600_viewport_set_rast_deps(struct r600_common_context *rctx,
+				 bool scissor_enable, bool clip_halfz);
+void r600_update_vs_writes_viewport_index(struct r600_common_context *rctx,
+					  struct tgsi_shader_info *info);
+void r600_init_viewport_functions(struct r600_common_context *rctx);
 
 /* cayman_msaa.c */
-void si_get_sample_position(struct pipe_context *ctx, unsigned sample_count,
-			    unsigned sample_index, float *out_value);
-void si_init_msaa(struct pipe_context *ctx);
-void si_common_emit_msaa_sample_locs(struct radeon_winsys_cs *cs, int nr_samples);
-void si_common_emit_msaa_config(struct radeon_winsys_cs *cs, int nr_samples,
-				int ps_iter_samples, int overrast_samples,
-				unsigned sc_mode_cntl_1);
+extern const uint32_t eg_sample_locs_2x[4];
+extern const unsigned eg_max_dist_2x;
+extern const uint32_t eg_sample_locs_4x[4];
+extern const unsigned eg_max_dist_4x;
+void cayman_get_sample_position(struct pipe_context *ctx, unsigned sample_count,
+				unsigned sample_index, float *out_value);
+void cayman_init_msaa(struct pipe_context *ctx);
+void cayman_emit_msaa_sample_locs(struct radeon_winsys_cs *cs, int nr_samples);
+void cayman_emit_msaa_config(struct radeon_winsys_cs *cs, int nr_samples,
+			     int ps_iter_samples, int overrast_samples,
+			     unsigned sc_mode_cntl_1);
 
 
 /* Inline helpers. */
@@ -1003,22 +992,9 @@ r600_can_sample_zs(struct r600_texture *tex, bool stencil_sampler)
 }
 
 static inline bool
-vi_dcc_enabled(struct r600_texture *tex, unsigned level)
-{
-	return tex->dcc_offset && level < tex->surface.num_dcc_levels;
-}
-
-static inline bool
 r600_htile_enabled(struct r600_texture *tex, unsigned level)
 {
 	return tex->htile_offset && level == 0;
-}
-
-static inline bool
-vi_tc_compat_htile_enabled(struct r600_texture *tex, unsigned level)
-{
-	assert(!tex->tc_compatible_htile || tex->htile_offset);
-	return tex->tc_compatible_htile && level == 0;
 }
 
 #define COMPUTE_DBG(rscreen, fmt, args...) \

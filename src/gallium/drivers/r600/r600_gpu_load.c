@@ -162,7 +162,7 @@ r600_gpu_load_thread(void *param)
 	return 0;
 }
 
-void si_gpu_load_kill_thread(struct r600_common_screen *rscreen)
+void r600_gpu_load_kill_thread(struct r600_common_screen *rscreen)
 {
 	if (!rscreen->gpu_load_thread)
 		return;
@@ -269,14 +269,14 @@ static unsigned busy_index_from_type(struct r600_common_screen *rscreen,
 	}
 }
 
-uint64_t si_begin_counter(struct r600_common_screen *rscreen, unsigned type)
+uint64_t r600_begin_counter(struct r600_common_screen *rscreen, unsigned type)
 {
 	unsigned busy_index = busy_index_from_type(rscreen, type);
 	return r600_read_mmio_counter(rscreen, busy_index);
 }
 
-unsigned si_end_counter(struct r600_common_screen *rscreen, unsigned type,
-			uint64_t begin)
+unsigned r600_end_counter(struct r600_common_screen *rscreen, unsigned type,
+			  uint64_t begin)
 {
 	unsigned busy_index = busy_index_from_type(rscreen, type);
 	return r600_end_mmio_counter(rscreen, begin, busy_index);

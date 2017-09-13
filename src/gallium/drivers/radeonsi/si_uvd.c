@@ -98,7 +98,7 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 		pbs[i] = &resources[i]->resource.buf;
 	}
 
-	rvid_join_surfaces(&ctx->b, pbs, surfaces);
+	si_vid_join_surfaces(&ctx->b, pbs, surfaces);
 
 	for (i = 0; i < VL_NUM_COMPONENTS; ++i) {
 		if (!resources[i])
@@ -131,7 +131,7 @@ static struct pb_buffer* si_uvd_set_dtb(struct ruvd_msg *msg, struct vl_video_bu
 
 	msg->body.decode.dt_field_mode = buf->base.interlaced;
 
-	ruvd_set_dt_surfaces(msg, &luma->surface, (chroma) ? &chroma->surface : NULL, type);
+	si_uvd_set_dt_surfaces(msg, &luma->surface, (chroma) ? &chroma->surface : NULL, type);
 
 	return luma->resource.buf;
 }
@@ -160,8 +160,8 @@ struct pipe_video_codec *si_uvd_create_decoder(struct pipe_context *context,
 	bool vcn = (ctx->b.family == CHIP_RAVEN) ? true : false;
 
         if (templ->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE)
-                return rvce_create_encoder(context, templ, ctx->b.ws, si_vce_get_buffer);
+                return si_vce_create_encoder(context, templ, ctx->b.ws, si_vce_get_buffer);
 
 	return (vcn) ? 	radeon_create_decoder(context, templ) :
-		ruvd_create_decoder(context, templ, si_uvd_set_dtb);
+		si_common_uvd_create_decoder(context, templ, si_uvd_set_dtb);
 }

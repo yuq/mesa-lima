@@ -390,7 +390,7 @@ static void si_set_sampler_view_desc(struct si_context *sctx,
 
 	if (unlikely(!is_buffer && sview->dcc_incompatible)) {
 		if (vi_dcc_enabled(rtex, view->u.tex.first_level))
-			if (!r600_texture_disable_dcc(&sctx->b, rtex))
+			if (!si_texture_disable_dcc(&sctx->b, rtex))
 				sctx->b.decompress_dcc(&sctx->b.b, rtex);
 
 		sview->dcc_incompatible = false;
@@ -674,7 +674,7 @@ static void si_set_shader_image_desc(struct si_context *ctx,
 			 * The decompression is relatively cheap if the surface
 			 * has been decompressed already.
 			 */
-			if (!r600_texture_disable_dcc(&ctx->b, tex))
+			if (!si_texture_disable_dcc(&ctx->b, tex))
 				ctx->b.decompress_dcc(&ctx->b.b, tex);
 		}
 
@@ -1404,7 +1404,7 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 	 */
 
 	/* Set the VGT regs. */
-	r600_set_streamout_targets(ctx, num_targets, targets, offsets);
+	si_common_set_streamout_targets(ctx, num_targets, targets, offsets);
 
 	/* Set the shader resources.*/
 	for (i = 0; i < num_targets; i++) {
@@ -1636,10 +1636,10 @@ static void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf
 
 			/* Update the streamout state. */
 			if (sctx->b.streamout.begin_emitted)
-				r600_emit_streamout_end(&sctx->b);
+				si_emit_streamout_end(&sctx->b);
 			sctx->b.streamout.append_bitmask =
 					sctx->b.streamout.enabled_mask;
-			r600_streamout_buffers_dirty(&sctx->b);
+			si_streamout_buffers_dirty(&sctx->b);
 		}
 	}
 
@@ -1795,7 +1795,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 	uint64_t old_va = rbuffer->gpu_address;
 
 	/* Reallocate the buffer in the same pipe_resource. */
-	r600_alloc_resource(&sctx->screen->b, rbuffer);
+	si_alloc_resource(&sctx->screen->b, rbuffer);
 
 	si_rebind_buffer(ctx, buf, old_va);
 }

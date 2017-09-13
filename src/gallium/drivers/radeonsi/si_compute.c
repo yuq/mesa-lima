@@ -175,7 +175,7 @@ static void *si_create_compute_state(
 
 		if ((sctx->b.debug.debug_message && !sctx->b.debug.async) ||
 		    sctx->is_debug ||
-		    r600_can_dump_shader(&sscreen->b, PIPE_SHADER_COMPUTE))
+		    si_can_dump_shader(&sscreen->b, PIPE_SHADER_COMPUTE))
 			si_create_compute_state_async(program, -1);
 		else
 			util_queue_add_job(&sscreen->shader_compiler_queue,
@@ -328,7 +328,7 @@ static bool si_setup_compute_scratch_buffer(struct si_context *sctx,
 		r600_resource_reference(&sctx->compute_scratch_buffer, NULL);
 
 		sctx->compute_scratch_buffer = (struct r600_resource*)
-			r600_aligned_buffer_create(&sctx->screen->b.b,
+			si_aligned_buffer_create(&sctx->screen->b.b,
 						   R600_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT,
 						   scratch_needed, 256);

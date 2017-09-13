@@ -45,9 +45,9 @@
 #include "vl/vl_mpeg12_decoder.h"
 
 #include "r600_pipe.h"
-#include "radeon/radeon_video.h"
-#include "radeon/radeon_uvd.h"
-#include "radeon/radeon_vce.h"
+#include "radeon_video.h"
+#include "radeon_uvd.h"
+#include "radeon_vce.h"
 #include "r600d.h"
 
 #define R600_UVD_ENABLE_TILING 0

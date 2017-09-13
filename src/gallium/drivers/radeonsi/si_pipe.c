@@ -88,7 +88,7 @@ static void si_destroy_context(struct pipe_context *context)
 	if (sctx->blitter)
 		util_blitter_destroy(sctx->blitter);
 
-	r600_common_context_cleanup(&sctx->b);
+	si_common_context_cleanup(&sctx->b);
 
 	LLVMDisposeTargetMachine(sctx->tm);
 
@@ -145,7 +145,7 @@ si_create_llvm_target_machine(struct si_screen *sscreen)
 		 sscreen->b.debug_flags & DBG_SI_SCHED ? ",+si-scheduler" : "");
 
 	return LLVMCreateTargetMachine(ac_get_llvm_target(triple), triple,
-				       r600_get_llvm_processor_name(sscreen->b.family),
+				       si_get_llvm_processor_name(sscreen->b.family),
 				       features,
 				       LLVMCodeGenLevelDefault,
 				       LLVMRelocDefault,
@@ -185,7 +185,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->screen = sscreen; /* Easy accessing of screen/winsys. */
 	sctx->is_debug = (flags & PIPE_CONTEXT_DEBUG) != 0;
 
-	if (!r600_common_context_init(&sctx->b, &sscreen->b, flags))
+	if (!si_common_context_init(&sctx->b, &sscreen->b, flags))
 		goto fail;
 
 	if (sscreen->b.info.drm_major == 3)
@@ -243,7 +243,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->blitter = util_blitter_create(&sctx->b.b);
 	if (sctx->blitter == NULL)
 		goto fail;
-	sctx->blitter->draw_rectangle = r600_draw_rectangle;
+	sctx->blitter->draw_rectangle = si_draw_rectangle;
 
 	sctx->sample_mask.sample_mask = 0xffff;
 
@@ -271,7 +271,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	 * if NUM_RECORDS == 0). We need to use a dummy buffer instead. */
 	if (sctx->b.chip_class == CIK) {
 		sctx->null_const_buf.buffer =
-			r600_aligned_buffer_create(screen,
+			si_aligned_buffer_create(screen,
 						   R600_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT, 16,
 						   sctx->screen->b.info.tcc_cache_line_size);
@@ -375,7 +375,7 @@ static struct pipe_context *si_pipe_create_context(struct pipe_screen *screen,
 		return ctx;
 
 	return threaded_context_create(ctx, &sscreen->b.pool_transfers,
-				       r600_replace_buffer_storage,
+				       si_replace_buffer_storage,
 				       &((struct si_context*)ctx)->b.tc);
 }
 
@@ -835,13 +835,13 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 			struct si_shader_part *part = parts[i];
 
 			parts[i] = part->next;
-			radeon_shader_binary_clean(&part->binary);
+			si_radeon_shader_binary_clean(&part->binary);
 			FREE(part);
 		}
 	}
 	mtx_destroy(&sscreen->shader_parts_mutex);
 	si_destroy_shader_cache(sscreen);
-	r600_destroy_common_screen(&sscreen->b);
+	si_destroy_common_screen(&sscreen->b);
 }
 
 static bool si_init_gs_info(struct si_screen *sscreen)
@@ -885,7 +885,7 @@ static void si_handle_env_var_force_family(struct si_screen *sscreen)
 		return;
 
 	for (i = CHIP_TAHITI; i < CHIP_LAST; i++) {
-		if (!strcmp(family, r600_get_llvm_processor_name(i))) {
+		if (!strcmp(family, si_get_llvm_processor_name(i))) {
 			/* Override family and chip_class. */
 			sscreen->b.family = sscreen->b.info.family = i;
 
@@ -969,7 +969,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	sscreen->b.b.get_compiler_options = si_get_compiler_options;
 	sscreen->b.b.get_device_uuid = radeonsi_get_device_uuid;
 	sscreen->b.b.get_driver_uuid = radeonsi_get_driver_uuid;
-	sscreen->b.b.resource_create = r600_resource_create_common;
+	sscreen->b.b.resource_create = si_resource_create_common;
 
 	si_init_screen_state_functions(sscreen);
 
@@ -982,7 +982,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	if (driQueryOptionb(config->options, "radeonsi_enable_sisched"))
 		sscreen->b.debug_flags |= DBG_SI_SCHED;
 
-	if (!r600_common_screen_init(&sscreen->b, ws) ||
+	if (!si_common_screen_init(&sscreen->b, ws) ||
 	    !si_init_gs_info(sscreen) ||
 	    !si_init_shader_cache(sscreen)) {
 		FREE(sscreen);
@@ -1110,7 +1110,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	sscreen->b.aux_context = si_create_context(&sscreen->b.b, 0);
 
 	if (sscreen->b.debug_flags & DBG_TEST_DMA)
-		r600_test_dma(&sscreen->b);
+		si_test_dma(&sscreen->b);
 
 	if (sscreen->b.debug_flags & (DBG_TEST_VMFAULT_CP |
 				      DBG_TEST_VMFAULT_SDMA |

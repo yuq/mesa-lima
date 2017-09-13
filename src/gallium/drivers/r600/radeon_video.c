@@ -46,7 +46,7 @@
 #define UVD_FW_1_66_16 ((1 << 24) | (66 << 16) | (16 << 8))
 
 /* generate an stream handle */
-unsigned si_vid_alloc_stream_handle()
+unsigned rvid_alloc_stream_handle()
 {
 	static unsigned counter = 0;
 	unsigned stream_handle = 0;
@@ -61,8 +61,8 @@ unsigned si_vid_alloc_stream_handle()
 }
 
 /* create a buffer in the winsys */
-bool si_vid_create_buffer(struct pipe_screen *screen, struct rvid_buffer *buffer,
-			  unsigned size, unsigned usage)
+bool rvid_create_buffer(struct pipe_screen *screen, struct rvid_buffer *buffer,
+			unsigned size, unsigned usage)
 {
 	memset(buffer, 0, sizeof(*buffer));
 	buffer->usage = usage;
@@ -79,14 +79,14 @@ bool si_vid_create_buffer(struct pipe_screen *screen, struct rvid_buffer *buffer
 }
 
 /* destroy a buffer */
-void si_vid_destroy_buffer(struct rvid_buffer *buffer)
+void rvid_destroy_buffer(struct rvid_buffer *buffer)
 {
 	r600_resource_reference(&buffer->res, NULL);
 }
 
 /* reallocate a buffer, preserving its content */
-bool si_vid_resize_buffer(struct pipe_screen *screen, struct radeon_winsys_cs *cs,
-			  struct rvid_buffer *new_buf, unsigned new_size)
+bool rvid_resize_buffer(struct pipe_screen *screen, struct radeon_winsys_cs *cs,
+			struct rvid_buffer *new_buf, unsigned new_size)
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen *)screen;
 	struct radeon_winsys* ws = rscreen->ws;
@@ -94,7 +94,7 @@ bool si_vid_resize_buffer(struct pipe_screen *screen, struct radeon_winsys_cs *c
 	struct rvid_buffer old_buf = *new_buf;
 	void *src = NULL, *dst = NULL;
 
-	if (!si_vid_create_buffer(screen, new_buf, new_size, new_buf->usage))
+	if (!rvid_create_buffer(screen, new_buf, new_size, new_buf->usage))
 		goto error;
 
 	src = ws->buffer_map(old_buf.res->buf, cs, PIPE_TRANSFER_READ);
@@ -113,19 +113,19 @@ bool si_vid_resize_buffer(struct pipe_screen *screen, struct radeon_winsys_cs *c
 	}
 	ws->buffer_unmap(new_buf->res->buf);
 	ws->buffer_unmap(old_buf.res->buf);
-	si_vid_destroy_buffer(&old_buf);
+	rvid_destroy_buffer(&old_buf);
 	return true;
 
 error:
 	if (src)
 		ws->buffer_unmap(old_buf.res->buf);
-	si_vid_destroy_buffer(new_buf);
+	rvid_destroy_buffer(new_buf);
 	*new_buf = old_buf;
 	return false;
 }
 
 /* clear the buffer with zeros */
-void si_vid_clear_buffer(struct pipe_context *context, struct rvid_buffer* buffer)
+void rvid_clear_buffer(struct pipe_context *context, struct rvid_buffer* buffer)
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)context;
 
@@ -138,9 +138,9 @@ void si_vid_clear_buffer(struct pipe_context *context, struct rvid_buffer* buffe
  * join surfaces into the same buffer with identical tiling params
  * sumup their sizes and replace the backend buffers with a single bo
  */
-void si_vid_join_surfaces(struct r600_common_context *rctx,
-			  struct pb_buffer** buffers[VL_NUM_COMPONENTS],
-			  struct radeon_surf *surfaces[VL_NUM_COMPONENTS])
+void rvid_join_surfaces(struct r600_common_context *rctx,
+			struct pb_buffer** buffers[VL_NUM_COMPONENTS],
+			struct radeon_surf *surfaces[VL_NUM_COMPONENTS])
 {
 	struct radeon_winsys* ws;
 	unsigned best_tiling, best_wh, off;
@@ -218,10 +218,10 @@ void si_vid_join_surfaces(struct r600_common_context *rctx,
 	pb_reference(&pb, NULL);
 }
 
-int si_vid_get_video_param(struct pipe_screen *screen,
-			   enum pipe_video_profile profile,
-			   enum pipe_video_entrypoint entrypoint,
-			   enum pipe_video_cap param)
+int rvid_get_video_param(struct pipe_screen *screen,
+			 enum pipe_video_profile profile,
+			 enum pipe_video_entrypoint entrypoint,
+			 enum pipe_video_cap param)
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen *)screen;
 	enum pipe_video_format codec = u_reduce_video_profile(profile);
@@ -233,7 +233,7 @@ int si_vid_get_video_param(struct pipe_screen *screen,
 		switch (param) {
 		case PIPE_VIDEO_CAP_SUPPORTED:
 			return codec == PIPE_VIDEO_FORMAT_MPEG4_AVC &&
-				si_vce_is_fw_version_supported(rscreen);
+				rvce_is_fw_version_supported(rscreen);
 		case PIPE_VIDEO_CAP_NPOT_TEXTURES:
 			return 1;
 		case PIPE_VIDEO_CAP_MAX_WIDTH:
@@ -354,10 +354,10 @@ int si_vid_get_video_param(struct pipe_screen *screen,
 	}
 }
 
-boolean si_vid_is_format_supported(struct pipe_screen *screen,
-				   enum pipe_format format,
-				   enum pipe_video_profile profile,
-				   enum pipe_video_entrypoint entrypoint)
+boolean rvid_is_format_supported(struct pipe_screen *screen,
+				 enum pipe_format format,
+				 enum pipe_video_profile profile,
+				 enum pipe_video_entrypoint entrypoint)
 {
 	/* HEVC 10 bit decoding should use P016 instead of NV12 if possible */
 	if (profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10)

@@ -350,7 +350,7 @@ si_decompress_depth(struct si_context *sctx,
 	 */
 	if (copy_planes &&
 	    (tex->flushed_depth_texture ||
-	     r600_init_flushed_depth_texture(&sctx->b.b, &tex->resource.b.b, NULL))) {
+	     si_init_flushed_depth_texture(&sctx->b.b, &tex->resource.b.b, NULL))) {
 		struct r600_texture *dst = tex->flushed_depth_texture;
 		unsigned fully_copied_levels;
 		unsigned levels = 0;
@@ -621,7 +621,7 @@ static void si_check_render_feedback_texture(struct si_context *sctx,
 	}
 
 	if (render_feedback)
-		r600_texture_disable_dcc(&sctx->b, tex);
+		si_texture_disable_dcc(&sctx->b, tex);
 }
 
 static void si_check_render_feedback_textures(struct si_context *sctx,
@@ -835,7 +835,7 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 		zsbuf ? (struct r600_texture*)zsbuf->texture : NULL;
 
 	if (buffers & PIPE_CLEAR_COLOR) {
-		evergreen_do_fast_color_clear(&sctx->b, fb,
+		si_do_fast_color_clear(&sctx->b, fb,
 					      &sctx->framebuffer.atom, &buffers,
 					      &sctx->framebuffer.dirty_cbufs,
 					      color);
@@ -1175,7 +1175,7 @@ void si_resource_copy_region(struct pipe_context *ctx,
 					      src_templ.format);
 
 	/* Initialize the surface. */
-	dst_view = r600_create_surface_custom(ctx, dst, &dst_templ,
+	dst_view = si_create_surface_custom(ctx, dst, &dst_templ,
 					      dst_width0, dst_height0,
 					      dst_width, dst_height);
 

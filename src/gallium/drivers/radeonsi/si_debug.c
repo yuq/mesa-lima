@@ -540,14 +540,14 @@ static void si_dump_framebuffer(struct si_context *sctx, struct u_log_context *l
 
 		rtex = (struct r600_texture*)state->cbufs[i]->texture;
 		u_log_printf(log, COLOR_YELLOW "Color buffer %i:" COLOR_RESET "\n", i);
-		r600_print_texture_info(sctx->b.screen, rtex, log);
+		si_print_texture_info(sctx->b.screen, rtex, log);
 		u_log_printf(log, "\n");
 	}
 
 	if (state->zsbuf) {
 		rtex = (struct r600_texture*)state->zsbuf->texture;
 		u_log_printf(log, COLOR_YELLOW "Depth-stencil buffer:" COLOR_RESET "\n");
-		r600_print_texture_info(sctx->b.screen, rtex, log);
+		si_print_texture_info(sctx->b.screen, rtex, log);
 		u_log_printf(log, "\n");
 	}
 }

@@ -1003,7 +1003,7 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	sctx->current_vs_state &= C_VS_STATE_CLAMP_VERTEX_COLOR;
 	sctx->current_vs_state |= S_VS_STATE_CLAMP_VERTEX_COLOR(rs->clamp_vertex_color);
 
-	r600_viewport_set_rast_deps(&sctx->b, rs->scissor_enable, rs->clip_halfz);
+	si_viewport_set_rast_deps(&sctx->b, rs->scissor_enable, rs->clip_halfz);
 
 	si_pm4_bind_state(sctx, rasterizer, rs);
 	si_update_poly_offset_state(sctx);
@@ -2093,7 +2093,7 @@ static unsigned si_is_vertex_format_supported(struct pipe_screen *screen,
 static bool si_is_colorbuffer_format_supported(enum pipe_format format)
 {
 	return si_translate_colorformat(format) != V_028C70_COLOR_INVALID &&
-		r600_translate_colorswap(format, false) != ~0U;
+		si_translate_colorswap(format, false) != ~0U;
 }
 
 static bool si_is_zs_format_supported(enum pipe_format format)
@@ -2354,7 +2354,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 		R600_ERR("Invalid CB format: %d, disabling CB.\n", surf->base.format);
 	}
 	assert(format != V_028C70_COLOR_INVALID);
-	swap = r600_translate_colorswap(surf->base.format, false);
+	swap = si_translate_colorswap(surf->base.format, false);
 	endian = si_colorformat_endian_swap(format);
 
 	/* blend clamp should be set for all NORM/SRGB types */
@@ -2719,7 +2719,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		}
 
 		if (vi_dcc_enabled(rtex, surf->base.u.tex.level))
-			if (!r600_texture_disable_dcc(&sctx->b, rtex))
+			if (!si_texture_disable_dcc(&sctx->b, rtex))
 				sctx->b.decompress_dcc(ctx, rtex);
 
 		surf->dcc_incompatible = false;
@@ -3184,7 +3184,7 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx,
 
 	if (nr_samples != sctx->msaa_sample_locs.nr_samples) {
 		sctx->msaa_sample_locs.nr_samples = nr_samples;
-		cayman_emit_msaa_sample_locs(cs, nr_samples);
+		si_common_emit_msaa_sample_locs(cs, nr_samples);
 	}
 
 	if (sctx->b.family >= CHIP_POLARIS10) {
@@ -3296,7 +3296,7 @@ static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
 		S_028A4C_FORCE_EOV_CNTDWN_ENABLE(1) |
 		S_028A4C_FORCE_EOV_REZ_ENABLE(1);
 
-	cayman_emit_msaa_config(cs, sctx->framebuffer.nr_samples,
+	si_common_emit_msaa_config(cs, sctx->framebuffer.nr_samples,
 				sctx->ps_iter_samples,
 				sctx->smoothing_enabled ? SI_NUM_SMOOTH_AA_SAMPLES : 0,
 				sc_mode_cntl_1);
@@ -3629,7 +3629,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 	}
 
 	if (tex->dcc_offset) {
-		unsigned swap = r600_translate_colorswap(pipe_format, false);
+		unsigned swap = si_translate_colorswap(pipe_format, false);
 
 		state[6] = S_008F28_ALPHA_IS_ON_MSB(swap <= 1);
 	} else {
@@ -3805,7 +3805,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	/* Depth/stencil texturing sometimes needs separate texture. */
 	if (tmp->is_depth && !r600_can_sample_zs(tmp, view->is_stencil_sampler)) {
 		if (!tmp->flushed_depth_texture &&
-		    !r600_init_flushed_depth_texture(ctx, texture, NULL)) {
+		    !si_init_flushed_depth_texture(ctx, texture, NULL)) {
 			pipe_resource_reference(&view->base.texture, NULL);
 			FREE(view);
 			return NULL;
@@ -4413,7 +4413,7 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->b.b.set_stencil_ref = si_set_stencil_ref;
 
 	sctx->b.b.set_framebuffer_state = si_set_framebuffer_state;
-	sctx->b.b.get_sample_position = cayman_get_sample_position;
+	sctx->b.b.get_sample_position = si_get_sample_position;
 
 	sctx->b.b.create_sampler_state = si_create_sampler_state;
 	sctx->b.b.delete_sampler_state = si_delete_sampler_state;

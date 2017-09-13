@@ -30,9 +30,9 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-bool si_rings_is_buffer_referenced(struct r600_common_context *ctx,
-				   struct pb_buffer *buf,
-				   enum radeon_bo_usage usage)
+bool r600_rings_is_buffer_referenced(struct r600_common_context *ctx,
+				     struct pb_buffer *buf,
+				     enum radeon_bo_usage usage)
 {
 	if (ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs, buf, usage)) {
 		return true;
@@ -44,9 +44,9 @@ bool si_rings_is_buffer_referenced(struct r600_common_context *ctx,
 	return false;
 }
 
-void *si_buffer_map_sync_with_rings(struct r600_common_context *ctx,
-				    struct r600_resource *resource,
-				    unsigned usage)
+void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
+                                      struct r600_resource *resource,
+                                      unsigned usage)
 {
 	enum radeon_bo_usage rusage = RADEON_USAGE_READWRITE;
 	bool busy = false;
@@ -101,9 +101,9 @@ void *si_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 	return ctx->ws->buffer_map(resource->buf, NULL, usage);
 }
 
-void si_init_resource_fields(struct r600_common_screen *rscreen,
-			     struct r600_resource *res,
-			     uint64_t size, unsigned alignment)
+void r600_init_resource_fields(struct r600_common_screen *rscreen,
+			       struct r600_resource *res,
+			       uint64_t size, unsigned alignment)
 {
 	struct r600_texture *rtex = (struct r600_texture*)res;
 
@@ -169,10 +169,11 @@ void si_init_resource_fields(struct r600_common_screen *rscreen,
 
 	/* Only displayable single-sample textures can be shared between
 	 * processes. */
-	if (!(res->b.b.bind & (PIPE_BIND_SHARED | PIPE_BIND_SCANOUT)) &&
-	    (res->b.b.target == PIPE_BUFFER ||
-	     res->b.b.nr_samples >= 2 ||
-	     rtex->surface.micro_tile_mode != RADEON_MICRO_MODE_DISPLAY))
+	if (res->b.b.target == PIPE_BUFFER ||
+	    res->b.b.nr_samples >= 2 ||
+	    (rtex->surface.micro_tile_mode != RADEON_MICRO_MODE_DISPLAY &&
+	     /* Raven doesn't use display micro mode for 32bpp, so check this: */
+	     !(res->b.b.bind & PIPE_BIND_SCANOUT)))
 		res->flags |= RADEON_FLAG_NO_INTERPROCESS_SHARING;
 
 	/* If VRAM is just stolen system memory, allow both VRAM and
@@ -205,8 +206,8 @@ void si_init_resource_fields(struct r600_common_screen *rscreen,
 		res->gart_usage = size;
 }
 
-bool si_alloc_resource(struct r600_common_screen *rscreen,
-		       struct r600_resource *res)
+bool r600_alloc_resource(struct r600_common_screen *rscreen,
+			 struct r600_resource *res)
 {
 	struct pb_buffer *old_buf, *new_buf;
 
@@ -274,7 +275,7 @@ r600_invalidate_buffer(struct r600_common_context *rctx,
 		return false;
 
 	/* Check if mapping this buffer would cause waiting for the GPU. */
-	if (si_rings_is_buffer_referenced(rctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
+	if (r600_rings_is_buffer_referenced(rctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
 	    !rctx->ws->buffer_wait(rbuffer->buf, 0, RADEON_USAGE_READWRITE)) {
 		rctx->invalidate_buffer(&rctx->b, &rbuffer->b.b);
 	} else {
@@ -285,7 +286,7 @@ r600_invalidate_buffer(struct r600_common_context *rctx,
 }
 
 /* Replace the storage of dst with src. */
-void si_replace_buffer_storage(struct pipe_context *ctx,
+void r600_replace_buffer_storage(struct pipe_context *ctx,
 				 struct pipe_resource *dst,
 				 struct pipe_resource *src)
 {
@@ -308,8 +309,8 @@ void si_replace_buffer_storage(struct pipe_context *ctx,
 	rctx->rebind_buffer(ctx, dst, old_gpu_address);
 }
 
-void si_invalidate_resource(struct pipe_context *ctx,
-			    struct pipe_resource *resource)
+void r600_invalidate_resource(struct pipe_context *ctx,
+			      struct pipe_resource *resource)
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
 	struct r600_resource *rbuffer = r600_resource(resource);
@@ -429,7 +430,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 		/* Check if mapping this buffer would cause waiting for the GPU.
 		 */
 		if (rbuffer->flags & RADEON_FLAG_SPARSE ||
-		    si_rings_is_buffer_referenced(rctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
+		    r600_rings_is_buffer_referenced(rctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
 		    !rctx->ws->buffer_wait(rbuffer->buf, 0, RADEON_USAGE_READWRITE)) {
 			/* Do a wait-free write-only transfer using a temporary buffer. */
 			unsigned offset;
@@ -472,7 +473,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 				       box->x % R600_MAP_BUFFER_ALIGNMENT,
 				       0, 0, resource, 0, box);
 
-			data = si_buffer_map_sync_with_rings(rctx, staging,
+			data = r600_buffer_map_sync_with_rings(rctx, staging,
 							       usage & ~PIPE_TRANSFER_UNSYNCHRONIZED);
 			if (!data) {
 				r600_resource_reference(&staging, NULL);
@@ -487,7 +488,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 		}
 	}
 
-	data = si_buffer_map_sync_with_rings(rctx, rbuffer, usage);
+	data = r600_buffer_map_sync_with_rings(rctx, rbuffer, usage);
 	if (!data) {
 		return NULL;
 	}
@@ -557,10 +558,10 @@ static void r600_buffer_transfer_unmap(struct pipe_context *ctx,
 	slab_free(&rctx->pool_transfers, transfer);
 }
 
-void si_buffer_subdata(struct pipe_context *ctx,
-		       struct pipe_resource *buffer,
-		       unsigned usage, unsigned offset,
-		       unsigned size, const void *data)
+void r600_buffer_subdata(struct pipe_context *ctx,
+			 struct pipe_resource *buffer,
+			 unsigned usage, unsigned offset,
+			 unsigned size, const void *data)
 {
 	struct pipe_transfer *transfer = NULL;
 	struct pipe_box box;
@@ -611,30 +612,30 @@ r600_alloc_buffer_struct(struct pipe_screen *screen,
 	return rbuffer;
 }
 
-struct pipe_resource *si_buffer_create(struct pipe_screen *screen,
-				       const struct pipe_resource *templ,
-				       unsigned alignment)
+struct pipe_resource *r600_buffer_create(struct pipe_screen *screen,
+					 const struct pipe_resource *templ,
+					 unsigned alignment)
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 	struct r600_resource *rbuffer = r600_alloc_buffer_struct(screen, templ);
 
-	si_init_resource_fields(rscreen, rbuffer, templ->width0, alignment);
+	r600_init_resource_fields(rscreen, rbuffer, templ->width0, alignment);
 
 	if (templ->flags & PIPE_RESOURCE_FLAG_SPARSE)
 		rbuffer->flags |= RADEON_FLAG_SPARSE;
 
-	if (!si_alloc_resource(rscreen, rbuffer)) {
+	if (!r600_alloc_resource(rscreen, rbuffer)) {
 		FREE(rbuffer);
 		return NULL;
 	}
 	return &rbuffer->b.b;
 }
 
-struct pipe_resource *si_aligned_buffer_create(struct pipe_screen *screen,
-					       unsigned flags,
-					       unsigned usage,
-					       unsigned size,
-					       unsigned alignment)
+struct pipe_resource *r600_aligned_buffer_create(struct pipe_screen *screen,
+						 unsigned flags,
+						 unsigned usage,
+						 unsigned size,
+						 unsigned alignment)
 {
 	struct pipe_resource buffer;
 
@@ -648,13 +649,13 @@ struct pipe_resource *si_aligned_buffer_create(struct pipe_screen *screen,
 	buffer.height0 = 1;
 	buffer.depth0 = 1;
 	buffer.array_size = 1;
-	return si_buffer_create(screen, &buffer, alignment);
+	return r600_buffer_create(screen, &buffer, alignment);
 }
 
 struct pipe_resource *
-si_buffer_from_user_memory(struct pipe_screen *screen,
-			   const struct pipe_resource *templ,
-			   void *user_memory)
+r600_buffer_from_user_memory(struct pipe_screen *screen,
+			     const struct pipe_resource *templ,
+			     void *user_memory)
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 	struct radeon_winsys *ws = rscreen->ws;

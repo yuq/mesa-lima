@@ -37,8 +37,8 @@
 #include "util/u_math.h"
 #include "vl/vl_decoder.h"
 #include "vl/vl_video_buffer.h"
-#include "radeon/radeon_video.h"
-#include "radeon/radeon_uvd.h"
+#include "radeon_video.h"
+#include "radeon_uvd.h"
 #include "os/os_time.h"
 
 static const struct debug_named_value r600_debug_options[] = {

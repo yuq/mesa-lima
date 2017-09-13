@@ -2226,7 +2226,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 
 	if ((sctx->b.debug.debug_message && !sctx->b.debug.async) ||
 	    sctx->is_debug ||
-	    r600_can_dump_shader(&sscreen->b, sel->info.processor))
+	    si_can_dump_shader(&sscreen->b, sel->info.processor))
 		si_init_shader_selector_async(sel, -1);
 	else
 		util_queue_add_job(&sscreen->shader_compiler_queue, sel,
@@ -2299,7 +2299,7 @@ static void si_bind_vs_shader(struct pipe_context *ctx, void *state)
 	sctx->vs_shader.current = sel ? sel->first_variant : NULL;
 
 	si_update_common_shader_state(sctx);
-	r600_update_vs_writes_viewport_index(&sctx->b, si_get_vs_info(sctx));
+	si_update_vs_writes_viewport_index(&sctx->b, si_get_vs_info(sctx));
 	si_set_active_descriptors_for_shader(sctx, sel);
 	si_update_streamout_state(sctx);
 	si_update_clip_regs(sctx, old_hw_vs, old_hw_vs_variant,
@@ -2342,7 +2342,7 @@ static void si_bind_gs_shader(struct pipe_context *ctx, void *state)
 		if (sctx->ia_multi_vgt_param_key.u.uses_tess)
 			si_update_tess_uses_prim_id(sctx);
 	}
-	r600_update_vs_writes_viewport_index(&sctx->b, si_get_vs_info(sctx));
+	si_update_vs_writes_viewport_index(&sctx->b, si_get_vs_info(sctx));
 	si_set_active_descriptors_for_shader(sctx, sel);
 	si_update_streamout_state(sctx);
 	si_update_clip_regs(sctx, old_hw_vs, old_hw_vs_variant,
@@ -2393,7 +2393,7 @@ static void si_bind_tes_shader(struct pipe_context *ctx, void *state)
 		si_shader_change_notify(sctx);
 		sctx->last_tes_sh_base = -1; /* invalidate derived tess state */
 	}
-	r600_update_vs_writes_viewport_index(&sctx->b, si_get_vs_info(sctx));
+	si_update_vs_writes_viewport_index(&sctx->b, si_get_vs_info(sctx));
 	si_set_active_descriptors_for_shader(sctx, sel);
 	si_update_streamout_state(sctx);
 	si_update_clip_regs(sctx, old_hw_vs, old_hw_vs_variant,
@@ -2710,7 +2710,7 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 	if (update_esgs) {
 		pipe_resource_reference(&sctx->esgs_ring, NULL);
 		sctx->esgs_ring =
-			r600_aligned_buffer_create(sctx->b.b.screen,
+			si_aligned_buffer_create(sctx->b.b.screen,
 						   R600_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT,
 						   esgs_ring_size, alignment);
@@ -2721,7 +2721,7 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 	if (update_gsvs) {
 		pipe_resource_reference(&sctx->gsvs_ring, NULL);
 		sctx->gsvs_ring =
-			r600_aligned_buffer_create(sctx->b.b.screen,
+			si_aligned_buffer_create(sctx->b.b.screen,
 						   R600_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT,
 						   gsvs_ring_size, alignment);
@@ -2963,7 +2963,7 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 			r600_resource_reference(&sctx->scratch_buffer, NULL);
 
 			sctx->scratch_buffer = (struct r600_resource*)
-				r600_aligned_buffer_create(&sctx->screen->b.b,
+				si_aligned_buffer_create(&sctx->screen->b.b,
 							   R600_RESOURCE_FLAG_UNMAPPABLE,
 							   PIPE_USAGE_DEFAULT,
 							   scratch_needed_size, 256);
@@ -3021,7 +3021,7 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	/* Use 64K alignment for both rings, so that we can pass the address
 	 * to shaders as one SGPR containing bits [16:47].
 	 */
-	sctx->tf_ring = r600_aligned_buffer_create(sctx->b.b.screen,
+	sctx->tf_ring = si_aligned_buffer_create(sctx->b.b.screen,
 						   R600_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT,
 						   32768 * sctx->screen->b.info.max_se,
@@ -3032,7 +3032,7 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	assert(((sctx->tf_ring->width0 / 4) & C_030938_SIZE) == 0);
 
 	sctx->tess_offchip_ring =
-		r600_aligned_buffer_create(sctx->b.b.screen,
+		si_aligned_buffer_create(sctx->b.b.screen,
 					   R600_RESOURCE_FLAG_UNMAPPABLE,
 					   PIPE_USAGE_DEFAULT,
 					   max_offchip_buffers *

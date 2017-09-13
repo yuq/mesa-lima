@@ -48,38 +48,38 @@ struct rvid_buffer
 };
 
 /* generate an stream handle */
-unsigned si_vid_alloc_stream_handle(void);
+unsigned rvid_alloc_stream_handle(void);
 
 /* create a buffer in the winsys */
-bool si_vid_create_buffer(struct pipe_screen *screen, struct rvid_buffer *buffer,
-			  unsigned size, unsigned usage);
+bool rvid_create_buffer(struct pipe_screen *screen, struct rvid_buffer *buffer,
+			unsigned size, unsigned usage);
 
 /* destroy a buffer */
-void si_vid_destroy_buffer(struct rvid_buffer *buffer);
+void rvid_destroy_buffer(struct rvid_buffer *buffer);
 
 /* reallocate a buffer, preserving its content */
-bool si_vid_resize_buffer(struct pipe_screen *screen, struct radeon_winsys_cs *cs,
-			  struct rvid_buffer *new_buf, unsigned new_size);
+bool rvid_resize_buffer(struct pipe_screen *screen, struct radeon_winsys_cs *cs,
+			struct rvid_buffer *new_buf, unsigned new_size);
 
 /* clear the buffer with zeros */
-void si_vid_clear_buffer(struct pipe_context *context, struct rvid_buffer* buffer);
+void rvid_clear_buffer(struct pipe_context *context, struct rvid_buffer* buffer);
 
 /* join surfaces into the same buffer with identical tiling params
    sumup their sizes and replace the backend buffers with a single bo */
-void si_vid_join_surfaces(struct r600_common_context *rctx,
-			  struct pb_buffer** buffers[VL_NUM_COMPONENTS],
-			  struct radeon_surf *surfaces[VL_NUM_COMPONENTS]);
+void rvid_join_surfaces(struct r600_common_context *rctx,
+                        struct pb_buffer** buffers[VL_NUM_COMPONENTS],
+                        struct radeon_surf *surfaces[VL_NUM_COMPONENTS]);
 
 /* returns supported codecs and other parameters */
-int si_vid_get_video_param(struct pipe_screen *screen,
-			   enum pipe_video_profile profile,
-			   enum pipe_video_entrypoint entrypoint,
-			   enum pipe_video_cap param);
+int rvid_get_video_param(struct pipe_screen *screen,
+                         enum pipe_video_profile profile,
+                         enum pipe_video_entrypoint entrypoint,
+                         enum pipe_video_cap param);
 
 /* the hardware only supports NV12 */
-boolean si_vid_is_format_supported(struct pipe_screen *screen,
-				   enum pipe_format format,
-				   enum pipe_video_profile profile,
-				   enum pipe_video_entrypoint entrypoint);
+boolean rvid_is_format_supported(struct pipe_screen *screen,
+                                 enum pipe_format format,
+                                 enum pipe_video_profile profile,
+                                 enum pipe_video_entrypoint entrypoint);
 
 #endif // RADEON_VIDEO_H

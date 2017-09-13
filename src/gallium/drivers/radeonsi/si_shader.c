@@ -5109,7 +5109,7 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 		max_simd_waves = MIN2(max_simd_waves, 16384 / lds_per_wave);
 
 	if (!check_debug_option ||
-	    r600_can_dump_shader(&sscreen->b, processor)) {
+	    si_can_dump_shader(&sscreen->b, processor)) {
 		if (processor == PIPE_SHADER_FRAGMENT) {
 			fprintf(file, "*** SHADER CONFIG ***\n"
 				"SPI_PS_INPUT_ADDR = 0x%04x\n"
@@ -5181,7 +5181,7 @@ void si_shader_dump(struct si_screen *sscreen, const struct si_shader *shader,
 		    FILE *file, bool check_debug_option)
 {
 	if (!check_debug_option ||
-	    r600_can_dump_shader(&sscreen->b, processor))
+	    si_can_dump_shader(&sscreen->b, processor))
 		si_dump_shader_key(processor, shader, file);
 
 	if (!check_debug_option && shader->binary.llvm_ir_string) {
@@ -5198,7 +5198,7 @@ void si_shader_dump(struct si_screen *sscreen, const struct si_shader *shader,
 	}
 
 	if (!check_debug_option ||
-	    (r600_can_dump_shader(&sscreen->b, processor) &&
+	    (si_can_dump_shader(&sscreen->b, processor) &&
 	     !(sscreen->b.debug_flags & DBG_NO_ASM))) {
 		fprintf(file, "\n%s:\n", si_get_shader_name(shader, processor));
 
@@ -5236,7 +5236,7 @@ static int si_compile_llvm(struct si_screen *sscreen,
 	int r = 0;
 	unsigned count = p_atomic_inc_return(&sscreen->b.num_compilations);
 
-	if (r600_can_dump_shader(&sscreen->b, processor)) {
+	if (si_can_dump_shader(&sscreen->b, processor)) {
 		fprintf(stderr, "radeonsi: Compiling shader %d\n", count);
 
 		if (!(sscreen->b.debug_flags & (DBG_NO_IR | DBG_PREOPT_IR))) {
@@ -5434,7 +5434,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 			    debug, PIPE_SHADER_GEOMETRY,
 			    "GS Copy Shader");
 	if (!r) {
-		if (r600_can_dump_shader(&sscreen->b, PIPE_SHADER_GEOMETRY))
+		if (si_can_dump_shader(&sscreen->b, PIPE_SHADER_GEOMETRY))
 			fprintf(stderr, "GS Copy Shader:\n");
 		si_shader_dump(sscreen, ctx.shader, debug,
 			       PIPE_SHADER_GEOMETRY, stderr, true);
@@ -6352,7 +6352,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
 	 * conversion fails. */
-	if (r600_can_dump_shader(&sscreen->b, sel->info.processor) &&
+	if (si_can_dump_shader(&sscreen->b, sel->info.processor) &&
 	    !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
 		if (sel->tokens)
 			tgsi_dump(sel->tokens, 0);
@@ -6561,7 +6561,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	si_optimize_vs_outputs(&ctx);
 
 	if ((debug && debug->debug_message) ||
-	    r600_can_dump_shader(&sscreen->b, ctx.type))
+	    si_can_dump_shader(&sscreen->b, ctx.type))
 		si_count_scratch_private_memory(&ctx);
 
 	/* Compile to bytecode. */
@@ -7750,7 +7750,7 @@ void si_shader_destroy(struct si_shader *shader)
 	r600_resource_reference(&shader->bo, NULL);
 
 	if (!shader->is_binary_shared)
-		radeon_shader_binary_clean(&shader->binary);
+		si_radeon_shader_binary_clean(&shader->binary);
 
 	free(shader->shader_log);
 }

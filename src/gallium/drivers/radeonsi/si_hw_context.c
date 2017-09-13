@@ -29,7 +29,7 @@
 
 void si_destroy_saved_cs(struct si_saved_cs *scs)
 {
-	radeon_clear_saved_cs(&scs->gfx);
+	si_clear_saved_cs(&scs->gfx);
 	r600_resource_reference(&scs->trace_buf, NULL);
 	free(scs);
 }
@@ -80,7 +80,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	if (!radeon_emitted(cs, ctx->b.initial_gfx_cs_size))
 		return;
 
-	if (r600_check_device_reset(&ctx->b))
+	if (si_check_device_reset(&ctx->b))
 		return;
 
 	if (ctx->screen->b.debug_flags & DBG_CHECK_VM)
@@ -98,7 +98,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 	ctx->gfx_flush_in_progress = true;
 
-	r600_preflush_suspend_features(&ctx->b);
+	si_preflush_suspend_features(&ctx->b);
 
 	ctx->b.flags |= SI_CONTEXT_CS_PARTIAL_FLUSH |
 			SI_CONTEXT_PS_PARTIAL_FLUSH;
@@ -115,7 +115,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 		si_log_hw_flush(ctx);
 
 		/* Save the IB for debug contexts. */
-		radeon_save_cs(ws, cs, &ctx->current_saved_cs->gfx, true);
+		si_save_cs(ws, cs, &ctx->current_saved_cs->gfx, true);
 		ctx->current_saved_cs->flushed = true;
 	}
 
@@ -260,7 +260,7 @@ void si_begin_new_cs(struct si_context *ctx)
 					       &ctx->scratch_buffer->b.b);
 	}
 
-	r600_postflush_resume_features(&ctx->b);
+	si_postflush_resume_features(&ctx->b);
 
 	assert(!ctx->b.gfx.cs->prev_dw);
 	ctx->b.initial_gfx_cs_size = ctx->b.gfx.cs->current.cdw;

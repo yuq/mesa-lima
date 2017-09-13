@@ -28,22 +28,22 @@
 
 /* 2xMSAA
  * There are two locations (4, 4), (-4, -4). */
-static const uint32_t eg_sample_locs_2x[4] = {
+const uint32_t eg_sample_locs_2x[4] = {
 	FILL_SREG(4, 4, -4, -4, 4, 4, -4, -4),
 	FILL_SREG(4, 4, -4, -4, 4, 4, -4, -4),
 	FILL_SREG(4, 4, -4, -4, 4, 4, -4, -4),
 	FILL_SREG(4, 4, -4, -4, 4, 4, -4, -4),
 };
-static const unsigned eg_max_dist_2x = 4;
+const unsigned eg_max_dist_2x = 4;
 /* 4xMSAA
  * There are 4 locations: (-2, 6), (6, -2), (-6, 2), (2, 6). */
-static const uint32_t eg_sample_locs_4x[4] = {
+const uint32_t eg_sample_locs_4x[4] = {
 	FILL_SREG(-2, -6, 6, -2, -6, 2, 2, 6),
 	FILL_SREG(-2, -6, 6, -2, -6, 2, 2, 6),
 	FILL_SREG(-2, -6, 6, -2, -6, 2, 2, 6),
 	FILL_SREG(-2, -6, 6, -2, -6, 2, 2, 6),
 };
-static const unsigned eg_max_dist_4x = 6;
+const unsigned eg_max_dist_4x = 6;
 
 /* Cayman 8xMSAA */
 static const uint32_t cm_sample_locs_8x[] = {
@@ -78,7 +78,7 @@ static const uint32_t cm_sample_locs_16x[] = {
 };
 static const unsigned cm_max_dist_16x = 8;
 
-void si_get_sample_position(struct pipe_context *ctx, unsigned sample_count,
+void cayman_get_sample_position(struct pipe_context *ctx, unsigned sample_count,
 				unsigned sample_index, float *out_value)
 {
 	int offset, index;
@@ -123,24 +123,24 @@ void si_get_sample_position(struct pipe_context *ctx, unsigned sample_count,
 	}
 }
 
-void si_init_msaa(struct pipe_context *ctx)
+void cayman_init_msaa(struct pipe_context *ctx)
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
 	int i;
 
-	si_get_sample_position(ctx, 1, 0, rctx->sample_locations_1x[0]);
+	cayman_get_sample_position(ctx, 1, 0, rctx->sample_locations_1x[0]);
 
 	for (i = 0; i < 2; i++)
-		si_get_sample_position(ctx, 2, i, rctx->sample_locations_2x[i]);
+		cayman_get_sample_position(ctx, 2, i, rctx->sample_locations_2x[i]);
 	for (i = 0; i < 4; i++)
-		si_get_sample_position(ctx, 4, i, rctx->sample_locations_4x[i]);
+		cayman_get_sample_position(ctx, 4, i, rctx->sample_locations_4x[i]);
 	for (i = 0; i < 8; i++)
-		si_get_sample_position(ctx, 8, i, rctx->sample_locations_8x[i]);
+		cayman_get_sample_position(ctx, 8, i, rctx->sample_locations_8x[i]);
 	for (i = 0; i < 16; i++)
-		si_get_sample_position(ctx, 16, i, rctx->sample_locations_16x[i]);
+		cayman_get_sample_position(ctx, 16, i, rctx->sample_locations_16x[i]);
 }
 
-void si_common_emit_msaa_sample_locs(struct radeon_winsys_cs *cs, int nr_samples)
+void cayman_emit_msaa_sample_locs(struct radeon_winsys_cs *cs, int nr_samples)
 {
 	switch (nr_samples) {
 	default:
@@ -201,9 +201,9 @@ void si_common_emit_msaa_sample_locs(struct radeon_winsys_cs *cs, int nr_samples
 	}
 }
 
-void si_common_emit_msaa_config(struct radeon_winsys_cs *cs, int nr_samples,
-				int ps_iter_samples, int overrast_samples,
-				unsigned sc_mode_cntl_1)
+void cayman_emit_msaa_config(struct radeon_winsys_cs *cs, int nr_samples,
+			     int ps_iter_samples, int overrast_samples,
+			     unsigned sc_mode_cntl_1)
 {
 	int setup_samples = nr_samples > 1 ? nr_samples :
 			    overrast_samples > 1 ? overrast_samples : 0;

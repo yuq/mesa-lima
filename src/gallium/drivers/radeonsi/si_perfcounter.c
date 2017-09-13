@@ -614,10 +614,10 @@ static void si_pc_emit_stop(struct r600_common_context *ctx,
 {
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 
-	r600_gfx_write_event_eop(ctx, EVENT_TYPE_BOTTOM_OF_PIPE_TS, 0,
+	si_gfx_write_event_eop(ctx, EVENT_TYPE_BOTTOM_OF_PIPE_TS, 0,
 				 EOP_DATA_SEL_VALUE_32BIT,
 				 buffer, va, 0, R600_NOT_QUERY);
-	r600_gfx_wait_fence(ctx, va, 0, 0xffffffff);
+	si_gfx_wait_fence(ctx, va, 0, 0xffffffff);
 
 	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 	radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_PERFCOUNTER_SAMPLE) | EVENT_INDEX(0));
@@ -676,7 +676,7 @@ static void si_pc_emit_read(struct r600_common_context *ctx,
 
 static void si_pc_cleanup(struct r600_common_screen *rscreen)
 {
-	r600_perfcounters_do_destroy(rscreen->perfcounters);
+	si_perfcounters_do_destroy(rscreen->perfcounters);
 	rscreen->perfcounters = NULL;
 }
 
@@ -717,7 +717,7 @@ void si_init_perfcounters(struct si_screen *screen)
 		return;
 
 	pc->num_start_cs_dwords = 14;
-	pc->num_stop_cs_dwords = 14 + r600_gfx_write_fence_dwords(&screen->b);
+	pc->num_stop_cs_dwords = 14 + si_gfx_write_fence_dwords(&screen->b);
 	pc->num_instance_cs_dwords = 3;
 	pc->num_shaders_cs_dwords = 4;
 
@@ -734,7 +734,7 @@ void si_init_perfcounters(struct si_screen *screen)
 	pc->emit_read = si_pc_emit_read;
 	pc->cleanup = si_pc_cleanup;
 
-	if (!r600_perfcounters_init(pc, num_blocks))
+	if (!si_perfcounters_init(pc, num_blocks))
 		goto error;
 
 	for (i = 0; i < num_blocks; ++i) {
@@ -746,7 +746,7 @@ void si_init_perfcounters(struct si_screen *screen)
 				instances = 2;
 		}
 
-		r600_perfcounters_add_block(&screen->b, pc,
+		si_perfcounters_add_block(&screen->b, pc,
 					    block->b->name,
 					    block->b->flags,
 					    block->b->num_counters,
@@ -759,5 +759,5 @@ void si_init_perfcounters(struct si_screen *screen)
 	return;
 
 error:
-	r600_perfcounters_do_destroy(pc);
+	si_perfcounters_do_destroy(pc);
 }

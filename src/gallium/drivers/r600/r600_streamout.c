@@ -74,7 +74,7 @@ static void r600_so_target_destroy(struct pipe_context *ctx,
 	FREE(t);
 }
 
-void si_streamout_buffers_dirty(struct r600_common_context *rctx)
+void r600_streamout_buffers_dirty(struct r600_common_context *rctx)
 {
 	struct r600_atom *begin = &rctx->streamout.begin_atom;
 	unsigned num_bufs = util_bitcount(rctx->streamout.enabled_mask);
@@ -109,10 +109,10 @@ void si_streamout_buffers_dirty(struct r600_common_context *rctx)
 	r600_set_streamout_enable(rctx, true);
 }
 
-void si_common_set_streamout_targets(struct pipe_context *ctx,
-				     unsigned num_targets,
-				     struct pipe_stream_output_target **targets,
-				     const unsigned *offsets)
+void r600_set_streamout_targets(struct pipe_context *ctx,
+				unsigned num_targets,
+				struct pipe_stream_output_target **targets,
+				const unsigned *offsets)
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	unsigned i;
@@ -120,7 +120,7 @@ void si_common_set_streamout_targets(struct pipe_context *ctx,
 
 	/* Stop streamout. */
 	if (rctx->streamout.num_targets && rctx->streamout.begin_emitted) {
-		si_emit_streamout_end(rctx);
+		r600_emit_streamout_end(rctx);
 	}
 
 	/* Set the new targets. */
@@ -144,7 +144,7 @@ void si_common_set_streamout_targets(struct pipe_context *ctx,
 	rctx->streamout.append_bitmask = append_bitmask;
 
 	if (num_targets) {
-		si_streamout_buffers_dirty(rctx);
+		r600_streamout_buffers_dirty(rctx);
 	} else {
 		rctx->set_atom_dirty(rctx, &rctx->streamout.begin_atom, false);
 		r600_set_streamout_enable(rctx, false);
@@ -266,7 +266,7 @@ static void r600_emit_streamout_begin(struct r600_common_context *rctx, struct r
 	rctx->streamout.begin_emitted = true;
 }
 
-void si_emit_streamout_end(struct r600_common_context *rctx)
+void r600_emit_streamout_end(struct r600_common_context *rctx)
 {
 	struct radeon_winsys_cs *cs = rctx->gfx.cs;
 	struct r600_so_target **t = rctx->streamout.targets;
@@ -353,8 +353,8 @@ static void r600_set_streamout_enable(struct r600_common_context *rctx, bool ena
 	}
 }
 
-void si_update_prims_generated_query_state(struct r600_common_context *rctx,
-					   unsigned type, int diff)
+void r600_update_prims_generated_query_state(struct r600_common_context *rctx,
+					     unsigned type, int diff)
 {
 	if (type == PIPE_QUERY_PRIMITIVES_GENERATED) {
 		bool old_strmout_en = r600_get_strmout_en(rctx);
@@ -371,7 +371,7 @@ void si_update_prims_generated_query_state(struct r600_common_context *rctx,
 	}
 }
 
-void si_streamout_init(struct r600_common_context *rctx)
+void r600_streamout_init(struct r600_common_context *rctx)
 {
 	rctx->b.create_stream_output_target = r600_create_so_target;
 	rctx->b.stream_output_target_destroy = r600_so_target_destroy;

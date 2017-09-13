@@ -678,9 +678,9 @@ static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec,
 					(struct pipe_h265_picture_desc*)picture);
 			else
 				ctx_size = calc_ctx_size_h265_main(dec);
-			if (!rvid_create_buffer(dec->screen, &dec->ctx, ctx_size, PIPE_USAGE_DEFAULT))
+			if (!si_vid_create_buffer(dec->screen, &dec->ctx, ctx_size, PIPE_USAGE_DEFAULT))
 				RVID_ERR("Can't allocated context buffer.\n");
-			rvid_clear_buffer(dec->base.context, &dec->ctx);
+			si_vid_clear_buffer(dec->base.context, &dec->ctx);
 		}
 		break;
 	}
@@ -1026,13 +1026,13 @@ static void radeon_dec_destroy(struct pipe_video_codec *decoder)
 	dec->ws->cs_destroy(dec->cs);
 
 	for (i = 0; i < NUM_BUFFERS; ++i) {
-		rvid_destroy_buffer(&dec->msg_fb_it_buffers[i]);
-		rvid_destroy_buffer(&dec->bs_buffers[i]);
+		si_vid_destroy_buffer(&dec->msg_fb_it_buffers[i]);
+		si_vid_destroy_buffer(&dec->bs_buffers[i]);
 	}
 
-	rvid_destroy_buffer(&dec->dpb);
-	rvid_destroy_buffer(&dec->ctx);
-	rvid_destroy_buffer(&dec->sessionctx);
+	si_vid_destroy_buffer(&dec->dpb);
+	si_vid_destroy_buffer(&dec->ctx);
+	si_vid_destroy_buffer(&dec->sessionctx);
 
 	FREE(dec);
 }
@@ -1096,7 +1096,7 @@ static void radeon_dec_decode_bitstream(struct pipe_video_codec *decoder,
 
 		if (new_size > buf->res->buf->size) {
 			dec->ws->buffer_unmap(buf->res->buf);
-			if (!rvid_resize_buffer(dec->screen, dec->cs, buf, new_size)) {
+			if (!si_vid_resize_buffer(dec->screen, dec->cs, buf, new_size)) {
 				RVID_ERR("Can't resize bitstream buffer!");
 				return;
 			}
@@ -1227,7 +1227,7 @@ struct pipe_video_codec *radeon_create_decoder(struct pipe_context *context,
 	dec->base.flush = radeon_dec_flush;
 
 	dec->stream_type = stream_type;
-	dec->stream_handle = rvid_alloc_stream_handle();
+	dec->stream_handle = si_vid_alloc_stream_handle();
 	dec->screen = context->screen;
 	dec->ws = ws;
 	dec->cs = ws->cs_create(rctx->ctx, RING_VCN_DEC, NULL, NULL);
@@ -1242,47 +1242,47 @@ struct pipe_video_codec *radeon_create_decoder(struct pipe_context *context,
 		if (have_it(dec))
 			msg_fb_it_size += IT_SCALING_TABLE_SIZE;
 		/* use vram to improve performance, workaround an unknown bug */
-		if (!rvid_create_buffer(dec->screen, &dec->msg_fb_it_buffers[i],
-					msg_fb_it_size, PIPE_USAGE_DEFAULT)) {
+		if (!si_vid_create_buffer(dec->screen, &dec->msg_fb_it_buffers[i],
+                                          msg_fb_it_size, PIPE_USAGE_DEFAULT)) {
 			RVID_ERR("Can't allocated message buffers.\n");
 			goto error;
 		}
 
-		if (!rvid_create_buffer(dec->screen, &dec->bs_buffers[i],
-					bs_buf_size, PIPE_USAGE_STAGING)) {
+		if (!si_vid_create_buffer(dec->screen, &dec->bs_buffers[i],
+                                          bs_buf_size, PIPE_USAGE_STAGING)) {
 			RVID_ERR("Can't allocated bitstream buffers.\n");
 			goto error;
 		}
 
-		rvid_clear_buffer(context, &dec->msg_fb_it_buffers[i]);
-		rvid_clear_buffer(context, &dec->bs_buffers[i]);
+		si_vid_clear_buffer(context, &dec->msg_fb_it_buffers[i]);
+		si_vid_clear_buffer(context, &dec->bs_buffers[i]);
 	}
 
 	dpb_size = calc_dpb_size(dec);
 
-	if (!rvid_create_buffer(dec->screen, &dec->dpb, dpb_size, PIPE_USAGE_DEFAULT)) {
+	if (!si_vid_create_buffer(dec->screen, &dec->dpb, dpb_size, PIPE_USAGE_DEFAULT)) {
 		RVID_ERR("Can't allocated dpb.\n");
 		goto error;
 	}
 
-	rvid_clear_buffer(context, &dec->dpb);
+	si_vid_clear_buffer(context, &dec->dpb);
 
 	if (dec->stream_type == RDECODE_CODEC_H264_PERF) {
 		unsigned ctx_size = calc_ctx_size_h264_perf(dec);
-		if (!rvid_create_buffer(dec->screen, &dec->ctx, ctx_size, PIPE_USAGE_DEFAULT)) {
+		if (!si_vid_create_buffer(dec->screen, &dec->ctx, ctx_size, PIPE_USAGE_DEFAULT)) {
 			RVID_ERR("Can't allocated context buffer.\n");
 			goto error;
 		}
-		rvid_clear_buffer(context, &dec->ctx);
+		si_vid_clear_buffer(context, &dec->ctx);
 	}
 
-	if (!rvid_create_buffer(dec->screen, &dec->sessionctx,
-				RDECODE_SESSION_CONTEXT_SIZE,
-				PIPE_USAGE_DEFAULT)) {
+	if (!si_vid_create_buffer(dec->screen, &dec->sessionctx,
+                                  RDECODE_SESSION_CONTEXT_SIZE,
+                                  PIPE_USAGE_DEFAULT)) {
 		RVID_ERR("Can't allocated session ctx.\n");
 		goto error;
 	}
-	rvid_clear_buffer(context, &dec->sessionctx);
+	si_vid_clear_buffer(context, &dec->sessionctx);
 
 	map_msg_fb_it_buf(dec);
 	rvcn_dec_message_create(dec);
@@ -1299,13 +1299,13 @@ error:
 	if (dec->cs) dec->ws->cs_destroy(dec->cs);
 
 	for (i = 0; i < NUM_BUFFERS; ++i) {
-		rvid_destroy_buffer(&dec->msg_fb_it_buffers[i]);
-		rvid_destroy_buffer(&dec->bs_buffers[i]);
+		si_vid_destroy_buffer(&dec->msg_fb_it_buffers[i]);
+		si_vid_destroy_buffer(&dec->bs_buffers[i]);
 	}
 
-	rvid_destroy_buffer(&dec->dpb);
-	rvid_destroy_buffer(&dec->ctx);
-	rvid_destroy_buffer(&dec->sessionctx);
+	si_vid_destroy_buffer(&dec->dpb);
+	si_vid_destroy_buffer(&dec->ctx);
+	si_vid_destroy_buffer(&dec->sessionctx);
 
 	FREE(dec);
 
