@@ -1483,6 +1483,7 @@ static void tex_fetch_args(
 				       opcode == TGSI_OPCODE_TXD,
 				       target == TGSI_TEXTURE_CUBE_ARRAY ||
 				       target == TGSI_TEXTURE_SHADOWCUBE_ARRAY,
+				       opcode == TGSI_OPCODE_LODQ,
 				       coords, derivs);
 
 	if (opcode == TGSI_OPCODE_TXD)

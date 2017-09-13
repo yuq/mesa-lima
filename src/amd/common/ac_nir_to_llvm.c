@@ -4550,15 +4550,13 @@ static void visit_tex(struct ac_nir_context *ctx, nir_tex_instr *instr)
 	}
 
 	if (instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE && coord) {
-		if (instr->is_array && instr->op != nir_texop_lod)
-			coords[3] = apply_round_slice(&ctx->ac, coords[3]);
 		for (chan = 0; chan < instr->coord_components; chan++)
 			coords[chan] = ac_to_float(&ctx->ac, coords[chan]);
 		if (instr->coord_components == 3)
 			coords[3] = LLVMGetUndef(ctx->ac.f32);
 		ac_prepare_cube_coords(&ctx->ac,
 			instr->op == nir_texop_txd, instr->is_array,
-			coords, derivs);
+			instr->op == nir_texop_lod, coords, derivs);
 		if (num_deriv_comp)
 			num_deriv_comp--;
 	}

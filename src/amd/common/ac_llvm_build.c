@@ -484,7 +484,7 @@ static void build_cube_select(LLVMBuilderRef builder,
 
 void
 ac_prepare_cube_coords(struct ac_llvm_context *ctx,
-		       bool is_deriv, bool is_array,
+		       bool is_deriv, bool is_array, bool is_lod,
 		       LLVMValueRef *coords_arg,
 		       LLVMValueRef *derivs_arg)
 {
@@ -493,6 +493,11 @@ ac_prepare_cube_coords(struct ac_llvm_context *ctx,
 	struct cube_selection_coords selcoords;
 	LLVMValueRef coords[3];
 	LLVMValueRef invma;
+
+	if (is_array && !is_lod) {
+		coords_arg[3] = ac_build_intrinsic(ctx, "llvm.rint.f32", ctx->f32,
+						   &coords_arg[3], 1, 0);
+	}
 
 	build_cube_intrinsic(ctx, coords_arg, &selcoords);
 

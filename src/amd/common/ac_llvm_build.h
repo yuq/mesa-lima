@@ -110,7 +110,7 @@ ac_build_fdiv(struct ac_llvm_context *ctx,
 
 void
 ac_prepare_cube_coords(struct ac_llvm_context *ctx,
-		       bool is_deriv, bool is_array,
+		       bool is_deriv, bool is_array, bool is_lod,
 		       LLVMValueRef *coords_arg,
 		       LLVMValueRef *derivs_arg);
 
