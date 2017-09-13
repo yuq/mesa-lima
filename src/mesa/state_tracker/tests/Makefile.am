@@ -1,18 +1,17 @@
+include $(top_srcdir)/src/gallium/Automake.inc
+
 AM_CFLAGS = \
 	$(PTHREAD_CFLAGS)
 
 AM_CXXFLAGS = \
-	$(LLVM_CXXFLAGS)
+	$(GALLIUM_DRIVER_CXXFLAGS) \
+	-std=c++11
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/gtest/include \
-	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/mapi \
 	-I$(top_builddir)/src/mesa \
 	-I$(top_srcdir)/src/mesa \
-	-I$(top_srcdir)/include \
-	-I$(top_srcdir)/src/gallium/include \
-	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_builddir)/src/compiler/glsl \
 	$(DEFINES)
 
@@ -32,7 +31,4 @@ st_renumerate_test_LDADD = \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(top_builddir)/src/gtest/libgtest.la \
 	$(GALLIUM_COMMON_LIB_DEPS) \
-	$(LIBUNWIND_LIBS) \
-	$(LLVM_LIBS) \
-	$(PTHREAD_LIBS) \
-	$(DLOPEN_LIBS)
+	$(LLVM_LIBS)
