@@ -5547,8 +5547,8 @@ ast_declarator_list::hir(exec_list *instructions,
        *    "It is a compile-time error to declare an unsized array of
        *     atomic_uint"
        */
-      if (var->type->is_unsized_array() &&
-          var->type->without_array()->base_type == GLSL_TYPE_ATOMIC_UINT) {
+      if (declared_var->type->is_unsized_array() &&
+          declared_var->type->without_array()->base_type == GLSL_TYPE_ATOMIC_UINT) {
          _mesa_glsl_error(& loc, state,
                           "Unsized array of atomic_uint is not allowed");
       }
