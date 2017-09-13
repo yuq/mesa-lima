@@ -617,6 +617,7 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
    int if_id = 0;
    int switch_id = 0;
    bool is_at_end = false;
+   bool ok = true;
    int n_scopes = 1;
 
    /* Count scopes to allocate the needed space without the need for
@@ -758,7 +759,8 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
           * Since this is not done, we have to bail out here and signal
           * that no register merge will take place.
           */
-         return false;
+         ok = false;
+         goto out;
       default: {
          for (unsigned j = 0; j < num_inst_src_regs(inst); j++) {
             const st_src_reg& src = inst->src[j];
@@ -797,8 +799,9 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
    }
    RENAME_DEBUG(cerr << "==================================\n\n");
 
+out:
    delete[] acc;
-   return true;
+   return ok;
 }
 
 /* Find the next register between [start, end) that has a life time starting
