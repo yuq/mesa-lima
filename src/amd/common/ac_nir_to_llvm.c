@@ -3466,7 +3466,7 @@ static void visit_image_store(struct ac_nir_context *ctx,
 static LLVMValueRef visit_image_atomic(struct ac_nir_context *ctx,
                                        const nir_intrinsic_instr *instr)
 {
-	LLVMValueRef params[6];
+	LLVMValueRef params[7];
 	int param_count = 0;
 	const nir_variable *var = instr->variables[0]->var;
 
