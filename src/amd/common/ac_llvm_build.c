@@ -498,8 +498,35 @@ ac_prepare_cube_coords(struct ac_llvm_context *ctx,
 	LLVMValueRef invma;
 
 	if (is_array && !is_lod) {
-		coords_arg[3] = ac_build_intrinsic(ctx, "llvm.rint.f32", ctx->f32,
-						   &coords_arg[3], 1, 0);
+		LLVMValueRef tmp = coords_arg[3];
+		tmp = ac_build_intrinsic(ctx, "llvm.rint.f32", ctx->f32, &tmp, 1, 0);
+
+		/* Section 8.9 (Texture Functions) of the GLSL 4.50 spec says:
+		 *
+		 *    "For Array forms, the array layer used will be
+		 *
+		 *       max(0, min(d−1, floor(layer+0.5)))
+		 *
+		 *     where d is the depth of the texture array and layer
+		 *     comes from the component indicated in the tables below.
+		 *     Workaroudn for an issue where the layer is taken from a
+		 *     helper invocation which happens to fall on a different
+		 *     layer due to extrapolation."
+		 *
+		 * VI and earlier attempt to implement this in hardware by
+		 * clamping the value of coords[2] = (8 * layer) + face.
+		 * Unfortunately, this means that the we end up with the wrong
+		 * face when clamping occurs.
+		 *
+		 * Clamp the layer earlier to work around the issue.
+		 */
+		if (ctx->chip_class <= VI) {
+			LLVMValueRef ge0;
+			ge0 = LLVMBuildFCmp(builder, LLVMRealOGE, tmp, ctx->f32_0, "");
+			tmp = LLVMBuildSelect(builder, ge0, tmp, ctx->f32_0, "");
+		}
+
+		coords_arg[3] = tmp;
 	}
 
 	build_cube_intrinsic(ctx, coords_arg, &selcoords);
