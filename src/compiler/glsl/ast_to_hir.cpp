@@ -4166,11 +4166,13 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
  * otherwise.
  */
 static ir_variable *
-get_variable_being_redeclared(ir_variable *var, YYLTYPE loc,
+get_variable_being_redeclared(ir_variable **var_ptr, YYLTYPE loc,
                               struct _mesa_glsl_parse_state *state,
                               bool allow_all_redeclarations,
                               bool *is_redeclaration)
 {
+   ir_variable *var = *var_ptr;
+
    /* Check if this declaration is actually a re-declaration, either to
     * resize an array or add qualifiers to an existing variable.
     *
@@ -4211,6 +4213,7 @@ get_variable_being_redeclared(ir_variable *var, YYLTYPE loc,
       earlier->type = var->type;
       delete var;
       var = NULL;
+      *var_ptr = NULL;
    } else if ((state->ARB_fragment_coord_conventions_enable ||
               state->is_version(150, 0))
               && strcmp(var->name, "gl_FragCoord") == 0
@@ -5457,7 +5460,7 @@ ast_declarator_list::hir(exec_list *instructions,
 
       bool is_redeclaration;
       ir_variable *declared_var =
-         get_variable_being_redeclared(var, decl->get_location(), state,
+         get_variable_being_redeclared(&var, decl->get_location(), state,
                                        false /* allow_all_redeclarations */,
                                        &is_redeclaration);
       if (is_redeclaration) {
@@ -8215,7 +8218,7 @@ ast_interface_block::hir(exec_list *instructions,
          if (redeclaring_per_vertex) {
             bool is_redeclaration;
             ir_variable *declared_var =
-               get_variable_being_redeclared(var, loc, state,
+               get_variable_being_redeclared(&var, loc, state,
                                              true /* allow_all_redeclarations */,
                                              &is_redeclaration);
             if (!var_is_gl_id || !is_redeclaration) {
