@@ -5459,22 +5459,21 @@ ast_declarator_list::hir(exec_list *instructions,
       bool var_is_gl_id = is_gl_identifier(var->name);
 
       bool is_redeclaration;
-      ir_variable *declared_var =
-         get_variable_being_redeclared(&var, decl->get_location(), state,
-                                       false /* allow_all_redeclarations */,
-                                       &is_redeclaration);
+      var = get_variable_being_redeclared(&var, decl->get_location(), state,
+                                          false /* allow_all_redeclarations */,
+                                          &is_redeclaration);
       if (is_redeclaration) {
          if (var_is_gl_id &&
-             declared_var->data.how_declared == ir_var_declared_in_block) {
+             var->data.how_declared == ir_var_declared_in_block) {
             _mesa_glsl_error(&loc, state,
                              "`%s' has already been redeclared using "
-                             "gl_PerVertex", declared_var->name);
+                             "gl_PerVertex", var->name);
          }
-         declared_var->data.how_declared = ir_var_declared_normally;
+         var->data.how_declared = ir_var_declared_normally;
       }
 
       if (decl->initializer != NULL) {
-         result = process_initializer(declared_var,
+         result = process_initializer(var,
                                       decl, this->type,
                                       &initializer_instructions, state);
       } else {
@@ -5494,7 +5493,7 @@ ast_declarator_list::hir(exec_list *instructions,
       }
 
       if (state->es_shader) {
-         const glsl_type *const t = declared_var->type;
+         const glsl_type *const t = var->type;
 
          /* Skip the unsized array check for TCS/TES/GS inputs & TCS outputs.
           *
@@ -5516,10 +5515,10 @@ ast_declarator_list::hir(exec_list *instructions,
           *     present, as per the following table."
           */
          const bool implicitly_sized =
-            (declared_var->data.mode == ir_var_shader_in &&
+            (var->data.mode == ir_var_shader_in &&
              state->stage >= MESA_SHADER_TESS_CTRL &&
              state->stage <= MESA_SHADER_GEOMETRY) ||
-            (declared_var->data.mode == ir_var_shader_out &&
+            (var->data.mode == ir_var_shader_out &&
              state->stage == MESA_SHADER_TESS_CTRL);
 
          if (t->is_unsized_array() && !implicitly_sized)
@@ -5550,8 +5549,8 @@ ast_declarator_list::hir(exec_list *instructions,
        *    "It is a compile-time error to declare an unsized array of
        *     atomic_uint"
        */
-      if (declared_var->type->is_unsized_array() &&
-          declared_var->type->without_array()->base_type == GLSL_TYPE_ATOMIC_UINT) {
+      if (var->type->is_unsized_array() &&
+          var->type->without_array()->base_type == GLSL_TYPE_ATOMIC_UINT) {
          _mesa_glsl_error(& loc, state,
                           "Unsized array of atomic_uint is not allowed");
       }
@@ -5575,7 +5574,7 @@ ast_declarator_list::hir(exec_list *instructions,
           *     after the initializer if present or immediately after the name
           *     being declared if not."
           */
-         if (!state->symbols->add_variable(declared_var)) {
+         if (!state->symbols->add_variable(var)) {
             YYLTYPE loc = this->get_location();
             _mesa_glsl_error(&loc, state, "name `%s' already taken in the "
                              "current scope", decl->identifier);
@@ -5588,7 +5587,7 @@ ast_declarator_list::hir(exec_list *instructions,
           * global var is decled, then the function is defined with usage of
           * the global var.  See glslparsertest's CorrectModule.frag.
           */
-         instructions->push_head(declared_var);
+         instructions->push_head(var);
       }
 
       instructions->append_list(&initializer_instructions);
@@ -8217,7 +8216,7 @@ ast_interface_block::hir(exec_list *instructions,
 
          if (redeclaring_per_vertex) {
             bool is_redeclaration;
-            ir_variable *declared_var =
+            var =
                get_variable_being_redeclared(&var, loc, state,
                                              true /* allow_all_redeclarations */,
                                              &is_redeclaration);
@@ -8225,13 +8224,13 @@ ast_interface_block::hir(exec_list *instructions,
                _mesa_glsl_error(&loc, state,
                                 "redeclaration of gl_PerVertex can only "
                                 "include built-in variables");
-            } else if (declared_var->data.how_declared == ir_var_declared_normally) {
+            } else if (var->data.how_declared == ir_var_declared_normally) {
                _mesa_glsl_error(&loc, state,
                                 "`%s' has already been redeclared",
-                                declared_var->name);
+                                var->name);
             } else {
-               declared_var->data.how_declared = ir_var_declared_in_block;
-               declared_var->reinit_interface_type(block_type);
+               var->data.how_declared = ir_var_declared_in_block;
+               var->reinit_interface_type(block_type);
             }
             continue;
          }
