@@ -29,6 +29,9 @@
 #include <assert.h>
 
 #include "shader_enums.h"
+#include "blob.h"
+
+struct glsl_type;
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,6 +45,10 @@ _mesa_glsl_initialize_types(struct _mesa_glsl_parse_state *state);
 
 extern void
 _mesa_glsl_release_types(void);
+
+void encode_type_to_blob(struct blob *blob, const struct glsl_type *type);
+
+const struct glsl_type *decode_type_from_blob(struct blob_reader *blob);
 
 #ifdef __cplusplus
 }
