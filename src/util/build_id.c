@@ -22,6 +22,7 @@
  */
 
 #ifdef HAVE_DL_ITERATE_PHDR
+#include <dlfcn.h>
 #include <link.h>
 #include <stddef.h>
 #include <string.h>
