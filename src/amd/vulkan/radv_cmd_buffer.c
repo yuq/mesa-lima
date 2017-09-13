@@ -79,10 +79,12 @@ const struct radv_dynamic_state default_dynamic_state = {
 };
 
 static void
-radv_dynamic_state_copy(struct radv_dynamic_state *dest,
+radv_bind_dynamic_state(struct radv_cmd_buffer *cmd_buffer,
 			const struct radv_dynamic_state *src)
 {
+	struct radv_dynamic_state *dest = &cmd_buffer->state.dynamic;
 	uint32_t copy_mask = src->mask;
+	uint32_t dest_mask = 0;
 
 	/* Make sure to copy the number of viewports/scissors because they can
 	 * only be specified at pipeline creation time.
@@ -91,35 +93,82 @@ radv_dynamic_state_copy(struct radv_dynamic_state *dest,
 	dest->scissor.count = src->scissor.count;
 
 	if (copy_mask & (1 << VK_DYNAMIC_STATE_VIEWPORT)) {
-		typed_memcpy(dest->viewport.viewports, src->viewport.viewports,
-			     src->viewport.count);
+		if (memcmp(&dest->viewport.viewports, &src->viewport.viewports,
+			   src->viewport.count * sizeof(VkViewport))) {
+			typed_memcpy(dest->viewport.viewports,
+				     src->viewport.viewports,
+				     src->viewport.count);
+			dest_mask |= 1 << VK_DYNAMIC_STATE_VIEWPORT;
+		}
 	}
 
 	if (copy_mask & (1 << VK_DYNAMIC_STATE_SCISSOR)) {
-		typed_memcpy(dest->scissor.scissors, src->scissor.scissors,
-			     src->scissor.count);
+		if (memcmp(&dest->scissor.scissors, &src->scissor.scissors,
+			   src->scissor.count * sizeof(VkRect2D))) {
+			typed_memcpy(dest->scissor.scissors,
+				     src->scissor.scissors, src->scissor.count);
+			dest_mask |= 1 << VK_DYNAMIC_STATE_SCISSOR;
+		}
 	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_LINE_WIDTH))
-		dest->line_width = src->line_width;
+	if (copy_mask & (1 << VK_DYNAMIC_STATE_LINE_WIDTH)) {
+		if (dest->line_width != src->line_width) {
+			dest->line_width = src->line_width;
+			dest_mask |= 1 << VK_DYNAMIC_STATE_LINE_WIDTH;
+		}
+	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_DEPTH_BIAS))
-		dest->depth_bias = src->depth_bias;
+	if (copy_mask & (1 << VK_DYNAMIC_STATE_DEPTH_BIAS)) {
+		if (memcmp(&dest->depth_bias, &src->depth_bias,
+			   sizeof(src->depth_bias))) {
+			dest->depth_bias = src->depth_bias;
+			dest_mask |= 1 << VK_DYNAMIC_STATE_DEPTH_BIAS;
+		}
+	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_BLEND_CONSTANTS))
-		typed_memcpy(dest->blend_constants, src->blend_constants, 4);
+	if (copy_mask & (1 << VK_DYNAMIC_STATE_BLEND_CONSTANTS)) {
+		if (memcmp(&dest->blend_constants, &src->blend_constants,
+			   sizeof(src->blend_constants))) {
+			typed_memcpy(dest->blend_constants,
+				     src->blend_constants, 4);
+			dest_mask |= 1 << VK_DYNAMIC_STATE_BLEND_CONSTANTS;
+		}
+	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_DEPTH_BOUNDS))
-		dest->depth_bounds = src->depth_bounds;
+	if (copy_mask & (1 << VK_DYNAMIC_STATE_DEPTH_BOUNDS)) {
+		if (memcmp(&dest->depth_bounds, &src->depth_bounds,
+			   sizeof(src->depth_bounds))) {
+			dest->depth_bounds = src->depth_bounds;
+			dest_mask |= 1 << VK_DYNAMIC_STATE_DEPTH_BOUNDS;
+		}
+	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK))
-		dest->stencil_compare_mask = src->stencil_compare_mask;
+	if (copy_mask & (1 << VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK)) {
+		if (memcmp(&dest->stencil_compare_mask,
+			   &src->stencil_compare_mask,
+			   sizeof(src->stencil_compare_mask))) {
+			dest->stencil_compare_mask = src->stencil_compare_mask;
+			dest_mask |= 1 << VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK;
+		}
+	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_STENCIL_WRITE_MASK))
-		dest->stencil_write_mask = src->stencil_write_mask;
+	if (copy_mask & (1 << VK_DYNAMIC_STATE_STENCIL_WRITE_MASK)) {
+		if (memcmp(&dest->stencil_write_mask, &src->stencil_write_mask,
+			   sizeof(src->stencil_write_mask))) {
+			dest->stencil_write_mask = src->stencil_write_mask;
+			dest_mask |= 1 << VK_DYNAMIC_STATE_STENCIL_WRITE_MASK;
+		}
+	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE))
-		dest->stencil_reference = src->stencil_reference;
+	if (copy_mask & (1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE)) {
+		if (memcmp(&dest->stencil_reference, &src->stencil_reference,
+			   sizeof(src->stencil_reference))) {
+			dest->stencil_reference = src->stencil_reference;
+			dest_mask |= 1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE;
+		}
+	}
+
+	cmd_buffer->state.dirty |= dest_mask;
 }
 
 bool radv_cmd_buffer_uses_mec(struct radv_cmd_buffer *cmd_buffer)
@@ -2531,10 +2580,7 @@ void radv_CmdBindPipeline(
 		cmd_buffer->state.dirty |= RADV_CMD_DIRTY_PIPELINE;
 		cmd_buffer->push_constant_stages |= pipeline->active_stages;
 
-		/* Apply the dynamic state from the pipeline */
-		cmd_buffer->state.dirty |= pipeline->dynamic_state.mask;
-		radv_dynamic_state_copy(&cmd_buffer->state.dynamic,
-					&pipeline->dynamic_state);
+		radv_bind_dynamic_state(cmd_buffer, &pipeline->dynamic_state);
 
 		if (pipeline->graphics.esgs_ring_size > cmd_buffer->esgs_ring_size_needed)
 			cmd_buffer->esgs_ring_size_needed = pipeline->graphics.esgs_ring_size;
