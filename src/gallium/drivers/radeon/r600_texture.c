@@ -35,6 +35,7 @@
 #include "os/os_time.h"
 #include <errno.h>
 #include <inttypes.h>
+#include "state_tracker/drm_driver.h"
 
 static void r600_texture_discard_cmask(struct r600_common_screen *rscreen,
 				       struct r600_texture *rtex);
@@ -605,13 +606,16 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 
 		/* Move a suballocated texture into a non-suballocated allocation. */
 		if (rscreen->ws->buffer_is_suballocated(res->buf) ||
-		    rtex->surface.tile_swizzle) {
+		    rtex->surface.tile_swizzle ||
+		    (rtex->resource.flags & RADEON_FLAG_NO_INTERPROCESS_SHARING &&
+		     whandle->type != DRM_API_HANDLE_TYPE_KMS)) {
 			assert(!res->b.is_shared);
 			r600_reallocate_texture_inplace(rctx, rtex,
 							PIPE_BIND_SHARED, false);
 			rctx->b.flush(&rctx->b, NULL, 0);
 			assert(res->b.b.bind & PIPE_BIND_SHARED);
 			assert(res->flags & RADEON_FLAG_NO_SUBALLOC);
+			assert(!(res->flags & RADEON_FLAG_NO_INTERPROCESS_SHARING));
 			assert(rtex->surface.tile_swizzle == 0);
 		}
 
