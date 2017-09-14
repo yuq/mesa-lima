@@ -27,6 +27,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/utsname.h>
 
 #include "sid.h"
 #include "gfx9d.h"
@@ -605,6 +606,32 @@ radv_dump_enabled_options(struct radv_device *device, FILE *f)
 	fprintf(f, "\n");
 }
 
+static void
+radv_dump_device_name(struct radv_device *device, FILE *f)
+{
+	struct radeon_info *info = &device->physical_device->rad_info;
+	char llvm_string[32] = {}, kernel_version[128] = {};
+	struct utsname uname_data;
+	const char *chip_name;
+
+	chip_name = device->ws->get_chip_name(device->ws);
+
+	if (uname(&uname_data) == 0)
+		snprintf(kernel_version, sizeof(kernel_version),
+			 " / %s", uname_data.release);
+
+	if (HAVE_LLVM > 0) {
+		snprintf(llvm_string, sizeof(llvm_string),
+			 ", LLVM %i.%i.%i", (HAVE_LLVM >> 8) & 0xff,
+			 HAVE_LLVM & 0xff, MESA_LLVM_VERSION_PATCH);
+	}
+
+	fprintf(f, "Device name: %s (%s DRM %i.%i.%i%s%s)\n\n",
+		chip_name, device->physical_device->name,
+		info->drm_major, info->drm_minor, info->drm_patchlevel,
+		kernel_version, llvm_string);
+}
+
 static bool
 radv_gpu_hang_occured(struct radv_queue *queue, enum ring_type ring)
 {
@@ -636,6 +663,9 @@ radv_check_gpu_hangs(struct radv_queue *queue, struct radeon_winsys_cs *cs)
 
 	graphics_pipeline = radv_get_saved_graphics_pipeline(device);
 	compute_pipeline = radv_get_saved_compute_pipeline(device);
+
+	fprintf(stderr, "GPU hang report:\n\n");
+	radv_dump_device_name(device, stderr);
 
 	radv_dump_enabled_options(device, stderr);
 	radv_dump_dmesg(stderr);
