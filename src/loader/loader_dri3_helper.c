@@ -391,13 +391,13 @@ dri3_handle_present_event(struct loader_dri3_drawable *draw,
       for (b = 0; b < sizeof(draw->buffers) / sizeof(draw->buffers[0]); b++) {
          struct loader_dri3_buffer *buf = draw->buffers[b];
 
-         if (buf && buf->pixmap == ie->pixmap) {
+         if (buf && buf->pixmap == ie->pixmap)
             buf->busy = 0;
-            if (draw->num_back <= b && b < LOADER_DRI3_MAX_BACK) {
-               dri3_free_render_buffer(draw, buf);
-               draw->buffers[b] = NULL;
-            }
-            break;
+
+         if (buf && draw->num_back <= b && b < LOADER_DRI3_MAX_BACK &&
+             draw->cur_blit_source != b) {
+            dri3_free_render_buffer(draw, buf);
+            draw->buffers[b] = NULL;
          }
       }
       break;
@@ -1469,10 +1469,12 @@ dri3_free_buffers(__DRIdrawable *driDrawable,
    case loader_dri3_buffer_back:
       first_id = LOADER_DRI3_BACK_ID(0);
       n_id = LOADER_DRI3_MAX_BACK;
+      draw->cur_blit_source = -1;
       break;
    case loader_dri3_buffer_front:
       first_id = LOADER_DRI3_FRONT_ID;
-      n_id = 1;
+      /* Don't free a fake front holding new backbuffer content. */
+      n_id = (draw->cur_blit_source == LOADER_DRI3_FRONT_ID) ? 0 : 1;
    }
 
    for (buf_id = first_id; buf_id < first_id + n_id; buf_id++) {
