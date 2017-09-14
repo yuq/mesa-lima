@@ -3270,6 +3270,17 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 }
 
+static void
+radv_dispatch(struct radv_cmd_buffer *cmd_buffer,
+	      const struct radv_dispatch_info *info)
+{
+	radv_flush_compute_state(cmd_buffer);
+
+	radv_emit_dispatch_packets(cmd_buffer, info);
+
+	radv_cmd_buffer_after_draw(cmd_buffer);
+}
+
 void radv_CmdDispatch(
 	VkCommandBuffer                             commandBuffer,
 	uint32_t                                    x,
@@ -3279,15 +3290,11 @@ void radv_CmdDispatch(
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	struct radv_dispatch_info info = {};
 
-	radv_flush_compute_state(cmd_buffer);
-
 	info.blocks[0] = x;
 	info.blocks[1] = y;
 	info.blocks[2] = z;
 
-	radv_emit_dispatch_packets(cmd_buffer, &info);
-
-	radv_cmd_buffer_after_draw(cmd_buffer);
+	radv_dispatch(cmd_buffer, &info);
 }
 
 void radv_CmdDispatchIndirect(
@@ -3299,14 +3306,10 @@ void radv_CmdDispatchIndirect(
 	RADV_FROM_HANDLE(radv_buffer, buffer, _buffer);
 	struct radv_dispatch_info info = {};
 
-	radv_flush_compute_state(cmd_buffer);
-
 	info.indirect = buffer;
 	info.indirect_offset = offset;
 
-	radv_emit_dispatch_packets(cmd_buffer, &info);
-
-	radv_cmd_buffer_after_draw(cmd_buffer);
+	radv_dispatch(cmd_buffer, &info);
 }
 
 void radv_unaligned_dispatch(
@@ -3322,11 +3325,7 @@ void radv_unaligned_dispatch(
 	info.blocks[2] = z;
 	info.unaligned = 1;
 
-	radv_flush_compute_state(cmd_buffer);
-
-	radv_emit_dispatch_packets(cmd_buffer, &info);
-
-	radv_cmd_buffer_after_draw(cmd_buffer);
+	radv_dispatch(cmd_buffer, &info);
 }
 
 void radv_CmdEndRenderPass(
