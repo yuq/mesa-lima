@@ -396,7 +396,8 @@ retry:
 
    pthread_mutex_unlock(&bufmgr->lock);
 
-   DBG("bo_create: buf %d (%s) %ldb\n", bo->gem_handle, bo->name, size);
+   DBG("bo_create: buf %d (%s) %llub\n", bo->gem_handle, bo->name,
+       (unsigned long long) size);
 
    return bo;
 
