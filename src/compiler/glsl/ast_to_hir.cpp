@@ -7254,11 +7254,6 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
             validate_matrix_layout_for_type(state, &loc, decl_type, NULL);
       }
 
-      if (qual->flags.q.read_only && qual->flags.q.write_only) {
-         _mesa_glsl_error(&loc, state, "buffer variable can't be both "
-                          "readonly and writeonly.");
-      }
-
       foreach_list_typed (ast_declaration, decl, link,
                           &decl_list->declarations) {
          YYLTYPE loc = decl->get_location();
@@ -7434,12 +7429,9 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
             /* For readonly and writeonly qualifiers the field definition,
              * if set, overwrites the layout qualifier.
              */
-            if (qual->flags.q.read_only) {
-               fields[i].memory_read_only = true;
-               fields[i].memory_write_only = false;
-            } else if (qual->flags.q.write_only) {
-               fields[i].memory_read_only = false;
-               fields[i].memory_write_only = true;
+            if (qual->flags.q.read_only || qual->flags.q.write_only) {
+               fields[i].memory_read_only = qual->flags.q.read_only;
+               fields[i].memory_write_only = qual->flags.q.write_only;
             } else {
                fields[i].memory_read_only =
                   layout ? layout->flags.q.read_only : 0;
