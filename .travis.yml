@@ -149,6 +149,8 @@ matrix:
         - BUILD=make
         - MAKEFLAGS="-j4"
         - MAKE_CHECK_COMMAND="true"
+        - LLVM_VERSION=3.3
+        - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
         - DRI_LOADERS="--disable-glx --disable-gbm --disable-egl"
         - DRI_DRIVERS=""
         - GALLIUM_ST="--enable-dri --disable-opencl --enable-xa --enable-nine --enable-xvmc --enable-vdpau --enable-va --enable-omx --enable-gallium-osmesa"
@@ -160,6 +162,8 @@ matrix:
       addons:
         apt:
           packages:
+            # We actually want to test against llvm-3.3
+            - llvm-3.3-dev
             # Nine requires gcc 4.6... which is the one we have right ?
             - libxvmc-dev
             # Build locally, for now.
