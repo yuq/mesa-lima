@@ -953,6 +953,47 @@ swr_change_rt(struct swr_context *ctx,
    return need_fence;
 }
 
+/*
+ * for cases where resources are shared between contexts, invalidate
+ * this ctx's resource. so it can be fetched fresh.  Old ctx's resource
+ * is already stored during a flush
+ */
+static inline void
+swr_invalidate_buffers_after_ctx_change(struct pipe_context *pipe)
+{
+   struct swr_context *ctx = swr_context(pipe);
+
+   for (uint32_t i = 0; i < ctx->framebuffer.nr_cbufs; i++) {
+      struct pipe_surface *cb = ctx->framebuffer.cbufs[i];
+      if (cb) {
+         struct swr_resource *res = swr_resource(cb->texture);
+         if (res->curr_pipe != pipe) {
+            /* if curr_pipe is NULL (first use), status should not be WRITE */
+            assert(res->curr_pipe || !(res->status & SWR_RESOURCE_WRITE));
+            if (res->status & SWR_RESOURCE_WRITE) {
+               swr_invalidate_render_target(pipe, i, cb->width, cb->height);
+            }
+         }
+         res->curr_pipe = pipe;
+      }
+   }
+   if (ctx->framebuffer.zsbuf) {
+      struct pipe_surface *zb = ctx->framebuffer.zsbuf;
+      if (zb) {
+         struct swr_resource *res = swr_resource(zb->texture);
+         if (res->curr_pipe != pipe) {
+            /* if curr_pipe is NULL (first use), status should not be WRITE */
+            assert(res->curr_pipe || !(res->status & SWR_RESOURCE_WRITE));
+            if (res->status & SWR_RESOURCE_WRITE) {
+               swr_invalidate_render_target(pipe, SWR_ATTACHMENT_DEPTH, zb->width, zb->height);
+               swr_invalidate_render_target(pipe, SWR_ATTACHMENT_STENCIL, zb->width, zb->height);
+            }
+         }
+         res->curr_pipe = pipe;
+      }
+   }
+}
+
 static inline void
 swr_user_vbuf_range(const struct pipe_draw_info *info,
                     const struct swr_vertex_element_state *velems,
@@ -1039,6 +1080,9 @@ swr_update_derived(struct pipe_context *pipe,
    /* Any state that requires dirty flags to be re-triggered sets this mask */
    /* For example, user_buffer vertex and index buffers. */
    unsigned post_update_dirty_flags = 0;
+
+   /* bring resources that changed context up-to-date */
+   swr_invalidate_buffers_after_ctx_change(pipe);
 
    /* Render Targets */
    if (ctx->dirty & SWR_NEW_FRAMEBUFFER) {

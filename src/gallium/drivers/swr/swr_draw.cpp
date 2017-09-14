@@ -239,14 +239,17 @@ swr_flush(struct pipe_context *pipe,
 {
    struct swr_context *ctx = swr_context(pipe);
    struct swr_screen *screen = swr_screen(pipe->screen);
-   struct pipe_surface *cb = ctx->framebuffer.cbufs[0];
 
-   /* If the current renderTarget is the display surface, store tiles back to
-    * the surface, in preparation for present (swr_flush_frontbuffer).
-    * Other renderTargets get stored back when attachment changes or
-    * swr_surface_destroy */
-   if (cb && swr_resource(cb->texture)->display_target)
-      swr_store_dirty_resource(pipe, cb->texture, SWR_TILE_RESOLVED);
+   for (int i=0; i < ctx->framebuffer.nr_cbufs; i++) {
+      struct pipe_surface *cb = ctx->framebuffer.cbufs[i];
+      if (cb) {
+         swr_store_dirty_resource(pipe, cb->texture, SWR_TILE_RESOLVED);
+      }
+   }
+   if (ctx->framebuffer.zsbuf) {
+      swr_store_dirty_resource(pipe, ctx->framebuffer.zsbuf->texture,
+                               SWR_TILE_RESOLVED);
+   }
 
    if (fence)
       swr_fence_reference(pipe->screen, fence, screen->flush_fence);

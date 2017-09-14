@@ -365,10 +365,20 @@ swr_destroy(struct pipe_context *pipe)
       util_blitter_destroy(ctx->blitter);
 
    for (unsigned i = 0; i < PIPE_MAX_COLOR_BUFS; i++) {
-      pipe_surface_reference(&ctx->framebuffer.cbufs[i], NULL);
+      if (ctx->framebuffer.cbufs[i]) {
+         struct swr_resource *res = swr_resource(ctx->framebuffer.cbufs[i]->texture);
+         /* NULL curr_pipe, so we don't have a reference to a deleted pipe */
+         res->curr_pipe = NULL;
+         pipe_surface_reference(&ctx->framebuffer.cbufs[i], NULL);
+      }
    }
 
-   pipe_surface_reference(&ctx->framebuffer.zsbuf, NULL);
+   if (ctx->framebuffer.zsbuf) {
+      struct swr_resource *res = swr_resource(ctx->framebuffer.zsbuf->texture);
+      /* NULL curr_pipe, so we don't have a reference to a deleted pipe */
+      res->curr_pipe = NULL;
+      pipe_surface_reference(&ctx->framebuffer.zsbuf, NULL);
+   }
 
    for (unsigned i = 0; i < ARRAY_SIZE(ctx->sampler_views[0]); i++) {
       pipe_sampler_view_reference(&ctx->sampler_views[PIPE_SHADER_FRAGMENT][i], NULL);

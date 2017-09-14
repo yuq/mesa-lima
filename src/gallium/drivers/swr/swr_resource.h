@@ -54,6 +54,9 @@ struct swr_resource {
    size_t secondary_mip_offsets[PIPE_MAX_TEXTURE_LEVELS];
 
    enum swr_resource_status status;
+
+   /* last pipe that used (validated) this resource */
+   struct pipe_context *curr_pipe;
 };
 
 
