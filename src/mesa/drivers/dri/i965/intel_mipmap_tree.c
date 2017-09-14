@@ -2854,6 +2854,7 @@ intel_miptree_make_shareable(struct brw_context *brw,
        */
       free(mt->aux_state);
       mt->aux_state = NULL;
+      brw->ctx.NewDriverState |= BRW_NEW_AUX_STATE;
    }
 
    if (mt->hiz_buf) {
@@ -2870,6 +2871,7 @@ intel_miptree_make_shareable(struct brw_context *brw,
        */
       free(mt->aux_state);
       mt->aux_state = NULL;
+      brw->ctx.NewDriverState |= BRW_NEW_AUX_STATE;
    }
 
    mt->aux_usage = ISL_AUX_USAGE_NONE;
