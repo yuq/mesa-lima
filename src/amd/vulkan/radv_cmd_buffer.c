@@ -3126,16 +3126,6 @@ void radv_CmdDrawIndexedIndirectCountAMD(
 	                                     maxDrawCount, stride);
 }
 
-static void
-radv_flush_compute_state(struct radv_cmd_buffer *cmd_buffer)
-{
-	radv_emit_compute_pipeline(cmd_buffer);
-	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_COMPUTE_BIT);
-	radv_flush_constants(cmd_buffer, cmd_buffer->state.compute_pipeline,
-			     VK_SHADER_STAGE_COMPUTE_BIT);
-	si_emit_cache_flush(cmd_buffer);
-}
-
 struct radv_dispatch_info {
 	/**
 	 * Determine the layout of the grid (in block units) to be used.
@@ -3274,7 +3264,13 @@ static void
 radv_dispatch(struct radv_cmd_buffer *cmd_buffer,
 	      const struct radv_dispatch_info *info)
 {
-	radv_flush_compute_state(cmd_buffer);
+	radv_emit_compute_pipeline(cmd_buffer);
+
+	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_COMPUTE_BIT);
+	radv_flush_constants(cmd_buffer, cmd_buffer->state.compute_pipeline,
+			     VK_SHADER_STAGE_COMPUTE_BIT);
+
+	si_emit_cache_flush(cmd_buffer);
 
 	radv_emit_dispatch_packets(cmd_buffer, info);
 
