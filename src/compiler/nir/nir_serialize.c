@@ -1199,3 +1199,22 @@ nir_deserialize(void *mem_ctx,
 
    return ctx.nir;
 }
+
+nir_shader *
+nir_shader_serialize_deserialize(void *mem_ctx, nir_shader *s)
+{
+   const struct nir_shader_compiler_options *options = s->options;
+
+   struct blob writer;
+   blob_init(&writer);
+   nir_serialize(&writer, s);
+   ralloc_free(s);
+
+   struct blob_reader reader;
+   blob_reader_init(&reader, writer.data, writer.size);
+   nir_shader *ns = nir_deserialize(mem_ctx, options, &reader);
+
+   blob_finish(&writer);
+
+   return ns;
+}
