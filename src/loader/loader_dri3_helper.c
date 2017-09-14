@@ -1639,6 +1639,7 @@ loader_dri3_close_screen(__DRIscreen *dri_screen)
  * Find a potentially new back buffer, and if it's not been allocated yet and
  * in addition needs initializing, then try to allocate and initialize it.
  */
+#include <stdio.h>
 static struct loader_dri3_buffer *
 dri3_find_back_alloc(struct loader_dri3_drawable *draw)
 {
@@ -1646,16 +1647,36 @@ dri3_find_back_alloc(struct loader_dri3_drawable *draw)
    int id;
 
    id = dri3_find_back(draw);
-   back = (id >= 0) ? draw->buffers[id] : NULL;
+   if (id < 0)
+      return NULL;
 
-   if (back || (id >= 0 && draw->back_format != __DRI_IMAGE_FORMAT_NONE)) {
-      if (dri3_update_drawable(draw->dri_drawable, draw)) {
-         (void) dri3_get_buffer(draw->dri_drawable,
-                                draw->back_format,
-                                loader_dri3_buffer_back,
-                                draw);
-         back = (id >= 0) ? draw->buffers[id] : NULL;
-      }
+   back = draw->buffers[id];
+   /* Allocate a new back if we haven't got one */
+   if (!back && draw->back_format != __DRI_IMAGE_FORMAT_NONE &&
+       dri3_update_drawable(draw->dri_drawable, draw))
+      back = dri3_alloc_render_buffer(draw, draw->back_format,
+                                      draw->width, draw->height, draw->depth);
+
+   if (!back)
+      return NULL;
+
+   draw->buffers[id] = back;
+
+   /* If necessary, prefill the back with data according to swap_method mode. */
+   if (draw->cur_blit_source != -1 &&
+       draw->buffers[draw->cur_blit_source] &&
+       back != draw->buffers[draw->cur_blit_source]) {
+      struct loader_dri3_buffer *source = draw->buffers[draw->cur_blit_source];
+
+      dri3_fence_await(draw->conn, draw, source);
+      dri3_fence_await(draw->conn, draw, back);
+      (void) loader_dri3_blit_image(draw,
+                                    back->image,
+                                    source->image,
+                                    0, 0, draw->width, draw->height,
+                                    0, 0, 0);
+      back->last_swap = source->last_swap;
+      draw->cur_blit_source = -1;
    }
 
    return back;
