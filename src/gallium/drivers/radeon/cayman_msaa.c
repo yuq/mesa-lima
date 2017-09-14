@@ -36,7 +36,7 @@ static const uint32_t eg_sample_locs_2x[4] = {
 };
 static const unsigned eg_max_dist_2x = 4;
 /* 4xMSAA
- * There are 4 locations: (-2, 6), (6, -2), (-6, 2), (2, 6). */
+ * There are 4 locations: (-2, -6), (6, -2), (-6, 2), (2, 6). */
 static const uint32_t eg_sample_locs_4x[4] = {
 	FILL_SREG(-2, -6, 6, -2, -6, 2, 2, 6),
 	FILL_SREG(-2, -6, 6, -2, -6, 2, 2, 6),
