@@ -1038,7 +1038,7 @@ const struct brw_tracked_state gen6_renderbuffer_surfaces = {
    .dirty = {
       .mesa = _NEW_BUFFERS,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_FAST_CLEAR_COLOR,
+             BRW_NEW_AUX_STATE,
    },
    .emit = update_renderbuffer_surfaces,
 };
@@ -1119,7 +1119,7 @@ const struct brw_tracked_state brw_renderbuffer_read_surfaces = {
    .dirty = {
       .mesa = _NEW_BUFFERS,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_FAST_CLEAR_COLOR |
+             BRW_NEW_AUX_STATE |
              BRW_NEW_FS_PROG_DATA,
    },
    .emit = update_renderbuffer_read_surfaces,
@@ -1216,7 +1216,7 @@ const struct brw_tracked_state brw_texture_surfaces = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_FAST_CLEAR_COLOR |
+             BRW_NEW_AUX_STATE |
              BRW_NEW_FRAGMENT_PROGRAM |
              BRW_NEW_FS_PROG_DATA |
              BRW_NEW_GEOMETRY_PROGRAM |
@@ -1259,7 +1259,7 @@ const struct brw_tracked_state brw_cs_texture_surfaces = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_COMPUTE_PROGRAM |
-             BRW_NEW_FAST_CLEAR_COLOR,
+             BRW_NEW_AUX_STATE,
    },
    .emit = brw_update_cs_texture_surfaces,
 };
@@ -1467,7 +1467,7 @@ const struct brw_tracked_state brw_cs_image_surfaces = {
       .mesa = _NEW_TEXTURE | _NEW_PROGRAM,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_CS_PROG_DATA |
-             BRW_NEW_FAST_CLEAR_COLOR |
+             BRW_NEW_AUX_STATE |
              BRW_NEW_IMAGE_UNITS
    },
    .emit = brw_upload_cs_image_surfaces,
@@ -1653,7 +1653,7 @@ const struct brw_tracked_state brw_wm_image_surfaces = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_FAST_CLEAR_COLOR |
+             BRW_NEW_AUX_STATE |
              BRW_NEW_FRAGMENT_PROGRAM |
              BRW_NEW_FS_PROG_DATA |
              BRW_NEW_IMAGE_UNITS

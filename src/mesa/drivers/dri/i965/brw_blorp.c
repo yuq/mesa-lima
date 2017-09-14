@@ -868,7 +868,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
        * on the next draw call.
        */
       if (!same_clear_color)
-         ctx->NewDriverState |= BRW_NEW_FAST_CLEAR_COLOR;
+         ctx->NewDriverState |= BRW_NEW_AUX_STATE;
 
       DBG("%s (fast) to mt %p level %d layers %d+%d\n", __FUNCTION__,
           irb->mt, irb->mt_level, irb->mt_layer, num_layers);

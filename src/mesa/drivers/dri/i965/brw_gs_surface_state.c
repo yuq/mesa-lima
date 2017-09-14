@@ -129,7 +129,7 @@ const struct brw_tracked_state brw_gs_image_surfaces = {
    .dirty = {
       .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_FAST_CLEAR_COLOR |
+             BRW_NEW_AUX_STATE |
              BRW_NEW_GEOMETRY_PROGRAM |
              BRW_NEW_GS_PROG_DATA |
              BRW_NEW_IMAGE_UNITS,
