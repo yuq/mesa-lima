@@ -1373,30 +1373,30 @@ dri3_get_buffer(__DRIdrawable *driDrawable,
       /* When resizing, copy the contents of the old buffer, waiting for that
        * copy to complete using our fences before proceeding
        */
-      switch (buffer_type) {
-      case loader_dri3_buffer_back:
-         if (buffer) {
-            if (!buffer->linear_buffer) {
-               dri3_fence_reset(draw->conn, new_buffer);
-               dri3_fence_await(draw->conn, draw, buffer);
-               dri3_copy_area(draw->conn,
-                              buffer->pixmap,
-                              new_buffer->pixmap,
-                              dri3_drawable_gc(draw),
-                              0, 0, 0, 0,
-                              draw->width, draw->height);
-               dri3_fence_trigger(draw->conn, new_buffer);
-            } else if (draw->vtable->in_current_context(draw)) {
-               (void) loader_dri3_blit_image(draw,
-                                             new_buffer->image,
-                                             buffer->image,
-                                             0, 0, draw->width, draw->height,
-                                             0, 0, 0);
-            }
-            dri3_free_render_buffer(draw, buffer);
+      if ((buffer_type == loader_dri3_buffer_back ||
+           (buffer_type == loader_dri3_buffer_front && draw->have_fake_front))
+          && buffer) {
+
+         /* Fill the new buffer with data from an old buffer */
+         dri3_fence_await(draw->conn, draw, buffer);
+         if (!loader_dri3_blit_image(draw,
+                                     new_buffer->image,
+                                     buffer->image,
+                                     0, 0, draw->width, draw->height,
+                                     0, 0, 0) &&
+             !buffer->linear_buffer) {
+            dri3_fence_reset(draw->conn, new_buffer);
+            dri3_copy_area(draw->conn,
+                           buffer->pixmap,
+                           new_buffer->pixmap,
+                           dri3_drawable_gc(draw),
+                           0, 0, 0, 0,
+                           draw->width, draw->height);
+            dri3_fence_trigger(draw->conn, new_buffer);
          }
-         break;
-      case loader_dri3_buffer_front:
+         dri3_free_render_buffer(draw, buffer);
+      } else if (buffer_type == loader_dri3_buffer_front) {
+         /* Fill the new fake front with data from a real front */
          loader_dri3_swapbuffer_barrier(draw);
          dri3_fence_reset(draw->conn, new_buffer);
          dri3_copy_area(draw->conn,
@@ -1407,8 +1407,7 @@ dri3_get_buffer(__DRIdrawable *driDrawable,
                         draw->width, draw->height);
          dri3_fence_trigger(draw->conn, new_buffer);
 
-         if (new_buffer->linear_buffer &&
-             draw->vtable->in_current_context(draw)) {
+         if (new_buffer->linear_buffer) {
             dri3_fence_await(draw->conn, draw, new_buffer);
             (void) loader_dri3_blit_image(draw,
                                           new_buffer->image,
@@ -1416,7 +1415,6 @@ dri3_get_buffer(__DRIdrawable *driDrawable,
                                           0, 0, draw->width, draw->height,
                                           0, 0, 0);
          }
-         break;
       }
       buffer = new_buffer;
       draw->buffers[buf_id] = buffer;
