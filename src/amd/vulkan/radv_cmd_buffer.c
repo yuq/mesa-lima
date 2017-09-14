@@ -3136,6 +3136,140 @@ radv_flush_compute_state(struct radv_cmd_buffer *cmd_buffer)
 	si_emit_cache_flush(cmd_buffer);
 }
 
+struct radv_dispatch_info {
+	/**
+	 * Determine the layout of the grid (in block units) to be used.
+	 */
+	uint32_t blocks[3];
+
+	/**
+	 * Whether it's an unaligned compute dispatch.
+	 */
+	bool unaligned;
+
+	/**
+	 * Indirect compute parameters resource.
+	 */
+	struct radv_buffer *indirect;
+	uint64_t indirect_offset;
+};
+
+static void
+radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
+			   const struct radv_dispatch_info *info)
+{
+	struct radv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
+	struct radv_shader_variant *compute_shader = pipeline->shaders[MESA_SHADER_COMPUTE];
+	struct radeon_winsys *ws = cmd_buffer->device->ws;
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
+	struct ac_userdata_info *loc;
+	uint8_t grid_used;
+
+	grid_used = compute_shader->info.info.cs.grid_components_used;
+
+	loc = radv_lookup_user_sgpr(pipeline, MESA_SHADER_COMPUTE,
+				    AC_UD_CS_GRID_SIZE);
+
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(ws, cs, 25);
+
+	if (info->indirect) {
+		uint64_t va = ws->buffer_get_va(info->indirect->bo);
+
+		va += info->indirect->offset + info->indirect_offset;
+
+		ws->cs_add_buffer(cs, info->indirect->bo, 8);
+
+		if (loc->sgpr_idx != -1) {
+			for (unsigned i = 0; i < grid_used; ++i) {
+				radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
+				radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
+						COPY_DATA_DST_SEL(COPY_DATA_REG));
+				radeon_emit(cs, (va +  4 * i));
+				radeon_emit(cs, (va + 4 * i) >> 32);
+				radeon_emit(cs, ((R_00B900_COMPUTE_USER_DATA_0
+						 + loc->sgpr_idx * 4) >> 2) + i);
+				radeon_emit(cs, 0);
+			}
+		}
+
+		if (radv_cmd_buffer_uses_mec(cmd_buffer)) {
+			radeon_emit(cs, PKT3(PKT3_DISPATCH_INDIRECT, 2, 0) |
+					PKT3_SHADER_TYPE_S(1));
+			radeon_emit(cs, va);
+			radeon_emit(cs, va >> 32);
+			radeon_emit(cs, 1);
+		} else {
+			radeon_emit(cs, PKT3(PKT3_SET_BASE, 2, 0) |
+					PKT3_SHADER_TYPE_S(1));
+			radeon_emit(cs, 1);
+			radeon_emit(cs, va);
+			radeon_emit(cs, va >> 32);
+
+			radeon_emit(cs, PKT3(PKT3_DISPATCH_INDIRECT, 1, 0) |
+					PKT3_SHADER_TYPE_S(1));
+			radeon_emit(cs, 0);
+			radeon_emit(cs, 1);
+		}
+	} else {
+		unsigned blocks[3] = { info->blocks[0], info->blocks[1], info->blocks[2] };
+		unsigned dispatch_initiator = S_00B800_COMPUTE_SHADER_EN(1);
+
+		if (info->unaligned) {
+			unsigned *cs_block_size = compute_shader->info.cs.block_size;
+			unsigned remainder[3];
+
+			/* If aligned, these should be an entire block size,
+			 * not 0.
+			 */
+			remainder[0] = blocks[0] + cs_block_size[0] -
+				       align_u32_npot(blocks[0], cs_block_size[0]);
+			remainder[1] = blocks[1] + cs_block_size[1] -
+				       align_u32_npot(blocks[1], cs_block_size[1]);
+			remainder[2] = blocks[2] + cs_block_size[2] -
+				       align_u32_npot(blocks[2], cs_block_size[2]);
+
+			blocks[0] = round_up_u32(blocks[0], cs_block_size[0]);
+			blocks[1] = round_up_u32(blocks[1], cs_block_size[1]);
+			blocks[2] = round_up_u32(blocks[2], cs_block_size[2]);
+
+			radeon_set_sh_reg_seq(cs, R_00B81C_COMPUTE_NUM_THREAD_X, 3);
+			radeon_emit(cs,
+				    S_00B81C_NUM_THREAD_FULL(cs_block_size[0]) |
+				    S_00B81C_NUM_THREAD_PARTIAL(remainder[0]));
+			radeon_emit(cs,
+				    S_00B81C_NUM_THREAD_FULL(cs_block_size[1]) |
+				    S_00B81C_NUM_THREAD_PARTIAL(remainder[1]));
+			radeon_emit(cs,
+				    S_00B81C_NUM_THREAD_FULL(cs_block_size[2]) |
+				    S_00B81C_NUM_THREAD_PARTIAL(remainder[2]));
+
+			dispatch_initiator |= S_00B800_PARTIAL_TG_EN(1);
+		}
+
+		if (loc->sgpr_idx != -1) {
+			assert(!loc->indirect);
+			assert(loc->num_sgprs == grid_used);
+
+			radeon_set_sh_reg_seq(cs, R_00B900_COMPUTE_USER_DATA_0 +
+						  loc->sgpr_idx * 4, grid_used);
+			radeon_emit(cs, blocks[0]);
+			if (grid_used > 1)
+				radeon_emit(cs, blocks[1]);
+			if (grid_used > 2)
+				radeon_emit(cs, blocks[2]);
+		}
+
+		radeon_emit(cs, PKT3(PKT3_DISPATCH_DIRECT, 3, 0) |
+				PKT3_SHADER_TYPE_S(1));
+		radeon_emit(cs, blocks[0]);
+		radeon_emit(cs, blocks[1]);
+		radeon_emit(cs, blocks[2]);
+		radeon_emit(cs, dispatch_initiator);
+	}
+
+	assert(cmd_buffer->cs->cdw <= cdw_max);
+}
+
 void radv_CmdDispatch(
 	VkCommandBuffer                             commandBuffer,
 	uint32_t                                    x,
@@ -3143,33 +3277,16 @@ void radv_CmdDispatch(
 	uint32_t                                    z)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	struct radv_dispatch_info info = {};
 
 	radv_flush_compute_state(cmd_buffer);
 
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 10);
+	info.blocks[0] = x;
+	info.blocks[1] = y;
+	info.blocks[2] = z;
 
-	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.compute_pipeline,
-							     MESA_SHADER_COMPUTE, AC_UD_CS_GRID_SIZE);
-	if (loc->sgpr_idx != -1) {
-		assert(!loc->indirect);
-		uint8_t grid_used = cmd_buffer->state.compute_pipeline->shaders[MESA_SHADER_COMPUTE]->info.info.cs.grid_components_used;
-		assert(loc->num_sgprs == grid_used);
-		radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B900_COMPUTE_USER_DATA_0 + loc->sgpr_idx * 4, grid_used);
-		radeon_emit(cmd_buffer->cs, x);
-		if (grid_used > 1)
-			radeon_emit(cmd_buffer->cs, y);
-		if (grid_used > 2)
-			radeon_emit(cmd_buffer->cs, z);
-	}
+	radv_emit_dispatch_packets(cmd_buffer, &info);
 
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_DISPATCH_DIRECT, 3, 0) |
-		    PKT3_SHADER_TYPE_S(1));
-	radeon_emit(cmd_buffer->cs, x);
-	radeon_emit(cmd_buffer->cs, y);
-	radeon_emit(cmd_buffer->cs, z);
-	radeon_emit(cmd_buffer->cs, 1);
-
-	assert(cmd_buffer->cs->cdw <= cdw_max);
 	radv_cmd_buffer_after_draw(cmd_buffer);
 }
 
@@ -3180,49 +3297,15 @@ void radv_CmdDispatchIndirect(
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	RADV_FROM_HANDLE(radv_buffer, buffer, _buffer);
-	uint64_t va = cmd_buffer->device->ws->buffer_get_va(buffer->bo);
-	va += buffer->offset + offset;
-
-	cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs, buffer->bo, 8);
+	struct radv_dispatch_info info = {};
 
 	radv_flush_compute_state(cmd_buffer);
 
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 25);
-	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.compute_pipeline,
-							     MESA_SHADER_COMPUTE, AC_UD_CS_GRID_SIZE);
-	if (loc->sgpr_idx != -1) {
-		uint8_t grid_used = cmd_buffer->state.compute_pipeline->shaders[MESA_SHADER_COMPUTE]->info.info.cs.grid_components_used;
-		for (unsigned i = 0; i < grid_used; ++i) {
-			radeon_emit(cmd_buffer->cs, PKT3(PKT3_COPY_DATA, 4, 0));
-			radeon_emit(cmd_buffer->cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
-				    COPY_DATA_DST_SEL(COPY_DATA_REG));
-			radeon_emit(cmd_buffer->cs, (va +  4 * i));
-			radeon_emit(cmd_buffer->cs, (va + 4 * i) >> 32);
-			radeon_emit(cmd_buffer->cs, ((R_00B900_COMPUTE_USER_DATA_0 + loc->sgpr_idx * 4) >> 2) + i);
-			radeon_emit(cmd_buffer->cs, 0);
-		}
-	}
+	info.indirect = buffer;
+	info.indirect_offset = offset;
 
-	if (radv_cmd_buffer_uses_mec(cmd_buffer)) {
-		radeon_emit(cmd_buffer->cs, PKT3(PKT3_DISPATCH_INDIRECT, 2, 0) |
-					PKT3_SHADER_TYPE_S(1));
-		radeon_emit(cmd_buffer->cs, va);
-		radeon_emit(cmd_buffer->cs, va >> 32);
-		radeon_emit(cmd_buffer->cs, 1);
-	} else {
-		radeon_emit(cmd_buffer->cs, PKT3(PKT3_SET_BASE, 2, 0) |
-					PKT3_SHADER_TYPE_S(1));
-		radeon_emit(cmd_buffer->cs, 1);
-		radeon_emit(cmd_buffer->cs, va);
-		radeon_emit(cmd_buffer->cs, va >> 32);
+	radv_emit_dispatch_packets(cmd_buffer, &info);
 
-		radeon_emit(cmd_buffer->cs, PKT3(PKT3_DISPATCH_INDIRECT, 1, 0) |
-					PKT3_SHADER_TYPE_S(1));
-		radeon_emit(cmd_buffer->cs, 0);
-		radeon_emit(cmd_buffer->cs, 1);
-	}
-
-	assert(cmd_buffer->cs->cdw <= cdw_max);
 	radv_cmd_buffer_after_draw(cmd_buffer);
 }
 
@@ -3232,54 +3315,17 @@ void radv_unaligned_dispatch(
 	uint32_t                                    y,
 	uint32_t                                    z)
 {
-	struct radv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
-	struct radv_shader_variant *compute_shader = pipeline->shaders[MESA_SHADER_COMPUTE];
-	uint32_t blocks[3], remainder[3];
+	struct radv_dispatch_info info = {};
 
-	blocks[0] = round_up_u32(x, compute_shader->info.cs.block_size[0]);
-	blocks[1] = round_up_u32(y, compute_shader->info.cs.block_size[1]);
-	blocks[2] = round_up_u32(z, compute_shader->info.cs.block_size[2]);
-
-	/* If aligned, these should be an entire block size, not 0 */
-	remainder[0] = x + compute_shader->info.cs.block_size[0] - align_u32_npot(x, compute_shader->info.cs.block_size[0]);
-	remainder[1] = y + compute_shader->info.cs.block_size[1] - align_u32_npot(y, compute_shader->info.cs.block_size[1]);
-	remainder[2] = z + compute_shader->info.cs.block_size[2] - align_u32_npot(z, compute_shader->info.cs.block_size[2]);
+	info.blocks[0] = x;
+	info.blocks[1] = y;
+	info.blocks[2] = z;
+	info.unaligned = 1;
 
 	radv_flush_compute_state(cmd_buffer);
 
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 15);
+	radv_emit_dispatch_packets(cmd_buffer, &info);
 
-	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B81C_COMPUTE_NUM_THREAD_X, 3);
-	radeon_emit(cmd_buffer->cs,
-		    S_00B81C_NUM_THREAD_FULL(compute_shader->info.cs.block_size[0]) |
-		    S_00B81C_NUM_THREAD_PARTIAL(remainder[0]));
-	radeon_emit(cmd_buffer->cs,
-		    S_00B81C_NUM_THREAD_FULL(compute_shader->info.cs.block_size[1]) |
-		    S_00B81C_NUM_THREAD_PARTIAL(remainder[1]));
-	radeon_emit(cmd_buffer->cs,
-		    S_00B81C_NUM_THREAD_FULL(compute_shader->info.cs.block_size[2]) |
-		    S_00B81C_NUM_THREAD_PARTIAL(remainder[2]));
-
-	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.compute_pipeline,
-							     MESA_SHADER_COMPUTE, AC_UD_CS_GRID_SIZE);
-	if (loc->sgpr_idx != -1) {
-		uint8_t grid_used = cmd_buffer->state.compute_pipeline->shaders[MESA_SHADER_COMPUTE]->info.info.cs.grid_components_used;
-		radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B900_COMPUTE_USER_DATA_0 + loc->sgpr_idx * 4, grid_used);
-		radeon_emit(cmd_buffer->cs, blocks[0]);
-		if (grid_used > 1)
-			radeon_emit(cmd_buffer->cs, blocks[1]);
-		if (grid_used > 2)
-			radeon_emit(cmd_buffer->cs, blocks[2]);
-	}
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_DISPATCH_DIRECT, 3, 0) |
-		    PKT3_SHADER_TYPE_S(1));
-	radeon_emit(cmd_buffer->cs, blocks[0]);
-	radeon_emit(cmd_buffer->cs, blocks[1]);
-	radeon_emit(cmd_buffer->cs, blocks[2]);
-	radeon_emit(cmd_buffer->cs, S_00B800_COMPUTE_SHADER_EN(1) |
-	                            S_00B800_PARTIAL_TG_EN(1));
-
-	assert(cmd_buffer->cs->cdw <= cdw_max);
 	radv_cmd_buffer_after_draw(cmd_buffer);
 }
 
