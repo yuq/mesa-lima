@@ -2771,9 +2771,10 @@ void radv_CmdBeginRenderPass(
 	cmd_buffer->state.framebuffer = framebuffer;
 	cmd_buffer->state.pass = pass;
 	cmd_buffer->state.render_area = pRenderPassBegin->renderArea;
+
 	result = radv_cmd_state_setup_attachments(cmd_buffer, pass, pRenderPassBegin);
 	if (result != VK_SUCCESS)
-		cmd_buffer->record_result = result;
+		return;
 
 	radv_cmd_buffer_set_subpass(cmd_buffer, pass->subpasses, true);
 	assert(cmd_buffer->cs->cdw <= cdw_max);
