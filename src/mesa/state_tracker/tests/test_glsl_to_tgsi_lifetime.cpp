@@ -1374,10 +1374,14 @@ MockShader::MockShader(const vector<MockCodelineWithSwizzle>& source):
          next_instr->dst[k] = create_dst_register(i.dst[k].first, i.dst[k].second);
       }
       next_instr->tex_offset_num_offset = i.tex_offsets.size();
-      next_instr->tex_offsets = new st_src_reg[i.tex_offsets.size()];
-      for (unsigned k = 0; k < i.tex_offsets.size(); ++k) {
-         next_instr->tex_offsets[k] = create_src_register(i.tex_offsets[k].first,
-                                                          i.tex_offsets[k].second);
+      if (next_instr->tex_offset_num_offset > 0) {
+         next_instr->tex_offsets = new st_src_reg[i.tex_offsets.size()];
+         for (unsigned k = 0; k < i.tex_offsets.size(); ++k) {
+            next_instr->tex_offsets[k] = create_src_register(i.tex_offsets[k].first,
+                                                             i.tex_offsets[k].second);
+         }
+      } else {
+         next_instr->tex_offsets = nullptr;
       }
       program->push_tail(next_instr);
    }
@@ -1407,9 +1411,13 @@ MockShader::MockShader(const vector<MockCodeline>& source):
          next_instr->dst[k] = create_dst_register(i.dst[k]);
       }
       next_instr->tex_offset_num_offset = i.tex_offsets.size();
-      next_instr->tex_offsets = new st_src_reg[i.tex_offsets.size()];
-      for (unsigned k = 0; k < i.tex_offsets.size(); ++k) {
-         next_instr->tex_offsets[k] = create_src_register(i.tex_offsets[k]);
+      if (next_instr->tex_offset_num_offset > 0) {
+         next_instr->tex_offsets = new st_src_reg[i.tex_offsets.size()];
+         for (unsigned k = 0; k < i.tex_offsets.size(); ++k) {
+            next_instr->tex_offsets[k] = create_src_register(i.tex_offsets[k]);
+         }
+      } else {
+         next_instr->tex_offsets = nullptr;
       }
       program->push_tail(next_instr);
    }
