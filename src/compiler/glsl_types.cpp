@@ -2149,6 +2149,8 @@ encode_type_to_blob(struct blob *blob, const glsl_type *type)
       }
       return;
    case GLSL_TYPE_VOID:
+      encoding = (type->base_type << 24);
+      break;
    case GLSL_TYPE_ERROR:
    default:
       assert(!"Cannot encode type!");
@@ -2230,6 +2232,7 @@ decode_type_from_blob(struct blob_reader *blob)
       return t;
    }
    case GLSL_TYPE_VOID:
+      return glsl_type::void_type;
    case GLSL_TYPE_ERROR:
    default:
       assert(!"Cannot decode type!");
