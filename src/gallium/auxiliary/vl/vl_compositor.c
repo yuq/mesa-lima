@@ -310,7 +310,7 @@ create_frag_shader_weave_rgb(struct vl_compositor *c)
 }
 
 static void *
-create_frag_shader_weave_yuv(struct vl_compositor *c, bool y)
+create_frag_shader_deint_yuv(struct vl_compositor *c, bool y, bool w)
 {
    struct ureg_program *shader;
    struct ureg_dst texel, fragment;
@@ -322,7 +322,10 @@ create_frag_shader_weave_yuv(struct vl_compositor *c, bool y)
    texel = ureg_DECL_temporary(shader);
    fragment = ureg_DECL_output(shader, TGSI_SEMANTIC_COLOR, 0);
 
-   create_frag_shader_weave(shader, texel);
+   if (w)
+      create_frag_shader_weave(shader, texel);
+   else
+      create_frag_shader_yuv(shader, texel);
 
    if (y)
       ureg_MOV(shader, ureg_writemask(fragment, TGSI_WRITEMASK_X), ureg_src(texel));
@@ -452,10 +455,13 @@ init_shaders(struct vl_compositor *c)
       return false;
    }
 
-   c->fs_weave_yuv.y = create_frag_shader_weave_yuv(c, true);
-   c->fs_weave_yuv.uv = create_frag_shader_weave_yuv(c, false);
-   if (!c->fs_weave_yuv.y || !c->fs_weave_yuv.uv) {
-      debug_printf("Unable to create YCbCr i-to-YCbCr p weave fragment shader.\n");
+   c->fs_yuv.weave.y = create_frag_shader_deint_yuv(c, true, true);
+   c->fs_yuv.weave.uv = create_frag_shader_deint_yuv(c, false, true);
+   c->fs_yuv.bob.y = create_frag_shader_deint_yuv(c, true, false);
+   c->fs_yuv.bob.uv = create_frag_shader_deint_yuv(c, false, false);
+   if (!c->fs_yuv.weave.y || !c->fs_yuv.weave.uv ||
+       !c->fs_yuv.bob.y || !c->fs_yuv.bob.uv) {
+      debug_printf("Unable to create YCbCr i-to-YCbCr p deint fragment shader.\n");
       return false;
    }
 
@@ -487,8 +493,10 @@ static void cleanup_shaders(struct vl_compositor *c)
    c->pipe->delete_vs_state(c->pipe, c->vs);
    c->pipe->delete_fs_state(c->pipe, c->fs_video_buffer);
    c->pipe->delete_fs_state(c->pipe, c->fs_weave_rgb);
-   c->pipe->delete_fs_state(c->pipe, c->fs_weave_yuv.y);
-   c->pipe->delete_fs_state(c->pipe, c->fs_weave_yuv.uv);
+   c->pipe->delete_fs_state(c->pipe, c->fs_yuv.weave.y);
+   c->pipe->delete_fs_state(c->pipe, c->fs_yuv.weave.uv);
+   c->pipe->delete_fs_state(c->pipe, c->fs_yuv.bob.y);
+   c->pipe->delete_fs_state(c->pipe, c->fs_yuv.bob.uv);
    c->pipe->delete_fs_state(c->pipe, c->fs_palette.yuv);
    c->pipe->delete_fs_state(c->pipe, c->fs_palette.rgb);
    c->pipe->delete_fs_state(c->pipe, c->fs_rgba);
@@ -913,7 +921,7 @@ set_yuv_layer(struct vl_compositor_state *s, struct vl_compositor *c, unsigned l
                     src_rect ? *src_rect : default_rect(&s->layers[layer]),
                     dst_rect ? *dst_rect : default_rect(&s->layers[layer]));
 
-   s->layers[layer].fs = (y) ? c->fs_weave_yuv.y : c->fs_weave_yuv.uv;
+   s->layers[layer].fs = (y) ? c->fs_yuv.weave.y : c->fs_yuv.weave.uv;
 }
 
 void
