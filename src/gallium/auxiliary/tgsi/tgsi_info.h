@@ -111,7 +111,7 @@ static inline bool tgsi_type_is_64bit(enum tgsi_opcode_type type)
 }
 
 enum tgsi_opcode_type
-tgsi_opcode_infer_src_type( uint opcode );
+tgsi_opcode_infer_src_type( uint opcode, uint src_idx );
 
 enum tgsi_opcode_type
 tgsi_opcode_infer_dst_type( uint opcode );
