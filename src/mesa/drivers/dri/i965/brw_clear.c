@@ -212,7 +212,7 @@ brw_fast_clear_depth(struct gl_context *ctx)
          }
       }
 
-      mt->fast_clear_color.f32[0] = clear_value;
+      intel_miptree_set_depth_clear_value(ctx, mt, clear_value);
    }
 
    bool need_clear = false;
