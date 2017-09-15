@@ -1062,7 +1062,7 @@ struct TessellationThreadLocalData
     size_t tsCtxSize;
 
     simdscalar* pDSOutput;
-    size_t numDSOutputVectors;
+    size_t dsOutputAllocSize;
 };
 
 THREAD TessellationThreadLocalData* gt_pTessellationThreadData = nullptr;
@@ -1210,24 +1210,20 @@ static void TessellationStages(
 
         // Allocate DS Output memory
         uint32_t requiredDSVectorInvocations = AlignUp(tsData.NumDomainPoints, KNOB_SIMD_WIDTH) / KNOB_SIMD_WIDTH;
-        size_t requiredDSOutputVectors = requiredDSVectorInvocations * tsState.numDsOutputAttribs;
 #if USE_SIMD16_FRONTEND
         size_t requiredAllocSize = sizeof(simdvector) * RoundUpEven(requiredDSVectorInvocations) * tsState.numDsOutputAttribs;      // simd8 -> simd16, padding
 #else
+        size_t requiredDSOutputVectors = requiredDSVectorInvocations * tsState.numDsOutputAttribs;
         size_t requiredAllocSize = sizeof(simdvector) * requiredDSOutputVectors;
 #endif
-        if (requiredDSOutputVectors > gt_pTessellationThreadData->numDSOutputVectors)
+        if (requiredAllocSize > gt_pTessellationThreadData->dsOutputAllocSize)
         {
             AlignedFree(gt_pTessellationThreadData->pDSOutput);
             gt_pTessellationThreadData->pDSOutput = (simdscalar*)AlignedMalloc(requiredAllocSize, 64);
-#if USE_SIMD16_FRONTEND
-            gt_pTessellationThreadData->numDSOutputVectors = RoundUpEven(requiredDSVectorInvocations) * tsState.numDsOutputAttribs; // simd8 -> simd16, padding
-#else
-            gt_pTessellationThreadData->numDSOutputVectors = requiredDSOutputVectors;
-#endif
+            gt_pTessellationThreadData->dsOutputAllocSize = requiredAllocSize;
         }
         SWR_ASSERT(gt_pTessellationThreadData->pDSOutput);
-        SWR_ASSERT(gt_pTessellationThreadData->numDSOutputVectors >= requiredDSOutputVectors);
+        SWR_ASSERT(gt_pTessellationThreadData->dsOutputAllocSize >= requiredAllocSize);
 
 #if defined(_DEBUG)
         memset(gt_pTessellationThreadData->pDSOutput, 0x90, requiredAllocSize);
@@ -1356,7 +1352,7 @@ static void TessellationStages(
         AlignedFree(gt_pTessellationThreadData->pDSOutput);
         gt_pTessellationThreadData->pDSOutput = nullptr;
     }
-    gt_pTessellationThreadData->numDSOutputVectors = 0;
+    gt_pTessellationThreadData->dsOutputAllocSize = 0;
 
 #endif
     TSDestroyCtx(tsCtx);
