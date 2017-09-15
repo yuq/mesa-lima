@@ -52,7 +52,7 @@ st_bind_atomics(struct st_context *st, struct gl_program *prog,
    for (i = 0; i < prog->sh.data->NumAtomicBuffers; i++) {
       struct gl_active_atomic_buffer *atomic =
          &prog->sh.data->AtomicBuffers[i];
-      struct gl_atomic_buffer_binding *binding =
+      struct gl_buffer_binding *binding =
          &st->ctx->AtomicBufferBindings[atomic->Binding];
       struct st_buffer_object *st_obj =
          st_buffer_object(binding->BufferObject);

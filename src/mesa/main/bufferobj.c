@@ -1265,7 +1265,7 @@ _mesa_BindBuffer(GLenum target, GLuint buffer)
  */
 static void
 set_atomic_buffer_binding(struct gl_context *ctx,
-                          struct gl_atomic_buffer_binding *binding,
+                          struct gl_buffer_binding *binding,
                           struct gl_buffer_object *bufObj,
                           GLintptr offset,
                           GLsizeiptr size,
@@ -1292,7 +1292,7 @@ set_atomic_buffer_binding(struct gl_context *ctx,
  */
 static void
 set_ubo_binding(struct gl_context *ctx,
-                struct gl_uniform_buffer_binding *binding,
+                struct gl_buffer_binding *binding,
                 struct gl_buffer_object *bufObj,
                 GLintptr offset,
                 GLsizeiptr size,
@@ -1319,7 +1319,7 @@ set_ubo_binding(struct gl_context *ctx,
  */
 static void
 set_ssbo_binding(struct gl_context *ctx,
-                 struct gl_shader_storage_buffer_binding *binding,
+                 struct gl_buffer_binding *binding,
                  struct gl_buffer_object *bufObj,
                  GLintptr offset,
                  GLsizeiptr size,
@@ -1353,7 +1353,7 @@ bind_uniform_buffer(struct gl_context *ctx,
                     GLsizeiptr size,
                     GLboolean autoSize)
 {
-   struct gl_uniform_buffer_binding *binding =
+   struct gl_buffer_binding *binding =
       &ctx->UniformBufferBindings[index];
 
    if (binding->BufferObject == bufObj &&
@@ -1384,7 +1384,7 @@ bind_shader_storage_buffer(struct gl_context *ctx,
                            GLsizeiptr size,
                            GLboolean autoSize)
 {
-   struct gl_shader_storage_buffer_binding *binding =
+   struct gl_buffer_binding *binding =
       &ctx->ShaderStorageBufferBindings[index];
 
    if (binding->BufferObject == bufObj &&
@@ -1412,7 +1412,7 @@ bind_atomic_buffer(struct gl_context *ctx, unsigned index,
                    struct gl_buffer_object *bufObj, GLintptr offset,
                    GLsizeiptr size, GLboolean autoSize)
 {
-   struct gl_atomic_buffer_binding *binding =
+   struct gl_buffer_binding *binding =
       &ctx->AtomicBufferBindings[index];
 
    if (binding->BufferObject == bufObj &&
@@ -3807,7 +3807,7 @@ bind_uniform_buffers(struct gl_context *ctx, GLuint first, GLsizei count,
    _mesa_HashLockMutex(ctx->Shared->BufferObjects);
 
    for (int i = 0; i < count; i++) {
-      struct gl_uniform_buffer_binding *binding =
+      struct gl_buffer_binding *binding =
          &ctx->UniformBufferBindings[first + i];
       struct gl_buffer_object *bufObj;
       GLintptr offset = 0;
@@ -3917,7 +3917,7 @@ bind_shader_storage_buffers(struct gl_context *ctx, GLuint first,
    _mesa_HashLockMutex(ctx->Shared->BufferObjects);
 
    for (int i = 0; i < count; i++) {
-      struct gl_shader_storage_buffer_binding *binding =
+      struct gl_buffer_binding *binding =
          &ctx->ShaderStorageBufferBindings[first + i];
       struct gl_buffer_object *bufObj;
       GLintptr offset = 0;
@@ -4251,7 +4251,7 @@ bind_atomic_buffers(struct gl_context *ctx,
    _mesa_HashLockMutex(ctx->Shared->BufferObjects);
 
    for (int i = 0; i < count; i++) {
-      struct gl_atomic_buffer_binding *binding =
+      struct gl_buffer_binding *binding =
          &ctx->AtomicBufferBindings[first + i];
       struct gl_buffer_object *bufObj;
       GLintptr offset = 0;

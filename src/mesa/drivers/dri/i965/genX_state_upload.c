@@ -3074,7 +3074,7 @@ genX(upload_push_constant_packets)(struct brw_context *brw)
 
                const struct gl_uniform_block *block =
                   prog->sh.UniformBlocks[range->block];
-               const struct gl_uniform_buffer_binding *binding =
+               const struct gl_buffer_binding *binding =
                   &ctx->UniformBufferBindings[block->Binding];
 
                if (binding->BufferObject == ctx->Shared->NullBufferObj) {

@@ -1281,7 +1281,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
       &stage_state->surf_offset[prog_data->binding_table.ubo_start];
 
    for (int i = 0; i < prog->info.num_ubos; i++) {
-      struct gl_uniform_buffer_binding *binding =
+      struct gl_buffer_binding *binding =
          &ctx->UniformBufferBindings[prog->sh.UniformBlocks[i]->Binding];
 
       if (binding->BufferObject == ctx->Shared->NullBufferObj) {
@@ -1306,7 +1306,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
       &stage_state->surf_offset[prog_data->binding_table.ssbo_start];
 
    for (int i = 0; i < prog->info.num_ssbos; i++) {
-      struct gl_shader_storage_buffer_binding *binding =
+      struct gl_buffer_binding *binding =
          &ctx->ShaderStorageBufferBindings[prog->sh.ShaderStorageBlocks[i]->Binding];
 
       if (binding->BufferObject == ctx->Shared->NullBufferObj) {
@@ -1388,7 +1388,7 @@ brw_upload_abo_surfaces(struct brw_context *brw,
 
    if (prog->info.num_abos) {
       for (unsigned i = 0; i < prog->info.num_abos; i++) {
-         struct gl_atomic_buffer_binding *binding =
+         struct gl_buffer_binding *binding =
             &ctx->AtomicBufferBindings[prog->sh.AtomicBuffers[i]->Binding];
          struct intel_buffer_object *intel_bo =
             intel_buffer_object(binding->BufferObject);

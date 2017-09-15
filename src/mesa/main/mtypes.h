@@ -4550,24 +4550,10 @@ struct gl_driver_flags
    uint64_t NewShaderConstants[MESA_SHADER_STAGES];
 };
 
-struct gl_uniform_buffer_binding
+struct gl_buffer_binding
 {
    struct gl_buffer_object *BufferObject;
    /** Start of uniform block data in the buffer */
-   GLintptr Offset;
-   /** Size of data allowed to be referenced from the buffer (in bytes) */
-   GLsizeiptr Size;
-   /**
-    * glBindBufferBase() indicates that the Size should be ignored and only
-    * limited by the current size of the BufferObject.
-    */
-   GLboolean AutomaticSize;
-};
-
-struct gl_shader_storage_buffer_binding
-{
-   struct gl_buffer_object *BufferObject;
-   /** Start of shader storage block data in the buffer */
    GLintptr Offset;
    /** Size of data allowed to be referenced from the buffer (in bytes) */
    GLsizeiptr Size;
@@ -4630,17 +4616,6 @@ struct gl_image_unit
     */
    mesa_format _ActualFormat;
 
-};
-
-/**
- * Binding point for an atomic counter buffer object.
- */
-struct gl_atomic_buffer_binding
-{
-   struct gl_buffer_object *BufferObject;
-   GLintptr Offset;
-   GLsizeiptr Size;
-   GLboolean AutomaticSize;
 };
 
 /**
@@ -4893,7 +4868,7 @@ struct gl_context
     * associated with uniform blocks by glUniformBlockBinding()'s state in the
     * shader program.
     */
-   struct gl_uniform_buffer_binding
+   struct gl_buffer_binding
       UniformBufferBindings[MAX_COMBINED_UNIFORM_BUFFERS];
 
    /**
@@ -4902,7 +4877,7 @@ struct gl_context
     * glBindBufferBase().  They are associated with shader storage blocks by
     * glShaderStorageBlockBinding()'s state in the shader program.
     */
-   struct gl_shader_storage_buffer_binding
+   struct gl_buffer_binding
       ShaderStorageBufferBindings[MAX_COMBINED_SHADER_STORAGE_BUFFERS];
 
    /**
@@ -4920,7 +4895,7 @@ struct gl_context
    /**
     * Array of atomic counter buffer binding points.
     */
-   struct gl_atomic_buffer_binding
+   struct gl_buffer_binding
       AtomicBufferBindings[MAX_COMBINED_ATOMIC_BUFFERS];
 
    /**
