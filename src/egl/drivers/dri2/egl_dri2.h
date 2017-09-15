@@ -327,6 +327,8 @@ struct dri2_egl_surface
       __DRIimage           *front;
       unsigned int         visual;
 #endif
+   int out_fence_fd;
+   EGLBoolean enable_out_fence;
 };
 
 struct dri2_egl_config
@@ -461,5 +463,12 @@ dri2_egl_surface_alloc_local_buffer(struct dri2_egl_surface *dri2_surf,
 
 void
 dri2_egl_surface_free_local_buffers(struct dri2_egl_surface *dri2_surf);
+
+EGLBoolean
+dri2_init_surface(_EGLSurface *surf, _EGLDisplay *dpy, EGLint type,
+        _EGLConfig *conf, const EGLint *attrib_list, EGLBoolean enable_out_fence);
+
+void
+dri2_fini_surface(_EGLSurface *surf);
 
 #endif /* EGL_DRI2_INCLUDED */
