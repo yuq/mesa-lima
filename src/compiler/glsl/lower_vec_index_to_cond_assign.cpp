@@ -50,8 +50,9 @@ namespace {
 class ir_vec_index_to_cond_assign_visitor : public ir_hierarchical_visitor {
 public:
    ir_vec_index_to_cond_assign_visitor()
+      : progress(false)
    {
-      progress = false;
+      /* empty */
    }
 
    ir_rvalue *convert_vec_index_to_cond_assign(void *mem_ctx,
@@ -91,8 +92,8 @@ ir_vec_index_to_cond_assign_visitor::convert_vec_index_to_cond_assign(void *mem_
    assert(orig_index->type == glsl_type::int_type ||
           orig_index->type == glsl_type::uint_type);
    index = new(base_ir) ir_variable(orig_index->type,
-				    "vec_index_tmp_i",
-				    ir_var_temporary);
+                                    "vec_index_tmp_i",
+                                    ir_var_temporary);
    list.push_tail(index);
    deref = new(base_ir) ir_dereference_variable(index);
    assign = new(base_ir) ir_assignment(deref, orig_index, NULL);
@@ -108,7 +109,7 @@ ir_vec_index_to_cond_assign_visitor::convert_vec_index_to_cond_assign(void *mem_
 
    /* Temporary where we store whichever value we swizzle out. */
    var = new(base_ir) ir_variable(type, "vec_index_tmp_v",
-				  ir_var_temporary);
+                                  ir_var_temporary);
    list.push_tail(var);
 
    /* Generate a single comparison condition "mask" for all of the components
@@ -117,7 +118,7 @@ ir_vec_index_to_cond_assign_visitor::convert_vec_index_to_cond_assign(void *mem_
    ir_rvalue *const cond_deref =
       compare_index_block(&list, index, 0,
                           orig_vector->type->vector_elements,
-			  mem_ctx);
+                          mem_ctx);
 
    /* Generate a conditional move of each vector element to the temp. */
    for (i = 0; i < orig_vector->type->vector_elements; i++) {
@@ -129,8 +130,8 @@ ir_vec_index_to_cond_assign_visitor::convert_vec_index_to_cond_assign(void *mem_
        * underlying variable.
        */
       ir_rvalue *swizzle =
-	 new(base_ir) ir_swizzle(deref_value->clone(mem_ctx, NULL),
-				 i, 0, 0, 0, 1);
+         new(base_ir) ir_swizzle(deref_value->clone(mem_ctx, NULL),
+                                 i, 0, 0, 0, 1);
 
       deref = new(base_ir) ir_dereference_variable(var);
       assign = new(base_ir) ir_assignment(deref, swizzle, condition_swizzle);
@@ -163,11 +164,8 @@ ir_vec_index_to_cond_assign_visitor::convert_vector_extract_to_cond_assign(ir_rv
 ir_visitor_status
 ir_vec_index_to_cond_assign_visitor::visit_enter(ir_expression *ir)
 {
-   unsigned int i;
-
-   for (i = 0; i < ir->num_operands; i++) {
+   for (unsigned i = 0; i < ir->num_operands; i++)
       ir->operands[i] = convert_vector_extract_to_cond_assign(ir->operands[i]);
-   }
 
    return visit_continue;
 }
@@ -189,9 +187,8 @@ ir_vec_index_to_cond_assign_visitor::visit_leave(ir_assignment *ir)
 {
    ir->rhs = convert_vector_extract_to_cond_assign(ir->rhs);
 
-   if (ir->condition) {
+   if (ir->condition)
       ir->condition = convert_vector_extract_to_cond_assign(ir->condition);
-   }
 
    return visit_continue;
 }
@@ -203,7 +200,7 @@ ir_vec_index_to_cond_assign_visitor::visit_enter(ir_call *ir)
       ir_rvalue *new_param = convert_vector_extract_to_cond_assign(param);
 
       if (new_param != param) {
-	 param->replace_with(new_param);
+         param->replace_with(new_param);
       }
    }
 
@@ -213,9 +210,8 @@ ir_vec_index_to_cond_assign_visitor::visit_enter(ir_call *ir)
 ir_visitor_status
 ir_vec_index_to_cond_assign_visitor::visit_enter(ir_return *ir)
 {
-   if (ir->value) {
+   if (ir->value)
       ir->value = convert_vector_extract_to_cond_assign(ir->value);
-   }
 
    return visit_continue;
 }
