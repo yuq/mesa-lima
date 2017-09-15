@@ -62,6 +62,12 @@ st_bind_atomics(struct st_context *st, struct gl_program *prog,
          sb.buffer = st_obj->buffer;
          sb.buffer_offset = binding->Offset;
          sb.buffer_size = st_obj->buffer->width0 - binding->Offset;
+
+	 /* AutomaticSize is FALSE if the buffer was set with BindBufferRange.
+          * Take the minimum just to be sure.
+          */
+         if (!binding->AutomaticSize)
+            sb.buffer_size = MIN2(sb.buffer_size, (unsigned) binding->Size);
       }
 
       st->pipe->set_shader_buffers(st->pipe, shader_type,
