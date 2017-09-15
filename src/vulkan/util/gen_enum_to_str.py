@@ -64,27 +64,27 @@ C_TEMPLATE = Template(textwrap.dedent(u"""\
 
     % for enum in enums:
 
-        const char *
-        vk_${enum.name[2:]}_to_str(${enum.name} input)
-        {
-            switch(input) {
-            % for v in enum.values:
-                % if v in FOREIGN_ENUM_VALUES:
+    const char *
+    vk_${enum.name[2:]}_to_str(${enum.name} input)
+    {
+        switch(input) {
+        % for v in enum.values:
+            % if v in FOREIGN_ENUM_VALUES:
 
-                #pragma GCC diagnostic push
-                #pragma GCC diagnostic ignored "-Wswitch"
-                % endif
-                case ${v}:
-                    return "${v}";
-                % if v in FOREIGN_ENUM_VALUES:
-                #pragma GCC diagnostic pop
+            #pragma GCC diagnostic push
+            #pragma GCC diagnostic ignored "-Wswitch"
+            % endif
+            case ${v}:
+                return "${v}";
+            % if v in FOREIGN_ENUM_VALUES:
+            #pragma GCC diagnostic pop
 
-                % endif
-            % endfor
-            default:
-                unreachable("Undefined enum value.");
-            }
+            % endif
+        % endfor
+        default:
+            unreachable("Undefined enum value.");
         }
+    }
     %endfor"""),
     output_encoding='utf-8')
 
@@ -102,7 +102,7 @@ H_TEMPLATE = Template(textwrap.dedent(u"""\
     #include <vulkan/vk_android_native_buffer.h>
 
     % for enum in enums:
-        const char * vk_${enum.name[2:]}_to_str(${enum.name} input);
+    const char * vk_${enum.name[2:]}_to_str(${enum.name} input);
     % endfor
 
     #endif"""),
