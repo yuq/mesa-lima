@@ -1309,6 +1309,29 @@ set_buffer_multi_binding(struct gl_context *ctx,
    }
 }
 
+static void
+bind_buffer(struct gl_context *ctx,
+            struct gl_buffer_binding *binding,
+            struct gl_buffer_object *bufObj,
+            GLintptr offset,
+            GLsizeiptr size,
+            GLboolean autoSize,
+            uint64_t driver_state,
+            gl_buffer_usage usage)
+{
+   if (binding->BufferObject == bufObj &&
+       binding->Offset == offset &&
+       binding->Size == size &&
+       binding->AutomaticSize == autoSize) {
+      return;
+   }
+
+   FLUSH_VERTICES(ctx, 0);
+   ctx->NewDriverState |= driver_state;
+
+   set_buffer_binding(ctx, binding, bufObj, offset, size, autoSize, usage);
+}
+
 /**
  * Binds a buffer object to a uniform buffer binding point.
  *
@@ -1324,20 +1347,10 @@ bind_uniform_buffer(struct gl_context *ctx,
                     GLsizeiptr size,
                     GLboolean autoSize)
 {
-   struct gl_buffer_binding *binding =
-      &ctx->UniformBufferBindings[index];
-
-   if (binding->BufferObject == bufObj &&
-       binding->Offset == offset &&
-       binding->Size == size &&
-       binding->AutomaticSize == autoSize) {
-      return;
-   }
-
-   FLUSH_VERTICES(ctx, 0);
-   ctx->NewDriverState |= ctx->DriverFlags.NewUniformBuffer;
-
-   set_buffer_binding(ctx, binding, bufObj, offset, size, autoSize, USAGE_UNIFORM_BUFFER);
+   bind_buffer(ctx, &ctx->UniformBufferBindings[index],
+               bufObj, offset, size, autoSize,
+               ctx->DriverFlags.NewUniformBuffer,
+               USAGE_UNIFORM_BUFFER);
 }
 
 /**
@@ -1355,20 +1368,10 @@ bind_shader_storage_buffer(struct gl_context *ctx,
                            GLsizeiptr size,
                            GLboolean autoSize)
 {
-   struct gl_buffer_binding *binding =
-      &ctx->ShaderStorageBufferBindings[index];
-
-   if (binding->BufferObject == bufObj &&
-       binding->Offset == offset &&
-       binding->Size == size &&
-       binding->AutomaticSize == autoSize) {
-      return;
-   }
-
-   FLUSH_VERTICES(ctx, 0);
-   ctx->NewDriverState |= ctx->DriverFlags.NewShaderStorageBuffer;
-
-   set_buffer_binding(ctx, binding, bufObj, offset, size, autoSize, USAGE_SHADER_STORAGE_BUFFER);
+   bind_buffer(ctx, &ctx->ShaderStorageBufferBindings[index],
+               bufObj, offset, size, autoSize,
+               ctx->DriverFlags.NewShaderStorageBuffer,
+               USAGE_SHADER_STORAGE_BUFFER);
 }
 
 /**
@@ -1383,20 +1386,10 @@ bind_atomic_buffer(struct gl_context *ctx, unsigned index,
                    struct gl_buffer_object *bufObj, GLintptr offset,
                    GLsizeiptr size, GLboolean autoSize)
 {
-   struct gl_buffer_binding *binding =
-      &ctx->AtomicBufferBindings[index];
-
-   if (binding->BufferObject == bufObj &&
-       binding->Offset == offset &&
-       binding->Size == size &&
-       binding->AutomaticSize == autoSize) {
-      return;
-   }
-
-   FLUSH_VERTICES(ctx, 0);
-   ctx->NewDriverState |= ctx->DriverFlags.NewAtomicBuffer;
-
-   set_buffer_binding(ctx, binding, bufObj, offset, size, autoSize, USAGE_ATOMIC_COUNTER_BUFFER);
+   bind_buffer(ctx, &ctx->AtomicBufferBindings[index],
+               bufObj, offset, size, autoSize,
+               ctx->DriverFlags.NewAtomicBuffer,
+               USAGE_ATOMIC_COUNTER_BUFFER);
 }
 
 /**
