@@ -1182,6 +1182,36 @@ vl_compositor_set_layer_rotation(struct vl_compositor_state *s,
 }
 
 void
+vl_compositor_yuv_deint_full(struct vl_compositor_state *s,
+                             struct vl_compositor *c,
+                             struct pipe_video_buffer *src,
+                             struct pipe_video_buffer *dst,
+                             struct u_rect *src_rect,
+                             struct u_rect *dst_rect,
+                             enum vl_compositor_deinterlace deinterlace)
+{
+   struct pipe_surface **dst_surfaces;
+
+   dst_surfaces = dst->get_surfaces(dst);
+   vl_compositor_clear_layers(s);
+
+   set_yuv_layer(s, c, 0, src, src_rect, NULL, true);
+   vl_compositor_set_layer_dst_area(s, 0, dst_rect);
+   vl_compositor_render(s, c, dst_surfaces[0], NULL, false);
+
+   if (dst_rect) {
+      dst_rect->x1 /= 2;
+      dst_rect->y1 /= 2;
+   }
+
+   set_yuv_layer(s, c, 0, src, src_rect, NULL, false);
+   vl_compositor_set_layer_dst_area(s, 0, dst_rect);
+   vl_compositor_render(s, c, dst_surfaces[1], NULL, false);
+
+   s->pipe->flush(s->pipe, NULL, 0);
+}
+
+void
 vl_compositor_render(struct vl_compositor_state *s,
                      struct vl_compositor       *c,
                      struct pipe_surface        *dst_surface,

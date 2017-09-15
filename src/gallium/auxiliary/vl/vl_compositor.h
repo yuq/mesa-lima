@@ -246,6 +246,18 @@ vl_compositor_set_layer_rotation(struct vl_compositor_state *state,
                                  unsigned layer,
                                  enum vl_compositor_rotation rotate);
 
+/**
+ * deinterlace yuv buffer with full abilities
+ */
+void
+vl_compositor_yuv_deint_full(struct vl_compositor_state *state,
+                             struct vl_compositor *compositor,
+                             struct pipe_video_buffer *src,
+                             struct pipe_video_buffer *dst,
+                             struct u_rect *src_rect,
+                             struct u_rect *dst_rect,
+                             enum vl_compositor_deinterlace deinterlace);
+
 /*@}*/
 
 /**
