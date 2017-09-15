@@ -115,18 +115,18 @@ FOREIGN_ENUM_VALUES = [
 ]
 
 
-class EnumFactory(object):
+class NamedFactory(object):
     """Factory for creating enums."""
 
     def __init__(self, type_):
         self.registry = {}
         self.type = type_
 
-    def __call__(self, name):
+    def __call__(self, name, **kwargs):
         try:
             return self.registry[name]
         except KeyError:
-            n = self.registry[name] = self.type(name)
+            n = self.registry[name] = self.type(name, **kwargs)
         return n
 
 
@@ -138,7 +138,7 @@ class VkEnum(object):
         self.values = values or []
 
 
-def parse_xml(efactory, filename):
+def parse_xml(enum_factory, filename):
     """Parse the XML file. Accumulate results into the efactory.
 
     This parser is a memory efficient iterative XML parser that returns a list
@@ -157,14 +157,14 @@ def parse_xml(efactory, filename):
             if event == 'end' and elem.tag == 'enums':
                 type_ = elem.attrib.get('type')
                 if type_ == 'enum':
-                    enum = efactory(elem.attrib['name'])
+                    enum = enum_factory(elem.attrib['name'])
                     enum.values.extend([e.attrib['name'] for e in elem
                                         if e.tag == 'enum'])
             elif event == 'end' and elem.tag == 'extension':
                 if elem.attrib['supported'] != 'vulkan':
                     continue
                 for e in elem.findall('.//enum[@extends][@offset]'):
-                    enum = efactory(e.attrib['extends'])
+                    enum = enum_factory(e.attrib['extends'])
                     enum.values.append(e.attrib['name'])
 
             root.clear()
@@ -182,10 +182,10 @@ def main():
 
     args = parser.parse_args()
 
-    efactory = EnumFactory(VkEnum)
+    enum_factory = NamedFactory(VkEnum)
     for filename in args.xml_files:
-        parse_xml(efactory, filename)
-    enums = sorted(efactory.registry.values(), key=lambda e: e.name)
+        parse_xml(enum_factory, filename)
+    enums = sorted(enum_factory.registry.values(), key=lambda e: e.name)
 
     for template, file_ in [(C_TEMPLATE, os.path.join(args.outdir, 'vk_enum_to_str.c')),
                             (H_TEMPLATE, os.path.join(args.outdir, 'vk_enum_to_str.h'))]:
