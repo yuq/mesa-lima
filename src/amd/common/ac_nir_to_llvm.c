@@ -3579,7 +3579,8 @@ static LLVMValueRef visit_image_size(struct ac_nir_context *ctx,
 		z = LLVMBuildSDiv(ctx->ac.builder, z, six, "");
 		res = LLVMBuildInsertElement(ctx->ac.builder, res, z, two, "");
 	}
-	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_1D &&
+	if (ctx->abi->chip_class >= GFX9 &&
+	    glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_1D &&
 	    glsl_sampler_type_is_array(type)) {
 		LLVMValueRef layers = LLVMBuildExtractElement(ctx->ac.builder, res, two, "");
 		res = LLVMBuildInsertElement(ctx->ac.builder, res, layers,
