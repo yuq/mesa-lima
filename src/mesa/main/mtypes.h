@@ -4640,6 +4640,7 @@ struct gl_atomic_buffer_binding
    struct gl_buffer_object *BufferObject;
    GLintptr Offset;
    GLsizeiptr Size;
+   GLboolean AutomaticSize;
 };
 
 /**
