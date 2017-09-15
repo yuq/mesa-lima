@@ -114,7 +114,7 @@ enum tgsi_opcode_type
 tgsi_opcode_infer_src_type( uint opcode, uint src_idx );
 
 enum tgsi_opcode_type
-tgsi_opcode_infer_dst_type( uint opcode );
+tgsi_opcode_infer_dst_type( uint opcode, uint dst_idx );
 
 #if defined __cplusplus
 }

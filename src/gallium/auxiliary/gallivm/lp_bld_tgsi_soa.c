@@ -1751,7 +1751,7 @@ emit_store_chan(
    struct lp_build_context *float_bld = &bld_base->base;
    struct lp_build_context *int_bld = &bld_base->int_bld;
    LLVMValueRef indirect_index = NULL;
-   enum tgsi_opcode_type dtype = tgsi_opcode_infer_dst_type(inst->Instruction.Opcode);
+   enum tgsi_opcode_type dtype = tgsi_opcode_infer_dst_type(inst->Instruction.Opcode, index);
 
    /*
     * Apply saturation.
@@ -1917,7 +1917,7 @@ emit_store(
    LLVMValueRef dst[4])
 
 {
-   enum tgsi_opcode_type dtype = tgsi_opcode_infer_dst_type(inst->Instruction.Opcode);
+   enum tgsi_opcode_type dtype = tgsi_opcode_infer_dst_type(inst->Instruction.Opcode, index);
 
    unsigned writemask = inst->Dst[index].Register.WriteMask;
    while (writemask) {

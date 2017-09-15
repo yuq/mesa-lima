@@ -312,7 +312,10 @@ tgsi_opcode_infer_src_type(uint opcode, uint src_idx)
  * infer the destination type of a TGSI opcode.
  */
 enum tgsi_opcode_type
-tgsi_opcode_infer_dst_type( uint opcode )
+tgsi_opcode_infer_dst_type( uint opcode, uint dst_idx )
 {
+   if (dst_idx == 1 && opcode == TGSI_OPCODE_DFRACEXP)
+      return TGSI_TYPE_SIGNED;
+
    return tgsi_opcode_infer_type(opcode);
 }

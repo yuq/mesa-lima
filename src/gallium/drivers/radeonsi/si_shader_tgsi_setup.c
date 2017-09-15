@@ -890,7 +890,7 @@ void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 	LLVMBuilderRef builder = ctx->gallivm.builder;
 	LLVMValueRef temp_ptr, temp_ptr2 = NULL;
 	bool is_vec_store = false;
-	enum tgsi_opcode_type dtype = tgsi_opcode_infer_dst_type(inst->Instruction.Opcode);
+	enum tgsi_opcode_type dtype = tgsi_opcode_infer_dst_type(inst->Instruction.Opcode, index);
 
 	if (dst[0]) {
 		LLVMTypeKind k = LLVMGetTypeKind(LLVMTypeOf(dst[0]));

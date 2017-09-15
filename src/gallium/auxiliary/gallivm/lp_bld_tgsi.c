@@ -201,7 +201,7 @@ void lp_build_fetch_args(
 static int get_src_chan_idx(unsigned opcode,
                             int dst_chan_index)
 {
-   enum tgsi_opcode_type dtype = tgsi_opcode_infer_dst_type(opcode);
+   enum tgsi_opcode_type dtype = tgsi_opcode_infer_dst_type(opcode, 0);
    enum tgsi_opcode_type stype = tgsi_opcode_infer_src_type(opcode, 0);
 
    if (!tgsi_type_is_64bit(dtype) && !tgsi_type_is_64bit(stype))
