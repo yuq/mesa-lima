@@ -584,10 +584,10 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
 
             } else {
                /* some opcodes are special case in what they use as sources
-                  - [FUI]2D/[UI]2I64 is a float/[u]int src0, DLDEXP is integer src1 */
+                  - [FUI]2D/[UI]2I64 is a float/[u]int src0, (D)LDEXP is integer src1 */
                if (op == TGSI_OPCODE_F2D || op == TGSI_OPCODE_U2D || op == TGSI_OPCODE_I2D ||
                    op == TGSI_OPCODE_I2I64 || op == TGSI_OPCODE_U2I64 ||
-                   op == TGSI_OPCODE_DLDEXP ||
+                   op == TGSI_OPCODE_DLDEXP || op == TGSI_OPCODE_LDEXP ||
                    (op == TGSI_OPCODE_UCMP && dst_is_64bit[0])) {
                   dinst->src[j].swizzle = MAKE_SWIZZLE4(swz, swz, swz, swz);
                }
@@ -2107,6 +2107,8 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
    case ir_binop_ldexp:
       if (ir->operands[0]->type->is_double()) {
          emit_asm(ir, TGSI_OPCODE_DLDEXP, result_dst, op[0], op[1]);
+      } else if (ir->operands[0]->type->is_float()) {
+         emit_asm(ir, TGSI_OPCODE_LDEXP, result_dst, op[0], op[1]);
       } else {
          assert(!"Invalid ldexp for non-double opcode in glsl_to_tgsi_visitor::visit()");
       }
@@ -6783,6 +6785,8 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
                                                    PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED);
       bool have_dfrexp = pscreen->get_shader_param(pscreen, ptarget,
                                                    PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED);
+      bool have_ldexp = pscreen->get_shader_param(pscreen, ptarget,
+                                                  PIPE_SHADER_CAP_TGSI_LDEXP_SUPPORTED);
       unsigned if_threshold = pscreen->get_shader_param(pscreen, ptarget,
                                                         PIPE_SHADER_CAP_LOWER_IF_THRESHOLD);
 
@@ -6833,7 +6837,7 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
                          FDIV_TO_MUL_RCP |
                          EXP_TO_EXP2 |
                          LOG_TO_LOG2 |
-                         LDEXP_TO_ARITH |
+                         (have_ldexp ? 0 : LDEXP_TO_ARITH) |
                          (have_dfrexp ? 0 : DFREXP_DLDEXP_TO_ARITH) |
                          CARRY_TO_ARITH |
                          BORROW_TO_ARITH |
