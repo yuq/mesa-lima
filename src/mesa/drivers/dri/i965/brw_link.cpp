@@ -181,7 +181,8 @@ unify_interfaces(struct shader_info **infos)
 }
 
 static void
-update_xfb_info(struct gl_transform_feedback_info *xfb_info)
+update_xfb_info(struct gl_transform_feedback_info *xfb_info,
+                struct shader_info *info)
 {
    if (!xfb_info)
       return;
@@ -210,6 +211,8 @@ update_xfb_info(struct gl_transform_feedback_info *xfb_info)
          output->ComponentOffset = 3;
          break;
       }
+
+      info->outputs_written |= 1ull << output->OutputRegister;
    }
 }
 
@@ -236,8 +239,6 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       prog->ShadowSamplers = shader->shadow_samplers;
       _mesa_update_shader_textures_used(shProg, prog);
 
-      update_xfb_info(prog->sh.LinkedTransformFeedback);
-
       bool debug_enabled =
          (INTEL_DEBUG & intel_debug_flag_for_shader_stage(shader->Stage));
 
@@ -251,6 +252,8 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage,
                                  compiler->scalar_stage[stage]);
       infos[stage] = &prog->nir->info;
+
+      update_xfb_info(prog->sh.LinkedTransformFeedback, infos[stage]);
 
       /* Make a pass over the IR to add state references for any built-in
        * uniforms that are used.  This has to be done now (during linking).
