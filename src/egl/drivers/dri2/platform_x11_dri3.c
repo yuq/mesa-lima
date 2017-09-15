@@ -51,8 +51,8 @@ egl_dri3_set_drawable_size(struct loader_dri3_drawable *draw,
 {
    struct dri3_egl_surface *dri3_surf = loader_drawable_to_egl_surface(draw);
 
-   dri3_surf->base.Width = width;
-   dri3_surf->base.Height = height;
+   dri3_surf->surf.base.Width = width;
+   dri3_surf->surf.base.Height = height;
 }
 
 static bool
@@ -61,7 +61,7 @@ egl_dri3_in_current_context(struct loader_dri3_drawable *draw)
    struct dri3_egl_surface *dri3_surf = loader_drawable_to_egl_surface(draw);
    _EGLContext *ctx = _eglGetCurrentContext();
 
-   return ctx->Resource.Display == dri3_surf->base.Resource.Display;
+   return ctx->Resource.Display == dri3_surf->surf.base.Resource.Display;
 }
 
 static __DRIcontext *
@@ -79,9 +79,9 @@ static void
 egl_dri3_flush_drawable(struct loader_dri3_drawable *draw, unsigned flags)
 {
    struct dri3_egl_surface *dri3_surf = loader_drawable_to_egl_surface(draw);
-   _EGLDisplay *disp = dri3_surf->base.Resource.Display;
+   _EGLDisplay *disp = dri3_surf->surf.base.Resource.Display;
 
-   dri2_flush_drawable_for_swapbuffers(disp, &dri3_surf->base);
+   dri2_flush_drawable_for_swapbuffers(disp, &dri3_surf->surf.base);
 }
 
 static const struct loader_dri3_vtable egl_dri3_vtable = {
@@ -112,7 +112,7 @@ dri3_set_swap_interval(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf,
 {
    struct dri3_egl_surface *dri3_surf = dri3_egl_surface(surf);
 
-   dri3_surf->base.SwapInterval = interval;
+   dri3_surf->surf.base.SwapInterval = interval;
    loader_dri3_set_swap_interval(&dri3_surf->loader_drawable, interval);
 
    return EGL_TRUE;
@@ -137,21 +137,21 @@ dri3_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
       return NULL;
    }
 
-   if (!_eglInitSurface(&dri3_surf->base, disp, type, conf, attrib_list))
+   if (!_eglInitSurface(&dri3_surf->surf.base, disp, type, conf, attrib_list))
       goto cleanup_surf;
 
    if (type == EGL_PBUFFER_BIT) {
       drawable = xcb_generate_id(dri2_dpy->conn);
       xcb_create_pixmap(dri2_dpy->conn, conf->BufferSize,
                         drawable, dri2_dpy->screen->root,
-                        dri3_surf->base.Width, dri3_surf->base.Height);
+                        dri3_surf->surf.base.Width, dri3_surf->surf.base.Height);
    } else {
       STATIC_ASSERT(sizeof(uintptr_t) == sizeof(native_surface));
       drawable = (uintptr_t) native_surface;
    }
 
    dri_config = dri2_get_dri_config(dri2_conf, type,
-                                    dri3_surf->base.GLColorspace);
+                                    dri3_surf->surf.base.GLColorspace);
 
    if (loader_dri3_drawable_init(dri2_dpy->conn, drawable,
                                  dri2_dpy->dri_screen,
@@ -163,7 +163,7 @@ dri3_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
       goto cleanup_pixmap;
    }
 
-   return &dri3_surf->base;
+   return &dri3_surf->surf.base;
 
  cleanup_pixmap:
    if (type == EGL_PBUFFER_BIT)
