@@ -208,7 +208,7 @@ radv_shader_compile_to_nir(struct radv_device *device,
 					   spec_entries, num_spec_entries,
 					   stage, entrypoint_name, &supported_ext, &nir_options);
 		nir = entry_point->shader;
-		assert(nir->stage == stage);
+		assert(nir->info.stage == stage);
 		nir_validate_shader(nir);
 
 		free(spec_entries);
@@ -258,9 +258,9 @@ radv_shader_compile_to_nir(struct radv_device *device,
 	 * indirect indexing is trivial.
 	 */
 	nir_variable_mode indirect_mask = 0;
-	if (nir->stage == MESA_SHADER_GEOMETRY ||
-	    (nir->stage != MESA_SHADER_TESS_CTRL &&
-	     nir->stage != MESA_SHADER_TESS_EVAL &&
+	if (nir->info.stage == MESA_SHADER_GEOMETRY ||
+	    (nir->info.stage != MESA_SHADER_TESS_CTRL &&
+	     nir->info.stage != MESA_SHADER_TESS_EVAL &&
 	     !llvm_has_working_vgpr_indexing)) {
 		indirect_mask |= nir_var_shader_in;
 	}
@@ -504,7 +504,7 @@ radv_shader_variant_create(struct radv_device *device,
 	options.unsafe_math = !!(device->instance->debug_flags & RADV_DEBUG_UNSAFE_MATH);
 	options.supports_spill = device->llvm_supports_spill;
 
-	return shader_variant_create(device, module, shaders, shader_count, shaders[shader_count - 1]->stage,
+	return shader_variant_create(device, module, shaders, shader_count, shaders[shader_count - 1]->info.stage,
 				     &options, false, code_out, code_size_out);
 }
 

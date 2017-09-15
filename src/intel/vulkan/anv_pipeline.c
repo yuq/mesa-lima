@@ -138,7 +138,7 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
                    spec_entries, num_spec_entries,
                    stage, entrypoint_name, &supported_ext, nir_options);
    nir_shader *nir = entry_point->shader;
-   assert(nir->stage == stage);
+   assert(nir->info.stage == stage);
    nir_validate_shader(nir);
    ralloc_steal(mem_ctx, nir);
 

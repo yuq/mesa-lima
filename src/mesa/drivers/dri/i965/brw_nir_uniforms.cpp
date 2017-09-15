@@ -206,8 +206,8 @@ brw_nir_setup_glsl_uniforms(void *mem_ctx, nir_shader *shader,
          brw_nir_setup_glsl_builtin_uniform(var, prog, stage_prog_data,
                                             is_scalar);
       } else {
-         brw_nir_setup_glsl_uniform(shader->stage, var, prog, stage_prog_data,
-                                    is_scalar);
+         brw_nir_setup_glsl_uniform(shader->info.stage, var, prog,
+                                    stage_prog_data, is_scalar);
       }
    }
 }

@@ -416,7 +416,7 @@ print_var_decl(nir_variable *var, print_state *state)
       const char *loc = NULL;
       char buf[4];
 
-      switch (state->shader->stage) {
+      switch (state->shader->info.stage) {
       case MESA_SHADER_VERTEX:
          if (var->data.mode == nir_var_shader_in)
             loc = gl_vert_attrib_name(var->data.location);
@@ -1157,7 +1157,7 @@ nir_print_shader_annotated(nir_shader *shader, FILE *fp,
 
    state.annotations = annotations;
 
-   fprintf(fp, "shader: %s\n", gl_shader_stage_name(shader->stage));
+   fprintf(fp, "shader: %s\n", gl_shader_stage_name(shader->info.stage));
 
    if (shader->info.name)
       fprintf(fp, "name: %s\n", shader->info.name);
@@ -1165,7 +1165,7 @@ nir_print_shader_annotated(nir_shader *shader, FILE *fp,
    if (shader->info.label)
       fprintf(fp, "label: %s\n", shader->info.label);
 
-   switch (shader->stage) {
+   switch (shader->info.stage) {
    case MESA_SHADER_COMPUTE:
       fprintf(fp, "local-size: %u, %u, %u%s\n",
               shader->info.cs.local_size[0],

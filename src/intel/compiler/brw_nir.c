@@ -165,7 +165,7 @@ remap_patch_urb_offsets(nir_block *block, nir_builder *b,
 
       nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
 
-      gl_shader_stage stage = b->shader->stage;
+      gl_shader_stage stage = b->shader->info.stage;
 
       if ((stage == MESA_SHADER_TESS_CTRL && is_output(intrin)) ||
           (stage == MESA_SHADER_TESS_EVAL && is_input(intrin))) {
@@ -526,11 +526,11 @@ brw_nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
                  bool is_scalar)
 {
    nir_variable_mode indirect_mask = 0;
-   if (compiler->glsl_compiler_options[nir->stage].EmitNoIndirectInput)
+   if (compiler->glsl_compiler_options[nir->info.stage].EmitNoIndirectInput)
       indirect_mask |= nir_var_shader_in;
-   if (compiler->glsl_compiler_options[nir->stage].EmitNoIndirectOutput)
+   if (compiler->glsl_compiler_options[nir->info.stage].EmitNoIndirectOutput)
       indirect_mask |= nir_var_shader_out;
-   if (compiler->glsl_compiler_options[nir->stage].EmitNoIndirectTemp)
+   if (compiler->glsl_compiler_options[nir->info.stage].EmitNoIndirectTemp)
       indirect_mask |= nir_var_local;
 
    bool progress;
@@ -601,9 +601,9 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    const struct gen_device_info *devinfo = compiler->devinfo;
    UNUSED bool progress; /* Written by OPT */
 
-   const bool is_scalar = compiler->scalar_stage[nir->stage];
+   const bool is_scalar = compiler->scalar_stage[nir->info.stage];
 
-   if (nir->stage == MESA_SHADER_GEOMETRY)
+   if (nir->info.stage == MESA_SHADER_GEOMETRY)
       OPT(nir_lower_gs_intrinsics);
 
    /* See also brw_nir_trig_workarounds.py */
@@ -638,11 +638,11 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    OPT(nir_lower_clip_cull_distance_arrays);
 
    nir_variable_mode indirect_mask = 0;
-   if (compiler->glsl_compiler_options[nir->stage].EmitNoIndirectInput)
+   if (compiler->glsl_compiler_options[nir->info.stage].EmitNoIndirectInput)
       indirect_mask |= nir_var_shader_in;
-   if (compiler->glsl_compiler_options[nir->stage].EmitNoIndirectOutput)
+   if (compiler->glsl_compiler_options[nir->info.stage].EmitNoIndirectOutput)
       indirect_mask |= nir_var_shader_out;
-   if (compiler->glsl_compiler_options[nir->stage].EmitNoIndirectTemp)
+   if (compiler->glsl_compiler_options[nir->info.stage].EmitNoIndirectTemp)
       indirect_mask |= nir_var_local;
 
    nir_lower_indirect_derefs(nir, indirect_mask);
@@ -672,7 +672,7 @@ brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
 {
    const struct gen_device_info *devinfo = compiler->devinfo;
    bool debug_enabled =
-      (INTEL_DEBUG & intel_debug_flag_for_shader_stage(nir->stage));
+      (INTEL_DEBUG & intel_debug_flag_for_shader_stage(nir->info.stage));
 
    UNUSED bool progress; /* Written by OPT */
 
@@ -706,7 +706,7 @@ brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
       }
 
       fprintf(stderr, "NIR (SSA form) for %s shader:\n",
-              _mesa_shader_stage_to_string(nir->stage));
+              _mesa_shader_stage_to_string(nir->info.stage));
       nir_print_shader(nir, stderr);
    }
 
@@ -729,7 +729,7 @@ brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
 
    if (unlikely(debug_enabled)) {
       fprintf(stderr, "NIR (final form) for %s shader:\n",
-              _mesa_shader_stage_to_string(nir->stage));
+              _mesa_shader_stage_to_string(nir->info.stage));
       nir_print_shader(nir, stderr);
    }
 

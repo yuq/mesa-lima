@@ -124,10 +124,10 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 	nir_function *func;
 	unsigned i;
 
-	assert(nir->stage == MESA_SHADER_VERTEX ||
-	       nir->stage == MESA_SHADER_FRAGMENT);
+	assert(nir->info.stage == MESA_SHADER_VERTEX ||
+	       nir->info.stage == MESA_SHADER_FRAGMENT);
 
-	info->processor = pipe_shader_type_from_mesa(nir->stage);
+	info->processor = pipe_shader_type_from_mesa(nir->info.stage);
 	info->num_tokens = 2; /* indicate that the shader is non-empty */
 	info->num_instructions = 2;
 
@@ -138,7 +138,7 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 	nir_foreach_variable(variable, &nir->inputs) {
 		unsigned semantic_name, semantic_index;
 		unsigned attrib_count = glsl_count_attribute_slots(variable->type,
-								   nir->stage == MESA_SHADER_VERTEX);
+								   nir->info.stage == MESA_SHADER_VERTEX);
 
 		assert(attrib_count == 1 && "not implemented");
 
@@ -146,11 +146,11 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 		 * tracker has already mapped them to attributes via
 		 * variable->data.driver_location.
 		 */
-		if (nir->stage == MESA_SHADER_VERTEX)
+		if (nir->info.stage == MESA_SHADER_VERTEX)
 			continue;
 
 		/* Fragment shader position is a system value. */
-		if (nir->stage == MESA_SHADER_FRAGMENT &&
+		if (nir->info.stage == MESA_SHADER_FRAGMENT &&
 		    variable->data.location == VARYING_SLOT_POS) {
 			if (variable->data.pixel_center_integer)
 				info->properties[TGSI_PROPERTY_FS_COORD_PIXEL_CENTER] =
@@ -231,7 +231,7 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 	nir_foreach_variable(variable, &nir->outputs) {
 		unsigned semantic_name, semantic_index;
 
-		if (nir->stage == MESA_SHADER_FRAGMENT) {
+		if (nir->info.stage == MESA_SHADER_FRAGMENT) {
 			tgsi_get_gl_frag_result_semantic(variable->data.location,
 				&semantic_name, &semantic_index);
 		} else {
@@ -336,7 +336,7 @@ si_lower_nir(struct si_shader_selector* sel)
 	nir_foreach_variable(variable, &sel->nir->outputs) {
 		variable->data.driver_location *= 4;
 
-		if (sel->nir->stage == MESA_SHADER_FRAGMENT) {
+		if (sel->nir->info.stage == MESA_SHADER_FRAGMENT) {
 			if (variable->data.location == FRAG_RESULT_DEPTH)
 				variable->data.driver_location += 2;
 			else if (variable->data.location == FRAG_RESULT_STENCIL)
@@ -478,15 +478,15 @@ bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 	unsigned fs_attr_idx = 0;
 	nir_foreach_variable(variable, &nir->inputs) {
 		unsigned attrib_count = glsl_count_attribute_slots(variable->type,
-								   nir->stage == MESA_SHADER_VERTEX);
+								   nir->info.stage == MESA_SHADER_VERTEX);
 		unsigned input_idx = variable->data.driver_location;
 
 		for (unsigned i = 0; i < attrib_count; ++i) {
 			LLVMValueRef data[4];
 
-			if (nir->stage == MESA_SHADER_VERTEX)
+			if (nir->info.stage == MESA_SHADER_VERTEX)
 				declare_nir_input_vs(ctx, variable, i, data);
-			else if (nir->stage == MESA_SHADER_FRAGMENT)
+			else if (nir->info.stage == MESA_SHADER_FRAGMENT)
 				declare_nir_input_fs(ctx, variable, i, &fs_attr_idx, data);
 
 			for (unsigned chan = 0; chan < 4; chan++) {

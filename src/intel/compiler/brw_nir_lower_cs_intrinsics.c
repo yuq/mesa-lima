@@ -159,7 +159,7 @@ bool
 brw_nir_lower_cs_intrinsics(nir_shader *nir,
                             struct brw_cs_prog_data *prog_data)
 {
-   assert(nir->stage == MESA_SHADER_COMPUTE);
+   assert(nir->info.stage == MESA_SHADER_COMPUTE);
 
    bool progress = false;
    struct lower_intrinsics_state state;

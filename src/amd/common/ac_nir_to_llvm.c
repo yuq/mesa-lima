@@ -6453,7 +6453,7 @@ static unsigned
 ac_nir_get_max_workgroup_size(enum chip_class chip_class,
 			      const struct nir_shader *nir)
 {
-	switch (nir->stage) {
+	switch (nir->info.stage) {
 	case MESA_SHADER_TESS_CTRL:
 		return chip_class >= CIK ? 128 : 64;
 	case MESA_SHADER_GEOMETRY:
@@ -6510,7 +6510,7 @@ void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 	if (nctx)
 		nctx->nir = &ctx;
 
-	ctx.stage = nir->stage;
+	ctx.stage = nir->info.stage;
 
 	ctx.main_function = LLVMGetBasicBlockParent(LLVMGetInsertBlock(ctx.ac.builder));
 
@@ -6528,7 +6528,7 @@ void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 
 	setup_locals(&ctx, func);
 
-	if (nir->stage == MESA_SHADER_COMPUTE)
+	if (nir->info.stage == MESA_SHADER_COMPUTE)
 		setup_shared(&ctx, nir);
 
 	visit_cf_list(&ctx, &func->impl->body);
@@ -6586,8 +6586,8 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 
 	ctx.max_workgroup_size = ac_nir_get_max_workgroup_size(ctx.options->chip_class, shaders[0]);
 
-	create_function(&ctx, shaders[shader_count - 1]->stage, shader_count >= 2,
-	                shader_count >= 2 ? shaders[shader_count - 2]->stage  : MESA_SHADER_VERTEX);
+	create_function(&ctx, shaders[shader_count - 1]->info.stage, shader_count >= 2,
+	                shader_count >= 2 ? shaders[shader_count - 2]->info.stage  : MESA_SHADER_VERTEX);
 
 	ctx.abi.inputs = &ctx.inputs[0];
 	ctx.abi.emit_outputs = handle_shader_outputs_post;
@@ -6598,28 +6598,28 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		ac_init_exec_full_mask(&ctx.ac);
 
 	if (ctx.ac.chip_class == GFX9 &&
-	    shaders[shader_count - 1]->stage == MESA_SHADER_TESS_CTRL)
+	    shaders[shader_count - 1]->info.stage == MESA_SHADER_TESS_CTRL)
 		ac_nir_fixup_ls_hs_input_vgprs(&ctx);
 
 	for(int i = 0; i < shader_count; ++i) {
-		ctx.stage = shaders[i]->stage;
+		ctx.stage = shaders[i]->info.stage;
 		ctx.output_mask = 0;
 		ctx.tess_outputs_written = 0;
 		ctx.num_output_clips = shaders[i]->info.clip_distance_array_size;
 		ctx.num_output_culls = shaders[i]->info.cull_distance_array_size;
 
-		if (shaders[i]->stage == MESA_SHADER_GEOMETRY) {
+		if (shaders[i]->info.stage == MESA_SHADER_GEOMETRY) {
 			ctx.gs_next_vertex = ac_build_alloca(&ctx.ac, ctx.i32, "gs_next_vertex");
 
 			ctx.gs_max_out_vertices = shaders[i]->info.gs.vertices_out;
-		} else if (shaders[i]->stage == MESA_SHADER_TESS_EVAL) {
+		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_EVAL) {
 			ctx.tes_primitive_mode = shaders[i]->info.tess.primitive_mode;
-		} else if (shaders[i]->stage == MESA_SHADER_VERTEX) {
+		} else if (shaders[i]->info.stage == MESA_SHADER_VERTEX) {
 			if (shader_info->info.vs.needs_instance_id) {
 				ctx.shader_info->vs.vgpr_comp_cnt =
 					MAX2(3, ctx.shader_info->vs.vgpr_comp_cnt);
 			}
-		} else if (shaders[i]->stage == MESA_SHADER_FRAGMENT) {
+		} else if (shaders[i]->info.stage == MESA_SHADER_FRAGMENT) {
 			shader_info->fs.can_discard = shaders[i]->info.fs.uses_discard;
 		}
 
@@ -6645,15 +6645,15 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			LLVMPositionBuilderAtEnd(ctx.ac.builder, then_block);
 		}
 
-		if (shaders[i]->stage == MESA_SHADER_FRAGMENT)
+		if (shaders[i]->info.stage == MESA_SHADER_FRAGMENT)
 			handle_fs_inputs(&ctx, shaders[i]);
-		else if(shaders[i]->stage == MESA_SHADER_VERTEX)
+		else if(shaders[i]->info.stage == MESA_SHADER_VERTEX)
 			handle_vs_inputs(&ctx, shaders[i]);
-		else if(shader_count >= 2 && shaders[i]->stage == MESA_SHADER_GEOMETRY)
+		else if(shader_count >= 2 && shaders[i]->info.stage == MESA_SHADER_GEOMETRY)
 			prepare_gs_input_vgprs(&ctx);
 
 		nir_foreach_variable(variable, &shaders[i]->outputs)
-			scan_shader_output_decl(&ctx, variable, shaders[i], shaders[i]->stage);
+			scan_shader_output_decl(&ctx, variable, shaders[i], shaders[i]->info.stage);
 
 		ac_nir_translate(&ctx.ac, &ctx.abi, shaders[i], &ctx);
 
@@ -6662,16 +6662,16 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			LLVMPositionBuilderAtEnd(ctx.ac.builder, merge_block);
 		}
 
-		if (shaders[i]->stage == MESA_SHADER_GEOMETRY) {
+		if (shaders[i]->info.stage == MESA_SHADER_GEOMETRY) {
 			unsigned addclip = shaders[i]->info.clip_distance_array_size +
 					shaders[i]->info.cull_distance_array_size > 4;
 			shader_info->gs.gsvs_vertex_size = (util_bitcount64(ctx.output_mask) + addclip) * 16;
 			shader_info->gs.max_gsvs_emit_size = shader_info->gs.gsvs_vertex_size *
 				shaders[i]->info.gs.vertices_out;
-		} else if (shaders[i]->stage == MESA_SHADER_TESS_CTRL) {
+		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_CTRL) {
 			shader_info->tcs.outputs_written = ctx.tess_outputs_written;
 			shader_info->tcs.patch_outputs_written = ctx.tess_patch_outputs_written;
-		} else if (shaders[i]->stage == MESA_SHADER_VERTEX && ctx.options->key.vs.as_ls) {
+		} else if (shaders[i]->info.stage == MESA_SHADER_VERTEX && ctx.options->key.vs.as_ls) {
 			shader_info->vs.outputs_written = ctx.tess_outputs_written;
 		}
 	}
@@ -6815,7 +6815,7 @@ static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
 static void
 ac_fill_shader_info(struct ac_shader_variant_info *shader_info, struct nir_shader *nir, const struct ac_nir_compiler_options *options)
 {
-        switch (nir->stage) {
+        switch (nir->info.stage) {
         case MESA_SHADER_COMPUTE:
                 for (int i = 0; i < 3; ++i)
                         shader_info->cs.block_size[i] = nir->info.cs.local_size[i];
@@ -6864,7 +6864,7 @@ void ac_compile_nir_shader(LLVMTargetMachineRef tm,
 	LLVMModuleRef llvm_module = ac_translate_nir_to_llvm(tm, nir, nir_count, shader_info,
 	                                                     options);
 
-	ac_compile_llvm_module(tm, llvm_module, binary, config, shader_info, nir[0]->stage, dump_shader, options->supports_spill);
+	ac_compile_llvm_module(tm, llvm_module, binary, config, shader_info, nir[0]->info.stage, dump_shader, options->supports_spill);
 	for (int i = 0; i < nir_count; ++i)
 		ac_fill_shader_info(shader_info, nir[i], options);
 }

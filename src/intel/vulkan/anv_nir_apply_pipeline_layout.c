@@ -296,6 +296,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
                               struct anv_pipeline_bind_map *map)
 {
    struct anv_pipeline_layout *layout = pipeline->layout;
+   gl_shader_stage stage = shader->info.stage;
 
    struct apply_pipeline_layout_state state = {
       .shader = shader,
@@ -328,15 +329,15 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
       BITSET_WORD b, _tmp;
       BITSET_FOREACH_SET(b, _tmp, state.set[set].used,
                          set_layout->binding_count) {
-         if (set_layout->binding[b].stage[shader->stage].surface_index >= 0) {
+         if (set_layout->binding[b].stage[stage].surface_index >= 0) {
             map->surface_count +=
                anv_descriptor_set_binding_layout_get_hw_size(&set_layout->binding[b]);
          }
-         if (set_layout->binding[b].stage[shader->stage].sampler_index >= 0) {
+         if (set_layout->binding[b].stage[stage].sampler_index >= 0) {
             map->sampler_count +=
                anv_descriptor_set_binding_layout_get_hw_size(&set_layout->binding[b]);
          }
-         if (set_layout->binding[b].stage[shader->stage].image_index >= 0)
+         if (set_layout->binding[b].stage[stage].image_index >= 0)
             map->image_count += set_layout->binding[b].array_size;
       }
    }
@@ -353,7 +354,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
          struct anv_descriptor_set_binding_layout *binding =
             &set_layout->binding[b];
 
-         if (binding->stage[shader->stage].surface_index >= 0) {
+         if (binding->stage[stage].surface_index >= 0) {
             state.set[set].surface_offsets[b] = surface;
             struct anv_sampler **samplers = binding->immutable_samplers;
             for (unsigned i = 0; i < binding->array_size; i++) {
@@ -368,7 +369,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
             }
          }
 
-         if (binding->stage[shader->stage].sampler_index >= 0) {
+         if (binding->stage[stage].sampler_index >= 0) {
             state.set[set].sampler_offsets[b] = sampler;
             struct anv_sampler **samplers = binding->immutable_samplers;
             for (unsigned i = 0; i < binding->array_size; i++) {
@@ -383,7 +384,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
             }
          }
 
-         if (binding->stage[shader->stage].image_index >= 0) {
+         if (binding->stage[stage].image_index >= 0) {
             state.set[set].image_offsets[b] = image;
             image += binding->array_size;
          }

@@ -1375,7 +1375,7 @@ ntq_setup_inputs(struct v3d_compile *c)
         qsort(&vars, num_entries, sizeof(*vars), driver_location_compare);
 
         uint32_t vpm_components_queued = 0;
-        if (c->s->stage == MESA_SHADER_VERTEX) {
+        if (c->s->info.stage == MESA_SHADER_VERTEX) {
                 bool uses_iid = c->s->info.system_values_read &
                         (1ull << SYSTEM_VALUE_INSTANCE_ID);
                 bool uses_vid = c->s->info.system_values_read &
@@ -1405,7 +1405,7 @@ ntq_setup_inputs(struct v3d_compile *c)
                 resize_qreg_array(c, &c->inputs, &c->inputs_array_size,
                                   (loc + 1) * 4);
 
-                if (c->s->stage == MESA_SHADER_FRAGMENT) {
+                if (c->s->info.stage == MESA_SHADER_FRAGMENT) {
                         if (var->data.location == VARYING_SLOT_POS) {
                                 emit_fragcoord_input(c, loc);
                         } else if (var->data.location == VARYING_SLOT_PNTC ||
@@ -1433,7 +1433,7 @@ ntq_setup_inputs(struct v3d_compile *c)
                 }
         }
 
-        if (c->s->stage == MESA_SHADER_VERTEX) {
+        if (c->s->info.stage == MESA_SHADER_VERTEX) {
                 assert(vpm_components_queued == 0);
                 assert(num_components == 0);
         }
@@ -1452,7 +1452,7 @@ ntq_setup_outputs(struct v3d_compile *c)
                 for (int i = 0; i < 4; i++)
                         add_output(c, loc + i, var->data.location, i);
 
-                if (c->s->stage == MESA_SHADER_FRAGMENT) {
+                if (c->s->info.stage == MESA_SHADER_FRAGMENT) {
                         switch (var->data.location) {
                         case FRAG_RESULT_COLOR:
                                 c->output_color_var[0] = var;
@@ -1948,7 +1948,7 @@ ntq_emit_impl(struct v3d_compile *c, nir_function_impl *impl)
 static void
 nir_to_vir(struct v3d_compile *c)
 {
-        if (c->s->stage == MESA_SHADER_FRAGMENT) {
+        if (c->s->info.stage == MESA_SHADER_FRAGMENT) {
                 c->payload_w = vir_MOV(c, vir_reg(QFILE_REG, 0));
                 c->payload_w_centroid = vir_MOV(c, vir_reg(QFILE_REG, 1));
                 c->payload_z = vir_MOV(c, vir_reg(QFILE_REG, 2));
@@ -2013,7 +2013,7 @@ void
 v3d_nir_to_vir(struct v3d_compile *c)
 {
         if (V3D_DEBUG & (V3D_DEBUG_NIR |
-                         v3d_debug_flag_for_shader_stage(c->s->stage))) {
+                         v3d_debug_flag_for_shader_stage(c->s->info.stage))) {
                 fprintf(stderr, "%s prog %d/%d NIR:\n",
                         vir_get_stage_name(c),
                         c->program_id, c->variant_id);
@@ -2022,7 +2022,7 @@ v3d_nir_to_vir(struct v3d_compile *c)
 
         nir_to_vir(c);
 
-        switch (c->s->stage) {
+        switch (c->s->info.stage) {
         case MESA_SHADER_FRAGMENT:
                 emit_frag_end(c);
                 break;
@@ -2034,7 +2034,7 @@ v3d_nir_to_vir(struct v3d_compile *c)
         }
 
         if (V3D_DEBUG & (V3D_DEBUG_VIR |
-                         v3d_debug_flag_for_shader_stage(c->s->stage))) {
+                         v3d_debug_flag_for_shader_stage(c->s->info.stage))) {
                 fprintf(stderr, "%s prog %d/%d pre-opt VIR:\n",
                         vir_get_stage_name(c),
                         c->program_id, c->variant_id);
@@ -2048,7 +2048,7 @@ v3d_nir_to_vir(struct v3d_compile *c)
         /* XXX: vir_schedule_instructions(c); */
 
         if (V3D_DEBUG & (V3D_DEBUG_VIR |
-                         v3d_debug_flag_for_shader_stage(c->s->stage))) {
+                         v3d_debug_flag_for_shader_stage(c->s->info.stage))) {
                 fprintf(stderr, "%s prog %d/%d VIR:\n",
                         vir_get_stage_name(c),
                         c->program_id, c->variant_id);

@@ -1904,9 +1904,6 @@ typedef struct nir_shader {
     * access plus one
     */
    unsigned num_inputs, num_uniforms, num_outputs, num_shared;
-
-   /** The shader stage, such as MESA_SHADER_VERTEX. */
-   gl_shader_stage stage;
 } nir_shader;
 
 static inline nir_function_impl *

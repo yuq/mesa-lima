@@ -399,7 +399,7 @@ int main(int argc, char **argv)
 	v.key = key;
 	v.shader = &s;
 
-	switch (nir->stage) {
+	switch (nir->info.stage) {
 	case MESA_SHADER_FRAGMENT:
 		s.type = v.type = SHADER_FRAGMENT;
 		break;
@@ -410,7 +410,7 @@ int main(int argc, char **argv)
 		s.type = v.type = SHADER_COMPUTE;
 		break;
 	default:
-		errx(1, "unhandled shader stage: %d", nir->stage);
+		errx(1, "unhandled shader stage: %d", nir->info.stage);
 	}
 
 	info = "NIR compiler";

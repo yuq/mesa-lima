@@ -670,7 +670,7 @@ backend_shader::backend_shader(const struct brw_compiler *compiler,
      stage_prog_data(stage_prog_data),
      mem_ctx(mem_ctx),
      cfg(NULL),
-     stage(shader->stage)
+     stage(shader->info.stage)
 {
    debug_enabled = INTEL_DEBUG & intel_debug_flag_for_shader_stage(stage);
    stage_name = _mesa_shader_stage_to_string(stage);

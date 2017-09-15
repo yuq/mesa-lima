@@ -157,7 +157,8 @@ nir_lower_samplers(nir_shader *shader,
 
    nir_foreach_function(function, shader) {
       if (function->impl)
-         progress |= lower_impl(function->impl, shader_program, shader->stage);
+         progress |= lower_impl(function->impl, shader_program,
+                                shader->info.stage);
    }
 
    return progress;

@@ -147,7 +147,7 @@ struct brw_blorp_wm_inputs
 #define BLORP_CREATE_NIR_INPUT(shader, name, type) ({ \
    nir_variable *input = nir_variable_create((shader), nir_var_shader_in, \
                                              type, #name); \
-   if ((shader)->stage == MESA_SHADER_FRAGMENT) \
+   if ((shader)->info.stage == MESA_SHADER_FRAGMENT) \
       input->data.interpolation = INTERP_MODE_FLAT; \
    input->data.location = VARYING_SLOT_VAR0 + \
       offsetof(struct brw_blorp_wm_inputs, name) / (4 * sizeof(float)); \
