@@ -4045,7 +4045,6 @@ static int tgsi_dfracexp(struct r600_shader_ctx *ctx)
 	struct r600_bytecode_alu alu;
 	unsigned write_mask = inst->Dst[0].Register.WriteMask;
 	int i, j, r;
-	int firsti = write_mask == 0xc ? 2 : 0;
 
 	for (i = 0; i <= 3; i++) {
 		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
@@ -4066,15 +4065,18 @@ static int tgsi_dfracexp(struct r600_shader_ctx *ctx)
 			return r;
 	}
 
-	/* MOV first two channels to writemask dst0 */
-	for (i = 0; i <= 1; i++) {
+	/* Replicate significand result across channels. */
+	for (i = 0; i <= 3; i++) {
+		if (!(write_mask & (1 << i)))
+			continue;
+
 		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 		alu.op = ALU_OP1_MOV;
-		alu.src[0].chan = i + 2;
+		alu.src[0].chan = (i & 1) + 2;
 		alu.src[0].sel = ctx->temp_reg;
 
-		tgsi_dst(ctx, &inst->Dst[0], firsti + i, &alu.dst);
-		alu.dst.write = (inst->Dst[0].Register.WriteMask >> (firsti + i)) & 1;
+		tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
+		alu.dst.write = 1;
 		alu.last = 1;
 		r = r600_bytecode_add_alu(ctx->bc, &alu);
 		if (r)

@@ -3688,17 +3688,15 @@ exec_dfracexp(struct tgsi_exec_machine *mach,
    union tgsi_double_channel dst;
    union tgsi_exec_channel dst_exp;
 
-   if (((inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_XY) == TGSI_WRITEMASK_XY)) {
-      fetch_double_channel(mach, &src, &inst->Src[0], TGSI_CHAN_X, TGSI_CHAN_Y);
-      micro_dfracexp(&dst, &dst_exp, &src);
+   fetch_double_channel(mach, &src, &inst->Src[0], TGSI_CHAN_X, TGSI_CHAN_Y);
+   micro_dfracexp(&dst, &dst_exp, &src);
+   if ((inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_XY) == TGSI_WRITEMASK_XY)
       store_double_channel(mach, &dst, &inst->Dst[0], inst, TGSI_CHAN_X, TGSI_CHAN_Y);
-      store_dest(mach, &dst_exp, &inst->Dst[1], inst, ffs(inst->Dst[1].Register.WriteMask) - 1, TGSI_EXEC_DATA_INT);
-   }
-   if (((inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_ZW) == TGSI_WRITEMASK_ZW)) {
-      fetch_double_channel(mach, &src, &inst->Src[0], TGSI_CHAN_Z, TGSI_CHAN_W);
-      micro_dfracexp(&dst, &dst_exp, &src);
+   if ((inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_ZW) == TGSI_WRITEMASK_ZW)
       store_double_channel(mach, &dst, &inst->Dst[0], inst, TGSI_CHAN_Z, TGSI_CHAN_W);
-      store_dest(mach, &dst_exp, &inst->Dst[1], inst, ffs(inst->Dst[1].Register.WriteMask) - 1, TGSI_EXEC_DATA_INT);
+   for (unsigned chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
+      if (inst->Dst[1].Register.WriteMask & (1 << chan))
+         store_dest(mach, &dst_exp, &inst->Dst[1], inst, chan, TGSI_EXEC_DATA_INT);
    }
 }
 

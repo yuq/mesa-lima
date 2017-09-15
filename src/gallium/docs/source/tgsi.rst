@@ -1838,17 +1838,15 @@ two-component vectors with doubled precision in each component.
 
 Like the ``frexp()`` routine in many math libraries, this opcode stores the
 exponent of its source to ``dst0``, and the significand to ``dst1``, such that
-:math:`dst1 \times 2^{dst0} = src` .
+:math:`dst1 \times 2^{dst0} = src` . The results are replicated across
+channels.
 
 .. math::
 
-  dst0.xy = exp(src.xy)
+  dst0.xy = dst.zw = frac(src.xy)
 
-  dst1.xy = frac(src.xy)
+  dst1 = frac(src.xy)
 
-  dst0.zw = exp(src.zw)
-
-  dst1.zw = frac(src.zw)
 
 .. opcode:: DLDEXP - Multiply Number by Integral Power of 2
 
