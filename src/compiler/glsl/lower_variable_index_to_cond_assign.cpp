@@ -66,10 +66,10 @@
  * \param mem_ctx       ralloc memory context to be used for all allocations.
  *
  * \returns
- * An \c ir_rvalue that \b must be cloned for each use in conditional
- * assignments, etc.
+ * An \c ir_variable containing the per-component comparison results.  This
+ * must be dereferenced per use.
  */
-ir_rvalue *
+ir_variable *
 compare_index_block(exec_list *instructions, ir_variable *index,
 		    unsigned base, unsigned components, void *mem_ctx)
 {
@@ -113,7 +113,7 @@ compare_index_block(exec_list *instructions, ir_variable *index,
       new(mem_ctx) ir_dereference_variable(condition);
    instructions->push_tail(new(mem_ctx) ir_assignment(cond_deref, condition_val, 0));
 
-   return cond_deref;
+   return condition;
 }
 
 static inline bool
@@ -275,17 +275,21 @@ struct switch_generator
       for (unsigned i = first; i < end; i += 4) {
          const unsigned comps = MIN2(condition_components, end - i);
 
-	 ir_rvalue *const cond_deref =
-	    compare_index_block(list, index, i, comps, this->mem_ctx);
+         ir_variable *const cond =
+            compare_index_block(list, index, i, comps, this->mem_ctx);
 
          if (comps == 1) {
-            this->generator.generate(i, cond_deref->clone(this->mem_ctx, NULL),
-				     list);
+            ir_rvalue *const cond_deref =
+               new(mem_ctx) ir_dereference_variable(cond);
+
+            this->generator.generate(i, cond_deref, list);
          } else {
             for (unsigned j = 0; j < comps; j++) {
-	       ir_rvalue *const cond_swiz =
-		  new(this->mem_ctx) ir_swizzle(cond_deref->clone(this->mem_ctx, NULL),
-						j, 0, 0, 0, 1);
+               ir_rvalue *const cond_deref =
+                  new(mem_ctx) ir_dereference_variable(cond);
+               ir_rvalue *const cond_swiz =
+                  new(this->mem_ctx) ir_swizzle(cond_deref,
+                                                j, 0, 0, 0, 1);
 
                this->generator.generate(i + j, cond_swiz, list);
             }

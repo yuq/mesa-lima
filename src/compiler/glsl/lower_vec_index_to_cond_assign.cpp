@@ -115,7 +115,7 @@ ir_vec_index_to_cond_assign_visitor::convert_vec_index_to_cond_assign(void *mem_
    /* Generate a single comparison condition "mask" for all of the components
     * in the vector.
     */
-   ir_rvalue *const cond_deref =
+   ir_variable *const cond =
       compare_index_block(&list, index, 0,
                           orig_vector->type->vector_elements,
                           mem_ctx);
@@ -123,7 +123,7 @@ ir_vec_index_to_cond_assign_visitor::convert_vec_index_to_cond_assign(void *mem_
    /* Generate a conditional move of each vector element to the temp. */
    for (i = 0; i < orig_vector->type->vector_elements; i++) {
       ir_rvalue *condition_swizzle =
-         new(base_ir) ir_swizzle(cond_deref->clone(mem_ctx, NULL),
+         new(base_ir) ir_swizzle(new(mem_ctx) ir_dereference_variable(cond),
                                  i, 0, 0, 0, 1);
 
       /* Just clone the rest of the deref chain when trying to get at the
