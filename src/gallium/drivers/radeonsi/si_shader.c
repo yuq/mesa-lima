@@ -1139,11 +1139,12 @@ static LLVMValueRef fetch_input_tes(
 static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 			     const struct tgsi_full_instruction *inst,
 			     const struct tgsi_opcode_info *info,
+			     unsigned index,
 			     LLVMValueRef dst[4])
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = &ctx->gallivm;
-	const struct tgsi_full_dst_register *reg = &inst->Dst[0];
+	const struct tgsi_full_dst_register *reg = &inst->Dst[index];
 	const struct tgsi_shader_info *sh_info = &ctx->shader->selector->info;
 	unsigned chan_index;
 	LLVMValueRef dw_addr, stride;
@@ -1157,7 +1158,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 	 */
 	if (reg->Register.File != TGSI_FILE_OUTPUT ||
 	    (dst[0] && LLVMGetTypeKind(LLVMTypeOf(dst[0])) == LLVMVectorTypeKind)) {
-		si_llvm_emit_store(bld_base, inst, info, dst);
+		si_llvm_emit_store(bld_base, inst, info, index, dst);
 		return;
 	}
 
@@ -1191,8 +1192,9 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 	base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 	buf_addr = get_tcs_tes_buffer_address_from_reg(ctx, reg, NULL);
 
-
-	TGSI_FOR_EACH_DST0_ENABLED_CHANNEL(inst, chan_index) {
+	uint32_t writemask = reg->Register.WriteMask;
+	while (writemask) {
+		chan_index = u_bit_scan(&writemask);
 		LLVMValueRef value = dst[chan_index];
 
 		if (inst->Instruction.Saturate)
@@ -1205,7 +1207,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 		value = LLVMBuildBitCast(gallivm->builder, value, ctx->i32, "");
 		values[chan_index] = value;
 
-		if (inst->Dst[0].Register.WriteMask != 0xF && !is_tess_factor) {
+		if (reg->Register.WriteMask != 0xF && !is_tess_factor) {
 			ac_build_buffer_store_dword(&ctx->ac, buffer, value, 1,
 						    buf_addr, base,
 						    4 * chan_index, 1, 0, true, false);
@@ -1224,7 +1226,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 		}
 	}
 
-	if (inst->Dst[0].Register.WriteMask == 0xF && !is_tess_factor) {
+	if (reg->Register.WriteMask == 0xF && !is_tess_factor) {
 		LLVMValueRef value = lp_build_gather_values(gallivm,
 		                                            values, 4);
 		ac_build_buffer_store_dword(&ctx->ac, buffer, value, 4, buf_addr,

@@ -881,14 +881,14 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 			const struct tgsi_full_instruction *inst,
 			const struct tgsi_opcode_info *info,
+			unsigned index,
 			LLVMValueRef dst[4])
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = &ctx->gallivm;
-	const struct tgsi_full_dst_register *reg = &inst->Dst[0];
+	const struct tgsi_full_dst_register *reg = &inst->Dst[index];
 	LLVMBuilderRef builder = ctx->gallivm.builder;
 	LLVMValueRef temp_ptr, temp_ptr2 = NULL;
-	unsigned chan, chan_index;
 	bool is_vec_store = false;
 	enum tgsi_opcode_type dtype = tgsi_opcode_infer_dst_type(inst->Instruction.Opcode);
 
@@ -899,16 +899,20 @@ void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 
 	if (is_vec_store) {
 		LLVMValueRef values[4] = {};
-		TGSI_FOR_EACH_DST0_ENABLED_CHANNEL(inst, chan) {
+		uint32_t writemask = reg->Register.WriteMask;
+		while (writemask) {
+			unsigned chan = u_bit_scan(&writemask);
 			LLVMValueRef index = LLVMConstInt(ctx->i32, chan, 0);
 			values[chan]  = LLVMBuildExtractElement(gallivm->builder,
 							dst[0], index, "");
 		}
-		bld_base->emit_store(bld_base, inst, info, values);
+		bld_base->emit_store(bld_base, inst, info, index, values);
 		return;
 	}
 
-	TGSI_FOR_EACH_DST0_ENABLED_CHANNEL( inst, chan_index ) {
+	uint32_t writemask = reg->Register.WriteMask;
+	while (writemask) {
+		unsigned chan_index = u_bit_scan(&writemask);
 		LLVMValueRef value = dst[chan_index];
 
 		if (tgsi_type_is_64bit(dtype) && (chan_index == 1 || chan_index == 3))

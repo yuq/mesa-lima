@@ -313,7 +313,7 @@ lp_build_tgsi_inst_llvm(
    }
 
    if (info->num_dst > 0 && info->opcode != TGSI_OPCODE_STORE) {
-      bld_base->emit_store(bld_base, inst, info, emit_data.output);
+      bld_base->emit_store(bld_base, inst, info, 0, emit_data.output);
    }
    return TRUE;
 }
