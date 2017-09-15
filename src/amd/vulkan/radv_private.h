@@ -1170,6 +1170,8 @@ bool radv_format_pack_clear_color(VkFormat format,
 				  uint32_t clear_vals[2],
 				  VkClearColorValue *value);
 bool radv_is_colorbuffer_format_supported(VkFormat format, bool *blendable);
+bool radv_dcc_formats_compatible(VkFormat format1,
+                                 VkFormat format2);
 
 struct radv_fmask_info {
 	uint64_t offset;
