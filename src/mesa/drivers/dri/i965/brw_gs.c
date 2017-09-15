@@ -198,7 +198,6 @@ brw_gs_populate_key(struct brw_context *brw,
 void
 brw_upload_gs_prog(struct brw_context *brw)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct brw_stage_state *stage_state = &brw->gs.base;
    struct brw_gs_prog_key key;
    /* BRW_NEW_GEOMETRY_PROGRAM */

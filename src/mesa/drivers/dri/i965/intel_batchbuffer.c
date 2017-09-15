@@ -174,7 +174,6 @@ intel_batchbuffer_reset(struct intel_batchbuffer *batch,
                         struct intel_screen *screen)
 {
    struct brw_bufmgr *bufmgr = screen->bufmgr;
-   const struct gen_device_info *devinfo = &screen->devinfo;
 
    if (batch->last_bo != NULL) {
       brw_bo_unreference(batch->last_bo);
