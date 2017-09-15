@@ -899,11 +899,13 @@ draw_layers(struct vl_compositor *c, struct vl_compositor_state *s, struct u_rec
 }
 
 static void
-set_yuv_layer(struct vl_compositor_state *s, struct vl_compositor *c, unsigned layer,
-              struct pipe_video_buffer *buffer, struct u_rect *src_rect,
-              struct u_rect *dst_rect, bool y)
+set_yuv_layer(struct vl_compositor_state *s, struct vl_compositor *c,
+              unsigned layer, struct pipe_video_buffer *buffer,
+              struct u_rect *src_rect, struct u_rect *dst_rect,
+              bool y, enum vl_compositor_deinterlace deinterlace)
 {
    struct pipe_sampler_view **sampler_views;
+   float half_a_line;
    unsigned i;
 
    assert(s && c && buffer);
@@ -921,7 +923,27 @@ set_yuv_layer(struct vl_compositor_state *s, struct vl_compositor *c, unsigned l
                     src_rect ? *src_rect : default_rect(&s->layers[layer]),
                     dst_rect ? *dst_rect : default_rect(&s->layers[layer]));
 
-   s->layers[layer].fs = (y) ? c->fs_yuv.weave.y : c->fs_yuv.weave.uv;
+   half_a_line = 0.5f / s->layers[layer].zw.y;
+
+   switch(deinterlace) {
+   case VL_COMPOSITOR_BOB_TOP:
+      s->layers[layer].zw.x = 0.0f;
+      s->layers[layer].src.tl.y += half_a_line;
+      s->layers[layer].src.br.y += half_a_line;
+      s->layers[layer].fs = (y) ? c->fs_yuv.bob.y : c->fs_yuv.bob.uv;
+      break;
+
+   case VL_COMPOSITOR_BOB_BOTTOM:
+      s->layers[layer].zw.x = 1.0f;
+      s->layers[layer].src.tl.y -= half_a_line;
+      s->layers[layer].src.br.y -= half_a_line;
+      s->layers[layer].fs = (y) ? c->fs_yuv.bob.y : c->fs_yuv.bob.uv;
+      break;
+
+   default:
+      s->layers[layer].fs = (y) ? c->fs_yuv.weave.y : c->fs_yuv.weave.uv;
+      break;
+   }
 }
 
 void
@@ -1195,7 +1217,7 @@ vl_compositor_yuv_deint_full(struct vl_compositor_state *s,
    dst_surfaces = dst->get_surfaces(dst);
    vl_compositor_clear_layers(s);
 
-   set_yuv_layer(s, c, 0, src, src_rect, NULL, true);
+   set_yuv_layer(s, c, 0, src, src_rect, NULL, true, deinterlace);
    vl_compositor_set_layer_dst_area(s, 0, dst_rect);
    vl_compositor_render(s, c, dst_surfaces[0], NULL, false);
 
@@ -1204,7 +1226,7 @@ vl_compositor_yuv_deint_full(struct vl_compositor_state *s,
       dst_rect->y1 /= 2;
    }
 
-   set_yuv_layer(s, c, 0, src, src_rect, NULL, false);
+   set_yuv_layer(s, c, 0, src, src_rect, NULL, false, deinterlace);
    vl_compositor_set_layer_dst_area(s, 0, dst_rect);
    vl_compositor_render(s, c, dst_surfaces[1], NULL, false);
 
