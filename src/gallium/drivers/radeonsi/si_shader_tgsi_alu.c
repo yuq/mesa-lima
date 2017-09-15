@@ -800,6 +800,8 @@ void si_shader_context_init_alu(struct lp_build_tgsi_context *bld_base)
 	bld_base->op_actions[TGSI_OPCODE_KILL_IF].fetch_args = kill_if_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_KILL_IF].emit = kil_emit;
 	bld_base->op_actions[TGSI_OPCODE_KILL].emit = kil_emit;
+	bld_base->op_actions[TGSI_OPCODE_LDEXP].emit = build_tgsi_intrinsic_nomem;
+	bld_base->op_actions[TGSI_OPCODE_LDEXP].intr_name = "llvm.amdgcn.ldexp.f32";
 	bld_base->op_actions[TGSI_OPCODE_LSB].emit = emit_lsb;
 	bld_base->op_actions[TGSI_OPCODE_LG2].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_LG2].intr_name = "llvm.log2.f32";
