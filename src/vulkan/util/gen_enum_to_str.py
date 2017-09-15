@@ -101,6 +101,10 @@ H_TEMPLATE = Template(textwrap.dedent(u"""\
     #include <vulkan/vulkan.h>
     #include <vulkan/vk_android_native_buffer.h>
 
+    % for ext in extensions:
+    #define _${ext.name}_number (${ext.number})
+    % endfor
+
     % for enum in enums:
     const char * vk_${enum.name[2:]}_to_str(${enum.name} input);
     % endfor
@@ -130,6 +134,14 @@ class NamedFactory(object):
         return n
 
 
+class VkExtension(object):
+    """Simple struct-like class representing extensions"""
+
+    def __init__(self, name, number=None):
+        self.name = name
+        self.number = number
+
+
 class VkEnum(object):
     """Simple struct-like class representing a single Vulkan Enum."""
 
@@ -138,8 +150,8 @@ class VkEnum(object):
         self.values = values or []
 
 
-def parse_xml(enum_factory, filename):
-    """Parse the XML file. Accumulate results into the efactory.
+def parse_xml(enum_factory, ext_factory, filename):
+    """Parse the XML file. Accumulate results into the factories.
 
     This parser is a memory efficient iterative XML parser that returns a list
     of VkEnum objects.
@@ -160,6 +172,9 @@ def parse_xml(enum_factory, filename):
                     enum = enum_factory(elem.attrib['name'])
                     enum.values.extend([e.attrib['name'] for e in elem
                                         if e.tag == 'enum'])
+            elif event == 'start' and elem.tag == 'extension':
+                ext_factory(elem.attrib['name'],
+                            number=int(elem.attrib['number']))
             elif event == 'end' and elem.tag == 'extension':
                 if elem.attrib['supported'] != 'vulkan':
                     continue
@@ -168,7 +183,6 @@ def parse_xml(enum_factory, filename):
                     enum.values.append(e.attrib['name'])
 
             root.clear()
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -183,9 +197,11 @@ def main():
     args = parser.parse_args()
 
     enum_factory = NamedFactory(VkEnum)
+    ext_factory = NamedFactory(VkExtension)
     for filename in args.xml_files:
-        parse_xml(enum_factory, filename)
+        parse_xml(enum_factory, ext_factory, filename)
     enums = sorted(enum_factory.registry.values(), key=lambda e: e.name)
+    extensions = sorted(ext_factory.registry.values(), key=lambda e: e.name)
 
     for template, file_ in [(C_TEMPLATE, os.path.join(args.outdir, 'vk_enum_to_str.c')),
                             (H_TEMPLATE, os.path.join(args.outdir, 'vk_enum_to_str.h'))]:
@@ -193,6 +209,7 @@ def main():
             f.write(template.render(
                 file=os.path.basename(__file__),
                 enums=enums,
+                extensions=extensions,
                 copyright=COPYRIGHT,
                 FOREIGN_ENUM_VALUES=FOREIGN_ENUM_VALUES))
 
