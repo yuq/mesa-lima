@@ -185,13 +185,14 @@ def main():
     efactory = EnumFactory(VkEnum)
     for filename in args.xml_files:
         parse_xml(efactory, filename)
+    enums = sorted(efactory.registry.values(), key=lambda e: e.name)
 
     for template, file_ in [(C_TEMPLATE, os.path.join(args.outdir, 'vk_enum_to_str.c')),
                             (H_TEMPLATE, os.path.join(args.outdir, 'vk_enum_to_str.h'))]:
         with open(file_, 'wb') as f:
             f.write(template.render(
                 file=os.path.basename(__file__),
-                enums=efactory.registry.values(),
+                enums=enums,
                 copyright=COPYRIGHT,
                 FOREIGN_ENUM_VALUES=FOREIGN_ENUM_VALUES))
 
