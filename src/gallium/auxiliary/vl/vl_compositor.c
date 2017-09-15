@@ -239,19 +239,12 @@ create_frag_shader_csc(struct ureg_program *shader, struct ureg_dst texel,
        ureg_release_temporary(shader, temp[i]);
 }
 
-static void *
-create_frag_shader_video_buffer(struct vl_compositor *c)
+static void
+create_frag_shader_yuv(struct ureg_program *shader, struct ureg_dst texel)
 {
-   struct ureg_program *shader;
    struct ureg_src tc;
    struct ureg_src sampler[3];
-   struct ureg_dst texel;
-   struct ureg_dst fragment;
    unsigned i;
-
-   shader = ureg_create(PIPE_SHADER_FRAGMENT);
-   if (!shader)
-      return false;
 
    tc = ureg_DECL_fs_input(shader, TGSI_SEMANTIC_GENERIC, VS_O_VTEX, TGSI_INTERPOLATE_LINEAR);
    for (i = 0; i < 3; ++i) {
@@ -262,17 +255,29 @@ create_frag_shader_video_buffer(struct vl_compositor *c)
                              TGSI_RETURN_TYPE_FLOAT,
                              TGSI_RETURN_TYPE_FLOAT);
    }
-   
-   texel = ureg_DECL_temporary(shader);
-   fragment = ureg_DECL_output(shader, TGSI_SEMANTIC_COLOR, 0);
 
    /*
     * texel.xyz = tex(tc, sampler[i])
-    * fragment = csc * texel
     */
    for (i = 0; i < 3; ++i)
       ureg_TEX(shader, ureg_writemask(texel, TGSI_WRITEMASK_X << i), TGSI_TEXTURE_2D_ARRAY, tc, sampler[i]);
+}
 
+static void *
+create_frag_shader_video_buffer(struct vl_compositor *c)
+{
+   struct ureg_program *shader;
+   struct ureg_dst texel;
+   struct ureg_dst fragment;
+
+   shader = ureg_create(PIPE_SHADER_FRAGMENT);
+   if (!shader)
+      return false;
+
+   texel = ureg_DECL_temporary(shader);
+   fragment = ureg_DECL_output(shader, TGSI_SEMANTIC_COLOR, 0);
+
+   create_frag_shader_yuv(shader, texel);
    create_frag_shader_csc(shader, texel, fragment);
 
    ureg_release_temporary(shader, texel);
