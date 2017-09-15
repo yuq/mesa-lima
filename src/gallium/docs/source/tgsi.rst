@@ -1859,7 +1859,7 @@ source is an integer.
 
   dst.xy = src0.xy \times 2^{src1.x}
 
-  dst.zw = src0.zw \times 2^{src1.y}
+  dst.zw = src0.zw \times 2^{src1.z}
 
 .. opcode:: DMIN - Minimum
 
