@@ -129,21 +129,13 @@ blob_write_bytes(struct blob *blob, const void *bytes, size_t to_write);
  * Reserve space in \blob for a number of bytes.
  *
  * Space will be allocated within the blob for these byes, but the bytes will
- * be left uninitialized. The caller is expected to use the return value to
- * write directly (and immediately) to these bytes.
+ * be left uninitialized. The caller is expected to use \sa
+ * blob_overwrite_bytes to write to these bytes.
  *
- * \note The return value is valid immediately upon return, but can be
- * invalidated by any other call to a blob function. So the caller should call
- * blob_reserve_byes immediately before writing through the returned pointer.
- *
- * This function is intended to be used when interfacing with an existing API
- * that is not aware of the blob API, (so that blob_write_bytes cannot be
- * called).
- *
- * \return A pointer to space allocated within \blob to which \to_write bytes
- * can be written, (or NULL in case of any allocation error).
+ * \return An offset to space allocated within \blob to which \to_write bytes
+ * can be written, (or -1 in case of any allocation error).
  */
-uint8_t *
+ssize_t
 blob_reserve_bytes(struct blob *blob, size_t to_write);
 
 /**

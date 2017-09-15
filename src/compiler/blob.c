@@ -132,7 +132,7 @@ blob_overwrite_bytes(struct blob *blob,
                      size_t to_write)
 {
    /* Detect an attempt to overwrite data out of bounds. */
-   if (blob->size < offset + to_write)
+   if (offset + to_write < offset || blob->size < offset + to_write)
       return false;
 
    VG(VALGRIND_CHECK_MEM_IS_DEFINED(bytes, to_write));
@@ -158,15 +158,15 @@ blob_write_bytes(struct blob *blob, const void *bytes, size_t to_write)
    return true;
 }
 
-uint8_t *
+ssize_t
 blob_reserve_bytes(struct blob *blob, size_t to_write)
 {
-   uint8_t *ret;
+   ssize_t ret;
 
    if (! grow_to_fit (blob, to_write))
-      return NULL;
+      return -1;
 
-   ret = blob->data + blob->size;
+   ret = blob->size;
    blob->size += to_write;
 
    return ret;

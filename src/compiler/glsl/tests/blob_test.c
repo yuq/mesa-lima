@@ -120,7 +120,7 @@ test_write_and_read_functions (void)
 {
    struct blob blob;
    struct blob_reader reader;
-   uint8_t *reserved;
+   ssize_t reserved;
    size_t str_offset, uint_offset;
    uint8_t reserve_buf[sizeof(reserve_test_str)];
 
@@ -131,7 +131,7 @@ test_write_and_read_functions (void)
    blob_write_bytes(&blob, bytes_test_str, sizeof(bytes_test_str));
 
    reserved = blob_reserve_bytes(&blob, sizeof(reserve_test_str));
-   memcpy(reserved, reserve_test_str, sizeof(reserve_test_str));
+   blob_overwrite_bytes(&blob, reserved, reserve_test_str, sizeof(reserve_test_str));
 
    /* Write a placeholder, (to be replaced later via overwrite_bytes) */
    str_offset = blob.size;
