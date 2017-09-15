@@ -2551,8 +2551,12 @@ intel_miptree_set_aux_state(struct brw_context *brw,
       assert(intel_miptree_level_has_hiz(mt, level));
    }
 
-   for (unsigned a = 0; a < num_layers; a++)
-      mt->aux_state[level][start_layer + a] = aux_state;
+   for (unsigned a = 0; a < num_layers; a++) {
+      if (mt->aux_state[level][start_layer + a] != aux_state) {
+         mt->aux_state[level][start_layer + a] = aux_state;
+         brw->ctx.NewDriverState |= BRW_NEW_AUX_STATE;
+      }
+   }
 }
 
 /* On Gen9 color buffers may be compressed by the hardware (lossless
