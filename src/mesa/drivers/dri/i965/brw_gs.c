@@ -115,7 +115,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
    brw_nir_analyze_ubo_ranges(compiler, gp->program.nir,
                               prog_data.base.base.ubo_ranges);
 
-   uint64_t outputs_written = gp->program.info.outputs_written;
+   uint64_t outputs_written = gp->program.nir->info.outputs_written;
 
    brw_compute_vue_map(devinfo,
                        &prog_data.base.vue_map, outputs_written,

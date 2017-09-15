@@ -212,7 +212,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
    }
 
    uint64_t outputs_written =
-      brw_vs_outputs_written(brw, key, vp->program.info.outputs_written);
+      brw_vs_outputs_written(brw, key, vp->program.nir->info.outputs_written);
 
    brw_compute_vue_map(devinfo,
                        &prog_data.base.vue_map, outputs_written,
