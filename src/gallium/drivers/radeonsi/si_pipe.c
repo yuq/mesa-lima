@@ -768,6 +768,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen,
 	case PIPE_SHADER_CAP_SUBROUTINES:
 	case PIPE_SHADER_CAP_SUPPORTED_IRS:
 	case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
+	case PIPE_SHADER_CAP_TGSI_LDEXP_SUPPORTED:
 		return 0;
 	}
 	return 0;

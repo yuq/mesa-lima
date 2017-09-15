@@ -1454,6 +1454,17 @@ micro_pow(
 }
 
 static void
+micro_ldexp(union tgsi_exec_channel *dst,
+            const union tgsi_exec_channel *src0,
+            const union tgsi_exec_channel *src1)
+{
+   dst->f[0] = ldexpf(src0->f[0], src1->i[0]);
+   dst->f[1] = ldexpf(src0->f[1], src1->i[1]);
+   dst->f[2] = ldexpf(src0->f[2], src1->i[2]);
+   dst->f[3] = ldexpf(src0->f[3], src1->i[3]);
+}
+
+static void
 micro_sub(union tgsi_exec_channel *dst,
           const union tgsi_exec_channel *src0,
           const union tgsi_exec_channel *src1)
@@ -5080,6 +5091,10 @@ exec_instruction(
 
    case TGSI_OPCODE_POW:
       exec_scalar_binary(mach, inst, micro_pow, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
+      break;
+
+   case TGSI_OPCODE_LDEXP:
+      exec_scalar_binary(mach, inst, micro_ldexp, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_INT);
       break;
 
    case TGSI_OPCODE_COS:
