@@ -1245,7 +1245,7 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
       emit(MOV(retype(reg, BRW_REGISTER_TYPE_UD), brw_imm_ud(0u)));
    } else {
       emit(MOV(retype(reg, BRW_REGISTER_TYPE_D), brw_imm_d(0)));
-      if (prog_data->vue_map.slots_valid & VARYING_BIT_PSIZ) {
+      if (output_reg[VARYING_SLOT_PSIZ][0].file != BAD_FILE) {
          dst_reg reg_w = reg;
          reg_w.writemask = WRITEMASK_W;
          src_reg reg_as_src = src_reg(output_reg[VARYING_SLOT_PSIZ][0]);
@@ -1253,14 +1253,14 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
          reg_as_src.swizzle = brw_swizzle_for_size(1);
          emit(MOV(reg_w, reg_as_src));
       }
-      if (prog_data->vue_map.slots_valid & VARYING_BIT_LAYER) {
+      if (output_reg[VARYING_SLOT_LAYER][0].file != BAD_FILE) {
          dst_reg reg_y = reg;
          reg_y.writemask = WRITEMASK_Y;
          reg_y.type = BRW_REGISTER_TYPE_D;
          output_reg[VARYING_SLOT_LAYER][0].type = reg_y.type;
          emit(MOV(reg_y, src_reg(output_reg[VARYING_SLOT_LAYER][0])));
       }
-      if (prog_data->vue_map.slots_valid & VARYING_BIT_VIEWPORT) {
+      if (output_reg[VARYING_SLOT_VIEWPORT][0].file != BAD_FILE) {
          dst_reg reg_z = reg;
          reg_z.writemask = WRITEMASK_Z;
          reg_z.type = BRW_REGISTER_TYPE_D;
