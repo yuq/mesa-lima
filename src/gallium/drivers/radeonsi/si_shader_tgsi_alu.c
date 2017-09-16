@@ -734,6 +734,27 @@ static void emit_rsq(const struct lp_build_tgsi_action *action,
 					  bld_base->base.one, sqrt);
 }
 
+static void dfracexp_fetch_args(struct lp_build_tgsi_context *bld_base,
+				struct lp_build_emit_data *emit_data)
+{
+	emit_data->args[0] = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_X);
+	emit_data->arg_count = 1;
+}
+
+static void dfracexp_emit(const struct lp_build_tgsi_action *action,
+			  struct lp_build_tgsi_context *bld_base,
+			  struct lp_build_emit_data *emit_data)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+
+	emit_data->output[emit_data->chan] =
+		lp_build_intrinsic(ctx->ac.builder, "llvm.amdgcn.frexp.mant.f64",
+				   ctx->ac.f64, &emit_data->args[0], 1, 0);
+	emit_data->output1[emit_data->chan] =
+		lp_build_intrinsic(ctx->ac.builder, "llvm.amdgcn.frexp.exp.i32.f64",
+				   ctx->ac.i32, &emit_data->args[0], 1, 0);
+}
+
 void si_shader_context_init_alu(struct lp_build_tgsi_context *bld_base)
 {
 	lp_set_default_actions(bld_base);
@@ -772,6 +793,10 @@ void si_shader_context_init_alu(struct lp_build_tgsi_context *bld_base)
 	bld_base->op_actions[TGSI_OPCODE_DSQRT].intr_name = "llvm.sqrt.f64";
 	bld_base->op_actions[TGSI_OPCODE_DTRUNC].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_DTRUNC].intr_name = "llvm.trunc.f64";
+	bld_base->op_actions[TGSI_OPCODE_DFRACEXP].fetch_args = dfracexp_fetch_args;
+	bld_base->op_actions[TGSI_OPCODE_DFRACEXP].emit = dfracexp_emit;
+	bld_base->op_actions[TGSI_OPCODE_DLDEXP].emit = build_tgsi_intrinsic_nomem;
+	bld_base->op_actions[TGSI_OPCODE_DLDEXP].intr_name = "llvm.amdgcn.ldexp.f64";
 	bld_base->op_actions[TGSI_OPCODE_EX2].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_EX2].intr_name = "llvm.exp2.f32";
 	bld_base->op_actions[TGSI_OPCODE_FLR].emit = build_tgsi_intrinsic_nomem;
