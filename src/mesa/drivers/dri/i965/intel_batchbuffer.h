@@ -12,8 +12,7 @@ extern "C" {
 
 struct intel_batchbuffer;
 
-void intel_batchbuffer_init(struct intel_screen *screen,
-                            struct intel_batchbuffer *batch);
+void intel_batchbuffer_init(struct brw_context *brw);
 void intel_batchbuffer_free(struct intel_batchbuffer *batch);
 void intel_batchbuffer_save_state(struct brw_context *brw);
 void intel_batchbuffer_reset_to_saved(struct brw_context *brw);

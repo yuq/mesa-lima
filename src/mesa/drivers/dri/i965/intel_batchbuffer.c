@@ -62,8 +62,7 @@
 #define MAX_STATE_SIZE (64 * 1024)
 
 static void
-intel_batchbuffer_reset(struct intel_batchbuffer *batch,
-                        struct intel_screen *screen);
+intel_batchbuffer_reset(struct brw_context *brw);
 
 static bool
 uint_key_compare(const void *a, const void *b)
@@ -87,9 +86,10 @@ init_reloc_list(struct brw_reloc_list *rlist, int count)
 }
 
 void
-intel_batchbuffer_init(struct intel_screen *screen,
-                       struct intel_batchbuffer *batch)
+intel_batchbuffer_init(struct brw_context *brw)
 {
+   struct intel_screen *screen = brw->screen;
+   struct intel_batchbuffer *batch = &brw->batch;
    const struct gen_device_info *devinfo = &screen->devinfo;
 
    if (!devinfo->has_llc) {
@@ -123,7 +123,7 @@ intel_batchbuffer_init(struct intel_screen *screen,
    if (devinfo->gen == 6)
       batch->valid_reloc_flags |= EXEC_OBJECT_NEEDS_GTT;
 
-   intel_batchbuffer_reset(batch, screen);
+   intel_batchbuffer_reset(brw);
 }
 
 #define READ_ONCE(x) (*(volatile __typeof__(x) *)&(x))
@@ -170,9 +170,10 @@ add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
 }
 
 static void
-intel_batchbuffer_reset(struct intel_batchbuffer *batch,
-                        struct intel_screen *screen)
+intel_batchbuffer_reset(struct brw_context *brw)
 {
+   struct intel_screen *screen = brw->screen;
+   struct intel_batchbuffer *batch = &brw->batch;
    struct brw_bufmgr *bufmgr = screen->bufmgr;
 
    if (batch->last_bo != NULL) {
@@ -218,7 +219,7 @@ intel_batchbuffer_reset(struct intel_batchbuffer *batch,
 static void
 intel_batchbuffer_reset_and_clear_render_cache(struct brw_context *brw)
 {
-   intel_batchbuffer_reset(&brw->batch, brw->screen);
+   intel_batchbuffer_reset(brw);
    brw_render_cache_set_clear(brw);
 }
 
