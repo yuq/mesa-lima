@@ -557,14 +557,11 @@ suface_from_external_memory(VADriverContextP ctx, vlVaSurface *surface,
 }
 
 VAStatus
-vlVaHandleSurfaceAllocate(VADriverContextP ctx, vlVaSurface *surface,
+vlVaHandleSurfaceAllocate(vlVaDriver *drv, vlVaSurface *surface,
                           struct pipe_video_buffer *templat)
 {
-   vlVaDriver *drv;
    struct pipe_surface **surfaces;
    unsigned i;
-
-   drv = VL_VA_DRIVER(ctx);
 
    surface->buffer = drv->pipe->create_video_buffer(drv->pipe, templat);
    if (!surface->buffer)
@@ -730,7 +727,7 @@ vlVaCreateSurfaces2(VADriverContextP ctx, unsigned int format,
              !(memory_attibute->flags & VA_SURFACE_EXTBUF_DESC_ENABLE_TILING))
             templat.bind = PIPE_BIND_LINEAR | PIPE_BIND_SHARED;
 
-	 vaStatus = vlVaHandleSurfaceAllocate(ctx, surf, &templat);
+	 vaStatus = vlVaHandleSurfaceAllocate(drv, surf, &templat);
          if (vaStatus != VA_STATUS_SUCCESS)
             goto free_surf;
          break;
