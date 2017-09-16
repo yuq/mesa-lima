@@ -198,6 +198,16 @@ namespace clover {
                f(mod.getError().message());
 #endif
          }
+
+        template<typename T> void
+        set_diagnostic_handler(::llvm::LLVMContext &ctx,
+                               T *diagnostic_handler, void *data) {
+#if HAVE_LLVM >= 0x0600
+           ctx.setDiagnosticHandlerCallBack(diagnostic_handler, data);
+#else
+           ctx.setDiagnosticHandler(diagnostic_handler, data);
+#endif
+        }
       }
    }
 }
