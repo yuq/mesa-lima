@@ -58,6 +58,15 @@ extern "C" {
    TGSI_FOR_EACH_CHANNEL( CHAN )\
       TGSI_IF_IS_DST0_CHANNEL_ENABLED( INST, CHAN )
 
+#define TGSI_IS_DST1_CHANNEL_ENABLED( INST, CHAN )\
+   ((INST)->Dst[1].Register.WriteMask & (1 << (CHAN)))
+
+#define TGSI_IF_IS_DST1_CHANNEL_ENABLED( INST, CHAN )\
+   if (TGSI_IS_DST1_CHANNEL_ENABLED( INST, CHAN ))
+
+#define TGSI_FOR_EACH_DST1_ENABLED_CHANNEL( INST, CHAN )\
+   TGSI_FOR_EACH_CHANNEL( CHAN )\
+      TGSI_IF_IS_DST1_CHANNEL_ENABLED( INST, CHAN )
 
 /**
   * Registers may be treated as float, signed int or unsigned int.

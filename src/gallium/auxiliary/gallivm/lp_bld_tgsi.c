@@ -264,10 +264,16 @@ lp_build_tgsi_inst_llvm(
 
    memset(&emit_data, 0, sizeof(emit_data));
 
-   assert(info->num_dst <= 1);
+   assert(info->num_dst <= 2);
    if (info->num_dst) {
       TGSI_FOR_EACH_DST0_ENABLED_CHANNEL( inst, chan_index ) {
          emit_data.output[chan_index] = bld_base->base.undef;
+      }
+
+      if (info->num_dst >= 2) {
+         TGSI_FOR_EACH_DST1_ENABLED_CHANNEL( inst, chan_index ) {
+            emit_data.output1[chan_index] = bld_base->base.undef;
+         }
       }
    }
 
@@ -309,11 +315,21 @@ lp_build_tgsi_inst_llvm(
          TGSI_FOR_EACH_DST0_ENABLED_CHANNEL(inst, chan_index) {
             emit_data.output[chan_index] = val;
          }
+
+         if (info->num_dst >= 2) {
+            val = emit_data.output1[0];
+            memset(emit_data.output1, 0, sizeof(emit_data.output1));
+            TGSI_FOR_EACH_DST1_ENABLED_CHANNEL(inst, chan_index) {
+               emit_data.output1[chan_index] = val;
+            }
+         }
       }
    }
 
    if (info->num_dst > 0 && info->opcode != TGSI_OPCODE_STORE) {
       bld_base->emit_store(bld_base, inst, info, 0, emit_data.output);
+      if (info->num_dst >= 2)
+         bld_base->emit_store(bld_base, inst, info, 1, emit_data.output1);
    }
    return TRUE;
 }
