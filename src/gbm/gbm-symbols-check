@@ -6,6 +6,7 @@ gbm_device_get_fd
 gbm_device_get_backend_name
 gbm_device_is_format_supported
 gbm_device_destroy
+gbm_device_get_format_modifier_plane_count
 gbm_create_device
 gbm_bo_create
 gbm_bo_create_with_modifiers
