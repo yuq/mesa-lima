@@ -184,7 +184,7 @@ intel_batchbuffer_reset(struct brw_context *brw)
 
    batch->bo = brw_bo_alloc(bufmgr, "batchbuffer", BATCH_SZ, 4096);
    if (!batch->batch_cpu_map) {
-      batch->map = brw_bo_map(NULL, batch->bo, MAP_READ | MAP_WRITE);
+      batch->map = brw_bo_map(brw, batch->bo, MAP_READ | MAP_WRITE);
    }
    batch->map_next = batch->map;
 
@@ -193,7 +193,7 @@ intel_batchbuffer_reset(struct brw_context *brw)
       can_do_exec_capture(screen) ? EXEC_OBJECT_CAPTURE : 0;
    if (!batch->state_cpu_map) {
       batch->state_map =
-         brw_bo_map(NULL, batch->state_bo, MAP_READ | MAP_WRITE);
+         brw_bo_map(brw, batch->state_bo, MAP_READ | MAP_WRITE);
    }
 
    /* Avoid making 0 a valid state offset - otherwise the decoder will try
