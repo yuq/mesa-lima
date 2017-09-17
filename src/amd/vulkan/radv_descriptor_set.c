@@ -67,6 +67,7 @@ VkResult radv_CreateDescriptorSetLayout(
 	set_layout->binding_count = max_binding + 1;
 	set_layout->shader_stages = 0;
 	set_layout->dynamic_shader_stages = 0;
+	set_layout->has_immutable_samplers = false;
 	set_layout->size = 0;
 
 	memset(set_layout->binding, 0, size - sizeof(struct radv_descriptor_set_layout));
@@ -132,6 +133,7 @@ VkResult radv_CreateDescriptorSetLayout(
 		if (binding->pImmutableSamplers) {
 			set_layout->binding[b].immutable_samplers_offset = samplers_offset;
 			set_layout->binding[b].immutable_samplers_equal = true;
+			set_layout->has_immutable_samplers = true;
 
 
 			for (uint32_t i = 0; i < binding->descriptorCount; i++)
@@ -329,21 +331,23 @@ radv_descriptor_set_create(struct radv_device *device,
 			return vk_error(VK_ERROR_OUT_OF_POOL_MEMORY_KHR);
 	}
 
-	for (unsigned i = 0; i < layout->binding_count; ++i) {
-		if (!layout->binding[i].immutable_samplers_offset ||
-		    layout->binding[i].immutable_samplers_equal)
-			continue;
+	if (layout->has_immutable_samplers) {
+		for (unsigned i = 0; i < layout->binding_count; ++i) {
+			if (!layout->binding[i].immutable_samplers_offset ||
+			layout->binding[i].immutable_samplers_equal)
+				continue;
 
-		unsigned offset = layout->binding[i].offset / 4;
-		if (layout->binding[i].type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-			offset += 16;
+			unsigned offset = layout->binding[i].offset / 4;
+			if (layout->binding[i].type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+				offset += 16;
 
-		const uint32_t *samplers = (const uint32_t*)((const char*)layout + layout->binding[i].immutable_samplers_offset);
-		for (unsigned j = 0; j < layout->binding[i].array_size; ++j) {
-			memcpy(set->mapped_ptr + offset, samplers + 4 * j, 16);
-			offset += layout->binding[i].size / 4;
+			const uint32_t *samplers = (const uint32_t*)((const char*)layout + layout->binding[i].immutable_samplers_offset);
+			for (unsigned j = 0; j < layout->binding[i].array_size; ++j) {
+				memcpy(set->mapped_ptr + offset, samplers + 4 * j, 16);
+				offset += layout->binding[i].size / 4;
+			}
+
 		}
-
 	}
 	*out_set = set;
 	return VK_SUCCESS;
