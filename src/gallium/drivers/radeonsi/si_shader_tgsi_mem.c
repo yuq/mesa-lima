@@ -1478,13 +1478,22 @@ static void tex_fetch_args(
 	if (target == TGSI_TEXTURE_CUBE ||
 	    target == TGSI_TEXTURE_CUBE_ARRAY ||
 	    target == TGSI_TEXTURE_SHADOWCUBE ||
-	    target == TGSI_TEXTURE_SHADOWCUBE_ARRAY)
+	    target == TGSI_TEXTURE_SHADOWCUBE_ARRAY) {
 		ac_prepare_cube_coords(&ctx->ac,
 				       opcode == TGSI_OPCODE_TXD,
 				       target == TGSI_TEXTURE_CUBE_ARRAY ||
 				       target == TGSI_TEXTURE_SHADOWCUBE_ARRAY,
 				       opcode == TGSI_OPCODE_LODQ,
 				       coords, derivs);
+	} else if (tgsi_is_array_sampler(target) &&
+		   opcode != TGSI_OPCODE_TXF &&
+		   opcode != TGSI_OPCODE_TXF_LZ &&
+		   ctx->screen->b.chip_class <= VI) {
+		unsigned array_coord = target == TGSI_TEXTURE_1D_ARRAY ? 1 : 2;
+		coords[array_coord] =
+			ac_build_intrinsic(&ctx->ac, "llvm.rint.f32", ctx->f32,
+					   &coords[array_coord], 1, 0);
+	}
 
 	if (opcode == TGSI_OPCODE_TXD)
 		for (int i = 0; i < num_deriv_channels * 2; i++)
