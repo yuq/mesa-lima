@@ -602,6 +602,7 @@ static void vid_dec_FrameDecoded(OMX_COMPONENTTYPE *comp, OMX_BUFFERHEADERTYPE* 
             /* re-allocate the progressive buffer */
             omx_base_video_PortType *port;
             struct pipe_video_buffer templat = {};
+            struct u_rect src_rect, dst_rect;
 
             port = (omx_base_video_PortType *)
                     priv->ports[OMX_BASE_FILTER_INPUTPORT_INDEX];
@@ -614,8 +615,14 @@ static void vid_dec_FrameDecoded(OMX_COMPONENTTYPE *comp, OMX_BUFFERHEADERTYPE* 
             new_vbuf = priv->pipe->create_video_buffer(priv->pipe, &templat);
 
             /* convert the interlaced to the progressive */
-            vl_compositor_yuv_deint(&priv->cstate, &priv->compositor,
-                                    input->pInputPortPrivate, new_vbuf);
+            src_rect.x0 = dst_rect.x0 = 0;
+            src_rect.x1 = dst_rect.x1 = templat.width;
+            src_rect.y0 = dst_rect.y0 = 0;
+            src_rect.y1 = dst_rect.y1 = templat.height;
+
+            vl_compositor_yuv_deint_full(&priv->cstate, &priv->compositor,
+                                         input->pInputPortPrivate, new_vbuf,
+                                         &src_rect, &dst_rect, VL_COMPOSITOR_WEAVE);
 
             /* set the progrssive buffer for next round */
             vbuf->destroy(vbuf);
