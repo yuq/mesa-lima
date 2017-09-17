@@ -174,6 +174,10 @@ static const VkExtensionProperties common_device_extensions[] = {
 		.extensionName = VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME,
 		.specVersion = 1,
 	},
+	{
+		.extensionName = VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
+		.specVersion = 1,
+	},
 };
 static const VkExtensionProperties ext_sema_device_extensions[] = {
 	{
@@ -2481,44 +2485,74 @@ void radv_GetDeviceMemoryCommitment(
 	*pCommittedMemoryInBytes = 0;
 }
 
-VkResult radv_BindBufferMemory(
-	VkDevice                                    device,
-	VkBuffer                                    _buffer,
-	VkDeviceMemory                              _memory,
-	VkDeviceSize                                memoryOffset)
+VkResult radv_BindBufferMemory2KHR(VkDevice device,
+                                   uint32_t bindInfoCount,
+                                   const VkBindBufferMemoryInfoKHR *pBindInfos)
 {
-	RADV_FROM_HANDLE(radv_device_memory, mem, _memory);
-	RADV_FROM_HANDLE(radv_buffer, buffer, _buffer);
+	for (uint32_t i = 0; i < bindInfoCount; ++i) {
+		RADV_FROM_HANDLE(radv_device_memory, mem, pBindInfos[i].memory);
+		RADV_FROM_HANDLE(radv_buffer, buffer, pBindInfos[i].buffer);
 
-	if (mem) {
-		buffer->bo = mem->bo;
-		buffer->offset = memoryOffset;
-	} else {
-		buffer->bo = NULL;
-		buffer->offset = 0;
+		if (mem) {
+			buffer->bo = mem->bo;
+			buffer->offset = pBindInfos[i].memoryOffset;
+		} else {
+			buffer->bo = NULL;
+		}
 	}
-
 	return VK_SUCCESS;
 }
 
-VkResult radv_BindImageMemory(
+VkResult radv_BindBufferMemory(
 	VkDevice                                    device,
-	VkImage                                     _image,
-	VkDeviceMemory                              _memory,
+	VkBuffer                                    buffer,
+	VkDeviceMemory                              memory,
 	VkDeviceSize                                memoryOffset)
 {
-	RADV_FROM_HANDLE(radv_device_memory, mem, _memory);
-	RADV_FROM_HANDLE(radv_image, image, _image);
+	const VkBindBufferMemoryInfoKHR info = {
+		.sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO_KHR,
+		.buffer = buffer,
+		.memory = memory,
+		.memoryOffset = memoryOffset
+	};
 
-	if (mem) {
-		image->bo = mem->bo;
-		image->offset = memoryOffset;
-	} else {
-		image->bo = NULL;
-		image->offset = 0;
+	return radv_BindBufferMemory2KHR(device, 1, &info);
+}
+
+VkResult radv_BindImageMemory2KHR(VkDevice device,
+                                  uint32_t bindInfoCount,
+                                  const VkBindImageMemoryInfoKHR *pBindInfos)
+{
+	for (uint32_t i = 0; i < bindInfoCount; ++i) {
+		RADV_FROM_HANDLE(radv_device_memory, mem, pBindInfos[i].memory);
+		RADV_FROM_HANDLE(radv_image, image, pBindInfos[i].image);
+
+		if (mem) {
+			image->bo = mem->bo;
+			image->offset = pBindInfos[i].memoryOffset;
+		} else {
+			image->bo = NULL;
+			image->offset = 0;
+		}
 	}
-
 	return VK_SUCCESS;
+}
+
+
+VkResult radv_BindImageMemory(
+	VkDevice                                    device,
+	VkImage                                     image,
+	VkDeviceMemory                              memory,
+	VkDeviceSize                                memoryOffset)
+{
+	const VkBindImageMemoryInfoKHR info = {
+		.sType = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO_KHR,
+		.image = image,
+		.memory = memory,
+		.memoryOffset = memoryOffset
+	};
+
+	return radv_BindImageMemory2KHR(device, 1, &info);
 }
 
 
