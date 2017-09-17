@@ -1912,7 +1912,7 @@ struct anv_fence_impl {
 struct anv_fence {
    /* Permanent fence state.  Every fence has some form of permanent state
     * (type != ANV_SEMAPHORE_TYPE_NONE).  This may be a BO to fence on (for
-    * cross-process fences0 or it could just be a dummy for use internally.
+    * cross-process fences) or it could just be a dummy for use internally.
     */
    struct anv_fence_impl permanent;
 
@@ -1950,13 +1950,13 @@ struct anv_semaphore_impl {
        */
       struct anv_bo *bo;
 
-      /* The sync file descriptor when type == AKV_SEMAPHORE_TYPE_SYNC_FILE.
+      /* The sync file descriptor when type == ANV_SEMAPHORE_TYPE_SYNC_FILE.
        * If the semaphore is in the unsignaled state due to either just being
        * created or because it has been used for a wait, fd will be -1.
        */
       int fd;
 
-      /* Sync object handle when type == AKV_SEMAPHORE_TYPE_DRM_SYNCOBJ.
+      /* Sync object handle when type == ANV_SEMAPHORE_TYPE_DRM_SYNCOBJ.
        * Unlike GEM BOs, DRM sync objects aren't deduplicated by the kernel on
        * import so we don't need to bother with a userspace cache.
        */
