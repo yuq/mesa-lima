@@ -599,6 +599,7 @@ struct r600_common_context {
 
 	/* Additional context states. */
 	unsigned flags; /* flush flags */
+	enum pipe_prim_type		current_rast_prim; /* primitive type after TES, GS */
 
 	/* Queries. */
 	/* Maintain the list of active queries for pausing between IBs. */

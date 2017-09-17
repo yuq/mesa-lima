@@ -409,7 +409,6 @@ struct si_context {
 	unsigned		last_sc_line_stipple;
 	unsigned		current_vs_state;
 	unsigned		last_vs_state;
-	enum pipe_prim_type	current_rast_prim; /* primitive type after TES, GS */
 
 	/* Scratch buffer */
 	struct r600_atom	scratch_state;
