@@ -902,8 +902,8 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 			S_028A04_MIN_SIZE(si_pack_float_12p4(psize_min/2)) |
 			S_028A04_MAX_SIZE(si_pack_float_12p4(psize_max/2)));
 
-	tmp = (unsigned)state->line_width * 8;
-	si_pm4_set_reg(pm4, R_028A08_PA_SU_LINE_CNTL, S_028A08_WIDTH(tmp));
+	si_pm4_set_reg(pm4, R_028A08_PA_SU_LINE_CNTL,
+		       S_028A08_WIDTH(si_pack_float_12p4(state->line_width/2)));
 	si_pm4_set_reg(pm4, R_028A48_PA_SC_MODE_CNTL_0,
 		       S_028A48_LINE_STIPPLE_ENABLE(state->line_stipple_enable) |
 		       S_028A48_MSAA_ENABLE(state->multisample ||
