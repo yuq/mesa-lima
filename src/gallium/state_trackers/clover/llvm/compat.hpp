@@ -36,6 +36,7 @@
 
 #include "util/algorithm.hpp"
 
+#include <llvm/IR/LLVMContext.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Target/TargetMachine.h>
