@@ -1249,9 +1249,12 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	 * current_rast_prim for this draw_vbo call. */
 	if (sctx->gs_shader.cso)
 		rast_prim = sctx->gs_shader.cso->gs_output_prim;
-	else if (sctx->tes_shader.cso)
-		rast_prim = sctx->tes_shader.cso->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
-	else
+	else if (sctx->tes_shader.cso) {
+		if (sctx->tes_shader.cso->info.properties[TGSI_PROPERTY_TES_POINT_MODE])
+			rast_prim = PIPE_PRIM_POINTS;
+		else
+			rast_prim = sctx->tes_shader.cso->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
+	} else
 		rast_prim = info->mode;
 
 	if (rast_prim != sctx->b.current_rast_prim) {
