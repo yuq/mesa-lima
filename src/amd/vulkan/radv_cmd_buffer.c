@@ -1598,9 +1598,7 @@ radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer,
 	                                                   cmd_buffer->cs,
 	                                                   MAX_SETS * MESA_SHADER_STAGES * 4);
 
-	for (i = 0; i < MAX_SETS; i++) {
-		if (!(cmd_buffer->state.descriptors_dirty & (1u << i)))
-			continue;
+	for_each_bit(i, cmd_buffer->state.descriptors_dirty) {
 		struct radv_descriptor_set *set = cmd_buffer->state.descriptors[i];
 		if (!set)
 			continue;
