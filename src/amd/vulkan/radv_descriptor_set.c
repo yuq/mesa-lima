@@ -301,7 +301,7 @@ radv_descriptor_set_create(struct radv_device *device,
 		if (pool->current_offset + layout_size <= pool->size) {
 			set->bo = pool->bo;
 			set->mapped_ptr = (uint32_t*)(pool->mapped_ptr + pool->current_offset);
-			set->va = device->ws->buffer_get_va(set->bo) + pool->current_offset;
+			set->va = radv_buffer_get_va(set->bo) + pool->current_offset;
 			pool->current_offset += layout_size;
 			list_addtail(&set->vram_list, &pool->vram_list);
 		} else if (!pool->host_memory_base) {
@@ -325,7 +325,7 @@ radv_descriptor_set_create(struct radv_device *device,
 			}
 			set->bo = pool->bo;
 			set->mapped_ptr = (uint32_t*)(pool->mapped_ptr + offset);
-			set->va = device->ws->buffer_get_va(set->bo) + offset;
+			set->va = radv_buffer_get_va(set->bo) + offset;
 			list_add(&set->vram_list, prev);
 		} else
 			return vk_error(VK_ERROR_OUT_OF_POOL_MEMORY_KHR);
@@ -560,7 +560,7 @@ static void write_buffer_descriptor(struct radv_device *device,
                                     const VkDescriptorBufferInfo *buffer_info)
 {
 	RADV_FROM_HANDLE(radv_buffer, buffer, buffer_info->buffer);
-	uint64_t va = device->ws->buffer_get_va(buffer->bo);
+	uint64_t va = radv_buffer_get_va(buffer->bo);
 	uint32_t range = buffer_info->range;
 
 	if (buffer_info->range == VK_WHOLE_SIZE)
@@ -589,7 +589,7 @@ static void write_dynamic_buffer_descriptor(struct radv_device *device,
                                             const VkDescriptorBufferInfo *buffer_info)
 {
 	RADV_FROM_HANDLE(radv_buffer, buffer, buffer_info->buffer);
-	uint64_t va = device->ws->buffer_get_va(buffer->bo);
+	uint64_t va = radv_buffer_get_va(buffer->bo);
 	unsigned size = buffer_info->range;
 
 	if (buffer_info->range == VK_WHOLE_SIZE)
