@@ -108,9 +108,7 @@ ir_vec_index_to_cond_assign_visitor::convert_vec_index_to_cond_assign(void *mem_
     * in the vector.
     */
    ir_variable *const cond =
-      compare_index_block(&list, index, 0,
-                          orig_vector->type->vector_elements,
-                          mem_ctx);
+      compare_index_block(body, index, 0, orig_vector->type->vector_elements);
 
    /* Generate a conditional move of each vector element to the temp. */
    for (unsigned i = 0; i < orig_vector->type->vector_elements; i++)
