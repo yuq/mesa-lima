@@ -6763,8 +6763,7 @@ ast_case_label::hir(exec_list *instructions,
       }
 
       body.emit(assign(fallthru_var,
-                       body.constant(true),
-                       equal(label, deref_test_var)));
+                       logic_or(fallthru_var, equal(label, deref_test_var))));
    } else { /* default case */
       if (state->switch_state.previous_default) {
          YYLTYPE loc = this->get_location();
@@ -6777,8 +6776,9 @@ ast_case_label::hir(exec_list *instructions,
       state->switch_state.previous_default = this;
 
       /* Set fallthru condition on 'run_default' bool. */
-      body.emit(assign(fallthru_var, body.constant(true),
-                       state->switch_state.run_default));
+      body.emit(assign(fallthru_var,
+                       logic_or(fallthru_var,
+                                state->switch_state.run_default)));
    }
 
    /* Case statements do not have r-values. */
