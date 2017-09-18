@@ -6690,12 +6690,14 @@ ast_case_label::hir(exec_list *instructions,
          }
       }
 
-      ir_dereference_variable *deref_test_var =
-         new(ctx) ir_dereference_variable(state->switch_state.test_var);
+      /* Create an r-value version of the ir_constant label here (after we may
+       * have created a fake one in error cases) that can be passed to
+       * apply_implicit_conversion below.
+       */
+      ir_rvalue *label = label_const;
 
-      ir_expression *test_cond = new(ctx) ir_expression(ir_binop_all_equal,
-                                                        label_const,
-                                                        deref_test_var);
+      ir_rvalue *deref_test_var =
+         new(ctx) ir_dereference_variable(state->switch_state.test_var);
 
       /*
        * From GLSL 4.40 specification section 6.2 ("Selection"):
@@ -6708,10 +6710,10 @@ ast_case_label::hir(exec_list *instructions,
        *     uint (see section 4.1.10 “Implicit Conversions”) before the compare
        *     is done."
        */
-      if (label_const->type != state->switch_state.test_var->type) {
+      if (label->type != state->switch_state.test_var->type) {
          YYLTYPE loc = this->test_value->get_location();
 
-         const glsl_type *type_a = label_const->type;
+         const glsl_type *type_a = label->type;
          const glsl_type *type_b = state->switch_state.test_var->type;
 
          /* Check if int->uint implicit conversion is supported. */
@@ -6728,16 +6730,27 @@ ast_case_label::hir(exec_list *instructions,
             /* Conversion of the case label. */
             if (type_a->base_type == GLSL_TYPE_INT) {
                if (!apply_implicit_conversion(glsl_type::uint_type,
-                                              test_cond->operands[0], state))
+                                              label, state))
                   _mesa_glsl_error(&loc, state, "implicit type conversion error");
             } else {
                /* Conversion of the init-expression value. */
                if (!apply_implicit_conversion(glsl_type::uint_type,
-                                              test_cond->operands[1], state))
+                                              deref_test_var, state))
                   _mesa_glsl_error(&loc, state, "implicit type conversion error");
             }
          }
+
+         /* If the implicit conversion was allowed, the types will already be
+          * the same.  If the implicit conversion wasn't allowed, smash the
+          * type of the label anyway.  This will prevent the expression
+          * constructor (below) from failing an assertion.
+          */
+         label->type = deref_test_var->type;
       }
+
+      ir_expression *test_cond = new(ctx) ir_expression(ir_binop_equal,
+                                                        label,
+                                                        deref_test_var);
 
       ir_assignment *set_fallthru_on_test =
          new(ctx) ir_assignment(deref_fallthru_var, true_val, test_cond);
@@ -6757,14 +6770,10 @@ ast_case_label::hir(exec_list *instructions,
       /* Set fallthru condition on 'run_default' bool. */
       ir_dereference_variable *deref_run_default =
          new(ctx) ir_dereference_variable(state->switch_state.run_default);
-      ir_rvalue *const cond_true = new(ctx) ir_constant(true);
-      ir_expression *test_cond = new(ctx) ir_expression(ir_binop_all_equal,
-                                                        cond_true,
-                                                        deref_run_default);
 
-      /* Set falltrhu state. */
+      /* Set fallthru state. */
       ir_assignment *set_fallthru =
-         new(ctx) ir_assignment(deref_fallthru_var, true_val, test_cond);
+         new(ctx) ir_assignment(deref_fallthru_var, true_val, deref_run_default);
 
       instructions->push_tail(set_fallthru);
    }
