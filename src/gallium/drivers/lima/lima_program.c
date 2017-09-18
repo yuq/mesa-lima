@@ -33,6 +33,7 @@
 #include "lima_context.h"
 #include "lima_program.h"
 #include "ir/gp/nir.h"
+#include "ir/pp/nir.h"
 
 
 static const nir_shader_compiler_options vs_nir_options = {
@@ -43,7 +44,9 @@ static const nir_shader_compiler_options vs_nir_options = {
    .lower_sub = true,
 };
 
-static const nir_shader_compiler_options fs_nir_options = {0};
+static const nir_shader_compiler_options fs_nir_options = {
+   .lower_fdiv = true,
+};
 
 const void *
 lima_program_get_compiler_options(enum pipe_shader_type shader)
@@ -130,7 +133,7 @@ static void *
 lima_create_fs_state(struct pipe_context *pctx,
                      const struct pipe_shader_state *cso)
 {
-   struct lima_fs_shader_state *so = CALLOC_STRUCT(lima_fs_shader_state);
+   struct lima_fs_shader_state *so = rzalloc(NULL, struct lima_fs_shader_state);
 
    if (!so)
       return NULL;
@@ -142,6 +145,8 @@ lima_create_fs_state(struct pipe_context *pctx,
    nir_shader *nir = cso->ir.nir;
    lima_program_optimize_fs_nir(nir);
    nir_print_shader(nir, stdout);
+
+   ppir_compile_nir(so, nir);
 
    static uint32_t fs[] = {
       0x00021025, 0x0000014c, 0x03c007cf, 0x00000000, /* 0x00000000 */
@@ -170,7 +175,7 @@ lima_delete_fs_state(struct pipe_context *pctx, void *hwcso)
 {
    struct lima_fs_shader_state *so = hwcso;
 
-   FREE(so);
+   ralloc_free(so);
 }
 
 static void *
