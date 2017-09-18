@@ -2518,8 +2518,11 @@ void radv_CmdSetScissor(
 	const VkRect2D*                             pScissors)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-
 	const uint32_t total_count = firstScissor + scissorCount;
+
+	assert(firstScissor < MAX_SCISSORS);
+	assert(total_count >= 1 && total_count <= MAX_SCISSORS);
+
 	if (cmd_buffer->state.dynamic.scissor.count < total_count)
 		cmd_buffer->state.dynamic.scissor.count = total_count;
 
