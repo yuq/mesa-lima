@@ -6647,12 +6647,9 @@ ir_rvalue *
 ast_case_label::hir(exec_list *instructions,
                     struct _mesa_glsl_parse_state *state)
 {
-   void *ctx = state;
+   ir_factory body(instructions, state);
 
-   ir_dereference_variable *deref_fallthru_var =
-      new(ctx) ir_dereference_variable(state->switch_state.is_fallthru_var);
-
-   ir_rvalue *const true_val = new(ctx) ir_constant(true);
+   ir_variable *const fallthru_var = state->switch_state.is_fallthru_var;
 
    /* If not default case, ... */
    if (this->test_value != NULL) {
@@ -6660,7 +6657,8 @@ ast_case_label::hir(exec_list *instructions,
        * comparison of cached test expression value to case label.
        */
       ir_rvalue *const label_rval = this->test_value->hir(instructions, state);
-      ir_constant *label_const = label_rval->constant_expression_value(ctx);
+      ir_constant *label_const =
+         label_rval->constant_expression_value(body.mem_ctx);
 
       if (!label_const) {
          YYLTYPE loc = this->test_value->get_location();
@@ -6670,7 +6668,7 @@ ast_case_label::hir(exec_list *instructions,
                           "constant expression");
 
          /* Stuff a dummy value in to allow processing to continue. */
-         label_const = new(ctx) ir_constant(0);
+         label_const = body.constant(0);
       } else {
          hash_entry *entry =
                _mesa_hash_table_search(state->switch_state.labels_ht,
@@ -6697,7 +6695,7 @@ ast_case_label::hir(exec_list *instructions,
       ir_rvalue *label = label_const;
 
       ir_rvalue *deref_test_var =
-         new(ctx) ir_dereference_variable(state->switch_state.test_var);
+         new(body.mem_ctx) ir_dereference_variable(state->switch_state.test_var);
 
       /*
        * From GLSL 4.40 specification section 6.2 ("Selection"):
@@ -6748,14 +6746,9 @@ ast_case_label::hir(exec_list *instructions,
          label->type = deref_test_var->type;
       }
 
-      ir_expression *test_cond = new(ctx) ir_expression(ir_binop_equal,
-                                                        label,
-                                                        deref_test_var);
-
-      ir_assignment *set_fallthru_on_test =
-         new(ctx) ir_assignment(deref_fallthru_var, true_val, test_cond);
-
-      instructions->push_tail(set_fallthru_on_test);
+      body.emit(assign(fallthru_var,
+                       body.constant(true),
+                       equal(label, deref_test_var)));
    } else { /* default case */
       if (state->switch_state.previous_default) {
          YYLTYPE loc = this->get_location();
@@ -6768,14 +6761,8 @@ ast_case_label::hir(exec_list *instructions,
       state->switch_state.previous_default = this;
 
       /* Set fallthru condition on 'run_default' bool. */
-      ir_dereference_variable *deref_run_default =
-         new(ctx) ir_dereference_variable(state->switch_state.run_default);
-
-      /* Set fallthru state. */
-      ir_assignment *set_fallthru =
-         new(ctx) ir_assignment(deref_fallthru_var, true_val, deref_run_default);
-
-      instructions->push_tail(set_fallthru);
+      body.emit(assign(fallthru_var, body.constant(true),
+                       state->switch_state.run_default));
    }
 
    /* Case statements do not have r-values. */
