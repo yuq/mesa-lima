@@ -2497,8 +2497,11 @@ void radv_CmdSetViewport(
 	const VkViewport*                           pViewports)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-
 	const uint32_t total_count = firstViewport + viewportCount;
+
+	assert(firstViewport < MAX_VIEWPORTS);
+	assert(total_count >= 1 && total_count <= MAX_VIEWPORTS);
+
 	if (cmd_buffer->state.dynamic.viewport.count < total_count)
 		cmd_buffer->state.dynamic.viewport.count = total_count;
 
