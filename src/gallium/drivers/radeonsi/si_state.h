@@ -55,6 +55,7 @@ struct si_state_blend {
 	unsigned		cb_target_enabled_4bit;
 	unsigned		blend_enable_4bit;
 	unsigned		need_src_alpha_4bit;
+	unsigned		commutative_4bit;
 	bool			alpha_to_coverage:1;
 	bool			alpha_to_one:1;
 	bool			dual_src_blend:1;

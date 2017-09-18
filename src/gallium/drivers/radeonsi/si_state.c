@@ -377,6 +377,48 @@ static uint32_t si_translate_blend_opt_factor(int blend_fact, bool is_alpha)
 	}
 }
 
+static void si_blend_check_commutativity(struct si_screen *sscreen,
+					 struct si_state_blend *blend,
+					 enum pipe_blend_func func,
+					 enum pipe_blendfactor src,
+					 enum pipe_blendfactor dst,
+					 unsigned chanmask)
+{
+	/* Src factor is allowed when it does not depend on Dst */
+	static const uint32_t src_allowed =
+		(1u << PIPE_BLENDFACTOR_ONE) |
+		(1u << PIPE_BLENDFACTOR_SRC_COLOR) |
+		(1u << PIPE_BLENDFACTOR_SRC_ALPHA) |
+		(1u << PIPE_BLENDFACTOR_SRC_ALPHA_SATURATE) |
+		(1u << PIPE_BLENDFACTOR_CONST_COLOR) |
+		(1u << PIPE_BLENDFACTOR_CONST_ALPHA) |
+		(1u << PIPE_BLENDFACTOR_SRC1_COLOR) |
+		(1u << PIPE_BLENDFACTOR_SRC1_ALPHA) |
+		(1u << PIPE_BLENDFACTOR_ZERO) |
+		(1u << PIPE_BLENDFACTOR_INV_SRC_COLOR) |
+		(1u << PIPE_BLENDFACTOR_INV_SRC_ALPHA) |
+		(1u << PIPE_BLENDFACTOR_INV_CONST_COLOR) |
+		(1u << PIPE_BLENDFACTOR_INV_CONST_ALPHA) |
+		(1u << PIPE_BLENDFACTOR_INV_SRC1_COLOR) |
+		(1u << PIPE_BLENDFACTOR_INV_SRC1_ALPHA);
+
+	if (dst == PIPE_BLENDFACTOR_ONE &&
+	    (src_allowed & (1u << src))) {
+		/* Addition is commutative, but floating point addition isn't
+		 * associative: subtle changes can be introduced via different
+		 * rounding.
+		 *
+		 * Out-of-order is also non-deterministic, which means that
+		 * this breaks OpenGL invariance requirements. So only enable
+		 * out-of-order additive blending if explicitly allowed by a
+		 * setting.
+		 */
+		if (func == PIPE_BLEND_MAX || func == PIPE_BLEND_MIN ||
+		    (func == PIPE_BLEND_ADD && sscreen->commutative_blend_add))
+			blend->commutative_4bit |= chanmask;
+	}
+}
+
 /**
  * Get rid of DST in the blend factors by commuting the operands:
  *    func(src * DST, dst * 0) ---> func(src * 0, dst * SRC)
@@ -492,6 +534,11 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 			si_pm4_set_reg(pm4, R_028780_CB_BLEND0_CONTROL + i * 4, blend_cntl);
 			continue;
 		}
+
+		si_blend_check_commutativity(sctx->screen, blend,
+					     eqRGB, srcRGB, dstRGB, 0x7 << (4 * i));
+		si_blend_check_commutativity(sctx->screen, blend,
+					     eqA, srcA, dstA, 0x8 << (4 * i));
 
 		/* Blending optimizations for RB+.
 		 * These transformations don't change the behavior.
@@ -636,6 +683,7 @@ static void si_bind_blend_state(struct pipe_context *ctx, void *state)
 	    (!old_blend ||
 	     (old_blend->blend_enable_4bit != blend->blend_enable_4bit ||
 	      old_blend->cb_target_enabled_4bit != blend->cb_target_enabled_4bit ||
+	      old_blend->commutative_4bit != blend->commutative_4bit ||
 	      old_blend->logicop_enable != blend->logicop_enable)))
 		si_mark_atom_dirty(sctx, &sctx->msaa_config);
 }
@@ -3208,12 +3256,23 @@ static bool si_out_of_order_rasterization(struct si_context *sctx)
 	if (!colormask)
 		return true;
 
-	bool blend_enabled = (colormask & blend->blend_enable_4bit) != 0;
+	unsigned blendmask = colormask & blend->blend_enable_4bit;
 
-	if (blend_enabled)
-		return false; /* TODO */
+	if (blendmask) {
+		/* Only commutative blending. */
+		if (blendmask & ~blend->commutative_4bit)
+			return false;
 
-	return dsa_order_invariant.pass_last;
+		if (!dsa_order_invariant.pass_set)
+			return false;
+	}
+
+	if (colormask & ~blendmask) {
+		if (!dsa_order_invariant.pass_last)
+			return false;
+	}
+
+	return true;
 }
 
 static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
