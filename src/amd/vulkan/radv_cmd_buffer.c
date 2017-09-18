@@ -2520,9 +2520,6 @@ void radv_CmdSetScissor(
 	assert(firstScissor < MAX_SCISSORS);
 	assert(total_count >= 1 && total_count <= MAX_SCISSORS);
 
-	if (cmd_buffer->state.dynamic.scissor.count < total_count)
-		cmd_buffer->state.dynamic.scissor.count = total_count;
-
 	memcpy(cmd_buffer->state.dynamic.scissor.scissors + firstScissor,
 	       pScissors, scissorCount * sizeof(*pScissors));
 	cmd_buffer->state.dirty |= RADV_CMD_DIRTY_DYNAMIC_SCISSOR;
