@@ -27,12 +27,11 @@
 #include "radv_meta.h"
 #include "wsi_common.h"
 #include "vk_util.h"
+#include "util/macros.h"
 
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-static const struct wsi_callbacks wsi_cbs = {
+MAYBE_UNUSED static const struct wsi_callbacks wsi_cbs = {
    .get_phys_device_format_properties = radv_GetPhysicalDeviceFormatProperties,
 };
-#endif
 
 VkResult
 radv_init_wsi(struct radv_physical_device *physical_device)
