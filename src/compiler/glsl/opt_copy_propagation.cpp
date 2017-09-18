@@ -355,8 +355,6 @@ ir_copy_propagation_visitor::add_copy(ir_assignment *ir)
       if (lhs_var->data.mode != ir_var_shader_storage &&
           lhs_var->data.mode != ir_var_shader_shared &&
           lhs_var->data.precise == rhs_var->data.precise) {
-         assert(lhs_var);
-         assert(rhs_var);
          _mesa_hash_table_insert(acp, lhs_var, rhs_var);
       }
    }
