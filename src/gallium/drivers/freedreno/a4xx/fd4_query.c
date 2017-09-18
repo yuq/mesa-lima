@@ -251,7 +251,7 @@ static const struct fd_hw_sample_provider occlusion_predicate = {
 		.accumulate_result = occlusion_predicate_accumulate_result,
 };
 
-static const struct fd_hw_sample_provider occlusion_predicate = {
+static const struct fd_hw_sample_provider occlusion_predicate_conservative = {
 		.query_type = PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE,
 		.active = FD_STAGE_DRAW,
 		.get_sample = occlusion_get_sample,
