@@ -665,6 +665,13 @@ brw_finish_batch(struct brw_context *brw)
                                           PIPE_CONTROL_CS_STALL);
       }
    }
+
+   /* Mark the end of the buffer. */
+   intel_batchbuffer_emit_dword(&brw->batch, MI_BATCH_BUFFER_END);
+   if (USED_BATCH(brw->batch) & 1) {
+      /* Round batchbuffer usage to 2 DWORDs. */
+      intel_batchbuffer_emit_dword(&brw->batch, MI_NOOP);
+   }
 }
 
 static void
@@ -898,13 +905,6 @@ _intel_batchbuffer_flush_fence(struct brw_context *brw,
    }
 
    brw_finish_batch(brw);
-
-   /* Mark the end of the buffer. */
-   intel_batchbuffer_emit_dword(&brw->batch, MI_BATCH_BUFFER_END);
-   if (USED_BATCH(brw->batch) & 1) {
-      /* Round batchbuffer usage to 2 DWORDs. */
-      intel_batchbuffer_emit_dword(&brw->batch, MI_NOOP);
-   }
 
    intel_upload_finish(brw);
 
