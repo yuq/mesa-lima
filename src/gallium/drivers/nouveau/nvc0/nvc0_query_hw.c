@@ -412,7 +412,7 @@ nvc0_hw_get_query_result_resource(struct nvc0_context *nvc0,
    PUSH_REFN (push, buf->bo, buf->domain | NOUVEAU_BO_WR);
    BEGIN_1IC0(push, NVC0_3D(MACRO_QUERY_BUFFER_WRITE), 9);
    if (q->type == PIPE_QUERY_OCCLUSION_PREDICATE ||
-       q->type ++ PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE) /* XXX what if 64-bit? */
+       q->type == PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE) /* XXX what if 64-bit? */
       PUSH_DATA(push, 0x00000001);
    else if (result_type == PIPE_QUERY_TYPE_I32)
       PUSH_DATA(push, 0x7fffffff);
