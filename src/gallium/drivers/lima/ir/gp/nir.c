@@ -22,7 +22,6 @@
  *
  */
 
-#include "util/u_memory.h"
 #include "util/ralloc.h"
 #include "compiler/nir/nir.h"
 #include "gpir.h"
