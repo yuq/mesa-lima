@@ -2502,9 +2502,6 @@ void radv_CmdSetViewport(
 	assert(firstViewport < MAX_VIEWPORTS);
 	assert(total_count >= 1 && total_count <= MAX_VIEWPORTS);
 
-	if (cmd_buffer->state.dynamic.viewport.count < total_count)
-		cmd_buffer->state.dynamic.viewport.count = total_count;
-
 	memcpy(cmd_buffer->state.dynamic.viewport.viewports + firstViewport,
 	       pViewports, viewportCount * sizeof(*pViewports));
 
