@@ -319,10 +319,10 @@ lower_instructions_visitor::mod_to_floor(ir_expression *ir)
 
    ir_assignment *const assign_x =
       new(ir) ir_assignment(new(ir) ir_dereference_variable(x),
-                            ir->operands[0], NULL);
+                            ir->operands[0]);
    ir_assignment *const assign_y =
       new(ir) ir_assignment(new(ir) ir_dereference_variable(y),
-                            ir->operands[1], NULL);
+                            ir->operands[1]);
 
    this->base_ir->insert_before(assign_x);
    this->base_ir->insert_before(assign_y);
