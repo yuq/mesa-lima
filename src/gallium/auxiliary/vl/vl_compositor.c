@@ -432,6 +432,43 @@ create_frag_shader_rgba(struct vl_compositor *c)
    return ureg_create_shader_and_destroy(shader, c->pipe);
 }
 
+static void *
+create_frag_shader_rgb_yuv(struct vl_compositor *c, bool y)
+{
+   struct ureg_program *shader;
+   struct ureg_src tc, sampler;
+   struct ureg_dst texel, fragment;
+
+   struct ureg_src csc[3];
+   unsigned i;
+
+   shader = ureg_create(PIPE_SHADER_FRAGMENT);
+   if (!shader)
+      return false;
+
+   for (i = 0; i < 3; ++i)
+      csc[i] = ureg_DECL_constant(shader, i);
+
+   sampler = ureg_DECL_sampler(shader, 0);
+   tc = ureg_DECL_fs_input(shader, TGSI_SEMANTIC_GENERIC, VS_O_VTEX, TGSI_INTERPOLATE_LINEAR);
+   texel = ureg_DECL_temporary(shader);
+   fragment = ureg_DECL_output(shader, TGSI_SEMANTIC_COLOR, 0);
+
+   ureg_TEX(shader, texel, TGSI_TEXTURE_2D, tc, sampler);
+
+   if (y) {
+      ureg_DP4(shader, ureg_writemask(fragment, TGSI_WRITEMASK_X), csc[0], ureg_src(texel));
+   } else {
+      for (i = 0; i < 2; ++i)
+         ureg_DP4(shader, ureg_writemask(fragment, TGSI_WRITEMASK_X << i), csc[i + 1], ureg_src(texel));
+   }
+
+   ureg_release_temporary(shader, texel);
+   ureg_END(shader);
+
+   return ureg_create_shader_and_destroy(shader, c->pipe);
+}
+
 static bool
 init_shaders(struct vl_compositor *c)
 {
@@ -483,6 +520,13 @@ init_shaders(struct vl_compositor *c)
       return false;
    }
 
+   c->fs_rgb_yuv.y = create_frag_shader_rgb_yuv(c, true);
+   c->fs_rgb_yuv.uv = create_frag_shader_rgb_yuv(c, false);
+   if (!c->fs_rgb_yuv.y || !c->fs_rgb_yuv.uv) {
+      debug_printf("Unable to create RGB-to-YUV fragment shader.\n");
+      return false;
+   }
+
    return true;
 }
 
@@ -500,6 +544,8 @@ static void cleanup_shaders(struct vl_compositor *c)
    c->pipe->delete_fs_state(c->pipe, c->fs_palette.yuv);
    c->pipe->delete_fs_state(c->pipe, c->fs_palette.rgb);
    c->pipe->delete_fs_state(c->pipe, c->fs_rgba);
+   c->pipe->delete_fs_state(c->pipe, c->fs_rgb_yuv.y);
+   c->pipe->delete_fs_state(c->pipe, c->fs_rgb_yuv.uv);
 }
 
 static bool
