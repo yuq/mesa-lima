@@ -9,6 +9,12 @@ gpir_SOURCES := \
 	  ir/gp/codegen.h \
 	  ir/gp/codegen.c
 
+ppir_SOURCES := \
+	  ir/pp/ppir.h \
+	  ir/pp/nir.h \
+	  ir/pp/nir.c \
+	  ir/pp/node.c
+
 DRM_SOURCES := \
 	  lima_device.c \
 	  lima_bo.c \
@@ -28,4 +34,5 @@ C_SOURCES := \
 	  lima_draw.c \
 	  lima_program.c \
 	  $(DRM_SOURCES) \
-	  $(gpir_SOURCES)
+	  $(gpir_SOURCES) \
+	  $(ppir_SOURCES)

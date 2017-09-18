@@ -1,0 +1,208 @@
+/*
+ * Copyright (c) 2017 Lima Project
+ * Copyright (c) 2013 Connor Abbott
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ */
+
+#ifndef LIMA_IR_PP_PPIR_H
+#define LIMA_IR_PP_PPIR_H
+
+#include "util/list.h"
+#include "util/set.h"
+
+typedef enum {
+   ppir_op_mov,
+
+   ppir_op_neg,
+   ppir_op_add,
+   ppir_op_sub,
+
+   ppir_op_ddx,
+   ppir_op_ddy,
+
+   ppir_op_mul,
+   ppir_op_rcp,
+   ppir_op_div,
+
+   ppir_op_sin_lut,
+   ppir_op_cos_lut,
+
+   ppir_op_sum3,
+   ppir_op_sum4,
+
+   ppir_op_normalize2,
+   ppir_op_normalize3,
+   ppir_op_normalize4,
+
+   ppir_op_select,
+
+   ppir_op_sin,
+   ppir_op_cos,
+   ppir_op_tan,
+   ppir_op_asin,
+   ppir_op_acos,
+
+   ppir_op_atan,
+   ppir_op_atan2,
+   ppir_op_atan_pt1,
+   ppir_op_atan2_pt1,
+   ppir_op_atan_pt2,
+
+   ppir_op_pow,
+   ppir_op_exp,
+   ppir_op_log,
+   ppir_op_exp2,
+   ppir_op_log2,
+   ppir_op_sqrt,
+   ppir_op_rsqrt,
+
+   ppir_op_abs,
+   ppir_op_sign,
+   ppir_op_floor,
+   ppir_op_ceil,
+   ppir_op_fract,
+   ppir_op_mod,
+   ppir_op_min,
+   ppir_op_max,
+
+   ppir_op_dot2,
+   ppir_op_dot3,
+   ppir_op_dot4,
+
+   ppir_op_gt,
+   ppir_op_ge,
+   ppir_op_eq,
+   ppir_op_ne,
+   ppir_op_not,
+
+   ppir_op_combine,
+
+   ppir_op_load_uniform,
+   ppir_op_load_varying,
+   ppir_op_load_texture,
+
+   ppir_op_store_temp,
+   ppir_op_store_color,
+
+   ppir_op_const,
+} ppir_op;
+
+typedef enum {
+   ppir_node_type_alu,
+   ppir_node_type_const,
+   ppir_node_type_load,
+   ppir_node_type_store,
+} ppir_node_type;
+
+typedef struct {
+   char *name;
+   ppir_node_type type;
+} ppir_op_info;
+
+extern const ppir_op_info ppir_op_infos[];
+
+typedef struct ppir_node {
+   struct list_head list;
+   ppir_op op;
+   ppir_node_type type;
+   int index;
+   char name[16];
+   bool printed;
+
+   /* for scheduler */
+   struct set *preds, *succs;
+} ppir_node;
+
+typedef struct {
+   ppir_node node;
+   ppir_node *children[3];
+   int num_child;
+} ppir_alu_node;
+
+typedef struct {
+   ppir_node node;
+   union fi value;
+} ppir_const_node;
+
+typedef struct {
+   ppir_node node;
+   int index;
+} ppir_load_node;
+
+typedef struct {
+   ppir_node node;
+   int index;
+   ppir_node *child;
+} ppir_store_node;
+
+typedef struct {
+   ppir_node *pred, *succ;
+   bool is_child_dep;
+   bool is_offset;
+} ppir_dep_info;
+
+typedef struct ppir_block {
+   struct list_head list;
+   struct list_head node_list;
+   struct ppir_compiler *comp;
+} ppir_block;
+
+struct lima_fs_shader_state;
+
+typedef struct ppir_compiler {
+   struct list_head block_list;
+   int cur_index;
+
+   /* array for searching ssa/reg node */
+   ppir_node **var_nodes;
+   unsigned reg_base;
+
+   struct lima_fs_shader_state *prog;
+} ppir_compiler;
+
+void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index);
+void ppir_node_add_child(ppir_node *parent, ppir_node *child);
+void ppir_node_print_prog(ppir_compiler *comp);
+
+static inline bool ppir_node_is_root(ppir_node *node)
+{
+   return !node->succs->entries;
+}
+
+static inline bool ppir_node_is_leaf(ppir_node *node)
+{
+   return !node->preds->entries;
+}
+
+#define ppir_dep_from_entry(entry) ((ppir_dep_info *)(entry->key))
+#define ppir_node_from_entry(entry, direction) (ppir_dep_from_entry(entry)->direction)
+
+#define ppir_node_foreach_pred(node, entry)                                \
+   for (struct set_entry *entry = _mesa_set_next_entry(node->preds, NULL); \
+        entry != NULL;                                                     \
+        entry = _mesa_set_next_entry(node->preds, entry))
+
+#define ppir_node_foreach_succ(node, entry)                                \
+   for (struct set_entry *entry = _mesa_set_next_entry(node->succs, NULL); \
+        entry != NULL;                                                     \
+        entry = _mesa_set_next_entry(node->succs, entry))
+
+#endif
