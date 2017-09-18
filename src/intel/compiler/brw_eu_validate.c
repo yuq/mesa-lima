@@ -44,15 +44,23 @@ cat(struct string *dest, const struct string src)
 }
 #define CAT(dest, src) cat(&dest, (struct string){src, strlen(src)})
 
+static bool
+contains(const struct string haystack, const struct string needle)
+{
+   return memmem(haystack.str, haystack.len, needle.str, needle.len) != NULL;
+}
+#define CONTAINS(haystack, needle) \
+   contains(haystack, (struct string){needle, strlen(needle)})
+
 #define error(str)   "\tERROR: " str "\n"
 #define ERROR_INDENT "\t       "
 
 #define ERROR(msg) ERROR_IF(true, msg)
-#define ERROR_IF(cond, msg)          \
-   do {                              \
-      if (cond) {                    \
-         CAT(error_msg, error(msg)); \
-      }                              \
+#define ERROR_IF(cond, msg)                             \
+   do {                                                 \
+      if ((cond) && !CONTAINS(error_msg, error(msg))) { \
+         CAT(error_msg, error(msg));                    \
+      }                                                 \
    } while(0)
 
 #define CHECK(func, args...)                             \
