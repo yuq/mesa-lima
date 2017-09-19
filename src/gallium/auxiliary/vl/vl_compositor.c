@@ -34,6 +34,7 @@
 #include "util/u_draw.h"
 #include "util/u_surface.h"
 #include "util/u_upload_mgr.h"
+#include "util/u_sampler.h"
 
 #include "tgsi/tgsi_ureg.h"
 
@@ -992,6 +993,37 @@ set_yuv_layer(struct vl_compositor_state *s, struct vl_compositor *c,
    }
 }
 
+static void
+set_rgb_to_yuv_layer(struct vl_compositor_state *s, struct vl_compositor *c,
+                     unsigned layer, struct pipe_sampler_view *v,
+                     struct u_rect *src_rect, struct u_rect *dst_rect, bool y)
+{
+   vl_csc_matrix csc_matrix;
+
+   assert(s && c && v);
+
+   assert(layer < VL_COMPOSITOR_MAX_LAYERS);
+
+   s->used_layers |= 1 << layer;
+
+   s->layers[layer].fs = y? c->fs_rgb_yuv.y : c->fs_rgb_yuv.uv;
+
+   vl_csc_get_matrix(VL_CSC_COLOR_STANDARD_BT_709_REV, NULL, false, &csc_matrix);
+   vl_compositor_set_csc_matrix(s, (const vl_csc_matrix *)&csc_matrix, 1.0f, 0.0f);
+
+   s->layers[layer].samplers[0] = c->sampler_linear;
+   s->layers[layer].samplers[1] = NULL;
+   s->layers[layer].samplers[2] = NULL;
+
+   pipe_sampler_view_reference(&s->layers[layer].sampler_views[0], v);
+   pipe_sampler_view_reference(&s->layers[layer].sampler_views[1], NULL);
+   pipe_sampler_view_reference(&s->layers[layer].sampler_views[2], NULL);
+
+   calc_src_and_dst(&s->layers[layer], v->texture->width0, v->texture->height0,
+                    src_rect ? *src_rect : default_rect(&s->layers[layer]),
+                    dst_rect ? *dst_rect : default_rect(&s->layers[layer]));
+}
+
 void
 vl_compositor_reset_dirty_area(struct u_rect *dirty)
 {
@@ -1275,6 +1307,43 @@ vl_compositor_yuv_deint_full(struct vl_compositor_state *s,
    set_yuv_layer(s, c, 0, src, src_rect, NULL, false, deinterlace);
    vl_compositor_set_layer_dst_area(s, 0, dst_rect);
    vl_compositor_render(s, c, dst_surfaces[1], NULL, false);
+
+   s->pipe->flush(s->pipe, NULL, 0);
+}
+
+void
+vl_compositor_convert_rgb_to_yuv(struct vl_compositor_state *s,
+                                 struct vl_compositor *c,
+                                 unsigned layer,
+                                 struct pipe_resource *src_res,
+                                 struct pipe_video_buffer *dst,
+                                 struct u_rect *src_rect,
+                                 struct u_rect *dst_rect)
+{
+   struct pipe_sampler_view *sv, sv_templ;
+   struct pipe_surface **dst_surfaces;
+
+   dst_surfaces = dst->get_surfaces(dst);
+
+   memset(&sv_templ, 0, sizeof(sv_templ));
+   u_sampler_view_default_template(&sv_templ, src_res, src_res->format);
+   sv = s->pipe->create_sampler_view(s->pipe, src_res, &sv_templ);
+
+   vl_compositor_clear_layers(s);
+
+   set_rgb_to_yuv_layer(s, c, 0, sv, src_rect, NULL, true);
+   vl_compositor_set_layer_dst_area(s, 0, dst_rect);
+   vl_compositor_render(s, c, dst_surfaces[0], NULL, false);
+
+   if (dst_rect) {
+      dst_rect->x1 /= 2;
+      dst_rect->y1 /= 2;
+   }
+
+   set_rgb_to_yuv_layer(s, c, 0, sv, src_rect, NULL, false);
+   vl_compositor_set_layer_dst_area(s, 0, dst_rect);
+   vl_compositor_render(s, c, dst_surfaces[1], NULL, false);
+   pipe_sampler_view_reference(&sv, NULL);
 
    s->pipe->flush(s->pipe, NULL, 0);
 }

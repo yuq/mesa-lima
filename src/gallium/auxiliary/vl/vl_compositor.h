@@ -263,6 +263,18 @@ vl_compositor_yuv_deint_full(struct vl_compositor_state *state,
                              struct u_rect *dst_rect,
                              enum vl_compositor_deinterlace deinterlace);
 
+/**
++ * convert rgb to yuv
++ */
+void
+vl_compositor_convert_rgb_to_yuv(struct vl_compositor_state *state,
+                                 struct vl_compositor *compositor,
+                                 unsigned layer,
+                                 struct pipe_resource *src_res,
+                                 struct pipe_video_buffer *dst,
+                                 struct u_rect *src_rect,
+                                 struct u_rect *dst_rect);
+
 /*@}*/
 
 /**
