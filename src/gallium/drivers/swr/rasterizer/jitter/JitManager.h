@@ -47,13 +47,6 @@
 #include "llvm/ExecutionEngine/ObjectCache.h"
 
 #include "llvm/Config/llvm-config.h"
-#ifndef LLVM_VERSION_MAJOR
-#include "llvm/Config/config.h"
-#endif
-
-#ifndef HAVE_LLVM
-#define HAVE_LLVM ((LLVM_VERSION_MAJOR << 8) | LLVM_VERSION_MINOR)
-#endif
 
 #include "llvm/IR/Verifier.h"
 #include "llvm/ExecutionEngine/MCJIT.h"

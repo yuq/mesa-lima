@@ -48,8 +48,9 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Config/llvm-config.h"
 
-#if HAVE_LLVM < 0x400
+#if LLVM_VERSION_MAJOR < 4
 #include "llvm/Bitcode/ReaderWriter.h"
 #else
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -231,8 +232,8 @@ void JitManager::DumpAsm(Function* pFunction, const char* fileName)
 
 #if defined(_WIN32)
         DWORD pid = GetCurrentProcessId();
-        TCHAR procname[MAX_PATH];
-        GetModuleFileName(NULL, procname, MAX_PATH);
+        char procname[MAX_PATH];
+        GetModuleFileNameA(NULL, procname, MAX_PATH);
         const char* pBaseName = strrchr(procname, '\\');
         std::stringstream outDir;
         outDir << JITTER_OUTPUT_DIR << pBaseName << "_" << pid << std::ends;
@@ -269,8 +270,8 @@ void JitManager::DumpToFile(Function *f, const char *fileName)
     {
 #if defined(_WIN32)
         DWORD pid = GetCurrentProcessId();
-        TCHAR procname[MAX_PATH];
-        GetModuleFileName(NULL, procname, MAX_PATH);
+        char procname[MAX_PATH];
+        GetModuleFileNameA(NULL, procname, MAX_PATH);
         const char* pBaseName = strrchr(procname, '\\');
         std::stringstream outDir;
         outDir << JITTER_OUTPUT_DIR << pBaseName << "_" << pid << std::ends;
