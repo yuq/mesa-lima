@@ -6579,26 +6579,10 @@ ast_case_statement_list::hir(exec_list *instructions,
     * if default should be chosen or not.
     */
    if (!default_case.is_empty()) {
-
-      ir_rvalue *const true_val = new (state) ir_constant(true);
-      ir_dereference_variable *deref_run_default_var =
-         new(state) ir_dereference_variable(state->switch_state.run_default);
-
-      /* Choose to run default case initially, following conditional
-       * assignments might change this.
-       */
-      ir_assignment *const init_var =
-         new(state) ir_assignment(deref_run_default_var, true_val);
-      instructions->push_tail(init_var);
-
-      /* Default case was the last one, no checks required. */
-      if (after_default.is_empty()) {
-         instructions->append_list(&default_case);
-         return NULL;
-      }
-
       struct hash_entry *entry;
       ir_factory body(instructions, state);
+
+      ir_expression *cmp = NULL;
 
       hash_table_foreach(state->switch_state.labels_ht, entry) {
          const struct case_label *const l = (struct case_label *) entry->data;
@@ -6613,11 +6597,16 @@ ast_case_statement_list::hir(exec_list *instructions,
                ? body.constant(unsigned(l->value))
                : body.constant(int(l->value));
 
-            body.emit(assign(state->switch_state.run_default,
-                             body.constant(false),
-                             equal(cnst, state->switch_state.test_var)));
+            cmp = cmp == NULL
+               ? equal(cnst, state->switch_state.test_var)
+               : logic_or(cmp, equal(cnst, state->switch_state.test_var));
          }
       }
+
+      if (cmp != NULL)
+         body.emit(assign(state->switch_state.run_default, logic_not(cmp)));
+      else
+         body.emit(assign(state->switch_state.run_default, body.constant(true)));
 
       /* Append default case and all cases after it. */
       instructions->append_list(&default_case);
