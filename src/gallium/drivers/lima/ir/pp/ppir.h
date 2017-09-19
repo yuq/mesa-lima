@@ -25,6 +25,7 @@
 #ifndef LIMA_IR_PP_PPIR_H
 #define LIMA_IR_PP_PPIR_H
 
+#include "util/u_math.h"
 #include "util/list.h"
 #include "util/set.h"
 
@@ -180,6 +181,8 @@ typedef struct ppir_compiler {
 
 void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index);
 void ppir_node_add_child(ppir_node *parent, ppir_node *child);
+void ppir_node_remove_entry(struct set_entry *entry);
+void ppir_node_delete(ppir_node *node);
 void ppir_node_print_prog(ppir_compiler *comp);
 
 static inline bool ppir_node_is_root(ppir_node *node)
@@ -204,5 +207,7 @@ static inline bool ppir_node_is_leaf(ppir_node *node)
    for (struct set_entry *entry = _mesa_set_next_entry(node->succs, NULL); \
         entry != NULL;                                                     \
         entry = _mesa_set_next_entry(node->succs, entry))
+
+void ppir_lower_prog(ppir_compiler *comp);
 
 #endif
