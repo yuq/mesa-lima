@@ -10,6 +10,7 @@ MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
 PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)
 
 EXTRA_DIST = \
+	$(top_srcdir)/include/vulkan/vk_android_native_buffer.h \
 	util/gen_enum_to_str.py
 
 VULKAN_UTIL_SOURCES = \
