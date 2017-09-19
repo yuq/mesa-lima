@@ -6365,13 +6365,28 @@ ast_selection_statement::hir(exec_list *instructions,
 }
 
 
+struct case_label {
+   /** Value of the case label. */
+   unsigned value;
+
+   /** Does this label occur after the default? */
+   bool after_default;
+
+   /**
+    * AST for the case label.
+    *
+    * This is only used to generate error messages for duplicate labels.
+    */
+   ast_expression *ast;
+};
+
 /* Used for detection of duplicate case values, compare
  * given contents directly.
  */
 static bool
 compare_case_value(const void *a, const void *b)
 {
-   return *(unsigned *) a == *(unsigned *) b;
+   return ((struct case_label *) a)->value == ((struct case_label *) b)->value;
 }
 
 
@@ -6381,7 +6396,7 @@ compare_case_value(const void *a, const void *b)
 static unsigned
 key_contents(const void *key)
 {
-   return *(unsigned *) key;
+   return ((struct case_label *) key)->value;
 }
 
 
@@ -6582,24 +6597,26 @@ ast_case_statement_list::hir(exec_list *instructions,
          return NULL;
       }
 
-      foreach_in_list(ir_instruction, ir, &after_default) {
-         ir_assignment *assign = ir->as_assignment();
+      struct hash_entry *entry;
+      ir_factory body(instructions, state);
 
-         if (!assign)
-            continue;
+      hash_table_foreach(state->switch_state.labels_ht, entry) {
+         const struct case_label *const l = (struct case_label *) entry->data;
 
-         /* Clone the check between case label and init expression. */
-         ir_expression *exp = (ir_expression*) assign->condition;
-         ir_expression *clone = exp->clone(state, NULL);
+         /* If the switch init-value is the value of one of the labels that
+          * occurs after the default case, disable execution of the default
+          * case.
+          */
+         if (l->after_default) {
+            ir_constant *const cnst =
+               state->switch_state.test_var->type->base_type == GLSL_TYPE_UINT
+               ? body.constant(unsigned(l->value))
+               : body.constant(int(l->value));
 
-         ir_dereference_variable *deref_var =
-            new(state) ir_dereference_variable(state->switch_state.run_default);
-         ir_rvalue *const false_val = new (state) ir_constant(false);
-
-         ir_assignment *const set_false =
-            new(state) ir_assignment(deref_var, false_val, clone);
-
-         instructions->push_tail(set_false);
+            body.emit(assign(state->switch_state.run_default,
+                             body.constant(false),
+                             equal(cnst, state->switch_state.test_var)));
+         }
       }
 
       /* Append default case and all cases after it. */
@@ -6672,19 +6689,29 @@ ast_case_label::hir(exec_list *instructions,
       } else {
          hash_entry *entry =
                _mesa_hash_table_search(state->switch_state.labels_ht,
-                     (void *)(uintptr_t)&label_const->value.u[0]);
+                                       &label_const->value.u[0]);
 
          if (entry) {
-            ast_expression *previous_label = (ast_expression *) entry->data;
+            const struct case_label *const l =
+               (struct case_label *) entry->data;
+            const ast_expression *const previous_label = l->ast;
             YYLTYPE loc = this->test_value->get_location();
+
             _mesa_glsl_error(& loc, state, "duplicate case value");
 
             loc = previous_label->get_location();
             _mesa_glsl_error(& loc, state, "this is the previous case label");
          } else {
+            struct case_label *l = ralloc(state->switch_state.labels_ht,
+                                          struct case_label);
+
+            l->value = label_const->value.u[0];
+            l->after_default = state->switch_state.previous_default != NULL;
+            l->ast = this->test_value;
+
             _mesa_hash_table_insert(state->switch_state.labels_ht,
-                                    (void *)(uintptr_t)&label_const->value.u[0],
-                                    this->test_value);
+                                    &label_const->value.u[0],
+                                    l);
          }
       }
 
