@@ -439,7 +439,7 @@ do_batch_dump(struct brw_context *brw)
 
    uint32_t *batch_data = brw_bo_map(brw, batch->bo, MAP_READ);
    uint32_t *state = brw_bo_map(brw, batch->state_bo, MAP_READ);
-   if (batch == NULL || state == NULL) {
+   if (batch_data == NULL || state == NULL) {
       fprintf(stderr, "WARNING: failed to map batchbuffer/statebuffer\n");
       return;
    }
