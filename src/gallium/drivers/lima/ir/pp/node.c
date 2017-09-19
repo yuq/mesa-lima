@@ -118,6 +118,32 @@ void ppir_node_add_child(ppir_node *parent, ppir_node *child)
    ppir_node_create_dep(parent, child, true, false);
 }
 
+void ppir_node_remove_entry(struct set_entry *entry)
+{
+   uint32_t hash = entry->hash;
+   ppir_dep_info *dep = ppir_dep_from_entry(entry);
+
+   struct set *set = dep->pred->succs;
+   _mesa_set_remove(set, _mesa_set_search_pre_hashed(set, hash, dep));
+
+   set = dep->succ->preds;
+   _mesa_set_remove(set, _mesa_set_search_pre_hashed(set, hash, dep));
+
+   ralloc_free(dep);
+}
+
+void ppir_node_delete(ppir_node *node)
+{
+   ppir_node_foreach_succ(node, entry)
+      ppir_node_remove_entry(entry);
+
+   ppir_node_foreach_pred(node, entry)
+      ppir_node_remove_entry(entry);
+
+   list_del(&node->list);
+   ralloc_free(node);
+}
+
 static void ppir_node_print_node(ppir_node *node, int space)
 {
    for (int i = 0; i < space; i++)

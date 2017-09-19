@@ -13,7 +13,8 @@ ppir_SOURCES := \
 	  ir/pp/ppir.h \
 	  ir/pp/nir.h \
 	  ir/pp/nir.c \
-	  ir/pp/node.c
+	  ir/pp/node.c \
+	  ir/pp/lower.c
 
 DRM_SOURCES := \
 	  lima_device.c \
