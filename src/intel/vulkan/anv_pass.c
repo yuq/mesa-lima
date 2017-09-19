@@ -293,8 +293,8 @@ VkResult anv_CreateRenderPass(
 
    vk_foreach_struct(ext, pCreateInfo->pNext) {
       switch (ext->sType) {
-      case VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO_KHX: {
-         VkRenderPassMultiviewCreateInfoKHX *mv = (void *)ext;
+      case VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO_KHR: {
+         VkRenderPassMultiviewCreateInfoKHR *mv = (void *)ext;
 
          for (uint32_t i = 0; i < mv->subpassCount; i++) {
             pass->subpasses[i].view_mask = mv->pViewMasks[i];

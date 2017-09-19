@@ -224,9 +224,9 @@ typedef enum VkStructureType {
     VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_BUFFER_CREATE_INFO_NV = 1000026001,
     VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV = 1000026002,
     VK_STRUCTURE_TYPE_TEXTURE_LOD_GATHER_FORMAT_PROPERTIES_AMD = 1000041000,
-    VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO_KHX = 1000053000,
-    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHX = 1000053001,
-    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHX = 1000053002,
+    VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO_KHR = 1000053000,
+    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR = 1000053001,
+    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHR = 1000053002,
     VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO_NV = 1000056000,
     VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_NV = 1000056001,
     VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_NV = 1000057000,
@@ -5547,11 +5547,11 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetShaderInfoAMD(
 #define VK_AMD_SHADER_IMAGE_LOAD_STORE_LOD_EXTENSION_NAME "VK_AMD_shader_image_load_store_lod"
 
 
-#define VK_KHX_multiview 1
-#define VK_KHX_MULTIVIEW_SPEC_VERSION     1
-#define VK_KHX_MULTIVIEW_EXTENSION_NAME   "VK_KHX_multiview"
+#define VK_KHR_multiview 1
+#define VK_KHR_MULTIVIEW_SPEC_VERSION     1
+#define VK_KHR_MULTIVIEW_EXTENSION_NAME   "VK_KHR_multiview"
 
-typedef struct VkRenderPassMultiviewCreateInfoKHX {
+typedef struct VkRenderPassMultiviewCreateInfoKHR {
     VkStructureType    sType;
     const void*        pNext;
     uint32_t           subpassCount;
@@ -5560,22 +5560,22 @@ typedef struct VkRenderPassMultiviewCreateInfoKHX {
     const int32_t*     pViewOffsets;
     uint32_t           correlationMaskCount;
     const uint32_t*    pCorrelationMasks;
-} VkRenderPassMultiviewCreateInfoKHX;
+} VkRenderPassMultiviewCreateInfoKHR;
 
-typedef struct VkPhysicalDeviceMultiviewFeaturesKHX {
+typedef struct VkPhysicalDeviceMultiviewFeaturesKHR {
     VkStructureType    sType;
     void*              pNext;
     VkBool32           multiview;
     VkBool32           multiviewGeometryShader;
     VkBool32           multiviewTessellationShader;
-} VkPhysicalDeviceMultiviewFeaturesKHX;
+} VkPhysicalDeviceMultiviewFeaturesKHR;
 
-typedef struct VkPhysicalDeviceMultiviewPropertiesKHX {
+typedef struct VkPhysicalDeviceMultiviewPropertiesKHR {
     VkStructureType    sType;
     void*              pNext;
     uint32_t           maxMultiviewViewCount;
     uint32_t           maxMultiviewInstanceIndex;
-} VkPhysicalDeviceMultiviewPropertiesKHX;
+} VkPhysicalDeviceMultiviewPropertiesKHR;
 
 
 

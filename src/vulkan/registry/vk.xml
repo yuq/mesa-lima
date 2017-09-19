@@ -2087,21 +2087,21 @@ private version is maintained in the 1.0 branch of the member gitlab server.
             <member><type>VkFence</type>                                <name>fence</name></member>
             <member><type>VkExternalFenceHandleTypeFlagBitsKHR</type>   <name>handleType</name></member>
         </type>
-        <type category="struct" name="VkPhysicalDeviceMultiviewFeaturesKHX" structextends="VkPhysicalDeviceFeatures2KHR,VkDeviceCreateInfo">
-            <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHX"><type>VkStructureType</type> <name>sType</name></member>
+        <type category="struct" name="VkPhysicalDeviceMultiviewFeaturesKHR" structextends="VkPhysicalDeviceFeatures2KHR,VkDeviceCreateInfo">
+            <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member noautovalidity="true"><type>void</type>*                            <name>pNext</name></member>
             <member><type>VkBool32</type>                         <name>multiview</name><comment>Multiple views in a renderpass</comment></member>
             <member><type>VkBool32</type>                         <name>multiviewGeometryShader</name><comment>Multiple views in a renderpass w/ geometry shader</comment></member>
             <member><type>VkBool32</type>                         <name>multiviewTessellationShader</name><comment>Multiple views in a renderpass w/ tessellation shader</comment></member>
         </type>
-        <type category="struct" name="VkPhysicalDeviceMultiviewPropertiesKHX" returnedonly="true" structextends="VkPhysicalDeviceProperties2KHR">
-            <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHX"><type>VkStructureType</type> <name>sType</name></member>
+        <type category="struct" name="VkPhysicalDeviceMultiviewPropertiesKHR" returnedonly="true" structextends="VkPhysicalDeviceProperties2KHR">
+            <member values="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHR"><type>VkStructureType</type> <name>sType</name></member>
             <member><type>void</type>*                            <name>pNext</name></member>
             <member><type>uint32_t</type>                         <name>maxMultiviewViewCount</name><comment>max number of views in a subpass</comment></member>
             <member><type>uint32_t</type>                         <name>maxMultiviewInstanceIndex</name><comment>max instance index for a draw in a multiview subpass</comment></member>
         </type>
-        <type category="struct" name="VkRenderPassMultiviewCreateInfoKHX" structextends="VkRenderPassCreateInfo">
-            <member values="VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO_KHX"><type>VkStructureType</type>        <name>sType</name></member>
+        <type category="struct" name="VkRenderPassMultiviewCreateInfoKHR" structextends="VkRenderPassCreateInfo">
+            <member values="VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO_KHR"><type>VkStructureType</type>        <name>sType</name></member>
             <member>const <type>void</type>*            <name>pNext</name></member>
             <member optional="true"><type>uint32_t</type>               <name>subpassCount</name></member>
             <member len="subpassCount">const <type>uint32_t</type>*     <name>pViewMasks</name></member>
@@ -6154,17 +6154,17 @@ private version is maintained in the 1.0 branch of the member gitlab server.
                 <enum value="&quot;VK_NV_extension_53&quot;"            name="VK_NV_EXTENSION_53_EXTENSION_NAME"/>
             </require>
         </extension>
-        <extension name="VK_KHX_multiview" number="54" type="device" author="NV" requires="VK_KHR_get_physical_device_properties2" contact="Jeff Bolz @jbolz" supported="vulkan">
+        <extension name="VK_KHR_multiview" number="54" type="device" author="NV" requires="VK_KHR_get_physical_device_properties2" contact="Jeff Bolz @jbolz" supported="vulkan">
             <require>
-                <enum value="1"                                         name="VK_KHX_MULTIVIEW_SPEC_VERSION"/>
-                <enum value="&quot;VK_KHX_multiview&quot;"              name="VK_KHX_MULTIVIEW_EXTENSION_NAME"/>
-                <enum offset="0" extends="VkStructureType"              name="VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO_KHX"/>
-                <enum offset="1" extends="VkStructureType"              name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHX"/>
-                <enum offset="2" extends="VkStructureType"              name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHX"/>
-                <enum bitpos="1" extends="VkDependencyFlagBits"         name="VK_DEPENDENCY_VIEW_LOCAL_BIT_KHX"/>
-                <type name="VkRenderPassMultiviewCreateInfoKHX"/>
-                <type name="VkPhysicalDeviceMultiviewFeaturesKHX"/>
-                <type name="VkPhysicalDeviceMultiviewPropertiesKHX"/>
+                <enum value="1"                                         name="VK_KHR_MULTIVIEW_SPEC_VERSION"/>
+                <enum value="&quot;VK_KHR_multiview&quot;"              name="VK_KHR_MULTIVIEW_EXTENSION_NAME"/>
+                <enum offset="0" extends="VkStructureType"              name="VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO_KHR"/>
+                <enum offset="1" extends="VkStructureType"              name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR"/>
+                <enum offset="2" extends="VkStructureType"              name="VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHR"/>
+                <enum bitpos="1" extends="VkDependencyFlagBits"         name="VK_DEPENDENCY_VIEW_LOCAL_BIT_KHR"/>
+                <type name="VkRenderPassMultiviewCreateInfoKHR"/>
+                <type name="VkPhysicalDeviceMultiviewFeaturesKHR"/>
+                <type name="VkPhysicalDeviceMultiviewPropertiesKHR"/>
             </require>
         </extension>
         <extension name="VK_IMG_format_pvrtc" number="55" type="device" author="IMG" contact="Tobias Hector @tobias" supported="vulkan">

@@ -767,9 +767,9 @@ void anv_GetPhysicalDeviceFeatures2KHR(
 
    vk_foreach_struct(ext, pFeatures->pNext) {
       switch (ext->sType) {
-      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHX: {
-         VkPhysicalDeviceMultiviewFeaturesKHX *features =
-            (VkPhysicalDeviceMultiviewFeaturesKHX *)ext;
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR: {
+         VkPhysicalDeviceMultiviewFeaturesKHR *features =
+            (VkPhysicalDeviceMultiviewFeaturesKHR *)ext;
          features->multiview = true;
          features->multiviewGeometryShader = true;
          features->multiviewTessellationShader = true;
@@ -984,9 +984,9 @@ void anv_GetPhysicalDeviceProperties2KHR(
          break;
       }
 
-      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHX: {
-         VkPhysicalDeviceMultiviewPropertiesKHX *properties =
-            (VkPhysicalDeviceMultiviewPropertiesKHX *)ext;
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHR: {
+         VkPhysicalDeviceMultiviewPropertiesKHR *properties =
+            (VkPhysicalDeviceMultiviewPropertiesKHR *)ext;
          properties->maxMultiviewViewCount = 16;
          properties->maxMultiviewInstanceIndex = UINT32_MAX / 16;
          break;
