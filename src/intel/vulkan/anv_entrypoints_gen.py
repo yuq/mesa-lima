@@ -76,6 +76,9 @@ extern const struct anv_dispatch_table ${layer}_dispatch_table;
 extern const struct anv_dispatch_table anv_tramp_dispatch_table;
 
 % for e in entrypoints:
+  % if e.alias:
+    <% continue %>
+  % endif
   % if e.guard is not None:
 #ifdef ${e.guard}
   % endif
@@ -189,6 +192,9 @@ string_map_lookup(const char *str)
 
 % for layer in LAYERS:
   % for e in entrypoints:
+    % if e.alias:
+      <% continue %>
+    % endif
     % if e.guard is not None:
 #ifdef ${e.guard}
     % endif
@@ -215,7 +221,7 @@ string_map_lookup(const char *str)
 /** Trampoline entrypoints for all device functions */
 
 % for e in entrypoints:
-  % if not e.is_device_entrypoint():
+  % if e.alias or not e.is_device_entrypoint():
     <% continue %>
   % endif
   % if e.guard is not None:
@@ -398,17 +404,23 @@ class StringIntMap(object):
 
 EntrypointParam = namedtuple('EntrypointParam', 'type name decl')
 
-class Entrypoint(object):
-    def __init__(self, name, return_type, params, guard = None):
+class EntrypointBase(object):
+    def __init__(self, name):
         self.name = name
-        self.return_type = return_type
-        self.params = params
-        self.guard = guard
+        self.alias = None
+        self.guard = None
         self.enabled = False
         self.num = None
         # Extensions which require this entrypoint
         self.core_version = None
         self.extensions = []
+
+class Entrypoint(EntrypointBase):
+    def __init__(self, name, return_type, params, guard = None):
+        super(Entrypoint, self).__init__(name)
+        self.return_type = return_type
+        self.params = params
+        self.guard = guard
 
     def is_device_entrypoint(self):
         return self.params[0].type in ('VkDevice', 'VkCommandBuffer')
@@ -423,24 +435,39 @@ class Entrypoint(object):
     def call_params(self):
         return ', '.join(p.name for p in self.params)
 
+class EntrypointAlias(EntrypointBase):
+    def __init__(self, name, entrypoint):
+        super(EntrypointAlias, self).__init__(name)
+        self.alias = entrypoint
+
+    def is_device_entrypoint(self):
+        return self.alias.is_device_entrypoint()
+
+    def prefixed_name(self, prefix):
+        return self.alias.prefixed_name(prefix)
+
 def get_entrypoints(doc, entrypoints_to_defines, start_index):
     """Extract the entry points from the registry."""
     entrypoints = OrderedDict()
 
     for command in doc.findall('./commands/command'):
-        ret_type = command.find('./proto/type').text
-        fullname = command.find('./proto/name').text
-        params = [EntrypointParam(
-            type = p.find('./type').text,
-            name = p.find('./name').text,
-            decl = ''.join(p.itertext())
-        ) for p in command.findall('./param')]
-        guard = entrypoints_to_defines.get(fullname)
-        # They really need to be unique
-        assert fullname not in entrypoints
-        entrypoints[fullname] = Entrypoint(fullname, ret_type, params, guard)
+        if 'alias' in command.attrib:
+            alias = command.attrib['name']
+            target = command.attrib['alias']
+            entrypoints[alias] = EntrypointAlias(alias, entrypoints[target])
+        else:
+            name = command.find('./proto/name').text
+            ret_type = command.find('./proto/type').text
+            params = [EntrypointParam(
+                type = p.find('./type').text,
+                name = p.find('./name').text,
+                decl = ''.join(p.itertext())
+            ) for p in command.findall('./param')]
+            guard = entrypoints_to_defines.get(name)
+            # They really need to be unique
+            assert name not in entrypoints
+            entrypoints[name] = Entrypoint(name, ret_type, params, guard)
 
-    enabled_commands = set()
     for feature in doc.findall('./feature'):
         assert feature.attrib['api'] == 'vulkan'
         version = VkVersion(feature.attrib['number'])
