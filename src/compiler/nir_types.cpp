@@ -397,3 +397,30 @@ glsl_transposed_type(const struct glsl_type *type)
    return glsl_type::get_instance(type->base_type, type->matrix_columns,
                                   type->vector_elements);
 }
+
+const glsl_type *
+glsl_channel_type(const glsl_type *t)
+{
+   switch (glsl_get_base_type(t)) {
+   case GLSL_TYPE_ARRAY: {
+      const glsl_type *base = glsl_channel_type(glsl_get_array_element(t));
+      return glsl_array_type(base, glsl_get_length(t));
+   }
+   case GLSL_TYPE_UINT:
+      return glsl_uint_type();
+   case GLSL_TYPE_INT:
+      return glsl_int_type();
+   case GLSL_TYPE_FLOAT:
+      return glsl_float_type();
+   case GLSL_TYPE_BOOL:
+      return glsl_bool_type();
+   case GLSL_TYPE_DOUBLE:
+      return glsl_double_type();
+   case GLSL_TYPE_UINT64:
+      return glsl_uint64_t_type();
+   case GLSL_TYPE_INT64:
+      return glsl_int64_t_type();
+   default:
+      unreachable("Unhandled base type glsl_channel_type()");
+   }
+}
