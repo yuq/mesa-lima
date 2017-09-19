@@ -302,6 +302,8 @@ bool ppir_compile_nir(struct lima_fs_shader_state *prog, nir_shader *nir)
       goto err_out0;
 
    ppir_node_print_prog(comp);
+   ppir_lower_prog(comp);
+   ppir_node_print_prog(comp);
 
    ralloc_free(comp);
    return true;
