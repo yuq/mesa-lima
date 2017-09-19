@@ -30,6 +30,9 @@
 
 #include "etnaviv_query.h"
 
+#define ETNA_QUERY_DRAW_CALLS    (ETNA_SW_QUERY_BASE + 0)
+#define ETNA_QUERY_RS_OPERATIONS (ETNA_SW_QUERY_BASE + 1)
+
 struct etna_sw_query {
    struct etna_query base;
    uint64_t begin_value, end_value;
