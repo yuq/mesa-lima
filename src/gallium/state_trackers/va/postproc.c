@@ -118,14 +118,32 @@ static VAStatus vlVaPostProcBlit(vlVaDriver *drv, vlVaContext *context,
    struct pipe_surface **dst_surfaces;
    struct u_rect src_rect;
    struct u_rect dst_rect;
+   bool scale = false;
    unsigned i;
 
    if (src->interlaced != dst->interlaced && dst->interlaced)
       return VA_STATUS_ERROR_INVALID_SURFACE;
 
+   if ((src->width != dst->width || src->height != dst->height) &&
+       (src->interlaced && dst->interlaced))
+      scale = true;
+
    src_surfaces = src->get_surfaces(src);
    if (!src_surfaces || !src_surfaces[0])
       return VA_STATUS_ERROR_INVALID_SURFACE;
+
+   if (scale) {
+      vlVaSurface *surf;
+
+      surf = handle_table_get(drv->htab, context->target_id);
+      surf->templat.interlaced = false;
+      dst->destroy(dst);
+
+      if (vlVaHandleSurfaceAllocate(drv, surf, &surf->templat) != VA_STATUS_SUCCESS)
+         return VA_STATUS_ERROR_ALLOCATION_FAILED;
+
+      dst = context->target = surf->buffer;
+   }
 
    dst_surfaces = dst->get_surfaces(dst);
    if (!dst_surfaces || !dst_surfaces[0])
