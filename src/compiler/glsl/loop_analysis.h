@@ -55,13 +55,6 @@ extern bool
 unroll_loops(exec_list *instructions, loop_state *ls,
              const struct gl_shader_compiler_options *options);
 
-ir_rvalue *
-find_initial_value(ir_loop *loop, ir_variable *var);
-
-int
-calculate_iterations(ir_rvalue *from, ir_rvalue *to, ir_rvalue *increment,
-		     enum ir_expression_operation op);
-
 
 /**
  * Tracking for all variables used in a loop
