@@ -1592,10 +1592,8 @@ intel_update_image_buffer(struct brw_context *intel,
    else
       last_mt = rb->singlesample_mt;
 
-   if (last_mt && last_mt->bo == buffer->bo) {
-      intel_miptree_finish_external(intel, last_mt);
+   if (last_mt && last_mt->bo == buffer->bo)
       return;
-   }
 
    enum isl_colorspace colorspace;
    switch (_mesa_get_format_color_encoding(intel_rb_format(rb))) {

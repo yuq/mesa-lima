@@ -2820,25 +2820,6 @@ intel_miptree_prepare_external(struct brw_context *brw,
                                 aux_usage, supports_fast_clear);
 }
 
-void
-intel_miptree_finish_external(struct brw_context *brw,
-                              struct intel_mipmap_tree *mt)
-{
-   if (!mt->mcs_buf)
-      return;
-
-   /* We just got this image in from the window system via glxBindTexImageEXT
-    * or similar and have no idea what the actual aux state is other than that
-    * we aren't in AUX_INVALID.  Reset the aux state to the default for the
-    * image's modifier.
-    */
-   enum isl_aux_state default_aux_state =
-      isl_drm_modifier_get_default_aux_state(mt->drm_modifier);
-   assert(mt->last_level == mt->first_level);
-   intel_miptree_set_aux_state(brw, mt, 0, 0, INTEL_REMAINING_LAYERS,
-                               default_aux_state);
-}
-
 /**
  * Make it possible to share the BO backing the given miptree with another
  * process or another miptree.
