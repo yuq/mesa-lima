@@ -179,6 +179,14 @@ static const VkExtensionProperties common_device_extensions[] = {
 		.specVersion = 1,
 	},
 };
+
+static const VkExtensionProperties rasterization_order_extension[] ={
+	{
+		.extensionName = VK_AMD_RASTERIZATION_ORDER_EXTENSION_NAME,
+		.specVersion = 1,
+	},
+};
+
 static const VkExtensionProperties ext_sema_device_extensions[] = {
 	{
 		.extensionName = VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
@@ -342,6 +350,15 @@ radv_physical_device_init(struct radv_physical_device *device,
 					ARRAY_SIZE(common_device_extensions));
 	if (result != VK_SUCCESS)
 		goto fail;
+
+	if (device->rad_info.chip_class >= VI && device->rad_info.max_se >= 2) {
+		result = radv_extensions_register(instance,
+						&device->extensions,
+						rasterization_order_extension,
+						ARRAY_SIZE(rasterization_order_extension));
+		if (result != VK_SUCCESS)
+			goto fail;
+	}
 
 	if (device->rad_info.has_syncobj) {
 		result = radv_extensions_register(instance,
