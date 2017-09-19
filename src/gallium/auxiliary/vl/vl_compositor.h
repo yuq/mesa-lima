@@ -282,13 +282,4 @@ vl_compositor_cleanup(struct vl_compositor *compositor);
 void
 vl_compositor_cleanup_state(struct vl_compositor_state *state);
 
-/**
- * deinterlace yuv buffer
- */
-void
-vl_compositor_yuv_deint(struct vl_compositor_state *state,
-                        struct vl_compositor *compositor,
-                        struct pipe_video_buffer *src,
-                        struct pipe_video_buffer *dst);
-
 #endif /* vl_compositor_h */
