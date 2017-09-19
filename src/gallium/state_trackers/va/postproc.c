@@ -119,9 +119,15 @@ static VAStatus vlVaPostProcBlit(vlVaDriver *drv, vlVaContext *context,
    struct u_rect src_rect;
    struct u_rect dst_rect;
    bool scale = false;
+   bool grab = false;
    unsigned i;
 
-   if (src->interlaced != dst->interlaced && dst->interlaced)
+   if ((src->buffer_format == PIPE_FORMAT_B8G8R8A8_UNORM ||
+        src->buffer_format == PIPE_FORMAT_B8G8R8X8_UNORM) &&
+       !src->interlaced)
+      grab = true;
+
+   if (src->interlaced != dst->interlaced && dst->interlaced && !grab)
       return VA_STATUS_ERROR_INVALID_SURFACE;
 
    if ((src->width != dst->width || src->height != dst->height) &&
@@ -132,7 +138,7 @@ static VAStatus vlVaPostProcBlit(vlVaDriver *drv, vlVaContext *context,
    if (!src_surfaces || !src_surfaces[0])
       return VA_STATUS_ERROR_INVALID_SURFACE;
 
-   if (scale) {
+   if (scale || (grab && dst->interlaced)) {
       vlVaSurface *surf;
 
       surf = handle_table_get(drv->htab, context->target_id);
@@ -158,6 +164,14 @@ static VAStatus vlVaPostProcBlit(vlVaDriver *drv, vlVaContext *context,
    dst_rect.y0 = dst_region->y;
    dst_rect.x1 = dst_region->x + dst_region->width;
    dst_rect.y1 = dst_region->y + dst_region->height;
+
+   if (grab) {
+      vl_compositor_convert_rgb_to_yuv(&drv->cstate, &drv->compositor, 0,
+                                       ((struct vl_video_buffer *)src)->resources[0],
+                                       dst, &src_rect, &dst_rect);
+
+      return VA_STATUS_SUCCESS;
+   }
 
    if (src->interlaced != dst->interlaced) {
       vl_compositor_yuv_deint_full(&drv->cstate, &drv->compositor,
