@@ -371,11 +371,23 @@ def main():
 
     # For outputting entrypoints.h we generate a anv_EntryPoint() prototype
     # per entry point.
-    with open(os.path.join(args.outdir, 'anv_entrypoints.h'), 'wb') as f:
-        f.write(TEMPLATE_H.render(entrypoints=entrypoints,
-                                  filename=os.path.basename(__file__)))
-    with open(os.path.join(args.outdir, 'anv_entrypoints.c'), 'wb') as f:
-        f.write(gen_code(entrypoints))
+    try:
+        with open(os.path.join(args.outdir, 'anv_entrypoints.h'), 'wb') as f:
+            f.write(TEMPLATE_H.render(entrypoints=entrypoints,
+                                      filename=os.path.basename(__file__)))
+        with open(os.path.join(args.outdir, 'anv_entrypoints.c'), 'wb') as f:
+            f.write(gen_code(entrypoints))
+    except Exception:
+        # In the even there's an error this imports some helpers from mako
+        # to print a useful stack trace and prints it, then exits with
+        # status 1, if python is run with debug; otherwise it just raises
+        # the exception
+        if __debug__:
+            import sys
+            from mako import exceptions
+            sys.stderr.write(exceptions.text_error_template().render() + '\n')
+            sys.exit(1)
+        raise
 
 
 if __name__ == '__main__':
