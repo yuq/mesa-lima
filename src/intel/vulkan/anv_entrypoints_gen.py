@@ -43,33 +43,33 @@ struct anv_dispatch_table {
    union {
       void *entrypoints[${len(entrypoints)}];
       struct {
-      % for _, name, _, _, _, guard in entrypoints:
-        % if guard is not None:
-#ifdef ${guard}
-          PFN_vk${name} ${name};
+      % for e in entrypoints:
+        % if e.guard is not None:
+#ifdef ${e.guard}
+          PFN_${e.name} ${e.name};
 #else
-          void *${name};
+          void *${e.name};
 # endif
         % else:
-          PFN_vk${name} ${name};
+          PFN_${e.name} ${e.name};
         % endif
       % endfor
       };
    };
 };
 
-% for type_, name, args, num, h, guard in entrypoints:
-  % if guard is not None:
-#ifdef ${guard}
+% for e in entrypoints:
+  % if e.guard is not None:
+#ifdef ${e.guard}
   % endif
-  ${type_} anv_${name}(${args});
-  ${type_} gen7_${name}(${args});
-  ${type_} gen75_${name}(${args});
-  ${type_} gen8_${name}(${args});
-  ${type_} gen9_${name}(${args});
-  ${type_} gen10_${name}(${args});
-  % if guard is not None:
-#endif // ${guard}
+  ${e.return_type} ${e.prefixed_name('anv')}(${e.params});
+  ${e.return_type} ${e.prefixed_name('gen7')}(${e.params});
+  ${e.return_type} ${e.prefixed_name('gen75')}(${e.params});
+  ${e.return_type} ${e.prefixed_name('gen8')}(${e.params});
+  ${e.return_type} ${e.prefixed_name('gen9')}(${e.params});
+  ${e.return_type} ${e.prefixed_name('gen10')}(${e.params});
+  % if e.guard is not None:
+#endif // ${e.guard}
   % endif
 % endfor
 """, output_encoding='utf-8')
@@ -113,14 +113,14 @@ struct anv_entrypoint {
  */
 
 static const char strings[] =
-% for _, name, _, _, _, _ in entrypoints:
-    "vk${name}\\0"
+% for e in entrypoints:
+    "${e.name}\\0"
 % endfor
 ;
 
 static const struct anv_entrypoint entrypoints[] = {
-% for _, name, _, num, h, _ in entrypoints:
-    [${num}] = { ${offsets[num]}, ${'{:0=#8x}'.format(h)} }, /* vk${name} */
+% for e in entrypoints:
+    [${e.num}] = { ${offsets[e.num]}, ${'{:0=#8x}'.format(e.get_c_hash())} }, /* ${e.name} */
 % endfor
 };
 
@@ -130,24 +130,24 @@ static const struct anv_entrypoint entrypoints[] = {
  */
 
 % for layer in ['anv', 'gen7', 'gen75', 'gen8', 'gen9', 'gen10']:
-  % for type_, name, args, _, _, guard in entrypoints:
-    % if guard is not None:
-#ifdef ${guard}
+  % for e in entrypoints:
+    % if e.guard is not None:
+#ifdef ${e.guard}
     % endif
-    ${type_} ${layer}_${name}(${args}) __attribute__ ((weak));
-    % if guard is not None:
-#endif // ${guard}
+    ${e.return_type} ${e.prefixed_name(layer)}(${e.params}) __attribute__ ((weak));
+    % if e.guard is not None:
+#endif // ${e.guard}
     % endif
   % endfor
 
   const struct anv_dispatch_table ${layer}_layer = {
-  % for _, name, args, _, _, guard in entrypoints:
-    % if guard is not None:
-#ifdef ${guard}
+  % for e in entrypoints:
+    % if e.guard is not None:
+#ifdef ${e.guard}
     % endif
-    .${name} = ${layer}_${name},
-    % if guard is not None:
-#endif // ${guard}
+    .${e.name} = ${e.prefixed_name(layer)},
+    % if e.guard is not None:
+#endif // ${e.guard}
     % endif
   % endfor
   };
@@ -251,6 +251,20 @@ def cal_hash(name):
     return functools.reduce(
         lambda h, c: (h * PRIME_FACTOR + ord(c)) & U32_MASK, name, 0)
 
+class Entrypoint(object):
+    def __init__(self, name, return_type, params, guard = None):
+        self.name = name
+        self.return_type = return_type
+        self.params = ', '.join(params)
+        self.guard = guard
+        self.num = None
+
+    def prefixed_name(self, prefix):
+        assert self.name.startswith('vk')
+        return prefix + '_' + self.name[2:]
+
+    def get_c_hash(self):
+        return cal_hash(self.name)
 
 def get_entrypoints(doc, entrypoints_to_defines, start_index):
     """Extract the entry points from the registry."""
@@ -276,20 +290,16 @@ def get_entrypoints(doc, entrypoints_to_defines, start_index):
         for command in extension.findall('./require/command'):
             enabled_commands.add(command.attrib['name'])
 
-    index = start_index
     for command in doc.findall('./commands/command'):
-        type = command.find('./proto/type').text
+        ret_type = command.find('./proto/type').text
         fullname = command.find('./proto/name').text
 
         if fullname not in enabled_commands:
             continue
 
-        shortname = fullname[2:]
         params = (''.join(p.itertext()) for p in command.findall('./param'))
-        params = ', '.join(params)
         guard = entrypoints_to_defines.get(fullname)
-        entrypoints.append((type, shortname, params, index, cal_hash(fullname), guard))
-        index += 1
+        entrypoints.append(Entrypoint(fullname, ret_type, params, guard))
 
     return entrypoints
 
@@ -312,14 +322,15 @@ def gen_code(entrypoints):
     """Generate the C code."""
     i = 0
     offsets = []
-    for _, name, _, _, _, _ in entrypoints:
+    for e in entrypoints:
         offsets.append(i)
-        i += 2 + len(name) + 1
+        i += len(e.name) + 1
 
     mapping = [NONE] * HASH_SIZE
     collisions = [0] * 10
-    for _, name, _, num, h, _ in entrypoints:
+    for e in entrypoints:
         level = 0
+        h = e.get_c_hash()
         while mapping[h & HASH_MASK] != NONE:
             h = h + PRIME_STEP
             level = level + 1
@@ -327,7 +338,7 @@ def gen_code(entrypoints):
             collisions[9] += 1
         else:
             collisions[level] += 1
-        mapping[h & HASH_MASK] = num
+        mapping[h & HASH_MASK] = e.num
 
     return TEMPLATE_C.render(entrypoints=entrypoints,
                              offsets=offsets,
@@ -361,13 +372,15 @@ def main():
 
     # Manually add CreateDmaBufImageINTEL for which we don't have an extension
     # defined.
-    entrypoints.append(('VkResult', 'CreateDmaBufImageINTEL',
-                        'VkDevice device, ' +
-                        'const VkDmaBufImageCreateInfo* pCreateInfo, ' +
-                        'const VkAllocationCallbacks* pAllocator,' +
-                        'VkDeviceMemory* pMem,' +
-                        'VkImage* pImage', len(entrypoints),
-                        cal_hash('vkCreateDmaBufImageINTEL'), None))
+    entrypoints.append(Entrypoint('vkCreateDmaBufImageINTEL', 'VkResult',
+                                  ['VkDevice device',
+                                   'const VkDmaBufImageCreateInfo* pCreateInfo',
+                                   'const VkAllocationCallbacks* pAllocator',
+                                   'VkDeviceMemory* pMem',
+                                   'VkImage* pImage']))
+
+    for num, e in enumerate(entrypoints):
+        e.num = num
 
     # For outputting entrypoints.h we generate a anv_EntryPoint() prototype
     # per entry point.
