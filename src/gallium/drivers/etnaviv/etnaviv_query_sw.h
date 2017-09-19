@@ -44,4 +44,8 @@ etna_sw_query(struct etna_query *q)
 struct etna_query *
 etna_sw_create_query(struct etna_context *ctx, unsigned query_type);
 
+int
+etna_sw_get_driver_query_info(struct pipe_screen *pscreen, unsigned index,
+                              struct pipe_driver_query_info *info);
+
 #endif

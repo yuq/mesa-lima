@@ -81,21 +81,12 @@ static int
 etna_get_driver_query_info(struct pipe_screen *pscreen, unsigned index,
                            struct pipe_driver_query_info *info)
 {
-   struct pipe_driver_query_info list[] = {
-      {"prims-emitted", PIPE_QUERY_PRIMITIVES_EMITTED, { 0 }},
-      {"draw-calls", ETNA_QUERY_DRAW_CALLS, { 0 }},
-      {"rs-operations", ETNA_QUERY_RS_OPERATIONS, { 0 }},
-   };
+   int nr_sw_queries = etna_sw_get_driver_query_info(pscreen, 0, NULL);
 
    if (!info)
-      return ARRAY_SIZE(list);
+      return nr_sw_queries;
 
-   if (index >= ARRAY_SIZE(list))
-      return 0;
-
-   *info = list[index];
-
-   return 1;
+   return etna_sw_get_driver_query_info(pscreen, index, info);
 }
 
 static void
