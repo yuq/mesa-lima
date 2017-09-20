@@ -699,7 +699,7 @@ VkResult anv_BindImageMemory(
    return VK_SUCCESS;
 }
 
-VkResult anv_BindImageMemory2KHR(
+VkResult anv_BindImageMemory2(
     VkDevice                                    _device,
     uint32_t                                    bindInfoCount,
     const VkBindImageMemoryInfoKHR*             pBindInfos)

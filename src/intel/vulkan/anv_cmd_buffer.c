@@ -875,7 +875,7 @@ VkResult anv_ResetCommandPool(
    return VK_SUCCESS;
 }
 
-void anv_TrimCommandPoolKHR(
+void anv_TrimCommandPool(
     VkDevice                                    device,
     VkCommandPool                               commandPool,
     VkCommandPoolTrimFlagsKHR                   flags)

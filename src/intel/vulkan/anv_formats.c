@@ -705,7 +705,7 @@ void anv_GetPhysicalDeviceFormatProperties(
    };
 }
 
-void anv_GetPhysicalDeviceFormatProperties2KHR(
+void anv_GetPhysicalDeviceFormatProperties2(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkFormatProperties2KHR*                     pFormatProperties)
@@ -924,7 +924,7 @@ static const VkExternalMemoryPropertiesKHR prime_fd_props = {
       VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
 };
 
-VkResult anv_GetPhysicalDeviceImageFormatProperties2KHR(
+VkResult anv_GetPhysicalDeviceImageFormatProperties2(
     VkPhysicalDevice                            physicalDevice,
     const VkPhysicalDeviceImageFormatInfo2KHR*  base_info,
     VkImageFormatProperties2KHR*                base_props)
@@ -1027,7 +1027,7 @@ void anv_GetPhysicalDeviceSparseImageFormatProperties(
    *pNumProperties = 0;
 }
 
-void anv_GetPhysicalDeviceSparseImageFormatProperties2KHR(
+void anv_GetPhysicalDeviceSparseImageFormatProperties2(
     VkPhysicalDevice                            physicalDevice,
     const VkPhysicalDeviceSparseImageFormatInfo2KHR* pFormatInfo,
     uint32_t*                                   pPropertyCount,
@@ -1037,7 +1037,7 @@ void anv_GetPhysicalDeviceSparseImageFormatProperties2KHR(
    *pPropertyCount = 0;
 }
 
-void anv_GetPhysicalDeviceExternalBufferPropertiesKHR(
+void anv_GetPhysicalDeviceExternalBufferProperties(
     VkPhysicalDevice                             physicalDevice,
     const VkPhysicalDeviceExternalBufferInfoKHR* pExternalBufferInfo,
     VkExternalBufferPropertiesKHR*               pExternalBufferProperties)
@@ -1071,7 +1071,7 @@ void anv_GetPhysicalDeviceExternalBufferPropertiesKHR(
       (VkExternalMemoryPropertiesKHR) {0};
 }
 
-VkResult anv_CreateSamplerYcbcrConversionKHR(
+VkResult anv_CreateSamplerYcbcrConversion(
     VkDevice                                    _device,
     const VkSamplerYcbcrConversionCreateInfoKHR* pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
@@ -1116,7 +1116,7 @@ VkResult anv_CreateSamplerYcbcrConversionKHR(
    return VK_SUCCESS;
 }
 
-void anv_DestroySamplerYcbcrConversionKHR(
+void anv_DestroySamplerYcbcrConversion(
     VkDevice                                    _device,
     VkSamplerYcbcrConversionKHR                 YcbcrConversion,
     const VkAllocationCallbacks*                pAllocator)

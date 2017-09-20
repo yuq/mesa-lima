@@ -890,7 +890,7 @@ anv_descriptor_set_write_template(struct anv_descriptor_set *set,
    }
 }
 
-VkResult anv_CreateDescriptorUpdateTemplateKHR(
+VkResult anv_CreateDescriptorUpdateTemplate(
     VkDevice                                    _device,
     const VkDescriptorUpdateTemplateCreateInfoKHR* pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
@@ -932,7 +932,7 @@ VkResult anv_CreateDescriptorUpdateTemplateKHR(
    return VK_SUCCESS;
 }
 
-void anv_DestroyDescriptorUpdateTemplateKHR(
+void anv_DestroyDescriptorUpdateTemplate(
     VkDevice                                    _device,
     VkDescriptorUpdateTemplateKHR               descriptorUpdateTemplate,
     const VkAllocationCallbacks*                pAllocator)
@@ -944,7 +944,7 @@ void anv_DestroyDescriptorUpdateTemplateKHR(
    vk_free2(&device->alloc, pAllocator, template);
 }
 
-void anv_UpdateDescriptorSetWithTemplateKHR(
+void anv_UpdateDescriptorSetWithTemplate(
     VkDevice                                    _device,
     VkDescriptorSet                             descriptorSet,
     VkDescriptorUpdateTemplateKHR               descriptorUpdateTemplate,

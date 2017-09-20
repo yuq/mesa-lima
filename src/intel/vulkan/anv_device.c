@@ -759,7 +759,7 @@ void anv_GetPhysicalDeviceFeatures(
       pdevice->compiler->scalar_stage[MESA_SHADER_GEOMETRY];
 }
 
-void anv_GetPhysicalDeviceFeatures2KHR(
+void anv_GetPhysicalDeviceFeatures2(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceFeatures2KHR*               pFeatures)
 {
@@ -956,7 +956,7 @@ void anv_GetPhysicalDeviceProperties(
           pdevice->pipeline_cache_uuid, VK_UUID_SIZE);
 }
 
-void anv_GetPhysicalDeviceProperties2KHR(
+void anv_GetPhysicalDeviceProperties2(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceProperties2KHR*             pProperties)
 {
@@ -1030,7 +1030,7 @@ void anv_GetPhysicalDeviceQueueFamilyProperties(
    }
 }
 
-void anv_GetPhysicalDeviceQueueFamilyProperties2KHR(
+void anv_GetPhysicalDeviceQueueFamilyProperties2(
     VkPhysicalDevice                            physicalDevice,
     uint32_t*                                   pQueueFamilyPropertyCount,
     VkQueueFamilyProperties2KHR*                pQueueFamilyProperties)
@@ -1070,7 +1070,7 @@ void anv_GetPhysicalDeviceMemoryProperties(
    }
 }
 
-void anv_GetPhysicalDeviceMemoryProperties2KHR(
+void anv_GetPhysicalDeviceMemoryProperties2(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceMemoryProperties2KHR*       pMemoryProperties)
 {
@@ -2170,7 +2170,7 @@ void anv_GetBufferMemoryRequirements(
    pMemoryRequirements->memoryTypeBits = memory_types;
 }
 
-void anv_GetBufferMemoryRequirements2KHR(
+void anv_GetBufferMemoryRequirements2(
     VkDevice                                    _device,
     const VkBufferMemoryRequirementsInfo2KHR*   pInfo,
     VkMemoryRequirements2KHR*                   pMemoryRequirements)
@@ -2219,7 +2219,7 @@ void anv_GetImageMemoryRequirements(
    pMemoryRequirements->memoryTypeBits = memory_types;
 }
 
-void anv_GetImageMemoryRequirements2KHR(
+void anv_GetImageMemoryRequirements2(
     VkDevice                                    _device,
     const VkImageMemoryRequirementsInfo2KHR*    pInfo,
     VkMemoryRequirements2KHR*                   pMemoryRequirements)
@@ -2301,7 +2301,7 @@ void anv_GetImageSparseMemoryRequirements(
    *pSparseMemoryRequirementCount = 0;
 }
 
-void anv_GetImageSparseMemoryRequirements2KHR(
+void anv_GetImageSparseMemoryRequirements2(
     VkDevice                                    device,
     const VkImageSparseMemoryRequirementsInfo2KHR* pInfo,
     uint32_t*                                   pSparseMemoryRequirementCount,
@@ -2353,7 +2353,7 @@ VkResult anv_BindBufferMemory(
    return VK_SUCCESS;
 }
 
-VkResult anv_BindBufferMemory2KHR(
+VkResult anv_BindBufferMemory2(
     VkDevice                                    device,
     uint32_t                                    bindInfoCount,
     const VkBindBufferMemoryInfoKHR*            pBindInfos)

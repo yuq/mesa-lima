@@ -682,7 +682,7 @@ VkResult anv_WaitForFences(
    }
 }
 
-void anv_GetPhysicalDeviceExternalFencePropertiesKHR(
+void anv_GetPhysicalDeviceExternalFenceProperties(
     VkPhysicalDevice                            physicalDevice,
     const VkPhysicalDeviceExternalFenceInfoKHR* pExternalFenceInfo,
     VkExternalFencePropertiesKHR*               pExternalFenceProperties)
@@ -960,7 +960,7 @@ void anv_DestroySemaphore(
    vk_free2(&device->alloc, pAllocator, semaphore);
 }
 
-void anv_GetPhysicalDeviceExternalSemaphorePropertiesKHR(
+void anv_GetPhysicalDeviceExternalSemaphoreProperties(
     VkPhysicalDevice                            physicalDevice,
     const VkPhysicalDeviceExternalSemaphoreInfoKHR* pExternalSemaphoreInfo,
     VkExternalSemaphorePropertiesKHR*           pExternalSemaphoreProperties)

@@ -54,6 +54,7 @@ class ApiVersion:
 # available.
 API_VERSIONS = [
     ApiVersion('1.0.57',    True),
+    ApiVersion('1.1.0',     False),
 ]
 
 MAX_API_VERSION = None # Computed later
