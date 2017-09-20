@@ -2361,7 +2361,9 @@ ast_type_specifier::glsl_type(const char **name,
 {
    const struct glsl_type *type;
 
-   if (structure)
+   if (this->type != NULL)
+      type = this->type;
+   else if (structure)
       type = structure->type;
    else
       type = state->symbols->get_type(this->type_name);

@@ -2189,7 +2189,7 @@ type_specifier_nonarray:
    basic_type_specifier_nonarray
    {
       void *ctx = state->linalloc;
-      $$ = new(ctx) ast_type_specifier($1->name);
+      $$ = new(ctx) ast_type_specifier($1);
       $$->set_location(@1);
    }
    | struct_specifier

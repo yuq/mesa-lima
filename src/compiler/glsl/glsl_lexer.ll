@@ -132,17 +132,22 @@ static int classify_identifier(struct _mesa_glsl_parse_state *, const char *,
 /**
  * Like DEPRECATED_ES_KEYWORD, but for types
  */
-#define DEPRECATED_ES_TYPE(gtype)					\
+#define DEPRECATED_ES_TYPE_WITH_ALT(alt_expr, gtype)			\
    do {									\
       if (yyextra->is_version(0, 300)) {				\
-	 _mesa_glsl_error(yylloc, yyextra,				\
-			  "illegal use of reserved word `%s'", yytext);	\
-	 return ERROR_TOK;						\
-      } else {								\
-	 yylval->type = gtype;						\
+         _mesa_glsl_error(yylloc, yyextra,				\
+                          "illegal use of reserved word `%s'", yytext);	\
+         return ERROR_TOK;						\
+      } else if (alt_expr) {						\
+         yylval->type = gtype;						\
          return BASIC_TYPE_TOK;						\
+      } else {								\
+         return classify_identifier(yyextra, yytext, yyleng, yylval);	\
       }									\
    } while (0)
+
+#define DEPRECATED_ES_TYPE(gtype)					\
+   DEPRECATED_ES_TYPE_WITH_ALT(true, gtype)
 
 static int
 literal_integer(char *text, int len, struct _mesa_glsl_parse_state *state,
@@ -619,9 +624,9 @@ dmat4x4		TYPE_WITH_ALT(110, 100, 400, 0, yyextra->ARB_gpu_shader_fp64_enable, gl
 fvec2		KEYWORD(110, 100, 0, 0, FVEC2);
 fvec3		KEYWORD(110, 100, 0, 0, FVEC3);
 fvec4		KEYWORD(110, 100, 0, 0, FVEC4);
-sampler2DRect		DEPRECATED_ES_TYPE(glsl_type::sampler2DRect_type);
+sampler2DRect		DEPRECATED_ES_TYPE_WITH_ALT(yyextra->ARB_texture_rectangle_enable, glsl_type::sampler2DRect_type);
 sampler3DRect		KEYWORD(110, 100, 0, 0, SAMPLER3DRECT);
-sampler2DRectShadow	DEPRECATED_ES_TYPE(glsl_type::sampler2DRectShadow_type);
+sampler2DRectShadow	DEPRECATED_ES_TYPE_WITH_ALT(yyextra->ARB_texture_rectangle_enable, glsl_type::sampler2DRectShadow_type);
 sizeof		KEYWORD(110, 100, 0, 0, SIZEOF);
 cast		KEYWORD(110, 100, 0, 0, CAST);
 namespace	KEYWORD(110, 100, 0, 0, NAMESPACE);
