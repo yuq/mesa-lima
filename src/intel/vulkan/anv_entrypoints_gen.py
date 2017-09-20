@@ -480,20 +480,6 @@ def get_entrypoints_defines(doc):
     return entrypoints_to_defines
 
 
-def gen_code(entrypoints):
-    """Generate the C code."""
-
-    strmap = StringIntMap()
-    for e in entrypoints:
-        strmap.add_string(e.name, e.num)
-    strmap.bake()
-
-    return TEMPLATE_C.render(entrypoints=entrypoints,
-                             LAYERS=LAYERS,
-                             strmap=strmap,
-                             filename=os.path.basename(__file__))
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--outdir', help='Where to write the files.',
@@ -524,8 +510,11 @@ def main():
         EntrypointParam('VkImage', 'pImage', 'VkImage* pImage')
     ]))
 
+    strmap = StringIntMap()
     for num, e in enumerate(entrypoints):
+        strmap.add_string(e.name, num)
         e.num = num
+    strmap.bake()
 
     # For outputting entrypoints.h we generate a anv_EntryPoint() prototype
     # per entry point.
@@ -535,7 +524,10 @@ def main():
                                       LAYERS=LAYERS,
                                       filename=os.path.basename(__file__)))
         with open(os.path.join(args.outdir, 'anv_entrypoints.c'), 'wb') as f:
-            f.write(gen_code(entrypoints))
+            f.write(TEMPLATE_C.render(entrypoints=entrypoints,
+                                      LAYERS=LAYERS,
+                                      strmap=strmap,
+                                      filename=os.path.basename(__file__)))
     except Exception:
         # In the even there's an error this imports some helpers from mako
         # to print a useful stack trace and prints it, then exits with
