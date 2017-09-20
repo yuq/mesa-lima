@@ -1587,13 +1587,13 @@ anv_pipe_invalidate_bits_for_access_flags(VkAccessFlags flags)
 
 #define VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV (         \
    VK_IMAGE_ASPECT_COLOR_BIT | \
-   VK_IMAGE_ASPECT_PLANE_0_BIT_KHR | \
-   VK_IMAGE_ASPECT_PLANE_1_BIT_KHR | \
-   VK_IMAGE_ASPECT_PLANE_2_BIT_KHR)
+   VK_IMAGE_ASPECT_PLANE_0_BIT | \
+   VK_IMAGE_ASPECT_PLANE_1_BIT | \
+   VK_IMAGE_ASPECT_PLANE_2_BIT)
 #define VK_IMAGE_ASPECT_PLANES_BITS_ANV ( \
-   VK_IMAGE_ASPECT_PLANE_0_BIT_KHR | \
-   VK_IMAGE_ASPECT_PLANE_1_BIT_KHR | \
-   VK_IMAGE_ASPECT_PLANE_2_BIT_KHR)
+   VK_IMAGE_ASPECT_PLANE_0_BIT | \
+   VK_IMAGE_ASPECT_PLANE_1_BIT | \
+   VK_IMAGE_ASPECT_PLANE_2_BIT)
 
 struct anv_vertex_binding {
    struct anv_buffer *                          buffer;
@@ -2287,15 +2287,15 @@ anv_image_aspect_to_plane(VkImageAspectFlags image_aspects,
    switch (aspect_mask) {
    case VK_IMAGE_ASPECT_COLOR_BIT:
    case VK_IMAGE_ASPECT_DEPTH_BIT:
-   case VK_IMAGE_ASPECT_PLANE_0_BIT_KHR:
+   case VK_IMAGE_ASPECT_PLANE_0_BIT:
       return 0;
    case VK_IMAGE_ASPECT_STENCIL_BIT:
       if ((image_aspects & VK_IMAGE_ASPECT_DEPTH_BIT) == 0)
          return 0;
       /* Fall-through */
-   case VK_IMAGE_ASPECT_PLANE_1_BIT_KHR:
+   case VK_IMAGE_ASPECT_PLANE_1_BIT:
       return 1;
-   case VK_IMAGE_ASPECT_PLANE_2_BIT_KHR:
+   case VK_IMAGE_ASPECT_PLANE_2_BIT:
       return 2;
    default:
       /* Purposefully assert with depth/stencil aspects. */
@@ -2311,11 +2311,11 @@ anv_image_aspect_get_planes(VkImageAspectFlags aspect_mask)
    if (aspect_mask & (VK_IMAGE_ASPECT_COLOR_BIT |
                       VK_IMAGE_ASPECT_DEPTH_BIT |
                       VK_IMAGE_ASPECT_STENCIL_BIT |
-                      VK_IMAGE_ASPECT_PLANE_0_BIT_KHR))
+                      VK_IMAGE_ASPECT_PLANE_0_BIT))
       planes++;
-   if (aspect_mask & VK_IMAGE_ASPECT_PLANE_1_BIT_KHR)
+   if (aspect_mask & VK_IMAGE_ASPECT_PLANE_1_BIT)
       planes++;
-   if (aspect_mask & VK_IMAGE_ASPECT_PLANE_2_BIT_KHR)
+   if (aspect_mask & VK_IMAGE_ASPECT_PLANE_2_BIT)
       planes++;
 
    return planes;
@@ -2327,7 +2327,7 @@ anv_plane_to_aspect(VkImageAspectFlags image_aspects,
 {
    if (image_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
       if (_mesa_bitcount(image_aspects) > 1)
-         return VK_IMAGE_ASPECT_PLANE_0_BIT_KHR << plane;
+         return VK_IMAGE_ASPECT_PLANE_0_BIT << plane;
       return VK_IMAGE_ASPECT_COLOR_BIT;
    }
    if (image_aspects & VK_IMAGE_ASPECT_DEPTH_BIT)
@@ -2869,10 +2869,10 @@ void anv_fill_buffer_surface_state(struct anv_device *device,
 
 struct anv_ycbcr_conversion {
    const struct anv_format *        format;
-   VkSamplerYcbcrModelConversionKHR ycbcr_model;
-   VkSamplerYcbcrRangeKHR           ycbcr_range;
+   VkSamplerYcbcrModelConversion    ycbcr_model;
+   VkSamplerYcbcrRange              ycbcr_range;
    VkComponentSwizzle               mapping[4];
-   VkChromaLocationKHR              chroma_offsets[2];
+   VkChromaLocation                 chroma_offsets[2];
    VkFilter                         chroma_filter;
    bool                             chroma_reconstruction;
 };
@@ -3067,7 +3067,7 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_sampler, VkSampler)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_semaphore, VkSemaphore)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_shader_module, VkShaderModule)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(vk_debug_report_callback, VkDebugReportCallbackEXT)
-ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_ycbcr_conversion, VkSamplerYcbcrConversionKHR)
+ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_ycbcr_conversion, VkSamplerYcbcrConversion)
 
 /* Gen-specific function declarations */
 #ifdef genX

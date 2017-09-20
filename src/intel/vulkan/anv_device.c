@@ -761,31 +761,31 @@ void anv_GetPhysicalDeviceFeatures(
 
 void anv_GetPhysicalDeviceFeatures2(
     VkPhysicalDevice                            physicalDevice,
-    VkPhysicalDeviceFeatures2KHR*               pFeatures)
+    VkPhysicalDeviceFeatures2*                  pFeatures)
 {
    anv_GetPhysicalDeviceFeatures(physicalDevice, &pFeatures->features);
 
    vk_foreach_struct(ext, pFeatures->pNext) {
       switch (ext->sType) {
-      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES_KHR: {
-         VkPhysicalDeviceMultiviewFeaturesKHR *features =
-            (VkPhysicalDeviceMultiviewFeaturesKHR *)ext;
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES: {
+         VkPhysicalDeviceMultiviewFeatures *features =
+            (VkPhysicalDeviceMultiviewFeatures *)ext;
          features->multiview = true;
          features->multiviewGeometryShader = true;
          features->multiviewTessellationShader = true;
          break;
       }
 
-      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES_KHR: {
-         VkPhysicalDeviceVariablePointerFeaturesKHR *features = (void *)ext;
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES: {
+         VkPhysicalDeviceVariablePointerFeatures *features = (void *)ext;
          features->variablePointersStorageBuffer = true;
          features->variablePointers = true;
          break;
       }
 
-      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES_KHR: {
-         VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR *features =
-            (VkPhysicalDeviceSamplerYcbcrConversionFeaturesKHR *) ext;
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES: {
+         VkPhysicalDeviceSamplerYcbcrConversionFeatures *features =
+            (VkPhysicalDeviceSamplerYcbcrConversionFeatures *) ext;
          features->samplerYcbcrConversion = true;
          break;
       }
@@ -958,7 +958,7 @@ void anv_GetPhysicalDeviceProperties(
 
 void anv_GetPhysicalDeviceProperties2(
     VkPhysicalDevice                            physicalDevice,
-    VkPhysicalDeviceProperties2KHR*             pProperties)
+    VkPhysicalDeviceProperties2*                pProperties)
 {
    ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
 
@@ -974,9 +974,9 @@ void anv_GetPhysicalDeviceProperties2(
          break;
       }
 
-      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES_KHR: {
-         VkPhysicalDeviceIDPropertiesKHR *id_props =
-            (VkPhysicalDeviceIDPropertiesKHR *)ext;
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES: {
+         VkPhysicalDeviceIDProperties *id_props =
+            (VkPhysicalDeviceIDProperties *)ext;
          memcpy(id_props->deviceUUID, pdevice->device_uuid, VK_UUID_SIZE);
          memcpy(id_props->driverUUID, pdevice->driver_uuid, VK_UUID_SIZE);
          /* The LUID is for Windows. */
@@ -984,18 +984,18 @@ void anv_GetPhysicalDeviceProperties2(
          break;
       }
 
-      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES_KHR: {
-         VkPhysicalDeviceMultiviewPropertiesKHR *properties =
-            (VkPhysicalDeviceMultiviewPropertiesKHR *)ext;
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES: {
+         VkPhysicalDeviceMultiviewProperties *properties =
+            (VkPhysicalDeviceMultiviewProperties *)ext;
          properties->maxMultiviewViewCount = 16;
          properties->maxMultiviewInstanceIndex = UINT32_MAX / 16;
          break;
       }
 
-      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_POINT_CLIPPING_PROPERTIES_KHR: {
-         VkPhysicalDevicePointClippingPropertiesKHR *properties =
-            (VkPhysicalDevicePointClippingPropertiesKHR *) ext;
-         properties->pointClippingBehavior = VK_POINT_CLIPPING_BEHAVIOR_ALL_CLIP_PLANES_KHR;
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_POINT_CLIPPING_PROPERTIES: {
+         VkPhysicalDevicePointClippingProperties *properties =
+            (VkPhysicalDevicePointClippingProperties *) ext;
+         properties->pointClippingBehavior = VK_POINT_CLIPPING_BEHAVIOR_ALL_CLIP_PLANES;
          anv_finishme("Implement pop-free point clipping");
          break;
       }
@@ -1033,7 +1033,7 @@ void anv_GetPhysicalDeviceQueueFamilyProperties(
 void anv_GetPhysicalDeviceQueueFamilyProperties2(
     VkPhysicalDevice                            physicalDevice,
     uint32_t*                                   pQueueFamilyPropertyCount,
-    VkQueueFamilyProperties2KHR*                pQueueFamilyProperties)
+    VkQueueFamilyProperties2*                   pQueueFamilyProperties)
 {
 
    VK_OUTARRAY_MAKE(out, pQueueFamilyProperties, pQueueFamilyPropertyCount);
@@ -1072,7 +1072,7 @@ void anv_GetPhysicalDeviceMemoryProperties(
 
 void anv_GetPhysicalDeviceMemoryProperties2(
     VkPhysicalDevice                            physicalDevice,
-    VkPhysicalDeviceMemoryProperties2KHR*       pMemoryProperties)
+    VkPhysicalDeviceMemoryProperties2*          pMemoryProperties)
 {
    anv_GetPhysicalDeviceMemoryProperties(physicalDevice,
                                          &pMemoryProperties->memoryProperties);
@@ -1835,7 +1835,7 @@ VkResult anv_AllocateMemory(
    if (fd_info && fd_info->handleType) {
       /* At the moment, we support only the below handle types. */
       assert(fd_info->handleType ==
-               VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR ||
+               VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT ||
              fd_info->handleType ==
                VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT);
 
@@ -1943,7 +1943,7 @@ VkResult anv_GetMemoryFdKHR(
 
    assert(pGetFdInfo->sType == VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR);
 
-   assert(pGetFdInfo->handleType == VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR ||
+   assert(pGetFdInfo->handleType == VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT ||
           pGetFdInfo->handleType == VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT);
 
    return anv_bo_cache_export(dev, &dev->bo_cache, mem->bo, pFd);
@@ -1973,7 +1973,7 @@ VkResult anv_GetMemoryFdPropertiesKHR(
        *
        * So opaque handle types fall into the default "unsupported" case.
        */
-      return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
+      return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE);
    }
 }
 
@@ -2172,16 +2172,16 @@ void anv_GetBufferMemoryRequirements(
 
 void anv_GetBufferMemoryRequirements2(
     VkDevice                                    _device,
-    const VkBufferMemoryRequirementsInfo2KHR*   pInfo,
-    VkMemoryRequirements2KHR*                   pMemoryRequirements)
+    const VkBufferMemoryRequirementsInfo2*      pInfo,
+    VkMemoryRequirements2*                      pMemoryRequirements)
 {
    anv_GetBufferMemoryRequirements(_device, pInfo->buffer,
                                    &pMemoryRequirements->memoryRequirements);
 
    vk_foreach_struct(ext, pMemoryRequirements->pNext) {
       switch (ext->sType) {
-      case VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS_KHR: {
-         VkMemoryDedicatedRequirementsKHR *requirements = (void *)ext;
+      case VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS: {
+         VkMemoryDedicatedRequirements *requirements = (void *)ext;
          requirements->prefersDedicatedAllocation = VK_FALSE;
          requirements->requiresDedicatedAllocation = VK_FALSE;
          break;
@@ -2221,8 +2221,8 @@ void anv_GetImageMemoryRequirements(
 
 void anv_GetImageMemoryRequirements2(
     VkDevice                                    _device,
-    const VkImageMemoryRequirementsInfo2KHR*    pInfo,
-    VkMemoryRequirements2KHR*                   pMemoryRequirements)
+    const VkImageMemoryRequirementsInfo2*       pInfo,
+    VkMemoryRequirements2*                      pMemoryRequirements)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_image, image, pInfo->image);
@@ -2232,7 +2232,7 @@ void anv_GetImageMemoryRequirements2(
 
    vk_foreach_struct_const(ext, pInfo->pNext) {
       switch (ext->sType) {
-      case VK_STRUCTURE_TYPE_IMAGE_PLANE_MEMORY_REQUIREMENTS_INFO_KHR: {
+      case VK_STRUCTURE_TYPE_IMAGE_PLANE_MEMORY_REQUIREMENTS_INFO: {
          struct anv_physical_device *pdevice = &device->instance->physicalDevice;
          const VkImagePlaneMemoryRequirementsInfoKHR *plane_reqs =
             (const VkImagePlaneMemoryRequirementsInfoKHR *) ext;
@@ -2268,8 +2268,8 @@ void anv_GetImageMemoryRequirements2(
 
    vk_foreach_struct(ext, pMemoryRequirements->pNext) {
       switch (ext->sType) {
-      case VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS_KHR: {
-         VkMemoryDedicatedRequirementsKHR *requirements = (void *)ext;
+      case VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS: {
+         VkMemoryDedicatedRequirements *requirements = (void *)ext;
          if (image->needs_set_tiling) {
             /* If we need to set the tiling for external consumers, we need a
              * dedicated allocation.
@@ -2303,9 +2303,9 @@ void anv_GetImageSparseMemoryRequirements(
 
 void anv_GetImageSparseMemoryRequirements2(
     VkDevice                                    device,
-    const VkImageSparseMemoryRequirementsInfo2KHR* pInfo,
+    const VkImageSparseMemoryRequirementsInfo2* pInfo,
     uint32_t*                                   pSparseMemoryRequirementCount,
-    VkSparseImageMemoryRequirements2KHR*        pSparseMemoryRequirements)
+    VkSparseImageMemoryRequirements2*           pSparseMemoryRequirements)
 {
    *pSparseMemoryRequirementCount = 0;
 }
@@ -2319,12 +2319,12 @@ void anv_GetDeviceMemoryCommitment(
 }
 
 static void
-anv_bind_buffer_memory(const VkBindBufferMemoryInfoKHR *pBindInfo)
+anv_bind_buffer_memory(const VkBindBufferMemoryInfo *pBindInfo)
 {
    ANV_FROM_HANDLE(anv_device_memory, mem, pBindInfo->memory);
    ANV_FROM_HANDLE(anv_buffer, buffer, pBindInfo->buffer);
 
-   assert(pBindInfo->sType == VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO_KHR);
+   assert(pBindInfo->sType == VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO);
 
    if (mem) {
       assert((buffer->usage & mem->type->valid_buffer_usage) == buffer->usage);
@@ -2343,8 +2343,8 @@ VkResult anv_BindBufferMemory(
     VkDeviceSize                                memoryOffset)
 {
    anv_bind_buffer_memory(
-      &(VkBindBufferMemoryInfoKHR) {
-         .sType         = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO_KHR,
+      &(VkBindBufferMemoryInfo) {
+         .sType         = VK_STRUCTURE_TYPE_BIND_BUFFER_MEMORY_INFO,
          .buffer        = buffer,
          .memory        = memory,
          .memoryOffset  = memoryOffset,
@@ -2356,7 +2356,7 @@ VkResult anv_BindBufferMemory(
 VkResult anv_BindBufferMemory2(
     VkDevice                                    device,
     uint32_t                                    bindInfoCount,
-    const VkBindBufferMemoryInfoKHR*            pBindInfos)
+    const VkBindBufferMemoryInfo*               pBindInfos)
 {
    for (uint32_t i = 0; i < bindInfoCount; i++)
       anv_bind_buffer_memory(&pBindInfos[i]);

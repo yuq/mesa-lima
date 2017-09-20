@@ -253,9 +253,9 @@ VkResult genX(CreateSampler)(
 
    vk_foreach_struct(ext, pCreateInfo->pNext) {
       switch (ext->sType) {
-      case VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO_KHR: {
-         VkSamplerYcbcrConversionInfoKHR *pSamplerConversion =
-            (VkSamplerYcbcrConversionInfoKHR *) ext;
+      case VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_INFO: {
+         VkSamplerYcbcrConversionInfo *pSamplerConversion =
+            (VkSamplerYcbcrConversionInfo *) ext;
          ANV_FROM_HANDLE(anv_ycbcr_conversion, conversion,
                          pSamplerConversion->conversion);
 

@@ -460,7 +460,7 @@ anv_descriptor_set_create(struct anv_device *device,
       if (pool->free_list != EMPTY) {
          return vk_error(VK_ERROR_FRAGMENTED_POOL);
       } else {
-         return vk_error(VK_ERROR_OUT_OF_POOL_MEMORY_KHR);
+         return vk_error(VK_ERROR_OUT_OF_POOL_MEMORY);
       }
    }
 
@@ -892,9 +892,9 @@ anv_descriptor_set_write_template(struct anv_descriptor_set *set,
 
 VkResult anv_CreateDescriptorUpdateTemplate(
     VkDevice                                    _device,
-    const VkDescriptorUpdateTemplateCreateInfoKHR* pCreateInfo,
+    const VkDescriptorUpdateTemplateCreateInfo* pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
-    VkDescriptorUpdateTemplateKHR*              pDescriptorUpdateTemplate)
+    VkDescriptorUpdateTemplate*                 pDescriptorUpdateTemplate)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_descriptor_update_template *template;
@@ -908,7 +908,7 @@ VkResult anv_CreateDescriptorUpdateTemplate(
 
    template->bind_point = pCreateInfo->pipelineBindPoint;
 
-   if (pCreateInfo->templateType == VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET_KHR)
+   if (pCreateInfo->templateType == VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET)
       template->set = pCreateInfo->set;
 
    template->entry_count = pCreateInfo->descriptorUpdateEntryCount;
@@ -934,7 +934,7 @@ VkResult anv_CreateDescriptorUpdateTemplate(
 
 void anv_DestroyDescriptorUpdateTemplate(
     VkDevice                                    _device,
-    VkDescriptorUpdateTemplateKHR               descriptorUpdateTemplate,
+    VkDescriptorUpdateTemplate                  descriptorUpdateTemplate,
     const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -947,7 +947,7 @@ void anv_DestroyDescriptorUpdateTemplate(
 void anv_UpdateDescriptorSetWithTemplate(
     VkDevice                                    _device,
     VkDescriptorSet                             descriptorSet,
-    VkDescriptorUpdateTemplateKHR               descriptorUpdateTemplate,
+    VkDescriptorUpdateTemplate                  descriptorUpdateTemplate,
     const void*                                 pData)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);

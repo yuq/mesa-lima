@@ -67,9 +67,9 @@ choose_isl_surf_usage(VkImageCreateFlags vk_create_flags,
       isl_usage |= ISL_SURF_USAGE_STENCIL_BIT;
       break;
    case VK_IMAGE_ASPECT_COLOR_BIT:
-   case VK_IMAGE_ASPECT_PLANE_0_BIT_KHR:
-   case VK_IMAGE_ASPECT_PLANE_1_BIT_KHR:
-   case VK_IMAGE_ASPECT_PLANE_2_BIT_KHR:
+   case VK_IMAGE_ASPECT_PLANE_0_BIT:
+   case VK_IMAGE_ASPECT_PLANE_1_BIT:
+   case VK_IMAGE_ASPECT_PLANE_2_BIT:
       break;
    default:
       unreachable("bad VkImageAspect");
@@ -327,7 +327,7 @@ make_surface(const struct anv_device *dev,
     */
    bool needs_shadow = false;
    if (dev->info.gen <= 8 &&
-       (vk_info->flags & VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT_KHR) &&
+       (vk_info->flags & VK_IMAGE_CREATE_BLOCK_TEXEL_VIEW_COMPATIBLE_BIT) &&
        vk_info->tiling == VK_IMAGE_TILING_OPTIMAL) {
       assert(isl_format_is_compressed(plane_format.isl_format));
       tiling_flags = ISL_TILING_LINEAR_BIT;
@@ -430,7 +430,7 @@ make_surface(const struct anv_device *dev,
        */
       const bool allow_compression =
          image->n_planes == 1 &&
-         (vk_info->flags & VK_IMAGE_CREATE_ALIAS_BIT_KHR) == 0 &&
+         (vk_info->flags & VK_IMAGE_CREATE_ALIAS_BIT) == 0 &&
          likely((INTEL_DEBUG & DEBUG_NO_RBC) == 0);
 
       if (allow_compression) {
@@ -585,7 +585,7 @@ anv_image_create(VkDevice _device,
    image->samples = pCreateInfo->samples;
    image->usage = pCreateInfo->usage;
    image->tiling = pCreateInfo->tiling;
-   image->disjoint = pCreateInfo->flags & VK_IMAGE_CREATE_DISJOINT_BIT_KHR;
+   image->disjoint = pCreateInfo->flags & VK_IMAGE_CREATE_DISJOINT_BIT;
    image->needs_set_tiling = wsi_info && wsi_info->scanout;
    image->drm_format_mod = isl_mod_info ? isl_mod_info->modifier :
                                           DRM_FORMAT_MOD_INVALID;
@@ -702,21 +702,21 @@ VkResult anv_BindImageMemory(
 VkResult anv_BindImageMemory2(
     VkDevice                                    _device,
     uint32_t                                    bindInfoCount,
-    const VkBindImageMemoryInfoKHR*             pBindInfos)
+    const VkBindImageMemoryInfo*                pBindInfos)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
 
    for (uint32_t i = 0; i < bindInfoCount; i++) {
-      const VkBindImageMemoryInfoKHR *bind_info = &pBindInfos[i];
+      const VkBindImageMemoryInfo *bind_info = &pBindInfos[i];
       ANV_FROM_HANDLE(anv_device_memory, mem, bind_info->memory);
       ANV_FROM_HANDLE(anv_image, image, bind_info->image);
       VkImageAspectFlags aspects = image->aspects;
 
       vk_foreach_struct_const(s, bind_info->pNext) {
          switch (s->sType) {
-         case VK_STRUCTURE_TYPE_BIND_IMAGE_PLANE_MEMORY_INFO_KHR: {
-            const VkBindImagePlaneMemoryInfoKHR *plane_info =
-               (const VkBindImagePlaneMemoryInfoKHR *) s;
+         case VK_STRUCTURE_TYPE_BIND_IMAGE_PLANE_MEMORY_INFO: {
+            const VkBindImagePlaneMemoryInfo *plane_info =
+               (const VkBindImagePlaneMemoryInfo *) s;
 
             aspects = plane_info->planeAspect;
             break;
@@ -848,7 +848,7 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
 
    /* Sampling Layouts */
    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-   case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR:
+   case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL:
       assert((image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) == 0);
       /* Fall-through */
    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
@@ -895,7 +895,7 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
       }
 
    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-   case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR:
+   case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL:
       assert(aspect == VK_IMAGE_ASPECT_DEPTH_BIT);
       return ISL_AUX_USAGE_HIZ;
 
@@ -1182,7 +1182,7 @@ remap_aspect_flags(VkImageAspectFlags view_aspects)
 
       VkImageAspectFlags color_aspects = 0;
       for (uint32_t i = 0; i < _mesa_bitcount(view_aspects); i++)
-         color_aspects |= VK_IMAGE_ASPECT_PLANE_0_BIT_KHR << i;
+         color_aspects |= VK_IMAGE_ASPECT_PLANE_0_BIT << i;
       return color_aspects;
    }
    /* No special remapping needed for depth & stencil aspects. */
@@ -1209,8 +1209,8 @@ anv_CreateImageView(VkDevice _device,
    assert(range->layerCount > 0);
    assert(range->baseMipLevel < image->levels);
 
-   const VkImageViewUsageCreateInfoKHR *usage_info =
-      vk_find_struct_const(pCreateInfo, IMAGE_VIEW_USAGE_CREATE_INFO_KHR);
+   const VkImageViewUsageCreateInfo *usage_info =
+      vk_find_struct_const(pCreateInfo, IMAGE_VIEW_USAGE_CREATE_INFO);
    VkImageUsageFlags view_usage = usage_info ? usage_info->usage : image->usage;
    /* View usage should be a subset of image usage */
    assert((view_usage & ~image->usage) == 0);
@@ -1235,8 +1235,8 @@ anv_CreateImageView(VkDevice _device,
 
    /* First expand aspects to the image's ones (for example
     * VK_IMAGE_ASPECT_COLOR_BIT will be converted to
-    * VK_IMAGE_ASPECT_PLANE_0_BIT_KHR | VK_IMAGE_ASPECT_PLANE_1_BIT_KHR |
-    * VK_IMAGE_ASPECT_PLANE_2_BIT_KHR for an image of format
+    * VK_IMAGE_ASPECT_PLANE_0_BIT | VK_IMAGE_ASPECT_PLANE_1_BIT |
+    * VK_IMAGE_ASPECT_PLANE_2_BIT for an image of format
     * VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM_KHR.
     */
    VkImageAspectFlags expanded_aspects =
@@ -1245,7 +1245,7 @@ anv_CreateImageView(VkDevice _device,
    iview->image = image;
 
    /* Remap the expanded aspects for the image view. For example if only
-    * VK_IMAGE_ASPECT_PLANE_1_BIT_KHR was given in range->aspectMask, we will
+    * VK_IMAGE_ASPECT_PLANE_1_BIT was given in range->aspectMask, we will
     * convert it to VK_IMAGE_ASPECT_COLOR_BIT since from the point of view of
     * the image view, it only has a single plane.
     */
@@ -1535,17 +1535,17 @@ anv_image_get_surface_for_aspect_mask(const struct anv_image *image,
          sanitized_mask = VK_IMAGE_ASPECT_STENCIL_BIT;
       }
       break;
-   case VK_IMAGE_ASPECT_PLANE_0_BIT_KHR:
+   case VK_IMAGE_ASPECT_PLANE_0_BIT:
       assert((image->aspects & ~VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) == 0);
-      sanitized_mask = VK_IMAGE_ASPECT_PLANE_0_BIT_KHR;
+      sanitized_mask = VK_IMAGE_ASPECT_PLANE_0_BIT;
       break;
-   case VK_IMAGE_ASPECT_PLANE_1_BIT_KHR:
+   case VK_IMAGE_ASPECT_PLANE_1_BIT:
       assert((image->aspects & ~VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) == 0);
-      sanitized_mask = VK_IMAGE_ASPECT_PLANE_1_BIT_KHR;
+      sanitized_mask = VK_IMAGE_ASPECT_PLANE_1_BIT;
       break;
-   case VK_IMAGE_ASPECT_PLANE_2_BIT_KHR:
+   case VK_IMAGE_ASPECT_PLANE_2_BIT:
       assert((image->aspects & ~VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) == 0);
-      sanitized_mask = VK_IMAGE_ASPECT_PLANE_2_BIT_KHR;
+      sanitized_mask = VK_IMAGE_ASPECT_PLANE_2_BIT;
       break;
    default:
        unreachable("image does not have aspect");

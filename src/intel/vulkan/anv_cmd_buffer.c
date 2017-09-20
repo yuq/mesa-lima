@@ -878,7 +878,7 @@ VkResult anv_ResetCommandPool(
 void anv_TrimCommandPool(
     VkDevice                                    device,
     VkCommandPool                               commandPool,
-    VkCommandPoolTrimFlagsKHR                   flags)
+    VkCommandPoolTrimFlags                      flags)
 {
    /* Nothing for us to do here.  Our pools stay pretty tidy. */
 }
@@ -1026,7 +1026,7 @@ void anv_CmdPushDescriptorSetKHR(
 
 void anv_CmdPushDescriptorSetWithTemplateKHR(
     VkCommandBuffer                             commandBuffer,
-    VkDescriptorUpdateTemplateKHR               descriptorUpdateTemplate,
+    VkDescriptorUpdateTemplate                  descriptorUpdateTemplate,
     VkPipelineLayout                            _layout,
     uint32_t                                    _set,
     const void*                                 pData)

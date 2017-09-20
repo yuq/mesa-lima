@@ -303,70 +303,70 @@ static const struct anv_format main_formats[] = {
 };
 
 static const struct anv_format ycbcr_formats[] = {
-   ycbcr_fmt(VK_FORMAT_G8B8G8R8_422_UNORM_KHR, 1,
+   ycbcr_fmt(VK_FORMAT_G8B8G8R8_422_UNORM, 1,
              y_plane(ISL_FORMAT_YCRCB_SWAPUV, RGBA, _ISL_SWIZZLE(BLUE, GREEN, RED, ZERO), 1, 1)),
-   ycbcr_fmt(VK_FORMAT_B8G8R8G8_422_UNORM_KHR, 1,
+   ycbcr_fmt(VK_FORMAT_B8G8R8G8_422_UNORM, 1,
              y_plane(ISL_FORMAT_YCRCB_SWAPUVY, RGBA, _ISL_SWIZZLE(BLUE, GREEN, RED, ZERO), 1, 1)),
-   ycbcr_fmt(VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM_KHR, 3,
+   ycbcr_fmt(VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM, 3,
              y_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
              chroma_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(BLUE, ZERO, ZERO, ZERO), 2, 2),
              chroma_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(RED, ZERO, ZERO, ZERO), 2, 2)),
-   ycbcr_fmt(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM_KHR, 2,
+   ycbcr_fmt(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 2,
              y_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
              chroma_plane(ISL_FORMAT_R8G8_UNORM, RGBA, _ISL_SWIZZLE(BLUE, RED, ZERO, ZERO), 2, 2)),
-   ycbcr_fmt(VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM_KHR, 3,
+   ycbcr_fmt(VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM, 3,
              y_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
              chroma_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(BLUE, ZERO, ZERO, ZERO), 2, 1),
              chroma_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(RED, ZERO, ZERO, ZERO), 2, 1)),
-   ycbcr_fmt(VK_FORMAT_G8_B8R8_2PLANE_422_UNORM_KHR, 2,
+   ycbcr_fmt(VK_FORMAT_G8_B8R8_2PLANE_422_UNORM, 2,
              y_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
              chroma_plane(ISL_FORMAT_R8G8_UNORM, RGBA, _ISL_SWIZZLE(BLUE, RED, ZERO, ZERO), 2, 1)),
-   ycbcr_fmt(VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM_KHR, 3,
+   ycbcr_fmt(VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM, 3,
              y_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
              chroma_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(BLUE, ZERO, ZERO, ZERO), 1, 1),
              chroma_plane(ISL_FORMAT_R8_UNORM, RGBA, _ISL_SWIZZLE(RED, ZERO, ZERO, ZERO), 1, 1)),
 
-   fmt_unsupported(VK_FORMAT_R10X6_UNORM_PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_R10X6G10X6_UNORM_2PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_G10X6B10X6G10X6R10X6_422_UNORM_4PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_B10X6G10X6R10X6G10X6_422_UNORM_4PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_R12X4_UNORM_PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_R12X4G12X4_UNORM_2PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_G12X4B12X4G12X4R12X4_422_UNORM_4PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_B12X4G12X4R12X4G12X4_422_UNORM_4PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16_KHR),
-   fmt_unsupported(VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16_KHR),
+   fmt_unsupported(VK_FORMAT_R10X6_UNORM_PACK16),
+   fmt_unsupported(VK_FORMAT_R10X6G10X6_UNORM_2PACK16),
+   fmt_unsupported(VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16),
+   fmt_unsupported(VK_FORMAT_G10X6B10X6G10X6R10X6_422_UNORM_4PACK16),
+   fmt_unsupported(VK_FORMAT_B10X6G10X6R10X6G10X6_422_UNORM_4PACK16),
+   fmt_unsupported(VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16),
+   fmt_unsupported(VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16),
+   fmt_unsupported(VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16),
+   fmt_unsupported(VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16),
+   fmt_unsupported(VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16),
+   fmt_unsupported(VK_FORMAT_R12X4_UNORM_PACK16),
+   fmt_unsupported(VK_FORMAT_R12X4G12X4_UNORM_2PACK16),
+   fmt_unsupported(VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16),
+   fmt_unsupported(VK_FORMAT_G12X4B12X4G12X4R12X4_422_UNORM_4PACK16),
+   fmt_unsupported(VK_FORMAT_B12X4G12X4R12X4G12X4_422_UNORM_4PACK16),
+   fmt_unsupported(VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16),
+   fmt_unsupported(VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16),
+   fmt_unsupported(VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16),
+   fmt_unsupported(VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16),
+   fmt_unsupported(VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16),
    /* TODO: it is possible to enable the following 2 formats, but that
     * requires further refactoring of how we handle multiplanar formats.
     */
-   fmt_unsupported(VK_FORMAT_G16B16G16R16_422_UNORM_KHR),
-   fmt_unsupported(VK_FORMAT_B16G16R16G16_422_UNORM_KHR),
+   fmt_unsupported(VK_FORMAT_G16B16G16R16_422_UNORM),
+   fmt_unsupported(VK_FORMAT_B16G16R16G16_422_UNORM),
 
-   ycbcr_fmt(VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM_KHR, 3,
+   ycbcr_fmt(VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM, 3,
              y_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
              chroma_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(BLUE, ZERO, ZERO, ZERO), 2, 2),
              chroma_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(RED, ZERO, ZERO, ZERO), 2, 2)),
-   ycbcr_fmt(VK_FORMAT_G16_B16R16_2PLANE_420_UNORM_KHR, 2,
+   ycbcr_fmt(VK_FORMAT_G16_B16R16_2PLANE_420_UNORM, 2,
              y_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
              chroma_plane(ISL_FORMAT_R16G16_UNORM, RGBA, _ISL_SWIZZLE(BLUE, RED, ZERO, ZERO), 2, 2)),
-   ycbcr_fmt(VK_FORMAT_G16_B16_R16_3PLANE_422_UNORM_KHR, 3,
+   ycbcr_fmt(VK_FORMAT_G16_B16_R16_3PLANE_422_UNORM, 3,
              y_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
              chroma_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(BLUE, ZERO, ZERO, ZERO), 2, 1),
              chroma_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(RED, ZERO, ZERO, ZERO), 2, 1)),
-   ycbcr_fmt(VK_FORMAT_G16_B16R16_2PLANE_422_UNORM_KHR, 2,
+   ycbcr_fmt(VK_FORMAT_G16_B16R16_2PLANE_422_UNORM, 2,
              y_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
              chroma_plane(ISL_FORMAT_R16G16_UNORM, RGBA, _ISL_SWIZZLE(BLUE, RED, ZERO, ZERO), 2, 1)),
-   ycbcr_fmt(VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM_KHR, 3,
+   ycbcr_fmt(VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM, 3,
              y_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(GREEN, ZERO, ZERO, ZERO), 1, 1),
              chroma_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(BLUE, ZERO, ZERO, ZERO), 1, 1),
              chroma_plane(ISL_FORMAT_R16_UNORM, RGBA, _ISL_SWIZZLE(RED, ZERO, ZERO, ZERO), 1, 1)),
@@ -550,8 +550,8 @@ get_image_format_features(const struct gen_device_info *devinfo,
       flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
 
    if (flags) {
-      flags |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR |
-               VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR;
+      flags |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT |
+               VK_FORMAT_FEATURE_TRANSFER_DST_BIT;
    }
 
    /* XXX: We handle 3-channel formats by switching them out for RGBX or
@@ -578,11 +578,11 @@ get_image_format_features(const struct gen_device_info *devinfo,
           * sampler. The failures show a slightly out of range values on the
           * bottom left of the sampled image.
           */
-         flags |= VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT_KHR;
+         flags |= VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT;
       } else {
-         flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_LINEAR_FILTER_BIT_KHR |
-                  VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT_KHR |
-                  VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_SEPARATE_RECONSTRUCTION_FILTER_BIT_KHR;
+         flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_LINEAR_FILTER_BIT |
+                  VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT |
+                  VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_SEPARATE_RECONSTRUCTION_FILTER_BIT;
       }
 
       /* We can support cosited chroma locations when handle planes with our
@@ -591,13 +591,13 @@ get_image_format_features(const struct gen_device_info *devinfo,
       for (unsigned p = 0; p < anv_format->n_planes; p++) {
          if (anv_format->planes[p].denominator_scales[0] > 1 ||
              anv_format->planes[p].denominator_scales[1] > 1) {
-            flags |= VK_FORMAT_FEATURE_COSITED_CHROMA_SAMPLES_BIT_KHR;
+            flags |= VK_FORMAT_FEATURE_COSITED_CHROMA_SAMPLES_BIT;
             break;
          }
       }
 
       if (anv_format->n_planes > 1)
-         flags |= VK_FORMAT_FEATURE_DISJOINT_BIT_KHR;
+         flags |= VK_FORMAT_FEATURE_DISJOINT_BIT;
 
       const VkFormatFeatureFlags disallowed_ycbcr_image_features =
          VK_FORMAT_FEATURE_BLIT_SRC_BIT |
@@ -708,7 +708,7 @@ void anv_GetPhysicalDeviceFormatProperties(
 void anv_GetPhysicalDeviceFormatProperties2(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
-    VkFormatProperties2KHR*                     pFormatProperties)
+    VkFormatProperties2*                        pFormatProperties)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
    anv_GetPhysicalDeviceFormatProperties(physicalDevice, format,
@@ -730,7 +730,7 @@ void anv_GetPhysicalDeviceFormatProperties2(
 static VkResult
 anv_get_image_format_properties(
    struct anv_physical_device *physical_device,
-   const VkPhysicalDeviceImageFormatInfo2KHR *info,
+   const VkPhysicalDeviceImageFormatInfo2 *info,
    VkImageFormatProperties *pImageFormatProperties,
    VkSamplerYcbcrConversionImageFormatPropertiesKHR *pYcbcrImageFormatProperties)
 {
@@ -897,8 +897,8 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
 
-   const VkPhysicalDeviceImageFormatInfo2KHR info = {
-      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2_KHR,
+   const VkPhysicalDeviceImageFormatInfo2 info = {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2,
       .pNext = NULL,
       .format = format,
       .type = type,
@@ -911,34 +911,34 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
                                           pImageFormatProperties, NULL);
 }
 
-static const VkExternalMemoryPropertiesKHR prime_fd_props = {
+static const VkExternalMemoryProperties prime_fd_props = {
    /* If we can handle external, then we can both import and export it. */
-   .externalMemoryFeatures = VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT_KHR |
-                             VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT_KHR,
+   .externalMemoryFeatures = VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT |
+                             VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT,
    /* For the moment, let's not support mixing and matching */
    .exportFromImportedHandleTypes =
-      VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR |
+      VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT |
       VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
    .compatibleHandleTypes =
-      VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR |
+      VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT |
       VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
 };
 
 VkResult anv_GetPhysicalDeviceImageFormatProperties2(
     VkPhysicalDevice                            physicalDevice,
-    const VkPhysicalDeviceImageFormatInfo2KHR*  base_info,
-    VkImageFormatProperties2KHR*                base_props)
+    const VkPhysicalDeviceImageFormatInfo2*     base_info,
+    VkImageFormatProperties2*                   base_props)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
-   const VkPhysicalDeviceExternalImageFormatInfoKHR *external_info = NULL;
+   const VkPhysicalDeviceExternalImageFormatInfo *external_info = NULL;
    VkExternalImageFormatPropertiesKHR *external_props = NULL;
-   VkSamplerYcbcrConversionImageFormatPropertiesKHR *ycbcr_props = NULL;
+   VkSamplerYcbcrConversionImageFormatProperties *ycbcr_props = NULL;
    VkResult result;
 
    /* Extract input structs */
    vk_foreach_struct_const(s, base_info->pNext) {
       switch (s->sType) {
-      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO_KHR:
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO:
          external_info = (const void *) s;
          break;
       default:
@@ -950,10 +950,10 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties2(
    /* Extract output structs */
    vk_foreach_struct(s, base_props->pNext) {
       switch (s->sType) {
-      case VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES_KHR:
+      case VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES:
          external_props = (void *) s;
          break;
-      case VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_IMAGE_FORMAT_PROPERTIES_KHR:
+      case VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_IMAGE_FORMAT_PROPERTIES:
          ycbcr_props = (void *) s;
          break;
       default:
@@ -969,13 +969,13 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties2(
 
    /* From the Vulkan 1.0.42 spec:
     *
-    *    If handleType is 0, vkGetPhysicalDeviceImageFormatProperties2KHR will
-    *    behave as if VkPhysicalDeviceExternalImageFormatInfoKHR was not
-    *    present and VkExternalImageFormatPropertiesKHR will be ignored.
+    *    If handleType is 0, vkGetPhysicalDeviceImageFormatProperties2 will
+    *    behave as if VkPhysicalDeviceExternalImageFormatInfo was not
+    *    present and VkExternalImageFormatProperties will be ignored.
     */
    if (external_info && external_info->handleType != 0) {
       switch (external_info->handleType) {
-      case VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR:
+      case VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT:
       case VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT:
          if (external_props)
             external_props->externalMemoryProperties = prime_fd_props;
@@ -984,13 +984,13 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties2(
          /* From the Vulkan 1.0.42 spec:
           *
           *    If handleType is not compatible with the [parameters] specified
-          *    in VkPhysicalDeviceImageFormatInfo2KHR, then
-          *    vkGetPhysicalDeviceImageFormatProperties2KHR returns
+          *    in VkPhysicalDeviceImageFormatInfo2, then
+          *    vkGetPhysicalDeviceImageFormatProperties2 returns
           *    VK_ERROR_FORMAT_NOT_SUPPORTED.
           */
          result = vk_errorf(physical_device->instance, physical_device,
                             VK_ERROR_FORMAT_NOT_SUPPORTED,
-                            "unsupported VkExternalMemoryTypeFlagBitsKHR 0x%x",
+                            "unsupported VkExternalMemoryTypeFlagBits 0x%x",
                             external_info->handleType);
          goto fail;
       }
@@ -1003,7 +1003,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties2(
       /* From the Vulkan 1.0.42 spec:
        *
        *    If the combination of parameters to
-       *    vkGetPhysicalDeviceImageFormatProperties2KHR is not supported by
+       *    vkGetPhysicalDeviceImageFormatProperties2 is not supported by
        *    the implementation for use in vkCreateImage, then all members of
        *    imageFormatProperties will be filled with zero.
        */
@@ -1029,9 +1029,9 @@ void anv_GetPhysicalDeviceSparseImageFormatProperties(
 
 void anv_GetPhysicalDeviceSparseImageFormatProperties2(
     VkPhysicalDevice                            physicalDevice,
-    const VkPhysicalDeviceSparseImageFormatInfo2KHR* pFormatInfo,
+    const VkPhysicalDeviceSparseImageFormatInfo2* pFormatInfo,
     uint32_t*                                   pPropertyCount,
-    VkSparseImageFormatProperties2KHR*          pProperties)
+    VkSparseImageFormatProperties2*             pProperties)
 {
    /* Sparse images are not yet supported. */
    *pPropertyCount = 0;
@@ -1039,13 +1039,13 @@ void anv_GetPhysicalDeviceSparseImageFormatProperties2(
 
 void anv_GetPhysicalDeviceExternalBufferProperties(
     VkPhysicalDevice                             physicalDevice,
-    const VkPhysicalDeviceExternalBufferInfoKHR* pExternalBufferInfo,
-    VkExternalBufferPropertiesKHR*               pExternalBufferProperties)
+    const VkPhysicalDeviceExternalBufferInfo*    pExternalBufferInfo,
+    VkExternalBufferProperties*                  pExternalBufferProperties)
 {
    /* The Vulkan 1.0.42 spec says "handleType must be a valid
-    * VkExternalMemoryHandleTypeFlagBitsKHR value" in
-    * VkPhysicalDeviceExternalBufferInfoKHR. This differs from
-    * VkPhysicalDeviceExternalImageFormatInfoKHR, which surprisingly permits
+    * VkExternalMemoryHandleTypeFlagBits value" in
+    * VkPhysicalDeviceExternalBufferInfo. This differs from
+    * VkPhysicalDeviceExternalImageFormatInfo, which surprisingly permits
     * handleType == 0.
     */
    assert(pExternalBufferInfo->handleType != 0);
@@ -1058,7 +1058,7 @@ void anv_GetPhysicalDeviceExternalBufferProperties(
       goto unsupported;
 
    switch (pExternalBufferInfo->handleType) {
-   case VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR:
+   case VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT:
    case VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT:
       pExternalBufferProperties->externalMemoryProperties = prime_fd_props;
       return;
@@ -1068,19 +1068,19 @@ void anv_GetPhysicalDeviceExternalBufferProperties(
 
  unsupported:
    pExternalBufferProperties->externalMemoryProperties =
-      (VkExternalMemoryPropertiesKHR) {0};
+      (VkExternalMemoryProperties) {0};
 }
 
 VkResult anv_CreateSamplerYcbcrConversion(
     VkDevice                                    _device,
-    const VkSamplerYcbcrConversionCreateInfoKHR* pCreateInfo,
+    const VkSamplerYcbcrConversionCreateInfo*   pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
-    VkSamplerYcbcrConversionKHR*                pYcbcrConversion)
+    VkSamplerYcbcrConversion*                   pYcbcrConversion)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_ycbcr_conversion *conversion;
 
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO_KHR);
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_CREATE_INFO);
 
    conversion = vk_alloc2(&device->alloc, pAllocator, sizeof(*conversion), 8,
                           VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -1108,8 +1108,8 @@ VkResult anv_CreateSamplerYcbcrConversion(
          has_chroma_subsampled = true;
    }
    conversion->chroma_reconstruction = has_chroma_subsampled &&
-      (conversion->chroma_offsets[0] == VK_CHROMA_LOCATION_COSITED_EVEN_KHR ||
-       conversion->chroma_offsets[1] == VK_CHROMA_LOCATION_COSITED_EVEN_KHR);
+      (conversion->chroma_offsets[0] == VK_CHROMA_LOCATION_COSITED_EVEN ||
+       conversion->chroma_offsets[1] == VK_CHROMA_LOCATION_COSITED_EVEN);
 
    *pYcbcrConversion = anv_ycbcr_conversion_to_handle(conversion);
 
@@ -1118,7 +1118,7 @@ VkResult anv_CreateSamplerYcbcrConversion(
 
 void anv_DestroySamplerYcbcrConversion(
     VkDevice                                    _device,
-    VkSamplerYcbcrConversionKHR                 YcbcrConversion,
+    VkSamplerYcbcrConversion                    YcbcrConversion,
     const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
