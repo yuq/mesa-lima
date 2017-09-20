@@ -25,7 +25,6 @@
 import argparse
 import functools
 import os
-import textwrap
 import xml.etree.cElementTree as et
 
 from mako.template import Template
@@ -37,206 +36,206 @@ from anv_extensions import *
 # function and a power-of-two size table. The prime numbers are determined
 # experimentally.
 
-TEMPLATE_H = Template(textwrap.dedent("""\
-    /* This file generated from ${filename}, don't edit directly. */
+TEMPLATE_H = Template("""\
+/* This file generated from ${filename}, don't edit directly. */
 
-    struct anv_dispatch_table {
-       union {
-          void *entrypoints[${len(entrypoints)}];
-          struct {
-          % for _, name, _, _, _, guard in entrypoints:
-            % if guard is not None:
-    #ifdef ${guard}
-              PFN_vk${name} ${name};
-    #else
-              void *${name};
-    # endif
-            % else:
-              PFN_vk${name} ${name};
-            % endif
-          % endfor
-          };
-       };
-    };
-
-    % for type_, name, args, num, h, guard in entrypoints:
-      % if guard is not None:
-    #ifdef ${guard}
-      % endif
-      ${type_} anv_${name}(${args});
-      ${type_} gen7_${name}(${args});
-      ${type_} gen75_${name}(${args});
-      ${type_} gen8_${name}(${args});
-      ${type_} gen9_${name}(${args});
-      ${type_} gen10_${name}(${args});
-      % if guard is not None:
-    #endif // ${guard}
-      % endif
-    % endfor
-    """), output_encoding='utf-8')
-
-TEMPLATE_C = Template(textwrap.dedent(u"""\
-    /*
-     * Copyright © 2015 Intel Corporation
-     *
-     * Permission is hereby granted, free of charge, to any person obtaining a
-     * copy of this software and associated documentation files (the "Software"),
-     * to deal in the Software without restriction, including without limitation
-     * the rights to use, copy, modify, merge, publish, distribute, sublicense,
-     * and/or sell copies of the Software, and to permit persons to whom the
-     * Software is furnished to do so, subject to the following conditions:
-     *
-     * The above copyright notice and this permission notice (including the next
-     * paragraph) shall be included in all copies or substantial portions of the
-     * Software.
-     *
-     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-     * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-     * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-     * IN THE SOFTWARE.
-     */
-
-    /* This file generated from ${filename}, don't edit directly. */
-
-    #include "anv_private.h"
-
-    struct anv_entrypoint {
-       uint32_t name;
-       uint32_t hash;
-    };
-
-    /* We use a big string constant to avoid lots of reloctions from the entry
-     * point table to lots of little strings. The entries in the entry point table
-     * store the index into this big string.
-     */
-
-    static const char strings[] =
-    % for _, name, _, _, _, _ in entrypoints:
-        "vk${name}\\0"
-    % endfor
-    ;
-
-    static const struct anv_entrypoint entrypoints[] = {
-    % for _, name, _, num, h, _ in entrypoints:
-        [${num}] = { ${offsets[num]}, ${'{:0=#8x}'.format(h)} }, /* vk${name} */
-    % endfor
-    };
-
-    /* Weak aliases for all potential implementations. These will resolve to
-     * NULL if they're not defined, which lets the resolve_entrypoint() function
-     * either pick the correct entry point.
-     */
-
-    % for layer in ['anv', 'gen7', 'gen75', 'gen8', 'gen9', 'gen10']:
-      % for type_, name, args, _, _, guard in entrypoints:
+struct anv_dispatch_table {
+   union {
+      void *entrypoints[${len(entrypoints)}];
+      struct {
+      % for _, name, _, _, _, guard in entrypoints:
         % if guard is not None:
-    #ifdef ${guard}
-        % endif
-        ${type_} ${layer}_${name}(${args}) __attribute__ ((weak));
-        % if guard is not None:
-    #endif // ${guard}
-        % endif
-      % endfor
-
-      const struct anv_dispatch_table ${layer}_layer = {
-      % for _, name, args, _, _, guard in entrypoints:
-        % if guard is not None:
-    #ifdef ${guard}
-        % endif
-        .${name} = ${layer}_${name},
-        % if guard is not None:
-    #endif // ${guard}
+#ifdef ${guard}
+          PFN_vk${name} ${name};
+#else
+          void *${name};
+# endif
+        % else:
+          PFN_vk${name} ${name};
         % endif
       % endfor
       };
-    % endfor
+   };
+};
 
-    static void * __attribute__ ((noinline))
-    anv_resolve_entrypoint(const struct gen_device_info *devinfo, uint32_t index)
-    {
-       if (devinfo == NULL) {
-          return anv_layer.entrypoints[index];
-       }
+% for type_, name, args, num, h, guard in entrypoints:
+  % if guard is not None:
+#ifdef ${guard}
+  % endif
+  ${type_} anv_${name}(${args});
+  ${type_} gen7_${name}(${args});
+  ${type_} gen75_${name}(${args});
+  ${type_} gen8_${name}(${args});
+  ${type_} gen9_${name}(${args});
+  ${type_} gen10_${name}(${args});
+  % if guard is not None:
+#endif // ${guard}
+  % endif
+% endfor
+""", output_encoding='utf-8')
 
-       switch (devinfo->gen) {
-       case 10:
-          if (gen10_layer.entrypoints[index])
-             return gen10_layer.entrypoints[index];
-          /* fall through */
-       case 9:
-          if (gen9_layer.entrypoints[index])
-             return gen9_layer.entrypoints[index];
-          /* fall through */
-       case 8:
-          if (gen8_layer.entrypoints[index])
-             return gen8_layer.entrypoints[index];
-          /* fall through */
-       case 7:
-          if (devinfo->is_haswell && gen75_layer.entrypoints[index])
-             return gen75_layer.entrypoints[index];
+TEMPLATE_C = Template(u"""\
+/*
+ * Copyright © 2015 Intel Corporation
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
 
-          if (gen7_layer.entrypoints[index])
-             return gen7_layer.entrypoints[index];
-          /* fall through */
-       case 0:
-          return anv_layer.entrypoints[index];
-       default:
-          unreachable("unsupported gen\\n");
-       }
-    }
+/* This file generated from ${filename}, don't edit directly. */
 
-    /* Hash table stats:
-     * size ${hash_size} entries
-     * collisions entries:
-    % for i in xrange(10):
-     *     ${i}${'+' if i == 9 else ''}     ${collisions[i]}
-    % endfor
-     */
+#include "anv_private.h"
 
-    #define none ${'{:#x}'.format(none)}
-    static const uint16_t map[] = {
-    % for i in xrange(0, hash_size, 8):
-      % for j in xrange(i, i + 8):
-        ## This is 6 because the 0x is counted in the length
-        % if mapping[j] & 0xffff == 0xffff:
-          none,
-        % else:
-          ${'{:0=#6x}'.format(mapping[j] & 0xffff)},
-        % endif
-      % endfor
-    % endfor
-    };
+struct anv_entrypoint {
+   uint32_t name;
+   uint32_t hash;
+};
 
-    void *
-    anv_lookup_entrypoint(const struct gen_device_info *devinfo, const char *name)
-    {
-       static const uint32_t prime_factor = ${prime_factor};
-       static const uint32_t prime_step = ${prime_step};
-       const struct anv_entrypoint *e;
-       uint32_t hash, h, i;
-       const char *p;
+/* We use a big string constant to avoid lots of reloctions from the entry
+ * point table to lots of little strings. The entries in the entry point table
+ * store the index into this big string.
+ */
 
-       hash = 0;
-       for (p = name; *p; p++)
-          hash = hash * prime_factor + *p;
+static const char strings[] =
+% for _, name, _, _, _, _ in entrypoints:
+    "vk${name}\\0"
+% endfor
+;
 
-       h = hash;
-       do {
-          i = map[h & ${hash_mask}];
-          if (i == none)
-             return NULL;
-          e = &entrypoints[i];
-          h += prime_step;
-       } while (e->hash != hash);
+static const struct anv_entrypoint entrypoints[] = {
+% for _, name, _, num, h, _ in entrypoints:
+    [${num}] = { ${offsets[num]}, ${'{:0=#8x}'.format(h)} }, /* vk${name} */
+% endfor
+};
 
-       if (strcmp(name, strings + e->name) != 0)
-          return NULL;
+/* Weak aliases for all potential implementations. These will resolve to
+ * NULL if they're not defined, which lets the resolve_entrypoint() function
+ * either pick the correct entry point.
+ */
 
-       return anv_resolve_entrypoint(devinfo, i);
-    }"""), output_encoding='utf-8')
+% for layer in ['anv', 'gen7', 'gen75', 'gen8', 'gen9', 'gen10']:
+  % for type_, name, args, _, _, guard in entrypoints:
+    % if guard is not None:
+#ifdef ${guard}
+    % endif
+    ${type_} ${layer}_${name}(${args}) __attribute__ ((weak));
+    % if guard is not None:
+#endif // ${guard}
+    % endif
+  % endfor
+
+  const struct anv_dispatch_table ${layer}_layer = {
+  % for _, name, args, _, _, guard in entrypoints:
+    % if guard is not None:
+#ifdef ${guard}
+    % endif
+    .${name} = ${layer}_${name},
+    % if guard is not None:
+#endif // ${guard}
+    % endif
+  % endfor
+  };
+% endfor
+
+static void * __attribute__ ((noinline))
+anv_resolve_entrypoint(const struct gen_device_info *devinfo, uint32_t index)
+{
+   if (devinfo == NULL) {
+      return anv_layer.entrypoints[index];
+   }
+
+   switch (devinfo->gen) {
+   case 10:
+      if (gen10_layer.entrypoints[index])
+         return gen10_layer.entrypoints[index];
+      /* fall through */
+   case 9:
+      if (gen9_layer.entrypoints[index])
+         return gen9_layer.entrypoints[index];
+      /* fall through */
+   case 8:
+      if (gen8_layer.entrypoints[index])
+         return gen8_layer.entrypoints[index];
+      /* fall through */
+   case 7:
+      if (devinfo->is_haswell && gen75_layer.entrypoints[index])
+         return gen75_layer.entrypoints[index];
+
+      if (gen7_layer.entrypoints[index])
+         return gen7_layer.entrypoints[index];
+      /* fall through */
+   case 0:
+      return anv_layer.entrypoints[index];
+   default:
+      unreachable("unsupported gen\\n");
+   }
+}
+
+/* Hash table stats:
+ * size ${hash_size} entries
+ * collisions entries:
+% for i in xrange(10):
+ *     ${i}${'+' if i == 9 else ''}     ${collisions[i]}
+% endfor
+ */
+
+#define none ${'{:#x}'.format(none)}
+static const uint16_t map[] = {
+% for i in xrange(0, hash_size, 8):
+  % for j in xrange(i, i + 8):
+    ## This is 6 because the 0x is counted in the length
+    % if mapping[j] & 0xffff == 0xffff:
+      none,
+    % else:
+      ${'{:0=#6x}'.format(mapping[j] & 0xffff)},
+    % endif
+  % endfor
+% endfor
+};
+
+void *
+anv_lookup_entrypoint(const struct gen_device_info *devinfo, const char *name)
+{
+   static const uint32_t prime_factor = ${prime_factor};
+   static const uint32_t prime_step = ${prime_step};
+   const struct anv_entrypoint *e;
+   uint32_t hash, h, i;
+   const char *p;
+
+   hash = 0;
+   for (p = name; *p; p++)
+      hash = hash * prime_factor + *p;
+
+   h = hash;
+   do {
+      i = map[h & ${hash_mask}];
+      if (i == none)
+         return NULL;
+      e = &entrypoints[i];
+      h += prime_step;
+   } while (e->hash != hash);
+
+   if (strcmp(name, strings + e->name) != 0)
+      return NULL;
+
+   return anv_resolve_entrypoint(devinfo, i);
+}""", output_encoding='utf-8')
 
 NONE = 0xffff
 HASH_SIZE = 256
