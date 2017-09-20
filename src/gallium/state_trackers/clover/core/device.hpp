@@ -68,6 +68,7 @@ namespace clover {
       bool image_support() const;
       bool has_doubles() const;
       bool has_halves() const;
+      bool has_int64_atomics() const;
       bool has_unified_memory() const;
       cl_uint mem_base_addr_align() const;
 

@@ -197,6 +197,12 @@ device::has_halves() const {
 }
 
 bool
+device::has_int64_atomics() const {
+   return pipe->get_shader_param(pipe, PIPE_SHADER_COMPUTE,
+                                 PIPE_SHADER_CAP_INT64_ATOMICS);
+}
+
+bool
 device::has_unified_memory() const {
    return pipe->get_param(pipe, PIPE_CAP_UMA);
 }
