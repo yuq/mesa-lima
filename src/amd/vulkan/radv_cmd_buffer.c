@@ -83,14 +83,18 @@ radv_dynamic_state_copy(struct radv_dynamic_state *dest,
 			const struct radv_dynamic_state *src,
 			uint32_t copy_mask)
 {
+	/* Make sure to copy the number of viewports/scissors because they can
+	 * only be specified at pipeline creation time.
+	 */
+	dest->viewport.count = src->viewport.count;
+	dest->scissor.count = src->scissor.count;
+
 	if (copy_mask & (1 << VK_DYNAMIC_STATE_VIEWPORT)) {
-		dest->viewport.count = src->viewport.count;
 		typed_memcpy(dest->viewport.viewports, src->viewport.viewports,
 			     src->viewport.count);
 	}
 
 	if (copy_mask & (1 << VK_DYNAMIC_STATE_SCISSOR)) {
-		dest->scissor.count = src->scissor.count;
 		typed_memcpy(dest->scissor.scissors, src->scissor.scissors,
 			     src->scissor.count);
 	}
