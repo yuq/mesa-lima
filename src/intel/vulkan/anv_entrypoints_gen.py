@@ -24,6 +24,7 @@
 
 import argparse
 import functools
+import math
 import os
 import xml.etree.cElementTree as et
 
@@ -334,9 +335,7 @@ anv_lookup_entrypoint(const struct gen_device_info *devinfo, const char *name)
    return anv_resolve_entrypoint(devinfo, idx);
 }""", output_encoding='utf-8')
 
-HASH_SIZE = 256
 U32_MASK = 2**32 - 1
-HASH_MASK = HASH_SIZE - 1
 
 PRIME_FACTOR = 5024183
 PRIME_STEP = 19
@@ -353,6 +352,9 @@ class StringIntMapEntry(object):
         self.hash = h
 
         self.offset = None
+
+def round_to_pow2(x):
+    return 2**int(math.ceil(math.log(x, 2)))
 
 class StringIntMap(object):
     def __init__(self):
@@ -374,8 +376,8 @@ class StringIntMap(object):
             offset += len(entry.string) + 1
 
         # Save off some values that we'll need in C
-        self.hash_size = HASH_SIZE
-        self.hash_mask = HASH_SIZE - 1
+        self.hash_size = round_to_pow2(len(self.strings) * 1.25)
+        self.hash_mask = self.hash_size - 1
         self.prime_factor = PRIME_FACTOR
         self.prime_step = PRIME_STEP
 
