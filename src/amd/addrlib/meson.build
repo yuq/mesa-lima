@@ -18,15 +18,46 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-option('platforms',      type : 'string',  value : 'x11,wayland',
-       description : 'comma separated list of window systems to support. wayland, x11, surfaceless, drm, etc.')
-option('vulkan-drivers', type : 'string',  value : 'intel,amd',
-       description : 'comma separated list of vulkan drivers to build.')
-option('shader-cache',    type : 'boolean', value : true,
-       description : 'Build with on-disk shader cache support')
-option('vulkan_icd_dir', type : 'string',  value : '',
-       description : 'Location relative to prefix to put vulkan icds on install. Default: $datadir/vulkan/icd.d')
-option('valgrind',       type : 'boolean', value : true,
-       description : 'Build with valgrind support if possible')
-option('build-tests',    type : 'boolean', value : false,
-       description : 'Build unit tests. Currently this will build *all* unit tests, which may build more than expected.')
+files_addrlib = files(
+  'addrinterface.cpp',
+  'addrinterface.h',
+  'addrtypes.h',
+  'core/addrcommon.h',
+  'core/addrelemlib.cpp',
+  'core/addrelemlib.h',
+  'core/addrlib.cpp',
+  'core/addrlib.h',
+  'core/addrlib1.cpp',
+  'core/addrlib1.h',
+  'core/addrlib2.cpp',
+  'core/addrlib2.h',
+  'core/addrobject.cpp',
+  'core/addrobject.h',
+  'gfx9/chip/gfx9_enum.h',
+  'gfx9/coord.cpp',
+  'gfx9/coord.h',
+  'gfx9/gfx9addrlib.cpp',
+  'gfx9/gfx9addrlib.h',
+  'gfx9/rbmap.cpp',
+  'gfx9/rbmap.h',
+  'inc/chip/gfx9/gfx9_gb_reg.h',
+  'inc/chip/r800/si_gb_reg.h',
+  'inc/lnx_common_defs.h',
+  'r800/chip/si_ci_vi_merged_enum.h',
+  'r800/ciaddrlib.cpp',
+  'r800/ciaddrlib.h',
+  'r800/egbaddrlib.cpp',
+  'r800/egbaddrlib.h',
+  'r800/siaddrlib.cpp',
+  'r800/siaddrlib.h',
+)
+
+libamdgpu_addrlib = static_library(
+  'addrlib',
+  files_addrlib,
+  include_directories : include_directories(
+    'core', 'inc/chip/gfx9', 'inc/chip/r800', 'gfx9/chip', 'r800/chip',
+    '../common', '../../'),
+  cpp_args : [cpp_vis_args, '-DBRAHMA_BUILD=1'],
+  build_by_default : false,
+)

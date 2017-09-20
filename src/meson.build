@@ -37,7 +37,7 @@ subdir('util')
 subdir('compiler')
 subdir('egl/wayland/wayland-drm')
 subdir('vulkan')
-# TODO: amd
+subdir('amd')
 subdir('intel')
 # TODO: vc4
 # TODO: opengl_common

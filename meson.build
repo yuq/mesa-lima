@@ -71,6 +71,12 @@ if get_option('buildtype').startswith('debug')
   pre_args += '-DDEBUG'
 endif
 
+if get_option('shader-cache')
+  pre_args += '-DENABLE_SHADER_CACHE'
+elif with_amd_vk
+  error('Radv requires shader cache support')
+endif
+
 # Check for GCC style builtins
 foreach b : ['bswap32', 'bswap64', 'clz', 'clzll', 'ctz', 'expect', 'ffs',
              'ffsll', 'popcount', 'popcountll', 'unreachable']
@@ -79,7 +85,7 @@ foreach b : ['bswap32', 'bswap64', 'clz', 'clzll', 'ctz', 'expect', 'ffs',
   endif
 endforeach
 
-# check for GCC __attribute__ s
+# check for GCC __attribute__
 foreach a : ['const', 'flatten', 'malloc', 'pure', 'unused',
              'warn_unused_result', 'weak',]
   if cc.compiles('int foo(void) __attribute__((@0@));'.format(a),
@@ -286,6 +292,35 @@ dep_m = cc.find_library('m', required : false)
 # TODO: conditionalize libdrm requirement
 dep_libdrm = dependency('libdrm', version : '>= 2.4.75')
 pre_args += '-DHAVE_LIBDRM'
+dep_libdrm_amdgpu = []
+if with_amd_vk
+  dep_libdrm_amdgpu = dependency('libdrm_amdgpu', version : '>= 2.4.82')
+endif
+
+llvm_modules = ['bitwriter', 'engine', 'mcdisassembler', 'mcjit']
+if with_amd_vk
+  llvm_modules += ['amdgpu', 'bitreader', 'ipo']
+endif
+dep_llvm = dependency(
+  'llvm', version : '>= 3.9.0', required : false, modules : llvm_modules,
+)
+if not dep_llvm.found()
+  if with_amd_vk
+    error('Radv requires llvm.')
+  endif
+else
+  _llvm_version = dep_llvm.version().split('.')
+  # Development versions of LLVM have an 'svn' suffix, we don't want that for
+  # our version checks.
+  _llvm_patch = _llvm_version[2]
+  if _llvm_patch.endswith('svn')
+    _llvm_patch = _llvm_patch.split('s')[0]
+  endif
+  pre_args += [
+    '-DHAVE_LLVM=0x0@0@@1@@2@'.format(_llvm_version[0], _llvm_version[1], _llvm_patch),
+    '-DMESA_LLVM_VERSION_PATCH=@0@'.format(_llvm_patch),
+  ]
+endif
 
 # TODO: make this conditional
 dep_valgrind = dependency('valgrind', required : false)
@@ -298,8 +333,6 @@ endif
 # TODO: selinux
 
 # TODO: llvm-prefix and llvm-shared-libs
-
-# TODO: llvm dependency (that's all native now, yay!)
 
 # TODO: unwind (llvm [radeon, gallivm] and gallium)
 

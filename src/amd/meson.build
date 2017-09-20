@@ -18,15 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-option('platforms',      type : 'string',  value : 'x11,wayland',
-       description : 'comma separated list of window systems to support. wayland, x11, surfaceless, drm, etc.')
-option('vulkan-drivers', type : 'string',  value : 'intel,amd',
-       description : 'comma separated list of vulkan drivers to build.')
-option('shader-cache',    type : 'boolean', value : true,
-       description : 'Build with on-disk shader cache support')
-option('vulkan_icd_dir', type : 'string',  value : '',
-       description : 'Location relative to prefix to put vulkan icds on install. Default: $datadir/vulkan/icd.d')
-option('valgrind',       type : 'boolean', value : true,
-       description : 'Build with valgrind support if possible')
-option('build-tests',    type : 'boolean', value : false,
-       description : 'Build unit tests. Currently this will build *all* unit tests, which may build more than expected.')
+inc_amd = include_directories('.')
+
+subdir('addrlib')
+subdir('common')
+if with_amd_vk
+  subdir('vulkan')
+endif
