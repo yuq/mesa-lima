@@ -472,6 +472,7 @@ MOV OUT[0], CONST[0][3]  # copy vector 3 of constbuf 0
   BGNSUB, ENDSUB, CAL, and RET, including RET in the main block.
 * ``PIPE_SHADER_CAP_INTEGERS``: Whether integer opcodes are supported.
   If unsupported, only float opcodes are supported.
+* ``PIPE_SHADER_CAP_INT64_ATOMICS``: Whether int64 atomic opcodes are supported. The device needs to support add, sub, swap, cmpswap, and, or, xor, min, and max.
 * ``PIPE_SHADER_CAP_FP16``: Whether half precision floating-point opcodes are supported.
    If unsupported, half precision ops need to be lowered to full precision.
 * ``PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS``: The maximum number of texture
