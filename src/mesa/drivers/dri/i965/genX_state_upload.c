@@ -1029,17 +1029,13 @@ genX(calculate_attr_overrides)(const struct brw_context *brw,
 
    *point_sprite_enables = 0;
 
-   /* If the fragment shader reads VARYING_SLOT_LAYER, then we need to pass in
-    * the full vertex header.  Otherwise, we can program the SF to start
-    * reading at an offset of 1 (2 varying slots) to skip unnecessary data:
-    * - VARYING_SLOT_PSIZ and BRW_VARYING_SLOT_NDC on gen4-5
-    * - VARYING_SLOT_{PSIZ,LAYER} and VARYING_SLOT_POS on gen6+
-    */
+   int first_slot =
+      brw_compute_first_urb_slot_required(fp->info.inputs_read,
+                                          &brw->vue_map_geom_out);
 
-   bool fs_needs_vue_header = fp->info.inputs_read &
-      (VARYING_BIT_LAYER | VARYING_BIT_VIEWPORT);
-
-   *urb_entry_read_offset = fs_needs_vue_header ? 0 : 1;
+   /* Each URB offset packs two varying slots */
+   assert(first_slot % 2 == 0);
+   *urb_entry_read_offset = first_slot / 2;
 
    /* From the Ivybridge PRM, Vol 2 Part 1, 3DSTATE_SBE,
     * description of dw10 Point Sprite Texture Coordinate Enable:
