@@ -222,6 +222,18 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
         default: SWR_INVALID("Unsupported index type"); vIndices = nullptr; break;
     }
 
+    if(fetchState.bForceSequentialAccessEnable)
+    {
+        Value* pOffsets = C({ 0, 1, 2, 3, 4, 5, 6, 7 });
+
+        // VertexData buffers are accessed sequentially, the index is equal to the vertex number
+        vIndices = VBROADCAST(LOAD(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_StartVertex }));
+        vIndices = ADD(vIndices, pOffsets);
+#if USE_SIMD16_SHADERS
+        vIndices2 = ADD(vIndices, VIMMED1(8));
+#endif
+    }
+
     Value* vVertexId = vIndices;
 #if USE_SIMD16_SHADERS
     Value* vVertexId2 = vIndices2;
@@ -274,12 +286,6 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     (fetchState.bDisableVGATHER) ? JitLoadVertices(fetchState, streams, vIndices, pVtxOut)
                                  : JitGatherVertices(fetchState, streams, vIndices, pVtxOut);
 #endif
-
-    if (fetchState.bInstanceIDOffsetEnable)
-    {
-        // TODO: 
-        SWR_ASSERT((0), "Add support for handling InstanceID Offset Enable.");
-    }
 
     RET_VOID();
 
@@ -361,6 +367,11 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* str
         SWR_ASSERT(ied.ComponentPacking == ComponentEnable::XYZW, "Fetch load path doesn't support component packing.");
 
         vectors.clear();
+
+        if (fetchState.bInstanceIDOffsetEnable)
+        {
+            SWR_ASSERT((0), "TODO: Fill out more once driver sends this down");
+        }
 
         Value *vCurIndices;
         Value *startOffset;
@@ -831,8 +842,16 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
             minVertex = LOAD(minVertex);
         }
 
+        if (fetchState.bInstanceIDOffsetEnable)
+        {
+            // the InstanceID (curInstance) value is offset by StartInstanceLocation
+            curInstance = ADD(curInstance, startInstance);
+        }
+
         Value *vCurIndices;
         Value *startOffset;
+        Value *vInstanceStride = VIMMED1(0);
+
         if(ied.InstanceEnable)
         {
             Value* stepRate = C(ied.InstanceAdvancementState);
@@ -853,11 +872,19 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
         }
         else if (ied.InstanceStrideEnable)
         {
+            // grab the instance advancement state, determines stride in bytes from one instance to the next
+            Value* stepRate = C(ied.InstanceAdvancementState);
+            vInstanceStride = VBROADCAST(MUL(curInstance, stepRate));
+
+            // offset indices by baseVertex
+            vCurIndices = ADD(vIndices, vBaseVertex);
+
+            startOffset = startVertex;
             SWR_ASSERT((0), "TODO: Fill out more once driver sends this down.");
         }
         else
         {
-            // offset indices by baseVertex            
+            // offset indices by baseVertex
             vCurIndices = ADD(vIndices, vBaseVertex);
 
             startOffset = startVertex;
@@ -924,6 +951,11 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
         // calculate the actual offsets into the VB
         Value* vOffsets = MUL(vCurIndices, vStride);
         vOffsets = ADD(vOffsets, vAlignmentOffsets);
+
+        // if instance stride enable is:
+        //  true  - add product of the instanceID and advancement state to the offst into the VB
+        //  false - value of vInstanceStride has been initialialized to zero
+        vOffsets = ADD(vOffsets, vInstanceStride);
 
         // Packing and component control 
         ComponentEnable compMask = (ComponentEnable)ied.ComponentPacking;
