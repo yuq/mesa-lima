@@ -68,15 +68,15 @@ C_TEMPLATE = Template(textwrap.dedent(u"""\
     vk_${enum.name[2:]}_to_str(${enum.name} input)
     {
         switch(input) {
-        % for v in enum.values:
-            % if v in FOREIGN_ENUM_VALUES:
+        % for v in sorted(enum.values.keys()):
+            % if enum.values[v] in FOREIGN_ENUM_VALUES:
 
             #pragma GCC diagnostic push
             #pragma GCC diagnostic ignored "-Wswitch"
             % endif
             case ${v}:
-                return "${v}";
-            % if v in FOREIGN_ENUM_VALUES:
+                return "${enum.values[v]}";
+            % if enum.values[v] in FOREIGN_ENUM_VALUES:
             #pragma GCC diagnostic pop
 
             % endif
@@ -133,6 +133,9 @@ class NamedFactory(object):
             n = self.registry[name] = self.type(name, **kwargs)
         return n
 
+    def get(self, name):
+        return self.registry.get(name)
+
 
 class VkExtension(object):
     """Simple struct-like class representing extensions"""
@@ -147,7 +150,20 @@ class VkEnum(object):
 
     def __init__(self, name, values=None):
         self.name = name
-        self.values = values or []
+        # Maps numbers to names
+        self.values = values or dict()
+
+    def add_value(self, name, value=None,
+                  extension=None, offset=None,
+                  error=False):
+        assert value is not None or extension is not None
+        if value is None:
+            value = 1000000000 + (extension.number - 1) * 1000 + offset
+            if error:
+                value = -value
+
+        if value not in self.values:
+            self.values[value] = name
 
 
 def parse_xml(enum_factory, ext_factory, filename):
@@ -162,11 +178,27 @@ def parse_xml(enum_factory, ext_factory, filename):
     for enum_type in xml.findall('./enums[@type="enum"]'):
         enum = enum_factory(enum_type.attrib['name'])
         for value in enum_type.findall('./enum'):
-            enum.values.append(value.attrib['name'])
+            enum.add_value(value.attrib['name'],
+                           value=int(value.attrib['value']))
 
     for ext_elem in xml.findall('./extensions/extension[@supported="vulkan"]'):
-        ext_factory(ext_elem.attrib['name'],
-                    number=int(ext_elem.attrib['number']))
+        extension = ext_factory(ext_elem.attrib['name'],
+                                number=int(ext_elem.attrib['number']))
+
+        for value in ext_elem.findall('./require/enum[@extends]'):
+            enum = enum_factory.get(value.attrib['extends'])
+            if enum is None:
+                continue
+            if 'value' in value.attrib:
+                enum.add_value(value.attrib['name'],
+                               value=int(value.attrib['value']))
+            else:
+                error = 'dir' in value.attrib and value.attrib['dir'] == '-'
+                enum.add_value(value.attrib['name'],
+                               extension=extension,
+                               offset=int(value.attrib['offset']),
+                               error=error)
+
 
 def main():
     parser = argparse.ArgumentParser()
