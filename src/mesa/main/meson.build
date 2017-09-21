@@ -18,43 +18,29 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_common = include_directories(
-  '../include', '.', 'mapi', 'mesa', 'gallium/include', 'gallium/auxiliary')
-inc_mesa = include_directories('mesa')
-inc_mapi = include_directories('mapi')
-inc_src = include_directories('.')
-
-libglsl_util = static_library(
-  'glsl_util',
-  files('mesa/main/extensions_table.c', 'mesa/main/imports.c',
-        'mesa/program/prog_parameter.c', 'mesa/program/symbol_table.c',
-        'mesa/program/dummy_errors.c'),
-  include_directories : [inc_common],
-  c_args : [c_vis_args],
-  build_by_default : false,
+main_dispatch_h = custom_target(
+  'dispatch.h',
+  input : [files('../../mapi/glapi/gen/gl_table.py'), gl_and_es_api_files],
+  output : 'dispatch.h',
+  command : [prog_python2, '@INPUT0@', '-f', '@INPUT1@', '-m', 'remap_table'],
+  depend_files : glapi_gen_depends,
+  capture : true,
 )
 
-sha1_h = vcs_tag(
-  input : 'git_sha1.h.in',
-  output : 'git_sha1.h',
+main_marshal_generated_h = custom_target(
+  'marshal_generated.h',
+  input : [files('../../mapi/glapi/gen/gl_marshal_h.py'), gl_and_es_api_files],
+  output : 'marshal_generated.h',
+  command : [prog_python2, '@INPUT0@', '-f', '@INPUT1@'],
+  depend_files : files('../../mapi/glapi/gen/marshal_XML.py') + glapi_gen_depends,
+  capture : true,
 )
 
-subdir('gtest')
-subdir('util')
-subdir('mapi/glapi/gen')
-subdir('mapi')
-# TODO: opengl
-# TODO: glx
-# TODO: osmesa
-subdir('compiler')
-subdir('egl/wayland/wayland-drm')
-subdir('vulkan')
-subdir('amd')
-subdir('intel')
-# TODO: vc4
-subdir('mesa')
-# TODO: dri_glx
-# TODO: gbm
-# TODO: egl
-# TODO: radv
-# TODO: gallium
+main_remap_helper_h = custom_target(
+  'remap_helper.h',
+  input : [files('../../mapi/glapi/gen/remap_helper.py'), gl_and_es_api_files],
+  output : 'remap_helper.h',
+  command : [prog_python2, '@INPUT0@', '-f', '@INPUT1@'],
+  depend_files : glapi_gen_depends,
+  capture : true,
+)

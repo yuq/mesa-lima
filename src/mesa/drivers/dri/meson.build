@@ -18,43 +18,38 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_common = include_directories(
-  '../include', '.', 'mapi', 'mesa', 'gallium/include', 'gallium/auxiliary')
-inc_mesa = include_directories('mesa')
-inc_mapi = include_directories('mapi')
-inc_src = include_directories('.')
+subdir('common')
 
-libglsl_util = static_library(
-  'glsl_util',
-  files('mesa/main/extensions_table.c', 'mesa/main/imports.c',
-        'mesa/program/prog_parameter.c', 'mesa/program/symbol_table.c',
-        'mesa/program/dummy_errors.c'),
-  include_directories : [inc_common],
-  c_args : [c_vis_args],
-  build_by_default : false,
-)
+dri_drivers = []
+dri_link = []
+if with_dri_i965
+  subdir('i965')
+endif
 
-sha1_h = vcs_tag(
-  input : 'git_sha1.h.in',
-  output : 'git_sha1.h',
-)
+if with_dri
+  libmesa_dri_drivers = shared_library(
+    'mesa_dri_drivers',
+    dummy_cpp,  # see meson #2180
+    link_whole : dri_drivers,
+    link_with : [libmegadriver_stub, libdricommon, libxmlconfig, libglapi,
+                 libmesa_util, libnir, libmesa_classic],
+    dependencies : [dep_selinux, dep_libdrm, dep_expat, dep_m, dep_thread,
+                    dep_dl],
+    link_args : [ld_args_bsymbolic, ld_args_gc_sections],
+  )
 
-subdir('gtest')
-subdir('util')
-subdir('mapi/glapi/gen')
-subdir('mapi')
-# TODO: opengl
-# TODO: glx
-# TODO: osmesa
-subdir('compiler')
-subdir('egl/wayland/wayland-drm')
-subdir('vulkan')
-subdir('amd')
-subdir('intel')
-# TODO: vc4
-subdir('mesa')
-# TODO: dri_glx
-# TODO: gbm
-# TODO: egl
-# TODO: radv
-# TODO: gallium
+  pkg.generate(
+    name : 'dri',
+    filebase : 'dri',
+    description : 'Direct Rendering Infrastructure',
+    version : meson.project_version(),
+    requires_private : ['libdrm >= 2.4.75'],  # FIXME: don't hardcode this
+  )
+
+  meson.add_install_script(
+    join_paths(meson.source_root(), 'bin/install_megadrivers.py'),
+    libmesa_dri_drivers.full_path(),
+    join_paths(get_option('libdir'), 'dri'),
+    dri_link,
+  )
+endif

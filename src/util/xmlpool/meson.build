@@ -18,43 +18,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_common = include_directories(
-  '../include', '.', 'mapi', 'mesa', 'gallium/include', 'gallium/auxiliary')
-inc_mesa = include_directories('mesa')
-inc_mapi = include_directories('mapi')
-inc_src = include_directories('.')
-
-libglsl_util = static_library(
-  'glsl_util',
-  files('mesa/main/extensions_table.c', 'mesa/main/imports.c',
-        'mesa/program/prog_parameter.c', 'mesa/program/symbol_table.c',
-        'mesa/program/dummy_errors.c'),
-  include_directories : [inc_common],
-  c_args : [c_vis_args],
-  build_by_default : false,
+xmlpool_options_h = custom_target(
+  'xmlpool_options.h',
+  input : ['gen_xmlpool.py', 't_options.h'],
+  output : 'options.h',
+  command : [prog_python2, '@INPUT@', meson.current_source_dir()],
+  capture : true,
+  depend_files : files('ca.po', 'es.po', 'de.po', 'nl.po', 'sv.po', 'fr.po'),
 )
-
-sha1_h = vcs_tag(
-  input : 'git_sha1.h.in',
-  output : 'git_sha1.h',
-)
-
-subdir('gtest')
-subdir('util')
-subdir('mapi/glapi/gen')
-subdir('mapi')
-# TODO: opengl
-# TODO: glx
-# TODO: osmesa
-subdir('compiler')
-subdir('egl/wayland/wayland-drm')
-subdir('vulkan')
-subdir('amd')
-subdir('intel')
-# TODO: vc4
-subdir('mesa')
-# TODO: dri_glx
-# TODO: gbm
-# TODO: egl
-# TODO: radv
-# TODO: gallium

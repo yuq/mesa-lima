@@ -21,10 +21,68 @@
 project('mesa', ['c', 'cpp'], version : '17.3.0-devel', license : 'MIT',
         default_options : ['c_std=c99', 'cpp_std=c++11'])
 
+# Arguments for the preprocessor, put these in a separate array from the C and
+# C++ (cpp in meson terminology) arguments since they need to be added to the
+# default arguments for both C and C++.
+pre_args = [
+  '-D__STDC_CONSTANT_MACROS',
+  '-D__STDC_FORMAT_MACROS',
+  '-D__STDC_LIMIT_MACROS',
+  '-DVERSION="@0@"'.format(meson.project_version()),
+  '-DPACKAGE_VERSION=VERSION',
+  '-DPACKAGE_BUGREPORT="https://bugs.freedesktop.org/enter_bug.cgi?product=Mesa"',
+]
+
 with_dri3 = true  # XXX: need a switch for this
 with_vulkan_icd_dir = get_option('vulkan-icd-dir')
 with_tests = get_option('build-tests')
 with_valgrind = get_option('valgrind')
+with_asm = get_option('asm')
+
+# XXX: yeah, do these
+with_appledri = false
+with_windowsdri = false
+
+with_gles1 = get_option('gles1')
+with_gles2 = get_option('gles2')
+with_opengl = get_option('opengl')
+with_any_opengl = with_opengl or with_gles1 or with_gles2
+with_shared_glapi = get_option('shared-glapi')
+
+# TODO: these will need options, but at the moment they just control header
+# installs
+with_glx = false
+with_osmesa = false
+
+# shared-glapi is required if at least two OpenGL APIs are being built
+if not with_shared_glapi
+  if ((with_gles1 and with_gles2) or (with_gles1 and with_opengl)
+      or (with_gles2 and with_opengl))
+    error('shared-glapi required for building two or more of OpenGL, OpenGL ES 1.x, OpenGL ES 2.x')
+  endif
+endif
+
+# We require OpenGL for OpenGL ES
+if (with_gles1 or with_gles2) and not with_opengl
+  error('building OpenGL ES without OpenGL is not supported.')
+endif
+
+with_dri = false
+with_dri_i965 = false
+_drivers = get_option('dri-drivers')
+if _drivers != ''
+  _split = _drivers.split(',')
+  with_dri_i965 = _split.contains('i965')
+  with_dri = true
+endif
+
+if not with_dri
+  with_gles1 = false
+  with_gles2 = false
+  with_opengl = false
+  with_any_opengl = false
+  with_shared_glapi = false
+endif
 
 # TODO: there are more platforms required for non-vulkan drivers
 with_platform_wayland = false
@@ -62,13 +120,6 @@ cc = meson.get_compiler('c')
 if cc.get_id() == 'gcc' and cc.version().version_compare('< 4.4.6')
   error('When using GCC, version 4.4.6 or later is required.')
 endif
-
-# Arguments for the preprocessor, put these in a separate array from the C and
-# C++ (cpp in meson terminology) arguments since they need to be added to the
-# default arguments for both C and C++.
-pre_args = ['-D__STDC_CONSTANT_MACROS', '-D__STDC_FORMAT_MACROS',
-            '-D__STDC_LIMIT_MACROS',
-            '-DVERSION="@0@"'.format(meson.project_version())]
 
 # Define DEBUG for debug and debugoptimized builds
 if get_option('buildtype').startswith('debug')
@@ -204,7 +255,39 @@ endif
 
 # TODO: cross-compiling. I don't think this is relavent to meson
 
-# TODO: assembly support. mesa and vc4
+# FIXME: enable asm when cross compiler
+# This is doable (autotools does it), but it's not of immediate concern
+if meson.is_cross_build()
+  message('Cross compiling, disabling asm')
+  with_asm = false
+endif
+
+with_asm_arch = ''
+if with_asm
+  # TODO: SPARC and PPC
+  if host_machine.cpu_family() == 'x86'
+    if ['linux', 'bsd'].contains(host_machine.system()) # FIXME: hurd?
+      with_asm_arch = 'x86'
+      pre_args += ['-DUSE_X86_ASM', '-DUSE_MMX_ASM', '-DUSE_3DNOW_ASM',
+                   '-DUSE_SSE_ASM']
+    endif
+  elif host_machine.cpu_family() == 'x86_64'
+    if host_machine.system() == 'linux'
+      with_asm_arch = 'x86_64'
+      pre_args += ['-DUSE_X86_64_ASM']
+    endif
+  elif host_machine.cpu_family() == 'arm'
+    if host_machine.system() == 'linux'
+      with_asm_arch = 'arm'
+      pre_args += ['-DUSE_ARM_ASM']
+    endif
+  elif host_machine.cpu_family() == 'aarch64'
+    if host_machine.system() == 'linux'
+      with_asm_arch = 'aarch64'
+      pre_args += ['-DUSE_AARCH64_ASM']
+    endif
+  endif
+endif
 
 # Check for standard headers and functions
 if cc.has_header_symbol('sys/sysmacros.h', 'major')
@@ -264,9 +347,9 @@ if cc.has_function('dlopen')
 else
   dep_dl = cc.find_library('dl')
 endif
-
-if not cc.has_function('dladdr', dependencies : dep_dl)
-  error('dl library doesn\'t have dladdr')
+if cc.has_function('dladdr', dependencies : dep_dl)
+  # This is really only required for megadrivers
+  pre_args += '-DHAVE_DLADDR'
 endif
 
 if cc.has_function('dl_iterate_phdr')
@@ -336,7 +419,11 @@ endif
 
 # pthread stubs. Lets not and say we didn't
 
+prog_bison = find_program('bison', required : with_any_opengl)
+prog_flex = find_program('flex', required : with_any_opengl)
+
 # TODO: selinux
+dep_selinux = []
 
 # TODO: llvm-prefix and llvm-shared-libs
 
@@ -390,6 +477,7 @@ if with_platform_x11
     dependency('xcb-dri2', version : '>= 1.8'),
     dependency('xcb-xfixes'),
   ]
+  pre_args += '-DHAVE_X11_PLATFORM'
   if with_dri3
     dep_xcb_dri3 = [
       dep_xcb_dri2,
@@ -452,6 +540,8 @@ foreach a : cpp_args
 endforeach
 
 inc_include = include_directories('include')
+
+pkg = import('pkgconfig')
 
 subdir('include')
 subdir('src')

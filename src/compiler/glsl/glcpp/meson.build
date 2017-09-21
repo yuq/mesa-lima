@@ -18,48 +18,39 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_compiler = include_directories('.')
-inc_nir = include_directories('nir')
-inc_glsl = include_directories('glsl')
-
-files_libcompiler = files(
-  'builtin_type_macros.h',
-  'glsl_types.cpp',
-  'glsl_types.h',
-  'nir_types.cpp',
-  'nir_types.h',
-  'shader_enums.c',
-  'shader_enums.h',
-  'shader_info.h',
+glcpp_parse = custom_target(
+  'glcpp-parse.[ch]',
+  input : 'glcpp-parse.y',
+  output : ['glcpp-parse.c', 'glcpp-parse.h'],
+  command : [prog_bison, '-o', '@OUTPUT0@', '-p', 'glcpp_parser_',
+             '--defines=@OUTPUT1@', '@INPUT@'],
 )
 
-ir_expression_operation_h = custom_target(
-  'ir_expression_operation.h',
-  input : 'glsl/ir_expression_operation.py',
-  output : 'ir_expression_operation.h',
-  command : [prog_python2, '@INPUT@', 'enum'],
-  capture : true,
+glcpp_lex = custom_target(
+  'glcpp-lex.c',
+  input : 'glcpp-lex.l',
+  output : 'glcpp-lex.c',
+  command : [prog_flex, '-o', '@OUTPUT@', '@INPUT@'],
 )
 
-libcompiler = static_library(
-  'compiler',
-  [files_libcompiler, ir_expression_operation_h],
-  include_directories : [inc_mapi, inc_mesa, inc_compiler, inc_common],
-  c_args : [c_vis_args, c_msvc_compat_args, no_override_init_args],
+libglcpp = static_library(
+  'glcpp',
+  [glcpp_lex, glcpp_parse, files('glcpp.h', 'pp.c')],
+  link_with : libmesa_util,
+  include_directories : [inc_common],
+  c_args : [c_vis_args, no_override_init_args, c_msvc_compat_args],
   cpp_args : [cpp_vis_args, cpp_msvc_compat_args],
   build_by_default : false,
 )
 
-subdir('nir')
-
-spirv2nir = executable(
-  'spirv2nir',
-  [files('spirv/spirv2nir.c'), dummy_cpp],
-  dependencies : [dep_m, dep_thread],
-  include_directories : [inc_common, inc_nir, include_directories('spirv')],
-  link_with : [libnir, libmesa_util],
-  c_args : [c_vis_args, c_msvc_compat_args, no_override_init_args],
+glcpp = executable(
+  'glcpp',
+  'glcpp.c',
+  dependencies : [dep_m],
+  include_directories : [inc_common],
+  link_with : [libglcpp, libglsl_util],
+  c_args : [c_vis_args, no_override_init_args, c_msvc_compat_args],
   build_by_default : false,
 )
 
-subdir('glsl')
+# TODO: figure out how to make all of these tests work.

@@ -18,48 +18,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_compiler = include_directories('.')
-inc_nir = include_directories('nir')
-inc_glsl = include_directories('glsl')
+inc_dri_common = include_directories('.')
 
-files_libcompiler = files(
-  'builtin_type_macros.h',
-  'glsl_types.cpp',
-  'glsl_types.h',
-  'nir_types.cpp',
-  'nir_types.h',
-  'shader_enums.c',
-  'shader_enums.h',
-  'shader_info.h',
-)
-
-ir_expression_operation_h = custom_target(
-  'ir_expression_operation.h',
-  input : 'glsl/ir_expression_operation.py',
-  output : 'ir_expression_operation.h',
-  command : [prog_python2, '@INPUT@', 'enum'],
-  capture : true,
-)
-
-libcompiler = static_library(
-  'compiler',
-  [files_libcompiler, ir_expression_operation_h],
-  include_directories : [inc_mapi, inc_mesa, inc_compiler, inc_common],
-  c_args : [c_vis_args, c_msvc_compat_args, no_override_init_args],
-  cpp_args : [cpp_vis_args, cpp_msvc_compat_args],
+libdricommon = static_library(
+  'dricommon',
+  ['utils.c', 'utils.h', 'dri_util.c', 'dri_util.h', xmlpool_options_h],
+  include_directories : [inc_common, inc_util],
+  c_args : c_vis_args,
+  dependencies : dep_libdrm,
   build_by_default : false,
 )
 
-subdir('nir')
-
-spirv2nir = executable(
-  'spirv2nir',
-  [files('spirv/spirv2nir.c'), dummy_cpp],
-  dependencies : [dep_m, dep_thread],
-  include_directories : [inc_common, inc_nir, include_directories('spirv')],
-  link_with : [libnir, libmesa_util],
-  c_args : [c_vis_args, c_msvc_compat_args, no_override_init_args],
+libmegadriver_stub = static_library(
+  'megadriver_stub',
+  'megadriver_stub.c',
+  include_directories : inc_common,
+  c_args : c_vis_args,
+  dependencies : dep_libdrm,
   build_by_default : false,
 )
-
-subdir('glsl')

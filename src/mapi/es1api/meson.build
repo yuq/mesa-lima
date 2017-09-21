@@ -18,43 +18,37 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_common = include_directories(
-  '../include', '.', 'mapi', 'mesa', 'gallium/include', 'gallium/auxiliary')
-inc_mesa = include_directories('mesa')
-inc_mapi = include_directories('mapi')
-inc_src = include_directories('.')
-
-libglsl_util = static_library(
-  'glsl_util',
-  files('mesa/main/extensions_table.c', 'mesa/main/imports.c',
-        'mesa/program/prog_parameter.c', 'mesa/program/symbol_table.c',
-        'mesa/program/dummy_errors.c'),
-  include_directories : [inc_common],
-  c_args : [c_vis_args],
-  build_by_default : false,
+es1_glapi_mapi_tmp_h = custom_target(
+  'es1_glapi_mapi_tmp.h',
+  input : ['../mapi_abi.py', gl_and_es_api_files],
+  output : 'glapi_mapi_tmp.h',
+  command : [prog_python2, '@INPUT0@', '--printer', 'es1api', '@INPUT1@'],
+  depend_files : api_xml_files,
+  capture : true,
 )
 
-sha1_h = vcs_tag(
-  input : 'git_sha1.h.in',
-  output : 'git_sha1.h',
+libglesv1_cm = shared_library(
+  'GLESv1_CM',
+  ['../entry.c', es1_glapi_mapi_tmp_h],
+  c_args : [c_msvc_compat_args, c_vis_args, '-DMAPI_MODE_BRIDGE',
+            '-DMAPI_ABI_HEADER="@0@"'.format(es1_glapi_mapi_tmp_h.full_path())],
+  link_args : [ld_args_gc_sections],
+  include_directories : [inc_src, inc_include, inc_mapi],
+  link_with : libglapi,
+  dependencies : [dep_thread, dep_libdrm, dep_m, dep_dl],
+  version : '1.1',
+  install : true,
 )
 
-subdir('gtest')
-subdir('util')
-subdir('mapi/glapi/gen')
-subdir('mapi')
-# TODO: opengl
-# TODO: glx
-# TODO: osmesa
-subdir('compiler')
-subdir('egl/wayland/wayland-drm')
-subdir('vulkan')
-subdir('amd')
-subdir('intel')
-# TODO: vc4
-subdir('mesa')
-# TODO: dri_glx
-# TODO: gbm
-# TODO: egl
-# TODO: radv
-# TODO: gallium
+pkg.generate(
+  name : 'glesv1_cm',
+  filebase : 'glesv1_cm',
+  description : 'Mesa OpenGL ES 1.1 CM library',
+  version : meson.project_version(),
+  libraries : libglesv1_cm,
+  libraries_private : '-lm -ldl -lpthread -pthread',
+)
+
+if with_tests
+  test('es1-ABI-check', find_program('ABI-check'))
+endif

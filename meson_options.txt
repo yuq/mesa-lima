@@ -20,12 +20,24 @@
 
 option('platforms', type : 'string', value : 'x11,wayland',
        description : 'comma separated list of window systems to support. wayland, x11, surfaceless, drm, etc.')
+option('dri-drivers', type : 'string', value : 'i965',
+       description : 'comma separated list of dri drivers to build.')
 option('vulkan-drivers', type : 'string', value : 'intel,amd',
        description : 'comma separated list of vulkan drivers to build.')
 option('shader-cache', type : 'boolean', value : true,
        description : 'Build with on-disk shader cache support')
 option('vulkan-icd-dir', type : 'string', value : '',
        description : 'Location relative to prefix to put vulkan icds on install. Default: $datadir/vulkan/icd.d')
+option('shared-glapi', type : 'boolean', value : true,
+       description : 'Whether to build a shared or static glapi')
+option('gles1', type : 'boolean', value : true,
+       description : 'Build support for OpenGL ES 1.x')
+option('gles2', type : 'boolean', value : true,
+       description : 'Build support for OpenGL ES 2.x and 3.x')
+option('opengl', type : 'boolean', value : true,
+       description : 'Build support for OpenGL (all versions)')
+option('asm', type : 'boolean', value : true,
+       description : 'Build assembly code if possible')
 option('valgrind', type : 'boolean', value : true,
        description : 'Build with valgrind support if possible')
 option('build-tests', type : 'boolean', value : false,
