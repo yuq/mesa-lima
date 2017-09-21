@@ -43,7 +43,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
-#include <pthread.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -107,7 +106,7 @@ struct bo_cache_bucket {
 struct brw_bufmgr {
    int fd;
 
-   pthread_mutex_t lock;
+   mtx_t lock;
 
    /** Array of lists of cached gem objects of power-of-two sizes */
    struct bo_cache_bucket cache_bucket[14 * 4];
@@ -284,7 +283,7 @@ bo_alloc_internal(struct brw_bufmgr *bufmgr,
       bo_size = bucket->size;
    }
 
-   pthread_mutex_lock(&bufmgr->lock);
+   mtx_lock(&bufmgr->lock);
    /* Get a buffer out of the cache if available */
 retry:
    alloc_from_cache = false;
@@ -394,7 +393,7 @@ retry:
    bo->cache_coherent = bufmgr->has_llc;
    bo->index = -1;
 
-   pthread_mutex_unlock(&bufmgr->lock);
+   mtx_unlock(&bufmgr->lock);
 
    DBG("bo_create: buf %d (%s) %llub\n", bo->gem_handle, bo->name,
        (unsigned long long) size);
@@ -404,7 +403,7 @@ retry:
 err_free:
    bo_free(bo);
 err:
-   pthread_mutex_unlock(&bufmgr->lock);
+   mtx_unlock(&bufmgr->lock);
    return NULL;
 }
 
@@ -485,7 +484,7 @@ brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
     * alternating names for the front/back buffer a linear search
     * provides a sufficiently fast match.
     */
-   pthread_mutex_lock(&bufmgr->lock);
+   mtx_lock(&bufmgr->lock);
    bo = hash_find_bo(bufmgr->name_table, handle);
    if (bo) {
       brw_bo_reference(bo);
@@ -541,12 +540,12 @@ brw_bo_gem_create_from_name(struct brw_bufmgr *bufmgr,
    DBG("bo_create_from_handle: %d (%s)\n", handle, bo->name);
 
 out:
-   pthread_mutex_unlock(&bufmgr->lock);
+   mtx_unlock(&bufmgr->lock);
    return bo;
 
 err_unref:
    bo_free(bo);
-   pthread_mutex_unlock(&bufmgr->lock);
+   mtx_unlock(&bufmgr->lock);
    return NULL;
 }
 
@@ -651,14 +650,14 @@ brw_bo_unreference(struct brw_bo *bo)
 
       clock_gettime(CLOCK_MONOTONIC, &time);
 
-      pthread_mutex_lock(&bufmgr->lock);
+      mtx_lock(&bufmgr->lock);
 
       if (p_atomic_dec_zero(&bo->refcount)) {
          bo_unreference_final(bo, time.tv_sec);
          cleanup_bo_cache(bufmgr, time.tv_sec);
       }
 
-      pthread_mutex_unlock(&bufmgr->lock);
+      mtx_unlock(&bufmgr->lock);
    }
 }
 
@@ -1042,7 +1041,7 @@ brw_bo_wait(struct brw_bo *bo, int64_t timeout_ns)
 void
 brw_bufmgr_destroy(struct brw_bufmgr *bufmgr)
 {
-   pthread_mutex_destroy(&bufmgr->lock);
+   mtx_destroy(&bufmgr->lock);
 
    /* Free any cached buffer objects we were going to reuse */
    for (int i = 0; i < bufmgr->num_buckets; i++) {
@@ -1111,12 +1110,12 @@ brw_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr, int prime_fd)
    struct brw_bo *bo;
    struct drm_i915_gem_get_tiling get_tiling;
 
-   pthread_mutex_lock(&bufmgr->lock);
+   mtx_lock(&bufmgr->lock);
    ret = drmPrimeFDToHandle(bufmgr->fd, prime_fd, &handle);
    if (ret) {
       DBG("create_from_prime: failed to obtain handle from fd: %s\n",
           strerror(errno));
-      pthread_mutex_unlock(&bufmgr->lock);
+      mtx_unlock(&bufmgr->lock);
       return NULL;
    }
 
@@ -1165,12 +1164,12 @@ brw_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr, int prime_fd)
    /* XXX stride is unknown */
 
 out:
-   pthread_mutex_unlock(&bufmgr->lock);
+   mtx_unlock(&bufmgr->lock);
    return bo;
 
 err:
    bo_free(bo);
-   pthread_mutex_unlock(&bufmgr->lock);
+   mtx_unlock(&bufmgr->lock);
    return NULL;
 }
 
@@ -1202,7 +1201,7 @@ brw_bo_flink(struct brw_bo *bo, uint32_t *name)
       if (drmIoctl(bufmgr->fd, DRM_IOCTL_GEM_FLINK, &flink))
          return -errno;
 
-      pthread_mutex_lock(&bufmgr->lock);
+      mtx_lock(&bufmgr->lock);
       if (!bo->global_name) {
          bo->global_name = flink.name;
          bo->reusable = false;
@@ -1210,7 +1209,7 @@ brw_bo_flink(struct brw_bo *bo, uint32_t *name)
 
          _mesa_hash_table_insert(bufmgr->name_table, &bo->global_name, bo);
       }
-      pthread_mutex_unlock(&bufmgr->lock);
+      mtx_unlock(&bufmgr->lock);
    }
 
    *name = bo->global_name;
@@ -1353,7 +1352,7 @@ brw_bufmgr_init(struct gen_device_info *devinfo, int fd)
     */
    bufmgr->fd = fd;
 
-   if (pthread_mutex_init(&bufmgr->lock, NULL) != 0) {
+   if (mtx_init(&bufmgr->lock, mtx_plain) != 0) {
       free(bufmgr);
       return NULL;
    }
