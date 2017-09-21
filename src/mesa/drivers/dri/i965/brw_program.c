@@ -127,11 +127,7 @@ brw_create_nir(struct brw_context *brw,
 static unsigned
 get_new_program_id(struct intel_screen *screen)
 {
-   static pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
-   pthread_mutex_lock(&m);
-   unsigned id = screen->program_id++;
-   pthread_mutex_unlock(&m);
-   return id;
+   return p_atomic_inc_return(&screen->program_id);
 }
 
 static struct gl_program *brwNewProgram(struct gl_context *ctx, GLenum target,
