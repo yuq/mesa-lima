@@ -644,9 +644,11 @@ static void gfx9_get_gs_info(struct si_shader_selector *es,
 	/* MAX_PRIMS_PER_SUBGROUP = gs_prims * max_vert_out * gs_invocations.
 	 * Make sure we don't go over the maximum value.
 	 */
-	max_gs_prims = MIN2(max_gs_prims,
-			    max_out_prims /
-			    (gs->gs_max_out_vertices * gs_num_invocations));
+	if (gs->gs_max_out_vertices > 0) {
+		max_gs_prims = MIN2(max_gs_prims,
+				    max_out_prims /
+				    (gs->gs_max_out_vertices * gs_num_invocations));
+	}
 	assert(max_gs_prims > 0);
 
 	/* If the primitive has adjacency, halve the number of vertices
