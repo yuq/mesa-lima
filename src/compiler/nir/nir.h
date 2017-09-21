@@ -1888,6 +1888,8 @@ typedef struct nir_shader_compiler_options {
 
    bool lower_cs_local_index_from_id;
 
+   bool lower_device_index_to_zero;
+
    /**
     * Should nir_lower_io() create load_interpolated_input intrinsics?
     *

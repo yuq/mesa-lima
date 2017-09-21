@@ -36,6 +36,7 @@ struct spirv_supported_capabilities {
    bool float64;
    bool image_ms_array;
    bool tessellation;
+   bool device_group;
    bool draw_parameters;
    bool image_read_without_format;
    bool image_write_without_format;

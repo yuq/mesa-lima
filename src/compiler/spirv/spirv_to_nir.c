@@ -3283,6 +3283,10 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
          spv_check_supported(image_write_without_format, cap);
          break;
 
+      case SpvCapabilityDeviceGroup:
+         spv_check_supported(device_group, cap);
+         break;
+
       case SpvCapabilityMultiView:
          spv_check_supported(multiview, cap);
          break;
