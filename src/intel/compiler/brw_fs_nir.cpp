@@ -1267,14 +1267,36 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       unreachable("not reached: should have been lowered");
 
    case nir_op_ishl:
-      bld.SHL(result, op[0], op[1]);
-      break;
    case nir_op_ishr:
-      bld.ASR(result, op[0], op[1]);
+   case nir_op_ushr: {
+      fs_reg shift_count = op[1];
+
+      if (devinfo->is_cherryview || gen_device_info_is_9lp(devinfo)) {
+         if (op[1].file == VGRF &&
+             (result.type == BRW_REGISTER_TYPE_Q ||
+              result.type == BRW_REGISTER_TYPE_UQ)) {
+            shift_count = fs_reg(VGRF, alloc.allocate(dispatch_width / 4),
+                                 BRW_REGISTER_TYPE_UD);
+            shift_count.stride = 2;
+            bld.MOV(shift_count, op[1]);
+         }
+      }
+
+      switch (instr->op) {
+      case nir_op_ishl:
+         bld.SHL(result, op[0], shift_count);
+         break;
+      case nir_op_ishr:
+         bld.ASR(result, op[0], shift_count);
+         break;
+      case nir_op_ushr:
+         bld.SHR(result, op[0], shift_count);
+         break;
+      default:
+         unreachable("not reached");
+      }
       break;
-   case nir_op_ushr:
-      bld.SHR(result, op[0], op[1]);
-      break;
+   }
 
    case nir_op_pack_half_2x16_split:
       bld.emit(FS_OPCODE_PACK_HALF_2x16_SPLIT, result, op[0], op[1]);
