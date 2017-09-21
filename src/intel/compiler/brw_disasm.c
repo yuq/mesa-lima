@@ -1012,10 +1012,10 @@ imm(FILE *file, const struct gen_device_info *devinfo, enum brw_reg_type type,
 {
    switch (type) {
    case BRW_REGISTER_TYPE_UQ:
-      format(file, "0x%16lxUD", brw_inst_imm_uq(devinfo, inst));
+      format(file, "0x%016lxUQ", brw_inst_imm_uq(devinfo, inst));
       break;
    case BRW_REGISTER_TYPE_Q:
-      format(file, "%ldD", brw_inst_imm_uq(devinfo, inst));
+      format(file, "%ldQ", brw_inst_imm_uq(devinfo, inst));
       break;
    case BRW_REGISTER_TYPE_UD:
       format(file, "0x%08xUD", brw_inst_imm_ud(devinfo, inst));
