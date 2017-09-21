@@ -5148,7 +5148,8 @@ glsl_to_tgsi_visitor::eliminate_dead_code(void)
 void
 glsl_to_tgsi_visitor::merge_two_dsts(void)
 {
-   foreach_in_list_safe(glsl_to_tgsi_instruction, inst, &this->instructions) {
+   /* We never delete inst, but we may delete its successor. */
+   foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
       glsl_to_tgsi_instruction *inst2;
       bool merged;
       if (num_inst_dst_regs(inst) != 2)
