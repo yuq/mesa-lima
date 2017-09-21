@@ -171,6 +171,40 @@ calculate_iterations(ir_rvalue *from, ir_rvalue *to, ir_rvalue *increment,
    return (valid_loop) ? iter_value : -1;
 }
 
+static bool
+incremented_before_terminator(ir_loop *loop, ir_variable *var,
+                              ir_if *terminator)
+{
+   for (exec_node *node = loop->body_instructions.get_head();
+        !node->is_tail_sentinel();
+        node = node->get_next()) {
+      ir_instruction *ir = (ir_instruction *) node;
+
+      switch (ir->ir_type) {
+      case ir_type_if:
+         if (ir->as_if() == terminator)
+            return false;
+         break;
+
+      case ir_type_assignment: {
+         ir_assignment *assign = ir->as_assignment();
+         ir_variable *assignee = assign->lhs->whole_variable_referenced();
+
+         if (assignee == var) {
+            assert(assign->condition == NULL);
+            return true;
+         }
+
+         break;
+      }
+
+      default:
+         break;
+      }
+   }
+
+   unreachable("Unable to find induction variable");
+}
 
 /**
  * Record the fact that the given loop variable was referenced inside the loop.
@@ -581,6 +615,10 @@ loop_analysis::visit_leave(ir_loop *ir)
          if (lv != NULL && lv->is_induction_var()) {
             t->iterations = calculate_iterations(init, limit, lv->increment,
                                                  cmp);
+
+            if (incremented_before_terminator(ir, var, t->ir)) {
+               t->iterations--;
+            }
 
             if (t->iterations >= 0 &&
                 (ls->limiting_terminator == NULL ||
