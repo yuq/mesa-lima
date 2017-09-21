@@ -28,7 +28,8 @@
 #include "glsl_parser_extras.h"
 #include "glsl_parser.h"
 
-static int classify_identifier(struct _mesa_glsl_parse_state *, const char *);
+static int classify_identifier(struct _mesa_glsl_parse_state *, const char *,
+			       unsigned name_len, YYSTYPE *output);
 
 #ifdef _MSC_VER
 #define YY_NO_UNISTD_H
@@ -81,14 +82,7 @@ static int classify_identifier(struct _mesa_glsl_parse_state *, const char *);
 			  "illegal use of reserved word `%s'", yytext);	\
 	 return ERROR_TOK;						\
       } else {								\
-	 /* We're not doing linear_strdup here, to avoid an implicit    \
-	  * call on strlen() for the length of the string, as this is   \
-	  * already found by flex and stored in yyleng */               \
-	 void *mem_ctx = yyextra->linalloc;				\
-         char *id = (char *) linear_alloc_child(mem_ctx, yyleng + 1);   \
-         memcpy(id, yytext, yyleng + 1);                                \
-         yylval->identifier = id;                                       \
-	 return classify_identifier(yyextra, yytext);			\
+	 return classify_identifier(yyextra, yytext, yyleng, yylval);	\
       }									\
    } while (0)
 
@@ -460,15 +454,7 @@ layout		{
                       || yyextra->ARB_tessellation_shader_enable) {
 		      return LAYOUT_TOK;
 		   } else {
-		      /* We're not doing linear_strdup here, to avoid an implicit call
-		       * on strlen() for the length of the string, as this is already
-		       * found by flex and stored in yyleng
-		       */
-                      void *mem_ctx = yyextra->linalloc;
-                      char *id = (char *) linear_alloc_child(mem_ctx, yyleng + 1);
-                      memcpy(id, yytext, yyleng + 1);
-                      yylval->identifier = id;
-		      return classify_identifier(yyextra, yytext);
+		      return classify_identifier(yyextra, yytext, yyleng, yylval);
 		   }
 		}
 
@@ -637,21 +623,12 @@ u64vec4		KEYWORD_WITH_ALT(0, 0, 0, 0, yyextra->ARB_gpu_shader_int64_enable, U64V
 
 [_a-zA-Z][_a-zA-Z0-9]*	{
 			    struct _mesa_glsl_parse_state *state = yyextra;
-			    void *ctx = state->linalloc;
 			    if (state->es_shader && yyleng > 1024) {
 			       _mesa_glsl_error(yylloc, state,
 			                        "Identifier `%s' exceeds 1024 characters",
 			                        yytext);
-			    } else {
-			      /* We're not doing linear_strdup here, to avoid an implicit call
-			       * on strlen() for the length of the string, as this is already
-			       * found by flex and stored in yyleng
-			       */
-                              char *id = (char *) linear_alloc_child(ctx, yyleng + 1);
-                              memcpy(id, yytext, yyleng + 1);
-                              yylval->identifier = id;
 			    }
-			    return classify_identifier(state, yytext);
+			    return classify_identifier(state, yytext, yyleng, yylval);
 			}
 
 \.			{ struct _mesa_glsl_parse_state *state = yyextra;
@@ -663,8 +640,17 @@ u64vec4		KEYWORD_WITH_ALT(0, 0, 0, 0, yyextra->ARB_gpu_shader_int64_enable, U64V
 %%
 
 int
-classify_identifier(struct _mesa_glsl_parse_state *state, const char *name)
+classify_identifier(struct _mesa_glsl_parse_state *state, const char *name,
+                    unsigned name_len, YYSTYPE *output)
 {
+   /* We're not doing linear_strdup here, to avoid an implicit call on
+    * strlen() for the length of the string, as this is already found by flex
+    * and stored in yyleng
+    */
+   char *id = (char *) linear_alloc_child(state->linalloc, name_len + 1);
+   memcpy(id, name, name_len + 1);
+   output->identifier = id;
+
    if (state->is_field) {
       state->is_field = false;
       return FIELD_SELECTION;
