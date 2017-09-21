@@ -157,32 +157,16 @@ def parse_xml(enum_factory, ext_factory, filename):
     of VkEnum objects.
     """
 
-    with open(filename, 'rb') as f:
-        context = iter(et.iterparse(f, events=('start', 'end')))
+    xml = et.parse(filename)
 
-        # This gives the root element, since goal is to iterate over the
-        # elements without building a tree, this allows the root to be cleared
-        # (erase the elements) after the children have been processed.
-        _, root = next(context)
+    for enum_type in xml.findall('./enums[@type="enum"]'):
+        enum = enum_factory(enum_type.attrib['name'])
+        for value in enum_type.findall('./enum'):
+            enum.values.append(value.attrib['name'])
 
-        for event, elem in context:
-            if event == 'end' and elem.tag == 'enums':
-                type_ = elem.attrib.get('type')
-                if type_ == 'enum':
-                    enum = enum_factory(elem.attrib['name'])
-                    enum.values.extend([e.attrib['name'] for e in elem
-                                        if e.tag == 'enum'])
-            elif event == 'start' and elem.tag == 'extension':
-                ext_factory(elem.attrib['name'],
-                            number=int(elem.attrib['number']))
-            elif event == 'end' and elem.tag == 'extension':
-                if elem.attrib['supported'] != 'vulkan':
-                    continue
-                for e in elem.findall('.//enum[@extends][@offset]'):
-                    enum = enum_factory(e.attrib['extends'])
-                    enum.values.append(e.attrib['name'])
-
-            root.clear()
+    for ext_elem in xml.findall('./extensions/extension[@supported="vulkan"]'):
+        ext_factory(ext_elem.attrib['name'],
+                    number=int(ext_elem.attrib['number']))
 
 def main():
     parser = argparse.ArgumentParser()
