@@ -242,3 +242,25 @@ VkResult anv_QueuePresentKHR(
                                    _queue, 0,
                                    pPresentInfo);
 }
+
+VkResult anv_GetDeviceGroupPresentCapabilitiesKHR(
+    VkDevice                                    device,
+    VkDeviceGroupPresentCapabilitiesKHR*        pCapabilities)
+{
+   memset(pCapabilities->presentMask, 0,
+          sizeof(pCapabilities->presentMask));
+   pCapabilities->presentMask[0] = 0x1;
+   pCapabilities->modes = VK_DEVICE_GROUP_PRESENT_MODE_LOCAL_BIT_KHR;
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_GetDeviceGroupSurfacePresentModesKHR(
+    VkDevice                                    device,
+    VkSurfaceKHR                                surface,
+    VkDeviceGroupPresentModeFlagsKHR*           pModes)
+{
+   *pModes = VK_DEVICE_GROUP_PRESENT_MODE_LOCAL_BIT_KHR;
+
+   return VK_SUCCESS;
+}

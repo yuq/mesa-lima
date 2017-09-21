@@ -672,6 +672,18 @@ anv_enumerate_devices(struct anv_instance *instance)
    return result;
 }
 
+static VkResult
+anv_instance_ensure_physical_device(struct anv_instance *instance)
+{
+   if (instance->physicalDeviceCount < 0) {
+      VkResult result = anv_enumerate_devices(instance);
+      if (result != VK_SUCCESS &&
+          result != VK_ERROR_INCOMPATIBLE_DRIVER)
+         return result;
+   }
+
+   return VK_SUCCESS;
+}
 
 VkResult anv_EnumeratePhysicalDevices(
     VkInstance                                  _instance,
@@ -680,20 +692,49 @@ VkResult anv_EnumeratePhysicalDevices(
 {
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
    VK_OUTARRAY_MAKE(out, pPhysicalDevices, pPhysicalDeviceCount);
-   VkResult result;
 
-   if (instance->physicalDeviceCount < 0) {
-      result = anv_enumerate_devices(instance);
-      if (result != VK_SUCCESS &&
-          result != VK_ERROR_INCOMPATIBLE_DRIVER)
-         return result;
+   VkResult result = anv_instance_ensure_physical_device(instance);
+   if (result != VK_SUCCESS)
+      return result;
+
+   if (instance->physicalDeviceCount == 0)
+      return VK_SUCCESS;
+
+   assert(instance->physicalDeviceCount == 1);
+   vk_outarray_append(&out, i) {
+      *i = anv_physical_device_to_handle(&instance->physicalDevice);
    }
 
-   if (instance->physicalDeviceCount > 0) {
-      assert(instance->physicalDeviceCount == 1);
-      vk_outarray_append(&out, i) {
-         *i = anv_physical_device_to_handle(&instance->physicalDevice);
-      }
+   return vk_outarray_status(&out);
+}
+
+VkResult anv_EnumeratePhysicalDeviceGroups(
+    VkInstance                                  _instance,
+    uint32_t*                                   pPhysicalDeviceGroupCount,
+    VkPhysicalDeviceGroupProperties*            pPhysicalDeviceGroupProperties)
+{
+   ANV_FROM_HANDLE(anv_instance, instance, _instance);
+   VK_OUTARRAY_MAKE(out, pPhysicalDeviceGroupProperties,
+                         pPhysicalDeviceGroupCount);
+
+   VkResult result = anv_instance_ensure_physical_device(instance);
+   if (result != VK_SUCCESS)
+      return result;
+
+   if (instance->physicalDeviceCount == 0)
+      return VK_SUCCESS;
+
+   assert(instance->physicalDeviceCount == 1);
+
+   vk_outarray_append(&out, p) {
+      p->physicalDeviceCount = 1;
+      memset(p->physicalDevices, 0, sizeof(p->physicalDevices));
+      p->physicalDevices[0] =
+         anv_physical_device_to_handle(&instance->physicalDevice);
+      p->subsetAllocation = VK_FALSE;
+
+      vk_foreach_struct(ext, p->pNext)
+         anv_debug_ignored_stype(ext->sType);
    }
 
    return vk_outarray_status(&out);
@@ -1101,6 +1142,21 @@ void anv_GetPhysicalDeviceMemoryProperties2(
          break;
       }
    }
+}
+
+void
+anv_GetDeviceGroupPeerMemoryFeatures(
+    VkDevice                                    device,
+    uint32_t                                    heapIndex,
+    uint32_t                                    localDeviceIndex,
+    uint32_t                                    remoteDeviceIndex,
+    VkPeerMemoryFeatureFlags*                   pPeerMemoryFeatures)
+{
+   assert(localDeviceIndex == 0 && remoteDeviceIndex == 0);
+   *pPeerMemoryFeatures = VK_PEER_MEMORY_FEATURE_COPY_SRC_BIT |
+                          VK_PEER_MEMORY_FEATURE_COPY_DST_BIT |
+                          VK_PEER_MEMORY_FEATURE_GENERIC_SRC_BIT |
+                          VK_PEER_MEMORY_FEATURE_GENERIC_DST_BIT;
 }
 
 PFN_vkVoidFunction anv_GetInstanceProcAddr(
