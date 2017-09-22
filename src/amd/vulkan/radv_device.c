@@ -1203,6 +1203,11 @@ VkResult radv_CreateDevice(
 		device->physical_device->rad_info.chip_class >= VI &&
 		device->physical_device->rad_info.max_se >= 2;
 
+	if (getenv("RADV_TRACE_FILE")) {
+		if (!radv_init_trace(device))
+			goto fail;
+	}
+
 	result = radv_device_init_meta(device);
 	if (result != VK_SUCCESS)
 		goto fail;
@@ -1223,11 +1228,6 @@ VkResult radv_CreateDevice(
 			break;
 		}
 		device->ws->cs_finalize(device->empty_cs[family]);
-	}
-
-	if (getenv("RADV_TRACE_FILE")) {
-		if (!radv_init_trace(device))
-			goto fail;
 	}
 
 	if (device->physical_device->rad_info.chip_class >= CIK)
