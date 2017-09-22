@@ -1136,13 +1136,6 @@ struct radv_graphics_pipeline_create_info {
 };
 
 VkResult
-radv_pipeline_init(struct radv_pipeline *pipeline, struct radv_device *device,
-		   struct radv_pipeline_cache *cache,
-		   const VkGraphicsPipelineCreateInfo *pCreateInfo,
-		   const struct radv_graphics_pipeline_create_info *extra,
-		   const VkAllocationCallbacks *alloc);
-
-VkResult
 radv_graphics_pipeline_create(VkDevice device,
 			      VkPipelineCache cache,
 			      const VkGraphicsPipelineCreateInfo *pCreateInfo,
