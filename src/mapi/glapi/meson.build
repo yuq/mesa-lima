@@ -18,6 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+inc_glapi = include_directories('.')
+
 static_glapi_files = []
 static_glapi_args = []
 

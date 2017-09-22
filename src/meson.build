@@ -44,7 +44,6 @@ subdir('util')
 subdir('mapi/glapi/gen')
 subdir('mapi')
 # TODO: opengl
-# TODO: glx
 # TODO: osmesa
 subdir('compiler')
 subdir('egl/wayland/wayland-drm')
@@ -53,8 +52,8 @@ subdir('amd')
 subdir('intel')
 # TODO: vc4
 subdir('mesa')
+subdir('loader')
+subdir('glx')
 # TODO: dri_glx
-# TODO: gbm
 # TODO: egl
-# TODO: radv
 # TODO: gallium
