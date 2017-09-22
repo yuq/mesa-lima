@@ -2897,7 +2897,15 @@ glsl_to_tgsi_visitor::emit_block_mov(ir_assignment *ir, const struct glsl_type *
    r->type = type->base_type;
    if (cond) {
       st_src_reg l_src = st_src_reg(*l);
-      l_src.swizzle = swizzle_for_size(type->vector_elements);
+
+      if (l_src.file == PROGRAM_OUTPUT &&
+          this->prog->Target == GL_FRAGMENT_PROGRAM_ARB &&
+          (l_src.index == FRAG_RESULT_DEPTH || l_src.index == FRAG_RESULT_STENCIL)) {
+         /* This is a special case because the source swizzles will be shifted
+          * later to account for the difference between GLSL (where they're
+          * plain floats) and TGSI (where they're Z and Y components). */
+         l_src.swizzle = SWIZZLE_XXXX;
+      }
 
       if (native_integers) {
          emit_asm(ir, TGSI_OPCODE_UCMP, *l, *cond,
