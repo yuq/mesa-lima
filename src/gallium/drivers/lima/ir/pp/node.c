@@ -132,6 +132,36 @@ void ppir_node_remove_entry(struct set_entry *entry)
    ralloc_free(dep);
 }
 
+void ppir_node_replace_child(ppir_node *parent, ppir_node *old_child, ppir_node *new_child)
+{
+   if (parent->type == ppir_node_type_alu) {
+      ppir_alu_node *alu = ppir_node_to_alu(parent);
+      for (int i = 0; i < alu->num_child; i++) {
+         if (alu->children[i] == old_child)
+            alu->children[i] = new_child;
+      }
+   }
+   else if (parent->type == ppir_node_type_store) {
+      ppir_store_node *store = ppir_node_to_store(parent);
+      if (store->child == old_child)
+         store->child = new_child;
+   }
+}
+
+void ppir_node_replace_succ(ppir_node *dst, ppir_node *src)
+{
+   ppir_node_foreach_succ(src, entry) {
+      ppir_dep_info *dep = ppir_dep_from_entry(entry);
+      ppir_node *succ = ppir_node_from_entry(entry, succ);
+
+      _mesa_set_remove(src->succs, entry);
+      dep->pred = dst;
+      _mesa_set_add(dst->succs, dep);
+
+      ppir_node_replace_child(succ, src, dst);
+   }
+}
+
 void ppir_node_delete(ppir_node *node)
 {
    ppir_node_foreach_succ(node, entry)
@@ -142,6 +172,20 @@ void ppir_node_delete(ppir_node *node)
 
    list_del(&node->list);
    ralloc_free(node);
+}
+
+ppir_node *ppir_node_insert_move(ppir_compiler *comp, ppir_node *node)
+{
+   ppir_alu_node *move = ppir_node_create(comp, ppir_op_mov, -1);
+   if (!move)
+      return NULL;
+
+   ppir_node_replace_succ(&move->node, node);
+   ppir_node_add_child(&move->node, node);
+
+   move->children[0] = node;
+   move->num_child = 1;
+   return &move->node;
 }
 
 static void ppir_node_print_node(ppir_node *node, int space)
