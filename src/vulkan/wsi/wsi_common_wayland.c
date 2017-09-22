@@ -98,7 +98,6 @@ wsi_wl_display_add_vk_format(struct wsi_wl_display *display, VkFormat format)
 static void
 drm_handle_device(void *data, struct wl_drm *drm, const char *name)
 {
-   fprintf(stderr, "wl_drm.device(%s)\n", name);
 }
 
 static uint32_t
