@@ -438,12 +438,13 @@ build_cube_intrinsic(struct ac_llvm_context *ctx,
  * selcoords.ma; i.e., a positive out_ma means that coords is pointed towards
  * the selcoords major axis.
  */
-static void build_cube_select(LLVMBuilderRef builder,
+static void build_cube_select(struct ac_llvm_context *ctx,
 			      const struct cube_selection_coords *selcoords,
 			      const LLVMValueRef *coords,
 			      LLVMValueRef *out_st,
 			      LLVMValueRef *out_ma)
 {
+	LLVMBuilderRef builder = ctx->builder;
 	LLVMTypeRef f32 = LLVMTypeOf(coords[0]);
 	LLVMValueRef is_ma_positive;
 	LLVMValueRef sgn_ma;
@@ -480,9 +481,9 @@ static void build_cube_select(LLVMBuilderRef builder,
 	/* Select ma */
 	tmp = LLVMBuildSelect(builder, is_ma_z, coords[2],
 		LLVMBuildSelect(builder, is_ma_y, coords[1], coords[0], ""), "");
-	sgn = LLVMBuildSelect(builder, is_ma_positive,
-		LLVMConstReal(f32, 2.0), LLVMConstReal(f32, -2.0), "");
-	*out_ma = LLVMBuildFMul(builder, tmp, sgn, "");
+	tmp = ac_build_intrinsic(ctx, "llvm.fabs.f32",
+				 ctx->f32, &tmp, 1, AC_FUNC_ATTR_READNONE);
+	*out_ma = LLVMBuildFMul(builder, tmp, LLVMConstReal(f32, 2.0), "");
 }
 
 void
@@ -570,7 +571,7 @@ ac_prepare_cube_coords(struct ac_llvm_context *ctx,
 			 * seems awfully quiet about how textureGrad for cube
 			 * maps should be handled.
 			 */
-			build_cube_select(builder, &selcoords, &derivs_arg[axis * 3],
+			build_cube_select(ctx, &selcoords, &derivs_arg[axis * 3],
 					  deriv_st, &deriv_ma);
 
 			deriv_ma = LLVMBuildFMul(builder, deriv_ma, invma, "");
