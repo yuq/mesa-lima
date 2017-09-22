@@ -249,7 +249,7 @@ static const struct wl_registry_listener registry_listener = {
 };
 
 static void
-wsi_wl_display_destroy(struct wsi_wayland *wsi, struct wsi_wl_display *display)
+wsi_wl_display_finish(struct wsi_wl_display *display)
 {
    u_vector_finish(&display->formats);
    if (display->drm)
@@ -258,21 +258,16 @@ wsi_wl_display_destroy(struct wsi_wayland *wsi, struct wsi_wl_display *display)
       wl_proxy_wrapper_destroy(display->wl_display_wrapper);
    if (display->queue)
       wl_event_queue_destroy(display->queue);
-   vk_free(wsi->alloc, display);
 }
 
-static struct wsi_wl_display *
-wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
+static int
+wsi_wl_display_init(struct wsi_wayland *wsi_wl,
+                    struct wsi_wl_display *display,
+                    struct wl_display *wl_display)
 {
-   struct wsi_wl_display *display =
-      vk_alloc(wsi->alloc, sizeof(*display), 8,
-               VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
-   if (!display)
-      return NULL;
-
    memset(display, 0, sizeof(*display));
 
-   display->wsi_wl = wsi;
+   display->wsi_wl = wsi_wl;
    display->wl_display = wl_display;
 
    if (!u_vector_init(&display->formats, sizeof(VkFormat), 8))
@@ -312,15 +307,39 @@ wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
    /* We don't need this anymore */
    wl_registry_destroy(registry);
 
-   return display;
+   return 0;
 
 fail_registry:
    if (registry)
       wl_registry_destroy(registry);
 
 fail:
-   wsi_wl_display_destroy(wsi, display);
-   return NULL;
+   wsi_wl_display_finish(display);
+   return -1;
+}
+
+static struct wsi_wl_display *
+wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
+{
+   struct wsi_wl_display *display =
+      vk_alloc(wsi->alloc, sizeof(*display), 8,
+               VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+   if (!display)
+      return NULL;
+
+   if (wsi_wl_display_init(wsi, display, wl_display)) {
+      vk_free(wsi->alloc, display);
+      return NULL;
+   }
+
+   return display;
+}
+
+static void
+wsi_wl_display_destroy(struct wsi_wayland *wsi, struct wsi_wl_display *display)
+{
+   wsi_wl_display_finish(display);
+   vk_free(wsi->alloc, display);
 }
 
 static struct wsi_wl_display *
