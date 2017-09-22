@@ -29,18 +29,34 @@ import copy
 import re
 import xml.etree.cElementTree as et
 
-MAX_API_VERSION = '1.0.57'
+def _bool_to_c_expr(b):
+    if b is True:
+        return 'true';
+    elif b is False:
+        return 'false';
+    else:
+        return b;
 
 class Extension:
     def __init__(self, name, ext_version, enable):
         self.name = name
         self.ext_version = int(ext_version)
-        if enable is True:
-            self.enable = 'true';
-        elif enable is False:
-            self.enable = 'false';
-        else:
-            self.enable = enable;
+        self.enable = _bool_to_c_expr(enable)
+
+class ApiVersion:
+    def __init__(self, max_patch_version, enable):
+        self.max_patch_version = max_patch_version
+        self.enable = _bool_to_c_expr(enable)
+
+# Supported API versions.  Each one is the maximum patch version for the given
+# version.  Version come in increasing order and each version is available if
+# it's provided "enable" condition is true and all previous versions are
+# available.
+API_VERSIONS = [
+    ApiVersion('1.0.57',    True),
+]
+
+MAX_API_VERSION = None # Computed later
 
 # On Android, we disable all surface and swapchain extensions. Android's Vulkan
 # loader implements VK_KHR_surface and VK_KHR_swapchain, and applications
@@ -132,4 +148,9 @@ class VkVersion:
 
         return self.__int_ver().__cmp__(other.__int_ver())
 
-MAX_API_VERSION = VkVersion(MAX_API_VERSION)
+
+MAX_API_VERSION = VkVersion('0.0.0')
+for version in API_VERSIONS:
+    version.max_patch_version = VkVersion(version.max_patch_version)
+    assert version.max_patch_version > MAX_API_VERSION
+    MAX_API_VERSION = version.max_patch_version

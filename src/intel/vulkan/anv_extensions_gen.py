@@ -147,9 +147,17 @@ const struct anv_instance_extension_table anv_instance_extensions_supported = {
 };
 
 uint32_t
-anv_physical_device_api_version(struct anv_physical_device *dev)
+anv_physical_device_api_version(struct anv_physical_device *device)
 {
-    return ${MAX_API_VERSION.c_vk_version()};
+    uint32_t version = 0;
+
+%for version in API_VERSIONS:
+    if (!(${version.enable}))
+        return version;
+    version = ${version.max_patch_version.c_vk_version()};
+
+%endfor
+    return version;
 }
 
 const VkExtensionProperties anv_device_extensions[ANV_DEVICE_EXTENSION_COUNT] = {
@@ -188,6 +196,7 @@ if __name__ == '__main__':
         assert ext.type == 'instance' or ext.type == 'device'
 
     template_env = {
+        'API_VERSIONS': API_VERSIONS,
         'MAX_API_VERSION': MAX_API_VERSION,
         'instance_extensions': [e for e in EXTENSIONS if e.type == 'instance'],
         'device_extensions': [e for e in EXTENSIONS if e.type == 'device'],
