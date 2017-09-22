@@ -154,9 +154,11 @@ static ppir_node *ppir_emit_load_const(ppir_compiler *comp, nir_load_const_instr
       return NULL;
 
    assert(instr->def.bit_size == 32);
-   assert(instr->def.num_components == 1);
 
-   node->value.i = instr->value.i32[0];
+   for (int i = 0; i < instr->def.num_components; i++)
+      node->value[i].i = instr->value.i32[i];
+
+   node->num_components = instr->def.num_components;
 
    return &node->node;
 }
@@ -207,6 +209,7 @@ static ppir_block *ppir_block_create(ppir_compiler *comp)
       return NULL;
 
    list_inithead(&block->node_list);
+   list_inithead(&block->instr_list);
 
    return block;
 }
@@ -304,6 +307,7 @@ bool ppir_compile_nir(struct lima_fs_shader_state *prog, nir_shader *nir)
    ppir_node_print_prog(comp);
    ppir_lower_prog(comp);
    ppir_node_print_prog(comp);
+   ppir_schedule_prog(comp);
 
    ralloc_free(comp);
    return true;

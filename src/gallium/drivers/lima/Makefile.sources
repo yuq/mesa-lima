@@ -14,7 +14,9 @@ ppir_SOURCES := \
 	  ir/pp/nir.h \
 	  ir/pp/nir.c \
 	  ir/pp/node.c \
-	  ir/pp/lower.c
+	  ir/pp/lower.c \
+	  ir/pp/scheduler.c \
+	  ir/pp/instr.c
 
 DRM_SOURCES := \
 	  lima_device.c \
