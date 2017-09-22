@@ -29,7 +29,9 @@
 #include "lima.h"
 #include "lima_drm.h"
 
+#include "util/macros.h"
 #include "util/u_atomic.h"
+#include "os/os_mman.h"
 
 int lima_bo_create(lima_device_handle dev, struct lima_bo_create_request *request,
                    lima_bo_handle *bo_handle)
@@ -95,9 +97,10 @@ void *lima_bo_map(lima_bo_handle bo)
             bo->offset = req.offset;
       }
 
-      drmAddress address;
-      if (!drmMap(bo->dev->fd, bo->offset, bo->size, &address))
-         bo->map = address;
+      bo->map = os_mmap(0, bo->size, PROT_READ | PROT_WRITE,
+                        MAP_SHARED, bo->dev->fd, bo->offset);
+      if (bo->map == MAP_FAILED)
+          bo->map = NULL;
    }
 
    return bo->map;
@@ -108,7 +111,7 @@ int lima_bo_unmap(lima_bo_handle bo)
    int err = 0;
 
    if (bo->map) {
-      err = drmUnmap(bo->map, bo->size);
+      err = os_munmap(bo->map, bo->size);
       bo->map = NULL;
    }
    return err;
