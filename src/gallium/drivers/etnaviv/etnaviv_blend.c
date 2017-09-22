@@ -27,7 +27,9 @@
 #include "etnaviv_blend.h"
 
 #include "etnaviv_context.h"
+#include "etnaviv_screen.h"
 #include "etnaviv_translate.h"
+#include "hw/common.xml.h"
 #include "pipe/p_defines.h"
 #include "util/u_memory.h"
 
