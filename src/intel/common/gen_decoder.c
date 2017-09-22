@@ -39,19 +39,6 @@
 
 #define XML_BUFFER_SIZE 4096
 
-struct gen_spec {
-   uint32_t gen;
-
-   int ncommands;
-   struct gen_group *commands[256];
-   int nstructs;
-   struct gen_group *structs[256];
-   int nregisters;
-   struct gen_group *registers[256];
-   int nenums;
-   struct gen_enum *enums[256];
-};
-
 struct location {
    const char *filename;
    int line_number;

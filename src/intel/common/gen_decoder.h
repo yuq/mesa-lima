@@ -68,6 +68,19 @@ struct gen_field_iterator {
    bool print_colors;
 };
 
+struct gen_spec {
+   uint32_t gen;
+
+   uint32_t ncommands;
+   struct gen_group *commands[256];
+   uint32_t nstructs;
+   struct gen_group *structs[256];
+   uint32_t nregisters;
+   struct gen_group *registers[256];
+   uint32_t nenums;
+   struct gen_enum *enums[256];
+};
+
 struct gen_group {
    struct gen_spec *spec;
    char *name;
