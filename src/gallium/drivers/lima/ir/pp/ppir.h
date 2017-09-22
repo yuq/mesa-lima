@@ -127,6 +127,7 @@ typedef struct ppir_node {
    int index;
    char name[16];
    bool printed;
+   struct ppir_instr *instr;
 
    /* for scheduler */
    struct set *preds, *succs;
@@ -134,13 +135,14 @@ typedef struct ppir_node {
 
 typedef struct {
    ppir_node node;
-   ppir_node *children[3];
+   ppir_node *children[2];
    int num_child;
 } ppir_alu_node;
 
 typedef struct {
    ppir_node node;
-   union fi value;
+   union fi value[4];
+   int num_components;
 } ppir_const_node;
 
 typedef struct {
@@ -160,9 +162,31 @@ typedef struct {
    bool is_offset;
 } ppir_dep_info;
 
+enum ppir_instr_slot {
+   PPIR_INSTR_SLOT_VARYING,
+   PPIR_INSTR_SLOT_TEXLD,
+   PPIR_INSTR_SLOT_UNIFORM,
+   PPIR_INSTR_SLOT_CONST0,
+   PPIR_INSTR_SLOT_CONST1,
+   PPIR_INSTR_SLOT_ALU_VEC_MUL,
+   PPIR_INSTR_SLOT_ALU_SCL_MUL,
+   PPIR_INSTR_SLOT_ALU_VEC_ADD,
+   PPIR_INSTR_SLOT_ALU_SCL_ADD,
+   PPIR_INSTR_SLOT_ALU_COMBINE,
+   PPIR_INSTR_SLOT_STORE_TEMP,
+   PPIR_INSTR_SLOT_NUM,
+};
+
+typedef struct ppir_instr {
+   struct list_head list;
+   ppir_node *slots[PPIR_INSTR_SLOT_NUM];
+   bool is_end;
+} ppir_instr;
+
 typedef struct ppir_block {
    struct list_head list;
    struct list_head node_list;
+   struct list_head instr_list;
    struct ppir_compiler *comp;
 } ppir_block;
 
@@ -184,6 +208,9 @@ void ppir_node_add_child(ppir_node *parent, ppir_node *child);
 void ppir_node_remove_entry(struct set_entry *entry);
 void ppir_node_delete(ppir_node *node);
 void ppir_node_print_prog(ppir_compiler *comp);
+void ppir_node_replace_child(ppir_node *parent, ppir_node *old_child, ppir_node *new_child);
+void ppir_node_replace_succ(ppir_node *dst, ppir_node *src);
+ppir_node *ppir_node_insert_move(ppir_compiler *comp, ppir_node *node);
 
 static inline bool ppir_node_is_root(ppir_node *node)
 {
@@ -208,6 +235,16 @@ static inline bool ppir_node_is_leaf(ppir_node *node)
         entry != NULL;                                                     \
         entry = _mesa_set_next_entry(node->succs, entry))
 
+#define ppir_node_to_alu(node) ((ppir_alu_node *)(node))
+#define ppir_node_to_const(node) ((ppir_const_node *)(node))
+#define ppir_node_to_load(node) ((ppir_load_node *)(node))
+#define ppir_node_to_store(node) ((ppir_store_node *)(node))
+
+bool ppir_instr_insert_node(ppir_block *block, ppir_node *node);
+void ppir_instr_insert_const(ppir_node *node);
+void ppir_instr_print_pre_schedule(ppir_compiler *comp);
+
 void ppir_lower_prog(ppir_compiler *comp);
+bool ppir_schedule_prog(ppir_compiler *comp);
 
 #endif
