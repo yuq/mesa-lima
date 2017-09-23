@@ -131,10 +131,9 @@ static void
 get_group_offset_count(const char **atts, uint32_t *offset, uint32_t *count,
                        uint32_t *size, bool *variable)
 {
-   char *p;
-   int i;
+   for (int i = 0; atts[i]; i += 2) {
+      char *p;
 
-   for (i = 0; atts[i]; i += 2) {
       if (strcmp(atts[i], "count") == 0) {
          *count = strtoul(atts[i + 1], &p, 0);
          if (*count == 0)
@@ -190,10 +189,9 @@ create_enum(struct parser_context *ctx, const char *name, const char **atts)
 static void
 get_register_offset(const char **atts, uint32_t *offset)
 {
-   char *p;
-   int i;
+   for (int i = 0; atts[i]; i += 2) {
+      char *p;
 
-   for (i = 0; atts[i]; i += 2) {
       if (strcmp(atts[i], "num") == 0)
          *offset = strtoul(atts[i + 1], &p, 0);
    }
@@ -282,12 +280,12 @@ static struct gen_field *
 create_field(struct parser_context *ctx, const char **atts)
 {
    struct gen_field *field;
-   char *p;
-   int i;
 
    field = rzalloc(ctx->group, struct gen_field);
 
-   for (i = 0; atts[i]; i += 2) {
+   for (int i = 0; atts[i]; i += 2) {
+      char *p;
+
       if (strcmp(atts[i], "name") == 0)
          field->name = ralloc_strdup(field, atts[i + 1]);
       else if (strcmp(atts[i], "start") == 0)
@@ -346,13 +344,12 @@ static void
 start_element(void *data, const char *element_name, const char **atts)
 {
    struct parser_context *ctx = data;
-   int i;
    const char *name = NULL;
    const char *gen = NULL;
 
    ctx->loc.line_number = XML_GetCurrentLineNumber(ctx->parser);
 
-   for (i = 0; atts[i]; i += 2) {
+   for (int i = 0; atts[i]; i += 2) {
       if (strcmp(atts[i], "name") == 0)
          name = atts[i + 1];
       else if (strcmp(atts[i], "gen") == 0)
