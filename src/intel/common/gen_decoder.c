@@ -161,8 +161,6 @@ create_group(struct parser_context *ctx,
       group->name = ralloc_strdup(group, name);
 
    group->spec = ctx->spec;
-   group->group_offset = 0;
-   group->group_count = 0;
    group->variable = false;
 
    if (parent) {
@@ -185,8 +183,6 @@ create_enum(struct parser_context *ctx, const char *name, const char **atts)
    e = rzalloc(ctx->spec, struct gen_enum);
    if (name)
       e->name = ralloc_strdup(e, name);
-
-   e->nvalues = 0;
 
    return e;
 }
