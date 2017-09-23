@@ -3861,6 +3861,12 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 				   width, height, depth,
 				   view->state, view->fmask_state);
 
+	unsigned num_format = G_008F14_NUM_FORMAT_GFX6(view->state[1]);
+	view->is_integer =
+		num_format == V_008F14_IMG_NUM_FORMAT_USCALED ||
+		num_format == V_008F14_IMG_NUM_FORMAT_SSCALED ||
+		num_format == V_008F14_IMG_NUM_FORMAT_UINT ||
+		num_format == V_008F14_IMG_NUM_FORMAT_SINT;
 	view->base_level_info = &surflevel[base_level];
 	view->base_level = base_level;
 	view->block_width = util_format_get_blockwidth(pipe_format);
@@ -3897,24 +3903,36 @@ static bool wrap_mode_uses_border_color(unsigned wrap, bool linear_filter)
 
 static uint32_t si_translate_border_color(struct si_context *sctx,
 					  const struct pipe_sampler_state *state,
-					  const union pipe_color_union *color)
+					  const union pipe_color_union *color,
+					  bool is_integer)
 {
 	bool linear_filter = state->min_img_filter != PIPE_TEX_FILTER_NEAREST ||
 			     state->mag_img_filter != PIPE_TEX_FILTER_NEAREST;
 
-	if ((color->f[0] == 0 && color->f[1] == 0 &&
-	     color->f[2] == 0 && color->f[3] == 0) ||
-	    (!wrap_mode_uses_border_color(state->wrap_s, linear_filter) &&
-	     !wrap_mode_uses_border_color(state->wrap_t, linear_filter) &&
-	     !wrap_mode_uses_border_color(state->wrap_r, linear_filter)))
+	if (!wrap_mode_uses_border_color(state->wrap_s, linear_filter) &&
+	    !wrap_mode_uses_border_color(state->wrap_t, linear_filter) &&
+	    !wrap_mode_uses_border_color(state->wrap_r, linear_filter))
 		return S_008F3C_BORDER_COLOR_TYPE(V_008F3C_SQ_TEX_BORDER_COLOR_TRANS_BLACK);
 
-	if (color->f[0] == 0 && color->f[1] == 0 &&
-	    color->f[2] == 0 && color->f[3] == 1)
-		return S_008F3C_BORDER_COLOR_TYPE(V_008F3C_SQ_TEX_BORDER_COLOR_OPAQUE_BLACK);
-	if (color->f[0] == 1 && color->f[1] == 1 &&
-	    color->f[2] == 1 && color->f[3] == 1)
-		return S_008F3C_BORDER_COLOR_TYPE(V_008F3C_SQ_TEX_BORDER_COLOR_OPAQUE_WHITE);
+#define simple_border_types(elt) \
+do { \
+	if (color->elt[0] == 0 && color->elt[1] == 0 &&                         \
+	    color->elt[2] == 0 && color->elt[3] == 0)                           \
+		return S_008F3C_BORDER_COLOR_TYPE(V_008F3C_SQ_TEX_BORDER_COLOR_TRANS_BLACK); \
+	if (color->elt[0] == 0 && color->elt[1] == 0 &&                         \
+	    color->elt[2] == 0 && color->elt[3] == 1)                           \
+		return S_008F3C_BORDER_COLOR_TYPE(V_008F3C_SQ_TEX_BORDER_COLOR_OPAQUE_BLACK); \
+	if (color->elt[0] == 1 && color->elt[1] == 1 &&                         \
+	    color->elt[2] == 1 && color->elt[3] == 1)                           \
+		return S_008F3C_BORDER_COLOR_TYPE(V_008F3C_SQ_TEX_BORDER_COLOR_OPAQUE_WHITE); \
+} while (false)
+
+	if (is_integer)
+		simple_border_types(ui);
+	else
+		simple_border_types(f);
+
+#undef simple_border_types
 
 	int i;
 
@@ -3984,7 +4002,11 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 			  S_008F38_DISABLE_LSB_CEIL(sctx->b.chip_class <= VI) |
 			  S_008F38_FILTER_PREC_FIX(1) |
 			  S_008F38_ANISO_OVERRIDE(sctx->b.chip_class >= VI));
-	rstate->val[3] = si_translate_border_color(sctx, state, &state->border_color);
+	rstate->val[3] = si_translate_border_color(sctx, state, &state->border_color, false);
+
+	/* Create sampler resource for integer textures. */
+	memcpy(rstate->integer_val, rstate->val, sizeof(rstate->val));
+	rstate->integer_val[3] = si_translate_border_color(sctx, state, &state->border_color, true);
 
 	/* Create sampler resource for upgraded depth textures. */
 	memcpy(rstate->upgraded_depth_val, rstate->val, sizeof(rstate->val));
@@ -3999,7 +4021,7 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 		rstate->upgraded_depth_val[3] |= S_008F3C_UPGRADED_DEPTH(1);
 	else
 		rstate->upgraded_depth_val[3] =
-			si_translate_border_color(sctx, state, &clamped_border_color) |
+			si_translate_border_color(sctx, state, &clamped_border_color, false) |
 			S_008F3C_UPGRADED_DEPTH(1);
 
 	return rstate;

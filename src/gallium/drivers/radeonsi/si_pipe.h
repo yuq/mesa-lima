@@ -157,6 +157,7 @@ struct si_sampler_view {
 	ubyte				base_level;
 	ubyte				block_width;
 	bool is_stencil_sampler;
+	bool is_integer;
 	bool dcc_incompatible;
 };
 
@@ -167,6 +168,7 @@ struct si_sampler_state {
 	unsigned			magic;
 #endif
 	uint32_t			val[4];
+	uint32_t			integer_val[4];
 	uint32_t			upgraded_depth_val[4];
 };
 
