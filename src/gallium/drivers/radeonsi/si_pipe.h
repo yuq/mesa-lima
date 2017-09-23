@@ -167,6 +167,7 @@ struct si_sampler_state {
 	unsigned			magic;
 #endif
 	uint32_t			val[4];
+	uint32_t			upgraded_depth_val[4];
 };
 
 struct si_cs_shader_state {

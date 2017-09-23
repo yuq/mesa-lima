@@ -3997,6 +3997,10 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 			  S_008F38_ANISO_OVERRIDE(sctx->b.chip_class >= VI));
 	rstate->val[3] = S_008F3C_BORDER_COLOR_PTR(border_color_index) |
 			 S_008F3C_BORDER_COLOR_TYPE(border_color_type);
+
+	memcpy(rstate->upgraded_depth_val, rstate->val, sizeof(rstate->val));
+	rstate->upgraded_depth_val[3] |= S_008F3C_UPGRADED_DEPTH(1);
+
 	return rstate;
 }
 
