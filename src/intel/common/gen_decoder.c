@@ -38,6 +38,7 @@
 #include "genxml/genX_xml.h"
 
 #define XML_BUFFER_SIZE 4096
+#define MAX_VALUE_ITEMS 128
 
 struct location {
    const char *filename;
@@ -53,11 +54,10 @@ struct parser_context {
    struct gen_group *group;
    struct gen_enum *enoom;
 
-   int nvalues;
-   struct gen_value *values[256];
+   int n_values, n_allocated_values;
+   struct gen_value **values;
 
-   struct gen_field *fields[256];
-   int nfields;
+   struct gen_field *last_field;
 
    struct gen_spec *spec;
 };
@@ -77,42 +77,34 @@ gen_group_get_opcode(struct gen_group *group)
 struct gen_group *
 gen_spec_find_struct(struct gen_spec *spec, const char *name)
 {
-   for (int i = 0; i < spec->nstructs; i++)
-      if (strcmp(spec->structs[i]->name, name) == 0)
-         return spec->structs[i];
-
-   return NULL;
+   struct hash_entry *entry = _mesa_hash_table_search(spec->structs,
+                                                      name);
+   return entry ? entry->data : NULL;
 }
 
 struct gen_group *
 gen_spec_find_register(struct gen_spec *spec, uint32_t offset)
 {
-   for (int i = 0; i < spec->nregisters; i++)
-      if (spec->registers[i]->register_offset == offset)
-         return spec->registers[i];
-
-   return NULL;
+   struct hash_entry *entry =
+      _mesa_hash_table_search(spec->registers_by_offset,
+                              (void *) (uintptr_t) offset);
+   return entry ? entry->data : NULL;
 }
 
 struct gen_group *
 gen_spec_find_register_by_name(struct gen_spec *spec, const char *name)
 {
-   for (int i = 0; i < spec->nregisters; i++) {
-      if (strcmp(spec->registers[i]->name, name) == 0)
-         return spec->registers[i];
-   }
-
-   return NULL;
+   struct hash_entry *entry =
+      _mesa_hash_table_search(spec->registers_by_name, name);
+   return entry ? entry->data : NULL;
 }
 
 struct gen_enum *
 gen_spec_find_enum(struct gen_spec *spec, const char *name)
 {
-   for (int i = 0; i < spec->nenums; i++)
-      if (strcmp(spec->enums[i]->name, name) == 0)
-         return spec->enums[i];
-
-   return NULL;
+   struct hash_entry *entry = _mesa_hash_table_search(spec->enums,
+                                                      name);
+   return entry ? entry->data : NULL;
 }
 
 uint32_t
@@ -133,35 +125,6 @@ fail(struct location *loc, const char *msg, ...)
    fprintf(stderr, "\n");
    va_end(ap);
    exit(EXIT_FAILURE);
-}
-
-static void *
-fail_on_null(void *p)
-{
-   if (p == NULL) {
-      fprintf(stderr, "aubinator: out of memory\n");
-      exit(EXIT_FAILURE);
-   }
-
-   return p;
-}
-
-static char *
-xstrdup(const char *s)
-{
-   return fail_on_null(strdup(s));
-}
-
-static void *
-zalloc(size_t s)
-{
-   return calloc(s, 1);
-}
-
-static void *
-xzalloc(size_t s)
-{
-   return fail_on_null(zalloc(s));
 }
 
 static void
@@ -193,9 +156,9 @@ create_group(struct parser_context *ctx,
 {
    struct gen_group *group;
 
-   group = xzalloc(sizeof(*group));
+   group = rzalloc(ctx->spec, struct gen_group);
    if (name)
-      group->name = xstrdup(name);
+      group->name = ralloc_strdup(group, name);
 
    group->spec = ctx->spec;
    group->group_offset = 0;
@@ -219,9 +182,9 @@ create_enum(struct parser_context *ctx, const char *name, const char **atts)
 {
    struct gen_enum *e;
 
-   e = xzalloc(sizeof(*e));
+   e = rzalloc(ctx->spec, struct gen_enum);
    if (name)
-      e->name = xstrdup(name);
+      e->name = ralloc_strdup(e, name);
 
    e->nvalues = 0;
 
@@ -326,11 +289,11 @@ create_field(struct parser_context *ctx, const char **atts)
    char *p;
    int i;
 
-   field = xzalloc(sizeof(*field));
+   field = rzalloc(ctx->group, struct gen_field);
 
    for (i = 0; atts[i]; i += 2) {
       if (strcmp(atts[i], "name") == 0)
-         field->name = xstrdup(atts[i + 1]);
+         field->name = ralloc_strdup(field, atts[i + 1]);
       else if (strcmp(atts[i], "start") == 0)
          field->start = strtoul(atts[i + 1], &p, 0);
       else if (strcmp(atts[i], "end") == 0) {
@@ -350,11 +313,11 @@ create_field(struct parser_context *ctx, const char **atts)
 static struct gen_value *
 create_value(struct parser_context *ctx, const char **atts)
 {
-   struct gen_value *value = xzalloc(sizeof(*value));
+   struct gen_value *value = rzalloc(ctx->values, struct gen_value);
 
    for (int i = 0; atts[i]; i += 2) {
       if (strcmp(atts[i], "name") == 0)
-         value->name = xstrdup(atts[i + 1]);
+         value->name = ralloc_strdup(value, atts[i + 1]);
       else if (strcmp(atts[i], "value") == 0)
          value->value = strtoul(atts[i + 1], NULL, 0);
    }
@@ -406,7 +369,7 @@ start_element(void *data, const char *element_name, const char **atts)
       if (gen == NULL)
          fail(&ctx->loc, "no gen given");
 
-      ctx->platform = xstrdup(name);
+      ctx->platform = strdup(name);
       int major, minor;
       int n = sscanf(gen, "%d.%d", &major, &minor);
       if (n == 0)
@@ -430,12 +393,18 @@ start_element(void *data, const char *element_name, const char **atts)
       previous_group->next = group;
       ctx->group = group;
    } else if (strcmp(element_name, "field") == 0) {
-      ctx->fields[ctx->nfields++] = create_and_append_field(ctx, atts);
+      ctx->last_field = create_and_append_field(ctx, atts);
    } else if (strcmp(element_name, "enum") == 0) {
       ctx->enoom = create_enum(ctx, name, atts);
    } else if (strcmp(element_name, "value") == 0) {
-      ctx->values[ctx->nvalues++] = create_value(ctx, atts);
-      assert(ctx->nvalues < ARRAY_SIZE(ctx->values));
+      if (ctx->n_values >= ctx->n_allocated_values) {
+         ctx->n_allocated_values = MAX2(2, ctx->n_allocated_values * 2);
+         ctx->values = reralloc_array_size(ctx->spec, ctx->values,
+                                           sizeof(struct gen_value *),
+                                           ctx->n_allocated_values);
+      }
+      assert(ctx->n_values < ctx->n_allocated_values);
+      ctx->values[ctx->n_values++] = create_value(ctx, atts);
    }
 
 }
@@ -464,35 +433,32 @@ end_element(void *data, const char *name)
       }
 
       if (strcmp(name, "instruction") == 0)
-         spec->commands[spec->ncommands++] = group;
+         _mesa_hash_table_insert(spec->commands, group->name, group);
       else if (strcmp(name, "struct") == 0)
-         spec->structs[spec->nstructs++] = group;
-      else if (strcmp(name, "register") == 0)
-         spec->registers[spec->nregisters++] = group;
-
-      assert(spec->ncommands < ARRAY_SIZE(spec->commands));
-      assert(spec->nstructs < ARRAY_SIZE(spec->structs));
-      assert(spec->nregisters < ARRAY_SIZE(spec->registers));
+         _mesa_hash_table_insert(spec->structs, group->name, group);
+      else if (strcmp(name, "register") == 0) {
+         _mesa_hash_table_insert(spec->registers_by_name, group->name, group);
+         _mesa_hash_table_insert(spec->registers_by_offset,
+                                 (void *) (uintptr_t) group->register_offset,
+                                 group);
+      }
    } else if (strcmp(name, "group") == 0) {
       ctx->group = ctx->group->parent;
    } else if (strcmp(name, "field") == 0) {
-      struct gen_field *field = ctx->fields[ctx->nfields - 1];
-      size_t size = ctx->nvalues * sizeof(ctx->values[0]);
-      ctx->nfields--;
-      assert(ctx->nfields >= 0);
-      field->inline_enum.values = xzalloc(size);
-      field->inline_enum.nvalues = ctx->nvalues;
-      memcpy(field->inline_enum.values, ctx->values, size);
-      ctx->nvalues = 0;
+      struct gen_field *field = ctx->last_field;
+      ctx->last_field = NULL;
+      field->inline_enum.values = ctx->values;
+      field->inline_enum.nvalues = ctx->n_values;
+      ctx->values = ralloc_array(ctx->spec, struct gen_value*, ctx->n_allocated_values = 2);
+      ctx->n_values = 0;
    } else if (strcmp(name, "enum") == 0) {
       struct gen_enum *e = ctx->enoom;
-      size_t size = ctx->nvalues * sizeof(ctx->values[0]);
-      e->values = xzalloc(size);
-      e->nvalues = ctx->nvalues;
-      memcpy(e->values, ctx->values, size);
-      ctx->nvalues = 0;
+      e->values = ctx->values;
+      e->nvalues = ctx->n_values;
+      ctx->values = ralloc_array(ctx->spec, struct gen_value*, ctx->n_allocated_values = 2);
+      ctx->n_values = 0;
       ctx->enoom = NULL;
-      spec->enums[spec->nenums++] = e;
+      _mesa_hash_table_insert(spec->enums, e->name, e);
    }
 }
 
@@ -560,6 +526,11 @@ static uint32_t zlib_inflate(const void *compressed_data,
    return zstream.total_out;
 }
 
+static uint32_t _hash_uint32(const void *key)
+{
+   return (uint32_t) (uintptr_t) key;
+}
+
 struct gen_spec *
 gen_spec_load(const struct gen_device_info *devinfo)
 {
@@ -593,7 +564,18 @@ gen_spec_load(const struct gen_device_info *devinfo)
    XML_SetElementHandler(ctx.parser, start_element, end_element);
    XML_SetCharacterDataHandler(ctx.parser, character_data);
 
-   ctx.spec = xzalloc(sizeof(*ctx.spec));
+   ctx.spec = rzalloc(NULL, struct gen_spec);
+
+   ctx.spec->commands =
+      _mesa_hash_table_create(ctx.spec, _mesa_hash_string, _mesa_key_string_equal);
+   ctx.spec->structs =
+      _mesa_hash_table_create(ctx.spec, _mesa_hash_string, _mesa_key_string_equal);
+   ctx.spec->registers_by_name =
+      _mesa_hash_table_create(ctx.spec, _mesa_hash_string, _mesa_key_string_equal);
+   ctx.spec->registers_by_offset =
+      _mesa_hash_table_create(ctx.spec, _hash_uint32, _mesa_key_pointer_equal);
+   ctx.spec->enums =
+      _mesa_hash_table_create(ctx.spec, _mesa_hash_string, _mesa_key_string_equal);
 
    total_length = zlib_inflate(compress_genxmls,
                                sizeof(compress_genxmls),
@@ -655,7 +637,7 @@ gen_spec_load_from_path(const struct gen_device_info *devinfo,
    XML_SetElementHandler(ctx.parser, start_element, end_element);
    XML_SetCharacterDataHandler(ctx.parser, character_data);
    ctx.loc.filename = filename;
-   ctx.spec = xzalloc(sizeof(*ctx.spec));
+   ctx.spec = rzalloc(NULL, struct gen_spec);
 
    do {
       buf = XML_GetBuffer(ctx.parser, XML_BUFFER_SIZE);
@@ -687,13 +669,21 @@ gen_spec_load_from_path(const struct gen_device_info *devinfo,
    return ctx.spec;
 }
 
+void gen_spec_destroy(struct gen_spec *spec)
+{
+   ralloc_free(spec);
+}
+
 struct gen_group *
 gen_spec_find_instruction(struct gen_spec *spec, const uint32_t *p)
 {
-   for (int i = 0; i < spec->ncommands; i++) {
-      uint32_t opcode = *p & spec->commands[i]->opcode_mask;
-      if (opcode == spec->commands[i]->opcode)
-         return spec->commands[i];
+   struct hash_entry *entry;
+
+   hash_table_foreach(spec->commands, entry) {
+      struct gen_group *command = entry->data;
+      uint32_t opcode = *p & command->opcode_mask;
+      if (opcode == command->opcode)
+         return command;
    }
 
    return NULL;

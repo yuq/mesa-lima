@@ -28,6 +28,7 @@
 #include <stdbool.h>
 
 #include "common/gen_device_info.h"
+#include "util/hash_table.h"
 
 struct gen_spec;
 struct gen_group;
@@ -42,6 +43,7 @@ struct gen_group *gen_spec_find_struct(struct gen_spec *spec, const char *name);
 struct gen_spec *gen_spec_load(const struct gen_device_info *devinfo);
 struct gen_spec *gen_spec_load_from_path(const struct gen_device_info *devinfo,
                                          const char *path);
+void gen_spec_destroy(struct gen_spec *spec);
 uint32_t gen_spec_get_gen(struct gen_spec *spec);
 struct gen_group *gen_spec_find_instruction(struct gen_spec *spec, const uint32_t *p);
 struct gen_group *gen_spec_find_register(struct gen_spec *spec, uint32_t offset);
@@ -72,14 +74,11 @@ struct gen_field_iterator {
 struct gen_spec {
    uint32_t gen;
 
-   uint32_t ncommands;
-   struct gen_group *commands[256];
-   uint32_t nstructs;
-   struct gen_group *structs[256];
-   uint32_t nregisters;
-   struct gen_group *registers[256];
-   uint32_t nenums;
-   struct gen_enum *enums[256];
+   struct hash_table *commands;
+   struct hash_table *structs;
+   struct hash_table *registers_by_name;
+   struct hash_table *registers_by_offset;
+   struct hash_table *enums;
 };
 
 struct gen_group {
