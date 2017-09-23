@@ -971,8 +971,8 @@ print_dword_header(FILE *outfile,
            offset + 4 * dword, iter->p[dword], dword);
 }
 
-static bool
-is_header_field(struct gen_group *group, struct gen_field *field)
+bool
+gen_group_header_is_header(struct gen_group *group, struct gen_field *field)
 {
    uint32_t bits;
 
@@ -999,7 +999,7 @@ gen_print_group(FILE *outfile, struct gen_group *group,
             print_dword_header(outfile, &iter, offset, i);
          last_dword = iter.dword;
       }
-      if (!is_header_field(group, iter.field)) {
+      if (!gen_group_header_is_header(group, iter.field)) {
          fprintf(outfile, "    %s: %s\n", iter.name, iter.value);
          if (iter.struct_desc) {
             uint64_t struct_offset = offset + 4 * iter.dword;
