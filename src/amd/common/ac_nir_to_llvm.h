@@ -216,7 +216,8 @@ void ac_compile_nir_shader(LLVMTargetMachineRef tm,
                            struct ac_shader_binary *binary,
                            struct ac_shader_config *config,
                            struct ac_shader_variant_info *shader_info,
-                           struct nir_shader *nir,
+                           struct nir_shader *const *nir,
+                           int nir_count,
                            const struct ac_nir_compiler_options *options,
 			   bool dump_shader);
 

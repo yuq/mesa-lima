@@ -6540,53 +6540,61 @@ static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
 	                         shader_info->num_input_sgprs + 3);
 }
 
+static void
+ac_fill_shader_info(struct ac_shader_variant_info *shader_info, struct nir_shader *nir, const struct ac_nir_compiler_options *options)
+{
+        switch (nir->stage) {
+        case MESA_SHADER_COMPUTE:
+                for (int i = 0; i < 3; ++i)
+                        shader_info->cs.block_size[i] = nir->info.cs.local_size[i];
+                break;
+        case MESA_SHADER_FRAGMENT:
+                shader_info->fs.early_fragment_test = nir->info.fs.early_fragment_tests;
+                break;
+        case MESA_SHADER_GEOMETRY:
+                shader_info->gs.vertices_in = nir->info.gs.vertices_in;
+                shader_info->gs.vertices_out = nir->info.gs.vertices_out;
+                shader_info->gs.output_prim = nir->info.gs.output_primitive;
+                shader_info->gs.invocations = nir->info.gs.invocations;
+                break;
+        case MESA_SHADER_TESS_EVAL:
+                shader_info->tes.primitive_mode = nir->info.tess.primitive_mode;
+                shader_info->tes.spacing = nir->info.tess.spacing;
+                shader_info->tes.ccw = nir->info.tess.ccw;
+                shader_info->tes.point_mode = nir->info.tess.point_mode;
+                shader_info->tes.as_es = options->key.tes.as_es;
+                break;
+        case MESA_SHADER_TESS_CTRL:
+                shader_info->tcs.tcs_vertices_out = nir->info.tess.tcs_vertices_out;
+                break;
+        case MESA_SHADER_VERTEX:
+                shader_info->vs.as_es = options->key.vs.as_es;
+                shader_info->vs.as_ls = options->key.vs.as_ls;
+                /* in LS mode we need at least 1, invocation id needs 3, handled elsewhere */
+                if (options->key.vs.as_ls)
+                        shader_info->vs.vgpr_comp_cnt = MAX2(1, shader_info->vs.vgpr_comp_cnt);
+                break;
+        default:
+                break;
+        }
+}
+
 void ac_compile_nir_shader(LLVMTargetMachineRef tm,
                            struct ac_shader_binary *binary,
                            struct ac_shader_config *config,
                            struct ac_shader_variant_info *shader_info,
-                           struct nir_shader *nir,
+                           struct nir_shader *const *nir,
+                           int nir_count,
                            const struct ac_nir_compiler_options *options,
 			   bool dump_shader)
 {
 
-	LLVMModuleRef llvm_module = ac_translate_nir_to_llvm(tm, nir, shader_info,
+	LLVMModuleRef llvm_module = ac_translate_nir_to_llvm(tm, nir[0], shader_info,
 	                                                     options);
 
-	ac_compile_llvm_module(tm, llvm_module, binary, config, shader_info, nir->stage, dump_shader, options->supports_spill);
-	switch (nir->stage) {
-	case MESA_SHADER_COMPUTE:
-		for (int i = 0; i < 3; ++i)
-			shader_info->cs.block_size[i] = nir->info.cs.local_size[i];
-		break;
-	case MESA_SHADER_FRAGMENT:
-		shader_info->fs.early_fragment_test = nir->info.fs.early_fragment_tests;
-		break;
-	case MESA_SHADER_GEOMETRY:
-		shader_info->gs.vertices_in = nir->info.gs.vertices_in;
-		shader_info->gs.vertices_out = nir->info.gs.vertices_out;
-		shader_info->gs.output_prim = nir->info.gs.output_primitive;
-		shader_info->gs.invocations = nir->info.gs.invocations;
-		break;
-	case MESA_SHADER_TESS_EVAL:
-		shader_info->tes.primitive_mode = nir->info.tess.primitive_mode;
-		shader_info->tes.spacing = nir->info.tess.spacing;
-		shader_info->tes.ccw = nir->info.tess.ccw;
-		shader_info->tes.point_mode = nir->info.tess.point_mode;
-		shader_info->tes.as_es = options->key.tes.as_es;
-		break;
-	case MESA_SHADER_TESS_CTRL:
-		shader_info->tcs.tcs_vertices_out = nir->info.tess.tcs_vertices_out;
-		break;
-	case MESA_SHADER_VERTEX:
-		shader_info->vs.as_es = options->key.vs.as_es;
-		shader_info->vs.as_ls = options->key.vs.as_ls;
-		/* in LS mode we need at least 1, invocation id needs 3, handled elsewhere */
-		if (options->key.vs.as_ls)
-			shader_info->vs.vgpr_comp_cnt = MAX2(1, shader_info->vs.vgpr_comp_cnt);
-		break;
-	default:
-		break;
-	}
+	ac_compile_llvm_module(tm, llvm_module, binary, config, shader_info, nir[0]->stage, dump_shader, options->supports_spill);
+	for (int i = 0; i < nir_count; ++i)
+		ac_fill_shader_info(shader_info, nir[i], options);
 }
 
 static void

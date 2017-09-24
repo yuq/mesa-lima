@@ -410,7 +410,7 @@ shader_variant_create(struct radv_device *device,
 					 &variant->info, options, dump_shaders);
 	} else {
 		ac_compile_nir_shader(tm, &binary, &variant->config,
-				      &variant->info, shader, options,
+				      &variant->info, &shader, 1, options,
 				      dump_shaders);
 	}
 
