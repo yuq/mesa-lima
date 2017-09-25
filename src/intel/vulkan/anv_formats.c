@@ -45,7 +45,7 @@
 #define RGB1 _ISL_SWIZZLE(RED, GREEN, BLUE, ONE)
 
 #define swiz_fmt(__vk_fmt, __hw_fmt, __swizzle)     \
-   [__vk_fmt] = { \
+   [VK_ENUM_OFFSET(__vk_fmt)] = { \
       .isl_format = __hw_fmt, \
       .swizzle = __swizzle, \
    }
@@ -58,7 +58,7 @@
  * other.  The reason for this is that, for packed formats, the ISL (and
  * bspec) names are in LSB -> MSB order while VK formats are MSB -> LSB.
  */
-static const struct anv_format anv_formats[] = {
+static const struct anv_format main_formats[] = {
    fmt(VK_FORMAT_UNDEFINED,               ISL_FORMAT_UNSUPPORTED),
    fmt(VK_FORMAT_R4G4_UNORM_PACK8,        ISL_FORMAT_UNSUPPORTED),
    fmt(VK_FORMAT_R4G4B4A4_UNORM_PACK16,   ISL_FORMAT_A4B4G4R4_UNORM),
@@ -251,13 +251,30 @@ static const struct anv_format anv_formats[] = {
 
 #undef fmt
 
+static const struct {
+   const struct anv_format *formats;
+   uint32_t n_formats;
+} anv_formats[] = {
+   [0] = { .formats = main_formats, .n_formats = ARRAY_SIZE(main_formats), },
+};
+
+static struct anv_format
+vk_to_anv_format(VkFormat vk_format)
+{
+   uint32_t enum_offset = VK_ENUM_OFFSET(vk_format);
+   uint32_t ext_number = VK_ENUM_EXTENSION(vk_format);
+
+   if (ext_number >= ARRAY_SIZE(anv_formats) ||
+       enum_offset >= anv_formats[ext_number].n_formats)
+      return (struct anv_format) { .isl_format = ISL_FORMAT_UNSUPPORTED };
+
+   return anv_formats[ext_number].formats[enum_offset];
+}
+
 static bool
 format_supported(VkFormat vk_format)
 {
-   if (vk_format >= ARRAY_SIZE(anv_formats))
-      return false;
-
-   return anv_formats[vk_format].isl_format != ISL_FORMAT_UNSUPPORTED;
+   return vk_to_anv_format(vk_format).isl_format != ISL_FORMAT_UNSUPPORTED;
 }
 
 /**
@@ -267,10 +284,10 @@ struct anv_format
 anv_get_format(const struct gen_device_info *devinfo, VkFormat vk_format,
                VkImageAspectFlags aspect, VkImageTiling tiling)
 {
-   if (!format_supported(vk_format))
-      return anv_formats[VK_FORMAT_UNDEFINED];
+   struct anv_format format = vk_to_anv_format(vk_format);
 
-   struct anv_format format = anv_formats[vk_format];
+   if (format.isl_format == ISL_FORMAT_UNSUPPORTED)
+      return format;
 
    if (aspect == VK_IMAGE_ASPECT_STENCIL_BIT) {
       assert(vk_format_aspects(vk_format) & VK_IMAGE_ASPECT_STENCIL_BIT);
@@ -553,7 +570,7 @@ anv_get_image_format_properties(
     *    * This field cannot be ASTC format if the Surface Type is SURFTYPE_1D.
     */
    if (info->type == VK_IMAGE_TYPE_1D &&
-       isl_format_is_compressed(anv_formats[info->format].isl_format)) {
+       isl_format_is_compressed(vk_to_anv_format(info->format).isl_format)) {
        goto unsupported;
    }
 
