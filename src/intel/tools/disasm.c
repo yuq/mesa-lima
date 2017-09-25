@@ -96,10 +96,10 @@ gen_disasm_disassemble(struct gen_disasm *disasm, void *assembly,
       int start_offset = annotation[i].offset;
       int end_offset = annotation[i + 1].offset;
 
-      brw_disassemble(devinfo, assembly, start_offset, end_offset, stdout);
+      brw_disassemble(devinfo, assembly, start_offset, end_offset, out);
 
       if (annotation[i].error) {
-         fputs(annotation[i].error, stdout);
+         fputs(annotation[i].error, out);
       }
    }
 
