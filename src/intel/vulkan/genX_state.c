@@ -166,7 +166,7 @@ VkResult genX(CreateSampler)(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
 
-   sampler = vk_alloc2(&device->alloc, pAllocator, sizeof(*sampler), 8,
+   sampler = vk_zalloc2(&device->alloc, pAllocator, sizeof(*sampler), 8,
                         VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (!sampler)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -181,55 +181,57 @@ VkResult genX(CreateSampler)(
    bool enable_mag_filter_addr_rounding =
       pCreateInfo->magFilter != VK_FILTER_NEAREST;
 
-   struct GENX(SAMPLER_STATE) sampler_state = {
-      .SamplerDisable = false,
-      .TextureBorderColorMode = DX10OGL,
+   for (unsigned p = 0; p < sampler->n_planes; p++) {
+      struct GENX(SAMPLER_STATE) sampler_state = {
+         .SamplerDisable = false,
+         .TextureBorderColorMode = DX10OGL,
 
 #if GEN_GEN >= 8
-      .LODPreClampMode = CLAMP_MODE_OGL,
+         .LODPreClampMode = CLAMP_MODE_OGL,
 #else
-      .LODPreClampEnable = CLAMP_ENABLE_OGL,
+         .LODPreClampEnable = CLAMP_ENABLE_OGL,
 #endif
 
 #if GEN_GEN == 8
-      .BaseMipLevel = 0.0,
+         .BaseMipLevel = 0.0,
 #endif
-      .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipmapMode],
-      .MagModeFilter = vk_to_gen_tex_filter(pCreateInfo->magFilter,
-                                            pCreateInfo->anisotropyEnable),
-      .MinModeFilter = vk_to_gen_tex_filter(pCreateInfo->minFilter,
-                                            pCreateInfo->anisotropyEnable),
-      .TextureLODBias = anv_clamp_f(pCreateInfo->mipLodBias, -16, 15.996),
-      .AnisotropicAlgorithm = EWAApproximation,
-      .MinLOD = anv_clamp_f(pCreateInfo->minLod, 0, 14),
-      .MaxLOD = anv_clamp_f(pCreateInfo->maxLod, 0, 14),
-      .ChromaKeyEnable = 0,
-      .ChromaKeyIndex = 0,
-      .ChromaKeyMode = 0,
-      .ShadowFunction = vk_to_gen_shadow_compare_op[pCreateInfo->compareOp],
-      .CubeSurfaceControlMode = OVERRIDE,
+         .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipmapMode],
+         .MagModeFilter = vk_to_gen_tex_filter(pCreateInfo->magFilter,
+                                               pCreateInfo->anisotropyEnable),
+         .MinModeFilter = vk_to_gen_tex_filter(pCreateInfo->minFilter,
+                                               pCreateInfo->anisotropyEnable),
+         .TextureLODBias = anv_clamp_f(pCreateInfo->mipLodBias, -16, 15.996),
+         .AnisotropicAlgorithm = EWAApproximation,
+         .MinLOD = anv_clamp_f(pCreateInfo->minLod, 0, 14),
+         .MaxLOD = anv_clamp_f(pCreateInfo->maxLod, 0, 14),
+         .ChromaKeyEnable = 0,
+         .ChromaKeyIndex = 0,
+         .ChromaKeyMode = 0,
+         .ShadowFunction = vk_to_gen_shadow_compare_op[pCreateInfo->compareOp],
+         .CubeSurfaceControlMode = OVERRIDE,
 
-      .BorderColorPointer = border_color_offset,
+         .BorderColorPointer = border_color_offset,
 
 #if GEN_GEN >= 8
-      .LODClampMagnificationMode = MIPNONE,
+         .LODClampMagnificationMode = MIPNONE,
 #endif
 
-      .MaximumAnisotropy = vk_to_gen_max_anisotropy(pCreateInfo->maxAnisotropy),
-      .RAddressMinFilterRoundingEnable = enable_min_filter_addr_rounding,
-      .RAddressMagFilterRoundingEnable = enable_mag_filter_addr_rounding,
-      .VAddressMinFilterRoundingEnable = enable_min_filter_addr_rounding,
-      .VAddressMagFilterRoundingEnable = enable_mag_filter_addr_rounding,
-      .UAddressMinFilterRoundingEnable = enable_min_filter_addr_rounding,
-      .UAddressMagFilterRoundingEnable = enable_mag_filter_addr_rounding,
-      .TrilinearFilterQuality = 0,
-      .NonnormalizedCoordinateEnable = pCreateInfo->unnormalizedCoordinates,
-      .TCXAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeU],
-      .TCYAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeV],
-      .TCZAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeW],
-   };
+         .MaximumAnisotropy = vk_to_gen_max_anisotropy(pCreateInfo->maxAnisotropy),
+         .RAddressMinFilterRoundingEnable = enable_min_filter_addr_rounding,
+         .RAddressMagFilterRoundingEnable = enable_mag_filter_addr_rounding,
+         .VAddressMinFilterRoundingEnable = enable_min_filter_addr_rounding,
+         .VAddressMagFilterRoundingEnable = enable_mag_filter_addr_rounding,
+         .UAddressMinFilterRoundingEnable = enable_min_filter_addr_rounding,
+         .UAddressMagFilterRoundingEnable = enable_mag_filter_addr_rounding,
+         .TrilinearFilterQuality = 0,
+         .NonnormalizedCoordinateEnable = pCreateInfo->unnormalizedCoordinates,
+         .TCXAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeU],
+         .TCYAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeV],
+         .TCZAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeW],
+      };
 
-   GENX(SAMPLER_STATE_pack)(NULL, sampler->state, &sampler_state);
+      GENX(SAMPLER_STATE_pack)(NULL, sampler->state[p], &sampler_state);
+   }
 
    *pSampler = anv_sampler_to_handle(sampler);
 

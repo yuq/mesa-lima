@@ -2545,7 +2545,7 @@ void anv_fill_buffer_surface_state(struct anv_device *device,
                                    uint32_t stride);
 
 struct anv_sampler {
-   uint32_t state[4];
+   uint32_t state[3][4];
    uint32_t n_planes;
 };
 

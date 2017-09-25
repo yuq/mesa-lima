@@ -1742,7 +1742,7 @@ emit_samplers(struct anv_cmd_buffer *cmd_buffer,
          continue;
 
       memcpy(state->map + (s * 16),
-             sampler->state, sizeof(sampler->state));
+             sampler->state[binding->plane], sizeof(sampler->state[0]));
    }
 
    anv_state_flush(cmd_buffer->device, *state);
