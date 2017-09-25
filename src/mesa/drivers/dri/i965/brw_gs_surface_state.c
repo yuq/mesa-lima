@@ -41,7 +41,8 @@ brw_upload_gs_pull_constants(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->gs.base;
 
    /* BRW_NEW_GEOMETRY_PROGRAM */
-   struct brw_program *gp = (struct brw_program *) brw->geometry_program;
+   struct brw_program *gp =
+      (struct brw_program *) brw->programs[MESA_SHADER_GEOMETRY];
 
    if (!gp)
       return;
@@ -94,7 +95,7 @@ static void
 brw_upload_gs_abo_surfaces(struct brw_context *brw)
 {
    /* _NEW_PROGRAM */
-   const struct gl_program *gp = brw->geometry_program;
+   const struct gl_program *gp = brw->programs[MESA_SHADER_GEOMETRY];
 
    if (gp) {
       /* BRW_NEW_GS_PROG_DATA */
@@ -116,7 +117,7 @@ static void
 brw_upload_gs_image_surfaces(struct brw_context *brw)
 {
    /* BRW_NEW_GEOMETRY_PROGRAM */
-   const struct gl_program *gp = brw->geometry_program;
+   const struct gl_program *gp = brw->programs[MESA_SHADER_GEOMETRY];
 
    if (gp) {
       /* BRW_NEW_GS_PROG_DATA, BRW_NEW_IMAGE_UNITS, _NEW_TEXTURE */

@@ -204,6 +204,12 @@ brw_upload_constant_buffer(struct brw_context *brw)
    GLuint i;
    gl_clip_plane *clip_planes;
 
+   /* BRW_NEW_FRAGMENT_PROGRAM */
+   struct gl_program *fp = brw->programs[MESA_SHADER_FRAGMENT];
+
+   /* BRW_NEW_VERTEX_PROGRAM */
+   struct gl_program *vp = brw->programs[MESA_SHADER_VERTEX];
+
    if (sz == 0) {
       goto emit;
    }
@@ -215,7 +221,7 @@ brw_upload_constant_buffer(struct brw_context *brw)
 
    /* fragment shader constants */
    if (brw->curbe.wm_size) {
-      _mesa_load_state_parameters(ctx, brw->fragment_program->Parameters);
+      _mesa_load_state_parameters(ctx, fp->Parameters);
 
       /* BRW_NEW_PUSH_CONSTANT_ALLOCATION */
       GLuint offset = brw->curbe.wm_start * 16;
@@ -257,7 +263,7 @@ brw_upload_constant_buffer(struct brw_context *brw)
 
    /* vertex shader constants */
    if (brw->curbe.vs_size) {
-      _mesa_load_state_parameters(ctx, brw->vertex_program->Parameters);
+      _mesa_load_state_parameters(ctx, vp->Parameters);
 
       GLuint offset = brw->curbe.vs_start * 16;
 
@@ -325,7 +331,7 @@ emit:
     * BRW_NEW_FRAGMENT_PROGRAM
     */
    if (devinfo->gen == 4 && !devinfo->is_g4x &&
-       (brw->fragment_program->info.inputs_read & (1 << VARYING_SLOT_POS))) {
+       (fp->info.inputs_read & (1 << VARYING_SLOT_POS))) {
       BEGIN_BATCH(2);
       OUT_BATCH(_3DSTATE_GLOBAL_DEPTH_OFFSET_CLAMP << 16 | (2 - 2));
       OUT_BATCH(0);

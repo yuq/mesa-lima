@@ -165,8 +165,10 @@ void
 brw_tes_populate_key(struct brw_context *brw,
                      struct brw_tes_prog_key *key)
 {
-   struct brw_program *tcp = (struct brw_program *) brw->tess_ctrl_program;
-   struct brw_program *tep = (struct brw_program *) brw->tess_eval_program;
+   struct brw_program *tcp =
+      (struct brw_program *) brw->programs[MESA_SHADER_TESS_CTRL];
+   struct brw_program *tep =
+      (struct brw_program *) brw->programs[MESA_SHADER_TESS_EVAL];
    struct gl_program *prog = &tep->program;
 
    uint64_t per_vertex_slots = prog->info.inputs_read;
@@ -200,7 +202,8 @@ brw_upload_tes_prog(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->tes.base;
    struct brw_tes_prog_key key;
    /* BRW_NEW_TESS_PROGRAMS */
-   struct brw_program *tep = (struct brw_program *) brw->tess_eval_program;
+   struct brw_program *tep =
+      (struct brw_program *) brw->programs[MESA_SHADER_TESS_EVAL];
 
    if (!brw_state_dirty(brw,
                         _NEW_TEXTURE,

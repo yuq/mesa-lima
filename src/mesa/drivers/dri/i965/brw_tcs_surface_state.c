@@ -41,7 +41,8 @@ brw_upload_tcs_pull_constants(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->tcs.base;
 
    /* BRW_NEW_TESS_PROGRAMS */
-   struct brw_program *tcp = (struct brw_program *) brw->tess_ctrl_program;
+   struct brw_program *tcp =
+      (struct brw_program *) brw->programs[MESA_SHADER_TESS_CTRL];
 
    if (!tcp)
       return;
@@ -94,7 +95,7 @@ static void
 brw_upload_tcs_abo_surfaces(struct brw_context *brw)
 {
    /* _NEW_PROGRAM */
-   const struct gl_program *tcp = brw->tess_ctrl_program;
+   const struct gl_program *tcp = brw->programs[MESA_SHADER_TESS_CTRL];
 
    if (tcp) {
       /* BRW_NEW_TCS_PROG_DATA */
@@ -117,7 +118,7 @@ static void
 brw_upload_tcs_image_surfaces(struct brw_context *brw)
 {
    /* BRW_NEW_TESS_PROGRAMS */
-   const struct gl_program *tcp = brw->tess_ctrl_program;
+   const struct gl_program *tcp = brw->programs[MESA_SHADER_TESS_CTRL];
 
    if (tcp) {
       /* BRW_NEW_TCS_PROG_DATA, BRW_NEW_IMAGE_UNITS */

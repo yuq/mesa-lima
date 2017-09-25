@@ -65,10 +65,10 @@ gen7_allocate_push_constants(struct brw_context *brw)
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    /* BRW_NEW_GEOMETRY_PROGRAM */
-   bool gs_present = brw->geometry_program;
+   bool gs_present = brw->programs[MESA_SHADER_GEOMETRY];
 
    /* BRW_NEW_TESS_PROGRAMS */
-   bool tess_present = brw->tess_eval_program;
+   bool tess_present = brw->programs[MESA_SHADER_TESS_EVAL];
 
    unsigned avail_size = 16;
    unsigned multiplier =

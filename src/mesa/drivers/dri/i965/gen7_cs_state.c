@@ -114,7 +114,8 @@ gen7_upload_cs_push_constants(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->cs.base;
 
    /* BRW_NEW_COMPUTE_PROGRAM */
-   const struct brw_program *cp = (struct brw_program *) brw->compute_program;
+   const struct brw_program *cp =
+      (struct brw_program *) brw->programs[MESA_SHADER_COMPUTE];
 
    if (cp) {
       /* BRW_NEW_CS_PROG_DATA */
@@ -148,7 +149,8 @@ brw_upload_cs_pull_constants(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->cs.base;
 
    /* BRW_NEW_COMPUTE_PROGRAM */
-   struct brw_program *cp = (struct brw_program *) brw->compute_program;
+   struct brw_program *cp =
+      (struct brw_program *) brw->programs[MESA_SHADER_COMPUTE];
 
    /* BRW_NEW_CS_PROG_DATA */
    const struct brw_stage_prog_data *prog_data = brw->cs.base.prog_data;

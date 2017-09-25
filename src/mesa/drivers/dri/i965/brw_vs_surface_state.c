@@ -113,7 +113,8 @@ brw_upload_vs_pull_constants(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->vs.base;
 
    /* BRW_NEW_VERTEX_PROGRAM */
-   struct brw_program *vp = (struct brw_program *) brw->vertex_program;
+   struct brw_program *vp =
+      (struct brw_program *) brw->programs[MESA_SHADER_VERTEX];
 
    /* BRW_NEW_VS_PROG_DATA */
    const struct brw_stage_prog_data *prog_data = brw->vs.base.prog_data;
@@ -159,7 +160,7 @@ static void
 brw_upload_vs_abo_surfaces(struct brw_context *brw)
 {
    /* _NEW_PROGRAM */
-   const struct gl_program *vp = brw->vertex_program;
+   const struct gl_program *vp = brw->programs[MESA_SHADER_VERTEX];
 
    if (vp) {
       /* BRW_NEW_VS_PROG_DATA */
@@ -181,7 +182,7 @@ static void
 brw_upload_vs_image_surfaces(struct brw_context *brw)
 {
    /* BRW_NEW_VERTEX_PROGRAM */
-   const struct gl_program *vp = brw->vertex_program;
+   const struct gl_program *vp = brw->programs[MESA_SHADER_VERTEX];
 
    if (vp) {
       /* BRW_NEW_VS_PROG_DATA, BRW_NEW_IMAGE_UNITS, _NEW_TEXTURE */

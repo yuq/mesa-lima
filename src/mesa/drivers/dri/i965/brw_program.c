@@ -151,15 +151,15 @@ static void brwDeleteProgram( struct gl_context *ctx,
 
    /* Beware!  prog's refcount has reached zero, and it's about to be freed.
     *
-    * In brw_upload_pipeline_state(), we compare brw->foo_program to
+    * In brw_upload_pipeline_state(), we compare brw->programs[i] to
     * ctx->FooProgram._Current, and flag BRW_NEW_FOO_PROGRAM if the
     * pointer has changed.
     *
-    * We cannot leave brw->foo_program as a dangling pointer to the dead
+    * We cannot leave brw->programs[i] as a dangling pointer to the dead
     * program.  malloc() may allocate the same memory for a new gl_program,
     * causing us to see matching pointers...but totally different programs.
     *
-    * We cannot set brw->foo_program to NULL, either.  If we've deleted the
+    * We cannot set brw->programs[i] to NULL, either.  If we've deleted the
     * active program, Mesa may set ctx->FooProgram._Current to NULL.  That
     * would cause us to see matching pointers (NULL == NULL), and fail to
     * detect that a program has changed since our last draw.
@@ -172,23 +172,10 @@ static void brwDeleteProgram( struct gl_context *ctx,
     */
    static const struct gl_program deleted_program;
 
-   if (brw->vertex_program == prog)
-      brw->vertex_program = &deleted_program;
-
-   if (brw->tess_ctrl_program == prog)
-      brw->tess_ctrl_program = &deleted_program;
-
-   if (brw->tess_eval_program == prog)
-      brw->tess_eval_program = &deleted_program;
-
-   if (brw->geometry_program == prog)
-      brw->geometry_program = &deleted_program;
-
-   if (brw->fragment_program == prog)
-      brw->fragment_program = &deleted_program;
-
-   if (brw->compute_program == prog)
-      brw->compute_program = &deleted_program;
+   for (int i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (brw->programs[i] == prog)
+         brw->programs[i] = (struct gl_program *) &deleted_program;
+   }
 
    _mesa_delete_program( ctx, prog );
 }
@@ -208,7 +195,7 @@ brwProgramStringNotify(struct gl_context *ctx,
    case GL_FRAGMENT_PROGRAM_ARB: {
       struct brw_program *newFP = brw_program(prog);
       const struct brw_program *curFP =
-         brw_program_const(brw->fragment_program);
+         brw_program_const(brw->programs[MESA_SHADER_FRAGMENT]);
 
       if (newFP == curFP)
 	 brw->ctx.NewDriverState |= BRW_NEW_FRAGMENT_PROGRAM;
@@ -224,7 +211,7 @@ brwProgramStringNotify(struct gl_context *ctx,
    case GL_VERTEX_PROGRAM_ARB: {
       struct brw_program *newVP = brw_program(prog);
       const struct brw_program *curVP =
-         brw_program_const(brw->vertex_program);
+         brw_program_const(brw->programs[MESA_SHADER_VERTEX]);
 
       if (newVP == curVP)
 	 brw->ctx.NewDriverState |= BRW_NEW_VERTEX_PROGRAM;

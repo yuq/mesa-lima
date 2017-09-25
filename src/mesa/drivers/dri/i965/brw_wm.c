@@ -460,8 +460,8 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FRAGMENT_PROGRAM */
-   const struct brw_program *fp = brw_program_const(brw->fragment_program);
-   const struct gl_program *prog = (struct gl_program *) brw->fragment_program;
+   const struct gl_program *prog = brw->programs[MESA_SHADER_FRAGMENT];
+   const struct brw_program *fp = brw_program_const(prog);
    GLuint lookup = 0;
    GLuint line_aa;
 
@@ -595,7 +595,8 @@ void
 brw_upload_wm_prog(struct brw_context *brw)
 {
    struct brw_wm_prog_key key;
-   struct brw_program *fp = (struct brw_program *) brw->fragment_program;
+   struct brw_program *fp =
+      (struct brw_program *) brw->programs[MESA_SHADER_FRAGMENT];
 
    if (!brw_wm_state_dirty(brw))
       return;

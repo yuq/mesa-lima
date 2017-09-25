@@ -177,7 +177,8 @@ brw_cs_populate_key(struct brw_context *brw, struct brw_cs_prog_key *key)
 {
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_COMPUTE_PROGRAM */
-   const struct brw_program *cp = (struct brw_program *) brw->compute_program;
+   const struct brw_program *cp =
+      (struct brw_program *) brw->programs[MESA_SHADER_COMPUTE];
    const struct gl_program *prog = (struct gl_program *) cp;
 
    memset(key, 0, sizeof(*key));
@@ -195,7 +196,8 @@ brw_upload_cs_prog(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    struct brw_cs_prog_key key;
-   struct brw_program *cp = (struct brw_program *) brw->compute_program;
+   struct brw_program *cp =
+      (struct brw_program *) brw->programs[MESA_SHADER_COMPUTE];
 
    if (!cp)
       return;

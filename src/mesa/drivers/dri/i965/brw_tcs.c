@@ -295,8 +295,10 @@ brw_tcs_populate_key(struct brw_context *brw,
                      struct brw_tcs_prog_key *key)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   struct brw_program *tcp = (struct brw_program *) brw->tess_ctrl_program;
-   struct brw_program *tep = (struct brw_program *) brw->tess_eval_program;
+   struct brw_program *tcp =
+      (struct brw_program *) brw->programs[MESA_SHADER_TESS_CTRL];
+   struct brw_program *tep =
+      (struct brw_program *) brw->programs[MESA_SHADER_TESS_EVAL];
    struct gl_program *tes_prog = &tep->program;
 
    uint64_t per_vertex_slots = tes_prog->info.inputs_read;
@@ -337,9 +339,10 @@ brw_upload_tcs_prog(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->tcs.base;
    struct brw_tcs_prog_key key;
    /* BRW_NEW_TESS_PROGRAMS */
-   struct brw_program *tcp = (struct brw_program *) brw->tess_ctrl_program;
+   struct brw_program *tcp =
+      (struct brw_program *) brw->programs[MESA_SHADER_TESS_CTRL];
    MAYBE_UNUSED struct brw_program *tep =
-      (struct brw_program *) brw->tess_eval_program;
+      (struct brw_program *) brw->programs[MESA_SHADER_TESS_EVAL];
    assert(tep);
 
    if (!brw_state_dirty(brw,

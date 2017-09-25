@@ -305,8 +305,8 @@ brw_vs_populate_key(struct brw_context *brw,
 {
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_VERTEX_PROGRAM */
-   struct brw_program *vp = (struct brw_program *)brw->vertex_program;
-   struct gl_program *prog = (struct gl_program *) brw->vertex_program;
+   struct gl_program *prog = brw->programs[MESA_SHADER_VERTEX];
+   struct brw_program *vp = (struct brw_program *) prog;
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    memset(key, 0, sizeof(*key));
@@ -356,7 +356,8 @@ brw_upload_vs_prog(struct brw_context *brw)
 {
    struct brw_vs_prog_key key;
    /* BRW_NEW_VERTEX_PROGRAM */
-   struct brw_program *vp = (struct brw_program *)brw->vertex_program;
+   struct brw_program *vp =
+      (struct brw_program *) brw->programs[MESA_SHADER_VERTEX];
 
    if (!brw_vs_state_dirty(brw))
       return;

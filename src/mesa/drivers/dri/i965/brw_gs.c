@@ -185,7 +185,8 @@ brw_gs_populate_key(struct brw_context *brw,
                     struct brw_gs_prog_key *key)
 {
    struct gl_context *ctx = &brw->ctx;
-   struct brw_program *gp = (struct brw_program *) brw->geometry_program;
+   struct brw_program *gp =
+      (struct brw_program *) brw->programs[MESA_SHADER_GEOMETRY];
 
    memset(key, 0, sizeof(*key));
 
@@ -201,7 +202,8 @@ brw_upload_gs_prog(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->gs.base;
    struct brw_gs_prog_key key;
    /* BRW_NEW_GEOMETRY_PROGRAM */
-   struct brw_program *gp = (struct brw_program *) brw->geometry_program;
+   struct brw_program *gp =
+      (struct brw_program *) brw->programs[MESA_SHADER_GEOMETRY];
 
    if (!brw_gs_state_dirty(brw))
       return;

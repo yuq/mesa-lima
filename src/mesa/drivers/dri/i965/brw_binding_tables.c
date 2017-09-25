@@ -153,7 +153,7 @@ static void
 brw_tcs_upload_binding_table(struct brw_context *brw)
 {
    /* Skip if the tessellation stages are disabled. */
-   if (brw->tess_eval_program == NULL)
+   if (brw->programs[MESA_SHADER_TESS_EVAL] == NULL)
       return;
 
    /* BRW_NEW_TCS_PROG_DATA */
@@ -182,7 +182,7 @@ static void
 brw_tes_upload_binding_table(struct brw_context *brw)
 {
    /* If there's no TES, skip changing anything. */
-   if (brw->tess_eval_program == NULL)
+   if (brw->programs[MESA_SHADER_TESS_EVAL] == NULL)
       return;
 
    /* BRW_NEW_TES_PROG_DATA */
@@ -210,7 +210,7 @@ static void
 brw_gs_upload_binding_table(struct brw_context *brw)
 {
    /* If there's no GS, skip changing anything. */
-   if (brw->geometry_program == NULL)
+   if (brw->programs[MESA_SHADER_GEOMETRY] == NULL)
       return;
 
    /* BRW_NEW_GS_PROG_DATA */
