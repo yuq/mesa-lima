@@ -162,6 +162,13 @@ create_group(struct parser_context *ctx,
    group->spec = ctx->spec;
    group->variable = false;
 
+   for (int i = 0; atts[i]; i += 2) {
+      char *p;
+      if (strcmp(atts[i], "length") == 0) {
+         group->dw_length = strtoul(atts[i + 1], &p, 0);
+      }
+   }
+
    if (parent) {
       group->parent = parent;
       get_group_offset_count(atts,

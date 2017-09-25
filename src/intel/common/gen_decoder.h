@@ -87,6 +87,7 @@ struct gen_group {
 
    struct gen_field *fields; /* linked list of fields */
 
+   uint32_t dw_length;
    uint32_t group_offset, group_count;
    uint32_t group_size;
    bool variable;
