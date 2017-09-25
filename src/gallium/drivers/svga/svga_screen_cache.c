@@ -364,7 +364,7 @@ svga_screen_cache_flush(struct svga_screen *svgascreen,
           * It will be done using the current context.
           */
          if (svga->swc->surface_invalidate(svga->swc, entry->handle) != PIPE_OK) {
-            enum pipe_error ret;
+            MAYBE_UNUSED enum pipe_error ret;
 
             /* Even though surface invalidation here is done after the command
              * buffer is flushed, it is still possible that it will
