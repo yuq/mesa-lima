@@ -779,9 +779,6 @@ struct brw_context
 
    struct brw_cache cache;
 
-   /** IDs for meta stencil blit shader programs. */
-   struct gl_shader_program *meta_stencil_blit_programs[2];
-
    /* Whether a meta-operation is in progress. */
    bool meta_in_progress;
 
