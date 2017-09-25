@@ -1324,6 +1324,9 @@ struct anv_descriptor_update_template {
 };
 
 size_t
+anv_descriptor_set_binding_layout_get_hw_size(const struct anv_descriptor_set_binding_layout *binding);
+
+size_t
 anv_descriptor_set_layout_size(const struct anv_descriptor_set_layout *layout);
 
 void
@@ -1384,6 +1387,9 @@ struct anv_pipeline_binding {
 
    /* Index in the binding */
    uint32_t index;
+
+   /* Plane in the binding index */
+   uint8_t plane;
 
    /* Input attachment index (relative to the subpass) */
    uint8_t input_attachment_index;
@@ -2540,6 +2546,7 @@ void anv_fill_buffer_surface_state(struct anv_device *device,
 
 struct anv_sampler {
    uint32_t state[4];
+   uint32_t n_planes;
 };
 
 struct anv_framebuffer {
