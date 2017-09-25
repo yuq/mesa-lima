@@ -700,16 +700,20 @@ struct radv_vertex_binding {
 	VkDeviceSize                                 offset;
 };
 
-struct radv_dynamic_state {
-	struct {
-		uint32_t                                  count;
-		VkViewport                                viewports[MAX_VIEWPORTS];
-	} viewport;
+struct radv_viewport_state {
+	uint32_t                                          count;
+	VkViewport                                        viewports[MAX_VIEWPORTS];
+};
 
-	struct {
-		uint32_t                                  count;
-		VkRect2D                                  scissors[MAX_SCISSORS];
-	} scissor;
+struct radv_scissor_state {
+	uint32_t                                          count;
+	VkRect2D                                          scissors[MAX_SCISSORS];
+};
+
+struct radv_dynamic_state {
+	struct radv_viewport_state                        viewport;
+
+	struct radv_scissor_state                         scissor;
 
 	float                                        line_width;
 
