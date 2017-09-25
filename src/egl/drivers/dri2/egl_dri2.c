@@ -3195,16 +3195,11 @@ dri2_interop_export_object(_EGLDisplay *dpy, _EGLContext *ctx,
 
 /**
  * This is the main entrypoint into the driver, called by libEGL.
- * Create a new _EGLDriver object and init its dispatch table.
+ * Gets an _EGLDriver object and init its dispatch table.
  */
-_EGLDriver *
-_eglBuiltInDriver(void)
+void
+_eglInitDriver(_EGLDriver *dri2_drv)
 {
-   _EGLDriver *dri2_drv = calloc(1, sizeof *dri2_drv);
-   if (!dri2_drv)
-      return NULL;
-
-   _eglInitDriverFallbacks(dri2_drv);
    dri2_drv->API.Initialize = dri2_initialize;
    dri2_drv->API.Terminate = dri2_terminate;
    dri2_drv->API.CreateContext = dri2_create_context;
@@ -3255,6 +3250,4 @@ _eglBuiltInDriver(void)
    dri2_drv->API.DupNativeFenceFDANDROID = dri2_dup_native_fence_fd;
 
    dri2_drv->Name = "DRI2";
-
-   return dri2_drv;
 }
