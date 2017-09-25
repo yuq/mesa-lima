@@ -1257,7 +1257,7 @@ special_requirements_for_handling_double_precision_data_types(
 
 bool
 brw_validate_instructions(const struct gen_device_info *devinfo,
-                          void *assembly, int start_offset, int end_offset,
+                          const void *assembly, int start_offset, int end_offset,
                           struct annotation_info *annotation)
 {
    bool valid = true;

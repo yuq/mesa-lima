@@ -549,7 +549,7 @@ void brw_debug_compact_uncompact(const struct gen_device_info *devinfo,
 
 /* brw_eu_validate.c */
 bool brw_validate_instructions(const struct gen_device_info *devinfo,
-                               void *assembly, int start_offset, int end_offset,
+                               const void *assembly, int start_offset, int end_offset,
                                struct annotation_info *annotation);
 
 static inline int
