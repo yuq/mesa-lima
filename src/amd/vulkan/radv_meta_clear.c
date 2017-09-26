@@ -1392,7 +1392,7 @@ void radv_CmdClearColorImage(
 	bool cs = cmd_buffer->queue_family_index == RADV_QUEUE_COMPUTE;
 
 	if (cs)
-		radv_meta_begin_cleari(cmd_buffer, &saved_state.compute);
+		radv_meta_save_compute(&saved_state.compute, cmd_buffer, 16);
 	else
 		radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state.gfx, cmd_buffer);
 
@@ -1401,7 +1401,7 @@ void radv_CmdClearColorImage(
 			     rangeCount, pRanges, cs);
 
 	if (cs)
-		radv_meta_end_cleari(cmd_buffer, &saved_state.compute);
+		radv_meta_restore_compute(&saved_state.compute, cmd_buffer, 16);
 	else
 		radv_meta_restore(&saved_state.gfx, cmd_buffer);
 }

@@ -814,48 +814,6 @@ fail_itob:
 	return result;
 }
 
-void
-radv_meta_begin_itoi(struct radv_cmd_buffer *cmd_buffer,
-		     struct radv_meta_saved_compute_state *save)
-{
-	radv_meta_save_compute(save, cmd_buffer, 16);
-}
-
-void
-radv_meta_end_itoi(struct radv_cmd_buffer *cmd_buffer,
-		   struct radv_meta_saved_compute_state *save)
-{
-	radv_meta_restore_compute(save, cmd_buffer, 16);
-}
-
-void
-radv_meta_begin_bufimage(struct radv_cmd_buffer *cmd_buffer,
-			 struct radv_meta_saved_compute_state *save)
-{
-	radv_meta_save_compute(save, cmd_buffer, 12);
-}
-
-void
-radv_meta_end_bufimage(struct radv_cmd_buffer *cmd_buffer,
-		       struct radv_meta_saved_compute_state *save)
-{
-	radv_meta_restore_compute(save, cmd_buffer, 12);
-}
-
-void
-radv_meta_begin_cleari(struct radv_cmd_buffer *cmd_buffer,
-		       struct radv_meta_saved_compute_state *save)
-{
-	radv_meta_save_compute(save, cmd_buffer, 16);
-}
-
-void
-radv_meta_end_cleari(struct radv_cmd_buffer *cmd_buffer,
-		     struct radv_meta_saved_compute_state *save)
-{
-	radv_meta_restore_compute(save, cmd_buffer, 16);
-}
-
 static void
 create_iview(struct radv_cmd_buffer *cmd_buffer,
              struct radv_meta_blit2d_surf *surf,
