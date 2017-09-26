@@ -74,6 +74,14 @@ public:
    st_src_reg *reladdr;
    st_src_reg *reladdr2;
 
+   bool is_legal_tgsi_address_operand() const
+   {
+      /* 2D registers can't be used as an address operand, or if the address
+       * operand itself is a result of indirect addressing.
+       */
+      return (type == GLSL_TYPE_INT || type == GLSL_TYPE_UINT) &&
+             !has_index2 && !reladdr && !reladdr2;
+   }
 };
 
 class st_dst_reg {

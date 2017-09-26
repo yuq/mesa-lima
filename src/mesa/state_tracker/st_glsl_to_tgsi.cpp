@@ -193,6 +193,7 @@ public:
    bool use_shared_memory;
    bool has_tex_txf_lz;
    bool precise;
+   bool need_uarl;
 
    variable_storage *find_variable_storage(ir_variable *var);
 
@@ -803,8 +804,12 @@ glsl_to_tgsi_visitor::emit_arl(ir_instruction *ir,
 {
    int op = TGSI_OPCODE_ARL;
 
-   if (src0.type == GLSL_TYPE_INT || src0.type == GLSL_TYPE_UINT)
+   if (src0.type == GLSL_TYPE_INT || src0.type == GLSL_TYPE_UINT) {
+      if (!this->need_uarl && src0.is_legal_tgsi_address_operand())
+         return;
+
       op = TGSI_OPCODE_UARL;
+   }
 
    assert(dst.file == PROGRAM_ADDRESS);
    if (dst.index >= this->num_address_regs)
@@ -5246,7 +5251,7 @@ glsl_to_tgsi_visitor::merge_two_dsts(void)
 void
 glsl_to_tgsi_visitor::merge_registers(void)
 {
-
+   assert(need_uarl);
    struct lifetime *lifetimes =
          rzalloc_array(mem_ctx, struct lifetime, this->next_temp);
 
@@ -5327,6 +5332,7 @@ struct st_translate {
    const ubyte *outputMapping;
 
    unsigned procType;  /**< PIPE_SHADER_VERTEX/FRAGMENT */
+   bool need_uarl;
 };
 
 /** Map Mesa's SYSTEM_VALUE_x to TGSI_SEMANTIC_x */
@@ -5523,6 +5529,19 @@ dst_register(struct st_translate *t, gl_register_file file, unsigned index,
    }
 }
 
+static struct ureg_src
+translate_src(struct st_translate *t, const st_src_reg *src_reg);
+
+static struct ureg_src
+translate_addr(struct st_translate *t, const st_src_reg *reladdr,
+               unsigned addr_index)
+{
+   if (t->need_uarl || !reladdr->is_legal_tgsi_address_operand())
+      return ureg_src(t->address[addr_index]);
+
+   return translate_src(t, reladdr);
+}
+
 /**
  * Create a TGSI ureg_dst register from an st_dst_reg.
  */
@@ -5544,12 +5563,13 @@ translate_dst(struct st_translate *t,
 
    if (dst_reg->reladdr != NULL) {
       assert(dst_reg->file != PROGRAM_TEMPORARY);
-      dst = ureg_dst_indirect(dst, ureg_src(t->address[0]));
+      dst = ureg_dst_indirect(dst, translate_addr(t, dst_reg->reladdr, 0));
    }
 
    if (dst_reg->has_index2) {
       if (dst_reg->reladdr2)
-         dst = ureg_dst_dimension_indirect(dst, ureg_src(t->address[1]),
+         dst = ureg_dst_dimension_indirect(dst,
+                                           translate_addr(t, dst_reg->reladdr2, 1),
                                            dst_reg->index2D);
       else
          dst = ureg_dst_dimension(dst, dst_reg->index2D);
@@ -5652,7 +5672,8 @@ translate_src(struct st_translate *t, const st_src_reg *src_reg)
        * and UBO constant buffers (buffer, position).
        */
       if (src_reg->reladdr2)
-         src = ureg_src_dimension_indirect(src, ureg_src(t->address[1]),
+         src = ureg_src_dimension_indirect(src,
+                                           translate_addr(t, src_reg->reladdr2, 1),
                                            src_reg->index2D);
       else
          src = ureg_src_dimension(src, src_reg->index2D);
@@ -5672,7 +5693,7 @@ translate_src(struct st_translate *t, const st_src_reg *src_reg)
 
    if (src_reg->reladdr != NULL) {
       assert(src_reg->file != PROGRAM_TEMPORARY);
-      src = ureg_src_indirect(src, ureg_src(t->address[0]));
+      src = ureg_src_indirect(src, translate_addr(t, src_reg->reladdr, 0));
    }
 
    return src;
@@ -5760,7 +5781,8 @@ compile_tgsi_instruction(struct st_translate *t,
       assert(src[num_src].File != TGSI_FILE_NULL);
       if (inst->resource.reladdr)
          src[num_src] =
-            ureg_src_indirect(src[num_src], ureg_src(t->address[2]));
+            ureg_src_indirect(src[num_src],
+                              translate_addr(t, inst->resource.reladdr, 2));
       num_src++;
       for (i = 0; i < (int)inst->tex_offset_num_offset; i++) {
          texoffsets[i] = translate_tex_offset(t, &inst->tex_offsets[i]);
@@ -5809,7 +5831,8 @@ compile_tgsi_instruction(struct st_translate *t,
          tex_target = st_translate_texture_target(inst->tex_target, inst->tex_shadow);
       }
       if (inst->resource.reladdr)
-         src[0] = ureg_src_indirect(src[0], ureg_src(t->address[2]));
+         src[0] = ureg_src_indirect(src[0],
+                                    translate_addr(t, inst->resource.reladdr, 2));
       assert(src[0].File != TGSI_FILE_NULL);
       ureg_memory_insn(ureg, inst->op, dst, num_dst, src, num_src,
                        inst->buffer_access,
@@ -5832,7 +5855,8 @@ compile_tgsi_instruction(struct st_translate *t,
       }
       dst[0] = ureg_writemask(dst[0], inst->dst[0].writemask);
       if (inst->resource.reladdr)
-         dst[0] = ureg_dst_indirect(dst[0], ureg_src(t->address[2]));
+         dst[0] = ureg_dst_indirect(dst[0],
+                                    translate_addr(t, inst->resource.reladdr, 2));
       assert(dst[0].File != TGSI_FILE_NULL);
       ureg_memory_insn(ureg, inst->op, dst, num_dst, src, num_src,
                        inst->buffer_access,
@@ -6151,6 +6175,7 @@ st_translate_program(
    const ubyte outputSemanticName[],
    const ubyte outputSemanticIndex[])
 {
+   struct pipe_screen *screen = st_context(ctx)->pipe->screen;
    struct st_translate *t;
    unsigned i;
    struct gl_program_constants *frag_const =
@@ -6167,6 +6192,7 @@ st_translate_program(
    }
 
    t->procType = procType;
+   t->need_uarl = !screen->get_param(screen, PIPE_CAP_TGSI_ANY_REG_AS_ADDRESS);
    t->inputMapping = inputMapping;
    t->outputMapping = outputMapping;
    t->ureg = ureg;
@@ -6592,6 +6618,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
                                            PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED);
    v->has_tex_txf_lz = pscreen->get_param(pscreen,
                                           PIPE_CAP_TGSI_TEX_TXF_LZ);
+   v->need_uarl = !pscreen->get_param(pscreen, PIPE_CAP_TGSI_ANY_REG_AS_ADDRESS);
 
    v->variables = _mesa_hash_table_create(v->mem_ctx, _mesa_hash_pointer,
                                           _mesa_key_pointer_equal);
