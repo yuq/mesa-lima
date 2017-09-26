@@ -79,11 +79,6 @@ struct zwp_linux_dmabuf_v1;
 
 struct wl_buffer;
 
-struct dri2_egl_driver
-{
-   _EGLDriver base;
-};
-
 struct dri2_egl_display_vtbl {
    int (*authenticate)(_EGLDisplay *disp, uint32_t id);
 
