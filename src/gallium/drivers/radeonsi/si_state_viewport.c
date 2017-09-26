@@ -186,7 +186,7 @@ static void si_emit_guardband(struct si_context *ctx,
 	discard_x = 1.0;
 	discard_y = 1.0;
 
-	if (ctx->b.current_rast_prim < PIPE_PRIM_TRIANGLES) {
+	if (ctx->current_rast_prim < PIPE_PRIM_TRIANGLES) {
 		/* When rendering wide points or lines, we need to be more
 		 * conservative about when to discard them entirely. Since
 		 * point size can be determined by the VS output, we basically

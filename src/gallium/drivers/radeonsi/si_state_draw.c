@@ -531,7 +531,7 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 static void si_emit_rasterizer_prim_state(struct si_context *sctx)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	enum pipe_prim_type rast_prim = sctx->b.current_rast_prim;
+	enum pipe_prim_type rast_prim = sctx->current_rast_prim;
 	struct si_state_rasterizer *rs = sctx->emitted.named.rasterizer;
 
 	/* Skip this if not rendering lines. */
@@ -581,7 +581,7 @@ static void si_emit_draw_registers(struct si_context *sctx,
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	unsigned prim = si_conv_pipe_prim(info->mode);
-	unsigned gs_out_prim = si_conv_prim_to_gs_out(sctx->b.current_rast_prim);
+	unsigned gs_out_prim = si_conv_prim_to_gs_out(sctx->current_rast_prim);
 	unsigned ia_multi_vgt_param;
 
 	ia_multi_vgt_param = si_get_ia_multi_vgt_param(sctx, info, num_patches);
@@ -1257,15 +1257,15 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	} else
 		rast_prim = info->mode;
 
-	if (rast_prim != sctx->b.current_rast_prim) {
-		bool old_is_poly = sctx->b.current_rast_prim >= PIPE_PRIM_TRIANGLES;
+	if (rast_prim != sctx->current_rast_prim) {
+		bool old_is_poly = sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES;
 		bool new_is_poly = rast_prim >= PIPE_PRIM_TRIANGLES;
 		if (old_is_poly != new_is_poly) {
 			sctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
 			si_mark_atom_dirty(sctx, &sctx->scissors.atom);
 		}
 
-		sctx->b.current_rast_prim = rast_prim;
+		sctx->current_rast_prim = rast_prim;
 		sctx->do_update_shaders = true;
 	}
 
