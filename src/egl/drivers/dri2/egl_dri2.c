@@ -3178,14 +3178,6 @@ dri2_interop_export_object(_EGLDisplay *dpy, _EGLContext *ctx,
    return dri2_dpy->interop->export_object(dri2_ctx->dri_context, in, out);
 }
 
-static void
-dri2_unload(_EGLDriver *drv)
-{
-   struct dri2_egl_driver *dri2_drv = dri2_egl_driver(drv);
-
-   free(dri2_drv);
-}
-
 static EGLBoolean
 dri2_load(_EGLDriver *drv)
 {
@@ -3272,7 +3264,6 @@ _eglBuiltInDriver(void)
    dri2_drv->base.API.DupNativeFenceFDANDROID = dri2_dup_native_fence_fd;
 
    dri2_drv->base.Name = "DRI2";
-   dri2_drv->base.Unload = dri2_unload;
 
    return &dri2_drv->base;
 }

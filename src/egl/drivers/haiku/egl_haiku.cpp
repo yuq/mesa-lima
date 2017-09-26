@@ -308,14 +308,6 @@ haiku_swap_buffers(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSurface *surf)
 }
 
 
-extern "C"
-void
-haiku_unload(_EGLDriver* drv)
-{
-
-}
-
-
 /**
  * This is the main entrypoint into the driver, called by libEGL.
  * Create a new _EGLDriver object and init its dispatch table.
@@ -347,7 +339,6 @@ _eglBuiltInDriver(void)
 	driver->base.API.SwapBuffers = haiku_swap_buffers;
 
 	driver->base.Name = "Haiku";
-	driver->base.Unload = haiku_unload;
 
 	TRACE("API Calls defined\n");
 

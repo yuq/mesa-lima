@@ -120,8 +120,6 @@ void
 _eglUnloadDrivers(void)
 {
    /* this is called at atexit time */
-   if (_eglDriver && _eglDriver->Unload)
-      _eglDriver->Unload(_eglDriver);
-
+   free(_eglDriver);
    _eglDriver = NULL;
 }

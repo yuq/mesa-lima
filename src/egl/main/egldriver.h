@@ -80,13 +80,6 @@ struct _egl_driver
 {
    const char *Name;  /**< name of this driver */
 
-   /**
-    * Release the driver resource.
-    *
-    * It is called before dlclose().
-    */
-   void (*Unload)(_EGLDriver *drv);
-
    _EGLAPI API;  /**< EGL API dispatch table */
 };
 
