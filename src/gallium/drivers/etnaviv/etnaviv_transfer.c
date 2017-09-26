@@ -243,11 +243,16 @@ etna_transfer_map(struct pipe_context *pctx, struct pipe_resource *prsc,
 
    struct etna_resource_level *res_level = &rsc->levels[level];
 
-   /* Always sync if we have the temporary resource.  The PIPE_TRANSFER_READ
-    * case could be optimised if we knew whether the resource has outstanding
-    * rendering. */
-   if ((usage & PIPE_TRANSFER_READ || trans->rsc) &&
-       rsc->status & ETNA_PENDING_WRITE)
+   /*
+    * Always flush if we have the temporary resource and have a copy to this
+    * outstanding. Otherwise infer flush requirement from resource access and
+    * current GPU usage (reads must wait for GPU writes, writes must have
+    * exclusive access to the buffer).
+    */
+   if ((trans->rsc && (etna_resource(trans->rsc)->status & ETNA_PENDING_WRITE)) ||
+       (!trans->rsc &&
+        (((usage & PIPE_TRANSFER_READ) && (rsc->status & ETNA_PENDING_WRITE)) ||
+        ((usage & PIPE_TRANSFER_WRITE) && rsc->status))))
       pctx->flush(pctx, NULL, 0);
 
    /* XXX we don't handle PIPE_TRANSFER_FLUSH_EXPLICIT; this flag can be ignored
