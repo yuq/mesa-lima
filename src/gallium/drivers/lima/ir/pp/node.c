@@ -35,6 +35,22 @@ const ppir_op_info ppir_op_infos[] = {
       .name = "mov",
       .type = ppir_node_type_alu,
    },
+   [ppir_op_mul] = {
+      .name = "mul",
+      .type = ppir_node_type_alu,
+   },
+   [ppir_op_add] = {
+      .name = "add",
+      .type = ppir_node_type_alu,
+   },
+   [ppir_op_neg] = {
+      .name = "neg",
+      .type = ppir_node_type_alu,
+   },
+   [ppir_op_copy] = {
+      .name = "copy",
+      .type = ppir_node_type_alu,
+   },
    [ppir_op_load_varying] = {
       .name = "ld_var",
       .type = ppir_node_type_load,
@@ -185,6 +201,10 @@ ppir_node *ppir_node_insert_move(ppir_compiler *comp, ppir_node *node)
 
    move->children[0] = node;
    move->num_child = 1;
+
+   for (int i = 0; i < 4; i++)
+      move->src[0].swizzle[i] = i;
+
    return &move->node;
 }
 
