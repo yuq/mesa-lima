@@ -2384,7 +2384,15 @@ struct_specifier:
    | STRUCT '{' struct_declaration_list '}'
    {
       void *ctx = state->linalloc;
-      $$ = new(ctx) ast_struct_specifier(NULL, $3);
+
+      /* All anonymous structs have the same name. This simplifies matching of
+       * globals whose type is an unnamed struct.
+       *
+       * It also avoids a memory leak when the same shader is compiled over and
+       * over again.
+       */
+      $$ = new(ctx) ast_struct_specifier("#anon_struct", $3);
+
       $$->set_location_range(@2, @4);
    }
    ;

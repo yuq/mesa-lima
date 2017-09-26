@@ -1674,21 +1674,10 @@ ast_struct_specifier::print(void) const
 
 ast_struct_specifier::ast_struct_specifier(const char *identifier,
 					   ast_declarator_list *declarator_list)
+   : name(identifier), layout(NULL), declarations(), is_declaration(true),
+     type(NULL)
 {
-   if (identifier == NULL) {
-      /* All anonymous structs have the same name. This simplifies matching of
-       * globals whose type is an unnamed struct.
-       *
-       * It also avoids a memory leak when the same shader is compiled over and
-       * over again.
-       */
-      identifier = "#anon_struct";
-   }
-   name = identifier;
    this->declarations.push_degenerate_list_at_head(&declarator_list->link);
-   is_declaration = true;
-   layout = NULL;
-   type = NULL;
 }
 
 void ast_subroutine_list::print(void) const
