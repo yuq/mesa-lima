@@ -22,19 +22,43 @@
  *
  */
 
+#include <string.h>
+
 #include "util/ralloc.h"
+#include "util/bitscan.h"
 #include "compiler/nir/nir.h"
 #include "ppir.h"
 #include "nir.h"
 
-static inline void *ppir_node_create_ssa(ppir_compiler *comp, ppir_op op, nir_ssa_def *ssa)
+static void *ppir_node_create_ssa(ppir_compiler *comp, ppir_op op, nir_ssa_def *ssa)
 {
-   return ppir_node_create(comp, op, ssa->index);
+   ppir_node *node = ppir_node_create(comp, op, ssa->index);
+   if (!node)
+      return NULL;
+
+   ppir_dest *dest = ppir_node_get_dest(node);
+   if (dest)
+      dest->reg.ssa.num_components = ssa->num_components;
+   return node;
 }
 
-static inline void *ppir_node_create_reg(ppir_compiler *comp, ppir_op op, nir_reg_dest *reg)
+static void *ppir_node_create_reg(ppir_compiler *comp, ppir_op op, nir_reg_dest *reg)
 {
-   return ppir_node_create(comp, op, reg->reg->index + comp->reg_base);
+   ppir_node *node = ppir_node_create(comp, op, reg->reg->index + comp->reg_base);
+   if (!node)
+      return NULL;
+
+   ppir_dest *dest = ppir_node_get_dest(node);
+
+   list_for_each_entry(ppir_reg, r, &comp->reg_list, list) {
+      if (r->index == reg->reg->index) {
+         dest->reg.reg = r;
+         break;
+      }
+   }
+
+   dest->type = ppir_dest_register;
+   return node;
 }
 
 static void *ppir_node_create_dest(ppir_compiler *comp, ppir_op op, nir_dest *dest)
@@ -70,6 +94,10 @@ static int nir_to_ppir_opcodes[nir_num_opcodes] = {
    /* not supported */
    [0 ... nir_last_opcode] = -1,
 
+   [nir_op_vec2] = ppir_op_copy,
+   [nir_op_vec3] = ppir_op_copy,
+   [nir_op_vec4] = ppir_op_copy,
+
    [nir_op_fmul] = ppir_op_mul,
    [nir_op_fadd] = ppir_op_add,
    [nir_op_fneg] = ppir_op_neg,
@@ -88,6 +116,13 @@ static ppir_node *ppir_emit_alu(ppir_compiler *comp, nir_alu_instr *instr)
    if (!node)
       return NULL;
 
+   ppir_dest *pd = &node->dest;
+   nir_alu_dest *nd = &instr->dest;
+   if (nd->saturate)
+      pd->modifier = ppir_outmod_clamp_fraction;
+   if (!nd->dest.is_ssa)
+      pd->write_mask = nd->write_mask;
+
    unsigned num_child = nir_op_infos[instr->op].num_inputs;
    assert(num_child <= ARRAY_SIZE(node->children));
    node->num_child = num_child;
@@ -96,8 +131,12 @@ static ppir_node *ppir_emit_alu(ppir_compiler *comp, nir_alu_instr *instr)
       nir_alu_src *src = instr->src + i;
       ppir_node *child = ppir_node_find(comp, &src->src);
       node->children[i] = child;
-
       ppir_node_add_child(&node->node, child);
+
+      ppir_src *ps = node->src + i;
+      memcpy(ps->swizzle, src->swizzle, sizeof(ps->swizzle));
+      ps->absolute = src->abs;
+      ps->negate = src->negate;
    }
 
    return &node->node;
@@ -117,6 +156,9 @@ static ppir_node *ppir_emit_intrinsic(ppir_compiler *comp, nir_intrinsic_instr *
 
       lnode->index = nir_intrinsic_base(instr);
 
+      if (!instr->dest.is_ssa)
+         lnode->dest.write_mask = u_bit_consecutive(0, instr->num_components);
+
       return &lnode->node;
 
    case nir_intrinsic_load_uniform:
@@ -125,6 +167,9 @@ static ppir_node *ppir_emit_intrinsic(ppir_compiler *comp, nir_intrinsic_instr *
          return NULL;
 
       lnode->index = nir_intrinsic_base(instr);
+
+      if (!instr->dest.is_ssa)
+         lnode->dest.write_mask = u_bit_consecutive(0, instr->num_components);
 
       return &lnode->node;
 
@@ -288,6 +333,9 @@ static ppir_compiler *ppir_compiler_create(void *prog, unsigned num_reg, unsigne
       return NULL;
 
    list_inithead(&comp->block_list);
+   list_inithead(&comp->reg_list);
+
+   comp->cur_reg_index = num_reg;
    comp->var_nodes = (ppir_node **)(comp + 1);
    comp->reg_base = num_ssa;
    comp->prog = prog;
@@ -300,6 +348,16 @@ bool ppir_compile_nir(struct lima_fs_shader_state *prog, nir_shader *nir)
    ppir_compiler *comp = ppir_compiler_create(prog, func->reg_alloc, func->ssa_alloc);
    if (!comp)
       return false;
+
+   foreach_list_typed(nir_register, reg, node, &func->registers) {
+      ppir_reg *r = ralloc(comp, ppir_reg);
+      if (!r)
+         return false;
+
+      r->index = reg->index;
+      r->num_components = reg->num_components;
+      list_addtail(&r->list, &comp->reg_list);
+   }
 
    if (!ppir_emit_cf_list(comp, &func->body))
       goto err_out0;

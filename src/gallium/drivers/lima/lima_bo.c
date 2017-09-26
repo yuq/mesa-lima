@@ -29,7 +29,6 @@
 #include "lima.h"
 #include "lima_drm.h"
 
-#include "util/macros.h"
 #include "util/u_atomic.h"
 #include "os/os_mman.h"
 
