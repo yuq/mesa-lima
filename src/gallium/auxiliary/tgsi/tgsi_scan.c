@@ -458,6 +458,29 @@ scan_instruction(struct tgsi_shader_info *info,
       scan_src_operand(info, fullinst, &fullinst->Src[i], i,
                        tgsi_util_get_inst_usage_mask(fullinst, i),
                        is_interp_instruction, &is_mem_inst);
+
+      if (fullinst->Src[i].Register.Indirect) {
+         struct tgsi_full_src_register src = {{0}};
+
+         src.Register.File = fullinst->Src[i].Indirect.File;
+         src.Register.Index = fullinst->Src[i].Indirect.Index;
+
+         scan_src_operand(info, fullinst, &src, -1,
+                          1 << fullinst->Src[i].Indirect.Swizzle,
+                          false, NULL);
+      }
+
+      if (fullinst->Src[i].Register.Dimension &&
+          fullinst->Src[i].Dimension.Indirect) {
+         struct tgsi_full_src_register src = {{0}};
+
+         src.Register.File = fullinst->Src[i].DimIndirect.File;
+         src.Register.Index = fullinst->Src[i].DimIndirect.Index;
+
+         scan_src_operand(info, fullinst, &src, -1,
+                          1 << fullinst->Src[i].DimIndirect.Swizzle,
+                          false, NULL);
+      }
    }
 
    if (fullinst->Instruction.Texture) {
@@ -479,13 +502,31 @@ scan_instruction(struct tgsi_shader_info *info,
    /* check for indirect register writes */
    for (i = 0; i < fullinst->Instruction.NumDstRegs; i++) {
       const struct tgsi_full_dst_register *dst = &fullinst->Dst[i];
+
       if (dst->Register.Indirect) {
+         struct tgsi_full_src_register src = {{0}};
+
+         src.Register.File = dst->Indirect.File;
+         src.Register.Index = dst->Indirect.Index;
+
+         scan_src_operand(info, fullinst, &src, -1,
+                          1 << dst->Indirect.Swizzle, false, NULL);
+
          info->indirect_files |= (1 << dst->Register.File);
          info->indirect_files_written |= (1 << dst->Register.File);
       }
 
-      if (dst->Register.Dimension && dst->Dimension.Indirect)
+      if (dst->Register.Dimension && dst->Dimension.Indirect) {
+         struct tgsi_full_src_register src = {{0}};
+
+         src.Register.File = dst->DimIndirect.File;
+         src.Register.Index = dst->DimIndirect.Index;
+
+         scan_src_operand(info, fullinst, &src, -1,
+                          1 << dst->DimIndirect.Swizzle, false, NULL);
+
          info->dim_indirect_files |= 1u << dst->Register.File;
+      }
 
       if (is_memory_file(dst->Register.File)) {
          assert(fullinst->Instruction.Opcode == TGSI_OPCODE_STORE);
