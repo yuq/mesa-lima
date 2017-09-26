@@ -569,8 +569,7 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 /* si_viewport.c */
 void si_viewport_set_rast_deps(struct si_context *rctx,
 			       bool scissor_enable, bool clip_halfz);
-void si_update_vs_writes_viewport_index(struct si_context *ctx,
-					struct tgsi_shader_info *info);
+void si_update_vs_writes_viewport_index(struct si_context *ctx);
 void si_init_viewport_functions(struct si_context *ctx);
 
 

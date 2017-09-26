@@ -389,9 +389,9 @@ void si_viewport_set_rast_deps(struct si_context *ctx,
  * is delayed. When a shader with VIEWPORT_INDEX appears, this should be
  * called to emit the rest.
  */
-void si_update_vs_writes_viewport_index(struct si_context *ctx,
-					struct tgsi_shader_info *info)
+void si_update_vs_writes_viewport_index(struct si_context *ctx)
 {
+	struct tgsi_shader_info *info = si_get_vs_info(ctx);
 	bool vs_window_space;
 
 	if (!info)
