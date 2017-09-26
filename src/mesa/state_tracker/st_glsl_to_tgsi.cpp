@@ -4947,6 +4947,8 @@ glsl_to_tgsi_visitor::copy_propagate(void)
           !inst->dst[0].reladdr2 &&
           !inst->saturate &&
           inst->src[0].file != PROGRAM_ARRAY &&
+          (inst->src[0].file != PROGRAM_OUTPUT ||
+           this->shader->Stage != MESA_SHADER_TESS_CTRL) &&
           !inst->src[0].reladdr &&
           !inst->src[0].reladdr2 &&
           !inst->src[0].negate &&
@@ -6602,10 +6604,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
 
    /* Perform optimizations on the instructions in the glsl_to_tgsi_visitor. */
    v->simplify_cmp();
-
-   if (shader->Stage != MESA_SHADER_TESS_CTRL &&
-       shader->Stage != MESA_SHADER_TESS_EVAL)
-      v->copy_propagate();
+   v->copy_propagate();
 
    while (v->eliminate_dead_code());
 
