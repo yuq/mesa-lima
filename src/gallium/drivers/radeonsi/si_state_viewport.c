@@ -21,7 +21,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "r600_cs.h"
+#include "radeon/r600_cs.h"
 #include "util/u_viewport.h"
 #include "tgsi/tgsi_scan.h"
 
