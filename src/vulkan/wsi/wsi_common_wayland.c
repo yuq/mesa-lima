@@ -263,59 +263,72 @@ wsi_wl_display_finish(struct wsi_wl_display *display)
       wl_event_queue_destroy(display->queue);
 }
 
-static int
+static VkResult
 wsi_wl_display_init(struct wsi_wayland *wsi_wl,
                     struct wsi_wl_display *display,
                     struct wl_display *wl_display,
                     bool get_format_list)
 {
+   VkResult result = VK_SUCCESS;
    memset(display, 0, sizeof(*display));
 
    display->wsi_wl = wsi_wl;
    display->wl_display = wl_display;
 
    if (get_format_list) {
-      if (!u_vector_init(&display->formats, sizeof(VkFormat), 8))
+      if (!u_vector_init(&display->formats, sizeof(VkFormat), 8)) {
+         result = VK_ERROR_OUT_OF_HOST_MEMORY;
          goto fail;
+      }
    }
 
    display->queue = wl_display_create_queue(wl_display);
-   if (!display->queue)
+   if (!display->queue) {
+      result = VK_ERROR_OUT_OF_HOST_MEMORY;
       goto fail;
+   }
 
    display->wl_display_wrapper = wl_proxy_create_wrapper(wl_display);
-   if (!display->wl_display_wrapper)
+   if (!display->wl_display_wrapper) {
+      result = VK_ERROR_OUT_OF_HOST_MEMORY;
       goto fail;
+   }
 
    wl_proxy_set_queue((struct wl_proxy *) display->wl_display_wrapper,
                       display->queue);
 
    struct wl_registry *registry =
       wl_display_get_registry(display->wl_display_wrapper);
-   if (!registry)
+   if (!registry) {
+      result = VK_ERROR_OUT_OF_HOST_MEMORY;
       goto fail;
+   }
 
    wl_registry_add_listener(registry, &registry_listener, display);
 
    /* Round-trip to get the wl_drm global */
    wl_display_roundtrip_queue(display->wl_display, display->queue);
 
-   if (!display->drm)
+   if (!display->drm) {
+      result = VK_ERROR_SURFACE_LOST_KHR;
       goto fail_registry;
+   }
 
    /* Round-trip to get wl_drm formats and capabilities */
    wl_display_roundtrip_queue(display->wl_display, display->queue);
 
    /* We need prime support */
-   if (!(display->capabilities & WL_DRM_CAPABILITY_PRIME))
+   if (!(display->capabilities & WL_DRM_CAPABILITY_PRIME)) {
+      result = VK_ERROR_SURFACE_LOST_KHR;
       goto fail_registry;
+   }
 
    /* We don't need this anymore */
    wl_registry_destroy(registry);
 
    display->refcount = 0;
 
-   return 0;
+   return VK_SUCCESS;
 
 fail_registry:
    if (registry)
@@ -323,26 +336,29 @@ fail_registry:
 
 fail:
    wsi_wl_display_finish(display);
-   return -1;
+   return result;
 }
 
-static struct wsi_wl_display *
-wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
+static VkResult
+wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display,
+                      struct wsi_wl_display **display_out)
 {
    struct wsi_wl_display *display =
       vk_alloc(wsi->alloc, sizeof(*display), 8,
                VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
    if (!display)
-      return NULL;
+      return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-   if (wsi_wl_display_init(wsi, display, wl_display, true)) {
+   VkResult result = wsi_wl_display_init(wsi, display, wl_display, true);
+   if (result != VK_SUCCESS) {
       vk_free(wsi->alloc, display);
-      return NULL;
+      return result;
    }
 
    display->refcount++;
+   *display_out = display;
 
-   return display;
+   return result;
 }
 
 static struct wsi_wl_display *
@@ -841,16 +857,15 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
       struct wsi_wl_swapchain *old_chain = (void *)pCreateInfo->oldSwapchain;
       chain->display = wsi_wl_display_ref(old_chain->display);
    } else {
-      chain->display = wsi_wl_display_create(wsi, surface->display);
-      if (!chain->display) {
-         result = VK_ERROR_INITIALIZATION_FAILED;
+      chain->display = NULL;
+      result = wsi_wl_display_create(wsi, surface->display, &chain->display);
+      if (result != VK_SUCCESS)
          goto fail;
-      }
    }
 
    chain->surface = wl_proxy_create_wrapper(surface->surface);
    if (!chain->surface) {
-      result = VK_ERROR_INITIALIZATION_FAILED;
+      result = VK_ERROR_OUT_OF_HOST_MEMORY;
       goto fail;
    }
    wl_proxy_set_queue((struct wl_proxy *) chain->surface,
@@ -859,7 +874,7 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
 
    chain->drm_wrapper = wl_proxy_create_wrapper(chain->display->drm);
    if (!chain->drm_wrapper) {
-      result = VK_ERROR_INITIALIZATION_FAILED;
+      result = VK_ERROR_OUT_OF_HOST_MEMORY;
       goto fail;
    }
    wl_proxy_set_queue((struct wl_proxy *) chain->drm_wrapper,
