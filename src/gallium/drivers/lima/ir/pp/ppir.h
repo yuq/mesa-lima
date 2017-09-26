@@ -94,7 +94,7 @@ typedef enum {
    ppir_op_ne,
    ppir_op_not,
 
-   ppir_op_combine,
+   ppir_op_copy,
 
    ppir_op_load_uniform,
    ppir_op_load_varying,
@@ -133,10 +133,75 @@ typedef struct ppir_node {
    struct set *preds, *succs;
 } ppir_node;
 
+typedef enum {
+   ppir_pipeline_reg_const0,
+   ppir_pipeline_reg_const1,
+   ppir_pipeline_reg_sampler,
+   ppir_pipeline_reg_uniform,
+   ppir_pipeline_reg_vmul,
+   ppir_pipeline_reg_fmul,
+   ppir_pipeline_reg_discard, /* varying load */
+} ppir_pipeline_reg;
+
+typedef struct ppir_reg {
+   struct list_head list;
+
+   int index;
+   int num_components;
+} ppir_reg;
+
+typedef struct ppir_ssa {
+   int num_components;
+} ppir_ssa;
+
+typedef struct ppir_src {
+   enum {
+      ppir_src_ssa,
+      ppir_src_pipeline,
+      ppir_src_register,
+   } type;
+
+   union {
+      ppir_reg *reg;
+      ppir_pipeline_reg pipeline_reg;
+      ppir_ssa *ssa;
+   } reg;
+
+   uint8_t swizzle[4];
+   bool absolute, negate;
+} ppir_src;
+
+typedef enum {
+   ppir_outmod_none,
+   ppir_outmod_clamp_fraction,
+   ppir_outmod_clamp_positive,
+   ppir_outmod_round,
+} ppir_outmod;
+
+typedef struct ppir_dest {
+   enum {
+      ppir_dest_ssa,
+      ppir_dest_pipeline,
+      ppir_dest_register,
+   } type;
+
+   union {
+      ppir_reg *reg;
+      ppir_pipeline_reg pipeline_reg;
+      ppir_ssa ssa;
+   } reg;
+
+   ppir_outmod modifier;
+   unsigned write_mask : 4;
+} ppir_dest;
+
 typedef struct {
    ppir_node node;
-   ppir_node *children[2];
+   ppir_node *children[4];
    int num_child;
+
+   ppir_dest dest;
+   ppir_src src[4];
 } ppir_alu_node;
 
 typedef struct {
@@ -148,6 +213,8 @@ typedef struct {
 typedef struct {
    ppir_node node;
    int index;
+
+   ppir_dest dest;
 } ppir_load_node;
 
 typedef struct {
@@ -196,6 +263,9 @@ typedef struct ppir_compiler {
    struct list_head block_list;
    int cur_index;
 
+   struct list_head reg_list;
+   int cur_reg_index;
+
    /* array for searching ssa/reg node */
    ppir_node **var_nodes;
    unsigned reg_base;
@@ -239,6 +309,18 @@ static inline bool ppir_node_is_leaf(ppir_node *node)
 #define ppir_node_to_const(node) ((ppir_const_node *)(node))
 #define ppir_node_to_load(node) ((ppir_load_node *)(node))
 #define ppir_node_to_store(node) ((ppir_store_node *)(node))
+
+static inline ppir_dest *ppir_node_get_dest(ppir_node *node)
+{
+   switch (node->type) {
+   case ppir_node_type_alu:
+      return &ppir_node_to_alu(node)->dest;
+   case ppir_node_type_load:
+      return &ppir_node_to_load(node)->dest;
+   default:
+      return NULL;
+   }
+}
 
 bool ppir_instr_insert_node(ppir_block *block, ppir_node *node);
 void ppir_instr_insert_const(ppir_node *node);
