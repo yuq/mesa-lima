@@ -712,8 +712,25 @@ LLVMValueRef si_get_indirect_index(struct si_shader_context *ctx,
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMValueRef result;
 
-	result = ctx->addrs[ind->Index][ind->Swizzle];
-	result = LLVMBuildLoad(gallivm->builder, result, "");
+
+	if (ind->File == TGSI_FILE_ADDRESS) {
+		result = ctx->addrs[ind->Index][ind->Swizzle];
+		result = LLVMBuildLoad(gallivm->builder, result, "");
+	} else {
+		struct tgsi_full_src_register src = {};
+
+		src.Register.File = ind->File;
+		src.Register.Index = ind->Index;
+
+		/* Set the second index to 0 for constants. */
+		if (ind->File == TGSI_FILE_CONSTANT)
+			src.Register.Dimension = 1;
+
+		result = ctx->bld_base.emit_fetch_funcs[ind->File](&ctx->bld_base, &src,
+								   TGSI_TYPE_SIGNED,
+								   ind->Swizzle);
+		result = ac_to_integer(&ctx->ac, result);
+	}
 
 	if (addr_mul != 1)
 		result = LLVMBuildMul(gallivm->builder, result,
