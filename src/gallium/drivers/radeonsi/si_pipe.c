@@ -230,6 +230,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	si_init_all_descriptors(sctx);
 	si_init_state_functions(sctx);
 	si_init_shader_functions(sctx);
+	si_init_viewport_functions(sctx);
 	si_init_ia_multi_vgt_param_table(sctx);
 
 	if (sctx->b.chip_class >= CIK)
@@ -620,7 +621,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 
 	/* Viewports and render targets. */
 	case PIPE_CAP_MAX_VIEWPORTS:
-		return R600_MAX_VIEWPORTS;
+		return SI_MAX_VIEWPORTS;
 	case PIPE_CAP_VIEWPORT_SUBPIXEL_BITS:
 	case PIPE_CAP_MAX_RENDER_TARGETS:
 		return 8;

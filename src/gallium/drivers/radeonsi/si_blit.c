@@ -70,8 +70,8 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 		util_blitter_save_stencil_ref(sctx->blitter, &sctx->stencil_ref.state);
 		util_blitter_save_fragment_shader(sctx->blitter, sctx->ps_shader.cso);
 		util_blitter_save_sample_mask(sctx->blitter, sctx->sample_mask.sample_mask);
-		util_blitter_save_viewport(sctx->blitter, &sctx->b.viewports.states[0]);
-		util_blitter_save_scissor(sctx->blitter, &sctx->b.scissors.states[0]);
+		util_blitter_save_viewport(sctx->blitter, &sctx->viewports.states[0]);
+		util_blitter_save_scissor(sctx->blitter, &sctx->scissors.states[0]);
 	}
 
 	if (op & SI_SAVE_FRAMEBUFFER)

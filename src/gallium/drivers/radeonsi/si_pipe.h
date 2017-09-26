@@ -81,6 +81,7 @@
 #define SI_PREFETCH_PS			(1 << 6)
 
 #define SI_MAX_BORDER_COLORS	4096
+#define SI_MAX_VIEWPORTS        16
 #define SIX_BITS		0x3F
 
 struct si_compute;
@@ -212,6 +213,27 @@ struct si_framebuffer {
 	bool				DB_has_shader_readable_metadata;
 };
 
+struct si_signed_scissor {
+	int minx;
+	int miny;
+	int maxx;
+	int maxy;
+};
+
+struct si_scissors {
+	struct r600_atom		atom;
+	unsigned			dirty_mask;
+	struct pipe_scissor_state	states[SI_MAX_VIEWPORTS];
+};
+
+struct si_viewports {
+	struct r600_atom		atom;
+	unsigned			dirty_mask;
+	unsigned			depth_range_dirty_mask;
+	struct pipe_viewport_state	states[SI_MAX_VIEWPORTS];
+	struct si_signed_scissor	as_scissor[SI_MAX_VIEWPORTS];
+};
+
 struct si_clip_state {
 	struct r600_atom		atom;
 	struct pipe_clip_state		state;
@@ -326,6 +348,8 @@ struct si_context {
 	struct si_shader_data		shader_pointers;
 	struct si_stencil_ref		stencil_ref;
 	struct r600_atom		spi_map;
+	struct si_scissors		scissors;
+	struct si_viewports		viewports;
 
 	/* Precomputed states. */
 	struct si_pm4_state		*init_config;
@@ -437,6 +461,11 @@ struct si_context {
 	bool need_check_render_feedback;
 	bool			decompression_enabled;
 
+	bool			scissor_enabled;
+	bool			clip_halfz;
+	bool			vs_writes_viewport_index;
+	bool			vs_disables_clipping_viewport;
+
 	/* Precomputed IA_MULTI_VGT_PARAM */
 	union si_vgt_param_key  ia_multi_vgt_param_key;
 	unsigned		ia_multi_vgt_param[SI_NUM_VGT_PARAM_STATES];
@@ -535,6 +564,14 @@ struct pipe_video_codec *si_uvd_create_decoder(struct pipe_context *context,
 
 struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 						 const struct pipe_video_buffer *tmpl);
+
+/* si_viewport.c */
+void si_viewport_set_rast_deps(struct si_context *rctx,
+			       bool scissor_enable, bool clip_halfz);
+void si_update_vs_writes_viewport_index(struct si_context *ctx,
+					struct tgsi_shader_info *info);
+void si_init_viewport_functions(struct si_context *ctx);
+
 
 /*
  * common helpers

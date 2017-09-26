@@ -248,11 +248,11 @@ void si_begin_new_cs(struct si_context *ctx)
 	si_all_descriptors_begin_new_cs(ctx);
 	si_all_resident_buffers_begin_new_cs(ctx);
 
-	ctx->b.scissors.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
-	ctx->b.viewports.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
-	ctx->b.viewports.depth_range_dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
-	si_mark_atom_dirty(ctx, &ctx->b.scissors.atom);
-	si_mark_atom_dirty(ctx, &ctx->b.viewports.atom);
+	ctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
+	ctx->viewports.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
+	ctx->viewports.depth_range_dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
+	si_mark_atom_dirty(ctx, &ctx->scissors.atom);
+	si_mark_atom_dirty(ctx, &ctx->viewports.atom);
 
 	si_mark_atom_dirty(ctx, &ctx->scratch_state);
 	if (ctx->scratch_buffer) {

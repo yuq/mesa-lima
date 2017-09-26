@@ -1261,8 +1261,8 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		bool old_is_poly = sctx->b.current_rast_prim >= PIPE_PRIM_TRIANGLES;
 		bool new_is_poly = rast_prim >= PIPE_PRIM_TRIANGLES;
 		if (old_is_poly != new_is_poly) {
-			sctx->b.scissors.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
-			si_set_atom_dirty(sctx, &sctx->b.scissors.atom, true);
+			sctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
+			si_mark_atom_dirty(sctx, &sctx->scissors.atom);
 		}
 
 		sctx->b.current_rast_prim = rast_prim;
@@ -1398,7 +1398,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	 * involved alternative workaround.
 	 */
 	if (sctx->b.chip_class == GFX9 &&
-	    si_is_atom_dirty(sctx, &sctx->b.scissors.atom)) {
+	    si_is_atom_dirty(sctx, &sctx->scissors.atom)) {
 		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH;
 		si_emit_cache_flush(sctx);
 	}

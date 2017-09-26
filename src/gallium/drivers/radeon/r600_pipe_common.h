@@ -120,7 +120,6 @@ struct u_log_context;
 #define DBG_NO_DFSM		(1ull << 55)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
-#define R600_MAX_VIEWPORTS        16
 
 #define SI_MAX_VARIABLE_THREADS_PER_BLOCK 1024
 
@@ -523,27 +522,6 @@ struct r600_streamout {
 	int				num_prims_gen_queries;
 };
 
-struct r600_signed_scissor {
-	int minx;
-	int miny;
-	int maxx;
-	int maxy;
-};
-
-struct r600_scissors {
-	struct r600_atom		atom;
-	unsigned			dirty_mask;
-	struct pipe_scissor_state	states[R600_MAX_VIEWPORTS];
-};
-
-struct r600_viewports {
-	struct r600_atom		atom;
-	unsigned			dirty_mask;
-	unsigned			depth_range_dirty_mask;
-	struct pipe_viewport_state	states[R600_MAX_VIEWPORTS];
-	struct r600_signed_scissor	as_scissor[R600_MAX_VIEWPORTS];
-};
-
 struct r600_ring {
 	struct radeon_winsys_cs		*cs;
 	void (*flush)(void *ctx, unsigned flags,
@@ -590,12 +568,6 @@ struct r600_common_context {
 
 	/* States. */
 	struct r600_streamout		streamout;
-	struct r600_scissors		scissors;
-	struct r600_viewports		viewports;
-	bool				scissor_enabled;
-	bool				clip_halfz;
-	bool				vs_writes_viewport_index;
-	bool				vs_disables_clipping_viewport;
 
 	/* Additional context states. */
 	unsigned flags; /* flush flags */
@@ -878,13 +850,6 @@ bool si_texture_disable_dcc(struct r600_common_context *rctx,
 			    struct r600_texture *rtex);
 void si_init_screen_texture_functions(struct r600_common_screen *rscreen);
 void si_init_context_texture_functions(struct r600_common_context *rctx);
-
-/* r600_viewport.c */
-void si_viewport_set_rast_deps(struct r600_common_context *rctx,
-			       bool scissor_enable, bool clip_halfz);
-void si_update_vs_writes_viewport_index(struct r600_common_context *rctx,
-					struct tgsi_shader_info *info);
-void si_init_viewport_functions(struct r600_common_context *rctx);
 
 /* cayman_msaa.c */
 void si_get_sample_position(struct pipe_context *ctx, unsigned sample_count,

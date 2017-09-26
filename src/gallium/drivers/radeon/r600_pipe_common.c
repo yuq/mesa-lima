@@ -738,7 +738,6 @@ bool si_common_context_init(struct r600_common_context *rctx,
 	rctx->b.set_device_reset_callback = r600_set_device_reset_callback;
 
 	si_init_context_texture_functions(rctx);
-	si_init_viewport_functions(rctx);
 	si_streamout_init(rctx);
 	si_init_query_functions(rctx);
 	si_init_msaa(&rctx->b);

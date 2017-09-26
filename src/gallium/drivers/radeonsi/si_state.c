@@ -1003,7 +1003,7 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	sctx->current_vs_state &= C_VS_STATE_CLAMP_VERTEX_COLOR;
 	sctx->current_vs_state |= S_VS_STATE_CLAMP_VERTEX_COLOR(rs->clamp_vertex_color);
 
-	si_viewport_set_rast_deps(&sctx->b, rs->scissor_enable, rs->clip_halfz);
+	si_viewport_set_rast_deps(sctx, rs->scissor_enable, rs->clip_halfz);
 
 	si_pm4_bind_state(sctx, rasterizer, rs);
 	si_update_poly_offset_state(sctx);
@@ -4402,8 +4402,8 @@ void si_init_state_functions(struct si_context *sctx)
 	si_init_external_atom(sctx, &sctx->b.render_cond_atom, &sctx->atoms.s.render_cond);
 	si_init_external_atom(sctx, &sctx->b.streamout.begin_atom, &sctx->atoms.s.streamout_begin);
 	si_init_external_atom(sctx, &sctx->b.streamout.enable_atom, &sctx->atoms.s.streamout_enable);
-	si_init_external_atom(sctx, &sctx->b.scissors.atom, &sctx->atoms.s.scissors);
-	si_init_external_atom(sctx, &sctx->b.viewports.atom, &sctx->atoms.s.viewports);
+	si_init_external_atom(sctx, &sctx->scissors.atom, &sctx->atoms.s.scissors);
+	si_init_external_atom(sctx, &sctx->viewports.atom, &sctx->atoms.s.viewports);
 
 	si_init_atom(sctx, &sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state);
 	si_init_atom(sctx, &sctx->msaa_sample_locs.atom, &sctx->atoms.s.msaa_sample_locs, si_emit_msaa_sample_locs);
