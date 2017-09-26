@@ -406,6 +406,8 @@ The integer capabilities:
 * ``PIPE_CAP_MEMOBJ``: Whether operations on memory objects are supported.
 * ``PIPE_CAP_LOAD_CONSTBUF``: True if the driver supports TGSI_OPCODE_LOAD use
   with constant buffers.
+* ``PIPE_CAP_TGSI_ANY_REG_AS_ADDRESS``: Any TGSI register can be used as
+  an address for indirect register indexing.
 
 
 .. _pipe_capf:
