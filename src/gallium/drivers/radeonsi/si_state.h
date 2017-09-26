@@ -68,6 +68,8 @@ struct si_state_rasterizer {
 	struct si_pm4_state	*pm4_poly_offset;
 	unsigned		pa_sc_line_stipple;
 	unsigned		pa_cl_clip_cntl;
+	float			line_width;
+	float			max_point_size;
 	unsigned		sprite_coord_enable:8;
 	unsigned		clip_plane_enable:8;
 	unsigned		flatshade:1;

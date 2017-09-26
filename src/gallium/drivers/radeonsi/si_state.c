@@ -858,6 +858,7 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 	rs->line_stipple_enable = state->line_stipple_enable;
 	rs->poly_stipple_enable = state->poly_stipple_enable;
 	rs->line_smooth = state->line_smooth;
+	rs->line_width = state->line_width;
 	rs->poly_smooth = state->poly_smooth;
 	rs->uses_poly_offset = state->offset_point || state->offset_line ||
 			       state->offset_tri;
@@ -897,6 +898,8 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 		psize_min = state->point_size;
 		psize_max = state->point_size;
 	}
+	rs->max_point_size = psize_max;
+
 	/* Divide by two, because 0.5 = 1 pixel. */
 	si_pm4_set_reg(pm4, R_028A04_PA_SU_POINT_MINMAX,
 			S_028A04_MIN_SIZE(si_pack_float_12p4(psize_min/2)) |
@@ -1007,7 +1010,9 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	si_update_poly_offset_state(sctx);
 
 	if (!old_rs ||
-	    old_rs->scissor_enable != rs->scissor_enable) {
+	    (old_rs->scissor_enable != rs->scissor_enable ||
+	     old_rs->line_width != rs->line_width ||
+	     old_rs->max_point_size != rs->max_point_size)) {
 		sctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
 		si_mark_atom_dirty(sctx, &sctx->scissors.atom);
 	}

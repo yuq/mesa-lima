@@ -187,17 +187,26 @@ static void si_emit_guardband(struct si_context *ctx,
 	discard_x = 1.0;
 	discard_y = 1.0;
 
-	if (ctx->current_rast_prim < PIPE_PRIM_TRIANGLES) {
+	if (unlikely(ctx->current_rast_prim < PIPE_PRIM_TRIANGLES) &&
+	    ctx->queued.named.rasterizer) {
 		/* When rendering wide points or lines, we need to be more
-		 * conservative about when to discard them entirely. Since
-		 * point size can be determined by the VS output, we basically
-		 * disable discard completely completely here.
-		 *
-		 * TODO: This can hurt performance when rendering lines and
-		 * points with fixed size, and could be improved.
-		 */
-		discard_x = guardband_x;
-		discard_y = guardband_y;
+		 * conservative about when to discard them entirely. */
+		const struct si_state_rasterizer *rs = ctx->queued.named.rasterizer;
+		float pixels;
+
+		if (ctx->current_rast_prim == PIPE_PRIM_POINTS)
+			pixels = rs->max_point_size;
+		else
+			pixels = rs->line_width;
+
+		/* Add half the point size / line width */
+		discard_x += pixels / (2.0 * vp.scale[0]);
+		discard_y += pixels / (2.0 * vp.scale[1]);
+
+		/* Discard primitives that would lie entirely outside the clip
+		 * region. */
+		discard_x = MIN2(discard_x, guardband_x);
+		discard_y = MIN2(discard_y, guardband_y);
 	}
 
 	/* If any of the GB registers is updated, all of them must be updated. */
