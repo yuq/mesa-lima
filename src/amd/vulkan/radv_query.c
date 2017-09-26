@@ -737,7 +737,7 @@ static void radv_query_shader(struct radv_cmd_buffer *cmd_buffer,
 	                                RADV_CMD_FLAG_INV_VMEM_L1 |
 	                                RADV_CMD_FLAG_CS_PARTIAL_FLUSH;
 
-	radv_meta_restore_compute(&saved_state, cmd_buffer, 16);
+	radv_meta_restore_compute(&saved_state, cmd_buffer);
 }
 
 VkResult radv_CreateQueryPool(

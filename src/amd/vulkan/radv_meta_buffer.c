@@ -340,7 +340,7 @@ static void fill_buffer_shader(struct radv_cmd_buffer *cmd_buffer,
 
 	radv_CmdDispatch(radv_cmd_buffer_to_handle(cmd_buffer), block_count, 1, 1);
 
-	radv_meta_restore_compute(&saved_state, cmd_buffer, 4);
+	radv_meta_restore_compute(&saved_state, cmd_buffer);
 }
 
 static void copy_buffer_shader(struct radv_cmd_buffer *cmd_buffer,
@@ -404,7 +404,7 @@ static void copy_buffer_shader(struct radv_cmd_buffer *cmd_buffer,
 
 	radv_CmdDispatch(radv_cmd_buffer_to_handle(cmd_buffer), block_count, 1, 1);
 
-	radv_meta_restore_compute(&saved_state, cmd_buffer, 0);
+	radv_meta_restore_compute(&saved_state, cmd_buffer);
 }
 
 

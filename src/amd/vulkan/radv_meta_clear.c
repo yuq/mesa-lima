@@ -1401,7 +1401,7 @@ void radv_CmdClearColorImage(
 			     rangeCount, pRanges, cs);
 
 	if (cs)
-		radv_meta_restore_compute(&saved_state.compute, cmd_buffer, 16);
+		radv_meta_restore_compute(&saved_state.compute, cmd_buffer);
 	else
 		radv_meta_restore(&saved_state.gfx, cmd_buffer);
 }

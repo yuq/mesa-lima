@@ -203,7 +203,7 @@ meta_copy_buffer_to_image(struct radv_cmd_buffer *cmd_buffer,
 		}
 	}
 	if (cs)
-		radv_meta_restore_compute(&saved_state.compute, cmd_buffer, 12);
+		radv_meta_restore_compute(&saved_state.compute, cmd_buffer);
 	else
 		radv_meta_restore(&saved_state.gfx, cmd_buffer);
 }
@@ -304,7 +304,7 @@ meta_copy_image_to_buffer(struct radv_cmd_buffer *cmd_buffer,
 				slice_array++;
 		}
 	}
-	radv_meta_restore_compute(&saved_state, cmd_buffer, 12);
+	radv_meta_restore_compute(&saved_state, cmd_buffer);
 }
 
 void radv_CmdCopyImageToBuffer(
@@ -414,7 +414,7 @@ meta_copy_image(struct radv_cmd_buffer *cmd_buffer,
 	}
 
 	if (cs)
-		radv_meta_restore_compute(&saved_state.compute, cmd_buffer, 16);
+		radv_meta_restore_compute(&saved_state.compute, cmd_buffer);
 	else
 		radv_meta_restore(&saved_state.gfx, cmd_buffer);
 }
