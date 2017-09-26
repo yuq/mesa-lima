@@ -880,8 +880,6 @@ void si_init_screen_texture_functions(struct r600_common_screen *rscreen);
 void si_init_context_texture_functions(struct r600_common_context *rctx);
 
 /* r600_viewport.c */
-void si_apply_scissor_bug_workaround(struct r600_common_context *rctx,
-				     struct pipe_scissor_state *scissor);
 void si_viewport_set_rast_deps(struct r600_common_context *rctx,
 			       bool scissor_enable, bool clip_halfz);
 void si_update_vs_writes_viewport_index(struct r600_common_context *rctx,

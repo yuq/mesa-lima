@@ -115,21 +115,6 @@ static void r600_scissor_make_union(struct r600_signed_scissor *out,
 	out->maxy = MAX2(out->maxy, in->maxy);
 }
 
-void si_apply_scissor_bug_workaround(struct r600_common_context *rctx,
-				     struct pipe_scissor_state *scissor)
-{
-	if (rctx->chip_class == EVERGREEN || rctx->chip_class == CAYMAN) {
-		if (scissor->maxx == 0)
-			scissor->minx = 1;
-		if (scissor->maxy == 0)
-			scissor->miny = 1;
-
-		if (rctx->chip_class == CAYMAN &&
-		    scissor->maxx == 1 && scissor->maxy == 1)
-			scissor->maxx = 2;
-	}
-}
-
 static void r600_emit_one_scissor(struct r600_common_context *rctx,
 				  struct radeon_winsys_cs *cs,
 				  struct r600_signed_scissor *vp_scissor,
@@ -146,8 +131,6 @@ static void r600_emit_one_scissor(struct r600_common_context *rctx,
 
 	if (scissor)
 		r600_clip_scissor(&final, scissor);
-
-	si_apply_scissor_bug_workaround(rctx, &final);
 
 	radeon_emit(cs, S_028250_TL_X(final.minx) |
 			S_028250_TL_Y(final.miny) |
