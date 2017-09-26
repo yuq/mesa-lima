@@ -58,6 +58,9 @@ struct wsi_wl_display {
    struct u_vector                            formats;
 
    uint32_t                                     capabilities;
+
+   /* Only used for displays created by wsi_wl_display_create */
+   uint32_t                                     refcount;
 };
 
 struct wsi_wayland {
@@ -249,6 +252,8 @@ static const struct wl_registry_listener registry_listener = {
 static void
 wsi_wl_display_finish(struct wsi_wl_display *display)
 {
+   assert(display->refcount == 0);
+
    u_vector_finish(&display->formats);
    if (display->drm)
       wl_drm_destroy(display->drm);
@@ -308,6 +313,8 @@ wsi_wl_display_init(struct wsi_wayland *wsi_wl,
    /* We don't need this anymore */
    wl_registry_destroy(registry);
 
+   display->refcount = 0;
+
    return 0;
 
 fail_registry:
@@ -333,12 +340,24 @@ wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
       return NULL;
    }
 
+   display->refcount++;
+
+   return display;
+}
+
+static struct wsi_wl_display *
+wsi_wl_display_ref(struct wsi_wl_display *display)
+{
+   display->refcount++;
    return display;
 }
 
 static void
-wsi_wl_display_destroy(struct wsi_wl_display *display)
+wsi_wl_display_unref(struct wsi_wl_display *display)
 {
+   if (display->refcount-- > 1)
+      return;
+
    struct wsi_wayland *wsi = display->wsi_wl;
    wsi_wl_display_finish(display);
    vk_free(wsi->alloc, display);
@@ -757,7 +776,7 @@ wsi_wl_swapchain_destroy(struct wsi_swapchain *wsi_chain,
       wl_proxy_wrapper_destroy(chain->drm_wrapper);
 
    if (chain->display)
-      wsi_wl_display_destroy(chain->display);
+      wsi_wl_display_unref(chain->display);
 
    vk_free(pAllocator, chain);
 
@@ -815,10 +834,18 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->vk_format = pCreateInfo->imageFormat;
    chain->drm_format = wl_drm_format_for_vk_format(chain->vk_format, alpha);
 
-   chain->display = wsi_wl_display_create(wsi, surface->display);
-   if (!chain->display) {
-      result = VK_ERROR_INITIALIZATION_FAILED;
-      goto fail;
+   if (pCreateInfo->oldSwapchain) {
+      /* If we have an oldSwapchain parameter, copy the display struct over
+       * from the old one so we don't have to fully re-initialize it.
+       */
+      struct wsi_wl_swapchain *old_chain = (void *)pCreateInfo->oldSwapchain;
+      chain->display = wsi_wl_display_ref(old_chain->display);
+   } else {
+      chain->display = wsi_wl_display_create(wsi, surface->display);
+      if (!chain->display) {
+         result = VK_ERROR_INITIALIZATION_FAILED;
+         goto fail;
+      }
    }
 
    chain->surface = wl_proxy_create_wrapper(surface->surface);
