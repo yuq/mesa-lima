@@ -4606,6 +4606,17 @@ glsl_to_tgsi_visitor::simplify_cmp(void)
    free(tempWrites);
 }
 
+static void
+rename_temp_handle_src(struct rename_reg_pair *renames,
+                           struct st_src_reg *src)
+{
+   if (src && src->file == PROGRAM_TEMPORARY) {
+      int old_idx = src->index;
+      if (renames[old_idx].valid)
+         src->index = renames[old_idx].new_reg;
+   }
+}
+
 /* Replaces all references to a temporary register index with another index. */
 void
 glsl_to_tgsi_visitor::rename_temp_registers(struct rename_reg_pair *renames)
@@ -4613,32 +4624,29 @@ glsl_to_tgsi_visitor::rename_temp_registers(struct rename_reg_pair *renames)
    foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
       unsigned j;
       for (j = 0; j < num_inst_src_regs(inst); j++) {
-         if (inst->src[j].file == PROGRAM_TEMPORARY) {
-            int old_idx = inst->src[j].index;
-            if (renames[old_idx].valid)
-               inst->src[j].index = renames[old_idx].new_reg;
-         }
+         rename_temp_handle_src(renames, &inst->src[j]);
+         rename_temp_handle_src(renames, inst->src[j].reladdr);
+         rename_temp_handle_src(renames, inst->src[j].reladdr2);
       }
 
       for (j = 0; j < inst->tex_offset_num_offset; j++) {
-         if (inst->tex_offsets[j].file == PROGRAM_TEMPORARY) {
-            int old_idx = inst->tex_offsets[j].index;
-            if (renames[old_idx].valid)
-               inst->tex_offsets[j].index = renames[old_idx].new_reg;
-         }
+         rename_temp_handle_src(renames, &inst->tex_offsets[j]);
+         rename_temp_handle_src(renames, inst->tex_offsets[j].reladdr);
+         rename_temp_handle_src(renames, inst->tex_offsets[j].reladdr2);
       }
 
-      if (inst->resource.file == PROGRAM_TEMPORARY) {
-         int old_idx = inst->resource.index;
-         if (renames[old_idx].valid)
-            inst->resource.index = renames[old_idx].new_reg;
-      }
+      rename_temp_handle_src(renames, &inst->resource);
+      rename_temp_handle_src(renames, inst->resource.reladdr);
+      rename_temp_handle_src(renames, inst->resource.reladdr2);
 
       for (j = 0; j < num_inst_dst_regs(inst); j++) {
          if (inst->dst[j].file == PROGRAM_TEMPORARY) {
             int old_idx = inst->dst[j].index;
             if (renames[old_idx].valid)
-               inst->dst[j].index = renames[old_idx].new_reg;}
+               inst->dst[j].index = renames[old_idx].new_reg;
+         }
+         rename_temp_handle_src(renames, inst->dst[j].reladdr);
+         rename_temp_handle_src(renames, inst->dst[j].reladdr2);
       }
    }
 }
@@ -4976,6 +4984,16 @@ glsl_to_tgsi_visitor::copy_propagate(void)
    ralloc_free(acp);
 }
 
+static void
+dead_code_handle_reladdr(glsl_to_tgsi_instruction **writes, st_src_reg *reladdr)
+{
+   if (reladdr && reladdr->file == PROGRAM_TEMPORARY) {
+      /* Clear where it's used as src. */
+      int swz = GET_SWZ(reladdr->swizzle, 0);
+      writes[4 * reladdr->index + swz] = NULL;
+   }
+}
+
 /*
  * On a basic block basis, tracks available PROGRAM_TEMPORARY registers for dead
  * code elimination.
@@ -5066,6 +5084,8 @@ glsl_to_tgsi_visitor::eliminate_dead_code(void)
                      writes[4 * inst->src[i].index + c] = NULL;
                }
             }
+            dead_code_handle_reladdr(writes, inst->src[i].reladdr);
+            dead_code_handle_reladdr(writes, inst->src[i].reladdr2);
          }
          for (unsigned i = 0; i < inst->tex_offset_num_offset; i++) {
             if (inst->tex_offsets[i].file == PROGRAM_TEMPORARY && inst->tex_offsets[i].reladdr){
@@ -5085,6 +5105,8 @@ glsl_to_tgsi_visitor::eliminate_dead_code(void)
                      writes[4 * inst->tex_offsets[i].index + c] = NULL;
                }
             }
+            dead_code_handle_reladdr(writes, inst->tex_offsets[i].reladdr);
+            dead_code_handle_reladdr(writes, inst->tex_offsets[i].reladdr2);
          }
 
          if (inst->resource.file == PROGRAM_TEMPORARY) {
@@ -5100,7 +5122,13 @@ glsl_to_tgsi_visitor::eliminate_dead_code(void)
                   writes[4 * inst->resource.index + c] = NULL;
             }
          }
+         dead_code_handle_reladdr(writes, inst->resource.reladdr);
+         dead_code_handle_reladdr(writes, inst->resource.reladdr2);
 
+         for (unsigned i = 0; i < ARRAY_SIZE(inst->dst); i++) {
+            dead_code_handle_reladdr(writes, inst->dst[i].reladdr);
+            dead_code_handle_reladdr(writes, inst->dst[i].reladdr2);
+         }
          break;
       }
 
