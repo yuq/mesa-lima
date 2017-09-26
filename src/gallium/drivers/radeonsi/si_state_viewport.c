@@ -40,7 +40,8 @@ static void si_set_scissor_states(struct pipe_context *pctx,
 	for (i = 0; i < num_scissors; i++)
 		ctx->scissors.states[start_slot + i] = state[i];
 
-	if (!ctx->scissor_enabled)
+	if (!ctx->queued.named.rasterizer ||
+	    !ctx->queued.named.rasterizer->scissor_enable)
 		return;
 
 	ctx->scissors.dirty_mask |= ((1 << num_scissors) - 1) << start_slot;
@@ -214,9 +215,12 @@ static void si_emit_scissors(struct r600_common_context *rctx, struct r600_atom 
 	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
 	struct pipe_scissor_state *states = ctx->scissors.states;
 	unsigned mask = ctx->scissors.dirty_mask;
-	bool scissor_enabled = ctx->scissor_enabled;
+	bool scissor_enabled = false;
 	struct si_signed_scissor max_vp_scissor;
 	int i;
+
+	if (ctx->queued.named.rasterizer)
+		scissor_enabled = ctx->queued.named.rasterizer->scissor_enable;
 
 	/* The simple case: Only 1 viewport is active. */
 	if (!ctx->vs_writes_viewport_index) {
@@ -327,14 +331,18 @@ static void si_emit_depth_ranges(struct si_context *ctx)
 	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
 	struct pipe_viewport_state *states = ctx->viewports.states;
 	unsigned mask = ctx->viewports.depth_range_dirty_mask;
+	bool clip_halfz = false;
 	float zmin, zmax;
+
+	if (ctx->queued.named.rasterizer)
+		clip_halfz = ctx->queued.named.rasterizer->clip_halfz;
 
 	/* The simple case: Only 1 viewport is active. */
 	if (!ctx->vs_writes_viewport_index) {
 		if (!(mask & 1))
 			return;
 
-		util_viewport_zmin_zmax(&states[0], ctx->clip_halfz, &zmin, &zmax);
+		util_viewport_zmin_zmax(&states[0], clip_halfz, &zmin, &zmax);
 
 		radeon_set_context_reg_seq(cs, R_0282D0_PA_SC_VPORT_ZMIN_0, 2);
 		radeon_emit(cs, fui(zmin));
@@ -351,7 +359,7 @@ static void si_emit_depth_ranges(struct si_context *ctx)
 		radeon_set_context_reg_seq(cs, R_0282D0_PA_SC_VPORT_ZMIN_0 +
 					   start * 4 * 2, count * 2);
 		for (i = start; i < start+count; i++) {
-			util_viewport_zmin_zmax(&states[i], ctx->clip_halfz, &zmin, &zmax);
+			util_viewport_zmin_zmax(&states[i], clip_halfz, &zmin, &zmax);
 			radeon_emit(cs, fui(zmin));
 			radeon_emit(cs, fui(zmax));
 		}
@@ -365,22 +373,6 @@ static void si_emit_viewport_states(struct r600_common_context *rctx,
 	struct si_context *ctx = (struct si_context *)rctx;
 	si_emit_viewports(ctx);
 	si_emit_depth_ranges(ctx);
-}
-
-/* Set viewport dependencies on pipe_rasterizer_state. */
-void si_viewport_set_rast_deps(struct si_context *ctx,
-			       bool scissor_enable, bool clip_halfz)
-{
-	if (ctx->scissor_enabled != scissor_enable) {
-		ctx->scissor_enabled = scissor_enable;
-		ctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
-		si_mark_atom_dirty(ctx, &ctx->scissors.atom);
-	}
-	if (ctx->clip_halfz != clip_halfz) {
-		ctx->clip_halfz = clip_halfz;
-		ctx->viewports.depth_range_dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
-		si_mark_atom_dirty(ctx, &ctx->viewports.atom);
-	}
 }
 
 /**

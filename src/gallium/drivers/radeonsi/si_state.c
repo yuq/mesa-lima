@@ -1003,10 +1003,20 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	sctx->current_vs_state &= C_VS_STATE_CLAMP_VERTEX_COLOR;
 	sctx->current_vs_state |= S_VS_STATE_CLAMP_VERTEX_COLOR(rs->clamp_vertex_color);
 
-	si_viewport_set_rast_deps(sctx, rs->scissor_enable, rs->clip_halfz);
-
 	si_pm4_bind_state(sctx, rasterizer, rs);
 	si_update_poly_offset_state(sctx);
+
+	if (!old_rs ||
+	    old_rs->scissor_enable != rs->scissor_enable) {
+		sctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
+		si_mark_atom_dirty(sctx, &sctx->scissors.atom);
+	}
+
+	if (!old_rs ||
+	    old_rs->clip_halfz != rs->clip_halfz) {
+		sctx->viewports.depth_range_dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
+		si_mark_atom_dirty(sctx, &sctx->viewports.atom);
+	}
 
 	if (!old_rs ||
 	    old_rs->clip_plane_enable != rs->clip_plane_enable ||

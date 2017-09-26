@@ -462,8 +462,6 @@ struct si_context {
 	bool need_check_render_feedback;
 	bool			decompression_enabled;
 
-	bool			scissor_enabled;
-	bool			clip_halfz;
 	bool			vs_writes_viewport_index;
 	bool			vs_disables_clipping_viewport;
 
@@ -567,8 +565,6 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 						 const struct pipe_video_buffer *tmpl);
 
 /* si_viewport.c */
-void si_viewport_set_rast_deps(struct si_context *rctx,
-			       bool scissor_enable, bool clip_halfz);
 void si_update_vs_writes_viewport_index(struct si_context *ctx);
 void si_init_viewport_functions(struct si_context *ctx);
 
