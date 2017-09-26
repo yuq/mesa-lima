@@ -82,8 +82,6 @@ struct wl_buffer;
 struct dri2_egl_driver
 {
    _EGLDriver base;
-
-   void (*glFlush)(void);
 };
 
 struct dri2_egl_display_vtbl {

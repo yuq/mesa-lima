@@ -101,6 +101,26 @@ dri_set_background_context(void *loaderPrivate)
    _eglBindContextToThread(ctx, t);
 }
 
+static void
+dri2_gl_flush()
+{
+   static void (*glFlush)(void);
+   static mtx_t glFlushMutex = _MTX_INITIALIZER_NP;
+
+   mtx_lock(&glFlushMutex);
+   if (!glFlush)
+      glFlush = _glapi_get_proc_address("glFlush");
+   mtx_unlock(&glFlushMutex);
+
+   /* if glFlush is not available things are horribly broken */
+   if (!glFlush) {
+      _eglLog(_EGL_WARNING, "DRI2: failed to find glFlush entry point");
+      return;
+   }
+
+   glFlush();
+}
+
 static GLboolean
 dri_is_thread_safe(void *loaderPrivate)
 {
@@ -1478,7 +1498,6 @@ static EGLBoolean
 dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
                   _EGLSurface *rsurf, _EGLContext *ctx)
 {
-   struct dri2_egl_driver *dri2_drv = dri2_egl_driver(drv);
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);
    _EGLContext *old_ctx;
@@ -1499,7 +1518,7 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
 
    /* flush before context switch */
    if (old_ctx)
-      dri2_drv->glFlush();
+      dri2_gl_flush();
 
    ddraw = (dsurf) ? dri2_dpy->vtbl->get_dri_drawable(dsurf) : NULL;
    rdraw = (rsurf) ? dri2_dpy->vtbl->get_dri_drawable(rsurf) : NULL;
@@ -3023,7 +3042,6 @@ dri2_client_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
                       EGLint flags, EGLTime timeout)
 {
    _EGLContext *ctx = _eglGetCurrentContext();
-   struct dri2_egl_driver *dri2_drv = dri2_egl_driver(drv);
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
    struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);
    struct dri2_egl_sync *dri2_sync = dri2_egl_sync(sync);
@@ -3062,7 +3080,7 @@ dri2_client_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
       if (dri2_ctx && dri2_sync->base.SyncStatus == EGL_UNSIGNALED_KHR &&
           (flags & EGL_SYNC_FLUSH_COMMANDS_BIT_KHR)) {
          /* flush context if EGL_SYNC_FLUSH_COMMANDS_BIT_KHR is set */
-         dri2_drv->glFlush();
+         dri2_gl_flush();
       }
 
       /* if timeout is EGL_FOREVER_KHR, it should wait without any timeout.*/
@@ -3175,23 +3193,6 @@ dri2_interop_export_object(_EGLDisplay *dpy, _EGLContext *ctx,
    return dri2_dpy->interop->export_object(dri2_ctx->dri_context, in, out);
 }
 
-static EGLBoolean
-dri2_load(_EGLDriver *drv)
-{
-   struct dri2_egl_driver *dri2_drv = dri2_egl_driver(drv);
-
-   dri2_drv->glFlush = (void (*)(void))
-      _glapi_get_proc_address("glFlush");
-
-   /* if glFlush is not available things are horribly broken */
-   if (!dri2_drv->glFlush) {
-      _eglLog(_EGL_WARNING, "DRI2: failed to find glFlush entry point");
-      return EGL_FALSE;
-   }
-
-   return EGL_TRUE;
-}
-
 /**
  * This is the main entrypoint into the driver, called by libEGL.
  * Create a new _EGLDriver object and init its dispatch table.
@@ -3205,10 +3206,6 @@ _eglBuiltInDriver(void)
    if (!dri2_drv)
       return NULL;
 
-   if (!dri2_load(&dri2_drv->base)) {
-      free(dri2_drv);
-      return NULL;
-   }
 
    _eglInitDriverFallbacks(&dri2_drv->base);
    dri2_drv->base.API.Initialize = dri2_initialize;
