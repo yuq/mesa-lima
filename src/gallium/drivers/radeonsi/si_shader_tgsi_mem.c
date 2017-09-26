@@ -82,7 +82,7 @@ shader_buffer_fetch_rsrc(struct si_shader_context *ctx,
 		index = LLVMConstInt(ctx->i32, reg->Register.Index, false);
 	} else {
 		index = si_get_indirect_index(ctx, &reg->Indirect,
-					      reg->Register.Index);
+					      1, reg->Register.Index);
 	}
 
 	if (ubo)

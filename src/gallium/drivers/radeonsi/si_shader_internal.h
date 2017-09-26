@@ -301,7 +301,7 @@ void si_emit_waitcnt(struct si_shader_context *ctx, unsigned simm16);
 
 LLVMValueRef si_get_indirect_index(struct si_shader_context *ctx,
 				   const struct tgsi_ind_register *ind,
-				   int rel_index);
+				   unsigned addr_mul, int rel_index);
 LLVMValueRef si_get_bounded_indirect_index(struct si_shader_context *ctx,
 					   const struct tgsi_ind_register *ind,
 					   int rel_index, unsigned num);
