@@ -1672,7 +1672,7 @@ ast_struct_specifier::print(void) const
 }
 
 
-ast_struct_specifier::ast_struct_specifier(void *lin_ctx, const char *identifier,
+ast_struct_specifier::ast_struct_specifier(const char *identifier,
 					   ast_declarator_list *declarator_list)
 {
    if (identifier == NULL) {

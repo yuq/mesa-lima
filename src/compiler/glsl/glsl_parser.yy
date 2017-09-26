@@ -2377,14 +2377,14 @@ struct_specifier:
    STRUCT any_identifier '{' struct_declaration_list '}'
    {
       void *ctx = state->linalloc;
-      $$ = new(ctx) ast_struct_specifier(ctx, $2, $4);
+      $$ = new(ctx) ast_struct_specifier($2, $4);
       $$->set_location_range(@2, @5);
       state->symbols->add_type($2, glsl_type::void_type);
    }
    | STRUCT '{' struct_declaration_list '}'
    {
       void *ctx = state->linalloc;
-      $$ = new(ctx) ast_struct_specifier(ctx, NULL, $3);
+      $$ = new(ctx) ast_struct_specifier(NULL, $3);
       $$->set_location_range(@2, @4);
    }
    ;

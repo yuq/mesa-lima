@@ -832,8 +832,8 @@ class ast_declarator_list;
 
 class ast_struct_specifier : public ast_node {
 public:
-   ast_struct_specifier(void *lin_ctx, const char *identifier,
-			ast_declarator_list *declarator_list);
+   ast_struct_specifier(const char *identifier,
+                        ast_declarator_list *declarator_list);
    virtual void print(void) const;
 
    virtual ir_rvalue *hir(exec_list *instructions,
