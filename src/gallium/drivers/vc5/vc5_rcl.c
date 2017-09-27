@@ -26,23 +26,80 @@
 #include "vc5_tiling.h"
 #include "broadcom/cle/v3d_packet_v33_pack.h"
 
+static void
+vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job)
+{
+        /* Emit the generic list in our indirect state -- the rcl will just
+         * have pointers into it.
+         */
+        struct vc5_cl *cl = &job->indirect;
+        vc5_cl_ensure_space(cl, 200, 1);
+        struct vc5_cl_reloc tile_list_start = cl_get_address(cl);
+
+        const uint32_t pipe_clear_color_buffers = (PIPE_CLEAR_COLOR0 |
+                                                   PIPE_CLEAR_COLOR1 |
+                                                   PIPE_CLEAR_COLOR2 |
+                                                   PIPE_CLEAR_COLOR3);
+        const uint32_t first_color_buffer_bit = (ffs(PIPE_CLEAR_COLOR0) - 1);
+
+        uint32_t read_but_not_cleared = job->resolve & ~job->cleared;
+
+        /* The initial reload will be queued until we get the
+         * tile coordinates.
+         */
+        if (read_but_not_cleared) {
+                cl_emit(cl, RELOAD_TILE_COLOUR_BUFFER, load) {
+                        load.disable_colour_buffer_load =
+                                (~read_but_not_cleared & pipe_clear_color_buffers) >>
+                                first_color_buffer_bit;
+                        load.enable_z_load =
+                                read_but_not_cleared & PIPE_CLEAR_DEPTH;
+                        load.enable_stencil_load =
+                                read_but_not_cleared & PIPE_CLEAR_STENCIL;
+                }
+        }
+
+        /* Tile Coordinates triggers the reload and sets where the stores
+         * go. There must be one per store packet.
+         */
+        cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
+
+        cl_emit(cl, BRANCH_TO_IMPLICIT_TILE_LIST, branch);
+
+        cl_emit(cl, STORE_MULTI_SAMPLE_RESOLVED_TILE_COLOR_BUFFER_EXTENDED, store) {
+                uint32_t color_write_enables =
+                        job->resolve >> first_color_buffer_bit;
+
+                store.disable_color_buffer_write = (~color_write_enables) & 0xf;
+                store.enable_z_write = job->resolve & PIPE_CLEAR_DEPTH;
+                store.enable_stencil_write = job->resolve & PIPE_CLEAR_STENCIL;
+
+                store.disable_colour_buffers_clear_on_write =
+                        (job->cleared & pipe_clear_color_buffers) == 0;
+                store.disable_z_buffer_clear_on_write =
+                        !(job->cleared & PIPE_CLEAR_DEPTH);
+                store.disable_stencil_buffer_clear_on_write =
+                        !(job->cleared & PIPE_CLEAR_STENCIL);
+        };
+
+        cl_emit(cl, RETURN_FROM_SUB_LIST, ret);
+
+        cl_emit(&job->rcl, START_ADDRESS_OF_GENERIC_TILE_LIST, branch) {
+                branch.start = tile_list_start;
+                branch.end = cl_get_address(cl);
+        }
+}
+
+#define div_round_up(a, b) (((a) + (b) - 1) / b)
+
 void
 vc5_emit_rcl(struct vc5_job *job)
 {
-        uint32_t min_x_tile = job->draw_min_x / job->tile_width;
-        uint32_t min_y_tile = job->draw_min_y / job->tile_height;
-        uint32_t max_x_tile = (job->draw_max_x - 1) / job->tile_width;
-        uint32_t max_y_tile = (job->draw_max_y - 1) / job->tile_height;
-
         /* The RCL list should be empty. */
         assert(!job->rcl.bo);
 
-        vc5_cl_ensure_space(&job->rcl,
-                            256 +
-                            (64 *
-                             (max_x_tile - min_x_tile + 1) *
-                             (max_y_tile - min_y_tile + 1)), 1);
-
+        vc5_cl_ensure_space_with_branch(&job->rcl, 200 + 256 *
+                                        cl_packet_length(SUPERTILE_COORDINATES));
         job->submit.rcl_start = job->rcl.bo->offset;
         vc5_job_add_bo(job, job->rcl.bo);
 
@@ -137,7 +194,45 @@ vc5_emit_rcl(struct vc5_job *job)
                         TILE_ALLOCATION_BLOCK_SIZE_64B;
         }
 
-        cl_emit(&job->rcl, WAIT_ON_SEMAPHORE, sem);
+        uint32_t supertile_w = 1, supertile_h = 1;
+
+        /* If doing multicore binning, we would need to initialize each core's
+         * tile list here.
+         */
+        cl_emit(&job->rcl, MULTICORE_RENDERING_TILE_LIST_SET_BASE, list) {
+                list.address = cl_address(job->tile_alloc, 0);
+        }
+
+        cl_emit(&job->rcl, MULTICORE_RENDERING_SUPERTILE_CONFIGURATION, config) {
+                uint32_t frame_w_in_supertiles, frame_h_in_supertiles;
+                const uint32_t max_supertiles = 256;
+
+                /* Size up our supertiles until we get under the limit. */
+                for (;;) {
+                        frame_w_in_supertiles = div_round_up(job->draw_tiles_x,
+                                                             supertile_w);
+                        frame_h_in_supertiles = div_round_up(job->draw_tiles_y,
+                                                             supertile_h);
+                        if (frame_w_in_supertiles * frame_h_in_supertiles <
+                            max_supertiles) {
+                                break;
+                        }
+
+                        if (supertile_w < supertile_h)
+                                supertile_w++;
+                        else
+                                supertile_h++;
+                }
+
+                config.total_frame_width_in_tiles = job->draw_tiles_x;
+                config.total_frame_height_in_tiles = job->draw_tiles_y;
+
+                config.supertile_width_in_tiles_minus_1 = supertile_w - 1;
+                config.supertile_height_in_tiles_minus_1 = supertile_h - 1;
+
+                config.total_frame_width_in_supertiles = frame_w_in_supertiles;
+                config.total_frame_height_in_supertiles = frame_h_in_supertiles;
+        }
 
         /* Start by clearing the tile buffer. */
         cl_emit(&job->rcl, TILE_COORDINATES, coords) {
@@ -151,68 +246,26 @@ vc5_emit_rcl(struct vc5_job *job)
 
         cl_emit(&job->rcl, FLUSH_VCD_CACHE, flush);
 
-        const uint32_t pipe_clear_color_buffers = (PIPE_CLEAR_COLOR0 |
-                                                   PIPE_CLEAR_COLOR1 |
-                                                   PIPE_CLEAR_COLOR2 |
-                                                   PIPE_CLEAR_COLOR3);
-        const uint32_t first_color_buffer_bit = (ffs(PIPE_CLEAR_COLOR0) - 1);
+        vc5_rcl_emit_generic_per_tile_list(job);
 
-        for (int y = min_y_tile; y <= max_y_tile; y++) {
-                for (int x = min_x_tile; x <= max_x_tile; x++) {
-                        uint32_t read_but_not_cleared = job->resolve & ~job->cleared;
+        cl_emit(&job->rcl, WAIT_ON_SEMAPHORE, sem);
 
-                        /* The initial reload will be queued until we get the
-                         * tile coordinates.
-                         */
-                        if (read_but_not_cleared) {
-                                cl_emit(&job->rcl, RELOAD_TILE_COLOUR_BUFFER, load) {
-                                        load.disable_colour_buffer_load =
-                                                (~read_but_not_cleared & pipe_clear_color_buffers) >>
-                                                first_color_buffer_bit;
-                                        load.enable_z_load =
-                                                read_but_not_cleared & PIPE_CLEAR_DEPTH;
-                                        load.enable_stencil_load =
-                                                read_but_not_cleared & PIPE_CLEAR_STENCIL;
-                                }
+        /* XXX: Use Morton order */
+        uint32_t supertile_w_in_pixels = job->tile_width * supertile_w;
+        uint32_t supertile_h_in_pixels = job->tile_height * supertile_h;
+        uint32_t min_x_supertile = job->draw_min_x / supertile_w_in_pixels;
+        uint32_t min_y_supertile = job->draw_min_y / supertile_h_in_pixels;
+        uint32_t max_x_supertile = (job->draw_max_x - 1) / supertile_w_in_pixels;
+        uint32_t max_y_supertile = (job->draw_max_y - 1) / supertile_h_in_pixels;
+
+        for (int y = min_y_supertile; y <= max_y_supertile; y++) {
+                for (int x = min_x_supertile; x <= max_x_supertile; x++) {
+                        cl_emit(&job->rcl, SUPERTILE_COORDINATES, coords) {
+                                coords.column_number_in_supertiles = x;
+                                coords.row_number_in_supertiles = y;
                         }
-
-                        /* Tile Coordinates triggers the reload and sets where
-                         * the stores go. There must be one per store packet.
-                         */
-                        cl_emit(&job->rcl, TILE_COORDINATES, coords) {
-                                coords.tile_column_number = x;
-                                coords.tile_row_number = y;
-                        }
-
-                        cl_emit(&job->rcl, BRANCH_TO_AUTO_CHAINED_SUB_LIST, branch) {
-                                uint32_t bin_tile_stride =
-                                        (align(job->draw_width,
-                                               job->tile_width) /
-                                         job->tile_width);
-                                uint32_t bin_index =
-                                        (y * bin_tile_stride + x);
-                                branch.address = cl_address(job->tile_alloc,
-                                                            64 * bin_index);
-                        }
-
-                        cl_emit(&job->rcl, STORE_MULTI_SAMPLE_RESOLVED_TILE_COLOR_BUFFER_EXTENDED, store) {
-                                uint32_t color_write_enables =
-                                        job->resolve >> first_color_buffer_bit;
-
-                                store.disable_color_buffer_write = (~color_write_enables) & 0xf;
-                                store.enable_z_write = job->resolve & PIPE_CLEAR_DEPTH;
-                                store.enable_stencil_write = job->resolve & PIPE_CLEAR_STENCIL;
-
-                                store.disable_colour_buffers_clear_on_write =
-                                        (job->cleared & pipe_clear_color_buffers) == 0;
-                                store.disable_z_buffer_clear_on_write =
-                                        !(job->cleared & PIPE_CLEAR_DEPTH);
-                                store.disable_stencil_buffer_clear_on_write =
-                                        !(job->cleared & PIPE_CLEAR_STENCIL);
-
-                                store.last_tile_of_frame = (x == max_x_tile &&
-                                                            y == max_y_tile);
-                        };
                 }
         }
+
+        cl_emit(&job->rcl, END_OF_RENDERING, end);
 }

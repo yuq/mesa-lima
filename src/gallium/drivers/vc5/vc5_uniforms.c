@@ -225,8 +225,7 @@ vc5_write_uniforms(struct vc5_context *vc5, struct vc5_compiled_shader *shader,
          */
         vc5_cl_ensure_space(&job->indirect, MAX2(uinfo->count, 1) * 4, 4);
 
-        struct vc5_cl_reloc uniform_stream =
-                cl_address(job->indirect.bo, cl_offset(&job->indirect));
+        struct vc5_cl_reloc uniform_stream = cl_get_address(&job->indirect);
         vc5_bo_reference(uniform_stream.bo);
 
         struct vc5_cl_out *uniforms =

@@ -74,6 +74,11 @@ static inline uint32_t cl_offset(struct vc5_cl *cl)
         return (char *)cl->next - (char *)cl->base;
 }
 
+static inline struct vc5_cl_reloc cl_get_address(struct vc5_cl *cl)
+{
+        return (struct vc5_cl_reloc){ .bo = cl->bo, .offset = cl_offset(cl) };
+}
+
 static inline void
 cl_advance(struct vc5_cl_out **cl, uint32_t n)
 {
