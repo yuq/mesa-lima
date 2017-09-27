@@ -45,7 +45,5 @@ bool ppir_schedule_prog(ppir_compiler *comp)
       }
    }
 
-   ppir_instr_print_pre_schedule(comp);
-
    return true;
 }
