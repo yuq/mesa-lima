@@ -470,8 +470,10 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 			     "Decompress Color (levels %u - %u, mask 0x%x)\n\n",
 			     first_level, last_level, level_mask);
 
-	if (rtex->dcc_offset && need_dcc_decompress) {
+	if (need_dcc_decompress) {
 		custom_blend = sctx->custom_blend_dcc_decompress;
+
+		assert(rtex->dcc_offset);
 
 		/* disable levels without DCC */
 		for (int i = first_level; i <= last_level; i++) {
