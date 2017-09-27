@@ -6407,6 +6407,7 @@ ast_switch_statement::hir(exec_list *instructions,
                        state,
                        "switch-statement expression must be scalar "
                        "integer");
+      return NULL;
    }
 
    /* Track the switch-statement nesting in a stack-like manner.
