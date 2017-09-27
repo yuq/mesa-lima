@@ -150,8 +150,7 @@ vc5_get_default_values(struct vc5_context *vc5)
 
 static void
 vc5_emit_gl_shader_state(struct vc5_context *vc5,
-                         const struct pipe_draw_info *info,
-                         uint32_t extra_index_bias)
+                         const struct pipe_draw_info *info)
 {
         struct vc5_job *job = vc5->job;
         /* VC5_DIRTY_VTXSTATE */
@@ -242,9 +241,7 @@ vc5_emit_gl_shader_state(struct vc5_context *vc5,
                 const struct util_format_description *desc =
                         util_format_description(elem->src_format);
 
-                uint32_t offset = (vb->buffer_offset +
-                                   elem->src_offset +
-                                   vb->stride * info->index_bias);
+                uint32_t offset = vb->buffer_offset + elem->src_offset;
 
                 cl_emit(&job->indirect, GL_SHADER_STATE_ATTRIBUTE_RECORD, attr) {
                         uint32_t r_size = desc->channel[0].size;
@@ -380,21 +377,30 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
         vc5_emit_state(pctx);
 
-        if ((vc5->dirty & (VC5_DIRTY_VTXBUF |
-                           VC5_DIRTY_VTXSTATE |
-                           VC5_DIRTY_PRIM_MODE |
-                           VC5_DIRTY_RASTERIZER |
-                           VC5_DIRTY_COMPILED_CS |
-                           VC5_DIRTY_COMPILED_VS |
-                           VC5_DIRTY_COMPILED_FS |
-                           vc5->prog.cs->uniform_dirty_bits |
-                           vc5->prog.vs->uniform_dirty_bits |
-                           vc5->prog.fs->uniform_dirty_bits)) ||
-            vc5->last_index_bias != info->index_bias) {
-                vc5_emit_gl_shader_state(vc5, info, 0);
+        if (vc5->dirty & (VC5_DIRTY_VTXBUF |
+                          VC5_DIRTY_VTXSTATE |
+                          VC5_DIRTY_PRIM_MODE |
+                          VC5_DIRTY_RASTERIZER |
+                          VC5_DIRTY_COMPILED_CS |
+                          VC5_DIRTY_COMPILED_VS |
+                          VC5_DIRTY_COMPILED_FS |
+                          vc5->prog.cs->uniform_dirty_bits |
+                          vc5->prog.vs->uniform_dirty_bits |
+                          vc5->prog.fs->uniform_dirty_bits)) {
+                vc5_emit_gl_shader_state(vc5, info);
         }
 
         vc5->dirty = 0;
+
+        /* The Base Vertex/Base Instance packet sets those values to nonzero
+         * for the next draw call only.
+         */
+        if (info->index_bias || info->start_instance) {
+                cl_emit(&job->bcl, BASE_VERTEX_BASE_INSTANCE, base) {
+                        base.base_instance = info->start_instance;
+                        base.base_vertex = info->index_bias;
+                }
+        }
 
         /* Note that the primitive type fields match with OpenGL/gallium
          * definitions, up to but not including QUADS.

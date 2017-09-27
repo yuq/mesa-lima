@@ -97,6 +97,7 @@ vc5_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_TEXTURE_MULTISAMPLE:
         case PIPE_CAP_TEXTURE_SWIZZLE:
         case PIPE_CAP_VERTEX_ELEMENT_INSTANCE_DIVISOR:
+        case PIPE_CAP_START_INSTANCE:
         case PIPE_CAP_TGSI_INSTANCEID:
         case PIPE_CAP_SM3:
         case PIPE_CAP_INDEP_BLEND_ENABLE: /* XXX */
@@ -159,7 +160,6 @@ vc5_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_VERTEX_BUFFER_OFFSET_4BYTE_ALIGNED_ONLY:
         case PIPE_CAP_VERTEX_BUFFER_STRIDE_4BYTE_ALIGNED_ONLY:
         case PIPE_CAP_VERTEX_ELEMENT_SRC_OFFSET_4BYTE_ALIGNED_ONLY:
-        case PIPE_CAP_START_INSTANCE:
         case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:
         case PIPE_CAP_SHADER_STENCIL_EXPORT:
         case PIPE_CAP_TGSI_TEXCOORD:

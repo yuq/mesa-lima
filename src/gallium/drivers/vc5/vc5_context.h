@@ -304,8 +304,6 @@ struct vc5_context {
 
         /** Maximum index buffer valid for the current shader_rec. */
         uint32_t max_index;
-        /** Last index bias baked into the current shader_rec. */
-        uint32_t last_index_bias;
 
         /** Seqno of the last CL flush's job. */
         uint64_t last_emit_seqno;
