@@ -49,7 +49,6 @@ struct parser_context {
    XML_Parser parser;
    int foo;
    struct location loc;
-   const char *platform;
 
    struct gen_group *group;
    struct gen_enum *enoom;
@@ -369,7 +368,6 @@ start_element(void *data, const char *element_name, const char **atts)
       if (gen == NULL)
          fail(&ctx->loc, "no gen given");
 
-      ctx->platform = strdup(name);
       int major, minor;
       int n = sscanf(gen, "%d.%d", &major, &minor);
       if (n == 0)
