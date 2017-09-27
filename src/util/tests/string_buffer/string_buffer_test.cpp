@@ -40,9 +40,9 @@ class string_buffer : public ::testing::Test {
 public:
 
    struct _mesa_string_buffer *buf;
-   const char *str1 = "test1";
-   const char *str2 = "test2";
-   const char *str3 = "test1test2";
+   const char *str1;
+   const char *str2;
+   const char *str3;
    char str4[80];
    char str5[40];
 
@@ -53,6 +53,9 @@ public:
 void
 string_buffer::SetUp()
 {
+   str1 = "test1";
+   str2 = "test2";
+   str3 = "test1test2";
    buf = _mesa_string_buffer_create(NULL, INITIAL_BUF_SIZE);
 }
 
