@@ -94,8 +94,6 @@ typedef enum {
    ppir_op_ne,
    ppir_op_not,
 
-   ppir_op_copy,
-
    ppir_op_load_uniform,
    ppir_op_load_varying,
    ppir_op_load_texture,
@@ -199,11 +197,11 @@ typedef struct ppir_dest {
 
 typedef struct {
    ppir_node node;
-   ppir_node *children[4];
+   ppir_node *children[3];
    int num_child;
 
    ppir_dest dest;
-   ppir_src src[4];
+   ppir_src src[3];
 } ppir_alu_node;
 
 typedef struct {
