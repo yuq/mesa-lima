@@ -2518,6 +2518,17 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
 
    intel_screen_init_surface_formats(screen);
 
+   if (INTEL_DEBUG & (DEBUG_BATCH | DEBUG_SUBMIT)) {
+      unsigned int caps = intel_get_integer(screen, I915_PARAM_HAS_SCHEDULER);
+      if (caps) {
+         fprintf(stderr, "Kernel scheduler detected: %08x\n", caps);
+         if (caps & I915_SCHEDULER_CAP_PRIORITY)
+            fprintf(stderr, "  - User priority sorting enabled\n");
+         if (caps & I915_SCHEDULER_CAP_PREEMPTION)
+            fprintf(stderr, "  - Preemption enabled\n");
+      }
+   }
+
    return (const __DRIconfig**) intel_screen_make_configs(dri_screen);
 }
 
