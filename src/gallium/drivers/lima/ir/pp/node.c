@@ -47,12 +47,12 @@ const ppir_op_info ppir_op_infos[] = {
       .name = "neg",
       .type = ppir_node_type_alu,
    },
-   [ppir_op_copy] = {
-      .name = "copy",
-      .type = ppir_node_type_alu,
-   },
    [ppir_op_load_varying] = {
       .name = "ld_var",
+      .type = ppir_node_type_load,
+   },
+   [ppir_op_load_uniform] = {
+      .name = "ld_uni",
       .type = ppir_node_type_load,
    },
    [ppir_op_const] = {
