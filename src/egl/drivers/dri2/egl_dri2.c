@@ -2745,17 +2745,16 @@ dri2_wl_release_buffer(void *user_data, struct wl_drm_buffer *buffer)
    dri2_dpy->image->destroyImage(buffer->driver_buffer);
 }
 
-static struct wayland_drm_callbacks wl_drm_callbacks = {
-        .authenticate = NULL,
-        .reference_buffer = dri2_wl_reference_buffer,
-        .release_buffer = dri2_wl_release_buffer
-};
-
 static EGLBoolean
 dri2_bind_wayland_display_wl(_EGLDriver *drv, _EGLDisplay *disp,
                              struct wl_display *wl_dpy)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   const struct wayland_drm_callbacks wl_drm_callbacks = {
+      .authenticate = (int(*)(void *, uint32_t)) dri2_dpy->vtbl->authenticate,
+      .reference_buffer = dri2_wl_reference_buffer,
+      .release_buffer = dri2_wl_release_buffer
+   };
    int flags = 0;
    uint64_t cap;
 
@@ -2763,9 +2762,6 @@ dri2_bind_wayland_display_wl(_EGLDriver *drv, _EGLDisplay *disp,
 
    if (dri2_dpy->wl_server_drm)
            return EGL_FALSE;
-
-   wl_drm_callbacks.authenticate =
-      (int(*)(void *, uint32_t)) dri2_dpy->vtbl->authenticate;
 
    if (drmGetCap(dri2_dpy->fd, DRM_CAP_PRIME, &cap) == 0 &&
        cap == (DRM_PRIME_CAP_IMPORT | DRM_PRIME_CAP_EXPORT) &&
