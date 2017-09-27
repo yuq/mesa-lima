@@ -56,7 +56,7 @@ vc4_bo_label(struct vc4_screen *screen, struct vc4_bo *bo, const char *fmt, ...)
          * (for debugging a single app's allocation).
          */
 #ifndef DEBUG
-        if (!(VC4_DEBUG & VC4_DEBUG_SURFACE))
+        if (!(vc4_debug & VC4_DEBUG_SURFACE))
                 return;
 #endif
         va_list va;
