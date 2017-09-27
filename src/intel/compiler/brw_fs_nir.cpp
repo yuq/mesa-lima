@@ -1915,7 +1915,9 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
    const unsigned push_reg_count = gs_prog_data->base.urb_read_length * 8;
 
    /* TODO: figure out push input layout for invocations == 1 */
+   /* TODO: make this work with 64-bit inputs */
    if (gs_prog_data->invocations == 1 &&
+       type_sz(dst.type) <= 4 &&
        offset_const != NULL && vertex_const != NULL &&
        4 * (base_offset + offset_const->u32[0]) < push_reg_count) {
       int imm_offset = (base_offset + offset_const->u32[0]) * 4 +
@@ -1928,7 +1930,7 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
    }
 
    /* Resort to the pull model.  Ensure the VUE handles are provided. */
-   gs_prog_data->base.include_vue_handles = true;
+   assert(gs_prog_data->base.include_vue_handles);
 
    unsigned first_icp_handle = gs_prog_data->include_primitive_id ? 3 : 2;
    fs_reg icp_handle = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);

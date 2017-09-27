@@ -5602,6 +5602,17 @@ fs_visitor::setup_gs_payload()
       payload.num_regs++;
    }
 
+   /* Always enable VUE handles so we can safely use pull model if needed.
+    *
+    * The push model for a GS uses a ton of register space even for trivial
+    * scenarios with just a few inputs, so just make things easier and a bit
+    * safer by always having pull model available.
+    */
+   gs_prog_data->base.include_vue_handles = true;
+
+   /* R3..RN: ICP Handles for each incoming vertex (when using pull model) */
+   payload.num_regs += nir->info.gs.vertices_in;
+
    /* Use a maximum of 24 registers for push-model inputs. */
    const unsigned max_push_components = 24;
 
@@ -5612,12 +5623,7 @@ fs_visitor::setup_gs_payload()
     * have to multiply by VerticesIn to obtain the total storage requirement.
     */
    if (8 * vue_prog_data->urb_read_length * nir->info.gs.vertices_in >
-       max_push_components || gs_prog_data->invocations > 1) {
-      gs_prog_data->base.include_vue_handles = true;
-
-      /* R3..RN: ICP Handles for each incoming vertex (when using pull model) */
-      payload.num_regs += nir->info.gs.vertices_in;
-
+       max_push_components) {
       vue_prog_data->urb_read_length =
          ROUND_DOWN_TO(max_push_components / nir->info.gs.vertices_in, 8) / 8;
    }
