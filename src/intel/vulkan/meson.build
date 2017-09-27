@@ -144,7 +144,7 @@ libvulkan_intel = shared_library(
   include_directories : [inc_common, inc_intel, inc_compiler, inc_drm_uapi,
                          inc_vulkan_util, inc_vulkan_wsi],
   link_whole : [libanv_common, libanv_gen_libs],
-  link_with : [libintel_compiler, libintel_common, libisl, libisl, libblorp,
+  link_with : [libintel_compiler, libintel_common, libisl, libblorp,
                libvulkan_util, libvulkan_wsi, libnir, libmesa_util],
   dependencies : [dep_libdrm, dep_thread, dep_dl, dep_m, anv_deps, dep_valgrind],
   c_args : [c_vis_args, no_override_init_args, '-msse2', anv_flags],
