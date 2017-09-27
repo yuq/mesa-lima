@@ -26,6 +26,7 @@ env:
     - WAYLAND_PROTOCOLS_VERSION=wayland-protocols-1.8
     - PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig:$HOME/prefix/share/pkgconfig
     - LD_LIBRARY_PATH="$HOME/prefix/lib:$LD_LIBRARY_PATH"
+    - PATH="$HOME/prefix/bin:$PATH"
 
 matrix:
   include:
@@ -392,9 +393,33 @@ matrix:
             - libexpat1-dev
             - libx11-xcb-dev
             - libelf-dev
+    - env:
+        - LABEL="meson Vulkan"
+        - BUILD=meson
+        - MESON_OPTIONS="-Dbuild-tests=true"
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-3.9
+          packages:
+            # LLVM packaging is broken and misses these dependencies
+            - libedit-dev
+            # From sources above
+            - llvm-3.9-dev
+            # Common
+            - xz-utils
+            - libexpat1-dev
+            - libelf-dev
+            - python3-pip
 
 install:
   - pip install --user mako
+
+  # Install the latest meson from pip, since the version in the ubuntu repos is
+  # often quite old.
+  - if test "x$BUILD" = xmeson; then
+      pip3 install --user meson;
+    fi
 
   # Since libdrm gets updated in configure.ac regularly, try to pick up the
   # latest version from there.
@@ -457,6 +482,11 @@ install:
   - tar -axvf $WAYLAND_PROTOCOLS_VERSION.tar.xz
   - (cd $WAYLAND_PROTOCOLS_VERSION && ./configure --prefix=$HOME/prefix && make install)
 
+  # Meson requires ninja >= 1.6, but trusty has 1.3.x
+  - wget https://github.com/ninja-build/ninja/releases/download/v1.6.0/ninja-linux.zip;
+  - unzip ninja-linux.zip
+  - mv ninja $HOME/prefix/bin/
+
   # Generate the header since one is missing on the Travis instance
   - mkdir -p linux
   - printf "%s\n" \
@@ -495,4 +525,10 @@ script:
       test -n "$OVERRIDE_CC" && export CC="$OVERRIDE_CC";
       test -n "$OVERRIDE_CXX" && export CXX="$OVERRIDE_CXX";
       scons $SCONS_TARGET && eval $SCONS_CHECK_COMMAND;
+    fi
+
+  - if test "x$BUILD" = xmeson; then
+      export CC="$CC -isystem`pwd`";
+      meson _build $MESON_OPTIONS;
+      ninja -C _build test;
     fi
