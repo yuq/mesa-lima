@@ -30,7 +30,7 @@
 #include <fstream>
 #include <string>
 
-#if defined(__linux__) || defined(__gnu_linux__)
+#if defined(__linux__) || defined(__gnu_linux__) || defined(__APPLE__)
 #include <pthread.h>
 #include <sched.h>
 #include <unistd.h>
@@ -218,6 +218,8 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes, uint32_t& out_numThread
         }
     }
 
+#elif defined(__APPLE__)
+
 #else
 
 #error Unsupported platform
@@ -291,7 +293,7 @@ void bindThread(SWR_CONTEXT* pContext, uint32_t threadId, uint32_t procGroupId =
 
     SetThreadGroupAffinity(GetCurrentThread(), &affinity, nullptr);
 
-#else
+#elif defined(__linux__) || defined(__gnu_linux__)
 
     cpu_set_t cpuset;
     pthread_t thread = pthread_self();
