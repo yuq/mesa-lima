@@ -252,10 +252,11 @@ static void emit_arl(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
 	LLVMValueRef floor_index =  lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_FLR, emit_data->args[0]);
 	emit_data->output[emit_data->chan] = LLVMBuildFPToSI(builder,
-			floor_index, bld_base->base.int_elem_type , "");
+			floor_index, ctx->i32, "");
 }
 
 static void emit_and(const struct lp_build_tgsi_action *action,
@@ -369,12 +370,12 @@ static void emit_ssg(const struct lp_build_tgsi_action *action,
 		cmp = LLVMBuildICmp(builder, LLVMIntSGT, emit_data->args[0], bld_base->int64_bld.zero, "");
 		val = LLVMBuildSelect(builder, cmp, bld_base->int64_bld.one, emit_data->args[0], "");
 		cmp = LLVMBuildICmp(builder, LLVMIntSGE, val, bld_base->int64_bld.zero, "");
-		val = LLVMBuildSelect(builder, cmp, val, LLVMConstInt(bld_base->int64_bld.elem_type, -1, true), "");
+		val = LLVMBuildSelect(builder, cmp, val, LLVMConstInt(ctx->i64, -1, true), "");
 	} else if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_ISSG) {
 		cmp = LLVMBuildICmp(builder, LLVMIntSGT, emit_data->args[0], ctx->i32_0, "");
 		val = LLVMBuildSelect(builder, cmp, ctx->i32_1, emit_data->args[0], "");
 		cmp = LLVMBuildICmp(builder, LLVMIntSGE, val, ctx->i32_0, "");
-		val = LLVMBuildSelect(builder, cmp, val, LLVMConstInt(bld_base->int_bld.elem_type, -1, true), "");
+		val = LLVMBuildSelect(builder, cmp, val, LLVMConstInt(ctx->i32, -1, true), "");
 	} else if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_DSSG) {
 		cmp = LLVMBuildFCmp(builder, LLVMRealOGT, emit_data->args[0], bld_base->dbl_bld.zero, "");
 		val = LLVMBuildSelect(builder, cmp, bld_base->dbl_bld.one, emit_data->args[0], "");
@@ -384,7 +385,7 @@ static void emit_ssg(const struct lp_build_tgsi_action *action,
 		cmp = LLVMBuildFCmp(builder, LLVMRealOGT, emit_data->args[0], bld_base->base.zero, "");
 		val = LLVMBuildSelect(builder, cmp, bld_base->base.one, emit_data->args[0], "");
 		cmp = LLVMBuildFCmp(builder, LLVMRealOGE, val, bld_base->base.zero, "");
-		val = LLVMBuildSelect(builder, cmp, val, LLVMConstReal(bld_base->base.elem_type, -1), "");
+		val = LLVMBuildSelect(builder, cmp, val, LLVMConstReal(ctx->f32, -1), "");
 	}
 
 	emit_data->output[emit_data->chan] = val;
@@ -701,8 +702,7 @@ static void emit_up2h(const struct lp_build_tgsi_action *action,
 		val = i == 1 ? LLVMBuildLShr(builder, input, const16, "") : input;
 		val = LLVMBuildTrunc(builder, val, i16, "");
 		val = ac_to_float(&ctx->ac, val);
-		emit_data->output[i] =
-			LLVMBuildFPExt(builder, val, bld_base->base.elem_type, "");
+		emit_data->output[i] = LLVMBuildFPExt(builder, val, ctx->f32, "");
 	}
 }
 
