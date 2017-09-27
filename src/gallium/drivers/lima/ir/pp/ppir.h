@@ -104,6 +104,8 @@ typedef enum {
    ppir_op_store_color,
 
    ppir_op_const,
+
+   ppir_op_num,
 } ppir_op;
 
 typedef enum {
@@ -326,7 +328,7 @@ bool ppir_instr_insert_node(ppir_block *block, ppir_node *node);
 void ppir_instr_insert_const(ppir_node *node);
 void ppir_instr_print_pre_schedule(ppir_compiler *comp);
 
-void ppir_lower_prog(ppir_compiler *comp);
+bool ppir_lower_prog(ppir_compiler *comp);
 bool ppir_schedule_prog(ppir_compiler *comp);
 
 #endif
