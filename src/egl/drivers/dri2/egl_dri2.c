@@ -62,6 +62,7 @@
 #include "loader/loader.h"
 #include "util/u_atomic.h"
 #include "util/u_vector.h"
+#include "mapi/glapi/glapi.h"
 
 /* The kernel header drm_fourcc.h defines the DRM formats below.  We duplicate
  * some of the definitions here so that building Mesa won't bleeding-edge
@@ -1564,9 +1565,7 @@ dri2_surface_get_dri_drawable(_EGLSurface *surf)
 static _EGLProc
 dri2_get_proc_address(_EGLDriver *drv, const char *procname)
 {
-   struct dri2_egl_driver *dri2_drv = dri2_egl_driver(drv);
-
-   return dri2_drv->get_proc_address(procname);
+   return _glapi_get_proc_address(procname);
 }
 
 static _EGLSurface*
@@ -3169,7 +3168,6 @@ dri2_unload(_EGLDriver *drv)
 {
    struct dri2_egl_driver *dri2_drv = dri2_egl_driver(drv);
 
-   dlclose(dri2_drv->handle);
    free(dri2_drv);
 }
 
@@ -3177,49 +3175,17 @@ static EGLBoolean
 dri2_load(_EGLDriver *drv)
 {
    struct dri2_egl_driver *dri2_drv = dri2_egl_driver(drv);
-#ifdef HAVE_ANDROID_PLATFORM
-   const char *libname = "libglapi.so";
-#elif defined(__APPLE__)
-   const char *libname = "libglapi.0.dylib";
-#elif defined(__CYGWIN__)
-   const char *libname = "cygglapi-0.dll";
-#else
-   const char *libname = "libglapi.so.0";
-#endif
-   void *handle;
-
-   /* RTLD_GLOBAL to make sure glapi symbols are visible to DRI drivers */
-   handle = dlopen(libname, RTLD_LAZY | RTLD_GLOBAL);
-   if (!handle) {
-      _eglLog(_EGL_WARNING, "DRI2: failed to open glapi provider");
-      goto no_handle;
-   }
-
-   dri2_drv->get_proc_address = (_EGLProc (*)(const char *))
-         dlsym(handle, "_glapi_get_proc_address");
-
-   /* if glapi is not available, loading DRI drivers will fail */
-   if (!dri2_drv->get_proc_address) {
-      _eglLog(_EGL_WARNING, "DRI2: failed to find _glapi_get_proc_address");
-      goto no_symbol;
-   }
 
    dri2_drv->glFlush = (void (*)(void))
-      dri2_drv->get_proc_address("glFlush");
+      _glapi_get_proc_address("glFlush");
 
    /* if glFlush is not available things are horribly broken */
    if (!dri2_drv->glFlush) {
       _eglLog(_EGL_WARNING, "DRI2: failed to find glFlush entry point");
-      goto no_symbol;
+      return EGL_FALSE;
    }
 
-   dri2_drv->handle = handle;
    return EGL_TRUE;
-
-no_symbol:
-   dlclose(handle);
-no_handle:
-   return EGL_FALSE;
 }
 
 /**

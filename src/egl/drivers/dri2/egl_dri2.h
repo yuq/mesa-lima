@@ -83,8 +83,6 @@ struct dri2_egl_driver
 {
    _EGLDriver base;
 
-   void *handle;
-   _EGLProc (*get_proc_address)(const char *procname);
    void (*glFlush)(void);
 };
 

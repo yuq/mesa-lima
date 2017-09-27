@@ -27,6 +27,7 @@ BUILT_SOURCES =
 
 AM_CFLAGS = \
 	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/src/mapi \
 	-I$(top_srcdir)/src/egl/main \
 	-I$(top_srcdir)/src/gbm/main \
 	-I$(top_srcdir)/src \
@@ -45,6 +46,7 @@ libEGL_common_la_SOURCES = \
 	$(LIBEGL_C_FILES)
 
 libEGL_common_la_LIBADD = \
+	$(top_builddir)/src/mapi/shared-glapi/libglapi.la \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(EGL_LIB_DEPS)
 

@@ -53,6 +53,7 @@ LOCAL_STATIC_LIBRARIES := \
 
 LOCAL_SHARED_LIBRARIES := \
 	libdl \
+	libglapi \
 	libhardware \
 	liblog \
 	libcutils \
