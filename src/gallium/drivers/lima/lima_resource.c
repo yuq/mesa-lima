@@ -164,6 +164,58 @@ lima_resource_destroy(struct pipe_screen *pscreen, struct pipe_resource *pres)
    FREE(res);
 }
 
+static struct pipe_resource *
+lima_resource_from_handle(struct pipe_screen *pscreen,
+        const struct pipe_resource *templat,
+        struct winsys_handle *handle, unsigned usage)
+{
+   struct lima_resource *res;
+   struct lima_screen *screen = lima_screen(pscreen);
+   struct lima_bo_import_result result = {0};
+   enum lima_bo_handle_type type;
+   int r;
+
+   switch (handle->type) {
+   case DRM_API_HANDLE_TYPE_FD:
+      type = lima_bo_handle_type_dma_buf_fd;
+      break;
+   default:
+      return NULL;
+   }
+
+   res = CALLOC_STRUCT(lima_resource);
+   if (!res)
+      return NULL;
+
+   res->buffer = CALLOC_STRUCT(lima_buffer);
+   if (!res->buffer)
+      return NULL;
+
+   struct pipe_resource *pres = &res->base;
+
+   *pres = *templat;
+
+   pres->screen = pscreen;
+
+   r = lima_bo_import(screen->dev, type, handle->handle, &result);
+   if (r)
+      goto fail;
+
+   res->buffer->bo = result.bo;
+   res->buffer->size = result.size;
+
+   res->stride = handle->stride;
+   res->buffer->screen = screen;
+
+   pipe_reference_init(&pres->reference, 1);
+
+   return pres;
+
+fail:
+   lima_resource_destroy(pscreen, pres);
+   return NULL;
+}
+
 static boolean
 lima_resource_get_handle(struct pipe_screen *pscreen,
                          struct pipe_context *pctx,
@@ -196,6 +248,7 @@ void
 lima_resource_screen_init(struct lima_screen *screen)
 {
    screen->base.resource_create = lima_resource_create;
+   screen->base.resource_from_handle = lima_resource_from_handle;
    screen->base.resource_destroy = lima_resource_destroy;
    screen->base.resource_get_handle = lima_resource_get_handle;
 }
