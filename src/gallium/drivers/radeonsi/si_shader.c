@@ -1037,8 +1037,7 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
 		return si_llvm_emit_fetch_64bit(bld_base, type, value, value2);
 	}
 
-	return LLVMBuildBitCast(gallivm->builder, value,
-				tgsi2llvmtype(bld_base, type), "");
+	return bitcast(bld_base, type, value);
 }
 
 /**
@@ -1325,9 +1324,7 @@ static LLVMValueRef fetch_input_gs(
 		return si_llvm_emit_fetch_64bit(bld_base, type,
 						value, value2);
 	}
-	return LLVMBuildBitCast(gallivm->builder,
-				value,
-				tgsi2llvmtype(bld_base, type), "");
+	return bitcast(bld_base, type, value);
 }
 
 static int lookup_interp_param_index(unsigned interpolate, unsigned location)
