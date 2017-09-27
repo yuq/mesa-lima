@@ -180,14 +180,6 @@ blit2d_bind_dst(struct radv_cmd_buffer *cmd_buffer,
 }
 
 static void
-blit2d_unbind_dst(struct radv_cmd_buffer *cmd_buffer,
-                  struct blit2d_dst_temps *tmp)
-{
-	VkDevice vk_device = radv_device_to_handle(cmd_buffer->device);
-	radv_DestroyFramebuffer(vk_device, tmp->fb, &cmd_buffer->pool->alloc);
-}
-
-static void
 bind_pipeline(struct radv_cmd_buffer *cmd_buffer,
               enum blit2d_src_type src_type, unsigned fs_key)
 {
@@ -340,7 +332,9 @@ radv_meta_blit2d_normal_dst(struct radv_cmd_buffer *cmd_buffer,
 			/* At the point where we emit the draw call, all data from the
 			* descriptor sets, etc. has been used.  We are free to delete it.
 			*/
-			blit2d_unbind_dst(cmd_buffer, &dst_temps);
+			radv_DestroyFramebuffer(radv_device_to_handle(device),
+						dst_temps.fb,
+						&cmd_buffer->pool->alloc);
 		}
 	}
 }
