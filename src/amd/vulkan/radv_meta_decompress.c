@@ -232,8 +232,6 @@ radv_device_init_meta_depth_decomp_state(struct radv_device *device)
 	struct radv_meta_state *state = &device->meta_state;
 	VkResult res = VK_SUCCESS;
 
-	zero(state->depth_decomp);
-
 	struct radv_shader_module vs_module = { .nir = radv_meta_build_nir_vs_generate_vertices() };
 	if (!vs_module.nir) {
 		/* XXX: Need more accurate error */

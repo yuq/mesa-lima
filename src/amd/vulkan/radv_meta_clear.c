@@ -768,8 +768,6 @@ radv_device_init_meta_clear_state(struct radv_device *device)
 	VkResult res;
 	struct radv_meta_state *state = &device->meta_state;
 
-	memset(&device->meta_state.clear, 0, sizeof(device->meta_state.clear));
-
 	VkPipelineLayoutCreateInfo pl_color_create_info = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		.setLayoutCount = 0,

@@ -250,7 +250,6 @@ radv_device_init_meta_resolve_compute_state(struct radv_device *device)
 {
 	struct radv_meta_state *state = &device->meta_state;
 	VkResult res;
-	memset(&device->meta_state.resolve_compute, 0, sizeof(device->meta_state.resolve_compute));
 
 	res = create_layout(device);
 	if (res != VK_SUCCESS)

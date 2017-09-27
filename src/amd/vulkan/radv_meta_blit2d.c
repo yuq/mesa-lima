@@ -1136,8 +1136,6 @@ radv_device_init_meta_blit2d_state(struct radv_device *device)
 {
 	VkResult result;
 
-	zero(device->meta_state.blit2d);
-
 	const VkPushConstantRange push_constant_ranges[] = {
 		{VK_SHADER_STAGE_VERTEX_BIT, 0, 16},
 		{VK_SHADER_STAGE_FRAGMENT_BIT, 16, 4},

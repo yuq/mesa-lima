@@ -197,8 +197,6 @@ radv_clear_mask(uint32_t *inout_mask, uint32_t clear_mask)
 			memcpy((dest), (src), (count) * sizeof(*(src))); \
 		})
 
-#define zero(x) (memset(&(x), 0, sizeof(x)))
-
 /* Whenever we generate an error, pass it through this function. Useful for
  * debugging, where we can break on it. Only call at error site, not when
  * propagating errors. Might be useful to plug in a stack trace here.

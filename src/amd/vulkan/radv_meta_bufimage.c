@@ -127,8 +127,6 @@ radv_device_init_meta_itob_state(struct radv_device *device)
 	VkResult result;
 	struct radv_shader_module cs = { .nir = NULL };
 
-	zero(device->meta_state.itob);
-
 	cs.nir = build_nir_itob_compute_shader(device);
 
 	/*
@@ -327,8 +325,6 @@ radv_device_init_meta_btoi_state(struct radv_device *device)
 	VkResult result;
 	struct radv_shader_module cs = { .nir = NULL };
 
-	zero(device->meta_state.btoi);
-
 	cs.nir = build_nir_btoi_compute_shader(device);
 
 	/*
@@ -521,8 +517,6 @@ radv_device_init_meta_itoi_state(struct radv_device *device)
 	VkResult result;
 	struct radv_shader_module cs = { .nir = NULL };
 
-	zero(device->meta_state.itoi);
-
 	cs.nir = build_nir_itoi_compute_shader(device);
 
 	/*
@@ -676,8 +670,6 @@ radv_device_init_meta_cleari_state(struct radv_device *device)
 {
 	VkResult result;
 	struct radv_shader_module cs = { .nir = NULL };
-
-	zero(device->meta_state.cleari);
 
 	cs.nir = build_nir_cleari_compute_shader(device);
 

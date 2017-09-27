@@ -266,8 +266,6 @@ radv_device_init_meta_fast_clear_flush_state(struct radv_device *device)
 {
 	VkResult res = VK_SUCCESS;
 
-	zero(device->meta_state.fast_clear_flush);
-
 	struct radv_shader_module vs_module = { .nir = radv_meta_build_nir_vs_generate_vertices() };
 	if (!vs_module.nir) {
 		/* XXX: Need more accurate error */

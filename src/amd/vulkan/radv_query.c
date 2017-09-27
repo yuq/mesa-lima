@@ -519,8 +519,6 @@ VkResult radv_device_init_meta_query_state(struct radv_device *device)
 	struct radv_shader_module occlusion_cs = { .nir = NULL };
 	struct radv_shader_module pipeline_statistics_cs = { .nir = NULL };
 
-	zero(device->meta_state.query);
-
 	occlusion_cs.nir = build_occlusion_query_shader(device);
 	pipeline_statistics_cs.nir = build_pipeline_statistics_query_shader(device);
 

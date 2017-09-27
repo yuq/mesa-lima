@@ -121,8 +121,6 @@ VkResult radv_device_init_meta_buffer_state(struct radv_device *device)
 	struct radv_shader_module fill_cs = { .nir = NULL };
 	struct radv_shader_module copy_cs = { .nir = NULL };
 
-	zero(device->meta_state.buffer);
-
 	fill_cs.nir = build_buffer_fill_shader(device);
 	copy_cs.nir = build_buffer_copy_shader(device);
 
