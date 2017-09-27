@@ -360,6 +360,7 @@ static const struct vgpu10_format_entry format_conversion_table[] =
    { PIPE_FORMAT_ASTC_12x10_SRGB,       SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_ASTC_12x12_SRGB,       SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_P016,                  SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_R10G10B10X2_UNORM,     SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
 };
 
 
