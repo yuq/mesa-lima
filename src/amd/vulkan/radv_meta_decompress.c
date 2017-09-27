@@ -337,6 +337,7 @@ static void radv_process_depth_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 				     &(VkImageViewCreateInfo) {
 					     .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 					     .image = radv_image_to_handle(image),
+					     .viewType = radv_meta_get_view_type(image),
 					     .format = image->vk_format,
 					     .subresourceRange = {
 						     .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
