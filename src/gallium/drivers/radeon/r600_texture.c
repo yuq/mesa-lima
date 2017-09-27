@@ -1910,8 +1910,7 @@ void vi_disable_dcc_if_incompatible_format(struct r600_common_context *rctx,
 {
 	struct r600_texture *rtex = (struct r600_texture *)tex;
 
-	if (vi_dcc_enabled(rtex, level) &&
-	    !vi_dcc_formats_compatible(tex->format, view_format))
+	if (vi_dcc_formats_are_incompatible(tex, level, view_format))
 		if (!si_texture_disable_dcc(rctx, (struct r600_texture*)tex))
 			rctx->decompress_dcc(&rctx->b, rtex);
 }
