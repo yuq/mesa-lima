@@ -287,13 +287,6 @@ create_color_pipeline(struct radv_device *device,
 	return result;
 }
 
-static void
-destroy_render_pass(struct radv_device *device, VkRenderPass renderpass)
-{
-	radv_DestroyRenderPass(radv_device_to_handle(device), renderpass,
-				     &device->meta_state.alloc);
-}
-
 void
 radv_device_finish_meta_clear_state(struct radv_device *device)
 {
@@ -304,7 +297,9 @@ radv_device_finish_meta_clear_state(struct radv_device *device)
 			radv_DestroyPipeline(radv_device_to_handle(device),
 					     state->clear[i].color_pipelines[j],
 					     &device->meta_state.alloc);
-			destroy_render_pass(device, state->clear[i].render_pass[j]);
+			radv_DestroyRenderPass(radv_device_to_handle(device),
+					       state->clear[i].render_pass[j],
+					       &device->meta_state.alloc);
 		}
 
 		for (uint32_t j = 0; j < NUM_DEPTH_CLEAR_PIPELINES; j++) {
@@ -318,7 +313,9 @@ radv_device_finish_meta_clear_state(struct radv_device *device)
 					     state->clear[i].depthstencil_pipeline[j],
 					     &device->meta_state.alloc);
 		}
-		destroy_render_pass(device, state->clear[i].depthstencil_rp);
+		radv_DestroyRenderPass(radv_device_to_handle(device),
+				      state->clear[i].depthstencil_rp,
+				      &device->meta_state.alloc);
 	}
 	radv_DestroyPipelineLayout(radv_device_to_handle(device),
 				   state->clear_color_p_layout,
