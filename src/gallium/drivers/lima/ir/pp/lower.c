@@ -33,15 +33,8 @@ static bool ppir_lower_const(ppir_block *block, ppir_node *node)
    return true;
 }
 
-/* lower copy from different sources into a series of move */
-static bool ppir_lower_copy(ppir_block *block, ppir_node *node)
-{
-   return true;
-}
-
 static bool (*ppir_lower_funcs[ppir_op_num])(ppir_block *, ppir_node *) = {
    [ppir_op_const] = ppir_lower_const,
-   [ppir_op_copy] = ppir_lower_copy,
 };
 
 bool ppir_lower_prog(ppir_compiler *comp)
