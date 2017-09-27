@@ -29,6 +29,8 @@ endif
 AM_CFLAGS = \
 	-I$(top_builddir)/src/compiler/nir \
 	-I$(top_srcdir)/include/drm-uapi \
+	-I$(top_builddir)/src \
+	-I$(top_srcdir)/src/broadcom/cle \
 	$(LIBDRM_CFLAGS) \
 	$(GALLIUM_DRIVER_CFLAGS) \
 	$(SIM_CFLAGS) \
