@@ -30,6 +30,10 @@
 #include "common/gen_device_info.h"
 #include "util/hash_table.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct gen_spec;
 struct gen_group;
 struct gen_field;
@@ -163,5 +167,10 @@ void gen_print_group(FILE *out,
                      struct gen_group *group,
                      uint64_t offset, const uint32_t *p,
                      bool color);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif /* GEN_DECODER_H */
