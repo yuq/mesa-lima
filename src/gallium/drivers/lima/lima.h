@@ -34,6 +34,7 @@ enum lima_gpu_type {
 enum lima_bo_handle_type {
    lima_bo_handle_type_gem_flink_name = 0,
    lima_bo_handle_type_kms = 1,
+   lima_bo_handle_type_dma_buf_fd = 2,
 };
 
 struct lima_device_info {
