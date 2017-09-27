@@ -322,11 +322,6 @@
     <field name="Viewport Z Scale (Zc to Zs)" size="32" start="0" type="float"/>
   </packet>
 
-  <packet code="120" name="Tile Binning Mode Configuration">
-    <field name="pad" size="63" start="1" type="uint" default="0"/>
-    <field name="sub-id" size="1" start="0" type="uint" default="0"/>
-  </packet>
-
   <packet code="120" name="Tile Binning Mode Configuration (Part1)">
     <field name="Double-buffer in non-ms mode" size="1" start="63" type="bool"/>
     <field name="Multisample Mode (4x)" size="1" start="62" type="bool"/>
@@ -362,11 +357,6 @@
     <field name="Tile Allocation Memory Size" size="32" start="0" type="uint"/>
 
     <field name="sub-id" size="1" start="0" type="uint" default="1"/>
-  </packet>
-
-  <packet code="121" name="Tile Rendering Mode Configuration" cl="R">
-    <field name="pad" size="60" start="4" type="uint"/>
-    <field name="sub-id" size="4" start="0" type="uint"/>
   </packet>
 
   <packet code="121" name="Tile Rendering Mode Configuration (Common Configuration)" cl="R">
