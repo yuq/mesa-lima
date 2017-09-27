@@ -415,11 +415,11 @@ si_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,
 	result = LLVMBuildInsertElement(builder,
 					result,
 					ac_to_integer(&ctx->ac, ptr),
-					bld_base->int_bld.zero, "");
+					ctx->i32_0, "");
 	result = LLVMBuildInsertElement(builder,
 					result,
 					ac_to_integer(&ctx->ac, ptr2),
-					bld_base->int_bld.one, "");
+					ctx->i32_1, "");
 	return bitcast(bld_base, type, result);
 }
 
@@ -1131,8 +1131,7 @@ static void uif_emit(const struct lp_build_tgsi_action *action,
 	LLVMValueRef cond;
 
 	cond = LLVMBuildICmp(gallivm->builder, LLVMIntNE,
-	        ac_to_integer(&ctx->ac, emit_data->args[0]),
-			bld_base->int_bld.zero, "");
+	        ac_to_integer(&ctx->ac, emit_data->args[0]), ctx->i32_0, "");
 
 	if_cond_emit(action, bld_base, emit_data, cond);
 }
