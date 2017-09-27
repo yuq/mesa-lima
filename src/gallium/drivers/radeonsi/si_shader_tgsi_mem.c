@@ -237,7 +237,7 @@ static LLVMValueRef image_fetch_coords(
 
 	for (chan = 0; chan < num_coords; ++chan) {
 		tmp = lp_build_emit_fetch(bld_base, inst, src, chan);
-		tmp = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
+		tmp = ac_to_integer(&ctx->ac, tmp);
 		coords[chan] = tmp;
 	}
 
@@ -356,7 +356,6 @@ static void load_fetch_args(
 		struct lp_build_emit_data * emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = &ctx->gallivm;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	unsigned target = inst->Memory.Texture;
 	LLVMValueRef rsrc;
@@ -365,7 +364,6 @@ static void load_fetch_args(
 
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER ||
 		   inst->Src[0].Register.File == TGSI_FILE_CONSTBUF) {
-		LLVMBuilderRef builder = gallivm->builder;
 		LLVMValueRef offset;
 		LLVMValueRef tmp;
 
@@ -373,7 +371,7 @@ static void load_fetch_args(
 		rsrc = shader_buffer_fetch_rsrc(ctx, &inst->Src[0], ubo);
 
 		tmp = lp_build_emit_fetch(bld_base, inst, 1, 0);
-		offset = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
+		offset = ac_to_integer(&ctx->ac, tmp);
 
 		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
 				   offset, false, false);
@@ -456,7 +454,7 @@ static LLVMValueRef get_memory_ptr(struct si_shader_context *ctx,
 	int addr_space;
 
 	offset = lp_build_emit_fetch(&ctx->bld_base, inst, arg, 0);
-	offset = LLVMBuildBitCast(builder, offset, ctx->i32, "");
+	offset = ac_to_integer(&ctx->ac, offset);
 
 	ptr = ctx->shared_memory;
 	ptr = LLVMBuildGEP(builder, ptr, &offset, 1, "");
@@ -620,7 +618,6 @@ static void store_fetch_args(
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = &ctx->gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	struct tgsi_full_src_register memory;
 	LLVMValueRef chans[4];
@@ -646,7 +643,7 @@ static void store_fetch_args(
 		rsrc = shader_buffer_fetch_rsrc(ctx, &memory, false);
 
 		tmp = lp_build_emit_fetch(bld_base, inst, 0, 0);
-		offset = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
+		offset = ac_to_integer(&ctx->ac, tmp);
 
 		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
 				   offset, false, false);
@@ -836,8 +833,6 @@ static void atomic_fetch_args(
 		struct lp_build_emit_data * emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = &ctx->gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	LLVMValueRef data1, data2;
 	LLVMValueRef rsrc;
@@ -846,11 +841,11 @@ static void atomic_fetch_args(
 	emit_data->dst_type = ctx->f32;
 
 	tmp = lp_build_emit_fetch(bld_base, inst, 2, 0);
-	data1 = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
+	data1 = ac_to_integer(&ctx->ac, tmp);
 
 	if (inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS) {
 		tmp = lp_build_emit_fetch(bld_base, inst, 3, 0);
-		data2 = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
+		data2 = ac_to_integer(&ctx->ac, tmp);
 	}
 
 	/* llvm.amdgcn.image/buffer.atomic.cmpswap reflect the hardware order
@@ -866,7 +861,7 @@ static void atomic_fetch_args(
 		rsrc = shader_buffer_fetch_rsrc(ctx, &inst->Src[0], false);
 
 		tmp = lp_build_emit_fetch(bld_base, inst, 1, 0);
-		offset = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
+		offset = ac_to_integer(&ctx->ac, tmp);
 
 		buffer_append_args(ctx, emit_data, rsrc, ctx->i32_0,
 				   offset, true, false);
@@ -900,14 +895,14 @@ static void atomic_emit_memory(struct si_shader_context *ctx,
 	ptr = get_memory_ptr(ctx, inst, ctx->i32, 1);
 
 	arg = lp_build_emit_fetch(&ctx->bld_base, inst, 2, 0);
-	arg = LLVMBuildBitCast(builder, arg, ctx->i32, "");
+	arg = ac_to_integer(&ctx->ac, arg);
 
 	if (inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS) {
 		LLVMValueRef new_data;
 		new_data = lp_build_emit_fetch(&ctx->bld_base,
 		                               inst, 3, 0);
 
-		new_data = LLVMBuildBitCast(builder, new_data, ctx->i32, "");
+		new_data = ac_to_integer(&ctx->ac, new_data);
 
 		result = LLVMBuildAtomicCmpXchg(builder, ptr, arg, new_data,
 		                       LLVMAtomicOrderingSequentiallyConsistent,
@@ -996,8 +991,7 @@ static void atomic_emit(
 	tmp = lp_build_intrinsic(
 		builder, intrinsic_name, ctx->i32,
 		emit_data->args, emit_data->arg_count, 0);
-	emit_data->output[emit_data->chan] =
-		LLVMBuildBitCast(builder, tmp, ctx->f32, "");
+	emit_data->output[emit_data->chan] = ac_to_float(&ctx->ac, tmp);
 }
 
 static void set_tex_fetch_args(struct si_shader_context *ctx,
@@ -1333,7 +1327,7 @@ static void tex_fetch_args(
 
 	/* Fetch and project texture coordinates */
 	coords[3] = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_W);
-	for (chan = 0; chan < 3; chan++ ) {
+	for (chan = 0; chan < 3; chan++) {
 		coords[chan] = lp_build_emit_fetch(bld_base,
 						   emit_data->inst, 0,
 						   chan);
@@ -1541,10 +1535,8 @@ static void tex_fetch_args(
 		count = 16;
 	}
 
-	for (chan = 0; chan < count; chan++ ) {
-		address[chan] = LLVMBuildBitCast(gallivm->builder,
-						 address[chan], ctx->i32, "");
-	}
+	for (chan = 0; chan < count; chan++)
+		address[chan] = ac_to_integer(&ctx->ac, address[chan]);
 
 	/* Adjust the sample index according to FMASK.
 	 *
@@ -1810,9 +1802,9 @@ si_lower_gather4_integer(struct si_shader_context *ctx,
 		LLVMValueRef index = LLVMConstInt(ctx->i32, coord_vgpr_index + c, 0);
 
 		tmp = LLVMBuildExtractElement(builder, coord, index, "");
-		tmp = LLVMBuildBitCast(builder, tmp, ctx->f32, "");
+		tmp = ac_to_float(&ctx->ac, tmp);
 		tmp = LLVMBuildFAdd(builder, tmp, half_texel[c], "");
-		tmp = LLVMBuildBitCast(builder, tmp, ctx->i32, "");
+		tmp = ac_to_integer(&ctx->ac, tmp);
 		coord = LLVMBuildInsertElement(builder, coord, tmp, index, "");
 	}
 
@@ -1846,7 +1838,7 @@ si_fix_gather4_integer_result(struct si_shader_context *ctx,
 			wa_value = LLVMBuildFPToUI(builder, value, ctx->i32, "");
 		else
 			wa_value = LLVMBuildFPToSI(builder, value, ctx->i32, "");
-		wa_value = LLVMBuildBitCast(builder, wa_value, ctx->f32, "");
+		wa_value = ac_to_float(&ctx->ac, wa_value);
 		value = LLVMBuildSelect(builder, wa, wa_value, value, "");
 
 		result = LLVMBuildInsertElement(builder, result, value, chanv, "");

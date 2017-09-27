@@ -128,10 +128,10 @@ static void emit_ucmp(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
 
-	LLVMValueRef arg0 = LLVMBuildBitCast(builder, emit_data->args[0],
-					     bld_base->uint_bld.elem_type, "");
+	LLVMValueRef arg0 = ac_to_integer(&ctx->ac, emit_data->args[0]);
 
 	LLVMValueRef v = LLVMBuildICmp(builder, LLVMIntNE, arg0,
 				       bld_base->uint_bld.zero, "");
@@ -242,9 +242,9 @@ static void emit_not(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	LLVMValueRef v = bitcast(bld_base, TGSI_TYPE_UNSIGNED,
-			emit_data->args[0]);
+	LLVMValueRef v = ac_to_integer(&ctx->ac, emit_data->args[0]);
 	emit_data->output[emit_data->chan] = LLVMBuildNot(builder, v, "");
 }
 
@@ -682,14 +682,14 @@ static void emit_up2h(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
 	LLVMContextRef context = bld_base->base.gallivm->context;
 	struct lp_build_context *uint_bld = &bld_base->uint_bld;
-	LLVMTypeRef fp16, i16;
+	LLVMTypeRef i16;
 	LLVMValueRef const16, input, val;
 	unsigned i;
 
-	fp16 = LLVMHalfTypeInContext(context);
 	i16 = LLVMInt16TypeInContext(context);
 	const16 = lp_build_const_int32(uint_bld->gallivm, 16);
 	input = emit_data->args[0];
@@ -697,7 +697,7 @@ static void emit_up2h(const struct lp_build_tgsi_action *action,
 	for (i = 0; i < 2; i++) {
 		val = i == 1 ? LLVMBuildLShr(builder, input, const16, "") : input;
 		val = LLVMBuildTrunc(builder, val, i16, "");
-		val = LLVMBuildBitCast(builder, val, fp16, "");
+		val = ac_to_float(&ctx->ac, val);
 		emit_data->output[i] =
 			LLVMBuildFPExt(builder, val, bld_base->base.elem_type, "");
 	}

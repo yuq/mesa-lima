@@ -406,6 +406,7 @@ si_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,
 			 LLVMValueRef ptr,
 			 LLVMValueRef ptr2)
 {
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
 	LLVMValueRef result;
 
@@ -413,11 +414,11 @@ si_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,
 
 	result = LLVMBuildInsertElement(builder,
 					result,
-					bitcast(bld_base, TGSI_TYPE_UNSIGNED, ptr),
+					ac_to_integer(&ctx->ac, ptr),
 					bld_base->int_bld.zero, "");
 	result = LLVMBuildInsertElement(builder,
 					result,
-					bitcast(bld_base, TGSI_TYPE_UNSIGNED, ptr2),
+					ac_to_integer(&ctx->ac, ptr2),
 					bld_base->int_bld.one, "");
 	return bitcast(bld_base, type, result);
 }
@@ -913,7 +914,7 @@ void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 		}
 
 		if (!tgsi_type_is_64bit(dtype))
-			value = bitcast(bld_base, TGSI_TYPE_FLOAT, value);
+			value = ac_to_float(&ctx->ac, value);
 
 		if (reg->Register.Indirect) {
 			unsigned file = reg->Register.File;
@@ -953,8 +954,8 @@ void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 				val2 = LLVMBuildExtractElement(builder, ptr,
 							       ctx->i32_1, "");
 
-				LLVMBuildStore(builder, bitcast(bld_base, TGSI_TYPE_FLOAT, value), temp_ptr);
-				LLVMBuildStore(builder, bitcast(bld_base, TGSI_TYPE_FLOAT, val2), temp_ptr2);
+				LLVMBuildStore(builder, ac_to_float(&ctx->ac, value), temp_ptr);
+				LLVMBuildStore(builder, ac_to_float(&ctx->ac, val2), temp_ptr2);
 			}
 		}
 	}
@@ -1125,11 +1126,12 @@ static void uif_emit(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMValueRef cond;
 
 	cond = LLVMBuildICmp(gallivm->builder, LLVMIntNE,
-	        bitcast(bld_base, TGSI_TYPE_UNSIGNED, emit_data->args[0]),
+	        ac_to_integer(&ctx->ac, emit_data->args[0]),
 			bld_base->int_bld.zero, "");
 
 	if_cond_emit(action, bld_base, emit_data, cond);
