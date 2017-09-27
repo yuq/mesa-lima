@@ -223,6 +223,12 @@
     <field name="mode" size="8" start="0" type="Primitive"/>
   </packet>
 
+  <packet code="43" name="Base Vertex Base Instance" cl="B">
+    <field name="Base Instance" size="32" start="32" type="uint"/>
+
+    <field name="Base Vertex" size="32" start="0" type="uint"/>
+  </packet>
+
   <packet code="56" name="Primitive List Format">
     <field name="data type" size="1" start="6" type="uint">
       <value name="List Indexed" value="0"/>
