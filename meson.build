@@ -286,7 +286,10 @@ endif
 dep_zlib = dependency('zlib', version : '>= 1.2.3')
 dep_thread = dependency('threads')
 pre_args += '-DHAVE_PTHREAD'
-dep_elf = dependency('libelf')
+dep_elf = dependency('libelf', required : false)
+if not dep_elf.found()
+  dep_elf = cc.find_library('elf')
+endif
 dep_expat = dependency('expat')
 # this only exists on linux so either this is linux and it will be found, or
 # its not linux and and wont
