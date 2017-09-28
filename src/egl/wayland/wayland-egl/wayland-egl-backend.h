@@ -35,6 +35,7 @@
 #define WL_EGL_EXPORT
 #endif
 
+#include <stdint.h>
 #include <wayland-client.h>
 
 #ifdef  __cplusplus
