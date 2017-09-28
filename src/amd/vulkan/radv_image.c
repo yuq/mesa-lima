@@ -251,7 +251,7 @@ si_set_mutable_tex_desc_fields(struct radv_device *device,
 	if (chip_class >= VI) {
 		state[6] &= C_008F28_COMPRESSION_EN;
 		state[7] = 0;
-		if (image->surface.dcc_size && first_level < image->surface.num_dcc_levels) {
+		if (radv_vi_dcc_enabled(image, first_level)) {
 			meta_va = gpu_address + image->dcc_offset;
 			if (chip_class <= VI)
 				meta_va += base_level_info->dcc_offset;
