@@ -698,10 +698,9 @@ vec4_visitor::pack_uniform_registers()
    /* As the uniforms are going to be reordered, take the data from a temporary
     * copy of the original param[].
     */
-   gl_constant_value **param = ralloc_array(NULL, gl_constant_value*,
-                                            stage_prog_data->nr_params);
+   uint32_t *param = ralloc_array(NULL, uint32_t, stage_prog_data->nr_params);
    memcpy(param, stage_prog_data->param,
-          sizeof(gl_constant_value*) * stage_prog_data->nr_params);
+          sizeof(uint32_t) * stage_prog_data->nr_params);
 
    /* Now, figure out a packing of the live uniform vectors into our
     * push constants. Start with dvec{3,4} because they are aligned to
@@ -907,7 +906,7 @@ vec4_visitor::move_push_constants_to_pull_constants()
       pull_constant_loc[i / 4] = -1;
 
       if (i >= max_uniform_components) {
-         const gl_constant_value **values = &stage_prog_data->param[i];
+         uint32_t *values = &stage_prog_data->param[i];
 
          /* Try to find an existing copy of this uniform in the pull
           * constants if it was part of an array access already.
@@ -1764,11 +1763,10 @@ vec4_visitor::setup_uniforms(int reg)
     */
    if (devinfo->gen < 6 && this->uniforms == 0) {
       stage_prog_data->param =
-         reralloc(NULL, stage_prog_data->param, const gl_constant_value *, 4);
+         reralloc(NULL, stage_prog_data->param, uint32_t, 4);
       for (unsigned int i = 0; i < 4; i++) {
 	 unsigned int slot = this->uniforms * 4 + i;
-	 static gl_constant_value zero = { 0.0 };
-	 stage_prog_data->param[slot] = &zero;
+	 stage_prog_data->param[slot] = BRW_PARAM_BUILTIN_ZERO;
       }
 
       this->uniforms++;
@@ -2742,7 +2740,6 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
                const struct brw_vs_prog_key *key,
                struct brw_vs_prog_data *prog_data,
                const nir_shader *src_shader,
-               gl_clip_plane *clip_planes,
                bool use_legacy_snorm_formula,
                int shader_time_index,
                unsigned *final_assembly_size,
@@ -2866,7 +2863,7 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
       fs_visitor v(compiler, log_data, mem_ctx, key, &prog_data->base.base,
                    NULL, /* prog; Only used for TEXTURE_RECTANGLE on gen < 8 */
                    shader, 8, shader_time_index);
-      if (!v.run_vs(clip_planes)) {
+      if (!v.run_vs()) {
          if (error_str)
             *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
 
@@ -2895,7 +2892,7 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
       prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
       vec4_vs_visitor v(compiler, log_data, key, prog_data,
-                        shader, clip_planes, mem_ctx,
+                        shader, mem_ctx,
                         shader_time_index, use_legacy_snorm_formula);
       if (!v.run()) {
          if (error_str)

@@ -89,10 +89,8 @@ brw_codegen_cs_prog(struct brw_context *brw,
 
    /* The backend also sometimes adds params for texture size. */
    param_count += 2 * ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits;
-   prog_data.base.param =
-      rzalloc_array(NULL, const gl_constant_value *, param_count);
-   prog_data.base.pull_param =
-      rzalloc_array(NULL, const gl_constant_value *, param_count);
+   prog_data.base.param = rzalloc_array(NULL, uint32_t, param_count);
+   prog_data.base.pull_param = rzalloc_array(NULL, uint32_t, param_count);
    prog_data.base.image_param =
       rzalloc_array(NULL, struct brw_image_param,
                     cp->program.info.num_images);

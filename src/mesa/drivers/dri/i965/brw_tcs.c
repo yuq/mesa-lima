@@ -188,10 +188,8 @@ brw_codegen_tcs_prog(struct brw_context *brw, struct brw_program *tcp,
     */
    int param_count = nir->num_uniforms / 4;
 
-   prog_data.base.base.param =
-      rzalloc_array(NULL, const gl_constant_value *, param_count);
-   prog_data.base.base.pull_param =
-      rzalloc_array(NULL, const gl_constant_value *, param_count);
+   prog_data.base.base.param = rzalloc_array(NULL, uint32_t, param_count);
+   prog_data.base.base.pull_param = rzalloc_array(NULL, uint32_t, param_count);
    prog_data.base.base.nr_params = param_count;
 
    if (tcp) {
@@ -211,26 +209,25 @@ brw_codegen_tcs_prog(struct brw_context *brw, struct brw_program *tcp,
       /* Upload the Patch URB Header as the first two uniforms.
        * Do the annoying scrambling so the shader doesn't have to.
        */
-      const float **param = (const float **) prog_data.base.base.param;
-      static float zero = 0.0f;
+      uint32_t *param = prog_data.base.base.param;
       for (int i = 0; i < 8; i++)
-         param[i] = &zero;
+         param[i] = BRW_PARAM_BUILTIN_ZERO;
 
       if (key->tes_primitive_mode == GL_QUADS) {
          for (int i = 0; i < 4; i++)
-            param[7 - i] = &ctx->TessCtrlProgram.patch_default_outer_level[i];
+            param[7 - i] = BRW_PARAM_BUILTIN_TESS_LEVEL_OUTER_X + i;
 
-         param[3] = &ctx->TessCtrlProgram.patch_default_inner_level[0];
-         param[2] = &ctx->TessCtrlProgram.patch_default_inner_level[1];
+         param[3] = BRW_PARAM_BUILTIN_TESS_LEVEL_INNER_X;
+         param[2] = BRW_PARAM_BUILTIN_TESS_LEVEL_INNER_Y;
       } else if (key->tes_primitive_mode == GL_TRIANGLES) {
          for (int i = 0; i < 3; i++)
-            param[7 - i] = &ctx->TessCtrlProgram.patch_default_outer_level[i];
+            param[7 - i] = BRW_PARAM_BUILTIN_TESS_LEVEL_OUTER_X + i;
 
-         param[4] = &ctx->TessCtrlProgram.patch_default_inner_level[0];
+         param[4] = BRW_PARAM_BUILTIN_TESS_LEVEL_INNER_X;
       } else {
          assert(key->tes_primitive_mode == GL_ISOLINES);
-         param[7] = &ctx->TessCtrlProgram.patch_default_outer_level[1];
-         param[6] = &ctx->TessCtrlProgram.patch_default_outer_level[0];
+         param[7] = BRW_PARAM_BUILTIN_TESS_LEVEL_OUTER_Y;
+         param[6] = BRW_PARAM_BUILTIN_TESS_LEVEL_OUTER_X;
       }
    }
 

@@ -1567,6 +1567,9 @@ struct anv_vertex_binding {
    VkDeviceSize                                 offset;
 };
 
+#define ANV_PARAM_PUSH(offset)         ((1 << 16) | (uint32_t)(offset))
+#define ANV_PARAM_PUSH_OFFSET(param)   ((param) & 0xffff)
+
 struct anv_push_constants {
    /* Current allocated size of this push constants data structure.
     * Because a decent chunk of it may not be used (images on SKL, for

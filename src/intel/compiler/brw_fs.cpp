@@ -2084,10 +2084,9 @@ fs_visitor::assign_constant_locations()
    /* As the uniforms are going to be reordered, take the data from a temporary
     * copy of the original param[].
     */
-   gl_constant_value **param = ralloc_array(NULL, gl_constant_value*,
-                                            stage_prog_data->nr_params);
+   uint32_t *param = ralloc_array(NULL, uint32_t, stage_prog_data->nr_params);
    memcpy(param, stage_prog_data->param,
-          sizeof(gl_constant_value*) * stage_prog_data->nr_params);
+          sizeof(uint32_t) * stage_prog_data->nr_params);
    stage_prog_data->nr_params = num_push_constants;
    stage_prog_data->nr_pull_params = num_pull_constants;
 
@@ -2115,8 +2114,7 @@ fs_visitor::assign_constant_locations()
     */
    int new_thread_local_id_index = -1;
    for (unsigned int i = 0; i < uniforms; i++) {
-      const gl_constant_value *value = param[i];
-
+      uint32_t value = param[i];
       if (pull_constant_loc[i] != -1) {
          stage_prog_data->pull_param[pull_constant_loc[i]] = value;
       } else if (push_constant_loc[i] != -1) {
@@ -5967,7 +5965,7 @@ fs_visitor::allocate_registers(bool allow_spilling)
 }
 
 bool
-fs_visitor::run_vs(gl_clip_plane *clip_planes)
+fs_visitor::run_vs()
 {
    assert(stage == MESA_SHADER_VERTEX);
 
@@ -5981,7 +5979,7 @@ fs_visitor::run_vs(gl_clip_plane *clip_planes)
    if (failed)
       return false;
 
-   compute_clip_distance(clip_planes);
+   compute_clip_distance();
 
    emit_urb_writes();
 

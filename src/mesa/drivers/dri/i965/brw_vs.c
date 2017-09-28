@@ -191,10 +191,8 @@ brw_codegen_vs_prog(struct brw_context *brw,
     */
    param_count += key->nr_userclip_plane_consts * 4;
 
-   stage_prog_data->param =
-      rzalloc_array(NULL, const gl_constant_value *, param_count);
-   stage_prog_data->pull_param =
-      rzalloc_array(NULL, const gl_constant_value *, param_count);
+   stage_prog_data->param = rzalloc_array(NULL, uint32_t, param_count);
+   stage_prog_data->pull_param = rzalloc_array(NULL, uint32_t, param_count);
    stage_prog_data->image_param =
       rzalloc_array(NULL, struct brw_image_param,
                     stage_prog_data->nr_image_params);
@@ -244,7 +242,6 @@ brw_codegen_vs_prog(struct brw_context *brw,
    char *error_str;
    program = brw_compile_vs(compiler, brw, mem_ctx, key, &prog_data,
                             vp->program.nir,
-                            brw_select_clip_planes(&brw->ctx),
                             !_mesa_is_gles3(&brw->ctx),
                             st_index, &program_size, &error_str);
    if (program == NULL) {

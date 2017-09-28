@@ -239,7 +239,7 @@ brw_populate_constant_data(struct brw_context *brw,
                            const struct gl_program *prog,
                            const struct brw_stage_prog_data *prog_data,
                            void *dst,
-                           const union gl_constant_value **param,
+                           const uint32_t *param,
                            unsigned nr_params);
 void
 brw_upload_pull_constants(struct brw_context *brw,

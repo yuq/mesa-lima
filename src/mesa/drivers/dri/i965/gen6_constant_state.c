@@ -24,21 +24,84 @@
 #include "brw_context.h"
 #include "brw_state.h"
 #include "brw_defines.h"
+#include "brw_program.h"
 #include "intel_batchbuffer.h"
 #include "intel_buffer_objects.h"
 #include "program/prog_parameter.h"
+
+static uint32_t
+f_as_u32(float f)
+{
+   return *(uint32_t *)&f;
+}
+
+static uint32_t
+brw_param_value(struct brw_context *brw,
+                const struct gl_program *prog,
+                const struct brw_stage_prog_data *prog_data,
+                uint32_t param)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   switch (BRW_PARAM_DOMAIN(param)) {
+   case BRW_PARAM_DOMAIN_BUILTIN:
+      if (param == BRW_PARAM_BUILTIN_ZERO) {
+         return 0;
+      } else if (BRW_PARAM_BUILTIN_IS_CLIP_PLANE(param)) {
+         gl_clip_plane *clip_planes = brw_select_clip_planes(ctx);
+         unsigned idx = BRW_PARAM_BUILTIN_CLIP_PLANE_IDX(param);
+         unsigned comp = BRW_PARAM_BUILTIN_CLIP_PLANE_COMP(param);
+         return ((uint32_t *)clip_planes[idx])[comp];
+      } else if (param >= BRW_PARAM_BUILTIN_TESS_LEVEL_OUTER_X &&
+                 param <= BRW_PARAM_BUILTIN_TESS_LEVEL_OUTER_W) {
+         unsigned i = param - BRW_PARAM_BUILTIN_TESS_LEVEL_OUTER_X;
+         return f_as_u32(ctx->TessCtrlProgram.patch_default_outer_level[i]);
+      } else if (param == BRW_PARAM_BUILTIN_TESS_LEVEL_INNER_X) {
+         return f_as_u32(ctx->TessCtrlProgram.patch_default_inner_level[0]);
+      } else if (param == BRW_PARAM_BUILTIN_TESS_LEVEL_INNER_Y) {
+         return f_as_u32(ctx->TessCtrlProgram.patch_default_inner_level[1]);
+      } else {
+         unreachable("Invalid param builtin");
+      }
+
+   case BRW_PARAM_DOMAIN_PARAMETER: {
+      unsigned idx = BRW_PARAM_PARAMETER_IDX(param);
+      unsigned comp = BRW_PARAM_PARAMETER_COMP(param);
+      assert(idx < prog->Parameters->NumParameters);
+      return prog->Parameters->ParameterValues[idx][comp].u;
+   }
+
+   case BRW_PARAM_DOMAIN_UNIFORM: {
+      unsigned idx = BRW_PARAM_UNIFORM_IDX(param);
+      assert(idx < prog->sh.data->NumUniformDataSlots);
+      return prog->sh.data->UniformDataSlots[idx].u;
+   }
+
+   case BRW_PARAM_DOMAIN_IMAGE: {
+      unsigned idx = BRW_PARAM_IMAGE_IDX(param);
+      unsigned offset = BRW_PARAM_IMAGE_OFFSET(param);
+      assert(idx < prog_data->nr_image_params);
+      assert(offset < sizeof(struct brw_image_param));
+      return ((uint32_t *)&prog_data->image_param[idx])[offset];
+   }
+
+   default:
+      unreachable("Invalid param domain");
+   }
+}
+
 
 void
 brw_populate_constant_data(struct brw_context *brw,
                            const struct gl_program *prog,
                            const struct brw_stage_prog_data *prog_data,
                            void *void_dst,
-                           const union gl_constant_value **param,
+                           const uint32_t *param,
                            unsigned nr_params)
 {
-   gl_constant_value *dst = void_dst;
+   uint32_t *dst = void_dst;
    for (unsigned i = 0; i < nr_params; i++)
-      dst[i] = *param[i];
+      dst[i] = brw_param_value(brw, prog, prog_data, param[i]);
 }
 
 
@@ -234,7 +297,7 @@ brw_upload_cs_push_constants(struct brw_context *brw,
    }
 
 
-   gl_constant_value *param = (gl_constant_value*)
+   uint32_t *param =
       brw_state_batch(brw, ALIGN(cs_prog_data->push.total.size, 64),
                       64, &stage_state->push_const_offset);
    assert(param);
@@ -242,18 +305,18 @@ brw_upload_cs_push_constants(struct brw_context *brw,
    STATIC_ASSERT(sizeof(gl_constant_value) == sizeof(float));
 
    if (cs_prog_data->push.cross_thread.size > 0) {
-      gl_constant_value *param_copy = param;
+      uint32_t *param_copy = param;
       assert(cs_prog_data->thread_local_id_index < 0 ||
              cs_prog_data->thread_local_id_index >=
                 cs_prog_data->push.cross_thread.dwords);
       for (unsigned i = 0;
            i < cs_prog_data->push.cross_thread.dwords;
            i++) {
-         param_copy[i] = *prog_data->param[i];
+         param_copy[i] = brw_param_value(brw, prog, prog_data,
+                                         prog_data->param[i]);
       }
    }
 
-   gl_constant_value thread_id;
    if (cs_prog_data->push.per_thread.size > 0) {
       for (unsigned t = 0; t < cs_prog_data->threads; t++) {
          unsigned dst =
@@ -261,11 +324,11 @@ brw_upload_cs_push_constants(struct brw_context *brw,
                  cs_prog_data->push.cross_thread.regs);
          unsigned src = cs_prog_data->push.cross_thread.dwords;
          for ( ; src < prog_data->nr_params; src++, dst++) {
-            if (src != cs_prog_data->thread_local_id_index)
-               param[dst] = *prog_data->param[src];
-            else {
-               thread_id.u = t * cs_prog_data->simd_size;
-               param[dst] = thread_id;
+            if (src != cs_prog_data->thread_local_id_index) {
+               param[dst] = brw_param_value(brw, prog, prog_data,
+                                            prog_data->param[src]);
+            } else {
+               param[dst] = t * cs_prog_data->simd_size;
             }
          }
       }

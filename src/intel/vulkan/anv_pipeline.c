@@ -415,8 +415,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
 
    if (prog_data->nr_params > 0) {
       /* XXX: I think we're leaking this */
-      prog_data->param = (const union gl_constant_value **)
-         malloc(prog_data->nr_params * sizeof(union gl_constant_value *));
+      prog_data->param = malloc(prog_data->nr_params * sizeof(uint32_t));
 
       /* We now set the param values to be offsets into a
        * anv_push_constant_data structure.  Since the compiler doesn't
@@ -427,8 +426,8 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
       if (nir->num_uniforms > 0) {
          /* Fill out the push constants section of the param array */
          for (unsigned i = 0; i < MAX_PUSH_CONSTANTS_SIZE / sizeof(float); i++)
-            prog_data->param[i] = (const union gl_constant_value *)
-               &null_data->client_data[i * sizeof(float)];
+            prog_data->param[i] = ANV_PARAM_PUSH(
+               (uintptr_t)&null_data->client_data[i * sizeof(float)]);
       }
    }
 
@@ -540,7 +539,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
       unsigned code_size;
       const unsigned *shader_code =
          brw_compile_vs(compiler, NULL, mem_ctx, &key, &prog_data, nir,
-                        NULL, false, -1, &code_size, NULL);
+                        false, -1, &code_size, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
