@@ -36,19 +36,6 @@ typedef GLubyte GLchan;
 #define BCOMP 2
 #define ACOMP 3
 
-void fetch_2d_texel_rgb_dxt1(GLint srcRowStride, const GLubyte *pixdata,
-			     GLint i, GLint j, GLvoid *texel);
-void fetch_2d_texel_rgba_dxt1(GLint srcRowStride, const GLubyte *pixdata,
-			     GLint i, GLint j, GLvoid *texel);
-void fetch_2d_texel_rgba_dxt3(GLint srcRowStride, const GLubyte *pixdata,
-			     GLint i, GLint j, GLvoid *texel);
-void fetch_2d_texel_rgba_dxt5(GLint srcRowStride, const GLubyte *pixdata,
-			     GLint i, GLint j, GLvoid *texel);
-
-void tx_compress_dxtn(GLint srccomps, GLint width, GLint height,
-		      const GLubyte *srcPixData, GLenum destformat,
-		      GLubyte *dest, GLint dstRowStride);
-
 #define EXP5TO8R(packedcol)					\
    ((((packedcol) >> 8) & 0xf8) | (((packedcol) >> 13) & 0x7))
 
@@ -118,7 +105,7 @@ static void dxt135_decode_imageblock ( const GLubyte *img_block_src,
 }
 
 
-void fetch_2d_texel_rgb_dxt1(GLint srcRowStride, const GLubyte *pixdata,
+static void fetch_2d_texel_rgb_dxt1(GLint srcRowStride, const GLubyte *pixdata,
                          GLint i, GLint j, GLvoid *texel)
 {
    /* Extract the (i,j) pixel from pixdata and return it
@@ -130,7 +117,7 @@ void fetch_2d_texel_rgb_dxt1(GLint srcRowStride, const GLubyte *pixdata,
 }
 
 
-void fetch_2d_texel_rgba_dxt1(GLint srcRowStride, const GLubyte *pixdata,
+static void fetch_2d_texel_rgba_dxt1(GLint srcRowStride, const GLubyte *pixdata,
                          GLint i, GLint j, GLvoid *texel)
 {
    /* Extract the (i,j) pixel from pixdata and return it
@@ -141,7 +128,7 @@ void fetch_2d_texel_rgba_dxt1(GLint srcRowStride, const GLubyte *pixdata,
    dxt135_decode_imageblock(blksrc, (i&3), (j&3), 1, texel);
 }
 
-void fetch_2d_texel_rgba_dxt3(GLint srcRowStride, const GLubyte *pixdata,
+static void fetch_2d_texel_rgba_dxt3(GLint srcRowStride, const GLubyte *pixdata,
                          GLint i, GLint j, GLvoid *texel) {
 
    /* Extract the (i,j) pixel from pixdata and return it
@@ -155,7 +142,7 @@ void fetch_2d_texel_rgba_dxt3(GLint srcRowStride, const GLubyte *pixdata,
    rgba[ACOMP] = UBYTE_TO_CHAN( (GLubyte)(EXP4TO8(anibble)) );
 }
 
-void fetch_2d_texel_rgba_dxt5(GLint srcRowStride, const GLubyte *pixdata,
+static void fetch_2d_texel_rgba_dxt5(GLint srcRowStride, const GLubyte *pixdata,
                          GLint i, GLint j, GLvoid *texel) {
 
    /* Extract the (i,j) pixel from pixdata and return it
@@ -916,7 +903,7 @@ static void extractsrccolors( GLubyte srcpixels[4][4][4], const GLchan *srcaddr,
 }
 
 
-void tx_compress_dxtn(GLint srccomps, GLint width, GLint height, const GLubyte *srcPixData,
+static void tx_compress_dxtn(GLint srccomps, GLint width, GLint height, const GLubyte *srcPixData,
                      GLenum destFormat, GLubyte *dest, GLint dstRowStride)
 {
       GLubyte *blkaddr = dest;
