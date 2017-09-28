@@ -185,6 +185,7 @@ static const struct vc5_format vc5_format_table[] = {
         FORMAT(X8Z24_UNORM,       DEPTH_COMPONENT24, DEPTH24_X8, SWIZ_X001, 32, 1),
         FORMAT(S8X24_UINT,        NO,           R32F,        SWIZ_X001, 32, 1),
         FORMAT(Z32_FLOAT,         DEPTH_COMPONENT32F, R32F, SWIZ_X001, 32, 1),
+        FORMAT(Z16_UNORM,         DEPTH_COMPONENT16,  DEPTH_COMP16, SWIZ_X001, 32, 1),
 
         /* Pretend we support this, but it'll be separate Z32F depth and S8. */
         FORMAT(Z32_FLOAT_S8X24_UINT, DEPTH_COMPONENT32F, R32F, SWIZ_X001, 32, 1),
