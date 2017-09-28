@@ -2280,13 +2280,13 @@ st_ChooseTextureFormat(struct gl_context *ctx, GLenum target,
    }
 
    pFormat = st_choose_format(st, internalFormat, format, type,
-                              pTarget, 0, bindings, ctx->Mesa_DXTn);
+                              pTarget, 0, bindings, GL_TRUE);
 
    if (pFormat == PIPE_FORMAT_NONE && !is_renderbuffer) {
       /* try choosing format again, this time without render target bindings */
       pFormat = st_choose_format(st, internalFormat, format, type,
                                  pTarget, 0, PIPE_BIND_SAMPLER_VIEW,
-                                 ctx->Mesa_DXTn);
+                                 GL_TRUE);
    }
 
    if (pFormat == PIPE_FORMAT_NONE) {

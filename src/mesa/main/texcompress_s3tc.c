@@ -43,13 +43,6 @@
 #include "util/format_srgb.h"
 
 
-void
-_mesa_init_texture_s3tc( struct gl_context *ctx )
-{
-   /* called during context initialization */
-   ctx->Mesa_DXTn = GL_TRUE;
-}
-
 /**
  * Store user's image in rgb_dxt1 format.
  */
