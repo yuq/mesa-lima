@@ -58,8 +58,6 @@ typedef void
                             uint8_t *dst,
                             int dst_stride);
 
-extern boolean util_format_s3tc_enabled;
-
 extern util_format_dxtn_fetch_t util_format_dxt1_rgb_fetch;
 extern util_format_dxtn_fetch_t util_format_dxt1_rgba_fetch;
 extern util_format_dxtn_fetch_t util_format_dxt3_rgba_fetch;

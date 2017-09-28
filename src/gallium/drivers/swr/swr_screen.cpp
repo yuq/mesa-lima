@@ -147,10 +147,6 @@ swr_is_format_supported(struct pipe_screen *_screen,
       return FALSE;
    }
 
-   if (format_desc->layout == UTIL_FORMAT_LAYOUT_S3TC) {
-      return util_format_s3tc_enabled;
-   }
-
    return TRUE;
 }
 

@@ -486,9 +486,7 @@ virgl_is_format_supported( struct pipe_screen *screen,
     */
 
    if (format_desc->layout == UTIL_FORMAT_LAYOUT_S3TC) {
-      if (util_format_s3tc_enabled)
-         goto out_lookup;
-      return FALSE;
+      goto out_lookup;
    }
    if (format_desc->layout == UTIL_FORMAT_LAYOUT_RGTC) {
       goto out_lookup;

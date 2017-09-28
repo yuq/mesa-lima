@@ -383,11 +383,6 @@ test_all(unsigned verbose, FILE *fp)
       if (util_format_is_pure_integer(format))
 	 continue;
 
-      if (format_desc->layout == UTIL_FORMAT_LAYOUT_S3TC &&
-          !util_format_s3tc_enabled) {
-         continue;
-      }
-
       /* only have util fetch func for etc1 */
       if (format_desc->layout == UTIL_FORMAT_LAYOUT_ETC &&
           format != PIPE_FORMAT_ETC1_RGB8) {

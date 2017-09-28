@@ -1712,10 +1712,6 @@ static uint32_t si_translate_texformat(struct pipe_screen *screen,
 		if (!enable_compressed_formats)
 			goto out_unknown;
 
-		if (!util_format_s3tc_enabled) {
-			goto out_unknown;
-		}
-
 		switch (format) {
 		case PIPE_FORMAT_DXT1_RGB:
 		case PIPE_FORMAT_DXT1_RGBA:

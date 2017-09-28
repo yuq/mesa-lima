@@ -460,10 +460,6 @@ softpipe_is_format_supported( struct pipe_screen *screen,
     * All other operations (sampling, transfer, etc).
     */
 
-   if (format_desc->layout == UTIL_FORMAT_LAYOUT_S3TC) {
-      return util_format_s3tc_enabled;
-   }
-
    /*
     * Everything else should be supported by u_format.
     */

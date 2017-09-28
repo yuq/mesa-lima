@@ -127,7 +127,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 
         /* r300 cannot do swizzling of compressed textures. Supported otherwise. */
         case PIPE_CAP_TEXTURE_SWIZZLE:
-            return util_format_s3tc_enabled ? r300screen->caps.dxtc_swizzle : 1;
+            return r300screen->caps.dxtc_swizzle;
 
         /* We don't support color clamping on r500, so that we can use color
          * intepolators for generic varyings. */
