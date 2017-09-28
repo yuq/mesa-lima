@@ -245,21 +245,34 @@ clif_process_worklist(struct clif_dump *clif)
 }
 
 void
-clif_dump_add_cl(struct clif_dump *clif, uint32_t address)
+clif_dump_add_cl(struct clif_dump *clif, uint32_t start, uint32_t end)
 {
         uint32_t size;
 
-        void *vaddr;
-        if (!clif->lookup_vaddr(clif->data, address, &vaddr)) {
+        void *start_vaddr;
+        if (!clif->lookup_vaddr(clif->data, start, &start_vaddr)) {
                 out(clif, "Failed to look up address 0x%08x\n",
-                    address);
+                    start);
                 return;
         }
 
-        uint8_t *cl = vaddr;
-        while (clif_dump_packet(clif, address, cl, &size)) {
+        /* The end address is optional (for example, a BRANCH instruction
+         * won't set an end), but is used for BCL/RCL termination.
+         */
+        void *end_vaddr = NULL;
+        if (end && !clif->lookup_vaddr(clif->data, end, &end_vaddr)) {
+                out(clif, "Failed to look up address 0x%08x\n",
+                    end);
+                return;
+        }
+
+        uint8_t *cl = start_vaddr;
+        while (clif_dump_packet(clif, start, cl, &size)) {
                 cl += size;
-                address += size;
+                start += size;
+
+                if (cl == end_vaddr)
+                        break;
         }
 
         out(clif, "\n");

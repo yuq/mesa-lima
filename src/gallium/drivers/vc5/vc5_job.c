@@ -329,11 +329,11 @@ vc5_clif_dump(struct vc5_context *vc5, struct vc5_job *job)
         fprintf(stderr, "BCL: 0x%08x..0x%08x\n",
                 job->submit.bcl_start, job->submit.bcl_end);
 
-        clif_dump_add_cl(clif, job->submit.bcl_start);
+        clif_dump_add_cl(clif, job->submit.bcl_start, job->submit.bcl_end);
 
         fprintf(stderr, "RCL: 0x%08x..0x%08x\n",
                 job->submit.rcl_start, job->submit.rcl_end);
-        clif_dump_add_cl(clif, job->submit.rcl_start);
+        clif_dump_add_cl(clif, job->submit.rcl_start, job->submit.rcl_end);
 }
 
 /**

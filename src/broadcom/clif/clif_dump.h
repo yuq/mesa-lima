@@ -37,6 +37,6 @@ struct clif_dump *clif_dump_init(const struct v3d_device_info *devinfo,
                                  void *data);
 void clif_dump_destroy(struct clif_dump *clif);
 
-void clif_dump_add_cl(struct clif_dump *clif, uint32_t offset);
+void clif_dump_add_cl(struct clif_dump *clif, uint32_t start, uint32_t end);
 
 #endif
