@@ -1560,13 +1560,6 @@ struct anv_push_constants {
    /* Push constant data provided by the client through vkPushConstants */
    uint8_t client_data[MAX_PUSH_CONSTANTS_SIZE];
 
-   /* Our hardware only provides zero-based vertex and instance id so, in
-    * order to satisfy the vulkan requirements, we may have to push one or
-    * both of these into the shader.
-    */
-   uint32_t base_vertex;
-   uint32_t base_instance;
-
    /* Image data for image_load_store on pre-SKL */
    struct brw_image_param images[MAX_IMAGES];
 };
