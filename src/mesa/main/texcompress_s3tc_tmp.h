@@ -983,7 +983,7 @@ static void tx_compress_dxtn(GLint srccomps, GLint width, GLint height, const GL
       }
       break;
    default:
-      fprintf(stderr, "libdxtn: Bad dstFormat %d in tx_compress_dxtn\n", destFormat);
+      assert(false);
       return;
    }
 }
