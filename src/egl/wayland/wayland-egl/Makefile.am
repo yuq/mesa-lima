@@ -6,7 +6,7 @@ AM_CFLAGS = $(DEFINES) \
 	    $(WAYLAND_CLIENT_CFLAGS)
 
 lib_LTLIBRARIES = libwayland-egl.la
-noinst_HEADERS = wayland-egl-priv.h
+noinst_HEADERS = wayland-egl-backend.h
 libwayland_egl_la_SOURCES = wayland-egl.c
 libwayland_egl_la_LDFLAGS = \
 	-no-undefined \

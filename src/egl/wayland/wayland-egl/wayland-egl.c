@@ -32,7 +32,7 @@
 
 #include <wayland-client.h>
 #include "wayland-egl.h"
-#include "wayland-egl-priv.h"
+#include "wayland-egl-backend.h"
 
 WL_EGL_EXPORT void
 wl_egl_window_resize(struct wl_egl_window *egl_window,
