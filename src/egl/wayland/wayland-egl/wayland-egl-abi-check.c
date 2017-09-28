@@ -20,10 +20,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <stddef.h> // offsetof
-#include <stdio.h>  // printf
+#include <stddef.h> /* offsetof */
+#include <stdio.h>  /* printf */
 
-#include "wayland-egl-backend.h" // Current struct wl_egl_window implementation
+#include "wayland-egl-backend.h" /* Current struct wl_egl_window implementation */
 
 /*
  * Following are previous implementations of wl_egl_window.
