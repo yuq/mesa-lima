@@ -56,7 +56,7 @@ int gen_group_get_length(struct gen_group *group, const uint32_t *p);
 const char *gen_group_get_name(struct gen_group *group);
 uint32_t gen_group_get_opcode(struct gen_group *group);
 struct gen_enum *gen_spec_find_enum(struct gen_spec *spec, const char *name);
-bool gen_group_header_is_header(struct gen_group *group, struct gen_field *field);
+bool gen_field_is_header(struct gen_field *field);
 
 struct gen_field_iterator {
    struct gen_group *group;
@@ -145,6 +145,7 @@ struct gen_type {
 };
 
 struct gen_field {
+   struct gen_group *parent;
    struct gen_field *next;
 
    char *name;

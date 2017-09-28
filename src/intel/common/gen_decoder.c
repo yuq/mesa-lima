@@ -288,6 +288,7 @@ create_field(struct parser_context *ctx, const char **atts)
    struct gen_field *field;
 
    field = rzalloc(ctx->group, struct gen_field);
+   field->parent = ctx->group;
 
    for (int i = 0; atts[i]; i += 2) {
       char *p;
@@ -960,7 +961,7 @@ print_dword_header(FILE *outfile,
 }
 
 bool
-gen_group_header_is_header(struct gen_group *group, struct gen_field *field)
+gen_field_is_header(struct gen_field *field)
 {
    uint32_t bits;
 
@@ -970,7 +971,7 @@ gen_group_header_is_header(struct gen_group *group, struct gen_field *field)
    bits = (1U << (field->end - field->start + 1)) - 1;
    bits <<= field->start;
 
-   return (group->opcode_mask & bits) != 0;
+   return (field->parent->opcode_mask & bits) != 0;
 }
 
 void
@@ -987,7 +988,7 @@ gen_print_group(FILE *outfile, struct gen_group *group,
             print_dword_header(outfile, &iter, offset, i);
          last_dword = iter.dword;
       }
-      if (!gen_group_header_is_header(group, iter.field)) {
+      if (!gen_field_is_header(iter.field)) {
          fprintf(outfile, "    %s: %s\n", iter.name, iter.value);
          if (iter.struct_desc) {
             uint64_t struct_offset = offset + 4 * iter.dword;
