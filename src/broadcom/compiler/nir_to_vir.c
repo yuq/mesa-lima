@@ -986,6 +986,32 @@ ntq_emit_alu(struct v3d_compile *c, nir_alu_instr *instr)
                        ffs(instr->dest.write_mask) - 1, result);
 }
 
+/* Each TLB read/write setup (a render target or depth buffer) takes an 8-bit
+ * specifier.  They come from a register that's preloaded with 0xffffffff
+ * (0xff gets you normal vec4 f16 RT0 writes), and when one is neaded the low
+ * 8 bits are shifted off the bottom and 0xff shifted in from the top.
+ */
+#define TLB_TYPE_F16_COLOR         (3 << 6)
+#define TLB_TYPE_I32_COLOR         (1 << 6)
+#define TLB_TYPE_F32_COLOR         (0 << 6)
+#define TLB_RENDER_TARGET_SHIFT    3 /* Reversed!  7 = RT 0, 0 = RT 7. */
+#define TLB_SAMPLE_MODE_PER_SAMPLE (0 << 2)
+#define TLB_SAMPLE_MODE_PER_PIXEL  (1 << 2)
+#define TLB_F16_SWAP_HI_LO         (1 << 1)
+#define TLB_VEC_SIZE_4_F16         (1 << 0)
+#define TLB_VEC_SIZE_2_F16         (0 << 0)
+#define TLB_VEC_SIZE_MINUS_1_SHIFT 0
+
+/* Triggers Z/Stencil testing, used when the shader state's "FS modifies Z"
+ * flag is set.
+ */
+#define TLB_TYPE_DEPTH             ((2 << 6) | (0 << 4))
+#define TLB_DEPTH_TYPE_INVARIANT   (0 << 2) /* Unmodified sideband input used */
+#define TLB_DEPTH_TYPE_PER_PIXEL   (1 << 2) /* QPU result used */
+
+/* Stencil is a single 32-bit write. */
+#define TLB_TYPE_STENCIL_ALPHA     ((2 << 6) | (1 << 4))
+
 static void
 emit_frag_end(struct v3d_compile *c)
 {
@@ -1008,8 +1034,8 @@ emit_frag_end(struct v3d_compile *c)
 
                 inst->src[vir_get_implicit_uniform_src(inst)] =
                         vir_uniform_ui(c,
-                                       (1 << 2) | /* per pixel */
-                                       (2 << 6) /* type */ |
+                                       TLB_TYPE_DEPTH |
+                                       TLB_DEPTH_TYPE_PER_PIXEL |
                                        0xffffff00);
         }
 
@@ -1028,10 +1054,11 @@ emit_frag_end(struct v3d_compile *c)
                 switch (glsl_get_base_type(var->type)) {
                 case GLSL_TYPE_UINT:
                 case GLSL_TYPE_INT:
-                        conf = ((1 << 2) | /* per pixel */
-                                ((7 - 0) << 3) | /* rt */
-                                (1 << 6) /* type */ |
-                                (num_components - 1) |
+                        conf = (TLB_TYPE_I32_COLOR |
+                                TLB_SAMPLE_MODE_PER_PIXEL |
+                                ((7 - 0) << TLB_RENDER_TARGET_SHIFT) |
+                                ((num_components - 1) <<
+                                 TLB_VEC_SIZE_MINUS_1_SHIFT) |
                                 0xffffff00);
 
 
