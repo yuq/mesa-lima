@@ -182,7 +182,8 @@ vc5_emit_rcl(struct vc5_job *job)
         /* Ends rendering mode config. */
         cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_Z_STENCIL_CLEAR_VALUES,
                 clear) {
-                clear.z_s_clear_value = job->clear_zs;
+                clear.z_clear_value = job->clear_z;
+                clear.stencil_vg_mask_clear_value = job->clear_s;
         };
 
         /* Always set initial block size before the first branch, which needs

@@ -557,7 +557,7 @@
   <packet code="121" name="Tile Rendering Mode Configuration (Z Stencil Clear Values)" cl="R">
     <field name="unused" size="16" start="48" type="uint"/>
 
-    <field name="Z/S Clear Value" size="32" start="16" type="uint"/>
+    <field name="Z Clear Value" size="32" start="16" type="float"/>
 
     <field name="Stencil/VG Mask Clear Value" size="8" start="8" type="uint"/>
     <field name="sub-id" size="4" start="0" type="uint" default="3"/>

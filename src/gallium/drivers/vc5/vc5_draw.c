@@ -561,21 +561,15 @@ vc5_clear(struct pipe_context *pctx, unsigned buffers,
                 rsc->initialized_buffers |= (buffers & PIPE_CLEAR_COLOR0);
         }
 
-        if (buffers & PIPE_CLEAR_DEPTHSTENCIL) {
+        unsigned zsclear = buffers & PIPE_CLEAR_DEPTHSTENCIL;
+        if (zsclear) {
                 struct vc5_resource *rsc =
                         vc5_resource(vc5->framebuffer.zsbuf->texture);
-                unsigned zsclear = buffers & PIPE_CLEAR_DEPTHSTENCIL;
 
-                if (buffers & PIPE_CLEAR_DEPTH) {
-                        job->clear_zs |=
-                                util_pack_z_stencil(PIPE_FORMAT_S8_UINT_Z24_UNORM,
-                                                    depth, 0);
-                }
-                if (buffers & PIPE_CLEAR_STENCIL) {
-                        job->clear_zs |=
-                                util_pack_z_stencil(PIPE_FORMAT_S8_UINT_Z24_UNORM,
-                                                    0, stencil);
-                }
+                if (zsclear & PIPE_CLEAR_DEPTH)
+                        job->clear_z = depth;
+                if (zsclear & PIPE_CLEAR_STENCIL)
+                        job->clear_s = stencil;
 
                 rsc->initialized_buffers |= zsclear;
         }

@@ -245,7 +245,8 @@ struct vc5_job {
          */
         uint32_t resolve;
         uint32_t clear_color[2];
-        uint32_t clear_zs; /**< 24-bit unorm depth/stencil */
+        float clear_z;
+        uint8_t clear_s;
 
         /**
          * Set if some drawing (triangles, blits, or just a glClear()) has
