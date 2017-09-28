@@ -278,12 +278,12 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
             nir_shader *producer = shProg->_LinkedShaders[i]->Program->nir;
             nir_shader *consumer = shProg->_LinkedShaders[next]->Program->nir;
 
-            nir_remove_dead_variables(producer, nir_var_shader_out);
-            nir_remove_dead_variables(consumer, nir_var_shader_in);
+            NIR_PASS_V(producer, nir_remove_dead_variables, nir_var_shader_out);
+            NIR_PASS_V(consumer, nir_remove_dead_variables, nir_var_shader_in);
 
             if (nir_remove_unused_varyings(producer, consumer)) {
-               nir_lower_global_vars_to_local(producer);
-               nir_lower_global_vars_to_local(consumer);
+               NIR_PASS_V(producer, nir_lower_global_vars_to_local);
+               NIR_PASS_V(consumer, nir_lower_global_vars_to_local);
 
                nir_variable_mode indirect_mask = (nir_variable_mode) 0;
                if (compiler->glsl_compiler_options[i].EmitNoIndirectTemp)
@@ -293,8 +293,8 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
                 * temporaries so we need to lower indirects on any of the
                 * varyings we have demoted here.
                 */
-               nir_lower_indirect_derefs(producer, indirect_mask);
-               nir_lower_indirect_derefs(consumer, indirect_mask);
+               NIR_PASS_V(producer, nir_lower_indirect_derefs, indirect_mask);
+               NIR_PASS_V(consumer, nir_lower_indirect_derefs, indirect_mask);
 
                const bool p_is_scalar = compiler->scalar_stage[producer->stage];
                producer = brw_nir_optimize(producer, compiler, p_is_scalar);
