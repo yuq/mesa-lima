@@ -49,6 +49,9 @@
 #endif
 
 #include <llvm-c/Core.h>
+#if HAVE_LLVM >= 0x0306
+#include <llvm-c/Support.h>
+#endif
 #include <llvm-c/ExecutionEngine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
@@ -122,6 +125,26 @@ static void init_native_targets()
    llvm::InitializeNativeTargetAsmPrinter();
 
    llvm::InitializeNativeTargetDisassembler();
+#if DEBUG && HAVE_LLVM >= 0x0306
+   {
+      char *env_llc_options = getenv("GALLIVM_LLC_OPTIONS");
+      if (env_llc_options) {
+         char *option;
+         char *options[64] = {(char *) "llc"};      // Warning without cast
+         int   n;
+         for (n = 0, option = strtok(env_llc_options, " "); option; n++, option = strtok(NULL, " ")) {
+            options[n + 1] = option;
+         }
+         if (gallivm_debug & (GALLIVM_DEBUG_IR | GALLIVM_DEBUG_ASM | GALLIVM_DEBUG_DUMP_BC)) {
+            debug_printf("llc additional options (%d):\n", n);
+            for (int i = 1; i <= n; i++)
+               debug_printf("\t%s\n", options[i]);
+            debug_printf("\n");
+         }
+         LLVMParseCommandLineOptions(n + 1, options, NULL);
+      }
+   }
+#endif
 }
 
 extern "C" void
