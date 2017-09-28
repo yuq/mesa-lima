@@ -150,26 +150,9 @@ void fetch_2d_texel_rgba_dxt3(GLint srcRowStride, const GLubyte *pixdata,
 
    GLchan *rgba = (GLchan *) texel;
    const GLubyte *blksrc = (pixdata + ((srcRowStride + 3) / 4 * (j / 4) + (i / 4)) * 16);
-#if 0
-   /* Simple 32bit version. */
-/* that's pretty brain-dead for a single pixel, isn't it? */
-   const GLubyte bit_pos = 4 * ((j&3) * 4 + (i&3));
-   const GLuint alpha_low = blksrc[0] | (blksrc[1] << 8) | (blksrc[2] << 16) | (blksrc[3] << 24);
-   const GLuint alpha_high = blksrc[4] | (blksrc[5] << 8) | (blksrc[6] << 16) | (blksrc[7] << 24);
-
-   dxt135_decode_imageblock(blksrc + 8, (i&3), (j&3), 2, texel);
-   if (bit_pos < 32)
-      rgba[ACOMP] = UBYTE_TO_CHAN( (GLubyte)(EXP4TO8((alpha_low >> bit_pos) & 15)) );
-   else
-      rgba[ACOMP] = UBYTE_TO_CHAN( (GLubyte)(EXP4TO8((alpha_high >> (bit_pos - 32)) & 15)) );
-#endif
-#if 1
-/* TODO test this! */
    const GLubyte anibble = (blksrc[((j&3) * 4 + (i&3)) / 2] >> (4 * (i&1))) & 0xf;
    dxt135_decode_imageblock(blksrc + 8, (i&3), (j&3), 2, texel);
    rgba[ACOMP] = UBYTE_TO_CHAN( (GLubyte)(EXP4TO8(anibble)) );
-#endif
-
 }
 
 void fetch_2d_texel_rgba_dxt5(GLint srcRowStride, const GLubyte *pixdata,
@@ -183,74 +166,12 @@ void fetch_2d_texel_rgba_dxt5(GLint srcRowStride, const GLubyte *pixdata,
    const GLubyte *blksrc = (pixdata + ((srcRowStride + 3) / 4 * (j / 4) + (i / 4)) * 16);
    const GLubyte alpha0 = blksrc[0];
    const GLubyte alpha1 = blksrc[1];
-#if 0
-   const GLubyte bit_pos = 3 * ((j&3) * 4 + (i&3));
-   /* simple 32bit version */
-   const GLuint bits_low = blksrc[2] | (blksrc[3] << 8) | (blksrc[4] << 16) | (blksrc[5] << 24);
-   const GLuint bits_high = blksrc[6] | (blksrc[7] << 8);
-   GLubyte code;
-
-   if (bit_pos < 30)
-      code = (GLubyte) ((bits_low >> bit_pos) & 7);
-   else if (bit_pos == 30)
-      code = (GLubyte) ((bits_low >> 30) & 3) | ((bits_high << 2) & 4);
-   else
-      code = (GLubyte) ((bits_high >> (bit_pos - 32)) & 7);
-#endif
-#if 1
-/* TODO test this! */
    const GLubyte bit_pos = ((j&3) * 4 + (i&3)) * 3;
    const GLubyte acodelow = blksrc[2 + bit_pos / 8];
    const GLubyte acodehigh = blksrc[3 + bit_pos / 8];
    const GLubyte code = (acodelow >> (bit_pos & 0x7) |
       (acodehigh  << (8 - (bit_pos & 0x7)))) & 0x7;
-#endif
    dxt135_decode_imageblock(blksrc + 8, (i&3), (j&3), 2, texel);
-#if 0
-   if (alpha0 > alpha1) {
-      switch (code) {
-      case 0:
-         rgba[ACOMP] = UBYTE_TO_CHAN( alpha0 );
-         break;
-      case 1:
-         rgba[ACOMP] = UBYTE_TO_CHAN( alpha1 );
-         break;
-      case 2:
-      case 3:
-      case 4:
-      case 5:
-      case 6:
-      case 7:
-         rgba[ACOMP] = UBYTE_TO_CHAN( ((alpha0 * (8 - code) + (alpha1 * (code - 1))) / 7) );
-         break;
-      }
-   }
-   else {
-      switch (code) {
-      case 0:
-         rgba[ACOMP] = UBYTE_TO_CHAN( alpha0 );
-         break;
-      case 1:
-         rgba[ACOMP] = UBYTE_TO_CHAN( alpha1 );
-         break;
-      case 2:
-      case 3:
-      case 4:
-      case 5:
-         rgba[ACOMP] = UBYTE_TO_CHAN( ((alpha0 * (6 - code) + (alpha1 * (code - 1))) / 5) );
-         break;
-      case 6:
-         rgba[ACOMP] = 0;
-         break;
-      case 7:
-         rgba[ACOMP] = CHAN_MAX;
-         break;
-      }
-   }
-#endif
-/* not sure. Which version is faster? */
-#if 1
-/* TODO test this */
    if (code == 0)
       rgba[ACOMP] = UBYTE_TO_CHAN( alpha0 );
    else if (code == 1)
@@ -263,7 +184,6 @@ void fetch_2d_texel_rgba_dxt5(GLint srcRowStride, const GLubyte *pixdata,
       rgba[ACOMP] = 0;
    else
       rgba[ACOMP] = CHAN_MAX;
-#endif
 }
 
 
