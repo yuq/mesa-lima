@@ -72,8 +72,6 @@ dri_fill_st_options(struct dri_screen *screen)
       driQueryOptionb(optionCache, "force_glsl_extensions_warn");
    options->force_glsl_version =
       driQueryOptioni(optionCache, "force_glsl_version");
-   options->force_s3tc_enable =
-      driQueryOptionb(optionCache, "force_s3tc_enable");
    options->allow_glsl_extension_directive_midshader =
       driQueryOptionb(optionCache, "allow_glsl_extension_directive_midshader");
    options->allow_glsl_builtin_variable_redeclaration =
