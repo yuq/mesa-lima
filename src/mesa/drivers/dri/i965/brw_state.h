@@ -235,6 +235,13 @@ void brw_emit_sampler_state(struct brw_context *brw,
 
 /* gen6_constant_state.c */
 void
+brw_populate_constant_data(struct brw_context *brw,
+                           const struct gl_program *prog,
+                           const struct brw_stage_prog_data *prog_data,
+                           void *dst,
+                           const union gl_constant_value **param,
+                           unsigned nr_params);
+void
 brw_upload_pull_constants(struct brw_context *brw,
                           GLbitfield64 brw_new_constbuf,
                           const struct gl_program *prog,

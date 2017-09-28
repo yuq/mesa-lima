@@ -28,6 +28,20 @@
 #include "intel_buffer_objects.h"
 #include "program/prog_parameter.h"
 
+void
+brw_populate_constant_data(struct brw_context *brw,
+                           const struct gl_program *prog,
+                           const struct brw_stage_prog_data *prog_data,
+                           void *void_dst,
+                           const union gl_constant_value **param,
+                           unsigned nr_params)
+{
+   gl_constant_value *dst = void_dst;
+   for (unsigned i = 0; i < nr_params; i++)
+      dst[i] = *param[i];
+}
+
+
 /**
  * Creates a streamed BO containing the push constants for the VS or GS on
  * gen6+.
@@ -82,9 +96,9 @@ gen6_upload_push_constants(struct brw_context *brw,
        * side effect of dereferencing uniforms, so _NEW_PROGRAM_CONSTANTS
        * wouldn't be set for them.
        */
-      for (i = 0; i < prog_data->nr_params; i++) {
-         param[i] = *prog_data->param[i];
-      }
+      brw_populate_constant_data(brw, prog, prog_data, param,
+                                 prog_data->param,
+                                 prog_data->nr_params);
 
       if (0) {
          fprintf(stderr, "%s constants:\n",
@@ -169,9 +183,9 @@ brw_upload_pull_constants(struct brw_context *brw,
 
    STATIC_ASSERT(sizeof(gl_constant_value) == sizeof(float));
 
-   for (i = 0; i < prog_data->nr_pull_params; i++) {
-      constants[i] = *prog_data->pull_param[i];
-   }
+   brw_populate_constant_data(brw, prog, prog_data, constants,
+                              prog_data->pull_param,
+                              prog_data->nr_pull_params);
 
    if (0) {
       for (i = 0; i < ALIGN(prog_data->nr_pull_params, 4) / 4; i++) {
