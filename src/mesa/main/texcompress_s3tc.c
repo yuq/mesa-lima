@@ -92,14 +92,9 @@ _mesa_texstore_rgb_dxt1(TEXSTORE_PARAMS)
 
    dst = dstSlices[0];
 
-   if (tx_compress_dxtn) {
-      (*tx_compress_dxtn)(3, srcWidth, srcHeight, pixels,
-                              GL_COMPRESSED_RGB_S3TC_DXT1_EXT,
-                              dst, dstRowStride);
-   }
-   else {
-      _mesa_warning(ctx, "external dxt library not available: texstore_rgb_dxt1");
-   }
+   tx_compress_dxtn(3, srcWidth, srcHeight, pixels,
+                    GL_COMPRESSED_RGB_S3TC_DXT1_EXT,
+                    dst, dstRowStride);
 
    free((void *) tempImage);
 
@@ -150,14 +145,9 @@ _mesa_texstore_rgba_dxt1(TEXSTORE_PARAMS)
 
    dst = dstSlices[0];
 
-   if (tx_compress_dxtn) {
-      (*tx_compress_dxtn)(4, srcWidth, srcHeight, pixels,
-                              GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,
-                              dst, dstRowStride);
-   }
-   else {
-      _mesa_warning(ctx, "external dxt library not available: texstore_rgba_dxt1");
-   }
+   tx_compress_dxtn(4, srcWidth, srcHeight, pixels,
+                    GL_COMPRESSED_RGBA_S3TC_DXT1_EXT,
+                    dst, dstRowStride);
 
    free((void*) tempImage);
 
@@ -207,14 +197,9 @@ _mesa_texstore_rgba_dxt3(TEXSTORE_PARAMS)
 
    dst = dstSlices[0];
 
-   if (tx_compress_dxtn) {
-      (*tx_compress_dxtn)(4, srcWidth, srcHeight, pixels,
-                              GL_COMPRESSED_RGBA_S3TC_DXT3_EXT,
-                              dst, dstRowStride);
-   }
-   else {
-      _mesa_warning(ctx, "external dxt library not available: texstore_rgba_dxt3");
-   }
+   tx_compress_dxtn(4, srcWidth, srcHeight, pixels,
+                    GL_COMPRESSED_RGBA_S3TC_DXT3_EXT,
+                    dst, dstRowStride);
 
    free((void *) tempImage);
 
@@ -264,14 +249,9 @@ _mesa_texstore_rgba_dxt5(TEXSTORE_PARAMS)
 
    dst = dstSlices[0];
 
-   if (tx_compress_dxtn) {
-      (*tx_compress_dxtn)(4, srcWidth, srcHeight, pixels,
-                              GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,
-                              dst, dstRowStride);
-   }
-   else {
-      _mesa_warning(ctx, "external dxt library not available: texstore_rgba_dxt5");
-   }
+   tx_compress_dxtn(4, srcWidth, srcHeight, pixels,
+                    GL_COMPRESSED_RGBA_S3TC_DXT5_EXT,
+                    dst, dstRowStride);
 
    free((void *) tempImage);
 
@@ -279,85 +259,52 @@ _mesa_texstore_rgba_dxt5(TEXSTORE_PARAMS)
 }
 
 
-/** Report problem with dxt texture decompression, once */
-static void
-problem(const char *func)
-{
-   static GLboolean warned = GL_FALSE;
-   if (!warned) {
-      _mesa_debug(NULL, "attempted to decode DXT texture without "
-                  "library available: %s\n", func);
-      warned = GL_TRUE;
-   }
-}
-
-
 static void
 fetch_rgb_dxt1(const GLubyte *map,
                GLint rowStride, GLint i, GLint j, GLfloat *texel)
 {
-   if (fetch_2d_texel_rgb_dxt1) {
-      GLubyte tex[4];
-      fetch_2d_texel_rgb_dxt1(rowStride, map, i, j, tex);
-      texel[RCOMP] = UBYTE_TO_FLOAT(tex[RCOMP]);
-      texel[GCOMP] = UBYTE_TO_FLOAT(tex[GCOMP]);
-      texel[BCOMP] = UBYTE_TO_FLOAT(tex[BCOMP]);
-      texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
-   }
-   else {
-      problem("rgb_dxt1");
-   }
+   GLubyte tex[4];
+   fetch_2d_texel_rgb_dxt1(rowStride, map, i, j, tex);
+   texel[RCOMP] = UBYTE_TO_FLOAT(tex[RCOMP]);
+   texel[GCOMP] = UBYTE_TO_FLOAT(tex[GCOMP]);
+   texel[BCOMP] = UBYTE_TO_FLOAT(tex[BCOMP]);
+   texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
 }
 
 static void
 fetch_rgba_dxt1(const GLubyte *map,
                 GLint rowStride, GLint i, GLint j, GLfloat *texel)
 {
-   if (fetch_2d_texel_rgba_dxt1) {
-      GLubyte tex[4];
-      fetch_2d_texel_rgba_dxt1(rowStride, map, i, j, tex);
-      texel[RCOMP] = UBYTE_TO_FLOAT(tex[RCOMP]);
-      texel[GCOMP] = UBYTE_TO_FLOAT(tex[GCOMP]);
-      texel[BCOMP] = UBYTE_TO_FLOAT(tex[BCOMP]);
-      texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
-   }
-   else {
-      problem("rgba_dxt1");
-   }
+   GLubyte tex[4];
+   fetch_2d_texel_rgba_dxt1(rowStride, map, i, j, tex);
+   texel[RCOMP] = UBYTE_TO_FLOAT(tex[RCOMP]);
+   texel[GCOMP] = UBYTE_TO_FLOAT(tex[GCOMP]);
+   texel[BCOMP] = UBYTE_TO_FLOAT(tex[BCOMP]);
+   texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
 }
 
 static void
 fetch_rgba_dxt3(const GLubyte *map,
                 GLint rowStride, GLint i, GLint j, GLfloat *texel)
 {
-   if (fetch_2d_texel_rgba_dxt3) {
-      GLubyte tex[4];
-      fetch_2d_texel_rgba_dxt3(rowStride, map, i, j, tex);
-      texel[RCOMP] = UBYTE_TO_FLOAT(tex[RCOMP]);
-      texel[GCOMP] = UBYTE_TO_FLOAT(tex[GCOMP]);
-      texel[BCOMP] = UBYTE_TO_FLOAT(tex[BCOMP]);
-      texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
-   }
-   else {
-      problem("rgba_dxt3");
-   }
+   GLubyte tex[4];
+   fetch_2d_texel_rgba_dxt3(rowStride, map, i, j, tex);
+   texel[RCOMP] = UBYTE_TO_FLOAT(tex[RCOMP]);
+   texel[GCOMP] = UBYTE_TO_FLOAT(tex[GCOMP]);
+   texel[BCOMP] = UBYTE_TO_FLOAT(tex[BCOMP]);
+   texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
 }
 
 static void
 fetch_rgba_dxt5(const GLubyte *map,
                 GLint rowStride, GLint i, GLint j, GLfloat *texel)
 {
-   if (fetch_2d_texel_rgba_dxt5) {
-      GLubyte tex[4];
-      fetch_2d_texel_rgba_dxt5(rowStride, map, i, j, tex);
-      texel[RCOMP] = UBYTE_TO_FLOAT(tex[RCOMP]);
-      texel[GCOMP] = UBYTE_TO_FLOAT(tex[GCOMP]);
-      texel[BCOMP] = UBYTE_TO_FLOAT(tex[BCOMP]);
-      texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
-   }
-   else {
-      problem("rgba_dxt5");
-   }
+   GLubyte tex[4];
+   fetch_2d_texel_rgba_dxt5(rowStride, map, i, j, tex);
+   texel[RCOMP] = UBYTE_TO_FLOAT(tex[RCOMP]);
+   texel[GCOMP] = UBYTE_TO_FLOAT(tex[GCOMP]);
+   texel[BCOMP] = UBYTE_TO_FLOAT(tex[BCOMP]);
+   texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
 }
 
 
@@ -365,68 +312,48 @@ static void
 fetch_srgb_dxt1(const GLubyte *map,
                 GLint rowStride, GLint i, GLint j, GLfloat *texel)
 {
-   if (fetch_2d_texel_rgb_dxt1) {
-      GLubyte tex[4];
-      fetch_2d_texel_rgb_dxt1(rowStride, map, i, j, tex);
-      texel[RCOMP] = util_format_srgb_8unorm_to_linear_float(tex[RCOMP]);
-      texel[GCOMP] = util_format_srgb_8unorm_to_linear_float(tex[GCOMP]);
-      texel[BCOMP] = util_format_srgb_8unorm_to_linear_float(tex[BCOMP]);
-      texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
-   }
-   else {
-      problem("srgb_dxt1");
-   }
+   GLubyte tex[4];
+   fetch_2d_texel_rgb_dxt1(rowStride, map, i, j, tex);
+   texel[RCOMP] = util_format_srgb_8unorm_to_linear_float(tex[RCOMP]);
+   texel[GCOMP] = util_format_srgb_8unorm_to_linear_float(tex[GCOMP]);
+   texel[BCOMP] = util_format_srgb_8unorm_to_linear_float(tex[BCOMP]);
+   texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
 }
 
 static void
 fetch_srgba_dxt1(const GLubyte *map,
                  GLint rowStride, GLint i, GLint j, GLfloat *texel)
 {
-   if (fetch_2d_texel_rgba_dxt1) {
-      GLubyte tex[4];
-      fetch_2d_texel_rgba_dxt1(rowStride, map, i, j, tex);
-      texel[RCOMP] = util_format_srgb_8unorm_to_linear_float(tex[RCOMP]);
-      texel[GCOMP] = util_format_srgb_8unorm_to_linear_float(tex[GCOMP]);
-      texel[BCOMP] = util_format_srgb_8unorm_to_linear_float(tex[BCOMP]);
-      texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
-   }
-   else {
-      problem("srgba_dxt1");
-   }
+   GLubyte tex[4];
+   fetch_2d_texel_rgba_dxt1(rowStride, map, i, j, tex);
+   texel[RCOMP] = util_format_srgb_8unorm_to_linear_float(tex[RCOMP]);
+   texel[GCOMP] = util_format_srgb_8unorm_to_linear_float(tex[GCOMP]);
+   texel[BCOMP] = util_format_srgb_8unorm_to_linear_float(tex[BCOMP]);
+   texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
 }
 
 static void
 fetch_srgba_dxt3(const GLubyte *map,
                  GLint rowStride, GLint i, GLint j, GLfloat *texel)
 {
-   if (fetch_2d_texel_rgba_dxt3) {
-      GLubyte tex[4];
-      fetch_2d_texel_rgba_dxt3(rowStride, map, i, j, tex);
-      texel[RCOMP] = util_format_srgb_8unorm_to_linear_float(tex[RCOMP]);
-      texel[GCOMP] = util_format_srgb_8unorm_to_linear_float(tex[GCOMP]);
-      texel[BCOMP] = util_format_srgb_8unorm_to_linear_float(tex[BCOMP]);
-      texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
-   }
-   else {
-      problem("srgba_dxt3");
-   }
+   GLubyte tex[4];
+   fetch_2d_texel_rgba_dxt3(rowStride, map, i, j, tex);
+   texel[RCOMP] = util_format_srgb_8unorm_to_linear_float(tex[RCOMP]);
+   texel[GCOMP] = util_format_srgb_8unorm_to_linear_float(tex[GCOMP]);
+   texel[BCOMP] = util_format_srgb_8unorm_to_linear_float(tex[BCOMP]);
+   texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
 }
 
 static void
 fetch_srgba_dxt5(const GLubyte *map,
                  GLint rowStride, GLint i, GLint j, GLfloat *texel)
 {
-   if (fetch_2d_texel_rgba_dxt5) {
-      GLubyte tex[4];
-      fetch_2d_texel_rgba_dxt5(rowStride, map, i, j, tex);
-      texel[RCOMP] = util_format_srgb_8unorm_to_linear_float(tex[RCOMP]);
-      texel[GCOMP] = util_format_srgb_8unorm_to_linear_float(tex[GCOMP]);
-      texel[BCOMP] = util_format_srgb_8unorm_to_linear_float(tex[BCOMP]);
-      texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
-   }
-   else {
-      problem("srgba_dxt5");
-   }
+   GLubyte tex[4];
+   fetch_2d_texel_rgba_dxt5(rowStride, map, i, j, tex);
+   texel[RCOMP] = util_format_srgb_8unorm_to_linear_float(tex[RCOMP]);
+   texel[GCOMP] = util_format_srgb_8unorm_to_linear_float(tex[GCOMP]);
+   texel[BCOMP] = util_format_srgb_8unorm_to_linear_float(tex[BCOMP]);
+   texel[ACOMP] = UBYTE_TO_FLOAT(tex[ACOMP]);
 }
 
 
