@@ -396,7 +396,6 @@ struct radv_meta_state {
 		VkPipeline pipeline;
 	} itob;
 	struct {
-		VkRenderPass render_pass;
 		VkPipelineLayout                          img_p_layout;
 		VkDescriptorSetLayout                     img_ds_layout;
 		VkPipeline pipeline;
