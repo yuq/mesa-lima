@@ -331,20 +331,6 @@ get_array_range(struct lp_build_tgsi_context *bld_base,
 	return range;
 }
 
-static LLVMValueRef
-emit_array_index(struct si_shader_context *ctx,
-		 const struct tgsi_ind_register *reg,
-		 unsigned offset)
-{
-	struct gallivm_state *gallivm = &ctx->gallivm;
-
-	if (!reg) {
-		return LLVMConstInt(ctx->i32, offset, 0);
-	}
-	LLVMValueRef addr = LLVMBuildLoad(gallivm->builder, ctx->addrs[reg->Index][reg->Swizzle], "");
-	return LLVMBuildAdd(gallivm->builder, addr, LLVMConstInt(ctx->i32, offset, 0), "");
-}
-
 /**
  * For indirect registers, construct a pointer directly to the requested
  * element using getelementptr if possible.
@@ -383,8 +369,8 @@ get_pointer_into_array(struct si_shader_context *ctx,
 	if (!(array->writemask & (1 << swizzle)))
 		return ctx->undef_alloca;
 
-	index = emit_array_index(ctx, reg_indirect,
-				 reg_index - ctx->temp_arrays[array_id - 1].range.First);
+	index = si_get_indirect_index(ctx, reg_indirect, 1,
+				      reg_index - ctx->temp_arrays[array_id - 1].range.First);
 
 	/* Ensure that the index is within a valid range, to guard against
 	 * VM faults and overwriting critical data (e.g. spilled resource
@@ -490,7 +476,7 @@ load_value_from_array(struct lp_build_tgsi_context *bld_base,
 		struct tgsi_declaration_range range =
 			get_array_range(bld_base, file, reg_index, reg_indirect);
 		LLVMValueRef index =
-			emit_array_index(ctx, reg_indirect, reg_index - range.First);
+			si_get_indirect_index(ctx, reg_indirect, 1, reg_index - range.First);
 		LLVMValueRef array =
 			emit_array_fetch(bld_base, file, type, range, swizzle);
 		return LLVMBuildExtractElement(builder, array, index, "");
@@ -516,7 +502,7 @@ store_value_to_array(struct lp_build_tgsi_context *bld_base,
 	} else {
 		unsigned i, size;
 		struct tgsi_declaration_range range = get_array_range(bld_base, file, reg_index, reg_indirect);
-		LLVMValueRef index = emit_array_index(ctx, reg_indirect, reg_index - range.First);
+		LLVMValueRef index = si_get_indirect_index(ctx, reg_indirect, 1, reg_index - range.First);
 		LLVMValueRef array =
 			emit_array_fetch(bld_base, file, TGSI_TYPE_FLOAT, range, chan_index);
 		LLVMValueRef temp_ptr;
