@@ -106,7 +106,7 @@ elif with_windowsdri
   #]
 endif
 
-dri_driver_dir = join_paths(get_option('prefix'), get_option('libdir'), 'dri')
+dri_driver_dir = join_paths(get_option('prefix'), dri_drivers_path)
 if not with_glvnd
   gl_lib_name = 'GL'
   gl_lib_version = '1.2.0'

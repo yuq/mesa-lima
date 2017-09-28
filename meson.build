@@ -42,6 +42,11 @@ with_asm = get_option('asm')
 with_appledri = false
 with_windowsdri = false
 
+dri_drivers_path = get_option('dri-drivers-path')
+if dri_drivers_path == ''
+  dri_drivers_path = join_paths(get_option('libdir'), 'dri')
+endif
+
 with_gles1 = get_option('gles1')
 with_gles2 = get_option('gles2')
 with_opengl = get_option('opengl')
