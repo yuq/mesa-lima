@@ -30,7 +30,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <wayland-client.h>
 #include "wayland-egl.h"
 #include "wayland-egl-backend.h"
 

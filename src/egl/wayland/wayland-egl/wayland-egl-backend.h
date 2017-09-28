@@ -36,7 +36,6 @@
 #endif
 
 #include <stdint.h>
-#include <wayland-client.h>
 
 #ifdef  __cplusplus
 extern "C" {

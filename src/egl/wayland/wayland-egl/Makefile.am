@@ -2,8 +2,7 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = wayland-egl.pc
 
 AM_CFLAGS = $(DEFINES) \
-	    $(VISIBILITY_CFLAGS) \
-	    $(WAYLAND_CLIENT_CFLAGS)
+	    $(VISIBILITY_CFLAGS)
 
 lib_LTLIBRARIES = libwayland-egl.la
 noinst_HEADERS = wayland-egl-backend.h
