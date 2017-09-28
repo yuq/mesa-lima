@@ -1031,6 +1031,7 @@ emit_frag_end(struct v3d_compile *c)
                 struct qinst *inst = vir_MOV_dest(c,
                                                   vir_reg(QFILE_TLBU, 0),
                                                   c->outputs[c->output_position_index]);
+                vir_set_cond(inst, discard_cond);
 
                 inst->src[vir_get_implicit_uniform_src(inst)] =
                         vir_uniform_ui(c,
