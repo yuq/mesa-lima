@@ -4097,6 +4097,70 @@ static const struct brw_tracked_state genX(tcs_push_constants) = {
 
 #if GEN_GEN >= 7
 static void
+genX(upload_cs_push_constants)(struct brw_context *brw)
+{
+   struct brw_stage_state *stage_state = &brw->cs.base;
+
+   /* BRW_NEW_COMPUTE_PROGRAM */
+   const struct brw_program *cp =
+      (struct brw_program *) brw->programs[MESA_SHADER_COMPUTE];
+
+   if (cp) {
+      /* BRW_NEW_CS_PROG_DATA */
+      struct brw_cs_prog_data *cs_prog_data =
+         brw_cs_prog_data(brw->cs.base.prog_data);
+
+      _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_COMPUTE);
+      brw_upload_cs_push_constants(brw, &cp->program, cs_prog_data,
+                                   stage_state);
+   }
+}
+
+const struct brw_tracked_state genX(cs_push_constants) = {
+   .dirty = {
+      .mesa = _NEW_PROGRAM_CONSTANTS,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_COMPUTE_PROGRAM |
+             BRW_NEW_CS_PROG_DATA,
+   },
+   .emit = genX(upload_cs_push_constants),
+};
+
+/**
+ * Creates a new CS constant buffer reflecting the current CS program's
+ * constants, if needed by the CS program.
+ */
+static void
+genX(upload_cs_pull_constants)(struct brw_context *brw)
+{
+   struct brw_stage_state *stage_state = &brw->cs.base;
+
+   /* BRW_NEW_COMPUTE_PROGRAM */
+   struct brw_program *cp =
+      (struct brw_program *) brw->programs[MESA_SHADER_COMPUTE];
+
+   /* BRW_NEW_CS_PROG_DATA */
+   const struct brw_stage_prog_data *prog_data = brw->cs.base.prog_data;
+
+   _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_COMPUTE);
+   /* _NEW_PROGRAM_CONSTANTS */
+   brw_upload_pull_constants(brw, BRW_NEW_SURFACES, &cp->program,
+                             stage_state, prog_data);
+}
+
+const struct brw_tracked_state genX(cs_pull_constants) = {
+   .dirty = {
+      .mesa = _NEW_PROGRAM_CONSTANTS,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_BLORP |
+             BRW_NEW_COMPUTE_PROGRAM |
+             BRW_NEW_CS_PROG_DATA,
+   },
+   .emit = genX(upload_cs_pull_constants),
+};
+
+static void
 genX(upload_cs_state)(struct brw_context *brw)
 {
    if (!brw->cs.base.prog_data)
@@ -5597,8 +5661,8 @@ genX(init_atoms)(struct brw_context *brw)
    {
       &gen7_l3_state,
       &brw_cs_image_surfaces,
-      &gen7_cs_push_constants,
-      &brw_cs_pull_constants,
+      &genX(cs_push_constants),
+      &genX(cs_pull_constants),
       &brw_cs_ubo_surfaces,
       &brw_cs_abo_surfaces,
       &brw_cs_texture_surfaces,

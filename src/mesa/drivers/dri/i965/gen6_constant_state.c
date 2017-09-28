@@ -201,3 +201,77 @@ brw_upload_pull_constants(struct brw_context *brw,
 
    brw->ctx.NewDriverState |= brw_new_constbuf;
 }
+
+/**
+ * Creates a region containing the push constants for the CS on gen7+.
+ *
+ * Push constants are constant values (such as GLSL uniforms) that are
+ * pre-loaded into a shader stage's register space at thread spawn time.
+ *
+ * For other stages, see brw_curbe.c:brw_upload_constant_buffer for the
+ * equivalent gen4/5 code and gen6_vs_state.c:gen6_upload_push_constants for
+ * gen6+.
+ */
+void
+brw_upload_cs_push_constants(struct brw_context *brw,
+                             const struct gl_program *prog,
+                             const struct brw_cs_prog_data *cs_prog_data,
+                             struct brw_stage_state *stage_state)
+{
+   struct gl_context *ctx = &brw->ctx;
+   const struct brw_stage_prog_data *prog_data =
+      (struct brw_stage_prog_data*) cs_prog_data;
+
+   /* Updates the ParamaterValues[i] pointers for all parameters of the
+    * basic type of PROGRAM_STATE_VAR.
+    */
+   /* XXX: Should this happen somewhere before to get our state flag set? */
+   _mesa_load_state_parameters(ctx, prog->Parameters);
+
+   if (cs_prog_data->push.total.size == 0) {
+      stage_state->push_const_size = 0;
+      return;
+   }
+
+
+   gl_constant_value *param = (gl_constant_value*)
+      brw_state_batch(brw, ALIGN(cs_prog_data->push.total.size, 64),
+                      64, &stage_state->push_const_offset);
+   assert(param);
+
+   STATIC_ASSERT(sizeof(gl_constant_value) == sizeof(float));
+
+   if (cs_prog_data->push.cross_thread.size > 0) {
+      gl_constant_value *param_copy = param;
+      assert(cs_prog_data->thread_local_id_index < 0 ||
+             cs_prog_data->thread_local_id_index >=
+                cs_prog_data->push.cross_thread.dwords);
+      for (unsigned i = 0;
+           i < cs_prog_data->push.cross_thread.dwords;
+           i++) {
+         param_copy[i] = *prog_data->param[i];
+      }
+   }
+
+   gl_constant_value thread_id;
+   if (cs_prog_data->push.per_thread.size > 0) {
+      for (unsigned t = 0; t < cs_prog_data->threads; t++) {
+         unsigned dst =
+            8 * (cs_prog_data->push.per_thread.regs * t +
+                 cs_prog_data->push.cross_thread.regs);
+         unsigned src = cs_prog_data->push.cross_thread.dwords;
+         for ( ; src < prog_data->nr_params; src++, dst++) {
+            if (src != cs_prog_data->thread_local_id_index)
+               param[dst] = *prog_data->param[src];
+            else {
+               thread_id.u = t * cs_prog_data->simd_size;
+               param[dst] = thread_id;
+            }
+         }
+      }
+   }
+
+   stage_state->push_const_size =
+      cs_prog_data->push.cross_thread.regs +
+      cs_prog_data->push.per_thread.regs;
+}

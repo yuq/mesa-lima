@@ -88,7 +88,6 @@ files_i965 = files(
   'gen6_sampler_state.c',
   'gen6_sol.c',
   'gen6_urb.c',
-  'gen7_cs_state.c',
   'gen7_l3_state.c',
   'gen7_misc_state.c',
   'gen7_sol_state.c',

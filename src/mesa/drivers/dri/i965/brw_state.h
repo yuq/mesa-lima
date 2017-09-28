@@ -247,6 +247,11 @@ brw_upload_pull_constants(struct brw_context *brw,
                           const struct gl_program *prog,
                           struct brw_stage_state *stage_state,
                           const struct brw_stage_prog_data *prog_data);
+void
+brw_upload_cs_push_constants(struct brw_context *brw,
+                             const struct gl_program *prog,
+                             const struct brw_cs_prog_data *cs_prog_data,
+                             struct brw_stage_state *stage_state);
 
 /* gen7_vs_state.c */
 void
