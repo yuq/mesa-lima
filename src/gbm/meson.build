@@ -18,44 +18,50 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_common = include_directories(
-  '../include', '.', 'mapi', 'mesa', 'gallium/include', 'gallium/auxiliary')
-inc_mesa = include_directories('mesa')
-inc_mapi = include_directories('mapi')
-inc_src = include_directories('.')
-
-libglsl_util = static_library(
-  'glsl_util',
-  files('mesa/main/extensions_table.c', 'mesa/main/imports.c',
-        'mesa/program/prog_parameter.c', 'mesa/program/symbol_table.c',
-        'mesa/program/dummy_errors.c'),
-  include_directories : [inc_common],
-  c_args : [c_vis_args],
-  build_by_default : false,
+files_gbm = files(
+  'main/backend.c',
+  'main/backend.h',
+  'main/gbm.c',
+  'main/gbm.h',
+  'main/gbmint.h',
 )
+deps_gbm = []
+args_gbm = []
+links_gbm = []
 
-sha1_h = vcs_tag(
-  input : 'git_sha1.h.in',
-  output : 'git_sha1.h',
-)
-
-subdir('gtest')
-subdir('util')
-subdir('mapi/glapi/gen')
-subdir('mapi')
-# TODO: opengl
-# TODO: osmesa
-subdir('compiler')
-subdir('egl/wayland/wayland-drm')
-subdir('vulkan')
-subdir('amd')
-subdir('intel')
-# TODO: vc4
-subdir('mesa')
-subdir('loader')
-subdir('glx')
-if with_gbm
-  subdir('gbm')
+if with_dri2
+  files_gbm += files('backends/dri/gbm_dri.c', 'backends/dri/gbm_driint.h')
+  deps_gbm += [dep_libdrm, dep_thread]
+  args_gbm += '-DDEFAULT_DRIVER_DIR="@0@"'.format(dri_driver_dir)
 endif
-# TODO: egl
-# TODO: gallium
+
+# TODO: wayland support (requires egl)
+
+libgbm = shared_library(
+  'gbm',
+  files_gbm,
+  include_directories : [
+    include_directories('main'), inc_include, inc_src, inc_loader],
+  c_args : args_gbm,
+  link_args : [ld_args_gc_sections],
+  link_with : [libloader, libmesa_util, libxmlconfig],
+  dependencies : [deps_gbm, dep_dl],
+  version : '1.0',
+  install : true,
+)
+
+install_headers('main/gbm.h')
+
+pkg.generate(
+  name : 'gbm',
+  filebase : 'gbm',
+  description : 'Mesa gbm library',
+  version : meson.project_version(),
+  libraries : libgbm,
+  libraries_private : '-ldl',  # FIXME: autotools lists this a incomplete
+)
+
+if with_tests
+  gbm_symbols_check = find_program('gbm-symbols-check')
+  test('gbm-symbols-check', gbm_symbols_check)
+endif

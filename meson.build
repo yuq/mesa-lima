@@ -101,12 +101,15 @@ pre_args += '-DHAVE_LIBDRM'
 with_dri2 = with_dri_platform == 'drm' and dep_libdrm.found()
 with_dri3 = get_option('dri3')
 if with_dri3 == 'auto'
-  if host_machine.system() == 'linux'
+  if host_machine.system() == 'linux' and with_dri2
     with_dri3 = true
   else
     with_dri3 = false
  endif
 elif with_dri3 == 'yes'
+  if not with_dri2
+    error('dri3 support requires libdrm')
+  endif
   with_dri3 = true
 else
   with_dri3 = false
@@ -120,6 +123,18 @@ if _platforms != ''
   _split = _platforms.split(',')
   with_platform_x11 = _split.contains('x11')
   with_platform_wayland = _split.contains('wayland')
+endif
+
+with_gbm = get_option('gbm')
+if with_gbm == 'auto' and with_dri  # TODO: or gallium
+  with_gbm = host_machine.system() == 'linux'
+elif with_gbm == 'yes'
+  if not ['linux', 'bsd'].contains(host_machine.system())
+    error('GBM only supports unix-like platforms')
+  endif
+  with_gbm = true
+else
+  with_gbm = false
 endif
 
 with_glx = get_option('glx')
