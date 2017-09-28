@@ -553,8 +553,7 @@ static bool depth_view_can_fast_clear(struct radv_cmd_buffer *cmd_buffer,
 	    clear_rect->rect.extent.width != iview->extent.width ||
 	    clear_rect->rect.extent.height != iview->extent.height)
 		return false;
-	if (iview->image->surface.htile_size &&
-	    iview->base_mip == 0 &&
+	if (iview->base_mip == 0 &&
 	    iview->base_layer == 0 &&
 	    radv_layout_is_htile_compressed(iview->image, layout, queue_mask) &&
 	    !radv_image_extent_compare(iview->image, &iview->extent))
