@@ -297,13 +297,14 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
                nir_lower_indirect_derefs(consumer, indirect_mask);
 
                const bool p_is_scalar = compiler->scalar_stage[producer->stage];
-               shProg->_LinkedShaders[i]->Program->nir =
-                 brw_nir_optimize(producer, compiler, p_is_scalar);
+               producer = brw_nir_optimize(producer, compiler, p_is_scalar);
 
                const bool c_is_scalar = compiler->scalar_stage[producer->stage];
-               shProg->_LinkedShaders[next]->Program->nir =
-                 brw_nir_optimize(consumer, compiler, c_is_scalar);
+               consumer = brw_nir_optimize(consumer, compiler, c_is_scalar);
             }
+
+            shProg->_LinkedShaders[i]->Program->nir = producer;
+            shProg->_LinkedShaders[next]->Program->nir = consumer;
 
             next = i;
        }
