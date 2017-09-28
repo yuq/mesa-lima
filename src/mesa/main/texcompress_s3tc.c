@@ -37,6 +37,7 @@
 #include "mtypes.h"
 #include "texcompress.h"
 #include "texcompress_s3tc.h"
+#include "texcompress_s3tc_tmp.h"
 #include "texstore.h"
 #include "format_unpack.h"
 #include "util/format_srgb.h"

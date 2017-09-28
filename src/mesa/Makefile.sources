@@ -249,9 +249,6 @@ MAIN_FILES = \
 	main/textureview.h \
 	main/transformfeedback.c \
 	main/transformfeedback.h \
-	main/txc_compress_dxtn.c \
-	main/txc_dxtn.h \
-	main/txc_fetch_dxtn.c \
 	main/uniform_query.cpp \
 	main/uniforms.c \
 	main/uniforms.h \
