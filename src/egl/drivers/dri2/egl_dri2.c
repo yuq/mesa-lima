@@ -1966,7 +1966,8 @@ dri2_create_image_wayland_wl_buffer(_EGLDisplay *disp, _EGLContext *ctx,
    }
 
    dri_image = dri2_dpy->image->fromPlanar(buffer->driver_buffer, plane, NULL);
-
+   if (dri_image == NULL && plane == 0)
+      dri_image = dri2_dpy->image->dupImage(buffer->driver_buffer, NULL);
    if (dri_image == NULL) {
       _eglError(EGL_BAD_PARAMETER, "dri2_create_image_wayland_wl_buffer");
       return NULL;
