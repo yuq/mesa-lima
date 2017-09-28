@@ -452,14 +452,12 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    s.RenderCacheReadWriteMode = 0;
 #endif
 
-   if (info->view->usage & ISL_SURF_USAGE_CUBE_BIT) {
-      s.CubeFaceEnablePositiveZ = 1;
-      s.CubeFaceEnableNegativeZ = 1;
-      s.CubeFaceEnablePositiveY = 1;
-      s.CubeFaceEnableNegativeY = 1;
-      s.CubeFaceEnablePositiveX = 1;
-      s.CubeFaceEnableNegativeX = 1;
-   }
+   s.CubeFaceEnablePositiveZ = 1;
+   s.CubeFaceEnableNegativeZ = 1;
+   s.CubeFaceEnablePositiveY = 1;
+   s.CubeFaceEnableNegativeY = 1;
+   s.CubeFaceEnablePositiveX = 1;
+   s.CubeFaceEnableNegativeX = 1;
 
 #if GEN_GEN >= 6
    s.NumberofMultisamples = ffs(info->surf->samples) - 1;
