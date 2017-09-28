@@ -1075,32 +1075,32 @@ emit_clear(struct radv_cmd_buffer *cmd_buffer,
 	}
 }
 
-static bool
-subpass_needs_clear(const struct radv_cmd_buffer *cmd_buffer)
+static inline bool
+radv_attachment_needs_clear(struct radv_cmd_state *cmd_state, uint32_t a)
 {
-	const struct radv_cmd_state *cmd_state = &cmd_buffer->state;
-	uint32_t ds;
+	uint32_t view_mask = cmd_state->subpass->view_mask;
+	return (a != VK_ATTACHMENT_UNUSED &&
+		cmd_state->attachments[a].pending_clear_aspects &&
+		(!view_mask || (view_mask & ~cmd_state->attachments[a].cleared_views)));
+}
+
+static bool
+radv_subpass_needs_clear(struct radv_cmd_buffer *cmd_buffer)
+{
+	struct radv_cmd_state *cmd_state = &cmd_buffer->state;
+	uint32_t a;
 
 	if (!cmd_state->subpass)
 		return false;
-	uint32_t view_mask = cmd_state->subpass->view_mask;
-	ds = cmd_state->subpass->depth_stencil_attachment.attachment;
+
 	for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
-		uint32_t a = cmd_state->subpass->color_attachments[i].attachment;
-		if (a != VK_ATTACHMENT_UNUSED &&
-		    cmd_state->attachments[a].pending_clear_aspects &&
-		    (!view_mask || (view_mask & ~cmd_state->attachments[a].cleared_views))) {
+		a = cmd_state->subpass->color_attachments[i].attachment;
+		if (radv_attachment_needs_clear(cmd_state, a))
 			return true;
-		}
 	}
 
-	if (ds != VK_ATTACHMENT_UNUSED &&
-	    cmd_state->attachments[ds].pending_clear_aspects &&
-	    (!view_mask || (view_mask & ~cmd_state->attachments[ds].cleared_views))) {
-		return true;
-	}
-
-	return false;
+	a = cmd_state->subpass->depth_stencil_attachment.attachment;
+	return radv_attachment_needs_clear(cmd_state, a);
 }
 
 /**
@@ -1117,7 +1117,7 @@ radv_cmd_buffer_clear_subpass(struct radv_cmd_buffer *cmd_buffer)
 	enum radv_cmd_flush_bits post_flush = 0;
 	uint32_t view_mask = cmd_buffer->state.subpass->view_mask;
 
-	if (!subpass_needs_clear(cmd_buffer))
+	if (!radv_subpass_needs_clear(cmd_buffer))
 		return;
 
 	radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state, cmd_buffer);
@@ -1131,9 +1131,7 @@ radv_cmd_buffer_clear_subpass(struct radv_cmd_buffer *cmd_buffer)
 	for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
 		uint32_t a = cmd_state->subpass->color_attachments[i].attachment;
 
-		if (a == VK_ATTACHMENT_UNUSED ||
-		    !cmd_state->attachments[a].pending_clear_aspects ||
-		    (view_mask && !(view_mask & ~cmd_state->attachments[a].cleared_views)))
+		if (!radv_attachment_needs_clear(cmd_state, a))
 			continue;
 
 		assert(cmd_state->attachments[a].pending_clear_aspects ==
@@ -1154,25 +1152,19 @@ radv_cmd_buffer_clear_subpass(struct radv_cmd_buffer *cmd_buffer)
 	}
 
 	uint32_t ds = cmd_state->subpass->depth_stencil_attachment.attachment;
+	if (radv_attachment_needs_clear(cmd_state, ds)) {
+		VkClearAttachment clear_att = {
+			.aspectMask = cmd_state->attachments[ds].pending_clear_aspects,
+			.clearValue = cmd_state->attachments[ds].clear_value,
+		};
 
-	if (ds != VK_ATTACHMENT_UNUSED) {
-
-		if (cmd_state->attachments[ds].pending_clear_aspects &&
-		    (!view_mask || (view_mask & ~cmd_state->attachments[ds].cleared_views))) {
-
-			VkClearAttachment clear_att = {
-				.aspectMask = cmd_state->attachments[ds].pending_clear_aspects,
-				.clearValue = cmd_state->attachments[ds].clear_value,
-			};
-
-			emit_clear(cmd_buffer, &clear_att, &clear_rect,
-			           &pre_flush, &post_flush,
-			           view_mask & ~cmd_state->attachments[ds].cleared_views);
-			if (view_mask)
-				cmd_state->attachments[ds].cleared_views |= view_mask;
-			else
-				cmd_state->attachments[ds].pending_clear_aspects = 0;
-		}
+		emit_clear(cmd_buffer, &clear_att, &clear_rect, &pre_flush,
+			   &post_flush,
+			   view_mask & ~cmd_state->attachments[ds].cleared_views);
+		if (view_mask)
+			cmd_state->attachments[ds].cleared_views |= view_mask;
+		else
+			cmd_state->attachments[ds].pending_clear_aspects = 0;
 	}
 
 	radv_meta_restore(&saved_state, cmd_buffer);
