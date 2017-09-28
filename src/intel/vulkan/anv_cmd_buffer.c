@@ -150,10 +150,8 @@ anv_cmd_state_reset(struct anv_cmd_buffer *cmd_buffer)
    state->pma_fix_enabled = false;
    state->hiz_enabled = false;
 
-   if (state->attachments != NULL) {
-      vk_free(&cmd_buffer->pool->alloc, state->attachments);
-      state->attachments = NULL;
-   }
+   vk_free(&cmd_buffer->pool->alloc, state->attachments);
+   state->attachments = NULL;
 
    state->gen7.index_buffer = NULL;
 }
@@ -271,8 +269,6 @@ VkResult anv_AllocateCommandBuffers(
 static void
 anv_cmd_buffer_destroy(struct anv_cmd_buffer *cmd_buffer)
 {
-   struct anv_cmd_state *state = &cmd_buffer->state;
-
    list_del(&cmd_buffer->pool_link);
 
    anv_cmd_buffer_fini_batch_bo_chain(cmd_buffer);
@@ -280,10 +276,8 @@ anv_cmd_buffer_destroy(struct anv_cmd_buffer *cmd_buffer)
    anv_state_stream_finish(&cmd_buffer->surface_state_stream);
    anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
 
-   for (uint32_t i = 0; i < ARRAY_SIZE(state->push_descriptors); i++)
-      vk_free(&cmd_buffer->pool->alloc, state->push_descriptors[i]);
+   anv_cmd_state_reset(cmd_buffer);
 
-   vk_free(&cmd_buffer->pool->alloc, state->attachments);
    vk_free(&cmd_buffer->pool->alloc, cmd_buffer);
 }
 
