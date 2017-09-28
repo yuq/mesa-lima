@@ -33,6 +33,13 @@
 #include "wayland-egl.h"
 #include "wayland-egl-backend.h"
 
+/* GCC visibility */
+#if defined(__GNUC__)
+#define WL_EGL_EXPORT __attribute__ ((visibility("default")))
+#else
+#define WL_EGL_EXPORT
+#endif
+
 WL_EGL_EXPORT void
 wl_egl_window_resize(struct wl_egl_window *egl_window,
 		     int width, int height,

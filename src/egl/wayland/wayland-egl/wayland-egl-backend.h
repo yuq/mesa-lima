@@ -28,13 +28,6 @@
 #ifndef _WAYLAND_EGL_PRIV_H
 #define _WAYLAND_EGL_PRIV_H
 
-/* GCC visibility */
-#if defined(__GNUC__)
-#define WL_EGL_EXPORT __attribute__ ((visibility("default")))
-#else
-#define WL_EGL_EXPORT
-#endif
-
 #include <stdint.h>
 
 #ifdef  __cplusplus
