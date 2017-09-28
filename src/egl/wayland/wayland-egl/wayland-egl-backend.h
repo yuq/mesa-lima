@@ -43,6 +43,8 @@ extern "C" {
 
 #define WL_EGL_WINDOW_VERSION 3
 
+struct wl_surface;
+
 struct wl_egl_window {
 	const intptr_t version;
 
