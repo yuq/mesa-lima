@@ -2914,15 +2914,6 @@ static void r600_set_active_query_state(struct pipe_context *ctx, boolean enable
 	}
 }
 
-static void r600_set_occlusion_query_state(struct pipe_context *ctx,
-					   bool old_enable,
-					   bool old_perfect_enable)
-{
-	struct r600_context *rctx = (struct r600_context*)ctx;
-
-	r600_mark_atom_dirty(rctx, &rctx->db_misc_state.atom);
-}
-
 static void r600_need_gfx_cs_space(struct pipe_context *ctx, unsigned num_dw,
                                    bool include_draw_vbo)
 {
@@ -2971,6 +2962,5 @@ void r600_init_common_state_functions(struct r600_context *rctx)
 	rctx->b.b.set_active_query_state = r600_set_active_query_state;
 	rctx->b.b.draw_vbo = r600_draw_vbo;
 	rctx->b.invalidate_buffer = r600_invalidate_buffer;
-	rctx->b.set_occlusion_query_state = r600_set_occlusion_query_state;
 	rctx->b.need_gfx_cs_space = r600_need_gfx_cs_space;
 }

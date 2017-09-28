@@ -703,9 +703,6 @@ struct r600_common_context {
 	void (*rebind_buffer)(struct pipe_context *ctx, struct pipe_resource *buf,
 			      uint64_t old_gpu_address);
 
-	/* Enable or disable occlusion queries. */
-	void (*set_occlusion_query_state)(struct pipe_context *ctx, bool enable);
-
 	void (*save_qbo_state)(struct pipe_context *ctx, struct r600_qbo_state *st);
 
 	/* This ensures there is enough space in the command stream. */

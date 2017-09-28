@@ -23,6 +23,7 @@
  */
 
 #include "r600_query.h"
+#include "r600_pipe.h"
 #include "r600_cs.h"
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
@@ -710,7 +711,8 @@ static void r600_update_occlusion_query_state(struct r600_common_context *rctx,
 		perfect_enable = rctx->num_perfect_occlusion_queries != 0;
 
 		if (enable != old_enable || perfect_enable != old_perfect_enable) {
-			rctx->set_occlusion_query_state(&rctx->b, enable);
+			struct r600_context *ctx = (struct r600_context*)rctx;
+			r600_mark_atom_dirty(ctx, &ctx->db_misc_state.atom);
 		}
 	}
 }
