@@ -31,7 +31,6 @@
 
 #include "glheader.h"
 #include "imports.h"
-#include "dlopen.h"
 #include "image.h"
 #include "macros.h"
 #include "mtypes.h"
