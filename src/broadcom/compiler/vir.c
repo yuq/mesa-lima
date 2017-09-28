@@ -762,8 +762,9 @@ uint64_t *v3d_compile_fs(const struct v3d_compiler *compiler,
 
         v3d_set_prog_data(c, &prog_data->base);
         v3d_set_fs_prog_data_inputs(c, prog_data);
-        if (c->s->info.outputs_written & (1 << FRAG_RESULT_DEPTH))
-                prog_data->writes_z = true;
+        prog_data->writes_z = (c->s->info.outputs_written &
+                               (1 << FRAG_RESULT_DEPTH));
+        prog_data->discard = c->s->info.fs.uses_discard;
 
         return v3d_return_qpu_insts(c, final_assembly_size);
 }

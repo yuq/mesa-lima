@@ -579,6 +579,7 @@ struct v3d_fs_prog_data {
         BITSET_WORD flat_shade_flags[BITSET_WORDS(V3D_MAX_FS_INPUTS)];
 
         bool writes_z;
+        bool discard;
 };
 
 /* Special nir_load_input intrinsic index for loading the current TLB

@@ -1038,6 +1038,17 @@ emit_frag_end(struct v3d_compile *c)
                                        TLB_TYPE_DEPTH |
                                        TLB_DEPTH_TYPE_PER_PIXEL |
                                        0xffffff00);
+        } else if (c->s->info.fs.uses_discard) {
+                struct qinst *inst = vir_MOV_dest(c,
+                                                  vir_reg(QFILE_TLBU, 0),
+                                                  vir_reg(QFILE_NULL, 0));
+                vir_set_cond(inst, discard_cond);
+
+                inst->src[vir_get_implicit_uniform_src(inst)] =
+                        vir_uniform_ui(c,
+                                       TLB_TYPE_DEPTH |
+                                       TLB_DEPTH_TYPE_INVARIANT |
+                                       0xffffff00);
         }
 
         /* XXX: Performance improvement: Merge Z write and color writes TLB
