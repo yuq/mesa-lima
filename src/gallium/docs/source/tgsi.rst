@@ -2479,6 +2479,18 @@ after lookup.
   NOTE: no driver has implemented this opcode yet (and no state tracker
   emits it).  This information is subject to change.
 
+.. opcode:: LOD - level of detail
+
+   Same syntax as the SAMPLE opcode but instead of performing an actual
+   texture lookup/filter, return the computed LOD information that the
+   texture pipe would use to access the texture. The Y component contains
+   the computed LOD lambda_prime. The X component contains the LOD that will
+   be accessed, based on min/max lod's and mipmap filters.
+   The Z and W components are set to 0.
+
+   Syntax: ``LOD dst, address, sampler_view, sampler``
+
+
 .. _resourceopcodes:
 
 Resource Access Opcodes
