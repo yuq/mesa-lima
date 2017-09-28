@@ -827,7 +827,7 @@ iter_advance_field(struct gen_field_iterator *iter)
 }
 
 static void
-gen_field_decode(struct gen_field_iterator *iter)
+iter_decode_field(struct gen_field_iterator *iter)
 {
    union {
       uint64_t qw;
@@ -937,7 +937,7 @@ gen_field_iterator_init(struct gen_field_iterator *iter,
    iter->p_end = &p[gen_group_get_length(iter->group, iter->p)];
    iter->print_colors = print_colors;
 
-   gen_field_decode(iter);
+   iter_decode_field(iter);
 }
 
 bool
@@ -946,7 +946,7 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
    if (!iter_advance_field(iter))
       return false;
 
-   gen_field_decode(iter);
+   iter_decode_field(iter);
 
    return true;
 }
