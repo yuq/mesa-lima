@@ -242,23 +242,15 @@ void
 radv_device_finish_meta_fast_clear_flush_state(struct radv_device *device)
 {
 	struct radv_meta_state *state = &device->meta_state;
-	VkDevice device_h = radv_device_to_handle(device);
-	VkRenderPass pass_h = device->meta_state.fast_clear_flush.pass;
-	const VkAllocationCallbacks *alloc = &device->meta_state.alloc;
 
-	if (pass_h)
-		radv_DestroyRenderPass(device_h, pass_h,
-					     &device->meta_state.alloc);
-
-	VkPipeline pipeline_h = state->fast_clear_flush.cmask_eliminate_pipeline;
-	if (pipeline_h) {
-		radv_DestroyPipeline(device_h, pipeline_h, alloc);
-	}
-
-	pipeline_h = state->fast_clear_flush.fmask_decompress_pipeline;
-	if (pipeline_h) {
-		radv_DestroyPipeline(device_h, pipeline_h, alloc);
-	}
+	radv_DestroyRenderPass(radv_device_to_handle(device),
+			       state->fast_clear_flush.pass, &state->alloc);
+	radv_DestroyPipeline(radv_device_to_handle(device),
+			     state->fast_clear_flush.cmask_eliminate_pipeline,
+			     &state->alloc);
+	radv_DestroyPipeline(radv_device_to_handle(device),
+			     state->fast_clear_flush.fmask_decompress_pipeline,
+			     &state->alloc);
 }
 
 VkResult

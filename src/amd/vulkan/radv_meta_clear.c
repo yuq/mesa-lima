@@ -296,26 +296,26 @@ radv_device_finish_meta_clear_state(struct radv_device *device)
 		for (uint32_t j = 0; j < ARRAY_SIZE(state->clear[i].color_pipelines); ++j) {
 			radv_DestroyPipeline(radv_device_to_handle(device),
 					     state->clear[i].color_pipelines[j],
-					     &device->meta_state.alloc);
+					     &state->alloc);
 			radv_DestroyRenderPass(radv_device_to_handle(device),
 					       state->clear[i].render_pass[j],
-					       &device->meta_state.alloc);
+					       &state->alloc);
 		}
 
 		for (uint32_t j = 0; j < NUM_DEPTH_CLEAR_PIPELINES; j++) {
 			radv_DestroyPipeline(radv_device_to_handle(device),
 					     state->clear[i].depth_only_pipeline[j],
-					     &device->meta_state.alloc);
+					     &state->alloc);
 			radv_DestroyPipeline(radv_device_to_handle(device),
 					     state->clear[i].stencil_only_pipeline[j],
-					     &device->meta_state.alloc);
+					     &state->alloc);
 			radv_DestroyPipeline(radv_device_to_handle(device),
 					     state->clear[i].depthstencil_pipeline[j],
-					     &device->meta_state.alloc);
+					     &state->alloc);
 		}
 		radv_DestroyRenderPass(radv_device_to_handle(device),
 				      state->clear[i].depthstencil_rp,
-				      &device->meta_state.alloc);
+				      &state->alloc);
 	}
 	radv_DestroyPipelineLayout(radv_device_to_handle(device),
 				   state->clear_color_p_layout,

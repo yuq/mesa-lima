@@ -207,22 +207,17 @@ void
 radv_device_finish_meta_depth_decomp_state(struct radv_device *device)
 {
 	struct radv_meta_state *state = &device->meta_state;
-	VkDevice device_h = radv_device_to_handle(device);
-	const VkAllocationCallbacks *alloc = &device->meta_state.alloc;
 
 	for (uint32_t i = 0; i < ARRAY_SIZE(state->depth_decomp); ++i) {
-		VkRenderPass pass_h = state->depth_decomp[i].pass;
-		if (pass_h) {
-			radv_DestroyRenderPass(device_h, pass_h, alloc);
-		}
-		VkPipeline pipeline_h = state->depth_decomp[i].decompress_pipeline;
-		if (pipeline_h) {
-			radv_DestroyPipeline(device_h, pipeline_h, alloc);
-		}
-		pipeline_h = state->depth_decomp[i].resummarize_pipeline;
-		if (pipeline_h) {
-			radv_DestroyPipeline(device_h, pipeline_h, alloc);
-		}
+		radv_DestroyRenderPass(radv_device_to_handle(device),
+				       state->depth_decomp[i].pass,
+				       &state->alloc);
+		radv_DestroyPipeline(radv_device_to_handle(device),
+				     state->depth_decomp[i].decompress_pipeline,
+				     &state->alloc);
+		radv_DestroyPipeline(radv_device_to_handle(device),
+				     state->depth_decomp[i].resummarize_pipeline,
+				     &state->alloc);
 	}
 }
 

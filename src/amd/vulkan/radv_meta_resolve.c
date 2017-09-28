@@ -219,18 +219,11 @@ void
 radv_device_finish_meta_resolve_state(struct radv_device *device)
 {
 	struct radv_meta_state *state = &device->meta_state;
-	VkDevice device_h = radv_device_to_handle(device);
-	VkRenderPass pass_h = device->meta_state.resolve.pass;
-	const VkAllocationCallbacks *alloc = &device->meta_state.alloc;
 
-	if (pass_h)
-		radv_DestroyRenderPass(device_h, pass_h,
-					     &device->meta_state.alloc);
-
-	VkPipeline pipeline_h = state->resolve.pipeline;
-	if (pipeline_h) {
-		radv_DestroyPipeline(device_h, pipeline_h, alloc);
-	}
+	radv_DestroyRenderPass(radv_device_to_handle(device),
+			       state->resolve.pass, &state->alloc);
+	radv_DestroyPipeline(radv_device_to_handle(device),
+			     state->resolve.pipeline, &state->alloc);
 }
 
 VkResult

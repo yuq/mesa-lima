@@ -261,35 +261,22 @@ fail:
 
 void radv_device_finish_meta_buffer_state(struct radv_device *device)
 {
-	if (device->meta_state.buffer.copy_pipeline)
-		radv_DestroyPipeline(radv_device_to_handle(device),
-				     device->meta_state.buffer.copy_pipeline,
-				     &device->meta_state.alloc);
+	struct radv_meta_state *state = &device->meta_state;
 
-	if (device->meta_state.buffer.fill_pipeline)
-		radv_DestroyPipeline(radv_device_to_handle(device),
-				     device->meta_state.buffer.fill_pipeline,
-				     &device->meta_state.alloc);
-
-	if (device->meta_state.buffer.copy_p_layout)
-		radv_DestroyPipelineLayout(radv_device_to_handle(device),
-					   device->meta_state.buffer.copy_p_layout,
-					   &device->meta_state.alloc);
-
-	if (device->meta_state.buffer.fill_p_layout)
-		radv_DestroyPipelineLayout(radv_device_to_handle(device),
-					   device->meta_state.buffer.fill_p_layout,
-					   &device->meta_state.alloc);
-
-	if (device->meta_state.buffer.copy_ds_layout)
-		radv_DestroyDescriptorSetLayout(radv_device_to_handle(device),
-						device->meta_state.buffer.copy_ds_layout,
-						&device->meta_state.alloc);
-
-	if (device->meta_state.buffer.fill_ds_layout)
-		radv_DestroyDescriptorSetLayout(radv_device_to_handle(device),
-						device->meta_state.buffer.fill_ds_layout,
-						&device->meta_state.alloc);
+	radv_DestroyPipeline(radv_device_to_handle(device),
+			     state->buffer.copy_pipeline, &state->alloc);
+	radv_DestroyPipeline(radv_device_to_handle(device),
+			     state->buffer.fill_pipeline, &state->alloc);
+	radv_DestroyPipelineLayout(radv_device_to_handle(device),
+				   state->buffer.copy_p_layout, &state->alloc);
+	radv_DestroyPipelineLayout(radv_device_to_handle(device),
+				   state->buffer.fill_p_layout, &state->alloc);
+	radv_DestroyDescriptorSetLayout(radv_device_to_handle(device),
+					state->buffer.copy_ds_layout,
+					&state->alloc);
+	radv_DestroyDescriptorSetLayout(radv_device_to_handle(device),
+					state->buffer.fill_ds_layout,
+					&state->alloc);
 }
 
 static void fill_buffer_shader(struct radv_cmd_buffer *cmd_buffer,

@@ -584,48 +584,39 @@ build_nir_copy_fragment_shader_stencil(struct radv_device *device,
 void
 radv_device_finish_meta_blit2d_state(struct radv_device *device)
 {
+	struct radv_meta_state *state = &device->meta_state;
+
 	for(unsigned j = 0; j < NUM_META_FS_KEYS; ++j) {
-		if (device->meta_state.blit2d.render_passes[j]) {
-			radv_DestroyRenderPass(radv_device_to_handle(device),
-					       device->meta_state.blit2d.render_passes[j],
-					       &device->meta_state.alloc);
-		}
+		radv_DestroyRenderPass(radv_device_to_handle(device),
+				       state->blit2d.render_passes[j],
+				       &state->alloc);
 	}
 
 	radv_DestroyRenderPass(radv_device_to_handle(device),
-			       device->meta_state.blit2d.depth_only_rp,
-			       &device->meta_state.alloc);
+			       state->blit2d.depth_only_rp, &state->alloc);
 	radv_DestroyRenderPass(radv_device_to_handle(device),
-			       device->meta_state.blit2d.stencil_only_rp,
-			       &device->meta_state.alloc);
+			       state->blit2d.stencil_only_rp, &state->alloc);
 
 	for (unsigned src = 0; src < BLIT2D_NUM_SRC_TYPES; src++) {
-		if (device->meta_state.blit2d.p_layouts[src]) {
-			radv_DestroyPipelineLayout(radv_device_to_handle(device),
-						device->meta_state.blit2d.p_layouts[src],
-						&device->meta_state.alloc);
-		}
-
-		if (device->meta_state.blit2d.ds_layouts[src]) {
-			radv_DestroyDescriptorSetLayout(radv_device_to_handle(device),
-							device->meta_state.blit2d.ds_layouts[src],
-							&device->meta_state.alloc);
-		}
+		radv_DestroyPipelineLayout(radv_device_to_handle(device),
+					   state->blit2d.p_layouts[src],
+					   &state->alloc);
+		radv_DestroyDescriptorSetLayout(radv_device_to_handle(device),
+						state->blit2d.ds_layouts[src],
+						&state->alloc);
 
 		for (unsigned j = 0; j < NUM_META_FS_KEYS; ++j) {
-			if (device->meta_state.blit2d.pipelines[src][j]) {
-				radv_DestroyPipeline(radv_device_to_handle(device),
-						     device->meta_state.blit2d.pipelines[src][j],
-						     &device->meta_state.alloc);
-			}
+			radv_DestroyPipeline(radv_device_to_handle(device),
+					     state->blit2d.pipelines[src][j],
+					     &state->alloc);
 		}
 
 		radv_DestroyPipeline(radv_device_to_handle(device),
-				     device->meta_state.blit2d.depth_only_pipeline[src],
-				     &device->meta_state.alloc);
+				     state->blit2d.depth_only_pipeline[src],
+				     &state->alloc);
 		radv_DestroyPipeline(radv_device_to_handle(device),
-				     device->meta_state.blit2d.stencil_only_pipeline[src],
-				     &device->meta_state.alloc);
+				     state->blit2d.stencil_only_pipeline[src],
+				     &state->alloc);
 	}
 }
 
