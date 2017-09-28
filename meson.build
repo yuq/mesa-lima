@@ -22,7 +22,7 @@ project('mesa', ['c', 'cpp'], version : '17.3.0-devel', license : 'MIT',
         default_options : ['c_std=c99'])
 
 with_dri3 = true  # XXX: need a switch for this
-with_vulkan_icd_dir = get_option('vulkan_icd_dir')
+with_vulkan_icd_dir = get_option('vulkan-icd-dir')
 with_tests = get_option('build-tests')
 with_valgrind = get_option('valgrind')
 
