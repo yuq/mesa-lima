@@ -233,7 +233,7 @@ void brw_emit_sampler_state(struct brw_context *brw,
                             bool non_normalized_coordinates,
                             uint32_t border_color_offset);
 
-/* brw_vs_surface_state.c */
+/* gen6_constant_state.c */
 void
 brw_upload_pull_constants(struct brw_context *brw,
                           GLbitfield64 brw_new_constbuf,
