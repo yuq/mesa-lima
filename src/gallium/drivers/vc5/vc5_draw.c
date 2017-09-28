@@ -187,8 +187,13 @@ vc5_emit_gl_shader_state(struct vc5_context *vc5,
                         (info->mode == PIPE_PRIM_POINTS &&
                          vc5->rasterizer->base.point_size_per_vertex);
 
+                /* Must be set if the shader modifies Z, discards, or modifies
+                 * the sample mask.  For any of these cases, the fragment
+                 * shader needs to write the Z value (even just discards).
+                 */
                 shader.fragment_shader_does_z_writes =
-                        vc5->prog.fs->prog_data.fs->writes_z;
+                        (vc5->prog.fs->prog_data.fs->writes_z ||
+                         vc5->prog.fs->prog_data.fs->discard);
 
                 shader.number_of_varyings_in_fragment_shader =
                         vc5->prog.fs->prog_data.base->num_inputs;
