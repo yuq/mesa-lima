@@ -564,6 +564,21 @@ emit_fragment_varying(struct v3d_compile *c, nir_variable *var,
 
         switch (var->data.interpolation) {
         case INTERP_MODE_NONE:
+                /* If a gl_FrontColor or gl_BackColor input has no interp
+                 * qualifier, then flag it for glShadeModel() handling by the
+                 * driver.
+                 */
+                switch (var->data.location) {
+                case VARYING_SLOT_COL0:
+                case VARYING_SLOT_COL1:
+                case VARYING_SLOT_BFC0:
+                case VARYING_SLOT_BFC1:
+                        BITSET_SET(c->shade_model_flags, i);
+                        break;
+                default:
+                        break;
+                }
+                /* FALLTHROUGH */
         case INTERP_MODE_SMOOTH:
                 if (var->data.centroid) {
                         return vir_FADD(c, vir_FMUL(c, vary,

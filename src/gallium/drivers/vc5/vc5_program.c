@@ -367,8 +367,8 @@ vc5_update_compiled_fs(struct vc5_context *vc5, uint8_t prim_mode)
             (vc5->prog.fs->prog_data.fs->flat_shade_flags !=
              old_fs->prog_data.fs->flat_shade_flags ||
              (vc5->rasterizer->base.flatshade &&
-              vc5->prog.fs->prog_data.fs->color_inputs !=
-              old_fs->prog_data.fs->color_inputs))) {
+              vc5->prog.fs->prog_data.fs->shade_model_flags !=
+              old_fs->prog_data.fs->shade_model_flags))) {
                 vc5->dirty |= VC5_DIRTY_FLAT_SHADE_FLAGS;
         }
 

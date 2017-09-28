@@ -421,6 +421,11 @@ struct v3d_compile {
          */
         BITSET_WORD flat_shade_flags[BITSET_WORDS(V3D_MAX_FS_INPUTS)];
 
+        /* Booleans for whether the corresponding QFILE_VARY[i] uses the
+         * default glShadeModel() behavior.
+         */
+        BITSET_WORD shade_model_flags[BITSET_WORDS(V3D_MAX_FS_INPUTS)];
+
         struct v3d_ubo_range *ubo_ranges;
         bool *ubo_range_used;
         uint32_t ubo_ranges_array_size;
@@ -570,13 +575,14 @@ struct v3d_fs_prog_data {
 
         struct v3d_varying_slot input_slots[V3D_MAX_FS_INPUTS];
 
-        /** bitmask of which inputs are color inputs, for flat shade handling. */
-        uint32_t color_inputs[BITSET_WORDS(V3D_MAX_FS_INPUTS)];
-
         /* Bitmask for whether the corresponding input is flat-shaded,
          * independent of rasterizer (gl_FragColor) flat-shading.
          */
         BITSET_WORD flat_shade_flags[BITSET_WORDS(V3D_MAX_FS_INPUTS)];
+        /* Bitmask for whether the corresponding input uses the default
+         * glShadeModel() behavior.
+         */
+        BITSET_WORD shade_model_flags[BITSET_WORDS(V3D_MAX_FS_INPUTS)];
 
         bool writes_z;
         bool discard;

@@ -705,20 +705,10 @@ v3d_set_fs_prog_data_inputs(struct v3d_compile *c,
         memcpy(prog_data->input_slots, c->input_slots,
                c->num_inputs * sizeof(*c->input_slots));
 
-        for (int i = 0; i < c->num_inputs; i++) {
-                struct v3d_varying_slot v3d_slot = c->input_slots[i];
-                uint8_t slot = v3d_slot_get_slot(v3d_slot);
-
-                if (slot == VARYING_SLOT_COL0 ||
-                    slot == VARYING_SLOT_COL1 ||
-                    slot == VARYING_SLOT_BFC0 ||
-                    slot == VARYING_SLOT_BFC1) {
-                        BITSET_SET(prog_data->color_inputs, i);
-                }
-
-                if (BITSET_TEST(c->flat_shade_flags, i))
-                        BITSET_SET(prog_data->flat_shade_flags, i);
-        }
+        memcpy(prog_data->flat_shade_flags, c->flat_shade_flags,
+               sizeof(c->flat_shade_flags));
+        memcpy(prog_data->shade_model_flags, c->shade_model_flags,
+               sizeof(c->shade_model_flags));
 }
 
 uint64_t *v3d_compile_fs(const struct v3d_compiler *compiler,
