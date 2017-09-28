@@ -316,11 +316,10 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
          continue;
 
       struct gl_program *prog = shader->Program;
-      nir_shader *nir = shader->Program->nir;
-      brw_shader_gather_info(nir, prog);
+      brw_shader_gather_info(prog->nir, prog);
 
-      NIR_PASS_V(nir, nir_lower_samplers, shProg);
-      NIR_PASS_V(nir, nir_lower_atomics, shProg);
+      NIR_PASS_V(prog->nir, nir_lower_samplers, shProg);
+      NIR_PASS_V(prog->nir, nir_lower_atomics, shProg);
 
       infos[stage] = &prog->nir->info;
 
