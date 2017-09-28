@@ -53,6 +53,10 @@ if _vulkan_drivers != ''
 endif
 
 prog_python2 = find_program('python2')
+has_mako = run_command(prog_python2, '-c', 'import mako')
+if has_mako.returncode() != 0
+  error('Python (2.x) mako module required to build mesa.')
+endif
 
 cc = meson.get_compiler('c')
 if cc.get_id() == 'gcc' and cc.version().version_compare('< 4.4.6')
