@@ -3445,8 +3445,7 @@ static void radv_handle_cmask_image_transition(struct radv_cmd_buffer *cmd_buffe
 					       VkImageLayout dst_layout,
 					       unsigned src_queue_mask,
 					       unsigned dst_queue_mask,
-					       const VkImageSubresourceRange *range,
-					       VkImageAspectFlags pending_clears)
+					       const VkImageSubresourceRange *range)
 {
 	if (src_layout == VK_IMAGE_LAYOUT_UNDEFINED) {
 		if (image->fmask.size)
@@ -3482,8 +3481,7 @@ static void radv_handle_dcc_image_transition(struct radv_cmd_buffer *cmd_buffer,
 					     VkImageLayout dst_layout,
 					     unsigned src_queue_mask,
 					     unsigned dst_queue_mask,
-					     const VkImageSubresourceRange *range,
-					     VkImageAspectFlags pending_clears)
+					     const VkImageSubresourceRange *range)
 {
 	if (src_layout == VK_IMAGE_LAYOUT_UNDEFINED) {
 		radv_initialize_dcc(cmd_buffer, image, 0x20202020u);
@@ -3531,14 +3529,12 @@ static void radv_handle_image_transition(struct radv_cmd_buffer *cmd_buffer,
 	if (image->cmask.size)
 		radv_handle_cmask_image_transition(cmd_buffer, image, src_layout,
 						   dst_layout, src_queue_mask,
-						   dst_queue_mask, range,
-						   pending_clears);
+						   dst_queue_mask, range);
 
 	if (image->surface.dcc_size)
 		radv_handle_dcc_image_transition(cmd_buffer, image, src_layout,
 						 dst_layout, src_queue_mask,
-						 dst_queue_mask, range,
-						 pending_clears);
+						 dst_queue_mask, range);
 }
 
 void radv_CmdPipelineBarrier(
