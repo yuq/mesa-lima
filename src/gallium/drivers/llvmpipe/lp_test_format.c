@@ -357,8 +357,6 @@ test_all(unsigned verbose, FILE *fp)
    enum pipe_format format;
    boolean success = TRUE;
 
-   util_format_s3tc_init();
-
 #if USE_TEXTURE_CACHE
    cache_ptr = align_malloc(sizeof(struct lp_build_format_cache), 16);
 #endif

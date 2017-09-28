@@ -613,6 +613,5 @@ virgl_create_screen(struct virgl_winsys *vws)
 
    slab_create_parent(&screen->texture_transfer_pool, sizeof(struct virgl_transfer), 16);
 
-   util_format_s3tc_init();
    return &screen->base;
 }

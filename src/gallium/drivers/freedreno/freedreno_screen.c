@@ -884,8 +884,6 @@ fd_screen_create(struct fd_device *dev)
 
 	slab_create_parent(&screen->transfer_pool, sizeof(struct fd_transfer), 16);
 
-	util_format_s3tc_init();
-
 	return pscreen;
 
 fail:

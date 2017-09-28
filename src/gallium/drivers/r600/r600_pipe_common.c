@@ -1525,7 +1525,6 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 		       1 << util_logbase2(rscreen->force_aniso));
 	}
 
-	util_format_s3tc_init();
 	(void) mtx_init(&rscreen->aux_context_lock, mtx_plain);
 	(void) mtx_init(&rscreen->gpu_load_mutex, mtx_plain);
 

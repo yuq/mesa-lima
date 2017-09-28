@@ -67,10 +67,6 @@ extern util_format_dxtn_pack_t util_format_dxtn_pack;
 
 
 void
-util_format_s3tc_init(void);
-
-
-void
 util_format_dxt1_rgb_unpack_rgba_8unorm(uint8_t *dst_row, unsigned dst_stride, const uint8_t *src_row, unsigned src_stride, unsigned width, unsigned height);
 
 void

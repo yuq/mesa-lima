@@ -586,8 +586,6 @@ softpipe_create_screen(struct sw_winsys *winsys)
    screen->base.get_compute_param = softpipe_get_compute_param;
    screen->use_llvm = debug_get_option_use_llvm();
 
-   util_format_s3tc_init();
-
    softpipe_init_screen_texture_funcs(&screen->base);
    softpipe_init_screen_fence_funcs(&screen->base);
 

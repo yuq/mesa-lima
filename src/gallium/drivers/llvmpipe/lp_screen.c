@@ -682,7 +682,5 @@ llvmpipe_create_screen(struct sw_winsys *winsys)
    }
    (void) mtx_init(&screen->rast_mutex, mtx_plain);
 
-   util_format_s3tc_init();
-
    return &screen->base;
 }

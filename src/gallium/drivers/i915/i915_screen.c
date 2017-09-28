@@ -628,7 +628,5 @@ i915_screen_create(struct i915_winsys *iws)
 
    i915_debug_init(is);
 
-   util_format_s3tc_init();
-
    return &is->base;
 }

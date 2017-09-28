@@ -1142,8 +1142,6 @@ swr_create_screen_internal(struct sw_winsys *winsys)
 
    swr_fence_init(&screen->base);
 
-   util_format_s3tc_init();
-
    swr_validate_env_options(screen);
 
    return &screen->base;

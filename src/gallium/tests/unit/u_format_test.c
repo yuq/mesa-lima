@@ -753,8 +753,6 @@ int main(int argc, char **argv)
 {
    boolean success;
 
-   util_format_s3tc_init();
-
    success = test_all();
 
    return success ? 0 : 1;
