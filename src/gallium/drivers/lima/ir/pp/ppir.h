@@ -141,31 +141,33 @@ typedef enum {
    ppir_pipeline_reg_vmul,
    ppir_pipeline_reg_fmul,
    ppir_pipeline_reg_discard, /* varying load */
-} ppir_pipeline_reg;
+} ppir_pipeline;
 
 typedef struct ppir_reg {
    struct list_head list;
-
    int index;
    int num_components;
 } ppir_reg;
 
 typedef struct ppir_ssa {
+   ppir_node *node;
    int num_components;
 } ppir_ssa;
 
+typedef enum {
+   ppir_target_ssa,
+   ppir_target_pipeline,
+   ppir_target_register,
+} ppir_target;
+
 typedef struct ppir_src {
-   enum {
-      ppir_src_ssa,
-      ppir_src_pipeline,
-      ppir_src_register,
-   } type;
+   ppir_target type;
 
    union {
-      ppir_reg *reg;
-      ppir_pipeline_reg pipeline_reg;
       ppir_ssa *ssa;
-   } reg;
+      ppir_reg *reg;
+      ppir_pipeline pipeline;
+   };
 
    uint8_t swizzle[4];
    bool absolute, negate;
@@ -179,17 +181,13 @@ typedef enum {
 } ppir_outmod;
 
 typedef struct ppir_dest {
-   enum {
-      ppir_dest_ssa,
-      ppir_dest_pipeline,
-      ppir_dest_register,
-   } type;
+   ppir_target type;
 
    union {
-      ppir_reg *reg;
-      ppir_pipeline_reg pipeline_reg;
       ppir_ssa ssa;
-   } reg;
+      ppir_reg *reg;
+      ppir_pipeline pipeline;
+   };
 
    ppir_outmod modifier;
    unsigned write_mask : 4;
@@ -197,30 +195,27 @@ typedef struct ppir_dest {
 
 typedef struct {
    ppir_node node;
-   ppir_node *children[3];
-   int num_child;
-
    ppir_dest dest;
    ppir_src src[3];
+   int num_src;
 } ppir_alu_node;
 
 typedef struct {
    ppir_node node;
    union fi value[4];
-   int num_components;
+   ppir_dest dest;
 } ppir_const_node;
 
 typedef struct {
    ppir_node node;
    int index;
-
    ppir_dest dest;
 } ppir_load_node;
 
 typedef struct {
    ppir_node node;
    int index;
-   ppir_node *child;
+   ppir_src src;
 } ppir_store_node;
 
 typedef struct {
@@ -233,8 +228,6 @@ enum ppir_instr_slot {
    PPIR_INSTR_SLOT_VARYING,
    PPIR_INSTR_SLOT_TEXLD,
    PPIR_INSTR_SLOT_UNIFORM,
-   PPIR_INSTR_SLOT_CONST0,
-   PPIR_INSTR_SLOT_CONST1,
    PPIR_INSTR_SLOT_ALU_VEC_MUL,
    PPIR_INSTR_SLOT_ALU_SCL_MUL,
    PPIR_INSTR_SLOT_ALU_VEC_ADD,
@@ -247,6 +240,8 @@ enum ppir_instr_slot {
 typedef struct ppir_instr {
    struct list_head list;
    ppir_node *slots[PPIR_INSTR_SLOT_NUM];
+   union fi constant[2][4];
+   unsigned constant_num[2];
    bool is_end;
 } ppir_instr;
 
@@ -273,14 +268,13 @@ typedef struct ppir_compiler {
    struct lima_fs_shader_state *prog;
 } ppir_compiler;
 
-void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index);
+void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index, unsigned mask);
 void ppir_node_add_child(ppir_node *parent, ppir_node *child);
 void ppir_node_remove_entry(struct set_entry *entry);
 void ppir_node_delete(ppir_node *node);
 void ppir_node_print_prog(ppir_compiler *comp);
 void ppir_node_replace_child(ppir_node *parent, ppir_node *old_child, ppir_node *new_child);
 void ppir_node_replace_succ(ppir_node *dst, ppir_node *src);
-ppir_node *ppir_node_insert_move(ppir_compiler *comp, ppir_node *node);
 
 static inline bool ppir_node_is_root(ppir_node *node)
 {
@@ -317,13 +311,42 @@ static inline ppir_dest *ppir_node_get_dest(ppir_node *node)
       return &ppir_node_to_alu(node)->dest;
    case ppir_node_type_load:
       return &ppir_node_to_load(node)->dest;
+   case ppir_node_type_const:
+      return &ppir_node_to_const(node)->dest;
    default:
       return NULL;
    }
 }
 
-bool ppir_instr_insert_node(ppir_block *block, ppir_node *node);
-void ppir_instr_insert_const(ppir_node *node);
+static inline void ppir_node_target_assign(ppir_src *src, ppir_dest *dest)
+{
+   src->type = dest->type;
+   switch (src->type) {
+   case ppir_target_ssa:
+      src->ssa = &dest->ssa;
+      break;
+   case ppir_target_register:
+      src->reg = dest->reg;
+      break;
+   case ppir_target_pipeline:
+      src->pipeline = dest->pipeline;
+      break;
+   }
+}
+
+static inline bool ppir_node_target_equal(ppir_src *src, ppir_dest *dest)
+{
+   if (src->type != dest->type ||
+       (src->type == ppir_target_ssa && src->ssa != &dest->ssa) ||
+       (src->type == ppir_target_register && src->reg != dest->reg) ||
+       (src->type == ppir_target_pipeline && src->pipeline != dest->pipeline))
+      return false;
+
+   return true;
+}
+
+ppir_instr *ppir_instr_create(ppir_block *block);
+bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node);
 void ppir_instr_print_pre_schedule(ppir_compiler *comp);
 
 bool ppir_lower_prog(ppir_compiler *comp);

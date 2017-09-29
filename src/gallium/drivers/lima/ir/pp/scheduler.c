@@ -26,22 +26,138 @@
 
 #include "ppir.h"
 
+static bool create_alu_instr(ppir_block *block, ppir_node *node)
+{
+   ppir_instr *instr = ppir_instr_create(block);
+   if (!instr)
+      return false;
+
+   if (!ppir_instr_insert_node(instr, node))
+      return false;
+
+   node->instr = instr;
+   return true;
+}
 
 bool ppir_schedule_prog(ppir_compiler *comp)
 {
-   /* insert each node into a new instruction */
    list_for_each_entry(ppir_block, block, &comp->block_list, list) {
       list_for_each_entry(ppir_node, node, &block->node_list, list) {
-         if (!ppir_instr_insert_node(block, node))
-            return false;
+         switch (node->type) {
+         case ppir_node_type_alu:
+            if (!create_alu_instr(block, node))
+               return false;
+            break;
+         case ppir_node_type_store:
+         {
+            /* Only the store color node should appear here.
+             * Currently we always insert a move node as the end instr.
+             * But it should only be done when:
+             *   1. store a const node
+             *   2. store a load node
+             *   3. store a reg assigned in another block like loop/if
+             */
+            ppir_node *move = ppir_node_create(comp, ppir_op_mov, -1, 0);
+            if (!move)
+               return false;
+
+            ppir_node_foreach_pred(node, entry) {
+               ppir_node *pred = ppir_node_from_entry(entry, pred);
+               ppir_node_remove_entry(entry);
+               ppir_node_add_child(move, pred);
+            }
+
+            ppir_node_add_child(node, move);
+            list_addtail(&move->list, &node->list);
+
+            ppir_alu_node *alu = ppir_node_to_alu(move);
+            ppir_store_node *store = ppir_node_to_store(node);
+            alu->src[0] = store->src;
+            alu->num_src = 1;
+
+            alu->dest.type = ppir_target_ssa;
+            alu->dest.ssa.node = move;
+            alu->dest.ssa.num_components = 4;
+            alu->dest.write_mask = 0xf;
+
+            store->src.type = ppir_target_ssa;
+            store->src.ssa = &alu->dest.ssa;
+
+            if (!create_alu_instr(block, move))
+               return false;
+
+            move->instr->is_end = true;
+            break;
+         }
+         default:
+            break;
+         }
       }
    }
 
-   /* insert const node into already created instructions */
    list_for_each_entry(ppir_block, block, &comp->block_list, list) {
       list_for_each_entry(ppir_node, node, &block->node_list, list) {
-         if (node->op == ppir_op_const)
-            ppir_instr_insert_const(node);
+         switch (node->type) {
+         case ppir_node_type_const:
+            ppir_node_foreach_succ(node, entry) {
+               ppir_node *succ = ppir_node_from_entry(entry, succ);
+               if (!ppir_instr_insert_node(succ->instr, node))
+                  return false;
+            }
+            break;
+         case ppir_node_type_load:
+         {
+            struct list_head move_list;
+            list_inithead(&move_list);
+
+            ppir_node_foreach_succ(node, entry) {
+               ppir_node *succ = ppir_node_from_entry(entry, succ);
+               assert(succ->type == ppir_node_type_alu);
+
+               if (!ppir_instr_insert_node(succ->instr, node)) {
+                  /* each instr can only have one load node with the same type
+                   * create a move node to insert instead when fail, we can choose:
+                   *   1. one move for all failed node (less move but more reg pressure)
+                   *   2. one move for one failed node
+                   */
+                  ppir_node *move = ppir_node_create(comp, ppir_op_mov, -1, 0);
+                  if (!move)
+                     return false;
+
+                  ppir_load_node *load = ppir_node_to_load(node);
+                  assert(load->dest.type == ppir_target_ssa);
+
+                  ppir_alu_node *alu = ppir_node_to_alu(move);
+                  alu->dest = load->dest;
+                  alu->num_src = 1;
+                  ppir_node_target_assign(alu->src, &load->dest);
+                  for (int i = 0; i < 4; i++)
+                     alu->src->swizzle[i] = i;
+
+                  ppir_dep_info *dep = ppir_dep_from_entry(entry);
+                  dep->pred = move;
+                  _mesa_set_add_pre_hashed(move->succs, entry->hash, dep);
+                  _mesa_set_remove(node->succs, entry);
+                  ppir_node_replace_child(succ, node, move);
+
+                  if (!create_alu_instr(block, move) ||
+                      !ppir_instr_insert_node(move->instr, node))
+                     return false;
+
+                  /* can't add move to node succs here in a set loop */
+                  list_addtail(&move->list, &move_list);
+               }
+            }
+
+            list_for_each_entry(ppir_node, move, &move_list, list) {
+               ppir_node_add_child(move, node);
+            }
+            list_splicetail(&move_list, &node->list);
+            break;
+         }
+         default:
+            break;
+         }
       }
    }
 
