@@ -1451,7 +1451,7 @@ create_tmpfile_cloexec(char *tmpname)
 static int
 os_create_anonymous_file(off_t size)
 {
-   static const char template[] = "/mesa-shared-XXXXXX";
+   static const char templ[] = "/mesa-shared-XXXXXX";
    const char *path;
    char *name;
    int fd;
@@ -1463,12 +1463,12 @@ os_create_anonymous_file(off_t size)
       return -1;
    }
 
-   name = malloc(strlen(path) + sizeof(template));
+   name = malloc(strlen(path) + sizeof(templ));
    if (!name)
       return -1;
 
    strcpy(name, path);
-   strcat(name, template);
+   strcat(name, templ);
 
    fd = create_tmpfile_cloexec(name);
 
