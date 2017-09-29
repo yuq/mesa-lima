@@ -296,21 +296,13 @@ cleanup:
 static void
 emit_fast_clear_flush(struct radv_cmd_buffer *cmd_buffer,
 		      const VkExtent2D *resolve_extent,
-		      bool fmask_decompress)
+		      VkPipeline pipeline)
 {
-	struct radv_device *device = cmd_buffer->device;
 	VkCommandBuffer cmd_buffer_h = radv_cmd_buffer_to_handle(cmd_buffer);
 
-	VkPipeline pipeline_h;
-	if (fmask_decompress)
-		pipeline_h = device->meta_state.fast_clear_flush.fmask_decompress_pipeline;
-	else
-		pipeline_h = device->meta_state.fast_clear_flush.cmask_eliminate_pipeline;
-	RADV_FROM_HANDLE(radv_pipeline, pipeline, pipeline_h);
-
-	if (cmd_buffer->state.pipeline != pipeline) {
+	if (cmd_buffer->state.pipeline != radv_pipeline_from_handle(pipeline)) {
 		radv_CmdBindPipeline(cmd_buffer_h, VK_PIPELINE_BIND_POINT_GRAPHICS,
-				     pipeline_h);
+				     pipeline);
 	}
 
 	radv_CmdSetViewport(radv_cmd_buffer_to_handle(cmd_buffer), 0, 1, &(VkViewport) {
@@ -358,10 +350,17 @@ radv_fast_clear_flush_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 	VkDevice device_h = radv_device_to_handle(cmd_buffer->device);
 	VkCommandBuffer cmd_buffer_h = radv_cmd_buffer_to_handle(cmd_buffer);
 	uint32_t layer_count = radv_get_layerCount(image, subresourceRange);
+	VkPipeline pipeline;
 
 	assert(cmd_buffer->queue_family_index == RADV_QUEUE_GENERAL);
 	radv_meta_save_pass(&saved_pass_state, cmd_buffer);
 	radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state, cmd_buffer);
+
+	if (image->fmask.size > 0) {
+               pipeline = cmd_buffer->device->meta_state.fast_clear_flush.fmask_decompress_pipeline;
+	} else {
+               pipeline = cmd_buffer->device->meta_state.fast_clear_flush.cmask_eliminate_pipeline;
+	}
 
 	if (image->surface.dcc_size) {
 		radv_emit_set_predication_state_from_image(cmd_buffer, image, true);
@@ -422,7 +421,7 @@ radv_fast_clear_flush_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 
 		emit_fast_clear_flush(cmd_buffer,
 				      &(VkExtent2D) { image->info.width, image->info.height },
-				      image->fmask.size > 0);
+				      pipeline);
 		radv_CmdEndRenderPass(cmd_buffer_h);
 
 		radv_DestroyFramebuffer(device_h, fb_h,
