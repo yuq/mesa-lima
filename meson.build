@@ -56,7 +56,7 @@ prog_python2 = find_program('python2')
 
 cc = meson.get_compiler('c')
 if cc.get_id() == 'gcc' and cc.version().version_compare('< 4.4.6')
-  error('When using GCC version 4.2.0 or later required.')
+  error('When using GCC, version 4.4.6 or later is required.')
 endif
 
 # Arguments for the preprocessor, put these in a separate array from the C and
