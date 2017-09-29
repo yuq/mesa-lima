@@ -617,7 +617,7 @@ static void store_fetch_args(
 	LLVMValueRef rsrc;
 	unsigned chan;
 
-	emit_data->dst_type = LLVMVoidTypeInContext(gallivm->context);
+	emit_data->dst_type = ctx->voidt;
 
 	for (chan = 0; chan < 4; ++chan) {
 		chans[chan] = lp_build_emit_fetch(bld_base, inst, 1, chan);

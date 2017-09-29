@@ -446,7 +446,7 @@ static LLVMValueRef extract_double_to_float(struct si_shader_context *ctx,
 					    unsigned double_index)
 {
 	LLVMBuilderRef builder = ctx->ac.builder;
-	LLVMTypeRef f64 = LLVMDoubleTypeInContext(ctx->gallivm.context);
+	LLVMTypeRef f64 = LLVMDoubleTypeInContext(ctx->ac.context);
 	LLVMValueRef dvec2 = LLVMBuildBitCast(builder, vec4,
 					      LLVMVectorType(f64, 2), "");
 	LLVMValueRef index = LLVMConstInt(ctx->i32, double_index, 0);
@@ -5246,7 +5246,6 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 {
 	struct si_shader_context ctx;
 	struct si_shader *shader;
-	struct gallivm_state *gallivm = &ctx.gallivm;
 	LLVMBuilderRef builder;
 	struct lp_build_tgsi_context *bld_base = &ctx.bld_base;
 	struct lp_build_context *uint = &bld_base->uint_bld;
@@ -5303,7 +5302,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	LLVMBasicBlockRef end_bb;
 	LLVMValueRef switch_inst;
 
-	end_bb = LLVMAppendBasicBlockInContext(gallivm->context, ctx.main_fn, "end");
+	end_bb = LLVMAppendBasicBlockInContext(ctx.ac.context, ctx.main_fn, "end");
 	switch_inst = LLVMBuildSwitch(builder, stream_id, end_bb, 4);
 
 	for (int stream = 0; stream < 4; stream++) {
@@ -5316,7 +5315,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 		if (stream > 0 && !gs_selector->so.num_outputs)
 			continue;
 
-		bb = LLVMInsertBasicBlockInContext(gallivm->context, end_bb, "out");
+		bb = LLVMInsertBasicBlockInContext(ctx.ac.context, end_bb, "out");
 		LLVMAddCase(switch_inst, LLVMConstInt(ctx.i32, stream, 0), bb);
 		LLVMPositionBuilderAtEnd(builder, bb);
 

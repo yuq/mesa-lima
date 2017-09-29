@@ -49,7 +49,7 @@ static void kill_if_fetch_args(struct lp_build_tgsi_context *bld_base,
 		conds[i - 1] = LLVMBuildOr(builder, conds[i], conds[i - 1], "");
 	}
 
-	emit_data->dst_type = LLVMVoidTypeInContext(gallivm->context);
+	emit_data->dst_type = ctx->voidt;
 	emit_data->arg_count = 1;
 	emit_data->args[0] = LLVMBuildSelect(builder, conds[0],
 					lp_build_const_float(gallivm, -1.0f),
@@ -95,7 +95,6 @@ static void emit_icmp(const struct lp_build_tgsi_action *action,
 {
 	unsigned pred;
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMContextRef context = bld_base->base.gallivm->context;
 
 	switch (emit_data->inst->Instruction.Opcode) {
 	case TGSI_OPCODE_USEQ:
@@ -119,8 +118,7 @@ static void emit_icmp(const struct lp_build_tgsi_action *action,
 	LLVMValueRef v = LLVMBuildICmp(ctx->ac.builder, pred,
 			emit_data->args[0], emit_data->args[1],"");
 
-	v = LLVMBuildSExtOrBitCast(ctx->ac.builder, v,
-			LLVMInt32TypeInContext(context), "");
+	v = LLVMBuildSExtOrBitCast(ctx->ac.builder, v, ctx->i32, "");
 
 	emit_data->output[emit_data->chan] = v;
 }
@@ -186,7 +184,6 @@ static void emit_fcmp(const struct lp_build_tgsi_action *action,
 		      struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMContextRef context = bld_base->base.gallivm->context;
 	LLVMRealPredicate pred;
 
 	/* Use ordered for everything but NE (which is usual for
@@ -203,8 +200,7 @@ static void emit_fcmp(const struct lp_build_tgsi_action *action,
 	LLVMValueRef v = LLVMBuildFCmp(ctx->ac.builder, pred,
 			emit_data->args[0], emit_data->args[1],"");
 
-	v = LLVMBuildSExtOrBitCast(ctx->ac.builder, v,
-			LLVMInt32TypeInContext(context), "");
+	v = LLVMBuildSExtOrBitCast(ctx->ac.builder, v, ctx->i32, "");
 
 	emit_data->output[emit_data->chan] = v;
 }
@@ -214,7 +210,6 @@ static void emit_dcmp(const struct lp_build_tgsi_action *action,
 		      struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMContextRef context = bld_base->base.gallivm->context;
 	LLVMRealPredicate pred;
 
 	/* Use ordered for everything but NE (which is usual for
@@ -231,8 +226,7 @@ static void emit_dcmp(const struct lp_build_tgsi_action *action,
 	LLVMValueRef v = LLVMBuildFCmp(ctx->ac.builder, pred,
 			emit_data->args[0], emit_data->args[1],"");
 
-	v = LLVMBuildSExtOrBitCast(ctx->ac.builder, v,
-			LLVMInt32TypeInContext(context), "");
+	v = LLVMBuildSExtOrBitCast(ctx->ac.builder, v, ctx->i32, "");
 
 	emit_data->output[emit_data->chan] = v;
 }
@@ -558,7 +552,7 @@ static void emit_lsb(const struct lp_build_tgsi_action *action,
 		 * in [0, 31], but GLSL expects that ffs(0) = -1, so
 		 * a conditional assignment to handle 0 is still required.
 		 */
-		LLVMConstInt(LLVMInt1TypeInContext(gallivm->context), 1, 0)
+		LLVMConstInt(ctx->i1, 1, 0)
 	};
 
 	LLVMValueRef lsb =
@@ -681,13 +675,12 @@ static void emit_up2h(const struct lp_build_tgsi_action *action,
 		      struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMContextRef context = bld_base->base.gallivm->context;
 	struct lp_build_context *uint_bld = &bld_base->uint_bld;
 	LLVMTypeRef i16;
 	LLVMValueRef const16, input, val;
 	unsigned i;
 
-	i16 = LLVMInt16TypeInContext(context);
+	i16 = LLVMInt16TypeInContext(ctx->ac.context);
 	const16 = lp_build_const_int32(uint_bld->gallivm, 16);
 	input = emit_data->args[0];
 
