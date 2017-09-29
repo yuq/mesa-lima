@@ -64,35 +64,22 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 	template.width = align(tmpl->width, VL_MACROBLOCK_WIDTH);
 	template.height = align(tmpl->height / array_size, VL_MACROBLOCK_HEIGHT);
 
-	vl_video_buffer_template(&templ, &template, resource_formats[0], 1, array_size, PIPE_USAGE_DEFAULT, 0);
+	assert(resource_formats[0] != PIPE_FORMAT_NONE);
 
-	/* TODO: get tiling working */
-	/* Set PIPE_BIND_SHARED to avoid reallocation in r600_texture_get_handle,
-	 * which can't handle joined surfaces. */
-	unsigned bind = PIPE_BIND_LINEAR | PIPE_BIND_SHARED;
-
-	templ.bind = bind;
-	resources[0] = (struct r600_texture *)
-		pipe->screen->resource_create(pipe->screen, &templ);
-	if (!resources[0])
-		goto error;
-
-	if (resource_formats[1] != PIPE_FORMAT_NONE) {
-		vl_video_buffer_template(&templ, &template, resource_formats[1], 1, array_size, PIPE_USAGE_DEFAULT, 1);
-		templ.bind = bind;
-		resources[1] = (struct r600_texture *)
-			pipe->screen->resource_create(pipe->screen, &templ);
-		if (!resources[1])
-			goto error;
-	}
-
-	if (resource_formats[2] != PIPE_FORMAT_NONE) {
-		vl_video_buffer_template(&templ, &template, resource_formats[2], 1, array_size, PIPE_USAGE_DEFAULT, 2);
-		templ.bind = bind;
-		resources[2] = (struct r600_texture *)
-			pipe->screen->resource_create(pipe->screen, &templ);
-		if (!resources[2])
-			goto error;
+	for (i = 0; i < VL_NUM_COMPONENTS; ++i) {
+		if (resource_formats[i] != PIPE_FORMAT_NONE) {
+			vl_video_buffer_template(&templ, &template,
+			                         resource_formats[i], 1,
+			                         array_size, PIPE_USAGE_DEFAULT, i);
+			/* Set PIPE_BIND_SHARED to avoid reallocation in r600_texture_get_handle,
+			 * which can't handle joined surfaces. */
+			/* TODO: get tiling working */
+			templ.bind = PIPE_BIND_LINEAR | PIPE_BIND_SHARED;
+			resources[i] = (struct r600_texture *)
+			                pipe->screen->resource_create(pipe->screen, &templ);
+			if (!resources[i])
+				goto error;
+		}
 	}
 
 	for (i = 0; i < VL_NUM_COMPONENTS; ++i) {
@@ -164,8 +151,8 @@ struct pipe_video_codec *si_uvd_create_decoder(struct pipe_context *context,
 	struct si_context *ctx = (struct si_context *)context;
 	bool vcn = (ctx->b.family == CHIP_RAVEN) ? true : false;
 
-        if (templ->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE)
-                return si_vce_create_encoder(context, templ, ctx->b.ws, si_vce_get_buffer);
+	if (templ->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE)
+		return si_vce_create_encoder(context, templ, ctx->b.ws, si_vce_get_buffer);
 
 	return (vcn) ? 	radeon_create_decoder(context, templ) :
 		si_common_uvd_create_decoder(context, templ, si_uvd_set_dtb);
