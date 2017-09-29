@@ -3625,6 +3625,12 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
 
    glsl_to_tgsi_instruction *inst;
 
+   st_src_reg bindless;
+   if (imgvar->contains_bindless()) {
+      img->accept(this);
+      bindless = this->result;
+   }
+
    if (ir->callee->intrinsic_id == ir_intrinsic_image_size) {
       dst.writemask = WRITEMASK_XYZ;
       inst = emit_asm(ir, TGSI_OPCODE_RESQ, dst);
@@ -3722,8 +3728,7 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
    }
 
    if (imgvar->contains_bindless()) {
-      img->accept(this);
-      inst->resource = this->result;
+      inst->resource = bindless;
       inst->resource.swizzle = MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y,
                                              SWIZZLE_X, SWIZZLE_Y);
    } else {
@@ -4245,6 +4250,12 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
       emit_arl(ir, sampler_reladdr, reladdr);
    }
 
+   st_src_reg bindless;
+   if (var->contains_bindless()) {
+      ir->sampler->accept(this);
+      bindless = this->result;
+   }
+
    if (opcode == TGSI_OPCODE_TXD)
       inst = emit_asm(ir, opcode, result_dst, coord, dx, dy);
    else if (opcode == TGSI_OPCODE_TXQ) {
@@ -4275,8 +4286,7 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
       inst->tex_shadow = GL_TRUE;
 
    if (var->contains_bindless()) {
-      ir->sampler->accept(this);
-      inst->resource = this->result;
+      inst->resource = bindless;
       inst->resource.swizzle = MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_Y,
                                              SWIZZLE_X, SWIZZLE_Y);
    } else {
