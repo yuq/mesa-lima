@@ -65,8 +65,13 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 	template.height = align(tmpl->height / array_size, VL_MACROBLOCK_HEIGHT);
 
 	vl_video_buffer_template(&templ, &template, resource_formats[0], 1, array_size, PIPE_USAGE_DEFAULT, 0);
+
 	/* TODO: get tiling working */
-	templ.bind = PIPE_BIND_LINEAR;
+	/* Set PIPE_BIND_SHARED to avoid reallocation in r600_texture_get_handle,
+	 * which can't handle joined surfaces. */
+	unsigned bind = PIPE_BIND_LINEAR | PIPE_BIND_SHARED;
+
+	templ.bind = bind;
 	resources[0] = (struct r600_texture *)
 		pipe->screen->resource_create(pipe->screen, &templ);
 	if (!resources[0])
@@ -74,7 +79,7 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 
 	if (resource_formats[1] != PIPE_FORMAT_NONE) {
 		vl_video_buffer_template(&templ, &template, resource_formats[1], 1, array_size, PIPE_USAGE_DEFAULT, 1);
-		templ.bind = PIPE_BIND_LINEAR;
+		templ.bind = bind;
 		resources[1] = (struct r600_texture *)
 			pipe->screen->resource_create(pipe->screen, &templ);
 		if (!resources[1])
@@ -83,7 +88,7 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 
 	if (resource_formats[2] != PIPE_FORMAT_NONE) {
 		vl_video_buffer_template(&templ, &template, resource_formats[2], 1, array_size, PIPE_USAGE_DEFAULT, 2);
-		templ.bind = PIPE_BIND_LINEAR;
+		templ.bind = bind;
 		resources[2] = (struct r600_texture *)
 			pipe->screen->resource_create(pipe->screen, &templ);
 		if (!resources[2])
