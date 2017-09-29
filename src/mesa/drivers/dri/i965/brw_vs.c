@@ -178,24 +178,14 @@ brw_codegen_vs_prog(struct brw_context *brw,
    brw_assign_common_binding_table_offsets(devinfo, &vp->program,
                                            &prog_data.base.base, 0);
 
-   /* Allocate the references to the uniforms that will end up in the
-    * prog_data associated with the compiled program, and which will be freed
-    * by the state cache.
-    */
-   int param_count = vp->program.nir->num_uniforms / 4;
-
-   stage_prog_data->param = rzalloc_array(NULL, uint32_t, param_count);
-   stage_prog_data->pull_param = rzalloc_array(NULL, uint32_t, param_count);
-   stage_prog_data->nr_params = param_count;
-
    if (!vp->program.is_arb_asm) {
-      brw_nir_setup_glsl_uniforms(vp->program.nir, &vp->program,
+      brw_nir_setup_glsl_uniforms(mem_ctx, vp->program.nir, &vp->program,
                                   &prog_data.base.base,
                                   compiler->scalar_stage[MESA_SHADER_VERTEX]);
       brw_nir_analyze_ubo_ranges(compiler, vp->program.nir,
                                  prog_data.base.base.ubo_ranges);
    } else {
-      brw_nir_setup_arb_uniforms(vp->program.nir, &vp->program,
+      brw_nir_setup_arb_uniforms(mem_ctx, vp->program.nir, &vp->program,
                                  &prog_data.base.base);
    }
 
@@ -262,6 +252,9 @@ brw_codegen_vs_prog(struct brw_context *brw,
                            prog_data.base.base.total_scratch,
                            devinfo->max_vs_threads);
 
+   /* The param and pull_param arrays will be freed by the shader cache. */
+   ralloc_steal(NULL, prog_data.base.base.param);
+   ralloc_steal(NULL, prog_data.base.base.pull_param);
    brw_upload_cache(&brw->cache, BRW_CACHE_VS_PROG,
 		    key, sizeof(struct brw_vs_prog_key),
 		    program, program_size,

@@ -178,25 +178,12 @@ brw_codegen_tcs_prog(struct brw_context *brw, struct brw_program *tcp,
 
    memset(&prog_data, 0, sizeof(prog_data));
 
-   /* Allocate the references to the uniforms that will end up in the
-    * prog_data associated with the compiled program, and which will be freed
-    * by the state cache.
-    *
-    * Note: param_count needs to be num_uniform_components * 4, since we add
-    * padding around uniform values below vec4 size, so the worst case is that
-    * every uniform is a float which gets padded to the size of a vec4.
-    */
-   int param_count = nir->num_uniforms / 4;
-
-   prog_data.base.base.param = rzalloc_array(NULL, uint32_t, param_count);
-   prog_data.base.base.pull_param = rzalloc_array(NULL, uint32_t, param_count);
-   prog_data.base.base.nr_params = param_count;
-
    if (tcp) {
       brw_assign_common_binding_table_offsets(devinfo, &tcp->program,
                                               &prog_data.base.base, 0);
 
-      brw_nir_setup_glsl_uniforms(nir, &tcp->program, &prog_data.base.base,
+      brw_nir_setup_glsl_uniforms(mem_ctx, nir, &tcp->program,
+                                  &prog_data.base.base,
                                   compiler->scalar_stage[MESA_SHADER_TESS_CTRL]);
       brw_nir_analyze_ubo_ranges(compiler, tcp->program.nir,
                                  prog_data.base.base.ubo_ranges);
@@ -204,6 +191,10 @@ brw_codegen_tcs_prog(struct brw_context *brw, struct brw_program *tcp,
       /* Upload the Patch URB Header as the first two uniforms.
        * Do the annoying scrambling so the shader doesn't have to.
        */
+      assert(nir->num_uniforms == 32);
+      prog_data.base.base.param = rzalloc_array(mem_ctx, uint32_t, 8);
+      prog_data.base.base.nr_params = 8;
+
       uint32_t *param = prog_data.base.base.param;
       for (int i = 0; i < 8; i++)
          param[i] = BRW_PARAM_BUILTIN_ZERO;
@@ -272,6 +263,9 @@ brw_codegen_tcs_prog(struct brw_context *brw, struct brw_program *tcp,
                            prog_data.base.base.total_scratch,
                            devinfo->max_tcs_threads);
 
+   /* The param and pull_param arrays will be freed by the shader cache. */
+   ralloc_steal(NULL, prog_data.base.base.param);
+   ralloc_steal(NULL, prog_data.base.base.pull_param);
    brw_upload_cache(&brw->cache, BRW_CACHE_TCS_PROG,
                     key, sizeof(*key),
                     program, program_size,

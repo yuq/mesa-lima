@@ -134,12 +134,13 @@ enum brw_reg_type brw_type_for_nir_type(const struct gen_device_info *devinfo,
 
 enum glsl_base_type brw_glsl_base_type_for_nir_type(nir_alu_type type);
 
-void brw_nir_setup_glsl_uniforms(nir_shader *shader,
+void brw_nir_setup_glsl_uniforms(void *mem_ctx, nir_shader *shader,
                                  const struct gl_program *prog,
                                  struct brw_stage_prog_data *stage_prog_data,
                                  bool is_scalar);
 
-void brw_nir_setup_arb_uniforms(nir_shader *shader, struct gl_program *prog,
+void brw_nir_setup_arb_uniforms(void *mem_ctx, nir_shader *shader,
+                                struct gl_program *prog,
                                 struct brw_stage_prog_data *stage_prog_data);
 
 void brw_nir_analyze_ubo_ranges(const struct brw_compiler *compiler,

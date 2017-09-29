@@ -77,18 +77,8 @@ brw_codegen_cs_prog(struct brw_context *brw,
 
    assign_cs_binding_table_offsets(devinfo, &cp->program, &prog_data);
 
-   /* Allocate the references to the uniforms that will end up in the
-    * prog_data associated with the compiled program, and which will be freed
-    * by the state cache.
-    */
-   int param_count = cp->program.nir->num_uniforms / 4;
-
-   prog_data.base.param = rzalloc_array(NULL, uint32_t, param_count);
-   prog_data.base.pull_param = rzalloc_array(NULL, uint32_t, param_count);
-   prog_data.base.nr_params = param_count;
-
-   brw_nir_setup_glsl_uniforms(cp->program.nir, &cp->program,&prog_data.base,
-                               true);
+   brw_nir_setup_glsl_uniforms(mem_ctx, cp->program.nir,
+                               &cp->program, &prog_data.base, true);
 
    if (unlikely(brw->perf_debug)) {
       start_busy = (brw->batch.last_bo &&
@@ -149,6 +139,9 @@ brw_codegen_cs_prog(struct brw_context *brw,
                            prog_data.base.total_scratch,
                            scratch_ids_per_subslice * subslices);
 
+   /* The param and pull_param arrays will be freed by the shader cache. */
+   ralloc_steal(NULL, prog_data.base.param);
+   ralloc_steal(NULL, prog_data.base.pull_param);
    brw_upload_cache(&brw->cache, BRW_CACHE_CS_PROG,
                     key, sizeof(*key),
                     program, program_size,

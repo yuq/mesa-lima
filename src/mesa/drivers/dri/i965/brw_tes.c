@@ -77,24 +77,13 @@ brw_codegen_tes_prog(struct brw_context *brw,
 
    memset(&prog_data, 0, sizeof(prog_data));
 
+   void *mem_ctx = ralloc_context(NULL);
+
    brw_assign_common_binding_table_offsets(devinfo, &tep->program,
                                            &prog_data.base.base, 0);
 
-   /* Allocate the references to the uniforms that will end up in the
-    * prog_data associated with the compiled program, and which will be freed
-    * by the state cache.
-    *
-    * Note: param_count needs to be num_uniform_components * 4, since we add
-    * padding around uniform values below vec4 size, so the worst case is that
-    * every uniform is a float which gets padded to the size of a vec4.
-    */
-   int param_count = nir->num_uniforms / 4;
-
-   prog_data.base.base.param = rzalloc_array(NULL, uint32_t, param_count);
-   prog_data.base.base.pull_param = rzalloc_array(NULL, uint32_t, param_count);
-   prog_data.base.base.nr_params = param_count;
-
-   brw_nir_setup_glsl_uniforms(nir, &tep->program, &prog_data.base.base,
+   brw_nir_setup_glsl_uniforms(mem_ctx, nir, &tep->program,
+                               &prog_data.base.base,
                                compiler->scalar_stage[MESA_SHADER_TESS_EVAL]);
    brw_nir_analyze_ubo_ranges(compiler, tep->program.nir,
                               prog_data.base.base.ubo_ranges);
@@ -112,7 +101,6 @@ brw_codegen_tes_prog(struct brw_context *brw,
    brw_compute_tess_vue_map(&input_vue_map, key->inputs_read,
                             key->patch_inputs_read);
 
-   void *mem_ctx = ralloc_context(NULL);
    unsigned program_size;
    char *error_str;
    const unsigned *program =
@@ -145,6 +133,9 @@ brw_codegen_tes_prog(struct brw_context *brw,
                            prog_data.base.base.total_scratch,
                            devinfo->max_tes_threads);
 
+   /* The param and pull_param arrays will be freed by the shader cache. */
+   ralloc_steal(NULL, prog_data.base.base.param);
+   ralloc_steal(NULL, prog_data.base.base.pull_param);
    brw_upload_cache(&brw->cache, BRW_CACHE_TES_PROG,
                     key, sizeof(*key),
                     program, program_size,

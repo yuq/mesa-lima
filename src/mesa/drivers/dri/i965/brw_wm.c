@@ -144,22 +144,13 @@ brw_codegen_wm_prog(struct brw_context *brw,
 
    assign_fs_binding_table_offsets(devinfo, &fp->program, key, &prog_data);
 
-   /* Allocate the references to the uniforms that will end up in the
-    * prog_data associated with the compiled program, and which will be freed
-    * by the state cache.
-    */
-   int param_count = fp->program.nir->num_uniforms / 4;
-   prog_data.base.param = rzalloc_array(NULL, uint32_t, param_count);
-   prog_data.base.pull_param = rzalloc_array(NULL, uint32_t, param_count);
-   prog_data.base.nr_params = param_count;
-
    if (!fp->program.is_arb_asm) {
-      brw_nir_setup_glsl_uniforms(fp->program.nir, &fp->program,
+      brw_nir_setup_glsl_uniforms(mem_ctx, fp->program.nir, &fp->program,
                                   &prog_data.base, true);
       brw_nir_analyze_ubo_ranges(brw->screen->compiler, fp->program.nir,
                                  prog_data.base.ubo_ranges);
    } else {
-      brw_nir_setup_arb_uniforms(fp->program.nir, &fp->program,
+      brw_nir_setup_arb_uniforms(mem_ctx, fp->program.nir, &fp->program,
                                  &prog_data.base);
 
       if (unlikely(INTEL_DEBUG & DEBUG_WM))
@@ -217,6 +208,9 @@ brw_codegen_wm_prog(struct brw_context *brw,
    if (unlikely((INTEL_DEBUG & DEBUG_WM) && fp->program.is_arb_asm))
       fprintf(stderr, "\n");
 
+   /* The param and pull_param arrays will be freed by the shader cache. */
+   ralloc_steal(NULL, prog_data.base.param);
+   ralloc_steal(NULL, prog_data.base.pull_param);
    brw_upload_cache(&brw->cache, BRW_CACHE_FS_PROG,
                     key, sizeof(struct brw_wm_prog_key),
                     program, program_size,

@@ -1762,8 +1762,7 @@ vec4_visitor::setup_uniforms(int reg)
     * matter what, or the GPU would hang.
     */
    if (devinfo->gen < 6 && this->uniforms == 0) {
-      stage_prog_data->param =
-         reralloc(NULL, stage_prog_data->param, uint32_t, 4);
+      brw_stage_prog_data_add_params(stage_prog_data, 4);
       for (unsigned int i = 0; i < 4; i++) {
 	 unsigned int slot = this->uniforms * 4 + i;
 	 stage_prog_data->param[slot] = BRW_PARAM_BUILTIN_ZERO;

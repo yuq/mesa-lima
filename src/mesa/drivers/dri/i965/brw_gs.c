@@ -87,23 +87,11 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
    memset(&prog_data, 0, sizeof(prog_data));
 
+   void *mem_ctx = ralloc_context(NULL);
+
    assign_gs_binding_table_offsets(devinfo, &gp->program, &prog_data);
 
-   /* Allocate the references to the uniforms that will end up in the
-    * prog_data associated with the compiled program, and which will be freed
-    * by the state cache.
-    *
-    * Note: param_count needs to be num_uniform_components * 4, since we add
-    * padding around uniform values below vec4 size, so the worst case is that
-    * every uniform is a float which gets padded to the size of a vec4.
-    */
-   int param_count = gp->program.nir->num_uniforms / 4;
-
-   prog_data.base.base.param = rzalloc_array(NULL, uint32_t, param_count);
-   prog_data.base.base.pull_param = rzalloc_array(NULL, uint32_t, param_count);
-   prog_data.base.base.nr_params = param_count;
-
-   brw_nir_setup_glsl_uniforms(gp->program.nir, &gp->program,
+   brw_nir_setup_glsl_uniforms(mem_ctx, gp->program.nir, &gp->program,
                                &prog_data.base.base,
                                compiler->scalar_stage[MESA_SHADER_GEOMETRY]);
    brw_nir_analyze_ubo_ranges(compiler, gp->program.nir,
@@ -124,7 +112,6 @@ brw_codegen_gs_prog(struct brw_context *brw,
       start_time = get_time();
    }
 
-   void *mem_ctx = ralloc_context(NULL);
    unsigned program_size;
    char *error_str;
    const unsigned *program =
@@ -155,6 +142,9 @@ brw_codegen_gs_prog(struct brw_context *brw,
                            prog_data.base.base.total_scratch,
                            devinfo->max_gs_threads);
 
+   /* The param and pull_param arrays will be freed by the shader cache. */
+   ralloc_steal(NULL, prog_data.base.base.param);
+   ralloc_steal(NULL, prog_data.base.base.pull_param);
    brw_upload_cache(&brw->cache, BRW_CACHE_GS_PROG,
                     key, sizeof(*key),
                     program, program_size,
