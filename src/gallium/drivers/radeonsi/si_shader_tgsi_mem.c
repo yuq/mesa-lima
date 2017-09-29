@@ -222,7 +222,6 @@ static LLVMValueRef image_fetch_coords(
 		unsigned src, LLVMValueRef desc)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = ctx->ac.builder;
 	unsigned target = inst->Memory.Texture;
 	unsigned num_coords = tgsi_util_get_texture_coord_dim(target);
@@ -272,7 +271,7 @@ static LLVMValueRef image_fetch_coords(
 		num_coords = 4;
 	}
 
-	return lp_build_gather_values(gallivm, coords, num_coords);
+	return lp_build_gather_values(&ctx->gallivm, coords, num_coords);
 }
 
 /**
@@ -463,7 +462,6 @@ static void load_emit_memory(
 		struct lp_build_emit_data *emit_data)
 {
 	const struct tgsi_full_instruction *inst = emit_data->inst;
-	struct gallivm_state *gallivm = &ctx->gallivm;
 	unsigned writemask = inst->Dst[0].Register.WriteMask;
 	LLVMValueRef channels[4], ptr, derived_ptr, index;
 	int chan;
@@ -480,7 +478,7 @@ static void load_emit_memory(
 		derived_ptr = LLVMBuildGEP(ctx->ac.builder, ptr, &index, 1, "");
 		channels[chan] = LLVMBuildLoad(ctx->ac.builder, derived_ptr, "");
 	}
-	emit_data->output[emit_data->chan] = lp_build_gather_values(gallivm, channels, 4);
+	emit_data->output[emit_data->chan] = lp_build_gather_values(&ctx->gallivm, channels, 4);
 }
 
 /**
@@ -609,7 +607,6 @@ static void store_fetch_args(
 		struct lp_build_emit_data * emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = &ctx->gallivm;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	struct tgsi_full_src_register memory;
 	LLVMValueRef chans[4];
@@ -622,7 +619,7 @@ static void store_fetch_args(
 	for (chan = 0; chan < 4; ++chan) {
 		chans[chan] = lp_build_emit_fetch(bld_base, inst, 1, chan);
 	}
-	data = lp_build_gather_values(gallivm, chans, 4);
+	data = lp_build_gather_values(&ctx->gallivm, chans, 4);
 
 	emit_data->args[emit_data->arg_count++] = data;
 
@@ -988,7 +985,6 @@ static void set_tex_fetch_args(struct si_shader_context *ctx,
 			       LLVMValueRef *param, unsigned count,
 			       unsigned dmask)
 {
-	struct gallivm_state *gallivm = &ctx->gallivm;
 	struct ac_image_args args = {};
 
 	/* Pad to power of two vector */
@@ -996,7 +992,7 @@ static void set_tex_fetch_args(struct si_shader_context *ctx,
 		param[count++] = LLVMGetUndef(ctx->i32);
 
 	if (count > 1)
-		args.addr = lp_build_gather_values(gallivm, param, count);
+		args.addr = lp_build_gather_values(&ctx->gallivm, param, count);
 	else
 		args.addr = param[0];
 
