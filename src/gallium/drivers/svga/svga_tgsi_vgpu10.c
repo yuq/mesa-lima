@@ -1870,9 +1870,9 @@ translate_interpolation(const struct svga_shader_emitter_v10 *emit,
 
 /**
  * Translate a TGSI property to VGPU10.
- * Don't emit any instructions yet, only need to gather the primitive property information.
- * The output primitive topology might be changed later. The final property instructions
- * will be emitted as part of the pre-helper code.
+ * Don't emit any instructions yet, only need to gather the primitive property
+ * information.  The output primitive topology might be changed later. The
+ * final property instructions will be emitted as part of the pre-helper code.
  */
 static boolean
 emit_vgpu10_property(struct svga_shader_emitter_v10 *emit,
@@ -2422,7 +2422,9 @@ emit_input_declarations(struct svga_shader_emitter_v10 *emit)
          selMode = VGPU10_OPERAND_4_COMPONENT_MASK_MODE;
          name = VGPU10_NAME_UNDEFINED;
 
-         /* all geometry shader inputs are two dimensional except gl_PrimitiveID */
+         /* all geometry shader inputs are two dimensional except
+          * gl_PrimitiveID
+          */
          dim = VGPU10_OPERAND_INDEX_2D;
 
          if (semantic_name == TGSI_SEMANTIC_PRIMID) {
