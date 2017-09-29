@@ -428,7 +428,7 @@ static void emit_f2i(const struct lp_build_tgsi_action *action,
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	emit_data->output[emit_data->chan] = LLVMBuildFPToSI(ctx->ac.builder,
-			emit_data->args[0], bld_base->int_bld.elem_type, "");
+			emit_data->args[0], ctx->i32, "");
 }
 
 static void emit_f2u(const struct lp_build_tgsi_action *action,
@@ -437,7 +437,7 @@ static void emit_f2u(const struct lp_build_tgsi_action *action,
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	emit_data->output[emit_data->chan] = LLVMBuildFPToUI(ctx->ac.builder,
-			emit_data->args[0], bld_base->uint_bld.elem_type, "");
+			emit_data->args[0], ctx->i32, "");
 }
 
 static void emit_i2f(const struct lp_build_tgsi_action *action,
@@ -446,7 +446,7 @@ static void emit_i2f(const struct lp_build_tgsi_action *action,
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	emit_data->output[emit_data->chan] = LLVMBuildSIToFP(ctx->ac.builder,
-			emit_data->args[0], bld_base->base.elem_type, "");
+			emit_data->args[0], ctx->f32, "");
 }
 
 static void emit_u2f(const struct lp_build_tgsi_action *action,
@@ -455,7 +455,7 @@ static void emit_u2f(const struct lp_build_tgsi_action *action,
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	emit_data->output[emit_data->chan] = LLVMBuildUIToFP(ctx->ac.builder,
-			emit_data->args[0], bld_base->base.elem_type, "");
+			emit_data->args[0], ctx->f32, "");
 }
 
 static void
