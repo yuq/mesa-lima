@@ -27,6 +27,7 @@
 #include "util/u_math.h"
 #include "util/ralloc.h"
 #include "util/hash_table.h"
+#include "util/bitscan.h"
 
 #include "ppir.h"
 
@@ -65,7 +66,7 @@ const ppir_op_info ppir_op_infos[] = {
    },
 };
 
-void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index)
+void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index, unsigned mask)
 {
    static const int node_size[] = {
       [ppir_node_type_alu] = sizeof(ppir_alu_node),
@@ -88,11 +89,15 @@ void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index)
       goto err_out;
 
    if (index >= 0) {
-      comp->var_nodes[index] = node;
-      if (index < comp->reg_base)
+      if (mask) {
+         /* reg has 4 slots for each componemt write node */
+         while (mask)
+            comp->var_nodes[(index << 2) + comp->reg_base + u_bit_scan(&mask)] = node;
+         snprintf(node->name, sizeof(node->name), "reg%d", index);
+      } else {
+         comp->var_nodes[index] = node;
          snprintf(node->name, sizeof(node->name), "ssa%d", index);
-      else
-         snprintf(node->name, sizeof(node->name), "reg%d", index - comp->reg_base);
+      }
    }
    else
       snprintf(node->name, sizeof(node->name), "new");
@@ -148,19 +153,25 @@ void ppir_node_remove_entry(struct set_entry *entry)
    ralloc_free(dep);
 }
 
+static void _ppir_node_replace_child(ppir_src *src, ppir_node *old_child, ppir_node *new_child)
+{
+   ppir_dest *od = ppir_node_get_dest(old_child);
+   if (ppir_node_target_equal(src, od)) {
+      ppir_dest *nd = ppir_node_get_dest(new_child);
+      ppir_node_target_assign(src, nd);
+   }
+}
+
 void ppir_node_replace_child(ppir_node *parent, ppir_node *old_child, ppir_node *new_child)
 {
    if (parent->type == ppir_node_type_alu) {
       ppir_alu_node *alu = ppir_node_to_alu(parent);
-      for (int i = 0; i < alu->num_child; i++) {
-         if (alu->children[i] == old_child)
-            alu->children[i] = new_child;
-      }
+      for (int i = 0; i < alu->num_src; i++)
+         _ppir_node_replace_child(alu->src + i, old_child, new_child);
    }
    else if (parent->type == ppir_node_type_store) {
       ppir_store_node *store = ppir_node_to_store(parent);
-      if (store->child == old_child)
-         store->child = new_child;
+      _ppir_node_replace_child(&store->src, old_child, new_child);
    }
 }
 
@@ -188,24 +199,6 @@ void ppir_node_delete(ppir_node *node)
 
    list_del(&node->list);
    ralloc_free(node);
-}
-
-ppir_node *ppir_node_insert_move(ppir_compiler *comp, ppir_node *node)
-{
-   ppir_alu_node *move = ppir_node_create(comp, ppir_op_mov, -1);
-   if (!move)
-      return NULL;
-
-   ppir_node_replace_succ(&move->node, node);
-   ppir_node_add_child(&move->node, node);
-
-   move->children[0] = node;
-   move->num_child = 1;
-
-   for (int i = 0; i < 4; i++)
-      move->src[0].swizzle[i] = i;
-
-   return &move->node;
 }
 
 static void ppir_node_print_node(ppir_node *node, int space)

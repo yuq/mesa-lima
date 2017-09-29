@@ -28,51 +28,48 @@
 
 #include "ppir.h"
 
-
-bool ppir_instr_insert_node(ppir_block *block, ppir_node *node)
+ppir_instr *ppir_instr_create(ppir_block *block)
 {
-   if (node->op == ppir_op_const)
-      return true;
-
-   ppir_instr *instr = rzalloc(block->comp, ppir_instr);
+   ppir_instr *instr = rzalloc(block, ppir_instr);
    if (!instr)
-      return false;
+      return NULL;
 
+   list_addtail(&instr->list, &block->instr_list);
+   return instr;
+}
+
+bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
+{
    switch (node->op) {
-   case ppir_op_store_color:
-   {
-      ppir_store_node *store = ppir_node_to_store(node);
-      ppir_node *move = ppir_node_insert_move(block->comp, store->child);
-      if (!move)
-         return false;
-
-      move->instr = instr;
-      list_addtail(&move->list, &node->list);
-
+   case ppir_op_mov:
+   case ppir_op_mul:
       instr->slots[PPIR_INSTR_SLOT_ALU_VEC_MUL] = node;
-      instr->is_end = true;
       break;
-   }
+
+   case ppir_op_add:
+      instr->slots[PPIR_INSTR_SLOT_ALU_VEC_ADD] = node;
+      break;
+
+   case ppir_op_const:
+      break;
+
+   case ppir_op_load_varying:
+      if (instr->slots[PPIR_INSTR_SLOT_VARYING])
+         return false;
+      instr->slots[PPIR_INSTR_SLOT_VARYING] = node;
+      break;
+
+   case ppir_op_load_uniform:
+      if (instr->slots[PPIR_INSTR_SLOT_UNIFORM])
+         return false;
+      instr->slots[PPIR_INSTR_SLOT_UNIFORM] = node;
+      break;
 
    default:
       return false;
    }
 
-   list_addtail(&instr->list, &block->instr_list);
    return true;
-}
-
-void ppir_instr_insert_const(ppir_node *node)
-{
-   ppir_node_foreach_succ(node, entry) {
-      ppir_node *succ = ppir_node_from_entry(entry, succ);
-      ppir_instr *instr = succ->instr;
-
-      if (instr->slots[PPIR_INSTR_SLOT_CONST0])
-         instr->slots[PPIR_INSTR_SLOT_CONST1] = node;
-      else
-         instr->slots[PPIR_INSTR_SLOT_CONST0] = node;
-   }
 }
 
 static struct {
@@ -82,8 +79,6 @@ static struct {
    [PPIR_INSTR_SLOT_VARYING] = { 4, "vary" },
    [PPIR_INSTR_SLOT_TEXLD] = { 4, "texl"},
    [PPIR_INSTR_SLOT_UNIFORM] = { 4, "unif" },
-   [PPIR_INSTR_SLOT_CONST0] = { 4, "con0" },
-   [PPIR_INSTR_SLOT_CONST1] = { 4, "con1" },
    [PPIR_INSTR_SLOT_ALU_VEC_MUL] = { 4, "vmul" },
    [PPIR_INSTR_SLOT_ALU_SCL_MUL] = { 4, "smul" },
    [PPIR_INSTR_SLOT_ALU_VEC_ADD] = { 4, "vadd" },
