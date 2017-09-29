@@ -558,14 +558,14 @@ CallCreateNewScreen(Display *dpy, int scrn, struct dri_screen *psc,
     * non-conformant to prevent apps from picking them up accidentally.
     */
    for (visual = psc->base.visuals; visual; visual = visual->next) {
-      XVisualInfo template;
+      XVisualInfo templ;
       XVisualInfo *visuals;
       int num_visuals;
       long mask;
 
-      template.visualid = visual->visualID;
+      templ.visualid = visual->visualID;
       mask = VisualIDMask;
-      visuals = XGetVisualInfo(dpy, mask, &template, &num_visuals);
+      visuals = XGetVisualInfo(dpy, mask, &templ, &num_visuals);
 
       if (visuals) {
          if (num_visuals > 0 && visuals->depth != DefaultDepth(dpy, scrn))
