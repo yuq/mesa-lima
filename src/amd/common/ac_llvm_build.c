@@ -252,6 +252,20 @@ void ac_build_type_name_for_intr(LLVMTypeRef type, char *buf, unsigned bufsize)
 	}
 }
 
+/**
+ * Helper function that builds an LLVM IR PHI node and immediately adds
+ * incoming edges.
+ */
+LLVMValueRef
+ac_build_phi(struct ac_llvm_context *ctx, LLVMTypeRef type,
+	     unsigned count_incoming, LLVMValueRef *values,
+	     LLVMBasicBlockRef *blocks)
+{
+	LLVMValueRef phi = LLVMBuildPhi(ctx->builder, type, "");
+	LLVMAddIncoming(phi, values, blocks, count_incoming);
+	return phi;
+}
+
 /* Prevent optimizations (at least of memory accesses) across the current
  * point in the program by emitting empty inline assembly that is marked as
  * having side effects.
