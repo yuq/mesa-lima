@@ -764,8 +764,7 @@ radv_image_alloc_cmask(struct radv_device *device,
 }
 
 static void
-radv_image_alloc_dcc(struct radv_device *device,
-		       struct radv_image *image)
+radv_image_alloc_dcc(struct radv_image *image)
 {
 	image->dcc_offset = align64(image->size, image->surface.dcc_alignment);
 	/* + 16 for storing the clear values + dcc pred */
@@ -776,20 +775,49 @@ radv_image_alloc_dcc(struct radv_device *device,
 }
 
 static void
-radv_image_alloc_htile(struct radv_device *device,
-		       struct radv_image *image)
+radv_image_alloc_htile(struct radv_image *image)
 {
-	if ((device->debug_flags & RADV_DEBUG_NO_HIZ) || image->info.levels > 1) {
-		image->surface.htile_size = 0;
-		return;
-	}
-
 	image->htile_offset = align64(image->size, image->surface.htile_alignment);
 
 	/* + 8 for storing the clear values */
 	image->clear_value_offset = image->htile_offset + image->surface.htile_size;
 	image->size = image->clear_value_offset + 8;
 	image->alignment = align64(image->alignment, image->surface.htile_alignment);
+}
+
+static inline bool
+radv_image_can_enable_dcc_or_cmask(struct radv_image *image)
+{
+	return image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT &&
+	       (image->exclusive || image->queue_family_mask == 1);
+}
+
+static inline bool
+radv_image_can_enable_dcc(struct radv_image *image)
+{
+	return radv_image_can_enable_dcc_or_cmask(image) &&
+	       image->surface.dcc_size;
+}
+
+static inline bool
+radv_image_can_enable_cmask(struct radv_image *image)
+{
+	return radv_image_can_enable_dcc_or_cmask(image) &&
+	       image->info.levels == 1 &&
+	       image->info.depth == 1 &&
+	       !image->surface.is_linear;
+}
+
+static inline bool
+radv_image_can_enable_fmask(struct radv_image *image)
+{
+	return image->info.samples > 1 && vk_format_is_color(image->vk_format);
+}
+
+static inline bool
+radv_image_can_enable_htile(struct radv_image *image)
+{
+	return image->info.levels == 1 && vk_format_is_depth(image->vk_format);
 }
 
 VkResult
@@ -801,7 +829,6 @@ radv_image_create(VkDevice _device,
 	RADV_FROM_HANDLE(radv_device, device, _device);
 	const VkImageCreateInfo *pCreateInfo = create_info->vk_info;
 	struct radv_image *image = NULL;
-	bool can_cmask_dcc = false;
 	assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
 
 	radv_assert(pCreateInfo->mipLevels > 0);
@@ -852,26 +879,28 @@ radv_image_create(VkDevice _device,
 	image->size = image->surface.surf_size;
 	image->alignment = image->surface.surf_alignment;
 
-	if (image->exclusive || image->queue_family_mask == 1)
-		can_cmask_dcc = true;
-
-	if ((pCreateInfo->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) &&
-	    image->surface.dcc_size && can_cmask_dcc)
-		radv_image_alloc_dcc(device, image);
-	else
+	/* Try to enable DCC first. */
+	if (radv_image_can_enable_dcc(image)) {
+		radv_image_alloc_dcc(image);
+	} else {
+		/* When DCC cannot be enabled, try CMASK. */
 		image->surface.dcc_size = 0;
+		if (radv_image_can_enable_cmask(image)) {
+			radv_image_alloc_cmask(device, image);
+		}
+	}
 
-	if ((pCreateInfo->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) &&
-	    pCreateInfo->mipLevels == 1 &&
-	    !image->surface.dcc_size && image->info.depth == 1 && can_cmask_dcc &&
-	    !image->surface.is_linear)
-		radv_image_alloc_cmask(device, image);
-
-	if (image->info.samples > 1 && vk_format_is_color(pCreateInfo->format)) {
+	/* Try to enable FMASK for multisampled images. */
+	if (radv_image_can_enable_fmask(image)) {
 		radv_image_alloc_fmask(device, image);
-	} else if (vk_format_is_depth(pCreateInfo->format)) {
-
-		radv_image_alloc_htile(device, image);
+	} else {
+		/* Otherwise, try to enable HTILE for depth surfaces. */
+		if (radv_image_can_enable_htile(image) &&
+		    !(device->debug_flags & RADV_DEBUG_NO_HIZ)) {
+			radv_image_alloc_htile(image);
+		} else {
+			image->surface.htile_size = 0;
+		}
 	}
 
 	if (pCreateInfo->flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT) {
