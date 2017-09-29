@@ -54,8 +54,9 @@ get_pipeline_state_l3_weights(const struct brw_context *brw)
       const struct brw_stage_prog_data *prog_data = stage_states[i]->prog_data;
 
       needs_dc |= (prog && (prog->sh.data->NumAtomicBuffers ||
-                            prog->sh.data->NumShaderStorageBlocks)) ||
-         (prog_data && (prog_data->total_scratch || prog_data->nr_image_params));
+                            prog->sh.data->NumShaderStorageBlocks ||
+                            prog->info.num_images)) ||
+         (prog_data && prog_data->total_scratch);
       needs_slm |= prog_data && prog_data->total_shared;
    }
 
