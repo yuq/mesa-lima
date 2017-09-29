@@ -71,7 +71,6 @@ brw_create_nir(struct brw_context *brw,
    struct gl_context *ctx = &brw->ctx;
    const nir_shader_compiler_options *options =
       ctx->Const.ShaderCompilerOptions[stage].NirOptions;
-   bool progress;
    nir_shader *nir;
 
    /* First, lower the GLSL IR or Mesa IR to NIR */
@@ -88,8 +87,6 @@ brw_create_nir(struct brw_context *brw,
    }
    nir_validate_shader(nir);
 
-   (void)progress;
-
    nir = brw_preprocess_nir(brw->screen->compiler, nir);
 
    if (stage == MESA_SHADER_FRAGMENT) {
@@ -98,13 +95,16 @@ brw_create_nir(struct brw_context *brw,
          .fs_coord_pixel_center_integer = 1,
          .fs_coord_origin_upper_left = 1,
       };
-      _mesa_add_state_reference(prog->Parameters,
-                                (gl_state_index *) wpos_options.state_tokens);
 
+      bool progress = false;
       NIR_PASS(progress, nir, nir_lower_wpos_ytransform, &wpos_options);
+      if (progress) {
+         _mesa_add_state_reference(prog->Parameters,
+                                   (gl_state_index *) wpos_options.state_tokens);
+      }
    }
 
-   NIR_PASS(progress, nir, nir_lower_system_values);
+   NIR_PASS_V(nir, nir_lower_system_values);
    NIR_PASS_V(nir, brw_nir_lower_uniforms, is_scalar);
 
    return nir;
