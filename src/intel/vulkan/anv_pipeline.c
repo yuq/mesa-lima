@@ -405,12 +405,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
       prog_data->nr_params += MAX_PUSH_CONSTANTS_SIZE / sizeof(float);
    }
 
-   if (nir->info.num_images > 0) {
-      prog_data->nr_params += nir->info.num_images * BRW_IMAGE_PARAM_SIZE;
-      pipeline->needs_data_cache = true;
-   }
-
-   if (nir->info.num_ssbos > 0)
+   if (nir->info.num_ssbos > 0 || nir->info.num_images > 0)
       pipeline->needs_data_cache = true;
 
    if (prog_data->nr_params > 0) {

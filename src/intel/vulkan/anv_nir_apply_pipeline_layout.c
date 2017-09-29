@@ -473,8 +473,10 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
          }
       }
 
+      uint32_t *param = brw_stage_prog_data_add_params(prog_data,
+                                                       map->image_count *
+                                                       BRW_IMAGE_PARAM_SIZE);
       struct anv_push_constants *null_data = NULL;
-      uint32_t *param = prog_data->param + (shader->num_uniforms / 4);
       const struct brw_image_param *image_param = null_data->images;
       for (uint32_t i = 0; i < map->image_count; i++) {
          setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SURFACE_IDX_OFFSET,
@@ -493,6 +495,7 @@ anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
          param += BRW_IMAGE_PARAM_SIZE;
          image_param ++;
       }
+      assert(param == prog_data->param + prog_data->nr_params);
 
       shader->num_uniforms += map->image_count * BRW_IMAGE_PARAM_SIZE * 4;
    }
