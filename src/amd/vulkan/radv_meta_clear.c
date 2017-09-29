@@ -693,9 +693,6 @@ emit_fast_htile_clear(struct radv_cmd_buffer *cmd_buffer,
 	if (iview->image->info.array_size != iview->layer_count)
 		goto fail;
 
-	if (iview->image->info.levels > 1)
-		goto fail;
-
 	if (!radv_image_extent_compare(iview->image, &iview->extent))
 		goto fail;
 
