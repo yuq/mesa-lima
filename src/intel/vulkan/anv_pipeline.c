@@ -393,22 +393,15 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
 
    nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir));
 
-   /* Figure out the number of parameters */
-   prog_data->nr_params = 0;
-
    if (nir->num_uniforms > 0) {
+      assert(prog_data->nr_params == 0);
+
       /* If the shader uses any push constants at all, we'll just give
        * them the maximum possible number
        */
       assert(nir->num_uniforms <= MAX_PUSH_CONSTANTS_SIZE);
       nir->num_uniforms = MAX_PUSH_CONSTANTS_SIZE;
       prog_data->nr_params += MAX_PUSH_CONSTANTS_SIZE / sizeof(float);
-   }
-
-   if (nir->info.num_ssbos > 0 || nir->info.num_images > 0)
-      pipeline->needs_data_cache = true;
-
-   if (prog_data->nr_params > 0) {
       prog_data->param = ralloc_array(mem_ctx, uint32_t, prog_data->nr_params);
 
       /* We now set the param values to be offsets into a
@@ -417,13 +410,15 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
        * params array, it doesn't really matter what we put here.
        */
       struct anv_push_constants *null_data = NULL;
-      if (nir->num_uniforms > 0) {
-         /* Fill out the push constants section of the param array */
-         for (unsigned i = 0; i < MAX_PUSH_CONSTANTS_SIZE / sizeof(float); i++)
-            prog_data->param[i] = ANV_PARAM_PUSH(
-               (uintptr_t)&null_data->client_data[i * sizeof(float)]);
+      /* Fill out the push constants section of the param array */
+      for (unsigned i = 0; i < MAX_PUSH_CONSTANTS_SIZE / sizeof(float); i++) {
+         prog_data->param[i] = ANV_PARAM_PUSH(
+            (uintptr_t)&null_data->client_data[i * sizeof(float)]);
       }
    }
+
+   if (nir->info.num_ssbos > 0 || nir->info.num_images > 0)
+      pipeline->needs_data_cache = true;
 
    /* Apply the actual pipeline layout to UBOs, SSBOs, and textures */
    if (pipeline->layout)
