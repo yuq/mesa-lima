@@ -2084,14 +2084,17 @@ fs_visitor::assign_constant_locations()
    if (thread_local_id_index >= 0)
       push_constant_loc[thread_local_id_index] = num_push_constants++;
 
-   /* As the uniforms are going to be reordered, take the data from a temporary
-    * copy of the original param[].
+   /* As the uniforms are going to be reordered, stash the old array and
+    * create two new arrays for push/pull params.
     */
-   uint32_t *param = ralloc_array(NULL, uint32_t, stage_prog_data->nr_params);
-   memcpy(param, stage_prog_data->param,
-          sizeof(uint32_t) * stage_prog_data->nr_params);
+   uint32_t *param = stage_prog_data->param;
    stage_prog_data->nr_params = num_push_constants;
-   stage_prog_data->nr_pull_params = num_pull_constants;
+   stage_prog_data->param = ralloc_array(NULL, uint32_t, num_push_constants);
+   if (num_pull_constants > 0) {
+      stage_prog_data->nr_pull_params = num_pull_constants;
+      stage_prog_data->pull_param = ralloc_array(NULL, uint32_t,
+                                                 num_pull_constants);
+   }
 
    /* Now that we know how many regular uniforms we'll push, reduce the
     * UBO push ranges so we don't exceed the 3DSTATE_CONSTANT limits.

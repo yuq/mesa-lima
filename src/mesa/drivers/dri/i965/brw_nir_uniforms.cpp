@@ -195,7 +195,6 @@ brw_nir_setup_glsl_uniforms(void *mem_ctx, nir_shader *shader,
    unsigned nr_params = shader->num_uniforms / 4;
    stage_prog_data->nr_params = nr_params;
    stage_prog_data->param = rzalloc_array(mem_ctx, uint32_t, nr_params);
-   stage_prog_data->pull_param = rzalloc_array(mem_ctx, uint32_t, nr_params);
 
    nir_foreach_variable(var, &shader->uniforms) {
       /* UBO's, atomics and samplers don't take up space in the
@@ -223,7 +222,6 @@ brw_nir_setup_arb_uniforms(void *mem_ctx, nir_shader *shader,
    unsigned nr_params = plist->NumParameters * 4;
    stage_prog_data->nr_params = nr_params;
    stage_prog_data->param = rzalloc_array(mem_ctx, uint32_t, nr_params);
-   stage_prog_data->pull_param = rzalloc_array(mem_ctx, uint32_t, nr_params);
 
    /* For ARB programs, prog_to_nir generates a single "parameters" variable
     * for all uniform data.  nir_lower_wpos_ytransform may also create an
