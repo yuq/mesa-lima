@@ -150,14 +150,10 @@ brw_codegen_wm_prog(struct brw_context *brw,
     * by the state cache.
     */
    int param_count = fp->program.nir->num_uniforms / 4;
-   prog_data.base.nr_image_params = fp->program.info.num_images;
    /* The backend also sometimes adds params for texture size. */
    param_count += 2 * ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits;
    prog_data.base.param = rzalloc_array(NULL, uint32_t, param_count);
    prog_data.base.pull_param = rzalloc_array(NULL, uint32_t, param_count);
-   prog_data.base.image_param =
-      rzalloc_array(NULL, struct brw_image_param,
-                    prog_data.base.nr_image_params);
    prog_data.base.nr_params = param_count;
 
    if (!fp->program.is_arb_asm) {

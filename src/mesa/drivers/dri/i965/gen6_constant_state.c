@@ -38,7 +38,7 @@ f_as_u32(float f)
 static uint32_t
 brw_param_value(struct brw_context *brw,
                 const struct gl_program *prog,
-                const struct brw_stage_prog_data *prog_data,
+                const struct brw_stage_state *stage_state,
                 uint32_t param)
 {
    struct gl_context *ctx = &brw->ctx;
@@ -80,9 +80,8 @@ brw_param_value(struct brw_context *brw,
    case BRW_PARAM_DOMAIN_IMAGE: {
       unsigned idx = BRW_PARAM_IMAGE_IDX(param);
       unsigned offset = BRW_PARAM_IMAGE_OFFSET(param);
-      assert(idx < prog_data->nr_image_params);
-      assert(offset < sizeof(struct brw_image_param));
-      return ((uint32_t *)&prog_data->image_param[idx])[offset];
+      assert(offset < ARRAY_SIZE(stage_state->image_param));
+      return ((uint32_t *)&stage_state->image_param[idx])[offset];
    }
 
    default:
@@ -94,14 +93,14 @@ brw_param_value(struct brw_context *brw,
 void
 brw_populate_constant_data(struct brw_context *brw,
                            const struct gl_program *prog,
-                           const struct brw_stage_prog_data *prog_data,
+                           const struct brw_stage_state *stage_state,
                            void *void_dst,
                            const uint32_t *param,
                            unsigned nr_params)
 {
    uint32_t *dst = void_dst;
    for (unsigned i = 0; i < nr_params; i++)
-      dst[i] = brw_param_value(brw, prog, prog_data, param[i]);
+      dst[i] = brw_param_value(brw, prog, stage_state, param[i]);
 }
 
 
@@ -159,7 +158,7 @@ gen6_upload_push_constants(struct brw_context *brw,
        * side effect of dereferencing uniforms, so _NEW_PROGRAM_CONSTANTS
        * wouldn't be set for them.
        */
-      brw_populate_constant_data(brw, prog, prog_data, param,
+      brw_populate_constant_data(brw, prog, stage_state, param,
                                  prog_data->param,
                                  prog_data->nr_params);
 
@@ -246,7 +245,7 @@ brw_upload_pull_constants(struct brw_context *brw,
 
    STATIC_ASSERT(sizeof(gl_constant_value) == sizeof(float));
 
-   brw_populate_constant_data(brw, prog, prog_data, constants,
+   brw_populate_constant_data(brw, prog, stage_state, constants,
                               prog_data->pull_param,
                               prog_data->nr_pull_params);
 
@@ -312,7 +311,7 @@ brw_upload_cs_push_constants(struct brw_context *brw,
       for (unsigned i = 0;
            i < cs_prog_data->push.cross_thread.dwords;
            i++) {
-         param_copy[i] = brw_param_value(brw, prog, prog_data,
+         param_copy[i] = brw_param_value(brw, prog, stage_state,
                                          prog_data->param[i]);
       }
    }
@@ -325,7 +324,7 @@ brw_upload_cs_push_constants(struct brw_context *brw,
          unsigned src = cs_prog_data->push.cross_thread.dwords;
          for ( ; src < prog_data->nr_params; src++, dst++) {
             if (src != cs_prog_data->thread_local_id_index) {
-               param[dst] = brw_param_value(brw, prog, prog_data,
+               param[dst] = brw_param_value(brw, prog, stage_state,
                                             prog_data->param[src]);
             } else {
                param[dst] = t * cs_prog_data->simd_size;

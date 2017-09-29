@@ -227,7 +227,7 @@ brw_upload_constant_buffer(struct brw_context *brw)
       GLuint offset = brw->curbe.wm_start * 16;
 
       /* BRW_NEW_FS_PROG_DATA | _NEW_PROGRAM_CONSTANTS: copy uniform values */
-      brw_populate_constant_data(brw, fp, brw->wm.base.prog_data, &buf[offset],
+      brw_populate_constant_data(brw, fp, &brw->wm.base, &buf[offset],
                                  brw->wm.base.prog_data->param,
                                  brw->wm.base.prog_data->nr_params);
    }
@@ -268,7 +268,7 @@ brw_upload_constant_buffer(struct brw_context *brw)
       GLuint offset = brw->curbe.vs_start * 16;
 
       /* BRW_NEW_VS_PROG_DATA | _NEW_PROGRAM_CONSTANTS: copy uniform values */
-      brw_populate_constant_data(brw, vp, brw->vs.base.prog_data, &buf[offset],
+      brw_populate_constant_data(brw, vp, &brw->vs.base, &buf[offset],
                                  brw->vs.base.prog_data->param,
                                  brw->vs.base.prog_data->nr_params);
    }

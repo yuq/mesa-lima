@@ -1630,7 +1630,7 @@ brw_upload_image_surfaces(struct brw_context *brw,
          update_image_surface(brw, u, prog->sh.ImageAccess[i],
                               surf_idx,
                               &stage_state->surf_offset[surf_idx],
-                              &prog_data->image_param[i]);
+                              &stage_state->image_param[i]);
       }
 
       brw->ctx.NewDriverState |= BRW_NEW_SURFACES;

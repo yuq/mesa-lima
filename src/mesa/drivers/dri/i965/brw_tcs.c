@@ -196,11 +196,6 @@ brw_codegen_tcs_prog(struct brw_context *brw, struct brw_program *tcp,
       brw_assign_common_binding_table_offsets(devinfo, &tcp->program,
                                               &prog_data.base.base, 0);
 
-      prog_data.base.base.image_param =
-         rzalloc_array(NULL, struct brw_image_param,
-                       tcp->program.info.num_images);
-      prog_data.base.base.nr_image_params = tcp->program.info.num_images;
-
       brw_nir_setup_glsl_uniforms(nir, &tcp->program, &prog_data.base.base,
                                   compiler->scalar_stage[MESA_SHADER_TESS_CTRL]);
       brw_nir_analyze_ubo_ranges(compiler, tcp->program.nir,

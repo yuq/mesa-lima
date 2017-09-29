@@ -92,11 +92,7 @@ brw_codegen_tes_prog(struct brw_context *brw,
 
    prog_data.base.base.param = rzalloc_array(NULL, uint32_t, param_count);
    prog_data.base.base.pull_param = rzalloc_array(NULL, uint32_t, param_count);
-   prog_data.base.base.image_param =
-      rzalloc_array(NULL, struct brw_image_param,
-                    tep->program.info.num_images);
    prog_data.base.base.nr_params = param_count;
-   prog_data.base.base.nr_image_params = tep->program.info.num_images;
 
    brw_nir_setup_glsl_uniforms(nir, &tep->program, &prog_data.base.base,
                                compiler->scalar_stage[MESA_SHADER_TESS_EVAL]);

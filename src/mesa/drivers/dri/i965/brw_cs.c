@@ -91,11 +91,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
    param_count += 2 * ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits;
    prog_data.base.param = rzalloc_array(NULL, uint32_t, param_count);
    prog_data.base.pull_param = rzalloc_array(NULL, uint32_t, param_count);
-   prog_data.base.image_param =
-      rzalloc_array(NULL, struct brw_image_param,
-                    cp->program.info.num_images);
    prog_data.base.nr_params = param_count;
-   prog_data.base.nr_image_params = cp->program.info.num_images;
 
    brw_nir_setup_glsl_uniforms(cp->program.nir, &cp->program,&prog_data.base,
                                true);

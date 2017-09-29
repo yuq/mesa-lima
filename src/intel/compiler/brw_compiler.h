@@ -574,7 +574,6 @@ struct brw_stage_prog_data {
 
    GLuint nr_params;       /**< number of float params/constants */
    GLuint nr_pull_params;
-   unsigned nr_image_params;
 
    unsigned curb_read_length;
    unsigned total_scratch;
@@ -596,9 +595,6 @@ struct brw_stage_prog_data {
     */
    uint32_t *param;
    uint32_t *pull_param;
-
-   /** Image metadata passed to the shader as uniforms. */
-   struct brw_image_param *image_param;
 };
 
 static inline void

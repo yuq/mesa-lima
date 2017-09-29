@@ -580,6 +580,8 @@ struct brw_stage_state
    uint32_t sampler_count;
    uint32_t sampler_offset;
 
+   struct brw_image_param image_param[BRW_MAX_IMAGES];
+
    /** Need to re-emit 3DSTATE_CONSTANT_XS? */
    bool push_constants_dirty;
 };

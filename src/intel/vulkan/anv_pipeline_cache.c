@@ -37,7 +37,7 @@ anv_shader_bin_create(struct anv_device *device,
    struct anv_shader_bin *shader;
    struct anv_shader_bin_key *key;
    struct brw_stage_prog_data *prog_data;
-   const union gl_constant_value **prog_data_param;
+   uint32_t *prog_data_param;
    struct anv_pipeline_binding *surface_to_descriptor, *sampler_to_descriptor;
 
    ANV_MULTIALLOC(ma);
@@ -169,9 +169,7 @@ anv_shader_bin_create_from_blob(struct anv_device *device,
  *
  * - Review prog_data struct for size and cacheability: struct
  *   brw_stage_prog_data has binding_table which uses a lot of uint32_t for 8
- *   bit quantities etc; param, pull_param, and image_params are pointers, we
- *   just need the compation map. use bit fields for all bools, eg
- *   dual_src_blend.
+ *   bit quantities etc; use bit fields for all bools, eg dual_src_blend.
  */
 
 static uint32_t

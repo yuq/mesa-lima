@@ -101,11 +101,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
    prog_data.base.base.param = rzalloc_array(NULL, uint32_t, param_count);
    prog_data.base.base.pull_param = rzalloc_array(NULL, uint32_t, param_count);
-   prog_data.base.base.image_param =
-      rzalloc_array(NULL, struct brw_image_param,
-                    gp->program.info.num_images);
    prog_data.base.base.nr_params = param_count;
-   prog_data.base.base.nr_image_params = gp->program.info.num_images;
 
    brw_nir_setup_glsl_uniforms(gp->program.nir, &gp->program,
                                &prog_data.base.base,
