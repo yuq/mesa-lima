@@ -28,6 +28,7 @@
 #include "common/gen_device_info.h"
 #include "main/mtypes.h"
 #include "main/macros.h"
+#include "util/ralloc.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -602,6 +603,18 @@ struct brw_stage_prog_data {
    uint32_t *param;
    uint32_t *pull_param;
 };
+
+static inline uint32_t *
+brw_stage_prog_data_add_params(struct brw_stage_prog_data *prog_data,
+                               unsigned nr_new_params)
+{
+   unsigned old_nr_params = prog_data->nr_params;
+   prog_data->nr_params += nr_new_params;
+   prog_data->param = reralloc(ralloc_parent(prog_data->param),
+                               prog_data->param, uint32_t,
+                               prog_data->nr_params);
+   return prog_data->param + old_nr_params;
+}
 
 static inline void
 brw_mark_surface_used(struct brw_stage_prog_data *prog_data,
