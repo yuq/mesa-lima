@@ -305,12 +305,10 @@ brw_upload_cs_push_constants(struct brw_context *brw,
 
    if (cs_prog_data->push.cross_thread.size > 0) {
       uint32_t *param_copy = param;
-      assert(cs_prog_data->thread_local_id_index < 0 ||
-             cs_prog_data->thread_local_id_index >=
-                cs_prog_data->push.cross_thread.dwords);
       for (unsigned i = 0;
            i < cs_prog_data->push.cross_thread.dwords;
            i++) {
+         assert(prog_data->param[i] != BRW_PARAM_BUILTIN_THREAD_LOCAL_ID);
          param_copy[i] = brw_param_value(brw, prog, stage_state,
                                          prog_data->param[i]);
       }
@@ -323,11 +321,11 @@ brw_upload_cs_push_constants(struct brw_context *brw,
                  cs_prog_data->push.cross_thread.regs);
          unsigned src = cs_prog_data->push.cross_thread.dwords;
          for ( ; src < prog_data->nr_params; src++, dst++) {
-            if (src != cs_prog_data->thread_local_id_index) {
+            if (prog_data->param[src] == BRW_PARAM_BUILTIN_THREAD_LOCAL_ID) {
+               param[dst] = t * cs_prog_data->simd_size;
+            } else {
                param[dst] = brw_param_value(brw, prog, stage_state,
                                             prog_data->param[src]);
-            } else {
-               param[dst] = t * cs_prog_data->simd_size;
             }
          }
       }

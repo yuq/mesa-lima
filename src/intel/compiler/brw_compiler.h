@@ -542,6 +542,8 @@ enum brw_param_builtin {
    BRW_PARAM_BUILTIN_TESS_LEVEL_OUTER_W,
    BRW_PARAM_BUILTIN_TESS_LEVEL_INNER_X,
    BRW_PARAM_BUILTIN_TESS_LEVEL_INNER_Y,
+
+   BRW_PARAM_BUILTIN_THREAD_LOCAL_ID,
 };
 
 #define BRW_PARAM_BUILTIN_CLIP_PLANE(idx, comp) \
@@ -738,7 +740,6 @@ struct brw_cs_prog_data {
    unsigned threads;
    bool uses_barrier;
    bool uses_num_work_groups;
-   int thread_local_id_index;
 
    struct {
       struct brw_push_const_block cross_thread;

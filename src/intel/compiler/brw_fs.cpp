@@ -1935,6 +1935,20 @@ set_push_pull_constant_loc(unsigned uniform, int *chunk_start,
    }
 }
 
+static int
+get_thread_local_id_param_index(const brw_stage_prog_data *prog_data)
+{
+   if (prog_data->nr_params == 0)
+      return -1;
+
+   /* The local thread id is always the last parameter in the list */
+   uint32_t last_param = prog_data->param[prog_data->nr_params - 1];
+   if (last_param == BRW_PARAM_BUILTIN_THREAD_LOCAL_ID)
+      return prog_data->nr_params - 1;
+
+   return -1;
+}
+
 /**
  * Assign UNIFORM file registers to either push constants or pull constants.
  *
@@ -1962,10 +1976,6 @@ fs_visitor::assign_constant_locations()
     */
    bool contiguous[uniforms];
    memset(contiguous, 0, sizeof(contiguous));
-
-   int thread_local_id_index =
-      (stage == MESA_SHADER_COMPUTE) ?
-      brw_cs_prog_data(stage_prog_data)->thread_local_id_index : -1;
 
    /* First, we walk through the instructions and do two things:
     *
@@ -2009,8 +2019,7 @@ fs_visitor::assign_constant_locations()
       }
    }
 
-   if (thread_local_id_index >= 0 && !is_live[thread_local_id_index])
-      thread_local_id_index = -1;
+   int thread_local_id_index = get_thread_local_id_param_index(stage_prog_data);
 
    /* Only allow 16 registers (128 uniform components) as push constants.
     *
@@ -2118,22 +2127,15 @@ fs_visitor::assign_constant_locations()
     * push_constant_loc[i] <= i and we can do it in one smooth loop without
     * having to make a copy.
     */
-   int new_thread_local_id_index = -1;
    for (unsigned int i = 0; i < uniforms; i++) {
       uint32_t value = param[i];
       if (pull_constant_loc[i] != -1) {
          stage_prog_data->pull_param[pull_constant_loc[i]] = value;
       } else if (push_constant_loc[i] != -1) {
          stage_prog_data->param[push_constant_loc[i]] = value;
-         if (thread_local_id_index == (int)i)
-            new_thread_local_id_index = push_constant_loc[i];
       }
    }
    ralloc_free(param);
-
-   if (stage == MESA_SHADER_COMPUTE)
-      brw_cs_prog_data(stage_prog_data)->thread_local_id_index =
-         new_thread_local_id_index;
 }
 
 bool
@@ -6698,24 +6700,20 @@ cs_fill_push_const_info(const struct gen_device_info *devinfo,
                         struct brw_cs_prog_data *cs_prog_data)
 {
    const struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
-   bool fill_thread_id =
-      cs_prog_data->thread_local_id_index >= 0 &&
-      cs_prog_data->thread_local_id_index < (int)prog_data->nr_params;
+   int thread_local_id_index = get_thread_local_id_param_index(prog_data);
    bool cross_thread_supported = devinfo->gen > 7 || devinfo->is_haswell;
 
    /* The thread ID should be stored in the last param dword */
-   assert(prog_data->nr_params > 0 || !fill_thread_id);
-   assert(!fill_thread_id ||
-          cs_prog_data->thread_local_id_index ==
-             (int)prog_data->nr_params - 1);
+   assert(thread_local_id_index == -1 ||
+          thread_local_id_index == (int)prog_data->nr_params - 1);
 
    unsigned cross_thread_dwords, per_thread_dwords;
    if (!cross_thread_supported) {
       cross_thread_dwords = 0u;
       per_thread_dwords = prog_data->nr_params;
-   } else if (fill_thread_id) {
+   } else if (thread_local_id_index >= 0) {
       /* Fill all but the last register with cross-thread payload */
-      cross_thread_dwords = 8 * (cs_prog_data->thread_local_id_index / 8);
+      cross_thread_dwords = 8 * (thread_local_id_index / 8);
       per_thread_dwords = prog_data->nr_params - cross_thread_dwords;
       assert(per_thread_dwords > 0 && per_thread_dwords <= 8);
    } else {
