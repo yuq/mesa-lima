@@ -2511,6 +2511,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    screen->compiler->shader_debug_log = shader_debug_log_mesa;
    screen->compiler->shader_perf_log = shader_perf_log_mesa;
    screen->compiler->constant_buffer_0_is_relative = devinfo->gen < 8;
+   screen->compiler->supports_pull_constants = true;
 
    screen->has_exec_fence =
      intel_get_boolean(screen, I915_PARAM_HAS_EXEC_FENCE);

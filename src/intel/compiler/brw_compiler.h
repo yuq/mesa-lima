@@ -105,6 +105,12 @@ struct brw_compiler {
     * Base Address?  (If not, it's a normal GPU address.)
     */
    bool constant_buffer_0_is_relative;
+
+   /**
+    * Whether or not the driver supports pull constants.  If not, the compiler
+    * will attempt to push everything.
+    */
+   bool supports_pull_constants;
 };
 
 

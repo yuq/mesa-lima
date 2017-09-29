@@ -390,6 +390,7 @@ anv_physical_device_init(struct anv_physical_device *device,
    }
    device->compiler->shader_debug_log = compiler_debug_log;
    device->compiler->shader_perf_log = compiler_perf_log;
+   device->compiler->supports_pull_constants = false;
 
    isl_device_init(&device->isl_dev, &device->info, swizzled);
 

@@ -1889,6 +1889,7 @@ set_push_pull_constant_loc(unsigned uniform, int *chunk_start,
                            unsigned *num_pull_constants,
                            const unsigned max_push_components,
                            const unsigned max_chunk_size,
+                           bool allow_pull_constants,
                            struct brw_stage_prog_data *stage_prog_data)
 {
    /* This is the first live uniform in the chunk */
@@ -1918,7 +1919,7 @@ set_push_pull_constant_loc(unsigned uniform, int *chunk_start,
        * Vulkan driver, push constants are explicitly exposed via the API
        * so we push everything.  In GL, we only push small arrays.
        */
-      if (stage_prog_data->pull_param == NULL ||
+      if (!allow_pull_constants ||
           (*num_push_constants + chunk_size <= max_push_components &&
            chunk_size <= max_chunk_size)) {
          assert(*num_push_constants + chunk_size <= max_push_components);
@@ -2054,6 +2055,7 @@ fs_visitor::assign_constant_locations()
                                  push_constant_loc, pull_constant_loc,
                                  &num_push_constants, &num_pull_constants,
                                  max_push_components, max_chunk_size,
+                                 compiler->supports_pull_constants,
                                  stage_prog_data);
 
    }
@@ -2074,6 +2076,7 @@ fs_visitor::assign_constant_locations()
                                  push_constant_loc, pull_constant_loc,
                                  &num_push_constants, &num_pull_constants,
                                  max_push_components, max_chunk_size,
+                                 compiler->supports_pull_constants,
                                  stage_prog_data);
    }
 
