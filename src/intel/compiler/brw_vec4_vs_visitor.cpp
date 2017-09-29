@@ -119,6 +119,13 @@ vec4_vs_visitor::emit_clip_distances(dst_reg reg, int offset)
 void
 vec4_vs_visitor::setup_uniform_clipplane_values()
 {
+   if (key->nr_userclip_plane_consts == 0)
+      return;
+
+   assert(stage_prog_data->nr_params == (unsigned)this->uniforms * 4);
+   brw_stage_prog_data_add_params(stage_prog_data,
+                                  key->nr_userclip_plane_consts * 4);
+
    for (int i = 0; i < key->nr_userclip_plane_consts; ++i) {
       this->userplane[i] = dst_reg(UNIFORM, this->uniforms);
       this->userplane[i].type = BRW_REGISTER_TYPE_F;

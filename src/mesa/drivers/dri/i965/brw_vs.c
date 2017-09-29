@@ -184,11 +184,6 @@ brw_codegen_vs_prog(struct brw_context *brw,
     */
    int param_count = vp->program.nir->num_uniforms / 4;
 
-   /* vec4_visitor::setup_uniform_clipplane_values() also uploads user clip
-    * planes as uniforms.
-    */
-   param_count += key->nr_userclip_plane_consts * 4;
-
    stage_prog_data->param = rzalloc_array(NULL, uint32_t, param_count);
    stage_prog_data->pull_param = rzalloc_array(NULL, uint32_t, param_count);
    stage_prog_data->nr_params = param_count;
