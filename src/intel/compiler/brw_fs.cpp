@@ -6758,14 +6758,6 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
    shader = brw_nir_apply_sampler_key(shader, compiler, &key->tex, true);
 
-   /* Now that we cloned the nir_shader, we can update num_uniforms based on
-    * the thread_local_id_index.
-    */
-   assert(prog_data->thread_local_id_index >= 0);
-   shader->num_uniforms =
-      MAX2(shader->num_uniforms,
-           (unsigned)4 * (prog_data->thread_local_id_index + 1));
-
    brw_nir_lower_cs_intrinsics(shader, prog_data);
    shader = brw_postprocess_nir(shader, compiler, true);
 

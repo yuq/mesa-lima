@@ -83,9 +83,6 @@ brw_codegen_cs_prog(struct brw_context *brw,
     */
    int param_count = cp->program.nir->num_uniforms / 4;
 
-   /* The backend also sometimes add a param for the thread local id. */
-   prog_data.thread_local_id_index = param_count++;
-
    prog_data.base.param = rzalloc_array(NULL, uint32_t, param_count);
    prog_data.base.pull_param = rzalloc_array(NULL, uint32_t, param_count);
    prog_data.base.nr_params = param_count;
