@@ -1722,6 +1722,7 @@ si_lower_gather4_integer(struct si_shader_context *ctx,
 			 enum tgsi_return_type return_type)
 {
 	LLVMBuilderRef builder = ctx->gallivm.builder;
+	LLVMValueRef wa_8888 = NULL;
 	LLVMValueRef coord = args->addr;
 	LLVMValueRef half_texel[2];
 	/* Texture coordinates start after:
@@ -1739,7 +1740,6 @@ si_lower_gather4_integer(struct si_shader_context *ctx,
 		LLVMValueRef formats;
 		LLVMValueRef data_format;
 		LLVMValueRef wa_formats;
-		LLVMValueRef wa;
 
 		formats = LLVMBuildExtractElement(builder, args->resource, ctx->i32_1, "");
 
@@ -1747,9 +1747,10 @@ si_lower_gather4_integer(struct si_shader_context *ctx,
 					    LLVMConstInt(ctx->i32, 20, false), "");
 		data_format = LLVMBuildAnd(builder, data_format,
 					   LLVMConstInt(ctx->i32, (1u << 6) - 1, false), "");
-		wa = LLVMBuildICmp(builder, LLVMIntEQ, data_format,
-				   LLVMConstInt(ctx->i32, V_008F14_IMG_DATA_FORMAT_8_8_8_8, false),
-				   "");
+		wa_8888 = LLVMBuildICmp(
+			builder, LLVMIntEQ, data_format,
+			LLVMConstInt(ctx->i32, V_008F14_IMG_DATA_FORMAT_8_8_8_8, false),
+			"");
 
 		uint32_t wa_num_format =
 			return_type == TGSI_RETURN_TYPE_UINT ?
@@ -1761,19 +1762,24 @@ si_lower_gather4_integer(struct si_shader_context *ctx,
 		wa_formats = LLVMBuildOr(builder, wa_formats,
 					LLVMConstInt(ctx->i32, wa_num_format, false), "");
 
-		formats = LLVMBuildSelect(builder, wa, wa_formats, formats, "");
+		formats = LLVMBuildSelect(builder, wa_8888, wa_formats, formats, "");
 		args->resource = LLVMBuildInsertElement(
 			builder, args->resource, formats, ctx->i32_1, "");
-
-		return wa;
 	}
 
 	if (target == TGSI_TEXTURE_RECT ||
 	    target == TGSI_TEXTURE_SHADOWRECT) {
+		assert(!wa_8888);
 		half_texel[0] = half_texel[1] = LLVMConstReal(ctx->f32, -0.5);
 	} else {
 		struct tgsi_full_instruction txq_inst = {};
 		struct lp_build_emit_data txq_emit_data = {};
+		struct lp_build_if_state if_ctx;
+
+		if (wa_8888) {
+			/* Skip the texture size query entirely if we don't need it. */
+			lp_build_if(&if_ctx, &ctx->gallivm, LLVMBuildNot(builder, wa_8888, ""));
+		}
 
 		/* Query the texture size. */
 		txq_inst.Texture.Texture = target;
@@ -1796,6 +1802,18 @@ si_lower_gather4_integer(struct si_shader_context *ctx,
 			half_texel[c] = LLVMBuildFMul(builder, half_texel[c],
 						      LLVMConstReal(ctx->f32, -0.5), "");
 		}
+
+		if (wa_8888) {
+			lp_build_endif(&if_ctx);
+
+			LLVMBasicBlockRef bb[2] = { if_ctx.true_block, if_ctx.entry_block };
+
+			for (c = 0; c < 2; c++) {
+				LLVMValueRef values[2] = { half_texel[c], ctx->ac.f32_0 };
+				half_texel[c] = ac_build_phi(&ctx->ac, ctx->f32, 2,
+							     values, bb);
+			}
+		}
 	}
 
 	for (c = 0; c < 2; c++) {
@@ -1811,7 +1829,7 @@ si_lower_gather4_integer(struct si_shader_context *ctx,
 
 	args->addr = coord;
 
-	return NULL;
+	return wa_8888;
 }
 
 /* The second half of the cube texture 8_8_8_8 integer workaround: adjust the
