@@ -417,8 +417,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
       pipeline->needs_data_cache = true;
 
    if (prog_data->nr_params > 0) {
-      /* XXX: I think we're leaking this */
-      prog_data->param = malloc(prog_data->nr_params * sizeof(uint32_t));
+      prog_data->param = ralloc_array(mem_ctx, uint32_t, prog_data->nr_params);
 
       /* We now set the param values to be offsets into a
        * anv_push_constant_data structure.  Since the compiler doesn't
