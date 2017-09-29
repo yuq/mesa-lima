@@ -53,7 +53,6 @@ brw_codegen_cs_prog(struct brw_context *brw,
                     struct brw_cs_prog_key *key)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   struct gl_context *ctx = &brw->ctx;
    const GLuint *program;
    void *mem_ctx = ralloc_context(NULL);
    GLuint program_size;
@@ -87,8 +86,6 @@ brw_codegen_cs_prog(struct brw_context *brw,
    /* The backend also sometimes add a param for the thread local id. */
    prog_data.thread_local_id_index = param_count++;
 
-   /* The backend also sometimes adds params for texture size. */
-   param_count += 2 * ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits;
    prog_data.base.param = rzalloc_array(NULL, uint32_t, param_count);
    prog_data.base.pull_param = rzalloc_array(NULL, uint32_t, param_count);
    prog_data.base.nr_params = param_count;

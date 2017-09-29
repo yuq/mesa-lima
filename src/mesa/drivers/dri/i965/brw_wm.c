@@ -129,7 +129,6 @@ brw_codegen_wm_prog(struct brw_context *brw,
                     struct brw_vue_map *vue_map)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   struct gl_context *ctx = &brw->ctx;
    void *mem_ctx = ralloc_context(NULL);
    struct brw_wm_prog_data prog_data;
    const GLuint *program;
@@ -150,8 +149,6 @@ brw_codegen_wm_prog(struct brw_context *brw,
     * by the state cache.
     */
    int param_count = fp->program.nir->num_uniforms / 4;
-   /* The backend also sometimes adds params for texture size. */
-   param_count += 2 * ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits;
    prog_data.base.param = rzalloc_array(NULL, uint32_t, param_count);
    prog_data.base.pull_param = rzalloc_array(NULL, uint32_t, param_count);
    prog_data.base.nr_params = param_count;
