@@ -33,7 +33,6 @@ static void kill_if_fetch_args(struct lp_build_tgsi_context *bld_base,
 {
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = ctx->ac.builder;
 	unsigned i;
 	LLVMValueRef conds[TGSI_NUM_CHANNELS];
@@ -52,7 +51,7 @@ static void kill_if_fetch_args(struct lp_build_tgsi_context *bld_base,
 	emit_data->dst_type = ctx->voidt;
 	emit_data->arg_count = 1;
 	emit_data->args[0] = LLVMBuildSelect(builder, conds[0],
-					lp_build_const_float(gallivm, -1.0f),
+					LLVMConstReal(ctx->f32, -1.0f),
 					bld_base->base.zero, "");
 }
 
@@ -476,7 +475,6 @@ static void emit_bfi(const struct lp_build_tgsi_action *action,
 		     struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = ctx->ac.builder;
 	LLVMValueRef bfi_args[3];
 	LLVMValueRef bfi_sm5;
@@ -511,7 +509,7 @@ static void emit_bfi(const struct lp_build_tgsi_action *action,
 	 * and disagrees with GLSL semantics when bits (src3) is 32.
 	 */
 	cond = LLVMBuildICmp(builder, LLVMIntUGE, emit_data->args[3],
-			     lp_build_const_int32(gallivm, 32), "");
+			     LLVMConstInt(ctx->i32, 32, 0), "");
 	emit_data->output[emit_data->chan] =
 		LLVMBuildSelect(builder, cond, emit_data->args[1], bfi_sm5, "");
 }
@@ -541,7 +539,6 @@ static void emit_lsb(const struct lp_build_tgsi_action *action,
 		     struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMValueRef args[2] = {
 		emit_data->args[0],
 
@@ -566,7 +563,7 @@ static void emit_lsb(const struct lp_build_tgsi_action *action,
 		LLVMBuildSelect(ctx->ac.builder,
 				LLVMBuildICmp(ctx->ac.builder, LLVMIntEQ, args[0],
 					      ctx->i32_0, ""),
-				lp_build_const_int32(gallivm, -1), lsb, "");
+				LLVMConstInt(ctx->i32, -1, 0), lsb, "");
 }
 
 /* Find the last bit set. */
@@ -675,13 +672,12 @@ static void emit_up2h(const struct lp_build_tgsi_action *action,
 		      struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct lp_build_context *uint_bld = &bld_base->uint_bld;
 	LLVMTypeRef i16;
 	LLVMValueRef const16, input, val;
 	unsigned i;
 
 	i16 = LLVMInt16TypeInContext(ctx->ac.context);
-	const16 = lp_build_const_int32(uint_bld->gallivm, 16);
+	const16 = LLVMConstInt(ctx->i32, 16, 0);
 	input = emit_data->args[0];
 
 	for (i = 0; i < 2; i++) {

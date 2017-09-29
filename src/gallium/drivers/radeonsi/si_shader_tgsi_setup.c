@@ -1193,7 +1193,7 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	/* metadata allowing 2.5 ULP */
 	ctx->fpmath_md_kind = LLVMGetMDKindIDInContext(ctx->ac.context,
 						       "fpmath", 6);
-	LLVMValueRef arg = lp_build_const_float(&ctx->gallivm, 2.5);
+	LLVMValueRef arg = LLVMConstReal(ctx->ac.f32, 2.5);
 	ctx->fpmath_md_2p5_ulp = LLVMMDNodeInContext(ctx->ac.context,
 						     &arg, 1);
 
