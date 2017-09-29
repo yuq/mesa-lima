@@ -401,6 +401,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
        * them the maximum possible number
        */
       assert(nir->num_uniforms <= MAX_PUSH_CONSTANTS_SIZE);
+      nir->num_uniforms = MAX_PUSH_CONSTANTS_SIZE;
       prog_data->nr_params += MAX_PUSH_CONSTANTS_SIZE / sizeof(float);
    }
 
@@ -433,10 +434,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    if (pipeline->layout)
       anv_nir_apply_pipeline_layout(pipeline, nir, prog_data, map);
 
-   /* nir_lower_io will only handle the push constants; we need to set this
-    * to the full number of possible uniforms.
-    */
-   nir->num_uniforms = prog_data->nr_params * 4;
+   assert(nir->num_uniforms == prog_data->nr_params * 4);
 
    return nir;
 }
