@@ -61,7 +61,8 @@ etna_rasterizer_state_create(struct pipe_context *pctx,
    /* XXX anything else? */
    /* XXX bottom_edge_rule */
    cs->PA_SYSTEM_MODE =
-      COND(so->half_pixel_center, VIVS_PA_SYSTEM_MODE_UNK0 | VIVS_PA_SYSTEM_MODE_UNK4);
+      COND(!so->flatshade_first, VIVS_PA_SYSTEM_MODE_PROVOKING_VERTEX_LAST) |
+      COND(so->half_pixel_center, VIVS_PA_SYSTEM_MODE_HALF_PIXEL_CENTER);
 
    /* so->scissor overrides the scissor, defaulting to the whole framebuffer,
     * with the scissor state */
