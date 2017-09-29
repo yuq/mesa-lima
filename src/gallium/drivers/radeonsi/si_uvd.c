@@ -48,7 +48,7 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 	struct radeon_surf *surfaces[VL_NUM_COMPONENTS] = {};
 	struct pb_buffer **pbs[VL_NUM_COMPONENTS] = {};
 	const enum pipe_format *resource_formats;
-	struct pipe_video_buffer template;
+	struct pipe_video_buffer vidtemplate;
 	struct pipe_resource templ;
 	unsigned i, array_size;
 
@@ -60,15 +60,15 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 		return NULL;
 
 	array_size = tmpl->interlaced ? 2 : 1;
-	template = *tmpl;
-	template.width = align(tmpl->width, VL_MACROBLOCK_WIDTH);
-	template.height = align(tmpl->height / array_size, VL_MACROBLOCK_HEIGHT);
+	vidtemplate = *tmpl;
+	vidtemplate.width = align(tmpl->width, VL_MACROBLOCK_WIDTH);
+	vidtemplate.height = align(tmpl->height / array_size, VL_MACROBLOCK_HEIGHT);
 
 	assert(resource_formats[0] != PIPE_FORMAT_NONE);
 
 	for (i = 0; i < VL_NUM_COMPONENTS; ++i) {
 		if (resource_formats[i] != PIPE_FORMAT_NONE) {
-			vl_video_buffer_template(&templ, &template,
+			vl_video_buffer_template(&templ, &vidtemplate,
 			                         resource_formats[i], 1,
 			                         array_size, PIPE_USAGE_DEFAULT, i);
 			/* Set PIPE_BIND_SHARED to avoid reallocation in r600_texture_get_handle,
@@ -101,8 +101,8 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 			resources[i]->resource.buf);
 	}
 
-	template.height *= array_size;
-	return vl_video_buffer_create_ex2(pipe, &template, (struct pipe_resource **)resources);
+	vidtemplate.height *= array_size;
+	return vl_video_buffer_create_ex2(pipe, &vidtemplate, (struct pipe_resource **)resources);
 
 error:
 	for (i = 0; i < VL_NUM_COMPONENTS; ++i)
