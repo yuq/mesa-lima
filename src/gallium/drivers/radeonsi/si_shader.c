@@ -1657,14 +1657,14 @@ void si_load_system_value(struct si_shader_context *ctx,
 		LLVMValueRef coord[4] = {
 			LLVMGetParam(ctx->main_fn, ctx->param_tes_u),
 			LLVMGetParam(ctx->main_fn, ctx->param_tes_v),
-			bld->zero,
-			bld->zero
+			ctx->ac.f32_0,
+			ctx->ac.f32_0
 		};
 
 		/* For triangles, the vector should be (u, v, 1-u-v). */
 		if (ctx->shader->selector->info.properties[TGSI_PROPERTY_TES_PRIM_MODE] ==
 		    PIPE_PRIM_TRIANGLES)
-			coord[2] = lp_build_sub(bld, bld->one,
+			coord[2] = lp_build_sub(bld, ctx->ac.f32_1,
 						lp_build_add(bld, coord[0], coord[1]));
 
 		value = lp_build_gather_values(&ctx->gallivm, coord, 4);
@@ -2076,7 +2076,7 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 			val[chan] = LLVMBuildFAdd(builder, val[chan],
 					LLVMBuildSelect(builder,
 						LLVMBuildFCmp(builder, LLVMRealOGE,
-							      val[chan], base->zero, ""),
+							      val[chan], ctx->ac.f32_0, ""),
 						LLVMConstReal(ctx->f32, 0.5),
 						LLVMConstReal(ctx->f32, -0.5), ""), "");
 			val[chan] = LLVMBuildFPToSI(builder, val[chan], ctx->i32, "");
@@ -2452,7 +2452,6 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct si_shader *shader = ctx->shader;
-	struct lp_build_context *base = &bld_base->base;
 	struct ac_export_args pos_args[4] = {};
 	LLVMValueRef psize_value = NULL, edgeflag_value = NULL, layer_value = NULL, viewport_index_value = NULL;
 	unsigned pos_idx;
@@ -2501,10 +2500,10 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 		pos_args[0].done = 0; /* last export? */
 		pos_args[0].target = V_008DFC_SQ_EXP_POS;
 		pos_args[0].compr = 0; /* COMPR flag */
-		pos_args[0].out[0] = base->zero; /* X */
-		pos_args[0].out[1] = base->zero; /* Y */
-		pos_args[0].out[2] = base->zero; /* Z */
-		pos_args[0].out[3] = base->one;  /* W */
+		pos_args[0].out[0] = ctx->ac.f32_0; /* X */
+		pos_args[0].out[1] = ctx->ac.f32_0; /* Y */
+		pos_args[0].out[2] = ctx->ac.f32_0; /* Z */
+		pos_args[0].out[3] = ctx->ac.f32_1;  /* W */
 	}
 
 	/* Write the misc vector (point size, edgeflag, layer, viewport). */
@@ -2520,10 +2519,10 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 		pos_args[1].done = 0; /* last export? */
 		pos_args[1].target = V_008DFC_SQ_EXP_POS + 1;
 		pos_args[1].compr = 0; /* COMPR flag */
-		pos_args[1].out[0] = base->zero; /* X */
-		pos_args[1].out[1] = base->zero; /* Y */
-		pos_args[1].out[2] = base->zero; /* Z */
-		pos_args[1].out[3] = base->zero; /* W */
+		pos_args[1].out[0] = ctx->ac.f32_0; /* X */
+		pos_args[1].out[1] = ctx->ac.f32_0; /* Y */
+		pos_args[1].out[2] = ctx->ac.f32_0; /* Z */
+		pos_args[1].out[3] = ctx->ac.f32_0; /* W */
 
 		if (shader->selector->info.writes_psize)
 			pos_args[1].out[0] = psize_value;
@@ -3331,7 +3330,6 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 				bool is_last, struct si_ps_exports *exp)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct lp_build_context *base = &bld_base->base;
 	int i;
 
 	/* Clamp color */
@@ -3341,7 +3339,7 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 
 	/* Alpha to one */
 	if (ctx->shader->key.part.ps.epilog.alpha_to_one)
-		color[3] = base->one;
+		color[3] = ctx->ac.f32_1;
 
 	/* Alpha test */
 	if (index == 0 &&

@@ -1098,7 +1098,7 @@ static void if_emit(const struct lp_build_tgsi_action *action,
 
 	cond = LLVMBuildFCmp(ctx->ac.builder, LLVMRealUNE,
 			emit_data->args[0],
-			bld_base->base.zero, "");
+			ctx->ac.f32_0, "");
 
 	if_cond_emit(action, bld_base, emit_data, cond);
 }

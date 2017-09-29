@@ -1318,7 +1318,7 @@ static void tex_fetch_args(
 	}
 
 	if (opcode == TGSI_OPCODE_TXP)
-		coords[3] = bld_base->base.one;
+		coords[3] = ctx->ac.f32_1;
 
 	/* Pack offsets. */
 	if (has_offset &&
@@ -1446,7 +1446,7 @@ static void tex_fetch_args(
 			for (chan = num_src_deriv_channels;
 			     chan < num_dst_deriv_channels; chan++)
 				derivs[param * num_dst_deriv_channels + chan] =
-					bld_base->base.zero;
+					ctx->ac.f32_0;
 		}
 	}
 
