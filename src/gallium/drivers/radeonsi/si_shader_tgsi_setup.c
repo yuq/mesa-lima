@@ -406,7 +406,7 @@ si_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMValueRef result;
 
-	result = LLVMGetUndef(LLVMVectorType(ctx->i32, bld_base->base.type.length * 2));
+	result = LLVMGetUndef(LLVMVectorType(ctx->i32, 2));
 
 	result = LLVMBuildInsertElement(ctx->ac.builder,
 					result,
@@ -576,7 +576,7 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 	case TGSI_FILE_IMMEDIATE: {
 		LLVMTypeRef ctype = tgsi2llvmtype(bld_base, type);
 		if (tgsi_type_is_64bit(type)) {
-			result = LLVMGetUndef(LLVMVectorType(ctx->i32, bld_base->base.type.length * 2));
+			result = LLVMGetUndef(LLVMVectorType(ctx->i32, 2));
 			result = LLVMConstInsertElement(result,
 							ctx->imms[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle],
 							ctx->i32_0);
