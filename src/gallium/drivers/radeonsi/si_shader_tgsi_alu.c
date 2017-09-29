@@ -32,8 +32,9 @@ static void kill_if_fetch_args(struct lp_build_tgsi_context *bld_base,
 			       struct lp_build_emit_data *emit_data)
 {
 	const struct tgsi_full_instruction *inst = emit_data->inst;
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
+	LLVMBuilderRef builder = ctx->ac.builder;
 	unsigned i;
 	LLVMValueRef conds[TGSI_NUM_CHANNELS];
 
@@ -60,7 +61,7 @@ static void kil_emit(const struct lp_build_tgsi_action *action,
 		     struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMBuilderRef builder = ctx->gallivm.builder;
+	LLVMBuilderRef builder = ctx->ac.builder;
 
 	if (ctx->postponed_kill) {
 		if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_KILL_IF) {
@@ -93,7 +94,7 @@ static void emit_icmp(const struct lp_build_tgsi_action *action,
 		      struct lp_build_emit_data *emit_data)
 {
 	unsigned pred;
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMContextRef context = bld_base->base.gallivm->context;
 
 	switch (emit_data->inst->Instruction.Opcode) {
@@ -115,10 +116,10 @@ static void emit_icmp(const struct lp_build_tgsi_action *action,
 		break;
 	}
 
-	LLVMValueRef v = LLVMBuildICmp(builder, pred,
+	LLVMValueRef v = LLVMBuildICmp(ctx->ac.builder, pred,
 			emit_data->args[0], emit_data->args[1],"");
 
-	v = LLVMBuildSExtOrBitCast(builder, v,
+	v = LLVMBuildSExtOrBitCast(ctx->ac.builder, v,
 			LLVMInt32TypeInContext(context), "");
 
 	emit_data->output[emit_data->chan] = v;
@@ -129,36 +130,34 @@ static void emit_ucmp(const struct lp_build_tgsi_action *action,
 		      struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-
 	LLVMValueRef arg0 = ac_to_integer(&ctx->ac, emit_data->args[0]);
 
-	LLVMValueRef v = LLVMBuildICmp(builder, LLVMIntNE, arg0,
+	LLVMValueRef v = LLVMBuildICmp(ctx->ac.builder, LLVMIntNE, arg0,
 				       ctx->i32_0, "");
 
 	emit_data->output[emit_data->chan] =
-		LLVMBuildSelect(builder, v, emit_data->args[1], emit_data->args[2], "");
+		LLVMBuildSelect(ctx->ac.builder, v, emit_data->args[1], emit_data->args[2], "");
 }
 
 static void emit_cmp(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMValueRef cond, *args = emit_data->args;
 
-	cond = LLVMBuildFCmp(builder, LLVMRealOLT, args[0],
+	cond = LLVMBuildFCmp(ctx->ac.builder, LLVMRealOLT, args[0],
 			     bld_base->base.zero, "");
 
 	emit_data->output[emit_data->chan] =
-		LLVMBuildSelect(builder, cond, args[1], args[2], "");
+		LLVMBuildSelect(ctx->ac.builder, cond, args[1], args[2], "");
 }
 
 static void emit_set_cond(const struct lp_build_tgsi_action *action,
 			  struct lp_build_tgsi_context *bld_base,
 			  struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMRealPredicate pred;
 	LLVMValueRef cond;
 
@@ -175,10 +174,10 @@ static void emit_set_cond(const struct lp_build_tgsi_action *action,
 	default: assert(!"unknown instruction"); pred = 0; break;
 	}
 
-	cond = LLVMBuildFCmp(builder,
+	cond = LLVMBuildFCmp(ctx->ac.builder,
 		pred, emit_data->args[0], emit_data->args[1], "");
 
-	emit_data->output[emit_data->chan] = LLVMBuildSelect(builder,
+	emit_data->output[emit_data->chan] = LLVMBuildSelect(ctx->ac.builder,
 		cond, bld_base->base.one, bld_base->base.zero, "");
 }
 
@@ -186,7 +185,7 @@ static void emit_fcmp(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMContextRef context = bld_base->base.gallivm->context;
 	LLVMRealPredicate pred;
 
@@ -201,10 +200,10 @@ static void emit_fcmp(const struct lp_build_tgsi_action *action,
 	default: assert(!"unknown instruction"); pred = 0; break;
 	}
 
-	LLVMValueRef v = LLVMBuildFCmp(builder, pred,
+	LLVMValueRef v = LLVMBuildFCmp(ctx->ac.builder, pred,
 			emit_data->args[0], emit_data->args[1],"");
 
-	v = LLVMBuildSExtOrBitCast(builder, v,
+	v = LLVMBuildSExtOrBitCast(ctx->ac.builder, v,
 			LLVMInt32TypeInContext(context), "");
 
 	emit_data->output[emit_data->chan] = v;
@@ -214,7 +213,7 @@ static void emit_dcmp(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMContextRef context = bld_base->base.gallivm->context;
 	LLVMRealPredicate pred;
 
@@ -229,10 +228,10 @@ static void emit_dcmp(const struct lp_build_tgsi_action *action,
 	default: assert(!"unknown instruction"); pred = 0; break;
 	}
 
-	LLVMValueRef v = LLVMBuildFCmp(builder, pred,
+	LLVMValueRef v = LLVMBuildFCmp(ctx->ac.builder, pred,
 			emit_data->args[0], emit_data->args[1],"");
 
-	v = LLVMBuildSExtOrBitCast(builder, v,
+	v = LLVMBuildSExtOrBitCast(ctx->ac.builder, v,
 			LLVMInt32TypeInContext(context), "");
 
 	emit_data->output[emit_data->chan] = v;
@@ -243,9 +242,8 @@ static void emit_not(const struct lp_build_tgsi_action *action,
 		     struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
 	LLVMValueRef v = ac_to_integer(&ctx->ac, emit_data->args[0]);
-	emit_data->output[emit_data->chan] = LLVMBuildNot(builder, v, "");
+	emit_data->output[emit_data->chan] = LLVMBuildNot(ctx->ac.builder, v, "");
 }
 
 static void emit_arl(const struct lp_build_tgsi_action *action,
@@ -253,9 +251,8 @@ static void emit_arl(const struct lp_build_tgsi_action *action,
 		     struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
 	LLVMValueRef floor_index =  lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_FLR, emit_data->args[0]);
-	emit_data->output[emit_data->chan] = LLVMBuildFPToSI(builder,
+	emit_data->output[emit_data->chan] = LLVMBuildFPToSI(ctx->ac.builder,
 			floor_index, ctx->i32, "");
 }
 
@@ -263,8 +260,8 @@ static void emit_and(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildAnd(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildAnd(ctx->ac.builder,
 			emit_data->args[0], emit_data->args[1], "");
 }
 
@@ -272,8 +269,8 @@ static void emit_or(const struct lp_build_tgsi_action *action,
 		    struct lp_build_tgsi_context *bld_base,
 		    struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildOr(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildOr(ctx->ac.builder,
 			emit_data->args[0], emit_data->args[1], "");
 }
 
@@ -281,8 +278,8 @@ static void emit_uadd(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildAdd(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildAdd(ctx->ac.builder,
 			emit_data->args[0], emit_data->args[1], "");
 }
 
@@ -290,8 +287,8 @@ static void emit_udiv(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildUDiv(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildUDiv(ctx->ac.builder,
 			emit_data->args[0], emit_data->args[1], "");
 }
 
@@ -299,8 +296,8 @@ static void emit_idiv(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildSDiv(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildSDiv(ctx->ac.builder,
 			emit_data->args[0], emit_data->args[1], "");
 }
 
@@ -308,8 +305,8 @@ static void emit_mod(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildSRem(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildSRem(ctx->ac.builder,
 			emit_data->args[0], emit_data->args[1], "");
 }
 
@@ -317,8 +314,8 @@ static void emit_umod(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildURem(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildURem(ctx->ac.builder,
 			emit_data->args[0], emit_data->args[1], "");
 }
 
@@ -326,8 +323,8 @@ static void emit_shl(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildShl(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildShl(ctx->ac.builder,
 			emit_data->args[0], emit_data->args[1], "");
 }
 
@@ -335,16 +332,16 @@ static void emit_ushr(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildLShr(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildLShr(ctx->ac.builder,
 			emit_data->args[0], emit_data->args[1], "");
 }
 static void emit_ishr(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildAShr(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildAShr(ctx->ac.builder,
 			emit_data->args[0], emit_data->args[1], "");
 }
 
@@ -352,8 +349,8 @@ static void emit_xor(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildXor(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildXor(ctx->ac.builder,
 			emit_data->args[0], emit_data->args[1], "");
 }
 
@@ -362,7 +359,7 @@ static void emit_ssg(const struct lp_build_tgsi_action *action,
 		     struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	LLVMBuilderRef builder = ctx->ac.builder;
 
 	LLVMValueRef cmp, val;
 
@@ -395,8 +392,8 @@ static void emit_ineg(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildNeg(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildNeg(ctx->ac.builder,
 			emit_data->args[0], "");
 }
 
@@ -404,8 +401,8 @@ static void emit_dneg(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildFNeg(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildFNeg(ctx->ac.builder,
 			emit_data->args[0], "");
 }
 
@@ -413,7 +410,7 @@ static void emit_frac(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	char *intr;
 
 	if (emit_data->info->opcode == TGSI_OPCODE_FRC)
@@ -425,10 +422,10 @@ static void emit_frac(const struct lp_build_tgsi_action *action,
 		return;
 	}
 
-	LLVMValueRef floor = lp_build_intrinsic(builder, intr, emit_data->dst_type,
+	LLVMValueRef floor = lp_build_intrinsic(ctx->ac.builder, intr, emit_data->dst_type,
 						&emit_data->args[0], 1,
 						LP_FUNC_ATTR_READNONE);
-	emit_data->output[emit_data->chan] = LLVMBuildFSub(builder,
+	emit_data->output[emit_data->chan] = LLVMBuildFSub(ctx->ac.builder,
 			emit_data->args[0], floor, "");
 }
 
@@ -436,8 +433,8 @@ static void emit_f2i(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildFPToSI(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildFPToSI(ctx->ac.builder,
 			emit_data->args[0], bld_base->int_bld.elem_type, "");
 }
 
@@ -445,8 +442,8 @@ static void emit_f2u(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildFPToUI(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildFPToUI(ctx->ac.builder,
 			emit_data->args[0], bld_base->uint_bld.elem_type, "");
 }
 
@@ -454,8 +451,8 @@ static void emit_i2f(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildSIToFP(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildSIToFP(ctx->ac.builder,
 			emit_data->args[0], bld_base->base.elem_type, "");
 }
 
@@ -463,8 +460,8 @@ static void emit_u2f(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-	emit_data->output[emit_data->chan] = LLVMBuildUIToFP(builder,
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_data->output[emit_data->chan] = LLVMBuildUIToFP(ctx->ac.builder,
 			emit_data->args[0], bld_base->base.elem_type, "");
 }
 
@@ -473,9 +470,9 @@ build_tgsi_intrinsic_nomem(const struct lp_build_tgsi_action *action,
 			   struct lp_build_tgsi_context *bld_base,
 			   struct lp_build_emit_data *emit_data)
 {
-	struct lp_build_context *base = &bld_base->base;
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	emit_data->output[emit_data->chan] =
-		lp_build_intrinsic(base->gallivm->builder, action->intr_name,
+		lp_build_intrinsic(ctx->ac.builder, action->intr_name,
 				   emit_data->dst_type, emit_data->args,
 				   emit_data->arg_count, LP_FUNC_ATTR_READNONE);
 }
@@ -486,7 +483,7 @@ static void emit_bfi(const struct lp_build_tgsi_action *action,
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
+	LLVMBuilderRef builder = ctx->ac.builder;
 	LLVMValueRef bfi_args[3];
 	LLVMValueRef bfi_sm5;
 	LLVMValueRef cond;
@@ -530,8 +527,6 @@ static void emit_bfe(const struct lp_build_tgsi_action *action,
 		     struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = &ctx->gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
 	LLVMValueRef bfe_sm5;
 	LLVMValueRef cond;
 
@@ -540,10 +535,10 @@ static void emit_bfe(const struct lp_build_tgsi_action *action,
 			       emit_data->info->opcode == TGSI_OPCODE_IBFE);
 
 	/* Correct for GLSL semantics. */
-	cond = LLVMBuildICmp(builder, LLVMIntUGE, emit_data->args[2],
+	cond = LLVMBuildICmp(ctx->ac.builder, LLVMIntUGE, emit_data->args[2],
 			     LLVMConstInt(ctx->i32, 32, 0), "");
 	emit_data->output[emit_data->chan] =
-		LLVMBuildSelect(builder, cond, emit_data->args[0], bfe_sm5, "");
+		LLVMBuildSelect(ctx->ac.builder, cond, emit_data->args[0], bfe_sm5, "");
 }
 
 /* this is ffs in C */
@@ -553,7 +548,6 @@ static void emit_lsb(const struct lp_build_tgsi_action *action,
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
 	LLVMValueRef args[2] = {
 		emit_data->args[0],
 
@@ -568,15 +562,15 @@ static void emit_lsb(const struct lp_build_tgsi_action *action,
 	};
 
 	LLVMValueRef lsb =
-		lp_build_intrinsic(gallivm->builder, "llvm.cttz.i32",
+		lp_build_intrinsic(ctx->ac.builder, "llvm.cttz.i32",
 				emit_data->dst_type, args, ARRAY_SIZE(args),
 				LP_FUNC_ATTR_READNONE);
 
 	/* TODO: We need an intrinsic to skip this conditional. */
 	/* Check for zero: */
 	emit_data->output[emit_data->chan] =
-		LLVMBuildSelect(builder,
-				LLVMBuildICmp(builder, LLVMIntEQ, args[0],
+		LLVMBuildSelect(ctx->ac.builder,
+				LLVMBuildICmp(ctx->ac.builder, LLVMIntEQ, args[0],
 					      ctx->i32_0, ""),
 				lp_build_const_int32(gallivm, -1), lsb, "");
 }
@@ -607,12 +601,12 @@ static void emit_iabs(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 
 	emit_data->output[emit_data->chan] =
 		lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_IMAX,
 					  emit_data->args[0],
-					  LLVMBuildNeg(builder,
+					  LLVMBuildNeg(ctx->ac.builder,
 						       emit_data->args[0], ""));
 }
 
@@ -620,7 +614,7 @@ static void emit_minmax_int(const struct lp_build_tgsi_action *action,
 			    struct lp_build_tgsi_context *bld_base,
 			    struct lp_build_emit_data *emit_data)
 {
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMIntPredicate op;
 
 	switch (emit_data->info->opcode) {
@@ -645,8 +639,8 @@ static void emit_minmax_int(const struct lp_build_tgsi_action *action,
 	}
 
 	emit_data->output[emit_data->chan] =
-		LLVMBuildSelect(builder,
-				LLVMBuildICmp(builder, op, emit_data->args[0],
+		LLVMBuildSelect(ctx->ac.builder,
+				LLVMBuildICmp(ctx->ac.builder, op, emit_data->args[0],
 					      emit_data->args[1], ""),
 				emit_data->args[0],
 				emit_data->args[1], "");
@@ -687,7 +681,6 @@ static void emit_up2h(const struct lp_build_tgsi_action *action,
 		      struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
 	LLVMContextRef context = bld_base->base.gallivm->context;
 	struct lp_build_context *uint_bld = &bld_base->uint_bld;
 	LLVMTypeRef i16;
@@ -699,10 +692,10 @@ static void emit_up2h(const struct lp_build_tgsi_action *action,
 	input = emit_data->args[0];
 
 	for (i = 0; i < 2; i++) {
-		val = i == 1 ? LLVMBuildLShr(builder, input, const16, "") : input;
-		val = LLVMBuildTrunc(builder, val, i16, "");
+		val = i == 1 ? LLVMBuildLShr(ctx->ac.builder, input, const16, "") : input;
+		val = LLVMBuildTrunc(ctx->ac.builder, val, i16, "");
 		val = ac_to_float(&ctx->ac, val);
-		emit_data->output[i] = LLVMBuildFPExt(builder, val, ctx->f32, "");
+		emit_data->output[i] = LLVMBuildFPExt(ctx->ac.builder, val, ctx->f32, "");
 	}
 }
 
@@ -713,7 +706,7 @@ static void emit_fdiv(const struct lp_build_tgsi_action *action,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 
 	emit_data->output[emit_data->chan] =
-		LLVMBuildFDiv(ctx->gallivm.builder,
+		LLVMBuildFDiv(ctx->ac.builder,
 			      emit_data->args[0], emit_data->args[1], "");
 
 	/* Use v_rcp_f32 instead of precise division. */
