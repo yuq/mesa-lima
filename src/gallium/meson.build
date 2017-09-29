@@ -1,4 +1,4 @@
-# Copyright © 2017 Intel Corporation
+# Copyright © 2017 Dylan Baker
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,44 +18,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_common = include_directories(
-  '../include', '.', 'mapi', 'mesa', 'gallium/include', 'gallium/auxiliary')
-inc_mesa = include_directories('mesa')
-inc_mapi = include_directories('mapi')
-inc_src = include_directories('.')
+inc_gallium = include_directories('include')
 
-libglsl_util = static_library(
-  'glsl_util',
-  files('mesa/main/extensions_table.c', 'mesa/main/imports.c',
-        'mesa/program/prog_parameter.c', 'mesa/program/symbol_table.c',
-        'mesa/program/dummy_errors.c'),
-  include_directories : [inc_common],
-  c_args : [c_vis_args],
-  build_by_default : false,
-)
-
-sha1_h = vcs_tag(
-  input : 'git_sha1.h.in',
-  output : 'git_sha1.h',
-)
-
-subdir('gtest')
-subdir('util')
-subdir('mapi/glapi/gen')
-subdir('mapi')
-# TODO: opengl
-# TODO: osmesa
-subdir('compiler')
-subdir('egl/wayland/wayland-drm')
-subdir('vulkan')
-subdir('amd')
-subdir('intel')
-# TODO: vc4
-subdir('mesa')
-subdir('loader')
-subdir('glx')
-if with_gbm
-  subdir('gbm')
-endif
-# TODO: egl
-subdir('gallium')
+subdir('auxiliary')
