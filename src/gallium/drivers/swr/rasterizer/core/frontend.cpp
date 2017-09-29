@@ -951,7 +951,7 @@ static void GeometryShaderStage(
                 }
 
 #if USE_SIMD16_FRONTEND
-                PA_STATE_CUT gsPa(pDC, (uint8_t*)pGsBuffers->pGsTransposed, numEmittedVerts, pState->outputVertexSize, reinterpret_cast<simd16mask *>(pCutBuffer), numEmittedVerts, numAttribs, pState->outputTopology, processCutVerts);
+                PA_STATE_CUT gsPa(pDC, (uint8_t*)pGsBuffers->pGsTransposed, numEmittedVerts, pState->outputVertexSize, reinterpret_cast<simd16mask *>(pCutBuffer), numEmittedVerts, numAttribs, pState->outputTopology, processCutVerts, pa.numVertsPerPrim);
 
 #else
                 PA_STATE_CUT gsPa(pDC, (uint8_t*)pGsBuffers->pGsTransposed, numEmittedVerts, pState->outputVertexSize, pCutBuffer, numEmittedVerts, numAttribs, pState->outputTopology, processCutVerts);
@@ -986,9 +986,10 @@ static void GeometryShaderStage(
                             {
 #if USE_SIMD16_FRONTEND
                                 simd16scalari vPrimId = _simd16_set1_epi32(pPrimitiveId[inputPrim]);
-
-                                gsPa.useAlternateOffset = false;
-                                pfnClipFunc(pDC, gsPa, workerId, attrib_simd16, GenMask(gsPa.NumPrims()), vPrimId);
+                                {
+                                    gsPa.useAlternateOffset = false;
+                                    pfnClipFunc(pDC, gsPa, workerId, attrib_simd16, GenMask(gsPa.NumPrims()), vPrimId);
+                                }
 #else
                                 simdscalari vPrimId = _simd_set1_epi32(pPrimitiveId[inputPrim]);
                                 pfnClipFunc(pDC, gsPa, workerId, attrib, GenMask(gsPa.NumPrims()), vPrimId);
@@ -1273,7 +1274,8 @@ static void TessellationStages(
             tsState.numDsOutputAttribs,
             tsData.ppIndices,
             tsData.NumPrimitives,
-            tsState.postDSTopology);
+            tsState.postDSTopology,
+            numVertsPerPrim);
 
         while (tessPa.HasWork())
         {
@@ -1498,7 +1500,8 @@ void ProcessDraw(
     }
 
     // choose primitive assembler
-    PA_FACTORY<IsIndexedT, IsCutIndexEnabledT> paFactory(pDC, state.topology, work.numVerts, gpVertexStore, numVerts, state.frontendState.vsVertexSize);
+    
+    PA_FACTORY<IsIndexedT, IsCutIndexEnabledT> paFactory(pDC, state.topology, work.numVerts, gpVertexStore, numVerts, state.frontendState.vsVertexSize, GetNumVerts(state.topology, 1));
     PA_STATE& pa = paFactory.GetPA();
 
 #if USE_SIMD16_FRONTEND
@@ -1727,9 +1730,10 @@ void ProcessDraw(
                                 if (HasRastT::value)
                                 {
                                     SWR_ASSERT(pDC->pState->pfnProcessPrims_simd16);
-
-                                    pa.useAlternateOffset = false;
-                                    pDC->pState->pfnProcessPrims_simd16(pDC, pa, workerId, prim_simd16, GenMask(numPrims), primID);
+                                    {
+                                        pa.useAlternateOffset = false;
+                                        pDC->pState->pfnProcessPrims_simd16(pDC, pa, workerId, prim_simd16, GenMask(numPrims), primID);
+                                    }
                                 }
                             }
                         }

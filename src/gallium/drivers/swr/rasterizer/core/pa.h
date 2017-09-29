@@ -77,11 +77,12 @@ struct PA_STATE
 
 #if ENABLE_AVX512_SIMD16
     bool useAlternateOffset{ false };
+    uint32_t numVertsPerPrim{ 0 };
 
 #endif
-    PA_STATE() {}
-    PA_STATE(DRAW_CONTEXT *in_pDC, uint8_t* in_pStreamBase, uint32_t in_streamSizeInVerts, uint32_t in_vertexStride) :
-        pDC(in_pDC), pStreamBase(in_pStreamBase), streamSizeInVerts(in_streamSizeInVerts), vertexStride(in_vertexStride) {}
+    PA_STATE(){}
+    PA_STATE(DRAW_CONTEXT *in_pDC, uint8_t* in_pStreamBase, uint32_t in_streamSizeInVerts, uint32_t in_vertexStride, uint32_t in_numVertsPerPrim) :
+        pDC(in_pDC), pStreamBase(in_pStreamBase), streamSizeInVerts(in_streamSizeInVerts), vertexStride(in_vertexStride), numVertsPerPrim(in_numVertsPerPrim) {}
 
     virtual bool HasWork() = 0;
     virtual simdvector& GetSimdVector(uint32_t index, uint32_t slot) = 0;
@@ -165,7 +166,7 @@ struct PA_STATE_OPT : public PA_STATE
 
     PA_STATE_OPT() {}
     PA_STATE_OPT(DRAW_CONTEXT* pDC, uint32_t numPrims, uint8_t* pStream, uint32_t streamSizeInVerts,
-        uint32_t vertexStride, bool in_isStreaming, PRIMITIVE_TOPOLOGY topo = TOP_UNKNOWN);
+        uint32_t vertexStride, bool in_isStreaming, uint32_t numVertsPerPrim, PRIMITIVE_TOPOLOGY topo = TOP_UNKNOWN);
 
     bool HasWork()
     {
@@ -430,8 +431,8 @@ struct PA_STATE_CUT : public PA_STATE
 
     PA_STATE_CUT() {}
     PA_STATE_CUT(DRAW_CONTEXT* pDC, uint8_t* in_pStream, uint32_t in_streamSizeInVerts, uint32_t in_vertexStride, SIMDMASK* in_pIndices, uint32_t in_numVerts,
-        uint32_t in_numAttribs, PRIMITIVE_TOPOLOGY topo, bool in_processCutVerts)
-        : PA_STATE(pDC, in_pStream, in_streamSizeInVerts, in_vertexStride)
+        uint32_t in_numAttribs, PRIMITIVE_TOPOLOGY topo, bool in_processCutVerts, uint32_t in_numVertsPerPrim)
+        : PA_STATE(pDC, in_pStream, in_streamSizeInVerts, in_vertexStride, in_numVertsPerPrim)
     {
         numVerts = in_streamSizeInVerts;
         numAttribs = in_numAttribs;
@@ -1144,9 +1145,10 @@ struct PA_TESS : PA_STATE
         uint32_t in_numAttributes,
         uint32_t* (&in_ppIndices)[3],
         uint32_t in_numPrims,
-        PRIMITIVE_TOPOLOGY in_binTopology) :
+        PRIMITIVE_TOPOLOGY in_binTopology,
+        uint32_t numVertsPerPrim) :
 
-        PA_STATE(in_pDC, nullptr, 0, in_vertexStride),
+        PA_STATE(in_pDC, nullptr, 0, in_vertexStride, numVertsPerPrim),
         m_pVertexData(in_pVertData),
         m_attributeStrideInVectors(in_attributeStrideInVectors),
         m_numAttributes(in_numAttributes),
@@ -1416,7 +1418,7 @@ private:
 template <typename IsIndexedT, typename IsCutIndexEnabledT>
 struct PA_FACTORY
 {
-    PA_FACTORY(DRAW_CONTEXT* pDC, PRIMITIVE_TOPOLOGY in_topo, uint32_t numVerts, PA_STATE::SIMDVERTEX *pVertexStore, uint32_t vertexStoreSize, uint32_t vertexStride) : topo(in_topo)
+    PA_FACTORY(DRAW_CONTEXT* pDC, PRIMITIVE_TOPOLOGY in_topo, uint32_t numVerts, PA_STATE::SIMDVERTEX *pVertexStore, uint32_t vertexStoreSize, uint32_t vertexStride, uint32_t numVertsPerPrim) : topo(in_topo)
     {
 #if KNOB_ENABLE_CUT_AWARE_PA == TRUE
         const API_STATE& state = GetApiState(pDC);
@@ -1433,14 +1435,14 @@ struct PA_FACTORY
             uint32_t numAttribs = state.feNumAttributes;
 
             new (&this->paCut) PA_STATE_CUT(pDC, reinterpret_cast<uint8_t *>(pVertexStore), vertexStoreSize * PA_STATE::SIMD_WIDTH,
-                vertexStride, &this->indexStore[0], numVerts, numAttribs, state.topology, false);
+                vertexStride, &this->indexStore[0], numVerts, numAttribs, state.topology, false, numVertsPerPrim);
             cutPA = true;
         }
         else
 #endif
         {
             uint32_t numPrims = GetNumPrims(in_topo, numVerts);
-            new (&this->paOpt) PA_STATE_OPT(pDC, numPrims, reinterpret_cast<uint8_t *>(pVertexStore), vertexStoreSize * PA_STATE::SIMD_WIDTH, vertexStride, false);
+            new (&this->paOpt) PA_STATE_OPT(pDC, numPrims, reinterpret_cast<uint8_t *>(pVertexStore), vertexStoreSize * PA_STATE::SIMD_WIDTH, vertexStride, false, numVertsPerPrim);
             cutPA = false;
         }
 

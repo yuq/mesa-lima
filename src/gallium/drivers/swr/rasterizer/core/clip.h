@@ -641,7 +641,7 @@ public:
                 }
             }
 
-            PA_STATE_OPT clipPA(pDC, numEmittedPrims, reinterpret_cast<uint8_t *>(&transposedPrims[0]), numEmittedVerts, SWR_VTX_NUM_SLOTS, true, clipTopology);
+            PA_STATE_OPT clipPA(pDC, numEmittedPrims, reinterpret_cast<uint8_t *>(&transposedPrims[0]), numEmittedVerts, SWR_VTX_NUM_SLOTS, true, NumVertsPerPrim, clipTopology);
 
             static const uint32_t primMaskMap[] = { 0x0, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f };
 
@@ -687,15 +687,21 @@ public:
         UPDATE_STAT_FE(CInvocations, numInvoc);
 
         // Read back viewport index if required
-        typename SIMD_T::Integer viewportIdx = SIMD_T::set1_epi32(0);
+        typename SIMD_T::Integer viewportIdx = SIMD_T::setzero_si();
+        typename SIMD_T::Vec4 vpiAttrib[NumVertsPerPrim];
+        typename SIMD_T::Integer vpai = SIMD_T::setzero_si();
 
         if (state.backendState.readViewportArrayIndex)
         {
-            typename SIMD_T::Vec4 vpiAttrib[NumVertsPerPrim];
             pa.Assemble(VERTEX_SGV_SLOT, vpiAttrib);
 
+            vpai = SIMD_T::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
+        }
+
+
+        if (state.backendState.readViewportArrayIndex) // VPAIOffsets are guaranteed 0-15 -- no OOB issues if they are offsets from 0 
+        {
             // OOB indices => forced to zero.
-            typename SIMD_T::Integer vpai = SIMD_T::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
             vpai = SIMD_T::max_epi32(vpai, SIMD_T::setzero_si());
             typename SIMD_T::Integer vNumViewports = SIMD_T::set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
             typename SIMD_T::Integer vClearMask = SIMD_T::cmplt_epi32(vpai, vNumViewports);

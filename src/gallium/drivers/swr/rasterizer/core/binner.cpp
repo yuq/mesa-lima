@@ -450,16 +450,22 @@ void SIMDCALL BinTrianglesImpl(
     typename SIMD_T::Float vRecipW1 = SIMD_T::set1_ps(1.0f);
     typename SIMD_T::Float vRecipW2 = SIMD_T::set1_ps(1.0f);
 
-    typename SIMD_T::Integer viewportIdx = SIMD_T::set1_epi32(0);
+    typename SIMD_T::Integer viewportIdx = SIMD_T::setzero_si();
+    typename SIMD_T::Vec4 vpiAttrib[3];
+    typename SIMD_T::Integer vpai = SIMD_T::setzero_si();
 
     if (state.backendState.readViewportArrayIndex)
     {
-        typename SIMD_T::Vec4 vpiAttrib[3];
         pa.Assemble(VERTEX_SGV_SLOT, vpiAttrib);
 
+        vpai = SIMD_T::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
+    }
+
+
+    if (state.backendState.readViewportArrayIndex) // VPAIOffsets are guaranteed 0-15 -- no OOB issues if they are offsets from 0 
+    {
         // OOB indices => forced to zero.
-        typename SIMD_T::Integer vpai = SIMD_T::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
-        vpai = SIMD_T::max_epi32(SIMD_T::setzero_si(), vpai);
+        vpai = SIMD_T::max_epi32(vpai, SIMD_T::setzero_si());
         typename SIMD_T::Integer vNumViewports = SIMD_T::set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
         typename SIMD_T::Integer vClearMask = SIMD_T::cmplt_epi32(vpai, vNumViewports);
         viewportIdx = SIMD_T::and_si(vClearMask, vpai);
@@ -814,6 +820,7 @@ endBinTriangles:
     {
         SIMD_T::store_si(reinterpret_cast<typename SIMD_T::Integer *>(aRTAI), SIMD_T::setzero_si());
     }
+
 
     // scan remaining valid triangles and bin each separately
     while (_BitScanForward(&triIndex, triMask))
@@ -1299,15 +1306,22 @@ void BinPointsImpl(
     const SWR_RASTSTATE& rastState = state.rastState;
 
     // Read back viewport index if required
-    typename SIMD_T::Integer viewportIdx = SIMD_T::set1_epi32(0);
+    typename SIMD_T::Integer viewportIdx = SIMD_T::setzero_si();
+    typename SIMD_T::Vec4 vpiAttrib[1];
+    typename SIMD_T::Integer vpai = SIMD_T::setzero_si();
+
     if (state.backendState.readViewportArrayIndex)
     {
-        typename SIMD_T::Vec4 vpiAttrib[1];
         pa.Assemble(VERTEX_SGV_SLOT, vpiAttrib);
 
+        vpai = SIMD_T::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
+    }
+
+
+    if (state.backendState.readViewportArrayIndex) // VPAIOffsets are guaranteed 0-15 -- no OOB issues if they are offsets from 0 
+    {
         // OOB indices => forced to zero.
-        typename SIMD_T::Integer vpai = SIMD_T::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
-        vpai = SIMD_T::max_epi32(SIMD_T::setzero_si(), vpai);
+        vpai = SIMD_T::max_epi32(vpai, SIMD_T::setzero_si());
         typename SIMD_T::Integer vNumViewports = SIMD_T::set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
         typename SIMD_T::Integer vClearMask = SIMD_T::cmplt_epi32(vpai, vNumViewports);
         viewportIdx = SIMD_T::and_si(vClearMask, vpai);
@@ -1626,15 +1640,22 @@ void SIMDCALL BinLinesImpl(
 
     typename SIMD_T::Float vRecipW[2] = { SIMD_T::set1_ps(1.0f), SIMD_T::set1_ps(1.0f) };
 
-    typename SIMD_T::Integer viewportIdx = SIMD_T::set1_epi32(0);
+    typename SIMD_T::Integer viewportIdx = SIMD_T::setzero_si();
+    typename SIMD_T::Vec4 vpiAttrib[2];
+    typename SIMD_T::Integer vpai = SIMD_T::setzero_si();
+
     if (state.backendState.readViewportArrayIndex)
     {
-        typename SIMD_T::Vec4 vpiAttrib[2];
         pa.Assemble(VERTEX_SGV_SLOT, vpiAttrib);
 
+        vpai = SIMD_T::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
+    }
+
+
+    if (state.backendState.readViewportArrayIndex) // VPAIOffsets are guaranteed 0-15 -- no OOB issues if they are offsets from 0 
+    {
         // OOB indices => forced to zero.
-        typename SIMD_T::Integer vpai = SIMD_T::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
-        vpai = SIMD_T::max_epi32(SIMD_T::setzero_si(), vpai);
+        vpai = SIMD_T::max_epi32(vpai, SIMD_T::setzero_si());
         typename SIMD_T::Integer vNumViewports = SIMD_T::set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
         typename SIMD_T::Integer vClearMask = SIMD_T::cmplt_epi32(vpai, vNumViewports);
         viewportIdx = SIMD_T::and_si(vClearMask, vpai);
