@@ -18,12 +18,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_gallium = include_directories('include')
-inc_gallium_winsys = include_directories('winsys')
-
-subdir('auxiliary')
-subdir('auxiliary/pipe-loader')
-subdir('drivers/ddebug')
-subdir('drivers/noop')
-subdir('drivers/trace')
-subdir('drivers/rbug')
+libnoop = static_library(
+  'noop',
+  files('noop_pipe.c', 'noop_public.h', 'noop_state.c'),
+  c_args : [c_vis_args],
+  include_directories : [inc_gallium, inc_include, inc_src, inc_gallium_aux],
+  build_by_default : false,
+)
