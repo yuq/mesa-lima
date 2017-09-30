@@ -241,14 +241,6 @@ field_value(uint64_t value, int start, int end)
    return (value & mask(start, end)) >> (start);
 }
 
-static inline uint64_t
-field_address(uint64_t value, int start, int end)
-{
-   /* no need to right shift for address/offset */
-   get_start_end_pos(&start, &end);
-   return (value & mask(start, end));
-}
-
 static struct gen_type
 string_to_type(struct parser_context *ctx, const char *s)
 {
@@ -826,6 +818,32 @@ iter_advance_field(struct gen_field_iterator *iter)
    return true;
 }
 
+static uint64_t
+iter_decode_field_raw(struct gen_field *field,
+                      const uint32_t *p,
+                      const uint32_t *end)
+{
+   uint64_t qw = 0;
+
+   if ((field->end - field->start) > 32) {
+      if ((p + 1) < end)
+         qw = ((uint64_t) p[1]) << 32;
+      qw |= p[0];
+   } else
+      qw = p[0];
+
+   qw = field_value(qw, field->start, field->end);
+
+   /* Address & offset types have to be aligned to dwords, their start bit is
+    * a reminder of the alignment requirement.
+    */
+   if (field->type.kind == GEN_TYPE_ADDRESS ||
+       field->type.kind == GEN_TYPE_OFFSET)
+      qw <<= field->start % 32;
+
+   return qw;
+}
+
 static void
 iter_decode_field(struct gen_field_iterator *iter)
 {
@@ -841,35 +859,28 @@ iter_decode_field(struct gen_field_iterator *iter)
 
    memset(&v, 0, sizeof(v));
 
-   if ((iter->field->end - iter->field->start) > 32) {
-      if (&iter->p[iter->dword + 1] < iter->p_end)
-         v.qw = ((uint64_t) iter->p[iter->dword+1] << 32);
-      v.qw |= iter->p[iter->dword];
-   } else
-      v.qw = iter->p[iter->dword];
+   v.qw = iter_decode_field_raw(iter->field,
+                                &iter->p[iter->dword], iter->p_end);
 
    const char *enum_name = NULL;
 
    switch (iter->field->type.kind) {
    case GEN_TYPE_UNKNOWN:
    case GEN_TYPE_INT: {
-      uint64_t value = field_value(v.qw, iter->field->start, iter->field->end);
-      snprintf(iter->value, sizeof(iter->value), "%"PRId64, value);
-      enum_name = gen_get_enum_name(&iter->field->inline_enum, value);
+      snprintf(iter->value, sizeof(iter->value), "%"PRId64, v.qw);
+      enum_name = gen_get_enum_name(&iter->field->inline_enum, v.qw);
       break;
    }
    case GEN_TYPE_UINT: {
-      uint64_t value = field_value(v.qw, iter->field->start, iter->field->end);
-      snprintf(iter->value, sizeof(iter->value), "%"PRIu64, value);
-      enum_name = gen_get_enum_name(&iter->field->inline_enum, value);
+      snprintf(iter->value, sizeof(iter->value), "%"PRIu64, v.qw);
+      enum_name = gen_get_enum_name(&iter->field->inline_enum, v.qw);
       break;
    }
    case GEN_TYPE_BOOL: {
       const char *true_string =
          iter->print_colors ? "\e[0;35mtrue\e[0m" : "true";
       snprintf(iter->value, sizeof(iter->value), "%s",
-               field_value(v.qw, iter->field->start, iter->field->end) ?
-               true_string : "false");
+               v.qw ? true_string : "false");
       break;
    }
    case GEN_TYPE_FLOAT:
@@ -877,8 +888,7 @@ iter_decode_field(struct gen_field_iterator *iter)
       break;
    case GEN_TYPE_ADDRESS:
    case GEN_TYPE_OFFSET:
-      snprintf(iter->value, sizeof(iter->value), "0x%08"PRIx64,
-               field_address(v.qw, iter->start, iter->end));
+      snprintf(iter->value, sizeof(iter->value), "0x%08"PRIx64, v.qw);
       break;
    case GEN_TYPE_STRUCT:
       snprintf(iter->value, sizeof(iter->value), "<struct %s>",
@@ -889,8 +899,7 @@ iter_decode_field(struct gen_field_iterator *iter)
       break;
    case GEN_TYPE_UFIXED:
       snprintf(iter->value, sizeof(iter->value), "%f",
-               (float) field_value(v.qw, iter->field->start,
-                                   iter->field->end) / (1 << iter->field->type.f));
+               (float) v.qw / (1 << iter->field->type.f));
       break;
    case GEN_TYPE_SFIXED:
       /* FIXME: Sign extend extracted field. */
@@ -899,10 +908,8 @@ iter_decode_field(struct gen_field_iterator *iter)
    case GEN_TYPE_MBO:
        break;
    case GEN_TYPE_ENUM: {
-      uint64_t value = field_value(v.qw, iter->field->start, iter->field->end);
-      snprintf(iter->value, sizeof(iter->value),
-               "%"PRId64, value);
-      enum_name = gen_get_enum_name(iter->field->type.gen_enum, value);
+      snprintf(iter->value, sizeof(iter->value), "%"PRId64, v.qw);
+      enum_name = gen_get_enum_name(iter->field->type.gen_enum, v.qw);
       break;
    }
    }
