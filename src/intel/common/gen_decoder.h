@@ -37,6 +37,7 @@ extern "C" {
 struct gen_spec;
 struct gen_group;
 struct gen_field;
+union gen_field_value;
 
 static inline uint32_t gen_make_gen(uint32_t major, uint32_t minor)
 {
@@ -57,8 +58,13 @@ struct gen_enum *gen_spec_find_enum(struct gen_spec *spec, const char *name);
 int gen_group_get_length(struct gen_group *group, const uint32_t *p);
 const char *gen_group_get_name(struct gen_group *group);
 uint32_t gen_group_get_opcode(struct gen_group *group);
+struct gen_field *gen_group_find_field(struct gen_group *group, const char *name);
 struct gen_enum *gen_spec_find_enum(struct gen_spec *spec, const char *name);
+
 bool gen_field_is_header(struct gen_field *field);
+void gen_field_decode(struct gen_field *field,
+                      const uint32_t *p, const uint32_t *end,
+                      union gen_field_value *value);
 
 struct gen_field_iterator {
    struct gen_group *group;
@@ -85,6 +91,8 @@ struct gen_spec {
    struct hash_table *registers_by_name;
    struct hash_table *registers_by_offset;
    struct hash_table *enums;
+
+   struct hash_table *access_cache;
 };
 
 struct gen_group {
@@ -144,6 +152,13 @@ struct gen_type {
          int i, f;
       };
    };
+};
+
+union gen_field_value {
+   bool b32;
+   float f32;
+   uint64_t u64;
+   int64_t i64;
 };
 
 struct gen_field {

@@ -568,6 +568,9 @@ gen_spec_load(const struct gen_device_info *devinfo)
    ctx.spec->enums =
       _mesa_hash_table_create(ctx.spec, _mesa_hash_string, _mesa_key_string_equal);
 
+   ctx.spec->access_cache =
+      _mesa_hash_table_create(ctx.spec, _mesa_hash_string, _mesa_key_string_equal);
+
    total_length = zlib_inflate(compress_genxmls,
                                sizeof(compress_genxmls),
                                (void **) &text_data);
@@ -675,6 +678,32 @@ gen_spec_find_instruction(struct gen_spec *spec, const uint32_t *p)
       uint32_t opcode = *p & command->opcode_mask;
       if (opcode == command->opcode)
          return command;
+   }
+
+   return NULL;
+}
+
+struct gen_field *
+gen_group_find_field(struct gen_group *group, const char *name)
+{
+   char path[256];
+   snprintf(path, sizeof(path), "%s/%s", group->name, name);
+
+   struct gen_spec *spec = group->spec;
+   struct hash_entry *entry = _mesa_hash_table_search(spec->access_cache,
+                                                      path);
+   if (entry)
+      return entry->data;
+
+   struct gen_field *field = group->fields;
+   while (field) {
+      if (strcmp(field->name, name) == 0) {
+         _mesa_hash_table_insert(spec->access_cache,
+                                 ralloc_strdup(spec, path),
+                                 field);
+         return field;
+      }
+      field = field->next;
    }
 
    return NULL;
@@ -979,6 +1008,14 @@ gen_field_is_header(struct gen_field *field)
    bits <<= field->start;
 
    return (field->parent->opcode_mask & bits) != 0;
+}
+
+void gen_field_decode(struct gen_field *field,
+                      const uint32_t *p, const uint32_t *end,
+                      union gen_field_value *value)
+{
+   uint32_t dword = field->start / 32;
+   value->u64 = iter_decode_field_raw(field, &p[dword], end);
 }
 
 void
