@@ -26,7 +26,7 @@
 
 #include "ppir.h"
 
-static bool create_alu_instr(ppir_block *block, ppir_node *node)
+static bool create_new_instr(ppir_block *block, ppir_node *node)
 {
    ppir_instr *instr = ppir_instr_create(block);
    if (!instr)
@@ -44,8 +44,11 @@ bool ppir_schedule_prog(ppir_compiler *comp)
    list_for_each_entry(ppir_block, block, &comp->block_list, list) {
       list_for_each_entry(ppir_node, node, &block->node_list, list) {
          switch (node->type) {
+         case ppir_node_type_load:
+            if (node->op != ppir_op_load_varying)
+               break;
          case ppir_node_type_alu:
-            if (!create_alu_instr(block, node))
+            if (!create_new_instr(block, node))
                return false;
             break;
          case ppir_node_type_store:
@@ -83,7 +86,7 @@ bool ppir_schedule_prog(ppir_compiler *comp)
             store->src.type = ppir_target_ssa;
             store->src.ssa = &alu->dest.ssa;
 
-            if (!create_alu_instr(block, move))
+            if (!create_new_instr(block, move))
                return false;
 
             move->instr->is_end = true;
@@ -107,6 +110,9 @@ bool ppir_schedule_prog(ppir_compiler *comp)
             break;
          case ppir_node_type_load:
          {
+            if (node->op == ppir_op_load_varying)
+               break;
+
             struct list_head move_list;
             list_inithead(&move_list);
 
@@ -140,7 +146,7 @@ bool ppir_schedule_prog(ppir_compiler *comp)
                   _mesa_set_remove(node->succs, entry);
                   ppir_node_replace_child(succ, node, move);
 
-                  if (!create_alu_instr(block, move) ||
+                  if (!create_new_instr(block, move) ||
                       !ppir_instr_insert_node(move->instr, node))
                      return false;
 
