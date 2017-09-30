@@ -235,7 +235,7 @@ mask(int start, int end)
 }
 
 static inline uint64_t
-field(uint64_t value, int start, int end)
+field_value(uint64_t value, int start, int end)
 {
    get_start_end_pos(&start, &end);
    return (value & mask(start, end)) >> (start);
@@ -692,32 +692,32 @@ int
 gen_group_get_length(struct gen_group *group, const uint32_t *p)
 {
    uint32_t h = p[0];
-   uint32_t type = field(h, 29, 31);
+   uint32_t type = field_value(h, 29, 31);
 
    switch (type) {
    case 0: /* MI */ {
-      uint32_t opcode = field(h, 23, 28);
+      uint32_t opcode = field_value(h, 23, 28);
       if (opcode < 16)
          return 1;
       else
-         return field(h, 0, 7) + 2;
+         return field_value(h, 0, 7) + 2;
       break;
    }
 
    case 2: /* BLT */ {
-      return field(h, 0, 7) + 2;
+      return field_value(h, 0, 7) + 2;
    }
 
    case 3: /* Render */ {
-      uint32_t subtype = field(h, 27, 28);
-      uint32_t opcode = field(h, 24, 26);
-      uint16_t whole_opcode = field(h, 16, 31);
+      uint32_t subtype = field_value(h, 27, 28);
+      uint32_t opcode = field_value(h, 24, 26);
+      uint16_t whole_opcode = field_value(h, 16, 31);
       switch (subtype) {
       case 0:
          if (whole_opcode == 0x6104 /* PIPELINE_SELECT_965 */)
             return 1;
          else if (opcode < 2)
-            return field(h, 0, 7) + 2;
+            return field_value(h, 0, 7) + 2;
          else
             return -1;
       case 1:
@@ -727,9 +727,9 @@ gen_group_get_length(struct gen_group *group, const uint32_t *p)
             return -1;
       case 2: {
          if (opcode == 0)
-            return field(h, 0, 7) + 2;
+            return field_value(h, 0, 7) + 2;
          else if (opcode < 3)
-            return field(h, 0, 15) + 2;
+            return field_value(h, 0, 15) + 2;
          else
             return -1;
       }
@@ -737,7 +737,7 @@ gen_group_get_length(struct gen_group *group, const uint32_t *p)
          if (whole_opcode == 0x780b)
             return 1;
          else if (opcode < 4)
-            return field(h, 0, 7) + 2;
+            return field_value(h, 0, 7) + 2;
          else
             return -1;
       }
@@ -853,13 +853,13 @@ iter_decode_field(struct gen_field_iterator *iter)
    switch (iter->field->type.kind) {
    case GEN_TYPE_UNKNOWN:
    case GEN_TYPE_INT: {
-      uint64_t value = field(v.qw, iter->start, iter->end);
+      uint64_t value = field_value(v.qw, iter->field->start, iter->field->end);
       snprintf(iter->value, sizeof(iter->value), "%"PRId64, value);
       enum_name = gen_get_enum_name(&iter->field->inline_enum, value);
       break;
    }
    case GEN_TYPE_UINT: {
-      uint64_t value = field(v.qw, iter->start, iter->end);
+      uint64_t value = field_value(v.qw, iter->field->start, iter->field->end);
       snprintf(iter->value, sizeof(iter->value), "%"PRIu64, value);
       enum_name = gen_get_enum_name(&iter->field->inline_enum, value);
       break;
@@ -868,7 +868,7 @@ iter_decode_field(struct gen_field_iterator *iter)
       const char *true_string =
          iter->print_colors ? "\e[0;35mtrue\e[0m" : "true";
       snprintf(iter->value, sizeof(iter->value), "%s",
-               field(v.qw, iter->start, iter->end) ?
+               field_value(v.qw, iter->field->start, iter->field->end) ?
                true_string : "false");
       break;
    }
@@ -889,8 +889,8 @@ iter_decode_field(struct gen_field_iterator *iter)
       break;
    case GEN_TYPE_UFIXED:
       snprintf(iter->value, sizeof(iter->value), "%f",
-               (float) field(v.qw, iter->start, iter->end) /
-               (1 << iter->field->type.f));
+               (float) field_value(v.qw, iter->field->start,
+                                   iter->field->end) / (1 << iter->field->type.f));
       break;
    case GEN_TYPE_SFIXED:
       /* FIXME: Sign extend extracted field. */
@@ -899,7 +899,7 @@ iter_decode_field(struct gen_field_iterator *iter)
    case GEN_TYPE_MBO:
        break;
    case GEN_TYPE_ENUM: {
-      uint64_t value = field(v.qw, iter->start, iter->end);
+      uint64_t value = field_value(v.qw, iter->field->start, iter->field->end);
       snprintf(iter->value, sizeof(iter->value),
                "%"PRId64, value);
       enum_name = gen_get_enum_name(iter->field->type.gen_enum, value);
