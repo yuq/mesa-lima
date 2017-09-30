@@ -188,6 +188,68 @@ static void ppir_schedule_build_instr_dependency(ppir_compiler *comp)
    }
 }
 
+static void ppir_schedule_calc_reg_pressure(ppir_instr *instr)
+{
+   int n = 0;
+
+   /* update all children's reg pressure */
+   ppir_instr_foreach_pred(instr, entry) {
+      ppir_instr *pred = ppir_instr_from_entry(entry);
+      if (pred->reg_pressure < 0)
+         ppir_schedule_calc_reg_pressure(pred);
+      n++;
+   }
+
+   /* leaf instr */
+   if (!n) {
+      instr->reg_pressure = 0;
+      return;
+   }
+
+   int i = 0, reg[n];
+   ppir_instr_foreach_pred(instr, entry) {
+      ppir_instr *pred = ppir_instr_from_entry(entry);
+      reg[i++] = pred->reg_pressure;
+   }
+
+   /* sort */
+   for (i = 0; i < n - 1; i++) {
+      for (int j = 0; j < n - i - 1; j++) {
+         if (reg[j] > reg[j + 1]) {
+            int tmp = reg[j + 1];
+            reg[j + 1] = reg[j];
+            reg[j] = tmp;
+         }
+      }
+   }
+
+   for (i = 0; i < n; i++) {
+      int pressure = reg[i] + n - (i + 1);
+      if (pressure > instr->reg_pressure)
+         instr->reg_pressure = pressure;
+   }
+}
+
+/* Register sensitive schedule algorithm from paper:
+ * "Register-Sensitive Selection, Duplication, and Sequencing of Instructions"
+ * Author: Vivek Sarkar,  Mauricio J. Serrano,  Barbara B. Simons
+ */
+static void ppir_schedule_block(ppir_block *block)
+{
+   /* step 2 */
+   list_for_each_entry(ppir_instr, instr, &block->instr_list, list) {
+      if (ppir_instr_is_root(instr))
+         ppir_schedule_calc_reg_pressure(instr);
+   }
+}
+
+static void _ppir_schedule_prog(ppir_compiler *comp)
+{
+   list_for_each_entry(ppir_block, block, &comp->block_list, list) {
+      ppir_schedule_block(block);
+   }
+}
+
 bool ppir_schedule_prog(ppir_compiler *comp)
 {
    if (!ppir_schedule_create_instr_from_node(comp))
@@ -196,6 +258,8 @@ bool ppir_schedule_prog(ppir_compiler *comp)
 
    ppir_schedule_build_instr_dependency(comp);
    ppir_instr_print_depend(comp);
+
+   _ppir_schedule_prog(comp);
 
    return true;
 }
