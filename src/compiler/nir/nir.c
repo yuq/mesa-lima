@@ -1969,6 +1969,10 @@ nir_intrinsic_from_system_value(gl_system_value val)
       return nir_intrinsic_load_subgroup_le_mask;
    case SYSTEM_VALUE_SUBGROUP_LT_MASK:
       return nir_intrinsic_load_subgroup_lt_mask;
+   case SYSTEM_VALUE_NUM_SUBGROUPS:
+      return nir_intrinsic_load_num_subgroups;
+   case SYSTEM_VALUE_SUBGROUP_ID:
+      return nir_intrinsic_load_subgroup_id;
    case SYSTEM_VALUE_LOCAL_GROUP_SIZE:
       return nir_intrinsic_load_local_group_size;
    default:
@@ -2040,6 +2044,10 @@ nir_system_value_from_intrinsic(nir_intrinsic_op intrin)
       return SYSTEM_VALUE_SUBGROUP_LE_MASK;
    case nir_intrinsic_load_subgroup_lt_mask:
       return SYSTEM_VALUE_SUBGROUP_LT_MASK;
+   case nir_intrinsic_load_num_subgroups:
+      return SYSTEM_VALUE_NUM_SUBGROUPS;
+   case nir_intrinsic_load_subgroup_id:
+      return SYSTEM_VALUE_SUBGROUP_ID;
    case nir_intrinsic_load_local_group_size:
       return SYSTEM_VALUE_LOCAL_GROUP_SIZE;
    default:

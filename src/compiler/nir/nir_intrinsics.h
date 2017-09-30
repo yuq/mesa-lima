@@ -381,6 +381,7 @@ SYSTEM_VALUE(subgroup_ge_mask, 0, 0, xx, xx, xx)
 SYSTEM_VALUE(subgroup_gt_mask, 0, 0, xx, xx, xx)
 SYSTEM_VALUE(subgroup_le_mask, 0, 0, xx, xx, xx)
 SYSTEM_VALUE(subgroup_lt_mask, 0, 0, xx, xx, xx)
+SYSTEM_VALUE(num_subgroups, 1, 0, xx, xx, xx)
 SYSTEM_VALUE(subgroup_id, 1, 0, xx, xx, xx)
 SYSTEM_VALUE(local_group_size, 3, 0, xx, xx, xx)
 
