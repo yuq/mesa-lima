@@ -19,5 +19,7 @@
 # SOFTWARE.
 
 inc_gallium = include_directories('include')
+inc_gallium_winsys = include_directories('winsys')
 
 subdir('auxiliary')
+subdir('auxiliary/pipe-loader')
