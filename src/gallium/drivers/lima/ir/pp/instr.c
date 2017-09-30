@@ -43,6 +43,8 @@ ppir_instr *ppir_instr_create(ppir_block *block)
       goto err_out;
 
    instr->index = block->comp->cur_instr_index++;
+   instr->reg_pressure = -1;
+
    list_addtail(&instr->list, &block->instr_list);
    return instr;
 
