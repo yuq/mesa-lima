@@ -39,7 +39,7 @@ static bool create_new_instr(ppir_block *block, ppir_node *node)
    return true;
 }
 
-bool ppir_schedule_prog(ppir_compiler *comp)
+static bool ppir_schedule_create_instr_from_node(ppir_compiler *comp)
 {
    list_for_each_entry(ppir_block, block, &comp->block_list, list) {
       list_for_each_entry(ppir_node, node, &block->node_list, list) {
@@ -167,5 +167,32 @@ bool ppir_schedule_prog(ppir_compiler *comp)
       }
    }
 
+   return true;
+}
+
+static void ppir_schedule_build_instr_dependency(ppir_compiler *comp)
+{
+   list_for_each_entry(ppir_block, block, &comp->block_list, list) {
+      list_for_each_entry(ppir_instr, instr, &block->instr_list, list) {
+         for (int i = 0; i < PPIR_INSTR_SLOT_NUM; i++) {
+            ppir_node *node = instr->slots[i];
+            if (node) {
+               ppir_node_foreach_pred(node, entry) {
+                  ppir_node *pred = ppir_node_from_entry(entry, pred);
+                  if (pred->instr && pred->instr != instr)
+                     ppir_instr_add_depend(instr, pred->instr);
+               }
+            }
+         }
+      }
+   }
+}
+
+bool ppir_schedule_prog(ppir_compiler *comp)
+{
+   if (!ppir_schedule_create_instr_from_node(comp))
+      return false;
+
+   ppir_schedule_build_instr_dependency(comp);
    return true;
 }
