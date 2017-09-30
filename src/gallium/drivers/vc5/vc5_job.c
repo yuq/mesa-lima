@@ -53,6 +53,16 @@ vc5_job_free(struct vc5_context *vc5, struct vc5_job *job)
 
         remove_from_ht(vc5->jobs, &job->key);
 
+        if (job->write_prscs) {
+                struct set_entry *entry;
+
+                set_foreach(job->write_prscs, entry) {
+                        const struct pipe_resource *prsc = entry->key;
+
+                        remove_from_ht(vc5->write_jobs, (void *)prsc);
+                }
+        }
+
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
                 if (job->cbufs[i]) {
                         remove_from_ht(vc5->write_jobs, job->cbufs[i]->texture);
@@ -118,6 +128,21 @@ vc5_job_add_bo(struct vc5_job *job, struct vc5_bo *bo)
                 job->submit.bo_handles = (uintptr_t)(void *)bo_handles;
         }
         bo_handles[job->submit.bo_handle_count++] = bo->handle;
+}
+
+void
+vc5_job_add_write_resource(struct vc5_job *job, struct pipe_resource *prsc)
+{
+        struct vc5_context *vc5 = job->vc5;
+
+        if (!job->write_prscs) {
+                job->write_prscs = _mesa_set_create(job,
+                                                    _mesa_hash_pointer,
+                                                    _mesa_key_pointer_equal);
+        }
+
+        _mesa_set_add(job->write_prscs, prsc);
+        _mesa_hash_table_insert(vc5->write_jobs, prsc, job);
 }
 
 void

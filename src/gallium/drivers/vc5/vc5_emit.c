@@ -440,6 +440,9 @@ vc5_emit_state(struct pipe_context *pctx)
                                                 cl_address(rsc->bo,
                                                            target->buffer_offset);
                                 };
+
+                                vc5_job_add_write_resource(vc5->job,
+                                                           target->buffer);
                                 /* XXX: buffer_size? */
                         }
                 } else {

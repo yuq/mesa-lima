@@ -199,6 +199,9 @@ struct vc5_job {
          * execute our job.
          */
         struct set *bos;
+
+        struct set *write_prscs;
+
         /* Size of the submit.bo_handles array. */
         uint32_t bo_handles_size;
 
@@ -437,6 +440,7 @@ struct vc5_job *vc5_get_job(struct vc5_context *vc5,
                             struct pipe_surface *zsbuf);
 struct vc5_job *vc5_get_job_for_fbo(struct vc5_context *vc5);
 void vc5_job_add_bo(struct vc5_job *job, struct vc5_bo *bo);
+void vc5_job_add_write_resource(struct vc5_job *job, struct pipe_resource *prsc);
 void vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job);
 void vc5_flush_jobs_writing_resource(struct vc5_context *vc5,
                                      struct pipe_resource *prsc);
