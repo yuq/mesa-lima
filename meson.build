@@ -433,13 +433,27 @@ endif
 
 # Check for some linker flags
 ld_args_bsymbolic = []
-if cc.links('int main() { return 0; }', args : '-Wl,-Bsymbolic')
+if cc.links('int main() { return 0; }', args : '-Wl,-Bsymbolic', name : 'Bsymbolic')
   ld_args_bsymbolic += '-Wl,-Bsymbolic'
 endif
 ld_args_gc_sections = []
 if cc.links('static char unused() { return 5; } int main() { return 0; }',
-            args : '-Wl,--gc-sections')
+            args : '-Wl,--gc-sections', name : 'gc-sections')
   ld_args_gc_sections += '-Wl,--gc-sections'
+endif
+with_ld_version_script = false
+if cc.links('int main() { return 0; }',
+            args : '-Wl,--version-script=@0@'.format(
+              join_paths(meson.source_root(), 'build-support/conftest.map')),
+            name : 'version-script')
+  with_ld_version_script = true
+endif
+with_ld_dynamic_list = false
+if cc.links('int main() { return 0; }',
+            args : '-Wl,--dynamic-list=@0@'.format(
+              join_paths(meson.source_root(), 'build-support/conftest.dyn')),
+            name : 'dynamic-list')
+  with_ld_dynamic_list = true
 endif
 
 # check for dl support
