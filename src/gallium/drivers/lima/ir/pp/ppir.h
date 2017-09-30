@@ -249,6 +249,9 @@ typedef struct ppir_instr {
    ppir_node *slots[PPIR_INSTR_SLOT_NUM];
    ppir_const constant[2];
    bool is_end;
+
+   /* for scheduler */
+   struct set *preds, *succs;
 } ppir_instr;
 
 typedef struct ppir_block {
@@ -353,7 +356,20 @@ static inline bool ppir_node_target_equal(ppir_src *src, ppir_dest *dest)
 
 ppir_instr *ppir_instr_create(ppir_block *block);
 bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node);
+void ppir_instr_add_depend(ppir_instr *succ, ppir_instr *pred);
 void ppir_instr_print_pre_schedule(ppir_compiler *comp);
+
+#define ppir_instr_from_entry(entry) ((ppir_instr *)(entry->key))
+
+#define ppir_instr_foreach_pred(instr, entry)                           \
+   for (struct set_entry *entry = _mesa_set_next_entry(instr->preds, NULL); \
+        entry != NULL;                                                  \
+        entry = _mesa_set_next_entry(instr->preds, entry))
+
+#define ppir_instr_foreach_succ(instr, entry)                           \
+   for (struct set_entry *entry = _mesa_set_next_entry(instr->succs, NULL); \
+        entry != NULL;                                                  \
+        entry = _mesa_set_next_entry(instr->succs, entry))
 
 bool ppir_lower_prog(ppir_compiler *comp);
 bool ppir_schedule_prog(ppir_compiler *comp);
