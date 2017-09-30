@@ -192,7 +192,10 @@ bool ppir_schedule_prog(ppir_compiler *comp)
 {
    if (!ppir_schedule_create_instr_from_node(comp))
       return false;
+   ppir_instr_print_list(comp);
 
    ppir_schedule_build_instr_dependency(comp);
+   ppir_instr_print_depend(comp);
+
    return true;
 }
