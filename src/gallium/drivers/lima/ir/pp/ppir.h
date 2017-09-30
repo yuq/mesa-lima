@@ -200,9 +200,14 @@ typedef struct {
    int num_src;
 } ppir_alu_node;
 
+typedef struct ppir_const {
+   union fi value[4];
+   int num;
+} ppir_const;
+
 typedef struct {
    ppir_node node;
-   union fi value[4];
+   ppir_const constant;
    ppir_dest dest;
 } ppir_const_node;
 
@@ -235,13 +240,14 @@ enum ppir_instr_slot {
    PPIR_INSTR_SLOT_ALU_COMBINE,
    PPIR_INSTR_SLOT_STORE_TEMP,
    PPIR_INSTR_SLOT_NUM,
+   PPIR_INSTR_SLOT_ALU_START = PPIR_INSTR_SLOT_ALU_VEC_MUL,
+   PPIR_INSTR_SLOT_ALU_END = PPIR_INSTR_SLOT_ALU_COMBINE,
 };
 
 typedef struct ppir_instr {
    struct list_head list;
    ppir_node *slots[PPIR_INSTR_SLOT_NUM];
-   union fi constant[2][4];
-   unsigned constant_num[2];
+   ppir_const constant[2];
    bool is_end;
 } ppir_instr;
 
