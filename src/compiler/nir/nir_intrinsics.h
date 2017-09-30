@@ -364,6 +364,9 @@ SYSTEM_VALUE(blend_const_color_a_float, 1, 0, xx, xx, xx)
 SYSTEM_VALUE(blend_const_color_rgba8888_unorm, 1, 0, xx, xx, xx)
 SYSTEM_VALUE(blend_const_color_aaaa8888_unorm, 1, 0, xx, xx, xx)
 
+/* Intel specific system values */
+SYSTEM_VALUE(intel_thread_local_id, 1, 0, xx, xx, xx)
+
 /**
  * Barycentric coordinate intrinsics.
  *

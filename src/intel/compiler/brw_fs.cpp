@@ -996,6 +996,7 @@ fs_visitor::import_uniforms(fs_visitor *v)
    this->push_constant_loc = v->push_constant_loc;
    this->pull_constant_loc = v->pull_constant_loc;
    this->uniforms = v->uniforms;
+   this->thread_local_id = v->thread_local_id;
 }
 
 void
@@ -6834,8 +6835,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
 {
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
    shader = brw_nir_apply_sampler_key(shader, compiler, &key->tex, true);
-
-   brw_nir_lower_cs_intrinsics(shader, prog_data);
+   brw_nir_lower_cs_intrinsics(shader);
    shader = brw_postprocess_nir(shader, compiler, true);
 
    prog_data->local_size[0] = shader->info.cs.local_size[0];

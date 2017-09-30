@@ -88,6 +88,16 @@ fs_visitor::nir_setup_uniforms()
    }
 
    uniforms = nir->num_uniforms / 4;
+
+   if (stage == MESA_SHADER_COMPUTE) {
+      /* Add a uniform for the thread local id.  It must be the last uniform
+       * on the list.
+       */
+      assert(uniforms == prog_data->nr_params);
+      uint32_t *param = brw_stage_prog_data_add_params(prog_data, 1);
+      *param = BRW_PARAM_BUILTIN_THREAD_LOCAL_ID;
+      thread_local_id = fs_reg(UNIFORM, uniforms++, BRW_REGISTER_TYPE_UD);
+   }
 }
 
 static bool
@@ -3410,6 +3420,10 @@ fs_visitor::nir_emit_cs_intrinsic(const fs_builder &bld,
    case nir_intrinsic_barrier:
       emit_barrier();
       cs_prog_data->uses_barrier = true;
+      break;
+
+   case nir_intrinsic_load_intel_thread_local_id:
+      bld.MOV(retype(dest, BRW_REGISTER_TYPE_UD), thread_local_id);
       break;
 
    case nir_intrinsic_load_local_invocation_id:
