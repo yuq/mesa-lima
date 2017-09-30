@@ -25,6 +25,7 @@
 #include <stdio.h>
 
 #include "util/ralloc.h"
+#include "util/hash_table.h"
 
 #include "ppir.h"
 
@@ -34,8 +35,32 @@ ppir_instr *ppir_instr_create(ppir_block *block)
    if (!instr)
       return NULL;
 
+   instr->preds = _mesa_set_create(instr, _mesa_hash_pointer, _mesa_key_pointer_equal);
+   if (!instr->preds)
+      goto err_out;
+   instr->succs = _mesa_set_create(instr, _mesa_hash_pointer, _mesa_key_pointer_equal);
+   if (!instr->succs)
+      goto err_out;
+
    list_addtail(&instr->list, &block->instr_list);
    return instr;
+
+err_out:
+   ralloc_free(instr);
+   return NULL;
+}
+
+void ppir_instr_add_depend(ppir_instr *succ, ppir_instr *pred)
+{
+   /* don't add duplicated instr */
+   ppir_instr_foreach_pred(succ, entry) {
+      ppir_instr *instr = ppir_instr_from_entry(entry);
+      if (instr == pred)
+         return;
+   }
+
+   _mesa_set_add(succ->preds, pred);
+   _mesa_set_add(pred->succs, succ);
 }
 
 /* check whether a const slot fix into another const slot */
