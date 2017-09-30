@@ -38,6 +38,30 @@ ppir_instr *ppir_instr_create(ppir_block *block)
    return instr;
 }
 
+/* check whether a const slot fix into another const slot */
+static bool ppir_instr_insert_const(ppir_const *dst, const ppir_const *src,
+                                    uint8_t *swizzle)
+{
+   int i, j;
+
+   for (i = 0; i < src->num; i++) {
+      for (j = 0; j < dst->num; j++) {
+         if (src->value[i].ui == dst->value[j].ui)
+            break;
+      }
+
+      if (j == dst->num) {
+         if (dst->num == 4)
+            return false;
+         dst->value[dst->num++] = src->value[i];
+      }
+
+      swizzle[i] = j;
+   }
+
+   return true;
+}
+
 bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
 {
    switch (node->op) {
@@ -51,8 +75,46 @@ bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
       break;
 
    case ppir_op_const:
-      break;
+   {
+      int i;
+      ppir_const_node *c = ppir_node_to_const(node);
+      const ppir_const *nc = &c->constant;
 
+      for (i = 0; i < 2; i++) {
+         ppir_const ic = instr->constant[i];
+         uint8_t swizzle[4] = {0};
+
+         if (ppir_instr_insert_const(&ic, nc, swizzle)) {
+            instr->constant[i] = ic;
+
+            /* make alu node src reflact the const reg */
+            for (int j = PPIR_INSTR_SLOT_ALU_START; j <= PPIR_INSTR_SLOT_ALU_END; j++) {
+               if (!instr->slots[j])
+                  continue;
+
+               ppir_alu_node *alu = ppir_node_to_alu(instr->slots[j]);
+               for (int p = 0; p < alu->num_src; p++) {
+                  ppir_src *src = alu->src + p;
+                  if (ppir_node_target_equal(src, &c->dest)) {
+                     src->type = ppir_target_pipeline;
+                     src->pipeline = ppir_pipeline_reg_const0 + i;
+
+                     for (int q = 0; q < 4; q++)
+                        src->swizzle[q] = swizzle[src->swizzle[q]];
+                  }
+               }
+            }
+
+            break;
+         }
+      }
+
+      /* no const slot can insert */
+      if (i == 2)
+         return false;
+
+      break;
+   }
    case ppir_op_load_varying:
       if (instr->slots[PPIR_INSTR_SLOT_VARYING])
          return false;
@@ -93,7 +155,7 @@ void ppir_instr_print_pre_schedule(ppir_compiler *comp)
    printf("      ");
    for (int i = 0; i < PPIR_INSTR_SLOT_NUM; i++)
       printf("%-*s ", ppir_instr_fields[i].len, ppir_instr_fields[i].name);
-   printf("\n");
+   printf("const0|1\n");
 
    list_for_each_entry(ppir_block, block, &comp->block_list, list) {
       int index = 0;
@@ -106,6 +168,13 @@ void ppir_instr_print_pre_schedule(ppir_compiler *comp)
                printf("%-*d ", ppir_instr_fields[i].len, node->index);
             else
                printf("%-*s ", ppir_instr_fields[i].len, "null");
+         }
+         for (int i = 0; i < 2; i++) {
+            if (i)
+               printf("| ");
+
+            for (int j = 0; j < instr->constant[i].num; j++)
+               printf("%f ", instr->constant[i].value[j].f);
          }
          printf("\n");
       }
