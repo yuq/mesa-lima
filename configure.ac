@@ -606,16 +606,7 @@ dnl Check if linker supports version scripts
 dnl
 AC_MSG_CHECKING([if the linker supports version-scripts])
 save_LDFLAGS=$LDFLAGS
-LDFLAGS="$LDFLAGS -Wl,--version-script=conftest.map"
-cat > conftest.map <<EOF
-VERSION_1 {
-     global:
-         main;
-
-     local:
-         *;
-};
-EOF
+LDFLAGS="$LDFLAGS -Wl,--version-script=$srcdir/build-support/conftest.map"
 AC_LINK_IFELSE(
     [AC_LANG_SOURCE([int main() { return 0;}])],
     [have_ld_version_script=yes;AC_MSG_RESULT(yes)],
@@ -628,12 +619,7 @@ dnl Check if linker supports dynamic list files
 dnl
 AC_MSG_CHECKING([if the linker supports --dynamic-list])
 save_LDFLAGS=$LDFLAGS
-LDFLAGS="$LDFLAGS -Wl,--dynamic-list=conftest.dyn"
-cat > conftest.dyn <<EOF
-{
-	radeon_drm_winsys_create;
-};
-EOF
+LDFLAGS="$LDFLAGS -Wl,--dynamic-list=$srcdir/build-support/conftest.dyn"
 AC_LINK_IFELSE(
     [AC_LANG_SOURCE([int main() { return 0;}])],
     [have_ld_dynamic_list=yes;AC_MSG_RESULT(yes)],
