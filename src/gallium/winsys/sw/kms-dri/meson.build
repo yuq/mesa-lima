@@ -1,4 +1,4 @@
-# Copyright © 2017 Dylan Baker
+# Copyright © 2017 Intel Corporation
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,51 +18,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_gallium = include_directories('include')
-inc_gallium_drivers = include_directories('drivers')
-inc_gallium_winsys = include_directories('winsys')
 
-subdir('auxiliary')
-subdir('auxiliary/pipe-loader')
-subdir('drivers/ddebug')
-subdir('drivers/noop')
-subdir('drivers/trace')
-subdir('drivers/rbug')
-subdir('drivers/radeon')
-subdir('drivers/radeonsi')
-subdir('winsys/sw/null')
-subdir('winsys/sw/dri')
-subdir('winsys/sw/kms-dri')
-subdir('winsys/sw/wrapper')
-subdir('winsys/radeon/drm')
-subdir('winsys/amdgpu/drm')
-subdir('state_trackers/dri')
-# TODO: freedreno
-# TODO: i915
-# TODO: nouveau
-# TODO: SVGA
-# TODO: r300
-# TODO: r600
-# TODO: etnaviv
-# TODO: IMX
-# TODO: PL111
-# TODO: softpipe
-# TODO: llvmpipe
-# TODO: SWR
-# TODO: vc4
-# TODO: virgl
-# TODO: winsys/sw/xlib
-# TODO: clover
-if with_dri
-  #subdir('targets/dri')
-endif
-# TODO: dricommon
-# TODO: xlib-glx
-# TODO: OMX
-# TODO: osmesa
-# TODO: VA
-# TODO: vdpau
-# TODO: xa
-# TODO: xvmc
-# TODO: nine
-# TODO: tests
+libswkmsdri = static_library(
+  'swkmsdri',
+  files('kms_dri_sw_winsys.c', 'kms_dri_sw_winsys.h'),
+  c_args : c_vis_args,
+  include_directories : [inc_gallium, inc_include, inc_src, inc_gallium_aux],
+  dependencies : dep_libdrm,
+  build_by_default : false,
+)

@@ -523,10 +523,14 @@ else
   dep_clock = cc.find_library('rt')
 endif
 
+with_gallium_drisw_kms = false
 dep_libdrm = dependency('libdrm', version : '>= 2.4.75',
                         required : with_dri2 or with_dri3)
 if dep_libdrm.found()
   pre_args += '-DHAVE_LIBDRM'
+  if with_dri_platform == 'drm' and with_dri
+    with_gallium_drisw_kms = true
+  endif
 endif
 
 # TODO: some of these may be conditional

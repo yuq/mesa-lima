@@ -26,8 +26,13 @@ files_pipe_loader = files(
   'driinfo_gallium.h',
 )
 
+libpipe_loader_defines = []
+
 if dep_libdrm.found()
   files_pipe_loader += files('pipe_loader_drm.c')
+endif
+if with_gallium_drisw_kms
+  libpipe_loader_defines += '-DHAVE_PIPE_LOADER_KMS'
 endif
 
 libpipe_loader_static = static_library(
@@ -38,7 +43,8 @@ libpipe_loader_static = static_library(
     inc_gallium_winsys,
   ],
   c_args : [
-    c_vis_args, '-DHAVE_PIPE_LOADER_DRI', '-DGALLIUM_STATIC_TARGETS=1'
+    c_vis_args, '-DHAVE_PIPE_LOADER_DRI', '-DGALLIUM_STATIC_TARGETS=1',
+    libpipe_loader_defines,
   ],
   link_with : [libloader, libxmlconfig],
   dependencies : [dep_libdrm],
@@ -53,8 +59,8 @@ libpipe_loader_dynamic = static_library(
     inc_gallium_winsys,
   ],
   c_args : [
-    c_vis_args, '-DHAVE_PIPE_LOADER_DRI', '-DPIPE_SEARCH_DIR="@0@"'.format(
-      join_paths(get_option('libdir'), 'gallium-pipe')
+    c_vis_args, libpipe_loader_defines, '-DHAVE_PIPE_LOADER_DRI',
+    '-DPIPE_SEARCH_DIR="@0@"'.format(join_paths(get_option('libdir'), 'gallium-pipe')
     )
   ],
   link_with : [libloader, libxmlconfig],
