@@ -18,51 +18,38 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_gallium = include_directories('include')
-inc_gallium_drivers = include_directories('drivers')
-inc_gallium_winsys = include_directories('winsys')
+files_libradeon = files(
+  'r600_buffer_common.c',
+  'r600_cs.h',
+  'r600_gpu_load.c',
+  'r600_perfcounter.c',
+  'r600_pipe_common.c',
+  'r600_pipe_common.h',
+  'r600_query.c',
+  'r600_query.h',
+  'r600_test_dma.c',
+  'r600_texture.c',
+  'radeon_uvd.c',
+  'radeon_uvd.h',
+  'radeon_vcn_dec.c',
+  'radeon_vcn_dec.h',
+  'radeon_vce_40_2_2.c',
+  'radeon_vce_50.c',
+  'radeon_vce_52.c',
+  'radeon_vce.c',
+  'radeon_vce.h',
+  'radeon_video.c',
+  'radeon_video.h',
+  'radeon_winsys.h',
+)
 
-subdir('auxiliary')
-subdir('auxiliary/pipe-loader')
-subdir('drivers/ddebug')
-subdir('drivers/noop')
-subdir('drivers/trace')
-subdir('drivers/rbug')
-subdir('drivers/radeon')
-subdir('drivers/radeonsi')
-subdir('winsys/radeon/drm')
-subdir('winsys/amdgpu/drm')
-subdir('state_trackers/dri')
-# TODO: freedreno
-# TODO: i915
-# TODO: nouveau
-# TODO: SVGA
-# TODO: r300
-# TODO: r600
-# TODO: etnaviv
-# TODO: IMX
-# TODO: PL111
-# TODO: softpipe
-# TODO: llvmpipe
-# TODO: SWR
-# TODO: vc4
-# TODO: virgl
-# TODO: winsys/sw/null
-# TODO: winsys/sw/xlib
-# TODO: winsys/sw/dri
-# TODO: winsys/sw/kms-dri
-# TODO: winsys/sw/wrapper
-# TODO: clover
-if with_dri
-  #subdir('targets/dri')
-endif
-# TODO: dricommon
-# TODO: xlib-glx
-# TODO: OMX
-# TODO: osmesa
-# TODO: VA
-# TODO: vdpau
-# TODO: xa
-# TODO: xvmc
-# TODO: nine
-# TODO: tests
+libradeon = static_library(
+  'radeon',
+  files_libradeon,
+  c_args : ['-Wstrict-overflow=0', c_vis_args],
+  dependencies : [dep_llvm, dep_clock],
+  include_directories : [
+    inc_include, inc_src, inc_gallium, inc_gallium_aux, inc_gallium_drivers,
+  ],
+  build_by_default : false,
+)

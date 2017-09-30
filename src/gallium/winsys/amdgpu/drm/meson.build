@@ -18,51 +18,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_gallium = include_directories('include')
-inc_gallium_drivers = include_directories('drivers')
-inc_gallium_winsys = include_directories('winsys')
-
-subdir('auxiliary')
-subdir('auxiliary/pipe-loader')
-subdir('drivers/ddebug')
-subdir('drivers/noop')
-subdir('drivers/trace')
-subdir('drivers/rbug')
-subdir('drivers/radeon')
-subdir('drivers/radeonsi')
-subdir('winsys/radeon/drm')
-subdir('winsys/amdgpu/drm')
-subdir('state_trackers/dri')
-# TODO: freedreno
-# TODO: i915
-# TODO: nouveau
-# TODO: SVGA
-# TODO: r300
-# TODO: r600
-# TODO: etnaviv
-# TODO: IMX
-# TODO: PL111
-# TODO: softpipe
-# TODO: llvmpipe
-# TODO: SWR
-# TODO: vc4
-# TODO: virgl
-# TODO: winsys/sw/null
-# TODO: winsys/sw/xlib
-# TODO: winsys/sw/dri
-# TODO: winsys/sw/kms-dri
-# TODO: winsys/sw/wrapper
-# TODO: clover
-if with_dri
-  #subdir('targets/dri')
-endif
-# TODO: dricommon
-# TODO: xlib-glx
-# TODO: OMX
-# TODO: osmesa
-# TODO: VA
-# TODO: vdpau
-# TODO: xa
-# TODO: xvmc
-# TODO: nine
-# TODO: tests
+libamdgpuwinsys = static_library(
+  'amdgpuwinsys',
+  files(
+    'amdgpu_bo.c', 'amdgpu_bo.h', 'amdgpu_cs.c', 'amdgpu_cs.h',
+    'amdgpu_public.h', 'amdgpu_surface.c', 'amdgpu_winsys.c',
+    'amdgpu_winsys.h',
+  ),
+  include_directories : [
+    inc_amd, inc_gallium, inc_gallium_aux, inc_include, inc_src,
+  ],
+  c_args : [c_vis_args],
+  cpp_args : [cpp_vis_args],
+  link_with : libamdgpu_addrlib,
+  dependencies : dep_libdrm_amdgpu,
+  build_by_default : false,
+)

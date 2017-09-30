@@ -543,7 +543,15 @@ dep_expat = dependency('expat')
 # this only exists on linux so either this is linux and it will be found, or
 # its not linux and and wont
 dep_m = cc.find_library('m', required : false)
-dep_libdrm_amdgpu = dependency('libdrm_amdgpu', version : '>= 2.4.82', required : with_amd_vk)
+
+dep_libdrm_amdgpu = []
+dep_libdrm_radeon = []
+if with_amd_vk or with_gallium_radeonsi
+  dep_libdrm_amdgpu = dependency('libdrm_amdgpu', version : '>= 2.4.84')
+endif
+if with_gallium_radeonsi # older radeon too
+  dep_libdrm_radeon = dependency('libdrm_radeon', version : '>= 2.4.71')
+endif
 
 llvm_modules = ['bitwriter', 'engine', 'mcdisassembler', 'mcjit']
 if with_amd_vk
@@ -566,12 +574,12 @@ if with_llvm
       '-DMESA_LLVM_VERSION_PATCH=@0@'.format(_llvm_patch),
     ]
   else
-    if with_amd_vk
-      error('The following drivers requires LLVM: Radv. One of these is enabled, but LLVM was not found.')
+    if with_amd_vk or with_gallium_radeonsi
+      error('The following drivers requires LLVM: Radv, RadeonSI. One of these is enabled, but LLVM was not found.')
     endif
   endif
-elif with_amd_vk
-  error('The following drivers requires LLVM: Radv. One of these is enabled, but LLVM is disabled.')
+elif with_amd_vk or with_gallium_radeonsi
+  error('The following drivers requires LLVM: Radv, RadeonSI. One of these is enabled, but LLVM is disabled.')
 endif
 
 dep_glvnd = []
