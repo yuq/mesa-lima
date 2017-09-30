@@ -540,8 +540,8 @@ if dep_thread.found() and host_machine.system() == 'linux'
   pre_args += '-DHAVE_PTHREAD'
 endif
 dep_elf = dependency('libelf', required : false)
-if not dep_elf.found()
-  dep_elf = cc.find_library('elf', required : with_amd_vk) # TODO: clover, r600, radeonsi
+if not dep_elf.found() and (with_amd_vk or with_gallium_radeonsi) # TODO: clover, r600
+  dep_elf = cc.find_library('elf')
 endif
 dep_expat = dependency('expat')
 # this only exists on linux so either this is linux and it will be found, or

@@ -66,7 +66,7 @@ si_driinfo_h = custom_target(
 
 libradeonsi = static_library(
   'radeonsi',
-  [files_libradeonsi, si_driinfo_h, nir_opcodes_h],
+  [files_libradeonsi, si_driinfo_h, nir_opcodes_h, sid_tables_h],
   include_directories : [
     inc_src, inc_include, inc_gallium, inc_gallium_aux, inc_amd_common,
     inc_gallium_drivers,

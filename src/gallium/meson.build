@@ -54,9 +54,8 @@ subdir('state_trackers/dri')
 # TODO: winsys/sw/xlib
 # TODO: clover
 if with_dri
-  #subdir('targets/dri')
+  subdir('targets/dri')
 endif
-# TODO: dricommon
 # TODO: xlib-glx
 # TODO: OMX
 # TODO: osmesa
