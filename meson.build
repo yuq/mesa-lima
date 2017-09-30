@@ -116,27 +116,6 @@ endif
 # TODO: other OSes
 with_dri_platform = 'drm'
 
-# TODO: conditionalize libdrm requirement
-dep_libdrm = dependency('libdrm', version : '>= 2.4.75')
-pre_args += '-DHAVE_LIBDRM'
-
-with_dri2 = with_dri_platform == 'drm' and dep_libdrm.found()
-with_dri3 = get_option('dri3')
-if with_dri3 == 'auto'
-  if host_machine.system() == 'linux' and with_dri2
-    with_dri3 = true
-  else
-    with_dri3 = false
- endif
-elif with_dri3 == 'yes'
-  if not with_dri2
-    error('dri3 support requires libdrm')
-  endif
-  with_dri3 = true
-else
-  with_dri3 = false
-endif
-
 # TODO: there are more platforms required for non-vulkan drivers
 with_platform_wayland = false
 with_platform_x11 = false
@@ -211,14 +190,66 @@ if _vulkan_drivers != ''
   if not (with_platform_x11 or with_platform_wayland)
     error('Vulkan requires at least one platform (x11, wayland)')
   endif
-  if with_platform_x11 and not with_dri3
-    error('Vulkan drivers require dri3 for X11 support')
-  endif
 endif
 
+with_dri2 = (with_dri or with_any_vk) and with_dri_platform == 'drm'
+with_dri3 = get_option('dri3')
+if with_dri3 == 'auto'
+  if host_machine.system() == 'linux' and with_dri2
+    with_dri3 = true
+  else
+    with_dri3 = false
+ endif
+elif with_dri3 == 'yes'
+  with_dri3 = true
+else
+  with_dri3 = false
+endif
+
+if with_any_vk and (with_platform_x11 and not with_dri3)
+  error('Vulkan drivers require dri3 for X11 support')
+endif
 if with_dri or with_gallium
   if with_glx == 'disabled' # TODO: or egl
     error('building dri or gallium drivers require at least one window system')
+  endif
+endif
+
+with_gallium_xvmc = false
+with_gallium_vdpau = false
+with_gallium_omx = false  # this is bellagio
+with_gallium_va = false
+with_gallium_media = false
+dep_va = []
+_drivers = get_option('gallium-media')
+if _drivers != ''
+  _split = _drivers.split(',')
+  with_gallium_xvmc = _split.contains('xvmc')
+  with_gallium_vdpau = _split.contains('vdpau')
+  with_gallium_omx = _split.contains('omx')
+  with_gallium_va = _split.contains('va')
+  with_gallium_media = (with_gallium_xvmc or with_gallium_vdpau or
+                        with_gallium_omx or with_gallium_va)
+endif
+
+if with_platform_x11
+  if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
+    pre_args += '-DHAVE_X11_PLATFORM'
+  endif
+  if with_glx == 'xlib'
+    # TODO
+    error('TODO')
+  elif with_glx == 'gallium-xlib'
+    # TODO
+    error('TODO')
+  else
+    pre_args += '-DGLX_INDIRECT_RENDERING'
+    if with_glx_direct
+      pre_args += '-DGLX_DIRECT_RENDERING'
+    endif
+    if with_dri_platform == 'drm'
+      pre_args += '-DGLX_USE_DRM'
+    endif
   endif
 endif
 
@@ -491,10 +522,18 @@ else
   dep_clock = cc.find_library('rt')
 endif
 
+dep_libdrm = dependency('libdrm', version : '>= 2.4.75',
+                        required : with_dri2 or with_dri3)
+if dep_libdrm.found()
+  pre_args += '-DHAVE_LIBDRM'
+endif
+
 # TODO: some of these may be conditional
 dep_zlib = dependency('zlib', version : '>= 1.2.3')
 dep_thread = dependency('threads')
-pre_args += '-DHAVE_PTHREAD'
+if dep_thread.found() and host_machine.system() == 'linux'
+  pre_args += '-DHAVE_PTHREAD'
+endif
 dep_elf = dependency('libelf', required : false)
 if not dep_elf.found()
   dep_elf = cc.find_library('elf', required : with_amd_vk) # TODO: clover, r600, radeonsi
@@ -503,18 +542,14 @@ dep_expat = dependency('expat')
 # this only exists on linux so either this is linux and it will be found, or
 # its not linux and and wont
 dep_m = cc.find_library('m', required : false)
-
-dep_libdrm_amdgpu = []
-if with_amd_vk
-  dep_libdrm_amdgpu = dependency('libdrm_amdgpu', version : '>= 2.4.82')
-endif
+dep_libdrm_amdgpu = dependency('libdrm_amdgpu', version : '>= 2.4.82', required : with_amd_vk)
 
 llvm_modules = ['bitwriter', 'engine', 'mcdisassembler', 'mcjit']
 if with_amd_vk
   llvm_modules += ['amdgpu', 'bitreader', 'ipo']
 endif
 dep_llvm = dependency(
-  'llvm', version : '>= 3.9.0', required : false, modules : llvm_modules,
+  'llvm', version : '>= 3.9.0', required : with_amd_vk, modules : llvm_modules,
 )
 if with_llvm
   if dep_llvm.found()
@@ -589,62 +624,46 @@ else
   dep_wayland_server = []
 endif
 
+dep_x11 = []
+dep_xext = []
+dep_xdamage = []
+dep_xfixes = []
+dep_x11_xcb = []
+dep_xcb_glx = []
 dep_xcb_dri2 = []
 dep_xcb_dri3 = []
 dep_dri2proto = []
 dep_glproto = []
-dep_x11 = []
 dep_xf86vm = []
+dep_xcb_dri3 = []
+dep_xcb_present = []
+dep_xcb_sync = []
+dep_xshmfence = []
 if with_platform_x11
-  if with_glx == 'xlib'
-    # TODO
-    error('TODO')
-  elif with_glx == 'gallium-xlib'
-    # TODO
-    error('TODO')
-  else
-    pre_args += '-DGLX_INDIRECT_RENDERING'
-    if with_glx_direct
-      pre_args += '-DGLX_DIRECT_RENDERING'
-    endif
-    if with_dri_platform == 'drm'
-      pre_args += '-DGLX_USE_DRM'
-      dep_dri2proto = dependency('dri2proto', version : '>= 2.8')
-      dep_x11 = [
-        dependency('x11'),
-        dependency('xext'),
-        dependency('xdamage', version : '>= 1.1'),
-        dependency('xfixes'),
-        dependency('x11-xcb'),
-        dependency('xcb'),
-        dependency('xcb-glx', version : '>= 1.8.1'),
-      ]
-
-      dep_xf86vm = dependency('xxf86vm', required : false)
-    endif
-    # TODO: XF86VIDMODE
-  endif
-  if with_glx != 'disabled'
-    dep_glproto = dependency('glproto', version : '>= 1.4.14')
+  if with_glx == 'dri' and with_dri_platform == 'drm'
+    dep_x11 = dependency('x11')
+    dep_xext = dependency('xext')
+    dep_xdamage = dependency('xdamage', version : '>= 1.1')
+    dep_xfixes = dependency('xfixes')
+    dep_xcb_glx = dependency('xcb-glx', version : '>= 1.8.1')
+    dep_xf86vm = dependency('xf86vm', required : false)
   endif
   if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
-    dep_xcb_dri2 = [
-      dependency('x11-xcb'),
-      dependency('xcb'),
-      dependency('xcb-dri2', version : '>= 1.8'),
-      dependency('xcb-xfixes'),
-    ]
-    pre_args += '-DHAVE_X11_PLATFORM'
+    dep_xcb = dependency('xcb')
+    dep_x11_xcb = dependency('x11-xcb')
+    dep_xcb_dri2 = dependency('xcb-dri2', version : '>= 1.8')
+
     if with_dri3
       pre_args += '-DHAVE_DRI3'
-      dep_xcb_dri3 = [
-        dep_xcb_dri2,
-        dependency('xcb-dri3'),
-        dependency('xcb-present'),
-        dependency('xcb-sync'),
-        dependency('xshmfence', version : '>= 1.1'),
-      ]
+      dep_xcb_dri3 = dependency('xcb-dri3')
+      dep_xcb_present = dependency('xcb-present')
+      dep_xcb_sync = dependency('xcb-sync')
+      dep_xshmfence = dependency('xshmfence', version : '>= 1.1')
     endif
+  endif
+  if with_glx != 'disabled'
+    dep_dri2proto = dependency('dri2proto', version : '>= 2.8')
+    dep_glproto = dependency('glproto', version : '>= 1.4.14')
   endif
 endif
 
@@ -661,31 +680,6 @@ endif
 # TODO: clover
 
 # TODO: egl sans x11
-
-with_gallium_xvmc = false
-with_gallium_vdpau = false
-with_gallium_omx = false  # this is bellagio
-with_gallium_va = false
-with_gallium_media = false
-dep_va = []
-_drivers = get_option('gallium-media')
-if _drivers != ''
-  _split = _drivers.split(',')
-  with_gallium_xvmc = _split.contains('xvmc')
-  with_gallium_vdpau = _split.contains('vdpau')
-  with_gallium_omx = _split.contains('omx')
-  with_gallium_va = _split.contains('va')
-  with_gallium_media = (with_gallium_xvmc or with_gallium_vdpau or
-                        with_gallium_omx or with_gallium_va)
-  if with_gallium_media
-    dep_va = [
-      dependency('x11-xcb'),
-      dependency('xcb'),
-      dependency('xcb-dri2', version : '>= 1.8'), # FIXME: dedup version
-    ]
-  endif
-endif
-
 # TODO: gallium tests
 
 # TODO: various libdirs
