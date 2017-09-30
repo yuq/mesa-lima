@@ -42,6 +42,7 @@ ppir_instr *ppir_instr_create(ppir_block *block)
    if (!instr->succs)
       goto err_out;
 
+   instr->index = block->comp->cur_instr_index++;
    list_addtail(&instr->list, &block->instr_list);
    return instr;
 
@@ -186,19 +187,17 @@ static struct {
    [PPIR_INSTR_SLOT_STORE_TEMP] = { 4, "stor" },
 };
 
-void ppir_instr_print_pre_schedule(ppir_compiler *comp)
+void ppir_instr_print_list(ppir_compiler *comp)
 {
-   printf("======ppir pre-schedule instr======\n");
+   printf("======ppir instr list======\n");
    printf("      ");
    for (int i = 0; i < PPIR_INSTR_SLOT_NUM; i++)
       printf("%-*s ", ppir_instr_fields[i].len, ppir_instr_fields[i].name);
    printf("const0|1\n");
 
    list_for_each_entry(ppir_block, block, &comp->block_list, list) {
-      int index = 0;
-      printf("-----------block instr----------\n");
       list_for_each_entry(ppir_instr, instr, &block->instr_list, list) {
-         printf("%c%03d: ", instr->is_end ? '*' : ' ', index++);
+         printf("%c%03d: ", instr->is_end ? '*' : ' ', instr->index);
          for (int i = 0; i < PPIR_INSTR_SLOT_NUM; i++) {
             ppir_node *node = instr->slots[i];
             if (node)
@@ -215,6 +214,44 @@ void ppir_instr_print_pre_schedule(ppir_compiler *comp)
          }
          printf("\n");
       }
+      printf("------------------------\n");
    }
-   printf("===================================\n");
+}
+
+static void ppir_instr_print_sub(ppir_instr *instr)
+{
+   printf("[%s%d",
+          instr->printed && !ppir_instr_is_leaf(instr) ? "+" : "",
+          instr->index);
+
+   if (!instr->printed) {
+      ppir_instr_foreach_pred(instr, entry) {
+         ppir_instr *pred = ppir_instr_from_entry(entry);
+         ppir_instr_print_sub(pred);
+      }
+
+      instr->printed = true;
+   }
+
+   printf("]");
+}
+
+void ppir_instr_print_depend(ppir_compiler *comp)
+{
+   list_for_each_entry(ppir_block, block, &comp->block_list, list) {
+      list_for_each_entry(ppir_instr, instr, &block->instr_list, list) {
+         instr->printed = false;
+      }
+   }
+
+   printf("======ppir instr depend======\n");
+   list_for_each_entry(ppir_block, block, &comp->block_list, list) {
+      list_for_each_entry(ppir_instr, instr, &block->instr_list, list) {
+         if (ppir_instr_is_root(instr)) {
+            ppir_instr_print_sub(instr);
+            printf("\n");
+         }
+      }
+      printf("------------------------\n");
+   }
 }
