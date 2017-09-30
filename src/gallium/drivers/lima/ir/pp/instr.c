@@ -62,6 +62,30 @@ static bool ppir_instr_insert_const(ppir_const *dst, const ppir_const *src,
    return true;
 }
 
+/* make alu node src reflact the pipeline reg */
+static void ppir_instr_update_src_pipeline(ppir_instr *instr, ppir_pipeline pipeline,
+                                           ppir_dest *dest, uint8_t *swizzle)
+{
+   for (int i = PPIR_INSTR_SLOT_ALU_START; i <= PPIR_INSTR_SLOT_ALU_END; i++) {
+      if (!instr->slots[i])
+         continue;
+
+      ppir_alu_node *alu = ppir_node_to_alu(instr->slots[i]);
+      for (int j = 0; j < alu->num_src; j++) {
+         ppir_src *src = alu->src + j;
+         if (ppir_node_target_equal(src, dest)) {
+            src->type = ppir_target_pipeline;
+            src->pipeline = pipeline;
+
+            if (swizzle) {
+               for (int k = 0; k < 4; k++)
+                  src->swizzle[k] = swizzle[src->swizzle[k]];
+            }
+         }
+      }
+   }
+}
+
 bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
 {
    switch (node->op) {
@@ -86,25 +110,8 @@ bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
 
          if (ppir_instr_insert_const(&ic, nc, swizzle)) {
             instr->constant[i] = ic;
-
-            /* make alu node src reflact the const reg */
-            for (int j = PPIR_INSTR_SLOT_ALU_START; j <= PPIR_INSTR_SLOT_ALU_END; j++) {
-               if (!instr->slots[j])
-                  continue;
-
-               ppir_alu_node *alu = ppir_node_to_alu(instr->slots[j]);
-               for (int p = 0; p < alu->num_src; p++) {
-                  ppir_src *src = alu->src + p;
-                  if (ppir_node_target_equal(src, &c->dest)) {
-                     src->type = ppir_target_pipeline;
-                     src->pipeline = ppir_pipeline_reg_const0 + i;
-
-                     for (int q = 0; q < 4; q++)
-                        src->swizzle[q] = swizzle[src->swizzle[q]];
-                  }
-               }
-            }
-
+            ppir_instr_update_src_pipeline(
+               instr, ppir_pipeline_reg_const0 + i, &c->dest, swizzle);
             break;
          }
       }
@@ -122,11 +129,16 @@ bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
       break;
 
    case ppir_op_load_uniform:
+   {
       if (instr->slots[PPIR_INSTR_SLOT_UNIFORM])
          return false;
       instr->slots[PPIR_INSTR_SLOT_UNIFORM] = node;
-      break;
 
+      ppir_load_node *l = ppir_node_to_load(node);
+      ppir_instr_update_src_pipeline(
+         instr, ppir_pipeline_reg_uniform, &l->dest, NULL);
+      break;
+   }
    default:
       return false;
    }
