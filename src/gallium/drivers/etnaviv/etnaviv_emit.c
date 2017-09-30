@@ -173,7 +173,14 @@ etna_submit_rs_state(struct etna_context *ctx,
 
    ctx->stats.rs_operations++;
 
-   if (screen->specs.pixel_pipes == 1) {
+   if (cs->RS_KICKER_INPLACE) {
+      etna_cmd_stream_reserve(stream, 6);
+      etna_coalesce_start(stream, &coalesce);
+      /* 0/1 */ EMIT_STATE(RS_EXTRA_CONFIG, cs->RS_EXTRA_CONFIG);
+      /* 2/3 */ EMIT_STATE(RS_SOURCE_STRIDE, cs->RS_SOURCE_STRIDE);
+      /* 4/5 */ EMIT_STATE(RS_KICKER_INPLACE, cs->RS_KICKER_INPLACE);
+      etna_coalesce_end(stream, &coalesce);
+   } else if (screen->specs.pixel_pipes == 1) {
       etna_cmd_stream_reserve(stream, 22);
       etna_coalesce_start(stream, &coalesce);
       /* 0/1 */ EMIT_STATE(RS_CONFIG, cs->RS_CONFIG);
