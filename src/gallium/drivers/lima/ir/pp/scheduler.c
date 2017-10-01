@@ -188,15 +188,20 @@ static void ppir_schedule_build_instr_dependency(ppir_compiler *comp)
    }
 }
 
-static void ppir_schedule_calc_reg_pressure(ppir_instr *instr)
+static void ppir_schedule_calc_sched_info(ppir_instr *instr)
 {
    int n = 0;
 
-   /* update all children's reg pressure */
+   /* update all children's sched info */
    ppir_instr_foreach_pred(instr, entry) {
       ppir_instr *pred = ppir_instr_from_entry(entry);
+
       if (pred->reg_pressure < 0)
-         ppir_schedule_calc_reg_pressure(pred);
+         ppir_schedule_calc_sched_info(pred);
+
+      if (instr->est < pred->est + 1)
+         instr->est = pred->est + 1;
+
       n++;
    }
 
@@ -236,10 +241,10 @@ static void ppir_schedule_calc_reg_pressure(ppir_instr *instr)
  */
 static void ppir_schedule_block(ppir_block *block)
 {
-   /* step 2 */
+   /* step 2 & 3 */
    list_for_each_entry(ppir_instr, instr, &block->instr_list, list) {
       if (ppir_instr_is_root(instr))
-         ppir_schedule_calc_reg_pressure(instr);
+         ppir_schedule_calc_sched_info(instr);
    }
 }
 
