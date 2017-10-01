@@ -1752,6 +1752,7 @@ static const struct instr_translater translaters[TGSI_OPCODE_LAST] = {
    INSTR(RSQ, trans_instr, .opc = INST_OPCODE_RSQ, .src = {2, -1, -1}),
    INSTR(MUL, trans_instr, .opc = INST_OPCODE_MUL, .src = {0, 1, -1}),
    INSTR(ADD, trans_instr, .opc = INST_OPCODE_ADD, .src = {0, 2, -1}),
+   INSTR(DP2, trans_instr, .opc = INST_OPCODE_DP2, .src = {0, 1, -1}),
    INSTR(DP3, trans_instr, .opc = INST_OPCODE_DP3, .src = {0, 1, -1}),
    INSTR(DP4, trans_instr, .opc = INST_OPCODE_DP4, .src = {0, 1, -1}),
    INSTR(DST, trans_instr, .opc = INST_OPCODE_DST, .src = {0, 1, -1}),
@@ -2293,7 +2294,7 @@ etna_compile_shader(struct etna_shader_variant *v)
       .lower_POW = true,
       .lower_EXP = true,
       .lower_LOG = true,
-      .lower_DP2 = true,
+      .lower_DP2 = !specs->has_halti2_instructions,
       .lower_TRUNC = true,
    };
 

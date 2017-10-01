@@ -700,6 +700,8 @@ etna_get_specs(struct etna_screen *screen)
       VIV_FEATURE(screen, chipMinorFeatures1, NON_POWER_OF_TWO);
    screen->specs.has_new_transcendentals =
       VIV_FEATURE(screen, chipMinorFeatures3, HAS_FAST_TRANSCENDENTALS);
+   screen->specs.has_halti2_instructions =
+      VIV_FEATURE(screen, chipMinorFeatures4, HALTI2);
 
    if (VIV_FEATURE(screen, chipMinorFeatures3, INSTRUCTION_CACHE)) {
       /* GC3000 - this core is capable of loading shaders from
