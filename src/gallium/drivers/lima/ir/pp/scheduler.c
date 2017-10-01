@@ -22,6 +22,7 @@
  *
  */
 
+#include <limits.h>
 #include <stdio.h>
 
 #include "ppir.h"
@@ -235,17 +236,95 @@ static void ppir_schedule_calc_sched_info(ppir_instr *instr)
    }
 }
 
+static void ppir_insert_ready_list(struct list_head *ready_list,
+                                   ppir_instr *insert_instr)
+{
+   struct list_head *insert_pos = ready_list;
+
+   list_for_each_entry(ppir_instr, instr, ready_list, list) {
+      if (insert_instr->parent_index < instr->parent_index ||
+          (insert_instr->parent_index == instr->parent_index &&
+           (insert_instr->reg_pressure < instr->reg_pressure ||
+            (insert_instr->reg_pressure == instr->reg_pressure &&
+             (insert_instr->est >= instr->est))))) {
+         insert_pos = &instr->list;
+         break;
+      }
+   }
+
+   list_del(&insert_instr->list);
+   list_addtail(&insert_instr->list, insert_pos);
+}
+
+static void ppir_schedule_ready_list(ppir_block *block,
+                                     struct list_head *ready_list)
+{
+   if (list_empty(ready_list))
+      return;
+
+   ppir_instr *instr = list_first_entry(ready_list, ppir_instr, list);
+   list_del(&instr->list);
+
+   /* schedule the instr to the block instr list */
+   list_add(&instr->list, &block->instr_list);
+   instr->scheduled = true;
+   block->sched_instr_index--;
+
+   ppir_instr_foreach_pred(instr, entry) {
+      ppir_instr *pred = ppir_instr_from_entry(entry);
+      pred->parent_index = block->sched_instr_index;
+
+      bool ready = true;
+      ppir_instr_foreach_succ(pred, _entry) {
+         ppir_instr *succ = ppir_instr_from_entry(_entry);
+         if (!succ->scheduled) {
+            ready = false;
+            break;
+         }
+      }
+      /* all successor have been scheduled */
+      if (ready)
+         ppir_insert_ready_list(ready_list, pred);
+   }
+
+   ppir_schedule_ready_list(block, ready_list);
+}
+
 /* Register sensitive schedule algorithm from paper:
  * "Register-Sensitive Selection, Duplication, and Sequencing of Instructions"
  * Author: Vivek Sarkar,  Mauricio J. Serrano,  Barbara B. Simons
  */
 static void ppir_schedule_block(ppir_block *block)
 {
+   struct list_head instr_list;
+   list_inithead(&instr_list);
+
+   /* move all instr to instr_list, block->instr_list will
+    * contain schedule result */
+   list_splice(&block->instr_list, &instr_list);
+   list_inithead(&block->instr_list);
+
    /* step 2 & 3 */
-   list_for_each_entry(ppir_instr, instr, &block->instr_list, list) {
+   list_for_each_entry(ppir_instr, instr, &instr_list, list) {
       if (ppir_instr_is_root(instr))
          ppir_schedule_calc_sched_info(instr);
+      block->sched_instr_index++;
    }
+
+   /* step 4 */
+   struct list_head ready_list;
+   list_inithead(&ready_list);
+
+   /* step 5 */
+   list_for_each_entry_safe(ppir_instr, instr, &instr_list, list) {
+      if (ppir_instr_is_root(instr)) {
+         instr->parent_index = INT_MAX;
+         ppir_insert_ready_list(&ready_list, instr);
+      }
+   }
+
+   /* step 6 */
+   ppir_schedule_ready_list(block, &ready_list);
 }
 
 static void _ppir_schedule_prog(ppir_compiler *comp)
@@ -265,6 +344,7 @@ bool ppir_schedule_prog(ppir_compiler *comp)
    ppir_instr_print_depend(comp);
 
    _ppir_schedule_prog(comp);
+   ppir_instr_print_list(comp);
 
    return true;
 }

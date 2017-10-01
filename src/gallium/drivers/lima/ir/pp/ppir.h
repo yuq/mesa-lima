@@ -257,6 +257,8 @@ typedef struct ppir_instr {
    struct set *preds, *succs;
    int reg_pressure;
    int est; /* earliest start time */
+   int parent_index;
+   bool scheduled;
 } ppir_instr;
 
 typedef struct ppir_block {
@@ -264,6 +266,9 @@ typedef struct ppir_block {
    struct list_head node_list;
    struct list_head instr_list;
    struct ppir_compiler *comp;
+
+   /* for scheduler */
+   int sched_instr_index;
 } ppir_block;
 
 struct lima_fs_shader_state;
