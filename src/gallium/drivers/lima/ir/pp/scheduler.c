@@ -192,6 +192,7 @@ static void ppir_schedule_build_instr_dependency(ppir_compiler *comp)
 static void ppir_schedule_calc_sched_info(ppir_instr *instr)
 {
    int n = 0;
+   float extra_reg = 1.0;
 
    /* update all children's sched info */
    ppir_instr_foreach_pred(instr, entry) {
@@ -202,6 +203,10 @@ static void ppir_schedule_calc_sched_info(ppir_instr *instr)
 
       if (instr->est < pred->est + 1)
          instr->est = pred->est + 1;
+
+      float reg_weight = 1.0 - 1.0 / pred->succs->entries;
+      if (extra_reg > reg_weight)
+         extra_reg = reg_weight;
 
       n++;
    }
@@ -234,6 +239,22 @@ static void ppir_schedule_calc_sched_info(ppir_instr *instr)
       if (pressure > instr->reg_pressure)
          instr->reg_pressure = pressure;
    }
+
+   /* If all children of this instr have multi parents, then this
+    * instr need an extra reg to store its result. For example,
+    * it's not fair for parent has the same reg pressure as child
+    * if n==1 and child's successor>1, because we need 2 reg for
+    * this.
+    *
+    * But we can't add a full reg to the reg_pressure, because the
+    * last parent of a multi-successor child doesn't need an extra
+    * reg. For example, a single child (with multi successor) instr
+    * should has less reg pressure than a two children (with single
+    * successor) instr.
+    *
+    * extra reg = min(all child)(1.0 - 1.0 / num successor)
+    */
+   instr->reg_pressure += extra_reg;
 }
 
 static void ppir_insert_ready_list(struct list_head *ready_list,

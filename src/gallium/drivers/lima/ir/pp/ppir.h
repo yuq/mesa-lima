@@ -255,7 +255,7 @@ typedef struct ppir_instr {
 
    /* for scheduler */
    struct set *preds, *succs;
-   int reg_pressure;
+   float reg_pressure;
    int est; /* earliest start time */
    int parent_index;
    bool scheduled;
