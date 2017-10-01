@@ -317,8 +317,19 @@ etna_cmd_stream_reset_notify(struct etna_cmd_stream *stream, void *priv)
    etna_set_state(stream, VIVS_GL_VERTEX_ELEMENT_CONFIG, 0x00000001);
    etna_set_state(stream, VIVS_RA_EARLY_DEPTH, 0x00000031);
    etna_set_state(stream, VIVS_PA_W_CLIP_LIMIT, 0x34000001);
+   etna_set_state(stream, VIVS_PA_FLAGS, 0x00000000); /* blob sets ZCONVERT_BYPASS on GC3000, this messes up z for us */
+   etna_set_state(stream, VIVS_RA_UNK00E0C, 0x00000000);
    etna_set_state(stream, VIVS_PA_VIEWPORT_UNK00A80, 0x38a01404);
    etna_set_state(stream, VIVS_PA_VIEWPORT_UNK00A84, fui(8192.0));
+   etna_set_state(stream, VIVS_PA_ZFARCLIPPING, 0x00000000);
+   etna_set_state(stream, VIVS_PE_ALPHA_COLOR_EXT0, 0x00000000);
+   etna_set_state(stream, VIVS_PE_ALPHA_COLOR_EXT1, 0x00000000);
+   etna_set_state(stream, VIVS_RA_HDEPTH_CONTROL, 0x00007000);
+   etna_set_state(stream, VIVS_PE_STENCIL_CONFIG_EXT2, 0x00000000);
+   etna_set_state(stream, VIVS_GL_UNK03834, 0x00000000);
+   etna_set_state(stream, VIVS_GL_UNK03838, 0x00000000);
+   etna_set_state(stream, VIVS_GL_UNK03854, 0x00000000);
+   etna_set_state(stream, VIVS_PS_CONTROL_EXT, 0x00000000);
 
    /* Enable SINGLE_BUFFER for resolve, if supported */
    etna_set_state(stream, VIVS_RS_SINGLE_BUFFER, COND(ctx->specs.single_buffer, VIVS_RS_SINGLE_BUFFER_ENABLE));
