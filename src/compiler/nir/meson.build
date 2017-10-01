@@ -197,8 +197,8 @@ if with_tests
     [files('tests/control_flow_tests.cpp'), nir_opcodes_h],
     c_args : [c_vis_args, c_msvc_compat_args, no_override_init_args],
     include_directories : [inc_common],
-    dependencies : [dep_thread],
-    link_with : [libmesa_util, libnir, libgtest],
+    dependencies : [dep_thread, idep_gtest],
+    link_with : [libmesa_util, libnir],
   )
 
   test('nir_control_flow', nir_control_flow_test)

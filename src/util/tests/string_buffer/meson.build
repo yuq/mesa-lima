@@ -21,9 +21,9 @@
 string_buffer_test = executable(
   'string_buffer_test',
   'string_buffer_test.cpp',
-  dependencies : [dep_thread, dep_dl],
+  dependencies : [dep_thread, dep_dl, idep_gtest],
   include_directories : inc_common,
-  link_with : [libmesa_util, libgtest],
+  link_with : [libmesa_util],
 )
 
 test('string_buffer', string_buffer_test)

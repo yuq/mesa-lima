@@ -146,9 +146,9 @@ if with_tests
       [t, nir_opcodes_h, ir_expression_operation_h],
       'test_@0@.cpp'.format(t),
       include_directories : [inc_common, inc_intel],
-      link_with : [libgtest, libintel_compiler, libintel_common, libnir,
-                   libmesa_util, libisl],
-      dependencies : [dep_thread, dep_dl],
+      link_with : [libintel_compiler, libintel_common, libnir, libmesa_util,
+                   libisl],
+      dependencies : [dep_thread, dep_dl, idep_gtest],
     )
     test(t, _exe)
   endforeach
