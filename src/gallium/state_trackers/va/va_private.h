@@ -394,6 +394,7 @@ VAStatus vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config, VAS
 
 VAStatus vlVaAcquireBufferHandle(VADriverContextP ctx, VABufferID buf_id, VABufferInfo *out_buf_info);
 VAStatus vlVaReleaseBufferHandle(VADriverContextP ctx, VABufferID buf_id);
+VAStatus vlVaExportSurfaceHandle(VADriverContextP ctx, VASurfaceID surface_id, uint32_t mem_type, uint32_t flags, void *descriptor);
 
 VAStatus vlVaQueryVideoProcFilters(VADriverContextP ctx, VAContextID context, VAProcFilterType *filters,
                                    unsigned int *num_filters);
