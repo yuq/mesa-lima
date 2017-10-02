@@ -182,7 +182,11 @@ struct si_cs_shader_state {
 };
 
 struct si_samplers {
-	struct si_sampler_views		views;
+	struct pipe_sampler_view	*views[SI_NUM_SAMPLERS];
+	struct si_sampler_state		*sampler_states[SI_NUM_SAMPLERS];
+
+	/* The i-th bit is set if that element is enabled (non-NULL resource). */
+	unsigned			enabled_mask;
 	uint32_t			needs_depth_decompress_mask;
 	uint32_t			needs_color_decompress_mask;
 };

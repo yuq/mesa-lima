@@ -276,14 +276,6 @@ struct si_descriptors {
 	ubyte shader_userdata_offset;
 };
 
-struct si_sampler_views {
-	struct pipe_sampler_view	*views[SI_NUM_SAMPLERS];
-	struct si_sampler_state		*sampler_states[SI_NUM_SAMPLERS];
-
-	/* The i-th bit is set if that element is enabled (non-NULL resource). */
-	unsigned			enabled_mask;
-};
-
 struct si_buffer_resources {
 	struct pipe_resource		**buffers; /* this has num_buffers elements */
 

@@ -80,10 +80,10 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 	if (op & SI_SAVE_TEXTURES) {
 		util_blitter_save_fragment_sampler_states(
 			sctx->blitter, 2,
-			(void**)sctx->samplers[PIPE_SHADER_FRAGMENT].views.sampler_states);
+			(void**)sctx->samplers[PIPE_SHADER_FRAGMENT].sampler_states);
 
 		util_blitter_save_fragment_sampler_views(sctx->blitter, 2,
-			sctx->samplers[PIPE_SHADER_FRAGMENT].views.views);
+			sctx->samplers[PIPE_SHADER_FRAGMENT].views);
 	}
 
 	if (op & SI_DISABLE_RENDER_COND)
@@ -433,7 +433,7 @@ si_decompress_sampler_depth_textures(struct si_context *sctx,
 
 		i = u_bit_scan(&mask);
 
-		view = textures->views.views[i];
+		view = textures->views[i];
 		assert(view);
 		sview = (struct si_sampler_view*)view;
 
@@ -559,7 +559,7 @@ si_decompress_sampler_color_textures(struct si_context *sctx,
 
 		i = u_bit_scan(&mask);
 
-		view = textures->views.views[i];
+		view = textures->views[i];
 		assert(view);
 
 		tex = (struct r600_texture *)view->texture;
@@ -629,7 +629,7 @@ static void si_check_render_feedback_texture(struct si_context *sctx,
 static void si_check_render_feedback_textures(struct si_context *sctx,
                                               struct si_samplers *textures)
 {
-	uint32_t mask = textures->views.enabled_mask;
+	uint32_t mask = textures->enabled_mask;
 
 	while (mask) {
 		const struct pipe_sampler_view *view;
@@ -637,7 +637,7 @@ static void si_check_render_feedback_textures(struct si_context *sctx,
 
 		unsigned i = u_bit_scan(&mask);
 
-		view = textures->views.views[i];
+		view = textures->views[i];
 		if(view->texture->target == PIPE_BUFFER)
 			continue;
 

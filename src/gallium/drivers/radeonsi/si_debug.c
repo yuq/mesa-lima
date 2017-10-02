@@ -736,7 +736,7 @@ static void si_dump_descriptors(struct si_context *sctx,
 				    u_bit_consecutive(0, SI_NUM_SHADER_BUFFERS);
 		enabled_shaderbuf = util_bitreverse(enabled_shaderbuf) >>
 				    (32 - SI_NUM_SHADER_BUFFERS);
-		enabled_samplers = sctx->samplers[processor].views.enabled_mask;
+		enabled_samplers = sctx->samplers[processor].enabled_mask;
 		enabled_images = sctx->images[processor].enabled_mask;
 	}
 
