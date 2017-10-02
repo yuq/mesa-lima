@@ -1940,17 +1940,13 @@ dri2_initialize_wayland_swrast(_EGLDriver *drv, _EGLDisplay *disp)
 EGLBoolean
 dri2_initialize_wayland(_EGLDriver *drv, _EGLDisplay *disp)
 {
-   EGLBoolean initialized = EGL_TRUE;
+   EGLBoolean initialized = EGL_FALSE;
 
-   bool hw_accel = !env_var_as_boolean("LIBGL_ALWAYS_SOFTWARE", false);
+   if (!env_var_as_boolean("LIBGL_ALWAYS_SOFTWARE", false))
+      initialized = dri2_initialize_wayland_drm(drv, disp);
 
-   if (hw_accel) {
-      if (!dri2_initialize_wayland_drm(drv, disp)) {
-         initialized = dri2_initialize_wayland_swrast(drv, disp);
-      }
-   } else {
+   if (!initialized)
       initialized = dri2_initialize_wayland_swrast(drv, disp);
-   }
 
    return initialized;
 
