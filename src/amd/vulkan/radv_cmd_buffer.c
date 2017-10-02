@@ -78,7 +78,7 @@ const struct radv_dynamic_state default_dynamic_state = {
 	},
 };
 
-void
+static void
 radv_dynamic_state_copy(struct radv_dynamic_state *dest,
 			const struct radv_dynamic_state *src,
 			uint32_t copy_mask)
