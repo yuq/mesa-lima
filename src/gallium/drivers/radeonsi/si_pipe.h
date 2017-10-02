@@ -181,13 +181,13 @@ struct si_cs_shader_state {
 	bool				uses_scratch;
 };
 
-struct si_textures_info {
+struct si_samplers {
 	struct si_sampler_views		views;
 	uint32_t			needs_depth_decompress_mask;
 	uint32_t			needs_color_decompress_mask;
 };
 
-struct si_images_info {
+struct si_images {
 	struct pipe_image_view		views[SI_NUM_IMAGES];
 	uint32_t			needs_color_decompress_mask;
 	unsigned			enabled_mask;
@@ -379,8 +379,8 @@ struct si_context {
 	unsigned			shader_needs_decompress_mask;
 	struct si_buffer_resources	rw_buffers;
 	struct si_buffer_resources	const_and_shader_buffers[SI_NUM_SHADERS];
-	struct si_textures_info		samplers[SI_NUM_SHADERS];
-	struct si_images_info		images[SI_NUM_SHADERS];
+	struct si_samplers		samplers[SI_NUM_SHADERS];
+	struct si_images		images[SI_NUM_SHADERS];
 
 	/* other shader resources */
 	struct pipe_constant_buffer	null_const_buf; /* used for set_constant_buffer(NULL) on CIK */

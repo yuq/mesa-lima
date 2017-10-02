@@ -465,7 +465,7 @@ static void si_set_sampler_view(struct si_context *sctx,
 				unsigned slot, struct pipe_sampler_view *view,
 				bool disallow_early_out)
 {
-	struct si_textures_info *samplers = &sctx->samplers[shader];
+	struct si_samplers *samplers = &sctx->samplers[shader];
 	struct si_sampler_views *views = &samplers->views;
 	struct si_sampler_view *rview = (struct si_sampler_view*)view;
 	struct si_descriptors *descs = si_sampler_and_image_descriptors(sctx, shader);
@@ -531,7 +531,7 @@ static void si_set_sampler_view(struct si_context *sctx,
 static void si_update_shader_needs_decompress_mask(struct si_context *sctx,
 						   unsigned shader)
 {
-	struct si_textures_info *samplers = &sctx->samplers[shader];
+	struct si_samplers *samplers = &sctx->samplers[shader];
 	unsigned shader_bit = 1 << shader;
 
 	if (samplers->needs_depth_decompress_mask ||
@@ -565,7 +565,7 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 }
 
 static void
-si_samplers_update_needs_color_decompress_mask(struct si_textures_info *samplers)
+si_samplers_update_needs_color_decompress_mask(struct si_samplers *samplers)
 {
 	unsigned mask = samplers->views.enabled_mask;
 
@@ -588,7 +588,7 @@ si_samplers_update_needs_color_decompress_mask(struct si_textures_info *samplers
 /* IMAGE VIEWS */
 
 static void
-si_release_image_views(struct si_images_info *images)
+si_release_image_views(struct si_images *images)
 {
 	unsigned i;
 
@@ -600,7 +600,7 @@ si_release_image_views(struct si_images_info *images)
 }
 
 static void
-si_image_views_begin_new_cs(struct si_context *sctx, struct si_images_info *images)
+si_image_views_begin_new_cs(struct si_context *sctx, struct si_images *images)
 {
 	uint mask = images->enabled_mask;
 
@@ -619,7 +619,7 @@ si_image_views_begin_new_cs(struct si_context *sctx, struct si_images_info *imag
 static void
 si_disable_shader_image(struct si_context *ctx, unsigned shader, unsigned slot)
 {
-	struct si_images_info *images = &ctx->images[shader];
+	struct si_images *images = &ctx->images[shader];
 
 	if (images->enabled_mask & (1u << slot)) {
 		struct si_descriptors *descs = si_sampler_and_image_descriptors(ctx, shader);
@@ -728,7 +728,7 @@ static void si_set_shader_image(struct si_context *ctx,
 				unsigned slot, const struct pipe_image_view *view,
 				bool skip_decompress)
 {
-	struct si_images_info *images = &ctx->images[shader];
+	struct si_images *images = &ctx->images[shader];
 	struct si_descriptors *descs = si_sampler_and_image_descriptors(ctx, shader);
 	struct r600_resource *res;
 	unsigned desc_slot = si_get_image_slot(slot);
@@ -802,7 +802,7 @@ si_set_shader_images(struct pipe_context *pipe,
 }
 
 static void
-si_images_update_needs_color_decompress_mask(struct si_images_info *images)
+si_images_update_needs_color_decompress_mask(struct si_images *images)
 {
 	unsigned mask = images->enabled_mask;
 
@@ -829,7 +829,7 @@ static void si_bind_sampler_states(struct pipe_context *ctx,
                                    unsigned start, unsigned count, void **states)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_textures_info *samplers = &sctx->samplers[shader];
+	struct si_samplers *samplers = &sctx->samplers[shader];
 	struct si_descriptors *desc = si_sampler_and_image_descriptors(sctx, shader);
 	struct si_sampler_state **sstates = (struct si_sampler_state**)states;
 	int i;
@@ -1712,7 +1712,7 @@ static void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf
 	/* Shader images */
 	if (rbuffer->bind_history & PIPE_BIND_SHADER_IMAGE) {
 		for (shader = 0; shader < SI_NUM_SHADERS; ++shader) {
-			struct si_images_info *images = &sctx->images[shader];
+			struct si_images *images = &sctx->images[shader];
 			struct si_descriptors *descs =
 				si_sampler_and_image_descriptors(sctx, shader);
 			unsigned mask = images->enabled_mask;
@@ -1949,7 +1949,7 @@ void si_update_all_texture_descriptors(struct si_context *sctx)
 
 	for (shader = 0; shader < SI_NUM_SHADERS; shader++) {
 		struct si_sampler_views *samplers = &sctx->samplers[shader].views;
-		struct si_images_info *images = &sctx->images[shader];
+		struct si_images *images = &sctx->images[shader];
 		unsigned mask;
 
 		/* Images. */

@@ -421,7 +421,7 @@ si_decompress_depth(struct si_context *sctx,
 
 static void
 si_decompress_sampler_depth_textures(struct si_context *sctx,
-				     struct si_textures_info *textures)
+				     struct si_samplers *textures)
 {
 	unsigned i;
 	unsigned mask = textures->needs_depth_decompress_mask;
@@ -548,7 +548,7 @@ si_decompress_color_texture(struct si_context *sctx, struct r600_texture *tex,
 
 static void
 si_decompress_sampler_color_textures(struct si_context *sctx,
-				     struct si_textures_info *textures)
+				     struct si_samplers *textures)
 {
 	unsigned i;
 	unsigned mask = textures->needs_color_decompress_mask;
@@ -571,7 +571,7 @@ si_decompress_sampler_color_textures(struct si_context *sctx,
 
 static void
 si_decompress_image_color_textures(struct si_context *sctx,
-				   struct si_images_info *images)
+				   struct si_images *images)
 {
 	unsigned i;
 	unsigned mask = images->needs_color_decompress_mask;
@@ -627,7 +627,7 @@ static void si_check_render_feedback_texture(struct si_context *sctx,
 }
 
 static void si_check_render_feedback_textures(struct si_context *sctx,
-                                              struct si_textures_info *textures)
+                                              struct si_samplers *textures)
 {
 	uint32_t mask = textures->views.enabled_mask;
 
@@ -652,7 +652,7 @@ static void si_check_render_feedback_textures(struct si_context *sctx,
 }
 
 static void si_check_render_feedback_images(struct si_context *sctx,
-                                            struct si_images_info *images)
+                                            struct si_images *images)
 {
 	uint32_t mask = images->enabled_mask;
 
