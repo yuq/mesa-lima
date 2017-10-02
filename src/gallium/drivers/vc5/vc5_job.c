@@ -193,9 +193,9 @@ vc5_job_set_tile_buffer_size(struct vc5_job *job)
         if (job->msaa)
                 tile_size_index += 2;
 
-        if (job->cbufs[3])
+        if (job->cbufs[3] || job->cbufs[2])
                 tile_size_index += 2;
-        else if (job->cbufs[2])
+        else if (job->cbufs[1])
                 tile_size_index++;
 
         int max_bpp = RENDER_TARGET_MAXIMUM_32BPP;
