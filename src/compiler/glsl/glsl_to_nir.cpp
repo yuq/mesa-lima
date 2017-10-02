@@ -219,7 +219,7 @@ constant_copy(ir_constant *ir, void *mem_ctx)
    if (ir == NULL)
       return NULL;
 
-   nir_constant *ret = ralloc(mem_ctx, nir_constant);
+   nir_constant *ret = rzalloc(mem_ctx, nir_constant);
 
    const unsigned rows = ir->type->vector_elements;
    const unsigned cols = ir->type->matrix_columns;
