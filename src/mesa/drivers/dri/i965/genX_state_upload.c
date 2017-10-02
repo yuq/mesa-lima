@@ -3298,7 +3298,8 @@ genX(upload_multisample_state)(struct brw_context *brw)
 
 static const struct brw_tracked_state genX(multisample_state) = {
    .dirty = {
-      .mesa = _NEW_MULTISAMPLE,
+      .mesa = _NEW_MULTISAMPLE |
+              (GEN_GEN == 10 ? _NEW_BUFFERS : 0),
       .brw = BRW_NEW_BLORP |
              BRW_NEW_CONTEXT |
              BRW_NEW_NUM_SAMPLES,
