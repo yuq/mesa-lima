@@ -36,6 +36,18 @@
 #include "vc5_context.h"
 #include "broadcom/cle/v3d_packet_v33_pack.h"
 
+static gl_varying_slot
+vc5_get_slot_for_driver_location(nir_shader *s, uint32_t driver_location)
+{
+        nir_foreach_variable(var, &s->outputs) {
+                if (var->data.driver_location == driver_location) {
+                        return var->data.location;
+                }
+        }
+
+        return -1;
+}
+
 static void
 vc5_set_transform_feedback_outputs(struct vc5_uncompiled_shader *so,
                                    const struct pipe_stream_output_info *stream_output)
@@ -73,9 +85,11 @@ vc5_set_transform_feedback_outputs(struct vc5_uncompiled_shader *so,
                          * components of this varying.
                          */
                         for (int j = 0; j < output->num_components; j++) {
+                                gl_varying_slot slot =
+                                        vc5_get_slot_for_driver_location(so->base.ir.nir, output->register_index);
+
                                 slots[slot_count] =
-                                        v3d_slot_from_slot_and_component(VARYING_SLOT_VAR0 +
-                                                                         output->register_index,
+                                        v3d_slot_from_slot_and_component(slot,
                                                                          output->start_component + j);
                                 slot_count++;
                         }
