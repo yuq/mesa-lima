@@ -248,6 +248,9 @@ vc5_emit_state(struct pipe_context *pctx)
                         config.rasterizer_oversample_mode =
                                 vc5->rasterizer->base.multisample;
 
+                        config.direct3d_provoking_vertex =
+                                vc5->rasterizer->base.flatshade_first;
+
                         config.blend_enable = vc5->blend->rt[0].blend_enable;
 
                         config.early_z_updates_enable = true;

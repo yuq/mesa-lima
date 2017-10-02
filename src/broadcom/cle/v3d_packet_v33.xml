@@ -308,6 +308,7 @@
   </packet>
 
   <packet code="96" name="Configuration Bits">
+    <field name="Direct3D Provoking Vertex" size="1" start="21" type="bool"/>
     <field name="Direct3D 'Point-fill' mode" size="1" start="20" type="bool"/>
     <field name="Blend enable" size="1" start="19" type="bool"/>
     <field name="Stencil enable" size="1" start="18" type="bool"/>
