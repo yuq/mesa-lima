@@ -87,6 +87,7 @@ struct nv50_ir_prog_info
       int16_t maxGPR;     /* may be -1 if none used */
       int16_t maxOutput;
       uint32_t tlsSpace;  /* required local memory per thread */
+      uint32_t smemSize;  /* required shared memory per block */
       uint32_t *code;
       uint32_t codeSize;
       uint32_t instructions;
