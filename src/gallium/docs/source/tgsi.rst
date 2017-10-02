@@ -417,17 +417,35 @@ This instruction replicates its result.
 
 .. opcode:: PK2US - Pack Two Unsigned 16-bit Scalars
 
-  TBD
+This instruction replicates its result.
+
+.. math::
+
+  dst = f32\_to\_unorm16(src.x) | f32\_to\_unorm16(src.y) << 16
 
 
 .. opcode:: PK4B - Pack Four Signed 8-bit Scalars
 
-  TBD
+This instruction replicates its result.
+
+.. math::
+
+  dst = f32\_to\_snorm8(src.x) |
+        (f32\_to\_snorm8(src.y) << 8) |
+        (f32\_to\_snorm8(src.z) << 16) |
+        (f32\_to\_snorm8(src.w) << 24)
 
 
 .. opcode:: PK4UB - Pack Four Unsigned 8-bit Scalars
 
-  TBD
+This instruction replicates its result.
+
+.. math::
+
+  dst = f32\_to\_unorm8(src.x) |
+        (f32\_to\_unorm8(src.y) << 8) |
+        (f32\_to\_unorm8(src.z) << 16) |
+        (f32\_to\_unorm8(src.w) << 24)
 
 
 .. opcode:: SEQ - Set On Equal
