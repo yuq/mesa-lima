@@ -116,6 +116,7 @@ lower_cs_intrinsics_convert_block(struct lower_intrinsics_state *state,
          nir_ssa_def *local_index = nir_load_local_invocation_index(b);
 
          nir_const_value uvec3;
+         memset(&uvec3, 0, sizeof(uvec3));
          uvec3.u32[0] = 1;
          uvec3.u32[1] = size[0];
          uvec3.u32[2] = size[0] * size[1];
