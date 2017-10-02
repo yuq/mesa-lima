@@ -484,7 +484,7 @@ scan_instruction(struct tgsi_shader_info *info,
          src.Register.SwizzleZ = fullinst->TexOffsets[i].SwizzleZ;
 
          /* The usage mask is suboptimal but should be safe. */
-         scan_src_operand(info, fullinst, &src, 0, TGSI_WRITEMASK_XYZ,
+         scan_src_operand(info, fullinst, &src, -1, TGSI_WRITEMASK_XYZ,
                           false, &is_mem_inst);
       }
    }
