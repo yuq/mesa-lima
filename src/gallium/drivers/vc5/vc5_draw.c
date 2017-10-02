@@ -80,7 +80,8 @@ vc5_start_draw(struct vc5_context *vc5)
                 config.height_in_tiles = job->draw_tiles_y;
 
                 /* Must be >= 1 */
-                config.number_of_render_targets = 1;
+                config.number_of_render_targets =
+                        MAX2(vc5->framebuffer.nr_cbufs, 1);
 
                 config.multisample_mode_4x = job->msaa;
 
