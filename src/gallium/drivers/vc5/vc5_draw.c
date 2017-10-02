@@ -361,7 +361,9 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 return;
         }
 
-        /* Before setting up the draw, do any fixup blits necessary. */
+        /* Before setting up the draw, flush anything writing to the textures
+         * that we read from.
+         */
         vc5_predraw_check_textures(pctx, &vc5->verttex);
         vc5_predraw_check_textures(pctx, &vc5->fragtex);
 
