@@ -280,6 +280,7 @@ vlVaPutSurface(VADriverContextP ctx, VASurfaceID surface_id, void* draw, short s
    struct vl_screen *vscreen;
    struct u_rect src_rect, *dirty_area;
    struct u_rect dst_rect = {destx, destx + destw, desty, desty + desth};
+   enum pipe_format format;
    VAStatus status;
 
    if (!ctx)
@@ -318,8 +319,19 @@ vlVaPutSurface(VADriverContextP ctx, VASurfaceID surface_id, void* draw, short s
    src_rect.x1 = srcw + srcx;
    src_rect.y1 = srch + srcy;
 
+   format = surf->buffer->buffer_format;
+
    vl_compositor_clear_layers(&drv->cstate);
-   vl_compositor_set_buffer_layer(&drv->cstate, &drv->compositor, 0, surf->buffer, &src_rect, NULL, VL_COMPOSITOR_WEAVE);
+
+   if (format == PIPE_FORMAT_B8G8R8A8_UNORM || format == PIPE_FORMAT_B8G8R8X8_UNORM ||
+       format == PIPE_FORMAT_R8G8B8A8_UNORM || format == PIPE_FORMAT_R8G8B8X8_UNORM) {
+      struct pipe_sampler_view **views;
+
+      views = surf->buffer->get_sampler_view_planes(surf->buffer);
+      vl_compositor_set_rgba_layer(&drv->cstate, &drv->compositor, 0, views[0], &src_rect, NULL, NULL);
+   } else
+      vl_compositor_set_buffer_layer(&drv->cstate, &drv->compositor, 0, surf->buffer, &src_rect, NULL, VL_COMPOSITOR_WEAVE);
+
    vl_compositor_set_layer_dst_area(&drv->cstate, 0, &dst_rect);
    vl_compositor_render(&drv->cstate, &drv->compositor, surf_draw, dirty_area, true);
 
