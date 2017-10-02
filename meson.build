@@ -264,7 +264,6 @@ if cc.has_function('dlopen')
 else
   dep_dl = cc.find_library('dl')
 endif
-pre_args += '-DHAVE_DLOPEN'
 
 if not cc.has_function('dladdr', dependencies : dep_dl)
   error('dl library doesn\'t have dladdr')
