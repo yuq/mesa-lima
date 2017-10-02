@@ -669,6 +669,11 @@ brw_finish_drawing(struct gl_context *ctx)
    brw_program_cache_check_size(brw);
    brw_postdraw_reconcile_align_wa_slices(brw);
    brw_postdraw_set_buffers_need_resolve(brw);
+
+   if (brw->draw.draw_params_count_bo) {
+      brw_bo_unreference(brw->draw.draw_params_count_bo);
+      brw->draw.draw_params_count_bo = NULL;
+   }
 }
 
 /* May fail if out of video memory for texture or vbo upload, or on
@@ -824,6 +829,8 @@ brw_draw_prims(struct gl_context *ctx,
    unsigned i;
    struct brw_context *brw = brw_context(ctx);
    const struct gl_vertex_array **arrays = ctx->Array._DrawArrays;
+   int predicate_state = brw->predicate.state;
+   int combine_op = MI_PREDICATE_COMBINEOP_SET;
    struct brw_transform_feedback_object *xfb_obj =
       (struct brw_transform_feedback_object *) gl_xfb_obj;
 
@@ -866,12 +873,107 @@ brw_draw_prims(struct gl_context *ctx,
     * manage it.  swrast doesn't support our featureset, so we can't fall back
     * to it.
     */
+
+    if (brw->draw.draw_params_count_bo &&
+        predicate_state == BRW_PREDICATE_STATE_USE_BIT) {
+      /* We need to empty the MI_PREDICATE_DATA register since it might
+       * already be set.
+       */
+
+      BEGIN_BATCH(4);
+      OUT_BATCH(MI_PREDICATE_DATA);
+      OUT_BATCH(0u);
+      OUT_BATCH(MI_PREDICATE_DATA + 4);
+      OUT_BATCH(0u);
+      ADVANCE_BATCH();
+
+      /* We need to combine the results of both predicates.*/
+      combine_op = MI_PREDICATE_COMBINEOP_AND;
+   }
+
    for (i = 0; i < nr_prims; i++) {
+      /* Implementation of ARB_indirect_parameters via predicates */
+      if (brw->draw.draw_params_count_bo) {
+         struct brw_bo *draw_id_bo = brw_bo_alloc(brw->bufmgr, "draw_id", 4, 4);
+         uint32_t draw_id_offset;
+
+         intel_upload_data(brw, &prims[i].draw_id, 4, 4, &draw_id_bo,
+                      &draw_id_offset);
+
+         brw_emit_pipe_control_flush(brw, PIPE_CONTROL_FLUSH_ENABLE);
+
+         brw_load_register_mem(brw, MI_PREDICATE_SRC0,
+                               brw->draw.draw_params_count_bo,
+                               brw->draw.draw_params_count_offset);
+         brw_load_register_mem(brw, MI_PREDICATE_SRC1, draw_id_bo,
+                               draw_id_offset);
+
+         BEGIN_BATCH(1);
+         OUT_BATCH(GEN7_MI_PREDICATE |
+                   MI_PREDICATE_LOADOP_LOADINV | combine_op |
+                   MI_PREDICATE_COMPAREOP_DELTAS_EQUAL);
+         ADVANCE_BATCH();
+
+         brw->predicate.state = BRW_PREDICATE_STATE_USE_BIT;
+
+         brw_bo_unreference(draw_id_bo);
+      }
+
       brw_draw_single_prim(ctx, arrays, &prims[i], i, xfb_obj, stream,
                            indirect);
    }
 
    brw_finish_drawing(ctx);
+   brw->predicate.state = predicate_state;
+}
+
+void
+brw_draw_indirect_prims(struct gl_context *ctx,
+                        GLuint mode,
+                        struct gl_buffer_object *indirect_data,
+                        GLsizeiptr indirect_offset,
+                        unsigned draw_count,
+                        unsigned stride,
+                        struct gl_buffer_object *indirect_params,
+                        GLsizeiptr indirect_params_offset,
+                        const struct _mesa_index_buffer *ib)
+{
+   struct brw_context *brw = brw_context(ctx);
+   struct _mesa_prim *prim;
+   GLsizei i;
+
+   prim = calloc(draw_count, sizeof(*prim));
+   if (prim == NULL) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "gl%sDraw%sIndirect%s",
+                  (draw_count > 1) ? "Multi" : "",
+                  ib ? "Elements" : "Arrays",
+                  indirect_params ? "CountARB" : "");
+      return;
+   }
+
+   prim[0].begin = 1;
+   prim[draw_count - 1].end = 1;
+   for (i = 0; i < draw_count; ++i, indirect_offset += stride) {
+      prim[i].mode = mode;
+      prim[i].indexed = !!ib;
+      prim[i].indirect_offset = indirect_offset;
+      prim[i].is_indirect = 1;
+      prim[i].draw_id = i;
+   }
+
+   if (indirect_params) {
+      brw->draw.draw_params_count_bo =
+         intel_buffer_object(indirect_params)->buffer;
+      brw_bo_reference(brw->draw.draw_params_count_bo);
+      brw->draw.draw_params_count_offset = indirect_params_offset;
+   }
+
+   brw_draw_prims(ctx, prim, draw_count,
+                  ib, false, 0, ~0,
+                  NULL, 0,
+                  indirect_data);
+
+   free(prim);
 }
 
 void
@@ -883,6 +985,7 @@ brw_draw_init(struct brw_context *brw)
    /* Register our drawing function:
     */
    vbo->draw_prims = brw_draw_prims;
+   vbo->draw_indirect_prims = brw_draw_indirect_prims;
 
    for (int i = 0; i < VERT_ATTRIB_MAX; i++)
       brw->vb.inputs[i].buffer = -1;

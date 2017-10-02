@@ -242,8 +242,10 @@ intelInitExtensions(struct gl_context *ctx)
                devinfo->gen >= 8 || devinfo->is_haswell;
          }
 
-         if (can_do_predicate_writes(brw->screen))
+         if (can_do_predicate_writes(brw->screen)) {
             brw->predicate.supported = true;
+            ctx->Extensions.ARB_indirect_parameters = true;
+         }
       }
    }
 

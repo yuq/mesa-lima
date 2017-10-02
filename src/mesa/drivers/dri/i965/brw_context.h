@@ -812,6 +812,14 @@ struct brw_context
       int gl_drawid;
       struct brw_bo *draw_id_bo;
       uint32_t draw_id_offset;
+
+      /**
+       * Pointer to the the buffer storing the indirect draw parameters. It
+       * currently only stores the number of requested draw calls but more
+       * parameters could potentially be added.
+       */
+      struct brw_bo *draw_params_count_bo;
+      uint32_t draw_params_count_offset;
    } draw;
 
    struct {
