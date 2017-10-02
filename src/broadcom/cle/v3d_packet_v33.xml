@@ -60,6 +60,13 @@
     <value name="TRIANGLES" value="4"/>
     <value name="TRIANGLE_STRIP" value="5"/>
     <value name="TRIANGLE_FAN" value="6"/>
+    <value name="POINTS_TF" value="16"/>
+    <value name="LINES_TF" value="17"/>
+    <value name="LINE_LOOP_TF" value="18"/>
+    <value name="LINE_STRIP_TF" value="19"/>
+    <value name="TRIANGLES_TF" value="20"/>
+    <value name="TRIANGLE_STRIP_TF" value="21"/>
+    <value name="TRIANGLE_FAN_TF" value="22"/>
   </enum>
 
   <packet code="0" name="Halt"/>

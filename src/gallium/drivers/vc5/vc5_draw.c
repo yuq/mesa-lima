@@ -409,6 +409,13 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 }
         }
 
+        /* The HW only processes transform feedback on primitives with the
+         * flag set.
+         */
+        uint32_t prim_tf_enable = 0;
+        if (vc5->prog.bind_vs->num_tf_outputs)
+                prim_tf_enable = (V3D_PRIM_POINTS_TF - V3D_PRIM_POINTS);
+
         /* Note that the primitive type fields match with OpenGL/gallium
          * definitions, up to but not including QUADS.
          */
@@ -433,7 +440,7 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                                 prim.maximum_index = (1u << 31) - 1; /* XXX */
                                 prim.address_of_indices_list =
                                         cl_address(rsc->bo, offset);
-                                prim.mode = info->mode;
+                                prim.mode = info->mode | prim_tf_enable;
                                 prim.enable_primitive_restarts = info->primitive_restart;
 
                                 prim.number_of_instances = info->instance_count;
@@ -446,7 +453,7 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                                 prim.maximum_index = (1u << 31) - 1; /* XXX */
                                 prim.address_of_indices_list =
                                         cl_address(rsc->bo, offset);
-                                prim.mode = info->mode;
+                                prim.mode = info->mode | prim_tf_enable;
                                 prim.enable_primitive_restarts = info->primitive_restart;
                         }
                 }
@@ -458,14 +465,14 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         } else {
                 if (info->instance_count > 1) {
                         cl_emit(&job->bcl, VERTEX_ARRAY_INSTANCED_PRIMITIVES, prim) {
-                                prim.mode = info->mode;
+                                prim.mode = info->mode | prim_tf_enable;
                                 prim.index_of_first_vertex = info->start;
                                 prim.number_of_instances = info->instance_count;
                                 prim.instance_length = info->count;
                         }
                 } else {
                         cl_emit(&job->bcl, VERTEX_ARRAY_PRIMITIVES, prim) {
-                                prim.mode = info->mode;
+                                prim.mode = info->mode | prim_tf_enable;
                                 prim.length = info->count;
                                 prim.index_of_first_vertex = info->start;
                         }
