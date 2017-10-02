@@ -188,12 +188,13 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
    NIR_PASS_V(nir, nir_propagate_invariant);
    NIR_PASS_V(nir, nir_lower_io_to_temporaries,
               entry_point->impl, true, false);
-   NIR_PASS_V(nir, nir_lower_system_values);
 
    /* Vulkan uses the separate-shader linking model */
    nir->info.separate_shader = true;
 
    nir = brw_preprocess_nir(compiler, nir);
+
+   NIR_PASS_V(nir, nir_lower_system_values);
 
    if (stage == MESA_SHADER_FRAGMENT)
       NIR_PASS_V(nir, anv_nir_lower_input_attachments);
