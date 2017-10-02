@@ -38,6 +38,7 @@
 #if !defined(XF86_LIBC_H)
 #include <stdio.h>
 #endif
+#include <stdlib.h>
 #include <stddef.h>
 #include <stdarg.h>
 
