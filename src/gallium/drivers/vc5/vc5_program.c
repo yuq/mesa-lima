@@ -100,7 +100,12 @@ vc5_set_transform_feedback_outputs(struct vc5_uncompiled_shader *so,
                         continue;
 
                 struct V3D33_TRANSFORM_FEEDBACK_OUTPUT_DATA_SPEC unpacked = {
-                        .first_shaded_vertex_value_to_output = vpm_start,
+                        /* We need the offset from the coordinate shader's VPM
+                         * output block, which has the [X, Y, Z, W, Xs, Ys]
+                         * values at the start.  Note that this will need some
+                         * shifting when PSIZ is also present.
+                         */
+                        .first_shaded_vertex_value_to_output = vpm_start + 6,
                         .number_of_consecutive_vertex_values_to_output_as_32_bit_values_minus_1 = vpm_size - 1,
                         .output_buffer_to_write_to = buffer,
                 };
