@@ -1070,24 +1070,26 @@ emit_frag_end(struct v3d_compile *c)
          * uniform setup
          */
 
-        if (c->output_color_var) {
-                nir_variable *var = c->output_color_var;
+        for (int rt = 0; rt < c->fs_key->nr_cbufs; rt++) {
+                if (!c->output_color_var[rt])
+                        continue;
+
+                nir_variable *var = c->output_color_var[rt];
                 struct qreg *color = &c->outputs[var->data.driver_location * 4];
                 int num_components = glsl_get_vector_elements(var->type);
-                uint32_t conf = ~0;
+                uint32_t conf = 0xffffff00;
                 struct qinst *inst;
+
+                conf |= TLB_SAMPLE_MODE_PER_PIXEL;
+                conf |= (7 - rt) << TLB_RENDER_TARGET_SHIFT;
 
                 assert(num_components != 0);
                 switch (glsl_get_base_type(var->type)) {
                 case GLSL_TYPE_UINT:
                 case GLSL_TYPE_INT:
-                        conf = (TLB_TYPE_I32_COLOR |
-                                TLB_SAMPLE_MODE_PER_PIXEL |
-                                ((7 - 0) << TLB_RENDER_TARGET_SHIFT) |
-                                ((num_components - 1) <<
-                                 TLB_VEC_SIZE_MINUS_1_SHIFT) |
-                                0xffffff00);
-
+                        conf |= TLB_TYPE_I32_COLOR;
+                        conf |= ((num_components - 1) <<
+                                 TLB_VEC_SIZE_MINUS_1_SHIFT);
 
                         inst = vir_MOV_dest(c, vir_reg(QFILE_TLBU, 0), color[0]);
                         vir_set_cond(inst, discard_cond);
@@ -1107,13 +1109,26 @@ emit_frag_end(struct v3d_compile *c)
                         struct qreg b = color[2];
                         struct qreg a = color[3];
 
-                        if (c->fs_key->swap_color_rb)  {
+                        conf |= TLB_TYPE_F16_COLOR;
+                        conf |= TLB_F16_SWAP_HI_LO;
+                        if (num_components >= 3)
+                                conf |= TLB_VEC_SIZE_4_F16;
+                        else
+                                conf |= TLB_VEC_SIZE_2_F16;
+
+                        if (c->fs_key->swap_color_rb & (1 << rt))  {
                                 r = color[2];
                                 b = color[0];
                         }
 
                         inst = vir_VFPACK_dest(c, vir_reg(QFILE_TLB, 0), r, g);
+                        if (conf != ~0) {
+                                inst->dst.file = QFILE_TLBU;
+                                inst->src[vir_get_implicit_uniform_src(inst)] =
+                                        vir_uniform_ui(c, conf);
+                        }
                         vir_set_cond(inst, discard_cond);
+
                         inst = vir_VFPACK_dest(c, vir_reg(QFILE_TLB, 0), b, a);
                         vir_set_cond(inst, discard_cond);
                         break;
@@ -1421,8 +1436,17 @@ ntq_setup_outputs(struct v3d_compile *c)
                 if (c->s->stage == MESA_SHADER_FRAGMENT) {
                         switch (var->data.location) {
                         case FRAG_RESULT_COLOR:
+                                c->output_color_var[0] = var;
+                                c->output_color_var[1] = var;
+                                c->output_color_var[2] = var;
+                                c->output_color_var[3] = var;
+                                break;
                         case FRAG_RESULT_DATA0:
-                                c->output_color_var = var;
+                        case FRAG_RESULT_DATA1:
+                        case FRAG_RESULT_DATA2:
+                        case FRAG_RESULT_DATA3:
+                                c->output_color_var[var->data.location -
+                                                    FRAG_RESULT_DATA0] = var;
                                 break;
                         case FRAG_RESULT_DEPTH:
                                 c->output_position_index = loc;

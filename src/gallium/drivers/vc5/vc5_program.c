@@ -357,12 +357,18 @@ vc5_update_compiled_fs(struct vc5_context *vc5, uint8_t prim_mode)
                 key->alpha_test_func = vc5->zsa->base.alpha.func;
         }
 
-        if (vc5->framebuffer.cbufs[0]) {
-                struct pipe_surface *cbuf = vc5->framebuffer.cbufs[0];
+        /* gl_FragColor's propagation to however many bound color buffers
+         * there are means that the buffer count needs to be in the key.
+         */
+        key->nr_cbufs = vc5->framebuffer.nr_cbufs;
+
+        for (int i = 0; i < key->nr_cbufs; i++) {
+                struct pipe_surface *cbuf = vc5->framebuffer.cbufs[i];
                 const struct util_format_description *desc =
                         util_format_description(cbuf->format);
 
-                key->swap_color_rb = desc->swizzle[0] == PIPE_SWIZZLE_Z;
+                if (desc->swizzle[0] == PIPE_SWIZZLE_Z)
+                        key->swap_color_rb |= 1 << i;
         }
 
         if (key->is_points) {

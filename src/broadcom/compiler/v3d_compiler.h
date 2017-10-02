@@ -318,7 +318,8 @@ struct v3d_fs_key {
         bool sample_alpha_to_coverage;
         bool sample_alpha_to_one;
         bool clamp_color;
-        bool swap_color_rb;
+        uint8_t nr_cbufs;
+        uint8_t swap_color_rb;
         uint8_t alpha_test_func;
         uint8_t logicop_func;
         uint32_t point_sprite_mask;
@@ -490,7 +491,7 @@ struct v3d_compile {
         uint32_t num_uniforms;
         uint32_t num_outputs;
         uint32_t output_position_index;
-        nir_variable *output_color_var;
+        nir_variable *output_color_var[4];
         uint32_t output_point_size_index;
         uint32_t output_sample_mask_index;
 
