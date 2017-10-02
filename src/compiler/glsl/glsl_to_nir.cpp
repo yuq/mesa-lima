@@ -311,7 +311,7 @@ nir_visitor::visit(ir_variable *ir)
    if (ir->data.mode == ir_var_shader_shared)
       return;
 
-   nir_variable *var = ralloc(shader, nir_variable);
+   nir_variable *var = rzalloc(shader, nir_variable);
    var->type = ir->type;
    var->name = ralloc_strdup(var, ir->name);
 
