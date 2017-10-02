@@ -2647,21 +2647,17 @@ void si_update_fb_dirtiness_after_rendering(struct si_context *sctx)
 		if (rtex->surface.has_stencil)
 			rtex->stencil_dirty_level_mask |= 1 << surf->u.tex.level;
 	}
-	if (sctx->framebuffer.compressed_cb_mask) {
-		struct pipe_surface *surf;
-		struct r600_texture *rtex;
-		unsigned mask = sctx->framebuffer.compressed_cb_mask;
 
-		do {
-			unsigned i = u_bit_scan(&mask);
-			surf = sctx->framebuffer.state.cbufs[i];
-			rtex = (struct r600_texture*)surf->texture;
+	unsigned compressed_cb_mask = sctx->framebuffer.compressed_cb_mask;
+	while (compressed_cb_mask) {
+		unsigned i = u_bit_scan(&compressed_cb_mask);
+		struct pipe_surface *surf = sctx->framebuffer.state.cbufs[i];
+		struct r600_texture *rtex = (struct r600_texture*)surf->texture;
 
-			if (rtex->fmask.size)
-				rtex->dirty_level_mask |= 1 << surf->u.tex.level;
-			if (rtex->dcc_gather_statistics)
-				rtex->separate_dcc_dirty = true;
-		} while (mask);
+		if (rtex->fmask.size)
+			rtex->dirty_level_mask |= 1 << surf->u.tex.level;
+		if (rtex->dcc_gather_statistics)
+			rtex->separate_dcc_dirty = true;
 	}
 }
 
