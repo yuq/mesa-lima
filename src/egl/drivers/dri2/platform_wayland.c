@@ -680,6 +680,7 @@ create_wl_buffer(struct dri2_egl_display *dri2_dpy,
    struct wl_buffer *ret;
    EGLBoolean query;
    int width, height, fourcc, num_planes;
+   uint64_t modifier = DRM_FORMAT_MOD_INVALID;
 
    query = dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_WIDTH, &width);
    query &= dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_HEIGHT,
@@ -694,10 +695,8 @@ create_wl_buffer(struct dri2_egl_display *dri2_dpy,
    if (!query)
       num_planes = 1;
 
-   if (dri2_dpy->wl_dmabuf && dri2_dpy->image->base.version >= 15) {
-      struct zwp_linux_buffer_params_v1 *params;
+   if (dri2_dpy->image->base.version >= 15) {
       int mod_hi, mod_lo;
-      int i;
 
       query = dri2_dpy->image->queryImage(image,
                                           __DRI_IMAGE_ATTRIB_MODIFIER_UPPER,
@@ -705,10 +704,15 @@ create_wl_buffer(struct dri2_egl_display *dri2_dpy,
       query &= dri2_dpy->image->queryImage(image,
                                            __DRI_IMAGE_ATTRIB_MODIFIER_LOWER,
                                            &mod_lo);
-      if (!query) {
-         mod_hi = DRM_FORMAT_MOD_INVALID >> 32;
-         mod_lo = DRM_FORMAT_MOD_INVALID & 0xffffffff;
+      if (query) {
+         modifier = (uint64_t) mod_hi << 32;
+         modifier |= (uint64_t) (mod_lo & 0xffffffff);
       }
+   }
+
+   if (dri2_dpy->wl_dmabuf && modifier != DRM_FORMAT_MOD_INVALID) {
+      struct zwp_linux_buffer_params_v1 *params;
+      int i;
 
       /* We don't need a wrapper for wl_dmabuf objects, because we have to
        * create the intermediate params object; we can set the queue on this,
@@ -751,7 +755,7 @@ create_wl_buffer(struct dri2_egl_display *dri2_dpy,
          }
 
          zwp_linux_buffer_params_v1_add(params, fd, i, offset, stride,
-                                        mod_hi, mod_lo);
+                                        modifier >> 32, modifier & 0xffffffff);
          close(fd);
       }
 
