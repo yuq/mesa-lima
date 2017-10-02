@@ -675,139 +675,136 @@ brw_finish_drawing(struct gl_context *ctx)
  * fallback conditions.
  */
 static void
-brw_try_draw_prims(struct gl_context *ctx,
-                   const struct gl_vertex_array *arrays[],
-                   const struct _mesa_prim *prims,
-                   GLuint nr_prims,
-                   struct brw_transform_feedback_object *xfb_obj,
-                   unsigned stream,
-                   struct gl_buffer_object *indirect)
+brw_draw_single_prim(struct gl_context *ctx,
+                     const struct gl_vertex_array *arrays[],
+                     const struct _mesa_prim *prim,
+                     unsigned prim_id,
+                     struct brw_transform_feedback_object *xfb_obj,
+                     unsigned stream,
+                     struct gl_buffer_object *indirect)
 {
    struct brw_context *brw = brw_context(ctx);
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   GLuint i;
    bool fail_next = false;
 
-   for (i = 0; i < nr_prims; i++) {
-      /* Flag BRW_NEW_DRAW_CALL on every draw.  This allows us to have
-       * atoms that happen on every draw call.
-       */
-      brw->ctx.NewDriverState |= BRW_NEW_DRAW_CALL;
+   /* Flag BRW_NEW_DRAW_CALL on every draw.  This allows us to have
+    * atoms that happen on every draw call.
+    */
+   brw->ctx.NewDriverState |= BRW_NEW_DRAW_CALL;
 
-      /* Flush the batch if the batch/state buffers are nearly full.  We can
-       * grow them if needed, but this is not free, so we'd like to avoid it.
-       */
-      intel_batchbuffer_require_space(brw, 1500, RENDER_RING);
-      brw_require_statebuffer_space(brw, 2400);
-      intel_batchbuffer_save_state(brw);
+   /* Flush the batch if the batch/state buffers are nearly full.  We can
+    * grow them if needed, but this is not free, so we'd like to avoid it.
+    */
+   intel_batchbuffer_require_space(brw, 1500, RENDER_RING);
+   brw_require_statebuffer_space(brw, 2400);
+   intel_batchbuffer_save_state(brw);
 
-      if (brw->num_instances != prims[i].num_instances ||
-          brw->basevertex != prims[i].basevertex ||
-          brw->baseinstance != prims[i].base_instance) {
-         brw->num_instances = prims[i].num_instances;
-         brw->basevertex = prims[i].basevertex;
-         brw->baseinstance = prims[i].base_instance;
-         if (i > 0) { /* For i == 0 we just did this before the loop */
-            brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
-            brw_merge_inputs(brw, arrays);
-         }
-      }
-
-      /* Determine if we need to flag BRW_NEW_VERTICES for updating the
-       * gl_BaseVertexARB or gl_BaseInstanceARB values. For indirect draw, we
-       * always flag if the shader uses one of the values. For direct draws,
-       * we only flag if the values change.
-       */
-      const int new_basevertex =
-         prims[i].indexed ? prims[i].basevertex : prims[i].start;
-      const int new_baseinstance = prims[i].base_instance;
-      const struct brw_vs_prog_data *vs_prog_data =
-         brw_vs_prog_data(brw->vs.base.prog_data);
-      if (i > 0) {
-         const bool uses_draw_parameters =
-            vs_prog_data->uses_basevertex ||
-            vs_prog_data->uses_baseinstance;
-
-         if ((uses_draw_parameters && prims[i].is_indirect) ||
-             (vs_prog_data->uses_basevertex &&
-              brw->draw.params.gl_basevertex != new_basevertex) ||
-             (vs_prog_data->uses_baseinstance &&
-              brw->draw.params.gl_baseinstance != new_baseinstance))
-            brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
-      }
-
-      brw->draw.params.gl_basevertex = new_basevertex;
-      brw->draw.params.gl_baseinstance = new_baseinstance;
-      brw_bo_unreference(brw->draw.draw_params_bo);
-
-      if (prims[i].is_indirect) {
-         /* Point draw_params_bo at the indirect buffer. */
-         brw->draw.draw_params_bo =
-            intel_buffer_object(ctx->DrawIndirectBuffer)->buffer;
-         brw_bo_reference(brw->draw.draw_params_bo);
-         brw->draw.draw_params_offset =
-            prims[i].indirect_offset + (prims[i].indexed ? 12 : 8);
-      } else {
-         /* Set draw_params_bo to NULL so brw_prepare_vertices knows it
-          * has to upload gl_BaseVertex and such if they're needed.
-          */
-         brw->draw.draw_params_bo = NULL;
-         brw->draw.draw_params_offset = 0;
-      }
-
-      /* gl_DrawID always needs its own vertex buffer since it's not part of
-       * the indirect parameter buffer. If the program uses gl_DrawID we need
-       * to flag BRW_NEW_VERTICES. For the first iteration, we don't have
-       * valid vs_prog_data, but we always flag BRW_NEW_VERTICES before
-       * the loop.
-       */
-      brw->draw.gl_drawid = prims[i].draw_id;
-      brw_bo_unreference(brw->draw.draw_id_bo);
-      brw->draw.draw_id_bo = NULL;
-      if (i > 0 && vs_prog_data->uses_drawid)
+   if (brw->num_instances != prim->num_instances ||
+       brw->basevertex != prim->basevertex ||
+       brw->baseinstance != prim->base_instance) {
+      brw->num_instances = prim->num_instances;
+      brw->basevertex = prim->basevertex;
+      brw->baseinstance = prim->base_instance;
+      if (prim_id > 0) { /* For i == 0 we just did this before the loop */
          brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
+         brw_merge_inputs(brw, arrays);
+      }
+   }
 
-      if (devinfo->gen < 6)
-         brw_set_prim(brw, &prims[i]);
-      else
-         gen6_set_prim(brw, &prims[i]);
+   /* Determine if we need to flag BRW_NEW_VERTICES for updating the
+    * gl_BaseVertexARB or gl_BaseInstanceARB values. For indirect draw, we
+    * always flag if the shader uses one of the values. For direct draws,
+    * we only flag if the values change.
+    */
+   const int new_basevertex =
+      prim->indexed ? prim->basevertex : prim->start;
+   const int new_baseinstance = prim->base_instance;
+   const struct brw_vs_prog_data *vs_prog_data =
+      brw_vs_prog_data(brw->vs.base.prog_data);
+   if (prim_id > 0) {
+      const bool uses_draw_parameters =
+         vs_prog_data->uses_basevertex ||
+         vs_prog_data->uses_baseinstance;
+
+      if ((uses_draw_parameters && prim->is_indirect) ||
+          (vs_prog_data->uses_basevertex &&
+           brw->draw.params.gl_basevertex != new_basevertex) ||
+          (vs_prog_data->uses_baseinstance &&
+           brw->draw.params.gl_baseinstance != new_baseinstance))
+         brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
+   }
+
+   brw->draw.params.gl_basevertex = new_basevertex;
+   brw->draw.params.gl_baseinstance = new_baseinstance;
+   brw_bo_unreference(brw->draw.draw_params_bo);
+
+   if (prim->is_indirect) {
+      /* Point draw_params_bo at the indirect buffer. */
+      brw->draw.draw_params_bo =
+         intel_buffer_object(ctx->DrawIndirectBuffer)->buffer;
+      brw_bo_reference(brw->draw.draw_params_bo);
+      brw->draw.draw_params_offset =
+         prim->indirect_offset + (prim->indexed ? 12 : 8);
+   } else {
+      /* Set draw_params_bo to NULL so brw_prepare_vertices knows it
+       * has to upload gl_BaseVertex and such if they're needed.
+       */
+      brw->draw.draw_params_bo = NULL;
+      brw->draw.draw_params_offset = 0;
+   }
+
+   /* gl_DrawID always needs its own vertex buffer since it's not part of
+    * the indirect parameter buffer. If the program uses gl_DrawID we need
+    * to flag BRW_NEW_VERTICES. For the first iteration, we don't have
+    * valid vs_prog_data, but we always flag BRW_NEW_VERTICES before
+    * the loop.
+    */
+   brw->draw.gl_drawid = prim->draw_id;
+   brw_bo_unreference(brw->draw.draw_id_bo);
+   brw->draw.draw_id_bo = NULL;
+   if (prim_id > 0 && vs_prog_data->uses_drawid)
+      brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
+
+   if (devinfo->gen < 6)
+      brw_set_prim(brw, prim);
+   else
+      gen6_set_prim(brw, prim);
 
 retry:
 
-      /* Note that before the loop, brw->ctx.NewDriverState was set to != 0, and
-       * that the state updated in the loop outside of this block is that in
-       * *_set_prim or intel_batchbuffer_flush(), which only impacts
-       * brw->ctx.NewDriverState.
-       */
-      if (brw->ctx.NewDriverState) {
-         brw->no_batch_wrap = true;
-         brw_upload_render_state(brw);
-      }
-
-      brw_emit_prim(brw, &prims[i], brw->primitive, xfb_obj, stream);
-
-      brw->no_batch_wrap = false;
-
-      if (!brw_batch_has_aperture_space(brw, 0)) {
-         if (!fail_next) {
-            intel_batchbuffer_reset_to_saved(brw);
-            intel_batchbuffer_flush(brw);
-            fail_next = true;
-            goto retry;
-         } else {
-            int ret = intel_batchbuffer_flush(brw);
-            WARN_ONCE(ret == -ENOSPC,
-                      "i965: Single primitive emit exceeded "
-                      "available aperture space\n");
-         }
-      }
-
-      /* Now that we know we haven't run out of aperture space, we can safely
-       * reset the dirty bits.
-       */
-      if (brw->ctx.NewDriverState)
-         brw_render_state_finished(brw);
+   /* Note that before the loop, brw->ctx.NewDriverState was set to != 0, and
+    * that the state updated in the loop outside of this block is that in
+    * *_set_prim or intel_batchbuffer_flush(), which only impacts
+    * brw->ctx.NewDriverState.
+    */
+   if (brw->ctx.NewDriverState) {
+      brw->no_batch_wrap = true;
+      brw_upload_render_state(brw);
    }
+
+   brw_emit_prim(brw, prim, brw->primitive, xfb_obj, stream);
+
+   brw->no_batch_wrap = false;
+
+   if (!brw_batch_has_aperture_space(brw, 0)) {
+      if (!fail_next) {
+         intel_batchbuffer_reset_to_saved(brw);
+         intel_batchbuffer_flush(brw);
+         fail_next = true;
+         goto retry;
+      } else {
+         int ret = intel_batchbuffer_flush(brw);
+         WARN_ONCE(ret == -ENOSPC,
+                   "i965: Single primitive emit exceeded "
+                   "available aperture space\n");
+      }
+   }
+
+   /* Now that we know we haven't run out of aperture space, we can safely
+    * reset the dirty bits.
+    */
+   if (brw->ctx.NewDriverState)
+      brw_render_state_finished(brw);
 
    return;
 }
@@ -824,6 +821,7 @@ brw_draw_prims(struct gl_context *ctx,
                unsigned stream,
                struct gl_buffer_object *indirect)
 {
+   unsigned i;
    struct brw_context *brw = brw_context(ctx);
    const struct gl_vertex_array **arrays = ctx->Array._DrawArrays;
    struct brw_transform_feedback_object *xfb_obj =
@@ -868,7 +866,11 @@ brw_draw_prims(struct gl_context *ctx,
     * manage it.  swrast doesn't support our featureset, so we can't fall back
     * to it.
     */
-   brw_try_draw_prims(ctx, arrays, prims, nr_prims, xfb_obj, stream, indirect);
+   for (i = 0; i < nr_prims; i++) {
+      brw_draw_single_prim(ctx, arrays, &prims[i], i, xfb_obj, stream,
+                           indirect);
+   }
+
    brw_finish_drawing(ctx);
 }
 
