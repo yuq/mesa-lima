@@ -107,7 +107,7 @@ scan_src_operand(struct tgsi_shader_info *info,
                  const struct tgsi_full_instruction *fullinst,
                  const struct tgsi_full_src_register *src,
                  unsigned src_index,
-                 unsigned usage_mask,
+                 unsigned usage_mask_after_swizzle,
                  bool is_interp_instruction,
                  bool *is_mem_inst)
 {
@@ -115,24 +115,21 @@ scan_src_operand(struct tgsi_shader_info *info,
 
    if (info->processor == PIPE_SHADER_COMPUTE &&
        src->Register.File == TGSI_FILE_SYSTEM_VALUE) {
-      unsigned swizzle[4], i, name;
+      unsigned name, mask;
 
       name = info->system_value_semantic_name[src->Register.Index];
-      swizzle[0] = src->Register.SwizzleX;
-      swizzle[1] = src->Register.SwizzleY;
-      swizzle[2] = src->Register.SwizzleZ;
-      swizzle[3] = src->Register.SwizzleW;
 
       switch (name) {
       case TGSI_SEMANTIC_THREAD_ID:
       case TGSI_SEMANTIC_BLOCK_ID:
-         for (i = 0; i < 4; i++) {
-            if (swizzle[i] <= TGSI_SWIZZLE_Z) {
-               if (name == TGSI_SEMANTIC_THREAD_ID)
-                  info->uses_thread_id[swizzle[i]] = true;
-               else
-                  info->uses_block_id[swizzle[i]] = true;
-            }
+         mask = usage_mask_after_swizzle & TGSI_WRITEMASK_XYZ;
+         while (mask) {
+            unsigned i = u_bit_scan(&mask);
+
+            if (name == TGSI_SEMANTIC_THREAD_ID)
+               info->uses_thread_id[i] = true;
+            else
+               info->uses_block_id[i] = true;
          }
          break;
       case TGSI_SEMANTIC_BLOCK_SIZE:
@@ -150,12 +147,12 @@ scan_src_operand(struct tgsi_shader_info *info,
    if (src->Register.File == TGSI_FILE_INPUT) {
       if (src->Register.Indirect) {
          for (ind = 0; ind < info->num_inputs; ++ind) {
-            info->input_usage_mask[ind] |= usage_mask;
+            info->input_usage_mask[ind] |= usage_mask_after_swizzle;
          }
       } else {
          assert(ind >= 0);
          assert(ind < PIPE_MAX_SHADER_INPUTS);
-         info->input_usage_mask[ind] |= usage_mask;
+         info->input_usage_mask[ind] |= usage_mask_after_swizzle;
       }
 
       if (info->processor == PIPE_SHADER_FRAGMENT) {
@@ -170,21 +167,11 @@ scan_src_operand(struct tgsi_shader_info *info,
          index = info->input_semantic_index[input];
 
          if (name == TGSI_SEMANTIC_POSITION &&
-             (src->Register.SwizzleX == TGSI_SWIZZLE_Z ||
-              src->Register.SwizzleY == TGSI_SWIZZLE_Z ||
-              src->Register.SwizzleZ == TGSI_SWIZZLE_Z ||
-              src->Register.SwizzleW == TGSI_SWIZZLE_Z))
-            info->reads_z = TRUE;
+             usage_mask_after_swizzle & TGSI_WRITEMASK_Z)
+            info->reads_z = true;
 
-         if (name == TGSI_SEMANTIC_COLOR) {
-            unsigned mask =
-               (1 << src->Register.SwizzleX) |
-               (1 << src->Register.SwizzleY) |
-               (1 << src->Register.SwizzleZ) |
-               (1 << src->Register.SwizzleW);
-
-            info->colors_read |= mask << (index * 4);
-         }
+         if (name == TGSI_SEMANTIC_COLOR)
+            info->colors_read |= usage_mask_after_swizzle << (index * 4);
 
          /* Process only interpolated varyings. Don't include POSITION.
           * Don't include integer varyings, because they are not
