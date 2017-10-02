@@ -336,6 +336,7 @@ nv50_program_translate(struct nv50_program *prog, uint16_t chipset,
    info->bin.sourceRep = PIPE_SHADER_IR_TGSI;
    info->bin.source = (void *)prog->pipe.tokens;
 
+   info->bin.smemSize = prog->cp.smem_size;
    info->io.auxCBSlot = 15;
    info->io.ucpBase = NV50_CB_AUX_UCP_OFFSET;
    info->io.genUserClip = prog->vp.clpd_nr;
@@ -382,6 +383,7 @@ nv50_program_translate(struct nv50_program *prog, uint16_t chipset,
    prog->interps = info->bin.fixupData;
    prog->max_gpr = MAX2(4, (info->bin.maxGPR >> 1) + 1);
    prog->tls_space = info->bin.tlsSpace;
+   prog->cp.smem_size = info->bin.smemSize;
    prog->mul_zero_wins = info->io.mul_zero_wins;
    prog->vp.need_vertex_id = info->io.vertexId < PIPE_MAX_SHADER_INPUTS;
 

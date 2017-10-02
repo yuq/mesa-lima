@@ -579,6 +579,7 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
    info->optLevel = 3;
 #endif
 
+   info->bin.smemSize = prog->cp.smem_size;
    info->io.genUserClip = prog->vp.num_ucps;
    info->io.auxCBSlot = 15;
    info->io.msInfoCBSlot = 15;
@@ -618,6 +619,7 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
    prog->relocs = info->bin.relocData;
    prog->fixups = info->bin.fixupData;
    prog->num_gprs = MAX2(4, (info->bin.maxGPR + 1));
+   prog->cp.smem_size = info->bin.smemSize;
    prog->num_barriers = info->numBarriers;
 
    prog->vp.need_vertex_id = info->io.vertexId < PIPE_MAX_SHADER_INPUTS;
