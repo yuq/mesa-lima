@@ -255,7 +255,7 @@
 
   <struct name="Transform Feedback Output Data Spec">
     <field name="First Shaded Vertex Value to output" size="8" start="0" type="uint"/>
-    <field name="Number of consecutive Vertex Values to output as 32-bit values" size="4" start="8" type="uint"/>
+    <field name="Number of consecutive Vertex Values to output as 32-bit values minus 1" size="4" start="8" type="uint"/>
     <field name="Output Buffer to write to" size="2" start="12" type="uint"/>
   </struct>
 

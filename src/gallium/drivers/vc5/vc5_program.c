@@ -87,7 +87,7 @@ vc5_set_transform_feedback_outputs(struct vc5_uncompiled_shader *so,
 
                 struct V3D33_TRANSFORM_FEEDBACK_OUTPUT_DATA_SPEC unpacked = {
                         .first_shaded_vertex_value_to_output = vpm_start,
-                        .number_of_consecutive_vertex_values_to_output_as_32_bit_values = vpm_size,
+                        .number_of_consecutive_vertex_values_to_output_as_32_bit_values_minus_1 = vpm_size - 1,
                         .output_buffer_to_write_to = buffer,
                 };
                 V3D33_TRANSFORM_FEEDBACK_OUTPUT_DATA_SPEC_pack(NULL,
