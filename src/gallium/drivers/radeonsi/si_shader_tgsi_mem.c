@@ -91,17 +91,6 @@ shader_buffer_fetch_rsrc(struct si_shader_context *ctx,
 		return ctx->abi.load_ssbo(&ctx->abi, index, false);
 }
 
-static bool tgsi_is_array_sampler(unsigned target)
-{
-	return target == TGSI_TEXTURE_1D_ARRAY ||
-	       target == TGSI_TEXTURE_SHADOW1D_ARRAY ||
-	       target == TGSI_TEXTURE_2D_ARRAY ||
-	       target == TGSI_TEXTURE_SHADOW2D_ARRAY ||
-	       target == TGSI_TEXTURE_CUBE_ARRAY ||
-	       target == TGSI_TEXTURE_SHADOWCUBE_ARRAY ||
-	       target == TGSI_TEXTURE_2D_ARRAY_MSAA;
-}
-
 static bool tgsi_is_array_image(unsigned target)
 {
 	return target == TGSI_TEXTURE_3D ||
