@@ -443,12 +443,30 @@ static void si_set_sampler_view_desc(struct si_context *sctx,
 	}
 }
 
+static bool color_needs_decompression(struct r600_texture *rtex)
+{
+	return rtex->fmask.size ||
+	       (rtex->dirty_level_mask &&
+		(rtex->cmask.size || rtex->dcc_offset));
+}
+
+static bool depth_needs_decompression(struct r600_texture *rtex)
+{
+	/* If the depth/stencil texture is TC-compatible, no decompression
+	 * will be done. The decompression function will only flush DB caches
+	 * to make it coherent with shaders. That's necessary because the driver
+	 * doesn't flush DB caches in any other case.
+	 */
+	return rtex->db_compatible;
+}
+
 static void si_set_sampler_view(struct si_context *sctx,
 				unsigned shader,
 				unsigned slot, struct pipe_sampler_view *view,
 				bool disallow_early_out)
 {
-	struct si_sampler_views *views = &sctx->samplers[shader].views;
+	struct si_textures_info *samplers = &sctx->samplers[shader];
+	struct si_sampler_views *views = &samplers->views;
 	struct si_sampler_view *rview = (struct si_sampler_view*)view;
 	struct si_descriptors *descs = si_sampler_and_image_descriptors(sctx, shader);
 	unsigned desc_slot = si_get_sampler_slot(slot);
@@ -463,8 +481,26 @@ static void si_set_sampler_view(struct si_context *sctx,
 		si_set_sampler_view_desc(sctx, rview,
 					 views->sampler_states[slot], desc);
 
-		if (rtex->resource.b.b.target == PIPE_BUFFER)
+		if (rtex->resource.b.b.target == PIPE_BUFFER) {
 			rtex->resource.bind_history |= PIPE_BIND_SAMPLER_VIEW;
+			samplers->needs_depth_decompress_mask &= ~(1u << slot);
+			samplers->needs_color_decompress_mask &= ~(1u << slot);
+		} else {
+			if (depth_needs_decompression(rtex)) {
+				samplers->needs_depth_decompress_mask |= 1u << slot;
+			} else {
+				samplers->needs_depth_decompress_mask &= ~(1u << slot);
+			}
+			if (color_needs_decompression(rtex)) {
+				samplers->needs_color_decompress_mask |= 1u << slot;
+			} else {
+				samplers->needs_color_decompress_mask &= ~(1u << slot);
+			}
+
+			if (rtex->dcc_offset &&
+			    p_atomic_read(&rtex->framebuffers_bound))
+				sctx->need_check_render_feedback = true;
+		}
 
 		pipe_sampler_view_reference(&views->views[slot], view);
 		views->enabled_mask |= 1u << slot;
@@ -485,26 +521,11 @@ static void si_set_sampler_view(struct si_context *sctx,
 						  desc + 12);
 
 		views->enabled_mask &= ~(1u << slot);
+		samplers->needs_depth_decompress_mask &= ~(1u << slot);
+		samplers->needs_color_decompress_mask &= ~(1u << slot);
 	}
 
 	sctx->descriptors_dirty |= 1u << si_sampler_and_image_descriptors_idx(shader);
-}
-
-static bool color_needs_decompression(struct r600_texture *rtex)
-{
-	return rtex->fmask.size ||
-	       (rtex->dirty_level_mask &&
-		(rtex->cmask.size || rtex->dcc_offset));
-}
-
-static bool depth_needs_decompression(struct r600_texture *rtex)
-{
-	/* If the depth/stencil texture is TC-compatible, no decompression
-	 * will be done. The decompression function will only flush DB caches
-	 * to make it coherent with shaders. That's necessary because the driver
-	 * doesn't flush DB caches in any other case.
-	 */
-	return rtex->db_compatible;
 }
 
 static void si_update_shader_needs_decompress_mask(struct si_context *sctx,
@@ -527,46 +548,17 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 				 struct pipe_sampler_view **views)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_textures_info *samplers = &sctx->samplers[shader];
 	int i;
 
 	if (!count || shader >= SI_NUM_SHADERS)
 		return;
 
-	for (i = 0; i < count; i++) {
-		unsigned slot = start + i;
-
-		if (!views || !views[i]) {
-			samplers->needs_depth_decompress_mask &= ~(1u << slot);
-			samplers->needs_color_decompress_mask &= ~(1u << slot);
-			si_set_sampler_view(sctx, shader, slot, NULL, false);
-			continue;
-		}
-
-		si_set_sampler_view(sctx, shader, slot, views[i], false);
-
-		if (views[i]->texture && views[i]->texture->target != PIPE_BUFFER) {
-			struct r600_texture *rtex =
-				(struct r600_texture*)views[i]->texture;
-
-			if (depth_needs_decompression(rtex)) {
-				samplers->needs_depth_decompress_mask |= 1u << slot;
-			} else {
-				samplers->needs_depth_decompress_mask &= ~(1u << slot);
-			}
-			if (color_needs_decompression(rtex)) {
-				samplers->needs_color_decompress_mask |= 1u << slot;
-			} else {
-				samplers->needs_color_decompress_mask &= ~(1u << slot);
-			}
-
-			if (rtex->dcc_offset &&
-			    p_atomic_read(&rtex->framebuffers_bound))
-				sctx->need_check_render_feedback = true;
-		} else {
-			samplers->needs_depth_decompress_mask &= ~(1u << slot);
-			samplers->needs_color_decompress_mask &= ~(1u << slot);
-		}
+	if (views) {
+		for (i = 0; i < count; i++)
+			si_set_sampler_view(sctx, shader, start + i, views[i], false);
+	} else {
+		for (i = 0; i < count; i++)
+			si_set_sampler_view(sctx, shader, start + i, NULL, false);
 	}
 
 	si_update_shader_needs_decompress_mask(sctx, shader);
