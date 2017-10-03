@@ -2777,7 +2777,7 @@ generate_variant(struct llvmpipe_context *lp,
                  const struct lp_fragment_shader_variant_key *key)
 {
    struct lp_fragment_shader_variant *variant;
-   const struct util_format_description *cbuf0_format_desc;
+   const struct util_format_description *cbuf0_format_desc = NULL;
    boolean fullcolormask;
    char module_name[64];
 
