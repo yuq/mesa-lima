@@ -365,7 +365,7 @@ void radv_CmdResolveImage(
 		return;
 	}
 
-	radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state, cmd_buffer);
+	radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state, cmd_buffer, ~0);
 
 	assert(src_image->info.samples > 1);
 	if (src_image->info.samples <= 1) {
@@ -573,7 +573,7 @@ radv_cmd_buffer_resolve_subpass(struct radv_cmd_buffer *cmd_buffer)
 		return;
 	}
 
-	radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state, cmd_buffer);
+	radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state, cmd_buffer, ~0);
 
 	for (uint32_t i = 0; i < subpass->color_count; ++i) {
 		VkAttachmentReference src_att = subpass->color_attachments[i];

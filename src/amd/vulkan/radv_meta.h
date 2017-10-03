@@ -33,7 +33,16 @@
 extern "C" {
 #endif
 
+enum radv_meta_save_flags {
+	RADV_META_SAVE_PASS		 = (1 << 0),
+	RADV_META_SAVE_CONSTANTS         = (1 << 1),
+	RADV_META_SAVE_DESCRIPTORS       = (1 << 2),
+	RADV_META_SAVE_GRAPHICS_PIPELINE = (1 << 3),
+};
+
 struct radv_meta_saved_state {
+	uint32_t flags;
+
 	struct radv_descriptor_set *old_descriptor_set0;
 	struct radv_pipeline *old_pipeline;
 	struct radv_viewport_state viewport;
@@ -182,7 +191,8 @@ void radv_fast_clear_flush_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 					 const VkImageSubresourceRange *subresourceRange);
 
 void radv_meta_save_graphics_reset_vport_scissor_novertex(struct radv_meta_saved_state *saved_state,
-							  struct radv_cmd_buffer *cmd_buffer);
+							  struct radv_cmd_buffer *cmd_buffer,
+							  uint32_t flags);
 
 void radv_meta_resolve_compute_image(struct radv_cmd_buffer *cmd_buffer,
 				     struct radv_image *src_image,

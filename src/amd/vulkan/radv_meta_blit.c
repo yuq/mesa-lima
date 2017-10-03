@@ -510,7 +510,7 @@ void radv_CmdBlitImage(
 	assert(src_image->info.samples == 1);
 	assert(dest_image->info.samples == 1);
 
-	radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state, cmd_buffer);
+	radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state, cmd_buffer, ~0);
 
 	for (unsigned r = 0; r < regionCount; r++) {
 		const VkImageSubresourceLayers *src_res = &pRegions[r].srcSubresource;

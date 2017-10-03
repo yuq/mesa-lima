@@ -32,53 +32,75 @@
 
 static void
 radv_meta_save_novertex(struct radv_meta_saved_state *state,
-			const struct radv_cmd_buffer *cmd_buffer)
+			const struct radv_cmd_buffer *cmd_buffer,
+			uint32_t flags)
 {
-	state->old_pipeline = cmd_buffer->state.pipeline;
-	state->old_descriptor_set0 = cmd_buffer->state.descriptors[0];
+	state->flags = flags;
 
-	/* Save all viewports. */
-	state->viewport.count = cmd_buffer->state.dynamic.viewport.count;
-	typed_memcpy(state->viewport.viewports,
-		     cmd_buffer->state.dynamic.viewport.viewports,
-		     MAX_VIEWPORTS);
+	if (state->flags & RADV_META_SAVE_GRAPHICS_PIPELINE) {
+		state->old_pipeline = cmd_buffer->state.pipeline;
 
-	/* Save all scissors. */
-	state->scissor.count = cmd_buffer->state.dynamic.scissor.count;
-	typed_memcpy(state->scissor.scissors,
-		     cmd_buffer->state.dynamic.scissor.scissors,
-		     MAX_SCISSORS);
+		/* Save all viewports. */
+		state->viewport.count = cmd_buffer->state.dynamic.viewport.count;
+		typed_memcpy(state->viewport.viewports,
+			     cmd_buffer->state.dynamic.viewport.viewports,
+			     MAX_VIEWPORTS);
 
-	memcpy(state->push_constants, cmd_buffer->push_constants, MAX_PUSH_CONSTANTS_SIZE);
+		/* Save all scissors. */
+		state->scissor.count = cmd_buffer->state.dynamic.scissor.count;
+		typed_memcpy(state->scissor.scissors,
+			     cmd_buffer->state.dynamic.scissor.scissors,
+			     MAX_SCISSORS);
+	}
+
+	if (state->flags & RADV_META_SAVE_DESCRIPTORS) {
+		state->old_descriptor_set0 = cmd_buffer->state.descriptors[0];
+	}
+
+	if (state->flags & RADV_META_SAVE_CONSTANTS) {
+		memcpy(state->push_constants, cmd_buffer->push_constants,
+		       MAX_PUSH_CONSTANTS_SIZE);
+	}
 }
 
 void
 radv_meta_restore(const struct radv_meta_saved_state *state,
 		  struct radv_cmd_buffer *cmd_buffer)
 {
-	radv_CmdBindPipeline(radv_cmd_buffer_to_handle(cmd_buffer), VK_PIPELINE_BIND_POINT_GRAPHICS,
-			     radv_pipeline_to_handle(state->old_pipeline));
-	cmd_buffer->state.descriptors[0] = state->old_descriptor_set0;
+	if (state->flags & RADV_META_SAVE_GRAPHICS_PIPELINE) {
+		radv_CmdBindPipeline(radv_cmd_buffer_to_handle(cmd_buffer),
+				     VK_PIPELINE_BIND_POINT_GRAPHICS,
+				     radv_pipeline_to_handle(state->old_pipeline));
 
-	cmd_buffer->state.dirty |= RADV_CMD_DIRTY_PIPELINE;
+		cmd_buffer->state.dirty |= RADV_CMD_DIRTY_PIPELINE;
 
-	/* Restore all viewports. */
-	cmd_buffer->state.dynamic.viewport.count = state->viewport.count;
-	typed_memcpy(cmd_buffer->state.dynamic.viewport.viewports,
-		     state->viewport.viewports,
-		     MAX_VIEWPORTS);
+		/* Restore all viewports. */
+		cmd_buffer->state.dynamic.viewport.count = state->viewport.count;
+		typed_memcpy(cmd_buffer->state.dynamic.viewport.viewports,
+			     state->viewport.viewports,
+			     MAX_VIEWPORTS);
 
-	/* Restore all scissors. */
-	cmd_buffer->state.dynamic.scissor.count = state->scissor.count;
-	typed_memcpy(cmd_buffer->state.dynamic.scissor.scissors,
-		     state->scissor.scissors,
-		     MAX_SCISSORS);
+		/* Restore all scissors. */
+		cmd_buffer->state.dynamic.scissor.count = state->scissor.count;
+		typed_memcpy(cmd_buffer->state.dynamic.scissor.scissors,
+			     state->scissor.scissors,
+			     MAX_SCISSORS);
 
-	cmd_buffer->state.dirty |= 1 << VK_DYNAMIC_STATE_VIEWPORT |
-				   1 << VK_DYNAMIC_STATE_SCISSOR;
+		cmd_buffer->state.dirty |= 1 << VK_DYNAMIC_STATE_VIEWPORT |
+					   1 << VK_DYNAMIC_STATE_SCISSOR;
+	}
 
-	memcpy(cmd_buffer->push_constants, state->push_constants, MAX_PUSH_CONSTANTS_SIZE);
-	cmd_buffer->push_constant_stages |= VK_SHADER_STAGE_ALL_GRAPHICS | VK_SHADER_STAGE_COMPUTE_BIT;
+	if (state->flags & RADV_META_SAVE_DESCRIPTORS) {
+		cmd_buffer->state.descriptors[0] = state->old_descriptor_set0;
+		cmd_buffer->state.descriptors_dirty |= (1 << 0);
+	}
+
+	if (state->flags & RADV_META_SAVE_CONSTANTS) {
+		memcpy(cmd_buffer->push_constants, state->push_constants,
+		       MAX_PUSH_CONSTANTS_SIZE);
+		cmd_buffer->push_constant_stages |= VK_SHADER_STAGE_ALL_GRAPHICS |
+						    VK_SHADER_STAGE_COMPUTE_BIT;
+	}
 }
 
 void
@@ -410,9 +432,10 @@ radv_device_finish_meta(struct radv_device *device)
  */
 void
 radv_meta_save_graphics_reset_vport_scissor_novertex(struct radv_meta_saved_state *saved_state,
-						     struct radv_cmd_buffer *cmd_buffer)
+						     struct radv_cmd_buffer *cmd_buffer,
+						     uint32_t flags)
 {
-	radv_meta_save_novertex(saved_state, cmd_buffer);
+	radv_meta_save_novertex(saved_state, cmd_buffer, flags);
 	cmd_buffer->state.dynamic.viewport.count = 0;
 	cmd_buffer->state.dynamic.scissor.count = 0;
 	cmd_buffer->state.dirty |= 1 << VK_DYNAMIC_STATE_VIEWPORT |
