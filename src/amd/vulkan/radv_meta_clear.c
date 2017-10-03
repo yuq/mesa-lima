@@ -1368,11 +1368,6 @@ radv_cmd_clear_image(struct radv_cmd_buffer *cmd_buffer,
 	}
 }
 
-union meta_saved_state {
-	struct radv_meta_saved_state gfx;
-	struct radv_meta_saved_compute_state compute;
-};
-
 void radv_CmdClearColorImage(
 	VkCommandBuffer                             commandBuffer,
 	VkImage                                     image_h,
@@ -1383,24 +1378,25 @@ void radv_CmdClearColorImage(
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	RADV_FROM_HANDLE(radv_image, image, image_h);
-	union meta_saved_state saved_state;
+	struct radv_meta_saved_state saved_state;
 	bool cs = cmd_buffer->queue_family_index == RADV_QUEUE_COMPUTE;
 
-	if (cs)
-		radv_meta_save_compute(&saved_state.compute, cmd_buffer, 16);
-	else
-		radv_meta_save(&saved_state.gfx, cmd_buffer,
+	if (cs) {
+		radv_meta_save(&saved_state, cmd_buffer,
+			       RADV_META_SAVE_COMPUTE_PIPELINE |
+			       RADV_META_SAVE_CONSTANTS |
+			       RADV_META_SAVE_DESCRIPTORS);
+	} else {
+		radv_meta_save(&saved_state, cmd_buffer,
 			       RADV_META_SAVE_GRAPHICS_PIPELINE |
 			       RADV_META_SAVE_CONSTANTS);
+	}
 
 	radv_cmd_clear_image(cmd_buffer, image, imageLayout,
 			     (const VkClearValue *) pColor,
 			     rangeCount, pRanges, cs);
 
-	if (cs)
-		radv_meta_restore_compute(&saved_state.compute, cmd_buffer);
-	else
-		radv_meta_restore(&saved_state.gfx, cmd_buffer);
+	radv_meta_restore(&saved_state, cmd_buffer);
 }
 
 void radv_CmdClearDepthStencilImage(

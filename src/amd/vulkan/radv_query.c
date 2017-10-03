@@ -649,9 +649,12 @@ static void radv_query_shader(struct radv_cmd_buffer *cmd_buffer,
                               uint32_t pipeline_stats_mask, uint32_t avail_offset)
 {
 	struct radv_device *device = cmd_buffer->device;
-	struct radv_meta_saved_compute_state saved_state;
+	struct radv_meta_saved_state saved_state;
 
-	radv_meta_save_compute(&saved_state, cmd_buffer, 16);
+	radv_meta_save(&saved_state, cmd_buffer,
+		       RADV_META_SAVE_COMPUTE_PIPELINE |
+		       RADV_META_SAVE_CONSTANTS |
+		       RADV_META_SAVE_DESCRIPTORS);
 
 	struct radv_buffer dst_buffer = {
 		.bo = dst_bo,
@@ -735,7 +738,7 @@ static void radv_query_shader(struct radv_cmd_buffer *cmd_buffer,
 	                                RADV_CMD_FLAG_INV_VMEM_L1 |
 	                                RADV_CMD_FLAG_CS_PARTIAL_FLUSH;
 
-	radv_meta_restore_compute(&saved_state, cmd_buffer);
+	radv_meta_restore(&saved_state, cmd_buffer);
 }
 
 VkResult radv_CreateQueryPool(
