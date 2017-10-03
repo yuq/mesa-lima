@@ -4885,7 +4885,7 @@ compressed_tex_sub_image(unsigned dim, GLenum target, GLuint texture,
                          const GLvoid *data, bool dsa, bool no_error,
                          const char *caller)
 {
-   struct gl_texture_object *texObj;
+   struct gl_texture_object *texObj = NULL;
    struct gl_texture_image *texImage;
 
    GET_CURRENT_CONTEXT(ctx);
