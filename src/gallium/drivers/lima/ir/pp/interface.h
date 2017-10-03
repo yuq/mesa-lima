@@ -21,12 +21,17 @@
  *
  */
 
-#ifndef LIMA_IR_PP_NIR_H
-#define LIMA_IR_PP_NIR_H
+#ifndef LIMA_IR_PP_INTERFACE_H
+#define LIMA_IR_PP_INTERFACE_H
+
+struct ra_regs;
 
 struct lima_fs_shader_state;
 typedef struct nir_shader nir_shader;
 
-bool ppir_compile_nir(struct lima_fs_shader_state *prog, nir_shader *nir);
+bool ppir_compile_nir(struct lima_fs_shader_state *prog, nir_shader *nir,
+                      struct ra_regs *ra);
+
+struct ra_regs *ppir_regalloc_init(void *mem_ctx);
 
 #endif

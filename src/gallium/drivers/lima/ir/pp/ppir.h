@@ -271,6 +271,7 @@ typedef struct ppir_block {
    int sched_instr_index;
 } ppir_block;
 
+struct ra_regs;
 struct lima_fs_shader_state;
 
 typedef struct ppir_compiler {
@@ -285,6 +286,7 @@ typedef struct ppir_compiler {
    ppir_node **var_nodes;
    unsigned reg_base;
 
+   struct ra_regs *ra;
    struct lima_fs_shader_state *prog;
 } ppir_compiler;
 
@@ -395,5 +397,6 @@ static inline bool ppir_instr_is_leaf(ppir_instr *instr)
 
 bool ppir_lower_prog(ppir_compiler *comp);
 bool ppir_schedule_prog(ppir_compiler *comp);
+bool ppir_regalloc_prog(ppir_compiler *comp);
 
 #endif

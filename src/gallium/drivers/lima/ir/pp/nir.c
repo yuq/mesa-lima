@@ -28,7 +28,7 @@
 #include "util/bitscan.h"
 #include "compiler/nir/nir.h"
 #include "ppir.h"
-#include "nir.h"
+#include "interface.h"
 
 static void *ppir_node_create_ssa(ppir_compiler *comp, ppir_op op, nir_ssa_def *ssa)
 {
@@ -350,12 +350,15 @@ static ppir_compiler *ppir_compiler_create(void *prog, unsigned num_reg, unsigne
    return comp;
 }
 
-bool ppir_compile_nir(struct lima_fs_shader_state *prog, nir_shader *nir)
+bool ppir_compile_nir(struct lima_fs_shader_state *prog, nir_shader *nir,
+                      struct ra_regs *ra)
 {
    nir_function_impl *func = nir_shader_get_entrypoint(nir);
    ppir_compiler *comp = ppir_compiler_create(prog, func->reg_alloc, func->ssa_alloc);
    if (!comp)
       return false;
+
+   comp->ra = ra;
 
    foreach_list_typed(nir_register, reg, node, &func->registers) {
       ppir_reg *r = ralloc(comp, ppir_reg);
@@ -376,6 +379,9 @@ bool ppir_compile_nir(struct lima_fs_shader_state *prog, nir_shader *nir)
    ppir_node_print_prog(comp);
 
    if (!ppir_schedule_prog(comp))
+      goto err_out0;
+
+   if (!ppir_regalloc_prog(comp))
       goto err_out0;
 
    ralloc_free(comp);
