@@ -11,12 +11,13 @@ gpir_SOURCES := \
 
 ppir_SOURCES := \
 	  ir/pp/ppir.h \
-	  ir/pp/nir.h \
+	  ir/pp/interface.h \
 	  ir/pp/nir.c \
 	  ir/pp/node.c \
 	  ir/pp/lower.c \
 	  ir/pp/scheduler.c \
-	  ir/pp/instr.c
+	  ir/pp/instr.c \
+	  ir/pp/regalloc.c
 
 DRM_SOURCES := \
 	  lima_device.c \

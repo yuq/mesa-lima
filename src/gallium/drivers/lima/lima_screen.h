@@ -33,6 +33,8 @@
 
 #define LIMA_MAX_MIP_LEVELS 12
 
+struct ra_regs;
+
 struct lima_screen {
    struct pipe_screen base;
 
@@ -44,6 +46,8 @@ struct lima_screen {
    int fd;
 
    struct slab_parent_pool transfer_pool;
+
+   struct ra_regs *pp_ra;
 };
 
 static inline struct lima_screen *
