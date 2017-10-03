@@ -4208,6 +4208,8 @@ struct gl_extensions
    GLboolean EXT_pixel_buffer_object;
    GLboolean EXT_point_parameters;
    GLboolean EXT_provoking_vertex;
+   GLboolean EXT_semaphore;
+   GLboolean EXT_semaphore_fd;
    GLboolean EXT_shader_integer_mix;
    GLboolean EXT_shader_samples_identical;
    GLboolean EXT_stencil_two_side;
