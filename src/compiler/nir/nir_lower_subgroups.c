@@ -28,6 +28,21 @@
  * \file nir_opt_intrinsics.c
  */
 
+static nir_ssa_def *
+ballot_type_to_uint(nir_builder *b, nir_ssa_def *value, unsigned bit_size)
+{
+   /* We only use this on uvec4 types */
+   assert(value->num_components == 4 && value->bit_size == 32);
+
+   if (bit_size == 32) {
+      return nir_channel(b, value, 0);
+   } else {
+      assert(bit_size == 64);
+      return nir_pack_64_2x32_split(b, nir_channel(b, value, 0),
+                                       nir_channel(b, value, 1));
+   }
+}
+
 /* Converts a uint32_t or uint64_t value to uint64_t or uvec4 */
 static nir_ssa_def *
 uint_to_ballot_type(nir_builder *b, nir_ssa_def *value,
@@ -185,6 +200,48 @@ lower_subgroups_intrin(nir_builder *b, nir_intrinsic_instr *intrin,
       return uint_to_ballot_type(b, &ballot->dest.ssa,
                                  intrin->dest.ssa.num_components,
                                  intrin->dest.ssa.bit_size);
+   }
+
+   case nir_intrinsic_ballot_bitfield_extract:
+   case nir_intrinsic_ballot_bit_count_reduce:
+   case nir_intrinsic_ballot_find_lsb:
+   case nir_intrinsic_ballot_find_msb: {
+      assert(intrin->src[0].is_ssa);
+      nir_ssa_def *int_val = ballot_type_to_uint(b, intrin->src[0].ssa,
+                                                 options->ballot_bit_size);
+      switch (intrin->intrinsic) {
+      case nir_intrinsic_ballot_bitfield_extract:
+         assert(intrin->src[1].is_ssa);
+         return nir_i2b(b, nir_iand(b, nir_ushr(b, int_val,
+                                                   intrin->src[1].ssa),
+                                       nir_imm_int(b, 1)));
+      case nir_intrinsic_ballot_bit_count_reduce:
+         return nir_bit_count(b, int_val);
+      case nir_intrinsic_ballot_find_lsb:
+         return nir_find_lsb(b, int_val);
+      case nir_intrinsic_ballot_find_msb:
+         return nir_ufind_msb(b, int_val);
+      default:
+         unreachable("you seriously can't tell this is unreachable?");
+      }
+   }
+
+   case nir_intrinsic_ballot_bit_count_exclusive:
+   case nir_intrinsic_ballot_bit_count_inclusive: {
+      nir_ssa_def *count = nir_load_subgroup_invocation(b);
+      nir_ssa_def *mask = nir_imm_intN_t(b, ~0ull, options->ballot_bit_size);
+      if (intrin->intrinsic == nir_intrinsic_ballot_bit_count_inclusive) {
+         const unsigned bits = options->ballot_bit_size;
+         mask = nir_ushr(b, mask, nir_isub(b, nir_imm_int(b, bits - 1), count));
+      } else {
+         mask = nir_inot(b, nir_ishl(b, mask, count));
+      }
+
+      assert(intrin->src[0].is_ssa);
+      nir_ssa_def *int_val = ballot_type_to_uint(b, intrin->src[0].ssa,
+                                                 options->ballot_bit_size);
+
+      return nir_bit_count(b, nir_iand(b, int_val, mask));
    }
 
    default:

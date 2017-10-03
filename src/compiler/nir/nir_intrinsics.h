@@ -125,6 +125,25 @@ INTRINSIC(vote_any, 1, ARR(1), true, 1, 0, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIM
 INTRINSIC(vote_all, 1, ARR(1), true, 1, 0, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 INTRINSIC(vote_eq,  1, ARR(1), true, 1, 0, 0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 
+/** Ballot ALU operations from SPIR-V.
+ *
+ * These operations work like their ALU counterparts except that the operate
+ * on a uvec4 which is treated as a 128bit integer.  Also, they are, in
+ * general, free to ignore any bits which are above the subgroup size.
+ */
+INTRINSIC(ballot_bitfield_extract, 2, ARR(4, 1), true, 1, 0,
+          0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(ballot_bit_count_reduce, 1, ARR(4), true, 1, 0,
+          0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(ballot_bit_count_inclusive, 1, ARR(4), true, 1, 0,
+          0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(ballot_bit_count_exclusive, 1, ARR(4), true, 1, 0,
+          0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(ballot_find_lsb, 1, ARR(4), true, 1, 0,
+          0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(ballot_find_msb, 1, ARR(4), true, 1, 0,
+          0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+
 /**
  * Basic Geometry Shader intrinsics.
  *
