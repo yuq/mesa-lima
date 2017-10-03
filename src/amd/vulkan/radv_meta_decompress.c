@@ -301,7 +301,6 @@ static void radv_process_depth_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 					     enum radv_depth_op op)
 {
 	struct radv_meta_saved_state saved_state;
-	struct radv_meta_saved_pass_state saved_pass_state;
 	VkDevice device_h = radv_device_to_handle(cmd_buffer->device);
 	VkCommandBuffer cmd_buffer_h = radv_cmd_buffer_to_handle(cmd_buffer);
 	uint32_t width = radv_minify(image->info.width,
@@ -315,10 +314,10 @@ static void radv_process_depth_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 
 	if (!image->surface.htile_size)
 		return;
-	radv_meta_save_pass(&saved_pass_state, cmd_buffer);
 
 	radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state, cmd_buffer,
-							     RADV_META_SAVE_GRAPHICS_PIPELINE);
+							     RADV_META_SAVE_GRAPHICS_PIPELINE |
+							     RADV_META_SAVE_PASS);
 
 	switch (op) {
 	case DEPTH_DECOMPRESS:
@@ -392,7 +391,6 @@ static void radv_process_depth_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 					&cmd_buffer->pool->alloc);
 	}
 	radv_meta_restore(&saved_state, cmd_buffer);
-	radv_meta_restore_pass(&saved_pass_state, cmd_buffer);
 }
 
 void radv_decompress_depth_image_inplace(struct radv_cmd_buffer *cmd_buffer,

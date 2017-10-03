@@ -49,9 +49,7 @@ struct radv_meta_saved_state {
 	struct radv_scissor_state scissor;
 
 	char push_constants[128];
-};
 
-struct radv_meta_saved_pass_state {
 	struct radv_render_pass *pass;
 	const struct radv_subpass *subpass;
 	struct radv_attachment_state *attachments;
@@ -99,12 +97,6 @@ void radv_device_finish_meta_resolve_fragment_state(struct radv_device *device);
 
 void radv_meta_restore(const struct radv_meta_saved_state *state,
 		       struct radv_cmd_buffer *cmd_buffer);
-
-void radv_meta_save_pass(struct radv_meta_saved_pass_state *state,
-			 const struct radv_cmd_buffer *cmd_buffer);
-
-void radv_meta_restore_pass(const struct radv_meta_saved_pass_state *state,
-			    struct radv_cmd_buffer *cmd_buffer);
 
 void radv_meta_save_compute(struct radv_meta_saved_compute_state *state,
 			    const struct radv_cmd_buffer *cmd_buffer,

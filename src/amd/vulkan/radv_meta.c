@@ -61,6 +61,14 @@ radv_meta_save_novertex(struct radv_meta_saved_state *state,
 		memcpy(state->push_constants, cmd_buffer->push_constants,
 		       MAX_PUSH_CONSTANTS_SIZE);
 	}
+
+	if (state->flags & RADV_META_SAVE_PASS) {
+		state->pass = cmd_buffer->state.pass;
+		state->subpass = cmd_buffer->state.subpass;
+		state->framebuffer = cmd_buffer->state.framebuffer;
+		state->attachments = cmd_buffer->state.attachments;
+		state->render_area = cmd_buffer->state.render_area;
+	}
 }
 
 void
@@ -101,30 +109,16 @@ radv_meta_restore(const struct radv_meta_saved_state *state,
 		cmd_buffer->push_constant_stages |= VK_SHADER_STAGE_ALL_GRAPHICS |
 						    VK_SHADER_STAGE_COMPUTE_BIT;
 	}
-}
 
-void
-radv_meta_save_pass(struct radv_meta_saved_pass_state *state,
-                    const struct radv_cmd_buffer *cmd_buffer)
-{
-	state->pass = cmd_buffer->state.pass;
-	state->subpass = cmd_buffer->state.subpass;
-	state->framebuffer = cmd_buffer->state.framebuffer;
-	state->attachments = cmd_buffer->state.attachments;
-	state->render_area = cmd_buffer->state.render_area;
-}
-
-void
-radv_meta_restore_pass(const struct radv_meta_saved_pass_state *state,
-                       struct radv_cmd_buffer *cmd_buffer)
-{
-	cmd_buffer->state.pass = state->pass;
-	cmd_buffer->state.subpass = state->subpass;
-	cmd_buffer->state.framebuffer = state->framebuffer;
-	cmd_buffer->state.attachments = state->attachments;
-	cmd_buffer->state.render_area = state->render_area;
-	if (state->subpass)
-		radv_emit_framebuffer_state(cmd_buffer);
+	if (state->flags & RADV_META_SAVE_PASS) {
+		cmd_buffer->state.pass = state->pass;
+		cmd_buffer->state.subpass = state->subpass;
+		cmd_buffer->state.framebuffer = state->framebuffer;
+		cmd_buffer->state.attachments = state->attachments;
+		cmd_buffer->state.render_area = state->render_area;
+		if (state->subpass)
+			radv_emit_framebuffer_state(cmd_buffer);
+	}
 }
 
 void
