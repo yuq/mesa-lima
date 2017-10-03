@@ -22,12 +22,13 @@
  *
  */
 
-#include "util/u_memory.h"
+#include "util/ralloc.h"
 
 #include "lima_screen.h"
 #include "lima_context.h"
 #include "lima_resource.h"
 #include "lima_program.h"
+#include "ir/pp/interface.h"
 
 static void
 lima_screen_destroy(struct pipe_screen *pscreen)
@@ -37,7 +38,7 @@ lima_screen_destroy(struct pipe_screen *pscreen)
    slab_destroy_parent(&screen->transfer_pool);
 
    lima_device_delete(screen->dev);
-   FREE(screen);
+   ralloc_free(screen);
 }
 
 static const char *
@@ -263,9 +264,13 @@ lima_screen_create(int fd)
    if (lima_device_create(fd, &dev))
       return NULL;
 
-   screen = CALLOC_STRUCT(lima_screen);
+   screen = rzalloc(NULL, struct lima_screen);
    if (!screen)
       goto err_out0;
+
+   screen->pp_ra = ppir_regalloc_init(screen);
+   if (!screen->pp_ra)
+      goto err_out1;
 
    screen->fd = fd;
    screen->dev = dev;
@@ -292,7 +297,7 @@ lima_screen_create(int fd)
    return &screen->base;
 
 err_out1:
-   FREE(screen);
+   ralloc_free(screen);
 err_out0:
    lima_device_delete(dev);
    return NULL;
