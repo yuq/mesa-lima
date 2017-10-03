@@ -561,7 +561,7 @@ public:
 
 #if defined(_DEBUG)
         // TODO: need to increase stack size, allocating SIMD16-widened transposedPrims causes stack overflow in debug builds
-        SIMDVERTEX_T<SIMD_T> *transposedPrims = reinterpret_cast<SIMDVERTEX_T<SIMD_T> *>(malloc(sizeof(SIMDVERTEX_T<SIMD_T>) * 2));
+        SIMDVERTEX_T<SIMD_T> *transposedPrims = reinterpret_cast<SIMDVERTEX_T<SIMD_T> *>(AlignedMalloc(sizeof(SIMDVERTEX_T<SIMD_T>) * 2, 64));
 
 #else
         SIMDVERTEX_T<SIMD_T> transposedPrims[2];
@@ -667,7 +667,7 @@ public:
         }
 
 #if defined(_DEBUG)
-        free(transposedPrims);
+        AlignedFree(transposedPrims);
 
 #endif
         // update global pipeline stat
