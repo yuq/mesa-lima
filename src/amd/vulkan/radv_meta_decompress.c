@@ -317,7 +317,8 @@ static void radv_process_depth_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 		return;
 	radv_meta_save_pass(&saved_pass_state, cmd_buffer);
 
-	radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state, cmd_buffer, ~0);
+	radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state, cmd_buffer,
+							     RADV_META_SAVE_GRAPHICS_PIPELINE);
 
 	switch (op) {
 	case DEPTH_DECOMPRESS:
