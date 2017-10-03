@@ -54,7 +54,7 @@ intermediates := $(call local-generated-sources-dir)
 
 $(intermediates)/compiler/brw_nir_trig_workarounds.c: $(brw_nir_trig_workarounds_deps)
 	@mkdir -p $(dir $@)
-	$(hide) PYTHONPATH=$(MESA_TOP)/src/compiler/nir $(MESA_PYTHON2) $< > $@
+	$(hide) $(MESA_PYTHON2) $< -p $(MESA_TOP)/src/compiler/nir > $@
 
 LOCAL_STATIC_LIBRARIES = libmesa_genxml
 
