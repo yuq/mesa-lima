@@ -1632,6 +1632,9 @@ struct anv_push_constants {
    /* Push constant data provided by the client through vkPushConstants */
    uint8_t client_data[MAX_PUSH_CONSTANTS_SIZE];
 
+   /* Used for vkCmdDispatchBase */
+   uint32_t base_work_group_id[3];
+
    /* Image data for image_load_store on pre-SKL */
    struct brw_image_param images[MAX_IMAGES];
 };

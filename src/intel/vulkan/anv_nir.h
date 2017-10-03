@@ -46,6 +46,9 @@ void anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
                                    struct brw_stage_prog_data *prog_data,
                                    struct anv_pipeline_bind_map *map);
 
+bool anv_nir_add_base_work_group_id(nir_shader *shader,
+                                    struct brw_cs_prog_data *prog_data);
+
 #ifdef __cplusplus
 }
 #endif

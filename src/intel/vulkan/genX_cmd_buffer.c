@@ -3032,15 +3032,60 @@ verify_cmd_parser(const struct anv_device *device,
 
 #endif
 
+static void
+anv_cmd_buffer_push_base_group_id(struct anv_cmd_buffer *cmd_buffer,
+                                  uint32_t baseGroupX,
+                                  uint32_t baseGroupY,
+                                  uint32_t baseGroupZ)
+{
+   if (anv_batch_has_error(&cmd_buffer->batch))
+      return;
+
+   VkResult result =
+      anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, MESA_SHADER_COMPUTE,
+                                                base_work_group_id);
+   if (result != VK_SUCCESS) {
+      cmd_buffer->batch.status = result;
+      return;
+   }
+
+   struct anv_push_constants *push =
+      cmd_buffer->state.push_constants[MESA_SHADER_COMPUTE];
+   if (push->base_work_group_id[0] != baseGroupX ||
+       push->base_work_group_id[1] != baseGroupY ||
+       push->base_work_group_id[2] != baseGroupZ) {
+      push->base_work_group_id[0] = baseGroupX;
+      push->base_work_group_id[1] = baseGroupY;
+      push->base_work_group_id[2] = baseGroupZ;
+
+      cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_COMPUTE_BIT;
+   }
+}
+
 void genX(CmdDispatch)(
     VkCommandBuffer                             commandBuffer,
     uint32_t                                    x,
     uint32_t                                    y,
     uint32_t                                    z)
 {
+   genX(CmdDispatchBase)(commandBuffer, 0, 0, 0, x, y, z);
+}
+
+void genX(CmdDispatchBase)(
+    VkCommandBuffer                             commandBuffer,
+    uint32_t                                    baseGroupX,
+    uint32_t                                    baseGroupY,
+    uint32_t                                    baseGroupZ,
+    uint32_t                                    groupCountX,
+    uint32_t                                    groupCountY,
+    uint32_t                                    groupCountZ)
+{
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.compute.base.pipeline;
    const struct brw_cs_prog_data *prog_data = get_cs_prog_data(pipeline);
+
+   anv_cmd_buffer_push_base_group_id(cmd_buffer, baseGroupX,
+                                     baseGroupY, baseGroupZ);
 
    if (anv_batch_has_error(&cmd_buffer->batch))
       return;
@@ -3049,9 +3094,9 @@ void genX(CmdDispatch)(
       struct anv_state state =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, 12, 4);
       uint32_t *sizes = state.map;
-      sizes[0] = x;
-      sizes[1] = y;
-      sizes[2] = z;
+      sizes[0] = groupCountX;
+      sizes[1] = groupCountY;
+      sizes[2] = groupCountZ;
       anv_state_flush(cmd_buffer->device, state);
       cmd_buffer->state.compute.num_workgroups = (struct anv_address) {
          .bo = &cmd_buffer->device->dynamic_state_pool.block_pool.bo,
@@ -3066,9 +3111,9 @@ void genX(CmdDispatch)(
       ggw.ThreadDepthCounterMaximum    = 0;
       ggw.ThreadHeightCounterMaximum   = 0;
       ggw.ThreadWidthCounterMaximum    = prog_data->threads - 1;
-      ggw.ThreadGroupIDXDimension      = x;
-      ggw.ThreadGroupIDYDimension      = y;
-      ggw.ThreadGroupIDZDimension      = z;
+      ggw.ThreadGroupIDXDimension      = groupCountX;
+      ggw.ThreadGroupIDYDimension      = groupCountY;
+      ggw.ThreadGroupIDZDimension      = groupCountZ;
       ggw.RightExecutionMask           = pipeline->cs_right_mask;
       ggw.BottomExecutionMask          = 0xffffffff;
    }
@@ -3092,6 +3137,8 @@ void genX(CmdDispatchIndirect)(
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
    struct anv_batch *batch = &cmd_buffer->batch;
+
+   anv_cmd_buffer_push_base_group_id(cmd_buffer, 0, 0, 0);
 
 #if GEN_GEN == 7
    /* Linux 4.4 added command parser version 5 which allows the GPGPU

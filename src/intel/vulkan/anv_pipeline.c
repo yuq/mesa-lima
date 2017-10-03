@@ -1042,6 +1042,8 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       }
 
+      NIR_PASS_V(nir, anv_nir_add_base_work_group_id, &prog_data);
+
       anv_fill_binding_table(&prog_data.base, 1);
 
       const unsigned *shader_code =

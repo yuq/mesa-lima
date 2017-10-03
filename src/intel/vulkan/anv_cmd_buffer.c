@@ -688,6 +688,12 @@ anv_push_constant_value(struct anv_push_constants *data, uint32_t param)
       switch (param) {
       case BRW_PARAM_BUILTIN_ZERO:
          return 0;
+      case BRW_PARAM_BUILTIN_BASE_WORK_GROUP_ID_X:
+         return data->base_work_group_id[0];
+      case BRW_PARAM_BUILTIN_BASE_WORK_GROUP_ID_Y:
+         return data->base_work_group_id[1];
+      case BRW_PARAM_BUILTIN_BASE_WORK_GROUP_ID_Z:
+         return data->base_work_group_id[2];
       default:
          unreachable("Invalid param builtin");
       }
