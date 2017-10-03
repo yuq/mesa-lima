@@ -34,9 +34,14 @@ void
 radv_meta_save(struct radv_meta_saved_state *state,
 	       struct radv_cmd_buffer *cmd_buffer, uint32_t flags)
 {
+	assert(flags & (RADV_META_SAVE_GRAPHICS_PIPELINE |
+			RADV_META_SAVE_COMPUTE_PIPELINE));
+
 	state->flags = flags;
 
 	if (state->flags & RADV_META_SAVE_GRAPHICS_PIPELINE) {
+		assert(!(state->flags & RADV_META_SAVE_COMPUTE_PIPELINE));
+
 		state->old_pipeline = cmd_buffer->state.pipeline;
 
 		/* Save all viewports. */
@@ -59,6 +64,12 @@ radv_meta_save(struct radv_meta_saved_state *state,
 		cmd_buffer->state.dynamic.scissor.count = 0;
 		cmd_buffer->state.dirty |= 1 << VK_DYNAMIC_STATE_VIEWPORT |
 					   1 << VK_DYNAMIC_STATE_SCISSOR;
+	}
+
+	if (state->flags & RADV_META_SAVE_COMPUTE_PIPELINE) {
+		assert(!(state->flags & RADV_META_SAVE_GRAPHICS_PIPELINE));
+
+		state->old_pipeline = cmd_buffer->state.compute_pipeline;
 	}
 
 	if (state->flags & RADV_META_SAVE_DESCRIPTORS) {
@@ -106,6 +117,12 @@ radv_meta_restore(const struct radv_meta_saved_state *state,
 					   1 << VK_DYNAMIC_STATE_SCISSOR;
 	}
 
+	if (state->flags & RADV_META_SAVE_COMPUTE_PIPELINE) {
+		radv_CmdBindPipeline(radv_cmd_buffer_to_handle(cmd_buffer),
+				     VK_PIPELINE_BIND_POINT_COMPUTE,
+				     radv_pipeline_to_handle(state->old_pipeline));
+	}
+
 	if (state->flags & RADV_META_SAVE_DESCRIPTORS) {
 		cmd_buffer->state.descriptors[0] = state->old_descriptor_set0;
 		cmd_buffer->state.descriptors_dirty |= (1 << 0);
@@ -114,8 +131,11 @@ radv_meta_restore(const struct radv_meta_saved_state *state,
 	if (state->flags & RADV_META_SAVE_CONSTANTS) {
 		memcpy(cmd_buffer->push_constants, state->push_constants,
 		       MAX_PUSH_CONSTANTS_SIZE);
-		cmd_buffer->push_constant_stages |= VK_SHADER_STAGE_ALL_GRAPHICS |
-						    VK_SHADER_STAGE_COMPUTE_BIT;
+		cmd_buffer->push_constant_stages |= VK_SHADER_STAGE_COMPUTE_BIT;
+
+		if (state->flags & RADV_META_SAVE_GRAPHICS_PIPELINE) {
+			cmd_buffer->push_constant_stages |= VK_SHADER_STAGE_ALL_GRAPHICS;
+		}
 	}
 
 	if (state->flags & RADV_META_SAVE_PASS) {
