@@ -33,8 +33,6 @@
 extern "C" {
 #endif
 
-#define RADV_META_VERTEX_BINDING_COUNT 2
-
 struct radv_meta_saved_state {
 	struct radv_descriptor_set *old_descriptor_set0;
 	struct radv_pipeline *old_pipeline;
