@@ -30,10 +30,9 @@
 #include <pwd.h>
 #include <sys/stat.h>
 
-static void
-radv_meta_save_novertex(struct radv_meta_saved_state *state,
-			const struct radv_cmd_buffer *cmd_buffer,
-			uint32_t flags)
+void
+radv_meta_save(struct radv_meta_saved_state *state,
+	       struct radv_cmd_buffer *cmd_buffer, uint32_t flags)
 {
 	state->flags = flags;
 
@@ -51,6 +50,15 @@ radv_meta_save_novertex(struct radv_meta_saved_state *state,
 		typed_memcpy(state->scissor.scissors,
 			     cmd_buffer->state.dynamic.scissor.scissors,
 			     MAX_SCISSORS);
+
+		/* The most common meta operations all want to have the
+		 * viewport reset and any scissors disabled. The rest of the
+		 * dynamic state should have no effect.
+		 */
+		cmd_buffer->state.dynamic.viewport.count = 0;
+		cmd_buffer->state.dynamic.scissor.count = 0;
+		cmd_buffer->state.dirty |= 1 << VK_DYNAMIC_STATE_VIEWPORT |
+					   1 << VK_DYNAMIC_STATE_SCISSOR;
 	}
 
 	if (state->flags & RADV_META_SAVE_DESCRIPTORS) {
@@ -417,23 +425,6 @@ radv_device_finish_meta(struct radv_device *device)
 
 	radv_store_meta_pipeline(device);
 	radv_pipeline_cache_finish(&device->meta_state.cache);
-}
-
-/*
- * The most common meta operations all want to have the viewport
- * reset and any scissors disabled. The rest of the dynamic state
- * should have no effect.
- */
-void
-radv_meta_save_graphics_reset_vport_scissor_novertex(struct radv_meta_saved_state *saved_state,
-						     struct radv_cmd_buffer *cmd_buffer,
-						     uint32_t flags)
-{
-	radv_meta_save_novertex(saved_state, cmd_buffer, flags);
-	cmd_buffer->state.dynamic.viewport.count = 0;
-	cmd_buffer->state.dynamic.scissor.count = 0;
-	cmd_buffer->state.dirty |= 1 << VK_DYNAMIC_STATE_VIEWPORT |
-				   1 << VK_DYNAMIC_STATE_SCISSOR;
 }
 
 nir_ssa_def *radv_meta_gen_rect_vertices_comp2(nir_builder *vs_b, nir_ssa_def *comp2)

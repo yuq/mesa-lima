@@ -343,9 +343,9 @@ radv_fast_clear_flush_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 
 	assert(cmd_buffer->queue_family_index == RADV_QUEUE_GENERAL);
 
-	radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state, cmd_buffer,
-							     RADV_META_SAVE_GRAPHICS_PIPELINE |
-							     RADV_META_SAVE_PASS);
+	radv_meta_save(&saved_state, cmd_buffer,
+		       RADV_META_SAVE_GRAPHICS_PIPELINE |
+		       RADV_META_SAVE_PASS);
 
 	if (image->fmask.size > 0) {
                pipeline = cmd_buffer->device->meta_state.fast_clear_flush.fmask_decompress_pipeline;

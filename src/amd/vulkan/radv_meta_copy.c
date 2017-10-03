@@ -123,10 +123,10 @@ meta_copy_buffer_to_image(struct radv_cmd_buffer *cmd_buffer,
 	if (cs)
 		radv_meta_save_compute(&saved_state.compute, cmd_buffer, 12);
 	else
-		radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state.gfx, cmd_buffer,
-								     RADV_META_SAVE_GRAPHICS_PIPELINE |
-								     RADV_META_SAVE_CONSTANTS |
-								     RADV_META_SAVE_DESCRIPTORS);
+		radv_meta_save(&saved_state.gfx, cmd_buffer,
+			       RADV_META_SAVE_GRAPHICS_PIPELINE |
+			       RADV_META_SAVE_CONSTANTS |
+			       RADV_META_SAVE_DESCRIPTORS);
 
 	for (unsigned r = 0; r < regionCount; r++) {
 
@@ -345,11 +345,10 @@ meta_copy_image(struct radv_cmd_buffer *cmd_buffer,
 	if (cs)
 		radv_meta_save_compute(&saved_state.compute, cmd_buffer, 16);
 	else
-		radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state.gfx, cmd_buffer,
-								     RADV_META_SAVE_GRAPHICS_PIPELINE |
-								     RADV_META_SAVE_CONSTANTS |
-								     RADV_META_SAVE_DESCRIPTORS);
-
+		radv_meta_save(&saved_state.gfx, cmd_buffer,
+			       RADV_META_SAVE_GRAPHICS_PIPELINE |
+			       RADV_META_SAVE_CONSTANTS |
+			       RADV_META_SAVE_DESCRIPTORS);
 
 	for (unsigned r = 0; r < regionCount; r++) {
 		assert(pRegions[r].srcSubresource.aspectMask ==
