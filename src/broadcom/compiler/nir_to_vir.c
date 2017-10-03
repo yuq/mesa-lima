@@ -1109,28 +1109,47 @@ emit_frag_end(struct v3d_compile *c)
                         struct qreg b = color[2];
                         struct qreg a = color[3];
 
-                        conf |= TLB_TYPE_F16_COLOR;
-                        conf |= TLB_F16_SWAP_HI_LO;
-                        if (num_components >= 3)
-                                conf |= TLB_VEC_SIZE_4_F16;
-                        else
-                                conf |= TLB_VEC_SIZE_2_F16;
+                        if (c->fs_key->f32_color_rb) {
+                                conf |= TLB_TYPE_F32_COLOR;
+                                conf |= ((num_components - 1) <<
+                                         TLB_VEC_SIZE_MINUS_1_SHIFT);
+                        } else {
+                                conf |= TLB_TYPE_F16_COLOR;
+                                conf |= TLB_F16_SWAP_HI_LO;
+                                if (num_components >= 3)
+                                        conf |= TLB_VEC_SIZE_4_F16;
+                                else
+                                        conf |= TLB_VEC_SIZE_2_F16;
+                        }
 
                         if (c->fs_key->swap_color_rb & (1 << rt))  {
                                 r = color[2];
                                 b = color[0];
                         }
 
-                        inst = vir_VFPACK_dest(c, vir_reg(QFILE_TLB, 0), r, g);
-                        if (conf != ~0) {
-                                inst->dst.file = QFILE_TLBU;
+                        if (c->fs_key->f32_color_rb & (1 << rt)) {
+                                inst = vir_MOV_dest(c, vir_reg(QFILE_TLBU, 0), color[0]);
+                                vir_set_cond(inst, discard_cond);
                                 inst->src[vir_get_implicit_uniform_src(inst)] =
                                         vir_uniform_ui(c, conf);
-                        }
-                        vir_set_cond(inst, discard_cond);
 
-                        inst = vir_VFPACK_dest(c, vir_reg(QFILE_TLB, 0), b, a);
-                        vir_set_cond(inst, discard_cond);
+                                for (int i = 1; i < num_components; i++) {
+                                        inst = vir_MOV_dest(c, vir_reg(QFILE_TLB, 0),
+                                                            color[i]);
+                                        vir_set_cond(inst, discard_cond);
+                                }
+                        } else {
+                                inst = vir_VFPACK_dest(c, vir_reg(QFILE_TLB, 0), r, g);
+                                if (conf != ~0) {
+                                        inst->dst.file = QFILE_TLBU;
+                                        inst->src[vir_get_implicit_uniform_src(inst)] =
+                                                vir_uniform_ui(c, conf);
+                                }
+                                vir_set_cond(inst, discard_cond);
+
+                                inst = vir_VFPACK_dest(c, vir_reg(QFILE_TLB, 0), b, a);
+                                vir_set_cond(inst, discard_cond);
+                        }
                         break;
                 }
                 }

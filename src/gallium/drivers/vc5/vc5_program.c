@@ -369,6 +369,10 @@ vc5_update_compiled_fs(struct vc5_context *vc5, uint8_t prim_mode)
 
                 if (desc->swizzle[0] == PIPE_SWIZZLE_Z)
                         key->swap_color_rb |= 1 << i;
+                if (desc->channel[0].type == UTIL_FORMAT_TYPE_FLOAT &&
+                    desc->channel[0].size == 32) {
+                        key->f32_color_rb |= 1 << i;
+                }
         }
 
         if (key->is_points) {

@@ -320,6 +320,8 @@ struct v3d_fs_key {
         bool clamp_color;
         uint8_t nr_cbufs;
         uint8_t swap_color_rb;
+        /* Mask of which render targets need to be written as 32-bit floats */
+        uint8_t f32_color_rb;
         uint8_t alpha_test_func;
         uint8_t logicop_func;
         uint32_t point_sprite_mask;
