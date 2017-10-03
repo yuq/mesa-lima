@@ -903,6 +903,21 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 			sctx->db_stencil_clear = true;
 			si_mark_atom_dirty(sctx, &sctx->db_render_state);
 		}
+
+		/* TODO: Find out what's wrong here. Fast depth clear leads to
+		 * corruption in ARK: Survival Evolved, but that may just be
+		 * a coincidence and the root cause is elsewhere.
+		 *
+		 * The corruption can be fixed by putting the DB metadata flush
+		 * before or after the depth clear. (suprisingly)
+		 *
+		 * https://bugs.freedesktop.org/show_bug.cgi?id=102955 (apitrace)
+		 *
+		 * This hack decreases back-to-back ClearDepth performance.
+		 */
+		if (sctx->screen->clear_db_meta_before_clear)
+			sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_DB_META |
+					 SI_CONTEXT_PS_PARTIAL_FLUSH;
 	}
 
 	si_blitter_begin(ctx, SI_CLEAR);
