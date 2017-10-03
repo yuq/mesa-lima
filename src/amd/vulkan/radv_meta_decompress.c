@@ -311,12 +311,24 @@ static void radv_process_depth_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 	uint32_t samples = image->info.samples;
 	uint32_t samples_log2 = ffs(samples) - 1;
 	struct radv_meta_state *meta_state = &cmd_buffer->device->meta_state;
+	VkPipeline pipeline_h;
 
 	if (!image->surface.htile_size)
 		return;
 	radv_meta_save_pass(&saved_pass_state, cmd_buffer);
 
 	radv_meta_save_graphics_reset_vport_scissor_novertex(&saved_state, cmd_buffer);
+
+	switch (op) {
+	case DEPTH_DECOMPRESS:
+		pipeline_h = meta_state->depth_decomp[samples_log2].decompress_pipeline;
+		break;
+	case DEPTH_RESUMMARIZE:
+		pipeline_h = meta_state->depth_decomp[samples_log2].resummarize_pipeline;
+		break;
+	default:
+		unreachable("unknown operation");
+	}
 
 	for (uint32_t layer = 0; layer < radv_get_layerCount(image, subresourceRange); layer++) {
 		struct radv_image_view iview;
@@ -371,18 +383,6 @@ static void radv_process_depth_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 						       .pClearValues = NULL,
 					   },
 					   VK_SUBPASS_CONTENTS_INLINE);
-
-		VkPipeline pipeline_h;
-		switch (op) {
-		case DEPTH_DECOMPRESS:
-			pipeline_h = meta_state->depth_decomp[samples_log2].decompress_pipeline;
-			break;
-		case DEPTH_RESUMMARIZE:
-			pipeline_h = meta_state->depth_decomp[samples_log2].resummarize_pipeline;
-			break;
-		default:
-			unreachable("unknown operation");
-		}
 
 		emit_depth_decomp(cmd_buffer, &(VkExtent2D){width, height}, pipeline_h);
 		radv_CmdEndRenderPass(cmd_buffer_h);
