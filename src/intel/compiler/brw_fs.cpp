@@ -1968,7 +1968,7 @@ fs_visitor::assign_constant_locations()
 
    /* For each uniform slot, a value of true indicates that the given slot and
     * the next slot must remain contiguous.  This is used to keep us from
-    * splitting arrays apart.
+    * splitting arrays and 64-bit values apart.
     */
    bool contiguous[uniforms];
    memset(contiguous, 0, sizeof(contiguous));
@@ -2005,6 +2005,9 @@ fs_visitor::assign_constant_locations()
             if (constant_nr >= 0 && constant_nr < (int) uniforms) {
                int regs_read = inst->components_read(i) *
                   type_sz(inst->src[i].type) / 4;
+               assert(regs_read <= 2);
+               if (regs_read == 2)
+                  contiguous[constant_nr] = true;
                for (int j = 0; j < regs_read; j++) {
                   is_live[constant_nr + j] = true;
                   bitsize_access[constant_nr + j] =
