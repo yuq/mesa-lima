@@ -1253,6 +1253,12 @@ radv_vi_dcc_enabled(const struct radv_image *image, unsigned level)
 	return image->surface.dcc_size && level < image->surface.num_dcc_levels;
 }
 
+static inline bool
+radv_htile_enabled(const struct radv_image *image, unsigned level)
+{
+	return image->surface.htile_size && level == 0;
+}
+
 unsigned radv_image_queue_family_mask(const struct radv_image *image, uint32_t family, uint32_t queue_family);
 
 static inline uint32_t

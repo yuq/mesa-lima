@@ -3255,8 +3255,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 		ds->db_depth_size = S_02801C_X_MAX(iview->image->info.width - 1) |
 			S_02801C_Y_MAX(iview->image->info.height - 1);
 
-		/* Only use HTILE for the first level. */
-		if (iview->image->surface.htile_size && !level) {
+		if (radv_htile_enabled(iview->image, level)) {
 			ds->db_z_info |= S_028038_TILE_SURFACE_ENABLE(1);
 
 			if (iview->image->tc_compatible_htile) {
@@ -3331,7 +3330,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 			S_028058_HEIGHT_TILE_MAX((level_info->nblk_y / 8) - 1);
 		ds->db_depth_slice = S_02805C_SLICE_TILE_MAX((level_info->nblk_x * level_info->nblk_y) / 64 - 1);
 
-		if (iview->image->surface.htile_size && !level) {
+		if (radv_htile_enabled(iview->image, level)) {
 			ds->db_z_info |= S_028040_TILE_SURFACE_ENABLE(1);
 
 			if (!iview->image->surface.has_stencil &&
