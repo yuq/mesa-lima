@@ -998,7 +998,7 @@ precompact(const struct gen_device_info *devinfo, brw_inst inst)
          (brw_inst_src0_type(devinfo, &inst) == BRW_REGISTER_TYPE_DF ||
           brw_inst_src0_type(devinfo, &inst) == BRW_REGISTER_TYPE_UQ ||
           brw_inst_src0_type(devinfo, &inst) == BRW_REGISTER_TYPE_Q))) {
-      enum brw_reg_file file = brw_inst_src0_reg_file(devinfo, &inst);
+      enum brw_reg_file file = brw_inst_src1_reg_file(devinfo, &inst);
       brw_inst_set_src1_file_type(devinfo, &inst, file, BRW_REGISTER_TYPE_UD);
    }
 
