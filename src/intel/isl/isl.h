@@ -1512,6 +1512,8 @@ enum isl_format isl_format_srgb_to_linear(enum isl_format fmt);
 static inline bool
 isl_format_is_rgb(enum isl_format fmt)
 {
+   if (isl_format_is_yuv(fmt))
+      return false;
    return isl_format_layouts[fmt].channels.r.bits > 0 &&
           isl_format_layouts[fmt].channels.g.bits > 0 &&
           isl_format_layouts[fmt].channels.b.bits > 0 &&
