@@ -336,14 +336,22 @@ vc5_emit_state(struct pipe_context *pctx)
                 }
 
                 cl_emit(&job->bcl, COLOUR_WRITE_MASKS, mask) {
-                        mask.render_target_0_per_colour_component_write_masks =
-                                (~blend->rt[0].colormask) & 0xf;
-                        mask.render_target_1_per_colour_component_write_masks =
-                                (~blend->rt[1].colormask) & 0xf;
-                        mask.render_target_2_per_colour_component_write_masks =
-                                (~blend->rt[2].colormask) & 0xf;
-                        mask.render_target_3_per_colour_component_write_masks =
-                                (~blend->rt[3].colormask) & 0xf;
+                        if (blend->independent_blend_enable) {
+                                mask.render_target_0_per_colour_component_write_masks =
+                                        (~blend->rt[0].colormask) & 0xf;
+                                mask.render_target_1_per_colour_component_write_masks =
+                                        (~blend->rt[1].colormask) & 0xf;
+                                mask.render_target_2_per_colour_component_write_masks =
+                                        (~blend->rt[2].colormask) & 0xf;
+                                mask.render_target_3_per_colour_component_write_masks =
+                                        (~blend->rt[3].colormask) & 0xf;
+                        } else {
+                                uint8_t colormask = (~blend->rt[0].colormask) & 0xf;
+                                mask.render_target_0_per_colour_component_write_masks = colormask;
+                                mask.render_target_1_per_colour_component_write_masks = colormask;
+                                mask.render_target_2_per_colour_component_write_masks = colormask;
+                                mask.render_target_3_per_colour_component_write_masks = colormask;
+                        }
                 }
         }
 
