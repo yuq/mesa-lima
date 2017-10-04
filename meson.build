@@ -73,10 +73,12 @@ endif
 
 with_dri = false
 with_dri_i965 = false
+with_dri_swrast = false
 _drivers = get_option('dri-drivers')
 if _drivers != ''
   _split = _drivers.split(',')
   with_dri_i965 = _split.contains('i965')
+  with_dri_swrast = _split.contains('swrast')
   with_dri = true
 endif
 

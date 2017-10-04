@@ -18,41 +18,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-subdir('common')
+libswrast_dri = static_library(
+  'swrast_dri',
+  files('swrast.c', 'swrast_priv.h'),
+  c_args : [c_vis_args],
+  include_directories : [inc_common, inc_dri_common],
+  dependencies : dep_libdrm,
+)
 
-dri_drivers = []
-dri_link = []
-if with_dri_swrast
-  subdir('swrast')
-endif
-if with_dri_i965
-  subdir('i965')
-endif
-
-if with_dri
-  libmesa_dri_drivers = shared_library(
-    'mesa_dri_drivers',
-    dummy_cpp,  # see meson #2180
-    link_whole : dri_drivers,
-    link_with : [libmegadriver_stub, libdricommon, libxmlconfig, libglapi,
-                 libmesa_util, libnir, libmesa_classic],
-    dependencies : [dep_selinux, dep_libdrm, dep_expat, dep_m, dep_thread,
-                    dep_dl],
-    link_args : [ld_args_bsymbolic, ld_args_gc_sections],
-  )
-
-  pkg.generate(
-    name : 'dri',
-    filebase : 'dri',
-    description : 'Direct Rendering Infrastructure',
-    version : meson.project_version(),
-    requires_private : ['libdrm >= 2.4.75'],  # FIXME: don't hardcode this
-  )
-
-  meson.add_install_script(
-    join_paths(meson.source_root(), 'bin/install_megadrivers.py'),
-    libmesa_dri_drivers.full_path(),
-    dri_drivers_path,
-    dri_link,
-  )
-endif
+dri_drivers += libswrast_dri
+dri_link += 'swrast_dri.so'
