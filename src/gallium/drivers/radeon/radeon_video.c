@@ -261,8 +261,7 @@ int si_vid_get_video_param(struct pipe_screen *screen,
 		case PIPE_VIDEO_FORMAT_MPEG12:
 			return profile != PIPE_VIDEO_PROFILE_MPEG1;
 		case PIPE_VIDEO_FORMAT_MPEG4:
-			/* no support for MPEG4 on older hw */
-			return rscreen->family >= CHIP_PALM;
+			return 1;
 		case PIPE_VIDEO_FORMAT_MPEG4_AVC:
 			if ((rscreen->family == CHIP_POLARIS10 ||
 			     rscreen->family == CHIP_POLARIS11) &&
@@ -305,21 +304,15 @@ int si_vid_get_video_param(struct pipe_screen *screen,
 			return PIPE_FORMAT_NV12;
 
 	case PIPE_VIDEO_CAP_PREFERS_INTERLACED:
-	case PIPE_VIDEO_CAP_SUPPORTS_INTERLACED:
-		if (rscreen->family < CHIP_PALM) {
-			/* MPEG2 only with shaders and no support for
-			   interlacing on R6xx style UVD */
-			return codec != PIPE_VIDEO_FORMAT_MPEG12 &&
-			       rscreen->family > CHIP_RV770;
-		} else {
-			enum pipe_video_format format = u_reduce_video_profile(profile);
+	case PIPE_VIDEO_CAP_SUPPORTS_INTERLACED: {
+		enum pipe_video_format format = u_reduce_video_profile(profile);
 
-			if (format == PIPE_VIDEO_FORMAT_HEVC)
-				return false; //The firmware doesn't support interlaced HEVC.
-			else if (format == PIPE_VIDEO_FORMAT_JPEG)
-				return false;
-			return true;
-		}
+		if (format == PIPE_VIDEO_FORMAT_HEVC)
+			return false; //The firmware doesn't support interlaced HEVC.
+		else if (format == PIPE_VIDEO_FORMAT_JPEG)
+			return false;
+		return true;
+	}
 	case PIPE_VIDEO_CAP_SUPPORTS_PROGRESSIVE:
 		return true;
 	case PIPE_VIDEO_CAP_MAX_LEVEL:

@@ -89,20 +89,10 @@ void si_streamout_buffers_dirty(struct r600_common_context *rctx)
 		num_bufs * 11; /* STRMOUT_BUFFER_UPDATE, BUFFER_SIZE */
 
 	begin->num_dw = 12; /* flush_vgt_streamout */
-
-	if (rctx->chip_class >= SI) {
-		begin->num_dw += num_bufs * 4; /* SET_CONTEXT_REG */
-	} else {
-		begin->num_dw += num_bufs * 7; /* SET_CONTEXT_REG */
-
-		if (rctx->family >= CHIP_RS780 && rctx->family <= CHIP_RV740)
-			begin->num_dw += num_bufs * 5; /* STRMOUT_BASE_UPDATE */
-	}
-
+	begin->num_dw += num_bufs * 4; /* SET_CONTEXT_REG */
 	begin->num_dw +=
 		num_bufs_appended * 8 + /* STRMOUT_BUFFER_UPDATE */
-		(num_bufs - num_bufs_appended) * 6 + /* STRMOUT_BUFFER_UPDATE */
-		(rctx->family > CHIP_R600 && rctx->family < CHIP_RS780 ? 2 : 0); /* SURFACE_BASE_UPDATE */
+		(num_bufs - num_bufs_appended) * 6; + /* STRMOUT_BUFFER_UPDATE */
 
 	rctx->set_atom_dirty(rctx, begin, true);
 
@@ -159,15 +149,9 @@ static void r600_flush_vgt_streamout(struct r600_common_context *rctx)
 	/* The register is at different places on different ASICs. */
 	if (rctx->chip_class >= CIK) {
 		reg_strmout_cntl = R_0300FC_CP_STRMOUT_CNTL;
-	} else if (rctx->chip_class >= EVERGREEN) {
-		reg_strmout_cntl = R_0084FC_CP_STRMOUT_CNTL;
-	} else {
-		reg_strmout_cntl = R_008490_CP_STRMOUT_CNTL;
-	}
-
-	if (rctx->chip_class >= CIK) {
 		radeon_set_uconfig_reg(cs, reg_strmout_cntl, 0);
 	} else {
+		reg_strmout_cntl = R_0084FC_CP_STRMOUT_CNTL;
 		radeon_set_config_reg(cs, reg_strmout_cntl, 0);
 	}
 
@@ -188,7 +172,7 @@ static void r600_emit_streamout_begin(struct r600_common_context *rctx, struct r
 	struct radeon_winsys_cs *cs = rctx->gfx.cs;
 	struct r600_so_target **t = rctx->streamout.targets;
 	uint16_t *stride_in_dw = rctx->streamout.stride_in_dw;
-	unsigned i, update_flags = 0;
+	unsigned i;
 
 	r600_flush_vgt_streamout(rctx);
 
@@ -198,39 +182,13 @@ static void r600_emit_streamout_begin(struct r600_common_context *rctx, struct r
 
 		t[i]->stride_in_dw = stride_in_dw[i];
 
-		if (rctx->chip_class >= SI) {
-			/* SI binds streamout buffers as shader resources.
-			 * VGT only counts primitives and tells the shader
-			 * through SGPRs what to do. */
-			radeon_set_context_reg_seq(cs, R_028AD0_VGT_STRMOUT_BUFFER_SIZE_0 + 16*i, 2);
-			radeon_emit(cs, (t[i]->b.buffer_offset +
-					 t[i]->b.buffer_size) >> 2);	/* BUFFER_SIZE (in DW) */
-			radeon_emit(cs, stride_in_dw[i]);		/* VTX_STRIDE (in DW) */
-		} else {
-			uint64_t va = r600_resource(t[i]->b.buffer)->gpu_address;
-
-			update_flags |= SURFACE_BASE_UPDATE_STRMOUT(i);
-
-			radeon_set_context_reg_seq(cs, R_028AD0_VGT_STRMOUT_BUFFER_SIZE_0 + 16*i, 3);
-			radeon_emit(cs, (t[i]->b.buffer_offset +
-					 t[i]->b.buffer_size) >> 2);	/* BUFFER_SIZE (in DW) */
-			radeon_emit(cs, stride_in_dw[i]);		/* VTX_STRIDE (in DW) */
-			radeon_emit(cs, va >> 8);			/* BUFFER_BASE */
-
-			r600_emit_reloc(rctx, &rctx->gfx, r600_resource(t[i]->b.buffer),
-					RADEON_USAGE_WRITE, RADEON_PRIO_SHADER_RW_BUFFER);
-
-			/* R7xx requires this packet after updating BUFFER_BASE.
-			 * Without this, R7xx locks up. */
-			if (rctx->family >= CHIP_RS780 && rctx->family <= CHIP_RV740) {
-				radeon_emit(cs, PKT3(PKT3_STRMOUT_BASE_UPDATE, 1, 0));
-				radeon_emit(cs, i);
-				radeon_emit(cs, va >> 8);
-
-				r600_emit_reloc(rctx, &rctx->gfx, r600_resource(t[i]->b.buffer),
-						RADEON_USAGE_WRITE, RADEON_PRIO_SHADER_RW_BUFFER);
-			}
-		}
+		/* SI binds streamout buffers as shader resources.
+		 * VGT only counts primitives and tells the shader
+		 * through SGPRs what to do. */
+		radeon_set_context_reg_seq(cs, R_028AD0_VGT_STRMOUT_BUFFER_SIZE_0 + 16*i, 2);
+		radeon_emit(cs, (t[i]->b.buffer_offset +
+				 t[i]->b.buffer_size) >> 2);	/* BUFFER_SIZE (in DW) */
+		radeon_emit(cs, stride_in_dw[i]);		/* VTX_STRIDE (in DW) */
 
 		if (rctx->streamout.append_bitmask & (1 << i) && t[i]->buf_filled_size_valid) {
 			uint64_t va = t[i]->buf_filled_size->gpu_address +
@@ -259,10 +217,6 @@ static void r600_emit_streamout_begin(struct r600_common_context *rctx, struct r
 		}
 	}
 
-	if (rctx->family > CHIP_R600 && rctx->family < CHIP_RV770) {
-		radeon_emit(cs, PKT3(PKT3_SURFACE_BASE_UPDATE, 0, 0));
-		radeon_emit(cs, update_flags);
-	}
 	rctx->streamout.begin_emitted = true;
 }
 
@@ -315,24 +269,16 @@ void si_emit_streamout_end(struct r600_common_context *rctx)
 static void r600_emit_streamout_enable(struct r600_common_context *rctx,
 				       struct r600_atom *atom)
 {
-	unsigned strmout_config_reg = R_028AB0_VGT_STRMOUT_EN;
-	unsigned strmout_config_val = S_028B94_STREAMOUT_0_EN(r600_get_strmout_en(rctx));
-	unsigned strmout_buffer_reg = R_028B20_VGT_STRMOUT_BUFFER_EN;
-	unsigned strmout_buffer_val = rctx->streamout.hw_enabled_mask &
-				      rctx->streamout.enabled_stream_buffers_mask;
-
-	if (rctx->chip_class >= EVERGREEN) {
-		strmout_buffer_reg = R_028B98_VGT_STRMOUT_BUFFER_CONFIG;
-
-		strmout_config_reg = R_028B94_VGT_STRMOUT_CONFIG;
-		strmout_config_val |=
-			S_028B94_RAST_STREAM(0) |
-			S_028B94_STREAMOUT_1_EN(r600_get_strmout_en(rctx)) |
-			S_028B94_STREAMOUT_2_EN(r600_get_strmout_en(rctx)) |
-			S_028B94_STREAMOUT_3_EN(r600_get_strmout_en(rctx));
-	}
-	radeon_set_context_reg(rctx->gfx.cs, strmout_buffer_reg, strmout_buffer_val);
-	radeon_set_context_reg(rctx->gfx.cs, strmout_config_reg, strmout_config_val);
+	radeon_set_context_reg_seq(rctx->gfx.cs, R_028B94_VGT_STRMOUT_CONFIG, 2);
+	radeon_emit(rctx->gfx.cs,
+		    S_028B94_STREAMOUT_0_EN(r600_get_strmout_en(rctx)) |
+		    S_028B94_RAST_STREAM(0) |
+		    S_028B94_STREAMOUT_1_EN(r600_get_strmout_en(rctx)) |
+		    S_028B94_STREAMOUT_2_EN(r600_get_strmout_en(rctx)) |
+		    S_028B94_STREAMOUT_3_EN(r600_get_strmout_en(rctx)));
+	radeon_emit(rctx->gfx.cs,
+		    rctx->streamout.hw_enabled_mask &
+		    rctx->streamout.enabled_stream_buffers_mask);
 }
 
 static void r600_set_streamout_enable(struct r600_common_context *rctx, bool enable)

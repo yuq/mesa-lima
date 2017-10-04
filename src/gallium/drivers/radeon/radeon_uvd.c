@@ -1358,7 +1358,7 @@ struct pipe_video_codec *si_common_uvd_create_decoder(struct pipe_context *conte
 
 	switch(u_reduce_video_profile(templ->profile)) {
 	case PIPE_VIDEO_FORMAT_MPEG12:
-		if (templ->entrypoint > PIPE_VIDEO_ENTRYPOINT_BITSTREAM || info.family < CHIP_PALM)
+		if (templ->entrypoint > PIPE_VIDEO_ENTRYPOINT_BITSTREAM)
 			return vl_create_mpeg12_decoder(context, templ);
 
 		/* fall through */

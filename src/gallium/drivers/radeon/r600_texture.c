@@ -496,10 +496,6 @@ static void r600_reallocate_texture_inplace(struct r600_common_context *rctx,
 
 	templ.bind |= new_bind_flag;
 
-	/* r600g doesn't react to dirty_tex_descriptor_counter */
-	if (rctx->chip_class < SI)
-		return;
-
 	if (rtex->resource.b.is_shared)
 		return;
 
