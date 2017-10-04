@@ -464,7 +464,6 @@ static struct pipe_context *si_pipe_create_context(struct pipe_screen *screen,
 /*
  * pipe_screen
  */
-
 static void si_destroy_screen(struct pipe_screen* pscreen)
 {
 	struct si_screen *sscreen = (struct si_screen *)pscreen;

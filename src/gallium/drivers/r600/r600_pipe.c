@@ -409,6 +409,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TILE_RASTER_ORDER:
 	case PIPE_CAP_SIGNED_VERTEX_BUFFER_OFFSET:
 	case PIPE_CAP_CONTEXT_PRIORITY_MASK:
+	case PIPE_CAP_FENCE_SIGNAL:
 		return 0;
 
 	case PIPE_CAP_DOUBLES:
