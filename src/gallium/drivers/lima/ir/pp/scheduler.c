@@ -80,8 +80,9 @@ static bool ppir_schedule_create_instr_from_node(ppir_compiler *comp)
             alu->num_src = 1;
 
             alu->dest.type = ppir_target_ssa;
-            alu->dest.ssa.node = move;
             alu->dest.ssa.num_components = 4;
+            alu->dest.ssa.live_in = INT_MAX;
+            alu->dest.ssa.live_out = 0;
             alu->dest.write_mask = 0xf;
 
             store->src.type = ppir_target_ssa;
@@ -290,6 +291,7 @@ static void ppir_schedule_ready_list(ppir_block *block,
    list_add(&instr->list, &block->instr_list);
    instr->scheduled = true;
    block->sched_instr_index--;
+   instr->seq = block->sched_instr_base + block->sched_instr_index;
 
    ppir_instr_foreach_pred(instr, entry) {
       ppir_instr *pred = ppir_instr_from_entry(entry);
@@ -331,6 +333,8 @@ static void ppir_schedule_block(ppir_block *block)
          ppir_schedule_calc_sched_info(instr);
       block->sched_instr_index++;
    }
+   block->sched_instr_base = block->comp->sched_instr_base;
+   block->comp->sched_instr_base += block->sched_instr_index;
 
    /* step 4 */
    struct list_head ready_list;
