@@ -29,7 +29,6 @@
 #include "sid.h"
 #include "gfx9d.h"
 
-#include "util/u_draw.h"
 #include "util/u_index_modify.h"
 #include "util/u_log.h"
 #include "util/u_upload_mgr.h"
@@ -1565,8 +1564,13 @@ void si_draw_rectangle(struct blitter_context *blitter,
 	vbuffer.buffer_offset = offset;
 
 	pipe->set_vertex_buffers(pipe, blitter->vb_slot, 1, &vbuffer);
-	util_draw_arrays_instanced(pipe, R600_PRIM_RECTANGLE_LIST, 0, 3,
-				   0, num_instances);
+
+	struct pipe_draw_info info = {};
+	info.mode = R600_PRIM_RECTANGLE_LIST;
+	info.count = 3;
+	info.instance_count = num_instances;
+
+	si_draw_vbo(pipe, &info);
 	pipe_resource_reference(&buf, NULL);
 }
 
