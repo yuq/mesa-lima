@@ -1407,6 +1407,12 @@ LLVMValueRef ac_build_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
 
 void ac_build_kill_if_false(struct ac_llvm_context *ctx, LLVMValueRef i1)
 {
+	if (HAVE_LLVM >= 0x0600) {
+		ac_build_intrinsic(ctx, "llvm.amdgcn.kill", ctx->voidt,
+				   &i1, 1, 0);
+		return;
+	}
+
 	LLVMValueRef value = LLVMBuildSelect(ctx->builder, i1,
 					     LLVMConstReal(ctx->f32, 1),
 					     LLVMConstReal(ctx->f32, -1), "");
