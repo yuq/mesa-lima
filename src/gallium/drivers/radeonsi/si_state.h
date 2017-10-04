@@ -407,6 +407,11 @@ void si_get_active_slot_masks(const struct tgsi_shader_info *info,
 void si_init_ia_multi_vgt_param_table(struct si_context *sctx);
 void si_emit_cache_flush(struct si_context *sctx);
 void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *dinfo);
+void si_draw_rectangle(struct blitter_context *blitter,
+		       int x1, int y1, int x2, int y2,
+		       float depth, unsigned num_instances,
+		       enum blitter_attrib_type type,
+		       const union blitter_attrib *attrib);
 void si_trace_emit(struct si_context *sctx);
 
 

@@ -29,6 +29,7 @@
 #include "sid.h"
 #include "gfx9d.h"
 
+#include "util/u_draw.h"
 #include "util/u_index_modify.h"
 #include "util/u_log.h"
 #include "util/u_upload_mgr.h"
@@ -1488,6 +1489,85 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	}
 	if (index_size && indexbuf != info->index.resource)
 		pipe_resource_reference(&indexbuf, NULL);
+}
+
+void si_draw_rectangle(struct blitter_context *blitter,
+		       int x1, int y1, int x2, int y2,
+		       float depth, unsigned num_instances,
+		       enum blitter_attrib_type type,
+		       const union blitter_attrib *attrib)
+{
+	struct pipe_context *pipe = util_blitter_get_pipe(blitter);
+	struct si_context *sctx = (struct si_context*)pipe;
+	struct pipe_viewport_state viewport;
+	struct pipe_resource *buf = NULL;
+	unsigned offset = 0;
+	float *vb;
+
+	/* setup viewport */
+	viewport.scale[0] = 1.0f;
+	viewport.scale[1] = 1.0f;
+	viewport.scale[2] = 1.0f;
+	viewport.translate[0] = 0.0f;
+	viewport.translate[1] = 0.0f;
+	viewport.translate[2] = 0.0f;
+	pipe->set_viewport_states(pipe, 0, 1, &viewport);
+
+	/* Upload vertices. The hw rectangle has only 3 vertices,
+	 * The 4th one is derived from the first 3.
+	 * The vertex specification should match u_blitter's vertex element state. */
+	u_upload_alloc(pipe->stream_uploader, 0, sizeof(float) * 24,
+		       sctx->screen->b.info.tcc_cache_line_size,
+                       &offset, &buf, (void**)&vb);
+	if (!buf)
+		return;
+
+	vb[0] = x1;
+	vb[1] = y1;
+	vb[2] = depth;
+	vb[3] = 1;
+
+	vb[8] = x1;
+	vb[9] = y2;
+	vb[10] = depth;
+	vb[11] = 1;
+
+	vb[16] = x2;
+	vb[17] = y1;
+	vb[18] = depth;
+	vb[19] = 1;
+
+	switch (type) {
+	case UTIL_BLITTER_ATTRIB_COLOR:
+		memcpy(vb+4, attrib->color, sizeof(float)*4);
+		memcpy(vb+12, attrib->color, sizeof(float)*4);
+		memcpy(vb+20, attrib->color, sizeof(float)*4);
+		break;
+	case UTIL_BLITTER_ATTRIB_TEXCOORD_XYZW:
+	case UTIL_BLITTER_ATTRIB_TEXCOORD_XY:
+		vb[6] = vb[14] = vb[22] = attrib->texcoord.z;
+		vb[7] = vb[15] = vb[23] = attrib->texcoord.w;
+		/* fall through */
+		vb[4] = attrib->texcoord.x1;
+		vb[5] = attrib->texcoord.y1;
+		vb[12] = attrib->texcoord.x1;
+		vb[13] = attrib->texcoord.y2;
+		vb[20] = attrib->texcoord.x2;
+		vb[21] = attrib->texcoord.y1;
+		break;
+	default:; /* Nothing to do. */
+	}
+
+	/* draw */
+	struct pipe_vertex_buffer vbuffer = {};
+	vbuffer.buffer.resource = buf;
+	vbuffer.stride = 2 * 4 * sizeof(float); /* vertex size */
+	vbuffer.buffer_offset = offset;
+
+	pipe->set_vertex_buffers(pipe, blitter->vb_slot, 1, &vbuffer);
+	util_draw_arrays_instanced(pipe, R600_PRIM_RECTANGLE_LIST, 0, 3,
+				   0, num_instances);
+	pipe_resource_reference(&buf, NULL);
 }
 
 void si_trace_emit(struct si_context *sctx)

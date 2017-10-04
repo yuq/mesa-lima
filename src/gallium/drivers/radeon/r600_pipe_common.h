@@ -736,11 +736,6 @@ void si_gfx_write_event_eop(struct r600_common_context *ctx,
 unsigned si_gfx_write_fence_dwords(struct r600_common_screen *screen);
 void si_gfx_wait_fence(struct r600_common_context *ctx,
 		       uint64_t va, uint32_t ref, uint32_t mask);
-void si_draw_rectangle(struct blitter_context *blitter,
-		       int x1, int y1, int x2, int y2,
-		       float depth, unsigned num_instances,
-		       enum blitter_attrib_type type,
-		       const union blitter_attrib *attrib);
 bool si_common_screen_init(struct r600_common_screen *rscreen,
 			   struct radeon_winsys *ws);
 void si_destroy_common_screen(struct r600_common_screen *rscreen);
