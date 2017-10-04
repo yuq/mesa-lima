@@ -134,7 +134,65 @@ struct ra_regs *ppir_regalloc_init(void *mem_ctx)
    return ret;
 }
 
+static ppir_reg *get_src_reg(ppir_src *src)
+{
+   switch (src->type) {
+   case ppir_target_ssa:
+      return src->ssa;
+   case ppir_target_register:
+      return src->reg;
+   default:
+      return NULL;
+   }
+}
+
+static void ppir_regalloc_build_liveness_info(ppir_compiler *comp)
+{
+   list_for_each_entry(ppir_block, block, &comp->block_list, list) {
+      list_for_each_entry(ppir_node, node, &block->node_list, list) {
+         if (!node->instr)
+            continue;
+
+         /* update reg live_in from node dest (write) */
+         ppir_dest *dest = ppir_node_get_dest(node);
+         if (dest) {
+            ppir_reg *reg = NULL;
+
+            if (dest->type == ppir_target_ssa) {
+               reg = &dest->ssa;
+               list_addtail(&reg->list, &comp->reg_list);
+            }
+            else if (dest->type == ppir_target_register)
+               reg = dest->reg;
+
+            if (reg && node->instr->seq < reg->live_in)
+               reg->live_in = node->instr->seq;
+
+            if (reg && node->instr->is_end)
+               reg->live_out = INT_MAX;
+         }
+
+         /* update reg live_out from node src (read) */
+         if (node->type == ppir_node_type_alu) {
+            ppir_alu_node *alu = ppir_node_to_alu(node);
+            for (int i = 0; i < alu->num_src; i++) {
+               ppir_reg *reg = get_src_reg(alu->src + i);
+               if (reg && node->instr->seq > reg->live_out)
+                  reg->live_out = node->instr->seq;
+            }
+         }
+         else if (node->type == ppir_node_type_store) {
+            ppir_store_node *store = ppir_node_to_store(node);
+            ppir_reg *reg = get_src_reg(&store->src);
+            if (reg && node->instr->seq > reg->live_out)
+               reg->live_out = node->instr->seq;
+         }
+      }
+   }
+}
+
 bool ppir_regalloc_prog(ppir_compiler *comp)
 {
+   ppir_regalloc_build_liveness_info(comp);
    return true;
 }
