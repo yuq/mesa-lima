@@ -2052,6 +2052,12 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 			       sel->info.num_inputs &&
 			       !sel->info.properties[TGSI_PROPERTY_VS_BLIT_SGPRS];
 
+	sel->force_correct_derivs_after_kill =
+		sel->type == PIPE_SHADER_FRAGMENT &&
+		sel->info.uses_derivatives &&
+		sel->info.uses_kill &&
+		sctx->screen->b.debug_flags & DBG(FS_CORRECT_DERIVS_AFTER_KILL);
+
 	/* Set which opcode uses which (i,j) pair. */
 	if (sel->info.uses_persp_opcode_interp_centroid)
 		sel->info.uses_persp_centroid = true;

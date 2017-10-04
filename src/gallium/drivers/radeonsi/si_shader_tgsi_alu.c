@@ -68,7 +68,7 @@ static void kil_emit(const struct lp_build_tgsi_action *action,
 		visible = LLVMConstInt(ctx->i1, false, 0);
 	}
 
-	if (ctx->postponed_kill) {
+	if (ctx->shader->selector->force_correct_derivs_after_kill) {
 		LLVMValueRef mask = LLVMBuildLoad(builder, ctx->postponed_kill, "");
 		mask = LLVMBuildAnd(builder, mask, visible, "");
 		LLVMBuildStore(builder, mask, ctx->postponed_kill);

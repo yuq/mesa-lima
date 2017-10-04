@@ -5846,8 +5846,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		}
 	}
 
-	if (ctx->type == PIPE_SHADER_FRAGMENT && sel->info.uses_kill &&
-	    ctx->screen->b.debug_flags & DBG(FS_CORRECT_DERIVS_AFTER_KILL)) {
+	if (sel->force_correct_derivs_after_kill) {
 		ctx->postponed_kill = lp_build_alloca_undef(&ctx->gallivm, ctx->i1, "");
 		/* true = don't kill. */
 		LLVMBuildStore(ctx->ac.builder, LLVMConstInt(ctx->i1, 1, 0),
