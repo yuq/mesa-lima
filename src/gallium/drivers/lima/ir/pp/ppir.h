@@ -147,12 +147,14 @@ typedef struct ppir_reg {
    struct list_head list;
    int index;
    int num_components;
+   /* whether this reg has to start from the x component
+    * of a full physical reg, this is true for reg used
+    * in load/store instr which has no swizzle field
+    */
+   bool is_head;
+   /* instr live range */
+   int live_in, live_out;
 } ppir_reg;
-
-typedef struct ppir_ssa {
-   ppir_node *node;
-   int num_components;
-} ppir_ssa;
 
 typedef enum {
    ppir_target_ssa,
@@ -164,7 +166,7 @@ typedef struct ppir_src {
    ppir_target type;
 
    union {
-      ppir_ssa *ssa;
+      ppir_reg *ssa;
       ppir_reg *reg;
       ppir_pipeline pipeline;
    };
@@ -184,7 +186,7 @@ typedef struct ppir_dest {
    ppir_target type;
 
    union {
-      ppir_ssa ssa;
+      ppir_reg ssa;
       ppir_reg *reg;
       ppir_pipeline pipeline;
    };
@@ -248,6 +250,7 @@ typedef struct ppir_instr {
    struct list_head list;
    int index;
    bool printed;
+   int seq; /* command sequence after schedule */
 
    ppir_node *slots[PPIR_INSTR_SLOT_NUM];
    ppir_const constant[2];
@@ -269,6 +272,7 @@ typedef struct ppir_block {
 
    /* for scheduler */
    int sched_instr_index;
+   int sched_instr_base;
 } ppir_block;
 
 struct ra_regs;
@@ -288,6 +292,9 @@ typedef struct ppir_compiler {
 
    struct ra_regs *ra;
    struct lima_fs_shader_state *prog;
+
+   /* for scheduler */
+   int sched_instr_base;
 } ppir_compiler;
 
 void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index, unsigned mask);
