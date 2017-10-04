@@ -24,6 +24,7 @@
 
 #include <stdio.h>
 
+#include "util/ralloc.h"
 #include "util/register_allocate.h"
 
 #include "ppir.h"
@@ -146,10 +147,22 @@ static ppir_reg *get_src_reg(ppir_src *src)
    }
 }
 
-static void ppir_regalloc_build_liveness_info(ppir_compiler *comp)
+static ppir_reg *ppir_regalloc_build_liveness_info(ppir_compiler *comp)
 {
+   ppir_reg *ret = NULL;
+
    list_for_each_entry(ppir_block, block, &comp->block_list, list) {
       list_for_each_entry(ppir_node, node, &block->node_list, list) {
+         if (node->op == ppir_op_store_color) {
+            ppir_store_node *store = ppir_node_to_store(node);
+            if (store->src.type == ppir_target_ssa)
+               ret = store->src.ssa;
+            else
+               ret = store->src.reg;
+            ret->live_out = INT_MAX;
+            continue;
+         }
+
          if (!node->instr)
             continue;
 
@@ -167,9 +180,6 @@ static void ppir_regalloc_build_liveness_info(ppir_compiler *comp)
 
             if (reg && node->instr->seq < reg->live_in)
                reg->live_in = node->instr->seq;
-
-            if (reg && node->instr->is_end)
-               reg->live_out = INT_MAX;
          }
 
          /* update reg live_out from node src (read) */
@@ -189,10 +199,86 @@ static void ppir_regalloc_build_liveness_info(ppir_compiler *comp)
          }
       }
    }
+
+   return ret;
+}
+
+static int get_phy_reg_index(int reg)
+{
+   int i;
+
+   for (i = 0; i < ppir_ra_reg_class_num; i++) {
+      if (reg < ppir_ra_reg_base[i + 1]) {
+         reg -= ppir_ra_reg_base[i];
+         break;
+      }
+   }
+
+   if (i < ppir_ra_reg_class_head_vec1)
+      return reg / (4 - i) * 4 + reg % (4 - i);
+   else
+      return reg * 4;
 }
 
 bool ppir_regalloc_prog(ppir_compiler *comp)
 {
-   ppir_regalloc_build_liveness_info(comp);
+   ppir_reg *end_reg = ppir_regalloc_build_liveness_info(comp);
+
+   struct ra_graph *g = ra_alloc_interference_graph(
+      comp->ra, list_length(&comp->reg_list));
+
+   int n = 0, end_reg_index = 0;
+   list_for_each_entry(ppir_reg, reg, &comp->reg_list, list) {
+      int c = ppir_ra_reg_class_vec1 + (reg->num_components - 1);
+      if (reg->is_head)
+         c += 4;
+      if (reg == end_reg)
+         end_reg_index = n;
+      ra_set_node_class(g, n++, c);
+   }
+
+   int n1 = 0;
+   list_for_each_entry(ppir_reg, reg1, &comp->reg_list, list) {
+      int n2 = n1 + 1;
+      list_for_each_entry_from(ppir_reg, reg2, reg1->list.next,
+                               &comp->reg_list, list) {
+         bool interference = false;
+         if (reg1->live_in < reg2->live_in) {
+            if (reg1->live_out > reg2->live_in)
+               interference = true;
+         }
+         else if (reg1->live_in > reg2->live_in) {
+            if (reg2->live_out > reg1->live_in)
+               interference = true;
+         }
+         else
+            interference = true;
+
+         if (interference)
+            ra_add_node_interference(g, n1, n2);
+
+         n2++;
+      }
+      n1++;
+   }
+
+   ra_set_node_reg(g, end_reg_index, ppir_ra_reg_base[ppir_ra_reg_class_vec4]);
+
+   if (!ra_allocate(g)) {
+      fprintf(stderr, "ppir: regalloc fail\n");
+      goto err_out;
+   }
+
+   n = 0;
+   list_for_each_entry(ppir_reg, reg, &comp->reg_list, list) {
+      int reg_index = ra_get_node_reg(g, n++);
+      reg->index = get_phy_reg_index(reg_index);
+   }
+
+   ralloc_free(g);
    return true;
+
+err_out:
+   ralloc_free(g);
+   return false;
 }
