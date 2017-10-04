@@ -396,7 +396,7 @@ matrix:
     - env:
         - LABEL="meson Vulkan"
         - BUILD=meson
-        - MESON_OPTIONS="-Dbuild-tests=true"
+        - MESON_OPTIONS=""
       addons:
         apt:
           sources:
@@ -530,5 +530,5 @@ script:
   - if test "x$BUILD" = xmeson; then
       export CFLAGS="$CFLAGS -isystem`pwd`";
       meson _build $MESON_OPTIONS;
-      ninja -C _build test;
+      ninja -C _build;
     fi
