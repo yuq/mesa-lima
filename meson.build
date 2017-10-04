@@ -288,7 +288,7 @@ dep_thread = dependency('threads')
 pre_args += '-DHAVE_PTHREAD'
 dep_elf = dependency('libelf', required : false)
 if not dep_elf.found()
-  dep_elf = cc.find_library('elf')
+  dep_elf = cc.find_library('elf', required : with_amd_vk) # TODO: clover, r600, radeonsi
 endif
 dep_expat = dependency('expat')
 # this only exists on linux so either this is linux and it will be found, or
