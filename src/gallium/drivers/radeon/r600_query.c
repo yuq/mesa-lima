@@ -1777,11 +1777,8 @@ static void r600_render_condition(struct pipe_context *ctx,
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct r600_query_hw *rquery = (struct r600_query_hw *)query;
-	struct r600_query_buffer *qbuf;
 	struct r600_atom *atom = &rctx->render_cond_atom;
 
-	/* Compute the size of SET_PREDICATION packets. */
-	atom->num_dw = 0;
 	if (query) {
 		bool needs_workaround = false;
 
@@ -1824,16 +1821,6 @@ static void r600_render_condition(struct pipe_context *ctx,
 
 			rctx->render_cond_force_off = old_force_off;
 		}
-
-		if (needs_workaround) {
-			atom->num_dw = 5;
-		} else {
-			for (qbuf = &rquery->buffer; qbuf; qbuf = qbuf->previous)
-				atom->num_dw += (qbuf->results_end / rquery->result_size) * 5;
-
-			if (rquery->b.type == PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE)
-				atom->num_dw *= R600_MAX_STREAMS;
-		}
 	}
 
 	rctx->render_cond = query;
@@ -1870,8 +1857,6 @@ static unsigned r600_queries_num_cs_dw_for_resuming(struct r600_common_context *
 		 */
 		num_dw += query->num_cs_dw_end;
 	}
-	/* primitives generated query */
-	num_dw += ctx->streamout.enable_atom.num_dw;
 	/* guess for ZPASS enable or PERFECT_ZPASS_COUNT enable updates */
 	num_dw += 13;
 

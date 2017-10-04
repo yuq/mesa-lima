@@ -76,26 +76,10 @@ static void r600_so_target_destroy(struct pipe_context *ctx,
 
 void si_streamout_buffers_dirty(struct r600_common_context *rctx)
 {
-	struct r600_atom *begin = &rctx->streamout.begin_atom;
-	unsigned num_bufs = util_bitcount(rctx->streamout.enabled_mask);
-	unsigned num_bufs_appended = util_bitcount(rctx->streamout.enabled_mask &
-						   rctx->streamout.append_bitmask);
-
-	if (!num_bufs)
+	if (!rctx->streamout.enabled_mask)
 		return;
 
-	rctx->streamout.num_dw_for_end =
-		12 + /* flush_vgt_streamout */
-		num_bufs * 11; /* STRMOUT_BUFFER_UPDATE, BUFFER_SIZE */
-
-	begin->num_dw = 12; /* flush_vgt_streamout */
-	begin->num_dw += num_bufs * 4; /* SET_CONTEXT_REG */
-	begin->num_dw +=
-		num_bufs_appended * 8 + /* STRMOUT_BUFFER_UPDATE */
-		(num_bufs - num_bufs_appended) * 6; + /* STRMOUT_BUFFER_UPDATE */
-
-	rctx->set_atom_dirty(rctx, begin, true);
-
+	rctx->set_atom_dirty(rctx, &rctx->streamout.begin_atom, true);
 	r600_set_streamout_enable(rctx, true);
 }
 
@@ -323,5 +307,4 @@ void si_streamout_init(struct r600_common_context *rctx)
 	rctx->b.stream_output_target_destroy = r600_so_target_destroy;
 	rctx->streamout.begin_atom.emit = r600_emit_streamout_begin;
 	rctx->streamout.enable_atom.emit = r600_emit_streamout_enable;
-	rctx->streamout.enable_atom.num_dw = 6;
 }

@@ -426,9 +426,6 @@ void si_init_viewport_functions(struct si_context *ctx)
 	ctx->scissors.atom.emit = si_emit_scissors;
 	ctx->viewports.atom.emit = si_emit_viewport_states;
 
-	ctx->scissors.atom.num_dw = (2 + 16 * 2) + 6;
-	ctx->viewports.atom.num_dw = 2 + 16 * 6;
-
 	ctx->b.b.set_scissor_states = si_set_scissor_states;
 	ctx->b.b.set_viewport_states = si_set_viewport_states;
 }

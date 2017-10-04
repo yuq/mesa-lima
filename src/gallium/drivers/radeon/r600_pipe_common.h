@@ -480,7 +480,6 @@ struct r600_common_screen {
  * command stream. */
 struct r600_atom {
 	void (*emit)(struct r600_common_context *ctx, struct r600_atom *state);
-	unsigned		num_dw;
 	unsigned short		id;
 };
 
@@ -498,7 +497,6 @@ struct r600_so_target {
 struct r600_streamout {
 	struct r600_atom		begin_atom;
 	bool				begin_emitted;
-	unsigned			num_dw_for_end;
 
 	unsigned			enabled_mask;
 	unsigned			num_targets;
