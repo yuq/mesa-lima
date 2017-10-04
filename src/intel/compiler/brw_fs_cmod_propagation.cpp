@@ -142,6 +142,14 @@ opt_cmod_propagation_local(const gen_device_info *devinfo, bblock_t *block)
                 scan_inst->opcode == BRW_OPCODE_CMPN)
                break;
 
+            /* From the Sky Lake PRM Vol. 7 "Assigning Conditional Mods":
+             *
+             *    * Note that the [post condition signal] bits generated at
+             *      the output of a compute are before the .sat.
+             */
+            if (scan_inst->saturate)
+               break;
+
             /* Otherwise, try propagating the conditional. */
             enum brw_conditional_mod cond =
                inst->src[0].negate ? brw_swap_cmod(inst->conditional_mod)
