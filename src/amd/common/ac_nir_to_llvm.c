@@ -3779,14 +3779,10 @@ static void emit_discard_if(struct ac_nir_context *ctx,
 {
 	LLVMValueRef cond;
 
-	cond = LLVMBuildICmp(ctx->ac.builder, LLVMIntNE,
+	cond = LLVMBuildICmp(ctx->ac.builder, LLVMIntEQ,
 			     get_src(ctx, instr->src[0]),
 			     ctx->ac.i32_0, "");
-
-	cond = LLVMBuildSelect(ctx->ac.builder, cond,
-			       LLVMConstReal(ctx->ac.f32, -1.0f),
-			       ctx->ac.f32_0, "");
-	ac_build_kill(&ctx->ac, cond);
+	ac_build_kill_if_false(&ctx->ac, cond);
 }
 
 static LLVMValueRef
@@ -4021,7 +4017,7 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 		  const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef gs_next_vertex;
-	LLVMValueRef can_emit, kill;
+	LLVMValueRef can_emit;
 	int idx;
 
 	assert(instr->const_index[0] == 0);
@@ -4037,11 +4033,7 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 	 */
 	can_emit = LLVMBuildICmp(ctx->builder, LLVMIntULT, gs_next_vertex,
 				 LLVMConstInt(ctx->i32, ctx->gs_max_out_vertices, false), "");
-
-	kill = LLVMBuildSelect(ctx->builder, can_emit,
-			       LLVMConstReal(ctx->f32, 1.0f),
-			       LLVMConstReal(ctx->f32, -1.0f), "");
-	ac_build_kill(&ctx->ac, kill);
+	ac_build_kill_if_false(&ctx->ac, can_emit);
 
 	/* loop num outputs */
 	idx = 0;

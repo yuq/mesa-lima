@@ -1405,20 +1405,13 @@ LLVMValueRef ac_build_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
 				  AC_FUNC_ATTR_LEGACY);
 }
 
-/**
- * KILL, AKA discard in GLSL.
- *
- * \param value  kill if value < 0.0 or value == NULL.
- */
-void ac_build_kill(struct ac_llvm_context *ctx, LLVMValueRef value)
+void ac_build_kill_if_false(struct ac_llvm_context *ctx, LLVMValueRef i1)
 {
-	if (value) {
-		ac_build_intrinsic(ctx, "llvm.AMDGPU.kill", ctx->voidt,
-				   &value, 1, AC_FUNC_ATTR_LEGACY);
-	} else {
-		ac_build_intrinsic(ctx, "llvm.AMDGPU.kilp", ctx->voidt,
-				   NULL, 0, AC_FUNC_ATTR_LEGACY);
-	}
+	LLVMValueRef value = LLVMBuildSelect(ctx->builder, i1,
+					     LLVMConstReal(ctx->f32, 1),
+					     LLVMConstReal(ctx->f32, -1), "");
+	ac_build_intrinsic(ctx, "llvm.AMDGPU.kill", ctx->voidt,
+			   &value, 1, AC_FUNC_ATTR_LEGACY);
 }
 
 LLVMValueRef ac_build_bfe(struct ac_llvm_context *ctx, LLVMValueRef input,

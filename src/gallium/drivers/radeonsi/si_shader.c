@@ -2272,22 +2272,24 @@ static void si_alpha_test(struct lp_build_tgsi_context *bld_base,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 
 	if (ctx->shader->key.part.ps.epilog.alpha_func != PIPE_FUNC_NEVER) {
+		static LLVMRealPredicate cond_map[PIPE_FUNC_ALWAYS + 1] = {
+			[PIPE_FUNC_LESS] = LLVMRealOLT,
+			[PIPE_FUNC_EQUAL] = LLVMRealOEQ,
+			[PIPE_FUNC_LEQUAL] = LLVMRealOLE,
+			[PIPE_FUNC_GREATER] = LLVMRealOGT,
+			[PIPE_FUNC_NOTEQUAL] = LLVMRealONE,
+			[PIPE_FUNC_GEQUAL] = LLVMRealOGE,
+		};
+		LLVMRealPredicate cond = cond_map[ctx->shader->key.part.ps.epilog.alpha_func];
+		assert(cond);
+
 		LLVMValueRef alpha_ref = LLVMGetParam(ctx->main_fn,
 				SI_PARAM_ALPHA_REF);
-
 		LLVMValueRef alpha_pass =
-			lp_build_cmp(&bld_base->base,
-				     ctx->shader->key.part.ps.epilog.alpha_func,
-				     alpha, alpha_ref);
-		LLVMValueRef arg =
-			lp_build_select(&bld_base->base,
-					alpha_pass,
-					LLVMConstReal(ctx->f32, 1.0f),
-					LLVMConstReal(ctx->f32, -1.0f));
-
-		ac_build_kill(&ctx->ac, arg);
+			LLVMBuildFCmp(ctx->ac.builder, cond, alpha, alpha_ref, "");
+		ac_build_kill_if_false(&ctx->ac, alpha_pass);
 	} else {
-		ac_build_kill(&ctx->ac, NULL);
+		ac_build_kill_if_false(&ctx->ac, LLVMConstInt(ctx->i1, 0, 0));
 	}
 }
 
@@ -3573,7 +3575,7 @@ static void si_llvm_return_fs_outputs(struct ac_shader_abi *abi,
 	LLVMValueRef ret;
 
 	if (ctx->postponed_kill)
-		ac_build_kill(&ctx->ac, LLVMBuildLoad(builder, ctx->postponed_kill, ""));
+		ac_build_kill_if_false(&ctx->ac, LLVMBuildLoad(builder, ctx->postponed_kill, ""));
 
 	/* Read the output values. */
 	for (i = 0; i < info->num_outputs; i++) {
@@ -4056,7 +4058,7 @@ static void si_llvm_emit_vertex(
 	LLVMValueRef soffset = LLVMGetParam(ctx->main_fn,
 					    ctx->param_gs2vs_offset);
 	LLVMValueRef gs_next_vertex;
-	LLVMValueRef can_emit, kill;
+	LLVMValueRef can_emit;
 	unsigned chan, offset;
 	int i;
 	unsigned stream;
@@ -4082,11 +4084,7 @@ static void si_llvm_emit_vertex(
 
 	bool use_kill = !info->writes_memory;
 	if (use_kill) {
-		kill = lp_build_select(&bld_base->base, can_emit,
-				       LLVMConstReal(ctx->f32, 1.0f),
-				       LLVMConstReal(ctx->f32, -1.0f));
-
-		ac_build_kill(&ctx->ac, kill);
+		ac_build_kill_if_false(&ctx->ac, can_emit);
 	} else {
 		lp_build_if(&if_state, &ctx->gallivm, can_emit);
 	}
@@ -4881,11 +4879,7 @@ static void si_llvm_emit_polygon_stipple(struct si_shader_context *ctx,
 	row = ac_to_integer(&ctx->ac, row);
 	bit = LLVMBuildLShr(builder, row, address[0], "");
 	bit = LLVMBuildTrunc(builder, bit, ctx->i1, "");
-
-	/* The intrinsic kills the thread if arg < 0. */
-	bit = LLVMBuildSelect(builder, bit, LLVMConstReal(ctx->f32, 0),
-			      LLVMConstReal(ctx->f32, -1), "");
-	ac_build_kill(&ctx->ac, bit);
+	ac_build_kill_if_false(&ctx->ac, bit);
 }
 
 void si_shader_binary_read_config(struct ac_shader_binary *binary,
@@ -5854,8 +5848,10 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 
 	if (ctx->type == PIPE_SHADER_FRAGMENT && sel->info.uses_kill &&
 	    ctx->screen->b.debug_flags & DBG(FS_CORRECT_DERIVS_AFTER_KILL)) {
-		/* This is initialized to 0.0 = not kill. */
-		ctx->postponed_kill = lp_build_alloca(&ctx->gallivm, ctx->f32, "");
+		ctx->postponed_kill = lp_build_alloca_undef(&ctx->gallivm, ctx->i1, "");
+		/* true = don't kill. */
+		LLVMBuildStore(ctx->ac.builder, LLVMConstInt(ctx->i1, 1, 0),
+			       ctx->postponed_kill);
 	}
 
 	if (sel->tokens) {

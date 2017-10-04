@@ -39,20 +39,18 @@ static void kill_if_fetch_args(struct lp_build_tgsi_context *bld_base,
 
 	for (i = 0; i < TGSI_NUM_CHANNELS; i++) {
 		LLVMValueRef value = lp_build_emit_fetch(bld_base, inst, 0, i);
-		conds[i] = LLVMBuildFCmp(builder, LLVMRealOLT, value,
+		conds[i] = LLVMBuildFCmp(builder, LLVMRealOGE, value,
 					ctx->ac.f32_0, "");
 	}
 
-	/* Or the conditions together */
+	/* And the conditions together */
 	for (i = TGSI_NUM_CHANNELS - 1; i > 0; i--) {
-		conds[i - 1] = LLVMBuildOr(builder, conds[i], conds[i - 1], "");
+		conds[i - 1] = LLVMBuildAnd(builder, conds[i], conds[i - 1], "");
 	}
 
 	emit_data->dst_type = ctx->voidt;
 	emit_data->arg_count = 1;
-	emit_data->args[0] = LLVMBuildSelect(builder, conds[0],
-					LLVMConstReal(ctx->f32, -1.0f),
-					ctx->ac.f32_0, "");
+	emit_data->args[0] = conds[0];
 }
 
 static void kil_emit(const struct lp_build_tgsi_action *action,
@@ -61,31 +59,23 @@ static void kil_emit(const struct lp_build_tgsi_action *action,
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMBuilderRef builder = ctx->ac.builder;
+	LLVMValueRef visible;
+
+	if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_KILL_IF) {
+		visible = emit_data->args[0];
+	} else {
+		assert(emit_data->inst->Instruction.Opcode == TGSI_OPCODE_KILL);
+		visible = LLVMConstInt(ctx->i1, false, 0);
+	}
 
 	if (ctx->postponed_kill) {
-		if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_KILL_IF) {
-			LLVMValueRef val;
-
-			/* Take the minimum kill value. This is the same as OR
-			 * between 2 kill values. If the value is negative,
-			 * the pixel will be killed.
-			 */
-			val = LLVMBuildLoad(builder, ctx->postponed_kill, "");
-			val = lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_MIN,
-							val, emit_data->args[0]);
-			LLVMBuildStore(builder, val, ctx->postponed_kill);
-		} else {
-			LLVMBuildStore(builder,
-				       LLVMConstReal(ctx->f32, -1),
-				       ctx->postponed_kill);
-		}
+		LLVMValueRef mask = LLVMBuildLoad(builder, ctx->postponed_kill, "");
+		mask = LLVMBuildAnd(builder, mask, visible, "");
+		LLVMBuildStore(builder, mask, ctx->postponed_kill);
 		return;
 	}
 
-	if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_KILL_IF)
-		ac_build_kill(&ctx->ac, emit_data->args[0]);
-	else
-		ac_build_kill(&ctx->ac, NULL);
+	ac_build_kill_if_false(&ctx->ac, visible);
 }
 
 static void emit_icmp(const struct lp_build_tgsi_action *action,
