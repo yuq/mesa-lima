@@ -2424,11 +2424,22 @@ const struct function gles2_functions_possible[] = {
    /* GL_KHR_blend_equation_advanced */
    { "glBlendBarrierKHR", 20, -1 },
 
+   /* GL_EXT_occlusion_query_boolean */
+   { "glGenQueriesEXT", 20, -1 },
+   { "glDeleteQueriesEXT", 20, -1 },
+   { "glIsQueryEXT", 20, -1 },
+   { "glBeginQueryEXT", 20, -1 },
+   { "glEndQueryEXT", 20, -1 },
+   { "glGetQueryivEXT", 20, -1 },
+   { "glGetQueryObjectivEXT", 20, -1 },
+   { "glGetQueryObjectuivEXT", 20, -1 },
+
    { NULL, 0, -1 }
 };
 
 const struct function gles3_functions_possible[] = {
-   { "glBeginQuery", 30, -1 },
+   // We check for the aliased -EXT version in GLES 2
+   // { "glBeginQuery", 30, -1 },
    { "glBeginTransformFeedback", 30, -1 },
    { "glBindBufferBase", 30, -1 },
    { "glBindBufferRange", 30, -1 },
@@ -2449,7 +2460,8 @@ const struct function gles3_functions_possible[] = {
    { "glCopyBufferSubData", 30, -1 },
    // We check for the aliased -OES version in GLES 2
    // { "glCopyTexSubImage3D", 30, -1 },
-   { "glDeleteQueries", 30, -1 },
+   // We check for the aliased -EXT version in GLES 2
+   // { "glDeleteQueries", 30, -1 },
    { "glDeleteSamplers", 30, -1 },
    { "glDeleteSync", 30, -1 },
    { "glDeleteTransformFeedbacks", 30, -1 },
@@ -2460,13 +2472,15 @@ const struct function gles3_functions_possible[] = {
    // { "glDrawBuffers", 30, -1 },
    { "glDrawElementsInstanced", 30, -1 },
    { "glDrawRangeElements", 30, -1 },
-   { "glEndQuery", 30, -1 },
+   // We check for the aliased -EXT version in GLES 2
+   // { "glEndQuery", 30, -1 },
    { "glEndTransformFeedback", 30, -1 },
    { "glFenceSync", 30, -1 },
    // We check for the aliased -EXT version in GLES 2
    // { "glFlushMappedBufferRange", 30, -1 },
    { "glFramebufferTextureLayer", 30, -1 },
-   { "glGenQueries", 30, -1 },
+   // We check for the aliased -EXT version in GLES 2
+   // { "glGenQueries", 30, -1 },
    { "glGenSamplers", 30, -1 },
    { "glGenTransformFeedbacks", 30, -1 },
    // We check for the aliased -OES version in GLES 2
@@ -2484,8 +2498,10 @@ const struct function gles3_functions_possible[] = {
    { "glGetInternalformativ", 30, -1 },
    { "glGetInternalformati64v", 30, -1 },
    // glGetProgramBinary aliases glGetProgramBinaryOES in GLES 2
-   { "glGetQueryiv", 30, -1 },
-   { "glGetQueryObjectuiv", 30, -1 },
+   // We check for the aliased -EXT version in GLES 2
+   // { "glGetQueryiv", 30, -1 },
+   // We check for the aliased -EXT version in GLES 2
+   // { "glGetQueryObjectuiv", 30, -1 },
    { "glGetSamplerParameterfv", 30, -1 },
    { "glGetSamplerParameteriv", 30, -1 },
    { "glGetStringi", 30, -1 },
@@ -2498,7 +2514,8 @@ const struct function gles3_functions_possible[] = {
    { "glGetVertexAttribIuiv", 30, -1 },
    { "glInvalidateFramebuffer", 30, -1 },
    { "glInvalidateSubFramebuffer", 30, -1 },
-   { "glIsQuery", 30, -1 },
+   // We check for the aliased -EXT version in GLES 2
+   // { "glIsQuery", 30, -1 },
    { "glIsSampler", 30, -1 },
    { "glIsSync", 30, -1 },
    { "glIsTransformFeedback", 30, -1 },
