@@ -265,6 +265,7 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 				   struct ac_image_args *a);
 LLVMValueRef ac_build_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
 				    LLVMValueRef args[2]);
+LLVMValueRef ac_build_wqm_vote(struct ac_llvm_context *ctx, LLVMValueRef i1);
 void ac_build_kill_if_false(struct ac_llvm_context *ctx, LLVMValueRef i1);
 LLVMValueRef ac_build_bfe(struct ac_llvm_context *ctx, LLVMValueRef input,
 			  LLVMValueRef offset, LLVMValueRef width,

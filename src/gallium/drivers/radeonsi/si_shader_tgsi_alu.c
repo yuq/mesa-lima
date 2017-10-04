@@ -69,6 +69,12 @@ static void kil_emit(const struct lp_build_tgsi_action *action,
 	}
 
 	if (ctx->shader->selector->force_correct_derivs_after_kill) {
+		/* LLVM 6.0 can kill immediately while maintaining WQM. */
+		if (HAVE_LLVM >= 0x0600) {
+			ac_build_kill_if_false(&ctx->ac,
+					       ac_build_wqm_vote(&ctx->ac, visible));
+		}
+
 		LLVMValueRef mask = LLVMBuildLoad(builder, ctx->postponed_kill, "");
 		mask = LLVMBuildAnd(builder, mask, visible, "");
 		LLVMBuildStore(builder, mask, ctx->postponed_kill);

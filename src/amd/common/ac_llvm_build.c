@@ -1405,6 +1405,13 @@ LLVMValueRef ac_build_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
 				  AC_FUNC_ATTR_LEGACY);
 }
 
+LLVMValueRef ac_build_wqm_vote(struct ac_llvm_context *ctx, LLVMValueRef i1)
+{
+	assert(HAVE_LLVM >= 0x0600);
+	return ac_build_intrinsic(ctx, "llvm.amdgcn.wqm.vote", ctx->i1,
+				  &i1, 1, AC_FUNC_ATTR_READNONE);
+}
+
 void ac_build_kill_if_false(struct ac_llvm_context *ctx, LLVMValueRef i1)
 {
 	if (HAVE_LLVM >= 0x0600) {
