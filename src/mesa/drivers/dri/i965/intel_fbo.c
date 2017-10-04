@@ -364,7 +364,7 @@ intel_image_target_renderbuffer_storage(struct gl_context *ctx,
     * content.
     */
    irb->mt = intel_miptree_create_for_dri_image(brw, image, GL_TEXTURE_2D,
-                                                ISL_COLORSPACE_NONE, false);
+                                                image->format, false);
    if (!irb->mt)
       return;
 

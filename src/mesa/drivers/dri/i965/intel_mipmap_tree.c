@@ -959,35 +959,14 @@ create_ccs_buf_for_image(struct brw_context *brw,
 struct intel_mipmap_tree *
 intel_miptree_create_for_dri_image(struct brw_context *brw,
                                    __DRIimage *image, GLenum target,
-                                   enum isl_colorspace colorspace,
+                                   mesa_format format,
                                    bool is_winsys_image)
 {
-   if (image->planar_format && image->planar_format->nplanes > 1) {
-      assert(colorspace == ISL_COLORSPACE_NONE ||
-             colorspace == ISL_COLORSPACE_YUV);
+   if (image->planar_format && image->planar_format->nplanes > 1)
       return miptree_create_for_planar_image(brw, image, target);
-   }
 
    if (image->planar_format)
       assert(image->planar_format->planes[0].dri_format == image->dri_format);
-
-   mesa_format format = image->format;
-   switch (colorspace) {
-   case ISL_COLORSPACE_NONE:
-      /* Keep the image format unmodified */
-      break;
-
-   case ISL_COLORSPACE_LINEAR:
-      format =_mesa_get_srgb_format_linear(format);
-      break;
-
-   case ISL_COLORSPACE_SRGB:
-      format =_mesa_get_linear_format_srgb(format);
-      break;
-
-   default:
-      unreachable("Inalid colorspace for non-planar image");
-   }
 
    if (!brw->ctx.TextureFormatSupported[format]) {
       /* The texture storage paths in core Mesa detect if the driver does not

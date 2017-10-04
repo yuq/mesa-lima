@@ -1596,21 +1596,9 @@ intel_update_image_buffer(struct brw_context *intel,
    if (last_mt && last_mt->bo == buffer->bo)
       return;
 
-   enum isl_colorspace colorspace;
-   switch (_mesa_get_format_color_encoding(intel_rb_format(rb))) {
-   case GL_SRGB:
-      colorspace = ISL_COLORSPACE_SRGB;
-      break;
-   case GL_LINEAR:
-      colorspace = ISL_COLORSPACE_LINEAR;
-      break;
-   default:
-      unreachable("Invalid color encoding");
-   }
-
    struct intel_mipmap_tree *mt =
       intel_miptree_create_for_dri_image(intel, buffer, GL_TEXTURE_2D,
-                                         colorspace, true);
+                                         intel_rb_format(rb), true);
    if (!mt)
       return;
 
