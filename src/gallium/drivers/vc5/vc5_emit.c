@@ -36,6 +36,7 @@ vc5_factor(enum pipe_blendfactor factor)
 
         switch (factor) {
         case PIPE_BLENDFACTOR_ZERO:
+                return V3D_BLEND_FACTOR_ZERO;
         case PIPE_BLENDFACTOR_ONE:
                 return V3D_BLEND_FACTOR_ONE;
         case PIPE_BLENDFACTOR_SRC_COLOR:
