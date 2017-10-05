@@ -178,6 +178,10 @@ static const VkExtensionProperties common_device_extensions[] = {
 		.extensionName = VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
 		.specVersion = 1,
 	},
+	{
+		.extensionName = VK_KHR_MAINTENANCE2_EXTENSION_NAME,
+		.specVersion = 1,
+	},
 };
 
 static const VkExtensionProperties rasterization_order_extension[] ={
