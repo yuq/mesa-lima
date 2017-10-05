@@ -580,6 +580,26 @@
     <field name="sub-id" size="4" start="0" type="uint" default="4"/>
   </packet>
 
+  <packet code="121" name="Tile Rendering Mode Configuration (Clear Colors Part2)" cl="R">
+    <!-- Express this as a 56-bit field? -->
+    <field name="Clear Color mid-high 24 bits" size="24" start="40" type="uint"/>
+    <field name="Clear Color mid-low 32 bits" size="32" start="8" type="uint"/>
+
+    <field name="Render Target number" size="4" start="4" type="uint"/>
+    <field name="sub-id" size="4" start="0" type="uint" default="5"/>
+  </packet>
+
+  <packet code="121" name="Tile Rendering Mode Configuration (Clear Colors Part3)" cl="R">
+    <field name="pad" size="11" start="53" type="uint"/>
+    <field name="UIF padded height in UIF blocks" size="13" start="40" type="uint"/>
+    <!-- image height is for Y flipping -->
+    <field name="Raster Row Stride or Image Height in Pixels" size="16" start="24" type="uint"/>
+    <field name="Clear Color high 16 bits" size="16" start="8" type="uint"/>
+
+    <field name="Render Target number" size="4" start="4" type="uint"/>
+    <field name="sub-id" size="4" start="0" type="uint" default="6"/>
+  </packet>
+
   <packet code="124" name="Tile Coordinates">
     <field name="tile row number" size="12" start="12" type="uint"/>
     <field name="tile column number" size="12" start="0" type="uint"/>

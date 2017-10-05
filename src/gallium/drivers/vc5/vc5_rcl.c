@@ -130,11 +130,11 @@ vc5_emit_rcl(struct vc5_job *job)
         }
 
         for (int i = 0; i < nr_cbufs; i++) {
-                cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_RENDER_TARGET_CONFIG, rt) {
-                        struct pipe_surface *psurf = job->cbufs[i];
-                        if (!psurf)
-                                continue;
+                struct pipe_surface *psurf = job->cbufs[i];
+                if (!psurf)
+                        continue;
 
+                cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_RENDER_TARGET_CONFIG, rt) {
                         struct vc5_surface *surf = vc5_surface(psurf);
                         struct vc5_resource *rsc = vc5_resource(psurf->texture);
                         rt.address = cl_address(rsc->bo, surf->offset);
@@ -154,6 +154,27 @@ vc5_emit_rcl(struct vc5_job *job)
                         clear.clear_color_next_24_bits = job->clear_color[i][1] & 0xffffff;
                         clear.render_target_number = i;
                 };
+
+                if (util_format_get_blocksize(psurf->format) > 7) {
+                        cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_CLEAR_COLORS_PART2,
+                                clear) {
+                                clear.clear_color_mid_low_32_bits =
+                                        ((job->clear_color[i][1] >> 24) |
+                                         (job->clear_color[i][2] << 8));
+                                clear.clear_color_mid_high_24_bits =
+                                        ((job->clear_color[i][2] >> 24) |
+                                         ((job->clear_color[i][3] & 0xffff) << 8));
+                                clear.render_target_number = i;
+                        };
+                }
+
+                if (util_format_get_blocksize(psurf->format) > 14) {
+                        cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_CLEAR_COLORS_PART3,
+                                clear) {
+                                clear.clear_color_high_16_bits = job->clear_color[i][3] >> 16;
+                                clear.render_target_number = i;
+                        };
+                }
         }
 
         /* TODO: Don't bother emitting if we don't load/clear Z/S. */
