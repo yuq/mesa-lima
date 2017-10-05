@@ -549,25 +549,30 @@ vc4_screen_query_dmabuf_modifiers(struct pipe_screen *pscreen,
                                   unsigned int *external_only,
                                   int *count)
 {
+        int m, i;
+        uint64_t available_modifiers[] = {
+                DRM_FORMAT_MOD_BROADCOM_VC4_T_TILED,
+                DRM_FORMAT_MOD_LINEAR,
+        };
+        struct vc4_screen *screen = vc4_screen(pscreen);
+        int num_modifiers = screen->has_tiling_ioctl ? 2 : 1;
+
         if (!modifiers) {
-                *count = 2;
+                *count = num_modifiers;
                 return;
         }
 
-        *count = MIN2(max, 2);
-
+        *count = MIN2(max, num_modifiers);
+        m = screen->has_tiling_ioctl ? 0 : 1;
         /* We support both modifiers (tiled and linear) for all sampler
-         * formats.
+         * formats, but if we don't have the DRM_VC4_GET_TILING ioctl
+         * we shouldn't advertise the tiled formats.
          */
-        modifiers[0] = DRM_FORMAT_MOD_BROADCOM_VC4_T_TILED;
-        if (external_only)
-                external_only[0] = false;
-        if (max < 2)
-                return;
-
-        modifiers[1] = DRM_FORMAT_MOD_LINEAR;
-        if (external_only)
-                external_only[1] = false;
+        for (i = 0; i < *count; i++) {
+                modifiers[i] = available_modifiers[m++];
+                if (external_only)
+                        external_only[i] = false;
+       }
 }
 
 #define PTR_TO_UINT(x) ((unsigned)((intptr_t)(x)))
