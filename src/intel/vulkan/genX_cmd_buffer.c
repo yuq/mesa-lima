@@ -400,10 +400,10 @@ enum fast_clear_state_field {
    FAST_CLEAR_STATE_FIELD_NEEDS_RESOLVE,
 };
 
-static inline uint32_t
-get_fast_clear_state_offset(const struct anv_device *device,
-                            const struct anv_image *image,
-                            unsigned level, enum fast_clear_state_field field)
+static inline struct anv_address
+get_fast_clear_state_address(const struct anv_device *device,
+                             const struct anv_image *image,
+                             unsigned level, enum fast_clear_state_field field)
 {
    assert(device && image);
    assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
@@ -421,7 +421,10 @@ get_fast_clear_state_offset(const struct anv_device *device,
    }
 
    assert(offset < image->offset + image->size);
-   return offset;
+   return (struct anv_address) {
+      .bo = image->bo,
+      .offset = offset,
+   };
 }
 
 #define MI_PREDICATE_SRC0  0x2400
@@ -439,16 +442,16 @@ genX(set_image_needs_resolve)(struct anv_cmd_buffer *cmd_buffer,
    assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
    assert(level < anv_image_aux_levels(image));
 
-   const uint32_t resolve_flag_offset =
-      get_fast_clear_state_offset(cmd_buffer->device, image, level,
-                                  FAST_CLEAR_STATE_FIELD_NEEDS_RESOLVE);
+   const struct anv_address resolve_flag_addr =
+      get_fast_clear_state_address(cmd_buffer->device, image, level,
+                                   FAST_CLEAR_STATE_FIELD_NEEDS_RESOLVE);
 
    /* The HW docs say that there is no way to guarantee the completion of
     * the following command. We use it nevertheless because it shows no
     * issues in testing is currently being used in the GL driver.
     */
    anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
-      sdi.Address = (struct anv_address) { image->bo, resolve_flag_offset };
+      sdi.Address = resolve_flag_addr;
       sdi.ImmediateData = needs_resolve;
    }
 }
@@ -462,9 +465,9 @@ genX(load_needs_resolve_predicate)(struct anv_cmd_buffer *cmd_buffer,
    assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
    assert(level < anv_image_aux_levels(image));
 
-   const uint32_t resolve_flag_offset =
-      get_fast_clear_state_offset(cmd_buffer->device, image, level,
-                                  FAST_CLEAR_STATE_FIELD_NEEDS_RESOLVE);
+   const struct anv_address resolve_flag_addr =
+      get_fast_clear_state_address(cmd_buffer->device, image, level,
+                                   FAST_CLEAR_STATE_FIELD_NEEDS_RESOLVE);
 
    /* Make the pending predicated resolve a no-op if one is not needed.
     * predicate = do_resolve = resolve_flag != 0;
@@ -473,7 +476,7 @@ genX(load_needs_resolve_predicate)(struct anv_cmd_buffer *cmd_buffer,
    emit_lri(&cmd_buffer->batch, MI_PREDICATE_SRC1 + 4, 0);
    emit_lri(&cmd_buffer->batch, MI_PREDICATE_SRC0    , 0);
    emit_lrm(&cmd_buffer->batch, MI_PREDICATE_SRC0 + 4,
-            image->bo, resolve_flag_offset);
+            resolve_flag_addr.bo, resolve_flag_addr.offset);
    anv_batch_emit(&cmd_buffer->batch, GENX(MI_PREDICATE), mip) {
       mip.LoadOperation    = LOAD_LOADINV;
       mip.CombineOperation = COMBINE_SET;
@@ -513,10 +516,9 @@ init_fast_clear_state_entry(struct anv_cmd_buffer *cmd_buffer,
    unsigned i = 0;
    for (; i < cmd_buffer->device->isl_dev.ss.clear_value_size; i += 4) {
       anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
-         const uint32_t entry_offset =
-            get_fast_clear_state_offset(cmd_buffer->device, image, level,
-                                        FAST_CLEAR_STATE_FIELD_CLEAR_COLOR);
-         sdi.Address = (struct anv_address) { image->bo, entry_offset + i };
+         sdi.Address =
+            get_fast_clear_state_address(cmd_buffer->device, image, level,
+                                         FAST_CLEAR_STATE_FIELD_CLEAR_COLOR);
 
          if (GEN_GEN >= 9) {
             /* MCS buffers on SKL+ can only have 1/0 clear colors. */
@@ -561,17 +563,17 @@ genX(copy_fast_clear_dwords)(struct anv_cmd_buffer *cmd_buffer,
       &cmd_buffer->device->surface_state_pool.block_pool.bo;
    uint32_t ss_clear_offset = surface_state.offset +
       cmd_buffer->device->isl_dev.ss.clear_value_offset;
-   uint32_t entry_offset =
-      get_fast_clear_state_offset(cmd_buffer->device, image, level,
-                                  FAST_CLEAR_STATE_FIELD_CLEAR_COLOR);
+   const struct anv_address entry_addr =
+      get_fast_clear_state_address(cmd_buffer->device, image, level,
+                                   FAST_CLEAR_STATE_FIELD_CLEAR_COLOR);
    unsigned copy_size = cmd_buffer->device->isl_dev.ss.clear_value_size;
 
    if (copy_from_surface_state) {
-      genX(cmd_buffer_mi_memcpy)(cmd_buffer, image->bo, entry_offset,
+      genX(cmd_buffer_mi_memcpy)(cmd_buffer, entry_addr.bo, entry_addr.offset,
                                  ss_bo, ss_clear_offset, copy_size);
    } else {
       genX(cmd_buffer_mi_memcpy)(cmd_buffer, ss_bo, ss_clear_offset,
-                                 image->bo, entry_offset, copy_size);
+                                 entry_addr.bo, entry_addr.offset, copy_size);
 
       /* Updating a surface state object may require that the state cache be
        * invalidated. From the SKL PRM, Shared Functions -> State -> State
