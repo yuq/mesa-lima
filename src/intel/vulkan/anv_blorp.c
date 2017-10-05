@@ -175,12 +175,17 @@ get_blorp_surf_for_anv_buffer(struct anv_device *device,
    assert(ok);
 }
 
+#define ANV_AUX_USAGE_DEFAULT ((enum isl_aux_usage)0xff)
+
 static void
 get_blorp_surf_for_anv_image(const struct anv_image *image,
                              VkImageAspectFlags aspect,
                              enum isl_aux_usage aux_usage,
                              struct blorp_surf *blorp_surf)
 {
+   if (aux_usage == ANV_AUX_USAGE_DEFAULT)
+      aux_usage = image->aux_usage;
+
    if (aspect == VK_IMAGE_ASPECT_STENCIL_BIT ||
        aux_usage == ISL_AUX_USAGE_HIZ)
       aux_usage = ISL_AUX_USAGE_NONE;
@@ -257,10 +262,10 @@ void anv_CmdCopyImage(
          VkImageAspectFlagBits aspect = (1 << a);
 
          struct blorp_surf src_surf, dst_surf;
-         get_blorp_surf_for_anv_image(src_image, aspect, src_image->aux_usage,
-                                      &src_surf);
-         get_blorp_surf_for_anv_image(dst_image, aspect, dst_image->aux_usage,
-                                      &dst_surf);
+         get_blorp_surf_for_anv_image(src_image, aspect,
+                                      ANV_AUX_USAGE_DEFAULT, &src_surf);
+         get_blorp_surf_for_anv_image(dst_image, aspect,
+                                      ANV_AUX_USAGE_DEFAULT, &dst_surf);
 
          for (unsigned i = 0; i < layer_count; i++) {
             blorp_copy(&batch, &src_surf, pRegions[r].srcSubresource.mipLevel,
@@ -308,8 +313,8 @@ copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
    for (unsigned r = 0; r < regionCount; r++) {
       const VkImageAspectFlags aspect = pRegions[r].imageSubresource.aspectMask;
 
-      get_blorp_surf_for_anv_image(anv_image, aspect, anv_image->aux_usage,
-                                   &image.surf);
+      get_blorp_surf_for_anv_image(anv_image, aspect,
+                                   ANV_AUX_USAGE_DEFAULT, &image.surf);
       image.offset =
          anv_sanitize_image_offset(anv_image->type, pRegions[r].imageOffset);
       image.level = pRegions[r].imageSubresource.mipLevel;
@@ -455,9 +460,9 @@ void anv_CmdBlitImage(
       const VkImageSubresourceLayers *dst_res = &pRegions[r].dstSubresource;
 
       get_blorp_surf_for_anv_image(src_image, src_res->aspectMask,
-                                   src_image->aux_usage, &src);
+                                   ANV_AUX_USAGE_DEFAULT, &src);
       get_blorp_surf_for_anv_image(dst_image, dst_res->aspectMask,
-                                   dst_image->aux_usage, &dst);
+                                   ANV_AUX_USAGE_DEFAULT, &dst);
 
       struct anv_format_plane src_format =
          anv_get_format_plane(&cmd_buffer->device->info, src_image->vk_format,
@@ -750,7 +755,7 @@ void anv_CmdClearColorImage(
 
    struct blorp_surf surf;
    get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT,
-                                image->aux_usage, &surf);
+                                ANV_AUX_USAGE_DEFAULT, &surf);
 
    for (unsigned r = 0; r < rangeCount; r++) {
       if (pRanges[r].aspectMask == 0)
@@ -1340,10 +1345,10 @@ void anv_CmdResolveImage(
 
       for (uint32_t layer = 0; layer < layer_count; layer++) {
          resolve_image(&batch,
-                       src_image, src_image->aux_usage,
+                       src_image, ANV_AUX_USAGE_DEFAULT,
                        pRegions[r].srcSubresource.mipLevel,
                        pRegions[r].srcSubresource.baseArrayLayer + layer,
-                       dst_image, dst_image->aux_usage,
+                       dst_image, ANV_AUX_USAGE_DEFAULT,
                        pRegions[r].dstSubresource.mipLevel,
                        pRegions[r].dstSubresource.baseArrayLayer + layer,
                        pRegions[r].dstSubresource.aspectMask,
