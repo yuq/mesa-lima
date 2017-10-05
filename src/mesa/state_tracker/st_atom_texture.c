@@ -84,18 +84,6 @@ st_update_single_texture(struct st_context *st,
       return;
    }
 
-   /* Check a few pieces of state outside the texture object to see if we
-    * need to force revalidation.
-    */
-   if (stObj->prev_glsl130_or_later != glsl130_or_later ||
-       stObj->prev_sRGBDecode != samp->sRGBDecode) {
-
-      st_texture_release_all_sampler_views(st, stObj);
-
-      stObj->prev_glsl130_or_later = glsl130_or_later;
-      stObj->prev_sRGBDecode = samp->sRGBDecode;
-   }
-
    if (texObj->TargetIndex == TEXTURE_EXTERNAL_INDEX &&
        stObj->pt->screen->resource_changed)
          stObj->pt->screen->resource_changed(stObj->pt->screen, stObj->pt);
