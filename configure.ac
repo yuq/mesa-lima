@@ -2659,9 +2659,6 @@ if test "x$enable_llvm" = xyes; then
     dnl this was causing the same libraries to be appear multiple times
     dnl in LLVM_LIBS.
 
-    if ! $LLVM_CONFIG --libs ${LLVM_COMPONENTS} >/dev/null; then
-       AC_MSG_ERROR([Calling ${LLVM_CONFIG} failed])
-    fi
     LLVM_LIBS="`$LLVM_CONFIG --libs ${LLVM_COMPONENTS}`"
 
     if test "x$enable_llvm_shared_libs" = xyes; then
