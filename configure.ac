@@ -2642,6 +2642,39 @@ if test "x$HAVE_GALLIUM_VC4" != xyes -a "x$HAVE_GALLIUM_PL111" = xyes  ; then
     AC_MSG_ERROR([Building with pl111 requires vc4])
 fi
 
+
+detect_old_buggy_llvm() {
+    dnl llvm-config may not give the right answer when llvm is a built as a
+    dnl single shared library, so we must work the library name out for
+    dnl ourselves.
+    dnl (See https://llvm.org/bugs/show_bug.cgi?id=6823)
+    dnl We can't use $LLVM_VERSION because it has 'svn' stripped out,
+    LLVM_SO_NAME=LLVM-`$LLVM_CONFIG --version`
+    AS_IF([test -f "$LLVM_LIBDIR/lib$LLVM_SO_NAME.$IMP_LIB_EXT"], [llvm_have_one_so=yes])
+
+    if test "x$llvm_have_one_so" = xyes; then
+        dnl LLVM was built using auto*, so there is only one shared object.
+        LLVM_LIBS="-l$LLVM_SO_NAME"
+    else
+        dnl If LLVM was built with CMake, there will be one shared object per
+        dnl component.
+        AS_IF([test ! -f "$LLVM_LIBDIR/libLLVMTarget.$IMP_LIB_EXT"],
+               [AC_MSG_ERROR([Could not find llvm shared libraries:
+                Please make sure you have built llvm with the --enable-shared option
+                and that your llvm libraries are installed in $LLVM_LIBDIR
+                If you have installed your llvm libraries to a different directory you
+                can use the --with-llvm-prefix= configure flag to specify this directory.
+                NOTE: Mesa is attempting to use llvm shared libraries by default.
+                If you do not want to build with llvm shared libraries and instead want to
+                use llvm static libraries then add --disable-llvm-shared-libs to your configure
+                invocation and rebuild.])])
+
+        dnl We don't need to update LLVM_LIBS in this case because the LLVM
+        dnl install uses a shared object for each component and we have
+        dnl already added all of these objects to LLVM_LIBS.
+    fi
+}
+
 dnl
 dnl Set defines and buildtime variables only when using LLVM.
 dnl
@@ -2663,35 +2696,7 @@ if test "x$enable_llvm" = xyes; then
 
     if test "x$enable_llvm_shared_libs" = xyes; then
         if test $LLVM_VERSION_MAJOR -lt 4 -o "`$LLVM_CONFIG --shared-mode ${LLVM_COMPONENTS}`" = static; then
-            dnl llvm-config may not give the right answer when llvm is a built as a
-            dnl single shared library, so we must work the library name out for
-            dnl ourselves.
-            dnl (See https://llvm.org/bugs/show_bug.cgi?id=6823)
-            dnl We can't use $LLVM_VERSION because it has 'svn' stripped out,
-            LLVM_SO_NAME=LLVM-`$LLVM_CONFIG --version`
-            AS_IF([test -f "$LLVM_LIBDIR/lib$LLVM_SO_NAME.$IMP_LIB_EXT"], [llvm_have_one_so=yes])
-
-            if test "x$llvm_have_one_so" = xyes; then
-               dnl LLVM was built using auto*, so there is only one shared object.
-               LLVM_LIBS="-l$LLVM_SO_NAME"
-            else
-                dnl If LLVM was built with CMake, there will be one shared object per
-                dnl component.
-                AS_IF([test ! -f "$LLVM_LIBDIR/libLLVMTarget.$IMP_LIB_EXT"],
-                      [AC_MSG_ERROR([Could not find llvm shared libraries:
-                       Please make sure you have built llvm with the --enable-shared option
-                       and that your llvm libraries are installed in $LLVM_LIBDIR
-                       If you have installed your llvm libraries to a different directory you
-                       can use the --with-llvm-prefix= configure flag to specify this directory.
-                       NOTE: Mesa is attempting to use llvm shared libraries by default.
-                       If you do not want to build with llvm shared libraries and instead want to
-                       use llvm static libraries then add --disable-llvm-shared-libs to your configure
-                       invocation and rebuild.])])
-
-                dnl We don't need to update LLVM_LIBS in this case because the LLVM
-                dnl install uses a shared object for each component and we have
-                dnl already added all of these objects to LLVM_LIBS.
-            fi
+            detect_old_buggy_llvm
         fi
     else
         AC_MSG_WARN([Building mesa with statically linked LLVM may cause compilation issues])
