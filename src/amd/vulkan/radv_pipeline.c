@@ -266,7 +266,6 @@ radv_tess_pipeline_compile(struct radv_pipeline *pipeline,
 	if (tcs_nir == NULL)
 		return;
 
-	tes_nir->info.tess.ccw = !tes_nir->info.tess.ccw;
 	nir_lower_tes_patch_vertices(tes_nir,
 				     tcs_nir->info.tess.tcs_vertices_out);
 
@@ -1555,9 +1554,9 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 	else if (tes->info.tes.primitive_mode == GL_ISOLINES)
 		topology = V_028B6C_OUTPUT_LINE;
 	else if (ccw)
-		topology = V_028B6C_OUTPUT_TRIANGLE_CW;
-	else
 		topology = V_028B6C_OUTPUT_TRIANGLE_CCW;
+	else
+		topology = V_028B6C_OUTPUT_TRIANGLE_CW;
 
 	if (pipeline->device->has_distributed_tess) {
 		if (pipeline->device->physical_device->rad_info.family == CHIP_FIJI ||
