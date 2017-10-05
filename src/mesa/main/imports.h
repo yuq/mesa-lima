@@ -318,13 +318,6 @@ extern void *
 _mesa_align_realloc(void *oldBuffer, size_t oldSize, size_t newSize,
                     unsigned long alignment);
 
-extern void *
-_mesa_exec_malloc( GLuint size );
-
-extern void 
-_mesa_exec_free( void *addr );
-
-
 #ifdef HAVE___BUILTIN_POPCOUNT
 #define _mesa_bitcount(i) __builtin_popcount(i)
 #else
