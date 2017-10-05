@@ -247,7 +247,7 @@ struct vc5_job {
          * (either clears or draws).
          */
         uint32_t resolve;
-        uint32_t clear_color[2];
+        uint32_t clear_color[4][4];
         float clear_z;
         uint8_t clear_s;
 

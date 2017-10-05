@@ -516,17 +516,6 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 vc5_flush(pctx);
 }
 
-static uint32_t
-pack_rgba(enum pipe_format format, const float *rgba)
-{
-        union util_color uc;
-        util_pack_color(rgba, format, &uc);
-        if (util_format_get_blocksize(format) == 2)
-                return uc.us;
-        else
-                return uc.ui[0];
-}
-
 static void
 vc5_clear(struct pipe_context *pctx, unsigned buffers,
           const union pipe_color_union *color, double depth, unsigned stencil)
@@ -543,32 +532,22 @@ vc5_clear(struct pipe_context *pctx, unsigned buffers,
                 job = vc5_get_job_for_fbo(vc5);
         }
 
-        if (buffers & PIPE_CLEAR_COLOR0) {
+        for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
+                uint32_t bit = PIPE_CLEAR_COLOR0 << i;
+                if (!(buffers & bit))
+                        continue;
+
+                struct pipe_surface *cbuf = vc5->framebuffer.cbufs[i];
                 struct vc5_resource *rsc =
-                        vc5_resource(vc5->framebuffer.cbufs[0]->texture);
-                uint32_t clear_color;
+                        vc5_resource(cbuf->texture);
 
-#if 0
-                if (vc5_rt_format_is_565(vc5->framebuffer.cbufs[0]->format)) {
-                        /* In 565 mode, the hardware will be packing our color
-                         * for us.
-                         */
-                        clear_color = pack_rgba(PIPE_FORMAT_R8G8B8A8_UNORM,
-                                                color->f);
-                } else {
-                        /* Otherwise, we need to do this packing because we
-                         * support multiple swizzlings of RGBA8888.
-                         */
-                        clear_color =
-                                pack_rgba(vc5->framebuffer.cbufs[0]->format,
-                                          color->f);
-                }
-#endif
-                clear_color = pack_rgba(vc5->framebuffer.cbufs[0]->format,
-                                        color->f);
+                union util_color uc;
+                util_pack_color(color->f, cbuf->format, &uc);
 
-                job->clear_color[0] = job->clear_color[1] = clear_color;
-                rsc->initialized_buffers |= (buffers & PIPE_CLEAR_COLOR0);
+                memcpy(job->clear_color[i], uc.ui,
+                       util_format_get_blocksize(cbuf->format));
+
+                rsc->initialized_buffers |= bit;
         }
 
         unsigned zsclear = buffers & PIPE_CLEAR_DEPTHSTENCIL;

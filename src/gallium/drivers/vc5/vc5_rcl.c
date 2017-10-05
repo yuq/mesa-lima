@@ -147,6 +147,13 @@ vc5_emit_rcl(struct vc5_job *job)
                         if (job->resolve & PIPE_CLEAR_COLOR0 << i)
                                 rsc->writes++;
                 }
+
+                cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_CLEAR_COLORS_PART1,
+                        clear) {
+                        clear.clear_color_low_32_bits = job->clear_color[i][0];
+                        clear.clear_color_next_24_bits = job->clear_color[i][1] & 0xffffff;
+                        clear.render_target_number = i;
+                };
         }
 
         /* TODO: Don't bother emitting if we don't load/clear Z/S. */
@@ -173,11 +180,6 @@ vc5_emit_rcl(struct vc5_job *job)
                 if (job->resolve & PIPE_CLEAR_DEPTHSTENCIL)
                         rsc->writes++;
         }
-
-        cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_CLEAR_COLORS_PART1,
-                clear) {
-                clear.clear_color_low_32_bits = job->clear_color[0];
-        };
 
         /* Ends rendering mode config. */
         cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_Z_STENCIL_CLEAR_VALUES,
