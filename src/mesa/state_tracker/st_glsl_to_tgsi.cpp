@@ -4478,6 +4478,10 @@ count_resources(glsl_to_tgsi_visitor *v, gl_program *prog)
             if (inst->tex_shadow) {
                prog->ShadowSamplers |= 1 << (inst->resource.index + i);
             }
+
+            if (inst->op == TGSI_OPCODE_TXF || inst->op == TGSI_OPCODE_TXF_LZ) {
+               prog->TexelFetchSamplers |= 1u << idx;
+            }
          }
       }
 

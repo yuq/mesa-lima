@@ -334,7 +334,7 @@ last_layer(const struct st_texture_object *stObj)
 static enum pipe_format
 get_sampler_view_format(struct st_context *st,
                         const struct st_texture_object *stObj,
-                        const struct gl_sampler_object *samp)
+                        bool srgb_skip_decode)
 {
    enum pipe_format format;
 
@@ -351,7 +351,7 @@ get_sampler_view_format(struct st_context *st,
    }
 
    /* If sRGB decoding is off, use the linear format */
-   if (samp->sRGBDecode == GL_SKIP_DECODE_EXT)
+   if (srgb_skip_decode)
       format = util_format_linear(format);
 
    /* Use R8_UNORM for video formats */
@@ -408,24 +408,29 @@ struct pipe_sampler_view *
 st_get_texture_sampler_view_from_stobj(struct st_context *st,
                                        struct st_texture_object *stObj,
                                        const struct gl_sampler_object *samp,
-                                       bool glsl130_or_later)
+                                       bool glsl130_or_later,
+                                       bool ignore_srgb_decode)
 {
    struct st_sampler_view *sv;
    struct pipe_sampler_view *view;
+   bool srgb_skip_decode = false;
 
    sv = st_texture_get_sampler_view(st, stObj);
    view = sv->view;
 
+   if (!ignore_srgb_decode && samp->sRGBDecode == GL_SKIP_DECODE_EXT)
+      srgb_skip_decode = true;
+
    if (view &&
        sv->glsl130_or_later == glsl130_or_later &&
-       sv->sRGBDecode == samp->sRGBDecode) {
+       sv->srgb_skip_decode == srgb_skip_decode) {
       /* Debug check: make sure that the sampler view's parameters are
        * what they're supposed to be.
        */
       MAYBE_UNUSED struct pipe_sampler_view *view = sv->view;
       assert(stObj->pt == view->texture);
       assert(!check_sampler_swizzle(st, stObj, view, glsl130_or_later));
-      assert(get_sampler_view_format(st, stObj, samp) == view->format);
+      assert(get_sampler_view_format(st, stObj, srgb_skip_decode) == view->format);
       assert(gl_target_to_pipe(stObj->base.Target) == view->target);
       assert(stObj->level_override ||
              stObj->base.MinLevel + stObj->base.BaseLevel == view->u.tex.first_level);
@@ -438,10 +443,10 @@ st_get_texture_sampler_view_from_stobj(struct st_context *st,
    }
    else {
       /* create new sampler view */
-      enum pipe_format format = get_sampler_view_format(st, stObj, samp);
+      enum pipe_format format = get_sampler_view_format(st, stObj, srgb_skip_decode);
 
       sv->glsl130_or_later = glsl130_or_later;
-      sv->sRGBDecode = samp->sRGBDecode;
+      sv->srgb_skip_decode = srgb_skip_decode;
 
       pipe_sampler_view_release(st->pipe, &sv->view);
       view = sv->view =

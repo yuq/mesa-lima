@@ -56,8 +56,8 @@ struct st_sampler_view {
 
    /** The glsl version of the shader seen during validation */
    bool glsl130_or_later;
-   /** The value of the sampler's sRGBDecode state during validation */
-   GLenum sRGBDecode;
+   /** Derived from the sampler's sRGBDecode state during validation */
+   bool srgb_skip_decode;
 };
 
 
@@ -309,7 +309,8 @@ st_convert_sampler_from_unit(const struct st_context *st,
 void
 st_update_single_texture(struct st_context *st,
                          struct pipe_sampler_view **sampler_view,
-                         GLuint texUnit, bool glsl130_or_later);
+                         GLuint texUnit, bool glsl130_or_later,
+                         bool ignore_srgb_decode);
 
 void
 st_make_bound_samplers_resident(struct st_context *st,
