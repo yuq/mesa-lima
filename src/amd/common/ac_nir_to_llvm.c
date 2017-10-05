@@ -1067,7 +1067,6 @@ static LLVMValueRef llvm_extract_elem(struct ac_llvm_context *ac,
 {
 	int count = get_llvm_num_components(value);
 
-	assert(index < count);
 	if (count == 1)
 		return value;
 
@@ -2818,6 +2817,28 @@ get_dw_address(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef
+build_varying_gather_values(struct ac_llvm_context *ctx, LLVMValueRef *values,
+			    unsigned value_count, unsigned component)
+{
+	LLVMValueRef vec = NULL;
+
+	if (value_count == 1) {
+		return values[component];
+	} else if (!value_count)
+		unreachable("value_count is 0");
+
+	for (unsigned i = component; i < value_count + component; i++) {
+		LLVMValueRef value = values[i];
+
+		if (!i)
+			vec = LLVMGetUndef( LLVMVectorType(LLVMTypeOf(value), value_count));
+		LLVMValueRef index = LLVMConstInt(ctx->i32, i - component, false);
+		vec = LLVMBuildInsertElement(ctx->builder, vec, value, index, "");
+	}
+	return vec;
+}
+
+static LLVMValueRef
 load_tcs_input(struct nir_to_llvm_context *ctx,
 	       nir_intrinsic_instr *instr)
 {
@@ -2839,12 +2860,13 @@ load_tcs_input(struct nir_to_llvm_context *ctx,
 	dw_addr = get_dw_address(ctx, dw_addr, param, const_index, is_compact, vertex_index, stride,
 				 indir_index);
 
-	for (unsigned i = 0; i < instr->num_components; i++) {
+	unsigned comp = instr->variables[0]->var->data.location_frac;
+	for (unsigned i = 0; i < instr->num_components + comp; i++) {
 		value[i] = lds_load(ctx, dw_addr);
 		dw_addr = LLVMBuildAdd(ctx->builder, dw_addr,
 				       ctx->i32one, "");
 	}
-	result = ac_build_gather_values(&ctx->ac, value, instr->num_components);
+	result = build_varying_gather_values(&ctx->ac, value, instr->num_components, comp);
 	result = LLVMBuildBitCast(ctx->builder, result, get_def_type(ctx->nir, &instr->dest.ssa), "");
 	return result;
 }
@@ -2877,12 +2899,13 @@ load_tcs_output(struct nir_to_llvm_context *ctx,
 	dw_addr = get_dw_address(ctx, dw_addr, param, const_index, is_compact, vertex_index, stride,
 				 indir_index);
 
-	for (unsigned i = 0; i < instr->num_components; i++) {
+	unsigned comp = instr->variables[0]->var->data.location_frac;
+	for (unsigned i = comp; i < instr->num_components + comp; i++) {
 		value[i] = lds_load(ctx, dw_addr);
 		dw_addr = LLVMBuildAdd(ctx->builder, dw_addr,
 				       ctx->i32one, "");
 	}
-	result = ac_build_gather_values(&ctx->ac, value, instr->num_components);
+	result = build_varying_gather_values(&ctx->ac, value, instr->num_components, comp);
 	result = LLVMBuildBitCast(ctx->builder, result, get_def_type(ctx->nir, &instr->dest.ssa), "");
 	return result;
 }
@@ -2900,6 +2923,7 @@ store_tcs_output(struct nir_to_llvm_context *ctx,
 	LLVMValueRef indir_index = NULL;
 	unsigned const_index = 0;
 	unsigned param;
+	const unsigned comp = instr->variables[0]->var->data.location_frac;
 	const bool per_vertex = nir_is_per_vertex_io(instr->variables[0]->var, ctx->stage);
 	const bool is_compact = instr->variables[0]->var->data.compact;
 
@@ -2937,7 +2961,7 @@ store_tcs_output(struct nir_to_llvm_context *ctx,
 	for (unsigned chan = 0; chan < 8; chan++) {
 		if (!(writemask & (1 << chan)))
 			continue;
-		LLVMValueRef value = llvm_extract_elem(&ctx->ac, src, chan);
+		LLVMValueRef value = llvm_extract_elem(&ctx->ac, src, chan - comp);
 
 		lds_store(ctx, dw_addr, value);
 
@@ -2979,8 +3003,13 @@ load_tes_input(struct nir_to_llvm_context *ctx,
 		const_index -= 3;
 		param++;
 	}
+
+	unsigned comp = instr->variables[0]->var->data.location_frac;
 	buf_addr = get_tcs_tes_buffer_address_params(ctx, param, const_index,
 						     is_compact, vertex_index, indir_index);
+
+	LLVMValueRef comp_offset = LLVMConstInt(ctx->i32, comp * 4, false);
+	buf_addr = LLVMBuildAdd(ctx->builder, buf_addr, comp_offset, "");
 
 	result = ac_build_buffer_load(&ctx->ac, ctx->hs_ring_tess_offchip, instr->num_components, NULL,
 				      buf_addr, ctx->oc_lds, is_compact ? (4 * const_index) : 0, 1, 0, true, false);
@@ -3008,7 +3037,9 @@ load_gs_input(struct nir_to_llvm_context *ctx,
 				  LLVMConstInt(ctx->i32, 4, false), "");
 
 	param = shader_io_get_unique_index(instr->variables[0]->var->data.location);
-	for (unsigned i = 0; i < instr->num_components; i++) {
+
+	unsigned comp = instr->variables[0]->var->data.location_frac;
+	for (unsigned i = comp; i < instr->num_components + comp; i++) {
 		if (ctx->ac.chip_class >= GFX9) {
 			LLVMValueRef dw_addr = ctx->gs_vtx_offset[vtx_offset_param];
 			dw_addr = LLVMBuildAdd(ctx->ac.builder, dw_addr,
@@ -3031,7 +3062,7 @@ load_gs_input(struct nir_to_llvm_context *ctx,
 			                              AC_FUNC_ATTR_LEGACY);
 		}
 	}
-	result = ac_build_gather_values(&ctx->ac, value, instr->num_components);
+	result = build_varying_gather_values(&ctx->ac, value, instr->num_components, comp);
 
 	return result;
 }
@@ -3081,6 +3112,7 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 	LLVMValueRef values[8];
 	int idx = instr->variables[0]->var->data.driver_location;
 	int ve = instr->dest.ssa.num_components;
+	unsigned comp = instr->variables[0]->var->data.location_frac;
 	LLVMValueRef indir_index;
 	LLVMValueRef ret;
 	unsigned const_index;
@@ -3101,7 +3133,8 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 		if (ctx->stage == MESA_SHADER_GEOMETRY) {
 			return load_gs_input(ctx->nctx, instr);
 		}
-		for (unsigned chan = 0; chan < ve; chan++) {
+
+		for (unsigned chan = comp; chan < ve + comp; chan++) {
 			if (indir_index) {
 				unsigned count = glsl_count_attribute_slots(
 						instr->variables[0]->var->type,
@@ -3147,7 +3180,8 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 	case nir_var_shader_out:
 		if (ctx->stage == MESA_SHADER_TESS_CTRL)
 			return load_tcs_output(ctx->nctx, instr);
-		for (unsigned chan = 0; chan < ve; chan++) {
+
+		for (unsigned chan = comp; chan < ve + comp; chan++) {
 			if (indir_index) {
 				unsigned count = glsl_count_attribute_slots(
 						instr->variables[0]->var->type, false);
@@ -3169,7 +3203,7 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 	default:
 		unreachable("unhandle variable mode");
 	}
-	ret = ac_build_gather_values(&ctx->ac, values, ve);
+	ret = build_varying_gather_values(&ctx->ac, values, ve, comp);
 	return LLVMBuildBitCast(ctx->ac.builder, ret, get_def_type(ctx, &instr->dest.ssa), "");
 }
 
@@ -3179,8 +3213,9 @@ visit_store_var(struct ac_nir_context *ctx,
 {
 	LLVMValueRef temp_ptr, value;
 	int idx = instr->variables[0]->var->data.driver_location;
+	unsigned comp = instr->variables[0]->var->data.location_frac;
 	LLVMValueRef src = ac_to_float(&ctx->ac, get_src(ctx, instr->src[0]));
-	int writemask = instr->const_index[0];
+	int writemask = instr->const_index[0] << comp;
 	LLVMValueRef indir_index;
 	unsigned const_index;
 	get_deref_offset(ctx, instr->variables[0], false,
@@ -3213,7 +3248,7 @@ visit_store_var(struct ac_nir_context *ctx,
 			if (!(writemask & (1 << chan)))
 				continue;
 
-			value = llvm_extract_elem(&ctx->ac, src, chan);
+			value = llvm_extract_elem(&ctx->ac, src, chan - comp);
 
 			if (instr->variables[0]->var->data.compact)
 				stride = 1;
@@ -3910,7 +3945,7 @@ static LLVMValueRef load_sample_pos(struct ac_nir_context *ctx)
 static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 				 const nir_intrinsic_instr *instr)
 {
-	LLVMValueRef result[2];
+	LLVMValueRef result[4];
 	LLVMValueRef interp_param, attr_number;
 	unsigned location;
 	unsigned chan;
@@ -3988,7 +4023,7 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 
 	}
 
-	for (chan = 0; chan < 2; chan++) {
+	for (chan = 0; chan < 4; chan++) {
 		LLVMValueRef llvm_chan = LLVMConstInt(ctx->i32, chan, false);
 
 		if (interp_param) {
@@ -4009,7 +4044,8 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 							      ctx->prim_mask);
 		}
 	}
-	return ac_build_gather_values(&ctx->ac, result, 2);
+	return build_varying_gather_values(&ctx->ac, result, instr->num_components,
+					   instr->variables[0]->var->data.location_frac);
 }
 
 static void
