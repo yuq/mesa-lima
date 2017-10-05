@@ -67,6 +67,17 @@ fd_context_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 	}
 }
 
+static void
+fd_texture_barrier(struct pipe_context *pctx, unsigned flags)
+{
+	/* On devices that could sample from GMEM we could possibly do better.
+	 * Or if we knew that we were doing GMEM bypass we could just emit a
+	 * cache flush, perhaps?  But we don't know if future draws would cause
+	 * us to use GMEM, and a flush in bypass isn't the end of the world.
+	 */
+	fd_context_flush(pctx, NULL, 0);
+}
+
 /**
  * emit marker string as payload of a no-op packet, which can be
  * decoded by cffdump.
@@ -273,6 +284,7 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 	pctx->set_debug_callback = fd_set_debug_callback;
 	pctx->create_fence_fd = fd_create_fence_fd;
 	pctx->fence_server_sync = fd_fence_server_sync;
+	pctx->texture_barrier = fd_texture_barrier;
 
 	pctx->stream_uploader = u_upload_create_default(pctx);
 	if (!pctx->stream_uploader)
