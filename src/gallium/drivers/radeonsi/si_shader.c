@@ -4187,14 +4187,13 @@ static void declare_per_stage_desc_pointers(struct si_shader_context *ctx,
 	}
 }
 
-static void declare_default_desc_pointers(struct si_shader_context *ctx,
-					  struct si_function_info *fninfo)
+static void declare_global_desc_pointers(struct si_shader_context *ctx,
+					 struct si_function_info *fninfo)
 {
 	ctx->param_rw_buffers = add_arg(fninfo, ARG_SGPR,
 		si_const_array(ctx->v4i32, SI_NUM_RW_BUFFERS));
 	ctx->param_bindless_samplers_and_images = add_arg(fninfo, ARG_SGPR,
 		si_const_array(ctx->v8i32, 0));
-	declare_per_stage_desc_pointers(ctx, fninfo, true);
 }
 
 static void declare_vs_specific_input_sgprs(struct si_shader_context *ctx,
@@ -4272,7 +4271,8 @@ static void create_function(struct si_shader_context *ctx)
 
 	switch (type) {
 	case PIPE_SHADER_VERTEX:
-		declare_default_desc_pointers(ctx, &fninfo);
+		declare_global_desc_pointers(ctx, &fninfo);
+		declare_per_stage_desc_pointers(ctx, &fninfo, true);
 		declare_vs_specific_input_sgprs(ctx, &fninfo);
 
 		if (shader->key.as_es) {
@@ -4297,7 +4297,8 @@ static void create_function(struct si_shader_context *ctx)
 		break;
 
 	case PIPE_SHADER_TESS_CTRL: /* SI-CI-VI */
-		declare_default_desc_pointers(ctx, &fninfo);
+		declare_global_desc_pointers(ctx, &fninfo);
+		declare_per_stage_desc_pointers(ctx, &fninfo, true);
 		ctx->param_tcs_offchip_layout = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_out_lds_offsets = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_out_lds_layout = add_arg(&fninfo, ARG_SGPR, ctx->i32);
@@ -4439,7 +4440,8 @@ static void create_function(struct si_shader_context *ctx)
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:
-		declare_default_desc_pointers(ctx, &fninfo);
+		declare_global_desc_pointers(ctx, &fninfo);
+		declare_per_stage_desc_pointers(ctx, &fninfo, true);
 		ctx->param_tcs_offchip_layout = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_offchip_addr_base64k = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 
@@ -4459,7 +4461,8 @@ static void create_function(struct si_shader_context *ctx)
 		break;
 
 	case PIPE_SHADER_GEOMETRY:
-		declare_default_desc_pointers(ctx, &fninfo);
+		declare_global_desc_pointers(ctx, &fninfo);
+		declare_per_stage_desc_pointers(ctx, &fninfo, true);
 		ctx->param_gs2vs_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_gs_wave_id = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 
@@ -4475,7 +4478,8 @@ static void create_function(struct si_shader_context *ctx)
 		break;
 
 	case PIPE_SHADER_FRAGMENT:
-		declare_default_desc_pointers(ctx, &fninfo);
+		declare_global_desc_pointers(ctx, &fninfo);
+		declare_per_stage_desc_pointers(ctx, &fninfo, true);
 		add_arg_checked(&fninfo, ARG_SGPR, ctx->f32, SI_PARAM_ALPHA_REF);
 		add_arg_checked(&fninfo, ARG_SGPR, ctx->i32, SI_PARAM_PRIM_MASK);
 
@@ -4538,7 +4542,8 @@ static void create_function(struct si_shader_context *ctx)
 		break;
 
 	case PIPE_SHADER_COMPUTE:
-		declare_default_desc_pointers(ctx, &fninfo);
+		declare_global_desc_pointers(ctx, &fninfo);
+		declare_per_stage_desc_pointers(ctx, &fninfo, true);
 		if (shader->selector->info.uses_grid_size)
 			ctx->param_grid_size = add_arg(&fninfo, ARG_SGPR, v3i32);
 		if (shader->selector->info.uses_block_size)
