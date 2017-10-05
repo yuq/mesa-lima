@@ -955,7 +955,7 @@ brw_draw_indirect_prims(struct gl_context *ctx,
    prim[draw_count - 1].end = 1;
    for (i = 0; i < draw_count; ++i, indirect_offset += stride) {
       prim[i].mode = mode;
-      prim[i].indexed = !!ib;
+      prim[i].indexed = ib != NULL;
       prim[i].indirect_offset = indirect_offset;
       prim[i].is_indirect = 1;
       prim[i].draw_id = i;
