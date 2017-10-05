@@ -547,7 +547,7 @@ fd5_emit_tile_mem2gmem(struct fd_batch *batch, struct fd_tile *tile)
 				A5XX_RB_MRT_BUF_INFO_COLOR_SWAP(WZYX));
 		OUT_RING(ring, A5XX_RB_MRT_PITCH(slice->pitch * rsc->cpp));
 		OUT_RING(ring, A5XX_RB_MRT_ARRAY_PITCH(slice->size0));
-		OUT_RELOCW(ring, rsc->bo, 0, 0, 0);  /* BASE_LO/HI */
+		OUT_RELOC(ring, rsc->bo, 0, 0, 0);  /* BASE_LO/HI */
 
 		emit_mem2gmem_surf(batch, ctx->gmem.zsbuf_base[0], pfb->zsbuf, BLIT_MRT0);
 	}
