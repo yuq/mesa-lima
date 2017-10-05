@@ -608,7 +608,7 @@ void anv_GetImageSubresourceLayout(
 enum isl_aux_usage
 anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
                         const struct anv_image * const image,
-                        const VkImageAspectFlags aspects,
+                        const VkImageAspectFlagBits aspect,
                         const VkImageLayout layout)
 {
    /* Validate the inputs. */
@@ -619,8 +619,8 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
    /* The layout of a NULL image is not properly defined. */
    assert(image != NULL);
 
-   /* The aspects must be a subset of the image aspects. */
-   assert(aspects & image->aspects && aspects <= image->aspects);
+   /* The aspect must be exactly one of the image aspects. */
+   assert(_mesa_bitcount(aspect) == 1 && (aspect & image->aspects));
 
    /* Determine the optimal buffer. */
 
@@ -633,15 +633,11 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
    /* All images that use an auxiliary surface are required to be tiled. */
    assert(image->tiling == VK_IMAGE_TILING_OPTIMAL);
 
-   /* On BDW+, when clearing the stencil aspect of a depth stencil image,
-    * the HiZ buffer allows us to record the clear with a relatively small
-    * number of packets. Prior to BDW, the HiZ buffer provides no known benefit
-    * to the stencil aspect.
-    */
-   if (devinfo->gen < 8 && aspects == VK_IMAGE_ASPECT_STENCIL_BIT)
+   /* Stencil has no aux */
+   if (aspect == VK_IMAGE_ASPECT_STENCIL_BIT)
       return ISL_AUX_USAGE_NONE;
 
-   const bool color_aspect = aspects == VK_IMAGE_ASPECT_COLOR_BIT;
+   const bool color_aspect = aspect == VK_IMAGE_ASPECT_COLOR_BIT;
 
    /* The following switch currently only handles depth stencil aspects.
     * TODO: Handle the color aspect.
@@ -685,7 +681,8 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
       /* Fall-through */
    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
    case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR:
-      if (anv_can_sample_with_hiz(devinfo, aspects, image->samples))
+      assert(aspect == VK_IMAGE_ASPECT_DEPTH_BIT);
+      if (anv_can_sample_with_hiz(devinfo, aspect, image->samples))
          return ISL_AUX_USAGE_HIZ;
       else
          return ISL_AUX_USAGE_NONE;
@@ -718,7 +715,7 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
 
    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
    case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR:
-      assert(!color_aspect);
+      assert(aspect == VK_IMAGE_ASPECT_DEPTH_BIT);
       return ISL_AUX_USAGE_HIZ;
 
    case VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR:

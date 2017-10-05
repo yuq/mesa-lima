@@ -2417,7 +2417,7 @@ anv_image_copy_to_shadow(struct anv_cmd_buffer *cmd_buffer,
 enum isl_aux_usage
 anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
                         const struct anv_image *image,
-                        const VkImageAspectFlags aspects,
+                        const VkImageAspectFlagBits aspect,
                         const VkImageLayout layout);
 
 /* This is defined as a macro so that it works for both

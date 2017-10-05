@@ -374,11 +374,11 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
       return;
 
    const bool hiz_enabled = ISL_AUX_USAGE_HIZ ==
-      anv_layout_to_aux_usage(&cmd_buffer->device->info, image, image->aspects,
-                              initial_layout);
+      anv_layout_to_aux_usage(&cmd_buffer->device->info, image,
+                              VK_IMAGE_ASPECT_DEPTH_BIT, initial_layout);
    const bool enable_hiz = ISL_AUX_USAGE_HIZ ==
-      anv_layout_to_aux_usage(&cmd_buffer->device->info, image, image->aspects,
-                              final_layout);
+      anv_layout_to_aux_usage(&cmd_buffer->device->info, image,
+                              VK_IMAGE_ASPECT_DEPTH_BIT, final_layout);
 
    enum blorp_hiz_op hiz_op;
    if (hiz_enabled && !enable_hiz) {
@@ -2892,7 +2892,7 @@ cmd_buffer_subpass_transition_layouts(struct anv_cmd_buffer * const cmd_buffer,
                                  att_state->current_layout, target_layout);
          att_state->aux_usage =
             anv_layout_to_aux_usage(&cmd_buffer->device->info, image,
-                                    image->aspects, target_layout);
+                                    VK_IMAGE_ASPECT_DEPTH_BIT, target_layout);
       } else if (image->aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
          transition_color_buffer(cmd_buffer, image,
                                  iview->isl.base_level, 1,
