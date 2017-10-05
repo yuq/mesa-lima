@@ -682,7 +682,7 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
    case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR:
       assert(aspect == VK_IMAGE_ASPECT_DEPTH_BIT);
-      if (anv_can_sample_with_hiz(devinfo, aspect, image->samples))
+      if (anv_can_sample_with_hiz(devinfo, image))
          return ISL_AUX_USAGE_HIZ;
       else
          return ISL_AUX_USAGE_NONE;

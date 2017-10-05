@@ -2381,13 +2381,15 @@ anv_fast_clear_state_entry_size(const struct anv_device *device)
 /* Returns true if a HiZ-enabled depth buffer can be sampled from. */
 static inline bool
 anv_can_sample_with_hiz(const struct gen_device_info * const devinfo,
-                        const VkImageAspectFlags aspect_mask,
-                        const uint32_t samples)
+                        const struct anv_image *image)
 {
-   /* Validate the inputs. */
-   assert(devinfo && aspect_mask && samples);
-   return devinfo->gen >= 8 && (aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) &&
-          samples == 1;
+   if (!(image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT))
+      return false;
+
+   if (devinfo->gen < 8)
+      return false;
+
+   return image->samples == 1;
 }
 
 void
