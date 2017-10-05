@@ -343,8 +343,11 @@ si_emit_config(struct radv_physical_device *physical_device,
 	radeon_set_context_reg(cs, R_028A1C_VGT_HOS_MIN_TESS_LEVEL, fui(0));
 
 	/* FIXME calculate these values somehow ??? */
-	radeon_set_context_reg(cs, R_028A54_VGT_GS_PER_ES, SI_GS_PER_ES);
-	radeon_set_context_reg(cs, R_028A58_VGT_ES_PER_GS, 0x40);
+	if (physical_device->rad_info.chip_class <= VI) {
+		radeon_set_context_reg(cs, R_028A54_VGT_GS_PER_ES, SI_GS_PER_ES);
+		radeon_set_context_reg(cs, R_028A58_VGT_ES_PER_GS, 0x40);
+	}
+
 	radeon_set_context_reg(cs, R_028A5C_VGT_GS_PER_VS, 0x2);
 
 	radeon_set_context_reg(cs, R_028A8C_VGT_PRIMITIVEID_RESET, 0x0);
