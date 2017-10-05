@@ -638,10 +638,10 @@ fd_get_compute_param(struct pipe_screen *pscreen, enum pipe_shader_ir ir_type,
 
 	case PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE:
 		if (ret) {
-			uint64_t *grid_size = ret;
-			grid_size[0] = 1024;
-			grid_size[1] = 1024;
-			grid_size[2] = 64;
+			uint64_t *block_size = ret;
+			block_size[0] = 1024;
+			block_size[1] = 1024;
+			block_size[2] = 64;
 		}
 		return 3 * sizeof(uint64_t) ;
 
