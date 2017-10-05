@@ -84,6 +84,16 @@ static void si_destroy_context(struct pipe_context *context)
 		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_eliminate_fastclear);
 	if (sctx->custom_blend_dcc_decompress)
 		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_dcc_decompress);
+	if (sctx->vs_blit_pos)
+		sctx->b.b.delete_vs_state(&sctx->b.b, sctx->vs_blit_pos);
+	if (sctx->vs_blit_pos_layered)
+		sctx->b.b.delete_vs_state(&sctx->b.b, sctx->vs_blit_pos_layered);
+	if (sctx->vs_blit_color)
+		sctx->b.b.delete_vs_state(&sctx->b.b, sctx->vs_blit_color);
+	if (sctx->vs_blit_color_layered)
+		sctx->b.b.delete_vs_state(&sctx->b.b, sctx->vs_blit_color_layered);
+	if (sctx->vs_blit_texcoord)
+		sctx->b.b.delete_vs_state(&sctx->b.b, sctx->vs_blit_texcoord);
 
 	if (sctx->blitter)
 		util_blitter_destroy(sctx->blitter);

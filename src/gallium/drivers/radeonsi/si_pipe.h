@@ -320,6 +320,11 @@ struct si_context {
 	void				*custom_blend_fmask_decompress;
 	void				*custom_blend_eliminate_fastclear;
 	void				*custom_blend_dcc_decompress;
+	void				*vs_blit_pos;
+	void				*vs_blit_pos_layered;
+	void				*vs_blit_color;
+	void				*vs_blit_color_layered;
+	void				*vs_blit_texcoord;
 	struct si_screen		*screen;
 	LLVMTargetMachineRef		tm; /* only non-threaded compilation */
 	struct si_shader_ctx_state	fixed_func_tcs_shader;

@@ -891,7 +891,13 @@ static void si_shader_vs(struct si_screen *sscreen, struct si_shader *shader,
 		 * StepRate0 is set to 1. so that VGPR3 doesn't have to be loaded.
 		 */
 		vgpr_comp_cnt = enable_prim_id ? 2 : (shader->info.uses_instanceid ? 1 : 0);
-		num_user_sgprs = SI_VS_NUM_USER_SGPR;
+
+		if (info->properties[TGSI_PROPERTY_VS_BLIT_SGPRS]) {
+			num_user_sgprs = SI_SGPR_VS_BLIT_DATA +
+					 info->properties[TGSI_PROPERTY_VS_BLIT_SGPRS];
+		} else {
+			num_user_sgprs = SI_VS_NUM_USER_SGPR;
+		}
 	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
 		vgpr_comp_cnt = enable_prim_id ? 3 : 2;
 		num_user_sgprs = SI_TES_NUM_USER_SGPR;
@@ -2043,7 +2049,8 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 
 	/* The prolog is a no-op if there are no inputs. */
 	sel->vs_needs_prolog = sel->type == PIPE_SHADER_VERTEX &&
-			       sel->info.num_inputs;
+			       sel->info.num_inputs &&
+			       !sel->info.properties[TGSI_PROPERTY_VS_BLIT_SGPRS];
 
 	/* Set which opcode uses which (i,j) pair. */
 	if (sel->info.uses_persp_opcode_interp_centroid)
@@ -3395,6 +3402,70 @@ static void si_emit_scratch_state(struct si_context *sctx,
 				      sctx->scratch_buffer, RADEON_USAGE_READWRITE,
 				      RADEON_PRIO_SCRATCH_BUFFER);
 	}
+}
+
+void *si_get_blit_vs(struct si_context *sctx, enum blitter_attrib_type type,
+		     unsigned num_layers)
+{
+	struct pipe_context *pipe = &sctx->b.b;
+	unsigned vs_blit_property;
+	void **vs;
+
+	switch (type) {
+	case UTIL_BLITTER_ATTRIB_NONE:
+		vs = num_layers > 1 ? &sctx->vs_blit_pos_layered :
+				      &sctx->vs_blit_pos;
+		vs_blit_property = SI_VS_BLIT_SGPRS_POS;
+		break;
+	case UTIL_BLITTER_ATTRIB_COLOR:
+		vs = num_layers > 1 ? &sctx->vs_blit_color_layered :
+				      &sctx->vs_blit_color;
+		vs_blit_property = SI_VS_BLIT_SGPRS_POS_COLOR;
+		break;
+	case UTIL_BLITTER_ATTRIB_TEXCOORD_XY:
+	case UTIL_BLITTER_ATTRIB_TEXCOORD_XYZW:
+		assert(num_layers == 1);
+		vs = &sctx->vs_blit_texcoord;
+		vs_blit_property = SI_VS_BLIT_SGPRS_POS_TEXCOORD;
+		break;
+	default:
+		assert(0);
+		return NULL;
+	}
+	if (*vs)
+		return *vs;
+
+	struct ureg_program *ureg = ureg_create(PIPE_SHADER_VERTEX);
+	if (!ureg)
+		return NULL;
+
+	/* Tell the shader to load VS inputs from SGPRs: */
+	ureg_property(ureg, TGSI_PROPERTY_VS_BLIT_SGPRS, vs_blit_property);
+
+	/* This is just a pass-through shader with 1-3 MOV instructions. */
+	ureg_MOV(ureg,
+		 ureg_DECL_output(ureg, TGSI_SEMANTIC_POSITION, 0),
+		 ureg_DECL_vs_input(ureg, 0));
+
+	if (type != UTIL_BLITTER_ATTRIB_NONE) {
+		ureg_MOV(ureg,
+			 ureg_DECL_output(ureg, TGSI_SEMANTIC_GENERIC, 0),
+			 ureg_DECL_vs_input(ureg, 1));
+	}
+
+	if (num_layers > 1) {
+		struct ureg_src instance_id =
+			ureg_DECL_system_value(ureg, TGSI_SEMANTIC_INSTANCEID, 0);
+		struct ureg_dst layer =
+			ureg_DECL_output(ureg, TGSI_SEMANTIC_LAYER, 0);
+
+		ureg_MOV(ureg, ureg_writemask(layer, TGSI_WRITEMASK_X),
+			 ureg_scalar(instance_id, TGSI_SWIZZLE_X));
+	}
+	ureg_END(ureg);
+
+	*vs = ureg_create_shader_and_destroy(ureg, pipe);
+	return *vs;
 }
 
 void si_init_shader_functions(struct si_context *sctx)

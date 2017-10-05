@@ -134,6 +134,7 @@ struct si_shader_context {
 	 *             max = 32*4
 	 */
 	int param_vs_state_bits;
+	int param_vs_blit_inputs;
 	/* HW VS */
 	int param_streamout_config;
 	int param_streamout_write_index;
