@@ -224,47 +224,12 @@ static unsigned radv_pack_float_12p4(float x)
 }
 
 static void
-si_emit_config(struct radv_physical_device *physical_device,
-	       struct radeon_winsys_cs *cs)
+si_set_raster_config(struct radv_physical_device *physical_device,
+		     struct radeon_winsys_cs *cs)
 {
 	unsigned num_rb = MIN2(physical_device->rad_info.num_render_backends, 16);
 	unsigned rb_mask = physical_device->rad_info.enabled_rb_mask;
 	unsigned raster_config, raster_config_1;
-	int i;
-
-	radeon_emit(cs, PKT3(PKT3_CONTEXT_CONTROL, 1, 0));
-	radeon_emit(cs, CONTEXT_CONTROL_LOAD_ENABLE(1));
-	radeon_emit(cs, CONTEXT_CONTROL_SHADOW_ENABLE(1));
-
-	radeon_set_context_reg(cs, R_028A18_VGT_HOS_MAX_TESS_LEVEL, fui(64));
-	radeon_set_context_reg(cs, R_028A1C_VGT_HOS_MIN_TESS_LEVEL, fui(0));
-
-	/* FIXME calculate these values somehow ??? */
-	radeon_set_context_reg(cs, R_028A54_VGT_GS_PER_ES, SI_GS_PER_ES);
-	radeon_set_context_reg(cs, R_028A58_VGT_ES_PER_GS, 0x40);
-	radeon_set_context_reg(cs, R_028A5C_VGT_GS_PER_VS, 0x2);
-
-	radeon_set_context_reg(cs, R_028A8C_VGT_PRIMITIVEID_RESET, 0x0);
-	radeon_set_context_reg(cs, R_028B28_VGT_STRMOUT_DRAW_OPAQUE_OFFSET, 0);
-
-	radeon_set_context_reg(cs, R_028B98_VGT_STRMOUT_BUFFER_CONFIG, 0x0);
-	radeon_set_context_reg(cs, R_028AA0_VGT_INSTANCE_STEP_RATE_0, 1);
-	if (physical_device->rad_info.chip_class >= GFX9)
-		radeon_set_context_reg(cs, R_028AB4_VGT_REUSE_OFF, 0);
-	radeon_set_context_reg(cs, R_028AB8_VGT_VTX_CNT_EN, 0x0);
-	if (physical_device->rad_info.chip_class < CIK)
-		radeon_set_config_reg(cs, R_008A14_PA_CL_ENHANCE, S_008A14_NUM_CLIP_SEQ(3) |
-				      S_008A14_CLIP_VTX_REORDER_ENA(1));
-
-	radeon_set_context_reg(cs, R_028BD4_PA_SC_CENTROID_PRIORITY_0, 0x76543210);
-	radeon_set_context_reg(cs, R_028BD8_PA_SC_CENTROID_PRIORITY_1, 0xfedcba98);
-
-	radeon_set_context_reg(cs, R_02882C_PA_SU_PRIM_FILTER_CNTL, 0);
-
-	for (i = 0; i < 16; i++) {
-		radeon_set_context_reg(cs, R_0282D0_PA_SC_VPORT_ZMIN_0 + i*8, 0);
-		radeon_set_context_reg(cs, R_0282D4_PA_SC_VPORT_ZMAX_0 + i*8, fui(1.0));
-	}
 
 	switch (physical_device->rad_info.family) {
 	case CHIP_TAHITI:
@@ -338,28 +303,70 @@ si_emit_config(struct radv_physical_device *physical_device,
 		raster_config_1 = 0x00000000;
 		break;
 	default:
-		if (physical_device->rad_info.chip_class <= VI) {
-			fprintf(stderr,
-				"radeonsi: Unknown GPU, using 0 for raster_config\n");
-			raster_config = 0x00000000;
-			raster_config_1 = 0x00000000;
-		}
+		fprintf(stderr,
+			"radv: Unknown GPU, using 0 for raster_config\n");
+		raster_config = 0x00000000;
+		raster_config_1 = 0x00000000;
 		break;
 	}
 
 	/* Always use the default config when all backends are enabled
 	 * (or when we failed to determine the enabled backends).
 	 */
-	if (physical_device->rad_info.chip_class <= VI) {
-		if (!rb_mask || util_bitcount(rb_mask) >= num_rb) {
-			radeon_set_context_reg(cs, R_028350_PA_SC_RASTER_CONFIG,
-					       raster_config);
-			if (physical_device->rad_info.chip_class >= CIK)
-				radeon_set_context_reg(cs, R_028354_PA_SC_RASTER_CONFIG_1,
-						       raster_config_1);
-		} else {
-			si_write_harvested_raster_configs(physical_device, cs, raster_config, raster_config_1);
-		}
+	if (!rb_mask || util_bitcount(rb_mask) >= num_rb) {
+		radeon_set_context_reg(cs, R_028350_PA_SC_RASTER_CONFIG,
+				       raster_config);
+		if (physical_device->rad_info.chip_class >= CIK)
+			radeon_set_context_reg(cs, R_028354_PA_SC_RASTER_CONFIG_1,
+					       raster_config_1);
+	} else {
+		si_write_harvested_raster_configs(physical_device, cs,
+						  raster_config,
+						  raster_config_1);
+	}
+}
+
+static void
+si_emit_config(struct radv_physical_device *physical_device,
+	       struct radeon_winsys_cs *cs)
+{
+	int i;
+
+	radeon_emit(cs, PKT3(PKT3_CONTEXT_CONTROL, 1, 0));
+	radeon_emit(cs, CONTEXT_CONTROL_LOAD_ENABLE(1));
+	radeon_emit(cs, CONTEXT_CONTROL_SHADOW_ENABLE(1));
+
+	if (physical_device->rad_info.chip_class <= VI)
+		si_set_raster_config(physical_device, cs);
+
+	radeon_set_context_reg(cs, R_028A18_VGT_HOS_MAX_TESS_LEVEL, fui(64));
+	radeon_set_context_reg(cs, R_028A1C_VGT_HOS_MIN_TESS_LEVEL, fui(0));
+
+	/* FIXME calculate these values somehow ??? */
+	radeon_set_context_reg(cs, R_028A54_VGT_GS_PER_ES, SI_GS_PER_ES);
+	radeon_set_context_reg(cs, R_028A58_VGT_ES_PER_GS, 0x40);
+	radeon_set_context_reg(cs, R_028A5C_VGT_GS_PER_VS, 0x2);
+
+	radeon_set_context_reg(cs, R_028A8C_VGT_PRIMITIVEID_RESET, 0x0);
+	radeon_set_context_reg(cs, R_028B28_VGT_STRMOUT_DRAW_OPAQUE_OFFSET, 0);
+
+	radeon_set_context_reg(cs, R_028B98_VGT_STRMOUT_BUFFER_CONFIG, 0x0);
+	radeon_set_context_reg(cs, R_028AA0_VGT_INSTANCE_STEP_RATE_0, 1);
+	if (physical_device->rad_info.chip_class >= GFX9)
+		radeon_set_context_reg(cs, R_028AB4_VGT_REUSE_OFF, 0);
+	radeon_set_context_reg(cs, R_028AB8_VGT_VTX_CNT_EN, 0x0);
+	if (physical_device->rad_info.chip_class < CIK)
+		radeon_set_config_reg(cs, R_008A14_PA_CL_ENHANCE, S_008A14_NUM_CLIP_SEQ(3) |
+				      S_008A14_CLIP_VTX_REORDER_ENA(1));
+
+	radeon_set_context_reg(cs, R_028BD4_PA_SC_CENTROID_PRIORITY_0, 0x76543210);
+	radeon_set_context_reg(cs, R_028BD8_PA_SC_CENTROID_PRIORITY_1, 0xfedcba98);
+
+	radeon_set_context_reg(cs, R_02882C_PA_SU_PRIM_FILTER_CNTL, 0);
+
+	for (i = 0; i < 16; i++) {
+		radeon_set_context_reg(cs, R_0282D0_PA_SC_VPORT_ZMIN_0 + i*8, 0);
+		radeon_set_context_reg(cs, R_0282D4_PA_SC_VPORT_ZMAX_0 + i*8, fui(1.0));
 	}
 
 	radeon_set_context_reg(cs, R_028204_PA_SC_WINDOW_SCISSOR_TL, S_028204_WINDOW_OFFSET_DISABLE(1));
