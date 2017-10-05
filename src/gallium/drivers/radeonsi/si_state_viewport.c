@@ -335,12 +335,25 @@ static void si_emit_viewports(struct si_context *ctx)
 	ctx->viewports.dirty_mask = 0;
 }
 
+static inline void
+si_viewport_zmin_zmax(const struct pipe_viewport_state *vp, bool halfz,
+		      bool window_space_position, float *zmin, float *zmax)
+{
+	if (window_space_position) {
+		*zmin = 0;
+		*zmax = 1;
+		return;
+	}
+	util_viewport_zmin_zmax(vp, halfz, zmin, zmax);
+}
+
 static void si_emit_depth_ranges(struct si_context *ctx)
 {
 	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
 	struct pipe_viewport_state *states = ctx->viewports.states;
 	unsigned mask = ctx->viewports.depth_range_dirty_mask;
 	bool clip_halfz = false;
+	bool window_space = ctx->vs_disables_clipping_viewport;
 	float zmin, zmax;
 
 	if (ctx->queued.named.rasterizer)
@@ -351,7 +364,8 @@ static void si_emit_depth_ranges(struct si_context *ctx)
 		if (!(mask & 1))
 			return;
 
-		util_viewport_zmin_zmax(&states[0], clip_halfz, &zmin, &zmax);
+		si_viewport_zmin_zmax(&states[0], clip_halfz, window_space,
+				      &zmin, &zmax);
 
 		radeon_set_context_reg_seq(cs, R_0282D0_PA_SC_VPORT_ZMIN_0, 2);
 		radeon_emit(cs, fui(zmin));
@@ -368,7 +382,8 @@ static void si_emit_depth_ranges(struct si_context *ctx)
 		radeon_set_context_reg_seq(cs, R_0282D0_PA_SC_VPORT_ZMIN_0 +
 					   start * 4 * 2, count * 2);
 		for (i = start; i < start+count; i++) {
-			util_viewport_zmin_zmax(&states[i], clip_halfz, &zmin, &zmax);
+			si_viewport_zmin_zmax(&states[i], clip_halfz, window_space,
+					      &zmin, &zmax);
 			radeon_emit(cs, fui(zmin));
 			radeon_emit(cs, fui(zmax));
 		}
@@ -409,7 +424,9 @@ void si_update_vs_viewport_state(struct si_context *ctx)
 	if (ctx->vs_disables_clipping_viewport != vs_window_space) {
 		ctx->vs_disables_clipping_viewport = vs_window_space;
 		ctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
+		ctx->viewports.depth_range_dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
 		si_mark_atom_dirty(ctx, &ctx->scissors.atom);
+		si_mark_atom_dirty(ctx, &ctx->viewports.atom);
 	}
 
 	/* Viewport index handling. */
