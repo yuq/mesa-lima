@@ -4475,10 +4475,6 @@ count_resources(glsl_to_tgsi_visitor *v, gl_program *prog)
             v->sampler_targets[idx] =
                st_translate_texture_target(inst->tex_target, inst->tex_shadow);
 
-            if (inst->tex_shadow) {
-               prog->ShadowSamplers |= 1 << (inst->resource.index + i);
-            }
-
             if (inst->op == TGSI_OPCODE_TXF || inst->op == TGSI_OPCODE_TXF_LZ) {
                prog->TexelFetchSamplers |= 1u << idx;
             }
