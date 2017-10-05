@@ -1542,11 +1542,19 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 		break;
 	}
 
+	bool ccw = tes->info.tes.ccw;
+	const VkPipelineTessellationDomainOriginStateCreateInfoKHR *domain_origin_state =
+	              vk_find_struct_const(pCreateInfo->pTessellationState,
+	                                   PIPELINE_TESSELLATION_DOMAIN_ORIGIN_STATE_CREATE_INFO_KHR);
+
+	if (domain_origin_state && domain_origin_state->domainOrigin != VK_TESSELLATION_DOMAIN_ORIGIN_UPPER_LEFT_KHR)
+		ccw = !ccw;
+
 	if (tes->info.tes.point_mode)
 		topology = V_028B6C_OUTPUT_POINT;
 	else if (tes->info.tes.primitive_mode == GL_ISOLINES)
 		topology = V_028B6C_OUTPUT_LINE;
-	else if (tes->info.tes.ccw)
+	else if (ccw)
 		topology = V_028B6C_OUTPUT_TRIANGLE_CW;
 	else
 		topology = V_028B6C_OUTPUT_TRIANGLE_CCW;
