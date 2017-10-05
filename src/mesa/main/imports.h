@@ -333,12 +333,6 @@ _mesa_bitcount_64(uint64_t n);
 #endif
 
 
-static inline bool
-_mesa_half_is_negative(GLhalfARB h)
-{
-   return h & 0x8000;
-}
-
 extern int
 _mesa_snprintf( char *str, size_t size, const char *fmt, ... ) PRINTFLIKE(3, 4);
 
