@@ -401,6 +401,11 @@ radv_physical_device_init(struct radv_physical_device *device,
 		device->rbplus_allowed = device->rad_info.family == CHIP_STONEY;
 	}
 
+	/* The mere presense of CLEAR_STATE in the IB causes random GPU hangs
+	 * on SI.
+	 */
+	device->has_clear_state = device->rad_info.chip_class >= CIK;
+
 	return VK_SUCCESS;
 
 fail:
