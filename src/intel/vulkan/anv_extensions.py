@@ -88,6 +88,7 @@ EXTENSIONS = [
     Extension('VK_KHR_incremental_present',               1, 'ANV_HAS_SURFACE'),
     Extension('VK_KHR_maintenance1',                      1, True),
     Extension('VK_KHR_maintenance2',                      1, True),
+    Extension('VK_KHR_maintenance3',                      1, True),
     Extension('VK_KHR_push_descriptor',                   1, True),
     Extension('VK_KHR_relaxed_block_layout',              1, True),
     Extension('VK_KHR_sampler_mirror_clamp_to_edge',      1, True),

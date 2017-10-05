@@ -104,6 +104,25 @@ struct gen_l3_config;
 #define MAX_IMAGES 8
 #define MAX_PUSH_DESCRIPTORS 32 /* Minimum requirement */
 
+/* The kernel relocation API has a limitation of a 32-bit delta value
+ * applied to the address before it is written which, in spite of it being
+ * unsigned, is treated as signed .  Because of the way that this maps to
+ * the Vulkan API, we cannot handle an offset into a buffer that does not
+ * fit into a signed 32 bits.  The only mechanism we have for dealing with
+ * this at the moment is to limit all VkDeviceMemory objects to a maximum
+ * of 2GB each.  The Vulkan spec allows us to do this:
+ *
+ *    "Some platforms may have a limit on the maximum size of a single
+ *    allocation. For example, certain systems may fail to create
+ *    allocations with a size greater than or equal to 4GB. Such a limit is
+ *    implementation-dependent, and if such a failure occurs then the error
+ *    VK_ERROR_OUT_OF_DEVICE_MEMORY should be returned."
+ *
+ * We don't use vk_error here because it's not an error so much as an
+ * indication to the application that the allocation is too large.
+ */
+#define MAX_MEMORY_ALLOCATION_SIZE (1ull << 31)
+
 #define ANV_SVGS_VB_INDEX    MAX_VBS
 #define ANV_DRAWID_VB_INDEX (MAX_VBS + 1)
 

@@ -990,6 +990,17 @@ void anv_GetPhysicalDeviceProperties2(
          break;
       }
 
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES: {
+         VkPhysicalDeviceMaintenance3Properties *props =
+            (VkPhysicalDeviceMaintenance3Properties *)ext;
+         /* This value doesn't matter for us today as our per-stage
+          * descriptors are the real limit.
+          */
+         props->maxPerSetDescriptors = 1024;
+         props->maxMemoryAllocationSize = MAX_MEMORY_ALLOCATION_SIZE;
+         break;
+      }
+
       case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES: {
          VkPhysicalDeviceMultiviewProperties *properties =
             (VkPhysicalDeviceMultiviewProperties *)ext;
@@ -1800,24 +1811,7 @@ VkResult anv_AllocateMemory(
    /* The Vulkan 1.0.33 spec says "allocationSize must be greater than 0". */
    assert(pAllocateInfo->allocationSize > 0);
 
-   /* The kernel relocation API has a limitation of a 32-bit delta value
-    * applied to the address before it is written which, in spite of it being
-    * unsigned, is treated as signed .  Because of the way that this maps to
-    * the Vulkan API, we cannot handle an offset into a buffer that does not
-    * fit into a signed 32 bits.  The only mechanism we have for dealing with
-    * this at the moment is to limit all VkDeviceMemory objects to a maximum
-    * of 2GB each.  The Vulkan spec allows us to do this:
-    *
-    *    "Some platforms may have a limit on the maximum size of a single
-    *    allocation. For example, certain systems may fail to create
-    *    allocations with a size greater than or equal to 4GB. Such a limit is
-    *    implementation-dependent, and if such a failure occurs then the error
-    *    VK_ERROR_OUT_OF_DEVICE_MEMORY should be returned."
-    *
-    * We don't use vk_error here because it's not an error so much as an
-    * indication to the application that the allocation is too large.
-    */
-   if (pAllocateInfo->allocationSize > (1ull << 31))
+   if (pAllocateInfo->allocationSize > MAX_MEMORY_ALLOCATION_SIZE)
       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
    /* FINISHME: Fail if allocation request exceeds heap size. */

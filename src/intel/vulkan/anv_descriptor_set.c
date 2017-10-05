@@ -35,6 +35,51 @@
  * Descriptor set layouts.
  */
 
+void anv_GetDescriptorSetLayoutSupport(
+    VkDevice                                    device,
+    const VkDescriptorSetLayoutCreateInfo*      pCreateInfo,
+    VkDescriptorSetLayoutSupport*               pSupport)
+{
+   uint32_t surface_count[MESA_SHADER_STAGES] = { 0, };
+
+   for (uint32_t b = 0; b <= pCreateInfo->bindingCount; b++) {
+      const VkDescriptorSetLayoutBinding *binding = &pCreateInfo->pBindings[b];
+
+      switch (binding->descriptorType) {
+      case VK_DESCRIPTOR_TYPE_SAMPLER:
+         /* There is no real limit on samplers */
+         break;
+
+      case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+         if (binding->pImmutableSamplers) {
+            for (uint32_t i = 0; i < binding->descriptorCount; i++) {
+               ANV_FROM_HANDLE(anv_sampler, sampler,
+                               binding->pImmutableSamplers[i]);
+               anv_foreach_stage(s, binding->stageFlags)
+                  surface_count[s] += sampler->n_planes;
+            }
+         }
+         break;
+
+      default:
+         anv_foreach_stage(s, binding->stageFlags)
+            surface_count[s] += binding->descriptorCount;
+         break;
+      }
+   }
+
+   bool supported = true;
+   for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
+      /* Our maximum binding table size is 250 and we need to reserve 8 for
+       * render targets.  240 is a nice round number.
+       */
+      if (surface_count[s] >= 240)
+         supported = false;
+   }
+
+   pSupport->supported = supported;
+}
+
 VkResult anv_CreateDescriptorSetLayout(
     VkDevice                                    _device,
     const VkDescriptorSetLayoutCreateInfo*      pCreateInfo,
