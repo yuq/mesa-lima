@@ -1240,7 +1240,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		si_update_all_texture_descriptors(sctx);
 	}
 
-	si_decompress_graphics_textures(sctx);
+	si_decompress_textures(sctx, u_bit_consecutive(0, SI_NUM_GRAPHICS_SHADERS));
 
 	/* Set the rasterization primitive type.
 	 *

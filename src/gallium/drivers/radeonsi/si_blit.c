@@ -771,7 +771,7 @@ static void si_decompress_resident_images(struct si_context *sctx)
 	}
 }
 
-static void si_decompress_textures(struct si_context *sctx, unsigned shader_mask)
+void si_decompress_textures(struct si_context *sctx, unsigned shader_mask)
 {
 	unsigned compressed_colortex_counter, mask;
 
@@ -814,16 +814,6 @@ static void si_decompress_textures(struct si_context *sctx, unsigned shader_mask
 	}
 
 	si_check_render_feedback(sctx);
-}
-
-void si_decompress_graphics_textures(struct si_context *sctx)
-{
-	si_decompress_textures(sctx, u_bit_consecutive(0, SI_NUM_GRAPHICS_SHADERS));
-}
-
-void si_decompress_compute_textures(struct si_context *sctx)
-{
-	si_decompress_textures(sctx, 1 << PIPE_SHADER_COMPUTE);
 }
 
 static void si_clear(struct pipe_context *ctx, unsigned buffers,

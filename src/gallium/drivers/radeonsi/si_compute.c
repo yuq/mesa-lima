@@ -787,7 +787,7 @@ static void si_launch_grid(
 		sctx->b.last_num_draw_calls = sctx->b.num_draw_calls;
 	}
 
-	si_decompress_compute_textures(sctx);
+	si_decompress_textures(sctx, 1 << PIPE_SHADER_COMPUTE);
 
 	/* Add buffer sizes for memory checking in need_cs_space. */
 	r600_context_add_resource_size(ctx, &program->shader.bo->b.b);
