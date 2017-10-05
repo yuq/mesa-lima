@@ -125,9 +125,6 @@ struct blitter_context_priv
    /* Rasterizer state. */
    void *rs_state, *rs_state_scissor, *rs_discard_state;
 
-   /* Viewport state. */
-   struct pipe_viewport_state viewport;
-
    /* Destination surface dimensions. */
    unsigned dst_width;
    unsigned dst_height;
@@ -751,13 +748,14 @@ static void blitter_set_rectangle(struct blitter_context_priv *ctx,
       ctx->vertices[i][0][2] = depth; /*z*/
 
    /* viewport */
-   ctx->viewport.scale[0] = 0.5f * ctx->dst_width;
-   ctx->viewport.scale[1] = 0.5f * ctx->dst_height;
-   ctx->viewport.scale[2] = 1.0f;
-   ctx->viewport.translate[0] = 0.5f * ctx->dst_width;
-   ctx->viewport.translate[1] = 0.5f * ctx->dst_height;
-   ctx->viewport.translate[2] = 0.0f;
-   ctx->base.pipe->set_viewport_states(ctx->base.pipe, 0, 1, &ctx->viewport);
+   struct pipe_viewport_state viewport;
+   viewport.scale[0] = 0.5f * ctx->dst_width;
+   viewport.scale[1] = 0.5f * ctx->dst_height;
+   viewport.scale[2] = 1.0f;
+   viewport.translate[0] = 0.5f * ctx->dst_width;
+   viewport.translate[1] = 0.5f * ctx->dst_height;
+   viewport.translate[2] = 0.0f;
+   ctx->base.pipe->set_viewport_states(ctx->base.pipe, 0, 1, &viewport);
 }
 
 static void blitter_set_clear_color(struct blitter_context_priv *ctx,
