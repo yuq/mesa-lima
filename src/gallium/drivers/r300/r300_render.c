@@ -1114,6 +1114,7 @@ struct draw_stage* r300_draw_stage(struct r300_context* r300)
  * somewhat inefficient. Instead we use a rectangular point sprite. */
 void r300_blitter_draw_rectangle(struct blitter_context *blitter,
                                  void *vertex_elements_cso,
+                                 blitter_get_vs_func get_vs,
                                  int x1, int y1, int x2, int y2,
                                  float depth, unsigned num_instances,
                                  enum blitter_attrib_type type,
@@ -1135,7 +1136,8 @@ void r300_blitter_draw_rectangle(struct blitter_context *blitter,
     if ((!r300->screen->caps.has_tcl && type == UTIL_BLITTER_ATTRIB_NONE) ||
         type == UTIL_BLITTER_ATTRIB_TEXCOORD_XYZW ||
         num_instances > 1) {
-        util_blitter_draw_rectangle(blitter, vertex_elements_cso, x1, y1, x2, y2,
+        util_blitter_draw_rectangle(blitter, vertex_elements_cso, get_vs,
+                                    x1, y1, x2, y2,
                                     depth, num_instances, type, attrib);
         return;
     }
@@ -1144,6 +1146,7 @@ void r300_blitter_draw_rectangle(struct blitter_context *blitter,
         return;
 
     r300->context.bind_vertex_elements_state(&r300->context, vertex_elements_cso);
+    r300->context.bind_vs_state(&r300->context, get_vs(blitter));
 
     if (type == UTIL_BLITTER_ATTRIB_TEXCOORD_XY)
         r300->sprite_coord_enable = 1;

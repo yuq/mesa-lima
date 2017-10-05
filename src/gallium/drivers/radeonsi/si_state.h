@@ -409,6 +409,7 @@ void si_emit_cache_flush(struct si_context *sctx);
 void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *dinfo);
 void si_draw_rectangle(struct blitter_context *blitter,
 		       void *vertex_elements_cso,
+		       blitter_get_vs_func get_vs,
 		       int x1, int y1, int x2, int y2,
 		       float depth, unsigned num_instances,
 		       enum blitter_attrib_type type,
