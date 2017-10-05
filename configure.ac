@@ -2301,13 +2301,16 @@ if test "x$enable_opencl" = xyes; then
 
     llvm_add_default_components "opencl"
     llvm_add_component "all-targets" "opencl"
+    llvm_add_component "coverage" "opencl"
     llvm_add_component "linker" "opencl"
     llvm_add_component "instrumentation" "opencl"
     llvm_add_component "ipo" "opencl"
     llvm_add_component "irreader" "opencl"
+    llvm_add_component "lto" "opencl"
     llvm_add_component "option" "opencl"
     llvm_add_component "objcarcopts" "opencl"
     llvm_add_component "profiledata" "opencl"
+    llvm_add_optional_component "coroutines" "opencl"
 
     dnl Check for Clang internal headers
     if test -z "$CLANG_LIBDIR"; then
