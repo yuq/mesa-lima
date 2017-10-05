@@ -95,6 +95,12 @@ static void si_blitter_end(struct pipe_context *ctx)
 	struct si_context *sctx = (struct si_context *)ctx;
 
 	sctx->b.render_cond_force_off = false;
+
+	/* Restore shader pointers because the VS blit shader changed all
+	 * non-global VS user SGPRs. */
+	sctx->shader_pointers_dirty |= SI_VS_SHADER_POINTER_MASK;
+	sctx->vertex_buffer_pointer_dirty = true;
+	si_mark_atom_dirty(sctx, &sctx->shader_pointers.atom);
 }
 
 static unsigned u_max_sample(struct pipe_resource *r)

@@ -563,6 +563,12 @@ static void si_emit_vs_state(struct si_context *sctx,
 	sctx->current_vs_state &= C_VS_STATE_INDEXED;
 	sctx->current_vs_state |= S_VS_STATE_INDEXED(!!info->index_size);
 
+	if (sctx->num_vs_blit_sgprs) {
+		/* Re-emit the state after we leave u_blitter. */
+		sctx->last_vs_state = ~0;
+		return;
+	}
+
 	if (sctx->current_vs_state != sctx->last_vs_state) {
 		struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 
@@ -795,11 +801,20 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		/* Base vertex and start instance. */
 		base_vertex = index_size ? info->index_bias : info->start;
 
-		if (base_vertex != sctx->last_base_vertex ||
-		    sctx->last_base_vertex == SI_BASE_VERTEX_UNKNOWN ||
-		    info->start_instance != sctx->last_start_instance ||
-		    info->drawid != sctx->last_drawid ||
-		    sh_base_reg != sctx->last_sh_base_reg) {
+		if (sctx->num_vs_blit_sgprs) {
+			/* Re-emit draw constants after we leave u_blitter. */
+			si_invalidate_draw_sh_constants(sctx);
+
+			/* Blit VS doesn't use BASE_VERTEX, START_INSTANCE, and DRAWID. */
+			radeon_set_sh_reg_seq(cs, sh_base_reg + SI_SGPR_VS_BLIT_DATA * 4,
+					      sctx->num_vs_blit_sgprs);
+			radeon_emit_array(cs, sctx->vs_blit_sh_data,
+					  sctx->num_vs_blit_sgprs);
+		} else if (base_vertex != sctx->last_base_vertex ||
+			   sctx->last_base_vertex == SI_BASE_VERTEX_UNKNOWN ||
+			   info->start_instance != sctx->last_start_instance ||
+			   info->drawid != sctx->last_drawid ||
+			   sh_base_reg != sctx->last_sh_base_reg) {
 			radeon_set_sh_reg_seq(cs, sh_base_reg + SI_SGPR_BASE_VERTEX * 4, 3);
 			radeon_emit(cs, base_vertex);
 			radeon_emit(cs, info->start_instance);
@@ -1501,9 +1516,6 @@ void si_draw_rectangle(struct blitter_context *blitter,
 	struct pipe_context *pipe = util_blitter_get_pipe(blitter);
 	struct si_context *sctx = (struct si_context*)pipe;
 	struct pipe_viewport_state viewport;
-	struct pipe_resource *buf = NULL;
-	unsigned offset = 0;
-	float *vb;
 
 	/* setup viewport */
 	viewport.scale[0] = 1.0f;
@@ -1514,70 +1526,38 @@ void si_draw_rectangle(struct blitter_context *blitter,
 	viewport.translate[2] = 0.0f;
 	pipe->set_viewport_states(pipe, 0, 1, &viewport);
 
-	/* Upload vertices. The hw rectangle has only 3 vertices,
-	 * The 4th one is derived from the first 3.
-	 * The vertex specification should match u_blitter's vertex element state. */
-	u_upload_alloc(pipe->stream_uploader, 0, sizeof(float) * 24,
-		       sctx->screen->b.info.tcc_cache_line_size,
-                       &offset, &buf, (void**)&vb);
-	if (!buf)
-		return;
-
-	vb[0] = x1;
-	vb[1] = y1;
-	vb[2] = depth;
-	vb[3] = 1;
-
-	vb[8] = x1;
-	vb[9] = y2;
-	vb[10] = depth;
-	vb[11] = 1;
-
-	vb[16] = x2;
-	vb[17] = y1;
-	vb[18] = depth;
-	vb[19] = 1;
+	/* Pack position coordinates as signed int16. */
+	sctx->vs_blit_sh_data[0] = (uint32_t)(x1 & 0xffff) |
+				   ((uint32_t)(y1 & 0xffff) << 16);
+	sctx->vs_blit_sh_data[1] = (uint32_t)(x2 & 0xffff) |
+				   ((uint32_t)(y2 & 0xffff) << 16);
+	sctx->vs_blit_sh_data[2] = fui(depth);
 
 	switch (type) {
 	case UTIL_BLITTER_ATTRIB_COLOR:
-		memcpy(vb+4, attrib->color, sizeof(float)*4);
-		memcpy(vb+12, attrib->color, sizeof(float)*4);
-		memcpy(vb+20, attrib->color, sizeof(float)*4);
+		memcpy(&sctx->vs_blit_sh_data[3], attrib->color,
+		       sizeof(float)*4);
 		break;
-	case UTIL_BLITTER_ATTRIB_TEXCOORD_XYZW:
 	case UTIL_BLITTER_ATTRIB_TEXCOORD_XY:
-		vb[6] = vb[14] = vb[22] = attrib->texcoord.z;
-		vb[7] = vb[15] = vb[23] = attrib->texcoord.w;
-		/* fall through */
-		vb[4] = attrib->texcoord.x1;
-		vb[5] = attrib->texcoord.y1;
-		vb[12] = attrib->texcoord.x1;
-		vb[13] = attrib->texcoord.y2;
-		vb[20] = attrib->texcoord.x2;
-		vb[21] = attrib->texcoord.y1;
+	case UTIL_BLITTER_ATTRIB_TEXCOORD_XYZW:
+		memcpy(&sctx->vs_blit_sh_data[3], &attrib->texcoord,
+		       sizeof(attrib->texcoord));
 		break;
-	default:; /* Nothing to do. */
+	case UTIL_BLITTER_ATTRIB_NONE:;
 	}
 
-	/* draw */
-	struct pipe_vertex_buffer vbuffer = {};
-	vbuffer.buffer.resource = buf;
-	vbuffer.stride = 2 * 4 * sizeof(float); /* vertex size */
-	vbuffer.buffer_offset = offset;
-
-	pipe->set_vertex_buffers(pipe, blitter->vb_slot, 1, &vbuffer);
-	pipe->bind_vs_state(pipe, get_vs(blitter));
-
-	if (sctx->vertex_elements != vertex_elements_cso)
-		pipe->bind_vertex_elements_state(pipe, vertex_elements_cso);
+	pipe->bind_vs_state(pipe, si_get_blit_vs(sctx, type, num_instances));
 
 	struct pipe_draw_info info = {};
 	info.mode = R600_PRIM_RECTANGLE_LIST;
 	info.count = 3;
 	info.instance_count = num_instances;
 
+	/* Don't set per-stage shader pointers for VS. */
+	sctx->shader_pointers_dirty &= ~SI_VS_SHADER_POINTER_MASK;
+	sctx->vertex_buffer_pointer_dirty = false;
+
 	si_draw_vbo(pipe, &info);
-	pipe_resource_reference(&buf, NULL);
 }
 
 void si_trace_emit(struct si_context *sctx)

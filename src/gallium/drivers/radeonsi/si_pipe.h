@@ -402,6 +402,8 @@ struct si_context {
 	struct r600_resource		*border_color_buffer;
 	union pipe_color_union		*border_color_map; /* in VRAM (slow access), little endian */
 	unsigned			border_color_count;
+	unsigned			num_vs_blit_sgprs;
+	uint32_t			vs_blit_sh_data[SI_VS_BLIT_SGPRS_POS_TEXCOORD];
 
 	/* Vertex and index buffers. */
 	bool				vertex_buffers_dirty;
