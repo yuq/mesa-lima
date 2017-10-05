@@ -866,6 +866,12 @@ void radv_GetPhysicalDeviceProperties2KHR(
 			properties->maxMultiviewInstanceIndex = INT_MAX;
 			break;
 		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_POINT_CLIPPING_PROPERTIES_KHR: {
+			VkPhysicalDevicePointClippingPropertiesKHR *properties =
+			    (VkPhysicalDevicePointClippingPropertiesKHR*)ext;
+			properties->pointClippingBehavior = VK_POINT_CLIPPING_BEHAVIOR_ALL_CLIP_PLANES_KHR;
+			break;
+		}
 		default:
 			break;
 		}
