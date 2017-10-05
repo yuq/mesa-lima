@@ -48,14 +48,15 @@
 /* XXX this should go away, needed for 'struct winsys_handle' */
 #include "state_tracker/drm_driver.h"
 
+/**
+ * Go through the entire state and see if the resource is bound
+ * anywhere. If it is, mark the relevant state as dirty. This is
+ * called on realloc_bo to ensure the neccessary state is re-
+ * emitted so the GPU looks at the new backing bo.
+ */
 static void
-fd_invalidate_resource(struct fd_context *ctx, struct pipe_resource *prsc)
+rebind_resource(struct fd_context *ctx, struct pipe_resource *prsc)
 {
-	/* Go through the entire state and see if the resource is bound
-	 * anywhere. If it is, mark the relevant state as dirty. This is called on
-	 * realloc_bo.
-	 */
-
 	/* VBOs */
 	for (unsigned i = 0; i < ctx->vtx.vertexbuf.count && !(ctx->dirty & FD_DIRTY_VTXBUF); i++) {
 		if (ctx->vtx.vertexbuf.vb[i].buffer.resource == prsc)
@@ -487,7 +488,7 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		realloc_bo(rsc, fd_bo_size(rsc->bo));
 		if (rsc->stencil)
 			realloc_bo(rsc->stencil, fd_bo_size(rsc->stencil->bo));
-		fd_invalidate_resource(ctx, prsc);
+		rebind_resource(ctx, prsc);
 	} else if ((usage & PIPE_TRANSFER_WRITE) &&
 			   prsc->target == PIPE_BUFFER &&
 			   !util_ranges_intersect(&rsc->valid_buffer_range,
@@ -524,7 +525,7 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		if (ctx->screen->reorder && busy && !(usage & PIPE_TRANSFER_READ)) {
 			if (fd_try_shadow_resource(ctx, rsc, level, usage, box)) {
 				needs_flush = busy = false;
-				fd_invalidate_resource(ctx, prsc);
+				rebind_resource(ctx, prsc);
 			}
 		}
 
