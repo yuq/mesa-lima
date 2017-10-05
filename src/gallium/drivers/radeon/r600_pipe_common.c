@@ -785,6 +785,8 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "nodccfb", DBG(NO_DCC_FB), "Disable separate DCC on the main framebuffer" },
 	{ "nodpbb", DBG(NO_DPBB), "Disable DPBB." },
 	{ "nodfsm", DBG(NO_DFSM), "Disable DFSM." },
+	{ "dpbb", DBG(DPBB), "Enable DPBB." },
+	{ "dfsm", DBG(DFSM), "Enable DFSM." },
 	{ "nooutoforder", DBG(NO_OUT_OF_ORDER), "Disable out-of-order rasterization" },
 
 	DEBUG_NAMED_VALUE_END /* must be last */

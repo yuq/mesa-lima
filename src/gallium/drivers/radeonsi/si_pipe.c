@@ -1072,10 +1072,21 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 					    sscreen->b.family <= CHIP_POLARIS12) ||
 					   sscreen->b.family == CHIP_VEGA10 ||
 					   sscreen->b.family == CHIP_RAVEN;
-	sscreen->dpbb_allowed = sscreen->b.chip_class >= GFX9 &&
-				!(sscreen->b.debug_flags & DBG(NO_DPBB));
-	sscreen->dfsm_allowed = sscreen->dpbb_allowed &&
-				!(sscreen->b.debug_flags & DBG(NO_DFSM));
+
+	if (sscreen->b.debug_flags & DBG(DPBB)) {
+		sscreen->dpbb_allowed = true;
+	} else {
+		/* Only enable primitive binning on Raven by default. */
+		sscreen->dpbb_allowed = sscreen->b.family == CHIP_RAVEN &&
+					!(sscreen->b.debug_flags & DBG(NO_DPBB));
+	}
+
+	if (sscreen->b.debug_flags & DBG(DFSM)) {
+		sscreen->dfsm_allowed = sscreen->dpbb_allowed;
+	} else {
+		sscreen->dfsm_allowed = sscreen->dpbb_allowed &&
+					!(sscreen->b.debug_flags & DBG(NO_DFSM));
+	}
 
 	/* While it would be nice not to have this flag, we are constrained
 	 * by the reality that LLVM 5.0 doesn't have working VGPR indexing
