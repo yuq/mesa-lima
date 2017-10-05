@@ -552,7 +552,6 @@ void util_blitter_unset_running_flag(struct blitter_context *blitter)
 
 static void blitter_check_saved_vertex_states(struct blitter_context_priv *ctx)
 {
-   assert(ctx->base.saved_velem_state != INVALID_PTR);
    assert(ctx->base.saved_vs != INVALID_PTR);
    assert(!ctx->has_geometry_shader || ctx->base.saved_gs != INVALID_PTR);
    assert(!ctx->has_tessellation || ctx->base.saved_tcs != INVALID_PTR);
@@ -568,13 +567,17 @@ void util_blitter_restore_vertex_states(struct blitter_context *blitter)
    unsigned i;
 
    /* Vertex buffer. */
-   pipe->set_vertex_buffers(pipe, ctx->base.vb_slot, 1,
-                            &ctx->base.saved_vertex_buffer);
-   pipe_vertex_buffer_unreference(&ctx->base.saved_vertex_buffer);
+   if (ctx->base.saved_vertex_buffer.buffer.resource) {
+      pipe->set_vertex_buffers(pipe, ctx->base.vb_slot, 1,
+                               &ctx->base.saved_vertex_buffer);
+      pipe_vertex_buffer_unreference(&ctx->base.saved_vertex_buffer);
+   }
 
    /* Vertex elements. */
-   pipe->bind_vertex_elements_state(pipe, ctx->base.saved_velem_state);
-   ctx->base.saved_velem_state = INVALID_PTR;
+   if (ctx->base.saved_velem_state != INVALID_PTR) {
+      pipe->bind_vertex_elements_state(pipe, ctx->base.saved_velem_state);
+      ctx->base.saved_velem_state = INVALID_PTR;
+   }
 
    /* Vertex shader. */
    pipe->bind_vs_state(pipe, ctx->base.saved_vs);
