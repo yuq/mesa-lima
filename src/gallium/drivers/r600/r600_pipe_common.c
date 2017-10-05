@@ -211,6 +211,7 @@ void r600_gfx_wait_fence(struct r600_common_context *ctx,
 }
 
 void r600_draw_rectangle(struct blitter_context *blitter,
+			 void *vertex_elements_cso,
 			 int x1, int y1, int x2, int y2,
 			 float depth, unsigned num_instances,
 			 enum blitter_attrib_type type,
@@ -222,6 +223,8 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 	struct pipe_resource *buf = NULL;
 	unsigned offset = 0;
 	float *vb;
+
+	rctx->b.bind_vertex_elements_state(&rctx->b, vertex_elements_cso);
 
 	/* Some operations (like color resolve on r6xx) don't work
 	 * with the conventional primitive types.

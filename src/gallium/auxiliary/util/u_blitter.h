@@ -81,6 +81,7 @@ struct blitter_context
     *       a rectangular point sprite.
     */
    void (*draw_rectangle)(struct blitter_context *blitter,
+                          void *vertex_elements_cso,
                           int x1, int y1, int x2, int y2,
                           float depth, unsigned num_instances,
                           enum blitter_attrib_type type,
@@ -155,6 +156,7 @@ void util_blitter_set_texture_multisample(struct blitter_context *blitter,
 /* The default function to draw a rectangle. This can only be used
  * inside of the draw_rectangle callback if the driver overrides it. */
 void util_blitter_draw_rectangle(struct blitter_context *blitter,
+                                 void *vertex_elements_cso,
                                  int x1, int y1, int x2, int y2,
                                  float depth, unsigned num_instances,
                                  enum blitter_attrib_type type,

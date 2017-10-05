@@ -1491,6 +1491,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 }
 
 void si_draw_rectangle(struct blitter_context *blitter,
+		       void *vertex_elements_cso,
 		       int x1, int y1, int x2, int y2,
 		       float depth, unsigned num_instances,
 		       enum blitter_attrib_type type,
@@ -1564,6 +1565,9 @@ void si_draw_rectangle(struct blitter_context *blitter,
 	vbuffer.buffer_offset = offset;
 
 	pipe->set_vertex_buffers(pipe, blitter->vb_slot, 1, &vbuffer);
+
+	if (sctx->vertex_elements != vertex_elements_cso)
+		pipe->bind_vertex_elements_state(pipe, vertex_elements_cso);
 
 	struct pipe_draw_info info = {};
 	info.mode = R600_PRIM_RECTANGLE_LIST;
