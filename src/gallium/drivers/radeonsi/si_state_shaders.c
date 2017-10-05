@@ -3442,6 +3442,7 @@ void *si_get_blit_vs(struct si_context *sctx, enum blitter_attrib_type type,
 
 	/* Tell the shader to load VS inputs from SGPRs: */
 	ureg_property(ureg, TGSI_PROPERTY_VS_BLIT_SGPRS, vs_blit_property);
+	ureg_property(ureg, TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION, true);
 
 	/* This is just a pass-through shader with 1-3 MOV instructions. */
 	ureg_MOV(ureg,

@@ -255,6 +255,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	if (sctx->blitter == NULL)
 		goto fail;
 	sctx->blitter->draw_rectangle = si_draw_rectangle;
+	sctx->blitter->skip_viewport_restore = true;
 
 	sctx->sample_mask.sample_mask = 0xffff;
 

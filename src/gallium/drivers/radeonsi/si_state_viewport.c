@@ -63,13 +63,6 @@ static void si_get_scissor_from_viewport(struct si_context *ctx,
 	maxx = vp->scale[0] + vp->translate[0];
 	maxy = vp->scale[1] + vp->translate[1];
 
-	/* r600_draw_rectangle sets this. Disable the scissor. */
-	if (minx == -1 && miny == -1 && maxx == 1 && maxy == 1) {
-		scissor->minx = scissor->miny = 0;
-		scissor->maxx = scissor->maxy = SI_MAX_SCISSOR;
-		return;
-	}
-
 	/* Handle inverted viewports. */
 	if (minx > maxx) {
 		tmp = minx;

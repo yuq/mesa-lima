@@ -650,7 +650,9 @@ void util_blitter_restore_fragment_states(struct blitter_context *blitter)
    /* XXX check whether these are saved and whether they need to be restored
     * (depending on the operation) */
    pipe->set_stencil_ref(pipe, &ctx->base.saved_stencil_ref);
-   pipe->set_viewport_states(pipe, 0, 1, &ctx->base.saved_viewport);
+
+   if (!blitter->skip_viewport_restore)
+      pipe->set_viewport_states(pipe, 0, 1, &ctx->base.saved_viewport);
 }
 
 static void blitter_check_saved_fb_state(struct blitter_context_priv *ctx)

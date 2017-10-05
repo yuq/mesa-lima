@@ -1515,16 +1515,6 @@ void si_draw_rectangle(struct blitter_context *blitter,
 {
 	struct pipe_context *pipe = util_blitter_get_pipe(blitter);
 	struct si_context *sctx = (struct si_context*)pipe;
-	struct pipe_viewport_state viewport;
-
-	/* setup viewport */
-	viewport.scale[0] = 1.0f;
-	viewport.scale[1] = 1.0f;
-	viewport.scale[2] = 1.0f;
-	viewport.translate[0] = 0.0f;
-	viewport.translate[1] = 0.0f;
-	viewport.translate[2] = 0.0f;
-	pipe->set_viewport_states(pipe, 0, 1, &viewport);
 
 	/* Pack position coordinates as signed int16. */
 	sctx->vs_blit_sh_data[0] = (uint32_t)(x1 & 0xffff) |
