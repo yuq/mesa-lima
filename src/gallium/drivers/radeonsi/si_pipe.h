@@ -576,7 +576,7 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 						 const struct pipe_video_buffer *tmpl);
 
 /* si_viewport.c */
-void si_update_vs_writes_viewport_index(struct si_context *ctx);
+void si_update_vs_viewport_state(struct si_context *ctx);
 void si_init_viewport_functions(struct si_context *ctx);
 
 

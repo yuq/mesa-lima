@@ -2309,7 +2309,7 @@ static void si_bind_vs_shader(struct pipe_context *ctx, void *state)
 	sctx->num_vs_blit_sgprs = sel ? sel->info.properties[TGSI_PROPERTY_VS_BLIT_SGPRS] : 0;
 
 	si_update_common_shader_state(sctx);
-	si_update_vs_writes_viewport_index(sctx);
+	si_update_vs_viewport_state(sctx);
 	si_set_active_descriptors_for_shader(sctx, sel);
 	si_update_streamout_state(sctx);
 	si_update_clip_regs(sctx, old_hw_vs, old_hw_vs_variant,
@@ -2352,7 +2352,7 @@ static void si_bind_gs_shader(struct pipe_context *ctx, void *state)
 		if (sctx->ia_multi_vgt_param_key.u.uses_tess)
 			si_update_tess_uses_prim_id(sctx);
 	}
-	si_update_vs_writes_viewport_index(sctx);
+	si_update_vs_viewport_state(sctx);
 	si_set_active_descriptors_for_shader(sctx, sel);
 	si_update_streamout_state(sctx);
 	si_update_clip_regs(sctx, old_hw_vs, old_hw_vs_variant,
@@ -2403,7 +2403,7 @@ static void si_bind_tes_shader(struct pipe_context *ctx, void *state)
 		si_shader_change_notify(sctx);
 		sctx->last_tes_sh_base = -1; /* invalidate derived tess state */
 	}
-	si_update_vs_writes_viewport_index(sctx);
+	si_update_vs_viewport_state(sctx);
 	si_set_active_descriptors_for_shader(sctx, sel);
 	si_update_streamout_state(sctx);
 	si_update_clip_regs(sctx, old_hw_vs, old_hw_vs_variant,

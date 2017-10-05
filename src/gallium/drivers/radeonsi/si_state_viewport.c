@@ -385,12 +385,16 @@ static void si_emit_viewport_states(struct r600_common_context *rctx,
 }
 
 /**
+ * This reacts to 2 state changes:
+ * - VS.writes_viewport_index
+ * - VS output position in window space (enable/disable)
+ *
  * Normally, we only emit 1 viewport and 1 scissor if no shader is using
  * the VIEWPORT_INDEX output, and emitting the other viewports and scissors
  * is delayed. When a shader with VIEWPORT_INDEX appears, this should be
  * called to emit the rest.
  */
-void si_update_vs_writes_viewport_index(struct si_context *ctx)
+void si_update_vs_viewport_state(struct si_context *ctx)
 {
 	struct tgsi_shader_info *info = si_get_vs_info(ctx);
 	bool vs_window_space;
