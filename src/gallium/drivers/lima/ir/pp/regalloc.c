@@ -220,6 +220,74 @@ static int get_phy_reg_index(int reg)
       return reg * 4;
 }
 
+static int get_src_reg_index(ppir_src *src)
+{
+   switch (src->type) {
+   case ppir_target_ssa:
+      return src->ssa->index;
+   case ppir_target_register:
+      return src->reg->index;
+   case ppir_target_pipeline:
+      return (src->pipeline + 12) * 4;
+   }
+
+   return -1;
+}
+
+static void ppir_regalloc_print_result(ppir_compiler *comp)
+{
+   printf("======ppir regalloc result======\n");
+   list_for_each_entry(ppir_block, block, &comp->block_list, list) {
+      list_for_each_entry(ppir_instr, instr, &block->instr_list, list) {
+         printf("%03d:", instr->index);
+         for (int i = 0; i < PPIR_INSTR_SLOT_NUM; i++) {
+            ppir_node *node = instr->slots[i];
+            if (!node)
+               continue;
+
+            printf(" (%d|", node->index);
+
+            ppir_dest *dest = ppir_node_get_dest(node);
+            if (dest) {
+               int index = -1;
+               switch (dest->type) {
+               case ppir_target_ssa:
+                  index = dest->ssa.index;
+                  break;
+               case ppir_target_register:
+                  index = dest->reg->index;
+                  break;
+               case ppir_target_pipeline:
+                  index = (dest->pipeline + 12) * 4;
+                  break;
+               }
+               printf("%d", index);
+            }
+
+            printf("|");
+
+            if (node->type == ppir_node_type_alu) {
+               ppir_alu_node *alu = ppir_node_to_alu(node);
+               for (int j = 0; j < alu->num_src; j++) {
+                  if (j)
+                     printf(" ");
+
+                  printf("%d", get_src_reg_index(alu->src + j));
+               }
+            }
+            else if (node->type == ppir_node_type_store) {
+               ppir_store_node *store = ppir_node_to_store(node);
+               printf("%d", get_src_reg_index(&store->src));
+            }
+
+            printf(")");
+         }
+         printf("\n");
+      }
+   }
+   printf("--------------------------\n");
+}
+
 bool ppir_regalloc_prog(ppir_compiler *comp)
 {
    ppir_reg *end_reg = ppir_regalloc_build_liveness_info(comp);
@@ -276,6 +344,8 @@ bool ppir_regalloc_prog(ppir_compiler *comp)
    }
 
    ralloc_free(g);
+
+   ppir_regalloc_print_result(comp);
    return true;
 
 err_out:
