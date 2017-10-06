@@ -755,6 +755,7 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 			       const struct radv_graphics_pipeline_create_info *extra)
 {
 	const VkPipelineColorBlendStateCreateInfo *vkblend = pCreateInfo->pColorBlendState;
+	const VkPipelineMultisampleStateCreateInfo *vkms = pCreateInfo->pMultisampleState;
 	struct radv_blend_state *blend = &pipeline->graphics.blend;
 	unsigned mode = V_028808_CB_NORMAL;
 	uint32_t blend_enable = 0, blend_need_alpha = 0;
@@ -779,6 +780,10 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 		S_028B70_ALPHA_TO_MASK_OFFSET1(2) |
 		S_028B70_ALPHA_TO_MASK_OFFSET2(2) |
 		S_028B70_ALPHA_TO_MASK_OFFSET3(2);
+
+	if (vkms && vkms->alphaToCoverageEnable) {
+		blend->db_alpha_to_mask |= S_028B70_ALPHA_TO_MASK_ENABLE(1);
+	}
 
 	blend->cb_target_mask = 0;
 	for (i = 0; i < vkblend->attachmentCount; i++) {
@@ -1041,7 +1046,6 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 				     const VkGraphicsPipelineCreateInfo *pCreateInfo)
 {
 	const VkPipelineMultisampleStateCreateInfo *vkms = pCreateInfo->pMultisampleState;
-	struct radv_blend_state *blend = &pipeline->graphics.blend;
 	struct radv_multisample_state *ms = &pipeline->graphics.ms;
 	unsigned num_tile_pipes = pipeline->device->physical_device->rad_info.num_tile_pipes;
 	int ps_iter_samples = 1;
@@ -1096,12 +1100,8 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 					S_028A4C_OUT_OF_ORDER_WATER_MARK(0x7);
 	}
 
-	if (vkms) {
-		if (vkms->alphaToCoverageEnable)
-			blend->db_alpha_to_mask |= S_028B70_ALPHA_TO_MASK_ENABLE(1);
-
-		if (vkms->pSampleMask)
-			mask = vkms->pSampleMask[0] & 0xffff;
+	if (vkms && vkms->pSampleMask) {
+		mask = vkms->pSampleMask[0] & 0xffff;
 	}
 
 	ms->pa_sc_aa_mask[0] = mask | (mask << 16);
