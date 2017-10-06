@@ -216,6 +216,13 @@ si_init_compute(struct radv_cmd_buffer *cmd_buffer)
 	si_emit_compute(physical_device, cmd_buffer->cs);
 }
 
+/* 12.4 fixed-point */
+static unsigned radv_pack_float_12p4(float x)
+{
+	return x <= 0    ? 0 :
+	       x >= 4096 ? 0xffff : x * 16;
+}
+
 static void
 si_emit_config(struct radv_physical_device *physical_device,
 	       struct radeon_winsys_cs *cs)
@@ -486,6 +493,14 @@ si_emit_config(struct radv_physical_device *physical_device,
 				       S_028C4C_NULL_SQUAD_AA_MASK_ENABLE(1));
 		radeon_set_uconfig_reg(cs, R_030968_VGT_INSTANCE_BASE_ID, 0);
 	}
+
+	unsigned tmp = (unsigned)(1.0 * 8.0);
+	radeon_set_context_reg_seq(cs, R_028A00_PA_SU_POINT_SIZE, 1);
+	radeon_emit(cs, S_028A00_HEIGHT(tmp) | S_028A00_WIDTH(tmp));
+	radeon_set_context_reg_seq(cs, R_028A04_PA_SU_POINT_MINMAX, 1);
+	radeon_emit(cs, S_028A04_MIN_SIZE(radv_pack_float_12p4(0)) |
+		    S_028A04_MAX_SIZE(radv_pack_float_12p4(8192/2)));
+
 	si_emit_compute(physical_device, cs);
 }
 

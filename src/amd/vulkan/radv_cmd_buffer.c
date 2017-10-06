@@ -488,13 +488,6 @@ radv_emit_graphics_depth_stencil_state(struct radv_cmd_buffer *cmd_buffer,
 	radeon_set_context_reg(cmd_buffer->cs, R_028010_DB_RENDER_OVERRIDE2, ds->db_render_override2);
 }
 
-/* 12.4 fixed-point */
-static unsigned radv_pack_float_12p4(float x)
-{
-	return x <= 0    ? 0 :
-	       x >= 4096 ? 0xffff : x * 16;
-}
-
 struct ac_userdata_info *
 radv_lookup_user_sgpr(struct radv_pipeline *pipeline,
 		      gl_shader_stage stage,
@@ -588,19 +581,10 @@ radv_emit_graphics_raster_state(struct radv_cmd_buffer *cmd_buffer,
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028810_PA_CL_CLIP_CNTL,
 			       raster->pa_cl_clip_cntl);
-
 	radeon_set_context_reg(cmd_buffer->cs, R_0286D4_SPI_INTERP_CONTROL_0,
 			       raster->spi_interp_control);
-
-	radeon_set_context_reg_seq(cmd_buffer->cs, R_028A00_PA_SU_POINT_SIZE, 2);
-	unsigned tmp = (unsigned)(1.0 * 8.0);
-	radeon_emit(cmd_buffer->cs, S_028A00_HEIGHT(tmp) | S_028A00_WIDTH(tmp));
-	radeon_emit(cmd_buffer->cs, S_028A04_MIN_SIZE(radv_pack_float_12p4(0)) |
-		    S_028A04_MAX_SIZE(radv_pack_float_12p4(8192/2))); /* R_028A04_PA_SU_POINT_MINMAX */
-
 	radeon_set_context_reg(cmd_buffer->cs, R_028BE4_PA_SU_VTX_CNTL,
 			       raster->pa_su_vtx_cntl);
-
 	radeon_set_context_reg(cmd_buffer->cs, R_028814_PA_SU_SC_MODE_CNTL,
 			       raster->pa_su_sc_mode_cntl);
 }
