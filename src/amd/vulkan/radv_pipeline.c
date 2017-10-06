@@ -2087,6 +2087,13 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		else
 			pipeline->graphics.vtx_emit_num = 2;
 	}
+
+	pipeline->graphics.vtx_reuse_depth = 30;
+	if (radv_pipeline_has_tess(pipeline) &&
+	    pipeline->shaders[MESA_SHADER_TESS_EVAL]->info.tes.spacing == TESS_SPACING_FRACTIONAL_ODD) {
+		pipeline->graphics.vtx_reuse_depth = 14;
+	}
+
 	if (device->debug_flags & RADV_DEBUG_DUMP_SHADER_STATS) {
 		radv_dump_pipeline_stats(device, pipeline);
 	}
