@@ -1269,7 +1269,7 @@ glsl_to_tgsi_visitor::reladdr_to_temp(ir_instruction *ir,
    if (reg->reladdr2) emit_arl(ir, address_reg2, *reg->reladdr2);
 
    if (*num_reladdr != 1) {
-      st_src_reg temp = get_temp(reg->type == GLSL_TYPE_DOUBLE ? glsl_type::dvec4_type : glsl_type::vec4_type);
+      st_src_reg temp = get_temp(glsl_type::get_instance(reg->type, 4, 1));
 
       emit_asm(ir, TGSI_OPCODE_MOV, st_dst_reg(temp), *reg);
       *reg = temp;
