@@ -667,12 +667,32 @@ _mesa_IsSemaphoreEXT(GLuint semaphore)
    return obj ? GL_TRUE : GL_FALSE;
 }
 
+/**
+ * Helper that outputs the correct error status for parameter
+ * calls where no pnames are defined
+ */
+static void
+semaphore_parameter_stub(const char* func, GLenum pname)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (!ctx->Extensions.EXT_semaphore) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(unsupported)", func);
+      return;
+   }
+
+   /* EXT_semaphore and EXT_semaphore_fd define no parameters */
+   _mesa_error(ctx, GL_INVALID_ENUM, "%s(pname=0x%x)", func, pname);
+}
+
 void GLAPIENTRY
 _mesa_SemaphoreParameterui64vEXT(GLuint semaphore,
                                  GLenum pname,
                                  const GLuint64 *params)
 {
+   const char *func = "glSemaphoreParameterui64vEXT";
 
+   semaphore_parameter_stub(func, pname);
 }
 
 void GLAPIENTRY
@@ -680,7 +700,9 @@ _mesa_GetSemaphoreParameterui64vEXT(GLuint semaphore,
                                     GLenum pname,
                                     GLuint64 *params)
 {
+   const char *func = "glGetSemaphoreParameterui64vEXT";
 
+   semaphore_parameter_stub(func, pname);
 }
 
 void GLAPIENTRY
