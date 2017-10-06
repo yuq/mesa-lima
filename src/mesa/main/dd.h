@@ -1133,6 +1133,40 @@ struct dd_function_table {
                                               struct gl_shader_program *shProg,
                                               struct gl_program *prog);
    /*@}*/
+
+   /**
+    * \name GL_EXT_semaphore interface
+    */
+   /*@{*/
+  /**
+    * Called to allocate a new semaphore object. Drivers will usually
+    * allocate/return a subclass of gl_semaphore_object.
+    */
+   struct gl_semaphore_object * (*NewSemaphoreObject)(struct gl_context *ctx,
+                                                      GLuint name);
+   /**
+    * Called to delete/free a semaphore object. Drivers should free the
+    * object and any associated resources.
+    */
+   void (*DeleteSemaphoreObject)(struct gl_context *ctx,
+                                 struct gl_semaphore_object *semObj);
+   /*@}*/
+
+   /**
+    * \name GL_EXT_semaphore_fd interface
+    */
+   /*@{*/
+   /**
+    * Called to import a semaphore object. The caller relinquishes ownership
+    * of fd after the call returns.
+    *
+    * Accessing fd after ImportSemaphoreFd returns results in undefined
+    * behaviour. This is consistent with EXT_semaphore_fd.
+    */
+   void (*ImportSemaphoreFd)(struct gl_context *ctx,
+                                struct gl_semaphore_object *semObj,
+                                int fd);
+   /*@}*/
 };
 
 
