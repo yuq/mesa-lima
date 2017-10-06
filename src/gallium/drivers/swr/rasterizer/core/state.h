@@ -820,7 +820,7 @@ struct SWR_TS_STATE
     uint32_t                numDsOutputAttribs;
 
     // Offset to the start of the attributes of the input vertices, in simdvector units
-    uint32_t vertexAttribOffset;
+    uint32_t                vertexAttribOffset;
 };
 
 // output merger state
