@@ -1740,6 +1740,18 @@ void anv_GetDeviceQueue(
    *pQueue = anv_queue_to_handle(&device->queue);
 }
 
+void anv_GetDeviceQueue2(
+    VkDevice                                    _device,
+    const VkDeviceQueueInfo2*                   pQueueInfo,
+    VkQueue*                                    pQueue)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+
+   assert(pQueueInfo->queueIndex == 0);
+
+   *pQueue = anv_queue_to_handle(&device->queue);
+}
+
 VkResult
 anv_device_query_status(struct anv_device *device)
 {
