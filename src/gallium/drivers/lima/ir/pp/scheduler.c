@@ -324,12 +324,10 @@ static void ppir_schedule_ready_list(ppir_block *block,
  */
 static void ppir_schedule_block(ppir_block *block)
 {
-   struct list_head instr_list;
-   list_inithead(&instr_list);
-
    /* move all instr to instr_list, block->instr_list will
     * contain schedule result */
-   list_splice(&block->instr_list, &instr_list);
+   struct list_head instr_list;
+   list_replace(&block->instr_list, &instr_list);
    list_inithead(&block->instr_list);
 
    /* step 2 & 3 */
