@@ -389,7 +389,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
     * sources into temps.
     */
    num_reladdr += dst.reladdr != NULL || dst.reladdr2;
-   num_reladdr += dst1.reladdr != NULL || dst1.reladdr2;
+   assert(!dst1.reladdr); /* should be lowered in earlier passes */
    num_reladdr += src0.reladdr != NULL || src0.reladdr2 != NULL;
    num_reladdr += src1.reladdr != NULL || src1.reladdr2 != NULL;
    num_reladdr += src2.reladdr != NULL || src2.reladdr2 != NULL;
@@ -407,10 +407,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
          emit_arl(ir, address_reg2, *dst.reladdr2);
       num_reladdr--;
    }
-   if (dst1.reladdr) {
-      emit_arl(ir, address_reg, *dst1.reladdr);
-      num_reladdr--;
-   }
+
    assert(num_reladdr == 0);
 
    /* inst->op has only 8 bits. */
