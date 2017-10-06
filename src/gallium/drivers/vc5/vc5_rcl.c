@@ -126,6 +126,8 @@ vc5_emit_rcl(struct vc5_job *job)
                 config.number_of_render_targets_minus_1 =
                         MAX2(nr_cbufs, 1) - 1;
 
+                config.multisample_mode_4x = job->msaa;
+
                 config.maximum_bpp_of_all_render_targets = job->internal_bpp;
         }
 
