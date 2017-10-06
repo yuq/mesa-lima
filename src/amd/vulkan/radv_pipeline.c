@@ -937,7 +937,6 @@ radv_pipeline_init_depth_stencil_state(struct radv_pipeline *pipeline,
 	const VkPipelineDepthStencilStateCreateInfo *vkds = pCreateInfo->pDepthStencilState;
 	struct radv_depth_stencil_state *ds = &pipeline->graphics.ds;
 
-	memset(ds, 0, sizeof(*ds));
 	if (!vkds)
 		return;
 
@@ -1003,8 +1002,6 @@ radv_pipeline_init_raster_state(struct radv_pipeline *pipeline,
 {
 	const VkPipelineRasterizationStateCreateInfo *vkraster = pCreateInfo->pRasterizationState;
 	struct radv_raster_state *raster = &pipeline->graphics.raster;
-
-	memset(raster, 0, sizeof(*raster));
 
 	raster->spi_interp_control =
 		S_0286D4_FLAT_SHADE_ENA(1) |
