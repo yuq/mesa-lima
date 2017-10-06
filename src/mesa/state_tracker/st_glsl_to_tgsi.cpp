@@ -5206,7 +5206,8 @@ glsl_to_tgsi_visitor::merge_two_dsts(void)
    /* We never delete inst, but we may delete its successor. */
    foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
       glsl_to_tgsi_instruction *inst2;
-      bool merged;
+      unsigned defined;
+
       if (num_inst_dst_regs(inst) != 2)
          continue;
 
@@ -5214,10 +5215,19 @@ glsl_to_tgsi_visitor::merge_two_dsts(void)
           inst->dst[1].file != PROGRAM_UNDEFINED)
          continue;
 
+      assert(inst->dst[0].file != PROGRAM_UNDEFINED ||
+             inst->dst[1].file != PROGRAM_UNDEFINED);
+
+      if (inst->dst[0].file == PROGRAM_UNDEFINED)
+         defined = 1;
+      else
+         defined = 0;
+
       inst2 = (glsl_to_tgsi_instruction *) inst->next;
       do {
-
-         if (inst->src[0].file == inst2->src[0].file &&
+         if (inst->op == inst2->op &&
+             inst2->dst[defined].file == PROGRAM_UNDEFINED &&
+             inst->src[0].file == inst2->src[0].file &&
              inst->src[0].index == inst2->src[0].index &&
              inst->src[0].type == inst2->src[0].type &&
              inst->src[0].swizzle == inst2->src[0].swizzle)
@@ -5225,21 +5235,19 @@ glsl_to_tgsi_visitor::merge_two_dsts(void)
          inst2 = (glsl_to_tgsi_instruction *) inst2->next;
       } while (inst2);
 
-      if (!inst2)
+      if (!inst2) {
+         /* Undefined destinations are not allowed, substitute with an unused
+          * temporary register.
+          */
+         st_src_reg tmp = get_temp(glsl_type::vec4_type);
+         inst->dst[defined ^ 1] = st_dst_reg(tmp);
+         inst->dst[defined ^ 1].writemask = 0;
          continue;
-      merged = false;
-      if (inst->dst[0].file == PROGRAM_UNDEFINED) {
-         merged = true;
-         inst->dst[0] = inst2->dst[0];
-      } else if (inst->dst[1].file == PROGRAM_UNDEFINED) {
-         inst->dst[1] = inst2->dst[1];
-         merged = true;
       }
 
-      if (merged) {
-         inst2->remove();
-         delete inst2;
-      }
+      inst->dst[defined ^ 1] = inst2->dst[defined ^ 1];
+      inst2->remove();
+      delete inst2;
    }
 }
 
