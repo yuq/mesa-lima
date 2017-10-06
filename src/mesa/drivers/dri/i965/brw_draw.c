@@ -336,19 +336,36 @@ brw_merge_inputs(struct brw_context *brw,
    }
 }
 
+/* Disable auxiliary buffers if a renderbuffer is also bound as a texture
+ * or shader image.  This causes a self-dependency, where both rendering
+ * and sampling may concurrently read or write the CCS buffer, causing
+ * incorrect pixels.
+ */
 static bool
-intel_disable_rb_aux_buffer(struct brw_context *brw, const struct brw_bo *bo)
+intel_disable_rb_aux_buffer(struct brw_context *brw,
+                            struct intel_mipmap_tree *tex_mt,
+                            const char *usage)
 {
    const struct gl_framebuffer *fb = brw->ctx.DrawBuffer;
    bool found = false;
+
+   /* We only need to worry about color compression and fast clears. */
+   if (tex_mt->aux_usage != ISL_AUX_USAGE_CCS_D &&
+       tex_mt->aux_usage != ISL_AUX_USAGE_CCS_E)
+      return false;
 
    for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
       const struct intel_renderbuffer *irb =
          intel_renderbuffer(fb->_ColorDrawBuffers[i]);
 
-      if (irb && irb->mt->bo == bo) {
+      if (irb && irb->mt->bo == tex_mt->bo) {
          found = brw->draw_aux_buffer_disabled[i] = true;
       }
+   }
+
+   if (found) {
+      perf_debug("Disabling CCS because a renderbuffer is also bound %s.\n",
+                 usage);
    }
 
    return found;
@@ -363,7 +380,6 @@ intel_disable_rb_aux_buffer(struct brw_context *brw, const struct brw_bo *bo)
 void
 brw_predraw_resolve_inputs(struct brw_context *brw)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    struct intel_texture_object *tex_obj;
 
@@ -383,15 +399,11 @@ brw_predraw_resolve_inputs(struct brw_context *brw)
       enum isl_format view_format =
          translate_tex_format(brw, tex_obj->_Format, sampler->sRGBDecode);
 
-      bool aux_supported;
-      intel_miptree_prepare_texture(brw, tex_obj->mt, view_format,
-                                    &aux_supported);
+      const bool disable_aux =
+         intel_disable_rb_aux_buffer(brw, tex_obj->mt, "for sampling");
 
-      if (!aux_supported && devinfo->gen >= 9 &&
-          intel_disable_rb_aux_buffer(brw, tex_obj->mt->bo)) {
-         perf_debug("Sampling renderbuffer with non-compressible format - "
-                    "turning off compression\n");
-      }
+      intel_miptree_prepare_texture(brw, tex_obj->mt, view_format,
+                                    disable_aux);
 
       brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
 
@@ -412,13 +424,10 @@ brw_predraw_resolve_inputs(struct brw_context *brw)
             tex_obj = intel_texture_object(u->TexObj);
 
             if (tex_obj && tex_obj->mt) {
-               intel_miptree_prepare_image(brw, tex_obj->mt);
+               intel_disable_rb_aux_buffer(brw, tex_obj->mt,
+                                           "as a shader image");
 
-               if (tex_obj->mt->aux_usage == ISL_AUX_USAGE_CCS_E &&
-                   intel_disable_rb_aux_buffer(brw, tex_obj->mt->bo)) {
-                  perf_debug("Using renderbuffer as shader image - turning "
-                             "off lossless compression\n");
-               }
+               intel_miptree_prepare_image(brw, tex_obj->mt);
 
                brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
             }
