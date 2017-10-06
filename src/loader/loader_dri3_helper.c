@@ -374,6 +374,29 @@ dri3_handle_present_event(struct loader_dri3_drawable *draw,
          if (draw->recv_sbc > draw->send_sbc)
             draw->recv_sbc -= 0x100000000;
 
+         /* When moving from flip to copy, we assume that we can allocate in
+          * a more optimal way if we don't need to cater for the display
+          * controller.
+          */
+         if (ce->mode == XCB_PRESENT_COMPLETE_MODE_COPY &&
+             draw->last_present_mode == XCB_PRESENT_COMPLETE_MODE_FLIP) {
+            for (int b = 0; b < ARRAY_SIZE(draw->buffers); b++) {
+               if (draw->buffers[b])
+                  draw->buffers[b]->reallocate = true;
+            }
+         }
+
+	 /* If the server tells us that our allocation is suboptimal, we
+          * reallocate once.
+          */
+         if (ce->mode == XCB_PRESENT_COMPLETE_MODE_SUBOPTIMAL_COPY &&
+             draw->last_present_mode != ce->mode) {
+            for (int b = 0; b < ARRAY_SIZE(draw->buffers); b++) {
+               if (draw->buffers[b])
+                  draw->buffers[b]->reallocate = true;
+            }
+         }
+
          draw->last_present_mode = ce->mode;
 
          if (draw->vtable->show_fps)
@@ -397,9 +420,9 @@ dri3_handle_present_event(struct loader_dri3_drawable *draw,
          if (buf && buf->pixmap == ie->pixmap)
             buf->busy = 0;
 
-         if (buf && draw->num_back <= b && b < LOADER_DRI3_MAX_BACK &&
-             draw->cur_blit_source != b &&
-             !buf->busy) {
+         if (buf && draw->cur_blit_source != b && !buf->busy &&
+             (buf->reallocate ||
+             (draw->num_back <= b && b < LOADER_DRI3_MAX_BACK))) {
             dri3_free_render_buffer(draw, buf);
             draw->buffers[b] = NULL;
          }
@@ -880,6 +903,9 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
        */
       if (!loader_dri3_have_image_blit(draw) && draw->cur_blit_source != -1)
          options |= XCB_PRESENT_OPTION_COPY;
+
+      if (draw->multiplanes_available)
+         options |= XCB_PRESENT_OPTION_SUBOPTIMAL;
 
       back->busy = 1;
       back->last_swap = draw->send_sbc;
@@ -1626,11 +1652,12 @@ dri3_get_buffer(__DRIdrawable *driDrawable,
 
    buffer = draw->buffers[buf_id];
 
-   /* Allocate a new buffer if there isn't an old one, or if that
-    * old one is the wrong size
+   /* Allocate a new buffer if there isn't an old one, if that
+    * old one is the wrong size, or if it's suboptimal
     */
    if (!buffer || buffer->width != draw->width ||
-       buffer->height != draw->height) {
+       buffer->height != draw->height ||
+       buffer->reallocate) {
       struct loader_dri3_buffer *new_buffer;
 
       /* Allocate the new buffers

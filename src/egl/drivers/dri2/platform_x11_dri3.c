@@ -565,6 +565,9 @@ dri3_x11_connect(struct dri2_egl_display *dri2_dpy)
       free(error);
       return EGL_FALSE;
    }
+
+   dri2_dpy->present_major_version = present_query->major_version;
+   dri2_dpy->present_minor_version = present_query->minor_version;
    free(present_query);
 
    dri2_dpy->fd = loader_dri3_open(dri2_dpy->conn, dri2_dpy->screen->root, 0);

@@ -61,6 +61,7 @@ struct loader_dri3_buffer {
    struct xshmfence *shm_fence; /* pointer to xshmfence object */
    bool         busy;           /* Set on swap, cleared on IdleNotify */
    bool         own_pixmap;     /* We allocated the pixmap ID, free on destroy */
+   bool         reallocate;     /* Buffer should be reallocated and not reused */
 
    uint32_t     num_planes;
    uint32_t     size;

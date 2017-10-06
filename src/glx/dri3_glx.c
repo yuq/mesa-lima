@@ -372,7 +372,9 @@ dri3_create_drawable(struct glx_screen *base, XID xDrawable,
    pdraw->base.psc = &psc->base;
 
    if ((psc->image && psc->image->base.version >= 15) &&
-       (pdp->dri3Major > 1 || (pdp->dri3Major == 1 && pdp->dri3Minor >= 2)))
+       (pdp->dri3Major > 1 || (pdp->dri3Major == 1 && pdp->dri3Minor >= 2)) &&
+       (pdp->presentMajor > 1 ||
+        (pdp->presentMajor == 1 && pdp->presentMinor >= 2)))
       has_multibuffer = true;
 
    (void) __glXInitialize(psc->base.dpy);

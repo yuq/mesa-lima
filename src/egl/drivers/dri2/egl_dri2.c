@@ -885,6 +885,8 @@ dri2_setup_extensions(_EGLDisplay *disp)
    dri2_dpy->multibuffers_available =
       (dri2_dpy->dri3_major_version > 1 || (dri2_dpy->dri3_major_version == 1 &&
                                             dri2_dpy->dri3_minor_version >= 2)) &&
+      (dri2_dpy->present_major_version > 1 || (dri2_dpy->present_major_version == 1 &&
+                                               dri2_dpy->present_minor_version >= 2)) &&
       (dri2_dpy->image && dri2_dpy->image->base.version >= 15);
 #endif
 
