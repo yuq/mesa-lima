@@ -115,6 +115,9 @@ static bool ppir_schedule_create_instr_from_node(ppir_compiler *comp)
             if (node->op == ppir_op_load_varying)
                break;
 
+            ppir_load_node *load = ppir_node_to_load(node);
+            assert(load->dest.type == ppir_target_ssa);
+
             struct list_head move_list;
             list_inithead(&move_list);
 
@@ -131,9 +134,6 @@ static bool ppir_schedule_create_instr_from_node(ppir_compiler *comp)
                   ppir_node *move = ppir_node_create(comp, ppir_op_mov, -1, 0);
                   if (!move)
                      return false;
-
-                  ppir_load_node *load = ppir_node_to_load(node);
-                  assert(load->dest.type == ppir_target_ssa);
 
                   ppir_alu_node *alu = ppir_node_to_alu(move);
                   alu->dest = load->dest;
@@ -155,6 +155,11 @@ static bool ppir_schedule_create_instr_from_node(ppir_compiler *comp)
                   /* can't add move to node succs here in a set loop */
                   list_addtail(&move->list, &move_list);
                }
+            }
+
+            if (node->op == ppir_op_load_uniform) {
+               load->dest.type = ppir_target_pipeline;
+               load->dest.pipeline = ppir_pipeline_reg_uniform;
             }
 
             list_for_each_entry(ppir_node, move, &move_list, list) {
