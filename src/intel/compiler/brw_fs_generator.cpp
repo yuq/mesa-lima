@@ -573,6 +573,19 @@ fs_generator::generate_urb_write(fs_inst *inst, struct brw_reg payload)
 {
    brw_inst *insn;
 
+    /* WaClearTDRRegBeforeEOTForNonPS.
+     *
+     *   WA: Clear tdr register before send EOT in all non-PS shader kernels
+     *
+     *   mov(8) tdr0:ud 0x0:ud {NoMask}"
+     */
+   if (inst->eot && p->devinfo->gen == 10) {
+      brw_push_insn_state(p);
+      brw_set_default_mask_control(p, BRW_MASK_DISABLE);
+      brw_MOV(p, brw_tdr_reg(), brw_imm_uw(0));
+      brw_pop_insn_state(p);
+   }
+
    insn = brw_next_insn(p, BRW_OPCODE_SEND);
 
    brw_set_dest(p, insn, brw_null_reg());

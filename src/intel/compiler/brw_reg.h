@@ -774,6 +774,12 @@ brw_address_reg(unsigned subnr)
    return brw_uw1_reg(BRW_ARCHITECTURE_REGISTER_FILE, BRW_ARF_ADDRESS, subnr);
 }
 
+static inline struct brw_reg
+brw_tdr_reg(void)
+{
+   return brw_uw1_reg(BRW_ARCHITECTURE_REGISTER_FILE, BRW_ARF_TDR, 0);
+}
+
 /* If/else instructions break in align16 mode if writemask & swizzle
  * aren't xyzw.  This goes against the convention for other scalar
  * regs:
