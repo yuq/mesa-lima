@@ -3216,7 +3216,15 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 		}
 	} else {
 		unsigned blocks[3] = { info->blocks[0], info->blocks[1], info->blocks[2] };
-		unsigned dispatch_initiator = S_00B800_COMPUTE_SHADER_EN(1);
+		unsigned dispatch_initiator = S_00B800_COMPUTE_SHADER_EN(1) |
+					      S_00B800_FORCE_START_AT_000(1);
+
+		if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK) {
+			/* If the KMD allows it (there is a KMD hw register for
+			 * it), allow launching waves out-of-order.
+			 */
+			dispatch_initiator |= S_00B800_ORDER_MODE(1);
+		}
 
 		if (info->unaligned) {
 			unsigned *cs_block_size = compute_shader->info.cs.block_size;
