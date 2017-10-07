@@ -28,7 +28,7 @@
 #include "util/u_memory.h"
 #include "r600_query.h"
 #include "r600_pipe_common.h"
-#include "amd/common/r600d_common.h"
+#include "r600d_common.h"
 
 /* Max counters per HW block */
 #define R600_QUERY_MAX_COUNTERS 16

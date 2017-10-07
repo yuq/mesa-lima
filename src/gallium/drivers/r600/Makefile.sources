@@ -1,4 +1,6 @@
+
 C_SOURCES = \
+	r600d_common.h \
 	compute_memory_pool.c \
 	compute_memory_pool.h \
 	eg_asm.c \

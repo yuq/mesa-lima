@@ -31,7 +31,7 @@
 #define R600_CS_H
 
 #include "r600_pipe_common.h"
-#include "amd/common/r600d_common.h"
+#include "r600d_common.h"
 
 /**
  * Return true if there is enough memory in VRAM and GTT for the buffers

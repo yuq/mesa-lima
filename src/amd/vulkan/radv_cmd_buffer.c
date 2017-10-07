@@ -3605,7 +3605,7 @@ static void write_event(struct radv_cmd_buffer *cmd_buffer,
 				   cmd_buffer->state.predicating,
 				   cmd_buffer->device->physical_device->rad_info.chip_class,
 				   false,
-				   EVENT_TYPE_BOTTOM_OF_PIPE_TS, 0,
+				   V_028A90_BOTTOM_OF_PIPE_TS, 0,
 				   1, va, 2, value);
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);

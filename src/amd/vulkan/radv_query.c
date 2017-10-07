@@ -1153,7 +1153,7 @@ void radv_CmdEndQuery(
 					   false,
 					   cmd_buffer->device->physical_device->rad_info.chip_class,
 					   false,
-					   EVENT_TYPE_BOTTOM_OF_PIPE_TS, 0,
+					   V_028A90_BOTTOM_OF_PIPE_TS, 0,
 					   1, avail_va, 0, 1);
 		break;
 	default:
