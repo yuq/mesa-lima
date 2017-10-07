@@ -17,7 +17,9 @@ ppir_SOURCES := \
 	  ir/pp/lower.c \
 	  ir/pp/scheduler.c \
 	  ir/pp/instr.c \
-	  ir/pp/regalloc.c
+	  ir/pp/regalloc.c \
+	  ir/pp/codegen.h \
+	  ir/pp/codegen.c
 
 DRM_SOURCES := \
 	  lima_device.c \
