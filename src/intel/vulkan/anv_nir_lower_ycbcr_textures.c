@@ -23,7 +23,7 @@
 
 #include "anv_nir.h"
 #include "anv_private.h"
-#include "nir.h"
+#include "nir/nir.h"
 #include "nir/nir_builder.h"
 
 struct ycbcr_state {
