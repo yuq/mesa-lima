@@ -4172,7 +4172,7 @@ static void si_create_function(struct si_shader_context *ctx,
 					   "no-signed-zeros-fp-math",
 					   "true");
 
-	if (ctx->screen->b.debug_flags & DBG_UNSAFE_MATH) {
+	if (ctx->screen->b.debug_flags & DBG(UNSAFE_MATH)) {
 		/* These were copied from some LLVM test. */
 		LLVMAddTargetDependentFunctionAttr(ctx->main_fn,
 						   "less-precise-fpmad",
@@ -5238,7 +5238,7 @@ void si_shader_dump(struct si_screen *sscreen, const struct si_shader *shader,
 
 	if (!check_debug_option ||
 	    (si_can_dump_shader(&sscreen->b, processor) &&
-	     !(sscreen->b.debug_flags & DBG_NO_ASM))) {
+	     !(sscreen->b.debug_flags & DBG(NO_ASM)))) {
 		fprintf(file, "\n%s:\n", si_get_shader_name(shader, processor));
 
 		if (shader->prolog)
@@ -5278,7 +5278,7 @@ static int si_compile_llvm(struct si_screen *sscreen,
 	if (si_can_dump_shader(&sscreen->b, processor)) {
 		fprintf(stderr, "radeonsi: Compiling shader %d\n", count);
 
-		if (!(sscreen->b.debug_flags & (DBG_NO_IR | DBG_PREOPT_IR))) {
+		if (!(sscreen->b.debug_flags & (DBG(NO_IR) | DBG(PREOPT_IR)))) {
 			fprintf(stderr, "%s LLVM IR:\n\n", name);
 			ac_dump_module(mod);
 			fprintf(stderr, "\n");
@@ -5812,7 +5812,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	}
 
 	if (ctx->type == PIPE_SHADER_FRAGMENT && sel->info.uses_kill &&
-	    ctx->screen->b.debug_flags & DBG_FS_CORRECT_DERIVS_AFTER_KILL) {
+	    ctx->screen->b.debug_flags & DBG(FS_CORRECT_DERIVS_AFTER_KILL)) {
 		/* This is initialized to 0.0 = not kill. */
 		ctx->postponed_kill = lp_build_alloca(&ctx->gallivm, ctx->f32, "");
 	}
@@ -6387,7 +6387,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
 	 * conversion fails. */
 	if (si_can_dump_shader(&sscreen->b, sel->info.processor) &&
-	    !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
+	    !(sscreen->b.debug_flags & DBG(NO_TGSI))) {
 		if (sel->tokens)
 			tgsi_dump(sel->tokens, 0);
 		else

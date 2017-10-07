@@ -368,7 +368,7 @@ si_get_init_multi_vgt_param(struct si_screen *sscreen,
 
 	/* This is a hardware requirement. */
 	if (key->u.line_stipple_enabled ||
-	    (sscreen->b.debug_flags & DBG_SWITCH_ON_EOP)) {
+	    (sscreen->b.debug_flags & DBG(SWITCH_ON_EOP))) {
 		ia_switch_on_eop = true;
 		wd_switch_on_eop = true;
 	}

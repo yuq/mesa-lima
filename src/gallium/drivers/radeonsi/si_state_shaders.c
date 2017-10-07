@@ -1483,7 +1483,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		assert(0);
 	}
 
-	if (unlikely(sctx->screen->b.debug_flags & DBG_NO_OPT_VARIANT))
+	if (unlikely(sctx->screen->b.debug_flags & DBG(NO_OPT_VARIANT)))
 		memset(&key->opt, 0, sizeof(key->opt));
 }
 
@@ -1913,7 +1913,7 @@ static void si_init_shader_selector_async(void *job, int thread_index)
 	}
 
 	/* Pre-compilation. */
-	if (sscreen->b.debug_flags & DBG_PRECOMPILE &&
+	if (sscreen->b.debug_flags & DBG(PRECOMPILE) &&
 	    /* GFX9 needs LS or ES for compilation, which we don't have here. */
 	    (sscreen->b.chip_class <= VI ||
 	     (sel->type != PIPE_SHADER_TESS_CTRL &&

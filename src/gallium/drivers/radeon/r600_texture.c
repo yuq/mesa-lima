@@ -1184,7 +1184,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 				     R600_RESOURCE_FLAG_FLUSHED_DEPTH))) {
 			rtex->db_compatible = true;
 
-			if (!(rscreen->debug_flags & DBG_NO_HYPERZ))
+			if (!(rscreen->debug_flags & DBG(NO_HYPERZ)))
 				r600_texture_allocate_htile(rscreen, rtex);
 		}
 	} else {
@@ -1205,7 +1205,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 		 * apply_opaque_metadata later.
 		 */
 		if (rtex->surface.dcc_size &&
-		    (buf || !(rscreen->debug_flags & DBG_NO_DCC)) &&
+		    (buf || !(rscreen->debug_flags & DBG(NO_DCC))) &&
 		    !(rtex->surface.flags & RADEON_SURF_SCANOUT)) {
 			/* Reserve space for the DCC buffer. */
 			rtex->dcc_offset = align64(rtex->size, rtex->surface.dcc_alignment);
@@ -1264,7 +1264,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 	rtex->cmask.base_address_reg =
 		(rtex->resource.gpu_address + rtex->cmask.offset) >> 8;
 
-	if (rscreen->debug_flags & DBG_VM) {
+	if (rscreen->debug_flags & DBG(VM)) {
 		fprintf(stderr, "VM start=0x%"PRIX64"  end=0x%"PRIX64" | Texture %ix%ix%i, %i levels, %i samples, %s\n",
 			rtex->resource.gpu_address,
 			rtex->resource.gpu_address + rtex->resource.buf->size,
@@ -1272,7 +1272,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 			base->nr_samples ? base->nr_samples : 1, util_format_short_name(base->format));
 	}
 
-	if (rscreen->debug_flags & DBG_TEX) {
+	if (rscreen->debug_flags & DBG(TEX)) {
 		puts("Texture:");
 		struct u_log_context log;
 		u_log_context_init(&log);
@@ -1316,7 +1316,7 @@ r600_choose_tiling(struct r600_common_screen *rscreen,
 	if (!force_tiling &&
 	    !is_depth_stencil &&
 	    !util_format_is_compressed(templ->format)) {
-		if (rscreen->debug_flags & DBG_NO_TILING)
+		if (rscreen->debug_flags & DBG(NO_TILING))
 			return RADEON_SURF_MODE_LINEAR_ALIGNED;
 
 		/* Tiling doesn't work with the 422 (SUBSAMPLED) formats on R600+. */
@@ -1347,7 +1347,7 @@ r600_choose_tiling(struct r600_common_screen *rscreen,
 
 	/* Make small textures 1D tiled. */
 	if (templ->width0 <= 16 || templ->height0 <= 16 ||
-	    (rscreen->debug_flags & DBG_NO_2D_TILING))
+	    (rscreen->debug_flags & DBG(NO_2D_TILING)))
 		return RADEON_SURF_MODE_1D;
 
 	/* The allocator will switch to 1D if needed. */
@@ -1363,7 +1363,7 @@ struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 	bool tc_compatible_htile =
 		rscreen->chip_class >= VI &&
 		(templ->flags & PIPE_RESOURCE_FLAG_TEXTURING_MORE_LIKELY) &&
-		!(rscreen->debug_flags & DBG_NO_HYPERZ) &&
+		!(rscreen->debug_flags & DBG(NO_HYPERZ)) &&
 		!is_flushed_depth &&
 		templ->nr_samples <= 1 && /* TC-compat HTILE is less efficient with MSAA */
 		util_format_is_depth_or_stencil(templ->format);
@@ -2686,7 +2686,7 @@ void si_do_fast_color_clear(struct r600_common_context *rctx,
 		 * displayable surfaces.
 		 */
 		if (rctx->chip_class >= VI &&
-		    !(rctx->screen->debug_flags & DBG_NO_DCC_FB)) {
+		    !(rctx->screen->debug_flags & DBG(NO_DCC_FB))) {
 			vi_separate_dcc_try_enable(rctx, tex);
 
 			/* RB+ isn't supported with a CMASK clear only on Stoney,
@@ -2704,7 +2704,7 @@ void si_do_fast_color_clear(struct r600_common_context *rctx,
 			uint32_t reset_value;
 			bool clear_words_needed;
 
-			if (rctx->screen->debug_flags & DBG_NO_DCC_CLEAR)
+			if (rctx->screen->debug_flags & DBG(NO_DCC_CLEAR))
 				continue;
 
 			if (!vi_get_fast_clear_parameters(fb->cbufs[i]->format,

@@ -152,7 +152,7 @@ si_create_llvm_target_machine(struct si_screen *sscreen)
 		 "+DumpCode,+vgpr-spilling,-fp32-denormals,+fp64-denormals%s%s%s",
 		 sscreen->b.chip_class >= GFX9 ? ",+xnack" : ",-xnack",
 		 sscreen->llvm_has_working_vgpr_indexing ? "" : ",-promote-alloca",
-		 sscreen->b.debug_flags & DBG_SI_SCHED ? ",+si-scheduler" : "");
+		 sscreen->b.debug_flags & DBG(SI_SCHED) ? ",+si-scheduler" : "");
 
 	return LLVMCreateTargetMachine(ac_get_llvm_target(triple), triple,
 				       si_get_llvm_processor_name(sscreen->b.family),
@@ -248,7 +248,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	else
 		si_init_dma_functions(sctx);
 
-	if (sscreen->b.debug_flags & DBG_FORCE_DMA)
+	if (sscreen->b.debug_flags & DBG(FORCE_DMA))
 		sctx->b.b.resource_copy_region = sctx->b.dma_copy;
 
 	sctx->blitter = util_blitter_create(&sctx->b.b);
@@ -362,7 +362,7 @@ static struct pipe_context *si_pipe_create_context(struct pipe_screen *screen,
 	struct si_screen *sscreen = (struct si_screen *)screen;
 	struct pipe_context *ctx;
 
-	if (sscreen->b.debug_flags & DBG_CHECK_VM)
+	if (sscreen->b.debug_flags & DBG(CHECK_VM))
 		flags |= PIPE_CONTEXT_DEBUG;
 
 	ctx = si_create_context(screen, flags);
@@ -540,7 +540,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return 4;
 
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
-		if (sscreen->b.debug_flags & DBG_NIR)
+		if (sscreen->b.debug_flags & DBG(NIR))
 			return 140; /* no geometry and tessellation shaders yet */
 		if (si_have_tgsi_compute(sscreen))
 			return 450;
@@ -739,7 +739,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen,
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
 		return 32;
 	case PIPE_SHADER_CAP_PREFERRED_IR:
-		if (sscreen->b.debug_flags & DBG_NIR &&
+		if (sscreen->b.debug_flags & DBG(NIR) &&
 		    (shader == PIPE_SHADER_VERTEX ||
 		     shader == PIPE_SHADER_FRAGMENT))
 			return PIPE_SHADER_IR_NIR;
@@ -934,17 +934,17 @@ static void si_test_vmfault(struct si_screen *sscreen)
 
 	r600_resource(buf)->gpu_address = 0; /* cause a VM fault */
 
-	if (sscreen->b.debug_flags & DBG_TEST_VMFAULT_CP) {
+	if (sscreen->b.debug_flags & DBG(TEST_VMFAULT_CP)) {
 		si_copy_buffer(sctx, buf, buf, 0, 4, 4, 0);
 		ctx->flush(ctx, NULL, 0);
 		puts("VM fault test: CP - done.");
 	}
-	if (sscreen->b.debug_flags & DBG_TEST_VMFAULT_SDMA) {
+	if (sscreen->b.debug_flags & DBG(TEST_VMFAULT_SDMA)) {
 		sctx->b.dma_clear_buffer(ctx, buf, 0, 4, 0);
 		ctx->flush(ctx, NULL, 0);
 		puts("VM fault test: SDMA - done.");
 	}
-	if (sscreen->b.debug_flags & DBG_TEST_VMFAULT_SHADER) {
+	if (sscreen->b.debug_flags & DBG(TEST_VMFAULT_SHADER)) {
 		util_test_constant_buffer(ctx, buf);
 		puts("VM fault test: Shader - done.");
 	}
@@ -990,9 +990,9 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	 */
 	if (driQueryOptionb(config->options,
 			    "glsl_correct_derivatives_after_discard"))
-		sscreen->b.debug_flags |= DBG_FS_CORRECT_DERIVS_AFTER_KILL;
+		sscreen->b.debug_flags |= DBG(FS_CORRECT_DERIVS_AFTER_KILL);
 	if (driQueryOptionb(config->options, "radeonsi_enable_sisched"))
-		sscreen->b.debug_flags |= DBG_SI_SCHED;
+		sscreen->b.debug_flags |= DBG(SI_SCHED);
 
 	if (!si_common_screen_init(&sscreen->b, ws) ||
 	    !si_init_gs_info(sscreen) ||
@@ -1061,7 +1061,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 
 	sscreen->has_out_of_order_rast = sscreen->b.chip_class >= VI &&
 					 sscreen->b.info.max_se >= 2 &&
-					 !(sscreen->b.debug_flags & DBG_NO_OUT_OF_ORDER);
+					 !(sscreen->b.debug_flags & DBG(NO_OUT_OF_ORDER));
 	sscreen->assume_no_z_fights =
 		driQueryOptionb(config->options, "radeonsi_assume_no_z_fights");
 	sscreen->commutative_blend_add =
@@ -1073,9 +1073,9 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 					   sscreen->b.family == CHIP_VEGA10 ||
 					   sscreen->b.family == CHIP_RAVEN;
 	sscreen->dpbb_allowed = sscreen->b.chip_class >= GFX9 &&
-				!(sscreen->b.debug_flags & DBG_NO_DPBB);
+				!(sscreen->b.debug_flags & DBG(NO_DPBB));
 	sscreen->dfsm_allowed = sscreen->dpbb_allowed &&
-				!(sscreen->b.debug_flags & DBG_NO_DFSM);
+				!(sscreen->b.debug_flags & DBG(NO_DFSM));
 
 	/* While it would be nice not to have this flag, we are constrained
 	 * by the reality that LLVM 5.0 doesn't have working VGPR indexing
@@ -1094,14 +1094,14 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 		sscreen->b.has_rbplus = true;
 
 		sscreen->b.rbplus_allowed =
-			!(sscreen->b.debug_flags & DBG_NO_RB_PLUS) &&
+			!(sscreen->b.debug_flags & DBG(NO_RB_PLUS)) &&
 			(sscreen->b.family == CHIP_STONEY ||
 			 sscreen->b.family == CHIP_RAVEN);
 	}
 
 	(void) mtx_init(&sscreen->shader_parts_mutex, mtx_plain);
 	sscreen->use_monolithic_shaders =
-		(sscreen->b.debug_flags & DBG_MONOLITHIC_SHADERS) != 0;
+		(sscreen->b.debug_flags & DBG(MONOLITHIC_SHADERS)) != 0;
 
 	sscreen->b.barrier_flags.cp_to_L2 = SI_CONTEXT_INV_SMEM_L1 |
 					    SI_CONTEXT_INV_VMEM_L1;
@@ -1123,12 +1123,12 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	/* Create the auxiliary context. This must be done last. */
 	sscreen->b.aux_context = si_create_context(&sscreen->b.b, 0);
 
-	if (sscreen->b.debug_flags & DBG_TEST_DMA)
+	if (sscreen->b.debug_flags & DBG(TEST_DMA))
 		si_test_dma(&sscreen->b);
 
-	if (sscreen->b.debug_flags & (DBG_TEST_VMFAULT_CP |
-				      DBG_TEST_VMFAULT_SDMA |
-				      DBG_TEST_VMFAULT_SHADER))
+	if (sscreen->b.debug_flags & (DBG(TEST_VMFAULT_CP) |
+				      DBG(TEST_VMFAULT_SDMA) |
+				      DBG(TEST_VMFAULT_SHADER)))
 		si_test_vmfault(sscreen);
 
 	return &sscreen->b.b;

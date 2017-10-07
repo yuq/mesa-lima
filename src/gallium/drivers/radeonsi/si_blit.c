@@ -1399,7 +1399,7 @@ static void si_blit(struct pipe_context *ctx,
 				  info->src.box.z,
 				  info->src.box.z + info->src.box.depth - 1);
 
-	if (sctx->screen->b.debug_flags & DBG_FORCE_DMA &&
+	if (sctx->screen->b.debug_flags & DBG(FORCE_DMA) &&
 	    util_try_blit_via_copy_region(ctx, info))
 		return;
 

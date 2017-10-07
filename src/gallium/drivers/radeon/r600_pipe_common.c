@@ -436,7 +436,7 @@ static void r600_flush_dma_ring(void *ctx, unsigned flags,
 	struct radeon_winsys_cs *cs = rctx->dma.cs;
 	struct radeon_saved_cs saved;
 	bool check_vm =
-		(rctx->screen->debug_flags & DBG_CHECK_VM) &&
+		(rctx->screen->debug_flags & DBG(CHECK_VM)) &&
 		rctx->check_vm_faults;
 
 	if (!radeon_emitted(cs, 0)) {
@@ -681,7 +681,7 @@ bool si_common_context_init(struct r600_common_context *rctx,
 	if (!rctx->ctx)
 		return false;
 
-	if (rscreen->info.num_sdma_rings && !(rscreen->debug_flags & DBG_NO_ASYNC_DMA)) {
+	if (rscreen->info.num_sdma_rings && !(rscreen->debug_flags & DBG(NO_ASYNC_DMA))) {
 		rctx->dma.cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
 						   r600_flush_dma_ring,
 						   rctx);
@@ -739,54 +739,53 @@ void si_common_context_cleanup(struct r600_common_context *rctx)
 
 static const struct debug_named_value common_debug_options[] = {
 	/* logging */
-	{ "tex", DBG_TEX, "Print texture info" },
-	{ "nir", DBG_NIR, "Enable experimental NIR shaders" },
-	{ "compute", DBG_COMPUTE, "Print compute info" },
-	{ "vm", DBG_VM, "Print virtual addresses when creating resources" },
-	{ "info", DBG_INFO, "Print driver information" },
+	{ "tex", DBG(TEX), "Print texture info" },
+	{ "nir", DBG(NIR), "Enable experimental NIR shaders" },
+	{ "compute", DBG(COMPUTE), "Print compute info" },
+	{ "vm", DBG(VM), "Print virtual addresses when creating resources" },
+	{ "info", DBG(INFO), "Print driver information" },
 
 	/* shaders */
-	{ "fs", DBG_FS, "Print fetch shaders" },
-	{ "vs", DBG_VS, "Print vertex shaders" },
-	{ "gs", DBG_GS, "Print geometry shaders" },
-	{ "ps", DBG_PS, "Print pixel shaders" },
-	{ "cs", DBG_CS, "Print compute shaders" },
-	{ "tcs", DBG_TCS, "Print tessellation control shaders" },
-	{ "tes", DBG_TES, "Print tessellation evaluation shaders" },
-	{ "noir", DBG_NO_IR, "Don't print the LLVM IR"},
-	{ "notgsi", DBG_NO_TGSI, "Don't print the TGSI"},
-	{ "noasm", DBG_NO_ASM, "Don't print disassembled shaders"},
-	{ "preoptir", DBG_PREOPT_IR, "Print the LLVM IR before initial optimizations" },
-	{ "checkir", DBG_CHECK_IR, "Enable additional sanity checks on shader IR" },
-	{ "nooptvariant", DBG_NO_OPT_VARIANT, "Disable compiling optimized shader variants." },
+	{ "vs", DBG(VS), "Print vertex shaders" },
+	{ "gs", DBG(GS), "Print geometry shaders" },
+	{ "ps", DBG(PS), "Print pixel shaders" },
+	{ "cs", DBG(CS), "Print compute shaders" },
+	{ "tcs", DBG(TCS), "Print tessellation control shaders" },
+	{ "tes", DBG(TES), "Print tessellation evaluation shaders" },
+	{ "noir", DBG(NO_IR), "Don't print the LLVM IR"},
+	{ "notgsi", DBG(NO_TGSI), "Don't print the TGSI"},
+	{ "noasm", DBG(NO_ASM), "Don't print disassembled shaders"},
+	{ "preoptir", DBG(PREOPT_IR), "Print the LLVM IR before initial optimizations" },
+	{ "checkir", DBG(CHECK_IR), "Enable additional sanity checks on shader IR" },
+	{ "nooptvariant", DBG(NO_OPT_VARIANT), "Disable compiling optimized shader variants." },
 
-	{ "testdma", DBG_TEST_DMA, "Invoke SDMA tests and exit." },
-	{ "testvmfaultcp", DBG_TEST_VMFAULT_CP, "Invoke a CP VM fault test and exit." },
-	{ "testvmfaultsdma", DBG_TEST_VMFAULT_SDMA, "Invoke a SDMA VM fault test and exit." },
-	{ "testvmfaultshader", DBG_TEST_VMFAULT_SHADER, "Invoke a shader VM fault test and exit." },
+	{ "testdma", DBG(TEST_DMA), "Invoke SDMA tests and exit." },
+	{ "testvmfaultcp", DBG(TEST_VMFAULT_CP), "Invoke a CP VM fault test and exit." },
+	{ "testvmfaultsdma", DBG(TEST_VMFAULT_SDMA), "Invoke a SDMA VM fault test and exit." },
+	{ "testvmfaultshader", DBG(TEST_VMFAULT_SHADER), "Invoke a shader VM fault test and exit." },
 
 	/* features */
-	{ "nodma", DBG_NO_ASYNC_DMA, "Disable asynchronous DMA" },
-	{ "nohyperz", DBG_NO_HYPERZ, "Disable Hyper-Z" },
+	{ "nodma", DBG(NO_ASYNC_DMA), "Disable asynchronous DMA" },
+	{ "nohyperz", DBG(NO_HYPERZ), "Disable Hyper-Z" },
 	/* GL uses the word INVALIDATE, gallium uses the word DISCARD */
-	{ "noinvalrange", DBG_NO_DISCARD_RANGE, "Disable handling of INVALIDATE_RANGE map flags" },
-	{ "no2d", DBG_NO_2D_TILING, "Disable 2D tiling" },
-	{ "notiling", DBG_NO_TILING, "Disable tiling" },
-	{ "switch_on_eop", DBG_SWITCH_ON_EOP, "Program WD/IA to switch on end-of-packet." },
-	{ "forcedma", DBG_FORCE_DMA, "Use asynchronous DMA for all operations when possible." },
-	{ "precompile", DBG_PRECOMPILE, "Compile one shader variant at shader creation." },
-	{ "nowc", DBG_NO_WC, "Disable GTT write combining" },
-	{ "check_vm", DBG_CHECK_VM, "Check VM faults and dump debug info." },
-	{ "nodcc", DBG_NO_DCC, "Disable DCC." },
-	{ "nodccclear", DBG_NO_DCC_CLEAR, "Disable DCC fast clear." },
-	{ "norbplus", DBG_NO_RB_PLUS, "Disable RB+." },
-	{ "sisched", DBG_SI_SCHED, "Enable LLVM SI Machine Instruction Scheduler." },
-	{ "mono", DBG_MONOLITHIC_SHADERS, "Use old-style monolithic shaders compiled on demand" },
-	{ "unsafemath", DBG_UNSAFE_MATH, "Enable unsafe math shader optimizations" },
-	{ "nodccfb", DBG_NO_DCC_FB, "Disable separate DCC on the main framebuffer" },
-	{ "nodpbb", DBG_NO_DPBB, "Disable DPBB." },
-	{ "nodfsm", DBG_NO_DFSM, "Disable DFSM." },
-	{ "nooutoforder", DBG_NO_OUT_OF_ORDER, "Disable out-of-order rasterization" },
+	{ "noinvalrange", DBG(NO_DISCARD_RANGE), "Disable handling of INVALIDATE_RANGE map flags" },
+	{ "no2d", DBG(NO_2D_TILING), "Disable 2D tiling" },
+	{ "notiling", DBG(NO_TILING), "Disable tiling" },
+	{ "switch_on_eop", DBG(SWITCH_ON_EOP), "Program WD/IA to switch on end-of-packet." },
+	{ "forcedma", DBG(FORCE_DMA), "Use asynchronous DMA for all operations when possible." },
+	{ "precompile", DBG(PRECOMPILE), "Compile one shader variant at shader creation." },
+	{ "nowc", DBG(NO_WC), "Disable GTT write combining" },
+	{ "check_vm", DBG(CHECK_VM), "Check VM faults and dump debug info." },
+	{ "nodcc", DBG(NO_DCC), "Disable DCC." },
+	{ "nodccclear", DBG(NO_DCC_CLEAR), "Disable DCC fast clear." },
+	{ "norbplus", DBG(NO_RB_PLUS), "Disable RB+." },
+	{ "sisched", DBG(SI_SCHED), "Enable LLVM SI Machine Instruction Scheduler." },
+	{ "mono", DBG(MONOLITHIC_SHADERS), "Use old-style monolithic shaders compiled on demand" },
+	{ "unsafemath", DBG(UNSAFE_MATH), "Enable unsafe math shader optimizations" },
+	{ "nodccfb", DBG(NO_DCC_FB), "Disable separate DCC on the main framebuffer" },
+	{ "nodpbb", DBG(NO_DPBB), "Disable DPBB." },
+	{ "nodfsm", DBG(NO_DFSM), "Disable DFSM." },
+	{ "nooutoforder", DBG(NO_OUT_OF_ORDER), "Disable out-of-order rasterization" },
 
 	DEBUG_NAMED_VALUE_END /* must be last */
 };
@@ -858,9 +857,9 @@ static void r600_disk_cache_create(struct r600_common_screen *rscreen)
 			/* These flags affect shader compilation. */
 			uint64_t shader_debug_flags =
 				rscreen->debug_flags &
-				(DBG_FS_CORRECT_DERIVS_AFTER_KILL |
-				 DBG_SI_SCHED |
-				 DBG_UNSAFE_MATH);
+				(DBG(FS_CORRECT_DERIVS_AFTER_KILL) |
+				 DBG(SI_SCHED) |
+				 DBG(UNSAFE_MATH));
 
 			rscreen->disk_shader_cache =
 				disk_cache_create(r600_get_family_name(rscreen),
@@ -1334,7 +1333,7 @@ bool si_common_screen_init(struct r600_common_screen *rscreen,
 	(void) mtx_init(&rscreen->aux_context_lock, mtx_plain);
 	(void) mtx_init(&rscreen->gpu_load_mutex, mtx_plain);
 
-	if (rscreen->debug_flags & DBG_INFO) {
+	if (rscreen->debug_flags & DBG(INFO)) {
 		printf("pci (domain:bus:dev.func): %04x:%02x:%02x.%x\n",
 		       rscreen->info.pci_domain, rscreen->info.pci_bus,
 		       rscreen->info.pci_dev, rscreen->info.pci_func);
@@ -1414,7 +1413,7 @@ bool si_can_dump_shader(struct r600_common_screen *rscreen,
 
 bool si_extra_shader_checks(struct r600_common_screen *rscreen, unsigned processor)
 {
-	return (rscreen->debug_flags & DBG_CHECK_IR) ||
+	return (rscreen->debug_flags & DBG(CHECK_IR)) ||
 	       si_can_dump_shader(rscreen, processor);
 }
 

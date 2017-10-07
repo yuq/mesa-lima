@@ -187,7 +187,7 @@ void si_init_resource_fields(struct r600_common_screen *rscreen,
 		res->flags &= ~RADEON_FLAG_NO_CPU_ACCESS; /* disallowed with VRAM_GTT */
 	}
 
-	if (rscreen->debug_flags & DBG_NO_WC)
+	if (rscreen->debug_flags & DBG(NO_WC))
 		res->flags &= ~RADEON_FLAG_GTT_WC;
 
 	/* Set expected VRAM and GART usage for the buffer. */
@@ -231,7 +231,7 @@ bool si_alloc_resource(struct r600_common_screen *rscreen,
 	res->TC_L2_dirty = false;
 
 	/* Print debug information. */
-	if (rscreen->debug_flags & DBG_VM && res->b.b.target == PIPE_BUFFER) {
+	if (rscreen->debug_flags & DBG(VM) && res->b.b.target == PIPE_BUFFER) {
 		fprintf(stderr, "VM start=0x%"PRIX64"  end=0x%"PRIX64" | Buffer %"PRIu64" bytes\n",
 			res->gpu_address, res->gpu_address + res->buf->size,
 			res->buf->size);
@@ -414,7 +414,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	}
 
 	if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
-	    !(rscreen->debug_flags & DBG_NO_DISCARD_RANGE) &&
+	    !(rscreen->debug_flags & DBG(NO_DISCARD_RANGE)) &&
 	    ((!(usage & (PIPE_TRANSFER_UNSYNCHRONIZED |
 			 PIPE_TRANSFER_PERSISTENT)) &&
 	      r600_can_dma_copy_buffer(rctx, box->x, 0, box->width)) ||

@@ -1156,7 +1156,7 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	LLVMDisposeTargetData(data_layout);
 	LLVMDisposeMessage(data_layout_str);
 
-	bool unsafe_fpmath = (sscreen->b.debug_flags & DBG_UNSAFE_MATH) != 0;
+	bool unsafe_fpmath = (sscreen->b.debug_flags & DBG(UNSAFE_MATH)) != 0;
 	enum lp_float_mode float_mode =
 		unsafe_fpmath ? LP_FLOAT_MODE_UNSAFE_FP_MATH :
 				LP_FLOAT_MODE_NO_SIGNED_ZEROS_FP_MATH;
@@ -1358,7 +1358,7 @@ void si_llvm_optimize_module(struct si_shader_context *ctx)
 	LLVMTargetLibraryInfoRef target_library_info;
 
 	/* Dump LLVM IR before any optimization passes */
-	if (ctx->screen->b.debug_flags & DBG_PREOPT_IR &&
+	if (ctx->screen->b.debug_flags & DBG(PREOPT_IR) &&
 	    si_can_dump_shader(&ctx->screen->b, ctx->type))
 		LLVMDumpModule(ctx->gallivm.module);
 
