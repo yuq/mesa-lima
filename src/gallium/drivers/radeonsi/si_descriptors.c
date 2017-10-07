@@ -1954,23 +1954,35 @@ void si_shader_change_notify(struct si_context *sctx)
 	}
 }
 
+static void si_emit_shader_pointer_head(struct radeon_winsys_cs *cs,
+					struct si_descriptors *desc,
+					unsigned sh_base,
+					unsigned pointer_count)
+{
+	radeon_emit(cs, PKT3(PKT3_SET_SH_REG, pointer_count * 2, 0));
+	radeon_emit(cs, (sh_base + desc->shader_userdata_offset - SI_SH_REG_OFFSET) >> 2);
+}
+
+static void si_emit_shader_pointer_body(struct radeon_winsys_cs *cs,
+					struct si_descriptors *desc)
+{
+	uint64_t va = 0;
+
+	if (desc->buffer)
+		va = desc->buffer->gpu_address + desc->buffer_offset;
+
+	radeon_emit(cs, va);
+	radeon_emit(cs, va >> 32);
+}
+
 static void si_emit_shader_pointer(struct si_context *sctx,
 				   struct si_descriptors *desc,
 				   unsigned sh_base)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	uint64_t va;
 
-	if (!desc->buffer)
-		return; /* the pointer is not used by current shaders */
-
-	va = desc->buffer->gpu_address +
-	     desc->buffer_offset;
-
-	radeon_emit(cs, PKT3(PKT3_SET_SH_REG, 2, 0));
-	radeon_emit(cs, (sh_base + desc->shader_userdata_offset - SI_SH_REG_OFFSET) >> 2);
-	radeon_emit(cs, va);
-	radeon_emit(cs, va >> 32);
+	si_emit_shader_pointer_head(cs, desc, sh_base, 1);
+	si_emit_shader_pointer_body(cs, desc);
 }
 
 static void si_emit_global_shader_pointers(struct si_context *sctx,
