@@ -3031,11 +3031,13 @@ static void si_set_ls_return_value_for_tcs(struct si_shader_context *ctx)
 {
 	LLVMValueRef ret = ctx->return_value;
 
-	ret = si_insert_input_ptr_as_2xi32(ctx, ret, ctx->param_rw_buffers, 0);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_offset, 2);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_wave_info, 3);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_factor_offset, 4);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_scratch_offset, 5);
+
+	ret = si_insert_input_ptr_as_2xi32(ctx, ret, ctx->param_rw_buffers,
+					   8 + SI_SGPR_RW_BUFFERS);
 	ret = si_insert_input_ptr_as_2xi32(ctx, ret,
 		ctx->param_bindless_samplers_and_images,
 		8 + SI_SGPR_BINDLESS_SAMPLERS_AND_IMAGES);
@@ -3072,11 +3074,12 @@ static void si_set_es_return_value_for_gs(struct si_shader_context *ctx)
 {
 	LLVMValueRef ret = ctx->return_value;
 
-	ret = si_insert_input_ptr_as_2xi32(ctx, ret, ctx->param_rw_buffers, 0);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_gs2vs_offset, 2);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_wave_info, 3);
-
 	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_scratch_offset, 5);
+
+	ret = si_insert_input_ptr_as_2xi32(ctx, ret, ctx->param_rw_buffers,
+					   8 + SI_SGPR_RW_BUFFERS);
 	ret = si_insert_input_ptr_as_2xi32(ctx, ret,
 		ctx->param_bindless_samplers_and_images,
 		8 + SI_SGPR_BINDLESS_SAMPLERS_AND_IMAGES);
@@ -4437,8 +4440,8 @@ static void create_function(struct si_shader_context *ctx)
 
 	case SI_SHADER_MERGED_VERTEX_TESSCTRL:
 		/* Merged stages have 8 system SGPRs at the beginning. */
-		ctx->param_rw_buffers = /* SPI_SHADER_USER_DATA_ADDR_LO_HS */
-			add_arg(&fninfo, ARG_SGPR, si_const_array(ctx->v4i32, SI_NUM_RW_BUFFERS));
+		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* SPI_SHADER_USER_DATA_ADDR_LO_HS */
+		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* SPI_SHADER_USER_DATA_ADDR_HI_HS */
 		ctx->param_tcs_offchip_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_merged_wave_info = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_factor_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
@@ -4446,12 +4449,7 @@ static void create_function(struct si_shader_context *ctx)
 		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
 		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
 
-		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
-		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
-
-		ctx->param_bindless_samplers_and_images =
-			add_arg(&fninfo, ARG_SGPR, si_const_array(ctx->v8i32, 0));
-
+		declare_global_desc_pointers(ctx, &fninfo);
 		declare_per_stage_desc_pointers(ctx, &fninfo,
 						ctx->type == PIPE_SHADER_VERTEX);
 		declare_vs_specific_input_sgprs(ctx, &fninfo);
@@ -4495,8 +4493,8 @@ static void create_function(struct si_shader_context *ctx)
 
 	case SI_SHADER_MERGED_VERTEX_OR_TESSEVAL_GEOMETRY:
 		/* Merged stages have 8 system SGPRs at the beginning. */
-		ctx->param_rw_buffers = /* SPI_SHADER_USER_DATA_ADDR_LO_GS */
-			add_arg(&fninfo, ARG_SGPR, si_const_array(ctx->v4i32, SI_NUM_RW_BUFFERS));
+		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused (SPI_SHADER_USER_DATA_ADDR_LO_GS) */
+		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused (SPI_SHADER_USER_DATA_ADDR_HI_GS) */
 		ctx->param_gs2vs_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_merged_wave_info = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_offchip_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
@@ -4504,12 +4502,7 @@ static void create_function(struct si_shader_context *ctx)
 		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused (SPI_SHADER_PGM_LO/HI_GS << 8) */
 		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused (SPI_SHADER_PGM_LO/HI_GS >> 24) */
 
-		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
-		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
-
-		ctx->param_bindless_samplers_and_images =
-			add_arg(&fninfo, ARG_SGPR, si_const_array(ctx->v8i32, 0));
-
+		declare_global_desc_pointers(ctx, &fninfo);
 		declare_per_stage_desc_pointers(ctx, &fninfo,
 						(ctx->type == PIPE_SHADER_VERTEX ||
 						 ctx->type == PIPE_SHADER_TESS_EVAL));
