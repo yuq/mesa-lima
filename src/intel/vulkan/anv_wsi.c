@@ -221,7 +221,7 @@ anv_wsi_image_create(VkDevice device_h,
    result = anv_AllocateMemory(anv_device_to_handle(device),
       &(VkMemoryAllocateInfo) {
          .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-         .allocationSize = image->planes[0].surface.isl.size,
+         .allocationSize = image->size,
          .memoryTypeIndex = 0,
       },
       NULL /* XXX: pAllocator */,
@@ -239,6 +239,7 @@ anv_wsi_image_create(VkDevice device_h,
    memory->bo->flags |= EXEC_OBJECT_WRITE;
 
    anv_BindImageMemory(device_h, image_h, memory_h, 0);
+   assert(image->size == 0);
 
    struct anv_surface *surface = &image->planes[0].surface;
    assert(surface->isl.tiling == ISL_TILING_X);
@@ -266,8 +267,8 @@ anv_wsi_image_create(VkDevice device_h,
    *image_p = image_h;
    *memory_p = memory_h;
    *fd_p = fd;
-   *size = image->planes[0].surface.isl.size;
-   *offset = image->planes[0].surface.offset;
+   *size = image->size;
+   *offset = 0;
    return VK_SUCCESS;
 fail_alloc_memory:
    anv_FreeMemory(device_h, memory_h, pAllocator);
