@@ -26,6 +26,7 @@
 
 #include "si_pipe.h"
 #include "si_state.h"
+#include "sid.h"
 #include "radeon/r600_cs.h"
 
 #include "util/u_memory.h"
@@ -90,21 +91,65 @@ void si_streamout_buffers_dirty(struct si_context *sctx)
 	si_set_streamout_enable(sctx, true);
 }
 
-void si_common_set_streamout_targets(struct pipe_context *ctx,
+static void si_set_streamout_targets(struct pipe_context *ctx,
 				     unsigned num_targets,
 				     struct pipe_stream_output_target **targets,
 				     const unsigned *offsets)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	unsigned i;
-        unsigned enabled_mask = 0, append_bitmask = 0;
+	struct si_buffer_resources *buffers = &sctx->rw_buffers;
+	struct si_descriptors *descs = &sctx->descriptors[SI_DESCS_RW_BUFFERS];
+	unsigned old_num_targets = sctx->streamout.num_targets;
+	unsigned i, bufidx;
 
-	/* Stop streamout. */
+	/* We are going to unbind the buffers. Mark which caches need to be flushed. */
 	if (sctx->streamout.num_targets && sctx->streamout.begin_emitted) {
-		si_emit_streamout_end(sctx);
+		/* Since streamout uses vector writes which go through TC L2
+		 * and most other clients can use TC L2 as well, we don't need
+		 * to flush it.
+		 *
+		 * The only cases which requires flushing it is VGT DMA index
+		 * fetching (on <= CIK) and indirect draw data, which are rare
+		 * cases. Thus, flag the TC L2 dirtiness in the resource and
+		 * handle it at draw call time.
+		 */
+		for (i = 0; i < sctx->streamout.num_targets; i++)
+			if (sctx->streamout.targets[i])
+				r600_resource(sctx->streamout.targets[i]->b.buffer)->TC_L2_dirty = true;
+
+		/* Invalidate the scalar cache in case a streamout buffer is
+		 * going to be used as a constant buffer.
+		 *
+		 * Invalidate TC L1, because streamout bypasses it (done by
+		 * setting GLC=1 in the store instruction), but it can contain
+		 * outdated data of streamout buffers.
+		 *
+		 * VS_PARTIAL_FLUSH is required if the buffers are going to be
+		 * used as an input immediately.
+		 */
+		sctx->b.flags |= SI_CONTEXT_INV_SMEM_L1 |
+				 SI_CONTEXT_INV_VMEM_L1 |
+				 SI_CONTEXT_VS_PARTIAL_FLUSH;
 	}
 
+	/* All readers of the streamout targets need to be finished before we can
+	 * start writing to the targets.
+	 */
+	if (num_targets)
+		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
+		                 SI_CONTEXT_CS_PARTIAL_FLUSH;
+
+	/* Streamout buffers must be bound in 2 places:
+	 * 1) in VGT by setting the VGT_STRMOUT registers
+	 * 2) as shader resources
+	 */
+
+	/* Stop streamout. */
+	if (sctx->streamout.num_targets && sctx->streamout.begin_emitted)
+		si_emit_streamout_end(sctx);
+
 	/* Set the new targets. */
+	unsigned enabled_mask = 0, append_bitmask = 0;
 	for (i = 0; i < num_targets; i++) {
 		si_so_target_reference(&sctx->streamout.targets[i], targets[i]);
 		if (!targets[i])
@@ -112,24 +157,79 @@ void si_common_set_streamout_targets(struct pipe_context *ctx,
 
 		r600_context_add_resource_size(ctx, targets[i]->buffer);
 		enabled_mask |= 1 << i;
+
 		if (offsets[i] == ((unsigned)-1))
 			append_bitmask |= 1 << i;
 	}
-	for (; i < sctx->streamout.num_targets; i++) {
+
+	for (; i < sctx->streamout.num_targets; i++)
 		si_so_target_reference(&sctx->streamout.targets[i], NULL);
-	}
 
 	sctx->streamout.enabled_mask = enabled_mask;
-
 	sctx->streamout.num_targets = num_targets;
 	sctx->streamout.append_bitmask = append_bitmask;
 
+	/* Update dirty state bits. */
 	if (num_targets) {
 		si_streamout_buffers_dirty(sctx);
 	} else {
 		si_set_atom_dirty(sctx, &sctx->streamout.begin_atom, false);
 		si_set_streamout_enable(sctx, false);
 	}
+
+	/* Set the shader resources.*/
+	for (i = 0; i < num_targets; i++) {
+		bufidx = SI_VS_STREAMOUT_BUF0 + i;
+
+		if (targets[i]) {
+			struct pipe_resource *buffer = targets[i]->buffer;
+			uint64_t va = r600_resource(buffer)->gpu_address;
+
+			/* Set the descriptor.
+			 *
+			 * On VI, the format must be non-INVALID, otherwise
+			 * the buffer will be considered not bound and store
+			 * instructions will be no-ops.
+			 */
+			uint32_t *desc = descs->list + bufidx*4;
+			desc[0] = va;
+			desc[1] = S_008F04_BASE_ADDRESS_HI(va >> 32);
+			desc[2] = 0xffffffff;
+			desc[3] = S_008F0C_DST_SEL_X(V_008F0C_SQ_SEL_X) |
+				  S_008F0C_DST_SEL_Y(V_008F0C_SQ_SEL_Y) |
+				  S_008F0C_DST_SEL_Z(V_008F0C_SQ_SEL_Z) |
+				  S_008F0C_DST_SEL_W(V_008F0C_SQ_SEL_W) |
+				  S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32);
+
+			/* Set the resource. */
+			pipe_resource_reference(&buffers->buffers[bufidx],
+						buffer);
+			radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
+							    (struct r600_resource*)buffer,
+							    buffers->shader_usage,
+							    RADEON_PRIO_SHADER_RW_BUFFER,
+							    true);
+			r600_resource(buffer)->bind_history |= PIPE_BIND_STREAM_OUTPUT;
+
+			buffers->enabled_mask |= 1u << bufidx;
+		} else {
+			/* Clear the descriptor and unset the resource. */
+			memset(descs->list + bufidx*4, 0,
+			       sizeof(uint32_t) * 4);
+			pipe_resource_reference(&buffers->buffers[bufidx],
+						NULL);
+			buffers->enabled_mask &= ~(1u << bufidx);
+		}
+	}
+	for (; i < old_num_targets; i++) {
+		bufidx = SI_VS_STREAMOUT_BUF0 + i;
+		/* Clear the descriptor and unset the resource. */
+		memset(descs->list + bufidx*4, 0, sizeof(uint32_t) * 4);
+		pipe_resource_reference(&buffers->buffers[bufidx], NULL);
+		buffers->enabled_mask &= ~(1u << bufidx);
+	}
+
+	sctx->descriptors_dirty |= 1u << SI_DESCS_RW_BUFFERS;
 }
 
 static void si_flush_vgt_streamout(struct si_context *sctx)
@@ -313,6 +413,7 @@ void si_init_streamout_functions(struct si_context *sctx)
 {
 	sctx->b.b.create_stream_output_target = si_create_so_target;
 	sctx->b.b.stream_output_target_destroy = si_so_target_destroy;
+	sctx->b.b.set_stream_output_targets = si_set_streamout_targets;
 	sctx->streamout.begin_atom.emit = si_emit_streamout_begin;
 	sctx->streamout.enable_atom.emit = si_emit_streamout_enable;
 }
