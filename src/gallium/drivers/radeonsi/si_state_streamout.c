@@ -32,6 +32,12 @@
 
 static void si_set_streamout_enable(struct si_context *sctx, bool enable);
 
+static inline void si_so_target_reference(struct si_streamout_target **dst,
+					  struct pipe_stream_output_target *src)
+{
+	pipe_so_target_reference((struct pipe_stream_output_target**)dst, src);
+}
+
 static struct pipe_stream_output_target *
 si_create_so_target(struct pipe_context *ctx,
 		    struct pipe_resource *buffer,
@@ -100,7 +106,7 @@ void si_common_set_streamout_targets(struct pipe_context *ctx,
 
 	/* Set the new targets. */
 	for (i = 0; i < num_targets; i++) {
-		pipe_so_target_reference((struct pipe_stream_output_target**)&sctx->streamout.targets[i], targets[i]);
+		si_so_target_reference(&sctx->streamout.targets[i], targets[i]);
 		if (!targets[i])
 			continue;
 
@@ -110,7 +116,7 @@ void si_common_set_streamout_targets(struct pipe_context *ctx,
 			append_bitmask |= 1 << i;
 	}
 	for (; i < sctx->streamout.num_targets; i++) {
-		pipe_so_target_reference((struct pipe_stream_output_target**)&sctx->streamout.targets[i], NULL);
+		si_so_target_reference(&sctx->streamout.targets[i], NULL);
 	}
 
 	sctx->streamout.enabled_mask = enabled_mask;
