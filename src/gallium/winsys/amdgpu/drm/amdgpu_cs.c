@@ -1423,6 +1423,7 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
          while (rcs->current.cdw & 7)
             radeon_emit(rcs, 0xffff1000); /* type3 nop packet */
       }
+      ws->gfx_ib_size_counter += (rcs->prev_dw + rcs->current.cdw) * 4;
       break;
    case RING_UVD:
       while (rcs->current.cdw & 15)

@@ -145,6 +145,8 @@ static uint64_t amdgpu_query_value(struct radeon_winsys *rws,
       return ws->num_sdma_IBs;
    case RADEON_GFX_BO_LIST_COUNTER:
       return ws->gfx_bo_list_counter;
+   case RADEON_GFX_IB_SIZE_COUNTER:
+      return ws->gfx_ib_size_counter;
    case RADEON_NUM_BYTES_MOVED:
       amdgpu_query_info(ws->dev, AMDGPU_INFO_NUM_BYTES_MOVED, 8, &retval);
       return retval;
