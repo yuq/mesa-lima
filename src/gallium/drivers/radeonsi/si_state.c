@@ -4407,8 +4407,8 @@ static void si_init_config(struct si_context *sctx);
 void si_init_state_functions(struct si_context *sctx)
 {
 	si_init_external_atom(sctx, &sctx->b.render_cond_atom, &sctx->atoms.s.render_cond);
-	si_init_external_atom(sctx, &sctx->b.streamout.begin_atom, &sctx->atoms.s.streamout_begin);
-	si_init_external_atom(sctx, &sctx->b.streamout.enable_atom, &sctx->atoms.s.streamout_enable);
+	si_init_external_atom(sctx, &sctx->streamout.begin_atom, &sctx->atoms.s.streamout_begin);
+	si_init_external_atom(sctx, &sctx->streamout.enable_atom, &sctx->atoms.s.streamout_enable);
 	si_init_external_atom(sctx, &sctx->scissors.atom, &sctx->atoms.s.scissors);
 	si_init_external_atom(sctx, &sctx->viewports.atom, &sctx->atoms.s.viewports);
 

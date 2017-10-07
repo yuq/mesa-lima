@@ -423,6 +423,17 @@ void si_draw_rectangle(struct blitter_context *blitter,
 		       const union blitter_attrib *attrib);
 void si_trace_emit(struct si_context *sctx);
 
+/* si_state_streamout.c */
+void si_streamout_buffers_dirty(struct si_context *sctx);
+void si_common_set_streamout_targets(struct pipe_context *ctx,
+				     unsigned num_targets,
+				     struct pipe_stream_output_target **targets,
+				     const unsigned *offset);
+void si_emit_streamout_end(struct si_context *sctx);
+void si_update_prims_generated_query_state(struct si_context *sctx,
+					   unsigned type, int diff);
+void si_init_streamout_functions(struct si_context *sctx);
+
 
 static inline unsigned
 si_tile_mode_index(struct r600_texture *rtex, unsigned level, bool stencil)

@@ -29,6 +29,10 @@
 #include "os/os_time.h"
 #include "tgsi/tgsi_text.h"
 
+/* TODO: remove this: */
+void si_update_prims_generated_query_state(struct r600_common_context *rctx,
+					   unsigned type, int diff);
+
 #define R600_MAX_STREAMS 4
 
 struct r600_hw_query_params {

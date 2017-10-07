@@ -2252,9 +2252,9 @@ static void si_update_streamout_state(struct si_context *sctx)
 	if (!shader_with_so)
 		return;
 
-	sctx->b.streamout.enabled_stream_buffers_mask =
+	sctx->streamout.enabled_stream_buffers_mask =
 		shader_with_so->enabled_streamout_buffer_mask;
-	sctx->b.streamout.stride_in_dw = shader_with_so->so.stride;
+	sctx->streamout.stride_in_dw = shader_with_so->so.stride;
 }
 
 static void si_update_clip_regs(struct si_context *sctx,

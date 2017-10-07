@@ -58,8 +58,8 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 	util_blitter_save_tessctrl_shader(sctx->blitter, sctx->tcs_shader.cso);
 	util_blitter_save_tesseval_shader(sctx->blitter, sctx->tes_shader.cso);
 	util_blitter_save_geometry_shader(sctx->blitter, sctx->gs_shader.cso);
-	util_blitter_save_so_targets(sctx->blitter, sctx->b.streamout.num_targets,
-				     (struct pipe_stream_output_target**)sctx->b.streamout.targets);
+	util_blitter_save_so_targets(sctx->blitter, sctx->streamout.num_targets,
+				     (struct pipe_stream_output_target**)sctx->streamout.targets);
 	util_blitter_save_rasterizer(sctx->blitter, sctx->queued.named.rasterizer);
 
 	if (op & SI_SAVE_FRAGMENT_STATE) {

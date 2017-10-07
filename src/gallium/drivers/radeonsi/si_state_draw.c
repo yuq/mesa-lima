@@ -652,8 +652,8 @@ static void si_emit_draw_packets(struct si_context *sctx,
 	uint64_t index_va = 0;
 
 	if (info->count_from_stream_output) {
-		struct r600_so_target *t =
-			(struct r600_so_target*)info->count_from_stream_output;
+		struct si_streamout_target *t =
+			(struct si_streamout_target*)info->count_from_stream_output;
 		uint64_t va = t->buf_filled_size->gpu_address +
 			      t->buf_filled_size_offset;
 
@@ -1486,7 +1486,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if ((sctx->b.family == CHIP_HAWAII ||
 	     sctx->b.family == CHIP_TONGA ||
 	     sctx->b.family == CHIP_FIJI) &&
-	    r600_get_strmout_en(&sctx->b)) {
+	    si_get_strmout_en(sctx)) {
 		sctx->b.flags |= SI_CONTEXT_VGT_STREAMOUT_SYNC;
 	}
 

@@ -24,29 +24,30 @@
  *
  */
 
-#include "r600_pipe_common.h"
-#include "r600_cs.h"
+#include "si_pipe.h"
+#include "si_state.h"
+#include "radeon/r600_cs.h"
 
 #include "util/u_memory.h"
 
-static void r600_set_streamout_enable(struct r600_common_context *rctx, bool enable);
+static void si_set_streamout_enable(struct si_context *sctx, bool enable);
 
 static struct pipe_stream_output_target *
-r600_create_so_target(struct pipe_context *ctx,
-		      struct pipe_resource *buffer,
-		      unsigned buffer_offset,
-		      unsigned buffer_size)
+si_create_so_target(struct pipe_context *ctx,
+		    struct pipe_resource *buffer,
+		    unsigned buffer_offset,
+		    unsigned buffer_size)
 {
-	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-	struct r600_so_target *t;
+	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_streamout_target *t;
 	struct r600_resource *rbuffer = (struct r600_resource*)buffer;
 
-	t = CALLOC_STRUCT(r600_so_target);
+	t = CALLOC_STRUCT(si_streamout_target);
 	if (!t) {
 		return NULL;
 	}
 
-	u_suballocator_alloc(rctx->allocator_zeroed_memory, 4, 4,
+	u_suballocator_alloc(sctx->b.allocator_zeroed_memory, 4, 4,
 			     &t->buf_filled_size_offset,
 			     (struct pipe_resource**)&t->buf_filled_size);
 	if (!t->buf_filled_size) {
@@ -65,22 +66,22 @@ r600_create_so_target(struct pipe_context *ctx,
 	return &t->b;
 }
 
-static void r600_so_target_destroy(struct pipe_context *ctx,
-				   struct pipe_stream_output_target *target)
+static void si_so_target_destroy(struct pipe_context *ctx,
+				 struct pipe_stream_output_target *target)
 {
-	struct r600_so_target *t = (struct r600_so_target*)target;
+	struct si_streamout_target *t = (struct si_streamout_target*)target;
 	pipe_resource_reference(&t->b.buffer, NULL);
 	r600_resource_reference(&t->buf_filled_size, NULL);
 	FREE(t);
 }
 
-void si_streamout_buffers_dirty(struct r600_common_context *rctx)
+void si_streamout_buffers_dirty(struct si_context *sctx)
 {
-	if (!rctx->streamout.enabled_mask)
+	if (!sctx->streamout.enabled_mask)
 		return;
 
-	rctx->set_atom_dirty(rctx, &rctx->streamout.begin_atom, true);
-	r600_set_streamout_enable(rctx, true);
+	si_mark_atom_dirty(sctx, &sctx->streamout.begin_atom);
+	si_set_streamout_enable(sctx, true);
 }
 
 void si_common_set_streamout_targets(struct pipe_context *ctx,
@@ -88,18 +89,18 @@ void si_common_set_streamout_targets(struct pipe_context *ctx,
 				     struct pipe_stream_output_target **targets,
 				     const unsigned *offsets)
 {
-	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+	struct si_context *sctx = (struct si_context *)ctx;
 	unsigned i;
         unsigned enabled_mask = 0, append_bitmask = 0;
 
 	/* Stop streamout. */
-	if (rctx->streamout.num_targets && rctx->streamout.begin_emitted) {
-		si_emit_streamout_end(rctx);
+	if (sctx->streamout.num_targets && sctx->streamout.begin_emitted) {
+		si_emit_streamout_end(sctx);
 	}
 
 	/* Set the new targets. */
 	for (i = 0; i < num_targets; i++) {
-		pipe_so_target_reference((struct pipe_stream_output_target**)&rctx->streamout.targets[i], targets[i]);
+		pipe_so_target_reference((struct pipe_stream_output_target**)&sctx->streamout.targets[i], targets[i]);
 		if (!targets[i])
 			continue;
 
@@ -108,30 +109,30 @@ void si_common_set_streamout_targets(struct pipe_context *ctx,
 		if (offsets[i] == ((unsigned)-1))
 			append_bitmask |= 1 << i;
 	}
-	for (; i < rctx->streamout.num_targets; i++) {
-		pipe_so_target_reference((struct pipe_stream_output_target**)&rctx->streamout.targets[i], NULL);
+	for (; i < sctx->streamout.num_targets; i++) {
+		pipe_so_target_reference((struct pipe_stream_output_target**)&sctx->streamout.targets[i], NULL);
 	}
 
-	rctx->streamout.enabled_mask = enabled_mask;
+	sctx->streamout.enabled_mask = enabled_mask;
 
-	rctx->streamout.num_targets = num_targets;
-	rctx->streamout.append_bitmask = append_bitmask;
+	sctx->streamout.num_targets = num_targets;
+	sctx->streamout.append_bitmask = append_bitmask;
 
 	if (num_targets) {
-		si_streamout_buffers_dirty(rctx);
+		si_streamout_buffers_dirty(sctx);
 	} else {
-		rctx->set_atom_dirty(rctx, &rctx->streamout.begin_atom, false);
-		r600_set_streamout_enable(rctx, false);
+		si_set_atom_dirty(sctx, &sctx->streamout.begin_atom, false);
+		si_set_streamout_enable(sctx, false);
 	}
 }
 
-static void r600_flush_vgt_streamout(struct r600_common_context *rctx)
+static void si_flush_vgt_streamout(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = rctx->gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	unsigned reg_strmout_cntl;
 
 	/* The register is at different places on different ASICs. */
-	if (rctx->chip_class >= CIK) {
+	if (sctx->b.chip_class >= CIK) {
 		reg_strmout_cntl = R_0300FC_CP_STRMOUT_CNTL;
 		radeon_set_uconfig_reg(cs, reg_strmout_cntl, 0);
 	} else {
@@ -151,16 +152,17 @@ static void r600_flush_vgt_streamout(struct r600_common_context *rctx)
 	radeon_emit(cs, 4); /* poll interval */
 }
 
-static void r600_emit_streamout_begin(struct r600_common_context *rctx, struct r600_atom *atom)
+static void si_emit_streamout_begin(struct r600_common_context *rctx, struct r600_atom *atom)
 {
-	struct radeon_winsys_cs *cs = rctx->gfx.cs;
-	struct r600_so_target **t = rctx->streamout.targets;
-	uint16_t *stride_in_dw = rctx->streamout.stride_in_dw;
+	struct si_context *sctx = (struct si_context*)rctx;
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct si_streamout_target **t = sctx->streamout.targets;
+	uint16_t *stride_in_dw = sctx->streamout.stride_in_dw;
 	unsigned i;
 
-	r600_flush_vgt_streamout(rctx);
+	si_flush_vgt_streamout(sctx);
 
-	for (i = 0; i < rctx->streamout.num_targets; i++) {
+	for (i = 0; i < sctx->streamout.num_targets; i++) {
 		if (!t[i])
 			continue;
 
@@ -174,7 +176,7 @@ static void r600_emit_streamout_begin(struct r600_common_context *rctx, struct r
 				 t[i]->b.buffer_size) >> 2);	/* BUFFER_SIZE (in DW) */
 		radeon_emit(cs, stride_in_dw[i]);		/* VTX_STRIDE (in DW) */
 
-		if (rctx->streamout.append_bitmask & (1 << i) && t[i]->buf_filled_size_valid) {
+		if (sctx->streamout.append_bitmask & (1 << i) && t[i]->buf_filled_size_valid) {
 			uint64_t va = t[i]->buf_filled_size->gpu_address +
 				      t[i]->buf_filled_size_offset;
 
@@ -187,7 +189,7 @@ static void r600_emit_streamout_begin(struct r600_common_context *rctx, struct r
 			radeon_emit(cs, va); /* src address lo */
 			radeon_emit(cs, va >> 32); /* src address hi */
 
-			r600_emit_reloc(rctx,  &rctx->gfx, t[i]->buf_filled_size,
+			r600_emit_reloc(&sctx->b,  &sctx->b.gfx, t[i]->buf_filled_size,
 					RADEON_USAGE_READ, RADEON_PRIO_SO_FILLED_SIZE);
 		} else {
 			/* Start from the beginning. */
@@ -201,19 +203,19 @@ static void r600_emit_streamout_begin(struct r600_common_context *rctx, struct r
 		}
 	}
 
-	rctx->streamout.begin_emitted = true;
+	sctx->streamout.begin_emitted = true;
 }
 
-void si_emit_streamout_end(struct r600_common_context *rctx)
+void si_emit_streamout_end(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = rctx->gfx.cs;
-	struct r600_so_target **t = rctx->streamout.targets;
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct si_streamout_target **t = sctx->streamout.targets;
 	unsigned i;
 	uint64_t va;
 
-	r600_flush_vgt_streamout(rctx);
+	si_flush_vgt_streamout(sctx);
 
-	for (i = 0; i < rctx->streamout.num_targets; i++) {
+	for (i = 0; i < sctx->streamout.num_targets; i++) {
 		if (!t[i])
 			continue;
 
@@ -227,7 +229,7 @@ void si_emit_streamout_end(struct r600_common_context *rctx)
 		radeon_emit(cs, 0); /* unused */
 		radeon_emit(cs, 0); /* unused */
 
-		r600_emit_reloc(rctx,  &rctx->gfx, t[i]->buf_filled_size,
+		r600_emit_reloc(&sctx->b,  &sctx->b.gfx, t[i]->buf_filled_size,
 				RADEON_USAGE_WRITE, RADEON_PRIO_SO_FILLED_SIZE);
 
 		/* Zero the buffer size. The counters (primitives generated,
@@ -239,8 +241,8 @@ void si_emit_streamout_end(struct r600_common_context *rctx)
 		t[i]->buf_filled_size_valid = true;
 	}
 
-	rctx->streamout.begin_emitted = false;
-	rctx->flags |= R600_CONTEXT_STREAMOUT_FLUSH;
+	sctx->streamout.begin_emitted = false;
+	sctx->b.flags |= R600_CONTEXT_STREAMOUT_FLUSH;
 }
 
 /* STREAMOUT CONFIG DERIVED STATE
@@ -250,61 +252,61 @@ void si_emit_streamout_end(struct r600_common_context *rctx)
  * are no buffers bound.
  */
 
-static void r600_emit_streamout_enable(struct r600_common_context *rctx,
-				       struct r600_atom *atom)
+static void si_emit_streamout_enable(struct r600_common_context *rctx,
+				     struct r600_atom *atom)
 {
-	radeon_set_context_reg_seq(rctx->gfx.cs, R_028B94_VGT_STRMOUT_CONFIG, 2);
-	radeon_emit(rctx->gfx.cs,
-		    S_028B94_STREAMOUT_0_EN(r600_get_strmout_en(rctx)) |
+	struct si_context *sctx = (struct si_context*)rctx;
+
+	radeon_set_context_reg_seq(sctx->b.gfx.cs, R_028B94_VGT_STRMOUT_CONFIG, 2);
+	radeon_emit(sctx->b.gfx.cs,
+		    S_028B94_STREAMOUT_0_EN(si_get_strmout_en(sctx)) |
 		    S_028B94_RAST_STREAM(0) |
-		    S_028B94_STREAMOUT_1_EN(r600_get_strmout_en(rctx)) |
-		    S_028B94_STREAMOUT_2_EN(r600_get_strmout_en(rctx)) |
-		    S_028B94_STREAMOUT_3_EN(r600_get_strmout_en(rctx)));
-	radeon_emit(rctx->gfx.cs,
-		    rctx->streamout.hw_enabled_mask &
-		    rctx->streamout.enabled_stream_buffers_mask);
+		    S_028B94_STREAMOUT_1_EN(si_get_strmout_en(sctx)) |
+		    S_028B94_STREAMOUT_2_EN(si_get_strmout_en(sctx)) |
+		    S_028B94_STREAMOUT_3_EN(si_get_strmout_en(sctx)));
+	radeon_emit(sctx->b.gfx.cs,
+		    sctx->streamout.hw_enabled_mask &
+		    sctx->streamout.enabled_stream_buffers_mask);
 }
 
-static void r600_set_streamout_enable(struct r600_common_context *rctx, bool enable)
+static void si_set_streamout_enable(struct si_context *sctx, bool enable)
 {
-	bool old_strmout_en = r600_get_strmout_en(rctx);
-	unsigned old_hw_enabled_mask = rctx->streamout.hw_enabled_mask;
+	bool old_strmout_en = si_get_strmout_en(sctx);
+	unsigned old_hw_enabled_mask = sctx->streamout.hw_enabled_mask;
 
-	rctx->streamout.streamout_enabled = enable;
+	sctx->streamout.streamout_enabled = enable;
 
-	rctx->streamout.hw_enabled_mask = rctx->streamout.enabled_mask |
-					  (rctx->streamout.enabled_mask << 4) |
-					  (rctx->streamout.enabled_mask << 8) |
-					  (rctx->streamout.enabled_mask << 12);
+	sctx->streamout.hw_enabled_mask = sctx->streamout.enabled_mask |
+					  (sctx->streamout.enabled_mask << 4) |
+					  (sctx->streamout.enabled_mask << 8) |
+					  (sctx->streamout.enabled_mask << 12);
 
-	if ((old_strmout_en != r600_get_strmout_en(rctx)) ||
-            (old_hw_enabled_mask != rctx->streamout.hw_enabled_mask)) {
-		rctx->set_atom_dirty(rctx, &rctx->streamout.enable_atom, true);
-	}
+	if ((old_strmout_en != si_get_strmout_en(sctx)) ||
+            (old_hw_enabled_mask != sctx->streamout.hw_enabled_mask))
+		si_mark_atom_dirty(sctx, &sctx->streamout.enable_atom);
 }
 
-void si_update_prims_generated_query_state(struct r600_common_context *rctx,
+void si_update_prims_generated_query_state(struct si_context *sctx,
 					   unsigned type, int diff)
 {
 	if (type == PIPE_QUERY_PRIMITIVES_GENERATED) {
-		bool old_strmout_en = r600_get_strmout_en(rctx);
+		bool old_strmout_en = si_get_strmout_en(sctx);
 
-		rctx->streamout.num_prims_gen_queries += diff;
-		assert(rctx->streamout.num_prims_gen_queries >= 0);
+		sctx->streamout.num_prims_gen_queries += diff;
+		assert(sctx->streamout.num_prims_gen_queries >= 0);
 
-		rctx->streamout.prims_gen_query_enabled =
-			rctx->streamout.num_prims_gen_queries != 0;
+		sctx->streamout.prims_gen_query_enabled =
+			sctx->streamout.num_prims_gen_queries != 0;
 
-		if (old_strmout_en != r600_get_strmout_en(rctx)) {
-			rctx->set_atom_dirty(rctx, &rctx->streamout.enable_atom, true);
-		}
+		if (old_strmout_en != si_get_strmout_en(sctx))
+			si_mark_atom_dirty(sctx, &sctx->streamout.enable_atom);
 	}
 }
 
-void si_streamout_init(struct r600_common_context *rctx)
+void si_init_streamout_functions(struct si_context *sctx)
 {
-	rctx->b.create_stream_output_target = r600_create_so_target;
-	rctx->b.stream_output_target_destroy = r600_so_target_destroy;
-	rctx->streamout.begin_atom.emit = r600_emit_streamout_begin;
-	rctx->streamout.enable_atom.emit = r600_emit_streamout_enable;
+	sctx->b.b.create_stream_output_target = si_create_so_target;
+	sctx->b.b.stream_output_target_destroy = si_so_target_destroy;
+	sctx->streamout.begin_atom.emit = si_emit_streamout_begin;
+	sctx->streamout.enable_atom.emit = si_emit_streamout_enable;
 }

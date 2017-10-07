@@ -497,43 +497,6 @@ struct r600_atom {
 	unsigned short		id;
 };
 
-struct r600_so_target {
-	struct pipe_stream_output_target b;
-
-	/* The buffer where BUFFER_FILLED_SIZE is stored. */
-	struct r600_resource	*buf_filled_size;
-	unsigned		buf_filled_size_offset;
-	bool			buf_filled_size_valid;
-
-	unsigned		stride_in_dw;
-};
-
-struct r600_streamout {
-	struct r600_atom		begin_atom;
-	bool				begin_emitted;
-
-	unsigned			enabled_mask;
-	unsigned			num_targets;
-	struct r600_so_target		*targets[PIPE_MAX_SO_BUFFERS];
-
-	unsigned			append_bitmask;
-	bool				suspended;
-
-	/* External state which comes from the vertex shader,
-	 * it must be set explicitly when binding a shader. */
-	uint16_t			*stride_in_dw;
-	unsigned			enabled_stream_buffers_mask; /* stream0 buffers0-3 in 4 LSB */
-
-	/* The state of VGT_STRMOUT_BUFFER_(CONFIG|EN). */
-	unsigned			hw_enabled_mask;
-
-	/* The state of VGT_STRMOUT_(CONFIG|EN). */
-	struct r600_atom		enable_atom;
-	bool				streamout_enabled;
-	bool				prims_gen_query_enabled;
-	int				num_prims_gen_queries;
-};
-
 struct r600_ring {
 	struct radeon_winsys_cs		*cs;
 	void (*flush)(void *ctx, unsigned flags,
@@ -577,9 +540,6 @@ struct r600_common_context {
 	/* Current unaccounted memory usage. */
 	uint64_t			vram;
 	uint64_t			gtt;
-
-	/* States. */
-	struct r600_streamout		streamout;
 
 	/* Additional context states. */
 	unsigned flags; /* flush flags */
@@ -790,17 +750,6 @@ void si_init_query_functions(struct r600_common_context *rctx);
 void si_suspend_queries(struct r600_common_context *ctx);
 void si_resume_queries(struct r600_common_context *ctx);
 
-/* r600_streamout.c */
-void si_streamout_buffers_dirty(struct r600_common_context *rctx);
-void si_common_set_streamout_targets(struct pipe_context *ctx,
-				     unsigned num_targets,
-				     struct pipe_stream_output_target **targets,
-				     const unsigned *offset);
-void si_emit_streamout_end(struct r600_common_context *rctx);
-void si_update_prims_generated_query_state(struct r600_common_context *rctx,
-					   unsigned type, int diff);
-void si_streamout_init(struct r600_common_context *rctx);
-
 /* r600_test_dma.c */
 void si_test_dma(struct r600_common_screen *rscreen);
 
@@ -898,12 +847,6 @@ r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resource *r
 		rctx->vram += res->vram_usage;
 		rctx->gtt += res->gart_usage;
 	}
-}
-
-static inline bool r600_get_strmout_en(struct r600_common_context *rctx)
-{
-	return rctx->streamout.streamout_enabled ||
-	       rctx->streamout.prims_gen_query_enabled;
 }
 
 #define     SQ_TEX_XY_FILTER_POINT                         0x00

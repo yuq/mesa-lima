@@ -296,21 +296,10 @@ void si_preflush_suspend_features(struct r600_common_context *ctx)
 	/* suspend queries */
 	if (!LIST_IS_EMPTY(&ctx->active_queries))
 		si_suspend_queries(ctx);
-
-	ctx->streamout.suspended = false;
-	if (ctx->streamout.begin_emitted) {
-		si_emit_streamout_end(ctx);
-		ctx->streamout.suspended = true;
-	}
 }
 
 void si_postflush_resume_features(struct r600_common_context *ctx)
 {
-	if (ctx->streamout.suspended) {
-		ctx->streamout.append_bitmask = ctx->streamout.enabled_mask;
-		si_streamout_buffers_dirty(ctx);
-	}
-
 	/* resume queries */
 	if (!LIST_IS_EMPTY(&ctx->active_queries))
 		si_resume_queries(ctx);
@@ -647,7 +636,6 @@ bool si_common_context_init(struct r600_common_context *rctx,
 	rctx->b.set_device_reset_callback = r600_set_device_reset_callback;
 
 	si_init_context_texture_functions(rctx);
-	si_streamout_init(rctx);
 	si_init_query_functions(rctx);
 	si_init_msaa(&rctx->b);
 

@@ -255,6 +255,43 @@ struct si_sample_mask {
 	uint16_t		sample_mask;
 };
 
+struct si_streamout_target {
+	struct pipe_stream_output_target b;
+
+	/* The buffer where BUFFER_FILLED_SIZE is stored. */
+	struct r600_resource	*buf_filled_size;
+	unsigned		buf_filled_size_offset;
+	bool			buf_filled_size_valid;
+
+	unsigned		stride_in_dw;
+};
+
+struct si_streamout {
+	struct r600_atom		begin_atom;
+	bool				begin_emitted;
+
+	unsigned			enabled_mask;
+	unsigned			num_targets;
+	struct si_streamout_target	*targets[PIPE_MAX_SO_BUFFERS];
+
+	unsigned			append_bitmask;
+	bool				suspended;
+
+	/* External state which comes from the vertex shader,
+	 * it must be set explicitly when binding a shader. */
+	uint16_t			*stride_in_dw;
+	unsigned			enabled_stream_buffers_mask; /* stream0 buffers0-3 in 4 LSB */
+
+	/* The state of VGT_STRMOUT_BUFFER_(CONFIG|EN). */
+	unsigned			hw_enabled_mask;
+
+	/* The state of VGT_STRMOUT_(CONFIG|EN). */
+	struct r600_atom		enable_atom;
+	bool				streamout_enabled;
+	bool				prims_gen_query_enabled;
+	int				num_prims_gen_queries;
+};
+
 /* A shader state consists of the shader selector, which is a constant state
  * object shared by multiple contexts and shouldn't be modified, and
  * the current shader variant selected for this context.
@@ -359,6 +396,7 @@ struct si_context {
 	struct si_stencil_ref		stencil_ref;
 	struct r600_atom		spi_map;
 	struct si_scissors		scissors;
+	struct si_streamout		streamout;
 	struct si_viewports		viewports;
 
 	/* Precomputed states. */
@@ -642,6 +680,12 @@ static inline struct si_shader* si_get_vs_state(struct si_context *sctx)
 
 	struct si_shader_ctx_state *vs = si_get_vs(sctx);
 	return vs->current ? vs->current : NULL;
+}
+
+static inline bool si_get_strmout_en(struct si_context *sctx)
+{
+	return sctx->streamout.streamout_enabled ||
+	       sctx->streamout.prims_gen_query_enabled;
 }
 
 static inline unsigned

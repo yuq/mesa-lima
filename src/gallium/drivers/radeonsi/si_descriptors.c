@@ -1373,11 +1373,11 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_buffer_resources *buffers = &sctx->rw_buffers;
 	struct si_descriptors *descs = &sctx->descriptors[SI_DESCS_RW_BUFFERS];
-	unsigned old_num_targets = sctx->b.streamout.num_targets;
+	unsigned old_num_targets = sctx->streamout.num_targets;
 	unsigned i, bufidx;
 
 	/* We are going to unbind the buffers. Mark which caches need to be flushed. */
-	if (sctx->b.streamout.num_targets && sctx->b.streamout.begin_emitted) {
+	if (sctx->streamout.num_targets && sctx->streamout.begin_emitted) {
 		/* Since streamout uses vector writes which go through TC L2
 		 * and most other clients can use TC L2 as well, we don't need
 		 * to flush it.
@@ -1387,9 +1387,9 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 		 * cases. Thus, flag the TC L2 dirtiness in the resource and
 		 * handle it at draw call time.
 		 */
-		for (i = 0; i < sctx->b.streamout.num_targets; i++)
-			if (sctx->b.streamout.targets[i])
-				r600_resource(sctx->b.streamout.targets[i]->b.buffer)->TC_L2_dirty = true;
+		for (i = 0; i < sctx->streamout.num_targets; i++)
+			if (sctx->streamout.targets[i])
+				r600_resource(sctx->streamout.targets[i]->b.buffer)->TC_L2_dirty = true;
 
 		/* Invalidate the scalar cache in case a streamout buffer is
 		 * going to be used as a constant buffer.
@@ -1650,11 +1650,11 @@ static void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf
 							    true);
 
 			/* Update the streamout state. */
-			if (sctx->b.streamout.begin_emitted)
-				si_emit_streamout_end(&sctx->b);
-			sctx->b.streamout.append_bitmask =
-					sctx->b.streamout.enabled_mask;
-			si_streamout_buffers_dirty(&sctx->b);
+			if (sctx->streamout.begin_emitted)
+				si_emit_streamout_end(sctx);
+			sctx->streamout.append_bitmask =
+					sctx->streamout.enabled_mask;
+			si_streamout_buffers_dirty(sctx);
 		}
 	}
 
