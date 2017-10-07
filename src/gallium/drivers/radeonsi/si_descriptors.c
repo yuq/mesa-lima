@@ -1985,6 +1985,28 @@ static void si_emit_shader_pointer(struct si_context *sctx,
 	si_emit_shader_pointer_body(cs, desc);
 }
 
+static void si_emit_consecutive_shader_pointers(struct si_context *sctx,
+						unsigned pointer_mask,
+						unsigned sh_base)
+{
+	if (!sh_base)
+		return;
+
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	unsigned mask = sctx->shader_pointers_dirty & pointer_mask;
+
+	while (mask) {
+		int start, count;
+		u_bit_scan_consecutive_range(&mask, &start, &count);
+
+		struct si_descriptors *descs = &sctx->descriptors[start];
+
+		si_emit_shader_pointer_head(cs, descs, sh_base, count);
+		for (int i = 0; i < count; i++)
+			si_emit_shader_pointer_body(cs, descs + i);
+	}
+}
+
 static void si_emit_global_shader_pointers(struct si_context *sctx,
 					   struct si_descriptors *descs)
 {
@@ -2012,27 +2034,24 @@ static void si_emit_global_shader_pointers(struct si_context *sctx,
 void si_emit_graphics_shader_pointers(struct si_context *sctx,
                                       struct r600_atom *atom)
 {
-	unsigned mask;
 	uint32_t *sh_base = sctx->shader_pointers.sh_base;
-	struct si_descriptors *descs;
 
-	descs = &sctx->descriptors[SI_DESCS_RW_BUFFERS];
-
-	if (sctx->shader_pointers_dirty & (1 << SI_DESCS_RW_BUFFERS))
-		si_emit_global_shader_pointers(sctx, descs);
-
-	mask = sctx->shader_pointers_dirty &
-	       u_bit_consecutive(SI_DESCS_FIRST_SHADER,
-				 SI_DESCS_FIRST_COMPUTE - SI_DESCS_FIRST_SHADER);
-
-	while (mask) {
-		unsigned i = u_bit_scan(&mask);
-		unsigned shader = (i - SI_DESCS_FIRST_SHADER) / SI_NUM_SHADER_DESCS;
-		unsigned base = sh_base[shader];
-
-		if (base)
-			si_emit_shader_pointer(sctx, descs + i, base);
+	if (sctx->shader_pointers_dirty & (1 << SI_DESCS_RW_BUFFERS)) {
+		si_emit_global_shader_pointers(sctx,
+					       &sctx->descriptors[SI_DESCS_RW_BUFFERS]);
 	}
+
+	si_emit_consecutive_shader_pointers(sctx, SI_DESCS_SHADER_MASK(VERTEX),
+					    sh_base[PIPE_SHADER_VERTEX]);
+	si_emit_consecutive_shader_pointers(sctx, SI_DESCS_SHADER_MASK(TESS_CTRL),
+					    sh_base[PIPE_SHADER_TESS_CTRL]);
+	si_emit_consecutive_shader_pointers(sctx, SI_DESCS_SHADER_MASK(TESS_EVAL),
+					    sh_base[PIPE_SHADER_TESS_EVAL]);
+	si_emit_consecutive_shader_pointers(sctx, SI_DESCS_SHADER_MASK(GEOMETRY),
+					    sh_base[PIPE_SHADER_GEOMETRY]);
+	si_emit_consecutive_shader_pointers(sctx, SI_DESCS_SHADER_MASK(FRAGMENT),
+					    sh_base[PIPE_SHADER_FRAGMENT]);
+
 	sctx->shader_pointers_dirty &=
 		~u_bit_consecutive(SI_DESCS_RW_BUFFERS, SI_DESCS_FIRST_COMPUTE);
 
@@ -2052,17 +2071,10 @@ void si_emit_graphics_shader_pointers(struct si_context *sctx,
 void si_emit_compute_shader_pointers(struct si_context *sctx)
 {
 	unsigned base = R_00B900_COMPUTE_USER_DATA_0;
-	struct si_descriptors *descs = sctx->descriptors;
-	unsigned compute_mask =
-		u_bit_consecutive(SI_DESCS_FIRST_COMPUTE, SI_NUM_SHADER_DESCS);
-	unsigned mask = sctx->shader_pointers_dirty & compute_mask;
 
-	while (mask) {
-		unsigned i = u_bit_scan(&mask);
-
-		si_emit_shader_pointer(sctx, descs + i, base);
-	}
-	sctx->shader_pointers_dirty &= ~compute_mask;
+	si_emit_consecutive_shader_pointers(sctx, SI_DESCS_SHADER_MASK(COMPUTE),
+					    R_00B900_COMPUTE_USER_DATA_0);
+	sctx->shader_pointers_dirty &= ~SI_DESCS_SHADER_MASK(COMPUTE);
 
 	if (sctx->compute_bindless_pointer_dirty) {
 		si_emit_shader_pointer(sctx, &sctx->bindless_descriptors, base);
