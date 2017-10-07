@@ -1225,7 +1225,8 @@ special_requirements_for_handling_double_precision_data_types(
     */
    if (devinfo->gen >= 8) {
       enum brw_reg_type src0_type = brw_inst_src0_type(devinfo, inst);
-      enum brw_reg_type src1_type = brw_inst_src1_type(devinfo, inst);
+      enum brw_reg_type src1_type =
+         num_sources > 1 ? brw_inst_src1_type(devinfo, inst) : src0_type;
       unsigned src0_type_size = brw_reg_type_to_size(src0_type);
       unsigned src1_type_size = brw_reg_type_to_size(src1_type);
 
