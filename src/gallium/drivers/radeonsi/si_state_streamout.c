@@ -295,8 +295,10 @@ static void si_emit_streamout_begin(struct r600_common_context *rctx, struct r60
 			radeon_emit(cs, va); /* src address lo */
 			radeon_emit(cs, va >> 32); /* src address hi */
 
-			r600_emit_reloc(&sctx->b,  &sctx->b.gfx, t[i]->buf_filled_size,
-					RADEON_USAGE_READ, RADEON_PRIO_SO_FILLED_SIZE);
+			radeon_add_to_buffer_list(&sctx->b,  &sctx->b.gfx,
+						  t[i]->buf_filled_size,
+						  RADEON_USAGE_READ,
+						  RADEON_PRIO_SO_FILLED_SIZE);
 		} else {
 			/* Start from the beginning. */
 			radeon_emit(cs, PKT3(PKT3_STRMOUT_BUFFER_UPDATE, 4, 0));
@@ -335,8 +337,10 @@ void si_emit_streamout_end(struct si_context *sctx)
 		radeon_emit(cs, 0); /* unused */
 		radeon_emit(cs, 0); /* unused */
 
-		r600_emit_reloc(&sctx->b,  &sctx->b.gfx, t[i]->buf_filled_size,
-				RADEON_USAGE_WRITE, RADEON_PRIO_SO_FILLED_SIZE);
+		radeon_add_to_buffer_list(&sctx->b,  &sctx->b.gfx,
+					  t[i]->buf_filled_size,
+					  RADEON_USAGE_WRITE,
+					  RADEON_PRIO_SO_FILLED_SIZE);
 
 		/* Zero the buffer size. The counters (primitives generated,
 		 * primitives emitted) may be enabled even if there is not

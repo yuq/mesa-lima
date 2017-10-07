@@ -113,21 +113,6 @@ radeon_add_to_buffer_list_check_mem(struct r600_common_context *rctx,
 	return radeon_add_to_buffer_list(rctx, ring, rbo, usage, priority);
 }
 
-static inline void r600_emit_reloc(struct r600_common_context *rctx,
-				   struct r600_ring *ring, struct r600_resource *rbo,
-				   enum radeon_bo_usage usage,
-				   enum radeon_bo_priority priority)
-{
-	struct radeon_winsys_cs *cs = ring->cs;
-	bool has_vm = ((struct r600_common_screen*)rctx->b.screen)->info.has_virtual_memory;
-	unsigned reloc = radeon_add_to_buffer_list(rctx, ring, rbo, usage, priority);
-
-	if (!has_vm) {
-		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-		radeon_emit(cs, reloc);
-	}
-}
-
 static inline void radeon_set_config_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
 {
 	assert(reg < R600_CONTEXT_REG_OFFSET);

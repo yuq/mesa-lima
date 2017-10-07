@@ -169,9 +169,10 @@ void si_gfx_write_event_eop(struct r600_common_context *ctx,
 		radeon_emit(cs, 0); /* unused */
 	}
 
-	if (buf)
-		r600_emit_reloc(ctx, &ctx->gfx, buf, RADEON_USAGE_WRITE,
-				RADEON_PRIO_QUERY);
+	if (buf) {
+		radeon_add_to_buffer_list(ctx, &ctx->gfx, buf, RADEON_USAGE_WRITE,
+					  RADEON_PRIO_QUERY);
+	}
 }
 
 unsigned si_gfx_write_fence_dwords(struct r600_common_screen *screen)
