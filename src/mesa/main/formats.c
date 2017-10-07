@@ -109,6 +109,11 @@ _mesa_get_format_name(mesa_format format)
 GLint
 _mesa_get_format_bytes(mesa_format format)
 {
+   if (_mesa_format_is_mesa_array_format(format)) {
+      return _mesa_array_format_get_type_size(format) *
+             _mesa_array_format_get_num_channels(format);
+   }
+
    const struct gl_format_info *info = _mesa_get_format_info(format);
    assert(info->BytesPerBlock);
    assert(info->BytesPerBlock <= MAX_PIXEL_BYTES ||
