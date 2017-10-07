@@ -543,6 +543,15 @@ struct si_context {
 	/* Bindless state */
 	bool			uses_bindless_samplers;
 	bool			uses_bindless_images;
+
+	/* MSAA sample locations.
+	 * The first index is the sample index.
+	 * The second index is the coordinate: X, Y. */
+	float			sample_locations_1x[1][2];
+	float			sample_locations_2x[2][2];
+	float			sample_locations_4x[4][2];
+	float			sample_locations_8x[8][2];
+	float			sample_locations_16x[16][2];
 };
 
 /* cik_sdma.c */

@@ -2886,19 +2886,19 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		/* Set sample locations as fragment shader constants. */
 		switch (sctx->framebuffer.nr_samples) {
 		case 1:
-			constbuf.user_buffer = sctx->b.sample_locations_1x;
+			constbuf.user_buffer = sctx->sample_locations_1x;
 			break;
 		case 2:
-			constbuf.user_buffer = sctx->b.sample_locations_2x;
+			constbuf.user_buffer = sctx->sample_locations_2x;
 			break;
 		case 4:
-			constbuf.user_buffer = sctx->b.sample_locations_4x;
+			constbuf.user_buffer = sctx->sample_locations_4x;
 			break;
 		case 8:
-			constbuf.user_buffer = sctx->b.sample_locations_8x;
+			constbuf.user_buffer = sctx->sample_locations_8x;
 			break;
 		case 16:
-			constbuf.user_buffer = sctx->b.sample_locations_16x;
+			constbuf.user_buffer = sctx->sample_locations_16x;
 			break;
 		default:
 			R600_ERR("Requested an invalid number of samples %i.\n",
@@ -3191,7 +3191,7 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx,
 
 	if (nr_samples != sctx->msaa_sample_locs.nr_samples) {
 		sctx->msaa_sample_locs.nr_samples = nr_samples;
-		si_common_emit_msaa_sample_locs(cs, nr_samples);
+		si_emit_sample_locations(cs, nr_samples);
 	}
 
 	if (sctx->b.family >= CHIP_POLARIS10) {
@@ -3303,10 +3303,68 @@ static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
 		S_028A4C_FORCE_EOV_CNTDWN_ENABLE(1) |
 		S_028A4C_FORCE_EOV_REZ_ENABLE(1);
 
-	si_common_emit_msaa_config(cs, sctx->framebuffer.nr_samples,
-				sctx->ps_iter_samples,
-				sctx->smoothing_enabled ? SI_NUM_SMOOTH_AA_SAMPLES : 0,
-				sc_mode_cntl_1);
+	int setup_samples = sctx->framebuffer.nr_samples > 1 ? sctx->framebuffer.nr_samples :
+			    sctx->smoothing_enabled ? SI_NUM_SMOOTH_AA_SAMPLES : 0;
+
+	/* Required by OpenGL line rasterization.
+	 *
+	 * TODO: We should also enable perpendicular endcaps for AA lines,
+	 *       but that requires implementing line stippling in the pixel
+	 *       shader. SC can only do line stippling with axis-aligned
+	 *       endcaps.
+	 */
+	unsigned sc_line_cntl = S_028BDC_DX10_DIAMOND_TEST_ENA(1);
+
+	if (setup_samples > 1) {
+		/* distance from the pixel center, indexed by log2(nr_samples) */
+		static unsigned max_dist[] = {
+			0, /* unused */
+			4, /* 2x MSAA */
+			6, /* 4x MSAA */
+			7, /* 8x MSAA */
+			8, /* 16x MSAA */
+		};
+		unsigned log_samples = util_logbase2(setup_samples);
+		unsigned log_ps_iter_samples =
+			util_logbase2(util_next_power_of_two(sctx->ps_iter_samples));
+
+		radeon_set_context_reg_seq(cs, CM_R_028BDC_PA_SC_LINE_CNTL, 2);
+		radeon_emit(cs, sc_line_cntl |
+			    S_028BDC_EXPAND_LINE_WIDTH(1)); /* CM_R_028BDC_PA_SC_LINE_CNTL */
+		radeon_emit(cs, S_028BE0_MSAA_NUM_SAMPLES(log_samples) |
+			    S_028BE0_MAX_SAMPLE_DIST(max_dist[log_samples]) |
+			    S_028BE0_MSAA_EXPOSED_SAMPLES(log_samples)); /* CM_R_028BE0_PA_SC_AA_CONFIG */
+
+		if (sctx->framebuffer.nr_samples > 1) {
+			radeon_set_context_reg(cs, CM_R_028804_DB_EQAA,
+					       S_028804_MAX_ANCHOR_SAMPLES(log_samples) |
+					       S_028804_PS_ITER_SAMPLES(log_ps_iter_samples) |
+					       S_028804_MASK_EXPORT_NUM_SAMPLES(log_samples) |
+					       S_028804_ALPHA_TO_MASK_NUM_SAMPLES(log_samples) |
+					       S_028804_HIGH_QUALITY_INTERSECTIONS(1) |
+					       S_028804_STATIC_ANCHOR_ASSOCIATIONS(1));
+			radeon_set_context_reg(cs, EG_R_028A4C_PA_SC_MODE_CNTL_1,
+					       EG_S_028A4C_PS_ITER_SAMPLE(sctx->ps_iter_samples > 1) |
+					       sc_mode_cntl_1);
+		} else if (sctx->smoothing_enabled) {
+			radeon_set_context_reg(cs, CM_R_028804_DB_EQAA,
+					       S_028804_HIGH_QUALITY_INTERSECTIONS(1) |
+					       S_028804_STATIC_ANCHOR_ASSOCIATIONS(1) |
+					       S_028804_OVERRASTERIZATION_AMOUNT(log_samples));
+			radeon_set_context_reg(cs, EG_R_028A4C_PA_SC_MODE_CNTL_1,
+					       sc_mode_cntl_1);
+		}
+	} else {
+		radeon_set_context_reg_seq(cs, CM_R_028BDC_PA_SC_LINE_CNTL, 2);
+		radeon_emit(cs, sc_line_cntl); /* CM_R_028BDC_PA_SC_LINE_CNTL */
+		radeon_emit(cs, 0); /* CM_R_028BE0_PA_SC_AA_CONFIG */
+
+		radeon_set_context_reg(cs, CM_R_028804_DB_EQAA,
+				       S_028804_HIGH_QUALITY_INTERSECTIONS(1) |
+				       S_028804_STATIC_ANCHOR_ASSOCIATIONS(1));
+		radeon_set_context_reg(cs, EG_R_028A4C_PA_SC_MODE_CNTL_1,
+				       sc_mode_cntl_1);
+	}
 
 	/* GFX9: Flush DFSM when the AA mode changes. */
 	if (sctx->screen->dfsm_allowed) {
@@ -4447,7 +4505,6 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->b.b.set_stencil_ref = si_set_stencil_ref;
 
 	sctx->b.b.set_framebuffer_state = si_set_framebuffer_state;
-	sctx->b.b.get_sample_position = si_get_sample_position;
 
 	sctx->b.b.create_sampler_state = si_create_sampler_state;
 	sctx->b.b.delete_sampler_state = si_delete_sampler_state;

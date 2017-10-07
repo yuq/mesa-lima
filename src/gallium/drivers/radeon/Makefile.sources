@@ -1,5 +1,4 @@
 C_SOURCES := \
-	cayman_msaa.c \
 	r600_buffer_common.c \
 	r600_cs.h \
 	r600_gpu_load.c \

@@ -423,6 +423,10 @@ void si_draw_rectangle(struct blitter_context *blitter,
 		       const union blitter_attrib *attrib);
 void si_trace_emit(struct si_context *sctx);
 
+/* si_state_msaa.c */
+void si_init_msaa_functions(struct si_context *sctx);
+void si_emit_sample_locations(struct radeon_winsys_cs *cs, int nr_samples);
+
 /* si_state_streamout.c */
 void si_streamout_buffers_dirty(struct si_context *sctx);
 void si_emit_streamout_end(struct si_context *sctx);

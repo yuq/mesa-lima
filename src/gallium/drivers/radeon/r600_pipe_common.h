@@ -578,15 +578,6 @@ struct r600_common_context {
 	bool				render_cond_invert;
 	bool				render_cond_force_off; /* for u_blitter */
 
-	/* MSAA sample locations.
-	 * The first index is the sample index.
-	 * The second index is the coordinate: X, Y. */
-	float				sample_locations_1x[1][2];
-	float				sample_locations_2x[2][2];
-	float				sample_locations_4x[4][2];
-	float				sample_locations_8x[8][2];
-	float				sample_locations_16x[16][2];
-
 	/* Statistics gathering for the DCC enablement heuristic. It can't be
 	 * in r600_texture because r600_texture can be shared by multiple
 	 * contexts. This is for back buffers only. We shouldn't get too many
@@ -806,15 +797,6 @@ bool si_texture_disable_dcc(struct r600_common_context *rctx,
 void si_init_screen_texture_functions(struct r600_common_screen *rscreen);
 void si_init_context_texture_functions(struct r600_common_context *rctx);
 
-/* cayman_msaa.c */
-void si_get_sample_position(struct pipe_context *ctx, unsigned sample_count,
-			    unsigned sample_index, float *out_value);
-void si_init_msaa(struct pipe_context *ctx);
-void si_common_emit_msaa_sample_locs(struct radeon_winsys_cs *cs, int nr_samples);
-void si_common_emit_msaa_config(struct radeon_winsys_cs *cs, int nr_samples,
-				int ps_iter_samples, int overrast_samples,
-				unsigned sc_mode_cntl_1);
-
 
 /* Inline helpers. */
 
@@ -922,13 +904,6 @@ vi_tc_compat_htile_enabled(struct r600_texture *tex, unsigned level)
 
 #define R600_ERR(fmt, args...) \
 	fprintf(stderr, "EE %s:%d %s - " fmt, __FILE__, __LINE__, __func__, ##args)
-
-/* For MSAA sample positions. */
-#define FILL_SREG(s0x, s0y, s1x, s1y, s2x, s2y, s3x, s3y)  \
-	(((s0x) & 0xf) | (((unsigned)(s0y) & 0xf) << 4) |		   \
-	(((unsigned)(s1x) & 0xf) << 8) | (((unsigned)(s1y) & 0xf) << 12) |	   \
-	(((unsigned)(s2x) & 0xf) << 16) | (((unsigned)(s2y) & 0xf) << 20) |	   \
-	 (((unsigned)(s3x) & 0xf) << 24) | (((unsigned)(s3y) & 0xf) << 28))
 
 static inline int S_FIXED(float value, unsigned frac_bits)
 {
