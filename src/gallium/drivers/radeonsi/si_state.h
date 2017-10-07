@@ -247,9 +247,9 @@ enum {
 #define SI_NUM_DESCS                   (SI_DESCS_FIRST_SHADER + \
                                         SI_NUM_SHADERS * SI_NUM_SHADER_DESCS)
 
-#define SI_VS_SHADER_POINTER_MASK \
+#define SI_DESCS_SHADER_MASK(name) \
 	u_bit_consecutive(SI_DESCS_FIRST_SHADER + \
-			  PIPE_SHADER_VERTEX * SI_NUM_SHADER_DESCS, \
+			  PIPE_SHADER_##name * SI_NUM_SHADER_DESCS, \
 			  SI_NUM_SHADER_DESCS)
 
 /* This represents descriptors in memory, such as buffer resources,
