@@ -28,6 +28,11 @@
 #include "r600_cs.h"
 
 #include "util/u_memory.h"
+#include "evergreend.h"
+
+#define R_008490_CP_STRMOUT_CNTL		     0x008490
+#define R_028AB0_VGT_STRMOUT_EN                      0x028AB0
+#define R_028B20_VGT_STRMOUT_BUFFER_EN               0x028B20
 
 static void r600_set_streamout_enable(struct r600_common_context *rctx, bool enable);
 
@@ -157,9 +162,7 @@ static void r600_flush_vgt_streamout(struct r600_common_context *rctx)
 	unsigned reg_strmout_cntl;
 
 	/* The register is at different places on different ASICs. */
-	if (rctx->chip_class >= CIK) {
-		reg_strmout_cntl = R_0300FC_CP_STRMOUT_CNTL;
-	} else if (rctx->chip_class >= EVERGREEN) {
+	if (rctx->chip_class >= EVERGREEN) {
 		reg_strmout_cntl = R_0084FC_CP_STRMOUT_CNTL;
 	} else {
 		reg_strmout_cntl = R_008490_CP_STRMOUT_CNTL;
@@ -178,8 +181,8 @@ static void r600_flush_vgt_streamout(struct r600_common_context *rctx)
 	radeon_emit(cs, WAIT_REG_MEM_EQUAL); /* wait until the register is equal to the reference value */
 	radeon_emit(cs, reg_strmout_cntl >> 2);  /* register */
 	radeon_emit(cs, 0);
-	radeon_emit(cs, S_008490_OFFSET_UPDATE_DONE(1)); /* reference value */
-	radeon_emit(cs, S_008490_OFFSET_UPDATE_DONE(1)); /* mask */
+	radeon_emit(cs, S_0084FC_OFFSET_UPDATE_DONE(1)); /* reference value */
+	radeon_emit(cs, S_0084FC_OFFSET_UPDATE_DONE(1)); /* mask */
 	radeon_emit(cs, 4); /* poll interval */
 }
 
@@ -326,7 +329,6 @@ static void r600_emit_streamout_enable(struct r600_common_context *rctx,
 
 		strmout_config_reg = R_028B94_VGT_STRMOUT_CONFIG;
 		strmout_config_val |=
-			S_028B94_RAST_STREAM(0) |
 			S_028B94_STREAMOUT_1_EN(r600_get_strmout_en(rctx)) |
 			S_028B94_STREAMOUT_2_EN(r600_get_strmout_en(rctx)) |
 			S_028B94_STREAMOUT_3_EN(r600_get_strmout_en(rctx));

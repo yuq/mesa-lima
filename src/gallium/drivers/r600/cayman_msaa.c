@@ -25,6 +25,7 @@
  */
 
 #include "r600_cs.h"
+#include "evergreend.h"
 
 /* 2xMSAA
  * There are two locations (4, 4), (-4, -4). */

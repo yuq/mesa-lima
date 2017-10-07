@@ -25,6 +25,29 @@
 #include "util/u_viewport.h"
 #include "tgsi/tgsi_scan.h"
 
+#define R600_R_028C0C_PA_CL_GB_VERT_CLIP_ADJ         0x028C0C
+#define CM_R_028BE8_PA_CL_GB_VERT_CLIP_ADJ           0x28be8
+#define R_02843C_PA_CL_VPORT_XSCALE                  0x02843C
+
+#define R_028250_PA_SC_VPORT_SCISSOR_0_TL                               0x028250
+#define   S_028250_TL_X(x)                                            (((unsigned)(x) & 0x7FFF) << 0)
+#define   G_028250_TL_X(x)                                            (((x) >> 0) & 0x7FFF)
+#define   C_028250_TL_X                                               0xFFFF8000
+#define   S_028250_TL_Y(x)                                            (((unsigned)(x) & 0x7FFF) << 16)
+#define   G_028250_TL_Y(x)                                            (((x) >> 16) & 0x7FFF)
+#define   C_028250_TL_Y                                               0x8000FFFF
+#define   S_028250_WINDOW_OFFSET_DISABLE(x)                           (((unsigned)(x) & 0x1) << 31)
+#define   G_028250_WINDOW_OFFSET_DISABLE(x)                           (((x) >> 31) & 0x1)
+#define   C_028250_WINDOW_OFFSET_DISABLE                              0x7FFFFFFF
+#define   S_028254_BR_X(x)                                            (((unsigned)(x) & 0x7FFF) << 0)
+#define   G_028254_BR_X(x)                                            (((x) >> 0) & 0x7FFF)
+#define   C_028254_BR_X                                               0xFFFF8000
+#define   S_028254_BR_Y(x)                                            (((unsigned)(x) & 0x7FFF) << 16)
+#define   G_028254_BR_Y(x)                                            (((x) >> 16) & 0x7FFF)
+#define   C_028254_BR_Y                                               0x8000FFFF
+#define R_0282D0_PA_SC_VPORT_ZMIN_0                                     0x0282D0
+#define R_0282D4_PA_SC_VPORT_ZMAX_0                                     0x0282D4
+
 #define GET_MAX_SCISSOR(rctx) (rctx->chip_class >= EVERGREEN ? 16384 : 8192)
 
 static void r600_set_scissor_states(struct pipe_context *ctx,

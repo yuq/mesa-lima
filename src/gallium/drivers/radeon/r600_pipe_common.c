@@ -36,6 +36,7 @@
 #include "vl/vl_decoder.h"
 #include "vl/vl_video_buffer.h"
 #include "radeon/radeon_video.h"
+#include "amd/common/sid.h"
 #include <inttypes.h>
 #include <sys/utsname.h>
 

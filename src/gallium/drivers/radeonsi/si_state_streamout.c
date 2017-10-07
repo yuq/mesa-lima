@@ -253,8 +253,8 @@ static void si_flush_vgt_streamout(struct si_context *sctx)
 	radeon_emit(cs, WAIT_REG_MEM_EQUAL); /* wait until the register is equal to the reference value */
 	radeon_emit(cs, reg_strmout_cntl >> 2);  /* register */
 	radeon_emit(cs, 0);
-	radeon_emit(cs, S_008490_OFFSET_UPDATE_DONE(1)); /* reference value */
-	radeon_emit(cs, S_008490_OFFSET_UPDATE_DONE(1)); /* mask */
+	radeon_emit(cs, S_0084FC_OFFSET_UPDATE_DONE(1)); /* reference value */
+	radeon_emit(cs, S_0084FC_OFFSET_UPDATE_DONE(1)); /* mask */
 	radeon_emit(cs, 4); /* poll interval */
 }
 

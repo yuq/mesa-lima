@@ -39,8 +39,6 @@
 #define PKT3_PREDICATE(x)               (((x) >> 0) & 0x1)
 #define PKT3(op, count, predicate) (PKT_TYPE_S(3) | PKT_COUNT_S(count) | PKT3_IT_OPCODE_S(op) | PKT3_PREDICATE(predicate))
 
-#define RADEON_CP_PACKET3_COMPUTE_MODE 0x00000002
-
 #define PKT3_NOP                               0x10
 #define PKT3_SET_PREDICATION                   0x20
 #define PKT3_STRMOUT_BUFFER_UPDATE             0x34
@@ -126,175 +124,12 @@
 #define PREDICATION_DRAW_NOT_VISIBLE (0 << 8)
 #define PREDICATION_DRAW_VISIBLE (1 << 8)
 
-/* R600-R700*/
-#define R_008490_CP_STRMOUT_CNTL		     0x008490
-#define   S_008490_OFFSET_UPDATE_DONE(x)		(((unsigned)(x) & 0x1) << 0)
-#define R_028AB0_VGT_STRMOUT_EN                      0x028AB0
-#define   S_028AB0_STREAMOUT(x)                        (((unsigned)(x) & 0x1) << 0)
-#define   G_028AB0_STREAMOUT(x)                        (((x) >> 0) & 0x1)
-#define   C_028AB0_STREAMOUT                           0xFFFFFFFE
-#define R_028B20_VGT_STRMOUT_BUFFER_EN               0x028B20
-#define   S_028B20_BUFFER_0_EN(x)                      (((unsigned)(x) & 0x1) << 0)
-#define   G_028B20_BUFFER_0_EN(x)                      (((x) >> 0) & 0x1)
-#define   C_028B20_BUFFER_0_EN                         0xFFFFFFFE
-#define   S_028B20_BUFFER_1_EN(x)                      (((unsigned)(x) & 0x1) << 1)
-#define   G_028B20_BUFFER_1_EN(x)                      (((x) >> 1) & 0x1)
-#define   C_028B20_BUFFER_1_EN                         0xFFFFFFFD
-#define   S_028B20_BUFFER_2_EN(x)                      (((unsigned)(x) & 0x1) << 2)
-#define   G_028B20_BUFFER_2_EN(x)                      (((x) >> 2) & 0x1)
-#define   C_028B20_BUFFER_2_EN                         0xFFFFFFFB
-#define   S_028B20_BUFFER_3_EN(x)                      (((unsigned)(x) & 0x1) << 3)
-#define   G_028B20_BUFFER_3_EN(x)                      (((x) >> 3) & 0x1)
-#define   C_028B20_BUFFER_3_EN                         0xFFFFFFF7
-#define R_028AD0_VGT_STRMOUT_BUFFER_SIZE_0                              0x028AD0
-
 #define     V_0280A0_SWAP_STD                          0x00000000
 #define     V_0280A0_SWAP_ALT                          0x00000001
 #define     V_0280A0_SWAP_STD_REV                      0x00000002
 #define     V_0280A0_SWAP_ALT_REV                      0x00000003
 
-/* EG+ */
-#define R_0084FC_CP_STRMOUT_CNTL		     0x0084FC
-#define   S_0084FC_OFFSET_UPDATE_DONE(x)		(((unsigned)(x) & 0x1) << 0)
-#define R_028B94_VGT_STRMOUT_CONFIG                                     0x028B94
-#define   S_028B94_STREAMOUT_0_EN(x)                                  (((unsigned)(x) & 0x1) << 0)
-#define   G_028B94_STREAMOUT_0_EN(x)                                  (((x) >> 0) & 0x1)
-#define   C_028B94_STREAMOUT_0_EN                                     0xFFFFFFFE
-#define   S_028B94_STREAMOUT_1_EN(x)                                  (((unsigned)(x) & 0x1) << 1)
-#define   G_028B94_STREAMOUT_1_EN(x)                                  (((x) >> 1) & 0x1)
-#define   C_028B94_STREAMOUT_1_EN                                     0xFFFFFFFD
-#define   S_028B94_STREAMOUT_2_EN(x)                                  (((unsigned)(x) & 0x1) << 2)
-#define   G_028B94_STREAMOUT_2_EN(x)                                  (((x) >> 2) & 0x1)
-#define   C_028B94_STREAMOUT_2_EN                                     0xFFFFFFFB
-#define   S_028B94_STREAMOUT_3_EN(x)                                  (((unsigned)(x) & 0x1) << 3)
-#define   G_028B94_STREAMOUT_3_EN(x)                                  (((x) >> 3) & 0x1)
-#define   C_028B94_STREAMOUT_3_EN                                     0xFFFFFFF7
-#define   S_028B94_RAST_STREAM(x)                                     (((unsigned)(x) & 0x07) << 4)
-#define   G_028B94_RAST_STREAM(x)                                     (((x) >> 4) & 0x07)
-#define   C_028B94_RAST_STREAM                                        0xFFFFFF8F
-#define   S_028B94_RAST_STREAM_MASK(x)                                (((unsigned)(x) & 0x0F) << 8) /* SI+ */
-#define   G_028B94_RAST_STREAM_MASK(x)                                (((x) >> 8) & 0x0F)
-#define   C_028B94_RAST_STREAM_MASK                                   0xFFFFF0FF
-#define   S_028B94_USE_RAST_STREAM_MASK(x)                            (((unsigned)(x) & 0x1) << 31) /* SI+ */
-#define   G_028B94_USE_RAST_STREAM_MASK(x)                            (((x) >> 31) & 0x1)
-#define   C_028B94_USE_RAST_STREAM_MASK                               0x7FFFFFFF
-#define R_028B98_VGT_STRMOUT_BUFFER_CONFIG                              0x028B98
-#define   S_028B98_STREAM_0_BUFFER_EN(x)                              (((unsigned)(x) & 0x0F) << 0)
-#define   G_028B98_STREAM_0_BUFFER_EN(x)                              (((x) >> 0) & 0x0F)
-#define   C_028B98_STREAM_0_BUFFER_EN                                 0xFFFFFFF0
-#define   S_028B98_STREAM_1_BUFFER_EN(x)                              (((unsigned)(x) & 0x0F) << 4)
-#define   G_028B98_STREAM_1_BUFFER_EN(x)                              (((x) >> 4) & 0x0F)
-#define   C_028B98_STREAM_1_BUFFER_EN                                 0xFFFFFF0F
-#define   S_028B98_STREAM_2_BUFFER_EN(x)                              (((unsigned)(x) & 0x0F) << 8)
-#define   G_028B98_STREAM_2_BUFFER_EN(x)                              (((x) >> 8) & 0x0F)
-#define   C_028B98_STREAM_2_BUFFER_EN                                 0xFFFFF0FF
-#define   S_028B98_STREAM_3_BUFFER_EN(x)                              (((unsigned)(x) & 0x0F) << 12)
-#define   G_028B98_STREAM_3_BUFFER_EN(x)                              (((x) >> 12) & 0x0F)
-#define   C_028B98_STREAM_3_BUFFER_EN                                 0xFFFF0FFF
-
-#define EG_R_028A4C_PA_SC_MODE_CNTL_1                0x028A4C
-#define   EG_S_028A4C_PS_ITER_SAMPLE(x)                 (((unsigned)(x) & 0x1) << 16)
-#define   EG_S_028A4C_FORCE_EOV_CNTDWN_ENABLE(x)        (((unsigned)(x) & 0x1) << 25)
-#define   EG_S_028A4C_FORCE_EOV_REZ_ENABLE(x)           (((unsigned)(x) & 0x1) << 26)
-
-#define CM_R_028804_DB_EQAA                          0x00028804
-#define   S_028804_MAX_ANCHOR_SAMPLES(x)                (((unsigned)(x) & 0x07) << 0)
-#define   G_028804_MAX_ANCHOR_SAMPLES(x)                (((x) >> 0) & 0x07)
-#define   C_028804_MAX_ANCHOR_SAMPLES                   0xFFFFFFF8
-#define   S_028804_PS_ITER_SAMPLES(x)                   (((unsigned)(x) & 0x07) << 4)
-#define   G_028804_PS_ITER_SAMPLES(x)                   (((x) >> 4) & 0x07)
-#define   C_028804_PS_ITER_SAMPLES                      0xFFFFFF8F
-#define   S_028804_MASK_EXPORT_NUM_SAMPLES(x)           (((unsigned)(x) & 0x07) << 8)
-#define   G_028804_MASK_EXPORT_NUM_SAMPLES(x)           (((x) >> 8) & 0x07)
-#define   C_028804_MASK_EXPORT_NUM_SAMPLES              0xFFFFF8FF
-#define   S_028804_ALPHA_TO_MASK_NUM_SAMPLES(x)         (((unsigned)(x) & 0x07) << 12)
-#define   G_028804_ALPHA_TO_MASK_NUM_SAMPLES(x)         (((x) >> 12) & 0x07)
-#define   C_028804_ALPHA_TO_MASK_NUM_SAMPLES            0xFFFF8FFF
-#define   S_028804_HIGH_QUALITY_INTERSECTIONS(x)        (((unsigned)(x) & 0x1) << 16)
-#define   G_028804_HIGH_QUALITY_INTERSECTIONS(x)        (((x) >> 16) & 0x1)
-#define   C_028804_HIGH_QUALITY_INTERSECTIONS           0xFFFEFFFF
-#define   S_028804_INCOHERENT_EQAA_READS(x)             (((unsigned)(x) & 0x1) << 17)
-#define   G_028804_INCOHERENT_EQAA_READS(x)             (((x) >> 17) & 0x1)
-#define   C_028804_INCOHERENT_EQAA_READS                0xFFFDFFFF
-#define   S_028804_INTERPOLATE_COMP_Z(x)                (((unsigned)(x) & 0x1) << 18)
-#define   G_028804_INTERPOLATE_COMP_Z(x)                (((x) >> 18) & 0x1)
-#define   C_028804_INTERPOLATE_COMP_Z                   0xFFFBFFFF
-#define   S_028804_INTERPOLATE_SRC_Z(x)                 (((unsigned)(x) & 0x1) << 19)
-#define   G_028804_INTERPOLATE_SRC_Z(x)                 (((x) >> 19) & 0x1)
-#define   C_028804_INTERPOLATE_SRC_Z                    0xFFF7FFFF
-#define   S_028804_STATIC_ANCHOR_ASSOCIATIONS(x)        (((unsigned)(x) & 0x1) << 20)
-#define   G_028804_STATIC_ANCHOR_ASSOCIATIONS(x)        (((x) >> 20) & 0x1)
-#define   C_028804_STATIC_ANCHOR_ASSOCIATIONS           0xFFEFFFFF
-#define   S_028804_ALPHA_TO_MASK_EQAA_DISABLE(x)        (((unsigned)(x) & 0x1) << 21)
-#define   G_028804_ALPHA_TO_MASK_EQAA_DISABLE(x)        (((x) >> 21) & 0x1)
-#define   C_028804_ALPHA_TO_MASK_EQAA_DISABLE           0xFFDFFFFF
-#define   S_028804_OVERRASTERIZATION_AMOUNT(x)          (((unsigned)(x) & 0x07) << 24)
-#define   G_028804_OVERRASTERIZATION_AMOUNT(x)          (((x) >> 24) & 0x07)
-#define   C_028804_OVERRASTERIZATION_AMOUNT             0xF8FFFFFF
-#define   S_028804_ENABLE_POSTZ_OVERRASTERIZATION(x)    (((unsigned)(x) & 0x1) << 27)
-#define   G_028804_ENABLE_POSTZ_OVERRASTERIZATION(x)    (((x) >> 27) & 0x1)
-#define   C_028804_ENABLE_POSTZ_OVERRASTERIZATION       0xF7FFFFFF
-#define CM_R_028BDC_PA_SC_LINE_CNTL                  0x28bdc
-#define   S_028BDC_EXPAND_LINE_WIDTH(x)                (((unsigned)(x) & 0x1) << 9)
-#define   G_028BDC_EXPAND_LINE_WIDTH(x)                (((x) >> 9) & 0x1)
-#define   C_028BDC_EXPAND_LINE_WIDTH                   0xFFFFFDFF
-#define   S_028BDC_LAST_PIXEL(x)                       (((unsigned)(x) & 0x1) << 10)
-#define   G_028BDC_LAST_PIXEL(x)                       (((x) >> 10) & 0x1)
-#define   C_028BDC_LAST_PIXEL                          0xFFFFFBFF
-#define   S_028BDC_PERPENDICULAR_ENDCAP_ENA(x)         (((unsigned)(x) & 0x1) << 11)
-#define   G_028BDC_PERPENDICULAR_ENDCAP_ENA(x)         (((x) >> 11) & 0x1)
-#define   C_028BDC_PERPENDICULAR_ENDCAP_ENA            0xFFFFF7FF
-#define   S_028BDC_DX10_DIAMOND_TEST_ENA(x)            (((unsigned)(x) & 0x1) << 12)
-#define   G_028BDC_DX10_DIAMOND_TEST_ENA(x)            (((x) >> 12) & 0x1)
-#define   C_028BDC_DX10_DIAMOND_TEST_ENA               0xFFFFEFFF
-#define CM_R_028BE0_PA_SC_AA_CONFIG                  0x28be0
-#define   S_028BE0_MSAA_NUM_SAMPLES(x)                 (((unsigned)(x) & 0x07) << 0)
-#define   G_028BE0_MSAA_NUM_SAMPLES(x)                 (((x) >> 0) & 0x07)
-#define   C_028BE0_MSAA_NUM_SAMPLES                    0xFFFFFFF8
-#define   S_028BE0_AA_MASK_CENTROID_DTMN(x)            (((unsigned)(x) & 0x1) << 4)
-#define   G_028BE0_AA_MASK_CENTROID_DTMN(x)            (((x) >> 4) & 0x1)
-#define   C_028BE0_AA_MASK_CENTROID_DTMN               0xFFFFFFEF
-#define   S_028BE0_MAX_SAMPLE_DIST(x)                  (((unsigned)(x) & 0x0F) << 13)
-#define   G_028BE0_MAX_SAMPLE_DIST(x)                  (((x) >> 13) & 0x0F)
-#define   C_028BE0_MAX_SAMPLE_DIST                     0xFFFE1FFF
-#define   S_028BE0_MSAA_EXPOSED_SAMPLES(x)             (((unsigned)(x) & 0x07) << 20)
-#define   G_028BE0_MSAA_EXPOSED_SAMPLES(x)             (((x) >> 20) & 0x07)
-#define   C_028BE0_MSAA_EXPOSED_SAMPLES                0xFF8FFFFF
-#define   S_028BE0_DETAIL_TO_EXPOSED_MODE(x)           (((unsigned)(x) & 0x03) << 24)
-#define   G_028BE0_DETAIL_TO_EXPOSED_MODE(x)           (((x) >> 24) & 0x03)
-#define   C_028BE0_DETAIL_TO_EXPOSED_MODE              0xFCFFFFFF
-#define CM_R_028BF8_PA_SC_AA_SAMPLE_LOCS_PIXEL_X0Y0_0 0x28bf8
-#define CM_R_028C08_PA_SC_AA_SAMPLE_LOCS_PIXEL_X1Y0_0 0x28c08
-#define CM_R_028C18_PA_SC_AA_SAMPLE_LOCS_PIXEL_X0Y1_0 0x28c18
-#define CM_R_028C28_PA_SC_AA_SAMPLE_LOCS_PIXEL_X1Y1_0 0x28c28
-
 #define   EG_S_028C70_FAST_CLEAR(x)                       (((unsigned)(x) & 0x1) << 17)
 #define   SI_S_028C70_FAST_CLEAR(x)                       (((unsigned)(x) & 0x1) << 13)
-
-/*CIK+*/
-#define R_0300FC_CP_STRMOUT_CNTL		     0x0300FC
-
-#define R600_R_028C0C_PA_CL_GB_VERT_CLIP_ADJ         0x028C0C
-#define CM_R_028BE8_PA_CL_GB_VERT_CLIP_ADJ           0x28be8
-#define R_02843C_PA_CL_VPORT_XSCALE                  0x02843C
-
-#define R_028250_PA_SC_VPORT_SCISSOR_0_TL                               0x028250
-#define   S_028250_TL_X(x)                                            (((unsigned)(x) & 0x7FFF) << 0)
-#define   G_028250_TL_X(x)                                            (((x) >> 0) & 0x7FFF)
-#define   C_028250_TL_X                                               0xFFFF8000
-#define   S_028250_TL_Y(x)                                            (((unsigned)(x) & 0x7FFF) << 16)
-#define   G_028250_TL_Y(x)                                            (((x) >> 16) & 0x7FFF)
-#define   C_028250_TL_Y                                               0x8000FFFF
-#define   S_028250_WINDOW_OFFSET_DISABLE(x)                           (((unsigned)(x) & 0x1) << 31)
-#define   G_028250_WINDOW_OFFSET_DISABLE(x)                           (((x) >> 31) & 0x1)
-#define   C_028250_WINDOW_OFFSET_DISABLE                              0x7FFFFFFF
-#define   S_028254_BR_X(x)                                            (((unsigned)(x) & 0x7FFF) << 0)
-#define   G_028254_BR_X(x)                                            (((x) >> 0) & 0x7FFF)
-#define   C_028254_BR_X                                               0xFFFF8000
-#define   S_028254_BR_Y(x)                                            (((unsigned)(x) & 0x7FFF) << 16)
-#define   G_028254_BR_Y(x)                                            (((x) >> 16) & 0x7FFF)
-#define   C_028254_BR_Y                                               0x8000FFFF
-#define R_0282D0_PA_SC_VPORT_ZMIN_0                                     0x0282D0
-#define R_0282D4_PA_SC_VPORT_ZMAX_0                                     0x0282D4
 
 #endif

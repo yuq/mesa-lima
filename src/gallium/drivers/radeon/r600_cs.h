@@ -31,7 +31,7 @@
 #define R600_CS_H
 
 #include "r600_pipe_common.h"
-#include "amd/common/r600d_common.h"
+#include "amd/common/sid.h"
 
 /**
  * Return true if there is enough memory in VRAM and GTT for the buffers
@@ -115,10 +115,10 @@ radeon_add_to_buffer_list_check_mem(struct r600_common_context *rctx,
 
 static inline void radeon_set_config_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
 {
-	assert(reg < R600_CONTEXT_REG_OFFSET);
+	assert(reg < SI_CONTEXT_REG_OFFSET);
 	assert(cs->current.cdw + 2 + num <= cs->current.max_dw);
 	radeon_emit(cs, PKT3(PKT3_SET_CONFIG_REG, num, 0));
-	radeon_emit(cs, (reg - R600_CONFIG_REG_OFFSET) >> 2);
+	radeon_emit(cs, (reg - SI_CONFIG_REG_OFFSET) >> 2);
 }
 
 static inline void radeon_set_config_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
@@ -129,10 +129,10 @@ static inline void radeon_set_config_reg(struct radeon_winsys_cs *cs, unsigned r
 
 static inline void radeon_set_context_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
 {
-	assert(reg >= R600_CONTEXT_REG_OFFSET);
+	assert(reg >= SI_CONTEXT_REG_OFFSET);
 	assert(cs->current.cdw + 2 + num <= cs->current.max_dw);
 	radeon_emit(cs, PKT3(PKT3_SET_CONTEXT_REG, num, 0));
-	radeon_emit(cs, (reg - R600_CONTEXT_REG_OFFSET) >> 2);
+	radeon_emit(cs, (reg - SI_CONTEXT_REG_OFFSET) >> 2);
 }
 
 static inline void radeon_set_context_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
@@ -145,10 +145,10 @@ static inline void radeon_set_context_reg_idx(struct radeon_winsys_cs *cs,
 					      unsigned reg, unsigned idx,
 					      unsigned value)
 {
-	assert(reg >= R600_CONTEXT_REG_OFFSET);
+	assert(reg >= SI_CONTEXT_REG_OFFSET);
 	assert(cs->current.cdw + 3 <= cs->current.max_dw);
 	radeon_emit(cs, PKT3(PKT3_SET_CONTEXT_REG, 1, 0));
-	radeon_emit(cs, (reg - R600_CONTEXT_REG_OFFSET) >> 2 | (idx << 28));
+	radeon_emit(cs, (reg - SI_CONTEXT_REG_OFFSET) >> 2 | (idx << 28));
 	radeon_emit(cs, value);
 }
 

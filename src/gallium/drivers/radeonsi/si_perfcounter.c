@@ -602,7 +602,7 @@ static void si_pc_emit_start(struct r600_common_context *ctx,
 	radeon_set_uconfig_reg(cs, R_036020_CP_PERFMON_CNTL,
 			       S_036020_PERFMON_STATE(V_036020_DISABLE_AND_RESET));
 	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
-	radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_PERFCOUNTER_START) | EVENT_INDEX(0));
+	radeon_emit(cs, EVENT_TYPE(V_028A90_PERFCOUNTER_START) | EVENT_INDEX(0));
 	radeon_set_uconfig_reg(cs, R_036020_CP_PERFMON_CNTL,
 			       S_036020_PERFMON_STATE(V_036020_START_COUNTING));
 }
@@ -614,15 +614,15 @@ static void si_pc_emit_stop(struct r600_common_context *ctx,
 {
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 
-	si_gfx_write_event_eop(ctx, EVENT_TYPE_BOTTOM_OF_PIPE_TS, 0,
+	si_gfx_write_event_eop(ctx, V_028A90_BOTTOM_OF_PIPE_TS, 0,
 				 EOP_DATA_SEL_VALUE_32BIT,
 				 buffer, va, 0, R600_NOT_QUERY);
 	si_gfx_wait_fence(ctx, va, 0, 0xffffffff);
 
 	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
-	radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_PERFCOUNTER_SAMPLE) | EVENT_INDEX(0));
+	radeon_emit(cs, EVENT_TYPE(V_028A90_PERFCOUNTER_SAMPLE) | EVENT_INDEX(0));
 	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
-	radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_PERFCOUNTER_STOP) | EVENT_INDEX(0));
+	radeon_emit(cs, EVENT_TYPE(V_028A90_PERFCOUNTER_STOP) | EVENT_INDEX(0));
 	radeon_set_uconfig_reg(cs, R_036020_CP_PERFMON_CNTL,
 			       S_036020_PERFMON_STATE(V_036020_STOP_COUNTING) |
 			       S_036020_PERFMON_SAMPLE_ENABLE(1));
