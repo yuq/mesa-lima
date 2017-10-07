@@ -1976,25 +1976,25 @@ static void si_emit_shader_pointer(struct si_context *sctx,
 static void si_emit_global_shader_pointers(struct si_context *sctx,
 					   struct si_descriptors *descs)
 {
+	if (sctx->b.chip_class == GFX9) {
+		/* Broadcast it to all shader stages. */
+		si_emit_shader_pointer(sctx, descs,
+				       R_00B530_SPI_SHADER_USER_DATA_COMMON_0);
+		return;
+	}
+
 	si_emit_shader_pointer(sctx, descs,
 			       R_00B030_SPI_SHADER_USER_DATA_PS_0);
 	si_emit_shader_pointer(sctx, descs,
 			       R_00B130_SPI_SHADER_USER_DATA_VS_0);
 	si_emit_shader_pointer(sctx, descs,
 			       R_00B330_SPI_SHADER_USER_DATA_ES_0);
-
-	if (sctx->b.chip_class >= GFX9) {
-		/* GFX9 merged LS-HS and ES-GS. */
-		si_emit_shader_pointer(sctx, descs,
-				       R_00B430_SPI_SHADER_USER_DATA_LS_0);
-	} else {
-		si_emit_shader_pointer(sctx, descs,
-				       R_00B230_SPI_SHADER_USER_DATA_GS_0);
-		si_emit_shader_pointer(sctx, descs,
-				       R_00B430_SPI_SHADER_USER_DATA_HS_0);
-		si_emit_shader_pointer(sctx, descs,
-				       R_00B530_SPI_SHADER_USER_DATA_LS_0);
-	}
+	si_emit_shader_pointer(sctx, descs,
+			       R_00B230_SPI_SHADER_USER_DATA_GS_0);
+	si_emit_shader_pointer(sctx, descs,
+			       R_00B430_SPI_SHADER_USER_DATA_HS_0);
+	si_emit_shader_pointer(sctx, descs,
+			       R_00B530_SPI_SHADER_USER_DATA_LS_0);
 }
 
 void si_emit_graphics_shader_pointers(struct si_context *sctx,
