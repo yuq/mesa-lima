@@ -397,6 +397,9 @@ bool ppir_compile_nir(struct lima_fs_shader_state *prog, nir_shader *nir,
    if (!ppir_regalloc_prog(comp))
       goto err_out0;
 
+   if (!ppir_codegen_prog(comp))
+      goto err_out0;
+
    ralloc_free(comp);
    return true;
 
