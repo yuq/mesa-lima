@@ -279,6 +279,9 @@ struct si_descriptors {
 	ubyte shader_userdata_offset;
 	/* The size of one descriptor. */
 	ubyte element_dw_size;
+	/* If there is only one slot enabled, bind it directly instead of
+	 * uploading descriptors. -1 if disabled. */
+	signed char slot_index_to_bind_directly;
 };
 
 struct si_buffer_resources {

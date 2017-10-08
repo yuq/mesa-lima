@@ -1973,6 +1973,7 @@ static LLVMValueRef fetch_constant(
 	unsigned swizzle)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct si_shader_selector *sel = ctx->shader->selector;
 	const struct tgsi_ind_register *ireg = &reg->Indirect;
 	unsigned buf, idx;
 
@@ -1996,9 +1997,60 @@ static LLVMValueRef fetch_constant(
 		return si_llvm_emit_fetch_64bit(bld_base, type, lo, hi);
 	}
 
+	idx = reg->Register.Index * 4 + swizzle;
+	if (reg->Register.Indirect) {
+		addr = si_get_indirect_index(ctx, ireg, 16, idx * 4);
+	} else {
+		addr = LLVMConstInt(ctx->i32, idx * 4, 0);
+	}
+
+	/* Fast path when user data SGPRs point to constant buffer 0 directly. */
+	if (sel->info.const_buffers_declared == 1 &&
+	    sel->info.shader_buffers_declared == 0) {
+		LLVMValueRef ptr =
+			LLVMGetParam(ctx->main_fn, ctx->param_const_and_shader_buffers);
+
+		/* This enables use of s_load_dword and flat_load_dword for const buffer 0
+		 * loads, and up to x4 load opcode merging. However, it leads to horrible
+		 * code reducing SIMD wave occupancy from 8 to 2 in many cases.
+		 *
+		 * Using s_buffer_load_dword (x1) seems to be the best option right now.
+		 */
+#if 0 /* keep this codepath disabled */
+		if (!reg->Register.Indirect) {
+			addr = LLVMBuildLShr(ctx->ac.builder, addr, LLVMConstInt(ctx->i32, 2, 0), "");
+			LLVMValueRef result = ac_build_load_invariant(&ctx->ac, ptr, addr);
+			return bitcast(bld_base, type, result);
+		}
+#endif
+
+		/* Do the bounds checking with a descriptor, because
+		 * doing computation and manual bounds checking of 64-bit
+		 * addresses generates horrible VALU code with very high
+		 * VGPR usage and very low SIMD occupancy.
+		 */
+		ptr = LLVMBuildPtrToInt(ctx->ac.builder, ptr, ctx->i64, "");
+		ptr = LLVMBuildBitCast(ctx->ac.builder, ptr, ctx->v2i32, "");
+
+		LLVMValueRef desc_elems[] = {
+			LLVMBuildExtractElement(ctx->ac.builder, ptr, ctx->i32_0, ""),
+			LLVMBuildExtractElement(ctx->ac.builder, ptr, ctx->i32_1, ""),
+			LLVMConstInt(ctx->i32, (sel->info.const_file_max[0] + 1) * 16, 0),
+			LLVMConstInt(ctx->i32,
+				S_008F0C_DST_SEL_X(V_008F0C_SQ_SEL_X) |
+				S_008F0C_DST_SEL_Y(V_008F0C_SQ_SEL_Y) |
+				S_008F0C_DST_SEL_Z(V_008F0C_SQ_SEL_Z) |
+				S_008F0C_DST_SEL_W(V_008F0C_SQ_SEL_W) |
+				S_008F0C_NUM_FORMAT(V_008F0C_BUF_NUM_FORMAT_FLOAT) |
+				S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32), 0)
+		};
+		LLVMValueRef desc = ac_build_gather_values(&ctx->ac, desc_elems, 4);
+		LLVMValueRef result = buffer_load_const(ctx, desc, addr);
+		return bitcast(bld_base, type, result);
+	}
+
 	assert(reg->Register.Dimension);
 	buf = reg->Dimension.Index;
-	idx = reg->Register.Index * 4 + swizzle;
 
 	if (reg->Dimension.Indirect) {
 		LLVMValueRef ptr = LLVMGetParam(ctx->main_fn, ctx->param_const_and_shader_buffers);
@@ -2011,12 +2063,6 @@ static LLVMValueRef fetch_constant(
 		bufp = ac_build_load_to_sgpr(&ctx->ac, ptr, index);
 	} else
 		bufp = load_const_buffer_desc(ctx, buf);
-
-	if (reg->Register.Indirect) {
-		addr = si_get_indirect_index(ctx, ireg, 16, idx * 4);
-	} else {
-		addr = LLVMConstInt(ctx->i32, idx * 4, 0);
-	}
 
 	return bitcast(bld_base, type, buffer_load_const(ctx, bufp, addr));
 }
@@ -4255,10 +4301,18 @@ static void declare_per_stage_desc_pointers(struct si_shader_context *ctx,
 					    struct si_function_info *fninfo,
 					    bool assign_params)
 {
+	LLVMTypeRef const_shader_buf_type;
+
+	if (ctx->shader->selector->info.const_buffers_declared == 1 &&
+	    ctx->shader->selector->info.shader_buffers_declared == 0)
+		const_shader_buf_type = ctx->f32;
+	else
+		const_shader_buf_type = ctx->v4i32;
+
 	unsigned const_and_shader_buffers =
 		add_arg(fninfo, ARG_SGPR,
-			si_const_array(ctx->v4i32,
-				       SI_NUM_SHADER_BUFFERS + SI_NUM_CONST_BUFFERS));
+			si_const_array(const_shader_buf_type, 0));
+
 	unsigned samplers_and_images =
 		add_arg(fninfo, ARG_SGPR,
 			si_const_array(ctx->v8i32,

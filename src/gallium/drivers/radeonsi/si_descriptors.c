@@ -126,6 +126,7 @@ static void si_init_descriptors(struct si_descriptors *desc,
 	desc->element_dw_size = element_dw_size;
 	desc->num_elements = num_elements;
 	desc->shader_userdata_offset = shader_userdata_index * 4;
+	desc->slot_index_to_bind_directly = -1;
 }
 
 static void si_release_descriptors(struct si_descriptors *desc)
@@ -147,6 +148,20 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	 */
 	if (!upload_size)
 		return true;
+
+	/* If there is just one active descriptor, bind it directly. */
+	if ((int)desc->first_active_slot == desc->slot_index_to_bind_directly &&
+	    desc->num_active_slots == 1) {
+		uint32_t *descriptor = &desc->list[desc->slot_index_to_bind_directly *
+						   desc->element_dw_size];
+
+		/* The buffer is already in the buffer list. */
+		r600_resource_reference(&desc->buffer, NULL);
+		desc->gpu_list = NULL;
+		desc->gpu_address = si_desc_extract_buffer_address(descriptor);
+		si_mark_atom_dirty(sctx, &sctx->shader_pointers.atom);
+		return true;
+	}
 
 	uint32_t *ptr;
 	int buffer_offset;
@@ -2531,14 +2546,15 @@ void si_init_all_descriptors(struct si_context *sctx)
 		bool gfx9_gs = false;
 		unsigned num_sampler_slots = SI_NUM_IMAGES / 2 + SI_NUM_SAMPLERS;
 		unsigned num_buffer_slots = SI_NUM_SHADER_BUFFERS + SI_NUM_CONST_BUFFERS;
+		struct si_descriptors *desc;
 
 		if (sctx->b.chip_class >= GFX9) {
 			gfx9_tcs = i == PIPE_SHADER_TESS_CTRL;
 			gfx9_gs = i == PIPE_SHADER_GEOMETRY;
 		}
 
-		si_init_buffer_resources(&sctx->const_and_shader_buffers[i],
-					 si_const_and_shader_buffer_descriptors(sctx, i),
+		desc = si_const_and_shader_buffer_descriptors(sctx, i);
+		si_init_buffer_resources(&sctx->const_and_shader_buffers[i], desc,
 					 num_buffer_slots,
 					 gfx9_tcs ? GFX9_SGPR_TCS_CONST_AND_SHADER_BUFFERS :
 					 gfx9_gs ? GFX9_SGPR_GS_CONST_AND_SHADER_BUFFERS :
@@ -2547,8 +2563,9 @@ void si_init_all_descriptors(struct si_context *sctx)
 					 RADEON_USAGE_READ,
 					 RADEON_PRIO_SHADER_RW_BUFFER,
 					 RADEON_PRIO_CONST_BUFFER);
+		desc->slot_index_to_bind_directly = si_get_constbuf_slot(0);
 
-		struct si_descriptors *desc = si_sampler_and_image_descriptors(sctx, i);
+		desc = si_sampler_and_image_descriptors(sctx, i);
 		si_init_descriptors(desc,
 				    gfx9_tcs ? GFX9_SGPR_TCS_SAMPLERS_AND_IMAGES :
 				    gfx9_gs ? GFX9_SGPR_GS_SAMPLERS_AND_IMAGES :
