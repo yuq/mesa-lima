@@ -73,6 +73,7 @@ struct amdgpu_ib {
    unsigned                used_ib_space;
    unsigned                max_ib_size;
    uint32_t                *ptr_ib_size;
+   bool                    ptr_ib_size_inside_ib;
    enum ib_type            ib_type;
 };
 
