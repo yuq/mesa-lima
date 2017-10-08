@@ -213,7 +213,32 @@ static int get_instr_encode_size(ppir_instr *instr)
 
 static void bitcopy(void *dst, int dst_offset, void *src, int src_size)
 {
-   
+   int off1 = dst_offset & 0x1f;
+
+   if (off1) {
+      uint32_t *cpy_dst = dst, *cpy_src = src;
+      cpy_dst += (dst_offset >> 5);
+
+      int off2 = 32 - off1;
+      int cpy_size = 0;
+      while (1) {
+         *cpy_dst |= *cpy_src << off1;
+         cpy_dst++;
+
+         cpy_size += off1;
+         if (cpy_size >= src_size)
+            break;
+
+         *cpy_dst |= *cpy_src >> off2;
+         cpy_src++;
+
+         cpy_size += off2;
+         if (cpy_size >= src_size)
+            break;
+      }
+   }
+   else
+      memcpy(dst, src, align_to_word(src_size) * 4);
 }
 
 static int encode_instr(ppir_instr *instr, void *code, void *last_code)
