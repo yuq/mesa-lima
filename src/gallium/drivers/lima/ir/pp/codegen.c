@@ -25,6 +25,7 @@
 #include <stdio.h>
 
 #include "util/ralloc.h"
+#include "util/u_half.h"
 
 #include "ppir.h"
 #include "codegen.h"
@@ -163,9 +164,10 @@ static void ppir_codegen_encode_store_temp(ppir_node *node, void *code)
    
 }
 
-static void ppir_codegen_encode_const(ppir_const *constant, void *code)
+static void ppir_codegen_encode_const(ppir_const *constant, uint16_t *code)
 {
-   
+   for (int i = 0; i < constant->num; i++)
+      code[i] = util_float_to_half(constant->value[i].f);
 }
 
 typedef void (*ppir_codegen_instr_slot_encode_func)(ppir_node *, void *);
