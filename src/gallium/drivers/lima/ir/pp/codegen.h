@@ -181,28 +181,28 @@ typedef enum {
    ppir_codegen_vec4_acc_op_ceil  = 0x0D,
    ppir_codegen_vec4_acc_op_min   = 0x0E,
    ppir_codegen_vec4_acc_op_max   = 0x0F,
-   ppir_codegen_vec4_acc_op_sum3  = 0x10, /* Sum3, result.w = (arg1.x + arg1.y + arg1.z) */
-   ppir_codegen_vec4_acc_op_sum   = 0x11, /* Sum, result.w = (arg1.x + arg1.y + arg1.z + arg1.w) */
+   ppir_codegen_vec4_acc_op_sum3  = 0x10, /* Sum3, result.w = (arg0.x + arg0.y + arg0.z) */
+   ppir_codegen_vec4_acc_op_sum   = 0x11, /* Sum, result.w = (arg0.x + arg0.y + arg0.z + arg0.w) */
    ppir_codegen_vec4_acc_op_dFdx  = 0x14,
    ppir_codegen_vec4_acc_op_dFdy  = 0x15,
-   ppir_codegen_vec4_acc_op_sel   = 0x17, /* result = (^fmul ? arg0 : arg1) */
-   ppir_codegen_vec4_acc_op_mov   = 0x1F, /* Passthrough, result = arg1 */
+   ppir_codegen_vec4_acc_op_sel   = 0x17, /* result = (^fmul ? arg1 : arg0) */
+   ppir_codegen_vec4_acc_op_mov   = 0x1F, /* Passthrough, result = arg0 */
 } ppir_codegen_vec4_acc_op;
 
 typedef struct __attribute__((__packed__)) {
-   ppir_codegen_vec4_reg    arg1_source   : 4;
-   unsigned                 arg1_swizzle  : 8;
-   bool                     arg1_absolute : 1;
-   bool                     arg1_negate   : 1;
    ppir_codegen_vec4_reg    arg0_source   : 4;
    unsigned                 arg0_swizzle  : 8;
    bool                     arg0_absolute : 1;
    bool                     arg0_negate   : 1;
+   ppir_codegen_vec4_reg    arg1_source   : 4;
+   unsigned                 arg1_swizzle  : 8;
+   bool                     arg1_absolute : 1;
+   bool                     arg1_negate   : 1;
    unsigned                 dest          : 4;
    unsigned                 mask          : 4;
    ppir_codegen_outmod      dest_modifier : 2;
    ppir_codegen_vec4_acc_op op            : 5;
-   bool                     mul_in        : 1; /* whether to get arg1 from multiply unit below */
+   bool                     mul_in        : 1; /* whether to get arg0 from multiply unit below */
 } ppir_codegen_field_vec4_acc;
 
 /* Float (Scalar) Pipe */
