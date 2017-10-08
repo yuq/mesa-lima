@@ -1977,7 +1977,6 @@ static LLVMValueRef fetch_constant(
 	unsigned buf, idx;
 
 	LLVMValueRef addr, bufp;
-	LLVMValueRef result;
 
 	if (swizzle == LP_CHAN_ALL) {
 		unsigned chan;
@@ -1986,6 +1985,15 @@ static LLVMValueRef fetch_constant(
 			values[chan] = fetch_constant(bld_base, reg, type, chan);
 
 		return lp_build_gather_values(&ctx->gallivm, values, 4);
+	}
+
+	/* Split 64-bit loads. */
+	if (tgsi_type_is_64bit(type)) {
+		LLVMValueRef lo, hi;
+
+		lo = fetch_constant(bld_base, reg, TGSI_TYPE_UNSIGNED, swizzle);
+		hi = fetch_constant(bld_base, reg, TGSI_TYPE_UNSIGNED, swizzle + 1);
+		return si_llvm_emit_fetch_64bit(bld_base, type, lo, hi);
 	}
 
 	assert(reg->Register.Dimension);
@@ -2010,21 +2018,7 @@ static LLVMValueRef fetch_constant(
 		addr = LLVMConstInt(ctx->i32, idx * 4, 0);
 	}
 
-	result = buffer_load_const(ctx, bufp, addr);
-
-	if (!tgsi_type_is_64bit(type))
-		result = bitcast(bld_base, type, result);
-	else {
-		LLVMValueRef addr2, result2;
-
-		addr2 = lp_build_add(&bld_base->uint_bld, addr,
-				     LLVMConstInt(ctx->i32, 4, 0));
-		result2 = buffer_load_const(ctx, bufp, addr2);
-
-		result = si_llvm_emit_fetch_64bit(bld_base, type,
-						  result, result2);
-	}
-	return result;
+	return bitcast(bld_base, type, buffer_load_const(ctx, bufp, addr));
 }
 
 /* Upper 16 bits must be zero. */
