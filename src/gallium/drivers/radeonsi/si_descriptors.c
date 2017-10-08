@@ -97,6 +97,11 @@ static uint32_t null_image_descriptor[8] = {
 	 * descriptor */
 };
 
+static uint64_t si_desc_extract_buffer_address(uint32_t *desc)
+{
+	return desc[0] | ((uint64_t)G_008F04_BASE_ADDRESS_HI(desc[1]) << 32);
+}
+
 static void si_init_descriptor_list(uint32_t *desc_list,
 				    unsigned element_dw_size,
 				    unsigned num_elements,
@@ -1365,8 +1370,7 @@ static void si_desc_reset_buffer_offset(struct pipe_context *ctx,
 					struct pipe_resource *new_buf)
 {
 	/* Retrieve the buffer offset from the descriptor. */
-	uint64_t old_desc_va =
-		desc[0] | ((uint64_t)G_008F04_BASE_ADDRESS_HI(desc[1]) << 32);
+	uint64_t old_desc_va = si_desc_extract_buffer_address(desc);
 
 	assert(old_buf_va <= old_desc_va);
 	uint64_t offset_within_buffer = old_desc_va - old_buf_va;
@@ -2178,8 +2182,7 @@ static void si_update_bindless_buffer_descriptor(struct si_context *sctx,
 	assert(resource->target == PIPE_BUFFER);
 
 	/* Retrieve the old buffer addr from the descriptor. */
-	old_desc_va  = desc_list[0];
-	old_desc_va |= ((uint64_t)G_008F04_BASE_ADDRESS_HI(desc_list[1]) << 32);
+	old_desc_va = si_desc_extract_buffer_address(desc_list);
 
 	if (old_desc_va != buf->gpu_address + offset) {
 		/* The buffer has been invalidated when the handle wasn't
