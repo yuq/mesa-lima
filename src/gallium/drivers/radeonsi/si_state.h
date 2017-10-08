@@ -265,8 +265,6 @@ struct si_descriptors {
 	struct r600_resource *buffer;
 	int buffer_offset; /* can be negative if not using lower slots */
 
-	/* The size of one descriptor. */
-	ubyte element_dw_size;
 	/* The maximum number of descriptors. */
 	uint32_t num_elements;
 
@@ -279,6 +277,8 @@ struct si_descriptors {
 	/* The SGPR index where the 64-bit pointer to the descriptor array will
 	 * be stored. */
 	ubyte shader_userdata_offset;
+	/* The size of one descriptor. */
+	ubyte element_dw_size;
 };
 
 struct si_buffer_resources {
