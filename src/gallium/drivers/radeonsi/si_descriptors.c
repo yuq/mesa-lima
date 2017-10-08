@@ -130,8 +130,7 @@ static void si_release_descriptors(struct si_descriptors *desc)
 }
 
 static bool si_upload_descriptors(struct si_context *sctx,
-				  struct si_descriptors *desc,
-				  struct r600_atom * atom)
+				  struct si_descriptors *desc)
 {
 	unsigned slot_size = desc->element_dw_size * 4;
 	unsigned first_slot_offset = desc->first_active_slot * slot_size;
@@ -163,9 +162,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	/* The shader pointer should point to slot 0. */
 	desc->buffer_offset -= first_slot_offset;
 
-	if (atom)
-		si_mark_atom_dirty(sctx, atom);
-
+	si_mark_atom_dirty(sctx, &sctx->shader_pointers.atom);
 	return true;
 }
 
@@ -2156,7 +2153,7 @@ si_create_bindless_descriptor(struct si_context *sctx, uint32_t *desc_list,
 
 	/* Re-upload the whole array of bindless descriptors into a new buffer.
 	 */
-	if (!si_upload_descriptors(sctx, desc, &sctx->shader_pointers.atom))
+	if (!si_upload_descriptors(sctx, desc))
 		return 0;
 
 	/* Make sure to re-emit the shader pointers for all stages. */
@@ -2629,8 +2626,7 @@ static bool si_upload_shader_descriptors(struct si_context *sctx, unsigned mask)
 	while (dirty) {
 		unsigned i = u_bit_scan(&dirty);
 
-		if (!si_upload_descriptors(sctx, &sctx->descriptors[i],
-					   &sctx->shader_pointers.atom))
+		if (!si_upload_descriptors(sctx, &sctx->descriptors[i]))
 			return false;
 	}
 
