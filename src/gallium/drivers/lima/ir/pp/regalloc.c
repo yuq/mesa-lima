@@ -220,20 +220,6 @@ static int get_phy_reg_index(int reg)
       return reg * 4;
 }
 
-static int get_src_reg_index(ppir_src *src)
-{
-   switch (src->type) {
-   case ppir_target_ssa:
-      return src->ssa->index;
-   case ppir_target_register:
-      return src->reg->index;
-   case ppir_target_pipeline:
-      return (src->pipeline + 12) * 4;
-   }
-
-   return -1;
-}
-
 static void ppir_regalloc_print_result(ppir_compiler *comp)
 {
    printf("======ppir regalloc result======\n");
@@ -248,21 +234,8 @@ static void ppir_regalloc_print_result(ppir_compiler *comp)
             printf(" (%d|", node->index);
 
             ppir_dest *dest = ppir_node_get_dest(node);
-            if (dest) {
-               int index = -1;
-               switch (dest->type) {
-               case ppir_target_ssa:
-                  index = dest->ssa.index;
-                  break;
-               case ppir_target_register:
-                  index = dest->reg->index;
-                  break;
-               case ppir_target_pipeline:
-                  index = (dest->pipeline + 12) * 4;
-                  break;
-               }
-               printf("%d", index);
-            }
+            if (dest)
+               printf("%d", ppir_target_get_dest_reg_index(dest));
 
             printf("|");
 
@@ -272,12 +245,12 @@ static void ppir_regalloc_print_result(ppir_compiler *comp)
                   if (j)
                      printf(" ");
 
-                  printf("%d", get_src_reg_index(alu->src + j));
+                  printf("%d", ppir_target_get_src_reg_index(alu->src + j));
                }
             }
             else if (node->type == ppir_node_type_store) {
                ppir_store_node *store = ppir_node_to_store(node);
-               printf("%d", get_src_reg_index(&store->src));
+               printf("%d", ppir_target_get_src_reg_index(&store->src));
             }
 
             printf(")");
