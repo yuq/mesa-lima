@@ -156,14 +156,14 @@ typedef enum {
 } ppir_codegen_outmod;
 
 typedef struct __attribute__((__packed__)) {
-   ppir_codegen_vec4_reg    arg1_source   : 4;
-   unsigned                 arg1_swizzle  : 8;
-   bool                     arg1_absolute : 1;
-   bool                     arg1_negate   : 1;
    ppir_codegen_vec4_reg    arg0_source   : 4;
    unsigned                 arg0_swizzle  : 8;
    bool                     arg0_absolute : 1;
    bool                     arg0_negate   : 1;
+   ppir_codegen_vec4_reg    arg1_source   : 4;
+   unsigned                 arg1_swizzle  : 8;
+   bool                     arg1_absolute : 1;
+   bool                     arg1_negate   : 1;
    unsigned                 dest          : 4;
    unsigned                 mask          : 4;
    ppir_codegen_outmod      dest_modifier : 2;
