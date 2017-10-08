@@ -561,7 +561,7 @@ void si_llvm_load_input_vs(
 
 	t_offset = LLVMConstInt(ctx->i32, input_index, 0);
 
-	t_list = ac_build_indexed_load_const(&ctx->ac, t_list_ptr, t_offset);
+	t_list = ac_build_load_to_sgpr(&ctx->ac, t_list_ptr, t_offset);
 
 	vertex_index = LLVMGetParam(ctx->main_fn,
 				    ctx->param_vertex_index0 +
@@ -1099,12 +1099,12 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
 	dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
 			    LLVMConstInt(ctx->i32, swizzle, 0));
 
-	value = ac_build_indexed_load(&ctx->ac, ctx->lds, dw_addr, false);
+	value = ac_build_load(&ctx->ac, ctx->lds, dw_addr);
 	if (tgsi_type_is_64bit(type)) {
 		LLVMValueRef value2;
 		dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
 				       ctx->i32_1);
-		value2 = ac_build_indexed_load(&ctx->ac, ctx->lds, dw_addr, false);
+		value2 = ac_build_load(&ctx->ac, ctx->lds, dw_addr);
 		return si_llvm_emit_fetch_64bit(bld_base, type, value, value2);
 	}
 
@@ -1617,7 +1617,7 @@ static LLVMValueRef load_sample_position(struct si_shader_context *ctx, LLVMValu
 	struct lp_build_context *uint_bld = &ctx->bld_base.uint_bld;
 	LLVMValueRef desc = LLVMGetParam(ctx->main_fn, ctx->param_rw_buffers);
 	LLVMValueRef buf_index = LLVMConstInt(ctx->i32, SI_PS_CONST_SAMPLE_POSITIONS, 0);
-	LLVMValueRef resource = ac_build_indexed_load_const(&ctx->ac, desc, buf_index);
+	LLVMValueRef resource = ac_build_load_to_sgpr(&ctx->ac, desc, buf_index);
 
 	/* offset = sample_id * 8  (8 = 2 floats containing samplepos.xy) */
 	LLVMValueRef offset0 = lp_build_mul_imm(uint_bld, sample_id, 8);
@@ -1792,7 +1792,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 
 		slot = LLVMConstInt(ctx->i32, SI_HS_CONST_DEFAULT_TESS_LEVELS, 0);
 		buf = LLVMGetParam(ctx->main_fn, ctx->param_rw_buffers);
-		buf = ac_build_indexed_load_const(&ctx->ac, buf, slot);
+		buf = ac_build_load_to_sgpr(&ctx->ac, buf, slot);
 		offset = decl->Semantic.Name == TGSI_SEMANTIC_DEFAULT_TESSINNER_SI ? 4 : 0;
 
 		for (i = 0; i < 4; i++)
@@ -1935,8 +1935,8 @@ static LLVMValueRef load_const_buffer_desc(struct si_shader_context *ctx, int i)
 	LLVMValueRef list_ptr = LLVMGetParam(ctx->main_fn,
 					     ctx->param_const_and_shader_buffers);
 
-	return ac_build_indexed_load_const(&ctx->ac, list_ptr,
-			LLVMConstInt(ctx->i32, si_get_constbuf_slot(i), 0));
+	return ac_build_load_to_sgpr(&ctx->ac, list_ptr,
+				     LLVMConstInt(ctx->i32, si_get_constbuf_slot(i), 0));
 }
 
 static LLVMValueRef load_ubo(struct ac_shader_abi *abi, LLVMValueRef index)
@@ -1948,7 +1948,7 @@ static LLVMValueRef load_ubo(struct ac_shader_abi *abi, LLVMValueRef index)
 	index = LLVMBuildAdd(ctx->ac.builder, index,
 			     LLVMConstInt(ctx->i32, SI_NUM_SHADER_BUFFERS, 0), "");
 
-	return ac_build_indexed_load_const(&ctx->ac, ptr, index);
+	return ac_build_load_to_sgpr(&ctx->ac, ptr, index);
 }
 
 static LLVMValueRef
@@ -1963,7 +1963,7 @@ load_ssbo(struct ac_shader_abi *abi, LLVMValueRef index, bool write)
 			     LLVMConstInt(ctx->i32, SI_NUM_SHADER_BUFFERS - 1, 0),
 			     index, "");
 
-	return ac_build_indexed_load_const(&ctx->ac, rsrc_ptr, index);
+	return ac_build_load_to_sgpr(&ctx->ac, rsrc_ptr, index);
 }
 
 static LLVMValueRef fetch_constant(
@@ -2008,7 +2008,7 @@ static LLVMValueRef fetch_constant(
 						      ctx->num_const_buffers);
 		index = LLVMBuildAdd(ctx->ac.builder, index,
 				     LLVMConstInt(ctx->i32, SI_NUM_SHADER_BUFFERS, 0), "");
-		bufp = ac_build_indexed_load_const(&ctx->ac, ptr, index);
+		bufp = ac_build_load_to_sgpr(&ctx->ac, ptr, index);
 	} else
 		bufp = load_const_buffer_desc(ctx, buf);
 
@@ -2283,7 +2283,7 @@ static void si_llvm_emit_clipvertex(struct lp_build_tgsi_context *bld_base,
 	LLVMValueRef ptr = LLVMGetParam(ctx->main_fn, ctx->param_rw_buffers);
 	LLVMValueRef constbuf_index = LLVMConstInt(ctx->i32,
 						   SI_VS_CONST_CLIP_PLANES, 0);
-	LLVMValueRef const_resource = ac_build_indexed_load_const(&ctx->ac, ptr, constbuf_index);
+	LLVMValueRef const_resource = ac_build_load_to_sgpr(&ctx->ac, ptr, constbuf_index);
 
 	for (reg_index = 0; reg_index < 2; reg_index ++) {
 		struct ac_export_args *args = &pos[2 + reg_index];
@@ -2440,7 +2440,7 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 			LLVMValueRef offset = LLVMConstInt(ctx->i32,
 							   SI_VS_STREAMOUT_BUF0 + i, 0);
 
-			so_buffers[i] = ac_build_indexed_load_const(&ctx->ac, buf_ptr, offset);
+			so_buffers[i] = ac_build_load_to_sgpr(&ctx->ac, buf_ptr, offset);
 
 			LLVMValueRef so_offset = LLVMGetParam(ctx->main_fn,
 							      ctx->param_streamout_offset[i]);
@@ -4722,20 +4722,20 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 		LLVMValueRef offset = LLVMConstInt(ctx->i32, ring, 0);
 
 		ctx->esgs_ring =
-			ac_build_indexed_load_const(&ctx->ac, buf_ptr, offset);
+			ac_build_load_to_sgpr(&ctx->ac, buf_ptr, offset);
 	}
 
 	if (ctx->shader->is_gs_copy_shader) {
 		LLVMValueRef offset = LLVMConstInt(ctx->i32, SI_RING_GSVS, 0);
 
 		ctx->gsvs_ring[0] =
-			ac_build_indexed_load_const(&ctx->ac, buf_ptr, offset);
+			ac_build_load_to_sgpr(&ctx->ac, buf_ptr, offset);
 	} else if (ctx->type == PIPE_SHADER_GEOMETRY) {
 		const struct si_shader_selector *sel = ctx->shader->selector;
 		LLVMValueRef offset = LLVMConstInt(ctx->i32, SI_RING_GSVS, 0);
 		LLVMValueRef base_ring;
 
-		base_ring = ac_build_indexed_load_const(&ctx->ac, buf_ptr, offset);
+		base_ring = ac_build_load_to_sgpr(&ctx->ac, buf_ptr, offset);
 
 		/* The conceptual layout of the GSVS ring is
 		 *   v0c0 .. vLv0 v0c1 .. vLc1 ..
@@ -4818,7 +4818,7 @@ static void si_llvm_emit_polygon_stipple(struct si_shader_context *ctx,
 
 	/* Load the buffer descriptor. */
 	slot = LLVMConstInt(ctx->i32, SI_PS_CONST_POLY_STIPPLE, 0);
-	desc = ac_build_indexed_load_const(&ctx->ac, param_rw_buffers, slot);
+	desc = ac_build_load_to_sgpr(&ctx->ac, param_rw_buffers, slot);
 
 	/* The stipple pattern is 32x32, each row has 32 bits. */
 	offset = LLVMBuildMul(builder, address[1],
@@ -6887,7 +6887,7 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 		LLVMValueRef buf_index =
 			LLVMConstInt(ctx->i32, SI_VS_CONST_INSTANCE_DIVISORS, 0);
 		instance_divisor_constbuf =
-			ac_build_indexed_load_const(&ctx->ac, list, buf_index);
+			ac_build_load_to_sgpr(&ctx->ac, list, buf_index);
 	}
 
 	for (i = 0; i <= key->vs_prolog.last_input; i++) {

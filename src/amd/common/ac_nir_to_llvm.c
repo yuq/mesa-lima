@@ -798,7 +798,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		for (unsigned i = 0; i < num_sets; ++i) {
 			if (ctx->options->layout->set[i].layout->shader_stages & (1 << ctx->stage)) {
 				set_userdata_location_indirect(&ctx->shader_info->user_sgprs_locs.descriptor_sets[i], desc_sgpr_idx, 2, i * 8);
-				ctx->descriptor_sets[i] = ac_build_indexed_load_const(&ctx->ac, desc_sets, LLVMConstInt(ctx->i32, i, false));
+				ctx->descriptor_sets[i] = ac_build_load_to_sgpr(&ctx->ac, desc_sets, LLVMConstInt(ctx->i32, i, false));
 
 			} else
 				ctx->descriptor_sets[i] = NULL;
@@ -2524,7 +2524,7 @@ lds_load(struct nir_to_llvm_context *ctx,
 	 LLVMValueRef dw_addr)
 {
 	LLVMValueRef value;
-	value = ac_build_indexed_load(&ctx->ac, ctx->lds, dw_addr, false);
+	value = ac_build_load(&ctx->ac, ctx->lds, dw_addr);
 	return value;
 }
 
@@ -3739,7 +3739,7 @@ static LLVMValueRef load_sample_position(struct nir_to_llvm_context *ctx,
 			       const_array(ctx->v2f32, 64), "");
 
 	sample_id = LLVMBuildAdd(ctx->builder, sample_id, ctx->sample_pos_offset, "");
-	result = ac_build_indexed_load(&ctx->ac, ptr, sample_id, false);
+	result = ac_build_load_invariant(&ctx->ac, ptr, sample_id);
 
 	return result;
 }
@@ -4230,7 +4230,7 @@ static LLVMValueRef radv_get_sampler_desc(struct ac_shader_abi *abi,
 	list = ac_build_gep0(&ctx->ac, list, LLVMConstInt(ctx->i32, offset, 0));
 	list = LLVMBuildPointerCast(builder, list, const_array(type, 0), "");
 
-	return ac_build_indexed_load_const(&ctx->ac, list, index);
+	return ac_build_load_to_sgpr(&ctx->ac, list, index);
 }
 
 static LLVMValueRef get_sampler_desc(struct ac_nir_context *ctx,
@@ -4927,7 +4927,7 @@ handle_vs_input_decl(struct nir_to_llvm_context *ctx,
 	for (unsigned i = 0; i < attrib_count; ++i, ++idx) {
 		t_offset = LLVMConstInt(ctx->i32, index + i, false);
 
-		t_list = ac_build_indexed_load_const(&ctx->ac, t_list_ptr, t_offset);
+		t_list = ac_build_load_to_sgpr(&ctx->ac, t_list_ptr, t_offset);
 
 		input = ac_build_buffer_load_format(&ctx->ac, t_list,
 						    buffer_index,
@@ -6217,16 +6217,16 @@ ac_setup_rings(struct nir_to_llvm_context *ctx)
 {
 	if ((ctx->stage == MESA_SHADER_VERTEX && ctx->options->key.vs.as_es) ||
 	    (ctx->stage == MESA_SHADER_TESS_EVAL && ctx->options->key.tes.as_es)) {
-		ctx->esgs_ring = ac_build_indexed_load_const(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_ESGS_VS, false));
+		ctx->esgs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_ESGS_VS, false));
 	}
 
 	if (ctx->is_gs_copy_shader) {
-		ctx->gsvs_ring = ac_build_indexed_load_const(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_GSVS_VS, false));
+		ctx->gsvs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_GSVS_VS, false));
 	}
 	if (ctx->stage == MESA_SHADER_GEOMETRY) {
 		LLVMValueRef tmp;
-		ctx->esgs_ring = ac_build_indexed_load_const(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_ESGS_GS, false));
-		ctx->gsvs_ring = ac_build_indexed_load_const(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_GSVS_GS, false));
+		ctx->esgs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_ESGS_GS, false));
+		ctx->gsvs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_GSVS_GS, false));
 
 		ctx->gsvs_ring = LLVMBuildBitCast(ctx->builder, ctx->gsvs_ring, ctx->v4i32, "");
 
@@ -6238,8 +6238,8 @@ ac_setup_rings(struct nir_to_llvm_context *ctx)
 
 	if (ctx->stage == MESA_SHADER_TESS_CTRL ||
 	    ctx->stage == MESA_SHADER_TESS_EVAL) {
-		ctx->hs_ring_tess_offchip = ac_build_indexed_load_const(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_HS_TESS_OFFCHIP, false));
-		ctx->hs_ring_tess_factor = ac_build_indexed_load_const(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_HS_TESS_FACTOR, false));
+		ctx->hs_ring_tess_offchip = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_HS_TESS_OFFCHIP, false));
+		ctx->hs_ring_tess_factor = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, RING_HS_TESS_FACTOR, false));
 	}
 }
 

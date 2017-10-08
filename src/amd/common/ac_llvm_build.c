@@ -717,32 +717,40 @@ ac_build_indexed_store(struct ac_llvm_context *ctx,
  * \param base_ptr  Where the array starts.
  * \param index     The element index into the array.
  * \param uniform   Whether the base_ptr and index can be assumed to be
- *                  dynamically uniform
+ *                  dynamically uniform (i.e. load to an SGPR)
+ * \param invariant Whether the load is invariant (no other opcodes affect it)
  */
-LLVMValueRef
-ac_build_indexed_load(struct ac_llvm_context *ctx,
-		      LLVMValueRef base_ptr, LLVMValueRef index,
-		      bool uniform)
+static LLVMValueRef
+ac_build_load_custom(struct ac_llvm_context *ctx, LLVMValueRef base_ptr,
+		     LLVMValueRef index, bool uniform, bool invariant)
 {
-	LLVMValueRef pointer;
+	LLVMValueRef pointer, result;
 
 	pointer = ac_build_gep0(ctx, base_ptr, index);
 	if (uniform)
 		LLVMSetMetadata(pointer, ctx->uniform_md_kind, ctx->empty_md);
-	return LLVMBuildLoad(ctx->builder, pointer, "");
+	result = LLVMBuildLoad(ctx->builder, pointer, "");
+	if (invariant)
+		LLVMSetMetadata(result, ctx->invariant_load_md_kind, ctx->empty_md);
+	return result;
 }
 
-/**
- * Do a load from &base_ptr[index], but also add a flag that it's loading
- * a constant from a dynamically uniform index.
- */
-LLVMValueRef
-ac_build_indexed_load_const(struct ac_llvm_context *ctx,
-			    LLVMValueRef base_ptr, LLVMValueRef index)
+LLVMValueRef ac_build_load(struct ac_llvm_context *ctx, LLVMValueRef base_ptr,
+			   LLVMValueRef index)
 {
-	LLVMValueRef result = ac_build_indexed_load(ctx, base_ptr, index, true);
-	LLVMSetMetadata(result, ctx->invariant_load_md_kind, ctx->empty_md);
-	return result;
+	return ac_build_load_custom(ctx, base_ptr, index, false, false);
+}
+
+LLVMValueRef ac_build_load_invariant(struct ac_llvm_context *ctx,
+				     LLVMValueRef base_ptr, LLVMValueRef index)
+{
+	return ac_build_load_custom(ctx, base_ptr, index, false, true);
+}
+
+LLVMValueRef ac_build_load_to_sgpr(struct ac_llvm_context *ctx,
+				   LLVMValueRef base_ptr, LLVMValueRef index)
+{
+	return ac_build_load_custom(ctx, base_ptr, index, true, true);
 }
 
 /* TBUFFER_STORE_FORMAT_{X,XY,XYZ,XYZW} <- the suffix is selected by num_channels=1..4.
