@@ -151,15 +151,10 @@ lima_create_fs_state(struct pipe_context *pctx,
    lima_program_optimize_fs_nir(nir);
    nir_print_shader(nir, stdout);
 
-   ppir_compile_nir(so, nir, screen->pp_ra);
-
-   static uint32_t fs[] = {
-      0x00021025, 0x0000014c, 0x03c007cf, 0x00000000, /* 0x00000000 */
-      0x00000000,
-   };
-
-   so->shader = fs;
-   so->shader_size = sizeof(fs);
+   if (!ppir_compile_nir(so, nir, screen->pp_ra)) {
+      ralloc_free(so);
+      return NULL;
+   }
 
    return so;
 }
