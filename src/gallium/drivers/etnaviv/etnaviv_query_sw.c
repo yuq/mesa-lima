@@ -27,7 +27,6 @@
 
 #include "os/os_time.h"
 #include "pipe/p_state.h"
-#include "util/u_inlines.h"
 #include "util/u_memory.h"
 #include "util/u_string.h"
 
@@ -81,7 +80,6 @@ etna_sw_get_query_result(struct etna_context *ctx, struct etna_query *q,
 {
    struct etna_sw_query *sq = etna_sw_query(q);
 
-   util_query_clear_result(result, q->type);
    result->u64 = sq->end_value - sq->begin_value;
 
    return true;

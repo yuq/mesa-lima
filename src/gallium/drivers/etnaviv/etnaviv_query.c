@@ -26,6 +26,7 @@
  */
 
 #include "pipe/p_screen.h"
+#include "util/u_inlines.h"
 
 #include "etnaviv_context.h"
 #include "etnaviv_query.h"
@@ -88,6 +89,8 @@ etna_get_query_result(struct pipe_context *pctx, struct pipe_query *pq,
 
    if (q->active)
       return false;
+
+   util_query_clear_result(result, q->type);
 
    return q->funcs->get_query_result(etna_context(pctx), q, wait, result);
 }
