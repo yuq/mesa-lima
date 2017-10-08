@@ -200,6 +200,7 @@ typedef struct {
    ppir_dest dest;
    ppir_src src[3];
    int num_src;
+   int shift : 3; /* Only used for ppir_op_mul */
 } ppir_alu_node;
 
 typedef struct ppir_const {
@@ -372,6 +373,34 @@ static inline bool ppir_node_target_equal(ppir_src *src, ppir_dest *dest)
       return false;
 
    return true;
+}
+
+static inline int ppir_target_get_src_reg_index(ppir_src *src)
+{
+   switch (src->type) {
+   case ppir_target_ssa:
+      return src->ssa->index;
+   case ppir_target_register:
+      return src->reg->index;
+   case ppir_target_pipeline:
+      return (src->pipeline + 12) * 4;
+   }
+
+   return -1;
+}
+
+static inline int ppir_target_get_dest_reg_index(ppir_dest *dest)
+{
+   switch (dest->type) {
+   case ppir_target_ssa:
+      return dest->ssa.index;
+   case ppir_target_register:
+      return dest->reg->index;
+   case ppir_target_pipeline:
+      return (dest->pipeline + 12) * 4;
+   }
+
+   return -1;
 }
 
 ppir_instr *ppir_instr_create(ppir_block *block);
