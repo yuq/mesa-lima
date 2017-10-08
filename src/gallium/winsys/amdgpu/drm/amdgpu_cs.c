@@ -616,7 +616,8 @@ static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
    return index;
 }
 
-static bool amdgpu_ib_new_buffer(struct amdgpu_winsys *ws, struct amdgpu_ib *ib)
+static bool amdgpu_ib_new_buffer(struct amdgpu_winsys *ws, struct amdgpu_ib *ib,
+                                 enum ring_type ring_type)
 {
    struct pb_buffer *pb;
    uint8_t *mapped;
@@ -646,7 +647,11 @@ static bool amdgpu_ib_new_buffer(struct amdgpu_winsys *ws, struct amdgpu_ib *ib)
    pb = ws->base.buffer_create(&ws->base, buffer_size,
                                ws->info.gart_page_size,
                                RADEON_DOMAIN_GTT,
-                               RADEON_FLAG_NO_INTERPROCESS_SHARING);
+                               RADEON_FLAG_NO_INTERPROCESS_SHARING |
+                               (ring_type == RING_GFX ||
+                                ring_type == RING_COMPUTE ||
+                                ring_type == RING_DMA ?
+                                   RADEON_FLAG_GTT_WC : 0));
    if (!pb)
       return false;
 
@@ -716,7 +721,7 @@ static bool amdgpu_get_new_ib(struct radeon_winsys *ws, struct amdgpu_cs *cs,
    /* Allocate a new buffer for IBs if the current buffer is all used. */
    if (!ib->big_ib_buffer ||
        ib->used_ib_space + ib_size > ib->big_ib_buffer->size) {
-      if (!amdgpu_ib_new_buffer(aws, ib))
+      if (!amdgpu_ib_new_buffer(aws, ib, cs->ring_type))
          return false;
    }
 
@@ -926,7 +931,7 @@ static bool amdgpu_cs_check_space(struct radeon_winsys_cs *rcs, unsigned dw)
       rcs->max_prev = new_max_prev;
    }
 
-   if (!amdgpu_ib_new_buffer(cs->ctx->ws, ib))
+   if (!amdgpu_ib_new_buffer(cs->ctx->ws, ib, cs->ring_type))
       return false;
 
    assert(ib->used_ib_space == 0);
