@@ -286,6 +286,27 @@ static int encode_instr(ppir_instr *instr, void *code, void *last_code)
    return size;
 }
 
+static void ppir_codegen_print_prog(ppir_compiler *comp)
+{
+   uint32_t *prog = comp->prog->shader;
+
+   printf("========ppir codegen========\n");
+   list_for_each_entry(ppir_block, block, &comp->block_list, list) {
+      list_for_each_entry(ppir_instr, instr, &block->instr_list, list) {
+         printf("%03d: ", instr->index);
+         int n = prog[0] & 0x1f;
+         for (int i = 0; i < n; i++) {
+            if (i && i % 6 == 0)
+               printf("\n    ");
+            printf("%08x ", prog[i]);
+         }
+         printf("\n");
+         prog += n;
+      }
+   }
+   printf("-----------------------\n");
+}
+
 bool ppir_codegen_prog(ppir_compiler *comp)
 {
    int size = 0;
@@ -311,5 +332,6 @@ bool ppir_codegen_prog(ppir_compiler *comp)
    comp->prog->shader = prog;
    comp->prog->shader_size = size;
 
+   ppir_codegen_print_prog(comp);
    return true;
 }
