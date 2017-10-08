@@ -149,13 +149,16 @@ static bool si_upload_descriptors(struct si_context *sctx,
 		return true;
 
 	uint32_t *ptr;
+	int buffer_offset;
 	u_upload_alloc(sctx->b.b.const_uploader, 0, upload_size,
 		       si_optimal_tcc_alignment(sctx, upload_size),
-		       (unsigned*)&desc->buffer_offset,
+		       (unsigned*)&buffer_offset,
 		       (struct pipe_resource**)&desc->buffer,
 		       (void**)&ptr);
-	if (!desc->buffer)
+	if (!desc->buffer) {
+		desc->gpu_address = 0;
 		return false; /* skip the draw call */
+	}
 
 	util_memcpy_cpu_to_le32(ptr, (char*)desc->list + first_slot_offset,
 				upload_size);
@@ -165,7 +168,8 @@ static bool si_upload_descriptors(struct si_context *sctx,
                             RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
 
 	/* The shader pointer should point to slot 0. */
-	desc->buffer_offset -= first_slot_offset;
+	buffer_offset -= first_slot_offset;
+	desc->gpu_address = desc->buffer->gpu_address + buffer_offset;
 
 	si_mark_atom_dirty(sctx, &sctx->shader_pointers.atom);
 	return true;
@@ -997,14 +1001,18 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	 * directly through a staging buffer and don't go through
 	 * the fine-grained upload path.
 	 */
+	unsigned buffer_offset = 0;
 	u_upload_alloc(sctx->b.b.const_uploader, 0,
 		       desc_list_byte_size,
 		       si_optimal_tcc_alignment(sctx, desc_list_byte_size),
-		       (unsigned*)&desc->buffer_offset,
+		       &buffer_offset,
 		       (struct pipe_resource**)&desc->buffer, (void**)&ptr);
-	if (!desc->buffer)
+	if (!desc->buffer) {
+		desc->gpu_address = 0;
 		return false;
+	}
 
+	desc->gpu_address = desc->buffer->gpu_address + buffer_offset;
 	desc->list = ptr;
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 			      desc->buffer, RADEON_USAGE_READ,
@@ -1714,9 +1722,7 @@ static void si_upload_bindless_descriptor(struct si_context *sctx,
 	uint64_t va;
 
 	data = desc->list + desc_slot_offset;
-
-	va = desc->buffer->gpu_address + desc->buffer_offset +
-	     desc_slot_offset * 4;
+	va = desc->gpu_address + desc_slot_offset * 4;
 
 	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 2 + num_dwords, 0));
 	radeon_emit(cs, S_370_DST_SEL(V_370_TC_L2) |
@@ -1967,10 +1973,7 @@ static void si_emit_shader_pointer_head(struct radeon_winsys_cs *cs,
 static void si_emit_shader_pointer_body(struct radeon_winsys_cs *cs,
 					struct si_descriptors *desc)
 {
-	uint64_t va = 0;
-
-	if (desc->buffer)
-		va = desc->buffer->gpu_address + desc->buffer_offset;
+	uint64_t va = desc->gpu_address;
 
 	radeon_emit(cs, va);
 	radeon_emit(cs, va >> 32);

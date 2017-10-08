@@ -460,7 +460,8 @@ static void cik_prefetch_VBO_descriptors(struct si_context *sctx)
 		return;
 
 	cik_prefetch_TC_L2_async(sctx, &sctx->vertex_buffers.buffer->b.b,
-				 sctx->vertex_buffers.buffer_offset,
+				 sctx->vertex_buffers.gpu_address -
+				 sctx->vertex_buffers.buffer->gpu_address,
 				 sctx->vertex_elements->desc_list_byte_size);
 }
 

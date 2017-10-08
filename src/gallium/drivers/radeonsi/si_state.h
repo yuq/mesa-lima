@@ -263,7 +263,7 @@ struct si_descriptors {
 
 	/* The buffer where the descriptors have been uploaded. */
 	struct r600_resource *buffer;
-	int buffer_offset; /* can be negative if not using lower slots */
+	uint64_t gpu_address;
 
 	/* The maximum number of descriptors. */
 	uint32_t num_elements;
