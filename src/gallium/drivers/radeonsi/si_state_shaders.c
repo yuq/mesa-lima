@@ -459,6 +459,17 @@ static struct si_pm4_state *si_get_shader_pm4_state(struct si_shader *shader)
 	return shader->pm4;
 }
 
+static unsigned si_get_num_vs_user_sgprs(unsigned num_always_on_user_sgprs)
+{
+	/* Add the pointer to VBO descriptors. */
+	if (HAVE_32BIT_POINTERS) {
+		return num_always_on_user_sgprs + 1;
+	} else {
+		assert(num_always_on_user_sgprs % 2 == 0);
+		return num_always_on_user_sgprs + 2;
+	}
+}
+
 static void si_shader_ls(struct si_screen *sscreen, struct si_shader *shader)
 {
 	struct si_pm4_state *pm4;
@@ -488,7 +499,7 @@ static void si_shader_ls(struct si_screen *sscreen, struct si_shader *shader)
 		           S_00B528_VGPR_COMP_CNT(vgpr_comp_cnt) |
 			   S_00B528_DX10_CLAMP(1) |
 			   S_00B528_FLOAT_MODE(shader->config.float_mode);
-	shader->config.rsrc2 = S_00B52C_USER_SGPR(SI_VS_NUM_USER_SGPR) |
+	shader->config.rsrc2 = S_00B52C_USER_SGPR(si_get_num_vs_user_sgprs(SI_VS_NUM_USER_SGPR)) |
 			   S_00B52C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0);
 }
 
@@ -515,9 +526,12 @@ static void si_shader_hs(struct si_screen *sscreen, struct si_shader *shader)
 		 */
 		ls_vgpr_comp_cnt = shader->info.uses_instanceid ? 2 : 1;
 
+		unsigned num_user_sgprs =
+			si_get_num_vs_user_sgprs(GFX9_TCS_NUM_USER_SGPR);
+
 		shader->config.rsrc2 =
-			S_00B42C_USER_SGPR(GFX9_TCS_NUM_USER_SGPR) |
-			S_00B42C_USER_SGPR_MSB(GFX9_TCS_NUM_USER_SGPR >> 5) |
+			S_00B42C_USER_SGPR(num_user_sgprs) |
+			S_00B42C_USER_SGPR_MSB(num_user_sgprs >> 5) |
 			S_00B42C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0);
 	} else {
 		si_pm4_set_reg(pm4, R_00B420_SPI_SHADER_PGM_LO_HS, va >> 8);
@@ -562,7 +576,7 @@ static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
 	if (shader->selector->type == PIPE_SHADER_VERTEX) {
 		/* VGPR0-3: (VertexID, InstanceID / StepRate0, ...) */
 		vgpr_comp_cnt = shader->info.uses_instanceid ? 1 : 0;
-		num_user_sgprs = SI_VS_NUM_USER_SGPR;
+		num_user_sgprs = si_get_num_vs_user_sgprs(SI_VS_NUM_USER_SGPR);
 	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
 		vgpr_comp_cnt = shader->selector->info.uses_primid ? 3 : 2;
 		num_user_sgprs = SI_TES_NUM_USER_SGPR;
@@ -769,6 +783,12 @@ static void si_shader_gs(struct si_screen *sscreen, struct si_shader *shader)
 		else
 			gs_vgpr_comp_cnt = 0; /* VGPR0 contains offsets 0, 1 */
 
+		unsigned num_user_sgprs;
+		if (es_type == PIPE_SHADER_VERTEX)
+			num_user_sgprs = si_get_num_vs_user_sgprs(GFX9_GS_NUM_USER_SGPR);
+		else
+			num_user_sgprs = GFX9_GS_NUM_USER_SGPR;
+
 		gfx9_get_gs_info(shader->key.part.gs.es, sel, &gs_info);
 
 		si_pm4_set_reg(pm4, R_00B210_SPI_SHADER_PGM_LO_ES, va >> 8);
@@ -781,8 +801,8 @@ static void si_shader_gs(struct si_screen *sscreen, struct si_shader *shader)
 			       S_00B228_FLOAT_MODE(shader->config.float_mode) |
 			       S_00B228_GS_VGPR_COMP_CNT(gs_vgpr_comp_cnt));
 		si_pm4_set_reg(pm4, R_00B22C_SPI_SHADER_PGM_RSRC2_GS,
-			       S_00B22C_USER_SGPR(GFX9_GS_NUM_USER_SGPR) |
-			       S_00B22C_USER_SGPR_MSB(GFX9_GS_NUM_USER_SGPR >> 5) |
+			       S_00B22C_USER_SGPR(num_user_sgprs) |
+			       S_00B22C_USER_SGPR_MSB(num_user_sgprs >> 5) |
 			       S_00B22C_ES_VGPR_COMP_CNT(es_vgpr_comp_cnt) |
 			       S_00B22C_OC_LDS_EN(es_type == PIPE_SHADER_TESS_EVAL) |
 			       S_00B22C_LDS_SIZE(gs_info.lds_size) |
@@ -887,7 +907,7 @@ static void si_shader_vs(struct si_screen *sscreen, struct si_shader *shader,
 			num_user_sgprs = SI_SGPR_VS_BLIT_DATA +
 					 info->properties[TGSI_PROPERTY_VS_BLIT_SGPRS];
 		} else {
-			num_user_sgprs = SI_VS_NUM_USER_SGPR;
+			num_user_sgprs = si_get_num_vs_user_sgprs(SI_VS_NUM_USER_SGPR);
 		}
 	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
 		vgpr_comp_cnt = enable_prim_id ? 3 : 2;

@@ -2127,9 +2127,19 @@ void si_emit_graphics_shader_pointers(struct si_context *sctx,
 
 	if (sctx->vertex_buffer_pointer_dirty) {
 		struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-		unsigned sh_offset = sh_base[PIPE_SHADER_VERTEX] +
-				     SI_SGPR_VERTEX_BUFFERS * 4;
 
+		/* Find the location of the VB descriptor pointer. */
+		/* TODO: In the future, the pointer will be packed in unused
+		 *       bits of the first 2 VB descriptors. */
+		unsigned sh_dw_offset = SI_VS_NUM_USER_SGPR;
+		if (sctx->b.chip_class >= GFX9) {
+			if (sctx->tes_shader.cso)
+				sh_dw_offset = GFX9_TCS_NUM_USER_SGPR;
+			else if (sctx->gs_shader.cso)
+				sh_dw_offset = GFX9_GS_NUM_USER_SGPR;
+		}
+
+		unsigned sh_offset = sh_base[PIPE_SHADER_VERTEX] + sh_dw_offset * 4;
 		si_emit_shader_pointer_head(cs, sh_offset, 1);
 		si_emit_shader_pointer_body(sctx->screen, cs,
 					    sctx->vb_descriptors_buffer->gpu_address +

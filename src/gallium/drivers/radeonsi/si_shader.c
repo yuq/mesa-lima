@@ -4558,8 +4558,6 @@ static void declare_global_desc_pointers(struct si_shader_context *ctx,
 static void declare_vs_specific_input_sgprs(struct si_shader_context *ctx,
 					    struct si_function_info *fninfo)
 {
-	ctx->param_vertex_buffers = add_arg(fninfo, ARG_SGPR,
-		ac_array_in_const32_addr_space(ctx->v4i32));
 	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.base_vertex);
 	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.start_instance);
 	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.draw_id);
@@ -4661,6 +4659,8 @@ static void create_function(struct si_shader_context *ctx)
 
 		declare_per_stage_desc_pointers(ctx, &fninfo, true);
 		declare_vs_specific_input_sgprs(ctx, &fninfo);
+		ctx->param_vertex_buffers = add_arg(&fninfo, ARG_SGPR,
+			ac_array_in_const32_addr_space(ctx->v4i32));
 
 		if (shader->key.as_es) {
 			ctx->param_es2gs_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
@@ -4733,6 +4733,10 @@ static void create_function(struct si_shader_context *ctx)
 		ctx->param_tcs_offchip_layout = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_out_lds_offsets = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_out_lds_layout = add_arg(&fninfo, ARG_SGPR, ctx->i32);
+		if (!HAVE_32BIT_POINTERS) /* Align to 2 dwords. */
+			add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
+		ctx->param_vertex_buffers = add_arg(&fninfo, ARG_SGPR,
+			ac_array_in_const32_addr_space(ctx->v4i32));
 
 		/* VGPRs (first TCS, then VS) */
 		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->abi.tcs_patch_id);
@@ -4790,15 +4794,16 @@ static void create_function(struct si_shader_context *ctx)
 			ctx->param_tcs_offchip_layout = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 			ctx->param_tes_offchip_addr = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 			add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
-			add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
-			if (!HAVE_32BIT_POINTERS)
-				add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
 			ctx->param_vs_state_bits = add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
 		}
 
 		if (!HAVE_32BIT_POINTERS) {
 			declare_samplers_and_images(ctx, &fninfo,
 						    ctx->type == PIPE_SHADER_GEOMETRY);
+		}
+		if (ctx->type == PIPE_SHADER_VERTEX) {
+			ctx->param_vertex_buffers = add_arg(&fninfo, ARG_SGPR,
+				ac_array_in_const32_addr_space(ctx->v4i32));
 		}
 
 		/* VGPRs (first GS, then VS/TES) */
@@ -7320,7 +7325,6 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
-		add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
 		add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
 		add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
 		add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
