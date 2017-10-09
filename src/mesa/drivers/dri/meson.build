@@ -25,6 +25,9 @@ dri_link = []
 if with_dri_swrast
   subdir('swrast')
 endif
+if with_dri_i915
+  subdir('i915')
+endif
 if with_dri_i965
   subdir('i965')
 endif
