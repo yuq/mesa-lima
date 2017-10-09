@@ -2665,17 +2665,22 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
          /* Arbitrarily only push up to 32 vec4 slots worth of data,
           * which is 16 registers (since each holds 2 vec4 slots).
           */
+         unsigned slot_count = 1;
+         if (type_sz(dest.type) == 8 && instr->num_components > 2)
+            slot_count++;
+
          const unsigned max_push_slots = 32;
-         if (imm_offset < max_push_slots) {
+         if (imm_offset + slot_count <= max_push_slots) {
             fs_reg src = fs_reg(ATTR, imm_offset / 2, dest.type);
             for (int i = 0; i < instr->num_components; i++) {
                unsigned comp = 16 / type_sz(dest.type) * (imm_offset % 2) +
                   i + first_component;
                bld.MOV(offset(dest, bld, i), component(src, comp));
             }
+
             tes_prog_data->base.urb_read_length =
                MAX2(tes_prog_data->base.urb_read_length,
-                    DIV_ROUND_UP(imm_offset + 1, 2));
+                    DIV_ROUND_UP(imm_offset + slot_count, 2));
          } else {
             /* Replicate the patch handle to all enabled channels */
             const fs_reg srcs[] = {
