@@ -476,17 +476,37 @@ vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config_id,
    attribs[i].value.value.p = NULL; /* ignore */
    i++;
 
-   attribs[i].type = VASurfaceAttribMaxWidth;
-   attribs[i].value.type = VAGenericValueTypeInteger;
-   attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
-   attribs[i].value.value.i = vl_video_buffer_max_size(pscreen);
-   i++;
+   if (config->entrypoint != PIPE_VIDEO_ENTRYPOINT_UNKNOWN) {
+      attribs[i].type = VASurfaceAttribMaxWidth;
+      attribs[i].value.type = VAGenericValueTypeInteger;
+      attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
+      attribs[i].value.value.i =
+         pscreen->get_video_param(pscreen,
+                                  config->profile, config->entrypoint,
+                                  PIPE_VIDEO_CAP_MAX_WIDTH);
+      i++;
 
-   attribs[i].type = VASurfaceAttribMaxHeight;
-   attribs[i].value.type = VAGenericValueTypeInteger;
-   attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
-   attribs[i].value.value.i = vl_video_buffer_max_size(pscreen);
-   i++;
+      attribs[i].type = VASurfaceAttribMaxHeight;
+      attribs[i].value.type = VAGenericValueTypeInteger;
+      attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
+      attribs[i].value.value.i =
+         pscreen->get_video_param(pscreen,
+                                  config->profile, config->entrypoint,
+                                  PIPE_VIDEO_CAP_MAX_HEIGHT);
+      i++;
+   } else {
+      attribs[i].type = VASurfaceAttribMaxWidth;
+      attribs[i].value.type = VAGenericValueTypeInteger;
+      attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
+      attribs[i].value.value.i = vl_video_buffer_max_size(pscreen);
+      i++;
+
+      attribs[i].type = VASurfaceAttribMaxHeight;
+      attribs[i].value.type = VAGenericValueTypeInteger;
+      attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE;
+      attribs[i].value.value.i = vl_video_buffer_max_size(pscreen);
+      i++;
+   }
 
    if (i > *num_attribs) {
       *num_attribs = i;
