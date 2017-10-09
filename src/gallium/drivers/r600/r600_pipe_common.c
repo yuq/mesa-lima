@@ -1012,24 +1012,8 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 	switch (param) {
 	case PIPE_COMPUTE_CAP_IR_TARGET: {
 		const char *gpu;
-		const char *triple;
-		if (rscreen->family <= CHIP_ARUBA) {
-			triple = "r600--";
-		} else {
-			if (HAVE_LLVM < 0x0400) {
-				triple = "amdgcn--";
-			} else {
-				triple = "amdgcn-mesa-mesa3d";
-			}
-		}
-		switch(rscreen->family) {
-		/* Clang < 3.6 is missing Hainan in its list of
-		 * GPUs, so we need to use the name of a similar GPU.
-		 */
-		default:
-			gpu = r600_get_llvm_processor_name(rscreen->family);
-			break;
-		}
+		const char *triple = "r600--";
+		gpu = r600_get_llvm_processor_name(rscreen->family);
 		if (ret) {
 			sprintf(ret, "%s-%s", gpu, triple);
 		}
