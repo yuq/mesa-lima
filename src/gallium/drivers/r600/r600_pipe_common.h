@@ -54,7 +54,6 @@ struct u_log_context;
 #define R600_RESOURCE_FLAG_TRANSFER		(PIPE_RESOURCE_FLAG_DRV_PRIV << 0)
 #define R600_RESOURCE_FLAG_FLUSHED_DEPTH	(PIPE_RESOURCE_FLAG_DRV_PRIV << 1)
 #define R600_RESOURCE_FLAG_FORCE_TILING		(PIPE_RESOURCE_FLAG_DRV_PRIV << 2)
-#define R600_RESOURCE_FLAG_DISABLE_DCC		(PIPE_RESOURCE_FLAG_DRV_PRIV << 3)
 #define R600_RESOURCE_FLAG_UNMAPPABLE		(PIPE_RESOURCE_FLAG_DRV_PRIV << 4)
 
 #define R600_CONTEXT_STREAMOUT_FLUSH		(1u << 0)
@@ -105,19 +104,11 @@ struct u_log_context;
 #define DBG_INFO		(1ull << 40)
 #define DBG_NO_WC		(1ull << 41)
 #define DBG_CHECK_VM		(1ull << 42)
-#define DBG_NO_DCC		(1ull << 43)
-#define DBG_NO_DCC_CLEAR	(1ull << 44)
-#define DBG_NO_RB_PLUS		(1ull << 45)
-#define DBG_SI_SCHED		(1ull << 46)
-#define DBG_MONOLITHIC_SHADERS	(1ull << 47)
 /* gap */
 #define DBG_UNSAFE_MATH		(1ull << 49)
-#define DBG_NO_DCC_FB		(1ull << 50)
 #define DBG_TEST_VMFAULT_CP	(1ull << 51)
 #define DBG_TEST_VMFAULT_SDMA	(1ull << 52)
 #define DBG_TEST_VMFAULT_SHADER	(1ull << 53)
-#define DBG_NO_DPBB		(1ull << 54)
-#define DBG_NO_DFSM		(1ull << 55)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
 #define R600_MAX_VIEWPORTS        16
@@ -238,48 +229,18 @@ struct r600_texture {
 	struct r600_fmask_info		fmask;
 	struct r600_cmask_info		cmask;
 	struct r600_resource		*cmask_buffer;
-	uint64_t			dcc_offset; /* 0 = disabled */
 	unsigned			cb_color_info; /* fast clear enable bit */
 	unsigned			color_clear_value[2];
 	unsigned			last_msaa_resolve_target_micro_mode;
 
 	/* Depth buffer compression and fast clear. */
 	uint64_t			htile_offset;
-	bool				tc_compatible_htile;
 	bool				depth_cleared; /* if it was cleared at least once */
 	float				depth_clear_value;
 	bool				stencil_cleared; /* if it was cleared at least once */
 	uint8_t				stencil_clear_value;
 
 	bool				non_disp_tiling; /* R600-Cayman only */
-
-	/* Whether the texture is a displayable back buffer and needs DCC
-	 * decompression, which is expensive. Therefore, it's enabled only
-	 * if statistics suggest that it will pay off and it's allocated
-	 * separately. It can't be bound as a sampler by apps. Limited to
-	 * target == 2D and last_level == 0. If enabled, dcc_offset contains
-	 * the absolute GPUVM address, not the relative one.
-	 */
-	struct r600_resource		*dcc_separate_buffer;
-	/* When DCC is temporarily disabled, the separate buffer is here. */
-	struct r600_resource		*last_dcc_separate_buffer;
-	/* We need to track DCC dirtiness, because st/dri usually calls
-	 * flush_resource twice per frame (not a bug) and we don't wanna
-	 * decompress DCC twice. Also, the dirty tracking must be done even
-	 * if DCC isn't used, because it's required by the DCC usage analysis
-	 * for a possible future enablement.
-	 */
-	bool				separate_dcc_dirty;
-	/* Statistics gathering for the DCC enablement heuristic. */
-	bool				dcc_gather_statistics;
-	/* Estimate of how much this color buffer is written to in units of
-	 * full-screen draws: ps_invocations / (width * height)
-	 * Shader kills, late Z, and blending with trivial discards make it
-	 * inaccurate (we need to count CB updates, not PS invocations).
-	 */
-	unsigned			ps_draw_ratio;
-	/* The number of clears since the last DCC usage analysis. */
-	unsigned			num_slow_clears;
 
 	/* Counter that should be non-zero if the texture is bound to a
 	 * framebuffer. Implemented in radeonsi only.
@@ -302,7 +263,6 @@ struct r600_surface {
 	bool export_16bpc;
 	bool color_is_int8;
 	bool color_is_int10;
-	bool dcc_incompatible;
 
 	/* Color registers. */
 	unsigned cb_color_info;
@@ -313,16 +273,10 @@ struct r600_surface {
 	unsigned cb_color_pitch;	/* EG and later */
 	unsigned cb_color_slice;	/* EG and later */
 	unsigned cb_color_attrib;	/* EG and later */
-	unsigned cb_color_attrib2;	/* GFX9 and later */
-	unsigned cb_dcc_control;	/* VI and later */
 	unsigned cb_color_fmask;	/* CB_COLORn_FMASK (EG and later) or CB_COLORn_FRAG (r600) */
 	unsigned cb_color_fmask_slice;	/* EG and later */
 	unsigned cb_color_cmask;	/* CB_COLORn_TILE (r600 only) */
 	unsigned cb_color_mask;		/* R600 only */
-	unsigned spi_shader_col_format;		/* SI+, no blending, no alpha-to-coverage. */
-	unsigned spi_shader_col_format_alpha;	/* SI+, alpha-to-coverage */
-	unsigned spi_shader_col_format_blend;	/* SI+, blending without alpha. */
-	unsigned spi_shader_col_format_blend_alpha; /* SI+, blending with alpha. */
 	struct r600_resource *cb_buffer_fmask; /* Used for FMASK relocations. R600 only */
 	struct r600_resource *cb_buffer_cmask; /* Used for CMASK relocations. R600 only */
 
@@ -332,12 +286,10 @@ struct r600_surface {
 	uint64_t db_htile_data_base;
 	unsigned db_depth_info;		/* R600 only, then SI and later */
 	unsigned db_z_info;		/* EG and later */
-	unsigned db_z_info2;		/* GFX9+ */
 	unsigned db_depth_view;
 	unsigned db_depth_size;
 	unsigned db_depth_slice;	/* EG and later */
 	unsigned db_stencil_info;	/* EG and later */
-	unsigned db_stencil_info2;	/* GFX9+ */
 	unsigned db_prefetch_limit;	/* R600 only */
 	unsigned db_htile_surface;
 	unsigned db_preload_control;	/* EG and later */
@@ -399,8 +351,6 @@ struct r600_common_screen {
 	uint64_t			debug_flags;
 	bool				has_cp_dma;
 	bool				has_streamout;
-	bool				has_rbplus;     /* if RB+ registers exist */
-	bool				rbplus_allowed; /* if RB+ is allowed */
 
 	struct disk_cache		*disk_shader_cache;
 
@@ -624,7 +574,6 @@ struct r600_common_context {
 	unsigned			num_L2_writebacks;
 	unsigned			num_resident_handles;
 	uint64_t			num_alloc_tex_transfer_bytes;
-	unsigned			last_tex_ps_draw_ratio; /* for query */
 
 	/* Render condition. */
 	struct r600_atom		render_cond_atom;
@@ -641,25 +590,6 @@ struct r600_common_context {
 	float				sample_locations_4x[4][2];
 	float				sample_locations_8x[8][2];
 	float				sample_locations_16x[16][2];
-
-	/* Statistics gathering for the DCC enablement heuristic. It can't be
-	 * in r600_texture because r600_texture can be shared by multiple
-	 * contexts. This is for back buffers only. We shouldn't get too many
-	 * of those.
-	 *
-	 * X11 DRI3 rotates among a finite set of back buffers. They should
-	 * all fit in this array. If they don't, separate DCC might never be
-	 * enabled by DCC stat gathering.
-	 */
-	struct {
-		struct r600_texture		*tex;
-		/* Query queue: 0 = usually active, 1 = waiting, 2 = readback. */
-		struct pipe_query		*ps_stats[3];
-		/* If all slots are used and another slot is needed,
-		 * the least recently used slot is evicted based on this. */
-		int64_t				last_use_timestamp;
-		bool				query_active;
-	} dcc_stats[5];
 
 	struct pipe_debug_callback	debug;
 	struct pipe_device_reset_callback device_reset_callback;
@@ -689,9 +619,6 @@ struct r600_common_context {
 				      unsigned first_level, unsigned last_level,
 				      unsigned first_layer, unsigned last_layer,
 				      unsigned first_sample, unsigned last_sample);
-
-	void (*decompress_dcc)(struct pipe_context *ctx,
-			       struct r600_texture *rtex);
 
 	/* Reallocate the buffer and update all resource bindings where
 	 * the buffer is bound, including all resource descriptors. */
@@ -856,8 +783,6 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				   struct r600_atom *fb_state,
 				   unsigned *buffers, ubyte *dirty_cbufs,
 				   const union pipe_color_union *color);
-bool r600_texture_disable_dcc(struct r600_common_context *rctx,
-			      struct r600_texture *rtex);
 void r600_init_screen_texture_functions(struct r600_common_screen *rscreen);
 void r600_init_context_texture_functions(struct r600_common_context *rctx);
 

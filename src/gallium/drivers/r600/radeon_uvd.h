@@ -117,11 +117,6 @@
 #define RUVD_VC1_PROFILE_MAIN		0x00000001
 #define RUVD_VC1_PROFILE_ADVANCED	0x00000002
 
-enum ruvd_surface_type {
-	RUVD_SURFACE_TYPE_LEGACY = 0,
-	RUVD_SURFACE_TYPE_GFX9
-};
-
 struct ruvd_mvc_element {
 	uint16_t	viewOrderIndex;
 	uint16_t	viewId;
@@ -443,5 +438,5 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 
 /* fill decoding target field from the luma and chroma surfaces */
 void ruvd_set_dt_surfaces(struct ruvd_msg *msg, struct radeon_surf *luma,
-			struct radeon_surf *chroma, enum ruvd_surface_type type);
+			  struct radeon_surf *chroma);
 #endif

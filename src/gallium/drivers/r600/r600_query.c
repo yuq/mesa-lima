@@ -169,7 +169,6 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 	case R600_QUERY_GPU_TEMPERATURE:
 	case R600_QUERY_CURRENT_GPU_SCLK:
 	case R600_QUERY_CURRENT_GPU_MCLK:
-	case R600_QUERY_BACK_BUFFER_PS_DRAW_RATIO:
 	case R600_QUERY_NUM_MAPPED_BUFFERS:
 		query->begin_result = 0;
 		break;
@@ -386,9 +385,6 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 		break;
 	case R600_QUERY_NUM_SHADERS_CREATED:
 		query->end_result = p_atomic_read(&rctx->screen->num_shaders_created);
-		break;
-	case R600_QUERY_BACK_BUFFER_PS_DRAW_RATIO:
-		query->end_result = rctx->last_tex_ps_draw_ratio;
 		break;
 	case R600_QUERY_NUM_SHADER_CACHE_HITS:
 		query->end_result =
@@ -763,26 +759,12 @@ static void r600_query_hw_do_emit_start(struct r600_common_context *ctx,
 			emit_sample_streamout(cs, va + 32 * stream, stream);
 		break;
 	case PIPE_QUERY_TIME_ELAPSED:
-		if (ctx->chip_class >= SI) {
-			/* Write the timestamp from the CP not waiting for
-			 * outstanding draws (top-of-pipe).
-			 */
-			radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
-			radeon_emit(cs, COPY_DATA_COUNT_SEL |
-					COPY_DATA_SRC_SEL(COPY_DATA_TIMESTAMP) |
-					COPY_DATA_DST_SEL(COPY_DATA_MEM_ASYNC));
-			radeon_emit(cs, 0);
-			radeon_emit(cs, 0);
-			radeon_emit(cs, va);
-			radeon_emit(cs, va >> 32);
-		} else {
-			/* Write the timestamp after the last draw is done.
-			 * (bottom-of-pipe)
-			 */
-			r600_gfx_write_event_eop(ctx, EVENT_TYPE_BOTTOM_OF_PIPE_TS,
-						 0, EOP_DATA_SEL_TIMESTAMP,
-						 NULL, va, 0, query->b.type);
-		}
+		/* Write the timestamp after the last draw is done.
+		 * (bottom-of-pipe)
+		 */
+		r600_gfx_write_event_eop(ctx, EVENT_TYPE_BOTTOM_OF_PIPE_TS,
+					 0, EOP_DATA_SEL_TIMESTAMP,
+					 NULL, va, 0, query->b.type);
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
@@ -928,16 +910,9 @@ static void emit_set_predicate(struct r600_common_context *ctx,
 {
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 
-	if (ctx->chip_class >= GFX9) {
-		radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 2, 0));
-		radeon_emit(cs, op);
-		radeon_emit(cs, va);
-		radeon_emit(cs, va >> 32);
-	} else {
-		radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
-		radeon_emit(cs, va);
-		radeon_emit(cs, op | ((va >> 32) & 0xFF));
-	}
+	radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
+	radeon_emit(cs, va);
+	radeon_emit(cs, op | ((va >> 32) & 0xFF));
 	r600_emit_reloc(ctx, &ctx->gfx, buf, RADEON_USAGE_READ,
 			RADEON_PRIO_QUERY);
 }
@@ -1803,55 +1778,11 @@ static void r600_render_condition(struct pipe_context *ctx,
 	/* Compute the size of SET_PREDICATION packets. */
 	atom->num_dw = 0;
 	if (query) {
-		bool needs_workaround = false;
+		for (qbuf = &rquery->buffer; qbuf; qbuf = qbuf->previous)
+			atom->num_dw += (qbuf->results_end / rquery->result_size) * 5;
 
-		/* There is a firmware regression in VI which causes successive
-		 * SET_PREDICATION packets to give the wrong answer for
-		 * non-inverted stream overflow predication.
-		 */
-		if (rctx->chip_class >= VI && !condition &&
-		    (rquery->b.type == PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE ||
-		     (rquery->b.type == PIPE_QUERY_SO_OVERFLOW_PREDICATE &&
-		      (rquery->buffer.previous ||
-		       rquery->buffer.results_end > rquery->result_size)))) {
-			needs_workaround = true;
-		}
-
-		if (needs_workaround && !rquery->workaround_buf) {
-			bool old_force_off = rctx->render_cond_force_off;
-			rctx->render_cond_force_off = true;
-
-			u_suballocator_alloc(
-				rctx->allocator_zeroed_memory, 8, 8,
-				&rquery->workaround_offset,
-				(struct pipe_resource **)&rquery->workaround_buf);
-
-			/* Reset to NULL to avoid a redundant SET_PREDICATION
-			 * from launching the compute grid.
-			 */
-			rctx->render_cond = NULL;
-
-			ctx->get_query_result_resource(
-				ctx, query, true, PIPE_QUERY_TYPE_U64, 0,
-				&rquery->workaround_buf->b.b, rquery->workaround_offset);
-
-			/* Settings this in the render cond atom is too late,
-			 * so set it here. */
-			rctx->flags |= rctx->screen->barrier_flags.L2_to_cp |
-				       R600_CONTEXT_FLUSH_FOR_RENDER_COND;
-
-			rctx->render_cond_force_off = old_force_off;
-		}
-
-		if (needs_workaround) {
-			atom->num_dw = 5;
-		} else {
-			for (qbuf = &rquery->buffer; qbuf; qbuf = qbuf->previous)
-				atom->num_dw += (qbuf->results_end / rquery->result_size) * 5;
-
-			if (rquery->b.type == PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE)
-				atom->num_dw *= R600_MAX_STREAMS;
-		}
+		if (rquery->b.type == PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE)
+			atom->num_dw *= R600_MAX_STREAMS;
 	}
 
 	rctx->render_cond = query;
@@ -2045,7 +1976,6 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("VRAM-usage",			VRAM_USAGE,		BYTES, AVERAGE),
 	X("VRAM-vis-usage",		VRAM_VIS_USAGE,		BYTES, AVERAGE),
 	X("GTT-usage",			GTT_USAGE,		BYTES, AVERAGE),
-	X("back-buffer-ps-draw-ratio",	BACK_BUFFER_PS_DRAW_RATIO, UINT64, AVERAGE),
 
 	/* GPIN queries are for the benefit of old versions of GPUPerfStudio,
 	 * which use it as a fallback path to detect the GPU type.
@@ -2095,12 +2025,6 @@ static unsigned r600_get_num_queries(struct r600_common_screen *rscreen)
 {
 	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 42)
 		return ARRAY_SIZE(r600_driver_query_list);
-	else if (rscreen->info.drm_major == 3) {
-		if (rscreen->chip_class >= VI)
-			return ARRAY_SIZE(r600_driver_query_list);
-		else
-			return ARRAY_SIZE(r600_driver_query_list) - 7;
-	}
 	else
 		return ARRAY_SIZE(r600_driver_query_list) - 25;
 }

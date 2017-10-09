@@ -225,16 +225,10 @@ struct rvce_cpb_slot *l1_slot(struct rvce_encoder *enc)
 void rvce_frame_offset(struct rvce_encoder *enc, struct rvce_cpb_slot *slot,
 		       signed *luma_offset, signed *chroma_offset)
 {
-	struct r600_common_screen *rscreen = (struct r600_common_screen *)enc->screen;
 	unsigned pitch, vpitch, fsize;
 
-	if (rscreen->chip_class < GFX9) {
-		pitch = align(enc->luma->u.legacy.level[0].nblk_x * enc->luma->bpe, 128);
-		vpitch = align(enc->luma->u.legacy.level[0].nblk_y, 16);
-	} else {
-		pitch = align(enc->luma->u.gfx9.surf_pitch * enc->luma->bpe, 256);
-		vpitch = align(enc->luma->u.gfx9.surf_height, 16);
-	}
+	pitch = align(enc->luma->u.legacy.level[0].nblk_x * enc->luma->bpe, 128);
+	vpitch = align(enc->luma->u.legacy.level[0].nblk_y, 16);
 	fsize = pitch * (vpitch + vpitch / 2);
 
 	*luma_offset = slot->index * fsize;
@@ -420,16 +414,6 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 	if ((rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 42) ||
             rscreen->info.drm_major == 3)
 		enc->use_vui = true;
-	if (rscreen->info.family >= CHIP_TONGA &&
-	    rscreen->info.family != CHIP_STONEY &&
-	    rscreen->info.family != CHIP_POLARIS11 &&
-	    rscreen->info.family != CHIP_POLARIS12)
-		enc->dual_pipe = true;
-	/* TODO enable B frame with dual instance */
-	if ((rscreen->info.family >= CHIP_TONGA) &&
-		(templ->max_references == 1) &&
-		(rscreen->info.vce_harvest_config == 0))
-		enc->dual_inst = true;
 
 	enc->base = *templ;
 	enc->base.context = context;
@@ -466,12 +450,8 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 
 	get_buffer(((struct vl_video_buffer *)tmp_buf)->resources[0], NULL, &tmp_surf);
 
-	cpb_size = (rscreen->chip_class < GFX9) ?
-		align(tmp_surf->u.legacy.level[0].nblk_x * tmp_surf->bpe, 128) *
-		align(tmp_surf->u.legacy.level[0].nblk_y, 32) :
-
-		align(tmp_surf->u.gfx9.surf_pitch * tmp_surf->bpe, 256) *
-		align(tmp_surf->u.gfx9.surf_height, 32);
+	cpb_size = align(tmp_surf->u.legacy.level[0].nblk_x * tmp_surf->bpe, 128) *
+	  align(tmp_surf->u.legacy.level[0].nblk_y, 32);
 
 	cpb_size = cpb_size * 3 / 2;
 	cpb_size = cpb_size * enc->cpb_num;

@@ -205,8 +205,7 @@ static uint32_t profile2stream_type(struct ruvd_decoder *dec, unsigned family)
 {
 	switch (u_reduce_video_profile(dec->base.profile)) {
 	case PIPE_VIDEO_FORMAT_MPEG4_AVC:
-		return (family >= CHIP_TONGA) ?
-			RUVD_CODEC_H264_PERF : RUVD_CODEC_H264;
+		return RUVD_CODEC_H264;
 
 	case PIPE_VIDEO_FORMAT_VC1:
 		return RUVD_CODEC_VC1;
@@ -227,60 +226,6 @@ static uint32_t profile2stream_type(struct ruvd_decoder *dec, unsigned family)
 		assert(0);
 		return 0;
 	}
-}
-
-static unsigned calc_ctx_size_h264_perf(struct ruvd_decoder *dec)
-{
-	unsigned width_in_mb, height_in_mb, ctx_size;
-	unsigned width = align(dec->base.width, VL_MACROBLOCK_WIDTH);
-	unsigned height = align(dec->base.height, VL_MACROBLOCK_HEIGHT);
-
-	unsigned max_references = dec->base.max_references + 1;
-
-	// picture width & height in 16 pixel units
-	width_in_mb = width / VL_MACROBLOCK_WIDTH;
-	height_in_mb = align(height / VL_MACROBLOCK_HEIGHT, 2);
-
-	if (!dec->use_legacy) {
-		unsigned fs_in_mb = width_in_mb * height_in_mb;
-		unsigned num_dpb_buffer;
-		switch(dec->base.level) {
-		case 30:
-			num_dpb_buffer = 8100 / fs_in_mb;
-			break;
-		case 31:
-			num_dpb_buffer = 18000 / fs_in_mb;
-			break;
-		case 32:
-			num_dpb_buffer = 20480 / fs_in_mb;
-			break;
-		case 41:
-			num_dpb_buffer = 32768 / fs_in_mb;
-			break;
-		case 42:
-			num_dpb_buffer = 34816 / fs_in_mb;
-			break;
-		case 50:
-			num_dpb_buffer = 110400 / fs_in_mb;
-			break;
-		case 51:
-			num_dpb_buffer = 184320 / fs_in_mb;
-			break;
-		default:
-			num_dpb_buffer = 184320 / fs_in_mb;
-			break;
-		}
-		num_dpb_buffer++;
-		max_references = MAX2(MIN2(NUM_H264_REFS, num_dpb_buffer), max_references);
-		ctx_size = max_references * align(width_in_mb * height_in_mb  * 192, 256);
-	} else {
-		// the firmware seems to always assume a minimum of ref frames
-		max_references = MAX2(NUM_H264_REFS, max_references);
-		// macroblock context buffer
-		ctx_size = align(width_in_mb * height_in_mb * max_references * 192, 256);
-	}
-
-	return ctx_size;
 }
 
 static unsigned calc_ctx_size_h265_main(struct ruvd_decoder *dec)
@@ -335,10 +280,7 @@ static unsigned calc_ctx_size_h265_main10(struct ruvd_decoder *dec, struct pipe_
 
 static unsigned get_db_pitch_alignment(struct ruvd_decoder *dec)
 {
-	if (((struct r600_common_screen*)dec->screen)->family < CHIP_VEGA10)
-		return 16;
-	else
-		return 32;
+	return 16;
 }
 
 /* calculate size of reference picture buffer */
@@ -399,8 +341,7 @@ static unsigned calc_dpb_size(struct ruvd_decoder *dec)
 			num_dpb_buffer++;
 			max_references = MAX2(MIN2(NUM_H264_REFS, num_dpb_buffer), max_references);
 			dpb_size = image_size * max_references;
-			if ((dec->stream_type != RUVD_CODEC_H264_PERF) ||
-			    (((struct r600_common_screen*)dec->screen)->family < CHIP_POLARIS10)) {
+			if ((dec->stream_type != RUVD_CODEC_H264_PERF)) {
 				dpb_size += max_references * align(width_in_mb * height_in_mb  * 192, alignment);
 				dpb_size += align(width_in_mb * height_in_mb * 32, alignment);
 			}
@@ -409,8 +350,7 @@ static unsigned calc_dpb_size(struct ruvd_decoder *dec)
 			max_references = MAX2(NUM_H264_REFS, max_references);
 			// reference picture buffer
 			dpb_size = image_size * max_references;
-			if ((dec->stream_type != RUVD_CODEC_H264_PERF) ||
-			    (((struct r600_common_screen*)dec->screen)->family < CHIP_POLARIS10)) {
+			if ((dec->stream_type != RUVD_CODEC_H264_PERF)) {
 				// macroblock context buffer
 				dpb_size += width_in_mb * height_in_mb * max_references * 192;
 				// IT surface buffer
@@ -610,8 +550,6 @@ static struct ruvd_h265 get_h265_msg(struct ruvd_decoder *dec, struct pipe_video
 	result.sps_info_flags |= pic->pps->sps->sps_temporal_mvp_enabled_flag << 6;
 	result.sps_info_flags |= pic->pps->sps->strong_intra_smoothing_enabled_flag << 7;
 	result.sps_info_flags |= pic->pps->sps->separate_colour_plane_flag << 8;
-	if (((struct r600_common_screen*)dec->screen)->family == CHIP_CARRIZO)
-		result.sps_info_flags |= 1 << 9;
 	if (pic->UseRefPicList == true)
 		result.sps_info_flags |= 1 << 10;
 
@@ -1250,13 +1188,7 @@ static void ruvd_end_frame(struct pipe_video_codec *decoder,
 	dec->msg->body.decode.bsd_size = bs_size;
 	dec->msg->body.decode.db_pitch = align(dec->base.width, get_db_pitch_alignment(dec));
 
-	if (dec->stream_type == RUVD_CODEC_H264_PERF &&
-	    ((struct r600_common_screen*)dec->screen)->family >= CHIP_POLARIS10)
-		dec->msg->body.decode.dpb_reserved = dec->ctx.res->buf->size;
-
 	dt = dec->set_dtb(dec->msg, (struct vl_video_buffer *)target);
-	if (((struct r600_common_screen*)dec->screen)->family >= CHIP_STONEY)
-		dec->msg->body.decode.dt_wa_chroma_top_offset = dec->msg->body.decode.dt_pitch / 2;
 
 	switch (u_reduce_video_profile(picture->profile)) {
 	case PIPE_VIDEO_FORMAT_MPEG4_AVC:
@@ -1407,8 +1339,7 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 		goto error;
 	}
 
-	dec->fb_size = (info.family == CHIP_TONGA) ? FB_BUFFER_SIZE_TONGA :
-			FB_BUFFER_SIZE;
+	dec->fb_size = FB_BUFFER_SIZE;
 	bs_buf_size = width * height * (512 / (16 * 16));
 	for (i = 0; i < NUM_BUFFERS; ++i) {
 		unsigned msg_fb_it_size = FB_BUFFER_OFFSET + dec->fb_size;
@@ -1440,36 +1371,10 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 		rvid_clear_buffer(context, &dec->dpb);
 	}
 
-	if (dec->stream_type == RUVD_CODEC_H264_PERF && info.family >= CHIP_POLARIS10) {
-		unsigned ctx_size = calc_ctx_size_h264_perf(dec);
-		if (!rvid_create_buffer(dec->screen, &dec->ctx, ctx_size, PIPE_USAGE_DEFAULT)) {
-			RVID_ERR("Can't allocated context buffer.\n");
-			goto error;
-		}
-		rvid_clear_buffer(context, &dec->ctx);
-	}
-
-	if (info.family >= CHIP_POLARIS10 && info.drm_minor >= 3) {
-		if (!rvid_create_buffer(dec->screen, &dec->sessionctx,
-					UVD_SESSION_CONTEXT_SIZE,
-					PIPE_USAGE_DEFAULT)) {
-			RVID_ERR("Can't allocated session ctx.\n");
-			goto error;
-		}
-		rvid_clear_buffer(context, &dec->sessionctx);
-	}
-
-	if (info.family >= CHIP_VEGA10) {
-		dec->reg.data0 = RUVD_GPCOM_VCPU_DATA0_SOC15;
-		dec->reg.data1 = RUVD_GPCOM_VCPU_DATA1_SOC15;
-		dec->reg.cmd = RUVD_GPCOM_VCPU_CMD_SOC15;
-		dec->reg.cntl = RUVD_ENGINE_CNTL_SOC15;
-	} else {
-		dec->reg.data0 = RUVD_GPCOM_VCPU_DATA0;
-		dec->reg.data1 = RUVD_GPCOM_VCPU_DATA1;
-		dec->reg.cmd = RUVD_GPCOM_VCPU_CMD;
-		dec->reg.cntl = RUVD_ENGINE_CNTL;
-	}
+	dec->reg.data0 = RUVD_GPCOM_VCPU_DATA0;
+	dec->reg.data1 = RUVD_GPCOM_VCPU_DATA1;
+	dec->reg.cmd = RUVD_GPCOM_VCPU_CMD;
+	dec->reg.cntl = RUVD_ENGINE_CNTL;
 
 	map_msg_fb_it_buf(dec);
 	dec->msg->size = sizeof(*dec->msg);
@@ -1506,20 +1411,10 @@ error:
 }
 
 /* calculate top/bottom offset */
-static unsigned texture_offset(struct radeon_surf *surface, unsigned layer,
-				enum ruvd_surface_type type)
+static unsigned texture_offset(struct radeon_surf *surface, unsigned layer)
 {
-	switch (type) {
-	default:
-	case RUVD_SURFACE_TYPE_LEGACY:
-		return surface->u.legacy.level[0].offset +
-			layer * surface->u.legacy.level[0].slice_size;
-		break;
-	case RUVD_SURFACE_TYPE_GFX9:
-		return surface->u.gfx9.surf_offset +
-			layer * surface->u.gfx9.surf_slice_size;
-		break;
-	}
+	return surface->u.legacy.level[0].offset +
+		layer * surface->u.legacy.level[0].slice_size;
 }
 
 /* hw encode the aspect of macro tiles */
@@ -1552,67 +1447,46 @@ static unsigned bank_wh(unsigned bankwh)
  * fill decoding target field from the luma and chroma surfaces
  */
 void ruvd_set_dt_surfaces(struct ruvd_msg *msg, struct radeon_surf *luma,
-			struct radeon_surf *chroma, enum ruvd_surface_type type)
+			  struct radeon_surf *chroma)
 {
-	switch (type) {
-	default:
-	case RUVD_SURFACE_TYPE_LEGACY:
-		msg->body.decode.dt_pitch = luma->u.legacy.level[0].nblk_x * luma->blk_w;
-		switch (luma->u.legacy.level[0].mode) {
-		case RADEON_SURF_MODE_LINEAR_ALIGNED:
-			msg->body.decode.dt_tiling_mode = RUVD_TILE_LINEAR;
-			msg->body.decode.dt_array_mode = RUVD_ARRAY_MODE_LINEAR;
-			break;
-		case RADEON_SURF_MODE_1D:
-			msg->body.decode.dt_tiling_mode = RUVD_TILE_8X8;
-			msg->body.decode.dt_array_mode = RUVD_ARRAY_MODE_1D_THIN;
-			break;
-		case RADEON_SURF_MODE_2D:
-			msg->body.decode.dt_tiling_mode = RUVD_TILE_8X8;
-			msg->body.decode.dt_array_mode = RUVD_ARRAY_MODE_2D_THIN;
-			break;
-		default:
-			assert(0);
-			break;
-		}
-
-		msg->body.decode.dt_luma_top_offset = texture_offset(luma, 0, type);
-		if (chroma)
-			msg->body.decode.dt_chroma_top_offset = texture_offset(chroma, 0, type);
-		if (msg->body.decode.dt_field_mode) {
-			msg->body.decode.dt_luma_bottom_offset = texture_offset(luma, 1, type);
-			if (chroma)
-				msg->body.decode.dt_chroma_bottom_offset = texture_offset(chroma, 1, type);
-		} else {
-			msg->body.decode.dt_luma_bottom_offset = msg->body.decode.dt_luma_top_offset;
-			msg->body.decode.dt_chroma_bottom_offset = msg->body.decode.dt_chroma_top_offset;
-		}
-
-		if (chroma) {
-			assert(luma->u.legacy.bankw == chroma->u.legacy.bankw);
-			assert(luma->u.legacy.bankh == chroma->u.legacy.bankh);
-			assert(luma->u.legacy.mtilea == chroma->u.legacy.mtilea);
-		}
-
-		msg->body.decode.dt_surf_tile_config |= RUVD_BANK_WIDTH(bank_wh(luma->u.legacy.bankw));
-		msg->body.decode.dt_surf_tile_config |= RUVD_BANK_HEIGHT(bank_wh(luma->u.legacy.bankh));
-		msg->body.decode.dt_surf_tile_config |= RUVD_MACRO_TILE_ASPECT_RATIO(macro_tile_aspect(luma->u.legacy.mtilea));
-		break;
-	case RUVD_SURFACE_TYPE_GFX9:
-		msg->body.decode.dt_pitch = luma->u.gfx9.surf_pitch * luma->blk_w;
-		/* SWIZZLE LINEAR MODE */
+	msg->body.decode.dt_pitch = luma->u.legacy.level[0].nblk_x * luma->blk_w;
+	switch (luma->u.legacy.level[0].mode) {
+	case RADEON_SURF_MODE_LINEAR_ALIGNED:
 		msg->body.decode.dt_tiling_mode = RUVD_TILE_LINEAR;
 		msg->body.decode.dt_array_mode = RUVD_ARRAY_MODE_LINEAR;
-		msg->body.decode.dt_luma_top_offset = texture_offset(luma, 0, type);
-		msg->body.decode.dt_chroma_top_offset = texture_offset(chroma, 0, type);
-		if (msg->body.decode.dt_field_mode) {
-			msg->body.decode.dt_luma_bottom_offset = texture_offset(luma, 1, type);
-			msg->body.decode.dt_chroma_bottom_offset = texture_offset(chroma, 1, type);
-		} else {
-			msg->body.decode.dt_luma_bottom_offset = msg->body.decode.dt_luma_top_offset;
-			msg->body.decode.dt_chroma_bottom_offset = msg->body.decode.dt_chroma_top_offset;
-		}
-		msg->body.decode.dt_surf_tile_config = 0;
+		break;
+	case RADEON_SURF_MODE_1D:
+		msg->body.decode.dt_tiling_mode = RUVD_TILE_8X8;
+		msg->body.decode.dt_array_mode = RUVD_ARRAY_MODE_1D_THIN;
+		break;
+	case RADEON_SURF_MODE_2D:
+		msg->body.decode.dt_tiling_mode = RUVD_TILE_8X8;
+		msg->body.decode.dt_array_mode = RUVD_ARRAY_MODE_2D_THIN;
+		break;
+	default:
+		assert(0);
 		break;
 	}
+
+	msg->body.decode.dt_luma_top_offset = texture_offset(luma, 0);
+	if (chroma)
+		msg->body.decode.dt_chroma_top_offset = texture_offset(chroma, 0);
+	if (msg->body.decode.dt_field_mode) {
+		msg->body.decode.dt_luma_bottom_offset = texture_offset(luma, 1);
+		if (chroma)
+			msg->body.decode.dt_chroma_bottom_offset = texture_offset(chroma, 1);
+	} else {
+		msg->body.decode.dt_luma_bottom_offset = msg->body.decode.dt_luma_top_offset;
+		msg->body.decode.dt_chroma_bottom_offset = msg->body.decode.dt_chroma_top_offset;
+	}
+
+	if (chroma) {
+		assert(luma->u.legacy.bankw == chroma->u.legacy.bankw);
+		assert(luma->u.legacy.bankh == chroma->u.legacy.bankh);
+		assert(luma->u.legacy.mtilea == chroma->u.legacy.mtilea);
+	}
+
+	msg->body.decode.dt_surf_tile_config |= RUVD_BANK_WIDTH(bank_wh(luma->u.legacy.bankw));
+	msg->body.decode.dt_surf_tile_config |= RUVD_BANK_HEIGHT(bank_wh(luma->u.legacy.bankh));
+	msg->body.decode.dt_surf_tile_config |= RUVD_MACRO_TILE_ASPECT_RATIO(macro_tile_aspect(luma->u.legacy.mtilea));
 }

@@ -162,7 +162,7 @@ static struct pb_buffer* r600_uvd_set_dtb(struct ruvd_msg *msg, struct vl_video_
 	msg->body.decode.dt_field_mode = buf->base.interlaced;
 	msg->body.decode.dt_surf_tile_config |= RUVD_NUM_BANKS(eg_num_banks(rscreen->b.info.r600_num_banks));
 
-	ruvd_set_dt_surfaces(msg, &luma->surface, &chroma->surface, RUVD_SURFACE_TYPE_LEGACY);
+	ruvd_set_dt_surfaces(msg, &luma->surface, &chroma->surface);
 
 	return luma->resource.buf;
 }

@@ -111,71 +111,12 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 		      event_flags;
 	unsigned sel = EOP_DATA_SEL(data_sel);
 
-	/* Wait for write confirmation before writing data, but don't send
-	 * an interrupt. */
-	if (ctx->chip_class >= SI && data_sel != EOP_DATA_SEL_DISCARD)
-		sel |= EOP_INT_SEL(EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM);
-
-	if (ctx->chip_class >= GFX9) {
-		/* A ZPASS_DONE or PIXEL_STAT_DUMP_EVENT (of the DB occlusion
-		 * counters) must immediately precede every timestamp event to
-		 * prevent a GPU hang on GFX9.
-		 *
-		 * Occlusion queries don't need to do it here, because they
-		 * always do ZPASS_DONE before the timestamp.
-		 */
-		if (ctx->chip_class == GFX9 &&
-		    query_type != PIPE_QUERY_OCCLUSION_COUNTER &&
-		    query_type != PIPE_QUERY_OCCLUSION_PREDICATE) {
-			struct r600_resource *scratch = ctx->eop_bug_scratch;
-
-			assert(16 * ctx->screen->info.num_render_backends <=
-			       scratch->b.b.width0);
-			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
-			radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_ZPASS_DONE) | EVENT_INDEX(1));
-			radeon_emit(cs, scratch->gpu_address);
-			radeon_emit(cs, scratch->gpu_address >> 32);
-
-			radeon_add_to_buffer_list(ctx, &ctx->gfx, scratch,
-						  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
-		}
-
-		radeon_emit(cs, PKT3(PKT3_RELEASE_MEM, 6, 0));
-		radeon_emit(cs, op);
-		radeon_emit(cs, sel);
-		radeon_emit(cs, va);		/* address lo */
-		radeon_emit(cs, va >> 32);	/* address hi */
-		radeon_emit(cs, new_fence);	/* immediate data lo */
-		radeon_emit(cs, 0); /* immediate data hi */
-		radeon_emit(cs, 0); /* unused */
-	} else {
-		if (ctx->chip_class == CIK ||
-		    ctx->chip_class == VI) {
-			struct r600_resource *scratch = ctx->eop_bug_scratch;
-			uint64_t va = scratch->gpu_address;
-
-			/* Two EOP events are required to make all engines go idle
-			 * (and optional cache flushes executed) before the timestamp
-			 * is written.
-			 */
-			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-			radeon_emit(cs, op);
-			radeon_emit(cs, va);
-			radeon_emit(cs, ((va >> 32) & 0xffff) | sel);
-			radeon_emit(cs, 0); /* immediate data */
-			radeon_emit(cs, 0); /* unused */
-
-			radeon_add_to_buffer_list(ctx, &ctx->gfx, scratch,
-						  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
-		}
-
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-		radeon_emit(cs, op);
-		radeon_emit(cs, va);
-		radeon_emit(cs, ((va >> 32) & 0xffff) | sel);
-		radeon_emit(cs, new_fence); /* immediate data */
-		radeon_emit(cs, 0); /* unused */
-	}
+	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
+	radeon_emit(cs, op);
+	radeon_emit(cs, va);
+	radeon_emit(cs, ((va >> 32) & 0xffff) | sel);
+	radeon_emit(cs, new_fence); /* immediate data */
+	radeon_emit(cs, 0); /* unused */
 
 	if (buf)
 		r600_emit_reloc(ctx, &ctx->gfx, buf, RADEON_USAGE_WRITE,
@@ -185,10 +126,6 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 unsigned r600_gfx_write_fence_dwords(struct r600_common_screen *screen)
 {
 	unsigned dwords = 6;
-
-	if (screen->chip_class == CIK ||
-	    screen->chip_class == VI)
-		dwords *= 2;
 
 	if (!screen->info.has_virtual_memory)
 		dwords += 2;
@@ -302,10 +239,7 @@ static void r600_dma_emit_wait_idle(struct r600_common_context *rctx)
 {
 	struct radeon_winsys_cs *cs = rctx->dma.cs;
 
-	/* NOP waits for idle on Evergreen and later. */
-	if (rctx->chip_class >= CIK)
-		radeon_emit(cs, 0x00000000); /* NOP */
-	else if (rctx->chip_class >= EVERGREEN)
+	if (rctx->chip_class >= EVERGREEN)
 		radeon_emit(cs, 0xf0000000); /* NOP */
 	else {
 		/* TODO: R600-R700 should use the FENCE packet.
@@ -760,16 +694,6 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	r600_query_init(rctx);
 	cayman_init_msaa(&rctx->b);
 
-	if (rctx->chip_class == CIK ||
-	    rctx->chip_class == VI ||
-	    rctx->chip_class == GFX9) {
-		rctx->eop_bug_scratch = (struct r600_resource*)
-			pipe_buffer_create(&rscreen->b, 0, PIPE_USAGE_DEFAULT,
-					   16 * rscreen->info.num_render_backends);
-		if (!rctx->eop_bug_scratch)
-			return false;
-	}
-
 	rctx->allocator_zeroed_memory =
 		u_suballocator_create(&rctx->b, rscreen->info.gart_page_size,
 				      0, PIPE_USAGE_DEFAULT, 0, true);
@@ -802,20 +726,6 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 
 void r600_common_context_cleanup(struct r600_common_context *rctx)
 {
-	unsigned i,j;
-
-	/* Release DCC stats. */
-	for (i = 0; i < ARRAY_SIZE(rctx->dcc_stats); i++) {
-		assert(!rctx->dcc_stats[i].query_active);
-
-		for (j = 0; j < ARRAY_SIZE(rctx->dcc_stats[i].ps_stats); j++)
-			if (rctx->dcc_stats[i].ps_stats[j])
-				rctx->b.destroy_query(&rctx->b,
-						      rctx->dcc_stats[i].ps_stats[j]);
-
-		r600_texture_reference(&rctx->dcc_stats[i].tex, NULL);
-	}
-
 	if (rctx->query_result_shader)
 		rctx->b.delete_compute_state(&rctx->b, rctx->query_result_shader);
 
@@ -886,15 +796,7 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "precompile", DBG_PRECOMPILE, "Compile one shader variant at shader creation." },
 	{ "nowc", DBG_NO_WC, "Disable GTT write combining" },
 	{ "check_vm", DBG_CHECK_VM, "Check VM faults and dump debug info." },
-	{ "nodcc", DBG_NO_DCC, "Disable DCC." },
-	{ "nodccclear", DBG_NO_DCC_CLEAR, "Disable DCC fast clear." },
-	{ "norbplus", DBG_NO_RB_PLUS, "Disable RB+." },
-	{ "sisched", DBG_SI_SCHED, "Enable LLVM SI Machine Instruction Scheduler." },
-	{ "mono", DBG_MONOLITHIC_SHADERS, "Use old-style monolithic shaders compiled on demand" },
 	{ "unsafemath", DBG_UNSAFE_MATH, "Enable unsafe math shader optimizations" },
-	{ "nodccfb", DBG_NO_DCC_FB, "Disable separate DCC on the main framebuffer" },
-	{ "nodpbb", DBG_NO_DPBB, "Disable DPBB." },
-	{ "nodfsm", DBG_NO_DFSM, "Disable DFSM." },
 
 	DEBUG_NAMED_VALUE_END /* must be last */
 };
@@ -944,26 +846,6 @@ static const char *r600_get_family_name(const struct r600_common_screen *rscreen
 	case CHIP_CAICOS: return "AMD CAICOS";
 	case CHIP_CAYMAN: return "AMD CAYMAN";
 	case CHIP_ARUBA: return "AMD ARUBA";
-	case CHIP_TAHITI: return "AMD TAHITI";
-	case CHIP_PITCAIRN: return "AMD PITCAIRN";
-	case CHIP_VERDE: return "AMD CAPE VERDE";
-	case CHIP_OLAND: return "AMD OLAND";
-	case CHIP_HAINAN: return "AMD HAINAN";
-	case CHIP_BONAIRE: return "AMD BONAIRE";
-	case CHIP_KAVERI: return "AMD KAVERI";
-	case CHIP_KABINI: return "AMD KABINI";
-	case CHIP_HAWAII: return "AMD HAWAII";
-	case CHIP_MULLINS: return "AMD MULLINS";
-	case CHIP_TONGA: return "AMD TONGA";
-	case CHIP_ICELAND: return "AMD ICELAND";
-	case CHIP_CARRIZO: return "AMD CARRIZO";
-	case CHIP_FIJI: return "AMD FIJI";
-	case CHIP_POLARIS10: return "AMD POLARIS10";
-	case CHIP_POLARIS11: return "AMD POLARIS11";
-	case CHIP_POLARIS12: return "AMD POLARIS12";
-	case CHIP_STONEY: return "AMD STONEY";
-	case CHIP_VEGA10: return "AMD VEGA10";
-	case CHIP_RAVEN: return "AMD RAVEN";
 	default: return "AMD unknown";
 	}
 }
@@ -979,25 +861,13 @@ static void r600_disk_cache_create(struct r600_common_screen *rscreen)
 					      &mesa_timestamp)) {
 		char *timestamp_str;
 		int res = -1;
-		if (rscreen->chip_class < SI) {
-			res = asprintf(&timestamp_str, "%u",mesa_timestamp);
-		}
-#if HAVE_LLVM
-		else {
-			uint32_t llvm_timestamp;
-			if (disk_cache_get_function_timestamp(LLVMInitializeAMDGPUTargetInfo,
-							      &llvm_timestamp)) {
-				res = asprintf(&timestamp_str, "%u_%u",
-					       mesa_timestamp, llvm_timestamp);
-			}
-		}
-#endif
+
+		res = asprintf(&timestamp_str, "%u",mesa_timestamp);
 		if (res != -1) {
 			/* These flags affect shader compilation. */
 			uint64_t shader_debug_flags =
 				rscreen->debug_flags &
 				(DBG_FS_CORRECT_DERIVS_AFTER_KILL |
-				 DBG_SI_SCHED |
 				 DBG_UNSAFE_MATH);
 
 			rscreen->disk_shader_cache =
@@ -1120,32 +990,6 @@ const char *r600_get_llvm_processor_name(enum radeon_family family)
         case CHIP_ARUBA:
 		return "cayman";
 
-	case CHIP_TAHITI: return "tahiti";
-	case CHIP_PITCAIRN: return "pitcairn";
-	case CHIP_VERDE: return "verde";
-	case CHIP_OLAND: return "oland";
-	case CHIP_HAINAN: return "hainan";
-	case CHIP_BONAIRE: return "bonaire";
-	case CHIP_KABINI: return "kabini";
-	case CHIP_KAVERI: return "kaveri";
-	case CHIP_HAWAII: return "hawaii";
-	case CHIP_MULLINS:
-		return "mullins";
-	case CHIP_TONGA: return "tonga";
-	case CHIP_ICELAND: return "iceland";
-	case CHIP_CARRIZO: return "carrizo";
-	case CHIP_FIJI:
-		return "fiji";
-	case CHIP_STONEY:
-		return "stoney";
-	case CHIP_POLARIS10:
-		return "polaris10";
-	case CHIP_POLARIS11:
-	case CHIP_POLARIS12: /* same as polaris11 */
-		return "polaris11";
-	case CHIP_VEGA10:
-	case CHIP_RAVEN:
-		return "gfx900";
 	default:
 		return "";
 	}
@@ -1154,19 +998,6 @@ const char *r600_get_llvm_processor_name(enum radeon_family family)
 static unsigned get_max_threads_per_block(struct r600_common_screen *screen,
 					  enum pipe_shader_ir ir_type)
 {
-	if (ir_type != PIPE_SHADER_IR_TGSI)
-		return 256;
-
-	/* Only 16 waves per thread-group on gfx9. */
-	if (screen->chip_class >= GFX9)
-		return 1024;
-
-	/* Up to 40 waves per thread-group on GCN < gfx9. Expose a nice
-	 * round number.
-	 */
-	if (screen->chip_class >= SI)
-		return 2048;
-
 	return 256;
 }
 
@@ -1241,8 +1072,6 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 		if (ret) {
 			uint32_t *address_bits = ret;
 			address_bits[0] = 32;
-			if (rscreen->chip_class >= SI)
-				address_bits[0] = 64;
 		}
 		return 1 * sizeof(uint32_t);
 
@@ -1322,11 +1151,7 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 	case PIPE_COMPUTE_CAP_MAX_VARIABLE_THREADS_PER_BLOCK:
 		if (ret) {
 			uint64_t *max_variable_threads_per_block = ret;
-			if (rscreen->chip_class >= SI &&
-			    ir_type == PIPE_SHADER_IR_TGSI)
-				*max_variable_threads_per_block = SI_MAX_VARIABLE_THREADS_PER_BLOCK;
-			else
-				*max_variable_threads_per_block = 0;
+			*max_variable_threads_per_block = 0;
 		}
 		return sizeof(uint64_t);
 	}
@@ -1516,8 +1341,6 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	rscreen->family = rscreen->info.family;
 	rscreen->chip_class = rscreen->info.chip_class;
 	rscreen->debug_flags |= debug_get_flags_option("R600_DEBUG", common_debug_options, 0);
-	rscreen->has_rbplus = false;
-	rscreen->rbplus_allowed = false;
 
 	r600_disk_cache_create(rscreen);
 

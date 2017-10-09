@@ -156,13 +156,11 @@ void rvid_join_surfaces(struct r600_common_context *rctx,
 		if (!surfaces[i])
 			continue;
 
-		if (rctx->chip_class < GFX9) {
-			/* choose the smallest bank w/h for now */
-			wh = surfaces[i]->u.legacy.bankw * surfaces[i]->u.legacy.bankh;
-			if (wh < best_wh) {
-				best_wh = wh;
-				best_tiling = i;
-			}
+		/* choose the smallest bank w/h for now */
+		wh = surfaces[i]->u.legacy.bankw * surfaces[i]->u.legacy.bankh;
+		if (wh < best_wh) {
+			best_wh = wh;
+			best_tiling = i;
 		}
 	}
 
@@ -173,17 +171,14 @@ void rvid_join_surfaces(struct r600_common_context *rctx,
 		/* adjust the texture layer offsets */
 		off = align(off, surfaces[i]->surf_alignment);
 
-		if (rctx->chip_class < GFX9) {
-			/* copy the tiling parameters */
-			surfaces[i]->u.legacy.bankw = surfaces[best_tiling]->u.legacy.bankw;
-			surfaces[i]->u.legacy.bankh = surfaces[best_tiling]->u.legacy.bankh;
-			surfaces[i]->u.legacy.mtilea = surfaces[best_tiling]->u.legacy.mtilea;
-			surfaces[i]->u.legacy.tile_split = surfaces[best_tiling]->u.legacy.tile_split;
+		/* copy the tiling parameters */
+		surfaces[i]->u.legacy.bankw = surfaces[best_tiling]->u.legacy.bankw;
+		surfaces[i]->u.legacy.bankh = surfaces[best_tiling]->u.legacy.bankh;
+		surfaces[i]->u.legacy.mtilea = surfaces[best_tiling]->u.legacy.mtilea;
+		surfaces[i]->u.legacy.tile_split = surfaces[best_tiling]->u.legacy.tile_split;
 
-			for (j = 0; j < ARRAY_SIZE(surfaces[i]->u.legacy.level); ++j)
-				surfaces[i]->u.legacy.level[j].offset += off;
-		} else
-			surfaces[i]->u.gfx9.surf_offset += off;
+		for (j = 0; j < ARRAY_SIZE(surfaces[i]->u.legacy.level); ++j)
+			surfaces[i]->u.legacy.level[j].offset += off;
 
 		off += surfaces[i]->surf_size;
 	}
@@ -237,9 +232,9 @@ int rvid_get_video_param(struct pipe_screen *screen,
 		case PIPE_VIDEO_CAP_NPOT_TEXTURES:
 			return 1;
 		case PIPE_VIDEO_CAP_MAX_WIDTH:
-			return (rscreen->family < CHIP_TONGA) ? 2048 : 4096;
+			return 2048;
 		case PIPE_VIDEO_CAP_MAX_HEIGHT:
-			return (rscreen->family < CHIP_TONGA) ? 1152 : 2304;
+			return 1152;
 		case PIPE_VIDEO_CAP_PREFERED_FORMAT:
 			return PIPE_FORMAT_NV12;
 		case PIPE_VIDEO_CAP_PREFERS_INTERLACED:
@@ -249,7 +244,7 @@ int rvid_get_video_param(struct pipe_screen *screen,
 		case PIPE_VIDEO_CAP_SUPPORTS_PROGRESSIVE:
 			return true;
 		case PIPE_VIDEO_CAP_STACKED_FRAMES:
-			return (rscreen->family < CHIP_TONGA) ? 1 : 2;
+			return 1;
 		default:
 			return 0;
 		}
@@ -264,40 +259,22 @@ int rvid_get_video_param(struct pipe_screen *screen,
 			/* no support for MPEG4 on older hw */
 			return rscreen->family >= CHIP_PALM;
 		case PIPE_VIDEO_FORMAT_MPEG4_AVC:
-			if ((rscreen->family == CHIP_POLARIS10 ||
-			     rscreen->family == CHIP_POLARIS11) &&
-			    info.uvd_fw_version < UVD_FW_1_66_16 ) {
-				RVID_ERR("POLARIS10/11 firmware version need to be updated.\n");
-				return false;
-			}
 			return true;
 		case PIPE_VIDEO_FORMAT_VC1:
 			return true;
 		case PIPE_VIDEO_FORMAT_HEVC:
-			/* Carrizo only supports HEVC Main */
-			if (rscreen->family >= CHIP_STONEY)
-				return (profile == PIPE_VIDEO_PROFILE_HEVC_MAIN ||
-					profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10);
-			else if (rscreen->family >= CHIP_CARRIZO)
-				return profile == PIPE_VIDEO_PROFILE_HEVC_MAIN;
 			return false;
 		case PIPE_VIDEO_FORMAT_JPEG:
-			if (rscreen->family < CHIP_CARRIZO || rscreen->family >= CHIP_VEGA10)
-				return false;
-			if (!(rscreen->info.drm_major == 3 && rscreen->info.drm_minor >= 19)) {
-				RVID_ERR("No MJPEG support for the kernel version\n");
-				return false;
-			}
-			return true;
+			return false;
 		default:
 			return false;
 		}
 	case PIPE_VIDEO_CAP_NPOT_TEXTURES:
 		return 1;
 	case PIPE_VIDEO_CAP_MAX_WIDTH:
-		return (rscreen->family < CHIP_TONGA) ? 2048 : 4096;
+		return 2048;
 	case PIPE_VIDEO_CAP_MAX_HEIGHT:
-		return (rscreen->family < CHIP_TONGA) ? 1152 : 4096;
+		return 1152;
 	case PIPE_VIDEO_CAP_PREFERED_FORMAT:
 		if (profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10)
 			return PIPE_FORMAT_P016;
@@ -342,7 +319,7 @@ int rvid_get_video_param(struct pipe_screen *screen,
 		case PIPE_VIDEO_PROFILE_MPEG4_AVC_BASELINE:
 		case PIPE_VIDEO_PROFILE_MPEG4_AVC_MAIN:
 		case PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH:
-			return (rscreen->family < CHIP_TONGA) ? 41 : 52;
+			return 41;
 		case PIPE_VIDEO_PROFILE_HEVC_MAIN:
 		case PIPE_VIDEO_PROFILE_HEVC_MAIN_10:
 			return 186;

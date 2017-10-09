@@ -104,26 +104,6 @@ static void r600_update_mmio_counters(struct r600_common_screen *rscreen,
 	UPDATE_COUNTER(gui, GUI_ACTIVE);
 	gui_busy = GUI_ACTIVE(value);
 
-	if (rscreen->chip_class == CIK || rscreen->chip_class == VI) {
-		/* SRBM_STATUS2 */
-		rscreen->ws->read_registers(rscreen->ws, SRBM_STATUS2, 1, &value);
-
-		UPDATE_COUNTER(sdma, SDMA_BUSY);
-		sdma_busy = SDMA_BUSY(value);
-	}
-
-	if (rscreen->chip_class >= VI) {
-		/* CP_STAT */
-		rscreen->ws->read_registers(rscreen->ws, CP_STAT, 1, &value);
-
-		UPDATE_COUNTER(pfp, PFP_BUSY);
-		UPDATE_COUNTER(meq, MEQ_BUSY);
-		UPDATE_COUNTER(me, ME_BUSY);
-		UPDATE_COUNTER(surf_sync, SURFACE_SYNC_BUSY);
-		UPDATE_COUNTER(cp_dma, DMA_BUSY);
-		UPDATE_COUNTER(scratch_ram, SCRATCH_RAM_BUSY);
-	}
-
 	value = gui_busy || sdma_busy;
 	UPDATE_COUNTER(gpu, IDENTITY);
 }
