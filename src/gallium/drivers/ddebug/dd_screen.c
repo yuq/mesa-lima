@@ -308,6 +308,16 @@ dd_screen_resource_get_handle(struct pipe_screen *_screen,
    return screen->resource_get_handle(screen, pipe, resource, handle, usage);
 }
 
+static bool
+dd_screen_check_resource_capability(struct pipe_screen *_screen,
+                                    struct pipe_resource *resource,
+                                    unsigned bind)
+{
+   struct pipe_screen *screen = dd_screen(_screen)->screen;
+
+   return screen->check_resource_capability(screen, resource, bind);
+}
+
 
 /********************************************************************
  * fence
@@ -467,6 +477,7 @@ ddebug_screen_create(struct pipe_screen *screen)
    dscreen->base.resource_from_handle = dd_screen_resource_from_handle;
    SCR_INIT(resource_from_memobj);
    SCR_INIT(resource_from_user_memory);
+   SCR_INIT(check_resource_capability);
    dscreen->base.resource_get_handle = dd_screen_resource_get_handle;
    SCR_INIT(resource_changed);
    dscreen->base.resource_destroy = dd_screen_resource_destroy;

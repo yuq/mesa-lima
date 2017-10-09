@@ -379,6 +379,16 @@ trace_screen_resource_from_handle(struct pipe_screen *_screen,
    return result;
 }
 
+static bool
+trace_screen_check_resource_capability(struct pipe_screen *_screen,
+                                       struct pipe_resource *resource,
+                                       unsigned bind)
+{
+   struct pipe_screen *screen = trace_screen(_screen)->screen;
+
+   return screen->check_resource_capability(screen, resource, bind);
+}
+
 static boolean
 trace_screen_resource_get_handle(struct pipe_screen *_screen,
                                  struct pipe_context *_pipe,
@@ -636,6 +646,7 @@ trace_screen_create(struct pipe_screen *screen)
    tr_scr->base.context_create = trace_screen_context_create;
    tr_scr->base.resource_create = trace_screen_resource_create;
    tr_scr->base.resource_from_handle = trace_screen_resource_from_handle;
+   SCR_INIT(check_resource_capability);
    tr_scr->base.resource_get_handle = trace_screen_resource_get_handle;
    SCR_INIT(resource_from_memobj);
    SCR_INIT(resource_changed);

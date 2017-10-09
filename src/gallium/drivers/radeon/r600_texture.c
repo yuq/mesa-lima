@@ -2878,6 +2878,26 @@ r600_texture_from_memobj(struct pipe_screen *screen,
 	return &rtex->resource.b.b;
 }
 
+static bool si_check_resource_capability(struct pipe_screen *screen,
+					 struct pipe_resource *resource,
+					 unsigned bind)
+{
+	struct r600_texture *tex = (struct r600_texture*)resource;
+
+	/* Buffers only support the linear flag. */
+	if (resource->target == PIPE_BUFFER)
+		return (bind & ~PIPE_BIND_LINEAR) == 0;
+
+	if (bind & PIPE_BIND_LINEAR && !tex->surface.is_linear)
+		return false;
+
+	if (bind & PIPE_BIND_SCANOUT && !tex->surface.is_displayable)
+		return false;
+
+	/* TODO: PIPE_BIND_CURSOR - do we care? */
+	return true;
+}
+
 void si_init_screen_texture_functions(struct r600_common_screen *rscreen)
 {
 	rscreen->b.resource_from_handle = r600_texture_from_handle;
@@ -2885,6 +2905,7 @@ void si_init_screen_texture_functions(struct r600_common_screen *rscreen)
 	rscreen->b.resource_from_memobj = r600_texture_from_memobj;
 	rscreen->b.memobj_create_from_handle = r600_memobj_from_handle;
 	rscreen->b.memobj_destroy = r600_memobj_destroy;
+	rscreen->b.check_resource_capability = si_check_resource_capability;
 }
 
 void si_init_context_texture_functions(struct r600_common_context *rctx)
