@@ -582,7 +582,7 @@ if with_platform_x11
         dependency('xcb-glx', version : '>= 1.8.1'),
       ]
 
-      dep_xf86vm = dependency('xf86vm', required : false)
+      dep_xf86vm = dependency('xxf86vm', required : false)
     endif
     # TODO: XF86VIDMODE
   endif
