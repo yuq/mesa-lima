@@ -92,11 +92,13 @@ endif
 
 with_gallium = false
 with_gallium_radeonsi = false
+with_gallium_nouveau = false
 with_gallium_softpipe = false
 _drivers = get_option('gallium-drivers')
 if _drivers != ''
   _split = _drivers.split(',')
   with_gallium_radeonsi = _split.contains('radeonsi')
+  with_gallium_nouveau = _split.contains('nouveau')
   with_gallium = true
   with_dri = true
 endif
@@ -550,11 +552,15 @@ dep_m = cc.find_library('m', required : false)
 
 dep_libdrm_amdgpu = []
 dep_libdrm_radeon = []
+dep_libdrm_nouveau = []
 if with_amd_vk or with_gallium_radeonsi
   dep_libdrm_amdgpu = dependency('libdrm_amdgpu', version : '>= 2.4.84')
 endif
 if with_gallium_radeonsi # older radeon too
   dep_libdrm_radeon = dependency('libdrm_radeon', version : '>= 2.4.71')
+endif
+if with_gallium_nouveau
+  dep_libdrm_nouveau = dependency('libdrm_nouveau', version : '>= 2.4.66')
 endif
 
 llvm_modules = ['bitwriter', 'engine', 'mcdisassembler', 'mcjit']

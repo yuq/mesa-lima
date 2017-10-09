@@ -26,7 +26,7 @@ option('dri-drivers', type : 'string', value : 'swrast,i915,i965',
        description : 'comma separated list of dri drivers to build.')
 option('dri-drivers-path', type : 'string', value : '',
        description : 'Location of dri drivers. Default: $libdir/dri.')
-option('gallium-drivers', type : 'string', value : 'radeonsi',
+option('gallium-drivers', type : 'string', value : 'radeonsi,nouveau',
        description : 'comma separated list of gallium drivers to build.')
 option('gallium-media', type : 'string', value : '',
        description : 'comma separated list of gallium media APIs to build (omx,va,vdpau,xvmc).')

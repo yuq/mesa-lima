@@ -59,6 +59,11 @@ if with_gallium_radeonsi
   ]
   gallium_dri_drivers += 'radeonsi_dri.so'
 endif
+if with_gallium_nouveau
+  gallium_dri_c_args += '-DGALLIUM_NOUVEAU'
+  gallium_dri_link_with += [libnouveauwinsys, libnouveau]
+  gallium_dri_drivers += 'nouveau_dri.so'
+endif
 
 libgallium_dri = shared_library(
   'gallium_dri',

@@ -18,51 +18,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_gallium = include_directories('include')
-inc_gallium_drivers = include_directories('drivers')
-inc_gallium_winsys = include_directories('winsys')
-
-subdir('auxiliary')
-subdir('auxiliary/pipe-loader')
-subdir('drivers/ddebug')
-subdir('drivers/noop')
-subdir('drivers/trace')
-subdir('drivers/rbug')
-subdir('drivers/radeon')
-subdir('drivers/radeonsi')
-subdir('drivers/nouveau')
-subdir('winsys/sw/null')
-subdir('winsys/sw/dri')
-subdir('winsys/sw/kms-dri')
-subdir('winsys/sw/wrapper')
-subdir('winsys/radeon/drm')
-subdir('winsys/amdgpu/drm')
-subdir('winsys/nouveau/drm')
-subdir('state_trackers/dri')
-# TODO: freedreno
-# TODO: i915
-# TODO: SVGA
-# TODO: r300
-# TODO: r600
-# TODO: etnaviv
-# TODO: IMX
-# TODO: PL111
-# TODO: softpipe
-# TODO: llvmpipe
-# TODO: SWR
-# TODO: vc4
-# TODO: virgl
-# TODO: winsys/sw/xlib
-# TODO: clover
-if with_dri
-  subdir('targets/dri')
-endif
-# TODO: xlib-glx
-# TODO: OMX
-# TODO: osmesa
-# TODO: VA
-# TODO: vdpau
-# TODO: xa
-# TODO: xvmc
-# TODO: nine
-# TODO: tests
+libnouveauwinsys = static_library(
+  'nouveauwinsys',
+  files('nouveau_drm_public.h', 'nouveau_drm_winsys.c'),
+  include_directories : [
+    inc_src, inc_include, inc_gallium, inc_gallium_aux, inc_gallium_drivers,
+  ],
+  c_args : [c_vis_args],
+  dependencies : [dep_libdrm_nouveau],
+  build_by_default : false,
+)
