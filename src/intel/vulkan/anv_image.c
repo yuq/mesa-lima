@@ -577,6 +577,7 @@ static void anv_image_bind_memory_plane(struct anv_device *device,
    if (!memory) {
       image->planes[plane].bo = NULL;
       image->planes[plane].bo_offset = 0;
+      return;
    }
 
    image->planes[plane].bo = memory->bo;
