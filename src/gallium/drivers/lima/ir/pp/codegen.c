@@ -330,7 +330,7 @@ bool ppir_codegen_prog(ppir_compiler *comp)
    }
 
    comp->prog->shader = prog;
-   comp->prog->shader_size = size;
+   comp->prog->shader_size = size * sizeof(uint32_t);
 
    ppir_codegen_print_prog(comp);
    return true;
