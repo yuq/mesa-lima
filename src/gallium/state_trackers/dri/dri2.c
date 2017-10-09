@@ -1272,15 +1272,29 @@ dri2_dup_image(__DRIimage *image, void *loaderPrivate)
 static GLboolean
 dri2_validate_usage(__DRIimage *image, unsigned int use)
 {
-   /*
-    * Gallium drivers are bad at adding usages to the resources
-    * once opened again in another process, which is the main use
-    * case for this, so we have to lie.
+   if (!image || !image->texture)
+      return false;
+
+   struct pipe_screen *screen = image->texture->screen;
+   if (!screen->check_resource_capability)
+      return true;
+
+   /* We don't want to check these:
+    *   __DRI_IMAGE_USE_SHARE (all images are shareable)
+    *   __DRI_IMAGE_USE_BACKBUFFER (all images support this)
     */
-   if (image != NULL)
-      return GL_TRUE;
-   else
-      return GL_FALSE;
+   unsigned bind = 0;
+   if (use & __DRI_IMAGE_USE_SCANOUT)
+      bind |= PIPE_BIND_SCANOUT;
+   if (use & __DRI_IMAGE_USE_LINEAR)
+      bind |= PIPE_BIND_LINEAR;
+   if (use & __DRI_IMAGE_USE_CURSOR)
+      bind |= PIPE_BIND_CURSOR;
+
+   if (!bind)
+      return true;
+
+   return screen->check_resource_capability(screen, image->texture, bind);
 }
 
 static __DRIimage *
