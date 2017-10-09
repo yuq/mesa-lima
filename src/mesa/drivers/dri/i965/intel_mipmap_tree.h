@@ -503,7 +503,7 @@ intel_miptree_copy_slice(struct brw_context *brw,
 void
 intel_miptree_copy_teximage(struct brw_context *brw,
                             struct intel_texture_image *intelImage,
-                            struct intel_mipmap_tree *dst_mt, bool invalidate);
+                            struct intel_mipmap_tree *dst_mt);
 
 /**
  * \name Miptree HiZ functions

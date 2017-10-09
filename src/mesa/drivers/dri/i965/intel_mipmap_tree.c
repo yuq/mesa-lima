@@ -1567,16 +1567,11 @@ intel_miptree_copy_slice(struct brw_context *brw,
 /**
  * Copies the image's current data to the given miptree, and associates that
  * miptree with the image.
- *
- * If \c invalidate is true, then the actual image data does not need to be
- * copied, but the image still needs to be associated to the new miptree (this
- * is set to true if we're about to clear the image).
  */
 void
 intel_miptree_copy_teximage(struct brw_context *brw,
 			    struct intel_texture_image *intelImage,
-			    struct intel_mipmap_tree *dst_mt,
-                            bool invalidate)
+			    struct intel_mipmap_tree *dst_mt)
 {
    struct intel_mipmap_tree *src_mt = intelImage->mt;
    struct intel_texture_object *intel_obj =
@@ -1599,12 +1594,10 @@ intel_miptree_copy_teximage(struct brw_context *brw,
       end_layer = intelImage->base.Base.Depth - 1;
    }
 
-   if (!invalidate) {
-      for (unsigned i = start_layer; i <= end_layer; i++) {
-         intel_miptree_copy_slice(brw,
-                                  src_mt, level, i,
-                                  dst_mt, level, i);
-      }
+   for (unsigned i = start_layer; i <= end_layer; i++) {
+      intel_miptree_copy_slice(brw,
+                               src_mt, level, i,
+                               dst_mt, level, i);
    }
 
    intel_miptree_reference(&intelImage->mt, dst_mt);
