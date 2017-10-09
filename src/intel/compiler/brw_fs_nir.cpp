@@ -4536,15 +4536,6 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       unreachable("unknown texture opcode");
    }
 
-   /* TXS and TXL require a LOD but not everything we implement using those
-    * two opcodes provides one.  Provide a default LOD of 0.
-    */
-   if ((opcode == SHADER_OPCODE_TXS_LOGICAL ||
-        opcode == SHADER_OPCODE_TXL_LOGICAL) &&
-       srcs[TEX_LOGICAL_SRC_LOD].file == BAD_FILE) {
-      srcs[TEX_LOGICAL_SRC_LOD] = brw_imm_ud(0u);
-   }
-
    if (instr->op == nir_texop_tg4) {
       if (instr->component == 1 &&
           key_tex->gather_channel_quirk_mask & (1 << texture)) {
