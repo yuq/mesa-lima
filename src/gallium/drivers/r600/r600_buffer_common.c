@@ -234,7 +234,6 @@ bool r600_alloc_resource(struct r600_common_screen *rscreen,
 	pb_reference(&old_buf, NULL);
 
 	util_range_set_empty(&res->valid_buffer_range);
-	res->TC_L2_dirty = false;
 
 	/* Print debug information. */
 	if (rscreen->debug_flags & DBG_VM && res->b.b.target == PIPE_BUFFER) {
@@ -607,7 +606,6 @@ r600_alloc_buffer_struct(struct pipe_screen *screen,
 
 	rbuffer->buf = NULL;
 	rbuffer->bind_history = 0;
-	rbuffer->TC_L2_dirty = false;
 	util_range_init(&rbuffer->valid_buffer_range);
 	return rbuffer;
 }

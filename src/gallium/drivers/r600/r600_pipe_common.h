@@ -165,18 +165,6 @@ struct r600_resource {
          */
 	struct util_range		valid_buffer_range;
 
-	/* For buffers only. This indicates that a write operation has been
-	 * performed by TC L2, but the cache hasn't been flushed.
-	 * Any hw block which doesn't use or bypasses TC L2 should check this
-	 * flag and flush the cache before using the buffer.
-	 *
-	 * For example, TC L2 must be flushed if a buffer which has been
-	 * modified by a shader store instruction is about to be used as
-	 * an index buffer. The reason is that VGT DMA index fetching doesn't
-	 * use TC L2.
-	 */
-	bool				TC_L2_dirty;
-
 	/* Whether the resource has been exported via resource_get_handle. */
 	unsigned			external_usage; /* PIPE_HANDLE_USAGE_* */
 

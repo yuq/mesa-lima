@@ -1739,7 +1739,6 @@ static void r600_query_hw_get_result_resource(struct r600_common_context *rctx,
 			ssbo[2].buffer_offset = offset;
 			ssbo[2].buffer_size = 8;
 
-			((struct r600_resource *)resource)->TC_L2_dirty = true;
 		}
 
 		rctx->b.set_shader_buffers(&rctx->b, PIPE_SHADER_COMPUTE, 0, 3, ssbo);
