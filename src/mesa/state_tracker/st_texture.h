@@ -70,7 +70,7 @@ struct st_texture_image
     * mapping/unmapping, as well as image copies.
     */
    GLubyte *etc_data;
- };
+};
 
 
 /**
