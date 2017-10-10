@@ -92,6 +92,7 @@ endif
 
 with_gallium = false
 with_gallium_radeonsi = false
+with_gallium_softpipe = false
 _drivers = get_option('gallium-drivers')
 if _drivers != ''
   _split = _drivers.split(',')

@@ -18,13 +18,40 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_gallium = include_directories('include')
-inc_gallium_winsys = include_directories('winsys')
+files_libdri = files(
+  'dri_context.c',
+  'dri_context.h',
+  'dri_drawable.c',
+  'dri_drawable.h',
+  'dri_helpers.c',
+  'dri_helpers.h',
+  'dri_query_renderer.c',
+  'dri_query_renderer.h',
+  'dri_screen.c',
+  'dri_screen.h',
+)
 
-subdir('auxiliary')
-subdir('auxiliary/pipe-loader')
-subdir('drivers/ddebug')
-subdir('drivers/noop')
-subdir('drivers/trace')
-subdir('drivers/rbug')
-subdir('state_trackers/dri')
+if with_dri
+  files_libdri += files('drisw.c')
+endif
+
+if with_dri2
+  files_libdri += files('dri2.c', 'dri2_buffer.h')
+endif
+
+libdri_c_args = []
+if with_gallium_softpipe
+  libdri_c_args += '-DGALLIUM_SOFTPIPE'
+endif
+
+libdri = static_library(
+  'dri',
+  files_libdri,
+  include_directories : [
+    inc_include, inc_util, inc_mesa, inc_mapi, inc_src, inc_gallium,
+    inc_gallium_aux, inc_dri_common,
+  ],
+  c_args : [c_vis_args, libdri_c_args],
+  dependencies : dep_libdrm,
+  build_by_default : false,
+)
