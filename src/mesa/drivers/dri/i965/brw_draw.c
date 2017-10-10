@@ -898,7 +898,7 @@ brw_draw_prims(struct gl_context *ctx,
          uint32_t draw_id_offset;
 
          intel_upload_data(brw, &prims[i].draw_id, 4, 4, &draw_id_bo,
-                      &draw_id_offset);
+                           &draw_id_offset);
 
          brw_emit_pipe_control_flush(brw, PIPE_CONTROL_FLUSH_ENABLE);
 
