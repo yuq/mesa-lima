@@ -37,6 +37,10 @@ with_vulkan_icd_dir = get_option('vulkan-icd-dir')
 with_tests = get_option('build-tests')
 with_valgrind = get_option('valgrind')
 with_asm = get_option('asm')
+if get_option('texture-float')
+  pre_args += '-DTEXTURE_FLOAT_ENABLED'
+  message('WARNING: Floating-point texture enabled. Please consult docs/patents.txt and your lawyer before building mesa.')
+endif
 
 # XXX: yeah, do these
 with_appledri = false
