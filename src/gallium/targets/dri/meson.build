@@ -64,6 +64,14 @@ if with_gallium_nouveau
   gallium_dri_link_with += [libnouveauwinsys, libnouveau]
   gallium_dri_drivers += 'nouveau_dri.so'
 endif
+if with_gallium_softpipe
+  gallium_dri_c_args += '-DGALLIUM_SOFTPIPE'
+  gallium_dri_link_with += libsoftpipe
+  gallium_dri_drivers += 'swrast_dri.so'
+  if with_gallium_drisw_kms
+    gallium_dri_drivers += 'kms_swrast_dri.so'
+  endif
+endif
 
 libgallium_dri = shared_library(
   'gallium_dri',

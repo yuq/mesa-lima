@@ -99,6 +99,7 @@ if _drivers != ''
   _split = _drivers.split(',')
   with_gallium_radeonsi = _split.contains('radeonsi')
   with_gallium_nouveau = _split.contains('nouveau')
+  with_gallium_softpipe = _split.contains('swrast')
   with_gallium = true
   with_dri = true
 endif
@@ -109,6 +110,10 @@ if not (with_dri or with_gallium)
   with_opengl = false
   with_any_opengl = false
   with_shared_glapi = false
+endif
+
+if with_dri_swrast and with_gallium_softpipe
+  error('Only one swrast provider can be built')
 endif
 
 dep_libdrm_intel = []
