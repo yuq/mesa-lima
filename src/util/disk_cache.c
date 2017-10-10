@@ -1145,6 +1145,7 @@ disk_cache_get(struct disk_cache *cache, const cache_key key, size_t *size)
 
    free(data);
    free(filename);
+   free(file_header);
    close(fd);
 
    if (size)
