@@ -45,6 +45,10 @@ $(intermediates)/egd_tables.h: $(MESA_TOP)/src/gallium/drivers/r600/egd_tables.p
 	@echo "Gen Header: $(PRIVATE_MODULE) <= $(notdir $(@))"
 	$(hide) $(MESA_PYTHON2) $(MESA_TOP)/src/gallium/drivers/r600/egd_tables.py $(MESA_TOP)/src/gallium/drivers/r600/evergreend.h > $@
 
+ifeq ($(MESA_ENABLE_LLVM),true)
+$(call mesa-build-with-llvm)
+endif
+
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
