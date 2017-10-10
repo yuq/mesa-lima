@@ -1272,9 +1272,9 @@ emit_fetch_constant(
 /**
  * Fetch 64-bit values from two separate channels.
  * 64-bit values are stored split across two channels, like xy and zw.
- * This function creates a set of 16 floats,
+ * This function creates a set of vec_length*2 floats,
  * extracts the values from the two channels,
- * puts them in the correct place, then casts to 8 64-bits.
+ * puts them in the correct place, then casts to vec_length 64-bits.
  */
 static LLVMValueRef
 emit_fetch_64bit(
@@ -1289,9 +1289,9 @@ emit_fetch_64bit(
    LLVMValueRef res;
    struct lp_build_context *bld_fetch = stype_to_fetch(bld_base, stype);
    int i;
-   LLVMValueRef shuffles[16];
+   LLVMValueRef shuffles[2 * (LP_MAX_VECTOR_WIDTH/32)];
    int len = bld_base->base.type.length * 2;
-   assert(len <= 16);
+   assert(len <= (2 * (LP_MAX_VECTOR_WIDTH/32)));
 
    for (i = 0; i < bld_base->base.type.length * 2; i+=2) {
       shuffles[i] = lp_build_const_int32(gallivm, i / 2);
@@ -1691,7 +1691,7 @@ emit_fetch_deriv(
 }
 
 /**
- * store an array of 8 64-bit into two arrays of 8 floats
+ * store an array of vec-length 64-bit into two arrays of vec_length floats
  * i.e.
  * value is d0, d1, d2, d3 etc.
  * each 64-bit has high and low pieces x, y
@@ -1710,8 +1710,8 @@ emit_store_64bit_chan(struct lp_build_tgsi_context *bld_base,
    struct lp_build_context *float_bld = &bld_base->base;
    unsigned i;
    LLVMValueRef temp, temp2;
-   LLVMValueRef shuffles[8];
-   LLVMValueRef shuffles2[8];
+   LLVMValueRef shuffles[LP_MAX_VECTOR_WIDTH/32];
+   LLVMValueRef shuffles2[LP_MAX_VECTOR_WIDTH/32];
 
    for (i = 0; i < bld_base->base.type.length; i++) {
       shuffles[i] = lp_build_const_int32(gallivm, i * 2);
