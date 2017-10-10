@@ -1847,6 +1847,29 @@ dri2_create_image_from_dri(_EGLDisplay *disp, __DRIimage *dri_image)
    return &dri2_img->base;
 }
 
+/**
+ * Translate a DRI Image extension error code into an EGL error code.
+ */
+static EGLint
+egl_error_from_dri_image_error(int dri_error)
+{
+   switch (dri_error) {
+   case __DRI_IMAGE_ERROR_SUCCESS:
+      return EGL_SUCCESS;
+   case __DRI_IMAGE_ERROR_BAD_ALLOC:
+      return EGL_BAD_ALLOC;
+   case __DRI_IMAGE_ERROR_BAD_MATCH:
+      return EGL_BAD_MATCH;
+   case __DRI_IMAGE_ERROR_BAD_PARAMETER:
+      return EGL_BAD_PARAMETER;
+   case __DRI_IMAGE_ERROR_BAD_ACCESS:
+      return EGL_BAD_ACCESS;
+   default:
+      assert(0);
+      return EGL_BAD_ALLOC;
+   }
+}
+
 static _EGLImage *
 dri2_create_image_khr_renderbuffer(_EGLDisplay *disp, _EGLContext *ctx,
                                    EGLClientBuffer buffer,
@@ -1949,35 +1972,10 @@ dri2_get_sync_values_chromium(_EGLDisplay *dpy, _EGLSurface *surf,
 static void
 dri2_create_image_khr_texture_error(int dri_error)
 {
-   EGLint egl_error;
+   EGLint egl_error = egl_error_from_dri_image_error(dri_error);
 
-   switch (dri_error) {
-   case __DRI_IMAGE_ERROR_SUCCESS:
-      return;
-
-   case __DRI_IMAGE_ERROR_BAD_ALLOC:
-      egl_error = EGL_BAD_ALLOC;
-      break;
-
-   case __DRI_IMAGE_ERROR_BAD_MATCH:
-      egl_error = EGL_BAD_MATCH;
-      break;
-
-   case __DRI_IMAGE_ERROR_BAD_PARAMETER:
-      egl_error = EGL_BAD_PARAMETER;
-      break;
-
-   case __DRI_IMAGE_ERROR_BAD_ACCESS:
-      egl_error = EGL_BAD_ACCESS;
-      break;
-
-   default:
-      assert(0);
-      egl_error = EGL_BAD_MATCH;
-      break;
-   }
-
-   _eglError(egl_error, "dri2_create_image_khr_texture");
+   if (egl_error != EGL_SUCCESS)
+      _eglError(egl_error, "dri2_create_image_khr_texture");
 }
 
 static _EGLImage *
