@@ -239,7 +239,7 @@ anv_wsi_image_create(VkDevice device_h,
    memory->bo->flags |= EXEC_OBJECT_WRITE;
 
    anv_BindImageMemory(device_h, image_h, memory_h, 0);
-   assert(image->size == 0);
+   assert(image->planes[0].offset == 0);
 
    struct anv_surface *surface = &image->planes[0].surface;
    assert(surface->isl.tiling == ISL_TILING_X);
