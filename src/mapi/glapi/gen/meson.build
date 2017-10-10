@@ -239,6 +239,7 @@ foreach x : [['indirect_size.h', ['-m', 'size_h', '--header-tag', '_INDIRECT_SIZ
     capture : true,
   )
 endforeach
+glx_indirect_size_h = glx_generated[3]
 
 glapi_x86_s = custom_target(
   'glapi_x86.S',
