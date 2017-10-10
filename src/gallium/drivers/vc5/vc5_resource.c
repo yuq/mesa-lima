@@ -43,7 +43,7 @@
 static bool
 vc5_resource_bo_alloc(struct vc5_resource *rsc)
 {
-        struct pipe_resource *prsc = &rsc->base.b;
+        struct pipe_resource *prsc = &rsc->base;
         struct pipe_screen *pscreen = prsc->screen;
         struct vc5_bo *bo;
         int layers = (prsc->target == PIPE_TEXTURE_3D ?
@@ -88,7 +88,7 @@ vc5_resource_transfer_unmap(struct pipe_context *pctx,
                                               slice->stride,
                                               trans->map, ptrans->stride,
                                               slice->tiling, rsc->cpp,
-                                              rsc->base.b.height0,
+                                              rsc->base.height0,
                                               &ptrans->box);
                 }
                 free(trans->map);
@@ -293,7 +293,7 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
                                              ptrans->box.z * rsc->cube_map_stride,
                                              slice->stride,
                                              slice->tiling, rsc->cpp,
-                                             rsc->base.b.height0,
+                                             rsc->base.height0,
                                              &ptrans->box);
                 }
                 return trans->map;
@@ -324,8 +324,10 @@ vc5_resource_destroy(struct pipe_screen *pscreen,
 
 static boolean
 vc5_resource_get_handle(struct pipe_screen *pscreen,
+                        struct pipe_context *pctx,
                         struct pipe_resource *prsc,
-                        struct winsys_handle *whandle)
+                        struct winsys_handle *whandle,
+                        unsigned usage)
 {
         struct vc5_resource *rsc = vc5_resource(prsc);
         struct vc5_bo *bo = rsc->bo;
@@ -352,18 +354,10 @@ vc5_resource_get_handle(struct pipe_screen *pscreen,
         return FALSE;
 }
 
-static const struct u_resource_vtbl vc5_resource_vtbl = {
-        .resource_get_handle      = vc5_resource_get_handle,
-        .resource_destroy         = vc5_resource_destroy,
-        .transfer_map             = vc5_resource_transfer_map,
-        .transfer_flush_region    = u_default_transfer_flush_region,
-        .transfer_unmap           = vc5_resource_transfer_unmap,
-};
-
 static void
 vc5_setup_slices(struct vc5_resource *rsc, const char *caller)
 {
-        struct pipe_resource *prsc = &rsc->base.b;
+        struct pipe_resource *prsc = &rsc->base;
         uint32_t width = prsc->width0;
         uint32_t height = prsc->height0;
         uint32_t pot_width = util_next_power_of_two(width);
@@ -481,14 +475,13 @@ vc5_resource_setup(struct pipe_screen *pscreen,
         struct vc5_resource *rsc = CALLOC_STRUCT(vc5_resource);
         if (!rsc)
                 return NULL;
-        struct pipe_resource *prsc = &rsc->base.b;
+        struct pipe_resource *prsc = &rsc->base;
 
         *prsc = *tmpl;
 
         pipe_reference_init(&prsc->reference, 1);
         prsc->screen = pscreen;
 
-        rsc->base.vtbl = &vc5_resource_vtbl;
         if (prsc->nr_samples <= 1)
                 rsc->cpp = util_format_get_blocksize(tmpl->format);
         else
@@ -520,7 +513,7 @@ vc5_resource_create_with_modifiers(struct pipe_screen *pscreen,
 {
         bool linear_ok = find_modifier(DRM_FORMAT_MOD_LINEAR, modifiers, count);
         struct vc5_resource *rsc = vc5_resource_setup(pscreen, tmpl);
-        struct pipe_resource *prsc = &rsc->base.b;
+        struct pipe_resource *prsc = &rsc->base;
         /* Use a tiled layout if we can, for better 3D performance. */
         bool should_tile = true;
 
@@ -584,7 +577,7 @@ vc5_resource_from_handle(struct pipe_screen *pscreen,
 {
         struct vc5_screen *screen = vc5_screen(pscreen);
         struct vc5_resource *rsc = vc5_resource_setup(pscreen, tmpl);
-        struct pipe_resource *prsc = &rsc->base.b;
+        struct pipe_resource *prsc = &rsc->base;
         struct vc5_resource_slice *slice = &rsc->slices[0];
 
         if (!rsc)
@@ -738,16 +731,16 @@ vc5_resource_screen_init(struct pipe_screen *pscreen)
                 vc5_resource_create_with_modifiers;
         pscreen->resource_create = vc5_resource_create;
         pscreen->resource_from_handle = vc5_resource_from_handle;
-        pscreen->resource_get_handle = u_resource_get_handle_vtbl;
-        pscreen->resource_destroy = u_resource_destroy_vtbl;
+        pscreen->resource_get_handle = vc5_resource_get_handle;
+        pscreen->resource_destroy = vc5_resource_destroy;
 }
 
 void
 vc5_resource_context_init(struct pipe_context *pctx)
 {
-        pctx->transfer_map = u_transfer_map_vtbl;
-        pctx->transfer_flush_region = u_transfer_flush_region_vtbl;
-        pctx->transfer_unmap = u_transfer_unmap_vtbl;
+        pctx->transfer_map = vc5_resource_transfer_map;
+        pctx->transfer_flush_region = u_default_transfer_flush_region;
+        pctx->transfer_unmap = vc5_resource_transfer_unmap;
         pctx->buffer_subdata = u_default_buffer_subdata;
         pctx->texture_subdata = u_default_texture_subdata;
         pctx->create_surface = vc5_create_surface;

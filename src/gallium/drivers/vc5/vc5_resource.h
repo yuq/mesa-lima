@@ -103,7 +103,7 @@ struct vc5_surface {
 };
 
 struct vc5_resource {
-        struct u_resource base;
+        struct pipe_resource base;
         struct vc5_bo *bo;
         struct vc5_resource_slice slices[VC5_MAX_MIP_LEVELS];
         uint32_t cube_map_stride;
