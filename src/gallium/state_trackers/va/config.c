@@ -195,7 +195,7 @@ vlVaCreateConfig(VADriverContextP ctx, VAProfile profile, VAEntrypoint entrypoin
       return VA_STATUS_ERROR_ALLOCATION_FAILED;
 
    if (profile == VAProfileNone && entrypoint == VAEntrypointVideoProc) {
-      config->entrypoint = VAEntrypointVideoProc;
+      config->entrypoint = PIPE_VIDEO_ENTRYPOINT_UNKNOWN;
       config->profile = PIPE_VIDEO_PROFILE_UNKNOWN;
       supported_rt_formats = VA_RT_FORMAT_YUV420 |
                              VA_RT_FORMAT_YUV420_10BPP |
@@ -342,13 +342,19 @@ vlVaQueryConfigAttributes(VADriverContextP ctx, VAConfigID config_id, VAProfile 
 
    *profile = PipeToProfile(config->profile);
 
-   if (config->profile == PIPE_VIDEO_PROFILE_UNKNOWN) {
+   switch (config->entrypoint) {
+   case PIPE_VIDEO_ENTRYPOINT_BITSTREAM:
+      *entrypoint = VAEntrypointVLD;
+      break;
+   case PIPE_VIDEO_ENTRYPOINT_ENCODE:
+      *entrypoint = VAEntrypointEncSlice;
+      break;
+   case PIPE_VIDEO_ENTRYPOINT_UNKNOWN:
       *entrypoint = VAEntrypointVideoProc;
-      *num_attribs = 0;
-      return VA_STATUS_SUCCESS;
+      break;
+   default:
+      return VA_STATUS_ERROR_INVALID_CONFIG;
    }
-
-   *entrypoint = config->entrypoint;
 
    *num_attribs = 1;
    attrib_list[0].type = VAConfigAttribRTFormat;
