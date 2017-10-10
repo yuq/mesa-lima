@@ -1890,7 +1890,8 @@ dri2_create_image_khr_renderbuffer(_EGLDisplay *disp, _EGLContext *ctx,
       return EGL_NO_IMAGE_KHR;
    }
 
-   if (dri2_dpy->image->base.version >= 17) {
+   if (dri2_dpy->image->base.version >= 17 &&
+       dri2_dpy->image->createImageFromRenderbuffer2) {
       unsigned error = ~0;
 
       dri_image = dri2_dpy->image->createImageFromRenderbuffer2(
