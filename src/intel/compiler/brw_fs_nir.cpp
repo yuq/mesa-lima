@@ -53,14 +53,27 @@ fs_visitor::nir_setup_outputs()
    if (stage == MESA_SHADER_TESS_CTRL || stage == MESA_SHADER_FRAGMENT)
       return;
 
+   unsigned vec4s[VARYING_SLOT_TESS_MAX] = { 0, };
+
+   /* Calculate the size of output registers in a separate pass, before
+    * allocating them.  With ARB_enhanced_layouts, multiple output variables
+    * may occupy the same slot, but have different type sizes.
+    */
    nir_foreach_variable(var, &nir->outputs) {
-      const unsigned vec4s =
+      const int loc = var->data.driver_location;
+      const unsigned var_vec4s =
          var->data.compact ? DIV_ROUND_UP(glsl_get_length(var->type), 4)
                            : type_size_vec4(var->type);
-      fs_reg reg = bld.vgrf(BRW_REGISTER_TYPE_F, 4 * vec4s);
-      for (unsigned i = 0; i < vec4s; i++) {
-         if (outputs[var->data.driver_location + i].file == BAD_FILE)
-            outputs[var->data.driver_location + i] = offset(reg, bld, 4 * i);
+      vec4s[loc] = MAX2(vec4s[loc], var_vec4s);
+   }
+
+   nir_foreach_variable(var, &nir->outputs) {
+      const int loc = var->data.driver_location;
+      if (outputs[loc].file == BAD_FILE) {
+         fs_reg reg = bld.vgrf(BRW_REGISTER_TYPE_F, 4 * vec4s[loc]);
+         for (unsigned i = 0; i < vec4s[loc]; i++) {
+            outputs[loc + i] = offset(reg, bld, 4 * i);
+         }
       }
    }
 }
