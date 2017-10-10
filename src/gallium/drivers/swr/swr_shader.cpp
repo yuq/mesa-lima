@@ -693,7 +693,7 @@ swr_compile_gs(struct swr_context *ctx, swr_jit_gs_key &key)
 void
 BuilderSWR::WriteVS(Value *pVal, Value *pVsContext, Value *pVtxOutput, unsigned slot, unsigned channel)
 {
-#if USE_SIMD16_FRONTEND
+#if USE_SIMD16_FRONTEND && !USE_SIMD16_SHADERS
    // interleave the simdvertex components into the dest simd16vertex
    //   slot16offset = slot8offset * 2
    //   comp16offset = comp8offset * 2 + alternateOffset
@@ -756,6 +756,9 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
    const_sizes_ptr->setName("num_vs_constants");
 
    Value *vtxInput = LOAD(pVsCtx, {0, SWR_VS_CONTEXT_pVin});
+#if USE_SIMD16_SHADERS
+   vtxInput = BITCAST(vtxInput, PointerType::get(Gen_simd16vertex(JM()), 0));
+#endif
 
    for (uint32_t attrib = 0; attrib < PIPE_MAX_SHADER_INPUTS; attrib++) {
       const unsigned mask = swr_vs->info.base.input_usage_mask[attrib];
@@ -777,7 +780,7 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
 
    lp_build_tgsi_soa(gallivm,
                      swr_vs->pipe.tokens,
-                     lp_type_float_vec(32, 32 * 8),
+                     lp_type_float_vec(32, 32 * mVWidth),
                      NULL, // mask
                      wrap(consts_ptr),
                      wrap(const_sizes_ptr),
@@ -795,6 +798,9 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
    IRB()->SetInsertPoint(unwrap(LLVMGetInsertBlock(gallivm->builder)));
 
    Value *vtxOutput = LOAD(pVsCtx, {0, SWR_VS_CONTEXT_pVout});
+#if USE_SIMD16_SHADERS
+   vtxOutput = BITCAST(vtxOutput, PointerType::get(Gen_simd16vertex(JM()), 0));
+#endif
 
    for (uint32_t channel = 0; channel < TGSI_NUM_CHANNELS; channel++) {
       for (uint32_t attrib = 0; attrib < PIPE_MAX_SHADER_OUTPUTS; attrib++) {
@@ -905,7 +911,11 @@ swr_compile_vs(struct swr_context *ctx, swr_jit_vs_key &key)
       return NULL;
 
    BuilderSWR builder(
+#if USE_SIMD16_SHADERS
+      reinterpret_cast<JitManager *>(swr_screen(ctx->pipe.screen)->hJitMgr16),
+#else
       reinterpret_cast<JitManager *>(swr_screen(ctx->pipe.screen)->hJitMgr),
+#endif
       "VS");
    PFN_VERTEX_FUNC func = builder.CompileVS(ctx, key);
 

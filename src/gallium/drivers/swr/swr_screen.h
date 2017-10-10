@@ -49,6 +49,9 @@ struct swr_screen {
    uint32_t client_copy_limit;
 
    HANDLE hJitMgr;
+#if USE_SIMD16_SHADERS
+   HANDLE hJitMgr16;
+#endif
 
    PFNSwrGetInterface pfnSwrGetInterface;
 };
