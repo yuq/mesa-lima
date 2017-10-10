@@ -1793,13 +1793,43 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer)
 }
 
 static void
+radv_emit_draw_registers(struct radv_cmd_buffer *cmd_buffer, bool indexed_draw,
+			 bool instanced_draw, bool indirect_draw,
+			 uint32_t draw_vertex_count)
+{
+	struct radeon_info *info = &cmd_buffer->device->physical_device->rad_info;
+	struct radv_cmd_state *state = &cmd_buffer->state;
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
+	uint32_t ia_multi_vgt_param;
+
+	/* Draw state. */
+	ia_multi_vgt_param =
+		si_get_ia_multi_vgt_param(cmd_buffer, instanced_draw,
+					  indirect_draw, draw_vertex_count);
+
+	if (state->last_ia_multi_vgt_param != ia_multi_vgt_param) {
+		if (info->chip_class >= GFX9) {
+			radeon_set_uconfig_reg_idx(cs,
+						   R_030960_IA_MULTI_VGT_PARAM,
+						   4, ia_multi_vgt_param);
+		} else if (info->chip_class >= CIK) {
+			radeon_set_context_reg_idx(cs,
+						   R_028AA8_IA_MULTI_VGT_PARAM,
+						   1, ia_multi_vgt_param);
+		} else {
+			radeon_set_context_reg(cs, R_028AA8_IA_MULTI_VGT_PARAM,
+					       ia_multi_vgt_param);
+		}
+		state->last_ia_multi_vgt_param = ia_multi_vgt_param;
+	}
+}
+
+static void
 radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 			    bool indexed_draw, bool instanced_draw,
 			    bool indirect_draw,
 			    uint32_t draw_vertex_count)
 {
-	uint32_t ia_multi_vgt_param;
-
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
 							   cmd_buffer->cs, 4096);
 
@@ -1824,16 +1854,8 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 			cmd_buffer->state.dirty |= RADV_CMD_DIRTY_INDEX_BUFFER;
 	}
 
-	ia_multi_vgt_param = si_get_ia_multi_vgt_param(cmd_buffer, instanced_draw, indirect_draw, draw_vertex_count);
-	if (cmd_buffer->state.last_ia_multi_vgt_param != ia_multi_vgt_param) {
-		if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9)
-			radeon_set_uconfig_reg_idx(cmd_buffer->cs, R_030960_IA_MULTI_VGT_PARAM, 4, ia_multi_vgt_param);
-		else if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK)
-			radeon_set_context_reg_idx(cmd_buffer->cs, R_028AA8_IA_MULTI_VGT_PARAM, 1, ia_multi_vgt_param);
-		else
-			radeon_set_context_reg(cmd_buffer->cs, R_028AA8_IA_MULTI_VGT_PARAM, ia_multi_vgt_param);
-		cmd_buffer->state.last_ia_multi_vgt_param = ia_multi_vgt_param;
-	}
+	radv_emit_draw_registers(cmd_buffer, indexed_draw, instanced_draw,
+				 indirect_draw, draw_vertex_count);
 
 	radv_cmd_buffer_flush_dynamic_state(cmd_buffer);
 
