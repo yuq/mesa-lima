@@ -237,7 +237,8 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       struct gl_program *prog = shader->Program;
       prog->Parameters = _mesa_new_parameter_list();
 
-      process_glsl_ir(brw, shProg, shader);
+      if (!shader->spirv_data)
+         process_glsl_ir(brw, shProg, shader);
 
       _mesa_copy_linked_program_data(shProg, shader);
 
