@@ -987,10 +987,8 @@ cache_put(void *job, int thread_index)
     */
    if (fd != -1)
       close(fd);
-   if (filename_tmp)
-      free(filename_tmp);
-   if (filename)
-      free(filename);
+   free(filename_tmp);
+   free(filename);
 }
 
 void
