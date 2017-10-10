@@ -1713,33 +1713,6 @@ radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 }
 
-static void radv_emit_primitive_reset_state(struct radv_cmd_buffer *cmd_buffer,
-					    bool indexed_draw)
-{
-	int32_t primitive_reset_en = indexed_draw && cmd_buffer->state.pipeline->graphics.prim_restart_enable;
-
-	if (primitive_reset_en != cmd_buffer->state.last_primitive_reset_en) {
-		cmd_buffer->state.last_primitive_reset_en = primitive_reset_en;
-		if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
-			radeon_set_uconfig_reg(cmd_buffer->cs, R_03092C_VGT_MULTI_PRIM_IB_RESET_EN,
-					       primitive_reset_en);
-		} else {
-			radeon_set_context_reg(cmd_buffer->cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN,
-					       primitive_reset_en);
-		}
-	}
-
-	if (primitive_reset_en) {
-		uint32_t primitive_reset_index = cmd_buffer->state.index_type ? 0xffffffffu : 0xffffu;
-
-		if (primitive_reset_index != cmd_buffer->state.last_primitive_reset_index) {
-			cmd_buffer->state.last_primitive_reset_index = primitive_reset_index;
-			radeon_set_context_reg(cmd_buffer->cs, R_02840C_VGT_MULTI_PRIM_IB_RESET_INDX,
-					       primitive_reset_index);
-		}
-	}
-}
-
 static bool
 radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer)
 {
@@ -1801,6 +1774,7 @@ radv_emit_draw_registers(struct radv_cmd_buffer *cmd_buffer, bool indexed_draw,
 	struct radv_cmd_state *state = &cmd_buffer->state;
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	uint32_t ia_multi_vgt_param;
+	int32_t primitive_reset_en;
 
 	/* Draw state. */
 	ia_multi_vgt_param =
@@ -1821,6 +1795,35 @@ radv_emit_draw_registers(struct radv_cmd_buffer *cmd_buffer, bool indexed_draw,
 					       ia_multi_vgt_param);
 		}
 		state->last_ia_multi_vgt_param = ia_multi_vgt_param;
+	}
+
+	/* Primitive restart. */
+	primitive_reset_en =
+		indexed_draw && state->pipeline->graphics.prim_restart_enable;
+
+	if (primitive_reset_en != state->last_primitive_reset_en) {
+		state->last_primitive_reset_en = primitive_reset_en;
+		if (info->chip_class >= GFX9) {
+			radeon_set_uconfig_reg(cs,
+					       R_03092C_VGT_MULTI_PRIM_IB_RESET_EN,
+					       primitive_reset_en);
+		} else {
+			radeon_set_context_reg(cs,
+					       R_028A94_VGT_MULTI_PRIM_IB_RESET_EN,
+					       primitive_reset_en);
+		}
+	}
+
+	if (primitive_reset_en) {
+		uint32_t primitive_reset_index =
+			state->index_type ? 0xffffffffu : 0xffffu;
+
+		if (primitive_reset_index != state->last_primitive_reset_index) {
+			radeon_set_context_reg(cs,
+					       R_02840C_VGT_MULTI_PRIM_IB_RESET_INDX,
+					       primitive_reset_index);
+			state->last_primitive_reset_index = primitive_reset_index;
+		}
 	}
 }
 
@@ -1858,8 +1861,6 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 				 indirect_draw, draw_vertex_count);
 
 	radv_cmd_buffer_flush_dynamic_state(cmd_buffer);
-
-	radv_emit_primitive_reset_state(cmd_buffer, indexed_draw);
 
 	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_ALL_GRAPHICS);
 	radv_flush_constants(cmd_buffer, cmd_buffer->state.pipeline,
