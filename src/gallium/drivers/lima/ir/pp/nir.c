@@ -179,6 +179,7 @@ static ppir_node *ppir_emit_intrinsic(ppir_compiler *comp, nir_intrinsic_instr *
       if (!lnode)
          return NULL;
 
+      lnode->num_components = instr->num_components;
       lnode->index = nir_intrinsic_base(instr);
       return &lnode->node;
 
@@ -190,7 +191,18 @@ static ppir_node *ppir_emit_intrinsic(ppir_compiler *comp, nir_intrinsic_instr *
       if (!lnode)
          return NULL;
 
+      lnode->num_components = instr->num_components;
       lnode->index = nir_intrinsic_base(instr);
+
+      if (instr->src->is_ssa) {
+         ppir_node *child = comp->var_nodes[instr->src->ssa->index];
+         if (child->type == ppir_node_type_const) {
+            ppir_const_node *c = ppir_node_to_const(child);
+            assert(c->constant.num == 1);
+            lnode->index += c->constant.value[0].i;
+         }
+      }
+
       return &lnode->node;
 
    case nir_intrinsic_store_output:
