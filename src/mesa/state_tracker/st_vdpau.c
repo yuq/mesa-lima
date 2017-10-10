@@ -221,7 +221,7 @@ st_vdpau_map_surface(struct gl_context *ctx, GLenum target, GLenum access,
 
    /* switch to surface based */
    if (!stObj->surface_based) {
-      _mesa_clear_texture_object(ctx, texObj);
+      _mesa_clear_texture_object(ctx, texObj, NULL);
       stObj->surface_based = GL_TRUE;
    }
 
