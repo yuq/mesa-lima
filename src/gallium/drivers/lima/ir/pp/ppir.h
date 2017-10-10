@@ -403,6 +403,20 @@ static inline int ppir_target_get_dest_reg_index(ppir_dest *dest)
    return -1;
 }
 
+static inline int ppir_target_get_dest_component(ppir_dest *dest)
+{
+   switch (dest->type) {
+   case ppir_target_ssa:
+      return dest->ssa.num_components;
+   case ppir_target_register:
+      return dest->reg->num_components;
+   case ppir_target_pipeline:
+      return 4;
+   }
+
+   return -1;
+}
+
 ppir_instr *ppir_instr_create(ppir_block *block);
 bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node);
 void ppir_instr_add_depend(ppir_instr *succ, ppir_instr *pred);
