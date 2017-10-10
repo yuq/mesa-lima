@@ -25,6 +25,7 @@
 #include "pipe/p_screen.h"
 #include "state_tracker/st_texture.h"
 #include "state_tracker/st_context.h"
+#include "state_tracker/st_cb_fbo.h"
 #include "main/texobj.h"
 
 #include "dri_helpers.h"
@@ -246,16 +247,68 @@ dri2_lookup_egl_image(struct dri_screen *screen, void *handle)
 }
 
 __DRIimage *
+dri2_create_image_from_renderbuffer2(__DRIcontext *context,
+				     int renderbuffer, void *loaderPrivate,
+                                     unsigned *error)
+{
+   struct gl_context *ctx = ((struct st_context *)dri_context(context)->st)->ctx;
+   struct gl_renderbuffer *rb;
+   struct pipe_resource *tex;
+   __DRIimage *img;
+
+   /* Section 3.9 (EGLImage Specification and Management) of the EGL 1.5
+    * specification says:
+    *
+    *   "If target is EGL_GL_RENDERBUFFER and buffer is not the name of a
+    *    renderbuffer object, or if buffer is the name of a multisampled
+    *    renderbuffer object, the error EGL_BAD_PARAMETER is generated."
+    *
+    *   "If target is EGL_GL_TEXTURE_2D , EGL_GL_TEXTURE_CUBE_MAP_*,
+    *    EGL_GL_RENDERBUFFER or EGL_GL_TEXTURE_3D and buffer refers to the
+    *    default GL texture object (0) for the corresponding GL target, the
+    *    error EGL_BAD_PARAMETER is generated."
+    *   (rely on _mesa_lookup_renderbuffer returning NULL in this case)
+    */
+   rb = _mesa_lookup_renderbuffer(ctx, renderbuffer);
+   if (!rb || rb->NumSamples > 0) {
+      *error = __DRI_IMAGE_ERROR_BAD_PARAMETER;
+      return NULL;
+   }
+
+   tex = st_get_renderbuffer_resource(rb);
+   if (!tex) {
+      *error = __DRI_IMAGE_ERROR_BAD_PARAMETER;
+      return NULL;
+   }
+
+   img = CALLOC_STRUCT(__DRIimageRec);
+   if (!img) {
+      *error = __DRI_IMAGE_ERROR_BAD_ALLOC;
+      return NULL;
+   }
+
+   img->dri_format = driGLFormatToImageFormat(rb->Format);
+   img->loader_private = loaderPrivate;
+
+   if (img->dri_format == __DRI_IMAGE_FORMAT_NONE) {
+      *error = __DRI_IMAGE_ERROR_BAD_PARAMETER;
+      free(img);
+      return NULL;
+   }
+
+   pipe_resource_reference(&img->texture, tex);
+
+   *error = __DRI_IMAGE_ERROR_SUCCESS;
+   return img;
+}
+
+__DRIimage *
 dri2_create_image_from_renderbuffer(__DRIcontext *context,
 				    int renderbuffer, void *loaderPrivate)
 {
-   struct dri_context *ctx = dri_context(context);
-
-   if (!ctx->st->get_resource_for_egl_image)
-      return NULL;
-
-   /* TODO */
-   return NULL;
+   unsigned error;
+   return dri2_create_image_from_renderbuffer2(context, renderbuffer,
+                                               loaderPrivate, &error);
 }
 
 void

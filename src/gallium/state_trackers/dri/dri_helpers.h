@@ -35,6 +35,11 @@ __DRIimage *
 dri2_create_image_from_renderbuffer(__DRIcontext *context,
 				    int renderbuffer, void *loaderPrivate);
 
+__DRIimage *
+dri2_create_image_from_renderbuffer2(__DRIcontext *context,
+				     int renderbuffer, void *loaderPrivate,
+                                     unsigned *error);
+
 void
 dri2_destroy_image(__DRIimage *img);
 

@@ -1561,7 +1561,7 @@ dri2_get_capabilities(__DRIscreen *_screen)
 
 /* The extension is modified during runtime if DRI_PRIME is detected */
 static __DRIimageExtension dri2ImageExtension = {
-    .base = { __DRI_IMAGE, 15 },
+    .base = { __DRI_IMAGE, 17 },
 
     .createImageFromName          = dri2_create_image_from_name,
     .createImageFromRenderbuffer  = dri2_create_image_from_renderbuffer,
@@ -1579,6 +1579,12 @@ static __DRIimageExtension dri2ImageExtension = {
     .getCapabilities              = dri2_get_capabilities,
     .mapImage                     = dri2_map_image,
     .unmapImage                   = dri2_unmap_image,
+    .createImageWithModifiers     = NULL,
+    .createImageFromDmaBufs2      = NULL,
+    .queryDmaBufFormats           = NULL,
+    .queryDmaBufModifiers         = NULL,
+    .queryDmaBufFormatModifierAttribs = NULL,
+    .createImageFromRenderbuffer2 = dri2_create_image_from_renderbuffer2,
 };
 
 static const __DRIrobustnessExtension dri2Robustness = {
