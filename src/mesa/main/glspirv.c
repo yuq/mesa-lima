@@ -28,6 +28,8 @@
 #include "compiler/nir/nir.h"
 #include "compiler/spirv/nir_spirv.h"
 
+#include "program/program.h"
+
 #include "util/u_atomic.h"
 
 void
@@ -100,6 +102,75 @@ _mesa_spirv_shader_binary(struct gl_context *ctx,
       sh->ir = NULL;
       ralloc_free(sh->symbols);
       sh->symbols = NULL;
+   }
+}
+
+/**
+ * This is the equivalent to compiler/glsl/linker.cpp::link_shaders()
+ * but for SPIR-V programs.
+ *
+ * This method just creates the gl_linked_shader structs with a reference to
+ * the SPIR-V data collected during previous steps.
+ *
+ * The real linking happens later in the driver-specifc call LinkShader().
+ * This is so backends can implement different linking strategies for
+ * SPIR-V programs.
+ */
+void
+_mesa_spirv_link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
+{
+   prog->data->LinkStatus = LINKING_SUCCESS;
+   prog->data->Validated = false;
+
+   for (unsigned i = 0; i < prog->NumShaders; i++) {
+      struct gl_shader *shader = prog->Shaders[i];
+      gl_shader_stage shader_type = shader->Stage;
+
+      /* We only support one shader per stage. The gl_spirv spec doesn't seem
+       * to prevent this, but the way the API is designed, requiring all shaders
+       * to be specialized with an entry point, makes supporting this quite
+       * undefined.
+       *
+       * TODO: Turn this into a proper error once the spec bug
+       * <https://gitlab.khronos.org/opengl/API/issues/58> is resolved.
+       */
+      if (prog->_LinkedShaders[shader_type]) {
+         ralloc_strcat(&prog->data->InfoLog,
+                       "\nError trying to link more than one SPIR-V shader "
+                       "per stage.\n");
+         prog->data->LinkStatus = LINKING_FAILURE;
+         return;
+      }
+
+      assert(shader->spirv_data);
+
+      struct gl_linked_shader *linked = rzalloc(NULL, struct gl_linked_shader);
+      linked->Stage = shader_type;
+
+      /* Create program and attach it to the linked shader */
+      struct gl_program *gl_prog =
+         ctx->Driver.NewProgram(ctx,
+                                _mesa_shader_stage_to_program(shader_type),
+                                prog->Name, false);
+      if (!gl_prog) {
+         prog->data->LinkStatus = LINKING_FAILURE;
+         _mesa_delete_linked_shader(ctx, linked);
+         return;
+      }
+
+      _mesa_reference_shader_program_data(ctx,
+                                          &gl_prog->sh.data,
+                                          prog->data);
+
+      /* Don't use _mesa_reference_program() just take ownership */
+      linked->Program = gl_prog;
+
+      /* Reference the SPIR-V data from shader to the linked shader */
+      _mesa_shader_spirv_data_reference(&linked->spirv_data,
+                                        shader->spirv_data);
+
+      prog->_LinkedShaders[shader_type] = linked;
+      prog->data->linked_stages |= 1 << shader_type;
    }
 }
 
