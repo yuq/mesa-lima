@@ -304,8 +304,6 @@ dri3_create_image_khr(_EGLDriver *drv, _EGLDisplay *disp,
                       _EGLContext *ctx, EGLenum target,
                       EGLClientBuffer buffer, const EGLint *attr_list)
 {
-   (void) drv;
-
    switch (target) {
    case EGL_NATIVE_PIXMAP_KHR:
       return dri3_create_image_khr_pixmap(disp, ctx, buffer, attr_list);
