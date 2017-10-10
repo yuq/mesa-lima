@@ -903,7 +903,7 @@ brw_draw_prims(struct gl_context *ctx,
    for (i = 0; i < nr_prims; i++) {
       /* Implementation of ARB_indirect_parameters via predicates */
       if (brw->draw.draw_params_count_bo) {
-         struct brw_bo *draw_id_bo = brw_bo_alloc(brw->bufmgr, "draw_id", 4, 4);
+         struct brw_bo *draw_id_bo = NULL;
          uint32_t draw_id_offset;
 
          intel_upload_data(brw, &prims[i].draw_id, 4, 4, &draw_id_bo,
