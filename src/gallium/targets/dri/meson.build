@@ -71,6 +71,10 @@ if with_gallium_softpipe
   if with_gallium_drisw_kms
     gallium_dri_drivers += 'kms_swrast_dri.so'
   endif
+  if with_llvm
+    gallium_dri_c_args += '-DGALLIUM_LLVMPIPE'
+    gallium_dri_link_with += libllvmpipe
+  endif
 endif
 
 libgallium_dri = shared_library(

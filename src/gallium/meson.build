@@ -32,6 +32,7 @@ subdir('drivers/radeon')
 subdir('drivers/radeonsi')
 subdir('drivers/nouveau')
 subdir('drivers/softpipe')
+subdir('drivers/llvmpipe')
 subdir('winsys/sw/null')
 subdir('winsys/sw/dri')
 subdir('winsys/sw/kms-dri')
@@ -48,7 +49,6 @@ subdir('state_trackers/dri')
 # TODO: etnaviv
 # TODO: IMX
 # TODO: PL111
-# TODO: llvmpipe
 # TODO: SWR
 # TODO: vc4
 # TODO: virgl

@@ -589,7 +589,9 @@ if with_llvm
       '-DMESA_LLVM_VERSION_PATCH=@0@'.format(_llvm_patch),
     ]
   else
-    if with_amd_vk or with_gallium_radeonsi
+    if with_gallium_softpipe
+      error('Cannot find LLVM to build LLVMPipe. If you wanted softpipe pass -Dllvm=false to meson')
+    elif with_amd_vk or with_gallium_radeonsi # etc
       error('The following drivers requires LLVM: Radv, RadeonSI. One of these is enabled, but LLVM was not found.')
     endif
   endif
