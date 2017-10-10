@@ -33,7 +33,29 @@
 
 static void ppir_codegen_encode_varying(ppir_node *node, void *code)
 {
-   
+   ppir_codegen_field_varying *f = code;
+   ppir_load_node *load = ppir_node_to_load(node);
+
+   ppir_dest *dest = &load->dest;
+   int index = ppir_target_get_dest_reg_index(dest);
+   f->imm.dest = index >> 2;
+   f->imm.mask = dest->write_mask << (index & 0x3);
+
+   if (node->op == ppir_op_load_varying) {
+      int num_components = ppir_target_get_dest_component(dest);
+      int alignment = num_components == 3 ? 3 : num_components - 1;
+
+      f->imm.alignment = alignment;
+      f->imm.offset_vector = 0xf;
+
+      /* TODO: we can combine varyings into one slot, i.e. vec1 and vec3
+       * can be one vec4. Now we just make one slot for each varying
+       */
+      if (alignment == 3)
+         f->imm.index = load->index;
+      else
+         f->imm.index = load->index << (2 - alignment);
+   }
 }
 
 static void ppir_codegen_encode_texld(ppir_node *node, void *code)
