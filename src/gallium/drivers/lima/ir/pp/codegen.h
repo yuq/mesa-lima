@@ -127,8 +127,8 @@ typedef enum {
 
 typedef struct __attribute__((__packed__)) {
    ppir_codegen_uniform_src source     :  2;
-   unsigned                 unknown_0  :  9; /* = 000 0000 00 */
-   bool                     alignment  :  1; /* 0: float, 1: vec4 */
+   unsigned                 unknown_0  :  8; /* = 00 0000 00 */
+   unsigned                 alignment  :  2; /* 00: float, 01: vec2, 10: vec4 */
    unsigned                 unknown_1  :  6; /* = 00 0000 */
    unsigned                 offset_reg :  6;
    bool                     offset_en  :  1;
