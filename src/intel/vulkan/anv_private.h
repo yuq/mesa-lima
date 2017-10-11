@@ -2048,8 +2048,6 @@ struct anv_shader_bin {
    uint32_t prog_data_size;
 
    struct anv_pipeline_bind_map bind_map;
-
-   /* Prog data follows, then params, then the key, all aligned to 8-bytes */
 };
 
 struct anv_shader_bin *
