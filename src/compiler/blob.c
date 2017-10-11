@@ -52,6 +52,11 @@ grow_to_fit(struct blob *blob, size_t additional)
    if (blob->size + additional <= blob->allocated)
       return true;
 
+   if (blob->fixed_allocation) {
+      blob->out_of_memory = true;
+      return false;
+   }
+
    if (blob->allocated == 0)
       to_allocate = BLOB_INITIAL_SIZE;
    else
@@ -105,6 +110,17 @@ blob_init(struct blob *blob)
    blob->data = NULL;
    blob->allocated = 0;
    blob->size = 0;
+   blob->fixed_allocation = false;
+   blob->out_of_memory = false;
+}
+
+void
+blob_init_fixed(struct blob *blob, void *data, size_t size)
+{
+   blob->data = data;
+   blob->allocated = size;
+   blob->size = 0;
+   blob->fixed_allocation = true;
    blob->out_of_memory = false;
 }
 

@@ -56,6 +56,12 @@ struct blob {
    /** The number of bytes that have actual data written to them. */
    size_t size;
 
+   /** True if \c data a fixed allocation that we cannot resize
+    *
+    * \see blob_init_fixed
+    */
+   bool fixed_allocation;
+
    /**
     * True if we've ever failed to realloc or if we go pas the end of a fixed
     * allocation blob.
@@ -85,12 +91,26 @@ void
 blob_init(struct blob *blob);
 
 /**
+ * Init a new, fixed-size blob.
+ *
+ * A fixed-size blob has a fixed block of data that will not be freed on
+ * blob_finish and will never be grown.  If we hit the end, we simply start
+ * returning false from the write functions.
+ */
+void
+blob_init_fixed(struct blob *blob, void *data, size_t size);
+
+/**
  * Finish a blob and free its memory.
+ *
+ * If \blob was initialized with blob_init_fixed, the data pointer is
+ * considered to be owned by the user and will not be freed.
  */
 static inline void
 blob_finish(struct blob *blob)
 {
-   free(blob->data);
+   if (!blob->fixed_allocation)
+      free(blob->data);
 }
 
 /**
