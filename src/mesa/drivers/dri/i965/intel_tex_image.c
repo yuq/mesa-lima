@@ -747,15 +747,8 @@ intel_get_tex_sub_image(struct gl_context *ctx,
       if (intel_gettexsubimage_blorp(brw, texImage,
                                      xoffset, yoffset, zoffset,
                                      width, height, depth, format, type,
-                                     pixels, &ctx->Pack)) {
-         /* Flush to guarantee coherency between the render cache and other
-          * caches the PBO could potentially be bound to after this point.
-          * See the related comment in intelReadPixels() for a more detailed
-          * explanation.
-          */
-         brw_emit_mi_flush(brw);
+                                     pixels, &ctx->Pack))
          return;
-      }
 
       perf_debug("%s: fallback to CPU mapping in PBO case\n", __func__);
    }

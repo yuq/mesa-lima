@@ -1094,6 +1094,28 @@ brw_blorp_download_miptree(struct brw_context *brw,
 
    result = true;
 
+   /* As we implement PBO transfers by binding the user-provided BO as a
+    * fake framebuffer and rendering to it.  This breaks the invariant of the
+    * GL that nothing is able to render to a BO, causing nondeterministic
+    * corruption issues because the render cache is not coherent with a
+    * number of other caches that the BO could potentially be bound to
+    * afterwards.
+    *
+    * This could be solved in the same way that we guarantee texture
+    * coherency after a texture is attached to a framebuffer and
+    * rendered to, but that would involve checking *all* BOs bound to
+    * the pipeline for the case we need to emit a cache flush due to
+    * previous rendering to any of them -- Including vertex, index,
+    * uniform, atomic counter, shader image, transform feedback,
+    * indirect draw buffers, etc.
+    *
+    * That would increase the per-draw call overhead even though it's
+    * very unlikely that any of the BOs bound to the pipeline has been
+    * rendered to via a PBO at any point, so it seems better to just
+    * flush here unconditionally.
+    */
+   brw_emit_mi_flush(brw);
+
 err:
    brw_bo_unreference(dst_bo);
 
