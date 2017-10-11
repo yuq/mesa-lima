@@ -35,7 +35,8 @@ nvc0_screen_init_resource_functions(struct pipe_screen *pscreen);
  */
 struct pipe_resource *
 nvc0_miptree_create(struct pipe_screen *pscreen,
-                    const struct pipe_resource *tmp);
+                    const struct pipe_resource *tmp,
+                    const uint64_t *modifiers, unsigned int count);
 
 const struct u_resource_vtbl nvc0_miptree_vtbl;
 

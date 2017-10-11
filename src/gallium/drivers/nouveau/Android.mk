@@ -36,6 +36,9 @@ LOCAL_SRC_FILES := \
 	$(NVC0_CODEGEN_SOURCES) \
 	$(NVC0_C_SOURCES)
 
+LOCAL_C_INCLUDES := \
+	$(MESA_TOP)/include/drm-uapi
+
 LOCAL_SHARED_LIBRARIES := libdrm_nouveau
 LOCAL_MODULE := libmesa_pipe_nouveau
 

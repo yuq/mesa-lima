@@ -207,7 +207,9 @@ files_libnouveau = files(
 libnouveau = static_library(
   'nouveau',
   [files_libnouveau],
-  include_directories : [inc_src, inc_include, inc_gallium, inc_gallium_aux],
+  include_directories : [
+    inc_src, inc_include, inc_gallium, inc_gallium_aux, inc_drm_uapi
+  ],
   c_args : [c_vis_args],
   cpp_args : [cpp_vis_args],
   dependencies : [dep_libdrm, dep_libdrm_nouveau],
