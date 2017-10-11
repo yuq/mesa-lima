@@ -182,6 +182,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_STRING_MARKER:
 	case PIPE_CAP_MIXED_COLOR_DEPTH_BITS:
 	case PIPE_CAP_TEXTURE_BARRIER:
+	case PIPE_CAP_INVALIDATE_BUFFER:
 		return 1;
 
 	case PIPE_CAP_VERTEXID_NOBASE:
@@ -293,7 +294,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
 	case PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL:
 	case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
-	case PIPE_CAP_INVALIDATE_BUFFER:
 	case PIPE_CAP_GENERATE_MIPMAP:
 	case PIPE_CAP_SURFACE_REINTERPRET_BLOCKS:
 	case PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT:

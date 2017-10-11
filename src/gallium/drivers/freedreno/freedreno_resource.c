@@ -1159,6 +1159,32 @@ fd_flush_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
 	assert(!rsc->write_batch);
 }
 
+static void
+fd_invalidate_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
+{
+	struct fd_resource *rsc = fd_resource(prsc);
+
+	/*
+	 * TODO I guess we could track that the resource is invalidated and
+	 * use that as a hint to realloc rather than stall in _transfer_map(),
+	 * even in the non-DISCARD_WHOLE_RESOURCE case?
+	 */
+
+	if (rsc->write_batch) {
+		struct fd_batch *batch = rsc->write_batch;
+		struct pipe_framebuffer_state *pfb = &batch->framebuffer;
+
+		if (pfb->zsbuf && pfb->zsbuf->texture == prsc)
+			batch->resolve &= ~(FD_BUFFER_DEPTH | FD_BUFFER_STENCIL);
+
+		for (unsigned i = 0; i < pfb->nr_cbufs; i++) {
+			if (pfb->cbufs[i] && pfb->cbufs[i]->texture == prsc) {
+				batch->resolve &= ~(PIPE_CLEAR_COLOR0 << i);
+			}
+		}
+	}
+}
+
 void
 fd_resource_screen_init(struct pipe_screen *pscreen)
 {
@@ -1181,4 +1207,5 @@ fd_resource_context_init(struct pipe_context *pctx)
 	pctx->resource_copy_region = fd_resource_copy_region;
 	pctx->blit = fd_blit;
 	pctx->flush_resource = fd_flush_resource;
+	pctx->invalidate_resource = fd_invalidate_resource;
 }
