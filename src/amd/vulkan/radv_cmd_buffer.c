@@ -2650,8 +2650,23 @@ void radv_CmdExecuteCommands(
 		}
 		primary->device->ws->cs_execute_secondary(primary->cs, secondary->cs);
 
-		primary->state.emitted_pipeline = secondary->state.emitted_pipeline;
-		primary->state.emitted_compute_pipeline = secondary->state.emitted_compute_pipeline;
+
+		/* When the secondary command buffer is compute only we don't
+		 * need to re-emit the current graphics pipeline.
+		 */
+		if (secondary->state.emitted_pipeline) {
+			primary->state.emitted_pipeline =
+				secondary->state.emitted_pipeline;
+		}
+
+		/* When the secondary command buffer is graphics only we don't
+		 * need to re-emit the current compute pipeline.
+		 */
+		if (secondary->state.emitted_compute_pipeline) {
+			primary->state.emitted_compute_pipeline =
+				secondary->state.emitted_compute_pipeline;
+		}
+
 		primary->state.last_primitive_reset_en = secondary->state.last_primitive_reset_en;
 		primary->state.last_primitive_reset_index = secondary->state.last_primitive_reset_index;
 	}
