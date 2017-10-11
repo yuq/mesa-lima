@@ -60,7 +60,7 @@ radv_pipeline_cache_init(struct radv_pipeline_cache *cache,
 	/* We don't consider allocation failure fatal, we just start with a 0-sized
 	 * cache. */
 	if (cache->hash_table == NULL ||
-	    (device->debug_flags & RADV_DEBUG_NO_CACHE))
+	    (device->instance->debug_flags & RADV_DEBUG_NO_CACHE))
 		cache->table_size = 0;
 	else
 		memset(cache->hash_table, 0, byte_size);

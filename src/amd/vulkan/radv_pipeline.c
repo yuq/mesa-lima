@@ -2093,7 +2093,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		pipeline->graphics.vtx_reuse_depth = 14;
 	}
 
-	if (device->debug_flags & RADV_DEBUG_DUMP_SHADER_STATS) {
+	if (device->instance->debug_flags & RADV_DEBUG_DUMP_SHADER_STATS) {
 		radv_dump_pipeline_stats(device, pipeline);
 	}
 
@@ -2198,7 +2198,7 @@ static VkResult radv_compute_pipeline_create(
 
 	*pPipeline = radv_pipeline_to_handle(pipeline);
 
-	if (device->debug_flags & RADV_DEBUG_DUMP_SHADER_STATS) {
+	if (device->instance->debug_flags & RADV_DEBUG_DUMP_SHADER_STATS) {
 		radv_dump_pipeline_stats(device, pipeline);
 	}
 	return VK_SUCCESS;

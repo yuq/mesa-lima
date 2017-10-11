@@ -1154,8 +1154,6 @@ VkResult radv_CreateDevice(
 	device->instance = physical_device->instance;
 	device->physical_device = physical_device;
 
-	device->debug_flags = device->instance->debug_flags;
-
 	device->ws = physical_device->ws;
 	if (pAllocator)
 		device->alloc = *pAllocator;
@@ -3151,7 +3149,7 @@ radv_initialise_color_surface(struct radv_device *device,
 	}
 
 	if (iview->image->cmask.size &&
-	    !(device->debug_flags & RADV_DEBUG_NO_FAST_CLEARS))
+	    !(device->instance->debug_flags & RADV_DEBUG_NO_FAST_CLEARS))
 		cb->cb_color_info |= S_028C70_FAST_CLEAR(1);
 
 	if (radv_vi_dcc_enabled(iview->image, iview->base_mip))

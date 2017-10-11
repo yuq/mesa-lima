@@ -513,7 +513,6 @@ struct radv_device {
 	struct radv_queue *queues[RADV_MAX_QUEUE_FAMILIES];
 	int queue_count[RADV_MAX_QUEUE_FAMILIES];
 	struct radeon_winsys_cs *empty_cs[RADV_MAX_QUEUE_FAMILIES];
-	uint64_t debug_flags;
 
 	bool llvm_supports_spill;
 	bool has_distributed_tess;
