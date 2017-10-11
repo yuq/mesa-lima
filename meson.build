@@ -151,9 +151,9 @@ else
   with_gbm = false
 endif
 
+pre_args += '-DGLX_USE_TLS'
 with_glx = get_option('glx')
 if with_glx != 'disabled'
-  pre_args += '-DGLX_USE_TLS'
   if not (with_platform_x11 and with_any_opengl) and with_glx != 'auto'
     error('Cannot build GLX support without X11 platform support and at least one OpenGL API')
   elif with_glx == 'gallium-xlib' 
