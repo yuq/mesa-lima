@@ -3190,6 +3190,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpSourceExtension:
    case SpvOpSourceContinued:
    case SpvOpExtension:
+   case SpvOpModuleProcessed:
       /* Unhandled, but these are for debug so that's ok. */
       break;
 
