@@ -207,6 +207,9 @@ blob_reader_init(struct blob_reader *blob, uint8_t *data, size_t size)
 static bool
 ensure_can_read(struct blob_reader *blob, size_t size)
 {
+   if (blob->overrun)
+      return false;
+
    if (blob->current < blob->end && blob->end - blob->current >= size)
       return true;
 
