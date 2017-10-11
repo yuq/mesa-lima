@@ -521,34 +521,6 @@ VkResult anv_CreateInstance(
       vk_find_struct_const(pCreateInfo->pNext,
                            DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT);
 
-   uint32_t client_version;
-   if (pCreateInfo->pApplicationInfo &&
-       pCreateInfo->pApplicationInfo->apiVersion != 0) {
-      client_version = pCreateInfo->pApplicationInfo->apiVersion;
-   } else {
-      client_version = VK_MAKE_VERSION(1, 0, 0);
-   }
-
-   if (VK_MAKE_VERSION(1, 0, 0) > client_version ||
-       client_version > VK_MAKE_VERSION(1, 0, 0xfff)) {
-
-      if (ctor_cb && ctor_cb->flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-         ctor_cb->pfnCallback(VK_DEBUG_REPORT_ERROR_BIT_EXT,
-                              VK_DEBUG_REPORT_OBJECT_TYPE_INSTANCE_EXT,
-                              VK_NULL_HANDLE, /* No handle available yet. */
-                              __LINE__,
-                              0,
-                              "anv",
-                              "incompatible driver version",
-                              ctor_cb->pUserData);
-
-      return vk_errorf(NULL, NULL, VK_ERROR_INCOMPATIBLE_DRIVER,
-                       "Client requested version %d.%d.%d",
-                       VK_VERSION_MAJOR(client_version),
-                       VK_VERSION_MINOR(client_version),
-                       VK_VERSION_PATCH(client_version));
-   }
-
    struct anv_instance_extension_table enabled_extensions = {};
    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
       int idx;
@@ -579,7 +551,13 @@ VkResult anv_CreateInstance(
    else
       instance->alloc = default_alloc;
 
-   instance->apiVersion = client_version;
+   if (pCreateInfo->pApplicationInfo &&
+       pCreateInfo->pApplicationInfo->apiVersion != 0) {
+      instance->apiVersion = pCreateInfo->pApplicationInfo->apiVersion;
+   } else {
+      anv_EnumerateInstanceVersion(&instance->apiVersion);
+   }
+
    instance->enabled_extensions = enabled_extensions;
 
    for (unsigned i = 0; i < ARRAY_SIZE(instance->dispatch.entrypoints); i++) {
