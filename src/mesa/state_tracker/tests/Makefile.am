@@ -18,7 +18,12 @@ AM_CPPFLAGS = \
 if HAVE_STD_CXX11
 TESTS = st-renumerate-test
 check_PROGRAMS = st-renumerate-test
+
+noinst_LIBRARIES = libmesa-st-tests-common.a
 endif
+
+libmesa_st_tests_common_a_SOURCES = \
+	st_tests_common.cpp
 
 st_renumerate_test_SOURCES =			\
 	test_glsl_to_tgsi_lifetime.cpp
@@ -27,6 +32,7 @@ st_renumerate_test_LDFLAGS = \
 	$(LLVM_LDFLAGS)
 
 st_renumerate_test_LDADD = \
+	libmesa-st-tests-common.a \
 	$(top_builddir)/src/mesa/libmesagallium.la \
 	$(top_builddir)/src/mapi/shared-glapi/libglapi.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
