@@ -1212,9 +1212,9 @@ static void TessellationStages(
         // Allocate DS Output memory
         uint32_t requiredDSVectorInvocations = AlignUp(tsData.NumDomainPoints, KNOB_SIMD_WIDTH) / KNOB_SIMD_WIDTH;
 #if USE_SIMD16_FRONTEND
-        size_t requiredAllocSize = sizeof(simdvector) * RoundUpEven(requiredDSVectorInvocations) * tsState.numDsOutputAttribs;      // simd8 -> simd16, padding
+        size_t requiredAllocSize = sizeof(simdvector) * RoundUpEven(requiredDSVectorInvocations) * tsState.dsAllocationSize;      // simd8 -> simd16, padding
 #else
-        size_t requiredDSOutputVectors = requiredDSVectorInvocations * tsState.numDsOutputAttribs;
+        size_t requiredDSOutputVectors = requiredDSVectorInvocations * tsState.dsAllocationSize;
         size_t requiredAllocSize = sizeof(simdvector) * requiredDSOutputVectors;
 #endif
         if (requiredAllocSize > gt_pTessellationThreadData->dsOutputAllocSize)
