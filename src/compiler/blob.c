@@ -99,19 +99,13 @@ align_blob_reader(struct blob_reader *blob, size_t alignment)
    blob->current = blob->data + ALIGN(blob->current - blob->data, alignment);
 }
 
-struct blob *
-blob_create()
+void
+blob_init(struct blob *blob)
 {
-   struct blob *blob = (struct blob *) malloc(sizeof(struct blob));
-   if (blob == NULL)
-      return NULL;
-
    blob->data = NULL;
    blob->allocated = 0;
    blob->size = 0;
    blob->out_of_memory = false;
-
-   return blob;
 }
 
 bool

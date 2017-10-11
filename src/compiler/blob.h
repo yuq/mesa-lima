@@ -79,21 +79,18 @@ struct blob_reader {
 };
 
 /**
- * Create a new, empty blob.
- *
- * \return The new blob, (or NULL in case of allocation failure).
+ * Init a new, empty blob.
  */
-struct blob *
-blob_create(void);
+void
+blob_init(struct blob *blob);
 
 /**
- * Destroy a blob and free its memory.
+ * Finish a blob and free its memory.
  */
 static inline void
-blob_destroy(struct blob *blob)
+blob_finish(struct blob *blob)
 {
    free(blob->data);
-   free(blob);
 }
 
 /**
