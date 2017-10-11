@@ -78,9 +78,9 @@ struct blob {
  *   2. blob->overrun should be false, (otherwise, too much was read).
  */
 struct blob_reader {
-   uint8_t *data;
-   uint8_t *end;
-   uint8_t *current;
+   const uint8_t *data;
+   const uint8_t *end;
+   const uint8_t *current;
    bool overrun;
 };
 
@@ -272,7 +272,7 @@ blob_write_string(struct blob *blob, const char *str);
  * current value is unchanged before and after the call.
  */
 void
-blob_reader_init(struct blob_reader *blob, uint8_t *data, size_t size);
+blob_reader_init(struct blob_reader *blob, const uint8_t *data, size_t size);
 
 /**
  * Read some unstructured, fixed-size data from the current location, (and
@@ -284,7 +284,7 @@ blob_reader_init(struct blob_reader *blob, uint8_t *data, size_t size);
  *
  * \return The bytes read (see note above about memory lifetime).
  */
-void *
+const void *
 blob_read_bytes(struct blob_reader *blob, size_t size);
 
 /**

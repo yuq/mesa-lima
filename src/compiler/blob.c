@@ -238,10 +238,10 @@ blob_write_string(struct blob *blob, const char *str)
 }
 
 void
-blob_reader_init(struct blob_reader *blob, uint8_t *data, size_t size)
+blob_reader_init(struct blob_reader *blob, const uint8_t *data, size_t size)
 {
    blob->data = data;
-   blob->end = data + size;
+   blob->end = blob->data + size;
    blob->current = data;
    blob->overrun = false;
 }
@@ -264,10 +264,10 @@ ensure_can_read(struct blob_reader *blob, size_t size)
    return false;
 }
 
-void *
+const void *
 blob_read_bytes(struct blob_reader *blob, size_t size)
 {
-   void *ret;
+   const void *ret;
 
    if (! ensure_can_read (blob, size))
       return NULL;
@@ -282,7 +282,7 @@ blob_read_bytes(struct blob_reader *blob, size_t size)
 void
 blob_copy_bytes(struct blob_reader *blob, uint8_t *dest, size_t size)
 {
-   uint8_t *bytes;
+   const uint8_t *bytes;
 
    bytes = blob_read_bytes(blob, size);
    if (bytes == NULL)

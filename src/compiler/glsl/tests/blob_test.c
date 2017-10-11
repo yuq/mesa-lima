@@ -83,7 +83,7 @@ expect_equal_str(const char *expected, const char *actual, const char *test)
 }
 
 static void
-expect_equal_bytes(uint8_t *expected, uint8_t *actual,
+expect_equal_bytes(uint8_t *expected, const uint8_t *actual,
                    size_t num_bytes, const char *test)
 {
    size_t i;
