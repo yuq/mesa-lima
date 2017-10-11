@@ -282,8 +282,17 @@ static bool gpir_try_place_node(gpir_block *block, gpir_node *node, int start, i
    return false;
 }
 
-static bool gpir_try_place_move_node(gpir_block *block, gpir_node *node, int start)
+static bool gpir_try_place_move_node(gpir_block *block, gpir_node *node)
 {
+   int start = 0;
+   gpir_node_foreach_succ(node, entry) {
+      gpir_dep_info *dep = gpir_dep_from_entry(entry);
+      gpir_node *succ = gpir_node_from_entry(entry, succ);
+      int min = succ->sched_instr + gpir_get_min_dist(dep);
+      if (min > start)
+         start = min;
+   }
+
    struct set_entry *entry = _mesa_set_next_entry(node->preds, NULL);
    gpir_dep_info *dep = gpir_dep_from_entry(entry);
    gpir_node *pred = gpir_node_from_entry(entry, pred);
@@ -299,19 +308,30 @@ static bool gpir_try_place_move_node(gpir_block *block, gpir_node *node, int sta
    return gpir_try_place_node(block, node, min, max + 1);
 }
 
-static int gpir_get_new_start(gpir_node *node)
+static int gpir_get_new_start(gpir_node *node, gpir_node *load)
 {
    int start = -1;
 
    gpir_node_foreach_succ(node, entry) {
       gpir_dep_info *dep = gpir_dep_from_entry(entry);
       gpir_node *succ = gpir_node_from_entry(entry, succ);
-      int min = succ->sched_instr + gpir_get_min_dist(dep);
       int max = succ->sched_instr + gpir_get_max_dist(dep);
 
       if (max < node->sched_instr) {
-         if (min > start)
-            start = min;
+         if (load) {
+            gpir_dep_info tmp = {
+               .pred = load,
+               .succ = succ,
+               .is_child_dep = dep->is_child_dep,
+               .is_offset = dep->is_offset,
+            };
+
+            int min = succ->sched_instr + gpir_get_min_dist(&tmp);
+            if (min > start)
+               start = min;
+         }
+         else
+            return 0;
       }
    }
 
@@ -568,7 +588,7 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
             gpir_remove_load_node(load, current);
 
          while (true) {
-            int new_start = gpir_get_new_start(current);
+            int new_start = gpir_get_new_start(current, load);
 
             /* all constraints are satisfied */
             if (new_start < 0)
@@ -583,7 +603,7 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
 
             gpir_node *start_node = gpir_move_get_start_node(current);
             gpir_node *move = gpir_create_from_node(block, start_node, NULL);
-            if (!move || !gpir_try_place_move_node(block, move, start))
+            if (!move || !gpir_try_place_move_node(block, move))
                return false;
 
             current = move;
@@ -602,7 +622,7 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
        */
       gpir_node *current = node;
       for (int i = 0; true; i++) {
-         int start = gpir_get_new_start(current);
+         int start = gpir_get_new_start(current, NULL);
 
          /* all constraints are satisfied */
          if (start < 0) {
@@ -613,7 +633,7 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
          }
 
          gpir_node *move = gpir_create_from_node(block, current, NULL);
-         if (!move || !gpir_try_place_move_node(block, move, start))
+         if (!move || !gpir_try_place_move_node(block, move))
             return false;
 
          current = move;
