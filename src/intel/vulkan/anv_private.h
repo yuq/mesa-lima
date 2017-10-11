@@ -438,9 +438,11 @@ _anv_multialloc_add(struct anv_multialloc *ma,
    ma->ptrs[ma->ptr_count++] = ptr;
 }
 
+#define anv_multialloc_add_size(_ma, _ptr, _size) \
+   _anv_multialloc_add((_ma), (void **)(_ptr), (_size), __alignof__(**(_ptr)))
+
 #define anv_multialloc_add(_ma, _ptr, _count) \
-   _anv_multialloc_add((_ma), (void **)(_ptr), \
-                       (_count) * sizeof(**(_ptr)), __alignof__(**(_ptr)))
+   anv_multialloc_add_size(_ma, _ptr, (_count) * sizeof(**(_ptr)));
 
 __attribute__((always_inline))
 static inline void *
