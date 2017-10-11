@@ -497,7 +497,6 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
-   struct anv_pipeline_bind_map map;
    struct brw_vs_prog_key key;
    struct anv_shader_bin *bin = NULL;
    unsigned char sha1[20];
@@ -516,7 +515,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
       struct anv_pipeline_binding surface_to_descriptor[256];
       struct anv_pipeline_binding sampler_to_descriptor[256];
 
-      map = (struct anv_pipeline_bind_map) {
+      struct anv_pipeline_bind_map map = {
          .surface_to_descriptor = surface_to_descriptor,
          .sampler_to_descriptor = sampler_to_descriptor
       };
@@ -617,8 +616,6 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
    const struct gen_device_info *devinfo = &pipeline->device->info;
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
-   struct anv_pipeline_bind_map tcs_map;
-   struct anv_pipeline_bind_map tes_map;
    struct brw_tcs_prog_key tcs_key = {};
    struct brw_tes_prog_key tes_key = {};
    struct anv_shader_bin *tcs_bin = NULL;
@@ -651,11 +648,11 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
       struct anv_pipeline_binding tes_surface_to_descriptor[256];
       struct anv_pipeline_binding tes_sampler_to_descriptor[256];
 
-      tcs_map = (struct anv_pipeline_bind_map) {
+      struct anv_pipeline_bind_map tcs_map = {
          .surface_to_descriptor = tcs_surface_to_descriptor,
          .sampler_to_descriptor = tcs_sampler_to_descriptor
       };
-      tes_map = (struct anv_pipeline_bind_map) {
+      struct anv_pipeline_bind_map tes_map = {
          .surface_to_descriptor = tes_surface_to_descriptor,
          .sampler_to_descriptor = tes_sampler_to_descriptor
       };
@@ -762,7 +759,6 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
-   struct anv_pipeline_bind_map map;
    struct brw_gs_prog_key key;
    struct anv_shader_bin *bin = NULL;
    unsigned char sha1[20];
@@ -781,7 +777,7 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
       struct anv_pipeline_binding surface_to_descriptor[256];
       struct anv_pipeline_binding sampler_to_descriptor[256];
 
-      map = (struct anv_pipeline_bind_map) {
+      struct anv_pipeline_bind_map map = {
          .surface_to_descriptor = surface_to_descriptor,
          .sampler_to_descriptor = sampler_to_descriptor
       };
@@ -840,7 +836,6 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
-   struct anv_pipeline_bind_map map;
    struct brw_wm_prog_key key;
    struct anv_shader_bin *bin = NULL;
    unsigned char sha1[20];
@@ -859,7 +854,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       struct anv_pipeline_binding surface_to_descriptor[256];
       struct anv_pipeline_binding sampler_to_descriptor[256];
 
-      map = (struct anv_pipeline_bind_map) {
+      struct anv_pipeline_bind_map map = {
          .surface_to_descriptor = surface_to_descriptor + 8,
          .sampler_to_descriptor = sampler_to_descriptor
       };
@@ -963,7 +958,6 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
 {
    const struct brw_compiler *compiler =
       pipeline->device->instance->physicalDevice.compiler;
-   struct anv_pipeline_bind_map map;
    struct brw_cs_prog_key key;
    struct anv_shader_bin *bin = NULL;
    unsigned char sha1[20];
@@ -982,7 +976,7 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
       struct anv_pipeline_binding surface_to_descriptor[256];
       struct anv_pipeline_binding sampler_to_descriptor[256];
 
-      map = (struct anv_pipeline_bind_map) {
+      struct anv_pipeline_bind_map map = {
          .surface_to_descriptor = surface_to_descriptor,
          .sampler_to_descriptor = sampler_to_descriptor
       };
