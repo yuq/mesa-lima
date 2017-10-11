@@ -367,7 +367,7 @@ matrix:
     - env:
         - LABEL="meson Vulkan"
         - BUILD=meson
-        - MESON_OPTIONS="-Ddri-drivers="
+        - MESON_OPTIONS="-Ddri-drivers= -Dgallium-drivers="
       addons:
         apt:
           sources:
@@ -385,7 +385,7 @@ matrix:
     - env:
         - LABEL="meson loaders/classic DRI"
         - BUILD=meson
-        - MESON_OPTIONS="-Dvulkan-drivers="
+        - MESON_OPTIONS="-Dvulkan-drivers= -Dgallium-drivers="
       addons:
         apt:
           packages:
