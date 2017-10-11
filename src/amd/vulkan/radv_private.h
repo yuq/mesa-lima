@@ -277,6 +277,12 @@ struct radv_physical_device {
 
 	bool has_rbplus; /* if RB+ register exist */
 	bool rbplus_allowed; /* if RB+ is allowed */
+
+
+	/* This is the drivers on-disk cache used as a fallback as opposed to
+	 * the pipeline cache defined by apps.
+	 */
+	struct disk_cache *                          disk_cache;
 };
 
 struct radv_instance {

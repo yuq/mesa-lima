@@ -352,6 +352,18 @@ radv_physical_device_init(struct radv_physical_device *device,
 		goto fail;
 	}
 
+	/* These flags affect shader compilation. */
+	uint64_t shader_env_flags =
+		(device->instance->perftest_flags & RADV_PERFTEST_SISCHED ? 0x1 : 0) |
+		(device->instance->debug_flags & RADV_DEBUG_UNSAFE_MATH ? 0x2 : 0);
+
+	/* The gpu id is already embeded in the uuid so we just pass "radv"
+	 * when creating the cache.
+	 */
+	char buf[VK_UUID_SIZE + 1];
+	disk_cache_format_hex_id(buf, device->cache_uuid, VK_UUID_SIZE);
+	device->disk_cache = disk_cache_create("radv", buf, shader_env_flags);
+
 	result = radv_extensions_register(instance,
 					&device->extensions,
 					common_device_extensions,
@@ -402,6 +414,7 @@ radv_physical_device_finish(struct radv_physical_device *device)
 	radv_extensions_finish(device->instance, &device->extensions);
 	radv_finish_wsi(device);
 	device->ws->destroy(device->ws);
+	disk_cache_destroy(device->disk_cache);
 	close(device->local_fd);
 }
 
