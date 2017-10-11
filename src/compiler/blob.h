@@ -272,7 +272,7 @@ blob_write_string(struct blob *blob, const char *str);
  * current value is unchanged before and after the call.
  */
 void
-blob_reader_init(struct blob_reader *blob, const uint8_t *data, size_t size);
+blob_reader_init(struct blob_reader *blob, const void *data, size_t size);
 
 /**
  * Read some unstructured, fixed-size data from the current location, (and
@@ -292,7 +292,7 @@ blob_read_bytes(struct blob_reader *blob, size_t size);
  * it to \dest (and update the current location to just past this data)
  */
 void
-blob_copy_bytes(struct blob_reader *blob, uint8_t *dest, size_t size);
+blob_copy_bytes(struct blob_reader *blob, void *dest, size_t size);
 
 /**
  * Read a uint32_t from the current location, (and update the current location

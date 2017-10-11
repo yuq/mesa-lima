@@ -238,7 +238,7 @@ blob_write_string(struct blob *blob, const char *str)
 }
 
 void
-blob_reader_init(struct blob_reader *blob, const uint8_t *data, size_t size)
+blob_reader_init(struct blob_reader *blob, const void *data, size_t size)
 {
    blob->data = data;
    blob->end = blob->data + size;
@@ -280,9 +280,9 @@ blob_read_bytes(struct blob_reader *blob, size_t size)
 }
 
 void
-blob_copy_bytes(struct blob_reader *blob, uint8_t *dest, size_t size)
+blob_copy_bytes(struct blob_reader *blob, void *dest, size_t size)
 {
-   const uint8_t *bytes;
+   const void *bytes;
 
    bytes = blob_read_bytes(blob, size);
    if (bytes == NULL)
