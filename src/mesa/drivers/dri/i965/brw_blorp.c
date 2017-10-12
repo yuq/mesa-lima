@@ -601,6 +601,14 @@ try_blorp_blit(struct brw_context *brw,
    return true;
 }
 
+static void
+apply_y_flip(int *y0, int *y1, int height)
+{
+   int tmp = height - *y0;
+   *y0 = height - *y1;
+   *y1 = tmp;
+}
+
 bool
 brw_blorp_copytexsubimage(struct brw_context *brw,
                           struct gl_renderbuffer *src_rb,
@@ -672,13 +680,9 @@ brw_blorp_copytexsubimage(struct brw_context *brw,
    /* Account for the fact that in the system framebuffer, the origin is at
     * the lower left.
     */
-   bool mirror_y = false;
-   if (_mesa_is_winsys_fbo(ctx->ReadBuffer)) {
-      GLint tmp = src_rb->Height - srcY0;
-      srcY0 = src_rb->Height - srcY1;
-      srcY1 = tmp;
-      mirror_y = true;
-   }
+   bool mirror_y = _mesa_is_winsys_fbo(ctx->ReadBuffer);
+   if (mirror_y)
+      apply_y_flip(&srcY0, &srcY1, src_rb->Height);
 
    /* Account for face selection and texture view MinLayer */
    int dst_slice = slice + dst_image->TexObject->MinLayer + dst_image->Face;
