@@ -124,6 +124,7 @@ struct etna_context {
       ETNA_DIRTY_SHADER          = (1 << 16),
       ETNA_DIRTY_TS              = (1 << 17),
       ETNA_DIRTY_TEXTURE_CACHES  = (1 << 18),
+      ETNA_DIRTY_DERIVE_TS       = (1 << 19),
    } dirty;
 
    uint32_t prim_hwsupport;
