@@ -136,6 +136,13 @@ const gpir_op_info gpir_op_infos[] = {
    },
    [gpir_op_load_reg] = {
       .name = "ld_reg",
+      .slots = (int []) {
+         GPIR_INSTR_SLOT_REG1_LOAD0, GPIR_INSTR_SLOT_REG1_LOAD1,
+         GPIR_INSTR_SLOT_REG1_LOAD2, GPIR_INSTR_SLOT_REG1_LOAD3,
+         GPIR_INSTR_SLOT_REG0_LOAD0, GPIR_INSTR_SLOT_REG0_LOAD1,
+         GPIR_INSTR_SLOT_REG0_LOAD2, GPIR_INSTR_SLOT_REG0_LOAD3,
+         GPIR_INSTR_SLOT_END
+      },
       .type = gpir_node_type_load,
    },
    [gpir_op_store_temp] = {
@@ -144,6 +151,11 @@ const gpir_op_info gpir_op_infos[] = {
    },
    [gpir_op_store_reg] = {
       .name = "st_reg",
+      .slots = (int []) {
+         GPIR_INSTR_SLOT_STORE0, GPIR_INSTR_SLOT_STORE1,
+         GPIR_INSTR_SLOT_STORE2, GPIR_INSTR_SLOT_STORE3,
+         GPIR_INSTR_SLOT_END
+      },
       .type = gpir_node_type_store,
    },
    [gpir_op_store_varying] = {
