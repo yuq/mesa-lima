@@ -962,13 +962,16 @@ struct radv_event {
 struct radv_shader_module;
 struct ac_shader_variant_key;
 
+#define RADV_HASH_SHADER_IS_GEOM_COPY_SHADER (1 << 0)
+#define RADV_HASH_SHADER_SISCHED             (1 << 1)
+#define RADV_HASH_SHADER_UNSAFE_MATH         (1 << 2)
 void
 radv_hash_shader(unsigned char *hash, struct radv_shader_module *module,
 		 const char *entrypoint,
 		 const VkSpecializationInfo *spec_info,
 		 const struct radv_pipeline_layout *layout,
 		 const struct ac_shader_variant_key *key,
-		 uint32_t is_geom_copy_shader);
+		 uint32_t flags);
 
 static inline gl_shader_stage
 vk_to_mesa_shader_stage(VkShaderStageFlagBits vk_stage)
