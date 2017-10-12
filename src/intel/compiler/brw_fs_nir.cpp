@@ -4208,12 +4208,20 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       }
       bld.CMP(bld.null_reg_d(), get_nir_src(instr->src[0]), brw_imm_d(0), BRW_CONDITIONAL_NZ);
 
-      dest.type = BRW_REGISTER_TYPE_D;
-      bld.MOV(dest, brw_imm_d(-1));
+      /* For some reason, the any/all predicates don't work properly with
+       * SIMD32.  In particular, it appears that a SEL with a QtrCtrl of 2H
+       * doesn't read the correct subset of the flag register and you end up
+       * getting garbage in the second half.  Work around this by using a pair
+       * of 1-wide MOVs and scattering the result.
+       */
+      fs_reg res1 = ubld.vgrf(BRW_REGISTER_TYPE_D);
+      ubld.MOV(res1, brw_imm_d(0));
       set_predicate(dispatch_width == 8  ? BRW_PREDICATE_ALIGN1_ANY8H :
                     dispatch_width == 16 ? BRW_PREDICATE_ALIGN1_ANY16H :
                                            BRW_PREDICATE_ALIGN1_ANY32H,
-                    bld.SEL(dest, dest, brw_imm_d(0)));
+                    ubld.MOV(res1, brw_imm_d(-1)));
+
+      bld.MOV(retype(dest, BRW_REGISTER_TYPE_D), component(res1, 0));
       break;
    }
    case nir_intrinsic_vote_all: {
@@ -4232,12 +4240,20 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       }
       bld.CMP(bld.null_reg_d(), get_nir_src(instr->src[0]), brw_imm_d(0), BRW_CONDITIONAL_NZ);
 
-      dest.type = BRW_REGISTER_TYPE_D;
-      bld.MOV(dest, brw_imm_d(-1));
+      /* For some reason, the any/all predicates don't work properly with
+       * SIMD32.  In particular, it appears that a SEL with a QtrCtrl of 2H
+       * doesn't read the correct subset of the flag register and you end up
+       * getting garbage in the second half.  Work around this by using a pair
+       * of 1-wide MOVs and scattering the result.
+       */
+      fs_reg res1 = ubld.vgrf(BRW_REGISTER_TYPE_D);
+      ubld.MOV(res1, brw_imm_d(0));
       set_predicate(dispatch_width == 8  ? BRW_PREDICATE_ALIGN1_ALL8H :
                     dispatch_width == 16 ? BRW_PREDICATE_ALIGN1_ALL16H :
                                            BRW_PREDICATE_ALIGN1_ALL32H,
-                    bld.SEL(dest, dest, brw_imm_d(0)));
+                    ubld.MOV(res1, brw_imm_d(-1)));
+
+      bld.MOV(retype(dest, BRW_REGISTER_TYPE_D), component(res1, 0));
       break;
    }
    case nir_intrinsic_vote_eq: {
@@ -4258,12 +4274,20 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       }
       bld.CMP(bld.null_reg_d(), value, uniformized, BRW_CONDITIONAL_Z);
 
-      dest.type = BRW_REGISTER_TYPE_D;
-      bld.MOV(dest, brw_imm_d(-1));
+      /* For some reason, the any/all predicates don't work properly with
+       * SIMD32.  In particular, it appears that a SEL with a QtrCtrl of 2H
+       * doesn't read the correct subset of the flag register and you end up
+       * getting garbage in the second half.  Work around this by using a pair
+       * of 1-wide MOVs and scattering the result.
+       */
+      fs_reg res1 = ubld.vgrf(BRW_REGISTER_TYPE_D);
+      ubld.MOV(res1, brw_imm_d(0));
       set_predicate(dispatch_width == 8  ? BRW_PREDICATE_ALIGN1_ALL8H :
                     dispatch_width == 16 ? BRW_PREDICATE_ALIGN1_ALL16H :
                                            BRW_PREDICATE_ALIGN1_ALL32H,
-                    bld.SEL(dest, dest, brw_imm_d(0)));
+                    ubld.MOV(res1, brw_imm_d(-1)));
+
+      bld.MOV(retype(dest, BRW_REGISTER_TYPE_D), component(res1, 0));
       break;
    }
 
