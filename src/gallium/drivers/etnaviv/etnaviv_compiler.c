@@ -2126,6 +2126,10 @@ fill_in_vs_inputs(struct etna_shader_variant *sobj, struct etna_compile *c)
    for (int idx = 0; idx < c->file[TGSI_FILE_INPUT].reg_size; ++idx) {
       struct etna_reg_desc *reg = &c->file[TGSI_FILE_INPUT].reg[idx];
       assert(sf->num_reg < ETNA_NUM_INPUTS);
+
+      if (!reg->native.valid)
+         continue;
+
       /* XXX exclude inputs with special semantics such as gl_frontFacing */
       sf->reg[sf->num_reg].reg = reg->native.id;
       sf->reg[sf->num_reg].semantic = reg->semantic;
