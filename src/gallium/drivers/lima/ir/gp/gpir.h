@@ -227,6 +227,9 @@ typedef struct {
    bool reg0_is_attr;
    int reg0_index;
 
+   bool reg1_is_used;
+   int reg1_index;
+
    bool mem_is_used;
    bool mem_is_temp;
    int mem_index;
