@@ -76,6 +76,26 @@ static bool gpir_instr_insert_reg0_check(gpir_instr *instr, gpir_node *node)
    return true;
 }
 
+static bool gpir_instr_insert_reg1_check(gpir_instr *instr, gpir_node *node)
+{
+   gpir_load_node *load = gpir_node_to_load(node);
+   int i = node->sched_pos - GPIR_INSTR_SLOT_REG1_LOAD0;
+
+   if (load->component != i)
+      return false;
+
+   if (instr->reg1_is_used) {
+       if (instr->reg1_index != load->index)
+          return false;
+   }
+   else {
+      instr->reg1_is_used = true;
+      instr->reg1_index = load->index;
+   }
+
+   return true;
+}
+
 static bool gpir_instr_insert_mem_check(gpir_instr *instr, gpir_node *node)
 {
    gpir_load_node *load = gpir_node_to_load(node);
@@ -116,15 +136,6 @@ static bool gpir_instr_insert_store_check(gpir_instr *instr, gpir_node *node)
           instr->store_content[!i] == GPIR_INSTR_STORE_TEMP &&
           instr->store_index[!i] != store->index)
          return false;
-
-      if (node->op == gpir_op_store_varying)
-         instr->store_content[i] = GPIR_INSTR_STORE_VARYING;
-      else if (node->op == gpir_op_store_reg)
-         instr->store_content[i] = GPIR_INSTR_STORE_REG;
-      else
-         instr->store_content[i] = GPIR_INSTR_STORE_TEMP;
-
-      instr->store_index[i] = store->index;
       break;
 
    case GPIR_INSTR_STORE_VARYING:
@@ -147,10 +158,10 @@ static bool gpir_instr_insert_store_check(gpir_instr *instr, gpir_node *node)
    }
 
    /* check if any store node has the same child as this node */
-   for (i = GPIR_INSTR_SLOT_STORE0; i <= GPIR_INSTR_SLOT_STORE3; i++) {
-      gpir_store_node *s = gpir_node_to_store(instr->slots[i]);
+   for (int j = GPIR_INSTR_SLOT_STORE0; j <= GPIR_INSTR_SLOT_STORE3; j++) {
+      gpir_store_node *s = gpir_node_to_store(instr->slots[j]);
       if (s && s->child == store->child)
-         return true;
+         goto out;
    }
 
    /* no store node has the same child as this node, so instr must
@@ -160,6 +171,18 @@ static bool gpir_instr_insert_store_check(gpir_instr *instr, gpir_node *node)
       return false;
 
    instr->alu_num_slot_needed_by_store++;
+
+out:
+   if (instr->store_content[i] == GPIR_INSTR_STORE_NONE) {
+      if (node->op == gpir_op_store_varying)
+         instr->store_content[i] = GPIR_INSTR_STORE_VARYING;
+      else if (node->op == gpir_op_store_reg)
+         instr->store_content[i] = GPIR_INSTR_STORE_REG;
+      else
+         instr->store_content[i] = GPIR_INSTR_STORE_TEMP;
+
+      instr->store_index[i] = store->index;
+   }
    return true;
 }
 
@@ -176,6 +199,11 @@ bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
    else if (node->sched_pos >= GPIR_INSTR_SLOT_REG0_LOAD0 &&
             node->sched_pos <= GPIR_INSTR_SLOT_REG0_LOAD3) {
       if (!gpir_instr_insert_reg0_check(instr, node))
+         return false;
+   }
+   else if (node->sched_pos >= GPIR_INSTR_SLOT_REG1_LOAD0 &&
+            node->sched_pos <= GPIR_INSTR_SLOT_REG1_LOAD3) {
+      if (!gpir_instr_insert_reg1_check(instr, node))
          return false;
    }
    else if (node->sched_pos >= GPIR_INSTR_SLOT_MEM_LOAD0 &&
