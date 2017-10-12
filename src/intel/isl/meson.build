@@ -101,5 +101,5 @@ if with_tests
     build_by_default : false,
   )
 
-  test('isl_surf_get_imaage_offset', isl_surf_get_image_offset_test)
+  test('isl_surf_get_image_offset', isl_surf_get_image_offset_test)
 endif
