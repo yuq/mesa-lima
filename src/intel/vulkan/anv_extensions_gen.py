@@ -134,6 +134,13 @@ _TEMPLATE_C = Template(COPYRIGHT + """
                          VK_USE_PLATFORM_XCB_KHR || \\
                          VK_USE_PLATFORM_XLIB_KHR)
 
+VkResult anv_EnumerateInstanceVersion(
+    uint32_t*                                   pApiVersion)
+{
+    *pApiVersion = ${MAX_API_VERSION.c_vk_version()};
+    return VK_SUCCESS;
+}
+
 const VkExtensionProperties anv_instance_extensions[ANV_INSTANCE_EXTENSION_COUNT] = {
 %for ext in instance_extensions:
    {"${ext.name}", ${ext.ext_version}},
