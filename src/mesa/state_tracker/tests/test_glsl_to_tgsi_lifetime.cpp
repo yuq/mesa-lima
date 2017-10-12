@@ -183,9 +183,9 @@ TEST_F(LifetimeEvaluatorAtLeastTest, WriteInIfAndElseInLoop)
    run (code, temp_lt_expect({{-1,-1}, {0,9}, {3,7}, {7,10}}));
 }
 
-/* In loop if/else value written in both path, read in else path
- * before write and also read later
- * - value must survive the whole loop
+/* Test that read before write in ELSE path is properly tracked:
+ * In loop if/else value written in both path but read in else path
+ * before write and also read later - value must survive the whole loop.
  */
 TEST_F(LifetimeEvaluatorExactTest, WriteInIfAndElseReadInElseInLoop)
 {
@@ -245,9 +245,9 @@ TEST_F(LifetimeEvaluatorExactTest, ReadInLoopInIfBeforeWriteAndLifeToTheEnd)
    run (code, temp_lt_expect({{-1,-1}, {0,6}}));
 }
 
-/* In loop if/else read in one path before written in the same loop
- * read after the loop, value must survivethe whole loop and
- * to the read.
+/* In loop read before written in the same loop read after the loop,
+ * value must survive the whole loop and to the read.
+ * This is kind of undefined behaviour though ...
  */
 TEST_F(LifetimeEvaluatorExactTest, ReadInLoopBeforeWriteAndLifeToTheEnd)
 {
@@ -580,7 +580,6 @@ TEST_F(LifetimeEvaluatorExactTest, LoopWithReadWriteInSwitchDifferentCaseFallThr
    run (code, temp_lt_expect({{-1,-1}, {0,8}}));
 }
 
-
 /* Here we read and write from an to the same temp in the same instruction,
  * but the read is conditional (select operation), hence the lifetime must
  * start with the first write.
@@ -588,21 +587,21 @@ TEST_F(LifetimeEvaluatorExactTest, LoopWithReadWriteInSwitchDifferentCaseFallThr
 TEST_F(LifetimeEvaluatorExactTest, WriteSelectFromSelf)
 {
    const vector<FakeCodeline> code = {
-      {TGSI_OPCODE_USEQ, {5}, {in0,in1}, {}},
-      {TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
-      {TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
-      {TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
-      {TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
-      {TGSI_OPCODE_FSLT, {2}, {1,in1}, {}},
-      {TGSI_OPCODE_UIF, {}, {2}, {}},
-      {  TGSI_OPCODE_MOV, {3}, {in1}, {}},
-      {TGSI_OPCODE_ELSE},
-      {  TGSI_OPCODE_MOV, {4}, {in1}, {}},
-      {  TGSI_OPCODE_MOV, {4}, {4}, {}},
-      {  TGSI_OPCODE_MOV, {3}, {4}, {}},
-      {TGSI_OPCODE_ENDIF},
-      {TGSI_OPCODE_MOV, {out1}, {3}, {}},
-      {TGSI_OPCODE_END}
+      { TGSI_OPCODE_USEQ, {5}, {in0,in1}, {}},
+      { TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
+      { TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
+      { TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
+      { TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
+      { TGSI_OPCODE_FSLT, {2}, {1,in1}, {}},
+      { TGSI_OPCODE_UIF, {}, {2}, {}},
+      {   TGSI_OPCODE_MOV, {3}, {in1}, {}},
+      { TGSI_OPCODE_ELSE},
+      {   TGSI_OPCODE_MOV, {4}, {in1}, {}},
+      {   TGSI_OPCODE_MOV, {4}, {4}, {}},
+      {   TGSI_OPCODE_MOV, {3}, {4}, {}},
+      { TGSI_OPCODE_ENDIF},
+      { TGSI_OPCODE_MOV, {out1}, {3}, {}},
+      { TGSI_OPCODE_END}
    };
    run (code, temp_lt_expect({{-1,-1}, {1,5}, {5,6}, {7,13}, {9,11}, {0,4}}));
 }
@@ -1162,21 +1161,21 @@ TEST_F(RegisterRemappingTest, RegisterRemappingMergeZeroLifetimeRegisters)
 TEST_F(RegisterLifetimeAndRemappingTest, LifetimeAndRemapping)
 {
    const vector<FakeCodeline> code = {
-      {TGSI_OPCODE_USEQ, {5}, {in0,in1}, {}},
-      {TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
-      {TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
-      {TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
-      {TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
-      {TGSI_OPCODE_FSLT, {2}, {1,in1}, {}},
-      {TGSI_OPCODE_UIF, {}, {2}, {}},
-      {  TGSI_OPCODE_MOV, {3}, {in1}, {}},
-      {TGSI_OPCODE_ELSE},
-      {  TGSI_OPCODE_MOV, {4}, {in1}, {}},
-      {  TGSI_OPCODE_MOV, {4}, {4}, {}},
-      {  TGSI_OPCODE_MOV, {3}, {4}, {}},
-      {TGSI_OPCODE_ENDIF},
-      {TGSI_OPCODE_MOV, {out1}, {3}, {}},
-      {TGSI_OPCODE_END}
+      { TGSI_OPCODE_USEQ, {5}, {in0,in1}, {}},
+      { TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
+      { TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
+      { TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
+      { TGSI_OPCODE_UCMP, {1}, {5,in1,1}, {}},
+      { TGSI_OPCODE_FSLT, {2}, {1,in1}, {}},
+      { TGSI_OPCODE_UIF, {}, {2}, {}},
+      {   TGSI_OPCODE_MOV, {3}, {in1}, {}},
+      { TGSI_OPCODE_ELSE},
+      {   TGSI_OPCODE_MOV, {4}, {in1}, {}},
+      {   TGSI_OPCODE_MOV, {4}, {4}, {}},
+      {   TGSI_OPCODE_MOV, {3}, {4}, {}},
+      { TGSI_OPCODE_ENDIF},
+      { TGSI_OPCODE_MOV, {out1}, {3}, {}},
+      { TGSI_OPCODE_END}
    };
    run (code, vector<int>({0,1,5,5,1,5}));
 }
@@ -1184,15 +1183,15 @@ TEST_F(RegisterLifetimeAndRemappingTest, LifetimeAndRemapping)
 TEST_F(RegisterLifetimeAndRemappingTest, LifetimeAndRemappingWithUnusedReadOnlyIgnored)
 {
    const vector<FakeCodeline> code = {
-      {TGSI_OPCODE_USEQ, {1}, {in0,in1}, {}},
-      {TGSI_OPCODE_UCMP, {2}, {1,in1,2}, {}},
-      {TGSI_OPCODE_UCMP, {4}, {2,in1,1}, {}},
-      {TGSI_OPCODE_ADD, {5}, {2,4}, {}},
-      {TGSI_OPCODE_UIF, {}, {7}, {}},
-      {  TGSI_OPCODE_ADD, {8}, {5,4}, {}},
-      {TGSI_OPCODE_ENDIF},
-      {TGSI_OPCODE_MOV, {out1}, {8}, {}},
-      {TGSI_OPCODE_END}
+      { TGSI_OPCODE_USEQ, {1}, {in0,in1}, {}},
+      { TGSI_OPCODE_UCMP, {2}, {1,in1,2}, {}},
+      { TGSI_OPCODE_UCMP, {4}, {2,in1,1}, {}},
+      { TGSI_OPCODE_ADD, {5}, {2,4}, {}},
+      { TGSI_OPCODE_UIF, {}, {7}, {}},
+      {   TGSI_OPCODE_ADD, {8}, {5,4}, {}},
+      { TGSI_OPCODE_ENDIF},
+      { TGSI_OPCODE_MOV, {out1}, {8}, {}},
+      { TGSI_OPCODE_END}
    };
    /* lt: 1: 0-2,2: 1-3 3: u 4: 2-5 5: 3-5 6: u 7: 0-(-1),8: 5-7 */
    run (code, vector<int>({0,1,2,3,1,2,6,7,1}));
@@ -1201,15 +1200,15 @@ TEST_F(RegisterLifetimeAndRemappingTest, LifetimeAndRemappingWithUnusedReadOnlyI
 TEST_F(RegisterLifetimeAndRemappingTest, LifetimeAndRemappingWithUnusedReadOnlyRemappedTo)
 {
    const vector<FakeCodeline> code = {
-      {TGSI_OPCODE_USEQ, {1}, {in0,in1}, {}},
-      {TGSI_OPCODE_UIF, {}, {7}, {}},
-      {  TGSI_OPCODE_UCMP, {2}, {1,in1,2}, {}},
-      {  TGSI_OPCODE_UCMP, {4}, {2,in1,1}, {}},
-      {  TGSI_OPCODE_ADD, {5}, {2,4}, {}},
-      {  TGSI_OPCODE_ADD, {8}, {5,4}, {}},
-      {TGSI_OPCODE_ENDIF},
-      {TGSI_OPCODE_MOV, {out1}, {8}, {}},
-      {TGSI_OPCODE_END}
+      { TGSI_OPCODE_USEQ, {1}, {in0,in1}, {}},
+      { TGSI_OPCODE_UIF, {}, {7}, {}},
+      {   TGSI_OPCODE_UCMP, {2}, {1,in1,2}, {}},
+      {   TGSI_OPCODE_UCMP, {4}, {2,in1,1}, {}},
+      {   TGSI_OPCODE_ADD, {5}, {2,4}, {}},
+      {   TGSI_OPCODE_ADD, {8}, {5,4}, {}},
+      { TGSI_OPCODE_ENDIF},
+      { TGSI_OPCODE_MOV, {out1}, {8}, {}},
+      { TGSI_OPCODE_END}
    };
    /* lt: 1: 0-3,2: 2-4 3: u 4: 3-5 5: 4-5 6: u 7: 1-1,8: 5-7 */
    run (code, vector<int>({0,1,2,3,1,2,6,7,1}));
@@ -1218,15 +1217,15 @@ TEST_F(RegisterLifetimeAndRemappingTest, LifetimeAndRemappingWithUnusedReadOnlyR
 TEST_F(RegisterLifetimeAndRemappingTest, LifetimeAndRemappingWithUnusedReadOnlyRemapped)
 {
    const vector<FakeCodeline> code = {
-      {TGSI_OPCODE_USEQ, {0}, {in0,in1}, {}},
-      {TGSI_OPCODE_UCMP, {2}, {0,in1,2}, {}},
-      {TGSI_OPCODE_UCMP, {4}, {2,in1,0}, {}},
-      {TGSI_OPCODE_UIF, {}, {7}, {}},
-      {  TGSI_OPCODE_ADD, {5}, {4,4}, {}},
-      {  TGSI_OPCODE_ADD, {8}, {5,4}, {}},
-      {TGSI_OPCODE_ENDIF},
-      {TGSI_OPCODE_MOV, {out1}, {8}, {}},
-      {TGSI_OPCODE_END}
+      { TGSI_OPCODE_USEQ, {0}, {in0,in1}, {}},
+      { TGSI_OPCODE_UCMP, {2}, {0,in1,2}, {}},
+      { TGSI_OPCODE_UCMP, {4}, {2,in1,0}, {}},
+      { TGSI_OPCODE_UIF, {}, {7}, {}},
+      {   TGSI_OPCODE_ADD, {5}, {4,4}, {}},
+      {   TGSI_OPCODE_ADD, {8}, {5,4}, {}},
+      { TGSI_OPCODE_ENDIF},
+      { TGSI_OPCODE_MOV, {out1}, {8}, {}},
+      { TGSI_OPCODE_END}
    };
    /* lt: 0: 0-2 1: u 2: 1-2 3: u 4: 2-5 5: 4-5 6: u 7:ro 8: 5-7 */
    run (code, vector<int>({0,1,2,3,0,2,6,7,0}));
