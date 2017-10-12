@@ -3530,7 +3530,7 @@ static void radv_handle_image_transition(struct radv_cmd_buffer *cmd_buffer,
 						   dst_queue_mask, range,
 						   pending_clears);
 
-	if (image->cmask.size)
+	if (image->cmask.size || image->fmask.size)
 		radv_handle_cmask_image_transition(cmd_buffer, image, src_layout,
 						   dst_layout, src_queue_mask,
 						   dst_queue_mask, range);
