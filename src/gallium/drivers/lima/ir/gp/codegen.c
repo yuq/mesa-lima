@@ -309,7 +309,10 @@ static void gpir_codegen_reg0_slot(gpir_codegen_instr *code, gpir_instr *instr)
 
 static void gpir_codegen_reg1_slot(gpir_codegen_instr *code, gpir_instr *instr)
 {
+   if (!instr->reg1_is_used)
+      return;
 
+   code->register1_addr = instr->reg1_index;
 }
 
 static void gpir_codegen_mem_slot(gpir_codegen_instr *code, gpir_instr *instr)
