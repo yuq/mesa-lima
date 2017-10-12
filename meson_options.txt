@@ -48,6 +48,7 @@ option('glvnd', type : 'boolean', value : false,
        description : 'Enable GLVND support.')
 option('asm', type : 'boolean', value : true,
        description : 'Build assembly code if possible')
+option('llvm', type : 'boolean', value : true, description : 'Build with LLVM support.')
 option('valgrind', type : 'boolean', value : true,
        description : 'Build with valgrind support if possible')
 option('build-tests', type : 'boolean', value : false,

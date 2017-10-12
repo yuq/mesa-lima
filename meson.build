@@ -38,6 +38,7 @@ with_vulkan_icd_dir = get_option('vulkan-icd-dir')
 with_tests = get_option('build-tests')
 with_valgrind = get_option('valgrind')
 with_asm = get_option('asm')
+with_llvm = get_option('llvm')
 if get_option('texture-float')
   pre_args += '-DTEXTURE_FLOAT_ENABLED'
   message('WARNING: Floating-point texture enabled. Please consult docs/patents.txt and your lawyer before building mesa.')
@@ -506,22 +507,26 @@ endif
 dep_llvm = dependency(
   'llvm', version : '>= 3.9.0', required : false, modules : llvm_modules,
 )
-if not dep_llvm.found()
-  if with_amd_vk
-    error('Radv requires llvm.')
+if with_llvm
+  if dep_llvm.found()
+    _llvm_version = dep_llvm.version().split('.')
+    # Development versions of LLVM have an 'svn' suffix, we don't want that for
+    # our version checks.
+    _llvm_patch = _llvm_version[2]
+    if _llvm_patch.endswith('svn')
+      _llvm_patch = _llvm_patch.split('s')[0]
+    endif
+    pre_args += [
+      '-DHAVE_LLVM=0x0@0@@1@@2@'.format(_llvm_version[0], _llvm_version[1], _llvm_patch),
+      '-DMESA_LLVM_VERSION_PATCH=@0@'.format(_llvm_patch),
+    ]
+  else
+    if with_amd_vk
+      error('The following drivers requires LLVM: Radv. One of these is enabled, but LLVM was not found.')
+    endif
   endif
-else
-  _llvm_version = dep_llvm.version().split('.')
-  # Development versions of LLVM have an 'svn' suffix, we don't want that for
-  # our version checks.
-  _llvm_patch = _llvm_version[2]
-  if _llvm_patch.endswith('svn')
-    _llvm_patch = _llvm_patch.split('s')[0]
-  endif
-  pre_args += [
-    '-DHAVE_LLVM=0x0@0@@1@@2@'.format(_llvm_version[0], _llvm_version[1], _llvm_patch),
-    '-DMESA_LLVM_VERSION_PATCH=@0@'.format(_llvm_patch),
-  ]
+elif with_amd_vk
+  error('The following drivers requires LLVM: Radv. One of these is enabled, but LLVM is disabled.')
 endif
 
 dep_glvnd = []
