@@ -70,9 +70,6 @@ extern "C" {
    _EGL_DRIVER_TYPECAST(drvname ## _config, _EGLConfig, obj)
 
 
-typedef _EGLDriver *(*_EGLMain_t)(const char *args);
-
-
 /**
  * Base class for device drivers.
  */
