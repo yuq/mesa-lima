@@ -167,6 +167,8 @@ radv_create_shader_variant_from_pipeline_cache(struct radv_device *device,
 		entry = radv_pipeline_cache_search(device->mem_cache, sha1);
 
 	if (!entry) {
+		if (!device->physical_device->disk_cache)
+			return NULL;
 		uint8_t disk_sha1[20];
 		disk_cache_compute_key(device->physical_device->disk_cache,
 				       sha1, 20, disk_sha1);
@@ -317,11 +319,13 @@ radv_pipeline_cache_insert_shader(struct radv_device *device,
 	 * compiled shaders by third parties such as steam, even if the app
 	 * implements its own pipeline cache.
 	 */
-	uint8_t disk_sha1[20];
-	disk_cache_compute_key(device->physical_device->disk_cache, sha1, 20,
-			       disk_sha1);
-	disk_cache_put(device->physical_device->disk_cache,
-		       disk_sha1, entry, entry_size(entry), NULL);
+	if (device->physical_device->disk_cache) {
+		uint8_t disk_sha1[20];
+		disk_cache_compute_key(device->physical_device->disk_cache, sha1, 20,
+				       disk_sha1);
+		disk_cache_put(device->physical_device->disk_cache,
+			       disk_sha1, entry, entry_size(entry), NULL);
+	}
 
 	entry->variant = variant;
 	p_atomic_inc(&variant->ref_count);
