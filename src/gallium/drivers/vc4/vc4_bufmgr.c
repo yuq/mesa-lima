@@ -69,7 +69,7 @@ vc4_bo_label(struct vc4_screen *screen, struct vc4_bo *bo, const char *fmt, ...)
                 .len = strlen(name),
                 .name = (uintptr_t)name,
         };
-        drmIoctl(screen->fd, DRM_IOCTL_VC4_LABEL_BO, &label);
+        vc4_ioctl(screen->fd, DRM_IOCTL_VC4_LABEL_BO, &label);
 
         ralloc_free(name);
 }
