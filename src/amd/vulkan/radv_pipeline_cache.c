@@ -97,32 +97,6 @@ entry_size(struct cache_entry *entry)
 }
 
 void
-radv_hash_shader(unsigned char *hash, struct radv_shader_module *module,
-		 const char *entrypoint,
-		 const VkSpecializationInfo *spec_info,
-		 const struct radv_pipeline_layout *layout,
-		 const struct ac_shader_variant_key *key,
-		 uint32_t flags)
-{
-	struct mesa_sha1 ctx;
-
-	_mesa_sha1_init(&ctx);
-	if (key)
-		_mesa_sha1_update(&ctx, key, sizeof(*key));
-	_mesa_sha1_update(&ctx, module->sha1, sizeof(module->sha1));
-	_mesa_sha1_update(&ctx, entrypoint, strlen(entrypoint));
-	if (layout)
-		_mesa_sha1_update(&ctx, layout->sha1, sizeof(layout->sha1));
-	if (spec_info) {
-		_mesa_sha1_update(&ctx, spec_info->pMapEntries,
-				  spec_info->mapEntryCount * sizeof spec_info->pMapEntries[0]);
-		_mesa_sha1_update(&ctx, spec_info->pData, spec_info->dataSize);
-	}
-	_mesa_sha1_update(&ctx, &flags, 4);
-	_mesa_sha1_final(&ctx, hash);
-}
-
-void
 radv_hash_shaders(unsigned char *hash,
 		  const VkPipelineShaderStageCreateInfo **stages,
 		  const struct radv_pipeline_layout *layout,
