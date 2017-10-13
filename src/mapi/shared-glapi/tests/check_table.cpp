@@ -25,7 +25,7 @@
 #include "../../../mesa/main/glheader.h"
 
 #include "glapi/glapi.h"
-#include "glapitable.h"
+#include "glapi/glapitable.h"
 
 struct name_offset {
    const char *name;
