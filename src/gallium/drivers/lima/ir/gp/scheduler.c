@@ -788,7 +788,7 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
 
          /* if next nearest succ is close enough, use move node to
           * satisfy, otherwise use reg */
-         if (current->sched_instr - start <= 6) {
+         if (current->sched_instr - start < 5) {
             current = gpir_create_from_node(block, current, NULL);
             if (!current || !gpir_try_place_move_node(block, current))
                return false;
