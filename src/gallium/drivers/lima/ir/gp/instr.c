@@ -165,8 +165,17 @@ static bool gpir_instr_insert_store_check(gpir_instr *instr, gpir_node *node)
          goto out;
    }
 
-   /* no store node has the same child as this node, so instr must
-    * have some free alu slot to insert this node's child
+   /* check if the child is alrady in this instr's alu slot,
+    * this may happen when store an scheduled alu node to reg
+    */
+   for (int j = GPIR_INSTR_SLOT_MUL0; j <= GPIR_INSTR_SLOT_PASS; j++) {
+      if (store->child == instr->slots[j])
+         goto out;
+   }
+
+   /* no store node has the same child as this node, and child is not
+    * already in this instr's alu slot, so instr must have some free
+    * alu slot to insert this node's child
     */
    if (!instr->alu_num_slot_free)
       return false;
