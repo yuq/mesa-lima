@@ -172,6 +172,20 @@ blob_reserve_bytes(struct blob *blob, size_t to_write)
    return ret;
 }
 
+ssize_t
+blob_reserve_uint32(struct blob *blob)
+{
+   align_blob(blob, sizeof(uint32_t));
+   return blob_reserve_bytes(blob, sizeof(uint32_t));
+}
+
+ssize_t
+blob_reserve_intptr(struct blob *blob)
+{
+   align_blob(blob, sizeof(intptr_t));
+   return blob_reserve_bytes(blob, sizeof(intptr_t));
+}
+
 bool
 blob_write_uint32(struct blob *blob, uint32_t value)
 {
@@ -180,11 +194,15 @@ blob_write_uint32(struct blob *blob, uint32_t value)
    return blob_write_bytes(blob, &value, sizeof(value));
 }
 
+#define ASSERT_ALIGNED(_offset, _align) \
+   assert(ALIGN((_offset), (_align)) == (_offset))
+
 bool
 blob_overwrite_uint32 (struct blob *blob,
                        size_t offset,
                        uint32_t value)
 {
+   ASSERT_ALIGNED(offset, sizeof(value));
    return blob_overwrite_bytes(blob, offset, &value, sizeof(value));
 }
 
@@ -202,6 +220,15 @@ blob_write_intptr(struct blob *blob, intptr_t value)
    align_blob(blob, sizeof(value));
 
    return blob_write_bytes(blob, &value, sizeof(value));
+}
+
+bool
+blob_overwrite_intptr (struct blob *blob,
+                       size_t offset,
+                       intptr_t value)
+{
+   ASSERT_ALIGNED(offset, sizeof(value));
+   return blob_overwrite_bytes(blob, offset, &value, sizeof(value));
 }
 
 bool
