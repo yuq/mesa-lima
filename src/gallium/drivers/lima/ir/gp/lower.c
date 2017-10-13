@@ -28,7 +28,7 @@
 #include "gpir.h"
 #include "lima_context.h"
 
-static void gpir_lower_const(gpir_compiler *comp)
+static bool gpir_lower_const(gpir_compiler *comp)
 {
    int num_constant = 0;
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
@@ -40,6 +40,9 @@ static void gpir_lower_const(gpir_compiler *comp)
 
    if (num_constant) {
       union fi *constant = ralloc_array(comp->prog, union fi, num_constant);
+      if (!constant)
+         return false;
+
       comp->prog->constant = constant;
       comp->prog->constant_size = num_constant * sizeof(union fi);
 
@@ -51,11 +54,14 @@ static void gpir_lower_const(gpir_compiler *comp)
 
                if (!gpir_node_is_root(node)) {
                   gpir_load_node *load = gpir_node_create(comp, gpir_op_load_uniform, -1);
+                  if (!load)
+                     return false;
+
                   load->index = comp->constant_base + (index >> 2);
                   load->component = index % 4;
                   constant[index++] = c->value;
                   gpir_node_replace_succ(&load->node, node);
-                  list_addtail(&load->node.list, &block->node_list);
+                  list_addtail(&load->node.list, &node->list);
 
                   fprintf(stderr, "gpir: lower const create uniform %d for const %d\n",
                           load->node.index, node->index);
@@ -66,73 +72,86 @@ static void gpir_lower_const(gpir_compiler *comp)
          }
       }
    }
+
+   return true;
 }
 
-static void gpir_lower_negate(gpir_compiler *comp)
+static bool gpir_lower_neg(gpir_block *block, gpir_node *node)
 {
-   list_for_each_entry(gpir_block, block, &comp->block_list, list) {
-      list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
-         if (node->op == gpir_op_neg) {
-            gpir_alu_node *neg = gpir_node_to_alu(node);
-            gpir_node *child = neg->children[0];
+   gpir_alu_node *neg = gpir_node_to_alu(node);
+   gpir_node *child = neg->children[0];
 
-            /* check if child can dest negate */
-            if (child->type == gpir_node_type_alu) {
-               /* negate must be its only successor */
-               bool only = true;
-               gpir_node_foreach_succ(child, entry) {
-                  gpir_node *succ = gpir_node_from_entry(entry, succ);
-                  if (succ != node) {
-                     only = false;
-                     break;
-                  }
-               }
-
-               if (only && gpir_op_infos[child->op].dest_neg) {
-                  gpir_alu_node *alu = gpir_node_to_alu(child);
-                  alu->dest_negate = !alu->dest_negate;
-
-                  gpir_node_replace_succ(child, node);
-                  gpir_node_delete(node);
-                  continue;
-               }
-            }
-
-            /* check if child can src negate */
-            gpir_node_foreach_succ(node, entry) {
-               gpir_node *succ = gpir_node_from_entry(entry, succ);
-
-               if (succ->type != gpir_node_type_alu)
-                  continue;
-
-               bool success = true;
-               gpir_alu_node *alu = gpir_node_to_alu(succ);
-               for (int i = 0; i < alu->num_child; i++) {
-                  if (alu->children[i] == node) {
-                     if (gpir_op_infos[succ->op].src_neg[i]) {
-                        alu->children_negate[i] = !alu->children_negate[i];
-                        alu->children[i] = child;
-                     }
-                     else
-                        success = false;
-                  }
-               }
-
-               if (success) {
-                  gpir_node_remove_entry(entry);
-                  gpir_node_add_child(succ, child);
-               }
-            }
-
-            if (gpir_node_is_root(node))
-               gpir_node_delete(node);
+   /* check if child can dest negate */
+   if (child->type == gpir_node_type_alu) {
+      /* negate must be its only successor */
+      bool only = true;
+      gpir_node_foreach_succ(child, entry) {
+         gpir_node *succ = gpir_node_from_entry(entry, succ);
+         if (succ != node) {
+            only = false;
+            break;
          }
       }
+
+      if (only && gpir_op_infos[child->op].dest_neg) {
+         gpir_alu_node *alu = gpir_node_to_alu(child);
+         alu->dest_negate = !alu->dest_negate;
+
+         gpir_node_replace_succ(child, node);
+         gpir_node_delete(node);
+         return true;
+      }
    }
+
+   /* check if child can src negate */
+   gpir_node_foreach_succ(node, entry) {
+      gpir_node *succ = gpir_node_from_entry(entry, succ);
+
+      if (succ->type != gpir_node_type_alu)
+         continue;
+
+      bool success = true;
+      gpir_alu_node *alu = gpir_node_to_alu(succ);
+      for (int i = 0; i < alu->num_child; i++) {
+         if (alu->children[i] == node) {
+            if (gpir_op_infos[succ->op].src_neg[i]) {
+               alu->children_negate[i] = !alu->children_negate[i];
+               alu->children[i] = child;
+            }
+            else
+               success = false;
+         }
+      }
+
+      if (success) {
+         gpir_node_remove_entry(entry);
+         gpir_node_add_child(succ, child);
+      }
+   }
+
+   if (gpir_node_is_root(node))
+      gpir_node_delete(node);
+
+   return true;
 }
 
-void gpir_lower_prog(gpir_compiler *comp)
+static bool (*gpir_lower_funcs[gpir_op_num])(gpir_block *, gpir_node *) = {
+   [gpir_op_neg] = gpir_lower_neg,
+};
+
+bool gpir_lower_prog(gpir_compiler *comp)
 {
-   gpir_lower_negate(comp);
-   gpir_lower_const(comp);
+   if (!gpir_lower_const(comp))
+      return false;
+
+   list_for_each_entry(gpir_block, block, &comp->block_list, list) {
+      list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
+         if (gpir_lower_funcs[node->op] &&
+             !gpir_lower_funcs[node->op](block, node))
+            return false;
+      }
+   }
+
+   gpir_node_print_prog(comp);
+   return true;
 }
