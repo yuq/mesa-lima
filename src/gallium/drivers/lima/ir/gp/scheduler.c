@@ -816,6 +816,28 @@ static bool gpir_schedule_node(gpir_block *block, gpir_node *node)
 
    fprintf(stderr, "gpir: fail to schedule node %s %d\n",
            gpir_op_infos[node->op].name, node->index);
+
+   /* print failed node's successors until none-sigle successor */
+   fprintf(stderr, "gpir: successors");
+   gpir_node *next = node;
+   while (true) {
+      if (next->succs->entries > 1)
+         fprintf(stderr, " |");
+
+      gpir_node *succ = NULL;
+      gpir_node_foreach_succ(next, entry) {
+         succ = gpir_node_from_entry(entry, succ);
+         fprintf(stderr, " %d", succ->index);
+      }
+
+      if (next->succs->entries > 1 || !succ)
+         break;
+      else
+         next = succ;
+   }
+   fprintf(stderr, "\n");
+
+   gpir_instr_print_prog(block->comp);
    return false;
 }
 
