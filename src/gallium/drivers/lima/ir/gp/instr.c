@@ -192,6 +192,11 @@ bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
    if (instr->slots[node->sched_pos])
       return false;
 
+   if (node->op == gpir_op_complex1) {
+      if (instr->slots[GPIR_INSTR_SLOT_MUL1])
+         return false;
+   }
+
    if (node->sched_pos >= GPIR_INSTR_SLOT_MUL0 &&
        node->sched_pos <= GPIR_INSTR_SLOT_PASS) {
       if (!gpir_instr_insert_alu_check(instr, node))
@@ -219,6 +224,10 @@ bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
    }
 
    instr->slots[node->sched_pos] = node;
+
+   if (node->op == gpir_op_complex1)
+      instr->slots[GPIR_INSTR_SLOT_MUL1] = node;
+
    return true;
 }
 
