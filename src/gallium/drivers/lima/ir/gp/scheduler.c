@@ -225,6 +225,22 @@ static void gpir_insert_ready_list(struct list_head *ready_list, gpir_node *inse
 {
    struct list_head *insert_pos = ready_list;
 
+   /* We must schedule complex2 & impl nodes right after the complex1,
+    * otherwise the sapce reserved in gpir_try_place_node() may be used
+    * by other node.
+    *
+    * complex2 & impl node will be called here right after the complex1
+    * is scheduled because they're the children of complex1 and have no
+    * other successor. And no other node will be called with this function
+    * before schedule complex2 & impl, because complex1 only have there
+    * children, the last one is also the child of the complex2 & impl, it
+    * won't be schedulable until complex2 & impl have been scheduled. */
+   if (insert_node->op == gpir_op_complex2 ||
+       insert_node->op == gpir_op_rcp_impl) {
+      list_add(&insert_node->ready, ready_list);
+      return;
+   }
+
    list_for_each_entry(gpir_node, node, ready_list, ready) {
       if (insert_node->sched_dist > node->sched_dist) {
          insert_pos = &node->ready;
@@ -273,6 +289,17 @@ static bool gpir_try_place_node(gpir_block *block, gpir_node *node, int start, i
    /* try to insert node begin from max_start */
    for (node->sched_instr = start; node->sched_instr < end; node->sched_instr++) {
       gpir_instr *instr = gpir_instr_array_grow(&block->instrs, node->sched_instr);
+
+      /* complex1 need to make sure the instr before 'instr' has
+       * slot for complex2 and impl */
+      if (node->op == gpir_op_complex1) {
+         gpir_instr *prev = instr + 1;
+         if (prev < (gpir_instr *)util_dynarray_end(&block->instrs)) {
+            if (prev->slots[GPIR_INSTR_SLOT_MUL0] ||
+                prev->slots[GPIR_INSTR_SLOT_COMPLEX])
+               continue;
+         }
+      }
 
       for (int i = 0; slots[i] != GPIR_INSTR_SLOT_END; i++) {
          node->sched_pos = slots[i];

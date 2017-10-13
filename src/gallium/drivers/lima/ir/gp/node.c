@@ -34,8 +34,8 @@ const gpir_op_info gpir_op_infos[] = {
    [gpir_op_mov] = {
       .name = "mov",
       .slots = (int []) {
-         GPIR_INSTR_SLOT_MUL0, GPIR_INSTR_SLOT_MUL1,
-         GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_ADD1,
+         GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_MUL1,
+         GPIR_INSTR_SLOT_ADD1, GPIR_INSTR_SLOT_MUL0,
          GPIR_INSTR_SLOT_COMPLEX, GPIR_INSTR_SLOT_PASS,
          GPIR_INSTR_SLOT_END
       },
@@ -43,7 +43,7 @@ const gpir_op_info gpir_op_infos[] = {
    [gpir_op_mul] = {
       .name = "mul",
       .dest_neg = true,
-      .slots = (int []) { GPIR_INSTR_SLOT_MUL0, GPIR_INSTR_SLOT_MUL1, GPIR_INSTR_SLOT_END },
+      .slots = (int []) { GPIR_INSTR_SLOT_MUL1, GPIR_INSTR_SLOT_MUL0, GPIR_INSTR_SLOT_END },
    },
    [gpir_op_select] = {
       .name = "select",
@@ -51,9 +51,11 @@ const gpir_op_info gpir_op_infos[] = {
    },
    [gpir_op_complex1] = {
       .name = "complex1",
+      .slots = (int []) { GPIR_INSTR_SLOT_MUL0, GPIR_INSTR_SLOT_END },
    },
    [gpir_op_complex2] = {
       .name = "complex2",
+      .slots = (int []) { GPIR_INSTR_SLOT_MUL0, GPIR_INSTR_SLOT_END },
    },
    [gpir_op_add] = {
       .name = "add",
@@ -108,6 +110,7 @@ const gpir_op_info gpir_op_infos[] = {
    },
    [gpir_op_rcp_impl] = {
       .name = "rcp_impl",
+      .slots = (int []) { GPIR_INSTR_SLOT_COMPLEX, GPIR_INSTR_SLOT_END },
    },
    [gpir_op_rsqrt_impl] = {
       .name = "rsqrt_impl",
