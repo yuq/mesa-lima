@@ -1041,14 +1041,11 @@ struct brw_context
    struct {
       struct brw_stage_state base;
 
-      GLuint render_surf;
-
       /**
        * Buffer object used in place of multisampled null render targets on
        * Gen6.  See brw_emit_null_surface_state().
        */
       struct brw_bo *multisampled_null_render_target_bo;
-      uint32_t fast_clear_op;
 
       float offset_clamp;
    } wm;
