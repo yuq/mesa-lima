@@ -3026,6 +3026,12 @@ struct radv_draw_info {
 	struct radv_buffer *indirect;
 	uint64_t indirect_offset;
 	uint32_t stride;
+
+	/**
+	 * Draw count parameters resource.
+	 */
+	struct radv_buffer *count_buffer;
+	uint64_t count_buffer_offset;
 };
 
 static void
@@ -3046,6 +3052,7 @@ radv_emit_draw_packets(struct radv_cmd_buffer *cmd_buffer,
 
 	if (info->indirect) {
 		uint64_t va = radv_buffer_get_va(info->indirect->bo);
+		uint64_t count_va = 0;
 
 		va += info->indirect->offset + info->indirect_offset;
 
@@ -3056,11 +3063,19 @@ radv_emit_draw_packets(struct radv_cmd_buffer *cmd_buffer,
 		radeon_emit(cs, va);
 		radeon_emit(cs, va >> 32);
 
+		if (info->count_buffer) {
+			count_va = radv_buffer_get_va(info->count_buffer->bo);
+			count_va += info->count_buffer->offset +
+				    info->count_buffer_offset;
+
+			ws->cs_add_buffer(cs, info->count_buffer->bo, 8);
+		}
+
 		if (!state->subpass->view_mask) {
 			radv_cs_emit_indirect_draw_packet(cmd_buffer,
 							  info->indexed,
 							  info->count,
-							  0 /* count_va */,
+							  count_va,
 							  info->stride);
 		} else {
 			unsigned i;
@@ -3070,7 +3085,7 @@ radv_emit_draw_packets(struct radv_cmd_buffer *cmd_buffer,
 				radv_cs_emit_indirect_draw_packet(cmd_buffer,
 								  info->indexed,
 								  info->count,
-								  0 /* count_va */,
+								  count_va,
 								  info->stride);
 			}
 		}
@@ -3165,97 +3180,6 @@ void radv_CmdDrawIndexed(
 	radv_emit_draw_packets(cmd_buffer, &info);
 }
 
-static void
-radv_emit_indirect_draw(struct radv_cmd_buffer *cmd_buffer,
-			VkBuffer _buffer,
-			VkDeviceSize offset,
-			VkBuffer _count_buffer,
-			VkDeviceSize count_offset,
-			uint32_t draw_count,
-			uint32_t stride,
-			bool indexed)
-{
-	RADV_FROM_HANDLE(radv_buffer, buffer, _buffer);
-	RADV_FROM_HANDLE(radv_buffer, count_buffer, _count_buffer);
-	struct radeon_winsys_cs *cs = cmd_buffer->cs;
-
-	uint64_t indirect_va = radv_buffer_get_va(buffer->bo);
-	indirect_va += offset + buffer->offset;
-	uint64_t count_va = 0;
-
-	if (count_buffer) {
-		count_va = radv_buffer_get_va(count_buffer->bo);
-		count_va += count_offset + count_buffer->offset;
-
-		cmd_buffer->device->ws->cs_add_buffer(cs, count_buffer->bo, 8);
-	}
-
-	if (!draw_count)
-		return;
-
-	cmd_buffer->device->ws->cs_add_buffer(cs, buffer->bo, 8);
-
-	radeon_emit(cs, PKT3(PKT3_SET_BASE, 2, 0));
-	radeon_emit(cs, 1);
-	radeon_emit(cs, indirect_va);
-	radeon_emit(cs, indirect_va >> 32);
-
-	if (!cmd_buffer->state.subpass->view_mask) {
-		radv_cs_emit_indirect_draw_packet(cmd_buffer, indexed, draw_count, count_va, stride);
-	} else {
-		unsigned i;
-		for_each_bit(i, cmd_buffer->state.subpass->view_mask) {
-			radv_emit_view_index(cmd_buffer, i);
-
-			radv_cs_emit_indirect_draw_packet(cmd_buffer, indexed, draw_count, count_va, stride);
-		}
-	}
-	radv_cmd_buffer_after_draw(cmd_buffer);
-}
-
-static void
-radv_cmd_draw_indirect_count(VkCommandBuffer                             commandBuffer,
-                             VkBuffer                                    buffer,
-                             VkDeviceSize                                offset,
-                             VkBuffer                                    countBuffer,
-                             VkDeviceSize                                countBufferOffset,
-                             uint32_t                                    maxDrawCount,
-                             uint32_t                                    stride)
-{
-	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-	radv_cmd_buffer_flush_state(cmd_buffer, false, false, true, 0);
-
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
-							   cmd_buffer->cs, 24 * MAX_VIEWS);
-
-	radv_emit_indirect_draw(cmd_buffer, buffer, offset,
-	                        countBuffer, countBufferOffset, maxDrawCount, stride, false);
-
-	assert(cmd_buffer->cs->cdw <= cdw_max);
-}
-
-static void
-radv_cmd_draw_indexed_indirect_count(
-	VkCommandBuffer                             commandBuffer,
-	VkBuffer                                    buffer,
-	VkDeviceSize                                offset,
-	VkBuffer                                    countBuffer,
-	VkDeviceSize                                countBufferOffset,
-	uint32_t                                    maxDrawCount,
-	uint32_t                                    stride)
-{
-	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-
-	radv_cmd_buffer_flush_state(cmd_buffer, true, false, true, 0);
-
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 31 * MAX_VIEWS);
-
-	radv_emit_indirect_draw(cmd_buffer, buffer, offset,
-	                        countBuffer, countBufferOffset, maxDrawCount, stride, true);
-
-	assert(cmd_buffer->cs->cdw <= cdw_max);
-}
-
 void radv_CmdDrawIndirect(
 	VkCommandBuffer                             commandBuffer,
 	VkBuffer                                    _buffer,
@@ -3297,30 +3221,51 @@ void radv_CmdDrawIndexedIndirect(
 
 void radv_CmdDrawIndirectCountAMD(
 	VkCommandBuffer                             commandBuffer,
-	VkBuffer                                    buffer,
+	VkBuffer                                    _buffer,
 	VkDeviceSize                                offset,
-	VkBuffer                                    countBuffer,
+	VkBuffer                                    _countBuffer,
 	VkDeviceSize                                countBufferOffset,
 	uint32_t                                    maxDrawCount,
 	uint32_t                                    stride)
 {
-	radv_cmd_draw_indirect_count(commandBuffer, buffer, offset,
-	                             countBuffer, countBufferOffset,
-	                             maxDrawCount, stride);
+	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	RADV_FROM_HANDLE(radv_buffer, buffer, _buffer);
+	RADV_FROM_HANDLE(radv_buffer, count_buffer, _countBuffer);
+	struct radv_draw_info info = {};
+
+	info.count = maxDrawCount;
+	info.indirect = buffer;
+	info.indirect_offset = offset;
+	info.count_buffer = count_buffer;
+	info.count_buffer_offset = countBufferOffset;
+	info.stride = stride;
+
+	radv_emit_draw_packets(cmd_buffer, &info);
 }
 
 void radv_CmdDrawIndexedIndirectCountAMD(
 	VkCommandBuffer                             commandBuffer,
-	VkBuffer                                    buffer,
+	VkBuffer                                    _buffer,
 	VkDeviceSize                                offset,
-	VkBuffer                                    countBuffer,
+	VkBuffer                                    _countBuffer,
 	VkDeviceSize                                countBufferOffset,
 	uint32_t                                    maxDrawCount,
 	uint32_t                                    stride)
 {
-	radv_cmd_draw_indexed_indirect_count(commandBuffer, buffer, offset,
-	                                     countBuffer, countBufferOffset,
-	                                     maxDrawCount, stride);
+	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	RADV_FROM_HANDLE(radv_buffer, buffer, _buffer);
+	RADV_FROM_HANDLE(radv_buffer, count_buffer, _countBuffer);
+	struct radv_draw_info info = {};
+
+	info.indexed = true;
+	info.count = maxDrawCount;
+	info.indirect = buffer;
+	info.indirect_offset = offset;
+	info.count_buffer = count_buffer;
+	info.count_buffer_offset = countBufferOffset;
+	info.stride = stride;
+
+	radv_emit_draw_packets(cmd_buffer, &info);
 }
 
 struct radv_dispatch_info {
