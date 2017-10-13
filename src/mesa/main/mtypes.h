@@ -2079,6 +2079,10 @@ struct gl_program
 
    struct nir_shader *nir;
 
+   /* Saved and restored with metadata. Freed with ralloc. */
+   void *driver_cache_blob;
+   size_t driver_cache_blob_size;
+
    bool is_arb_asm; /** Is this an ARB assembly-style program */
 
    /** Is this program written to on disk shader cache */
