@@ -3452,15 +3452,9 @@ genX(upload_sbe)(struct brw_context *brw)
 
 #if GEN_GEN >= 9
       /* prepare the active component dwords */
-      int input_index = 0;
-      for (int attr = 0; attr < VARYING_SLOT_MAX; attr++) {
-         if (!(fp->info.inputs_read & BITFIELD64_BIT(attr)))
-            continue;
-
-         assert(input_index < 32);
-
+      const int num_inputs = urb_entry_read_length * 2;
+      for (int input_index = 0; input_index < num_inputs; input_index++) {
          sbe.AttributeActiveComponentFormat[input_index] = ACTIVE_COMPONENT_XYZW;
-         ++input_index;
       }
 #endif
    }
