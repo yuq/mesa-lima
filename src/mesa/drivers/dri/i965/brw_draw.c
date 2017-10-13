@@ -344,6 +344,7 @@ brw_merge_inputs(struct brw_context *brw,
 static bool
 intel_disable_rb_aux_buffer(struct brw_context *brw,
                             struct intel_mipmap_tree *tex_mt,
+                            unsigned min_level, unsigned num_levels,
                             const char *usage)
 {
    const struct gl_framebuffer *fb = brw->ctx.DrawBuffer;
@@ -358,7 +359,9 @@ intel_disable_rb_aux_buffer(struct brw_context *brw,
       const struct intel_renderbuffer *irb =
          intel_renderbuffer(fb->_ColorDrawBuffers[i]);
 
-      if (irb && irb->mt->bo == tex_mt->bo) {
+      if (irb && irb->mt->bo == tex_mt->bo &&
+          irb->mt_level >= min_level &&
+          irb->mt_level < min_level + num_levels) {
          found = brw->draw_aux_buffer_disabled[i] = true;
       }
    }
@@ -414,7 +417,8 @@ brw_predraw_resolve_inputs(struct brw_context *brw)
       }
 
       const bool disable_aux =
-         intel_disable_rb_aux_buffer(brw, tex_obj->mt, "for sampling");
+         intel_disable_rb_aux_buffer(brw, tex_obj->mt, min_level, num_levels,
+                                     "for sampling");
 
       intel_miptree_prepare_texture(brw, tex_obj->mt, view_format,
                                     min_level, num_levels,
@@ -440,7 +444,7 @@ brw_predraw_resolve_inputs(struct brw_context *brw)
             tex_obj = intel_texture_object(u->TexObj);
 
             if (tex_obj && tex_obj->mt) {
-               intel_disable_rb_aux_buffer(brw, tex_obj->mt,
+               intel_disable_rb_aux_buffer(brw, tex_obj->mt, 0, ~0,
                                            "as a shader image");
 
                intel_miptree_prepare_image(brw, tex_obj->mt);
