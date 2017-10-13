@@ -361,7 +361,6 @@ retry:
       }
 
       bo->gem_handle = create.handle;
-      _mesa_hash_table_insert(bufmgr->handle_table, &bo->gem_handle, bo);
 
       bo->bufmgr = bufmgr;
       bo->align = alignment;
@@ -554,7 +553,6 @@ bo_free(struct brw_bo *bo)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
    struct drm_gem_close close;
-   struct hash_entry *entry;
    int ret;
 
    if (bo->map_cpu) {
@@ -570,12 +568,17 @@ bo_free(struct brw_bo *bo)
       drm_munmap(bo->map_gtt, bo->size);
    }
 
-   if (bo->global_name) {
-      entry = _mesa_hash_table_search(bufmgr->name_table, &bo->global_name);
-      _mesa_hash_table_remove(bufmgr->name_table, entry);
+   if (bo->external) {
+      struct hash_entry *entry;
+
+      if (bo->global_name) {
+         entry = _mesa_hash_table_search(bufmgr->name_table, &bo->global_name);
+         _mesa_hash_table_remove(bufmgr->name_table, entry);
+      }
+
+      entry = _mesa_hash_table_search(bufmgr->handle_table, &bo->gem_handle);
+      _mesa_hash_table_remove(bufmgr->handle_table, entry);
    }
-   entry = _mesa_hash_table_search(bufmgr->handle_table, &bo->gem_handle);
-   _mesa_hash_table_remove(bufmgr->handle_table, entry);
 
    /* Close this object */
    memclear(close);
@@ -1178,12 +1181,20 @@ brw_bo_gem_export_to_prime(struct brw_bo *bo, int *prime_fd)
 {
    struct brw_bufmgr *bufmgr = bo->bufmgr;
 
+   if (!bo->external) {
+      mtx_lock(&bufmgr->lock);
+      if (!bo->external) {
+         _mesa_hash_table_insert(bufmgr->handle_table, &bo->gem_handle, bo);
+         bo->external = true;
+      }
+      mtx_unlock(&bufmgr->lock);
+   }
+
    if (drmPrimeHandleToFD(bufmgr->fd, bo->gem_handle,
                           DRM_CLOEXEC, prime_fd) != 0)
       return -errno;
 
    bo->reusable = false;
-   bo->external = true;
 
    return 0;
 }
@@ -1202,14 +1213,17 @@ brw_bo_flink(struct brw_bo *bo, uint32_t *name)
          return -errno;
 
       mtx_lock(&bufmgr->lock);
+      if (!bo->external) {
+         _mesa_hash_table_insert(bufmgr->handle_table, &bo->gem_handle, bo);
+         bo->external = true;
+      }
       if (!bo->global_name) {
          bo->global_name = flink.name;
-         bo->reusable = false;
-         bo->external = true;
-
          _mesa_hash_table_insert(bufmgr->name_table, &bo->global_name, bo);
       }
       mtx_unlock(&bufmgr->lock);
+
+      bo->reusable = false;
    }
 
    *name = bo->global_name;
