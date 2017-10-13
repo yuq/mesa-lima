@@ -268,14 +268,14 @@ err_out:
    return NULL;
 }
 
-static void gpir_node_create_dep(gpir_node *succ, gpir_node *pred,
-                                 bool is_child_dep, bool is_offset)
+static gpir_dep_info *gpir_node_create_dep(gpir_node *succ, gpir_node *pred,
+                                           bool is_child_dep, bool is_offset)
 {
    /* don't add duplicated dep */
    gpir_node_foreach_pred(succ, entry) {
       gpir_node *node = gpir_node_from_entry(entry, pred);
       if (node == pred)
-         return;
+         return gpir_dep_from_entry(entry);
    }
 
    gpir_dep_info *dep = ralloc(succ, gpir_dep_info);
@@ -287,16 +287,18 @@ static void gpir_node_create_dep(gpir_node *succ, gpir_node *pred,
 
    _mesa_set_add(succ->preds, dep);
    _mesa_set_add(pred->succs, dep);
+
+   return dep;
 }
 
-void gpir_node_add_child(gpir_node *parent, gpir_node *child)
+gpir_dep_info * gpir_node_add_child(gpir_node *parent, gpir_node *child)
 {
-   gpir_node_create_dep(parent, child, true, false);
+   return gpir_node_create_dep(parent, child, true, false);
 }
 
-void gpir_node_add_read_after_write_dep(gpir_node *read, gpir_node *write)
+gpir_dep_info * gpir_node_add_read_after_write_dep(gpir_node *read, gpir_node *write)
 {
-   gpir_node_create_dep(read, write, false, false);
+   return gpir_node_create_dep(read, write, false, false);
 }
 
 void gpir_node_remove_entry(struct set_entry *entry)

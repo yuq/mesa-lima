@@ -30,6 +30,7 @@
 void gpir_instr_init(gpir_instr *instr)
 {
    instr->alu_num_slot_free = 6;
+   instr->reg_status = ~0ull;
 }
 
 static bool gpir_instr_insert_alu_check(gpir_instr *instr, gpir_node *node)
