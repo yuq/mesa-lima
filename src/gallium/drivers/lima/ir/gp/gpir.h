@@ -94,6 +94,8 @@ typedef enum {
    gpir_op_cos,
    gpir_op_tan,
    gpir_op_branch_uncond,
+
+   gpir_op_num,
 } gpir_op;
 
 typedef enum {
@@ -316,7 +318,7 @@ void gpir_instr_init(gpir_instr *instr);
 bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node);
 void gpir_instr_print_prog(gpir_compiler *comp);
 
-void gpir_lower_prog(gpir_compiler *comp);
+bool gpir_lower_prog(gpir_compiler *comp);
 bool gpir_schedule_prog(gpir_compiler *comp);
 
 bool gpir_codegen_prog(gpir_compiler *comp);
