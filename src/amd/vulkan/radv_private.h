@@ -324,17 +324,7 @@ void
 radv_pipeline_cache_load(struct radv_pipeline_cache *cache,
 			 const void *data, size_t size);
 
-struct radv_shader_variant *
-radv_create_shader_variant_from_pipeline_cache(struct radv_device *device,
-					       struct radv_pipeline_cache *cache,
-					       const unsigned char *sha1);
-
-struct radv_shader_variant *
-radv_pipeline_cache_insert_shader(struct radv_device *device,
-				  struct radv_pipeline_cache *cache,
-				  const unsigned char *sha1,
-				  struct radv_shader_variant *variant,
-				  const void *code, unsigned code_size);
+struct radv_shader_variant;
 
 bool
 radv_create_shader_variants_from_pipeline_cache(struct radv_device *device,
