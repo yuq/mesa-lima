@@ -96,6 +96,10 @@ blob_init(struct blob *blob);
  * A fixed-size blob has a fixed block of data that will not be freed on
  * blob_finish and will never be grown.  If we hit the end, we simply start
  * returning false from the write functions.
+ *
+ * If a fixed-size blob has a NULL data pointer then the data is written but
+ * it otherwise operates normally.  This can be used to determine the size
+ * that will be required to write a given data structure.
  */
 void
 blob_init_fixed(struct blob *blob, void *data, size_t size);

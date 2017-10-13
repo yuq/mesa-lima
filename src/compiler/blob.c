@@ -91,7 +91,8 @@ align_blob(struct blob *blob, size_t alignment)
       if (!grow_to_fit(blob, new_size - blob->size))
          return false;
 
-      memset(blob->data + blob->size, 0, new_size - blob->size);
+      if (blob->data)
+         memset(blob->data + blob->size, 0, new_size - blob->size);
       blob->size = new_size;
    }
 
@@ -136,7 +137,8 @@ blob_overwrite_bytes(struct blob *blob,
 
    VG(VALGRIND_CHECK_MEM_IS_DEFINED(bytes, to_write));
 
-   memcpy(blob->data + offset, bytes, to_write);
+   if (blob->data)
+      memcpy(blob->data + offset, bytes, to_write);
 
    return true;
 }
@@ -149,7 +151,8 @@ blob_write_bytes(struct blob *blob, const void *bytes, size_t to_write)
 
    VG(VALGRIND_CHECK_MEM_IS_DEFINED(bytes, to_write));
 
-   memcpy(blob->data + blob->size, bytes, to_write);
+   if (blob->data)
+      memcpy(blob->data + blob->size, bytes, to_write);
    blob->size += to_write;
 
    return true;
