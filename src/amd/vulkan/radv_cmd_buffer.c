@@ -3058,8 +3058,14 @@ radv_cmd_draw_indexed_indirect_count(
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 31 * MAX_VIEWS);
 
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
-	radeon_emit(cmd_buffer->cs, cmd_buffer->state.index_type);
+	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
+		radeon_set_uconfig_reg_idx(cmd_buffer->cs,
+					   R_03090C_VGT_INDEX_TYPE,
+					   2, cmd_buffer->state.index_type);
+	} else {
+		radeon_emit(cmd_buffer->cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
+		radeon_emit(cmd_buffer->cs, cmd_buffer->state.index_type);
+	}
 
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_INDEX_BASE, 1, 0));
 	radeon_emit(cmd_buffer->cs, index_va);
