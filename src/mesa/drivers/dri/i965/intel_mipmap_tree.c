@@ -2617,13 +2617,13 @@ isl_formats_are_fast_clear_compatible(enum isl_format a, enum isl_format b)
    return isl_format_srgb_to_linear(a) == isl_format_srgb_to_linear(b);
 }
 
-static void
-intel_miptree_prepare_texture_slices(struct brw_context *brw,
-                                     struct intel_mipmap_tree *mt,
-                                     enum isl_format view_format,
-                                     uint32_t start_level, uint32_t num_levels,
-                                     uint32_t start_layer, uint32_t num_layers,
-                                     bool disable_aux)
+void
+intel_miptree_prepare_texture(struct brw_context *brw,
+                              struct intel_mipmap_tree *mt,
+                              enum isl_format view_format,
+                              uint32_t start_level, uint32_t num_levels,
+                              uint32_t start_layer, uint32_t num_layers,
+                              bool disable_aux)
 {
    enum isl_aux_usage aux_usage = disable_aux ? ISL_AUX_USAGE_NONE :
       intel_miptree_texture_aux_usage(brw, mt, view_format);
@@ -2639,18 +2639,6 @@ intel_miptree_prepare_texture_slices(struct brw_context *brw,
    intel_miptree_prepare_access(brw, mt, start_level, num_levels,
                                 start_layer, num_layers,
                                 aux_usage, clear_supported);
-}
-
-void
-intel_miptree_prepare_texture(struct brw_context *brw,
-                              struct intel_mipmap_tree *mt,
-                              enum isl_format view_format,
-                              bool disable_aux)
-{
-   intel_miptree_prepare_texture_slices(brw, mt, view_format,
-                                        0, INTEL_REMAINING_LEVELS,
-                                        0, INTEL_REMAINING_LAYERS,
-                                        disable_aux);
 }
 
 void
@@ -2673,8 +2661,8 @@ intel_miptree_prepare_fb_fetch(struct brw_context *brw,
     */
    assert(brw->screen->devinfo.gen < 9);
 
-   intel_miptree_prepare_texture_slices(brw, mt, mt->surf.format, level, 1,
-                                        start_layer, num_layers, false);
+   intel_miptree_prepare_texture(brw, mt, mt->surf.format, level, 1,
+                                 start_layer, num_layers, false);
 }
 
 enum isl_aux_usage

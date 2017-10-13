@@ -403,6 +403,8 @@ brw_predraw_resolve_inputs(struct brw_context *brw)
          intel_disable_rb_aux_buffer(brw, tex_obj->mt, "for sampling");
 
       intel_miptree_prepare_texture(brw, tex_obj->mt, view_format,
+                                    0, INTEL_REMAINING_LEVELS,
+                                    0, INTEL_REMAINING_LAYERS,
                                     disable_aux);
 
       brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
