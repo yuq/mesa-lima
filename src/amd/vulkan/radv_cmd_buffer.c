@@ -2937,47 +2937,6 @@ radv_cs_emit_draw_packet(struct radv_cmd_buffer *cmd_buffer,
 	                            S_0287F0_USE_OPAQUE(0));
 }
 
-void radv_CmdDraw(
-	VkCommandBuffer                             commandBuffer,
-	uint32_t                                    vertexCount,
-	uint32_t                                    instanceCount,
-	uint32_t                                    firstVertex,
-	uint32_t                                    firstInstance)
-{
-	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-
-	radv_cmd_buffer_flush_state(cmd_buffer, false, (instanceCount > 1), false, vertexCount);
-
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 20 * MAX_VIEWS);
-
-	assert(cmd_buffer->state.pipeline->graphics.vtx_base_sgpr);
-	radeon_set_sh_reg_seq(cmd_buffer->cs, cmd_buffer->state.pipeline->graphics.vtx_base_sgpr,
-			      cmd_buffer->state.pipeline->graphics.vtx_emit_num);
-	radeon_emit(cmd_buffer->cs, firstVertex);
-	radeon_emit(cmd_buffer->cs, firstInstance);
-	if (cmd_buffer->state.pipeline->graphics.vtx_emit_num == 3)
-		radeon_emit(cmd_buffer->cs, 0);
-
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_NUM_INSTANCES, 0, cmd_buffer->state.predicating));
-	radeon_emit(cmd_buffer->cs, instanceCount);
-
-	if (!cmd_buffer->state.subpass->view_mask) {
-		radv_cs_emit_draw_packet(cmd_buffer, vertexCount);
-	} else {
-		unsigned i;
-		for_each_bit(i, cmd_buffer->state.subpass->view_mask) {
-			radv_emit_view_index(cmd_buffer, i);
-
-			radv_cs_emit_draw_packet(cmd_buffer, vertexCount);
-		}
-	}
-
-	assert(cmd_buffer->cs->cdw <= cdw_max);
-
-	radv_cmd_buffer_after_draw(cmd_buffer);
-}
-
-
 static void
 radv_cs_emit_draw_indexed_packet(struct radv_cmd_buffer *cmd_buffer,
                                  uint64_t index_va,
@@ -2991,6 +2950,120 @@ radv_cs_emit_draw_indexed_packet(struct radv_cmd_buffer *cmd_buffer,
 	radeon_emit(cmd_buffer->cs, V_0287F0_DI_SRC_SEL_DMA);
 }
 
+struct radv_draw_info {
+	/**
+	 * Number of vertices.
+	 */
+	uint32_t count;
+
+	/**
+	 * Index of the first vertex.
+	 */
+	int32_t vertex_offset;
+
+	/**
+	 * First instance id.
+	 */
+	uint32_t first_instance;
+
+	/**
+	 * Number of instances.
+	 */
+	uint32_t instance_count;
+
+	/**
+	 * First index (indexed draws only).
+	 */
+	uint32_t first_index;
+
+	/**
+	 * Whether it's an indexed draw.
+	 */
+	bool indexed;
+};
+
+static void
+radv_emit_draw_packets(struct radv_cmd_buffer *cmd_buffer,
+		       const struct radv_draw_info *info)
+{
+	struct radv_cmd_state *state = &cmd_buffer->state;
+	struct radv_device *device = cmd_buffer->device;
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
+
+	radv_cmd_buffer_flush_state(cmd_buffer, info->indexed,
+				    info->instance_count > 1, false,
+				    info->count);
+
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(device->ws, cs,
+							   26 * MAX_VIEWS);
+
+	assert(state->pipeline->graphics.vtx_base_sgpr);
+	radeon_set_sh_reg_seq(cs, state->pipeline->graphics.vtx_base_sgpr,
+			      state->pipeline->graphics.vtx_emit_num);
+	radeon_emit(cs, info->vertex_offset);
+	radeon_emit(cs, info->first_instance);
+	if (state->pipeline->graphics.vtx_emit_num == 3)
+		radeon_emit(cs, 0);
+
+	radeon_emit(cs, PKT3(PKT3_NUM_INSTANCES, 0, state->predicating));
+	radeon_emit(cs, info->instance_count);
+
+	if (info->indexed) {
+		int index_size = state->index_type ? 4 : 2;
+		uint64_t index_va;
+
+		index_va = state->index_va;
+		index_va += info->first_index * index_size;
+
+		if (!state->subpass->view_mask) {
+			radv_cs_emit_draw_indexed_packet(cmd_buffer, index_va,
+							 info->count);
+		} else {
+			unsigned i;
+			for_each_bit(i, state->subpass->view_mask) {
+				radv_emit_view_index(cmd_buffer, i);
+
+				radv_cs_emit_draw_indexed_packet(cmd_buffer,
+								 index_va,
+								 info->count);
+			}
+		}
+	} else {
+		if (!state->subpass->view_mask) {
+			radv_cs_emit_draw_packet(cmd_buffer, info->count);
+		} else {
+			unsigned i;
+			for_each_bit(i, state->subpass->view_mask) {
+				radv_emit_view_index(cmd_buffer, i);
+
+				radv_cs_emit_draw_packet(cmd_buffer,
+							 info->count);
+			}
+		}
+	}
+
+	assert(cs->cdw <= cdw_max);
+	radv_cmd_buffer_after_draw(cmd_buffer);
+}
+
+void radv_CmdDraw(
+	VkCommandBuffer                             commandBuffer,
+	uint32_t                                    vertexCount,
+	uint32_t                                    instanceCount,
+	uint32_t                                    firstVertex,
+	uint32_t                                    firstInstance)
+{
+	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	struct radv_draw_info info = {};
+
+	info.count = vertexCount;
+	info.instance_count = instanceCount;
+	info.first_instance = firstInstance;
+	info.vertex_offset = firstVertex;
+
+	radv_emit_draw_packets(cmd_buffer, &info);
+}
+
 void radv_CmdDrawIndexed(
 	VkCommandBuffer                             commandBuffer,
 	uint32_t                                    indexCount,
@@ -3000,39 +3073,16 @@ void radv_CmdDrawIndexed(
 	uint32_t                                    firstInstance)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-	int index_size = cmd_buffer->state.index_type ? 4 : 2;
-	uint64_t index_va;
+	struct radv_draw_info info = {};
 
-	radv_cmd_buffer_flush_state(cmd_buffer, true, (instanceCount > 1), false, indexCount);
+	info.indexed = true;
+	info.count = indexCount;
+	info.instance_count = instanceCount;
+	info.first_index = firstIndex;
+	info.vertex_offset = vertexOffset;
+	info.first_instance = firstInstance;
 
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 26 * MAX_VIEWS);
-
-	assert(cmd_buffer->state.pipeline->graphics.vtx_base_sgpr);
-	radeon_set_sh_reg_seq(cmd_buffer->cs, cmd_buffer->state.pipeline->graphics.vtx_base_sgpr,
-			      cmd_buffer->state.pipeline->graphics.vtx_emit_num);
-	radeon_emit(cmd_buffer->cs, vertexOffset);
-	radeon_emit(cmd_buffer->cs, firstInstance);
-	if (cmd_buffer->state.pipeline->graphics.vtx_emit_num == 3)
-		radeon_emit(cmd_buffer->cs, 0);
-
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_NUM_INSTANCES, 0, 0));
-	radeon_emit(cmd_buffer->cs, instanceCount);
-
-	index_va = cmd_buffer->state.index_va;
-	index_va += firstIndex * index_size;
-	if (!cmd_buffer->state.subpass->view_mask) {
-		radv_cs_emit_draw_indexed_packet(cmd_buffer, index_va, indexCount);
-	} else {
-		unsigned i;
-		for_each_bit(i, cmd_buffer->state.subpass->view_mask) {
-			radv_emit_view_index(cmd_buffer, i);
-
-			radv_cs_emit_draw_indexed_packet(cmd_buffer, index_va, indexCount);
-		}
-	}
-
-	assert(cmd_buffer->cs->cdw <= cdw_max);
-	radv_cmd_buffer_after_draw(cmd_buffer);
+	radv_emit_draw_packets(cmd_buffer, &info);
 }
 
 static void
