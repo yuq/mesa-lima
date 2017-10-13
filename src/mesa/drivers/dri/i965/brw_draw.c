@@ -473,13 +473,20 @@ brw_predraw_resolve_framebuffer(struct brw_context *brw)
        ctx->FragmentProgram._Current->info.outputs_read) {
       const struct gl_framebuffer *fb = ctx->DrawBuffer;
 
+      /* This is only used for non-coherent framebuffer fetch, so we don't
+       * need to worry about CCS_E and can simply pass 'false' below.
+       */
+      assert(brw->screen->devinfo.gen < 9);
+
       for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
          const struct intel_renderbuffer *irb =
             intel_renderbuffer(fb->_ColorDrawBuffers[i]);
 
          if (irb) {
-            intel_miptree_prepare_fb_fetch(brw, irb->mt, irb->mt_level,
-                                           irb->mt_layer, irb->layer_count);
+            intel_miptree_prepare_texture(brw, irb->mt, irb->mt->surf.format,
+                                          irb->mt_level, 1,
+                                          irb->mt_layer, irb->layer_count,
+                                          false);
          }
       }
    }

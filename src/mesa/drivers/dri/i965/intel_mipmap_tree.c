@@ -2651,20 +2651,6 @@ intel_miptree_prepare_image(struct brw_context *brw,
                                 ISL_AUX_USAGE_NONE, false);
 }
 
-void
-intel_miptree_prepare_fb_fetch(struct brw_context *brw,
-                               struct intel_mipmap_tree *mt, uint32_t level,
-                               uint32_t start_layer, uint32_t num_layers)
-{
-   /* This is only used for non-coherent framebuffer fetch, so we don't
-    * need to worry about CCS_E and can simply pass 'false' below.
-    */
-   assert(brw->screen->devinfo.gen < 9);
-
-   intel_miptree_prepare_texture(brw, mt, mt->surf.format, level, 1,
-                                 start_layer, num_layers, false);
-}
-
 enum isl_aux_usage
 intel_miptree_render_aux_usage(struct brw_context *brw,
                                struct intel_mipmap_tree *mt,
