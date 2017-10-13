@@ -174,6 +174,64 @@ _mesa_spirv_link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    }
 }
 
+nir_shader *
+_mesa_spirv_to_nir(struct gl_context *ctx,
+                   const struct gl_shader_program *prog,
+                   gl_shader_stage stage,
+                   const nir_shader_compiler_options *options)
+{
+   nir_shader *nir = NULL;
+
+   struct gl_linked_shader *linked_shader = prog->_LinkedShaders[stage];
+   assert (linked_shader);
+
+   struct gl_shader_spirv_data *spirv_data = linked_shader->spirv_data;
+   assert(spirv_data);
+
+   struct gl_spirv_module *spirv_module = spirv_data->SpirVModule;
+   assert (spirv_module != NULL);
+
+   const char *entry_point_name = spirv_data->SpirVEntryPoint;
+   assert(entry_point_name);
+
+   struct nir_spirv_specialization *spec_entries =
+      calloc(sizeof(*spec_entries),
+             spirv_data->NumSpecializationConstants);
+
+   for (unsigned i = 0; i < spirv_data->NumSpecializationConstants; ++i) {
+      spec_entries[i].id = spirv_data->SpecializationConstantsIndex[i];
+      spec_entries[i].data32 = spirv_data->SpecializationConstantsValue[i];
+      spec_entries[i].defined_on_module = false;
+   }
+
+   const struct spirv_to_nir_options spirv_options = {
+      .caps = ctx->Const.SpirVCapabilities
+   };
+
+   nir_function *entry_point =
+      spirv_to_nir((const uint32_t *) &spirv_module->Binary[0],
+                   spirv_module->Length / 4,
+                   spec_entries, spirv_data->NumSpecializationConstants,
+                   stage, entry_point_name,
+                   &spirv_options,
+                   options);
+   free(spec_entries);
+
+   assert (entry_point);
+   nir = entry_point->shader;
+   assert(nir->info.stage == stage);
+
+   nir->options = options;
+
+   nir->info.name =
+      ralloc_asprintf(nir, "SPIRV:%s:%d",
+                      _mesa_shader_stage_to_abbrev(nir->info.stage),
+                      prog->Name);
+   nir_validate_shader(nir);
+
+   return nir;
+}
+
 void GLAPIENTRY
 _mesa_SpecializeShaderARB(GLuint shader,
                           const GLchar *pEntryPoint,
