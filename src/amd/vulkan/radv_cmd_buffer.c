@@ -2992,6 +2992,8 @@ radv_emit_indirect_draw(struct radv_cmd_buffer *cmd_buffer,
 	if (count_buffer) {
 		count_va = radv_buffer_get_va(count_buffer->bo);
 		count_va += count_offset + count_buffer->offset;
+
+		cmd_buffer->device->ws->cs_add_buffer(cs, count_buffer->bo, 8);
 	}
 
 	if (!draw_count)
