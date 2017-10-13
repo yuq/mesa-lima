@@ -790,6 +790,12 @@ void anv_GetPhysicalDeviceFeatures2(
          break;
       }
 
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETER_FEATURES: {
+         VkPhysicalDeviceShaderDrawParameterFeatures *features = (void *)ext;
+         features->shaderDrawParameters = true;
+         break;
+      }
+
       case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES_KHR: {
          VkPhysicalDevice16BitStorageFeaturesKHR *features =
             (VkPhysicalDevice16BitStorageFeaturesKHR *)ext;
