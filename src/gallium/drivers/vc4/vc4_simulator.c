@@ -663,6 +663,7 @@ vc4_simulator_ioctl(int fd, unsigned long request, void *args)
                 /* Disable these for now, since the sharing with i965 requires
                  * linear buffers.
                  */
+                errno = -EINVAL;
                 return -1;
 
         case DRM_IOCTL_VC4_GET_PARAM:
