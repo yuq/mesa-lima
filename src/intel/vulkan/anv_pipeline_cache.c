@@ -449,7 +449,7 @@ VkResult anv_GetPipelineCacheData(
    blob_write_bytes(&blob, &header, sizeof(header));
 
    uint32_t count = 0;
-   ssize_t count_offset = blob_reserve_uint32(&blob);
+   intptr_t count_offset = blob_reserve_uint32(&blob);
    if (count_offset < 0) {
       *pDataSize = 0;
       blob_finish(&blob);
