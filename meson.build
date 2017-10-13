@@ -91,6 +91,7 @@ if _drivers != ''
 endif
 
 with_gallium = false
+with_gallium_pl111 = false
 with_gallium_radeonsi = false
 with_gallium_nouveau = false
 with_gallium_softpipe = false
@@ -98,6 +99,7 @@ with_gallium_vc4 = false
 _drivers = get_option('gallium-drivers')
 if _drivers != ''
   _split = _drivers.split(',')
+  with_gallium_vc4 = _split.contains('pl111')
   with_gallium_radeonsi = _split.contains('radeonsi')
   with_gallium_nouveau = _split.contains('nouveau')
   with_gallium_softpipe = _split.contains('swrast')

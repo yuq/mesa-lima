@@ -51,6 +51,11 @@ if with_gallium_drisw_kms
   gallium_dri_link_with += libswkmsdri
 endif
 
+if with_gallium_pl111
+  gallium_dri_c_args += '-DGALLIUM_PL111'
+  gallium_dri_link_with += [libpl111winsys]
+  gallium_dri_drivers += 'pl111_dri.so'
+endif
 if with_gallium_radeonsi
   gallium_dri_c_args += '-DGALLIUM_RADEONSI'
   gallium_dri_link_with += [

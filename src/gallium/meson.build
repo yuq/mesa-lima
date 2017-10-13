@@ -40,6 +40,9 @@ subdir('winsys/sw/null')
 subdir('winsys/sw/dri')
 subdir('winsys/sw/kms-dri')
 subdir('winsys/sw/wrapper')
+if with_gallium_vc4
+  subdir('winsys/pl111/drm')
+endif
 subdir('winsys/radeon/drm')
 subdir('winsys/amdgpu/drm')
 subdir('winsys/nouveau/drm')
@@ -54,7 +57,6 @@ subdir('state_trackers/dri')
 # TODO: r600
 # TODO: etnaviv
 # TODO: IMX
-# TODO: PL111
 # TODO: SWR
 # TODO: virgl
 # TODO: winsys/sw/xlib
