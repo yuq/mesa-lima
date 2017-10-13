@@ -224,7 +224,7 @@ retry:
    intel_batchbuffer_require_space(brw, 1400, RENDER_RING);
    brw_require_statebuffer_space(brw, 600);
    intel_batchbuffer_save_state(brw);
-   brw->no_batch_wrap = true;
+   brw->batch.no_wrap = true;
 
 #if GEN_GEN == 6
    /* Emit workaround flushes when we switch from drawing to blorping. */
@@ -252,7 +252,7 @@ retry:
 
    blorp_exec(batch, params);
 
-   brw->no_batch_wrap = false;
+   brw->batch.no_wrap = false;
 
    /* Check if the blorp op we just did would make our batch likely to fail to
     * map all the BOs into the GPU at batch exec time later.  If so, flush the

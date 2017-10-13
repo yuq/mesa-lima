@@ -465,6 +465,7 @@ struct intel_batchbuffer {
    bool use_batch_first;
    bool needs_sol_reset;
    bool state_base_address_emitted;
+   bool no_wrap;
 
    struct brw_reloc_list batch_relocs;
    struct brw_reloc_list state_relocs;
@@ -695,7 +696,6 @@ struct brw_context
    uint32_t reset_count;
 
    struct intel_batchbuffer batch;
-   bool no_batch_wrap;
 
    struct {
       struct brw_bo *bo;

@@ -792,13 +792,13 @@ retry:
     * brw->ctx.NewDriverState.
     */
    if (brw->ctx.NewDriverState) {
-      brw->no_batch_wrap = true;
+      brw->batch.no_wrap = true;
       brw_upload_render_state(brw);
    }
 
    brw_emit_prim(brw, prim, brw->primitive, xfb_obj, stream);
 
-   brw->no_batch_wrap = false;
+   brw->batch.no_wrap = false;
 
    if (!brw_batch_has_aperture_space(brw, 0)) {
       if (!fail_next) {

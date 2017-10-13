@@ -187,12 +187,12 @@ brw_dispatch_compute_common(struct gl_context *ctx)
    intel_batchbuffer_save_state(brw);
 
  retry:
-   brw->no_batch_wrap = true;
+   brw->batch.no_wrap = true;
    brw_upload_compute_state(brw);
 
    brw_emit_gpgpu_walker(brw);
 
-   brw->no_batch_wrap = false;
+   brw->batch.no_wrap = false;
 
    if (!brw_batch_has_aperture_space(brw, 0)) {
       if (!fail_next) {
