@@ -18,27 +18,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_broadcom = include_directories('.', 'cle')
+libbroadcom_qpu_files = files(
+  'qpu_disasm.c',
+  'qpu_instr.c',
+  'qpu_pack.c',
+)
 
-subdir('cle')
+libbroadcom_qpu = static_library(
+  ['broadcom_qpu', v3d_xml_h],
+  libbroadcom_qpu_files,
+  include_directories : [inc_common, inc_broadcom],
+  c_args : [c_vis_args, no_override_init_args],
+  dependencies : [dep_libdrm, dep_valgrind],
+  build_by_default : false,
+)
 
-if with_gallium_vc5
-  subdir('compiler')
-  subdir('qpu')
-
-  libbroadcom_vc5 = static_library(
-    'libbroadcom_vc5',
-    [
-      files(
-        'common/v3d_debug.c',
-       'clif/clif_dump.c',
-      ),
-      v3d_xml_pack,
-    ],
-    include_directories : [inc_common, inc_broadcom, inc_src],
-    c_args : [c_vis_args, no_override_init_args],
-    link_whole : [libbroadcom_compiler, libbroadcom_qpu],
-    build_by_default : false,
-    dependencies: dep_valgrind,
-  )
-endif
+test('qpu_disasm',
+  executable('qpu_disasm', 'tests/qpu_disasm.c',
+  link_with: [libbroadcom_qpu, libmesa_util],
+  include_directories: inc_common))

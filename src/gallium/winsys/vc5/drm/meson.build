@@ -18,27 +18,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_broadcom = include_directories('.', 'cle')
-
-subdir('cle')
-
-if with_gallium_vc5
-  subdir('compiler')
-  subdir('qpu')
-
-  libbroadcom_vc5 = static_library(
-    'libbroadcom_vc5',
-    [
-      files(
-        'common/v3d_debug.c',
-       'clif/clif_dump.c',
-      ),
-      v3d_xml_pack,
-    ],
-    include_directories : [inc_common, inc_broadcom, inc_src],
-    c_args : [c_vis_args, no_override_init_args],
-    link_whole : [libbroadcom_compiler, libbroadcom_qpu],
-    build_by_default : false,
-    dependencies: dep_valgrind,
-  )
-endif
+libvc5winsys = static_library(
+  'vc5winsys',
+  files('vc5_drm_winsys.c'),
+  include_directories : [
+    inc_src, inc_include,
+    inc_gallium, inc_gallium_aux, inc_gallium_drivers,
+  ],
+  c_args : [c_vis_args],
+)

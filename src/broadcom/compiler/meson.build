@@ -18,27 +18,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_broadcom = include_directories('.', 'cle')
+libbroadcom_compiler_files = files(
+  'nir_to_vir.c',
+  'vir.c',
+  'vir_dump.c',
+  'vir_live_variables.c',
+  'vir_lower_uniforms.c',
+  'vir_opt_copy_propagate.c',
+  'vir_opt_dead_code.c',
+  'vir_register_allocate.c',
+  'vir_to_qpu.c',
+  'qpu_schedule.c',
+  'qpu_validate.c',
+  'v3d_compiler.h',
+  'v3d_nir_lower_io.c',
+)
 
-subdir('cle')
-
-if with_gallium_vc5
-  subdir('compiler')
-  subdir('qpu')
-
-  libbroadcom_vc5 = static_library(
-    'libbroadcom_vc5',
-    [
-      files(
-        'common/v3d_debug.c',
-       'clif/clif_dump.c',
-      ),
-      v3d_xml_pack,
-    ],
-    include_directories : [inc_common, inc_broadcom, inc_src],
-    c_args : [c_vis_args, no_override_init_args],
-    link_whole : [libbroadcom_compiler, libbroadcom_qpu],
-    build_by_default : false,
-    dependencies: dep_valgrind,
-  )
-endif
+libbroadcom_compiler = static_library(
+  ['broadcom_compiler', v3d_xml_h, nir_opcodes_h, nir_builder_opcodes_h],
+  libbroadcom_compiler_files,
+  include_directories : [inc_common, inc_broadcom],
+  c_args : [c_vis_args, no_override_init_args],
+  dependencies : [dep_libdrm, dep_valgrind],
+  build_by_default : false,
+)
