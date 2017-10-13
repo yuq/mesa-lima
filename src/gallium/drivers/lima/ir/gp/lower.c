@@ -135,8 +135,42 @@ static bool gpir_lower_neg(gpir_block *block, gpir_node *node)
    return true;
 }
 
+static bool gpir_lower_rcp(gpir_block *block, gpir_node *node)
+{
+   gpir_alu_node *alu = gpir_node_to_alu(node);
+   gpir_node *child = alu->children[0];
+
+   gpir_alu_node *complex2 = gpir_node_create(block->comp, gpir_op_complex2, -1);
+   if (!complex2)
+      return false;
+   complex2->children[0] = child;
+   complex2->num_child = 1;
+   gpir_node_add_child(&complex2->node, child);
+   list_addtail(&complex2->node.list, &node->list);
+
+   gpir_alu_node *impl = gpir_node_create(block->comp, gpir_op_rcp_impl, -1);
+   if (!impl)
+      return false;
+   impl->children[0] = child;
+   impl->num_child = 1;
+   gpir_node_add_child(&impl->node, child);
+   list_addtail(&impl->node.list, &node->list);
+
+   /* complex1 node */
+   node->op = gpir_op_complex1;
+   alu->children[0] = &impl->node;
+   alu->children[1] = &complex2->node;
+   alu->children[2] = child;
+   alu->num_child = 3;
+   gpir_node_add_child(node, &impl->node);
+   gpir_node_add_child(node, &complex2->node);
+
+   return true;
+}
+
 static bool (*gpir_lower_funcs[gpir_op_num])(gpir_block *, gpir_node *) = {
    [gpir_op_neg] = gpir_lower_neg,
+   [gpir_op_rcp] = gpir_lower_rcp,
 };
 
 bool gpir_lower_prog(gpir_compiler *comp)
