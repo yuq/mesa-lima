@@ -718,3 +718,6 @@ libmesa_gallium = static_library(
 )
 
 subdir('drivers/dri')
+if with_tests
+  subdir('main/tests')
+endif
