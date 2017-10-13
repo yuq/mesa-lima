@@ -204,7 +204,7 @@ libglsl = static_library(
   c_args : [c_vis_args, c_msvc_compat_args, no_override_init_args],
   cpp_args : [cpp_vis_args, cpp_msvc_compat_args],
   link_with : [libnir, libglcpp],
-  include_directories : [inc_common, inc_nir],
+  include_directories : [inc_common, inc_compiler, inc_nir],
   dependencies : [dep_valgrind],
   build_by_default : false,
 )
