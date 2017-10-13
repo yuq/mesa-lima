@@ -22,7 +22,7 @@ glsl_blob_test = executable(
   'blob_test',
   'blob_test.c',
   c_args : [c_vis_args, c_msvc_compat_args, no_override_init_args],
-  include_directories : [inc_common, inc_glsl],
+  include_directories : [inc_common, inc_compiler],
   link_with : [libglsl],
 )
 
