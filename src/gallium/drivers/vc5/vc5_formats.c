@@ -111,8 +111,8 @@ static const struct vc5_format vc5_format_table[] = {
         FORMAT(B4G4R4A4_UNORM,    ABGR4444,     RGBA4,       SWIZ_YZWX, 16, 0),
         FORMAT(B4G4R4X4_UNORM,    ABGR4444,     RGBA4,       SWIZ_YZW1, 16, 0),
 
-        FORMAT(A1B5G5R5_UNORM,    NO,           RGB5_A1,     SWIZ_XYZW, 16, 0),
-        FORMAT(X1B5G5R5_UNORM,    NO,           RGB5_A1,     SWIZ_XYZ1, 16, 0),
+        FORMAT(A1B5G5R5_UNORM,    ABGR1555,     RGB5_A1,     SWIZ_XYZW, 16, 0),
+        FORMAT(X1B5G5R5_UNORM,    ABGR1555,     RGB5_A1,     SWIZ_XYZ1, 16, 0),
         FORMAT(B5G6R5_UNORM,      BGR565,       RGB565,      SWIZ_XYZ1, 16, 0),
 
         FORMAT(R8_UNORM,          R8,           R8,          SWIZ_X001, 16, 0),
