@@ -241,6 +241,8 @@ typedef struct {
       GPIR_INSTR_STORE_TEMP,
    } store_content[2];
    int store_index[2];
+
+   uint64_t reg_status;
 } gpir_instr;
 
 typedef struct gpir_block {
@@ -273,8 +275,8 @@ typedef struct gpir_compiler {
 } gpir_compiler;
 
 void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index);
-void gpir_node_add_child(gpir_node *parent, gpir_node *child);
-void gpir_node_add_read_after_write_dep(gpir_node *read, gpir_node *write);
+gpir_dep_info *gpir_node_add_child(gpir_node *parent, gpir_node *child);
+gpir_dep_info *gpir_node_add_read_after_write_dep(gpir_node *read, gpir_node *write);
 void gpir_node_remove_entry(struct set_entry *entry);
 void gpir_node_replace_succ(gpir_node *dst, gpir_node *src);
 void gpir_node_merge_pred(gpir_node *dst, gpir_node *src);

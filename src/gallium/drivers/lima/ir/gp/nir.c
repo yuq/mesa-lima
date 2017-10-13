@@ -320,8 +320,10 @@ bool gpir_compile_nir(struct lima_vs_shader_state *prog, nir_shader *nir)
    gpir_node_print_prog(comp);
    gpir_lower_prog(comp);
    gpir_node_print_prog(comp);
-   gpir_schedule_prog(comp);
-   gpir_instr_print_prog(comp);
+
+   if (!gpir_schedule_prog(comp))
+      goto err_out0;
+
    gpir_codegen_prog(comp);
    gpir_codegen_print_prog(comp);
 
