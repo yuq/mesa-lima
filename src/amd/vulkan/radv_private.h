@@ -986,6 +986,13 @@ radv_hash_shader(unsigned char *hash, struct radv_shader_module *module,
 		 const struct ac_shader_variant_key *key,
 		 uint32_t flags);
 
+void
+radv_hash_shaders(unsigned char *hash,
+		  const VkPipelineShaderStageCreateInfo **stages,
+		  const struct radv_pipeline_layout *layout,
+		  const struct ac_shader_variant_key *keys,
+		  uint32_t flags);
+
 static inline gl_shader_stage
 vk_to_mesa_shader_stage(VkShaderStageFlagBits vk_stage)
 {

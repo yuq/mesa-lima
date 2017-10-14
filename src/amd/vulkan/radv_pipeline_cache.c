@@ -122,6 +122,39 @@ radv_hash_shader(unsigned char *hash, struct radv_shader_module *module,
 	_mesa_sha1_final(&ctx, hash);
 }
 
+void
+radv_hash_shaders(unsigned char *hash,
+		  const VkPipelineShaderStageCreateInfo **stages,
+		  const struct radv_pipeline_layout *layout,
+		  const struct ac_shader_variant_key *keys,
+		  uint32_t flags)
+{
+	struct mesa_sha1 ctx;
+
+	_mesa_sha1_init(&ctx);
+	if (keys)
+		_mesa_sha1_update(&ctx, keys, sizeof(*keys) * MESA_SHADER_STAGES);
+	if (layout)
+		_mesa_sha1_update(&ctx, layout->sha1, sizeof(layout->sha1));
+
+	for (int i = 0; i < MESA_SHADER_STAGES; ++i) {
+		if (stages[i]) {
+			RADV_FROM_HANDLE(radv_shader_module, module, stages[i]->module);
+			const VkSpecializationInfo *spec_info = stages[i]->pSpecializationInfo;
+
+			_mesa_sha1_update(&ctx, module->sha1, sizeof(module->sha1));
+			_mesa_sha1_update(&ctx, stages[i]->pName, strlen(stages[i]->pName));
+			if (spec_info) {
+				_mesa_sha1_update(&ctx, spec_info->pMapEntries,
+				                  spec_info->mapEntryCount * sizeof spec_info->pMapEntries[0]);
+				_mesa_sha1_update(&ctx, spec_info->pData, spec_info->dataSize);
+			}
+		}
+	}
+	_mesa_sha1_update(&ctx, &flags, 4);
+	_mesa_sha1_final(&ctx, hash);
+}
+
 
 static struct cache_entry *
 radv_pipeline_cache_search_unlocked(struct radv_pipeline_cache *cache,
