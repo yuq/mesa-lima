@@ -31,6 +31,7 @@ subdir('drivers/rbug')
 subdir('drivers/radeon')
 subdir('drivers/radeonsi')
 subdir('drivers/nouveau')
+subdir('drivers/freedreno')
 subdir('drivers/softpipe')
 if with_gallium_vc4
   subdir('drivers/vc4')
@@ -52,6 +53,7 @@ endif
 subdir('winsys/radeon/drm')
 subdir('winsys/amdgpu/drm')
 subdir('winsys/nouveau/drm')
+subdir('winsys/freedreno/drm')
 if with_gallium_vc4
   subdir('winsys/vc4/drm')
 endif
@@ -65,7 +67,6 @@ if with_gallium_imx
   subdir('winsys/imx/drm')
 endif
 subdir('state_trackers/dri')
-# TODO: freedreno
 # TODO: i915
 # TODO: SVGA
 # TODO: r300
