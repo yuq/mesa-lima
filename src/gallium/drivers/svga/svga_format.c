@@ -49,6 +49,11 @@ struct format_compat_entry
    const SVGA3dSurfaceFormat *compat_format;
 };
 
+
+/**
+ * Table mapping Gallium formats to SVGA3d vertex/pixel formats.
+ * Note: the table is ordered according to PIPE_FORMAT_x order.
+ */
 static const struct vgpu10_format_entry format_conversion_table[] =
 {
    /* Gallium format                    SVGA3D vertex format        SVGA3D pixel format          Flags */
@@ -58,7 +63,6 @@ static const struct vgpu10_format_entry format_conversion_table[] =
    { PIPE_FORMAT_A8R8G8B8_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_X8R8G8B8_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_B5G5R5A1_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_B5G5R5A1_UNORM,       TF_GEN_MIPS },
-   { PIPE_FORMAT_A1B5G5R5_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_B4G4R4A4_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_B5G6R5_UNORM,          SVGA3D_FORMAT_INVALID,      SVGA3D_B5G6R5_UNORM,         TF_GEN_MIPS },
    { PIPE_FORMAT_R10G10B10A2_UNORM,     SVGA3D_R10G10B10A2_UNORM,   SVGA3D_R10G10B10A2_UNORM,    TF_GEN_MIPS },
@@ -176,7 +180,6 @@ static const struct vgpu10_format_entry format_conversion_table[] =
    { PIPE_FORMAT_R5SG5SB6U_NORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_A8B8G8R8_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_B5G5R5X1_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
-   { PIPE_FORMAT_X1B5G5R5_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_R10G10B10A2_USCALED,   SVGA3D_R10G10B10A2_UNORM,   SVGA3D_FORMAT_INVALID,       VF_PUINT_TO_USCALED },
    { PIPE_FORMAT_R11G11B10_FLOAT,       SVGA3D_FORMAT_INVALID,      SVGA3D_R11G11B10_FLOAT,      TF_GEN_MIPS },
    { PIPE_FORMAT_R9G9B9E5_FLOAT,        SVGA3D_FORMAT_INVALID,      SVGA3D_R9G9B9E5_SHAREDEXP,   0 },
@@ -363,6 +366,8 @@ static const struct vgpu10_format_entry format_conversion_table[] =
    { PIPE_FORMAT_ASTC_12x12_SRGB,       SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_P016,                  SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
    { PIPE_FORMAT_R10G10B10X2_UNORM,     SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_A1B5G5R5_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
+   { PIPE_FORMAT_X1B5G5R5_UNORM,        SVGA3D_FORMAT_INVALID,      SVGA3D_FORMAT_INVALID,       0 },
 };
 
 
