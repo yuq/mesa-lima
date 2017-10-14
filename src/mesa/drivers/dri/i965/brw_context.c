@@ -78,6 +78,7 @@
 
 #include "common/gen_defines.h"
 
+#include "compiler/spirv/nir_spirv.h"
 /***************************************
  * Mesa's Driver Functions
  ***************************************/
@@ -341,6 +342,26 @@ brw_init_driver_functions(struct brw_context *brw,
    functions->ProgramBinarySerializeDriverBlob = brw_program_serialize_nir;
    functions->ProgramBinaryDeserializeDriverBlob =
       brw_deserialize_program_binary;
+}
+
+static void
+brw_initialize_spirv_supported_capabilities(struct brw_context *brw)
+{
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   struct gl_context *ctx = &brw->ctx;
+
+   /* The following SPIR-V capabilities are only supported on gen7+. In theory
+    * you should enable the extension only on gen7+, but just in case let's
+    * assert it.
+    */
+   assert(devinfo->gen >= 7);
+
+   ctx->Const.SpirVCapabilities.float64 = devinfo->gen >= 8;
+   ctx->Const.SpirVCapabilities.int64 = devinfo->gen >= 8;
+   ctx->Const.SpirVCapabilities.tessellation = true;
+   ctx->Const.SpirVCapabilities.draw_parameters = true;
+   ctx->Const.SpirVCapabilities.image_write_without_format = true;
+   ctx->Const.SpirVCapabilities.variable_pointers = true;
 }
 
 static void
@@ -1061,6 +1082,10 @@ brwCreateContext(gl_api api,
 
    _mesa_override_extensions(ctx);
    _mesa_compute_version(ctx);
+
+   /* GL_ARB_gl_spirv */
+   if (ctx->Extensions.ARB_gl_spirv)
+      brw_initialize_spirv_supported_capabilities(brw);
 
    _mesa_initialize_dispatch_tables(ctx);
    _mesa_initialize_vbo_vtxfmt(ctx);
