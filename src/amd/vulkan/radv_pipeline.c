@@ -1766,6 +1766,8 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	pipeline->layout = radv_pipeline_layout_from_handle(pCreateInfo->layout);
 
 	radv_pipeline_init_dynamic_state(pipeline, pCreateInfo);
+	radv_pipeline_init_blend_state(pipeline, pCreateInfo, extra);
+
 	const VkPipelineShaderStageCreateInfo *pStages[MESA_SHADER_STAGES] = { 0, };
 	struct radv_shader_module *modules[MESA_SHADER_STAGES] = { 0, };
 	for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
@@ -1773,8 +1775,6 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		pStages[stage] = &pCreateInfo->pStages[i];
 		modules[stage] = radv_shader_module_from_handle(pStages[stage]->module);
 	}
-
-	radv_pipeline_init_blend_state(pipeline, pCreateInfo, extra);
 
 	if (!modules[MESA_SHADER_FRAGMENT]) {
 		nir_builder fs_b;
