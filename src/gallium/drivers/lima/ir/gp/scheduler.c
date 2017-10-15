@@ -433,19 +433,19 @@ static gpir_node *gpir_create_from_node(gpir_block *block, gpir_node *node, gpir
     return ret;
 }
 
-static void gpir_remove_load_node(gpir_node *load, gpir_node *node)
+static void gpir_remove_created_node(gpir_node *created, gpir_node *node)
 {
-   gpir_node_foreach_succ(load, entry) {
+   gpir_node_foreach_succ(created, entry) {
       gpir_dep_info *dep = gpir_dep_from_entry(entry);
       gpir_node *succ = gpir_node_from_entry(entry, succ);
 
       dep->pred = node;
       _mesa_set_add_pre_hashed(node->succs, entry->hash, dep);
-      _mesa_set_remove(load->succs, entry);
-      gpir_node_replace_child(succ, load, node);
+      _mesa_set_remove(created->succs, entry);
+      gpir_node_replace_child(succ, created, node);
    }
 
-   gpir_node_delete(load);
+   gpir_node_delete(created);
 }
 
 static bool gpir_insert_move_for_store_load(gpir_block *block, gpir_node *node)
@@ -622,7 +622,7 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int end)
       else {
          if (first_time)
             return -1;
-         gpir_remove_load_node(load, current);
+         gpir_remove_created_node(load, current);
       }
 
       while (true) {
@@ -756,6 +756,12 @@ static bool gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
    return true;
 }
 
+static inline void instr_remove_node(gpir_block *block, gpir_node *node)
+{
+   gpir_instr *instr = gpir_instr_array_e(&block->instrs, node->sched_instr);
+   gpir_instr_remove_node(instr, node);
+}
+
 static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
 {
    if (node->type == gpir_node_type_load) {
@@ -771,8 +777,8 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
          return false;
    }
    else {
-      int start = gpir_get_max_start(node), end = INT_MAX;
-      gpir_try_place_node(block, node, start, end);
+      int start = gpir_get_max_start(node);
+      gpir_try_place_node(block, node, start, INT_MAX);
 
       gpir_node *current = node;
       for (int i = 0; true; i++) {
@@ -789,9 +795,58 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
          /* if next nearest succ is close enough, use move node to
           * satisfy, otherwise use reg */
          if (current->sched_instr - start < 5) {
-            current = gpir_create_from_node(block, current, NULL);
-            if (!current || !gpir_try_place_move_node(block, current))
-               return false;
+            gpir_node *move = gpir_create_from_node(block, current, NULL);
+            if (!move || !gpir_try_place_move_node(block, move)) {
+               gpir_node *top = node;
+               while (current != node) {
+                  gpir_node *next = gpir_node_to_alu(current)->children[0];
+
+                  /* revert unused created move */
+                  if (top == node) {
+                     if (current->succs->entries == 1) {
+                        instr_remove_node(block, current);
+                        gpir_node_delete(current);
+                        current = next;
+                        continue;
+                     }
+                     else
+                        top = current;
+                  }
+
+                  /* current must be far enough for a reg store lantency */
+                  if (current->sched_instr - start >= 3)
+                     break;
+
+                  current = next;
+               }
+
+               /* remove the last move and merge all unsatisfied succ to current */
+               gpir_remove_created_node(move, current);
+
+               /* can directly reg schedule current */
+               if (current->sched_instr - start >= 3) {
+                  if (gpir_try_insert_load_reg(block, current))
+                     return true;
+               }
+
+               /* can't or fail to reg schedule current, we need to reschedule node */
+
+               /* remove all created move node and merge all successor back to node */
+               while (top != node) {
+                  gpir_node *tmp = gpir_node_to_alu(top)->children[0];
+                  instr_remove_node(block, top);
+                  gpir_remove_created_node(top, node);
+                  top = tmp;
+               }
+
+               /* re-insert node one instr after current scheduled place */
+               instr_remove_node(block, node);
+               gpir_try_place_node(block, node, node->sched_instr + 1, INT_MAX);
+               current = node;
+               continue;
+            }
+
+            current = move;
          }
          else
             return gpir_try_insert_load_reg(block, current);
