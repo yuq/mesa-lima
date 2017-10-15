@@ -190,6 +190,12 @@ TODO: document the other workarounds.
         <application name="Saints Row: The Third" executable="SaintsRow3.i386">
             <option name="mesa_glthread" value="true"/>
         </application>
+        <application name="Saints Row IV" executable="SaintsRow4.i386">
+            <option name="mesa_glthread" value="true"/>
+        </application>
+        <application name="Saints Row: Gat out of Hell" executable="SaintsRow4GooH.i386">
+            <option name="mesa_glthread" value="true"/>
+        </application>
         <application name="Sid Meier's: Civilization Beyond Earth" executable="CivBE">
             <option name="mesa_glthread" value="true"/>
         </application>
