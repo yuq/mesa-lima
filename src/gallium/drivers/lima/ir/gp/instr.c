@@ -59,6 +59,20 @@ static bool gpir_instr_insert_alu_check(gpir_instr *instr, gpir_node *node)
    return true;
 }
 
+static void gpir_instr_remove_alu(gpir_instr *instr, gpir_node *node)
+{
+   for (int i = GPIR_INSTR_SLOT_STORE0; i < GPIR_INSTR_SLOT_STORE3; i++) {
+      gpir_store_node *s = gpir_node_to_store(instr->slots[i]);
+      if (s && s->child == node) {
+         instr->alu_num_slot_needed_by_store++;
+         instr->alu_num_slot_free++;
+         return;
+      }
+   }
+
+   instr->alu_num_slot_free += node->op == gpir_op_complex1 ? 2 : 1;
+}
+
 static bool gpir_instr_insert_reg0_check(gpir_instr *instr, gpir_node *node)
 {
    gpir_load_node *load = gpir_node_to_load(node);
@@ -70,17 +84,24 @@ static bool gpir_instr_insert_reg0_check(gpir_instr *instr, gpir_node *node)
    if (instr->reg0_is_attr && node->op != gpir_op_load_attribute)
       return false;
 
-   if (instr->reg0_is_used) {
+   if (instr->reg0_use_count) {
        if (instr->reg0_index != load->index)
           return false;
    }
    else {
-      instr->reg0_is_used = true;
       instr->reg0_is_attr = node->op == gpir_op_load_attribute;
       instr->reg0_index = load->index;
    }
 
+   instr->reg0_use_count++;
    return true;
+}
+
+static void gpir_instr_remove_reg0(gpir_instr *instr, gpir_node *node)
+{
+   instr->reg0_use_count--;
+   if (!instr->reg0_use_count)
+      instr->reg0_is_attr = false;
 }
 
 static bool gpir_instr_insert_reg1_check(gpir_instr *instr, gpir_node *node)
@@ -91,16 +112,20 @@ static bool gpir_instr_insert_reg1_check(gpir_instr *instr, gpir_node *node)
    if (load->component != i)
       return false;
 
-   if (instr->reg1_is_used) {
+   if (instr->reg1_use_count) {
        if (instr->reg1_index != load->index)
           return false;
    }
-   else {
-      instr->reg1_is_used = true;
+   else
       instr->reg1_index = load->index;
-   }
 
+   instr->reg1_use_count++;
    return true;
+}
+
+static void gpir_instr_remove_reg1(gpir_instr *instr, gpir_node *node)
+{
+   instr->reg1_use_count--;
 }
 
 static bool gpir_instr_insert_mem_check(gpir_instr *instr, gpir_node *node)
@@ -114,17 +139,24 @@ static bool gpir_instr_insert_mem_check(gpir_instr *instr, gpir_node *node)
    if (instr->mem_is_temp && node->op != gpir_op_load_temp)
       return false;
 
-   if (instr->mem_is_used) {
+   if (instr->mem_use_count) {
        if (instr->mem_index != load->index)
           return false;
    }
    else {
-      instr->mem_is_used = true;
       instr->mem_is_temp = node->op == gpir_op_load_temp;
       instr->mem_index = load->index;
    }
 
+   instr->mem_use_count++;
    return true;
+}
+
+static void gpir_instr_remove_mem(gpir_instr *instr, gpir_node *node)
+{
+   instr->mem_use_count--;
+   if (!instr->mem_use_count)
+      instr->mem_is_temp = false;
 }
 
 static bool gpir_instr_insert_store_check(gpir_instr *instr, gpir_node *node)
@@ -202,6 +234,30 @@ out:
    return true;
 }
 
+static void gpir_instr_remove_store(gpir_instr *instr, gpir_node *node)
+{
+   gpir_store_node *store = gpir_node_to_store(node);
+   int component = node->sched_pos - GPIR_INSTR_SLOT_STORE0;
+   int other_slot = GPIR_INSTR_SLOT_STORE0 + (component ^ 1);
+
+   for (int j = GPIR_INSTR_SLOT_STORE0; j <= GPIR_INSTR_SLOT_STORE3; j++) {
+      gpir_store_node *s = gpir_node_to_store(instr->slots[j]);
+      if (s && s->child == store->child)
+         goto out;
+   }
+
+   for (int j = GPIR_INSTR_SLOT_MUL0; j <= GPIR_INSTR_SLOT_PASS; j++) {
+      if (store->child == instr->slots[j])
+         goto out;
+   }
+
+   instr->alu_num_slot_needed_by_store--;
+
+out:
+   if (!instr->slots[other_slot])
+      instr->store_content[component >> 1] = GPIR_INSTR_STORE_NONE;
+}
+
 bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
 {
    if (instr->slots[node->sched_pos])
@@ -244,6 +300,30 @@ bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
       instr->slots[GPIR_INSTR_SLOT_MUL1] = node;
 
    return true;
+}
+
+void gpir_instr_remove_node(gpir_instr *instr, gpir_node *node)
+{
+   if (node->sched_pos >= GPIR_INSTR_SLOT_MUL0 &&
+       node->sched_pos <= GPIR_INSTR_SLOT_PASS)
+      gpir_instr_remove_alu(instr, node);
+   else if (node->sched_pos >= GPIR_INSTR_SLOT_REG0_LOAD0 &&
+            node->sched_pos <= GPIR_INSTR_SLOT_REG0_LOAD3)
+      gpir_instr_remove_reg0(instr, node);
+   else if (node->sched_pos >= GPIR_INSTR_SLOT_REG1_LOAD0 &&
+            node->sched_pos <= GPIR_INSTR_SLOT_REG1_LOAD3)
+      gpir_instr_remove_reg1(instr, node);
+   else if (node->sched_pos >= GPIR_INSTR_SLOT_MEM_LOAD0 &&
+            node->sched_pos <= GPIR_INSTR_SLOT_MEM_LOAD3)
+      gpir_instr_remove_mem(instr, node);
+   else if (node->sched_pos >= GPIR_INSTR_SLOT_STORE0 &&
+            node->sched_pos <= GPIR_INSTR_SLOT_STORE3)
+      gpir_instr_remove_store(instr, node);
+
+   instr->slots[node->sched_pos] = NULL;
+
+   if (node->op == gpir_op_complex1)
+      instr->slots[GPIR_INSTR_SLOT_MUL1] = NULL;
 }
 
 void gpir_instr_print_prog(gpir_compiler *comp)
