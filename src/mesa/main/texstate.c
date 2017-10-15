@@ -686,8 +686,6 @@ update_single_program_texture_state(struct gl_context *ctx,
    struct gl_texture_object *texObj;
 
    texObj = update_single_program_texture(ctx, prog, unit);
-   if (!texObj)
-      return;
 
    _mesa_reference_texobj(&ctx->Texture.Unit[unit]._Current, texObj);
    BITSET_SET(enabled_texture_units, unit);
