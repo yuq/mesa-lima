@@ -234,9 +234,12 @@ static void gpir_insert_ready_list(struct list_head *ready_list, gpir_node *inse
     * other successor. And no other node will be called with this function
     * before schedule complex2 & impl, because complex1 only have there
     * children, the last one is also the child of the complex2 & impl, it
-    * won't be schedulable until complex2 & impl have been scheduled. */
+    * won't be schedulable until complex2 & impl have been scheduled.
+    *
+    * Unsure: also schedule load node early to avoid spill to reg */
    if (insert_node->op == gpir_op_complex2 ||
-       insert_node->op == gpir_op_rcp_impl) {
+       insert_node->op == gpir_op_rcp_impl ||
+       insert_node->type == gpir_node_type_load) {
       list_add(&insert_node->ready, ready_list);
       return;
    }
