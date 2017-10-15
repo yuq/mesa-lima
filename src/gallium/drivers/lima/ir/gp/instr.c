@@ -35,7 +35,10 @@ void gpir_instr_init(gpir_instr *instr)
 
 static bool gpir_instr_insert_alu_check(gpir_instr *instr, gpir_node *node)
 {
-   /* check if this node is child of one store node */
+   /* check if this node is child of one store node.
+    * complex1 won't be any of this instr's store node's child,
+    * because it has two instr latency before store can use it.
+    */
    for (int i = GPIR_INSTR_SLOT_STORE0; i < GPIR_INSTR_SLOT_STORE3; i++) {
       gpir_store_node *s = gpir_node_to_store(instr->slots[i]);
       if (s && s->child == node) {
@@ -45,11 +48,14 @@ static bool gpir_instr_insert_alu_check(gpir_instr *instr, gpir_node *node)
       }
    }
 
+   int consume_slot = node->op == gpir_op_complex1 ? 2 : 1;
+
    /* not a child of any store node, so must reserve alu slot for store node */
-   if (instr->alu_num_slot_free <= instr->alu_num_slot_needed_by_store)
+   if (instr->alu_num_slot_free - consume_slot <
+       instr->alu_num_slot_needed_by_store)
       return false;
 
-   instr->alu_num_slot_free--;
+   instr->alu_num_slot_free -= consume_slot;
    return true;
 }
 
