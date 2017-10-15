@@ -684,6 +684,24 @@ static bool gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
    gpir_instr *instrs = util_dynarray_begin(&block->instrs);
    uint64_t free_regs = gpir_get_free_regs(instrs, start, node->sched_instr);
 
+   /* tmp solution for store in the same instr */
+   uint64_t store_free_regs = ~0ull;
+   for (int i = 0; i < 2; i++) {
+      gpir_instr *instr = instrs + node->sched_instr;
+
+      if (instr->store_content[i] != GPIR_INSTR_STORE_NONE)
+         store_free_regs &= 0xCCCCCCCCCCCCCCCCull >> (i * 2);
+
+      if (instr->store_content[i] == GPIR_INSTR_STORE_REG) {
+         for (int j = 0; j < 2; j++) {
+            int component = (i << 1) + j;
+            if (!instr->slots[GPIR_INSTR_SLOT_STORE0 + component])
+               store_free_regs |= 1ull << ((instr->store_index[i] << 2) + component);
+         }
+      }
+   }
+   free_regs &= store_free_regs;
+
    int reg = ffsll(free_regs) - 1;
    if (reg < 0)
       return false;
