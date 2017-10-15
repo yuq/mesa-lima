@@ -328,7 +328,7 @@ static void gpir_codegen_branch_slot(gpir_codegen_instr *code, gpir_instr *instr
 
 static void gpir_codegen_reg0_slot(gpir_codegen_instr *code, gpir_instr *instr)
 {
-   if (!instr->reg0_is_used)
+   if (!instr->reg0_use_count)
       return;
 
    code->register0_attribute = instr->reg0_is_attr;
@@ -337,7 +337,7 @@ static void gpir_codegen_reg0_slot(gpir_codegen_instr *code, gpir_instr *instr)
 
 static void gpir_codegen_reg1_slot(gpir_codegen_instr *code, gpir_instr *instr)
 {
-   if (!instr->reg1_is_used)
+   if (!instr->reg1_use_count)
       return;
 
    code->register1_addr = instr->reg1_index;
@@ -345,7 +345,7 @@ static void gpir_codegen_reg1_slot(gpir_codegen_instr *code, gpir_instr *instr)
 
 static void gpir_codegen_mem_slot(gpir_codegen_instr *code, gpir_instr *instr)
 {
-   if (!instr->mem_is_used) {
+   if (!instr->mem_use_count) {
       code->load_offset = gpir_codegen_load_off_none;
       return;
    }
