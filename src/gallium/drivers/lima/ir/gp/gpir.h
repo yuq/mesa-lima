@@ -225,14 +225,14 @@ typedef struct {
    int alu_num_slot_free;
    int alu_num_slot_needed_by_store;
 
-   bool reg0_is_used;
+   int reg0_use_count;
    bool reg0_is_attr;
    int reg0_index;
 
-   bool reg1_is_used;
+   int reg1_use_count;
    int reg1_index;
 
-   bool mem_is_used;
+   int mem_use_count;
    bool mem_is_temp;
    int mem_index;
 
@@ -316,6 +316,7 @@ static inline bool gpir_node_is_leaf(gpir_node *node)
 
 void gpir_instr_init(gpir_instr *instr);
 bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node);
+void gpir_instr_remove_node(gpir_instr *instr, gpir_node *node);
 void gpir_instr_print_prog(gpir_compiler *comp);
 
 bool gpir_lower_prog(gpir_compiler *comp);

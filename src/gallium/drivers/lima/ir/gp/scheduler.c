@@ -691,7 +691,7 @@ static bool gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
       gpir_node *succ = gpir_node_from_entry(entry, succ);
       gpir_instr *instr = instrs + succ->sched_instr;
 
-      if (instr->reg1_is_used) {
+      if (instr->reg1_use_count) {
          uint64_t reg1 = (0xfull << (instr->reg1_index * 4)) & free_regs;
          if (reg1) {
             reg = ffsll(reg1) - 1;
@@ -701,7 +701,7 @@ static bool gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
       else
          continue;
 
-      if (instr->reg0_is_used && !instr->reg0_is_attr) {
+      if (instr->reg0_use_count && !instr->reg0_is_attr) {
          uint64_t reg0 = (0xfull << (instr->reg0_index * 4)) & free_regs;
          if (reg0) {
             reg = ffsll(reg0) - 1;
@@ -712,7 +712,7 @@ static bool gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
          continue;
 
       instr++;
-      if (instr->reg0_is_used && !instr->reg0_is_attr) {
+      if (instr->reg0_use_count && !instr->reg0_is_attr) {
          uint64_t reg0 = (0xfull << (instr->reg0_index * 4)) & free_regs;
          if (reg0) {
             reg = ffsll(reg0) - 1;
