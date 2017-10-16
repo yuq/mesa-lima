@@ -399,12 +399,26 @@ brw_predraw_resolve_inputs(struct brw_context *brw)
       enum isl_format view_format =
          translate_tex_format(brw, tex_obj->_Format, sampler->sRGBDecode);
 
+      unsigned min_level, min_layer, num_levels, num_layers;
+      if (tex_obj->base.Immutable) {
+         min_level  = tex_obj->base.MinLevel;
+         num_levels = MIN2(tex_obj->base.NumLevels, tex_obj->_MaxLevel + 1);
+         min_layer  = tex_obj->base.MinLayer;
+         num_layers = tex_obj->base.Target != GL_TEXTURE_3D ?
+                      tex_obj->base.NumLayers : INTEL_REMAINING_LAYERS;
+      } else {
+         min_level  = tex_obj->base.BaseLevel;
+         num_levels = tex_obj->_MaxLevel - tex_obj->base.BaseLevel + 1;
+         min_layer  = 0;
+         num_layers = INTEL_REMAINING_LAYERS;
+      }
+
       const bool disable_aux =
          intel_disable_rb_aux_buffer(brw, tex_obj->mt, "for sampling");
 
       intel_miptree_prepare_texture(brw, tex_obj->mt, view_format,
-                                    0, INTEL_REMAINING_LEVELS,
-                                    0, INTEL_REMAINING_LAYERS,
+                                    min_level, num_levels,
+                                    min_layer, num_layers,
                                     disable_aux);
 
       brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
