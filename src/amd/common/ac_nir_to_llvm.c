@@ -39,6 +39,7 @@ enum radeon_llvm_calling_convention {
 	RADEON_LLVM_AMDGPU_GS = 88,
 	RADEON_LLVM_AMDGPU_PS = 89,
 	RADEON_LLVM_AMDGPU_CS = 90,
+	RADEON_LLVM_AMDGPU_HS = 93,
 };
 
 #define CONST_ADDR_SPACE 2
@@ -223,12 +224,14 @@ static void set_llvm_calling_convention(LLVMValueRef func,
 
 	switch (stage) {
 	case MESA_SHADER_VERTEX:
-	case MESA_SHADER_TESS_CTRL:
 	case MESA_SHADER_TESS_EVAL:
 		calling_conv = RADEON_LLVM_AMDGPU_VS;
 		break;
 	case MESA_SHADER_GEOMETRY:
 		calling_conv = RADEON_LLVM_AMDGPU_GS;
+		break;
+	case MESA_SHADER_TESS_CTRL:
+		calling_conv = HAVE_LLVM >= 0x0500 ? RADEON_LLVM_AMDGPU_HS : RADEON_LLVM_AMDGPU_VS;
 		break;
 	case MESA_SHADER_FRAGMENT:
 		calling_conv = RADEON_LLVM_AMDGPU_PS;
