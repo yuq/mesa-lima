@@ -5151,7 +5151,9 @@ static LLVMValueRef si_build_alloca_undef(struct ac_llvm_context *ac,
 
 static void
 scan_shader_output_decl(struct nir_to_llvm_context *ctx,
-			struct nir_variable *variable)
+			struct nir_variable *variable,
+			struct nir_shader *shader,
+			gl_shader_stage stage)
 {
 	int idx = variable->data.location + variable->data.index;
 	unsigned attrib_count = glsl_count_attribute_slots(variable->type, false);
@@ -5160,22 +5162,23 @@ scan_shader_output_decl(struct nir_to_llvm_context *ctx,
 	variable->data.driver_location = idx * 4;
 
 	/* tess ctrl has it's own load/store paths for outputs */
-	if (ctx->stage == MESA_SHADER_TESS_CTRL)
+	if (stage == MESA_SHADER_TESS_CTRL)
 		return;
 
 	mask_attribs = ((1ull << attrib_count) - 1) << idx;
-	if (ctx->stage == MESA_SHADER_VERTEX ||
-	    ctx->stage == MESA_SHADER_TESS_EVAL ||
-	    ctx->stage == MESA_SHADER_GEOMETRY) {
+	if (stage == MESA_SHADER_VERTEX ||
+	    stage == MESA_SHADER_TESS_EVAL ||
+	    stage == MESA_SHADER_GEOMETRY) {
 		if (idx == VARYING_SLOT_CLIP_DIST0) {
-			int length = ctx->num_output_clips + ctx->num_output_culls;
-			if (ctx->stage == MESA_SHADER_VERTEX) {
-				ctx->shader_info->vs.outinfo.clip_dist_mask = (1 << ctx->num_output_clips) - 1;
-				ctx->shader_info->vs.outinfo.cull_dist_mask = (1 << ctx->num_output_culls) - 1;
+			int length = shader->info.clip_distance_array_size +
+			             shader->info.cull_distance_array_size;
+			if (stage == MESA_SHADER_VERTEX) {
+				ctx->shader_info->vs.outinfo.clip_dist_mask = (1 << shader->info.clip_distance_array_size) - 1;
+				ctx->shader_info->vs.outinfo.cull_dist_mask = (1 << shader->info.cull_distance_array_size) - 1;
 			}
-			if (ctx->stage == MESA_SHADER_TESS_EVAL) {
-				ctx->shader_info->tes.outinfo.clip_dist_mask = (1 << ctx->num_output_clips) - 1;
-				ctx->shader_info->tes.outinfo.cull_dist_mask = (1 << ctx->num_output_culls) - 1;
+			if (stage == MESA_SHADER_TESS_EVAL) {
+				ctx->shader_info->tes.outinfo.clip_dist_mask = (1 << shader->info.clip_distance_array_size) - 1;
+				ctx->shader_info->tes.outinfo.cull_dist_mask = (1 << shader->info.cull_distance_array_size) - 1;
 			}
 
 			if (length > 4)
@@ -6389,7 +6392,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	ctx.abi.load_sampler_desc = radv_get_sampler_desc;
 
 	nir_foreach_variable(variable, &nir->outputs)
-		scan_shader_output_decl(&ctx, variable);
+		scan_shader_output_decl(&ctx, variable, nir, nir->stage);
 
 	ac_nir_translate(&ctx.ac, &ctx.abi, nir, &ctx);
 
@@ -6687,7 +6690,7 @@ void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
 	ctx.nir = &nir_ctx;
 
 	nir_foreach_variable(variable, &geom_shader->outputs) {
-		scan_shader_output_decl(&ctx, variable);
+		scan_shader_output_decl(&ctx, variable, geom_shader, MESA_SHADER_VERTEX);
 		handle_shader_output_decl(&nir_ctx, geom_shader, variable);
 	}
 
