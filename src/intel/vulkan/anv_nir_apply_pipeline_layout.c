@@ -157,24 +157,7 @@ lower_tex_deref(nir_tex_instr *tex, nir_deref_var *deref,
          if (state->add_bounds_checks)
             index = nir_umin(b, index, nir_imm_int(b, array_size - 1));
 
-         nir_tex_src *new_srcs = rzalloc_array(tex, nir_tex_src,
-                                               tex->num_srcs + 1);
-
-         for (unsigned i = 0; i < tex->num_srcs; i++) {
-            new_srcs[i].src_type = tex->src[i].src_type;
-            nir_instr_move_src(&tex->instr, &new_srcs[i].src, &tex->src[i].src);
-         }
-
-         ralloc_free(tex->src);
-         tex->src = new_srcs;
-
-         /* Now we can go ahead and move the source over to being a
-          * first-class texture source.
-          */
-         tex->src[tex->num_srcs].src_type = src_type;
-         nir_instr_rewrite_src(&tex->instr, &tex->src[tex->num_srcs].src,
-                               nir_src_for_ssa(index));
-         tex->num_srcs++;
+         nir_tex_instr_add_src(tex, src_type, nir_src_for_ssa(index));
       } else {
          *const_index += MIN2(deref_array->base_offset, array_size - 1);
       }
