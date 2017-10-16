@@ -1827,50 +1827,6 @@ radv_emit_draw_registers(struct radv_cmd_buffer *cmd_buffer, bool indexed_draw,
 	}
 }
 
-static void
-radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
-			    bool indexed_draw, bool instanced_draw,
-			    bool indirect_draw,
-			    uint32_t draw_vertex_count)
-{
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
-							   cmd_buffer->cs, 4096);
-
-	if (!radv_cmd_buffer_update_vertex_descriptors(cmd_buffer))
-		return;
-
-	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_PIPELINE)
-		radv_emit_graphics_pipeline(cmd_buffer);
-
-	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_FRAMEBUFFER)
-		radv_emit_framebuffer_state(cmd_buffer);
-
-	if (indexed_draw) {
-		if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_INDEX_BUFFER)
-			radv_emit_index_buffer(cmd_buffer);
-	} else {
-		/* On CI and later, non-indexed draws overwrite VGT_INDEX_TYPE,
-		 * so the state must be re-emitted before the next indexed
-		 * draw.
-		 */
-		if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK)
-			cmd_buffer->state.dirty |= RADV_CMD_DIRTY_INDEX_BUFFER;
-	}
-
-	radv_emit_draw_registers(cmd_buffer, indexed_draw, instanced_draw,
-				 indirect_draw, draw_vertex_count);
-
-	radv_cmd_buffer_flush_dynamic_state(cmd_buffer);
-
-	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_ALL_GRAPHICS);
-	radv_flush_constants(cmd_buffer, cmd_buffer->state.pipeline,
-			     VK_SHADER_STAGE_ALL_GRAPHICS);
-
-	assert(cmd_buffer->cs->cdw <= cdw_max);
-
-	si_emit_cache_flush(cmd_buffer);
-}
-
 static void radv_stage_flush(struct radv_cmd_buffer *cmd_buffer,
 			     VkPipelineStageFlags src_stage_mask)
 {
@@ -3063,15 +3019,7 @@ radv_emit_draw_packets(struct radv_cmd_buffer *cmd_buffer,
 {
 	struct radv_cmd_state *state = &cmd_buffer->state;
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
-	struct radv_device *device = cmd_buffer->device;
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
-
-	radv_cmd_buffer_flush_state(cmd_buffer, info->indexed,
-				    info->instance_count > 1, info->indirect,
-				    info->indirect ? 0 : info->count);
-
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(device->ws, cs,
-							   31 * MAX_VIEWS);
 
 	if (info->indirect) {
 		uint64_t va = radv_buffer_get_va(info->indirect->bo);
@@ -3159,8 +3107,52 @@ radv_emit_draw_packets(struct radv_cmd_buffer *cmd_buffer,
 			}
 		}
 	}
+}
 
-	assert(cs->cdw <= cdw_max);
+static void
+radv_draw(struct radv_cmd_buffer *cmd_buffer,
+	  const struct radv_draw_info *info)
+{
+	MAYBE_UNUSED unsigned cdw_max =
+		radeon_check_space(cmd_buffer->device->ws,
+				   cmd_buffer->cs, 4096);
+
+	if (!radv_cmd_buffer_update_vertex_descriptors(cmd_buffer))
+		return;
+
+	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_PIPELINE)
+		radv_emit_graphics_pipeline(cmd_buffer);
+
+	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_FRAMEBUFFER)
+		radv_emit_framebuffer_state(cmd_buffer);
+
+	if (info->indexed) {
+		if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_INDEX_BUFFER)
+			radv_emit_index_buffer(cmd_buffer);
+	} else {
+		/* On CI and later, non-indexed draws overwrite VGT_INDEX_TYPE,
+		 * so the state must be re-emitted before the next indexed
+		 * draw.
+		 */
+		if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK)
+			cmd_buffer->state.dirty |= RADV_CMD_DIRTY_INDEX_BUFFER;
+	}
+
+	radv_emit_draw_registers(cmd_buffer, info->indexed,
+				 info->instance_count > 1, info->indirect,
+				 info->indirect ? 0 : info->count);
+
+	radv_cmd_buffer_flush_dynamic_state(cmd_buffer);
+
+	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_ALL_GRAPHICS);
+	radv_flush_constants(cmd_buffer, cmd_buffer->state.pipeline,
+			     VK_SHADER_STAGE_ALL_GRAPHICS);
+
+	si_emit_cache_flush(cmd_buffer);
+
+	radv_emit_draw_packets(cmd_buffer, info);
+
+	assert(cmd_buffer->cs->cdw <= cdw_max);
 	radv_cmd_buffer_after_draw(cmd_buffer);
 }
 
@@ -3179,7 +3171,7 @@ void radv_CmdDraw(
 	info.first_instance = firstInstance;
 	info.vertex_offset = firstVertex;
 
-	radv_emit_draw_packets(cmd_buffer, &info);
+	radv_draw(cmd_buffer, &info);
 }
 
 void radv_CmdDrawIndexed(
@@ -3200,7 +3192,7 @@ void radv_CmdDrawIndexed(
 	info.vertex_offset = vertexOffset;
 	info.first_instance = firstInstance;
 
-	radv_emit_draw_packets(cmd_buffer, &info);
+	radv_draw(cmd_buffer, &info);
 }
 
 void radv_CmdDrawIndirect(
@@ -3219,7 +3211,7 @@ void radv_CmdDrawIndirect(
 	info.indirect_offset = offset;
 	info.stride = stride;
 
-	radv_emit_draw_packets(cmd_buffer, &info);
+	radv_draw(cmd_buffer, &info);
 }
 
 void radv_CmdDrawIndexedIndirect(
@@ -3239,7 +3231,7 @@ void radv_CmdDrawIndexedIndirect(
 	info.indirect_offset = offset;
 	info.stride = stride;
 
-	radv_emit_draw_packets(cmd_buffer, &info);
+	radv_draw(cmd_buffer, &info);
 }
 
 void radv_CmdDrawIndirectCountAMD(
@@ -3263,7 +3255,7 @@ void radv_CmdDrawIndirectCountAMD(
 	info.count_buffer_offset = countBufferOffset;
 	info.stride = stride;
 
-	radv_emit_draw_packets(cmd_buffer, &info);
+	radv_draw(cmd_buffer, &info);
 }
 
 void radv_CmdDrawIndexedIndirectCountAMD(
@@ -3288,7 +3280,7 @@ void radv_CmdDrawIndexedIndirectCountAMD(
 	info.count_buffer_offset = countBufferOffset;
 	info.stride = stride;
 
-	radv_emit_draw_packets(cmd_buffer, &info);
+	radv_draw(cmd_buffer, &info);
 }
 
 struct radv_dispatch_info {
