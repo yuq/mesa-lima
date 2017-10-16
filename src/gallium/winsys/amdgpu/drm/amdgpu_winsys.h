@@ -32,6 +32,7 @@
 #include "pipebuffer/pb_slab.h"
 #include "gallium/drivers/radeon/radeon_winsys.h"
 #include "addrlib/addrinterface.h"
+#include "util/simple_mtx.h"
 #include "util/u_queue.h"
 #include <amdgpu.h>
 
@@ -49,7 +50,7 @@ struct amdgpu_winsys {
 
    amdgpu_device_handle dev;
 
-   mtx_t bo_fence_lock;
+   simple_mtx_t bo_fence_lock;
 
    int num_cs; /* The number of command streams created. */
    unsigned num_total_rejected_cs;
@@ -80,7 +81,7 @@ struct amdgpu_winsys {
    bool reserve_vmid;
 
    /* List of all allocated buffers */
-   mtx_t global_bo_list_lock;
+   simple_mtx_t global_bo_list_lock;
    struct list_head global_bo_list;
    unsigned num_buffers;
 };

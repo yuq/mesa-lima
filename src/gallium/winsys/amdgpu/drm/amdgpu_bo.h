@@ -72,7 +72,7 @@ struct amdgpu_winsys_bo {
          struct amdgpu_winsys_bo *real;
       } slab;
       struct {
-         mtx_t commit_lock;
+         simple_mtx_t commit_lock;
          amdgpu_va_handle va_handle;
          enum radeon_bo_flag flags;
 

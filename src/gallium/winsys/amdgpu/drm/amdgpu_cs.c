@@ -538,7 +538,7 @@ static int amdgpu_lookup_or_add_sparse_buffer(struct amdgpu_cs *acs,
    /* We delay adding the backing buffers until we really have to. However,
     * we cannot delay accounting for memory use.
     */
-   mtx_lock(&bo->u.sparse.commit_lock);
+   simple_mtx_lock(&bo->u.sparse.commit_lock);
 
    list_for_each_entry(struct amdgpu_sparse_backing, backing, &bo->u.sparse.backing, list) {
       if (bo->initial_domain & RADEON_DOMAIN_VRAM)
@@ -547,7 +547,7 @@ static int amdgpu_lookup_or_add_sparse_buffer(struct amdgpu_cs *acs,
          acs->main.base.used_gart += backing->bo->base.size;
    }
 
-   mtx_unlock(&bo->u.sparse.commit_lock);
+   simple_mtx_unlock(&bo->u.sparse.commit_lock);
 
    return idx;
 }
@@ -1146,7 +1146,7 @@ static bool amdgpu_add_sparse_backing_buffers(struct amdgpu_cs_context *cs)
       struct amdgpu_cs_buffer *buffer = &cs->sparse_buffers[i];
       struct amdgpu_winsys_bo *bo = buffer->bo;
 
-      mtx_lock(&bo->u.sparse.commit_lock);
+      simple_mtx_lock(&bo->u.sparse.commit_lock);
 
       list_for_each_entry(struct amdgpu_sparse_backing, backing, &bo->u.sparse.backing, list) {
          /* We can directly add the buffer here, because we know that each
@@ -1155,7 +1155,7 @@ static bool amdgpu_add_sparse_backing_buffers(struct amdgpu_cs_context *cs)
          int idx = amdgpu_do_add_real_buffer(cs, backing->bo);
          if (idx < 0) {
             fprintf(stderr, "%s: failed to add buffer\n", __FUNCTION__);
-            mtx_unlock(&bo->u.sparse.commit_lock);
+            simple_mtx_unlock(&bo->u.sparse.commit_lock);
             return false;
          }
 
@@ -1164,7 +1164,7 @@ static bool amdgpu_add_sparse_backing_buffers(struct amdgpu_cs_context *cs)
          p_atomic_inc(&backing->bo->num_active_ioctls);
       }
 
-      mtx_unlock(&bo->u.sparse.commit_lock);
+      simple_mtx_unlock(&bo->u.sparse.commit_lock);
    }
 
    return true;
@@ -1188,11 +1188,11 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
       amdgpu_bo_handle *handles;
       unsigned num = 0;
 
-      mtx_lock(&ws->global_bo_list_lock);
+      simple_mtx_lock(&ws->global_bo_list_lock);
 
       handles = malloc(sizeof(handles[0]) * ws->num_buffers);
       if (!handles) {
-         mtx_unlock(&ws->global_bo_list_lock);
+         simple_mtx_unlock(&ws->global_bo_list_lock);
          amdgpu_cs_context_cleanup(cs);
          cs->error_code = -ENOMEM;
          return;
@@ -1206,7 +1206,7 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
       r = amdgpu_bo_list_create(ws->dev, ws->num_buffers,
                                 handles, NULL, &bo_list);
       free(handles);
-      mtx_unlock(&ws->global_bo_list_lock);
+      simple_mtx_unlock(&ws->global_bo_list_lock);
    } else {
       unsigned num_handles;
 
@@ -1469,7 +1469,7 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
        * that the order of fence dependency updates matches the order of
        * submissions.
        */
-      mtx_lock(&ws->bo_fence_lock);
+      simple_mtx_lock(&ws->bo_fence_lock);
       amdgpu_add_fence_dependencies_bo_lists(cs);
 
       /* Swap command streams. "cst" is going to be submitted. */
@@ -1480,7 +1480,7 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       util_queue_add_job(&ws->cs_queue, cs, &cs->flush_completed,
                          amdgpu_cs_submit_ib, NULL);
       /* The submission has been queued, unlock the fence now. */
-      mtx_unlock(&ws->bo_fence_lock);
+      simple_mtx_unlock(&ws->bo_fence_lock);
 
       if (!(flags & RADEON_FLUSH_ASYNC)) {
          amdgpu_cs_sync_flush(rcs);
