@@ -1696,7 +1696,7 @@ dri2_interop_export_object(__DRIcontext *_ctx,
       return MESA_GLINTEROP_INVALID_MIP_LEVEL;
 
    /* Validate the OpenGL object and get pipe_resource. */
-   mtx_lock(&ctx->Shared->Mutex);
+   simple_mtx_lock(&ctx->Shared->Mutex);
 
    if (target == GL_ARRAY_BUFFER) {
       /* Buffer objects.
@@ -1712,14 +1712,14 @@ dri2_interop_export_object(__DRIcontext *_ctx,
        *   the size of the buffer is 0."
        */
       if (!buf || buf->Size == 0) {
-         mtx_unlock(&ctx->Shared->Mutex);
+         simple_mtx_unlock(&ctx->Shared->Mutex);
          return MESA_GLINTEROP_INVALID_OBJECT;
       }
 
       res = st_buffer_object(buf)->buffer;
       if (!res) {
          /* this shouldn't happen */
-         mtx_unlock(&ctx->Shared->Mutex);
+         simple_mtx_unlock(&ctx->Shared->Mutex);
          return MESA_GLINTEROP_INVALID_OBJECT;
       }
 
@@ -1740,7 +1740,7 @@ dri2_interop_export_object(__DRIcontext *_ctx,
        *    object or if the width or height of renderbuffer is zero."
        */
       if (!rb || rb->Width == 0 || rb->Height == 0) {
-         mtx_unlock(&ctx->Shared->Mutex);
+         simple_mtx_unlock(&ctx->Shared->Mutex);
          return MESA_GLINTEROP_INVALID_OBJECT;
       }
 
@@ -1749,7 +1749,7 @@ dri2_interop_export_object(__DRIcontext *_ctx,
        *    renderbuffer object."
        */
       if (rb->NumSamples > 1) {
-         mtx_unlock(&ctx->Shared->Mutex);
+         simple_mtx_unlock(&ctx->Shared->Mutex);
          return MESA_GLINTEROP_INVALID_OPERATION;
       }
 
@@ -1759,7 +1759,7 @@ dri2_interop_export_object(__DRIcontext *_ctx,
        */
       res = st_renderbuffer(rb)->texture;
       if (!res) {
-         mtx_unlock(&ctx->Shared->Mutex);
+         simple_mtx_unlock(&ctx->Shared->Mutex);
          return MESA_GLINTEROP_OUT_OF_RESOURCES;
       }
 
@@ -1789,7 +1789,7 @@ dri2_interop_export_object(__DRIcontext *_ctx,
           obj->Target != target ||
           !obj->_BaseComplete ||
           (in->miplevel > 0 && !obj->_MipmapComplete)) {
-         mtx_unlock(&ctx->Shared->Mutex);
+         simple_mtx_unlock(&ctx->Shared->Mutex);
          return MESA_GLINTEROP_INVALID_OBJECT;
       }
 
@@ -1802,19 +1802,19 @@ dri2_interop_export_object(__DRIcontext *_ctx,
        *    specification and section 3.7.10 of the OpenGL ES 2.0."
        */
       if (in->miplevel < obj->BaseLevel || in->miplevel > obj->_MaxLevel) {
-         mtx_unlock(&ctx->Shared->Mutex);
+         simple_mtx_unlock(&ctx->Shared->Mutex);
          return MESA_GLINTEROP_INVALID_MIP_LEVEL;
       }
 
       if (!st_finalize_texture(ctx, st->pipe, obj, 0)) {
-         mtx_unlock(&ctx->Shared->Mutex);
+         simple_mtx_unlock(&ctx->Shared->Mutex);
          return MESA_GLINTEROP_OUT_OF_RESOURCES;
       }
 
       res = st_get_texobj_resource(obj);
       if (!res) {
          /* Incomplete texture buffer object? This shouldn't really occur. */
-         mtx_unlock(&ctx->Shared->Mutex);
+         simple_mtx_unlock(&ctx->Shared->Mutex);
          return MESA_GLINTEROP_INVALID_OBJECT;
       }
 
@@ -1854,7 +1854,7 @@ dri2_interop_export_object(__DRIcontext *_ctx,
 
    success = screen->resource_get_handle(screen, st->pipe, res, &whandle,
                                          usage);
-   mtx_unlock(&ctx->Shared->Mutex);
+   simple_mtx_unlock(&ctx->Shared->Mutex);
 
    if (!success)
       return MESA_GLINTEROP_OUT_OF_HOST_MEMORY;
