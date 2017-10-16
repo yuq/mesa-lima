@@ -6047,26 +6047,31 @@ write_tess_factors(struct nir_to_llvm_context *ctx)
 	tf_base = ctx->tess_factor_offset;
 	byteoffset = LLVMBuildMul(ctx->builder, rel_patch_id,
 				  LLVMConstInt(ctx->i32, 4 * stride, false), "");
+	unsigned tf_offset = 0;
 
-	ac_nir_build_if(&inner_if_ctx, ctx,
-		    LLVMBuildICmp(ctx->builder, LLVMIntEQ,
-				  rel_patch_id, ctx->i32zero, ""));
+	if (ctx->options->chip_class <= VI) {
+		ac_nir_build_if(&inner_if_ctx, ctx,
+		                LLVMBuildICmp(ctx->builder, LLVMIntEQ,
+		                              rel_patch_id, ctx->i32zero, ""));
 
-	/* Store the dynamic HS control word. */
-	ac_build_buffer_store_dword(&ctx->ac, buffer,
-				    LLVMConstInt(ctx->i32, 0x80000000, false),
-				    1, ctx->i32zero, tf_base,
-				    0, 1, 0, true, false);
-	ac_nir_build_endif(&inner_if_ctx);
+		/* Store the dynamic HS control word. */
+		ac_build_buffer_store_dword(&ctx->ac, buffer,
+					    LLVMConstInt(ctx->i32, 0x80000000, false),
+					    1, ctx->i32zero, tf_base,
+					    0, 1, 0, true, false);
+		tf_offset += 4;
+
+		ac_nir_build_endif(&inner_if_ctx);
+	}
 
 	/* Store the tessellation factors. */
 	ac_build_buffer_store_dword(&ctx->ac, buffer, vec0,
 				    MIN2(stride, 4), byteoffset, tf_base,
-				    4, 1, 0, true, false);
+				    tf_offset, 1, 0, true, false);
 	if (vec1)
 		ac_build_buffer_store_dword(&ctx->ac, buffer, vec1,
 					    stride - 4, byteoffset, tf_base,
-					    20, 1, 0, true, false);
+					    16 + tf_offset, 1, 0, true, false);
 
 	//TODO store to offchip for TES to read - only if TES reads them
 	if (1) {
