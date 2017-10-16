@@ -2022,7 +2022,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	struct ac_userdata_info *loc = radv_lookup_user_sgpr(pipeline, MESA_SHADER_VERTEX,
 							     AC_UD_VS_BASE_VERTEX_START_INSTANCE);
 	if (loc->sgpr_idx != -1) {
-		pipeline->graphics.vtx_base_sgpr = radv_shader_stage_to_user_data_0(MESA_SHADER_VERTEX, radv_pipeline_has_gs(pipeline), radv_pipeline_has_tess(pipeline));
+		pipeline->graphics.vtx_base_sgpr = radv_shader_stage_to_user_data_0(MESA_SHADER_VERTEX, device->physical_device->rad_info.chip_class, radv_pipeline_has_gs(pipeline), radv_pipeline_has_tess(pipeline));
 		pipeline->graphics.vtx_base_sgpr += loc->sgpr_idx * 4;
 		if (pipeline->shaders[MESA_SHADER_VERTEX]->info.info.vs.needs_draw_id)
 			pipeline->graphics.vtx_emit_num = 3;
