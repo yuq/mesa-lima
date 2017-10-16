@@ -2679,6 +2679,11 @@ void radv_CmdExecuteCommands(
 			primary->state.last_primitive_reset_index =
 				secondary->state.last_primitive_reset_index;
 		}
+
+		if (secondary->state.last_ia_multi_vgt_param) {
+			primary->state.last_ia_multi_vgt_param =
+				secondary->state.last_ia_multi_vgt_param;
+		}
 	}
 
 	/* After executing commands from secondary buffers we have to dirty
