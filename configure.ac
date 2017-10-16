@@ -1255,9 +1255,9 @@ AC_ARG_ENABLE([opencl],
 AC_ARG_ENABLE([opencl_icd],
    [AS_HELP_STRING([--enable-opencl-icd],
           [Build an OpenCL ICD library to be loaded by an ICD implementation
-           @<:@default=disabled@:>@])],
+           @<:@default=enabled@:>@])],
     [enable_opencl_icd="$enableval"],
-    [enable_opencl_icd=no])
+    [enable_opencl_icd=yes])
 
 AC_ARG_ENABLE([gallium-tests],
     [AS_HELP_STRING([--enable-gallium-tests],
