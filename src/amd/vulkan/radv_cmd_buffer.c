@@ -2669,8 +2669,16 @@ void radv_CmdExecuteCommands(
 				secondary->state.emitted_compute_pipeline;
 		}
 
-		primary->state.last_primitive_reset_en = secondary->state.last_primitive_reset_en;
-		primary->state.last_primitive_reset_index = secondary->state.last_primitive_reset_index;
+		/* Only re-emit the draw packets when needed. */
+		if (secondary->state.last_primitive_reset_en != -1) {
+			primary->state.last_primitive_reset_en =
+				secondary->state.last_primitive_reset_en;
+		}
+
+		if (secondary->state.last_primitive_reset_index) {
+			primary->state.last_primitive_reset_index =
+				secondary->state.last_primitive_reset_index;
+		}
 	}
 
 	/* After executing commands from secondary buffers we have to dirty
