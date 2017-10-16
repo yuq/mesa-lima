@@ -621,6 +621,23 @@ radv_emit_shader_prefetch(struct radv_cmd_buffer *cmd_buffer,
 }
 
 static void
+radv_emit_shaders_prefetch(struct radv_cmd_buffer *cmd_buffer,
+			   struct radv_pipeline *pipeline)
+{
+	radv_emit_shader_prefetch(cmd_buffer,
+				  pipeline->shaders[MESA_SHADER_VERTEX]);
+	radv_emit_shader_prefetch(cmd_buffer,
+				  pipeline->shaders[MESA_SHADER_TESS_CTRL]);
+	radv_emit_shader_prefetch(cmd_buffer,
+				  pipeline->shaders[MESA_SHADER_TESS_EVAL]);
+	radv_emit_shader_prefetch(cmd_buffer,
+				  pipeline->shaders[MESA_SHADER_GEOMETRY]);
+	radv_emit_shader_prefetch(cmd_buffer, pipeline->gs_copy_shader);
+	radv_emit_shader_prefetch(cmd_buffer,
+				  pipeline->shaders[MESA_SHADER_FRAGMENT]);
+}
+
+static void
 radv_emit_hw_vs(struct radv_cmd_buffer *cmd_buffer,
 		struct radv_pipeline *pipeline,
 		struct radv_shader_variant *shader,
@@ -628,8 +645,6 @@ radv_emit_hw_vs(struct radv_cmd_buffer *cmd_buffer,
 {
 	uint64_t va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
 	unsigned export_count;
-
-	radv_emit_shader_prefetch(cmd_buffer, shader);
 
 	export_count = MAX2(1, outinfo->param_exports);
 	radeon_set_context_reg(cmd_buffer->cs, R_0286C4_SPI_VS_OUT_CONFIG,
@@ -676,8 +691,6 @@ radv_emit_hw_es(struct radv_cmd_buffer *cmd_buffer,
 {
 	uint64_t va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
 
-	radv_emit_shader_prefetch(cmd_buffer, shader);
-
 	radeon_set_context_reg(cmd_buffer->cs, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
 			       outinfo->esgs_itemsize / 4);
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B320_SPI_SHADER_PGM_LO_ES, 4);
@@ -693,8 +706,6 @@ radv_emit_hw_ls(struct radv_cmd_buffer *cmd_buffer,
 {
 	uint64_t va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
 	uint32_t rsrc2 = shader->rsrc2;
-
-	radv_emit_shader_prefetch(cmd_buffer, shader);
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B520_SPI_SHADER_PGM_LO_LS, 2);
 	radeon_emit(cmd_buffer->cs, va >> 8);
@@ -715,8 +726,6 @@ radv_emit_hw_hs(struct radv_cmd_buffer *cmd_buffer,
 		struct radv_shader_variant *shader)
 {
 	uint64_t va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
-
-	radv_emit_shader_prefetch(cmd_buffer, shader);
 
 	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
 		radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B410_SPI_SHADER_PGM_LO_LS, 2);
@@ -863,8 +872,6 @@ radv_emit_geometry_shader(struct radv_cmd_buffer *cmd_buffer,
 
 	va = radv_buffer_get_va(gs->bo) + gs->bo_offset;
 
-	radv_emit_shader_prefetch(cmd_buffer, gs);
-
 	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
 		radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B210_SPI_SHADER_PGM_LO_ES, 2);
 		radeon_emit(cmd_buffer->cs, va >> 8);
@@ -917,8 +924,6 @@ radv_emit_fragment_shader(struct radv_cmd_buffer *cmd_buffer,
 
 	ps = pipeline->shaders[MESA_SHADER_FRAGMENT];
 	va = radv_buffer_get_va(ps->bo) + ps->bo_offset;
-
-	radv_emit_shader_prefetch(cmd_buffer, ps);
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B020_SPI_SHADER_PGM_LO_PS, 4);
 	radeon_emit(cmd_buffer->cs, va >> 8);
@@ -995,6 +1000,8 @@ radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer)
 	radv_emit_geometry_shader(cmd_buffer, pipeline);
 	radv_emit_fragment_shader(cmd_buffer, pipeline);
 	radv_emit_vgt_vertex_reuse(cmd_buffer, pipeline);
+
+	radv_emit_shaders_prefetch(cmd_buffer, pipeline);
 
 	cmd_buffer->scratch_size_needed =
 	                          MAX2(cmd_buffer->scratch_size_needed,
