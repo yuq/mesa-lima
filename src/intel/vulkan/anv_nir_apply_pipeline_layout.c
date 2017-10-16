@@ -192,10 +192,10 @@ has_tex_src_plane(nir_tex_instr *tex)
 static uint32_t
 extract_tex_src_plane(nir_tex_instr *tex)
 {
-   nir_tex_src *new_srcs = rzalloc_array(tex, nir_tex_src, tex->num_srcs - 1);
    unsigned plane = 0;
 
-   for (unsigned i = 0, w = 0; i < tex->num_srcs; i++) {
+   int plane_src_idx = -1;
+   for (unsigned i = 0; i < tex->num_srcs; i++) {
       if (tex->src[i].src_type == nir_tex_src_plane) {
          nir_const_value *const_plane =
             nir_src_as_const_value(tex->src[i].src);
@@ -204,19 +204,12 @@ extract_tex_src_plane(nir_tex_instr *tex)
           * constants. */
          assert(const_plane);
          plane = const_plane->u32[0];
-
-         /* Remove the source from the instruction */
-         nir_instr_rewrite_src(&tex->instr, &tex->src[i].src, NIR_SRC_INIT);
-      } else {
-         new_srcs[w].src_type = tex->src[i].src_type;
-         nir_instr_move_src(&tex->instr, &new_srcs[w].src, &tex->src[i].src);
-         w++;
+         plane_src_idx = i;
       }
    }
 
-   ralloc_free(tex->src);
-   tex->src = new_srcs;
-   tex->num_srcs--;
+   assert(plane_src_idx >= 0);
+   nir_tex_instr_remove_src(tex, plane_src_idx);
 
    return plane;
 }
