@@ -441,6 +441,8 @@ intelSetTexBuffer2(__DRIcontext *pDRICtx, GLint target,
    struct intel_renderbuffer *rb;
    struct gl_texture_object *texObj;
    struct gl_texture_image *texImage;
+   mesa_format texFormat = MESA_FORMAT_NONE;
+   struct intel_mipmap_tree *mt;
    GLenum internal_format = 0;
 
    texObj = _mesa_get_current_tex_object(ctx, target);
@@ -460,20 +462,33 @@ intelSetTexBuffer2(__DRIcontext *pDRICtx, GLint target,
       return;
 
    if (rb->mt->cpp == 4) {
-      if (texture_format == __DRI_TEXTURE_FORMAT_RGB)
+      if (texture_format == __DRI_TEXTURE_FORMAT_RGB) {
          internal_format = GL_RGB;
-      else
+         texFormat = MESA_FORMAT_B8G8R8X8_UNORM;
+      }
+      else {
          internal_format = GL_RGBA;
+         texFormat = MESA_FORMAT_B8G8R8A8_UNORM;
+      }
    } else if (rb->mt->cpp == 2) {
-      /* This is 565 */
       internal_format = GL_RGB;
+      texFormat = MESA_FORMAT_B5G6R5_UNORM;
    }
 
-   intel_miptree_prepare_external(brw, rb->mt);
+   intel_miptree_make_shareable(brw, rb->mt);
+   mt = intel_miptree_create_for_bo(brw, rb->mt->bo, texFormat, 0,
+                                    rb->Base.Base.Width,
+                                    rb->Base.Base.Height,
+                                    1, rb->mt->surf.row_pitch,
+                                    MIPTREE_CREATE_DEFAULT);
+   if (mt == NULL)
+       return;
+   mt->target = target;
 
    _mesa_lock_texture(&brw->ctx, texObj);
    texImage = _mesa_get_tex_image(ctx, texObj, target, 0);
-   intel_set_texture_image_mt(brw, texImage, internal_format, rb->mt);
+   intel_set_texture_image_mt(brw, texImage, internal_format, mt);
+   intel_miptree_release(&mt);
    _mesa_unlock_texture(&brw->ctx, texObj);
 }
 
