@@ -49,10 +49,6 @@
 /* NOTE: this constant may get moved into a svga3d*.h header file */
 #define SVGA3D_DX_MAX_RESOURCE_SIZE (128 * 1024 * 1024)
 
-#ifndef MESA_GIT_SHA1
-#define MESA_GIT_SHA1 "(unknown git revision)"
-#endif
-
 #ifdef DEBUG
 int SVGA_DEBUG = 0;
 
@@ -984,7 +980,11 @@ init_logging(struct pipe_screen *screen)
    svga_host_log(host_log);
 
    util_snprintf(host_log, sizeof(host_log) - strlen(log_prefix),
-                 "%s%s (%s)", log_prefix, PACKAGE_VERSION, MESA_GIT_SHA1);
+                 "%s%s"
+#ifdef MESA_GIT_SHA1
+                 " (" MESA_GIT_SHA1 ")"
+#endif
+                 , log_prefix, PACKAGE_VERSION);
    svga_host_log(host_log);
 
    /* If the SVGA_EXTRA_LOGGING env var is set, log the process's command
