@@ -35,6 +35,7 @@ MESA_UTIL_FILES := \
 	set.c \
 	set.h \
 	simple_list.h \
+	simple_mtx.h \
 	slab.c \
 	slab.h \
 	string_buffer.c \
