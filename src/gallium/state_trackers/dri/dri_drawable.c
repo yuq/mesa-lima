@@ -99,10 +99,8 @@ dri_st_framebuffer_validate(struct st_context_iface *stctx,
       return TRUE;
 
    /* Set the window-system buffers for the state tracker. */
-   for (i = 0; i < count; i++) {
-      out[i] = NULL;
+   for (i = 0; i < count; i++)
       pipe_resource_reference(&out[i], textures[statts[i]]);
-   }
 
    return TRUE;
 }

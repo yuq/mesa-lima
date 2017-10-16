@@ -432,6 +432,7 @@ osmesa_st_framebuffer_validate(struct st_context_iface *stctx,
 
       templat.format = format;
       templat.bind = bind;
+      pipe_resource_reference(&out[i], NULL);
       out[i] = osbuffer->textures[statts[i]] =
          screen->resource_create(screen, &templat);
    }
