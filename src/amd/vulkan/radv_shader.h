@@ -87,10 +87,11 @@ radv_destroy_shader_slabs(struct radv_device *device);
 struct radv_shader_variant *
 radv_shader_variant_create(struct radv_device *device,
 			   struct radv_shader_module *module,
-			   struct nir_shader *shader,
+			   struct nir_shader *const *shaders,
+			   int shader_count,
 			   struct radv_pipeline_layout *layout,
 			   const struct ac_shader_variant_key *key,
-			   void ** code_out,
+			   void **code_out,
 			   unsigned *code_size_out);
 
 struct radv_shader_variant *

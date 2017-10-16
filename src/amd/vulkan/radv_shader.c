@@ -378,7 +378,8 @@ radv_fill_shader_variant(struct radv_device *device,
 static struct radv_shader_variant *
 shader_variant_create(struct radv_device *device,
 		      struct radv_shader_module *module,
-		      struct nir_shader *shader,
+		      struct nir_shader * const *shaders,
+		      int shader_count,
 		      gl_shader_stage stage,
 		      struct ac_nir_compiler_options *options,
 		      bool gs_copy_shader,
@@ -406,11 +407,12 @@ shader_variant_create(struct radv_device *device,
 	tm = ac_create_target_machine(chip_family, tm_options);
 
 	if (gs_copy_shader) {
-		ac_create_gs_copy_shader(tm, shader, &binary, &variant->config,
+		assert(shader_count == 1);
+		ac_create_gs_copy_shader(tm, *shaders, &binary, &variant->config,
 					 &variant->info, options, dump_shaders);
 	} else {
 		ac_compile_nir_shader(tm, &binary, &variant->config,
-				      &variant->info, &shader, 1, options,
+				      &variant->info, shaders, shader_count, options,
 				      dump_shaders);
 	}
 
@@ -432,7 +434,7 @@ shader_variant_create(struct radv_device *device,
 	if (device->trace_bo) {
 		variant->disasm_string = binary.disasm_string;
 		if (!gs_copy_shader && !module->nir) {
-			variant->nir = shader;
+			variant->nir = *shaders;
 			variant->spirv = (uint32_t *)module->data;
 			variant->spirv_size = module->size;
 		}
@@ -446,7 +448,8 @@ shader_variant_create(struct radv_device *device,
 struct radv_shader_variant *
 radv_shader_variant_create(struct radv_device *device,
 			   struct radv_shader_module *module,
-			   struct nir_shader *shader,
+			   struct nir_shader *const *shaders,
+			   int shader_count,
 			   struct radv_pipeline_layout *layout,
 			   const struct ac_shader_variant_key *key,
 			   void **code_out,
@@ -461,7 +464,7 @@ radv_shader_variant_create(struct radv_device *device,
 	options.unsafe_math = !!(device->instance->debug_flags & RADV_DEBUG_UNSAFE_MATH);
 	options.supports_spill = device->llvm_supports_spill;
 
-	return shader_variant_create(device, module, shader, shader->stage,
+	return shader_variant_create(device, module, shaders, shader_count, shaders[shader_count - 1]->stage,
 				     &options, false, code_out, code_size_out);
 }
 
@@ -476,7 +479,7 @@ radv_create_gs_copy_shader(struct radv_device *device,
 
 	options.key.has_multiview_view_index = multiview;
 
-	return shader_variant_create(device, NULL, shader, MESA_SHADER_VERTEX,
+	return shader_variant_create(device, NULL, &shader, 1, MESA_SHADER_VERTEX,
 				     &options, true, code_out, code_size_out);
 }
 
