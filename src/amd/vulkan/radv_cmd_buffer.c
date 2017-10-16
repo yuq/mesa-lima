@@ -493,6 +493,14 @@ radv_lookup_user_sgpr(struct radv_pipeline *pipeline,
 		      gl_shader_stage stage,
 		      int idx)
 {
+	if (stage == MESA_SHADER_VERTEX) {
+		if (pipeline->shaders[MESA_SHADER_VERTEX])
+			return &pipeline->shaders[MESA_SHADER_VERTEX]->info.user_sgprs_locs.shader_data[idx];
+		if (pipeline->shaders[MESA_SHADER_TESS_CTRL])
+			return &pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.user_sgprs_locs.shader_data[idx];
+		if (pipeline->shaders[MESA_SHADER_GEOMETRY])
+			return &pipeline->shaders[MESA_SHADER_GEOMETRY]->info.user_sgprs_locs.shader_data[idx];
+	}
 	return &pipeline->shaders[stage]->info.user_sgprs_locs.shader_data[idx];
 }
 
@@ -716,9 +724,12 @@ radv_emit_vertex_shader(struct radv_cmd_buffer *cmd_buffer,
 {
 	struct radv_shader_variant *vs;
 
-	assert (pipeline->shaders[MESA_SHADER_VERTEX]);
+	radeon_set_context_reg(cmd_buffer->cs, R_028A84_VGT_PRIMITIVEID_EN, pipeline->graphics.vgt_primitiveid_en);
 
+	/* Skip shaders merged into HS/GS */
 	vs = pipeline->shaders[MESA_SHADER_VERTEX];
+	if (!vs)
+		return;
 
 	if (vs->info.vs.as_ls)
 		radv_emit_hw_ls(cmd_buffer, vs);
@@ -726,8 +737,6 @@ radv_emit_vertex_shader(struct radv_cmd_buffer *cmd_buffer,
 		radv_emit_hw_es(cmd_buffer, vs, &vs->info.vs.es_info);
 	else
 		radv_emit_hw_vs(cmd_buffer, pipeline, vs, &vs->info.vs.outinfo);
-
-	radeon_set_context_reg(cmd_buffer->cs, R_028A84_VGT_PRIMITIVEID_EN, pipeline->graphics.vgt_primitiveid_en);
 }
 
 
@@ -1697,7 +1706,7 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer)
 
 	if ((cmd_buffer->state.pipeline != cmd_buffer->state.emitted_pipeline || cmd_buffer->state.vb_dirty) &&
 	    cmd_buffer->state.pipeline->vertex_elements.count &&
-	    cmd_buffer->state.pipeline->shaders[MESA_SHADER_VERTEX]->info.info.vs.has_vertex_buffers) {
+	    radv_get_vertex_shader(cmd_buffer->state.pipeline)->info.info.vs.has_vertex_buffers) {
 		struct radv_vertex_elements_info *velems = &cmd_buffer->state.pipeline->vertex_elements;
 		unsigned vb_offset;
 		void *vb_ptr;
@@ -2989,7 +2998,7 @@ radv_cs_emit_indirect_draw_packet(struct radv_cmd_buffer *cmd_buffer,
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	unsigned di_src_sel = indexed ? V_0287F0_DI_SRC_SEL_DMA
 	                              : V_0287F0_DI_SRC_SEL_AUTO_INDEX;
-	bool draw_id_enable = cmd_buffer->state.pipeline->shaders[MESA_SHADER_VERTEX]->info.info.vs.needs_draw_id;
+	bool draw_id_enable = radv_get_vertex_shader(cmd_buffer->state.pipeline)->info.info.vs.needs_draw_id;
 	uint32_t base_reg = cmd_buffer->state.pipeline->graphics.vtx_base_sgpr;
 	assert(base_reg);
 

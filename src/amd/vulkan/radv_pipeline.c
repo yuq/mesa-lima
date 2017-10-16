@@ -1207,6 +1207,16 @@ static void si_multiwave_lds_size_workaround(struct radv_device *device,
 		*lds_size = MAX2(*lds_size, 8);
 }
 
+struct radv_shader_variant *
+radv_get_vertex_shader(struct radv_pipeline *pipeline)
+{
+	if (pipeline->shaders[MESA_SHADER_VERTEX])
+		return pipeline->shaders[MESA_SHADER_VERTEX];
+	if (pipeline->shaders[MESA_SHADER_TESS_CTRL])
+		return pipeline->shaders[MESA_SHADER_TESS_CTRL];
+	return pipeline->shaders[MESA_SHADER_GEOMETRY];
+}
+
 static void
 calculate_tess_state(struct radv_pipeline *pipeline,
 		     const VkGraphicsPipelineCreateInfo *pCreateInfo)
@@ -1223,7 +1233,7 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 
 	/* This calculates how shader inputs and outputs among VS, TCS, and TES
 	 * are laid out in LDS. */
-	num_tcs_inputs = util_last_bit64(pipeline->shaders[MESA_SHADER_VERTEX]->info.vs.outputs_written);
+	num_tcs_inputs = util_last_bit64(radv_get_vertex_shader(pipeline)->info.vs.outputs_written);
 
 	num_tcs_outputs = util_last_bit64(pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.outputs_written); //tcs->outputs_written
 	num_tcs_output_cp = pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.tcs_vertices_out; //TCS VERTICES OUT
@@ -2024,7 +2034,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	if (loc->sgpr_idx != -1) {
 		pipeline->graphics.vtx_base_sgpr = radv_shader_stage_to_user_data_0(MESA_SHADER_VERTEX, device->physical_device->rad_info.chip_class, radv_pipeline_has_gs(pipeline), radv_pipeline_has_tess(pipeline));
 		pipeline->graphics.vtx_base_sgpr += loc->sgpr_idx * 4;
-		if (pipeline->shaders[MESA_SHADER_VERTEX]->info.info.vs.needs_draw_id)
+		if (radv_get_vertex_shader(pipeline)->info.info.vs.needs_draw_id)
 			pipeline->graphics.vtx_emit_num = 3;
 		else
 			pipeline->graphics.vtx_emit_num = 2;

@@ -1129,6 +1129,8 @@ struct ac_userdata_info *radv_lookup_user_sgpr(struct radv_pipeline *pipeline,
 					       gl_shader_stage stage,
 					       int idx);
 
+struct radv_shader_variant *radv_get_vertex_shader(struct radv_pipeline *pipeline);
+
 struct radv_graphics_pipeline_create_info {
 	bool use_rectlist;
 	bool db_depth_clear;
