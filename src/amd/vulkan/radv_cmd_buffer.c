@@ -602,12 +602,22 @@ radv_emit_graphics_raster_state(struct radv_cmd_buffer *cmd_buffer,
 			       raster->pa_su_sc_mode_cntl);
 }
 
-static inline void
-radv_emit_prefetch(struct radv_cmd_buffer *cmd_buffer, uint64_t va,
-		   unsigned size)
+static void
+radv_emit_shader_prefetch(struct radv_cmd_buffer *cmd_buffer,
+			  struct radv_shader_variant *shader)
 {
+	struct radeon_winsys *ws = cmd_buffer->device->ws;
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
+	uint64_t va;
+
+	if (!shader)
+		return;
+
+	va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
+
+	ws->cs_add_buffer(cs, shader->bo, 8);
 	if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK)
-		si_cp_dma_prefetch(cmd_buffer, va, size);
+		si_cp_dma_prefetch(cmd_buffer, va, shader->code_size);
 }
 
 static void
@@ -616,12 +626,10 @@ radv_emit_hw_vs(struct radv_cmd_buffer *cmd_buffer,
 		struct radv_shader_variant *shader,
 		struct ac_vs_output_info *outinfo)
 {
-	struct radeon_winsys *ws = cmd_buffer->device->ws;
 	uint64_t va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
 	unsigned export_count;
 
-	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
-	radv_emit_prefetch(cmd_buffer, va, shader->code_size);
+	radv_emit_shader_prefetch(cmd_buffer, shader);
 
 	export_count = MAX2(1, outinfo->param_exports);
 	radeon_set_context_reg(cmd_buffer->cs, R_0286C4_SPI_VS_OUT_CONFIG,
@@ -666,11 +674,9 @@ radv_emit_hw_es(struct radv_cmd_buffer *cmd_buffer,
 		struct radv_shader_variant *shader,
 		struct ac_es_output_info *outinfo)
 {
-	struct radeon_winsys *ws = cmd_buffer->device->ws;
 	uint64_t va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
 
-	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
-	radv_emit_prefetch(cmd_buffer, va, shader->code_size);
+	radv_emit_shader_prefetch(cmd_buffer, shader);
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
 			       outinfo->esgs_itemsize / 4);
@@ -685,12 +691,10 @@ static void
 radv_emit_hw_ls(struct radv_cmd_buffer *cmd_buffer,
 		struct radv_shader_variant *shader)
 {
-	struct radeon_winsys *ws = cmd_buffer->device->ws;
 	uint64_t va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
 	uint32_t rsrc2 = shader->rsrc2;
 
-	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
-	radv_emit_prefetch(cmd_buffer, va, shader->code_size);
+	radv_emit_shader_prefetch(cmd_buffer, shader);
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B520_SPI_SHADER_PGM_LO_LS, 2);
 	radeon_emit(cmd_buffer->cs, va >> 8);
@@ -710,11 +714,9 @@ static void
 radv_emit_hw_hs(struct radv_cmd_buffer *cmd_buffer,
 		struct radv_shader_variant *shader)
 {
-	struct radeon_winsys *ws = cmd_buffer->device->ws;
 	uint64_t va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
 
-	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
-	radv_emit_prefetch(cmd_buffer, va, shader->code_size);
+	radv_emit_shader_prefetch(cmd_buffer, shader);
 
 	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
 		radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B410_SPI_SHADER_PGM_LO_LS, 2);
@@ -827,7 +829,6 @@ static void
 radv_emit_geometry_shader(struct radv_cmd_buffer *cmd_buffer,
 			  struct radv_pipeline *pipeline)
 {
-	struct radeon_winsys *ws = cmd_buffer->device->ws;
 	struct radv_shader_variant *gs;
 	uint64_t va;
 
@@ -861,8 +862,8 @@ radv_emit_geometry_shader(struct radv_cmd_buffer *cmd_buffer,
 			       S_028B90_ENABLE(gs_num_invocations > 0));
 
 	va = radv_buffer_get_va(gs->bo) + gs->bo_offset;
-	ws->cs_add_buffer(cmd_buffer->cs, gs->bo, 8);
-	radv_emit_prefetch(cmd_buffer, va, gs->code_size);
+
+	radv_emit_shader_prefetch(cmd_buffer, gs);
 
 	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
 		radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B210_SPI_SHADER_PGM_LO_ES, 2);
@@ -908,7 +909,6 @@ static void
 radv_emit_fragment_shader(struct radv_cmd_buffer *cmd_buffer,
 			  struct radv_pipeline *pipeline)
 {
-	struct radeon_winsys *ws = cmd_buffer->device->ws;
 	struct radv_shader_variant *ps;
 	uint64_t va;
 	unsigned spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
@@ -917,8 +917,8 @@ radv_emit_fragment_shader(struct radv_cmd_buffer *cmd_buffer,
 
 	ps = pipeline->shaders[MESA_SHADER_FRAGMENT];
 	va = radv_buffer_get_va(ps->bo) + ps->bo_offset;
-	ws->cs_add_buffer(cmd_buffer->cs, ps->bo, 8);
-	radv_emit_prefetch(cmd_buffer, va, ps->code_size);
+
+	radv_emit_shader_prefetch(cmd_buffer, ps);
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B020_SPI_SHADER_PGM_LO_PS, 4);
 	radeon_emit(cmd_buffer->cs, va >> 8);
@@ -2429,7 +2429,6 @@ VkResult radv_EndCommandBuffer(
 static void
 radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 {
-	struct radeon_winsys *ws = cmd_buffer->device->ws;
 	struct radv_shader_variant *compute_shader;
 	struct radv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
 	uint64_t va;
@@ -2442,8 +2441,7 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 	compute_shader = pipeline->shaders[MESA_SHADER_COMPUTE];
 	va = radv_buffer_get_va(compute_shader->bo) + compute_shader->bo_offset;
 
-	ws->cs_add_buffer(cmd_buffer->cs, compute_shader->bo, 8);
-	radv_emit_prefetch(cmd_buffer, va, compute_shader->code_size);
+	radv_emit_shader_prefetch(cmd_buffer, compute_shader);
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
 							   cmd_buffer->cs, 16);
