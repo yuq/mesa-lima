@@ -183,7 +183,8 @@ radv_create_shader_variants_from_pipeline_cache(struct radv_device *device,
 		entry = radv_pipeline_cache_search(device->mem_cache, sha1);
 
 	if (!entry) {
-		if (!device->physical_device->disk_cache)
+		if (!device->physical_device->disk_cache ||
+		    (device->instance->debug_flags & RADV_DEBUG_NO_CACHE))
 			return false;
 
 		uint8_t disk_sha1[20];
