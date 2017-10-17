@@ -3187,6 +3187,7 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	struct ac_userdata_info *loc;
+	unsigned dispatch_initiator;
 	uint8_t grid_used;
 
 	grid_used = compute_shader->info.info.cs.grid_components_used;
@@ -3195,6 +3196,16 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 				    AC_UD_CS_GRID_SIZE);
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(ws, cs, 25);
+
+	dispatch_initiator = S_00B800_COMPUTE_SHADER_EN(1) |
+			     S_00B800_FORCE_START_AT_000(1);
+
+	if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK) {
+		/* If the KMD allows it (there is a KMD hw register for it),
+		 * allow launching waves out-of-order.
+		 */
+		dispatch_initiator |= S_00B800_ORDER_MODE(1);
+	}
 
 	if (info->indirect) {
 		uint64_t va = radv_buffer_get_va(info->indirect->bo);
@@ -3221,7 +3232,7 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 					PKT3_SHADER_TYPE_S(1));
 			radeon_emit(cs, va);
 			radeon_emit(cs, va >> 32);
-			radeon_emit(cs, 1);
+			radeon_emit(cs, dispatch_initiator);
 		} else {
 			radeon_emit(cs, PKT3(PKT3_SET_BASE, 2, 0) |
 					PKT3_SHADER_TYPE_S(1));
@@ -3232,19 +3243,10 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 			radeon_emit(cs, PKT3(PKT3_DISPATCH_INDIRECT, 1, 0) |
 					PKT3_SHADER_TYPE_S(1));
 			radeon_emit(cs, 0);
-			radeon_emit(cs, 1);
+			radeon_emit(cs, dispatch_initiator);
 		}
 	} else {
 		unsigned blocks[3] = { info->blocks[0], info->blocks[1], info->blocks[2] };
-		unsigned dispatch_initiator = S_00B800_COMPUTE_SHADER_EN(1) |
-					      S_00B800_FORCE_START_AT_000(1);
-
-		if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK) {
-			/* If the KMD allows it (there is a KMD hw register for
-			 * it), allow launching waves out-of-order.
-			 */
-			dispatch_initiator |= S_00B800_ORDER_MODE(1);
-		}
 
 		if (info->unaligned) {
 			unsigned *cs_block_size = compute_shader->info.cs.block_size;
