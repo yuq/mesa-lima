@@ -34,6 +34,9 @@ endif
 if with_dri_r100
   subdir('radeon')
 endif
+if with_dri_r200
+  subdir('r200')
+endif
 
 if dri_drivers != []
   libmesa_dri_drivers = shared_library(
