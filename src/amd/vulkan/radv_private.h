@@ -1221,15 +1221,15 @@ struct radv_image {
 	/* Set when bound */
 	struct radeon_winsys_bo *bo;
 	VkDeviceSize offset;
-	uint32_t dcc_offset;
-	uint32_t htile_offset;
+	uint64_t dcc_offset;
+	uint64_t htile_offset;
 	bool tc_compatible_htile;
 	struct radeon_surf surface;
 
 	struct radv_fmask_info fmask;
 	struct radv_cmask_info cmask;
-	uint32_t clear_value_offset;
-	uint32_t dcc_pred_offset;
+	uint64_t clear_value_offset;
+	uint64_t dcc_pred_offset;
 };
 
 /* Whether the image has a htile that is known consistent with the contents of
