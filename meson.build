@@ -87,12 +87,14 @@ endif
 with_dri = false
 with_dri_i915 = false
 with_dri_i965 = false
+with_dri_r100 = false
 with_dri_swrast = false
 _drivers = get_option('dri-drivers')
 if _drivers != ''
   _split = _drivers.split(',')
   with_dri_i915 = _split.contains('i915')
   with_dri_i965 = _split.contains('i965')
+  with_dri_r100 = _split.contains('r100')
   with_dri_swrast = _split.contains('swrast')
   with_dri = true
 endif
@@ -627,7 +629,7 @@ dep_libdrm_freedreno = []
 if with_amd_vk or with_gallium_radeonsi
   dep_libdrm_amdgpu = dependency('libdrm_amdgpu', version : '>= 2.4.85')
 endif
-if with_gallium_radeonsi # older radeon too
+if with_gallium_radeonsi or with_dri_r100 # older radeon too
   dep_libdrm_radeon = dependency('libdrm_radeon', version : '>= 2.4.71')
 endif
 if with_gallium_nouveau

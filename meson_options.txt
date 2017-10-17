@@ -34,7 +34,7 @@ option(
 option(
   'dri-drivers',
   type : 'string',
-  value : 'i915,i965',
+  value : 'i915,i965,r100',
   description : 'comma separated list of dri drivers to build.'
 )
 option(
