@@ -45,7 +45,7 @@ swr_copy_to_scratch_space(struct swr_context *ctx,
       ptr = ctx->api.pfnSwrAllocDrawContextMemory(ctx->swrContext, size, 4);
    } else {
       /* Allocate enough so that MAX_DRAWS_IN_FLIGHT sets fit. */
-      unsigned int max_size_in_flight = size * KNOB_MAX_DRAWS_IN_FLIGHT;
+      uint32_t max_size_in_flight = size * ctx->max_draws_in_flight;
 
       /* Need to grow space */
       if (max_size_in_flight > space->current_size) {

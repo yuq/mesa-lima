@@ -54,6 +54,9 @@ struct swr_screen {
 #endif
 
    PFNSwrGetInterface pfnSwrGetInterface;
+
+   /* Do we run on Xeon Phi? */
+   bool is_knl;
 };
 
 static INLINE struct swr_screen *

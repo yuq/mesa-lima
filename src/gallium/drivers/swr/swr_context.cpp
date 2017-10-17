@@ -39,6 +39,7 @@
 
 #include "api.h"
 #include "backend.h"
+#include "knobs.h"
 
 static struct pipe_surface *
 swr_create_surface(struct pipe_context *pipe,
@@ -483,6 +484,8 @@ swr_create_context(struct pipe_screen *p_screen, void *priv, unsigned flags)
    ctx->blendJIT =
       new std::unordered_map<BLEND_COMPILE_STATE, PFN_BLEND_JIT_FUNC>;
 
+   ctx->max_draws_in_flight = KNOB_MAX_DRAWS_IN_FLIGHT;
+
    SWR_CREATECONTEXT_INFO createInfo;
    memset(&createInfo, 0, sizeof(createInfo));
    createInfo.privateStateSize = sizeof(swr_draw_context);
@@ -491,6 +494,30 @@ swr_create_context(struct pipe_screen *p_screen, void *priv, unsigned flags)
    createInfo.pfnClearTile = swr_StoreHotTileClear;
    createInfo.pfnUpdateStats = swr_UpdateStats;
    createInfo.pfnUpdateStatsFE = swr_UpdateStatsFE;
+
+   SWR_THREADING_INFO threadingInfo {0};
+
+   threadingInfo.MAX_WORKER_THREADS        = KNOB_MAX_WORKER_THREADS;
+   threadingInfo.MAX_NUMA_NODES            = KNOB_MAX_NUMA_NODES;
+   threadingInfo.MAX_CORES_PER_NUMA_NODE   = KNOB_MAX_CORES_PER_NUMA_NODE;
+   threadingInfo.MAX_THREADS_PER_CORE      = KNOB_MAX_THREADS_PER_CORE;
+   threadingInfo.SINGLE_THREADED           = KNOB_SINGLE_THREADED;
+
+   // Use non-standard settings for KNL
+   if (swr_screen(p_screen)->is_knl)
+   {
+      if (nullptr == getenv("KNOB_MAX_THREADS_PER_CORE"))
+         threadingInfo.MAX_THREADS_PER_CORE  = 2;
+
+      if (nullptr == getenv("KNOB_MAX_DRAWS_IN_FLIGHT"))
+      {
+         ctx->max_draws_in_flight = 2048;
+         createInfo.MAX_DRAWS_IN_FLIGHT = ctx->max_draws_in_flight;
+      }
+   }
+
+   createInfo.pThreadInfo = &threadingInfo;
+
    ctx->swrContext = ctx->api.pfnSwrCreateContext(&createInfo);
 
    ctx->api.pfnSwrInit();
