@@ -1195,15 +1195,6 @@ struct radv_cmask_info {
 	unsigned base_address_reg;
 };
 
-struct r600_htile_info {
-	uint64_t offset;
-	uint64_t size;
-	unsigned pitch;
-	unsigned height;
-	unsigned xalign;
-	unsigned yalign;
-};
-
 struct radv_image {
 	VkImageType type;
 	/* The original VkFormat provided by the client.  This may not match any
