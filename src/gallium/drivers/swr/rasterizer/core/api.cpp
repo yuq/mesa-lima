@@ -74,13 +74,19 @@ HANDLE SwrCreateContext(
 
     pContext->privateStateSize = pCreateInfo->privateStateSize;
 
-    pContext->dcRing.Init(KNOB_MAX_DRAWS_IN_FLIGHT);
-    pContext->dsRing.Init(KNOB_MAX_DRAWS_IN_FLIGHT);
+    pContext->MAX_DRAWS_IN_FLIGHT = KNOB_MAX_DRAWS_IN_FLIGHT;
+    if (pCreateInfo->MAX_DRAWS_IN_FLIGHT != 0)
+    {
+        pContext->MAX_DRAWS_IN_FLIGHT = pCreateInfo->MAX_DRAWS_IN_FLIGHT;
+    }
 
-    pContext->pMacroTileManagerArray = (MacroTileMgr*)AlignedMalloc(sizeof(MacroTileMgr) * KNOB_MAX_DRAWS_IN_FLIGHT, 64);
-    pContext->pDispatchQueueArray = (DispatchQueue*)AlignedMalloc(sizeof(DispatchQueue) * KNOB_MAX_DRAWS_IN_FLIGHT, 64);
+    pContext->dcRing.Init(pContext->MAX_DRAWS_IN_FLIGHT);
+    pContext->dsRing.Init(pContext->MAX_DRAWS_IN_FLIGHT);
 
-    for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
+    pContext->pMacroTileManagerArray = (MacroTileMgr*)AlignedMalloc(sizeof(MacroTileMgr) * pContext->MAX_DRAWS_IN_FLIGHT, 64);
+    pContext->pDispatchQueueArray = (DispatchQueue*)AlignedMalloc(sizeof(DispatchQueue) * pContext->MAX_DRAWS_IN_FLIGHT, 64);
+
+    for (uint32_t dc = 0; dc < pContext->MAX_DRAWS_IN_FLIGHT; ++dc)
     {
         pContext->dcRing[dc].pArena = new CachingArena(pContext->cachingArenaAllocator);
         new (&pContext->pMacroTileManagerArray[dc]) MacroTileMgr(*pContext->dcRing[dc].pArena);
@@ -173,7 +179,7 @@ template<bool IsDraw>
 void QueueWork(SWR_CONTEXT *pContext)
 {
     DRAW_CONTEXT* pDC = pContext->pCurDrawContext;
-    uint32_t dcIndex = pDC->drawId % KNOB_MAX_DRAWS_IN_FLIGHT;
+    uint32_t dcIndex = pDC->drawId % pContext->MAX_DRAWS_IN_FLIGHT;
 
     if (IsDraw)
     {
@@ -257,7 +263,7 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         }
 
         uint64_t curDraw = pContext->dcRing.GetHead();
-        uint32_t dcIndex = curDraw % KNOB_MAX_DRAWS_IN_FLIGHT;
+        uint32_t dcIndex = curDraw % pContext->MAX_DRAWS_IN_FLIGHT;
 
         if ((pContext->frameCount - pContext->lastFrameChecked) > 2 ||
             (curDraw - pContext->lastDrawChecked) > 0x10000)
@@ -273,7 +279,7 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         pContext->pCurDrawContext = pCurDrawContext;
 
         // Assign next available entry in DS ring to this DC.
-        uint32_t dsIndex = pContext->curStateId % KNOB_MAX_DRAWS_IN_FLIGHT;
+        uint32_t dsIndex = pContext->curStateId % pContext->MAX_DRAWS_IN_FLIGHT;
         pCurDrawContext->pState = &pContext->dsRing[dsIndex];
 
         // Copy previous state to current state.
@@ -361,7 +367,7 @@ void SwrDestroyContext(HANDLE hContext)
     DestroyThreadPool(pContext, &pContext->threadPool);
 
     // free the fifos
-    for (uint32_t i = 0; i < KNOB_MAX_DRAWS_IN_FLIGHT; ++i)
+    for (uint32_t i = 0; i < pContext->MAX_DRAWS_IN_FLIGHT; ++i)
     {
         AlignedFree(pContext->dcRing[i].dynState.pStats);
         delete pContext->dcRing[i].pArena;
@@ -1481,7 +1487,7 @@ void SwrDispatch(
     pTaskData->threadGroupCountZ = threadGroupCountZ;
 
     uint32_t totalThreadGroups = threadGroupCountX * threadGroupCountY * threadGroupCountZ;
-    uint32_t dcIndex = pDC->drawId % KNOB_MAX_DRAWS_IN_FLIGHT;
+    uint32_t dcIndex = pDC->drawId % pContext->MAX_DRAWS_IN_FLIGHT;
     pDC->pDispatch = &pContext->pDispatchQueueArray[dcIndex];
     pDC->pDispatch->initialize(totalThreadGroups, pTaskData, &ProcessComputeBE);
 

@@ -318,7 +318,7 @@ uint32_t GetEnqueuedDraw(SWR_CONTEXT *pContext)
 INLINE
 DRAW_CONTEXT *GetDC(SWR_CONTEXT *pContext, uint32_t drawId)
 {
-    return &pContext->dcRing[(drawId-1) % KNOB_MAX_DRAWS_IN_FLIGHT];
+    return &pContext->dcRing[(drawId-1) % pContext->MAX_DRAWS_IN_FLIGHT];
 }
 
 INLINE
@@ -421,7 +421,7 @@ INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, uint32_t workerId, ui
     drawEnqueued = GetEnqueuedDraw(pContext);
     while (IDComparesLess(curDrawBE, drawEnqueued))
     {
-        DRAW_CONTEXT *pDC = &pContext->dcRing[curDrawBE % KNOB_MAX_DRAWS_IN_FLIGHT];
+        DRAW_CONTEXT *pDC = &pContext->dcRing[curDrawBE % pContext->MAX_DRAWS_IN_FLIGHT];
 
         // If its not compute and FE is not done then break out of loop.
         if (!pDC->doneFE && !pDC->isCompute) break;
@@ -478,7 +478,7 @@ bool WorkOnFifoBE(
         return false;
     }
 
-    uint32_t lastRetiredDraw = pContext->dcRing[curDrawBE % KNOB_MAX_DRAWS_IN_FLIGHT].drawId - 1;
+    uint32_t lastRetiredDraw = pContext->dcRing[curDrawBE % pContext->MAX_DRAWS_IN_FLIGHT].drawId - 1;
 
     // Reset our history for locked tiles. We'll have to re-learn which tiles are locked.
     lockedTiles.clear();
@@ -490,7 +490,7 @@ bool WorkOnFifoBE(
     //      maintain order. The locked tiles provides the history to ensures this.
     for (uint32_t i = curDrawBE; IDComparesLess(i, drawEnqueued); ++i)
     {
-        DRAW_CONTEXT *pDC = &pContext->dcRing[i % KNOB_MAX_DRAWS_IN_FLIGHT];
+        DRAW_CONTEXT *pDC = &pContext->dcRing[i % pContext->MAX_DRAWS_IN_FLIGHT];
 
         if (pDC->isCompute) return false; // We don't look at compute work.
 
@@ -636,7 +636,7 @@ void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint32_t &curDrawFE)
     uint32_t drawEnqueued = GetEnqueuedDraw(pContext);
     while (IDComparesLess(curDrawFE, drawEnqueued))
     {
-        uint32_t dcSlot = curDrawFE % KNOB_MAX_DRAWS_IN_FLIGHT;
+        uint32_t dcSlot = curDrawFE % pContext->MAX_DRAWS_IN_FLIGHT;
         DRAW_CONTEXT *pDC = &pContext->dcRing[dcSlot];
         if (pDC->isCompute || pDC->doneFE)
         {
@@ -653,7 +653,7 @@ void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint32_t &curDrawFE)
     uint32_t curDraw = curDrawFE;
     while (IDComparesLess(curDraw, drawEnqueued))
     {
-        uint32_t dcSlot = curDraw % KNOB_MAX_DRAWS_IN_FLIGHT;
+        uint32_t dcSlot = curDraw % pContext->MAX_DRAWS_IN_FLIGHT;
         DRAW_CONTEXT *pDC = &pContext->dcRing[dcSlot];
 
         if (!pDC->isCompute && !pDC->FeLock)
@@ -694,11 +694,11 @@ void WorkOnCompute(
         return;
     }
 
-    uint32_t lastRetiredDraw = pContext->dcRing[curDrawBE % KNOB_MAX_DRAWS_IN_FLIGHT].drawId - 1;
+    uint32_t lastRetiredDraw = pContext->dcRing[curDrawBE % pContext->MAX_DRAWS_IN_FLIGHT].drawId - 1;
 
     for (uint64_t i = curDrawBE; IDComparesLess(i, drawEnqueued); ++i)
     {
-        DRAW_CONTEXT *pDC = &pContext->dcRing[i % KNOB_MAX_DRAWS_IN_FLIGHT];
+        DRAW_CONTEXT *pDC = &pContext->dcRing[i % pContext->MAX_DRAWS_IN_FLIGHT];
         if (pDC->isCompute == false) return;
 
         // check dependencies
@@ -972,7 +972,7 @@ void CreateThreadPool(SWR_CONTEXT* pContext, THREAD_POOL* pPool)
     }
 
     // Initialize DRAW_CONTEXT's per-thread stats
-    for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
+    for (uint32_t dc = 0; dc < pContext->MAX_DRAWS_IN_FLIGHT; ++dc)
     {
         pContext->dcRing[dc].dynState.pStats = (SWR_STATS*)AlignedMalloc(sizeof(SWR_STATS) * numThreads, 64);
         memset(pContext->dcRing[dc].dynState.pStats, 0, sizeof(SWR_STATS) * numThreads);

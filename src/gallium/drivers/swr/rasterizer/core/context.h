@@ -481,6 +481,8 @@ struct SWR_CONTEXT
     THREAD_POOL threadPool; // Thread pool associated with this context
     SWR_THREADING_INFO threadInfo;
 
+    uint32_t MAX_DRAWS_IN_FLIGHT;
+
     std::condition_variable FifosNotEmpty;
     std::mutex WaitLock;
 
