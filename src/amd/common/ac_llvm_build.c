@@ -1257,7 +1257,7 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 	LLVMTypeRef dst_type;
 	LLVMValueRef args[11];
 	unsigned num_args = 0;
-	const char *name;
+	const char *name = NULL;
 	char intr_name[128], type[64];
 
 	if (HAVE_LLVM >= 0x0400) {
