@@ -3430,8 +3430,30 @@ brw_broadcast(struct brw_codegen *p,
          brw_pop_insn_state(p);
 
          /* Use indirect addressing to fetch the specified component. */
-         brw_MOV(p, dst,
-                 retype(brw_vec1_indirect(addr.subnr, offset), src.type));
+         if (type_sz(src.type) > 4 &&
+             (devinfo->is_cherryview || gen_device_info_is_9lp(devinfo))) {
+            /* From the Cherryview PRM Vol 7. "Register Region Restrictions":
+             *
+             *    "When source or destination datatype is 64b or operation is
+             *    integer DWord multiply, indirect addressing must not be
+             *    used."
+             *
+             * To work around both of this issue, we do two integer MOVs
+             * insead of one 64-bit MOV.  Because no double value should ever
+             * cross a register boundary, it's safe to use the immediate
+             * offset in the indirect here to handle adding 4 bytes to the
+             * offset and avoid the extra ADD to the register file.
+             */
+            brw_MOV(p, subscript(dst, BRW_REGISTER_TYPE_D, 0),
+                       retype(brw_vec1_indirect(addr.subnr, offset),
+                              BRW_REGISTER_TYPE_D));
+            brw_MOV(p, subscript(dst, BRW_REGISTER_TYPE_D, 1),
+                       retype(brw_vec1_indirect(addr.subnr, offset + 4),
+                              BRW_REGISTER_TYPE_D));
+         } else {
+            brw_MOV(p, dst,
+                    retype(brw_vec1_indirect(addr.subnr, offset), src.type));
+         }
       } else {
          /* In SIMD4x2 mode the index can be either zero or one, replicate it
           * to all bits of a flag register,
