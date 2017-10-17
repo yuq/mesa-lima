@@ -84,6 +84,7 @@
 #include "gallivm/lp_bld_flow.h"
 #include "gallivm/lp_bld_debug.h"
 #include "gallivm/lp_bld_arit.h"
+#include "gallivm/lp_bld_bitarit.h"
 #include "gallivm/lp_bld_pack.h"
 #include "gallivm/lp_bld_format.h"
 #include "gallivm/lp_bld_quad.h"
@@ -347,7 +348,8 @@ generate_fs_loop(struct gallivm_state *gallivm,
       if (!shader->info.base.writes_z && !shader->info.base.writes_stencil) {
          if (key->alpha.enabled ||
              key->blend.alpha_to_coverage ||
-             shader->info.base.uses_kill) {
+             shader->info.base.uses_kill ||
+             shader->info.base.writes_samplemask) {
             /* With alpha test and kill, can do the depth test early
              * and hopefully eliminate some quads.  But need to do a
              * special deferred depth write once the final mask value
@@ -514,6 +516,25 @@ generate_fs_loop(struct gallivm_state *gallivm,
                                     &mask, alpha,
                                     (depth_mode & LATE_DEPTH_TEST) != 0);
       }
+   }
+
+   if (shader->info.base.writes_samplemask) {
+      int smaski = find_output_by_semantic(&shader->info.base,
+                                           TGSI_SEMANTIC_SAMPLEMASK,
+                                           0);
+      LLVMValueRef smask;
+      struct lp_build_context smask_bld;
+      lp_build_context_init(&smask_bld, gallivm, int_type);
+
+      assert(smaski >= 0);
+      smask = LLVMBuildLoad(builder, outputs[smaski][0], "smask");
+      /*
+       * Pixel is alive according to the first sample in the mask.
+       */
+      smask = LLVMBuildBitCast(builder, smask, smask_bld.vec_type, "");
+      smask = lp_build_and(&smask_bld, smask, smask_bld.one);
+      smask = lp_build_cmp(&smask_bld, PIPE_FUNC_NOTEQUAL, smask, smask_bld.zero);
+      lp_build_mask_update(&mask, smask);
    }
 
    /* Late Z test */
@@ -2818,7 +2839,8 @@ generate_variant(struct llvmpipe_context *lp,
          !key->alpha.enabled &&
          !key->blend.alpha_to_coverage &&
          !key->depth.enabled &&
-         !shader->info.base.uses_kill
+         !shader->info.base.uses_kill &&
+         !shader->info.base.writes_samplemask
       ? TRUE : FALSE;
 
    if ((shader->info.base.num_tokens <= 1) &&
