@@ -46,7 +46,7 @@ def main():
         driver = os.path.join(to, each)
         if os.path.exists(driver):
             os.unlink(driver)
-        print('installing {} to {}'.format(args.megadriver, to))
+        print('installing {} to {}'.format(args.megadriver, driver))
         os.link(master, driver)
     os.unlink(master)
 
