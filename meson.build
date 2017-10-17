@@ -89,6 +89,7 @@ with_dri_i915 = false
 with_dri_i965 = false
 with_dri_r100 = false
 with_dri_r200 = false
+with_dri_nouveau = false
 with_dri_swrast = false
 _drivers = get_option('dri-drivers')
 if _drivers != ''
@@ -97,6 +98,7 @@ if _drivers != ''
   with_dri_i965 = _split.contains('i965')
   with_dri_r100 = _split.contains('r100')
   with_dri_r200 = _split.contains('r200')
+  with_dri_nouveau = _split.contains('nouveau')
   with_dri_swrast = _split.contains('swrast')
   with_dri = true
 endif
@@ -634,7 +636,7 @@ endif
 if with_gallium_radeonsi or with_dri_r100 or with_dri_r200
   dep_libdrm_radeon = dependency('libdrm_radeon', version : '>= 2.4.71')
 endif
-if with_gallium_nouveau
+if with_gallium_nouveau or with_dri_nouveau
   dep_libdrm_nouveau = dependency('libdrm_nouveau', version : '>= 2.4.66')
 endif
 if with_gallium_etnaviv

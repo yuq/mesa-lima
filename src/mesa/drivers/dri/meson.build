@@ -37,6 +37,9 @@ endif
 if with_dri_r200
   subdir('r200')
 endif
+if with_dri_nouveau
+  subdir('nouveau')
+endif
 
 if dri_drivers != []
   libmesa_dri_drivers = shared_library(
