@@ -3404,7 +3404,7 @@ brw_broadcast(struct brw_codegen *p,
       if (align1) {
          const struct brw_reg addr =
             retype(brw_address_reg(0), BRW_REGISTER_TYPE_UD);
-         const unsigned offset = src.nr * REG_SIZE + src.subnr;
+         unsigned offset = src.nr * REG_SIZE + src.subnr;
          /* Limit in bytes of the signed indirect addressing immediate. */
          const unsigned limit = 512;
 
@@ -3422,15 +3422,16 @@ brw_broadcast(struct brw_codegen *p,
           * addressing immediate, account for the difference if the source
           * register is above this limit.
           */
-         if (offset >= limit)
+         if (offset >= limit) {
             brw_ADD(p, addr, addr, brw_imm_ud(offset - offset % limit));
+            offset = offset % limit;
+         }
 
          brw_pop_insn_state(p);
 
          /* Use indirect addressing to fetch the specified component. */
          brw_MOV(p, dst,
-                 retype(brw_vec1_indirect(addr.subnr, offset % limit),
-                        src.type));
+                 retype(brw_vec1_indirect(addr.subnr, offset), src.type));
       } else {
          /* In SIMD4x2 mode the index can be either zero or one, replicate it
           * to all bits of a flag register,
