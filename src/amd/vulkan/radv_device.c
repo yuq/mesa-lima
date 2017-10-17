@@ -186,6 +186,10 @@ static const VkExtensionProperties common_device_extensions[] = {
 		.extensionName = VK_KHR_RELAXED_BLOCK_LAYOUT_EXTENSION_NAME,
 		.specVersion = 1,
 	},
+	{
+		.extensionName = VK_KHX_MULTIVIEW_EXTENSION_NAME,
+		.specVersion = 1,
+	},
 };
 
 static const VkExtensionProperties rasterization_order_extension[] ={
@@ -202,10 +206,6 @@ static const VkExtensionProperties ext_sema_device_extensions[] = {
 	},
 	{
 		.extensionName = VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
-		.specVersion = 1,
-	},
-	{
-		.extensionName = VK_KHX_MULTIVIEW_EXTENSION_NAME,
 		.specVersion = 1,
 	},
 };
