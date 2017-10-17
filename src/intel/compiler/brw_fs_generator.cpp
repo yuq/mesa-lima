@@ -445,6 +445,8 @@ fs_generator::generate_mov_indirect(fs_inst *inst,
 {
    assert(indirect_byte_offset.type == BRW_REGISTER_TYPE_UD);
    assert(indirect_byte_offset.file == BRW_GENERAL_REGISTER_FILE);
+   assert(!reg.abs && !reg.negate);
+   assert(reg.type == dst.type);
 
    unsigned imm_byte_offset = reg.nr * REG_SIZE + reg.subnr;
 
