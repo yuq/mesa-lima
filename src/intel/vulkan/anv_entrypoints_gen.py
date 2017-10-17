@@ -512,6 +512,14 @@ def get_entrypoints_defines(doc):
             fullname = entrypoint.attrib['name']
             entrypoints_to_defines[fullname] = define
 
+    for extension in doc.findall('./extensions/extension[@platform]'):
+        platform = extension.attrib['platform']
+        define = 'VK_USE_PLATFORM_' + platform.upper() + '_KHR'
+
+        for entrypoint in extension.findall('./require/command'):
+            fullname = entrypoint.attrib['name']
+            entrypoints_to_defines[fullname] = define
+
     return entrypoints_to_defines
 
 
