@@ -2541,6 +2541,7 @@ static LLVMValueRef visit_load_buffer(struct ac_nir_context *ctx,
 
 	}
 
+	assume(results[0]);
 	LLVMValueRef ret = results[0];
 	if (num_components > 4 || num_components == 3) {
 		LLVMValueRef masks[] = {
