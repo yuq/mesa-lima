@@ -47,7 +47,8 @@ cat(struct string *dest, const struct string src)
 static bool
 contains(const struct string haystack, const struct string needle)
 {
-   return memmem(haystack.str, haystack.len, needle.str, needle.len) != NULL;
+   return haystack.str && memmem(haystack.str, haystack.len,
+                                 needle.str, needle.len) != NULL;
 }
 #define CONTAINS(haystack, needle) \
    contains(haystack, (struct string){needle, strlen(needle)})
