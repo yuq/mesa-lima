@@ -505,13 +505,6 @@ def get_entrypoints_defines(doc):
     """Maps entry points to extension defines."""
     entrypoints_to_defines = {}
 
-    for extension in doc.findall('./extensions/extension[@protect]'):
-        define = extension.attrib['protect']
-
-        for entrypoint in extension.findall('./require/command'):
-            fullname = entrypoint.attrib['name']
-            entrypoints_to_defines[fullname] = define
-
     for extension in doc.findall('./extensions/extension[@platform]'):
         platform = extension.attrib['platform']
         define = 'VK_USE_PLATFORM_' + platform.upper() + '_KHR'
