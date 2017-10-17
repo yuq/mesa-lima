@@ -340,12 +340,21 @@ radv_fill_shader_variant(struct radv_device *device,
 	variant->rsrc2 = S_00B12C_USER_SGPR(variant->info.num_user_sgprs) |
 			S_00B12C_SCRATCH_EN(scratch_enabled);
 
+	variant->rsrc1 =  S_00B848_VGPRS((variant->config.num_vgprs - 1) / 4) |
+		S_00B848_SGPRS((variant->config.num_sgprs - 1) / 8) |
+		S_00B848_DX10_CLAMP(1) |
+		S_00B848_FLOAT_MODE(variant->config.float_mode);
+
 	switch (stage) {
 	case MESA_SHADER_TESS_EVAL:
 		vgpr_comp_cnt = 3;
-		/* fallthrough */
+		variant->rsrc2 |= S_00B12C_OC_LDS_EN(1);
+		break;
 	case MESA_SHADER_TESS_CTRL:
-		variant->rsrc2 |= S_00B42C_OC_LDS_EN(1);
+		if (device->physical_device->rad_info.chip_class >= GFX9)
+			vgpr_comp_cnt = variant->info.vs.vgpr_comp_cnt;
+		else
+			variant->rsrc2 |= S_00B12C_OC_LDS_EN(1);
 		break;
 	case MESA_SHADER_VERTEX:
 	case MESA_SHADER_GEOMETRY:
@@ -365,11 +374,11 @@ radv_fill_shader_variant(struct radv_device *device,
 		break;
 	}
 
-	variant->rsrc1 =  S_00B848_VGPRS((variant->config.num_vgprs - 1) / 4) |
-		S_00B848_SGPRS((variant->config.num_sgprs - 1) / 8) |
-		S_00B128_VGPR_COMP_CNT(vgpr_comp_cnt) |
-		S_00B848_DX10_CLAMP(1) |
-		S_00B848_FLOAT_MODE(variant->config.float_mode);
+	if (device->physical_device->rad_info.chip_class >= GFX9 &&
+	    stage == MESA_SHADER_TESS_CTRL)
+		variant->rsrc1 |= S_00B428_LS_VGPR_COMP_CNT(vgpr_comp_cnt);
+	else
+		variant->rsrc1 |= S_00B128_VGPR_COMP_CNT(vgpr_comp_cnt);
 
 	void *ptr = radv_alloc_shader_memory(device, variant);
 	memcpy(ptr, binary->code, binary->code_size);
