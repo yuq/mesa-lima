@@ -253,11 +253,6 @@ void radv_loge_v(const char *format, va_list va);
 
 void *radv_lookup_entrypoint(const char *name);
 
-struct radv_extensions {
-	VkExtensionProperties       *ext_array;
-	uint32_t                    num_ext;
-};
-
 struct radv_physical_device {
 	VK_LOADER_DATA                              _loader_data;
 
@@ -273,7 +268,6 @@ struct radv_physical_device {
 
 	int local_fd;
 	struct wsi_device                       wsi_device;
-	struct radv_extensions                      extensions;
 
 	bool has_rbplus; /* if RB+ register exist */
 	bool rbplus_allowed; /* if RB+ is allowed */
@@ -300,6 +294,11 @@ struct radv_instance {
 
 VkResult radv_init_wsi(struct radv_physical_device *physical_device);
 void radv_finish_wsi(struct radv_physical_device *physical_device);
+
+bool radv_instance_extension_supported(const char *name);
+uint32_t radv_physical_device_api_version(struct radv_physical_device *dev);
+bool radv_physical_device_extension_supported(struct radv_physical_device *dev,
+					      const char *name);
 
 struct cache_entry;
 
