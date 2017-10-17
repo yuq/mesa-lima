@@ -1150,6 +1150,20 @@ struct dd_function_table {
     */
    void (*DeleteSemaphoreObject)(struct gl_context *ctx,
                                  struct gl_semaphore_object *semObj);
+
+   /**
+    * Introduce an operation to wait for the semaphore object in the GL
+    * server's command stream
+    */
+   void (*ServerWaitSemaphoreObject)(struct gl_context *ctx,
+                                     struct gl_semaphore_object *semObj);
+
+   /**
+    * Introduce an operation to signal the semaphore object in the GL
+    * server's command stream
+    */
+   void (*ServerSignalSemaphoreObject)(struct gl_context *ctx,
+                                       struct gl_semaphore_object *semObj);
    /*@}*/
 
    /**
