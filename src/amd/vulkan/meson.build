@@ -24,6 +24,7 @@ radv_entrypoints = custom_target(
   output : ['radv_entrypoints.h', 'radv_entrypoints.c'],
   command : [prog_python2, '@INPUT0@', '--xml', '@INPUT1@',
              '--outdir', meson.current_build_dir()],
+  depend_files : files('radv_extensions.py'),
 )
 
 radv_extensions = custom_target(
