@@ -1001,8 +1001,6 @@ radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer)
 	radv_emit_fragment_shader(cmd_buffer, pipeline);
 	radv_emit_vgt_vertex_reuse(cmd_buffer, pipeline);
 
-	radv_emit_shaders_prefetch(cmd_buffer, pipeline);
-
 	cmd_buffer->scratch_size_needed =
 	                          MAX2(cmd_buffer->scratch_size_needed,
 	                               pipeline->max_waves * pipeline->scratch_bytes_per_wave);
@@ -1768,6 +1766,19 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer)
 					   AC_UD_VS_VERTEX_BUFFERS, va);
 	}
 	cmd_buffer->state.vb_dirty = false;
+
+	return true;
+}
+
+static bool
+radv_upload_graphics_shader_descriptors(struct radv_cmd_buffer *cmd_buffer)
+{
+	if (!radv_cmd_buffer_update_vertex_descriptors(cmd_buffer))
+		return false;
+
+	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_ALL_GRAPHICS);
+	radv_flush_constants(cmd_buffer, cmd_buffer->state.pipeline,
+			     VK_SHADER_STAGE_ALL_GRAPHICS);
 
 	return true;
 }
@@ -3114,16 +3125,9 @@ radv_emit_draw_packets(struct radv_cmd_buffer *cmd_buffer,
 }
 
 static void
-radv_draw(struct radv_cmd_buffer *cmd_buffer,
-	  const struct radv_draw_info *info)
+radv_emit_all_graphics_states(struct radv_cmd_buffer *cmd_buffer,
+			      const struct radv_draw_info *info)
 {
-	MAYBE_UNUSED unsigned cdw_max =
-		radeon_check_space(cmd_buffer->device->ws,
-				   cmd_buffer->cs, 4096);
-
-	if (!radv_cmd_buffer_update_vertex_descriptors(cmd_buffer))
-		return;
-
 	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_PIPELINE)
 		radv_emit_graphics_pipeline(cmd_buffer);
 
@@ -3142,19 +3146,77 @@ radv_draw(struct radv_cmd_buffer *cmd_buffer,
 			cmd_buffer->state.dirty |= RADV_CMD_DIRTY_INDEX_BUFFER;
 	}
 
+	radv_cmd_buffer_flush_dynamic_state(cmd_buffer);
+
 	radv_emit_draw_registers(cmd_buffer, info->indexed,
 				 info->instance_count > 1, info->indirect,
 				 info->indirect ? 0 : info->count);
 
-	radv_cmd_buffer_flush_dynamic_state(cmd_buffer);
+	cmd_buffer->state.dirty = 0;
+}
 
-	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_ALL_GRAPHICS);
-	radv_flush_constants(cmd_buffer, cmd_buffer->state.pipeline,
-			     VK_SHADER_STAGE_ALL_GRAPHICS);
+static void
+radv_draw(struct radv_cmd_buffer *cmd_buffer,
+	  const struct radv_draw_info *info)
+{
+	bool pipeline_is_dirty =
+		(cmd_buffer->state.dirty & RADV_CMD_DIRTY_PIPELINE) &&
+		cmd_buffer->state.pipeline &&
+		cmd_buffer->state.pipeline != cmd_buffer->state.emitted_pipeline;
 
-	si_emit_cache_flush(cmd_buffer);
+	MAYBE_UNUSED unsigned cdw_max =
+		radeon_check_space(cmd_buffer->device->ws,
+				   cmd_buffer->cs, 4096);
 
-	radv_emit_draw_packets(cmd_buffer, info);
+	/* Use optimal packet order based on whether we need to sync the
+	 * pipeline.
+	 */
+	if (cmd_buffer->state.flush_bits & (RADV_CMD_FLAG_FLUSH_AND_INV_CB |
+					    RADV_CMD_FLAG_FLUSH_AND_INV_DB |
+					    RADV_CMD_FLAG_PS_PARTIAL_FLUSH |
+					    RADV_CMD_FLAG_CS_PARTIAL_FLUSH)) {
+		/* If we have to wait for idle, set all states first, so that
+		 * all SET packets are processed in parallel with previous draw
+		 * calls. Then upload descriptors, set shader pointers, and
+		 * draw, and prefetch at the end. This ensures that the time
+		 * the CUs are idle is very short. (there are only SET_SH
+		 * packets between the wait and the draw)
+		 */
+		radv_emit_all_graphics_states(cmd_buffer, info);
+		si_emit_cache_flush(cmd_buffer);
+		/* <-- CUs are idle here --> */
+
+		if (!radv_upload_graphics_shader_descriptors(cmd_buffer))
+			return;
+
+		radv_emit_draw_packets(cmd_buffer, info);
+		/* <-- CUs are busy here --> */
+
+		/* Start prefetches after the draw has been started. Both will
+		 * run in parallel, but starting the draw first is more
+		 * important.
+		 */
+		if (pipeline_is_dirty) {
+			radv_emit_shaders_prefetch(cmd_buffer,
+						   cmd_buffer->state.pipeline);
+		}
+	} else {
+		/* If we don't wait for idle, start prefetches first, then set
+		 * states, and draw at the end.
+		 */
+		si_emit_cache_flush(cmd_buffer);
+
+		if (pipeline_is_dirty) {
+			radv_emit_shaders_prefetch(cmd_buffer,
+						   cmd_buffer->state.pipeline);
+		}
+
+		if (!radv_upload_graphics_shader_descriptors(cmd_buffer))
+			return;
+
+		radv_emit_all_graphics_states(cmd_buffer, info);
+		radv_emit_draw_packets(cmd_buffer, info);
+	}
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 	radv_cmd_buffer_after_draw(cmd_buffer);
