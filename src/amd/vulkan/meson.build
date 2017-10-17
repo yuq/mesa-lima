@@ -27,7 +27,7 @@ radv_entrypoints = custom_target(
   depend_files : files('radv_extensions.py'),
 )
 
-radv_extensions = custom_target(
+radv_extensions_c = custom_target(
   'radv_extensions.c',
   input : ['radv_extensions.py', vk_api_xml],
   output : ['radv_extensions.c'],
@@ -111,7 +111,7 @@ endif
 
 libvulkan_radeon = shared_library(
   'vulkan_radeon',
-  [libradv_files, radv_entrypoints, radv_extensions, nir_opcodes_h, vk_format_table_c],
+  [libradv_files, radv_entrypoints, radv_extensions_c, nir_opcodes_h, vk_format_table_c],
   include_directories : [inc_common, inc_amd, inc_amd_common, inc_compiler,
                          inc_vulkan_util, inc_vulkan_wsi],
   link_with : [libamd_common, libamdgpu_addrlib, libvulkan_util,
