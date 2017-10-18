@@ -615,7 +615,8 @@ eglInitialize(EGLDisplay dpy, EGLint *major, EGLint *minor)
       _eglCreateExtensionsString(disp);
       _eglCreateAPIsString(disp);
       snprintf(disp->VersionString, sizeof(disp->VersionString),
-               "%d.%d", disp->Version / 10, disp->Version % 10);
+               "%d.%d (%s)", disp->Version / 10, disp->Version % 10,
+               disp->Driver->Name);
    }
 
    /* Update applications version of major and minor if not NULL */
