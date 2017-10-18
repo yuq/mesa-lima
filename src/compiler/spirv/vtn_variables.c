@@ -1495,11 +1495,9 @@ vtn_pointer_to_ssa(struct vtn_builder *b, struct vtn_pointer *ptr)
    vtn_assert(ptr->ptr_type);
    vtn_assert(ptr->ptr_type->type);
 
-   if (ptr->offset && ptr->block_index) {
-      return nir_vec2(&b->nb, ptr->block_index, ptr->offset);
-   } else {
-      /* If we don't have an offset or block index, then we must be a pointer
-       * to the variable itself.
+   if (!ptr->offset || !ptr->block_index) {
+      /* If we don't have an offset then we must be a pointer to the variable
+       * itself.
        */
       vtn_assert(!ptr->offset && !ptr->block_index);
 
@@ -1509,9 +1507,14 @@ vtn_pointer_to_ssa(struct vtn_builder *b, struct vtn_pointer *ptr)
        */
       vtn_assert(ptr->var && ptr->var->type->base_type == vtn_base_type_struct);
 
-      return nir_vec2(&b->nb, vtn_variable_resource_index(b, ptr->var, NULL),
-                              nir_imm_int(&b->nb, 0));
+      struct vtn_access_chain chain = {
+         .length = 0,
+      };
+      ptr = vtn_ssa_offset_pointer_dereference(b, ptr, &chain);
    }
+
+   vtn_assert(ptr->offset && ptr->block_index);
+   return nir_vec2(&b->nb, ptr->block_index, ptr->offset);
 }
 
 struct vtn_pointer *
