@@ -292,17 +292,17 @@ tgsi_util_get_inst_usage_mask(const struct tgsi_full_instruction *inst,
    case TGSI_OPCODE_TXL2:
    case TGSI_OPCODE_LODQ:
    case TGSI_OPCODE_TG4: {
-      unsigned dim_layer_shadow =
+      unsigned dim_layer =
          tgsi_util_get_texture_coord_dim(inst->Texture.Texture);
-      unsigned dim_layer, dim;
+      unsigned dim_layer_shadow, dim;
 
-      /* Remove shadow. */
+      /* Add shadow. */
       if (tgsi_is_shadow_target(inst->Texture.Texture)) {
-         dim_layer = dim_layer_shadow - 1;
+         dim_layer_shadow = dim_layer + 1;
          if (inst->Texture.Texture == TGSI_TEXTURE_SHADOW1D)
-            dim_layer = 1;
+            dim_layer_shadow = 3;
       } else {
-         dim_layer = dim_layer_shadow;
+         dim_layer_shadow = dim_layer;
       }
 
       /* Remove layer. */
