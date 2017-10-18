@@ -1600,7 +1600,7 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 	    (!modules[MESA_SHADER_GEOMETRY] || pipeline->gs_copy_shader))
 		return;
 
-	if (!modules[MESA_SHADER_FRAGMENT]) {
+	if (!modules[MESA_SHADER_FRAGMENT] && !modules[MESA_SHADER_COMPUTE]) {
 		nir_builder fs_b;
 		nir_builder_init_simple_shader(&fs_b, NULL, MESA_SHADER_FRAGMENT, NULL);
 		fs_b.shader->info.name = ralloc_strdup(fs_b.shader, "noop_fs");
