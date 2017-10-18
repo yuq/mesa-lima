@@ -1691,7 +1691,7 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 
 	for (int i = 0; i < MESA_SHADER_STAGES; ++i) {
 		free(codes[i]);
-		if (modules[i] && !modules[i]->nir)
+		if (modules[i] && !modules[i]->nir && !pipeline->device->trace_bo)
 			ralloc_free(nir[i]);
 	}
 
