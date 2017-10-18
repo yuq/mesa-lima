@@ -27,6 +27,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := i915_dri
 LOCAL_MODULE_RELATIVE_PATH := $(MESA_DRI_MODULE_REL_PATH)
+LOCAL_LDFLAGS += $(MESA_DRI_LDFLAGS)
 
 # Import variables i915_FILES.
 include $(LOCAL_PATH)/Makefile.sources
