@@ -850,11 +850,20 @@ static void
 vtn_block_store(struct vtn_builder *b, struct vtn_ssa_value *src,
                 struct vtn_pointer *dst)
 {
+   nir_intrinsic_op op;
+   switch (dst->mode) {
+   case vtn_variable_mode_ssbo:
+      op = nir_intrinsic_store_ssbo;
+      break;
+   default:
+      vtn_fail("Invalid block variable mode");
+   }
+
    nir_ssa_def *offset, *index = NULL;
    unsigned chain_idx;
    offset = vtn_pointer_to_offset(b, dst, &index, &chain_idx);
 
-   _vtn_block_load_store(b, nir_intrinsic_store_ssbo, false, index, offset,
+   _vtn_block_load_store(b, op, false, index, offset,
                          0, 0, dst->chain, chain_idx, dst->type, &src);
 }
 
