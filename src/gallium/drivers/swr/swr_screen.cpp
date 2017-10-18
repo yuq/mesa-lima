@@ -57,7 +57,7 @@
 #define SWR_MAX_TEXTURE_ARRAY_LAYERS 512 /* 8K x 512 / 8K x 8K x 512 */
 
 /* Default max client_copy_limit */
-#define SWR_CLIENT_COPY_LIMIT 32768
+#define SWR_CLIENT_COPY_LIMIT 8192
 
 /* Flag indicates creation of alternate surface, to prevent recursive loop
  * in resource creation when msaa_force_enable is set. */
