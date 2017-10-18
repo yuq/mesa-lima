@@ -263,6 +263,8 @@ void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index)
    node->type = type;
    node->index = comp->cur_index++;
    node->sched_dist = -1;
+   node->sched_instr = -1;
+   node->sched_pos = -1;
 
    return node;
 
