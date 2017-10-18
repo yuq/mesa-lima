@@ -3480,8 +3480,14 @@ fs_visitor::lower_integer_multiplication()
              * schedule multi-component multiplications much better.
              */
 
+            bool needs_mov = false;
             fs_reg orig_dst = inst->dst;
-            if (orig_dst.is_null() || orig_dst.file == MRF) {
+            if (orig_dst.is_null() || orig_dst.file == MRF ||
+                regions_overlap(inst->dst, inst->size_written,
+                                inst->src[0], inst->size_read(0)) ||
+                regions_overlap(inst->dst, inst->size_written,
+                                inst->src[1], inst->size_read(1))) {
+               needs_mov = true;
                inst->dst = fs_reg(VGRF, alloc.allocate(dispatch_width / 8),
                                   inst->dst.type);
             }
@@ -3512,7 +3518,7 @@ fs_visitor::lower_integer_multiplication()
                      subscript(low, BRW_REGISTER_TYPE_UW, 1),
                      subscript(high, BRW_REGISTER_TYPE_UW, 0));
 
-            if (inst->conditional_mod || orig_dst.file == MRF) {
+            if (needs_mov || inst->conditional_mod) {
                set_condmod(inst->conditional_mod,
                            ibld.MOV(orig_dst, inst->dst));
             }
