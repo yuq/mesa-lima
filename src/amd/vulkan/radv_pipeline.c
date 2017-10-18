@@ -1658,8 +1658,6 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 			keys[MESA_SHADER_TESS_EVAL].tes.export_prim_id =
 				pipeline->shaders[MESA_SHADER_FRAGMENT]->info.fs.prim_id_input;
 		}
-
-		pipeline->active_stages |= mesa_to_vk_shader_stage(MESA_SHADER_FRAGMENT);
 	}
 
 	if (device->physical_device->rad_info.chip_class >= GFX9 &&
