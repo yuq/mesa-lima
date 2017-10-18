@@ -1597,8 +1597,13 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 	}
 
 	if (radv_create_shader_variants_from_pipeline_cache(device, cache, hash, pipeline->shaders) &&
-	    (!modules[MESA_SHADER_GEOMETRY] || pipeline->gs_copy_shader))
+	    (!modules[MESA_SHADER_GEOMETRY] || pipeline->gs_copy_shader)) {
+		for (unsigned i = 0; i < MESA_SHADER_STAGES; ++i) {
+			if (pipeline->shaders[i])
+				pipeline->active_stages |= mesa_to_vk_shader_stage(i);
+		}
 		return;
+	}
 
 	if (!modules[MESA_SHADER_FRAGMENT] && !modules[MESA_SHADER_COMPUTE]) {
 		nir_builder fs_b;
