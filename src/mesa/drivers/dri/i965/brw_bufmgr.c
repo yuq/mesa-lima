@@ -669,11 +669,12 @@ bo_wait_with_stall_warning(struct brw_context *brw,
                            struct brw_bo *bo,
                            const char *action)
 {
-   double elapsed = unlikely(brw && brw->perf_debug) ? -get_time() : 0.0;
+   bool busy = brw && brw->perf_debug && !bo->idle;
+   double elapsed = unlikely(busy) ? -get_time() : 0.0;
 
    brw_bo_wait_rendering(bo);
 
-   if (unlikely(brw && brw->perf_debug)) {
+   if (unlikely(busy)) {
       elapsed += get_time();
       if (elapsed > 1e-5) /* 0.01ms */
          perf_debug("%s a busy \"%s\" BO stalled and took %.03f ms.\n",
