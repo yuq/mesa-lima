@@ -161,24 +161,32 @@ vtn_ssa_offset_pointer_dereference(struct vtn_builder *b,
       idx++;
    }
 
-   if (!block_index) {
+   if (!offset) {
+      /* This is the first access chain so we don't have a block index */
+      vtn_assert(!block_index);
+
       vtn_assert(base->var);
-      if (glsl_type_is_array(type->type)) {
-         /* We need at least one element in the chain */
-         vtn_assert(deref_chain->length >= 1);
+      switch (base->mode) {
+      case vtn_variable_mode_ubo:
+      case vtn_variable_mode_ssbo:
+         if (glsl_type_is_array(type->type)) {
+            /* We need at least one element in the chain */
+            vtn_assert(deref_chain->length >= 1);
 
-         nir_ssa_def *desc_arr_idx =
-            vtn_access_link_as_ssa(b, deref_chain->link[0], 1);
-         block_index = vtn_variable_resource_index(b, base->var, desc_arr_idx);
-         type = type->array_element;
-         idx++;
-      } else {
-         block_index = vtn_variable_resource_index(b, base->var, NULL);
+            nir_ssa_def *desc_arr_idx =
+               vtn_access_link_as_ssa(b, deref_chain->link[0], 1);
+            block_index = vtn_variable_resource_index(b, base->var, desc_arr_idx);
+            type = type->array_element;
+            idx++;
+         } else {
+            block_index = vtn_variable_resource_index(b, base->var, NULL);
+         }
+         offset = nir_imm_int(&b->nb, 0);
+         break;
+
+      default:
+         vtn_fail("Invalid offset pointer mode");
       }
-
-      /* This is the first access chain so we also need an offset */
-      vtn_assert(!offset);
-      offset = nir_imm_int(&b->nb, 0);
    }
    vtn_assert(offset);
 
