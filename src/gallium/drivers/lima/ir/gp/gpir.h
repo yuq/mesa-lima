@@ -267,6 +267,8 @@ struct lima_vs_shader_state;
 typedef struct gpir_compiler {
    struct list_head block_list;
    int cur_index;
+   /* for mark a node newly created */
+   int save_index;
 
    /* array for searching ssa/reg node */
    gpir_node **var_nodes;
