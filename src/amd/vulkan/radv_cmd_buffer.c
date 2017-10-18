@@ -2905,7 +2905,7 @@ radv_cs_emit_draw_indexed_packet(struct radv_cmd_buffer *cmd_buffer,
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_DRAW_INDEX_2, 4, false));
 	radeon_emit(cmd_buffer->cs, cmd_buffer->state.max_index_count);
 	radeon_emit(cmd_buffer->cs, index_va);
-	radeon_emit(cmd_buffer->cs, (index_va >> 32UL) & 0xFF);
+	radeon_emit(cmd_buffer->cs, index_va >> 32);
 	radeon_emit(cmd_buffer->cs, index_count);
 	radeon_emit(cmd_buffer->cs, V_0287F0_DI_SRC_SEL_DMA);
 }
