@@ -2582,10 +2582,9 @@ if test -n "$with_gallium_drivers"; then
         xswr)
             llvm_require_version $LLVM_REQUIRED_SWR "swr"
 
-            swr_require_cxx_feature_flags "C++11" "__cplusplus >= 201103L" \
-                ",-std=c++11" \
-                SWR_CXX11_CXXFLAGS
-            AC_SUBST([SWR_CXX11_CXXFLAGS])
+            if test "x$HAVE_CXX11" != "xyes"; then
+                AC_MSG_ERROR([swr requires c++11 support])
+            fi
 
             swr_require_cxx_feature_flags "AVX" "defined(__AVX__)" \
                 ",-target-cpu=sandybridge,-mavx,-march=core-avx,-tp=sandybridge" \
