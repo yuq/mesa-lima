@@ -3489,18 +3489,20 @@ fs_visitor::lower_integer_multiplication()
 
             bool needs_mov = false;
             fs_reg orig_dst = inst->dst;
+            fs_reg low = inst->dst;
             if (orig_dst.is_null() || orig_dst.file == MRF ||
                 regions_overlap(inst->dst, inst->size_written,
                                 inst->src[0], inst->size_read(0)) ||
                 regions_overlap(inst->dst, inst->size_written,
                                 inst->src[1], inst->size_read(1))) {
                needs_mov = true;
-               inst->dst = fs_reg(VGRF, alloc.allocate(dispatch_width / 8),
-                                  inst->dst.type);
+               low.nr = alloc.allocate(regs_written(inst));
+               low.offset = low.offset % REG_SIZE;
             }
-            fs_reg low = inst->dst;
-            fs_reg high(VGRF, alloc.allocate(dispatch_width / 8),
-                        inst->dst.type);
+
+            fs_reg high = inst->dst;
+            high.nr = alloc.allocate(regs_written(inst));
+            high.offset = high.offset % REG_SIZE;
 
             if (devinfo->gen >= 7) {
                if (inst->src[1].file == IMM) {
@@ -3521,13 +3523,13 @@ fs_visitor::lower_integer_multiplication()
                         inst->src[1]);
             }
 
-            ibld.ADD(subscript(inst->dst, BRW_REGISTER_TYPE_UW, 1),
+            ibld.ADD(subscript(low, BRW_REGISTER_TYPE_UW, 1),
                      subscript(low, BRW_REGISTER_TYPE_UW, 1),
                      subscript(high, BRW_REGISTER_TYPE_UW, 0));
 
             if (needs_mov || inst->conditional_mod) {
                set_condmod(inst->conditional_mod,
-                           ibld.MOV(orig_dst, inst->dst));
+                           ibld.MOV(orig_dst, low));
             }
          }
 
