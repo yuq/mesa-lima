@@ -1477,8 +1477,6 @@ radv_cmd_buffer_flush_dynamic_state(struct radv_cmd_buffer *cmd_buffer)
 	if (cmd_buffer->state.dirty & (RADV_CMD_DIRTY_PIPELINE |
 				       RADV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS))
 		radv_emit_depth_biais(cmd_buffer);
-
-	cmd_buffer->state.dirty = 0;
 }
 
 static void
@@ -1789,6 +1787,8 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 
 	si_emit_cache_flush(cmd_buffer);
+
+	cmd_buffer->state.dirty = 0;
 }
 
 static void radv_stage_flush(struct radv_cmd_buffer *cmd_buffer,
