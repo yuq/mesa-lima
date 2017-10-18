@@ -70,6 +70,34 @@ linux_dmabuf_unstable_v1_client_protocol_h = custom_target(
   command : [prog_wl_scanner, 'client-header', '@INPUT@', '@OUTPUT@'],
 )
 
+g_egldispatchstubs_c = custom_target(
+  'g_egldispatchstubs.c',
+  input : [
+    'generate/gen_egl_dispatch.py', 'generate/eglFunctionList.py',
+    'generate/egl.xml', 'generate/egl_other.xml'
+  ],
+  output : 'g_egldispatchstubs.c',
+  command : [
+    prog_python2, '@INPUT0@', 'source', '@INPUT1@', '@INPUT2@', '@INPUT3@'
+  ],
+  depend_files : files('generate/genCommon.py'),
+  capture : true,
+)
+
+g_egldispatchstubs_h = custom_target(
+  'g_egldispatchstubs.h',
+  input : [
+    'generate/gen_egl_dispatch.py', 'generate/eglFunctionList.py',
+    'generate/egl.xml', 'generate/egl_other.xml'
+  ],
+  output : 'g_egldispatchstubs.h',
+  command : [
+    prog_python2, '@INPUT0@', 'header', '@INPUT1@', '@INPUT2@', '@INPUT3@'
+  ],
+  depend_files : files('generate/genCommon.py'),
+  capture : true,
+)
+
 if with_platform_x11
   files_egl += files('drivers/dri2/platform_x11.c')
   if with_dri3
@@ -107,8 +135,22 @@ if cc.has_function('mincore')
   c_args_for_egl += '-DHAVE_MINCORE'
 endif
 
+if not with_glvnd
+  egl_lib_name = 'EGL'
+  egl_lib_version = '1.0.0'
+else
+  egl_lib_name = 'EGL_mesa'
+  egl_lib_version = '0'
+  files_egl += [g_egldispatchstubs_h, g_egldispatchstubs_c]
+  files_egl += files('main/eglglvnd.c', 'main/egldispatchstubs.c')
+  install_data(
+    'main/50_mesa.json',
+    install_dir : join_paths(get_option('datadir'), 'glvnd', 'egl_vendor.d')
+  )
+endif
+
 libegl = shared_library(
-  'EGL',
+  egl_lib_name,
   files_egl,
   c_args : [
     c_vis_args,
@@ -125,7 +167,7 @@ libegl = shared_library(
   link_args : [ld_args_bsymbolic, ld_args_gc_sections],
   dependencies : [deps_for_egl, dep_dl, dep_libdrm, dep_clock, dep_thread],
   install : true,
-  version : '1.0.0',
+  version : egl_lib_version,
 )
 
 pkg.generate(
