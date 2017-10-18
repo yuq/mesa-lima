@@ -31,7 +31,7 @@ aubinator = executable(
 aubinator_error_decode = executable(
   'aubinator_error_decode',
   files('aubinator_error_decode.c', 'disasm.c', 'gen_disasm.h'),
-  dependencies : [dep_expat, dep_zlib, dep_thread],
+  dependencies : [dep_zlib, dep_thread],
   include_directories : [inc_common, inc_intel],
   link_with : [libintel_common, libintel_compiler, libmesa_util],
   c_args : [c_vis_args, no_override_init_args],
