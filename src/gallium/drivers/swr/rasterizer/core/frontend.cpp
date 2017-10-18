@@ -1237,6 +1237,7 @@ static void TessellationStages(
         dsContext.pDomainU = (simdscalar*)tsData.pDomainPointsU;
         dsContext.pDomainV = (simdscalar*)tsData.pDomainPointsV;
         dsContext.pOutputData = gt_pTessellationThreadData->pDSOutput;
+        dsContext.outVertexAttribOffset = tsState.dsOutVtxAttribOffset;
 #if USE_SIMD16_FRONTEND
         dsContext.vectorStride = RoundUpEven(requiredDSVectorInvocations);      // simd8 -> simd16
 #else

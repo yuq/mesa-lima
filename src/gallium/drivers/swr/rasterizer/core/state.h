@@ -288,6 +288,7 @@ struct SWR_DS_CONTEXT
     uint32_t        PrimitiveID;    // IN: (SCALAR) PrimitiveID for the patch associated with the DS invocation
     uint32_t        vectorOffset;   // IN: (SCALAR) vector index offset into SIMD data.
     uint32_t        vectorStride;   // IN: (SCALAR) stride (in vectors) of output data per attribute-component
+    uint32_t        outVertexAttribOffset; // IN: (SCALAR) Offset to the attributes as processed by the next shader stage.
     ScalarPatch*    pCpIn;          // IN: (SCALAR) Control patch
     simdscalar*     pDomainU;       // IN: (SIMD) Domain Point U coords
     simdscalar*     pDomainV;       // IN: (SIMD) Domain Point V coords
@@ -819,6 +820,7 @@ struct SWR_TS_STATE
     uint32_t                numHsOutputAttribs;
     uint32_t                numDsOutputAttribs;
     uint32_t                dsAllocationSize;
+    uint32_t                dsOutVtxAttribOffset;
 
     // Offset to the start of the attributes of the input vertices, in simdvector units
     uint32_t                vertexAttribOffset;
