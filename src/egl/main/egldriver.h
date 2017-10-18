@@ -75,8 +75,6 @@ extern "C" {
  */
 struct _egl_driver
 {
-   const char *Name;  /**< name of this driver */
-
    _EGLAPI API;  /**< EGL API dispatch table */
 };
 

@@ -325,7 +325,5 @@ _eglInitDriver(_EGLDriver *driver)
 
 	driver->API.SwapBuffers = haiku_swap_buffers;
 
-	driver->Name = "Haiku";
-
 	TRACE("API Calls defined\n");
 }

@@ -3244,6 +3244,4 @@ _eglInitDriver(_EGLDriver *dri2_drv)
    dri2_drv->API.GLInteropQueryDeviceInfo = dri2_interop_query_device_info;
    dri2_drv->API.GLInteropExportObject = dri2_interop_export_object;
    dri2_drv->API.DupNativeFenceFDANDROID = dri2_dup_native_fence_fd;
-
-   dri2_drv->Name = "DRI2";
 }
