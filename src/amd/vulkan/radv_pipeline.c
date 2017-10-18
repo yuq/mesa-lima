@@ -1756,6 +1756,17 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 		modules[MESA_SHADER_FRAGMENT] = &fs_m;
 	}
 
+	/* Determine first and last stage. */
+	unsigned first = MESA_SHADER_STAGES;
+	unsigned last = 0;
+	for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+		if (!pStages[i])
+			continue;
+		if (first == MESA_SHADER_STAGES)
+			first = i;
+		last = i;
+	}
+
 	for (unsigned i = 0; i < MESA_SHADER_STAGES; ++i) {
 		const VkPipelineShaderStageCreateInfo *stage = pStages[i];
 
@@ -1766,6 +1777,7 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 						    stage ? stage->pName : "main", i,
 						    stage ? stage->pSpecializationInfo : NULL);
 		pipeline->active_stages |= mesa_to_vk_shader_stage(i);
+
 		/* We don't want to alter meta shaders IR directly so clone it
 		 * first.
 		 */
@@ -1773,6 +1785,18 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 			nir[i] = nir_shader_clone(NULL, nir[i]);
 		}
 
+		if (first != last) {
+			nir_variable_mode mask = 0;
+
+			if (i != first)
+				mask = mask | nir_var_shader_in;
+
+			if (i != last)
+				mask = mask | nir_var_shader_out;
+
+			nir_lower_io_to_scalar_early(nir[i], mask);
+			radv_optimize_nir(nir[i]);
+		}
 	}
 
 	if (nir[MESA_SHADER_TESS_CTRL]) {
