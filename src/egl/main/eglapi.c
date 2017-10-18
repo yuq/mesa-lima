@@ -583,7 +583,7 @@ eglInitialize(EGLDisplay dpy, EGLint *major, EGLint *minor)
       RETURN_EGL_ERROR(NULL, EGL_BAD_DISPLAY, EGL_FALSE);
 
    if (!disp->Initialized) {
-      if (!_eglMatchDriver(disp, EGL_FALSE))
+      if (!_eglMatchDriver(disp))
          RETURN_EGL_ERROR(disp, EGL_NOT_INITIALIZED, EGL_FALSE);
 
       /* limit to APIs supported by core */

@@ -901,10 +901,6 @@ dri2_initialize(_EGLDriver *drv, _EGLDisplay *disp)
    if (disp->Options.UseFallback)
       return EGL_FALSE;
 
-   /* Nothing to initialize for a test only display */
-   if (disp->Options.TestOnly)
-      return EGL_TRUE;
-
    switch (disp->Platform) {
 #ifdef HAVE_SURFACELESS_PLATFORM
    case _EGL_PLATFORM_SURFACELESS:
