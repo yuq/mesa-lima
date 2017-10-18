@@ -1559,7 +1559,7 @@ VkResult anv_AllocateMemory(
        * this sort of attack but only if it can trust the buffer size.
        */
       if (mem->bo->size < aligned_alloc_size) {
-         result = vk_errorf(device->instace, device,
+         result = vk_errorf(device->instance, device,
                             VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR,
                             "aligned allocationSize too large for "
                             "VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR: "
