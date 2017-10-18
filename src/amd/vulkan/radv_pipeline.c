@@ -1828,6 +1828,7 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 		last = i;
 	}
 
+	int prev = -1;
 	for (unsigned i = 0; i < MESA_SHADER_STAGES; ++i) {
 		const VkPipelineShaderStageCreateInfo *stage = pStages[i];
 
@@ -1858,6 +1859,11 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 			nir_lower_io_to_scalar_early(nir[i], mask);
 			radv_optimize_nir(nir[i]);
 		}
+
+		if (prev != -1) {
+			nir_compact_varyings(nir[prev], nir[i], true);
+		}
+		prev = i;
 	}
 
 	if (nir[MESA_SHADER_TESS_CTRL]) {
