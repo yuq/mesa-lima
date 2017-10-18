@@ -111,6 +111,10 @@ dnl Check for progs
 AC_PROG_CPP
 AC_PROG_CC
 AC_PROG_CXX
+dnl add this here, so the help for this environmnet variable is close to
+dnl other CC/CXX flags related help
+AC_ARG_VAR([CXX11_CXXFLAGS], [Compiler flag to enable C++11 support (only needed if not
+                              enabled by default and different  from -std=c++11)])
 AM_PROG_CC_C_O
 AM_PROG_AS
 AX_CHECK_GNU_MAKE
@@ -119,6 +123,7 @@ AC_PROG_SED
 AC_PROG_MKDIR_P
 
 AC_SYS_LARGEFILE
+
 
 LT_PREREQ([2.2])
 LT_INIT([disable-static])
@@ -326,6 +331,56 @@ if test "x$GCC" = xyes; then
         CFLAGS="$CFLAGS -std=c99"
     fi
 fi
+
+dnl
+dnl Check whether C++11 is supported, if the environment variable
+dnl CXX11_CXXFLAGS is set it takes precedence.
+dnl
+
+AC_LANG_PUSH([C++])
+
+check_cxx11_available() {
+    output_support=$1
+    AC_COMPILE_IFELSE(
+        [AC_LANG_PROGRAM([
+             #if !(__cplusplus >= 201103L)
+             #error
+             #endif
+             #include <tuple>
+        ])
+    ], [
+         AC_MSG_RESULT(yes)
+         cxx11_support=yes
+    ], AC_MSG_RESULT(no))
+    eval "$output_support=\$cxx11_support"
+}
+
+HAVE_CXX11=no
+save_CXXFLAGS="$CXXFLAGS"
+
+dnl If the user provides a flag to enable c++11, then we test only this
+if test "x$CXX11_CXXFLAGS" != "x"; then
+   CXXFLAGS="$CXXFLAGS $CXX11_CXXFLAGS"
+   AC_MSG_CHECKING(whether c++11 is enabled by via $CXX11_CXXFLAGS)
+   check_cxx11_available HAVE_CXX11
+else
+   dnl test whether c++11 is enabled by default
+   AC_MSG_CHECKING(whether c++11 is enabled by default)
+   check_cxx11_available HAVE_CXX11
+
+   dnl C++11 not enabled by default, test whether -std=c++11 does the job
+   if test "x$HAVE_CXX11" != "xyes"; then
+       CXX11_CXXFLAGS=-std=c++11
+       CXXFLAGS="$CXXFLAGS $CXX11_CXXFLAGS"
+       AC_MSG_CHECKING(whether c++11 is enabled by via $CXX11_CXXFLAGS)
+       check_cxx11_available HAVE_CXX11
+   fi
+fi
+
+CXXFLAGS="$save_CXXFLAGS"
+AM_CONDITIONAL(HAVE_STD_CXX11, test "x$HAVE_CXX11" = "xyes")
+AC_SUBST(CXX11_CXXFLAGS)
+AC_LANG_POP([C++])
 
 dnl even if the compiler appears to support it, using visibility attributes isn't
 dnl going to do anything useful currently on cygwin apart from emit lots of warnings
@@ -3114,6 +3169,7 @@ defines=`echo $DEFINES | $SED 's/^ *//;s/  */ /;s/ *$//'`
 echo ""
 echo "        CFLAGS:          $cflags"
 echo "        CXXFLAGS:        $cxxflags"
+echo "        CXX11_CXXFLAGS:  $CXX11_CXXFLAGS"
 echo "        LDFLAGS:         $ldflags"
 echo "        Macros:          $defines"
 echo ""
