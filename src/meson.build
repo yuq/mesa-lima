@@ -56,8 +56,13 @@ subdir('intel')
 subdir('mesa')
 subdir('loader')
 subdir('glx')
+if with_platform_wayland
+  subdir('egl/wayland/wayland-egl')
+endif
 if with_gbm
   subdir('gbm')
 endif
-# TODO: egl
+if with_egl
+  subdir('egl')
+endif
 subdir('gallium')

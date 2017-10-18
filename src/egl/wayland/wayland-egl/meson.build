@@ -18,30 +18,25 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-wayland_drm_protocol_c = custom_target(
-  'wayland-drm-protocol.c',
-  input : 'wayland-drm.xml',
-  output : 'wayland-drm-protocol.c',
-  command : [prog_wl_scanner, 'code', '@INPUT@', '@OUTPUT@'],
+
+libwayland_egl = shared_library(
+  'wayland-egl',
+  'wayland-egl.c',
+  c_args : [c_vis_args],
+  link_args : ld_args_gc_sections,
+  version : '1.0.0',
+  install : true,
 )
 
-wayland_drm_client_protocol_h = custom_target(
-  'wayland-drm-client-protocol.h',
-  input : 'wayland-drm.xml',
-  output : 'wayland-drm-client-protocol.h',
-  command : [prog_wl_scanner, 'client-header', '@INPUT@', '@OUTPUT@'],
+pkg.generate(
+  name : 'wayland-egl',
+  description : 'Mesa wayland-egl library',
+  libraries : libwayland_egl,
+  version : meson.project_version(),
+  requires : 'wayland-client',
 )
 
-wayland_drm_server_protocol_h = custom_target(
-  'wayland-drm-server-protocol.h',
-  input : 'wayland-drm.xml',
-  output : 'wayland-drm-server-protocol.h',
-  command : [prog_wl_scanner, 'server-header', '@INPUT@', '@OUTPUT@'],
-)
-
-libwayland_drm = static_library(
-  'wayland_drm',
-  ['wayland-drm.c', wayland_drm_protocol_c, wayland_drm_server_protocol_h],
-  dependencies : [dep_wayland_server],
-  build_by_default : false,
-)
+if with_tests
+  test('wayland-egl-symbols-check', find_program('wayland-egl-symbols-check'))
+  test('wayland-egl-abi-check', executable('wayland-egl-abi-check', 'wayland-egl-abi-check.c'))
+endif
