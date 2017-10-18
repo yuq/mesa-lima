@@ -678,7 +678,7 @@ if with_platform_x11
     dep_xdamage = dependency('xdamage', version : '>= 1.1')
     dep_xfixes = dependency('xfixes')
     dep_xcb_glx = dependency('xcb-glx', version : '>= 1.8.1')
-    dep_xf86vm = dependency('xf86vm', required : false)
+    dep_xf86vm = dependency('xxf86vm', required : false)
   endif
   if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
     dep_xcb = dependency('xcb')
