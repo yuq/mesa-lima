@@ -81,8 +81,8 @@ struct _egl_driver
 };
 
 
-extern void
-_eglInitDriver(_EGLDriver *driver);
+extern _EGLDriver*
+_eglBuiltInDriver(void);
 
 
 extern _EGLDriver *
