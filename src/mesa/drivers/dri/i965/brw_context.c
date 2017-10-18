@@ -595,7 +595,6 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.QuadsFollowProvokingVertexConvention = false;
 
    ctx->Const.NativeIntegers = true;
-   ctx->Const.VertexID_is_zero_based = true;
 
    /* Regarding the CMP instruction, the Ivybridge PRM says:
     *
