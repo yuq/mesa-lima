@@ -1000,7 +1000,7 @@ backend_instruction::has_side_effects() const
    case TCS_OPCODE_RELEASE_INPUT:
       return true;
    default:
-      return false;
+      return eot;
    }
 }
 

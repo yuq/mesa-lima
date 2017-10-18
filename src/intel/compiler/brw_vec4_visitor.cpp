@@ -46,6 +46,7 @@ vec4_instruction::vec4_instruction(enum opcode opcode, const dst_reg &dst,
    this->predicate_inverse = false;
    this->target = 0;
    this->shadow_compare = false;
+   this->eot = false;
    this->ir = NULL;
    this->urb_write_flags = BRW_URB_WRITE_NO_FLAGS;
    this->header_size = 0;

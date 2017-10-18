@@ -393,12 +393,6 @@ fs_inst::can_change_types() const
             !src[1].abs && !src[1].negate));
 }
 
-bool
-fs_inst::has_side_effects() const
-{
-   return this->eot || backend_instruction::has_side_effects();
-}
-
 void
 fs_reg::init()
 {
