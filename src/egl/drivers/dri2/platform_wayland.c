@@ -42,7 +42,6 @@
 #include "egl_dri2.h"
 #include "egl_dri2_fallbacks.h"
 #include "loader.h"
-#include "util/debug.h"
 #include "util/u_vector.h"
 #include "eglglobals.h"
 
@@ -1972,7 +1971,7 @@ dri2_initialize_wayland(_EGLDriver *drv, _EGLDisplay *disp)
 {
    EGLBoolean initialized = EGL_FALSE;
 
-   if (!env_var_as_boolean("LIBGL_ALWAYS_SOFTWARE", false))
+   if (!disp->Options.UseFallback)
       initialized = dri2_initialize_wayland_drm(drv, disp);
 
    if (!initialized)

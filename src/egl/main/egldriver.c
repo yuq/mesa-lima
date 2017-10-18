@@ -44,6 +44,8 @@
 #include "egldriver.h"
 #include "egllog.h"
 
+#include "util/debug.h"
+
 static mtx_t _eglModuleMutex = _MTX_INITIALIZER_NP;
 static _EGLDriver *_eglDriver;
 
@@ -86,7 +88,8 @@ _eglMatchDriver(_EGLDisplay *dpy)
    assert(!dpy->Initialized);
 
    /* set options */
-   dpy->Options.UseFallback = EGL_FALSE;
+   dpy->Options.UseFallback =
+      env_var_as_boolean("LIBGL_ALWAYS_SOFTWARE", false);
 
    best_drv = _eglMatchAndInitialize(dpy);
    if (!best_drv) {

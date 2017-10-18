@@ -36,7 +36,6 @@
 #include "egl_dri2.h"
 #include "egl_dri2_fallbacks.h"
 #include "loader.h"
-#include "util/debug.h"
 
 static __DRIimage*
 surfaceless_alloc_image(struct dri2_egl_display *dri2_dpy,
@@ -325,7 +324,7 @@ dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
    dri2_dpy->fd = -1;
    disp->DriverData = (void *) dri2_dpy;
 
-   if (!env_var_as_boolean("LIBGL_ALWAYS_SOFTWARE", false)) {
+   if (!disp->Options.UseFallback) {
       driver_loaded = surfaceless_probe_device(disp, false);
       if (!driver_loaded)
          _eglLog(_EGL_WARNING,

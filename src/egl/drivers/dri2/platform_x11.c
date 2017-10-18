@@ -1460,7 +1460,7 @@ dri2_initialize_x11(_EGLDriver *drv, _EGLDisplay *disp)
 {
    EGLBoolean initialized = EGL_FALSE;
 
-   if (!env_var_as_boolean("LIBGL_ALWAYS_SOFTWARE", false)) {
+   if (!disp->Options.UseFallback) {
 #ifdef HAVE_DRI3
       if (!env_var_as_boolean("LIBGL_DRI3_DISABLE", false))
          initialized = dri2_initialize_x11_dri3(drv, disp);
