@@ -3008,21 +3008,27 @@ load_gs_input(struct nir_to_llvm_context *ctx,
 
 	param = shader_io_get_unique_index(instr->variables[0]->var->data.location);
 	for (unsigned i = 0; i < instr->num_components; i++) {
+		if (ctx->ac.chip_class >= GFX9) {
+			LLVMValueRef dw_addr = ctx->gs_vtx_offset[vtx_offset_param];
+			dw_addr = LLVMBuildAdd(ctx->ac.builder, dw_addr,
+			                       LLVMConstInt(ctx->ac.i32, param * 4 + i, 0), "");
+			value[i] = lds_load(ctx, dw_addr);
+		} else {
+			args[0] = ctx->esgs_ring;
+			args[1] = vtx_offset;
+			args[2] = LLVMConstInt(ctx->i32, (param * 4 + i + const_index) * 256, false);
+			args[3] = ctx->i32zero;
+			args[4] = ctx->i32one; /* OFFEN */
+			args[5] = ctx->i32zero; /* IDXEN */
+			args[6] = ctx->i32one; /* GLC */
+			args[7] = ctx->i32zero; /* SLC */
+			args[8] = ctx->i32zero; /* TFE */
 
-		args[0] = ctx->esgs_ring;
-		args[1] = vtx_offset;
-		args[2] = LLVMConstInt(ctx->i32, (param * 4 + i + const_index) * 256, false);
-		args[3] = ctx->i32zero;
-		args[4] = ctx->i32one; /* OFFEN */
-		args[5] = ctx->i32zero; /* IDXEN */
-		args[6] = ctx->i32one; /* GLC */
-		args[7] = ctx->i32zero; /* SLC */
-		args[8] = ctx->i32zero; /* TFE */
-
-		value[i] = ac_build_intrinsic(&ctx->ac, "llvm.SI.buffer.load.dword.i32.i32",
-					      ctx->i32, args, 9,
-					      AC_FUNC_ATTR_READONLY |
-					      AC_FUNC_ATTR_LEGACY);
+			value[i] = ac_build_intrinsic(&ctx->ac, "llvm.SI.buffer.load.dword.i32.i32",
+			                              ctx->i32, args, 9,
+			                              AC_FUNC_ATTR_READONLY |
+			                              AC_FUNC_ATTR_LEGACY);
+		}
 	}
 	result = ac_build_gather_values(&ctx->ac, value, instr->num_components);
 
