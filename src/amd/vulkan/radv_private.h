@@ -669,7 +669,7 @@ enum radv_cmd_dirty_bits {
 	RADV_CMD_DIRTY_DYNAMIC_ALL                       = (1 << 9) - 1,
 	RADV_CMD_DIRTY_PIPELINE                          = 1 << 9,
 	RADV_CMD_DIRTY_INDEX_BUFFER                      = 1 << 10,
-	RADV_CMD_DIRTY_RENDER_TARGETS                    = 1 << 11,
+	RADV_CMD_DIRTY_FRAMEBUFFER                       = 1 << 11,
 };
 typedef uint32_t radv_cmd_dirty_mask_t;
 

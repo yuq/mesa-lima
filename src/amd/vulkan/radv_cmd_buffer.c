@@ -1801,7 +1801,7 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_PIPELINE)
 		radv_emit_graphics_pipeline(cmd_buffer);
 
-	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_RENDER_TARGETS)
+	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_FRAMEBUFFER)
 		radv_emit_framebuffer_state(cmd_buffer);
 
 	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_INDEX_BUFFER)
@@ -1994,7 +1994,7 @@ radv_cmd_buffer_set_subpass(struct radv_cmd_buffer *cmd_buffer,
 
 	cmd_buffer->state.subpass = subpass;
 
-	cmd_buffer->state.dirty |= RADV_CMD_DIRTY_RENDER_TARGETS;
+	cmd_buffer->state.dirty |= RADV_CMD_DIRTY_FRAMEBUFFER;
 }
 
 static VkResult
