@@ -6377,6 +6377,20 @@ ac_nir_get_max_workgroup_size(enum chip_class chip_class,
 	return max_workgroup_size;
 }
 
+/* Fixup the HW not emitting the TCS regs if there are no HS threads. */
+static void ac_nir_fixup_ls_hs_input_vgprs(struct nir_to_llvm_context *ctx)
+{
+	LLVMValueRef count = ac_build_bfe(&ctx->ac, ctx->merged_wave_info,
+	                                  LLVMConstInt(ctx->ac.i32, 8, false),
+	                                  LLVMConstInt(ctx->ac.i32, 8, false), false);
+	LLVMValueRef hs_empty = LLVMBuildICmp(ctx->ac.builder, LLVMIntEQ, count,
+	                                      LLVMConstInt(ctx->ac.i32, 0, false), "");
+	ctx->abi.instance_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->rel_auto_id, ctx->abi.instance_id, "");
+	ctx->vs_prim_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->abi.vertex_id, ctx->vs_prim_id, "");
+	ctx->rel_auto_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->tcs_rel_ids, ctx->rel_auto_id, "");
+	ctx->abi.vertex_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->tcs_patch_id, ctx->abi.vertex_id, "");
+}
+
 void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 		      struct nir_shader *nir, struct nir_to_llvm_context *nctx)
 {
@@ -6473,6 +6487,10 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	ctx.abi.emit_outputs = handle_shader_outputs_post;
 	ctx.abi.load_ssbo = radv_load_ssbo;
 	ctx.abi.load_sampler_desc = radv_get_sampler_desc;
+
+	if (ctx.ac.chip_class == GFX9 &&
+	    shaders[shader_count - 1]->stage == MESA_SHADER_TESS_CTRL)
+		ac_nir_fixup_ls_hs_input_vgprs(&ctx);
 
 	for(int i = 0; i < shader_count; ++i) {
 		ctx.stage = shaders[i]->stage;
