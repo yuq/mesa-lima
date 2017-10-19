@@ -766,8 +766,12 @@ static int gpir_alloc_reg(gpir_instr *instrs, gpir_node *load,
          /* assert current has been inserted to instr before */
          assert(current->sched_instr >= 0);
       }
-      else
+      else {
+         /* TODO: we may create and insert some move node here
+          * based on all the nodes we've tried above and use it
+          * as store alu */
          return -1;
+      }
    }
 
    int reg = ffsll(free_regs) - 1;
@@ -958,7 +962,12 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
          int err = gpir_try_insert_load_reg(block, current);
          if (err == 0)
             return true;
-         else if (err < -1)
+         else if (err == -2) {
+            /* TODO: handle the target fail case to reschedule the target
+             * node and all its preceeds */
+            return false;
+         }
+         else if (err < -2)
             return false;
 
          /* fail to reg schedule current, we need to reschedule node */
