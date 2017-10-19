@@ -231,6 +231,13 @@ namespace SwrJit
         return UndefValue::get(VectorType::get(mFP32Ty, mVWidth));
     }
 
+#if USE_SIMD16_BUILDER
+    Value *Builder::VUNDEF2_F()
+    {
+        return UndefValue::get(VectorType::get(mFP32Ty, mVWidth2));
+    }
+
+#endif
     Value *Builder::VUNDEF(Type* t)
     {
         return UndefValue::get(VectorType::get(t, mVWidth));
@@ -690,6 +697,51 @@ namespace SwrJit
         return vGather;
     }
 
+#if USE_SIMD16_BUILDER
+    //////////////////////////////////////////////////////////////////////////
+    /// @brief
+    Value *Builder::EXTRACT(Value *a2, uint32_t imm)
+    {
+        const uint32_t i0 = (imm > 0) ? mVWidth : 0;
+
+        Value *result = VUNDEF_F();
+
+        for (uint32_t i = 0; i < mVWidth; i += 1)
+        {
+            Value *temp = VEXTRACT(a2, C(i0 + i));
+
+            result = VINSERT(result, temp, C(i));
+        }
+
+        return result;
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    /// @brief
+    Value *Builder::INSERT(Value *a2, Value * b, uint32_t imm)
+    {
+        const uint32_t i0 = (imm > 0) ? mVWidth : 0;
+
+        Value *result = BITCAST(a2, mSimd2FP32Ty);
+
+        for (uint32_t i = 0; i < mVWidth; i += 1)
+        {
+#if 1
+            if (!b->getType()->getScalarType()->isFloatTy())
+            {
+                b = BITCAST(b, mSimdFP32Ty);
+            }
+
+#endif
+            Value *temp = VEXTRACT(b, C(i));
+
+            result = VINSERT(result, temp, C(i0 + i));
+        }
+
+        return result;
+    }
+
+#endif
     //////////////////////////////////////////////////////////////////////////
     /// @brief convert x86 <N x float> mask to llvm <N x i1> mask
     Value* Builder::MASK(Value* vmask)

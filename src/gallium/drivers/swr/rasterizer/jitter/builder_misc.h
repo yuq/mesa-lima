@@ -56,6 +56,9 @@ Value *VIMMED1(float i);
 Value *VIMMED1(bool i);
 Value *VUNDEF(Type* t);
 Value *VUNDEF_F();
+#if USE_SIMD16_BUILDER
+Value *VUNDEF2_F();
+#endif
 Value *VUNDEF_I();
 Value *VUNDEF(Type* ty, uint32_t size);
 Value *VUNDEF_IPTR();
@@ -98,6 +101,12 @@ Value *VMASK(Value* mask);
 /// @brief functions that build IR to call x86 intrinsics directly, or
 /// emulate them with other instructions if not available on the host
 //////////////////////////////////////////////////////////////////////////
+
+#if USE_SIMD16_BUILDER
+Value *EXTRACT(Value *a, uint32_t imm);
+Value *INSERT(Value *a, Value *b, uint32_t imm);
+
+#endif
 Value *MASKLOADD(Value* src, Value* mask);
 
 void Gather4(const SWR_FORMAT format, Value* pSrcBase, Value* byteOffsets,

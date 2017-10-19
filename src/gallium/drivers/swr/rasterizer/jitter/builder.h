@@ -32,6 +32,8 @@
 #include "JitManager.h"
 #include "common/formats.h"
 
+#define USE_SIMD16_BUILDER 0
+
 namespace SwrJit
 {
     using namespace llvm;
@@ -45,6 +47,9 @@ namespace SwrJit
         IRBuilder<>* mpIRBuilder;
 
         uint32_t             mVWidth;
+#if USE_SIMD16_BUILDER
+        uint32_t             mVWidth2;
+#endif
 
         // Built in types.
         Type*                mVoidTy;
@@ -70,6 +75,17 @@ namespace SwrJit
         Type*                mSimdIntPtrTy;
         Type*                mSimdVectorTy;
         Type*                mSimdVectorTRTy;
+#if USE_SIMD16_BUILDER
+        Type*                mSimd2FP16Ty;
+        Type*                mSimd2FP32Ty;
+        Type*                mSimd2Int1Ty;
+        Type*                mSimd2Int16Ty;
+        Type*                mSimd2Int32Ty;
+        Type*                mSimd2Int64Ty;
+        Type*                mSimd2IntPtrTy;
+        Type*                mSimd2VectorTy;
+        Type*                mSimd2VectorTRTy;
+#endif
 
 #include "gen_builder.hpp"
 #include "gen_builder_x86.hpp"
