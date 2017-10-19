@@ -1122,7 +1122,7 @@ static inline bool radv_pipeline_has_gs(struct radv_pipeline *pipeline)
 
 static inline bool radv_pipeline_has_tess(struct radv_pipeline *pipeline)
 {
-	return pipeline->shaders[MESA_SHADER_TESS_EVAL] ? true : false;
+	return pipeline->shaders[MESA_SHADER_TESS_CTRL] ? true : false;
 }
 
 struct ac_userdata_info *radv_lookup_user_sgpr(struct radv_pipeline *pipeline,
