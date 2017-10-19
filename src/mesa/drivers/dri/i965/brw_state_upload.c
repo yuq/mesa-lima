@@ -101,30 +101,6 @@ brw_upload_initial_gpu_state(struct brw_context *brw)
       OUT_BATCH(0);
       ADVANCE_BATCH();
    }
-
-   /* Set the "CONSTANT_BUFFER Address Offset Disable" bit, so
-    * 3DSTATE_CONSTANT_XS buffer 0 is an absolute address.
-    *
-    * On Gen6-7.5, we use an execbuf parameter to do this for us.
-    * However, the kernel ignores that when execlists are in use.
-    * Fortunately, we can just write the registers from userspace
-    * on Gen8+, and they're context saved/restored.
-    */
-   if (devinfo->gen >= 9) {
-      BEGIN_BATCH(3);
-      OUT_BATCH(MI_LOAD_REGISTER_IMM | (3 - 2));
-      OUT_BATCH(CS_DEBUG_MODE2);
-      OUT_BATCH(REG_MASK(CSDBG2_CONSTANT_BUFFER_ADDRESS_OFFSET_DISABLE) |
-                CSDBG2_CONSTANT_BUFFER_ADDRESS_OFFSET_DISABLE);
-      ADVANCE_BATCH();
-   } else if (devinfo->gen == 8) {
-      BEGIN_BATCH(3);
-      OUT_BATCH(MI_LOAD_REGISTER_IMM | (3 - 2));
-      OUT_BATCH(INSTPM);
-      OUT_BATCH(REG_MASK(INSTPM_CONSTANT_BUFFER_ADDRESS_OFFSET_DISABLE) |
-                INSTPM_CONSTANT_BUFFER_ADDRESS_OFFSET_DISABLE);
-      ADVANCE_BATCH();
-   }
 }
 
 static inline const struct brw_tracked_state *

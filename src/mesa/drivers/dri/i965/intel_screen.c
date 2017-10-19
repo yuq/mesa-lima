@@ -2523,7 +2523,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    screen->compiler = brw_compiler_create(screen, devinfo);
    screen->compiler->shader_debug_log = shader_debug_log_mesa;
    screen->compiler->shader_perf_log = shader_perf_log_mesa;
-   screen->compiler->constant_buffer_0_is_relative = devinfo->gen < 8;
+   screen->compiler->constant_buffer_0_is_relative = true;
    screen->compiler->supports_pull_constants = true;
 
    screen->has_exec_fence =
