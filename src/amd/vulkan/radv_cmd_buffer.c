@@ -768,10 +768,12 @@ radv_emit_tess_shaders(struct radv_cmd_buffer *cmd_buffer,
 	tcs = pipeline->shaders[MESA_SHADER_TESS_CTRL];
 	tes = pipeline->shaders[MESA_SHADER_TESS_EVAL];
 
-	if (tes->info.tes.as_es)
-		radv_emit_hw_es(cmd_buffer, tes, &tes->info.tes.es_info);
-	else
-		radv_emit_hw_vs(cmd_buffer, pipeline, tes, &tes->info.tes.outinfo);
+	if (tes) {
+		if (tes->info.tes.as_es)
+			radv_emit_hw_es(cmd_buffer, tes, &tes->info.tes.es_info);
+		else
+			radv_emit_hw_vs(cmd_buffer, pipeline, tes, &tes->info.tes.outinfo);
+	}
 
 	radv_emit_hw_hs(cmd_buffer, tcs);
 
