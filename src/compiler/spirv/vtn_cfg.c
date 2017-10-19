@@ -606,7 +606,7 @@ vtn_emit_cf_list(struct vtn_builder *b, struct list_head *cf_list,
          if ((*block->branch & SpvOpCodeMask) == SpvOpReturnValue) {
             struct vtn_ssa_value *src = vtn_ssa_value(b, block->branch[1]);
             vtn_local_store(b, src,
-                            nir_deref_var_create(b, b->impl->return_var));
+                            nir_deref_var_create(b, b->nb.impl->return_var));
          }
 
          if (block->branch_type != vtn_branch_type_none) {

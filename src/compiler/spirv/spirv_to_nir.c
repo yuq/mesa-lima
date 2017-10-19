@@ -117,7 +117,7 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
 
          load->value = constant->values[0];
 
-         nir_instr_insert_before_cf_list(&b->impl->body, &load->instr);
+         nir_instr_insert_before_cf_list(&b->nb.impl->body, &load->instr);
          val->def = &load->def;
       } else {
          assert(glsl_type_is_matrix(type));
@@ -133,7 +133,7 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
 
             load->value = constant->values[i];
 
-            nir_instr_insert_before_cf_list(&b->impl->body, &load->instr);
+            nir_instr_insert_before_cf_list(&b->nb.impl->body, &load->instr);
             col_val->def = &load->def;
 
             val->elems[i] = col_val;
@@ -1410,7 +1410,7 @@ vtn_handle_function_call(struct vtn_builder *b, SpvOp opcode,
 
          /* Make a temporary to store the argument in */
          nir_variable *tmp =
-            nir_local_variable_create(b->impl, arg_ssa->type, "arg_tmp");
+            nir_local_variable_create(b->nb.impl, arg_ssa->type, "arg_tmp");
          call->params[i] = nir_deref_var_create(call, tmp);
 
          vtn_local_store(b, arg_ssa, call->params[i]);
@@ -1420,7 +1420,7 @@ vtn_handle_function_call(struct vtn_builder *b, SpvOp opcode,
    nir_variable *out_tmp = NULL;
    assert(res_type->type == callee->return_type);
    if (!glsl_type_is_void(callee->return_type)) {
-      out_tmp = nir_local_variable_create(b->impl, callee->return_type,
+      out_tmp = nir_local_variable_create(b->nb.impl, callee->return_type,
                                           "out_tmp");
       call->return_deref = nir_deref_var_create(call, out_tmp);
    }
@@ -3367,7 +3367,6 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    vtn_build_cfg(b, words, word_end);
 
    foreach_list_typed(struct vtn_function, func, node, &b->functions) {
-      b->impl = func->impl;
       b->const_table = _mesa_hash_table_create(b, _mesa_hash_pointer,
                                                _mesa_key_pointer_equal);
 

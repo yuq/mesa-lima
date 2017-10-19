@@ -1731,7 +1731,7 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
 
    if (var->mode == vtn_variable_mode_local) {
       assert(var->members == NULL && var->var != NULL);
-      nir_function_impl_add_variable(b->impl, var->var);
+      nir_function_impl_add_variable(b->nb.impl, var->var);
    } else if (var->var) {
       nir_shader_add_variable(b->shader, var->var);
    } else if (var->members) {
