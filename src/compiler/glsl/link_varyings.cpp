@@ -406,6 +406,7 @@ compute_variable_location_slot(ir_variable *var, gl_shader_stage stage)
 struct explicit_location_info {
    ir_variable *var;
    unsigned base_type;
+   unsigned interpolation;
 };
 
 static bool
@@ -415,6 +416,7 @@ check_location_aliasing(struct explicit_location_info explicit_locations[][4],
                         unsigned component,
                         unsigned location_limit,
                         const glsl_type *type,
+                        unsigned interpolation,
                         gl_shader_program *prog,
                         gl_shader_stage stage)
 {
@@ -431,6 +433,38 @@ check_location_aliasing(struct explicit_location_info explicit_locations[][4],
 
    while (location < location_limit) {
       unsigned i = component;
+
+      /* If there are other outputs assigned to the same location
+       * they must have the same interpolation
+       */
+      unsigned comp = 0;
+      while (comp < 4) {
+         /* Skip the components used by this output, we only care about
+         * other outputs in the same location
+          */
+         if (comp == i) {
+            comp = last_comp;
+            continue;
+         }
+
+         struct explicit_location_info *info =
+            &explicit_locations[location][comp];
+
+         if (info->var) {
+            if (info->interpolation != interpolation) {
+               linker_error(prog,
+                            "%s shader has multiple outputs at explicit "
+                            "location %u with different interpolation "
+                            "settings\n",
+                            _mesa_shader_stage_to_string(stage), location);
+               return false;
+            }
+         }
+
+         comp++;
+      }
+
+      /* Component aliasing is not allowed */
       while (i < last_comp) {
          if (explicit_locations[location][i].var != NULL) {
             linker_error(prog,
@@ -458,6 +492,7 @@ check_location_aliasing(struct explicit_location_info explicit_locations[][4],
          explicit_locations[location][i].var = var;
          explicit_locations[location][i].base_type =
             type->without_array()->base_type;
+         explicit_locations[location][i].interpolation = interpolation;
          i++;
 
          /* We need to do some special handling for doubles as dvec3 and
@@ -526,18 +561,20 @@ cross_validate_outputs_to_inputs(struct gl_context *ctx,
                unsigned field_location = type->fields.structure[i].location -
                   (type->fields.structure[i].patch ? VARYING_SLOT_PATCH0 :
                                                      VARYING_SLOT_VAR0);
+               unsigned interpolation = type->fields.structure[i].interpolation;
                if (!check_location_aliasing(explicit_locations, var,
                                             field_location,
                                             0, field_location + 1,
-                                            field_type, prog,
-                                            producer->Stage)) {
+                                            field_type, interpolation,
+                                            prog, producer->Stage)) {
                   return;
                }
             }
          } else if (!check_location_aliasing(explicit_locations, var,
                                              idx, var->data.location_frac,
-                                             slot_limit, type, prog,
-                                             producer->Stage)) {
+                                             slot_limit, type,
+                                             var->data.interpolation,
+                                             prog, producer->Stage)) {
             return;
          }
       }
