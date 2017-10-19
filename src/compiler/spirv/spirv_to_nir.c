@@ -809,6 +809,64 @@ translate_image_format(struct vtn_builder *b, SpvImageFormat format)
    }
 }
 
+static struct vtn_type *
+vtn_type_layout_std430(struct vtn_builder *b, struct vtn_type *type,
+                       uint32_t *size_out, uint32_t *align_out)
+{
+   switch (type->base_type) {
+   case vtn_base_type_scalar: {
+      uint32_t comp_size = glsl_get_bit_size(type->type) / 8;
+      *size_out = comp_size;
+      *align_out = comp_size;
+      return type;
+   }
+
+   case vtn_base_type_vector: {
+      uint32_t comp_size = glsl_get_bit_size(type->type) / 8;
+      assert(type->length > 0 && type->length <= 4);
+      unsigned align_comps = type->length == 3 ? 4 : type->length;
+      *size_out = comp_size * type->length,
+      *align_out = comp_size * align_comps;
+      return type;
+   }
+
+   case vtn_base_type_matrix:
+   case vtn_base_type_array: {
+      /* We're going to add an array stride */
+      type = vtn_type_copy(b, type);
+      uint32_t elem_size, elem_align;
+      type->array_element = vtn_type_layout_std430(b, type->array_element,
+                                                   &elem_size, &elem_align);
+      type->stride = vtn_align_u32(elem_size, elem_align);
+      *size_out = type->stride * type->length;
+      *align_out = elem_align;
+      return type;
+   }
+
+   case vtn_base_type_struct: {
+      /* We're going to add member offsets */
+      type = vtn_type_copy(b, type);
+      uint32_t offset = 0;
+      uint32_t align = 0;
+      for (unsigned i = 0; i < type->length; i++) {
+         uint32_t mem_size, mem_align;
+         type->members[i] = vtn_type_layout_std430(b, type->members[i],
+                                                   &mem_size, &mem_align);
+         offset = vtn_align_u32(offset, mem_align);
+         type->offsets[i] = offset;
+         offset += mem_size;
+         align = MAX2(align, mem_align);
+      }
+      *size_out = offset;
+      *align_out = align;
+      return type;
+   }
+
+   default:
+      unreachable("Invalid SPIR-V type for std430");
+   }
+}
+
 static void
 vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
                 const uint32_t *w, unsigned count)
@@ -957,6 +1015,19 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
           * values so they need a real glsl_type.
           */
          val->type->type = glsl_vector_type(GLSL_TYPE_UINT, 2);
+      }
+
+      if (storage_class == SpvStorageClassWorkgroup &&
+          b->options->lower_workgroup_access_to_offsets) {
+         uint32_t size, align;
+         val->type->deref = vtn_type_layout_std430(b, val->type->deref,
+                                                   &size, &align);
+         val->type->length = size;
+         val->type->align = align;
+         /* These can actually be stored to nir_variables and used as SSA
+          * values so they need a real glsl_type.
+          */
+         val->type->type = glsl_uint_type();
       }
       break;
    }
@@ -2182,6 +2253,32 @@ get_ssbo_nir_atomic_op(struct vtn_builder *b, SpvOp opcode)
 }
 
 static nir_intrinsic_op
+get_shared_nir_atomic_op(struct vtn_builder *b, SpvOp opcode)
+{
+   switch (opcode) {
+   case SpvOpAtomicLoad:      return nir_intrinsic_load_shared;
+   case SpvOpAtomicStore:     return nir_intrinsic_store_shared;
+#define OP(S, N) case SpvOp##S: return nir_intrinsic_shared_##N;
+   OP(AtomicExchange,         atomic_exchange)
+   OP(AtomicCompareExchange,  atomic_comp_swap)
+   OP(AtomicIIncrement,       atomic_add)
+   OP(AtomicIDecrement,       atomic_add)
+   OP(AtomicIAdd,             atomic_add)
+   OP(AtomicISub,             atomic_add)
+   OP(AtomicSMin,             atomic_imin)
+   OP(AtomicUMin,             atomic_umin)
+   OP(AtomicSMax,             atomic_imax)
+   OP(AtomicUMax,             atomic_umax)
+   OP(AtomicAnd,              atomic_and)
+   OP(AtomicOr,               atomic_or)
+   OP(AtomicXor,              atomic_xor)
+#undef OP
+   default:
+      vtn_fail("Invalid shared atomic");
+   }
+}
+
+static nir_intrinsic_op
 get_var_nir_atomic_op(struct vtn_builder *b, SpvOp opcode)
 {
    switch (opcode) {
@@ -2246,7 +2343,8 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
    SpvMemorySemanticsMask semantics = w[5];
    */
 
-   if (ptr->mode == vtn_variable_mode_workgroup) {
+   if (ptr->mode == vtn_variable_mode_workgroup &&
+       !b->options->lower_workgroup_access_to_offsets) {
       nir_deref_var *deref = vtn_pointer_to_deref(b, ptr);
       const struct glsl_type *deref_type = nir_deref_tail(&deref->deref)->type;
       nir_intrinsic_op op = get_var_nir_atomic_op(b, opcode);
@@ -2286,27 +2384,36 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
 
       }
    } else {
-      vtn_assert(ptr->mode == vtn_variable_mode_ssbo);
       nir_ssa_def *offset, *index;
       offset = vtn_pointer_to_offset(b, ptr, &index, NULL);
 
-      nir_intrinsic_op op = get_ssbo_nir_atomic_op(b, opcode);
+      nir_intrinsic_op op;
+      if (ptr->mode == vtn_variable_mode_ssbo) {
+         op = get_ssbo_nir_atomic_op(b, opcode);
+      } else {
+         vtn_assert(ptr->mode == vtn_variable_mode_workgroup &&
+                    b->options->lower_workgroup_access_to_offsets);
+         op = get_shared_nir_atomic_op(b, opcode);
+      }
 
       atomic = nir_intrinsic_instr_create(b->nb.shader, op);
 
+      int src = 0;
       switch (opcode) {
       case SpvOpAtomicLoad:
          atomic->num_components = glsl_get_vector_elements(ptr->type->type);
-         atomic->src[0] = nir_src_for_ssa(index);
-         atomic->src[1] = nir_src_for_ssa(offset);
+         if (ptr->mode == vtn_variable_mode_ssbo)
+            atomic->src[src++] = nir_src_for_ssa(index);
+         atomic->src[src++] = nir_src_for_ssa(offset);
          break;
 
       case SpvOpAtomicStore:
          atomic->num_components = glsl_get_vector_elements(ptr->type->type);
          nir_intrinsic_set_write_mask(atomic, (1 << atomic->num_components) - 1);
-         atomic->src[0] = nir_src_for_ssa(vtn_ssa_value(b, w[4])->def);
-         atomic->src[1] = nir_src_for_ssa(index);
-         atomic->src[2] = nir_src_for_ssa(offset);
+         atomic->src[src++] = nir_src_for_ssa(vtn_ssa_value(b, w[4])->def);
+         if (ptr->mode == vtn_variable_mode_ssbo)
+            atomic->src[src++] = nir_src_for_ssa(index);
+         atomic->src[src++] = nir_src_for_ssa(offset);
          break;
 
       case SpvOpAtomicExchange:
@@ -2323,9 +2430,10 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
       case SpvOpAtomicAnd:
       case SpvOpAtomicOr:
       case SpvOpAtomicXor:
-         atomic->src[0] = nir_src_for_ssa(index);
-         atomic->src[1] = nir_src_for_ssa(offset);
-         fill_common_atomic_sources(b, opcode, w, &atomic->src[2]);
+         if (ptr->mode == vtn_variable_mode_ssbo)
+            atomic->src[src++] = nir_src_for_ssa(index);
+         atomic->src[src++] = nir_src_for_ssa(offset);
+         fill_common_atomic_sources(b, opcode, w, &atomic->src[src]);
          break;
 
       default:

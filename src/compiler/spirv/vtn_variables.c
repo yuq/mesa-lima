@@ -62,7 +62,9 @@ vtn_pointer_uses_ssa_offset(struct vtn_builder *b,
                             struct vtn_pointer *ptr)
 {
    return ptr->mode == vtn_variable_mode_ubo ||
-          ptr->mode == vtn_variable_mode_ssbo;
+          ptr->mode == vtn_variable_mode_ssbo ||
+          (ptr->mode == vtn_variable_mode_workgroup &&
+           b->options->lower_workgroup_access_to_offsets);
 }
 
 static bool
@@ -71,7 +73,9 @@ vtn_pointer_is_external_block(struct vtn_builder *b,
 {
    return ptr->mode == vtn_variable_mode_ssbo ||
           ptr->mode == vtn_variable_mode_ubo ||
-          ptr->mode == vtn_variable_mode_push_constant;
+          ptr->mode == vtn_variable_mode_push_constant ||
+          (ptr->mode == vtn_variable_mode_workgroup &&
+           b->options->lower_workgroup_access_to_offsets);
 }
 
 /* Dereference the given base pointer by the access chain */
@@ -167,7 +171,8 @@ vtn_ssa_offset_pointer_dereference(struct vtn_builder *b,
       /* We need ptr_type for the stride */
       vtn_assert(base->ptr_type);
       /* This must be a pointer to an actual element somewhere */
-      vtn_assert(block_index && offset);
+      vtn_assert(offset);
+      vtn_assert(block_index || base->mode == vtn_variable_mode_workgroup);
       /* We need at least one element in the chain */
       vtn_assert(deref_chain->length >= 1);
 
@@ -183,6 +188,7 @@ vtn_ssa_offset_pointer_dereference(struct vtn_builder *b,
       vtn_assert(!block_index);
 
       vtn_assert(base->var);
+      vtn_assert(base->ptr_type);
       switch (base->mode) {
       case vtn_variable_mode_ubo:
       case vtn_variable_mode_ssbo:
@@ -199,6 +205,22 @@ vtn_ssa_offset_pointer_dereference(struct vtn_builder *b,
             block_index = vtn_variable_resource_index(b, base->var, NULL);
          }
          offset = nir_imm_int(&b->nb, 0);
+         break;
+
+      case vtn_variable_mode_workgroup:
+         /* Assign location on first use so that we don't end up bloating SLM
+          * address space for variables which are never statically used.
+          */
+         if (base->var->shared_location < 0) {
+            assert(base->ptr_type->length > 0 && base->ptr_type->align > 0);
+            b->shader->num_shared = vtn_align_u32(b->shader->num_shared,
+                                                  base->ptr_type->align);
+            base->var->shared_location = b->shader->num_shared;
+            b->shader->num_shared += base->ptr_type->length;
+         }
+
+         block_index = NULL;
+         offset = nir_imm_int(&b->nb, base->var->shared_location);
          break;
 
       default:
@@ -837,6 +859,9 @@ vtn_block_load(struct vtn_builder *b, struct vtn_pointer *src)
       vtn_access_chain_get_offset_size(b, src->chain, src->var->type,
                                        &access_offset, &access_size);
       break;
+   case vtn_variable_mode_workgroup:
+      op = nir_intrinsic_load_shared;
+      break;
    default:
       vtn_fail("Invalid block variable mode");
    }
@@ -860,6 +885,9 @@ vtn_block_store(struct vtn_builder *b, struct vtn_ssa_value *src,
    switch (dst->mode) {
    case vtn_variable_mode_ssbo:
       op = nir_intrinsic_store_ssbo;
+      break;
+   case vtn_variable_mode_workgroup:
+      op = nir_intrinsic_store_shared;
       break;
    default:
       vtn_fail("Invalid block variable mode");
@@ -946,7 +974,8 @@ vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
                    struct vtn_pointer *dest)
 {
    if (vtn_pointer_is_external_block(b, dest)) {
-      vtn_assert(dest->mode == vtn_variable_mode_ssbo);
+      vtn_assert(dest->mode == vtn_variable_mode_ssbo ||
+                 dest->mode == vtn_variable_mode_workgroup);
       vtn_block_store(b, src, dest);
    } else {
       _vtn_variable_load_store(b, false, dest, &src);
@@ -1526,7 +1555,7 @@ vtn_pointer_to_ssa(struct vtn_builder *b, struct vtn_pointer *ptr)
                  ptr->mode == vtn_variable_mode_ssbo);
       return nir_vec2(&b->nb, ptr->block_index, ptr->offset);
    } else {
-      vtn_fail("Invalid pointer");
+      vtn_assert(ptr->mode == vtn_variable_mode_workgroup);
       return ptr->offset;
    }
 }
@@ -1555,7 +1584,7 @@ vtn_pointer_from_ssa(struct vtn_builder *b, nir_ssa_def *ssa,
       ptr->offset = nir_channel(&b->nb, ssa, 1);
    } else {
       vtn_assert(ssa->num_components == 1);
-      unreachable("Invalid pointer");
+      vtn_assert(ptr->mode == vtn_variable_mode_workgroup);
       ptr->block_index = NULL;
       ptr->offset = ssa;
    }
@@ -1630,7 +1659,6 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
    case vtn_variable_mode_global:
    case vtn_variable_mode_image:
    case vtn_variable_mode_sampler:
-   case vtn_variable_mode_workgroup:
       /* For these, we create the variable normally */
       var->var = rzalloc(b->shader, nir_variable);
       var->var->name = ralloc_strdup(var->var, val->name);
@@ -1645,6 +1673,18 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
       default:
          var->var->interface_type = NULL;
          break;
+      }
+      break;
+
+   case vtn_variable_mode_workgroup:
+      if (b->options->lower_workgroup_access_to_offsets) {
+         var->shared_location = -1;
+      } else {
+         /* Create the variable normally */
+         var->var = rzalloc(b->shader, nir_variable);
+         var->var->name = ralloc_strdup(var->var, val->name);
+         var->var->type = var->type->type;
+         var->var->data.mode = nir_var_shared;
       }
       break;
 
