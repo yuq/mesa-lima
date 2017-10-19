@@ -5854,8 +5854,9 @@ handle_es_outputs_post(struct nir_to_llvm_context *ctx,
 {
 	int j;
 	uint64_t max_output_written = 0;
+	LLVMValueRef lds_base = NULL;
+
 	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
-		LLVMValueRef *out_ptr = &ctx->nir->outputs[i * 4];
 		int param_index;
 		int length = 4;
 
@@ -5868,20 +5869,60 @@ handle_es_outputs_post(struct nir_to_llvm_context *ctx,
 		param_index = shader_io_get_unique_index(i);
 
 		max_output_written = MAX2(param_index + (length > 4), max_output_written);
+	}
 
+	outinfo->esgs_itemsize = (max_output_written + 1) * 16;
+
+	if (ctx->ac.chip_class  >= GFX9) {
+		unsigned itemsize_dw = outinfo->esgs_itemsize / 4;
+		LLVMValueRef vertex_idx = ac_get_thread_id(&ctx->ac);
+		LLVMValueRef wave_idx = ac_build_bfe(&ctx->ac, ctx->merged_wave_info,
+		                                     LLVMConstInt(ctx->ac.i32, 24, false),
+		                                     LLVMConstInt(ctx->ac.i32, 4, false), false);
+		vertex_idx = LLVMBuildOr(ctx->ac.builder, vertex_idx,
+					 LLVMBuildMul(ctx->ac.builder, wave_idx,
+						      LLVMConstInt(ctx->i32, 64, false), ""), "");
+		lds_base = LLVMBuildMul(ctx->ac.builder, vertex_idx,
+					LLVMConstInt(ctx->i32, itemsize_dw, 0), "");
+	}
+
+	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
+		LLVMValueRef dw_addr;
+		LLVMValueRef *out_ptr = &ctx->nir->outputs[i * 4];
+		int param_index;
+		int length = 4;
+
+		if (!(ctx->output_mask & (1ull << i)))
+			continue;
+
+		if (i == VARYING_SLOT_CLIP_DIST0)
+			length = ctx->num_output_clips + ctx->num_output_culls;
+
+		param_index = shader_io_get_unique_index(i);
+
+		if (lds_base) {
+			dw_addr = LLVMBuildAdd(ctx->builder, lds_base,
+			                       LLVMConstInt(ctx->i32, param_index * 4, false),
+			                       "");
+		}
 		for (j = 0; j < length; j++) {
 			LLVMValueRef out_val = LLVMBuildLoad(ctx->builder, out_ptr[j], "");
 			out_val = LLVMBuildBitCast(ctx->builder, out_val, ctx->i32, "");
 
-			ac_build_buffer_store_dword(&ctx->ac,
-					       ctx->esgs_ring,
-					       out_val, 1,
-					       NULL, ctx->es2gs_offset,
-					       (4 * param_index + j) * 4,
-					       1, 1, true, true);
+			if (ctx->ac.chip_class  >= GFX9) {
+				lds_store(ctx, dw_addr,
+				          LLVMBuildLoad(ctx->builder, out_ptr[j], ""));
+				dw_addr = LLVMBuildAdd(ctx->builder, dw_addr, ctx->i32one, "");
+			} else {
+				ac_build_buffer_store_dword(&ctx->ac,
+				                            ctx->esgs_ring,
+				                            out_val, 1,
+				                            NULL, ctx->es2gs_offset,
+				                            (4 * param_index + j) * 4,
+				                            1, 1, true, true);
+			}
 		}
 	}
-	outinfo->esgs_itemsize = (max_output_written + 1) * 16;
 }
 
 static void
