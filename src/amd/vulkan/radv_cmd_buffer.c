@@ -1812,8 +1812,17 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer,
 	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_FRAMEBUFFER)
 		radv_emit_framebuffer_state(cmd_buffer);
 
-	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_INDEX_BUFFER)
-		radv_emit_index_buffer(cmd_buffer);
+	if (indexed_draw) {
+		if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_INDEX_BUFFER)
+			radv_emit_index_buffer(cmd_buffer);
+	} else {
+		/* On CI and later, non-indexed draws overwrite VGT_INDEX_TYPE,
+		 * so the state must be re-emitted before the next indexed
+		 * draw.
+		 */
+		if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK)
+			cmd_buffer->state.dirty |= RADV_CMD_DIRTY_INDEX_BUFFER;
+	}
 
 	ia_multi_vgt_param = si_get_ia_multi_vgt_param(cmd_buffer, instanced_draw, indirect_draw, draw_vertex_count);
 	if (cmd_buffer->state.last_ia_multi_vgt_param != ia_multi_vgt_param) {
