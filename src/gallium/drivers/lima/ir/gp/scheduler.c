@@ -159,11 +159,15 @@ static int gpir_max_dist_alu(gpir_dep_info *dep)
 static int gpir_get_max_dist(gpir_dep_info *dep)
 {
    /* Note: two instr's max are affected by pred's sched_pos:
-    * lima_gp_ir_op_load_reg
-    * lima_gp_ir_op_mov
+    * gpir_op_load_reg
+    * gpir_op_mov
     *
     * so these two nodes as pred must call this function with sched_pos set first
     */
+   if (dep->pred->op == gpir_op_load_reg ||
+       dep->pred->op == gpir_op_mov)
+      assert(dep->pred->sched_instr >= 0);
+
    if (dep->is_child_dep) {
       switch (dep->succ->op) {
       case gpir_op_store_temp:
