@@ -446,6 +446,8 @@ static inline void instr_remove_node(gpir_block *block, gpir_node *node)
 {
    gpir_instr *instr = gpir_instr_array_e(&block->instrs, node->sched_instr);
    gpir_instr_remove_node(instr, node);
+   node->sched_instr = -1;
+   node->sched_pos = -1;
 }
 
 static void gpir_remove_created_node(gpir_block *block, gpir_node *created,
@@ -635,14 +637,6 @@ static gpir_node *gpir_move_get_start_node(gpir_node *node)
    return move;
 }
 
-static uint64_t gpir_get_free_regs(gpir_instr *instrs, int start, int end)
-{
-   uint64_t ret = ~0ull;
-   for (int i = start; i < end; i++)
-      ret &= instrs[i].reg_status;
-   return ret;
-}
-
 /*
  * Return:
  * >=0 - success, the last inserted load instr index
@@ -718,39 +712,69 @@ static uint64_t gpir_get_instr_permitted_regs(gpir_instr *instr)
    return ret;
 }
 
-static int gpir_alloc_reg(gpir_instr *instrs, gpir_node *node, int store)
+static uint64_t gpir_get_free_regs(gpir_instr *instrs, int start, int end)
 {
-   /* node instr may have store node already which will constraint
+   /* current instr may have store node already which will constraint
     * free regs that can be chosen */
    uint64_t permitted_regs =
-      gpir_get_instr_permitted_regs(instrs + store);
+      gpir_get_instr_permitted_regs(instrs + end);
 
    if (!permitted_regs)
-      return -1;
+      return 0;
 
-   /* find farest succ */
-   int start = INT_MAX;
-   gpir_node_foreach_succ(node, entry) {
+   uint64_t ret = ~0ull;
+   for (int i = start; i < end; i++)
+      ret &= instrs[i].reg_status;
+
+   /* TODO: support spill to memory */
+   assert(ret);
+
+   return ret & permitted_regs;
+}
+
+static int gpir_alloc_reg(gpir_instr *instrs, gpir_node *load,
+                          gpir_node **store_alu)
+{
+   /* find nearest & farest succ */
+   int start = INT_MAX, end = 0;
+   gpir_node_foreach_succ(load, entry) {
       gpir_node *succ = gpir_node_from_entry(entry, succ);
       if (succ->sched_instr < start)
          start = succ->sched_instr;
+      if (succ->sched_instr > end)
+         end = succ->sched_instr;
    }
 
-   uint64_t free_regs =
-      gpir_get_free_regs(instrs, start, store);
+   gpir_node *current = *store_alu;
+   /* current need to be far enough from nearest succ for a reg
+    * store lantency */
+   while (current->sched_instr < end + 3) {
+      if (current->op == gpir_op_mov) {
+         current = gpir_node_to_alu(current)->children[0];
+         /* assert current has been inserted to instr before */
+         assert(current->sched_instr >= 0);
+      }
+      else
+         return -1;
+   }
 
-   /* TODO: support spill to memory */
-   assert(free_regs);
-
-   free_regs &= permitted_regs;
-   if (!free_regs)
-      return -1;
+   uint64_t free_regs;
+   while (!(free_regs = gpir_get_free_regs(
+               instrs, start, current->sched_instr))) {
+      if (current->op == gpir_op_mov) {
+         current = gpir_node_to_alu(current)->children[0];
+         /* assert current has been inserted to instr before */
+         assert(current->sched_instr >= 0);
+      }
+      else
+         return -1;
+   }
 
    int reg = ffsll(free_regs) - 1;
 
    /* find a free reg, prefer in the same slot as already
     * used load of the succ instr */
-   gpir_node_foreach_succ(node, entry) {
+   gpir_node_foreach_succ(load, entry) {
       gpir_node *succ = gpir_node_from_entry(entry, succ);
       gpir_instr *instr = instrs + succ->sched_instr;
 
@@ -784,7 +808,10 @@ static int gpir_alloc_reg(gpir_instr *instrs, gpir_node *node, int store)
       }
    }
 
-   fprintf(stderr, "gpir: alloc reg %d for node %d\n", reg, node->index);
+   /* record alu node used for creating a store node */
+   *store_alu = current;
+
+   fprintf(stderr, "gpir: alloc reg %d for node %d\n", reg, load->index);
    return reg;
 }
 
@@ -808,7 +835,9 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
    gpir_move_unsatistied_node(load, node);
 
    gpir_instr *instrs = util_dynarray_begin(&block->instrs);
-   int reg = gpir_alloc_reg(instrs, load, node->sched_instr);
+
+   gpir_node *store_alu = node;
+   int reg = gpir_alloc_reg(instrs, load, &store_alu);
    if (reg < 0) {
       fprintf(stderr, "gpir: alloc reg for node %d fail\n",
               load->index);
@@ -822,18 +851,18 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
 
    /* create store reg node */
    gpir_node *store = gpir_node_create(block->comp, gpir_op_store_reg, -1);
-   gpir_node_add_child(store, node);
+   gpir_node_add_child(store, store_alu);
    gpir_dep_info *dep = gpir_node_add_read_after_write_dep(load, store);
 
    gpir_store_node *sn = gpir_node_to_store(store);
    sn->index = reg >> 2;
    sn->component = reg & 0x3;
-   sn->child = node;
+   sn->child = store_alu;
 
-   /* TODO: we don't have to insert at the same instr as node */
-   store->sched_instr = node->sched_instr;
+   store->sched_instr = store_alu->sched_instr;
    store->sched_pos = GPIR_INSTR_SLOT_STORE0 + sn->component;
-   bool store_result = gpir_instr_try_insert_node(instrs + node->sched_instr, store);
+   bool store_result =
+      gpir_instr_try_insert_node(instrs + store_alu->sched_instr, store);
    /* ensured by the reg alloc process */
    assert(store_result);
 
@@ -844,8 +873,6 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
    int load_end = store->sched_instr - gpir_get_min_dist(dep) + 1;
    int load_start = gpir_try_insert_load(block, load, load_end);
    if (load_start < 0) {
-      gpir_remove_all_created_node(block, node);
-
       fprintf(stderr, "gpir: insert load reg fail for node %d\n",
               node->index);
       return load_start == -1 ? -2 : -3;
@@ -856,6 +883,20 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
       instrs[i].reg_status &= ~(1ull << reg);
 
    return 0;
+}
+
+static int gpir_has_satisfied_succ(gpir_node *node)
+{
+   gpir_node_foreach_succ(node, entry) {
+      gpir_dep_info *dep = gpir_dep_from_entry(entry);
+      gpir_node *succ = gpir_node_from_entry(entry, succ);
+      int max = succ->sched_instr + gpir_get_max_dist(dep);
+
+      if (max >= node->sched_instr)
+         return true;
+   }
+
+   return false;
 }
 
 static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
@@ -889,62 +930,48 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
          }
 
          /* if next nearest succ is close enough, use move node to
-          * satisfy, otherwise use reg */
+          * satisfy, otherwise use reg directly */
          if (current->sched_instr - start < 5) {
             gpir_node *move = gpir_create_from_node(block, current, NULL);
-            if (!move || !gpir_try_place_move_node(block, move)) {
-               gpir_node *top = node;
-               while (current != node) {
-                  gpir_node *next = gpir_node_to_alu(current)->children[0];
+            if (!move)
+               return false;
 
-                  /* revert unused created move */
-                  if (top == node) {
-                     if (current->succs->entries == 1) {
-                        instr_remove_node(block, current);
-                        gpir_node_delete(current);
-                        current = next;
-                        continue;
-                     }
-                     else
-                        top = current;
-                  }
-
-                  /* current must be far enough for a reg store lantency */
-                  if (current->sched_instr - start >= 3)
-                     break;
-
-                  current = next;
-               }
-
-               /* remove the last move and merge all unsatisfied succ to current */
-               gpir_remove_created_node(block, move, current);
-
-               /* can directly reg schedule current */
-               if (current->sched_instr - start >= 3) {
-                  if (gpir_try_insert_load_reg(block, current) == 0)
-                     return true;
-               }
-
-               /* can't or fail to reg schedule current, we need to reschedule node */
-
-               /* remove all created move node and merge all successor back to node */
-               while (top != node) {
-                  gpir_node *tmp = gpir_node_to_alu(top)->children[0];
-                  gpir_remove_created_node(block, top, node);
-                  top = tmp;
-               }
-
-               /* re-insert node one instr after current scheduled place */
-               instr_remove_node(block, node);
-               gpir_try_place_node(block, node, node->sched_instr + 1, INT_MAX);
-               current = node;
+            if (gpir_try_place_move_node(block, move)) {
+               current = move;
                continue;
             }
 
-            current = move;
+            gpir_remove_created_node(block, move, current);
          }
-         else
-            return gpir_try_insert_load_reg(block, current) == 0;
+
+         /* revert unused created move */
+         while (current != node) {
+            if (gpir_has_satisfied_succ(current))
+               break;
+
+            gpir_node *child = gpir_node_to_alu(current)->children[0];
+            gpir_remove_created_node(block, current, child);
+            current = child;
+         }
+
+         /* load reg function will handle min dist and reuse move case */
+         int err = gpir_try_insert_load_reg(block, current);
+         if (err == 0)
+            return true;
+         else if (err < -1)
+            return false;
+
+         /* fail to reg schedule current, we need to reschedule node */
+         fprintf(stderr, "gpir: reschedule node %d\n", node->index);
+
+         /* remove all created move node and merge all successor back to node */
+         gpir_remove_all_created_node(block, node);
+
+         /* re-insert node one instr after current scheduled place */
+         int reschedule_start = node->sched_instr + 1;
+         instr_remove_node(block, node);
+         gpir_try_place_node(block, node, reschedule_start, INT_MAX);
+         current = node;
       }
    }
 
