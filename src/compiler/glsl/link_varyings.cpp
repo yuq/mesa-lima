@@ -403,8 +403,13 @@ compute_variable_location_slot(ir_variable *var, gl_shader_stage stage)
    return var->data.location - location_start;
 }
 
+struct explicit_location_info {
+   ir_variable *var;
+   unsigned base_type;
+};
+
 static bool
-check_location_aliasing(ir_variable *explicit_locations[][4],
+check_location_aliasing(struct explicit_location_info explicit_locations[][4],
                         ir_variable *var,
                         unsigned location,
                         unsigned component,
@@ -427,7 +432,7 @@ check_location_aliasing(ir_variable *explicit_locations[][4],
    while (location < location_limit) {
       unsigned i = component;
       while (i < last_comp) {
-         if (explicit_locations[location][i] != NULL) {
+         if (explicit_locations[location][i].var != NULL) {
             linker_error(prog,
                          "%s shader has multiple outputs explicitly "
                          "assigned to location %d and component %d\n",
@@ -439,9 +444,9 @@ check_location_aliasing(ir_variable *explicit_locations[][4],
          /* Make sure all component at this location have the same type.
           */
          for (unsigned j = 0; j < 4; j++) {
-            if (explicit_locations[location][j] &&
-                (explicit_locations[location][j]->type->without_array()
-                 ->base_type != type->without_array()->base_type)) {
+            if (explicit_locations[location][j].var &&
+                explicit_locations[location][j].base_type !=
+                  type->without_array()->base_type) {
                linker_error(prog,
                             "Varyings sharing the same location must "
                             "have the same underlying numerical type. "
@@ -450,7 +455,9 @@ check_location_aliasing(ir_variable *explicit_locations[][4],
             }
          }
 
-         explicit_locations[location][i] = var;
+         explicit_locations[location][i].var = var;
+         explicit_locations[location][i].base_type =
+            type->without_array()->base_type;
          i++;
 
          /* We need to do some special handling for doubles as dvec3 and
@@ -482,8 +489,7 @@ cross_validate_outputs_to_inputs(struct gl_context *ctx,
                                  gl_linked_shader *consumer)
 {
    glsl_symbol_table parameters;
-   ir_variable *explicit_locations[MAX_VARYINGS_INCL_PATCH][4] =
-      { {NULL, NULL} };
+   struct explicit_location_info explicit_locations[MAX_VARYING][4] = { 0 };
 
    /* Find all shader outputs in the "producer" stage.
     */
@@ -514,9 +520,24 @@ cross_validate_outputs_to_inputs(struct gl_context *ctx,
             return;
          }
 
-         if (!check_location_aliasing(explicit_locations, var, idx,
-                                      var->data.location_frac, slot_limit,
-                                      type, prog, producer->Stage)) {
+         if (type->without_array()->is_interface()) {
+            for (unsigned i = 0; i < type->without_array()->length; i++) {
+               const glsl_type *field_type = type->fields.structure[i].type;
+               unsigned field_location = type->fields.structure[i].location -
+                  (type->fields.structure[i].patch ? VARYING_SLOT_PATCH0 :
+                                                     VARYING_SLOT_VAR0);
+               if (!check_location_aliasing(explicit_locations, var,
+                                            field_location,
+                                            0, field_location + 1,
+                                            field_type, prog,
+                                            producer->Stage)) {
+                  return;
+               }
+            }
+         } else if (!check_location_aliasing(explicit_locations, var,
+                                             idx, var->data.location_frac,
+                                             slot_limit, type, prog,
+                                             producer->Stage)) {
             return;
          }
       }
@@ -581,7 +602,7 @@ cross_validate_outputs_to_inputs(struct gl_context *ctx,
                   return;
                }
 
-               output = explicit_locations[idx][input->data.location_frac];
+               output = explicit_locations[idx][input->data.location_frac].var;
 
                if (output == NULL ||
                    input->data.location != output->data.location) {
