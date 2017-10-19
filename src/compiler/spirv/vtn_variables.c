@@ -57,6 +57,23 @@ vtn_access_chain_extend(struct vtn_builder *b, struct vtn_access_chain *old,
    return chain;
 }
 
+static bool
+vtn_pointer_uses_ssa_offset(struct vtn_builder *b,
+                            struct vtn_pointer *ptr)
+{
+   return ptr->mode == vtn_variable_mode_ubo ||
+          ptr->mode == vtn_variable_mode_ssbo;
+}
+
+static bool
+vtn_pointer_is_external_block(struct vtn_builder *b,
+                              struct vtn_pointer *ptr)
+{
+   return ptr->mode == vtn_variable_mode_ssbo ||
+          ptr->mode == vtn_variable_mode_ubo ||
+          ptr->mode == vtn_variable_mode_push_constant;
+}
+
 /* Dereference the given base pointer by the access chain */
 static struct vtn_pointer *
 vtn_access_chain_pointer_dereference(struct vtn_builder *b,
@@ -236,7 +253,7 @@ vtn_pointer_dereference(struct vtn_builder *b,
                         struct vtn_pointer *base,
                         struct vtn_access_chain *deref_chain)
 {
-   if (vtn_pointer_uses_ssa_offset(base)) {
+   if (vtn_pointer_uses_ssa_offset(b, base)) {
       return vtn_ssa_offset_pointer_dereference(b, base, deref_chain);
    } else {
       return vtn_access_chain_pointer_dereference(b, base, deref_chain);
@@ -875,14 +892,6 @@ vtn_block_store(struct vtn_builder *b, struct vtn_ssa_value *src,
                          0, 0, dst->chain, chain_idx, dst->type, &src);
 }
 
-static bool
-vtn_pointer_is_external_block(struct vtn_pointer *ptr)
-{
-   return ptr->mode == vtn_variable_mode_ssbo ||
-          ptr->mode == vtn_variable_mode_ubo ||
-          ptr->mode == vtn_variable_mode_push_constant;
-}
-
 static void
 _vtn_variable_load_store(struct vtn_builder *b, bool load,
                          struct vtn_pointer *ptr,
@@ -942,7 +951,7 @@ _vtn_variable_load_store(struct vtn_builder *b, bool load,
 struct vtn_ssa_value *
 vtn_variable_load(struct vtn_builder *b, struct vtn_pointer *src)
 {
-   if (vtn_pointer_is_external_block(src)) {
+   if (vtn_pointer_is_external_block(b, src)) {
       return vtn_block_load(b, src);
    } else {
       struct vtn_ssa_value *val = NULL;
@@ -955,7 +964,7 @@ void
 vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
                    struct vtn_pointer *dest)
 {
-   if (vtn_pointer_is_external_block(dest)) {
+   if (vtn_pointer_is_external_block(b, dest)) {
       vtn_assert(dest->mode == vtn_variable_mode_ssbo);
       vtn_block_store(b, src, dest);
    } else {
@@ -1764,9 +1773,7 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
          nir_shader_add_variable(b->shader, var->members[i]);
       }
    } else {
-      vtn_assert(var->mode == vtn_variable_mode_ubo ||
-                 var->mode == vtn_variable_mode_ssbo ||
-                 var->mode == vtn_variable_mode_push_constant);
+      vtn_assert(vtn_pointer_is_external_block(b, val->pointer));
    }
 }
 

@@ -428,13 +428,6 @@ struct vtn_pointer {
    struct nir_ssa_def *offset;
 };
 
-static inline bool
-vtn_pointer_uses_ssa_offset(struct vtn_pointer *ptr)
-{
-   return ptr->mode == vtn_variable_mode_ubo ||
-          ptr->mode == vtn_variable_mode_ssbo;
-}
-
 struct vtn_variable {
    enum vtn_variable_mode mode;
 
