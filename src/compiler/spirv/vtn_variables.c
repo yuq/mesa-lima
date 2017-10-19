@@ -1502,7 +1502,7 @@ vtn_pointer_to_ssa(struct vtn_builder *b, struct vtn_pointer *ptr)
    vtn_assert(ptr->ptr_type);
    vtn_assert(ptr->ptr_type->type);
 
-   if (!ptr->offset || !ptr->block_index) {
+   if (!ptr->offset) {
       /* If we don't have an offset then we must be a pointer to the variable
        * itself.
        */
@@ -1520,15 +1520,22 @@ vtn_pointer_to_ssa(struct vtn_builder *b, struct vtn_pointer *ptr)
       ptr = vtn_ssa_offset_pointer_dereference(b, ptr, &chain);
    }
 
-   vtn_assert(ptr->offset && ptr->block_index);
-   return nir_vec2(&b->nb, ptr->block_index, ptr->offset);
+   vtn_assert(ptr->offset);
+   if (ptr->block_index) {
+      vtn_assert(ptr->mode == vtn_variable_mode_ubo ||
+                 ptr->mode == vtn_variable_mode_ssbo);
+      return nir_vec2(&b->nb, ptr->block_index, ptr->offset);
+   } else {
+      vtn_fail("Invalid pointer");
+      return ptr->offset;
+   }
 }
 
 struct vtn_pointer *
 vtn_pointer_from_ssa(struct vtn_builder *b, nir_ssa_def *ssa,
                      struct vtn_type *ptr_type)
 {
-   vtn_assert(ssa->num_components == 2 && ssa->bit_size == 32);
+   vtn_assert(ssa->num_components <= 2 && ssa->bit_size == 32);
    vtn_assert(ptr_type->base_type == vtn_base_type_pointer);
    vtn_assert(ptr_type->deref->base_type != vtn_base_type_pointer);
    /* This pointer type needs to have actual storage */
@@ -1539,8 +1546,19 @@ vtn_pointer_from_ssa(struct vtn_builder *b, nir_ssa_def *ssa,
                                          ptr_type, NULL);
    ptr->type = ptr_type->deref;
    ptr->ptr_type = ptr_type;
-   ptr->block_index = nir_channel(&b->nb, ssa, 0);
-   ptr->offset = nir_channel(&b->nb, ssa, 1);
+
+   if (ssa->num_components > 1) {
+      vtn_assert(ssa->num_components == 2);
+      vtn_assert(ptr->mode == vtn_variable_mode_ubo ||
+                 ptr->mode == vtn_variable_mode_ssbo);
+      ptr->block_index = nir_channel(&b->nb, ssa, 0);
+      ptr->offset = nir_channel(&b->nb, ssa, 1);
+   } else {
+      vtn_assert(ssa->num_components == 1);
+      unreachable("Invalid pointer");
+      ptr->block_index = NULL;
+      ptr->offset = ssa;
+   }
 
    return ptr;
 }
