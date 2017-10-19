@@ -504,45 +504,26 @@ vtn_local_store(struct vtn_builder *b, struct vtn_ssa_value *src,
    }
 }
 
-static nir_ssa_def *
-get_vulkan_resource_index(struct vtn_builder *b, struct vtn_pointer *ptr,
-                          struct vtn_type **type, unsigned *chain_idx)
-{
-   /* Push constants have no explicit binding */
-   if (ptr->mode == vtn_variable_mode_push_constant) {
-      *chain_idx = 0;
-      *type = ptr->var->type;
-      return NULL;
-   }
-
-   if (glsl_type_is_array(ptr->var->type->type)) {
-      vtn_assert(ptr->chain->length > 0);
-      nir_ssa_def *desc_array_index =
-         vtn_access_link_as_ssa(b, ptr->chain->link[0], 1);
-      *chain_idx = 1;
-      *type = ptr->var->type->array_element;
-      return vtn_variable_resource_index(b, ptr->var, desc_array_index);
-   } else {
-      *chain_idx = 0;
-      *type = ptr->var->type;
-      return vtn_variable_resource_index(b, ptr->var, NULL);
-   }
-}
-
 nir_ssa_def *
 vtn_pointer_to_offset(struct vtn_builder *b, struct vtn_pointer *ptr,
                       nir_ssa_def **index_out, unsigned *end_idx_out)
 {
-   if (ptr->offset) {
-      vtn_assert(ptr->block_index);
+   if (vtn_pointer_uses_ssa_offset(b, ptr)) {
+      if (!ptr->offset) {
+         struct vtn_access_chain chain = {
+            .length = 0,
+         };
+         ptr = vtn_ssa_offset_pointer_dereference(b, ptr, &chain);
+      }
       *index_out = ptr->block_index;
       return ptr->offset;
    }
 
-   unsigned idx = 0;
-   struct vtn_type *type;
-   *index_out = get_vulkan_resource_index(b, ptr, &type, &idx);
+   vtn_assert(ptr->mode == vtn_variable_mode_push_constant);
+   *index_out = NULL;
 
+   unsigned idx = 0;
+   struct vtn_type *type = ptr->var->type;
    nir_ssa_def *offset = nir_imm_int(&b->nb, 0);
    for (; idx < ptr->chain->length; idx++) {
       enum glsl_base_type base_type = glsl_get_base_type(type->type);
@@ -1898,15 +1879,18 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       const uint32_t offset = ptr->var->type->offsets[w[4]];
       const uint32_t stride = ptr->var->type->members[w[4]]->stride;
 
-      unsigned chain_idx;
-      struct vtn_type *type;
-      nir_ssa_def *index =
-         get_vulkan_resource_index(b, ptr, &type, &chain_idx);
+      if (!ptr->block_index) {
+         struct vtn_access_chain chain = {
+            .length = 0,
+         };
+         ptr = vtn_ssa_offset_pointer_dereference(b, ptr, &chain);
+         vtn_assert(ptr->block_index);
+      }
 
       nir_intrinsic_instr *instr =
          nir_intrinsic_instr_create(b->nb.shader,
                                     nir_intrinsic_get_buffer_size);
-      instr->src[0] = nir_src_for_ssa(index);
+      instr->src[0] = nir_src_for_ssa(ptr->block_index);
       nir_ssa_dest_init(&instr->instr, &instr->dest, 1, 32, NULL);
       nir_builder_instr_insert(&b->nb, &instr->instr);
       nir_ssa_def *buf_size = &instr->dest.ssa;
