@@ -246,6 +246,72 @@ vc5_vertex_state_create(struct pipe_context *pctx, unsigned num_elements,
         memcpy(so->pipe, elements, sizeof(*elements) * num_elements);
         so->num_elements = num_elements;
 
+        for (int i = 0; i < so->num_elements; i++) {
+                const struct pipe_vertex_element *elem = &elements[i];
+                const struct util_format_description *desc =
+                        util_format_description(elem->src_format);
+                uint32_t r_size = desc->channel[0].size;
+
+                struct V3D33_GL_SHADER_STATE_ATTRIBUTE_RECORD attr_unpacked = {
+                        /* vec_size == 0 means 4 */
+                        .vec_size = desc->nr_channels & 3,
+                        .signed_int_type = (desc->channel[0].type ==
+                                            UTIL_FORMAT_TYPE_SIGNED),
+
+                        .normalized_int_type = desc->channel[0].normalized,
+                        .read_as_int_uint = desc->channel[0].pure_integer,
+                        .instance_divisor = elem->instance_divisor,
+                };
+
+                switch (desc->channel[0].type) {
+                case UTIL_FORMAT_TYPE_FLOAT:
+                        if (r_size == 32) {
+                                attr_unpacked.type = ATTRIBUTE_FLOAT;
+                        } else {
+                                assert(r_size == 16);
+                                attr_unpacked.type = ATTRIBUTE_HALF_FLOAT;
+                        }
+                        break;
+
+                case UTIL_FORMAT_TYPE_SIGNED:
+                case UTIL_FORMAT_TYPE_UNSIGNED:
+                        switch (r_size) {
+                        case 32:
+                                attr_unpacked.type = ATTRIBUTE_INT;
+                                break;
+                        case 16:
+                                attr_unpacked.type = ATTRIBUTE_SHORT;
+                                break;
+                        case 10:
+                                attr_unpacked.type = ATTRIBUTE_INT2_10_10_10;
+                                break;
+                        case 8:
+                                attr_unpacked.type = ATTRIBUTE_BYTE;
+                                break;
+                        default:
+                                fprintf(stderr,
+                                        "format %s unsupported\n",
+                                        desc->name);
+                                attr_unpacked.type = ATTRIBUTE_BYTE;
+                                abort();
+                        }
+                        break;
+
+                default:
+                        fprintf(stderr,
+                                "format %s unsupported\n",
+                                desc->name);
+                        abort();
+                }
+
+                const uint32_t size =
+                        cl_packet_length(GL_SHADER_STATE_ATTRIBUTE_RECORD);
+                V3D33_GL_SHADER_STATE_ATTRIBUTE_RECORD_pack(NULL,
+                                                            (uint8_t *)&so->attrs[i * size],
+                                                            &attr_unpacked);
+        }
+
+
         return so;
 }
 

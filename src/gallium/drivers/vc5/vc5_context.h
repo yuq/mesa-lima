@@ -33,6 +33,7 @@
 #include "util/slab.h"
 #include "xf86drm.h"
 #include "vc5_drm.h"
+#include "vc5_screen.h"
 
 struct vc5_job;
 struct vc5_bo;
@@ -159,8 +160,10 @@ struct vc5_vertexbuf_stateobj {
 };
 
 struct vc5_vertex_stateobj {
-        struct pipe_vertex_element pipe[PIPE_MAX_ATTRIBS];
+        struct pipe_vertex_element pipe[VC5_MAX_ATTRIBUTES];
         unsigned num_elements;
+
+        uint8_t attrs[12 * VC5_MAX_ATTRIBUTES];
 };
 
 struct vc5_streamout_stateobj {

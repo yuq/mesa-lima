@@ -38,6 +38,7 @@ struct vc5_bo;
 #define VC5_MAX_TEXTURE_SAMPLERS 32
 #define VC5_MAX_SAMPLES 4
 #define VC5_MAX_DRAW_BUFFERS 4
+#define VC5_MAX_ATTRIBUTES 16
 
 struct vc5_simulator_file;
 
