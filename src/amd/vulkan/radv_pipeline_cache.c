@@ -177,15 +177,20 @@ radv_create_shader_variants_from_pipeline_cache(struct radv_device *device,
 					        struct radv_shader_variant **variants)
 {
 	struct cache_entry *entry;
-	if (cache)
-		entry = radv_pipeline_cache_search(cache, sha1);
-	else
-		entry = radv_pipeline_cache_search(device->mem_cache, sha1);
+
+	if (!cache)
+		cache = device->mem_cache;
+
+	pthread_mutex_lock(&cache->mutex);
+
+	entry = radv_pipeline_cache_search_unlocked(cache, sha1);
 
 	if (!entry) {
 		if (!device->physical_device->disk_cache ||
-		    (device->instance->debug_flags & RADV_DEBUG_NO_CACHE))
+		    (device->instance->debug_flags & RADV_DEBUG_NO_CACHE)) {
+			pthread_mutex_unlock(&cache->mutex);
 			return false;
+		}
 
 		uint8_t disk_sha1[20];
 		disk_cache_compute_key(device->physical_device->disk_cache,
@@ -193,8 +198,10 @@ radv_create_shader_variants_from_pipeline_cache(struct radv_device *device,
 		entry = (struct cache_entry *)
 			disk_cache_get(device->physical_device->disk_cache,
 				       disk_sha1, NULL);
-		if (!entry)
+		if (!entry) {
+			pthread_mutex_unlock(&cache->mutex);
 			return false;
+		}
 	}
 
 	char *p = entry->code;
@@ -204,8 +211,10 @@ radv_create_shader_variants_from_pipeline_cache(struct radv_device *device,
 			struct cache_entry_variant_info info;
 
 			variant = calloc(1, sizeof(struct radv_shader_variant));
-			if (!variant)
+			if (!variant) {
+				pthread_mutex_unlock(&cache->mutex);
 				return false;
+			}
 
 			memcpy(&info, p, sizeof(struct cache_entry_variant_info));
 			p += sizeof(struct cache_entry_variant_info);
@@ -231,6 +240,7 @@ radv_create_shader_variants_from_pipeline_cache(struct radv_device *device,
 			p_atomic_inc(&entry->variants[i]->ref_count);
 
 	memcpy(variants, entry->variants, sizeof(entry->variants));
+	pthread_mutex_unlock(&cache->mutex);
 	return true;
 }
 
@@ -509,12 +519,17 @@ VkResult radv_GetPipelineCacheData(
 	RADV_FROM_HANDLE(radv_pipeline_cache, cache, _cache);
 	struct cache_header *header;
 	VkResult result = VK_SUCCESS;
+
+	pthread_mutex_lock(&cache->mutex);
+
 	const size_t size = sizeof(*header) + cache->total_size;
 	if (pData == NULL) {
+		pthread_mutex_unlock(&cache->mutex);
 		*pDataSize = size;
 		return VK_SUCCESS;
 	}
 	if (*pDataSize < sizeof(*header)) {
+		pthread_mutex_unlock(&cache->mutex);
 		*pDataSize = 0;
 		return VK_INCOMPLETE;
 	}
@@ -545,6 +560,7 @@ VkResult radv_GetPipelineCacheData(
 	}
 	*pDataSize = p - pData;
 
+	pthread_mutex_unlock(&cache->mutex);
 	return result;
 }
 
