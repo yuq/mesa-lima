@@ -238,6 +238,7 @@ static void *
 vc5_vertex_state_create(struct pipe_context *pctx, unsigned num_elements,
                         const struct pipe_vertex_element *elements)
 {
+        struct vc5_context *vc5 = vc5_context(pctx);
         struct vc5_vertex_stateobj *so = CALLOC_STRUCT(vc5_vertex_stateobj);
 
         if (!so)
@@ -311,6 +312,25 @@ vc5_vertex_state_create(struct pipe_context *pctx, unsigned num_elements,
                                                             &attr_unpacked);
         }
 
+        /* Set up the default attribute values in case any of the vertex
+         * elements use them.
+         */
+        so->default_attribute_values = vc5_bo_alloc(vc5->screen,
+                                                    VC5_MAX_ATTRIBUTES *
+                                                    4 * sizeof(float),
+                                                    "default attributes");
+        uint32_t *attrs = vc5_bo_map(so->default_attribute_values);
+        for (int i = 0; i < VC5_MAX_ATTRIBUTES; i++) {
+                attrs[i * 4 + 0] = 0;
+                attrs[i * 4 + 1] = 0;
+                attrs[i * 4 + 2] = 0;
+                if (i < so->num_elements &&
+                    util_format_is_pure_integer(so->pipe[i].src_format)) {
+                        attrs[i * 4 + 3] = 1;
+                } else {
+                        attrs[i * 4 + 3] = fui(1.0);
+                }
+        }
 
         return so;
 }

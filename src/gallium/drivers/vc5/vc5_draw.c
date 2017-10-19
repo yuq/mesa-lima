@@ -123,32 +123,6 @@ vc5_predraw_check_textures(struct pipe_context *pctx,
         }
 }
 
-static struct vc5_cl_reloc
-vc5_get_default_values(struct vc5_context *vc5)
-{
-        struct vc5_job *job = vc5->job;
-
-        /* VC5_DIRTY_VTXSTATE */
-        struct vc5_vertex_stateobj *vtx = vc5->vtx;
-
-        /* Set up the default values for attributes. */
-        vc5_cl_ensure_space(&job->indirect, 4 * 4 * vtx->num_elements, 4);
-        struct vc5_cl_reloc default_values =
-                cl_address(job->indirect.bo, cl_offset(&job->indirect));
-        vc5_bo_reference(default_values.bo);
-
-        struct vc5_cl_out *defaults = cl_start(&job->indirect);
-        for (int i = 0; i < vtx->num_elements; i++) {
-                cl_aligned_f(&defaults, 0.0);
-                cl_aligned_f(&defaults, 0.0);
-                cl_aligned_f(&defaults, 0.0);
-                cl_aligned_f(&defaults, 1.0);
-        }
-        cl_end(&job->indirect, defaults);
-
-        return default_values;
-}
-
 static void
 vc5_emit_gl_shader_state(struct vc5_context *vc5,
                          const struct pipe_draw_info *info)
@@ -172,7 +146,6 @@ vc5_emit_gl_shader_state(struct vc5_context *vc5,
                 vc5_write_uniforms(vc5, vc5->prog.cs,
                                    &vc5->constbuf[PIPE_SHADER_VERTEX],
                                    &vc5->verttex);
-        struct vc5_cl_reloc default_values = vc5_get_default_values(vc5);
 
         uint32_t shader_rec_offset =
                 vc5_cl_ensure_space(&job->indirect,
@@ -236,7 +209,8 @@ vc5_emit_gl_shader_state(struct vc5_context *vc5,
                 shader.instance_id_read_by_vertex_shader =
                         vc5->prog.vs->prog_data.vs->uses_iid;
 
-                shader.address_of_default_attribute_values = default_values;
+                shader.address_of_default_attribute_values =
+                        cl_address(vtx->default_attribute_values, 0);
         }
 
         for (int i = 0; i < vtx->num_elements; i++) {
@@ -274,7 +248,6 @@ vc5_emit_gl_shader_state(struct vc5_context *vc5,
         vc5_bo_unreference(&cs_uniforms.bo);
         vc5_bo_unreference(&vs_uniforms.bo);
         vc5_bo_unreference(&fs_uniforms.bo);
-        vc5_bo_unreference(&default_values.bo);
 
         job->shader_rec_count++;
 }

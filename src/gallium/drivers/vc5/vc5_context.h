@@ -164,6 +164,7 @@ struct vc5_vertex_stateobj {
         unsigned num_elements;
 
         uint8_t attrs[12 * VC5_MAX_ATTRIBUTES];
+        struct vc5_bo *default_attribute_values;
 };
 
 struct vc5_streamout_stateobj {
