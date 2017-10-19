@@ -2881,18 +2881,18 @@ store_tcs_output(struct nir_to_llvm_context *ctx,
 	buf_addr = get_tcs_tes_buffer_address_params(ctx, param, const_index, is_compact,
 						     vertex_index, indir_index);
 
+	bool is_tess_factor = false;
+	if (instr->variables[0]->var->data.location == VARYING_SLOT_TESS_LEVEL_INNER ||
+	    instr->variables[0]->var->data.location == VARYING_SLOT_TESS_LEVEL_OUTER)
+		is_tess_factor = true;
+
 	unsigned base = is_compact ? const_index : 0;
 	for (unsigned chan = 0; chan < 8; chan++) {
-		bool is_tess_factor = false;
 		if (!(writemask & (1 << chan)))
 			continue;
 		LLVMValueRef value = llvm_extract_elem(&ctx->ac, src, chan);
 
 		lds_store(ctx, dw_addr, value);
-
-		if (instr->variables[0]->var->data.location == VARYING_SLOT_TESS_LEVEL_INNER ||
-		    instr->variables[0]->var->data.location == VARYING_SLOT_TESS_LEVEL_OUTER)
-			is_tess_factor = true;
 
 		if (!is_tess_factor && writemask != 0xF)
 			ac_build_buffer_store_dword(&ctx->ac, ctx->hs_ring_tess_offchip, value, 1,
