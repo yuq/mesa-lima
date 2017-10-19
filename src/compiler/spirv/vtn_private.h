@@ -159,6 +159,9 @@ struct vtn_block {
 struct vtn_function {
    struct exec_node node;
 
+   bool referenced;
+   bool emitted;
+
    nir_function_impl *impl;
    struct vtn_block *start_block;
 

@@ -1394,8 +1394,11 @@ vtn_handle_function_call(struct vtn_builder *b, SpvOp opcode,
                          const uint32_t *w, unsigned count)
 {
    struct vtn_type *res_type = vtn_value(b, w[1], vtn_value_type_type)->type;
-   struct nir_function *callee =
-      vtn_value(b, w[3], vtn_value_type_function)->func->impl->function;
+   struct vtn_function *vtn_callee =
+      vtn_value(b, w[3], vtn_value_type_function)->func;
+   struct nir_function *callee = vtn_callee->impl->function;
+
+   vtn_callee->referenced = true;
 
    nir_call_instr *call = nir_call_instr_create(b->nb.shader, callee);
    for (unsigned i = 0; i < call->num_params; i++) {
@@ -3366,12 +3369,22 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
 
    vtn_build_cfg(b, words, word_end);
 
-   foreach_list_typed(struct vtn_function, func, node, &b->functions) {
-      b->const_table = _mesa_hash_table_create(b, _mesa_hash_pointer,
-                                               _mesa_key_pointer_equal);
+   assert(b->entry_point->value_type == vtn_value_type_function);
+   b->entry_point->func->referenced = true;
 
-      vtn_function_emit(b, func, vtn_handle_body_instruction);
-   }
+   bool progress;
+   do {
+      progress = false;
+      foreach_list_typed(struct vtn_function, func, node, &b->functions) {
+         if (func->referenced && !func->emitted) {
+            b->const_table = _mesa_hash_table_create(b, _mesa_hash_pointer,
+                                                     _mesa_key_pointer_equal);
+
+            vtn_function_emit(b, func, vtn_handle_body_instruction);
+            progress = true;
+         }
+      }
+   } while (progress);
 
    assert(b->entry_point->value_type == vtn_value_type_function);
    nir_function *entry_point = b->entry_point->func->impl->function;

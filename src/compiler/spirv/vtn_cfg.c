@@ -783,4 +783,6 @@ vtn_function_emit(struct vtn_builder *b, struct vtn_function *func,
     */
    if (b->has_loop_continue)
       nir_repair_ssa_impl(func->impl);
+
+   func->emitted = true;
 }
