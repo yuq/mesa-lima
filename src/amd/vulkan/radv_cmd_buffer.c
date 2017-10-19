@@ -1849,8 +1849,7 @@ static void radv_stage_flush(struct radv_cmd_buffer *cmd_buffer,
 			      VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT |
 			      VK_PIPELINE_STAGE_ALL_COMMANDS_BIT)) {
 		cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_PS_PARTIAL_FLUSH;
-	} else if (src_stage_mask & (VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT |
-	                             VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
+	} else if (src_stage_mask & (VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
 	                             VK_PIPELINE_STAGE_VERTEX_INPUT_BIT |
 	                             VK_PIPELINE_STAGE_VERTEX_SHADER_BIT)) {
 		cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_VS_PARTIAL_FLUSH;
