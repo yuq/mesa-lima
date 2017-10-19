@@ -528,6 +528,11 @@ si_emit_config(struct radv_physical_device *physical_device,
 	radeon_emit(cs, S_028A04_MIN_SIZE(radv_pack_float_12p4(0)) |
 		    S_028A04_MAX_SIZE(radv_pack_float_12p4(8192/2)));
 
+	if (!physical_device->has_clear_state) {
+		radeon_set_context_reg(cs, R_028004_DB_COUNT_CONTROL,
+				       S_028004_ZPASS_INCREMENT_DISABLE(1));
+	}
+
 	si_emit_compute(physical_device, cs);
 }
 

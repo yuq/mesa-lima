@@ -2160,7 +2160,6 @@ VkResult radv_BeginCommandBuffer(
 		switch (cmd_buffer->queue_family_index) {
 		case RADV_QUEUE_GENERAL:
 			emit_gfx_buffer_state(cmd_buffer);
-			radv_set_db_count_control(cmd_buffer);
 			break;
 		case RADV_QUEUE_COMPUTE:
 			si_init_compute(cmd_buffer);
