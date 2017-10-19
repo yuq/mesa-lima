@@ -603,7 +603,8 @@ get_max_samples_for_formats(struct pipe_screen *screen,
 void st_init_extensions(struct pipe_screen *screen,
                         struct gl_constants *consts,
                         struct gl_extensions *extensions,
-                        struct st_config_options *options)
+                        struct st_config_options *options,
+                        gl_api api)
 {
    unsigned i;
    GLboolean *extension_table = (GLboolean *) extensions;
@@ -1119,6 +1120,11 @@ void st_init_extensions(struct pipe_screen *screen,
 
    consts->MinMapBufferAlignment =
       screen->get_param(screen, PIPE_CAP_MIN_MAP_BUFFER_ALIGNMENT);
+
+   /* The OpenGL Compatibility profile requires arbitrary buffer swizzling. */
+   if (api == API_OPENGL_COMPAT &&
+       screen->get_param(screen, PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY))
+      extensions->ARB_texture_buffer_object = GL_FALSE;
 
    if (extensions->ARB_texture_buffer_object) {
       consts->MaxTextureBufferSize =

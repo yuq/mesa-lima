@@ -504,6 +504,10 @@ const struct function common_desktop_functions_possible[] = {
    { "glDrawArraysInstanced", 31, -1 },
    { "glDrawElementsInstanced", 31, -1 },
    { "glPrimitiveRestartIndex", 31, -1 },
+   { "glTexBuffer", 31, -1 },
+
+   /* GL_ARB_texture_buffer_range */
+   { "glTexBufferRange", 43, -1 },
 
    /* GL_ARB_shader_objects */
    { "glDeleteObjectARB", 31, -1 },
@@ -1501,9 +1505,6 @@ const struct function gl_compatibility_functions_possible[] = {
 };
 
 const struct function gl_core_functions_possible[] = {
-   /* GL 3.1 */
-   { "glTexBuffer", 31, -1 },
-
    /* GL 3.2 */
    { "glFramebufferTexture", 32, -1 },
 
@@ -1808,7 +1809,6 @@ const struct function gl_core_functions_possible[] = {
    { "glGetProgramResourceLocation", 43, -1 },
    { "glGetProgramResourceLocationIndex", 43, -1 },
 // { "glShaderStorageBlockBinding", 43, -1 },           // XXX: Add to xml
-   { "glTexBufferRange", 43, -1 },
 // { "glTextureBufferRangeEXT", 43, -1 },               // XXX: Add to xml
    { "glTexStorage2DMultisample", 43, -1 },
    { "glTexStorage3DMultisample", 43, -1 },
