@@ -407,6 +407,9 @@ struct explicit_location_info {
    ir_variable *var;
    unsigned base_type;
    unsigned interpolation;
+   bool centroid;
+   bool sample;
+   bool patch;
 };
 
 static bool
@@ -417,6 +420,9 @@ check_location_aliasing(struct explicit_location_info explicit_locations[][4],
                         unsigned location_limit,
                         const glsl_type *type,
                         unsigned interpolation,
+                        bool centroid,
+                        bool sample,
+                        bool patch,
                         gl_shader_program *prog,
                         gl_shader_stage stage)
 {
@@ -459,6 +465,16 @@ check_location_aliasing(struct explicit_location_info explicit_locations[][4],
                             _mesa_shader_stage_to_string(stage), location);
                return false;
             }
+
+            if (info->centroid != centroid ||
+                info->sample != sample ||
+                info->patch != patch) {
+               linker_error(prog,
+                            "%s shader has multiple outputs at explicit "
+                            "location %u with different aux storage\n",
+                            _mesa_shader_stage_to_string(stage), location);
+               return false;
+            }
          }
 
          comp++;
@@ -493,6 +509,9 @@ check_location_aliasing(struct explicit_location_info explicit_locations[][4],
          explicit_locations[location][i].base_type =
             type->without_array()->base_type;
          explicit_locations[location][i].interpolation = interpolation;
+         explicit_locations[location][i].centroid = centroid;
+         explicit_locations[location][i].sample = sample;
+         explicit_locations[location][i].patch = patch;
          i++;
 
          /* We need to do some special handling for doubles as dvec3 and
@@ -557,15 +576,17 @@ cross_validate_outputs_to_inputs(struct gl_context *ctx,
 
          if (type->without_array()->is_interface()) {
             for (unsigned i = 0; i < type->without_array()->length; i++) {
-               const glsl_type *field_type = type->fields.structure[i].type;
-               unsigned field_location = type->fields.structure[i].location -
-                  (type->fields.structure[i].patch ? VARYING_SLOT_PATCH0 :
-                                                     VARYING_SLOT_VAR0);
-               unsigned interpolation = type->fields.structure[i].interpolation;
+               glsl_struct_field *field = &type->fields.structure[i];
+               unsigned field_location = field->location -
+                  (field->patch ? VARYING_SLOT_PATCH0 : VARYING_SLOT_VAR0);
                if (!check_location_aliasing(explicit_locations, var,
                                             field_location,
                                             0, field_location + 1,
-                                            field_type, interpolation,
+                                            field->type,
+                                            field->interpolation,
+                                            field->centroid,
+                                            field->sample,
+                                            field->patch,
                                             prog, producer->Stage)) {
                   return;
                }
@@ -574,6 +595,9 @@ cross_validate_outputs_to_inputs(struct gl_context *ctx,
                                              idx, var->data.location_frac,
                                              slot_limit, type,
                                              var->data.interpolation,
+                                             var->data.centroid,
+                                             var->data.sample,
+                                             var->data.patch,
                                              prog, producer->Stage)) {
             return;
          }
