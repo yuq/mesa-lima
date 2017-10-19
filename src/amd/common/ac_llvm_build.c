@@ -1734,3 +1734,11 @@ void ac_optimize_vs_outputs(struct ac_llvm_context *ctx,
 		*num_param_exports = exports.num;
 	}
 }
+
+void ac_init_exec_full_mask(struct ac_llvm_context *ctx)
+{
+	LLVMValueRef full_mask = LLVMConstInt(ctx->i64, ~0ull, 0);
+	ac_build_intrinsic(ctx,
+			   "llvm.amdgcn.init.exec", ctx->voidt,
+			   &full_mask, 1, AC_FUNC_ATTR_CONVERGENT);
+}

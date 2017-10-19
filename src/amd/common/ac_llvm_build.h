@@ -281,6 +281,7 @@ void ac_optimize_vs_outputs(struct ac_llvm_context *ac,
 			    uint8_t *vs_output_param_offset,
 			    uint32_t num_outputs,
 			    uint8_t *num_param_exports);
+void ac_init_exec_full_mask(struct ac_llvm_context *ctx);
 #ifdef __cplusplus
 }
 #endif

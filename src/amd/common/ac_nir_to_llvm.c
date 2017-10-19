@@ -6488,6 +6488,9 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	ctx.abi.load_ssbo = radv_load_ssbo;
 	ctx.abi.load_sampler_desc = radv_get_sampler_desc;
 
+	if (shader_count >= 2)
+		ac_init_exec_full_mask(&ctx.ac);
+
 	if (ctx.ac.chip_class == GFX9 &&
 	    shaders[shader_count - 1]->stage == MESA_SHADER_TESS_CTRL)
 		ac_nir_fixup_ls_hs_input_vgprs(&ctx);
