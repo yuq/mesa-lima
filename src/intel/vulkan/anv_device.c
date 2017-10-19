@@ -728,7 +728,7 @@ void anv_GetPhysicalDeviceFeatures2KHR(
       case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES_KHR: {
          VkPhysicalDeviceVariablePointerFeaturesKHR *features = (void *)ext;
          features->variablePointersStorageBuffer = true;
-         features->variablePointers = false;
+         features->variablePointers = true;
          break;
       }
 

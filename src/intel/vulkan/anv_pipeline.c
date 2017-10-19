@@ -133,6 +133,7 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
    }
 
    struct spirv_to_nir_options spirv_options = {
+      .lower_workgroup_access_to_offsets = true,
       .caps = {
          .float64 = device->instance->physicalDevice.info.gen >= 8,
          .int64 = device->instance->physicalDevice.info.gen >= 8,
@@ -400,10 +401,8 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    if (stage != MESA_SHADER_COMPUTE)
       NIR_PASS_V(nir, anv_nir_lower_multiview, pipeline->subpass->view_mask);
 
-   if (stage == MESA_SHADER_COMPUTE) {
-      NIR_PASS_V(nir, brw_nir_lower_cs_shared);
+   if (stage == MESA_SHADER_COMPUTE)
       prog_data->total_shared = nir->num_shared;
-   }
 
    nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir));
 
