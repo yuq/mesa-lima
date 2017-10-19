@@ -341,7 +341,7 @@ si_emit_config(struct radv_physical_device *physical_device,
 	radeon_emit(cs, CONTEXT_CONTROL_SHADOW_ENABLE(1));
 
 	if (physical_device->has_clear_state) {
-		radeon_emit(cs, PKT3(PKT3_CLEAR_STATE, 1, 0));
+		radeon_emit(cs, PKT3(PKT3_CLEAR_STATE, 0, 0));
 		radeon_emit(cs, 0);
 	}
 
