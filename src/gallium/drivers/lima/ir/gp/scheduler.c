@@ -960,8 +960,11 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
 
          /* load reg function will handle min dist and reuse move case */
          int err = gpir_try_insert_load_reg(block, current);
-         if (err == 0)
+         if (err == 0) {
+            fprintf(stderr, "gpir: add reg load and %d moves for node %s %d\n",
+                    i, gpir_op_infos[node->op].name, node->index);
             return true;
+         }
          else if (err == -2) {
             /* TODO: handle the target fail case to reschedule the target
              * node and all its preceeds */
@@ -980,7 +983,9 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
          int reschedule_start = node->sched_instr + 1;
          instr_remove_node(block, node);
          gpir_try_place_node(block, node, reschedule_start, INT_MAX);
+
          current = node;
+         i = 0;
       }
    }
 
