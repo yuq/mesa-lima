@@ -2182,7 +2182,7 @@ get_ssbo_nir_atomic_op(struct vtn_builder *b, SpvOp opcode)
 }
 
 static nir_intrinsic_op
-get_shared_nir_atomic_op(struct vtn_builder *b, SpvOp opcode)
+get_var_nir_atomic_op(struct vtn_builder *b, SpvOp opcode)
 {
    switch (opcode) {
    case SpvOpAtomicLoad:      return nir_intrinsic_load_var;
@@ -2249,7 +2249,7 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
    if (ptr->mode == vtn_variable_mode_workgroup) {
       nir_deref_var *deref = vtn_pointer_to_deref(b, ptr);
       const struct glsl_type *deref_type = nir_deref_tail(&deref->deref)->type;
-      nir_intrinsic_op op = get_shared_nir_atomic_op(b, opcode);
+      nir_intrinsic_op op = get_var_nir_atomic_op(b, opcode);
       atomic = nir_intrinsic_instr_create(b->nb.shader, op);
       atomic->variables[0] = nir_deref_var_clone(deref, atomic);
 
