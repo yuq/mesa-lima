@@ -467,7 +467,7 @@ struct vtn_builder {
    nir_builder nb;
 
    nir_shader *shader;
-   const struct nir_spirv_supported_extensions *ext;
+   const struct spirv_to_nir_options *options;
    struct vtn_block *block;
 
    /* Current file, line, and column.  Useful for debugging.  Set

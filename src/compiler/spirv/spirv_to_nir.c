@@ -2675,7 +2675,7 @@ stage_for_execution_model(SpvExecutionModel model)
 }
 
 #define spv_check_supported(name, cap) do {		\
-      if (!(b->ext && b->ext->name))			\
+      if (!(b->options && b->options->caps.name))	\
          vtn_warn("Unsupported SPIR-V capability: %s",  \
                   spirv_capability_to_string(cap));     \
    } while(0)
@@ -3316,8 +3316,8 @@ nir_function *
 spirv_to_nir(const uint32_t *words, size_t word_count,
              struct nir_spirv_specialization *spec, unsigned num_spec,
              gl_shader_stage stage, const char *entry_point_name,
-             const struct nir_spirv_supported_extensions *ext,
-             const nir_shader_compiler_options *options)
+             const struct spirv_to_nir_options *options,
+             const nir_shader_compiler_options *nir_options)
 {
    const uint32_t *word_end = words + word_count;
 
@@ -3339,7 +3339,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    exec_list_make_empty(&b->functions);
    b->entry_point_stage = stage;
    b->entry_point_name = entry_point_name;
-   b->ext = ext;
+   b->options = options;
 
    /* Handle all the preamble instructions */
    words = vtn_foreach_instruction(b, words, word_end,
@@ -3351,7 +3351,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
       return NULL;
    }
 
-   b->shader = nir_shader_create(NULL, stage, options, NULL);
+   b->shader = nir_shader_create(NULL, stage, nir_options, NULL);
 
    /* Set shader info defaults */
    b->shader->info.gs.invocations = 1;
