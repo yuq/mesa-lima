@@ -42,7 +42,7 @@ etna_sw_destroy_query(struct etna_context *ctx, struct etna_query *q)
 }
 
 static uint64_t
-read_counter(struct etna_context *ctx, int type)
+read_counter(struct etna_context *ctx, unsigned type)
 {
    switch (type) {
    case PIPE_QUERY_PRIMITIVES_EMITTED:

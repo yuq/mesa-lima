@@ -44,7 +44,7 @@ struct etna_query_funcs {
 struct etna_query {
    const struct etna_query_funcs *funcs;
    bool active;
-   int type;
+   unsigned type;
 };
 
 static inline struct etna_query *
