@@ -32,7 +32,8 @@
 static uint32_t
 f_as_u32(float f)
 {
-   return *(uint32_t *)&f;
+   union fi fi = { .f = f };
+   return fi.ui;
 }
 
 static uint32_t
