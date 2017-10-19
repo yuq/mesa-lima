@@ -180,6 +180,9 @@ struct etna_context {
 
    struct pipe_debug_callback debug;
    int in_fence_fd;
+
+   /* list of active hardware queries */
+   struct list_head active_hw_queries;
 };
 
 static inline struct etna_context *
