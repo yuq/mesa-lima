@@ -2206,6 +2206,7 @@ get_ccs_compatible_uint_format(const struct isl_format_layout *fmtl)
    case ISL_FORMAT_R32G32B32A32_UINT:
    case ISL_FORMAT_R32G32B32A32_UNORM:
    case ISL_FORMAT_R32G32B32A32_SNORM:
+   case ISL_FORMAT_R32G32B32X32_FLOAT:
       return ISL_FORMAT_R32G32B32A32_UINT;
 
    case ISL_FORMAT_R16G16B16A16_UNORM:
