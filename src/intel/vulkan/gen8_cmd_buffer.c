@@ -259,6 +259,8 @@ want_depth_pma_fix(struct anv_cmd_buffer *cmd_buffer)
 UNUSED static bool
 want_stencil_pma_fix(struct anv_cmd_buffer *cmd_buffer)
 {
+   if (GEN_GEN > 9)
+      return false;
    assert(GEN_GEN == 9);
 
    /* From the Skylake PRM Vol. 2c CACHE_MODE_1::STC PMA Optimization Enable:
