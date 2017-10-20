@@ -119,6 +119,7 @@ bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
    switch (node->op) {
    case ppir_op_mov:
    case ppir_op_mul:
+   case ppir_op_max:
       instr->slots[PPIR_INSTR_SLOT_ALU_VEC_MUL] = node;
       break;
 

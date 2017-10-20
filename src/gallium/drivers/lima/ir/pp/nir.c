@@ -133,6 +133,7 @@ static int nir_to_ppir_opcodes[nir_num_opcodes] = {
    [nir_op_frsq] = ppir_op_rsqrt,
    [nir_op_flog2] = ppir_op_log2,
    [nir_op_fexp2] = ppir_op_exp2,
+   [nir_op_fmax] = ppir_op_max,
 };
 
 static ppir_node *ppir_emit_alu(ppir_compiler *comp, nir_alu_instr *instr)
