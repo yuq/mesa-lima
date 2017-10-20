@@ -3165,12 +3165,10 @@ genX(upload_gs_push_constants)(struct brw_context *brw)
    /* BRW_NEW_GEOMETRY_PROGRAM */
    const struct gl_program *gp = brw->programs[MESA_SHADER_GEOMETRY];
 
-   if (gp) {
-      /* BRW_NEW_GS_PROG_DATA */
-      struct brw_stage_prog_data *prog_data = brw->gs.base.prog_data;
+   /* BRW_NEW_GS_PROG_DATA */
+   struct brw_stage_prog_data *prog_data = brw->gs.base.prog_data;
 
-      gen6_upload_push_constants(brw, gp, prog_data, stage_state);
-   }
+   gen6_upload_push_constants(brw, gp, prog_data, stage_state);
 }
 
 static const struct brw_tracked_state genX(gs_push_constants) = {
@@ -4027,11 +4025,9 @@ genX(upload_tes_push_constants)(struct brw_context *brw)
    /* BRW_NEW_TESS_PROGRAMS */
    const struct gl_program *tep = brw->programs[MESA_SHADER_TESS_EVAL];
 
-   if (tep) {
-      /* BRW_NEW_TES_PROG_DATA */
-      const struct brw_stage_prog_data *prog_data = brw->tes.base.prog_data;
-      gen6_upload_push_constants(brw, tep, prog_data, stage_state);
-   }
+   /* BRW_NEW_TES_PROG_DATA */
+   const struct brw_stage_prog_data *prog_data = brw->tes.base.prog_data;
+   gen6_upload_push_constants(brw, tep, prog_data, stage_state);
 }
 
 static const struct brw_tracked_state genX(tes_push_constants) = {
@@ -4051,14 +4047,11 @@ genX(upload_tcs_push_constants)(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->tcs.base;
    /* BRW_NEW_TESS_PROGRAMS */
    const struct gl_program *tcp = brw->programs[MESA_SHADER_TESS_CTRL];
-   bool active = brw->programs[MESA_SHADER_TESS_EVAL];
 
-   if (active) {
-      /* BRW_NEW_TCS_PROG_DATA */
-      const struct brw_stage_prog_data *prog_data = brw->tcs.base.prog_data;
+   /* BRW_NEW_TCS_PROG_DATA */
+   const struct brw_stage_prog_data *prog_data = brw->tcs.base.prog_data;
 
-      gen6_upload_push_constants(brw, tcp, prog_data, stage_state);
-   }
+   gen6_upload_push_constants(brw, tcp, prog_data, stage_state);
 }
 
 static const struct brw_tracked_state genX(tcs_push_constants) = {

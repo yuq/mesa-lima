@@ -130,9 +130,14 @@ gen6_upload_push_constants(struct brw_context *brw,
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
 
-   _mesa_shader_write_subroutine_indices(ctx, stage_state->stage);
+   bool active = prog_data &&
+      (stage_state->stage != MESA_SHADER_TESS_CTRL ||
+       brw->programs[MESA_SHADER_TESS_EVAL]);
 
-   if (prog_data->nr_params == 0) {
+   if (active)
+      _mesa_shader_write_subroutine_indices(ctx, stage_state->stage);
+
+   if (!active || prog_data->nr_params == 0) {
       stage_state->push_const_size = 0;
    } else {
       /* Updates the ParamaterValues[i] pointers for all parameters of the
