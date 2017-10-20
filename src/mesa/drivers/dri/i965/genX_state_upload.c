@@ -3117,9 +3117,8 @@ genX(upload_push_constant_packets)(struct brw_context *brw)
       }
 
       stage_state->push_constants_dirty = false;
+      brw->ctx.NewDriverState |= GEN_GEN >= 9 ? BRW_NEW_SURFACES : 0;
    }
-
-   brw->ctx.NewDriverState |= GEN_GEN >= 9 ? BRW_NEW_SURFACES : 0;
 }
 
 const struct brw_tracked_state genX(push_constant_packets) = {
