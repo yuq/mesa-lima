@@ -201,6 +201,7 @@ void ppir_node_delete(ppir_node *node)
    ralloc_free(node);
 }
 
+#ifdef DEBUG
 static void ppir_node_print_node(ppir_node *node, int space)
 {
    for (int i = 0; i < space; i++)
@@ -236,3 +237,4 @@ void ppir_node_print_prog(ppir_compiler *comp)
    }
    printf("====================\n");
 }
+#endif
