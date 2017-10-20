@@ -832,16 +832,40 @@ void radv_GetPhysicalDeviceMemoryProperties2KHR(
 						      &pMemoryProperties->memoryProperties);
 }
 
+static enum radeon_ctx_priority
+radv_get_queue_global_priority(const VkDeviceQueueGlobalPriorityCreateInfoEXT *pObj)
+{
+	/* Default to MEDIUM when a specific global priority isn't requested */
+	if (!pObj)
+		return RADEON_CTX_PRIORITY_MEDIUM;
+
+	switch(pObj->globalPriority) {
+	case VK_QUEUE_GLOBAL_PRIORITY_REALTIME:
+		return RADEON_CTX_PRIORITY_REALTIME;
+	case VK_QUEUE_GLOBAL_PRIORITY_HIGH:
+		return RADEON_CTX_PRIORITY_HIGH;
+	case VK_QUEUE_GLOBAL_PRIORITY_MEDIUM:
+		return RADEON_CTX_PRIORITY_MEDIUM;
+	case VK_QUEUE_GLOBAL_PRIORITY_LOW:
+		return RADEON_CTX_PRIORITY_LOW;
+	default:
+		unreachable("Illegal global priority value");
+		return RADEON_CTX_PRIORITY_INVALID;
+	}
+}
+
 static int
 radv_queue_init(struct radv_device *device, struct radv_queue *queue,
-		int queue_family_index, int idx)
+		int queue_family_index, int idx,
+		const VkDeviceQueueGlobalPriorityCreateInfoEXT *global_priority)
 {
 	queue->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
 	queue->device = device;
 	queue->queue_family_index = queue_family_index;
 	queue->queue_idx = idx;
+	queue->priority = radv_get_queue_global_priority(global_priority);
 
-	queue->hw_ctx = device->ws->ctx_create(device->ws);
+	queue->hw_ctx = device->ws->ctx_create(device->ws, queue->priority);
 	if (!queue->hw_ctx)
 		return VK_ERROR_OUT_OF_HOST_MEMORY;
 
@@ -962,6 +986,8 @@ VkResult radv_CreateDevice(
 	for (unsigned i = 0; i < pCreateInfo->queueCreateInfoCount; i++) {
 		const VkDeviceQueueCreateInfo *queue_create = &pCreateInfo->pQueueCreateInfos[i];
 		uint32_t qfi = queue_create->queueFamilyIndex;
+		const VkDeviceQueueGlobalPriorityCreateInfoEXT *global_priority =
+			vk_find_struct_const(queue_create->pNext, DEVICE_QUEUE_GLOBAL_PRIORITY_CREATE_INFO_EXT);
 
 		device->queues[qfi] = vk_alloc(&device->alloc,
 					       queue_create->queueCount * sizeof(struct radv_queue), 8, VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
@@ -975,7 +1001,7 @@ VkResult radv_CreateDevice(
 		device->queue_count[qfi] = queue_create->queueCount;
 
 		for (unsigned q = 0; q < queue_create->queueCount; q++) {
-			result = radv_queue_init(device, &device->queues[qfi][q], qfi, q);
+			result = radv_queue_init(device, &device->queues[qfi][q], qfi, q, global_priority);
 			if (result != VK_SUCCESS)
 				goto fail;
 		}

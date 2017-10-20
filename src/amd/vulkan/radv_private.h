@@ -487,6 +487,7 @@ struct radv_queue {
 	VK_LOADER_DATA                              _loader_data;
 	struct radv_device *                         device;
 	struct radeon_winsys_ctx                    *hw_ctx;
+	enum radeon_ctx_priority                     priority;
 	int queue_family_index;
 	int queue_idx;
 
