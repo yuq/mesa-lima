@@ -435,6 +435,23 @@ static void gpir_codegen(gpir_codegen_instr *code, gpir_instr *instr)
    gpir_codegen_store_slot(code, instr);
 }
 
+static void gpir_codegen_print_prog(gpir_compiler *comp)
+{
+#ifdef DEBUG
+   uint32_t *data = comp->prog->shader;
+   int size = comp->prog->shader_size;
+   int num_instr = size / sizeof(gpir_codegen_instr);
+   int num_dword_per_instr = sizeof(gpir_codegen_instr) / sizeof(uint32_t);
+
+   for (int i = 0; i < num_instr; i++) {
+      printf("%03d: ", i);
+      for (int j = 0; j < num_dword_per_instr; j++)
+         printf("%08x ", data[i * num_dword_per_instr + j]);
+      printf("\n");
+   }
+#endif
+}
+
 bool gpir_codegen_prog(gpir_compiler *comp)
 {
    int num_instr = 0;
@@ -462,20 +479,7 @@ bool gpir_codegen_prog(gpir_compiler *comp)
 
    comp->prog->shader = code;
    comp->prog->shader_size = num_instr * sizeof(gpir_codegen_instr);
+
+   gpir_codegen_print_prog(comp);
    return true;
-}
-
-void gpir_codegen_print_prog(gpir_compiler *comp)
-{
-   uint32_t *data = comp->prog->shader;
-   int size = comp->prog->shader_size;
-   int num_instr = size / sizeof(gpir_codegen_instr);
-   int num_dword_per_instr = sizeof(gpir_codegen_instr) / sizeof(uint32_t);
-
-   for (int i = 0; i < num_instr; i++) {
-      printf("%03d: ", i);
-      for (int j = 0; j < num_dword_per_instr; j++)
-         printf("%08x ", data[i * num_dword_per_instr + j]);
-      printf("\n");
-   }
 }

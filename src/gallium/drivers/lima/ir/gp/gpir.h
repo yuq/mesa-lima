@@ -286,7 +286,11 @@ void gpir_node_replace_succ(gpir_node *dst, gpir_node *src);
 void gpir_node_merge_pred(gpir_node *dst, gpir_node *src);
 void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child, gpir_node *new_child);
 void gpir_node_delete(gpir_node *node);
+#ifdef DEBUG
 void gpir_node_print_prog(gpir_compiler *comp);
+#else
+static inline void gpir_node_print_prog(gpir_compiler *comp) {}
+#endif
 
 static inline bool gpir_node_is_root(gpir_node *node)
 {
@@ -319,12 +323,14 @@ static inline bool gpir_node_is_leaf(gpir_node *node)
 void gpir_instr_init(gpir_instr *instr);
 bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node);
 void gpir_instr_remove_node(gpir_instr *instr, gpir_node *node);
+#ifdef DEBUG
 void gpir_instr_print_prog(gpir_compiler *comp);
+#else
+static inline void gpir_instr_print_prog(gpir_compiler *comp) {}
+#endif
 
 bool gpir_lower_prog(gpir_compiler *comp);
 bool gpir_schedule_prog(gpir_compiler *comp);
-
 bool gpir_codegen_prog(gpir_compiler *comp);
-void gpir_codegen_print_prog(gpir_compiler *comp);
 
 #endif
