@@ -26,6 +26,7 @@
 #include <stdio.h>
 
 #include "util/bitscan.h"
+#include "util/u_debug.h"
 
 #include "gpir.h"
 
@@ -384,10 +385,10 @@ static gpir_node *_gpir_create_from_node(gpir_block *block, gpir_node *node, gpi
    if (!ret)
       return NULL;
 
-   fprintf(stderr, "gpir: scheduler create node %s %d from node %s %d\n",
-          gpir_op_infos[ret->op].name, ret->index,
-          load ? gpir_op_infos[load->op].name : gpir_op_infos[node->op].name,
-          load ? load->index : node->index);
+   debug_printf("gpir: scheduler create node %s %d from node %s %d\n",
+                gpir_op_infos[ret->op].name, ret->index,
+                load ? gpir_op_infos[load->op].name : gpir_op_infos[node->op].name,
+                load ? load->index : node->index);
 
    if (load) {
       /* copy load node */
@@ -631,8 +632,8 @@ static gpir_node *gpir_move_get_start_node(gpir_node *node)
       }
    }
 
-   fprintf(stderr, "gpir: scheduler reuse move node %d for node %d\n",
-           move->index, node->index);
+   debug_printf("gpir: scheduler reuse move node %d for node %d\n",
+                move->index, node->index);
 
    return move;
 }
@@ -815,7 +816,7 @@ static int gpir_alloc_reg(gpir_instr *instrs, gpir_node *load,
    /* record alu node used for creating a store node */
    *store_alu = current;
 
-   fprintf(stderr, "gpir: alloc reg %d for node %d\n", reg, load->index);
+   debug_printf("gpir: alloc reg %d for node %d\n", reg, load->index);
    return reg;
 }
 
@@ -833,8 +834,8 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
       return -3;
    list_addtail(&load->list, &block->node_list);
 
-   fprintf(stderr, "gpir: create load reg %d for node %d\n",
-           load->index, node->index);
+   debug_printf("gpir: create load reg %d for node %d\n",
+                load->index, node->index);
 
    gpir_move_unsatistied_node(load, node);
 
@@ -843,8 +844,8 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
    gpir_node *store_alu = node;
    int reg = gpir_alloc_reg(instrs, load, &store_alu);
    if (reg < 0) {
-      fprintf(stderr, "gpir: alloc reg for node %d fail\n",
-              load->index);
+      debug_printf("gpir: alloc reg for node %d fail\n",
+                   load->index);
       gpir_remove_created_node(block, load, node);
       return -1;
    }
@@ -865,7 +866,7 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
 
    store->sched_instr = store_alu->sched_instr;
    store->sched_pos = GPIR_INSTR_SLOT_STORE0 + sn->component;
-   bool store_result =
+   bool MAYBE_UNUSED store_result =
       gpir_instr_try_insert_node(instrs + store_alu->sched_instr, store);
    /* ensured by the reg alloc process */
    assert(store_result);
@@ -928,8 +929,8 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
          /* all constraints are satisfied */
          if (start < 0) {
             if (i > 0)
-               fprintf(stderr, "gpir: add %d moves for node %s %d\n",
-                       i, gpir_op_infos[node->op].name, node->index);
+               debug_printf("gpir: add %d moves for node %s %d\n",
+                            i, gpir_op_infos[node->op].name, node->index);
             return true;
          }
 
@@ -961,8 +962,8 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
          /* load reg function will handle min dist and reuse move case */
          int err = gpir_try_insert_load_reg(block, current);
          if (err == 0) {
-            fprintf(stderr, "gpir: add reg load and %d moves for node %s %d\n",
-                    i, gpir_op_infos[node->op].name, node->index);
+            debug_printf("gpir: add reg load and %d moves for node %s %d\n",
+                         i, gpir_op_infos[node->op].name, node->index);
             return true;
          }
          else if (err == -2) {
@@ -974,7 +975,7 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
             return false;
 
          /* fail to reg schedule current, we need to reschedule node */
-         fprintf(stderr, "gpir: reschedule node %d\n", node->index);
+         debug_printf("gpir: reschedule node %d\n", node->index);
 
          /* remove all created move node and merge all successor back to node */
          gpir_remove_all_created_node(block, node);
@@ -1008,6 +1009,7 @@ static bool gpir_schedule_node(gpir_block *block, gpir_node *node)
    fprintf(stderr, "gpir: fail to schedule node %s %d\n",
            gpir_op_infos[node->op].name, node->index);
 
+#ifdef DEBUG
    /* print failed node's successors until none-sigle successor */
    fprintf(stderr, "gpir: successors");
    gpir_node *next = node;
@@ -1027,6 +1029,7 @@ static bool gpir_schedule_node(gpir_block *block, gpir_node *node)
          next = succ;
    }
    fprintf(stderr, "\n");
+#endif
 
    gpir_instr_print_prog(block->comp);
    return false;
