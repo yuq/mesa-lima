@@ -85,11 +85,11 @@ static unsigned shift_to_op(int shift)
    return shift < 0 ? shift + 8 : shift;
 }
 
-static unsigned encode_swizzle(uint8_t *swizzle, int shift)
+static unsigned encode_swizzle(uint8_t *swizzle, int shift, int dest_shift)
 {
    unsigned ret = 0;
    for (int i = 0; i < 4; i++)
-      ret |= ((swizzle[i] + shift) & 0x3) << (i * 2);
+      ret |= ((swizzle[i] + shift) & 0x3) << ((i + dest_shift) * 2);
    return ret;
 }
 
@@ -100,8 +100,9 @@ static void ppir_codegen_encode_vec_mul(ppir_node *node, void *code)
 
    ppir_dest *dest = &alu->dest;
    int index = ppir_target_get_dest_reg_index(dest);
+   int dest_shift = index & 0x3;
    f->dest = index >> 2;
-   f->mask = dest->write_mask << (index & 0x3);
+   f->mask = dest->write_mask << dest_shift;
    f->dest_modifier = dest->modifier;
 
    switch (node->op) {
@@ -118,7 +119,7 @@ static void ppir_codegen_encode_vec_mul(ppir_node *node, void *code)
    ppir_src *src = alu->src;
    index = ppir_target_get_src_reg_index(src);
    f->arg0_source = index >> 2;
-   f->arg0_swizzle = encode_swizzle(src->swizzle, index & 0x3);
+   f->arg0_swizzle = encode_swizzle(src->swizzle, index & 0x3, dest_shift);
    f->arg0_absolute = src->absolute;
    f->arg0_negate = src->negate;
 
@@ -126,7 +127,7 @@ static void ppir_codegen_encode_vec_mul(ppir_node *node, void *code)
       src = alu->src + 1;
       index = ppir_target_get_src_reg_index(src);
       f->arg1_source = index >> 2;
-      f->arg1_swizzle = encode_swizzle(src->swizzle, index & 0x3);
+      f->arg1_swizzle = encode_swizzle(src->swizzle, index & 0x3, dest_shift);
       f->arg1_absolute = src->absolute;
       f->arg1_negate = src->negate;
    }
@@ -144,8 +145,9 @@ static void ppir_codegen_encode_vec_add(ppir_node *node, void *code)
 
    ppir_dest *dest = &alu->dest;
    int index = ppir_target_get_dest_reg_index(dest);
+   int dest_shift = index & 0x3;
    f->dest = index >> 2;
-   f->mask = dest->write_mask << (index & 0x3);
+   f->mask = dest->write_mask << dest_shift;
    f->dest_modifier = dest->modifier;
 
    switch (node->op) {
@@ -157,9 +159,11 @@ static void ppir_codegen_encode_vec_add(ppir_node *node, void *code)
       break;
    case ppir_op_sum3:
       f->op = ppir_codegen_vec4_acc_op_sum3;
+      dest_shift = 0;
       break;
    case ppir_op_sum4:
       f->op = ppir_codegen_vec4_acc_op_sum4;
+      dest_shift = 0;
       break;
    default:
       break;
@@ -174,7 +178,7 @@ static void ppir_codegen_encode_vec_add(ppir_node *node, void *code)
    else
       f->arg0_source = index >> 2;
 
-   f->arg0_swizzle = encode_swizzle(src->swizzle, index & 0x3);
+   f->arg0_swizzle = encode_swizzle(src->swizzle, index & 0x3, dest_shift);
    f->arg0_absolute = src->absolute;
    f->arg0_negate = src->negate;
 
@@ -182,7 +186,7 @@ static void ppir_codegen_encode_vec_add(ppir_node *node, void *code)
       src = alu->src + 1;
       index = ppir_target_get_src_reg_index(src);
       f->arg1_source = index >> 2;
-      f->arg1_swizzle = encode_swizzle(src->swizzle, index & 0x3);
+      f->arg1_swizzle = encode_swizzle(src->swizzle, index & 0x3, dest_shift);
       f->arg1_absolute = src->absolute;
       f->arg1_negate = src->negate;
    }
