@@ -533,6 +533,58 @@ check_location_aliasing(struct explicit_location_info explicit_locations[][4],
    return true;
 }
 
+static bool
+validate_explicit_variable_location(struct gl_context *ctx,
+                                    struct explicit_location_info explicit_locations[][4],
+                                    ir_variable *var,
+                                    gl_shader_program *prog,
+                                    gl_linked_shader *sh)
+{
+   const glsl_type *type = get_varying_type(var, sh->Stage);
+   unsigned num_elements = type->count_attribute_slots(false);
+   unsigned idx = compute_variable_location_slot(var, sh->Stage);
+   unsigned slot_limit = idx + num_elements;
+
+   unsigned slot_max =
+      ctx->Const.Program[sh->Stage].MaxOutputComponents / 4;
+   if (slot_limit > slot_max) {
+      linker_error(prog,
+                   "Invalid location %u in %s shader\n",
+                   idx, _mesa_shader_stage_to_string(sh->Stage));
+      return false;
+   }
+
+   if (type->without_array()->is_interface()) {
+      for (unsigned i = 0; i < type->without_array()->length; i++) {
+         glsl_struct_field *field = &type->fields.structure[i];
+         unsigned field_location = field->location -
+            (field->patch ? VARYING_SLOT_PATCH0 : VARYING_SLOT_VAR0);
+         if (!check_location_aliasing(explicit_locations, var,
+                                      field_location,
+                                      0, field_location + 1,
+                                      field->type,
+                                      field->interpolation,
+                                      field->centroid,
+                                      field->sample,
+                                      field->patch,
+                                      prog, sh->Stage)) {
+            return false;
+         }
+      }
+   } else if (!check_location_aliasing(explicit_locations, var,
+                                       idx, var->data.location_frac,
+                                       slot_limit, type,
+                                       var->data.interpolation,
+                                       var->data.centroid,
+                                       var->data.sample,
+                                       var->data.patch,
+                                       prog, sh->Stage)) {
+      return false;
+   }
+
+   return true;
+}
+
 /**
  * Validate that outputs from one stage match inputs of another
  */
@@ -560,45 +612,9 @@ cross_validate_outputs_to_inputs(struct gl_context *ctx,
          /* User-defined varyings with explicit locations are handled
           * differently because they do not need to have matching names.
           */
-         const glsl_type *type = get_varying_type(var, producer->Stage);
-         unsigned num_elements = type->count_attribute_slots(false);
-         unsigned idx = compute_variable_location_slot(var, producer->Stage);
-         unsigned slot_limit = idx + num_elements;
-
-         unsigned slot_max =
-            ctx->Const.Program[producer->Stage].MaxOutputComponents / 4;
-         if (slot_limit > slot_max) {
-            linker_error(prog,
-                         "Invalid location %u in %s shader\n",
-                         idx, _mesa_shader_stage_to_string(producer->Stage));
-            return;
-         }
-
-         if (type->without_array()->is_interface()) {
-            for (unsigned i = 0; i < type->without_array()->length; i++) {
-               glsl_struct_field *field = &type->fields.structure[i];
-               unsigned field_location = field->location -
-                  (field->patch ? VARYING_SLOT_PATCH0 : VARYING_SLOT_VAR0);
-               if (!check_location_aliasing(explicit_locations, var,
-                                            field_location,
-                                            0, field_location + 1,
-                                            field->type,
-                                            field->interpolation,
-                                            field->centroid,
-                                            field->sample,
-                                            field->patch,
-                                            prog, producer->Stage)) {
-                  return;
-               }
-            }
-         } else if (!check_location_aliasing(explicit_locations, var,
-                                             idx, var->data.location_frac,
-                                             slot_limit, type,
-                                             var->data.interpolation,
-                                             var->data.centroid,
-                                             var->data.sample,
-                                             var->data.patch,
-                                             prog, producer->Stage)) {
+         if (!validate_explicit_variable_location(ctx,
+                                                  explicit_locations,
+                                                  var, prog, producer)) {
             return;
          }
       }
