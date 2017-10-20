@@ -1030,12 +1030,6 @@ ntq_emit_alu(struct v3d_compile *c, nir_alu_instr *instr)
 static void
 emit_frag_end(struct v3d_compile *c)
 {
-        uint32_t discard_cond = V3D_QPU_COND_NONE;
-        if (c->s->info.fs.uses_discard) {
-                vir_PF(c, vir_MOV(c, c->discard), V3D_QPU_PF_PUSHZ);
-                discard_cond = V3D_QPU_COND_IFA;
-        }
-
         /* XXX
         if (c->output_sample_mask_index != -1) {
                 vir_MS_MASK(c, c->outputs[c->output_sample_mask_index]);
@@ -1046,7 +1040,6 @@ emit_frag_end(struct v3d_compile *c)
                 struct qinst *inst = vir_MOV_dest(c,
                                                   vir_reg(QFILE_TLBU, 0),
                                                   c->outputs[c->output_position_index]);
-                vir_set_cond(inst, discard_cond);
 
                 inst->src[vir_get_implicit_uniform_src(inst)] =
                         vir_uniform_ui(c,
@@ -1057,7 +1050,6 @@ emit_frag_end(struct v3d_compile *c)
                 struct qinst *inst = vir_MOV_dest(c,
                                                   vir_reg(QFILE_TLBU, 0),
                                                   vir_reg(QFILE_NULL, 0));
-                vir_set_cond(inst, discard_cond);
 
                 inst->src[vir_get_implicit_uniform_src(inst)] =
                         vir_uniform_ui(c,
@@ -1092,14 +1084,12 @@ emit_frag_end(struct v3d_compile *c)
                                  TLB_VEC_SIZE_MINUS_1_SHIFT);
 
                         inst = vir_MOV_dest(c, vir_reg(QFILE_TLBU, 0), color[0]);
-                        vir_set_cond(inst, discard_cond);
                         inst->src[vir_get_implicit_uniform_src(inst)] =
                                 vir_uniform_ui(c, conf);
 
                         for (int i = 1; i < num_components; i++) {
                                 inst = vir_MOV_dest(c, vir_reg(QFILE_TLB, 0),
                                                     color[i]);
-                                vir_set_cond(inst, discard_cond);
                         }
                         break;
 
@@ -1129,14 +1119,12 @@ emit_frag_end(struct v3d_compile *c)
 
                         if (c->fs_key->f32_color_rb & (1 << rt)) {
                                 inst = vir_MOV_dest(c, vir_reg(QFILE_TLBU, 0), color[0]);
-                                vir_set_cond(inst, discard_cond);
                                 inst->src[vir_get_implicit_uniform_src(inst)] =
                                         vir_uniform_ui(c, conf);
 
                                 for (int i = 1; i < num_components; i++) {
                                         inst = vir_MOV_dest(c, vir_reg(QFILE_TLB, 0),
                                                             color[i]);
-                                        vir_set_cond(inst, discard_cond);
                                 }
                         } else {
                                 inst = vir_VFPACK_dest(c, vir_reg(QFILE_TLB, 0), r, g);
@@ -1145,10 +1133,8 @@ emit_frag_end(struct v3d_compile *c)
                                         inst->src[vir_get_implicit_uniform_src(inst)] =
                                                 vir_uniform_ui(c, conf);
                                 }
-                                vir_set_cond(inst, discard_cond);
 
                                 inst = vir_VFPACK_dest(c, vir_reg(QFILE_TLB, 0), b, a);
-                                vir_set_cond(inst, discard_cond);
                         }
                         break;
                 }
@@ -1665,10 +1651,12 @@ ntq_emit_intrinsic(struct v3d_compile *c, nir_intrinsic_instr *instr)
         case nir_intrinsic_discard:
                 if (c->execute.file != QFILE_NULL) {
                         vir_PF(c, c->execute, V3D_QPU_PF_PUSHZ);
-                        vir_MOV_cond(c, V3D_QPU_COND_IFA, c->discard,
-                                     vir_uniform_ui(c, ~0));
+                        vir_set_cond(vir_SETMSF_dest(c, vir_reg(QFILE_NULL, 0),
+                                                     vir_uniform_ui(c, 0)),
+                                V3D_QPU_COND_IFA);
                 } else {
-                        vir_MOV_dest(c, c->discard, vir_uniform_ui(c, ~0));
+                        vir_SETMSF_dest(c, vir_reg(QFILE_NULL, 0),
+                                        vir_uniform_ui(c, 0));
                 }
                 break;
 
@@ -1683,9 +1671,14 @@ ntq_emit_intrinsic(struct v3d_compile *c, nir_intrinsic_instr *instr)
                          */
                         vir_PF(c, vir_AND(c, c->execute, vir_NOT(c, cond)),
                                V3D_QPU_PF_PUSHZ);
-                        vir_MOV_cond(c, V3D_QPU_COND_IFA, c->discard, cond);
+                        vir_set_cond(vir_SETMSF_dest(c, vir_reg(QFILE_NULL, 0),
+                                                     vir_uniform_ui(c, 0)),
+                                     V3D_QPU_COND_IFA);
                 } else {
-                        vir_OR_dest(c, c->discard, c->discard, cond);
+                        vir_PF(c, cond, V3D_QPU_PF_PUSHZ);
+                        vir_set_cond(vir_SETMSF_dest(c, vir_reg(QFILE_NULL, 0),
+                                                     vir_uniform_ui(c, 0)),
+                                     V3D_QPU_COND_IFNA);
                 }
 
                 break;
@@ -1952,9 +1945,6 @@ nir_to_vir(struct v3d_compile *c)
                 c->payload_w = vir_MOV(c, vir_reg(QFILE_REG, 0));
                 c->payload_w_centroid = vir_MOV(c, vir_reg(QFILE_REG, 1));
                 c->payload_z = vir_MOV(c, vir_reg(QFILE_REG, 2));
-
-                if (c->s->info.fs.uses_discard)
-                        c->discard = vir_MOV(c, vir_uniform_ui(c, 0));
 
                 if (c->fs_key->is_points) {
                         c->point_x = emit_fragment_varying(c, NULL, 0);
