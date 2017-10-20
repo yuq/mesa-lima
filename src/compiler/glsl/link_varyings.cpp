@@ -600,6 +600,61 @@ validate_explicit_variable_location(struct gl_context *ctx,
 }
 
 /**
+ * Validate explicit locations for the inputs to the first stage and the
+ * outputs of the last stage in an SSO program (everything in between is
+ * validated in cross_validate_outputs_to_inputs).
+ */
+void
+validate_sso_explicit_locations(struct gl_context *ctx,
+                                struct gl_shader_program *prog,
+                                gl_shader_stage first_stage,
+                                gl_shader_stage last_stage)
+{
+   assert(prog->SeparateShader);
+
+   /* VS inputs and FS outputs are validated in
+    * assign_attribute_or_color_locations()
+    */
+   bool validate_first_stage = first_stage != MESA_SHADER_VERTEX;
+   bool validate_last_stage = last_stage != MESA_SHADER_FRAGMENT;
+   if (!validate_first_stage && !validate_last_stage)
+      return;
+
+   struct explicit_location_info explicit_locations[MAX_VARYING][4];
+
+   gl_shader_stage stages[2] = { first_stage, last_stage };
+   bool validate_stage[2] = { validate_first_stage, validate_last_stage };
+   ir_variable_mode var_direction[2] = { ir_var_shader_in, ir_var_shader_out };
+
+   for (unsigned i = 0; i < 2; i++) {
+      if (!validate_stage[i])
+         continue;
+
+      gl_shader_stage stage = stages[i];
+
+      gl_linked_shader *sh = prog->_LinkedShaders[stage];
+      assert(sh);
+
+      memset(explicit_locations, 0, sizeof(explicit_locations));
+
+      foreach_in_list(ir_instruction, node, sh->ir) {
+         ir_variable *const var = node->as_variable();
+
+         if (var == NULL ||
+             !var->data.explicit_location ||
+             var->data.location < VARYING_SLOT_VAR0 ||
+             var->data.mode != var_direction[i])
+            continue;
+
+         if (!validate_explicit_variable_location(
+               ctx, explicit_locations, var, prog, sh)) {
+            return;
+         }
+      }
+   }
+}
+
+/**
  * Validate that outputs from one stage match inputs of another
  */
 void
