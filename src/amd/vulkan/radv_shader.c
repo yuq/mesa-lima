@@ -400,6 +400,12 @@ radv_fill_shader_variant(struct radv_device *device,
 	}
 
 	if (device->physical_device->rad_info.chip_class >= GFX9 &&
+	    stage == MESA_SHADER_GEOMETRY) {
+		/* TODO: Figure out how many we actually need. */
+		variant->rsrc1 |= S_00B228_GS_VGPR_COMP_CNT(3);
+		variant->rsrc2 |= S_00B22C_ES_VGPR_COMP_CNT(3) |
+		                  S_00B22C_OC_LDS_EN(1);
+	} else if (device->physical_device->rad_info.chip_class >= GFX9 &&
 	    stage == MESA_SHADER_TESS_CTRL)
 		variant->rsrc1 |= S_00B428_LS_VGPR_COMP_CNT(vgpr_comp_cnt);
 	else
