@@ -25,6 +25,7 @@
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
 #include "util/u_helpers.h"
+#include "util/u_debug.h"
 
 #include "pipe/p_state.h"
 
@@ -50,10 +51,10 @@ static void
 lima_set_framebuffer_state(struct pipe_context *pctx,
                            const struct pipe_framebuffer_state *framebuffer)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
-   printf("%s: psurf color=%p z=%p\n", __func__,
-          framebuffer->cbufs[0], framebuffer->zsbuf);
+   debug_printf("%s: psurf color=%p z=%p\n", __func__,
+                framebuffer->cbufs[0], framebuffer->zsbuf);
 
    struct lima_context *ctx = lima_context(pctx);
    struct lima_context_framebuffer *fb = &ctx->framebuffer;
@@ -104,9 +105,9 @@ lima_set_framebuffer_state(struct pipe_context *pctx,
       else if (max)
          fb->shift_max = 1;
 
-      printf("fb dim change tiled=%d/%d block=%d/%d shift=%d/%d\n",
-             fb->tiled_w, fb->tiled_h, fb->block_w, fb->block_h,
-             fb->shift_w, fb->shift_h);
+      debug_printf("fb dim change tiled=%d/%d block=%d/%d shift=%d/%d\n",
+                   fb->tiled_w, fb->tiled_h, fb->block_w, fb->block_h,
+                   fb->shift_w, fb->shift_h);
 
       fb->dirty_dim = true;
    }
@@ -118,14 +119,14 @@ static void
 lima_set_polygon_stipple(struct pipe_context *pctx,
                          const struct pipe_poly_stipple *stipple)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 }
 
 static void *
 lima_create_depth_stencil_alpha_state(struct pipe_context *pctx,
                                       const struct pipe_depth_stencil_alpha_state *cso)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_depth_stencil_alpha_state *so;
 
@@ -133,8 +134,8 @@ lima_create_depth_stencil_alpha_state(struct pipe_context *pctx,
    if (!so)
       return NULL;
 
-   printf("depth enable=%d min_b=%f max_b=%f\n",
-          cso->depth.enabled, cso->depth.bounds_min, cso->depth.bounds_max);
+   debug_printf("depth enable=%d min_b=%f max_b=%f\n",
+                cso->depth.enabled, cso->depth.bounds_min, cso->depth.bounds_max);
 
    so->base = *cso;
 
@@ -144,7 +145,7 @@ lima_create_depth_stencil_alpha_state(struct pipe_context *pctx,
 static void
 lima_bind_depth_stencil_alpha_state(struct pipe_context *pctx, void *hwcso)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_context *ctx = lima_context(pctx);
 
@@ -162,7 +163,7 @@ static void *
 lima_create_rasterizer_state(struct pipe_context *pctx,
                              const struct pipe_rasterizer_state *cso)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_rasterizer_state *so;
 
@@ -178,7 +179,7 @@ lima_create_rasterizer_state(struct pipe_context *pctx,
 static void
 lima_bind_rasterizer_state(struct pipe_context *pctx, void *hwcso)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_context *ctx = lima_context(pctx);
 
@@ -196,7 +197,7 @@ static void *
 lima_create_blend_state(struct pipe_context *pctx,
                         const struct pipe_blend_state *cso)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_blend_state *so;
 
@@ -212,7 +213,7 @@ lima_create_blend_state(struct pipe_context *pctx,
 static void
 lima_bind_blend_state(struct pipe_context *pctx, void *hwcso)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_context *ctx = lima_context(pctx);
 
@@ -236,7 +237,7 @@ lima_create_vertex_elements_state(struct pipe_context *pctx, unsigned num_elemen
    if (!so)
       return NULL;
 
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    memcpy(so->pipe, elements, sizeof(*elements) * num_elements);
    so->num_elements = num_elements;
@@ -247,7 +248,7 @@ lima_create_vertex_elements_state(struct pipe_context *pctx, unsigned num_elemen
 static void
 lima_bind_vertex_elements_state(struct pipe_context *pctx, void *hwcso)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_context *ctx = lima_context(pctx);
 
@@ -266,7 +267,7 @@ lima_set_vertex_buffers(struct pipe_context *pctx,
                         unsigned start_slot, unsigned count,
                         const struct pipe_vertex_buffer *vb)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_context *ctx = lima_context(pctx);
    struct lima_context_vertex_buffer *so = &ctx->vertex_buffers;
@@ -291,7 +292,7 @@ lima_set_viewport_states(struct pipe_context *pctx,
                          unsigned num_viewports,
                          const struct pipe_viewport_state *viewport)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_context *ctx = lima_context(pctx);
 
@@ -305,13 +306,15 @@ lima_set_viewport_states(struct pipe_context *pctx,
    ctx->viewport.near = viewport->translate[2] - viewport->scale[2];
    ctx->viewport.far = viewport->translate[2] + viewport->scale[2];
 
-   printf("viewport scale=%f/%f/%f translate=%f/%f/%f\n",
-          viewport->scale[0], viewport->scale[1], viewport->scale[2],
-          viewport->translate[0], viewport->translate[1], viewport->translate[2]);
-   printf("glViewport x/y/w/h = %f/%f/%f/%f\n",
-          ctx->viewport.x, ctx->viewport.y, ctx->viewport.width, ctx->viewport.height);
-   printf("glDepthRange n/f = %f/%f\n",
-          ctx->viewport.near, ctx->viewport.far);
+   debug_printf("viewport scale=%f/%f/%f translate=%f/%f/%f\n",
+                viewport->scale[0], viewport->scale[1], viewport->scale[2],
+                viewport->translate[0], viewport->translate[1],
+                viewport->translate[2]);
+   debug_printf("glViewport x/y/w/h = %f/%f/%f/%f\n",
+                ctx->viewport.x, ctx->viewport.y, ctx->viewport.width,
+                ctx->viewport.height);
+   debug_printf("glDepthRange n/f = %f/%f\n",
+                ctx->viewport.near, ctx->viewport.far);
 
    ctx->viewport.transform = *viewport;
    ctx->dirty |= LIMA_CONTEXT_DIRTY_VIEWPORT;
@@ -323,13 +326,13 @@ lima_set_scissor_states(struct pipe_context *pctx,
                         unsigned num_scissors,
                         const struct pipe_scissor_state *scissor)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_context *ctx = lima_context(pctx);
 
-   printf("scissor min=%d/%d max=%d/%d\n",
-          scissor->minx, scissor->miny,
-          scissor->maxx, scissor->maxy);
+   debug_printf("scissor min=%d/%d max=%d/%d\n",
+                scissor->minx, scissor->miny,
+                scissor->maxx, scissor->maxy);
 
    ctx->scissor = *scissor;
    ctx->dirty |= LIMA_CONTEXT_DIRTY_SCISSOR;
@@ -339,7 +342,7 @@ static void
 lima_set_blend_color(struct pipe_context *pctx,
                      const struct pipe_blend_color *blend_color)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_context *ctx = lima_context(pctx);
 
@@ -351,7 +354,7 @@ static void
 lima_set_stencil_ref(struct pipe_context *pctx,
                      const struct pipe_stencil_ref *stencil_ref)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_context *ctx = lima_context(pctx);
 
@@ -364,7 +367,7 @@ lima_set_constant_buffer(struct pipe_context *pctx,
                          enum pipe_shader_type shader, uint index,
                          const struct pipe_constant_buffer *cb)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_context *ctx = lima_context(pctx);
    struct lima_context_constant_buffer *so = ctx->const_buffer + shader;
@@ -386,8 +389,8 @@ lima_set_constant_buffer(struct pipe_context *pctx,
    so->dirty = true;
    ctx->dirty |= LIMA_CONTEXT_DIRTY_CONST_BUFF;
 
-   printf("shader %d index %u cb buffer %p offset %x size %x\n",
-          shader, index, cb->buffer, cb->buffer_offset, cb->buffer_size);
+   debug_printf("shader %d index %u cb buffer %p offset %x size %x\n",
+                shader, index, cb->buffer, cb->buffer_offset, cb->buffer_size);
 }
 
 void

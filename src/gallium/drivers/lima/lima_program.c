@@ -24,6 +24,8 @@
 
 #include "util/u_memory.h"
 #include "util/ralloc.h"
+#include "util/u_debug.h"
+
 #include "tgsi/tgsi_dump.h"
 #include "compiler/nir/nir.h"
 #include "nir/tgsi_to_nir.h"
@@ -143,13 +145,16 @@ lima_create_fs_state(struct pipe_context *pctx,
    if (!so)
       return NULL;
 
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    assert(cso->type == PIPE_SHADER_IR_NIR);
 
    nir_shader *nir = cso->ir.nir;
    lima_program_optimize_fs_nir(nir);
+
+#ifdef DEBUG
    nir_print_shader(nir, stdout);
+#endif
 
    if (!ppir_compile_nir(so, nir, screen->pp_ra)) {
       ralloc_free(so);
@@ -162,7 +167,7 @@ lima_create_fs_state(struct pipe_context *pctx,
 static void
 lima_bind_fs_state(struct pipe_context *pctx, void *hwcso)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_context *ctx = lima_context(pctx);
 
@@ -187,13 +192,16 @@ lima_create_vs_state(struct pipe_context *pctx,
    if (!so)
       return NULL;
 
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    assert(cso->type == PIPE_SHADER_IR_NIR);
 
    nir_shader *nir = cso->ir.nir;
    lima_program_optimize_vs_nir(nir);
+
+#ifdef DEBUG
    nir_print_shader(nir, stdout);
+#endif
 
    if (!gpir_compile_nir(so, nir)) {
       ralloc_free(so);
@@ -206,7 +214,7 @@ lima_create_vs_state(struct pipe_context *pctx,
 static void
 lima_bind_vs_state(struct pipe_context *pctx, void *hwcso)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_context *ctx = lima_context(pctx);
 

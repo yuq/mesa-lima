@@ -222,6 +222,7 @@ static int get_phy_reg_index(int reg)
 
 static void ppir_regalloc_print_result(ppir_compiler *comp)
 {
+#ifdef DEBUG
    printf("======ppir regalloc result======\n");
    list_for_each_entry(ppir_block, block, &comp->block_list, list) {
       list_for_each_entry(ppir_instr, instr, &block->instr_list, list) {
@@ -259,6 +260,7 @@ static void ppir_regalloc_print_result(ppir_compiler *comp)
       }
    }
    printf("--------------------------\n");
+#endif
 }
 
 bool ppir_regalloc_prog(ppir_compiler *comp)

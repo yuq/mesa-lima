@@ -369,6 +369,7 @@ void gpir_node_delete(gpir_node *node)
    ralloc_free(node);
 }
 
+#ifdef DEBUG
 static void gpir_node_print_node(gpir_node *node, int space)
 {
    for (int i = 0; i < space; i++)
@@ -404,3 +405,4 @@ void gpir_node_print_prog(gpir_compiler *comp)
    }
    printf("====================\n");
 }
+#endif
