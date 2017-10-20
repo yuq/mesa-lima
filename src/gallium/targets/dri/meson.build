@@ -91,6 +91,11 @@ if with_gallium_vc5
   gallium_dri_link_with += [libvc5, libvc5winsys, libbroadcom_vc5]
   gallium_dri_drivers += 'vc5_dri.so'
 endif
+if with_gallium_etnaviv
+  gallium_dri_c_args += '-DGALLIUM_ETNAVIV'
+  gallium_dri_link_with += [libetnaviv, libetnavivdrm]
+  gallium_dri_drivers += 'etnaviv_dri.so'
+endif
 
 if with_gallium_vc4 or with_gallium_vc5
   gallium_dri_link_with += libbroadcom_cle

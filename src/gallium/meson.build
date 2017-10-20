@@ -38,6 +38,9 @@ endif
 if with_gallium_vc5
   subdir('drivers/vc5')
 endif
+if with_gallium_etnaviv
+  subdir('drivers/etnaviv')
+endif
 subdir('drivers/llvmpipe')
 subdir('winsys/sw/null')
 subdir('winsys/sw/dri')
@@ -55,13 +58,15 @@ endif
 if with_gallium_vc5
   subdir('winsys/vc5/drm')
 endif
+if with_gallium_etnaviv
+  subdir('winsys/etnaviv/drm')
+endif
 subdir('state_trackers/dri')
 # TODO: freedreno
 # TODO: i915
 # TODO: SVGA
 # TODO: r300
 # TODO: r600
-# TODO: etnaviv
 # TODO: IMX
 # TODO: SWR
 # TODO: virgl

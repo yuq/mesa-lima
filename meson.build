@@ -97,6 +97,7 @@ with_gallium_nouveau = false
 with_gallium_softpipe = false
 with_gallium_vc4 = false
 with_gallium_vc5 = false
+with_gallium_etnaviv = false
 _drivers = get_option('gallium-drivers')
 if _drivers != ''
   _split = _drivers.split(',')
@@ -106,6 +107,7 @@ if _drivers != ''
   with_gallium_softpipe = _split.contains('swrast')
   with_gallium_vc4 = _split.contains('vc4')
   with_gallium_vc5 = _split.contains('vc5')
+  with_gallium_etnaviv = _split.contains('etnaviv')
   with_gallium = true
   with_dri = true
 endif
@@ -606,6 +608,7 @@ dep_m = cc.find_library('m', required : false)
 dep_libdrm_amdgpu = []
 dep_libdrm_radeon = []
 dep_libdrm_nouveau = []
+dep_libdrm_etnaviv = []
 if with_amd_vk or with_gallium_radeonsi
   dep_libdrm_amdgpu = dependency('libdrm_amdgpu', version : '>= 2.4.85')
 endif
@@ -614,6 +617,9 @@ if with_gallium_radeonsi # older radeon too
 endif
 if with_gallium_nouveau
   dep_libdrm_nouveau = dependency('libdrm_nouveau', version : '>= 2.4.66')
+endif
+if with_gallium_etnaviv
+  dep_libdrm_etnaviv = dependency('libdrm_etnaviv', version : '>= 2.4.82')
 endif
 
 llvm_modules = ['bitwriter', 'engine', 'mcdisassembler', 'mcjit']
