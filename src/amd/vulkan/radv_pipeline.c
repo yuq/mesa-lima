@@ -1410,12 +1410,19 @@ static uint32_t si_vgt_gs_mode(struct radv_shader_variant *gs)
 	       S_028A40_GS_WRITE_OPTIMIZE(1);
 }
 
+static struct ac_vs_output_info *get_vs_output_info(struct radv_pipeline *pipeline)
+{
+	if (radv_pipeline_has_gs(pipeline))
+		return &pipeline->gs_copy_shader->info.vs.outinfo;
+	else if (radv_pipeline_has_tess(pipeline))
+		return &pipeline->shaders[MESA_SHADER_TESS_EVAL]->info.tes.outinfo;
+	else
+		return &pipeline->shaders[MESA_SHADER_VERTEX]->info.vs.outinfo;
+}
+
 static void calculate_vgt_gs_mode(struct radv_pipeline *pipeline)
 {
-	struct radv_shader_variant *vs;
-	vs = radv_pipeline_has_gs(pipeline) ? pipeline->gs_copy_shader : (radv_pipeline_has_tess(pipeline) ? pipeline->shaders[MESA_SHADER_TESS_EVAL] :  pipeline->shaders[MESA_SHADER_VERTEX]);
-
-	struct ac_vs_output_info *outinfo = &vs->info.vs.outinfo;
+	struct ac_vs_output_info *outinfo = get_vs_output_info(pipeline);
 
 	pipeline->graphics.vgt_primitiveid_en = false;
 	pipeline->graphics.vgt_gs_mode = 0;
@@ -1430,10 +1437,7 @@ static void calculate_vgt_gs_mode(struct radv_pipeline *pipeline)
 
 static void calculate_pa_cl_vs_out_cntl(struct radv_pipeline *pipeline)
 {
-	struct radv_shader_variant *vs;
-	vs = radv_pipeline_has_gs(pipeline) ? pipeline->gs_copy_shader : (radv_pipeline_has_tess(pipeline) ? pipeline->shaders[MESA_SHADER_TESS_EVAL] :  pipeline->shaders[MESA_SHADER_VERTEX]);
-
-	struct ac_vs_output_info *outinfo = &vs->info.vs.outinfo;
+	struct ac_vs_output_info *outinfo = get_vs_output_info(pipeline);
 
 	unsigned clip_dist_mask, cull_dist_mask, total_mask;
 	clip_dist_mask = outinfo->clip_dist_mask;
@@ -1476,13 +1480,10 @@ static uint32_t offset_to_ps_input(uint32_t offset, bool flat_shade)
 
 static void calculate_ps_inputs(struct radv_pipeline *pipeline)
 {
-	struct radv_shader_variant *ps, *vs;
-	struct ac_vs_output_info *outinfo;
+	struct radv_shader_variant *ps;
+	struct ac_vs_output_info *outinfo = get_vs_output_info(pipeline);
 
 	ps = pipeline->shaders[MESA_SHADER_FRAGMENT];
-	vs = radv_pipeline_has_gs(pipeline) ? pipeline->gs_copy_shader : (radv_pipeline_has_tess(pipeline) ? pipeline->shaders[MESA_SHADER_TESS_EVAL] :  pipeline->shaders[MESA_SHADER_VERTEX]);
-
-	outinfo = &vs->info.vs.outinfo;
 
 	unsigned ps_offset = 0;
 
