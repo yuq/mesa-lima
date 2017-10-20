@@ -500,6 +500,11 @@ radv_lookup_user_sgpr(struct radv_pipeline *pipeline,
 			return &pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.user_sgprs_locs.shader_data[idx];
 		if (pipeline->shaders[MESA_SHADER_GEOMETRY])
 			return &pipeline->shaders[MESA_SHADER_GEOMETRY]->info.user_sgprs_locs.shader_data[idx];
+	} else if (stage == MESA_SHADER_TESS_EVAL) {
+		if (pipeline->shaders[MESA_SHADER_TESS_EVAL])
+			return &pipeline->shaders[MESA_SHADER_TESS_EVAL]->info.user_sgprs_locs.shader_data[idx];
+		if (pipeline->shaders[MESA_SHADER_GEOMETRY])
+			return &pipeline->shaders[MESA_SHADER_GEOMETRY]->info.user_sgprs_locs.shader_data[idx];
 	}
 	return &pipeline->shaders[stage]->info.user_sgprs_locs.shader_data[idx];
 }
