@@ -989,6 +989,8 @@ VkResult radv_CreateDevice(
 		const VkDeviceQueueGlobalPriorityCreateInfoEXT *global_priority =
 			vk_find_struct_const(queue_create->pNext, DEVICE_QUEUE_GLOBAL_PRIORITY_CREATE_INFO_EXT);
 
+		assert(!global_priority || device->physical_device->rad_info.has_ctx_priority);
+
 		device->queues[qfi] = vk_alloc(&device->alloc,
 					       queue_create->queueCount * sizeof(struct radv_queue), 8, VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
 		if (!device->queues[qfi]) {
