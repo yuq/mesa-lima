@@ -24,6 +24,8 @@
 
 #include <stdio.h>
 
+#include "util/bitscan.h"
+
 #include "ppir.h"
 
 static bool ppir_lower_const(ppir_block *block, ppir_node *node)
@@ -33,8 +35,67 @@ static bool ppir_lower_const(ppir_block *block, ppir_node *node)
    return true;
 }
 
+/* lower dot to mul+sum */
+static bool ppir_lower_dot(ppir_block *block, ppir_node *node)
+{
+   ppir_alu_node *mul = ppir_node_create(block->comp, ppir_op_mul, -1, 0);
+   if (!mul)
+      return false;
+   list_addtail(&mul->node.list, &node->list);
+
+   ppir_alu_node *dot = ppir_node_to_alu(node);
+   mul->src[0] = dot->src[0];
+   mul->src[1] = dot->src[1];
+   mul->num_src = 2;
+
+   int num_components = node->op - ppir_op_dot2 + 2;
+   ppir_dest *dest = &mul->dest;
+   dest->type = ppir_target_ssa;
+   dest->ssa.num_components = num_components;
+   dest->ssa.live_in = INT_MAX;
+   dest->ssa.live_out = 0;
+   dest->write_mask = u_bit_consecutive(0, num_components);
+
+   ppir_node_foreach_pred(node, entry) {
+      ppir_node *pred = ppir_node_from_entry(entry, pred);
+      ppir_node_remove_entry(entry);
+      ppir_node_add_child(&mul->node, pred);
+   }
+   ppir_node_add_child(node, &mul->node);
+
+   if (node->op == ppir_op_dot2) {
+      node->op = ppir_op_add;
+
+      ppir_node_target_assign(dot->src, dest);
+      dot->src[0].swizzle[0] = 0;
+      dot->src[0].absolute = false;
+      dot->src[0].negate = false;
+
+      ppir_node_target_assign(dot->src + 1, dest);
+      dot->src[1].swizzle[0] = 1;
+      dot->src[1].absolute = false;
+      dot->src[1].negate = false;
+   }
+   else {
+      node->op = node->op == ppir_op_dot3 ? ppir_op_sum3 : ppir_op_sum4;
+
+      ppir_node_target_assign(dot->src, dest);
+      for (int i = 0; i < 4; i++)
+         dot->src[0].swizzle[i] = i;
+      dot->src[0].absolute = false;
+      dot->src[0].negate = false;
+
+      dot->num_src = 1;
+   }
+
+   return true;
+}
+
 static bool (*ppir_lower_funcs[ppir_op_num])(ppir_block *, ppir_node *) = {
    [ppir_op_const] = ppir_lower_const,
+   [ppir_op_dot2] = ppir_lower_dot,
+   [ppir_op_dot3] = ppir_lower_dot,
+   [ppir_op_dot4] = ppir_lower_dot,
 };
 
 bool ppir_lower_prog(ppir_compiler *comp)
