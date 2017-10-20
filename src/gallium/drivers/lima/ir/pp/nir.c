@@ -130,6 +130,7 @@ static int nir_to_ppir_opcodes[nir_num_opcodes] = {
    [nir_op_fdot2] = ppir_op_dot2,
    [nir_op_fdot3] = ppir_op_dot3,
    [nir_op_fdot4] = ppir_op_dot4,
+   [nir_op_frsq] = ppir_op_rsqrt,
 };
 
 static ppir_node *ppir_emit_alu(ppir_compiler *comp, nir_alu_instr *instr)

@@ -26,6 +26,7 @@
 
 #include "util/ralloc.h"
 #include "util/u_half.h"
+#include "util/bitscan.h"
 
 #include "ppir.h"
 #include "codegen.h"
@@ -199,7 +200,38 @@ static void ppir_codegen_encode_scl_add(ppir_node *node, void *code)
 
 static void ppir_codegen_encode_combine(ppir_node *node, void *code)
 {
-   
+   ppir_codegen_field_combine *f = code;
+   ppir_alu_node *alu = ppir_node_to_alu(node);
+
+   switch (node->op) {
+   case ppir_op_rsqrt:
+   {
+      f->scalar.dest_vec = false;
+      f->scalar.arg1_en = false;
+
+      ppir_dest *dest = &alu->dest;
+      int dest_component = ffs(dest->write_mask) - 1;
+      assert(dest_component >= 0);
+      f->scalar.dest = ppir_target_get_dest_reg_index(dest) + dest_component;
+      f->scalar.dest = dest->modifier;
+
+      ppir_src *src = alu->src;
+      int src_component = src->swizzle[dest_component];
+      f->scalar.arg0_src = ppir_target_get_src_reg_index(src) + src_component;
+      f->scalar.arg0_absolute = src->absolute;
+      f->scalar.arg0_negate = src->negate;
+
+      switch (node->op) {
+      case ppir_op_rsqrt:
+         f->scalar.op = ppir_codegen_combine_scalar_op_rsqrt;
+         break;
+      default:
+         break;
+      }
+   }
+   default:
+      break;
+   }
 }
 
 static void ppir_codegen_encode_store_temp(ppir_node *node, void *code)
