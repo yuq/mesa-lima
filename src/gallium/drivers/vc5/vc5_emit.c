@@ -408,7 +408,7 @@ vc5_emit_state(struct pipe_context *pctx)
                 emit_textures(vc5, &vc5->fragtex);
 
         if (vc5->dirty & VC5_DIRTY_VERTTEX)
-                emit_textures(vc5, &vc5->fragtex);
+                emit_textures(vc5, &vc5->verttex);
 
         if (vc5->dirty & VC5_DIRTY_FLAT_SHADE_FLAGS) {
                 /* XXX: Need to handle more than 24 entries. */
