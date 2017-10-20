@@ -155,6 +155,12 @@ static void ppir_codegen_encode_vec_add(ppir_node *node, void *code)
    case ppir_op_mov:
       f->op = ppir_codegen_vec4_acc_op_mov;
       break;
+   case ppir_op_sum3:
+      f->op = ppir_codegen_vec4_acc_op_sum3;
+      break;
+   case ppir_op_sum4:
+      f->op = ppir_codegen_vec4_acc_op_sum4;
+      break;
    default:
       break;
    }

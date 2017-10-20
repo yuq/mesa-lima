@@ -181,8 +181,8 @@ typedef enum {
    ppir_codegen_vec4_acc_op_ceil  = 0x0D,
    ppir_codegen_vec4_acc_op_min   = 0x0E,
    ppir_codegen_vec4_acc_op_max   = 0x0F,
-   ppir_codegen_vec4_acc_op_sum3  = 0x10, /* Sum3, result.w = (arg0.x + arg0.y + arg0.z) */
-   ppir_codegen_vec4_acc_op_sum   = 0x11, /* Sum, result.w = (arg0.x + arg0.y + arg0.z + arg0.w) */
+   ppir_codegen_vec4_acc_op_sum3  = 0x10, /* dest.xyzw = (arg0.x + arg0.y + arg0.z) */
+   ppir_codegen_vec4_acc_op_sum4  = 0x11, /* dest.xyzw = (arg0.x + arg0.y + arg0.z + arg0.w) */
    ppir_codegen_vec4_acc_op_dFdx  = 0x14,
    ppir_codegen_vec4_acc_op_dFdy  = 0x15,
    ppir_codegen_vec4_acc_op_sel   = 0x17, /* result = (^fmul ? arg1 : arg0) */
