@@ -178,9 +178,9 @@ vc5_shader_state_create(struct pipe_context *pctx,
         vc5_set_transform_feedback_outputs(so, &cso->stream_output);
 
         if (V3D_DEBUG & (V3D_DEBUG_NIR |
-                         v3d_debug_flag_for_shader_stage(s->stage))) {
+                         v3d_debug_flag_for_shader_stage(s->info.stage))) {
                 fprintf(stderr, "%s prog %d NIR:\n",
-                        gl_shader_stage_name(s->stage),
+                        gl_shader_stage_name(s->info.stage),
                         so->program_id);
                 nir_print_shader(s, stderr);
                 fprintf(stderr, "\n");
@@ -197,7 +197,7 @@ vc5_get_compiled_shader(struct vc5_context *vc5, struct v3d_key *key)
 
         struct hash_table *ht;
         uint32_t key_size;
-        if (s->stage == MESA_SHADER_FRAGMENT) {
+        if (s->info.stage == MESA_SHADER_FRAGMENT) {
                 ht = vc5->fs_cache;
                 key_size = sizeof(struct v3d_fs_key);
         } else {
@@ -218,7 +218,7 @@ vc5_get_compiled_shader(struct vc5_context *vc5, struct v3d_key *key)
         uint64_t *qpu_insts;
         uint32_t shader_size;
 
-        switch (s->stage) {
+        switch (s->info.stage) {
         case MESA_SHADER_VERTEX:
                 shader->prog_data.vs = rzalloc(shader, struct v3d_vs_prog_data);
 
