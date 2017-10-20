@@ -545,8 +545,22 @@ validate_explicit_variable_location(struct gl_context *ctx,
    unsigned idx = compute_variable_location_slot(var, sh->Stage);
    unsigned slot_limit = idx + num_elements;
 
-   unsigned slot_max =
-      ctx->Const.Program[sh->Stage].MaxOutputComponents / 4;
+   /* Vertex shader inputs and fragment shader outputs are validated in
+    * assign_attribute_or_color_locations() so we should not attempt to
+    * validate them again here.
+    */
+   unsigned slot_max;
+   if (var->data.mode == ir_var_shader_out) {
+      assert(sh->Stage != MESA_SHADER_FRAGMENT);
+      slot_max =
+         ctx->Const.Program[sh->Stage].MaxOutputComponents / 4;
+   } else {
+      assert(var->data.mode == ir_var_shader_in);
+      assert(sh->Stage != MESA_SHADER_VERTEX);
+      slot_max =
+         ctx->Const.Program[sh->Stage].MaxInputComponents / 4;
+   }
+
    if (slot_limit > slot_max) {
       linker_error(prog,
                    "Invalid location %u in %s shader\n",
