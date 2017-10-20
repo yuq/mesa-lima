@@ -6484,6 +6484,19 @@ static void ac_nir_fixup_ls_hs_input_vgprs(struct nir_to_llvm_context *ctx)
 	ctx->abi.vertex_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->tcs_patch_id, ctx->abi.vertex_id, "");
 }
 
+static void prepare_gs_input_vgprs(struct nir_to_llvm_context *ctx)
+{
+	for(int i = 5; i >= 0; --i) {
+		ctx->gs_vtx_offset[i] = ac_build_bfe(&ctx->ac, ctx->gs_vtx_offset[i & ~1],
+		                                     LLVMConstInt(ctx->ac.i32, (i & 1) * 16, false),
+		                                     LLVMConstInt(ctx->ac.i32, 16, false), false);
+	}
+
+	ctx->gs_wave_id = ac_build_bfe(&ctx->ac, ctx->merged_wave_info,
+	                               LLVMConstInt(ctx->ac.i32, 16, false),
+	                               LLVMConstInt(ctx->ac.i32, 8, false), false);
+}
+
 void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 		      struct nir_shader *nir, struct nir_to_llvm_context *nctx)
 {
@@ -6636,6 +6649,8 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			handle_fs_inputs(&ctx, shaders[i]);
 		else if(shaders[i]->stage == MESA_SHADER_VERTEX)
 			handle_vs_inputs(&ctx, shaders[i]);
+		else if(shader_count >= 2 && shaders[i]->stage == MESA_SHADER_GEOMETRY)
+			prepare_gs_input_vgprs(&ctx);
 
 		nir_foreach_variable(variable, &shaders[i]->outputs)
 			scan_shader_output_decl(&ctx, variable, shaders[i], shaders[i]->stage);
