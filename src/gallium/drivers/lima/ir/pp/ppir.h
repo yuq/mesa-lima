@@ -67,7 +67,6 @@ typedef enum {
    ppir_op_atan2_pt1,
    ppir_op_atan_pt2,
 
-   ppir_op_pow,
    ppir_op_exp,
    ppir_op_log,
    ppir_op_exp2,
