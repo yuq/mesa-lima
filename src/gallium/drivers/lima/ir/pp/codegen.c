@@ -113,6 +113,9 @@ static void ppir_codegen_encode_vec_mul(ppir_node *node, void *code)
    case ppir_op_mov:
       f->op = ppir_codegen_vec4_mul_op_mov;
       break;
+   case ppir_op_max:
+      f->op = ppir_codegen_vec4_mul_op_max;
+      break;
    default:
       break;
    }
