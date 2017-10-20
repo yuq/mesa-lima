@@ -123,6 +123,8 @@ bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
       break;
 
    case ppir_op_add:
+   case ppir_op_sum3:
+   case ppir_op_sum4:
       instr->slots[PPIR_INSTR_SLOT_ALU_VEC_ADD] = node;
       break;
 
