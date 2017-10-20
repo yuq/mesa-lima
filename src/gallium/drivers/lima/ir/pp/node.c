@@ -48,6 +48,26 @@ const ppir_op_info ppir_op_infos[] = {
       .name = "neg",
       .type = ppir_node_type_alu,
    },
+   [ppir_op_dot2] = {
+      .name = "dot2",
+      .type = ppir_node_type_alu,
+   },
+   [ppir_op_dot3] = {
+      .name = "dot3",
+      .type = ppir_node_type_alu,
+   },
+   [ppir_op_dot4] = {
+      .name = "dot4",
+      .type = ppir_node_type_alu,
+   },
+   [ppir_op_sum3] = {
+      .name = "sum3",
+      .type = ppir_node_type_alu,
+   },
+   [ppir_op_sum4] = {
+      .name = "sum4",
+      .type = ppir_node_type_alu,
+   },
    [ppir_op_load_varying] = {
       .name = "ld_var",
       .type = ppir_node_type_load,
