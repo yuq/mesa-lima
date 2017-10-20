@@ -2048,11 +2048,11 @@ bool radv_get_memory_fd(struct radv_device *device,
 					 pFD);
 }
 
-VkResult radv_AllocateMemory(
-	VkDevice                                    _device,
-	const VkMemoryAllocateInfo*                 pAllocateInfo,
-	const VkAllocationCallbacks*                pAllocator,
-	VkDeviceMemory*                             pMem)
+VkResult radv_alloc_memory(VkDevice                        _device,
+			   const VkMemoryAllocateInfo*     pAllocateInfo,
+			   const VkAllocationCallbacks*    pAllocator,
+			   enum radv_mem_flags_bits        mem_flags,
+			   VkDeviceMemory*                 pMem)
 {
 	RADV_FROM_HANDLE(radv_device, device, _device);
 	struct radv_device_memory *mem;
@@ -2132,6 +2132,15 @@ fail:
 	vk_free2(&device->alloc, pAllocator, mem);
 
 	return result;
+}
+
+VkResult radv_AllocateMemory(
+	VkDevice                                    _device,
+	const VkMemoryAllocateInfo*                 pAllocateInfo,
+	const VkAllocationCallbacks*                pAllocator,
+	VkDeviceMemory*                             pMem)
+{
+	return radv_alloc_memory(_device, pAllocateInfo, pAllocator, 0, pMem);
 }
 
 void radv_FreeMemory(
