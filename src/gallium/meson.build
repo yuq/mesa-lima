@@ -61,13 +61,15 @@ endif
 if with_gallium_etnaviv
   subdir('winsys/etnaviv/drm')
 endif
+if with_gallium_imx
+  subdir('winsys/imx/drm')
+endif
 subdir('state_trackers/dri')
 # TODO: freedreno
 # TODO: i915
 # TODO: SVGA
 # TODO: r300
 # TODO: r600
-# TODO: IMX
 # TODO: SWR
 # TODO: virgl
 # TODO: winsys/sw/xlib

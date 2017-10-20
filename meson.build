@@ -98,6 +98,7 @@ with_gallium_softpipe = false
 with_gallium_vc4 = false
 with_gallium_vc5 = false
 with_gallium_etnaviv = false
+with_gallium_imx = false
 _drivers = get_option('gallium-drivers')
 if _drivers != ''
   _split = _drivers.split(',')
@@ -108,6 +109,7 @@ if _drivers != ''
   with_gallium_vc4 = _split.contains('vc4')
   with_gallium_vc5 = _split.contains('vc5')
   with_gallium_etnaviv = _split.contains('etnaviv')
+  with_gallium_imx = _split.contains('imx')
   with_gallium = true
   with_dri = true
 endif
@@ -122,6 +124,9 @@ endif
 
 if with_dri_swrast and with_gallium_softpipe
   error('Only one swrast provider can be built')
+endif
+if with_gallium_imx and not with_gallium_etnaviv
+  error('IMX driver requires etnaviv driver')
 endif
 
 dep_libdrm_intel = []
