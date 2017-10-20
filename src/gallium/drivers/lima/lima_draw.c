@@ -25,6 +25,7 @@
 
 #include "util/u_math.h"
 #include "util/u_format.h"
+#include "util/u_debug.h"
 
 #include "lima_context.h"
 #include "lima_screen.h"
@@ -36,7 +37,7 @@ static void
 lima_clear(struct pipe_context *pctx, unsigned buffers,
            const union pipe_color_union *color, double depth, unsigned stencil)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_context *ctx = lima_context(pctx);
    struct lima_context_clear *clear = &ctx->clear;
@@ -551,7 +552,7 @@ lima_pack_render_state(struct lima_context *ctx)
 static void
 lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 
    struct lima_context *ctx = lima_context(pctx);
 
@@ -647,21 +648,21 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    lima_submit_set_frame(ctx->gp_submit, &gp_frame, sizeof(gp_frame));
    if (lima_submit_start(ctx->gp_submit))
-      printf("gp submit error\n");
+      fprintf(stderr, "gp submit error\n");
 
 /*
    if (lima_submit_wait(ctx->gp_submit, 1000000000, true))
-      printf("gp submit wait error\n");
+      fprintf(stderr, "gp submit wait error\n");
    lima_buffer_update(ctx->share_buffer, LIMA_BUFFER_ALLOC_MAP);
    float *varying = ctx->share_buffer->map + sh_varying_offset;
-   printf("varing %f %f %f %f %f %f %f %f %f %f %f %f\n",
-          varying[0], varying[1], varying[2], varying[3],
-          varying[4], varying[5], varying[6], varying[7],
-          varying[8], varying[9], varying[10], varying[11]);
+   debug_printf("varing %f %f %f %f %f %f %f %f %f %f %f %f\n",
+                varying[0], varying[1], varying[2], varying[3],
+                varying[4], varying[5], varying[6], varying[7],
+                varying[8], varying[9], varying[10], varying[11]);
    uint32_t *plb = ctx->share_buffer->map + sh_plb_offset;
-   printf("plb %x %x %x %x %x %x %x %x\n",
-          plb[0], plb[1], plb[2], plb[3],
-          plb[4], plb[5], plb[6], plb[7]);
+   debug_printf("plb %x %x %x %x %x %x %x %x\n",
+                plb[0], plb[1], plb[2], plb[3],
+                plb[4], plb[5], plb[6], plb[7]);
 //*/
 
    lima_bo_wait(ctx->pp_buffer->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true);
@@ -774,7 +775,7 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    lima_submit_set_frame(ctx->pp_submit, &pp_frame, sizeof(pp_frame));
 
    if (lima_submit_start(ctx->pp_submit))
-      printf("pp submit error\n");
+      fprintf(stderr, "pp submit error\n");
 }
 
 void

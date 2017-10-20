@@ -326,8 +326,8 @@ bool gpir_compile_nir(struct lima_vs_shader_state *prog, nir_shader *nir)
    if (!gpir_schedule_prog(comp))
       goto err_out0;
 
-   gpir_codegen_prog(comp);
-   gpir_codegen_print_prog(comp);
+   if (!gpir_codegen_prog(comp))
+      goto err_out0;
 
    ralloc_free(comp);
    return true;

@@ -174,6 +174,7 @@ bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
    return true;
 }
 
+#ifdef DEBUG
 static struct {
    int len;
    char *name;
@@ -257,3 +258,4 @@ void ppir_instr_print_depend(ppir_compiler *comp)
       printf("------------------------\n");
    }
 }
+#endif
