@@ -128,6 +128,10 @@ bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
       instr->slots[PPIR_INSTR_SLOT_ALU_VEC_ADD] = node;
       break;
 
+   case ppir_op_rsqrt:
+      instr->slots[PPIR_INSTR_SLOT_ALU_COMBINE] = node;
+      break;
+
    case ppir_op_const:
    {
       int i;
