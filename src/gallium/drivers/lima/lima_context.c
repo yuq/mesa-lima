@@ -25,6 +25,7 @@
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
 #include "util/u_math.h"
+#include "util/u_debug.h"
 
 #include "lima_screen.h"
 #include "lima_context.h"
@@ -66,7 +67,7 @@ static void
 lima_pipe_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
                 unsigned flags)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 }
 
 struct pipe_context *

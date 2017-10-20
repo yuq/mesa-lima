@@ -23,6 +23,7 @@
  */
 
 #include "util/ralloc.h"
+#include "util/u_debug.h"
 
 #include "lima_screen.h"
 #include "lima_context.h"
@@ -251,7 +252,7 @@ lima_screen_get_compiler_options(struct pipe_screen *pscreen,
                                  enum pipe_shader_ir ir,
                                  enum pipe_shader_type shader)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
    return lima_program_get_compiler_options(shader);
 }
 

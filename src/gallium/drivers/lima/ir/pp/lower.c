@@ -47,5 +47,6 @@ bool ppir_lower_prog(ppir_compiler *comp)
       }
    }
 
+   ppir_node_print_prog(comp);
    return true;
 }

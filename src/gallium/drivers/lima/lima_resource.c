@@ -26,6 +26,7 @@
 #include "util/u_format.h"
 #include "util/u_inlines.h"
 #include "util/u_math.h"
+#include "util/u_debug.h"
 
 #include "state_tracker/drm_driver.h"
 
@@ -75,7 +76,7 @@ lima_buffer_alloc(struct lima_screen *screen, uint32_t size,
       if (lima_va_range_alloc(screen->dev, size, &buffer->va) ||
           lima_bo_va_map(buffer->bo, buffer->va, 0))
           goto err_out;
-      printf("create buffer %x-%x\n", buffer->va, size);
+      debug_printf("create buffer %x-%x\n", buffer->va, size);
    }
 
    return buffer;
@@ -110,7 +111,7 @@ lima_buffer_update(struct lima_buffer *buffer,
       }
 
       buffer->va = va;
-      printf("update buffer %x-%x\n", va, buffer->size);
+      debug_printf("update buffer %x-%x\n", va, buffer->size);
    }
 
    return 0;
@@ -145,8 +146,8 @@ lima_resource_create(struct pipe_screen *pscreen,
       return NULL;
    }
 
-   printf("%s: pres=%p width=%u height=%u\n", __func__, &res->base,
-          pres->width0, pres->height0);
+   debug_printf("%s: pres=%p width=%u height=%u\n",
+                __func__, &res->base, pres->width0, pres->height0);
 
    return pres;
 }
@@ -224,7 +225,7 @@ lima_surface_create(struct pipe_context *pctx,
    psurf->u.tex.first_layer = surf_tmpl->u.tex.first_layer;
    psurf->u.tex.last_layer = surf_tmpl->u.tex.last_layer;
 
-   printf("%s: pres=%p psurf=%p\n", __func__, pres, psurf);
+   debug_printf("%s: pres=%p psurf=%p\n", __func__, pres, psurf);
 
    return &surf->base;
 }
@@ -253,7 +254,7 @@ lima_transfer_map(struct pipe_context *pctx,
    struct pipe_transfer *ptrans;
    unsigned bo_op = 0;
 
-   printf("%s: pres=%p\n", __func__, pres);
+   debug_printf("%s: pres=%p\n", __func__, pres);
 
    if (usage & PIPE_TRANSFER_READ)
       bo_op |= LIMA_BO_WAIT_FLAG_READ;
@@ -296,7 +297,7 @@ lima_transfer_flush_region(struct pipe_context *pctx,
                            struct pipe_transfer *ptrans,
                            const struct pipe_box *box)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 }
 
 static void
@@ -313,7 +314,7 @@ lima_transfer_unmap(struct pipe_context *pctx,
 static void
 lima_flush_resource(struct pipe_context *pctx, struct pipe_resource *resource)
 {
-   printf("dummy %s\n", __func__);
+   debug_checkpoint();
 }
 
 void

@@ -321,6 +321,7 @@ static int encode_instr(ppir_instr *instr, void *code, void *last_code)
 
 static void ppir_codegen_print_prog(ppir_compiler *comp)
 {
+#ifdef DEBUG
    uint32_t *prog = comp->prog->shader;
 
    printf("========ppir codegen========\n");
@@ -338,6 +339,7 @@ static void ppir_codegen_print_prog(ppir_compiler *comp)
       }
    }
    printf("-----------------------\n");
+#endif
 }
 
 bool ppir_codegen_prog(ppir_compiler *comp)
