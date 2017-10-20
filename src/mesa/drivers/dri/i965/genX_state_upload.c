@@ -3143,7 +3143,6 @@ genX(upload_vs_push_constants)(struct brw_context *brw)
    /* BRW_NEW_VS_PROG_DATA */
    const struct brw_stage_prog_data *prog_data = brw->vs.base.prog_data;
 
-   _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_VERTEX);
    gen6_upload_push_constants(brw, &vp->program, prog_data, stage_state);
 }
 
@@ -3172,7 +3171,6 @@ genX(upload_gs_push_constants)(struct brw_context *brw)
       /* BRW_NEW_GS_PROG_DATA */
       struct brw_stage_prog_data *prog_data = brw->gs.base.prog_data;
 
-      _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_GEOMETRY);
       gen6_upload_push_constants(brw, &gp->program, prog_data, stage_state);
    }
 }
@@ -3198,8 +3196,6 @@ genX(upload_wm_push_constants)(struct brw_context *brw)
       brw_program_const(brw->programs[MESA_SHADER_FRAGMENT]);
    /* BRW_NEW_FS_PROG_DATA */
    const struct brw_stage_prog_data *prog_data = brw->wm.base.prog_data;
-
-   _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_FRAGMENT);
 
    gen6_upload_push_constants(brw, &fp->program, prog_data, stage_state);
 }
@@ -4038,7 +4034,6 @@ genX(upload_tes_push_constants)(struct brw_context *brw)
    if (tep) {
       /* BRW_NEW_TES_PROG_DATA */
       const struct brw_stage_prog_data *prog_data = brw->tes.base.prog_data;
-      _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_TESS_EVAL);
       gen6_upload_push_constants(brw, &tep->program, prog_data, stage_state);
    }
 }
@@ -4067,7 +4062,6 @@ genX(upload_tcs_push_constants)(struct brw_context *brw)
       /* BRW_NEW_TCS_PROG_DATA */
       const struct brw_stage_prog_data *prog_data = brw->tcs.base.prog_data;
 
-      _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_TESS_CTRL);
       gen6_upload_push_constants(brw, &tcp->program, prog_data, stage_state);
    }
 }
