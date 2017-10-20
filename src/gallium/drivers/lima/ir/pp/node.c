@@ -72,6 +72,14 @@ const ppir_op_info ppir_op_infos[] = {
       .name = "rsqrt",
       .type = ppir_node_type_alu,
    },
+   [ppir_op_log2] = {
+      .name = "log2",
+      .type = ppir_node_type_alu,
+   },
+   [ppir_op_exp2] = {
+      .name = "exp2",
+      .type = ppir_node_type_alu,
+   },
    [ppir_op_load_varying] = {
       .name = "ld_var",
       .type = ppir_node_type_load,
