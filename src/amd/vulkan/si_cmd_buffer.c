@@ -972,14 +972,12 @@ si_cs_emit_cache_flush(struct radeon_winsys_cs *cs,
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_DB_META) | EVENT_INDEX(0));
 	}
 
-	if (!flush_cb_db) {
-		if (flush_bits & RADV_CMD_FLAG_PS_PARTIAL_FLUSH) {
-			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, predicated));
-			radeon_emit(cs, EVENT_TYPE(V_028A90_PS_PARTIAL_FLUSH) | EVENT_INDEX(4));
-		} else if (flush_bits & RADV_CMD_FLAG_VS_PARTIAL_FLUSH) {
-			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, predicated));
-			radeon_emit(cs, EVENT_TYPE(V_028A90_VS_PARTIAL_FLUSH) | EVENT_INDEX(4));
-		}
+	if (flush_bits & RADV_CMD_FLAG_PS_PARTIAL_FLUSH) {
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(V_028A90_PS_PARTIAL_FLUSH) | EVENT_INDEX(4));
+	} else if (flush_bits & RADV_CMD_FLAG_VS_PARTIAL_FLUSH) {
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(V_028A90_VS_PARTIAL_FLUSH) | EVENT_INDEX(4));
 	}
 
 	if (flush_bits & RADV_CMD_FLAG_CS_PARTIAL_FLUSH) {
