@@ -300,8 +300,10 @@ anv_physical_device_init(struct anv_physical_device *device,
    } else if (device->info.gen == 7 && device->info.is_baytrail) {
       intel_logw("Bay Trail Vulkan support is incomplete");
    } else if (device->info.gen >= 8 && device->info.gen <= 9) {
-      /* Broadwell, Cherryview, Skylake, Broxton, Kabylake is as fully
-       * supported as anything */
+      /* Broadwell, Cherryview, Skylake, Broxton, Kabylake, Coffelake is as
+       * fully supported as anything */
+   } else if (device->info.gen == 10) {
+      intel_logw("Cannonlake Vulkan support is alpha");
    } else {
       result = vk_errorf(device->instance, device,
                          VK_ERROR_INCOMPATIBLE_DRIVER,
