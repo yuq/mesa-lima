@@ -6584,7 +6584,12 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	for (i = 0; i < AC_UD_MAX_UD; i++)
 		shader_info->user_sgprs_locs.shader_data[i].sgpr_idx = -1;
 
-	ctx.max_workgroup_size = ac_nir_get_max_workgroup_size(ctx.options->chip_class, shaders[0]);
+	ctx.max_workgroup_size = 0;
+	for (int i = 0; i < shader_count; ++i) {
+		ctx.max_workgroup_size = MAX2(ctx.max_workgroup_size,
+		                              ac_nir_get_max_workgroup_size(ctx.options->chip_class,
+		                                                            shaders[i]));
+	}
 
 	create_function(&ctx, shaders[shader_count - 1]->info.stage, shader_count >= 2,
 	                shader_count >= 2 ? shaders[shader_count - 2]->info.stage  : MESA_SHADER_VERTEX);
