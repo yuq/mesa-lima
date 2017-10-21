@@ -290,6 +290,25 @@ static int gpir_get_max_start(gpir_node *node)
    return max_start;
 }
 
+static int gpir_get_max_end(gpir_node *node)
+{
+   if (gpir_node_is_root(node))
+      return INT_MAX;
+
+   int max_end = 0;
+   /* find the max end instr constrainted by all successors */
+   gpir_node_foreach_succ(node, entry) {
+      gpir_node *succ = gpir_node_from_entry(entry, succ);
+      gpir_dep_info *dep = gpir_dep_from_entry(entry);
+      int end = succ->sched_instr + gpir_get_max_dist(dep);
+
+      if (end > max_end)
+         max_end = end;
+   }
+
+   return max_end;
+}
+
 static bool gpir_try_place_node(gpir_block *block, gpir_node *node, int start, int end)
 {
    int *slots = gpir_op_infos[node->op].slots;
@@ -307,6 +326,20 @@ static bool gpir_try_place_node(gpir_block *block, gpir_node *node, int start, i
                 prev->slots[GPIR_INSTR_SLOT_COMPLEX])
                continue;
          }
+      }
+
+      /* for node to choose a slot which can satisfy one successor first.
+       * i.e. if insert the load reg node in the same instr as its successor,
+       * we prefer load_reg1 than load_reg0 slot because load_reg0 is shared
+       * with load attr; but if insert one instr before its successor,
+       * we prefer load_reg0 than load_reg1 slot because load_reg1 need
+       * another move node to satisfy the successor.
+       */
+      for (int i = 0; slots[i] != GPIR_INSTR_SLOT_END; i++) {
+         node->sched_pos = slots[i];
+         if (gpir_get_max_end(node) >= node->sched_instr &&
+             gpir_instr_try_insert_node(instr, node))
+            return true;
       }
 
       for (int i = 0; slots[i] != GPIR_INSTR_SLOT_END; i++) {
