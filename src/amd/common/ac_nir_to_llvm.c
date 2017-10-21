@@ -3011,7 +3011,7 @@ load_gs_input(struct nir_to_llvm_context *ctx,
 		if (ctx->ac.chip_class >= GFX9) {
 			LLVMValueRef dw_addr = ctx->gs_vtx_offset[vtx_offset_param];
 			dw_addr = LLVMBuildAdd(ctx->ac.builder, dw_addr,
-			                       LLVMConstInt(ctx->ac.i32, param * 4 + i, 0), "");
+			                       LLVMConstInt(ctx->ac.i32, param * 4 + i + const_index, 0), "");
 			value[i] = lds_load(ctx, dw_addr);
 		} else {
 			args[0] = ctx->esgs_ring;
