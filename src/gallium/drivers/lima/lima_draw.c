@@ -556,6 +556,11 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    struct lima_context *ctx = lima_context(pctx);
 
+   if (!ctx->vs || !ctx->fs) {
+      debug_warn_once("no shader, skip draw\n");
+      return;
+   }
+
    lima_bo_wait(ctx->gp_buffer->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true);
 
    if (ctx->dirty & (LIMA_CONTEXT_DIRTY_VERTEX_ELEM|LIMA_CONTEXT_DIRTY_VERTEX_BUFF)) {
