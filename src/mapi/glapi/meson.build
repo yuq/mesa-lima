@@ -55,6 +55,9 @@ else
     'glapi_priv.h',
   )
   static_glapi_files += files_mapi_util
+  static_glapi_files += [
+    glapitable_h, glapi_mapi_tmp_h, glprocs_h, glapitemp_h,
+  ]
   if with_asm_arch == 'x86'
     static_glapi_files += glapi_x86_s
   elif with_asm_arch == 'x86_64'
