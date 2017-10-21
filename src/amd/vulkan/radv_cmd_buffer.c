@@ -3151,8 +3151,6 @@ radv_emit_all_graphics_states(struct radv_cmd_buffer *cmd_buffer,
 	radv_emit_draw_registers(cmd_buffer, info->indexed,
 				 info->instance_count > 1, info->indirect,
 				 info->indirect ? 0 : info->count);
-
-	cmd_buffer->state.dirty = 0;
 }
 
 static void
