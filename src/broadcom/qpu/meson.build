@@ -25,7 +25,7 @@ libbroadcom_qpu_files = files(
 )
 
 libbroadcom_qpu = static_library(
-  ['broadcom_qpu', v3d_xml_h],
+  ['broadcom_qpu', v3d_xml_pack],
   libbroadcom_qpu_files,
   include_directories : [inc_common, inc_broadcom],
   c_args : [c_vis_args, no_override_init_args],

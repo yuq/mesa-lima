@@ -35,7 +35,7 @@ libbroadcom_compiler_files = files(
 )
 
 libbroadcom_compiler = static_library(
-  ['broadcom_compiler', v3d_xml_h, nir_opcodes_h, nir_builder_opcodes_h],
+  ['broadcom_compiler', v3d_xml_pack, nir_opcodes_h, nir_builder_opcodes_h],
   libbroadcom_compiler_files,
   include_directories : [inc_common, inc_broadcom],
   c_args : [c_vis_args, no_override_init_args],
