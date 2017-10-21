@@ -264,6 +264,11 @@ radv_shader_compile_to_nir(struct radv_device *device,
 	     !llvm_has_working_vgpr_indexing)) {
 		indirect_mask |= nir_var_shader_in;
 	}
+	if (!llvm_has_working_vgpr_indexing &&
+	    (nir->info.stage == MESA_SHADER_VERTEX ||
+	     nir->info.stage == MESA_SHADER_TESS_EVAL ||
+	     nir->info.stage == MESA_SHADER_FRAGMENT))
+		indirect_mask |= nir_var_shader_out;
 
 	/* TODO: We shouldn't need to do this, however LLVM isn't currently
 	 * smart enough to handle indirects without causing excess spilling
