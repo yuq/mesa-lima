@@ -41,6 +41,7 @@ static void *ppir_node_create_ssa(ppir_compiler *comp, ppir_op op, nir_ssa_def *
    dest->ssa.num_components = ssa->num_components;
    dest->ssa.live_in = INT_MAX;
    dest->ssa.live_out = 0;
+   dest->write_mask = u_bit_consecutive(0, ssa->num_components);
 
    if (node->type == ppir_node_type_load ||
        node->type == ppir_node_type_store)
