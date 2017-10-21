@@ -23,6 +23,8 @@ inc_common = include_directories(
 inc_mesa = include_directories('mesa')
 inc_mapi = include_directories('mapi')
 inc_src = include_directories('.')
+inc_gallium = include_directories('gallium/include')
+inc_gallium_aux = include_directories('gallium/auxiliary')
 
 libglsl_util = static_library(
   'glsl_util',
