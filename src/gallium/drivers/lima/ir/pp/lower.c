@@ -91,11 +91,63 @@ static bool ppir_lower_dot(ppir_block *block, ppir_node *node)
    return true;
 }
 
+static void merge_src(ppir_src *dst, ppir_src *src)
+{
+   dst->type = src->type;
+   dst->ssa = src->ssa;
+
+   for (int i = 0; i < 4; i++)
+      dst->swizzle[i] = src->swizzle[dst->swizzle[i]];
+
+   dst->absolute = dst->absolute || src->absolute;
+   dst->negate = dst->negate ^ src->negate;
+}
+
+static bool ppir_lower_neg(ppir_block *block, ppir_node *node)
+{
+   ppir_alu_node *neg = ppir_node_to_alu(node);
+   ppir_dest *dest = &neg->dest;
+
+   ppir_node_foreach_succ(node, entry) {
+      ppir_node *succ = ppir_node_from_entry(entry, succ);
+
+      if (succ->type != ppir_node_type_alu)
+         continue;
+
+      ppir_alu_node *alu = ppir_node_to_alu(succ);
+      for (int i = 0; i < alu->num_src; i++) {
+         ppir_src *src = alu->src + i;
+         if (ppir_node_target_equal(src, dest)) {
+            merge_src(src, neg->src);
+            src->negate = !src->negate;
+         }
+      }
+
+      ppir_node_remove_entry(entry);
+
+      /* TODO: may not depend on all preceeds when reg */
+      ppir_node_foreach_pred(node, entry) {
+         ppir_node *pred = ppir_node_from_entry(entry, pred);
+         ppir_node_add_child(succ, pred);
+      }
+   }
+
+   if (ppir_node_is_root(node))
+      ppir_node_delete(node);
+   else {
+      node->op = ppir_op_mov;
+      neg->src->negate = !neg->src->negate;
+   }
+
+   return true;
+}
+
 static bool (*ppir_lower_funcs[ppir_op_num])(ppir_block *, ppir_node *) = {
    [ppir_op_const] = ppir_lower_const,
    [ppir_op_dot2] = ppir_lower_dot,
    [ppir_op_dot3] = ppir_lower_dot,
    [ppir_op_dot4] = ppir_lower_dot,
+   [ppir_op_neg] = ppir_lower_neg,
 };
 
 bool ppir_lower_prog(ppir_compiler *comp)
