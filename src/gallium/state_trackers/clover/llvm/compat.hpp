@@ -69,11 +69,19 @@ namespace clover {
          typedef ::llvm::TargetLibraryInfo target_library_info;
 #endif
 
+         template<typename T, typename AS>
+         unsigned target_address_space(const T &target, const AS lang_as) {
+            const auto &map = target.getAddressSpaceMap();
 #if HAVE_LLVM >= 0x0500
-         const auto lang_as_offset = 0;
+            return map[static_cast<unsigned>(lang_as)];
+#else
+            return map[lang_as - clang::LangAS::Offset];
+#endif
+         }
+
+#if HAVE_LLVM >= 0x0500
          const clang::InputKind ik_opencl = clang::InputKind::OpenCL;
 #else
-         const auto lang_as_offset = clang::LangAS::Offset;
          const clang::InputKind ik_opencl = clang::IK_OpenCL;
 #endif
 
