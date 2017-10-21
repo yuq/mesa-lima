@@ -6457,7 +6457,7 @@ ac_nir_get_max_workgroup_size(enum chip_class chip_class,
 	case MESA_SHADER_TESS_CTRL:
 		return chip_class >= CIK ? 128 : 64;
 	case MESA_SHADER_GEOMETRY:
-		return 64;
+		return chip_class >= GFX9 ? 128 : 64;
 	case MESA_SHADER_COMPUTE:
 		break;
 	default:
