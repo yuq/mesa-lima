@@ -1779,10 +1779,12 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 	radv_link_shaders(pipeline, nir);
 
 	if (nir[MESA_SHADER_FRAGMENT]) {
-		pipeline->shaders[MESA_SHADER_FRAGMENT] =
-			radv_shader_variant_create(device, modules[MESA_SHADER_FRAGMENT], &nir[MESA_SHADER_FRAGMENT], 1,
-						   pipeline->layout, keys ? keys + MESA_SHADER_FRAGMENT : 0,
-						   &codes[MESA_SHADER_FRAGMENT], &code_sizes[MESA_SHADER_FRAGMENT]);
+		if (!pipeline->shaders[MESA_SHADER_FRAGMENT]) {
+			pipeline->shaders[MESA_SHADER_FRAGMENT] =
+			       radv_shader_variant_create(device, modules[MESA_SHADER_FRAGMENT], &nir[MESA_SHADER_FRAGMENT], 1,
+			                                  pipeline->layout, keys ? keys + MESA_SHADER_FRAGMENT : 0,
+			                                  &codes[MESA_SHADER_FRAGMENT], &code_sizes[MESA_SHADER_FRAGMENT]);
+		}
 
 		/* TODO: These are no longer used as keys we should refactor this */
 		if (keys) {
@@ -1793,26 +1795,28 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 		}
 	}
 
-	if (device->physical_device->rad_info.chip_class >= GFX9 &&
-	    modules[MESA_SHADER_TESS_CTRL] && !pipeline->shaders[MESA_SHADER_TESS_CTRL]) {
-		struct nir_shader *combined_nir[] = {nir[MESA_SHADER_VERTEX], nir[MESA_SHADER_TESS_CTRL]};
-		struct ac_shader_variant_key key = keys[MESA_SHADER_TESS_CTRL];
-		key.tcs.vs_key = keys[MESA_SHADER_VERTEX].vs;
-		pipeline->shaders[MESA_SHADER_TESS_CTRL] = radv_shader_variant_create(device, modules[MESA_SHADER_TESS_CTRL], combined_nir, 2,
-		                                                                      pipeline->layout,
-		                                                                      &key, &codes[MESA_SHADER_TESS_CTRL],
-		                                                                      &code_sizes[MESA_SHADER_TESS_CTRL]);
+	if (device->physical_device->rad_info.chip_class >= GFX9 && modules[MESA_SHADER_TESS_CTRL]) {
+		if (!pipeline->shaders[MESA_SHADER_TESS_CTRL]) {
+			struct nir_shader *combined_nir[] = {nir[MESA_SHADER_VERTEX], nir[MESA_SHADER_TESS_CTRL]};
+			struct ac_shader_variant_key key = keys[MESA_SHADER_TESS_CTRL];
+			key.tcs.vs_key = keys[MESA_SHADER_VERTEX].vs;
+			pipeline->shaders[MESA_SHADER_TESS_CTRL] = radv_shader_variant_create(device, modules[MESA_SHADER_TESS_CTRL], combined_nir, 2,
+			                                                                      pipeline->layout,
+			                                                                      &key, &codes[MESA_SHADER_TESS_CTRL],
+			                                                                      &code_sizes[MESA_SHADER_TESS_CTRL]);
+		}
 		modules[MESA_SHADER_VERTEX] = NULL;
 	}
 
-	if (device->physical_device->rad_info.chip_class >= GFX9 &&
-	    modules[MESA_SHADER_GEOMETRY] && !pipeline->shaders[MESA_SHADER_GEOMETRY]) {
+	if (device->physical_device->rad_info.chip_class >= GFX9 && modules[MESA_SHADER_GEOMETRY]) {
 		gl_shader_stage pre_stage = modules[MESA_SHADER_TESS_EVAL] ? MESA_SHADER_TESS_EVAL : MESA_SHADER_VERTEX;
-		struct nir_shader *combined_nir[] = {nir[pre_stage], nir[MESA_SHADER_GEOMETRY]};
-		pipeline->shaders[MESA_SHADER_GEOMETRY] = radv_shader_variant_create(device, modules[MESA_SHADER_GEOMETRY], combined_nir, 2,
-		                                                                     pipeline->layout,
-		                                                                     &keys[pre_stage] , &codes[MESA_SHADER_GEOMETRY],
+		if (!pipeline->shaders[MESA_SHADER_GEOMETRY]) {
+			struct nir_shader *combined_nir[] = {nir[pre_stage], nir[MESA_SHADER_GEOMETRY]};
+			pipeline->shaders[MESA_SHADER_GEOMETRY] = radv_shader_variant_create(device, modules[MESA_SHADER_GEOMETRY], combined_nir, 2,
+			                                                                     pipeline->layout,
+			                                                                     &keys[pre_stage] , &codes[MESA_SHADER_GEOMETRY],
 		                                                                     &code_sizes[MESA_SHADER_GEOMETRY]);
+		}
 		modules[pre_stage] = NULL;
 	}
 
