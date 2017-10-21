@@ -2954,7 +2954,7 @@ radv_cs_emit_indirect_draw_packet(struct radv_cmd_buffer *cmd_buffer,
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	unsigned di_src_sel = indexed ? V_0287F0_DI_SRC_SEL_DMA
 	                              : V_0287F0_DI_SRC_SEL_AUTO_INDEX;
-	bool draw_id_enable = cmd_buffer->state.pipeline->shaders[MESA_SHADER_VERTEX]->info.info.vs.needs_draw_id;
+	bool draw_id_enable = radv_get_vertex_shader(cmd_buffer->state.pipeline)->info.info.vs.needs_draw_id;
 	uint32_t base_reg = cmd_buffer->state.pipeline->graphics.vtx_base_sgpr;
 	assert(base_reg);
 
