@@ -53,7 +53,7 @@
 
 /* For importing wl_buffer */
 #if HAVE_WAYLAND_PLATFORM
-#include "../../../egl/wayland/wayland-drm/wayland-drm.h"
+#include "wayland-drm.h"
 #endif
 
 #ifndef DRM_FORMAT_MOD_INVALID

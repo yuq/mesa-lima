@@ -18,6 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+inc_wayland_drm = include_directories('.')
+
 wayland_drm_protocol_c = custom_target(
   'wayland-drm-protocol.c',
   input : 'wayland-drm.xml',
