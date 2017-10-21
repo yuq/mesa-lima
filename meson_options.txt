@@ -166,3 +166,17 @@ option(
   value : false,
   description : 'Build an SELinux-aware Mesa'
 )
+option(
+  'osmesa',
+  type : 'combo',
+  value : 'none',
+  choices : ['none', 'classic'],
+  description : 'Build OSmesa.'
+)
+option(
+  'osmesa-bits',
+  type : 'combo',
+  value : '8',
+  choices : ['8', '16', '32'],
+  description : 'Number of channel bits for OSMesa.'
+)

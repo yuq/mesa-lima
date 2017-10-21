@@ -46,6 +46,7 @@ with_valgrind = get_option('valgrind')
 with_libunwind = get_option('libunwind')
 with_asm = get_option('asm')
 with_llvm = get_option('llvm')
+with_osmesa = get_option('osmesa')
 if get_option('texture-float')
   pre_args += '-DTEXTURE_FLOAT_ENABLED'
   message('WARNING: Floating-point texture enabled. Please consult docs/patents.txt and your lawyer before building mesa.')
@@ -67,9 +68,6 @@ with_any_opengl = with_opengl or with_gles1 or with_gles2
 # Only build shared_glapi if at least one OpenGL API is enabled
 with_shared_glapi = get_option('shared-glapi') and with_any_opengl
 
-# TODO: these will need options, but at the moment they just control header
-# installs
-with_osmesa = false
 
 # shared-glapi is required if at least two OpenGL APIs are being built
 if not with_shared_glapi
@@ -713,7 +711,22 @@ endif
 
 # TODO: glx provider
 
-# TODO: osmesa provider
+if with_osmesa != 'none'
+  if with_osmesa == 'classic' and not with_dri_swrast
+    error('OSMesa classic requires dri (classic) swrast.')
+  endif
+  osmesa_lib_name = 'OSMesa'
+  osmesa_bits = get_option('osmesa-bits')
+  if osmesa_bits != '8'
+    if with_dri or with_glx != 'disabled'
+      error('OSMesa bits must be 8 if building glx or dir based drivers')
+    endif
+    osmesa_lib_name = osmesa_lib_name + osmesa_bits
+    pre_args += [
+      '-DCHAN_BITS=@0@'.format(osmesa_bits), '-DDEFAULT_SOFTWARE_DEPTH_BITS=31'
+    ]
+  endif
+endif
 
 # TODO: symbol mangling
 
@@ -740,6 +753,7 @@ dep_xext = []
 dep_xdamage = []
 dep_xfixes = []
 dep_x11_xcb = []
+dep_xcb = []
 dep_xcb_glx = []
 dep_xcb_dri2 = []
 dep_xcb_dri3 = []

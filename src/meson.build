@@ -48,7 +48,6 @@ subdir('util')
 subdir('mapi/glapi/gen')
 subdir('mapi')
 # TODO: opengl
-# TODO: osmesa
 subdir('compiler')
 subdir('egl/wayland/wayland-drm')
 subdir('vulkan')
