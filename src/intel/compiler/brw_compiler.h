@@ -1109,6 +1109,12 @@ DEFINE_PROG_DATA_DOWNCAST(sf)
 struct brw_compiler *
 brw_compiler_create(void *mem_ctx, const struct gen_device_info *devinfo);
 
+unsigned
+brw_prog_data_size(gl_shader_stage stage);
+
+unsigned
+brw_prog_key_size(gl_shader_stage stage);
+
 /**
  * Compile a vertex shader.
  *
