@@ -2473,9 +2473,6 @@ st_finalize_texture(struct gl_context *ctx,
          stObj->lastLevel = stObj->base._MaxLevel;
    }
 
-   firstImage = st_texture_image_const(stObj->base.Image[cubeMapFace][stObj->base.BaseLevel]);
-   assert(firstImage);
-
    /* Skip the loop over images in the common case of no images having
     * changed.  But if the GL_BASE_LEVEL or GL_MAX_LEVEL change to something we
     * haven't looked at, then we do need to look at those new images.
@@ -2485,6 +2482,14 @@ st_finalize_texture(struct gl_context *ctx,
        stObj->lastLevel <= stObj->validated_last_level) {
       return GL_TRUE;
    }
+
+   /* If this texture comes from a window system, there is nothing else to do. */
+   if (stObj->surface_based) {
+      return GL_TRUE;
+   }
+
+   firstImage = st_texture_image_const(stObj->base.Image[cubeMapFace][stObj->base.BaseLevel]);
+   assert(firstImage);
 
    /* If both firstImage and stObj point to a texture which can contain
     * all active images, favour firstImage.  Note that because of the
@@ -2496,11 +2501,6 @@ st_finalize_texture(struct gl_context *ctx,
        (!stObj->pt || firstImage->pt->last_level >= stObj->pt->last_level)) {
       pipe_resource_reference(&stObj->pt, firstImage->pt);
       st_texture_release_all_sampler_views(st, stObj);
-   }
-
-   /* If this texture comes from a window system, there is nothing else to do. */
-   if (stObj->surface_based) {
-      return GL_TRUE;
    }
 
    /* Find gallium format for the Mesa texture */
