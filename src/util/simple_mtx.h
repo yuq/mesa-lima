@@ -24,6 +24,8 @@
 #ifndef _SIMPLE_MTX_H
 #define _SIMPLE_MTX_H
 
+#include "util/futex.h"
+
 #include "c11/threads.h"
 
 #if defined(__GNUC__) && defined(HAVE_LINUX_FUTEX_H)
@@ -57,27 +59,6 @@ typedef struct {
 } simple_mtx_t;
 
 #define _SIMPLE_MTX_INITIALIZER_NP { 0 }
-
-#include <stdint.h>
-#include <linux/futex.h>
-#include <sys/time.h>
-#include <sys/syscall.h>
-
-static inline long sys_futex(void *addr1, int op, int val1,
-                             struct timespec *timeout, void *addr2, int val3)
-{
-   return syscall(SYS_futex, addr1, op, val1, timeout, addr2, val3);
-}
-
-static inline int futex_wake(uint32_t *addr, int count)
-{
-   return sys_futex(addr, FUTEX_WAKE, count, NULL, NULL, 0);
-}
-
-static inline int futex_wait(uint32_t *addr, int32_t value)
-{
-   return sys_futex(addr, FUTEX_WAIT, value, NULL, NULL, 0);
-}
 
 static inline void
 simple_mtx_init(simple_mtx_t *mtx, int type)
