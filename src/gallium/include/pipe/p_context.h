@@ -855,6 +855,17 @@ struct pipe_context {
     */
    void (*make_image_handle_resident)(struct pipe_context *ctx, uint64_t handle,
                                       unsigned access, bool resident);
+
+   /**
+    * Call the given function from the driver thread.
+    *
+    * This is set by threaded contexts for use by debugging wrappers.
+    *
+    * \param asap if true, run the callback immediately if there are no pending
+    *             commands to be processed by the driver thread
+    */
+   void (*callback)(struct pipe_context *ctx, void (*fn)(void *), void *data,
+                    bool asap);
 };
 
 

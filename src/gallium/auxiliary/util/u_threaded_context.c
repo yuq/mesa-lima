@@ -169,6 +169,16 @@ tc_add_small_call(struct threaded_context *tc, enum tc_call_id id)
    return tc_add_sized_call(tc, id, 0);
 }
 
+static bool
+tc_is_sync(struct threaded_context *tc)
+{
+   struct tc_batch *last = &tc->batch_slots[tc->last];
+   struct tc_batch *next = &tc->batch_slots[tc->next];
+
+   return util_queue_fence_is_signalled(&last->fence) &&
+          !next->num_total_call_slots;
+}
+
 static void
 _tc_sync(struct threaded_context *tc, const char *info, const char *func)
 {
@@ -2374,6 +2384,41 @@ tc_resource_commit(struct pipe_context *_pipe, struct pipe_resource *res,
 
 
 /********************************************************************
+ * callback
+ */
+
+struct tc_callback_payload {
+   void (*fn)(void *data);
+   void *data;
+};
+
+static void
+tc_call_callback(struct pipe_context *pipe, union tc_payload *payload)
+{
+   struct tc_callback_payload *p = (struct tc_callback_payload *)payload;
+
+   p->fn(p->data);
+}
+
+static void
+tc_callback(struct pipe_context *_pipe, void (*fn)(void *), void *data,
+            bool asap)
+{
+   struct threaded_context *tc = threaded_context(_pipe);
+
+   if (asap && tc_is_sync(tc)) {
+      fn(data);
+      return;
+   }
+
+   struct tc_callback_payload *p =
+      tc_add_struct_typed_call(tc, TC_CALL_callback, tc_callback_payload);
+   p->fn = fn;
+   p->data = data;
+}
+
+
+/********************************************************************
  * create & destroy
  */
 
@@ -2470,6 +2515,7 @@ threaded_context_create(struct pipe_context *pipe,
    tc->base.priv = pipe; /* priv points to the wrapped driver context */
    tc->base.screen = pipe->screen;
    tc->base.destroy = tc_destroy;
+   tc->base.callback = tc_callback;
 
    tc->base.stream_uploader = u_upload_clone(&tc->base, pipe->stream_uploader);
    if (pipe->stream_uploader == pipe->const_uploader)
