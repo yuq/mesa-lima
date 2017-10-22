@@ -381,15 +381,8 @@ static struct pipe_context *si_pipe_create_context(struct pipe_screen *screen,
 	if (!(flags & PIPE_CONTEXT_PREFER_THREADED))
 		return ctx;
 
-	/* Clover (compute-only) is unsupported.
-	 *
-	 * Since the threaded context creates shader states from the non-driver
-	 * thread, asynchronous compilation is required for create_{shader}_-
-	 * state not to use pipe_context. Debug contexts (ddebug) disable
-	 * asynchronous compilation, so don't use the threaded context with
-	 * those.
-	 */
-	if (flags & (PIPE_CONTEXT_COMPUTE_ONLY | PIPE_CONTEXT_DEBUG))
+	/* Clover (compute-only) is unsupported. */
+	if (flags & PIPE_CONTEXT_COMPUTE_ONLY)
 		return ctx;
 
 	/* When shaders are logged to stderr, asynchronous compilation is
