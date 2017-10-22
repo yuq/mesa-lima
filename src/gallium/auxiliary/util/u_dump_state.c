@@ -32,6 +32,8 @@
 #include "util/u_format.h"
 #include "tgsi/tgsi_dump.h"
 
+#include <inttypes.h>
+
 #include "u_dump.h"
 
 
@@ -73,6 +75,14 @@ static void
 util_dump_float(FILE *stream, double value)
 {
    util_stream_writef(stream, "%g", value);
+}
+
+void
+util_dump_ns(FILE *f, uint64_t time)
+{
+   uint64_t secs = time / (1000*1000*1000);
+   unsigned usecs = (time % (1000*1000*1000)) / 1000;
+   fprintf(f, "%"PRIu64".%06us", secs, usecs);
 }
 
 static void
