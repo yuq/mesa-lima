@@ -33,7 +33,7 @@
 #include "util/u_memory.h"
 #include "util/simple_list.h"
 #include "util/u_network.h"
-#include "os/os_time.h"
+#include "util/os_time.h"
 
 #include "tgsi/tgsi_parse.h"
 

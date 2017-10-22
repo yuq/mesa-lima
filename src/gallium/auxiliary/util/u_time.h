@@ -38,7 +38,7 @@
 
 #include "pipe/p_config.h"
 
-#include "os/os_time.h"
+#include "util/os_time.h"
 
 #include "pipe/p_compiler.h"
 

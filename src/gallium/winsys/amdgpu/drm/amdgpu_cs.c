@@ -27,7 +27,8 @@
  */
 
 #include "amdgpu_cs.h"
-#include "os/os_time.h"
+#include "util/os_time.h"
+#include <inttypes.h>
 #include <stdio.h>
 
 #include "amd/common/sid.h"

@@ -35,20 +35,15 @@
 #ifndef _OS_TIME_H_
 #define _OS_TIME_H_
 
-
-#include "pipe/p_config.h"
-
-#if defined(PIPE_OS_UNIX)
-#  include <unistd.h> /* usleep */
-#endif
-
-#include "pipe/p_compiler.h"
-
+#include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/* must be equal to PIPE_TIMEOUT_INFINITE */
+#define OS_TIMEOUT_INFINITE 0xffffffffffffffffull
 
 /*
  * Get the current time in nanoseconds from an unknown base.
@@ -79,7 +74,7 @@ os_time_sleep(int64_t usecs);
  *
  * Returns true if the current time has elapsed beyond the specified interval.
  */
-static inline boolean
+static inline bool
 os_time_timeout(int64_t start,
                 int64_t end,
                 int64_t curr)
@@ -95,8 +90,8 @@ os_time_timeout(int64_t start,
  * Convert a relative timeout in nanoseconds into an absolute timeout,
  * in other words, it returns current time + timeout.
  * os_time_get_nano() must be monotonic.
- * PIPE_TIMEOUT_INFINITE is passed through unchanged. If the calculation
- * overflows, PIPE_TIMEOUT_INFINITE is returned.
+ * OS_TIMEOUT_INFINITE is passed through unchanged. If the calculation
+ * overflows, OS_TIMEOUT_INFINITE is returned.
  */
 int64_t
 os_time_get_absolute_timeout(uint64_t timeout);
@@ -107,7 +102,7 @@ os_time_get_absolute_timeout(uint64_t timeout);
  *
  * \param var           variable
  * \param timeout       timeout in ns, can be anything from 0 (no wait) to
- *                      PIPE_TIME_INFINITE (wait forever)
+ *                      OS_TIMEOUT_INFINITE (wait forever)
  * \return     true if the variable is zero
  */
 bool
@@ -118,7 +113,7 @@ os_wait_until_zero(volatile int *var, uint64_t timeout);
  * Wait until the variable at the given memory location is zero.
  * The timeout is the absolute time when the waiting should stop. If it is
  * less than or equal to the current time, it only returns the status and
- * doesn't wait. PIPE_TIME_INFINITE waits forever. This requires that
+ * doesn't wait. OS_TIMEOUT_INFINITE waits forever. This requires that
  * os_time_get_nano is monotonic.
  *
  * \param var       variable

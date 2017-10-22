@@ -30,7 +30,7 @@
 #include "pipe/p_screen.h"
 #include "util/u_memory.h"
 #include "hud/hud_context.h"
-#include "os/os_time.h"
+#include "util/os_time.h"
 #include "state_tracker/st_api.h"
 
 #include "stw_icd.h"

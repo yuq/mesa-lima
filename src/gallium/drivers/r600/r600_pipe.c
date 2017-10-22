@@ -39,7 +39,7 @@
 #include "vl/vl_video_buffer.h"
 #include "radeon_video.h"
 #include "radeon_uvd.h"
-#include "os/os_time.h"
+#include "util/os_time.h"
 
 static const struct debug_named_value r600_debug_options[] = {
 	/* features */

@@ -56,7 +56,7 @@
 #include "radeon_drm_cs.h"
 
 #include "util/u_memory.h"
-#include "os/os_time.h"
+#include "util/os_time.h"
 
 #include <stdio.h>
 #include <stdlib.h>

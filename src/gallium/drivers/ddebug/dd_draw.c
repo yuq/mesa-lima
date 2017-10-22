@@ -35,7 +35,7 @@
 #include "util/u_memory.h"
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_scan.h"
-#include "os/os_time.h"
+#include "util/os_time.h"
 #include <inttypes.h>
 
 

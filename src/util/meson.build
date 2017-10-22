@@ -46,6 +46,8 @@ files_mesa_util = files(
   'macros.h',
   'mesa-sha1.c',
   'mesa-sha1.h',
+  'os_time.c',
+  'os_time.h',
   'sha1/sha1.c',
   'sha1/sha1.h',
   'ralloc.c',

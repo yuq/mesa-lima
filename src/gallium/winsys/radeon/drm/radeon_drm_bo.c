@@ -31,7 +31,7 @@
 #include "util/simple_list.h"
 #include "os/os_thread.h"
 #include "os/os_mman.h"
-#include "os/os_time.h"
+#include "util/os_time.h"
 
 #include "state_tracker/drm_driver.h"
 

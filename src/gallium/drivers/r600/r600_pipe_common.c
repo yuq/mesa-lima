@@ -32,7 +32,7 @@
 #include "util/u_memory.h"
 #include "util/u_format_s3tc.h"
 #include "util/u_upload_mgr.h"
-#include "os/os_time.h"
+#include "util/os_time.h"
 #include "vl/vl_decoder.h"
 #include "vl/vl_video_buffer.h"
 #include "radeon_video.h"

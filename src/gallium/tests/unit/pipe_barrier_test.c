@@ -36,8 +36,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "os/os_time.h"
+#include "util/os_time.h"
 #include "util/u_atomic.h"
 #include "util/u_thread.h"
 

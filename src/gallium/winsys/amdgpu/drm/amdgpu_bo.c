@@ -27,7 +27,7 @@
 
 #include "amdgpu_cs.h"
 
-#include "os/os_time.h"
+#include "util/os_time.h"
 #include "state_tracker/drm_driver.h"
 #include <amdgpu_drm.h>
 #include <xf86drm.h>

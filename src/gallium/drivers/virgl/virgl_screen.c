@@ -24,7 +24,7 @@
 #include "util/u_format.h"
 #include "util/u_format_s3tc.h"
 #include "util/u_video.h"
-#include "os/os_time.h"
+#include "util/os_time.h"
 #include "pipe/p_defines.h"
 #include "pipe/p_screen.h"
 

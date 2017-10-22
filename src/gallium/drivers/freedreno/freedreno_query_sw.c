@@ -30,7 +30,7 @@
 #include "util/u_string.h"
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
-#include "os/os_time.h"
+#include "util/os_time.h"
 
 #include "freedreno_query_sw.h"
 #include "freedreno_context.h"

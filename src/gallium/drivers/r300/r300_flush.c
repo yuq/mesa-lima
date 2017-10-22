@@ -27,7 +27,7 @@
 #include "util/simple_list.h"
 #include "util/u_upload_mgr.h"
 
-#include "os/os_time.h"
+#include "util/os_time.h"
 
 #include "r300_context.h"
 #include "r300_cs.h"

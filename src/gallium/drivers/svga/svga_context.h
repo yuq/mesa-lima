@@ -31,7 +31,7 @@
 #include "pipe/p_defines.h"
 #include "pipe/p_state.h"
 
-#include "os/os_time.h"
+#include "util/os_time.h"
 
 #include "util/u_blitter.h"
 #include "util/list.h"

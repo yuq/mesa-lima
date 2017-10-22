@@ -38,7 +38,7 @@
 #include "util/u_string.h"
 #include "util/u_debug.h"
 
-#include "os/os_time.h"
+#include "util/os_time.h"
 
 #include <stdio.h>
 #include <errno.h>

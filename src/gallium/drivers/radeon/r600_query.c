@@ -26,7 +26,7 @@
 #include "r600_cs.h"
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
-#include "os/os_time.h"
+#include "util/os_time.h"
 #include "tgsi/tgsi_text.h"
 #include "amd/common/sid.h"
 

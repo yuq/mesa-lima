@@ -38,7 +38,7 @@
 #include "gallivm/lp_bld_type.h"
 
 #include "os/os_misc.h"
-#include "os/os_time.h"
+#include "util/os_time.h"
 #include "lp_texture.h"
 #include "lp_fence.h"
 #include "lp_jit.h"

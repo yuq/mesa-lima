@@ -34,7 +34,7 @@
 #include "util/u_string.h"
 #include "util/u_thread.h"
 
-#include "os/os_time.h"
+#include "util/os_time.h"
 
 #include "lp_scene_queue.h"
 #include "lp_context.h"
