@@ -33,11 +33,14 @@
 #include "pipe/p_screen.h"
 #include "dd_util.h"
 #include "os/os_thread.h"
+#include "util/list.h"
 #include "util/u_log.h"
+#include "util/u_queue.h"
 
-enum dd_mode {
-   DD_DETECT_HANGS,
-   DD_DETECT_HANGS_PIPELINED,
+struct dd_context;
+
+enum dd_dump_mode {
+   DD_DUMP_ONLY_HANGS,
    DD_DUMP_ALL_CALLS,
    DD_DUMP_APITRACE_CALL,
 };
@@ -47,8 +50,8 @@ struct dd_screen
    struct pipe_screen base;
    struct pipe_screen *screen;
    unsigned timeout_ms;
-   enum dd_mode mode;
-   bool no_flush;
+   enum dd_dump_mode dump_mode;
+   bool flush_always;
    bool verbose;
    unsigned skip_count;
    unsigned apitrace_dump_call;
@@ -218,13 +221,19 @@ struct dd_draw_state_copy
 };
 
 struct dd_draw_record {
-   struct dd_draw_record *next;
+   struct list_head list;
+   struct dd_context *dctx;
 
-   int64_t timestamp;
-   uint32_t sequence_no;
+   unsigned draw_call;
+
+   struct pipe_fence_handle *prev_bottom_of_pipe;
+   struct pipe_fence_handle *top_of_pipe;
+   struct pipe_fence_handle *bottom_of_pipe;
 
    struct dd_call call;
    struct dd_draw_state_copy draw_state;
+
+   struct util_queue_fence driver_finished;
    struct u_log_page *log_page;
 };
 
@@ -252,17 +261,16 @@ struct dd_context
     *
     * An independent, separate thread loops over the list of records and checks
     * their fences. Records with signalled fences are freed. On fence timeout,
-    * the thread dumps the record of the oldest unsignalled fence.
+    * the thread dumps the records of in-flight draws.
     */
    thrd_t thread;
    mtx_t mutex;
-   int kill_thread;
-   struct pipe_resource *fence;
-   struct pipe_transfer *fence_transfer;
-   uint32_t *mapped_fence;
-   uint32_t sequence_no;
-   struct dd_draw_record *records;
-   int max_log_buffer_size;
+   cnd_t cond;
+   struct dd_draw_record *record_pending; /* currently inside the driver */
+   struct list_head records; /* oldest record first */
+   unsigned num_records;
+   bool kill_thread;
+   bool api_stalled;
 };
 
 
@@ -271,8 +279,11 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe);
 
 void
 dd_init_draw_functions(struct dd_context *dctx);
+
+void
+dd_thread_join(struct dd_context *dctx);
 int
-dd_thread_pipelined_hang_detect(void *input);
+dd_thread_main(void *input);
 
 FILE *
 dd_get_file_stream(struct dd_screen *dscreen, unsigned apitrace_call_number);
