@@ -132,6 +132,7 @@ bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
    case ppir_op_rsqrt:
    case ppir_op_log2:
    case ppir_op_exp2:
+   case ppir_op_rcp:
       instr->slots[PPIR_INSTR_SLOT_ALU_COMBINE] = node;
       break;
 
