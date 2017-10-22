@@ -59,6 +59,19 @@ void util_queue_fence_destroy(struct util_queue_fence *fence);
 void util_queue_fence_wait(struct util_queue_fence *fence);
 void util_queue_fence_signal(struct util_queue_fence *fence);
 
+/**
+ * Move \p fence back into unsignalled state.
+ *
+ * \warning The caller must ensure that no other thread may currently be
+ *          waiting (or about to wait) on the fence.
+ */
+static inline void
+util_queue_fence_reset(struct util_queue_fence *fence)
+{
+   assert(fence->signalled);
+   fence->signalled = 0;
+}
+
 static inline bool
 util_queue_fence_is_signalled(struct util_queue_fence *fence)
 {

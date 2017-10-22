@@ -328,8 +328,6 @@ util_queue_add_job(struct util_queue *queue,
 {
    struct util_queue_job *ptr;
 
-   assert(fence->signalled);
-
    mtx_lock(&queue->lock);
    if (queue->kill_threads) {
       mtx_unlock(&queue->lock);
@@ -339,7 +337,7 @@ util_queue_add_job(struct util_queue *queue,
       return;
    }
 
-   fence->signalled = false;
+   util_queue_fence_reset(fence);
 
    assert(queue->num_queued >= 0 && queue->num_queued <= queue->max_jobs);
 
