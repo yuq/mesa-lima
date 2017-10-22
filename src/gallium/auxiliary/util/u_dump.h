@@ -91,6 +91,9 @@ const char *
 util_str_prim_mode(unsigned value, boolean shortened);
 
 void
+util_dump_ptr(FILE *stream, const void *value);
+
+void
 util_dump_query_type(FILE *stream, unsigned value);
 
 void

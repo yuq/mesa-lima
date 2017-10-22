@@ -142,11 +142,11 @@ util_dump_null(FILE *stream)
    fputs("NULL", stream);
 }
 
-static void
+void
 util_dump_ptr(FILE *stream, const void *value)
 {
    if(value)
-      util_stream_writef(stream, "0x%08lx", (unsigned long)(uintptr_t)value);
+      util_stream_writef(stream, "%p", value);
    else
       util_dump_null(stream);
 }
