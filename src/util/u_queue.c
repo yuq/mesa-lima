@@ -89,6 +89,7 @@ remove_from_atexit_list(struct util_queue *queue)
  * util_queue_fence
  */
 
+#ifdef UTIL_QUEUE_FENCE_STANDARD
 void
 util_queue_fence_signal(struct util_queue_fence *fence)
 {
@@ -136,6 +137,7 @@ util_queue_fence_destroy(struct util_queue_fence *fence)
    cnd_destroy(&fence->cond);
    mtx_destroy(&fence->mutex);
 }
+#endif
 
 /****************************************************************************
  * util_queue implementation

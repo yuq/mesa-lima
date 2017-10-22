@@ -35,7 +35,10 @@
 
 #include <string.h>
 
+#include "util/futex.h"
 #include "util/list.h"
+#include "util/macros.h"
+#include "util/u_atomic.h"
 #include "util/u_thread.h"
 
 #ifdef __cplusplus
@@ -45,6 +48,94 @@ extern "C" {
 #define UTIL_QUEUE_INIT_USE_MINIMUM_PRIORITY      (1 << 0)
 #define UTIL_QUEUE_INIT_RESIZE_IF_FULL            (1 << 1)
 
+#if defined(__GNUC__) && defined(HAVE_FUTEX)
+#define UTIL_QUEUE_FENCE_FUTEX
+#else
+#define UTIL_QUEUE_FENCE_STANDARD
+#endif
+
+#ifdef UTIL_QUEUE_FENCE_FUTEX
+/* Job completion fence.
+ * Put this into your job structure.
+ */
+struct util_queue_fence {
+   /* The fence can be in one of three states:
+    *  0 - signaled
+    *  1 - unsignaled
+    *  2 - unsignaled, may have waiters
+    */
+   uint32_t val;
+};
+
+static inline void
+util_queue_fence_init(struct util_queue_fence *fence)
+{
+   fence->val = 0;
+}
+
+static inline void
+util_queue_fence_destroy(struct util_queue_fence *fence)
+{
+   assert(fence->val == 0);
+   /* no-op */
+}
+
+static inline void
+util_queue_fence_wait(struct util_queue_fence *fence)
+{
+   uint32_t v = fence->val;
+
+   if (likely(v == 0))
+      return;
+
+   do {
+      if (v != 2) {
+         v = p_atomic_cmpxchg(&fence->val, 1, 2);
+         if (v == 0)
+            return;
+      }
+
+      futex_wait(&fence->val, 2);
+      v = fence->val;
+   } while(v != 0);
+}
+
+static inline void
+util_queue_fence_signal(struct util_queue_fence *fence)
+{
+   uint32_t val = p_atomic_xchg(&fence->val, 0);
+
+   assert(val != 0);
+
+   if (val == 2)
+      futex_wake(&fence->val, INT_MAX);
+}
+
+/**
+ * Move \p fence back into unsignalled state.
+ *
+ * \warning The caller must ensure that no other thread may currently be
+ *          waiting (or about to wait) on the fence.
+ */
+static inline void
+util_queue_fence_reset(struct util_queue_fence *fence)
+{
+#ifdef NDEBUG
+   fence->val = 1;
+#else
+   uint32_t v = p_atomic_xchg(&fence->val, 1);
+   assert(v == 0);
+#endif
+}
+
+static inline bool
+util_queue_fence_is_signalled(struct util_queue_fence *fence)
+{
+   return fence->val == 0;
+}
+#endif
+
+#ifdef UTIL_QUEUE_FENCE_STANDARD
 /* Job completion fence.
  * Put this into your job structure.
  */
@@ -77,6 +168,7 @@ util_queue_fence_is_signalled(struct util_queue_fence *fence)
 {
    return fence->signalled != 0;
 }
+#endif
 
 typedef void (*util_queue_execute_func)(void *job, int thread_index);
 
