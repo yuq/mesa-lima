@@ -134,17 +134,12 @@ dd_num_active_viewports(struct dd_draw_state *dstate)
    fprintf(f, "\n"); \
 } while(0)
 
-static void
-print_named_value(FILE *f, const char *name, int value)
-{
-   fprintf(f, COLOR_STATE "%s" COLOR_RESET " = %i\n", name, value);
-}
-
-static void
-print_named_xvalue(FILE *f, const char *name, int value)
-{
-   fprintf(f, COLOR_STATE "%s" COLOR_RESET " = 0x%08x\n", name, value);
-}
+#define PRINT_NAMED(type, name, value) \
+do { \
+   fprintf(f, COLOR_STATE "%s" COLOR_RESET " = ", name); \
+   util_dump_##type(f, value); \
+   fprintf(f, "\n"); \
+} while (0)
 
 static void
 util_dump_uint(FILE *f, unsigned i)
@@ -312,7 +307,7 @@ dd_dump_draw_vbo(struct dd_draw_state *dstate, struct pipe_draw_info *info, FILE
       }
 
    if (dstate->velems) {
-      print_named_value(f, "num vertex elements",
+      PRINT_NAMED(uint, "num vertex elements",
                         dstate->velems->state.velems.count);
       for (i = 0; i < dstate->velems->state.velems.count; i++) {
          fprintf(f, "  ");
@@ -320,7 +315,7 @@ dd_dump_draw_vbo(struct dd_draw_state *dstate, struct pipe_draw_info *info, FILE
       }
    }
 
-   print_named_value(f, "num stream output targets", dstate->num_so_targets);
+   PRINT_NAMED(uint, "num stream output targets", dstate->num_so_targets);
    for (i = 0; i < dstate->num_so_targets; i++)
       if (dstate->so_targets[i]) {
          DUMP_I(stream_output_target, dstate->so_targets[i], i);
@@ -344,8 +339,8 @@ dd_dump_draw_vbo(struct dd_draw_state *dstate, struct pipe_draw_info *info, FILE
       DUMP(blend_state, &dstate->blend->state.blend);
    DUMP(blend_color, &dstate->blend_color);
 
-   print_named_value(f, "min_samples", dstate->min_samples);
-   print_named_xvalue(f, "sample_mask", dstate->sample_mask);
+   PRINT_NAMED(uint, "min_samples", dstate->min_samples);
+   PRINT_NAMED(hex, "sample_mask", dstate->sample_mask);
    fprintf(f, "\n");
 
    DUMP(framebuffer_state, &dstate->framebuffer_state);
