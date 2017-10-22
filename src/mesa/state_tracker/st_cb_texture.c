@@ -151,10 +151,21 @@ static struct gl_texture_object *
 st_NewTextureObject(struct gl_context * ctx, GLuint name, GLenum target)
 {
    struct st_texture_object *obj = ST_CALLOC_STRUCT(st_texture_object);
+   if (!obj)
+      return NULL;
+
+   /* Pre-allocate a sampler views container to save a branch in the fast path. */
+   obj->sampler_views = calloc(1, sizeof(struct st_sampler_views) + sizeof(struct st_sampler_view));
+   if (!obj->sampler_views) {
+      free(obj);
+      return NULL;
+   }
+   obj->sampler_views->max = 1;
 
    DBG("%s\n", __func__);
    _mesa_initialize_texture_object(ctx, &obj->base, name, target);
 
+   simple_mtx_init(&obj->validate_mutex, mtx_plain);
    obj->needs_validation = true;
 
    return &obj->base;
@@ -171,6 +182,7 @@ st_DeleteTextureObject(struct gl_context *ctx,
    pipe_resource_reference(&stObj->pt, NULL);
    st_texture_release_all_sampler_views(st, stObj);
    st_texture_free_sampler_views(stObj);
+   simple_mtx_destroy(&stObj->validate_mutex);
    _mesa_delete_texture_object(ctx, texObj);
 }
 
