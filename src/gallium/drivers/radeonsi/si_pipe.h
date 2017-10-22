@@ -345,6 +345,7 @@ struct si_saved_cs {
 
 	unsigned		gfx_last_dw;
 	bool			flushed;
+	int64_t			time_flush;
 };
 
 struct si_context {

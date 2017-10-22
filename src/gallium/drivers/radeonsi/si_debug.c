@@ -27,6 +27,7 @@
 #include "gfx9d.h"
 #include "sid_tables.h"
 #include "ddebug/dd_util.h"
+#include "util/u_dump.h"
 #include "util/u_log.h"
 #include "util/u_memory.h"
 #include "ac_debug.h"
@@ -373,7 +374,9 @@ static void si_log_chunk_type_cs_print(void *data, FILE *f)
 	}
 
 	if (chunk->dump_bo_list) {
-		fprintf(f, "Flushing.\n\n");
+		fprintf(f, "Flushing. Time: ");
+		util_dump_ns(f, scs->time_flush);
+		fprintf(f, "\n\n");
 		si_dump_bo_list(ctx, &scs->gfx, f);
 	}
 }

@@ -24,6 +24,8 @@
 #include "si_pipe.h"
 #include "radeon/r600_cs.h"
 
+#include "util/os_time.h"
+
 void si_destroy_saved_cs(struct si_saved_cs *scs)
 {
 	si_clear_saved_cs(&scs->gfx);
@@ -120,6 +122,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 		/* Save the IB for debug contexts. */
 		si_save_cs(ws, cs, &ctx->current_saved_cs->gfx, true);
 		ctx->current_saved_cs->flushed = true;
+		ctx->current_saved_cs->time_flush = os_time_get_nano();
 	}
 
 	/* Flush the CS. */
