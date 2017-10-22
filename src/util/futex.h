@@ -33,7 +33,7 @@
 #include <sys/syscall.h>
 #include <sys/time.h>
 
-static inline long sys_futex(void *addr1, int op, int val1, struct timespec *timeout, void *addr2, int val3)
+static inline long sys_futex(void *addr1, int op, int val1, const struct timespec *timeout, void *addr2, int val3)
 {
    return syscall(SYS_futex, addr1, op, val1, timeout, addr2, val3);
 }
@@ -43,9 +43,12 @@ static inline int futex_wake(uint32_t *addr, int count)
    return sys_futex(addr, FUTEX_WAKE, count, NULL, NULL, 0);
 }
 
-static inline int futex_wait(uint32_t *addr, int32_t value)
+static inline int futex_wait(uint32_t *addr, int32_t value, const struct timespec *timeout)
 {
-   return sys_futex(addr, FUTEX_WAIT, value, NULL, NULL, 0);
+   /* FUTEX_WAIT_BITSET with FUTEX_BITSET_MATCH_ANY is equivalent to
+    * FUTEX_WAIT, except that it treats the timeout as absolute. */
+   return sys_futex(addr, FUTEX_WAIT_BITSET, value, timeout, NULL,
+                    FUTEX_BITSET_MATCH_ANY);
 }
 
 #endif

@@ -81,26 +81,6 @@ util_queue_fence_destroy(struct util_queue_fence *fence)
 }
 
 static inline void
-util_queue_fence_wait(struct util_queue_fence *fence)
-{
-   uint32_t v = fence->val;
-
-   if (likely(v == 0))
-      return;
-
-   do {
-      if (v != 2) {
-         v = p_atomic_cmpxchg(&fence->val, 1, 2);
-         if (v == 0)
-            return;
-      }
-
-      futex_wait(&fence->val, 2);
-      v = fence->val;
-   } while(v != 0);
-}
-
-static inline void
 util_queue_fence_signal(struct util_queue_fence *fence)
 {
    uint32_t val = p_atomic_xchg(&fence->val, 0);
@@ -147,7 +127,6 @@ struct util_queue_fence {
 
 void util_queue_fence_init(struct util_queue_fence *fence);
 void util_queue_fence_destroy(struct util_queue_fence *fence);
-void util_queue_fence_wait(struct util_queue_fence *fence);
 void util_queue_fence_signal(struct util_queue_fence *fence);
 
 /**
@@ -169,6 +148,39 @@ util_queue_fence_is_signalled(struct util_queue_fence *fence)
    return fence->signalled != 0;
 }
 #endif
+
+void
+_util_queue_fence_wait(struct util_queue_fence *fence);
+
+static inline void
+util_queue_fence_wait(struct util_queue_fence *fence)
+{
+   if (unlikely(!util_queue_fence_is_signalled(fence)))
+      _util_queue_fence_wait(fence);
+}
+
+bool
+_util_queue_fence_wait_timeout(struct util_queue_fence *fence,
+                               int64_t abs_timeout);
+
+/**
+ * Wait for the fence to be signaled with a timeout.
+ *
+ * \param fence the fence
+ * \param abs_timeout the absolute timeout in nanoseconds, relative to the
+ *                    clock provided by os_time_get_nano.
+ *
+ * \return true if the fence was signaled, false if the timeout occurred.
+ */
+static inline bool
+util_queue_fence_wait_timeout(struct util_queue_fence *fence,
+                              int64_t abs_timeout)
+{
+   if (util_queue_fence_is_signalled(fence))
+      return true;
+
+   return _util_queue_fence_wait_timeout(fence, abs_timeout);
+}
 
 typedef void (*util_queue_execute_func)(void *job, int thread_index);
 

@@ -83,7 +83,7 @@ simple_mtx_lock(simple_mtx_t *mtx)
       if (c != 2)
          c = __sync_lock_test_and_set(&mtx->val, 2);
       while (c != 0) {
-         futex_wait(&mtx->val, 2);
+         futex_wait(&mtx->val, 2, NULL);
          c = __sync_lock_test_and_set(&mtx->val, 2);
       }
    }

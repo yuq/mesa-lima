@@ -26,6 +26,9 @@
 
 #include "u_queue.h"
 
+#include <time.h>
+
+#include "util/os_time.h"
 #include "util/u_string.h"
 #include "util/u_thread.h"
 
@@ -91,6 +94,50 @@ remove_from_atexit_list(struct util_queue *queue)
  * util_queue_fence
  */
 
+#ifdef UTIL_QUEUE_FENCE_FUTEX
+static bool
+do_futex_fence_wait(struct util_queue_fence *fence,
+                    bool timeout, int64_t abs_timeout)
+{
+   uint32_t v = fence->val;
+   struct timespec ts;
+   ts.tv_sec = abs_timeout / (1000*1000*1000);
+   ts.tv_nsec = abs_timeout % (1000*1000*1000);
+
+   while (v != 0) {
+      if (v != 2) {
+         v = p_atomic_cmpxchg(&fence->val, 1, 2);
+         if (v == 0)
+            return true;
+      }
+
+      int r = futex_wait(&fence->val, 2, timeout ? &ts : NULL);
+      if (timeout && r < 0) {
+         if (errno == -ETIMEDOUT)
+            return false;
+      }
+
+      v = fence->val;
+   }
+
+   return true;
+}
+
+void
+_util_queue_fence_wait(struct util_queue_fence *fence)
+{
+   do_futex_fence_wait(fence, false, 0);
+}
+
+bool
+_util_queue_fence_wait_timeout(struct util_queue_fence *fence,
+                               int64_t abs_timeout)
+{
+   return do_futex_fence_wait(fence, true, abs_timeout);
+}
+
+#endif
+
 #ifdef UTIL_QUEUE_FENCE_STANDARD
 void
 util_queue_fence_signal(struct util_queue_fence *fence)
@@ -102,12 +149,45 @@ util_queue_fence_signal(struct util_queue_fence *fence)
 }
 
 void
-util_queue_fence_wait(struct util_queue_fence *fence)
+_util_queue_fence_wait(struct util_queue_fence *fence)
 {
    mtx_lock(&fence->mutex);
    while (!fence->signalled)
       cnd_wait(&fence->cond, &fence->mutex);
    mtx_unlock(&fence->mutex);
+}
+
+bool
+_util_queue_fence_wait_timeout(struct util_queue_fence *fence,
+                               int64_t abs_timeout)
+{
+   /* This terrible hack is made necessary by the fact that we really want an
+    * internal interface consistent with os_time_*, but cnd_timedwait is spec'd
+    * to be relative to the TIME_UTC clock.
+    */
+   int64_t rel = abs_timeout - os_time_get_nano();
+
+   if (rel > 0) {
+      struct timespec ts;
+
+      timespec_get(&ts, TIME_UTC);
+
+      ts.tv_sec += abs_timeout / (1000*1000*1000);
+      ts.tv_nsec += abs_timeout % (1000*1000*1000);
+      if (ts.tv_nsec >= (1000*1000*1000)) {
+         ts.tv_sec++;
+         ts.tv_nsec -= (1000*1000*1000);
+      }
+
+      mtx_lock(&fence->mutex);
+      while (!fence->signalled) {
+         if (cnd_timedwait(&fence->cond, &fence->mutex, &ts) != thrd_success)
+            break;
+      }
+      mtx_unlock(&fence->mutex);
+   }
+
+   return fence->signalled;
 }
 
 void
