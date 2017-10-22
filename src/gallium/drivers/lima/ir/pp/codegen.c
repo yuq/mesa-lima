@@ -210,6 +210,7 @@ static void ppir_codegen_encode_combine(ppir_node *node, void *code)
    case ppir_op_rsqrt:
    case ppir_op_log2:
    case ppir_op_exp2:
+   case ppir_op_rcp:
    {
       f->scalar.dest_vec = false;
       f->scalar.arg1_en = false;
@@ -235,6 +236,9 @@ static void ppir_codegen_encode_combine(ppir_node *node, void *code)
          break;
       case ppir_op_exp2:
          f->scalar.op = ppir_codegen_combine_scalar_op_exp2;
+         break;
+      case ppir_op_rcp:
+         f->scalar.op = ppir_codegen_combine_scalar_op_rcp;
          break;
       default:
          break;
