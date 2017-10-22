@@ -45,6 +45,7 @@
 #include "st_debug.h"
 #include "st_extensions.h"
 #include "st_format.h"
+#include "st_cb_bitmap.h"
 #include "st_cb_fbo.h"
 #include "st_cb_flush.h"
 #include "st_manager.h"
@@ -635,6 +636,8 @@ st_context_flush(struct st_context_iface *stctxi, unsigned flags,
       pipe_flags |= PIPE_FLUSH_END_OF_FRAME;
    }
 
+   FLUSH_VERTICES(st->ctx, 0);
+   FLUSH_CURRENT(st->ctx, 0);
    st_flush(st, fence, pipe_flags);
 
    if ((flags & ST_FLUSH_WAIT) && fence && *fence) {
