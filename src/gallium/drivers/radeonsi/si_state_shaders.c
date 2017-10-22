@@ -1621,6 +1621,8 @@ current_not_ready:
 		/* Don't check the "current" shader. We checked it above. */
 		if (current != iter &&
 		    memcmp(&iter->key, key, sizeof(*key)) == 0) {
+			mtx_unlock(&sel->mutex);
+
 			if (unlikely(!util_queue_fence_is_signalled(&iter->ready))) {
 				/* If it's an optimized shader and its compilation has
 				 * been started but isn't done, use the unoptimized
@@ -1628,7 +1630,6 @@ current_not_ready:
 				 */
 				if (iter->is_optimized) {
 					memset(&key->opt, 0, sizeof(key->opt));
-					mtx_unlock(&sel->mutex);
 					goto again;
 				}
 
@@ -1636,12 +1637,10 @@ current_not_ready:
 			}
 
 			if (iter->compilation_failed) {
-				mtx_unlock(&sel->mutex);
 				return -1; /* skip the draw call */
 			}
 
 			state->current = iter;
-			mtx_unlock(&sel->mutex);
 			return 0;
 		}
 	}
@@ -1768,6 +1767,8 @@ current_not_ready:
 		sel->last_variant = shader;
 	}
 
+	mtx_unlock(&sel->mutex);
+
 	assert(!shader->is_optimized);
 	si_build_shader_variant(shader, thread_index, false);
 
@@ -1776,7 +1777,6 @@ current_not_ready:
 	if (!shader->compilation_failed)
 		state->current = shader;
 
-	mtx_unlock(&sel->mutex);
 	return shader->compilation_failed ? -1 : 0;
 }
 
