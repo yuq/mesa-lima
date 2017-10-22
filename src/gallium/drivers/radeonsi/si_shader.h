@@ -593,7 +593,7 @@ struct si_shader {
 	struct r600_resource		*bo;
 	struct r600_resource		*scratch_bo;
 	struct si_shader_key		key;
-	struct util_queue_fence		optimized_ready;
+	struct util_queue_fence		ready;
 	bool				compilation_failed;
 	bool				is_monolithic;
 	bool				is_optimized;

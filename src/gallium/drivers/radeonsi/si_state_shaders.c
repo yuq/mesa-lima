@@ -1552,6 +1552,11 @@ static bool si_check_missing_main_part(struct si_screen *sscreen,
 		if (!main_part)
 			return false;
 
+		/* We can leave the fence as permanently signaled because the
+		 * main part becomes visible globally only after it has been
+		 * compiled. */
+		util_queue_fence_init(&main_part->ready);
+
 		main_part->selector = sel;
 		main_part->key.as_es = key->as_es;
 		main_part->key.as_ls = key->as_ls;
@@ -1585,10 +1590,19 @@ again:
 	 * variants, it will cost just a computation of the key and this
 	 * test. */
 	if (likely(current &&
-		   memcmp(&current->key, key, sizeof(*key)) == 0 &&
-		   (!current->is_optimized ||
-		    util_queue_fence_is_signalled(&current->optimized_ready))))
+		   memcmp(&current->key, key, sizeof(*key)) == 0)) {
+		if (unlikely(!util_queue_fence_is_signalled(&current->ready))) {
+			if (current->is_optimized) {
+				memset(&key->opt, 0, sizeof(key->opt));
+				goto current_not_ready;
+			}
+
+			util_queue_fence_wait(&current->ready);
+		}
+
 		return current->compilation_failed ? -1 : 0;
+	}
+current_not_ready:
 
 	/* This must be done before the mutex is locked, because async GS
 	 * compilation calls this function too, and therefore must enter
@@ -1607,15 +1621,18 @@ again:
 		/* Don't check the "current" shader. We checked it above. */
 		if (current != iter &&
 		    memcmp(&iter->key, key, sizeof(*key)) == 0) {
-			/* If it's an optimized shader and its compilation has
-			 * been started but isn't done, use the unoptimized
-			 * shader so as not to cause a stall due to compilation.
-			 */
-			if (iter->is_optimized &&
-			    !util_queue_fence_is_signalled(&iter->optimized_ready)) {
-				memset(&key->opt, 0, sizeof(key->opt));
-				mtx_unlock(&sel->mutex);
-				goto again;
+			if (unlikely(!util_queue_fence_is_signalled(&iter->ready))) {
+				/* If it's an optimized shader and its compilation has
+				 * been started but isn't done, use the unoptimized
+				 * shader so as not to cause a stall due to compilation.
+				 */
+				if (iter->is_optimized) {
+					memset(&key->opt, 0, sizeof(key->opt));
+					mtx_unlock(&sel->mutex);
+					goto again;
+				}
+
+				util_queue_fence_wait(&iter->ready);
 			}
 
 			if (iter->compilation_failed) {
@@ -1635,6 +1652,9 @@ again:
 		mtx_unlock(&sel->mutex);
 		return -ENOMEM;
 	}
+
+	util_queue_fence_init(&shader->ready);
+
 	shader->selector = sel;
 	shader->key = *key;
 	shader->compiler_ctx_state = *compiler_state;
@@ -1711,8 +1731,34 @@ again:
 	shader->is_optimized =
 		!is_pure_monolithic &&
 		memcmp(&key->opt, &zeroed.opt, sizeof(key->opt)) != 0;
-	if (shader->is_optimized)
-		util_queue_fence_init(&shader->optimized_ready);
+
+	/* If it's an optimized shader, compile it asynchronously. */
+	if (shader->is_optimized &&
+	    !is_pure_monolithic &&
+	    thread_index < 0) {
+		/* Compile it asynchronously. */
+		util_queue_add_job(&sscreen->shader_compiler_queue_low_priority,
+				   shader, &shader->ready,
+				   si_build_shader_variant_low_priority, NULL);
+
+		/* Add only after the ready fence was reset, to guard against a
+		 * race with si_bind_XX_shader. */
+		if (!sel->last_variant) {
+			sel->first_variant = shader;
+			sel->last_variant = shader;
+		} else {
+			sel->last_variant->next_variant = shader;
+			sel->last_variant = shader;
+		}
+
+		/* Use the default (unoptimized) shader for now. */
+		memset(&key->opt, 0, sizeof(key->opt));
+		mtx_unlock(&sel->mutex);
+		goto again;
+	}
+
+	/* Reset the fence before adding to the variant list. */
+	util_queue_fence_reset(&shader->ready);
 
 	if (!sel->last_variant) {
 		sel->first_variant = shader;
@@ -1722,23 +1768,10 @@ again:
 		sel->last_variant = shader;
 	}
 
-	/* If it's an optimized shader, compile it asynchronously. */
-	if (shader->is_optimized &&
-	    !is_pure_monolithic &&
-	    thread_index < 0) {
-		/* Compile it asynchronously. */
-		util_queue_add_job(&sscreen->shader_compiler_queue_low_priority,
-				   shader, &shader->optimized_ready,
-				   si_build_shader_variant_low_priority, NULL);
-
-		/* Use the default (unoptimized) shader for now. */
-		memset(&key->opt, 0, sizeof(key->opt));
-		mtx_unlock(&sel->mutex);
-		goto again;
-	}
-
 	assert(!shader->is_optimized);
 	si_build_shader_variant(shader, thread_index, false);
+
+	util_queue_fence_signal(&shader->ready);
 
 	if (!shader->compilation_failed)
 		state->current = shader;
@@ -1828,6 +1861,10 @@ static void si_init_shader_selector_async(void *job, int thread_index)
 			fprintf(stderr, "radeonsi: can't allocate a main shader part\n");
 			return;
 		}
+
+		/* We can leave the fence signaled because use of the default
+		 * main part is guarded by the selector's ready fence. */
+		util_queue_fence_init(&shader->ready);
 
 		shader->selector = sel;
 		si_parse_next_shader_property(&sel->info,
@@ -2448,9 +2485,10 @@ static void si_delete_shader(struct si_context *sctx, struct si_shader *shader)
 {
 	if (shader->is_optimized) {
 		util_queue_drop_job(&sctx->screen->shader_compiler_queue_low_priority,
-				    &shader->optimized_ready);
-		util_queue_fence_destroy(&shader->optimized_ready);
+				    &shader->ready);
 	}
+
+	util_queue_fence_destroy(&shader->ready);
 
 	if (shader->pm4) {
 		switch (shader->selector->type) {

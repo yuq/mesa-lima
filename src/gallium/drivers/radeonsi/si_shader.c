@@ -5395,6 +5395,9 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 		return NULL;
 	}
 
+	/* We can leave the fence as permanently signaled because the GS copy
+	 * shader only becomes visible globally after it has been compiled. */
+	util_queue_fence_init(&shader->ready);
 
 	shader->selector = gs_selector;
 	shader->is_gs_copy_shader = true;
