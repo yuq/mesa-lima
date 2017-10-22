@@ -89,7 +89,7 @@ remove_from_atexit_list(struct util_queue *queue)
  * util_queue_fence
  */
 
-static void
+void
 util_queue_fence_signal(struct util_queue_fence *fence)
 {
    mtx_lock(&fence->mutex);

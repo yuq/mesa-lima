@@ -57,6 +57,7 @@ struct util_queue_fence {
 void util_queue_fence_init(struct util_queue_fence *fence);
 void util_queue_fence_destroy(struct util_queue_fence *fence);
 void util_queue_fence_wait(struct util_queue_fence *fence);
+void util_queue_fence_signal(struct util_queue_fence *fence);
 
 static inline bool
 util_queue_fence_is_signalled(struct util_queue_fence *fence)
