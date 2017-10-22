@@ -158,6 +158,10 @@ static void si_set_debug_callback(struct pipe_context *ctx,
 				  const struct pipe_debug_callback *cb)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_screen *screen = sctx->screen;
+
+	util_queue_finish(&screen->shader_compiler_queue);
+	util_queue_finish(&screen->shader_compiler_queue_low_priority);
 
 	if (cb)
 		sctx->debug = *cb;
