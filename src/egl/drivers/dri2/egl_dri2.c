@@ -3064,10 +3064,6 @@ dri2_client_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
    struct dri2_egl_sync *dri2_sync = dri2_egl_sync(sync);
    unsigned wait_flags = 0;
 
-   /* timespecs for cnd_timedwait */
-   struct timespec current;
-   xtime expire;
-
    EGLint ret = EGL_CONDITION_SATISFIED_KHR;
 
    /* The EGL_KHR_fence_sync spec states:
@@ -3108,19 +3104,25 @@ dri2_client_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
       } else {
          /* if reusable sync has not been yet signaled */
          if (dri2_sync->base.SyncStatus != EGL_SIGNALED_KHR) {
+            /* timespecs for cnd_timedwait */
+            struct timespec current;
+            struct timespec expire;
+
+            /* We override the clock to monotonic when creating the condition
+             * variable. */
             clock_gettime(CLOCK_MONOTONIC, &current);
 
             /* calculating when to expire */
-            expire.nsec = timeout % 1000000000L;
-            expire.sec = timeout / 1000000000L;
+            expire.tv_nsec = timeout % 1000000000L;
+            expire.tv_sec = timeout / 1000000000L;
 
-            expire.nsec += current.tv_nsec;
-            expire.sec += current.tv_sec;
+            expire.tv_nsec += current.tv_nsec;
+            expire.tv_sec += current.tv_sec;
 
             /* expire.nsec now is a number between 0 and 1999999998 */
-            if (expire.nsec > 999999999L) {
-               expire.sec++;
-               expire.nsec -= 1000000000L;
+            if (expire.tv_nsec > 999999999L) {
+               expire.tv_sec++;
+               expire.tv_nsec -= 1000000000L;
             }
 
             mtx_lock(&dri2_sync->mutex);
