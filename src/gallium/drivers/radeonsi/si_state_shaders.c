@@ -30,6 +30,7 @@
 #include "tgsi/tgsi_ureg.h"
 #include "util/hash_table.h"
 #include "util/crc32.h"
+#include "util/u_async_debug.h"
 #include "util/u_memory.h"
 #include "util/u_prim.h"
 
@@ -1840,14 +1841,10 @@ static void si_init_shader_selector_async(void *job, int thread_index)
 	struct pipe_debug_callback *debug = &sel->compiler_ctx_state.debug;
 	unsigned i;
 
-	if (thread_index >= 0) {
-		assert(thread_index < ARRAY_SIZE(sscreen->tm));
-		tm = sscreen->tm[thread_index];
-		if (!debug->async)
-			debug = NULL;
-	} else {
-		tm = sel->compiler_ctx_state.tm;
-	}
+	assert(!debug->debug_message || debug->async);
+	assert(thread_index >= 0);
+	assert(thread_index < ARRAY_SIZE(sscreen->tm));
+	tm = sscreen->tm[thread_index];
 
 	/* Compile the main shader part for use with a prolog and/or epilog.
 	 * If this fails, the driver will try to compile a monolithic shader
@@ -2042,7 +2039,6 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 
 	pipe_reference_init(&sel->reference, 1);
 	sel->screen = sscreen;
-	sel->compiler_ctx_state.tm = sctx->tm;
 	sel->compiler_ctx_state.debug = sctx->debug;
 	sel->compiler_ctx_state.is_debug_context = sctx->is_debug;
 
@@ -2272,14 +2268,26 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	(void) mtx_init(&sel->mutex, mtx_plain);
 	util_queue_fence_init(&sel->ready);
 
-	if ((sctx->debug.debug_message && !sctx->debug.async) ||
-	    sctx->is_debug ||
-	    si_can_dump_shader(&sscreen->b, sel->info.processor))
-		si_init_shader_selector_async(sel, -1);
-	else
-		util_queue_add_job(&sscreen->shader_compiler_queue, sel,
-                                   &sel->ready, si_init_shader_selector_async,
-                                   NULL);
+	struct util_async_debug_callback async_debug;
+	bool wait =
+		(sctx->debug.debug_message && !sctx->debug.async) ||
+		sctx->is_debug ||
+		si_can_dump_shader(&sscreen->b, sel->info.processor);
+
+	if (wait) {
+		u_async_debug_init(&async_debug);
+		sel->compiler_ctx_state.debug = async_debug.base;
+	}
+
+	util_queue_add_job(&sscreen->shader_compiler_queue, sel,
+			   &sel->ready, si_init_shader_selector_async,
+			   NULL);
+
+	if (wait) {
+		util_queue_fence_wait(&sel->ready);
+		u_async_debug_drain(&async_debug, &sctx->debug);
+		u_async_debug_cleanup(&async_debug);
+	}
 
 	return sel;
 }
