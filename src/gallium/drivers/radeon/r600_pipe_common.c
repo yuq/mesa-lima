@@ -589,17 +589,6 @@ static enum pipe_reset_status r600_get_reset_status(struct pipe_context *ctx)
 	return PIPE_UNKNOWN_CONTEXT_RESET;
 }
 
-static void r600_set_debug_callback(struct pipe_context *ctx,
-				    const struct pipe_debug_callback *cb)
-{
-	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-
-	if (cb)
-		rctx->debug = *cb;
-	else
-		memset(&rctx->debug, 0, sizeof(rctx->debug));
-}
-
 static void r600_set_device_reset_callback(struct pipe_context *ctx,
 					   const struct pipe_device_reset_callback *cb)
 {
@@ -694,7 +683,6 @@ bool si_common_context_init(struct r600_common_context *rctx,
 	rctx->b.texture_subdata = u_default_texture_subdata;
 	rctx->b.memory_barrier = r600_memory_barrier;
 	rctx->b.flush = r600_flush_from_st;
-	rctx->b.set_debug_callback = r600_set_debug_callback;
 	rctx->b.create_fence_fd = r600_create_fence_fd;
 	rctx->b.fence_server_sync = r600_fence_server_sync;
 	rctx->dma_clear_buffer = r600_dma_clear_buffer_fallback;

@@ -361,6 +361,7 @@ struct si_context {
 	void				*vs_blit_color_layered;
 	void				*vs_blit_texcoord;
 	struct si_screen		*screen;
+	struct pipe_debug_callback	debug;
 	LLVMTargetMachineRef		tm; /* only non-threaded compilation */
 	struct si_shader_ctx_state	fixed_func_tcs_shader;
 	struct r600_resource		*wait_mem_scratch;

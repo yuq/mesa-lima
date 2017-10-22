@@ -168,12 +168,12 @@ static void *si_create_compute_state(
 		}
 
 		program->compiler_ctx_state.tm = sctx->tm;
-		program->compiler_ctx_state.debug = sctx->b.debug;
+		program->compiler_ctx_state.debug = sctx->debug;
 		program->compiler_ctx_state.is_debug_context = sctx->is_debug;
 		p_atomic_inc(&sscreen->b.num_shaders_created);
 		util_queue_fence_init(&program->ready);
 
-		if ((sctx->b.debug.debug_message && !sctx->b.debug.async) ||
+		if ((sctx->debug.debug_message && !sctx->debug.async) ||
 		    sctx->is_debug ||
 		    si_can_dump_shader(&sscreen->b, PIPE_SHADER_COMPUTE))
 			si_create_compute_state_async(program, -1);
@@ -196,7 +196,7 @@ static void *si_create_compute_state(
 			si_shader_binary_read_config(&program->shader.binary,
 				     &program->shader.config, 0);
 		}
-		si_shader_dump(sctx->screen, &program->shader, &sctx->b.debug,
+		si_shader_dump(sctx->screen, &program->shader, &sctx->debug,
 			       PIPE_SHADER_COMPUTE, stderr, true);
 		if (si_shader_binary_upload(sctx->screen, &program->shader) < 0) {
 			fprintf(stderr, "LLVM failed to upload shader\n");

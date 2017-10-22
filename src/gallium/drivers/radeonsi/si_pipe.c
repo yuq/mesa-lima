@@ -154,6 +154,17 @@ si_create_llvm_target_machine(struct si_screen *sscreen)
 	return ac_create_target_machine(sscreen->b.family, tm_options);
 }
 
+static void si_set_debug_callback(struct pipe_context *ctx,
+				  const struct pipe_debug_callback *cb)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+
+	if (cb)
+		sctx->debug = *cb;
+	else
+		memset(&sctx->debug, 0, sizeof(sctx->debug));
+}
+
 static void si_set_log_context(struct pipe_context *ctx,
 			       struct u_log_context *log)
 {
@@ -182,6 +193,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->b.b.priv = NULL;
 	sctx->b.b.destroy = si_destroy_context;
 	sctx->b.b.emit_string_marker = si_emit_string_marker;
+	sctx->b.b.set_debug_callback = si_set_debug_callback;
 	sctx->b.b.set_log_context = si_set_log_context;
 	sctx->b.set_atom_dirty = (void *)si_set_atom_dirty;
 	sctx->screen = sscreen; /* Easy accessing of screen/winsys. */

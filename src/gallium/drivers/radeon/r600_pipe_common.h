@@ -596,7 +596,6 @@ struct r600_common_context {
 		bool				query_active;
 	} dcc_stats[5];
 
-	struct pipe_debug_callback	debug;
 	struct pipe_device_reset_callback device_reset_callback;
 	struct u_log_context		*log;
 

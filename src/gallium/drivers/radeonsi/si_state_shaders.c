@@ -2043,7 +2043,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	pipe_reference_init(&sel->reference, 1);
 	sel->screen = sscreen;
 	sel->compiler_ctx_state.tm = sctx->tm;
-	sel->compiler_ctx_state.debug = sctx->b.debug;
+	sel->compiler_ctx_state.debug = sctx->debug;
 	sel->compiler_ctx_state.is_debug_context = sctx->is_debug;
 
 	sel->so = state->stream_output;
@@ -2272,7 +2272,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	(void) mtx_init(&sel->mutex, mtx_plain);
 	util_queue_fence_init(&sel->ready);
 
-	if ((sctx->b.debug.debug_message && !sctx->b.debug.async) ||
+	if ((sctx->debug.debug_message && !sctx->debug.async) ||
 	    sctx->is_debug ||
 	    si_can_dump_shader(&sscreen->b, sel->info.processor))
 		si_init_shader_selector_async(sel, -1);
@@ -3237,7 +3237,7 @@ bool si_update_shaders(struct si_context *sctx)
 	int r;
 
 	compiler_state.tm = sctx->tm;
-	compiler_state.debug = sctx->b.debug;
+	compiler_state.debug = sctx->debug;
 	compiler_state.is_debug_context = sctx->is_debug;
 
 	/* Update stages before GS. */
