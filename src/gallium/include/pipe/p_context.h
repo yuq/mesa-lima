@@ -508,6 +508,16 @@ struct pipe_context {
                                                      struct pipe_resource *texture,
                                                      const struct pipe_sampler_view *templat);
 
+   /**
+    * Destroy a view on a texture.
+    *
+    * \param ctx the current context
+    * \param view the view to be destroyed
+    *
+    * \note The current context may not be the context in which the view was
+    *       created (view->context). However, the caller must guarantee that
+    *       the context which created the view is still alive.
+    */
    void (*sampler_view_destroy)(struct pipe_context *ctx,
                                 struct pipe_sampler_view *view);
 
