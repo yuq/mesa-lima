@@ -54,6 +54,16 @@ struct util_queue_fence {
    int signalled;
 };
 
+void util_queue_fence_init(struct util_queue_fence *fence);
+void util_queue_fence_destroy(struct util_queue_fence *fence);
+void util_queue_fence_wait(struct util_queue_fence *fence);
+
+static inline bool
+util_queue_fence_is_signalled(struct util_queue_fence *fence)
+{
+   return fence->signalled != 0;
+}
+
 typedef void (*util_queue_execute_func)(void *job, int thread_index);
 
 struct util_queue_job {
@@ -88,8 +98,6 @@ bool util_queue_init(struct util_queue *queue,
                      unsigned num_threads,
                      unsigned flags);
 void util_queue_destroy(struct util_queue *queue);
-void util_queue_fence_init(struct util_queue_fence *fence);
-void util_queue_fence_destroy(struct util_queue_fence *fence);
 
 /* optional cleanup callback is called after fence is signaled: */
 void util_queue_add_job(struct util_queue *queue,
@@ -100,7 +108,6 @@ void util_queue_add_job(struct util_queue *queue,
 void util_queue_drop_job(struct util_queue *queue,
                          struct util_queue_fence *fence);
 
-void util_queue_fence_wait(struct util_queue_fence *fence);
 int64_t util_queue_get_thread_time_nano(struct util_queue *queue,
                                         unsigned thread_index);
 
@@ -109,12 +116,6 @@ static inline bool
 util_queue_is_initialized(struct util_queue *queue)
 {
    return queue->threads != NULL;
-}
-
-static inline bool
-util_queue_fence_is_signalled(struct util_queue_fence *fence)
-{
-   return fence->signalled != 0;
 }
 
 /* Convenient structure for monitoring the queue externally and passing
