@@ -469,7 +469,13 @@ struct pipe_context {
                         int clear_value_size);
 
    /**
-    * Flush draw commands
+    * Flush draw commands.
+    *
+    * This guarantees that the new fence (if any) will finish in finite time,
+    * unless PIPE_FLUSH_DEFERRED is used.
+    *
+    * Subsequent operations on other contexts of the same screen are guaranteed
+    * to execute after the flushed commands, unless PIPE_FLUSH_ASYNC is used.
     *
     * NOTE: use screen->fence_reference() (or equivalent) to transfer
     * new fence ref to **fence, to ensure that previous fence is unref'd

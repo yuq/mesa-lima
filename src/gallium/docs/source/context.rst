@@ -521,6 +521,15 @@ and the context is still unflushed, and the ctx parameter of fence_finish is
 equal to the context where the fence was created, fence_finish will flush
 the context.
 
+PIPE_FLUSH_ASYNC: The flush is allowed to be asynchronous. Unlike
+``PIPE_FLUSH_DEFERRED``, the driver must still ensure that the returned fence
+will finish in finite time. However, subsequent operations in other contexts of
+the same screen are no longer guaranteed to happen after the flush. Drivers
+which use this flag must implement pipe_context::fence_server_sync.
+
+PIPE_FLUSH_HINT_FINISH: Hints to the driver that the caller will immediately
+wait for the returned fence.
+
 
 ``flush_resource``
 
