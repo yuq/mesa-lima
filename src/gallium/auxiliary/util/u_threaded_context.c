@@ -1805,6 +1805,16 @@ tc_set_debug_callback(struct pipe_context *_pipe,
 }
 
 static void
+tc_set_log_context(struct pipe_context *_pipe, struct u_log_context *log)
+{
+   struct threaded_context *tc = threaded_context(_pipe);
+   struct pipe_context *pipe = tc->pipe;
+
+   tc_sync(tc);
+   pipe->set_log_context(pipe, log);
+}
+
+static void
 tc_create_fence_fd(struct pipe_context *_pipe,
                    struct pipe_fence_handle **fence, int fd)
 {
@@ -2584,6 +2594,7 @@ threaded_context_create(struct pipe_context *pipe,
    CTX_INIT(get_device_reset_status);
    CTX_INIT(set_device_reset_callback);
    CTX_INIT(dump_debug_state);
+   CTX_INIT(set_log_context);
    CTX_INIT(emit_string_marker);
    CTX_INIT(set_debug_callback);
    CTX_INIT(create_fence_fd);
