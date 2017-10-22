@@ -354,6 +354,8 @@ enum pipe_flush_flags
    PIPE_FLUSH_FENCE_FD = (1 << 2),
    PIPE_FLUSH_ASYNC = (1 << 3),
    PIPE_FLUSH_HINT_FINISH = (1 << 4),
+   PIPE_FLUSH_TOP_OF_PIPE = (1 << 5),
+   PIPE_FLUSH_BOTTOM_OF_PIPE = (1 << 6),
 };
 
 /**

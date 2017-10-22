@@ -530,6 +530,20 @@ which use this flag must implement pipe_context::fence_server_sync.
 PIPE_FLUSH_HINT_FINISH: Hints to the driver that the caller will immediately
 wait for the returned fence.
 
+Additional flags may be set together with ``PIPE_FLUSH_DEFERRED`` for even
+finer-grained fences. Note that as a general rule, GPU caches may not have been
+flushed yet when these fences are signaled. Drivers are free to ignore these
+flags and create normal fences instead. At most one of the following flags can
+be specified:
+
+PIPE_FLUSH_TOP_OF_PIPE: The fence should be signaled as soon as the next
+command is ready to start executing at the top of the pipeline, before any of
+its data is actually read (including indirect draw parameters).
+
+PIPE_FLUSH_BOTTOM_OF_PIPE: The fence should be signaled as soon as the previous
+command has finished executing on the GPU entirely (but data written by the
+command may still be in caches and inaccessible to the CPU).
+
 
 ``flush_resource``
 
