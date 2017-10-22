@@ -1809,9 +1809,11 @@ tc_flush(struct pipe_context *_pipe, struct pipe_fence_handle **fence,
    struct pipe_context *pipe = tc->pipe;
    struct threaded_query *tq, *tmp;
 
-   LIST_FOR_EACH_ENTRY_SAFE(tq, tmp, &tc->unflushed_queries, head_unflushed) {
-      tq->flushed = true;
-      LIST_DEL(&tq->head_unflushed);
+   if (!(flags & PIPE_FLUSH_DEFERRED)) {
+      LIST_FOR_EACH_ENTRY_SAFE(tq, tmp, &tc->unflushed_queries, head_unflushed) {
+         tq->flushed = true;
+         LIST_DEL(&tq->head_unflushed);
+      }
    }
 
    /* TODO: deferred flushes? */

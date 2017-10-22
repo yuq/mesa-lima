@@ -264,7 +264,7 @@ struct threaded_query {
    /* The query is added to the list in end_query and removed in flush. */
    struct list_head head_unflushed;
 
-   /* Whether pipe->flush has been called after end_query. */
+   /* Whether pipe->flush has been called in non-deferred mode after end_query. */
    bool flushed;
 };
 
