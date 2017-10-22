@@ -613,64 +613,6 @@ static bool gpir_insert_move_for_store_load(gpir_block *block, gpir_node *node)
    return true;
 }
 
-static gpir_node *gpir_move_get_start_node(gpir_node *node)
-{
-   gpir_node *move = NULL;
-
-   /* find existing move node to reuse */
-   gpir_node_foreach_succ(node, entry) {
-      gpir_dep_info *dep = gpir_dep_from_entry(entry);
-      gpir_node *succ = gpir_node_from_entry(entry, succ);
-      int max = succ->sched_instr + gpir_get_max_dist(dep);
-
-      /* node may have multi move successors, but can only satisfy one at a time */
-      if (max >= node->sched_instr && succ->op == gpir_op_mov) {
-         /* move node may have only one move successor, find the deepest */
-         move = succ;
-         while (true) {
-            gpir_node *new_move = NULL;
-
-            gpir_node_foreach_succ(move, _entry) {
-               gpir_node *_succ = gpir_node_from_entry(_entry, succ);
-               if (_succ->op == gpir_op_mov) {
-                  new_move = _succ;
-                  break;
-               }
-            }
-
-            if (new_move)
-               move = new_move;
-            else
-               break;
-         }
-      }
-   }
-
-   if (!move)
-      return node;
-
-   /* move un-satisfied successors of node to move node */
-   gpir_node_foreach_succ(node, entry) {
-      gpir_dep_info *dep = gpir_dep_from_entry(entry);
-      gpir_node *succ = gpir_node_from_entry(entry, succ);
-      int max = succ->sched_instr + gpir_get_max_dist(dep);
-
-      if (max < node->sched_instr) {
-         assert(max < move->sched_instr);
-
-         dep->pred = move;
-         _mesa_set_add_pre_hashed(move->succs, entry->hash, dep);
-         _mesa_set_remove(node->succs, entry);
-         gpir_node_replace_child(succ, node, move);
-      }
-   }
-
-   debug_printf("gpir: scheduler reuse move node %d for node %d\n",
-                move->index, node->index);
-
-   return move;
-}
-
 /*
  * Return:
  * >=0 - success, the last inserted load instr index
@@ -707,8 +649,7 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int end)
             break;
          }
 
-         gpir_node *start_node = gpir_move_get_start_node(current);
-         gpir_node *move = gpir_create_from_node(block, start_node, NULL);
+         gpir_node *move = gpir_create_from_node(block, current, NULL);
          if (!move)
             return -2;
 
