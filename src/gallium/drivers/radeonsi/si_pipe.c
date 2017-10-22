@@ -248,6 +248,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 		goto fail;
 
 	si_init_all_descriptors(sctx);
+	si_init_fence_functions(sctx);
 	si_init_state_functions(sctx);
 	si_init_shader_functions(sctx);
 	si_init_viewport_functions(sctx);
@@ -1001,6 +1002,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	sscreen->b.b.get_driver_uuid = radeonsi_get_driver_uuid;
 	sscreen->b.b.resource_create = si_resource_create_common;
 
+	si_init_screen_fence_functions(sscreen);
 	si_init_screen_state_functions(sscreen);
 
 	/* Set these flags in debug_flags early, so that the shader cache takes

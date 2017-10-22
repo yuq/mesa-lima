@@ -601,6 +601,10 @@ bool si_replace_shader(unsigned num, struct ac_shader_binary *binary);
 /* si_dma.c */
 void si_init_dma_functions(struct si_context *sctx);
 
+/* si_fence.c */
+void si_init_fence_functions(struct si_context *ctx);
+void si_init_screen_fence_functions(struct si_screen *screen);
+
 /* si_hw_context.c */
 void si_destroy_saved_cs(struct si_saved_cs *scs);
 void si_context_gfx_flush(void *context, unsigned flags,
