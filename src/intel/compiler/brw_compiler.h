@@ -1100,7 +1100,6 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
                const struct nir_shader *shader,
                bool use_legacy_snorm_formula,
                int shader_time_index,
-               unsigned *final_assembly_size,
                char **error_str);
 
 /**
@@ -1116,7 +1115,6 @@ brw_compile_tcs(const struct brw_compiler *compiler,
                 struct brw_tcs_prog_data *prog_data,
                 const struct nir_shader *nir,
                 int shader_time_index,
-                unsigned *final_assembly_size,
                 char **error_str);
 
 /**
@@ -1133,7 +1131,6 @@ brw_compile_tes(const struct brw_compiler *compiler, void *log_data,
                 const struct nir_shader *shader,
                 struct gl_program *prog,
                 int shader_time_index,
-                unsigned *final_assembly_size,
                 char **error_str);
 
 /**
@@ -1149,7 +1146,6 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
                const struct nir_shader *shader,
                struct gl_program *prog,
                int shader_time_index,
-               unsigned *final_assembly_size,
                char **error_str);
 
 /**
@@ -1200,7 +1196,6 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                int shader_time_index16,
                bool allow_spilling,
                bool use_rep_send, struct brw_vue_map *vue_map,
-               unsigned *final_assembly_size,
                char **error_str);
 
 /**
@@ -1215,7 +1210,6 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                struct brw_cs_prog_data *prog_data,
                const struct nir_shader *shader,
                int shader_time_index,
-               unsigned *final_assembly_size,
                char **error_str);
 
 static inline uint32_t

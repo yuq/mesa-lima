@@ -159,7 +159,6 @@ brw_codegen_vs_prog(struct brw_context *brw,
 {
    const struct brw_compiler *compiler = brw->screen->compiler;
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   GLuint program_size;
    const GLuint *program;
    struct brw_vs_prog_data prog_data;
    struct brw_stage_prog_data *stage_prog_data = &prog_data.base.base;
@@ -223,7 +222,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
    program = brw_compile_vs(compiler, brw, mem_ctx, key, &prog_data,
                             vp->program.nir,
                             !_mesa_is_gles3(&brw->ctx),
-                            st_index, &program_size, &error_str);
+                            st_index, &error_str);
    if (program == NULL) {
       if (!vp->program.is_arb_asm) {
          vp->program.sh.data->LinkStatus = linking_failure;
@@ -256,10 +255,10 @@ brw_codegen_vs_prog(struct brw_context *brw,
    ralloc_steal(NULL, prog_data.base.base.param);
    ralloc_steal(NULL, prog_data.base.base.pull_param);
    brw_upload_cache(&brw->cache, BRW_CACHE_VS_PROG,
-		    key, sizeof(struct brw_vs_prog_key),
-		    program, program_size,
-		    &prog_data, sizeof(prog_data),
-		    &brw->vs.base.prog_offset, &brw->vs.base.prog_data);
+                    key, sizeof(struct brw_vs_prog_key),
+                    program, prog_data.base.base.program_size,
+                    &prog_data, sizeof(prog_data),
+                    &brw->vs.base.prog_offset, &brw->vs.base.prog_data);
    ralloc_free(mem_ctx);
 
    return true;

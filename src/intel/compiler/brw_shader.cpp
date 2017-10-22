@@ -1157,7 +1157,6 @@ brw_compile_tes(const struct brw_compiler *compiler,
                 const nir_shader *src_shader,
                 struct gl_program *prog,
                 int shader_time_index,
-                unsigned *final_assembly_size,
                 char **error_str)
 {
    const struct gen_device_info *devinfo = compiler->devinfo;
@@ -1271,7 +1270,7 @@ brw_compile_tes(const struct brw_compiler *compiler,
 
       g.generate_code(v.cfg, 8);
 
-      assembly = g.get_assembly(final_assembly_size);
+      assembly = g.get_assembly(&prog_data->base.base.program_size);
    } else {
       brw::vec4_tes_visitor v(compiler, log_data, key, prog_data,
 			      nir, mem_ctx, shader_time_index);
@@ -1286,9 +1285,8 @@ brw_compile_tes(const struct brw_compiler *compiler,
 
       assembly = brw_vec4_generate_assembly(compiler, log_data, mem_ctx, nir,
                                             &prog_data->base, v.cfg,
-                                            final_assembly_size);
+                                            &prog_data->base.base.program_size);
    }
 
-   prog_data->base.base.program_size = *final_assembly_size;
    return assembly;
 }

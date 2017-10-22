@@ -75,14 +75,13 @@ blorp_params_get_clear_kernel(struct blorp_context *blorp,
    brw_blorp_init_wm_prog_key(&wm_key);
 
    struct brw_wm_prog_data prog_data;
-   unsigned program_size;
    const unsigned *program =
       blorp_compile_fs(blorp, mem_ctx, b.shader, &wm_key, use_replicated_data,
-                       &prog_data, &program_size);
+                       &prog_data);
 
    bool result =
       blorp->upload_shader(blorp, &blorp_key, sizeof(blorp_key),
-                           program, program_size,
+                           program, prog_data.base.program_size,
                            &prog_data.base, sizeof(prog_data),
                            &params->wm_prog_kernel, &params->wm_prog_data);
 
@@ -167,13 +166,12 @@ blorp_params_get_layer_offset_vs(struct blorp_context *blorp,
    struct brw_vs_prog_data vs_prog_data;
    memset(&vs_prog_data, 0, sizeof(vs_prog_data));
 
-   unsigned program_size;
    const unsigned *program =
-      blorp_compile_vs(blorp, mem_ctx, b.shader, &vs_prog_data, &program_size);
+      blorp_compile_vs(blorp, mem_ctx, b.shader, &vs_prog_data);
 
    bool result =
       blorp->upload_shader(blorp, &blorp_key, sizeof(blorp_key),
-                           program, program_size,
+                           program, vs_prog_data.base.base.program_size,
                            &vs_prog_data.base.base, sizeof(vs_prog_data),
                            &params->vs_prog_kernel, &params->vs_prog_data);
 
@@ -864,14 +862,13 @@ blorp_params_get_mcs_partial_resolve_kernel(struct blorp_context *blorp,
    wm_key.multisample_fbo = true;
 
    struct brw_wm_prog_data prog_data;
-   unsigned program_size;
    const unsigned *program =
       blorp_compile_fs(blorp, mem_ctx, b.shader, &wm_key, false,
-                       &prog_data, &program_size);
+                       &prog_data);
 
    bool result =
       blorp->upload_shader(blorp, &blorp_key, sizeof(blorp_key),
-                           program, program_size,
+                           program, prog_data.base.program_size,
                            &prog_data.base, sizeof(prog_data),
                            &params->wm_prog_kernel, &params->wm_prog_data);
 

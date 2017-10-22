@@ -535,15 +535,15 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
                           nir->info.outputs_written,
                           nir->info.separate_shader);
 
-      unsigned code_size;
       const unsigned *shader_code =
          brw_compile_vs(compiler, NULL, mem_ctx, &key, &prog_data, nir,
-                        false, -1, &code_size, NULL);
+                        false, -1, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       }
 
+      unsigned code_size = prog_data.base.base.program_size;
       bin = anv_pipeline_upload_kernel(pipeline, cache, sha1, 20,
                                        shader_code, code_size,
                                        &prog_data.base.base, sizeof(prog_data),
@@ -694,18 +694,18 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
       tes_key.inputs_read = tcs_key.outputs_written;
       tes_key.patch_inputs_read = tcs_key.patch_outputs_written;
 
-      unsigned code_size;
       const int shader_time_index = -1;
       const unsigned *shader_code;
 
       shader_code =
          brw_compile_tcs(compiler, NULL, mem_ctx, &tcs_key, &tcs_prog_data,
-                         tcs_nir, shader_time_index, &code_size, NULL);
+                         tcs_nir, shader_time_index, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       }
 
+      unsigned code_size = tcs_prog_data.base.base.program_size;
       tcs_bin = anv_pipeline_upload_kernel(pipeline, cache,
                                            tcs_sha1, sizeof(tcs_sha1),
                                            shader_code, code_size,
@@ -720,12 +720,13 @@ anv_pipeline_compile_tcs_tes(struct anv_pipeline *pipeline,
       shader_code =
          brw_compile_tes(compiler, NULL, mem_ctx, &tes_key,
                          &tcs_prog_data.base.vue_map, &tes_prog_data, tes_nir,
-                         NULL, shader_time_index, &code_size, NULL);
+                         NULL, shader_time_index, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       }
 
+      code_size = tes_prog_data.base.base.program_size;
       tes_bin = anv_pipeline_upload_kernel(pipeline, cache,
                                            tes_sha1, sizeof(tes_sha1),
                                            shader_code, code_size,
@@ -797,16 +798,16 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
                           nir->info.outputs_written,
                           nir->info.separate_shader);
 
-      unsigned code_size;
       const unsigned *shader_code =
          brw_compile_gs(compiler, NULL, mem_ctx, &key, &prog_data, nir,
-                        NULL, -1, &code_size, NULL);
+                        NULL, -1, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       }
 
       /* TODO: SIMD8 GS */
+      const unsigned code_size = prog_data.base.base.program_size;
       bin = anv_pipeline_upload_kernel(pipeline, cache, sha1, 20,
                                        shader_code, code_size,
                                        &prog_data.base.base, sizeof(prog_data),
@@ -921,15 +922,15 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 
       anv_fill_binding_table(&prog_data.base, num_rts);
 
-      unsigned code_size;
       const unsigned *shader_code =
          brw_compile_fs(compiler, NULL, mem_ctx, &key, &prog_data, nir,
-                        NULL, -1, -1, true, false, NULL, &code_size, NULL);
+                        NULL, -1, -1, true, false, NULL, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       }
 
+      unsigned code_size = prog_data.base.program_size;
       bin = anv_pipeline_upload_kernel(pipeline, cache, sha1, 20,
                                        shader_code, code_size,
                                        &prog_data.base, sizeof(prog_data),
@@ -993,15 +994,15 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
 
       anv_fill_binding_table(&prog_data.base, 1);
 
-      unsigned code_size;
       const unsigned *shader_code =
          brw_compile_cs(compiler, NULL, mem_ctx, &key, &prog_data, nir,
-                        -1, &code_size, NULL);
+                        -1, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       }
 
+      const unsigned code_size = prog_data.base.program_size;
       bin = anv_pipeline_upload_kernel(pipeline, cache, sha1, 20,
                                        shader_code, code_size,
                                        &prog_data.base, sizeof(prog_data),

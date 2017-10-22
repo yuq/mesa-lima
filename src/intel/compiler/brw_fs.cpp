@@ -6542,7 +6542,6 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                int shader_time_index8, int shader_time_index16,
                bool allow_spilling,
                bool use_rep_send, struct brw_vue_map *vue_map,
-               unsigned *final_assembly_size,
                char **error_str)
 {
    const struct gen_device_info *devinfo = compiler->devinfo;
@@ -6691,9 +6690,7 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
       prog_data->reg_blocks_0 = brw_register_blocks(simd16_grf_used);
    }
 
-   const unsigned *assembly = g.get_assembly(final_assembly_size);
-   prog_data->base.program_size = *final_assembly_size;
-   return assembly;
+   return g.get_assembly(&prog_data->base.program_size);
 }
 
 fs_reg *
@@ -6780,7 +6777,6 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                struct brw_cs_prog_data *prog_data,
                const nir_shader *src_shader,
                int shader_time_index,
-               unsigned *final_assembly_size,
                char **error_str)
 {
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
@@ -6892,9 +6888,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
 
    g.generate_code(cfg, prog_data->simd_size);
 
-   const unsigned *assembly = g.get_assembly(final_assembly_size);
-   prog_data->base.program_size = *final_assembly_size;
-   return assembly;
+   return g.get_assembly(&prog_data->base.program_size);
 }
 
 /**

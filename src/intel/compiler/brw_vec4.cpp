@@ -2741,7 +2741,6 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
                const nir_shader *src_shader,
                bool use_legacy_snorm_formula,
                int shader_time_index,
-               unsigned *final_assembly_size,
                char **error_str)
 {
    const bool is_scalar = compiler->scalar_stage[MESA_SHADER_VERTEX];
@@ -2880,7 +2879,7 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
          g.enable_debug(debug_name);
       }
       g.generate_code(v.cfg, 8);
-      assembly = g.get_assembly(final_assembly_size);
+      assembly = g.get_assembly(&prog_data->base.base.program_size);
    }
 
    if (!assembly) {
@@ -2898,10 +2897,9 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
 
       assembly = brw_vec4_generate_assembly(compiler, log_data, mem_ctx,
                                             shader, &prog_data->base, v.cfg,
-                                            final_assembly_size);
+                                            &prog_data->base.base.program_size);
    }
 
-   prog_data->base.base.program_size = *final_assembly_size;
    return assembly;
 }
 

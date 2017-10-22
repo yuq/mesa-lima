@@ -1308,7 +1308,6 @@ brw_blorp_get_blit_kernel(struct blorp_context *blorp,
    void *mem_ctx = ralloc_context(NULL);
 
    const unsigned *program;
-   unsigned program_size;
    struct brw_wm_prog_data prog_data;
 
    nir_shader *nir = brw_blorp_build_nir_shader(blorp, mem_ctx, prog_key);
@@ -1322,11 +1321,11 @@ brw_blorp_get_blit_kernel(struct blorp_context *blorp,
    wm_key.multisample_fbo = prog_key->rt_samples > 1;
 
    program = blorp_compile_fs(blorp, mem_ctx, nir, &wm_key, false,
-                              &prog_data, &program_size);
+                              &prog_data);
 
    bool result =
       blorp->upload_shader(blorp, prog_key, sizeof(*prog_key),
-                           program, program_size,
+                           program, prog_data.base.program_size,
                            &prog_data.base, sizeof(prog_data),
                            &params->wm_prog_kernel, &params->wm_prog_data);
 

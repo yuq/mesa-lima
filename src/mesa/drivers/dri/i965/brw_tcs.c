@@ -226,11 +226,10 @@ brw_codegen_tcs_prog(struct brw_context *brw, struct brw_program *tcp,
       start_time = get_time();
    }
 
-   unsigned program_size;
    char *error_str;
    const unsigned *program =
       brw_compile_tcs(compiler, brw, mem_ctx, key, &prog_data, nir, st_index,
-                      &program_size, &error_str);
+                      &error_str);
    if (program == NULL) {
       if (tep) {
          tep->program.sh.data->LinkStatus = linking_failure;
@@ -268,7 +267,7 @@ brw_codegen_tcs_prog(struct brw_context *brw, struct brw_program *tcp,
    ralloc_steal(NULL, prog_data.base.base.pull_param);
    brw_upload_cache(&brw->cache, BRW_CACHE_TCS_PROG,
                     key, sizeof(*key),
-                    program, program_size,
+                    program, prog_data.base.base.program_size,
                     &prog_data, sizeof(prog_data),
                     &stage_state->prog_offset, &brw->tcs.base.prog_data);
    ralloc_free(mem_ctx);

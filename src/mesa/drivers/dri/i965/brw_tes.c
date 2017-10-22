@@ -101,11 +101,10 @@ brw_codegen_tes_prog(struct brw_context *brw,
    brw_compute_tess_vue_map(&input_vue_map, key->inputs_read,
                             key->patch_inputs_read);
 
-   unsigned program_size;
    char *error_str;
    const unsigned *program =
       brw_compile_tes(compiler, brw, mem_ctx, key, &input_vue_map, &prog_data,
-                      nir, &tep->program, st_index, &program_size, &error_str);
+                      nir, &tep->program, st_index, &error_str);
    if (program == NULL) {
       tep->program.sh.data->LinkStatus = linking_failure;
       ralloc_strcat(&tep->program.sh.data->InfoLog, error_str);
@@ -138,7 +137,7 @@ brw_codegen_tes_prog(struct brw_context *brw,
    ralloc_steal(NULL, prog_data.base.base.pull_param);
    brw_upload_cache(&brw->cache, BRW_CACHE_TES_PROG,
                     key, sizeof(*key),
-                    program, program_size,
+                    program, prog_data.base.base.program_size,
                     &prog_data, sizeof(prog_data),
                     &stage_state->prog_offset, &brw->tes.base.prog_data);
    ralloc_free(mem_ctx);

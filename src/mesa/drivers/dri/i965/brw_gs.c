@@ -112,12 +112,11 @@ brw_codegen_gs_prog(struct brw_context *brw,
       start_time = get_time();
    }
 
-   unsigned program_size;
    char *error_str;
    const unsigned *program =
       brw_compile_gs(brw->screen->compiler, brw, mem_ctx, key,
                      &prog_data, gp->program.nir, &gp->program,
-                     st_index, &program_size, &error_str);
+                     st_index, &error_str);
    if (program == NULL) {
       ralloc_strcat(&gp->program.sh.data->InfoLog, error_str);
       _mesa_problem(NULL, "Failed to compile geometry shader: %s\n", error_str);
@@ -147,7 +146,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
    ralloc_steal(NULL, prog_data.base.base.pull_param);
    brw_upload_cache(&brw->cache, BRW_CACHE_GS_PROG,
                     key, sizeof(*key),
-                    program, program_size,
+                    program, prog_data.base.base.program_size,
                     &prog_data, sizeof(prog_data),
                     &stage_state->prog_offset, &brw->gs.base.prog_data);
    ralloc_free(mem_ctx);

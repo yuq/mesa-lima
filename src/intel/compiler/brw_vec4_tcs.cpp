@@ -382,7 +382,6 @@ brw_compile_tcs(const struct brw_compiler *compiler,
                 struct brw_tcs_prog_data *prog_data,
                 const nir_shader *src_shader,
                 int shader_time_index,
-                unsigned *final_assembly_size,
                 char **error_str)
 {
    const struct gen_device_info *devinfo = compiler->devinfo;
@@ -488,7 +487,7 @@ brw_compile_tcs(const struct brw_compiler *compiler,
 
       g.generate_code(v.cfg, 8);
 
-      assembly = g.get_assembly(final_assembly_size);
+      assembly = g.get_assembly(&prog_data->base.base.program_size);
    } else {
       vec4_tcs_visitor v(compiler, log_data, key, prog_data,
                          nir, mem_ctx, shader_time_index, &input_vue_map);
@@ -504,10 +503,9 @@ brw_compile_tcs(const struct brw_compiler *compiler,
 
       assembly = brw_vec4_generate_assembly(compiler, log_data, mem_ctx, nir,
                                             &prog_data->base, v.cfg,
-                                            final_assembly_size);
+                                            &prog_data->base.base.program_size);
    }
 
-   prog_data->base.base.program_size = *final_assembly_size;
    return assembly;
 }
 

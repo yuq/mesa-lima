@@ -141,7 +141,6 @@ brw_codegen_wm_prog(struct brw_context *brw,
    void *mem_ctx = ralloc_context(NULL);
    struct brw_wm_prog_data prog_data;
    const GLuint *program;
-   GLuint program_size;
    bool start_busy = false;
    double start_time = 0;
 
@@ -185,7 +184,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
                             key, &prog_data, fp->program.nir,
                             &fp->program, st_index8, st_index16,
                             true, false, vue_map,
-                            &program_size, &error_str);
+                            &error_str);
 
    if (program == NULL) {
       if (!fp->program.is_arb_asm) {
@@ -222,7 +221,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
    ralloc_steal(NULL, prog_data.base.pull_param);
    brw_upload_cache(&brw->cache, BRW_CACHE_FS_PROG,
                     key, sizeof(struct brw_wm_prog_key),
-                    program, program_size,
+                    program, prog_data.base.program_size,
                     &prog_data, sizeof(prog_data),
                     &brw->wm.base.prog_offset, &brw->wm.base.prog_data);
 

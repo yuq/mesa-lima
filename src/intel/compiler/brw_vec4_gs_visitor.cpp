@@ -618,7 +618,6 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
                const nir_shader *src_shader,
                struct gl_program *prog,
                int shader_time_index,
-               unsigned *final_assembly_size,
                char **error_str)
 {
    struct brw_gs_compile c;
@@ -868,9 +867,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
             g.enable_debug(name);
          }
          g.generate_code(v.cfg, 8);
-         const unsigned *ret = g.get_assembly(final_assembly_size);
-         prog_data->base.base.program_size = *final_assembly_size;
-         return ret;
+         return  g.get_assembly(&prog_data->base.base.program_size);
       }
    }
 
@@ -899,12 +896,10 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
          if (v.run()) {
             /* Success! Backup is not needed */
             ralloc_free(param);
-            const unsigned *ret =
-               brw_vec4_generate_assembly(compiler, log_data, mem_ctx, shader,
-                                          &prog_data->base, v.cfg,
-                                          final_assembly_size);
-            prog_data->base.base.program_size = *final_assembly_size;
-            return ret;
+            return brw_vec4_generate_assembly(compiler, log_data, mem_ctx,
+                                              shader, &prog_data->base, v.cfg,
+                                              &prog_data->base.base.
+                                                  program_size);
          } else {
             /* These variables could be modified by the execution of the GS
              * visitor if it packed the uniforms in the push constant buffer.
@@ -968,11 +963,10 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    } else {
       ret = brw_vec4_generate_assembly(compiler, log_data, mem_ctx, shader,
                                        &prog_data->base, gs->cfg,
-                                       final_assembly_size);
+                                       &prog_data->base.base.program_size);
    }
 
    delete gs;
-   prog_data->base.base.program_size = *final_assembly_size;
    return ret;
 }
 

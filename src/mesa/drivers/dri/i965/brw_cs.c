@@ -55,7 +55,6 @@ brw_codegen_cs_prog(struct brw_context *brw,
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const GLuint *program;
    void *mem_ctx = ralloc_context(NULL);
-   GLuint program_size;
    struct brw_cs_prog_data prog_data;
    bool start_busy = false;
    double start_time = 0;
@@ -93,7 +92,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
    char *error_str;
    program = brw_compile_cs(brw->screen->compiler, brw, mem_ctx, key,
                             &prog_data, cp->program.nir, st_index,
-                            &program_size, &error_str);
+                            &error_str);
    if (program == NULL) {
       cp->program.sh.data->LinkStatus = linking_failure;
       ralloc_strcat(&cp->program.sh.data->InfoLog, error_str);
@@ -144,7 +143,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
    ralloc_steal(NULL, prog_data.base.pull_param);
    brw_upload_cache(&brw->cache, BRW_CACHE_CS_PROG,
                     key, sizeof(*key),
-                    program, program_size,
+                    program, prog_data.base.program_size,
                     &prog_data, sizeof(prog_data),
                     &brw->cs.base.prog_offset, &brw->cs.base.prog_data);
    ralloc_free(mem_ctx);
