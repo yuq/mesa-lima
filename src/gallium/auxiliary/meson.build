@@ -322,7 +322,6 @@ files_libgallium = files(
   'util/u_texture.h',
   'util/u_tile.c',
   'util/u_tile.h',
-  'util/u_time.h',
   'util/u_transfer.c',
   'util/u_transfer.h',
   'util/u_threaded_context.c',
