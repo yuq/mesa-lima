@@ -224,6 +224,8 @@ struct dd_draw_record {
    struct list_head list;
    struct dd_context *dctx;
 
+   int64_t time_before;
+   int64_t time_after;
    unsigned draw_call;
 
    struct pipe_fence_handle *prev_bottom_of_pipe;

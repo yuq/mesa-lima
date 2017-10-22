@@ -790,6 +790,11 @@ dd_free_record(struct pipe_screen *screen, struct dd_draw_record *record)
 static void
 dd_write_record(FILE *f, struct dd_draw_record *record)
 {
+   PRINT_NAMED(ptr, "pipe", record->dctx->pipe);
+   PRINT_NAMED(ns, "time before (API call)", record->time_before);
+   PRINT_NAMED(ns, "time after (driver done)", record->time_after);
+   fprintf(f, "\n");
+
    dd_dump_call(f, &record->draw_state.base, &record->call);
 
    if (record->log_page) {
@@ -1013,6 +1018,8 @@ dd_before_draw(struct dd_context *dctx, struct dd_draw_record *record)
    struct pipe_context *pipe = dctx->pipe;
    struct pipe_screen *screen = dscreen->screen;
 
+   record->time_before = os_time_get_nano();
+
    if (dscreen->timeout_ms > 0) {
       if (dscreen->flush_always && dctx->num_draw_calls >= dscreen->skip_count) {
          pipe->flush(pipe, &record->prev_bottom_of_pipe, 0);
@@ -1040,6 +1047,7 @@ dd_after_draw_async(void *data)
    struct dd_screen *dscreen = dd_screen(dctx->base.screen);
 
    record->log_page = u_log_new_page(&dctx->log);
+   record->time_after = os_time_get_nano();
 
    if (!util_queue_fence_is_signalled(&record->driver_finished))
       util_queue_fence_signal(&record->driver_finished);
