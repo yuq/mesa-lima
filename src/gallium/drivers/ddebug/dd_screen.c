@@ -428,6 +428,7 @@ ddebug_screen_create(struct pipe_screen *screen)
    const char *option;
    bool flush = false;
    bool verbose = false;
+   bool transfers = false;
    unsigned timeout = 1000;
    unsigned apitrace_dump_call = 0;
    enum dd_dump_mode mode = DD_DUMP_ONLY_HANGS;
@@ -441,7 +442,7 @@ ddebug_screen_create(struct pipe_screen *screen)
       puts("");
       puts("Usage:");
       puts("");
-      puts("  GALLIUM_DDEBUG=\"[<timeout in ms>] [(always|apitrace <call#)] [flush] [verbose]\"");
+      puts("  GALLIUM_DDEBUG=\"[<timeout in ms>] [(always|apitrace <call#)] [flush] [transfers] [verbose]\"");
       puts("  GALLIUM_DDEBUG_SKIP=[count]");
       puts("");
       puts("Dump context and driver information of draw calls into");
@@ -454,6 +455,9 @@ ddebug_screen_create(struct pipe_screen *screen)
       puts("");
       puts("always");
       puts("  Dump information about all draw calls.");
+      puts("");
+      puts("transfers");
+      puts("  Also dump and do hang detection on transfers.");
       puts("");
       puts("apitrace <call#>");
       puts("  Dump information about the draw call corresponding to the given");
@@ -485,6 +489,8 @@ ddebug_screen_create(struct pipe_screen *screen)
          mode = DD_DUMP_ALL_CALLS;
       } else if (match_word(&option, "flush")) {
          flush = true;
+      } else if (match_word(&option, "transfers")) {
+         transfers = true;
       } else if (match_word(&option, "verbose")) {
          verbose = true;
       } else if (match_word(&option, "apitrace")) {
@@ -556,6 +562,7 @@ ddebug_screen_create(struct pipe_screen *screen)
    dscreen->timeout_ms = timeout;
    dscreen->dump_mode = mode;
    dscreen->flush_always = flush;
+   dscreen->transfers = transfers;
    dscreen->verbose = verbose;
    dscreen->apitrace_dump_call = apitrace_dump_call;
 

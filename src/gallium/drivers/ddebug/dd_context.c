@@ -608,66 +608,6 @@ dd_context_destroy(struct pipe_context *_pipe)
 
 
 /********************************************************************
- * transfer
- */
-
-static void *
-dd_context_transfer_map(struct pipe_context *_pipe,
-                        struct pipe_resource *resource, unsigned level,
-                        unsigned usage, const struct pipe_box *box,
-                        struct pipe_transfer **transfer)
-{
-   struct pipe_context *pipe = dd_context(_pipe)->pipe;
-
-   return pipe->transfer_map(pipe, resource, level, usage, box, transfer);
-}
-
-static void
-dd_context_transfer_flush_region(struct pipe_context *_pipe,
-                                 struct pipe_transfer *transfer,
-                                 const struct pipe_box *box)
-{
-   struct pipe_context *pipe = dd_context(_pipe)->pipe;
-
-   pipe->transfer_flush_region(pipe, transfer, box);
-}
-
-static void
-dd_context_transfer_unmap(struct pipe_context *_pipe,
-                          struct pipe_transfer *transfer)
-{
-   struct pipe_context *pipe = dd_context(_pipe)->pipe;
-
-   pipe->transfer_unmap(pipe, transfer);
-}
-
-static void
-dd_context_buffer_subdata(struct pipe_context *_pipe,
-                          struct pipe_resource *resource,
-                          unsigned usage, unsigned offset,
-                          unsigned size, const void *data)
-{
-   struct pipe_context *pipe = dd_context(_pipe)->pipe;
-
-   pipe->buffer_subdata(pipe, resource, usage, offset, size, data);
-}
-
-static void
-dd_context_texture_subdata(struct pipe_context *_pipe,
-                           struct pipe_resource *resource,
-                           unsigned level, unsigned usage,
-                           const struct pipe_box *box,
-                           const void *data, unsigned stride,
-                           unsigned layer_stride)
-{
-   struct pipe_context *pipe = dd_context(_pipe)->pipe;
-
-   pipe->texture_subdata(pipe, resource, level, usage, box, data,
-                         stride, layer_stride);
-}
-
-
-/********************************************************************
  * miscellaneous
  */
 
@@ -891,11 +831,6 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe)
    CTX_INIT(sampler_view_destroy);
    CTX_INIT(create_surface);
    CTX_INIT(surface_destroy);
-   CTX_INIT(transfer_map);
-   CTX_INIT(transfer_flush_region);
-   CTX_INIT(transfer_unmap);
-   CTX_INIT(buffer_subdata);
-   CTX_INIT(texture_subdata);
    CTX_INIT(texture_barrier);
    CTX_INIT(memory_barrier);
    CTX_INIT(resource_commit);

@@ -52,6 +52,7 @@ struct dd_screen
    unsigned timeout_ms;
    enum dd_dump_mode dump_mode;
    bool flush_always;
+   bool transfers;
    bool verbose;
    unsigned skip_count;
    unsigned apitrace_dump_call;
@@ -71,6 +72,11 @@ enum call_type
    CALL_CLEAR_DEPTH_STENCIL,
    CALL_GENERATE_MIPMAP,
    CALL_GET_QUERY_RESULT_RESOURCE,
+   CALL_TRANSFER_MAP,
+   CALL_TRANSFER_FLUSH_REGION,
+   CALL_TRANSFER_UNMAP,
+   CALL_BUFFER_SUBDATA,
+   CALL_TEXTURE_SUBDATA,
 };
 
 struct call_resource_copy_region
@@ -124,6 +130,41 @@ struct call_get_query_result_resource {
    unsigned offset;
 };
 
+struct call_transfer_map {
+   struct pipe_transfer *transfer_ptr;
+   struct pipe_transfer transfer;
+   void *ptr;
+};
+
+struct call_transfer_flush_region {
+   struct pipe_transfer *transfer_ptr;
+   struct pipe_transfer transfer;
+   struct pipe_box box;
+};
+
+struct call_transfer_unmap {
+   struct pipe_transfer *transfer_ptr;
+   struct pipe_transfer transfer;
+};
+
+struct call_buffer_subdata {
+   struct pipe_resource *resource;
+   unsigned usage;
+   unsigned offset;
+   unsigned size;
+   const void *data;
+};
+
+struct call_texture_subdata {
+   struct pipe_resource *resource;
+   unsigned level;
+   unsigned usage;
+   struct pipe_box box;
+   const void *data;
+   unsigned stride;
+   unsigned layer_stride;
+};
+
 struct dd_call
 {
    enum call_type type;
@@ -138,6 +179,11 @@ struct dd_call
       struct call_clear_buffer clear_buffer;
       struct call_generate_mipmap generate_mipmap;
       struct call_get_query_result_resource get_query_result_resource;
+      struct call_transfer_map transfer_map;
+      struct call_transfer_flush_region transfer_flush_region;
+      struct call_transfer_unmap transfer_unmap;
+      struct call_buffer_subdata buffer_subdata;
+      struct call_texture_subdata texture_subdata;
    } info;
 };
 

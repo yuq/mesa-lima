@@ -468,6 +468,56 @@ dd_dump_clear_buffer(struct dd_draw_state *dstate, struct call_clear_buffer *inf
 }
 
 static void
+dd_dump_transfer_map(struct call_transfer_map *info, FILE *f)
+{
+   fprintf(f, "%s:\n", __func__+8);
+   DUMP_M_ADDR(transfer, info, transfer);
+   DUMP_M(ptr, info, transfer_ptr);
+   DUMP_M(ptr, info, ptr);
+}
+
+static void
+dd_dump_transfer_flush_region(struct call_transfer_flush_region *info, FILE *f)
+{
+   fprintf(f, "%s:\n", __func__+8);
+   DUMP_M_ADDR(transfer, info, transfer);
+   DUMP_M(ptr, info, transfer_ptr);
+   DUMP_M_ADDR(box, info, box);
+}
+
+static void
+dd_dump_transfer_unmap(struct call_transfer_unmap *info, FILE *f)
+{
+   fprintf(f, "%s:\n", __func__+8);
+   DUMP_M_ADDR(transfer, info, transfer);
+   DUMP_M(ptr, info, transfer_ptr);
+}
+
+static void
+dd_dump_buffer_subdata(struct call_buffer_subdata *info, FILE *f)
+{
+   fprintf(f, "%s:\n", __func__+8);
+   DUMP_M(resource, info, resource);
+   DUMP_M(transfer_usage, info, usage);
+   DUMP_M(uint, info, offset);
+   DUMP_M(uint, info, size);
+   DUMP_M(ptr, info, data);
+}
+
+static void
+dd_dump_texture_subdata(struct call_texture_subdata *info, FILE *f)
+{
+   fprintf(f, "%s:\n", __func__+8);
+   DUMP_M(resource, info, resource);
+   DUMP_M(uint, info, level);
+   DUMP_M(transfer_usage, info, usage);
+   DUMP_M_ADDR(box, info, box);
+   DUMP_M(ptr, info, data);
+   DUMP_M(uint, info, stride);
+   DUMP_M(uint, info, layer_stride);
+}
+
+static void
 dd_dump_clear_texture(struct dd_draw_state *dstate, FILE *f)
 {
    fprintf(f, "%s:\n", __func__+8);
@@ -540,6 +590,21 @@ dd_dump_call(FILE *f, struct dd_draw_state *state, struct dd_call *call)
    case CALL_GET_QUERY_RESULT_RESOURCE:
       dd_dump_get_query_result_resource(&call->info.get_query_result_resource, f);
       break;
+   case CALL_TRANSFER_MAP:
+      dd_dump_transfer_map(&call->info.transfer_map, f);
+      break;
+   case CALL_TRANSFER_FLUSH_REGION:
+      dd_dump_transfer_flush_region(&call->info.transfer_flush_region, f);
+      break;
+   case CALL_TRANSFER_UNMAP:
+      dd_dump_transfer_unmap(&call->info.transfer_unmap, f);
+      break;
+   case CALL_BUFFER_SUBDATA:
+      dd_dump_buffer_subdata(&call->info.buffer_subdata, f);
+      break;
+   case CALL_TEXTURE_SUBDATA:
+      dd_dump_texture_subdata(&call->info.texture_subdata, f);
+      break;
    }
 }
 
@@ -597,6 +662,21 @@ dd_unreference_copy_of_call(struct dd_call *dst)
       break;
    case CALL_GET_QUERY_RESULT_RESOURCE:
       pipe_resource_reference(&dst->info.get_query_result_resource.resource, NULL);
+      break;
+   case CALL_TRANSFER_MAP:
+      pipe_resource_reference(&dst->info.transfer_map.transfer.resource, NULL);
+      break;
+   case CALL_TRANSFER_FLUSH_REGION:
+      pipe_resource_reference(&dst->info.transfer_flush_region.transfer.resource, NULL);
+      break;
+   case CALL_TRANSFER_UNMAP:
+      pipe_resource_reference(&dst->info.transfer_unmap.transfer.resource, NULL);
+      break;
+   case CALL_BUFFER_SUBDATA:
+      pipe_resource_reference(&dst->info.buffer_subdata.resource, NULL);
+      break;
+   case CALL_TEXTURE_SUBDATA:
+      pipe_resource_reference(&dst->info.texture_subdata.resource, NULL);
       break;
    }
 }
@@ -1392,6 +1472,155 @@ dd_context_clear_texture(struct pipe_context *_pipe,
    dd_after_draw(dctx, record);
 }
 
+/********************************************************************
+ * transfer
+ */
+
+static void *
+dd_context_transfer_map(struct pipe_context *_pipe,
+                        struct pipe_resource *resource, unsigned level,
+                        unsigned usage, const struct pipe_box *box,
+                        struct pipe_transfer **transfer)
+{
+   struct dd_context *dctx = dd_context(_pipe);
+   struct pipe_context *pipe = dctx->pipe;
+   struct dd_draw_record *record =
+      dd_screen(dctx->base.screen)->transfers ? dd_create_record(dctx) : NULL;
+
+   if (record) {
+      record->call.type = CALL_TRANSFER_MAP;
+
+      dd_before_draw(dctx, record);
+   }
+   void *ptr = pipe->transfer_map(pipe, resource, level, usage, box, transfer);
+   if (record) {
+      record->call.info.transfer_map.transfer_ptr = *transfer;
+      record->call.info.transfer_map.ptr = ptr;
+      if (*transfer) {
+         record->call.info.transfer_map.transfer = **transfer;
+         record->call.info.transfer_map.transfer.resource = NULL;
+         pipe_resource_reference(&record->call.info.transfer_map.transfer.resource,
+                                 (*transfer)->resource);
+      } else {
+         memset(&record->call.info.transfer_map.transfer, 0, sizeof(struct pipe_transfer));
+      }
+
+      dd_after_draw(dctx, record);
+   }
+   return ptr;
+}
+
+static void
+dd_context_transfer_flush_region(struct pipe_context *_pipe,
+                                 struct pipe_transfer *transfer,
+                                 const struct pipe_box *box)
+{
+   struct dd_context *dctx = dd_context(_pipe);
+   struct pipe_context *pipe = dctx->pipe;
+   struct dd_draw_record *record =
+      dd_screen(dctx->base.screen)->transfers ? dd_create_record(dctx) : NULL;
+
+   if (record) {
+      record->call.type = CALL_TRANSFER_FLUSH_REGION;
+      record->call.info.transfer_flush_region.transfer_ptr = transfer;
+      record->call.info.transfer_flush_region.box = *box;
+      record->call.info.transfer_flush_region.transfer = *transfer;
+      record->call.info.transfer_flush_region.transfer.resource = NULL;
+      pipe_resource_reference(
+            &record->call.info.transfer_flush_region.transfer.resource,
+            transfer->resource);
+
+      dd_before_draw(dctx, record);
+   }
+   pipe->transfer_flush_region(pipe, transfer, box);
+   if (record)
+      dd_after_draw(dctx, record);
+}
+
+static void
+dd_context_transfer_unmap(struct pipe_context *_pipe,
+                          struct pipe_transfer *transfer)
+{
+   struct dd_context *dctx = dd_context(_pipe);
+   struct pipe_context *pipe = dctx->pipe;
+   struct dd_draw_record *record =
+      dd_screen(dctx->base.screen)->transfers ? dd_create_record(dctx) : NULL;
+
+   if (record) {
+      record->call.type = CALL_TRANSFER_UNMAP;
+      record->call.info.transfer_unmap.transfer_ptr = transfer;
+      record->call.info.transfer_unmap.transfer = *transfer;
+      record->call.info.transfer_unmap.transfer.resource = NULL;
+      pipe_resource_reference(
+            &record->call.info.transfer_unmap.transfer.resource,
+            transfer->resource);
+
+      dd_before_draw(dctx, record);
+   }
+   pipe->transfer_unmap(pipe, transfer);
+   if (record)
+      dd_after_draw(dctx, record);
+}
+
+static void
+dd_context_buffer_subdata(struct pipe_context *_pipe,
+                          struct pipe_resource *resource,
+                          unsigned usage, unsigned offset,
+                          unsigned size, const void *data)
+{
+   struct dd_context *dctx = dd_context(_pipe);
+   struct pipe_context *pipe = dctx->pipe;
+   struct dd_draw_record *record =
+      dd_screen(dctx->base.screen)->transfers ? dd_create_record(dctx) : NULL;
+
+   if (record) {
+      record->call.type = CALL_BUFFER_SUBDATA;
+      record->call.info.buffer_subdata.resource = NULL;
+      pipe_resource_reference(&record->call.info.buffer_subdata.resource, resource);
+      record->call.info.buffer_subdata.usage = usage;
+      record->call.info.buffer_subdata.offset = offset;
+      record->call.info.buffer_subdata.size = size;
+      record->call.info.buffer_subdata.data = data;
+
+      dd_before_draw(dctx, record);
+   }
+   pipe->buffer_subdata(pipe, resource, usage, offset, size, data);
+   if (record)
+      dd_after_draw(dctx, record);
+}
+
+static void
+dd_context_texture_subdata(struct pipe_context *_pipe,
+                           struct pipe_resource *resource,
+                           unsigned level, unsigned usage,
+                           const struct pipe_box *box,
+                           const void *data, unsigned stride,
+                           unsigned layer_stride)
+{
+   struct dd_context *dctx = dd_context(_pipe);
+   struct pipe_context *pipe = dctx->pipe;
+   struct dd_draw_record *record =
+      dd_screen(dctx->base.screen)->transfers ? dd_create_record(dctx) : NULL;
+
+   if (record) {
+      record->call.type = CALL_TEXTURE_SUBDATA;
+      record->call.info.texture_subdata.resource = NULL;
+      pipe_resource_reference(&record->call.info.texture_subdata.resource, resource);
+      record->call.info.texture_subdata.level = level;
+      record->call.info.texture_subdata.usage = usage;
+      record->call.info.texture_subdata.box = *box;
+      record->call.info.texture_subdata.data = data;
+      record->call.info.texture_subdata.stride = stride;
+      record->call.info.texture_subdata.layer_stride = layer_stride;
+
+      dd_before_draw(dctx, record);
+   }
+   pipe->texture_subdata(pipe, resource, level, usage, box, data,
+                         stride, layer_stride);
+   if (record)
+      dd_after_draw(dctx, record);
+}
+
 void
 dd_init_draw_functions(struct dd_context *dctx)
 {
@@ -1408,4 +1637,9 @@ dd_init_draw_functions(struct dd_context *dctx)
    CTX_INIT(flush_resource);
    CTX_INIT(generate_mipmap);
    CTX_INIT(get_query_result_resource);
+   CTX_INIT(transfer_map);
+   CTX_INIT(transfer_flush_region);
+   CTX_INIT(transfer_unmap);
+   CTX_INIT(buffer_subdata);
+   CTX_INIT(texture_subdata);
 }
