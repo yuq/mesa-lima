@@ -102,6 +102,9 @@ util_dump_query_type(FILE *stream, unsigned value);
 void
 util_dump_query_value_type(FILE *stream, unsigned value);
 
+void
+util_dump_transfer_usage(FILE *stream, unsigned value);
+
 /*
  * p_state.h, through a FILE
  */
