@@ -1051,6 +1051,11 @@ _mesa_get_fallback_texture(struct gl_context *ctx, gl_texture_index tex)
       assert(texObj->_MipmapComplete);
 
       ctx->Shared->FallbackTex[tex] = texObj;
+
+      /* Complete the driver's operation in case another context will also
+       * use the same fallback texture. */
+      if (ctx->Driver.Finish)
+         ctx->Driver.Finish(ctx);
    }
    return ctx->Shared->FallbackTex[tex];
 }
