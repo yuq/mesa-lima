@@ -6166,8 +6166,8 @@ write_tess_factors(struct nir_to_llvm_context *ctx)
 					    stride - 4, byteoffset, tf_base,
 					    16 + tf_offset, 1, 0, true, false);
 
-	//TODO store to offchip for TES to read - only if TES reads them
-	if (1) {
+	//store to offchip for TES to read - only if TES reads them
+	if (ctx->options->key.tcs.tes_reads_tess_factors) {
 		LLVMValueRef inner_vec, outer_vec, tf_outer_offset;
 		LLVMValueRef tf_inner_offset;
 		unsigned param_outer, param_inner;
