@@ -397,8 +397,11 @@ static struct pipe_context *si_pipe_create_context(struct pipe_screen *screen,
 	if (sscreen->b.debug_flags & DBG_ALL_SHADERS)
 		return ctx;
 
+	/* Use asynchronous flushes only on amdgpu, since the radeon
+	 * implementation for fence_server_sync is incomplete. */
 	return threaded_context_create(ctx, &sscreen->b.pool_transfers,
 				       si_replace_buffer_storage,
+				       sscreen->b.info.drm_major >= 3 ? si_create_fence : NULL,
 				       &((struct si_context*)ctx)->b.tc);
 }
 

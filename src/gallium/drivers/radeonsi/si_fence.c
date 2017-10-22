@@ -26,6 +26,7 @@
 
 #include "util/os_time.h"
 #include "util/u_memory.h"
+#include "util/u_queue.h"
 
 #include "si_pipe.h"
 
@@ -33,6 +34,8 @@ struct si_multi_fence {
 	struct pipe_reference reference;
 	struct pipe_fence_handle *gfx;
 	struct pipe_fence_handle *sdma;
+	struct tc_unflushed_batch_token *tc_token;
+	struct util_queue_fence ready;
 
 	/* If the context wasn't flushed at fence creation, this is non-NULL. */
 	struct {
@@ -62,9 +65,35 @@ static void si_fence_reference(struct pipe_screen *screen,
 	if (pipe_reference(&(*rdst)->reference, &rsrc->reference)) {
 		ws->fence_reference(&(*rdst)->gfx, NULL);
 		ws->fence_reference(&(*rdst)->sdma, NULL);
+		tc_unflushed_batch_token_reference(&(*rdst)->tc_token, NULL);
 		FREE(*rdst);
 	}
         *rdst = rsrc;
+}
+
+static struct si_multi_fence *si_create_multi_fence()
+{
+	struct si_multi_fence *fence = CALLOC_STRUCT(si_multi_fence);
+	if (!fence)
+		return NULL;
+
+	pipe_reference_init(&fence->reference, 1);
+	util_queue_fence_init(&fence->ready);
+
+	return fence;
+}
+
+struct pipe_fence_handle *si_create_fence(struct pipe_context *ctx,
+					  struct tc_unflushed_batch_token *tc_token)
+{
+	struct si_multi_fence *fence = si_create_multi_fence();
+	if (!fence)
+		return NULL;
+
+	util_queue_fence_reset(&fence->ready);
+	tc_unflushed_batch_token_reference(&fence->tc_token, tc_token);
+
+	return (struct pipe_fence_handle *)fence;
 }
 
 static void si_fence_server_sync(struct pipe_context *ctx,
@@ -73,21 +102,11 @@ static void si_fence_server_sync(struct pipe_context *ctx,
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct si_multi_fence *rfence = (struct si_multi_fence *)fence;
 
-	/* Only amdgpu needs to handle fence dependencies (for fence imports).
-	 * radeon synchronizes all rings by default and will not implement
-	 * fence imports.
-	 */
-	if (rctx->screen->info.drm_major == 2)
-		return;
+	util_queue_fence_wait(&rfence->ready);
 
-	/* Only imported fences need to be handled by fence_server_sync,
-	 * because the winsys handles synchronizations automatically for BOs
-	 * within the process.
-	 *
-	 * Simply skip unflushed fences here, and the winsys will drop no-op
-	 * dependencies (i.e. dependencies within the same ring).
-	 */
-	if (rfence->gfx_unflushed.ctx)
+	/* Unflushed fences from the same context are no-ops. */
+	if (rfence->gfx_unflushed.ctx &&
+	    rfence->gfx_unflushed.ctx == rctx)
 		return;
 
 	/* All unflushed commands will not start execution before
@@ -113,6 +132,30 @@ static boolean si_fence_finish(struct pipe_screen *screen,
 
 	ctx = threaded_context_unwrap_sync(ctx);
 	rctx = ctx ? (struct r600_common_context*)ctx : NULL;
+
+	if (!util_queue_fence_is_signalled(&rfence->ready)) {
+		if (!timeout)
+			return false;
+
+		if (rfence->tc_token) {
+			/* Ensure that si_flush_from_st will be called for
+			 * this fence, but only if we're in the API thread
+			 * where the context is current.
+			 *
+			 * Note that the batch containing the flush may already
+			 * be in flight in the driver thread, so the fence
+			 * may not be ready yet when this call returns.
+			 */
+			threaded_context_flush(ctx, rfence->tc_token);
+		}
+
+		if (timeout == PIPE_TIMEOUT_INFINITE) {
+			util_queue_fence_wait(&rfence->ready);
+		} else {
+			if (!util_queue_fence_wait_timeout(&rfence->ready, abs_timeout))
+				return false;
+		}
+	}
 
 	if (rfence->sdma) {
 		if (!rws->fence_wait(rws, rfence->sdma, timeout))
@@ -160,11 +203,10 @@ static void si_create_fence_fd(struct pipe_context *ctx,
 	if (!rscreen->info.has_sync_file)
 		return;
 
-	rfence = CALLOC_STRUCT(si_multi_fence);
+	rfence = si_create_multi_fence();
 	if (!rfence)
 		return;
 
-	pipe_reference_init(&rfence->reference, 1);
 	rfence->gfx = ws->fence_import_sync_file(ws, fd);
 	if (!rfence->gfx) {
 		FREE(rfence);
@@ -184,6 +226,8 @@ static int si_fence_get_fd(struct pipe_screen *screen,
 
 	if (!rscreen->info.has_sync_file)
 		return -1;
+
+	util_queue_fence_wait(&rfence->ready);
 
 	/* Deferred fences aren't supported. */
 	assert(!rfence->gfx_unflushed.ctx);
@@ -260,15 +304,23 @@ static void si_flush_from_st(struct pipe_context *ctx,
 
 	/* Both engines can signal out of order, so we need to keep both fences. */
 	if (fence) {
-		struct si_multi_fence *multi_fence =
-				CALLOC_STRUCT(si_multi_fence);
-		if (!multi_fence) {
-			ws->fence_reference(&sdma_fence, NULL);
-			ws->fence_reference(&gfx_fence, NULL);
-			goto finish;
+		struct si_multi_fence *multi_fence;
+
+		if (flags & TC_FLUSH_ASYNC) {
+			multi_fence = (struct si_multi_fence *)*fence;
+			assert(multi_fence);
+		} else {
+			multi_fence = si_create_multi_fence();
+			if (!multi_fence) {
+				ws->fence_reference(&sdma_fence, NULL);
+				ws->fence_reference(&gfx_fence, NULL);
+				goto finish;
+			}
+
+			screen->fence_reference(screen, fence, NULL);
+			*fence = (struct pipe_fence_handle*)multi_fence;
 		}
 
-		multi_fence->reference.count = 1;
 		/* If both fences are NULL, fence_finish will always return true. */
 		multi_fence->gfx = gfx_fence;
 		multi_fence->sdma = sdma_fence;
@@ -278,8 +330,10 @@ static void si_flush_from_st(struct pipe_context *ctx,
 			multi_fence->gfx_unflushed.ib_index = rctx->num_gfx_cs_flushes;
 		}
 
-		screen->fence_reference(screen, fence, NULL);
-		*fence = (struct pipe_fence_handle*)multi_fence;
+		if (flags & TC_FLUSH_ASYNC) {
+			util_queue_fence_signal(&multi_fence->ready);
+			tc_unflushed_batch_token_reference(&multi_fence->tc_token, NULL);
+		}
 	}
 finish:
 	if (!(flags & PIPE_FLUSH_DEFERRED)) {

@@ -1,3 +1,4 @@
+CALL(flush)
 CALL(destroy_query)
 CALL(begin_query)
 CALL(end_query)
