@@ -328,6 +328,11 @@ tc_create_batch_query(struct pipe_context *_pipe, unsigned num_queries,
 static void
 tc_call_destroy_query(struct pipe_context *pipe, union tc_payload *payload)
 {
+   struct threaded_query *tq = threaded_query(payload->query);
+
+   if (tq->head_unflushed.next)
+      LIST_DEL(&tq->head_unflushed);
+
    pipe->destroy_query(pipe, payload->query);
 }
 
@@ -335,10 +340,6 @@ static void
 tc_destroy_query(struct pipe_context *_pipe, struct pipe_query *query)
 {
    struct threaded_context *tc = threaded_context(_pipe);
-   struct threaded_query *tq = threaded_query(query);
-
-   if (tq->head_unflushed.next)
-      LIST_DEL(&tq->head_unflushed);
 
    tc_add_small_call(tc, TC_CALL_destroy_query)->query = query;
 }
@@ -359,10 +360,21 @@ tc_begin_query(struct pipe_context *_pipe, struct pipe_query *query)
    return true; /* we don't care about the return value for this call */
 }
 
+struct tc_end_query_payload {
+   struct threaded_context *tc;
+   struct pipe_query *query;
+};
+
 static void
 tc_call_end_query(struct pipe_context *pipe, union tc_payload *payload)
 {
-   pipe->end_query(pipe, payload->query);
+   struct tc_end_query_payload *p = (struct tc_end_query_payload *)payload;
+   struct threaded_query *tq = threaded_query(p->query);
+
+   if (!tq->head_unflushed.next)
+      LIST_ADD(&tq->head_unflushed, &p->tc->unflushed_queries);
+
+   pipe->end_query(pipe, p->query);
 }
 
 static bool
@@ -370,13 +382,15 @@ tc_end_query(struct pipe_context *_pipe, struct pipe_query *query)
 {
    struct threaded_context *tc = threaded_context(_pipe);
    struct threaded_query *tq = threaded_query(query);
-   union tc_payload *payload = tc_add_small_call(tc, TC_CALL_end_query);
+   struct tc_end_query_payload *payload =
+      tc_add_struct_typed_call(tc, TC_CALL_end_query, tc_end_query_payload);
 
+   tc_add_small_call(tc, TC_CALL_end_query);
+
+   payload->tc = tc;
    payload->query = query;
 
    tq->flushed = false;
-   if (!tq->head_unflushed.next)
-      LIST_ADD(&tq->head_unflushed, &tc->unflushed_queries);
 
    return true; /* we don't care about the return value for this call */
 }
@@ -397,8 +411,10 @@ tc_get_query_result(struct pipe_context *_pipe,
 
    if (success) {
       tq->flushed = true;
-      if (tq->head_unflushed.next)
+      if (tq->head_unflushed.next) {
+         /* This is safe because it can only happen after we sync'd. */
          LIST_DEL(&tq->head_unflushed);
+      }
    }
    return success;
 }
@@ -1832,9 +1848,25 @@ tc_create_video_buffer(struct pipe_context *_pipe,
  */
 
 struct tc_flush_payload {
+   struct threaded_context *tc;
    struct pipe_fence_handle *fence;
    unsigned flags;
 };
+
+static void
+tc_flush_queries(struct threaded_context *tc)
+{
+   struct threaded_query *tq, *tmp;
+   LIST_FOR_EACH_ENTRY_SAFE(tq, tmp, &tc->unflushed_queries, head_unflushed) {
+      LIST_DEL(&tq->head_unflushed);
+
+      /* Memory release semantics: due to a possible race with
+       * tc_get_query_result, we must ensure that the linked list changes
+       * are visible before setting tq->flushed.
+       */
+      p_atomic_set(&tq->flushed, true);
+   }
+}
 
 static void
 tc_call_flush(struct pipe_context *pipe, union tc_payload *payload)
@@ -1844,6 +1876,9 @@ tc_call_flush(struct pipe_context *pipe, union tc_payload *payload)
 
    pipe->flush(pipe, p->fence ? &p->fence : NULL, p->flags);
    screen->fence_reference(screen, &p->fence, NULL);
+
+   if (!(p->flags & PIPE_FLUSH_DEFERRED))
+      tc_flush_queries(p->tc);
 }
 
 static void
@@ -1853,7 +1888,6 @@ tc_flush(struct pipe_context *_pipe, struct pipe_fence_handle **fence,
    struct threaded_context *tc = threaded_context(_pipe);
    struct pipe_context *pipe = tc->pipe;
    struct pipe_screen *screen = pipe->screen;
-   struct threaded_query *tq, *tmp;
    bool async = flags & PIPE_FLUSH_DEFERRED;
 
    if (flags & PIPE_FLUSH_ASYNC) {
@@ -1889,6 +1923,7 @@ tc_flush(struct pipe_context *_pipe, struct pipe_fence_handle **fence,
 
       struct tc_flush_payload *p =
          tc_add_struct_typed_call(tc, TC_CALL_flush, tc_flush_payload);
+      p->tc = tc;
       p->fence = fence ? *fence : NULL;
       p->flags = flags | TC_FLUSH_ASYNC;
 
@@ -1898,15 +1933,11 @@ tc_flush(struct pipe_context *_pipe, struct pipe_fence_handle **fence,
    }
 
 out_of_memory:
-   if (!(flags & PIPE_FLUSH_DEFERRED)) {
-      LIST_FOR_EACH_ENTRY_SAFE(tq, tmp, &tc->unflushed_queries, head_unflushed) {
-         tq->flushed = true;
-         LIST_DEL(&tq->head_unflushed);
-      }
-   }
-
    tc_sync_msg(tc, flags & PIPE_FLUSH_END_OF_FRAME ? "end of frame" :
                    flags & PIPE_FLUSH_DEFERRED ? "deferred fence" : "normal");
+
+   if (!(flags & PIPE_FLUSH_DEFERRED))
+      tc_flush_queries(tc);
    pipe->flush(pipe, fence, flags);
 }
 
