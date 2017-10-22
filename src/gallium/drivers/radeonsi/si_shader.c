@@ -2015,14 +2015,21 @@ static LLVMValueRef fetch_constant(
 		 * code reducing SIMD wave occupancy from 8 to 2 in many cases.
 		 *
 		 * Using s_buffer_load_dword (x1) seems to be the best option right now.
+		 *
+		 * LLVM 5.0 on SI doesn't insert a required s_nop between SALU setting
+		 * a descriptor and s_buffer_load_dword using it, so we can't expand
+		 * the pointer into a full descriptor like below. We have to use
+		 * s_load_dword instead. The only case when LLVM 5.0 would select
+		 * s_buffer_load_dword (that we have to prevent) is when we use use
+		 * a literal offset where we don't need bounds checking.
 		 */
-#if 0 /* keep this codepath disabled */
-		if (!reg->Register.Indirect) {
+		if (ctx->screen->b.chip_class == SI &&
+                    HAVE_LLVM < 0x0600 &&
+                    !reg->Register.Indirect) {
 			addr = LLVMBuildLShr(ctx->ac.builder, addr, LLVMConstInt(ctx->i32, 2, 0), "");
 			LLVMValueRef result = ac_build_load_invariant(&ctx->ac, ptr, addr);
 			return bitcast(bld_base, type, result);
 		}
-#endif
 
 		/* Do the bounds checking with a descriptor, because
 		 * doing computation and manual bounds checking of 64-bit
