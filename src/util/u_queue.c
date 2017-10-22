@@ -25,7 +25,9 @@
  */
 
 #include "u_queue.h"
+
 #include "util/u_string.h"
+#include "util/u_thread.h"
 
 static void util_queue_killall_and_wait(struct util_queue *queue);
 
@@ -427,6 +429,39 @@ util_queue_drop_job(struct util_queue *queue, struct util_queue_fence *fence)
       util_queue_fence_signal(fence);
    else
       util_queue_fence_wait(fence);
+}
+
+static void
+util_queue_finish_execute(void *data, int num_thread)
+{
+   util_barrier *barrier = data;
+   util_barrier_wait(barrier);
+}
+
+/**
+ * Wait until all previously added jobs have completed.
+ */
+void
+util_queue_finish(struct util_queue *queue)
+{
+   util_barrier barrier;
+   struct util_queue_fence *fences = malloc(queue->num_threads * sizeof(*fences));
+
+   util_barrier_init(&barrier, queue->num_threads);
+
+   for (unsigned i = 0; i < queue->num_threads; ++i) {
+      util_queue_fence_init(&fences[i]);
+      util_queue_add_job(queue, &barrier, &fences[i], util_queue_finish_execute, NULL);
+   }
+
+   for (unsigned i = 0; i < queue->num_threads; ++i) {
+      util_queue_fence_wait(&fences[i]);
+      util_queue_fence_destroy(&fences[i]);
+   }
+
+   util_barrier_destroy(&barrier);
+
+   free(fences);
 }
 
 int64_t
