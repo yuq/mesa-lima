@@ -34,14 +34,12 @@ typedef enum {
 
    ppir_op_neg,
    ppir_op_add,
-   ppir_op_sub,
 
    ppir_op_ddx,
    ppir_op_ddy,
 
    ppir_op_mul,
    ppir_op_rcp,
-   ppir_op_div,
 
    ppir_op_sin_lut,
    ppir_op_cos_lut,
