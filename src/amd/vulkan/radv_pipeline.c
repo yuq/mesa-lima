@@ -1141,7 +1141,7 @@ radv_pipeline_init_dynamic_state(struct radv_pipeline *pipeline,
 }
 
 static struct ac_shader_variant_key
-radv_compute_vs_key(const VkGraphicsPipelineCreateInfo *pCreateInfo, bool as_es, bool as_ls)
+radv_compute_vs_key(const VkGraphicsPipelineCreateInfo *pCreateInfo)
 {
 	struct ac_shader_variant_key key;
 	const VkPipelineVertexInputStateCreateInfo *input_state =
@@ -1149,8 +1149,6 @@ radv_compute_vs_key(const VkGraphicsPipelineCreateInfo *pCreateInfo, bool as_es,
 
 	memset(&key, 0, sizeof(key));
 	key.vs.instance_rate_inputs = 0;
-	key.vs.as_es = as_es;
-	key.vs.as_ls = as_ls;
 
 	for (unsigned i = 0; i < input_state->vertexAttributeDescriptionCount; ++i) {
 		unsigned binding;
@@ -1818,6 +1816,15 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 			nir_print_shader(nir[i], stderr);
 	}
 
+	if (keys && nir[MESA_SHADER_TESS_CTRL])
+		keys[MESA_SHADER_VERTEX].vs.as_ls = true;
+	if (keys && nir[MESA_SHADER_GEOMETRY]) {
+		if (nir[MESA_SHADER_TESS_CTRL])
+			keys[MESA_SHADER_TESS_EVAL].tes.as_es = true;
+		else
+			keys[MESA_SHADER_VERTEX].vs.as_es = true;
+	}
+
 	if (nir[MESA_SHADER_FRAGMENT]) {
 		if (!pipeline->shaders[MESA_SHADER_FRAGMENT]) {
 			pipeline->shaders[MESA_SHADER_FRAGMENT] =
@@ -1944,28 +1951,19 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	memset(keys, 0, sizeof(keys));
 
 	if (pStages[MESA_SHADER_VERTEX]) {
-		bool as_es = false;
-		bool as_ls = false;
-		if (pStages[MESA_SHADER_TESS_CTRL])
-			as_ls = true;
-		else if (pStages[MESA_SHADER_GEOMETRY])
-			as_es = true;
-
-		keys[MESA_SHADER_VERTEX] = radv_compute_vs_key(pCreateInfo, as_es, as_ls);
+		keys[MESA_SHADER_VERTEX] = radv_compute_vs_key(pCreateInfo);
 		keys[MESA_SHADER_VERTEX].has_multiview_view_index = has_view_index;
 	}
 
 	if (pStages[MESA_SHADER_TESS_EVAL]) {
 		keys[MESA_SHADER_TESS_EVAL].has_multiview_view_index = has_view_index;
-		if (pStages[MESA_SHADER_GEOMETRY])
-			keys[MESA_SHADER_TESS_EVAL].tes.as_es = true;
 	}
 
 	if (pCreateInfo->pTessellationState)
 		keys[MESA_SHADER_TESS_CTRL].tcs.input_vertices = pCreateInfo->pTessellationState->patchControlPoints;
 
 	if (pStages[MESA_SHADER_GEOMETRY]) {
-		keys[MESA_SHADER_GEOMETRY] = radv_compute_vs_key(pCreateInfo, false, false);
+		keys[MESA_SHADER_GEOMETRY] = radv_compute_vs_key(pCreateInfo);
 		keys[MESA_SHADER_GEOMETRY].has_multiview_view_index = has_view_index;
 	}
 
