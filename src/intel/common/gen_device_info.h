@@ -60,6 +60,7 @@ struct gen_device_info
 
    bool has_pln;
    bool has_64bit_types;
+   bool has_integer_dword_mul;
    bool has_compr4;
    bool has_surface_tile_offset;
    bool supports_simd16_3src;

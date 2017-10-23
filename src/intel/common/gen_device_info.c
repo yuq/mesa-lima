@@ -382,6 +382,7 @@ static const struct gen_device_info gen_device_info_hsw_gt3 = {
    .has_llc = true,                                 \
    .has_sample_with_hiz = false,                    \
    .has_pln = true,                                 \
+   .has_integer_dword_mul = true,                   \
    .has_64bit_types = true,                         \
    .supports_simd16_3src = true,                    \
    .has_surface_tile_offset = true,                 \
@@ -464,6 +465,7 @@ static const struct gen_device_info gen_device_info_bdw_gt3 = {
 static const struct gen_device_info gen_device_info_chv = {
    GEN8_FEATURES, .is_cherryview = 1, .gt = 1,
    .has_llc = false,
+   .has_integer_dword_mul = false,
    .num_slices = 1,
    .num_subslices = { 2, },
    .num_thread_per_eu = 7,
@@ -514,6 +516,7 @@ static const struct gen_device_info gen_device_info_chv = {
 #define GEN9_LP_FEATURES                           \
    GEN8_FEATURES,                                  \
    GEN9_HW_INFO,                                   \
+   .has_integer_dword_mul = false,                 \
    .gt = 1,                                        \
    .has_llc = false,                               \
    .has_sample_with_hiz = true,                    \
@@ -818,6 +821,7 @@ static const struct gen_device_info gen_device_info_cnl_5x8 = {
    GEN8_FEATURES,                                     \
    GEN11_HW_INFO,                                     \
    .has_64bit_types = false,                          \
+   .has_integer_dword_mul = false,                    \
    .gt = _gt, .num_slices = _slices, .l3_banks = _l3, \
    .num_subslices = _subslices
 
