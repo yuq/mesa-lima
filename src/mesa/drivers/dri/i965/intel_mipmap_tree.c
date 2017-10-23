@@ -1669,9 +1669,7 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
                         struct intel_mipmap_tree *mt,
                         GLuint num_samples)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-
-   assert(devinfo->gen >= 7); /* MCS only used on Gen7+ */
+   assert(brw->screen->devinfo.gen >= 7); /* MCS only used on Gen7+ */
    assert(mt->mcs_buf == NULL);
    assert(mt->aux_usage == ISL_AUX_USAGE_MCS);
 
@@ -1996,13 +1994,11 @@ intel_miptree_check_color_resolve(const struct brw_context *brw,
                                   const struct intel_mipmap_tree *mt,
                                   unsigned level, unsigned layer)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-
    if (!mt->mcs_buf)
       return;
 
    /* Fast color clear is supported for mipmapped surfaces only on Gen8+. */
-   assert(devinfo->gen >= 8 ||
+   assert(brw->screen->devinfo.gen >= 8 ||
           (level == 0 && mt->first_level == 0 && mt->last_level == 0));
 
    /* Compression of arrayed msaa surfaces is supported. */
@@ -2010,7 +2006,7 @@ intel_miptree_check_color_resolve(const struct brw_context *brw,
       return;
 
    /* Fast color clear is supported for non-msaa arrays only on Gen8+. */
-   assert(devinfo->gen >= 8 ||
+   assert(brw->screen->devinfo.gen >= 8 ||
           (layer == 0 &&
            mt->surf.logical_level0_px.depth == 1 &&
            mt->surf.logical_level0_px.array_len == 1));

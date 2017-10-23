@@ -1200,9 +1200,7 @@ brw_store_register_mem64(struct brw_context *brw,
 void
 brw_load_register_imm32(struct brw_context *brw, uint32_t reg, uint32_t imm)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-
-   assert(devinfo->gen >= 6);
+   assert(brw->screen->devinfo.gen >= 6);
 
    BEGIN_BATCH(3);
    OUT_BATCH(MI_LOAD_REGISTER_IMM | (3 - 2));
@@ -1217,9 +1215,7 @@ brw_load_register_imm32(struct brw_context *brw, uint32_t reg, uint32_t imm)
 void
 brw_load_register_imm64(struct brw_context *brw, uint32_t reg, uint64_t imm)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-
-   assert(devinfo->gen >= 6);
+   assert(brw->screen->devinfo.gen >= 6);
 
    BEGIN_BATCH(5);
    OUT_BATCH(MI_LOAD_REGISTER_IMM | (5 - 2));
@@ -1236,9 +1232,7 @@ brw_load_register_imm64(struct brw_context *brw, uint32_t reg, uint64_t imm)
 void
 brw_load_register_reg(struct brw_context *brw, uint32_t src, uint32_t dest)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-
-   assert(devinfo->gen >= 8 || devinfo->is_haswell);
+   assert(brw->screen->devinfo.gen >= 8 || brw->screen->devinfo.is_haswell);
 
    BEGIN_BATCH(3);
    OUT_BATCH(MI_LOAD_REGISTER_REG | (3 - 2));
@@ -1253,9 +1247,7 @@ brw_load_register_reg(struct brw_context *brw, uint32_t src, uint32_t dest)
 void
 brw_load_register_reg64(struct brw_context *brw, uint32_t src, uint32_t dest)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-
-   assert(devinfo->gen >= 8 || devinfo->is_haswell);
+   assert(brw->screen->devinfo.gen >= 8 || brw->screen->devinfo.is_haswell);
 
    BEGIN_BATCH(6);
    OUT_BATCH(MI_LOAD_REGISTER_REG | (3 - 2));

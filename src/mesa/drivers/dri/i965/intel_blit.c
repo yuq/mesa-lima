@@ -101,9 +101,7 @@ set_blitter_tiling(struct brw_context *brw,
                    bool dst_y_tiled, bool src_y_tiled,
                    uint32_t *__map)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-
-   assert(devinfo->gen >= 6);
+   assert(brw->screen->devinfo.gen >= 6);
 
    /* Idle the blitter before we update how tiling is interpreted. */
    OUT_BATCH(MI_FLUSH_DW);

@@ -386,7 +386,6 @@ brw_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
 			     struct gl_transform_feedback_object *obj)
 {
    struct brw_context *brw = brw_context(ctx);
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const struct gl_program *prog;
    const struct gl_transform_feedback_info *linked_xfb_info;
    struct gl_transform_feedback_object *xfb_obj =
@@ -394,7 +393,7 @@ brw_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
    struct brw_transform_feedback_object *brw_obj =
       (struct brw_transform_feedback_object *) xfb_obj;
 
-   assert(devinfo->gen == 6);
+   assert(brw->screen->devinfo.gen == 6);
 
    if (ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY]) {
       /* BRW_NEW_GEOMETRY_PROGRAM */
