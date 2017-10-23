@@ -25,6 +25,7 @@
 
 #include <sys/errno.h>
 
+#include "main/blend.h"
 #include "main/context.h"
 #include "main/condrender.h"
 #include "main/samplerobj.h"
@@ -503,9 +504,13 @@ brw_predraw_resolve_framebuffer(struct brw_context *brw)
       if (irb == NULL || irb->mt == NULL)
          continue;
 
+      mesa_format mesa_format =
+         _mesa_get_render_format(ctx, intel_rb_format(irb));
+      enum isl_format isl_format = brw_isl_format_for_mesa_format(mesa_format);
+
       intel_miptree_prepare_render(brw, irb->mt, irb->mt_level,
                                    irb->mt_layer, irb->layer_count,
-                                   ctx->Color.sRGBEnabled,
+                                   isl_format,
                                    ctx->Color.BlendEnabled & (1 << i));
    }
 }
@@ -571,10 +576,14 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
       if (!irb)
          continue;
 
+      mesa_format mesa_format =
+         _mesa_get_render_format(ctx, intel_rb_format(irb));
+      enum isl_format isl_format = brw_isl_format_for_mesa_format(mesa_format);
+
       brw_render_cache_set_add_bo(brw, irb->mt->bo);
       intel_miptree_finish_render(brw, irb->mt, irb->mt_level,
                                   irb->mt_layer, irb->layer_count,
-                                  ctx->Color.sRGBEnabled,
+                                  isl_format,
                                   ctx->Color.BlendEnabled & (1 << i));
    }
 }
