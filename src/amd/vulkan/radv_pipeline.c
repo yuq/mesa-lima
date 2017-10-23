@@ -1766,6 +1766,13 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 						    stage ? stage->pName : "main", i,
 						    stage ? stage->pSpecializationInfo : NULL);
 		pipeline->active_stages |= mesa_to_vk_shader_stage(i);
+		/* We don't want to alter meta shaders IR directly so clone it
+		 * first.
+		 */
+		if (nir[i]->info.name) {
+			nir[i] = nir_shader_clone(NULL, nir[i]);
+		}
+
 	}
 
 	if (nir[MESA_SHADER_TESS_CTRL]) {
@@ -1863,7 +1870,7 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 
 	for (int i = 0; i < MESA_SHADER_STAGES; ++i) {
 		free(codes[i]);
-		if (modules[i] && !modules[i]->nir && !pipeline->device->trace_bo)
+		if (modules[i] && !pipeline->device->trace_bo)
 			ralloc_free(nir[i]);
 	}
 
