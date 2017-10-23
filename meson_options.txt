@@ -143,6 +143,12 @@ option(
   description : 'Build with valgrind support if possible'
 )
 option(
+  'libunwind',
+  type : 'boolean',
+  value : true,
+  description : 'Use libunwind for stack-traces if possible'
+)
+option(
   'build-tests',
   type : 'boolean',
   value : false,

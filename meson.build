@@ -37,6 +37,7 @@ pre_args = [
 with_vulkan_icd_dir = get_option('vulkan-icd-dir')
 with_tests = get_option('build-tests')
 with_valgrind = get_option('valgrind')
+with_libunwind = get_option('libunwind')
 with_asm = get_option('asm')
 with_llvm = get_option('llvm')
 if get_option('texture-float')
@@ -687,7 +688,7 @@ dep_selinux = []
 # TODO: llvm-prefix and llvm-shared-libs
 
 dep_unwind = dependency('libunwind', required : false)
-if dep_unwind.found()
+if dep_unwind.found() and with_libunwind
   pre_args += '-DHAVE_LIBUNWIND'
 endif
 
