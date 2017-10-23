@@ -6973,15 +6973,7 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
 
       struct gl_program *linked_prog = NULL;
       if (preferred_ir == PIPE_SHADER_IR_NIR) {
-         /* TODO only for GLSL VS/FS/CS for now: */
-         switch (shader->Stage) {
-         case MESA_SHADER_VERTEX:
-         case MESA_SHADER_FRAGMENT:
-         case MESA_SHADER_COMPUTE:
-            linked_prog = st_nir_get_mesa_program(ctx, prog, shader);
-         default:
-            break;
-         }
+         linked_prog = st_nir_get_mesa_program(ctx, prog, shader);
       } else {
          linked_prog = get_mesa_program_tgsi(ctx, prog, shader);
       }
