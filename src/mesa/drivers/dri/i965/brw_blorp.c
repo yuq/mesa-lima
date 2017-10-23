@@ -329,6 +329,8 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    intel_miptree_prepare_access(brw, src_mt, src_level, 1, src_layer, 1,
                                 src_aux_usage, src_clear_supported);
 
+   enum isl_format dst_isl_format =
+      brw_blorp_to_isl_format(brw, dst_format, true);
    enum isl_aux_usage dst_aux_usage =
       intel_miptree_render_aux_usage(brw, dst_mt, encode_srgb, false);
    const bool dst_clear_supported = dst_aux_usage != ISL_AUX_USAGE_NONE;
@@ -352,10 +354,9 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    struct blorp_batch batch;
    blorp_batch_init(&brw->blorp, &batch, brw, 0);
    blorp_blit(&batch, &src_surf, src_level, src_layer,
-              brw_blorp_to_isl_format(brw, src_format, false), src_isl_swizzle,
+              src_isl_format, src_isl_swizzle,
               &dst_surf, dst_level, dst_layer,
-              brw_blorp_to_isl_format(brw, dst_format, true),
-              ISL_SWIZZLE_IDENTITY,
+              dst_isl_format, ISL_SWIZZLE_IDENTITY,
               src_x0, src_y0, src_x1, src_y1,
               dst_x0, dst_y0, dst_x1, dst_y1,
               filter, mirror_x, mirror_y);
@@ -1158,6 +1159,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    mesa_format format = irb->Base.Base.Format;
    if (!encode_srgb && _mesa_get_format_color_encoding(format) == GL_SRGB)
       format = _mesa_get_srgb_format_linear(format);
+   enum isl_format isl_format = brw->mesa_to_isl_render_format[format];
 
    x0 = fb->_Xmin;
    x1 = fb->_Xmax;
@@ -1256,8 +1258,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 
       struct blorp_batch batch;
       blorp_batch_init(&brw->blorp, &batch, brw, 0);
-      blorp_fast_clear(&batch, &surf,
-                       brw->mesa_to_isl_render_format[format],
+      blorp_fast_clear(&batch, &surf, isl_format,
                        level, irb->mt_layer, num_layers,
                        x0, y0, x1, y1);
       blorp_batch_finish(&batch);
@@ -1290,9 +1291,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 
       struct blorp_batch batch;
       blorp_batch_init(&brw->blorp, &batch, brw, 0);
-      blorp_clear(&batch, &surf,
-                  brw->mesa_to_isl_render_format[format],
-                  ISL_SWIZZLE_IDENTITY,
+      blorp_clear(&batch, &surf, isl_format, ISL_SWIZZLE_IDENTITY,
                   level, irb->mt_layer, num_layers,
                   x0, y0, x1, y1,
                   clear_color, color_write_disable);
