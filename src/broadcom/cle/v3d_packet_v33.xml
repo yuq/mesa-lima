@@ -767,7 +767,7 @@
     <field name="Gather sample mode" size="1" start="4" type="bool"/>
     <field name="Fetch sample mode" size="1" start="3" type="bool"/>
 
-    <field name="Lookup Type" size="3" start="0" type="bool">
+    <field name="Lookup Type" size="3" start="0" type="uint">
       <value name="Texture 2D" value="0"/>
       <value name="Texture 2D array" value="1"/>
       <value name="Texture 3D" value="2"/>
