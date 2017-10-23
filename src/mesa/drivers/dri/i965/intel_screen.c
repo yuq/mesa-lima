@@ -130,7 +130,7 @@ static const __DRItexBufferExtension intelTexBufferExtension = {
 
    .setTexBuffer        = intelSetTexBuffer,
    .setTexBuffer2       = intelSetTexBuffer2,
-   .releaseTexBuffer    = NULL,
+   .releaseTexBuffer    = intelReleaseTexBuffer,
 };
 
 static void

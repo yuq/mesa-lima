@@ -2796,6 +2796,25 @@ intel_miptree_prepare_external(struct brw_context *brw,
                                 aux_usage, supports_fast_clear);
 }
 
+void
+intel_miptree_finish_external(struct brw_context *brw,
+                              struct intel_mipmap_tree *mt)
+{
+   if (!mt->mcs_buf)
+      return;
+
+   /* We don't know the actual aux state of the aux surface.  The previous
+    * owner could have given it to us in a number of different states.
+    * Because we don't know the aux state, we reset the aux state to the
+    * least common denominator of possible valid states.
+    */
+   enum isl_aux_state default_aux_state =
+      isl_drm_modifier_get_default_aux_state(mt->drm_modifier);
+   assert(mt->last_level == mt->first_level);
+   intel_miptree_set_aux_state(brw, mt, 0, 0, INTEL_REMAINING_LAYERS,
+                               default_aux_state);
+}
+
 /**
  * Make it possible to share the BO backing the given miptree with another
  * process or another miptree.

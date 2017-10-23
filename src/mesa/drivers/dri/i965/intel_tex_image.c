@@ -487,13 +487,74 @@ intelSetTexBuffer2(__DRIcontext *pDRICtx, GLint target,
       internal_format = GL_RGB;
    }
 
-   intel_miptree_make_shareable(brw, rb->mt);
+   intel_miptree_finish_external(brw, rb->mt);
 
    _mesa_lock_texture(&brw->ctx, texObj);
    texImage = _mesa_get_tex_image(ctx, texObj, target, 0);
    intel_set_texture_image_mt(brw, texImage, internal_format,
                               texFormat, rb->mt);
    _mesa_unlock_texture(&brw->ctx, texObj);
+}
+
+void
+intelReleaseTexBuffer(__DRIcontext *pDRICtx, GLint target,
+                      __DRIdrawable *dPriv)
+{
+   struct brw_context *brw = pDRICtx->driverPrivate;
+   struct gl_context *ctx = &brw->ctx;
+   struct gl_texture_object *tex_obj;
+   struct intel_texture_object *intel_tex;
+
+   tex_obj = _mesa_get_current_tex_object(ctx, target);
+   if (!tex_obj)
+      return;
+
+   _mesa_lock_texture(&brw->ctx, tex_obj);
+
+   intel_tex = intel_texture_object(tex_obj);
+   if (!intel_tex->mt) {
+      _mesa_unlock_texture(&brw->ctx, tex_obj);
+      return;
+   }
+
+   /* The intel_miptree_prepare_external below as well as the finish_external
+    * above in intelSetTexBuffer2 *should* do nothing.  The BindTexImage call
+    * from both GLX and EGL has TexImage2D and not TexSubImage2D semantics so
+    * the texture is not immutable.  This means that the user cannot create a
+    * texture view of the image with a different format.  Since the only three
+    * formats available when using BindTexImage are all UNORM, we can never
+    * end up with an sRGB format being used for texturing and so we shouldn't
+    * get any format-related resolves when texturing from it.
+    *
+    * While very unlikely, it is possible that the client could use the bound
+    * texture with GL_ARB_image_load_store.  In that case, we'll do a resolve
+    * but that's not actually a problem as it just means that we lose
+    * compression on this texture until the next time it's used as a render
+    * target.
+    *
+    * The only other way we could end up with an unexpected aux usage would be
+    * if we rendered to the image from the same context as we have it bound as
+    * a texture between BindTexImage and ReleaseTexImage.  However, the spec
+    * clearly calls this case out and says you shouldn't do that.  It doesn't
+    * explicitly prevent binding the texture to a framebuffer but it says the
+    * results of trying to render to it while bound are undefined.
+    *
+    * Just to keep everything safe and sane, we do a prepare_external but it
+    * should be a no-op in almost all cases.  On the off chance that someone
+    * ever triggers this, we should at least warn them.
+    */
+   if (intel_tex->mt->mcs_buf &&
+       intel_miptree_get_aux_state(intel_tex->mt, 0, 0) !=
+       isl_drm_modifier_get_default_aux_state(intel_tex->mt->drm_modifier)) {
+      _mesa_warning(ctx, "Aux state changed between BindTexImage and "
+                         "ReleaseTexImage.  Most likely someone tried to draw "
+                         "to the pixmap bound in BindTexImage or used it with "
+                         "image_load_store.");
+   }
+
+   intel_miptree_prepare_external(brw, intel_tex->mt);
+
+   _mesa_unlock_texture(&brw->ctx, tex_obj);
 }
 
 static GLboolean

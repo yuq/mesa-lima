@@ -675,6 +675,9 @@ intel_miptree_finish_depth(struct brw_context *brw,
 void
 intel_miptree_prepare_external(struct brw_context *brw,
                                struct intel_mipmap_tree *mt);
+void
+intel_miptree_finish_external(struct brw_context *brw,
+                              struct intel_mipmap_tree *mt);
 
 void
 intel_miptree_make_shareable(struct brw_context *brw,
