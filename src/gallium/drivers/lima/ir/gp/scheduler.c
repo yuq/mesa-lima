@@ -510,16 +510,20 @@ static void gpir_remove_created_node(gpir_block *block, gpir_node *created,
 
 static void gpir_remove_all_created_node(gpir_block *block, gpir_node *node)
 {
-   while (true) {
+   bool done = true;
+
+   while (done) {
+      done = false;
+
       gpir_node_foreach_succ(node, entry) {
          gpir_node *succ = gpir_node_from_entry(entry, succ);
 
          if (succ->index >= block->comp->save_index) {
             gpir_remove_created_node(block, succ, node);
-            continue;
+            done = true;
+            break;
          }
       }
-      break;
    }
 }
 
