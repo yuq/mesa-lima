@@ -381,7 +381,7 @@ intel_disable_rb_aux_buffer(struct brw_context *brw,
  * enabled depth texture, and flush the render cache for any dirty textures.
  */
 void
-brw_predraw_resolve_inputs(struct brw_context *brw)
+brw_predraw_resolve_inputs(struct brw_context *brw, bool rendering)
 {
    struct gl_context *ctx = &brw->ctx;
    struct intel_texture_object *tex_obj;
@@ -416,7 +416,7 @@ brw_predraw_resolve_inputs(struct brw_context *brw)
          num_layers = INTEL_REMAINING_LAYERS;
       }
 
-      const bool disable_aux =
+      const bool disable_aux = rendering &&
          intel_disable_rb_aux_buffer(brw, tex_obj->mt, min_level, num_levels,
                                      "for sampling");
 
@@ -678,7 +678,7 @@ brw_prepare_drawing(struct gl_context *ctx,
     * and finalizing textures but before setting up any hardware state for
     * this draw call.
     */
-   brw_predraw_resolve_inputs(brw);
+   brw_predraw_resolve_inputs(brw, true);
    brw_predraw_resolve_framebuffer(brw);
 
    /* Bind all inputs, derive varying and size information:
