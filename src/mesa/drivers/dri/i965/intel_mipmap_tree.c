@@ -1308,7 +1308,8 @@ intel_miptree_match_image(struct intel_mipmap_tree *mt,
    if (mt->etc_format != MESA_FORMAT_NONE)
       mt_format = mt->etc_format;
 
-   if (image->TexFormat != mt_format)
+   if (_mesa_get_srgb_format_linear(image->TexFormat) !=
+       _mesa_get_srgb_format_linear(mt_format))
       return false;
 
    intel_get_image_dims(image, &width, &height, &depth);
@@ -1547,7 +1548,8 @@ intel_miptree_copy_slice(struct brw_context *brw,
    assert(src_layer < get_num_phys_layers(&src_mt->surf,
                                           src_level - src_mt->first_level));
 
-   assert(src_mt->format == dst_mt->format);
+   assert(_mesa_get_srgb_format_linear(src_mt->format) ==
+          _mesa_get_srgb_format_linear(dst_mt->format));
 
    if (dst_mt->compressed) {
       unsigned int i, j;
