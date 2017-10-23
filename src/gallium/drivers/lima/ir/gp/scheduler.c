@@ -462,12 +462,8 @@ static void gpir_move_unsatistied_node(gpir_node *dst, gpir_node *src)
 
       gpir_dep_info *dep = gpir_dep_from_entry(entry);
       int max = succ->sched_instr + gpir_get_max_dist(dep);
-      if (max < src->sched_instr) {
-         dep->pred = dst;
-         _mesa_set_add_pre_hashed(dst->succs, entry->hash, dep);
-         _mesa_set_remove(src->succs, entry);
-         gpir_node_replace_child(succ, src, dst);
-      }
+      if (max < src->sched_instr)
+         gpir_node_replace_pred(entry, dst);
    }
 }
 
@@ -493,13 +489,7 @@ static void gpir_remove_created_node(gpir_block *block, gpir_node *created,
                                      gpir_node *node)
 {
    gpir_node_foreach_succ(created, entry) {
-      gpir_dep_info *dep = gpir_dep_from_entry(entry);
-      gpir_node *succ = gpir_node_from_entry(entry, succ);
-
-      dep->pred = node;
-      _mesa_set_add_pre_hashed(node->succs, entry->hash, dep);
-      _mesa_set_remove(created->succs, entry);
-      gpir_node_replace_child(succ, created, node);
+      gpir_node_replace_pred(entry, node);
    }
 
    if (created->sched_instr >= 0)
@@ -606,16 +596,11 @@ static bool gpir_insert_move_for_store_load(gpir_block *block, gpir_node *node)
             .is_child_dep = true,
             .is_offset = false,
          };
-         gpir_dep_info *dep = gpir_dep_from_entry(entry);
          int min = succ->sched_instr + gpir_get_min_dist(&tmp);
          int max = succ->sched_instr + gpir_get_max_dist(&tmp);
 
-         if (move->sched_instr >= min && move->sched_instr <= max) {
-            dep->pred = move;
-            _mesa_set_add_pre_hashed(move->succs, entry->hash, dep);
-            _mesa_set_remove(node->succs, entry);
-            gpir_node_replace_child(succ, node, move);
-         }
+         if (move->sched_instr >= min && move->sched_instr <= max)
+            gpir_node_replace_pred(entry, move);
       }
    }
 
@@ -779,14 +764,9 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int orig_end
          gpir_node *spill = get_spill_node(current);
          assert(spill);
          gpir_node_foreach_succ(current, entry) {
-            gpir_dep_info *dep = gpir_dep_from_entry(entry);
             gpir_node *succ = gpir_node_from_entry(entry, succ);
-
             if (succ == spill) {
-               dep->pred = reg_move;
-               _mesa_set_add_pre_hashed(reg_move->succs, entry->hash, dep);
-               _mesa_set_remove(current->succs, entry);
-               gpir_node_replace_child(succ, current, reg_move);
+               gpir_node_replace_pred(entry, reg_move);
                break;
             }
          }
