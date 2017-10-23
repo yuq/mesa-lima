@@ -260,6 +260,9 @@ struct st_common_program
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
    uint64_t affected_states; /**< ST_NEW_* flags to mark dirty when binding */
 
+  /* used when bypassing glsl_to_tgsi: */
+   struct gl_shader_program *shader_program;
+
    struct st_basic_variant *variants;
 
    /** SHA1 hash of linked tgsi shader program, used for on-disk cache */
