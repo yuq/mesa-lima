@@ -357,6 +357,17 @@ void gpir_node_replace_succ(gpir_node *dst, gpir_node *src)
    }
 }
 
+void gpir_node_replace_pred(struct set_entry *entry, gpir_node *new_pred)
+{
+   gpir_dep_info *dep = gpir_dep_from_entry(entry);
+   gpir_node *succ = dep->succ, *pred = dep->pred;
+
+   dep->pred = new_pred;
+   _mesa_set_add_pre_hashed(new_pred->succs, entry->hash, dep);
+   _mesa_set_remove(pred->succs, entry);
+   gpir_node_replace_child(succ, pred, new_pred);
+}
+
 void gpir_node_delete(gpir_node *node)
 {
    gpir_node_foreach_succ(node, entry)
