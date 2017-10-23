@@ -4652,14 +4652,14 @@ static void visit_tex(struct ac_nir_context *ctx, nir_tex_instr *instr)
 		LLVMValueRef z = ac_to_float(&ctx->ac,
 		                             llvm_extract_elem(&ctx->ac, comparator, 0));
 
-		/* TC-compatible HTILE promotes Z16 and Z24 to Z32_FLOAT,
+		/* TC-compatible HTILE on radeonsi promotes Z16 and Z24 to Z32_FLOAT,
 		 * so the depth comparison value isn't clamped for Z16 and
 		 * Z24 anymore. Do it manually here.
 		 *
 		 * It's unnecessary if the original texture format was
 		 * Z32_FLOAT, but we don't know that here.
 		 */
-		if (ctx->ac.chip_class == VI)
+		if (ctx->ac.chip_class == VI && ctx->abi->clamp_shadow_reference)
 			z = ac_build_clamp(&ctx->ac, z);
 
 		address[count++] = z;
@@ -6600,6 +6600,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	ctx.abi.emit_outputs = handle_shader_outputs_post;
 	ctx.abi.load_ssbo = radv_load_ssbo;
 	ctx.abi.load_sampler_desc = radv_get_sampler_desc;
+	ctx.abi.clamp_shadow_reference = false;
 
 	if (shader_count >= 2)
 		ac_init_exec_full_mask(&ctx.ac);
