@@ -245,29 +245,6 @@ int loader_get_user_preferred_fd(int default_fd, bool *different_device)
 #endif
 
 #if defined(HAVE_LIBDRM)
-static int
-dev_node_from_fd(int fd, unsigned int *maj, unsigned int *min)
-{
-   struct stat buf;
-
-   if (fstat(fd, &buf) < 0) {
-      log_(_LOADER_WARNING, "MESA-LOADER: failed to stat fd %d\n", fd);
-      return -1;
-   }
-
-   if (!S_ISCHR(buf.st_mode)) {
-      log_(_LOADER_WARNING, "MESA-LOADER: fd %d not a character device\n", fd);
-      return -1;
-   }
-
-   *maj = major(buf.st_rdev);
-   *min = minor(buf.st_rdev);
-
-   return 0;
-}
-#endif
-
-#if defined(HAVE_LIBDRM)
 
 static int
 drm_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
@@ -312,18 +289,7 @@ loader_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
 static char *
 drm_get_device_name_for_fd(int fd)
 {
-   unsigned int maj, min;
-   char buf[0x40];
-   int n;
-
-   if (dev_node_from_fd(fd, &maj, &min) < 0)
-      return NULL;
-
-   n = snprintf(buf, sizeof(buf), DRM_DEV_NAME, DRM_DIR_NAME, min);
-   if (n == -1 || n >= sizeof(buf))
-      return NULL;
-
-   return strdup(buf);
+   return drmGetDeviceNameFromFd2(fd);
 }
 #endif
 
