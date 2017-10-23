@@ -1604,8 +1604,7 @@ st_translate_geometry_program(struct st_context *st,
 struct st_basic_variant *
 st_get_basic_variant(struct st_context *st,
                      unsigned pipe_shader,
-                     struct pipe_shader_state *tgsi,
-                     struct st_basic_variant **variants)
+                     struct st_common_program *prog)
 {
    struct pipe_context *pipe = st->pipe;
    struct st_basic_variant *v;
@@ -1615,7 +1614,7 @@ st_get_basic_variant(struct st_context *st,
    key.st = st->has_shareable_shaders ? NULL : st;
 
    /* Search for existing variant */
-   for (v = *variants; v; v = v->next) {
+   for (v = prog->variants; v; v = v->next) {
       if (memcmp(&v->key, &key, sizeof(key)) == 0) {
          break;
       }
@@ -1628,13 +1627,13 @@ st_get_basic_variant(struct st_context *st,
          /* fill in new variant */
          switch (pipe_shader) {
          case PIPE_SHADER_TESS_CTRL:
-            v->driver_shader = pipe->create_tcs_state(pipe, tgsi);
+            v->driver_shader = pipe->create_tcs_state(pipe, &prog->tgsi);
             break;
          case PIPE_SHADER_TESS_EVAL:
-            v->driver_shader = pipe->create_tes_state(pipe, tgsi);
+            v->driver_shader = pipe->create_tes_state(pipe, &prog->tgsi);
             break;
          case PIPE_SHADER_GEOMETRY:
-            v->driver_shader = pipe->create_gs_state(pipe, tgsi);
+            v->driver_shader = pipe->create_gs_state(pipe, &prog->tgsi);
             break;
          default:
             assert(!"unhandled shader type");
@@ -1645,8 +1644,8 @@ st_get_basic_variant(struct st_context *st,
          v->key = key;
 
          /* insert into list */
-         v->next = *variants;
-         *variants = v;
+         v->next = prog->variants;
+         prog->variants = v;
       }
    }
 
@@ -2004,19 +2003,19 @@ st_precompile_shader_variant(struct st_context *st,
 
    case GL_TESS_CONTROL_PROGRAM_NV: {
       struct st_common_program *p = st_common_program(prog);
-      st_get_basic_variant(st, PIPE_SHADER_TESS_CTRL, &p->tgsi, &p->variants);
+      st_get_basic_variant(st, PIPE_SHADER_TESS_CTRL, p);
       break;
    }
 
    case GL_TESS_EVALUATION_PROGRAM_NV: {
       struct st_common_program *p = st_common_program(prog);
-      st_get_basic_variant(st, PIPE_SHADER_TESS_EVAL, &p->tgsi, &p->variants);
+      st_get_basic_variant(st, PIPE_SHADER_TESS_EVAL, p);
       break;
    }
 
    case GL_GEOMETRY_PROGRAM_NV: {
       struct st_common_program *p = st_common_program(prog);
-      st_get_basic_variant(st, PIPE_SHADER_GEOMETRY, &p->tgsi, &p->variants);
+      st_get_basic_variant(st, PIPE_SHADER_GEOMETRY, p);
       break;
    }
 

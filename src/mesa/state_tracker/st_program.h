@@ -384,8 +384,7 @@ st_get_cp_variant(struct st_context *st,
 extern struct st_basic_variant *
 st_get_basic_variant(struct st_context *st,
                      unsigned pipe_shader,
-                     struct pipe_shader_state *tgsi,
-                     struct st_basic_variant **variants);
+                     struct st_common_program *p);
 
 extern void
 st_release_vp_variants( struct st_context *st,
