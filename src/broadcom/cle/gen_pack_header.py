@@ -111,6 +111,9 @@ class Field(object):
         self.end = self.start + int(attrs["size"]) - 1
         self.type = attrs["type"]
 
+        if self.type == 'bool' and self.start != self.end:
+            print("#error Field {} has bool type but more than one bit of size".format(self.name));
+
         if "prefix" in attrs:
             self.prefix = safe_name(attrs["prefix"]).upper()
         else:
