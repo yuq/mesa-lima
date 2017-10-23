@@ -2,6 +2,7 @@
 #include "pipe/p_compiler.h"
 #include "util/u_network.h"
 #include "util/u_debug.h"
+#include "util/u_string.h"
 
 #include <stdio.h>
 #if defined(PIPE_SUBSYSTEM_WINDOWS_USER)
@@ -120,7 +121,7 @@ u_socket_connect(const char *hostname, uint16_t port)
    hints.ai_family = AF_UNSPEC; // AF_INET or AF_INET6 to force version
    hints.ai_socktype = SOCK_STREAM;
 
-   snprintf(portString, sizeof(portString), "%d", port);
+   util_snprintf(portString, sizeof(portString), "%d", port);
 
    r = getaddrinfo(hostname, portString, NULL, &addr);
    if (r != 0) {
