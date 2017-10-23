@@ -231,6 +231,8 @@ radv_create_shader_variants_from_pipeline_cache(struct radv_device *device,
 			p += entry->code_sizes[i];
 
 			entry->variants[i] = variant;
+		} else if (entry->code_sizes[i]) {
+			p += sizeof(struct cache_entry_variant_info) + entry->code_sizes[i];
 		}
 
 	}
