@@ -39,6 +39,7 @@
 #include "tilemgr.h"
 #include "tessellator.h"
 #include <limits>
+#include <iostream>
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Helper macro to generate a bitmask
@@ -770,6 +771,7 @@ void TransposeSOAtoAOS(uint8_t* pDst, uint8_t* pSrc, uint32_t numVerts, uint32_t
     }
 }
 
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief Implements GS stage.
 /// @param pDC - pointer to draw context.
@@ -1335,8 +1337,11 @@ static void TessellationStages(
 
                     SWR_ASSERT(pfnClipFunc);
 #if USE_SIMD16_FRONTEND
-                    tessPa.useAlternateOffset = false;
-                    pfnClipFunc(pDC, tessPa, workerId, prim_simd16, GenMask(numPrims), primID);
+
+                    {
+                        tessPa.useAlternateOffset = false;
+                        pfnClipFunc(pDC, tessPa, workerId, prim_simd16, GenMask(numPrims), primID);
+                    }
 #else
                     pfnClipFunc(pDC, tessPa, workerId, prim,
                         GenMask(tessPa.NumPrims()), _simd_set1_epi32(dsContext.PrimitiveID));
