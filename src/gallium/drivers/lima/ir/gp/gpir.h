@@ -283,6 +283,7 @@ gpir_dep_info *gpir_node_add_child(gpir_node *parent, gpir_node *child);
 gpir_dep_info *gpir_node_add_read_after_write_dep(gpir_node *read, gpir_node *write);
 void gpir_node_remove_entry(struct set_entry *entry);
 void gpir_node_replace_succ(gpir_node *dst, gpir_node *src);
+void gpir_node_replace_pred(struct set_entry *entry, gpir_node *new_pred);
 void gpir_node_merge_pred(gpir_node *dst, gpir_node *src);
 void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child, gpir_node *new_child);
 void gpir_node_delete(gpir_node *node);
