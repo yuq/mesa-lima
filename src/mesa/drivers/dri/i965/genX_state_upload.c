@@ -3138,12 +3138,11 @@ genX(upload_vs_push_constants)(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->vs.base;
 
    /* BRW_NEW_VERTEX_PROGRAM */
-   const struct brw_program *vp =
-      brw_program_const(brw->programs[MESA_SHADER_VERTEX]);
+   const struct gl_program *vp = brw->programs[MESA_SHADER_VERTEX];
    /* BRW_NEW_VS_PROG_DATA */
    const struct brw_stage_prog_data *prog_data = brw->vs.base.prog_data;
 
-   gen6_upload_push_constants(brw, &vp->program, prog_data, stage_state);
+   gen6_upload_push_constants(brw, vp, prog_data, stage_state);
 }
 
 static const struct brw_tracked_state genX(vs_push_constants) = {
@@ -3164,14 +3163,13 @@ genX(upload_gs_push_constants)(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->gs.base;
 
    /* BRW_NEW_GEOMETRY_PROGRAM */
-   const struct brw_program *gp =
-      brw_program_const(brw->programs[MESA_SHADER_GEOMETRY]);
+   const struct gl_program *gp = brw->programs[MESA_SHADER_GEOMETRY];
 
    if (gp) {
       /* BRW_NEW_GS_PROG_DATA */
       struct brw_stage_prog_data *prog_data = brw->gs.base.prog_data;
 
-      gen6_upload_push_constants(brw, &gp->program, prog_data, stage_state);
+      gen6_upload_push_constants(brw, gp, prog_data, stage_state);
    }
 }
 
@@ -3192,12 +3190,11 @@ genX(upload_wm_push_constants)(struct brw_context *brw)
 {
    struct brw_stage_state *stage_state = &brw->wm.base;
    /* BRW_NEW_FRAGMENT_PROGRAM */
-   const struct brw_program *fp =
-      brw_program_const(brw->programs[MESA_SHADER_FRAGMENT]);
+   const struct gl_program *fp = brw->programs[MESA_SHADER_FRAGMENT];
    /* BRW_NEW_FS_PROG_DATA */
    const struct brw_stage_prog_data *prog_data = brw->wm.base.prog_data;
 
-   gen6_upload_push_constants(brw, &fp->program, prog_data, stage_state);
+   gen6_upload_push_constants(brw, fp, prog_data, stage_state);
 }
 
 static const struct brw_tracked_state genX(wm_push_constants) = {
@@ -4028,13 +4025,12 @@ genX(upload_tes_push_constants)(struct brw_context *brw)
 {
    struct brw_stage_state *stage_state = &brw->tes.base;
    /* BRW_NEW_TESS_PROGRAMS */
-   const struct brw_program *tep =
-      brw_program_const(brw->programs[MESA_SHADER_TESS_EVAL]);
+   const struct gl_program *tep = brw->programs[MESA_SHADER_TESS_EVAL];
 
    if (tep) {
       /* BRW_NEW_TES_PROG_DATA */
       const struct brw_stage_prog_data *prog_data = brw->tes.base.prog_data;
-      gen6_upload_push_constants(brw, &tep->program, prog_data, stage_state);
+      gen6_upload_push_constants(brw, tep, prog_data, stage_state);
    }
 }
 
@@ -4054,15 +4050,14 @@ genX(upload_tcs_push_constants)(struct brw_context *brw)
 {
    struct brw_stage_state *stage_state = &brw->tcs.base;
    /* BRW_NEW_TESS_PROGRAMS */
-   const struct brw_program *tcp =
-      brw_program_const(brw->programs[MESA_SHADER_TESS_CTRL]);
+   const struct gl_program *tcp = brw->programs[MESA_SHADER_TESS_CTRL];
    bool active = brw->programs[MESA_SHADER_TESS_EVAL];
 
    if (active) {
       /* BRW_NEW_TCS_PROG_DATA */
       const struct brw_stage_prog_data *prog_data = brw->tcs.base.prog_data;
 
-      gen6_upload_push_constants(brw, &tcp->program, prog_data, stage_state);
+      gen6_upload_push_constants(brw, tcp, prog_data, stage_state);
    }
 }
 
@@ -4089,8 +4084,7 @@ genX(upload_cs_push_constants)(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->cs.base;
 
    /* BRW_NEW_COMPUTE_PROGRAM */
-   const struct brw_program *cp =
-      (struct brw_program *) brw->programs[MESA_SHADER_COMPUTE];
+   const struct gl_program *cp = brw->programs[MESA_SHADER_COMPUTE];
 
    if (cp) {
       /* BRW_NEW_CS_PROG_DATA */
@@ -4098,8 +4092,7 @@ genX(upload_cs_push_constants)(struct brw_context *brw)
          brw_cs_prog_data(brw->cs.base.prog_data);
 
       _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_COMPUTE);
-      brw_upload_cs_push_constants(brw, &cp->program, cs_prog_data,
-                                   stage_state);
+      brw_upload_cs_push_constants(brw, cp, cs_prog_data, stage_state);
    }
 }
 
