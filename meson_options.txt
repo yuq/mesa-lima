@@ -170,7 +170,7 @@ option(
   'osmesa',
   type : 'combo',
   value : 'none',
-  choices : ['none', 'classic'],
+  choices : ['none', 'classic', 'gallium'],
   description : 'Build OSmesa.'
 )
 option(

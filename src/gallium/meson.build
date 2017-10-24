@@ -66,6 +66,9 @@ if with_gallium_imx
   subdir('winsys/imx/drm')
 endif
 subdir('state_trackers/dri')
+if with_osmesa == 'gallium'
+  subdir('state_trackers/osmesa')
+endif
 # TODO: i915
 # TODO: SVGA
 # TODO: r300
@@ -77,9 +80,11 @@ subdir('state_trackers/dri')
 if with_dri and with_gallium
   subdir('targets/dri')
 endif
+if with_osmesa == 'gallium'
+  subdir('targets/osmesa')
+endif
 # TODO: xlib-glx
 # TODO: OMX
-# TODO: osmesa
 # TODO: VA
 # TODO: vdpau
 # TODO: xa
