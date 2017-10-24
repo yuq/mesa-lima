@@ -823,7 +823,7 @@ gl_priv_reqs = [
   'xcb-glx >= 1.8.1', 'libdrm >= 2.4.75',
 ]
 if dep_xf86vm != [] and dep_xf86vm.found()
-  gl_priv_reqs += 'xf86vm'
+  gl_priv_reqs += 'xxf86vm'
 endif
 if with_dri_platform == 'drm'
   gl_priv_reqs += 'xcb-dri2 >= 1.8'
