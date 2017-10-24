@@ -348,8 +348,7 @@ brw_initialize_context_constants(struct brw_context *brw)
          (_mesa_is_desktop_gl(ctx) &&
           ctx->Const.MaxComputeWorkGroupSize[0] >= 1024) ||
          (ctx->API == API_OPENGLES2 &&
-          ctx->Const.MaxComputeWorkGroupSize[0] >= 128) ||
-         _mesa_extension_override_enables.ARB_compute_shader,
+          ctx->Const.MaxComputeWorkGroupSize[0] >= 128),
    };
 
    unsigned num_stages = 0;
