@@ -107,7 +107,6 @@ vc5_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_OCCLUSION_QUERY:
         case PIPE_CAP_POINT_SPRITE:
         case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
-        case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
         case PIPE_CAP_ALLOW_MAPPED_BUFFERS_DURING_EXECUTION:
         case PIPE_CAP_COMPUTE:
         case PIPE_CAP_DRAW_INDIRECT:
@@ -246,6 +245,7 @@ vc5_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_MEMOBJ:
         case PIPE_CAP_LOAD_CONSTBUF:
         case PIPE_CAP_TILE_RASTER_ORDER:
+        case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
                 return 0;
 
                 /* Geometry shader output, unsupported. */
