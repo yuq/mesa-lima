@@ -465,9 +465,9 @@ bool gpir_codegen_prog(gpir_compiler *comp)
 
    int instr_index = 0;
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
+      gpir_instr *instrs = gpir_instr_array(&block->instrs);
       for (int i = gpir_instr_array_n(&block->instrs) - 1; i >= 0; i--) {
-         gpir_instr *instr = gpir_instr_array_e(&block->instrs, i);
-         gpir_codegen(code + instr_index, instr);
+         gpir_codegen(code + instr_index, instrs + i);
          instr_index++;
       }
    }
