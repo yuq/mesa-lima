@@ -526,6 +526,11 @@ vc5_resource_create_with_modifiers(struct pipe_screen *pscreen,
         if (tmpl->bind & (PIPE_BIND_LINEAR | PIPE_BIND_CURSOR))
                 should_tile = false;
 
+        /* 1D and 1D_ARRAY textures are always raster-order. */
+        if (tmpl->target == PIPE_TEXTURE_1D ||
+            tmpl->target == PIPE_TEXTURE_1D_ARRAY)
+                should_tile = false;
+
         /* Scanout BOs for simulator need to be linear for interaction with
          * i965.
          */
