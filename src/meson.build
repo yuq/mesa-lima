@@ -34,9 +34,11 @@ libglsl_util = static_library(
   build_by_default : false,
 )
 
-sha1_h = vcs_tag(
-  input : 'git_sha1.h.in',
+sha1_h = custom_target(
+  'git_sha1.h',
   output : 'git_sha1.h',
+  command : [prog_python2, git_sha1_gen_py, '--output', '@OUTPUT@'],
+  build_always : true, # commit sha1 can change without having touched these files
 )
 
 subdir('gtest')

@@ -843,4 +843,5 @@ endif
 pkg = import('pkgconfig')
 
 subdir('include')
+subdir('bin')
 subdir('src')
