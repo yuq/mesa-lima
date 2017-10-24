@@ -74,6 +74,7 @@ static int nir_to_gpir_opcodes[nir_num_opcodes] = {
    [nir_op_fadd] = gpir_op_add,
    [nir_op_fneg] = gpir_op_neg,
    [nir_op_frcp] = gpir_op_rcp,
+   [nir_op_frsq] = gpir_op_rsqrt,
 };
 
 static gpir_node *gpir_emit_alu(gpir_compiler *comp, nir_alu_instr *instr)
