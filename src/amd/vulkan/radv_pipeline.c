@@ -1703,11 +1703,47 @@ radv_link_shaders(struct radv_pipeline *pipeline, nir_shader **shaders)
 	}
 }
 
+
+static struct radv_pipeline_key
+radv_generate_graphics_pipeline_key(struct radv_pipeline *pipeline,
+                                    const VkGraphicsPipelineCreateInfo *pCreateInfo,
+                                    bool has_view_index)
+{
+	const VkPipelineVertexInputStateCreateInfo *input_state =
+	                                         pCreateInfo->pVertexInputState;
+	struct radv_pipeline_key key;
+	memset(&key, 0, sizeof(key));
+
+	key.has_multiview_view_index = has_view_index;
+
+	for (unsigned i = 0; i < input_state->vertexAttributeDescriptionCount; ++i) {
+		unsigned binding;
+		binding = input_state->pVertexAttributeDescriptions[i].binding;
+		if (input_state->pVertexBindingDescriptions[binding].inputRate)
+			key.instance_rate_inputs |= 1u << input_state->pVertexAttributeDescriptions[i].location;
+	}
+
+	if (pCreateInfo->pTessellationState)
+		key.tess_input_vertices = pCreateInfo->pTessellationState->patchControlPoints;
+
+
+	if (pCreateInfo->pMultisampleState &&
+	    pCreateInfo->pMultisampleState->rasterizationSamples > 1)
+		key.multisample = true;
+
+	key.col_format = pipeline->graphics.blend.spi_shader_col_format;
+	if (pipeline->device->physical_device->rad_info.chip_class < VI)
+		radv_pipeline_compute_get_int_clamp(pCreateInfo, &key.is_int8, &key.is_int10);
+
+	return key;
+}
+
 static
 void radv_create_shaders(struct radv_pipeline *pipeline,
                          struct radv_device *device,
                          struct radv_pipeline_cache *cache,
                          struct ac_shader_variant_key *keys,
+                         struct radv_pipeline_key key,
                          const VkPipelineShaderStageCreateInfo **pStages)
 {
 	struct radv_shader_module fs_m = {0};
@@ -1727,7 +1763,7 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 		}
 	}
 
-	radv_hash_shaders(hash, pStages, pipeline->layout, keys, get_hash_flags(device));
+	radv_hash_shaders(hash, pStages, pipeline->layout, &key, get_hash_flags(device));
 	memcpy(gs_copy_hash, hash, 20);
 	gs_copy_hash[0] ^= 1;
 
@@ -1975,7 +2011,9 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	if (pipeline->device->physical_device->rad_info.chip_class < VI)
 		radv_pipeline_compute_get_int_clamp(pCreateInfo, &keys[MESA_SHADER_FRAGMENT].fs.is_int8, &keys[MESA_SHADER_FRAGMENT].fs.is_int10);
 
-	radv_create_shaders(pipeline, device, cache, keys, pStages);
+	radv_create_shaders(pipeline, device, cache, keys, 
+	                    radv_generate_graphics_pipeline_key(pipeline, pCreateInfo, has_view_index),
+	                    pStages);
 
 	radv_pipeline_init_depth_stencil_state(pipeline, pCreateInfo, extra);
 	radv_pipeline_init_raster_state(pipeline, pCreateInfo);
@@ -2311,7 +2349,7 @@ static VkResult radv_compute_pipeline_create(
 	pipeline->layout = radv_pipeline_layout_from_handle(pCreateInfo->layout);
 
 	pStages[MESA_SHADER_COMPUTE] = &pCreateInfo->stage;
-	radv_create_shaders(pipeline, device, cache, NULL, pStages);
+	radv_create_shaders(pipeline, device, cache, NULL, (struct radv_pipeline_key) {0}, pStages);
 
 
 	pipeline->need_indirect_descriptor_sets |= pipeline->shaders[MESA_SHADER_COMPUTE]->info.need_indirect_descriptor_sets;
