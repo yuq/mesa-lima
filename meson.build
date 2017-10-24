@@ -745,7 +745,7 @@ dep_xcb_dri2 = []
 dep_xcb_dri3 = []
 dep_dri2proto = []
 dep_glproto = []
-dep_xf86vm = []
+dep_xxf86vm = []
 dep_xcb_dri3 = []
 dep_xcb_present = []
 dep_xcb_sync = []
@@ -758,7 +758,7 @@ if with_platform_x11
     dep_xdamage = dependency('xdamage', version : '>= 1.1')
     dep_xfixes = dependency('xfixes')
     dep_xcb_glx = dependency('xcb-glx', version : '>= 1.8.1')
-    dep_xf86vm = dependency('xxf86vm', required : false)
+    dep_xxf86vm = dependency('xxf86vm', required : false)
   endif
   if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
     dep_xcb = dependency('xcb')
@@ -822,7 +822,7 @@ gl_priv_reqs = [
   'x11', 'xext', 'xdamage >= 1.1', 'xfixes', 'x11-xcb', 'xcb',
   'xcb-glx >= 1.8.1', 'libdrm >= 2.4.75',
 ]
-if dep_xf86vm != [] and dep_xf86vm.found()
+if dep_xxf86vm != [] and dep_xxf86vm.found()
   gl_priv_reqs += 'xxf86vm'
 endif
 if with_dri_platform == 'drm'
