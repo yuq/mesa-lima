@@ -1810,6 +1810,14 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 
 	radv_link_shaders(pipeline, nir);
 
+	for (int i = 0; i < MESA_SHADER_STAGES; ++i) {
+		if (!(device->instance->debug_flags & RADV_DEBUG_DUMP_SHADERS))
+			continue;
+
+		if (modules[i])
+			nir_print_shader(nir[i], stderr);
+	}
+
 	if (nir[MESA_SHADER_FRAGMENT]) {
 		if (!pipeline->shaders[MESA_SHADER_FRAGMENT]) {
 			pipeline->shaders[MESA_SHADER_FRAGMENT] =
@@ -1894,13 +1902,8 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 
 	for (int i = 0; i < MESA_SHADER_STAGES; ++i) {
 		free(codes[i]);
-		if (modules[i]) {
-			if (device->instance->debug_flags & RADV_DEBUG_DUMP_SHADERS)
-				nir_print_shader(nir[i], stderr);
-
-			if (!pipeline->device->trace_bo)
-				ralloc_free(nir[i]);
-		}
+		if (modules[i] && !pipeline->device->trace_bo)
+			ralloc_free(nir[i]);
 	}
 
 	if (fs_m.nir)
