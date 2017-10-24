@@ -73,6 +73,7 @@ static int nir_to_gpir_opcodes[nir_num_opcodes] = {
    [nir_op_fmul] = gpir_op_mul,
    [nir_op_fadd] = gpir_op_add,
    [nir_op_fneg] = gpir_op_neg,
+   [nir_op_fmax] = gpir_op_max,
    [nir_op_frcp] = gpir_op_rcp,
    [nir_op_frsq] = gpir_op_rsqrt,
 };
