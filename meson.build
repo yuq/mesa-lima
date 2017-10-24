@@ -150,7 +150,7 @@ endif
 # TODO: other OSes
 with_dri_platform = 'drm'
 
-# TODO: android platform
+with_platform_android = false
 with_platform_wayland = false
 with_platform_x11 = false
 with_platform_drm = false
@@ -159,6 +159,7 @@ egl_native_platform = ''
 _platforms = get_option('platforms')
 if _platforms != ''
   _split = _platforms.split(',')
+  with_platform_android = _split.contains('android')
   with_platform_x11 = _split.contains('x11')
   with_platform_wayland = _split.contains('wayland')
   with_platform_drm = _split.contains('drm')
@@ -250,8 +251,8 @@ if _vulkan_drivers != ''
   with_intel_vk = _split.contains('intel')
   with_amd_vk = _split.contains('amd')
   with_any_vk = with_amd_vk or with_intel_vk
-  if not (with_platform_x11 or with_platform_wayland)
-    error('Vulkan requires at least one platform (x11, wayland)')
+  if not (with_platform_x11 or with_platform_wayland or with_platform_android)
+    error('Vulkan requires at least one platform (x11, wayland, android)')
   endif
 endif
 
@@ -327,6 +328,14 @@ if with_platform_drm
 endif
 if with_platform_surfaceless
   pre_args += '-DHAVE_SURFACELESS_PLATFORM'
+endif
+if with_platform_android
+  dep_android = [
+    dependency('cutils'),
+    dependency('hardware'),
+    dependency('sync'),
+  ]
+  pre_args += '-DHAVE_ANDROID_PLATFORM'
 endif
 
 prog_python2 = find_program('python2')

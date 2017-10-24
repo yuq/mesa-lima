@@ -129,7 +129,10 @@ if with_platform_wayland
     'wayland/wayland-egl', 'wayland/wayland-drm',
   )
 endif
-# TODO: android
+if with_platform_android
+  deps_for_egl += dep_android
+  files_egl += files('drivers/dri2/platform_android.c')
+endif
 
 # TODO: glvnd
 
