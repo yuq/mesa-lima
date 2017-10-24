@@ -265,9 +265,11 @@ static gpir_instr *gpir_instr_array_grow(struct util_dynarray *instrs, int pos)
    if (n <= pos) {
       int size = (pos + 1 - n) * sizeof(gpir_instr);
       util_dynarray_grow(instrs, size);
-      memset(gpir_instr_array_e(instrs, n), 0, size);
+
+      gpir_instr *ia = gpir_instr_array(instrs);
+      memset(ia + n, 0, size);
       for (int i = n; i <= pos; i++)
-         gpir_instr_init(gpir_instr_array_e(instrs, i));
+         gpir_instr_init(ia + i);
    }
 
    return gpir_instr_array_e(instrs, pos);
@@ -994,7 +996,7 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
 
    gpir_move_unsatistied_node(load, node);
 
-   gpir_instr *instrs = util_dynarray_begin(&block->instrs);
+   gpir_instr *instrs = gpir_instr_array(&block->instrs);
 
    gpir_node *store_alu = node;
    int reg = gpir_alloc_reg(instrs, load, &store_alu);
