@@ -345,7 +345,7 @@ brw_initialize_context_constants(struct brw_context *brw)
       [MESA_SHADER_GEOMETRY] = devinfo->gen >= 6,
       [MESA_SHADER_FRAGMENT] = true,
       [MESA_SHADER_COMPUTE] =
-         ((ctx->API == API_OPENGL_COMPAT || ctx->API == API_OPENGL_CORE) &&
+         (_mesa_is_desktop_gl(ctx) &&
           ctx->Const.MaxComputeWorkGroupSize[0] >= 1024) ||
          (ctx->API == API_OPENGLES2 &&
           ctx->Const.MaxComputeWorkGroupSize[0] >= 128) ||
