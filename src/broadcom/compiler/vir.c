@@ -569,6 +569,7 @@ static void
 v3d_lower_nir_late(struct v3d_compile *c)
 {
         NIR_PASS_V(c->s, v3d_nir_lower_io, c);
+        NIR_PASS_V(c->s, v3d_nir_lower_txf_ms, c);
         NIR_PASS_V(c->s, nir_lower_idiv);
 }
 

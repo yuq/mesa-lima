@@ -324,7 +324,6 @@ vc5_write_uniforms(struct vc5_context *vc5, struct vc5_compiled_shader *shader,
                         break;
 
                 case QUNIFORM_TEXTURE_FIRST_LEVEL:
-                case QUNIFORM_TEXTURE_MSAA_ADDR:
                 case QUNIFORM_TEXTURE_BORDER_COLOR:
                         /* XXX */
                         break;
@@ -382,7 +381,6 @@ vc5_set_shader_uniform_dirty_flags(struct vc5_compiled_shader *shader)
                 case QUNIFORM_TEXTURE_CONFIG_P1:
                 case QUNIFORM_TEXTURE_BORDER_COLOR:
                 case QUNIFORM_TEXTURE_FIRST_LEVEL:
-                case QUNIFORM_TEXTURE_MSAA_ADDR:
                 case QUNIFORM_TEXRECT_SCALE_X:
                 case QUNIFORM_TEXRECT_SCALE_Y:
                 case QUNIFORM_TEXTURE_WIDTH:
