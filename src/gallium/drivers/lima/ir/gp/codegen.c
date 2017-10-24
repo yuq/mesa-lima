@@ -112,6 +112,8 @@ static void gpir_codegen_mul0_slot(gpir_codegen_instr *code, gpir_instr *instr)
          code->mul0_neg = !code->mul0_neg;
       break;
 
+   case gpir_op_neg:
+      code->mul0_neg = true;
    case gpir_op_mov:
       code->mul0_src0 = gpir_get_alu_input(node, alu->children[0]);
       code->mul0_src1 = gpir_codegen_src_ident;
@@ -163,6 +165,8 @@ static void gpir_codegen_mul1_slot(gpir_codegen_instr *code, gpir_instr *instr)
          code->mul1_neg = !code->mul1_neg;
       break;
 
+   case gpir_op_neg:
+      code->mul1_neg = true;
    case gpir_op_mov:
       code->mul1_src0 = gpir_get_alu_input(node, alu->children[0]);
       code->mul1_src1 = gpir_codegen_src_ident;
@@ -220,6 +224,8 @@ static void gpir_codegen_add0_slot(gpir_codegen_instr *code, gpir_instr *instr)
 
       break;
 
+   case gpir_op_neg:
+      code->acc0_src0_neg = true;
    case gpir_op_mov:
       code->acc_op = gpir_codegen_acc_op_add;
       code->acc0_src0 = gpir_get_alu_input(node, alu->children[0]);
@@ -274,6 +280,8 @@ static void gpir_codegen_add1_slot(gpir_codegen_instr *code, gpir_instr *instr)
 
       break;
 
+   case gpir_op_neg:
+      code->acc1_src0_neg = true;
    case gpir_op_mov:
       code->acc_op = gpir_codegen_acc_op_add;
       code->acc1_src0 = gpir_get_alu_input(node, alu->children[0]);
