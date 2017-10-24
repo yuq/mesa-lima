@@ -18,8 +18,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-project('mesa', ['c', 'cpp'], version : '17.3.0-devel', license : 'MIT',
-        default_options : ['c_std=c99', 'cpp_std=c++11'])
+project(
+  'mesa',
+  ['c', 'cpp'],
+  version : '17.3.0-devel',
+  license : 'MIT',
+  meson_version : '>= 0.42',
+  default_options : ['c_std=c99', 'cpp_std=c++11']
+)
 
 # Arguments for the preprocessor, put these in a separate array from the C and
 # C++ (cpp in meson terminology) arguments since they need to be added to the
