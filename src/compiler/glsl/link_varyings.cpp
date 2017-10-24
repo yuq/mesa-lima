@@ -556,6 +556,13 @@ cross_validate_outputs_to_inputs(struct gl_context *ctx,
             unsigned slot_limit = idx + num_elements;
 
             while (idx < slot_limit) {
+               if (idx >= MAX_VARYING) {
+                  linker_error(prog,
+                               "Invalid location %u in %s shader\n", idx,
+                               _mesa_shader_stage_to_string(consumer->Stage));
+                  return;
+               }
+
                output = explicit_locations[idx][input->data.location_frac];
 
                if (output == NULL ||
