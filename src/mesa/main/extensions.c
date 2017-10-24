@@ -48,8 +48,6 @@ static char *extra_extensions = NULL;
  */
 #define o(x) offsetof(struct gl_extensions, x)
 
-static bool disabled_extensions[MESA_EXTENSION_COUNT];
-
 /**
  * Given an extension name, lookup up the corresponding member of struct
  * gl_extensions and return that member's index.  If the name is
@@ -298,9 +296,6 @@ _mesa_one_time_init_extension_overrides(void)
          recognized = false;
       }
 
-      if (i >= 0)
-         disabled_extensions[i] = !enable;
-
       if (!recognized && enable) {
          strcat(extra_extensions, ext);
          strcat(extra_extensions, " ");
@@ -357,8 +352,7 @@ _mesa_extension_supported(const struct gl_context *ctx, extension_index i)
    const bool *base = (bool *) &ctx->Extensions;
    const struct mesa_extension *ext = _mesa_extension_table + i;
 
-   return !disabled_extensions[i] &&
-          (ctx->Version >= ext->version[ctx->API]) && base[ext->offset];
+   return (ctx->Version >= ext->version[ctx->API]) && base[ext->offset];
 }
 
 /**
