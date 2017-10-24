@@ -135,7 +135,7 @@ static bool gpir_lower_neg(gpir_block *block, gpir_node *node)
    return true;
 }
 
-static bool gpir_lower_rcp(gpir_block *block, gpir_node *node)
+static bool gpir_lower_complex(gpir_block *block, gpir_node *node)
 {
    gpir_alu_node *alu = gpir_node_to_alu(node);
    gpir_node *child = alu->children[0];
@@ -148,7 +148,19 @@ static bool gpir_lower_rcp(gpir_block *block, gpir_node *node)
    gpir_node_add_child(&complex2->node, child);
    list_addtail(&complex2->node.list, &node->list);
 
-   gpir_alu_node *impl = gpir_node_create(block->comp, gpir_op_rcp_impl, -1);
+   int impl_op = 0;
+   switch (node->op) {
+   case gpir_op_rcp:
+      impl_op = gpir_op_rcp_impl;
+      break;
+   case gpir_op_rsqrt:
+      impl_op = gpir_op_rsqrt_impl;
+      break;
+   default:
+      assert(0);
+   }
+
+   gpir_alu_node *impl = gpir_node_create(block->comp, impl_op, -1);
    if (!impl)
       return false;
    impl->children[0] = child;
@@ -170,7 +182,8 @@ static bool gpir_lower_rcp(gpir_block *block, gpir_node *node)
 
 static bool (*gpir_lower_funcs[gpir_op_num])(gpir_block *, gpir_node *) = {
    [gpir_op_neg] = gpir_lower_neg,
-   [gpir_op_rcp] = gpir_lower_rcp,
+   [gpir_op_rcp] = gpir_lower_complex,
+   [gpir_op_rsqrt] = gpir_lower_complex,
 };
 
 bool gpir_lower_prog(gpir_compiler *comp)
