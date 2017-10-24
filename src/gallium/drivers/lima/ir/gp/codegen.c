@@ -192,23 +192,36 @@ static void gpir_codegen_add0_slot(gpir_codegen_instr *code, gpir_instr *instr)
 
    switch (node->op) {
    case gpir_op_add:
+   case gpir_op_max:
       code->acc0_src0 = gpir_get_alu_input(node, alu->children[0]);
       code->acc0_src1 = gpir_get_alu_input(node, alu->children[1]);
 
       code->acc0_src0_neg = alu->children_negate[0];
       code->acc0_src1_neg = alu->children_negate[1];
 
-      if (code->acc0_src1 == gpir_codegen_src_p1_complex) {
-         code->acc0_src1 = code->acc0_src0;
-         code->acc0_src0 = gpir_codegen_src_p1_complex;
+      switch (node->op) {
+      case gpir_op_add:
+         code->acc_op = gpir_codegen_acc_op_add;
+         if (code->acc0_src1 == gpir_codegen_src_p1_complex) {
+            code->acc0_src1 = code->acc0_src0;
+            code->acc0_src0 = gpir_codegen_src_p1_complex;
 
-         bool tmp = code->acc0_src0_neg;
-         code->acc0_src0_neg = code->acc0_src1_neg;
-         code->acc0_src1_neg = tmp;
+            bool tmp = code->acc0_src0_neg;
+            code->acc0_src0_neg = code->acc0_src1_neg;
+            code->acc0_src1_neg = tmp;
+         }
+         break;
+      case gpir_op_max:
+         code->acc_op = gpir_codegen_acc_op_max;
+         break;
+      default:
+         assert(0);
       }
+
       break;
 
    case gpir_op_mov:
+      code->acc_op = gpir_codegen_acc_op_add;
       code->acc0_src0 = gpir_get_alu_input(node, alu->children[0]);
       code->acc0_src1 = gpir_codegen_src_ident;
       code->acc0_src1_neg = true;
@@ -233,23 +246,36 @@ static void gpir_codegen_add1_slot(gpir_codegen_instr *code, gpir_instr *instr)
 
    switch (node->op) {
    case gpir_op_add:
+   case gpir_op_max:
       code->acc1_src0 = gpir_get_alu_input(node, alu->children[0]);
       code->acc1_src1 = gpir_get_alu_input(node, alu->children[1]);
 
       code->acc1_src0_neg = alu->children_negate[0];
       code->acc1_src1_neg = alu->children_negate[1];
 
-      if (code->acc1_src1 == gpir_codegen_src_p1_complex) {
-         code->acc1_src1 = code->acc1_src0;
-         code->acc1_src0 = gpir_codegen_src_p1_complex;
+      switch (node->op) {
+      case gpir_op_add:
+         code->acc_op = gpir_codegen_acc_op_add;
+         if (code->acc1_src1 == gpir_codegen_src_p1_complex) {
+            code->acc1_src1 = code->acc1_src0;
+            code->acc1_src0 = gpir_codegen_src_p1_complex;
 
-         bool tmp = code->acc1_src0_neg;
-         code->acc1_src0_neg = code->acc1_src1_neg;
-         code->acc1_src1_neg = tmp;
+            bool tmp = code->acc1_src0_neg;
+            code->acc1_src0_neg = code->acc1_src1_neg;
+            code->acc1_src1_neg = tmp;
+         }
+         break;
+      case gpir_op_max:
+         code->acc_op = gpir_codegen_acc_op_max;
+         break;
+      default:
+         assert(0);
       }
+
       break;
 
    case gpir_op_mov:
+      code->acc_op = gpir_codegen_acc_op_add;
       code->acc1_src0 = gpir_get_alu_input(node, alu->children[0]);
       code->acc1_src1 = gpir_codegen_src_ident;
       code->acc1_src1_neg = true;
