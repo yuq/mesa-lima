@@ -198,18 +198,16 @@ set_extension(struct gl_extensions *ext, int i, GLboolean state)
 
 /**
  * The unrecognized extensions from \c MESA_EXTENSION_OVERRIDE.
- * Must be freed, does not return \c NULL.
+ * Returns \c NULL if empty.
  */
-static char *
+static const char *
 get_extension_override( struct gl_context *ctx )
 {
-   if (extra_extensions == NULL) {
-      return calloc(1, sizeof(char));
-   } else {
+   if (extra_extensions)
       _mesa_problem(ctx, "Trying to enable unknown extensions: %s",
                     extra_extensions);
-      return strdup(extra_extensions);
-   }
+
+   return extra_extensions;
 }
 
 
@@ -396,7 +394,7 @@ _mesa_make_extension_string(struct gl_context *ctx)
    /* Indices of the extensions sorted by year */
    extension_index *extension_indices;
    /* String of extra extensions. */
-   char *extra_extensions = get_extension_override(ctx);
+   const char *extra_extensions = get_extension_override(ctx);
    unsigned k;
    unsigned j;
    unsigned maxYear = ~0;
@@ -427,14 +425,12 @@ _mesa_make_extension_string(struct gl_context *ctx)
 
    exts = calloc(ALIGN(length + 1, 4), sizeof(char));
    if (exts == NULL) {
-      free(extra_extensions);
       return NULL;
    }
 
    extension_indices = malloc(count * sizeof(extension_index));
    if (extension_indices == NULL) {
       free(exts);
-      free(extra_extensions);
       return NULL;
    }
 
@@ -464,7 +460,6 @@ _mesa_make_extension_string(struct gl_context *ctx)
    free(extension_indices);
    if (extra_extensions != 0) {
       strcat(exts, extra_extensions);
-      free(extra_extensions);
    }
 
    return (GLubyte *) exts;
