@@ -304,8 +304,12 @@ vc5_setup_shared_key(struct vc5_context *vc5, struct v3d_key *key,
                 } else if (sampler){
                         key->tex[i].compare_mode = sampler_state->compare_mode;
                         key->tex[i].compare_func = sampler_state->compare_func;
-                        key->tex[i].wrap_s = sampler_state->wrap_s;
-                        key->tex[i].wrap_t = sampler_state->wrap_t;
+                        key->tex[i].clamp_s =
+                                sampler_state->wrap_s == PIPE_TEX_WRAP_CLAMP;
+                        key->tex[i].clamp_t =
+                                sampler_state->wrap_t == PIPE_TEX_WRAP_CLAMP;
+                        key->tex[i].clamp_r =
+                                sampler_state->wrap_r == PIPE_TEX_WRAP_CLAMP;
                 }
         }
 
