@@ -272,6 +272,7 @@ static void gpir_codegen_complex_slot(gpir_codegen_instr *code, gpir_instr *inst
    switch (node->op) {
    case gpir_op_mov:
    case gpir_op_rcp_impl:
+   case gpir_op_rsqrt_impl:
    {
       gpir_alu_node *alu = gpir_node_to_alu(node);
       code->complex_src = gpir_get_alu_input(node, alu->children[0]);
@@ -287,6 +288,9 @@ static void gpir_codegen_complex_slot(gpir_codegen_instr *code, gpir_instr *inst
       break;
    case gpir_op_rcp_impl:
       code->complex_op = gpir_codegen_complex_op_rcp;
+      break;
+   case gpir_op_rsqrt_impl:
+      code->complex_op = gpir_codegen_complex_op_rsqrt;
       break;
    default:
       assert(0);
