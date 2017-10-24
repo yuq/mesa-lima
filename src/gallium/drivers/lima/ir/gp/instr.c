@@ -70,7 +70,8 @@ static void gpir_instr_remove_alu(gpir_instr *instr, gpir_node *node)
       }
    }
 
-   instr->alu_num_slot_free += node->op == gpir_op_complex1 ? 2 : 1;
+   int resume_slot = node->op == gpir_op_complex1 ? 2 : 1;
+   instr->alu_num_slot_free += resume_slot;
 }
 
 static bool gpir_instr_insert_reg0_check(gpir_instr *instr, gpir_node *node)
@@ -356,11 +357,13 @@ void gpir_instr_print_prog(gpir_compiler *comp)
 
    int index = 0;
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
+      gpir_instr *instrs = gpir_instr_array(&block->instrs);
+
       printf("-------block instr------\n");
       for (int i = gpir_instr_array_n(&block->instrs) - 1; i >= 0; i--) {
          printf("%03d: ", index++);
 
-         gpir_instr *instr = gpir_instr_array_e(&block->instrs, i);
+         gpir_instr *instr = instrs + i;
          char buff[16] = "null";
          int start = 0;
          for (int j = 0; j < GPIR_INSTR_SLOT_NUM; j++) {
