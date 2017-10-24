@@ -25,6 +25,7 @@
 #include <stdio.h>
 
 #include "util/bitscan.h"
+#include "util/ralloc.h"
 
 #include "ppir.h"
 
@@ -142,12 +143,113 @@ static bool ppir_lower_neg(ppir_block *block, ppir_node *node)
    return true;
 }
 
+static ppir_reg *create_reg(ppir_compiler *comp, int num_components)
+{
+   ppir_reg *r = ralloc(comp, ppir_reg);
+   if (!r)
+      return NULL;
+
+   r->index = comp->cur_reg_index++;
+   r->num_components = num_components;
+   r->live_in = INT_MAX;
+   r->live_out = 0;
+   list_addtail(&r->list, &comp->reg_list);
+
+   return r;
+}
+
+/* lower vector alu node to multi scalar nodes */
+static bool ppir_lower_vec_to_scalar(ppir_block *block, ppir_node *node)
+{
+   ppir_alu_node *alu = ppir_node_to_alu(node);
+   ppir_dest *dest = &alu->dest;
+
+   int n = 0;
+   int index[4];
+
+   unsigned mask = dest->write_mask;
+   while (mask)
+      index[n++] = u_bit_scan(&mask);
+
+   if (n == 1)
+      return true;
+
+   ppir_reg *r;
+   /* we need a reg for scalar nodes to store output */
+   if (dest->type == ppir_target_register)
+      r = dest->reg;
+   else {
+      r = create_reg(block->comp, n);
+      if (!r)
+         return false;
+
+      /* change all successors to use reg r */
+      ppir_node_foreach_succ(node, entry) {
+         ppir_node *succ = ppir_node_from_entry(entry, succ);
+         if (succ->type == ppir_node_type_alu) {
+            ppir_alu_node *sa = ppir_node_to_alu(succ);
+            for (int i = 0; i < sa->num_src; i++) {
+               ppir_src *src = sa->src + i;
+               if (ppir_node_target_equal(src, dest)) {
+                  src->type = ppir_target_register;
+                  src->reg = r;
+               }
+            }
+         }
+         else {
+            assert(succ->type == ppir_node_type_store);
+            ppir_store_node *ss = ppir_node_to_store(succ);
+            ppir_src *src = &ss->src;
+            src->type = ppir_target_register;
+            src->reg = r;
+         }
+      }
+   }
+
+   /* create each component's scalar node */
+   for (int i = 0; i < n; i++) {
+      ppir_node *s = ppir_node_create(block->comp, node->op, -1, 0);
+      if (!s)
+         return false;
+      list_addtail(&s->list, &node->list);
+
+      ppir_alu_node *sa = ppir_node_to_alu(s);
+      ppir_dest *sd = &sa->dest;
+      sd->type = ppir_target_register;
+      sd->reg = r;
+      sd->modifier = dest->modifier;
+      sd->write_mask = 1 << index[i];
+
+      for (int j = 0; j < alu->num_src; j++)
+         sa->src[j] = alu->src[j];
+      sa->num_src = alu->num_src;
+
+      /* TODO: need per reg component dependancy */
+      ppir_node_foreach_succ(node, entry) {
+         ppir_node *succ = ppir_node_from_entry(entry, succ);
+         ppir_node_add_child(succ, s);
+      }
+
+      ppir_node_foreach_pred(node, entry) {
+         ppir_node *pred = ppir_node_from_entry(entry, pred);
+         ppir_node_add_child(s, pred);
+      }
+   }
+
+   ppir_node_delete(node);
+   return true;
+}
+
 static bool (*ppir_lower_funcs[ppir_op_num])(ppir_block *, ppir_node *) = {
    [ppir_op_const] = ppir_lower_const,
    [ppir_op_dot2] = ppir_lower_dot,
    [ppir_op_dot3] = ppir_lower_dot,
    [ppir_op_dot4] = ppir_lower_dot,
    [ppir_op_neg] = ppir_lower_neg,
+   [ppir_op_rcp] = ppir_lower_vec_to_scalar,
+   [ppir_op_rsqrt] = ppir_lower_vec_to_scalar,
+   [ppir_op_log2] = ppir_lower_vec_to_scalar,
+   [ppir_op_exp2] = ppir_lower_vec_to_scalar,
 };
 
 bool ppir_lower_prog(ppir_compiler *comp)
