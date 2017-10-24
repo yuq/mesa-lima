@@ -93,6 +93,11 @@ const gpir_op_info gpir_op_infos[] = {
    },
    [gpir_op_neg] = {
       .name = "neg",
+      .slots = (int []) {
+         GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_MUL1,
+         GPIR_INSTR_SLOT_ADD1, GPIR_INSTR_SLOT_MUL0,
+         GPIR_INSTR_SLOT_END
+      },
    },
    [gpir_op_clamp_const] = {
       .name = "clamp_const",
