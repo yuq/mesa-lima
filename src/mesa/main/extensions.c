@@ -287,12 +287,11 @@ _mesa_one_time_init_extension_overrides(void)
 
       i = name_to_index(ext);
       offset = set_extension(&_mesa_extension_override_enables, i, enable);
-      if (offset != 0 && (offset != o(dummy_true) || enable != GL_FALSE)) {
-         ((GLboolean *) &_mesa_extension_override_disables)[offset] = !enable;
+      offset = set_extension(&_mesa_extension_override_disables, i, !enable);
+      if (offset != 0)
          recognized = true;
-      } else {
+      else
          recognized = false;
-      }
 
       if (!recognized && enable) {
          strcat(extra_extensions, ext);
