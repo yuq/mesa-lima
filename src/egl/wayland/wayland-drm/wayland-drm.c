@@ -39,19 +39,6 @@
 
 #define MIN(x,y) (((x)<(y))?(x):(y))
 
-struct wl_drm {
-	struct wl_display *display;
-	struct wl_global *wl_drm_global;
-
-	void *user_data;
-	char *device_name;
-        uint32_t flags;
-
-	struct wayland_drm_callbacks callbacks;
-
-        struct wl_buffer_interface buffer_interface;
-};
-
 static void
 destroy_buffer(struct wl_resource *resource)
 {
@@ -242,19 +229,6 @@ bind_drm(struct wl_client *client, void *data, uint32_t version, uint32_t id)
 
         if (version >= 2)
            wl_resource_post_event(resource, WL_DRM_CAPABILITIES, capabilities);
-}
-
-struct wl_drm_buffer *
-wayland_drm_buffer_get(struct wl_drm *drm, struct wl_resource *resource)
-{
-	if (resource == NULL)
-		return NULL;
-
-        if (wl_resource_instance_of(resource, &wl_buffer_interface,
-                                    &drm->buffer_interface))
-		return wl_resource_get_user_data(resource);
-        else
-		return NULL;
 }
 
 struct wl_drm *
