@@ -114,6 +114,7 @@ const gpir_op_info gpir_op_infos[] = {
    },
    [gpir_op_rsqrt_impl] = {
       .name = "rsqrt_impl",
+      .slots = (int []) { GPIR_INSTR_SLOT_COMPLEX, GPIR_INSTR_SLOT_END },
    },
    [gpir_op_load_uniform] = {
       .name = "ld_uni",
