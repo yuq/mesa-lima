@@ -186,7 +186,6 @@ public:
    bool indirect_addr_consts;
    int wpos_transform_const;
 
-   int glsl_version;
    bool native_integers;
    bool have_sqrt;
    bool have_fma;
@@ -4415,7 +4414,6 @@ glsl_to_tgsi_visitor::glsl_to_tgsi_visitor()
    images_used = 0;
    indirect_addr_consts = false;
    wpos_transform_const = -1;
-   glsl_version = 0;
    native_integers = false;
    mem_ctx = ralloc_context(NULL);
    ctx = NULL;
@@ -6615,7 +6613,6 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    v->shader_program = shader_program;
    v->shader = shader;
    v->options = options;
-   v->glsl_version = ctx->Const.GLSLVersion;
    v->native_integers = ctx->Const.NativeIntegers;
 
    v->have_sqrt = pscreen->get_shader_param(pscreen, ptarget,
