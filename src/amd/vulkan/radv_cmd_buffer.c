@@ -313,7 +313,8 @@ radv_cmd_buffer_resize_upload_buf(struct radv_cmd_buffer *cmd_buffer,
 	bo = device->ws->buffer_create(device->ws,
 				       new_size, 4096,
 				       RADEON_DOMAIN_GTT,
-				       RADEON_FLAG_CPU_ACCESS);
+				       RADEON_FLAG_CPU_ACCESS|
+				       RADEON_FLAG_NO_INTERPROCESS_SHARING);
 
 	if (!bo) {
 		cmd_buffer->record_result = VK_ERROR_OUT_OF_DEVICE_MEMORY;

@@ -1394,6 +1394,7 @@ radv_get_preamble_cs(struct radv_queue *queue,
 	unsigned tess_factor_ring_size = 0, tess_offchip_ring_size = 0;
 	unsigned max_offchip_buffers;
 	unsigned hs_offchip_param = 0;
+	uint32_t ring_bo_flags = RADEON_FLAG_NO_CPU_ACCESS | RADEON_FLAG_NO_INTERPROCESS_SHARING;
 	if (!queue->has_tess_rings) {
 		if (needs_tess_rings)
 			add_tess_rings = true;
@@ -1427,7 +1428,7 @@ radv_get_preamble_cs(struct radv_queue *queue,
 		                                              scratch_size,
 		                                              4096,
 		                                              RADEON_DOMAIN_VRAM,
-		                                              RADEON_FLAG_NO_CPU_ACCESS);
+		                                              ring_bo_flags);
 		if (!scratch_bo)
 			goto fail;
 	} else
@@ -1438,7 +1439,7 @@ radv_get_preamble_cs(struct radv_queue *queue,
 		                                                      compute_scratch_size,
 		                                                      4096,
 		                                                      RADEON_DOMAIN_VRAM,
-		                                                      RADEON_FLAG_NO_CPU_ACCESS);
+		                                                      ring_bo_flags);
 		if (!compute_scratch_bo)
 			goto fail;
 
@@ -1450,7 +1451,7 @@ radv_get_preamble_cs(struct radv_queue *queue,
 								esgs_ring_size,
 								4096,
 								RADEON_DOMAIN_VRAM,
-								RADEON_FLAG_NO_CPU_ACCESS);
+								ring_bo_flags);
 		if (!esgs_ring_bo)
 			goto fail;
 	} else {
@@ -1463,7 +1464,7 @@ radv_get_preamble_cs(struct radv_queue *queue,
 								gsvs_ring_size,
 								4096,
 								RADEON_DOMAIN_VRAM,
-								RADEON_FLAG_NO_CPU_ACCESS);
+								ring_bo_flags);
 		if (!gsvs_ring_bo)
 			goto fail;
 	} else {
@@ -1476,14 +1477,14 @@ radv_get_preamble_cs(struct radv_queue *queue,
 								       tess_factor_ring_size,
 								       256,
 								       RADEON_DOMAIN_VRAM,
-								       RADEON_FLAG_NO_CPU_ACCESS);
+								       ring_bo_flags);
 		if (!tess_factor_ring_bo)
 			goto fail;
 		tess_offchip_ring_bo = queue->device->ws->buffer_create(queue->device->ws,
 								       tess_offchip_ring_size,
 								       256,
 								       RADEON_DOMAIN_VRAM,
-								       RADEON_FLAG_NO_CPU_ACCESS);
+									ring_bo_flags);
 		if (!tess_offchip_ring_bo)
 			goto fail;
 	} else {
@@ -1510,7 +1511,7 @@ radv_get_preamble_cs(struct radv_queue *queue,
 		                                                 size,
 		                                                 4096,
 		                                                 RADEON_DOMAIN_VRAM,
-		                                                 RADEON_FLAG_CPU_ACCESS);
+		                                                 RADEON_FLAG_CPU_ACCESS|RADEON_FLAG_NO_INTERPROCESS_SHARING);
 		if (!descriptor_bo)
 			goto fail;
 	} else
@@ -2119,6 +2120,9 @@ VkResult radv_alloc_memory(VkDevice                        _device,
 	if (mem_flags & RADV_MEM_IMPLICIT_SYNC)
 		flags |= RADEON_FLAG_IMPLICIT_SYNC;
 
+	if (!dedicate_info && !import_info)
+		flags |= RADEON_FLAG_NO_INTERPROCESS_SHARING;
+
 	mem->bo = device->ws->buffer_create(device->ws, alloc_size, device->physical_device->rad_info.max_alignment,
 					       domain, flags);
 
@@ -2682,7 +2686,7 @@ VkResult radv_CreateEvent(
 
 	event->bo = device->ws->buffer_create(device->ws, 8, 8,
 					      RADEON_DOMAIN_GTT,
-					      RADEON_FLAG_VA_UNCACHED | RADEON_FLAG_CPU_ACCESS);
+					      RADEON_FLAG_VA_UNCACHED | RADEON_FLAG_CPU_ACCESS | RADEON_FLAG_NO_INTERPROCESS_SHARING);
 	if (!event->bo) {
 		vk_free2(&device->alloc, pAllocator, event);
 		return VK_ERROR_OUT_OF_DEVICE_MEMORY;
