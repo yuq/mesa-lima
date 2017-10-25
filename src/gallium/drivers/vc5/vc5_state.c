@@ -571,7 +571,7 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                 .image_height = prsc->height0 * msaa_scale,
                 .image_depth = prsc->depth0,
 
-                .texture_type = rsc->tex_format,
+                .texture_type = vc5_get_tex_format(cso->format),
                 .srgb = util_format_is_srgb(cso->format),
 
                 .base_level = cso->u.tex.first_level,

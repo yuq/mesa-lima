@@ -574,9 +574,6 @@ vc5_resource_create_with_modifiers(struct pipe_screen *pscreen,
                 return NULL;
         }
 
-        if (tmpl->target != PIPE_BUFFER)
-                rsc->tex_format = vc5_get_tex_format(prsc->format);
-
         vc5_setup_slices(rsc, "create");
         if (!vc5_resource_bo_alloc(rsc))
                 goto fail;
@@ -648,8 +645,6 @@ vc5_resource_from_handle(struct pipe_screen *pscreen,
                 goto fail;
 
         vc5_setup_slices(rsc, "import");
-
-        rsc->tex_format = vc5_get_tex_format(prsc->format);
 
         DBG(V3D_DEBUG_SURFACE,
             "rsc import %p (format %s), %dx%d: "

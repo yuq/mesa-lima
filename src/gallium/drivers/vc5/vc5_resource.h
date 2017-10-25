@@ -109,8 +109,6 @@ struct vc5_resource {
         uint32_t cube_map_stride;
         int cpp;
         bool tiled;
-        /** One of V3D_TEXTURE_DATA_FORMAT_* */
-        uint8_t tex_format;
 
         /**
          * Number of times the resource has been written to.
