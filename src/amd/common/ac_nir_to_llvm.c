@@ -3631,15 +3631,17 @@ static LLVMValueRef visit_image_atomic(struct ac_nir_context *ctx,
 	LLVMValueRef i1true = LLVMConstInt(ctx->ac.i1, 1, false);
 	MAYBE_UNUSED int length;
 
+	bool is_unsigned = glsl_get_sampler_result_type(type) == GLSL_TYPE_UINT;
+
 	switch (instr->intrinsic) {
 	case nir_intrinsic_image_atomic_add:
 		atomic_name = "add";
 		break;
 	case nir_intrinsic_image_atomic_min:
-		atomic_name = "smin";
+		atomic_name = is_unsigned ? "umin" : "smin";
 		break;
 	case nir_intrinsic_image_atomic_max:
-		atomic_name = "smax";
+		atomic_name = is_unsigned ? "umax" : "smax";
 		break;
 	case nir_intrinsic_image_atomic_and:
 		atomic_name = "and";
