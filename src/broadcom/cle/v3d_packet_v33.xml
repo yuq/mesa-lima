@@ -831,7 +831,7 @@
 
     <field name="Array Stride (64-byte aligned)" size="26" start="32" type="uint"/>
 
-    <field name="Texture base pointer" size="32" start="0" type="address"/>
+    <field name="Texture base pointer" size="30" start="2" type="address"/>
 
     <field name="Minification Filter" size="3" start="1" type="uint"/>
     <field name="Magnification Filter" size="1" start="0" type="uint"/>
