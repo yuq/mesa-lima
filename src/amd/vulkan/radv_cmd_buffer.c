@@ -1523,8 +1523,7 @@ radv_cmd_buffer_flush_dynamic_state(struct radv_cmd_buffer *cmd_buffer)
 				       RADV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK))
 		radv_emit_stencil(cmd_buffer);
 
-	if (cmd_buffer->state.dirty & (RADV_CMD_DIRTY_PIPELINE |
-				       RADV_CMD_DIRTY_DYNAMIC_DEPTH_BOUNDS))
+	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_DYNAMIC_DEPTH_BOUNDS)
 		radv_emit_depth_bounds(cmd_buffer);
 
 	if (cmd_buffer->state.dirty & (RADV_CMD_DIRTY_PIPELINE |
