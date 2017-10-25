@@ -6166,6 +6166,31 @@ fs_visitor::run_gs()
    return !failed;
 }
 
+/* From the SKL PRM, Volume 16, Workarounds:
+ *
+ *   0877  3D   Pixel Shader Hang possible when pixel shader dispatched with
+ *              only header phases (R0-R2)
+ *
+ *   WA: Enable a non-header phase (e.g. push constant) when dispatch would
+ *       have been header only.
+ *
+ * Instead of enabling push constants one can alternatively enable one of the
+ * inputs. Here one simply chooses "layer" which shouldn't impose much
+ * overhead.
+ */
+static void
+gen9_ps_header_only_workaround(struct brw_wm_prog_data *wm_prog_data)
+{
+   if (wm_prog_data->num_varying_inputs)
+      return;
+
+   if (wm_prog_data->base.curb_read_length)
+      return;
+
+   wm_prog_data->urb_setup[VARYING_SLOT_LAYER] = 0;
+   wm_prog_data->num_varying_inputs = 1;
+}
+
 bool
 fs_visitor::run_fs(bool allow_spilling, bool do_rep_send)
 {
@@ -6229,6 +6254,10 @@ fs_visitor::run_fs(bool allow_spilling, bool do_rep_send)
       optimize();
 
       assign_curb_setup();
+
+      if (devinfo->gen >= 9)
+         gen9_ps_header_only_workaround(wm_prog_data);
+
       assign_urb_setup();
 
       fixup_3src_null_dest();
