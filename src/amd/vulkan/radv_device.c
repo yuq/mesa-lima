@@ -170,8 +170,8 @@ radv_physical_device_init(struct radv_physical_device *device,
 	/* The gpu id is already embeded in the uuid so we just pass "radv"
 	 * when creating the cache.
 	 */
-	char buf[VK_UUID_SIZE + 1];
-	disk_cache_format_hex_id(buf, device->cache_uuid, VK_UUID_SIZE);
+	char buf[VK_UUID_SIZE * 2 + 1];
+	disk_cache_format_hex_id(buf, device->cache_uuid, VK_UUID_SIZE * 2);
 	device->disk_cache = disk_cache_create(device->name, buf, shader_env_flags);
 
 	fprintf(stderr, "WARNING: radv is not a conformant vulkan implementation, testing use only.\n");
