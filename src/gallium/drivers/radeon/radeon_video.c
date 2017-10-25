@@ -182,8 +182,11 @@ void si_vid_join_surfaces(struct r600_common_context *rctx,
 
 			for (j = 0; j < ARRAY_SIZE(surfaces[i]->u.legacy.level); ++j)
 				surfaces[i]->u.legacy.level[j].offset += off;
-		} else
+		} else {
 			surfaces[i]->u.gfx9.surf_offset += off;
+			for (j = 0; j < ARRAY_SIZE(surfaces[i]->u.gfx9.offset); ++j)
+				surfaces[i]->u.gfx9.offset[j] += off;
+		}
 
 		off += surfaces[i]->surf_size;
 	}
