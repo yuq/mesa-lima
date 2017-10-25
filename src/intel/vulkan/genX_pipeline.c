@@ -379,8 +379,8 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
          /* We have to subtract two slots to accout for the URB entry output
           * read offset in the VS and GS stages.
           */
-         assert(slot >= 2);
          const int source_attr = slot - 2 * urb_entry_read_offset;
+         assert(source_attr >= 0 && source_attr < 32);
          max_source_attr = MAX2(max_source_attr, source_attr);
          swiz.Attribute[input_index].SourceAttribute = source_attr;
       }
