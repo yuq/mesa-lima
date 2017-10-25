@@ -528,7 +528,7 @@
   </packet>
 
   <packet code="121" name="Tile Rendering Mode Configuration (Z/Stencil config)" cl="R">
-    <field name="Address" size="32" start="32" type="address"/>
+    <field name="Address" size="26" start="38" type="address"/>
 
     <field name="Padded height of output image in UIF blocks" size="13" start="25" type="uint"/>
 
