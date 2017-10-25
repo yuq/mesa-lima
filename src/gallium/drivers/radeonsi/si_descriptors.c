@@ -995,7 +995,6 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	unsigned i, count;
 	unsigned desc_list_byte_size;
 	unsigned first_vb_use_mask;
-	uint64_t va;
 	uint32_t *ptr;
 
 	if (!sctx->vertex_buffers_dirty || !velems)
@@ -1035,7 +1034,6 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	for (i = 0; i < count; i++) {
 		struct pipe_vertex_buffer *vb;
 		struct r600_resource *rbuffer;
-		unsigned offset;
 		unsigned vbo_index = velems->vertex_buffer_index[i];
 		uint32_t *desc = &ptr[i*4];
 
@@ -1046,23 +1044,22 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 			continue;
 		}
 
-		offset = vb->buffer_offset + velems->src_offset[i];
-		va = rbuffer->gpu_address + offset;
+		int offset = (int)vb->buffer_offset + (int)velems->src_offset[i];
+		int64_t va = (int64_t)rbuffer->gpu_address + offset;
+		assert(va > 0);
 
-		/* Fill in T# buffer resource description */
+		int64_t num_records = (int64_t)rbuffer->b.b.width0 - offset;
+		if (sctx->b.chip_class != VI && vb->stride) {
+			/* Round up by rounding down and adding 1 */
+			num_records = (num_records - velems->format_size[i]) /
+				      vb->stride + 1;
+		}
+		assert(num_records >= 0 && num_records <= UINT_MAX);
+
 		desc[0] = va;
 		desc[1] = S_008F04_BASE_ADDRESS_HI(va >> 32) |
 			  S_008F04_STRIDE(vb->stride);
-
-		if (sctx->b.chip_class != VI && vb->stride) {
-			/* Round up by rounding down and adding 1 */
-			desc[2] = (vb->buffer.resource->width0 - offset -
-				   velems->format_size[i]) /
-				  vb->stride + 1;
-		} else {
-			desc[2] = vb->buffer.resource->width0 - offset;
-		}
-
+		desc[2] = num_records;
 		desc[3] = velems->rsrc_word3[i];
 
 		if (first_vb_use_mask & (1 << i)) {
