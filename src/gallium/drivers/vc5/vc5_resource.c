@@ -367,7 +367,11 @@ vc5_setup_slices(struct vc5_resource *rsc, const char *caller)
         uint32_t utile_h = vc5_utile_height(rsc->cpp);
         uint32_t uif_block_w = utile_w * 2;
         uint32_t uif_block_h = utile_h * 2;
-        bool uif_top = false;
+        bool msaa = prsc->nr_samples > 1;
+        /* MSAA textures/renderbuffers are always laid out as single-level
+         * UIF.
+         */
+        bool uif_top = prsc->nr_samples > 1;
 
         for (int i = prsc->last_level; i >= 0; i--) {
                 struct vc5_resource_slice *slice = &rsc->slices[i];
@@ -381,13 +385,13 @@ vc5_setup_slices(struct vc5_resource *rsc, const char *caller)
                         level_height = u_minify(pot_height, i);
                 }
 
+                if (msaa) {
+                        level_width *= 2;
+                        level_height *= 2;
+                }
+
                 if (!rsc->tiled) {
                         slice->tiling = VC5_TILING_RASTER;
-                        if (prsc->nr_samples > 1) {
-                                /* MSAA (4x) surfaces are stored as raw tile buffer contents. */
-                                level_width = align(level_width, 32);
-                                level_height = align(level_height, 32);
-                        }
                 } else {
                         if ((i != 0 || !uif_top) &&
                             (level_width <= utile_w ||
@@ -416,8 +420,7 @@ vc5_setup_slices(struct vc5_resource *rsc, const char *caller)
                 }
 
                 slice->offset = offset;
-                slice->stride = (level_width * rsc->cpp *
-                                 MAX2(prsc->nr_samples, 1));
+                slice->stride = level_width * rsc->cpp;
                 slice->size = level_height * slice->stride;
 
                 offset += slice->size;
@@ -482,10 +485,28 @@ vc5_resource_setup(struct pipe_screen *pscreen,
         pipe_reference_init(&prsc->reference, 1);
         prsc->screen = pscreen;
 
-        if (prsc->nr_samples <= 1)
-                rsc->cpp = util_format_get_blocksize(tmpl->format);
-        else
-                rsc->cpp = sizeof(uint32_t);
+        if (prsc->nr_samples <= 1) {
+                rsc->cpp = util_format_get_blocksize(prsc->format);
+        } else {
+                assert(vc5_rt_format_supported(prsc->format));
+                uint32_t output_image_format = vc5_get_rt_format(prsc->format);
+                uint32_t internal_type;
+                uint32_t internal_bpp;
+                vc5_get_internal_type_bpp_for_output_format(output_image_format,
+                                                            &internal_type,
+                                                            &internal_bpp);
+                switch (internal_bpp) {
+                case INTERNAL_BPP_32:
+                        rsc->cpp = 4;
+                        break;
+                case INTERNAL_BPP_64:
+                        rsc->cpp = 8;
+                        break;
+                case INTERNAL_BPP_128:
+                        rsc->cpp = 16;
+                        break;
+                }
+        }
 
         assert(rsc->cpp);
 

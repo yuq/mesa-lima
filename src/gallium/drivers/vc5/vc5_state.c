@@ -562,11 +562,13 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
         so->base.reference.count = 1;
         so->base.context = pctx;
 
+        int msaa_scale = prsc->nr_samples > 1 ? 2 : 1;
+
         struct V3D33_TEXTURE_SHADER_STATE state_unpacked = {
                 cl_packet_header(TEXTURE_SHADER_STATE),
 
-                .image_width = prsc->width0,
-                .image_height = prsc->height0,
+                .image_width = prsc->width0 * msaa_scale,
+                .image_height = prsc->height0 * msaa_scale,
                 .image_depth = prsc->depth0,
 
                 .texture_type = rsc->tex_format,
