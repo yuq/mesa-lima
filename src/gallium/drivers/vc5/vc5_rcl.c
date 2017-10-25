@@ -27,6 +27,25 @@
 #include "broadcom/cle/v3d_packet_v33_pack.h"
 
 static void
+load_raw(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer)
+{
+        struct vc5_surface *surf = vc5_surface(psurf);
+        struct vc5_resource *rsc = vc5_resource(psurf->texture);
+
+        cl_emit(cl, LOAD_TILE_BUFFER_GENERAL, load) {
+                load.raw_mode = true;
+                load.buffer_to_load = buffer;
+                load.address = cl_address(rsc->bo, surf->offset);
+
+                struct vc5_resource_slice *slice =
+                        &rsc->slices[psurf->u.tex.level];
+                load.padded_height_of_output_image_in_uif_blocks =
+                        (slice->size / slice->stride) /
+                        (2 * vc5_utile_height(rsc->cpp));
+        }
+}
+
+static void
 store_raw(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer,
           bool color_clear, bool z_clear, bool s_clear)
 {
@@ -64,6 +83,20 @@ zs_buffer_from_pipe_bits(int pipe_clear_bits)
         }
 }
 
+/* The HW queues up the load until the tile coordinates show up, but can only
+ * track one at a time.  If we need to do more than one load, then we need to
+ * flush out the previous load by emitting the tile coordinates and doing a
+ * dummy store.
+ */
+static void
+flush_last_load(struct vc5_cl *cl)
+{
+        cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
+        cl_emit(cl, STORE_TILE_BUFFER_GENERAL, store) {
+                store.buffer_to_store = NONE;
+        }
+}
+
 static void
 vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
 {
@@ -81,6 +114,31 @@ vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
         const uint32_t first_color_buffer_bit = (ffs(PIPE_CLEAR_COLOR0) - 1);
 
         uint32_t read_but_not_cleared = job->resolve & ~job->cleared;
+
+        for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
+                uint32_t bit = PIPE_CLEAR_COLOR0 << i;
+                if (!(read_but_not_cleared & bit))
+                        continue;
+
+                struct pipe_surface *psurf = job->cbufs[i];
+                if (!psurf || psurf->texture->nr_samples <= 1)
+                        continue;
+
+                load_raw(cl, psurf, RENDER_TARGET_0 + i);
+                read_but_not_cleared &= ~bit;
+
+                if (read_but_not_cleared)
+                        flush_last_load(cl);
+        }
+
+        if (job->zsbuf && job->zsbuf->texture->nr_samples > 1 &&
+            read_but_not_cleared & PIPE_CLEAR_DEPTHSTENCIL) {
+                load_raw(cl, job->zsbuf,
+                         zs_buffer_from_pipe_bits(read_but_not_cleared));
+                read_but_not_cleared &= ~PIPE_CLEAR_DEPTHSTENCIL;
+                if (read_but_not_cleared)
+                        cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
+        }
 
         /* The initial reload will be queued until we get the
          * tile coordinates.
