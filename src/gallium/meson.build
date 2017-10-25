@@ -70,8 +70,9 @@ endif
 if with_gallium_imx
   subdir('winsys/imx/drm')
 endif
-if with_glx == 'gallium-xlib'
-  subdir('winsys/sw/xlib')
+if with_gallium_i915
+  subdir('winsys/i915/drm')
+  subdir('drivers/i915')
 endif
 if with_dri
   subdir('state_trackers/dri')
@@ -80,9 +81,9 @@ if with_osmesa == 'gallium'
   subdir('state_trackers/osmesa')
 endif
 if with_glx == 'gallium-xlib'
+  subdir('winsys/sw/xlib')
   subdir('state_trackers/glx/xlib')
 endif
-# TODO: i915
 # TODO: SVGA
 # TODO: r300
 # TODO: r600

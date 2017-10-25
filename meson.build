@@ -119,6 +119,7 @@ with_gallium_vc4 = false
 with_gallium_vc5 = false
 with_gallium_etnaviv = false
 with_gallium_imx = false
+with_gallium_i915 = false
 _drivers = get_option('gallium-drivers')
 if _drivers == 'auto'
   if not ['darwin', 'windows'].contains(host_machine.system())
@@ -145,6 +146,7 @@ if _drivers != ''
   with_gallium_vc5 = _split.contains('vc5')
   with_gallium_etnaviv = _split.contains('etnaviv')
   with_gallium_imx = _split.contains('imx')
+  with_gallium_i915 = _split.contains('i915')
   with_gallium = true
 endif
 
@@ -174,12 +176,15 @@ endif
 if with_dri_swrast and with_gallium_softpipe
   error('Only one swrast provider can be built')
 endif
+if with_dri_i915 and with_gallium_i915
+  error('Only one i915 provider can be built')
+endif
 if with_gallium_imx and not with_gallium_etnaviv
   error('IMX driver requires etnaviv driver')
 endif
 
 dep_libdrm_intel = []
-if with_dri_i915
+if with_dri_i915 or with_gallium_i915
   dep_libdrm_intel = dependency('libdrm_intel', version : '>= 2.4.75')
 endif
 

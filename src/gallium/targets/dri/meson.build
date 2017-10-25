@@ -108,6 +108,11 @@ if with_gallium_imx
   gallium_dri_link_with += libimxdrm
   gallium_dri_drivers += 'imx-drm_dri.so'
 endif
+if with_gallium_i915
+  gallium_dri_c_args += '-DGALLIUM_I915'
+  gallium_dri_link_with += [libi915, libi915drm]
+  gallium_dri_drivers += 'i915_dri.so'
+endif
 
 if with_gallium_vc4 or with_gallium_vc5
   gallium_dri_link_with += libbroadcom_cle
