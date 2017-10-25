@@ -38,6 +38,7 @@
 
 enum reloc_worklist_type {
         reloc_gl_shader_state,
+        reloc_generic_tile_list,
 };
 
 struct reloc_worklist_entry {
@@ -50,6 +51,9 @@ struct reloc_worklist_entry {
                 struct {
                         uint32_t num_attrs;
                 } shader_state;
+                struct {
+                        uint32_t end;
+                } generic_tile_list;
         };
 };
 
@@ -190,6 +194,17 @@ clif_dump_packet(struct clif_dump *clif, uint32_t offset, const uint8_t *cl,
                 break;
         }
 
+        case V3D33_START_ADDRESS_OF_GENERIC_TILE_LIST_opcode: {
+                struct V3D33_START_ADDRESS_OF_GENERIC_TILE_LIST values;
+                V3D33_START_ADDRESS_OF_GENERIC_TILE_LIST_unpack(cl, &values);
+                struct reloc_worklist_entry *reloc =
+                        clif_dump_add_address_to_worklist(clif,
+                                                          reloc_generic_tile_list,
+                                                          values.start);
+                reloc->generic_tile_list.end = values.end;
+                break;
+        }
+
         case V3D33_HALT_opcode:
                 return false;
         }
@@ -269,6 +284,10 @@ clif_process_worklist(struct clif_dump *clif)
                 switch (reloc->type) {
                 case reloc_gl_shader_state:
                         clif_dump_gl_shader_state_record(clif, reloc, vaddr);
+                        break;
+                case reloc_generic_tile_list:
+                        clif_dump_cl(clif, reloc->addr,
+                                     reloc->generic_tile_list.end);
                         break;
                 }
                 out(clif, "\n");
