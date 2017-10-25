@@ -352,30 +352,6 @@ _mesa_extension_supported(const struct gl_context *ctx, extension_index i)
    return (ctx->Version >= ext->version[ctx->API]) && base[ext->offset];
 }
 
-/**
- * Compare two entries of the extensions table.  Sorts first by year,
- * then by name.
- *
- * Arguments are indices into _mesa_extension_table.
- */
-static int
-extension_compare(const void *p1, const void *p2)
-{
-   extension_index i1 = * (const extension_index *) p1;
-   extension_index i2 = * (const extension_index *) p2;
-   const struct mesa_extension *e1 = &_mesa_extension_table[i1];
-   const struct mesa_extension *e2 = &_mesa_extension_table[i2];
-   int res;
-
-   res = (int)e1->year - (int)e2->year;
-
-   if (res == 0) {
-      res = strcmp(e1->name, e2->name);
-   }
-
-   return res;
-}
-
 
 /**
  * Construct the GL_EXTENSIONS string.  Called the first time that
@@ -391,7 +367,7 @@ _mesa_make_extension_string(struct gl_context *ctx)
    /* Number of extensions */
    unsigned count;
    /* Indices of the extensions sorted by year */
-   extension_index *extension_indices;
+   extension_index extension_indices[MESA_EXTENSION_COUNT];
    /* String of extra extensions. */
    const char *extra_extensions = get_extension_override(ctx);
    unsigned k;
@@ -415,8 +391,8 @@ _mesa_make_extension_string(struct gl_context *ctx)
 
       if (i->year <= maxYear &&
           _mesa_extension_supported(ctx, k)) {
-	 length += strlen(i->name) + 1; /* +1 for space */
-	 ++count;
+         length += strlen(i->name) + 1; /* +1 for space */
+         extension_indices[count++] = k;
       }
    }
    if (extra_extensions != NULL)
@@ -427,28 +403,6 @@ _mesa_make_extension_string(struct gl_context *ctx)
       return NULL;
    }
 
-   extension_indices = malloc(count * sizeof(extension_index));
-   if (extension_indices == NULL) {
-      free(exts);
-      return NULL;
-   }
-
-   /* Sort extensions in chronological order because certain old applications
-    * (e.g., Quake3 demo) store the extension list in a static size buffer so
-    * chronologically order ensure that the extensions that such applications
-    * expect will fit into that buffer.
-    */
-   j = 0;
-   for (k = 0; k < MESA_EXTENSION_COUNT; ++k) {
-      if (_mesa_extension_table[k].year <= maxYear &&
-         _mesa_extension_supported(ctx, k)) {
-         extension_indices[j++] = k;
-      }
-   }
-   assert(j == count);
-   qsort(extension_indices, count,
-         sizeof *extension_indices, extension_compare);
-
    /* Build the extension string.*/
    for (j = 0; j < count; ++j) {
       const struct mesa_extension *i = &_mesa_extension_table[extension_indices[j]];
@@ -456,7 +410,6 @@ _mesa_make_extension_string(struct gl_context *ctx)
       strcat(exts, i->name);
       strcat(exts, " ");
    }
-   free(extension_indices);
    if (extra_extensions != 0) {
       strcat(exts, extra_extensions);
    }
