@@ -691,9 +691,13 @@ if with_glvnd
 endif
 
 # TODO: make this conditional
-dep_valgrind = dependency('valgrind', required : false)
-if dep_valgrind.found() and with_valgrind
-  pre_args += '-DHAVE_VALGRIND'
+if with_valgrind != 'false'
+  dep_valgrind = dependency('valgrind', required : with_valgrind == 'true')
+  if dep_valgrind.found()
+    pre_args += '-DHAVE_VALGRIND'
+  endif
+else
+  dep_valgrind = []
 endif
 
 # pthread stubs. Lets not and say we didn't
@@ -709,9 +713,13 @@ endif
 
 # TODO: llvm-prefix and llvm-shared-libs
 
-dep_unwind = dependency('libunwind', required : false)
-if dep_unwind.found() and with_libunwind
-  pre_args += '-DHAVE_LIBUNWIND'
+if with_libunwind != 'false'
+  dep_unwind = dependency('libunwind', required : with_libunwind == 'true')
+  if dep_unwind.found()
+    pre_args += '-DHAVE_LIBUNWIND'
+  endif
+else
+  dep_unwind = []
 endif
 
 # TODO: flags for opengl, gles, dri
