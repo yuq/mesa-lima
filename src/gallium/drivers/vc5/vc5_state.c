@@ -571,12 +571,49 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                 .image_height = prsc->height0 * msaa_scale,
                 .image_depth = prsc->depth0,
 
-                .texture_type = vc5_get_tex_format(cso->format),
                 .srgb = util_format_is_srgb(cso->format),
 
                 .base_level = cso->u.tex.first_level,
                 .array_stride_64_byte_aligned = rsc->cube_map_stride / 64,
         };
+
+        if (prsc->nr_samples > 1) {
+                /* Using texture views to reinterpret formats on our MSAA
+                 * textures won't work, because we don't lay out the bits in
+                 * memory as it's expected -- for example, RGBA8 and RGB10_A2
+                 * are compatible in the ARB_texture_view spec, but in HW we
+                 * lay them out as 32bpp RGBA8 and 64bpp RGBA16F.  Just assert
+                 * for now to catch failures.
+                 */
+                assert(util_format_linear(cso->format) ==
+                       util_format_linear(prsc->format));
+                uint32_t output_image_format = vc5_get_rt_format(cso->format);
+                uint32_t internal_type;
+                uint32_t internal_bpp;
+                vc5_get_internal_type_bpp_for_output_format(output_image_format,
+                                                            &internal_type,
+                                                            &internal_bpp);
+
+                switch (internal_type) {
+                case INTERNAL_TYPE_8:
+                        state_unpacked.texture_type = TEXTURE_DATA_FORMAT_RGBA8;
+                        break;
+                case INTERNAL_TYPE_16F:
+                        state_unpacked.texture_type = TEXTURE_DATA_FORMAT_RGBA16F;
+                        break;
+                default:
+                        unreachable("Bad MSAA texture type");
+                }
+
+                /* sRGB was stored in the tile buffer as linear and would have
+                 * been encoded to sRGB on resolved tile buffer store.  Note
+                 * that this means we would need shader code if we wanted to
+                 * read an MSAA sRGB texture without sRGB decode.
+                 */
+                state_unpacked.srgb = false;
+        } else {
+                state_unpacked.texture_type = vc5_get_tex_format(cso->format);
+        }
 
         /* Note: Contrary to the docs, the swizzle still applies even
          * if the return size is 32.  It's just that you probably want

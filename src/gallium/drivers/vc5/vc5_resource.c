@@ -371,7 +371,7 @@ vc5_setup_slices(struct vc5_resource *rsc, const char *caller)
         /* MSAA textures/renderbuffers are always laid out as single-level
          * UIF.
          */
-        bool uif_top = prsc->nr_samples > 1;
+        bool uif_top = msaa;
 
         for (int i = prsc->last_level; i >= 0; i--) {
                 struct vc5_resource_slice *slice = &rsc->slices[i];
