@@ -438,92 +438,74 @@ check_location_aliasing(struct explicit_location_info explicit_locations[][4],
    }
 
    while (location < location_limit) {
-      unsigned i = component;
-
-      /* If there are other outputs assigned to the same location
-       * they must have the same interpolation
-       */
       unsigned comp = 0;
       while (comp < 4) {
-         /* Skip the components used by this output, we only care about
-         * other outputs in the same location
-          */
-         if (comp == i) {
-            comp = last_comp;
-            continue;
-         }
-
          struct explicit_location_info *info =
             &explicit_locations[location][comp];
 
          if (info->var) {
-            if (info->interpolation != interpolation) {
+            /* Component aliasing is not alloed */
+            if (comp >= component && comp < last_comp) {
                linker_error(prog,
-                            "%s shader has multiple outputs at explicit "
-                            "location %u with different interpolation "
-                            "settings\n",
-                            _mesa_shader_stage_to_string(stage), location);
+                            "%s shader has multiple outputs explicitly "
+                            "assigned to location %d and component %d\n",
+                            _mesa_shader_stage_to_string(stage),
+                            location, comp);
                return false;
-            }
+            } else {
+               /* For all other used components we need to have matching
+                * types, interpolation and auxiliary storage
+                */
+               if (info->base_type != type->without_array()->base_type) {
+                  linker_error(prog,
+                               "Varyings sharing the same location must "
+                               "have the same underlying numerical type. "
+                               "Location %u component %u\n",
+                               location, comp);
+                  return false;
+               }
 
-            if (info->centroid != centroid ||
-                info->sample != sample ||
-                info->patch != patch) {
-               linker_error(prog,
-                            "%s shader has multiple outputs at explicit "
-                            "location %u with different aux storage\n",
-                            _mesa_shader_stage_to_string(stage), location);
-               return false;
+               if (info->interpolation != interpolation) {
+                  linker_error(prog,
+                               "%s shader has multiple outputs at explicit "
+                               "location %u with different interpolation "
+                               "settings\n",
+                               _mesa_shader_stage_to_string(stage), location);
+                  return false;
+               }
+
+               if (info->centroid != centroid ||
+                   info->sample != sample ||
+                   info->patch != patch) {
+                  linker_error(prog,
+                               "%s shader has multiple outputs at explicit "
+                               "location %u with different aux storage\n",
+                               _mesa_shader_stage_to_string(stage), location);
+                  return false;
+               }
             }
+         } else if (comp >= component && comp < last_comp) {
+            info->var = var;
+            info->base_type = type->without_array()->base_type;
+            info->interpolation = interpolation;
+            info->centroid = centroid;
+            info->sample = sample;
+            info->patch = patch;
          }
 
          comp++;
-      }
-
-      /* Component aliasing is not allowed */
-      while (i < last_comp) {
-         if (explicit_locations[location][i].var != NULL) {
-            linker_error(prog,
-                         "%s shader has multiple outputs explicitly "
-                         "assigned to location %d and component %d\n",
-                         _mesa_shader_stage_to_string(stage),
-                         location, component);
-            return false;
-         }
-
-         /* Make sure all component at this location have the same type.
-          */
-         for (unsigned j = 0; j < 4; j++) {
-            if (explicit_locations[location][j].var &&
-                explicit_locations[location][j].base_type !=
-                  type->without_array()->base_type) {
-               linker_error(prog,
-                            "Varyings sharing the same location must "
-                            "have the same underlying numerical type. "
-                            "Location %u component %u\n", location, component);
-               return false;
-            }
-         }
-
-         explicit_locations[location][i].var = var;
-         explicit_locations[location][i].base_type =
-            type->without_array()->base_type;
-         explicit_locations[location][i].interpolation = interpolation;
-         explicit_locations[location][i].centroid = centroid;
-         explicit_locations[location][i].sample = sample;
-         explicit_locations[location][i].patch = patch;
-         i++;
 
          /* We need to do some special handling for doubles as dvec3 and
           * dvec4 consume two consecutive locations. We don't need to
           * worry about components beginning at anything other than 0 as
           * the spec does not allow this for dvec3 and dvec4.
           */
-         if (i == 4 && last_comp > 4) {
+         if (comp == 4 && last_comp > 4) {
             last_comp = last_comp - 4;
             /* Bump location index and reset the component index */
             location++;
-            i = 0;
+            comp = 0;
+            component = 0;
          }
       }
 
