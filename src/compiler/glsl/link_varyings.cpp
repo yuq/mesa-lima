@@ -405,12 +405,27 @@ compute_variable_location_slot(ir_variable *var, gl_shader_stage stage)
 
 struct explicit_location_info {
    ir_variable *var;
-   unsigned base_type;
+   unsigned numerical_type;
    unsigned interpolation;
    bool centroid;
    bool sample;
    bool patch;
 };
+
+static inline unsigned
+get_numerical_type(const glsl_type *type)
+{
+   /* From the OpenGL 4.6 spec, section 4.4.1 Input Layout Qualifiers, Page 68,
+    * (Location aliasing):
+    *
+    *    "Further, when location aliasing, the aliases sharing the location
+    *     must have the same underlying numerical type  (floating-point or
+    *     integer)
+    */
+   if (type->is_float() || type->is_double())
+      return GLSL_TYPE_FLOAT;
+   return GLSL_TYPE_INT;
+}
 
 static bool
 check_location_aliasing(struct explicit_location_info explicit_locations[][4],
@@ -456,7 +471,8 @@ check_location_aliasing(struct explicit_location_info explicit_locations[][4],
                /* For all other used components we need to have matching
                 * types, interpolation and auxiliary storage
                 */
-               if (info->base_type != type->without_array()->base_type) {
+               if (info->numerical_type !=
+                   get_numerical_type(type->without_array())) {
                   linker_error(prog,
                                "Varyings sharing the same location must "
                                "have the same underlying numerical type. "
@@ -486,7 +502,7 @@ check_location_aliasing(struct explicit_location_info explicit_locations[][4],
             }
          } else if (comp >= component && comp < last_comp) {
             info->var = var;
-            info->base_type = type->without_array()->base_type;
+            info->numerical_type = get_numerical_type(type->without_array());
             info->interpolation = interpolation;
             info->centroid = centroid;
             info->sample = sample;
