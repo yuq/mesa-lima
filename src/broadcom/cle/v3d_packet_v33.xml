@@ -145,7 +145,7 @@
   <packet code="27" name="End of Tile Marker" cl="R"/>
 
   <packet code="29" name="Store Tile Buffer General" cl="R">
-    <field name="Address" size="32" start="16" type="address"/>
+    <field name="Address" size="24" start="24" type="address"/>
     <field name="Padded height of output image in UIF blocks" size="13" start="11" type="uint"/>
     <field name="XOR UIF" size="1" start="10" type="bool"/>
     <field name="Last Tile of Frame" size="1" start="8" type="bool"/>
