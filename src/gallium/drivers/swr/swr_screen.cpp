@@ -345,6 +345,7 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_TGSI_ANY_REG_AS_ADDRESS:
    case PIPE_CAP_TILE_RASTER_ORDER:
    case PIPE_CAP_MAX_COMBINED_SHADER_OUTPUT_RESOURCES:
+   case PIPE_CAP_SIGNED_VERTEX_BUFFER_OFFSET:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
