@@ -779,7 +779,7 @@
   </struct>
 
   <struct name="Texture Uniform Parameter 1 CFG_MODE=1">
-    <field name="Texture state record base address" size="32" start="0" type="address"/>
+    <field name="Texture state record base address" size="28" start="4" type="address"/>
     <field name="Return word 3 of texture data" size="1" start="3" type="bool"/>
     <field name="Return word 2 of texture data" size="1" start="2" type="bool"/>
     <field name="Return word 1 of texture data" size="1" start="1" type="bool"/>
