@@ -75,6 +75,9 @@ ac_llvm_context_init(struct ac_llvm_context *ctx, LLVMContextRef context,
 	ctx->f32_0 = LLVMConstReal(ctx->f32, 0.0);
 	ctx->f32_1 = LLVMConstReal(ctx->f32, 1.0);
 
+	ctx->i1false = LLVMConstInt(ctx->i1, 0, false);
+	ctx->i1true = LLVMConstInt(ctx->i1, 1, false);
+
 	ctx->range_md_kind = LLVMGetMDKindIDInContext(ctx->context,
 						     "range", 5);
 
@@ -946,8 +949,8 @@ LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
 		LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
 		vindex,
 		voffset,
-		LLVMConstInt(ctx->i1, 0, 0), /* glc */
-		LLVMConstInt(ctx->i1, 0, 0), /* slc */
+		ctx->i1false, /* glc */
+		ctx->i1false, /* slc */
 	};
 
 	return ac_build_intrinsic(ctx,
@@ -1150,7 +1153,7 @@ ac_build_umsb(struct ac_llvm_context *ctx,
 {
 	LLVMValueRef args[2] = {
 		arg,
-		LLVMConstInt(ctx->i1, 1, 0),
+		ctx->i1true,
 	};
 	LLVMValueRef msb = ac_build_intrinsic(ctx, "llvm.ctlz.i32",
 					      dst_type, args, ARRAY_SIZE(args),
@@ -1276,9 +1279,9 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 		args[num_args++] = LLVMConstInt(ctx->i32, a->dmask, 0);
 		if (sample)
 			args[num_args++] = LLVMConstInt(ctx->i1, a->unorm, 0);
-		args[num_args++] = LLVMConstInt(ctx->i1, 0, 0); /* glc */
-		args[num_args++] = LLVMConstInt(ctx->i1, 0, 0); /* slc */
-		args[num_args++] = LLVMConstInt(ctx->i1, 0, 0); /* lwe */
+		args[num_args++] = ctx->i1false; /* glc */
+		args[num_args++] = ctx->i1false; /* slc */
+		args[num_args++] = ctx->i1false; /* lwe */
 		args[num_args++] = LLVMConstInt(ctx->i1, a->da, 0);
 
 		switch (a->opcode) {
