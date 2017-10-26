@@ -521,6 +521,7 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
 
    /* _NEW_HINT */
    key->high_quality_derivatives =
+      prog->info.uses_fddx_fddy &&
       ctx->Hint.FragmentShaderDerivative == GL_NICEST;
 
    if (devinfo->gen < 6)
