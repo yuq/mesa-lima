@@ -806,6 +806,14 @@ ntq_emit_alu(struct v3d_compile *c, nir_alu_instr *instr)
         case nir_op_imov:
                 result = vir_MOV(c, src[0]);
                 break;
+
+        case nir_op_fneg:
+                result = vir_XOR(c, src[0], vir_uniform_ui(c, 1 << 31));
+                break;
+        case nir_op_ineg:
+                result = vir_NEG(c, src[0]);
+                break;
+
         case nir_op_fmul:
                 result = vir_FMUL(c, src[0], src[1]);
                 break;
@@ -1984,7 +1992,6 @@ const nir_shader_compiler_options v3d_nir_options = {
         .lower_fpow = true,
         .lower_fsat = true,
         .lower_fsqrt = true,
-        .lower_negate = true,
         .native_integers = true,
 };
 
