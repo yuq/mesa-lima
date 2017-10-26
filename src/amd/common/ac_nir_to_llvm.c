@@ -162,7 +162,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef empty_md;
 	gl_shader_stage stage;
 
-	LLVMValueRef lds;
 	LLVMValueRef inputs[RADEON_LLVM_MAX_INPUTS * 4];
 
 	uint64_t input_mask;
@@ -546,14 +545,6 @@ static void set_userdata_location_indirect(struct ac_userdata_info *ud_info, uin
 	ud_info->num_sgprs = num_sgprs;
 	ud_info->indirect = true;
 	ud_info->indirect_offset = indirect_offset;
-}
-
-static void declare_tess_lds(struct nir_to_llvm_context *ctx)
-{
-	unsigned lds_size = ctx->options->chip_class >= CIK ? 65536 : 32768;
-	ctx->lds = LLVMBuildIntToPtr(ctx->builder, ctx->i32zero,
-				     LLVMPointerType(LLVMArrayType(ctx->i32, lds_size / 4), LOCAL_ADDR_SPACE),
-		"tess_lds");
 }
 
 struct user_sgpr_info {
@@ -971,7 +962,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			set_userdata_location_shader(ctx, AC_UD_VS_LS_TCS_IN_LAYOUT, &user_sgpr_idx, 1);
 		}
 		if (ctx->options->key.vs.as_ls)
-			declare_tess_lds(ctx);
+			ac_declare_lds_as_pointer(&ctx->ac);
 		break;
 	case MESA_SHADER_TESS_CTRL:
 		radv_define_vs_user_sgprs_phase2(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_idx);
@@ -980,7 +971,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		set_userdata_location_shader(ctx, AC_UD_TCS_OFFCHIP_LAYOUT, &user_sgpr_idx, 4);
 		if (ctx->view_index)
 			set_userdata_location_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
-		declare_tess_lds(ctx);
+		ac_declare_lds_as_pointer(&ctx->ac);
 		break;
 	case MESA_SHADER_TESS_EVAL:
 		set_userdata_location_shader(ctx, AC_UD_TES_OFFCHIP_LAYOUT, &user_sgpr_idx, 1);
@@ -998,7 +989,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		if (ctx->view_index)
 			set_userdata_location_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
 		if (has_previous_stage)
-			declare_tess_lds(ctx);
+			ac_declare_lds_as_pointer(&ctx->ac);
 		break;
 	case MESA_SHADER_FRAGMENT:
 		if (ctx->shader_info->info.ps.needs_sample_positions) {
@@ -2670,23 +2661,6 @@ out:
 	*indir_out = offset;
 }
 
-static LLVMValueRef
-lds_load(struct nir_to_llvm_context *ctx,
-	 LLVMValueRef dw_addr)
-{
-	LLVMValueRef value;
-	value = ac_build_load(&ctx->ac, ctx->lds, dw_addr);
-	return value;
-}
-
-static void
-lds_store(struct nir_to_llvm_context *ctx,
-	  LLVMValueRef dw_addr, LLVMValueRef value)
-{
-	value = LLVMBuildBitCast(ctx->builder, value, ctx->i32, "");
-	ac_build_indexed_store(&ctx->ac, ctx->lds,
-			       dw_addr, value);
-}
 
 /* The offchip buffer layout for TCS->TES is
  *
@@ -2862,7 +2836,7 @@ load_tcs_input(struct nir_to_llvm_context *ctx,
 
 	unsigned comp = instr->variables[0]->var->data.location_frac;
 	for (unsigned i = 0; i < instr->num_components + comp; i++) {
-		value[i] = lds_load(ctx, dw_addr);
+		value[i] = ac_lds_load(&ctx->ac, dw_addr);
 		dw_addr = LLVMBuildAdd(ctx->builder, dw_addr,
 				       ctx->i32one, "");
 	}
@@ -2901,7 +2875,7 @@ load_tcs_output(struct nir_to_llvm_context *ctx,
 
 	unsigned comp = instr->variables[0]->var->data.location_frac;
 	for (unsigned i = comp; i < instr->num_components + comp; i++) {
-		value[i] = lds_load(ctx, dw_addr);
+		value[i] = ac_lds_load(&ctx->ac, dw_addr);
 		dw_addr = LLVMBuildAdd(ctx->builder, dw_addr,
 				       ctx->i32one, "");
 	}
@@ -2963,7 +2937,7 @@ store_tcs_output(struct nir_to_llvm_context *ctx,
 			continue;
 		LLVMValueRef value = llvm_extract_elem(&ctx->ac, src, chan - comp);
 
-		lds_store(ctx, dw_addr, value);
+		ac_lds_store(&ctx->ac, dw_addr, value);
 
 		if (!is_tess_factor && writemask != 0xF)
 			ac_build_buffer_store_dword(&ctx->ac, ctx->hs_ring_tess_offchip, value, 1,
@@ -3044,7 +3018,7 @@ load_gs_input(struct nir_to_llvm_context *ctx,
 			LLVMValueRef dw_addr = ctx->gs_vtx_offset[vtx_offset_param];
 			dw_addr = LLVMBuildAdd(ctx->ac.builder, dw_addr,
 			                       LLVMConstInt(ctx->ac.i32, param * 4 + i + const_index, 0), "");
-			value[i] = lds_load(ctx, dw_addr);
+			value[i] = ac_lds_load(&ctx->ac, dw_addr);
 		} else {
 			args[0] = ctx->esgs_ring;
 			args[1] = vtx_offset;
@@ -5949,8 +5923,8 @@ handle_es_outputs_post(struct nir_to_llvm_context *ctx,
 			out_val = LLVMBuildBitCast(ctx->builder, out_val, ctx->i32, "");
 
 			if (ctx->ac.chip_class  >= GFX9) {
-				lds_store(ctx, dw_addr,
-				          LLVMBuildLoad(ctx->builder, out_ptr[j], ""));
+				ac_lds_store(&ctx->ac, dw_addr,
+					     LLVMBuildLoad(ctx->builder, out_ptr[j], ""));
 				dw_addr = LLVMBuildAdd(ctx->builder, dw_addr, ctx->i32one, "");
 			} else {
 				ac_build_buffer_store_dword(&ctx->ac,
@@ -5989,8 +5963,8 @@ handle_ls_outputs_post(struct nir_to_llvm_context *ctx)
 						    LLVMConstInt(ctx->i32, param * 4, false),
 						    "");
 		for (unsigned j = 0; j < length; j++) {
-			lds_store(ctx, dw_addr,
-				  LLVMBuildLoad(ctx->builder, out_ptr[j], ""));
+			ac_lds_store(&ctx->ac, dw_addr,
+				     LLVMBuildLoad(ctx->builder, out_ptr[j], ""));
 			dw_addr = LLVMBuildAdd(ctx->builder, dw_addr, ctx->i32one, "");
 		}
 	}
@@ -6142,20 +6116,20 @@ write_tess_factors(struct nir_to_llvm_context *ctx)
 
 	// LINES reverseal
 	if (ctx->options->key.tcs.primitive_mode == GL_ISOLINES) {
-		outer[0] = out[1] = lds_load(ctx, lds_outer);
+		outer[0] = out[1] = ac_lds_load(&ctx->ac, lds_outer);
 		lds_outer = LLVMBuildAdd(ctx->builder, lds_outer,
 					 LLVMConstInt(ctx->i32, 1, false), "");
-		outer[1] = out[0] = lds_load(ctx, lds_outer);
+		outer[1] = out[0] = ac_lds_load(&ctx->ac, lds_outer);
 	} else {
 		for (i = 0; i < outer_comps; i++) {
 			outer[i] = out[i] =
-				lds_load(ctx, lds_outer);
+				ac_lds_load(&ctx->ac, lds_outer);
 			lds_outer = LLVMBuildAdd(ctx->builder, lds_outer,
 						 LLVMConstInt(ctx->i32, 1, false), "");
 		}
 		for (i = 0; i < inner_comps; i++) {
 			inner[i] = out[outer_comps+i] =
-				lds_load(ctx, lds_inner);
+				ac_lds_load(&ctx->ac, lds_inner);
 			lds_inner = LLVMBuildAdd(ctx->builder, lds_inner,
 						 LLVMConstInt(ctx->i32, 1, false), "");
 		}

@@ -1099,12 +1099,12 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
 	dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
 			    LLVMConstInt(ctx->i32, swizzle, 0));
 
-	value = ac_build_load(&ctx->ac, ctx->lds, dw_addr);
+	value = ac_lds_load(&ctx->ac, dw_addr);
 	if (tgsi_type_is_64bit(type)) {
 		LLVMValueRef value2;
 		dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
 				       ctx->i32_1);
-		value2 = ac_build_load(&ctx->ac, ctx->lds, dw_addr);
+		value2 = ac_lds_load(&ctx->ac, dw_addr);
 		return si_llvm_emit_fetch_64bit(bld_base, type, value, value2);
 	}
 
@@ -1127,9 +1127,7 @@ static void lds_store(struct lp_build_tgsi_context *bld_base,
 	dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
 			    LLVMConstInt(ctx->i32, dw_offset_imm, 0));
 
-	value = ac_to_integer(&ctx->ac, value);
-	ac_build_indexed_store(&ctx->ac, ctx->lds,
-			       dw_addr, value);
+	ac_lds_store(&ctx->ac, dw_addr, value);
 }
 
 static LLVMValueRef desc_from_addr_base64k(struct si_shader_context *ctx,
@@ -4254,14 +4252,6 @@ static void declare_streamout_params(struct si_shader_context *ctx,
 	}
 }
 
-static void declare_lds_as_pointer(struct si_shader_context *ctx)
-{
-	unsigned lds_size = ctx->screen->b.chip_class >= CIK ? 65536 : 32768;
-	ctx->lds = LLVMBuildIntToPtr(ctx->ac.builder, ctx->i32_0,
-		LLVMPointerType(LLVMArrayType(ctx->i32, lds_size / 4), LOCAL_ADDR_SPACE),
-		"lds");
-}
-
 static unsigned si_get_max_workgroup_size(const struct si_shader *shader)
 {
 	switch (shader->selector->type) {
@@ -4752,7 +4742,7 @@ static void create_function(struct si_shader_context *ctx)
 	    (ctx->screen->b.chip_class >= GFX9 &&
 	     (shader->key.as_es ||
 	      ctx->type == PIPE_SHADER_GEOMETRY)))
-		declare_lds_as_pointer(ctx);
+		ac_declare_lds_as_pointer(&ctx->ac);
 }
 
 /**
@@ -7076,7 +7066,7 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 	/* Create the function. */
 	si_create_function(ctx, "tcs_epilog", NULL, 0, &fninfo,
 			   ctx->screen->b.chip_class >= CIK ? 128 : 64);
-	declare_lds_as_pointer(ctx);
+	ac_declare_lds_as_pointer(&ctx->ac);
 	func = ctx->main_fn;
 
 	LLVMValueRef invoc0_tess_factors[6];

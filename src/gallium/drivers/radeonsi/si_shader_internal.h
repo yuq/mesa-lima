@@ -209,7 +209,6 @@ struct si_shader_context {
 	LLVMValueRef esgs_ring;
 	LLVMValueRef gsvs_ring[4];
 
-	LLVMValueRef lds;
 	LLVMValueRef invoc0_tess_factors[6]; /* outer[4], inner[2] */
 	LLVMValueRef gs_next_vertex[4];
 	LLVMValueRef postponed_kill;

@@ -34,6 +34,10 @@
 extern "C" {
 #endif
 
+enum {
+	AC_LOCAL_ADDR_SPACE = 3,
+};
+
 struct ac_llvm_context {
 	LLVMContextRef context;
 	LLVMModuleRef module;
@@ -65,6 +69,8 @@ struct ac_llvm_context {
 	LLVMValueRef empty_md;
 
 	enum chip_class chip_class;
+
+	LLVMValueRef lds;
 };
 
 void
@@ -283,6 +289,12 @@ void ac_optimize_vs_outputs(struct ac_llvm_context *ac,
 			    uint32_t num_outputs,
 			    uint8_t *num_param_exports);
 void ac_init_exec_full_mask(struct ac_llvm_context *ctx);
+
+void ac_declare_lds_as_pointer(struct ac_llvm_context *ac);
+LLVMValueRef ac_lds_load(struct ac_llvm_context *ctx,
+			 LLVMValueRef dw_addr);
+void ac_lds_store(struct ac_llvm_context *ctx,
+		  LLVMValueRef dw_addr, LLVMValueRef value);
 #ifdef __cplusplus
 }
 #endif
