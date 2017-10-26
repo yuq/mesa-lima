@@ -150,8 +150,6 @@ struct nir_to_llvm_context {
 	LLVMTypeRef v4f32;
 	LLVMTypeRef voidt;
 
-	LLVMValueRef v4f32empty;
-
 	unsigned uniform_md_kind;
 	LLVMValueRef empty_md;
 	gl_shader_stage stage;
@@ -999,8 +997,6 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 static void setup_types(struct nir_to_llvm_context *ctx)
 {
-	LLVMValueRef args[4];
-
 	ctx->voidt = LLVMVoidTypeInContext(ctx->context);
 	ctx->i1 = LLVMIntTypeInContext(ctx->context, 1);
 	ctx->i8 = LLVMIntTypeInContext(ctx->context, 8);
@@ -1017,17 +1013,9 @@ static void setup_types(struct nir_to_llvm_context *ctx)
 	ctx->v2f32 = LLVMVectorType(ctx->f32, 2);
 	ctx->v4f32 = LLVMVectorType(ctx->f32, 4);
 
-	args[0] = ctx->ac.f32_0;
-	args[1] = ctx->ac.f32_0;
-	args[2] = ctx->ac.f32_0;
-	args[3] = ctx->ac.f32_1;
-	ctx->v4f32empty = LLVMConstVector(args, 4);
-
 	ctx->uniform_md_kind =
 	    LLVMGetMDKindIDInContext(ctx->context, "amdgpu.uniform", 14);
 	ctx->empty_md = LLVMMDNodeInContext(ctx->context, NULL, 0);
-
-	args[0] = LLVMConstReal(ctx->f32, 2.5);
 }
 
 static int get_llvm_num_components(LLVMValueRef value)
