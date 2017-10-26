@@ -1259,6 +1259,52 @@ static bool gpir_schedule_block(gpir_block *block)
    return gpir_schedule_ready_list(block, &ready_list);
 }
 
+static void print_statistic(gpir_compiler *comp)
+{
+#ifdef DEBUG
+   int num_nodes[gpir_op_num] = {0};
+   int num_created_nodes[gpir_op_num] = {0};
+
+   list_for_each_entry(gpir_block, block, &comp->block_list, list) {
+      list_for_each_entry(gpir_node, node, &block->node_list, list) {
+         num_nodes[node->op]++;
+         if (node->index >= comp->save_index)
+            num_created_nodes[node->op]++;
+      }
+   }
+
+   debug_printf("====== gpir scheduler statistic ======\n");
+   debug_printf("---- how many nodes are scheduled ----\n");
+   int n = 0, l = 0;
+   for (int i = 0; i < gpir_op_num; i++) {
+      if (num_nodes[i]) {
+         debug_printf("%10s:%-6d", gpir_op_infos[i].name, num_nodes[i]);
+         n += num_nodes[i];
+         if (!(++l % 4))
+            debug_printf("\n");
+      }
+   }
+   if (l % 4)
+      debug_printf("\n");
+   debug_printf("\ntotal: %d\n", n);
+
+   debug_printf("---- how many nodes are created ----\n");
+   n = l = 0;
+   for (int i = 0; i < gpir_op_num; i++) {
+      if (num_created_nodes[i]) {
+         debug_printf("%10s:%-6d", gpir_op_infos[i].name, num_created_nodes[i]);
+         n += num_created_nodes[i];
+         if (!(++l % 4))
+            debug_printf("\n");
+      }
+   }
+   if (l % 4)
+      debug_printf("\n");
+   debug_printf("\ntotal: %d\n", n);
+   debug_printf("------------------------------------\n");
+#endif
+}
+
 bool gpir_schedule_prog(gpir_compiler *comp)
 {
    comp->save_index = comp->cur_index;
@@ -1268,6 +1314,7 @@ bool gpir_schedule_prog(gpir_compiler *comp)
          return false;
    }
 
+   print_statistic(comp);
    gpir_instr_print_prog(comp);
    return true;
 }
