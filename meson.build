@@ -112,6 +112,7 @@ endif
 with_gallium = false
 with_gallium_pl111 = false
 with_gallium_radeonsi = false
+with_gallium_r300 = false
 with_gallium_nouveau = false
 with_gallium_freedreno = false
 with_gallium_softpipe = false
@@ -125,7 +126,7 @@ if _drivers == 'auto'
   if not ['darwin', 'windows'].contains(host_machine.system())
     # TODO: PPC, Sparc
     if ['x86', 'x86_64'].contains(host_machine.cpu_family())
-      _drivers = 'radeonsi,nouveau,swrast'
+      _drivers = 'r300,radeonsi,nouveau,swrast'
     elif ['arm', 'aarch64'].contains(host_machine.cpu_family())
       _drivers = 'pl111,vc4,vc5,freedreno,etnaviv,imx,swrast'
     else
@@ -139,6 +140,7 @@ if _drivers != ''
   _split = _drivers.split(',')
   with_gallium_pl111 = _split.contains('pl111')
   with_gallium_radeonsi = _split.contains('radeonsi')
+  with_gallium_r300 = _split.contains('r300')
   with_gallium_nouveau = _split.contains('nouveau')
   with_gallium_freedreno = _split.contains('freedreno')
   with_gallium_softpipe = _split.contains('swrast')
@@ -717,7 +719,7 @@ dep_libdrm_freedreno = []
 if with_amd_vk or with_gallium_radeonsi
   dep_libdrm_amdgpu = dependency('libdrm_amdgpu', version : '>= 2.4.88')
 endif
-if with_gallium_radeonsi or with_dri_r100 or with_dri_r200
+if with_gallium_radeonsi or with_dri_r100 or with_dri_r200 or with_gallium_r300
   dep_libdrm_radeon = dependency('libdrm_radeon', version : '>= 2.4.71')
 endif
 if with_gallium_nouveau or with_dri_nouveau
