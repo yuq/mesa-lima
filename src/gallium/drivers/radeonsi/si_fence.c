@@ -63,6 +63,14 @@ static void si_add_fence_dependency(struct r600_common_context *rctx,
 	ws->cs_add_fence_dependency(rctx->gfx.cs, fence);
 }
 
+static void si_add_syncobj_signal(struct r600_common_context *rctx,
+				  struct pipe_fence_handle *fence)
+{
+	struct radeon_winsys *ws = rctx->ws;
+
+	ws->cs_add_syncobj_signal(rctx->gfx.cs, fence);
+}
+
 static void si_fence_reference(struct pipe_screen *screen,
 			       struct pipe_fence_handle **dst,
 			       struct pipe_fence_handle *src)
@@ -480,11 +488,40 @@ finish:
 	}
 }
 
+static void si_fence_server_signal(struct pipe_context *ctx,
+				   struct pipe_fence_handle *fence)
+{
+	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+	struct si_multi_fence *rfence = (struct si_multi_fence *)fence;
+
+	/* We should have at least one syncobj to signal */
+	assert(rfence->sdma || rfence->gfx);
+
+	if (rfence->sdma)
+		si_add_syncobj_signal(rctx, rfence->sdma);
+	if (rfence->gfx)
+		si_add_syncobj_signal(rctx, rfence->gfx);
+
+	/**
+	 * The spec does not require a flush here. We insert a flush
+	 * because syncobj based signals are not directly placed into
+	 * the command stream. Instead the signal happens when the
+	 * submission associated with the syncobj finishes execution.
+	 *
+	 * Therefore, we must make sure that we flush the pipe to avoid
+	 * new work being emitted and getting executed before the signal
+	 * operation.
+	 */
+	si_flush_from_st(ctx, NULL, PIPE_FLUSH_ASYNC);
+}
+
+
 void si_init_fence_functions(struct si_context *ctx)
 {
 	ctx->b.b.flush = si_flush_from_st;
 	ctx->b.b.create_fence_fd = si_create_fence_fd;
 	ctx->b.b.fence_server_sync = si_fence_server_sync;
+	ctx->b.b.fence_server_signal = si_fence_server_signal;
 }
 
 void si_init_screen_fence_functions(struct si_screen *screen)
