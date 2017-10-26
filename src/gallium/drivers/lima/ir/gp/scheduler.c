@@ -1036,6 +1036,10 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
 
    /* create store reg node */
    gpir_node *store = gpir_node_create(block->comp, gpir_op_store_reg, -1);
+   if (!store)
+      return -3;
+   list_addtail(&store->list, &block->node_list);
+
    gpir_node_add_child(store, store_alu);
    gpir_dep_info *dep = gpir_node_add_read_after_write_dep(load, store);
 
