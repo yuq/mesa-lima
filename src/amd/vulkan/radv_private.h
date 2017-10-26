@@ -961,9 +961,9 @@ void radv_set_color_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 void radv_set_dcc_need_cmask_elim_pred(struct radv_cmd_buffer *cmd_buffer,
 				       struct radv_image *image,
 				       bool value);
-void radv_fill_buffer(struct radv_cmd_buffer *cmd_buffer,
-		      struct radeon_winsys_bo *bo,
-		      uint64_t offset, uint64_t size, uint32_t value);
+uint32_t radv_fill_buffer(struct radv_cmd_buffer *cmd_buffer,
+			  struct radeon_winsys_bo *bo,
+			  uint64_t offset, uint64_t size, uint32_t value);
 void radv_cmd_buffer_trace_emit(struct radv_cmd_buffer *cmd_buffer);
 bool radv_get_memory_fd(struct radv_device *device,
 			struct radv_device_memory *memory,

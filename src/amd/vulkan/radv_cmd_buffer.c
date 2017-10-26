@@ -3641,16 +3641,15 @@ static void radv_initialize_htile(struct radv_cmd_buffer *cmd_buffer,
 	uint64_t size = image->surface.htile_slice_size * layer_count;
 	uint64_t offset = image->offset + image->htile_offset +
 	                  image->surface.htile_slice_size * range->baseArrayLayer;
+	struct radv_cmd_state *state = &cmd_buffer->state;
 
-	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB |
-	                                RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
+	state->flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB |
+			     RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
 
-	radv_fill_buffer(cmd_buffer, image->bo, offset, size, clear_word);
+	state->flush_bits |= radv_fill_buffer(cmd_buffer, image->bo, offset,
+					      size, clear_word);
 
-	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB_META |
-	                                RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
-	                                RADV_CMD_FLAG_INV_VMEM_L1 |
-	                                RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
+	state->flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB_META;
 }
 
 static void radv_handle_depth_image_transition(struct radv_cmd_buffer *cmd_buffer,
@@ -3696,16 +3695,16 @@ static void radv_handle_depth_image_transition(struct radv_cmd_buffer *cmd_buffe
 void radv_initialise_cmask(struct radv_cmd_buffer *cmd_buffer,
 			   struct radv_image *image, uint32_t value)
 {
-	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
-	                                RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
+	struct radv_cmd_state *state = &cmd_buffer->state;
 
-	radv_fill_buffer(cmd_buffer, image->bo, image->offset + image->cmask.offset,
-			 image->cmask.size, value);
+	state->flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
+			    RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
 
-	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB_META |
-	                                RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
-	                                RADV_CMD_FLAG_INV_VMEM_L1 |
-	                                RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
+	state->flush_bits |= radv_fill_buffer(cmd_buffer, image->bo,
+					      image->offset + image->cmask.offset,
+					      image->cmask.size, value);
+
+	state->flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
 }
 
 static void radv_handle_cmask_image_transition(struct radv_cmd_buffer *cmd_buffer,
@@ -3730,18 +3729,17 @@ static void radv_handle_cmask_image_transition(struct radv_cmd_buffer *cmd_buffe
 void radv_initialize_dcc(struct radv_cmd_buffer *cmd_buffer,
 			 struct radv_image *image, uint32_t value)
 {
+	struct radv_cmd_state *state = &cmd_buffer->state;
 
-	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
-	                                RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
+	state->flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
+			     RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
 
-	radv_fill_buffer(cmd_buffer, image->bo, image->offset + image->dcc_offset,
-			 image->surface.dcc_size, value);
+	state->flush_bits |= radv_fill_buffer(cmd_buffer, image->bo,
+					      image->offset + image->dcc_offset,
+					      image->surface.dcc_size, value);
 
-	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
-	                                RADV_CMD_FLAG_FLUSH_AND_INV_CB_META |
-	                                RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
-	                                RADV_CMD_FLAG_INV_VMEM_L1 |
-	                                RADV_CMD_FLAG_WRITEBACK_GLOBAL_L2;
+	state->flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB |
+			     RADV_CMD_FLAG_FLUSH_AND_INV_CB_META;
 }
 
 static void radv_handle_dcc_image_transition(struct radv_cmd_buffer *cmd_buffer,
