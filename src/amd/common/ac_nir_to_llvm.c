@@ -1227,18 +1227,6 @@ static LLVMValueRef emit_bcsel(struct ac_llvm_context *ctx,
 	return LLVMBuildSelect(ctx->builder, v, src1, src2, "");
 }
 
-static LLVMValueRef emit_ifind_msb(struct ac_llvm_context *ctx,
-				   LLVMValueRef src0)
-{
-	return ac_build_imsb(ctx, src0, ctx->i32);
-}
-
-static LLVMValueRef emit_ufind_msb(struct ac_llvm_context *ctx,
-				   LLVMValueRef src0)
-{
-	return ac_build_umsb(ctx, src0, ctx->i32);
-}
-
 static LLVMValueRef emit_minmax_int(struct ac_llvm_context *ctx,
 				    LLVMIntPredicate pred,
 				    LLVMValueRef src0, LLVMValueRef src1)
@@ -1871,11 +1859,11 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		break;
 	case nir_op_ufind_msb:
 		src[0] = ac_to_integer(&ctx->ac, src[0]);
-		result = emit_ufind_msb(&ctx->ac, src[0]);
+		result = ac_build_umsb(&ctx->ac, src[0], ctx->ac.i32);
 		break;
 	case nir_op_ifind_msb:
 		src[0] = ac_to_integer(&ctx->ac, src[0]);
-		result = emit_ifind_msb(&ctx->ac, src[0]);
+		result = ac_build_imsb(&ctx->ac, src[0], ctx->ac.i32);
 		break;
 	case nir_op_uadd_carry:
 		src[0] = ac_to_integer(&ctx->ac, src[0]);
