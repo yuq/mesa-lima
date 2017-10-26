@@ -1,4 +1,5 @@
 # Copyright © 2017 Dylan Baker
+# Copyright © 2017 Intel Corporation
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -85,6 +86,11 @@ if with_gallium_svga
   subdir('drivers/svga')
   subdir('winsys/svga/drm')
 endif
+if with_gallium_virgl
+  subdir('drivers/virgl')
+  subdir('winsys/virgl/drm')
+  subdir('winsys/virgl/vtest')
+endif
 if with_dri
   subdir('state_trackers/dri')
 endif
@@ -96,7 +102,6 @@ if with_glx == 'gallium-xlib'
   subdir('state_trackers/glx/xlib')
 endif
 # TODO: SWR
-# TODO: virgl
 # TODO: clover
 if with_dri
   subdir('targets/dri')

@@ -123,14 +123,15 @@ with_gallium_etnaviv = false
 with_gallium_imx = false
 with_gallium_i915 = false
 with_gallium_svga = false
+with_gallium_virgl = false
 _drivers = get_option('gallium-drivers')
 if _drivers == 'auto'
   if not ['darwin', 'windows'].contains(host_machine.system())
     # TODO: PPC, Sparc
     if ['x86', 'x86_64'].contains(host_machine.cpu_family())
-      _drivers = 'r300,r600,radeonsi,nouveau,svga,swrast'
+      _drivers = 'r300,r600,radeonsi,nouveau,virgl,svga,swrast'
     elif ['arm', 'aarch64'].contains(host_machine.cpu_family())
-      _drivers = 'pl111,vc4,vc5,freedreno,etnaviv,imx,svga,swrast'
+      _drivers = 'pl111,vc4,vc5,freedreno,etnaviv,imx,virgl,svga,swrast'
     else
       error('Unknown architecture. Please pass -Dgallium-drivers to set driver options. Patches gladly accepted to fix this.')
     endif
@@ -153,6 +154,7 @@ if _drivers != ''
   with_gallium_imx = _split.contains('imx')
   with_gallium_i915 = _split.contains('i915')
   with_gallium_svga = _split.contains('svga')
+  with_gallium_virgl = _split.contains('virgl')
   with_gallium = true
 endif
 
@@ -286,9 +288,13 @@ else
   with_egl = false
 endif
 
-# TODO: or virgl
-if with_egl and with_gallium_radeonsi and not (with_platform_drm or with_platform_surfaceless)
-  error('RadeonSI requires drm or surfaceless platform when using EGL')
+if with_egl and not (with_platform_drm or with_platform_surfaceless)
+  if with_gallium_radeonsi
+    error('RadeonSI requires drm or surfaceless platform when using EGL')
+  endif
+  if with_gallium_virgl
+    error('Virgl requires drm or surfaceless platform when using EGL')
+  endif
 endif
 
 pre_args += '-DGLX_USE_TLS'
