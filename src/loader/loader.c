@@ -284,24 +284,15 @@ loader_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
    return 0;
 }
 
-
-#if defined(HAVE_LIBDRM)
-static char *
-drm_get_device_name_for_fd(int fd)
-{
-   return drmGetDeviceNameFromFd2(fd);
-}
-#endif
-
 char *
 loader_get_device_name_for_fd(int fd)
 {
    char *result = NULL;
 
 #if HAVE_LIBDRM
-   if ((result = drm_get_device_name_for_fd(fd)))
-      return result;
+   result = drmGetDeviceNameFromFd2(fd);
 #endif
+
    return result;
 }
 
