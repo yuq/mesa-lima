@@ -4362,6 +4362,16 @@ genX(upload_raster)(struct brw_context *brw)
       /* _NEW_LINE */
       raster.AntialiasingEnable = ctx->Line.SmoothFlag;
 
+#if GEN_GEN == 10
+      /* _NEW_BUFFERS
+       * Antialiasing Enable bit MUST not be set when NUM_MULTISAMPLES > 1.
+       */
+      const bool multisampled_fbo =
+         _mesa_geometric_samples(ctx->DrawBuffer) > 1;
+      if (multisampled_fbo)
+         raster.AntialiasingEnable = false;
+#endif
+
       /* _NEW_SCISSOR */
       raster.ScissorRectangleEnable = ctx->Scissor.EnableFlags;
 
