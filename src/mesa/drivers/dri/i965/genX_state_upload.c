@@ -1626,6 +1626,16 @@ genX(upload_sf)(struct brw_context *brw)
          sf.SmoothPointEnable = true;
 #endif
 
+#if GEN_GEN == 10
+      /* _NEW_BUFFERS
+       * Smooth Point Enable bit MUST not be set when NUM_MULTISAMPLES > 1.
+       */
+      const bool multisampled_fbo =
+         _mesa_geometric_samples(ctx->DrawBuffer) > 1;
+      if (multisampled_fbo)
+         sf.SmoothPointEnable = false;
+#endif
+
 #if GEN_IS_G4X || GEN_GEN >= 5
       sf.AALineDistanceMode = AALINEDISTANCE_TRUE;
 #endif
@@ -1681,7 +1691,8 @@ static const struct brw_tracked_state genX(sf_state) = {
                _NEW_POINT |
                _NEW_PROGRAM |
                (GEN_GEN >= 6 ? _NEW_MULTISAMPLE : 0) |
-               (GEN_GEN <= 7 ? _NEW_BUFFERS | _NEW_POLYGON : 0),
+               (GEN_GEN <= 7 ? _NEW_BUFFERS | _NEW_POLYGON : 0) |
+               (GEN_GEN == 10 ? _NEW_BUFFERS : 0),
       .brw   = BRW_NEW_BLORP |
                BRW_NEW_VUE_MAP_GEOM_OUT |
                (GEN_GEN <= 5 ? BRW_NEW_BATCH |
