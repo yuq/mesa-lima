@@ -24,6 +24,7 @@ libwayland_egl = shared_library(
   'wayland-egl.c',
   c_args : [c_vis_args],
   link_args : ld_args_gc_sections,
+  dependencies : dep_wayland_client,
   version : '1.0.0',
   install : true,
 )
