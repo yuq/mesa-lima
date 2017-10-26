@@ -265,6 +265,9 @@ vc5_emit_state(struct pipe_context *pctx)
                         } else {
                                 config.depth_test_function = PIPE_FUNC_ALWAYS;
                         }
+
+                        config.stencil_enable =
+                                vc5->zsa->base.stencil[0].enabled;
                 }
 
         }
