@@ -1864,6 +1864,25 @@ tc_fence_server_sync(struct pipe_context *_pipe,
    screen->fence_reference(screen, &payload->fence, fence);
 }
 
+static void
+tc_call_fence_server_signal(struct pipe_context *pipe, union tc_payload *payload)
+{
+   pipe->fence_server_signal(pipe, payload->fence);
+   pipe->screen->fence_reference(pipe->screen, &payload->fence, NULL);
+}
+
+static void
+tc_fence_server_signal(struct pipe_context *_pipe,
+                           struct pipe_fence_handle *fence)
+{
+   struct threaded_context *tc = threaded_context(_pipe);
+   struct pipe_screen *screen = tc->pipe->screen;
+   union tc_payload *payload = tc_add_small_call(tc, TC_CALL_fence_server_signal);
+
+   payload->fence = NULL;
+   screen->fence_reference(screen, &payload->fence, fence);
+}
+
 static struct pipe_video_codec *
 tc_create_video_codec(UNUSED struct pipe_context *_pipe,
                       UNUSED const struct pipe_video_codec *templ)
@@ -2662,6 +2681,7 @@ threaded_context_create(struct pipe_context *pipe,
    CTX_INIT(set_debug_callback);
    CTX_INIT(create_fence_fd);
    CTX_INIT(fence_server_sync);
+   CTX_INIT(fence_server_signal);
    CTX_INIT(get_timestamp);
    CTX_INIT(create_texture_handle);
    CTX_INIT(delete_texture_handle);
