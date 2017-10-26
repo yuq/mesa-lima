@@ -160,3 +160,9 @@ option(
   value : false,
   description : 'Enable floating point textures and renderbuffers. This option may be patent encumbered, please read docs/patents.txt and consult with your lawyer before turning this on.'
 )
+option(
+  'selinux',
+  type : 'boolean',
+  value : false,
+  description : 'Build an SELinux-aware Mesa'
+)

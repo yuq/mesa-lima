@@ -694,8 +694,11 @@ endif
 prog_bison = find_program('bison', required : with_any_opengl)
 prog_flex = find_program('flex', required : with_any_opengl)
 
-# TODO: selinux
 dep_selinux = []
+if get_option('selinux')
+  dep_selinux = dependency('libselinux')
+  pre_args += '-DMESA_SELINUX'
+endif
 
 # TODO: llvm-prefix and llvm-shared-libs
 
