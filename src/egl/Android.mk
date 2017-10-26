@@ -60,6 +60,10 @@ LOCAL_SHARED_LIBRARIES := \
 	libgralloc_drm \
 	libsync
 
+ifeq ($(filter $(MESA_ANDROID_MAJOR_VERSION), 4 5 6 7),)
+LOCAL_SHARED_LIBRARIES += libnativewindow
+endif
+
 # This controls enabling building of driver libraries
 ifneq ($(HAVE_I915_DRI),)
 LOCAL_REQUIRED_MODULES += i915_dri
