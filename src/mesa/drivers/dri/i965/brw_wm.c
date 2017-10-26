@@ -88,27 +88,36 @@ brw_wm_debug_recompile(struct brw_context *brw, struct gl_program *prog,
                       old_key->stats_wm, key->stats_wm);
    found |= key_debug(brw, "flat shading",
                       old_key->flat_shade, key->flat_shade);
-   found |= key_debug(brw, "per-sample interpolation",
-                      old_key->persample_interp, key->persample_interp);
    found |= key_debug(brw, "number of color buffers",
                       old_key->nr_color_regions, key->nr_color_regions);
    found |= key_debug(brw, "MRT alpha test or alpha-to-coverage",
                       old_key->replicate_alpha, key->replicate_alpha);
    found |= key_debug(brw, "fragment color clamping",
                       old_key->clamp_fragment_color, key->clamp_fragment_color);
+   found |= key_debug(brw, "per-sample interpolation",
+                      old_key->persample_interp, key->persample_interp);
    found |= key_debug(brw, "multisampled FBO",
                       old_key->multisample_fbo, key->multisample_fbo);
+   found |= key_debug(brw, "frag coord adds sample pos",
+                      old_key->frag_coord_adds_sample_pos,
+                      key->frag_coord_adds_sample_pos);
    found |= key_debug(brw, "line smoothing",
                       old_key->line_aa, key->line_aa);
+   found |= key_debug(brw, "high quality derivatives",
+                      old_key->high_quality_derivatives,
+                      key->high_quality_derivatives);
+   found |= key_debug(brw, "force dual color blending",
+                      old_key->force_dual_color_blend,
+                      key->force_dual_color_blend);
+   found |= key_debug(brw, "coherent fb fetch",
+                      old_key->coherent_fb_fetch, key->coherent_fb_fetch);
+
    found |= key_debug(brw, "input slots valid",
                       old_key->input_slots_valid, key->input_slots_valid);
    found |= key_debug(brw, "mrt alpha test function",
                       old_key->alpha_test_func, key->alpha_test_func);
    found |= key_debug(brw, "mrt alpha test reference value",
                       old_key->alpha_test_ref, key->alpha_test_ref);
-   found |= key_debug(brw, "force dual color blending",
-                      old_key->force_dual_color_blend,
-                      key->force_dual_color_blend);
 
    found |= brw_debug_recompile_sampler_key(brw, &old_key->tex, &key->tex);
 
