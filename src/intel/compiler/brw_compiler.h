@@ -389,7 +389,6 @@ struct brw_wm_prog_key {
    bool force_dual_color_blend:1;
    bool coherent_fb_fetch:1;
 
-   uint16_t drawable_height;
    uint64_t input_slots_valid;
    unsigned program_string_id;
    GLenum alpha_test_func;          /* < For Gen4/5 MRT alpha test */
