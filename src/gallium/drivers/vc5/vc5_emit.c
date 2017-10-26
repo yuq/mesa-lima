@@ -215,7 +215,6 @@ vc5_emit_state(struct pipe_context *pctx)
                 cl_emit(&job->bcl, CLIP_WINDOW, clip) {
                         clip.clip_window_left_pixel_coordinate = minx;
                         clip.clip_window_bottom_pixel_coordinate = miny;
-                        clip.clip_window_height_in_pixels = maxy - miny;
                         clip.clip_window_width_in_pixels = maxx - minx;
                         clip.clip_window_height_in_pixels = maxy - miny;
                 }
