@@ -37,11 +37,14 @@ if with_gallium_softpipe
     subdir('drivers/llvmpipe')
   endif
 endif
-if with_gallium_r300 or with_gallium_radeonsi
+if with_gallium_r300 or with_gallium_radeonsi or with_gallium_r600
   subdir('winsys/radeon/drm')
 endif
 if with_gallium_r300
   subdir('drivers/r300')
+endif
+if with_gallium_r600
+  subdir('drivers/r600')
 endif
 if with_gallium_radeonsi
   subdir('drivers/radeon')
@@ -89,7 +92,6 @@ if with_glx == 'gallium-xlib'
   subdir('state_trackers/glx/xlib')
 endif
 # TODO: SVGA
-# TODO: r600
 # TODO: SWR
 # TODO: virgl
 # TODO: clover
