@@ -122,14 +122,15 @@ with_gallium_vc5 = false
 with_gallium_etnaviv = false
 with_gallium_imx = false
 with_gallium_i915 = false
+with_gallium_svga = false
 _drivers = get_option('gallium-drivers')
 if _drivers == 'auto'
   if not ['darwin', 'windows'].contains(host_machine.system())
     # TODO: PPC, Sparc
     if ['x86', 'x86_64'].contains(host_machine.cpu_family())
-      _drivers = 'r300,r600,radeonsi,nouveau,swrast'
+      _drivers = 'r300,r600,radeonsi,nouveau,svga,swrast'
     elif ['arm', 'aarch64'].contains(host_machine.cpu_family())
-      _drivers = 'pl111,vc4,vc5,freedreno,etnaviv,imx,swrast'
+      _drivers = 'pl111,vc4,vc5,freedreno,etnaviv,imx,svga,swrast'
     else
       error('Unknown architecture. Please pass -Dgallium-drivers to set driver options. Patches gladly accepted to fix this.')
     endif
@@ -151,6 +152,7 @@ if _drivers != ''
   with_gallium_etnaviv = _split.contains('etnaviv')
   with_gallium_imx = _split.contains('imx')
   with_gallium_i915 = _split.contains('i915')
+  with_gallium_svga = _split.contains('svga')
   with_gallium = true
 endif
 

@@ -122,6 +122,11 @@ if with_gallium_r600
   gallium_dri_link_with += libr600
   gallium_dri_drivers += 'r600_dri.so'
 endif
+if with_gallium_svga
+  gallium_dri_c_args += '-DGALLIUM_VMWGFX'
+  gallium_dri_link_with += [libsvga, libsvgadrm]
+  gallium_dri_drivers += 'vmwgfx_dri.so'
+endif
 
 if with_gallium_radeonsi or with_gallium_r300 or with_gallium_r600
   gallium_dri_link_with += libradeonwinsys

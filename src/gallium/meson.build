@@ -81,6 +81,10 @@ if with_gallium_i915
   subdir('winsys/i915/drm')
   subdir('drivers/i915')
 endif
+if with_gallium_svga
+  subdir('drivers/svga')
+  subdir('winsys/svga/drm')
+endif
 if with_dri
   subdir('state_trackers/dri')
 endif
@@ -91,7 +95,6 @@ if with_glx == 'gallium-xlib'
   subdir('winsys/sw/xlib')
   subdir('state_trackers/glx/xlib')
 endif
-# TODO: SVGA
 # TODO: SWR
 # TODO: virgl
 # TODO: clover
