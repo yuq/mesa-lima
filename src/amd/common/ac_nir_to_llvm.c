@@ -1227,34 +1227,6 @@ static LLVMValueRef emit_bcsel(struct ac_llvm_context *ctx,
 	return LLVMBuildSelect(ctx->builder, v, src1, src2, "");
 }
 
-static LLVMValueRef emit_find_lsb(struct ac_llvm_context *ctx,
-				  LLVMValueRef src0)
-{
-	LLVMValueRef params[2] = {
-		src0,
-
-		/* The value of 1 means that ffs(x=0) = undef, so LLVM won't
-		 * add special code to check for x=0. The reason is that
-		 * the LLVM behavior for x=0 is different from what we
-		 * need here.
-		 *
-		 * The hardware already implements the correct behavior.
-		 */
-		LLVMConstInt(ctx->i1, 1, false),
-	};
-
-	LLVMValueRef lsb = ac_build_intrinsic(ctx, "llvm.cttz.i32", ctx->i32,
-					      params, 2,
-					      AC_FUNC_ATTR_READNONE);
-
-	/* TODO: We need an intrinsic to skip this conditional. */
-	/* Check for zero: */
-	return LLVMBuildSelect(ctx->builder, LLVMBuildICmp(ctx->builder,
-							   LLVMIntEQ, src0,
-							   ctx->i32_0, ""),
-			       LLVMConstInt(ctx->i32, -1, 0), lsb, "");
-}
-
 static LLVMValueRef emit_ifind_msb(struct ac_llvm_context *ctx,
 				   LLVMValueRef src0)
 {
@@ -1895,7 +1867,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		break;
 	case nir_op_find_lsb:
 		src[0] = ac_to_integer(&ctx->ac, src[0]);
-		result = emit_find_lsb(&ctx->ac, src[0]);
+		result = ac_find_lsb(&ctx->ac, ctx->ac.i32, src[0]);
 		break;
 	case nir_op_ufind_msb:
 		src[0] = ac_to_integer(&ctx->ac, src[0]);

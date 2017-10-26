@@ -297,6 +297,10 @@ LLVMValueRef ac_lds_load(struct ac_llvm_context *ctx,
 			 LLVMValueRef dw_addr);
 void ac_lds_store(struct ac_llvm_context *ctx,
 		  LLVMValueRef dw_addr, LLVMValueRef value);
+
+LLVMValueRef ac_find_lsb(struct ac_llvm_context *ctx,
+			 LLVMTypeRef dst_type,
+			 LLVMValueRef src0);
 #ifdef __cplusplus
 }
 #endif

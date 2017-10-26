@@ -535,31 +535,8 @@ static void emit_lsb(const struct lp_build_tgsi_action *action,
 		     struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMValueRef args[2] = {
-		emit_data->args[0],
 
-		/* The value of 1 means that ffs(x=0) = undef, so LLVM won't
-		 * add special code to check for x=0. The reason is that
-		 * the LLVM behavior for x=0 is different from what we
-		 * need here. However, LLVM also assumes that ffs(x) is
-		 * in [0, 31], but GLSL expects that ffs(0) = -1, so
-		 * a conditional assignment to handle 0 is still required.
-		 */
-		LLVMConstInt(ctx->i1, 1, 0)
-	};
-
-	LLVMValueRef lsb =
-		lp_build_intrinsic(ctx->ac.builder, "llvm.cttz.i32",
-				emit_data->dst_type, args, ARRAY_SIZE(args),
-				LP_FUNC_ATTR_READNONE);
-
-	/* TODO: We need an intrinsic to skip this conditional. */
-	/* Check for zero: */
-	emit_data->output[emit_data->chan] =
-		LLVMBuildSelect(ctx->ac.builder,
-				LLVMBuildICmp(ctx->ac.builder, LLVMIntEQ, args[0],
-					      ctx->i32_0, ""),
-				LLVMConstInt(ctx->i32, -1, 0), lsb, "");
+	emit_data->output[emit_data->chan] = ac_find_lsb(&ctx->ac, emit_data->dst_type, emit_data->args[0]);
 }
 
 /* Find the last bit set. */

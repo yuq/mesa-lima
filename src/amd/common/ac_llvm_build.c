@@ -1774,3 +1774,34 @@ void ac_lds_store(struct ac_llvm_context *ctx,
 	ac_build_indexed_store(ctx, ctx->lds,
 			       dw_addr, value);
 }
+
+LLVMValueRef ac_find_lsb(struct ac_llvm_context *ctx,
+			 LLVMTypeRef dst_type,
+			 LLVMValueRef src0)
+{
+	LLVMValueRef params[2] = {
+		src0,
+
+		/* The value of 1 means that ffs(x=0) = undef, so LLVM won't
+		 * add special code to check for x=0. The reason is that
+		 * the LLVM behavior for x=0 is different from what we
+		 * need here. However, LLVM also assumes that ffs(x) is
+		 * in [0, 31], but GLSL expects that ffs(0) = -1, so
+		 * a conditional assignment to handle 0 is still required.
+		 *
+		 * The hardware already implements the correct behavior.
+		 */
+		LLVMConstInt(ctx->i1, 1, false),
+	};
+
+	LLVMValueRef lsb = ac_build_intrinsic(ctx, "llvm.cttz.i32", ctx->i32,
+					      params, 2,
+					      AC_FUNC_ATTR_READNONE);
+
+	/* TODO: We need an intrinsic to skip this conditional. */
+	/* Check for zero: */
+	return LLVMBuildSelect(ctx->builder, LLVMBuildICmp(ctx->builder,
+							   LLVMIntEQ, src0,
+							   ctx->i32_0, ""),
+			       LLVMConstInt(ctx->i32, -1, 0), lsb, "");
+}
