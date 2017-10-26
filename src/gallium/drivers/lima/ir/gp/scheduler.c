@@ -667,6 +667,53 @@ static int gpir_has_satisfied_succ(gpir_node *node)
 
 static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node);
 
+static int insert_load_reg(gpir_block *block, gpir_node *node, int end,
+                           gpir_node *load, gpir_node *move)
+{
+   /* TODO: we may use already scheduled load node */
+   if (!load) {
+      load = _gpir_create_from_node(block, NULL, node);
+      if (!load)
+         return -2;
+   }
+
+   gpir_alu_node *alu = gpir_node_to_alu(move);
+   alu->children[0] = load;
+   alu->num_child = 1;
+   gpir_node_add_child(move, load);
+
+   int start = gpir_get_max_start_for_load(move, load);
+
+   while (true) {
+      MAYBE_UNUSED bool place_result =
+         gpir_try_place_node(block, load, start, end);
+      assert(place_result);
+
+      if (!gpir_try_place_move_node(block, move)) {
+         start = load->sched_instr + 1;
+         instr_remove_node(block, load);
+         continue;
+      }
+
+      int err = gpir_try_insert_load_reg(block, move);
+      if (err == 0)
+         return 0;
+      else if (err == -2) {
+         /* TODO: handle target fail case */
+         return -1;
+      }
+      else if (err < -2)
+         return -2;
+
+      /* TODO: for load attr, reg_move may have another instr for try */
+      instr_remove_node(block, move);
+      start = load->sched_instr + 1;
+      instr_remove_node(block, load);
+   }
+
+   return -2;
+}
+
 /*
  * Return:
  * >=0 - success, the last inserted load instr index
@@ -675,9 +722,27 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node);
  */
 static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int orig_end)
 {
+   gpir_node *reg_load = NULL, *reg_move = NULL;
+
+   /* save reg0 load slot for reg usage */
+   if (node->op == gpir_op_load_attribute && node->succs->entries > 3) {
+      reg_load = node;
+
+      reg_move = gpir_node_create(block->comp, gpir_op_mov, -1);
+      if (!reg_move)
+         return -2;
+
+      gpir_node_foreach_succ(node, entry) {
+         gpir_node_replace_pred(entry, reg_move);
+      }
+
+      debug_printf("gpir: schedule attr load %d with reg load\n", node->index);
+
+      return insert_load_reg(block, node, orig_end, reg_load, reg_move);
+   }
+
    int start = gpir_get_max_start(node), end = orig_end;
    gpir_node *load = node, *current = NULL, *last_current = NULL;
-   gpir_node *reg_load = NULL, *reg_move = NULL;
 
    while (true) {
       if (gpir_try_place_node(block, load, start, end)) {
@@ -697,7 +762,7 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int orig_end
          /* all constraints are satisfied */
          if (new_start < 0) {
             if (reg_move)
-               goto schedule_reg;
+               return insert_load_reg(block, node, orig_end, reg_load, reg_move);
             else
                return load->sched_instr;
          }
@@ -782,7 +847,7 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int orig_end
             if (gpir_node_is_root(node)) {
                instr_remove_node(block, node);
                reg_load = node;
-               goto schedule_reg;
+               return insert_load_reg(block, node, orig_end, reg_load, reg_move);
             }
 
             /* node need re-place (original placement satisfy no successor) */
@@ -803,48 +868,6 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int orig_end
       load = gpir_create_from_node(block, current, node);
       if (!load)
          return -2;
-   }
-
-schedule_reg:
-   /* TODO: we may use already scheduled load node */
-   if (!reg_load) {
-      reg_load = _gpir_create_from_node(block, NULL, node);
-      if (!reg_load)
-         return -2;
-   }
-
-   gpir_node_to_alu(reg_move)->children[0] = reg_load;
-   gpir_node_to_alu(reg_move)->num_child = 1;
-   gpir_node_add_child(reg_move, reg_load);
-
-   start = gpir_get_max_start_for_load(reg_move, reg_load);
-   end = orig_end;
-
-   while (true) {
-      MAYBE_UNUSED bool place_result =
-         gpir_try_place_node(block, reg_load, start, end);
-      assert(place_result);
-
-      if (!gpir_try_place_move_node(block, reg_move)) {
-         start = reg_load->sched_instr + 1;
-         instr_remove_node(block, reg_load);
-         continue;
-      }
-
-      int err = gpir_try_insert_load_reg(block, reg_move);
-      if (err == 0)
-         return 0;
-      else if (err == -2) {
-         /* TODO: handle target fail case */
-         return -1;
-      }
-      else if (err < -2)
-         return -2;
-
-      /* TODO: for load attr, reg_move may have another instr for try */
-      instr_remove_node(block, reg_move);
-      start = reg_load->sched_instr + 1;
-      instr_remove_node(block, reg_load);
    }
 
    return -2;
