@@ -233,6 +233,17 @@ disassemble_program(struct gen_disasm *disasm, const char *type,
    gen_disasm_disassemble(disasm, instruction_section->data, ksp, stdout);
 }
 
+static const struct section *
+find_section(const char *str_base_address)
+{
+   uint64_t base_address = strtol(str_base_address, NULL, 16);
+   for (int s = 0; s < MAX_SECTIONS; s++) {
+      if (sections[s].gtt_offset == base_address)
+         return &sections[s];
+   }
+   return NULL;
+}
+
 static void
 decode(struct gen_spec *spec, struct gen_disasm *disasm,
        const struct section *section)
@@ -243,6 +254,7 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
    int length;
    struct gen_group *inst;
    const struct section *current_instruction_buffer = NULL;
+   const struct section *current_dynamic_state_buffer = NULL;
 
    for (p = data; p < end; p += length) {
       const char *color = option_full_decode ? BLUE_HEADER : NORMAL,
@@ -277,13 +289,9 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
 
          do {
             if (strcmp(iter.name, "Instruction Base Address") == 0) {
-               uint64_t instr_base_address = strtol(iter.value, NULL, 16);
-               current_instruction_buffer = NULL;
-               for (int s = 0; s < MAX_SECTIONS; s++) {
-                  if (sections[s].gtt_offset == instr_base_address) {
-                     current_instruction_buffer = &sections[s];
-                  }
-               }
+               current_instruction_buffer = find_section(iter.value);
+            } else if (strcmp(iter.name, "Dynamic State Base Address") == 0) {
+               current_dynamic_state_buffer = find_section(iter.value);
             }
          } while (gen_field_iterator_next(&iter));
       } else if (strcmp(inst->name,   "WM_STATE") == 0 ||
@@ -379,6 +387,33 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
          if (is_enabled) {
             disassemble_program(disasm, type, current_instruction_buffer, ksp);
             printf("\n");
+         }
+      } else if (strcmp(inst->name, "MEDIA_INTERFACE_DESCRIPTOR_LOAD") == 0) {
+         struct gen_field_iterator iter;
+         gen_field_iterator_init(&iter, inst, p, false);
+         uint64_t interface_offset = 0;
+         do {
+            if (strcmp(iter.name, "Interface Descriptor Data Start Address") == 0) {
+               interface_offset = strtol(iter.value, NULL, 16);
+               break;
+            }
+         } while (gen_field_iterator_next(&iter));
+
+         if (current_dynamic_state_buffer && interface_offset != 0) {
+            struct gen_group *desc =
+               gen_spec_find_struct(spec, "INTERFACE_DESCRIPTOR_DATA");
+            uint32_t *desc_p =
+               ((void *)current_dynamic_state_buffer->data) + interface_offset;
+            gen_field_iterator_init(&iter, desc, desc_p, false);
+            do {
+               if (strcmp(iter.name, "Kernel Start Pointer") == 0) {
+                  uint64_t ksp = strtol(iter.value, NULL, 16);
+                  disassemble_program(disasm, "compute shader",
+                                      current_instruction_buffer, ksp);
+                  printf("\n");
+                  break;
+               }
+            } while (gen_field_iterator_next(&iter));
          }
       }
    }
