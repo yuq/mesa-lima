@@ -1061,16 +1061,12 @@ intelDestroyContext(__DRIcontext * driContextPriv)
    brw_draw_destroy(brw);
 
    brw_bo_unreference(brw->curbe.curbe_bo);
-   if (brw->vs.base.scratch_bo)
-      brw_bo_unreference(brw->vs.base.scratch_bo);
-   if (brw->tcs.base.scratch_bo)
-      brw_bo_unreference(brw->tcs.base.scratch_bo);
-   if (brw->tes.base.scratch_bo)
-      brw_bo_unreference(brw->tes.base.scratch_bo);
-   if (brw->gs.base.scratch_bo)
-      brw_bo_unreference(brw->gs.base.scratch_bo);
-   if (brw->wm.base.scratch_bo)
-      brw_bo_unreference(brw->wm.base.scratch_bo);
+
+   brw_bo_unreference(brw->vs.base.scratch_bo);
+   brw_bo_unreference(brw->tcs.base.scratch_bo);
+   brw_bo_unreference(brw->tes.base.scratch_bo);
+   brw_bo_unreference(brw->gs.base.scratch_bo);
+   brw_bo_unreference(brw->wm.base.scratch_bo);
 
    brw_destroy_hw_context(brw->bufmgr, brw->hw_ctx);
 
