@@ -28,7 +28,7 @@
 #include "broadcom/compiler/v3d_compiler.h"
 
 static uint8_t
-vc5_factor(enum pipe_blendfactor factor)
+vc5_factor(enum pipe_blendfactor factor, bool dst_alpha_one)
 {
         /* We may get a bad blendfactor when blending is disabled. */
         if (factor == 0)
@@ -52,9 +52,13 @@ vc5_factor(enum pipe_blendfactor factor)
         case PIPE_BLENDFACTOR_INV_SRC_ALPHA:
                 return V3D_BLEND_FACTOR_INV_SRC_ALPHA;
         case PIPE_BLENDFACTOR_DST_ALPHA:
-                return V3D_BLEND_FACTOR_DST_ALPHA;
+                return (dst_alpha_one ?
+                        V3D_BLEND_FACTOR_ONE :
+                        V3D_BLEND_FACTOR_DST_ALPHA);
         case PIPE_BLENDFACTOR_INV_DST_ALPHA:
-                return V3D_BLEND_FACTOR_INV_DST_ALPHA;
+                return (dst_alpha_one ?
+                        V3D_BLEND_FACTOR_ZERO :
+                        V3D_BLEND_FACTOR_INV_DST_ALPHA);
         case PIPE_BLENDFACTOR_CONST_COLOR:
                 return V3D_BLEND_FACTOR_CONST_COLOR;
         case PIPE_BLENDFACTOR_INV_CONST_COLOR:
@@ -327,15 +331,19 @@ vc5_emit_state(struct pipe_context *pctx)
 
                         config.colour_blend_mode = rtblend->rgb_func;
                         config.colour_blend_dst_factor =
-                                vc5_factor(rtblend->rgb_dst_factor);
+                                vc5_factor(rtblend->rgb_dst_factor,
+                                           vc5->blend_dst_alpha_one);
                         config.colour_blend_src_factor =
-                                vc5_factor(rtblend->rgb_src_factor);
+                                vc5_factor(rtblend->rgb_src_factor,
+                                           vc5->blend_dst_alpha_one);
 
                         config.alpha_blend_mode = rtblend->alpha_func;
                         config.alpha_blend_dst_factor =
-                                vc5_factor(rtblend->alpha_dst_factor);
+                                vc5_factor(rtblend->alpha_dst_factor,
+                                           vc5->blend_dst_alpha_one);
                         config.alpha_blend_src_factor =
-                                vc5_factor(rtblend->alpha_src_factor);
+                                vc5_factor(rtblend->alpha_src_factor,
+                                           vc5->blend_dst_alpha_one);
                 }
 
                 cl_emit(&job->bcl, COLOUR_WRITE_MASKS, mask) {

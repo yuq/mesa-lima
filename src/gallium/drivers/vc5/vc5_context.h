@@ -345,6 +345,14 @@ struct vc5_context {
          */
         uint8_t swap_color_rb;
 
+        /* Per render target, whether we should treat the dst alpha values as
+         * one in blending.
+         *
+         * For RGBX formats, the tile buffer's alpha channel will be
+         * undefined.
+         */
+        uint8_t blend_dst_alpha_one;
+
         struct pipe_poly_stipple stipple;
         struct pipe_clip_state clip;
         struct pipe_viewport_state viewport;

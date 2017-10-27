@@ -389,6 +389,7 @@ vc5_set_framebuffer_state(struct pipe_context *pctx,
         cso->height = framebuffer->height;
 
         vc5->swap_color_rb = 0;
+        vc5->blend_dst_alpha_one = 0;
         for (int i = 0; i < vc5->framebuffer.nr_cbufs; i++) {
                 struct pipe_surface *cbuf = vc5->framebuffer.cbufs[i];
                 const struct util_format_description *desc =
@@ -401,6 +402,9 @@ vc5_set_framebuffer_state(struct pipe_context *pctx,
                     cbuf->format != PIPE_FORMAT_B5G6R5_UNORM) {
                         vc5->swap_color_rb |= 1 << i;
                 }
+
+                if (desc->swizzle[3] == PIPE_SWIZZLE_1)
+                        vc5->blend_dst_alpha_one |= 1 << i;
         }
 
         vc5->dirty |= VC5_DIRTY_FRAMEBUFFER;
