@@ -223,7 +223,7 @@ glsl_compiler = executable(
   'main.cpp',
   c_args : [c_vis_args, c_msvc_compat_args, no_override_init_args],
   cpp_args : [cpp_vis_args, cpp_msvc_compat_args],
-  dependencies : [dep_clock],
+  dependencies : [dep_clock, dep_thread],
   include_directories : [inc_common],
   link_with : [libglsl_standalone],
   build_by_default : false,
