@@ -1072,6 +1072,12 @@ intelDestroyContext(__DRIcontext * driContextPriv)
    if (brw->wm.base.scratch_bo)
       brw_bo_unreference(brw->wm.base.scratch_bo);
 
+   brw_bo_unreference(brw->vs.base.push_const_bo);
+   brw_bo_unreference(brw->tcs.base.push_const_bo);
+   brw_bo_unreference(brw->tes.base.push_const_bo);
+   brw_bo_unreference(brw->gs.base.push_const_bo);
+   brw_bo_unreference(brw->wm.base.push_const_bo);
+
    brw_destroy_hw_context(brw->bufmgr, brw->hw_ctx);
 
    if (ctx->swrast_context) {
