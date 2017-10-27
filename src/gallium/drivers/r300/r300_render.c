@@ -964,7 +964,7 @@ static void r300_render_release_vertices(struct vbuf_render* render)
 }
 
 static void r300_render_set_primitive(struct vbuf_render* render,
-                                      unsigned prim)
+                                      enum pipe_prim_type prim)
 {
     struct r300_render* r300render = r300_render(render);
 
