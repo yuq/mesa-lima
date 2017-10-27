@@ -275,9 +275,9 @@ vc5_emit_rcl(struct vc5_job *job)
                 struct pipe_surface *psurf = job->cbufs[i];
                 if (!psurf)
                         continue;
+                struct vc5_surface *surf = vc5_surface(psurf);
 
                 cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_RENDER_TARGET_CONFIG, rt) {
-                        struct vc5_surface *surf = vc5_surface(psurf);
                         struct vc5_resource *rsc = vc5_resource(psurf->texture);
                         rt.address = cl_address(rsc->bo, surf->offset);
                         rt.internal_type = surf->internal_type;
@@ -297,7 +297,7 @@ vc5_emit_rcl(struct vc5_job *job)
                         clear.render_target_number = i;
                 };
 
-                if (util_format_get_blocksize(psurf->format) > 7) {
+                if (surf->internal_bpp >= INTERNAL_BPP_64) {
                         cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_CLEAR_COLORS_PART2,
                                 clear) {
                                 clear.clear_color_mid_low_32_bits =
@@ -310,7 +310,7 @@ vc5_emit_rcl(struct vc5_job *job)
                         };
                 }
 
-                if (util_format_get_blocksize(psurf->format) > 14) {
+                if (surf->internal_bpp >= INTERNAL_BPP_128) {
                         cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_CLEAR_COLORS_PART3,
                                 clear) {
                                 clear.clear_color_high_16_bits = job->clear_color[i][3] >> 16;

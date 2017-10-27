@@ -485,15 +485,54 @@ vc5_clear(struct pipe_context *pctx, unsigned buffers,
                 if (!(buffers & bit))
                         continue;
 
-                struct pipe_surface *cbuf = vc5->framebuffer.cbufs[i];
-                struct vc5_resource *rsc =
-                        vc5_resource(cbuf->texture);
+                struct pipe_surface *psurf = vc5->framebuffer.cbufs[i];
+                struct vc5_surface *surf = vc5_surface(psurf);
+                struct vc5_resource *rsc = vc5_resource(psurf->texture);
 
                 union util_color uc;
-                util_pack_color(color->f, cbuf->format, &uc);
+                uint32_t internal_size = 4 << surf->internal_bpp;
 
-                memcpy(job->clear_color[i], uc.ui,
-                       util_format_get_blocksize(cbuf->format));
+                switch (surf->internal_type) {
+                case INTERNAL_TYPE_8:
+                        if (surf->format == PIPE_FORMAT_B4G4R4A4_UNORM ||
+                            surf->format == PIPE_FORMAT_B4G4R4A4_UNORM) {
+                                /* Our actual hardware layout is ABGR4444, but
+                                 * we apply a swizzle when texturing to flip
+                                 * things back around.
+                                 */
+                                util_pack_color(color->f, PIPE_FORMAT_A8R8G8B8_UNORM,
+                                                &uc);
+                        } else {
+                                util_pack_color(color->f, PIPE_FORMAT_R8G8B8A8_UNORM,
+                                                &uc);
+                        }
+                        memcpy(job->clear_color[i], uc.ui, internal_size);
+                        break;
+                case INTERNAL_TYPE_8I:
+                case INTERNAL_TYPE_8UI:
+                        job->clear_color[i][0] = ((uc.ui[0] & 0xff) |
+                                                  (uc.ui[1] & 0xff) << 8 |
+                                                  (uc.ui[2] & 0xff) << 16 |
+                                                  (uc.ui[3] & 0xff) << 24);
+                        break;
+                case INTERNAL_TYPE_16F:
+                        util_pack_color(color->f, PIPE_FORMAT_R16G16B16A16_FLOAT,
+                                        &uc);
+                        memcpy(job->clear_color[i], uc.ui, internal_size);
+                        break;
+                case INTERNAL_TYPE_16I:
+                case INTERNAL_TYPE_16UI:
+                        job->clear_color[i][0] = ((uc.ui[0] & 0xffff) |
+                                                  uc.ui[1] << 16);
+                        job->clear_color[i][1] = ((uc.ui[2] & 0xffff) |
+                                                  uc.ui[3] << 16);
+                        break;
+                case INTERNAL_TYPE_32F:
+                case INTERNAL_TYPE_32I:
+                case INTERNAL_TYPE_32UI:
+                        memcpy(job->clear_color[i], color->ui, internal_size);
+                        break;
+                }
 
                 rsc->initialized_buffers |= bit;
         }
