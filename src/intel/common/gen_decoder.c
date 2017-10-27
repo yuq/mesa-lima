@@ -569,7 +569,7 @@ gen_spec_load(const struct gen_device_info *devinfo)
 {
    struct parser_context ctx;
    void *buf;
-   uint8_t *text_data;
+   uint8_t *text_data = NULL;
    uint32_t text_offset = 0, text_length = 0, total_length;
    uint32_t gen_10 = devinfo_to_gen(devinfo);
 
