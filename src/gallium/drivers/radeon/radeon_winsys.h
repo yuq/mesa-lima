@@ -583,6 +583,12 @@ struct radeon_winsys {
                                     struct pipe_fence_handle *fence);
 
     /**
+     * Signal a syncobj when the CS finishes execution.
+     */
+    void (*cs_add_syncobj_signal)(struct radeon_winsys_cs *cs,
+				  struct pipe_fence_handle *fence);
+
+    /**
      * Wait for the fence and return true if the fence has been signalled.
      * The timeout of 0 will only return the status.
      * The timeout of PIPE_TIMEOUT_INFINITE will always wait until the fence
@@ -597,6 +603,12 @@ struct radeon_winsys {
      */
     void (*fence_reference)(struct pipe_fence_handle **dst,
                             struct pipe_fence_handle *src);
+
+    /**
+     * Create a new fence object corresponding to the given syncobj fd.
+     */
+    struct pipe_fence_handle *(*fence_import_syncobj)(struct radeon_winsys *ws,
+						      int fd);
 
     /**
      * Create a new fence object corresponding to the given sync_file.

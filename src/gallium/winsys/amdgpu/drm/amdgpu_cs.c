@@ -57,6 +57,31 @@ amdgpu_fence_create(struct amdgpu_ctx *ctx, unsigned ip_type,
 }
 
 static struct pipe_fence_handle *
+amdgpu_fence_import_syncobj(struct radeon_winsys *rws, int fd)
+{
+   struct amdgpu_winsys *ws = amdgpu_winsys(rws);
+   struct amdgpu_fence *fence = CALLOC_STRUCT(amdgpu_fence);
+   int r;
+
+   if (!fence)
+      return NULL;
+
+   pipe_reference_init(&fence->reference, 1);
+   fence->ws = ws;
+
+   r = amdgpu_cs_import_syncobj(ws->dev, fd, &fence->syncobj);
+   if (r) {
+      FREE(fence);
+      return NULL;
+   }
+
+   util_queue_fence_init(&fence->submitted);
+
+   assert(amdgpu_fence_is_syncobj(fence));
+   return (struct pipe_fence_handle*)fence;
+}
+
+static struct pipe_fence_handle *
 amdgpu_fence_import_sync_file(struct radeon_winsys *rws, int fd)
 {
    struct amdgpu_winsys *ws = amdgpu_winsys(rws);
@@ -838,11 +863,14 @@ static void amdgpu_cs_context_cleanup(struct amdgpu_cs_context *cs)
    }
    for (i = 0; i < cs->num_fence_dependencies; i++)
       amdgpu_fence_reference(&cs->fence_dependencies[i], NULL);
+   for (i = 0; i < cs->num_syncobj_to_signal; i++)
+      amdgpu_fence_reference(&cs->syncobj_to_signal[i], NULL);
 
    cs->num_real_buffers = 0;
    cs->num_slab_buffers = 0;
    cs->num_sparse_buffers = 0;
    cs->num_fence_dependencies = 0;
+   cs->num_syncobj_to_signal = 0;
    amdgpu_fence_reference(&cs->fence, NULL);
 
    memset(cs->buffer_indices_hashlist, -1, sizeof(cs->buffer_indices_hashlist));
@@ -858,6 +886,7 @@ static void amdgpu_destroy_cs_context(struct amdgpu_cs_context *cs)
    FREE(cs->slab_buffers);
    FREE(cs->sparse_buffers);
    FREE(cs->fence_dependencies);
+   FREE(cs->syncobj_to_signal);
 }
 
 
@@ -1167,6 +1196,36 @@ static void amdgpu_add_fence_dependencies_bo_lists(struct amdgpu_cs *acs)
    amdgpu_add_fence_dependencies_bo_list(acs, cs->fence, cs->num_sparse_buffers, cs->sparse_buffers);
 }
 
+static unsigned add_syncobj_to_signal_entry(struct amdgpu_cs_context *cs)
+{
+   unsigned idx = cs->num_syncobj_to_signal++;
+
+   if (idx >= cs->max_syncobj_to_signal) {
+      unsigned size;
+      const unsigned increment = 8;
+
+      cs->max_syncobj_to_signal = idx + increment;
+      size = cs->max_syncobj_to_signal * sizeof(cs->syncobj_to_signal[0]);
+      cs->syncobj_to_signal = realloc(cs->syncobj_to_signal, size);
+      /* Clear the newly-allocated elements. */
+      memset(cs->syncobj_to_signal + idx, 0,
+             increment * sizeof(cs->syncobj_to_signal[0]));
+   }
+   return idx;
+}
+
+static void amdgpu_cs_add_syncobj_signal(struct radeon_winsys_cs *rws,
+                                         struct pipe_fence_handle *fence)
+{
+   struct amdgpu_cs *acs = amdgpu_cs(rws);
+   struct amdgpu_cs_context *cs = acs->csc;
+
+   assert(amdgpu_fence_is_syncobj((struct amdgpu_fence *)fence));
+
+   unsigned idx = add_syncobj_to_signal_entry(cs);
+   amdgpu_fence_reference(&cs->syncobj_to_signal[idx], fence);
+}
+
 /* Add backing of sparse buffers to the buffer list.
  *
  * This is done late, during submission, to keep the buffer list short before
@@ -1297,7 +1356,7 @@ bo_list_error:
    if (acs->ctx->num_rejected_cs) {
       r = -ECANCELED;
    } else {
-      struct drm_amdgpu_cs_chunk chunks[4];
+      struct drm_amdgpu_cs_chunk chunks[5];
       unsigned num_chunks = 0;
 
       /* Convert from dwords to bytes. */
@@ -1364,6 +1423,26 @@ bo_list_error:
 
          chunks[num_chunks].chunk_id = AMDGPU_CHUNK_ID_SYNCOBJ_IN;
          chunks[num_chunks].length_dw = sizeof(sem_chunk[0]) / 4 * num;
+         chunks[num_chunks].chunk_data = (uintptr_t)sem_chunk;
+         num_chunks++;
+      }
+
+      /* Syncobj sygnals. */
+      if (cs->num_syncobj_to_signal) {
+         struct drm_amdgpu_cs_chunk_sem *sem_chunk =
+            alloca(cs->num_syncobj_to_signal * sizeof(sem_chunk[0]));
+
+         for (unsigned i = 0; i < cs->num_syncobj_to_signal; i++) {
+            struct amdgpu_fence *fence =
+               (struct amdgpu_fence*)cs->syncobj_to_signal[i];
+
+            assert(amdgpu_fence_is_syncobj(fence));
+            sem_chunk[i].handle = fence->syncobj;
+         }
+
+         chunks[num_chunks].chunk_id = AMDGPU_CHUNK_ID_SYNCOBJ_OUT;
+         chunks[num_chunks].length_dw = sizeof(sem_chunk[0]) / 4
+                                        * cs->num_syncobj_to_signal;
          chunks[num_chunks].chunk_data = (uintptr_t)sem_chunk;
          num_chunks++;
       }
@@ -1576,8 +1655,10 @@ void amdgpu_cs_init_functions(struct amdgpu_winsys *ws)
    ws->base.cs_is_buffer_referenced = amdgpu_bo_is_referenced;
    ws->base.cs_sync_flush = amdgpu_cs_sync_flush;
    ws->base.cs_add_fence_dependency = amdgpu_cs_add_fence_dependency;
+   ws->base.cs_add_syncobj_signal = amdgpu_cs_add_syncobj_signal;
    ws->base.fence_wait = amdgpu_fence_wait_rel_timeout;
    ws->base.fence_reference = amdgpu_fence_reference;
+   ws->base.fence_import_syncobj = amdgpu_fence_import_syncobj;
    ws->base.fence_import_sync_file = amdgpu_fence_import_sync_file;
    ws->base.fence_export_sync_file = amdgpu_fence_export_sync_file;
    ws->base.export_signalled_sync_file = amdgpu_export_signalled_sync_file;
