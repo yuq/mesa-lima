@@ -68,8 +68,9 @@ LOCAL_SHARED_LIBRARIES += $(sort $(GALLIUM_SHARED_LIBS))
 ifneq ($(filter 5 6 7, $(MESA_ANDROID_MAJOR_VERSION)),)
 LOCAL_POST_INSTALL_CMD := \
 	$(foreach l, lib $(if $(filter true,$(TARGET_IS_64_BIT)),lib64), \
-	  mkdir -p $(TARGET_OUT)/$(l)/$(MESA_DRI_MODULE_REL_PATH); \
-	  $(foreach d, $(GALLIUM_TARGET_DRIVERS), ln -sf gallium_dri.so $(TARGET_OUT)/$(l)/$(MESA_DRI_MODULE_REL_PATH)/$(d)_dri.so;) \
+	  $(eval MESA_DRI_MODULE_PATH := $(TARGET_OUT_VENDOR)/$(l)/$(MESA_DRI_MODULE_REL_PATH)) \
+	  mkdir -p $(MESA_DRI_MODULE_PATH); \
+	  $(foreach d, $(GALLIUM_TARGET_DRIVERS), ln -sf gallium_dri.so $(MESA_DRI_MODULE_PATH)/$(d)_dri.so;) \
 	)
 else
 LOCAL_MODULE_SYMLINKS := $(foreach d, $(GALLIUM_TARGET_DRIVERS), $(d)_dri.so)
