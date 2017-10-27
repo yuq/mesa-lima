@@ -200,7 +200,7 @@ freedreno_includes = [
 
 libfreedreno = static_library(
   'freedreno',
-  [files_libfreedreno, ir3_nir_trig_c],
+  [files_libfreedreno, ir3_nir_trig_c, nir_opcodes_h],
   include_directories : freedreno_includes,
   c_args : [c_vis_args],
   cpp_args : [cpp_vis_args],
