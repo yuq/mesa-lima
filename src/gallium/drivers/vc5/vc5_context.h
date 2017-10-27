@@ -337,6 +337,14 @@ struct vc5_context {
         struct pipe_stencil_ref stencil_ref;
         unsigned sample_mask;
         struct pipe_framebuffer_state framebuffer;
+
+        /* Per render target, whether we should swap the R and B fields in the
+         * shader's color output and in blending.  If render targets disagree
+         * on the R/B swap and use the constant color, then we would need to
+         * fall back to in-shader blending.
+         */
+        uint8_t swap_color_rb;
+
         struct pipe_poly_stipple stipple;
         struct pipe_clip_state clip;
         struct pipe_viewport_state viewport;

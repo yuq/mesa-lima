@@ -388,6 +388,21 @@ vc5_set_framebuffer_state(struct pipe_context *pctx,
         cso->width = framebuffer->width;
         cso->height = framebuffer->height;
 
+        vc5->swap_color_rb = 0;
+        for (int i = 0; i < vc5->framebuffer.nr_cbufs; i++) {
+                struct pipe_surface *cbuf = vc5->framebuffer.cbufs[i];
+                const struct util_format_description *desc =
+                        util_format_description(cbuf->format);
+
+                /* For BGRA8 formats (DRI window system default format), we
+                 * need to swap R and B, since the HW's format is RGBA8.
+                 */
+                if (desc->swizzle[0] == PIPE_SWIZZLE_Z &&
+                    cbuf->format != PIPE_FORMAT_B5G6R5_UNORM) {
+                        vc5->swap_color_rb |= 1 << i;
+                }
+        }
+
         vc5->dirty |= VC5_DIRTY_FRAMEBUFFER;
 }
 

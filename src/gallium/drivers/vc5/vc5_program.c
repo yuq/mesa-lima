@@ -365,19 +365,12 @@ vc5_update_compiled_fs(struct vc5_context *vc5, uint8_t prim_mode)
          * there are means that the buffer count needs to be in the key.
          */
         key->nr_cbufs = vc5->framebuffer.nr_cbufs;
+        key->swap_color_rb = vc5->swap_color_rb;
 
         for (int i = 0; i < key->nr_cbufs; i++) {
                 struct pipe_surface *cbuf = vc5->framebuffer.cbufs[i];
                 const struct util_format_description *desc =
                         util_format_description(cbuf->format);
-
-                /* For BGRA8 formats (DRI window system default format), we
-                 * need to swap R and B, since the HW's format is RGBA8.
-                 */
-                if (desc->swizzle[0] == PIPE_SWIZZLE_Z &&
-                    cbuf->format != PIPE_FORMAT_B5G6R5_UNORM) {
-                        key->swap_color_rb |= 1 << i;
-                }
 
                 if (desc->channel[0].type == UTIL_FORMAT_TYPE_FLOAT &&
                     desc->channel[0].size == 32) {

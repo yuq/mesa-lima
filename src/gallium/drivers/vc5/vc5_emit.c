@@ -360,10 +360,13 @@ vc5_emit_state(struct pipe_context *pctx)
 
         if (vc5->dirty & VC5_DIRTY_BLEND_COLOR) {
                 cl_emit(&job->bcl, BLEND_CONSTANT_COLOUR, colour) {
-                        /* XXX: format-dependent swizzling */
-                        colour.red_f16 = vc5->blend_color.hf[2];
+                        colour.red_f16 = (vc5->swap_color_rb ?
+                                          vc5->blend_color.hf[2] :
+                                          vc5->blend_color.hf[0]);
                         colour.green_f16 = vc5->blend_color.hf[1];
-                        colour.blue_f16 = vc5->blend_color.hf[0];
+                        colour.blue_f16 = (vc5->swap_color_rb ?
+                                           vc5->blend_color.hf[0] :
+                                           vc5->blend_color.hf[2]);
                         colour.alpha_f16 = vc5->blend_color.hf[3];
                 }
         }
