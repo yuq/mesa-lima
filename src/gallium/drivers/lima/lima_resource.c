@@ -27,6 +27,7 @@
 #include "util/u_inlines.h"
 #include "util/u_math.h"
 #include "util/u_debug.h"
+#include "util/u_transfer.h"
 
 #include "state_tracker/drm_driver.h"
 
@@ -322,6 +323,8 @@ lima_resource_context_init(struct lima_context *ctx)
 {
    ctx->base.create_surface = lima_surface_create;
    ctx->base.surface_destroy = lima_surface_destroy;
+
+   ctx->base.buffer_subdata = u_default_buffer_subdata;
 
    ctx->base.transfer_map = lima_transfer_map;
    ctx->base.transfer_flush_region = lima_transfer_flush_region;
