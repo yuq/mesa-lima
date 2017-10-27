@@ -563,6 +563,9 @@ struct radv_device {
 	struct radeon_winsys_bo                      *trace_bo;
 	uint32_t                                     *trace_id_ptr;
 
+	/* Whether to keep shader debug info, for tracing or VK_AMD_shader_info */
+	bool                                         keep_shader_info;
+
 	struct radv_physical_device                  *physical_device;
 
 	/* Backup in-memory cache to be used if the app doesn't provide one */

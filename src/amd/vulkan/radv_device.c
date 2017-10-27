@@ -944,10 +944,15 @@ VkResult radv_CreateDevice(
 	VkResult result;
 	struct radv_device *device;
 
+	bool keep_shader_info = false;
+
 	for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
 		const char *ext_name = pCreateInfo->ppEnabledExtensionNames[i];
 		if (!radv_physical_device_extension_supported(physical_device, ext_name))
 			return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
+
+		if (strcmp(ext_name, VK_AMD_SHADER_INFO_EXTENSION_NAME) == 0)
+			keep_shader_info = true;
 	}
 
 	/* Check enabled features */
@@ -1041,9 +1046,13 @@ VkResult radv_CreateDevice(
 		device->physical_device->rad_info.max_se >= 2;
 
 	if (getenv("RADV_TRACE_FILE")) {
+		keep_shader_info = true;
+
 		if (!radv_init_trace(device))
 			goto fail;
 	}
+
+	device->keep_shader_info = keep_shader_info;
 
 	result = radv_device_init_meta(device);
 	if (result != VK_SUCCESS)
