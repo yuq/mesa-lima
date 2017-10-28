@@ -589,8 +589,6 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
             (lima_pipe_format_to_attrib_type(pve->src_format) << 2) |
             (util_format_get_nr_components(pve->src_format) - 1);
       }
-
-      ctx->dirty &= ~(LIMA_CONTEXT_DIRTY_VERTEX_ELEM|LIMA_CONTEXT_DIRTY_VERTEX_BUFF);
    }
 
    bool vs_need_update_const = false;
@@ -606,8 +604,6 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
          cbs->dirty = false;
          vs_need_update_const = true;
       }
-
-      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_CONST_BUFF;
    }
 
    if (ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_VERT) {
@@ -624,7 +620,6 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       varying[n++] = 0x8020;
 
       vs_need_update_const = true;
-      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_SHADER_VERT;
    }
 
    if (vs_need_update_const) {
@@ -632,10 +627,6 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       struct lima_vs_shader_state *vs = ctx->vs;
       if (vs->constant)
          memcpy(vs_const_buff + cbs->size, vs->constant, vs->constant_size);
-   }
-
-   if (ctx->dirty & LIMA_CONTEXT_DIRTY_VIEWPORT) {
-      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_VIEWPORT;
    }
 
    int vs_cmd_size = lima_pack_vs_cmd(ctx, info);
@@ -678,39 +669,12 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
          lima_update_plb(ctx);
          fb->dirty_dim = false;
       }
-
-      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_FRAMEBUFFER;
    }
 
    if (ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_FRAG) {
       struct lima_fs_shader_state *fs = ctx->fs;
 
       memcpy(ctx->pp_buffer->map + pp_fs_program_offset, fs->shader, fs->shader_size);
-      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_SHADER_FRAG;
-   }
-
-   if (ctx->dirty & LIMA_CONTEXT_DIRTY_SCISSOR) {
-      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_SCISSOR;
-   }
-
-   if (ctx->dirty & LIMA_CONTEXT_DIRTY_RASTERIZER) {
-      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_RASTERIZER;
-   }
-
-   if (ctx->dirty & LIMA_CONTEXT_DIRTY_ZSA) {
-      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_ZSA;
-   }
-
-   if (ctx->dirty & LIMA_CONTEXT_DIRTY_BLEND_COLOR) {
-      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_BLEND_COLOR;
-   }
-
-   if (ctx->dirty & LIMA_CONTEXT_DIRTY_BLEND) {
-      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_BLEND;
-   }
-
-   if (ctx->dirty & LIMA_CONTEXT_DIRTY_STENCIL_REF) {
-      ctx->dirty &= ~LIMA_CONTEXT_DIRTY_STENCIL_REF;
    }
 
    lima_pack_render_state(ctx);
@@ -780,6 +744,8 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    if (lima_submit_start(ctx->pp_submit))
       fprintf(stderr, "pp submit error\n");
+
+   ctx->dirty = 0;
 }
 
 void
