@@ -675,6 +675,38 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    return nir;
 }
 
+void
+brw_nir_link_shaders(const struct brw_compiler *compiler,
+                     nir_shader **producer, nir_shader **consumer)
+{
+   NIR_PASS_V(*producer, nir_remove_dead_variables, nir_var_shader_out);
+   NIR_PASS_V(*consumer, nir_remove_dead_variables, nir_var_shader_in);
+
+   if (nir_remove_unused_varyings(*producer, *consumer)) {
+      NIR_PASS_V(*producer, nir_lower_global_vars_to_local);
+      NIR_PASS_V(*consumer, nir_lower_global_vars_to_local);
+
+      nir_variable_mode indirect_mask = (nir_variable_mode) 0;
+      if (compiler->glsl_compiler_options[(*producer)->info.stage].EmitNoIndirectTemp)
+         indirect_mask = nir_var_local;
+
+      /* The backend might not be able to handle indirects on
+       * temporaries so we need to lower indirects on any of the
+       * varyings we have demoted here.
+       */
+      NIR_PASS_V(*producer, nir_lower_indirect_derefs, indirect_mask);
+      NIR_PASS_V(*consumer, nir_lower_indirect_derefs, indirect_mask);
+
+      const bool p_is_scalar =
+         compiler->scalar_stage[(*producer)->info.stage];
+      *producer = brw_nir_optimize(*producer, compiler, p_is_scalar);
+
+      const bool c_is_scalar =
+         compiler->scalar_stage[(*producer)->info.stage];
+      *consumer = brw_nir_optimize(*consumer, compiler, c_is_scalar);
+   }
+}
+
 /* Prepare the given shader for codegen
  *
  * This function is intended to be called right before going into the actual
