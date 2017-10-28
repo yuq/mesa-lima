@@ -22,8 +22,6 @@
  *
  */
 
-#include <stdio.h>
-
 #include "util/u_math.h"
 #include "util/ralloc.h"
 #include "util/hash_table.h"
@@ -387,7 +385,6 @@ void gpir_node_delete(gpir_node *node)
    ralloc_free(node);
 }
 
-#ifdef DEBUG
 static void gpir_node_print_node(gpir_node *node, int space)
 {
    for (int i = 0; i < space; i++)
@@ -407,6 +404,9 @@ static void gpir_node_print_node(gpir_node *node, int space)
 
 void gpir_node_print_prog(gpir_compiler *comp)
 {
+   if (!lima_shader_debug_gp)
+      return;
+
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
       list_for_each_entry(gpir_node, node, &block->node_list, list) {
          node->printed = false;
@@ -423,4 +423,3 @@ void gpir_node_print_prog(gpir_compiler *comp)
    }
    printf("====================\n");
 }
-#endif

@@ -22,9 +22,8 @@
  *
  */
 
-#include <stdio.h>
-
 #include "util/ralloc.h"
+
 #include "gpir.h"
 #include "lima_context.h"
 
@@ -63,8 +62,8 @@ static bool gpir_lower_const(gpir_compiler *comp)
                   gpir_node_replace_succ(&load->node, node);
                   list_addtail(&load->node.list, &node->list);
 
-                  fprintf(stderr, "gpir: lower const create uniform %d for const %d\n",
-                          load->node.index, node->index);
+                  gpir_debug("lower const create uniform %d for const %d\n",
+                             load->node.index, node->index);
                }
 
                gpir_node_delete(node);

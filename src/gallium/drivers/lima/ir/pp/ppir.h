@@ -29,6 +29,8 @@
 #include "util/list.h"
 #include "util/set.h"
 
+#include "ir/lima_ir.h"
+
 typedef enum {
    ppir_op_mov,
 
@@ -300,11 +302,7 @@ void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index, unsigned mask
 void ppir_node_add_child(ppir_node *parent, ppir_node *child);
 void ppir_node_remove_entry(struct set_entry *entry);
 void ppir_node_delete(ppir_node *node);
-#ifdef DEBUG
 void ppir_node_print_prog(ppir_compiler *comp);
-#else
-static inline void ppir_node_print_prog(ppir_compiler *comp) {}
-#endif
 void ppir_node_replace_child(ppir_node *parent, ppir_node *old_child, ppir_node *new_child);
 void ppir_node_replace_succ(ppir_node *dst, ppir_node *src);
 
@@ -408,13 +406,8 @@ static inline int ppir_target_get_dest_reg_index(ppir_dest *dest)
 ppir_instr *ppir_instr_create(ppir_block *block);
 bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node);
 void ppir_instr_add_depend(ppir_instr *succ, ppir_instr *pred);
-#ifdef DEBUG
 void ppir_instr_print_list(ppir_compiler *comp);
 void ppir_instr_print_depend(ppir_compiler *comp);
-#else
-static inline void ppir_instr_print_list(ppir_compiler *comp) {}
-static inline void ppir_instr_print_depend(ppir_compiler *comp) {}
-#endif
 
 #define ppir_instr_from_entry(entry) ((ppir_instr *)(entry->key))
 
