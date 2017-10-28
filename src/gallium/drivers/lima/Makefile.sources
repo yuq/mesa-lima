@@ -1,6 +1,5 @@
 gpir_SOURCES := \
 	  ir/gp/gpir.h \
-	  ir/gp/nir.h \
 	  ir/gp/nir.c \
 	  ir/gp/node.c \
 	  ir/gp/lower.c \
@@ -11,7 +10,6 @@ gpir_SOURCES := \
 
 ppir_SOURCES := \
 	  ir/pp/ppir.h \
-	  ir/pp/interface.h \
 	  ir/pp/nir.c \
 	  ir/pp/node.c \
 	  ir/pp/lower.c \
@@ -20,6 +18,11 @@ ppir_SOURCES := \
 	  ir/pp/regalloc.c \
 	  ir/pp/codegen.h \
 	  ir/pp/codegen.c
+
+ir_SOURCES := \
+	  ir/lima_ir.h \
+	  $(gpir_SOURCES) \
+	  $(ppir_SOURCES)
 
 DRM_SOURCES := \
 	  lima_device.c \
@@ -40,5 +43,4 @@ C_SOURCES := \
 	  lima_draw.c \
 	  lima_program.c \
 	  $(DRM_SOURCES) \
-	  $(gpir_SOURCES) \
-	  $(ppir_SOURCES)
+	  $(ir_SOURCES)

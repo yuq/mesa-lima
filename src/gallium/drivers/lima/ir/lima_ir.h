@@ -21,12 +21,45 @@
  *
  */
 
-#ifndef LIMA_IR_GP_NIR_H
-#define LIMA_IR_GP_NIR_H
+#ifndef LIMA_IR_H
+#define LIMA_IR_H
 
+#include <stdio.h>
+
+extern bool lima_shader_debug_gp;
+extern bool lima_shader_debug_pp;
+
+#define gpir_debug(...)                \
+   do {                                \
+      if (lima_shader_debug_gp)        \
+         printf("gpir: " __VA_ARGS__); \
+   } while (0)
+
+#define gpir_error(...) \
+   fprintf(stderr, "gpir: " __VA_ARGS__)
+
+#define ppir_debug(...)                \
+   do {                                \
+      if (lima_shader_debug_pp)        \
+         printf("ppir: " __VA_ARGS__); \
+   } while (0)
+
+#define ppir_error(...) \
+   fprintf(stderr, "ppir: " __VA_ARGS__)
+
+
+struct ra_regs;
+struct nir_shader;
 struct lima_vs_shader_state;
-typedef struct nir_shader nir_shader;
+struct lima_fs_shader_state;
 
-bool gpir_compile_nir(struct lima_vs_shader_state *prog, nir_shader *nir);
+/* gpir interface */
+bool gpir_compile_nir(struct lima_vs_shader_state *prog, struct nir_shader *nir);
+
+
+/* ppir interface */
+bool ppir_compile_nir(struct lima_fs_shader_state *prog, struct nir_shader *nir,
+                      struct ra_regs *ra);
+struct ra_regs *ppir_regalloc_init(void *mem_ctx);
 
 #endif
