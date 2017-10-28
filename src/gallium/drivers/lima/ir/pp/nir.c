@@ -27,8 +27,8 @@
 #include "util/ralloc.h"
 #include "util/bitscan.h"
 #include "compiler/nir/nir.h"
+
 #include "ppir.h"
-#include "interface.h"
 
 static void *ppir_node_create_ssa(ppir_compiler *comp, ppir_op op, nir_ssa_def *ssa)
 {
@@ -143,7 +143,7 @@ static ppir_node *ppir_emit_alu(ppir_compiler *comp, nir_alu_instr *instr)
    int op = nir_to_ppir_opcodes[instr->op];
 
    if (op < 0) {
-      fprintf(stderr, "ppir: unsupport nir_op %d\n", instr->op);
+      ppir_error("unsupport nir_op %d\n", instr->op);
       return NULL;
    }
 
@@ -228,7 +228,7 @@ static ppir_node *ppir_emit_intrinsic(ppir_compiler *comp, nir_intrinsic_instr *
       return &snode->node;
 
    default:
-      fprintf(stderr, "ppir: unsupport nir_intrinsic_instr %d\n", instr->intrinsic);
+      ppir_error("unsupport nir_intrinsic_instr %d\n", instr->intrinsic);
       return NULL;
    }
 }
@@ -250,19 +250,19 @@ static ppir_node *ppir_emit_load_const(ppir_compiler *comp, nir_load_const_instr
 
 static ppir_node *ppir_emit_ssa_undef(ppir_compiler *comp, nir_ssa_undef_instr *instr)
 {
-   fprintf(stderr, "ppir: nir_ssa_undef_instr not support\n");
+   ppir_error("nir_ssa_undef_instr not support\n");
    return NULL;
 }
 
 static ppir_node *ppir_emit_tex(ppir_compiler *comp, nir_tex_instr *instr)
 {
-   fprintf(stderr, "ppir: nir_tex_instr not support\n");
+   ppir_error("nir_tex_instr not support\n");
    return NULL;
 }
 
 static ppir_node *ppir_emit_jump(ppir_compiler *comp, nir_jump_instr *instr)
 {
-   fprintf(stderr, "ppir: nir_jump_instr not support\n");
+   ppir_error("nir_jump_instr not support\n");
    return NULL;
 }
 
@@ -282,7 +282,7 @@ static ppir_node *ppir_emit_instr(ppir_compiler *comp, nir_instr *instr)
    case nir_instr_type_jump:
       return ppir_emit_jump(comp, nir_instr_as_jump(instr));
    default:
-      fprintf(stderr, "ppir: unknown NIR instr type %d\n", instr->type);
+      ppir_error("unknown NIR instr type %d\n", instr->type);
       return NULL;
    }
 }
@@ -319,19 +319,19 @@ static bool ppir_emit_block(ppir_compiler *comp, nir_block *nblock)
 
 static bool ppir_emit_if(ppir_compiler *comp, nir_if *nif)
 {
-   fprintf(stderr, "ppir: if nir_cf_node not support\n");
+   ppir_error("if nir_cf_node not support\n");
    return false;
 }
 
 static bool ppir_emit_loop(ppir_compiler *comp, nir_loop *nloop)
 {
-   fprintf(stderr, "ppir: loop nir_cf_node not support\n");
+   ppir_error("loop nir_cf_node not support\n");
    return false;
 }
 
 static bool ppir_emit_function(ppir_compiler *comp, nir_function_impl *nfunc)
 {
-   fprintf(stderr, "ppir: function nir_cf_node not support\n");
+   ppir_error("function nir_cf_node not support\n");
    return false;
 }
 
@@ -354,7 +354,7 @@ static bool ppir_emit_cf_list(ppir_compiler *comp, struct exec_list *list)
          ret = ppir_emit_function(comp, nir_cf_node_as_function(node));
          break;
       default:
-         fprintf(stderr, "ppir: unknown NIR node type %d\n", node->type);
+         ppir_error("unknown NIR node type %d\n", node->type);
          return false;
       }
 
@@ -382,7 +382,7 @@ static ppir_compiler *ppir_compiler_create(void *prog, unsigned num_reg, unsigne
    return comp;
 }
 
-bool ppir_compile_nir(struct lima_fs_shader_state *prog, nir_shader *nir,
+bool ppir_compile_nir(struct lima_fs_shader_state *prog, struct nir_shader *nir,
                       struct ra_regs *ra)
 {
    nir_function_impl *func = nir_shader_get_entrypoint(nir);
