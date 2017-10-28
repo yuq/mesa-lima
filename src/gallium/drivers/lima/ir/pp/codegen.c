@@ -22,8 +22,6 @@
  *
  */
 
-#include <stdio.h>
-
 #include "util/ralloc.h"
 #include "util/u_half.h"
 #include "util/bitscan.h"
@@ -378,7 +376,6 @@ static int encode_instr(ppir_instr *instr, void *code, void *last_code)
 
 static void ppir_codegen_print_prog(ppir_compiler *comp)
 {
-#ifdef DEBUG
    uint32_t *prog = comp->prog->shader;
 
    printf("========ppir codegen========\n");
@@ -396,7 +393,6 @@ static void ppir_codegen_print_prog(ppir_compiler *comp)
       }
    }
    printf("-----------------------\n");
-#endif
 }
 
 bool ppir_codegen_prog(ppir_compiler *comp)
@@ -424,6 +420,8 @@ bool ppir_codegen_prog(ppir_compiler *comp)
    comp->prog->shader = prog;
    comp->prog->shader_size = size * sizeof(uint32_t);
 
-   ppir_codegen_print_prog(comp);
+   if (lima_shader_debug_pp)
+      ppir_codegen_print_prog(comp);
+
    return true;
 }

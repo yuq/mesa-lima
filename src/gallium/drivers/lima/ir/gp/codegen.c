@@ -22,8 +22,6 @@
  *
  */
 
-#include <stdio.h>
-
 #include "util/ralloc.h"
 
 #include "gpir.h"
@@ -475,7 +473,6 @@ static void gpir_codegen(gpir_codegen_instr *code, gpir_instr *instr)
 
 static void gpir_codegen_print_prog(gpir_compiler *comp)
 {
-#ifdef DEBUG
    uint32_t *data = comp->prog->shader;
    int size = comp->prog->shader_size;
    int num_instr = size / sizeof(gpir_codegen_instr);
@@ -487,7 +484,6 @@ static void gpir_codegen_print_prog(gpir_compiler *comp)
          printf("%08x ", data[i * num_dword_per_instr + j]);
       printf("\n");
    }
-#endif
 }
 
 bool gpir_codegen_prog(gpir_compiler *comp)
@@ -518,6 +514,8 @@ bool gpir_codegen_prog(gpir_compiler *comp)
    comp->prog->shader = code;
    comp->prog->shader_size = num_instr * sizeof(gpir_codegen_instr);
 
-   gpir_codegen_print_prog(comp);
+   if (lima_shader_debug_gp)
+      gpir_codegen_print_prog(comp);
+
    return true;
 }

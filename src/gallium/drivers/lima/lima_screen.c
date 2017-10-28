@@ -22,6 +22,8 @@
  *
  */
 
+#include <string.h>
+
 #include "util/ralloc.h"
 #include "util/u_debug.h"
 
@@ -29,7 +31,7 @@
 #include "lima_context.h"
 #include "lima_resource.h"
 #include "lima_program.h"
-#include "ir/pp/interface.h"
+#include "ir/lima_ir.h"
 
 static void
 lima_screen_destroy(struct pipe_screen *pscreen)
@@ -256,6 +258,9 @@ lima_screen_get_compiler_options(struct pipe_screen *pscreen,
    return lima_program_get_compiler_options(shader);
 }
 
+bool lima_shader_debug_gp = false;
+bool lima_shader_debug_pp = false;
+
 struct pipe_screen *
 lima_screen_create(int fd)
 {
@@ -294,6 +299,21 @@ lima_screen_create(int fd)
    slab_create_parent(&screen->transfer_pool, sizeof(struct lima_transfer), 16);
 
    screen->refcnt = 1;
+
+   const char *shader_debug = debug_get_option("LIMA_SHADER_DEBUG", NULL);
+   if (shader_debug) {
+      if (!strcmp("all", shader_debug)) {
+         lima_shader_debug_gp = true;
+         lima_shader_debug_pp = true;
+      }
+      else if (!strcmp("gp", shader_debug))
+         lima_shader_debug_gp = true;
+      else if (!strcmp("pp", shader_debug))
+         lima_shader_debug_pp = true;
+      else
+         debug_printf("lima: unsupport LIMA_SHADER_DEBUG value %s\n",
+                      shader_debug);
+   }
 
    return &screen->base;
 
