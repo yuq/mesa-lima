@@ -236,7 +236,8 @@ etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                          VIVS_TE_SAMPLER_SIZE_HEIGHT(res->base.height0);
    sv->TE_SAMPLER_LOG_SIZE =
       VIVS_TE_SAMPLER_LOG_SIZE_WIDTH(etna_log2_fixp55(res->base.width0)) |
-      VIVS_TE_SAMPLER_LOG_SIZE_HEIGHT(etna_log2_fixp55(res->base.height0));
+      VIVS_TE_SAMPLER_LOG_SIZE_HEIGHT(etna_log2_fixp55(res->base.height0)) |
+      COND(util_format_is_srgb(so->format), VIVS_TE_SAMPLER_LOG_SIZE_SRGB);
 
    /* Set up levels-of-detail */
    for (int lod = 0; lod <= res->base.last_level; ++lod) {

@@ -165,6 +165,8 @@ static struct etna_format formats[PIPE_FORMAT_COUNT] = {
 
    _T(B8G8R8A8_UNORM, A8R8G8B8, SWIZ(X, Y, Z, W), A8R8G8B8),
    _T(B8G8R8X8_UNORM, X8R8G8B8, SWIZ(X, Y, Z, W), X8R8G8B8),
+   _T(B8G8R8A8_SRGB,  A8R8G8B8, SWIZ(X, Y, Z, W), A8R8G8B8),
+   _T(B8G8R8X8_SRGB,  X8R8G8B8, SWIZ(X, Y, Z, W), X8R8G8B8),
 
    V_(R10G10B10A2_UNORM,   UNSIGNED_INT_10_10_10_2, NONE),
    V_(R10G10B10A2_SNORM,   INT_10_10_10_2,          NONE),
@@ -225,8 +227,11 @@ static struct etna_format formats[PIPE_FORMAT_COUNT] = {
    _T(ETC1_RGB8, ETC1, SWIZ(X, Y, Z, W), NONE),
 
    _T(DXT1_RGB,  DXT1,      SWIZ(X, Y, Z, W), NONE),
+   _T(DXT1_SRGBA,DXT1,      SWIZ(X, Y, Z, W), NONE),
    _T(DXT1_RGBA, DXT1,      SWIZ(X, Y, Z, W), NONE),
+   _T(DXT3_SRGBA,DXT2_DXT3, SWIZ(X, Y, Z, W), NONE),
    _T(DXT3_RGBA, DXT2_DXT3, SWIZ(X, Y, Z, W), NONE),
+   _T(DXT5_SRGBA,DXT4_DXT5, SWIZ(X, Y, Z, W), NONE),
    _T(DXT5_RGBA, DXT4_DXT5, SWIZ(X, Y, Z, W), NONE),
 
    _T(ETC2_RGB8,       EXT_NONE | EXT_FORMAT,                          SWIZ(X, Y, Z, W), NONE), /* Extd. format NONE doubles as ETC2_RGB8 */

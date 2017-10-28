@@ -482,6 +482,9 @@ gpu_supports_texure_format(struct etna_screen *screen, uint32_t fmt,
    if (fmt >= TEXTURE_FORMAT_DXT1 && fmt <= TEXTURE_FORMAT_DXT4_DXT5)
       supported = VIV_FEATURE(screen, chipFeatures, DXT_TEXTURE_COMPRESSION);
 
+   if (util_format_is_srgb(format))
+      supported = VIV_FEATURE(screen, chipMinorFeatures1, HALTI0);
+
    if (fmt & EXT_FORMAT) {
       supported = VIV_FEATURE(screen, chipMinorFeatures1, HALTI0);
 
