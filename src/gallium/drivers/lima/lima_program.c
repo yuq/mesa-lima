@@ -35,9 +35,7 @@
 #include "lima_screen.h"
 #include "lima_context.h"
 #include "lima_program.h"
-#include "ir/gp/nir.h"
-#include "ir/pp/interface.h"
-
+#include "ir/lima_ir.h"
 
 static const nir_shader_compiler_options vs_nir_options = {
    .lower_fpow = true,
@@ -153,9 +151,8 @@ lima_create_fs_state(struct pipe_context *pctx,
    nir_shader *nir = cso->ir.nir;
    lima_program_optimize_fs_nir(nir);
 
-#ifdef DEBUG
-   nir_print_shader(nir, stdout);
-#endif
+   if (lima_shader_debug_pp)
+      nir_print_shader(nir, stdout);
 
    if (!ppir_compile_nir(so, nir, screen->pp_ra)) {
       ralloc_free(so);
@@ -200,9 +197,8 @@ lima_create_vs_state(struct pipe_context *pctx,
    nir_shader *nir = cso->ir.nir;
    lima_program_optimize_vs_nir(nir);
 
-#ifdef DEBUG
-   nir_print_shader(nir, stdout);
-#endif
+   if (lima_shader_debug_gp)
+      nir_print_shader(nir, stdout);
 
    if (!gpir_compile_nir(so, nir)) {
       ralloc_free(so);

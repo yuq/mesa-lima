@@ -22,7 +22,6 @@
  *
  */
 
-#include <stdio.h>
 #include <string.h>
 
 #include "gpir.h"
@@ -327,7 +326,6 @@ void gpir_instr_remove_node(gpir_instr *instr, gpir_node *node)
       instr->slots[GPIR_INSTR_SLOT_MUL1] = NULL;
 }
 
-#ifdef DEBUG
 void gpir_instr_print_prog(gpir_compiler *comp)
 {
    struct {
@@ -387,4 +385,3 @@ void gpir_instr_print_prog(gpir_compiler *comp)
    }
    printf("==========================\n");
 }
-#endif

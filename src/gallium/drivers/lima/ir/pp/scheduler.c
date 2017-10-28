@@ -23,7 +23,6 @@
  */
 
 #include <limits.h>
-#include <stdio.h>
 
 #include "ppir.h"
 
