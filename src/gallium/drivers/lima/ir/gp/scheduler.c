@@ -495,6 +495,9 @@ static void gpir_remove_created_node(gpir_block *block, gpir_node *created,
    if (created->sched_instr >= 0)
       instr_remove_node(block, created);
 
+   gpir_debug("remove created node %d back to %d\n",
+              created->index, node->index);
+
    gpir_node_delete(created);
 }
 
@@ -712,6 +715,23 @@ static int insert_load_reg(gpir_block *block, gpir_node *node, int end,
    return -2;
 }
 
+static void gpir_print_unsatisfied_succ(gpir_node *node)
+{
+   if (!lima_shader_debug_gp)
+      return;
+
+   printf("unsatisfied successors");
+   gpir_node_foreach_succ(node, entry) {
+      gpir_dep_info *dep = gpir_dep_from_entry(entry);
+      gpir_node *succ = gpir_node_from_entry(entry, succ);
+      int max = succ->sched_instr + gpir_get_max_dist(dep);
+
+      if (max < node->sched_instr)
+         printf(" %d", succ->index);
+   }
+   printf("\n");
+}
+
 /*
  * Return:
  * >=0 - success, the last inserted load instr index
@@ -729,6 +749,10 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int orig_end
       reg_move = gpir_node_create(block->comp, gpir_op_mov, -1);
       if (!reg_move)
          return -2;
+      list_addtail(&reg_move->list, &block->node_list);
+
+      gpir_debug("create move %d for load %d to store reg\n",
+                 reg_move->index, node->index);
 
       gpir_node_foreach_succ(node, entry) {
          gpir_node_replace_pred(entry, reg_move);
@@ -748,8 +772,10 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int orig_end
          current = load;
       }
       else {
-         if (!current)
+         if (!current) {
+            gpir_print_unsatisfied_succ(load);
             return -1;
+         }
 
          gpir_remove_created_node(block, load, current);
       }
@@ -789,8 +815,10 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int orig_end
          }
 
          /* load reg can't use reg again */
-         if (node->op == gpir_op_load_reg)
+         if (node->op == gpir_op_load_reg) {
+            gpir_print_unsatisfied_succ(current);
             return -1;
+         }
 
          /* revert unused created nodes */
          while (true) {
@@ -823,6 +851,9 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int orig_end
             if (!reg_move)
                return -2;
             list_addtail(&reg_move->list, &block->node_list);
+
+            gpir_debug("create move %d for load %d to store reg\n",
+                       reg_move->index, node->index);
          }
 
          /* spill */
@@ -1035,6 +1066,8 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
       return -3;
    list_addtail(&store->list, &block->node_list);
 
+   gpir_debug("create store reg %d for %d\n", store->index, node->index);
+
    gpir_node_add_child(store, store_alu);
    gpir_dep_info *dep = gpir_node_add_read_after_write_dep(load, store);
 
@@ -1057,7 +1090,8 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
    int load_end = store->sched_instr - gpir_get_min_dist(dep) + 1;
    int load_start = gpir_try_insert_load(block, load, load_end);
    if (load_start < 0) {
-      gpir_error("insert load reg fail for node %d\n", node->index);
+      gpir_error("insert load reg fail %d for node %d\n",
+                 load_start, node->index);
       return load_start == -1 ? -2 : -3;
    }
 
@@ -1157,27 +1191,14 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
    return true;
 }
 
-static void gpir_print_failed_node(gpir_node *node)
+static void gpir_print_pre_schedule_node(gpir_node *node)
 {
-   /* print failed node's successors until none-sigle successor */
-   fprintf(stderr, "gpir: successors");
-   gpir_node *next = node;
-   while (true) {
-      if (next->succs->entries > 1)
-         fprintf(stderr, " |");
-
-      gpir_node *succ = NULL;
-      gpir_node_foreach_succ(next, entry) {
-         succ = gpir_node_from_entry(entry, succ);
-         fprintf(stderr, " %d", succ->index);
-      }
-
-      if (next->succs->entries > 1 || !succ)
-         break;
-      else
-         next = succ;
+   printf("gpir: pre schedule node %d successors", node->index);
+   gpir_node_foreach_succ(node, entry) {
+      gpir_node *succ = gpir_node_from_entry(entry, succ);
+      printf(" %d", succ->index);
    }
-   fprintf(stderr, "\n");
+   printf("\n");
 }
 
 static bool gpir_schedule_node(gpir_block *block, gpir_node *node)
@@ -1190,13 +1211,15 @@ static bool gpir_schedule_node(gpir_block *block, gpir_node *node)
    if (!slots)
       return true;
 
+   if (lima_shader_debug_gp)
+      gpir_print_pre_schedule_node(node);
+
    if (gpir_try_schedule_node(block, node))
       return true;
 
    gpir_error("fail to schedule node %s %d\n",
               gpir_op_infos[node->op].name, node->index);
 
-   gpir_print_failed_node(node);
    gpir_instr_print_prog(block->comp);
    return false;
 }
