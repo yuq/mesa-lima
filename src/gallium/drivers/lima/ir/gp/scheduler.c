@@ -23,10 +23,8 @@
  */
 
 #include <limits.h>
-#include <stdio.h>
 
 #include "util/bitscan.h"
-#include "util/u_debug.h"
 
 #include "gpir.h"
 
@@ -425,10 +423,10 @@ static gpir_node *_gpir_create_from_node(gpir_block *block, gpir_node *node, gpi
    if (!ret)
       return NULL;
 
-   debug_printf("gpir: scheduler create node %s %d from node %s %d\n",
-                gpir_op_infos[ret->op].name, ret->index,
-                load ? gpir_op_infos[load->op].name : gpir_op_infos[node->op].name,
-                load ? load->index : node->index);
+   gpir_debug("scheduler create node %s %d from node %s %d\n",
+              gpir_op_infos[ret->op].name, ret->index,
+              load ? gpir_op_infos[load->op].name : gpir_op_infos[node->op].name,
+              load ? load->index : node->index);
 
    if (load) {
       /* copy load node */
@@ -736,7 +734,7 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int orig_end
          gpir_node_replace_pred(entry, reg_move);
       }
 
-      debug_printf("gpir: schedule attr load %d with reg load\n", node->index);
+      gpir_debug("schedule attr load %d with reg load\n", node->index);
 
       return insert_load_reg(block, node, orig_end, reg_load, reg_move);
    }
@@ -838,8 +836,7 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int orig_end
             }
          }
 
-         debug_printf("gpir: spill node %d for load %d\n",
-                      spill->index, node->index);
+         gpir_debug("spill node %d for load %d\n", spill->index, node->index);
 
          /* handle current == node case */
          if (current == node) {
@@ -996,7 +993,7 @@ static int gpir_alloc_reg(gpir_instr *instrs, gpir_node *load,
    /* record alu node used for creating a store node */
    *store_alu = current;
 
-   debug_printf("gpir: alloc reg %d for node %d\n", reg, load->index);
+   gpir_debug("alloc reg %d for node %d\n", reg, load->index);
    return reg;
 }
 
@@ -1014,8 +1011,7 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
       return -3;
    list_addtail(&load->list, &block->node_list);
 
-   debug_printf("gpir: create load reg %d for node %d\n",
-                load->index, node->index);
+   gpir_debug("create load reg %d for node %d\n", load->index, node->index);
 
    gpir_move_unsatistied_node(load, node);
 
@@ -1024,8 +1020,7 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
    gpir_node *store_alu = node;
    int reg = gpir_alloc_reg(instrs, load, &store_alu);
    if (reg < 0) {
-      debug_printf("gpir: alloc reg for node %d fail\n",
-                   load->index);
+      gpir_debug("alloc reg for node %d fail\n", load->index);
       gpir_remove_created_node(block, load, node);
       return -1;
    }
@@ -1062,8 +1057,7 @@ static int gpir_try_insert_load_reg(gpir_block *block, gpir_node *node)
    int load_end = store->sched_instr - gpir_get_min_dist(dep) + 1;
    int load_start = gpir_try_insert_load(block, load, load_end);
    if (load_start < 0) {
-      fprintf(stderr, "gpir: insert load reg fail for node %d\n",
-              node->index);
+      gpir_error("insert load reg fail for node %d\n", node->index);
       return load_start == -1 ? -2 : -3;
    }
 
@@ -1099,8 +1093,8 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
          /* all constraints are satisfied */
          if (end < 0) {
             if (i > 0)
-               debug_printf("gpir: add %d moves for node %s %d\n",
-                            i, gpir_op_infos[node->op].name, node->index);
+               gpir_debug("add %d moves for node %s %d\n",
+                          i, gpir_op_infos[node->op].name, node->index);
             return true;
          }
 
@@ -1132,8 +1126,8 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
          /* load reg function will handle min dist and reuse move case */
          int err = gpir_try_insert_load_reg(block, current);
          if (err == 0) {
-            debug_printf("gpir: add reg load and %d moves for node %s %d\n",
-                         i, gpir_op_infos[node->op].name, node->index);
+            gpir_debug("add reg load and %d moves for node %s %d\n",
+                       i, gpir_op_infos[node->op].name, node->index);
             return true;
          }
          else if (err == -2) {
@@ -1145,7 +1139,7 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
             return false;
 
          /* fail to reg schedule current, we need to reschedule node */
-         debug_printf("gpir: reschedule node %d\n", node->index);
+         gpir_debug("reschedule node %d\n", node->index);
 
          /* remove all created move node and merge all successor back to node */
          gpir_remove_all_created_node(block, node);
@@ -1163,23 +1157,8 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
    return true;
 }
 
-static bool gpir_schedule_node(gpir_block *block, gpir_node *node)
+static void gpir_print_failed_node(gpir_node *node)
 {
-   node->scheduled = true;
-
-   const gpir_op_info *info = gpir_op_infos + node->op;
-   int *slots = info->slots;
-   /* not schedule node without instr slot */
-   if (!slots)
-      return true;
-
-   if (gpir_try_schedule_node(block, node))
-      return true;
-
-   fprintf(stderr, "gpir: fail to schedule node %s %d\n",
-           gpir_op_infos[node->op].name, node->index);
-
-#ifdef DEBUG
    /* print failed node's successors until none-sigle successor */
    fprintf(stderr, "gpir: successors");
    gpir_node *next = node;
@@ -1199,8 +1178,25 @@ static bool gpir_schedule_node(gpir_block *block, gpir_node *node)
          next = succ;
    }
    fprintf(stderr, "\n");
-#endif
+}
 
+static bool gpir_schedule_node(gpir_block *block, gpir_node *node)
+{
+   node->scheduled = true;
+
+   const gpir_op_info *info = gpir_op_infos + node->op;
+   int *slots = info->slots;
+   /* not schedule node without instr slot */
+   if (!slots)
+      return true;
+
+   if (gpir_try_schedule_node(block, node))
+      return true;
+
+   gpir_error("fail to schedule node %s %d\n",
+              gpir_op_infos[node->op].name, node->index);
+
+   gpir_print_failed_node(node);
    gpir_instr_print_prog(block->comp);
    return false;
 }
@@ -1265,7 +1261,6 @@ static bool gpir_schedule_block(gpir_block *block)
 
 static void print_statistic(gpir_compiler *comp)
 {
-#ifdef DEBUG
    int num_nodes[gpir_op_num] = {0};
    int num_created_nodes[gpir_op_num] = {0};
 
@@ -1277,36 +1272,35 @@ static void print_statistic(gpir_compiler *comp)
       }
    }
 
-   debug_printf("====== gpir scheduler statistic ======\n");
-   debug_printf("---- how many nodes are scheduled ----\n");
+   printf("====== gpir scheduler statistic ======\n");
+   printf("---- how many nodes are scheduled ----\n");
    int n = 0, l = 0;
    for (int i = 0; i < gpir_op_num; i++) {
       if (num_nodes[i]) {
-         debug_printf("%10s:%-6d", gpir_op_infos[i].name, num_nodes[i]);
+         printf("%10s:%-6d", gpir_op_infos[i].name, num_nodes[i]);
          n += num_nodes[i];
          if (!(++l % 4))
-            debug_printf("\n");
+            printf("\n");
       }
    }
    if (l % 4)
-      debug_printf("\n");
-   debug_printf("\ntotal: %d\n", n);
+      printf("\n");
+   printf("\ntotal: %d\n", n);
 
-   debug_printf("---- how many nodes are created ----\n");
+   printf("---- how many nodes are created ----\n");
    n = l = 0;
    for (int i = 0; i < gpir_op_num; i++) {
       if (num_created_nodes[i]) {
-         debug_printf("%10s:%-6d", gpir_op_infos[i].name, num_created_nodes[i]);
+         printf("%10s:%-6d", gpir_op_infos[i].name, num_created_nodes[i]);
          n += num_created_nodes[i];
          if (!(++l % 4))
-            debug_printf("\n");
+            printf("\n");
       }
    }
    if (l % 4)
-      debug_printf("\n");
-   debug_printf("\ntotal: %d\n", n);
-   debug_printf("------------------------------------\n");
-#endif
+      printf("\n");
+   printf("\ntotal: %d\n", n);
+   printf("------------------------------------\n");
 }
 
 bool gpir_schedule_prog(gpir_compiler *comp)
@@ -1318,7 +1312,10 @@ bool gpir_schedule_prog(gpir_compiler *comp)
          return false;
    }
 
-   print_statistic(comp);
-   gpir_instr_print_prog(comp);
+   if (lima_shader_debug_gp) {
+      print_statistic(comp);
+      gpir_instr_print_prog(comp);
+   }
+
    return true;
 }

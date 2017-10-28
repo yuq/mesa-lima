@@ -22,13 +22,11 @@
  *
  */
 
-#include <stdio.h>
-
 #include "util/ralloc.h"
 #include "util/register_allocate.h"
 
 #include "ppir.h"
-#include "interface.h"
+
 
 #define PPIR_FULL_REG_NUM  6
 
@@ -222,7 +220,6 @@ static int get_phy_reg_index(int reg)
 
 static void ppir_regalloc_print_result(ppir_compiler *comp)
 {
-#ifdef DEBUG
    printf("======ppir regalloc result======\n");
    list_for_each_entry(ppir_block, block, &comp->block_list, list) {
       list_for_each_entry(ppir_instr, instr, &block->instr_list, list) {
@@ -260,7 +257,6 @@ static void ppir_regalloc_print_result(ppir_compiler *comp)
       }
    }
    printf("--------------------------\n");
-#endif
 }
 
 bool ppir_regalloc_prog(ppir_compiler *comp)
@@ -308,7 +304,7 @@ bool ppir_regalloc_prog(ppir_compiler *comp)
    ra_set_node_reg(g, end_reg_index, ppir_ra_reg_base[ppir_ra_reg_class_vec4]);
 
    if (!ra_allocate(g)) {
-      fprintf(stderr, "ppir: regalloc fail\n");
+      ppir_error("ppir: regalloc fail\n");
       goto err_out;
    }
 
@@ -320,7 +316,9 @@ bool ppir_regalloc_prog(ppir_compiler *comp)
 
    ralloc_free(g);
 
-   ppir_regalloc_print_result(comp);
+   if (lima_shader_debug_pp)
+      ppir_regalloc_print_result(comp);
+
    return true;
 
 err_out:

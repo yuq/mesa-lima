@@ -22,8 +22,6 @@
  *
  */
 
-#include <stdio.h>
-
 #include "util/ralloc.h"
 #include "util/hash_table.h"
 
@@ -184,7 +182,6 @@ bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
    return true;
 }
 
-#ifdef DEBUG
 static struct {
    int len;
    char *name;
@@ -202,6 +199,9 @@ static struct {
 
 void ppir_instr_print_list(ppir_compiler *comp)
 {
+   if (!lima_shader_debug_pp)
+      return;
+
    printf("======ppir instr list======\n");
    printf("      ");
    for (int i = 0; i < PPIR_INSTR_SLOT_NUM; i++)
@@ -251,6 +251,9 @@ static void ppir_instr_print_sub(ppir_instr *instr)
 
 void ppir_instr_print_depend(ppir_compiler *comp)
 {
+   if (!lima_shader_debug_pp)
+      return;
+
    list_for_each_entry(ppir_block, block, &comp->block_list, list) {
       list_for_each_entry(ppir_instr, instr, &block->instr_list, list) {
          instr->printed = false;
@@ -268,4 +271,3 @@ void ppir_instr_print_depend(ppir_compiler *comp)
       printf("------------------------\n");
    }
 }
-#endif
