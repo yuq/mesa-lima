@@ -521,17 +521,28 @@ brw_nir_lower_cs_shared(nir_shader *nir)
    this_progress;                                          \
 })
 
+static nir_variable_mode
+brw_nir_no_indirect_mask(const struct brw_compiler *compiler,
+                         gl_shader_stage stage)
+{
+   nir_variable_mode indirect_mask = 0;
+
+   if (compiler->glsl_compiler_options[stage].EmitNoIndirectInput)
+      indirect_mask |= nir_var_shader_in;
+   if (compiler->glsl_compiler_options[stage].EmitNoIndirectOutput)
+      indirect_mask |= nir_var_shader_out;
+   if (compiler->glsl_compiler_options[stage].EmitNoIndirectTemp)
+      indirect_mask |= nir_var_local;
+
+   return indirect_mask;
+}
+
 nir_shader *
 brw_nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
                  bool is_scalar)
 {
-   nir_variable_mode indirect_mask = 0;
-   if (compiler->glsl_compiler_options[nir->info.stage].EmitNoIndirectInput)
-      indirect_mask |= nir_var_shader_in;
-   if (compiler->glsl_compiler_options[nir->info.stage].EmitNoIndirectOutput)
-      indirect_mask |= nir_var_shader_out;
-   if (compiler->glsl_compiler_options[nir->info.stage].EmitNoIndirectTemp)
-      indirect_mask |= nir_var_local;
+   nir_variable_mode indirect_mask =
+      brw_nir_no_indirect_mask(compiler, nir->info.stage);
 
    bool progress;
    do {
@@ -648,14 +659,8 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
 
    OPT(nir_lower_clip_cull_distance_arrays);
 
-   nir_variable_mode indirect_mask = 0;
-   if (compiler->glsl_compiler_options[nir->info.stage].EmitNoIndirectInput)
-      indirect_mask |= nir_var_shader_in;
-   if (compiler->glsl_compiler_options[nir->info.stage].EmitNoIndirectOutput)
-      indirect_mask |= nir_var_shader_out;
-   if (compiler->glsl_compiler_options[nir->info.stage].EmitNoIndirectTemp)
-      indirect_mask |= nir_var_local;
-
+   nir_variable_mode indirect_mask =
+      brw_nir_no_indirect_mask(compiler, nir->info.stage);
    nir_lower_indirect_derefs(nir, indirect_mask);
 
    nir_lower_int64(nir, nir_lower_imul64 |
