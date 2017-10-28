@@ -187,8 +187,20 @@ if with_dri_i915
   dep_libdrm_intel = dependency('libdrm_intel', version : '>= 2.4.75')
 endif
 
-# TODO: other OSes
-with_dri_platform = 'drm'
+if host_machine.system() == 'darwin'
+  with_dri_platform = 'apple'
+elif ['windows', 'cygwin'].contains(host_machine.system())
+  with_dri_platform = 'windows'
+elif host_machine.system() == 'linux'
+  # FIXME: This should include BSD and possibly other systems
+  with_dri_platform = 'drm'
+else
+  # FIXME: haiku doesn't use dri, and xlib doesn't use dri, probably should
+  # assert here that one of those cases has been met.
+  # FIXME: GNU (hurd) ends up here as well, but meson doesn't officially
+  # support Hurd at time of writing (2017/11)
+  with_dri_platform = 'none'
+endif
 
 with_platform_android = false
 with_platform_wayland = false
