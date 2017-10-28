@@ -764,11 +764,13 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int orig_end
    }
 
    int start = gpir_get_max_start(node), end = orig_end;
-   gpir_node *load = node, *current = NULL, *last_current = NULL;
+   gpir_node *load = node, *current = NULL;
+   gpir_node *last_load = NULL, *last_current = NULL;
 
    while (true) {
       if (gpir_try_place_node(block, load, start, end)) {
          last_current = current;
+         last_load = load;
          current = load;
       }
       else {
@@ -778,6 +780,7 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int orig_end
          }
 
          gpir_remove_created_node(block, load, current);
+         load = last_load;
       }
 
       while (true) {
