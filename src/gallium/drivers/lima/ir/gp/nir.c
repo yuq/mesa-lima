@@ -24,8 +24,9 @@
 
 #include "util/ralloc.h"
 #include "compiler/nir/nir.h"
+
 #include "gpir.h"
-#include "nir.h"
+
 
 static inline void *gpir_node_create_ssa(gpir_compiler *comp, gpir_op op, nir_ssa_def *ssa)
 {
@@ -83,7 +84,7 @@ static gpir_node *gpir_emit_alu(gpir_compiler *comp, nir_alu_instr *instr)
    int op = nir_to_gpir_opcodes[instr->op];
 
    if (op < 0) {
-      fprintf(stderr, "gpir: unsupport nir_op %d\n", instr->op);
+      gpir_error("unsupport nir_op %d\n", instr->op);
       return NULL;
    }
 
@@ -158,7 +159,7 @@ static gpir_node *gpir_emit_intrinsic(gpir_compiler *comp, nir_intrinsic_instr *
       return &snode->node;
 
    default:
-      fprintf(stderr, "gpir: unsupport nir_intrinsic_instr %d\n", instr->intrinsic);
+      gpir_error("unsupport nir_intrinsic_instr %d\n", instr->intrinsic);
       return NULL;
    }
 }
@@ -179,19 +180,19 @@ static gpir_node *gpir_emit_load_const(gpir_compiler *comp, nir_load_const_instr
 
 static gpir_node *gpir_emit_ssa_undef(gpir_compiler *comp, nir_ssa_undef_instr *instr)
 {
-   fprintf(stderr, "gpir: nir_ssa_undef_instr not support\n");
+   gpir_error("nir_ssa_undef_instr not support\n");
    return NULL;
 }
 
 static gpir_node *gpir_emit_tex(gpir_compiler *comp, nir_tex_instr *instr)
 {
-   fprintf(stderr, "gpir: nir_jump_instr not support\n");
+   gpir_error("nir_jump_instr not support\n");
    return NULL;
 }
 
 static gpir_node *gpir_emit_jump(gpir_compiler *comp, nir_jump_instr *instr)
 {
-   fprintf(stderr, "gpir: nir_jump_instr not support\n");
+   gpir_error("nir_jump_instr not support\n");
    return NULL;
 }
 
@@ -211,7 +212,7 @@ static gpir_node *gpir_emit_instr(gpir_compiler *comp, nir_instr *instr)
    case nir_instr_type_jump:
       return gpir_emit_jump(comp, nir_instr_as_jump(instr));
    default:
-      fprintf(stderr, "gpir: unknown NIR instr type %d\n", instr->type);
+      gpir_error("unknown NIR instr type %d\n", instr->type);
       return NULL;
    }
 }
@@ -248,19 +249,19 @@ static bool gpir_emit_block(gpir_compiler *comp, nir_block *nblock)
 
 static bool gpir_emit_if(gpir_compiler *comp, nir_if *nif)
 {
-   fprintf(stderr, "gpir: if nir_cf_node not support\n");
+   gpir_error("if nir_cf_node not support\n");
    return false;
 }
 
 static bool gpir_emit_loop(gpir_compiler *comp, nir_loop *nloop)
 {
-   fprintf(stderr, "gpir: loop nir_cf_node not support\n");
+   gpir_error("loop nir_cf_node not support\n");
    return false;
 }
 
 static bool gpir_emit_function(gpir_compiler *comp, nir_function_impl *nfunc)
 {
-   fprintf(stderr, "gpir: function nir_cf_node not support\n");
+   gpir_error("function nir_cf_node not support\n");
    return false;
 }
 
@@ -283,7 +284,7 @@ static bool gpir_emit_cf_list(gpir_compiler *comp, struct exec_list *list)
          ret = gpir_emit_function(comp, nir_cf_node_as_function(node));
          break;
       default:
-         fprintf(stderr, "gpir: unknown NIR node type %d\n", node->type);
+         gpir_error("unknown NIR node type %d\n", node->type);
          return false;
       }
 
@@ -308,7 +309,7 @@ static gpir_compiler *gpir_compiler_create(void *prog, unsigned num_reg, unsigne
    return comp;
 }
 
-bool gpir_compile_nir(struct lima_vs_shader_state *prog, nir_shader *nir)
+bool gpir_compile_nir(struct lima_vs_shader_state *prog, struct nir_shader *nir)
 {
    nir_function_impl *func = nir_shader_get_entrypoint(nir);
    gpir_compiler *comp = gpir_compiler_create(prog, func->reg_alloc, func->ssa_alloc);

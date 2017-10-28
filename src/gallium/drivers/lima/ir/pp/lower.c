@@ -22,8 +22,6 @@
  *
  */
 
-#include <stdio.h>
-
 #include "util/bitscan.h"
 #include "util/ralloc.h"
 
