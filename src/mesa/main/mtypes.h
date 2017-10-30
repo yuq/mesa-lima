@@ -2886,6 +2886,17 @@ struct gl_shader_program_data
    unsigned NumUniformDataSlots;
    union gl_constant_value *UniformDataSlots;
 
+   /* Used to hold initial uniform values for program binary restores.
+    *
+    * From the ARB_get_program_binary spec:
+    *
+    *    "A successful call to ProgramBinary will reset all uniform
+    *    variables to their initial values. The initial value is either
+    *    the value of the variable's initializer as specified in the
+    *    original shader source, or 0 if no initializer was present.
+    */
+   union gl_constant_value *UniformDataDefaults;
+
    GLboolean Validated;
 
    /** List of all active resources after linking. */

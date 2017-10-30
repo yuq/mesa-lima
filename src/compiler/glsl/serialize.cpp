@@ -449,7 +449,10 @@ write_uniforms(struct blob *metadata, struct gl_shader_program *prog)
          unsigned vec_size =
             prog->data->UniformStorage[i].type->component_slots() *
             MAX2(prog->data->UniformStorage[i].array_elements, 1);
-         blob_write_bytes(metadata, prog->data->UniformStorage[i].storage,
+         unsigned slot =
+            prog->data->UniformStorage[i].storage -
+            prog->data->UniformDataSlots;
+         blob_write_bytes(metadata, &prog->data->UniformDataDefaults[slot],
                           sizeof(union gl_constant_value) * vec_size);
       }
    }
@@ -472,6 +475,9 @@ read_uniforms(struct blob_reader *metadata, struct gl_shader_program *prog)
    data = rzalloc_array(uniforms, union gl_constant_value,
                         prog->data->NumUniformDataSlots);
    prog->data->UniformDataSlots = data;
+   prog->data->UniformDataDefaults =
+      rzalloc_array(uniforms, union gl_constant_value,
+                    prog->data->NumUniformDataSlots);
 
    prog->UniformHash = new string_to_uint_map;
 
@@ -512,14 +518,20 @@ read_uniforms(struct blob_reader *metadata, struct gl_shader_program *prog)
          unsigned vec_size =
             prog->data->UniformStorage[i].type->component_slots() *
             MAX2(prog->data->UniformStorage[i].array_elements, 1);
+         unsigned slot =
+            prog->data->UniformStorage[i].storage -
+            prog->data->UniformDataSlots;
          blob_copy_bytes(metadata,
-                         (uint8_t *) prog->data->UniformStorage[i].storage,
+                         (uint8_t *) &prog->data->UniformDataSlots[slot],
                          sizeof(union gl_constant_value) * vec_size);
 
         assert(vec_size + prog->data->UniformStorage[i].storage <=
                data +  prog->data->NumUniformDataSlots);
       }
    }
+
+   memcpy(prog->data->UniformDataDefaults, prog->data->UniformDataSlots,
+          sizeof(union gl_constant_value) * prog->data->NumUniformDataSlots);
 }
 
 enum uniform_remap_type
