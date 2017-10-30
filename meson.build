@@ -170,7 +170,7 @@ endif
 with_gbm = get_option('gbm')
 if with_gbm == 'auto' and with_dri  # TODO: or gallium
   with_gbm = host_machine.system() == 'linux'
-elif with_gbm == 'yes'
+elif with_gbm == 'true'
   if not ['linux', 'bsd'].contains(host_machine.system())
     error('GBM only supports unix-like platforms')
   endif
@@ -182,7 +182,7 @@ endif
 _egl = get_option('egl')
 if _egl == 'auto'
   with_egl = with_dri and with_shared_glapi and egl_native_platform != ''
-elif _egl == 'yes'
+elif _egl == 'true'
   if not with_dri
     error('EGL requires dri')
   elif not with_shared_glapi
@@ -264,7 +264,7 @@ if with_dri3 == 'auto'
   else
     with_dri3 = false
  endif
-elif with_dri3 == 'yes'
+elif with_dri3 == 'true'
   with_dri3 = true
 else
   with_dri3 = false

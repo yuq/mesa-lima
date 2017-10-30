@@ -28,7 +28,7 @@ option(
   'dri3',
   type : 'combo',
   value : 'auto',
-  choices : ['auto', 'yes', 'no'],
+  choices : ['auto', 'true', 'false'],
   description : 'enable support for dri3'
 )
 option(
@@ -101,7 +101,7 @@ option(
   'gbm',
   type : 'combo',
   value : 'auto',
-  choices : ['auto', 'yes', 'no'],
+  choices : ['auto', 'true', 'false'],
   description : 'Build support for gbm platform'
 )
 option(
@@ -115,7 +115,7 @@ option(
   'egl',
   type : 'combo',
   value : 'auto',
-  choices : ['auto', 'yes', 'no'],
+  choices : ['auto', 'true', 'false'],
   description : 'Build support for EGL platform'
 )
 option(
