@@ -195,6 +195,10 @@ typedef enum {
 	OPC_LDC             = _OPC(6, 30),
 	OPC_LDLV            = _OPC(6, 31),
 
+	/* category 7: */
+	OPC_BAR             = _OPC(7, 0),
+	OPC_FENCE           = _OPC(7, 1),
+
 	/* meta instructions (category -1): */
 	/* placeholder instr to mark shader inputs: */
 	OPC_META_INPUT      = _OPC(-1, 0),
@@ -715,6 +719,24 @@ typedef union PACKED {
 	};
 } instr_cat6_t;
 
+typedef struct PACKED {
+	/* dword0: */
+	uint32_t pad1     : 32;
+
+	/* dword1: */
+	uint32_t pad2     : 12;
+	uint32_t ss       : 1;  /* maybe in the encoding, but blob only uses (sy) */
+	uint32_t pad3     : 6;
+	uint32_t w        : 1;  /* write */
+	uint32_t r        : 1;  /* read */
+	uint32_t l        : 1;  /* local */
+	uint32_t g        : 1;  /* global */
+	uint32_t opc      : 4;  /* presumed, but only a couple known OPCs */
+	uint32_t jmp_tgt  : 1;  /* (jp) */
+	uint32_t sync     : 1;  /* (sy) */
+	uint32_t opc_cat  : 3;
+} instr_cat7_t;
+
 typedef union PACKED {
 	instr_cat0_t cat0;
 	instr_cat1_t cat1;
@@ -723,12 +745,13 @@ typedef union PACKED {
 	instr_cat4_t cat4;
 	instr_cat5_t cat5;
 	instr_cat6_t cat6;
+	instr_cat7_t cat7;
 	struct PACKED {
 		/* dword0: */
 		uint64_t pad1     : 40;
 		uint32_t repeat   : 3;  /* cat0-cat4 */
 		uint32_t pad2     : 1;
-		uint32_t ss       : 1;  /* cat1-cat4 (cat0??) */
+		uint32_t ss       : 1;  /* cat1-cat4 (cat0??) and cat7 (?) */
 		uint32_t ul       : 1;  /* cat2-cat4 (and cat1 in blob.. which may be bug??) */
 		uint32_t pad3     : 13;
 		uint32_t jmp_tgt  : 1;
@@ -748,6 +771,7 @@ static inline uint32_t instr_opc(instr_t *instr)
 	case 4:  return instr->cat4.opc;
 	case 5:  return instr->cat5.opc;
 	case 6:  return instr->cat6.opc;
+	case 7:  return instr->cat7.opc;
 	default: return 0;
 	}
 }

@@ -604,9 +604,28 @@ static int emit_cat6(struct ir3_instruction *instr, void *ptr,
 	return 0;
 }
 
+static int emit_cat7(struct ir3_instruction *instr, void *ptr,
+		struct ir3_info *info)
+{
+	instr_cat7_t *cat7 = ptr;
+
+	cat7->ss      = !!(instr->flags & IR3_INSTR_SS);
+	cat7->w       = instr->cat7.w;
+	cat7->r       = instr->cat7.r;
+	cat7->l       = instr->cat7.l;
+	cat7->g       = instr->cat7.g;
+	cat7->opc     = instr->opc;
+	cat7->jmp_tgt = !!(instr->flags & IR3_INSTR_JP);
+	cat7->sync    = !!(instr->flags & IR3_INSTR_SY);
+	cat7->opc_cat = 7;
+
+	return 0;
+}
+
 static int (*emit[])(struct ir3_instruction *instr, void *ptr,
 		struct ir3_info *info) = {
 	emit_cat0, emit_cat1, emit_cat2, emit_cat3, emit_cat4, emit_cat5, emit_cat6,
+	emit_cat7,
 };
 
 void * ir3_assemble(struct ir3 *shader, struct ir3_info *info,

@@ -714,6 +714,23 @@ static void print_instr_cat6(instr_t *instr)
 	}
 }
 
+static void print_instr_cat7(instr_t *instr)
+{
+	instr_cat7_t *cat7 = &instr->cat7;
+
+	if (cat7->g)
+		printf(".g");
+	if (cat7->l)
+		printf(".l");
+
+	if (_OPC(7, cat7->opc) == OPC_FENCE) {
+		if (cat7->r)
+			printf(".r");
+		if (cat7->w)
+			printf(".w");
+	}
+}
+
 /* size of largest OPC field of all the instruction categories: */
 #define NOPC_BITS 6
 
@@ -879,6 +896,8 @@ static const struct opc_info {
 	OPC(6, OPC_LDC,          ldc),
 	OPC(6, OPC_LDLV,         ldlv),
 
+	OPC(7, OPC_BAR,          bar),
+	OPC(7, OPC_FENCE,        fence),
 
 #undef OPC
 };
@@ -909,7 +928,7 @@ static void print_instr(uint32_t *dwords, int level, int n)
 
 	if (instr->sync)
 		printf("(sy)");
-	if (instr->ss && (instr->opc_cat <= 4))
+	if (instr->ss && ((instr->opc_cat <= 4) || (instr->opc_cat == 7)))
 		printf("(ss)");
 	if (instr->jmp_tgt)
 		printf("(jp)");

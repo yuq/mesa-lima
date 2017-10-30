@@ -228,6 +228,12 @@ struct ir3_instruction {
 			int dst_offset;
 			int iim_val;          /* for ldgb/stgb, # of components */
 		} cat6;
+		struct {
+			unsigned w : 1;       /* write */
+			unsigned r : 1;       /* read */
+			unsigned l : 1;       /* local */
+			unsigned g : 1;       /* global */
+		} cat7;
 		/* for meta-instructions, just used to hold extra data
 		 * before instruction scheduling, etc
 		 */
@@ -603,6 +609,11 @@ static inline bool is_tex(struct ir3_instruction *instr)
 static inline bool is_mem(struct ir3_instruction *instr)
 {
 	return (opc_cat(instr->opc) == 6);
+}
+
+static inline bool is_barrier(struct ir3_instruction *instr)
+{
+	return (opc_cat(instr->opc) == 7);
 }
 
 static inline bool
@@ -1178,6 +1189,10 @@ INSTR4(ATOMIC_MAX);
 INSTR4(ATOMIC_AND);
 INSTR4(ATOMIC_OR);
 INSTR4(ATOMIC_XOR);
+
+/* cat7 instructions: */
+INSTR0(BAR);
+INSTR0(FENCE);
 
 /* ************************************************************************* */
 /* split this out or find some helper to use.. like main/bitset.h.. */
