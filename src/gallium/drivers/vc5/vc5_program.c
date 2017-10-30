@@ -371,8 +371,14 @@ vc5_update_compiled_fs(struct vc5_context *vc5, uint8_t prim_mode)
                 const struct util_format_description *desc =
                         util_format_description(cbuf->format);
 
-                if (desc->swizzle[0] == PIPE_SWIZZLE_Z)
+                /* For BGRA8 formats (DRI window system default format), we
+                 * need to swap R and B, since the HW's format is RGBA8.
+                 */
+                if (desc->swizzle[0] == PIPE_SWIZZLE_Z &&
+                    cbuf->format != PIPE_FORMAT_B5G6R5_UNORM) {
                         key->swap_color_rb |= 1 << i;
+                }
+
                 if (desc->channel[0].type == UTIL_FORMAT_TYPE_FLOAT &&
                     desc->channel[0].size == 32) {
                         key->f32_color_rb |= 1 << i;
