@@ -1682,6 +1682,9 @@ radv_link_shaders(struct radv_pipeline *pipeline, nir_shader **shaders)
 	}
 
 	for (int i = 1; i < shader_count; ++i)  {
+		nir_lower_io_arrays_to_elements(ordered_shaders[i],
+						ordered_shaders[i - 1]);
+
 		nir_remove_dead_variables(ordered_shaders[i],
 					  nir_var_shader_out);
 		nir_remove_dead_variables(ordered_shaders[i - 1],
