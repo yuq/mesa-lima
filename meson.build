@@ -442,6 +442,64 @@ if xvmc_drivers_path == ''
   xvmc_drivers_path = get_option('libdir')
 endif
 
+dep_omx = []
+_omx = get_option('gallium-omx')
+if _omx == 'auto'
+  if not ['linux', 'bsd'].contains(host_machine.system())
+    with_gallium_omx = false
+  elif not with_platform_x11
+    with_gallium_omx = false
+  elif not (with_gallium_r600 or with_gallium_radeonsi or with_gallium_nouveau)
+    with_gallium_omx = false
+  else
+    dep_omx = dependency('libomxil-bellagio', required : false)
+    with_gallium_omx = dep_omx.found()
+  endif
+elif _omx == 'true'
+  if not ['linux', 'bsd'].contains(host_machine.system())
+    error('OMX state tracker can only be built on unix-like OSes.')
+  elif not (with_platform_x11 or with_platform_drm)
+    error('OMX state tracker requires X11 or drm platform support.')
+    with_gallium_omx = false
+  elif not (with_gallium_r600 or with_gallium_radeonsi or with_gallium_nouveau)
+    error('OMX state tracker requires at least one of the following gallium drivers: r600, radeonsi, nouveau.')
+  endif
+  dep_omx = dependency('libomxil-bellagio')
+  with_gallium_omx = true
+else
+  with_gallium_omx = false
+endif
+
+omx_drivers_path = get_option('omx-libs-path')
+if with_gallium_omx
+  # Figure out where to put the omx driver.
+  # FIXME: this could all be vastly simplified by adding a 'defined_variable'
+  # argument to meson's get_pkgconfig_variable method.
+  if omx_drivers_path == ''
+    _omx_libdir = dep_omx.get_pkgconfig_variable('libdir')
+    _omx_drivers_dir = dep_omx.get_pkgconfig_variable('pluginsdir')
+    if _omx_libdir == get_option('libdir')
+      omx_drivers_path = _omx_drivers_dir
+    else
+      _omx_base_dir = []
+      # This will fail on windows. Does OMX run on windows?
+      _omx_libdir = _omx_libdir.split('/')
+      _omx_drivers_dir = _omx_drivers_dir.split('/')
+      foreach o : _omx_drivers_dir
+        if not _omx_libdir.contains(o)
+          _omx_base_dir += o
+        endif
+      endforeach
+      omx_drivers_path = join_paths(get_option('libdir'), _omx_base_dir)
+    endif
+  endif
+endif
+if with_gallium_omx
+  dep_omx = declare_dependency(
+    compile_args : dep_omx.get_pkgconfig_variable('cflags').split()
+  )
+endif
+
 gl_pkgconfig_c_flags = []
 if with_platform_x11
   if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
@@ -972,7 +1030,7 @@ if with_platform_x11
     dep_xxf86vm = dependency('xxf86vm', required : false)
   endif
   if with_any_vk or with_glx == 'dri' or
-      (with_gallium_vdpau or with_gallium_xvmc)
+      (with_gallium_vdpau or with_gallium_xvmc or with_gallium_omx)
     dep_xcb = dependency('xcb')
     dep_x11_xcb = dependency('x11-xcb')
   endif
