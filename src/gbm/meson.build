@@ -50,7 +50,7 @@ libgbm = shared_library(
   include_directories : [
     include_directories('main'), inc_include, inc_src, inc_loader,
     include_directories('../egl/wayland/wayland-drm')],
-  c_args : args_gbm,
+  c_args : [c_vis_args, args_gbm],
   link_args : [ld_args_gc_sections],
   link_with : [links_gbm, libloader, libmesa_util, libxmlconfig],
   dependencies : [deps_gbm, dep_dl],
