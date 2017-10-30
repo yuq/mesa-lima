@@ -2864,14 +2864,9 @@ AM_CONDITIONAL(HAVE_VULKAN_COMMON, test "x$VULKAN_DRIVERS" != "x")
 AC_SUBST([XVMC_MAJOR], 1)
 AC_SUBST([XVMC_MINOR], 0)
 
-XA_HEADER="$srcdir/src/gallium/state_trackers/xa/xa_tracker.h"
-XA_MAJOR=`grep "#define XA_TRACKER_VERSION_MAJOR" $XA_HEADER | $SED 's/^#define XA_TRACKER_VERSION_MAJOR //'`
-XA_MINOR=`grep "#define XA_TRACKER_VERSION_MINOR" $XA_HEADER | $SED 's/^#define XA_TRACKER_VERSION_MINOR //'`
-XA_TINY=`grep "#define XA_TRACKER_VERSION_PATCH" $XA_HEADER | $SED 's/^#define XA_TRACKER_VERSION_PATCH //'`
-
-AC_SUBST([XA_MAJOR], $XA_MAJOR)
-AC_SUBST([XA_MINOR], $XA_MINOR)
-AC_SUBST([XA_TINY], $XA_TINY)
+AC_SUBST([XA_MAJOR], 2)
+AC_SUBST([XA_MINOR], 3)
+AC_SUBST([XA_TINY], 0)
 AC_SUBST([XA_VERSION], "$XA_MAJOR.$XA_MINOR.$XA_TINY")
 
 AC_ARG_ENABLE(valgrind,
@@ -2954,6 +2949,7 @@ AC_CONFIG_FILES([Makefile
                  src/gallium/state_trackers/va/Makefile
                  src/gallium/state_trackers/vdpau/Makefile
                  src/gallium/state_trackers/xa/Makefile
+                 src/gallium/state_trackers/xa/xa_tracker.h
                  src/gallium/state_trackers/xvmc/Makefile
                  src/gallium/targets/d3dadapter9/Makefile
                  src/gallium/targets/d3dadapter9/d3d.pc
