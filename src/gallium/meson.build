@@ -122,6 +122,9 @@ endif
 if with_gallium_vdpau
   subdir('state_trackers/vdpau')
 endif
+if with_gallium_xvmc
+  subdir('state_trackers/xvmc')
+endif
 # TODO: SWR
 # TODO: clover
 if with_dri
@@ -140,9 +143,11 @@ endif
 if with_gallium_vdpau
   subdir('targets/vdpau')
 endif
+if with_gallium_xvmc
+  subdir('targets/xvmc')
+endif
 # TODO: OMX
 # TODO: VA
 # TODO: xa
-# TODO: xvmc
 # TODO: nine
 # TODO: tests

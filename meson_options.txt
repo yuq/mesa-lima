@@ -69,6 +69,19 @@ option(
   description : 'path to put vdpau libraries. defaults to $libdir/vdpau.'
 )
 option(
+  'gallium-xvmc',
+  type : 'combo',
+  value : 'auto',
+  choices : ['auto', 'true', 'false'],
+  description : 'enable gallium xvmc state tracker.',
+)
+option(
+  'xvmc-libs-path',
+  type : 'string',
+  value : '',
+  description : 'path to put xvmc libraries. defaults to $libdir.'
+)
+option(
   'vulkan-drivers',
   type : 'string',
   value : 'auto',

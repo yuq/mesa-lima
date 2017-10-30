@@ -404,6 +404,44 @@ if vdpau_drivers_path == ''
   vdpau_drivers_path = join_paths(get_option('libdir'), 'vdpau')
 endif
 
+dep_xvmc = []
+_xvmc = get_option('gallium-xvmc')
+if _xvmc == 'auto'
+  if not ['linux', 'bsd'].contains(host_machine.system())
+    with_gallium_xvmc = false
+  elif not with_platform_x11
+    with_gallium_xvmc = false
+  elif not (with_gallium_r600 or with_gallium_nouveau)
+    with_gallium_xvmc = false
+  else
+    dep_xvmc = dependency('xvmc', version : '>= 1.0.6', required : false)
+    with_gallium_xvmc = dep_xvmc.found()
+  endif
+elif _xvmc == 'true'
+  if not ['linux', 'bsd'].contains(host_machine.system())
+    error('XVMC state tracker can only be build on unix-like OSes.')
+  elif not with_platform_x11
+    error('XVMC state tracker requires X11 support.')
+    with_gallium_xvmc = false
+  elif not (with_gallium_r600 or with_gallium_nouveau)
+    error('XVMC state tracker requires at least one of the following gallium drivers: r600, nouveau.')
+  endif
+  dep_xvmc = dependency('xvmc', version : '>= 1.0.6')
+  with_gallium_xvmc = true
+else
+  with_gallium_xvmc = false
+endif
+if with_gallium_xvmc
+  dep_xvmc = declare_dependency(
+    compile_args : dep_xvmc.get_pkgconfig_variable('cflags').split()
+  )
+endif
+
+xvmc_drivers_path = get_option('xvmc-libs-path')
+if xvmc_drivers_path == ''
+  xvmc_drivers_path = get_option('libdir')
+endif
+
 gl_pkgconfig_c_flags = []
 if with_platform_x11
   if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
@@ -933,7 +971,8 @@ if with_platform_x11
     dep_xcb_glx = dependency('xcb-glx', version : '>= 1.8.1')
     dep_xxf86vm = dependency('xxf86vm', required : false)
   endif
-  if with_any_vk or with_glx == 'dri' or with_gallium_vdpau
+  if with_any_vk or with_glx == 'dri' or
+      (with_gallium_vdpau or with_gallium_xvmc)
     dep_xcb = dependency('xcb')
     dep_x11_xcb = dependency('x11-xcb')
   endif
