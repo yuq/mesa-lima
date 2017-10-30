@@ -2815,9 +2815,6 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
       nr_attribute_slots++;
    }
 
-   unsigned nr_attributes = nr_attribute_slots -
-      DIV_ROUND_UP(_mesa_bitcount_64(shader->info.double_inputs_read), 2);
-
    /* The 3DSTATE_VS documentation lists the lower bound on "Vertex URB Entry
     * Read Length" as 1 in vec4 mode, and 0 in SIMD8 mode.  Empirically, in
     * vec4 mode, the hardware appears to wedge unless we read something.
