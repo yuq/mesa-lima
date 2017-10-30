@@ -50,5 +50,8 @@ pkg.generate(
 )
 
 if with_tests
-  test('es1-ABI-check', find_program('ABI-check'))
+  test('es1-ABI-check',
+    find_program('ABI-check'),
+    args : libglesv1_cm
+  )
 endif
