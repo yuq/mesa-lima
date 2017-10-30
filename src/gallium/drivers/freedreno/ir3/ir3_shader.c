@@ -708,19 +708,17 @@ max_tf_vtx(struct fd_context *ctx, const struct ir3_shader_variant *v)
 	return maxvtxcnt;
 }
 
-void
-ir3_emit_vs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
-		struct fd_context *ctx, const struct pipe_draw_info *info)
+static void
+emit_common_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
+		struct fd_context *ctx, enum pipe_shader_type t)
 {
-	enum fd_dirty_shader_state dirty = ctx->dirty_shader[PIPE_SHADER_VERTEX];
-
-	debug_assert(v->type == SHADER_VERTEX);
+	enum fd_dirty_shader_state dirty = ctx->dirty_shader[t];
 
 	if (dirty & (FD_DIRTY_SHADER_PROG | FD_DIRTY_SHADER_CONST)) {
 		struct fd_constbuf_stateobj *constbuf;
 		bool shader_dirty;
 
-		constbuf = &ctx->constbuf[PIPE_SHADER_VERTEX];
+		constbuf = &ctx->constbuf[t];
 		shader_dirty = !!(dirty & FD_DIRTY_SHADER_PROG);
 
 		emit_user_consts(ctx, v, ring, constbuf);
@@ -728,6 +726,15 @@ ir3_emit_vs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *rin
 		if (shader_dirty)
 			emit_immediates(ctx, v, ring);
 	}
+}
+
+void
+ir3_emit_vs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
+		struct fd_context *ctx, const struct pipe_draw_info *info)
+{
+	debug_assert(v->type == SHADER_VERTEX);
+
+	emit_common_consts(v, ring, ctx, PIPE_SHADER_VERTEX);
 
 	/* emit driver params every time: */
 	/* TODO skip emit if shader doesn't use driver params to avoid WFI.. */
@@ -772,22 +779,9 @@ void
 ir3_emit_fs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 		struct fd_context *ctx)
 {
-	enum fd_dirty_shader_state dirty = ctx->dirty_shader[PIPE_SHADER_FRAGMENT];
-
 	debug_assert(v->type == SHADER_FRAGMENT);
 
-	if (dirty & (FD_DIRTY_SHADER_PROG | FD_DIRTY_SHADER_CONST)) {
-		struct fd_constbuf_stateobj *constbuf;
-		bool shader_dirty;
-
-		constbuf = &ctx->constbuf[PIPE_SHADER_FRAGMENT];
-		shader_dirty = !!(dirty & FD_DIRTY_SHADER_PROG);
-
-		emit_user_consts(ctx, v, ring, constbuf);
-		emit_ubos(ctx, v, ring, constbuf);
-		if (shader_dirty)
-			emit_immediates(ctx, v, ring);
-	}
+	emit_common_consts(v, ring, ctx, PIPE_SHADER_FRAGMENT);
 }
 
 /* emit compute-shader consts: */
@@ -795,20 +789,9 @@ void
 ir3_emit_cs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 		struct fd_context *ctx, const struct pipe_grid_info *info)
 {
-	enum fd_dirty_shader_state dirty = ctx->dirty_shader[PIPE_SHADER_COMPUTE];
+	debug_assert(v->type == SHADER_COMPUTE);
 
-	if (dirty & (FD_DIRTY_SHADER_PROG | FD_DIRTY_SHADER_CONST)) {
-		struct fd_constbuf_stateobj *constbuf;
-		bool shader_dirty;
-
-		constbuf = &ctx->constbuf[PIPE_SHADER_COMPUTE];
-		shader_dirty = !!(dirty & FD_DIRTY_SHADER_PROG);
-
-		emit_user_consts(ctx, v, ring, constbuf);
-		emit_ubos(ctx, v, ring, constbuf);
-		if (shader_dirty)
-			emit_immediates(ctx, v, ring);
-	}
+	emit_common_consts(v, ring, ctx, PIPE_SHADER_COMPUTE);
 
 	/* emit compute-shader driver-params: */
 	uint32_t offset = v->constbase.driver_param;
