@@ -128,6 +128,9 @@ endif
 if with_gallium_omx
   subdir('state_trackers/omx_bellagio')
 endif
+if with_gallium_va
+  subdir('state_trackers/va')
+endif
 # TODO: SWR
 # TODO: clover
 if with_dri
@@ -152,7 +155,9 @@ endif
 if with_gallium_omx
   subdir('targets/omx-bellagio')
 endif
-# TODO: VA
+if with_gallium_va
+  subdir('targets/va')
+endif
 # TODO: xa
 # TODO: nine
 # TODO: tests

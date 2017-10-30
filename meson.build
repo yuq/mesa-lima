@@ -500,6 +500,44 @@ if with_gallium_omx
   )
 endif
 
+dep_va = []
+_va = get_option('gallium-va')
+if _va == 'auto'
+  if not ['linux', 'bsd'].contains(host_machine.system())
+    with_gallium_va = false
+  elif not with_platform_x11
+    with_gallium_va = false
+  elif not (with_gallium_r600 or with_gallium_radeonsi or with_gallium_nouveau)
+    with_gallium_va = false
+  else
+    dep_va = dependency('libva', version : '>= 0.38.0', required : false)
+    with_gallium_va = dep_va.found()
+  endif
+elif _va == 'true'
+  if not ['linux', 'bsd'].contains(host_machine.system())
+    error('VA state tracker can only be built on unix-like OSes.')
+  elif not (with_platform_x11 or with_platform_drm)
+    error('VA state tracker requires X11 or drm or wayland platform support.')
+    with_gallium_va = false
+  elif not (with_gallium_r600 or with_gallium_radeonsi or with_gallium_nouveau)
+    error('VA state tracker requires at least one of the following gallium drivers: r600, radeonsi, nouveau.')
+  endif
+  dep_va = dependency('libva', version : '>= 0.38.0')
+  with_gallium_va = true
+else
+  with_gallium_va = false
+endif
+if with_gallium_va
+  dep_va = declare_dependency(
+    compile_args : dep_va.get_pkgconfig_variable('cflags').split()
+  )
+endif
+
+va_drivers_path = get_option('va-libs-path')
+if va_drivers_path == ''
+  va_drivers_path = join_paths(get_option('libdir'), 'dri')
+endif
+
 gl_pkgconfig_c_flags = []
 if with_platform_x11
   if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
@@ -1030,7 +1068,8 @@ if with_platform_x11
     dep_xxf86vm = dependency('xxf86vm', required : false)
   endif
   if with_any_vk or with_glx == 'dri' or
-      (with_gallium_vdpau or with_gallium_xvmc or with_gallium_omx)
+      (with_gallium_vdpau or with_gallium_xvmc or with_gallium_omx or
+       with_gallium_xa)
     dep_xcb = dependency('xcb')
     dep_x11_xcb = dependency('x11-xcb')
   endif
