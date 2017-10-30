@@ -92,6 +92,18 @@ with_dri_r200 = false
 with_dri_nouveau = false
 with_dri_swrast = false
 _drivers = get_option('dri-drivers')
+if _drivers == 'auto'
+  # TODO: PPC, Sparc
+  if not ['darwin', 'windows'].contains(host_machine.system())
+    if ['x86', 'x86_64'].contains(host_machine.cpu_family())
+      _drivers = 'i915,i965,r100,r200,nouveau'
+    else
+      error('Unknown architecture. Please pass -Ddri-drivers to set driver options. Patches gladly accepted to fix this.')
+    endif
+  else
+    error('Unknown OS. Please pass -Ddri-drivers to set driver options. Patches gladly accepted to fix this.')
+  endif
+endif
 if _drivers != ''
   _split = _drivers.split(',')
   with_dri_i915 = _split.contains('i915')
@@ -114,6 +126,20 @@ with_gallium_vc5 = false
 with_gallium_etnaviv = false
 with_gallium_imx = false
 _drivers = get_option('gallium-drivers')
+if _drivers == 'auto'
+  if not ['darwin', 'windows'].contains(host_machine.system())
+    # TODO: PPC, Sparc
+    if ['x86', 'x86_64'].contains(host_machine.cpu_family())
+      _drivers = 'radeonsi,nouveau,swrast'
+    elif ['arm', 'aarch64'].contains(host_machine.cpu_family())
+      _drivers = 'pl111,vc4,vc5,freedreno,etnaviv,imx,swrast'
+    else
+      error('Unknown architecture. Please pass -Dgallium-drivers to set driver options. Patches gladly accepted to fix this.')
+    endif
+  else
+    error('Unknown OS. Please pass -Dgallium-drivers to set driver options. Patches gladly accepted to fix this.')
+  endif
+endif
 if _drivers != ''
   _split = _drivers.split(',')
   with_gallium_pl111 = _split.contains('pl111')
@@ -252,6 +278,18 @@ with_intel_vk = false
 with_amd_vk = false
 with_any_vk = false
 _vulkan_drivers = get_option('vulkan-drivers')
+if _vulkan_drivers == 'auto'
+  if not ['darwin', 'windows'].contains(host_machine.system())
+    if host_machine.cpu_family().startswith('x86')
+      _vulkan_drivers = 'amd,intel'
+    else
+      error('Unknown architecture. Please pass -Dvulkan-drivers to set driver options. Patches gladly accepted to fix this.')
+    endif
+  else
+    # No vulkan driver supports windows or macOS currently
+    _vulkan_drivers = ''
+  endif
+endif
 if _vulkan_drivers != ''
   _split = _vulkan_drivers.split(',')
   with_intel_vk = _split.contains('intel')
