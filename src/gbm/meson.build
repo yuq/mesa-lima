@@ -70,6 +70,8 @@ pkg.generate(
 )
 
 if with_tests
-  gbm_symbols_check = find_program('gbm-symbols-check')
-  test('gbm-symbols-check', gbm_symbols_check)
+  test('gbm-symbols-check',
+    find_program('gbm-symbols-check'),
+    args : libgbm
+  )
 endif
