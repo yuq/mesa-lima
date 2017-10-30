@@ -379,14 +379,8 @@ emit_ssbos(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			CP_LOAD_STATE4_1_EXT_SRC_ADDR(0));
 	OUT_RING(ring, CP_LOAD_STATE4_2_EXT_SRC_ADDR_HI(0));
 	for (unsigned i = 0; i < count; i++) {
-		struct pipe_shader_buffer *buf = &so->sb[i];
-		if (buf->buffer) {
-			struct fd_resource *rsc = fd_resource(buf->buffer);
-			OUT_RELOCW(ring, rsc->bo, 0, 0, 0);
-		} else {
-			OUT_RING(ring, 0x00000000);
-			OUT_RING(ring, 0x00000000);
-		}
+		OUT_RING(ring, 0x00000000);
+		OUT_RING(ring, 0x00000000);
 		OUT_RING(ring, 0x00000000);
 		OUT_RING(ring, 0x00000000);
 	}
@@ -401,10 +395,13 @@ emit_ssbos(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	OUT_RING(ring, CP_LOAD_STATE4_2_EXT_SRC_ADDR_HI(0));
 	for (unsigned i = 0; i < count; i++) {
 		struct pipe_shader_buffer *buf = &so->sb[i];
+		unsigned sz = buf->buffer_size;
 
-		// TODO maybe offset encoded somewhere here??
-		OUT_RING(ring, (buf->buffer_size << 16));
-		OUT_RING(ring, 0x00000000);
+		/* width is in dwords, overflows into height: */
+		sz /= 4;
+
+		OUT_RING(ring, A5XX_SSBO_1_0_WIDTH(sz));
+		OUT_RING(ring, A5XX_SSBO_1_1_HEIGHT(sz >> 16));
 	}
 
 	OUT_PKT7(ring, CP_LOAD_STATE4, 3 + (2 * count));

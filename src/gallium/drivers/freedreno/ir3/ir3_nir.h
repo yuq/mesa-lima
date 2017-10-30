@@ -34,6 +34,8 @@
 
 #include "ir3_shader.h"
 
+void ir3_nir_scan_driver_consts(nir_shader *shader, struct ir3_driver_const_layout *layout);
+
 bool ir3_nir_lower_if_else(nir_shader *shader);
 bool ir3_nir_apply_trig_workarounds(nir_shader *shader);
 

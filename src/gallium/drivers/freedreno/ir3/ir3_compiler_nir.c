@@ -217,6 +217,8 @@ compile_init(struct ir3_compiler *compiler,
 		nir_print_shader(ctx->s, stdout);
 	}
 
+	ir3_nir_scan_driver_consts(ctx->s, &so->const_layout);
+
 	so->num_uniforms = ctx->s->num_uniforms;
 	so->num_ubos = ctx->s->info.num_ubos;
 
@@ -225,6 +227,7 @@ compile_init(struct ir3_compiler *compiler,
 	 *
 	 *    user consts
 	 *    UBO addresses
+	 *    SSBO sizes
 	 *    if (vertex shader) {
 	 *        driver params (IR3_DP_*)
 	 *        if (stream_output.num_outputs > 0)
@@ -243,6 +246,12 @@ compile_init(struct ir3_compiler *compiler,
 	if (so->num_ubos > 0) {
 		so->constbase.ubo = constoff;
 		constoff += align(ctx->s->info.num_ubos * ptrsz, 4) / 4;
+	}
+
+	if (so->const_layout.ssbo_size.count > 0) {
+		unsigned cnt = so->const_layout.ssbo_size.count;
+		so->constbase.ssbo_sizes = constoff;
+		constoff += align(cnt, 4) / 4;
 	}
 
 	unsigned num_driver_params = 0;
@@ -1302,6 +1311,21 @@ emit_intrinsic_store_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	array_insert(b, b->keeps, stgb);
 }
 
+/* src[] = { block_index } */
+static void
+emit_intrinsic_ssbo_size(struct ir3_context *ctx, nir_intrinsic_instr *intr,
+		struct ir3_instruction **dst)
+{
+	/* SSBO size stored as a const starting at ssbo_sizes: */
+	unsigned blk_idx = nir_src_as_const_value(intr->src[0])->u32[0];
+	unsigned idx = regid(ctx->so->constbase.ssbo_sizes, 0) +
+		ctx->so->const_layout.ssbo_size.off[blk_idx];
+
+	debug_assert(ctx->so->const_layout.ssbo_size.mask & (1 << blk_idx));
+
+	dst[0] = create_uniform(ctx, idx);
+}
+
 static struct ir3_instruction *
 emit_intrinsic_atomic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 {
@@ -1482,6 +1506,9 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_store_ssbo:
 		emit_intrinsic_store_ssbo(ctx, intr);
+		break;
+	case nir_intrinsic_get_buffer_size:
+		emit_intrinsic_ssbo_size(ctx, intr, dst);
 		break;
 	case nir_intrinsic_ssbo_atomic_add:
 	case nir_intrinsic_ssbo_atomic_imin:

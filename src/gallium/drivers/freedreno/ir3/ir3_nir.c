@@ -209,3 +209,38 @@ ir3_optimize_nir(struct ir3_shader *shader, nir_shader *s,
 
 	return s;
 }
+
+void
+ir3_nir_scan_driver_consts(nir_shader *shader,
+		struct ir3_driver_const_layout *layout)
+{
+	nir_foreach_function(function, shader) {
+		if (!function->impl)
+			continue;
+
+		nir_foreach_block(block, function->impl) {
+			nir_foreach_instr(instr, block) {
+				if (instr->type != nir_instr_type_intrinsic)
+					continue;
+
+				nir_intrinsic_instr *intr =
+					nir_instr_as_intrinsic(instr);
+				unsigned idx;
+
+				switch (intr->intrinsic) {
+				case nir_intrinsic_get_buffer_size:
+					idx = nir_src_as_const_value(intr->src[0])->u32[0];
+					if (layout->ssbo_size.mask & (1 << idx))
+						break;
+					layout->ssbo_size.mask |= (1 << idx);
+					layout->ssbo_size.off[idx] =
+						layout->ssbo_size.count;
+					layout->ssbo_size.count += 1; /* one const per */
+					break;
+				default:
+					break;
+				}
+			}
+		}
+	}
+}

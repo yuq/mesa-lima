@@ -607,6 +607,27 @@ emit_ubos(struct fd_context *ctx, const struct ir3_shader_variant *v,
 }
 
 static void
+emit_ssbo_sizes(struct fd_context *ctx, const struct ir3_shader_variant *v,
+		struct fd_ringbuffer *ring, struct fd_shaderbuf_stateobj *sb)
+{
+	uint32_t offset = v->constbase.ssbo_sizes;
+	if (v->constlen > offset) {
+		uint32_t sizes[align(v->const_layout.ssbo_size.count, 4)];
+		unsigned mask = v->const_layout.ssbo_size.mask;
+
+		while (mask) {
+			unsigned index = u_bit_scan(&mask);
+			unsigned off = v->const_layout.ssbo_size.off[index];
+			sizes[off] = sb->sb[index].buffer_size;
+		}
+
+		fd_wfi(ctx->batch, ring);
+		ctx->emit_const(ring, v->type, offset * 4,
+			0, ARRAY_SIZE(sizes), sizes, NULL);
+	}
+}
+
+static void
 emit_immediates(struct fd_context *ctx, const struct ir3_shader_variant *v,
 		struct fd_ringbuffer *ring)
 {
@@ -725,6 +746,11 @@ emit_common_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *rin
 		emit_ubos(ctx, v, ring, constbuf);
 		if (shader_dirty)
 			emit_immediates(ctx, v, ring);
+	}
+
+	if (dirty & (FD_DIRTY_SHADER_PROG | FD_DIRTY_SHADER_SSBO)) {
+		struct fd_shaderbuf_stateobj *sb = &ctx->shaderbuf[t];
+		emit_ssbo_sizes(ctx, v, ring, sb);
 	}
 }
 
