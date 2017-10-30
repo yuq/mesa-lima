@@ -201,8 +201,13 @@ egl_HEADERS = \
 	$(top_srcdir)/include/EGL/eglmesaext.h \
 	$(top_srcdir)/include/EGL/eglplatform.h
 
-TESTS = egl-symbols-check \
-	egl-entrypoint-check
+TESTS = egl-entrypoint-check
+
+if USE_LIBGLVND
+#TODO: glvnd symbol check
+else
+TESTS += egl-symbols-check
+endif
 
 EXTRA_DIST = \
 	$(TESTS) \

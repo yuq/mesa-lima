@@ -183,10 +183,14 @@ pkg.generate(
 )
 
 if with_tests
-  test('egl-symbols-check',
-    find_program('egl-symbols-check'),
-    args : libegl
-  )
+  if with_glvnd
+    # TODO: add glvnd symbol check
+  else
+    test('egl-symbols-check',
+      find_program('egl-symbols-check'),
+      args : libegl
+    )
+  endif
   test('egl-entrypoint-check',
     find_program('egl-entrypoint-check'),
     env : [ 'srcdir=' + meson.current_source_dir() ]
