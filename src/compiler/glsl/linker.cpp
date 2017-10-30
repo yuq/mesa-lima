@@ -3653,21 +3653,21 @@ included_in_packed_varying(ir_variable *var, const char *name)
    if (strncmp(var->name, "packed:", 7) != 0)
       return false;
 
-   const char *token = var->name + 7;
-   while (token) {
-      const char *next_token = strchr(list, ' ');
-      if (next_token) {
-         len = token - next_token;
-         next_token++;
-      } else {
-         len = strlen(token);
-      }
-      if (strncmp(token, name, MAX2(len, strlen(name)) == 0)
-         return true;
+   char *list = strdup(var->name + 7);
+   assert(list);
 
-      token = next_token;
+   bool found = false;
+   char *saveptr;
+   char *token = strtok_r(list, ",", &saveptr);
+   while (token) {
+      if (strcmp(token, name) == 0) {
+         found = true;
+         break;
+      }
+      token = strtok_r(NULL, ",", &saveptr);
    }
-   return false;
+   free(list);
+   return found;
 }
 
 /**
