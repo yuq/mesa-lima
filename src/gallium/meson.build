@@ -119,6 +119,9 @@ if with_gallium_virgl
 else
   driver_virgl = declare_dependency()
 endif
+if with_gallium_vdpau
+  subdir('state_trackers/vdpau')
+endif
 # TODO: SWR
 # TODO: clover
 if with_dri
@@ -134,9 +137,11 @@ if with_glx == 'gallium-xlib'
   subdir('state_trackers/glx/xlib')
   subdir('targets/libgl-xlib')
 endif
+if with_gallium_vdpau
+  subdir('targets/vdpau')
+endif
 # TODO: OMX
 # TODO: VA
-# TODO: vdpau
 # TODO: xa
 # TODO: xvmc
 # TODO: nine

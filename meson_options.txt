@@ -56,6 +56,19 @@ option(
   description : 'Enable HUD block/NIC I/O HUD status support',
 )
 option(
+  'gallium-vdpau',
+  type : 'combo',
+  value : 'auto',
+  choices : ['auto', 'true', 'false'],
+  description : 'enable gallium vdpau state tracker.',
+)
+option(
+  'vdpau-libs-path',
+  type : 'string',
+  value : '',
+  description : 'path to put vdpau libraries. defaults to $libdir/vdpau.'
+)
+option(
   'vulkan-drivers',
   type : 'string',
   value : 'auto',

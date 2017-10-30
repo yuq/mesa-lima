@@ -361,6 +361,49 @@ if with_dri or with_gallium
   endif
 endif
 
+dep_vdpau = []
+_vdpau = get_option('gallium-vdpau')
+if _vdpau == 'auto'
+  if not ['linux', 'bsd'].contains(host_machine.system())
+    with_gallium_vdpau = false
+  elif not with_platform_x11
+    with_gallium_vdpau = false
+  elif not (with_gallium_r300 or with_gallium_r600 or with_gallium_radeonsi or
+            with_gallium_nouveau)
+    with_gallium_vdpau = false
+  else
+    dep_vdpau = dependency('vdpau', version : '>= 1.1', required : false)
+    with_gallium_vdpau = dep_vdpau.found()
+  endif
+elif _vdpau == 'true'
+  if not ['linux', 'bsd'].contains(host_machine.system())
+    error('VDPAU state tracker can only be build on unix-like OSes.')
+  elif not with_platform_x11
+    error('VDPAU state tracker requires X11 support.')
+    with_gallium_vdpau = false
+  elif not (with_gallium_r300 or with_gallium_r600 or with_gallium_radeonsi or
+            with_gallium_nouveau)
+    error('VDPAU state tracker requires at least one of the following gallium drivers: r300, r600, radeonsi, nouveau.')
+  endif
+  dep_vdpau = dependency('vdpau', version : '>= 1.1')
+  with_gallium_vdpau = true
+else
+  with_gallium_vdpau = false
+endif
+if with_gallium_vdpau
+  dep_vdpau = declare_dependency(
+    compile_args : dep_vdpau.get_pkgconfig_variable('cflags').split()
+  )
+endif
+
+if with_gallium_vdpau
+  pre_args += '-DHAVE_ST_VDPAU'
+endif
+vdpau_drivers_path = get_option('vdpau-libs-path')
+if vdpau_drivers_path == ''
+  vdpau_drivers_path = join_paths(get_option('libdir'), 'vdpau')
+endif
+
 gl_pkgconfig_c_flags = []
 if with_platform_x11
   if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
@@ -890,7 +933,7 @@ if with_platform_x11
     dep_xcb_glx = dependency('xcb-glx', version : '>= 1.8.1')
     dep_xxf86vm = dependency('xxf86vm', required : false)
   endif
-  if with_any_vk or with_glx == 'dri'
+  if with_any_vk or with_glx == 'dri' or with_gallium_vdpau
     dep_xcb = dependency('xcb')
     dep_x11_xcb = dependency('x11-xcb')
   endif
