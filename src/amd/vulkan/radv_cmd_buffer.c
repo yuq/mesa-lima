@@ -2259,14 +2259,28 @@ void radv_CmdBindVertexBuffers(
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	struct radv_vertex_binding *vb = cmd_buffer->state.vertex_bindings;
+	bool changed = false;
 
 	/* We have to defer setting up vertex buffer since we need the buffer
 	 * stride from the pipeline. */
 
 	assert(firstBinding + bindingCount <= MAX_VBS);
 	for (uint32_t i = 0; i < bindingCount; i++) {
-		vb[firstBinding + i].buffer = radv_buffer_from_handle(pBuffers[i]);
-		vb[firstBinding + i].offset = pOffsets[i];
+		uint32_t idx = firstBinding + i;
+
+		if (!changed &&
+		    (vb[idx].buffer != radv_buffer_from_handle(pBuffers[i]) ||
+		     vb[idx].offset != pOffsets[i])) {
+			changed = true;
+		}
+
+		vb[idx].buffer = radv_buffer_from_handle(pBuffers[i]);
+		vb[idx].offset = pOffsets[i];
+	}
+
+	if (!changed) {
+		/* No state changes. */
+		return;
 	}
 
 	cmd_buffer->state.vb_dirty = true;
