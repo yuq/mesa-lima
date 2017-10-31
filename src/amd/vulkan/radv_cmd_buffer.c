@@ -2315,9 +2315,9 @@ void radv_CmdBindIndexBuffer(
 }
 
 
-void radv_bind_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
-			      struct radv_descriptor_set *set,
-			      unsigned idx)
+static void
+radv_bind_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
+			 struct radv_descriptor_set *set, unsigned idx)
 {
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
 
