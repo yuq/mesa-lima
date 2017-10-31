@@ -514,6 +514,7 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
    _EGL_CHECK_EXTENSION(KHR_surfaceless_context);
    if (dpy->Extensions.EXT_swap_buffers_with_damage)
       _eglAppendExtension(&exts, "EGL_KHR_swap_buffers_with_damage");
+   _EGL_CHECK_EXTENSION(EXT_pixel_format_float);
    _EGL_CHECK_EXTENSION(KHR_wait_sync);
 
    if (dpy->Extensions.KHR_no_config_context)
