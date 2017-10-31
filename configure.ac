@@ -309,11 +309,11 @@ AC_LANG_POP([C++])
 # - non-Linux/Posix OpenGL portions needs to build on MSVC 2013 (which
 #   supports most of C99)
 # - the rest has no compiler compiler restrictions
-AX_CHECK_COMPILE_FLAG([-Werror=pointer-arith],                 [MSVC2013_COMPAT_CFLAGS="-Werror=pointer-arith"])
-AX_CHECK_COMPILE_FLAG([-Werror=vla],                           [MSVC2013_COMPAT_CFLAGS="-Werror=vla"])
+AX_CHECK_COMPILE_FLAG([-Werror=pointer-arith],                 [MSVC2013_COMPAT_CFLAGS="$MSVC2013_COMPAT_CFLAGS -Werror=pointer-arith"])
+AX_CHECK_COMPILE_FLAG([-Werror=vla],                           [MSVC2013_COMPAT_CFLAGS="$MSVC2013_COMPAT_CFLAGS -Werror=vla"])
 AC_LANG_PUSH([C++])
-AX_CHECK_COMPILE_FLAG([-Werror=pointer-arith],                 [MSVC2013_COMPAT_CXXFLAGS="-Werror=pointer-arith"])
-AX_CHECK_COMPILE_FLAG([-Werror=vla],                           [MSVC2013_COMPAT_CXXFLAGS="-Werror=vla"])
+AX_CHECK_COMPILE_FLAG([-Werror=pointer-arith],                 [MSVC2013_COMPAT_CXXFLAGS="$MSVC2013_COMPAT_CXXFLAGS -Werror=pointer-arith"])
+AX_CHECK_COMPILE_FLAG([-Werror=vla],                           [MSVC2013_COMPAT_CXXFLAGS="$MSVC2013_COMPAT_CXXFLAGS -Werror=vla"])
 AC_LANG_POP([C++])
 
 AC_SUBST([MSVC2013_COMPAT_CFLAGS])
