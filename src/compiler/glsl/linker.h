@@ -159,16 +159,6 @@ protected:
                             const enum glsl_interface_packing packing,
                             bool last_field) = 0;
 
-   /**
-    * Visit a record before visiting its fields
-    *
-    * For structures-of-structures or interfaces-of-structures, this visits
-    * the inner structure before visiting its fields.
-    *
-    * The default implementation does nothing.
-    */
-   virtual void visit_field(const glsl_struct_field *field);
-
    virtual void enter_record(const glsl_type *type, const char *name,
                              bool row_major, const enum glsl_interface_packing packing);
 

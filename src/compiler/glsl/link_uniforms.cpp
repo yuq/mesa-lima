@@ -132,9 +132,6 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
          const char *field = t->fields.structure[i].name;
          size_t new_length = name_length;
 
-         if (t->fields.structure[i].type->is_record())
-            this->visit_field(&t->fields.structure[i]);
-
          if (t->is_interface() && t->fields.structure[i].offset != -1)
             this->set_buffer_offset(t->fields.structure[i].offset);
 
@@ -213,11 +210,6 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
       this->set_record_array_count(record_array_count);
       this->visit_field(t, *name, row_major, record_type, packing, last_field);
    }
-}
-
-void
-program_resource_visitor::visit_field(const glsl_struct_field *)
-{
 }
 
 void
