@@ -1168,8 +1168,8 @@ intelUnbindContext(__DRIcontext * driContextPriv)
  *
  * Unfortunately, renderbuffer setup happens before a context is created.  So
  * in intel_screen.c we always set up sRGB, and here, if you're a GLES2/3
- * context (without an sRGB visual, though we don't have sRGB visuals exposed
- * yet), we go turn that back off before anyone finds out.
+ * context (without an sRGB visual), we go turn that back off before anyone
+ * finds out.
  */
 static void
 intel_gles3_srgb_workaround(struct brw_context *brw,
@@ -1180,15 +1180,19 @@ intel_gles3_srgb_workaround(struct brw_context *brw,
    if (_mesa_is_desktop_gl(ctx) || !fb->Visual.sRGBCapable)
       return;
 
-   /* Some day when we support the sRGB capable bit on visuals available for
-    * GLES, we'll need to respect that and not disable things here.
-    */
-   fb->Visual.sRGBCapable = false;
    for (int i = 0; i < BUFFER_COUNT; i++) {
       struct gl_renderbuffer *rb = fb->Attachment[i].Renderbuffer;
+
+      /* Check if sRGB was specifically asked for. */
+      struct intel_renderbuffer *irb = intel_get_renderbuffer(fb, i);
+      if (irb && irb->need_srgb)
+         return;
+
       if (rb)
          rb->Format = _mesa_get_srgb_format_linear(rb->Format);
    }
+   /* Disable sRGB from framebuffers that are not compatible. */
+   fb->Visual.sRGBCapable = false;
 }
 
 GLboolean
