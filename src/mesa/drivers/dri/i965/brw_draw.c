@@ -40,6 +40,7 @@
 #include "swrast_setup/swrast_setup.h"
 #include "drivers/common/meta.h"
 #include "util/bitscan.h"
+#include "util/bitset.h"
 
 #include "brw_blorp.h"
 #include "brw_draw.h"
@@ -371,6 +372,20 @@ intel_disable_rb_aux_buffer(struct brw_context *brw,
    return found;
 }
 
+static void
+mark_textures_used_for_txf(BITSET_WORD *used_for_txf,
+                           const struct gl_program *prog)
+{
+   if (!prog)
+      return;
+
+   unsigned mask = prog->SamplersUsed & prog->info.textures_used_by_txf;
+   while (mask) {
+      int s = u_bit_scan(&mask);
+      BITSET_SET(used_for_txf, prog->SamplerUnits[s]);
+   }
+}
+
 /**
  * \brief Resolve buffers before drawing.
  *
@@ -385,6 +400,18 @@ brw_predraw_resolve_inputs(struct brw_context *brw, bool rendering)
 
    memset(brw->draw_aux_buffer_disabled, 0,
           sizeof(brw->draw_aux_buffer_disabled));
+
+   BITSET_DECLARE(used_for_txf, MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+   memset(used_for_txf, 0, sizeof(used_for_txf));
+   if (rendering) {
+      mark_textures_used_for_txf(used_for_txf, ctx->VertexProgram._Current);
+      mark_textures_used_for_txf(used_for_txf, ctx->TessCtrlProgram._Current);
+      mark_textures_used_for_txf(used_for_txf, ctx->TessEvalProgram._Current);
+      mark_textures_used_for_txf(used_for_txf, ctx->GeometryProgram._Current);
+      mark_textures_used_for_txf(used_for_txf, ctx->FragmentProgram._Current);
+   } else {
+      mark_textures_used_for_txf(used_for_txf, ctx->ComputeProgram._Current);
+   }
 
    /* Resolve depth buffer and render cache of each enabled texture. */
    int maxEnabledUnit = ctx->Texture._MaxEnabledTexImageUnit;
@@ -421,6 +448,20 @@ brw_predraw_resolve_inputs(struct brw_context *brw, bool rendering)
                                     min_level, num_levels,
                                     min_layer, num_layers,
                                     disable_aux);
+
+      /* If any programs are using it with texelFetch, we may need to also do
+       * a prepare with an sRGB format to ensure texelFetch works "properly".
+       */
+      if (BITSET_TEST(used_for_txf, i)) {
+         enum isl_format txf_format =
+            translate_tex_format(brw, tex_obj->_Format, GL_DECODE_EXT);
+         if (txf_format != view_format) {
+            intel_miptree_prepare_texture(brw, tex_obj->mt, txf_format,
+                                          min_level, num_levels,
+                                          min_layer, num_layers,
+                                          disable_aux);
+         }
+      }
 
       brw_cache_flush_for_read(brw, tex_obj->mt->bo);
 
