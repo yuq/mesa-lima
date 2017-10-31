@@ -61,18 +61,10 @@
 #define KNOB_SIMD_WIDTH 8
 #define KNOB_SIMD_BYTES 32
 #elif (KNOB_ARCH == KNOB_ARCH_AVX512)
-#if 0
-// not ready to enable this globally, enabled on the side (below)
 #define KNOB_ARCH_ISA AVX512F
 #define KNOB_ARCH_STR "AVX512"
-#define KNOB_SIMD_WIDTH 16
-#define KNOB_SIMD_BYTES 64
-#else
-#define KNOB_ARCH_ISA AVX2
-#define KNOB_ARCH_STR "AVX2"
 #define KNOB_SIMD_WIDTH 8
 #define KNOB_SIMD_BYTES 32
-#endif
 #else
 #error "Unknown architecture"
 #endif

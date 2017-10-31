@@ -102,14 +102,12 @@ public:
             bForceAVX2 = true;
             bForceAVX512 = false;
         }
-        #if 0
         else if(isaRequest == "avx512")
         {
             bForceAVX = false;
             bForceAVX2 = false;
             bForceAVX512 = true;
         }
-        #endif
     };
 
     bool AVX2(void) { return bForceAVX ? 0 : InstructionSet::AVX2(); }
