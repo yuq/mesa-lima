@@ -2532,8 +2532,6 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 	compute_shader = pipeline->shaders[MESA_SHADER_COMPUTE];
 	va = radv_buffer_get_va(compute_shader->bo) + compute_shader->bo_offset;
 
-	radv_emit_shader_prefetch(cmd_buffer, compute_shader);
-
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
 							   cmd_buffer->cs, 16);
 
@@ -3561,18 +3559,65 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 }
 
 static void
-radv_dispatch(struct radv_cmd_buffer *cmd_buffer,
-	      const struct radv_dispatch_info *info)
+radv_upload_compute_shader_descriptors(struct radv_cmd_buffer *cmd_buffer)
 {
-	radv_emit_compute_pipeline(cmd_buffer);
-
 	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_COMPUTE_BIT);
 	radv_flush_constants(cmd_buffer, cmd_buffer->state.compute_pipeline,
 			     VK_SHADER_STAGE_COMPUTE_BIT);
+}
 
-	si_emit_cache_flush(cmd_buffer);
+static void
+radv_dispatch(struct radv_cmd_buffer *cmd_buffer,
+	      const struct radv_dispatch_info *info)
+{
+	struct radv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
+	bool pipeline_is_dirty = pipeline &&
+				 pipeline != cmd_buffer->state.emitted_compute_pipeline;
 
-	radv_emit_dispatch_packets(cmd_buffer, info);
+	if (cmd_buffer->state.flush_bits & (RADV_CMD_FLAG_FLUSH_AND_INV_CB |
+					    RADV_CMD_FLAG_FLUSH_AND_INV_DB |
+					    RADV_CMD_FLAG_PS_PARTIAL_FLUSH |
+					    RADV_CMD_FLAG_CS_PARTIAL_FLUSH)) {
+		/* If we have to wait for idle, set all states first, so that
+		 * all SET packets are processed in parallel with previous draw
+		 * calls. Then upload descriptors, set shader pointers, and
+		 * dispatch, and prefetch at the end. This ensures that the
+		 * time the CUs are idle is very short. (there are only SET_SH
+		 * packets between the wait and the draw)
+		 */
+		radv_emit_compute_pipeline(cmd_buffer);
+		si_emit_cache_flush(cmd_buffer);
+		/* <-- CUs are idle here --> */
+
+		radv_upload_compute_shader_descriptors(cmd_buffer);
+
+		radv_emit_dispatch_packets(cmd_buffer, info);
+		/* <-- CUs are busy here --> */
+
+		/* Start prefetches after the dispatch has been started. Both
+		 * will run in parallel, but starting the dispatch first is
+		 * more important.
+		 */
+		if (pipeline_is_dirty) {
+			radv_emit_shader_prefetch(cmd_buffer,
+						  pipeline->shaders[MESA_SHADER_COMPUTE]);
+		}
+	} else {
+		/* If we don't wait for idle, start prefetches first, then set
+		 * states, and dispatch at the end.
+		 */
+		si_emit_cache_flush(cmd_buffer);
+
+		if (pipeline_is_dirty) {
+			radv_emit_shader_prefetch(cmd_buffer,
+						  pipeline->shaders[MESA_SHADER_COMPUTE]);
+		}
+
+		radv_upload_compute_shader_descriptors(cmd_buffer);
+
+		radv_emit_compute_pipeline(cmd_buffer);
+		radv_emit_dispatch_packets(cmd_buffer, info);
+	}
 
 	radv_cmd_buffer_after_draw(cmd_buffer);
 }
