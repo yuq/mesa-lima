@@ -276,7 +276,20 @@ radv_create_shader_variants_from_pipeline_cache(struct radv_device *device,
 			pthread_mutex_unlock(&cache->mutex);
 			return false;
 		} else {
-			radv_pipeline_cache_add_entry(cache, entry);
+			size_t size = entry_size(entry);
+			struct cache_entry *new_entry = vk_alloc(&cache->alloc, size, 8,
+								 VK_SYSTEM_ALLOCATION_SCOPE_CACHE);
+			if (!new_entry) {
+				free(entry);
+				pthread_mutex_unlock(&cache->mutex);
+				return false;
+			}
+
+			memcpy(new_entry, entry, entry_size(entry));
+			free(entry);
+			entry = new_entry;
+
+			radv_pipeline_cache_add_entry(cache, new_entry);
 		}
 	}
 
