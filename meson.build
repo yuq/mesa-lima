@@ -361,23 +361,6 @@ if with_dri or with_gallium
   endif
 endif
 
-with_gallium_xvmc = false
-with_gallium_vdpau = false
-with_gallium_omx = false  # this is bellagio
-with_gallium_va = false
-with_gallium_media = false
-dep_va = []
-_drivers = get_option('gallium-media')
-if _drivers != ''
-  _split = _drivers.split(',')
-  with_gallium_xvmc = _split.contains('xvmc')
-  with_gallium_vdpau = _split.contains('vdpau')
-  with_gallium_omx = _split.contains('omx')
-  with_gallium_va = _split.contains('va')
-  with_gallium_media = (with_gallium_xvmc or with_gallium_vdpau or
-                        with_gallium_omx or with_gallium_va)
-endif
-
 gl_pkgconfig_c_flags = []
 if with_platform_x11
   if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
