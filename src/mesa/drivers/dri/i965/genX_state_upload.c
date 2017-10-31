@@ -34,9 +34,6 @@
 #include "main/state.h"
 
 #include "brw_context.h"
-#if GEN_GEN == 6
-#include "brw_defines.h"
-#endif
 #include "brw_draw.h"
 #include "brw_multisample_state.h"
 #include "brw_state.h"

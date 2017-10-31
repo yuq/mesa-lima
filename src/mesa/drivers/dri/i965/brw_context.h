@@ -37,6 +37,7 @@
 #include "main/macros.h"
 #include "main/mtypes.h"
 #include "brw_structs.h"
+#include "brw_pipe_control.h"
 #include "compiler/brw_compiler.h"
 
 #include "isl/isl.h"
@@ -1673,22 +1674,6 @@ gen6_upload_push_constants(struct brw_context *brw,
 bool
 gen9_use_linear_1d_layout(const struct brw_context *brw,
                           const struct intel_mipmap_tree *mt);
-
-/* brw_pipe_control.c */
-int brw_init_pipe_control(struct brw_context *brw,
-			  const struct gen_device_info *info);
-void brw_fini_pipe_control(struct brw_context *brw);
-
-void brw_emit_pipe_control_flush(struct brw_context *brw, uint32_t flags);
-void brw_emit_pipe_control_write(struct brw_context *brw, uint32_t flags,
-                                 struct brw_bo *bo, uint32_t offset,
-                                 uint64_t imm);
-void brw_emit_end_of_pipe_sync(struct brw_context *brw, uint32_t flags);
-void brw_emit_mi_flush(struct brw_context *brw);
-void brw_emit_post_sync_nonzero_flush(struct brw_context *brw);
-void brw_emit_depth_stall_flushes(struct brw_context *brw);
-void gen7_emit_vs_workaround_flush(struct brw_context *brw);
-void gen7_emit_cs_stall_flush(struct brw_context *brw);
 
 /* brw_queryformat.c */
 void brw_query_internal_format(struct gl_context *ctx, GLenum target,
