@@ -411,7 +411,9 @@ The integer capabilities:
 * ``PIPE_CAP_TILE_RASTER_ORDER``: Whether the driver supports
   GL_MESA_tile_raster_order, using the tile_raster_order_* fields in
   pipe_rasterizer_state.
-
+* ``PIPE_CAP_MAX_COMBINED_SHADER_OUTPUT_RESOURCES``: Limit on combined shader
+  output resources (images + buffers + fragment outputs). If 0 the state
+  tracker works it out.
 
 .. _pipe_capf:
 

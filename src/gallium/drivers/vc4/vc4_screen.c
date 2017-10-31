@@ -286,6 +286,7 @@ vc4_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_MEMOBJ:
         case PIPE_CAP_LOAD_CONSTBUF:
 	case PIPE_CAP_TGSI_ANY_REG_AS_ADDRESS:
+	case PIPE_CAP_MAX_COMBINED_SHADER_OUTPUT_RESOURCES:
                 return 0;
 
                 /* Stream output. */

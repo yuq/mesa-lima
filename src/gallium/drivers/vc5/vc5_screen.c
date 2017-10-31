@@ -246,6 +246,7 @@ vc5_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_LOAD_CONSTBUF:
         case PIPE_CAP_TILE_RASTER_ORDER:
         case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
+        case PIPE_CAP_MAX_COMBINED_SHADER_OUTPUT_RESOURCES:
                 return 0;
 
                 /* Geometry shader output, unsupported. */
