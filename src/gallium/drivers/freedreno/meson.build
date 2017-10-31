@@ -212,7 +212,17 @@ ir3_compiler = executable(
   'ir3_compiler',
   'ir3/ir3_cmdline.c',
   include_directories : freedreno_includes,
-  dependencies : [dep_libdrm, dep_libdrm_freedreno],
-  link_with : [libfreedreno, libgallium, libmesa_util],
-  build_by_default : false,
+  dependencies : [
+    dep_libdrm,
+    dep_libdrm_freedreno,
+    dependency('threads'),
+  ],
+  link_with : [
+    libfreedreno,
+    libgallium,
+    libnir,
+    libglsl_standalone,
+    libmesa_util,
+  ],
+  build_by_default : true,
 )
