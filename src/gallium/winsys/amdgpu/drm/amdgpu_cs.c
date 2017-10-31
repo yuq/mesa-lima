@@ -256,6 +256,14 @@ static struct radeon_winsys_ctx *amdgpu_ctx_create(struct radeon_winsys *ws)
       goto error_create;
    }
 
+   if (ctx->ws->reserve_vmid) {
+	   r = amdgpu_vm_reserve_vmid(ctx->ctx, 0);
+	   if (r) {
+		fprintf(stderr, "amdgpu: amdgpu_vm_reserve_vmid failed. (%i)\n", r);
+		goto error_create;
+	   }
+   }
+
    alloc_buffer.alloc_size = ctx->ws->info.gart_page_size;
    alloc_buffer.phys_alignment = ctx->ws->info.gart_page_size;
    alloc_buffer.preferred_heap = AMDGPU_GEM_DOMAIN_GTT;

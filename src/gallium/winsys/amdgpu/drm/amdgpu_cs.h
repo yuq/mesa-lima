@@ -162,6 +162,9 @@ static inline bool amdgpu_fence_is_syncobj(struct amdgpu_fence *fence)
 static inline void amdgpu_ctx_unref(struct amdgpu_ctx *ctx)
 {
    if (p_atomic_dec_zero(&ctx->refcount)) {
+      if (ctx->ws->reserve_vmid)
+         amdgpu_vm_unreserve_vmid(ctx->ctx, 0);
+
       amdgpu_cs_ctx_free(ctx->ctx);
       amdgpu_bo_free(ctx->user_fence_bo);
       FREE(ctx);

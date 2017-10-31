@@ -851,6 +851,7 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "dpbb", DBG(DPBB), "Enable DPBB." },
 	{ "dfsm", DBG(DFSM), "Enable DFSM." },
 	{ "nooutoforder", DBG(NO_OUT_OF_ORDER), "Disable out-of-order rasterization" },
+	{ "reserve_vmid", DBG(RESERVE_VMID), "Force VMID reservation per context." },
 
 	DEBUG_NAMED_VALUE_END /* must be last */
 };
