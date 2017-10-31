@@ -1489,7 +1489,6 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	case nir_intrinsic_ssbo_atomic_exchange:
 	case nir_intrinsic_ssbo_atomic_comp_swap:
 		if (info->has_dest) {
-			compile_assert(ctx, intr->num_components == 1);
 			dst[0] = emit_intrinsic_atomic(ctx, intr);
 		} else {
 			emit_intrinsic_atomic(ctx, intr);
