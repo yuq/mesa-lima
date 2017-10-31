@@ -328,19 +328,65 @@ brw_get_scratch_bo(struct brw_context *brw,
 void
 brw_alloc_stage_scratch(struct brw_context *brw,
                         struct brw_stage_state *stage_state,
-                        unsigned per_thread_size,
-                        unsigned thread_count)
+                        unsigned per_thread_size)
 {
-   if (stage_state->per_thread_scratch < per_thread_size) {
-      stage_state->per_thread_scratch = per_thread_size;
+   if (stage_state->per_thread_scratch >= per_thread_size)
+      return;
 
-      if (stage_state->scratch_bo)
-         brw_bo_unreference(stage_state->scratch_bo);
+   stage_state->per_thread_scratch = per_thread_size;
 
-      stage_state->scratch_bo =
-         brw_bo_alloc(brw->bufmgr, "shader scratch space",
-                      per_thread_size * thread_count, 4096);
+   if (stage_state->scratch_bo)
+      brw_bo_unreference(stage_state->scratch_bo);
+
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   unsigned thread_count;
+   switch(stage_state->stage) {
+   case MESA_SHADER_VERTEX:
+      thread_count = devinfo->max_vs_threads;
+      break;
+   case MESA_SHADER_TESS_CTRL:
+      thread_count = devinfo->max_tcs_threads;
+      break;
+   case MESA_SHADER_TESS_EVAL:
+      thread_count = devinfo->max_tes_threads;
+      break;
+   case MESA_SHADER_GEOMETRY:
+      thread_count = devinfo->max_gs_threads;
+      break;
+   case MESA_SHADER_FRAGMENT:
+      thread_count = devinfo->max_wm_threads;
+      break;
+   case MESA_SHADER_COMPUTE: {
+      const unsigned subslices = MAX2(brw->screen->subslice_total, 1);
+
+      /* WaCSScratchSize:hsw
+       *
+       * Haswell's scratch space address calculation appears to be sparse
+       * rather than tightly packed.  The Thread ID has bits indicating
+       * which subslice, EU within a subslice, and thread within an EU
+       * it is.  There's a maximum of two slices and two subslices, so these
+       * can be stored with a single bit.  Even though there are only 10 EUs
+       * per subslice, this is stored in 4 bits, so there's an effective
+       * maximum value of 16 EUs.  Similarly, although there are only 7
+       * threads per EU, this is stored in a 3 bit number, giving an effective
+       * maximum value of 8 threads per EU.
+       *
+       * This means that we need to use 16 * 8 instead of 10 * 7 for the
+       * number of threads per subslice.
+       */
+      const unsigned scratch_ids_per_subslice =
+         devinfo->is_haswell ? 16 * 8 : devinfo->max_cs_threads;
+
+      thread_count = scratch_ids_per_subslice * subslices;
+      break;
    }
+   default:
+      unreachable("Unsupported stage!");
+   }
+
+   stage_state->scratch_bo =
+      brw_bo_alloc(brw->bufmgr, "shader scratch space",
+                   per_thread_size * thread_count, 4096);
 }
 
 void brwInitFragProgFuncs( struct dd_function_table *functions )

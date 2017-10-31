@@ -248,8 +248,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
 
    /* Scratch space is used for register spilling */
    brw_alloc_stage_scratch(brw, &brw->vs.base,
-                           prog_data.base.base.total_scratch,
-                           devinfo->max_vs_threads);
+                           prog_data.base.base.total_scratch);
 
    /* The param and pull_param arrays will be freed by the shader cache. */
    ralloc_steal(NULL, prog_data.base.base.param);

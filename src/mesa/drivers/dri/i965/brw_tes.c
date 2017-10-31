@@ -129,8 +129,7 @@ brw_codegen_tes_prog(struct brw_context *brw,
 
    /* Scratch space is used for register spilling */
    brw_alloc_stage_scratch(brw, stage_state,
-                           prog_data.base.base.total_scratch,
-                           devinfo->max_tes_threads);
+                           prog_data.base.base.total_scratch);
 
    /* The param and pull_param arrays will be freed by the shader cache. */
    ralloc_steal(NULL, prog_data.base.base.param);

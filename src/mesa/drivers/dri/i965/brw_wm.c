@@ -209,9 +209,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
       }
    }
 
-   brw_alloc_stage_scratch(brw, &brw->wm.base,
-                           prog_data.base.total_scratch,
-                           devinfo->max_wm_threads);
+   brw_alloc_stage_scratch(brw, &brw->wm.base, prog_data.base.total_scratch);
 
    if (unlikely((INTEL_DEBUG & DEBUG_WM) && fp->program.is_arb_asm))
       fprintf(stderr, "\n");

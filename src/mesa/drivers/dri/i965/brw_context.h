@@ -1345,8 +1345,7 @@ void brw_get_scratch_bo(struct brw_context *brw,
 			struct brw_bo **scratch_bo, int size);
 void brw_alloc_stage_scratch(struct brw_context *brw,
                              struct brw_stage_state *stage_state,
-                             unsigned per_thread_size,
-                             unsigned thread_count);
+                             unsigned per_thread_size);
 void brw_init_shader_time(struct brw_context *brw);
 int brw_get_shader_time_index(struct brw_context *brw,
                               struct gl_program *prog,
