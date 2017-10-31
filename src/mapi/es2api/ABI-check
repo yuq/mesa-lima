@@ -6,7 +6,7 @@ set -eu
 # GL_EXT_multi_draw_arrays
 # GL_OES_EGL_image
 
-LIB=${1-.libs/libGLESv2.so.2}
+LIB=${1-es2api/.libs/libGLESv2.so.2}
 
 if ! [ -f "$LIB" ]
 then
