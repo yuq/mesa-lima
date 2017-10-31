@@ -569,7 +569,21 @@ static inline bool is_nop(struct ir3_instruction *instr)
  */
 static inline bool is_same_type_mov(struct ir3_instruction *instr)
 {
-	struct ir3_register *dst = instr->regs[0];
+	struct ir3_register *dst;
+
+	switch (instr->opc) {
+	case OPC_MOV:
+		if (instr->cat1.src_type != instr->cat1.dst_type)
+			return false;
+		break;
+	case OPC_ABSNEG_F:
+	case OPC_ABSNEG_S:
+		break;
+	default:
+		return false;
+	}
+
+	dst = instr->regs[0];
 
 	/* mov's that write to a0.x or p0.x are special: */
 	if (dst->num == regid(REG_P0, 0))
@@ -580,15 +594,7 @@ static inline bool is_same_type_mov(struct ir3_instruction *instr)
 	if (dst->flags & (IR3_REG_RELATIV | IR3_REG_ARRAY))
 		return false;
 
-	switch (instr->opc) {
-	case OPC_MOV:
-		return instr->cat1.src_type == instr->cat1.dst_type;
-	case OPC_ABSNEG_F:
-	case OPC_ABSNEG_S:
-		return true;
-	default:
-		return false;
-	}
+	return true;
 }
 
 static inline bool is_alu(struct ir3_instruction *instr)
