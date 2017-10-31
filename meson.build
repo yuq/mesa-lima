@@ -538,6 +538,28 @@ if va_drivers_path == ''
   va_drivers_path = join_paths(get_option('libdir'), 'dri')
 endif
 
+_xa = get_option('gallium-xa')
+if _xa == 'auto'
+  if not ['linux', 'bsd'].contains(host_machine.system())
+    with_gallium_xa = false
+  elif not (with_gallium_nouveau or with_gallium_freedreno or with_gallium_i915
+            or with_gallium_svga)
+    with_gallium_xa = false
+  else
+    with_gallium_xa = true
+  endif
+elif _xa == 'true'
+  if not ['linux', 'bsd'].contains(host_machine.system())
+    error('XA state tracker can only be built on unix-like OSes.')
+  elif not (with_gallium_nouveau or with_gallium_freedreno or with_gallium_i915
+            or with_gallium_svga)
+    error('XA state tracker requires at least one of the following gallium drivers: nouveau, freedreno, i915, svga.')
+  endif
+  with_gallium_xa = true
+else
+  with_gallium_xa = false
+endif
+
 gl_pkgconfig_c_flags = []
 if with_platform_x11
   if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')

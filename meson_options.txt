@@ -108,6 +108,13 @@ option(
   description : 'path to put va libraries. defaults to $libdir/dri.'
 )
 option(
+  'gallium-xa',
+  type : 'combo',
+  value : 'auto',
+  choices : ['auto', 'true', 'false'],
+  description : 'enable gallium xa state tracker.',
+)
+option(
   'vulkan-drivers',
   type : 'string',
   value : 'auto',

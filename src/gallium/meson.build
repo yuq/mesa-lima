@@ -131,6 +131,9 @@ endif
 if with_gallium_va
   subdir('state_trackers/va')
 endif
+if with_gallium_xa
+  subdir('state_trackers/xa')
+endif
 # TODO: SWR
 # TODO: clover
 if with_dri
@@ -158,6 +161,8 @@ endif
 if with_gallium_va
   subdir('targets/va')
 endif
-# TODO: xa
+if with_gallium_xa
+  subdir('targets/xa')
+endif
 # TODO: nine
 # TODO: tests
