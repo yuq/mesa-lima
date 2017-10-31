@@ -1406,6 +1406,44 @@ emit_intrinsic_atomic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	return atomic;
 }
 
+static void
+emit_intrinsic_barrier(struct ir3_context *ctx, nir_intrinsic_instr *intr)
+{
+	struct ir3_block *b = ctx->block;
+	struct ir3_instruction *barrier;
+
+	switch (intr->intrinsic) {
+	case nir_intrinsic_barrier:
+		barrier = ir3_BAR(b);
+		barrier->cat7.g = true;
+		barrier->cat7.l = true;
+		barrier->flags = IR3_INSTR_SS | IR3_INSTR_SY;
+		break;
+	case nir_intrinsic_memory_barrier:
+	case nir_intrinsic_memory_barrier_atomic_counter:
+	case nir_intrinsic_memory_barrier_buffer:
+		barrier = ir3_FENCE(b);
+		barrier->cat7.g = true;
+		barrier->cat7.r = true;
+		barrier->cat7.w = true;
+		break;
+	case nir_intrinsic_group_memory_barrier:
+	case nir_intrinsic_memory_barrier_image:
+	case nir_intrinsic_memory_barrier_shared:
+		barrier = ir3_FENCE(b);
+		barrier->cat7.g = true;
+		barrier->cat7.l = true;
+		barrier->cat7.r = true;
+		barrier->cat7.w = true;
+		break;
+	default:
+		unreachable("boo");
+	}
+
+	/* make sure barrier doesn't get DCE'd */
+	array_insert(b, b->keeps, barrier);
+}
+
 static void add_sysval_input_compmask(struct ir3_context *ctx,
 		gl_system_value slot, unsigned compmask,
 		struct ir3_instruction *instr)
@@ -1525,6 +1563,17 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 		} else {
 			emit_intrinsic_atomic(ctx, intr);
 		}
+		break;
+	case nir_intrinsic_barrier:
+	case nir_intrinsic_memory_barrier:
+	case nir_intrinsic_group_memory_barrier:
+	case nir_intrinsic_memory_barrier_atomic_counter:
+	case nir_intrinsic_memory_barrier_buffer:
+	case nir_intrinsic_memory_barrier_image:
+	case nir_intrinsic_memory_barrier_shared:
+		emit_intrinsic_barrier(ctx, intr);
+		/* note that blk ptr no longer valid, make that obvious: */
+		b = NULL;
 		break;
 	case nir_intrinsic_store_output:
 		idx = nir_intrinsic_base(intr);

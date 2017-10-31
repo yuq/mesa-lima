@@ -67,6 +67,7 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 {
 	struct ir3_instruction *last_input = NULL;
 	struct ir3_instruction *last_rel = NULL;
+	struct ir3_instruction *last_n = NULL;
 	struct list_head instr_list;
 	regmask_t needs_ss_war;       /* write after read */
 	regmask_t needs_ss;
@@ -94,6 +95,9 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 			assert(inloc->flags & IR3_REG_IMMED);
 			ctx->max_bary = MAX2(ctx->max_bary, inloc->iim_val);
 		}
+
+		if (last_n && is_barrier(last_n))
+			n->flags |= IR3_INSTR_SS | IR3_INSTR_SY;
 
 		/* NOTE: consider dst register too.. it could happen that
 		 * texture sample instruction (for example) writes some
@@ -208,6 +212,8 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 
 		if (is_input(n))
 			last_input = n;
+
+		last_n = n;
 	}
 
 	if (last_input) {
