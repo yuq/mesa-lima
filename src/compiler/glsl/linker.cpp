@@ -3809,6 +3809,7 @@ add_shader_variable(const struct gl_context *ctx,
                     GLenum programInterface, ir_variable *var,
                     const char *name, const glsl_type *type,
                     bool use_implicit_location, int location,
+                    bool inouts_share_location,
                     const glsl_type *outermost_struct_type = NULL)
 {
    const glsl_type *interface_type = var->get_interface_type();
@@ -3871,12 +3872,49 @@ add_shader_variable(const struct gl_context *ctx,
                                   stage_mask, programInterface,
                                   var, field_name, field->type,
                                   use_implicit_location, field_location,
-                                  outermost_struct_type))
+                                  false, outermost_struct_type))
             return false;
 
          field_location += field->type->count_attribute_slots(false);
       }
       return true;
+   }
+
+   case GLSL_TYPE_ARRAY: {
+      /* The ARB_program_interface_query spec says:
+       *
+       *     "For an active variable declared as an array of basic types, a
+       *      single entry will be generated, with its name string formed by
+       *      concatenating the name of the array and the string "[0]"."
+       *
+       *     "For an active variable declared as an array of an aggregate data
+       *      type (structures or arrays), a separate entry will be generated
+       *      for each active array element, unless noted immediately below.
+       *      The name of each entry is formed by concatenating the name of
+       *      the array, the "[" character, an integer identifying the element
+       *      number, and the "]" character.  These enumeration rules are
+       *      applied recursively, treating each enumerated array element as a
+       *      separate active variable."
+       */
+      const struct glsl_type *array_type = type->fields.array;
+      if (array_type->base_type == GLSL_TYPE_STRUCT ||
+          array_type->base_type == GLSL_TYPE_ARRAY) {
+         unsigned elem_location = location;
+         unsigned stride = inouts_share_location ? 0 :
+                           array_type->count_attribute_slots(false);
+         for (unsigned i = 0; i < type->length; i++) {
+            char *elem = ralloc_asprintf(shProg, "%s[%d]", name, i);
+            if (!add_shader_variable(ctx, shProg, resource_set,
+                                     stage_mask, programInterface,
+                                     var, elem, array_type,
+                                     use_implicit_location, elem_location,
+                                     false, outermost_struct_type))
+               return false;
+            elem_location += stride;
+         }
+         return true;
+      }
+      /* fallthrough */
    }
 
    default: {
@@ -3897,6 +3935,20 @@ add_shader_variable(const struct gl_context *ctx,
                                   programInterface, sha_v, stage_mask);
    }
    }
+}
+
+static bool
+inout_has_same_location(const ir_variable *var, unsigned stage)
+{
+   if (!var->data.patch &&
+       ((var->data.mode == ir_var_shader_out &&
+         stage == MESA_SHADER_TESS_CTRL) ||
+        (var->data.mode == ir_var_shader_in &&
+         (stage == MESA_SHADER_TESS_CTRL || stage == MESA_SHADER_TESS_EVAL ||
+          stage == MESA_SHADER_GEOMETRY))))
+      return true;
+   else
+      return false;
 }
 
 static bool
@@ -3955,7 +4007,8 @@ add_interface_variables(const struct gl_context *ctx,
       if (!add_shader_variable(ctx, shProg, resource_set,
                                1 << stage, programInterface,
                                var, var->name, var->type, vs_input_or_fs_output,
-                               var->data.location - loc_bias))
+                               var->data.location - loc_bias,
+                               inout_has_same_location(var, stage)))
          return false;
    }
    return true;
@@ -3993,7 +4046,8 @@ add_packed_varyings(const struct gl_context *ctx,
             if (!add_shader_variable(ctx, shProg, resource_set,
                                      stage_mask,
                                      iface, var, var->name, var->type, false,
-                                     var->data.location - VARYING_SLOT_VAR0))
+                                     var->data.location - VARYING_SLOT_VAR0,
+                                     inout_has_same_location(var, stage)))
                return false;
          }
       }
@@ -4019,7 +4073,8 @@ add_fragdata_arrays(const struct gl_context *ctx,
          if (!add_shader_variable(ctx, shProg, resource_set,
                                   1 << MESA_SHADER_FRAGMENT,
                                   GL_PROGRAM_OUTPUT, var, var->name, var->type,
-                                  true, var->data.location - FRAG_RESULT_DATA0))
+                                  true, var->data.location - FRAG_RESULT_DATA0,
+                                  false))
             return false;
       }
    }
