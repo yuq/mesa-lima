@@ -22,9 +22,6 @@
  * The above copyright notice and this permission notice (including the
  * next paragraph) shall be included in all copies or substantial portions
  * of the Software.
- *
- * Authors:
- *   Marek Olšák <maraeo@gmail.com>
  */
 
 #include "radeon_drm_winsys.h"

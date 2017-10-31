@@ -25,12 +25,6 @@
  *
  **************************************************************************/
 
-/*
- * Authors:
- *      Christian König <christian.koenig@amd.com>
- *
- */
-
 #ifndef RADEON_VIDEO_H
 #define RADEON_VIDEO_H
 

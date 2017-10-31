@@ -25,12 +25,6 @@
  *
  **************************************************************************/
 
-/*
- * Authors:
- *      Christian König <christian.koenig@amd.com>
- *
- */
-
 #include "si_pipe.h"
 #include "radeon/radeon_video.h"
 #include "radeon/radeon_uvd.h"

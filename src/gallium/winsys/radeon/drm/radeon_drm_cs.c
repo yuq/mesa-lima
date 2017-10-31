@@ -24,15 +24,6 @@
  * next paragraph) shall be included in all copies or substantial portions
  * of the Software.
  */
-/*
- * Authors:
- *      Marek Olšák <maraeo@gmail.com>
- *
- * Based on work from libdrm_radeon by:
- *      Aapo Tahkola <aet@rasterburn.org>
- *      Nicolai Haehnle <prefect_@gmx.net>
- *      Jérôme Glisse <glisse@freedesktop.org>
- */
 
 /*
     This file replaces libdrm's radeon_cs_gem with our own implemention.
