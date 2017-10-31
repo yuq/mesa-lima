@@ -878,13 +878,51 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       }
 
       unsigned num_rts = 0;
-      struct anv_pipeline_binding rt_bindings[8];
+      const int max_rt = FRAG_RESULT_DATA7 - FRAG_RESULT_DATA0 + 1;
+      struct anv_pipeline_binding rt_bindings[max_rt];
       nir_function_impl *impl = nir_shader_get_entrypoint(nir);
+      int rt_to_bindings[max_rt];
+      memset(rt_to_bindings, -1, sizeof(rt_to_bindings));
+      bool rt_used[max_rt];
+      memset(rt_used, 0, sizeof(rt_used));
+
+      /* Flag used render targets */
       nir_foreach_variable_safe(var, &nir->outputs) {
          if (var->data.location < FRAG_RESULT_DATA0)
             continue;
 
-         unsigned rt = var->data.location - FRAG_RESULT_DATA0;
+         const unsigned rt = var->data.location - FRAG_RESULT_DATA0;
+         /* Out-of-bounds */
+         if (rt >= key.nr_color_regions)
+            continue;
+
+         const unsigned array_len =
+            glsl_type_is_array(var->type) ? glsl_get_length(var->type) : 1;
+         assert(rt + array_len <= max_rt);
+
+         for (unsigned i = 0; i < array_len; i++)
+            rt_used[rt + i] = true;
+      }
+
+      /* Set new, compacted, location */
+      for (unsigned i = 0; i < max_rt; i++) {
+         if (!rt_used[i])
+            continue;
+
+         rt_to_bindings[i] = num_rts;
+         rt_bindings[rt_to_bindings[i]] = (struct anv_pipeline_binding) {
+            .set = ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS,
+            .binding = 0,
+            .index = i,
+         };
+         num_rts++;
+      }
+
+      nir_foreach_variable_safe(var, &nir->outputs) {
+         if (var->data.location < FRAG_RESULT_DATA0)
+            continue;
+
+         const unsigned rt = var->data.location - FRAG_RESULT_DATA0;
          if (rt >= key.nr_color_regions) {
             /* Out-of-bounds, throw it away */
             var->data.mode = nir_var_local;
@@ -893,22 +931,9 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
             continue;
          }
 
-         /* Give it a new, compacted, location */
-         var->data.location = FRAG_RESULT_DATA0 + num_rts;
-
-         unsigned array_len =
-            glsl_type_is_array(var->type) ? glsl_get_length(var->type) : 1;
-         assert(num_rts + array_len <= 8);
-
-         for (unsigned i = 0; i < array_len; i++) {
-            rt_bindings[num_rts + i] = (struct anv_pipeline_binding) {
-               .set = ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS,
-               .binding = 0,
-               .index = rt + i,
-            };
-         }
-
-         num_rts += array_len;
+         /* Give it the new location */
+         assert(rt_to_bindings[rt] != -1);
+         var->data.location = rt_to_bindings[rt] + FRAG_RESULT_DATA0;
       }
 
       if (num_rts == 0) {
@@ -921,7 +946,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
          num_rts = 1;
       }
 
-      assert(num_rts <= 8);
+      assert(num_rts <= max_rt);
       map.surface_to_descriptor -= num_rts;
       map.surface_count += num_rts;
       assert(map.surface_count <= 256);
