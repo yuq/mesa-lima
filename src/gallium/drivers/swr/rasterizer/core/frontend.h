@@ -352,7 +352,8 @@ bool CanUseSimplePoints(DRAW_CONTEXT *pDC)
     return (state.rastState.sampleCount == SWR_MULTISAMPLE_1X &&
             state.rastState.pointSize == 1.0f &&
             !state.rastState.pointParam &&
-            !state.rastState.pointSpriteEnable);
+            !state.rastState.pointSpriteEnable &&
+            !state.backendState.clipDistanceMask);
 }
 
 INLINE
