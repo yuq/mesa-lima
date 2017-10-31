@@ -2156,7 +2156,9 @@ if test "x$enable_xvmc" = xyes -o \
         "x$enable_vdpau" = xyes -o \
         "x$enable_omx_bellagio" = xyes -o \
         "x$enable_va" = xyes; then
-    PKG_CHECK_MODULES([VL], [x11-xcb xcb xcb-dri2 >= $XCBDRI2_REQUIRED])
+    if echo $platforms | grep -q "x11"; then
+        PKG_CHECK_MODULES([VL], [x11-xcb xcb xcb-dri2 >= $XCBDRI2_REQUIRED])
+    fi
     need_gallium_vl_winsys=yes
 fi
 AM_CONDITIONAL(NEED_GALLIUM_VL_WINSYS, test "x$need_gallium_vl_winsys" = xyes)
