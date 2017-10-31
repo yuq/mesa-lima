@@ -8,10 +8,15 @@ http://github.com/freedreno/envytools/
 git clone https://github.com/freedreno/envytools.git
 
 The rules-ng-ng source files this header was generated from are:
-- /home/ilia/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 141938 bytes, from 2017-07-08 01:02:47)
-- /home/ilia/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-11 01:04:14)
-- /home/ilia/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-07-04 02:59:47)
-- /home/ilia/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31866 bytes, from 2017-07-04 02:59:47)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    431 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  32453 bytes, from 2017-11-10 18:31:55)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 111898 bytes, from 2017-06-06 18:23:59)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 143114 bytes, from 2017-11-10 18:31:55)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
 
 Copyright (C) 2013-2017 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -4891,6 +4896,85 @@ static inline uint32_t A5XX_TEX_CONST_5_DEPTH(uint32_t val)
 #define REG_A5XX_TEX_CONST_10					0x0000000a
 
 #define REG_A5XX_TEX_CONST_11					0x0000000b
+
+#define REG_A5XX_SSBO_0_0					0x00000000
+#define A5XX_SSBO_0_0_BASE_LO__MASK				0xffffffe0
+#define A5XX_SSBO_0_0_BASE_LO__SHIFT				5
+static inline uint32_t A5XX_SSBO_0_0_BASE_LO(uint32_t val)
+{
+	assert(!(val & 0x1f));
+	return ((val >> 5) << A5XX_SSBO_0_0_BASE_LO__SHIFT) & A5XX_SSBO_0_0_BASE_LO__MASK;
+}
+
+#define REG_A5XX_SSBO_0_1					0x00000001
+#define A5XX_SSBO_0_1_PITCH__MASK				0x003fffff
+#define A5XX_SSBO_0_1_PITCH__SHIFT				0
+static inline uint32_t A5XX_SSBO_0_1_PITCH(uint32_t val)
+{
+	return ((val) << A5XX_SSBO_0_1_PITCH__SHIFT) & A5XX_SSBO_0_1_PITCH__MASK;
+}
+
+#define REG_A5XX_SSBO_0_2					0x00000002
+#define A5XX_SSBO_0_2_ARRAY_PITCH__MASK				0x03fff000
+#define A5XX_SSBO_0_2_ARRAY_PITCH__SHIFT			12
+static inline uint32_t A5XX_SSBO_0_2_ARRAY_PITCH(uint32_t val)
+{
+	assert(!(val & 0xfff));
+	return ((val >> 12) << A5XX_SSBO_0_2_ARRAY_PITCH__SHIFT) & A5XX_SSBO_0_2_ARRAY_PITCH__MASK;
+}
+
+#define REG_A5XX_SSBO_0_3					0x00000003
+#define A5XX_SSBO_0_3_CPP__MASK					0x0000003f
+#define A5XX_SSBO_0_3_CPP__SHIFT				0
+static inline uint32_t A5XX_SSBO_0_3_CPP(uint32_t val)
+{
+	return ((val) << A5XX_SSBO_0_3_CPP__SHIFT) & A5XX_SSBO_0_3_CPP__MASK;
+}
+
+#define REG_A5XX_SSBO_1_0					0x00000000
+#define A5XX_SSBO_1_0_FMT__MASK					0x0000ff00
+#define A5XX_SSBO_1_0_FMT__SHIFT				8
+static inline uint32_t A5XX_SSBO_1_0_FMT(enum a5xx_tex_fmt val)
+{
+	return ((val) << A5XX_SSBO_1_0_FMT__SHIFT) & A5XX_SSBO_1_0_FMT__MASK;
+}
+#define A5XX_SSBO_1_0_WIDTH__MASK				0xffff0000
+#define A5XX_SSBO_1_0_WIDTH__SHIFT				16
+static inline uint32_t A5XX_SSBO_1_0_WIDTH(uint32_t val)
+{
+	return ((val) << A5XX_SSBO_1_0_WIDTH__SHIFT) & A5XX_SSBO_1_0_WIDTH__MASK;
+}
+
+#define REG_A5XX_SSBO_1_1					0x00000001
+#define A5XX_SSBO_1_1_HEIGHT__MASK				0x0000ffff
+#define A5XX_SSBO_1_1_HEIGHT__SHIFT				0
+static inline uint32_t A5XX_SSBO_1_1_HEIGHT(uint32_t val)
+{
+	return ((val) << A5XX_SSBO_1_1_HEIGHT__SHIFT) & A5XX_SSBO_1_1_HEIGHT__MASK;
+}
+#define A5XX_SSBO_1_1_DEPTH__MASK				0xffff0000
+#define A5XX_SSBO_1_1_DEPTH__SHIFT				16
+static inline uint32_t A5XX_SSBO_1_1_DEPTH(uint32_t val)
+{
+	return ((val) << A5XX_SSBO_1_1_DEPTH__SHIFT) & A5XX_SSBO_1_1_DEPTH__MASK;
+}
+
+#define REG_A5XX_SSBO_2_0					0x00000000
+#define A5XX_SSBO_2_0_BASE_LO__MASK				0xffffffe0
+#define A5XX_SSBO_2_0_BASE_LO__SHIFT				5
+static inline uint32_t A5XX_SSBO_2_0_BASE_LO(uint32_t val)
+{
+	assert(!(val & 0x1f));
+	return ((val >> 5) << A5XX_SSBO_2_0_BASE_LO__SHIFT) & A5XX_SSBO_2_0_BASE_LO__MASK;
+}
+
+#define REG_A5XX_SSBO_2_1					0x00000001
+#define A5XX_SSBO_2_1_BASE_HI__MASK				0xffffffff
+#define A5XX_SSBO_2_1_BASE_HI__SHIFT				0
+static inline uint32_t A5XX_SSBO_2_1_BASE_HI(uint32_t val)
+{
+	return ((val) << A5XX_SSBO_2_1_BASE_HI__SHIFT) & A5XX_SSBO_2_1_BASE_HI__MASK;
+}
 
 
 #endif /* A5XX_XML */

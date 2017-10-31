@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  31866 bytes, from 2017-06-02 15:50:23)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  32453 bytes, from 2017-11-10 18:31:55)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 111898 bytes, from 2017-05-30 19:25:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 142603 bytes, from 2017-06-06 17:02:32)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 111898 bytes, from 2017-06-06 18:23:59)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 143114 bytes, from 2017-11-10 18:31:55)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
 
 Copyright (C) 2013-2017 by the following authors:
@@ -199,6 +199,7 @@ enum adreno_pm4_type3_packets {
 	CP_WAIT_MEM_WRITES = 18,
 	CP_COND_REG_EXEC = 71,
 	CP_MEM_TO_REG = 66,
+	CP_EXEC_CS_INDIRECT = 65,
 	CP_EXEC_CS = 51,
 	CP_PERFCOUNTER_ACTION = 80,
 	CP_SMMU_TABLE_UPDATE = 83,
@@ -1113,6 +1114,44 @@ static inline uint32_t CP_EXEC_CS_2_NGROUPS_Y(uint32_t val)
 static inline uint32_t CP_EXEC_CS_3_NGROUPS_Z(uint32_t val)
 {
 	return ((val) << CP_EXEC_CS_3_NGROUPS_Z__SHIFT) & CP_EXEC_CS_3_NGROUPS_Z__MASK;
+}
+
+#define REG_CP_EXEC_CS_INDIRECT_0				0x00000000
+
+#define REG_CP_EXEC_CS_INDIRECT_1				0x00000001
+#define CP_EXEC_CS_INDIRECT_1_ADDR_LO__MASK			0xffffffff
+#define CP_EXEC_CS_INDIRECT_1_ADDR_LO__SHIFT			0
+static inline uint32_t CP_EXEC_CS_INDIRECT_1_ADDR_LO(uint32_t val)
+{
+	return ((val) << CP_EXEC_CS_INDIRECT_1_ADDR_LO__SHIFT) & CP_EXEC_CS_INDIRECT_1_ADDR_LO__MASK;
+}
+
+#define REG_CP_EXEC_CS_INDIRECT_2				0x00000002
+#define CP_EXEC_CS_INDIRECT_2_ADDR_HI__MASK			0xffffffff
+#define CP_EXEC_CS_INDIRECT_2_ADDR_HI__SHIFT			0
+static inline uint32_t CP_EXEC_CS_INDIRECT_2_ADDR_HI(uint32_t val)
+{
+	return ((val) << CP_EXEC_CS_INDIRECT_2_ADDR_HI__SHIFT) & CP_EXEC_CS_INDIRECT_2_ADDR_HI__MASK;
+}
+
+#define REG_CP_EXEC_CS_INDIRECT_3				0x00000003
+#define CP_EXEC_CS_INDIRECT_3_LOCALSIZEX__MASK			0x00000ffc
+#define CP_EXEC_CS_INDIRECT_3_LOCALSIZEX__SHIFT			2
+static inline uint32_t CP_EXEC_CS_INDIRECT_3_LOCALSIZEX(uint32_t val)
+{
+	return ((val) << CP_EXEC_CS_INDIRECT_3_LOCALSIZEX__SHIFT) & CP_EXEC_CS_INDIRECT_3_LOCALSIZEX__MASK;
+}
+#define CP_EXEC_CS_INDIRECT_3_LOCALSIZEY__MASK			0x003ff000
+#define CP_EXEC_CS_INDIRECT_3_LOCALSIZEY__SHIFT			12
+static inline uint32_t CP_EXEC_CS_INDIRECT_3_LOCALSIZEY(uint32_t val)
+{
+	return ((val) << CP_EXEC_CS_INDIRECT_3_LOCALSIZEY__SHIFT) & CP_EXEC_CS_INDIRECT_3_LOCALSIZEY__MASK;
+}
+#define CP_EXEC_CS_INDIRECT_3_LOCALSIZEZ__MASK			0xffc00000
+#define CP_EXEC_CS_INDIRECT_3_LOCALSIZEZ__SHIFT			22
+static inline uint32_t CP_EXEC_CS_INDIRECT_3_LOCALSIZEZ(uint32_t val)
+{
+	return ((val) << CP_EXEC_CS_INDIRECT_3_LOCALSIZEZ__SHIFT) & CP_EXEC_CS_INDIRECT_3_LOCALSIZEZ__MASK;
 }
 
 
