@@ -121,26 +121,8 @@ lower_buffer_access::emit_access(void *mem_ctx,
                         row_major, deref->type, packing,
                         writemask_for_size(col_deref->type->vector_elements));
          } else {
-            int size_mul;
-
-            /* std430 doesn't round up vec2 size to a vec4 size */
-            if (packing == GLSL_INTERFACE_PACKING_STD430 &&
-                deref->type->vector_elements == 2 &&
-                !deref->type->is_64bit()) {
-               size_mul = 8;
-            } else {
-               /* std140 always rounds the stride of arrays (and matrices) to a
-                * vec4, so matrices are always 16 between columns/rows. With
-                * doubles, they will be 32 apart when there are more than 2 rows.
-                *
-                * For both std140 and std430, if the member is a
-                * three-'component vector with components consuming N basic
-                * machine units, the base alignment is 4N. For vec4, base
-                * alignment is 4N.
-                */
-               size_mul = (deref->type->is_64bit() &&
-                           deref->type->vector_elements > 2) ? 32 : 16;
-            }
+            const int size_mul =
+               link_calculate_matrix_stride(deref->type, row_major, packing);
 
             emit_access(mem_ctx, is_write, col_deref, base_offset,
                         deref_offset + i * size_mul,
