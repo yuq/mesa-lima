@@ -170,6 +170,8 @@ emit_one_texture(struct vc5_context *vc5, struct vc5_texture_stateobj *stage_tex
         for (int i = 0; i < ARRAY_SIZE(packed); i++)
                 packed[i] |= sview->texture_shader_state[i] | sampler->texture_shader_state[i];
 
+        /* TMU indirect structs need to be 32b aligned. */
+        vc5_cl_ensure_space(&job->indirect, ARRAY_SIZE(packed), 32);
         cl_emit_prepacked(&job->indirect, &packed);
 }
 
