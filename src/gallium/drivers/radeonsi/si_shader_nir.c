@@ -59,6 +59,11 @@ static void scan_instruction(struct tgsi_shader_info *info,
 	} else if (instr->type == nir_instr_type_tex) {
 		nir_tex_instr *tex = nir_instr_as_tex(instr);
 
+		if (!tex->texture) {
+			info->samplers_declared |=
+				u_bit_consecutive(tex->sampler_index, 1);
+		}
+
 		switch (tex->op) {
 		case nir_texop_tex:
 		case nir_texop_txb:
