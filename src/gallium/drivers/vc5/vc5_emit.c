@@ -277,14 +277,17 @@ vc5_emit_state(struct pipe_context *pctx)
 
         }
 
-        if (vc5->dirty & VC5_DIRTY_RASTERIZER) {
+        if (vc5->dirty & VC5_DIRTY_RASTERIZER &&
+            vc5->rasterizer->base.offset_tri) {
                 cl_emit(&job->bcl, DEPTH_OFFSET, depth) {
                         depth.depth_offset_factor =
                                 vc5->rasterizer->offset_factor;
                         depth.depth_offset_units =
                                 vc5->rasterizer->offset_units;
                 }
+        }
 
+        if (vc5->dirty & VC5_DIRTY_RASTERIZER) {
                 cl_emit(&job->bcl, POINT_SIZE, point_size) {
                         point_size.point_size = vc5->rasterizer->point_size;
                 }
