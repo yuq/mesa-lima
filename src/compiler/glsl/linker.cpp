@@ -5079,6 +5079,16 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    if(!link_varyings_and_uniforms(first, last, ctx, prog, mem_ctx))
       goto done;
 
+   /* Linking varyings can cause some extra, useless swizzles to be generated
+    * due to packing and unpacking.
+    */
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (prog->_LinkedShaders[i] == NULL)
+         continue;
+
+      optimize_swizzles(prog->_LinkedShaders[i]->ir);
+   }
+
    /* OpenGL ES < 3.1 requires that a vertex shader and a fragment shader both
     * be present in a linked program. GL_ARB_ES2_compatibility doesn't say
     * anything about shader linking when one of the shaders (vertex or
