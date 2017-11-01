@@ -191,10 +191,15 @@ void si_init_resource_fields(struct r600_common_screen *rscreen,
 	res->vram_usage = 0;
 	res->gart_usage = 0;
 
-	if (res->domains & RADEON_DOMAIN_VRAM)
+	if (res->domains & RADEON_DOMAIN_VRAM) {
 		res->vram_usage = size;
-	else if (res->domains & RADEON_DOMAIN_GTT)
+
+		res->b.max_forced_staging_uploads =
+			rscreen->info.has_dedicated_vram &&
+			size >= rscreen->info.vram_vis_size / 4 ? 1 : 0;
+	} else if (res->domains & RADEON_DOMAIN_GTT) {
 		res->gart_usage = size;
+	}
 }
 
 bool si_alloc_resource(struct r600_common_screen *rscreen,
@@ -289,6 +294,7 @@ void si_replace_buffer_storage(struct pipe_context *ctx,
 	pb_reference(&rdst->buf, rsrc->buf);
 	rdst->gpu_address = rsrc->gpu_address;
 	rdst->b.b.bind = rsrc->b.b.bind;
+	rdst->b.max_forced_staging_uploads = rsrc->b.max_forced_staging_uploads;
 	rdst->flags = rsrc->flags;
 
 	assert(rdst->vram_usage == rsrc->vram_usage);

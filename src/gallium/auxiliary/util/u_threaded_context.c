@@ -1284,6 +1284,20 @@ tc_improve_map_buffer_flags(struct threaded_context *tc,
    if (usage & tc_flags)
       return usage;
 
+   /* Use the staging upload if it's preferred. */
+   if (usage & (PIPE_TRANSFER_DISCARD_RANGE |
+                PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) &&
+       !(usage & PIPE_TRANSFER_PERSISTENT) &&
+       /* Try not to decrement the counter if it's not positive. Still racy,
+        * but it makes it harder to wrap the counter from INT_MIN to INT_MAX. */
+       tres->max_forced_staging_uploads > 0 &&
+       p_atomic_dec_return(&tres->max_forced_staging_uploads) >= 0) {
+      usage &= ~(PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE |
+                 PIPE_TRANSFER_UNSYNCHRONIZED);
+
+      return usage | tc_flags | PIPE_TRANSFER_DISCARD_RANGE;
+   }
+
    /* Sparse buffers can't be mapped directly and can't be reallocated
     * (fully invalidated). That may just be a radeonsi limitation, but
     * the threaded context must obey it with radeonsi.
