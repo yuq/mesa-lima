@@ -407,6 +407,7 @@ st_nir_get_mesa_program(struct gl_context *ctx,
                         struct gl_shader_program *shader_program,
                         struct gl_linked_shader *shader)
 {
+   struct st_context *st = st_context(ctx);
    struct gl_program *prog;
 
    validate_ir_tree(shader->ir);
@@ -461,6 +462,11 @@ st_nir_get_mesa_program(struct gl_context *ctx,
       assert(!"should not be reached");
       return NULL;
    }
+
+   struct st_common_program *st_comm_prog = (struct st_common_program *)prog;
+   nir_shader *nir = st_glsl_to_nir(st, prog, shader_program, shader->Stage);
+   st_comm_prog->tgsi.type = PIPE_SHADER_IR_NIR;
+   st_comm_prog->tgsi.ir.nir = nir;
 
    return prog;
 }
