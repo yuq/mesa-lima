@@ -92,6 +92,10 @@ link_intrastage_shaders(void *mem_ctx,
                         unsigned num_shaders,
                         bool allow_missing_main);
 
+extern unsigned
+link_calculate_matrix_stride(const glsl_type *matrix, bool row_major,
+                             enum glsl_interface_packing packing);
+
 /**
  * Class for processing all of the leaf fields of a variable that corresponds
  * to a program resource.
