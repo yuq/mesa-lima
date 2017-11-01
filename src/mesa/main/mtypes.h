@@ -2060,6 +2060,7 @@ typedef enum
    PROGRAM_BUFFER,      /**< for shader buffers, compile-time only */
    PROGRAM_MEMORY,      /**< for shared, global and local memory */
    PROGRAM_IMAGE,       /**< for shader images, compile-time only */
+   PROGRAM_HW_ATOMIC,   /**< for hw atomic counters, compile-time only */
    PROGRAM_FILE_MAX
 } gl_register_file;
 
