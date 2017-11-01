@@ -79,6 +79,7 @@ void st_init_limits(struct pipe_screen *screen,
    unsigned sh;
    boolean can_ubo = TRUE;
    int temp;
+   bool ssbo_atomic = true;
 
    c->MaxTextureLevels
       = _min(screen->get_param(screen, PIPE_CAP_MAX_TEXTURE_2D_LEVELS),
@@ -243,11 +244,21 @@ void st_init_limits(struct pipe_screen *screen,
                                           c->MaxUniformBlockSize / 4 *
                                           pc->MaxUniformBlocks);
 
-      pc->MaxAtomicCounters = MAX_ATOMIC_COUNTERS;
-      pc->MaxAtomicBuffers = screen->get_shader_param(
-            screen, sh, PIPE_SHADER_CAP_MAX_SHADER_BUFFERS) / 2;
-      pc->MaxShaderStorageBlocks = pc->MaxAtomicBuffers;
-
+      temp = screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTERS);
+      if (temp) {
+         /*
+          * for separate atomic counters get the actual hw limits
+          * per stage on atomic counters and buffers
+          */
+         ssbo_atomic = false;
+         pc->MaxAtomicCounters = temp;
+         pc->MaxAtomicBuffers = screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTER_BUFFERS);
+         pc->MaxShaderStorageBlocks = screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_MAX_SHADER_BUFFERS);
+      } else {
+         pc->MaxAtomicCounters = MAX_ATOMIC_COUNTERS;
+         pc->MaxAtomicBuffers = screen->get_shader_param(screen, sh, PIPE_SHADER_CAP_MAX_SHADER_BUFFERS) / 2;
+         pc->MaxShaderStorageBlocks = pc->MaxAtomicBuffers;
+      }
       pc->MaxImageUniforms = screen->get_shader_param(
             screen, sh, PIPE_SHADER_CAP_MAX_SHADER_IMAGES);
 
@@ -407,14 +418,26 @@ void st_init_limits(struct pipe_screen *screen,
       screen->get_param(screen, PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL);
 
    c->MaxAtomicBufferBindings =
-         c->Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers;
-   c->MaxCombinedAtomicBuffers =
+          c->Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers;
+
+   if (!ssbo_atomic) {
+      /* for separate atomic buffers - there atomic buffer size will be
+         limited */
+      c->MaxAtomicBufferSize = c->Program[MESA_SHADER_FRAGMENT].MaxAtomicCounters * ATOMIC_COUNTER_SIZE;
+      /* on all HW with separate atomic (evergreen) the following
+         lines are true. not sure it's worth adding CAPs for this at this
+         stage. */
+      c->MaxCombinedAtomicCounters = c->Program[MESA_SHADER_FRAGMENT].MaxAtomicCounters;
+      c->MaxCombinedAtomicBuffers = c->Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers;
+   } else {
+      c->MaxCombinedAtomicBuffers =
          c->Program[MESA_SHADER_VERTEX].MaxAtomicBuffers +
          c->Program[MESA_SHADER_TESS_CTRL].MaxAtomicBuffers +
          c->Program[MESA_SHADER_TESS_EVAL].MaxAtomicBuffers +
          c->Program[MESA_SHADER_GEOMETRY].MaxAtomicBuffers +
          c->Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers;
-   assert(c->MaxCombinedAtomicBuffers <= MAX_COMBINED_ATOMIC_BUFFERS);
+      assert(c->MaxCombinedAtomicBuffers <= MAX_COMBINED_ATOMIC_BUFFERS);
+   }
 
    if (c->MaxCombinedAtomicBuffers > 0) {
       extensions->ARB_shader_atomic_counters = GL_TRUE;
@@ -425,8 +448,10 @@ void st_init_limits(struct pipe_screen *screen,
    c->ShaderStorageBufferOffsetAlignment =
       screen->get_param(screen, PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT);
    if (c->ShaderStorageBufferOffsetAlignment) {
-      c->MaxCombinedShaderStorageBlocks = c->MaxShaderStorageBufferBindings =
-         c->MaxCombinedAtomicBuffers;
+      /* for hw atomic counters leaves these at default for now */
+      if (ssbo_atomic)
+         c->MaxCombinedShaderStorageBlocks = c->MaxShaderStorageBufferBindings =
+            c->MaxCombinedAtomicBuffers;
       c->MaxCombinedShaderOutputResources +=
          c->MaxCombinedShaderStorageBlocks;
       c->MaxShaderStorageBlockSize = 1 << 27;
