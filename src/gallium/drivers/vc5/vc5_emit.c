@@ -325,7 +325,7 @@ vc5_emit_state(struct pipe_context *pctx)
                 }
         }
 
-        if (vc5->dirty & VC5_DIRTY_BLEND) {
+        if (vc5->dirty & VC5_DIRTY_BLEND && vc5->blend->rt[0].blend_enable) {
                 struct pipe_blend_state *blend = vc5->blend;
 
                 cl_emit(&job->bcl, BLEND_CONFIG, config) {
@@ -347,6 +347,10 @@ vc5_emit_state(struct pipe_context *pctx)
                                 vc5_factor(rtblend->alpha_src_factor,
                                            vc5->blend_dst_alpha_one);
                 }
+        }
+
+        if (vc5->dirty & VC5_DIRTY_BLEND) {
+                struct pipe_blend_state *blend = vc5->blend;
 
                 cl_emit(&job->bcl, COLOUR_WRITE_MASKS, mask) {
                         if (blend->independent_blend_enable) {
