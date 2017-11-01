@@ -273,16 +273,12 @@ st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
     */
    _mesa_associate_uniform_storage(st->ctx, shader_program, prog, true);
 
-   st_set_prog_affected_state_flags(prog);
-
    NIR_PASS_V(nir, nir_lower_io_to_temporaries,
          nir_shader_get_entrypoint(nir),
          true, true);
    NIR_PASS_V(nir, nir_lower_global_vars_to_local);
    NIR_PASS_V(nir, nir_split_var_copies);
    NIR_PASS_V(nir, nir_lower_var_copies);
-   NIR_PASS_V(nir, st_nir_lower_builtin);
-   NIR_PASS_V(nir, nir_lower_atomics, shader_program);
 
    /* fragment shaders may need : */
    if (stage == MESA_SHADER_FRAGMENT) {
@@ -308,6 +304,16 @@ st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
          _mesa_add_state_reference(prog->Parameters, wposTransformState);
       }
    }
+
+   NIR_PASS_V(nir, nir_lower_system_values);
+
+   nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir));
+   prog->info = nir->info;
+
+   st_set_prog_affected_state_flags(prog);
+
+   NIR_PASS_V(nir, st_nir_lower_builtin);
+   NIR_PASS_V(nir, nir_lower_atomics, shader_program);
 
    if (st->ctx->_Shader->Flags & GLSL_DUMP) {
       _mesa_log("\n");
@@ -394,8 +400,6 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog,
    st_nir_assign_uniform_locations(prog, shader_program,
                                    &nir->uniforms, &nir->num_uniforms);
 
-   NIR_PASS_V(nir, nir_lower_system_values);
-
    if (screen->get_param(screen, PIPE_CAP_NIR_SAMPLERS_AS_DEREF))
       NIR_PASS_V(nir, nir_lower_samplers_as_deref, shader_program);
    else
@@ -415,8 +419,6 @@ st_nir_get_mesa_program(struct gl_context *ctx,
    prog = shader->Program;
 
    prog->Parameters = _mesa_new_parameter_list();
-
-   do_set_program_inouts(shader->ir, prog, shader->Stage);
 
    _mesa_copy_linked_program_data(shader_program, shader);
    _mesa_generate_parameters_list_for_uniforms(ctx, shader_program, shader,
