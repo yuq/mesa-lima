@@ -40,6 +40,8 @@
 #include "util/u_surface.h"
 #include "util/u_transfer.h"
 
+#include "hw/common_3d.xml.h"
+
 #include <drm_fourcc.h>
 
 /* Compute offset into a 1D/2D/3D buffer of a certain box.

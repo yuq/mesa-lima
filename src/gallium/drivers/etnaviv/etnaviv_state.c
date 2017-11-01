@@ -177,7 +177,7 @@ etna_set_framebuffer_state(struct pipe_context *pctx,
       /* MSAA */
       if (cbuf->base.texture->nr_samples > 1)
          ts_mem_config |=
-            VIVS_TS_MEM_CONFIG_MSAA | translate_msaa_format(cbuf->base.format);
+            VIVS_TS_MEM_CONFIG_COLOR_COMPRESSION | translate_msaa_format(cbuf->base.format);
 
       nr_samples_color = cbuf->base.texture->nr_samples;
    } else {

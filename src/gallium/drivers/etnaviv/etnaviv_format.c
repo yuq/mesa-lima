@@ -26,6 +26,7 @@
 
 #include "etnaviv_format.h"
 
+#include "hw/common_3d.xml.h"
 #include "hw/state.xml.h"
 #include "hw/state_3d.xml.h"
 
@@ -62,7 +63,7 @@ struct etna_format {
 /* vertex + texture */
 #define VT(pipe, vtxfmt, texfmt, texswiz, rsfmt)          \
    [PIPE_FORMAT_##pipe] = {                               \
-      .vtx = VIVS_FE_VERTEX_ELEMENT_CONFIG_TYPE_##vtxfmt, \
+      .vtx = FE_DATA_TYPE_##vtxfmt, \
       .tex = TEXTURE_FORMAT_##texfmt,                     \
       .rs = RS_FORMAT_##rsfmt,                            \
       .present = 1,                                       \
@@ -82,7 +83,7 @@ struct etna_format {
 /* vertex-only */
 #define V_(pipe, fmt, rsfmt)                           \
    [PIPE_FORMAT_##pipe] = {                            \
-      .vtx = VIVS_FE_VERTEX_ELEMENT_CONFIG_TYPE_##fmt, \
+      .vtx = FE_DATA_TYPE_##fmt, \
       .tex = ETNA_NO_MATCH,                            \
       .rs = RS_FORMAT_##rsfmt,                         \
       .present = 1,                                    \
@@ -173,8 +174,8 @@ static struct etna_format formats[PIPE_FORMAT_COUNT] = {
    V_(R10G10B10A2_USCALED, UNSIGNED_INT_10_10_10_2, NONE),
    V_(R10G10B10A2_SSCALED, INT_10_10_10_2,          NONE),
 
-   _T(X8Z24_UNORM,       D24S8, SWIZ(X, Y, Z, W), A8R8G8B8),
-   _T(S8_UINT_Z24_UNORM, D24S8, SWIZ(X, Y, Z, W), A8R8G8B8),
+   _T(X8Z24_UNORM,       D24X8, SWIZ(X, Y, Z, W), A8R8G8B8),
+   _T(S8_UINT_Z24_UNORM, D24X8, SWIZ(X, Y, Z, W), A8R8G8B8),
 
    /* 48-bit */
    V_(R16G16B16_UNORM,   UNSIGNED_SHORT, NONE),

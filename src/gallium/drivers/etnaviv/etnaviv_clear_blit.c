@@ -531,7 +531,7 @@ etna_try_rs_blit(struct pipe_context *pctx,
    if (src->base.nr_samples > 1) {
       uint32_t msaa_format = translate_msaa_format(src_format);
       assert(msaa_format != ETNA_NO_MATCH);
-      ts_mem_config |= VIVS_TS_MEM_CONFIG_MSAA | msaa_format;
+      ts_mem_config |= VIVS_TS_MEM_CONFIG_COLOR_COMPRESSION | msaa_format;
    }
 
    /* Always flush color and depth cache together before resolving. This works
