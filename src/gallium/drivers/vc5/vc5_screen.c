@@ -320,7 +320,7 @@ vc5_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
         case PIPE_CAPF_MAX_TEXTURE_ANISOTROPY:
                 return 0.0f;
         case PIPE_CAPF_MAX_TEXTURE_LOD_BIAS:
-                return 0.0f;
+                return 16.0f;
         case PIPE_CAPF_GUARD_BAND_LEFT:
         case PIPE_CAPF_GUARD_BAND_TOP:
         case PIPE_CAPF_GUARD_BAND_RIGHT:
