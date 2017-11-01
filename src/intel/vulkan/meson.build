@@ -48,6 +48,18 @@ intel_icd = custom_target(
   install : true,
 )
 
+dev_icd = custom_target(
+  'dev_icd',
+  input : 'anv_icd.py',
+  output : 'dev_icd.@0@.json'.format(host_machine.cpu()),
+  command : [prog_python2, '@INPUT@',
+             '--lib-path', meson.current_build_dir(),
+             '--out', '@OUTPUT@'],
+  depend_files : files('anv_extensions.py'),
+  build_by_default : true,
+  install : false,
+)
+
 # TODO: workaround for anv_entrypoints combining the .h and .c files in it's
 # output. See issue #2346
 block_entrypoints = custom_target(
