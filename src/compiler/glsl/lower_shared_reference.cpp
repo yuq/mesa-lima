@@ -241,7 +241,7 @@ lower_shared_reference_visitor::insert_buffer_access(void *mem_ctx,
                                                      const glsl_type *type,
                                                      ir_rvalue *offset,
                                                      unsigned mask,
-                                                     int channel)
+                                                     int /* channel */)
 {
    if (buffer_access_type == shared_store_access) {
       ir_call *store = shared_store(mem_ctx, deref, offset, mask);
