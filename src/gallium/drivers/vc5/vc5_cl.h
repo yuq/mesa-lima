@@ -221,8 +221,23 @@ cl_get_emit_space(struct vc5_cl_out **cl, size_t size)
         ({                                                       \
                 struct vc5_cl_out *cl_out = cl_start(cl);        \
                 cl_packet_pack(packet)(cl, (uint8_t *)cl_out, &name); \
-                VG(VALGRIND_CHECK_MEM_IS_DEFINED(cl_out,         \
-                                                 cl_packet_length(packet))); \
+                cl_advance(&cl_out, cl_packet_length(packet));   \
+                cl_end(cl, cl_out);                              \
+                _loop_terminate = NULL;                          \
+        }))                                                      \
+
+#define cl_emit_with_prepacked(cl, packet, prepacked, name)      \
+        for (struct cl_packet_struct(packet) name = {            \
+                cl_packet_header(packet)                         \
+        },                                                       \
+        *_loop_terminate = &name;                                \
+        __builtin_expect(_loop_terminate != NULL, 1);            \
+        ({                                                       \
+                struct vc5_cl_out *cl_out = cl_start(cl);        \
+                uint8_t packed[cl_packet_length(packet)];         \
+                cl_packet_pack(packet)(cl, packed, &name);       \
+                for (int _i = 0; _i < cl_packet_length(packet); _i++) \
+                        ((uint8_t *)cl_out)[_i] = packed[_i] | (prepacked)[_i]; \
                 cl_advance(&cl_out, cl_packet_length(packet));   \
                 cl_end(cl, cl_out);                              \
                 _loop_terminate = NULL;                          \

@@ -221,25 +221,20 @@ vc5_emit_gl_shader_state(struct vc5_context *vc5,
                         &vertexbuf->vb[elem->vertex_buffer_index];
                 struct vc5_resource *rsc = vc5_resource(vb->buffer.resource);
 
-                struct V3D33_GL_SHADER_STATE_ATTRIBUTE_RECORD attr_unpacked = {
-                        .stride = vb->stride,
-                        .address = cl_address(rsc->bo,
-                                              vb->buffer_offset +
-                                              elem->src_offset),
-                        .number_of_values_read_by_coordinate_shader =
-                                vc5->prog.cs->prog_data.vs->vattr_sizes[i],
-                        .number_of_values_read_by_vertex_shader =
-                                vc5->prog.vs->prog_data.vs->vattr_sizes[i],
-                };
                 const uint32_t size =
                         cl_packet_length(GL_SHADER_STATE_ATTRIBUTE_RECORD);
-                uint8_t attr_packed[size];
-                V3D33_GL_SHADER_STATE_ATTRIBUTE_RECORD_pack(&job->indirect,
-                                                            attr_packed,
-                                                            &attr_unpacked);
-                for (int j = 0; j < size; j++)
-                        attr_packed[j] |= vtx->attrs[i * size + j];
-                cl_emit_prepacked(&job->indirect, &attr_packed);
+                cl_emit_with_prepacked(&job->indirect,
+                                       GL_SHADER_STATE_ATTRIBUTE_RECORD,
+                                       &vtx->attrs[i * size], attr) {
+                        attr.stride = vb->stride;
+                        attr.address = cl_address(rsc->bo,
+                                                  vb->buffer_offset +
+                                                  elem->src_offset);
+                        attr.number_of_values_read_by_coordinate_shader =
+                                vc5->prog.cs->prog_data.vs->vattr_sizes[i];
+                        attr.number_of_values_read_by_vertex_shader =
+                                vc5->prog.vs->prog_data.vs->vattr_sizes[i];
+                }
         }
 
         if (vtx->num_elements == 0) {
