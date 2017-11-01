@@ -391,7 +391,7 @@
     <field name="Height (in tiles)" size="12" start="44" type="uint"/>
     <field name="Width (in tiles)" size="12" start="32" type="uint"/>
 
-    <field name="Tile State Data Array Base Address" size="32" start="0" type="address"/>
+    <field name="Tile State Data Array Base Address" size="26" start="6" type="address"/>
 
     <field name="tile allocation block size" size="2" start="4" type="uint">
       <value name="tile allocation block size 64b" value="0"/>
