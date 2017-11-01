@@ -2095,7 +2095,7 @@ fs_visitor::assign_constant_locations()
    stage_prog_data->param = ralloc_array(mem_ctx, uint32_t, num_push_constants);
    if (num_pull_constants > 0) {
       stage_prog_data->nr_pull_params = num_pull_constants;
-      stage_prog_data->pull_param = ralloc_array(NULL, uint32_t,
+      stage_prog_data->pull_param = ralloc_array(mem_ctx, uint32_t,
                                                  num_pull_constants);
    }
 
