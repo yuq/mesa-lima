@@ -332,6 +332,22 @@ struct pipe_context {
                               const struct pipe_shader_buffer *buffers);
 
    /**
+    * Bind an array of hw atomic buffers for use by all shaders.
+    * And buffers that were previously bound to the specified range
+    * will be unbound.
+    *
+    * \param start_slot first buffer slot to bind.
+    * \param count      number of consecutive buffers to bind.
+    * \param buffers    array of pointers to the buffers to bind, it
+    *                   should contain at least \a count elements
+    *                   unless it's NULL, in which case no buffers will
+    *                   be bound.
+    */
+   void (*set_hw_atomic_buffers)(struct pipe_context *,
+                                 unsigned start_slot, unsigned count,
+                                 const struct pipe_shader_buffer *buffers);
+
+   /**
     * Bind an array of images that will be used by a shader.
     * Any images that were previously bound to the specified range
     * will be unbound.

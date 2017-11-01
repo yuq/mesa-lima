@@ -145,6 +145,14 @@ to the array index which is used for sampling.
 * ``sampler_view_destroy`` destroys a sampler view and releases its reference
   to associated texture.
 
+Hardware Atomic buffers
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Buffers containing hw atomics are required to support the feature
+on some drivers.
+
+Drivers that require this need to fill the ``set_hw_atomic_buffers`` method.
+
 Shader Resources
 ^^^^^^^^^^^^^^^^
 
