@@ -1953,7 +1953,8 @@ arch_rounding_available(const struct lp_type type)
 {
    if ((util_cpu_caps.has_sse4_1 &&
        (type.length == 1 || type.width*type.length == 128)) ||
-       (util_cpu_caps.has_avx && type.width*type.length == 256))
+       (util_cpu_caps.has_avx && type.width*type.length == 256) ||
+       (util_cpu_caps.has_avx512f && type.width*type.length == 512))
       return TRUE;
    else if ((util_cpu_caps.has_altivec &&
             (type.width == 32 && type.length == 4)))
