@@ -394,6 +394,9 @@ struct vc5_depth_stencil_alpha_state {
          * Index 2 is the writemask config if it's not a common mask value.
          */
         uint32_t stencil_uniforms[3];
+
+        uint8_t stencil_front[8];
+        uint8_t stencil_back[8];
 };
 
 #define perf_debug(...) do {                            \

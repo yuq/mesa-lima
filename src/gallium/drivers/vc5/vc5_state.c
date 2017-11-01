@@ -153,6 +153,41 @@ vc5_create_depth_stencil_alpha_state(struct pipe_context *pctx,
                             cso->stencil[1].zfail_op == PIPE_STENCIL_OP_KEEP))));
         }
 
+        const struct pipe_stencil_state *front = &cso->stencil[0];
+        const struct pipe_stencil_state *back = &cso->stencil[1];
+
+        if (front->enabled) {
+                v3dx_pack(&so->stencil_front, STENCIL_CONFIG, config) {
+                        config.front_config = true;
+                        /* If !back->enabled, then the front values should be
+                         * used for both front and back-facing primitives.
+                         */
+                        config.back_config = !back->enabled;
+
+                        config.stencil_write_mask = front->writemask;
+                        config.stencil_test_mask = front->valuemask;
+
+                        config.stencil_test_function = front->func;
+                        config.stencil_pass_op = front->zpass_op;
+                        config.depth_test_fail_op = front->zfail_op;
+                        config.stencil_test_fail_op = front->fail_op;
+                }
+        }
+        if (back->enabled) {
+                v3dx_pack(&so->stencil_back, STENCIL_CONFIG, config) {
+                        config.front_config = false;
+                        config.back_config = true;
+
+                        config.stencil_write_mask = back->writemask;
+                        config.stencil_test_mask = back->valuemask;
+
+                        config.stencil_test_function = back->func;
+                        config.stencil_pass_op = back->zpass_op;
+                        config.depth_test_fail_op = back->zfail_op;
+                        config.stencil_test_fail_op = back->fail_op;
+                }
+        }
+
         return so;
 }
 

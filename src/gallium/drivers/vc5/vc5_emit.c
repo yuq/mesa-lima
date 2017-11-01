@@ -388,39 +388,21 @@ vc5_emit_state(struct pipe_context *pctx)
                 }
         }
 
-        if (vc5->dirty & (VC5_DIRTY_ZSA | VC5_DIRTY_STENCIL_REF) &&
-            vc5->zsa->base.stencil[0].enabled) {
+        if (vc5->dirty & (VC5_DIRTY_ZSA | VC5_DIRTY_STENCIL_REF)) {
                 struct pipe_stencil_state *front = &vc5->zsa->base.stencil[0];
                 struct pipe_stencil_state *back = &vc5->zsa->base.stencil[1];
 
-                cl_emit(&job->bcl, STENCIL_CONFIG, config) {
-                        config.front_config = true;
-                        config.back_config = !back->enabled;
-
-                        config.stencil_write_mask = front->writemask;
-                        config.stencil_test_mask = front->valuemask;
-
-                        config.stencil_test_function = front->func;
-                        config.stencil_pass_op = front->zpass_op;
-                        config.depth_test_fail_op = front->zfail_op;
-                        config.stencil_test_fail_op = front->fail_op;
-
-                        config.stencil_ref_value = vc5->stencil_ref.ref_value[0];
+                if (front->enabled) {
+                        cl_emit_with_prepacked(&job->bcl, STENCIL_CONFIG,
+                                               vc5->zsa->stencil_front, config) {
+                                config.stencil_ref_value =
+                                        vc5->stencil_ref.ref_value[1];
+                        }
                 }
 
                 if (back->enabled) {
-                        cl_emit(&job->bcl, STENCIL_CONFIG, config) {
-                                config.front_config = false;
-                                config.back_config = true;
-
-                                config.stencil_write_mask = back->writemask;
-                                config.stencil_test_mask = back->valuemask;
-
-                                config.stencil_test_function = back->func;
-                                config.stencil_pass_op = back->zpass_op;
-                                config.depth_test_fail_op = back->zfail_op;
-                                config.stencil_test_fail_op = back->fail_op;
-
+                        cl_emit_with_prepacked(&job->bcl, STENCIL_CONFIG,
+                                               vc5->zsa->stencil_back, config) {
                                 config.stencil_ref_value =
                                         vc5->stencil_ref.ref_value[1];
                         }
