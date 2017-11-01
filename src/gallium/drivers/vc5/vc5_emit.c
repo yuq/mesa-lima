@@ -385,7 +385,8 @@ vc5_emit_state(struct pipe_context *pctx)
                 }
         }
 
-        if (vc5->dirty & (VC5_DIRTY_ZSA | VC5_DIRTY_STENCIL_REF)) {
+        if (vc5->dirty & (VC5_DIRTY_ZSA | VC5_DIRTY_STENCIL_REF) &&
+            vc5->zsa->base.stencil[0].enabled) {
                 struct pipe_stencil_state *front = &vc5->zsa->base.stencil[0];
                 struct pipe_stencil_state *back = &vc5->zsa->base.stencil[1];
 
