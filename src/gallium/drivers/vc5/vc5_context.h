@@ -395,8 +395,8 @@ struct vc5_depth_stencil_alpha_state {
          */
         uint32_t stencil_uniforms[3];
 
-        uint8_t stencil_front[8];
-        uint8_t stencil_back[8];
+        uint8_t stencil_front[6];
+        uint8_t stencil_back[6];
 };
 
 #define perf_debug(...) do {                            \

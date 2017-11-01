@@ -127,6 +127,22 @@ vc5_create_blend_state(struct pipe_context *pctx,
         return vc5_generic_cso_state_create(cso, sizeof(*cso));
 }
 
+static uint32_t
+translate_stencil_op(enum pipe_stencil_op op)
+{
+        switch (op) {
+        case PIPE_STENCIL_OP_KEEP:      return V3D_STENCIL_OP_KEEP;
+        case PIPE_STENCIL_OP_ZERO:      return V3D_STENCIL_OP_ZERO;
+        case PIPE_STENCIL_OP_REPLACE:   return V3D_STENCIL_OP_REPLACE;
+        case PIPE_STENCIL_OP_INCR:      return V3D_STENCIL_OP_INCR;
+        case PIPE_STENCIL_OP_DECR:      return V3D_STENCIL_OP_DECR;
+        case PIPE_STENCIL_OP_INCR_WRAP: return V3D_STENCIL_OP_INCWRAP;
+        case PIPE_STENCIL_OP_DECR_WRAP: return V3D_STENCIL_OP_DECWRAP;
+        case PIPE_STENCIL_OP_INVERT:    return V3D_STENCIL_OP_INVERT;
+        }
+        unreachable("bad stencil op");
+}
+
 static void *
 vc5_create_depth_stencil_alpha_state(struct pipe_context *pctx,
                                      const struct pipe_depth_stencil_alpha_state *cso)
@@ -168,9 +184,12 @@ vc5_create_depth_stencil_alpha_state(struct pipe_context *pctx,
                         config.stencil_test_mask = front->valuemask;
 
                         config.stencil_test_function = front->func;
-                        config.stencil_pass_op = front->zpass_op;
-                        config.depth_test_fail_op = front->zfail_op;
-                        config.stencil_test_fail_op = front->fail_op;
+                        config.stencil_pass_op =
+                                translate_stencil_op(front->zpass_op);
+                        config.depth_test_fail_op =
+                                translate_stencil_op(front->zfail_op);
+                        config.stencil_test_fail_op =
+                                translate_stencil_op(front->fail_op);
                 }
         }
         if (back->enabled) {
@@ -182,9 +201,12 @@ vc5_create_depth_stencil_alpha_state(struct pipe_context *pctx,
                         config.stencil_test_mask = back->valuemask;
 
                         config.stencil_test_function = back->func;
-                        config.stencil_pass_op = back->zpass_op;
-                        config.depth_test_fail_op = back->zfail_op;
-                        config.stencil_test_fail_op = back->fail_op;
+                        config.stencil_pass_op =
+                                translate_stencil_op(back->zpass_op);
+                        config.depth_test_fail_op =
+                                translate_stencil_op(back->zfail_op);
+                        config.stencil_test_fail_op =
+                                translate_stencil_op(back->fail_op);
                 }
         }
 
