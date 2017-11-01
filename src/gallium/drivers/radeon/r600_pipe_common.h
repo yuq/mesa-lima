@@ -174,6 +174,7 @@ struct r600_resource {
 	enum radeon_bo_domain		domains;
 	enum radeon_bo_flag		flags;
 	unsigned			bind_history;
+	int				max_forced_staging_uploads;
 
 	/* The buffer range which is initialized (with a write transfer,
 	 * streamout, DMA, or as a random access target). The rest of

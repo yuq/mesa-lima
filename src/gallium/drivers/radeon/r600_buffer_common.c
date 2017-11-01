@@ -194,6 +194,7 @@ void si_init_resource_fields(struct r600_common_screen *rscreen,
 	if (res->domains & RADEON_DOMAIN_VRAM) {
 		res->vram_usage = size;
 
+		res->max_forced_staging_uploads =
 		res->b.max_forced_staging_uploads =
 			rscreen->info.has_dedicated_vram &&
 			size >= rscreen->info.vram_vis_size / 4 ? 1 : 0;
@@ -295,6 +296,7 @@ void si_replace_buffer_storage(struct pipe_context *ctx,
 	rdst->gpu_address = rsrc->gpu_address;
 	rdst->b.b.bind = rsrc->b.b.bind;
 	rdst->b.max_forced_staging_uploads = rsrc->b.max_forced_staging_uploads;
+	rdst->max_forced_staging_uploads = rsrc->max_forced_staging_uploads;
 	rdst->flags = rsrc->flags;
 
 	assert(rdst->vram_usage == rsrc->vram_usage);
@@ -402,6 +404,23 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 		usage |= PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE;
 	}
 
+	/* If a buffer in VRAM is too large and the range is discarded, don't
+	 * map it directly. This makes sure that the buffer stays in VRAM.
+	 */
+	bool force_discard_range = false;
+	if (usage & (PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE |
+		     PIPE_TRANSFER_DISCARD_RANGE) &&
+	    !(usage & PIPE_TRANSFER_PERSISTENT) &&
+	    /* Try not to decrement the counter if it's not positive. Still racy,
+	     * but it makes it harder to wrap the counter from INT_MIN to INT_MAX. */
+	    rbuffer->max_forced_staging_uploads > 0 &&
+	    p_atomic_dec_return(&rbuffer->max_forced_staging_uploads) >= 0) {
+		usage &= ~(PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE |
+			   PIPE_TRANSFER_UNSYNCHRONIZED);
+		usage |= PIPE_TRANSFER_DISCARD_RANGE;
+		force_discard_range = true;
+	}
+
 	if (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE &&
 	    !(usage & (PIPE_TRANSFER_UNSYNCHRONIZED |
 		       TC_TRANSFER_MAP_NO_INVALIDATE))) {
@@ -427,6 +446,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 		/* Check if mapping this buffer would cause waiting for the GPU.
 		 */
 		if (rbuffer->flags & RADEON_FLAG_SPARSE ||
+		    force_discard_range ||
 		    si_rings_is_buffer_referenced(rctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
 		    !rctx->ws->buffer_wait(rbuffer->buf, 0, RADEON_USAGE_READWRITE)) {
 			/* Do a wait-free write-only transfer using a temporary buffer. */
