@@ -195,8 +195,7 @@
       <value name="Index type 32-bit" value="2"/>
     </field>
 
-    <field name="mode" size="5" start="0" type="uint">
-    </field>
+    <field name="mode" size="5" start="0" type="Primitive"/>
   </packet>
 
   <packet code="34" name="Indexed Instanced Primitive List" cl="B">
