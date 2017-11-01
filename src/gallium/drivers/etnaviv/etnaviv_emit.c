@@ -703,6 +703,14 @@ etna_emit_state(struct etna_context *ctx)
          /*03828*/ EMIT_STATE(GL_VARYING_COMPONENT_USE(x), ctx->shader_state.GL_VARYING_COMPONENT_USE[x]);
       }
    }
+   if (unlikely(ctx->specs.tex_astc && (dirty & (ETNA_DIRTY_SAMPLER_VIEWS)))) {
+      for (int x = 0; x < VIVS_TE_SAMPLER__LEN; ++x) {
+         if ((1 << x) & active_samplers) {
+            struct etna_sampler_view *sv = etna_sampler_view(ctx->sampler_view[x]);
+            /*10500*/ EMIT_STATE(NTE_SAMPLER_ASTC0(x), sv->TE_SAMPLER_ASTC0);
+         }
+      }
+   }
    etna_coalesce_end(stream, &coalesce);
    /* end only EMIT_STATE */
 

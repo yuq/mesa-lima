@@ -173,6 +173,7 @@ etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
    struct etna_context *ctx = etna_context(pctx);
    const uint32_t format = translate_texture_format(so->format);
    const bool ext = !!(format & EXT_FORMAT);
+   const bool astc = !!(format & ASTC_FORMAT);
    const uint32_t swiz = get_texture_swiz(so->format, so->swizzle_r,
                                           so->swizzle_g, so->swizzle_b,
                                           so->swizzle_a);
@@ -207,7 +208,7 @@ etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
    sv->base.context = pctx;
 
    /* merged with sampler state */
-   sv->TE_SAMPLER_CONFIG0 = COND(!ext, VIVS_TE_SAMPLER_CONFIG0_FORMAT(format));
+   sv->TE_SAMPLER_CONFIG0 = COND(!ext && !astc, VIVS_TE_SAMPLER_CONFIG0_FORMAT(format));
    sv->TE_SAMPLER_CONFIG0_MASK = 0xffffffff;
 
    switch (sv->base.target) {
@@ -231,13 +232,19 @@ etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
    }
 
    sv->TE_SAMPLER_CONFIG1 = COND(ext, VIVS_TE_SAMPLER_CONFIG1_FORMAT_EXT(format)) |
+                            COND(astc, VIVS_TE_SAMPLER_CONFIG1_FORMAT_EXT(TEXTURE_FORMAT_EXT_ASTC)) |
                             VIVS_TE_SAMPLER_CONFIG1_HALIGN(res->halign) | swiz;
+   sv->TE_SAMPLER_ASTC0 = COND(astc, VIVS_NTE_SAMPLER_ASTC0_ASTC_FORMAT(format)) |
+                          VIVS_NTE_SAMPLER_ASTC0_UNK8(0xc) |
+                          VIVS_NTE_SAMPLER_ASTC0_UNK16(0xc) |
+                          VIVS_NTE_SAMPLER_ASTC0_UNK24(0xc);
    sv->TE_SAMPLER_SIZE = VIVS_TE_SAMPLER_SIZE_WIDTH(res->base.width0) |
                          VIVS_TE_SAMPLER_SIZE_HEIGHT(res->base.height0);
    sv->TE_SAMPLER_LOG_SIZE =
       VIVS_TE_SAMPLER_LOG_SIZE_WIDTH(etna_log2_fixp55(res->base.width0)) |
       VIVS_TE_SAMPLER_LOG_SIZE_HEIGHT(etna_log2_fixp55(res->base.height0)) |
-      COND(util_format_is_srgb(so->format), VIVS_TE_SAMPLER_LOG_SIZE_SRGB);
+      COND(util_format_is_srgb(so->format) && !astc, VIVS_TE_SAMPLER_LOG_SIZE_SRGB) |
+      COND(astc, VIVS_TE_SAMPLER_LOG_SIZE_ASTC);
 
    /* Set up levels-of-detail */
    for (int lod = 0; lod <= res->base.last_level; ++lod) {

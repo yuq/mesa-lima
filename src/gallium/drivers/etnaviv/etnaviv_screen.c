@@ -500,6 +500,10 @@ gpu_supports_texure_format(struct etna_screen *screen, uint32_t fmt,
          supported = VIV_FEATURE(screen, chipMinorFeatures2, HALTI1);
    }
 
+   if (fmt & ASTC_FORMAT) {
+      supported = screen->specs.tex_astc;
+   }
+
    if (!supported)
       return false;
 
@@ -788,6 +792,8 @@ etna_get_specs(struct etna_screen *screen)
    screen->specs.single_buffer = VIV_FEATURE(screen, chipMinorFeatures4, SINGLE_BUFFER);
    if (screen->specs.single_buffer)
       DBG("etnaviv: Single buffer mode enabled with %d pixel pipes\n", screen->specs.pixel_pipes);
+
+   screen->specs.tex_astc = VIV_FEATURE(screen, chipMinorFeatures4, TEXTURE_ASTC);
 
    return true;
 
