@@ -2255,13 +2255,13 @@ void radv_GetBufferMemoryRequirements2KHR(
 {
 	radv_GetBufferMemoryRequirements(device, pInfo->buffer,
                                         &pMemoryRequirements->memoryRequirements);
-
+	RADV_FROM_HANDLE(radv_buffer, buffer, pInfo->buffer);
 	vk_foreach_struct(ext, pMemoryRequirements->pNext) {
 		switch (ext->sType) {
 		case VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS_KHR: {
 			VkMemoryDedicatedRequirementsKHR *req =
 			               (VkMemoryDedicatedRequirementsKHR *) ext;
-			req->requiresDedicatedAllocation = false;
+			req->requiresDedicatedAllocation = buffer->shareable;
 			req->prefersDedicatedAllocation = req->requiresDedicatedAllocation;
 			break;
 		}
@@ -2774,6 +2774,9 @@ VkResult radv_CreateBuffer(
 	buffer->bo = NULL;
 	buffer->offset = 0;
 	buffer->flags = pCreateInfo->flags;
+
+	buffer->shareable = vk_find_struct_const(pCreateInfo->pNext,
+						 EXTERNAL_MEMORY_BUFFER_CREATE_INFO_KHR) != NULL;
 
 	if (pCreateInfo->flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT) {
 		buffer->bo = device->ws->buffer_create(device->ws,
