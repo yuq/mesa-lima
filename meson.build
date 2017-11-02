@@ -155,14 +155,6 @@ if _drivers != ''
   with_dri = true
 endif
 
-if not (with_dri or with_gallium)
-  with_gles1 = false
-  with_gles2 = false
-  with_opengl = false
-  with_any_opengl = false
-  with_shared_glapi = false
-endif
-
 if with_dri_swrast and with_gallium_softpipe
   error('Only one swrast provider can be built')
 endif
@@ -193,6 +185,29 @@ if _platforms != ''
   with_platform_drm = _split.contains('drm')
   with_platform_surfaceless = _split.contains('surfaceless')
   egl_native_platform = _split[0]
+endif
+
+with_glx = get_option('glx')
+if with_glx == 'auto'
+  if with_dri
+    with_glx = 'dri'
+  elif with_gallium
+    with_glx = 'gallium-xlib'
+  elif with_platform_x11 and with_any_opengl and not with_any_vk
+    # The automatic behavior should not be to turn on xlib based glx when
+    # building only vulkan drivers
+    with_glx = 'xlib'
+  else
+    with_glx = 'disabled'
+  endif
+endif
+
+if not (with_dri or with_gallium or with_glx == 'xlib')
+  with_gles1 = false
+  with_gles2 = false
+  with_opengl = false
+  with_any_opengl = false
+  with_shared_glapi = false
 endif
 
 with_gbm = get_option('gbm')
@@ -229,7 +244,6 @@ if with_egl and with_gallium_radeonsi and not (with_platform_drm or with_platfor
 endif
 
 pre_args += '-DGLX_USE_TLS'
-with_glx = get_option('glx')
 if with_glx != 'disabled'
   if not (with_platform_x11 and with_any_opengl)
     if with_glx == 'auto'
@@ -243,18 +257,12 @@ if with_glx != 'disabled'
     elif with_dri
       error('gallium-xlib conflicts with any dri driver')
     endif
+  elif with_glx == 'xlib' 
+    if with_dri
+      error('xlib conflicts with any dri driver')
+    endif
   elif with_glx == 'dri' and not with_dri
     error('dri based GLX requires at least one DRI driver')
-  elif with_glx == 'auto'
-    if with_dri
-      with_glx = 'dri'
-    elif with_gallium
-      with_glx = 'gallium-xlib'
-    elif with_platform_x11 and with_any_opengl
-      with_glx = 'xlib'
-    else
-      with_glx = 'disabled'
-    endif
   endif
 endif
 
@@ -346,8 +354,7 @@ if with_platform_x11
     pre_args += '-DHAVE_X11_PLATFORM'
   endif
   if with_glx == 'xlib'
-    # TODO
-    error('TODO')
+    pre_args += '-DUSE_XSHM'
   elif with_glx == 'gallium-xlib'
     # TODO
     error('TODO')
@@ -830,7 +837,11 @@ dep_xcb_sync = []
 dep_xcb_xfixes = []
 dep_xshmfence = []
 if with_platform_x11
-  if with_glx == 'dri' and with_dri_platform == 'drm'
+  if with_glx == 'xlib'
+    dep_x11 = dependency('x11')
+    dep_xext = dependency('xext')
+    dep_xcb = dependency('xcb')
+  elif with_glx == 'dri' and with_dri_platform == 'drm'
     dep_x11 = dependency('x11')
     dep_xext = dependency('xext')
     dep_xdamage = dependency('xdamage', version : '>= 1.1')
@@ -851,7 +862,7 @@ if with_platform_x11
       dep_xshmfence = dependency('xshmfence', version : '>= 1.1')
     endif
   endif
-  if with_glx != 'disabled'
+  if with_glx == 'dri'
     dep_dri2proto = dependency('dri2proto', version : '>= 2.8')
     dep_glproto = dependency('glproto', version : '>= 1.4.14')
   endif
