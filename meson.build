@@ -152,7 +152,6 @@ if _drivers != ''
   with_gallium_etnaviv = _split.contains('etnaviv')
   with_gallium_imx = _split.contains('imx')
   with_gallium = true
-  with_dri = true
 endif
 
 if with_dri_swrast and with_gallium_softpipe
@@ -192,7 +191,9 @@ if with_glx == 'auto'
   if with_dri
     with_glx = 'dri'
   elif with_gallium
-    with_glx = 'gallium-xlib'
+    # Even when building just gallium drivers the user probably wants dri
+    with_glx = 'dri'
+    with_dri = true
   elif with_platform_x11 and with_any_opengl and not with_any_vk
     # The automatic behavior should not be to turn on xlib based glx when
     # building only vulkan drivers
@@ -202,7 +203,7 @@ if with_glx == 'auto'
   endif
 endif
 
-if not (with_dri or with_gallium or with_glx == 'xlib')
+if not (with_dri or with_gallium or with_glx == 'xlib' or with_glx == 'gallium-xlib')
   with_gles1 = false
   with_gles2 = false
   with_opengl = false
@@ -254,6 +255,8 @@ if with_glx != 'disabled'
   elif with_glx == 'gallium-xlib' 
     if not with_gallium
       error('Gallium-xlib based GLX requires at least one gallium driver')
+    elif not with_gallium_softpipe
+      error('Gallium-xlib based GLX requires softpipe or llvmpipe.')
     elif with_dri
       error('gallium-xlib conflicts with any dri driver')
     endif
@@ -353,11 +356,8 @@ if with_platform_x11
   if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
     pre_args += '-DHAVE_X11_PLATFORM'
   endif
-  if with_glx == 'xlib'
+  if with_glx == 'xlib' or with_glx == 'gallium-xlib'
     pre_args += '-DUSE_XSHM'
-  elif with_glx == 'gallium-xlib'
-    # TODO
-    error('TODO')
   else
     pre_args += '-DGLX_INDIRECT_RENDERING'
     if with_glx_direct
@@ -837,7 +837,7 @@ dep_xcb_sync = []
 dep_xcb_xfixes = []
 dep_xshmfence = []
 if with_platform_x11
-  if with_glx == 'xlib'
+  if with_glx == 'xlib' or with_glx == 'gallium-xlib'
     dep_x11 = dependency('x11')
     dep_xext = dependency('xext')
     dep_xcb = dependency('xcb')

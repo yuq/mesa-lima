@@ -65,9 +65,15 @@ endif
 if with_gallium_imx
   subdir('winsys/imx/drm')
 endif
+if with_glx == 'gallium-xlib'
+  subdir('winsys/sw/xlib')
+endif
 subdir('state_trackers/dri')
 if with_osmesa == 'gallium'
   subdir('state_trackers/osmesa')
+endif
+if with_glx == 'gallium-xlib'
+  subdir('state_trackers/glx/xlib')
 endif
 # TODO: i915
 # TODO: SVGA
@@ -75,7 +81,6 @@ endif
 # TODO: r600
 # TODO: SWR
 # TODO: virgl
-# TODO: winsys/sw/xlib
 # TODO: clover
 if with_dri and with_gallium
   subdir('targets/dri')
@@ -83,7 +88,9 @@ endif
 if with_osmesa == 'gallium'
   subdir('targets/osmesa')
 endif
-# TODO: xlib-glx
+if with_glx == 'gallium-xlib'
+  subdir('targets/libgl-xlib')
+endif
 # TODO: OMX
 # TODO: VA
 # TODO: vdpau
