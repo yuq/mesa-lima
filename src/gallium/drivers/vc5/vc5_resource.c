@@ -462,10 +462,14 @@ vc5_setup_slices(struct vc5_resource *rsc)
                         } else {
                                 slice->tiling = VC5_TILING_UIF_NO_XOR;
 
+                                /* We align the width to a 4-block column of
+                                 * UIF blocks, but we only align height to UIF
+                                 * blocks.
+                                 */
                                 level_width = align(level_width,
                                                     4 * uif_block_w);
                                 level_height = align(level_height,
-                                                     4 * uif_block_h);
+                                                     uif_block_h);
                         }
                 }
 
