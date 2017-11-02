@@ -134,7 +134,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
 
-	LLVMTypeRef v3i32;
 	LLVMTypeRef v4i32;
 	LLVMTypeRef v8i32;
 	LLVMTypeRef f64;
@@ -734,9 +733,9 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		radv_define_common_user_sgprs_phase1(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_info, &args, &desc_sets);
 		if (ctx->shader_info->info.cs.grid_components_used)
 			add_user_sgpr_argument(&args, LLVMVectorType(ctx->ac.i32, ctx->shader_info->info.cs.grid_components_used), &ctx->num_work_groups); /* grid size */
-		add_sgpr_argument(&args, LLVMVectorType(ctx->ac.i32, 3), &ctx->workgroup_ids);
+		add_sgpr_argument(&args, ctx->ac.v3i32, &ctx->workgroup_ids);
 		add_sgpr_argument(&args, ctx->ac.i32, &ctx->tg_size);
-		add_vgpr_argument(&args, LLVMVectorType(ctx->ac.i32, 3), &ctx->local_invocation_ids);
+		add_vgpr_argument(&args, ctx->ac.v3i32, &ctx->local_invocation_ids);
 		break;
 	case MESA_SHADER_VERTEX:
 		radv_define_common_user_sgprs_phase1(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_info, &args, &desc_sets);
@@ -879,7 +878,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->persp_sample); /* persp sample */
 		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->persp_center); /* persp center */
 		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->persp_centroid); /* persp centroid */
-		add_vgpr_argument(&args, ctx->v3i32, NULL); /* persp pull model */
+		add_vgpr_argument(&args, ctx->ac.v3i32, NULL); /* persp pull model */
 		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->linear_sample); /* linear sample */
 		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->linear_center); /* linear center */
 		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->linear_centroid); /* linear centroid */
@@ -991,7 +990,6 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 static void setup_types(struct nir_to_llvm_context *ctx)
 {
-	ctx->v3i32 = LLVMVectorType(ctx->ac.i32, 3);
 	ctx->v4i32 = LLVMVectorType(ctx->ac.i32, 4);
 	ctx->v8i32 = LLVMVectorType(ctx->ac.i32, 8);
 	ctx->f32 = LLVMFloatTypeInContext(ctx->context);
