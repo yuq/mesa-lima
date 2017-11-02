@@ -134,7 +134,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
 
-	LLVMTypeRef i8;
 	LLVMTypeRef i16;
 	LLVMTypeRef i64;
 	LLVMTypeRef v2i32;
@@ -628,15 +627,15 @@ radv_define_common_user_sgprs_phase1(struct nir_to_llvm_context *ctx,
 	if (!user_sgpr_info->indirect_all_descriptor_sets) {
 		for (unsigned i = 0; i < num_sets; ++i) {
 			if (ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
-				add_user_sgpr_array_argument(args, const_array(ctx->i8, 1024 * 1024), &ctx->descriptor_sets[i]);
+				add_user_sgpr_array_argument(args, const_array(ctx->ac.i8, 1024 * 1024), &ctx->descriptor_sets[i]);
 			}
 		}
 	} else
-		add_user_sgpr_array_argument(args, const_array(const_array(ctx->i8, 1024 * 1024), 32), desc_sets);
+		add_user_sgpr_array_argument(args, const_array(const_array(ctx->ac.i8, 1024 * 1024), 32), desc_sets);
 
 	if (ctx->shader_info->info.needs_push_constants) {
 		/* 1 for push constants and dynamic descriptors */
-		add_user_sgpr_array_argument(args, const_array(ctx->i8, 1024 * 1024), &ctx->push_constants);
+		add_user_sgpr_array_argument(args, const_array(ctx->ac.i8, 1024 * 1024), &ctx->push_constants);
 	}
 }
 
@@ -925,7 +924,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		set_userdata_location_shader(ctx, AC_UD_SCRATCH_RING_OFFSETS, &user_sgpr_idx, 2);
 		if (ctx->options->supports_spill) {
 			ctx->ring_offsets = ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.implicit.buffer.ptr",
-							       LLVMPointerType(ctx->i8, CONST_ADDR_SPACE),
+							       LLVMPointerType(ctx->ac.i8, CONST_ADDR_SPACE),
 							       NULL, 0, AC_FUNC_ATTR_READNONE);
 			ctx->ring_offsets = LLVMBuildBitCast(ctx->builder, ctx->ring_offsets,
 							     const_array(ctx->v4i32, 16), "");
@@ -997,7 +996,6 @@ static void create_function(struct nir_to_llvm_context *ctx,
 static void setup_types(struct nir_to_llvm_context *ctx)
 {
 	ctx->voidt = LLVMVoidTypeInContext(ctx->context);
-	ctx->i8 = LLVMIntTypeInContext(ctx->context, 8);
 	ctx->i16 = LLVMIntTypeInContext(ctx->context, 16);
 	ctx->i64 = LLVMIntTypeInContext(ctx->context, 64);
 	ctx->v2i32 = LLVMVectorType(ctx->ac.i32, 2);
