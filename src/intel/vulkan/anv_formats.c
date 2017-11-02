@@ -541,10 +541,6 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
                                           VkFormat vk_format,
                                           VkFormatProperties *out_properties)
 {
-   int gen = physical_device->info.gen * 10;
-   if (physical_device->info.is_haswell)
-      gen += 5;
-
    const struct anv_format *format = anv_get_format(vk_format);
    VkFormatFeatureFlags linear = 0, tiled = 0, buffer = 0;
    if (format == NULL) {
