@@ -64,6 +64,8 @@
 #define R600_MAX_DRIVER_CONST_BUFFERS 3
 #define R600_MAX_CONST_BUFFERS (R600_MAX_USER_CONST_BUFFERS + R600_MAX_DRIVER_CONST_BUFFERS)
 
+#define EG_MAX_ATOMIC_BUFFERS 8
+
 /* start driver buffers after user buffers */
 #define R600_BUFFER_INFO_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS)
 #define R600_UCP_SIZE (4*4*8)
@@ -247,6 +249,7 @@ struct r600_screen {
 	struct r600_common_screen	b;
 	bool				has_msaa;
 	bool				has_compressed_msaa_texturing;
+	bool				has_atomics;
 
 	/*for compute global memory binding, we allocate stuff here, instead of
 	 * buffers.
@@ -416,6 +419,12 @@ struct r600_shader_state {
 	struct r600_pipe_shader *shader;
 };
 
+struct r600_atomic_buffer_state {
+	uint32_t enabled_mask;
+	uint32_t dirty_mask;
+	struct pipe_shader_buffer buffer[EG_MAX_ATOMIC_BUFFERS];
+};
+
 struct r600_context {
 	struct r600_common_context	b;
 	struct r600_screen		*screen;
@@ -470,6 +479,7 @@ struct r600_context {
 	struct r600_config_state	config_state;
 	struct r600_stencil_ref_state	stencil_ref;
 	struct r600_vgt_state		vgt_state;
+	struct r600_atomic_buffer_state atomic_buffer_state;
 	/* Shaders and shader resources. */
 	struct r600_cso_state		vertex_fetch_shader;
 	struct r600_shader_state        hw_shader_stages[EG_NUM_HW_STAGES];
@@ -531,6 +541,9 @@ struct r600_context {
 	struct r600_resource	*last_trace_buf;
 	struct r600_resource	*trace_buf;
 	unsigned		trace_id;
+
+	struct pipe_resource *append_fence;
+	uint32_t append_fence_id;
 };
 
 static inline void r600_emit_command_buffer(struct radeon_winsys_cs *cs,
@@ -959,4 +972,13 @@ unsigned r600_conv_prim_to_gs_out(unsigned mode);
 void eg_trace_emit(struct r600_context *rctx);
 void eg_dump_debug_state(struct pipe_context *ctx, FILE *f,
 			 unsigned flags);
+
+struct r600_shader_atomic;
+bool evergreen_emit_atomic_buffer_setup(struct r600_context *rctx,
+					struct r600_shader_atomic *combined_atomics,
+					uint8_t *atomic_used_mask_p);
+void evergreen_emit_atomic_buffer_save(struct r600_context *rctx,
+				       struct r600_shader_atomic *combined_atomics,
+				       uint8_t *atomic_used_mask_p);
+
 #endif

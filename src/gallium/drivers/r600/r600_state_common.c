@@ -698,6 +698,38 @@ static void r600_update_compressed_colortex_mask(struct r600_samplerview_state *
 	}
 }
 
+static int r600_get_hw_atomic_count(const struct pipe_context *ctx,
+				    enum pipe_shader_type shader)
+{
+	const struct r600_context *rctx = (struct r600_context *)ctx;
+	int value = 0;
+	switch (shader) {
+	case PIPE_SHADER_FRAGMENT:
+	case PIPE_SHADER_COMPUTE:
+	default:
+		break;
+	case PIPE_SHADER_VERTEX:
+		value = rctx->ps_shader->info.file_count[TGSI_FILE_HW_ATOMIC];
+		break;
+	case PIPE_SHADER_GEOMETRY:
+		value = rctx->ps_shader->info.file_count[TGSI_FILE_HW_ATOMIC] +
+			rctx->vs_shader->info.file_count[TGSI_FILE_HW_ATOMIC];
+		break;
+	case PIPE_SHADER_TESS_EVAL:
+		value = rctx->ps_shader->info.file_count[TGSI_FILE_HW_ATOMIC] +
+			rctx->vs_shader->info.file_count[TGSI_FILE_HW_ATOMIC] +
+			(rctx->gs_shader ? rctx->gs_shader->info.file_count[TGSI_FILE_HW_ATOMIC] : 0);
+		break;
+	case PIPE_SHADER_TESS_CTRL:
+		value = rctx->ps_shader->info.file_count[TGSI_FILE_HW_ATOMIC] +
+			rctx->vs_shader->info.file_count[TGSI_FILE_HW_ATOMIC] +
+			(rctx->gs_shader ? rctx->gs_shader->info.file_count[TGSI_FILE_HW_ATOMIC] : 0) +
+			rctx->tes_shader->info.file_count[TGSI_FILE_HW_ATOMIC];
+		break;
+	}
+	return value;
+}
+
 /* Compute the key for the hw shader variant */
 static inline void r600_shader_selector_key(const struct pipe_context *ctx,
 		const struct r600_pipe_shader_selector *sel,
@@ -716,11 +748,14 @@ static inline void r600_shader_selector_key(const struct pipe_context *ctx,
 			key->vs.as_gs_a = true;
 			key->vs.prim_id_out = rctx->ps_shader->current->shader.input[rctx->ps_shader->current->shader.ps_prim_id_input].spi_sid;
 		}
+		key->vs.first_atomic_counter = r600_get_hw_atomic_count(ctx, PIPE_SHADER_VERTEX);
 		break;
 	}
 	case PIPE_SHADER_GEOMETRY:
+		key->gs.first_atomic_counter = r600_get_hw_atomic_count(ctx, PIPE_SHADER_GEOMETRY);
 		break;
 	case PIPE_SHADER_FRAGMENT: {
+		key->ps.first_atomic_counter = r600_get_hw_atomic_count(ctx, PIPE_SHADER_FRAGMENT);
 		key->ps.color_two_side = rctx->rasterizer && rctx->rasterizer->two_side;
 		key->ps.alpha_to_one = rctx->alpha_to_one &&
 				      rctx->rasterizer && rctx->rasterizer->multisample_enable &&
@@ -733,9 +768,11 @@ static inline void r600_shader_selector_key(const struct pipe_context *ctx,
 	}
 	case PIPE_SHADER_TESS_EVAL:
 		key->tes.as_es = (rctx->gs_shader != NULL);
+		key->tes.first_atomic_counter = r600_get_hw_atomic_count(ctx, PIPE_SHADER_TESS_EVAL);
 		break;
 	case PIPE_SHADER_TESS_CTRL:
 		key->tcs.prim_mode = rctx->tes_shader->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
+		key->tcs.first_atomic_counter = r600_get_hw_atomic_count(ctx, PIPE_SHADER_TESS_CTRL);
 		break;
 	default:
 		assert(0);
@@ -1700,6 +1737,8 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	unsigned num_patches, dirty_tex_counter, index_offset = 0;
 	unsigned index_size = info->index_size;
 	int index_bias;
+	struct r600_shader_atomic combined_atomics[8];
+	uint8_t atomic_used_mask;
 
 	if (!info->indirect && !info->count && (index_size || !info->count_from_stream_output)) {
 		return;
@@ -1738,6 +1777,9 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	rctx->current_rast_prim = (rctx->gs_shader)? rctx->gs_shader->gs_output_prim
 		: (rctx->tes_shader)? rctx->tes_shader->info.properties[TGSI_PROPERTY_TES_PRIM_MODE]
 		: info->mode;
+
+	if (rctx->b.chip_class >= EVERGREEN)
+		evergreen_emit_atomic_buffer_setup(rctx, combined_atomics, &atomic_used_mask);
 
 	if (index_size) {
 		index_offset += info->start * index_size;
@@ -2018,6 +2060,10 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_SQ_NON_EVENT));
 	}
+
+
+	if (rctx->b.chip_class >= EVERGREEN)
+		evergreen_emit_atomic_buffer_save(rctx, combined_atomics, &atomic_used_mask);
 
 	if (rctx->trace_buf)
 		eg_trace_emit(rctx);

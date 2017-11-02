@@ -56,15 +56,25 @@ struct r600_shader_io {
 	int			ring_offset;
 };
 
+struct r600_shader_atomic {
+	unsigned start, end;
+	unsigned buffer_id;
+	unsigned hw_idx;
+	unsigned array_id;
+};
+
 struct r600_shader {
 	unsigned		processor_type;
 	struct r600_bytecode		bc;
 	unsigned		ninput;
 	unsigned		noutput;
+	unsigned                nhwatomic;
 	unsigned		nlds;
 	unsigned		nsys_inputs;
 	struct r600_shader_io	input[64];
 	struct r600_shader_io	output[64];
+	struct r600_shader_atomic atomics[8];
+	unsigned                nhwatomic_ranges;
 	boolean			uses_kill;
 	boolean			fs_write_all;
 	boolean			two_side;
@@ -105,26 +115,35 @@ struct r600_shader {
 	struct r600_shader_array * arrays;
 
 	boolean			uses_doubles;
+	boolean                 uses_atomics;
+	uint8_t                 atomic_base;
 };
 
 union r600_shader_key {
 	struct {
 		unsigned	nr_cbufs:4;
+		unsigned        first_atomic_counter:4;
 		unsigned	color_two_side:1;
 		unsigned	alpha_to_one:1;
 	} ps;
 	struct {
 		unsigned	prim_id_out:8;
+		unsigned        first_atomic_counter:4;
 		unsigned	as_es:1; /* export shader */
 		unsigned	as_ls:1; /* local shader */
 		unsigned	as_gs_a:1;
 	} vs;
 	struct {
+		unsigned        first_atomic_counter:4;
 		unsigned	as_es:1;
 	} tes;
 	struct {
+		unsigned        first_atomic_counter:4;
 		unsigned	prim_mode:3;
 	} tcs;
+	struct {
+		unsigned        first_atomic_counter:4;
+	} gs;
 };
 
 struct r600_shader_array {

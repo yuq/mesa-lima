@@ -194,6 +194,8 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 	/* disable SB for shaders using doubles */
 	use_sb &= !shader->shader.uses_doubles;
 
+	use_sb &= !shader->shader.uses_atomics;
+
 	/* Check if the bytecode has already been built. */
 	if (!shader->shader.bc.bytecode) {
 		r = r600_bytecode_build(&shader->shader.bc);
@@ -407,6 +409,7 @@ static int tgsi_is_supported(struct r600_shader_ctx *ctx)
 		if (i->Src[j].Register.Dimension) {
 		   switch (i->Src[j].Register.File) {
 		   case TGSI_FILE_CONSTANT:
+		   case TGSI_FILE_HW_ATOMIC:
 			   break;
 		   case TGSI_FILE_INPUT:
 			   if (ctx->type == PIPE_SHADER_GEOMETRY ||
@@ -964,6 +967,17 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 	case TGSI_FILE_SAMPLER:
 	case TGSI_FILE_SAMPLER_VIEW:
 	case TGSI_FILE_ADDRESS:
+		break;
+
+	case TGSI_FILE_HW_ATOMIC:
+		i = ctx->shader->nhwatomic_ranges;
+		ctx->shader->atomics[i].start = d->Range.First;
+		ctx->shader->atomics[i].end = d->Range.Last;
+		ctx->shader->atomics[i].hw_idx = ctx->shader->atomic_base + ctx->shader->nhwatomic;
+		ctx->shader->atomics[i].array_id = d->Array.ArrayID;
+		ctx->shader->atomics[i].buffer_id = d->Dim.Index2D;
+		ctx->shader->nhwatomic_ranges++;
+		ctx->shader->nhwatomic += count;
 		break;
 
 	case TGSI_FILE_SYSTEM_VALUE:
@@ -2946,6 +2960,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	shader->indirect_files = ctx.info.indirect_files;
 
 	shader->uses_doubles = ctx.info.uses_doubles;
+	shader->uses_atomics = ctx.info.file_mask[TGSI_FILE_HW_ATOMIC];
 	shader->nsys_inputs = 0;
 
 	indirect_gprs = ctx.info.indirect_files & ~((1 << TGSI_FILE_CONSTANT) | (1 << TGSI_FILE_SAMPLER));
@@ -2959,6 +2974,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		shader->vs_as_gs_a = key.vs.as_gs_a;
 		shader->vs_as_es = key.vs.as_es;
 		shader->vs_as_ls = key.vs.as_ls;
+		shader->atomic_base = key.vs.first_atomic_counter;
 		if (shader->vs_as_es)
 			ring_outputs = true;
 		if (shader->vs_as_ls)
@@ -2966,20 +2982,24 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		ring_outputs = true;
+		shader->atomic_base = key.gs.first_atomic_counter;
 		break;
 	case PIPE_SHADER_TESS_CTRL:
 		shader->tcs_prim_mode = key.tcs.prim_mode;
+		shader->atomic_base = key.tcs.first_atomic_counter;
 		lds_outputs = true;
 		lds_inputs = true;
 		break;
 	case PIPE_SHADER_TESS_EVAL:
 		shader->tes_as_es = key.tes.as_es;
+		shader->atomic_base = key.tes.first_atomic_counter;
 		lds_inputs = true;
 		if (shader->tes_as_es)
 			ring_outputs = true;
 		break;
 	case PIPE_SHADER_FRAGMENT:
 		shader->two_side = key.ps.color_two_side;
+		shader->atomic_base = key.ps.first_atomic_counter;
 		break;
 	default:
 		break;
@@ -7533,6 +7553,181 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 	return 0;
 }
 
+static int find_hw_atomic_counter(struct r600_shader_ctx *ctx,
+				  struct tgsi_full_src_register *src)
+{
+	int i;
+
+	if (src->Register.Indirect) {
+		for (i = 0; i < ctx->shader->nhwatomic_ranges; i++) {
+			if (src->Indirect.ArrayID == ctx->shader->atomics[i].array_id)
+				return ctx->shader->atomics[i].hw_idx;
+		}
+	} else {
+		uint32_t index = src->Register.Index;
+		for (i = 0; i < ctx->shader->nhwatomic_ranges; i++) {
+			if (ctx->shader->atomics[i].buffer_id != src->Dimension.Index)
+				continue;
+			if (index > ctx->shader->atomics[i].end)
+				continue;
+			if (index < ctx->shader->atomics[i].start)
+				continue;
+			uint32_t offset = (index - ctx->shader->atomics[i].start);
+			return ctx->shader->atomics[i].hw_idx + offset;
+		}
+	}
+	assert(0);
+	return -1;
+}
+
+
+static int tgsi_load_gds(struct r600_shader_ctx *ctx)
+{
+	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
+	int r;
+	struct r600_bytecode_gds gds;
+	int uav_id = 0;
+	int uav_index_mode = 0;
+
+	uav_id = find_hw_atomic_counter(ctx, &inst->Src[0]);
+
+	if (inst->Src[0].Register.Indirect)
+		uav_index_mode = 2;
+
+	memset(&gds, 0, sizeof(struct r600_bytecode_gds));
+	gds.op = FETCH_OP_GDS_READ_RET;
+	gds.dst_gpr = ctx->file_offset[inst->Dst[0].Register.File] + inst->Dst[0].Register.Index;
+	gds.uav_id = uav_id;
+	gds.uav_index_mode = uav_index_mode;
+	gds.src_gpr = ctx->temp_reg;
+	gds.src_sel_x = 4;
+	gds.src_sel_y = 4;
+	gds.src_sel_z = 4;
+	gds.dst_sel_x = 0;
+	gds.dst_sel_y = 7;
+	gds.dst_sel_z = 7;
+	gds.dst_sel_w = 7;
+	gds.src_gpr2 = ctx->temp_reg;
+	gds.alloc_consume = 1;
+	r = r600_bytecode_add_gds(ctx->bc, &gds);
+	if (r)
+		return r;
+
+	ctx->bc->cf_last->vpm = 1;
+	return 0;
+}
+
+static int tgsi_load(struct r600_shader_ctx *ctx)
+{
+	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
+	if (inst->Src[0].Register.File == TGSI_FILE_HW_ATOMIC)
+		return tgsi_load_gds(ctx);
+	return 0;
+}
+
+static int get_gds_op(int opcode)
+{
+	switch (opcode) {
+	case TGSI_OPCODE_ATOMUADD:
+		return FETCH_OP_GDS_ADD_RET;
+	case TGSI_OPCODE_ATOMAND:
+		return FETCH_OP_GDS_AND_RET;
+	case TGSI_OPCODE_ATOMOR:
+		return FETCH_OP_GDS_OR_RET;
+	case TGSI_OPCODE_ATOMXOR:
+		return FETCH_OP_GDS_XOR_RET;
+	case TGSI_OPCODE_ATOMUMIN:
+		return FETCH_OP_GDS_MIN_UINT_RET;
+	case TGSI_OPCODE_ATOMUMAX:
+		return FETCH_OP_GDS_MAX_UINT_RET;
+	case TGSI_OPCODE_ATOMXCHG:
+		return FETCH_OP_GDS_XCHG_RET;
+	case TGSI_OPCODE_ATOMCAS:
+		return FETCH_OP_GDS_CMP_XCHG_RET;
+	default:
+		return -1;
+	}
+}
+
+static int tgsi_atomic_op_gds(struct r600_shader_ctx *ctx)
+{
+	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
+	struct r600_bytecode_gds gds;
+	struct r600_bytecode_alu alu;
+	int gds_op = get_gds_op(inst->Instruction.Opcode);
+	int r;
+	int uav_id = 0;
+	int uav_index_mode = 0;
+
+	if (gds_op == -1) {
+		fprintf(stderr, "unknown GDS op for opcode %d\n", inst->Instruction.Opcode);
+		return -1;
+	}
+
+	uav_id = find_hw_atomic_counter(ctx, &inst->Src[0]);
+
+	if (inst->Src[0].Register.Indirect)
+		uav_index_mode = 2;
+
+	if (inst->Src[2].Register.File == TGSI_FILE_IMMEDIATE) {
+		int value = (ctx->literals[4 * inst->Src[2].Register.Index + inst->Src[2].Register.SwizzleX]);
+		int abs_value = abs(value);
+		if (abs_value != value && gds_op == FETCH_OP_GDS_ADD_RET)
+			gds_op = FETCH_OP_GDS_SUB_RET;
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ALU_OP1_MOV;
+		alu.dst.sel = ctx->temp_reg;
+		alu.dst.chan = 0;
+		alu.src[0].sel = V_SQ_ALU_SRC_LITERAL;
+		alu.src[0].value = abs_value;
+		alu.last = 1;
+		alu.dst.write = 1;
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+	} else {
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ALU_OP1_MOV;
+		alu.dst.sel = ctx->temp_reg;
+		alu.dst.chan = 0;
+		r600_bytecode_src(&alu.src[0], &ctx->src[2], 0);
+		alu.last = 1;
+		alu.dst.write = 1;
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+	}
+
+	memset(&gds, 0, sizeof(struct r600_bytecode_gds));
+	gds.op = gds_op;
+	gds.dst_gpr = ctx->file_offset[inst->Dst[0].Register.File] + inst->Dst[0].Register.Index;
+	gds.uav_id = uav_id;
+	gds.uav_index_mode = uav_index_mode;
+	gds.src_gpr = ctx->temp_reg;
+	gds.src_gpr2 = ctx->temp_reg;
+	gds.src_sel_x = 4;
+	gds.src_sel_y = 0;
+	gds.src_sel_z = 4;
+	gds.dst_sel_x = 0;
+	gds.dst_sel_y = 7;
+	gds.dst_sel_z = 7;
+	gds.dst_sel_w = 7;
+	gds.alloc_consume = 1;
+	r = r600_bytecode_add_gds(ctx->bc, &gds);
+	if (r)
+		return r;
+	ctx->bc->cf_last->vpm = 1;
+	return 0;
+}
+
+static int tgsi_atomic_op(struct r600_shader_ctx *ctx)
+{
+	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
+	if (inst->Src[0].Register.File == TGSI_FILE_HW_ATOMIC)
+		return tgsi_atomic_op_gds(ctx);
+	return 0;
+}
+
 static int tgsi_lrp(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
@@ -9190,22 +9385,22 @@ static const struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_UCMP]	= { ALU_OP0_NOP, tgsi_ucmp},
 	[TGSI_OPCODE_IABS]	= { 0, tgsi_iabs},
 	[TGSI_OPCODE_ISSG]	= { 0, tgsi_issg},
-	[TGSI_OPCODE_LOAD]	= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_LOAD]	= { ALU_OP0_NOP, tgsi_load},
 	[TGSI_OPCODE_STORE]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[163]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[164]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[165]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_BARRIER]	= { ALU_OP0_GROUP_BARRIER, tgsi_barrier},
-	[TGSI_OPCODE_ATOMUADD]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMXCHG]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMCAS]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMAND]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMOR]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMXOR]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMUMIN]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMUMAX]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMIMIN]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMIMAX]	= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_ATOMUADD]	= { V_RAT_INST_ADD_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMXCHG]	= { V_RAT_INST_XCHG_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMCAS]	= { V_RAT_INST_CMPXCHG_INT_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMAND]	= { V_RAT_INST_AND_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMOR]	= { V_RAT_INST_OR_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMXOR]	= { V_RAT_INST_XOR_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMUMIN]	= { V_RAT_INST_MIN_UINT_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMUMAX]	= { V_RAT_INST_MAX_UINT_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMIMIN]	= { V_RAT_INST_MIN_INT_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMIMAX]	= { V_RAT_INST_MAX_INT_RTN, tgsi_atomic_op},
 	[TGSI_OPCODE_TEX2]	= { FETCH_OP_SAMPLE, tgsi_tex},
 	[TGSI_OPCODE_TXB2]	= { FETCH_OP_SAMPLE_LB, tgsi_tex},
 	[TGSI_OPCODE_TXL2]	= { FETCH_OP_SAMPLE_L, tgsi_tex},
@@ -9413,22 +9608,22 @@ static const struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_UCMP]	= { ALU_OP0_NOP, tgsi_ucmp},
 	[TGSI_OPCODE_IABS]	= { 0, tgsi_iabs},
 	[TGSI_OPCODE_ISSG]	= { 0, tgsi_issg},
-	[TGSI_OPCODE_LOAD]	= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_LOAD]	= { ALU_OP0_NOP, tgsi_load},
 	[TGSI_OPCODE_STORE]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[163]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[164]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[165]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_BARRIER]	= { ALU_OP0_GROUP_BARRIER, tgsi_barrier},
-	[TGSI_OPCODE_ATOMUADD]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMXCHG]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMCAS]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMAND]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMOR]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMXOR]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMUMIN]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMUMAX]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMIMIN]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ATOMIMAX]	= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_ATOMUADD]	= { V_RAT_INST_ADD_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMXCHG]	= { V_RAT_INST_XCHG_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMCAS]	= { V_RAT_INST_CMPXCHG_INT_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMAND]	= { V_RAT_INST_AND_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMOR]	= { V_RAT_INST_OR_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMXOR]	= { V_RAT_INST_XOR_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMUMIN]	= { V_RAT_INST_MIN_UINT_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMUMAX]	= { V_RAT_INST_MAX_UINT_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMIMIN]	= { V_RAT_INST_MIN_INT_RTN, tgsi_atomic_op},
+	[TGSI_OPCODE_ATOMIMAX]	= { V_RAT_INST_MAX_INT_RTN, tgsi_atomic_op},
 	[TGSI_OPCODE_TEX2]	= { FETCH_OP_SAMPLE, tgsi_tex},
 	[TGSI_OPCODE_TXB2]	= { FETCH_OP_SAMPLE_LB, tgsi_tex},
 	[TGSI_OPCODE_TXL2]	= { FETCH_OP_SAMPLE_L, tgsi_tex},

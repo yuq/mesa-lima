@@ -74,6 +74,8 @@ static void r600_destroy_context(struct pipe_context *context)
 	r600_resource_reference(&rctx->dummy_cmask, NULL);
 	r600_resource_reference(&rctx->dummy_fmask, NULL);
 
+	if (rctx->append_fence)
+		pipe_resource_reference((struct pipe_resource**)&rctx->append_fence, NULL);
 	for (sh = 0; sh < PIPE_SHADER_TYPES; sh++) {
 		rctx->b.b.set_constant_buffer(&rctx->b.b, sh, R600_BUFFER_INFO_CONST_BUFFER, NULL);
 		free(rctx->driver_consts[sh].constants);
@@ -186,6 +188,9 @@ static struct pipe_context *r600_create_context(struct pipe_screen *screen,
 					   rctx->b.family == CHIP_CAICOS ||
 					   rctx->b.family == CHIP_CAYMAN ||
 					   rctx->b.family == CHIP_ARUBA);
+
+		rctx->append_fence = pipe_buffer_create(rctx->b.b.screen, PIPE_BIND_CUSTOM,
+							 PIPE_USAGE_DEFAULT, 32);
 		break;
 	default:
 		R600_ERR("Unsupported chip class %d.\n", rctx->b.chip_class);
@@ -605,8 +610,17 @@ static int r600_get_shader_param(struct pipe_screen* pscreen,
 	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
 	case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
 	case PIPE_SHADER_CAP_TGSI_SKIP_MERGE_REGISTERS:
+		return 0;
 	case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTERS:
+		if (rscreen->b.family >= CHIP_CEDAR && rscreen->has_atomics)
+			return 8;
+		return 0;
 	case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTER_BUFFERS:
+		/* having to allocate the atomics out amongst shaders stages is messy,
+		   so give compute 8 buffers and all the others one */
+		if (rscreen->b.family >= CHIP_CEDAR && rscreen->has_atomics) {
+			return EG_MAX_ATOMIC_BUFFERS;
+		}
 		return 0;
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
 		/* due to a bug in the shader compiler, some loops hang
@@ -741,6 +755,7 @@ struct pipe_screen *r600_screen_create(struct radeon_winsys *ws,
 	/* Create the auxiliary context. This must be done last. */
 	rscreen->b.aux_context = rscreen->b.b.context_create(&rscreen->b.b, NULL, 0);
 
+	rscreen->has_atomics = rscreen->b.info.drm_minor >= 44;
 #if 0 /* This is for testing whether aux_context and buffer clearing work correctly. */
 	struct pipe_resource templ = {};
 
