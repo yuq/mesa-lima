@@ -134,7 +134,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
 
-	LLVMTypeRef i16;
 	LLVMTypeRef i64;
 	LLVMTypeRef v2i32;
 	LLVMTypeRef v3i32;
@@ -994,7 +993,6 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 static void setup_types(struct nir_to_llvm_context *ctx)
 {
-	ctx->i16 = LLVMIntTypeInContext(ctx->context, 16);
 	ctx->i64 = LLVMIntTypeInContext(ctx->context, 64);
 	ctx->v2i32 = LLVMVectorType(ctx->ac.i32, 2);
 	ctx->v3i32 = LLVMVectorType(ctx->ac.i32, 3);
