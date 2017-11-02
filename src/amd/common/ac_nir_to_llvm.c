@@ -134,7 +134,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
 
-	LLVMTypeRef f16;
 	LLVMTypeRef v2f32;
 	LLVMTypeRef v4f32;
 
@@ -986,7 +985,6 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 static void setup_types(struct nir_to_llvm_context *ctx)
 {
-	ctx->f16 = LLVMHalfTypeInContext(ctx->context);
 	ctx->v2f32 = LLVMVectorType(ctx->ac.f32, 2);
 	ctx->v4f32 = LLVMVectorType(ctx->ac.f32, 4);
 
@@ -1314,7 +1312,7 @@ static LLVMValueRef emit_f2f16(struct nir_to_llvm_context *ctx,
 	LLVMValueRef cond = NULL;
 
 	src0 = ac_to_float(&ctx->ac, src0);
-	result = LLVMBuildFPTrunc(ctx->builder, src0, ctx->f16, "");
+	result = LLVMBuildFPTrunc(ctx->builder, src0, ctx->ac.f16, "");
 
 	if (ctx->options->chip_class >= VI) {
 		LLVMValueRef args[2];
