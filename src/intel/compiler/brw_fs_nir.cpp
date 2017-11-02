@@ -295,7 +295,7 @@ brw_reg_type_from_bit_size(const unsigned bit_size,
       case 32:
          return BRW_REGISTER_TYPE_D;
       case 64:
-         return BRW_REGISTER_TYPE_DF;
+         return BRW_REGISTER_TYPE_Q;
       default:
          unreachable("Invalid bit size");
       }
@@ -308,7 +308,7 @@ brw_reg_type_from_bit_size(const unsigned bit_size,
       case 32:
          return BRW_REGISTER_TYPE_UD;
       case 64:
-         return BRW_REGISTER_TYPE_DF;
+         return BRW_REGISTER_TYPE_UQ;
       default:
          unreachable("Invalid bit size");
       }
