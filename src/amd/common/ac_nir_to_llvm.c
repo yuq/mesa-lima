@@ -134,7 +134,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
 
-	LLVMTypeRef f32;
 	LLVMTypeRef f16;
 	LLVMTypeRef v2f32;
 	LLVMTypeRef v4f32;
@@ -805,8 +804,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			add_sgpr_argument(&args, ctx->ac.i32, NULL); //
 			add_sgpr_argument(&args, ctx->ac.i32, &ctx->oc_lds); // OC LDS
 		}
-		add_vgpr_argument(&args, ctx->f32, &ctx->tes_u); // tes_u
-		add_vgpr_argument(&args, ctx->f32, &ctx->tes_v); // tes_v
+		add_vgpr_argument(&args, ctx->ac.f32, &ctx->tes_u); // tes_u
+		add_vgpr_argument(&args, ctx->ac.f32, &ctx->tes_v); // tes_v
 		add_vgpr_argument(&args, ctx->ac.i32, &ctx->tes_rel_patch_id); // tes rel patch id
 		add_vgpr_argument(&args, ctx->ac.i32, &ctx->tes_patch_id); // tes patch id
 		break;
@@ -843,8 +842,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 				add_vgpr_argument(&args, ctx->ac.i32, &ctx->vs_prim_id); // vs prim id
 				add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.instance_id); // instance id
 			} else {
-				add_vgpr_argument(&args, ctx->f32, &ctx->tes_u); // tes_u
-				add_vgpr_argument(&args, ctx->f32, &ctx->tes_v); // tes_v
+				add_vgpr_argument(&args, ctx->ac.f32, &ctx->tes_u); // tes_u
+				add_vgpr_argument(&args, ctx->ac.f32, &ctx->tes_v); // tes_v
 				add_vgpr_argument(&args, ctx->ac.i32, &ctx->tes_rel_patch_id); // tes rel patch id
 				add_vgpr_argument(&args, ctx->ac.i32, &ctx->tes_patch_id); // tes patch id
 			}
@@ -879,11 +878,11 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->linear_sample); /* linear sample */
 		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->linear_center); /* linear center */
 		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->linear_centroid); /* linear centroid */
-		add_vgpr_argument(&args, ctx->f32, NULL);  /* line stipple tex */
-		add_vgpr_argument(&args, ctx->f32, &ctx->abi.frag_pos[0]);  /* pos x float */
-		add_vgpr_argument(&args, ctx->f32, &ctx->abi.frag_pos[1]);  /* pos y float */
-		add_vgpr_argument(&args, ctx->f32, &ctx->abi.frag_pos[2]);  /* pos z float */
-		add_vgpr_argument(&args, ctx->f32, &ctx->abi.frag_pos[3]);  /* pos w float */
+		add_vgpr_argument(&args, ctx->ac.f32, NULL);  /* line stipple tex */
+		add_vgpr_argument(&args, ctx->ac.f32, &ctx->abi.frag_pos[0]);  /* pos x float */
+		add_vgpr_argument(&args, ctx->ac.f32, &ctx->abi.frag_pos[1]);  /* pos y float */
+		add_vgpr_argument(&args, ctx->ac.f32, &ctx->abi.frag_pos[2]);  /* pos z float */
+		add_vgpr_argument(&args, ctx->ac.f32, &ctx->abi.frag_pos[3]);  /* pos w float */
 		add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.front_face);  /* front face */
 		add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.ancillary);  /* ancillary */
 		add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.sample_coverage);  /* sample coverage */
@@ -987,10 +986,9 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 static void setup_types(struct nir_to_llvm_context *ctx)
 {
-	ctx->f32 = LLVMFloatTypeInContext(ctx->context);
 	ctx->f16 = LLVMHalfTypeInContext(ctx->context);
-	ctx->v2f32 = LLVMVectorType(ctx->f32, 2);
-	ctx->v4f32 = LLVMVectorType(ctx->f32, 4);
+	ctx->v2f32 = LLVMVectorType(ctx->ac.f32, 2);
+	ctx->v4f32 = LLVMVectorType(ctx->ac.f32, 4);
 
 	ctx->uniform_md_kind =
 	    LLVMGetMDKindIDInContext(ctx->context, "amdgpu.uniform", 14);
@@ -1327,7 +1325,7 @@ static LLVMValueRef emit_f2f16(struct nir_to_llvm_context *ctx,
 	}
 
 	/* need to convert back up to f32 */
-	result = LLVMBuildFPExt(ctx->builder, result, ctx->f32, "");
+	result = LLVMBuildFPExt(ctx->builder, result, ctx->ac.f32, "");
 
 	if (ctx->options->chip_class >= VI)
 		result = LLVMBuildSelect(ctx->builder, cond, ctx->ac.f32_0, result, "");
@@ -1338,9 +1336,9 @@ static LLVMValueRef emit_f2f16(struct nir_to_llvm_context *ctx,
 		 */
 		LLVMValueRef temp, cond2;
 		temp = emit_intrin_1f_param(&ctx->ac, "llvm.fabs",
-					    ctx->f32, result);
+					    ctx->ac.f32, result);
 		cond = LLVMBuildFCmp(ctx->builder, LLVMRealUGT,
-				     LLVMBuildBitCast(ctx->builder, LLVMConstInt(ctx->ac.i32, 0x38800000, false), ctx->f32, ""),
+				     LLVMBuildBitCast(ctx->builder, LLVMConstInt(ctx->ac.i32, 0x38800000, false), ctx->ac.f32, ""),
 				     temp, "");
 		cond2 = LLVMBuildFCmp(ctx->builder, LLVMRealUNE,
 				      temp, ctx->ac.f32_0, "");
@@ -3853,7 +3851,7 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 		src_c1 = ac_to_float(&ctx->ac, LLVMBuildExtractElement(ctx->builder, src0, ctx->ac.i32_1, ""));
 	} else if (instr->intrinsic == nir_intrinsic_interp_var_at_sample) {
 		LLVMValueRef sample_position;
-		LLVMValueRef halfval = LLVMConstReal(ctx->f32, 0.5f);
+		LLVMValueRef halfval = LLVMConstReal(ctx->ac.f32, 0.5f);
 
 		/* fetch sample ID */
 		sample_position = load_sample_position(ctx, src0);
@@ -3890,7 +3888,7 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 			LLVMValueRef temp1, temp2;
 
 			interp_el = LLVMBuildBitCast(ctx->builder, interp_el,
-						     ctx->f32, "");
+						     ctx->ac.f32, "");
 
 			temp1 = LLVMBuildFMul(ctx->builder, ddx_el, src_c0, "");
 			temp1 = LLVMBuildFAdd(ctx->builder, temp1, interp_el, "");
@@ -3910,7 +3908,7 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 
 		if (interp_param) {
 			interp_param = LLVMBuildBitCast(ctx->builder,
-							interp_param, LLVMVectorType(ctx->f32, 2), "");
+							interp_param, LLVMVectorType(ctx->ac.f32, 2), "");
 			LLVMValueRef i = LLVMBuildExtractElement(
 				ctx->builder, interp_param, ctx->ac.i32_0, "");
 			LLVMValueRef j = LLVMBuildExtractElement(
@@ -5049,7 +5047,7 @@ static void interp_fs_input(struct nir_to_llvm_context *ctx,
 	 */
 	if (interp) {
 		interp_param = LLVMBuildBitCast(ctx->builder, interp_param,
-						LLVMVectorType(ctx->f32, 2), "");
+						LLVMVectorType(ctx->ac.f32, 2), "");
 
 		i = LLVMBuildExtractElement(ctx->builder, interp_param,
 						ctx->ac.i32_0, "");
@@ -5316,7 +5314,7 @@ glsl_base_to_llvm_type(struct nir_to_llvm_context *ctx,
 	case GLSL_TYPE_SUBROUTINE:
 		return ctx->ac.i32;
 	case GLSL_TYPE_FLOAT: /* TODO handle mediump */
-		return ctx->f32;
+		return ctx->ac.f32;
 	case GLSL_TYPE_INT64:
 	case GLSL_TYPE_UINT64:
 		return ctx->ac.i64;
@@ -5445,10 +5443,10 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 	args->target = target;
 
 	args->compr = false;
-	args->out[0] = LLVMGetUndef(ctx->f32);
-	args->out[1] = LLVMGetUndef(ctx->f32);
-	args->out[2] = LLVMGetUndef(ctx->f32);
-	args->out[3] = LLVMGetUndef(ctx->f32);
+	args->out[0] = LLVMGetUndef(ctx->ac.f32);
+	args->out[1] = LLVMGetUndef(ctx->ac.f32);
+	args->out[2] = LLVMGetUndef(ctx->ac.f32);
+	args->out[3] = LLVMGetUndef(ctx->ac.f32);
 
 	if (!values)
 		return;
@@ -5502,9 +5500,9 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 			for (unsigned chan = 0; chan < 4; chan++) {
 				val[chan] = ac_build_clamp(&ctx->ac, values[chan]);
 				val[chan] = LLVMBuildFMul(ctx->builder, val[chan],
-							LLVMConstReal(ctx->f32, 65535), "");
+							LLVMConstReal(ctx->ac.f32, 65535), "");
 				val[chan] = LLVMBuildFAdd(ctx->builder, val[chan],
-							LLVMConstReal(ctx->f32, 0.5), "");
+							LLVMConstReal(ctx->ac.f32, 0.5), "");
 				val[chan] = LLVMBuildFPToUI(ctx->builder, val[chan],
 							ctx->ac.i32, "");
 			}
@@ -5518,15 +5516,15 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 			for (unsigned chan = 0; chan < 4; chan++) {
 				val[chan] = emit_float_saturate(&ctx->ac, values[chan], -1, 1);
 				val[chan] = LLVMBuildFMul(ctx->builder, val[chan],
-							LLVMConstReal(ctx->f32, 32767), "");
+							LLVMConstReal(ctx->ac.f32, 32767), "");
 
 				/* If positive, add 0.5, else add -0.5. */
 				val[chan] = LLVMBuildFAdd(ctx->builder, val[chan],
 						LLVMBuildSelect(ctx->builder,
 							LLVMBuildFCmp(ctx->builder, LLVMRealOGE,
 								val[chan], ctx->ac.f32_0, ""),
-							LLVMConstReal(ctx->f32, 0.5),
-							LLVMConstReal(ctx->f32, -0.5), ""), "");
+							LLVMConstReal(ctx->ac.f32, 0.5),
+							LLVMConstReal(ctx->ac.f32, -0.5), ""), "");
 				val[chan] = LLVMBuildFPToSI(ctx->builder, val[chan], ctx->ac.i32, "");
 			}
 
@@ -5624,7 +5622,7 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 							       ctx->nir->outputs[radeon_llvm_reg_index_soa(i, j)], ""));
 
 		for (i = ctx->num_output_clips + ctx->num_output_culls; i < 8; i++)
-			slots[i] = LLVMGetUndef(ctx->f32);
+			slots[i] = LLVMGetUndef(ctx->ac.f32);
 
 		if (ctx->num_output_clips + ctx->num_output_culls > 4) {
 			target = V_008DFC_SQ_EXP_POS + 3;
@@ -6158,10 +6156,10 @@ si_export_mrt_z(struct nir_to_llvm_context *ctx,
 	args.target = V_008DFC_SQ_EXP_MRTZ;
 	args.compr = false;
 
-	args.out[0] = LLVMGetUndef(ctx->f32); /* R, depth */
-	args.out[1] = LLVMGetUndef(ctx->f32); /* G, stencil test val[0:7], stencil op val[8:15] */
-	args.out[2] = LLVMGetUndef(ctx->f32); /* B, sample mask */
-	args.out[3] = LLVMGetUndef(ctx->f32); /* A, alpha to mask */
+	args.out[0] = LLVMGetUndef(ctx->ac.f32); /* R, depth */
+	args.out[1] = LLVMGetUndef(ctx->ac.f32); /* G, stencil test val[0:7], stencil op val[8:15] */
+	args.out[2] = LLVMGetUndef(ctx->ac.f32); /* B, sample mask */
+	args.out[3] = LLVMGetUndef(ctx->ac.f32); /* A, alpha to mask */
 
 	if (depth) {
 		args.out[0] = depth;
