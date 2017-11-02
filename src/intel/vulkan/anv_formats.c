@@ -514,23 +514,39 @@ get_image_format_properties(const struct gen_device_info *devinfo,
 
 static VkFormatFeatureFlags
 get_buffer_format_properties(const struct gen_device_info *devinfo,
-                             enum isl_format format)
+                             VkFormat vk_format,
+                             const struct anv_format *anv_format)
 {
-   if (format == ISL_FORMAT_UNSUPPORTED)
+   VkFormatFeatureFlags flags = 0;
+
+   if (anv_format == NULL)
       return 0;
 
-   VkFormatFeatureFlags flags = 0;
-   if (isl_format_supports_sampling(devinfo, format) &&
-       !isl_format_is_compressed(format))
+   const enum isl_format isl_format = anv_format->planes[0].isl_format;
+
+   if (isl_format == ISL_FORMAT_UNSUPPORTED)
+      return 0;
+
+   if (anv_format->n_planes > 1)
+      return 0;
+
+   if (anv_format->can_ycbcr)
+      return 0;
+
+   if (vk_format_is_depth_or_stencil(vk_format))
+      return 0;
+
+   if (isl_format_supports_sampling(devinfo, isl_format) &&
+       !isl_format_is_compressed(isl_format))
       flags |= VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT;
 
-   if (isl_format_supports_vertex_fetch(devinfo, format))
+   if (isl_format_supports_vertex_fetch(devinfo, isl_format))
       flags |= VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT;
 
-   if (isl_is_storage_image_format(format))
+   if (isl_is_storage_image_format(isl_format))
       flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT;
 
-   if (format == ISL_FORMAT_R32_SINT || format == ISL_FORMAT_R32_UINT)
+   if (isl_format == ISL_FORMAT_R32_SINT || isl_format == ISL_FORMAT_R32_UINT)
       flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT;
 
    return flags;
@@ -541,8 +557,10 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
                                           VkFormat vk_format,
                                           VkFormatProperties *out_properties)
 {
+   const struct gen_device_info *devinfo = &physical_device->info;
    const struct anv_format *format = anv_get_format(vk_format);
-   VkFormatFeatureFlags linear = 0, tiled = 0, buffer = 0;
+   VkFormatFeatureFlags linear = 0, tiled = 0;
+
    if (format == NULL) {
       /* Nothing to do here */
    } else if (vk_format_is_depth_or_stencil(vk_format)) {
@@ -568,8 +586,6 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
                                            linear_fmt.isl_format, linear_fmt);
       tiled = get_image_format_properties(&physical_device->info,
                                           linear_fmt.isl_format, tiled_fmt);
-      buffer = get_buffer_format_properties(&physical_device->info,
-                                            linear_fmt.isl_format);
 
       /* XXX: We handle 3-channel formats by switching them out for RGBX or
        * RGBA formats behind-the-scenes.  This works fine for textures
@@ -634,14 +650,12 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
 
       linear &= ~disallowed_ycbcr_image_features;
       tiled &= ~disallowed_ycbcr_image_features;
-      buffer = 0;
    }
 
    out_properties->linearTilingFeatures = linear;
    out_properties->optimalTilingFeatures = tiled;
-   out_properties->bufferFeatures = buffer;
-
-   return;
+   out_properties->bufferFeatures =
+     get_buffer_format_properties(devinfo, vk_format, format);
 }
 
 
