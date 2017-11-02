@@ -439,7 +439,7 @@ get_fast_clear_state_address(const struct anv_device *device,
                              enum fast_clear_state_field field)
 {
    assert(device && image);
-   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT);
+   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
    assert(level < anv_image_aux_levels(image, aspect));
 
    uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
@@ -478,7 +478,7 @@ genX(set_image_needs_resolve)(struct anv_cmd_buffer *cmd_buffer,
                         unsigned level, bool needs_resolve)
 {
    assert(cmd_buffer && image);
-   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT);
+   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
    assert(level < anv_image_aux_levels(image, aspect));
 
    const struct anv_address resolve_flag_addr =
@@ -502,7 +502,7 @@ genX(load_needs_resolve_predicate)(struct anv_cmd_buffer *cmd_buffer,
                                    unsigned level)
 {
    assert(cmd_buffer && image);
-   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT);
+   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
    assert(level < anv_image_aux_levels(image, aspect));
 
    const struct anv_address resolve_flag_addr =
@@ -531,7 +531,7 @@ init_fast_clear_state_entry(struct anv_cmd_buffer *cmd_buffer,
                             unsigned level)
 {
    assert(cmd_buffer && image);
-   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT);
+   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
    assert(level < anv_image_aux_levels(image, aspect));
 
    uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
@@ -601,7 +601,7 @@ genX(copy_fast_clear_dwords)(struct anv_cmd_buffer *cmd_buffer,
                              bool copy_from_surface_state)
 {
    assert(cmd_buffer && image);
-   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT);
+   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
    assert(level < anv_image_aux_levels(image, aspect));
 
    struct anv_bo *ss_bo =
@@ -658,7 +658,7 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
 {
    /* Validate the inputs. */
    assert(cmd_buffer);
-   assert(image && image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT);
+   assert(image && image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
    /* These values aren't supported for simplicity's sake. */
    assert(level_count != VK_REMAINING_MIP_LEVELS &&
           layer_count != VK_REMAINING_ARRAY_LAYERS);
@@ -941,7 +941,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
          VkImageAspectFlags att_aspects = vk_format_aspects(att->format);
          VkImageAspectFlags clear_aspects = 0;
 
-         if (att_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT) {
+         if (att_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
             /* color attachment */
             if (att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
                clear_aspects |= VK_IMAGE_ASPECT_COLOR_BIT;
@@ -968,7 +968,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
          anv_assert(iview->n_planes == 1);
 
          union isl_color_value clear_color = { .u32 = { 0, } };
-         if (att_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT) {
+         if (att_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
             assert(att_aspects == VK_IMAGE_ASPECT_COLOR_BIT);
             color_attachment_compute_aux_usage(cmd_buffer->device,
                                                state, i, begin->renderArea,
@@ -1434,7 +1434,7 @@ void genX(CmdPipelineBarrier)(
          transition_depth_buffer(cmd_buffer, image,
                                  pImageMemoryBarriers[i].oldLayout,
                                  pImageMemoryBarriers[i].newLayout);
-      } else if (range->aspectMask & VK_IMAGE_ASPECT_ANY_COLOR_BIT) {
+      } else if (range->aspectMask & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
          VkImageAspectFlags color_aspects =
             anv_image_expand_aspects(image, range->aspectMask);
          uint32_t aspect_bit;
@@ -1648,7 +1648,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       }
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
          assert(stage == MESA_SHADER_FRAGMENT);
-         if ((desc->image_view->aspect_mask & VK_IMAGE_ASPECT_ANY_COLOR_BIT) == 0) {
+         if ((desc->image_view->aspect_mask & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) == 0) {
             /* For depth and stencil input attachments, we treat it like any
              * old texture that a user may have bound.
              */
@@ -2947,7 +2947,7 @@ cmd_buffer_subpass_transition_layouts(struct anv_cmd_buffer * const cmd_buffer,
             att_state->input_aux_usage != att_state->aux_usage;
       if (subpass_end) {
          target_layout = att_desc->final_layout;
-      } else if (iview->aspect_mask & VK_IMAGE_ASPECT_ANY_COLOR_BIT &&
+      } else if (iview->aspect_mask & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV &&
                  !input_needs_resolve) {
          /* Layout transitions before the final only help to enable sampling as
           * an input attachment. If the input attachment supports sampling
@@ -2966,7 +2966,7 @@ cmd_buffer_subpass_transition_layouts(struct anv_cmd_buffer * const cmd_buffer,
          att_state->aux_usage =
             anv_layout_to_aux_usage(&cmd_buffer->device->info, image,
                                     VK_IMAGE_ASPECT_DEPTH_BIT, target_layout);
-      } else if (image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT) {
+      } else if (image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
          assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
          transition_color_buffer(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
                                  iview->planes[0].isl.base_level, 1,

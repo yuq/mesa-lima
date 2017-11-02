@@ -777,7 +777,7 @@ void anv_CmdClearColorImage(
       if (pRanges[r].aspectMask == 0)
          continue;
 
-      assert(pRanges[r].aspectMask & VK_IMAGE_ASPECT_ANY_COLOR_BIT);
+      assert(pRanges[r].aspectMask & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
 
       struct blorp_surf surf;
       get_blorp_surf_for_anv_image(image, pRanges[r].aspectMask,
@@ -1068,7 +1068,7 @@ void anv_CmdClearAttachments(
                     BLORP_BATCH_NO_EMIT_DEPTH_STENCIL);
 
    for (uint32_t a = 0; a < attachmentCount; ++a) {
-      if (pAttachments[a].aspectMask & VK_IMAGE_ASPECT_ANY_COLOR_BIT) {
+      if (pAttachments[a].aspectMask & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
          assert(pAttachments[a].aspectMask == VK_IMAGE_ASPECT_COLOR_BIT);
          clear_color_attachment(cmd_buffer, &batch,
                                 &pAttachments[a],
@@ -1668,7 +1668,7 @@ anv_ccs_resolve(struct anv_cmd_buffer * const cmd_buffer,
    /* The resolved subresource range must have a CCS buffer. */
    assert(level < anv_image_aux_levels(image, aspect));
    assert(layer_count <= anv_image_aux_layers(image, aspect, level));
-   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT && image->samples == 1);
+   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV && image->samples == 1);
 
    /* Create a binding table for this surface state. */
    uint32_t binding_table;

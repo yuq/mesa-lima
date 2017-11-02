@@ -209,7 +209,7 @@ add_fast_clear_state_buffer(struct anv_image *image,
 {
    assert(image && device);
    assert(image->planes[plane].aux_surface.isl.size > 0 &&
-          image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT);
+          image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
 
    /* The offset to the buffer of clear values must be dword-aligned for GPU
     * memcpy operations. It is located immediately after the auxiliary surface.
@@ -394,7 +394,7 @@ make_surface(const struct anv_device *dev,
          add_surface(image, &image->planes[plane].aux_surface, plane);
          image->planes[plane].aux_usage = ISL_AUX_USAGE_HIZ;
       }
-   } else if ((aspect & VK_IMAGE_ASPECT_ANY_COLOR_BIT) && vk_info->samples == 1) {
+   } else if ((aspect & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) && vk_info->samples == 1) {
       /* TODO: Disallow compression with :
        *
        *     1) non multiplanar images (We appear to hit a sampler bug with
@@ -451,7 +451,7 @@ make_surface(const struct anv_device *dev,
             }
          }
       }
-   } else if ((aspect & VK_IMAGE_ASPECT_ANY_COLOR_BIT) && vk_info->samples > 1) {
+   } else if ((aspect & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) && vk_info->samples > 1) {
       assert(!(vk_info->usage & VK_IMAGE_USAGE_STORAGE_BIT));
       assert(image->planes[plane].aux_surface.isl.size == 0);
       ok = isl_surf_get_mcs_surf(&dev->isl_dev,
@@ -751,7 +751,7 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
    /* The following switch currently only handles depth stencil aspects.
     * TODO: Handle the color aspect.
     */
-   if (image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT)
+   if (image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV)
       return image->planes[plane].aux_usage;
 
    switch (layout) {
@@ -786,7 +786,7 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
 
    /* Sampling Layouts */
    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-      assert((image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT) == 0);
+      assert((image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) == 0);
       /* Fall-through */
    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
    case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR:
@@ -1034,7 +1034,7 @@ anv_image_fill_surface_state(struct anv_device *device,
 static VkImageAspectFlags
 remap_aspect_flags(VkImageAspectFlags view_aspects)
 {
-   if (view_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT) {
+   if (view_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
       if (_mesa_bitcount(view_aspects) == 1)
          return VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -1394,15 +1394,15 @@ anv_image_get_surface_for_aspect_mask(const struct anv_image *image,
       }
       break;
    case VK_IMAGE_ASPECT_PLANE_0_BIT_KHR:
-      assert((image->aspects & ~VK_IMAGE_ASPECT_ANY_COLOR_BIT) == 0);
+      assert((image->aspects & ~VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) == 0);
       sanitized_mask = VK_IMAGE_ASPECT_PLANE_0_BIT_KHR;
       break;
    case VK_IMAGE_ASPECT_PLANE_1_BIT_KHR:
-      assert((image->aspects & ~VK_IMAGE_ASPECT_ANY_COLOR_BIT) == 0);
+      assert((image->aspects & ~VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) == 0);
       sanitized_mask = VK_IMAGE_ASPECT_PLANE_1_BIT_KHR;
       break;
    case VK_IMAGE_ASPECT_PLANE_2_BIT_KHR:
-      assert((image->aspects & ~VK_IMAGE_ASPECT_ANY_COLOR_BIT) == 0);
+      assert((image->aspects & ~VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) == 0);
       sanitized_mask = VK_IMAGE_ASPECT_PLANE_2_BIT_KHR;
       break;
    default:

@@ -430,7 +430,7 @@ anv_get_format_plane(const struct gen_device_info *devinfo, VkFormat vk_format,
       return plane_format;
    }
 
-   assert((aspect & ~VK_IMAGE_ASPECT_ANY_COLOR_BIT) == 0);
+   assert((aspect & ~VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) == 0);
 
    const struct isl_format_layout *isl_layout =
       isl_format_get_layout(plane_format.isl_format);

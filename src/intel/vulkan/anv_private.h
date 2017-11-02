@@ -1552,12 +1552,12 @@ anv_pipe_invalidate_bits_for_access_flags(VkAccessFlags flags)
    return pipe_bits;
 }
 
-#define VK_IMAGE_ASPECT_ANY_COLOR_BIT (         \
+#define VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV (         \
    VK_IMAGE_ASPECT_COLOR_BIT | \
    VK_IMAGE_ASPECT_PLANE_0_BIT_KHR | \
    VK_IMAGE_ASPECT_PLANE_1_BIT_KHR | \
    VK_IMAGE_ASPECT_PLANE_2_BIT_KHR)
-#define VK_IMAGE_ASPECT_PLANES_BITS ( \
+#define VK_IMAGE_ASPECT_PLANES_BITS_ANV ( \
    VK_IMAGE_ASPECT_PLANE_0_BIT_KHR | \
    VK_IMAGE_ASPECT_PLANE_1_BIT_KHR | \
    VK_IMAGE_ASPECT_PLANE_2_BIT_KHR)
@@ -2253,7 +2253,7 @@ static inline VkImageAspectFlags
 anv_plane_to_aspect(VkImageAspectFlags image_aspects,
                     uint32_t plane)
 {
-   if (image_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT) {
+   if (image_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
       if (_mesa_bitcount(image_aspects) > 1)
          return VK_IMAGE_ASPECT_PLANE_0_BIT_KHR << plane;
       return VK_IMAGE_ASPECT_COLOR_BIT;
@@ -2547,7 +2547,7 @@ anv_image_expand_aspects(const struct anv_image *image,
    /* If the underlying image has color plane aspects and
     * VK_IMAGE_ASPECT_COLOR_BIT has been requested, then return the aspects of
     * the underlying image. */
-   if ((image->aspects & VK_IMAGE_ASPECT_PLANES_BITS) != 0 &&
+   if ((image->aspects & VK_IMAGE_ASPECT_PLANES_BITS_ANV) != 0 &&
        aspects == VK_IMAGE_ASPECT_COLOR_BIT)
       return image->aspects;
 
@@ -2562,8 +2562,8 @@ anv_image_aspects_compatible(VkImageAspectFlags aspects1,
       return true;
 
    /* Only 1 color aspects are compatibles. */
-   if ((aspects1 & VK_IMAGE_ASPECT_ANY_COLOR_BIT) != 0 &&
-       (aspects2 & VK_IMAGE_ASPECT_ANY_COLOR_BIT) != 0 &&
+   if ((aspects1 & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) != 0 &&
+       (aspects2 & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) != 0 &&
        _mesa_bitcount(aspects1) == _mesa_bitcount(aspects2))
       return true;
 
