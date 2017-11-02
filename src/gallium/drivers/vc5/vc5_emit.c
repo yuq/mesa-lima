@@ -149,20 +149,22 @@ emit_one_texture(struct vc5_context *vc5, struct vc5_texture_stateobj *stage_tex
                 mag_img_filter = PIPE_TEX_FILTER_NEAREST;
         }
 
-        bool min_nearest = (min_img_filter == PIPE_TEX_FILTER_NEAREST);
+        bool min_nearest = min_img_filter == PIPE_TEX_FILTER_NEAREST;
         switch (min_mip_filter) {
         case PIPE_TEX_MIPFILTER_NONE:
-                unpacked.minification_filter = 0 + min_nearest;
+                unpacked.filter += min_nearest ? 2 : 0;
                 break;
         case PIPE_TEX_MIPFILTER_NEAREST:
-                unpacked.minification_filter = 2 + !min_nearest;
+                unpacked.filter += min_nearest ? 4 : 8;
                 break;
         case PIPE_TEX_MIPFILTER_LINEAR:
-                unpacked.minification_filter = 4 + !min_nearest;
+                unpacked.filter += min_nearest ? 4 : 8;
+                unpacked.filter += 2;
                 break;
         }
-        unpacked.magnification_filter = (mag_img_filter ==
-                                         PIPE_TEX_FILTER_NEAREST);
+
+        if (mag_img_filter == PIPE_TEX_FILTER_NEAREST)
+                unpacked.filter++;
 
         uint8_t packed[cl_packet_length(TEXTURE_SHADER_STATE)];
         cl_packet_pack(TEXTURE_SHADER_STATE)(&job->indirect, packed, &unpacked);
