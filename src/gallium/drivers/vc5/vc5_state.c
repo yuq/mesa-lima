@@ -524,7 +524,6 @@ vc5_create_sampler_state(struct pipe_context *pctx,
         }
 
         v3dx_pack(&so->texture_shader_state, TEXTURE_SHADER_STATE, tex) {
-                tex.min_level_of_detail = MAX2(cso->min_lod, 0.0);
                 tex.depth_compare_function = cso->compare_func;
                 tex.fixed_bias = cso->lod_bias;
         }

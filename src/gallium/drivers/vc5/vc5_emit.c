@@ -130,9 +130,21 @@ emit_one_texture(struct vc5_context *vc5, struct vc5_texture_stateobj *stage_tex
                 .border_color_blue = swizzled_border_color(psampler, sview, 2),
                 .border_color_alpha = swizzled_border_color(psampler, sview, 3),
 
-                /* XXX: Disable min/maxlod for txf */
-                .max_level_of_detail = MIN2(MIN2(psampler->max_lod,
-                                                 VC5_MAX_MIP_LEVELS),
+                /* In the normal texturing path, the LOD gets clamped between
+                 * min/max, and the base_level field (set in the sampler view
+                 * from first_level) only decides where the min/mag switch
+                 * happens, so we need to use the LOD clamps to keep us
+                 * between min and max.
+                 *
+                 * For txf, the LOD clamp is still used, despite GL not
+                 * wanting that.  We will need to have a separate
+                 * TEXTURE_SHADER_STATE that ignores psview->min/max_lod to
+                 * support txf properly.
+                 */
+                .min_level_of_detail = (psview->u.tex.first_level +
+                                        MAX2(psampler->min_lod, 0)),
+                .max_level_of_detail = MIN2(psview->u.tex.first_level +
+                                            psampler->max_lod,
                                             psview->u.tex.last_level),
 
                 .texture_base_pointer = cl_address(rsc->bo,
