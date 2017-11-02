@@ -134,8 +134,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
 
-	unsigned uniform_md_kind;
-	LLVMValueRef empty_md;
 	gl_shader_stage stage;
 
 	LLVMValueRef inputs[RADEON_LLVM_MAX_INPUTS * 4];
@@ -978,13 +976,6 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	}
 
 	ctx->shader_info->num_user_sgprs = user_sgpr_idx;
-}
-
-static void setup_types(struct nir_to_llvm_context *ctx)
-{
-	ctx->uniform_md_kind =
-	    LLVMGetMDKindIDInContext(ctx->context, "amdgpu.uniform", 14);
-	ctx->empty_md = LLVMMDNodeInContext(ctx->context, NULL, 0);
 }
 
 static int get_llvm_num_components(LLVMValueRef value)
@@ -2220,7 +2211,7 @@ static LLVMValueRef visit_vulkan_resource_index(struct nir_to_llvm_context *ctx,
 	
 	desc_ptr = ac_build_gep0(&ctx->ac, desc_ptr, offset);
 	desc_ptr = cast_ptr(ctx, desc_ptr, ctx->ac.v4i32);
-	LLVMSetMetadata(desc_ptr, ctx->uniform_md_kind, ctx->empty_md);
+	LLVMSetMetadata(desc_ptr, ctx->ac.uniform_md_kind, ctx->ac.empty_md);
 
 	return LLVMBuildLoad(ctx->builder, desc_ptr, "");
 }
@@ -6481,7 +6472,6 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	LLVMDisposeTargetData(data_layout);
 	LLVMDisposeMessage(data_layout_str);
 
-	setup_types(&ctx);
 	ctx.builder = LLVMCreateBuilderInContext(ctx.context);
 	ctx.ac.builder = ctx.builder;
 
@@ -6854,7 +6844,6 @@ void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
 
 	ctx.is_gs_copy_shader = true;
 	LLVMSetTarget(ctx.module, "amdgcn--");
-	setup_types(&ctx);
 
 	ctx.builder = LLVMCreateBuilderInContext(ctx.context);
 	ctx.ac.builder = ctx.builder;
