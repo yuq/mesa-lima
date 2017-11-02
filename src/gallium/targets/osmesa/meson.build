@@ -62,7 +62,7 @@ libosmesa = shared_library(
 pkg.generate(
   name : 'osmesa',
   description : 'Mesa Off-screen Rendering Library',
-  version : '8',
+  version : '8.0.0',
   libraries : libosmesa,
   libraries_private : gl_priv_libs,
 )

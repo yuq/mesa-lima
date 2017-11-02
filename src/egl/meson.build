@@ -145,7 +145,7 @@ if not with_glvnd
   egl_lib_version = '1.0.0'
 else
   egl_lib_name = 'EGL_mesa'
-  egl_lib_version = '0'
+  egl_lib_version = '0.0.0'
   files_egl += [g_egldispatchstubs_h, g_egldispatchstubs_c]
   files_egl += files('main/eglglvnd.c', 'main/egldispatchstubs.c')
   install_data(

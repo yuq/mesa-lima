@@ -112,7 +112,7 @@ if not with_glvnd
   gl_lib_version = '1.2.0'
 else
   gl_lib_name = 'GLX_mesa'
-  gl_lib_version = '0'
+  gl_lib_version = '0.0.0'
   files_libglx += files(
     'g_glxglvnddispatchfuncs.c',
     'g_glxglvnddispatchindices.h',
