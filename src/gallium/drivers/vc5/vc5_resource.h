@@ -74,6 +74,10 @@ struct vc5_resource_slice {
         uint32_t offset;
         uint32_t stride;
         uint32_t padded_height;
+        /* Size of a single pane of the slice.  For 3D textures, there will be
+         * a number of panes equal to the minified, power-of-two-aligned
+         * depth.
+         */
         uint32_t size;
         uint8_t ub_pad;
         enum vc5_tiling_mode tiling;
@@ -113,6 +117,7 @@ struct vc5_resource {
         struct vc5_bo *bo;
         struct vc5_resource_slice slices[VC5_MAX_MIP_LEVELS];
         uint32_t cube_map_stride;
+        uint32_t size;
         int cpp;
         bool tiled;
 
@@ -163,5 +168,8 @@ void vc5_resource_screen_init(struct pipe_screen *pscreen);
 void vc5_resource_context_init(struct pipe_context *pctx);
 struct pipe_resource *vc5_resource_create(struct pipe_screen *pscreen,
                                           const struct pipe_resource *tmpl);
+uint32_t vc5_layer_offset(struct pipe_resource *prsc, uint32_t level,
+                          uint32_t layer);
+
 
 #endif /* VC5_RESOURCE_H */

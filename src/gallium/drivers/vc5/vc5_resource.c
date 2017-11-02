@@ -75,18 +75,22 @@ vc5_debug_resource_layout(struct vc5_resource *rsc, const char *caller)
 
                 int level_width = slice->stride / rsc->cpp;
                 int level_height = slice->padded_height;
+                int level_depth =
+                        u_minify(util_next_power_of_two(prsc->depth0), i);
 
                 fprintf(stderr,
                         "rsc %s %p (format %s), %dx%d: "
-                        "level %d (%s) %dx%d -> %dx%d, stride %d@0x%08x\n",
+                        "level %d (%s) %dx%dx%d -> %dx%dx%d, stride %d@0x%08x\n",
                         caller, rsc,
                         util_format_short_name(prsc->format),
                         prsc->width0, prsc->height0,
                         i, tiling_descriptions[slice->tiling],
                         u_minify(prsc->width0, i),
                         u_minify(prsc->height0, i),
+                        u_minify(prsc->depth0, i),
                         level_width,
                         level_height,
+                        level_depth,
                         slice->stride,
                         rsc->bo->offset + slice->offset);
         }
@@ -98,14 +102,8 @@ vc5_resource_bo_alloc(struct vc5_resource *rsc)
         struct pipe_resource *prsc = &rsc->base;
         struct pipe_screen *pscreen = prsc->screen;
         struct vc5_bo *bo;
-        int layers = (prsc->target == PIPE_TEXTURE_3D ?
-                      prsc->depth0 : prsc->array_size);
 
-        bo = vc5_bo_alloc(vc5_screen(pscreen),
-                          rsc->slices[0].offset +
-                          rsc->slices[0].size +
-                          rsc->cube_map_stride * layers - 1,
-                          "resource");
+        bo = vc5_bo_alloc(vc5_screen(pscreen), rsc->size, "resource");
         if (bo) {
                 vc5_bo_unreference(&rsc->bo);
                 rsc->bo = bo;
@@ -128,13 +126,21 @@ vc5_resource_transfer_unmap(struct pipe_context *pctx,
                 struct vc5_resource_slice *slice = &rsc->slices[ptrans->level];
 
                 if (ptrans->usage & PIPE_TRANSFER_WRITE) {
-                        vc5_store_tiled_image(rsc->bo->map + slice->offset +
-                                              ptrans->box.z * rsc->cube_map_stride,
-                                              slice->stride,
-                                              trans->map, ptrans->stride,
-                                              slice->tiling, rsc->cpp,
-                                              slice->padded_height,
-                                              &ptrans->box);
+                        for (int z = 0; z < ptrans->box.depth; z++) {
+                                void *dst = rsc->bo->map +
+                                        vc5_layer_offset(&rsc->base,
+                                                         ptrans->level,
+                                                         ptrans->box.z + z);
+                                vc5_store_tiled_image(dst,
+                                                      slice->stride,
+                                                      (trans->map +
+                                                       ptrans->stride *
+                                                       ptrans->box.height * z),
+                                                      ptrans->stride,
+                                                      slice->tiling, rsc->cpp,
+                                                      slice->padded_height,
+                                                      &ptrans->box);
+                        }
                 }
                 free(trans->map);
         }
@@ -259,13 +265,21 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
                 trans->map = malloc(ptrans->layer_stride * ptrans->box.depth);
 
                 if (usage & PIPE_TRANSFER_READ) {
-                        vc5_load_tiled_image(trans->map, ptrans->stride,
-                                             buf + slice->offset +
-                                             ptrans->box.z * rsc->cube_map_stride,
-                                             slice->stride,
-                                             slice->tiling, rsc->cpp,
-                                             slice->padded_height,
+                        for (int z = 0; z < ptrans->box.depth; z++) {
+                                void *src = rsc->bo->map +
+                                        vc5_layer_offset(&rsc->base,
+                                                         ptrans->level,
+                                                         ptrans->box.z + z);
+                                vc5_load_tiled_image((trans->map +
+                                                      ptrans->stride *
+                                                      ptrans->box.height * z),
+                                                     ptrans->stride,
+                                                     src,
+                                                     slice->stride,
+                                                     slice->tiling, rsc->cpp,
+                                                     slice->padded_height,
                                              &ptrans->box);
+                        }
                 }
                 return trans->map;
         } else {
@@ -378,8 +392,10 @@ vc5_setup_slices(struct vc5_resource *rsc)
         struct pipe_resource *prsc = &rsc->base;
         uint32_t width = prsc->width0;
         uint32_t height = prsc->height0;
+        uint32_t depth = prsc->depth0;
         uint32_t pot_width = util_next_power_of_two(width);
         uint32_t pot_height = util_next_power_of_two(height);
+        uint32_t pot_depth = util_next_power_of_two(depth);
         uint32_t offset = 0;
         uint32_t utile_w = vc5_utile_width(rsc->cpp);
         uint32_t utile_h = vc5_utile_height(rsc->cpp);
@@ -396,7 +412,7 @@ vc5_setup_slices(struct vc5_resource *rsc)
         for (int i = prsc->last_level; i >= 0; i--) {
                 struct vc5_resource_slice *slice = &rsc->slices[i];
 
-                uint32_t level_width, level_height;
+                uint32_t level_width, level_height, level_depth;
                 if (i < 2) {
                         level_width = u_minify(width, i);
                         level_height = u_minify(height, i);
@@ -404,6 +420,10 @@ vc5_setup_slices(struct vc5_resource *rsc)
                         level_width = u_minify(pot_width, i);
                         level_height = u_minify(pot_height, i);
                 }
+                if (i < 1)
+                        level_depth = u_minify(depth, i);
+                else
+                        level_depth = u_minify(pot_depth, i);
 
                 if (msaa) {
                         level_width *= 2;
@@ -468,6 +488,9 @@ vc5_setup_slices(struct vc5_resource *rsc)
                 slice->padded_height = level_height;
                 slice->size = level_height * slice->stride;
 
+                offset += slice->size * level_depth;
+
+
                 /* The HW aligns level 1's base to a page if any of level 1 or
                  * below could be UIF XOR.  The lower levels then inherit the
                  * alignment for as long as necesary, thanks to being power of
@@ -476,11 +499,10 @@ vc5_setup_slices(struct vc5_resource *rsc)
                 if (i == 1 &&
                     level_width > 4 * uif_block_w &&
                     level_height > PAGE_CACHE_MINUS_1_5_UB_ROWS * uif_block_h) {
-                        slice->size = align(slice->size, VC5_UIFCFG_PAGE_SIZE);
+                        offset = align(offset, VC5_UIFCFG_PAGE_SIZE);
                 }
-
-                offset += slice->size;
         }
+        rsc->size = offset;
 
         /* UIF/UBLINEAR levels need to be aligned to UIF-blocks, and LT only
          * needs to be aligned to utile boundaries.  Since tiles are laid out
@@ -493,15 +515,34 @@ vc5_setup_slices(struct vc5_resource *rsc)
         uint32_t page_align_offset = (align(rsc->slices[0].offset, 4096) -
                                       rsc->slices[0].offset);
         if (page_align_offset) {
+                rsc->size += page_align_offset;
                 for (int i = 0; i <= prsc->last_level; i++)
                         rsc->slices[i].offset += page_align_offset;
         }
 
-        /* Arrays, cubes, and 3D textures have a stride which is the distance
-         * from one full mipmap tree to the next (64b aligned).
+        /* Arrays and cube textures have a stride which is the distance from
+         * one full mipmap tree to the next (64b aligned).  For 3D textures,
+         * we need to program the stride between slices of miplevel 0.
          */
-        rsc->cube_map_stride = align(rsc->slices[0].offset +
-                                     rsc->slices[0].size, 64);
+        if (prsc->target != PIPE_TEXTURE_3D) {
+                rsc->cube_map_stride = align(rsc->slices[0].offset +
+                                             rsc->slices[0].size, 64);
+                rsc->size += rsc->cube_map_stride * (prsc->array_size - 1);
+        } else {
+                rsc->cube_map_stride = rsc->slices[0].size;
+        }
+}
+
+uint32_t
+vc5_layer_offset(struct pipe_resource *prsc, uint32_t level, uint32_t layer)
+{
+        struct vc5_resource *rsc = vc5_resource(prsc);
+        struct vc5_resource_slice *slice = &rsc->slices[level];
+
+        if (prsc->target == PIPE_TEXTURE_3D)
+                return slice->offset + layer * slice->size;
+        else
+                return slice->offset + layer * rsc->cube_map_stride;
 }
 
 static struct vc5_resource *
@@ -737,8 +778,8 @@ vc5_create_surface(struct pipe_context *pctx,
         psurf->u.tex.first_layer = surf_tmpl->u.tex.first_layer;
         psurf->u.tex.last_layer = surf_tmpl->u.tex.last_layer;
 
-        surface->offset = (slice->offset +
-                           psurf->u.tex.first_layer * rsc->cube_map_stride);
+        surface->offset = vc5_layer_offset(ptex, level,
+                                           psurf->u.tex.first_layer);
         surface->tiling = slice->tiling;
 
         surface->format = vc5_get_rt_format(&screen->devinfo, psurf->format);
