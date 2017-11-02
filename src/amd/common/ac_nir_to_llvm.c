@@ -134,7 +134,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
 
-	LLVMTypeRef v8i32;
 	LLVMTypeRef f64;
 	LLVMTypeRef f32;
 	LLVMTypeRef f16;
@@ -989,7 +988,6 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 static void setup_types(struct nir_to_llvm_context *ctx)
 {
-	ctx->v8i32 = LLVMVectorType(ctx->ac.i32, 8);
 	ctx->f32 = LLVMFloatTypeInContext(ctx->context);
 	ctx->f16 = LLVMHalfTypeInContext(ctx->context);
 	ctx->f64 = LLVMDoubleTypeInContext(ctx->context);
@@ -4251,11 +4249,11 @@ static LLVMValueRef radv_get_sampler_desc(struct ac_shader_abi *abi,
 
 	switch (desc_type) {
 	case AC_DESC_IMAGE:
-		type = ctx->v8i32;
+		type = ctx->ac.v8i32;
 		type_size = 32;
 		break;
 	case AC_DESC_FMASK:
-		type = ctx->v8i32;
+		type = ctx->ac.v8i32;
 		offset += 32;
 		type_size = 32;
 		break;
