@@ -134,7 +134,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
 
-	LLVMTypeRef v4i32;
 	LLVMTypeRef v8i32;
 	LLVMTypeRef f64;
 	LLVMTypeRef f32;
@@ -684,7 +683,7 @@ radv_define_vs_user_sgprs_phase1(struct nir_to_llvm_context *ctx,
 {
 	if (!ctx->is_gs_copy_shader && (stage == MESA_SHADER_VERTEX || (has_previous_stage && previous_stage == MESA_SHADER_VERTEX))) {
 		if (ctx->shader_info->info.vs.has_vertex_buffers)
-			add_user_sgpr_argument(args, const_array(ctx->v4i32, 16), &ctx->vertex_buffers); /* vertex buffers */
+			add_user_sgpr_argument(args, const_array(ctx->ac.v4i32, 16), &ctx->vertex_buffers); /* vertex buffers */
 		add_user_sgpr_argument(args, ctx->ac.i32, &ctx->abi.base_vertex); // base vertex
 		add_user_sgpr_argument(args, ctx->ac.i32, &ctx->abi.start_instance);// start instance
 		if (ctx->shader_info->info.vs.needs_draw_id)
@@ -725,7 +724,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	allocate_user_sgprs(ctx, &user_sgpr_info);
 
 	if (user_sgpr_info.need_ring_offsets && !ctx->options->supports_spill) {
-		add_user_sgpr_argument(&args, const_array(ctx->v4i32, 16), &ctx->ring_offsets); /* address of rings */
+		add_user_sgpr_argument(&args, const_array(ctx->ac.v4i32, 16), &ctx->ring_offsets); /* address of rings */
 	}
 
 	switch (stage) {
@@ -922,7 +921,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 							       LLVMPointerType(ctx->ac.i8, CONST_ADDR_SPACE),
 							       NULL, 0, AC_FUNC_ATTR_READNONE);
 			ctx->ring_offsets = LLVMBuildBitCast(ctx->builder, ctx->ring_offsets,
-							     const_array(ctx->v4i32, 16), "");
+							     const_array(ctx->ac.v4i32, 16), "");
 		}
 	}
 	
@@ -990,7 +989,6 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 static void setup_types(struct nir_to_llvm_context *ctx)
 {
-	ctx->v4i32 = LLVMVectorType(ctx->ac.i32, 4);
 	ctx->v8i32 = LLVMVectorType(ctx->ac.i32, 8);
 	ctx->f32 = LLVMFloatTypeInContext(ctx->context);
 	ctx->f16 = LLVMHalfTypeInContext(ctx->context);
@@ -2236,7 +2234,7 @@ static LLVMValueRef visit_vulkan_resource_index(struct nir_to_llvm_context *ctx,
 	offset = LLVMBuildAdd(ctx->builder, offset, index, "");
 	
 	desc_ptr = ac_build_gep0(&ctx->ac, desc_ptr, offset);
-	desc_ptr = cast_ptr(ctx, desc_ptr, ctx->v4i32);
+	desc_ptr = cast_ptr(ctx, desc_ptr, ctx->ac.v4i32);
 	LLVMSetMetadata(desc_ptr, ctx->uniform_md_kind, ctx->empty_md);
 
 	return LLVMBuildLoad(ctx->builder, desc_ptr, "");
@@ -4262,14 +4260,14 @@ static LLVMValueRef radv_get_sampler_desc(struct ac_shader_abi *abi,
 		type_size = 32;
 		break;
 	case AC_DESC_SAMPLER:
-		type = ctx->v4i32;
+		type = ctx->ac.v4i32;
 		if (binding->type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
 			offset += 64;
 
 		type_size = 16;
 		break;
 	case AC_DESC_BUFFER:
-		type = ctx->v4i32;
+		type = ctx->ac.v4i32;
 		type_size = 16;
 		break;
 	default:
@@ -6364,7 +6362,7 @@ ac_setup_rings(struct nir_to_llvm_context *ctx)
 		ctx->esgs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->ac.i32, RING_ESGS_GS, false));
 		ctx->gsvs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->ac.i32, RING_GSVS_GS, false));
 
-		ctx->gsvs_ring = LLVMBuildBitCast(ctx->builder, ctx->gsvs_ring, ctx->v4i32, "");
+		ctx->gsvs_ring = LLVMBuildBitCast(ctx->builder, ctx->gsvs_ring, ctx->ac.v4i32, "");
 
 		ctx->gsvs_ring = LLVMBuildInsertElement(ctx->builder, ctx->gsvs_ring, ctx->gsvs_num_entries, LLVMConstInt(ctx->ac.i32, 2, false), "");
 		tmp = LLVMBuildExtractElement(ctx->builder, ctx->gsvs_ring, ctx->ac.i32_1, "");
