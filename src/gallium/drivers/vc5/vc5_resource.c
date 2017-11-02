@@ -40,6 +40,56 @@
 #define DRM_FORMAT_MOD_INVALID ((1ULL << 56) - 1)
 #endif
 
+static void
+vc5_debug_resource_layout(struct vc5_resource *rsc, const char *caller)
+{
+        if (!(V3D_DEBUG & V3D_DEBUG_SURFACE))
+                return;
+
+        struct pipe_resource *prsc = &rsc->base;
+
+        if (prsc->target == PIPE_BUFFER) {
+                fprintf(stderr,
+                        "rsc %s %p (format %s), %dx%d buffer @0x%08x-0x%08x\n",
+                        caller, rsc,
+                        util_format_short_name(prsc->format),
+                        prsc->width0, prsc->height0,
+                        rsc->bo->offset,
+                        rsc->bo->offset + rsc->bo->size - 1);
+                return;
+        }
+
+        static const char *const tiling_descriptions[] = {
+                [VC5_TILING_RASTER] = "R",
+                [VC5_TILING_LINEARTILE] = "LT",
+                [VC5_TILING_UBLINEAR_1_COLUMN] = "UB1",
+                [VC5_TILING_UBLINEAR_2_COLUMN] = "UB2",
+                [VC5_TILING_UIF_NO_XOR] = "UIF",
+                [VC5_TILING_UIF_XOR] = "UIF^",
+        };
+
+        for (int i = 0; i <= prsc->last_level; i++) {
+                struct vc5_resource_slice *slice = &rsc->slices[i];
+
+                int level_width = slice->stride / rsc->cpp;
+                int level_height = slice->size / slice->stride;
+
+                fprintf(stderr,
+                        "rsc %s %p (format %s), %dx%d: "
+                        "level %d (%s) %dx%d -> %dx%d, stride %d@0x%08x\n",
+                        caller, rsc,
+                        util_format_short_name(prsc->format),
+                        prsc->width0, prsc->height0,
+                        i, tiling_descriptions[slice->tiling],
+                        u_minify(prsc->width0, i),
+                        u_minify(prsc->height0, i),
+                        level_width,
+                        level_height,
+                        slice->stride,
+                        rsc->bo->offset + slice->offset);
+        }
+}
+
 static bool
 vc5_resource_bo_alloc(struct vc5_resource *rsc)
 {
@@ -55,9 +105,9 @@ vc5_resource_bo_alloc(struct vc5_resource *rsc)
                           rsc->cube_map_stride * layers - 1,
                           "resource");
         if (bo) {
-                DBG(V3D_DEBUG_SURFACE, "alloc %p @ 0x%08x:\n", rsc, bo->offset);
                 vc5_bo_unreference(&rsc->bo);
                 rsc->bo = bo;
+                vc5_debug_resource_layout(rsc, "alloc");
                 return true;
         } else {
                 return false;
@@ -355,7 +405,7 @@ vc5_resource_get_handle(struct pipe_screen *pscreen,
 }
 
 static void
-vc5_setup_slices(struct vc5_resource *rsc, const char *caller)
+vc5_setup_slices(struct vc5_resource *rsc)
 {
         struct pipe_resource *prsc = &rsc->base;
         uint32_t width = prsc->width0;
@@ -424,29 +474,6 @@ vc5_setup_slices(struct vc5_resource *rsc, const char *caller)
                 slice->size = level_height * slice->stride;
 
                 offset += slice->size;
-
-                if (V3D_DEBUG & V3D_DEBUG_SURFACE) {
-                        static const char *const tiling_descriptions[] = {
-                                [VC5_TILING_RASTER] = "R",
-                                [VC5_TILING_LINEARTILE] = "LT",
-                                [VC5_TILING_UBLINEAR_1_COLUMN] = "UB1",
-                                [VC5_TILING_UBLINEAR_2_COLUMN] = "UB2",
-                                [VC5_TILING_UIF_NO_XOR] = "UIF",
-                                [VC5_TILING_UIF_XOR] = "UIF^",
-                        };
-
-                        fprintf(stderr,
-                                "rsc %s %p (format %s), %dx%d: "
-                                "level %d (%s) %dx%d -> %dx%d, stride %d@0x%08x\n",
-                                caller, rsc,
-                                util_format_short_name(prsc->format),
-                                prsc->width0, prsc->height0,
-                                i, tiling_descriptions[slice->tiling],
-                                u_minify(prsc->width0, i),
-                                u_minify(prsc->height0, i),
-                                level_width, level_height,
-                                slice->stride, slice->offset);
-                }
         }
 
         /* UIF/UBLINEAR levels need to be aligned to UIF-blocks, and LT only
@@ -574,7 +601,7 @@ vc5_resource_create_with_modifiers(struct pipe_screen *pscreen,
                 return NULL;
         }
 
-        vc5_setup_slices(rsc, "create");
+        vc5_setup_slices(rsc);
         if (!vc5_resource_bo_alloc(rsc))
                 goto fail;
 
@@ -644,14 +671,8 @@ vc5_resource_from_handle(struct pipe_screen *pscreen,
         if (!rsc->bo)
                 goto fail;
 
-        vc5_setup_slices(rsc, "import");
-
-        DBG(V3D_DEBUG_SURFACE,
-            "rsc import %p (format %s), %dx%d: "
-            "level 0 (R) -> stride %d@0x%08x\n",
-            rsc, util_format_short_name(prsc->format),
-            prsc->width0, prsc->height0,
-            slice->stride, slice->offset);
+        vc5_setup_slices(rsc);
+        vc5_debug_resource_layout(rsc, "import");
 
         if (whandle->stride != slice->stride) {
                 static bool warned = false;
