@@ -1114,13 +1114,11 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
  * \param dw_addr	address in dwords
  * \param value		value to store
  */
-static void lds_store(struct lp_build_tgsi_context *bld_base,
+static void lds_store(struct si_shader_context *ctx,
 		      unsigned dw_offset_imm, LLVMValueRef dw_addr,
 		      LLVMValueRef value)
 {
-	struct si_shader_context *ctx = si_shader_context(bld_base);
-
-	dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
+	dw_addr = lp_build_add(&ctx->bld_base.uint_bld, dw_addr,
 			    LLVMConstInt(ctx->i32, dw_offset_imm, 0));
 
 	ac_lds_store(&ctx->ac, dw_addr, value);
@@ -1266,7 +1264,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 
 		/* Skip LDS stores if there is no LDS read of this output. */
 		if (!skip_lds_store)
-			lds_store(bld_base, chan_index, dw_addr, value);
+			lds_store(ctx, chan_index, dw_addr, value);
 
 		value = ac_to_integer(&ctx->ac, value);
 		values[chan_index] = value;
@@ -3129,9 +3127,11 @@ static void si_set_es_return_value_for_gs(struct si_shader_context *ctx)
 	ctx->return_value = ret;
 }
 
-static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context *bld_base)
+static void si_llvm_emit_ls_epilogue(struct ac_shader_abi *abi,
+				     unsigned max_outputs,
+				     LLVMValueRef *addrs)
 {
-	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	struct si_shader *shader = ctx->shader;
 	struct tgsi_shader_info *info = &shader->selector->info;
 	unsigned i, chan;
@@ -3144,7 +3144,6 @@ static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context *bld_base)
 	/* Write outputs to LDS. The next shader (TCS aka HS) will read
 	 * its inputs from it. */
 	for (i = 0; i < info->num_outputs; i++) {
-		LLVMValueRef *out_ptr = ctx->outputs[i];
 		unsigned name = info->output_semantic_name[i];
 		unsigned index = info->output_semantic_index[i];
 
@@ -3175,8 +3174,8 @@ static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context *bld_base)
 			if (!(info->output_usagemask[i] & (1 << chan)))
 				continue;
 
-			lds_store(bld_base, chan, dw_addr,
-				  LLVMBuildLoad(ctx->ac.builder, out_ptr[chan], ""));
+			lds_store(ctx, chan, dw_addr,
+				  LLVMBuildLoad(ctx->ac.builder, addrs[4 * i + chan], ""));
 		}
 	}
 
@@ -3223,7 +3222,7 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
 
 			/* GFX9 has the ESGS ring in LDS. */
 			if (ctx->screen->info.chip_class >= GFX9) {
-				lds_store(bld_base, param * 4 + chan, lds_base, out_val);
+				lds_store(ctx, param * 4 + chan, lds_base, out_val);
 				continue;
 			}
 
@@ -4432,7 +4431,6 @@ static void create_function(struct si_shader_context *ctx)
 			assert(!shader->selector->nir);
 			ctx->param_es2gs_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		} else if (shader->key.as_ls) {
-			assert(!shader->selector->nir);
 			/* no extra parameters */
 		} else {
 			if (shader->is_gs_copy_shader) {
@@ -5735,9 +5733,10 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	switch (ctx->type) {
 	case PIPE_SHADER_VERTEX:
 		ctx->load_input = declare_input_vs;
-		if (shader->key.as_ls)
-			bld_base->emit_epilogue = si_llvm_emit_ls_epilogue;
-		else if (shader->key.as_es)
+		if (shader->key.as_ls) {
+			ctx->abi.emit_outputs = si_llvm_emit_ls_epilogue;
+			bld_base->emit_epilogue = si_tgsi_emit_epilogue;
+		} else if (shader->key.as_es)
 			bld_base->emit_epilogue = si_llvm_emit_es_epilogue;
 		else {
 			ctx->abi.emit_outputs = si_llvm_emit_vs_epilogue;
