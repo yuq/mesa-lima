@@ -134,7 +134,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
 
-	LLVMTypeRef i64;
 	LLVMTypeRef v2i32;
 	LLVMTypeRef v3i32;
 	LLVMTypeRef v4i32;
@@ -993,7 +992,6 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 static void setup_types(struct nir_to_llvm_context *ctx)
 {
-	ctx->i64 = LLVMIntTypeInContext(ctx->context, 64);
 	ctx->v2i32 = LLVMVectorType(ctx->ac.i32, 2);
 	ctx->v3i32 = LLVMVectorType(ctx->ac.i32, 3);
 	ctx->v4i32 = LLVMVectorType(ctx->ac.i32, 4);
@@ -5331,7 +5329,7 @@ glsl_base_to_llvm_type(struct nir_to_llvm_context *ctx,
 		return ctx->f32;
 	case GLSL_TYPE_INT64:
 	case GLSL_TYPE_UINT64:
-		return ctx->i64;
+		return ctx->ac.i64;
 	case GLSL_TYPE_DOUBLE:
 		return ctx->f64;
 	default:
