@@ -145,7 +145,6 @@ struct nir_to_llvm_context {
 	LLVMTypeRef f16;
 	LLVMTypeRef v2f32;
 	LLVMTypeRef v4f32;
-	LLVMTypeRef voidt;
 
 	unsigned uniform_md_kind;
 	LLVMValueRef empty_md;
@@ -995,7 +994,6 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 static void setup_types(struct nir_to_llvm_context *ctx)
 {
-	ctx->voidt = LLVMVoidTypeInContext(ctx->context);
 	ctx->i16 = LLVMIntTypeInContext(ctx->context, 16);
 	ctx->i64 = LLVMIntTypeInContext(ctx->context, 64);
 	ctx->v2i32 = LLVMVectorType(ctx->ac.i32, 2);
@@ -3689,7 +3687,7 @@ static void emit_waitcnt(struct nir_to_llvm_context *ctx,
 		LLVMConstInt(ctx->ac.i32, simm16, false),
 	};
 	ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.s.waitcnt",
-			   ctx->voidt, args, 1, 0);
+			   ctx->ac.voidt, args, 1, 0);
 }
 
 static void emit_barrier(struct nir_to_llvm_context *ctx)
@@ -3704,7 +3702,7 @@ static void emit_barrier(struct nir_to_llvm_context *ctx)
 		return;
 	}
 	ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.s.barrier",
-			   ctx->voidt, NULL, 0, AC_FUNC_ATTR_CONVERGENT);
+			   ctx->ac.voidt, NULL, 0, AC_FUNC_ATTR_CONVERGENT);
 }
 
 static void emit_discard_if(struct ac_nir_context *ctx,
