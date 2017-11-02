@@ -134,7 +134,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
 
-	LLVMTypeRef v2i32;
 	LLVMTypeRef v3i32;
 	LLVMTypeRef v4i32;
 	LLVMTypeRef v8i32;
@@ -877,13 +876,13 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		if (ctx->shader_info->info.ps.needs_sample_positions)
 			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->sample_pos_offset); /* sample position offset */
 		add_sgpr_argument(&args, ctx->ac.i32, &ctx->prim_mask); /* prim mask */
-		add_vgpr_argument(&args, ctx->v2i32, &ctx->persp_sample); /* persp sample */
-		add_vgpr_argument(&args, ctx->v2i32, &ctx->persp_center); /* persp center */
-		add_vgpr_argument(&args, ctx->v2i32, &ctx->persp_centroid); /* persp centroid */
+		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->persp_sample); /* persp sample */
+		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->persp_center); /* persp center */
+		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->persp_centroid); /* persp centroid */
 		add_vgpr_argument(&args, ctx->v3i32, NULL); /* persp pull model */
-		add_vgpr_argument(&args, ctx->v2i32, &ctx->linear_sample); /* linear sample */
-		add_vgpr_argument(&args, ctx->v2i32, &ctx->linear_center); /* linear center */
-		add_vgpr_argument(&args, ctx->v2i32, &ctx->linear_centroid); /* linear centroid */
+		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->linear_sample); /* linear sample */
+		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->linear_center); /* linear center */
+		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->linear_centroid); /* linear centroid */
 		add_vgpr_argument(&args, ctx->f32, NULL);  /* line stipple tex */
 		add_vgpr_argument(&args, ctx->f32, &ctx->abi.frag_pos[0]);  /* pos x float */
 		add_vgpr_argument(&args, ctx->f32, &ctx->abi.frag_pos[1]);  /* pos y float */
@@ -992,7 +991,6 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 static void setup_types(struct nir_to_llvm_context *ctx)
 {
-	ctx->v2i32 = LLVMVectorType(ctx->ac.i32, 2);
 	ctx->v3i32 = LLVMVectorType(ctx->ac.i32, 3);
 	ctx->v4i32 = LLVMVectorType(ctx->ac.i32, 4);
 	ctx->v8i32 = LLVMVectorType(ctx->ac.i32, 8);
@@ -1908,7 +1906,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 	case nir_op_unpack_64_2x32_split_x: {
 		assert(instr->src[0].src.ssa->num_components == 1);
 		LLVMValueRef tmp = LLVMBuildBitCast(ctx->ac.builder, src[0],
-						    LLVMVectorType(ctx->ac.i32, 2),
+						    ctx->ac.v2i32,
 						    "");
 		result = LLVMBuildExtractElement(ctx->ac.builder, tmp,
 						 ctx->ac.i32_0, "");
@@ -1918,7 +1916,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 	case nir_op_unpack_64_2x32_split_y: {
 		assert(instr->src[0].src.ssa->num_components == 1);
 		LLVMValueRef tmp = LLVMBuildBitCast(ctx->ac.builder, src[0],
-						    LLVMVectorType(ctx->ac.i32, 2),
+						    ctx->ac.v2i32,
 						    "");
 		result = LLVMBuildExtractElement(ctx->ac.builder, tmp,
 						 ctx->ac.i32_1, "");
@@ -1926,7 +1924,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 	}
 
 	case nir_op_pack_64_2x32_split: {
-		LLVMValueRef tmp = LLVMGetUndef(LLVMVectorType(ctx->ac.i32, 2));
+		LLVMValueRef tmp = LLVMGetUndef(ctx->ac.v2i32);
 		tmp = LLVMBuildInsertElement(ctx->ac.builder, tmp,
 					     src[0], ctx->ac.i32_0, "");
 		tmp = LLVMBuildInsertElement(ctx->ac.builder, tmp,
