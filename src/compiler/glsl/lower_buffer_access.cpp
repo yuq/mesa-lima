@@ -111,24 +111,17 @@ lower_buffer_access::emit_access(void *mem_ctx,
          ir_dereference *col_deref =
             new(mem_ctx) ir_dereference_array(deref->clone(mem_ctx, NULL), col);
 
-         if (row_major) {
-            /* For a row-major matrix, the next column starts at the next
-             * element.
-             */
-            int size_mul = deref->type->is_64bit() ? 8 : 4;
-            emit_access(mem_ctx, is_write, col_deref, base_offset,
-                        deref_offset + i * size_mul,
-                        row_major, deref->type, packing,
-                        writemask_for_size(col_deref->type->vector_elements));
-         } else {
-            const int size_mul =
-               link_calculate_matrix_stride(deref->type, row_major, packing);
+         /* For a row-major matrix, the next column starts at the next
+          * element.  Otherwise it is offset by the matrix stride.
+          */
+         const unsigned size_mul = row_major
+            ? (deref->type->is_double() ? 8 : 4)
+            : link_calculate_matrix_stride(deref->type, row_major, packing);
 
-            emit_access(mem_ctx, is_write, col_deref, base_offset,
-                        deref_offset + i * size_mul,
-                        row_major, deref->type, packing,
-                        writemask_for_size(col_deref->type->vector_elements));
-         }
+         emit_access(mem_ctx, is_write, col_deref, base_offset,
+                     deref_offset + i * size_mul,
+                     row_major, deref->type, packing,
+                     writemask_for_size(col_deref->type->vector_elements));
       }
       return;
    }
