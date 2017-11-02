@@ -134,7 +134,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
 
-	LLVMTypeRef i1;
 	LLVMTypeRef i8;
 	LLVMTypeRef i16;
 	LLVMTypeRef i64;
@@ -998,7 +997,6 @@ static void create_function(struct nir_to_llvm_context *ctx,
 static void setup_types(struct nir_to_llvm_context *ctx)
 {
 	ctx->voidt = LLVMVoidTypeInContext(ctx->context);
-	ctx->i1 = LLVMIntTypeInContext(ctx->context, 1);
 	ctx->i8 = LLVMIntTypeInContext(ctx->context, 8);
 	ctx->i16 = LLVMIntTypeInContext(ctx->context, 16);
 	ctx->i64 = LLVMIntTypeInContext(ctx->context, 64);
@@ -1343,7 +1341,7 @@ static LLVMValueRef emit_f2f16(struct nir_to_llvm_context *ctx,
 		/* Check if the result is a denormal - and flush to 0 if so. */
 		args[0] = result;
 		args[1] = LLVMConstInt(ctx->ac.i32, N_SUBNORMAL | P_SUBNORMAL, false);
-		cond = ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.class.f16", ctx->i1, args, 2, AC_FUNC_ATTR_READNONE);
+		cond = ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.class.f16", ctx->ac.i1, args, 2, AC_FUNC_ATTR_READNONE);
 	}
 
 	/* need to convert back up to f32 */
