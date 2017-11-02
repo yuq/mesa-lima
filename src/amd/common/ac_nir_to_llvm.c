@@ -134,7 +134,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
 
-	LLVMTypeRef v2f32;
 	LLVMTypeRef v4f32;
 
 	unsigned uniform_md_kind;
@@ -985,7 +984,6 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 static void setup_types(struct nir_to_llvm_context *ctx)
 {
-	ctx->v2f32 = LLVMVectorType(ctx->ac.f32, 2);
 	ctx->v4f32 = LLVMVectorType(ctx->ac.f32, 4);
 
 	ctx->uniform_md_kind =
@@ -1450,8 +1448,7 @@ static LLVMValueRef emit_unpack_half_2x16(struct ac_llvm_context *ctx,
 		temps[i] = LLVMBuildFPExt(ctx->builder, val, ctx->f32, "");
 	}
 
-	LLVMTypeRef v2f32 = LLVMVectorType(ctx->f32, 2);
-	result = LLVMBuildInsertElement(ctx->builder, LLVMGetUndef(v2f32), temps[0],
+	result = LLVMBuildInsertElement(ctx->builder, LLVMGetUndef(ctx->v2f32), temps[0],
 					ctx->i32_0, "");
 	result = LLVMBuildInsertElement(ctx->builder, result, temps[1],
 					ctx->i32_1, "");
@@ -2305,11 +2302,9 @@ static void visit_store_ssbo(struct ac_nir_context *ctx,
 			store_name = "llvm.amdgcn.buffer.store.v4f32";
 			data = base_data;
 		} else if (count == 2) {
-			LLVMTypeRef v2f32 = LLVMVectorType(ctx->ac.f32, 2);
-
 			tmp = LLVMBuildExtractElement(ctx->ac.builder,
 						      base_data, LLVMConstInt(ctx->ac.i32, start, false), "");
-			data = LLVMBuildInsertElement(ctx->ac.builder, LLVMGetUndef(v2f32), tmp,
+			data = LLVMBuildInsertElement(ctx->ac.builder, LLVMGetUndef(ctx->ac.v2f32), tmp,
 						      ctx->ac.i32_0, "");
 
 			tmp = LLVMBuildExtractElement(ctx->ac.builder,
@@ -3803,7 +3798,7 @@ static LLVMValueRef load_sample_position(struct nir_to_llvm_context *ctx,
 	LLVMValueRef ptr = ac_build_gep0(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->ac.i32, RING_PS_SAMPLE_POSITIONS, false));
 
 	ptr = LLVMBuildBitCast(ctx->builder, ptr,
-			       const_array(ctx->v2f32, 64), "");
+			       const_array(ctx->ac.v2f32, 64), "");
 
 	sample_id = LLVMBuildAdd(ctx->builder, sample_id, ctx->sample_pos_offset, "");
 	result = ac_build_load_invariant(&ctx->ac, ptr, sample_id);
@@ -3906,7 +3901,7 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 
 		if (interp_param) {
 			interp_param = LLVMBuildBitCast(ctx->builder,
-							interp_param, LLVMVectorType(ctx->ac.f32, 2), "");
+							interp_param, ctx->ac.v2f32, "");
 			LLVMValueRef i = LLVMBuildExtractElement(
 				ctx->builder, interp_param, ctx->ac.i32_0, "");
 			LLVMValueRef j = LLVMBuildExtractElement(
@@ -5045,7 +5040,7 @@ static void interp_fs_input(struct nir_to_llvm_context *ctx,
 	 */
 	if (interp) {
 		interp_param = LLVMBuildBitCast(ctx->builder, interp_param,
-						LLVMVectorType(ctx->ac.f32, 2), "");
+						ctx->ac.v2f32, "");
 
 		i = LLVMBuildExtractElement(ctx->builder, interp_param,
 						ctx->ac.i32_0, "");
