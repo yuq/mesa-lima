@@ -182,6 +182,10 @@ pkg.generate(
   extra_cflags : gl_pkgconfig_c_flags,
 )
 
+if with_platform_wayland
+  subdir('wayland/wayland-egl')
+endif
+
 if with_tests
   if with_glvnd
     # TODO: add glvnd symbol check
