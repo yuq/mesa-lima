@@ -166,6 +166,15 @@ emit_one_texture(struct vc5_context *vc5, struct vc5_texture_stateobj *stage_tex
         if (mag_img_filter == PIPE_TEX_FILTER_NEAREST)
                 unpacked.filter++;
 
+        if (psampler->max_anisotropy > 8)
+                unpacked.filter = V3D_TMU_FILTER_ANISOTROPIC_16_1;
+        else if (psampler->max_anisotropy > 4)
+                unpacked.filter = V3D_TMU_FILTER_ANISOTROPIC_8_1;
+        else if (psampler->max_anisotropy > 2)
+                unpacked.filter = V3D_TMU_FILTER_ANISOTROPIC_4_1;
+        else if (psampler->max_anisotropy)
+                unpacked.filter = V3D_TMU_FILTER_ANISOTROPIC_2_1;
+
         uint8_t packed[cl_packet_length(TEXTURE_SHADER_STATE)];
         cl_packet_pack(TEXTURE_SHADER_STATE)(&job->indirect, packed, &unpacked);
 
