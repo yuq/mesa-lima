@@ -167,17 +167,6 @@ if with_glx == 'dri'
     version : gl_lib_version,
     install : true,
   )
-
-  pkg.generate(
-    name : 'gl',
-    filebase : 'gl',
-    description : 'Mesa OpenGL Library',
-    version : meson.project_version(),
-    libraries : libgl,
-    libraries_private : gl_priv_libs,
-    requires_private : gl_priv_reqs,
-    variables : ['glx_tls=yes'],
-  )
 endif
 
 if with_tests
