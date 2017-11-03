@@ -497,6 +497,11 @@ get_image_format_properties(const struct gen_device_info *devinfo,
       return flags;
    }
 
+   /* ASTC textures must be in Y-tiled memory */
+   if (vk_tiling == VK_IMAGE_TILING_LINEAR &&
+       isl_format_get_layout(format.isl_format)->txc == ISL_TXC_ASTC)
+      return 0;
+
    if (isl_format_supports_sampling(devinfo, format.isl_format)) {
       flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
                VK_FORMAT_FEATURE_BLIT_SRC_BIT;
@@ -615,10 +620,6 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
          tiled &= ~VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT &
                   ~VK_FORMAT_FEATURE_BLIT_DST_BIT;
       }
-
-      /* ASTC textures must be in Y-tiled memory */
-      if (isl_format_get_layout(linear_fmt.isl_format)->txc == ISL_TXC_ASTC)
-         linear = 0;
    }
 
    if (format && format->can_ycbcr) {
