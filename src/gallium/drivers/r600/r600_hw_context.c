@@ -351,6 +351,8 @@ void r600_begin_new_cs(struct r600_context *ctx)
 	if (ctx->b.chip_class >= EVERGREEN) {
 		r600_mark_atom_dirty(ctx, &ctx->fragment_images.atom);
 		r600_mark_atom_dirty(ctx, &ctx->fragment_buffers.atom);
+		r600_mark_atom_dirty(ctx, &ctx->compute_images.atom);
+		r600_mark_atom_dirty(ctx, &ctx->compute_buffers.atom);
 	}
 	r600_mark_atom_dirty(ctx, &ctx->hw_shader_stages[R600_HW_STAGE_PS].atom);
 	r600_mark_atom_dirty(ctx, &ctx->poly_offset_state.atom);

@@ -38,7 +38,7 @@
 
 #include "tgsi/tgsi_scan.h"
 
-#define R600_NUM_ATOMS 54
+#define R600_NUM_ATOMS 56
 
 #define R600_MAX_IMAGES 8
 /*
@@ -522,7 +522,9 @@ struct r600_context {
 	struct r600_atomic_buffer_state atomic_buffer_state;
 	/* only have images on fragment shader */
 	struct r600_image_state         fragment_images;
+	struct r600_image_state         compute_images;
 	struct r600_image_state         fragment_buffers;
+	struct r600_image_state         compute_buffers;
 	/* Shaders and shader resources. */
 	struct r600_cso_state		vertex_fetch_shader;
 	struct r600_shader_state        hw_shader_stages[EG_NUM_HW_STAGES];
@@ -1023,9 +1025,11 @@ void eg_dump_debug_state(struct pipe_context *ctx, FILE *f,
 
 struct r600_shader_atomic;
 bool evergreen_emit_atomic_buffer_setup(struct r600_context *rctx,
+					struct r600_pipe_shader *cs_shader,
 					struct r600_shader_atomic *combined_atomics,
 					uint8_t *atomic_used_mask_p);
 void evergreen_emit_atomic_buffer_save(struct r600_context *rctx,
+				       bool is_compute,
 				       struct r600_shader_atomic *combined_atomics,
 				       uint8_t *atomic_used_mask_p);
 

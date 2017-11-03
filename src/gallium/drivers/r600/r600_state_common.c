@@ -1893,7 +1893,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		: info->mode;
 
 	if (rctx->b.chip_class >= EVERGREEN)
-		evergreen_emit_atomic_buffer_setup(rctx, combined_atomics, &atomic_used_mask);
+		evergreen_emit_atomic_buffer_setup(rctx, NULL, combined_atomics, &atomic_used_mask);
 
 	if (index_size) {
 		index_offset += info->start * index_size;
@@ -2177,7 +2177,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 
 
 	if (rctx->b.chip_class >= EVERGREEN)
-		evergreen_emit_atomic_buffer_save(rctx, combined_atomics, &atomic_used_mask);
+		evergreen_emit_atomic_buffer_save(rctx, false, combined_atomics, &atomic_used_mask);
 
 	if (rctx->trace_buf)
 		eg_trace_emit(rctx);
