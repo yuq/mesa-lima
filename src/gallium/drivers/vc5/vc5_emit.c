@@ -201,8 +201,10 @@ emit_one_texture(struct vc5_context *vc5, struct vc5_texture_stateobj *stage_tex
 static void
 emit_textures(struct vc5_context *vc5, struct vc5_texture_stateobj *stage_tex)
 {
-        for (int i = 0; i < stage_tex->num_textures; i++)
-                emit_one_texture(vc5, stage_tex, i);
+        for (int i = 0; i < stage_tex->num_textures; i++) {
+                if (stage_tex->textures[i])
+                        emit_one_texture(vc5, stage_tex, i);
+        }
 }
 
 void
