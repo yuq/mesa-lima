@@ -1202,7 +1202,8 @@ static uint64_t gpir_get_free_regs(gpir_instr *instrs, int start, int end)
       return 0;
 
    uint64_t ret = ~0ull;
-   for (int i = start; i < end; i++)
+   /* store will have 3 instr delay, so end-2 */
+   for (int i = start; i < end - 2; i++)
       ret &= instrs[i].reg_status;
 
    /* TODO: support spill to memory */
