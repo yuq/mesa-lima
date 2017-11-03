@@ -1526,7 +1526,7 @@ static void r600_generate_fixed_func_tcs(struct r600_context *rctx)
 		ureg_create_shader_and_destroy(ureg, &rctx->b.b);
 }
 
-static void r600_update_compressed_resource_state(struct r600_context *rctx)
+void r600_update_compressed_resource_state(struct r600_context *rctx, bool compute_only)
 {
 	unsigned i;
 	unsigned counter;
@@ -1535,15 +1535,25 @@ static void r600_update_compressed_resource_state(struct r600_context *rctx)
 	if (counter != rctx->b.last_compressed_colortex_counter) {
 		rctx->b.last_compressed_colortex_counter = counter;
 
-		for (i = 0; i < PIPE_SHADER_TYPES; ++i) {
-			r600_update_compressed_colortex_mask(&rctx->samplers[i].views);
+		if (compute_only) {
+			r600_update_compressed_colortex_mask(&rctx->samplers[PIPE_SHADER_COMPUTE].views);
+		} else {
+			for (i = 0; i < PIPE_SHADER_TYPES; ++i) {
+				r600_update_compressed_colortex_mask(&rctx->samplers[i].views);
+			}
 		}
-		r600_update_compressed_colortex_mask_images(&rctx->fragment_images);
+		if (!compute_only)
+			r600_update_compressed_colortex_mask_images(&rctx->fragment_images);
+		r600_update_compressed_colortex_mask_images(&rctx->compute_images);
 	}
 
 	/* Decompress textures if needed. */
 	for (i = 0; i < PIPE_SHADER_TYPES; i++) {
 		struct r600_samplerview_state *views = &rctx->samplers[i].views;
+
+		if (compute_only)
+			if (i != PIPE_SHADER_COMPUTE)
+				continue;
 		if (views->compressed_depthtex_mask) {
 			r600_decompress_depth_textures(rctx, views);
 		}
@@ -1554,7 +1564,16 @@ static void r600_update_compressed_resource_state(struct r600_context *rctx)
 
 	{
 		struct r600_image_state *istate;
-		istate = &rctx->fragment_images;
+
+		if (!compute_only) {
+			istate = &rctx->fragment_images;
+			if (istate->compressed_depthtex_mask)
+				r600_decompress_depth_images(rctx, istate);
+			if (istate->compressed_colortex_mask)
+				r600_decompress_color_images(rctx, istate);
+		}
+
+		istate = &rctx->compute_images;
 		if (istate->compressed_depthtex_mask)
 			r600_decompress_depth_images(rctx, istate);
 		if (istate->compressed_colortex_mask)
@@ -1603,7 +1622,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 	struct r600_pipe_shader *clip_so_current = NULL;
 
 	if (!rctx->blitter->running)
-		r600_update_compressed_resource_state(rctx);
+		r600_update_compressed_resource_state(rctx, false);
 
 	SELECT_SHADER_OR_FAIL(ps);
 

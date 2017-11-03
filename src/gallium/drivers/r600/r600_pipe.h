@@ -1032,5 +1032,6 @@ void evergreen_emit_atomic_buffer_save(struct r600_context *rctx,
 				       bool is_compute,
 				       struct r600_shader_atomic *combined_atomics,
 				       uint8_t *atomic_used_mask_p);
+void r600_update_compressed_resource_state(struct r600_context *rctx, bool compute_only);
 
 #endif
