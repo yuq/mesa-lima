@@ -697,6 +697,8 @@ static void compute_emit_cs(struct r600_context *rctx,
 		rctx->b.dma.flush(rctx, PIPE_FLUSH_ASYNC, NULL);
 	}
 
+	r600_update_compressed_resource_state(rctx, true);
+
 	r600_need_cs_space(rctx, 0, true);
 	if (rctx->cs_shader_state.shader->ir_type == PIPE_SHADER_IR_TGSI) {
 		r600_shader_select(&rctx->b.b, rctx->cs_shader_state.shader->sel, &compute_dirty);
@@ -759,7 +761,13 @@ static void compute_emit_cs(struct r600_context *rctx,
 	/* Emit sampler view (texture resource) state */
 	r600_emit_atom(rctx, &rctx->samplers[PIPE_SHADER_COMPUTE].views.atom);
 
-	/* Emit compute shader state */
+	/* Emit images state */
+	r600_emit_atom(rctx, &rctx->compute_images.atom);
+
+	/* Emit buffers state */
+	r600_emit_atom(rctx, &rctx->compute_buffers.atom);
+
+	/* Emit shader state */
 	r600_emit_atom(rctx, &rctx->cs_shader_state.atom);
 
 	/* Emit dispatch state and dispatch packet */
