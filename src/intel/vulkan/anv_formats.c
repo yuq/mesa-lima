@@ -651,35 +651,25 @@ get_buffer_format_features(const struct gen_device_info *devinfo,
    return flags;
 }
 
-static void
-anv_physical_device_get_format_properties(struct anv_physical_device *physical_device,
-                                          VkFormat vk_format,
-                                          VkFormatProperties *out_properties)
-{
-   const struct gen_device_info *devinfo = &physical_device->info;
-   const struct anv_format *anv_format = anv_get_format(vk_format);
-
-   out_properties->linearTilingFeatures =
-      get_image_format_features(devinfo, vk_format, anv_format,
-                                VK_IMAGE_TILING_LINEAR);
-   out_properties->optimalTilingFeatures =
-      get_image_format_features(devinfo, vk_format, anv_format,
-                                VK_IMAGE_TILING_OPTIMAL);
-   out_properties->bufferFeatures =
-      get_buffer_format_features(devinfo, vk_format, anv_format);
-}
-
 void anv_GetPhysicalDeviceFormatProperties(
     VkPhysicalDevice                            physicalDevice,
-    VkFormat                                    format,
+    VkFormat                                    vk_format,
     VkFormatProperties*                         pFormatProperties)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
+   const struct gen_device_info *devinfo = &physical_device->info;
+   const struct anv_format *anv_format = anv_get_format(vk_format);
 
-   anv_physical_device_get_format_properties(
-               physical_device,
-               format,
-               pFormatProperties);
+   *pFormatProperties = (VkFormatProperties) {
+      .linearTilingFeatures =
+         get_image_format_features(devinfo, vk_format, anv_format,
+                                   VK_IMAGE_TILING_LINEAR),
+      .optimalTilingFeatures =
+         get_image_format_features(devinfo, vk_format, anv_format,
+                                   VK_IMAGE_TILING_OPTIMAL),
+      .bufferFeatures =
+         get_buffer_format_features(devinfo, vk_format, anv_format),
+   };
 }
 
 void anv_GetPhysicalDeviceFormatProperties2KHR(
