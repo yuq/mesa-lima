@@ -1270,7 +1270,9 @@ brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
 {
    struct gl_context *ctx = &brw->ctx;
 
-   if (!prog)
+   if (!prog || (prog->info.num_ubos == 0 &&
+                 prog->info.num_ssbos == 0 &&
+                 prog->info.num_abos == 0))
       return;
 
    uint32_t *ubo_surf_offsets =
@@ -1283,9 +1285,16 @@ brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
                             ISL_FORMAT_R32G32B32A32_FLOAT, 0);
    }
 
-   uint32_t *ssbo_surf_offsets =
-      &stage_state->surf_offset[prog_data->binding_table.ssbo_start] +
-      prog->info.num_abos;
+   uint32_t *abo_surf_offsets =
+      &stage_state->surf_offset[prog_data->binding_table.ssbo_start];
+   uint32_t *ssbo_surf_offsets = abo_surf_offsets + prog->info.num_abos;
+
+   for (int i = 0; i < prog->info.num_abos; i++) {
+      struct gl_buffer_binding *binding =
+         &ctx->AtomicBufferBindings[prog->sh.AtomicBuffers[i]->Binding];
+      upload_buffer_surface(brw, binding, &abo_surf_offsets[i],
+                            ISL_FORMAT_RAW, RELOC_WRITE);
+   }
 
    for (int i = 0; i < prog->info.num_ssbos; i++) {
       struct gl_buffer_binding *binding =
@@ -1296,9 +1305,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
    }
 
    stage_state->push_constants_dirty = true;
-
-   if (prog->info.num_ubos || prog->info.num_ssbos)
-      brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
+   brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
 }
 
 static void
@@ -1342,72 +1349,6 @@ const struct brw_tracked_state brw_cs_ubo_surfaces = {
              BRW_NEW_UNIFORM_BUFFER,
    },
    .emit = brw_upload_cs_ubo_surfaces,
-};
-
-void
-brw_upload_abo_surfaces(struct brw_context *brw,
-                        const struct gl_program *prog,
-                        struct brw_stage_state *stage_state,
-                        struct brw_stage_prog_data *prog_data)
-{
-   struct gl_context *ctx = &brw->ctx;
-   uint32_t *surf_offsets =
-      &stage_state->surf_offset[prog_data->binding_table.ssbo_start];
-
-   if (prog->info.num_abos) {
-      for (unsigned i = 0; i < prog->info.num_abos; i++) {
-         struct gl_buffer_binding *binding =
-            &ctx->AtomicBufferBindings[prog->sh.AtomicBuffers[i]->Binding];
-         upload_buffer_surface(brw, binding, &surf_offsets[i],
-                               ISL_FORMAT_RAW, RELOC_WRITE);
-      }
-
-      brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
-   }
-}
-
-static void
-brw_upload_wm_abo_surfaces(struct brw_context *brw)
-{
-   /* _NEW_PROGRAM */
-   const struct gl_program *wm = brw->programs[MESA_SHADER_FRAGMENT];
-
-   if (wm) {
-      /* BRW_NEW_FS_PROG_DATA */
-      brw_upload_abo_surfaces(brw, wm, &brw->wm.base, brw->wm.base.prog_data);
-   }
-}
-
-const struct brw_tracked_state brw_wm_abo_surfaces = {
-   .dirty = {
-      .mesa = _NEW_PROGRAM,
-      .brw = BRW_NEW_ATOMIC_BUFFER |
-             BRW_NEW_BATCH |
-             BRW_NEW_FS_PROG_DATA,
-   },
-   .emit = brw_upload_wm_abo_surfaces,
-};
-
-static void
-brw_upload_cs_abo_surfaces(struct brw_context *brw)
-{
-   /* _NEW_PROGRAM */
-   const struct gl_program *cp = brw->programs[MESA_SHADER_COMPUTE];
-
-   if (cp) {
-      /* BRW_NEW_CS_PROG_DATA */
-      brw_upload_abo_surfaces(brw, cp, &brw->cs.base, brw->cs.base.prog_data);
-   }
-}
-
-const struct brw_tracked_state brw_cs_abo_surfaces = {
-   .dirty = {
-      .mesa = _NEW_PROGRAM,
-      .brw = BRW_NEW_ATOMIC_BUFFER |
-             BRW_NEW_BATCH |
-             BRW_NEW_CS_PROG_DATA,
-   },
-   .emit = brw_upload_cs_abo_surfaces,
 };
 
 static void
