@@ -220,7 +220,7 @@ static void
 intel_batchbuffer_reset_and_clear_render_cache(struct brw_context *brw)
 {
    intel_batchbuffer_reset(brw);
-   brw_render_cache_set_clear(brw);
+   brw_cache_sets_clear(brw);
 }
 
 void

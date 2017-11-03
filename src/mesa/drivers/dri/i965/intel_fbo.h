@@ -234,10 +234,7 @@ void
 intel_renderbuffer_upsample(struct brw_context *brw,
                             struct intel_renderbuffer *irb);
 
-void brw_render_cache_set_clear(struct brw_context *brw);
-void brw_render_cache_set_add_bo(struct brw_context *brw, struct brw_bo *bo);
-void brw_render_cache_set_check_flush(struct brw_context *brw, struct brw_bo *bo);
-
+void brw_cache_sets_clear(struct brw_context *brw);
 void brw_cache_flush_for_read(struct brw_context *brw, struct brw_bo *bo);
 void brw_cache_flush_for_render(struct brw_context *brw, struct brw_bo *bo);
 void brw_cache_flush_for_depth(struct brw_context *brw, struct brw_bo *bo);

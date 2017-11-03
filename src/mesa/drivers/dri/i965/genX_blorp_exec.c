@@ -232,7 +232,6 @@ genX(blorp_exec)(struct blorp_batch *batch,
       brw_cache_flush_for_depth(brw, params->depth.addr.buffer);
    if (params->stencil.enabled)
       brw_cache_flush_for_depth(brw, params->stencil.addr.buffer);
-   brw_render_cache_set_check_flush(brw, params->dst.addr.buffer);
 
    brw_select_pipeline(brw, BRW_RENDER_PIPELINE);
 

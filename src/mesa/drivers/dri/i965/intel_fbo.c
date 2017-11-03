@@ -970,19 +970,16 @@ intel_renderbuffer_move_to_temp(struct brw_context *brw,
 }
 
 void
-brw_render_cache_set_clear(struct brw_context *brw)
+brw_cache_sets_clear(struct brw_context *brw)
 {
    struct set_entry *entry;
 
    set_foreach(brw->render_cache, entry) {
       _mesa_set_remove(brw->render_cache, entry);
    }
-}
 
-void
-brw_render_cache_set_add_bo(struct brw_context *brw, struct brw_bo *bo)
-{
-   _mesa_set_add(brw->render_cache, bo);
+   set_foreach(brw->depth_cache, entry)
+      _mesa_set_remove(brw->depth_cache, entry);
 }
 
 /**
@@ -997,13 +994,10 @@ brw_render_cache_set_add_bo(struct brw_context *brw, struct brw_bo *bo)
  * necessary is flushed before another use of that BO, but for reuse from
  * different caches within a batchbuffer, it's all our responsibility.
  */
-void
-brw_render_cache_set_check_flush(struct brw_context *brw, struct brw_bo *bo)
+static void
+flush_depth_and_render_caches(struct brw_context *brw, struct brw_bo *bo)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
-
-   if (!_mesa_set_search(brw->render_cache, bo))
-      return;
 
    if (devinfo->gen >= 6) {
       brw_emit_pipe_control_flush(brw,
@@ -1018,36 +1012,41 @@ brw_render_cache_set_check_flush(struct brw_context *brw, struct brw_bo *bo)
       brw_emit_mi_flush(brw);
    }
 
-   brw_render_cache_set_clear(brw);
+   brw_cache_sets_clear(brw);
 }
 
 void
 brw_cache_flush_for_read(struct brw_context *brw, struct brw_bo *bo)
 {
-   brw_render_cache_set_check_flush(brw, bo);
+   if (_mesa_set_search(brw->render_cache, bo) ||
+       _mesa_set_search(brw->depth_cache, bo))
+      flush_depth_and_render_caches(brw, bo);
 }
 
 void
 brw_cache_flush_for_render(struct brw_context *brw, struct brw_bo *bo)
 {
+   if (_mesa_set_search(brw->depth_cache, bo))
+      flush_depth_and_render_caches(brw, bo);
 }
 
 void
 brw_render_cache_add_bo(struct brw_context *brw, struct brw_bo *bo)
 {
-   brw_render_cache_set_add_bo(brw, bo);
+   _mesa_set_add(brw->render_cache, bo);
 }
 
 void
 brw_cache_flush_for_depth(struct brw_context *brw, struct brw_bo *bo)
 {
-   brw_render_cache_set_check_flush(brw, bo);
+   if (_mesa_set_search(brw->render_cache, bo))
+      flush_depth_and_render_caches(brw, bo);
 }
 
 void
 brw_depth_cache_add_bo(struct brw_context *brw, struct brw_bo *bo)
 {
-   brw_render_cache_set_add_bo(brw, bo);
+   _mesa_set_add(brw->depth_cache, bo);
 }
 
 /**
@@ -1069,4 +1068,6 @@ intel_fbo_init(struct brw_context *brw)
 
    brw->render_cache = _mesa_set_create(brw, _mesa_hash_pointer,
                                         _mesa_key_pointer_equal);
+   brw->depth_cache = _mesa_set_create(brw, _mesa_hash_pointer,
+                                       _mesa_key_pointer_equal);
 }
