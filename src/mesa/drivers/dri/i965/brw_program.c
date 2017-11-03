@@ -788,6 +788,17 @@ brw_assign_common_binding_table_offsets(const struct gen_device_info *devinfo,
 }
 
 void
+brw_program_serialize_nir(struct gl_context *ctx, struct gl_program *prog)
+{
+   struct blob writer;
+   blob_init(&writer);
+   nir_serialize(&writer, prog->nir);
+   prog->driver_cache_blob = ralloc_size(NULL, writer.size);
+   memcpy(prog->driver_cache_blob, writer.data, writer.size);
+   prog->driver_cache_blob_size = writer.size;
+}
+
+void
 brw_program_deserialize_nir(struct gl_context *ctx, struct gl_program *prog,
                             gl_shader_stage stage)
 {

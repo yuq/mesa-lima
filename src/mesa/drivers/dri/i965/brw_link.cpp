@@ -355,12 +355,7 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
             continue;
 
          struct gl_program *prog = shader->Program;
-         struct blob writer;
-         blob_init(&writer);
-         nir_serialize(&writer, prog->nir);
-         prog->driver_cache_blob = ralloc_size(NULL, writer.size);
-         memcpy(prog->driver_cache_blob, writer.data, writer.size);
-         prog->driver_cache_blob_size = writer.size;
+         brw_program_serialize_nir(ctx, prog);
       }
    }
 
