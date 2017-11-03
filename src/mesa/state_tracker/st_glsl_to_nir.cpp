@@ -176,6 +176,7 @@ st_nir_assign_uniform_locations(struct gl_program *prog,
 {
    int max = 0;
    int shaderidx = 0;
+   int imageidx = 0;
 
    nir_foreach_variable(uniform, uniform_list) {
       int loc;
@@ -188,10 +189,13 @@ st_nir_assign_uniform_locations(struct gl_program *prog,
           uniform->interface_type != NULL)
          continue;
 
-      if (uniform->type->is_sampler()) {
+      if (uniform->type->is_sampler() || uniform->type->is_image()) {
          unsigned val = 0;
          bool found = shader_program->UniformHash->get(val, uniform->name);
-         loc = shaderidx++;
+         if (uniform->type->is_sampler())
+            loc = shaderidx++;
+         else
+            loc = imageidx++;
          assert(found);
          (void) found; /* silence unused var warning */
          /* this ensure that nir_lower_samplers looks at the correct
