@@ -24,7 +24,6 @@
 #include "compiler/blob.h"
 #include "compiler/glsl/ir_uniform.h"
 #include "compiler/glsl/shader_cache.h"
-#include "compiler/nir/nir_serialize.h"
 #include "main/mtypes.h"
 #include "util/build_id.h"
 #include "util/debug.h"
@@ -59,27 +58,6 @@ gen_shader_sha1(struct brw_context *brw, struct gl_program *prog,
                       sha1_buf);
 
    _mesa_sha1_compute(manifest, strlen(manifest), out_sha1);
-}
-
-static void
-restore_serialized_nir_shader(struct brw_context *brw, struct gl_program *prog,
-                              gl_shader_stage stage)
-{
-   prog->program_written_to_cache = false;
-   if (brw->ctx._Shader->Flags & GLSL_CACHE_INFO) {
-      fprintf(stderr, "falling back to nir %s.\n",
-              _mesa_shader_stage_to_abbrev(prog->info.stage));
-   }
-
-   if (!prog->nir) {
-      assert(prog->driver_cache_blob && prog->driver_cache_blob_size > 0);
-      const struct nir_shader_compiler_options *options =
-         brw->ctx.Const.ShaderCompilerOptions[stage].NirOptions;
-      struct blob_reader reader;
-      blob_reader_init(&reader, prog->driver_cache_blob,
-                       prog->driver_cache_blob_size);
-      prog->nir = nir_deserialize(NULL, options, &reader);
-   }
 }
 
 static void
@@ -298,7 +276,14 @@ brw_disk_cache_upload_program(struct brw_context *brw, gl_shader_stage stage)
    return true;
 
 fail:
-   restore_serialized_nir_shader(brw, prog, stage);
+   prog->program_written_to_cache = false;
+   if (brw->ctx._Shader->Flags & GLSL_CACHE_INFO) {
+      fprintf(stderr, "falling back to nir %s.\n",
+              _mesa_shader_stage_to_abbrev(prog->info.stage));
+   }
+
+   brw_program_deserialize_nir(&brw->ctx, prog, stage);
+
    return false;
 }
 

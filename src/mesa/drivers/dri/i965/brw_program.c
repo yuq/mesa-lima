@@ -40,6 +40,7 @@
 #include "util/ralloc.h"
 #include "compiler/glsl/ir.h"
 #include "compiler/glsl/glsl_to_nir.h"
+#include "compiler/nir/nir_serialize.h"
 
 #include "brw_program.h"
 #include "brw_context.h"
@@ -784,4 +785,19 @@ brw_assign_common_binding_table_offsets(const struct gen_device_info *devinfo,
 
    assert(next_binding_table_offset <= BRW_MAX_SURFACES);
    return next_binding_table_offset;
+}
+
+void
+brw_program_deserialize_nir(struct gl_context *ctx, struct gl_program *prog,
+                            gl_shader_stage stage)
+{
+   if (!prog->nir) {
+      assert(prog->driver_cache_blob && prog->driver_cache_blob_size > 0);
+      const struct nir_shader_compiler_options *options =
+         ctx->Const.ShaderCompilerOptions[stage].NirOptions;
+      struct blob_reader reader;
+      blob_reader_init(&reader, prog->driver_cache_blob,
+                       prog->driver_cache_blob_size);
+      prog->nir = nir_deserialize(NULL, options, &reader);
+   }
 }
