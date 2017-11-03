@@ -467,10 +467,10 @@ anv_get_format_plane(const struct gen_device_info *devinfo, VkFormat vk_format,
 // Format capabilities
 
 static VkFormatFeatureFlags
-get_image_format_properties(const struct gen_device_info *devinfo,
-                            VkFormat vk_format,
-                            const struct anv_format *anv_format,
-                            VkImageTiling vk_tiling)
+get_image_format_features(const struct gen_device_info *devinfo,
+                          VkFormat vk_format,
+                          const struct anv_format *anv_format,
+                          VkImageTiling vk_tiling)
 {
    VkFormatFeatureFlags flags = 0;
 
@@ -612,9 +612,9 @@ get_image_format_properties(const struct gen_device_info *devinfo,
 }
 
 static VkFormatFeatureFlags
-get_buffer_format_properties(const struct gen_device_info *devinfo,
-                             VkFormat vk_format,
-                             const struct anv_format *anv_format)
+get_buffer_format_features(const struct gen_device_info *devinfo,
+                           VkFormat vk_format,
+                           const struct anv_format *anv_format)
 {
    VkFormatFeatureFlags flags = 0;
 
@@ -663,16 +663,16 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
    if (format == NULL) {
       /* Nothing to do here */
    } else {
-      linear = get_image_format_properties(&physical_device->info, vk_format,
-                                           format, VK_IMAGE_TILING_LINEAR);
-      tiled = get_image_format_properties(&physical_device->info, vk_format,
-                                          format, VK_IMAGE_TILING_OPTIMAL);
+      linear = get_image_format_features(&physical_device->info, vk_format,
+                                         format, VK_IMAGE_TILING_LINEAR);
+      tiled = get_image_format_features(&physical_device->info, vk_format,
+                                        format, VK_IMAGE_TILING_OPTIMAL);
    }
 
    out_properties->linearTilingFeatures = linear;
    out_properties->optimalTilingFeatures = tiled;
    out_properties->bufferFeatures =
-     get_buffer_format_properties(devinfo, vk_format, format);
+      get_buffer_format_features(devinfo, vk_format, format);
 }
 
 
