@@ -206,7 +206,7 @@ static bool gpir_instr_insert_store_check(gpir_instr *instr, gpir_node *node)
    /* check if the child is alrady in this instr's alu slot,
     * this may happen when store an scheduled alu node to reg
     */
-   for (int j = GPIR_INSTR_SLOT_MUL0; j <= GPIR_INSTR_SLOT_PASS; j++) {
+   for (int j = GPIR_INSTR_SLOT_ALU_BEGIN; j <= GPIR_INSTR_SLOT_ALU_END; j++) {
       if (store->child == instr->slots[j])
          goto out;
    }
@@ -246,7 +246,7 @@ static void gpir_instr_remove_store(gpir_instr *instr, gpir_node *node)
          goto out;
    }
 
-   for (int j = GPIR_INSTR_SLOT_MUL0; j <= GPIR_INSTR_SLOT_PASS; j++) {
+   for (int j = GPIR_INSTR_SLOT_ALU_BEGIN; j <= GPIR_INSTR_SLOT_ALU_END; j++) {
       if (store->child == instr->slots[j])
          goto out;
    }
@@ -268,8 +268,8 @@ bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
          return false;
    }
 
-   if (node->sched_pos >= GPIR_INSTR_SLOT_MUL0 &&
-       node->sched_pos <= GPIR_INSTR_SLOT_PASS) {
+   if (node->sched_pos >= GPIR_INSTR_SLOT_ALU_BEGIN &&
+       node->sched_pos <= GPIR_INSTR_SLOT_ALU_END) {
       if (!gpir_instr_insert_alu_check(instr, node))
          return false;
    }
@@ -304,8 +304,8 @@ bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
 
 void gpir_instr_remove_node(gpir_instr *instr, gpir_node *node)
 {
-   if (node->sched_pos >= GPIR_INSTR_SLOT_MUL0 &&
-       node->sched_pos <= GPIR_INSTR_SLOT_PASS)
+   if (node->sched_pos >= GPIR_INSTR_SLOT_ALU_BEGIN &&
+       node->sched_pos <= GPIR_INSTR_SLOT_ALU_END)
       gpir_instr_remove_alu(instr, node);
    else if (node->sched_pos >= GPIR_INSTR_SLOT_REG0_LOAD0 &&
             node->sched_pos <= GPIR_INSTR_SLOT_REG0_LOAD3)
