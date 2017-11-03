@@ -713,30 +713,19 @@ anv_get_image_format_properties(
    VkImageFormatProperties *pImageFormatProperties,
    VkSamplerYcbcrConversionImageFormatPropertiesKHR *pYcbcrImageFormatProperties)
 {
-   VkFormatProperties format_props;
    VkFormatFeatureFlags format_feature_flags;
    VkExtent3D maxExtent;
    uint32_t maxMipLevels;
    uint32_t maxArraySize;
    VkSampleCountFlags sampleCounts = VK_SAMPLE_COUNT_1_BIT;
+   const struct gen_device_info *devinfo = &physical_device->info;
    const struct anv_format *format = anv_get_format(info->format);
 
    if (format == NULL)
       goto unsupported;
 
-   anv_physical_device_get_format_properties(physical_device, info->format,
-                                             &format_props);
-
-   /* Extract the VkFormatFeatureFlags that are relevant for the queried
-    * tiling.
-    */
-   if (info->tiling == VK_IMAGE_TILING_LINEAR) {
-      format_feature_flags = format_props.linearTilingFeatures;
-   } else if (info->tiling == VK_IMAGE_TILING_OPTIMAL) {
-      format_feature_flags = format_props.optimalTilingFeatures;
-   } else {
-      unreachable("bad VkImageTiling");
-   }
+   format_feature_flags = get_image_format_features(devinfo, info->format,
+                                                    format, info->tiling);
 
    switch (info->type) {
    default:
