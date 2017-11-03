@@ -195,6 +195,7 @@ static const struct vc5_format vc5_format_table[] = {
         FORMAT(ETC2_RGB8A1,       NO,           RGB8_PUNCHTHROUGH_ALPHA1, SWIZ_XYZW, 16, 0),
         FORMAT(ETC2_SRGB8A1,      NO,           RGB8_PUNCHTHROUGH_ALPHA1, SWIZ_XYZW, 16, 0),
         FORMAT(ETC2_RGBA8,        NO,           RGBA8_ETC2_EAC, SWIZ_XYZW, 16, 0),
+        FORMAT(ETC2_SRGBA8,       NO,           RGBA8_ETC2_EAC, SWIZ_XYZW, 16, 0),
         FORMAT(ETC2_R11_UNORM,    NO,           R11_EAC,     SWIZ_X001, 16, 0),
         FORMAT(ETC2_R11_SNORM,    NO,           SIGNED_R11_EAC, SWIZ_X001, 16, 0),
         FORMAT(ETC2_RG11_UNORM,   NO,           RG11_EAC,    SWIZ_XY01, 16, 0),
