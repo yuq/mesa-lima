@@ -287,7 +287,8 @@ vc5_emit_state(struct pipe_context *pctx)
                                 config.z_updates_enable =
                                         vc5->zsa->base.depth.writemask;
                                 config.early_z_enable =
-                                        vc5->zsa->early_z_enable;
+                                        (vc5->zsa->early_z_enable &&
+                                         !vc5->prog.fs->prog_data.fs->writes_z);
                                 config.depth_test_function =
                                         vc5->zsa->base.depth.func;
                         } else {
