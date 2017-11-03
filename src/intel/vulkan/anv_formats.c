@@ -412,17 +412,17 @@ anv_get_format_plane(const struct gen_device_info *devinfo, VkFormat vk_format,
                      VkImageAspectFlagBits aspect, VkImageTiling tiling)
 {
    const struct anv_format *format = anv_get_format(vk_format);
-   struct anv_format_plane plane_format = {
+   const struct anv_format_plane unsupported = {
       .isl_format = ISL_FORMAT_UNSUPPORTED,
    };
 
    if (format == NULL)
-      return plane_format;
+      return unsupported;
 
    uint32_t plane = anv_image_aspect_to_plane(vk_format_aspects(vk_format), aspect);
-   plane_format = format->planes[plane];
+   struct anv_format_plane plane_format = format->planes[plane];
    if (plane_format.isl_format == ISL_FORMAT_UNSUPPORTED)
-      return plane_format;
+      return unsupported;
 
    if (aspect & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
       assert(vk_format_aspects(vk_format) &
