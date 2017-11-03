@@ -426,7 +426,7 @@ brw_predraw_resolve_inputs(struct brw_context *brw, bool rendering)
                                     min_layer, num_layers,
                                     disable_aux);
 
-      brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
+      brw_cache_flush_for_read(brw, tex_obj->mt->bo);
 
       if (tex_obj->base.StencilSampling ||
           tex_obj->mt->format == MESA_FORMAT_S_UINT8) {
@@ -450,7 +450,7 @@ brw_predraw_resolve_inputs(struct brw_context *brw, bool rendering)
 
                intel_miptree_prepare_image(brw, tex_obj->mt);
 
-               brw_render_cache_set_check_flush(brw, tex_obj->mt->bo);
+               brw_cache_flush_for_read(brw, tex_obj->mt->bo);
             }
          }
       }
@@ -561,11 +561,11 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
                                     depth_written);
       }
       if (depth_written)
-         brw_render_cache_set_add_bo(brw, depth_irb->mt->bo);
+         brw_depth_cache_add_bo(brw, depth_irb->mt->bo);
    }
 
    if (stencil_irb && brw->stencil_write_enabled)
-      brw_render_cache_set_add_bo(brw, stencil_irb->mt->bo);
+      brw_depth_cache_add_bo(brw, stencil_irb->mt->bo);
 
    for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
       struct intel_renderbuffer *irb =
@@ -578,7 +578,7 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
          _mesa_get_render_format(ctx, intel_rb_format(irb));
       enum isl_format isl_format = brw_isl_format_for_mesa_format(mesa_format);
 
-      brw_render_cache_set_add_bo(brw, irb->mt->bo);
+      brw_render_cache_add_bo(brw, irb->mt->bo);
       intel_miptree_finish_render(brw, irb->mt, irb->mt_level,
                                   irb->mt_layer, irb->layer_count,
                                   isl_format,
@@ -593,7 +593,7 @@ intel_renderbuffer_move_temp_back(struct brw_context *brw,
    if (irb->align_wa_mt == NULL)
       return;
 
-   brw_render_cache_set_check_flush(brw, irb->align_wa_mt->bo);
+   brw_cache_flush_for_read(brw, irb->align_wa_mt->bo);
 
    intel_miptree_copy_slice(brw, irb->align_wa_mt, 0, 0,
                             irb->mt,

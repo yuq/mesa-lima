@@ -1021,6 +1021,35 @@ brw_render_cache_set_check_flush(struct brw_context *brw, struct brw_bo *bo)
    brw_render_cache_set_clear(brw);
 }
 
+void
+brw_cache_flush_for_read(struct brw_context *brw, struct brw_bo *bo)
+{
+   brw_render_cache_set_check_flush(brw, bo);
+}
+
+void
+brw_cache_flush_for_render(struct brw_context *brw, struct brw_bo *bo)
+{
+}
+
+void
+brw_render_cache_add_bo(struct brw_context *brw, struct brw_bo *bo)
+{
+   brw_render_cache_set_add_bo(brw, bo);
+}
+
+void
+brw_cache_flush_for_depth(struct brw_context *brw, struct brw_bo *bo)
+{
+   brw_render_cache_set_check_flush(brw, bo);
+}
+
+void
+brw_depth_cache_add_bo(struct brw_context *brw, struct brw_bo *bo)
+{
+   brw_render_cache_set_add_bo(brw, bo);
+}
+
 /**
  * Do one-time context initializations related to GL_EXT_framebuffer_object.
  * Hook in device driver functions.

@@ -2996,7 +2996,7 @@ intel_update_r8stencil(struct brw_context *brw,
       }
    }
 
-   brw_render_cache_set_check_flush(brw, dst->bo);
+   brw_cache_flush_for_read(brw, dst->bo);
    src->r8stencil_needs_update = false;
 }
 

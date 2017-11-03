@@ -333,9 +333,9 @@ brw_emit_depthbuffer(struct brw_context *brw)
    }
 
    if (depth_mt)
-      brw_render_cache_set_check_flush(brw, depth_mt->bo);
+      brw_cache_flush_for_depth(brw, depth_mt->bo);
    if (stencil_mt)
-      brw_render_cache_set_check_flush(brw, stencil_mt->bo);
+      brw_cache_flush_for_depth(brw, stencil_mt->bo);
 
    brw->vtbl.emit_depth_stencil_hiz(brw, depth_mt, depth_offset,
                                     depthbuffer_format, depth_surface_type,
