@@ -657,24 +657,17 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
                                           VkFormatProperties *out_properties)
 {
    const struct gen_device_info *devinfo = &physical_device->info;
-   const struct anv_format *format = anv_get_format(vk_format);
-   VkFormatFeatureFlags linear = 0, tiled = 0;
+   const struct anv_format *anv_format = anv_get_format(vk_format);
 
-   if (format == NULL) {
-      /* Nothing to do here */
-   } else {
-      linear = get_image_format_features(&physical_device->info, vk_format,
-                                         format, VK_IMAGE_TILING_LINEAR);
-      tiled = get_image_format_features(&physical_device->info, vk_format,
-                                        format, VK_IMAGE_TILING_OPTIMAL);
-   }
-
-   out_properties->linearTilingFeatures = linear;
-   out_properties->optimalTilingFeatures = tiled;
+   out_properties->linearTilingFeatures =
+      get_image_format_features(devinfo, vk_format, anv_format,
+                                VK_IMAGE_TILING_LINEAR);
+   out_properties->optimalTilingFeatures =
+      get_image_format_features(devinfo, vk_format, anv_format,
+                                VK_IMAGE_TILING_OPTIMAL);
    out_properties->bufferFeatures =
-      get_buffer_format_features(devinfo, vk_format, format);
+      get_buffer_format_features(devinfo, vk_format, anv_format);
 }
-
 
 void anv_GetPhysicalDeviceFormatProperties(
     VkPhysicalDevice                            physicalDevice,
