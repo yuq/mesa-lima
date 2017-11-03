@@ -468,12 +468,35 @@ anv_get_format_plane(const struct gen_device_info *devinfo, VkFormat vk_format,
 
 static VkFormatFeatureFlags
 get_image_format_properties(const struct gen_device_info *devinfo,
-                            enum isl_format base, struct anv_format_plane format)
+                            VkFormat vk_format,
+                            enum isl_format base,
+                            struct anv_format_plane format,
+                            VkImageTiling vk_tiling)
 {
+   VkFormatFeatureFlags flags = 0;
+
    if (format.isl_format == ISL_FORMAT_UNSUPPORTED)
       return 0;
 
-   VkFormatFeatureFlags flags = 0;
+   const VkImageAspectFlags aspects = vk_format_aspects(vk_format);
+
+   if (aspects & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
+      if (vk_tiling == VK_IMAGE_TILING_LINEAR)
+         return 0;
+
+      flags |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+
+      if (aspects == VK_IMAGE_ASPECT_DEPTH_BIT || devinfo->gen >= 8)
+         flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+
+      flags |= VK_FORMAT_FEATURE_BLIT_SRC_BIT |
+               VK_FORMAT_FEATURE_BLIT_DST_BIT |
+               VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR |
+               VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR;
+
+      return flags;
+   }
+
    if (isl_format_supports_sampling(devinfo, format.isl_format)) {
       flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
                VK_FORMAT_FEATURE_BLIT_SRC_BIT;
@@ -563,16 +586,6 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
 
    if (format == NULL) {
       /* Nothing to do here */
-   } else if (vk_format_is_depth_or_stencil(vk_format)) {
-      tiled |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-      if (vk_format_aspects(vk_format) == VK_IMAGE_ASPECT_DEPTH_BIT ||
-          physical_device->info.gen >= 8)
-         tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-
-      tiled |= VK_FORMAT_FEATURE_BLIT_SRC_BIT |
-               VK_FORMAT_FEATURE_BLIT_DST_BIT |
-               VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR |
-               VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR;
    } else {
       struct anv_format_plane linear_fmt, tiled_fmt;
       linear_fmt = anv_get_format_plane(&physical_device->info, vk_format,
@@ -582,10 +595,12 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
                                        VK_IMAGE_ASPECT_COLOR_BIT,
                                        VK_IMAGE_TILING_OPTIMAL);
 
-      linear = get_image_format_properties(&physical_device->info,
-                                           linear_fmt.isl_format, linear_fmt);
-      tiled = get_image_format_properties(&physical_device->info,
-                                          linear_fmt.isl_format, tiled_fmt);
+      linear = get_image_format_properties(&physical_device->info, vk_format,
+                                           linear_fmt.isl_format, linear_fmt,
+                                           VK_IMAGE_TILING_LINEAR);
+      tiled = get_image_format_properties(&physical_device->info, vk_format,
+                                          linear_fmt.isl_format, tiled_fmt,
+                                          VK_IMAGE_TILING_OPTIMAL);
 
       /* XXX: We handle 3-channel formats by switching them out for RGBX or
        * RGBA formats behind-the-scenes.  This works fine for textures
