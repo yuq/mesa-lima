@@ -597,6 +597,24 @@ brw_imm_f(float f)
    return imm;
 }
 
+/** Construct int64_t immediate register */
+static inline struct brw_reg
+brw_imm_q(int64_t q)
+{
+   struct brw_reg imm = brw_imm_reg(BRW_REGISTER_TYPE_Q);
+   imm.d64 = q;
+   return imm;
+}
+
+/** Construct int64_t immediate register */
+static inline struct brw_reg
+brw_imm_uq(uint64_t uq)
+{
+   struct brw_reg imm = brw_imm_reg(BRW_REGISTER_TYPE_UQ);
+   imm.u64 = uq;
+   return imm;
+}
+
 /** Construct integer immediate register */
 static inline struct brw_reg
 brw_imm_d(int d)
