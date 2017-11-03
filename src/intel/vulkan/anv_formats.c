@@ -469,7 +469,7 @@ anv_get_format_plane(const struct gen_device_info *devinfo, VkFormat vk_format,
 static VkFormatFeatureFlags
 get_image_format_properties(const struct gen_device_info *devinfo,
                             VkFormat vk_format,
-                            enum isl_format base,
+                            enum isl_format base_isl_format,
                             struct anv_format_plane plane_format,
                             VkImageTiling vk_tiling)
 {
@@ -526,10 +526,11 @@ get_image_format_properties(const struct gen_device_info *devinfo,
    /* Load/store is determined based on base format.  This prevents RGB
     * formats from showing up as load/store capable.
     */
-   if (isl_is_storage_image_format(base))
+   if (isl_is_storage_image_format(base_isl_format))
       flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
 
-   if (base == ISL_FORMAT_R32_SINT || base == ISL_FORMAT_R32_UINT)
+   if (base_isl_format == ISL_FORMAT_R32_SINT ||
+       base_isl_format == ISL_FORMAT_R32_UINT)
       flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
 
    if (flags) {
