@@ -732,6 +732,272 @@ static void gpir_print_unsatisfied_succ(gpir_node *node)
    printf("\n");
 }
 
+/* insert an empty instruction and try again */
+static bool gpir_try_relax_insert_move(gpir_block *block, gpir_node *node,
+                                       gpir_node *move)
+{
+   struct set_entry *entry = _mesa_set_next_entry(move->preds, NULL);
+   gpir_dep_info *dep = gpir_dep_from_entry(entry);
+   const int pos = node->sched_instr - gpir_get_max_dist(dep);
+
+   gpir_debug("relax insert move %d for node %d at new instr %d\n",
+              move->index, node->index, pos);
+
+   gpir_instr *instrs = gpir_instr_array(&block->instrs);
+   int n = gpir_instr_array_n(&block->instrs);
+   int dist_one_nodes = 0, dist_two_nodes = 0;
+   int dist_one_slots = 1, dist_two_slots = 5;
+
+   /* keep complex1 node in new instr if pos instr has it */
+   gpir_node *nd = instrs[pos].slots[GPIR_INSTR_SLOT_MUL0];
+   if (nd && nd->op == gpir_op_complex1) {
+      dist_two_slots -= 2;
+      /* for insert move node, can use the empty slot in pos
+       * instr made by moving complex1 nodes out, so just need
+       * a dist one slot in pos+1 instr */
+      dist_one_slots -= 1;
+   }
+   else {
+      /* for insert move node, must use dist two slot to make
+       * any progress (exceed pos instr) */
+      dist_two_slots -= 1;
+   }
+
+   /* two instr after pos, the two dist slot output may be used
+    * by pos instr slots, but only need new instr's one dist slot
+    */
+   if (pos + 2 < n) {
+      gpir_instr *instr = instrs + pos + 2;
+
+      for (int i = GPIR_INSTR_SLOT_DIST_TWO_BEGIN;
+           i <= GPIR_INSTR_SLOT_DIST_TWO_END; i++) {
+         if (!(nd = instr->slots[i]))
+            continue;
+
+         if (nd->op == gpir_op_complex1 && i == GPIR_INSTR_SLOT_MUL1)
+            continue;
+
+         /* if nd is used by any pos instr slot node */
+         gpir_node_foreach_succ(nd, entry) {
+            gpir_node *succ = gpir_node_from_entry(entry, succ);
+            if (succ->sched_instr == pos) {
+               dist_one_nodes++;
+               break;
+            }
+         }
+      }
+   }
+
+   /* one instr after pos, the two dist slot output may be used
+    * by pos-1 instr slots, and need new instr's two dist slot
+    */
+   gpir_instr *instr = instrs + pos + 1;
+   for (int i = GPIR_INSTR_SLOT_DIST_TWO_BEGIN;
+        i <= GPIR_INSTR_SLOT_DIST_TWO_END; i++) {
+      if (!(nd = instr->slots[i]))
+         continue;
+
+      if (nd->op == gpir_op_complex1 && i == GPIR_INSTR_SLOT_MUL1)
+         continue;
+
+      /* if nd is used by any pos-1 instr slot node */
+      gpir_node_foreach_succ(nd, entry) {
+         gpir_node *succ = gpir_node_from_entry(entry, succ);
+         if (succ->sched_instr == pos - 1) {
+            dist_two_nodes++;
+            break;
+         }
+      }
+   }
+
+   /* the one dist slot output may be used by pos instr slots,
+    * need new instr's one dist slot */
+   if ((nd = instr->slots[GPIR_INSTR_SLOT_COMPLEX])) {
+      /* if nd is used by any pos instr slot node */
+      gpir_node_foreach_succ(nd, entry) {
+         gpir_node *succ = gpir_node_from_entry(entry, succ);
+         /* complex impl node */
+         if (succ->op == gpir_op_complex1)
+            break;
+
+         if (succ->sched_instr == pos) {
+            dist_one_nodes++;
+            break;
+         }
+      }
+   }
+
+   gpir_debug("relax insert move %d check d2n/d2s=%d/%d d1n/d1s=%d/%d\n",
+              move->index, dist_two_nodes, dist_two_slots,
+              dist_one_nodes, dist_one_slots);
+
+   /* check if we can do instr insert */
+   if (dist_two_nodes > dist_two_slots ||
+       dist_one_nodes + dist_two_nodes > dist_one_slots + dist_two_slots) {
+      gpir_debug("fail relax insert move %d\n", move->index);
+      return false;
+   }
+
+   /* really do new instr insert */
+
+   /* create a new instr at last and move all instrs after pos down */
+   instr = gpir_instr_array_grow(&block->instrs, n);
+   instrs = gpir_instr_array(&block->instrs);
+   for ( ; instr - 1 != instrs + pos; instr--) {
+      *instr = *(instr - 1);
+      for (int i = 0; i < GPIR_INSTR_SLOT_NUM; i++) {
+         if ((nd = instr->slots[i]) &&
+             !(nd->op == gpir_op_complex1 && i == GPIR_INSTR_SLOT_MUL1))
+            nd->sched_instr++;
+      }
+   }
+
+   /* reset new inserted instr */
+   gpir_instr *new_instr = instr;
+   memset(new_instr, 0, sizeof(*new_instr));
+   gpir_instr_init(new_instr);
+   new_instr->reg_status = instrs[pos].reg_status;
+
+   /* keep complex1 node */
+   MAYBE_UNUSED bool insert_result;
+   nd = instrs[pos].slots[GPIR_INSTR_SLOT_MUL0];
+   if (nd && nd->op == gpir_op_complex1) {
+      gpir_instr_remove_node(instrs + pos, nd);
+
+      nd->sched_instr = pos + 1;
+      insert_result = gpir_instr_try_insert_node(new_instr, nd);
+      assert(insert_result);
+
+      gpir_node_foreach_succ(nd, entry) {
+         gpir_node *succ = gpir_node_from_entry(entry, succ);
+
+         /* need insert a move node at pos */
+         if (succ->sched_instr == pos - 1) {
+            gpir_node *move = gpir_create_from_node(block, nd, NULL);
+            move->sched_instr = pos;
+            move->sched_pos = GPIR_INSTR_SLOT_MUL1;
+            insert_result = gpir_instr_try_insert_node(instrs + pos, move);
+            assert(insert_result);
+            break;
+         }
+      }
+   }
+
+   /* first insert moves for nodes need dist two slot */
+   instr = new_instr + 1;
+   for (int i = GPIR_INSTR_SLOT_DIST_TWO_BEGIN;
+        i <= GPIR_INSTR_SLOT_DIST_TWO_END; i++) {
+      if (!(nd = instr->slots[i]))
+         continue;
+
+      if (nd->op == gpir_op_complex1 && i == GPIR_INSTR_SLOT_MUL1)
+         continue;
+
+      /* if nd is used by any pos-1 instr slot node */
+      gpir_node_foreach_succ(nd, entry) {
+         gpir_node *succ = gpir_node_from_entry(entry, succ);
+         if (succ->sched_instr == pos - 1) {
+            gpir_node *move = gpir_create_from_node(block, nd, NULL);
+            insert_result = gpir_try_place_node(block, move, pos + 1, pos + 2);
+            assert(insert_result);
+            break;
+         }
+      }
+   }
+
+   /* insert the move node here for better dist two slot if avaliable */
+   insert_result = gpir_try_place_node(block, move, pos + 1, pos + 2);
+   assert(insert_result);
+
+   /* insert moves for other nodes need dist one slot */
+
+   n = gpir_instr_array_n(&block->instrs);
+   if (pos + 3 < n) {
+      gpir_instr *instr = instrs + pos + 3;
+
+      for (int i = GPIR_INSTR_SLOT_DIST_TWO_BEGIN;
+           i <= GPIR_INSTR_SLOT_DIST_TWO_END; i++) {
+         if (!(nd = instr->slots[i]))
+            continue;
+
+         if (nd->op == gpir_op_complex1 && i == GPIR_INSTR_SLOT_MUL1)
+            continue;
+
+         /* if nd is used by any pos instr slot node */
+         gpir_node_foreach_succ(nd, entry) {
+            gpir_node *succ = gpir_node_from_entry(entry, succ);
+            if (succ->sched_instr == pos) {
+               gpir_node *move = gpir_create_from_node(block, nd, NULL);
+               insert_result = gpir_try_place_node(block, move, pos + 1, pos + 2);
+               assert(insert_result);
+               break;
+            }
+         }
+      }
+   }
+
+   if ((nd = instr->slots[GPIR_INSTR_SLOT_COMPLEX])) {
+      /* if nd is used by any pos instr slot node */
+      gpir_node_foreach_succ(nd, entry) {
+         gpir_node *succ = gpir_node_from_entry(entry, succ);
+         /* complex impl node */
+         if (succ->op == gpir_op_complex1)
+            break;
+
+         if (succ->sched_instr == pos) {
+            gpir_node *move = gpir_create_from_node(block, nd, NULL);
+            insert_result = gpir_try_place_node(block, move, pos + 1, pos + 2);
+            assert(insert_result);
+            break;
+         }
+      }
+   }
+
+   for (int i = GPIR_INSTR_SLOT_REG0_LOAD0;
+        i <= GPIR_INSTR_SLOT_REG0_LOAD3; i++) {
+      if (!(nd = instr->slots[i]))
+            continue;
+
+      /* check if load node can be just moved to next instr */
+      bool move_load = true;
+      gpir_node_foreach_succ(nd, entry) {
+         gpir_node *succ = gpir_node_from_entry(entry, succ);
+         if (succ->sched_instr != pos) {
+            move_load = false;
+            break;
+         }
+      }
+
+      bool reset_reg = false;
+      if (move_load) {
+         gpir_instr_remove_node(instr, nd);
+         insert_result = gpir_try_place_node(block, nd, pos + 1, pos + 2);
+         assert(insert_result);
+         reset_reg = true;
+      }
+      else {
+         gpir_node *move = gpir_create_from_node(block, nd, NULL);
+         insert_result = gpir_try_place_node(block, move, pos + 1, pos + 2);
+         if (!insert_result) {
+            gpir_remove_created_node(block, move, nd);
+            gpir_node *load = gpir_create_from_node(block, nd, nd);
+            insert_result = gpir_try_place_node(block, load, pos + 1, pos + 2);
+            assert(insert_result);
+            reset_reg = true;
+         }
+      }
+
+      if (reset_reg && nd->op == gpir_op_load_reg) {
+         gpir_load_node *ln = gpir_node_to_load(nd);
+         int reg = (ln->index << 2) + ln->component;
+         instr->reg_status &= ~(1ull << reg);
+      }
+   }
+
+   gpir_debug("success relax insert move %d\n", move->index);
+   return true;
+}
+
 /*
  * Return:
  * >=0 - success, the last inserted load instr index
@@ -809,7 +1075,8 @@ static int gpir_try_insert_load(gpir_block *block, gpir_node *node, int orig_end
             if (!move)
                return -2;
 
-            if (gpir_try_place_move_node(block, move)) {
+            if (gpir_try_place_move_node(block, move) ||
+                gpir_try_relax_insert_move(block, current, move)) {
                current = move;
                continue;
             }
@@ -1142,7 +1409,8 @@ static bool gpir_try_schedule_node(gpir_block *block, gpir_node *node)
             if (!move)
                return false;
 
-            if (gpir_try_place_move_node(block, move)) {
+            if (gpir_try_place_move_node(block, move) ||
+                gpir_try_relax_insert_move(block, current, move)) {
                current = move;
                continue;
             }
