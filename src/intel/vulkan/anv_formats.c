@@ -568,6 +568,46 @@ get_image_format_properties(const struct gen_device_info *devinfo,
       flags &= ~VK_FORMAT_FEATURE_BLIT_DST_BIT;
    }
 
+   if (anv_format->can_ycbcr) {
+      /* The sampler doesn't have support for mid point when it handles YUV on
+       * its own.
+       */
+      if (isl_format_is_yuv(anv_format->planes[0].isl_format)) {
+         /* TODO: We've disabled linear implicit reconstruction with the
+          * sampler. The failures show a slightly out of range values on the
+          * bottom left of the sampled image.
+          */
+         flags |= VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT_KHR;
+      } else {
+         flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_LINEAR_FILTER_BIT_KHR |
+                  VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT_KHR |
+                  VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_SEPARATE_RECONSTRUCTION_FILTER_BIT_KHR;
+      }
+
+      /* We can support cosited chroma locations when handle planes with our
+       * own shader snippets.
+       */
+      for (unsigned p = 0; p < anv_format->n_planes; p++) {
+         if (anv_format->planes[p].denominator_scales[0] > 1 ||
+             anv_format->planes[p].denominator_scales[1] > 1) {
+            flags |= VK_FORMAT_FEATURE_COSITED_CHROMA_SAMPLES_BIT_KHR;
+            break;
+         }
+      }
+
+      if (anv_format->n_planes > 1)
+         flags |= VK_FORMAT_FEATURE_DISJOINT_BIT_KHR;
+
+      const VkFormatFeatureFlags disallowed_ycbcr_image_features =
+         VK_FORMAT_FEATURE_BLIT_SRC_BIT |
+         VK_FORMAT_FEATURE_BLIT_DST_BIT |
+         VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
+         VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT |
+         VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+
+      flags &= ~disallowed_ycbcr_image_features;
+   }
+
    return flags;
 }
 
@@ -627,52 +667,6 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
                                            format, VK_IMAGE_TILING_LINEAR);
       tiled = get_image_format_properties(&physical_device->info, vk_format,
                                           format, VK_IMAGE_TILING_OPTIMAL);
-   }
-
-   if (format && format->can_ycbcr) {
-      VkFormatFeatureFlags ycbcr_features = 0;
-
-      /* The sampler doesn't have support for mid point when it handles YUV on
-       * its own.
-       */
-      if (isl_format_is_yuv(format->planes[0].isl_format)) {
-         /* TODO: We've disabled linear implicit reconstruction with the
-          * sampler. The failures show a slightly out of range values on the
-          * bottom left of the sampled image.
-          */
-         ycbcr_features |= VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT_KHR;
-      } else {
-         ycbcr_features |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_LINEAR_FILTER_BIT_KHR |
-            VK_FORMAT_FEATURE_MIDPOINT_CHROMA_SAMPLES_BIT_KHR |
-            VK_FORMAT_FEATURE_SAMPLED_IMAGE_YCBCR_CONVERSION_SEPARATE_RECONSTRUCTION_FILTER_BIT_KHR;
-      }
-
-      /* We can support cosited chroma locations when handle planes with our
-       * own shader snippets.
-       */
-      for (unsigned p = 0; p < format->n_planes; p++) {
-         if (format->planes[p].denominator_scales[0] > 1 ||
-             format->planes[p].denominator_scales[1] > 1) {
-            ycbcr_features |= VK_FORMAT_FEATURE_COSITED_CHROMA_SAMPLES_BIT_KHR;
-            break;
-         }
-      }
-
-      if (format->n_planes > 1)
-         ycbcr_features |= VK_FORMAT_FEATURE_DISJOINT_BIT_KHR;
-
-      linear |= ycbcr_features;
-      tiled |= ycbcr_features;
-
-      const VkFormatFeatureFlags disallowed_ycbcr_image_features =
-         VK_FORMAT_FEATURE_BLIT_SRC_BIT |
-         VK_FORMAT_FEATURE_BLIT_DST_BIT |
-         VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
-         VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT |
-         VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
-
-      linear &= ~disallowed_ycbcr_image_features;
-      tiled &= ~disallowed_ycbcr_image_features;
    }
 
    out_properties->linearTilingFeatures = linear;
