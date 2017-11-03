@@ -732,10 +732,11 @@ brw_assign_common_binding_table_offsets(const struct gen_device_info *devinfo,
       stage_prog_data->binding_table.ubo_start = 0xd0d0d0d0;
    }
 
-   if (prog->info.num_ssbos) {
+   if (prog->info.num_ssbos || prog->info.num_abos) {
+      assert(prog->info.num_abos <= BRW_MAX_ABO);
       assert(prog->info.num_ssbos <= BRW_MAX_SSBO);
       stage_prog_data->binding_table.ssbo_start = next_binding_table_offset;
-      next_binding_table_offset += prog->info.num_ssbos;
+      next_binding_table_offset += prog->info.num_abos + prog->info.num_ssbos;
    } else {
       stage_prog_data->binding_table.ssbo_start = 0xd0d0d0d0;
    }
@@ -757,13 +758,6 @@ brw_assign_common_binding_table_offsets(const struct gen_device_info *devinfo,
       }
    } else {
       stage_prog_data->binding_table.gather_texture_start = 0xd0d0d0d0;
-   }
-
-   if (prog->info.num_abos) {
-      stage_prog_data->binding_table.abo_start = next_binding_table_offset;
-      next_binding_table_offset += prog->info.num_abos;
-   } else {
-      stage_prog_data->binding_table.abo_start = 0xd0d0d0d0;
    }
 
    if (prog->info.num_images) {

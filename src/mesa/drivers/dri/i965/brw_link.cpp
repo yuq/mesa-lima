@@ -299,6 +299,8 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       NIR_PASS_V(prog->nir, nir_lower_samplers, shProg);
       NIR_PASS_V(prog->nir, nir_lower_atomics, shProg);
+      NIR_PASS_V(prog->nir, nir_lower_atomics_to_ssbo,
+                 prog->nir->info.num_abos);
 
       if (brw->ctx.Cache) {
          struct blob writer;

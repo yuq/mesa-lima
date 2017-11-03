@@ -3645,53 +3645,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       dest = get_nir_dest(instr->dest);
 
    switch (instr->intrinsic) {
-   case nir_intrinsic_atomic_counter_inc:
-   case nir_intrinsic_atomic_counter_dec:
-   case nir_intrinsic_atomic_counter_read:
-   case nir_intrinsic_atomic_counter_add:
-   case nir_intrinsic_atomic_counter_min:
-   case nir_intrinsic_atomic_counter_max:
-   case nir_intrinsic_atomic_counter_and:
-   case nir_intrinsic_atomic_counter_or:
-   case nir_intrinsic_atomic_counter_xor:
-   case nir_intrinsic_atomic_counter_exchange:
-   case nir_intrinsic_atomic_counter_comp_swap: {
-      if (stage == MESA_SHADER_FRAGMENT &&
-          instr->intrinsic != nir_intrinsic_atomic_counter_read)
-         brw_wm_prog_data(prog_data)->has_side_effects = true;
-
-      /* Get some metadata from the image intrinsic. */
-      const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];
-
-      /* Get the arguments of the atomic intrinsic. */
-      const fs_reg offset = get_nir_src(instr->src[0]);
-      const unsigned surface = (stage_prog_data->binding_table.abo_start +
-                                instr->const_index[0]);
-      const fs_reg src0 = (info->num_srcs >= 2
-                           ? get_nir_src(instr->src[1]) : fs_reg());
-      const fs_reg src1 = (info->num_srcs >= 3
-                           ? get_nir_src(instr->src[2]) : fs_reg());
-      fs_reg tmp;
-
-      assert(info->num_srcs <= 3);
-
-      /* Emit a surface read or atomic op. */
-      if (instr->intrinsic == nir_intrinsic_atomic_counter_read) {
-         tmp = emit_untyped_read(bld, brw_imm_ud(surface), offset, 1, 1);
-      } else {
-         tmp = emit_untyped_atomic(bld, brw_imm_ud(surface), offset, src0,
-                                   src1, 1, 1,
-                                   get_atomic_counter_op(instr->intrinsic));
-      }
-
-      /* Assign the result. */
-      bld.MOV(retype(dest, BRW_REGISTER_TYPE_UD), tmp);
-
-      /* Mark the surface as used. */
-      brw_mark_surface_used(stage_prog_data, surface);
-      break;
-   }
-
    case nir_intrinsic_image_load:
    case nir_intrinsic_image_store:
    case nir_intrinsic_image_atomic_add:

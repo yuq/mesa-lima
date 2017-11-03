@@ -286,8 +286,6 @@ struct brw_gs_compile
    unsigned control_data_header_size_bits;
 };
 
-unsigned get_atomic_counter_op(nir_intrinsic_op op);
-
 #ifdef __cplusplus
 }
 #endif
