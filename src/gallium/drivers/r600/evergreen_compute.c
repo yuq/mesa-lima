@@ -689,6 +689,8 @@ static void compute_emit_cs(struct r600_context *rctx,
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	bool compute_dirty = false;
 	struct r600_pipe_shader *current;
+	struct r600_shader_atomic combined_atomics[8];
+	uint8_t atomic_used_mask;
 
 	/* make sure that the gfx ring is only one active */
 	if (radeon_emitted(rctx->b.dma.cs, 0)) {
@@ -703,6 +705,11 @@ static void compute_emit_cs(struct r600_context *rctx,
 			rctx->cs_shader_state.atom.num_dw = current->command_buffer.num_dw;
 			r600_context_add_resource_size(&rctx->b.b, (struct pipe_resource *)current->bo);
 			r600_set_atom_dirty(rctx, &rctx->cs_shader_state.atom, true);
+		}
+
+		if (evergreen_emit_atomic_buffer_setup(rctx, current, combined_atomics, &atomic_used_mask)) {
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+			radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_CS_PARTIAL_FLUSH) | EVENT_INDEX(4));
 		}
 	}
 
@@ -776,6 +783,8 @@ static void compute_emit_cs(struct r600_context *rctx,
 		radeon_emit(cs, PKT3C(PKT3_DEALLOC_STATE, 0, 0));
 		radeon_emit(cs, 0);
 	}
+	if (rctx->cs_shader_state.shader->ir_type == PIPE_SHADER_IR_TGSI)
+		evergreen_emit_atomic_buffer_save(rctx, true, combined_atomics, &atomic_used_mask);
 
 #if 0
 	COMPUTE_DBG(rctx->screen, "cdw: %i\n", cs->cdw);
