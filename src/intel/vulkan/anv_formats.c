@@ -470,12 +470,12 @@ static VkFormatFeatureFlags
 get_image_format_properties(const struct gen_device_info *devinfo,
                             VkFormat vk_format,
                             enum isl_format base,
-                            struct anv_format_plane format,
+                            struct anv_format_plane plane_format,
                             VkImageTiling vk_tiling)
 {
    VkFormatFeatureFlags flags = 0;
 
-   if (format.isl_format == ISL_FORMAT_UNSUPPORTED)
+   if (plane_format.isl_format == ISL_FORMAT_UNSUPPORTED)
       return 0;
 
    const VkImageAspectFlags aspects = vk_format_aspects(vk_format);
@@ -499,14 +499,14 @@ get_image_format_properties(const struct gen_device_info *devinfo,
 
    /* ASTC textures must be in Y-tiled memory */
    if (vk_tiling == VK_IMAGE_TILING_LINEAR &&
-       isl_format_get_layout(format.isl_format)->txc == ISL_TXC_ASTC)
+       isl_format_get_layout(plane_format.isl_format)->txc == ISL_TXC_ASTC)
       return 0;
 
-   if (isl_format_supports_sampling(devinfo, format.isl_format)) {
+   if (isl_format_supports_sampling(devinfo, plane_format.isl_format)) {
       flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
                VK_FORMAT_FEATURE_BLIT_SRC_BIT;
 
-      if (isl_format_supports_filtering(devinfo, format.isl_format))
+      if (isl_format_supports_filtering(devinfo, plane_format.isl_format))
          flags |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
    }
 
@@ -514,12 +514,12 @@ get_image_format_properties(const struct gen_device_info *devinfo,
     * moved, then blending won't work correctly.  The PRM tells us
     * straight-up not to render to such a surface.
     */
-   if (isl_format_supports_rendering(devinfo, format.isl_format) &&
-       format.swizzle.a == ISL_CHANNEL_SELECT_ALPHA) {
+   if (isl_format_supports_rendering(devinfo, plane_format.isl_format) &&
+       plane_format.swizzle.a == ISL_CHANNEL_SELECT_ALPHA) {
       flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
                VK_FORMAT_FEATURE_BLIT_DST_BIT;
 
-      if (isl_format_supports_alpha_blending(devinfo, format.isl_format))
+      if (isl_format_supports_alpha_blending(devinfo, plane_format.isl_format))
          flags |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
    }
 
