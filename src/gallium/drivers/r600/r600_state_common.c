@@ -820,6 +820,8 @@ static inline void r600_shader_selector_key(const struct pipe_context *ctx,
 		key->tcs.prim_mode = rctx->tes_shader->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
 		key->tcs.first_atomic_counter = r600_get_hw_atomic_count(ctx, PIPE_SHADER_TESS_CTRL);
 		break;
+	case PIPE_SHADER_COMPUTE:
+		break;
 	default:
 		assert(0);
 	}
