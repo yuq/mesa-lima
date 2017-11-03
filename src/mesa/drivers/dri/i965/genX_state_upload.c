@@ -2469,24 +2469,28 @@ genX(upload_sf_clip_viewport)(struct brw_context *brw)
 #elif GEN_GEN >= 8
       /* _NEW_VIEWPORT | _NEW_BUFFERS: Screen Space Viewport
        * The hardware will take the intersection of the drawing rectangle,
-       * scissor rectangle, and the viewport extents. We don't need to be
-       * smart, and can therefore just program the viewport extents.
+       * scissor rectangle, and the viewport extents.  However, emitting
+       * 3DSTATE_DRAWING_RECTANGLE is expensive since it requires a full
+       * pipeline stall so we're better off just being a little more clever
+       * with our viewport so we can emit it once at context creation time.
        */
+      const float viewport_Xmin = MAX2(ctx->ViewportArray[i].X, 0);
+      const float viewport_Ymin = MAX2(ctx->ViewportArray[i].Y, 0);
       const float viewport_Xmax =
-         ctx->ViewportArray[i].X + ctx->ViewportArray[i].Width;
+         MIN2(ctx->ViewportArray[i].X + ctx->ViewportArray[i].Width, fb_width);
       const float viewport_Ymax =
-         ctx->ViewportArray[i].Y + ctx->ViewportArray[i].Height;
+         MIN2(ctx->ViewportArray[i].Y + ctx->ViewportArray[i].Height, fb_height);
 
       if (render_to_fbo) {
-         sfv.XMinViewPort = ctx->ViewportArray[i].X;
+         sfv.XMinViewPort = viewport_Xmin;
          sfv.XMaxViewPort = viewport_Xmax - 1;
-         sfv.YMinViewPort = ctx->ViewportArray[i].Y;
+         sfv.YMinViewPort = viewport_Ymin;
          sfv.YMaxViewPort = viewport_Ymax - 1;
       } else {
-         sfv.XMinViewPort = ctx->ViewportArray[i].X;
+         sfv.XMinViewPort = viewport_Xmin;
          sfv.XMaxViewPort = viewport_Xmax - 1;
          sfv.YMinViewPort = fb_height - viewport_Ymax;
-         sfv.YMaxViewPort = fb_height - ctx->ViewportArray[i].Y - 1;
+         sfv.YMaxViewPort = fb_height - viewport_Ymin - 1;
       }
 #endif
 
