@@ -553,6 +553,21 @@ get_image_format_properties(const struct gen_device_info *devinfo,
                VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR;
    }
 
+   /* XXX: We handle 3-channel formats by switching them out for RGBX or
+    * RGBA formats behind-the-scenes.  This works fine for textures
+    * because the upload process will fill in the extra channel.
+    * We could also support it for render targets, but it will take
+    * substantially more work and we have enough RGBX formats to handle
+    * what most clients will want.
+    */
+   if (vk_tiling == VK_IMAGE_TILING_OPTIMAL &&
+       base_isl_format != ISL_FORMAT_UNSUPPORTED &&
+       !util_is_power_of_two(isl_format_layouts[base_isl_format].bpb) &&
+       isl_format_rgb_to_rgbx(base_isl_format) == ISL_FORMAT_UNSUPPORTED) {
+      flags &= ~VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+      flags &= ~VK_FORMAT_FEATURE_BLIT_DST_BIT;
+   }
+
    return flags;
 }
 
@@ -608,29 +623,10 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
    if (format == NULL) {
       /* Nothing to do here */
    } else {
-      struct anv_format_plane linear_fmt;
-      linear_fmt = anv_get_format_plane(&physical_device->info, vk_format,
-                                        VK_IMAGE_ASPECT_COLOR_BIT,
-                                        VK_IMAGE_TILING_LINEAR);
-
       linear = get_image_format_properties(&physical_device->info, vk_format,
                                            format, VK_IMAGE_TILING_LINEAR);
       tiled = get_image_format_properties(&physical_device->info, vk_format,
                                           format, VK_IMAGE_TILING_OPTIMAL);
-
-      /* XXX: We handle 3-channel formats by switching them out for RGBX or
-       * RGBA formats behind-the-scenes.  This works fine for textures
-       * because the upload process will fill in the extra channel.
-       * We could also support it for render targets, but it will take
-       * substantially more work and we have enough RGBX formats to handle
-       * what most clients will want.
-       */
-      if (linear_fmt.isl_format != ISL_FORMAT_UNSUPPORTED &&
-          !util_is_power_of_two(isl_format_layouts[linear_fmt.isl_format].bpb) &&
-          isl_format_rgb_to_rgbx(linear_fmt.isl_format) == ISL_FORMAT_UNSUPPORTED) {
-         tiled &= ~VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT &
-                  ~VK_FORMAT_FEATURE_BLIT_DST_BIT;
-      }
    }
 
    if (format && format->can_ycbcr) {
