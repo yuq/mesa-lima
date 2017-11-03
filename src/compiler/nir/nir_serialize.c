@@ -585,7 +585,7 @@ union packed_tex_data {
       unsigned component:2;
       unsigned has_texture_deref:1;
       unsigned has_sampler_deref:1;
-   };
+   } u;
 };
 
 static void
@@ -599,15 +599,15 @@ write_tex(write_ctx *ctx, const nir_tex_instr *tex)
 
    STATIC_ASSERT(sizeof(union packed_tex_data) == sizeof(uint32_t));
    union packed_tex_data packed = {
-      .sampler_dim = tex->sampler_dim,
-      .dest_type = tex->dest_type,
-      .coord_components = tex->coord_components,
-      .is_array = tex->is_array,
-      .is_shadow = tex->is_shadow,
-      .is_new_style_shadow = tex->is_new_style_shadow,
-      .component = tex->component,
-      .has_texture_deref = tex->texture != NULL,
-      .has_sampler_deref = tex->sampler != NULL,
+      .u.sampler_dim = tex->sampler_dim,
+      .u.dest_type = tex->dest_type,
+      .u.coord_components = tex->coord_components,
+      .u.is_array = tex->is_array,
+      .u.is_shadow = tex->is_shadow,
+      .u.is_new_style_shadow = tex->is_new_style_shadow,
+      .u.component = tex->component,
+      .u.has_texture_deref = tex->texture != NULL,
+      .u.has_sampler_deref = tex->sampler != NULL,
    };
    blob_write_uint32(ctx->blob, packed.u32);
 
@@ -636,13 +636,13 @@ read_tex(read_ctx *ctx)
 
    union packed_tex_data packed;
    packed.u32 = blob_read_uint32(ctx->blob);
-   tex->sampler_dim = packed.sampler_dim;
-   tex->dest_type = packed.dest_type;
-   tex->coord_components = packed.coord_components;
-   tex->is_array = packed.is_array;
-   tex->is_shadow = packed.is_shadow;
-   tex->is_new_style_shadow = packed.is_new_style_shadow;
-   tex->component = packed.component;
+   tex->sampler_dim = packed.u.sampler_dim;
+   tex->dest_type = packed.u.dest_type;
+   tex->coord_components = packed.u.coord_components;
+   tex->is_array = packed.u.is_array;
+   tex->is_shadow = packed.u.is_shadow;
+   tex->is_new_style_shadow = packed.u.is_new_style_shadow;
+   tex->component = packed.u.component;
 
    read_dest(ctx, &tex->dest, &tex->instr);
    for (unsigned i = 0; i < tex->num_srcs; i++) {
@@ -650,9 +650,9 @@ read_tex(read_ctx *ctx)
       read_src(ctx, &tex->src[i].src, &tex->instr);
    }
 
-   tex->texture = packed.has_texture_deref ?
+   tex->texture = packed.u.has_texture_deref ?
                   read_deref_chain(ctx, &tex->instr) : NULL;
-   tex->sampler = packed.has_sampler_deref ?
+   tex->sampler = packed.u.has_sampler_deref ?
                   read_deref_chain(ctx, &tex->instr) : NULL;
 
    return tex;
