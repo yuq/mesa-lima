@@ -800,4 +800,10 @@ brw_program_deserialize_nir(struct gl_context *ctx, struct gl_program *prog,
                        prog->driver_cache_blob_size);
       prog->nir = nir_deserialize(NULL, options, &reader);
    }
+
+   if (prog->driver_cache_blob) {
+      ralloc_free(prog->driver_cache_blob);
+      prog->driver_cache_blob = NULL;
+      prog->driver_cache_blob_size = 0;
+   }
 }
