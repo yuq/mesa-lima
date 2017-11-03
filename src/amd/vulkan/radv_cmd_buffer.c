@@ -484,9 +484,6 @@ radv_save_descriptors(struct radv_cmd_buffer *cmd_buffer)
 	uint32_t data[MAX_SETS * 2] = {};
 	uint64_t va;
 
-	if (!device->trace_bo)
-		return;
-
 	va = radv_buffer_get_va(device->trace_bo) + 24;
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(device->ws,
@@ -1723,7 +1720,8 @@ radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer,
 	cmd_buffer->state.descriptors_dirty = 0;
 	cmd_buffer->state.push_descriptors_dirty = false;
 
-	radv_save_descriptors(cmd_buffer);
+	if (cmd_buffer->device->trace_bo)
+		radv_save_descriptors(cmd_buffer);
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 }
