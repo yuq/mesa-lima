@@ -469,13 +469,12 @@ anv_get_format_plane(const struct gen_device_info *devinfo, VkFormat vk_format,
 static VkFormatFeatureFlags
 get_image_format_properties(const struct gen_device_info *devinfo,
                             VkFormat vk_format,
-                            enum isl_format base_isl_format,
-                            struct anv_format_plane plane_format,
+                            const struct anv_format *anv_format,
                             VkImageTiling vk_tiling)
 {
    VkFormatFeatureFlags flags = 0;
 
-   if (plane_format.isl_format == ISL_FORMAT_UNSUPPORTED)
+   if (anv_format == NULL)
       return 0;
 
    const VkImageAspectFlags aspects = vk_format_aspects(vk_format);
@@ -496,6 +495,22 @@ get_image_format_properties(const struct gen_device_info *devinfo,
 
       return flags;
    }
+
+   const struct anv_format_plane plane_format =
+      anv_get_format_plane(devinfo, vk_format, VK_IMAGE_ASPECT_COLOR_BIT,
+                           vk_tiling);
+
+   if (plane_format.isl_format == ISL_FORMAT_UNSUPPORTED)
+      return 0;
+
+   struct anv_format_plane base_plane_format = plane_format;
+   if (vk_tiling == VK_IMAGE_TILING_OPTIMAL) {
+      base_plane_format = anv_get_format_plane(devinfo, vk_format,
+                                               VK_IMAGE_ASPECT_COLOR_BIT,
+                                               VK_IMAGE_TILING_LINEAR);
+   }
+
+   enum isl_format base_isl_format = base_plane_format.isl_format;
 
    /* ASTC textures must be in Y-tiled memory */
    if (vk_tiling == VK_IMAGE_TILING_LINEAR &&
@@ -593,20 +608,15 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
    if (format == NULL) {
       /* Nothing to do here */
    } else {
-      struct anv_format_plane linear_fmt, tiled_fmt;
+      struct anv_format_plane linear_fmt;
       linear_fmt = anv_get_format_plane(&physical_device->info, vk_format,
                                         VK_IMAGE_ASPECT_COLOR_BIT,
                                         VK_IMAGE_TILING_LINEAR);
-      tiled_fmt = anv_get_format_plane(&physical_device->info, vk_format,
-                                       VK_IMAGE_ASPECT_COLOR_BIT,
-                                       VK_IMAGE_TILING_OPTIMAL);
 
       linear = get_image_format_properties(&physical_device->info, vk_format,
-                                           linear_fmt.isl_format, linear_fmt,
-                                           VK_IMAGE_TILING_LINEAR);
+                                           format, VK_IMAGE_TILING_LINEAR);
       tiled = get_image_format_properties(&physical_device->info, vk_format,
-                                          linear_fmt.isl_format, tiled_fmt,
-                                          VK_IMAGE_TILING_OPTIMAL);
+                                          format, VK_IMAGE_TILING_OPTIMAL);
 
       /* XXX: We handle 3-channel formats by switching them out for RGBX or
        * RGBA formats behind-the-scenes.  This works fine for textures
