@@ -38,7 +38,7 @@
 
 #include "tgsi/tgsi_scan.h"
 
-#define R600_NUM_ATOMS 53
+#define R600_NUM_ATOMS 54
 
 #define R600_MAX_IMAGES 8
 /*
@@ -145,6 +145,7 @@ struct r600_cb_misc_state {
 	unsigned nr_cbufs;
 	unsigned nr_ps_color_outputs;
 	unsigned nr_image_rats;
+	unsigned nr_buffer_rats;
 	bool multiwrite;
 	bool dual_src_blend;
 };
@@ -521,6 +522,7 @@ struct r600_context {
 	struct r600_atomic_buffer_state atomic_buffer_state;
 	/* only have images on fragment shader */
 	struct r600_image_state         fragment_images;
+	struct r600_image_state         fragment_buffers;
 	/* Shaders and shader resources. */
 	struct r600_cso_state		vertex_fetch_shader;
 	struct r600_shader_state        hw_shader_stages[EG_NUM_HW_STAGES];

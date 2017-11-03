@@ -1333,26 +1333,35 @@ static void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type
 {
 	struct r600_textures_info *samplers = &rctx->samplers[shader_type];
 	struct r600_image_state *images = NULL;
-	int bits, sview_bits;
+	struct r600_image_state *buffers = NULL;
+	int bits, sview_bits, img_bits;
 	uint32_t array_size;
 	int i;
 	uint32_t *constants;
 	uint32_t base_offset;
 
-	if (shader_type == PIPE_SHADER_FRAGMENT)
+	if (shader_type == PIPE_SHADER_FRAGMENT) {
 		images = &rctx->fragment_images;
+		buffers = &rctx->fragment_buffers;
+	}
 
 	if (!samplers->views.dirty_buffer_constants &&
-	    (images && !images->dirty_buffer_constants))
+	    (images && !images->dirty_buffer_constants) &&
+	    (buffers && !buffers->dirty_buffer_constants))
 		return;
 
 	if (images)
 		images->dirty_buffer_constants = FALSE;
+	if (buffers)
+		buffers->dirty_buffer_constants = FALSE;
 	samplers->views.dirty_buffer_constants = FALSE;
 
 	bits = sview_bits = util_last_bit(samplers->views.enabled_mask);
 	if (images)
 		bits += util_last_bit(images->enabled_mask);
+	img_bits = bits;
+	if (buffers)
+		bits += util_last_bit(buffers->enabled_mask);
 	array_size = bits * 2 * sizeof(uint32_t) * 4;
 
 	constants = r600_alloc_buf_consts(rctx, shader_type, array_size,
@@ -1366,12 +1375,22 @@ static void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type
 		}
 	}
 	if (images) {
-		for (i = sview_bits; i < bits; i++) {
+		for (i = sview_bits; i < img_bits; i++) {
 			int idx = i - sview_bits;
 			if (images->enabled_mask & (1 << idx)) {
 				uint32_t offset = (base_offset / 4) + i * 2;
 				constants[offset] = images->views[i].base.resource->width0 / util_format_get_blocksize(images->views[i].base.format);
 				constants[offset + 1] = images->views[i].base.resource->array_size / 6;
+			}
+		}
+	}
+	if (buffers) {
+		for (i = img_bits; i < bits; i++) {
+			int idx = i - img_bits;
+			if (buffers->enabled_mask & (1 << idx)) {
+				uint32_t offset = (base_offset / 4) + i * 2;
+				constants[offset] = buffers->views[i].base.resource->width0 / util_format_get_blocksize(buffers->views[i].base.format);
+				constants[offset + 1] = 0;
 			}
 		}
 	}
@@ -3027,6 +3046,24 @@ static void r600_invalidate_buffer(struct pipe_context *ctx, struct pipe_resourc
 			r600_sampler_views_dirty(rctx, state);
 		}
 	}
+
+	/* SSBOs */
+	struct r600_image_state *istate = &rctx->fragment_buffers;
+	{
+		uint32_t mask = istate->enabled_mask;
+		bool found = false;
+		while (mask) {
+			unsigned i = u_bit_scan(&mask);
+			if (istate->views[i].base.resource == &rbuffer->b.b) {
+				found = true;
+				istate->dirty_mask |= 1 << i;
+			}
+		}
+		if (found) {
+			r600_mark_atom_dirty(rctx, &istate->atom);
+		}
+	}
+
 }
 
 static void r600_set_active_query_state(struct pipe_context *ctx, boolean enable)
