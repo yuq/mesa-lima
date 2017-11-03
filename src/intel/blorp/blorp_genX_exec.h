@@ -1364,11 +1364,7 @@ blorp_emit_depth_stencil_config(struct blorp_batch *batch,
       return;
 
    struct isl_depth_stencil_hiz_emit_info info = {
-#if GEN_GEN >= 7
-      .mocs = 1, /* GEN7_MOCS_L3 */
-#else
-      .mocs = 0,
-#endif
+      .mocs = batch->blorp->mocs.tex,
    };
 
    if (params->depth.enabled) {
