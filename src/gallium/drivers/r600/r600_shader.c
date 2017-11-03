@@ -190,6 +190,7 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 	}
 	use_sb &= (shader->shader.processor_type != PIPE_SHADER_TESS_CTRL);
 	use_sb &= (shader->shader.processor_type != PIPE_SHADER_TESS_EVAL);
+	use_sb &= (shader->shader.processor_type != PIPE_SHADER_COMPUTE);
 
 	/* disable SB for shaders using doubles */
 	use_sb &= !shader->shader.uses_doubles;
@@ -278,6 +279,9 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 		} else {
 			r600_update_ps_state(ctx, shader);
 		}
+		break;
+	case PIPE_SHADER_COMPUTE:
+		evergreen_update_ls_state(ctx, shader);
 		break;
 	default:
 		r = -EINVAL;
@@ -1362,6 +1366,10 @@ static void tgsi_src(struct r600_shader_ctx *ctx,
 			r600_src->swizzle[2] = 0;
 			r600_src->swizzle[3] = 0;
 			r600_src->sel = 0;
+		} else if (ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_THREAD_ID) {
+			r600_src->sel = 0;
+		} else if (ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_BLOCK_ID) {
+			r600_src->sel = 1;
 		} else if (ctx->type != PIPE_SHADER_TESS_CTRL && ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_INVOCATIONID) {
 			r600_src->swizzle[0] = 3;
 			r600_src->swizzle[1] = 3;
@@ -3114,6 +3122,10 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		shader->rat_base = key.ps.nr_cbufs;
 		shader->image_size_const_offset = key.ps.image_size_const_offset;
 		break;
+	case PIPE_SHADER_COMPUTE:
+		shader->rat_base = 0;
+		shader->image_size_const_offset = 0;
+		break;
 	default:
 		break;
 	}
@@ -3199,6 +3211,8 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		if (add_tess_inout)
 			ctx.file_offset[TGSI_FILE_INPUT]+=2;
 	}
+	if (ctx.type == PIPE_SHADER_COMPUTE)
+		ctx.file_offset[TGSI_FILE_INPUT] = 2;
 
 	ctx.file_offset[TGSI_FILE_OUTPUT] =
 			ctx.file_offset[TGSI_FILE_INPUT] +
