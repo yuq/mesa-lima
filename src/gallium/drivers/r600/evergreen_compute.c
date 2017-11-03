@@ -41,6 +41,7 @@
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
 #include "util/u_framebuffer.h"
+#include "tgsi/tgsi_parse.h"
 #include "pipebuffer/pb_buffer.h"
 #include "evergreend.h"
 #include "r600_shader.h"
@@ -412,7 +413,20 @@ static void *evergreen_create_compute_state(struct pipe_context *ctx,
 	const char *code;
 	void *p;
 	boolean use_kill;
+#endif
 
+	shader->ctx = rctx;
+	shader->local_size = cso->req_local_mem;
+	shader->private_size = cso->req_private_mem;
+	shader->input_size = cso->req_input_mem;
+
+	shader->ir_type = cso->ir_type;
+
+	if (shader->ir_type == PIPE_SHADER_IR_TGSI) {
+		shader->sel = r600_create_shader_state_tokens(ctx, cso->prog, PIPE_SHADER_COMPUTE);
+		return shader;
+	}
+#ifdef HAVE_OPENCL
 	COMPUTE_DBG(rctx->screen, "*** evergreen_create_compute_state\n");
 	header = cso->prog;
 	code = cso->prog + sizeof(struct pipe_llvm_program_header);
@@ -429,11 +443,6 @@ static void *evergreen_create_compute_state(struct pipe_context *ctx,
 	rctx->b.ws->buffer_unmap(shader->code_bo->buf);
 #endif
 
-	shader->ctx = rctx;
-	shader->local_size = cso->req_local_mem;
-	shader->private_size = cso->req_private_mem;
-	shader->input_size = cso->req_input_mem;
-
 	return shader;
 }
 
@@ -447,21 +456,36 @@ static void evergreen_delete_compute_state(struct pipe_context *ctx, void *state
 	if (!shader)
 		return;
 
+	if (shader->ir_type == PIPE_SHADER_IR_TGSI) {
+		r600_delete_shader_selector(ctx, shader->sel);
+	} else {
 #ifdef HAVE_OPENCL
-	radeon_shader_binary_clean(&shader->binary);
+		radeon_shader_binary_clean(&shader->binary);
 #endif
-	r600_destroy_shader(&shader->bc);
+		r600_destroy_shader(&shader->bc);
 
-	/* TODO destroy shader->code_bo, shader->const_bo
-	 * we'll need something like r600_buffer_free */
+		/* TODO destroy shader->code_bo, shader->const_bo
+		 * we'll need something like r600_buffer_free */
+	}
 	FREE(shader);
 }
 
 static void evergreen_bind_compute_state(struct pipe_context *ctx, void *state)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
-
+	struct r600_pipe_compute *cstate = (struct r600_pipe_compute *)state;
 	COMPUTE_DBG(rctx->screen, "*** evergreen_bind_compute_state\n");
+
+	if (!state) {
+		rctx->cs_shader_state.shader = (struct r600_pipe_compute *)state;
+		return;
+	}
+
+	if (cstate->ir_type == PIPE_SHADER_IR_TGSI) {
+		bool compute_dirty;
+
+		r600_shader_select(ctx, cstate->sel, &compute_dirty);
+	}
 
 	rctx->cs_shader_state.shader = (struct r600_pipe_compute *)state;
 }
@@ -486,7 +510,7 @@ static void evergreen_compute_upload_input(struct pipe_context *ctx,
 	/* We need to reserve 9 dwords (36 bytes) for implicit kernel
 	 * parameters.
 	 */
-	unsigned input_size = shader->input_size + 36;
+	unsigned input_size;
 	uint32_t *num_work_groups_start;
 	uint32_t *global_size_start;
 	uint32_t *local_size_start;
@@ -494,10 +518,12 @@ static void evergreen_compute_upload_input(struct pipe_context *ctx,
 	struct pipe_box box;
 	struct pipe_transfer *transfer = NULL;
 
+	if (!shader)
+		return;
 	if (shader->input_size == 0) {
 		return;
 	}
-
+	input_size = shader->input_size + 36;
 	if (!shader->kernel_param) {
 		/* Add space for the grid dimensions */
 		shader->kernel_param = (struct r600_resource *)
@@ -555,9 +581,10 @@ static void evergreen_emit_dispatch(struct r600_context *rctx,
 	unsigned wave_divisor = (16 * num_pipes);
 	int group_size = 1;
 	int grid_size = 1;
-	unsigned lds_size = shader->local_size / 4 +
-		shader->bc.nlds_dw;
+	unsigned lds_size = shader->local_size / 4;
 
+	if (shader->ir_type != PIPE_SHADER_IR_TGSI)
+		lds_size += shader->bc.nlds_dw;
 
 	/* Calculate group_size/grid_size */
 	for (i = 0; i < 3; i++) {
@@ -660,10 +687,23 @@ static void compute_emit_cs(struct r600_context *rctx,
 			    const struct pipe_grid_info *info)
 {
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	bool compute_dirty = false;
+	struct r600_pipe_shader *current;
 
 	/* make sure that the gfx ring is only one active */
 	if (radeon_emitted(rctx->b.dma.cs, 0)) {
 		rctx->b.dma.flush(rctx, PIPE_FLUSH_ASYNC, NULL);
+	}
+
+	r600_need_cs_space(rctx, 0, true);
+	if (rctx->cs_shader_state.shader->ir_type == PIPE_SHADER_IR_TGSI) {
+		r600_shader_select(&rctx->b.b, rctx->cs_shader_state.shader->sel, &compute_dirty);
+		current = rctx->cs_shader_state.shader->sel->current;
+		if (compute_dirty) {
+			rctx->cs_shader_state.atom.num_dw = current->command_buffer.num_dw;
+			r600_context_add_resource_size(&rctx->b.b, (struct pipe_resource *)current->bo);
+			r600_set_atom_dirty(rctx, &rctx->cs_shader_state.atom, true);
+		}
 	}
 
 	/* Initialize all the compute-related registers.
@@ -674,17 +714,34 @@ static void compute_emit_cs(struct r600_context *rctx,
 	r600_emit_command_buffer(cs, &rctx->start_compute_cs_cmd);
 
 	/* emit config state */
-	if (rctx->b.chip_class == EVERGREEN)
-		r600_emit_atom(rctx, &rctx->config_state.atom);
+	if (rctx->b.chip_class == EVERGREEN) {
+		if (rctx->cs_shader_state.shader->ir_type == PIPE_SHADER_IR_TGSI) {
+			radeon_set_config_reg_seq(cs, R_008C04_SQ_GPR_RESOURCE_MGMT_1, 3);
+			radeon_emit(cs, S_008C04_NUM_CLAUSE_TEMP_GPRS(rctx->r6xx_num_clause_temp_gprs));
+			radeon_emit(cs, 0);
+			radeon_emit(cs, 0);
+			radeon_set_config_reg(cs, R_008D8C_SQ_DYN_GPR_CNTL_PS_FLUSH_REQ, (1 << 8));
+		} else
+			r600_emit_atom(rctx, &rctx->config_state.atom);
+	}
 
 	rctx->b.flags |= R600_CONTEXT_WAIT_3D_IDLE | R600_CONTEXT_FLUSH_AND_INV;
 	r600_flush_emit(rctx);
 
-	compute_setup_cbs(rctx);
+	if (rctx->cs_shader_state.shader->ir_type != PIPE_SHADER_IR_TGSI) {
 
-	/* Emit vertex buffer state */
-	rctx->cs_vertex_buffer_state.atom.num_dw = 12 * util_bitcount(rctx->cs_vertex_buffer_state.dirty_mask);
-	r600_emit_atom(rctx, &rctx->cs_vertex_buffer_state.atom);
+		compute_setup_cbs(rctx);
+
+		/* Emit vertex buffer state */
+		rctx->cs_vertex_buffer_state.atom.num_dw = 12 * util_bitcount(rctx->cs_vertex_buffer_state.dirty_mask);
+		r600_emit_atom(rctx, &rctx->cs_vertex_buffer_state.atom);
+	} else {
+		uint32_t rat_mask;
+
+		rat_mask = ((1ULL << (((unsigned)rctx->cb_misc_state.nr_image_rats + rctx->cb_misc_state.nr_buffer_rats) * 4)) - 1);
+		radeon_compute_set_context_reg(cs, R_028238_CB_TARGET_MASK,
+					       rat_mask);
+	}
 
 	/* Emit constant buffer state */
 	r600_emit_atom(rctx, &rctx->constbuf_state[PIPE_SHADER_COMPUTE].atom);
@@ -744,10 +801,17 @@ void evergreen_emit_cs_shader(struct r600_context *rctx,
 	struct r600_resource *code_bo;
 	unsigned ngpr, nstack;
 
-	code_bo = shader->code_bo;
-	va = shader->code_bo->gpu_address + state->pc;
-	ngpr = shader->bc.ngpr;
-	nstack = shader->bc.nstack;
+	if (shader->ir_type == PIPE_SHADER_IR_TGSI) {
+		code_bo = shader->sel->current->bo;
+		va = shader->sel->current->bo->gpu_address;
+		ngpr = shader->sel->current->shader.bc.ngpr;
+		nstack = shader->sel->current->shader.bc.nstack;
+	} else {
+		code_bo = shader->code_bo;
+		va = shader->code_bo->gpu_address + state->pc;
+		ngpr = shader->bc.ngpr;
+		nstack = shader->bc.nstack;
+	}
 
 	radeon_compute_set_context_reg_seq(cs, R_0288D0_SQ_PGM_START_LS, 3);
 	radeon_emit(cs, va >> 8); /* R_0288D0_SQ_PGM_START_LS */
@@ -771,10 +835,15 @@ static void evergreen_launch_grid(struct pipe_context *ctx,
 	struct r600_pipe_compute *shader = rctx->cs_shader_state.shader;
 	boolean use_kill;
 
-	rctx->cs_shader_state.pc = info->pc;
-	/* Get the config information for this kernel. */
-	r600_shader_binary_read_config(&shader->binary, &shader->bc,
-                                  info->pc, &use_kill);
+	if (shader->ir_type != PIPE_SHADER_IR_TGSI) {
+		rctx->cs_shader_state.pc = info->pc;
+		/* Get the config information for this kernel. */
+		r600_shader_binary_read_config(&shader->binary, &shader->bc,
+					       info->pc, &use_kill);
+	} else {
+		use_kill = false;
+		rctx->cs_shader_state.pc = 0;
+	}
 #endif
 
 	COMPUTE_DBG(rctx->screen, "*** evergreen_launch_grid: pc = %u\n", info->pc);
