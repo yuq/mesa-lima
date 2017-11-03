@@ -409,7 +409,7 @@ anv_get_format(VkFormat vk_format)
  */
 struct anv_format_plane
 anv_get_format_plane(const struct gen_device_info *devinfo, VkFormat vk_format,
-                     VkImageAspectFlags aspect, VkImageTiling tiling)
+                     VkImageAspectFlagBits aspect, VkImageTiling tiling)
 {
    const struct anv_format *format = anv_get_format(vk_format);
    struct anv_format_plane plane_format = {

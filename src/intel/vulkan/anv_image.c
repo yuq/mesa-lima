@@ -34,14 +34,11 @@
 
 #include "vk_format_info.h"
 
-/**
- * Exactly one bit must be set in \a aspect.
- */
 static isl_surf_usage_flags_t
 choose_isl_surf_usage(VkImageCreateFlags vk_create_flags,
                       VkImageUsageFlags vk_usage,
                       isl_surf_usage_flags_t isl_extra_usage,
-                      VkImageAspectFlags aspect)
+                      VkImageAspectFlagBits aspect)
 {
    isl_surf_usage_flags_t isl_usage = isl_extra_usage;
 
@@ -93,11 +90,8 @@ choose_isl_surf_usage(VkImageCreateFlags vk_create_flags,
    return isl_usage;
 }
 
-/**
- * Exactly one bit must be set in \a aspect.
- */
 static struct anv_surface *
-get_surface(struct anv_image *image, VkImageAspectFlags aspect)
+get_surface(struct anv_image *image, VkImageAspectFlagBits aspect)
 {
    uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
    return &image->planes[plane].surface;
@@ -253,14 +247,12 @@ add_fast_clear_state_buffer(struct anv_image *image,
 /**
  * Initialize the anv_image::*_surface selected by \a aspect. Then update the
  * image's memory requirements (that is, the image's size and alignment).
- *
- * Exactly one bit must be set in \a aspect.
  */
 static VkResult
 make_surface(const struct anv_device *dev,
              struct anv_image *image,
              const struct anv_image_create_info *anv_info,
-             VkImageAspectFlags aspect)
+             VkImageAspectFlagBits aspect)
 {
    const VkImageCreateInfo *vk_info = anv_info->vk_info;
    bool ok UNUSED;
