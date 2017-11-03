@@ -1442,9 +1442,17 @@ fs_visitor::nir_emit_load_const(const fs_builder &bld,
       break;
 
    case 64:
-      for (unsigned i = 0; i < instr->def.num_components; i++)
-         bld.MOV(offset(reg, bld, i),
-                 setup_imm_df(bld, instr->value.f64[i]));
+      assert(devinfo->gen >= 7);
+      if (devinfo->gen == 7) {
+         /* We don't get 64-bit integer types until gen8 */
+         for (unsigned i = 0; i < instr->def.num_components; i++) {
+            bld.MOV(retype(offset(reg, bld, i), BRW_REGISTER_TYPE_DF),
+                    setup_imm_df(bld, instr->value.f64[i]));
+         }
+      } else {
+         for (unsigned i = 0; i < instr->def.num_components; i++)
+            bld.MOV(offset(reg, bld, i), brw_imm_q(instr->value.i64[i]));
+      }
       break;
 
    default:
