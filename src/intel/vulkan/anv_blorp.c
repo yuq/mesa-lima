@@ -92,9 +92,6 @@ anv_device_init_blorp(struct anv_device *device)
    anv_pipeline_cache_init(&device->blorp_shader_cache, device, true);
    blorp_init(&device->blorp, device, &device->isl_dev);
    device->blorp.compiler = device->instance->physicalDevice.compiler;
-   device->blorp.mocs.tex = device->default_mocs;
-   device->blorp.mocs.rb = device->default_mocs;
-   device->blorp.mocs.vb = device->default_mocs;
    device->blorp.lookup_shader = lookup_blorp_shader;
    device->blorp.upload_shader = upload_blorp_shader;
    switch (device->info.gen) {
@@ -156,6 +153,7 @@ get_blorp_surf_for_anv_buffer(struct anv_device *device,
       .addr = {
          .buffer = buffer->bo,
          .offset = buffer->offset + offset,
+         .mocs = device->default_mocs,
       },
    };
 
@@ -199,6 +197,7 @@ get_blorp_surf_for_anv_image(const struct anv_device *device,
       .addr = {
          .buffer = image->planes[plane].bo,
          .offset = image->planes[plane].bo_offset + surface->offset,
+         .mocs = device->default_mocs,
       },
    };
 
@@ -208,6 +207,7 @@ get_blorp_surf_for_anv_image(const struct anv_device *device,
       blorp_surf->aux_addr = (struct blorp_address) {
          .buffer = image->planes[plane].bo,
          .offset = image->planes[plane].bo_offset + aux_surface->offset,
+         .mocs = device->default_mocs,
       };
       blorp_surf->aux_usage = aux_usage;
    }
@@ -607,10 +607,12 @@ void anv_CmdCopyBuffer(
       struct blorp_address src = {
          .buffer = src_buffer->bo,
          .offset = src_buffer->offset + pRegions[r].srcOffset,
+         .mocs = cmd_buffer->device->default_mocs,
       };
       struct blorp_address dst = {
          .buffer = dst_buffer->bo,
          .offset = dst_buffer->offset + pRegions[r].dstOffset,
+         .mocs = cmd_buffer->device->default_mocs,
       };
 
       blorp_buffer_copy(&batch, src, dst, pRegions[r].size);
@@ -658,10 +660,12 @@ void anv_CmdUpdateBuffer(
       struct blorp_address src = {
          .buffer = &cmd_buffer->device->dynamic_state_pool.block_pool.bo,
          .offset = tmp_data.offset,
+         .mocs = cmd_buffer->device->default_mocs,
       };
       struct blorp_address dst = {
          .buffer = dst_buffer->bo,
          .offset = dst_buffer->offset + dstOffset,
+         .mocs = cmd_buffer->device->default_mocs,
       };
 
       blorp_buffer_copy(&batch, src, dst, copy_size);
@@ -1595,6 +1599,7 @@ anv_image_copy_to_shadow(struct anv_cmd_buffer *cmd_buffer,
          .buffer = image->planes[0].bo,
          .offset = image->planes[0].bo_offset +
                    image->planes[0].shadow_surface.offset,
+         .mocs = cmd_buffer->device->default_mocs,
       },
    };
 
@@ -1656,6 +1661,7 @@ anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
       .buffer = image->planes[0].bo,
       .offset = image->planes[0].bo_offset +
                 image->planes[0].aux_surface.offset,
+      .mocs = cmd_buffer->device->default_mocs,
    };
    surf.aux_usage = ISL_AUX_USAGE_HIZ;
 
