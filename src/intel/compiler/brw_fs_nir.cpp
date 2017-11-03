@@ -1125,12 +1125,13 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
          if (instr->op == nir_op_f2b) {
             zero = vgrf(glsl_type::double_type);
             tmp = vgrf(glsl_type::double_type);
+            bld.MOV(zero, setup_imm_df(bld, 0.0));
          } else {
             zero = vgrf(glsl_type::int64_t_type);
             tmp = vgrf(glsl_type::int64_t_type);
+            bld.MOV(zero, brw_imm_q(0));
          }
 
-         bld.MOV(zero, setup_imm_df(bld, 0.0));
          /* A SIMD16 execution needs to be split in two instructions, so use
           * a vgrf instead of the flag register as dst so instruction splitting
           * works
