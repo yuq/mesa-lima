@@ -1023,6 +1023,16 @@ void eg_trace_emit(struct r600_context *rctx);
 void eg_dump_debug_state(struct pipe_context *ctx, FILE *f,
 			 unsigned flags);
 
+struct r600_pipe_shader_selector *r600_create_shader_state_tokens(struct pipe_context *ctx,
+								  const struct tgsi_token *tokens,
+								  unsigned pipe_shader_type);
+int r600_shader_select(struct pipe_context *ctx,
+		       struct r600_pipe_shader_selector* sel,
+		       bool *dirty);
+
+void r600_delete_shader_selector(struct pipe_context *ctx,
+				 struct r600_pipe_shader_selector *sel);
+
 struct r600_shader_atomic;
 bool evergreen_emit_atomic_buffer_setup(struct r600_context *rctx,
 					struct r600_pipe_shader *cs_shader,

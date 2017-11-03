@@ -829,7 +829,7 @@ static inline void r600_shader_selector_key(const struct pipe_context *ctx,
 
 /* Select the hw shader variant depending on the current state.
  * (*dirty) is set to 1 if current variant was changed */
-static int r600_shader_select(struct pipe_context *ctx,
+int r600_shader_select(struct pipe_context *ctx,
         struct r600_pipe_shader_selector* sel,
         bool *dirty)
 {
@@ -897,17 +897,27 @@ static int r600_shader_select(struct pipe_context *ctx,
 	return 0;
 }
 
-static void *r600_create_shader_state(struct pipe_context *ctx,
-			       const struct pipe_shader_state *state,
-			       unsigned pipe_shader_type)
+struct r600_pipe_shader_selector *r600_create_shader_state_tokens(struct pipe_context *ctx,
+								  const struct tgsi_token *tokens,
+								  unsigned pipe_shader_type)
 {
 	struct r600_pipe_shader_selector *sel = CALLOC_STRUCT(r600_pipe_shader_selector);
 	int i;
 
 	sel->type = pipe_shader_type;
-	sel->tokens = tgsi_dup_tokens(state->tokens);
+	sel->tokens = tgsi_dup_tokens(tokens);
+	tgsi_scan_shader(tokens, &sel->info);
+	return sel;
+}
+
+static void *r600_create_shader_state(struct pipe_context *ctx,
+			       const struct pipe_shader_state *state,
+			       unsigned pipe_shader_type)
+{
+	int i;
+	struct r600_pipe_shader_selector *sel = r600_create_shader_state_tokens(ctx, state->tokens, pipe_shader_type);
+
 	sel->so = state->stream_output;
-	tgsi_scan_shader(state->tokens, &sel->info);
 
 	switch (pipe_shader_type) {
 	case PIPE_SHADER_GEOMETRY:
@@ -1048,8 +1058,8 @@ static void r600_bind_tes_state(struct pipe_context *ctx, void *state)
 	rctx->b.streamout.stride_in_dw = rctx->tes_shader->so.stride;
 }
 
-static void r600_delete_shader_selector(struct pipe_context *ctx,
-		struct r600_pipe_shader_selector *sel)
+void r600_delete_shader_selector(struct pipe_context *ctx,
+				 struct r600_pipe_shader_selector *sel)
 {
 	struct r600_pipe_shader *p = sel->current, *c;
 	while (p) {
