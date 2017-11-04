@@ -2199,12 +2199,15 @@ _mesa_GetProgramBinary(GLuint program, GLsizei bufSize, GLsizei *length,
       return;
    }
 
-   *length = 0;
-   _mesa_error(ctx, GL_INVALID_OPERATION,
-               "glGetProgramBinary(driver supports zero binary formats)");
-
-   (void) binaryFormat;
-   (void) binary;
+   if (ctx->Const.NumProgramBinaryFormats == 0) {
+      *length = 0;
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glGetProgramBinary(driver supports zero binary formats)");
+   } else {
+      _mesa_get_program_binary(ctx, shProg, bufSize, length, binaryFormat,
+                               binary);
+      assert(*length == 0 || *binaryFormat == GL_PROGRAM_BINARY_FORMAT_MESA);
+   }
 }
 
 void GLAPIENTRY
