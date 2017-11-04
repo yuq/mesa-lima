@@ -898,6 +898,7 @@ static void r600_init_color_surface(struct r600_context *rctx,
 		S_0280A0_COMP_SWAP(swap) |
 		S_0280A0_BLEND_BYPASS(blend_bypass) |
 		S_0280A0_BLEND_CLAMP(blend_clamp) |
+		S_0280A0_SIMPLE_FLOAT(1) |
 		S_0280A0_NUMBER_TYPE(ntype) |
 		S_0280A0_ENDIAN(endian);
 
