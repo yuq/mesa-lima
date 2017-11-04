@@ -772,6 +772,11 @@ nv50_screen_init_hwctx(struct nv50_screen *screen)
       PUSH_DATA (push, 0);
    }
 
+   BEGIN_NV04(push, NV50_3D(UNK0FDC), 1);
+   PUSH_DATA (push, 1);
+   BEGIN_NV04(push, NV50_3D(UNK19C0), 1);
+   PUSH_DATA (push, 1);
+
    PUSH_KICK (push);
 }
 
