@@ -2221,9 +2221,6 @@ _mesa_ProgramBinary(GLuint program, GLenum binaryFormat,
    if (!shProg)
       return;
 
-   (void) binaryFormat;
-   (void) binary;
-
    /* Section 2.3.1 (Errors) of the OpenGL 4.5 spec says:
     *
     *     "If a negative number is provided where an argument of type sizei or
@@ -2234,20 +2231,25 @@ _mesa_ProgramBinary(GLuint program, GLenum binaryFormat,
       return;
    }
 
-   /* The ARB_get_program_binary spec says:
-    *
-    *     "<binaryFormat> and <binary> must be those returned by a previous
-    *     call to GetProgramBinary, and <length> must be the length of the
-    *     program binary as returned by GetProgramBinary or GetProgramiv with
-    *     <pname> PROGRAM_BINARY_LENGTH. Loading the program binary will fail,
-    *     setting the LINK_STATUS of <program> to FALSE, if these conditions
-    *     are not met."
-    *
-    * Since any value of binaryFormat passed "is not one of those specified as
-    * allowable for [this] command, an INVALID_ENUM error is generated."
-    */
-   shProg->data->LinkStatus = linking_failure;
-   _mesa_error(ctx, GL_INVALID_ENUM, "glProgramBinary");
+   if (ctx->Const.NumProgramBinaryFormats == 0 ||
+       binaryFormat != GL_PROGRAM_BINARY_FORMAT_MESA) {
+      /* The ARB_get_program_binary spec says:
+       *
+       *     "<binaryFormat> and <binary> must be those returned by a previous
+       *     call to GetProgramBinary, and <length> must be the length of the
+       *     program binary as returned by GetProgramBinary or GetProgramiv with
+       *     <pname> PROGRAM_BINARY_LENGTH. Loading the program binary will fail,
+       *     setting the LINK_STATUS of <program> to FALSE, if these conditions
+       *     are not met."
+       *
+       * Since any value of binaryFormat passed "is not one of those specified as
+       * allowable for [this] command, an INVALID_ENUM error is generated."
+       */
+      shProg->data->LinkStatus = linking_failure;
+      _mesa_error(ctx, GL_INVALID_ENUM, "glProgramBinary");
+   } else {
+      _mesa_program_binary(ctx, shProg, binaryFormat, binary, length);
+   }
 }
 
 
