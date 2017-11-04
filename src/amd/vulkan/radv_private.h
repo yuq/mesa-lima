@@ -612,8 +612,6 @@ struct radv_descriptor_set {
 	uint32_t *mapped_ptr;
 	struct radv_descriptor_range *dynamic_descriptors;
 
-	struct list_head vram_list;
-
 	struct radeon_winsys_bo *descriptors[0];
 };
 
@@ -623,17 +621,25 @@ struct radv_push_descriptor_set
 	uint32_t capacity;
 };
 
+struct radv_descriptor_pool_entry {
+	uint32_t offset;
+	uint32_t size;
+	struct radv_descriptor_set *set;
+};
+
 struct radv_descriptor_pool {
 	struct radeon_winsys_bo *bo;
 	uint8_t *mapped_ptr;
 	uint64_t current_offset;
 	uint64_t size;
 
-	struct list_head vram_list;
-
 	uint8_t *host_memory_base;
 	uint8_t *host_memory_ptr;
 	uint8_t *host_memory_end;
+
+	uint32_t entry_count;
+	uint32_t max_entry_count;
+	struct radv_descriptor_pool_entry entries[0];
 };
 
 struct radv_descriptor_update_template_entry {
