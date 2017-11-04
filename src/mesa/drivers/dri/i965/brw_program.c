@@ -796,6 +796,7 @@ brw_program_serialize_nir(struct gl_context *ctx, struct gl_program *prog)
    prog->driver_cache_blob = ralloc_size(NULL, writer.size);
    memcpy(prog->driver_cache_blob, writer.data, writer.size);
    prog->driver_cache_blob_size = writer.size;
+   blob_finish(&writer);
 }
 
 void
