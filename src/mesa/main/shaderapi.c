@@ -45,6 +45,7 @@
 #include "main/hash.h"
 #include "main/mtypes.h"
 #include "main/pipelineobj.h"
+#include "main/program_binary.h"
 #include "main/shaderapi.h"
 #include "main/shaderobj.h"
 #include "main/transformfeedback.h"
@@ -834,7 +835,11 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       *params = shProg->BinaryRetreivableHint;
       return;
    case GL_PROGRAM_BINARY_LENGTH:
-      *params = 0;
+      if (ctx->Const.NumProgramBinaryFormats == 0) {
+         *params = 0;
+      } else {
+         _mesa_get_program_binary_length(ctx, shProg, params);
+      }
       return;
    case GL_ACTIVE_ATOMIC_COUNTER_BUFFERS:
       if (!ctx->Extensions.ARB_shader_atomic_counters)
