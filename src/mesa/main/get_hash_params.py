@@ -324,7 +324,7 @@ descriptor=[
   [ "SHADER_BINARY_FORMATS", "LOC_CUSTOM, TYPE_INVALID, 0, extra_ARB_ES2_compatibility_api_es2" ],
 
 # GL_ARB_get_program_binary / GL_OES_get_program_binary
-  [ "NUM_PROGRAM_BINARY_FORMATS", "CONST(0), NO_EXTRA" ],
+  [ "NUM_PROGRAM_BINARY_FORMATS", "CONTEXT_UINT(Const.NumProgramBinaryFormats), NO_EXTRA" ],
   [ "PROGRAM_BINARY_FORMATS", "LOC_CUSTOM, TYPE_INVALID, 0, NO_EXTRA" ],
 
 # GL_INTEL_performance_query
