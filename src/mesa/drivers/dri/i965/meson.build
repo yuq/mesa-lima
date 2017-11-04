@@ -57,6 +57,7 @@ files_i965 = files(
   'brw_performance_query.c',
   'brw_program.c',
   'brw_program.h',
+  'brw_program_binary.c',
   'brw_program_cache.c',
   'brw_primitive_restart.c',
   'brw_queryobj.c',

@@ -1579,6 +1579,21 @@ brw_check_for_reset(struct brw_context *brw);
 extern void
 brw_init_compute_functions(struct dd_function_table *functions);
 
+/* brw_program_binary.c */
+extern void
+brw_program_binary_init(unsigned device_id);
+extern void
+brw_get_program_binary_driver_sha1(struct gl_context *ctx, uint8_t *sha1);
+extern void
+brw_deserialize_program_binary(struct gl_context *ctx,
+                               struct gl_shader_program *shProg,
+                               struct gl_program *prog);
+void
+brw_program_serialize_nir(struct gl_context *ctx, struct gl_program *prog);
+void
+brw_program_deserialize_nir(struct gl_context *ctx, struct gl_program *prog,
+                            gl_shader_stage stage);
+
 /*======================================================================
  * Inline conversion functions.  These are better-typed than the
  * macros used previously:

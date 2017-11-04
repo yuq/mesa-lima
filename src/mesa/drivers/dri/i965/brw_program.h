@@ -82,12 +82,6 @@ brw_assign_common_binding_table_offsets(const struct gen_device_info *devinfo,
                                         uint32_t next_binding_table_offset);
 
 void
-brw_program_serialize_nir(struct gl_context *ctx, struct gl_program *prog);
-void
-brw_program_deserialize_nir(struct gl_context *ctx, struct gl_program *prog,
-                            gl_shader_stage stage);
-
-void
 brw_stage_prog_data_free(const void *prog_data);
 
 void
