@@ -558,6 +558,7 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen,
 	case PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTER_BUFFERS:
 		return 0;
 	case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
+	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
 		if (is_a5xx(screen)) {
 			/* a5xx (and a4xx for that matter) has one state-block
 			 * for compute-shader SSBO's and another that is shared
@@ -576,6 +577,10 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen,
 			 *
 			 * I think that way we could avoid having to patch shaders
 			 * for actual SSBO indexes by using a static partitioning.
+			 *
+			 * Note same state block is used for images and buffers,
+			 * but images also need texture state for read access
+			 * (isam/isam.3d)
 			 */
 			switch(shader)
 			{
@@ -586,9 +591,6 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen,
 				return 0;
 			}
 		}
-		return 0;
-	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
-		/* probably should be same as MAX_SHADRER_BUFFERS but not implemented yet */
 		return 0;
 	}
 	debug_printf("unknown shader param %d\n", param);

@@ -160,6 +160,8 @@ files_libfreedreno = files(
   'a5xx/fd5_format.h',
   'a5xx/fd5_gmem.c',
   'a5xx/fd5_gmem.h',
+  'a5xx/fd5_image.c',
+  'a5xx/fd5_image.h',
   'a5xx/fd5_program.c',
   'a5xx/fd5_program.h',
   'a5xx/fd5_query.c',

@@ -186,28 +186,6 @@ fd5_sampler_states_bind(struct pipe_context *pctx,
 	}
 }
 
-static enum a5xx_tex_type
-tex_type(unsigned target)
-{
-	switch (target) {
-	default:
-		assert(0);
-	case PIPE_BUFFER:
-	case PIPE_TEXTURE_1D:
-	case PIPE_TEXTURE_1D_ARRAY:
-		return A5XX_TEX_1D;
-	case PIPE_TEXTURE_RECT:
-	case PIPE_TEXTURE_2D:
-	case PIPE_TEXTURE_2D_ARRAY:
-		return A5XX_TEX_2D;
-	case PIPE_TEXTURE_3D:
-		return A5XX_TEX_3D;
-	case PIPE_TEXTURE_CUBE:
-	case PIPE_TEXTURE_CUBE_ARRAY:
-		return A5XX_TEX_CUBE;
-	}
-}
-
 static bool
 use_astc_srgb_workaround(struct pipe_context *pctx, enum pipe_format format)
 {
@@ -272,7 +250,7 @@ fd5_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 		so->offset = fd_resource_offset(rsc, lvl, cso->u.tex.first_layer);
 	}
 
-	so->texconst2 |= A5XX_TEX_CONST_2_TYPE(tex_type(cso->target));
+	so->texconst2 |= A5XX_TEX_CONST_2_TYPE(fd5_tex_type(cso->target));
 
 	switch (cso->target) {
 	case PIPE_TEXTURE_1D:
