@@ -810,9 +810,9 @@ struct radv_attachment_state {
 
 struct radv_cmd_state {
 	bool                                          vb_dirty;
-	radv_cmd_dirty_mask_t                         dirty;
 	bool                                          push_descriptors_dirty;
 	bool predicating;
+	radv_cmd_dirty_mask_t                         dirty;
 
 	struct radv_pipeline *                        pipeline;
 	struct radv_pipeline *                        emitted_pipeline;
