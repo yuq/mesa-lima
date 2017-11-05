@@ -476,6 +476,14 @@ radv_save_pipeline(struct radv_cmd_buffer *cmd_buffer,
 	radv_emit_write_data_packet(cs, va, 2, data);
 }
 
+void radv_set_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
+			     struct radv_descriptor_set *set,
+			     unsigned idx)
+{
+	cmd_buffer->state.descriptors[idx] = set;
+	cmd_buffer->state.descriptors_dirty |= (1u << idx);
+}
+
 static void
 radv_save_descriptors(struct radv_cmd_buffer *cmd_buffer)
 {
@@ -2319,8 +2327,7 @@ radv_bind_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
 {
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
 
-	cmd_buffer->state.descriptors[idx] = set;
-	cmd_buffer->state.descriptors_dirty |= (1u << idx);
+	radv_set_descriptor_set(cmd_buffer, set, idx);
 	if (!set)
 		return;
 
@@ -2432,8 +2439,7 @@ void radv_meta_push_descriptor_set(
 	                            radv_descriptor_set_to_handle(push_set),
 	                            descriptorWriteCount, pDescriptorWrites, 0, NULL);
 
-	cmd_buffer->state.descriptors[set] = push_set;
-	cmd_buffer->state.descriptors_dirty |= (1u << set);
+	radv_set_descriptor_set(cmd_buffer, push_set, set);
 }
 
 void radv_CmdPushDescriptorSetKHR(
@@ -2457,8 +2463,7 @@ void radv_CmdPushDescriptorSetKHR(
 	                            radv_descriptor_set_to_handle(push_set),
 	                            descriptorWriteCount, pDescriptorWrites, 0, NULL);
 
-	cmd_buffer->state.descriptors[set] = push_set;
-	cmd_buffer->state.descriptors_dirty |= (1u << set);
+	radv_set_descriptor_set(cmd_buffer, push_set, set);
 	cmd_buffer->state.push_descriptors_dirty = true;
 }
 
@@ -2481,8 +2486,7 @@ void radv_CmdPushDescriptorSetWithTemplateKHR(
 	radv_update_descriptor_set_with_template(cmd_buffer->device, cmd_buffer, push_set,
 						 descriptorUpdateTemplate, pData);
 
-	cmd_buffer->state.descriptors[set] = push_set;
-	cmd_buffer->state.descriptors_dirty |= (1u << set);
+	radv_set_descriptor_set(cmd_buffer, push_set, set);
 	cmd_buffer->state.push_descriptors_dirty = true;
 }
 

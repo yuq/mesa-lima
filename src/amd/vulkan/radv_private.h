@@ -1552,6 +1552,10 @@ VkResult radv_alloc_sem_info(struct radv_winsys_sem_info *sem_info,
 			     const VkSemaphore *signal_sems);
 void radv_free_sem_info(struct radv_winsys_sem_info *sem_info);
 
+void radv_set_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
+			     struct radv_descriptor_set *set,
+			     unsigned idx);
+
 void
 radv_update_descriptor_sets(struct radv_device *device,
                             struct radv_cmd_buffer *cmd_buffer,
