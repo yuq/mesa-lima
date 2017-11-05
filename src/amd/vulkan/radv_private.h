@@ -822,7 +822,6 @@ struct radv_cmd_state {
 	struct radv_render_pass *                     pass;
 	const struct radv_subpass *                         subpass;
 	struct radv_dynamic_state                     dynamic;
-	struct radv_descriptor_set *                  descriptors[MAX_SETS];
 	struct radv_attachment_state *                attachments;
 	VkRect2D                                     render_area;
 
@@ -839,6 +838,7 @@ struct radv_cmd_state {
 	unsigned                                     active_occlusion_queries;
 	float					     offset_scale;
 	uint32_t                                      descriptors_dirty;
+	uint32_t                                      valid_descriptors;
 	uint32_t                                      trace_id;
 	uint32_t                                      last_ia_multi_vgt_param;
 };
@@ -878,6 +878,7 @@ struct radv_cmd_buffer {
 	VkShaderStageFlags push_constant_stages;
 	struct radv_push_descriptor_set push_descriptors;
 	struct radv_descriptor_set meta_push_descriptors;
+	struct radv_descriptor_set *descriptors[MAX_SETS];
 
 	struct radv_cmd_buffer_upload upload;
 

@@ -73,7 +73,10 @@ radv_meta_save(struct radv_meta_saved_state *state,
 	}
 
 	if (state->flags & RADV_META_SAVE_DESCRIPTORS) {
-		state->old_descriptor_set0 = cmd_buffer->state.descriptors[0];
+		if (cmd_buffer->state.valid_descriptors & (1 << 0))
+			state->old_descriptor_set0 = cmd_buffer->descriptors[0];
+		else
+			state->old_descriptor_set0 = NULL;
 	}
 
 	if (state->flags & RADV_META_SAVE_CONSTANTS) {
