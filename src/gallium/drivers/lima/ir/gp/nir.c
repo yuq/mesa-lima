@@ -26,6 +26,7 @@
 #include "compiler/nir/nir.h"
 
 #include "gpir.h"
+#include "lima_context.h"
 
 
 static inline void *gpir_node_create_ssa(gpir_compiler *comp, gpir_op op, nir_ssa_def *ssa)
@@ -331,6 +332,16 @@ bool gpir_compile_nir(struct lima_vs_shader_state *prog, struct nir_shader *nir)
 
    if (!gpir_codegen_prog(comp))
       goto err_out0;
+
+   nir_foreach_variable(var, &nir->outputs) {
+      gpir_debug("nir output %s loc=%d dloc=%d base=%d comp=%d vece=%d len=%d\n",
+                 var->name, var->data.location, var->data.driver_location,
+                 glsl_get_base_type(var->type),
+                 glsl_get_components(var->type),
+                 glsl_get_vector_elements(var->type),
+                 glsl_get_length(var->type));
+   }
+   prog->num_varying = nir->num_outputs;
 
    ralloc_free(comp);
    return true;
