@@ -268,8 +268,11 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
     * ensures that inter-shader outputs written to in an earlier stage
     * are eliminated if they are (transitively) not used in a later
     * stage.
+    *
+    * TODO: Look into Shadow of Mordor regressions on HSW and enable this for
+    * all platforms. See: https://bugs.freedesktop.org/show_bug.cgi?id=103537
     */
-    if (first != last) {
+    if (first != last && brw->screen->devinfo.gen >= 8) {
        int next = last;
        for (int i = next - 1; i >= 0; i--) {
           if (shProg->_LinkedShaders[i] == NULL)
