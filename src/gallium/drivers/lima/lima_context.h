@@ -62,6 +62,13 @@ struct lima_fs_shader_state {
    int shader_size;
 };
 
+#define LIMA_MAX_VARYING_NUM 16
+
+struct lima_varying_info {
+   int addr;
+   int size;
+};
+
 struct lima_vs_shader_state {
    void *shader;
    int shader_size;
@@ -69,6 +76,9 @@ struct lima_vs_shader_state {
 
    void *constant;
    int constant_size;
+
+   struct lima_varying_info varying[LIMA_MAX_VARYING_NUM];
+   int num_varying;
 };
 
 struct lima_rasterizer_state {
