@@ -1790,13 +1790,13 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer, bo
 			uint32_t *desc = &((uint32_t *)vb_ptr)[i * 4];
 			uint32_t offset;
 			int vb = velems->binding[i];
-			struct radv_buffer *buffer = cmd_buffer->state.vertex_bindings[vb].buffer;
+			struct radv_buffer *buffer = cmd_buffer->vertex_bindings[vb].buffer;
 			uint32_t stride = cmd_buffer->state.pipeline->binding_stride[vb];
 
 			device->ws->cs_add_buffer(cmd_buffer->cs, buffer->bo, 8);
 			va = radv_buffer_get_va(buffer->bo);
 
-			offset = cmd_buffer->state.vertex_bindings[vb].offset + velems->offset[i];
+			offset = cmd_buffer->vertex_bindings[vb].offset + velems->offset[i];
 			va += offset + buffer->offset;
 			desc[0] = va;
 			desc[1] = S_008F04_BASE_ADDRESS_HI(va >> 32) | S_008F04_STRIDE(stride);
@@ -2256,7 +2256,7 @@ void radv_CmdBindVertexBuffers(
 	const VkDeviceSize*                         pOffsets)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-	struct radv_vertex_binding *vb = cmd_buffer->state.vertex_bindings;
+	struct radv_vertex_binding *vb = cmd_buffer->vertex_bindings;
 	bool changed = false;
 
 	/* We have to defer setting up vertex buffer since we need the buffer
