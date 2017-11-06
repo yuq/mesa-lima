@@ -390,7 +390,7 @@ one_time_init( struct gl_context *ctx )
 
       _mesa_locale_init();
 
-      _mesa_one_time_init_extension_overrides();
+      _mesa_one_time_init_extension_overrides(ctx);
 
       _mesa_get_cpu_features();
 

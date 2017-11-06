@@ -237,7 +237,7 @@ free_unknown_extensions_strings(void)
  *    - Collect unrecognized extension names in a new string.
  */
 void
-_mesa_one_time_init_extension_overrides(void)
+_mesa_one_time_init_extension_overrides(struct gl_context *ctx)
 {
    const char *env_const = getenv("MESA_EXTENSION_OVERRIDE");
    char *env;
