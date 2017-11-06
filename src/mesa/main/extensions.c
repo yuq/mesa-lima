@@ -39,7 +39,7 @@
 
 struct gl_extensions _mesa_extension_override_enables;
 struct gl_extensions _mesa_extension_override_disables;
-static char *extra_extensions = NULL;
+static char *unrecognized_extensions = NULL;
 
 
 /**
@@ -196,31 +196,17 @@ set_extension(struct gl_extensions *ext, int i, GLboolean state)
    return offset;
 }
 
-/**
- * The unrecognized extensions from \c MESA_EXTENSION_OVERRIDE.
- * Returns \c NULL if empty.
- */
-static const char *
-get_extension_override( struct gl_context *ctx )
-{
-   if (extra_extensions)
-      _mesa_problem(ctx, "Trying to enable unknown extensions: %s",
-                    extra_extensions);
-
-   return extra_extensions;
-}
-
 
 /**
- * \brief Free extra_extensions string
+ * \brief Free string pointed by unrecognized_extensions
  *
- * These strings are allocated early during the first context creation by
+ * This string is allocated early during the first context creation by
  * _mesa_one_time_init_extension_overrides.
  */
 static void
 free_unknown_extensions_strings(void)
 {
-   free(extra_extensions);
+   free(unrecognized_extensions);
 }
 
 
@@ -242,8 +228,8 @@ _mesa_one_time_init_extension_overrides(struct gl_context *ctx)
    const char *env_const = getenv("MESA_EXTENSION_OVERRIDE");
    char *env;
    char *ext;
-   int len;
    size_t offset;
+   unsigned unknown_ext = 0;
 
    memset(&_mesa_extension_override_enables, 0, sizeof(struct gl_extensions));
    memset(&_mesa_extension_override_disables, 0, sizeof(struct gl_extensions));
@@ -252,18 +238,11 @@ _mesa_one_time_init_extension_overrides(struct gl_context *ctx)
       return;
    }
 
-   /* extra_exts: List of unrecognized extensions. */
-   extra_extensions = calloc(ALIGN(strlen(env_const) + 2, 4), sizeof(char));
-
    /* Copy env_const because strtok() is destructive. */
    env = strdup(env_const);
 
-   if (env == NULL ||
-       extra_extensions == NULL) {
-      free(env);
-      free(extra_extensions);
+   if (env == NULL)
       return;
-   }
 
    for (ext = strtok(env, " "); ext != NULL; ext = strtok(NULL, " ")) {
       int enable;
@@ -292,19 +271,28 @@ _mesa_one_time_init_extension_overrides(struct gl_context *ctx)
          recognized = false;
 
       if (!recognized && enable) {
-         strcat(extra_extensions, ext);
-         strcat(extra_extensions, " ");
+         if (unknown_ext >= MAX_UNRECOGNIZED_EXTENSIONS) {
+            static bool warned;
+
+            if (!warned) {
+               warned = true;
+               _mesa_problem(ctx, "Trying to enable too many unknown extension. "
+                                  "Only the first %d will be honoured",
+                                  MAX_UNRECOGNIZED_EXTENSIONS);
+            }
+         } else {
+            ctx->Extensions.unrecognized_extensions[unknown_ext] = ext;
+            unknown_ext++;
+
+            _mesa_problem(ctx, "Trying to enable unknown extension: %s", ext);
+         }
       }
    }
 
-   free(env);
-
-   /* Remove trailing space, and free if unused. */
-   len = strlen(extra_extensions);
-   if (len == 0) {
-      free(extra_extensions);
-   } else if (extra_extensions[len - 1] == ' ') {
-      extra_extensions[len - 1] = '\0';
+   if (!unknown_ext) {
+      free(env);
+   } else {
+      unrecognized_extensions = env;
       atexit(free_unknown_extensions_strings);
    }
 }
@@ -366,8 +354,6 @@ _mesa_make_extension_string(struct gl_context *ctx)
    unsigned count;
    /* Indices of the extensions sorted by year */
    extension_index extension_indices[MESA_EXTENSION_COUNT];
-   /* String of extra extensions. */
-   const char *extra_extensions = get_extension_override(ctx);
    unsigned k;
    unsigned j;
    unsigned maxYear = ~0;
@@ -393,8 +379,9 @@ _mesa_make_extension_string(struct gl_context *ctx)
          extension_indices[count++] = k;
       }
    }
-   if (extra_extensions != NULL)
-      length += 1 + strlen(extra_extensions); /* +1 for space */
+   for (k = 0; k < MAX_UNRECOGNIZED_EXTENSIONS; k++)
+      if (ctx->Extensions.unrecognized_extensions[k])
+         length += 1 + strlen(ctx->Extensions.unrecognized_extensions[k]); /* +1 for space */
 
    exts = calloc(ALIGN(length + 1, 4), sizeof(char));
    if (exts == NULL) {
@@ -408,8 +395,11 @@ _mesa_make_extension_string(struct gl_context *ctx)
       strcat(exts, i->name);
       strcat(exts, " ");
    }
-   if (extra_extensions != 0) {
-      strcat(exts, extra_extensions);
+   for (j = 0; j < MAX_UNRECOGNIZED_EXTENSIONS; j++) {
+      if (ctx->Extensions.unrecognized_extensions[j]) {
+         strcat(exts, ctx->Extensions.unrecognized_extensions[j]);
+         strcat(exts, " ");
+      }
    }
 
    return (GLubyte *) exts;
