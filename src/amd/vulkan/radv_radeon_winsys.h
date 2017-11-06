@@ -147,6 +147,7 @@ struct radeon_winsys_fence;
 
 struct radeon_winsys_bo {
 	uint64_t va;
+	bool is_local;
 };
 struct radv_winsys_sem_counts {
 	uint32_t syncobj_count;
@@ -284,6 +285,9 @@ static inline void radv_cs_add_buffer(struct radeon_winsys *ws,
 				      struct radeon_winsys_bo *bo,
 				      uint8_t priority)
 {
+	if (bo->is_local)
+		return;
+
 	ws->cs_add_buffer(cs, bo, priority);
 }
 
