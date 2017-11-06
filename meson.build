@@ -24,7 +24,7 @@ project(
   version : '17.3.0-devel',
   license : 'MIT',
   meson_version : '>= 0.42',
-  default_options : ['c_std=c99', 'cpp_std=c++11']
+  default_options : ['buildtype=debugoptimized', 'c_std=c99', 'cpp_std=c++11']
 )
 
 # Arguments for the preprocessor, put these in a separate array from the C and
