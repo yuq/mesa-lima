@@ -236,6 +236,12 @@ lima_resource_get_handle(struct pipe_screen *pscreen,
       err = lima_bo_export(bo, lima_bo_handle_type_kms, &handle->handle);
       if (err)
          return FALSE;
+      break;
+   case DRM_API_HANDLE_TYPE_FD:
+      err = lima_bo_export(bo, lima_bo_handle_type_dma_buf_fd, &handle->handle);
+      if (err)
+         return FALSE;
+      break;
    default:
       return FALSE;
    }
