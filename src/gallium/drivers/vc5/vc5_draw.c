@@ -93,6 +93,9 @@ vc5_start_draw(struct vc5_context *vc5)
         /* There's definitely nothing in the VCD cache we want. */
         cl_emit(&job->bcl, FLUSH_VCD_CACHE, bin);
 
+        /* Disable any leftover OQ state from another job. */
+        cl_emit(&job->bcl, OCCLUSION_QUERY_COUNTER, counter);
+
         /* "Binning mode lists must have a Start Tile Binning item (6) after
          *  any prefix state data before the binning list proper starts."
          */

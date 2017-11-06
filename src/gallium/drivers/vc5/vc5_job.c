@@ -381,7 +381,17 @@ vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job)
         vc5_emit_rcl(job);
 
         if (cl_offset(&job->bcl) > 0) {
-                vc5_cl_ensure_space_with_branch(&job->bcl, 2);
+                vc5_cl_ensure_space_with_branch(&job->bcl,
+                                                7 +
+                                                cl_packet_length(OCCLUSION_QUERY_COUNTER));
+
+                if (job->oq_enabled) {
+                        /* Disable the OQ at the end of the CL, so that the
+                         * draw calls at the start of the CL don't inherit the
+                         * OQ counter.
+                         */
+                        cl_emit(&job->bcl, OCCLUSION_QUERY_COUNTER, counter);
+                }
 
                 /* Increment the semaphore indicating that binning is done and
                  * unblocking the render thread.  Note that this doesn't act
@@ -389,10 +399,12 @@ vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job)
                  */
                 cl_emit(&job->bcl, INCREMENT_SEMAPHORE, incr);
 
-                /* The FLUSH caps all of our bin lists with a
-                 * VC5_PACKET_RETURN.
+                /* The FLUSH_ALL emits any unwritten state changes in each
+                 * tile.  We can use this to reset any state that needs to be
+                 * present at the start of the next tile, as we do with
+                 * OCCLUSION_QUERY_COUNTER above.
                  */
-                cl_emit(&job->bcl, FLUSH, flush);
+                cl_emit(&job->bcl, FLUSH_ALL_STATE, flush);
         }
 
         job->submit.bcl_end = job->bcl.bo->offset + cl_offset(&job->bcl);

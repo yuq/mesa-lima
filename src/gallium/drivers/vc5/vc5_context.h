@@ -77,6 +77,7 @@ void vc5_job_add_bo(struct vc5_job *job, struct vc5_bo *bo);
 #define VC5_DIRTY_COMPILED_FS   (1 << 25)
 #define VC5_DIRTY_FS_INPUTS     (1 << 26)
 #define VC5_DIRTY_STREAMOUT     (1 << 27)
+#define VC5_DIRTY_OQ            (1 << 28)
 
 #define VC5_MAX_FS_INPUTS 64
 
@@ -262,6 +263,13 @@ struct vc5_job {
          */
         bool needs_flush;
 
+        /**
+         * Set if there is a nonzero address for OCCLUSION_QUERY_COUNTER.  If
+         * so, we need to disable it and flush before ending the CL, to keep
+         * the next tile from starting with it enabled.
+         */
+        bool oq_enabled;
+
         bool uses_early_z;
 
         /**
@@ -353,12 +361,15 @@ struct vc5_context {
          */
         uint8_t blend_dst_alpha_one;
 
+        bool active_queries;
+
         struct pipe_poly_stipple stipple;
         struct pipe_clip_state clip;
         struct pipe_viewport_state viewport;
         struct vc5_constbuf_stateobj constbuf[PIPE_SHADER_TYPES];
         struct vc5_vertexbuf_stateobj vertexbuf;
         struct vc5_streamout_stateobj streamout;
+        struct vc5_bo *current_oq;
         /** @} */
 };
 

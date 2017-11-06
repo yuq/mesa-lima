@@ -492,4 +492,13 @@ vc5_emit_state(struct pipe_context *pctx)
                         /* XXX? */
                 }
         }
+
+        if (vc5->dirty & VC5_DIRTY_OQ) {
+                cl_emit(&job->bcl, OCCLUSION_QUERY_COUNTER, counter) {
+                        job->oq_enabled = vc5->active_queries && vc5->current_oq;
+                        if (job->oq_enabled) {
+                                counter.address = cl_address(vc5->current_oq, 0);
+                        }
+                }
+        }
 }
