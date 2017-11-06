@@ -421,6 +421,11 @@ _mesa_get_extension_count(struct gl_context *ctx)
       if (_mesa_extension_supported(ctx, k))
 	 ctx->Extensions.Count++;
    }
+
+   for (k = 0; k < MAX_UNRECOGNIZED_EXTENSIONS; ++k) {
+      if (ctx->Extensions.unrecognized_extensions[k])
+	 ctx->Extensions.Count++;
+   }
    return ctx->Extensions.Count;
 }
 
@@ -442,5 +447,13 @@ _mesa_get_enabled_extension(struct gl_context *ctx, GLuint index)
       }
    }
 
+   for (i = 0; i < MAX_UNRECOGNIZED_EXTENSIONS; ++i) {
+      if (ctx->Extensions.unrecognized_extensions[i]) {
+         if (n == index)
+            return (const GLubyte*) ctx->Extensions.unrecognized_extensions[i];
+         else
+            ++n;
+      }
+   }
    return NULL;
 }
