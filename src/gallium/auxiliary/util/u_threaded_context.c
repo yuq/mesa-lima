@@ -1835,14 +1835,22 @@ tc_create_fence_fd(struct pipe_context *_pipe,
 }
 
 static void
+tc_call_fence_server_sync(struct pipe_context *pipe, union tc_payload *payload)
+{
+   pipe->fence_server_sync(pipe, payload->fence);
+   pipe->screen->fence_reference(pipe->screen, &payload->fence, NULL);
+}
+
+static void
 tc_fence_server_sync(struct pipe_context *_pipe,
                      struct pipe_fence_handle *fence)
 {
    struct threaded_context *tc = threaded_context(_pipe);
-   struct pipe_context *pipe = tc->pipe;
+   struct pipe_screen *screen = tc->pipe->screen;
+   union tc_payload *payload = tc_add_small_call(tc, TC_CALL_fence_server_sync);
 
-   tc_sync(tc);
-   pipe->fence_server_sync(pipe, fence);
+   payload->fence = NULL;
+   screen->fence_reference(screen, &payload->fence, fence);
 }
 
 static struct pipe_video_codec *

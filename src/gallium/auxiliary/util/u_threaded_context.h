@@ -309,6 +309,7 @@ union tc_payload {
    struct pipe_query *query;
    struct pipe_resource *resource;
    struct pipe_transfer *transfer;
+   struct pipe_fence_handle *fence;
    uint64_t handle;
 };
 
