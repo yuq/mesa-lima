@@ -1576,8 +1576,6 @@ handle_first_current(struct gl_context *ctx)
       return;
    }
 
-   ctx->Extensions.String = _mesa_make_extension_string(ctx);
-
    check_context_limits(ctx);
 
    /* According to GL_MESA_configless_context the default value of
