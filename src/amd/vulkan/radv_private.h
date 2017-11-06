@@ -1128,6 +1128,7 @@ struct radv_pipeline {
 
 	uint32_t                                     binding_stride[MAX_VBS];
 
+	uint32_t user_data_0[MESA_SHADER_STAGES];
 	union {
 		struct {
 			struct radv_blend_state blend;
