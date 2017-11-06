@@ -755,6 +755,67 @@ intel_create_image(__DRIscreen *dri_screen,
                                loaderPrivate);
 }
 
+static void *
+intel_map_image(__DRIcontext *context, __DRIimage *image,
+                int x0, int y0, int width, int height,
+                unsigned int flags, int *stride, void **map_info)
+{
+   struct brw_context *brw = NULL;
+   struct brw_bo *bo = NULL;
+   void *raw_data = NULL;
+   GLuint pix_w = 1;
+   GLuint pix_h = 1;
+   GLint pix_bytes = 1;
+
+   if (!context || !image || !stride || !map_info || *map_info)
+      return NULL;
+
+   if (x0 < 0 || x0 >= image->width || width > image->width - x0)
+      return NULL;
+
+   if (y0 < 0 || y0 >= image->height || height > image->height - y0)
+      return NULL;
+
+   if (flags & MAP_INTERNAL_MASK)
+      return NULL;
+
+   brw = context->driverPrivate;
+   bo = image->bo;
+
+   assert(brw);
+   assert(bo);
+
+   /* DRI flags and GL_MAP.*_BIT flags are the same, so just pass them on. */
+   raw_data = brw_bo_map(brw, bo, flags);
+   if (!raw_data)
+      return NULL;
+
+   _mesa_get_format_block_size(image->format, &pix_w, &pix_h);
+   pix_bytes = _mesa_get_format_bytes(image->format);
+
+   assert(pix_w);
+   assert(pix_h);
+   assert(pix_bytes > 0);
+
+   raw_data += (x0 / pix_w) * pix_bytes + (y0 / pix_h) * image->pitch;
+
+   brw_bo_reference(bo);
+
+   *stride = image->pitch;
+   *map_info = bo;
+
+   return raw_data;
+}
+
+static void
+intel_unmap_image(__DRIcontext *context, __DRIimage *image, void *map_info)
+{
+   struct brw_bo *bo = map_info;
+
+   brw_bo_unmap(bo);
+   brw_bo_unreference(bo);
+}
+
 static __DRIimage *
 intel_create_image_with_modifiers(__DRIscreen *dri_screen,
                                   int width, int height, int format,
@@ -1305,8 +1366,8 @@ static const __DRIimageExtension intelImageExtension = {
     .createImageFromDmaBufs             = intel_create_image_from_dma_bufs,
     .blitImage                          = NULL,
     .getCapabilities                    = NULL,
-    .mapImage                           = NULL,
-    .unmapImage                         = NULL,
+    .mapImage                           = intel_map_image,
+    .unmapImage                         = intel_unmap_image,
     .createImageWithModifiers           = intel_create_image_with_modifiers,
     .createImageFromDmaBufs2            = intel_create_image_from_dma_bufs2,
     .queryDmaBufFormats                 = intel_query_dma_buf_formats,
