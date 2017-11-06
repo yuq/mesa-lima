@@ -245,8 +245,6 @@ _mesa_one_time_init_extension_overrides(void)
    int len;
    size_t offset;
 
-   atexit(free_unknown_extensions_strings);
-
    memset(&_mesa_extension_override_enables, 0, sizeof(struct gl_extensions));
    memset(&_mesa_extension_override_disables, 0, sizeof(struct gl_extensions));
 
@@ -305,9 +303,9 @@ _mesa_one_time_init_extension_overrides(void)
    len = strlen(extra_extensions);
    if (len == 0) {
       free(extra_extensions);
-      extra_extensions = NULL;
    } else if (extra_extensions[len - 1] == ' ') {
       extra_extensions[len - 1] = '\0';
+      atexit(free_unknown_extensions_strings);
    }
 }
 
