@@ -1686,6 +1686,27 @@ intelDestroyBuffer(__DRIdrawable * driDrawPriv)
 }
 
 static void
+intel_cs_timestamp_frequency(struct intel_screen *screen)
+{
+   /* We shouldn't need to update gen_device_info.timestamp_frequency prior to
+    * gen10, PCI-id is enough to figure it out.
+    */
+   assert(screen->devinfo.gen >= 10);
+
+   int ret, freq;
+
+   ret = intel_get_param(screen, I915_PARAM_CS_TIMESTAMP_FREQUENCY,
+                         &freq);
+   if (ret < 0) {
+      _mesa_warning(NULL,
+                    "Kernel 4.15 required to read the CS timestamp frequency.\n");
+      return;
+   }
+
+   screen->devinfo.timestamp_frequency = freq;
+}
+
+static void
 intel_detect_sseu(struct intel_screen *screen)
 {
    assert(screen->devinfo.gen >= 8);
@@ -2404,6 +2425,9 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
 
    isl_device_init(&screen->isl_dev, &screen->devinfo,
                    screen->hw_has_swizzling);
+
+   if (devinfo->gen >= 10)
+      intel_cs_timestamp_frequency(screen);
 
    /* GENs prior to 8 do not support EU/Subslice info */
    if (devinfo->gen >= 8) {
