@@ -1545,7 +1545,7 @@ static void calculate_vgt_gs_mode(struct radv_pipeline *pipeline)
 	}
 }
 
-static void calculate_pa_cl_vs_out_cntl(struct radv_pipeline *pipeline)
+static void calculate_vs_outinfo(struct radv_pipeline *pipeline)
 {
 	struct ac_vs_output_info *outinfo = get_vs_output_info(pipeline);
 
@@ -1557,7 +1557,7 @@ static void calculate_pa_cl_vs_out_cntl(struct radv_pipeline *pipeline)
 	bool misc_vec_ena = outinfo->writes_pointsize ||
 		outinfo->writes_layer ||
 		outinfo->writes_viewport_index;
-	pipeline->graphics.pa_cl_vs_out_cntl =
+	pipeline->graphics.vs.pa_cl_vs_out_cntl =
 		S_02881C_USE_VTX_POINT_SIZE(outinfo->writes_pointsize) |
 		S_02881C_USE_VTX_RENDER_TARGET_INDX(outinfo->writes_layer) |
 		S_02881C_USE_VTX_VIEWPORT_INDX(outinfo->writes_viewport_index) |
@@ -1568,6 +1568,21 @@ static void calculate_pa_cl_vs_out_cntl(struct radv_pipeline *pipeline)
 		cull_dist_mask << 8 |
 		clip_dist_mask;
 
+	pipeline->graphics.vs.spi_shader_pos_format =
+		S_02870C_POS0_EXPORT_FORMAT(V_02870C_SPI_SHADER_4COMP) |
+		S_02870C_POS1_EXPORT_FORMAT(outinfo->pos_exports > 1 ?
+					    V_02870C_SPI_SHADER_4COMP :
+					    V_02870C_SPI_SHADER_NONE) |
+		S_02870C_POS2_EXPORT_FORMAT(outinfo->pos_exports > 2 ?
+					    V_02870C_SPI_SHADER_4COMP :
+					    V_02870C_SPI_SHADER_NONE) |
+		S_02870C_POS3_EXPORT_FORMAT(outinfo->pos_exports > 3 ?
+					    V_02870C_SPI_SHADER_4COMP :
+					    V_02870C_SPI_SHADER_NONE);
+
+	pipeline->graphics.vs.spi_vs_out_config = S_0286C4_VS_EXPORT_COUNT(MAX2(1, outinfo->param_exports) - 1);
+	/* only emitted on pre-VI */
+	pipeline->graphics.vs.vgt_reuse_off = S_028AB4_REUSE_OFF(outinfo->writes_viewport_index);
 }
 
 static uint32_t offset_to_ps_input(uint32_t offset, bool flat_shade)
@@ -2093,7 +2108,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		V_028710_SPI_SHADER_ZERO;
 
 	calculate_vgt_gs_mode(pipeline);
-	calculate_pa_cl_vs_out_cntl(pipeline);
+	calculate_vs_outinfo(pipeline);
 	calculate_ps_inputs(pipeline);
 
 	for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
