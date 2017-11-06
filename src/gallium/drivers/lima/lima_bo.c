@@ -180,8 +180,13 @@ int lima_bo_export(lima_bo_handle bo, enum lima_bo_handle_type type,
       *handle = bo->handle;
       return 0;
    case lima_bo_handle_type_dma_buf_fd:
-      /* unsupported yet */
-      return -EINVAL;
+      err = drmPrimeHandleToFD(bo->dev->fd, bo->handle, DRM_CLOEXEC, (int*)handle);
+      if (err)
+         return err;
+      pthread_mutex_lock(&bo->dev->bo_table_mutex);
+      util_hash_table_set(bo->dev->bo_handles, (void *)bo->handle, bo);
+      pthread_mutex_unlock(&bo->dev->bo_table_mutex);
+      return 0;
    }
 
    return -EINVAL;
