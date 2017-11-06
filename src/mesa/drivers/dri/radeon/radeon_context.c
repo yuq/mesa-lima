@@ -353,6 +353,7 @@ r100CreateContext( gl_api api,
 /*       _tnl_need_dlist_norm_lengths( ctx, GL_FALSE ); */
    }
 
+   _mesa_override_extensions(ctx);
    _mesa_compute_version(ctx);
 
    /* Exec table initialization requires the version to be computed */

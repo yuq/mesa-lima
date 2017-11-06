@@ -394,6 +394,7 @@ GLboolean r200CreateContext( gl_api api,
       TCL_FALLBACK(&rmesa->radeon.glCtx, R200_TCL_FALLBACK_TCL_DISABLE, 1);
    }
 
+   _mesa_override_extensions(ctx);
    _mesa_compute_version(ctx);
 
    /* Exec table initialization requires the version to be computed */

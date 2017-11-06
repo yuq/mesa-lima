@@ -1051,6 +1051,7 @@ brwCreateContext(gl_api api,
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
       brw_init_shader_time(brw);
 
+   _mesa_override_extensions(ctx);
    _mesa_compute_version(ctx);
 
    _mesa_initialize_dispatch_tables(ctx);

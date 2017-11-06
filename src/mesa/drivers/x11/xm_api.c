@@ -957,6 +957,7 @@ XMesaContext XMesaCreateContext( XMesaVisual v, XMesaContext share_list )
 
    _mesa_meta_init(mesaCtx);
 
+   _mesa_override_extensions(mesaCtx);
    _mesa_compute_version(mesaCtx);
 
     /* Exec table initialization requires the version to be computed */

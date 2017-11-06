@@ -78,8 +78,8 @@ name_to_index(const char* name)
  * Overrides extensions in \c ctx based on the values in
  * _mesa_extension_override_enables and _mesa_extension_override_disables.
  */
-static void
-override_extensions_in_context(struct gl_context *ctx)
+void
+_mesa_override_extensions(struct gl_context *ctx)
 {
    unsigned i;
    const GLboolean *enables =
@@ -199,27 +199,12 @@ set_extension(struct gl_extensions *ext, int i, GLboolean state)
 }
 
 /**
- * \brief Apply the \c MESA_EXTENSION_OVERRIDE environment variable.
- *
- * \c MESA_EXTENSION_OVERRIDE is a space-separated list of extensions to
- * enable or disable. The list is processed thus:
- *    - Enable recognized extension names that are prefixed with '+'.
- *    - Disable recognized extension names that are prefixed with '-'.
- *    - Enable recognized extension names that are not prefixed.
- *    - Collect unrecognized extension names in a new string.
- *
- * \c MESA_EXTENSION_OVERRIDE was previously parsed during
- * _mesa_one_time_init_extension_overrides. We just use the results of that
- * parsing in this function.
- *
- * \return Space-separated list of unrecognized extension names (which must
- *    be freed). Does not return \c NULL.
+ * The unrecognized extensions from \c MESA_EXTENSION_OVERRIDE.
+ * Must be freed, does not return \c NULL.
  */
 static char *
 get_extension_override( struct gl_context *ctx )
 {
-   override_extensions_in_context(ctx);
-
    if (extra_extensions == NULL) {
       return calloc(1, sizeof(char));
    } else {
@@ -244,9 +229,16 @@ free_unknown_extensions_strings(void)
 
 
 /**
- * \brief Initialize extension override tables.
+ * \brief Initialize extension override tables based on \c MESA_EXTENSION_OVERRIDE
  *
  * This should be called one time early during first context initialization.
+
+ * \c MESA_EXTENSION_OVERRIDE is a space-separated list of extensions to
+ * enable or disable. The list is processed thus:
+ *    - Enable recognized extension names that are prefixed with '+'.
+ *    - Disable recognized extension names that are prefixed with '-'.
+ *    - Enable recognized extension names that are not prefixed.
+ *    - Collect unrecognized extension names in a new string.
  */
 void
 _mesa_one_time_init_extension_overrides(void)

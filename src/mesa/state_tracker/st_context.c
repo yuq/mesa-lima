@@ -536,6 +536,7 @@ st_create_context_priv(struct gl_context *ctx, struct pipe_context *pipe,
 
    st->bitmap.cache.empty = true;
 
+   _mesa_override_extensions(ctx);
    _mesa_compute_version(ctx);
 
    if (ctx->Version == 0) {

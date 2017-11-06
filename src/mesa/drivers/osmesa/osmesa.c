@@ -913,6 +913,7 @@ OSMesaCreateContextAttribs(const int *attribList, OSMesaContext sharelist)
          swrast->choose_line = osmesa_choose_line;
          swrast->choose_triangle = osmesa_choose_triangle;
 
+         _mesa_override_extensions(ctx);
          _mesa_compute_version(ctx);
 
          if (ctx->Version < version_major * 10 + version_minor) {

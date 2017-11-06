@@ -53,6 +53,8 @@ extern void _mesa_init_extensions(struct gl_extensions *extentions);
 
 extern GLubyte *_mesa_make_extension_string(struct gl_context *ctx);
 
+extern void _mesa_override_extensions(struct gl_context *ctx);
+
 extern GLuint
 _mesa_get_extension_count(struct gl_context *ctx);
 

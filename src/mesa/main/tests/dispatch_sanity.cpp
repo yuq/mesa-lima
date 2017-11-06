@@ -112,6 +112,7 @@ DispatchSanity_test::SetUpCtx(gl_api api, unsigned int version)
                             &driver_functions);
    _vbo_CreateContext(&ctx);
 
+   _mesa_override_extensions(&ctx);
    ctx.Version = version;
 
    _mesa_initialize_dispatch_tables(&ctx);

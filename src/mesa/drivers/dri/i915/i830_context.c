@@ -124,6 +124,7 @@ i830CreateContext(int api,
    _tnl_allow_vertex_fog(ctx, 1);
    _tnl_allow_pixel_fog(ctx, 0);
 
+   _mesa_override_extensions(ctx);
    _mesa_compute_version(ctx);
 
    _mesa_initialize_dispatch_tables(ctx);
