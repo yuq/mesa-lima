@@ -3183,9 +3183,11 @@ static void si_llvm_emit_ls_epilogue(struct ac_shader_abi *abi,
 		si_set_ls_return_value_for_tcs(ctx);
 }
 
-static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
+static void si_llvm_emit_es_epilogue(struct ac_shader_abi *abi,
+				     unsigned max_outputs,
+				     LLVMValueRef *addrs)
 {
-	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	struct si_shader *es = ctx->shader;
 	struct tgsi_shader_info *info = &es->selector->info;
 	LLVMValueRef soffset = LLVMGetParam(ctx->main_fn,
@@ -3206,7 +3208,6 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
 	}
 
 	for (i = 0; i < info->num_outputs; i++) {
-		LLVMValueRef *out_ptr = ctx->outputs[i];
 		int param;
 
 		if (info->output_semantic_name[i] == TGSI_SEMANTIC_VIEWPORT_INDEX ||
@@ -3217,7 +3218,7 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
 						      info->output_semantic_index[i]);
 
 		for (chan = 0; chan < 4; chan++) {
-			LLVMValueRef out_val = LLVMBuildLoad(ctx->ac.builder, out_ptr[chan], "");
+			LLVMValueRef out_val = LLVMBuildLoad(ctx->ac.builder, addrs[4 * i + chan], "");
 			out_val = ac_to_integer(&ctx->ac, out_val);
 
 			/* GFX9 has the ESGS ring in LDS. */
@@ -4428,7 +4429,6 @@ static void create_function(struct si_shader_context *ctx)
 		declare_vs_specific_input_sgprs(ctx, &fninfo);
 
 		if (shader->key.as_es) {
-			assert(!shader->selector->nir);
 			ctx->param_es2gs_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		} else if (shader->key.as_ls) {
 			/* no extra parameters */
@@ -5733,15 +5733,13 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	switch (ctx->type) {
 	case PIPE_SHADER_VERTEX:
 		ctx->load_input = declare_input_vs;
-		if (shader->key.as_ls) {
+		if (shader->key.as_ls)
 			ctx->abi.emit_outputs = si_llvm_emit_ls_epilogue;
-			bld_base->emit_epilogue = si_tgsi_emit_epilogue;
-		} else if (shader->key.as_es)
-			bld_base->emit_epilogue = si_llvm_emit_es_epilogue;
-		else {
+		else if (shader->key.as_es)
+			ctx->abi.emit_outputs = si_llvm_emit_es_epilogue;
+		else
 			ctx->abi.emit_outputs = si_llvm_emit_vs_epilogue;
-			bld_base->emit_epilogue = si_tgsi_emit_epilogue;
-		}
+		bld_base->emit_epilogue = si_tgsi_emit_epilogue;
 		break;
 	case PIPE_SHADER_TESS_CTRL:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_tcs;
@@ -5752,11 +5750,10 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	case PIPE_SHADER_TESS_EVAL:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_tes;
 		if (shader->key.as_es)
-			bld_base->emit_epilogue = si_llvm_emit_es_epilogue;
-		else {
+			ctx->abi.emit_outputs = si_llvm_emit_es_epilogue;
+		else
 			ctx->abi.emit_outputs = si_llvm_emit_vs_epilogue;
-			bld_base->emit_epilogue = si_tgsi_emit_epilogue;
-		}
+		bld_base->emit_epilogue = si_tgsi_emit_epilogue;
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_gs;
