@@ -731,13 +731,11 @@ radv_emit_hw_vs(struct radv_cmd_buffer *cmd_buffer,
 
 static void
 radv_emit_hw_es(struct radv_cmd_buffer *cmd_buffer,
-		struct radv_shader_variant *shader,
-		struct ac_es_output_info *outinfo)
+		struct radv_pipeline *pipeline,
+		struct radv_shader_variant *shader)
 {
 	uint64_t va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
 
-	radeon_set_context_reg(cmd_buffer->cs, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
-			       outinfo->esgs_itemsize / 4);
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B320_SPI_SHADER_PGM_LO_ES, 4);
 	radeon_emit(cmd_buffer->cs, va >> 8);
 	radeon_emit(cmd_buffer->cs, va >> 40);
@@ -806,7 +804,7 @@ radv_emit_vertex_shader(struct radv_cmd_buffer *cmd_buffer,
 	if (vs->info.vs.as_ls)
 		radv_emit_hw_ls(cmd_buffer, vs);
 	else if (vs->info.vs.as_es)
-		radv_emit_hw_es(cmd_buffer, vs, &vs->info.vs.es_info);
+		radv_emit_hw_es(cmd_buffer, pipeline, vs);
 	else
 		radv_emit_hw_vs(cmd_buffer, pipeline, vs);
 }
@@ -826,7 +824,7 @@ radv_emit_tess_shaders(struct radv_cmd_buffer *cmd_buffer,
 
 	if (tes) {
 		if (tes->info.tes.as_es)
-			radv_emit_hw_es(cmd_buffer, tes, &tes->info.tes.es_info);
+			radv_emit_hw_es(cmd_buffer, pipeline, tes);
 		else
 			radv_emit_hw_vs(cmd_buffer, pipeline, tes);
 	}
@@ -915,6 +913,9 @@ radv_emit_geometry_shader(struct radv_cmd_buffer *cmd_buffer,
 			       S_028B90_CNT(MIN2(gs_num_invocations, 127)) |
 			       S_028B90_ENABLE(gs_num_invocations > 0));
 
+	radeon_set_context_reg(cmd_buffer->cs, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
+			       pipeline->graphics.gs.vgt_esgs_ring_itemsize);
+
 	va = radv_buffer_get_va(gs->bo) + gs->bo_offset;
 
 	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
@@ -929,7 +930,6 @@ radv_emit_geometry_shader(struct radv_cmd_buffer *cmd_buffer,
 
 		radeon_set_context_reg(cmd_buffer->cs, R_028A44_VGT_GS_ONCHIP_CNTL, pipeline->graphics.gs.vgt_gs_onchip_cntl);
 		radeon_set_context_reg(cmd_buffer->cs, R_028A94_VGT_GS_MAX_PRIMS_PER_SUBGROUP, pipeline->graphics.gs.vgt_gs_max_prims_per_subgroup);
-		radeon_set_context_reg(cmd_buffer->cs, R_028AAC_VGT_ESGS_RING_ITEMSIZE, pipeline->graphics.gs.vgt_esgs_ring_itemsize);
 	} else {
 		radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B220_SPI_SHADER_PGM_LO_GS, 4);
 		radeon_emit(cmd_buffer->cs, va >> 8);

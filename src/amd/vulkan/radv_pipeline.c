@@ -1290,6 +1290,7 @@ calculate_gs_ring_sizes(struct radv_pipeline *pipeline)
 	if (pipeline->device->physical_device->rad_info.chip_class <= VI)
 		pipeline->graphics.esgs_ring_size = CLAMP(esgs_ring_size, min_esgs_ring_size, max_size);
 
+	pipeline->graphics.gs.vgt_esgs_ring_itemsize = es_info->esgs_itemsize / 4;
 	pipeline->graphics.gsvs_ring_size = MIN2(gsvs_ring_size, max_size);
 }
 
