@@ -35,7 +35,6 @@
 #include <xf86drm.h>
 #include <stdio.h>
 #include <sys/stat.h>
-#include "amd/common/amdgpu_id.h"
 #include "amd/common/sid.h"
 #include "amd/common/gfx9d.h"
 
