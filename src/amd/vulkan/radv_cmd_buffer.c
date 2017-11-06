@@ -1340,7 +1340,6 @@ radv_load_depth_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 	if (!image->surface.htile_size)
 		return;
 
-	cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs, image->bo, 8);
 
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_COPY_DATA, 4, 0));
 	radeon_emit(cmd_buffer->cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
@@ -1424,7 +1423,6 @@ radv_load_color_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 		return;
 
 	uint32_t reg = R_028C8C_CB_COLOR0_CLEAR_WORD0 + idx * 0x3c;
-	cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs, image->bo, 8);
 
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_COPY_DATA, 4, cmd_buffer->state.predicating));
 	radeon_emit(cmd_buffer->cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
