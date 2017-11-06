@@ -248,6 +248,43 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 		info->output_semantic_index[i] = semantic_index;
 		info->output_usagemask[i] = TGSI_WRITEMASK_XYZW;
 
+		unsigned num_components = 4;
+		unsigned vector_elements = glsl_get_vector_elements(glsl_without_array(variable->type));
+		if (vector_elements)
+			num_components = vector_elements;
+
+		unsigned gs_out_streams;
+		if (variable->data.stream & (1u << 31)) {
+			gs_out_streams = variable->data.stream & ~(1u << 31);
+		} else {
+			assert(variable->data.stream < 4);
+			gs_out_streams = 0;
+			for (unsigned j = 0; j < num_components; ++j)
+				gs_out_streams |= variable->data.stream << (2 * (variable->data.location_frac + j));
+		}
+
+		unsigned streamx = gs_out_streams & 3;
+		unsigned streamy = (gs_out_streams >> 2) & 3;
+		unsigned streamz = (gs_out_streams >> 4) & 3;
+		unsigned streamw = (gs_out_streams >> 6) & 3;
+
+		if (info->output_usagemask[i] & TGSI_WRITEMASK_X) {
+			info->output_streams[i] |= streamx;
+			info->num_stream_output_components[streamx]++;
+		}
+		if (info->output_usagemask[i] & TGSI_WRITEMASK_Y) {
+			info->output_streams[i] |= streamy << 2;
+			info->num_stream_output_components[streamy]++;
+		}
+		if (info->output_usagemask[i] & TGSI_WRITEMASK_Z) {
+			info->output_streams[i] |= streamz << 4;
+			info->num_stream_output_components[streamz]++;
+		}
+		if (info->output_usagemask[i] & TGSI_WRITEMASK_W) {
+			info->output_streams[i] |= streamw << 6;
+			info->num_stream_output_components[streamw]++;
+		}
+
 		switch (semantic_name) {
 		case TGSI_SEMANTIC_PRIMID:
 			info->writes_primid = true;
