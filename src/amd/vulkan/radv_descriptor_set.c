@@ -566,7 +566,7 @@ static void write_texel_buffer_descriptor(struct radv_device *device,
 	memcpy(dst, buffer_view->state, 4 * 4);
 
 	if (cmd_buffer)
-		device->ws->cs_add_buffer(cmd_buffer->cs, buffer_view->bo, 7);
+		radv_cs_add_buffer(device->ws, cmd_buffer->cs, buffer_view->bo, 7);
 	else
 		*buffer_list = buffer_view->bo;
 }
@@ -596,7 +596,7 @@ static void write_buffer_descriptor(struct radv_device *device,
 		S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32);
 
 	if (cmd_buffer)
-		device->ws->cs_add_buffer(cmd_buffer->cs, buffer->bo, 7);
+		radv_cs_add_buffer(device->ws, cmd_buffer->cs, buffer->bo, 7);
 	else
 		*buffer_list = buffer->bo;
 }
@@ -639,7 +639,7 @@ write_image_descriptor(struct radv_device *device,
 	}
 
 	if (cmd_buffer)
-		device->ws->cs_add_buffer(cmd_buffer->cs, iview->bo, 7);
+		radv_cs_add_buffer(device->ws, cmd_buffer->cs, iview->bo, 7);
 	else
 		*buffer_list = iview->bo;
 }

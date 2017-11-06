@@ -279,4 +279,12 @@ static inline uint64_t radv_buffer_get_va(struct radeon_winsys_bo *bo)
 	return bo->va;
 }
 
+static inline void radv_cs_add_buffer(struct radeon_winsys *ws,
+				      struct radeon_winsys_cs *cs,
+				      struct radeon_winsys_bo *bo,
+				      uint8_t priority)
+{
+	ws->cs_add_buffer(cs, bo, priority);
+}
+
 #endif /* RADV_RADEON_WINSYS_H */
