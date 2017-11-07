@@ -308,49 +308,34 @@ struct r600_surface {
 	bool depth_initialized;
 
 	/* Misc. color flags. */
-	bool alphatest_bypass;
-	bool export_16bpc;
 	bool color_is_int8;
 	bool color_is_int10;
 	bool dcc_incompatible;
 
 	/* Color registers. */
 	unsigned cb_color_info;
-	unsigned cb_color_base;
 	unsigned cb_color_view;
-	unsigned cb_color_size;		/* R600 only */
-	unsigned cb_color_dim;		/* EG only */
-	unsigned cb_color_pitch;	/* EG and later */
-	unsigned cb_color_slice;	/* EG and later */
-	unsigned cb_color_attrib;	/* EG and later */
+	unsigned cb_color_attrib;
 	unsigned cb_color_attrib2;	/* GFX9 and later */
 	unsigned cb_dcc_control;	/* VI and later */
-	unsigned cb_color_fmask;	/* CB_COLORn_FMASK (EG and later) or CB_COLORn_FRAG (r600) */
-	unsigned cb_color_fmask_slice;	/* EG and later */
-	unsigned cb_color_cmask;	/* CB_COLORn_TILE (r600 only) */
-	unsigned cb_color_mask;		/* R600 only */
-	unsigned spi_shader_col_format;		/* SI+, no blending, no alpha-to-coverage. */
-	unsigned spi_shader_col_format_alpha;	/* SI+, alpha-to-coverage */
-	unsigned spi_shader_col_format_blend;	/* SI+, blending without alpha. */
-	unsigned spi_shader_col_format_blend_alpha; /* SI+, blending with alpha. */
-	struct r600_resource *cb_buffer_fmask; /* Used for FMASK relocations. R600 only */
-	struct r600_resource *cb_buffer_cmask; /* Used for CMASK relocations. R600 only */
+	unsigned spi_shader_col_format;		/* no blending, no alpha-to-coverage. */
+	unsigned spi_shader_col_format_alpha;	/* alpha-to-coverage */
+	unsigned spi_shader_col_format_blend;	/* blending without alpha. */
+	unsigned spi_shader_col_format_blend_alpha; /* blending with alpha. */
 
 	/* DB registers. */
-	uint64_t db_depth_base;		/* DB_Z_READ/WRITE_BASE (EG and later) or DB_DEPTH_BASE (r600) */
-	uint64_t db_stencil_base;	/* EG and later */
+	uint64_t db_depth_base;		/* DB_Z_READ/WRITE_BASE */
+	uint64_t db_stencil_base;
 	uint64_t db_htile_data_base;
-	unsigned db_depth_info;		/* R600 only, then SI and later */
-	unsigned db_z_info;		/* EG and later */
+	unsigned db_depth_info;
+	unsigned db_z_info;
 	unsigned db_z_info2;		/* GFX9+ */
 	unsigned db_depth_view;
 	unsigned db_depth_size;
-	unsigned db_depth_slice;	/* EG and later */
-	unsigned db_stencil_info;	/* EG and later */
+	unsigned db_depth_slice;
+	unsigned db_stencil_info;
 	unsigned db_stencil_info2;	/* GFX9+ */
-	unsigned db_prefetch_limit;	/* R600 only */
 	unsigned db_htile_surface;
-	unsigned db_preload_control;	/* EG and later */
 };
 
 struct r600_mmio_counter {

@@ -1973,9 +1973,6 @@ static struct pipe_surface *r600_create_surface(struct pipe_context *pipe,
 static void r600_surface_destroy(struct pipe_context *pipe,
 				 struct pipe_surface *surface)
 {
-	struct r600_surface *surf = (struct r600_surface*)surface;
-	r600_resource_reference(&surf->cb_buffer_fmask, NULL);
-	r600_resource_reference(&surf->cb_buffer_cmask, NULL);
 	pipe_resource_reference(&surface->texture, NULL);
 	FREE(surface);
 }
