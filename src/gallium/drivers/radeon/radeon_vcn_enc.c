@@ -126,7 +126,28 @@ static void radeon_enc_begin_frame(struct pipe_video_codec *encoder,
 							 struct pipe_video_buffer *source,
 							 struct pipe_picture_desc *picture)
 {
-	/* TODO*/
+	struct radeon_encoder *enc = (struct radeon_encoder*)encoder;
+	struct vl_video_buffer *vid_buf = (struct vl_video_buffer *)source;
+	struct pipe_h264_enc_picture_desc *pic = (struct pipe_h264_enc_picture_desc *)picture;
+
+	radeon_vcn_enc_get_param(enc, pic);
+
+	enc->get_buffer(vid_buf->resources[0], &enc->handle, &enc->luma);
+	enc->get_buffer(vid_buf->resources[1], NULL, &enc->chroma);
+
+	enc->need_feedback = false;
+
+	if (!enc->stream_handle) {
+		struct rvid_buffer fb;
+		enc->stream_handle = si_vid_alloc_stream_handle();
+		enc->si = CALLOC_STRUCT(rvid_buffer);
+		si_vid_create_buffer(enc->screen, enc->si, 128 * 1024, PIPE_USAGE_STAGING);
+		si_vid_create_buffer(enc->screen, &fb, 4096, PIPE_USAGE_STAGING);
+		enc->fb = &fb;
+		enc->begin(enc, pic);
+		flush(enc);
+		si_vid_destroy_buffer(&fb);
+	}
 }
 
 static void radeon_enc_encode_bitstream(struct pipe_video_codec *encoder,
