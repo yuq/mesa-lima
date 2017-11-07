@@ -200,7 +200,20 @@ static void radeon_enc_destroy(struct pipe_video_codec *encoder)
 static void radeon_enc_get_feedback(struct pipe_video_codec *encoder,
 							  void *feedback, unsigned *size)
 {
-	/* TODO*/
+	struct radeon_encoder *enc = (struct radeon_encoder*)encoder;
+	struct rvid_buffer *fb = feedback;
+
+	if (size) {
+		uint32_t *ptr = enc->ws->buffer_map(fb->res->buf, enc->cs, PIPE_TRANSFER_READ_WRITE);
+		if (ptr[1])
+			*size = ptr[6];
+		else
+			*size = 0;
+		enc->ws->buffer_unmap(fb->res->buf);
+	}
+
+	si_vid_destroy_buffer(fb);
+	FREE(fb);
 }
 
 struct pipe_video_codec *radeon_create_encoder(struct pipe_context *context,
