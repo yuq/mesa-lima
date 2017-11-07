@@ -235,19 +235,23 @@ Bool
 validate_renderType_against_config(const struct glx_config *config,
                                    int renderType)
 {
-    switch (renderType) {
-    case GLX_RGBA_TYPE:
-        return (config->renderType & GLX_RGBA_BIT) != 0;
-    case GLX_COLOR_INDEX_TYPE:
-        return (config->renderType & GLX_COLOR_INDEX_BIT) != 0;
-    case GLX_RGBA_FLOAT_TYPE_ARB:
-        return (config->renderType & GLX_RGBA_FLOAT_BIT_ARB) != 0;
-    case GLX_RGBA_UNSIGNED_FLOAT_TYPE_EXT:
-        return (config->renderType & GLX_RGBA_UNSIGNED_FLOAT_BIT_EXT) != 0;
-    default:
-        break;
-    }
-    return 0;
+   /* GLX_EXT_no_config_context supports any render type */
+   if (!config)
+      return True;
+
+   switch (renderType) {
+      case GLX_RGBA_TYPE:
+         return (config->renderType & GLX_RGBA_BIT) != 0;
+      case GLX_COLOR_INDEX_TYPE:
+         return (config->renderType & GLX_COLOR_INDEX_BIT) != 0;
+      case GLX_RGBA_FLOAT_TYPE_ARB:
+         return (config->renderType & GLX_RGBA_FLOAT_BIT_ARB) != 0;
+      case GLX_RGBA_UNSIGNED_FLOAT_TYPE_EXT:
+         return (config->renderType & GLX_RGBA_UNSIGNED_FLOAT_BIT_EXT) != 0;
+      default:
+         break;
+   }
+   return 0;
 }
 
 _X_HIDDEN Bool
