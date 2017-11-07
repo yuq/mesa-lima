@@ -677,12 +677,18 @@ VkResult anv_BindImageMemory2KHR(
    return VK_SUCCESS;
 }
 
-static void
-anv_surface_get_subresource_layout(struct anv_image *image,
-                                   struct anv_surface *surface,
-                                   const VkImageSubresource *subresource,
-                                   VkSubresourceLayout *layout)
+void anv_GetImageSubresourceLayout(
+    VkDevice                                    device,
+    VkImage                                     _image,
+    const VkImageSubresource*                   subresource,
+    VkSubresourceLayout*                        layout)
 {
+   ANV_FROM_HANDLE(anv_image, image, _image);
+   const struct anv_surface *surface =
+      get_surface(image, subresource->aspectMask);
+
+   assert(__builtin_popcount(subresource->aspectMask) == 1);
+
    /* If we are on a non-zero mip level or array slice, we need to
     * calculate a real offset.
     */
@@ -694,22 +700,6 @@ anv_surface_get_subresource_layout(struct anv_image *image,
    layout->depthPitch = isl_surf_get_array_pitch(&surface->isl);
    layout->arrayPitch = isl_surf_get_array_pitch(&surface->isl);
    layout->size = surface->isl.size;
-}
-
-void anv_GetImageSubresourceLayout(
-    VkDevice                                    device,
-    VkImage                                     _image,
-    const VkImageSubresource*                   pSubresource,
-    VkSubresourceLayout*                        pLayout)
-{
-   ANV_FROM_HANDLE(anv_image, image, _image);
-
-   assert(__builtin_popcount(pSubresource->aspectMask) == 1);
-
-   anv_surface_get_subresource_layout(image,
-                                      get_surface(image,
-                                                  pSubresource->aspectMask),
-                                      pSubresource, pLayout);
 }
 
 /**
