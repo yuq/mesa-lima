@@ -396,6 +396,7 @@ handleVAEncSequenceParameterBufferType(vlVaDriver *drv, vlVaContext *context, vl
    context->desc.h264enc.gop_size = h264->intra_idr_period * context->gop_coeff;
    context->desc.h264enc.rate_ctrl.frame_rate_num = h264->time_scale / 2;
    context->desc.h264enc.rate_ctrl.frame_rate_den = h264->num_units_in_tick;
+   context->desc.h264enc.pic_order_cnt_type = h264->seq_fields.bits.pic_order_cnt_type;
    return VA_STATUS_SUCCESS;
 }
 
