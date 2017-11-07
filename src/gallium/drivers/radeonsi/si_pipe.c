@@ -1074,6 +1074,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 					    sscreen->b.family <= CHIP_POLARIS12) ||
 					   sscreen->b.family == CHIP_VEGA10 ||
 					   sscreen->b.family == CHIP_RAVEN;
+	sscreen->has_ls_vgpr_init_bug = sscreen->b.family == CHIP_VEGA10 ||
+					sscreen->b.family == CHIP_RAVEN;
 
 	if (sscreen->b.debug_flags & DBG(DPBB)) {
 		sscreen->dpbb_allowed = true;

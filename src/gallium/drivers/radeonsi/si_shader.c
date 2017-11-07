@@ -6882,8 +6882,7 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 			si_init_exec_from_input(ctx, 3, 0);
 
 		if (key->vs_prolog.as_ls &&
-		    (ctx->screen->b.family == CHIP_VEGA10 ||
-		     ctx->screen->b.family == CHIP_RAVEN)) {
+		    ctx->screen->has_ls_vgpr_init_bug) {
 			/* If there are no HS threads, SPI loads the LS VGPRs
 			 * starting at VGPR 0. Shift them back to where they
 			 * belong.

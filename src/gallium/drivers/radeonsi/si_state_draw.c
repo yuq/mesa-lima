@@ -1282,7 +1282,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	}
 
 	if (sctx->tes_shader.cso &&
-	    (sctx->b.family == CHIP_VEGA10 || sctx->b.family == CHIP_RAVEN)) {
+	    sctx->screen->has_ls_vgpr_init_bug) {
 		/* Determine whether the LS VGPR fix should be applied.
 		 *
 		 * It is only required when num input CPs > num output CPs,

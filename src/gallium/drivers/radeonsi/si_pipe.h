@@ -97,6 +97,7 @@ struct si_screen {
 	bool				commutative_blend_add;
 	bool				clear_db_cache_before_clear;
 	bool				has_msaa_sample_loc_bug;
+	bool				has_ls_vgpr_init_bug;
 	bool				dpbb_allowed;
 	bool				dfsm_allowed;
 	bool				llvm_has_working_vgpr_indexing;
