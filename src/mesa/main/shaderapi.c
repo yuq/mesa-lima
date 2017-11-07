@@ -2221,6 +2221,9 @@ _mesa_ProgramBinary(GLuint program, GLenum binaryFormat,
    if (!shProg)
       return;
 
+   _mesa_clear_shader_program_data(ctx, shProg);
+   shProg->data = _mesa_create_shader_program_data();
+
    /* Section 2.3.1 (Errors) of the OpenGL 4.5 spec says:
     *
     *     "If a negative number is provided where an argument of type sizei or
