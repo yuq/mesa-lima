@@ -1306,33 +1306,28 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 	}
 }
 
-static LLVMValueRef fetch_input_gs(
-	struct lp_build_tgsi_context *bld_base,
-	const struct tgsi_full_src_register *reg,
-	enum tgsi_opcode_type type,
-	unsigned swizzle)
+LLVMValueRef si_llvm_load_input_gs(struct ac_shader_abi *abi,
+				   unsigned input_index,
+				   unsigned vtx_offset_param,
+				   LLVMTypeRef type,
+				   unsigned swizzle)
 {
-	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+	struct lp_build_tgsi_context *bld_base = &ctx->bld_base;
 	struct si_shader *shader = ctx->shader;
 	struct lp_build_context *uint =	&ctx->bld_base.uint_bld;
 	LLVMValueRef vtx_offset, soffset;
 	struct tgsi_shader_info *info = &shader->selector->info;
-	unsigned semantic_name = info->input_semantic_name[reg->Register.Index];
-	unsigned semantic_index = info->input_semantic_index[reg->Register.Index];
+	unsigned semantic_name = info->input_semantic_name[input_index];
+	unsigned semantic_index = info->input_semantic_index[input_index];
 	unsigned param;
 	LLVMValueRef value;
-
-	if (swizzle != ~0 && semantic_name == TGSI_SEMANTIC_PRIMID)
-		return get_primitive_id(ctx, swizzle);
-
-	if (!reg->Register.Dimension)
-		return NULL;
 
 	param = si_shader_io_get_unique_index(semantic_name, semantic_index);
 
 	/* GFX9 has the ESGS ring in LDS. */
 	if (ctx->screen->info.chip_class >= GFX9) {
-		unsigned index = reg->Dimension.Index;
+		unsigned index = vtx_offset_param;
 
 		switch (index / 2) {
 		case 0:
@@ -1354,8 +1349,7 @@ static LLVMValueRef fetch_input_gs(
 
 		vtx_offset = LLVMBuildAdd(ctx->ac.builder, vtx_offset,
 					  LLVMConstInt(ctx->i32, param * 4, 0), "");
-		return lds_load(bld_base, tgsi2llvmtype(bld_base, type),
-				swizzle, vtx_offset);
+		return lds_load(bld_base, type, swizzle, vtx_offset);
 	}
 
 	/* GFX6: input load from the ESGS ring in memory. */
@@ -1363,14 +1357,14 @@ static LLVMValueRef fetch_input_gs(
 		LLVMValueRef values[TGSI_NUM_CHANNELS];
 		unsigned chan;
 		for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
-			values[chan] = fetch_input_gs(bld_base, reg, type, chan);
+			values[chan] = si_llvm_load_input_gs(abi, input_index, vtx_offset_param,
+							     type, chan);
 		}
 		return lp_build_gather_values(&ctx->gallivm, values,
 					      TGSI_NUM_CHANNELS);
 	}
 
 	/* Get the vertex offset parameter on GFX6. */
-	unsigned vtx_offset_param = reg->Dimension.Index;
 	LLVMValueRef gs_vtx_offset = ctx->gs_vtx_offset[vtx_offset_param];
 
 	vtx_offset = lp_build_mul_imm(uint, gs_vtx_offset, 4);
@@ -1379,17 +1373,38 @@ static LLVMValueRef fetch_input_gs(
 
 	value = ac_build_buffer_load(&ctx->ac, ctx->esgs_ring, 1, ctx->i32_0,
 				     vtx_offset, soffset, 0, 1, 0, true, false);
-	if (tgsi_type_is_64bit(type)) {
+	if (llvm_type_is_64bit(ctx, type)) {
 		LLVMValueRef value2;
 		soffset = LLVMConstInt(ctx->i32, (param * 4 + swizzle + 1) * 256, 0);
 
 		value2 = ac_build_buffer_load(&ctx->ac, ctx->esgs_ring, 1,
 					      ctx->i32_0, vtx_offset, soffset,
 					      0, 1, 0, true, false);
-		return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
-						value, value2);
+		return si_llvm_emit_fetch_64bit(bld_base, type, value, value2);
 	}
-	return bitcast(bld_base, type, value);
+	return LLVMBuildBitCast(ctx->ac.builder, value, type, "");
+}
+
+static LLVMValueRef fetch_input_gs(
+	struct lp_build_tgsi_context *bld_base,
+	const struct tgsi_full_src_register *reg,
+	enum tgsi_opcode_type type,
+	unsigned swizzle)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct tgsi_shader_info *info = &ctx->shader->selector->info;
+
+	unsigned semantic_name = info->input_semantic_name[reg->Register.Index];
+	if (swizzle != ~0 && semantic_name == TGSI_SEMANTIC_PRIMID)
+		return get_primitive_id(ctx, swizzle);
+
+	if (!reg->Register.Dimension)
+		return NULL;
+
+	return si_llvm_load_input_gs(&ctx->abi, reg->Register.Index,
+				     reg->Dimension.Index,
+				     tgsi2llvmtype(bld_base, type),
+				     swizzle);
 }
 
 static int lookup_interp_param_index(unsigned interpolate, unsigned location)
