@@ -155,7 +155,19 @@ static void radeon_enc_encode_bitstream(struct pipe_video_codec *encoder,
 								  struct pipe_resource *destination,
 								  void **fb)
 {
-	/* TODO*/
+	struct radeon_encoder *enc = (struct radeon_encoder*)encoder;
+	enc->get_buffer(destination, &enc->bs_handle, NULL);
+	enc->bs_size = destination->width0;
+
+	*fb = enc->fb = CALLOC_STRUCT(rvid_buffer);
+
+	if (!si_vid_create_buffer(enc->screen, enc->fb, 4096, PIPE_USAGE_STAGING)) {
+		RVID_ERR("Can't create feedback buffer.\n");
+		return;
+	}
+
+	enc->need_feedback = true;
+	enc->encode(enc);
 }
 
 static void radeon_enc_end_frame(struct pipe_video_codec *encoder,
