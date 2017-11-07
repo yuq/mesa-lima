@@ -213,6 +213,9 @@ struct SWR_CREATECONTEXT_INFO
     // Output: size required memory passed to for SwrSaveState / SwrRestoreState
     size_t  contextSaveSize;
 
+    // ArchRast event manager.
+    HANDLE  hArEventManager;
+
     // Input (optional): Threading info that overrides any set KNOB values.
     SWR_THREADING_INFO* pThreadInfo;
 

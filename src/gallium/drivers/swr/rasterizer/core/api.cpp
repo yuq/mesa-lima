@@ -143,6 +143,11 @@ HANDLE SwrCreateContext(
 #endif
     }
 
+#if defined(KNOB_ENABLE_AR)
+    // cache the API thread event manager, for use with sim layer
+    pCreateInfo->hArEventManager = pContext->pArContext[16];
+#endif
+
     // State setup AFTER context is fully initialized
     SetupDefaultState(pContext);
 
