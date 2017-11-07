@@ -174,7 +174,8 @@ static void radeon_enc_end_frame(struct pipe_video_codec *encoder,
 						   struct pipe_video_buffer *source,
 						   struct pipe_picture_desc *picture)
 {
-	/* TODO*/
+	struct radeon_encoder *enc = (struct radeon_encoder*)encoder;
+	flush(enc);
 }
 
 static void radeon_enc_destroy(struct pipe_video_codec *encoder)
