@@ -396,9 +396,15 @@ struct radeon_encoder {
 	struct radeon_enc_h264_enc_pic	enc_pic;
 
 	unsigned			alignment;
+	unsigned			shifter;
+	unsigned			bits_in_shifter;
+	unsigned			num_zeros;
+	unsigned			byte_index;
+	unsigned			bits_output;
 	uint32_t			total_task_size;
 	uint32_t*			p_task_size;
 
+	bool				emulation_prevention;
 	bool				need_feedback;
 };
 

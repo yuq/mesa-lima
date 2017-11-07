@@ -49,6 +49,7 @@ RADEON_ENC_CS(cmd)
 	enc->total_task_size += *begin;}
 
 static const unsigned profiles[7] = { 66, 77, 88, 100, 110, 122, 244 };
+static const unsigned index_to_shifts[4] = {24, 16, 8, 0};
 
 static void radeon_enc_add_buffer(struct radeon_encoder *enc, struct pb_buffer *buf,
 								  enum radeon_bo_usage usage, enum radeon_bo_domain domain,
@@ -61,6 +62,126 @@ static void radeon_enc_add_buffer(struct radeon_encoder *enc, struct pb_buffer *
 	addr = addr + offset;
 	RADEON_ENC_CS(addr >> 32);
 	RADEON_ENC_CS(addr);
+}
+
+static void radeon_enc_set_emulation_prevention(struct radeon_encoder *enc, bool set)
+{
+	if (set != enc->emulation_prevention) {
+		enc->emulation_prevention = set;
+		enc->num_zeros = 0;
+	}
+}
+
+static void radeon_enc_output_one_byte(struct radeon_encoder *enc, unsigned char byte)
+{
+	if (enc->byte_index == 0)
+		enc->cs->current.buf[enc->cs->current.cdw] = 0;
+	enc->cs->current.buf[enc->cs->current.cdw] |= ((unsigned int)(byte) << index_to_shifts[enc->byte_index]);
+	enc->byte_index++;
+
+	if (enc->byte_index >= 4) {
+		enc->byte_index = 0;
+		enc->cs->current.cdw++;
+	}
+}
+
+static void radeon_enc_emulation_prevention(struct radeon_encoder *enc, unsigned char byte)
+{
+	if(enc->emulation_prevention) {
+		if((enc->num_zeros >= 2) && ((byte == 0x00) || (byte == 0x01) || (byte == 0x03))) {
+            radeon_enc_output_one_byte(enc, 0x03);
+            enc->bits_output += 8;
+            enc->num_zeros = 0;
+        }
+        enc->num_zeros = (byte == 0 ? (enc->num_zeros + 1) : 0);
+    }
+}
+
+static void radeon_enc_code_fixed_bits(struct radeon_encoder *enc, unsigned int value, unsigned int num_bits)
+{
+	unsigned int bits_to_pack = 0;
+
+	while(num_bits > 0) {
+		unsigned int value_to_pack = value & (0xffffffff >> (32 - num_bits));
+		bits_to_pack = num_bits > (32 - enc->bits_in_shifter) ? (32 - enc->bits_in_shifter) : num_bits;
+
+		if (bits_to_pack < num_bits)
+			value_to_pack = value_to_pack >> (num_bits - bits_to_pack);
+
+		enc->shifter |= value_to_pack << (32 - enc->bits_in_shifter - bits_to_pack);
+		num_bits -= bits_to_pack;
+		enc->bits_in_shifter += bits_to_pack;
+
+		while(enc->bits_in_shifter >= 8) {
+			unsigned char output_byte = (unsigned char)(enc->shifter >> 24);
+			enc->shifter <<= 8;
+			radeon_enc_emulation_prevention(enc, output_byte);
+			radeon_enc_output_one_byte(enc, output_byte);
+			enc->bits_in_shifter -= 8;
+			enc->bits_output += 8;
+		}
+	}
+}
+
+static void radeon_enc_reset(struct radeon_encoder *enc)
+{
+	enc->emulation_prevention = false;
+	enc->shifter = 0;
+	enc->bits_in_shifter = 0;
+	enc->bits_output = 0;
+	enc->num_zeros = 0;
+	enc->byte_index = 0;
+}
+
+static void radeon_enc_byte_align(struct radeon_encoder *enc)
+{
+	unsigned int num_padding_zeros = (32 - enc->bits_in_shifter) % 8;
+
+	if (num_padding_zeros > 0)
+		radeon_enc_code_fixed_bits(enc, 0, num_padding_zeros);
+}
+
+static void radeon_enc_flush_headers(struct radeon_encoder *enc)
+{
+	if (enc->bits_in_shifter != 0) {
+		unsigned char output_byte = (unsigned char)(enc->shifter >> 24);
+		radeon_enc_emulation_prevention(enc, output_byte);
+		radeon_enc_output_one_byte(enc, output_byte);
+		enc->bits_output += enc->bits_in_shifter;
+		enc->shifter = 0;
+		enc->bits_in_shifter = 0;
+		enc->num_zeros = 0;
+	}
+
+	if (enc->byte_index > 0) {
+		enc->cs->current.cdw++;
+		enc->byte_index = 0;
+	}
+}
+
+static void radeon_enc_code_ue(struct radeon_encoder *enc, unsigned int value)
+{
+	int x = -1;
+	unsigned int ue_code = value + 1;
+	value += 1;
+
+	while (value) {
+		value = (value >> 1);
+		x += 1;
+	}
+
+	unsigned int ue_length = (x << 1) + 1;
+	radeon_enc_code_fixed_bits(enc, ue_code, ue_length);
+}
+
+static void radeon_enc_code_se(struct radeon_encoder *enc, int value)
+{
+	unsigned int v = 0;
+
+	if (value != 0)
+		v = (value < 0 ? ((unsigned int)(0 - value) << 1) : (((unsigned int)(value) << 1) - 1));
+
+	radeon_enc_code_ue(enc, v);
 }
 
 static void radeon_enc_session_info(struct radeon_encoder *enc)
