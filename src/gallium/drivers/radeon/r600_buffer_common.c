@@ -368,7 +368,6 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
                                       struct pipe_transfer **ptransfer)
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
-	struct r600_common_screen *rscreen = (struct r600_common_screen*)ctx->screen;
 	struct r600_resource *rbuffer = r600_resource(resource);
 	uint8_t *data;
 
@@ -436,7 +435,6 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	}
 
 	if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
-	    !(rscreen->debug_flags & DBG(NO_DISCARD_RANGE)) &&
 	    ((!(usage & (PIPE_TRANSFER_UNSYNCHRONIZED |
 			 PIPE_TRANSFER_PERSISTENT)) &&
 	      r600_can_dma_copy_buffer(rctx, box->x, 0, box->width)) ||

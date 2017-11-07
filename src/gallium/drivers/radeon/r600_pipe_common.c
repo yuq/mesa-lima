@@ -615,8 +615,6 @@ static const struct debug_named_value common_debug_options[] = {
 	/* features */
 	{ "nodma", DBG(NO_ASYNC_DMA), "Disable asynchronous DMA" },
 	{ "nohyperz", DBG(NO_HYPERZ), "Disable Hyper-Z" },
-	/* GL uses the word INVALIDATE, gallium uses the word DISCARD */
-	{ "noinvalrange", DBG(NO_DISCARD_RANGE), "Disable handling of INVALIDATE_RANGE map flags" },
 	{ "no2d", DBG(NO_2D_TILING), "Disable 2D tiling" },
 	{ "notiling", DBG(NO_TILING), "Disable tiling" },
 	{ "switch_on_eop", DBG(SWITCH_ON_EOP), "Program WD/IA to switch on end-of-packet." },
