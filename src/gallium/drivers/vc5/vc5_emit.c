@@ -207,6 +207,18 @@ emit_textures(struct vc5_context *vc5, struct vc5_texture_stateobj *stage_tex)
         }
 }
 
+static uint32_t
+translate_colormask(struct vc5_context *vc5, uint32_t colormask, int rt)
+{
+        if (vc5->swap_color_rb & (1 << rt)) {
+                colormask = ((colormask & (2 | 8)) |
+                             ((colormask & 1) << 2) |
+                             ((colormask & 4) >> 2));
+        }
+
+        return (~colormask) & 0xf;
+}
+
 void
 vc5_emit_state(struct pipe_context *pctx)
 {
@@ -384,19 +396,22 @@ vc5_emit_state(struct pipe_context *pctx)
                 cl_emit(&job->bcl, COLOUR_WRITE_MASKS, mask) {
                         if (blend->independent_blend_enable) {
                                 mask.render_target_0_per_colour_component_write_masks =
-                                        (~blend->rt[0].colormask) & 0xf;
+                                        translate_colormask(vc5, blend->rt[0].colormask, 0);
                                 mask.render_target_1_per_colour_component_write_masks =
-                                        (~blend->rt[1].colormask) & 0xf;
+                                        translate_colormask(vc5, blend->rt[1].colormask, 1);
                                 mask.render_target_2_per_colour_component_write_masks =
-                                        (~blend->rt[2].colormask) & 0xf;
+                                        translate_colormask(vc5, blend->rt[2].colormask, 2);
                                 mask.render_target_3_per_colour_component_write_masks =
-                                        (~blend->rt[3].colormask) & 0xf;
+                                        translate_colormask(vc5, blend->rt[3].colormask, 3);
                         } else {
-                                uint8_t colormask = (~blend->rt[0].colormask) & 0xf;
-                                mask.render_target_0_per_colour_component_write_masks = colormask;
-                                mask.render_target_1_per_colour_component_write_masks = colormask;
-                                mask.render_target_2_per_colour_component_write_masks = colormask;
-                                mask.render_target_3_per_colour_component_write_masks = colormask;
+                                mask.render_target_0_per_colour_component_write_masks =
+                                        translate_colormask(vc5, blend->rt[0].colormask, 0);
+                                mask.render_target_1_per_colour_component_write_masks =
+                                        translate_colormask(vc5, blend->rt[0].colormask, 1);
+                                mask.render_target_2_per_colour_component_write_masks =
+                                        translate_colormask(vc5, blend->rt[0].colormask, 2);
+                                mask.render_target_3_per_colour_component_write_masks =
+                                        translate_colormask(vc5, blend->rt[0].colormask, 3);
                         }
                 }
         }
