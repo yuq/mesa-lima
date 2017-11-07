@@ -145,21 +145,13 @@ static void si_emit_string_marker(struct pipe_context *ctx,
 static LLVMTargetMachineRef
 si_create_llvm_target_machine(struct si_screen *sscreen)
 {
-	const char *triple = "amdgcn--";
-	char features[256];
+	enum ac_target_machine_options tm_options =
+		(sscreen->b.debug_flags & DBG(SI_SCHED) ? AC_TM_SISCHED : 0) |
+		(sscreen->b.chip_class >= GFX9 ? AC_TM_FORCE_ENABLE_XNACK : 0) |
+		(sscreen->b.chip_class < GFX9 ? AC_TM_FORCE_DISABLE_XNACK : 0) |
+		(!sscreen->llvm_has_working_vgpr_indexing ? AC_TM_PROMOTE_ALLOCA_TO_SCRATCH : 0);
 
-	snprintf(features, sizeof(features),
-		 "+DumpCode,+vgpr-spilling,-fp32-denormals,+fp64-denormals%s%s%s",
-		 sscreen->b.chip_class >= GFX9 ? ",+xnack" : ",-xnack",
-		 sscreen->llvm_has_working_vgpr_indexing ? "" : ",-promote-alloca",
-		 sscreen->b.debug_flags & DBG(SI_SCHED) ? ",+si-scheduler" : "");
-
-	return LLVMCreateTargetMachine(ac_get_llvm_target(triple), triple,
-				       ac_get_llvm_processor_name(sscreen->b.family),
-				       features,
-				       LLVMCodeGenLevelDefault,
-				       LLVMRelocDefault,
-				       LLVMCodeModelDefault);
+	return ac_create_target_machine(sscreen->b.family, tm_options);
 }
 
 static void si_set_log_context(struct pipe_context *ctx,
