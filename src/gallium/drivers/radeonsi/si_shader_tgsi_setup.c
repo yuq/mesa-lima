@@ -170,15 +170,15 @@ LLVMTypeRef tgsi2llvmtype(struct lp_build_tgsi_context *bld_base,
 	switch (type) {
 	case TGSI_TYPE_UNSIGNED:
 	case TGSI_TYPE_SIGNED:
-		return ctx->i32;
+		return ctx->ac.i32;
 	case TGSI_TYPE_UNSIGNED64:
 	case TGSI_TYPE_SIGNED64:
-		return ctx->i64;
+		return ctx->ac.i64;
 	case TGSI_TYPE_DOUBLE:
-		return LLVMDoubleTypeInContext(ctx->ac.context);
+		return ctx->ac.f64;
 	case TGSI_TYPE_UNTYPED:
 	case TGSI_TYPE_FLOAT:
-		return ctx->f32;
+		return ctx->ac.f32;
 	default: break;
 	}
 	return 0;
