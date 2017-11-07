@@ -339,13 +339,11 @@ vc5_emit_state(struct pipe_context *pctx)
                         clip.viewport_z_scale_zc_to_zs =
                                 vc5->viewport.scale[2];
                 }
-                if (0 /* XXX */) {
                 cl_emit(&job->bcl, CLIPPER_Z_MIN_MAX_CLIPPING_PLANES, clip) {
                         clip.minimum_zw = (vc5->viewport.translate[2] -
                                            vc5->viewport.scale[2]);
                         clip.maximum_zw = (vc5->viewport.translate[2] +
                                            vc5->viewport.scale[2]);
-                }
                 }
 
                 cl_emit(&job->bcl, VIEWPORT_OFFSET, vp) {
