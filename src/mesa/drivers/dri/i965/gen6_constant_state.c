@@ -266,8 +266,11 @@ brw_upload_pull_constants(struct brw_context *brw,
       }
    }
 
-   brw_create_constant_surface(brw, const_bo, const_offset, size,
-                               &stage_state->surf_offset[surf_index]);
+   brw_emit_buffer_surface_state(brw, &stage_state->surf_offset[surf_index],
+                                 const_bo, const_offset,
+                                 ISL_FORMAT_R32G32B32A32_FLOAT,
+                                 size, 1, 0);
+
    brw_bo_unreference(const_bo);
 
    brw->ctx.NewDriverState |= brw_new_constbuf;

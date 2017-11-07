@@ -1402,16 +1402,6 @@ brw_get_index_type(unsigned index_size)
 void brw_prepare_vertices(struct brw_context *brw);
 
 /* brw_wm_surface_state.c */
-void brw_create_constant_surface(struct brw_context *brw,
-                                 struct brw_bo *bo,
-                                 uint32_t offset,
-                                 uint32_t size,
-                                 uint32_t *out_offset);
-void brw_create_buffer_surface(struct brw_context *brw,
-                               struct brw_bo *bo,
-                               uint32_t offset,
-                               uint32_t size,
-                               uint32_t *out_offset);
 void brw_update_buffer_texture_surface(struct gl_context *ctx,
                                        unsigned unit,
                                        uint32_t *surf_offset);
