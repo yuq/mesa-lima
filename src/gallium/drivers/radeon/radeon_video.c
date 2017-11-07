@@ -230,7 +230,8 @@ int si_vid_get_video_param(struct pipe_screen *screen,
 		switch (param) {
 		case PIPE_VIDEO_CAP_SUPPORTED:
 			return codec == PIPE_VIDEO_FORMAT_MPEG4_AVC &&
-				si_vce_is_fw_version_supported(rscreen);
+				(si_vce_is_fw_version_supported(rscreen) ||
+				rscreen->family == CHIP_RAVEN);
 		case PIPE_VIDEO_CAP_NPOT_TEXTURES:
 			return 1;
 		case PIPE_VIDEO_CAP_MAX_WIDTH:
