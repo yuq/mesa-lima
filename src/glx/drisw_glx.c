@@ -455,7 +455,7 @@ drisw_create_context_attribs(struct glx_screen *base,
    if (pcp == NULL)
       return NULL;
 
-   if (!glx_context_init(&pcp->base, &psc->base, &config->base)) {
+   if (!glx_context_init(&pcp->base, &psc->base, config_base)) {
       free(pcp);
       return NULL;
    }
@@ -483,7 +483,7 @@ drisw_create_context_attribs(struct glx_screen *base,
    pcp->driContext =
       (*psc->swrast->createContextAttribs) (psc->driScreen,
 					    api,
-					    config->driConfig,
+					    config ? config->driConfig : 0,
 					    shared,
 					    num_ctx_attribs / 2,
 					    ctx_attribs,

@@ -278,7 +278,7 @@ dri2_create_context_attribs(struct glx_screen *base,
       goto error_exit;
    }
 
-   if (!glx_context_init(&pcp->base, &psc->base, &config->base))
+   if (!glx_context_init(&pcp->base, &psc->base, config_base))
       goto error_exit;
 
    ctx_attribs[num_ctx_attribs++] = __DRI_CTX_ATTRIB_MAJOR_VERSION;
@@ -317,7 +317,7 @@ dri2_create_context_attribs(struct glx_screen *base,
    pcp->driContext =
       (*psc->dri2->createContextAttribs) (psc->driScreen,
 					  api,
-					  config->driConfig,
+					  config ? config->driConfig : NULL,
 					  shared,
 					  num_ctx_attribs / 2,
 					  ctx_attribs,
