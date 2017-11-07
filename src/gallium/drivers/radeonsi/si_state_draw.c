@@ -1405,11 +1405,11 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (!si_upload_vertex_buffer_descriptors(sctx))
 		return;
 
-	/* GFX9 scissor bug workaround. This must be done before VPORT scissor
-	 * registers are changed. There is also a more efficient but more
-	 * involved alternative workaround.
+	/* Vega10/Raven scissor bug workaround. This must be done before VPORT
+	 * scissor registers are changed. There is also a more efficient but
+	 * more involved alternative workaround.
 	 */
-	if (sctx->b.chip_class == GFX9 &&
+	if ((sctx->b.family == CHIP_VEGA10 || sctx->b.family == CHIP_RAVEN) &&
 	    si_is_atom_dirty(sctx, &sctx->scissors.atom)) {
 		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH;
 		si_emit_cache_flush(sctx);
