@@ -262,9 +262,11 @@ vc5_emit_state(struct pipe_context *pctx)
                           VC5_DIRTY_COMPILED_FS)) {
                 cl_emit(&job->bcl, CONFIGURATION_BITS, config) {
                         config.enable_forward_facing_primitive =
+                                !vc5->rasterizer->base.rasterizer_discard &&
                                 !(vc5->rasterizer->base.cull_face &
                                   PIPE_FACE_FRONT);
                         config.enable_reverse_facing_primitive =
+                                !vc5->rasterizer->base.rasterizer_discard &&
                                 !(vc5->rasterizer->base.cull_face &
                                   PIPE_FACE_BACK);
                         /* This seems backwards, but it's what gets the
