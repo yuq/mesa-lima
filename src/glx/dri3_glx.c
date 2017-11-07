@@ -719,6 +719,7 @@ dri3_bind_extensions(struct dri3_screen *psc, struct glx_display * priv,
 
    __glXEnableDirectExtension(&psc->base, "GLX_ARB_create_context");
    __glXEnableDirectExtension(&psc->base, "GLX_ARB_create_context_profile");
+   __glXEnableDirectExtension(&psc->base, "GLX_EXT_no_config_context");
 
    if ((mask & ((1 << __DRI_API_GLES) |
                 (1 << __DRI_API_GLES2) |
