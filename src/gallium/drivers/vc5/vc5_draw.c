@@ -379,7 +379,7 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
          * flag set.
          */
         uint32_t prim_tf_enable = 0;
-        if (vc5->prog.bind_vs->num_tf_outputs)
+        if (vc5->streamout.num_targets)
                 prim_tf_enable = (V3D_PRIM_POINTS_TF - V3D_PRIM_POINTS);
 
         vc5_tf_statistics_record(vc5, info, prim_tf_enable);
