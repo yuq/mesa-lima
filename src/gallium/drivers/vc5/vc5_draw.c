@@ -517,6 +517,15 @@ vc5_clear(struct pipe_context *pctx, unsigned buffers,
                 union util_color uc;
                 uint32_t internal_size = 4 << surf->internal_bpp;
 
+                static union pipe_color_union swapped_color;
+                if (vc5->swap_color_rb & (1 << i)) {
+                        swapped_color.f[0] = color->f[2];
+                        swapped_color.f[1] = color->f[1];
+                        swapped_color.f[2] = color->f[0];
+                        swapped_color.f[3] = color->f[3];
+                        color = &swapped_color;
+                }
+
                 switch (surf->internal_type) {
                 case INTERNAL_TYPE_8:
                         if (surf->format == PIPE_FORMAT_B4G4R4A4_UNORM ||
