@@ -6925,27 +6925,28 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
       }
    }
 
+   const unsigned *ret = NULL;
    if (unlikely(cfg == NULL)) {
       assert(fail_msg);
       if (error_str)
          *error_str = ralloc_strdup(mem_ctx, fail_msg);
+   } else {
+      fs_generator g(compiler, log_data, mem_ctx, (void*) key, &prog_data->base,
+                     v8.promoted_constants, false, MESA_SHADER_COMPUTE);
+      if (INTEL_DEBUG & DEBUG_CS) {
+         char *name = ralloc_asprintf(mem_ctx, "%s compute shader %s",
+                                      shader->info.label ? shader->info.label :
+                                                           "unnamed",
+                                      shader->info.name);
+         g.enable_debug(name);
+      }
 
-      return NULL;
+      g.generate_code(cfg, prog_data->simd_size);
+
+      ret = g.get_assembly(&prog_data->base.program_size);
    }
 
-   fs_generator g(compiler, log_data, mem_ctx, (void*) key, &prog_data->base,
-                  v8.promoted_constants, false, MESA_SHADER_COMPUTE);
-   if (INTEL_DEBUG & DEBUG_CS) {
-      char *name = ralloc_asprintf(mem_ctx, "%s compute shader %s",
-                                   shader->info.label ? shader->info.label :
-                                                        "unnamed",
-                                   shader->info.name);
-      g.enable_debug(name);
-   }
-
-   g.generate_code(cfg, prog_data->simd_size);
-
-   return g.get_assembly(&prog_data->base.program_size);
+   return ret;
 }
 
 /**
