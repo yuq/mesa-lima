@@ -103,6 +103,15 @@ enum {
 	LOCAL_ADDR_SPACE = 3,
 };
 
+static bool llvm_type_is_64bit(struct si_shader_context *ctx,
+			       LLVMTypeRef type)
+{
+	if (type == ctx->ac.i64 || type == ctx->ac.f64)
+		return true;
+
+	return false;
+}
+
 static bool is_merged_shader(struct si_shader *shader)
 {
 	if (shader->selector->screen->info.chip_class <= VI)
