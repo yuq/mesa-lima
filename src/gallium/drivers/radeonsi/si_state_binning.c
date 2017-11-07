@@ -414,6 +414,7 @@ void si_emit_dpbb_state(struct si_context *sctx, struct r600_atom *state)
 
 	switch (sctx->b.family) {
 	case CHIP_VEGA10:
+	case CHIP_VEGA12:
 	case CHIP_RAVEN:
 		/* Tuned for Raven. Vega might need different values. */
 		context_states_per_bin = 5;

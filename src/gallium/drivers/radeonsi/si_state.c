@@ -1675,7 +1675,8 @@ static uint32_t si_translate_texformat(struct pipe_screen *screen,
 
 	if (desc->layout == UTIL_FORMAT_LAYOUT_ETC &&
 	    (sscreen->info.family == CHIP_STONEY ||
-	     sscreen->info.chip_class >= GFX9)) {
+	     sscreen->info.family == CHIP_VEGA10 ||
+	     sscreen->info.family == CHIP_RAVEN)) {
 		switch (format) {
 		case PIPE_FORMAT_ETC1_RGB8:
 		case PIPE_FORMAT_ETC2_RGB8:
@@ -5045,6 +5046,7 @@ static void si_init_config(struct si_context *sctx)
 
 		switch (sctx->b.family) {
 		case CHIP_VEGA10:
+		case CHIP_VEGA12:
 			pc_lines = 4096;
 			break;
 		case CHIP_RAVEN:

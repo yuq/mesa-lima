@@ -828,6 +828,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 		sscreen->dpbb_allowed = true;
 	} else {
 		/* Only enable primitive binning on Raven by default. */
+		/* TODO: Investigate if binning is profitable on Vega12. */
 		sscreen->dpbb_allowed = sscreen->info.family == CHIP_RAVEN &&
 					!(sscreen->debug_flags & DBG(NO_DPBB));
 	}
@@ -855,6 +856,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 		sscreen->rbplus_allowed =
 			!(sscreen->debug_flags & DBG(NO_RB_PLUS)) &&
 			(sscreen->info.family == CHIP_STONEY ||
+			 sscreen->info.family == CHIP_VEGA12 ||
 			 sscreen->info.family == CHIP_RAVEN);
 	}
 
