@@ -866,6 +866,10 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 
 static bool si_init_gs_info(struct si_screen *sscreen)
 {
+	/* gs_table_depth is not used by GFX9 */
+	if (sscreen->b.chip_class >= GFX9)
+		return true;
+
 	switch (sscreen->b.family) {
 	case CHIP_OLAND:
 	case CHIP_HAINAN:
@@ -887,8 +891,6 @@ static bool si_init_gs_info(struct si_screen *sscreen)
 	case CHIP_POLARIS10:
 	case CHIP_POLARIS11:
 	case CHIP_POLARIS12:
-	case CHIP_VEGA10:
-	case CHIP_RAVEN:
 		sscreen->gs_table_depth = 32;
 		return true;
 	default:
