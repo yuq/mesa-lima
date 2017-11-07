@@ -90,6 +90,31 @@ choose_isl_surf_usage(VkImageCreateFlags vk_create_flags,
    return isl_usage;
 }
 
+static isl_tiling_flags_t
+choose_isl_tiling_flags(const struct anv_image_create_info *anv_info)
+{
+   const VkImageCreateInfo *base_info = anv_info->vk_info;
+   isl_tiling_flags_t flags = 0;
+
+   switch (base_info->tiling) {
+   default:
+      unreachable("bad VkImageTiling");
+   case VK_IMAGE_TILING_OPTIMAL:
+      flags = ISL_TILING_ANY_MASK;
+      break;
+   case VK_IMAGE_TILING_LINEAR:
+      flags = ISL_TILING_LINEAR_BIT;
+      break;
+   }
+
+   if (anv_info->isl_tiling_flags)
+      flags &= anv_info->isl_tiling_flags;
+
+   assert(flags);
+
+   return flags;
+}
+
 static struct anv_surface *
 get_surface(struct anv_image *image, VkImageAspectFlagBits aspect)
 {
@@ -252,6 +277,7 @@ static VkResult
 make_surface(const struct anv_device *dev,
              struct anv_image *image,
              const struct anv_image_create_info *anv_info,
+             isl_tiling_flags_t tiling_flags,
              VkImageAspectFlagBits aspect)
 {
    const VkImageCreateInfo *vk_info = anv_info->vk_info;
@@ -262,18 +288,6 @@ make_surface(const struct anv_device *dev,
       [VK_IMAGE_TYPE_2D] = ISL_SURF_DIM_2D,
       [VK_IMAGE_TYPE_3D] = ISL_SURF_DIM_3D,
    };
-
-   /* Translate the Vulkan tiling to an equivalent ISL tiling, then filter the
-    * result with an optionally provided ISL tiling argument.
-    */
-   isl_tiling_flags_t tiling_flags =
-      (vk_info->tiling == VK_IMAGE_TILING_LINEAR) ?
-      ISL_TILING_LINEAR_BIT : ISL_TILING_ANY_MASK;
-
-   if (anv_info->isl_tiling_flags)
-      tiling_flags &= anv_info->isl_tiling_flags;
-
-   assert(tiling_flags);
 
    image->extent = anv_sanitize_image_extent(vk_info->imageType,
                                              vk_info->extent);
@@ -518,11 +532,15 @@ anv_image_create(VkDevice _device,
    const struct anv_format *format = anv_get_format(image->vk_format);
    assert(format != NULL);
 
+   const isl_tiling_flags_t isl_tiling_flags =
+      choose_isl_tiling_flags(create_info);
+
    image->n_planes = format->n_planes;
 
    uint32_t b;
    for_each_bit(b, image->aspects) {
-      r = make_surface(device, image, create_info, (1 << b));
+      r = make_surface(device, image, create_info, isl_tiling_flags,
+                       (1 << b));
       if (r != VK_SUCCESS)
          goto fail;
    }
