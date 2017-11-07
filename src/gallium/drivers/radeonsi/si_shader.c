@@ -1063,7 +1063,8 @@ static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
 	value2 = ac_build_buffer_load(&ctx->ac, buffer, 1, NULL, base, offset,
 	                           swizzle * 4 + 4, 1, 0, can_speculate, false);
 
-	return si_llvm_emit_fetch_64bit(bld_base, type, value, value2);
+	return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
+					value, value2);
 }
 
 /**
@@ -1096,7 +1097,8 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
 
 		lo = lds_load(bld_base, TGSI_TYPE_UNSIGNED, swizzle, dw_addr);
 		hi = lds_load(bld_base, TGSI_TYPE_UNSIGNED, swizzle + 1, dw_addr);
-		return si_llvm_emit_fetch_64bit(bld_base, type, lo, hi);
+		return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
+						lo, hi);
 	}
 
 	dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
@@ -1375,7 +1377,7 @@ static LLVMValueRef fetch_input_gs(
 		value2 = ac_build_buffer_load(&ctx->ac, ctx->esgs_ring, 1,
 					      ctx->i32_0, vtx_offset, soffset,
 					      0, 1, 0, true, false);
-		return si_llvm_emit_fetch_64bit(bld_base, type,
+		return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
 						value, value2);
 	}
 	return bitcast(bld_base, type, value);
@@ -1978,7 +1980,8 @@ static LLVMValueRef fetch_constant(
 
 		lo = fetch_constant(bld_base, reg, TGSI_TYPE_UNSIGNED, swizzle);
 		hi = fetch_constant(bld_base, reg, TGSI_TYPE_UNSIGNED, swizzle + 1);
-		return si_llvm_emit_fetch_64bit(bld_base, type, lo, hi);
+		return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
+						lo, hi);
 	}
 
 	idx = reg->Register.Index * 4 + swizzle;

@@ -399,7 +399,7 @@ get_pointer_into_array(struct si_shader_context *ctx,
 
 LLVMValueRef
 si_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,
-			 enum tgsi_opcode_type type,
+			 LLVMTypeRef type,
 			 LLVMValueRef ptr,
 			 LLVMValueRef ptr2)
 {
@@ -416,7 +416,7 @@ si_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,
 					result,
 					ac_to_integer(&ctx->ac, ptr2),
 					ctx->i32_1, "");
-	return bitcast(bld_base, type, result);
+	return LLVMBuildBitCast(ctx->ac.builder, result, type, "");
 }
 
 static LLVMValueRef
@@ -461,7 +461,8 @@ load_value_from_array(struct lp_build_tgsi_context *bld_base,
 			LLVMValueRef ptr_hi, val_hi;
 			ptr_hi = LLVMBuildGEP(builder, ptr, &ctx->i32_1, 1, "");
 			val_hi = LLVMBuildLoad(builder, ptr_hi, "");
-			val = si_llvm_emit_fetch_64bit(bld_base, type, val, val_hi);
+			val = si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
+						       val, val_hi);
 		}
 
 		return val;
@@ -609,7 +610,8 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 		if (tgsi_type_is_64bit(type)) {
 			ptr = result;
 			ptr2 = input[swizzle + 1];
-			return si_llvm_emit_fetch_64bit(bld_base, type, ptr, ptr2);
+			return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
+							ptr, ptr2);
 		}
 		break;
 	}
@@ -620,7 +622,7 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 		ptr = ctx->temps[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle];
 		if (tgsi_type_is_64bit(type)) {
 			ptr2 = ctx->temps[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle + 1];
-			return si_llvm_emit_fetch_64bit(bld_base, type,
+			return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
 							LLVMBuildLoad(builder, ptr, ""),
 							LLVMBuildLoad(builder, ptr2, ""));
 		}
@@ -631,7 +633,7 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 		ptr = get_output_ptr(bld_base, reg->Register.Index, swizzle);
 		if (tgsi_type_is_64bit(type)) {
 			ptr2 = get_output_ptr(bld_base, reg->Register.Index, swizzle + 1);
-			return si_llvm_emit_fetch_64bit(bld_base, type,
+			return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
 							LLVMBuildLoad(builder, ptr, ""),
 							LLVMBuildLoad(builder, ptr2, ""));
 		}
@@ -664,7 +666,8 @@ static LLVMValueRef fetch_system_value(struct lp_build_tgsi_context *bld_base,
 		hi = LLVMBuildExtractElement(
 			builder, cval, LLVMConstInt(ctx->i32, swizzle + 1, 0), "");
 
-		return si_llvm_emit_fetch_64bit(bld_base, type, lo, hi);
+		return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
+						lo, hi);
 	}
 
 	if (LLVMGetTypeKind(LLVMTypeOf(cval)) == LLVMVectorTypeKind) {
