@@ -1084,7 +1084,7 @@ static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
  * \param dw_addr	address in dwords
  */
 static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
-			     enum tgsi_opcode_type type, unsigned swizzle,
+			     LLVMTypeRef type, unsigned swizzle,
 			     LLVMValueRef dw_addr)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
@@ -1101,13 +1101,12 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
 	}
 
 	/* Split 64-bit loads. */
-	if (tgsi_type_is_64bit(type)) {
+	if (llvm_type_is_64bit(ctx, type)) {
 		LLVMValueRef lo, hi;
 
-		lo = lds_load(bld_base, TGSI_TYPE_UNSIGNED, swizzle, dw_addr);
-		hi = lds_load(bld_base, TGSI_TYPE_UNSIGNED, swizzle + 1, dw_addr);
-		return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
-						lo, hi);
+		lo = lds_load(bld_base, ctx->i32, swizzle, dw_addr);
+		hi = lds_load(bld_base, ctx->i32, swizzle + 1, dw_addr);
+		return si_llvm_emit_fetch_64bit(bld_base, type, lo, hi);
 	}
 
 	dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
@@ -1115,7 +1114,7 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
 
 	value = ac_lds_load(&ctx->ac, dw_addr);
 
-	return bitcast(bld_base, type, value);
+	return LLVMBuildBitCast(ctx->ac.builder, value, type, "");
 }
 
 /**
@@ -1171,7 +1170,7 @@ static LLVMValueRef fetch_input_tcs(
 	dw_addr = get_tcs_in_current_patch_offset(ctx);
 	dw_addr = get_dw_address(ctx, NULL, reg, stride, dw_addr);
 
-	return lds_load(bld_base, type, swizzle, dw_addr);
+	return lds_load(bld_base, tgsi2llvmtype(bld_base, type), swizzle, dw_addr);
 }
 
 static LLVMValueRef fetch_output_tcs(
@@ -1191,7 +1190,7 @@ static LLVMValueRef fetch_output_tcs(
 		dw_addr = get_dw_address(ctx, NULL, reg, NULL, dw_addr);
 	}
 
-	return lds_load(bld_base, type, swizzle, dw_addr);
+	return lds_load(bld_base, tgsi2llvmtype(bld_base, type), swizzle, dw_addr);
 }
 
 static LLVMValueRef fetch_input_tes(
@@ -1355,7 +1354,8 @@ static LLVMValueRef fetch_input_gs(
 
 		vtx_offset = LLVMBuildAdd(ctx->ac.builder, vtx_offset,
 					  LLVMConstInt(ctx->i32, param * 4, 0), "");
-		return lds_load(bld_base, type, swizzle, vtx_offset);
+		return lds_load(bld_base, tgsi2llvmtype(bld_base, type),
+				swizzle, vtx_offset);
 	}
 
 	/* GFX6: input load from the ESGS ring in memory. */
@@ -2754,7 +2754,7 @@ static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 		                              invocation_id,
 		                              LLVMConstInt(ctx->i32, i, 0));
 
-		LLVMValueRef value = lds_load(bld_base, TGSI_TYPE_SIGNED, ~0,
+		LLVMValueRef value = lds_load(bld_base, ctx->ac.i32, ~0,
 		                              lds_ptr);
 
 		ac_build_buffer_store_dword(&ctx->ac, buffer, value, 4, buffer_addr,
@@ -2841,11 +2841,11 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 
 		for (i = 0; i < outer_comps; i++) {
 			outer[i] = out[i] =
-				lds_load(bld_base, TGSI_TYPE_SIGNED, i, lds_outer);
+				lds_load(bld_base, ctx->ac.i32, i, lds_outer);
 		}
 		for (i = 0; i < inner_comps; i++) {
 			inner[i] = out[outer_comps+i] =
-				lds_load(bld_base, TGSI_TYPE_SIGNED, i, lds_inner);
+				lds_load(bld_base, ctx->ac.i32, i, lds_inner);
 		}
 	}
 
