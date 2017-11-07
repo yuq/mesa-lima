@@ -205,6 +205,9 @@ struct vc5_job {
          */
         struct set *bos;
 
+        /** Sum of the sizes of the BOs referenced by the job. */
+        uint32_t referenced_size;
+
         struct set *write_prscs;
 
         /* Size of the submit.bo_handles array. */

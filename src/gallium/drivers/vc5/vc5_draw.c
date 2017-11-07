@@ -479,6 +479,12 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 vc5_job_add_bo(job, rsc->bo);
         }
 
+        if (job->referenced_size > 768 * 1024 * 1024) {
+                perf_debug("Flushing job with %dkb to try to free up memory\n",
+                        job->referenced_size / 1024);
+                vc5_flush(pctx);
+        }
+
         if (V3D_DEBUG & V3D_DEBUG_ALWAYS_FLUSH)
                 vc5_flush(pctx);
 }

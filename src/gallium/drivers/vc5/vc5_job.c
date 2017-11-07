@@ -118,6 +118,7 @@ vc5_job_add_bo(struct vc5_job *job, struct vc5_bo *bo)
 
         vc5_bo_reference(bo);
         _mesa_set_add(job->bos, bo);
+        job->referenced_size += bo->size;
 
         uint32_t *bo_handles = (void *)(uintptr_t)job->submit.bo_handles;
 
