@@ -1114,9 +1114,6 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	 */
 	sscreen->llvm_has_working_vgpr_indexing = sscreen->b.chip_class <= VI;
 
-	sscreen->b.has_cp_dma = true;
-	sscreen->b.has_streamout = true;
-
 	/* Some chips have RB+ registers, but don't support RB+. Those must
 	 * always disable it.
 	 */

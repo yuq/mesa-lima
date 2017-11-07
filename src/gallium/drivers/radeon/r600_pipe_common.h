@@ -391,8 +391,6 @@ struct r600_common_screen {
 	enum chip_class			chip_class;
 	struct radeon_info		info;
 	uint64_t			debug_flags;
-	bool				has_cp_dma;
-	bool				has_streamout;
 	bool				has_rbplus;     /* if RB+ registers exist */
 	bool				rbplus_allowed; /* if RB+ is allowed */
 

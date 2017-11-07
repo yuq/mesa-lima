@@ -349,17 +349,6 @@ static void *r600_buffer_get_transfer(struct pipe_context *ctx,
 	return data;
 }
 
-static bool r600_can_dma_copy_buffer(struct r600_common_context *rctx,
-				     unsigned dstx, unsigned srcx, unsigned size)
-{
-	bool dword_aligned = !(dstx % 4) && !(srcx % 4) && !(size % 4);
-
-	return rctx->screen->has_cp_dma ||
-	       (dword_aligned && (rctx->dma.cs ||
-				  rctx->screen->has_streamout));
-
-}
-
 static void *r600_buffer_transfer_map(struct pipe_context *ctx,
                                       struct pipe_resource *resource,
                                       unsigned level,
@@ -436,8 +425,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 
 	if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
 	    ((!(usage & (PIPE_TRANSFER_UNSYNCHRONIZED |
-			 PIPE_TRANSFER_PERSISTENT)) &&
-	      r600_can_dma_copy_buffer(rctx, box->x, 0, box->width)) ||
+			 PIPE_TRANSFER_PERSISTENT))) ||
 	     (rbuffer->flags & RADEON_FLAG_SPARSE))) {
 		assert(usage & PIPE_TRANSFER_WRITE);
 
@@ -473,8 +461,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	else if (((usage & PIPE_TRANSFER_READ) &&
 		  !(usage & PIPE_TRANSFER_PERSISTENT) &&
 		  (rbuffer->domains & RADEON_DOMAIN_VRAM ||
-		   rbuffer->flags & RADEON_FLAG_GTT_WC) &&
-		  r600_can_dma_copy_buffer(rctx, 0, box->x, box->width)) ||
+		   rbuffer->flags & RADEON_FLAG_GTT_WC)) ||
 		 (rbuffer->flags & RADEON_FLAG_SPARSE)) {
 		struct r600_resource *staging;
 
