@@ -197,6 +197,7 @@ protected:
                   struct brw_stage_prog_data *stage_prog_data);
 
 public:
+   virtual ~backend_shader();
 
    const struct brw_compiler *compiler;
    void *log_data; /* Passed to compiler->*_log functions */

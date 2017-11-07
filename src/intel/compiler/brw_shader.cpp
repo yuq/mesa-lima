@@ -673,6 +673,10 @@ backend_shader::backend_shader(const struct brw_compiler *compiler,
    stage_abbrev = _mesa_shader_stage_to_abbrev(stage);
 }
 
+backend_shader::~backend_shader()
+{
+}
+
 bool
 backend_reg::equals(const backend_reg &r) const
 {

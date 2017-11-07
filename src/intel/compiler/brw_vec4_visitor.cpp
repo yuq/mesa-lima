@@ -1883,10 +1883,6 @@ vec4_visitor::vec4_visitor(const struct brw_compiler *compiler,
    this->uniforms = 0;
 }
 
-vec4_visitor::~vec4_visitor()
-{
-}
-
 
 void
 vec4_visitor::fail(const char *format, ...)
