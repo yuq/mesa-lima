@@ -24,12 +24,13 @@
 /**
  * Gallium query object support.
  *
- * So far we just support occlusion queries.  The HW has native support for
- * them, with the query result being loaded and stored by the TLB unit.
+ * The HW has native support for occlusion queries, with the query result
+ * being loaded and stored by the TLB unit. From a SW perspective, we have to
+ * be careful to make sure that the jobs that need to be tracking queries are
+ * bracketed by the start and end of counting, even across FBO transitions.
  *
- * From a SW perspective, we have to be careful to make sure that the jobs
- * that need to be tracking queries are bracketed by the start and end of
- * counting, even across FBO transitions.
+ * For the transform feedback PRIMITIVES_GENERATED/WRITTEN queries, we have to
+ * do the calculations in software at draw time.
  */
 
 #include "vc5_context.h"
@@ -39,16 +40,14 @@ struct vc5_query
 {
         enum pipe_query_type type;
         struct vc5_bo *bo;
+
+        uint32_t start, end;
 };
 
 static struct pipe_query *
 vc5_create_query(struct pipe_context *pctx, unsigned query_type, unsigned index)
 {
         struct vc5_query *q = calloc(1, sizeof(*q));
-
-        assert(query_type == PIPE_QUERY_OCCLUSION_COUNTER ||
-               query_type == PIPE_QUERY_OCCLUSION_PREDICATE ||
-               query_type == PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE);
 
         q->type = query_type;
 
@@ -71,13 +70,22 @@ vc5_begin_query(struct pipe_context *pctx, struct pipe_query *query)
         struct vc5_context *vc5 = vc5_context(pctx);
         struct vc5_query *q = (struct vc5_query *)query;
 
-        q->bo = vc5_bo_alloc(vc5->screen, 4096, "query");
+        switch (q->type) {
+        case PIPE_QUERY_PRIMITIVES_GENERATED:
+                q->start = vc5->prims_generated;
+                break;
+        case PIPE_QUERY_PRIMITIVES_EMITTED:
+                q->start = vc5->tf_prims_generated;
+                break;
+        default:
+                q->bo = vc5_bo_alloc(vc5->screen, 4096, "query");
 
-        uint32_t *map = vc5_bo_map(q->bo);
-        *map = 0;
-
-        vc5->current_oq = q->bo;
-        vc5->dirty |= VC5_DIRTY_OQ;
+                uint32_t *map = vc5_bo_map(q->bo);
+                *map = 0;
+                vc5->current_oq = q->bo;
+                vc5->dirty |= VC5_DIRTY_OQ;
+                break;
+        }
 
         return true;
 }
@@ -86,9 +94,20 @@ static bool
 vc5_end_query(struct pipe_context *pctx, struct pipe_query *query)
 {
         struct vc5_context *vc5 = vc5_context(pctx);
+        struct vc5_query *q = (struct vc5_query *)query;
 
-        vc5->current_oq = NULL;
-        vc5->dirty |= VC5_DIRTY_OQ;
+        switch (q->type) {
+        case PIPE_QUERY_PRIMITIVES_GENERATED:
+                q->end = vc5->prims_generated;
+                break;
+        case PIPE_QUERY_PRIMITIVES_EMITTED:
+                q->end = vc5->tf_prims_generated;
+                break;
+        default:
+                vc5->current_oq = NULL;
+                vc5->dirty |= VC5_DIRTY_OQ;
+                break;
+        }
 
         return true;
 }
@@ -126,6 +145,10 @@ vc5_get_query_result(struct pipe_context *pctx, struct pipe_query *query,
         case PIPE_QUERY_OCCLUSION_PREDICATE:
         case PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE:
                 vresult->b = result != 0;
+                break;
+        case PIPE_QUERY_PRIMITIVES_GENERATED:
+        case PIPE_QUERY_PRIMITIVES_EMITTED:
+                vresult->u64 = q->end - q->start;
                 break;
         default:
                 unreachable("unsupported query type");

@@ -363,6 +363,9 @@ struct vc5_context {
 
         bool active_queries;
 
+        uint32_t tf_prims_generated;
+        uint32_t prims_generated;
+
         struct pipe_poly_stipple stipple;
         struct pipe_clip_state clip;
         struct pipe_viewport_state viewport;

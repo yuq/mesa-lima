@@ -270,6 +270,25 @@ vc5_emit_gl_shader_state(struct vc5_context *vc5,
         job->shader_rec_count++;
 }
 
+/**
+ * Computes the various transform feedback statistics, since they can't be
+ * recorded by CL packets.
+ */
+static void
+vc5_tf_statistics_record(struct vc5_context *vc5,
+                         const struct pipe_draw_info *info,
+                         bool prim_tf)
+{
+        uint32_t prims = u_prims_for_vertices(info->mode, info->count);
+
+        vc5->prims_generated += prims;
+
+        if (prim_tf) {
+                /* XXX: Only count if we didn't overflow. */
+                vc5->tf_prims_generated += prims;
+        }
+}
+
 static void
 vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
@@ -362,6 +381,8 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         uint32_t prim_tf_enable = 0;
         if (vc5->prog.bind_vs->num_tf_outputs)
                 prim_tf_enable = (V3D_PRIM_POINTS_TF - V3D_PRIM_POINTS);
+
+        vc5_tf_statistics_record(vc5, info, prim_tf_enable);
 
         /* Note that the primitive type fields match with OpenGL/gallium
          * definitions, up to but not including QUADS.
