@@ -796,10 +796,10 @@ endBinTriangles:
 
     // transpose verts needed for backend
     /// @todo modify BE to take non-transformed verts
-    simd4scalar vHorizX[SIMD_WIDTH];
-    simd4scalar vHorizY[SIMD_WIDTH];
-    simd4scalar vHorizZ[SIMD_WIDTH];
-    simd4scalar vHorizW[SIMD_WIDTH];
+    OSALIGNSIMD16(simd4scalar) vHorizX[SIMD_WIDTH];
+    OSALIGNSIMD16(simd4scalar) vHorizY[SIMD_WIDTH];
+    OSALIGNSIMD16(simd4scalar) vHorizZ[SIMD_WIDTH];
+    OSALIGNSIMD16(simd4scalar) vHorizW[SIMD_WIDTH];
 
     TransposeVertices(vHorizX, tri[0].x, tri[1].x, tri[2].x);
     TransposeVertices(vHorizY, tri[0].y, tri[1].y, tri[2].y);
@@ -1510,10 +1510,10 @@ void BinPostSetupLinesImpl(
 
     // transpose verts needed for backend
     /// @todo modify BE to take non-transformed verts
-    simd4scalar vHorizX[SIMD_WIDTH];
-    simd4scalar vHorizY[SIMD_WIDTH];
-    simd4scalar vHorizZ[SIMD_WIDTH];
-    simd4scalar vHorizW[SIMD_WIDTH];
+    OSALIGNSIMD16(simd4scalar) vHorizX[SIMD_WIDTH];
+    OSALIGNSIMD16(simd4scalar) vHorizY[SIMD_WIDTH];
+    OSALIGNSIMD16(simd4scalar) vHorizZ[SIMD_WIDTH];
+    OSALIGNSIMD16(simd4scalar) vHorizW[SIMD_WIDTH];
 
     if (!primMask)
     {
