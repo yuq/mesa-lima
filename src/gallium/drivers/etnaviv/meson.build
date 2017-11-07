@@ -21,6 +21,7 @@
 files_etnaviv = files(
   'hw/cmdstream.xml.h',
   'hw/common.xml.h',
+  'hw/common_3d.xml.h',
   'hw/isa.xml.h',
   'hw/state_3d.xml.h',
   'hw/state.xml.h',
