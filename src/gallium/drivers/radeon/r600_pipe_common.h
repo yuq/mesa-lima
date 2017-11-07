@@ -233,17 +233,9 @@ struct r600_cmask_info {
 struct r600_texture {
 	struct r600_resource		resource;
 
-	uint64_t			size;
-	unsigned			num_level0_transfers;
-	enum pipe_format		db_render_format;
-	bool				is_depth;
-	bool				db_compatible;
-	bool				can_sample_z;
-	bool				can_sample_s;
-	unsigned			dirty_level_mask; /* each bit says if that mipmap is compressed */
-	unsigned			stencil_dirty_level_mask; /* each bit says if that mipmap is compressed */
-	struct r600_texture		*flushed_depth_texture;
 	struct radeon_surf		surface;
+	uint64_t			size;
+	struct r600_texture		*flushed_depth_texture;
 
 	/* Colorbuffer compression and fast clear. */
 	struct r600_fmask_info		fmask;
@@ -253,16 +245,37 @@ struct r600_texture {
 	unsigned			cb_color_info; /* fast clear enable bit */
 	unsigned			color_clear_value[2];
 	unsigned			last_msaa_resolve_target_micro_mode;
+	unsigned			num_level0_transfers;
 
 	/* Depth buffer compression and fast clear. */
 	uint64_t			htile_offset;
-	bool				tc_compatible_htile;
-	bool				depth_cleared; /* if it was cleared at least once */
 	float				depth_clear_value;
-	bool				stencil_cleared; /* if it was cleared at least once */
+	uint16_t			dirty_level_mask; /* each bit says if that mipmap is compressed */
+	uint16_t			stencil_dirty_level_mask; /* each bit says if that mipmap is compressed */
+	enum pipe_format		db_render_format:16;
 	uint8_t				stencil_clear_value;
-	bool				upgraded_depth; /* upgraded from unorm to Z32_FLOAT */
+	bool				tc_compatible_htile:1;
+	bool				depth_cleared:1; /* if it was cleared at least once */
+	bool				stencil_cleared:1; /* if it was cleared at least once */
+	bool				upgraded_depth:1; /* upgraded from unorm to Z32_FLOAT */
+	bool				is_depth:1;
+	bool				db_compatible:1;
+	bool				can_sample_z:1;
+	bool				can_sample_s:1;
 
+	/* We need to track DCC dirtiness, because st/dri usually calls
+	 * flush_resource twice per frame (not a bug) and we don't wanna
+	 * decompress DCC twice. Also, the dirty tracking must be done even
+	 * if DCC isn't used, because it's required by the DCC usage analysis
+	 * for a possible future enablement.
+	 */
+	bool				separate_dcc_dirty:1;
+	/* Statistics gathering for the DCC enablement heuristic. */
+	bool				dcc_gather_statistics:1;
+	/* Counter that should be non-zero if the texture is bound to a
+	 * framebuffer.
+	 */
+	unsigned                        framebuffers_bound;
 	/* Whether the texture is a displayable back buffer and needs DCC
 	 * decompression, which is expensive. Therefore, it's enabled only
 	 * if statistics suggest that it will pay off and it's allocated
@@ -273,15 +286,6 @@ struct r600_texture {
 	struct r600_resource		*dcc_separate_buffer;
 	/* When DCC is temporarily disabled, the separate buffer is here. */
 	struct r600_resource		*last_dcc_separate_buffer;
-	/* We need to track DCC dirtiness, because st/dri usually calls
-	 * flush_resource twice per frame (not a bug) and we don't wanna
-	 * decompress DCC twice. Also, the dirty tracking must be done even
-	 * if DCC isn't used, because it's required by the DCC usage analysis
-	 * for a possible future enablement.
-	 */
-	bool				separate_dcc_dirty;
-	/* Statistics gathering for the DCC enablement heuristic. */
-	bool				dcc_gather_statistics;
 	/* Estimate of how much this color buffer is written to in units of
 	 * full-screen draws: ps_invocations / (width * height)
 	 * Shader kills, late Z, and blending with trivial discards make it
@@ -290,11 +294,6 @@ struct r600_texture {
 	unsigned			ps_draw_ratio;
 	/* The number of clears since the last DCC usage analysis. */
 	unsigned			num_slow_clears;
-
-	/* Counter that should be non-zero if the texture is bound to a
-	 * framebuffer. Implemented in radeonsi only.
-	 */
-	uint32_t			framebuffers_bound;
 };
 
 struct r600_surface {
