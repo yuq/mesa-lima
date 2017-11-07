@@ -263,8 +263,6 @@ struct r600_texture {
 	uint8_t				stencil_clear_value;
 	bool				upgraded_depth; /* upgraded from unorm to Z32_FLOAT */
 
-	bool				non_disp_tiling; /* R600-Cayman only */
-
 	/* Whether the texture is a displayable back buffer and needs DCC
 	 * decompression, which is expensive. Therefore, it's enabled only
 	 * if statistics suggest that it will pay off and it's allocated

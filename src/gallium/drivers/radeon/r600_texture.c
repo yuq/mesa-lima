@@ -553,7 +553,6 @@ static void r600_reallocate_texture_inplace(struct r600_common_context *rctx,
 	rtex->tc_compatible_htile = new_tex->tc_compatible_htile;
 	rtex->depth_cleared = new_tex->depth_cleared;
 	rtex->stencil_cleared = new_tex->stencil_cleared;
-	rtex->non_disp_tiling = new_tex->non_disp_tiling;
 	rtex->dcc_gather_statistics = new_tex->dcc_gather_statistics;
 	rtex->framebuffers_bound = new_tex->framebuffers_bound;
 
@@ -1155,10 +1154,6 @@ r600_texture_create_object(struct pipe_screen *screen,
 		rtex->db_render_format = base->format;
 	}
 
-	/* Tiled depth textures utilize the non-displayable tile order.
-	 * This must be done after r600_setup_surface.
-	 * Applies to R600-Cayman. */
-	rtex->non_disp_tiling = rtex->is_depth && rtex->surface.u.legacy.level[0].mode >= RADEON_SURF_MODE_1D;
 	/* Applies to GCN. */
 	rtex->last_msaa_resolve_target_micro_mode = rtex->surface.micro_tile_mode;
 
@@ -1491,8 +1486,6 @@ bool si_init_flushed_depth_texture(struct pipe_context *ctx,
 		R600_ERR("failed to create temporary texture to hold flushed depth\n");
 		return false;
 	}
-
-	(*flushed_depth_texture)->non_disp_tiling = false;
 	return true;
 }
 
