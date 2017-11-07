@@ -74,20 +74,6 @@ struct ir3_context {
 	/* Compute shader inputs: */
 	struct ir3_instruction *local_invocation_id, *work_group_id;
 
-	/* For SSBO's and atomics, we need to preserve order, such
-	 * that reads don't overtake writes, and the order of writes
-	 * is preserved.  Atomics are considered as a write.
-	 *
-	 * To do this, we track last write and last access, in a
-	 * similar way to ir3_array.  But since we don't know whether
-	 * the same SSBO is bound to multiple slots, so we simply
-	 * track this globally rather than per-SSBO.
-	 *
-	 * TODO should we track this per block instead?  I guess it
-	 * shouldn't matter much?
-	 */
-	struct ir3_instruction *last_write, *last_access;
-
 	/* mapping from nir_register to defining instruction: */
 	struct hash_table *def_ht;
 
@@ -345,6 +331,8 @@ create_array_load(struct ir3_context *ctx, struct ir3_array *arr, int n,
 	mov = ir3_instr_create(block, OPC_MOV);
 	mov->cat1.src_type = TYPE_U32;
 	mov->cat1.dst_type = TYPE_U32;
+	mov->barrier_class = IR3_BARRIER_ARRAY_R;
+	mov->barrier_conflict = IR3_BARRIER_ARRAY_W;
 	ir3_reg_create(mov, 0, 0);
 	src = ir3_reg_create(mov, 0, IR3_REG_ARRAY |
 			COND(address, IR3_REG_RELATIV));
@@ -355,8 +343,6 @@ create_array_load(struct ir3_context *ctx, struct ir3_array *arr, int n,
 
 	if (address)
 		ir3_instr_set_address(mov, address);
-
-	arr->last_access = mov;
 
 	return mov;
 }
@@ -373,9 +359,11 @@ create_array_store(struct ir3_context *ctx, struct ir3_array *arr, int n,
 	mov = ir3_instr_create(block, OPC_MOV);
 	mov->cat1.src_type = TYPE_U32;
 	mov->cat1.dst_type = TYPE_U32;
+	mov->barrier_class = IR3_BARRIER_ARRAY_W;
+	mov->barrier_conflict = IR3_BARRIER_ARRAY_R | IR3_BARRIER_ARRAY_W;
 	dst = ir3_reg_create(mov, 0, IR3_REG_ARRAY |
 			COND(address, IR3_REG_RELATIV));
-	dst->instr = arr->last_access;
+	dst->instr = arr->last_write;
 	dst->size  = arr->length;
 	dst->array.id = arr->id;
 	dst->array.offset = n;
@@ -384,7 +372,7 @@ create_array_store(struct ir3_context *ctx, struct ir3_array *arr, int n,
 	if (address)
 		ir3_instr_set_address(mov, address);
 
-	arr->last_write = arr->last_access = mov;
+	arr->last_write = mov;
 
 	return mov;
 }
@@ -1236,22 +1224,6 @@ emit_intrinsic_load_ubo(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 	}
 }
 
-static void
-mark_read(struct ir3_context *ctx, struct ir3_instruction *instr)
-{
-	instr->regs[0]->instr = ctx->last_write;
-	instr->regs[0]->flags |= IR3_REG_SSA;
-	ctx->last_access = instr;
-}
-
-static void
-mark_write(struct ir3_context *ctx, struct ir3_instruction *instr)
-{
-	instr->regs[0]->instr = ctx->last_access;
-	instr->regs[0]->flags |= IR3_REG_SSA;
-	ctx->last_write = ctx->last_access = instr;
-}
-
 /* src[] = { buffer_index, offset }. No const_index */
 static void
 emit_intrinsic_load_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr,
@@ -1280,7 +1252,8 @@ emit_intrinsic_load_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 	ldgb->cat6.iim_val = intr->num_components;
 	ldgb->cat6.d = 4;
 	ldgb->cat6.type = TYPE_U32;
-	mark_read(ctx, ldgb);
+	ldgb->barrier_class = IR3_BARRIER_BUFFER_R;
+	ldgb->barrier_conflict = IR3_BARRIER_BUFFER_W;
 
 	split_dest(b, dst, ldgb, 0, intr->num_components);
 }
@@ -1320,7 +1293,8 @@ emit_intrinsic_store_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	stgb->cat6.iim_val = ncomp;
 	stgb->cat6.d = 4;
 	stgb->cat6.type = TYPE_U32;
-	mark_write(ctx, stgb);
+	stgb->barrier_class = IR3_BARRIER_BUFFER_W;
+	stgb->barrier_conflict = IR3_BARRIER_BUFFER_R | IR3_BARRIER_BUFFER_W;
 
 	array_insert(b, b->keeps, stgb);
 }
@@ -1430,7 +1404,8 @@ emit_intrinsic_atomic_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	atomic->cat6.iim_val = 1;
 	atomic->cat6.d = 4;
 	atomic->cat6.type = type;
-	mark_write(ctx, atomic);
+	atomic->barrier_class = IR3_BARRIER_BUFFER_W;
+	atomic->barrier_conflict = IR3_BARRIER_BUFFER_R | IR3_BARRIER_BUFFER_W;
 
 	/* even if nothing consume the result, we can't DCE the instruction: */
 	array_insert(b, b->keeps, atomic);
@@ -1455,7 +1430,8 @@ emit_intrinsic_load_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 	ldl->cat6.type = TYPE_U32;
 	ldl->regs[0]->wrmask = MASK(intr->num_components);
 
-	mark_read(ctx, ldl);
+	ldl->barrier_class = IR3_BARRIER_SHARED_R;
+	ldl->barrier_conflict = IR3_BARRIER_SHARED_W;
 
 	split_dest(b, dst, ldl, 0, intr->num_components);
 }
@@ -1491,8 +1467,9 @@ emit_intrinsic_store_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 			create_immed(b, length), 0);
 		stl->cat6.dst_offset = first_component + base;
 		stl->cat6.type = TYPE_U32;
+		stl->barrier_class = IR3_BARRIER_SHARED_W;
+		stl->barrier_conflict = IR3_BARRIER_SHARED_R | IR3_BARRIER_SHARED_W;
 
-		mark_write(ctx, stl);
 		array_insert(b, b->keeps, stl);
 
 		/* Clear the bits in the writemask that we just wrote, then try
@@ -1573,7 +1550,8 @@ emit_intrinsic_atomic_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	atomic->cat6.iim_val = 1;
 	atomic->cat6.d = 1;
 	atomic->cat6.type = type;
-	mark_write(ctx, atomic);
+	atomic->barrier_class = IR3_BARRIER_SHARED_W;
+	atomic->barrier_conflict = IR3_BARRIER_SHARED_R | IR3_BARRIER_SHARED_W;
 
 	/* even if nothing consume the result, we can't DCE the instruction: */
 	array_insert(b, b->keeps, atomic);
@@ -1702,6 +1680,9 @@ emit_intrinsic_load_image(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 	sam = ir3_SAM(b, OPC_ISAM, type, TGSI_WRITEMASK_XYZW, flags,
 			tex_idx, tex_idx, create_collect(b, coords, ncoords), NULL);
 
+	sam->barrier_class = IR3_BARRIER_IMAGE_R;
+	sam->barrier_conflict = IR3_BARRIER_IMAGE_W;
+
 	split_dest(b, dst, sam, 0, 4);
 }
 
@@ -1737,7 +1718,8 @@ emit_intrinsic_store_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	stib->cat6.d = ncoords;
 	stib->cat6.type = get_image_type(var);
 	stib->cat6.typed = true;
-	mark_write(ctx, stib);
+	stib->barrier_class = IR3_BARRIER_IMAGE_W;
+	stib->barrier_conflict = IR3_BARRIER_IMAGE_R | IR3_BARRIER_IMAGE_W;
 
 	array_insert(b, b->keeps, stib);
 }
@@ -1821,7 +1803,8 @@ emit_intrinsic_atomic_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	atomic->cat6.d = ncoords;
 	atomic->cat6.type = get_image_type(var);
 	atomic->cat6.typed = true;
-	mark_write(ctx, atomic);
+	atomic->barrier_class = IR3_BARRIER_IMAGE_W;
+	atomic->barrier_conflict = IR3_BARRIER_IMAGE_R | IR3_BARRIER_IMAGE_W;
 
 	/* even if nothing consume the result, we can't DCE the instruction: */
 	array_insert(b, b->keeps, atomic);
@@ -1841,23 +1824,62 @@ emit_intrinsic_barrier(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 		barrier->cat7.g = true;
 		barrier->cat7.l = true;
 		barrier->flags = IR3_INSTR_SS | IR3_INSTR_SY;
+		barrier->barrier_class = IR3_BARRIER_EVERYTHING;
 		break;
 	case nir_intrinsic_memory_barrier:
+		barrier = ir3_FENCE(b);
+		barrier->cat7.g = true;
+		barrier->cat7.r = true;
+		barrier->cat7.w = true;
+		barrier->barrier_class = IR3_BARRIER_IMAGE_W |
+				IR3_BARRIER_BUFFER_W;
+		barrier->barrier_conflict =
+				IR3_BARRIER_IMAGE_R | IR3_BARRIER_IMAGE_W |
+				IR3_BARRIER_BUFFER_R | IR3_BARRIER_BUFFER_W;
+		break;
 	case nir_intrinsic_memory_barrier_atomic_counter:
 	case nir_intrinsic_memory_barrier_buffer:
 		barrier = ir3_FENCE(b);
 		barrier->cat7.g = true;
 		barrier->cat7.r = true;
 		barrier->cat7.w = true;
+		barrier->barrier_class = IR3_BARRIER_BUFFER_W;
+		barrier->barrier_conflict = IR3_BARRIER_BUFFER_R |
+				IR3_BARRIER_BUFFER_W;
 		break;
-	case nir_intrinsic_group_memory_barrier:
 	case nir_intrinsic_memory_barrier_image:
+		// TODO double check if this should have .g set
+		barrier = ir3_FENCE(b);
+		barrier->cat7.g = true;
+		barrier->cat7.r = true;
+		barrier->cat7.w = true;
+		barrier->barrier_class = IR3_BARRIER_IMAGE_W;
+		barrier->barrier_conflict = IR3_BARRIER_IMAGE_R |
+				IR3_BARRIER_IMAGE_W;
+		break;
 	case nir_intrinsic_memory_barrier_shared:
 		barrier = ir3_FENCE(b);
 		barrier->cat7.g = true;
 		barrier->cat7.l = true;
 		barrier->cat7.r = true;
 		barrier->cat7.w = true;
+		barrier->barrier_class = IR3_BARRIER_SHARED_W;
+		barrier->barrier_conflict = IR3_BARRIER_SHARED_R |
+				IR3_BARRIER_SHARED_W;
+		break;
+	case nir_intrinsic_group_memory_barrier:
+		barrier = ir3_FENCE(b);
+		barrier->cat7.g = true;
+		barrier->cat7.l = true;
+		barrier->cat7.r = true;
+		barrier->cat7.w = true;
+		barrier->barrier_class = IR3_BARRIER_SHARED_W |
+				IR3_BARRIER_IMAGE_W |
+				IR3_BARRIER_BUFFER_W;
+		barrier->barrier_conflict =
+				IR3_BARRIER_SHARED_R | IR3_BARRIER_SHARED_W |
+				IR3_BARRIER_IMAGE_R | IR3_BARRIER_IMAGE_W |
+				IR3_BARRIER_BUFFER_R | IR3_BARRIER_BUFFER_W;
 		break;
 	default:
 		unreachable("boo");
@@ -3300,6 +3322,8 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 		printf("BEFORE GROUPING:\n");
 		ir3_print(ir);
 	}
+
+	ir3_sched_add_deps(ir);
 
 	/* Group left/right neighbors, inserting mov's where needed to
 	 * solve conflicts:

@@ -326,6 +326,40 @@ struct ir3_instruction {
 	 */
 	struct ir3_instruction *address;
 
+	/* Tracking for additional dependent instructions.  Used to handle
+	 * barriers, WAR hazards for arrays/SSBOs/etc.
+	 */
+	DECLARE_ARRAY(struct ir3_instruction *, deps);
+
+	/*
+	 * From PoV of instruction scheduling, not execution (ie. ignores global/
+	 * local distinction):
+	 *                            shared  image  atomic  SSBO  everything
+	 *   barrier()/            -   R/W     R/W    R/W     R/W       X
+	 *     groupMemoryBarrier()
+	 *   memoryBarrier()       -           R/W    R/W
+	 *     (but only images declared coherent?)
+	 *   memoryBarrierAtomic() -                  R/W
+	 *   memoryBarrierBuffer() -                          R/W
+	 *   memoryBarrierImage()  -           R/W
+	 *   memoryBarrierShared() -   R/W
+	 *
+	 * TODO I think for SSBO/image/shared, in cases where we can determine
+	 * which variable is accessed, we don't need to care about accesses to
+	 * different variables (unless declared coherent??)
+	 */
+	enum {
+		IR3_BARRIER_EVERYTHING = 1 << 0,
+		IR3_BARRIER_SHARED_R   = 1 << 1,
+		IR3_BARRIER_SHARED_W   = 1 << 2,
+		IR3_BARRIER_IMAGE_R    = 1 << 3,
+		IR3_BARRIER_IMAGE_W    = 1 << 4,
+		IR3_BARRIER_BUFFER_R   = 1 << 5,
+		IR3_BARRIER_BUFFER_W   = 1 << 6,
+		IR3_BARRIER_ARRAY_R    = 1 << 7,
+		IR3_BARRIER_ARRAY_W    = 1 << 8,
+	} barrier_class, barrier_conflict;
+
 	/* Entry in ir3_block's instruction list: */
 	struct list_head node;
 
@@ -417,16 +451,13 @@ struct ir3_array {
 
 	nir_register *r;
 
-	/* We track the last write and last access (read or write) to
-	 * setup dependencies on instructions that read or write the
-	 * array.  Reads can be re-ordered wrt. other reads, but should
-	 * not be re-ordered wrt. to writes.  Writes cannot be reordered
-	 * wrt. any other access to the array.
-	 *
-	 * So array reads depend on last write, and array writes depend
-	 * on the last access.
+	/* To avoid array write's from getting DCE'd, keep track of the
+	 * most recent write.  Any array access depends on the most
+	 * recent write.  This way, nothing depends on writes after the
+	 * last read.  But all the writes that happen before that have
+	 * something depending on them
 	 */
-	struct ir3_instruction *last_write, *last_access;
+	struct ir3_instruction *last_write;
 
 	/* extra stuff used in RA pass: */
 	unsigned base;      /* base vreg name */
@@ -493,6 +524,7 @@ struct ir3_instruction * ir3_instr_create(struct ir3_block *block, opc_t opc);
 struct ir3_instruction * ir3_instr_create2(struct ir3_block *block,
 		opc_t opc, int nreg);
 struct ir3_instruction * ir3_instr_clone(struct ir3_instruction *instr);
+void ir3_instr_add_dep(struct ir3_instruction *instr, struct ir3_instruction *dep);
 const char *ir3_instr_name(struct ir3_instruction *instr);
 
 struct ir3_register * ir3_reg_create(struct ir3_instruction *instr,
@@ -907,25 +939,36 @@ static inline unsigned ir3_cat3_absneg(opc_t opc)
 
 static inline unsigned __ssa_src_cnt(struct ir3_instruction *instr)
 {
+	unsigned cnt = instr->regs_count + instr->deps_count;
 	if (instr->address)
-		return instr->regs_count + 1;
-	return instr->regs_count;
+		cnt++;
+	return cnt;
 }
 
 static inline struct ir3_instruction * __ssa_src_n(struct ir3_instruction *instr, unsigned n)
 {
-	if (n == (instr->regs_count + 0))
+	if (n == (instr->regs_count + instr->deps_count))
 		return instr->address;
+	if (n >= instr->regs_count)
+		return instr->deps[n - instr->regs_count];
 	return ssa(instr->regs[n]);
+}
+
+static inline bool __is_false_dep(struct ir3_instruction *instr, unsigned n)
+{
+	if (n == (instr->regs_count + instr->deps_count))
+		return false;
+	if (n >= instr->regs_count)
+		return true;
+	return false;
 }
 
 #define __src_cnt(__instr) ((__instr)->address ? (__instr)->regs_count : (__instr)->regs_count - 1)
 
 /* iterator for an instruction's SSA sources (instr), also returns src #: */
 #define foreach_ssa_src_n(__srcinst, __n, __instr) \
-	if ((__instr)->regs_count) \
-		for (unsigned __cnt = __ssa_src_cnt(__instr), __n = 0; __n < __cnt; __n++) \
-			if ((__srcinst = __ssa_src_n(__instr, __n)))
+	for (unsigned __cnt = __ssa_src_cnt(__instr), __n = 0; __n < __cnt; __n++) \
+		if ((__srcinst = __ssa_src_n(__instr, __n)))
 
 /* iterator for an instruction's SSA sources (instr): */
 #define foreach_ssa_src(__srcinst, __instr) \
@@ -950,6 +993,7 @@ void ir3_cp(struct ir3 *ir, struct ir3_shader_variant *so);
 void ir3_group(struct ir3 *ir);
 
 /* scheduling: */
+void ir3_sched_add_deps(struct ir3 *ir);
 int ir3_sched(struct ir3 *ir);
 
 /* register assignment: */

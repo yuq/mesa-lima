@@ -817,6 +817,12 @@ struct ir3_instruction * ir3_instr_clone(struct ir3_instruction *instr)
 	return new_instr;
 }
 
+/* Add a false dependency to instruction, to ensure it is scheduled first: */
+void ir3_instr_add_dep(struct ir3_instruction *instr, struct ir3_instruction *dep)
+{
+	array_insert(instr, instr->deps, dep);
+}
+
 struct ir3_register * ir3_reg_create(struct ir3_instruction *instr,
 		int num, int flags)
 {
