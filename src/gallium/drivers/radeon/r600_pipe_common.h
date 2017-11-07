@@ -300,16 +300,16 @@ struct r600_surface {
 	struct pipe_surface		base;
 
 	/* These can vary with block-compressed textures. */
-	unsigned width0;
-	unsigned height0;
+	uint16_t width0;
+	uint16_t height0;
 
-	bool color_initialized;
-	bool depth_initialized;
+	bool color_initialized:1;
+	bool depth_initialized:1;
 
 	/* Misc. color flags. */
-	bool color_is_int8;
-	bool color_is_int10;
-	bool dcc_incompatible;
+	bool color_is_int8:1;
+	bool color_is_int10:1;
+	bool dcc_incompatible:1;
 
 	/* Color registers. */
 	unsigned cb_color_info;
@@ -317,10 +317,10 @@ struct r600_surface {
 	unsigned cb_color_attrib;
 	unsigned cb_color_attrib2;	/* GFX9 and later */
 	unsigned cb_dcc_control;	/* VI and later */
-	unsigned spi_shader_col_format;		/* no blending, no alpha-to-coverage. */
-	unsigned spi_shader_col_format_alpha;	/* alpha-to-coverage */
-	unsigned spi_shader_col_format_blend;	/* blending without alpha. */
-	unsigned spi_shader_col_format_blend_alpha; /* blending with alpha. */
+	unsigned spi_shader_col_format:8;	/* no blending, no alpha-to-coverage. */
+	unsigned spi_shader_col_format_alpha:8;	/* alpha-to-coverage */
+	unsigned spi_shader_col_format_blend:8;	/* blending without alpha. */
+	unsigned spi_shader_col_format_blend_alpha:8; /* blending with alpha. */
 
 	/* DB registers. */
 	uint64_t db_depth_base;		/* DB_Z_READ/WRITE_BASE */
