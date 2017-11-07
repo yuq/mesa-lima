@@ -180,7 +180,21 @@ static void radeon_enc_end_frame(struct pipe_video_codec *encoder,
 
 static void radeon_enc_destroy(struct pipe_video_codec *encoder)
 {
-	/* TODO*/
+	struct radeon_encoder *enc = (struct radeon_encoder*)encoder;
+
+	if (enc->stream_handle) {
+		struct rvid_buffer fb;
+		enc->need_feedback = false;
+		si_vid_create_buffer(enc->screen, &fb, 512, PIPE_USAGE_STAGING);
+		enc->fb = &fb;
+		enc->destroy(enc);
+		flush(enc);
+		si_vid_destroy_buffer(&fb);
+	}
+
+	si_vid_destroy_buffer(&enc->cpb);
+	enc->ws->cs_destroy(enc->cs);
+	FREE(enc);
 }
 
 static void radeon_enc_get_feedback(struct pipe_video_codec *encoder,
