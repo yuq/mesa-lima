@@ -155,7 +155,7 @@ si_create_llvm_target_machine(struct si_screen *sscreen)
 		 sscreen->b.debug_flags & DBG(SI_SCHED) ? ",+si-scheduler" : "");
 
 	return LLVMCreateTargetMachine(ac_get_llvm_target(triple), triple,
-				       si_get_llvm_processor_name(sscreen->b.family),
+				       ac_get_llvm_processor_name(sscreen->b.family),
 				       features,
 				       LLVMCodeGenLevelDefault,
 				       LLVMRelocDefault,
@@ -907,7 +907,7 @@ static void si_handle_env_var_force_family(struct si_screen *sscreen)
 		return;
 
 	for (i = CHIP_TAHITI; i < CHIP_LAST; i++) {
-		if (!strcmp(family, si_get_llvm_processor_name(i))) {
+		if (!strcmp(family, ac_get_llvm_processor_name(i))) {
 			/* Override family and chip_class. */
 			sscreen->b.family = sscreen->b.info.family = i;
 

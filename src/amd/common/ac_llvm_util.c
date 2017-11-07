@@ -74,7 +74,7 @@ LLVMTargetRef ac_get_llvm_target(const char *triple)
 	return target;
 }
 
-static const char *ac_get_llvm_processor_name(enum radeon_family family)
+const char *ac_get_llvm_processor_name(enum radeon_family family)
 {
 	switch (family) {
 	case CHIP_TAHITI:

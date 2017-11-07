@@ -33,6 +33,7 @@
 #include "vl/vl_decoder.h"
 #include "vl/vl_video_buffer.h"
 #include "radeon/radeon_video.h"
+#include "amd/common/ac_llvm_util.h"
 #include "amd/common/sid.h"
 #include <inttypes.h>
 #include <sys/utsname.h>
@@ -996,40 +997,6 @@ static int r600_get_video_param(struct pipe_screen *screen,
 	}
 }
 
-const char *si_get_llvm_processor_name(enum radeon_family family)
-{
-	switch (family) {
-	case CHIP_TAHITI: return "tahiti";
-	case CHIP_PITCAIRN: return "pitcairn";
-	case CHIP_VERDE: return "verde";
-	case CHIP_OLAND: return "oland";
-	case CHIP_HAINAN: return "hainan";
-	case CHIP_BONAIRE: return "bonaire";
-	case CHIP_KABINI: return "kabini";
-	case CHIP_KAVERI: return "kaveri";
-	case CHIP_HAWAII: return "hawaii";
-	case CHIP_MULLINS:
-		return "mullins";
-	case CHIP_TONGA: return "tonga";
-	case CHIP_ICELAND: return "iceland";
-	case CHIP_CARRIZO: return "carrizo";
-	case CHIP_FIJI:
-		return "fiji";
-	case CHIP_STONEY:
-		return "stoney";
-	case CHIP_POLARIS10:
-		return "polaris10";
-	case CHIP_POLARIS11:
-	case CHIP_POLARIS12: /* same as polaris11 */
-		return "polaris11";
-	case CHIP_VEGA10:
-	case CHIP_RAVEN:
-		return "gfx900";
-	default:
-		return "";
-	}
-}
-
 static unsigned get_max_threads_per_block(struct r600_common_screen *screen,
 					  enum pipe_shader_ir ir_type)
 {
@@ -1064,7 +1031,7 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 		else
 			triple = "amdgcn-mesa-mesa3d";
 
-		gpu = si_get_llvm_processor_name(rscreen->family);
+		gpu = ac_get_llvm_processor_name(rscreen->family);
 		if (ret) {
 			sprintf(ret, "%s-%s", gpu, triple);
 		}

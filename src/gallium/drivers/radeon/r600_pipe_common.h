@@ -717,7 +717,6 @@ void si_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_reso
 			    uint64_t offset, uint64_t size, unsigned value);
 struct pipe_resource *si_resource_create_common(struct pipe_screen *screen,
 						const struct pipe_resource *templ);
-const char *si_get_llvm_processor_name(enum radeon_family family);
 void si_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 		       struct r600_resource *dst, struct r600_resource *src);
 void si_save_cs(struct radeon_winsys *ws, struct radeon_winsys_cs *cs,
