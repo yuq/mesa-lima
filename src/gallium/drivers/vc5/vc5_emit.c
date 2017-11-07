@@ -437,7 +437,7 @@ vc5_emit_state(struct pipe_context *pctx)
                         cl_emit_with_prepacked(&job->bcl, STENCIL_CONFIG,
                                                vc5->zsa->stencil_front, config) {
                                 config.stencil_ref_value =
-                                        vc5->stencil_ref.ref_value[1];
+                                        vc5->stencil_ref.ref_value[0];
                         }
                 }
 
