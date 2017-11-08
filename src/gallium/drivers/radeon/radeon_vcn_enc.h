@@ -322,4 +322,86 @@ typedef struct rvcn_enc_feedback_buffer_s
     uint32_t	feedback_data_size;
 } rvcn_enc_feedback_buffer_t;
 
+typedef void (*radeon_enc_get_buffer)(struct pipe_resource *resource,
+		struct pb_buffer **handle,
+		struct radeon_surf **surface);
+
+struct pipe_video_codec *radeon_create_encoder(struct pipe_context *context,
+		const struct pipe_video_codec *templat,
+		struct radeon_winsys* ws,
+		radeon_enc_get_buffer get_buffer);
+
+struct radeon_enc_h264_enc_pic {
+	enum	pipe_h264_enc_picture_type picture_type;
+
+	unsigned	frame_num;
+	unsigned	pic_order_cnt;
+	unsigned	pic_order_cnt_type;
+	unsigned	ref_idx_l0;
+	unsigned	ref_idx_l1;
+	unsigned	crop_left;
+	unsigned	crop_right;
+	unsigned	crop_top;
+	unsigned	crop_bottom;
+
+	bool	not_referenced;
+	bool	is_idr;
+
+	rvcn_enc_task_info_t	task_info;
+	rvcn_enc_session_init_t	session_init;
+	rvcn_enc_layer_control_t	layer_ctrl;
+	rvcn_enc_layer_select_t	layer_sel;
+	rvcn_enc_h264_slice_control_t	slice_ctrl;
+	rvcn_enc_h264_spec_misc_t	spec_misc;
+	rvcn_enc_rate_ctl_session_init_t	rc_session_init;
+	rvcn_enc_rate_ctl_layer_init_t	rc_layer_init;
+	rvcn_enc_h264_encode_params_t	h264_enc_params;
+	rvcn_enc_h264_deblocking_filter_t	h264_deblock;
+	rvcn_enc_rate_ctl_per_picture_t	rc_per_pic;
+	rvcn_enc_quality_params_t	quality_params;
+	rvcn_enc_encode_context_buffer_t	ctx_buf;
+	rvcn_enc_video_bitstream_buffer_t	bit_buf;
+	rvcn_enc_feedback_buffer_t	fb_buf;
+	rvcn_enc_intra_refresh_t	intra_ref;
+	rvcn_enc_encode_params_t	enc_params;
+};
+
+struct radeon_encoder {
+	struct pipe_video_codec		base;
+
+	void (*begin)(struct radeon_encoder *enc, struct pipe_h264_enc_picture_desc *pic);
+	void (*encode)(struct radeon_encoder *enc);
+	void (*destroy)(struct radeon_encoder *enc);
+
+	unsigned			stream_handle;
+
+	struct pipe_screen		*screen;
+	struct radeon_winsys*		ws;
+	struct radeon_winsys_cs*	cs;
+
+	radeon_enc_get_buffer			get_buffer;
+
+	struct pb_buffer*	handle;
+	struct radeon_surf*		luma;
+	struct radeon_surf*		chroma;
+
+	struct pb_buffer*	bs_handle;
+	unsigned			bs_size;
+
+	unsigned			cpb_num;
+
+	struct rvid_buffer		*si;
+	struct rvid_buffer		*fb;
+	struct rvid_buffer		cpb;
+	struct radeon_enc_h264_enc_pic	enc_pic;
+
+	unsigned			alignment;
+	uint32_t			total_task_size;
+	uint32_t*			p_task_size;
+
+	bool				need_feedback;
+};
+
+void radeon_enc_1_2_init(struct radeon_encoder *enc);
+
 #endif  // _RADEON_VCN_ENC_H
