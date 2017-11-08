@@ -2894,27 +2894,29 @@ load_tes_input(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef
-load_gs_input(struct nir_to_llvm_context *ctx,
-	      nir_intrinsic_instr *instr)
+load_gs_input(struct ac_shader_abi *abi,
+	      unsigned location,
+	      unsigned driver_location,
+	      unsigned component,
+	      unsigned num_components,
+	      unsigned vertex_index,
+	      unsigned const_index,
+	      LLVMTypeRef type)
 {
-	LLVMValueRef indir_index, vtx_offset;
-	unsigned const_index;
+	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
+	LLVMValueRef vtx_offset;
 	LLVMValueRef args[9];
 	unsigned param, vtx_offset_param;
 	LLVMValueRef value[4], result;
-	unsigned vertex_index;
-	get_deref_offset(ctx->nir, instr->variables[0],
-			 false, &vertex_index, NULL,
-			 &const_index, &indir_index);
+
 	vtx_offset_param = vertex_index;
 	assert(vtx_offset_param < 6);
 	vtx_offset = LLVMBuildMul(ctx->builder, ctx->gs_vtx_offset[vtx_offset_param],
 				  LLVMConstInt(ctx->ac.i32, 4, false), "");
 
-	param = shader_io_get_unique_index(instr->variables[0]->var->data.location);
+	param = shader_io_get_unique_index(location);
 
-	unsigned comp = instr->variables[0]->var->data.location_frac;
-	for (unsigned i = comp; i < instr->num_components + comp; i++) {
+	for (unsigned i = component; i < num_components + component; i++) {
 		if (ctx->ac.chip_class >= GFX9) {
 			LLVMValueRef dw_addr = ctx->gs_vtx_offset[vtx_offset_param];
 			dw_addr = LLVMBuildAdd(ctx->ac.builder, dw_addr,
@@ -2937,7 +2939,7 @@ load_gs_input(struct nir_to_llvm_context *ctx,
 			                              AC_FUNC_ATTR_LEGACY);
 		}
 	}
-	result = ac_build_varying_gather_values(&ctx->ac, value, instr->num_components, comp);
+	result = ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
 
 	return result;
 }
@@ -3006,7 +3008,16 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 		if (ctx->stage == MESA_SHADER_TESS_EVAL)
 			return load_tes_input(ctx->nctx, instr);
 		if (ctx->stage == MESA_SHADER_GEOMETRY) {
-			return load_gs_input(ctx->nctx, instr);
+				LLVMValueRef indir_index;
+				unsigned const_index, vertex_index;
+				get_deref_offset(ctx, instr->variables[0],
+						 false, &vertex_index, NULL,
+						 &const_index, &indir_index);
+			return ctx->abi->load_inputs(ctx->abi, instr->variables[0]->var->data.location,
+						     instr->variables[0]->var->data.driver_location,
+						     instr->variables[0]->var->data.location_frac, ve,
+						     vertex_index, const_index,
+						     nir2llvmtype(ctx, instr->variables[0]->var->type));
 		}
 
 		for (unsigned chan = comp; chan < ve + comp; chan++) {
@@ -6560,8 +6571,8 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 
 		if (shaders[i]->info.stage == MESA_SHADER_GEOMETRY) {
 			ctx.gs_next_vertex = ac_build_alloca(&ctx.ac, ctx.ac.i32, "gs_next_vertex");
-
 			ctx.gs_max_out_vertices = shaders[i]->info.gs.vertices_out;
+			ctx.abi.load_inputs = load_gs_input;
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_CTRL) {
 			ctx.tcs_outputs_read = shaders[i]->info.outputs_read;
 			ctx.tcs_patch_outputs_read = shaders[i]->info.patch_outputs_read;

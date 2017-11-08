@@ -5800,6 +5800,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_gs;
+		ctx->abi.load_inputs = si_nir_load_input_gs;
 		ctx->abi.emit_vertex = si_llvm_emit_vertex;
 		ctx->abi.emit_outputs = si_llvm_emit_gs_epilogue;
 		bld_base->emit_epilogue = si_tgsi_emit_gs_epilogue;
