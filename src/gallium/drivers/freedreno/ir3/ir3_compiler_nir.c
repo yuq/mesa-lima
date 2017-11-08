@@ -1356,33 +1356,33 @@ emit_intrinsic_atomic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 
 	switch (intr->intrinsic) {
 	case nir_intrinsic_ssbo_atomic_add:
-		atomic = ir3_ATOMIC_ADD(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		atomic = ir3_ATOMIC_ADD_G(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
 		break;
 	case nir_intrinsic_ssbo_atomic_imin:
-		atomic = ir3_ATOMIC_MIN(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		atomic = ir3_ATOMIC_MIN_G(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
 		type = TYPE_S32;
 		break;
 	case nir_intrinsic_ssbo_atomic_umin:
-		atomic = ir3_ATOMIC_MIN(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		atomic = ir3_ATOMIC_MIN_G(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
 		break;
 	case nir_intrinsic_ssbo_atomic_imax:
-		atomic = ir3_ATOMIC_MAX(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		atomic = ir3_ATOMIC_MAX_G(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
 		type = TYPE_S32;
 		break;
 	case nir_intrinsic_ssbo_atomic_umax:
-		atomic = ir3_ATOMIC_MAX(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		atomic = ir3_ATOMIC_MAX_G(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
 		break;
 	case nir_intrinsic_ssbo_atomic_and:
-		atomic = ir3_ATOMIC_AND(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		atomic = ir3_ATOMIC_AND_G(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
 		break;
 	case nir_intrinsic_ssbo_atomic_or:
-		atomic = ir3_ATOMIC_OR(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		atomic = ir3_ATOMIC_OR_G(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
 		break;
 	case nir_intrinsic_ssbo_atomic_xor:
-		atomic = ir3_ATOMIC_XOR(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		atomic = ir3_ATOMIC_XOR_G(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
 		break;
 	case nir_intrinsic_ssbo_atomic_exchange:
-		atomic = ir3_ATOMIC_XCHG(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		atomic = ir3_ATOMIC_XCHG_G(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
 		break;
 	case nir_intrinsic_ssbo_atomic_comp_swap:
 		/* for cmpxchg, src0 is [ui]vec2(data, compare): */
@@ -1390,7 +1390,7 @@ emit_intrinsic_atomic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 			src0,
 			get_src(ctx, &intr->src[3])[0],
 		}, 2);
-		atomic = ir3_ATOMIC_CMPXCHG(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
+		atomic = ir3_ATOMIC_CMPXCHG_G(b, ssbo, 0, src0, 0, src1, 0, src2, 0);
 		break;
 	default:
 		unreachable("boo");

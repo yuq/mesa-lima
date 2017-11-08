@@ -1068,11 +1068,30 @@ ir3_##name(struct ir3_block *block,                                      \
 	return instr;                                                        \
 }
 
+#define INSTR4F(f, name)                                                 \
+static inline struct ir3_instruction *                                   \
+ir3_##name##_##f(struct ir3_block *block,                                \
+		struct ir3_instruction *a, unsigned aflags,                      \
+		struct ir3_instruction *b, unsigned bflags,                      \
+		struct ir3_instruction *c, unsigned cflags,                      \
+		struct ir3_instruction *d, unsigned dflags)                      \
+{                                                                        \
+	struct ir3_instruction *instr =                                      \
+		ir3_instr_create2(block, OPC_##name, 5);                         \
+	ir3_reg_create(instr, 0, 0);   /* dst */                             \
+	ir3_reg_create(instr, 0, IR3_REG_SSA | aflags)->instr = a;           \
+	ir3_reg_create(instr, 0, IR3_REG_SSA | bflags)->instr = b;           \
+	ir3_reg_create(instr, 0, IR3_REG_SSA | cflags)->instr = c;           \
+	ir3_reg_create(instr, 0, IR3_REG_SSA | dflags)->instr = d;           \
+	instr->flags |= IR3_INSTR_##f;                                       \
+	return instr;                                                        \
+}
+
 /* cat0 instructions: */
-INSTR0(BR);
-INSTR0(JUMP);
-INSTR1(KILL);
-INSTR0(END);
+INSTR0(BR)
+INSTR0(JUMP)
+INSTR1(KILL)
+INSTR0(END)
 
 /* cat2 instructions, most 2 src but some 1 src: */
 INSTR2(ADD_F)
@@ -1184,24 +1203,40 @@ ir3_SAM(struct ir3_block *block, opc_t opc, type_t type,
 /* cat6 instructions: */
 INSTR2(LDLV)
 INSTR2(LDG)
+INSTR2(LDL)
 INSTR3(STG)
-INSTR3(LDGB);
-INSTR4(STGB);
-INSTR4(ATOMIC_ADD);
-INSTR4(ATOMIC_SUB);
-INSTR4(ATOMIC_XCHG);
-INSTR4(ATOMIC_INC);
-INSTR4(ATOMIC_DEC);
-INSTR4(ATOMIC_CMPXCHG);
-INSTR4(ATOMIC_MIN);
-INSTR4(ATOMIC_MAX);
-INSTR4(ATOMIC_AND);
-INSTR4(ATOMIC_OR);
-INSTR4(ATOMIC_XOR);
+INSTR3(STL)
+INSTR3(LDGB)
+INSTR4(STGB)
+INSTR4(STIB)
+INSTR1(RESINFO)
+INSTR1(RESFMT)
+INSTR2(ATOMIC_ADD)
+INSTR2(ATOMIC_SUB)
+INSTR2(ATOMIC_XCHG)
+INSTR2(ATOMIC_INC)
+INSTR2(ATOMIC_DEC)
+INSTR2(ATOMIC_CMPXCHG)
+INSTR2(ATOMIC_MIN)
+INSTR2(ATOMIC_MAX)
+INSTR2(ATOMIC_AND)
+INSTR2(ATOMIC_OR)
+INSTR2(ATOMIC_XOR)
+INSTR4F(G, ATOMIC_ADD)
+INSTR4F(G, ATOMIC_SUB)
+INSTR4F(G, ATOMIC_XCHG)
+INSTR4F(G, ATOMIC_INC)
+INSTR4F(G, ATOMIC_DEC)
+INSTR4F(G, ATOMIC_CMPXCHG)
+INSTR4F(G, ATOMIC_MIN)
+INSTR4F(G, ATOMIC_MAX)
+INSTR4F(G, ATOMIC_AND)
+INSTR4F(G, ATOMIC_OR)
+INSTR4F(G, ATOMIC_XOR)
 
 /* cat7 instructions: */
-INSTR0(BAR);
-INSTR0(FENCE);
+INSTR0(BAR)
+INSTR0(FENCE)
 
 /* ************************************************************************* */
 /* split this out or find some helper to use.. like main/bitset.h.. */
