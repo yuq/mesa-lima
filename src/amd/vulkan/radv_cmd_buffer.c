@@ -660,6 +660,14 @@ radv_emit_graphics_raster_state(struct radv_cmd_buffer *cmd_buffer,
 			       raster->pa_su_sc_mode_cntl);
 }
 
+static inline void
+radv_emit_prefetch_TC_L2_async(struct radv_cmd_buffer *cmd_buffer, uint64_t va,
+			       unsigned size)
+{
+	if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK)
+		si_cp_dma_prefetch(cmd_buffer, va, size);
+}
+
 static void
 radv_emit_shader_prefetch(struct radv_cmd_buffer *cmd_buffer,
 			  struct radv_shader_variant *shader)
@@ -674,8 +682,7 @@ radv_emit_shader_prefetch(struct radv_cmd_buffer *cmd_buffer,
 	va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
 
 	radv_cs_add_buffer(ws, cs, shader->bo, 8);
-	if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK)
-		si_cp_dma_prefetch(cmd_buffer, va, shader->code_size);
+	radv_emit_prefetch_TC_L2_async(cmd_buffer, va, shader->code_size);
 }
 
 static void
