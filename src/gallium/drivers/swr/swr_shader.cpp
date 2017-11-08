@@ -1238,7 +1238,7 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
 
          // peform a gather to grab stipple words for each lane
          Value *vStipple = GATHERDD(VUNDEF_I(), stipplePtr, vYstipple,
-                                    VIMMED1(0xffffffff), C((char)4));
+                                    VIMMED1(0xffffffff), 4);
 
          // create a mask with one bit corresponding to the x stipple
          // and AND it with the pattern, to see if we have a bit

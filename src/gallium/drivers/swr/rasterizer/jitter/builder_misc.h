@@ -112,15 +112,15 @@ Value *MASKLOADD(Value* src, Value* mask);
 void Gather4(const SWR_FORMAT format, Value* pSrcBase, Value* byteOffsets,
                       Value* mask, Value* vGatherComponents[], bool bPackedOutput);
 
-Value *GATHERPS(Value* src, Value* pBase, Value* indices, Value* mask, Value* scale);
+Value *GATHERPS(Value* src, Value* pBase, Value* indices, Value* mask, uint8_t scale = 1);
 void GATHER4PS(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
                Value* mask, Value* vGatherComponents[], bool bPackedOutput);
 
-Value *GATHERDD(Value* src, Value* pBase, Value* indices, Value* mask, Value* scale);
+Value *GATHERDD(Value* src, Value* pBase, Value* indices, Value* mask, uint8_t scale = 1);
 void GATHER4DD(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
                Value* mask, Value* vGatherComponents[], bool bPackedOutput);
 
-Value *GATHERPD(Value* src, Value* pBase, Value* indices, Value* mask, Value* scale);
+Value *GATHERPD(Value* src, Value* pBase, Value* indices, Value* mask, uint8_t scale = 1);
 
 void SCATTERPS(Value* pDst, Value* vSrc, Value* vOffsets, Value* vMask);
 
