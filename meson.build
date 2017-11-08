@@ -661,10 +661,11 @@ llvm_modules = ['bitwriter', 'engine', 'mcdisassembler', 'mcjit']
 if with_amd_vk
   llvm_modules += ['amdgpu', 'bitreader', 'ipo']
 endif
-dep_llvm = dependency(
-  'llvm', version : '>= 3.9.0', required : with_amd_vk, modules : llvm_modules,
-)
+dep_llvm = []
 if with_llvm
+  dep_llvm = dependency(
+    'llvm', version : '>= 3.9.0', required : with_amd_vk, modules : llvm_modules,
+  )
   if dep_llvm.found()
     _llvm_version = dep_llvm.version().split('.')
     # Development versions of LLVM have an 'svn' suffix, we don't want that for
