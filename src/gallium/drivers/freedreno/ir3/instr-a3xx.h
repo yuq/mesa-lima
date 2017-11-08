@@ -647,8 +647,11 @@ typedef struct PACKED {
 	uint32_t pad0     : 15;
 } instr_cat6d_t;
 
-/* ldgb and atomics.. atomics use 3rd src and pad0=1, pad3=3.  For
- * ldgb pad0=0, pad3=2
+/* ldgb and atomics..
+ *
+ * ldgb:      pad0=0, pad3=1
+ * atomic .g: pad0=1, pad3=1
+ *        .l: pad0=1, pad3=0
  */
 typedef struct PACKED {
 	/* dword0: */
@@ -667,7 +670,8 @@ typedef struct PACKED {
 	uint32_t mustbe0  : 1;
 	uint32_t src_ssbo : 8;
 	uint32_t pad2     : 3;  // type
-	uint32_t pad3     : 2;
+	uint32_t g        : 1;
+	uint32_t pad3     : 1;
 	uint32_t pad4     : 10; // opc/jmp_tgt/sync/opc_cat
 } instr_cat6ldgb_t;
 
@@ -816,6 +820,20 @@ static inline bool is_atomic(opc_t opc)
 	case OPC_ATOMIC_AND:
 	case OPC_ATOMIC_OR:
 	case OPC_ATOMIC_XOR:
+		return true;
+	default:
+		return false;
+	}
+}
+
+static inline bool is_ssbo(opc_t opc)
+{
+	switch (opc) {
+	case OPC_RESFMT:
+	case OPC_RESINFO:
+	case OPC_LDGB:
+	case OPC_STGB:
+	case OPC_STIB:
 		return true;
 	default:
 		return false;

@@ -226,7 +226,9 @@ struct ir3_instruction {
 			type_t type;
 			int src_offset;
 			int dst_offset;
-			int iim_val;          /* for ldgb/stgb, # of components */
+			int iim_val : 3;      /* for ldgb/stgb, # of components */
+			int d : 3;
+			bool typed : 1;
 		} cat6;
 		struct {
 			unsigned w : 1;       /* write */
@@ -631,6 +633,7 @@ is_store(struct ir3_instruction *instr)
 	switch (instr->opc) {
 	case OPC_STG:
 	case OPC_STGB:
+	case OPC_STIB:
 	case OPC_STP:
 	case OPC_STL:
 	case OPC_STLW:
