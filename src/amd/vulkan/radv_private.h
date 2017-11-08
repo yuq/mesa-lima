@@ -809,7 +809,12 @@ struct radv_attachment_state {
 };
 
 struct radv_cmd_state {
+	/* Vertex descriptors */
 	bool                                          vb_dirty;
+	bool                                          vb_prefetch_dirty;
+	uint64_t                                      vb_va;
+	unsigned                                      vb_size;
+
 	bool                                          push_descriptors_dirty;
 	bool predicating;
 	radv_cmd_dirty_mask_t                         dirty;

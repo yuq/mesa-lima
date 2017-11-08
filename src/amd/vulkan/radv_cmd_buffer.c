@@ -669,6 +669,17 @@ radv_emit_prefetch_TC_L2_async(struct radv_cmd_buffer *cmd_buffer, uint64_t va,
 }
 
 static void
+radv_emit_VBO_descriptors_prefetch(struct radv_cmd_buffer *cmd_buffer)
+{
+	if (cmd_buffer->state.vb_prefetch_dirty) {
+		radv_emit_prefetch_TC_L2_async(cmd_buffer,
+					       cmd_buffer->state.vb_va,
+					       cmd_buffer->state.vb_size);
+		cmd_buffer->state.vb_prefetch_dirty = false;
+	}
+}
+
+static void
 radv_emit_shader_prefetch(struct radv_cmd_buffer *cmd_buffer,
 			  struct radv_shader_variant *shader)
 {
@@ -691,6 +702,7 @@ radv_emit_prefetch(struct radv_cmd_buffer *cmd_buffer,
 {
 	radv_emit_shader_prefetch(cmd_buffer,
 				  pipeline->shaders[MESA_SHADER_VERTEX]);
+	radv_emit_VBO_descriptors_prefetch(cmd_buffer);
 	radv_emit_shader_prefetch(cmd_buffer,
 				  pipeline->shaders[MESA_SHADER_TESS_CTRL]);
 	radv_emit_shader_prefetch(cmd_buffer,
@@ -1814,6 +1826,10 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer, bo
 
 		radv_emit_userdata_address(cmd_buffer, cmd_buffer->state.pipeline, MESA_SHADER_VERTEX,
 					   AC_UD_VS_VERTEX_BUFFERS, va);
+
+		cmd_buffer->state.vb_va = va;
+		cmd_buffer->state.vb_size = count * 16;
+		cmd_buffer->state.vb_prefetch_dirty = true;
 	}
 	cmd_buffer->state.vb_dirty = false;
 
