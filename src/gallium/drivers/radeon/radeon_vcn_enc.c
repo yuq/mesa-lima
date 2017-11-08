@@ -221,5 +221,85 @@ struct pipe_video_codec *radeon_create_encoder(struct pipe_context *context,
 		struct radeon_winsys* ws,
 		radeon_enc_get_buffer get_buffer)
 {
-	/* TODO*/
+	struct r600_common_screen *rscreen = (struct r600_common_screen *)context->screen;
+	struct r600_common_context *rctx = (struct r600_common_context*)context;
+	struct radeon_encoder *enc;
+	struct pipe_video_buffer *tmp_buf, templat = {};
+	struct radeon_surf *tmp_surf;
+	unsigned cpb_size;
+
+	enc = CALLOC_STRUCT(radeon_encoder);
+
+	if (!enc)
+		return NULL;
+
+	enc->alignment = 256;
+	enc->base = *templ;
+	enc->base.context = context;
+	enc->base.destroy = radeon_enc_destroy;
+	enc->base.begin_frame = radeon_enc_begin_frame;
+	enc->base.encode_bitstream = radeon_enc_encode_bitstream;
+	enc->base.end_frame = radeon_enc_end_frame;
+	enc->base.flush = radeon_enc_flush;
+	enc->base.get_feedback = radeon_enc_get_feedback;
+	enc->get_buffer = get_buffer;
+	enc->bits_in_shifter = 0;
+	enc->screen = context->screen;
+	enc->ws = ws;
+	enc->cs = ws->cs_create(rctx->ctx, RING_VCN_ENC, radeon_enc_cs_flush, enc);
+
+	if (!enc->cs) {
+		RVID_ERR("Can't get command submission context.\n");
+		goto error;
+	}
+
+	struct rvid_buffer si;
+	si_vid_create_buffer(enc->screen, &si, 128 * 1024, PIPE_USAGE_STAGING);
+	enc->si = &si;
+
+	templat.buffer_format = PIPE_FORMAT_NV12;
+	templat.chroma_format = PIPE_VIDEO_CHROMA_FORMAT_420;
+	templat.width = enc->base.width;
+	templat.height = enc->base.height;
+	templat.interlaced = false;
+
+	if (!(tmp_buf = context->create_video_buffer(context, &templat))) {
+		RVID_ERR("Can't create video buffer.\n");
+		goto error;
+	}
+
+	enc->cpb_num = get_cpb_num(enc);
+
+	if (!enc->cpb_num)
+		goto error;
+
+	get_buffer(((struct vl_video_buffer *)tmp_buf)->resources[0], NULL, &tmp_surf);
+
+	cpb_size = (rscreen->chip_class < GFX9) ?
+			   align(tmp_surf->u.legacy.level[0].nblk_x * tmp_surf->bpe, 128) *
+			   align(tmp_surf->u.legacy.level[0].nblk_y, 32) :
+			   align(tmp_surf->u.gfx9.surf_pitch * tmp_surf->bpe, 256) *
+			   align(tmp_surf->u.gfx9.surf_height, 32);
+
+	cpb_size = cpb_size * 3 / 2;
+	cpb_size = cpb_size * enc->cpb_num;
+	tmp_buf->destroy(tmp_buf);
+
+	if (!si_vid_create_buffer(enc->screen, &enc->cpb, cpb_size, PIPE_USAGE_DEFAULT)) {
+		RVID_ERR("Can't create CPB buffer.\n");
+		goto error;
+	}
+
+	radeon_enc_1_2_init(enc);
+
+	return &enc->base;
+
+error:
+	if (enc->cs)
+		enc->ws->cs_destroy(enc->cs);
+
+	si_vid_destroy_buffer(&enc->cpb);
+
+	FREE(enc);
+	return NULL;
 }
