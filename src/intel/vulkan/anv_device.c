@@ -113,6 +113,18 @@ anv_physical_device_init_heaps(struct anv_physical_device *device, int fd)
    if (result != VK_SUCCESS)
       return result;
 
+   if (heap_size > (2ull << 30) && !device->supports_48bit_addresses) {
+      /* When running with an overridden PCI ID, we may get a GTT size from
+       * the kernel that is greater than 2 GiB but the execbuf check for 48bit
+       * address support can still fail.  Just clamp the address space size to
+       * 2 GiB if we don't have 48-bit support.
+       */
+      intel_logw("%s:%d: The kernel reported a GTT size larger than 2 GiB but "
+                        "not support for 48-bit addresses",
+                        __FILE__, __LINE__);
+      heap_size = 2ull << 30;
+   }
+
    if (heap_size <= 3ull * (1ull << 30)) {
       /* In this case, everything fits nicely into the 32-bit address space,
        * so there's no need for supporting 48bit addresses on client-allocated
