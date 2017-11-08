@@ -134,6 +134,7 @@ libgallium_dri = shared_library(
   ],
   dependencies : [
     gallium_dri_depends, dep_selinux, dep_expat, dep_libdrm, dep_llvm,
+    dep_thread,
   ],
 )
 
