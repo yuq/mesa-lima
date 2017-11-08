@@ -57,15 +57,15 @@ gen10_emit_wa_lri_to_cache_mode_zero(struct brw_context *brw)
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    assert(devinfo->gen == 10);
 
+   /* Write to CACHE_MODE_0 (0x7000) */
+   brw_load_register_imm32(brw, GEN7_CACHE_MODE_0, 0);
+
    /* Before changing the value of CACHE_MODE_0 register, GFX pipeline must
     * be idle; i.e., full flush is required.
     */
    brw_emit_pipe_control_flush(brw,
                                PIPE_CONTROL_CACHE_FLUSH_BITS |
                                PIPE_CONTROL_CACHE_INVALIDATE_BITS);
-
-   /* Write to CACHE_MODE_0 (0x7000) */
-   brw_load_register_imm32(brw, GEN7_CACHE_MODE_0, 0);
 }
 
 /**
