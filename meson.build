@@ -695,7 +695,6 @@ if with_glvnd
   pre_args += '-DUSE_LIBGLVND=1'
 endif
 
-# TODO: make this conditional
 if with_valgrind != 'false'
   dep_valgrind = dependency('valgrind', required : with_valgrind == 'true')
   if dep_valgrind.found()
