@@ -725,8 +725,12 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
 
    case nir_op_f2f64:
+   case nir_op_f2i64:
+   case nir_op_f2u64:
    case nir_op_i2f64:
+   case nir_op_i2i64:
    case nir_op_u2f64:
+   case nir_op_u2u64:
       /* CHV PRM, vol07, 3D Media GPGPU Engine, Register Region Restrictions:
        *
        *    "When source or destination is 64b (...), regioning in Align1
@@ -754,12 +758,8 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_f2f32:
    case nir_op_f2i32:
    case nir_op_f2u32:
-   case nir_op_f2i64:
-   case nir_op_f2u64:
    case nir_op_i2i32:
-   case nir_op_i2i64:
    case nir_op_u2u32:
-   case nir_op_u2u64:
       inst = bld.MOV(result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
