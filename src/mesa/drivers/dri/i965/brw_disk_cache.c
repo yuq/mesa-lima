@@ -407,9 +407,6 @@ void
 brw_disk_cache_init(struct intel_screen *screen)
 {
 #ifdef ENABLE_SHADER_CACHE
-   if (env_var_as_boolean("MESA_GLSL_CACHE_DISABLE", true))
-      return;
-
    char renderer[10];
    MAYBE_UNUSED int len = snprintf(renderer, sizeof(renderer), "i965_%04x",
                                    screen->deviceID);
