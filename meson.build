@@ -489,8 +489,8 @@ endif
 
 # FIXME: enable asm when cross compiler
 # This is doable (autotools does it), but it's not of immediate concern
-if meson.is_cross_build()
-  message('Cross compiling, disabling asm')
+if meson.is_cross_build() and host_machine.cpu_family().startswith('x86')
+  message('Cross compiling, disabling x86/x86_64 asm')
   with_asm = false
 endif
 

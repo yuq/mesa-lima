@@ -81,6 +81,18 @@ files_libvc4 = files(
   'vc4_uniforms.c',
 )
 
+libvc4_neon = []
+if with_asm_arch == 'arm'
+  libvc4_neon = static_library(
+    'vc4_neon',
+    'vc4_tiling_lt_neon.c',
+    include_directories : [
+      inc_src, inc_include, inc_gallium, inc_gallium_aux, inc_broadcom
+    ],
+    c_args : '-mfpu=neon',
+  )
+endif
+
 simpenrose_c_args = []
 dep_simpenrose = dependency('simpenrose', required : false)
 if dep_simpenrose.found()
@@ -94,6 +106,7 @@ libvc4 = static_library(
     inc_src, inc_include, inc_gallium, inc_gallium_aux, inc_broadcom,
     inc_gallium_drivers, inc_drm_uapi,
   ],
+  link_with: libvc4_neon,
   c_args : [c_vis_args, simpenrose_c_args],
   cpp_args : [cpp_vis_args],
   dependencies : [dep_simpenrose, dep_libdrm, dep_valgrind],
