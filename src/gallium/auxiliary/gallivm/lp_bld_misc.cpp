@@ -830,7 +830,11 @@ lp_create_builder(LLVMContextRef ctx, enum lp_float_mode float_mode)
       llvm::unwrap(builder)->setFastMathFlags(flags);
       break;
    case LP_FLOAT_MODE_UNSAFE_FP_MATH:
+#if HAVE_LLVM >= 0x0600
+      flags.setFast();
+#else
       flags.setUnsafeAlgebra();
+#endif
       llvm::unwrap(builder)->setFastMathFlags(flags);
       break;
    }
