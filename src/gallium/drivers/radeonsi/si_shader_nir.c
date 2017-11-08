@@ -139,6 +139,13 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 	info->num_inputs = nir->num_inputs;
 	info->num_outputs = nir->num_outputs;
 
+	if (nir->info.stage == MESA_SHADER_GEOMETRY) {
+		info->properties[TGSI_PROPERTY_GS_INPUT_PRIM] = nir->info.gs.input_primitive;
+		info->properties[TGSI_PROPERTY_GS_OUTPUT_PRIM] = nir->info.gs.output_primitive;
+		info->properties[TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES] = nir->info.gs.vertices_out;
+		info->properties[TGSI_PROPERTY_GS_INVOCATIONS] = nir->info.gs.invocations;
+	}
+
 	i = 0;
 	nir_foreach_variable(variable, &nir->inputs) {
 		unsigned semantic_name, semantic_index;
