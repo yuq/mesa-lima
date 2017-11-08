@@ -1201,8 +1201,8 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog,
       }
 
       for (unsigned int j = 0; j < sh_num_blocks; j++) {
-         int index = link_cross_validate_uniform_block(prog, &blks, num_blks,
-                                                       sh_blks[j]);
+         int index = link_cross_validate_uniform_block(prog->data, &blks,
+                                                       num_blks, sh_blks[j]);
 
          if (index == -1) {
             linker_error(prog, "buffer block `%s' has mismatching "
@@ -3610,7 +3610,7 @@ add_program_resource(struct gl_shader_program *prog,
       return true;
 
    prog->data->ProgramResourceList =
-      reralloc(prog,
+      reralloc(prog->data,
                prog->data->ProgramResourceList,
                gl_program_resource,
                prog->data->NumProgramResourceList + 1);
