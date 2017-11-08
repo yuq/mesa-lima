@@ -679,8 +679,8 @@ radv_emit_shader_prefetch(struct radv_cmd_buffer *cmd_buffer,
 }
 
 static void
-radv_emit_shaders_prefetch(struct radv_cmd_buffer *cmd_buffer,
-			   struct radv_pipeline *pipeline)
+radv_emit_prefetch(struct radv_cmd_buffer *cmd_buffer,
+		   struct radv_pipeline *pipeline)
 {
 	radv_emit_shader_prefetch(cmd_buffer,
 				  pipeline->shaders[MESA_SHADER_VERTEX]);
@@ -3250,8 +3250,8 @@ radv_draw(struct radv_cmd_buffer *cmd_buffer,
 		 * important.
 		 */
 		if (pipeline_is_dirty) {
-			radv_emit_shaders_prefetch(cmd_buffer,
-						   cmd_buffer->state.pipeline);
+			radv_emit_prefetch(cmd_buffer,
+					   cmd_buffer->state.pipeline);
 		}
 	} else {
 		/* If we don't wait for idle, start prefetches first, then set
@@ -3260,8 +3260,8 @@ radv_draw(struct radv_cmd_buffer *cmd_buffer,
 		si_emit_cache_flush(cmd_buffer);
 
 		if (pipeline_is_dirty) {
-			radv_emit_shaders_prefetch(cmd_buffer,
-						   cmd_buffer->state.pipeline);
+			radv_emit_prefetch(cmd_buffer,
+					   cmd_buffer->state.pipeline);
 		}
 
 		if (!radv_upload_graphics_shader_descriptors(cmd_buffer, pipeline_is_dirty))
