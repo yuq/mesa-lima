@@ -8,6 +8,7 @@ ADDRLIB_FILES = \
 	addrlib/addrinterface.cpp \
 	addrlib/addrinterface.h \
 	addrlib/addrtypes.h \
+	addrlib/amdgpu_asic_addr.h \
 	addrlib/core/addrcommon.h \
 	addrlib/core/addrelemlib.cpp \
 	addrlib/core/addrelemlib.h \
