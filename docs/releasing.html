@@ -504,8 +504,10 @@ Here is one solution that I've been using.
 	unset LIBGL_DRIVERS_PATH
 	unset LIBGL_DEBUG
 	unset LIBGL_ALWAYS_SOFTWARE
+	unset GALLIUM_DRIVER
 	export VK_ICD_FILENAMES=`pwd`/src/intel/vulkan/dev_icd.json
 	steam steam://rungameid/570  -vconsole -vulkan
+	unset VK_ICD_FILENAMES
 </pre>
 
 <h3>Update version in file VERSION</h3>
