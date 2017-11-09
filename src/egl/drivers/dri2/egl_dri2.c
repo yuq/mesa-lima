@@ -994,28 +994,9 @@ dri2_display_destroy(_EGLDisplay *disp)
    case _EGL_PLATFORM_DRM:
       dri2_teardown_drm(disp);
       break;
-#ifdef HAVE_WAYLAND_PLATFORM
    case _EGL_PLATFORM_WAYLAND:
-      if (dri2_dpy->wl_drm)
-          wl_drm_destroy(dri2_dpy->wl_drm);
-      if (dri2_dpy->wl_dmabuf)
-          zwp_linux_dmabuf_v1_destroy(dri2_dpy->wl_dmabuf);
-      if (dri2_dpy->wl_shm)
-          wl_shm_destroy(dri2_dpy->wl_shm);
-      if (dri2_dpy->wl_registry)
-         wl_registry_destroy(dri2_dpy->wl_registry);
-      if (dri2_dpy->wl_queue)
-         wl_event_queue_destroy(dri2_dpy->wl_queue);
-      if (dri2_dpy->wl_dpy_wrapper)
-         wl_proxy_wrapper_destroy(dri2_dpy->wl_dpy_wrapper);
-      u_vector_finish(&dri2_dpy->wl_modifiers.argb8888);
-      u_vector_finish(&dri2_dpy->wl_modifiers.xrgb8888);
-      u_vector_finish(&dri2_dpy->wl_modifiers.rgb565);
-      if (dri2_dpy->own_device) {
-         wl_display_disconnect(dri2_dpy->wl_dpy);
-      }
+      dri2_teardown_wayland(disp);
       break;
-#endif
    default:
       break;
    }
