@@ -86,6 +86,8 @@
 
 #define memclear(s) memset(&s, 0, sizeof(s))
 
+#define PAGE_SIZE 4096
+
 #define FILE_DEBUG_FLAG DEBUG_BUFMGR
 
 static inline int
@@ -180,19 +182,44 @@ bo_tile_pitch(struct brw_bufmgr *bufmgr, uint32_t pitch, uint32_t tiling)
    return ALIGN(pitch, tile_width);
 }
 
+/**
+ * This function finds the correct bucket fit for the input size.
+ * The function works with O(1) complexity when the requested size
+ * was queried instead of iterating the size through all the buckets.
+ */
 static struct bo_cache_bucket *
 bucket_for_size(struct brw_bufmgr *bufmgr, uint64_t size)
 {
-   int i;
+   /* Calculating the pages and rounding up to the page size. */
+   const unsigned pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
 
-   for (i = 0; i < bufmgr->num_buckets; i++) {
-      struct bo_cache_bucket *bucket = &bufmgr->cache_bucket[i];
-      if (bucket->size >= size) {
-         return bucket;
-      }
-   }
+   /* Row  Bucket sizes    clz((x-1) | 3)   Row    Column
+    *        in pages                      stride   size
+    *   0:   1  2  3  4 -> 30 30 30 30        4       1
+    *   1:   5  6  7  8 -> 29 29 29 29        4       1
+    *   2:  10 12 14 16 -> 28 28 28 28        8       2
+    *   3:  20 24 28 32 -> 27 27 27 27       16       4
+    */
+   const unsigned row = 30 - __builtin_clz((pages - 1) | 3);
+   const unsigned row_max_pages = 4 << row;
 
-   return NULL;
+   /* The '& ~2' is the special case for row 1. In row 1, max pages /
+    * 2 is 2, but the previous row maximum is zero (because there is
+    * no previous row). All row maximum sizes are power of 2, so that
+    * is the only case where that bit will be set.
+    */
+   const unsigned prev_row_max_pages = (row_max_pages / 2) & ~2;
+   int col_size_log2 = row - 1;
+   col_size_log2 += (col_size_log2 < 0);
+
+   const unsigned col = (pages - prev_row_max_pages +
+                        ((1 << col_size_log2) - 1)) >> col_size_log2;
+
+   /* Calculating the index based on the row and column. */
+   const unsigned index = (row * 4) + (col - 1);
+
+   return (index < bufmgr->num_buckets) ?
+          &bufmgr->cache_bucket[index] : NULL;
 }
 
 int
@@ -1267,6 +1294,10 @@ add_bucket(struct brw_bufmgr *bufmgr, int size)
    list_inithead(&bufmgr->cache_bucket[i].head);
    bufmgr->cache_bucket[i].size = size;
    bufmgr->num_buckets++;
+
+   assert(bucket_for_size(bufmgr, size) == &bufmgr->cache_bucket[i]);
+   assert(bucket_for_size(bufmgr, size - 2048) == &bufmgr->cache_bucket[i]);
+   assert(bucket_for_size(bufmgr, size + 1) != &bufmgr->cache_bucket[i]);
 }
 
 static void
