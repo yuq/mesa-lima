@@ -183,8 +183,6 @@ struct si_shader_context {
 	int param_gs2vs_offset;
 	int param_gs_wave_id; /* GFX6 */
 	LLVMValueRef gs_vtx_offset[6]; /* in dwords (GFX6) */
-	int param_gs_prim_id;
-	int param_gs_instance_id;
 	int param_gs_vtx01_offset; /* in dwords (GFX9) */
 	int param_gs_vtx23_offset; /* in dwords (GFX9) */
 	int param_gs_vtx45_offset; /* in dwords (GFX9) */

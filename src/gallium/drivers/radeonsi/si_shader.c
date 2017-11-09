@@ -759,8 +759,7 @@ static LLVMValueRef get_primitive_id(struct si_shader_context *ctx,
 		return LLVMGetParam(ctx->main_fn,
 				    ctx->param_tes_patch_id);
 	case PIPE_SHADER_GEOMETRY:
-		return LLVMGetParam(ctx->main_fn,
-				    ctx->param_gs_prim_id);
+		return ctx->abi.gs_prim_id;
 	default:
 		assert(0);
 		return ctx->i32_0;
@@ -1674,8 +1673,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 		if (ctx->type == PIPE_SHADER_TESS_CTRL)
 			value = unpack_param(ctx, ctx->param_tcs_rel_ids, 8, 5);
 		else if (ctx->type == PIPE_SHADER_GEOMETRY)
-			value = LLVMGetParam(ctx->main_fn,
-					     ctx->param_gs_instance_id);
+			value = ctx->abi.gs_invocation_id;
 		else
 			assert(!"INVOCATIONID not implemented");
 		break;
@@ -4562,8 +4560,8 @@ static void create_function(struct si_shader_context *ctx)
 		/* VGPRs (first GS, then VS/TES) */
 		ctx->param_gs_vtx01_offset = add_arg(&fninfo, ARG_VGPR, ctx->i32);
 		ctx->param_gs_vtx23_offset = add_arg(&fninfo, ARG_VGPR, ctx->i32);
-		ctx->param_gs_prim_id = add_arg(&fninfo, ARG_VGPR, ctx->i32);
-		ctx->param_gs_instance_id = add_arg(&fninfo, ARG_VGPR, ctx->i32);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->abi.gs_prim_id);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->abi.gs_invocation_id);
 		ctx->param_gs_vtx45_offset = add_arg(&fninfo, ARG_VGPR, ctx->i32);
 
 		if (ctx->type == PIPE_SHADER_VERTEX) {
@@ -4613,12 +4611,12 @@ static void create_function(struct si_shader_context *ctx)
 		/* VGPRs */
 		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->gs_vtx_offset[0]);
 		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->gs_vtx_offset[1]);
-		ctx->param_gs_prim_id = add_arg(&fninfo, ARG_VGPR, ctx->i32);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->abi.gs_prim_id);
 		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->gs_vtx_offset[2]);
 		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->gs_vtx_offset[3]);
 		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->gs_vtx_offset[4]);
 		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->gs_vtx_offset[5]);
-		ctx->param_gs_instance_id = add_arg(&fninfo, ARG_VGPR, ctx->i32);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->abi.gs_invocation_id);
 		break;
 
 	case PIPE_SHADER_FRAGMENT:
