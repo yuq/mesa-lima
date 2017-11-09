@@ -137,7 +137,7 @@ intrastage_match(ir_variable *a,
    /* If a block is an array then it must match across the shader.
     * Unsized arrays are also processed and matched agaist sized arrays.
     */
-   if (b->type != a->type &&
+   if (b->type != a->type && (b->type->is_array() || a->type->is_array()) &&
        (b->is_interface_instance() || a->is_interface_instance()) &&
        !validate_intrastage_arrays(prog, b, a))
       return false;
