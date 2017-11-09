@@ -44,6 +44,7 @@ inst_aliases = {
 intrinsics = [
         ['VGATHERPD', 'x86_avx2_gather_d_pd_256', ['src', 'pBase', 'indices', 'mask', 'scale']],
         ['VGATHERPS', 'x86_avx2_gather_d_ps_256', ['src', 'pBase', 'indices', 'mask', 'scale']],
+        ['VGATHERPS2', 'x86_avx512_gather_dps_512', ['src', 'pBase', 'indices', 'mask', 'scale']],
         ['VGATHERDD', 'x86_avx2_gather_d_d_256', ['src', 'pBase', 'indices', 'mask', 'scale']],
         ['VPSRLI', 'x86_avx2_psrli_d', ['src', 'imm']],
         ['VSQRTPS', 'x86_avx_sqrt_ps_256', ['a']],

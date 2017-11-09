@@ -54,15 +54,25 @@ Value *VIMMED1(int i);
 Value *VIMMED1(uint32_t i);
 Value *VIMMED1(float i);
 Value *VIMMED1(bool i);
+#if USE_SIMD16_BUILDER
+Value *VIMMED2_1(int i);
+Value *VIMMED2_1(uint32_t i);
+Value *VIMMED2_1(float i);
+Value *VIMMED2_1(bool i);
+#endif
 Value *VUNDEF(Type* t);
 Value *VUNDEF_F();
+Value *VUNDEF_I();
 #if USE_SIMD16_BUILDER
 Value *VUNDEF2_F();
+Value *VUNDEF2_I();
 #endif
-Value *VUNDEF_I();
 Value *VUNDEF(Type* ty, uint32_t size);
 Value *VUNDEF_IPTR();
 Value *VBROADCAST(Value *src);
+#if USE_SIMD16_BUILDER
+Value *VBROADCAST2(Value *src);
+#endif
 Value *VRCP(Value *va);
 Value *VPLANEPS(Value* vA, Value* vB, Value* vC, Value* &vX, Value* &vY);
 
@@ -94,8 +104,12 @@ Value *VCMPPS_GE(Value* a, Value* b)    { return VCMPPS(a, b, C((uint8_t)_CMP_GE
 Value *VCMPPS_GT(Value* a, Value* b)    { return VCMPPS(a, b, C((uint8_t)_CMP_GT_OQ)); }
 Value *VCMPPS_NOTNAN(Value* a, Value* b){ return VCMPPS(a, b, C((uint8_t)_CMP_ORD_Q)); }
 
-Value *MASK(Value* vmask);
-Value *VMASK(Value* mask);
+Value *MASK(Value *vmask);
+Value *VMASK(Value *mask);
+#if USE_SIMD16_BUILDER
+Value *MASK2(Value *vmask);
+Value *VMASK2(Value *mask);
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief functions that build IR to call x86 intrinsics directly, or
@@ -103,8 +117,10 @@ Value *VMASK(Value* mask);
 //////////////////////////////////////////////////////////////////////////
 
 #if USE_SIMD16_BUILDER
-Value *EXTRACT(Value *a, uint32_t imm);
-Value *INSERT(Value *a, Value *b, uint32_t imm);
+Value *EXTRACT2_F(Value *a2, uint32_t imm);
+Value *EXTRACT2_I(Value *a2, uint32_t imm);
+Value *INSERT2_F(Value *a2, Value *b, uint32_t imm);
+Value *INSERT2_I(Value *a2, Value *b, uint32_t imm);
 
 #endif
 Value *MASKLOADD(Value* src, Value* mask);
@@ -112,7 +128,10 @@ Value *MASKLOADD(Value* src, Value* mask);
 void Gather4(const SWR_FORMAT format, Value* pSrcBase, Value* byteOffsets,
                       Value* mask, Value* vGatherComponents[], bool bPackedOutput);
 
-Value *GATHERPS(Value* src, Value* pBase, Value* indices, Value* mask, uint8_t scale = 1);
+Value *GATHERPS(Value *src, Value *pBase, Value *indices, Value *mask, uint8_t scale = 1);
+#if USE_SIMD16_BUILDER
+Value *GATHERPS2(Value *src, Value *pBase, Value *indices, Value *mask, uint8_t scale = 1);
+#endif
 void GATHER4PS(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
                Value* mask, Value* vGatherComponents[], bool bPackedOutput);
 

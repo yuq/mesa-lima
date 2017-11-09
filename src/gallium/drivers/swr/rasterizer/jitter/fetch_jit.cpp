@@ -89,6 +89,9 @@ struct FetchJit : public Builder
 #else
     Value* GenerateCompCtrlVector(const ComponentControl ctrl);
 #endif
+#if USE_SIMD16_BUILDER
+    Value* GenerateCompCtrlVector2(const ComponentControl ctrl);
+#endif
 
     void JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* streams, Value* vIndices, Value* pVtxOut);
 #if USE_SIMD16_SHADERS
@@ -1219,6 +1222,12 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                     break;
                 case 32:
                 {
+#if USE_SIMD16_GATHERS
+#if USE_SIMD16_BUILDER
+                    Value *pVtxSrc2[4];
+
+#endif
+#endif
                     for (uint32_t i = 0; i < 4; i += 1)
                     {
 #if USE_SIMD16_GATHERS
@@ -1228,7 +1237,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                             if (compCtrl[i] == StoreSrc)
                             {
                                 // save mask as it is zero'd out after each gather
-                                Value *vMask = vGatherMask;
+                                Value *vMask  = vGatherMask;
                                 Value *vMask2 = vGatherMask2;
 
                                 // Gather a SIMD of vertices
@@ -1236,37 +1245,66 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 // However, GATHERPS uses signed 32-bit offsets, so only a 2GB range :(
                                 // But, we know that elements must be aligned for FETCH. :)
                                 // Right shift the offset by a bit and then scale by 2 to remove the sign extension.
-                                Value *vShiftedOffsets = VPSRLI(vOffsets, C(1));
+                                Value *vShiftedOffsets  = VPSRLI(vOffsets,  C(1));
                                 Value *vShiftedOffsets2 = VPSRLI(vOffsets2, C(1));
-                                vVertexElements[currentVertexElement] = GATHERPS(gatherSrc, pStreamBase, vShiftedOffsets, vMask, 2);
+#if USE_SIMD16_BUILDER
+                                Value *src = VUNDEF2_F();
+                                src = INSERT2_F(src, gatherSrc,  0);
+                                src = INSERT2_F(src, gatherSrc2, 1);
+
+                                Value *indices = VUNDEF2_I();
+                                indices = INSERT2_I(indices, vShiftedOffsets,  0);
+                                indices = INSERT2_I(indices, vShiftedOffsets2, 1);
+
+                                Value *mask = VUNDEF2_I();
+                                mask = INSERT2_I(mask, vMask,  0);
+                                mask = INSERT2_I(mask, vMask2, 1);
+
+                                pVtxSrc2[currentVertexElement] = GATHERPS2(src, pStreamBase, indices, mask, 2);
+#if 1
+
+                                vVertexElements[currentVertexElement]  = EXTRACT2_F(pVtxSrc2[currentVertexElement], 0);
+                                vVertexElements2[currentVertexElement] = EXTRACT2_F(pVtxSrc2[currentVertexElement], 1);
+#endif
+#else
+                                vVertexElements[currentVertexElement]  = GATHERPS(gatherSrc, pStreamBase, vShiftedOffsets, vMask, 2);
                                 vVertexElements2[currentVertexElement] = GATHERPS(gatherSrc2, pStreamBase, vShiftedOffsets2, vMask2, 2);
 
+#if USE_SIMD16_BUILDER
+                                // pack adjacent pairs of SIMD8s into SIMD16s
+                                pVtxSrc2[currentVertexElement] = VUNDEF2_F();
+                                pVtxSrc2[currentVertexElement] = INSERT2_F(pVtxSrc2[currentVertexElement], vVertexElements[currentVertexElement],  0);
+                                pVtxSrc2[currentVertexElement] = INSERT2_F(pVtxSrc2[currentVertexElement], vVertexElements2[currentVertexElement], 1);
+
+#endif
+#endif
                                 currentVertexElement += 1;
                             }
                             else
                             {
+#if USE_SIMD16_BUILDER
+                                pVtxSrc2[currentVertexElement] = GenerateCompCtrlVector2(compCtrl[i]);
+#else
                                 vVertexElements[currentVertexElement] = GenerateCompCtrlVector(compCtrl[i], false);
                                 vVertexElements2[currentVertexElement] = GenerateCompCtrlVector(compCtrl[i], true);
 
+#if USE_SIMD16_BUILDER
+                                // pack adjacent pairs of SIMD8s into SIMD16s
+                                pVtxSrc2[currentVertexElement] = VUNDEF2_F();
+                                pVtxSrc2[currentVertexElement] = INSERT2_F(pVtxSrc2[currentVertexElement], vVertexElements[currentVertexElement],  0);
+                                pVtxSrc2[currentVertexElement] = INSERT2_F(pVtxSrc2[currentVertexElement], vVertexElements2[currentVertexElement], 1);
+
+#endif
+#endif
                                 currentVertexElement += 1;
                             }
 
                             if (currentVertexElement > 3)
                             {
 #if USE_SIMD16_BUILDER
-                                Value *pVtxSrc2[4];
-
-                                // pack adjacent pairs of SIMD8s into SIMD16s
-                                for (uint32_t i = 0; i < 4; i += 1)
-                                {
-                                    pVtxSrc2[i] = VUNDEF2_F();
-
-                                    pVtxSrc2[i] = INSERT(pVtxSrc2[i], vVertexElements[i],  0);
-                                    pVtxSrc2[i] = INSERT(pVtxSrc2[i], vVertexElements2[i], 1);
-                                }
-
                                 // store SIMD16s
                                 Value *pVtxOut2 = BITCAST(pVtxOut, PointerType::get(VectorType::get(mFP32Ty, mVWidth2), 0));
+
                                 StoreVertexElements2(pVtxOut2, outputElt, 4, pVtxSrc2);
 
 #else
@@ -2429,6 +2467,31 @@ Value* FetchJit::GenerateCompCtrlVector(const ComponentControl ctrl)
     }
 }
 
+#if USE_SIMD16_BUILDER
+Value* FetchJit::GenerateCompCtrlVector2(const ComponentControl ctrl)
+{
+    switch (ctrl)
+    {
+        case NoStore:   return VUNDEF2_I();
+        case Store0:    return VIMMED2_1(0);
+        case Store1Fp:  return VIMMED2_1(1.0f);
+        case Store1Int: return VIMMED2_1(1);
+        case StoreVertexId:
+        {
+            Value* pId = BITCAST(LOAD(GEP(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID })), mSimd2FP32Ty);
+            return VBROADCAST2(pId);
+        }
+        case StoreInstanceId:
+        {
+            Value* pId = BITCAST(LOAD(GEP(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_CurInstance })), mFP32Ty);
+            return VBROADCAST2(pId);
+        }
+        case StoreSrc:
+        default:        SWR_INVALID("Invalid component control"); return VUNDEF2_I();
+    }
+}
+
+#endif
 //////////////////////////////////////////////////////////////////////////
 /// @brief Returns the enable mask for the specified component.
 /// @param enableMask - enable bits
