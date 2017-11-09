@@ -9161,11 +9161,7 @@ static const struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[] 
 	[TGSI_OPCODE_MOV]	= { ALU_OP1_MOV, tgsi_op2},
 	[TGSI_OPCODE_LIT]	= { ALU_OP0_NOP, tgsi_lit},
 
-	/* XXX:
-	 * For state trackers other than OpenGL, we'll want to use
-	 * _RECIP_IEEE instead.
-	 */
-	[TGSI_OPCODE_RCP]	= { ALU_OP1_RECIP_CLAMPED, tgsi_trans_srcx_replicate},
+	[TGSI_OPCODE_RCP]	= { ALU_OP1_RECIP_IEEE, tgsi_trans_srcx_replicate},
 
 	[TGSI_OPCODE_RSQ]	= { ALU_OP0_NOP, tgsi_rsq},
 	[TGSI_OPCODE_EXP]	= { ALU_OP0_NOP, tgsi_exp},
@@ -9366,7 +9362,7 @@ static const struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_MOV]	= { ALU_OP1_MOV, tgsi_op2},
 	[TGSI_OPCODE_LIT]	= { ALU_OP0_NOP, tgsi_lit},
 	[TGSI_OPCODE_RCP]	= { ALU_OP1_RECIP_IEEE, tgsi_trans_srcx_replicate},
-	[TGSI_OPCODE_RSQ]	= { ALU_OP1_RECIPSQRT_IEEE, tgsi_rsq},
+	[TGSI_OPCODE_RSQ]	= { ALU_OP0_NOP, tgsi_rsq},
 	[TGSI_OPCODE_EXP]	= { ALU_OP0_NOP, tgsi_exp},
 	[TGSI_OPCODE_LOG]	= { ALU_OP0_NOP, tgsi_log},
 	[TGSI_OPCODE_MUL]	= { ALU_OP2_MUL_IEEE, tgsi_op2},
