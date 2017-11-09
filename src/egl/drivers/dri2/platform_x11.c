@@ -1476,3 +1476,9 @@ dri2_initialize_x11(_EGLDriver *drv, _EGLDisplay *disp)
    return initialized;
 }
 
+void
+dri2_teardown_x11(struct dri2_egl_display *dri2_dpy)
+{
+   if (dri2_dpy->own_device)
+      xcb_disconnect(dri2_dpy->conn);
+}

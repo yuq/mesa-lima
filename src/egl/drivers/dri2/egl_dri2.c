@@ -988,13 +988,9 @@ dri2_display_destroy(_EGLDisplay *disp)
 #endif
 
    switch (disp->Platform) {
-#ifdef HAVE_X11_PLATFORM
    case _EGL_PLATFORM_X11:
-      if (dri2_dpy->own_device) {
-         xcb_disconnect(dri2_dpy->conn);
-      }
+      dri2_teardown_x11(dri2_dpy);
       break;
-#endif
 #ifdef HAVE_DRM_PLATFORM
    case _EGL_PLATFORM_DRM:
       if (dri2_dpy->own_device) {
