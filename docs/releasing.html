@@ -374,6 +374,9 @@ Queued (NUMBER)
 
 AUTHOR (NUMBER):
       COMMIT SUMMARY
+[If applicable:
+Squashed with
+      COMMIT SUMMARY]
 
 For example:
 
@@ -382,16 +385,21 @@ Jonas Pfeil (1):
 Squashed with
       ralloc: don't leave out the alignment factor
 
+
 Rejected (NUMBER)
 =================
-
-Rejected (11)
-=============
 
 AUTHOR (NUMBER):
       SHA     COMMIT SUMMARY
 
 Reason: ...
+
+For example:
+
+Emil Velikov (1)
+      a39ad18 configure.ac: honour LLVM_LIBDIR when linking against LLVM
+
+Reason: The patch was reverted shortly after it was merged.
 </pre>
 
 
