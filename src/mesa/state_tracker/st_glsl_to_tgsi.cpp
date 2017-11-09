@@ -4588,8 +4588,7 @@ glsl_to_tgsi_visitor::simplify_cmp(void)
 }
 
 static void
-rename_temp_handle_src(struct rename_reg_pair *renames,
-                           struct st_src_reg *src)
+rename_temp_handle_src(struct rename_reg_pair *renames, st_src_reg *src)
 {
    if (src && src->file == PROGRAM_TEMPORARY) {
       int old_idx = src->index;
