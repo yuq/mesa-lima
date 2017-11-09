@@ -3484,7 +3484,7 @@ struct gl_framebuffer
    /** Computed from ColorDraw/ReadBuffer above */
    GLuint _NumColorDrawBuffers;
    GLint _ColorDrawBufferIndexes[MAX_DRAW_BUFFERS]; /**< BUFFER_x or -1 */
-   GLint _ColorReadBufferIndex; /* -1 = None */
+   gl_buffer_index _ColorReadBufferIndex;
    struct gl_renderbuffer *_ColorDrawBuffers[MAX_DRAW_BUFFERS];
    struct gl_renderbuffer *_ColorReadBuffer;
 
