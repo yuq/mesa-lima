@@ -38,7 +38,7 @@ anv_extensions_c = custom_target(
 intel_icd = custom_target(
   'intel_icd',
   input : 'anv_icd.py',
-  output : 'intel_icd.@0@.json'.format(target_machine.cpu()),
+  output : 'intel_icd.@0@.json'.format(host_machine.cpu()),
   command : [prog_python2, '@INPUT@',
              '--lib-path', join_paths(get_option('prefix'), get_option('libdir')),
              '--out', '@OUTPUT@'],
