@@ -1361,16 +1361,9 @@ static LLVMValueRef fetch_input_gs(
 
 	/* Get the vertex offset parameter on GFX6. */
 	unsigned vtx_offset_param = reg->Dimension.Index;
-	if (vtx_offset_param < 2) {
-		vtx_offset_param += ctx->param_gs_vtx0_offset;
-	} else {
-		assert(vtx_offset_param < 6);
-		vtx_offset_param += ctx->param_gs_vtx2_offset - 2;
-	}
-	vtx_offset = lp_build_mul_imm(uint,
-				      LLVMGetParam(ctx->main_fn,
-						   vtx_offset_param),
-				      4);
+	LLVMValueRef gs_vtx_offset = ctx->gs_vtx_offset[vtx_offset_param];
+
+	vtx_offset = lp_build_mul_imm(uint, gs_vtx_offset, 4);
 
 	soffset = LLVMConstInt(ctx->i32, (param * 4 + swizzle) * 256, 0);
 
@@ -4612,13 +4605,13 @@ static void create_function(struct si_shader_context *ctx)
 		ctx->param_gs_wave_id = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 
 		/* VGPRs */
-		ctx->param_gs_vtx0_offset = add_arg(&fninfo, ARG_VGPR, ctx->i32);
-		ctx->param_gs_vtx1_offset = add_arg(&fninfo, ARG_VGPR, ctx->i32);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->gs_vtx_offset[0]);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->gs_vtx_offset[1]);
 		ctx->param_gs_prim_id = add_arg(&fninfo, ARG_VGPR, ctx->i32);
-		ctx->param_gs_vtx2_offset = add_arg(&fninfo, ARG_VGPR, ctx->i32);
-		ctx->param_gs_vtx3_offset = add_arg(&fninfo, ARG_VGPR, ctx->i32);
-		ctx->param_gs_vtx4_offset = add_arg(&fninfo, ARG_VGPR, ctx->i32);
-		ctx->param_gs_vtx5_offset = add_arg(&fninfo, ARG_VGPR, ctx->i32);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->gs_vtx_offset[2]);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->gs_vtx_offset[3]);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->gs_vtx_offset[4]);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->gs_vtx_offset[5]);
 		ctx->param_gs_instance_id = add_arg(&fninfo, ARG_VGPR, ctx->i32);
 		break;
 
