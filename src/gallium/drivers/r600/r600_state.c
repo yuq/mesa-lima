@@ -817,7 +817,7 @@ static void r600_init_color_surface(struct r600_context *rctx,
 	unsigned offset;
 	const struct util_format_description *desc;
 	int i;
-	bool blend_bypass = 0, blend_clamp = 1, do_endian_swap = FALSE;
+	bool blend_bypass = 0, blend_clamp = 0, do_endian_swap = FALSE;
 
 	if (rtex->db_compatible && !r600_can_sample_zs(rtex, false)) {
 		r600_init_flushed_depth_texture(&rctx->b.b, surf->base.texture, NULL);
@@ -869,6 +869,8 @@ static void r600_init_color_surface(struct r600_context *rctx,
 			ntype = V_0280A0_NUMBER_UNORM;
 		else if (desc->channel[i].pure_integer)
 			ntype = V_0280A0_NUMBER_UINT;
+	} else if (desc->channel[i].type == UTIL_FORMAT_TYPE_FLOAT) {
+		ntype = V_0280A0_NUMBER_FLOAT;
 	}
 
 	if (R600_BIG_ENDIAN)
@@ -882,6 +884,11 @@ static void r600_init_color_surface(struct r600_context *rctx,
 	assert(swap != ~0);
 
 	endian = r600_colorformat_endian_swap(format, do_endian_swap);
+
+	/* blend clamp should be set for all NORM/SRGB types */
+	if (ntype == V_0280A0_NUMBER_UNORM || ntype == V_0280A0_NUMBER_SNORM ||
+	    ntype == V_0280A0_NUMBER_SRGB)
+		blend_clamp = 1;
 
 	/* set blend bypass according to docs if SINT/UINT or
 	   8/24 COLOR variants */
@@ -917,6 +924,7 @@ static void r600_init_color_surface(struct r600_context *rctx,
 		     ntype != V_0280A0_NUMBER_UINT &&
 		     ntype != V_0280A0_NUMBER_SINT) &&
 		    G_0280A0_BLEND_CLAMP(color_info) &&
+		    /* XXX this condition is always true since BLEND_FLOAT32 is never set (bug?). */
 		    !G_0280A0_BLEND_FLOAT32(color_info)) {
 			color_info |= S_0280A0_SOURCE_FORMAT(V_0280A0_EXPORT_NORM);
 			surf->export_16bpc = true;

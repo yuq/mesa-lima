@@ -1050,7 +1050,7 @@ static void evergreen_set_color_surface_buffer(struct r600_context *rctx,
 		}
 	}
 	ntype = V_028C70_NUMBER_UNORM;
-		if (desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB)
+	if (desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB)
 		ntype = V_028C70_NUMBER_SRGB;
 	else if (desc->channel[i].type == UTIL_FORMAT_TYPE_SIGNED) {
 		if (desc->channel[i].normalized)
@@ -1062,7 +1062,10 @@ static void evergreen_set_color_surface_buffer(struct r600_context *rctx,
 			ntype = V_028C70_NUMBER_UNORM;
 		else if (desc->channel[i].pure_integer)
 			ntype = V_028C70_NUMBER_UINT;
+	} else if (desc->channel[i].type == UTIL_FORMAT_TYPE_FLOAT) {
+		ntype = V_028C70_NUMBER_FLOAT;
 	}
+
 	pitch = (pitch / 8) - 1;
 	color->pitch = S_028C64_PITCH_TILE_MAX(pitch);
 
@@ -1188,6 +1191,8 @@ static void evergreen_set_color_surface_common(struct r600_context *rctx,
 			ntype = V_028C70_NUMBER_UNORM;
 		else if (desc->channel[i].pure_integer)
 			ntype = V_028C70_NUMBER_UINT;
+	} else if (desc->channel[i].type == UTIL_FORMAT_TYPE_FLOAT) {
+		ntype = V_028C70_NUMBER_FLOAT;
 	}
 
 	if (R600_BIG_ENDIAN)
