@@ -147,6 +147,8 @@ enum st_attachment_type {
 #define ST_FLUSH_FRONT                    (1 << 0)
 #define ST_FLUSH_END_OF_FRAME             (1 << 1)
 #define ST_FLUSH_WAIT                     (1 << 2)
+#define ST_FLUSH_DEFERRED                 (1 << 3)
+#define ST_FLUSH_FENCE_FD                 (1 << 4)
 
 /**
  * Value to st_manager->get_param function.

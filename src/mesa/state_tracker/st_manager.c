@@ -632,9 +632,12 @@ st_context_flush(struct st_context_iface *stctxi, unsigned flags,
    struct st_context *st = (struct st_context *) stctxi;
    unsigned pipe_flags = 0;
 
-   if (flags & ST_FLUSH_END_OF_FRAME) {
+   if (flags & ST_FLUSH_END_OF_FRAME)
       pipe_flags |= PIPE_FLUSH_END_OF_FRAME;
-   }
+   if (flags & ST_FLUSH_DEFERRED)
+      pipe_flags |= PIPE_FLUSH_DEFERRED;
+   if (flags & ST_FLUSH_FENCE_FD)
+      pipe_flags |= PIPE_FLUSH_FENCE_FD;
 
    FLUSH_VERTICES(st->ctx, 0);
    FLUSH_CURRENT(st->ctx, 0);
