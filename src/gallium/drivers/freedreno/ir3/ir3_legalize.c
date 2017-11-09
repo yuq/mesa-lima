@@ -191,13 +191,18 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 			/* seems like ldlv needs (ss) bit instead??  which is odd but
 			 * makes a bunch of flat-varying tests start working on a4xx.
 			 */
-			if (n->opc == OPC_LDLV)
+			if ((n->opc == OPC_LDLV) || (n->opc == OPC_LDL))
 				regmask_set(&needs_ss, n->regs[0]);
 			else
 				regmask_set(&needs_sy, n->regs[0]);
+		} else if (is_atomic(n->opc)) {
+			if (n->flags & IR3_INSTR_G)
+				regmask_set(&needs_sy, n->regs[0]);
+			else
+				regmask_set(&needs_ss, n->regs[0]);
 		}
 
-		if ((n->opc == OPC_LDGB) || (n->opc == OPC_STGB) || is_atomic(n->opc))
+		if (is_ssbo(n->opc) || (is_atomic(n->opc) && (n->flags & IR3_INSTR_G)))
 			ctx->has_ssbo = true;
 
 		/* both tex/sfu appear to not always immediately consume

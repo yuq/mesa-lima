@@ -1432,6 +1432,149 @@ emit_intrinsic_atomic_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	return atomic;
 }
 
+/* src[] = { offset }. const_index[] = { base } */
+static void
+emit_intrinsic_load_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr,
+		struct ir3_instruction **dst)
+{
+	struct ir3_block *b = ctx->block;
+	struct ir3_instruction *ldl, *offset;
+	unsigned base;
+
+	offset = get_src(ctx, &intr->src[0])[0];
+	base   = intr->const_index[0];
+
+	ldl = ir3_LDL(b, offset, 0, create_immed(b, intr->num_components), 0);
+	ldl->cat6.src_offset = base;
+	ldl->cat6.type = TYPE_U32;
+	ldl->regs[0]->wrmask = MASK(intr->num_components);
+
+	mark_read(ctx, ldl);
+
+	split_dest(b, dst, ldl, 0, intr->num_components);
+}
+
+/* src[] = { value, offset }. const_index[] = { base, write_mask } */
+static void
+emit_intrinsic_store_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr)
+{
+	struct ir3_block *b = ctx->block;
+	struct ir3_instruction *stl, *offset;
+	struct ir3_instruction * const *value;
+	unsigned base, wrmask;
+
+	value  = get_src(ctx, &intr->src[0]);
+	offset = get_src(ctx, &intr->src[1])[0];
+
+	base   = intr->const_index[0];
+	wrmask = intr->const_index[1];
+
+	/* Combine groups of consecutive enabled channels in one write
+	 * message. We use ffs to find the first enabled channel and then ffs on
+	 * the bit-inverse, down-shifted writemask to determine the length of
+	 * the block of enabled bits.
+	 *
+	 * (trick stolen from i965's fs_visitor::nir_emit_cs_intrinsic())
+	 */
+	while (wrmask) {
+		unsigned first_component = ffs(wrmask) - 1;
+		unsigned length = ffs(~(wrmask >> first_component)) - 1;
+
+		stl = ir3_STL(b, offset, 0,
+			create_collect(b, &value[first_component], length), 0,
+			create_immed(b, length), 0);
+		stl->cat6.dst_offset = first_component + base;
+		stl->cat6.type = TYPE_U32;
+
+		mark_write(ctx, stl);
+		array_insert(b, b->keeps, stl);
+
+		/* Clear the bits in the writemask that we just wrote, then try
+		 * again to see if more channels are left.
+		 */
+		wrmask &= (15 << (first_component + length));
+	}
+}
+
+/*
+ * CS shared variable atomic intrinsics
+ *
+ * All of the shared variable atomic memory operations read a value from
+ * memory, compute a new value using one of the operations below, write the
+ * new value to memory, and return the original value read.
+ *
+ * All operations take 2 sources except CompSwap that takes 3. These
+ * sources represent:
+ *
+ * 0: The offset into the shared variable storage region that the atomic
+ *    operation will operate on.
+ * 1: The data parameter to the atomic function (i.e. the value to add
+ *    in shared_atomic_add, etc).
+ * 2: For CompSwap only: the second data parameter.
+ */
+static struct ir3_instruction *
+emit_intrinsic_atomic_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr)
+{
+	struct ir3_block *b = ctx->block;
+	struct ir3_instruction *atomic, *src0, *src1;
+	type_t type = TYPE_U32;
+
+	src0 = get_src(ctx, &intr->src[0])[0];   /* offset */
+	src1 = get_src(ctx, &intr->src[1])[0];   /* value */
+
+	switch (intr->intrinsic) {
+	case nir_intrinsic_shared_atomic_add:
+		atomic = ir3_ATOMIC_ADD(b, src0, 0, src1, 0);
+		break;
+	case nir_intrinsic_shared_atomic_imin:
+		atomic = ir3_ATOMIC_MIN(b, src0, 0, src1, 0);
+		type = TYPE_S32;
+		break;
+	case nir_intrinsic_shared_atomic_umin:
+		atomic = ir3_ATOMIC_MIN(b, src0, 0, src1, 0);
+		break;
+	case nir_intrinsic_shared_atomic_imax:
+		atomic = ir3_ATOMIC_MAX(b, src0, 0, src1, 0);
+		type = TYPE_S32;
+		break;
+	case nir_intrinsic_shared_atomic_umax:
+		atomic = ir3_ATOMIC_MAX(b, src0, 0, src1, 0);
+		break;
+	case nir_intrinsic_shared_atomic_and:
+		atomic = ir3_ATOMIC_AND(b, src0, 0, src1, 0);
+		break;
+	case nir_intrinsic_shared_atomic_or:
+		atomic = ir3_ATOMIC_OR(b, src0, 0, src1, 0);
+		break;
+	case nir_intrinsic_shared_atomic_xor:
+		atomic = ir3_ATOMIC_XOR(b, src0, 0, src1, 0);
+		break;
+	case nir_intrinsic_shared_atomic_exchange:
+		atomic = ir3_ATOMIC_XCHG(b, src0, 0, src1, 0);
+		break;
+	case nir_intrinsic_shared_atomic_comp_swap:
+		/* for cmpxchg, src1 is [ui]vec2(data, compare): */
+		src1 = create_collect(b, (struct ir3_instruction*[]){
+			get_src(ctx, &intr->src[2])[0],
+			src1,
+		}, 2);
+		atomic = ir3_ATOMIC_CMPXCHG(b, src0, 0, src1, 0);
+		break;
+	default:
+		unreachable("boo");
+	}
+
+	atomic->cat6.iim_val = 1;
+	atomic->cat6.d = 1;
+	atomic->cat6.type = type;
+	mark_write(ctx, atomic);
+
+	/* even if nothing consume the result, we can't DCE the instruction: */
+	array_insert(b, b->keeps, atomic);
+
+	return atomic;
+}
+
 static void
 emit_intrinsic_barrier(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 {
@@ -1585,6 +1728,24 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	case nir_intrinsic_ssbo_atomic_exchange:
 	case nir_intrinsic_ssbo_atomic_comp_swap:
 		dst[0] = emit_intrinsic_atomic_ssbo(ctx, intr);
+		break;
+	case nir_intrinsic_load_shared:
+		emit_intrinsic_load_shared(ctx, intr, dst);
+		break;
+	case nir_intrinsic_store_shared:
+		emit_intrinsic_store_shared(ctx, intr);
+		break;
+	case nir_intrinsic_shared_atomic_add:
+	case nir_intrinsic_shared_atomic_imin:
+	case nir_intrinsic_shared_atomic_umin:
+	case nir_intrinsic_shared_atomic_imax:
+	case nir_intrinsic_shared_atomic_umax:
+	case nir_intrinsic_shared_atomic_and:
+	case nir_intrinsic_shared_atomic_or:
+	case nir_intrinsic_shared_atomic_xor:
+	case nir_intrinsic_shared_atomic_exchange:
+	case nir_intrinsic_shared_atomic_comp_swap:
+		dst[0] = emit_intrinsic_atomic_shared(ctx, intr);
 		break;
 	case nir_intrinsic_barrier:
 	case nir_intrinsic_memory_barrier:
