@@ -45,10 +45,9 @@ void st_finalize_nir(struct st_context *st, struct gl_program *prog,
                      struct gl_shader_program *shader_program,
                      struct nir_shader *nir);
 
-struct gl_program *
-st_nir_get_mesa_program(struct gl_context *ctx,
-                        struct gl_shader_program *shader_program,
-                        struct gl_linked_shader *shader);
+bool
+st_link_nir(struct gl_context *ctx,
+            struct gl_shader_program *shader_program);
 
 #ifdef __cplusplus
 }

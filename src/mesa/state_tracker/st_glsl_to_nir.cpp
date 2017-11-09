@@ -508,4 +508,29 @@ st_nir_get_mesa_program(struct gl_context *ctx,
    return prog;
 }
 
+bool
+st_link_nir(struct gl_context *ctx,
+            struct gl_shader_program *shader_program)
+{
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_linked_shader *shader = shader_program->_LinkedShaders[i];
+      if (shader == NULL)
+         continue;
+
+      struct gl_program *linked_prog =
+         st_nir_get_mesa_program(ctx, shader_program, shader);
+
+      if (linked_prog) {
+         if (!ctx->Driver.ProgramStringNotify(ctx,
+                                              _mesa_shader_stage_to_program(i),
+                                              linked_prog)) {
+            _mesa_reference_program(ctx, &shader->Program, NULL);
+            return false;
+         }
+      }
+   }
+
+   return true;
+}
+
 } /* extern "C" */
