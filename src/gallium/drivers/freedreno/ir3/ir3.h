@@ -893,6 +893,8 @@ static inline unsigned ir3_cat3_absneg(opc_t opc)
 	}
 }
 
+#define MASK(n) ((1 << (n)) - 1)
+
 /* iterator for an instructions's sources (reg), also returns src #: */
 #define foreach_src_n(__srcreg, __n, __instr) \
 	if ((__instr)->regs_count) \

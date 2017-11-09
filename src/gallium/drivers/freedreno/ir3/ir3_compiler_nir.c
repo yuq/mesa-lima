@@ -1231,7 +1231,7 @@ emit_intrinsic_load_ubo(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 }
 
 static void
-mark_ssbo_read(struct ir3_context *ctx, struct ir3_instruction *instr)
+mark_read(struct ir3_context *ctx, struct ir3_instruction *instr)
 {
 	instr->regs[0]->instr = ctx->last_write;
 	instr->regs[0]->flags |= IR3_REG_SSA;
@@ -1239,13 +1239,14 @@ mark_ssbo_read(struct ir3_context *ctx, struct ir3_instruction *instr)
 }
 
 static void
-mark_ssbo_write(struct ir3_context *ctx, struct ir3_instruction *instr)
+mark_write(struct ir3_context *ctx, struct ir3_instruction *instr)
 {
 	instr->regs[0]->instr = ctx->last_access;
 	instr->regs[0]->flags |= IR3_REG_SSA;
 	ctx->last_write = ctx->last_access = instr;
 }
 
+/* src[] = { buffer_index, offset }. No const_index */
 static void
 emit_intrinsic_load_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 		struct ir3_instruction **dst)
@@ -1269,10 +1270,11 @@ emit_intrinsic_load_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 
 	ldgb = ir3_LDGB(b, create_immed(b, const_offset->u32[0]), 0,
 			src0, 0, src1, 0);
-	ldgb->regs[0]->wrmask = (1 << intr->num_components) - 1;
+	ldgb->regs[0]->wrmask = MASK(intr->num_components);
 	ldgb->cat6.iim_val = intr->num_components;
+	ldgb->cat6.d = 4;
 	ldgb->cat6.type = TYPE_U32;
-	mark_ssbo_read(ctx, ldgb);
+	mark_read(ctx, ldgb);
 
 	split_dest(b, dst, ldgb, 0, intr->num_components);
 }
@@ -1284,7 +1286,12 @@ emit_intrinsic_store_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	struct ir3_block *b = ctx->block;
 	struct ir3_instruction *stgb, *src0, *src1, *src2, *offset;
 	nir_const_value *const_offset;
-	unsigned ncomp = ffs(~intr->const_index[0]) - 1;
+	/* TODO handle wrmask properly, see _store_shared().. but I think
+	 * it is more a PITA than that, since blob ends up loading the
+	 * masked components and writing them back out.
+	 */
+	unsigned wrmask = intr->const_index[0];
+	unsigned ncomp = ffs(~wrmask) - 1;
 
 	/* can this be non-const buffer_index?  how do we handle that? */
 	const_offset = nir_src_as_const_value(intr->src[1]);
@@ -1305,8 +1312,9 @@ emit_intrinsic_store_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	stgb = ir3_STGB(b, create_immed(b, const_offset->u32[0]), 0,
 			src0, 0, src1, 0, src2, 0);
 	stgb->cat6.iim_val = ncomp;
+	stgb->cat6.d = 4;
 	stgb->cat6.type = TYPE_U32;
-	mark_ssbo_write(ctx, stgb);
+	mark_write(ctx, stgb);
 
 	array_insert(b, b->keeps, stgb);
 }
@@ -1326,8 +1334,25 @@ emit_intrinsic_ssbo_size(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 	dst[0] = create_uniform(ctx, idx);
 }
 
+/*
+ * SSBO atomic intrinsics
+ *
+ * All of the SSBO atomic memory operations read a value from memory,
+ * compute a new value using one of the operations below, write the new
+ * value to memory, and return the original value read.
+ *
+ * All operations take 3 sources except CompSwap that takes 4. These
+ * sources represent:
+ *
+ * 0: The SSBO buffer index.
+ * 1: The offset into the SSBO buffer of the variable that the atomic
+ *    operation will operate on.
+ * 2: The data parameter to the atomic function (i.e. the value to add
+ *    in ssbo_atomic_add, etc).
+ * 3: For CompSwap only: the second data parameter.
+ */
 static struct ir3_instruction *
-emit_intrinsic_atomic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
+emit_intrinsic_atomic_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 {
 	struct ir3_block *b = ctx->block;
 	struct ir3_instruction *atomic, *ssbo, *src0, *src1, *src2, *offset;
@@ -1341,9 +1366,9 @@ emit_intrinsic_atomic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 
 	offset = get_src(ctx, &intr->src[1])[0];
 
-	/* src0 is data (or uvec2(data, compare)
+	/* src0 is data (or uvec2(data, compare))
 	 * src1 is offset
-	 * src2 is uvec2(offset*4, 0)
+	 * src2 is uvec2(offset*4, 0) (appears to be 64b byte offset)
 	 *
 	 * Note that nir already multiplies the offset by four
 	 */
@@ -1397,8 +1422,9 @@ emit_intrinsic_atomic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	}
 
 	atomic->cat6.iim_val = 1;
+	atomic->cat6.d = 4;
 	atomic->cat6.type = type;
-	mark_ssbo_write(ctx, atomic);
+	mark_write(ctx, atomic);
 
 	/* even if nothing consume the result, we can't DCE the instruction: */
 	array_insert(b, b->keeps, atomic);
@@ -1558,11 +1584,7 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	case nir_intrinsic_ssbo_atomic_xor:
 	case nir_intrinsic_ssbo_atomic_exchange:
 	case nir_intrinsic_ssbo_atomic_comp_swap:
-		if (info->has_dest) {
-			dst[0] = emit_intrinsic_atomic(ctx, intr);
-		} else {
-			emit_intrinsic_atomic(ctx, intr);
-		}
+		dst[0] = emit_intrinsic_atomic_ssbo(ctx, intr);
 		break;
 	case nir_intrinsic_barrier:
 	case nir_intrinsic_memory_barrier:
