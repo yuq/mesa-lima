@@ -991,13 +991,9 @@ dri2_display_destroy(_EGLDisplay *disp)
    case _EGL_PLATFORM_X11:
       dri2_teardown_x11(dri2_dpy);
       break;
-#ifdef HAVE_DRM_PLATFORM
    case _EGL_PLATFORM_DRM:
-      if (dri2_dpy->own_device) {
-         gbm_device_destroy(&dri2_dpy->gbm_dri->base);
-      }
+      dri2_teardown_drm(disp);
       break;
-#endif
 #ifdef HAVE_WAYLAND_PLATFORM
    case _EGL_PLATFORM_WAYLAND:
       if (dri2_dpy->wl_drm)

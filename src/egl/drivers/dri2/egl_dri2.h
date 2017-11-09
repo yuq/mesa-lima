@@ -418,12 +418,16 @@ dri2_teardown_x11(struct dri2_egl_display *dri2_dpy) {}
 #ifdef HAVE_DRM_PLATFORM
 EGLBoolean
 dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp);
+void
+dri2_teardown_drm(struct dri2_egl_display *dri2_dpy);
 #else
 static inline EGLBoolean
 dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
 {
    return _eglError(EGL_NOT_INITIALIZED, "GBM/DRM platform not built");
 }
+static inline void
+dri2_teardown_drm(struct dri2_egl_display *dri2_dpy) {}
 #endif
 
 #ifdef HAVE_WAYLAND_PLATFORM
