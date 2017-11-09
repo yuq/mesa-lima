@@ -471,6 +471,10 @@ Here is one solution that I've been using.
 		--enable-egl \
 		--with-platforms=x11,drm,wayland,surfaceless
 	make &amp;&amp; DESTDIR=`pwd`/test make install
+
+	# Drop LLVM_CONFIG, if applicable:
+	# unset LLVM_CONFIG
+
 	__glxinfo_cmd='glxinfo 2>&amp;1 | egrep -o "Mesa.*|Gallium.*|.*dri\.so"'
 	__glxgears_cmd='glxgears 2>&amp;1 | grep -v "configuration file"'
 	__es2info_cmd='es2_info 2>&amp;1 | egrep "GL_VERSION|GL_RENDERER|.*dri\.so"'
