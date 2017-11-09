@@ -134,6 +134,21 @@ struct ir3_register {
 	};
 };
 
+/*
+ * Stupid/simple growable array implementation:
+ */
+#define DECLARE_ARRAY(type, name) \
+	unsigned name ## _count, name ## _sz; \
+	type * name;
+
+#define array_insert(ctx, arr, val) do { \
+		if (arr ## _count == arr ## _sz) { \
+			arr ## _sz = MAX2(2 * arr ## _sz, 16); \
+			arr = reralloc_size(ctx, arr, arr ## _sz * sizeof(arr[0])); \
+		} \
+		arr[arr ##_count++] = val; \
+	} while (0)
+
 struct ir3_instruction {
 	struct ir3_block *block;
 	opc_t opc;
@@ -350,21 +365,6 @@ static inline int ir3_neighbor_count(struct ir3_instruction *instr)
 
 	return num;
 }
-
-/*
- * Stupid/simple growable array implementation:
- */
-#define DECLARE_ARRAY(type, name) \
-	unsigned name ## _count, name ## _sz; \
-	type * name;
-
-#define array_insert(ctx, arr, val) do { \
-		if (arr ## _count == arr ## _sz) { \
-			arr ## _sz = MAX2(2 * arr ## _sz, 16); \
-			arr = reralloc_size(ctx, arr, arr ## _sz * sizeof(arr[0])); \
-		} \
-		arr[arr ##_count++] = val; \
-	} while (0)
 
 struct ir3 {
 	struct ir3_compiler *compiler;
