@@ -461,11 +461,14 @@ brw_emit_mi_flush(struct brw_context *brw)
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    if (brw->batch.ring == BLT_RING && devinfo->gen >= 6) {
-      BEGIN_BATCH_BLT(4);
-      OUT_BATCH(MI_FLUSH_DW | (4 - 2));
+      const unsigned n_dwords = devinfo->gen >= 8 ? 5 : 4;
+      BEGIN_BATCH_BLT(n_dwords);
+      OUT_BATCH(MI_FLUSH_DW | (n_dwords - 2));
       OUT_BATCH(0);
       OUT_BATCH(0);
       OUT_BATCH(0);
+      if (n_dwords == 5)
+         OUT_BATCH(0);
       ADVANCE_BATCH();
    } else {
       int flags = PIPE_CONTROL_NO_WRITE | PIPE_CONTROL_RENDER_TARGET_FLUSH;
