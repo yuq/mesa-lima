@@ -543,7 +543,9 @@ struct radeon_winsys {
     /**
      * Create a fence before the CS is flushed.
      * The user must flush manually to complete the initializaton of the fence.
-     * The fence must not be used before the flush.
+     *
+     * The fence must not be used for anything except \ref cs_add_fence_dependency
+     * before the flush.
      */
     struct pipe_fence_handle *(*cs_get_next_fence)(struct radeon_winsys_cs *cs);
 

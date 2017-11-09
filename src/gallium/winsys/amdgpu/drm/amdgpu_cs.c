@@ -50,7 +50,8 @@ amdgpu_fence_create(struct amdgpu_ctx *ctx, unsigned ip_type,
    fence->fence.ip_type = ip_type;
    fence->fence.ip_instance = ip_instance;
    fence->fence.ring = ring;
-   fence->submission_in_progress = true;
+   util_queue_fence_init(&fence->submitted);
+   util_queue_fence_reset(&fence->submitted);
    p_atomic_inc(&ctx->refcount);
    return (struct pipe_fence_handle *)fence;
 }
@@ -81,6 +82,9 @@ amdgpu_fence_import_sync_file(struct radeon_winsys *rws, int fd)
       FREE(fence);
       return NULL;
    }
+
+   util_queue_fence_init(&fence->submitted);
+
    return (struct pipe_fence_handle*)fence;
 }
 
@@ -98,7 +102,7 @@ static int amdgpu_fence_export_sync_file(struct radeon_winsys *rws,
       return r ? -1 : fd;
    }
 
-   os_wait_until_zero(&fence->submission_in_progress, PIPE_TIMEOUT_INFINITE);
+   util_queue_fence_wait(&fence->submitted);
 
    /* Convert the amdgpu fence into a fence FD. */
    int fd;
@@ -118,7 +122,7 @@ static void amdgpu_fence_submitted(struct pipe_fence_handle *fence,
 
    rfence->fence.fence = seq_no;
    rfence->user_fence_cpu_address = user_fence_cpu_address;
-   rfence->submission_in_progress = false;
+   util_queue_fence_signal(&rfence->submitted);
 }
 
 static void amdgpu_fence_signalled(struct pipe_fence_handle *fence)
@@ -126,7 +130,7 @@ static void amdgpu_fence_signalled(struct pipe_fence_handle *fence)
    struct amdgpu_fence *rfence = (struct amdgpu_fence*)fence;
 
    rfence->signalled = true;
-   rfence->submission_in_progress = false;
+   util_queue_fence_signal(&rfence->submitted);
 }
 
 bool amdgpu_fence_wait(struct pipe_fence_handle *fence, uint64_t timeout,
@@ -164,8 +168,7 @@ bool amdgpu_fence_wait(struct pipe_fence_handle *fence, uint64_t timeout,
    /* The fence might not have a number assigned if its IB is being
     * submitted in the other thread right now. Wait until the submission
     * is done. */
-   if (!os_wait_until_zero_abs_timeout(&rfence->submission_in_progress,
-                                       abs_timeout))
+   if (!util_queue_fence_wait_timeout(&rfence->submitted, abs_timeout))
       return false;
 
    user_fence_cpu = rfence->user_fence_cpu_address;
@@ -1029,6 +1032,8 @@ static void amdgpu_cs_add_fence_dependency(struct radeon_winsys_cs *rws,
    struct amdgpu_cs_context *cs = acs->csc;
    struct amdgpu_fence *fence = (struct amdgpu_fence*)pfence;
 
+   util_queue_fence_wait(&fence->submitted);
+
    if (is_noop_fence_dependency(acs, fence))
       return;
 
@@ -1304,7 +1309,7 @@ bo_list_error:
                continue;
             }
 
-            assert(!fence->submission_in_progress);
+            assert(util_queue_fence_is_signalled(&fence->submitted));
             amdgpu_cs_chunk_fence_to_dep(&fence->fence, &dep_chunk[num++]);
          }
 
@@ -1327,7 +1332,7 @@ bo_list_error:
             if (!amdgpu_fence_is_syncobj(fence))
                continue;
 
-            assert(!fence->submission_in_progress);
+            assert(util_queue_fence_is_signalled(&fence->submitted));
             sem_chunk[num++].handle = fence->syncobj;
          }
 

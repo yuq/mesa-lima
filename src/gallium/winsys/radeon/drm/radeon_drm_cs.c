@@ -786,6 +786,24 @@ radeon_drm_cs_get_next_fence(struct radeon_winsys_cs *rcs)
    return fence;
 }
 
+static void
+radeon_drm_cs_add_fence_dependency(struct radeon_winsys_cs *cs,
+                                   struct pipe_fence_handle *fence)
+{
+   /* TODO: Handle the following unlikely multi-threaded scenario:
+    *
+    *  Thread 1 / Context 1                   Thread 2 / Context 2
+    *  --------------------                   --------------------
+    *  f = cs_get_next_fence()
+    *                                         cs_add_fence_dependency(f)
+    *                                         cs_flush()
+    *  cs_flush()
+    *
+    * We currently assume that this does not happen because we don't support
+    * asynchronous flushes on Radeon.
+    */
+}
+
 void radeon_drm_cs_init_functions(struct radeon_drm_winsys *ws)
 {
     ws->base.ctx_create = radeon_drm_ctx_create;
@@ -801,6 +819,7 @@ void radeon_drm_cs_init_functions(struct radeon_drm_winsys *ws)
     ws->base.cs_get_next_fence = radeon_drm_cs_get_next_fence;
     ws->base.cs_is_buffer_referenced = radeon_bo_is_referenced;
     ws->base.cs_sync_flush = radeon_drm_cs_sync_flush;
+    ws->base.cs_add_fence_dependency = radeon_drm_cs_add_fence_dependency;
     ws->base.fence_wait = radeon_fence_wait;
     ws->base.fence_reference = radeon_fence_reference;
 }
