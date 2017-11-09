@@ -2532,7 +2532,9 @@ struct gl_linked_shader
    struct glsl_symbol_table *symbols;
 };
 
-static inline GLbitfield gl_external_samplers(struct gl_program *prog)
+
+static inline GLbitfield
+gl_external_samplers(const struct gl_program *prog)
 {
    GLbitfield external_samplers = 0;
    GLbitfield mask = prog->SamplersUsed;
@@ -2545,6 +2547,7 @@ static inline GLbitfield gl_external_samplers(struct gl_program *prog)
 
    return external_samplers;
 }
+
 
 /**
  * Compile status enum. compile_skipped is used to indicate the compile
