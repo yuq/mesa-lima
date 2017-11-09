@@ -4646,7 +4646,7 @@ static void si_set_grbm_gfx_index(struct si_context *sctx,
 				  struct si_pm4_state *pm4,  unsigned value)
 {
 	unsigned reg = sctx->b.chip_class >= CIK ? R_030800_GRBM_GFX_INDEX :
-						   GRBM_GFX_INDEX;
+						   R_00802C_GRBM_GFX_INDEX;
 	si_pm4_set_reg(pm4, reg, value);
 }
 
