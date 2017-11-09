@@ -1090,17 +1090,19 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
 					      TGSI_NUM_CHANNELS);
 	}
 
+	/* Split 64-bit loads. */
+	if (tgsi_type_is_64bit(type)) {
+		LLVMValueRef lo, hi;
+
+		lo = lds_load(bld_base, TGSI_TYPE_UNSIGNED, swizzle, dw_addr);
+		hi = lds_load(bld_base, TGSI_TYPE_UNSIGNED, swizzle + 1, dw_addr);
+		return si_llvm_emit_fetch_64bit(bld_base, type, lo, hi);
+	}
+
 	dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
 			    LLVMConstInt(ctx->i32, swizzle, 0));
 
 	value = ac_lds_load(&ctx->ac, dw_addr);
-	if (tgsi_type_is_64bit(type)) {
-		LLVMValueRef value2;
-		dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
-				       ctx->i32_1);
-		value2 = ac_lds_load(&ctx->ac, dw_addr);
-		return si_llvm_emit_fetch_64bit(bld_base, type, value, value2);
-	}
 
 	return bitcast(bld_base, type, value);
 }
