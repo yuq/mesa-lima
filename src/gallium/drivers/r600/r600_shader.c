@@ -4865,11 +4865,7 @@ static int tgsi_rsq(struct r600_shader_ctx *ctx)
 
 	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 
-	/* XXX:
-	 * For state trackers other than OpenGL, we'll want to use
-	 * _RECIPSQRT_IEEE instead.
-	 */
-	alu.op = ALU_OP1_RECIPSQRT_CLAMPED;
+	alu.op = ALU_OP1_RECIPSQRT_IEEE;
 
 	for (i = 0; i < inst->Instruction.NumSrcRegs; i++) {
 		r600_bytecode_src(&alu.src[i], &ctx->src[i], 0);
