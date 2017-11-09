@@ -400,20 +400,60 @@ _EGLImage *
 dri2_create_image_dma_buf(_EGLDisplay *disp, _EGLContext *ctx,
                           EGLClientBuffer buffer, const EGLint *attr_list);
 
+#ifdef HAVE_X11_PLATFORM
 EGLBoolean
 dri2_initialize_x11(_EGLDriver *drv, _EGLDisplay *disp);
+#else
+static inline EGLBoolean
+dri2_initialize_x11(_EGLDriver *drv, _EGLDisplay *disp)
+{
+   return _eglError(EGL_NOT_INITIALIZED, "X11 platform not built");
+}
+#endif
 
+#ifdef HAVE_DRM_PLATFORM
 EGLBoolean
 dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp);
+#else
+static inline EGLBoolean
+dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
+{
+   return _eglError(EGL_NOT_INITIALIZED, "GBM/DRM platform not built");
+}
+#endif
 
+#ifdef HAVE_WAYLAND_PLATFORM
 EGLBoolean
 dri2_initialize_wayland(_EGLDriver *drv, _EGLDisplay *disp);
+#else
+static inline EGLBoolean
+dri2_initialize_wayland(_EGLDriver *drv, _EGLDisplay *disp)
+{
+   return _eglError(EGL_NOT_INITIALIZED, "Wayland platform not built");
+}
+#endif
 
+#ifdef HAVE_ANDROID_PLATFORM
 EGLBoolean
 dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *disp);
+#else
+static inline EGLBoolean
+dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *disp)
+{
+   return _eglError(EGL_NOT_INITIALIZED, "Android platform not built");
+}
+#endif
 
+#ifdef HAVE_SURFACELESS_PLATFORM
 EGLBoolean
 dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp);
+#else
+static inline EGLBoolean
+dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
+{
+   return _eglError(EGL_NOT_INITIALIZED, "Surfaceless platform not built");
+}
+#endif
 
 void
 dri2_flush_drawable_for_swapbuffers(_EGLDisplay *disp, _EGLSurface *draw);

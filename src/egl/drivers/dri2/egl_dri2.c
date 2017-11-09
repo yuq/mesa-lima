@@ -915,33 +915,23 @@ dri2_initialize(_EGLDriver *drv, _EGLDisplay *disp)
       return EGL_FALSE;
 
    switch (disp->Platform) {
-#ifdef HAVE_SURFACELESS_PLATFORM
    case _EGL_PLATFORM_SURFACELESS:
       ret = dri2_initialize_surfaceless(drv, disp);
       break;
-#endif
-#ifdef HAVE_X11_PLATFORM
    case _EGL_PLATFORM_X11:
       ret = dri2_initialize_x11(drv, disp);
       break;
-#endif
-#ifdef HAVE_DRM_PLATFORM
    case _EGL_PLATFORM_DRM:
       ret = dri2_initialize_drm(drv, disp);
       break;
-#endif
-#ifdef HAVE_WAYLAND_PLATFORM
    case _EGL_PLATFORM_WAYLAND:
       ret = dri2_initialize_wayland(drv, disp);
       break;
-#endif
-#ifdef HAVE_ANDROID_PLATFORM
    case _EGL_PLATFORM_ANDROID:
       ret = dri2_initialize_android(drv, disp);
       break;
-#endif
    default:
-      _eglLog(_EGL_WARNING, "No EGL platform enabled.");
+      unreachable("Callers ensure we cannot get here.");
       return EGL_FALSE;
    }
 
