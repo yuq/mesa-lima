@@ -1905,7 +1905,7 @@ void si_declare_compute_memory(struct si_shader_context *ctx,
 
 	assert(decl->Declaration.MemType == TGSI_MEMORY_TYPE_SHARED);
 	assert(decl->Range.First == decl->Range.Last);
-	assert(!ctx->shared_memory);
+	assert(!ctx->ac.lds);
 
 	var = LLVMAddGlobalInAddressSpace(ctx->ac.module,
 	                                  LLVMArrayType(ctx->i8, sel->local_size),
@@ -1913,7 +1913,7 @@ void si_declare_compute_memory(struct si_shader_context *ctx,
 	                                  LOCAL_ADDR_SPACE);
 	LLVMSetAlignment(var, 4);
 
-	ctx->shared_memory = LLVMBuildBitCast(ctx->ac.builder, var, i8p, "");
+	ctx->ac.lds = LLVMBuildBitCast(ctx->ac.builder, var, i8p, "");
 }
 
 static LLVMValueRef load_const_buffer_desc(struct si_shader_context *ctx, int i)

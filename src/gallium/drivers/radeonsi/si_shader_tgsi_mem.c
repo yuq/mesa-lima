@@ -449,7 +449,7 @@ static LLVMValueRef get_memory_ptr(struct si_shader_context *ctx,
 	offset = lp_build_emit_fetch(&ctx->bld_base, inst, arg, 0);
 	offset = ac_to_integer(&ctx->ac, offset);
 
-	ptr = ctx->shared_memory;
+	ptr = ctx->ac.lds;
 	ptr = LLVMBuildGEP(builder, ptr, &offset, 1, "");
 	addr_space = LLVMGetPointerAddressSpace(LLVMTypeOf(ptr));
 	ptr = LLVMBuildBitCast(builder, ptr, LLVMPointerType(type, addr_space), "");

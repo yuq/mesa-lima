@@ -221,8 +221,6 @@ struct si_shader_context {
 
 	LLVMValueRef i32_0;
 	LLVMValueRef i32_1;
-
-	LLVMValueRef shared_memory;
 };
 
 static inline struct si_shader_context *
