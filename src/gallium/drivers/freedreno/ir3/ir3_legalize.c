@@ -187,6 +187,9 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 			 */
 			ctx->has_samp = true;
 			regmask_set(&needs_sy, n->regs[0]);
+		} else if (n->opc == OPC_RESINFO) {
+			regmask_set(&needs_ss, n->regs[0]);
+			ir3_NOP(block)->flags |= IR3_INSTR_SS;
 		} else if (is_load(n)) {
 			/* seems like ldlv needs (ss) bit instead??  which is odd but
 			 * makes a bunch of flat-varying tests start working on a4xx.

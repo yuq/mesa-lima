@@ -628,6 +628,38 @@ emit_ssbo_sizes(struct fd_context *ctx, const struct ir3_shader_variant *v,
 }
 
 static void
+emit_image_dims(struct fd_context *ctx, const struct ir3_shader_variant *v,
+		struct fd_ringbuffer *ring, struct fd_shaderimg_stateobj *si)
+{
+	uint32_t offset = v->constbase.image_dims;
+	if (v->constlen > offset) {
+		uint32_t dims[align(v->const_layout.image_dims.count, 4)];
+		unsigned mask = v->const_layout.image_dims.mask;
+
+		while (mask) {
+			struct pipe_image_view *img;
+			struct fd_resource *rsc;
+			unsigned index = u_bit_scan(&mask);
+			unsigned off = v->const_layout.image_dims.off[index];
+
+			img = &si->si[index];
+			rsc = fd_resource(img->resource);
+
+			dims[off + 0] = rsc->cpp;
+			if (img->resource->target != PIPE_BUFFER) {
+				unsigned lvl = img->u.tex.level;
+				dims[off + 1] = rsc->slices[lvl].pitch * rsc->cpp;
+				dims[off + 2] = rsc->slices[lvl].size0;
+			}
+		}
+
+		fd_wfi(ctx->batch, ring);
+		ctx->emit_const(ring, v->type, offset * 4,
+			0, ARRAY_SIZE(dims), dims, NULL);
+	}
+}
+
+static void
 emit_immediates(struct fd_context *ctx, const struct ir3_shader_variant *v,
 		struct fd_ringbuffer *ring)
 {
@@ -751,6 +783,11 @@ emit_common_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *rin
 	if (dirty & (FD_DIRTY_SHADER_PROG | FD_DIRTY_SHADER_SSBO)) {
 		struct fd_shaderbuf_stateobj *sb = &ctx->shaderbuf[t];
 		emit_ssbo_sizes(ctx, v, ring, sb);
+	}
+
+	if (dirty & (FD_DIRTY_SHADER_PROG | FD_DIRTY_SHADER_IMAGE)) {
+		struct fd_shaderimg_stateobj *si = &ctx->shaderimg[t];
+		emit_image_dims(ctx, v, ring, si);
 	}
 }
 

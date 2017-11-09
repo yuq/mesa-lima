@@ -63,6 +63,9 @@ enum ir3_driver_param {
  *
  *   + SSBO sizes: only needed if shader has a get_buffer_size intrinsic
  *     for a given SSBO
+ *
+ *   + Image dimensions: needed to calculate pixel offset, but only for
+ *     images that have a image_store intrinsic
  */
 struct ir3_driver_const_layout {
 	struct {
@@ -74,6 +77,17 @@ struct ir3_driver_const_layout {
 		 */
 		uint32_t off[PIPE_MAX_SHADER_BUFFERS];
 	} ssbo_size;
+
+	struct {
+		uint32_t mask;  /* bitmask of images that have image_store */
+		uint32_t count; /* number of consts allocated */
+		/* three const allocated per image which has image_store:
+		 *  + cpp         (bytes per pixel)
+		 *  + pitch       (y pitch)
+		 *  + array_pitch (z pitch)
+		 */
+		uint32_t off[PIPE_MAX_SHADER_IMAGES];
+	} image_dims;
 };
 
 /* Configuration key used to identify a shader variant.. different
@@ -295,6 +309,7 @@ struct ir3_shader_variant {
 		unsigned ubo;
 		/* NOTE that a3xx might need a section for SSBO addresses too */
 		unsigned ssbo_sizes;
+		unsigned image_dims;
 		unsigned driver_param;
 		unsigned tfbo;
 		unsigned immediate;

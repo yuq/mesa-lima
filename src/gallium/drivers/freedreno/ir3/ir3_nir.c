@@ -237,6 +237,15 @@ ir3_nir_scan_driver_consts(nir_shader *shader,
 						layout->ssbo_size.count;
 					layout->ssbo_size.count += 1; /* one const per */
 					break;
+				case nir_intrinsic_image_store:
+					idx = intr->variables[0]->var->data.driver_location;
+					if (layout->image_dims.mask & (1 << idx))
+						break;
+					layout->image_dims.mask |= (1 << idx);
+					layout->ssbo_size.off[idx] =
+						layout->image_dims.count;
+					layout->image_dims.count += 3; /* three const per */
+					break;
 				default:
 					break;
 				}

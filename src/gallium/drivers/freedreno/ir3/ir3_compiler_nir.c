@@ -254,6 +254,12 @@ compile_init(struct ir3_compiler *compiler,
 		constoff += align(cnt, 4) / 4;
 	}
 
+	if (so->const_layout.image_dims.count > 0) {
+		unsigned cnt = so->const_layout.image_dims.count;
+		so->constbase.image_dims = constoff;
+		constoff += align(cnt, 4) / 4;
+	}
+
 	unsigned num_driver_params = 0;
 	if (so->type == SHADER_VERTEX) {
 		num_driver_params = IR3_DP_VS_COUNT;
@@ -1575,6 +1581,254 @@ emit_intrinsic_atomic_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	return atomic;
 }
 
+/* Images get mapped into SSBO/image state (for store/atomic) and texture
+ * state block (for load).  To simplify things, invert the image id and
+ * map it from end of state block, ie. image 0 becomes num-1, image 1
+ * becomes num-2, etc.  This potentially avoids needing to re-emit texture
+ * state when switching shaders.
+ *
+ * TODO is max # of samplers and SSBOs the same.  This shouldn't be hard-
+ * coded.  Also, since all the gl shader stages (ie. everything but CS)
+ * share the same SSBO/image state block, this might require some more
+ * logic if we supported images in anything other than FS..
+ */
+static unsigned
+get_image_slot(struct ir3_context *ctx, const nir_variable *var)
+{
+	/* TODO figure out real limit per generation, and don't hardcode: */
+	const unsigned max_samplers = 16;
+	return max_samplers - var->data.driver_location - 1;
+}
+
+static unsigned
+get_image_coords(const nir_variable *var)
+{
+	switch (glsl_get_sampler_dim(glsl_without_array(var->type))) {
+	case GLSL_SAMPLER_DIM_1D:
+	case GLSL_SAMPLER_DIM_BUF:
+		return 1;
+		break;
+	case GLSL_SAMPLER_DIM_2D:
+	case GLSL_SAMPLER_DIM_RECT:
+	case GLSL_SAMPLER_DIM_EXTERNAL:
+	case GLSL_SAMPLER_DIM_MS:
+		return 2;
+	case GLSL_SAMPLER_DIM_3D:
+	case GLSL_SAMPLER_DIM_CUBE:
+		return 3;
+	default:
+		unreachable("bad sampler dim");
+		return 0;
+	}
+}
+
+static type_t
+get_image_type(const nir_variable *var)
+{
+	switch (glsl_get_sampler_result_type(glsl_without_array(var->type))) {
+	case GLSL_TYPE_UINT:
+		return TYPE_U32;
+	case GLSL_TYPE_INT:
+		return TYPE_S32;
+	case GLSL_TYPE_FLOAT:
+		return TYPE_F32;
+	default:
+		unreachable("bad sampler type.");
+		return 0;
+	}
+}
+
+static struct ir3_instruction *
+get_image_offset(struct ir3_context *ctx, const nir_variable *var,
+		struct ir3_instruction * const *coords, bool byteoff)
+{
+	struct ir3_block *b = ctx->block;
+	struct ir3_instruction *offset;
+	unsigned ncoords = get_image_coords(var);
+
+	/* to calculate the byte offset (yes, uggg) we need (up to) three
+	 * const values to know the bytes per pixel, and y and z stride:
+	 */
+	unsigned cb = regid(ctx->so->constbase.image_dims, 0) +
+		ctx->so->const_layout.image_dims.off[var->data.driver_location];
+
+	debug_assert(ctx->so->const_layout.image_dims.mask &
+			(1 << var->data.driver_location));
+
+	/* offset = coords.x * bytes_per_pixel: */
+	offset = ir3_MUL_S(b, coords[0], 0, create_uniform(ctx, cb + 0), 0);
+	if (ncoords > 1) {
+		/* offset += coords.y * y_pitch: */
+		offset = ir3_MAD_S24(b, create_uniform(ctx, cb + 1), 0,
+				coords[1], 0, offset, 0);
+	}
+	if (ncoords > 2) {
+		/* offset += coords.z * z_pitch: */
+		offset = ir3_MAD_S24(b, create_uniform(ctx, cb + 2), 0,
+				coords[2], 0, offset, 0);
+	}
+
+	if (!byteoff) {
+		/* Some cases, like atomics, seem to use dword offset instead
+		 * of byte offsets.. blob just puts an extra shr.b in there
+		 * in those cases:
+		 */
+		offset = ir3_SHR_B(b, offset, 0, create_immed(b, 2), 0);
+	}
+
+	return create_collect(b, (struct ir3_instruction*[]){
+		offset,
+		create_immed(b, 0),
+	}, 2);
+}
+
+/* src[] = { coord, sample_index }. const_index[] = {} */
+static void
+emit_intrinsic_load_image(struct ir3_context *ctx, nir_intrinsic_instr *intr,
+		struct ir3_instruction **dst)
+{
+	struct ir3_block *b = ctx->block;
+	const nir_variable *var = intr->variables[0]->var;
+	struct ir3_instruction *sam;
+	struct ir3_instruction * const *coords = get_src(ctx, &intr->src[0]);
+	unsigned ncoords = get_image_coords(var);
+	unsigned tex_idx = get_image_slot(ctx, var);
+	type_t type = get_image_type(var);
+	unsigned flags = 0;
+
+	if (ncoords == 3)
+		flags |= IR3_INSTR_3D;
+
+	sam = ir3_SAM(b, OPC_ISAM, type, TGSI_WRITEMASK_XYZW, flags,
+			tex_idx, tex_idx, create_collect(b, coords, ncoords), NULL);
+
+	split_dest(b, dst, sam, 0, 4);
+}
+
+/* src[] = { coord, sample_index, value }. const_index[] = {} */
+static void
+emit_intrinsic_store_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
+{
+	struct ir3_block *b = ctx->block;
+	const nir_variable *var = intr->variables[0]->var;
+	struct ir3_instruction *stib, *offset;
+	struct ir3_instruction * const *value = get_src(ctx, &intr->src[2]);
+	struct ir3_instruction * const *coords = get_src(ctx, &intr->src[0]);
+	unsigned ncoords = get_image_coords(var);
+	unsigned tex_idx = get_image_slot(ctx, var);
+
+	/* src0 is value
+	 * src1 is coords
+	 * src2 is 64b byte offset
+	 */
+
+	offset = get_image_offset(ctx, var, coords, true);
+
+	/* NOTE: stib seems to take byte offset, but stgb.typed can be used
+	 * too and takes a dword offset.. not quite sure yet why blob uses
+	 * one over the other in various cases.
+	 */
+
+	stib = ir3_STIB(b, create_immed(b, tex_idx), 0,
+			create_collect(b, value, 4), 0,
+			create_collect(b, coords, ncoords), 0,
+			offset, 0);
+	stib->cat6.iim_val = 4;
+	stib->cat6.d = ncoords;
+	stib->cat6.type = get_image_type(var);
+	stib->cat6.typed = true;
+	mark_write(ctx, stib);
+
+	array_insert(b, b->keeps, stib);
+}
+
+static void
+emit_intrinsic_image_size(struct ir3_context *ctx, nir_intrinsic_instr *intr,
+		struct ir3_instruction **dst)
+{
+	struct ir3_block *b = ctx->block;
+	const nir_variable *var = intr->variables[0]->var;
+	unsigned ncoords = get_image_coords(var);
+	unsigned tex_idx = get_image_slot(ctx, var);
+	struct ir3_instruction *sam, *lod;
+	unsigned flags = 0;
+
+	if (ncoords == 3)
+		flags = IR3_INSTR_3D;
+
+	lod = create_immed(b, 0);
+	sam = ir3_SAM(b, OPC_GETSIZE, TYPE_U32, TGSI_WRITEMASK_XYZW, flags,
+			tex_idx, tex_idx, lod, NULL);
+
+	split_dest(b, dst, sam, 0, ncoords);
+}
+
+/* src[] = { coord, sample_index, value, compare }. const_index[] = {} */
+static struct ir3_instruction *
+emit_intrinsic_atomic_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
+{
+	struct ir3_block *b = ctx->block;
+	const nir_variable *var = intr->variables[0]->var;
+	struct ir3_instruction *atomic, *image, *src0, *src1, *src2;
+	struct ir3_instruction * const *coords = get_src(ctx, &intr->src[0]);
+	unsigned ncoords = get_image_coords(var);
+
+	image = create_immed(b, get_image_slot(ctx, var));
+
+	/* src0 is value (or uvec2(value, compare))
+	 * src1 is coords
+	 * src2 is 64b byte offset
+	 */
+	src0 = get_src(ctx, &intr->src[2])[0];
+	src1 = create_collect(b, coords, ncoords);
+	src2 = get_image_offset(ctx, var, coords, false);
+
+	switch (intr->intrinsic) {
+	case nir_intrinsic_image_atomic_add:
+		atomic = ir3_ATOMIC_ADD_G(b, image, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	case nir_intrinsic_image_atomic_min:
+		atomic = ir3_ATOMIC_MIN_G(b, image, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	case nir_intrinsic_image_atomic_max:
+		atomic = ir3_ATOMIC_MAX_G(b, image, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	case nir_intrinsic_image_atomic_and:
+		atomic = ir3_ATOMIC_AND_G(b, image, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	case nir_intrinsic_image_atomic_or:
+		atomic = ir3_ATOMIC_OR_G(b, image, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	case nir_intrinsic_image_atomic_xor:
+		atomic = ir3_ATOMIC_XOR_G(b, image, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	case nir_intrinsic_image_atomic_exchange:
+		atomic = ir3_ATOMIC_XCHG_G(b, image, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	case nir_intrinsic_image_atomic_comp_swap:
+		/* for cmpxchg, src0 is [ui]vec2(data, compare): */
+		src0 = create_collect(b, (struct ir3_instruction*[]){
+			src0,
+			get_src(ctx, &intr->src[3])[0],
+		}, 2);
+		atomic = ir3_ATOMIC_CMPXCHG_G(b, image, 0, src0, 0, src1, 0, src2, 0);
+		break;
+	default:
+		unreachable("boo");
+	}
+
+	atomic->cat6.iim_val = 1;
+	atomic->cat6.d = ncoords;
+	atomic->cat6.type = get_image_type(var);
+	atomic->cat6.typed = true;
+	mark_write(ctx, atomic);
+
+	/* even if nothing consume the result, we can't DCE the instruction: */
+	array_insert(b, b->keeps, atomic);
+
+	return atomic;
+}
+
 static void
 emit_intrinsic_barrier(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 {
@@ -1746,6 +2000,25 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	case nir_intrinsic_shared_atomic_exchange:
 	case nir_intrinsic_shared_atomic_comp_swap:
 		dst[0] = emit_intrinsic_atomic_shared(ctx, intr);
+		break;
+	case nir_intrinsic_image_load:
+		emit_intrinsic_load_image(ctx, intr, dst);
+		break;
+	case nir_intrinsic_image_store:
+		emit_intrinsic_store_image(ctx, intr);
+		break;
+	case nir_intrinsic_image_size:
+		emit_intrinsic_image_size(ctx, intr, dst);
+		break;
+	case nir_intrinsic_image_atomic_add:
+	case nir_intrinsic_image_atomic_min:
+	case nir_intrinsic_image_atomic_max:
+	case nir_intrinsic_image_atomic_and:
+	case nir_intrinsic_image_atomic_or:
+	case nir_intrinsic_image_atomic_xor:
+	case nir_intrinsic_image_atomic_exchange:
+	case nir_intrinsic_image_atomic_comp_swap:
+		dst[0] = emit_intrinsic_atomic_image(ctx, intr);
 		break;
 	case nir_intrinsic_barrier:
 	case nir_intrinsic_memory_barrier:
