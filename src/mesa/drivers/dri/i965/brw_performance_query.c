@@ -82,6 +82,7 @@
 #include "brw_oa_kblgt3.h"
 #include "brw_oa_glk.h"
 #include "brw_oa_cflgt2.h"
+#include "brw_oa_cflgt3.h"
 #include "intel_batchbuffer.h"
 
 #define FILE_DEBUG_FLAG DEBUG_PERFMON
@@ -2094,6 +2095,8 @@ get_register_queries_function(const struct gen_device_info *devinfo)
    if (devinfo->is_coffeelake) {
       if (devinfo->gt == 2)
          return brw_oa_register_queries_cflgt2;
+      if (devinfo->gt == 3)
+         return brw_oa_register_queries_cflgt3;
    }
 
    return NULL;
