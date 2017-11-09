@@ -114,7 +114,7 @@ intrastage_match(ir_variable *a,
        */
       if ((a->data.how_declared != ir_var_declared_implicitly ||
            b->data.how_declared != ir_var_declared_implicitly) &&
-          (!prog->IsES || prog->data->Version != 310 ||
+          (!prog->IsES ||
            interstage_member_mismatch(prog, a->get_interface_type(),
                                       b->get_interface_type())))
          return false;
