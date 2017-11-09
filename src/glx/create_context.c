@@ -47,10 +47,20 @@ glXCreateContextAttribsARB(Display *dpy, GLXFBConfig config,
    xcb_generic_error_t *err;
    xcb_void_cookie_t cookie;
    unsigned dummy_err = 0;
-   int screen = -1;
 
-   if (dpy == NULL)
+
+   if (dpy == NULL || cfg == NULL)
       return NULL;
+
+   /* This means that either the caller passed the wrong display pointer or
+    * one of the internal GLX data structures (probably the fbconfig) has an
+    * error.  There is nothing sensible to do, so return an error.
+    */
+   psc = GetGLXScreenConfigs(dpy, cfg->screen);
+   if (psc == NULL)
+      return NULL;
+
+   assert(cfg->screen == psc->scr);
 
    /* Count the number of attributes specified by the application.  All
     * attributes appear in pairs, except the terminating None.
@@ -59,29 +69,6 @@ glXCreateContextAttribsARB(Display *dpy, GLXFBConfig config,
       for (/* empty */; attrib_list[num_attribs * 2] != 0; num_attribs++)
 	 /* empty */ ;
    }
-
-   if (cfg) {
-      screen = cfg->screen;
-   } else {
-      int i;
-      for (i = 0; i < num_attribs; i++) {
-         if (attrib_list[i * 2] == GLX_SCREEN)
-            screen = attrib_list[i * 2 + 1];
-      }
-   }
-
-   /* This means that either the caller passed the wrong display pointer or
-    * one of the internal GLX data structures (probably the fbconfig) has an
-    * error.  There is nothing sensible to do, so return an error.
-    */
-   psc = GetGLXScreenConfigs(dpy, screen);
-   if (psc == NULL)
-      return NULL;
-
-   assert(screen == psc->scr);
-
-   if (!cfg && !__glXExtensionBitIsEnabled(psc, EXT_no_config_context_bit))
-      return NULL;
 
    if (direct && psc->vtable->create_context_attribs) {
       /* GLX drops the error returned by the driver.  The expectation is that
@@ -117,8 +104,8 @@ glXCreateContextAttribsARB(Display *dpy, GLXFBConfig config,
    cookie =
       xcb_glx_create_context_attribs_arb_checked(c,
 						 gc->xid,
-						 cfg ? cfg->fbconfigID : 0,
-						 screen,
+						 cfg->fbconfigID,
+						 cfg->screen,
 						 gc->share_xid,
 						 gc->isDirect,
 						 num_attribs,

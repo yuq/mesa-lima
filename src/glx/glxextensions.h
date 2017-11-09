@@ -50,7 +50,6 @@ enum
    EXT_fbconfig_packed_float_bit,
    EXT_framebuffer_sRGB_bit,
    EXT_import_context_bit,
-   EXT_no_config_context_bit,
    EXT_texture_from_pixmap_bit,
    EXT_visual_info_bit,
    EXT_visual_rating_bit,
