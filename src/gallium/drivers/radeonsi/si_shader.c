@@ -3247,15 +3247,31 @@ static LLVMValueRef si_get_gs_wave_id(struct si_shader_context *ctx)
 		return LLVMGetParam(ctx->main_fn, ctx->param_gs_wave_id);
 }
 
-static void si_llvm_emit_gs_epilogue(struct lp_build_tgsi_context *bld_base)
+static void emit_gs_epilogue(struct si_shader_context *ctx)
 {
-	struct si_shader_context *ctx = si_shader_context(bld_base);
-
 	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_NOP | AC_SENDMSG_GS_DONE,
 			 si_get_gs_wave_id(ctx));
 
 	if (ctx->screen->info.chip_class >= GFX9)
 		lp_build_endif(&ctx->merged_wrap_if_state);
+}
+
+static void si_llvm_emit_gs_epilogue(struct ac_shader_abi *abi,
+				     unsigned max_outputs,
+				     LLVMValueRef *addrs)
+{
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+	struct tgsi_shader_info UNUSED *info = &ctx->shader->selector->info;
+
+	assert(info->num_outputs <= max_outputs);
+
+	emit_gs_epilogue(ctx);
+}
+
+static void si_tgsi_emit_gs_epilogue(struct lp_build_tgsi_context *bld_base)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	emit_gs_epilogue(ctx);
 }
 
 static void si_llvm_emit_vs_epilogue(struct ac_shader_abi *abi,
@@ -5758,7 +5774,8 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	case PIPE_SHADER_GEOMETRY:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_gs;
 		ctx->abi.emit_vertex = si_llvm_emit_vertex;
-		bld_base->emit_epilogue = si_llvm_emit_gs_epilogue;
+		ctx->abi.emit_outputs = si_llvm_emit_gs_epilogue;
+		bld_base->emit_epilogue = si_tgsi_emit_gs_epilogue;
 		break;
 	case PIPE_SHADER_FRAGMENT:
 		ctx->load_input = declare_input_fs;
