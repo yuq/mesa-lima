@@ -317,6 +317,7 @@ static const struct debug_control radv_debug_options[] = {
 	{"vmfaults", RADV_DEBUG_VM_FAULTS},
 	{"zerovram", RADV_DEBUG_ZERO_VRAM},
 	{"syncshaders", RADV_DEBUG_SYNC_SHADERS},
+	{"nosisched", RADV_DEBUG_NO_SISCHED},
 	{NULL, 0}
 };
 
@@ -396,6 +397,14 @@ VkResult radv_CreateInstance(
 
 	instance->perftest_flags = parse_debug_string(getenv("RADV_PERFTEST"),
 						   radv_perftest_options);
+
+	if (instance->debug_flags & RADV_DEBUG_NO_SISCHED) {
+		/* Disable sisched when the user requests it, this is mostly
+		 * useful when the driver force-enable sisched for the given
+		 * application.
+		 */
+		instance->perftest_flags &= ~RADV_PERFTEST_SISCHED;
+	}
 
 	*pInstance = radv_instance_to_handle(instance);
 
