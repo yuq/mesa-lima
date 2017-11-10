@@ -134,10 +134,12 @@ _TEMPLATE_C = Template(COPYRIGHT + """
                          VK_USE_PLATFORM_XCB_KHR || \\
                          VK_USE_PLATFORM_XLIB_KHR)
 
+static const uint32_t MAX_API_VERSION = ${MAX_API_VERSION.c_vk_version()};
+
 VkResult anv_EnumerateInstanceVersion(
     uint32_t*                                   pApiVersion)
 {
-    *pApiVersion = ${MAX_API_VERSION.c_vk_version()};
+    *pApiVersion = MAX_API_VERSION;
     return VK_SUCCESS;
 }
 
@@ -157,6 +159,10 @@ uint32_t
 anv_physical_device_api_version(struct anv_physical_device *device)
 {
     uint32_t version = 0;
+
+    uint32_t override = vk_get_version_override();
+    if (override)
+        return MIN2(override, MAX_API_VERSION);
 
 %for version in API_VERSIONS:
     if (!(${version.enable}))
