@@ -402,9 +402,6 @@ void radv_cmd_buffer_trace_emit(struct radv_cmd_buffer *cmd_buffer)
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	uint64_t va;
 
-	if (!device->trace_bo)
-		return;
-
 	va = radv_buffer_get_va(device->trace_bo);
 	if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY)
 		va += 4;
@@ -435,7 +432,8 @@ radv_cmd_buffer_after_draw(struct radv_cmd_buffer *cmd_buffer)
 				       flags);
 	}
 
-	radv_cmd_buffer_trace_emit(cmd_buffer);
+	if (unlikely(cmd_buffer->device->trace_bo))
+		radv_cmd_buffer_trace_emit(cmd_buffer);
 }
 
 static void
@@ -2254,7 +2252,9 @@ VkResult radv_BeginCommandBuffer(
 		radv_cmd_buffer_set_subpass(cmd_buffer, subpass, false);
 	}
 
-	radv_cmd_buffer_trace_emit(cmd_buffer);
+	if (unlikely(cmd_buffer->device->trace_bo))
+		radv_cmd_buffer_trace_emit(cmd_buffer);
+
 	return result;
 }
 
