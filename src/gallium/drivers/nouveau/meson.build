@@ -211,7 +211,6 @@ libnouveau = static_library(
   c_args : [c_vis_args],
   cpp_args : [cpp_vis_args],
   dependencies : [dep_libdrm, dep_libdrm_nouveau],
-  build_by_default : false,
 )
 
 nouveau_compiler = executable(

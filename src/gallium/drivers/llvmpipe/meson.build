@@ -98,7 +98,6 @@ libllvmpipe = static_library(
   cpp_args : [cpp_vis_args, cpp_msvc_compat_args],
   include_directories : [inc_gallium, inc_gallium_aux, inc_include, inc_src],
   dependencies : dep_llvm,
-  build_by_default : false,
 )
 
 if with_tests and with_gallium_softpipe and with_llvm

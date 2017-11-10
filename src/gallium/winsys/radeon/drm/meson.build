@@ -26,5 +26,4 @@ libradeonwinsys = static_library(
   include_directories : [inc_src, inc_include, inc_gallium, inc_gallium_aux],
   c_args : [c_vis_args],
   dependencies : [dep_libdrm_radeon],
-  build_by_default : false,
 )

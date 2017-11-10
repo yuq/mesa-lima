@@ -53,5 +53,4 @@ libdri = static_library(
   ],
   c_args : [c_vis_args, libdri_c_args],
   dependencies : dep_libdrm,
-  build_by_default : false,
 )

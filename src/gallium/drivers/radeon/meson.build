@@ -51,5 +51,4 @@ libradeon = static_library(
   include_directories : [
     inc_include, inc_src, inc_gallium, inc_gallium_aux, inc_gallium_drivers,
   ],
-  build_by_default : false,
 )

@@ -75,5 +75,4 @@ libradeonsi = static_library(
   c_args : [c_vis_args],
   cpp_args : [cpp_vis_args],
   dependencies : dep_llvm,
-  build_by_default : false,
 )

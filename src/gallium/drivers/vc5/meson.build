@@ -61,5 +61,4 @@ libvc5 = static_library(
   c_args : [c_vis_args, v3dv3_c_args],
   cpp_args : [cpp_vis_args],
   dependencies : [dep_v3dv3, dep_libdrm, dep_valgrind],
-  build_by_default : false,
 )

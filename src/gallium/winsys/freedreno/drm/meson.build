@@ -26,5 +26,4 @@ libfreedrenowinsys = static_library(
   ],
   c_args : [c_vis_args],
   dependencies : [dep_libdrm_freedreno],
-  build_by_default : false,
 )
