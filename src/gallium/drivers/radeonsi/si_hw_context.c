@@ -129,6 +129,9 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	ws->cs_flush(cs, flags, &ctx->b.last_gfx_fence);
 	if (fence)
 		ws->fence_reference(fence, ctx->b.last_gfx_fence);
+
+	/* This must be after cs_flush returns, since the context's API
+	 * thread can concurrently read this value in si_fence_finish. */
 	ctx->b.num_gfx_cs_flushes++;
 
 	/* Check VM faults if needed. */

@@ -188,11 +188,7 @@ static boolean si_fence_finish(struct pipe_screen *screen,
 {
 	struct radeon_winsys *rws = ((struct r600_common_screen*)screen)->ws;
 	struct si_multi_fence *rfence = (struct si_multi_fence *)fence;
-	struct r600_common_context *rctx;
 	int64_t abs_timeout = os_time_get_absolute_timeout(timeout);
-
-	ctx = threaded_context_unwrap_sync(ctx);
-	rctx = ctx ? (struct r600_common_context*)ctx : NULL;
 
 	if (!util_queue_fence_is_signalled(&rfence->ready)) {
 		if (!timeout)
@@ -245,41 +241,46 @@ static boolean si_fence_finish(struct pipe_screen *screen,
 	}
 
 	/* Flush the gfx IB if it hasn't been flushed yet. */
-	if (rctx &&
-	    rfence->gfx_unflushed.ctx == rctx &&
-	    rfence->gfx_unflushed.ib_index == rctx->num_gfx_cs_flushes) {
-		/* Section 4.1.2 (Signaling) of the OpenGL 4.6 (Core profile)
-		 * spec says:
-		 *
-		 *    "If the sync object being blocked upon will not be
-		 *     signaled in finite time (for example, by an associated
-		 *     fence command issued previously, but not yet flushed to
-		 *     the graphics pipeline), then ClientWaitSync may hang
-		 *     forever. To help prevent this behavior, if
-		 *     ClientWaitSync is called and all of the following are
-		 *     true:
-		 *
-		 *     * the SYNC_FLUSH_COMMANDS_BIT bit is set in flags,
-		 *     * sync is unsignaled when ClientWaitSync is called,
-		 *     * and the calls to ClientWaitSync and FenceSync were
-		 *       issued from the same context,
-		 *
-		 *     then the GL will behave as if the equivalent of Flush
-		 *     were inserted immediately after the creation of sync."
-		 *
-		 * This means we need to flush for such fences even when we're
-		 * not going to wait.
-		 */
-		rctx->gfx.flush(rctx, timeout ? 0 : RADEON_FLUSH_ASYNC, NULL);
-		rfence->gfx_unflushed.ctx = NULL;
+	if (ctx && rfence->gfx_unflushed.ctx) {
+		struct si_context *sctx;
 
-		if (!timeout)
-			return false;
+		sctx = (struct si_context *)threaded_context_unwrap_unsync(ctx);
+		if (rfence->gfx_unflushed.ctx == &sctx->b &&
+		    rfence->gfx_unflushed.ib_index == sctx->b.num_gfx_cs_flushes) {
+			/* Section 4.1.2 (Signaling) of the OpenGL 4.6 (Core profile)
+			 * spec says:
+			 *
+			 *    "If the sync object being blocked upon will not be
+			 *     signaled in finite time (for example, by an associated
+			 *     fence command issued previously, but not yet flushed to
+			 *     the graphics pipeline), then ClientWaitSync may hang
+			 *     forever. To help prevent this behavior, if
+			 *     ClientWaitSync is called and all of the following are
+			 *     true:
+			 *
+			 *     * the SYNC_FLUSH_COMMANDS_BIT bit is set in flags,
+			 *     * sync is unsignaled when ClientWaitSync is called,
+			 *     * and the calls to ClientWaitSync and FenceSync were
+			 *       issued from the same context,
+			 *
+			 *     then the GL will behave as if the equivalent of Flush
+			 *     were inserted immediately after the creation of sync."
+			 *
+			 * This means we need to flush for such fences even when we're
+			 * not going to wait.
+			 */
+			threaded_context_unwrap_sync(ctx);
+			sctx->b.gfx.flush(&sctx->b, timeout ? 0 : RADEON_FLUSH_ASYNC, NULL);
+			rfence->gfx_unflushed.ctx = NULL;
 
-		/* Recompute the timeout after all that. */
-		if (timeout && timeout != PIPE_TIMEOUT_INFINITE) {
-			int64_t time = os_time_get_nano();
-			timeout = abs_timeout > time ? abs_timeout - time : 0;
+			if (!timeout)
+				return false;
+
+			/* Recompute the timeout after all that. */
+			if (timeout && timeout != PIPE_TIMEOUT_INFINITE) {
+				int64_t time = os_time_get_nano();
+				timeout = abs_timeout > time ? abs_timeout - time : 0;
+			}
 		}
 	}
 
