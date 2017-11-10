@@ -634,8 +634,6 @@ st_context_flush(struct st_context_iface *stctxi, unsigned flags,
 
    if (flags & ST_FLUSH_END_OF_FRAME)
       pipe_flags |= PIPE_FLUSH_END_OF_FRAME;
-   if (flags & ST_FLUSH_DEFERRED)
-      pipe_flags |= PIPE_FLUSH_DEFERRED;
    if (flags & ST_FLUSH_FENCE_FD)
       pipe_flags |= PIPE_FLUSH_FENCE_FD;
 

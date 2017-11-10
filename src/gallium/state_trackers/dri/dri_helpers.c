@@ -116,8 +116,7 @@ dri2_create_fence_fd(__DRIcontext *_ctx, int fd)
 
    if (fd == -1) {
       /* exporting driver created fence, flush: */
-      stapi->flush(stapi, ST_FLUSH_DEFERRED | ST_FLUSH_FENCE_FD,
-                   &fence->pipe_fence);
+      stapi->flush(stapi, ST_FLUSH_FENCE_FD, &fence->pipe_fence);
    } else {
       /* importing a foreign fence fd: */
       ctx->create_fence_fd(ctx, &fence->pipe_fence, fd);
