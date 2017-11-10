@@ -69,7 +69,6 @@ struct st_manager_private
    mtx_t st_mutex;
 };
 
-static void st_manager_destroy(struct st_manager *);
 
 /**
  * Map an attachment to a buffer index.
@@ -795,6 +794,21 @@ st_thread_finish(struct st_context_iface *stctxi)
    _mesa_glthread_finish(st->ctx);
 }
 
+
+static void
+st_manager_destroy(struct st_manager *smapi)
+{
+   struct st_manager_private *smPriv = smapi->st_manager_private;
+
+   if (smPriv && smPriv->stfbi_ht) {
+      _mesa_hash_table_destroy(smPriv->stfbi_ht, NULL);
+      mtx_destroy(&smPriv->st_mutex);
+      free(smPriv);
+      smapi->st_manager_private = NULL;
+   }
+}
+
+
 static struct st_context_iface *
 st_api_create_context(struct st_api *stapi, struct st_manager *smapi,
                       const struct st_context_attribs *attribs,
@@ -1149,18 +1163,6 @@ st_manager_add_color_renderbuffer(struct st_context *st,
    return TRUE;
 }
 
-static void
-st_manager_destroy(struct st_manager *smapi)
-{
-   struct st_manager_private *smPriv = smapi->st_manager_private;
-
-   if (smPriv && smPriv->stfbi_ht) {
-      _mesa_hash_table_destroy(smPriv->stfbi_ht, NULL);
-      mtx_destroy(&smPriv->st_mutex);
-      free(smPriv);
-      smapi->st_manager_private = NULL;
-   }
-}
 
 static unsigned
 get_version(struct pipe_screen *screen,
