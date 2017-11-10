@@ -198,12 +198,11 @@ static VkResult radv_create_cmd_buffer(
 {
 	struct radv_cmd_buffer *cmd_buffer;
 	unsigned ring;
-	cmd_buffer = vk_alloc(&pool->alloc, sizeof(*cmd_buffer), 8,
-				VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+	cmd_buffer = vk_zalloc(&pool->alloc, sizeof(*cmd_buffer), 8,
+			       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 	if (cmd_buffer == NULL)
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-	memset(cmd_buffer, 0, sizeof(*cmd_buffer));
 	cmd_buffer->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
 	cmd_buffer->device = device;
 	cmd_buffer->pool = pool;

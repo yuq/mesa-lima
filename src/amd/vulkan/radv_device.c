@@ -372,12 +372,10 @@ VkResult radv_CreateInstance(
 			return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
 	}
 
-	instance = vk_alloc2(&default_alloc, pAllocator, sizeof(*instance), 8,
-			       VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+	instance = vk_zalloc2(&default_alloc, pAllocator, sizeof(*instance), 8,
+			      VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
 	if (!instance)
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-	memset(instance, 0, sizeof(*instance));
 
 	instance->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
 
@@ -995,13 +993,11 @@ VkResult radv_CreateDevice(
 		}
 	}
 
-	device = vk_alloc2(&physical_device->instance->alloc, pAllocator,
-			     sizeof(*device), 8,
-			     VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
+	device = vk_zalloc2(&physical_device->instance->alloc, pAllocator,
+			    sizeof(*device), 8,
+			    VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
 	if (!device)
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-	memset(device, 0, sizeof(*device));
 
 	device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
 	device->instance = physical_device->instance;

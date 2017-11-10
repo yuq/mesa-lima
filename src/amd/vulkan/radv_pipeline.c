@@ -2312,12 +2312,11 @@ radv_graphics_pipeline_create(
 	struct radv_pipeline *pipeline;
 	VkResult result;
 
-	pipeline = vk_alloc2(&device->alloc, pAllocator, sizeof(*pipeline), 8,
-			       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+	pipeline = vk_zalloc2(&device->alloc, pAllocator, sizeof(*pipeline), 8,
+			      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 	if (pipeline == NULL)
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-	memset(pipeline, 0, sizeof(*pipeline));
 	result = radv_pipeline_init(pipeline, device, cache,
 				    pCreateInfo, extra, pAllocator);
 	if (result != VK_SUCCESS) {
@@ -2369,12 +2368,11 @@ static VkResult radv_compute_pipeline_create(
 	struct radv_pipeline *pipeline;
 	VkResult result;
 
-	pipeline = vk_alloc2(&device->alloc, pAllocator, sizeof(*pipeline), 8,
-			       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+	pipeline = vk_zalloc2(&device->alloc, pAllocator, sizeof(*pipeline), 8,
+			      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 	if (pipeline == NULL)
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-	memset(pipeline, 0, sizeof(*pipeline));
 	pipeline->device = device;
 	pipeline->layout = radv_pipeline_layout_from_handle(pCreateInfo->layout);
 
