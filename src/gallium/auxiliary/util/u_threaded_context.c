@@ -1931,7 +1931,6 @@ tc_flush(struct pipe_context *_pipe, struct pipe_fence_handle **fence,
 
    if (async && tc->create_fence) {
       if (fence) {
-         struct tc_unflushed_batch_token *token = NULL;
          struct tc_batch *next = &tc->batch_slots[tc->next];
 
          if (!next->token) {
@@ -1943,7 +1942,7 @@ tc_flush(struct pipe_context *_pipe, struct pipe_fence_handle **fence,
             next->token->tc = tc;
          }
 
-         screen->fence_reference(screen, fence, tc->create_fence(pipe, token));
+         screen->fence_reference(screen, fence, tc->create_fence(pipe, next->token));
          if (!*fence)
             goto out_of_memory;
       }
