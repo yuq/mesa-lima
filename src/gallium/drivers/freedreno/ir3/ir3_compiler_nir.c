@@ -747,6 +747,12 @@ split_dest(struct ir3_block *block, struct ir3_instruction **dst,
 		struct ir3_instruction *src, unsigned base, unsigned n)
 {
 	struct ir3_instruction *prev = NULL;
+
+	if ((n == 1) && (src->regs[0]->wrmask == 0x1)) {
+		dst[0] = src;
+		return;
+	}
+
 	for (int i = 0, j = 0; i < n; i++) {
 		struct ir3_instruction *split = ir3_instr_create(block, OPC_META_FO);
 		ir3_reg_create(split, 0, IR3_REG_SSA);
