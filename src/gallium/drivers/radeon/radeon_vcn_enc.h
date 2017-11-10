@@ -346,6 +346,7 @@ struct radeon_enc_h264_enc_pic {
 
 	bool	not_referenced;
 	bool	is_idr;
+	bool	is_even_frame;
 
 	rvcn_enc_task_info_t	task_info;
 	rvcn_enc_session_init_t	session_init;
