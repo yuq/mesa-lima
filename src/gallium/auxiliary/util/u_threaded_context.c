@@ -231,13 +231,23 @@ _tc_sync(struct threaded_context *tc, MAYBE_UNUSED const char *info, MAYBE_UNUSE
  */
 void
 threaded_context_flush(struct pipe_context *_pipe,
-                       struct tc_unflushed_batch_token *token)
+                       struct tc_unflushed_batch_token *token,
+                       bool prefer_async)
 {
    struct threaded_context *tc = threaded_context(_pipe);
 
    /* This is called from the state-tracker / application thread. */
-   if (token->tc && token->tc == tc)
-      tc_sync(token->tc);
+   if (token->tc && token->tc == tc) {
+      struct tc_batch *last = &tc->batch_slots[tc->last];
+
+      /* Prefer to do the flush in the driver thread if it is already
+       * running. That should be better for cache locality.
+       */
+      if (prefer_async || !util_queue_fence_is_signalled(&last->fence))
+         tc_batch_flush(tc);
+      else
+         tc_sync(token->tc);
+   }
 }
 
 static void

@@ -381,7 +381,8 @@ threaded_context_create(struct pipe_context *pipe,
 
 void
 threaded_context_flush(struct pipe_context *_pipe,
-                       struct tc_unflushed_batch_token *token);
+                       struct tc_unflushed_batch_token *token,
+                       bool prefer_async);
 
 static inline struct threaded_context *
 threaded_context(struct pipe_context *pipe)

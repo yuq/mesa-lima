@@ -203,7 +203,8 @@ static boolean si_fence_finish(struct pipe_screen *screen,
 			 * be in flight in the driver thread, so the fence
 			 * may not be ready yet when this call returns.
 			 */
-			threaded_context_flush(ctx, rfence->tc_token);
+			threaded_context_flush(ctx, rfence->tc_token,
+					       timeout == 0);
 		}
 
 		if (timeout == PIPE_TIMEOUT_INFINITE) {
