@@ -104,7 +104,7 @@ set_blitter_tiling(struct brw_context *brw,
    assert(brw->screen->devinfo.gen >= 6);
 
    /* Idle the blitter before we update how tiling is interpreted. */
-   OUT_BATCH(MI_FLUSH_DW);
+   OUT_BATCH(MI_FLUSH_DW | (4 - 2));
    OUT_BATCH(0);
    OUT_BATCH(0);
    OUT_BATCH(0);

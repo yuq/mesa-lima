@@ -462,7 +462,7 @@ brw_emit_mi_flush(struct brw_context *brw)
 
    if (brw->batch.ring == BLT_RING && devinfo->gen >= 6) {
       BEGIN_BATCH_BLT(4);
-      OUT_BATCH(MI_FLUSH_DW);
+      OUT_BATCH(MI_FLUSH_DW | (4 - 2));
       OUT_BATCH(0);
       OUT_BATCH(0);
       OUT_BATCH(0);
