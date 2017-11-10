@@ -1034,10 +1034,10 @@ dd_thread_main(void *input)
       /* Fences can be NULL legitimately when timeout detection is disabled. */
       if ((fence &&
            !screen->fence_finish(screen, NULL, fence,
-                                 dscreen->timeout_ms * 1000*1000)) ||
+                                 (uint64_t)dscreen->timeout_ms * 1000*1000)) ||
           (fence2 &&
            !screen->fence_finish(screen, NULL, fence2,
-                                 dscreen->timeout_ms * 1000*1000))) {
+                                 (uint64_t)dscreen->timeout_ms * 1000*1000))) {
          mtx_lock(&dctx->mutex);
          list_splice(&records, &dctx->records);
          dd_report_hang(dctx);
