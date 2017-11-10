@@ -1,8 +1,8 @@
 /**************************************************************************
- * 
+ *
  * Copyright 2007 VMware, Inc.
  * All Rights Reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -10,11 +10,11 @@
  * distribute, sub license, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice (including the
  * next paragraph) shall be included in all copies or substantial portions
  * of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
@@ -22,7 +22,7 @@
  * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- * 
+ *
  **************************************************************************/
 
 #include "main/imports.h"
@@ -89,7 +89,8 @@ DEBUG_GET_ONCE_BOOL_OPTION(mesa_mvp_dp4, "MESA_MVP_DP4", FALSE)
 /**
  * Called via ctx->Driver.Enable()
  */
-static void st_Enable(struct gl_context * ctx, GLenum cap, GLboolean state)
+static void
+st_Enable(struct gl_context *ctx, GLenum cap, GLboolean state)
 {
    struct st_context *st = st_context(ctx);
 
@@ -184,7 +185,7 @@ st_invalidate_buffers(struct st_context *st)
  * Called via ctx->Driver.UpdateState()
  */
 static void
-st_invalidate_state(struct gl_context * ctx)
+st_invalidate_state(struct gl_context *ctx)
 {
    GLbitfield new_state = ctx->NewState;
    struct st_context *st = st_context(ctx);
@@ -253,8 +254,8 @@ st_destroy_context_priv(struct st_context *st, bool destroy_pipe)
 {
    uint shader, i;
 
-   st_destroy_atoms( st );
-   st_destroy_draw( st );
+   st_destroy_atoms(st);
+   st_destroy_draw(st);
    st_destroy_clear(st);
    st_destroy_bitmap(st);
    st_destroy_drawpix(st);
@@ -283,11 +284,12 @@ st_destroy_context_priv(struct st_context *st, bool destroy_pipe)
    if (st->pipe && destroy_pipe)
       st->pipe->destroy(st->pipe);
 
-   free( st );
+   free(st);
 }
 
 
-static void st_init_driver_flags(struct st_context *st)
+static void
+st_init_driver_flags(struct st_context *st)
 {
    struct gl_driver_flags *f = &st->ctx->DriverFlags;
 
@@ -350,13 +352,13 @@ static void st_init_driver_flags(struct st_context *st)
 
 
 static struct st_context *
-st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
-		const struct st_config_options *options, bool no_error)
+st_create_context_priv(struct gl_context *ctx, struct pipe_context *pipe,
+                       const struct st_config_options *options, bool no_error)
 {
    struct pipe_screen *screen = pipe->screen;
    uint i;
-   struct st_context *st = ST_CALLOC_STRUCT( st_context );
-   
+   struct st_context *st = ST_CALLOC_STRUCT( st_context);
+
    st->options = *options;
 
    ctx->st = st;
@@ -384,9 +386,9 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
       ctx->API == API_OPENGL_CORE ? U_VBUF_FLAG_NO_USER_VBOS : 0;
    st->cso_context = cso_create_context(pipe, vbuf_flags);
 
-   st_init_atoms( st );
+   st_init_atoms(st);
    st_init_clear(st);
-   st_init_draw( st );
+   st_init_draw(st);
    st_init_pbo_helpers(st);
 
    /* Choose texture target for glDrawPixels, glBitmap, renderbuffers */
@@ -468,7 +470,8 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
 
    st->has_hw_atomics =
       screen->get_shader_param(screen, PIPE_SHADER_FRAGMENT,
-                               PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTERS) ? true : false;
+                               PIPE_SHADER_CAP_MAX_HW_ATOMIC_COUNTERS)
+      ? true : false;
 
    /* GL limits and extensions */
    st_init_limits(pipe->screen, &ctx->Const, &ctx->Extensions);
@@ -505,8 +508,11 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
     */
    ctx->Point.MaxSize = MAX2(ctx->Const.MaxPointSize,
                              ctx->Const.MaxPointSizeAA);
-   /* For vertex shaders, make sure not to emit saturate when SM 3.0 is not supported */
-   ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].EmitNoSat = !st->has_shader_model3;
+   /* For vertex shaders, make sure not to emit saturate when SM 3.0
+    * is not supported
+    */
+   ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].EmitNoSat =
+      !st->has_shader_model3;
 
    if (!ctx->Extensions.ARB_gpu_shader5) {
       for (i = 0; i < MESA_SHADER_STAGES; i++)
@@ -551,11 +557,12 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
 }
 
 
-struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,
-                                     const struct gl_config *visual,
-                                     struct st_context *share,
-                                     const struct st_config_options *options,
-                                     bool no_error)
+struct st_context *
+st_create_context(gl_api api, struct pipe_context *pipe,
+                  const struct gl_config *visual,
+                  struct st_context *share,
+                  const struct st_config_options *options,
+                  bool no_error)
 {
    struct gl_context *ctx;
    struct gl_context *shareCtx = share ? share->ctx : NULL;
@@ -607,15 +614,17 @@ destroy_tex_sampler_cb(GLuint id, void *data, void *userData)
 
    st_texture_release_sampler_view(st, st_texture_object(texObj));
 }
- 
-void st_destroy_context( struct st_context *st )
+
+
+void
+st_destroy_context(struct st_context *st)
 {
    struct gl_context *ctx = st->ctx;
    struct st_framebuffer *stfb, *next;
 
    GET_CURRENT_CONTEXT(curctx);
-   if (curctx == NULL) {
 
+   if (curctx == NULL) {
       /* No current context, but we need one to release
        * renderbuffer surface when we release framebuffer.
        * So temporarily bind the context.
@@ -657,6 +666,7 @@ void st_destroy_context( struct st_context *st )
    free(ctx);
 }
 
+
 static void
 st_emit_string_marker(struct gl_context *ctx, const GLchar *string, GLsizei len)
 {
@@ -664,17 +674,19 @@ st_emit_string_marker(struct gl_context *ctx, const GLchar *string, GLsizei len)
    st->pipe->emit_string_marker(st->pipe, string, len);
 }
 
+
 static void
 st_set_background_context(struct gl_context *ctx,
                           struct util_queue_monitoring *queue_info)
 {
    struct st_context *st = ctx->st;
    struct st_manager *smapi =
-      (struct st_manager*)st->iface.st_context_private;
+      (struct st_manager *) st->iface.st_context_private;
 
    assert(smapi->set_background_context);
    smapi->set_background_context(&st->iface, queue_info);
 }
+
 
 static void
 st_get_device_uuid(struct gl_context *ctx, char *uuid)
@@ -686,6 +698,7 @@ st_get_device_uuid(struct gl_context *ctx, char *uuid)
    screen->get_device_uuid(screen, uuid);
 }
 
+
 static void
 st_get_driver_uuid(struct gl_context *ctx, char *uuid)
 {
@@ -696,8 +709,10 @@ st_get_driver_uuid(struct gl_context *ctx, char *uuid)
    screen->get_driver_uuid(screen, uuid);
 }
 
-void st_init_driver_functions(struct pipe_screen *screen,
-                              struct dd_function_table *functions)
+
+void
+st_init_driver_functions(struct pipe_screen *screen,
+                         struct dd_function_table *functions)
 {
    _mesa_init_shader_object_functions(functions);
    _mesa_init_sampler_object_functions(functions);
