@@ -447,9 +447,6 @@ radv_save_pipeline(struct radv_cmd_buffer *cmd_buffer,
 	uint32_t data[2];
 	uint64_t va;
 
-	if (!device->trace_bo)
-		return;
-
 	va = radv_buffer_get_va(device->trace_bo);
 
 	switch (ring) {
@@ -1084,7 +1081,8 @@ radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer)
 	}
 	radeon_set_context_reg(cmd_buffer->cs, R_028A6C_VGT_GS_OUT_PRIM_TYPE, pipeline->graphics.gs_out);
 
-	radv_save_pipeline(cmd_buffer, pipeline, RING_GFX);
+	if (unlikely(cmd_buffer->device->trace_bo))
+		radv_save_pipeline(cmd_buffer, pipeline, RING_GFX);
 
 	cmd_buffer->state.emitted_pipeline = pipeline;
 
@@ -2570,7 +2568,9 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 		    S_00B81C_NUM_THREAD_FULL(compute_shader->info.cs.block_size[2]));
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
-	radv_save_pipeline(cmd_buffer, pipeline, RING_COMPUTE);
+
+	if (unlikely(cmd_buffer->device->trace_bo))
+		radv_save_pipeline(cmd_buffer, pipeline, RING_COMPUTE);
 }
 
 static void radv_mark_descriptor_sets_dirty(struct radv_cmd_buffer *cmd_buffer)
