@@ -3752,4 +3752,16 @@
     <field name="Color Compression Disable Mask" start="31" end="31" type="bool"/>
   </register>
 
+  <register name="CACHE_MODE_SS" length="1" num="0x0e420">
+    <field name="Instruction Level 1 Cache Disable" start="0" end="0" type="bool"/>
+    <field name="Instruction Level 1 Cache and In-Flight Queue Disable " start="1" end="1" type="bool"/>
+    <field name="Float Blend Optimization Enable" start="4" end="4" type="bool"/>
+    <field name="Per Sample Blend Opt Disable"  start="11" end="11" type="bool"/>
+
+    <field name="Instruction Level 1 Cache Disable Mask" start="16" end="16" type="bool"/>
+    <field name="Instruction Level 1 Cache and In-Flight Queue Disable Mask" start="17" end="17" type="bool"/>
+    <field name="Float Blend Optimization Enable Mask" start="20" end="20" type="bool"/>
+    <field name="Per Sample Blend Opt Disable Mask"  start="27" end="27" type="bool"/>
+  </register>
+
 </genxml>
