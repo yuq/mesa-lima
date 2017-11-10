@@ -2526,7 +2526,7 @@ VkResult radv_EndCommandBuffer(
 	vk_free(&cmd_buffer->pool->alloc, cmd_buffer->state.attachments);
 
 	if (!cmd_buffer->device->ws->cs_finalize(cmd_buffer->cs))
-		return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+		return vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
 
 	return cmd_buffer->record_result;
 }

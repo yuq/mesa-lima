@@ -134,7 +134,7 @@ radv_pipeline_scratch_init(struct radv_device *device,
 	if (scratch_bytes_per_wave && max_waves < min_waves) {
 		/* Not really true at this moment, but will be true on first
 		 * execution. Avoid having hanging shaders. */
-		return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+		return vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
 	}
 	pipeline->scratch_bytes_per_wave = scratch_bytes_per_wave;
 	pipeline->max_waves = max_waves;
