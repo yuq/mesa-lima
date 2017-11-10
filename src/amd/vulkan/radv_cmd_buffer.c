@@ -231,8 +231,6 @@ static VkResult radv_create_cmd_buffer(
 
 	*pCommandBuffer = radv_cmd_buffer_to_handle(cmd_buffer);
 
-	cmd_buffer->upload.offset = 0;
-	cmd_buffer->upload.size = 0;
 	list_inithead(&cmd_buffer->upload.list);
 
 	return VK_SUCCESS;
