@@ -4221,6 +4221,9 @@ void evergreen_emit_atomic_buffer_save(struct r600_context *rctx,
 	unsigned reloc;
 
 	mask = *atomic_used_mask_p;
+	if (!mask)
+		return;
+
 	while (mask) {
 		unsigned atomic_index = u_bit_scan(&mask);
 		struct r600_shader_atomic *atomic = &combined_atomics[atomic_index];
