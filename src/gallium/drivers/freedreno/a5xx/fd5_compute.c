@@ -26,6 +26,8 @@
 
 #include "pipe/p_state.h"
 
+#include "freedreno_resource.h"
+
 #include "fd5_compute.h"
 #include "fd5_context.h"
 #include "fd5_emit.h"
@@ -110,9 +112,9 @@ cs_program_emit(struct fd_ringbuffer *ring, struct ir3_shader_variant *v)
 
 	OUT_PKT4(ring, REG_A5XX_HLSQ_CS_CNTL_0, 2);
 	OUT_RING(ring, A5XX_HLSQ_CS_CNTL_0_WGIDCONSTID(work_group_id) |
-			A5XX_HLSQ_CS_CNTL_0_UNK0(regid(63, 0)) |
-			A5XX_HLSQ_CS_CNTL_0_UNK1(regid(63, 0)) |
-			A5XX_HLSQ_CS_CNTL_0_LOCALIDREGID(local_invocation_id));
+		A5XX_HLSQ_CS_CNTL_0_UNK0(regid(63, 0)) |
+		A5XX_HLSQ_CS_CNTL_0_UNK1(regid(63, 0)) |
+		A5XX_HLSQ_CS_CNTL_0_LOCALIDREGID(local_invocation_id));
 	OUT_RING(ring, 0x1);               /* HLSQ_CS_CNTL_1 */
 
 	fd5_emit_shader(ring, v);
@@ -125,9 +127,6 @@ fd5_launch_grid(struct fd_context *ctx, const struct pipe_grid_info *info)
 	struct ir3_shader_key key = {0};
 	struct ir3_shader_variant *v;
 	struct fd_ringbuffer *ring = ctx->batch->draw;
-
-	if (info->indirect)
-		return;  // TODO
 
 	v = ir3_shader_variant(so->shader, key, &ctx->debug);
 
@@ -158,11 +157,29 @@ fd5_launch_grid(struct fd_context *ctx, const struct pipe_grid_info *info)
 	OUT_RING(ring, 1);            /* HLSQ_CS_KERNEL_GROUP_Y */
 	OUT_RING(ring, 1);            /* HLSQ_CS_KERNEL_GROUP_Z */
 
-	OUT_PKT7(ring, CP_EXEC_CS, 4);
-	OUT_RING(ring, 0x00000000);
-	OUT_RING(ring, CP_EXEC_CS_1_NGROUPS_X(info->grid[0]));
-	OUT_RING(ring, CP_EXEC_CS_2_NGROUPS_Y(info->grid[1]));
-	OUT_RING(ring, CP_EXEC_CS_3_NGROUPS_Z(info->grid[2]));
+	if (info->indirect) {
+		struct fd_resource *rsc = fd_resource(info->indirect);
+
+		OUT_PKT7(ring, CP_EVENT_WRITE, 4);
+		OUT_RING(ring, CACHE_FLUSH_TS);
+		OUT_RELOCW(ring, fd5_context(ctx)->blit_mem, 0, 0, 0);  /* ADDR_LO/HI */
+		OUT_RING(ring, 0x00000000);
+
+		OUT_WFI5(ring);
+
+		OUT_PKT7(ring, CP_EXEC_CS_INDIRECT, 4);
+		OUT_RING(ring, 0x00000000);
+		OUT_RELOC(ring, rsc->bo, info->indirect_offset, 0, 0);  /* ADDR_LO/HI */
+		OUT_RING(ring, CP_EXEC_CS_INDIRECT_3_LOCALSIZEX(local_size[0] - 1) |
+				CP_EXEC_CS_INDIRECT_3_LOCALSIZEY(local_size[1] - 1) |
+				CP_EXEC_CS_INDIRECT_3_LOCALSIZEZ(local_size[2] - 1));
+	} else {
+		OUT_PKT7(ring, CP_EXEC_CS, 4);
+		OUT_RING(ring, 0x00000000);
+		OUT_RING(ring, CP_EXEC_CS_1_NGROUPS_X(info->grid[0]));
+		OUT_RING(ring, CP_EXEC_CS_2_NGROUPS_Y(info->grid[1]));
+		OUT_RING(ring, CP_EXEC_CS_3_NGROUPS_Z(info->grid[2]));
+	}
 }
 
 void

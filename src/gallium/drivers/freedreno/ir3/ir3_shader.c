@@ -859,15 +859,59 @@ ir3_emit_cs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *rin
 	/* emit compute-shader driver-params: */
 	uint32_t offset = v->constbase.driver_param;
 	if (v->constlen > offset) {
-		uint32_t compute_params[IR3_DP_CS_COUNT] = {
-			[IR3_DP_NUM_WORK_GROUPS_X] = info->grid[0],
-			[IR3_DP_NUM_WORK_GROUPS_Y] = info->grid[1],
-			[IR3_DP_NUM_WORK_GROUPS_Z] = info->grid[2],
-			/* do we need work-group-size? */
-		};
-
 		fd_wfi(ctx->batch, ring);
-		ctx->emit_const(ring, SHADER_COMPUTE, offset * 4, 0,
-				ARRAY_SIZE(compute_params), compute_params, NULL);
+
+		if (info->indirect) {
+			struct pipe_resource *indirect = NULL;
+			unsigned indirect_offset;
+
+			/* This is a bit awkward, but CP_LOAD_STATE.EXT_SRC_ADDR needs
+			 * to be aligned more strongly than 4 bytes.  So in this case
+			 * we need a temporary buffer to copy NumWorkGroups.xyz to.
+			 *
+			 * TODO if previous compute job is writing to info->indirect,
+			 * we might need a WFI.. but since we currently flush for each
+			 * compute job, we are probably ok for now.
+			 */
+			if (info->indirect_offset & 0xf) {
+				indirect = pipe_buffer_create(&ctx->screen->base,
+					PIPE_BIND_COMMAND_ARGS_BUFFER, PIPE_USAGE_STREAM,
+					0x1000);
+				indirect_offset = 0;
+
+				if (is_a5xx(ctx->screen)) {
+					struct fd_bo *src = fd_resource(info->indirect)->bo;
+					struct fd_bo *dst = fd_resource(indirect)->bo;
+					for (unsigned i = 0; i < 3; i++) {
+						unsigned dst_off = i * 4;
+						unsigned src_off = (i * 4) + info->indirect_offset;
+						OUT_PKT7(ring, CP_MEM_TO_MEM, 5);
+						OUT_RING(ring, 0x00000000);
+						OUT_RELOCW(ring, dst, dst_off, 0, 0);
+						OUT_RELOC (ring, src, src_off, 0, 0);
+					}
+				} else {
+					assert(0);
+				}
+			} else {
+				pipe_resource_reference(&indirect, info->indirect);
+				indirect_offset = info->indirect_offset;
+			}
+
+			ctx->emit_const(ring, SHADER_COMPUTE, offset * 4,
+					indirect_offset, 4, NULL, indirect);
+
+			pipe_resource_reference(&indirect, NULL);
+		} else {
+			uint32_t compute_params[IR3_DP_CS_COUNT] = {
+				[IR3_DP_NUM_WORK_GROUPS_X] = info->grid[0],
+				[IR3_DP_NUM_WORK_GROUPS_Y] = info->grid[1],
+				[IR3_DP_NUM_WORK_GROUPS_Z] = info->grid[2],
+				/* do we need work-group-size? */
+			};
+
+			ctx->emit_const(ring, SHADER_COMPUTE, offset * 4, 0,
+					ARRAY_SIZE(compute_params), compute_params, NULL);
+		}
 	}
 }
