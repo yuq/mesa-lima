@@ -1727,7 +1727,7 @@ radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer,
 	cmd_buffer->state.descriptors_dirty = 0;
 	cmd_buffer->state.push_descriptors_dirty = false;
 
-	if (cmd_buffer->device->trace_bo)
+	if (unlikely(cmd_buffer->device->trace_bo))
 		radv_save_descriptors(cmd_buffer);
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
