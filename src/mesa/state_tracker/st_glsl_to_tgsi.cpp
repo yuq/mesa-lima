@@ -2128,10 +2128,10 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
 
    case ir_unop_get_buffer_size: {
       ir_constant *const_offset = ir->operands[0]->as_constant();
+      int buf_base = ctx->st->has_hw_atomics ? 0 : ctx->Const.Program[shader->Stage].MaxAtomicBuffers;
       st_src_reg buffer(
             PROGRAM_BUFFER,
-            ctx->Const.Program[shader->Stage].MaxAtomicBuffers +
-            (const_offset ? const_offset->value.u[0] : 0),
+            buf_base + (const_offset ? const_offset->value.u[0] : 0),
             GLSL_TYPE_UINT);
       if (!const_offset) {
          buffer.reladdr = ralloc(mem_ctx, st_src_reg);
@@ -3352,11 +3352,10 @@ glsl_to_tgsi_visitor::visit_ssbo_intrinsic(ir_call *ir)
    ir_rvalue *offset = ((ir_instruction *)param)->as_rvalue();
 
    ir_constant *const_block = block->as_constant();
-
+   int buf_base = st_context(ctx)->has_hw_atomics ? 0 : ctx->Const.Program[shader->Stage].MaxAtomicBuffers;
    st_src_reg buffer(
          PROGRAM_BUFFER,
-         ctx->Const.Program[shader->Stage].MaxAtomicBuffers +
-         (const_block ? const_block->value.u[0] : 0),
+         buf_base + (const_block ? const_block->value.u[0] : 0),
          GLSL_TYPE_UINT);
 
    if (!const_block) {
@@ -6581,7 +6580,10 @@ st_translate_program(
 
       assert(prog->info.num_ssbos <= frag_const->MaxShaderStorageBlocks);
       for (i = 0; i < prog->info.num_ssbos; i++) {
-         unsigned index = frag_const->MaxAtomicBuffers + i;
+         unsigned index = i;
+         if (!st_context(ctx)->has_hw_atomics)
+            index += frag_const->MaxAtomicBuffers;
+
          t->buffers[index] = ureg_DECL_buffer(ureg, index, false);
       }
    }
