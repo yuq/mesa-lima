@@ -130,6 +130,7 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 	unsigned i;
 
 	assert(nir->info.stage == MESA_SHADER_VERTEX ||
+	       nir->info.stage == MESA_SHADER_GEOMETRY ||
 	       nir->info.stage == MESA_SHADER_FRAGMENT);
 
 	info->processor = pipe_shader_type_from_mesa(nir->info.stage);
@@ -151,14 +152,15 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 		unsigned attrib_count = glsl_count_attribute_slots(variable->type,
 								   nir->info.stage == MESA_SHADER_VERTEX);
 
-		assert(attrib_count == 1 && "not implemented");
-
 		/* Vertex shader inputs don't have semantics. The state
 		 * tracker has already mapped them to attributes via
 		 * variable->data.driver_location.
 		 */
 		if (nir->info.stage == MESA_SHADER_VERTEX)
 			continue;
+
+		assert(nir->info.stage != MESA_SHADER_FRAGMENT ||
+		       (attrib_count == 1 && "not implemented"));
 
 		/* Fragment shader position is a system value. */
 		if (nir->info.stage == MESA_SHADER_FRAGMENT &&
@@ -559,33 +561,36 @@ bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 {
 	struct tgsi_shader_info *info = &ctx->shader->selector->info;
 
-	uint64_t processed_inputs = 0;
-	nir_foreach_variable(variable, &nir->inputs) {
-		unsigned attrib_count = glsl_count_attribute_slots(variable->type,
-								   nir->info.stage == MESA_SHADER_VERTEX);
-		unsigned input_idx = variable->data.driver_location;
+	if (nir->info.stage == MESA_SHADER_VERTEX ||
+	    nir->info.stage == MESA_SHADER_FRAGMENT) {
+		uint64_t processed_inputs = 0;
+		nir_foreach_variable(variable, &nir->inputs) {
+			unsigned attrib_count = glsl_count_attribute_slots(variable->type,
+									   nir->info.stage == MESA_SHADER_VERTEX);
+			unsigned input_idx = variable->data.driver_location;
 
-		assert(attrib_count == 1);
+			assert(attrib_count == 1);
 
-		LLVMValueRef data[4];
-		unsigned loc = variable->data.location;
+			LLVMValueRef data[4];
+			unsigned loc = variable->data.location;
 
-		/* Packed components share the same location so skip
-		 * them if we have already processed the location.
-		 */
-		if (processed_inputs & ((uint64_t)1 << loc))
-			continue;
+			/* Packed components share the same location so skip
+			 * them if we have already processed the location.
+			 */
+			if (processed_inputs & ((uint64_t)1 << loc))
+				continue;
 
-		if (nir->info.stage == MESA_SHADER_VERTEX)
-			declare_nir_input_vs(ctx, variable, data);
-		else if (nir->info.stage == MESA_SHADER_FRAGMENT)
-			declare_nir_input_fs(ctx, variable, input_idx / 4, data);
+			if (nir->info.stage == MESA_SHADER_VERTEX)
+				declare_nir_input_vs(ctx, variable, data);
+			else if (nir->info.stage == MESA_SHADER_FRAGMENT)
+				declare_nir_input_fs(ctx, variable, input_idx / 4, data);
 
-		for (unsigned chan = 0; chan < 4; chan++) {
-			ctx->inputs[input_idx + chan] =
-				LLVMBuildBitCast(ctx->ac.builder, data[chan], ctx->ac.i32, "");
+			for (unsigned chan = 0; chan < 4; chan++) {
+				ctx->inputs[input_idx + chan] =
+					LLVMBuildBitCast(ctx->ac.builder, data[chan], ctx->ac.i32, "");
+			}
+			processed_inputs |= ((uint64_t)1 << loc);
 		}
-		processed_inputs |= ((uint64_t)1 << loc);
 	}
 
 	ctx->abi.inputs = &ctx->inputs[0];

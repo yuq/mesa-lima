@@ -655,6 +655,18 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog,
                                   &nir->num_outputs,
                                   nir->info.stage);
       st_nir_fixup_varying_slots(st, &nir->outputs);
+   } else if (nir->info.stage == MESA_SHADER_GEOMETRY) {
+      sort_varyings(&nir->inputs);
+      st_nir_assign_var_locations(&nir->inputs,
+                                  &nir->num_inputs,
+                                  nir->info.stage);
+      st_nir_fixup_varying_slots(st, &nir->inputs);
+
+      sort_varyings(&nir->outputs);
+      st_nir_assign_var_locations(&nir->outputs,
+                                  &nir->num_outputs,
+                                  nir->info.stage);
+      st_nir_fixup_varying_slots(st, &nir->outputs);
    } else if (nir->info.stage == MESA_SHADER_FRAGMENT) {
       sort_varyings(&nir->inputs);
       st_nir_assign_var_locations(&nir->inputs,
