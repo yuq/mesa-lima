@@ -1395,10 +1395,31 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 
    case nir_op_extract_u8:
    case nir_op_extract_i8: {
-      const brw_reg_type type = brw_int_type(1, instr->op == nir_op_extract_i8);
       nir_const_value *byte = nir_src_as_const_value(instr->src[1].src);
       assert(byte != NULL);
-      bld.MOV(result, subscript(op[0], type, byte->u32[0]));
+
+      /* The PRMs say:
+       *
+       *    BDW+
+       *    There is no direct conversion from B/UB to Q/UQ or Q/UQ to B/UB.
+       *    Use two instructions and a word or DWord intermediate integer type.
+       */
+      if (nir_dest_bit_size(instr->dest.dest) == 64) {
+         const brw_reg_type type = brw_int_type(2, instr->op == nir_op_extract_i8);
+
+         if (instr->op == nir_op_extract_i8) {
+            /* If we need to sign extend, extract to a word first */
+            fs_reg w_temp = bld.vgrf(BRW_REGISTER_TYPE_W);
+            bld.MOV(w_temp, subscript(op[0], type, byte->u32[0]));
+            bld.MOV(result, w_temp);
+         } else {
+            /* Otherwise use an AND with 0xff and a word type */
+            bld.AND(result, subscript(op[0], type, byte->u32[0] / 2), brw_imm_uw(0xff));
+         }
+      } else {
+         const brw_reg_type type = brw_int_type(1, instr->op == nir_op_extract_i8);
+         bld.MOV(result, subscript(op[0], type, byte->u32[0]));
+      }
       break;
    }
 
