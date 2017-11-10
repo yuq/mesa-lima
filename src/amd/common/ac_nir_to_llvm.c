@@ -2705,28 +2705,6 @@ get_dw_address(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef
-build_varying_gather_values(struct ac_llvm_context *ctx, LLVMValueRef *values,
-			    unsigned value_count, unsigned component)
-{
-	LLVMValueRef vec = NULL;
-
-	if (value_count == 1) {
-		return values[component];
-	} else if (!value_count)
-		unreachable("value_count is 0");
-
-	for (unsigned i = component; i < value_count + component; i++) {
-		LLVMValueRef value = values[i];
-
-		if (!i)
-			vec = LLVMGetUndef( LLVMVectorType(LLVMTypeOf(value), value_count));
-		LLVMValueRef index = LLVMConstInt(ctx->i32, i - component, false);
-		vec = LLVMBuildInsertElement(ctx->builder, vec, value, index, "");
-	}
-	return vec;
-}
-
-static LLVMValueRef
 load_tcs_input(struct nir_to_llvm_context *ctx,
 	       nir_intrinsic_instr *instr)
 {
@@ -2754,7 +2732,7 @@ load_tcs_input(struct nir_to_llvm_context *ctx,
 		dw_addr = LLVMBuildAdd(ctx->builder, dw_addr,
 				       ctx->ac.i32_1, "");
 	}
-	result = build_varying_gather_values(&ctx->ac, value, instr->num_components, comp);
+	result = ac_build_varying_gather_values(&ctx->ac, value, instr->num_components, comp);
 	result = LLVMBuildBitCast(ctx->builder, result, get_def_type(ctx->nir, &instr->dest.ssa), "");
 	return result;
 }
@@ -2793,7 +2771,7 @@ load_tcs_output(struct nir_to_llvm_context *ctx,
 		dw_addr = LLVMBuildAdd(ctx->builder, dw_addr,
 				       ctx->ac.i32_1, "");
 	}
-	result = build_varying_gather_values(&ctx->ac, value, instr->num_components, comp);
+	result = ac_build_varying_gather_values(&ctx->ac, value, instr->num_components, comp);
 	result = LLVMBuildBitCast(ctx->builder, result, get_def_type(ctx->nir, &instr->dest.ssa), "");
 	return result;
 }
@@ -2959,7 +2937,7 @@ load_gs_input(struct nir_to_llvm_context *ctx,
 			                              AC_FUNC_ATTR_LEGACY);
 		}
 	}
-	result = build_varying_gather_values(&ctx->ac, value, instr->num_components, comp);
+	result = ac_build_varying_gather_values(&ctx->ac, value, instr->num_components, comp);
 
 	return result;
 }
@@ -3100,7 +3078,7 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 	default:
 		unreachable("unhandle variable mode");
 	}
-	ret = build_varying_gather_values(&ctx->ac, values, ve, comp);
+	ret = ac_build_varying_gather_values(&ctx->ac, values, ve, comp);
 	return LLVMBuildBitCast(ctx->ac.builder, ret, get_def_type(ctx, &instr->dest.ssa), "");
 }
 
@@ -3962,8 +3940,8 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 							      ctx->prim_mask);
 		}
 	}
-	return build_varying_gather_values(&ctx->ac, result, instr->num_components,
-					   instr->variables[0]->var->data.location_frac);
+	return ac_build_varying_gather_values(&ctx->ac, result, instr->num_components,
+					      instr->variables[0]->var->data.location_frac);
 }
 
 static void
