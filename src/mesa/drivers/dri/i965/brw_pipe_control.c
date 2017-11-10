@@ -102,8 +102,8 @@ gen10_add_rcpfe_workaround_bits(uint32_t *flags)
    if (*flags & PIPE_CONTROL_RENDER_TARGET_FLUSH) {
       *flags = *flags | PIPE_CONTROL_STALL_AT_SCOREBOARD;
    } else if (*flags &
-             (PIPE_CONTROL_WRITE_IMMEDIATE ||
-              PIPE_CONTROL_WRITE_DEPTH_COUNT ||
+             (PIPE_CONTROL_WRITE_IMMEDIATE |
+              PIPE_CONTROL_WRITE_DEPTH_COUNT |
               PIPE_CONTROL_WRITE_TIMESTAMP)) {
       *flags = *flags | PIPE_CONTROL_DEPTH_STALL;
    }
