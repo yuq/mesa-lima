@@ -21,7 +21,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "compiler/nir/nir_builder.h"
+#include "blorp_nir_builder.h"
 
 #include "blorp_priv.h"
 
@@ -680,6 +680,11 @@ blorp_nir_manual_blend_average(nir_builder *b, struct brw_blorp_blit_vars *v,
           * ld2dms are equivalent (since all samples are on sample slice 0).
           * Since we have already sampled from sample 0, all we need to do is
           * skip the remaining fetches and averaging if MCS is zero.
+          *
+          * It's also trivial to detect when the MCS has the magic clear color
+          * value.  In this case, the txf we did on sample 0 will return the
+          * clear color and we can skip the remaining fetches just like we do
+          * when MCS == 0.
           */
          nir_ssa_def *mcs_zero =
             nir_ieq(b, nir_channel(b, mcs, 0), nir_imm_int(b, 0));
@@ -687,9 +692,11 @@ blorp_nir_manual_blend_average(nir_builder *b, struct brw_blorp_blit_vars *v,
             mcs_zero = nir_iand(b, mcs_zero,
                nir_ieq(b, nir_channel(b, mcs, 1), nir_imm_int(b, 0)));
          }
+         nir_ssa_def *mcs_clear =
+            blorp_nir_mcs_is_clear_color(b, mcs, tex_samples);
 
          nir_if *if_stmt = nir_if_create(b->shader);
-         if_stmt->condition = nir_src_for_ssa(mcs_zero);
+         if_stmt->condition = nir_src_for_ssa(nir_ior(b, mcs_zero, mcs_clear));
          nir_cf_node_insert(b->cursor, &if_stmt->cf_node);
 
          b->cursor = nir_after_cf_list(&if_stmt->then_list);
