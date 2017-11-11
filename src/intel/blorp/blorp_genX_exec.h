@@ -263,53 +263,50 @@ blorp_emit_input_varying_data(struct blorp_batch *batch,
 }
 
 static void
+blorp_fill_vertex_buffer_state(struct blorp_batch *batch,
+                               struct GENX(VERTEX_BUFFER_STATE) *vb,
+                               unsigned idx,
+                               struct blorp_address addr, uint32_t size,
+                               uint32_t stride)
+{
+   vb[idx].VertexBufferIndex = idx;
+   vb[idx].BufferStartingAddress = addr;
+   vb[idx].BufferPitch = stride;
+
+#if GEN_GEN >= 6
+   vb[idx].VertexBufferMOCS = addr.mocs;
+#endif
+
+#if GEN_GEN >= 7
+   vb[idx].AddressModifyEnable = true;
+#endif
+
+#if GEN_GEN >= 8
+   vb[idx].BufferSize = size;
+#elif GEN_GEN >= 5
+   vb[idx].BufferAccessType = stride > 0 ? VERTEXDATA : INSTANCEDATA;
+   vb[idx].EndAddress = vb[idx].BufferStartingAddress;
+   vb[idx].EndAddress.offset += size - 1;
+#elif GEN_GEN == 4
+   vb[idx].BufferAccessType = stride > 0 ? VERTEXDATA : INSTANCEDATA;
+   vb[idx].MaxIndex = stride > 0 ? size / stride : 0;
+#endif
+}
+
+static void
 blorp_emit_vertex_buffers(struct blorp_batch *batch,
                           const struct blorp_params *params)
 {
    struct GENX(VERTEX_BUFFER_STATE) vb[2];
    memset(vb, 0, sizeof(vb));
 
+   struct blorp_address addr;
    uint32_t size;
-   blorp_emit_vertex_data(batch, params, &vb[0].BufferStartingAddress, &size);
-   vb[0].VertexBufferIndex = 0;
-   vb[0].BufferPitch = 3 * sizeof(float);
-#if GEN_GEN >= 6
-   vb[0].VertexBufferMOCS = vb[0].BufferStartingAddress.mocs;
-#endif
-#if GEN_GEN >= 7
-   vb[0].AddressModifyEnable = true;
-#endif
-#if GEN_GEN >= 8
-   vb[0].BufferSize = size;
-#elif GEN_GEN >= 5
-   vb[0].BufferAccessType = VERTEXDATA;
-   vb[0].EndAddress = vb[0].BufferStartingAddress;
-   vb[0].EndAddress.offset += size - 1;
-#elif GEN_GEN == 4
-   vb[0].BufferAccessType = VERTEXDATA;
-   vb[0].MaxIndex = 2;
-#endif
+   blorp_emit_vertex_data(batch, params, &addr, &size);
+   blorp_fill_vertex_buffer_state(batch, vb, 0, addr, size, 3 * sizeof(float));
 
-   blorp_emit_input_varying_data(batch, params,
-                                 &vb[1].BufferStartingAddress, &size);
-   vb[1].VertexBufferIndex = 1;
-   vb[1].BufferPitch = 0;
-#if GEN_GEN >= 6
-   vb[1].VertexBufferMOCS = vb[1].BufferStartingAddress.mocs;
-#endif
-#if GEN_GEN >= 7
-   vb[1].AddressModifyEnable = true;
-#endif
-#if GEN_GEN >= 8
-   vb[1].BufferSize = size;
-#elif GEN_GEN >= 5
-   vb[1].BufferAccessType = INSTANCEDATA;
-   vb[1].EndAddress = vb[1].BufferStartingAddress;
-   vb[1].EndAddress.offset += size - 1;
-#elif GEN_GEN == 4
-   vb[1].BufferAccessType = INSTANCEDATA;
-   vb[1].MaxIndex = 0;
-#endif
+   blorp_emit_input_varying_data(batch, params, &addr, &size);
+   blorp_fill_vertex_buffer_state(batch, vb, 1, addr, size, 0);
 
    const unsigned num_dwords = 1 + GENX(VERTEX_BUFFER_STATE_length) * 2;
    uint32_t *dw = blorp_emitn(batch, GENX(3DSTATE_VERTEX_BUFFERS), num_dwords);
