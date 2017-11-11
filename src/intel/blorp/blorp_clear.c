@@ -778,13 +778,16 @@ prepare_ccs_resolve(struct blorp_batch * const batch,
 
 void
 blorp_ccs_resolve(struct blorp_batch *batch,
-                  struct blorp_surf *surf, uint32_t level, uint32_t layer,
+                  struct blorp_surf *surf, uint32_t level,
+                  uint32_t start_layer, uint32_t num_layers,
                   enum isl_format format,
                   enum blorp_fast_clear_op resolve_op)
 {
    struct blorp_params params;
 
-   prepare_ccs_resolve(batch, &params, surf, level, layer, format, resolve_op);
+   prepare_ccs_resolve(batch, &params, surf, level, start_layer,
+                       format, resolve_op);
+   params.num_layers = num_layers;
 
    batch->blorp->exec(batch, &params);
 }
