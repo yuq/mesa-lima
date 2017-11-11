@@ -1606,6 +1606,16 @@ anv_image_mcs_op(struct anv_cmd_buffer *cmd_buffer,
                                 ANV_IMAGE_LAYOUT_EXPLICIT_AUX,
                                 ISL_AUX_USAGE_MCS, &surf);
 
+   if (mcs_op == ISL_AUX_OP_PARTIAL_RESOLVE) {
+      /* If we're doing a partial resolve, then we need the indirect clear
+       * color.  The clear operation just stomps the CCS to a particular value
+       * and don't care about format or clear value.
+       */
+      const struct anv_address clear_color_addr =
+         anv_image_get_clear_color_addr(cmd_buffer->device, image, aspect);
+      surf.clear_color_addr = anv_to_blorp_address(clear_color_addr);
+   }
+
    /* From the Sky Lake PRM Vol. 7, "Render Target Fast Clear":
     *
     *    "After Render target fast clear, pipe-control with color cache
@@ -1630,8 +1640,11 @@ anv_image_mcs_op(struct anv_cmd_buffer *cmd_buffer,
                        0, base_layer, layer_count,
                        0, 0, image->extent.width, image->extent.height);
       break;
-   case ISL_AUX_OP_FULL_RESOLVE:
    case ISL_AUX_OP_PARTIAL_RESOLVE:
+      blorp_mcs_partial_resolve(&batch, &surf, surf.surf->format,
+                                base_layer, layer_count);
+      break;
+   case ISL_AUX_OP_FULL_RESOLVE:
    case ISL_AUX_OP_AMBIGUATE:
    default:
       unreachable("Unsupported MCS operation");
