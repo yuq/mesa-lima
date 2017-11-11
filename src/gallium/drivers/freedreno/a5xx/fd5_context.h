@@ -42,10 +42,6 @@ struct fd5_context {
 
 	/* This only needs to be 4 * num_of_pipes bytes (ie. 32 bytes).  We
 	 * could combine it with another allocation.
-	 *
-	 * (upper area used as scratch bo.. see fd5_query)
-	 *
-	 * XXX remove if unneeded after binning r/e..
 	 */
 	struct fd_bo *vsc_size_mem;
 
