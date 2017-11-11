@@ -461,7 +461,7 @@ get_fast_clear_state_address(const struct anv_device *device,
 
    return (struct anv_address) {
       .bo = image->planes[plane].bo,
-      .offset = offset,
+      .offset = image->planes[plane].bo_offset + offset,
    };
 }
 
