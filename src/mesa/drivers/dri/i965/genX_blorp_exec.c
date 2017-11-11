@@ -94,6 +94,19 @@ blorp_surface_reloc(struct blorp_batch *batch, uint32_t ss_offset,
 #endif
 }
 
+#if GEN_GEN >= 7
+static struct blorp_address
+blorp_get_surface_base_address(struct blorp_batch *batch)
+{
+   assert(batch->blorp->driver_ctx == batch->driver_batch);
+   struct brw_context *brw = batch->driver_batch;
+   return (struct blorp_address) {
+      .buffer = brw->batch.state_bo,
+      .offset = 0,
+   };
+}
+#endif
+
 static void *
 blorp_alloc_dynamic_state(struct blorp_batch *batch,
                           uint32_t size,

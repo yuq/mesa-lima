@@ -100,6 +100,7 @@ brw_blorp_surface_info_init(struct blorp_context *blorp,
    }
 
    info->clear_color = surf->clear_color;
+   info->clear_color_addr = surf->clear_color_addr;
 
    info->view = (struct isl_view) {
       .usage = is_render_target ? ISL_SURF_USAGE_RENDER_TARGET_BIT :

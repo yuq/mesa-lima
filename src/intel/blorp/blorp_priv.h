@@ -56,6 +56,7 @@ struct brw_blorp_surface_info
    enum isl_aux_usage aux_usage;
 
    union isl_color_value clear_color;
+   struct blorp_address clear_color_addr;
 
    struct isl_view view;
 
