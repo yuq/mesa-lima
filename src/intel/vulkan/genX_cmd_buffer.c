@@ -179,29 +179,6 @@ add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
 }
 
 static void
-add_image_relocs(struct anv_cmd_buffer *cmd_buffer,
-                 const struct anv_image *image,
-                 const uint32_t plane,
-                 struct anv_surface_state state)
-{
-   const struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
-
-   add_surface_state_reloc(cmd_buffer, state.state,
-                           image->planes[plane].bo, state.address);
-
-   if (state.aux_address) {
-      VkResult result =
-         anv_reloc_list_add(&cmd_buffer->surface_relocs,
-                            &cmd_buffer->pool->alloc,
-                            state.state.offset + isl_dev->ss.aux_addr_offset,
-                            image->planes[plane].bo,
-                            state.aux_address);
-      if (result != VK_SUCCESS)
-         anv_batch_set_error(&cmd_buffer->batch, result);
-   }
-}
-
-static void
 add_image_view_relocs(struct anv_cmd_buffer *cmd_buffer,
                       const struct anv_image_view *image_view,
                       const uint32_t plane,
@@ -783,33 +760,7 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
 
       genX(load_needs_resolve_predicate)(cmd_buffer, image, aspect, level);
 
-      enum isl_aux_usage aux_usage =
-         image->planes[plane].aux_usage == ISL_AUX_USAGE_NONE ?
-         ISL_AUX_USAGE_CCS_D : image->planes[plane].aux_usage;
-
-      /* Create a surface state with the right clear color and perform the
-       * resolve.
-       */
-      struct anv_surface_state surface_state;
-      surface_state.state = anv_cmd_buffer_alloc_surface_state(cmd_buffer);
-      anv_image_fill_surface_state(cmd_buffer->device,
-                                   image, VK_IMAGE_ASPECT_COLOR_BIT,
-                                   &(struct isl_view) {
-                                      .format = image->planes[plane].surface.isl.format,
-                                      .swizzle = ISL_SWIZZLE_IDENTITY,
-                                      .base_level = level,
-                                      .levels = 1,
-                                      .base_array_layer = base_layer,
-                                      .array_len = layer_count,
-                                   },
-                                   ISL_SURF_USAGE_RENDER_TARGET_BIT,
-                                   aux_usage, NULL, 0,
-                                   &surface_state, NULL);
-      add_image_relocs(cmd_buffer, image, 0, surface_state);
-      genX(copy_fast_clear_dwords)(cmd_buffer, surface_state.state, image,
-                                   aspect, level, false /* copy to ss */);
-      anv_ccs_resolve(cmd_buffer, surface_state.state, image,
-                      aspect, level, layer_count,
+      anv_ccs_resolve(cmd_buffer, image, aspect, level, base_layer, layer_count,
                       image->planes[plane].aux_usage == ISL_AUX_USAGE_CCS_E ?
                       BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL :
                       BLORP_FAST_CLEAR_OP_RESOLVE_FULL);
