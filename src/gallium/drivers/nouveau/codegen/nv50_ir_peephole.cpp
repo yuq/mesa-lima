@@ -1192,6 +1192,21 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
 
             delete_Instruction(prog, i);
          }
+      } else if (s == 1) {
+         // In this case, we still want the optimized lowering that we get
+         // from having division by an immediate.
+         //
+         // a % b == a - (a/b) * b
+         bld.setPosition(i, false);
+         Value *div = bld.mkOp2v(OP_DIV, i->sType, bld.getSSA(),
+                                 i->getSrc(0), i->getSrc(1));
+         newi = bld.mkOp2(OP_ADD, i->sType, i->getDef(0), i->getSrc(0),
+                          bld.mkOp2v(OP_MUL, i->sType, bld.getSSA(), div, i->getSrc(1)));
+         // TODO: Check that target supports this. In this case, we know that
+         // all backends do.
+         newi->src(1).mod = Modifier(NV50_IR_MOD_NEG);
+
+         delete_Instruction(prog, i);
       }
       break;
 
