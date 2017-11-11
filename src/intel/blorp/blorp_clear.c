@@ -715,17 +715,18 @@ blorp_clear_attachments(struct blorp_batch *batch,
    batch->blorp->exec(batch, &params);
 }
 
-static void
-prepare_ccs_resolve(struct blorp_batch * const batch,
-                    struct blorp_params * const params,
-                    const struct blorp_surf * const surf,
-                    const uint32_t level, const uint32_t layer,
-                    const enum isl_format format,
-                    const enum blorp_fast_clear_op resolve_op)
+void
+blorp_ccs_resolve(struct blorp_batch *batch,
+                  struct blorp_surf *surf, uint32_t level,
+                  uint32_t start_layer, uint32_t num_layers,
+                  enum isl_format format,
+                  enum blorp_fast_clear_op resolve_op)
 {
-   blorp_params_init(params);
-   brw_blorp_surface_info_init(batch->blorp, &params->dst, surf,
-                               level, layer, format, true);
+   struct blorp_params params;
+
+   blorp_params_init(&params);
+   brw_blorp_surface_info_init(batch->blorp, &params.dst, surf,
+                               level, start_layer, format, true);
 
    /* From the Ivy Bridge PRM, Vol2 Part1 11.9 "Render Target Resolve":
     *
@@ -737,7 +738,7 @@ prepare_ccs_resolve(struct blorp_batch * const batch,
     * multiply by 8 and 16. On Sky Lake, we multiply by 8.
     */
    const struct isl_format_layout *aux_fmtl =
-      isl_format_get_layout(params->dst.aux_surf.format);
+      isl_format_get_layout(params.dst.aux_surf.format);
    assert(aux_fmtl->txc == ISL_TXC_CCS);
 
    unsigned x_scaledown, y_scaledown;
@@ -751,11 +752,11 @@ prepare_ccs_resolve(struct blorp_batch * const batch,
       x_scaledown = aux_fmtl->bw / 2;
       y_scaledown = aux_fmtl->bh / 2;
    }
-   params->x0 = params->y0 = 0;
-   params->x1 = minify(params->dst.aux_surf.logical_level0_px.width, level);
-   params->y1 = minify(params->dst.aux_surf.logical_level0_px.height, level);
-   params->x1 = ALIGN(params->x1, x_scaledown) / x_scaledown;
-   params->y1 = ALIGN(params->y1, y_scaledown) / y_scaledown;
+   params.x0 = params.y0 = 0;
+   params.x1 = minify(params.dst.aux_surf.logical_level0_px.width, level);
+   params.y1 = minify(params.dst.aux_surf.logical_level0_px.height, level);
+   params.x1 = ALIGN(params.x1, x_scaledown) / x_scaledown;
+   params.y1 = ALIGN(params.y1, y_scaledown) / y_scaledown;
 
    if (batch->blorp->isl_dev->info->gen >= 9) {
       assert(resolve_op == BLORP_FAST_CLEAR_OP_RESOLVE_FULL ||
@@ -764,7 +765,8 @@ prepare_ccs_resolve(struct blorp_batch * const batch,
       /* Broadwell and earlier do not have a partial resolve */
       assert(resolve_op == BLORP_FAST_CLEAR_OP_RESOLVE_FULL);
    }
-   params->fast_clear_op = resolve_op;
+   params.fast_clear_op = resolve_op;
+   params.num_layers = num_layers;
 
    /* Note: there is no need to initialize push constants because it doesn't
     * matter what data gets dispatched to the render target.  However, we must
@@ -772,40 +774,8 @@ prepare_ccs_resolve(struct blorp_batch * const batch,
     * color" message.
     */
 
-   if (!blorp_params_get_clear_kernel(batch->blorp, params, true))
+   if (!blorp_params_get_clear_kernel(batch->blorp, &params, true))
       return;
-}
-
-void
-blorp_ccs_resolve(struct blorp_batch *batch,
-                  struct blorp_surf *surf, uint32_t level,
-                  uint32_t start_layer, uint32_t num_layers,
-                  enum isl_format format,
-                  enum blorp_fast_clear_op resolve_op)
-{
-   struct blorp_params params;
-
-   prepare_ccs_resolve(batch, &params, surf, level, start_layer,
-                       format, resolve_op);
-   params.num_layers = num_layers;
-
-   batch->blorp->exec(batch, &params);
-}
-
-void
-blorp_ccs_resolve_attachment(struct blorp_batch *batch,
-                             const uint32_t binding_table_offset,
-                             struct blorp_surf * const surf,
-                             const uint32_t level, const uint32_t num_layers,
-                             const enum isl_format format,
-                             const enum blorp_fast_clear_op resolve_op)
-{
-   struct blorp_params params;
-
-   prepare_ccs_resolve(batch, &params, surf, level, 0, format, resolve_op);
-   params.use_pre_baked_binding_table = true;
-   params.pre_baked_binding_table_offset = binding_table_offset;
-   params.num_layers = num_layers;
 
    batch->blorp->exec(batch, &params);
 }
