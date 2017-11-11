@@ -6,12 +6,17 @@ set -eu
 # GL_EXT_multi_draw_arrays
 # GL_OES_EGL_image
 
-if [ $(uname) == "Darwin" ]
-then
+case "$(uname)" in
+Darwin)
   LIB=${1-es2api/.libs/libGLESv2.dylib}
-else
+  ;;
+CYGWIN*)
+  LIB=${1-es2api/.libs/cygGLESv2-2.dll}
+  ;;
+*)
   LIB=${1-es2api/.libs/libGLESv2.so.2}
-fi
+  ;;
+esac
 
 if ! [ -f "$LIB" ]
 then

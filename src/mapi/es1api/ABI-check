@@ -9,12 +9,17 @@ set -eu
 # or in extensions that are part of the ES 1.1 extension pack.
 # (see http://www.khronos.org/registry/gles/specs/1.1/opengles_spec_1_1_extension_pack.pdf)
 
-if [ $(uname) == "Darwin" ]
-then
+case "$(uname)" in
+Darwin)
   LIB=${1-es1api/.libs/libGLESv1_CM.dylib}
-else
+  ;;
+CYGWIN*)
+  LIB=${1-es1api/.libs/cygGLESv1_CM-1.dll}
+  ;;
+*)
   LIB=${1-es1api/.libs/libGLESv1_CM.so.1}
-fi
+  ;;
+esac
 
 if ! [ -f "$LIB" ]
 then
