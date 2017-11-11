@@ -30,7 +30,9 @@ subdir('drivers/rbug')
 subdir('drivers/radeon')
 subdir('drivers/radeonsi')
 subdir('drivers/nouveau')
-subdir('drivers/freedreno')
+if with_gallium_freedreno
+  subdir('drivers/freedreno')
+endif
 subdir('drivers/softpipe')
 if with_gallium_vc4
   subdir('drivers/vc4')
