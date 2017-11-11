@@ -417,7 +417,7 @@ emit_ssbos(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		struct pipe_shader_buffer *buf = &so->sb[i];
 		if (buf->buffer) {
 			struct fd_resource *rsc = fd_resource(buf->buffer);
-			OUT_RELOCW(ring, rsc->bo, 0, 0, 0);
+			OUT_RELOCW(ring, rsc->bo, buf->buffer_offset, 0, 0);
 		} else {
 			OUT_RING(ring, 0x00000000);
 			OUT_RING(ring, 0x00000000);
