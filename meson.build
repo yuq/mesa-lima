@@ -306,9 +306,6 @@ if _vulkan_drivers != ''
   with_intel_vk = _split.contains('intel')
   with_amd_vk = _split.contains('amd')
   with_any_vk = with_amd_vk or with_intel_vk
-  if not (with_platform_x11 or with_platform_wayland or with_platform_android)
-    error('Vulkan requires at least one platform (x11, wayland, android)')
-  endif
 endif
 
 with_dri2 = (with_dri or with_any_vk) and with_dri_platform == 'drm'
