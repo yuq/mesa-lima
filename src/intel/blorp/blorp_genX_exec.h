@@ -297,7 +297,7 @@ static void
 blorp_emit_vertex_buffers(struct blorp_batch *batch,
                           const struct blorp_params *params)
 {
-   struct GENX(VERTEX_BUFFER_STATE) vb[2];
+   struct GENX(VERTEX_BUFFER_STATE) vb[3];
    memset(vb, 0, sizeof(vb));
 
    struct blorp_address addr;
@@ -308,12 +308,20 @@ blorp_emit_vertex_buffers(struct blorp_batch *batch,
    blorp_emit_input_varying_data(batch, params, &addr, &size);
    blorp_fill_vertex_buffer_state(batch, vb, 1, addr, size, 0);
 
-   const unsigned num_dwords = 1 + GENX(VERTEX_BUFFER_STATE_length) * 2;
+   uint32_t num_vbs = 2;
+   if (params->dst_clear_color_as_input) {
+      blorp_fill_vertex_buffer_state(batch, vb, num_vbs++,
+                                     params->dst.clear_color_addr,
+                                     batch->blorp->isl_dev->ss.clear_value_size,
+                                     0);
+   }
+
+   const unsigned num_dwords = 1 + num_vbs * GENX(VERTEX_BUFFER_STATE_length);
    uint32_t *dw = blorp_emitn(batch, GENX(3DSTATE_VERTEX_BUFFERS), num_dwords);
    if (!dw)
       return;
 
-   for (unsigned i = 0; i < 2; i++) {
+   for (unsigned i = 0; i < num_vbs; i++) {
       GENX(VERTEX_BUFFER_STATE_pack)(batch, dw, &vb[i]);
       dw += GENX(VERTEX_BUFFER_STATE_length);
    }
@@ -440,21 +448,49 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
    };
    slot++;
 
-   for (unsigned i = 0; i < num_varyings; ++i) {
+   if (params->dst_clear_color_as_input) {
+      /* If the caller wants the destination indirect clear color, redirect
+       * to vertex buffer 2 where we stored it earlier.  The only users of
+       * an indirect clear color source have that as their only vertex
+       * attribute.
+       */
+      assert(num_varyings == 1);
       ve[slot] = (struct GENX(VERTEX_ELEMENT_STATE)) {
-         .VertexBufferIndex = 1,
+         .VertexBufferIndex = 2,
          .Valid = true,
-         .SourceElementFormat = (enum GENX(SURFACE_FORMAT)) ISL_FORMAT_R32G32B32A32_FLOAT,
-         .SourceElementOffset = 16 + i * 4 * sizeof(float),
+         .SourceElementOffset = 0,
          .Component0Control = VFCOMP_STORE_SRC,
+#if GEN_GEN >= 9
+         .SourceElementFormat = (enum GENX(SURFACE_FORMAT)) ISL_FORMAT_R32G32B32A32_FLOAT,
          .Component1Control = VFCOMP_STORE_SRC,
          .Component2Control = VFCOMP_STORE_SRC,
          .Component3Control = VFCOMP_STORE_SRC,
-#if GEN_GEN <= 5
-         .DestinationElementOffset = slot * 4,
+#else
+         /* Clear colors on gen7-8 are for bits out of one dword */
+         .SourceElementFormat = (enum GENX(SURFACE_FORMAT)) ISL_FORMAT_R32_FLOAT,
+         .Component1Control = VFCOMP_STORE_0,
+         .Component2Control = VFCOMP_STORE_0,
+         .Component3Control = VFCOMP_STORE_0,
 #endif
       };
       slot++;
+   } else {
+      for (unsigned i = 0; i < num_varyings; ++i) {
+         ve[slot] = (struct GENX(VERTEX_ELEMENT_STATE)) {
+            .VertexBufferIndex = 1,
+            .Valid = true,
+            .SourceElementFormat = (enum GENX(SURFACE_FORMAT)) ISL_FORMAT_R32G32B32A32_FLOAT,
+            .SourceElementOffset = 16 + i * 4 * sizeof(float),
+            .Component0Control = VFCOMP_STORE_SRC,
+            .Component1Control = VFCOMP_STORE_SRC,
+            .Component2Control = VFCOMP_STORE_SRC,
+            .Component3Control = VFCOMP_STORE_SRC,
+#if GEN_GEN <= 5
+            .DestinationElementOffset = slot * 4,
+#endif
+         };
+         slot++;
+      }
    }
 
    const unsigned num_dwords =

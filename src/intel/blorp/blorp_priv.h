@@ -196,6 +196,7 @@ struct blorp_params
    bool color_write_disable[4];
    struct brw_blorp_wm_inputs wm_inputs;
    struct blorp_vs_inputs vs_inputs;
+   bool dst_clear_color_as_input;
    unsigned num_samples;
    unsigned num_draw_buffers;
    unsigned num_layers;

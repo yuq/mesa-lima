@@ -833,9 +833,18 @@ blorp_ccs_resolve(struct blorp_batch *batch,
    batch->blorp->exec(batch, &params);
 }
 
+static nir_ssa_def *
+blorp_nir_bit(nir_builder *b, nir_ssa_def *src, unsigned bit)
+{
+   return nir_iand(b, nir_ushr(b, src, nir_imm_int(b, bit)),
+                      nir_imm_int(b, 1));
+}
+
 struct blorp_mcs_partial_resolve_key
 {
    enum blorp_shader_type shader_type;
+   bool indirect_clear_color;
+   bool int_format;
    uint32_t num_samples;
 };
 
@@ -845,6 +854,8 @@ blorp_params_get_mcs_partial_resolve_kernel(struct blorp_context *blorp,
 {
    const struct blorp_mcs_partial_resolve_key blorp_key = {
       .shader_type = BLORP_SHADER_TYPE_MCS_PARTIAL_RESOLVE,
+      .indirect_clear_color = params->dst.clear_color_addr.buffer != NULL,
+      .int_format = isl_format_has_int_channel(params->dst.view.format),
       .num_samples = params->num_samples,
    };
 
@@ -879,7 +890,18 @@ blorp_params_get_mcs_partial_resolve_kernel(struct blorp_context *blorp,
    discard->src[0] = nir_src_for_ssa(nir_inot(&b, is_clear));
    nir_builder_instr_insert(&b, &discard->instr);
 
-   nir_copy_var(&b, frag_color, v_color);
+   nir_ssa_def *clear_color = nir_load_var(&b, v_color);
+   if (blorp_key.indirect_clear_color && blorp->isl_dev->info->gen <= 8) {
+      /* Gen7-8 clear colors are stored as single 0/1 bits */
+      clear_color = nir_vec4(&b, blorp_nir_bit(&b, clear_color, 31),
+                                 blorp_nir_bit(&b, clear_color, 30),
+                                 blorp_nir_bit(&b, clear_color, 29),
+                                 blorp_nir_bit(&b, clear_color, 28));
+
+      if (!blorp_key.int_format)
+         clear_color = nir_i2f32(&b, clear_color);
+   }
+   nir_store_var(&b, frag_color, clear_color, 0xf);
 
    struct brw_wm_prog_key wm_key;
    brw_blorp_init_wm_prog_key(&wm_key);
@@ -925,6 +947,7 @@ blorp_mcs_partial_resolve(struct blorp_batch *batch,
 
    params.num_samples = params.dst.surf.samples;
    params.num_layers = num_layers;
+   params.dst_clear_color_as_input = surf->clear_color_addr.buffer != NULL;
 
    memcpy(&params.wm_inputs.clear_color,
           surf->clear_color.f32, sizeof(float) * 4);
