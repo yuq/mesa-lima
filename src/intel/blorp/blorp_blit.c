@@ -268,7 +268,8 @@ blorp_nir_txf_ms(nir_builder *b, struct brw_blorp_blit_vars *v,
 }
 
 static nir_ssa_def *
-blorp_nir_txf_ms_mcs(nir_builder *b, struct brw_blorp_blit_vars *v, nir_ssa_def *pos)
+blorp_blit_txf_ms_mcs(nir_builder *b, struct brw_blorp_blit_vars *v,
+                      nir_ssa_def *pos)
 {
    nir_tex_instr *tex =
       blorp_create_nir_tex_instr(b, v, nir_texop_txf_ms_mcs,
@@ -621,7 +622,7 @@ blorp_nir_manual_blend_average(nir_builder *b, struct brw_blorp_blit_vars *v,
 
    nir_ssa_def *mcs = NULL;
    if (tex_aux_usage == ISL_AUX_USAGE_MCS)
-      mcs = blorp_nir_txf_ms_mcs(b, v, pos);
+      mcs = blorp_blit_txf_ms_mcs(b, v, pos);
 
    /* We add together samples using a binary tree structure, e.g. for 4x MSAA:
     *
@@ -783,7 +784,7 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
        */
       nir_ssa_def *mcs = NULL;
       if (key->tex_aux_usage == ISL_AUX_USAGE_MCS)
-         mcs = blorp_nir_txf_ms_mcs(b, v, sample_coords_int);
+         mcs = blorp_blit_txf_ms_mcs(b, v, sample_coords_int);
 
       /* Compute sample index and map the sample index to a sample number.
        * Sample index layout shows the numbering of slots in a rectangular
@@ -1260,7 +1261,7 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp, void *mem_ctx,
          } else {
             nir_ssa_def *mcs = NULL;
             if (key->tex_aux_usage == ISL_AUX_USAGE_MCS)
-               mcs = blorp_nir_txf_ms_mcs(&b, &v, src_pos);
+               mcs = blorp_blit_txf_ms_mcs(&b, &v, src_pos);
 
             color = blorp_nir_txf_ms(&b, &v, src_pos, mcs, key->texture_data_type);
          }
