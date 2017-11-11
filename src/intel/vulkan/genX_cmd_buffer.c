@@ -426,45 +426,6 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
       anv_gen8_hiz_op_resolve(cmd_buffer, image, hiz_op);
 }
 
-enum fast_clear_state_field {
-   FAST_CLEAR_STATE_FIELD_CLEAR_COLOR,
-   FAST_CLEAR_STATE_FIELD_NEEDS_RESOLVE,
-};
-
-static inline struct anv_address
-get_fast_clear_state_address(const struct anv_device *device,
-                             const struct anv_image *image,
-                             VkImageAspectFlagBits aspect,
-                             unsigned level,
-                             enum fast_clear_state_field field)
-{
-   assert(device && image);
-   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
-   assert(level < anv_image_aux_levels(image, aspect));
-
-   uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
-
-   /* Refer to the definition of anv_image for the memory layout. */
-   uint32_t offset = image->planes[plane].fast_clear_state_offset;
-
-   offset += anv_fast_clear_state_entry_size(device) * level;
-
-   switch (field) {
-   case FAST_CLEAR_STATE_FIELD_NEEDS_RESOLVE:
-      offset += device->isl_dev.ss.clear_value_size;
-      /* Fall-through */
-   case FAST_CLEAR_STATE_FIELD_CLEAR_COLOR:
-      break;
-   }
-
-   assert(offset < image->planes[plane].surface.offset + image->planes[plane].size);
-
-   return (struct anv_address) {
-      .bo = image->planes[plane].bo,
-      .offset = image->planes[plane].bo_offset + offset,
-   };
-}
-
 #define MI_PREDICATE_SRC0  0x2400
 #define MI_PREDICATE_SRC1  0x2408
 
@@ -481,16 +442,13 @@ genX(set_image_needs_resolve)(struct anv_cmd_buffer *cmd_buffer,
    assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
    assert(level < anv_image_aux_levels(image, aspect));
 
-   const struct anv_address resolve_flag_addr =
-      get_fast_clear_state_address(cmd_buffer->device, image, aspect, level,
-                                   FAST_CLEAR_STATE_FIELD_NEEDS_RESOLVE);
-
    /* The HW docs say that there is no way to guarantee the completion of
     * the following command. We use it nevertheless because it shows no
     * issues in testing is currently being used in the GL driver.
     */
    anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
-      sdi.Address = resolve_flag_addr;
+      sdi.Address = anv_image_get_needs_resolve_addr(cmd_buffer->device,
+                                                     image, aspect, level);
       sdi.ImmediateData = needs_resolve;
    }
 }
@@ -506,8 +464,8 @@ genX(load_needs_resolve_predicate)(struct anv_cmd_buffer *cmd_buffer,
    assert(level < anv_image_aux_levels(image, aspect));
 
    const struct anv_address resolve_flag_addr =
-      get_fast_clear_state_address(cmd_buffer->device, image, aspect, level,
-                                   FAST_CLEAR_STATE_FIELD_NEEDS_RESOLVE);
+      anv_image_get_needs_resolve_addr(cmd_buffer->device,
+                                       image, aspect, level);
 
    /* Make the pending predicated resolve a no-op if one is not needed.
     * predicate = do_resolve = resolve_flag != 0;
@@ -558,8 +516,7 @@ init_fast_clear_state_entry(struct anv_cmd_buffer *cmd_buffer,
     * values in the clear value dword(s).
     */
    struct anv_address addr =
-      get_fast_clear_state_address(cmd_buffer->device, image, aspect, level,
-                                   FAST_CLEAR_STATE_FIELD_CLEAR_COLOR);
+      anv_image_get_clear_color_addr(cmd_buffer->device, image, aspect, level);
    unsigned i = 0;
    for (; i < cmd_buffer->device->isl_dev.ss.clear_value_size; i += 4) {
       anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
@@ -612,8 +569,7 @@ genX(copy_fast_clear_dwords)(struct anv_cmd_buffer *cmd_buffer,
    uint32_t ss_clear_offset = surface_state.offset +
       cmd_buffer->device->isl_dev.ss.clear_value_offset;
    const struct anv_address entry_addr =
-      get_fast_clear_state_address(cmd_buffer->device, image, aspect, level,
-                                   FAST_CLEAR_STATE_FIELD_CLEAR_COLOR);
+      anv_image_get_clear_color_addr(cmd_buffer->device, image, aspect, level);
    unsigned copy_size = cmd_buffer->device->isl_dev.ss.clear_value_size;
 
    if (copy_from_surface_state) {

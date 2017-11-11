@@ -2488,6 +2488,33 @@ anv_fast_clear_state_entry_size(const struct anv_device *device)
    return device->isl_dev.ss.clear_value_size + 4;
 }
 
+static inline struct anv_address
+anv_image_get_clear_color_addr(const struct anv_device *device,
+                               const struct anv_image *image,
+                               VkImageAspectFlagBits aspect,
+                               unsigned level)
+{
+   uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
+   return (struct anv_address) {
+      .bo = image->planes[plane].bo,
+      .offset = image->planes[plane].bo_offset +
+                image->planes[plane].fast_clear_state_offset +
+                anv_fast_clear_state_entry_size(device) * level,
+   };
+}
+
+static inline struct anv_address
+anv_image_get_needs_resolve_addr(const struct anv_device *device,
+                                 const struct anv_image *image,
+                                 VkImageAspectFlagBits aspect,
+                                 unsigned level)
+{
+   struct anv_address addr =
+      anv_image_get_clear_color_addr(device, image, aspect, level);
+   addr.offset += device->isl_dev.ss.clear_value_size;
+   return addr;
+}
+
 /* Returns true if a HiZ-enabled depth buffer can be sampled from. */
 static inline bool
 anv_can_sample_with_hiz(const struct gen_device_info * const devinfo,
