@@ -275,7 +275,7 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
          struct gen_field_iterator iter;
          gen_field_iterator_init(&iter, inst, p, false);
 
-         while (gen_field_iterator_next(&iter)) {
+         do {
             if (strcmp(iter.name, "Instruction Base Address") == 0) {
                uint64_t instr_base_address = strtol(iter.value, NULL, 16);
                current_instruction_buffer = NULL;
@@ -285,7 +285,7 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
                   }
                }
             }
-         }
+         } while (gen_field_iterator_next(&iter));
       } else if (strcmp(inst->name,   "WM_STATE") == 0 ||
                  strcmp(inst->name, "3DSTATE_PS") == 0 ||
                  strcmp(inst->name, "3DSTATE_WM") == 0) {
@@ -294,7 +294,7 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
          uint64_t ksp[3] = {0, 0, 0};
          bool enabled[3] = {false, false, false};
 
-         while (gen_field_iterator_next(&iter)) {
+         do {
             if (strncmp(iter.name, "Kernel Start Pointer ",
                         strlen("Kernel Start Pointer ")) == 0) {
                int idx = iter.name[strlen("Kernel Start Pointer ")] - '0';
@@ -306,7 +306,7 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
             } else if (strcmp(iter.name, "32 Pixel Dispatch Enable") == 0) {
                enabled[2] = strcmp(iter.value, "true") == 0;
             }
-         }
+         } while (gen_field_iterator_next(&iter));
 
          /* Reorder KSPs to be [8, 16, 32] instead of the hardware order. */
          if (enabled[0] + enabled[1] + enabled[2] == 1) {
@@ -353,7 +353,7 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
          bool is_simd8 = false; /* vertex shaders on Gen8+ only */
          bool is_enabled = true;
 
-         while (gen_field_iterator_next(&iter)) {
+         do {
             if (strcmp(iter.name, "Kernel Start Pointer") == 0) {
                ksp = strtol(iter.value, NULL, 16);
             } else if (strcmp(iter.name, "SIMD8 Dispatch Enable") == 0) {
@@ -363,7 +363,7 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
             } else if (strcmp(iter.name, "Enable") == 0) {
                is_enabled = strcmp(iter.value, "true") == 0;
             }
-         }
+         } while (gen_field_iterator_next(&iter));
 
          const char *type =
             strcmp(inst->name,   "VS_STATE") == 0 ? "vertex shader" :
