@@ -485,9 +485,8 @@ static void
 read_data_file(FILE *file)
 {
    struct gen_spec *spec = NULL;
-   uint32_t *data = NULL;
    long long unsigned fence;
-   int data_size = 0, count = 0, line_number = 0, matched;
+   int matched;
    char *line = NULL;
    size_t line_size;
    uint32_t offset, value;
@@ -500,7 +499,6 @@ read_data_file(FILE *file)
    while (getline(&line, &line_size, file) > 0) {
       char *new_ring_name = NULL;
       char *dashes;
-      line_number++;
 
       if (sscanf(line, "%m[^ ] command stream\n", &new_ring_name) > 0) {
          free(ring_name);
@@ -508,7 +506,8 @@ read_data_file(FILE *file)
       }
 
       if (line[0] == ':' || line[0] == '~') {
-         count = ascii85_decode(line+1, &data, line[0] == ':');
+         uint32_t *data = NULL;
+         int count = ascii85_decode(line+1, &data, line[0] == ':');
          if (count == 0) {
             fprintf(stderr, "ASCII85 decode failed.\n");
             exit(EXIT_FAILURE);
@@ -533,6 +532,7 @@ read_data_file(FILE *file)
          } else {
             decode(spec, buffer_name, ring_name, gtt_offset, data, &count);
          }
+         free(data);
          continue;
       }
 
@@ -554,9 +554,6 @@ read_data_file(FILE *file)
                new_gtt_offset |= lo;
             }
 
-            decode(spec,
-                   buffer_name, ring_name,
-                   gtt_offset, data, &count);
             gtt_offset = new_gtt_offset;
             free(ring_name);
             ring_name = new_ring_name;
@@ -573,9 +570,6 @@ read_data_file(FILE *file)
                new_gtt_offset |= lo;
             }
 
-            decode(spec,
-                   buffer_name, ring_name,
-                   gtt_offset, data, &count);
             gtt_offset = new_gtt_offset;
             free(ring_name);
             ring_name = new_ring_name;
@@ -592,9 +586,6 @@ read_data_file(FILE *file)
                new_gtt_offset |= lo;
             }
 
-            decode(spec,
-                   buffer_name, ring_name,
-                   gtt_offset, data, &count);
             gtt_offset = new_gtt_offset;
             free(ring_name);
             ring_name = new_ring_name;
@@ -624,10 +615,6 @@ read_data_file(FILE *file)
          uint32_t reg, reg2;
 
          /* display reg section is after the ringbuffers, don't mix them */
-         decode(spec,
-                buffer_name, ring_name,
-                gtt_offset, data, &count);
-
          printf("%s", line);
 
          matched = sscanf(line, "PCI ID: 0x%04x\n", &reg);
@@ -716,27 +703,9 @@ read_data_file(FILE *file)
 
          continue;
       }
-
-      count++;
-
-      if (count > data_size) {
-         data_size = data_size ? data_size * 2 : 1024;
-         data = realloc(data, data_size * sizeof (uint32_t));
-         if (data == NULL) {
-            fprintf(stderr, "Out of memory.\n");
-            exit(EXIT_FAILURE);
-         }
-      }
-
-      data[count-1] = value;
    }
 
-   decode(spec,
-          buffer_name, ring_name,
-          gtt_offset, data, &count);
-
    gen_disasm_destroy(disasm);
-   free(data);
    free(line);
    free(ring_name);
 }
