@@ -82,6 +82,7 @@ struct nv50_ir_prog_info
 
    uint8_t optLevel; /* optimization level (0 to 3) */
    uint8_t dbgFlags;
+   bool omitLineNum; /* only used for printing the prog when dbgFlags is set */
 
    struct {
       int16_t maxGPR;     /* may be -1 if none used */
