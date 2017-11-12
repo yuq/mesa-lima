@@ -507,6 +507,35 @@ read_data_file(FILE *file)
          ring_name = new_ring_name;
       }
 
+      if (line[0] == ':' || line[0] == '~') {
+         count = ascii85_decode(line+1, &data, line[0] == ':');
+         if (count == 0) {
+            fprintf(stderr, "ASCII85 decode failed.\n");
+            exit(EXIT_FAILURE);
+         }
+
+         if (strcmp(buffer_name, "user") == 0) {
+            printf("Disassembly of programs in instruction buffer at "
+                   "0x%08"PRIx64":\n", gtt_offset);
+            for (int i = 0; i < num_programs; i++) {
+               int idx = (idx_program + i) % MAX_NUM_PROGRAMS;
+               if (programs[idx].instruction_base_address == gtt_offset) {
+                    printf("\n%s (specified by %s at batch offset "
+                           "0x%08"PRIx64") at offset 0x%08"PRIx64"\n",
+                           programs[idx].type,
+                           programs[idx].command,
+                           programs[idx].command_offset,
+                           programs[idx].ksp);
+                    gen_disasm_disassemble(disasm, data, programs[idx].ksp,
+                                           stdout);
+               }
+            }
+         } else {
+            decode(spec, buffer_name, ring_name, gtt_offset, data, &count);
+         }
+         continue;
+      }
+
       dashes = strstr(line, "---");
       if (dashes) {
          uint32_t lo, hi;
@@ -588,37 +617,6 @@ read_data_file(FILE *file)
             buffer_name = "user";
             continue;
          }
-      }
-
-      if (line[0] == ':' || line[0] == '~') {
-         count = ascii85_decode(line+1, &data, line[0] == ':');
-         if (count == 0) {
-            fprintf(stderr, "ASCII85 decode failed.\n");
-            exit(EXIT_FAILURE);
-         }
-
-         if (strcmp(buffer_name, "user") == 0) {
-            printf("Disassembly of programs in instruction buffer at "
-                   "0x%08"PRIx64":\n", gtt_offset);
-            for (int i = 0; i < num_programs; i++) {
-               int idx = (idx_program + i) % MAX_NUM_PROGRAMS;
-               if (programs[idx].instruction_base_address == gtt_offset) {
-                    printf("\n%s (specified by %s at batch offset "
-                           "0x%08"PRIx64") at offset 0x%08"PRIx64"\n",
-                           programs[idx].type,
-                           programs[idx].command,
-                           programs[idx].command_offset,
-                           programs[idx].ksp);
-                    gen_disasm_disassemble(disasm, data, programs[idx].ksp,
-                                           stdout);
-               }
-            }
-         } else {
-            decode(spec,
-                   buffer_name, ring_name,
-                   gtt_offset, data, &count);
-         }
-         continue;
       }
 
       matched = sscanf(line, "%08x : %08x", &offset, &value);
