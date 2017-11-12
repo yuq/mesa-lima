@@ -527,7 +527,9 @@ read_data_file(FILE *file)
                                            stdout);
                }
             }
-         } else {
+         } else if (strcmp(buffer_name, "batch buffer") == 0 ||
+                    strcmp(buffer_name, "ring buffer") == 0 ||
+                    strcmp(buffer_name, "HW Context") == 0) {
             decode(spec, gtt_offset, data, count);
          }
          free(data);
