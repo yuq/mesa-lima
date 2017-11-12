@@ -824,14 +824,15 @@ iter_advance_group(struct gen_field_iterator *iter)
 static bool
 iter_advance_field(struct gen_field_iterator *iter)
 {
-   while (!iter_more_fields(iter)) {
+   if (iter_more_fields(iter)) {
+      iter->field = iter->field->next;
+   } else {
       if (!iter_more_groups(iter))
          return false;
 
       iter_advance_group(iter);
    }
 
-   iter->field = iter->field->next;
    if (iter->field->name)
       strncpy(iter->name, iter->field->name, sizeof(iter->name));
    else
