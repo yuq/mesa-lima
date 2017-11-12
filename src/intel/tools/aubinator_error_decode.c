@@ -207,8 +207,6 @@ print_fault_data(struct gen_device_info *devinfo, uint32_t data1, uint32_t data0
           data1 & (1 << 4) ? "GGTT" : "PPGTT");
 }
 
-#define MAX_RINGS 10 /* I really hope this never... */
-
 #define CSI "\e["
 #define NORMAL       CSI "0m"
 
