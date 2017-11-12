@@ -559,6 +559,7 @@ read_data_file(FILE *file)
          free(ring_name);
          ring_name = malloc(dashes - line);
          strncpy(ring_name, line, dashes - line);
+         ring_name[dashes - line - 1] = '\0';
 
          dashes += 4;
          for (b = buffers; b->match; b++) {
