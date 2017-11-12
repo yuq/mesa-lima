@@ -233,13 +233,11 @@ static int next_program(void)
 }
 
 static void decode(struct gen_spec *spec,
-                   const char *buffer_name,
-                   const char *ring_name,
                    uint64_t gtt_offset,
                    uint32_t *data,
-                   int *count)
+                   int count)
 {
-   uint32_t *p, *end = (data + *count);
+   uint32_t *p, *end = (data + count);
    int length;
    struct gen_group *inst;
    uint64_t current_instruction_base_address = 0;
@@ -530,7 +528,7 @@ read_data_file(FILE *file)
                }
             }
          } else {
-            decode(spec, buffer_name, ring_name, gtt_offset, data, &count);
+            decode(spec, gtt_offset, data, count);
          }
          free(data);
          continue;
