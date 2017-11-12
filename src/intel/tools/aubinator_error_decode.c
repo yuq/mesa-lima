@@ -221,35 +221,28 @@ struct section {
 #define MAX_SECTIONS 30
 static struct section sections[MAX_SECTIONS];
 
-struct program {
-   const char *type;
-   const char *command;
-   uint64_t command_offset;
-   uint64_t instruction_base_address;
-   uint64_t ksp;
-};
-
-#define MAX_NUM_PROGRAMS 4096
-static struct program programs[MAX_NUM_PROGRAMS];
-static int idx_program = 0, num_programs = 0;
-
-static int next_program(void)
+static void
+disassemble_program(struct gen_disasm *disasm, const char *type,
+                    const struct section *instruction_section,
+                    uint64_t ksp)
 {
-   int ret = idx_program;
-   idx_program = (idx_program + 1) % MAX_NUM_PROGRAMS;
-   num_programs = MIN(num_programs + 1, MAX_NUM_PROGRAMS);
-   return ret;
+   if (!instruction_section)
+      return;
+
+   printf("\nReferenced %s:\n", type);
+   gen_disasm_disassemble(disasm, instruction_section->data, ksp, stdout);
 }
 
 static void
-decode(struct gen_spec *spec, const struct section *section)
+decode(struct gen_spec *spec, struct gen_disasm *disasm,
+       const struct section *section)
 {
    uint64_t gtt_offset = section->gtt_offset;
    uint32_t *data = section->data;
    uint32_t *p, *end = (data + section->count);
    int length;
    struct gen_group *inst;
-   uint64_t current_instruction_base_address = 0;
+   const struct section *current_instruction_buffer = NULL;
 
    for (p = data; p < end; p += length) {
       const char *color = option_full_decode ? BLUE_HEADER : NORMAL,
@@ -284,7 +277,13 @@ decode(struct gen_spec *spec, const struct section *section)
 
          while (gen_field_iterator_next(&iter)) {
             if (strcmp(iter.name, "Instruction Base Address") == 0) {
-               current_instruction_base_address = strtol(iter.value, NULL, 16);
+               uint64_t instr_base_address = strtol(iter.value, NULL, 16);
+               current_instruction_buffer = NULL;
+               for (int s = 0; s < MAX_SECTIONS; s++) {
+                  if (sections[s].gtt_offset == instr_base_address) {
+                     current_instruction_buffer = &sections[s];
+                  }
+               }
             }
          }
       } else if (strcmp(inst->name,   "WM_STATE") == 0 ||
@@ -309,50 +308,37 @@ decode(struct gen_spec *spec, const struct section *section)
             }
          }
 
+         /* Reorder KSPs to be [8, 16, 32] instead of the hardware order. */
+         if (enabled[0] + enabled[1] + enabled[2] == 1) {
+            if (enabled[1]) {
+               ksp[1] = ksp[0];
+               ksp[0] = 0;
+            } else if (enabled[2]) {
+               ksp[2] = ksp[0];
+               ksp[0] = 0;
+            }
+         } else {
+            uint64_t tmp = ksp[1];
+            ksp[1] = ksp[2];
+            ksp[2] = tmp;
+         }
+
          /* FINISHME: Broken for multi-program WM_STATE,
           * which Mesa does not use
           */
-         if (enabled[0] + enabled[1] + enabled[2] == 1) {
-            const char *type = enabled[0] ? "SIMD8 fragment shader" :
-                               enabled[1] ? "SIMD16 fragment shader" :
-                               enabled[2] ? "SIMD32 fragment shader" : NULL;
-
-            programs[next_program()] = (struct program) {
-               .type = type,
-               .command = inst->name,
-               .command_offset = offset,
-               .instruction_base_address = current_instruction_base_address,
-               .ksp = ksp[0],
-            };
-         } else {
-            if (enabled[0]) /* SIMD8 */ {
-               programs[next_program()] = (struct program) {
-                  .type = "SIMD8 fragment shader",
-                  .command = inst->name,
-                  .command_offset = offset,
-                  .instruction_base_address = current_instruction_base_address,
-                  .ksp = ksp[0], /* SIMD8 shader is specified by ksp[0] */
-               };
-            }
-            if (enabled[1]) /* SIMD16 */ {
-               programs[next_program()] = (struct program) {
-                  .type = "SIMD16 fragment shader",
-                  .command = inst->name,
-                  .command_offset = offset,
-                  .instruction_base_address = current_instruction_base_address,
-                  .ksp = ksp[2], /* SIMD16 shader is specified by ksp[2] */
-               };
-            }
-            if (enabled[2]) /* SIMD32 */ {
-               programs[next_program()] = (struct program) {
-                  .type = "SIMD32 fragment shader",
-                  .command = inst->name,
-                  .command_offset = offset,
-                  .instruction_base_address = current_instruction_base_address,
-                  .ksp = ksp[1], /* SIMD32 shader is specified by ksp[1] */
-               };
-            }
+         if (enabled[0]) {
+            disassemble_program(disasm, "SIMD8 fragment shader",
+                                current_instruction_buffer, ksp[0]);
          }
+         if (enabled[1]) {
+            disassemble_program(disasm, "SIMD16 fragment shader",
+                                current_instruction_buffer, ksp[1]);
+         }
+         if (enabled[2]) {
+            disassemble_program(disasm, "SIMD32 fragment shader",
+                                current_instruction_buffer, ksp[2]);
+         }
+         printf("\n");
       } else if (strcmp(inst->name,   "VS_STATE") == 0 ||
                  strcmp(inst->name,   "GS_STATE") == 0 ||
                  strcmp(inst->name,   "SF_STATE") == 0 ||
@@ -391,13 +377,8 @@ decode(struct gen_spec *spec, const struct section *section)
             NULL;
 
          if (is_enabled) {
-            programs[next_program()] = (struct program) {
-               .type = type,
-               .command = inst->name,
-               .command_offset = offset,
-               .instruction_base_address = current_instruction_base_address,
-               .ksp = ksp,
-            };
+            disassemble_program(disasm, type, current_instruction_buffer, ksp);
+            printf("\n");
          }
       }
    }
@@ -671,24 +652,7 @@ read_data_file(FILE *file)
       if (strcmp(sections[s].buffer_name, "batch buffer") == 0 ||
           strcmp(sections[s].buffer_name, "ring buffer") == 0 ||
           strcmp(sections[s].buffer_name, "HW Context") == 0) {
-         decode(spec, &sections[s]);
-      } else if (strcmp(sections[s].buffer_name, "user") == 0) {
-         printf("Disassembly of programs in instruction buffer at "
-                "0x%08"PRIx64":\n", sections[s].gtt_offset);
-         for (int i = 0; i < num_programs; i++) {
-            int idx = (idx_program + i) % MAX_NUM_PROGRAMS;
-            if (programs[idx].instruction_base_address ==
-                sections[s].gtt_offset) {
-                 printf("\n%s (specified by %s at batch offset "
-                        "0x%08"PRIx64") at offset 0x%08"PRIx64"\n",
-                        programs[idx].type,
-                        programs[idx].command,
-                        programs[idx].command_offset,
-                        programs[idx].ksp);
-                 gen_disasm_disassemble(disasm, sections[s].data,
-                                        programs[idx].ksp, stdout);
-            }
-         }
+         decode(spec, disasm, &sections[s]);
       }
 
       free(sections[s].ring_name);
