@@ -210,6 +210,17 @@ print_fault_data(struct gen_device_info *devinfo, uint32_t data1, uint32_t data0
 #define CSI "\e["
 #define NORMAL       CSI "0m"
 
+struct section {
+   uint64_t gtt_offset;
+   char *ring_name;
+   const char *buffer_name;
+   uint32_t *data;
+   int count;
+};
+
+#define MAX_SECTIONS 30
+static struct section sections[MAX_SECTIONS];
+
 struct program {
    const char *type;
    const char *command;
@@ -230,12 +241,12 @@ static int next_program(void)
    return ret;
 }
 
-static void decode(struct gen_spec *spec,
-                   uint64_t gtt_offset,
-                   uint32_t *data,
-                   int count)
+static void
+decode(struct gen_spec *spec, const struct section *section)
 {
-   uint32_t *p, *end = (data + count);
+   uint64_t gtt_offset = section->gtt_offset;
+   uint32_t *data = section->data;
+   uint32_t *p, *end = (data + section->count);
    int length;
    struct gen_group *inst;
    uint64_t current_instruction_base_address = 0;
@@ -486,11 +497,10 @@ read_data_file(FILE *file)
    char *line = NULL;
    size_t line_size;
    uint32_t offset, value;
-   uint64_t gtt_offset = 0;
-   const char *buffer_name = "batch buffer";
    char *ring_name = NULL;
    struct gen_device_info devinfo;
    struct gen_disasm *disasm = NULL;
+   int sect_num = 0;
 
    while (getline(&line, &line_size, file) > 0) {
       char *new_ring_name = NULL;
@@ -508,29 +518,9 @@ read_data_file(FILE *file)
             fprintf(stderr, "ASCII85 decode failed.\n");
             exit(EXIT_FAILURE);
          }
-
-         if (strcmp(buffer_name, "user") == 0) {
-            printf("Disassembly of programs in instruction buffer at "
-                   "0x%08"PRIx64":\n", gtt_offset);
-            for (int i = 0; i < num_programs; i++) {
-               int idx = (idx_program + i) % MAX_NUM_PROGRAMS;
-               if (programs[idx].instruction_base_address == gtt_offset) {
-                    printf("\n%s (specified by %s at batch offset "
-                           "0x%08"PRIx64") at offset 0x%08"PRIx64"\n",
-                           programs[idx].type,
-                           programs[idx].command,
-                           programs[idx].command_offset,
-                           programs[idx].ksp);
-                    gen_disasm_disassemble(disasm, data, programs[idx].ksp,
-                                           stdout);
-               }
-            }
-         } else if (strcmp(buffer_name, "batch buffer") == 0 ||
-                    strcmp(buffer_name, "ring buffer") == 0 ||
-                    strcmp(buffer_name, "HW Context") == 0) {
-            decode(spec, gtt_offset, data, count);
-         }
-         free(data);
+         sections[sect_num].data = data;
+         sections[sect_num].count = count;
+         sect_num++;
          continue;
       }
 
@@ -552,10 +542,6 @@ read_data_file(FILE *file)
             { NULL, "unknown" },
          }, *b;
 
-         printf("%s", line);
-
-         gtt_offset = 0;
-
          free(ring_name);
          ring_name = malloc(dashes - line);
          strncpy(ring_name, line, dashes - line);
@@ -567,12 +553,13 @@ read_data_file(FILE *file)
                break;
          }
 
-         buffer_name = b->name;
+         sections[sect_num].buffer_name = b->name;
+         sections[sect_num].ring_name = strdup(ring_name);
 
          uint32_t hi, lo;
          dashes = strchr(dashes, '=');
          if (dashes && sscanf(dashes, "= 0x%08x %08x\n", &hi, &lo))
-            gtt_offset = ((uint64_t) hi) << 32 | lo;
+            sections[sect_num].gtt_offset = ((uint64_t) hi) << 32 | lo;
 
          continue;
       }
@@ -672,9 +659,43 @@ read_data_file(FILE *file)
       }
    }
 
-   gen_disasm_destroy(disasm);
    free(line);
    free(ring_name);
+
+   for (int s = 0; s < sect_num; s++) {
+      printf("--- %s (%s) at 0x%08x %08x\n",
+             sections[s].buffer_name, sections[s].ring_name,
+             (unsigned) (sections[s].gtt_offset >> 32),
+             (unsigned) sections[s].gtt_offset);
+
+      if (strcmp(sections[s].buffer_name, "batch buffer") == 0 ||
+          strcmp(sections[s].buffer_name, "ring buffer") == 0 ||
+          strcmp(sections[s].buffer_name, "HW Context") == 0) {
+         decode(spec, &sections[s]);
+      } else if (strcmp(sections[s].buffer_name, "user") == 0) {
+         printf("Disassembly of programs in instruction buffer at "
+                "0x%08"PRIx64":\n", sections[s].gtt_offset);
+         for (int i = 0; i < num_programs; i++) {
+            int idx = (idx_program + i) % MAX_NUM_PROGRAMS;
+            if (programs[idx].instruction_base_address ==
+                sections[s].gtt_offset) {
+                 printf("\n%s (specified by %s at batch offset "
+                        "0x%08"PRIx64") at offset 0x%08"PRIx64"\n",
+                        programs[idx].type,
+                        programs[idx].command,
+                        programs[idx].command_offset,
+                        programs[idx].ksp);
+                 gen_disasm_disassemble(disasm, sections[s].data,
+                                        programs[idx].ksp, stdout);
+            }
+         }
+      }
+
+      free(sections[s].ring_name);
+      free(sections[s].data);
+   }
+
+   gen_disasm_destroy(disasm);
 }
 
 static void
