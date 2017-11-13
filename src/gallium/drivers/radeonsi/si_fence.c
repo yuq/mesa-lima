@@ -216,6 +216,11 @@ static boolean si_fence_finish(struct pipe_screen *screen,
 			if (!util_queue_fence_wait_timeout(&rfence->ready, abs_timeout))
 				return false;
 		}
+
+		if (timeout && timeout != PIPE_TIMEOUT_INFINITE) {
+			int64_t time = os_time_get_nano();
+			timeout = abs_timeout > time ? abs_timeout - time : 0;
+		}
 	}
 
 	if (rfence->sdma) {
