@@ -55,7 +55,9 @@ subdir('amd')
 if with_gallium_vc4
   subdir('broadcom')
 endif
-subdir('intel')
+if with_dri_i965 or with_intel_vk
+  subdir('intel')
+endif
 subdir('mesa')
 subdir('loader')
 subdir('glx')

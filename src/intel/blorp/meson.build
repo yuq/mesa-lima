@@ -33,5 +33,4 @@ libblorp = static_library(
   [files_libblorp, nir_opcodes_h],
   include_directories : [inc_common, inc_intel],
   c_args : [c_vis_args, no_override_init_args],
-  build_by_default : false,
 )

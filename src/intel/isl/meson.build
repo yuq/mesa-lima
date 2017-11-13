@@ -60,7 +60,6 @@ foreach g : [['40', isl_gen4_files], ['50', []], ['60', isl_gen6_files],
     include_directories : [inc_common, inc_intel],
     c_args : [c_vis_args, no_override_init_args,
               '-DGEN_VERSIONx10=@0@'.format(_gen)],
-    build_by_default : false,
   )
   isl_gen_libs += _lib
 endforeach
@@ -88,7 +87,6 @@ libisl = static_library(
   include_directories : [inc_common, inc_intel, inc_drm_uapi],
   link_with : isl_gen_libs,
   c_args : [c_vis_args, no_override_init_args],
-  build_by_default : false,
 )
 
 if with_tests
@@ -98,7 +96,6 @@ if with_tests
     dependencies : dep_m,
     include_directories : [inc_common, inc_intel],
     link_with : [libisl, libintel_common],
-    build_by_default : false,
   )
 
   test('isl_surf_get_image_offset', isl_surf_get_image_offset_test)
