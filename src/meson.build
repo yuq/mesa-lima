@@ -51,7 +51,9 @@ subdir('mapi')
 subdir('compiler')
 subdir('egl/wayland/wayland-drm')
 subdir('vulkan')
-subdir('amd')
+if with_gallium_radeonsi or with_amd_vk
+  subdir('amd')
+endif
 if with_gallium_vc4
   subdir('broadcom')
 endif
