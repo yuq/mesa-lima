@@ -1833,10 +1833,6 @@ static VkResult radv_alloc_sem_counts(struct radv_winsys_sem_counts *counts,
 
 		if (sem->temp_syncobj) {
 			counts->syncobj[syncobj_idx++] = sem->temp_syncobj;
-			if (reset_temp) {
-				/* after we wait on a temp import - drop it */
-				sem->temp_syncobj = 0;
-			}
 		}
 		else if (sem->syncobj)
 			counts->syncobj[syncobj_idx++] = sem->syncobj;
@@ -1855,6 +1851,21 @@ void radv_free_sem_info(struct radv_winsys_sem_info *sem_info)
 	free(sem_info->wait.sem);
 	free(sem_info->signal.syncobj);
 	free(sem_info->signal.sem);
+}
+
+
+static void radv_free_temp_syncobjs(struct radv_device *device,
+				    int num_sems,
+				    const VkSemaphore *sems)
+{
+	for (uint32_t i = 0; i < num_sems; i++) {
+		RADV_FROM_HANDLE(radv_semaphore, sem, sems[i]);
+
+		if (sem->temp_syncobj) {
+			device->ws->destroy_syncobj(device->ws, sem->temp_syncobj);
+			sem->temp_syncobj = 0;
+		}
+	}
 }
 
 VkResult radv_alloc_sem_info(struct radv_winsys_sem_info *sem_info,
@@ -1995,6 +2006,9 @@ VkResult radv_QueueSubmit(
 			}
 		}
 
+		radv_free_temp_syncobjs(queue->device,
+					pSubmits[i].waitSemaphoreCount,
+					pSubmits[i].pWaitSemaphores);
 		radv_free_sem_info(&sem_info);
 		free(cs_array);
 	}
