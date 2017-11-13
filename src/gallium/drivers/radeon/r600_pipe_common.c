@@ -689,6 +689,10 @@ static void r600_disk_cache_create(struct r600_common_screen *rscreen)
 	if (rscreen->debug_flags & DBG_ALL_SHADERS)
 		return;
 
+	/* TODO: remove this once gallium supports a nir cache */
+	if (rscreen->debug_flags & DBG(NIR))
+		return;
+
 	uint32_t mesa_timestamp;
 	if (disk_cache_get_function_timestamp(r600_disk_cache_create,
 					      &mesa_timestamp)) {
