@@ -192,7 +192,7 @@ LLVMValueRef si_llvm_bound_index(struct si_shader_context *ctx,
 	LLVMValueRef c_max = LLVMConstInt(ctx->i32, num - 1, 0);
 	LLVMValueRef cc;
 
-	if (util_is_power_of_two(num)) {
+	if (util_is_power_of_two_or_zero(num)) {
 		index = LLVMBuildAnd(builder, index, c_max, "");
 	} else {
 		/* In theory, this MAX pattern should result in code that is

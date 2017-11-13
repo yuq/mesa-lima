@@ -31,6 +31,7 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 
 #if defined(_MSC_VER)
@@ -105,6 +106,17 @@ u_bit_scan64(uint64_t *mask)
    const int i = ffsll(*mask) - 1;
    *mask ^= (((uint64_t)1) << i);
    return i;
+}
+
+/* Determine if an unsigned value is a power of two.
+ *
+ * \note
+ * Zero is treated as a power of two.
+ */
+static inline bool
+util_is_power_of_two_or_zero(unsigned v)
+{
+   return (v & (v - 1)) == 0;
 }
 
 /* For looping over a bitmask when you want to loop over consecutive bits

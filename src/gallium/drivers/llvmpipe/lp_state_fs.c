@@ -2240,7 +2240,7 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
 
    if (dst_count > src_count) {
       if ((dst_type.width == 8 || dst_type.width == 16) &&
-          util_is_power_of_two(dst_type.length) &&
+          util_is_power_of_two_or_zero(dst_type.length) &&
           dst_type.length * dst_type.width < 128) {
          /*
           * Never try to load values as 4xi8 which we will then

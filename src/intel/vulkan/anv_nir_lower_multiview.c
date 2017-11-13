@@ -87,7 +87,7 @@ build_view_index(struct lower_multiview_state *state)
             nir_umod(b, nir_load_instance_id(b),
                         nir_imm_int(b, _mesa_bitcount(state->view_mask)));
 
-         if (util_is_power_of_two(state->view_mask + 1)) {
+         if (util_is_power_of_two_or_zero(state->view_mask + 1)) {
             /* If we have a full view mask, then compacted is what we want */
             state->view_index = compacted;
          } else {

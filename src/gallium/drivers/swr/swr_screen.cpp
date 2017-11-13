@@ -105,7 +105,7 @@ swr_is_format_supported(struct pipe_screen *_screen,
       return FALSE;
 
    if ((sample_count > screen->msaa_max_count)
-      || !util_is_power_of_two(sample_count))
+      || !util_is_power_of_two_or_zero(sample_count))
       return FALSE;
 
    if (bind & PIPE_BIND_DISPLAY_TARGET) {
@@ -1103,7 +1103,7 @@ swr_validate_env_options(struct swr_screen *screen)
    int msaa_max_count = debug_get_num_option("SWR_MSAA_MAX_COUNT", 1);
    if (msaa_max_count != 1) {
       if ((msaa_max_count < 1) || (msaa_max_count > SWR_MAX_NUM_MULTISAMPLES)
-            || !util_is_power_of_two(msaa_max_count)) {
+            || !util_is_power_of_two_or_zero(msaa_max_count)) {
          fprintf(stderr, "SWR_MSAA_MAX_COUNT invalid: %d\n", msaa_max_count);
          fprintf(stderr, "must be power of 2 between 1 and %d" \
                          " (or 1 to disable msaa)\n",
