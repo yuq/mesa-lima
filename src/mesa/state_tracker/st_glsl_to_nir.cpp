@@ -247,13 +247,11 @@ st_nir_assign_uniform_locations(struct gl_program *prog,
    *size = max;
 }
 
-extern "C" {
-
 /* First third of converting glsl_to_nir.. this leaves things in a pre-
  * nir_lower_io state, so that shader variants can more easily insert/
  * replace variables, etc.
  */
-nir_shader *
+static nir_shader *
 st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
                struct gl_shader_program *shader_program,
                gl_shader_stage stage)
@@ -392,54 +390,6 @@ sort_varyings(struct exec_list *var_list)
    exec_list_move_nodes_to(&new_list, var_list);
 }
 
-/* Last third of preparing nir from glsl, which happens after shader
- * variant lowering.
- */
-void
-st_finalize_nir(struct st_context *st, struct gl_program *prog,
-                struct gl_shader_program *shader_program, nir_shader *nir)
-{
-   struct pipe_screen *screen = st->pipe->screen;
-
-   NIR_PASS_V(nir, nir_split_var_copies);
-   NIR_PASS_V(nir, nir_lower_var_copies);
-   NIR_PASS_V(nir, nir_lower_io_types);
-
-   if (nir->info.stage == MESA_SHADER_VERTEX) {
-      /* Needs special handling so drvloc matches the vbo state: */
-      st_nir_assign_vs_in_locations(prog, nir);
-      /* Re-lower global vars, to deal with any dead VS inputs. */
-      NIR_PASS_V(nir, nir_lower_global_vars_to_local);
-
-      sort_varyings(&nir->outputs);
-      st_nir_assign_var_locations(&nir->outputs,
-                                  &nir->num_outputs);
-      st_nir_fixup_varying_slots(st, &nir->outputs);
-   } else if (nir->info.stage == MESA_SHADER_FRAGMENT) {
-      sort_varyings(&nir->inputs);
-      st_nir_assign_var_locations(&nir->inputs,
-                                  &nir->num_inputs);
-      st_nir_fixup_varying_slots(st, &nir->inputs);
-      st_nir_assign_var_locations(&nir->outputs,
-                                  &nir->num_outputs);
-   } else if (nir->info.stage == MESA_SHADER_COMPUTE) {
-       /* TODO? */
-   } else {
-      unreachable("invalid shader type for tgsi bypass\n");
-   }
-
-   NIR_PASS_V(nir, nir_lower_atomics_to_ssbo,
-         st->ctx->Const.Program[nir->info.stage].MaxAtomicBuffers);
-
-   st_nir_assign_uniform_locations(prog, shader_program,
-                                   &nir->uniforms, &nir->num_uniforms);
-
-   if (screen->get_param(screen, PIPE_CAP_NIR_SAMPLERS_AS_DEREF))
-      NIR_PASS_V(nir, nir_lower_samplers_as_deref, shader_program);
-   else
-      NIR_PASS_V(nir, nir_lower_samplers, shader_program);
-}
-
 static void
 set_st_program(struct gl_program *prog,
                struct gl_shader_program *shader_program,
@@ -518,6 +468,8 @@ st_nir_get_mesa_program(struct gl_context *ctx,
    prog->nir = nir;
 }
 
+extern "C" {
+
 bool
 st_link_nir(struct gl_context *ctx,
             struct gl_shader_program *shader_program)
@@ -549,6 +501,54 @@ st_link_nir(struct gl_context *ctx,
    }
 
    return true;
+}
+
+/* Last third of preparing nir from glsl, which happens after shader
+ * variant lowering.
+ */
+void
+st_finalize_nir(struct st_context *st, struct gl_program *prog,
+                struct gl_shader_program *shader_program, nir_shader *nir)
+{
+   struct pipe_screen *screen = st->pipe->screen;
+
+   NIR_PASS_V(nir, nir_split_var_copies);
+   NIR_PASS_V(nir, nir_lower_var_copies);
+   NIR_PASS_V(nir, nir_lower_io_types);
+
+   if (nir->info.stage == MESA_SHADER_VERTEX) {
+      /* Needs special handling so drvloc matches the vbo state: */
+      st_nir_assign_vs_in_locations(prog, nir);
+      /* Re-lower global vars, to deal with any dead VS inputs. */
+      NIR_PASS_V(nir, nir_lower_global_vars_to_local);
+
+      sort_varyings(&nir->outputs);
+      st_nir_assign_var_locations(&nir->outputs,
+                                  &nir->num_outputs);
+      st_nir_fixup_varying_slots(st, &nir->outputs);
+   } else if (nir->info.stage == MESA_SHADER_FRAGMENT) {
+      sort_varyings(&nir->inputs);
+      st_nir_assign_var_locations(&nir->inputs,
+                                  &nir->num_inputs);
+      st_nir_fixup_varying_slots(st, &nir->inputs);
+      st_nir_assign_var_locations(&nir->outputs,
+                                  &nir->num_outputs);
+   } else if (nir->info.stage == MESA_SHADER_COMPUTE) {
+       /* TODO? */
+   } else {
+      unreachable("invalid shader type for tgsi bypass\n");
+   }
+
+   NIR_PASS_V(nir, nir_lower_atomics_to_ssbo,
+         st->ctx->Const.Program[nir->info.stage].MaxAtomicBuffers);
+
+   st_nir_assign_uniform_locations(prog, shader_program,
+                                   &nir->uniforms, &nir->num_uniforms);
+
+   if (screen->get_param(screen, PIPE_CAP_NIR_SAMPLERS_AS_DEREF))
+      NIR_PASS_V(nir, nir_lower_samplers_as_deref, shader_program);
+   else
+      NIR_PASS_V(nir, nir_lower_samplers, shader_program);
 }
 
 } /* extern "C" */
