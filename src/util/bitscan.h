@@ -38,6 +38,10 @@
 #include <intrin.h>
 #endif
 
+#if defined(__POPCNT__)
+#include <popcntintrin.h>
+#endif
+
 #include "c99_compat.h"
 
 #ifdef __cplusplus
@@ -127,7 +131,20 @@ util_is_power_of_two_or_zero(unsigned v)
 static inline bool
 util_is_power_of_two_nonzero(unsigned v)
 {
+   /* __POPCNT__ is different from HAVE___BUILTIN_POPCOUNT.  The latter
+    * indicates the existence of the __builtin_popcount function.  The former
+    * indicates that _mm_popcnt_u32 exists and is a native instruction.
+    *
+    * The other alternative is to use SSE 4.2 compile-time flags.  This has
+    * two drawbacks.  First, there is currently no build infrastructure for
+    * SSE 4.2 (only 4.1), so that would have to be added.  Second, some AMD
+    * CPUs support POPCNT but not SSE 4.2 (e.g., Barcelona).
+    */
+#ifdef __POPCNT__
+   return _mm_popcnt_u32(v) == 1;
+#else
    return v != 0 && (v & (v - 1)) == 0;
+#endif
 }
 
 /* For looping over a bitmask when you want to loop over consecutive bits
