@@ -2870,6 +2870,13 @@ static int r600_emit_tess_factor(struct r600_shader_ctx *ctx)
 		int out_idx = i >= outer_comps ? tessinner_idx : tessouter_idx;
 		int out_comp = i >= outer_comps ? i - outer_comps : i;
 
+		if (ctx->shader->tcs_prim_mode == PIPE_PRIM_LINES) {
+			if (out_comp == 1)
+				out_comp = 0;
+			else if (out_comp == 0)
+				out_comp = 1;
+		}
+
 		r = single_alu_op2(ctx, ALU_OP2_ADD_INT,
 				   treg[i / 2], (2 * (i % 2)),
 				   temp_reg, 0,
