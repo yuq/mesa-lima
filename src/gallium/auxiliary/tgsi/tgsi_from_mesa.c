@@ -127,6 +127,14 @@ tgsi_get_gl_varying_semantic(gl_varying_slot attr,
       *semantic_name = TGSI_SEMANTIC_PCOORD;
       *semantic_index = 0;
       break;
+   case VARYING_SLOT_TESS_LEVEL_OUTER:
+      *semantic_name = TGSI_SEMANTIC_TESSOUTER;
+      *semantic_index = 0;
+      break;
+   case VARYING_SLOT_TESS_LEVEL_INNER:
+      *semantic_name = TGSI_SEMANTIC_TESSINNER;
+      *semantic_index = 0;
+      break;
 
    case VARYING_SLOT_TEX0:
    case VARYING_SLOT_TEX1:
