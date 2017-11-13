@@ -62,6 +62,10 @@ tgsi_get_gl_varying_semantic(gl_varying_slot attr,
                              unsigned *semantic_index)
 {
    switch (attr) {
+   case VARYING_SLOT_PRIMITIVE_ID:
+      *semantic_name = TGSI_SEMANTIC_PRIMID;
+      *semantic_index = 0;
+      break;
    case VARYING_SLOT_POS:
       *semantic_name = TGSI_SEMANTIC_POSITION;
       *semantic_index = 0;
