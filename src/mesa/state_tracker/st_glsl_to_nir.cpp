@@ -249,7 +249,7 @@ st_nir_assign_uniform_locations(struct gl_program *prog,
 
 extern "C" {
 
-/* First half of converting glsl_to_nir.. this leaves things in a pre-
+/* First third of converting glsl_to_nir.. this leaves things in a pre-
  * nir_lower_io state, so that shader variants can more easily insert/
  * replace variables, etc.
  */
@@ -261,7 +261,6 @@ st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
    struct pipe_screen *pscreen = st->pipe->screen;
    enum pipe_shader_type ptarget = pipe_shader_type_from_mesa(stage);
    const nir_shader_compiler_options *options;
-   nir_shader *nir;
 
    assert(pscreen->get_compiler_options);   /* drivers using NIR must implement this */
 
@@ -272,7 +271,17 @@ st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
    if (prog->nir)
       return prog->nir;
 
-   nir = glsl_to_nir(shader_program, stage, options);
+   return glsl_to_nir(shader_program, stage, options);
+}
+
+/* Second third of converting glsl_to_nir. This creates uniforms, gathers
+ * info on varyings, etc after NIR link time opts have been applied.
+ */
+static void
+st_glsl_to_nir_post_opts(struct st_context *st, struct gl_program *prog,
+                         struct gl_shader_program *shader_program)
+{
+   nir_shader *nir = prog->nir;
 
    /* Make a pass over the IR to add state references for any built-in
     * uniforms that are used.  This has to be done now (during linking).
@@ -313,7 +322,7 @@ st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
    NIR_PASS_V(nir, nir_lower_var_copies);
 
    /* fragment shaders may need : */
-   if (stage == MESA_SHADER_FRAGMENT) {
+   if (prog->info.stage == MESA_SHADER_FRAGMENT) {
       static const gl_state_index wposTransformState[STATE_LENGTH] = {
          STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM
       };
@@ -350,15 +359,11 @@ st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
    if (st->ctx->_Shader->Flags & GLSL_DUMP) {
       _mesa_log("\n");
       _mesa_log("NIR IR for linked %s program %d:\n",
-             _mesa_shader_stage_to_string(stage),
+             _mesa_shader_stage_to_string(prog->info.stage),
              shader_program->Name);
       nir_print_shader(nir, _mesa_get_log_file());
       _mesa_log("\n\n");
    }
-
-   prog->nir = nir;
-
-   return nir;
 }
 
 /* TODO any better helper somewhere to sort a list? */
@@ -387,7 +392,7 @@ sort_varyings(struct exec_list *var_list)
    exec_list_move_nodes_to(&new_list, var_list);
 }
 
-/* Second half of preparing nir from glsl, which happens after shader
+/* Last third of preparing nir from glsl, which happens after shader
  * variant lowering.
  */
 void
@@ -477,7 +482,7 @@ set_st_program(struct gl_program *prog,
    }
 }
 
-struct gl_program *
+static void
 st_nir_get_mesa_program(struct gl_context *ctx,
                         struct gl_shader_program *shader_program,
                         struct gl_linked_shader *shader)
@@ -510,29 +515,36 @@ st_nir_get_mesa_program(struct gl_context *ctx,
    nir_shader *nir = st_glsl_to_nir(st, prog, shader_program, shader->Stage);
 
    set_st_program(prog, shader_program, nir);
-
-   return prog;
+   prog->nir = nir;
 }
 
 bool
 st_link_nir(struct gl_context *ctx,
             struct gl_shader_program *shader_program)
 {
+   struct st_context *st = st_context(ctx);
+
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_linked_shader *shader = shader_program->_LinkedShaders[i];
       if (shader == NULL)
          continue;
 
-      struct gl_program *linked_prog =
-         st_nir_get_mesa_program(ctx, shader_program, shader);
+      st_nir_get_mesa_program(ctx, shader_program, shader);
+   }
 
-      if (linked_prog) {
-         if (!ctx->Driver.ProgramStringNotify(ctx,
-                                              _mesa_shader_stage_to_program(i),
-                                              linked_prog)) {
-            _mesa_reference_program(ctx, &shader->Program, NULL);
-            return false;
-         }
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_linked_shader *shader = shader_program->_LinkedShaders[i];
+      if (shader == NULL)
+         continue;
+
+      st_glsl_to_nir_post_opts(st, shader->Program, shader_program);
+
+      assert(shader->Program);
+      if (!ctx->Driver.ProgramStringNotify(ctx,
+                                           _mesa_shader_stage_to_program(i),
+                                           shader->Program)) {
+         _mesa_reference_program(ctx, &shader->Program, NULL);
+         return false;
       }
    }
 
