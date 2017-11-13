@@ -3525,6 +3525,7 @@ VkResult radv_ImportSemaphoreFdKHR(VkDevice _device,
 	RADV_FROM_HANDLE(radv_device, device, _device);
 	RADV_FROM_HANDLE(radv_semaphore, sem, pImportSemaphoreFdInfo->semaphore);
 	uint32_t syncobj_handle = 0;
+	uint32_t *syncobj_dst = NULL;
 	assert(pImportSemaphoreFdInfo->handleType == VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR);
 
 	int ret = device->ws->import_syncobj(device->ws, pImportSemaphoreFdInfo->fd, &syncobj_handle);
@@ -3532,10 +3533,15 @@ VkResult radv_ImportSemaphoreFdKHR(VkDevice _device,
 		return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
 
 	if (pImportSemaphoreFdInfo->flags & VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR) {
-		sem->temp_syncobj = syncobj_handle;
+		syncobj_dst = &sem->temp_syncobj;
 	} else {
-		sem->syncobj = syncobj_handle;
+		syncobj_dst = &sem->syncobj;
 	}
+
+	if (*syncobj_dst)
+		device->ws->destroy_syncobj(device->ws, *syncobj_dst);
+
+	*syncobj_dst = syncobj_handle;
 	close(pImportSemaphoreFdInfo->fd);
 	return VK_SUCCESS;
 }
