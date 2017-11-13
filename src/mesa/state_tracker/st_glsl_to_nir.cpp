@@ -435,6 +435,48 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog,
       NIR_PASS_V(nir, nir_lower_samplers, shader_program);
 }
 
+static void
+set_st_program(struct gl_program *prog,
+               struct gl_shader_program *shader_program,
+               nir_shader *nir)
+{
+   struct st_vertex_program *stvp;
+   struct st_common_program *stp;
+   struct st_fragment_program *stfp;
+   struct st_compute_program *stcp;
+
+   switch (prog->info.stage) {
+   case MESA_SHADER_VERTEX:
+      stvp = (struct st_vertex_program *)prog;
+      stvp->shader_program = shader_program;
+      stvp->tgsi.type = PIPE_SHADER_IR_NIR;
+      stvp->tgsi.ir.nir = nir;
+      break;
+   case MESA_SHADER_GEOMETRY:
+   case MESA_SHADER_TESS_CTRL:
+   case MESA_SHADER_TESS_EVAL:
+      stp = (struct st_common_program *)prog;
+      stp->shader_program = shader_program;
+      stp->tgsi.type = PIPE_SHADER_IR_NIR;
+      stp->tgsi.ir.nir = nir;
+      break;
+   case MESA_SHADER_FRAGMENT:
+      stfp = (struct st_fragment_program *)prog;
+      stfp->shader_program = shader_program;
+      stfp->tgsi.type = PIPE_SHADER_IR_NIR;
+      stfp->tgsi.ir.nir = nir;
+      break;
+   case MESA_SHADER_COMPUTE:
+      stcp = (struct st_compute_program *)prog;
+      stcp->shader_program = shader_program;
+      stcp->tgsi.ir_type = PIPE_SHADER_IR_NIR;
+      stcp->tgsi.prog = nir_shader_clone(NULL, nir);
+      break;
+   default:
+      unreachable("unknown shader stage");
+   }
+}
+
 struct gl_program *
 st_nir_get_mesa_program(struct gl_context *ctx,
                         struct gl_shader_program *shader_program,
@@ -465,45 +507,9 @@ st_nir_get_mesa_program(struct gl_context *ctx,
    prog->ExternalSamplersUsed = gl_external_samplers(prog);
    _mesa_update_shader_textures_used(shader_program, prog);
 
-   struct st_vertex_program *stvp;
-   struct st_common_program *stp;
-   struct st_fragment_program *stfp;
-   struct st_compute_program *stcp;
-
    nir_shader *nir = st_glsl_to_nir(st, prog, shader_program, shader->Stage);
 
-   switch (shader->Stage) {
-   case MESA_SHADER_VERTEX:
-      stvp = (struct st_vertex_program *)prog;
-      stvp->shader_program = shader_program;
-      stvp->tgsi.type = PIPE_SHADER_IR_NIR;
-      stvp->tgsi.ir.nir = nir;
-      break;
-   case MESA_SHADER_GEOMETRY:
-   case MESA_SHADER_TESS_CTRL:
-   case MESA_SHADER_TESS_EVAL:
-      stp = (struct st_common_program *)prog;
-      stp->shader_program = shader_program;
-      stp->tgsi.type = PIPE_SHADER_IR_NIR;
-      stp->tgsi.ir.nir = nir;
-      break;
-   case MESA_SHADER_FRAGMENT:
-      stfp = (struct st_fragment_program *)prog;
-      stfp->shader_program = shader_program;
-      stfp->tgsi.type = PIPE_SHADER_IR_NIR;
-      stfp->tgsi.ir.nir = nir;
-      break;
-   case MESA_SHADER_COMPUTE:
-      stcp = (struct st_compute_program *)prog;
-      stcp->shader_program = shader_program;
-      stcp->tgsi.ir_type = PIPE_SHADER_IR_NIR;
-      stcp->tgsi.prog = nir_shader_clone(NULL, nir);
-      break;
-   default:
-      assert(!"should not be reached");
-      return NULL;
-   }
-
+   set_st_program(prog, shader_program, nir);
 
    return prog;
 }
