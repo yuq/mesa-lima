@@ -982,7 +982,7 @@ validate_var_decl(nir_variable *var, bool is_global, validate_state *state)
    validate_assert(state, is_global == nir_variable_is_global(var));
 
    /* Must have exactly one mode set */
-   validate_assert(state, util_bitcount(var->data.mode) == 1);
+   validate_assert(state, util_is_power_of_two_nonzero(var->data.mode));
 
    if (var->data.compact) {
       /* The "compact" flag is only valid on arrays of scalars. */

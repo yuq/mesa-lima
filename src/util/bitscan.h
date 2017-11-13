@@ -119,6 +119,17 @@ util_is_power_of_two_or_zero(unsigned v)
    return (v & (v - 1)) == 0;
 }
 
+/* Determine if an unsigned value is a power of two.
+ *
+ * \note
+ * Zero is \b not treated as a power of two.
+ */
+static inline bool
+util_is_power_of_two_nonzero(unsigned v)
+{
+   return v != 0 && (v & (v - 1)) == 0;
+}
+
 /* For looping over a bitmask when you want to loop over consecutive bits
  * manually, for example:
  *
