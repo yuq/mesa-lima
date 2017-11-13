@@ -42,6 +42,23 @@ _mesa_spirv_module_reference(struct gl_spirv_module **dest,
       p_atomic_inc(&src->RefCount);
 }
 
+void
+_mesa_shader_spirv_data_reference(struct gl_shader_spirv_data **dest,
+                                  struct gl_shader_spirv_data *src)
+{
+   struct gl_shader_spirv_data *old = *dest;
+
+   if (old && p_atomic_dec_zero(&old->RefCount)) {
+      _mesa_spirv_module_reference(&(*dest)->SpirVModule, NULL);
+      ralloc_free(old);
+   }
+
+   *dest = src;
+
+   if (src)
+      p_atomic_inc(&src->RefCount);
+}
+
 void GLAPIENTRY
 _mesa_SpecializeShaderARB(GLuint shader,
                           const GLchar *pEntryPoint,

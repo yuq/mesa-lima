@@ -42,9 +42,34 @@ struct gl_spirv_module {
    char Binary[0];
 };
 
+/**
+ * SPIR-V data needed to compile and link a SPIR-V shader.
+ *
+ * It includes a SPIR-V binary that is potentially shared among different
+ * shaders; and shader-specific specialization constants and entry point.
+ *
+ * It is reference-counted because it is shared between gl_shader and its
+ * corresponding gl_linked_shader.
+ */
+struct gl_shader_spirv_data {
+   GLint RefCount;
+
+   struct gl_spirv_module *SpirVModule;
+
+   GLchar *SpirVEntryPoint;
+
+   GLuint NumSpecializationConstants;
+   GLuint *SpecializationConstantsIndex;
+   GLuint *SpecializationConstantsValue;
+};
+
 void
 _mesa_spirv_module_reference(struct gl_spirv_module **dest,
                              struct gl_spirv_module *src);
+
+void
+_mesa_shader_spirv_data_reference(struct gl_shader_spirv_data **dest,
+                                  struct gl_shader_spirv_data *src);
 
 /**
  * \name API functions
