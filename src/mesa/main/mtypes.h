@@ -2651,6 +2651,14 @@ struct gl_linked_shader
    struct exec_list *packed_varyings;
    struct exec_list *fragdata_arrays;
    struct glsl_symbol_table *symbols;
+
+   /**
+    * ARB_gl_spirv related data.
+    *
+    * This is actually a reference to the gl_shader::spirv_data, which
+    * stores information that is also needed during linking.
+    */
+   struct gl_shader_spirv_data *spirv_data;
 };
 
 
