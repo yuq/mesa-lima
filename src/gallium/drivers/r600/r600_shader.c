@@ -348,6 +348,7 @@ struct r600_shader_ctx {
 	int					gs_next_vertex;
 	struct r600_shader	*gs_for_vs;
 	int					gs_export_gpr_tregs[4];
+	int                                     gs_rotated_input[2];
 	const struct pipe_stream_output_info	*gs_stream_output_info;
 	unsigned				enabled_stream_buffers_mask;
 	unsigned                                tess_input_info; /* temp with tess input offsets */
@@ -760,7 +761,7 @@ static int single_alu_op3(struct r600_shader_ctx *ctx, int op,
 	int r;
 
 	/* validate this for other ops */
-	assert(op == ALU_OP3_MULADD_UINT24);
+	assert(op == ALU_OP3_MULADD_UINT24 || op == ALU_OP3_CNDE_INT);
 	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 	alu.op = op;
 	alu.src[0].sel = src0_sel;
@@ -1479,14 +1480,14 @@ static int fetch_gs_input(struct r600_shader_ctx *ctx, struct tgsi_full_src_regi
 	int r;
 	unsigned index = src->Register.Index;
 	unsigned vtx_id = src->Dimension.Index;
-	int offset_reg = vtx_id / 3;
+	int offset_reg = ctx->gs_rotated_input[vtx_id / 3];
 	int offset_chan = vtx_id % 3;
 	int t2 = 0;
 
 	/* offsets of per-vertex data in ESGS ring are passed to GS in R0.x, R0.y,
 	 * R0.w, R1.x, R1.y, R1.z (it seems R0.z is used for PrimitiveID) */
 
-	if (offset_reg == 0 && offset_chan == 2)
+	if (offset_reg == ctx->gs_rotated_input[0] && offset_chan == 2)
 		offset_chan = 3;
 
 	if (src->Dimension.Indirect || src->Register.Indirect)
@@ -1517,7 +1518,7 @@ static int fetch_gs_input(struct r600_shader_ctx *ctx, struct tgsi_full_src_regi
 		for (i = 0; i < 3; i++) {
 			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 			alu.op = ALU_OP1_MOV;
-			alu.src[0].sel = 0;
+			alu.src[0].sel = ctx->gs_rotated_input[0];
 			alu.src[0].chan = i == 2 ? 3 : i;
 			alu.dst.sel = treg[i];
 			alu.dst.chan = 0;
@@ -2990,6 +2991,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	case PIPE_SHADER_GEOMETRY:
 		ring_outputs = true;
 		shader->atomic_base = key.gs.first_atomic_counter;
+		shader->gs_tri_strip_adj_fix = key.gs.tri_strip_adj_fix;
 		break;
 	case PIPE_SHADER_TESS_CTRL:
 		shader->tcs_prim_mode = key.tcs.prim_mode;
@@ -3123,6 +3125,14 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		ctx.gs_export_gpr_tregs[2] = ctx.bc->ar_reg + 5;
 		ctx.gs_export_gpr_tregs[3] = ctx.bc->ar_reg + 6;
 		ctx.temp_reg = ctx.bc->ar_reg + 7;
+		if (ctx.shader->gs_tri_strip_adj_fix) {
+			ctx.gs_rotated_input[0] = ctx.bc->ar_reg + 7;
+			ctx.gs_rotated_input[1] = ctx.bc->ar_reg + 8;
+			ctx.temp_reg += 2;
+		} else {
+			ctx.gs_rotated_input[0] = 0;
+			ctx.gs_rotated_input[1] = 1;
+		}
 	} else {
 		ctx.temp_reg = ctx.bc->ar_reg + 3;
 	}
@@ -3289,6 +3299,36 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			r = r600_bytecode_add_alu(ctx.bc, &alu);
 			if (r)
 				return r;
+		}
+
+		if (ctx.shader->gs_tri_strip_adj_fix) {
+			r = single_alu_op2(&ctx, ALU_OP2_AND_INT,
+					   ctx.gs_rotated_input[0], 2,
+					   0, 2,
+					   V_SQ_ALU_SRC_LITERAL, 1);
+			if (r)
+				return r;
+
+			for (i = 0; i < 6; i++) {
+				int rotated = (i + 4) % 6;
+				int offset_reg = i / 3;
+				int offset_chan = i % 3;
+				int rotated_offset_reg = rotated / 3;
+				int rotated_offset_chan = rotated % 3;
+
+				if (offset_reg == 0 && offset_chan == 2)
+					offset_chan = 3;
+				if (rotated_offset_reg == 0 && rotated_offset_chan == 2)
+					rotated_offset_chan = 3;
+
+				r = single_alu_op3(&ctx, ALU_OP3_CNDE_INT,
+						   ctx.gs_rotated_input[offset_reg], offset_chan,
+						   ctx.gs_rotated_input[0], 2,
+						   offset_reg, offset_chan,
+						   rotated_offset_reg, rotated_offset_chan);
+				if (r)
+					return r;
+			}
 		}
 	}
 

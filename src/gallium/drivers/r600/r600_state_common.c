@@ -753,6 +753,7 @@ static inline void r600_shader_selector_key(const struct pipe_context *ctx,
 	}
 	case PIPE_SHADER_GEOMETRY:
 		key->gs.first_atomic_counter = r600_get_hw_atomic_count(ctx, PIPE_SHADER_GEOMETRY);
+		key->gs.tri_strip_adj_fix = rctx->gs_tri_strip_adj_fix;
 		break;
 	case PIPE_SHADER_FRAGMENT: {
 		key->ps.first_atomic_counter = r600_get_hw_atomic_count(ctx, PIPE_SHADER_FRAGMENT);
@@ -1767,6 +1768,20 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		rctx->framebuffer.do_update_surf_dirtiness = true;
 	}
 
+	if (rctx->gs_shader) {
+		/* Determine whether the GS triangle strip adjacency fix should
+		 * be applied. Rotate every other triangle if
+		 * - triangle strips with adjacency are fed to the GS and
+		 * - primitive restart is disabled (the rotation doesn't help
+		 *   when the restart occurs after an odd number of triangles).
+		 */
+		bool gs_tri_strip_adj_fix =
+			!rctx->tes_shader &&
+			info->mode == PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY &&
+			!info->primitive_restart;
+		if (gs_tri_strip_adj_fix != rctx->gs_tri_strip_adj_fix)
+			rctx->gs_tri_strip_adj_fix = gs_tri_strip_adj_fix;
+	}
 	if (!r600_update_derived_state(rctx)) {
 		/* useless to render because current rendering command
 		 * can't be achieved

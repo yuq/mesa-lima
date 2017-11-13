@@ -96,7 +96,7 @@ struct r600_shader {
 	boolean			has_txq_cube_array_z_comp;
 	boolean			uses_tex_buffers;
 	boolean                 gs_prim_id_input;
-
+	boolean                 gs_tri_strip_adj_fix;
 	uint8_t			ps_conservative_z;
 
 	/* Size in bytes of a data item in the ring(s) (single vertex data).
@@ -143,6 +143,7 @@ union r600_shader_key {
 	} tcs;
 	struct {
 		unsigned        first_atomic_counter:4;
+		unsigned        tri_strip_adj_fix:1;
 	} gs;
 };
 

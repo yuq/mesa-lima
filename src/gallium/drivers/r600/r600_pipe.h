@@ -510,6 +510,7 @@ struct r600_context {
 	struct r600_rasterizer_state	*rasterizer;
 	bool				alpha_to_one;
 	bool				force_blend_disable;
+	bool                            gs_tri_strip_adj_fix;
 	boolean				dual_src_blend;
 	unsigned			zwritemask;
 	int					ps_iter_samples;
