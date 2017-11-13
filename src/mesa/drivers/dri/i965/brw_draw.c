@@ -242,11 +242,7 @@ brw_emit_prim(struct brw_context *brw,
       } else {
          brw_load_register_mem(brw, GEN7_3DPRIM_START_INSTANCE, bo,
                                prim->indirect_offset + 12);
-         BEGIN_BATCH(3);
-         OUT_BATCH(MI_LOAD_REGISTER_IMM | (3 - 2));
-         OUT_BATCH(GEN7_3DPRIM_BASE_VERTEX);
-         OUT_BATCH(0);
-         ADVANCE_BATCH();
+         brw_load_register_imm32(brw, GEN7_3DPRIM_BASE_VERTEX, 0);
       }
    } else {
       indirect_flag = 0;
