@@ -998,6 +998,7 @@ dri2_display_destroy(_EGLDisplay *disp)
       dri2_teardown_wayland(disp);
       break;
    default:
+      /* TODO: add teardown for other platforms */
       break;
    }
 
