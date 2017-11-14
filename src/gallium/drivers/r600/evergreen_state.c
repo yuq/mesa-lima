@@ -169,9 +169,20 @@ static uint32_t r600_translate_blend_factor(int blend_fact)
 	return 0;
 }
 
-static unsigned r600_tex_dim(unsigned dim, unsigned nr_samples)
+static unsigned r600_tex_dim(struct r600_texture *rtex,
+			     unsigned view_target, unsigned nr_samples)
 {
-	switch (dim) {
+	unsigned res_target = rtex->resource.b.b.target;
+
+	if (view_target == PIPE_TEXTURE_CUBE ||
+	    view_target == PIPE_TEXTURE_CUBE_ARRAY)
+		res_target = view_target;
+		/* If interpreting cubemaps as something else, set 2D_ARRAY. */
+	else if (res_target == PIPE_TEXTURE_CUBE ||
+		 res_target == PIPE_TEXTURE_CUBE_ARRAY)
+		res_target = PIPE_TEXTURE_2D_ARRAY;
+
+	switch (res_target) {
 	default:
 	case PIPE_TEXTURE_1D:
 		return V_030000_SQ_TEX_DIM_1D;
@@ -805,13 +816,10 @@ static int evergreen_fill_tex_resource_words(struct r600_context *rctx,
 	va = tmp->resource.gpu_address;
 
 	/* array type views and views into array types need to use layer offset */
-	dim = params->target;
-	if (params->target != PIPE_TEXTURE_CUBE)
-		dim = MAX2(params->target, texture->target);
-
-	tex_resource_words[0] = (S_030000_DIM(r600_tex_dim(dim, texture->nr_samples)) |
-				       S_030000_PITCH((pitch / 8) - 1) |
-				       S_030000_TEX_WIDTH(width - 1));
+	dim = r600_tex_dim(tmp, params->target, texture->nr_samples);
+	tex_resource_words[0] = (S_030000_DIM(dim) |
+				 S_030000_PITCH((pitch / 8) - 1) |
+				 S_030000_TEX_WIDTH(width - 1));
 	if (rscreen->b.chip_class == CAYMAN)
 		tex_resource_words[0] |= CM_S_030000_NON_DISP_TILING_ORDER(non_disp_tiling);
 	else
