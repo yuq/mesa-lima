@@ -74,9 +74,9 @@ struct legacy_surf_level {
     uint32_t                    slice_size_dw; /* in dwords; max = 4GB / 4. */
     uint32_t                    dcc_offset; /* relative offset within DCC mip tree */
     uint32_t                    dcc_fast_clear_size;
-    uint16_t                    nblk_x;
-    uint16_t                    nblk_y;
-    enum radeon_surf_mode       mode;
+    unsigned                    nblk_x:15;
+    unsigned                    nblk_y:15;
+    enum radeon_surf_mode       mode:2;
 };
 
 struct legacy_surf_layout {
