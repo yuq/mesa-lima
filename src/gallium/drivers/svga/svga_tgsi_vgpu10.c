@@ -5043,7 +5043,7 @@ is_valid_tex_instruction(struct svga_shader_emitter_v10 *emit,
                          const struct tgsi_full_instruction *inst)
 {
    const unsigned unit = inst->Src[1].Register.Index;
-   const unsigned target = inst->Texture.Texture;
+   const enum tgsi_texture_type target = inst->Texture.Texture;
    boolean valid = TRUE;
 
    if (tgsi_is_shadow_target(target) &&
@@ -5075,7 +5075,7 @@ emit_tex(struct svga_shader_emitter_v10 *emit,
          const struct tgsi_full_instruction *inst)
 {
    const uint unit = inst->Src[1].Register.Index;
-   unsigned target = inst->Texture.Texture;
+   const enum tgsi_texture_type target = inst->Texture.Texture;
    unsigned opcode;
    struct tgsi_full_src_register coord;
    int offsets[3];
@@ -5125,7 +5125,7 @@ emit_txp(struct svga_shader_emitter_v10 *emit,
          const struct tgsi_full_instruction *inst)
 {
    const uint unit = inst->Src[1].Register.Index;
-   unsigned target = inst->Texture.Texture;
+   const enum tgsi_texture_type target = inst->Texture.Texture;
    unsigned opcode;
    int offsets[3];
    unsigned tmp = get_temp_index(emit);
@@ -5187,7 +5187,7 @@ emit_txd(struct svga_shader_emitter_v10 *emit,
          const struct tgsi_full_instruction *inst)
 {
    const uint unit = inst->Src[3].Register.Index;
-   unsigned target = inst->Texture.Texture;
+   const enum tgsi_texture_type target = inst->Texture.Texture;
    int offsets[3];
    struct tgsi_full_src_register coord;
    struct tex_swizzle_info swz_info;
@@ -5277,7 +5277,7 @@ static boolean
 emit_txl_txb(struct svga_shader_emitter_v10 *emit,
              const struct tgsi_full_instruction *inst)
 {
-   unsigned target = inst->Texture.Texture;
+   const enum tgsi_texture_type target = inst->Texture.Texture;
    unsigned opcode, unit;
    int offsets[3];
    struct tgsi_full_src_register coord, lod_bias;
