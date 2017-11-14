@@ -753,6 +753,26 @@ static int r600_get_hw_atomic_count(const struct pipe_context *ctx,
 	return value;
 }
 
+static void r600_update_compressed_colortex_mask_images(struct r600_image_state *images)
+{
+	uint32_t mask = images->enabled_mask;
+
+	while (mask) {
+		unsigned i = u_bit_scan(&mask);
+		struct pipe_resource *res = images->views[i].base.resource;
+
+		if (res && res->target != PIPE_BUFFER) {
+			struct r600_texture *rtex = (struct r600_texture *)res;
+
+			if (rtex->cmask.size) {
+				images->compressed_colortex_mask |= 1 << i;
+			} else {
+				images->compressed_colortex_mask &= ~(1 << i);
+			}
+		}
+	}
+}
+
 /* Compute the key for the hw shader variant */
 static inline void r600_shader_selector_key(const struct pipe_context *ctx,
 		const struct r600_pipe_shader_selector *sel,
@@ -1473,6 +1493,7 @@ static void r600_update_compressed_resource_state(struct r600_context *rctx)
 		for (i = 0; i < PIPE_SHADER_TYPES; ++i) {
 			r600_update_compressed_colortex_mask(&rctx->samplers[i].views);
 		}
+		r600_update_compressed_colortex_mask_images(&rctx->fragment_images);
 	}
 
 	/* Decompress textures if needed. */
@@ -1484,6 +1505,15 @@ static void r600_update_compressed_resource_state(struct r600_context *rctx)
 		if (views->compressed_colortex_mask) {
 			r600_decompress_color_textures(rctx, views);
 		}
+	}
+
+	{
+		struct r600_image_state *istate;
+		istate = &rctx->fragment_images;
+		if (istate->compressed_depthtex_mask)
+			r600_decompress_depth_images(rctx, istate);
+		if (istate->compressed_colortex_mask)
+			r600_decompress_color_images(rctx, istate);
 	}
 }
 

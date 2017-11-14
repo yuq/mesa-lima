@@ -118,6 +118,7 @@ struct r600_shader {
 	boolean                 uses_atomics;
 	boolean			uses_images;
 	uint8_t                 atomic_base;
+	uint8_t			rat_base;
 };
 
 union r600_shader_key {
