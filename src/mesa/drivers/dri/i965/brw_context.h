@@ -451,7 +451,6 @@ struct intel_batchbuffer {
 #ifdef DEBUG
    uint16_t emit, total;
 #endif
-   uint16_t reserved_space;
    uint32_t *map_next;
    uint32_t *map;
    uint32_t *batch_cpu_map;
