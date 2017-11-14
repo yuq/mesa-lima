@@ -20,6 +20,7 @@
 
 inc_drm_uapi = include_directories('drm-uapi')
 inc_vulkan = include_directories('vulkan')
+inc_d3d9 = include_directories('D3D9')
 
 if with_gles1
   install_headers(
@@ -69,4 +70,11 @@ endif
 
 if with_dri
   install_headers('GL/internal/dri_interface.h', subdir : 'GL/internal')
+endif
+
+if with_gallium_st_nine
+  install_headers(
+    'd3dadapter/d3dadapter9.h', 'd3dadapter/drm.h', 'd3dadapter/present.h',
+    subdir : 'd3dadapter',
+  )
 endif

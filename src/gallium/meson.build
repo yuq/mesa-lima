@@ -134,6 +134,9 @@ endif
 if with_gallium_xa
   subdir('state_trackers/xa')
 endif
+if with_gallium_st_nine
+  subdir('state_trackers/nine')
+endif
 # TODO: SWR
 # TODO: clover
 if with_dri
@@ -164,5 +167,7 @@ endif
 if with_gallium_xa
   subdir('targets/xa')
 endif
-# TODO: nine
+if with_gallium_st_nine
+  subdir('targets/d3dadapter9')
+endif
 # TODO: tests

@@ -560,6 +560,24 @@ else
   with_gallium_xa = false
 endif
 
+d3d_drivers_path = get_option('d3d-drivers-path')
+if d3d_drivers_path == ''
+  d3d_drivers_path = join_paths(get_option('libdir'), 'd3d')
+endif
+
+with_gallium_st_nine =  get_option('gallium-nine')
+if with_gallium_st_nine
+  if not with_gallium_softpipe
+    error('The nine state tracker requires gallium softpipe/llvmpipe.')
+  elif not (with_gallium_radeonsi or with_gallium_nouveau or with_gallium_r600
+            or with_gallium_r300 or with_gallium_svga or with_gallium_i915)
+    error('The nine state tracker requires at least on non-swrast gallium driver.')
+  endif
+  if not with_dri3
+    error('Using nine with wine requires dri3')
+  endif
+endif
+
 gl_pkgconfig_c_flags = []
 if with_platform_x11
   if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
@@ -1130,9 +1148,6 @@ if _sensors != 'false'
 else
   dep_lmsensors = []
 endif
-
-
-# TODO: nine
 
 # TODO: clover
 

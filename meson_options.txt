@@ -115,6 +115,18 @@ option(
   description : 'enable gallium xa state tracker.',
 )
 option(
+  'gallium-nine',
+  type : 'boolean',
+  value : false,
+  description : 'build gallium "nine" Direct3D 9.x state tracker.',
+)
+option(
+  'd3d-drivers-path',
+  type : 'string',
+  value : '',
+  description : 'Location of D3D drivers. Default: $libdir/d3d',
+)
+option(
   'vulkan-drivers',
   type : 'string',
   value : 'auto',
