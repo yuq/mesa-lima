@@ -632,6 +632,32 @@ etna_emit_state(struct etna_context *ctx)
       /*01668*/ EMIT_STATE_RELOC(TS_DEPTH_SURFACE_BASE, &ctx->framebuffer.TS_DEPTH_SURFACE_BASE);
       /*0166C*/ EMIT_STATE(TS_DEPTH_CLEAR_VALUE, ctx->framebuffer.TS_DEPTH_CLEAR_VALUE);
    }
+   if (unlikely(dirty & ETNA_DIRTY_SAMPLER_VIEWS)) {
+      for (int x = 0; x < VIVS_TS_SAMPLER__LEN; ++x) {
+         if ((1 << x) & active_samplers) {
+            struct etna_sampler_view *sv = etna_sampler_view(ctx->sampler_view[x]);
+            /*01720*/ EMIT_STATE(TS_SAMPLER_CONFIG(x), sv->TS_SAMPLER_CONFIG);
+         }
+      }
+      for (int x = 0; x < VIVS_TS_SAMPLER__LEN; ++x) {
+         if ((1 << x) & active_samplers) {
+            struct etna_sampler_view *sv = etna_sampler_view(ctx->sampler_view[x]);
+            /*01740*/ EMIT_STATE_RELOC(TS_SAMPLER_STATUS_BASE(x), &sv->TS_SAMPLER_STATUS_BASE);
+         }
+      }
+      for (int x = 0; x < VIVS_TS_SAMPLER__LEN; ++x) {
+         if ((1 << x) & active_samplers) {
+            struct etna_sampler_view *sv = etna_sampler_view(ctx->sampler_view[x]);
+            /*01760*/ EMIT_STATE(TS_SAMPLER_CLEAR_VALUE(x), sv->TS_SAMPLER_CLEAR_VALUE);
+         }
+      }
+      for (int x = 0; x < VIVS_TS_SAMPLER__LEN; ++x) {
+         if ((1 << x) & active_samplers) {
+            struct etna_sampler_view *sv = etna_sampler_view(ctx->sampler_view[x]);
+            /*01780*/ EMIT_STATE(TS_SAMPLER_CLEAR_VALUE2(x), sv->TS_SAMPLER_CLEAR_VALUE2);
+         }
+      }
+   }
    if (unlikely(dirty & (ETNA_DIRTY_SAMPLER_VIEWS | ETNA_DIRTY_SAMPLERS))) {
       for (int x = 0; x < VIVS_TE_SAMPLER__LEN; ++x) {
          uint32_t val = 0; /* 0 == sampler inactive */
