@@ -90,19 +90,9 @@ brw_reg_from_fs_reg(const struct gen_device_info *devinfo, fs_inst *inst,
           *       different execution size when the number of components
           *       written to each destination GRF is not the same.
           */
-         if (reg->stride > 4) {
-            /* For registers with an exceptionally large stride, we use a
-             * width of 1 and only use the vertical stride.  This only works
-             * for sources since destinations require hstride == 1.
-             */
-            assert(reg != &inst->dst);
-            brw_reg = brw_vec1_reg(brw_file_from_reg(reg), reg->nr, 0);
-            brw_reg = stride(brw_reg, reg->stride, 1, 0);
-         } else {
-            const unsigned width = MIN2(reg_width, phys_width);
-            brw_reg = brw_vecn_reg(width, brw_file_from_reg(reg), reg->nr, 0);
-            brw_reg = stride(brw_reg, width * reg->stride, width, reg->stride);
-         }
+         const unsigned width = MIN2(reg_width, phys_width);
+         brw_reg = brw_vecn_reg(width, brw_file_from_reg(reg), reg->nr, 0);
+         brw_reg = stride(brw_reg, width * reg->stride, width, reg->stride);
 
          if (devinfo->gen == 7 && !devinfo->is_haswell) {
             /* From the IvyBridge PRM (EU Changes by Processor Generation, page 13):
