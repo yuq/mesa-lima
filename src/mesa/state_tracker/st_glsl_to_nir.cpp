@@ -300,7 +300,11 @@ st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
    if (prog->nir)
       return prog->nir;
 
-   return glsl_to_nir(shader_program, stage, options);
+   nir_shader *nir = glsl_to_nir(shader_program, stage, options);
+
+   st_nir_opts(nir);
+
+   return nir;
 }
 
 /* Second third of converting glsl_to_nir. This creates uniforms, gathers
@@ -342,13 +346,6 @@ st_glsl_to_nir_post_opts(struct st_context *st, struct gl_program *prog,
     * program constant) has to happen before creating this linkage.
     */
    _mesa_associate_uniform_storage(st->ctx, shader_program, prog, true);
-
-   NIR_PASS_V(nir, nir_lower_io_to_temporaries,
-         nir_shader_get_entrypoint(nir),
-         true, true);
-   NIR_PASS_V(nir, nir_lower_global_vars_to_local);
-   NIR_PASS_V(nir, nir_split_var_copies);
-   NIR_PASS_V(nir, nir_lower_var_copies);
 
    /* fragment shaders may need : */
    if (prog->info.stage == MESA_SHADER_FRAGMENT) {
@@ -497,6 +494,13 @@ st_nir_get_mesa_program(struct gl_context *ctx,
 
    set_st_program(prog, shader_program, nir);
    prog->nir = nir;
+
+   NIR_PASS_V(nir, nir_lower_io_to_temporaries,
+              nir_shader_get_entrypoint(nir),
+              true, true);
+   NIR_PASS_V(nir, nir_lower_global_vars_to_local);
+   NIR_PASS_V(nir, nir_split_var_copies);
+   NIR_PASS_V(nir, nir_lower_var_copies);
 }
 
 extern "C" {
