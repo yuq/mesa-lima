@@ -353,6 +353,7 @@ struct r600_shader_ctx {
 	unsigned				enabled_stream_buffers_mask;
 	unsigned                                tess_input_info; /* temp with tess input offsets */
 	unsigned                                tess_output_info; /* temp with tess input offsets */
+	unsigned                                thread_id_gpr; /* temp with thread id calculated for images */
 };
 
 struct r600_shader_tgsi_instruction {
@@ -2935,6 +2936,69 @@ static int r600_emit_tess_factor(struct r600_shader_ctx *ctx)
 	return 0;
 }
 
+/*
+ * We have to work out the thread ID for load and atomic
+ * operations, which store the returned value to an index
+ * in an intermediate buffer.
+ * The index is calculated by taking the thread id,
+ * calculated from the MBCNT instructions.
+ * Then the shader engine ID is multiplied by 256,
+ * and the wave id is added.
+ * Then the result is multipled by 64 and thread id is
+ * added.
+ */
+static int load_thread_id_gpr(struct r600_shader_ctx *ctx)
+{
+	struct r600_bytecode_alu alu;
+	int r;
+
+	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+	alu.op = ALU_OP1_MBCNT_32LO_ACCUM_PREV_INT;
+	alu.dst.sel = ctx->temp_reg;
+	alu.dst.chan = 0;
+	alu.src[0].sel = V_SQ_ALU_SRC_LITERAL;
+	alu.src[0].value = 0xffffffff;
+	alu.dst.write = 1;
+	r = r600_bytecode_add_alu(ctx->bc, &alu);
+	if (r)
+		return r;
+
+	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+	alu.op = ALU_OP1_MBCNT_32HI_INT;
+	alu.dst.sel = ctx->temp_reg;
+	alu.dst.chan = 1;
+	alu.src[0].sel = V_SQ_ALU_SRC_LITERAL;
+	alu.src[0].value = 0xffffffff;
+	alu.dst.write = 1;
+	r = r600_bytecode_add_alu(ctx->bc, &alu);
+	if (r)
+		return r;
+
+	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+	alu.op = ALU_OP3_MULADD_UINT24;
+	alu.dst.sel = ctx->temp_reg;
+	alu.dst.chan = 2;
+	alu.src[0].sel = EG_V_SQ_ALU_SRC_SE_ID;
+	alu.src[1].sel = V_SQ_ALU_SRC_LITERAL;
+	alu.src[1].value = 256;
+	alu.src[2].sel = EG_V_SQ_ALU_SRC_HW_WAVE_ID;
+	alu.dst.write = 1;
+	alu.is_op3 = 1;
+	alu.last = 1;
+	r = r600_bytecode_add_alu(ctx->bc, &alu);
+	if (r)
+		return r;
+
+	r = single_alu_op3(ctx, ALU_OP3_MULADD_UINT24,
+			   ctx->thread_id_gpr, 1,
+			   ctx->temp_reg, 2,
+			   V_SQ_ALU_SRC_LITERAL, 0x40,
+			   ctx->temp_reg, 0);
+	if (r)
+		return r;
+	return 0;
+}
+
 static int r600_shader_from_tgsi(struct r600_context *rctx,
 				 struct r600_pipe_shader *pipeshader,
 				 union r600_shader_key key)
@@ -3138,6 +3202,12 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		ctx.temp_reg = ctx.bc->ar_reg + 3;
 	}
 
+	if (shader->uses_images && ctx.type == PIPE_SHADER_FRAGMENT) {
+		ctx.thread_id_gpr = ctx.temp_reg;
+		ctx.temp_reg++;
+	} else
+		ctx.thread_id_gpr = 0;
+
 	shader->max_arrays = 0;
 	shader->num_arrays = 0;
 	if (indirect_gprs) {
@@ -3279,6 +3349,10 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			if ((r = r600_bytecode_add_alu(ctx.bc, &alu)))
 				return r;
 		}
+	}
+
+	if (ctx.thread_id_gpr) {
+		load_thread_id_gpr(&ctx);
 	}
 
 	if (ctx.type == PIPE_SHADER_GEOMETRY) {
