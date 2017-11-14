@@ -701,6 +701,7 @@ enum radv_cmd_dirty_bits {
 	RADV_CMD_DIRTY_PIPELINE                          = 1 << 9,
 	RADV_CMD_DIRTY_INDEX_BUFFER                      = 1 << 10,
 	RADV_CMD_DIRTY_FRAMEBUFFER                       = 1 << 11,
+	RADV_CMD_DIRTY_VERTEX_BUFFER                     = 1 << 12,
 };
 
 enum radv_cmd_flush_bits {
@@ -809,7 +810,6 @@ struct radv_attachment_state {
 
 struct radv_cmd_state {
 	/* Vertex descriptors */
-	bool                                          vb_dirty;
 	bool                                          vb_prefetch_dirty;
 	uint64_t                                      vb_va;
 	unsigned                                      vb_size;

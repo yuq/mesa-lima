@@ -1774,7 +1774,8 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer, bo
 {
 	struct radv_device *device = cmd_buffer->device;
 
-	if ((pipeline_is_dirty || cmd_buffer->state.vb_dirty) &&
+	if ((pipeline_is_dirty ||
+	    (cmd_buffer->state.dirty & RADV_CMD_DIRTY_VERTEX_BUFFER)) &&
 	    cmd_buffer->state.pipeline->vertex_elements.count &&
 	    radv_get_vertex_shader(cmd_buffer->state.pipeline)->info.info.vs.has_vertex_buffers) {
 		struct radv_vertex_elements_info *velems = &cmd_buffer->state.pipeline->vertex_elements;
@@ -1820,7 +1821,7 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer, bo
 		cmd_buffer->state.vb_size = count * 16;
 		cmd_buffer->state.vb_prefetch_dirty = true;
 	}
-	cmd_buffer->state.vb_dirty = false;
+	cmd_buffer->state.dirty &= ~RADV_CMD_DIRTY_VERTEX_BUFFER;
 
 	return true;
 }
@@ -2287,7 +2288,7 @@ void radv_CmdBindVertexBuffers(
 		return;
 	}
 
-	cmd_buffer->state.vb_dirty = true;
+	cmd_buffer->state.dirty |= RADV_CMD_DIRTY_VERTEX_BUFFER;
 }
 
 void radv_CmdBindIndexBuffer(
