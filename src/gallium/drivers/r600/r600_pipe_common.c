@@ -321,10 +321,6 @@ void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 	ctx->num_dma_calls++;
 }
 
-static void r600_memory_barrier(struct pipe_context *ctx, unsigned flags)
-{
-}
-
 void r600_preflush_suspend_features(struct r600_common_context *ctx)
 {
 	/* suspend queries */
@@ -664,7 +660,6 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	rctx->b.transfer_flush_region = u_transfer_flush_region_vtbl;
 	rctx->b.transfer_unmap = u_transfer_unmap_vtbl;
 	rctx->b.texture_subdata = u_default_texture_subdata;
-	rctx->b.memory_barrier = r600_memory_barrier;
 	rctx->b.flush = r600_flush_from_st;
 	rctx->b.set_debug_callback = r600_set_debug_callback;
 	rctx->b.fence_server_sync = r600_fence_server_sync;

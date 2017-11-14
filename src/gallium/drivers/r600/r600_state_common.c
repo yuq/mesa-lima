@@ -91,6 +91,29 @@ void r600_emit_alphatest_state(struct r600_context *rctx, struct r600_atom *atom
 	radeon_set_context_reg(cs, R_028438_SX_ALPHA_REF, alpha_ref);
 }
 
+static void r600_memory_barrier(struct pipe_context *ctx, unsigned flags)
+{
+	struct r600_context *rctx = (struct r600_context *)ctx;
+	if (flags & PIPE_BARRIER_CONSTANT_BUFFER)
+		rctx->b.flags |= R600_CONTEXT_INV_CONST_CACHE;
+
+	if (flags & (PIPE_BARRIER_VERTEX_BUFFER |
+		     PIPE_BARRIER_SHADER_BUFFER |
+		     PIPE_BARRIER_TEXTURE |
+		     PIPE_BARRIER_IMAGE |
+		     PIPE_BARRIER_STREAMOUT_BUFFER |
+		     PIPE_BARRIER_GLOBAL_BUFFER)) {
+		rctx->b.flags |= R600_CONTEXT_INV_VERTEX_CACHE|
+			R600_CONTEXT_INV_TEX_CACHE;
+	}
+
+	if (flags & (PIPE_BARRIER_FRAMEBUFFER|
+		     PIPE_BARRIER_IMAGE))
+		rctx->b.flags |= R600_CONTEXT_FLUSH_AND_INV;
+
+	rctx->b.flags |= R600_CONTEXT_WAIT_3D_IDLE;
+}
+
 static void r600_texture_barrier(struct pipe_context *ctx, unsigned flags)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
@@ -3014,6 +3037,7 @@ void r600_init_common_state_functions(struct r600_context *rctx)
 	rctx->b.b.set_vertex_buffers = r600_set_vertex_buffers;
 	rctx->b.b.set_sampler_views = r600_set_sampler_views;
 	rctx->b.b.sampler_view_destroy = r600_sampler_view_destroy;
+	rctx->b.b.memory_barrier = r600_memory_barrier;
 	rctx->b.b.texture_barrier = r600_texture_barrier;
 	rctx->b.b.set_stream_output_targets = r600_set_streamout_targets;
 	rctx->b.b.set_active_query_state = r600_set_active_query_state;
