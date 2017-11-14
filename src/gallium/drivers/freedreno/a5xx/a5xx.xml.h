@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  32453 bytes, from 2017-11-10 18:31:55)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  33379 bytes, from 2017-11-14 19:02:59)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 111898 bytes, from 2017-06-06 18:23:59)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 143114 bytes, from 2017-11-10 18:31:55)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 143413 bytes, from 2017-11-14 19:05:14)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
 
 Copyright (C) 2013-2017 by the following authors:
@@ -4960,12 +4960,11 @@ static inline uint32_t A5XX_SSBO_1_1_DEPTH(uint32_t val)
 }
 
 #define REG_A5XX_SSBO_2_0					0x00000000
-#define A5XX_SSBO_2_0_BASE_LO__MASK				0xffffffe0
-#define A5XX_SSBO_2_0_BASE_LO__SHIFT				5
+#define A5XX_SSBO_2_0_BASE_LO__MASK				0xffffffff
+#define A5XX_SSBO_2_0_BASE_LO__SHIFT				0
 static inline uint32_t A5XX_SSBO_2_0_BASE_LO(uint32_t val)
 {
-	assert(!(val & 0x1f));
-	return ((val >> 5) << A5XX_SSBO_2_0_BASE_LO__SHIFT) & A5XX_SSBO_2_0_BASE_LO__MASK;
+	return ((val) << A5XX_SSBO_2_0_BASE_LO__SHIFT) & A5XX_SSBO_2_0_BASE_LO__MASK;
 }
 
 #define REG_A5XX_SSBO_2_1					0x00000001

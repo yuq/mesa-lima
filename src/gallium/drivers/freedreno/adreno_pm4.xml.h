@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  32453 bytes, from 2017-11-10 18:31:55)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  33379 bytes, from 2017-11-14 19:02:59)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 111898 bytes, from 2017-06-06 18:23:59)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 143114 bytes, from 2017-11-10 18:31:55)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 143413 bytes, from 2017-11-14 19:05:14)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
 
 Copyright (C) 2013-2017 by the following authors:
@@ -581,6 +581,126 @@ static inline uint32_t CP_DRAW_INDX_OFFSET_4_INDX_BASE(uint32_t val)
 static inline uint32_t CP_DRAW_INDX_OFFSET_5_INDX_SIZE(uint32_t val)
 {
 	return ((val) << CP_DRAW_INDX_OFFSET_5_INDX_SIZE__SHIFT) & CP_DRAW_INDX_OFFSET_5_INDX_SIZE__MASK;
+}
+
+#define REG_CP_DRAW_INDIRECT_0					0x00000000
+#define CP_DRAW_INDIRECT_0_PRIM_TYPE__MASK			0x0000003f
+#define CP_DRAW_INDIRECT_0_PRIM_TYPE__SHIFT			0
+static inline uint32_t CP_DRAW_INDIRECT_0_PRIM_TYPE(enum pc_di_primtype val)
+{
+	return ((val) << CP_DRAW_INDIRECT_0_PRIM_TYPE__SHIFT) & CP_DRAW_INDIRECT_0_PRIM_TYPE__MASK;
+}
+#define CP_DRAW_INDIRECT_0_SOURCE_SELECT__MASK			0x000000c0
+#define CP_DRAW_INDIRECT_0_SOURCE_SELECT__SHIFT			6
+static inline uint32_t CP_DRAW_INDIRECT_0_SOURCE_SELECT(enum pc_di_src_sel val)
+{
+	return ((val) << CP_DRAW_INDIRECT_0_SOURCE_SELECT__SHIFT) & CP_DRAW_INDIRECT_0_SOURCE_SELECT__MASK;
+}
+#define CP_DRAW_INDIRECT_0_VIS_CULL__MASK			0x00000300
+#define CP_DRAW_INDIRECT_0_VIS_CULL__SHIFT			8
+static inline uint32_t CP_DRAW_INDIRECT_0_VIS_CULL(enum pc_di_vis_cull_mode val)
+{
+	return ((val) << CP_DRAW_INDIRECT_0_VIS_CULL__SHIFT) & CP_DRAW_INDIRECT_0_VIS_CULL__MASK;
+}
+#define CP_DRAW_INDIRECT_0_INDEX_SIZE__MASK			0x00000c00
+#define CP_DRAW_INDIRECT_0_INDEX_SIZE__SHIFT			10
+static inline uint32_t CP_DRAW_INDIRECT_0_INDEX_SIZE(enum a4xx_index_size val)
+{
+	return ((val) << CP_DRAW_INDIRECT_0_INDEX_SIZE__SHIFT) & CP_DRAW_INDIRECT_0_INDEX_SIZE__MASK;
+}
+#define CP_DRAW_INDIRECT_0_TESS_MODE__MASK			0x01f00000
+#define CP_DRAW_INDIRECT_0_TESS_MODE__SHIFT			20
+static inline uint32_t CP_DRAW_INDIRECT_0_TESS_MODE(uint32_t val)
+{
+	return ((val) << CP_DRAW_INDIRECT_0_TESS_MODE__SHIFT) & CP_DRAW_INDIRECT_0_TESS_MODE__MASK;
+}
+
+#define REG_CP_DRAW_INDIRECT_1					0x00000001
+#define CP_DRAW_INDIRECT_1_INDIRECT_LO__MASK			0xffffffff
+#define CP_DRAW_INDIRECT_1_INDIRECT_LO__SHIFT			0
+static inline uint32_t CP_DRAW_INDIRECT_1_INDIRECT_LO(uint32_t val)
+{
+	return ((val) << CP_DRAW_INDIRECT_1_INDIRECT_LO__SHIFT) & CP_DRAW_INDIRECT_1_INDIRECT_LO__MASK;
+}
+
+#define REG_CP_DRAW_INDIRECT_2					0x00000002
+#define CP_DRAW_INDIRECT_2_INDIRECT_HI__MASK			0xffffffff
+#define CP_DRAW_INDIRECT_2_INDIRECT_HI__SHIFT			0
+static inline uint32_t CP_DRAW_INDIRECT_2_INDIRECT_HI(uint32_t val)
+{
+	return ((val) << CP_DRAW_INDIRECT_2_INDIRECT_HI__SHIFT) & CP_DRAW_INDIRECT_2_INDIRECT_HI__MASK;
+}
+
+#define REG_CP_DRAW_INDX_INDIRECT_0				0x00000000
+#define CP_DRAW_INDX_INDIRECT_0_PRIM_TYPE__MASK			0x0000003f
+#define CP_DRAW_INDX_INDIRECT_0_PRIM_TYPE__SHIFT		0
+static inline uint32_t CP_DRAW_INDX_INDIRECT_0_PRIM_TYPE(enum pc_di_primtype val)
+{
+	return ((val) << CP_DRAW_INDX_INDIRECT_0_PRIM_TYPE__SHIFT) & CP_DRAW_INDX_INDIRECT_0_PRIM_TYPE__MASK;
+}
+#define CP_DRAW_INDX_INDIRECT_0_SOURCE_SELECT__MASK		0x000000c0
+#define CP_DRAW_INDX_INDIRECT_0_SOURCE_SELECT__SHIFT		6
+static inline uint32_t CP_DRAW_INDX_INDIRECT_0_SOURCE_SELECT(enum pc_di_src_sel val)
+{
+	return ((val) << CP_DRAW_INDX_INDIRECT_0_SOURCE_SELECT__SHIFT) & CP_DRAW_INDX_INDIRECT_0_SOURCE_SELECT__MASK;
+}
+#define CP_DRAW_INDX_INDIRECT_0_VIS_CULL__MASK			0x00000300
+#define CP_DRAW_INDX_INDIRECT_0_VIS_CULL__SHIFT			8
+static inline uint32_t CP_DRAW_INDX_INDIRECT_0_VIS_CULL(enum pc_di_vis_cull_mode val)
+{
+	return ((val) << CP_DRAW_INDX_INDIRECT_0_VIS_CULL__SHIFT) & CP_DRAW_INDX_INDIRECT_0_VIS_CULL__MASK;
+}
+#define CP_DRAW_INDX_INDIRECT_0_INDEX_SIZE__MASK		0x00000c00
+#define CP_DRAW_INDX_INDIRECT_0_INDEX_SIZE__SHIFT		10
+static inline uint32_t CP_DRAW_INDX_INDIRECT_0_INDEX_SIZE(enum a4xx_index_size val)
+{
+	return ((val) << CP_DRAW_INDX_INDIRECT_0_INDEX_SIZE__SHIFT) & CP_DRAW_INDX_INDIRECT_0_INDEX_SIZE__MASK;
+}
+#define CP_DRAW_INDX_INDIRECT_0_TESS_MODE__MASK			0x01f00000
+#define CP_DRAW_INDX_INDIRECT_0_TESS_MODE__SHIFT		20
+static inline uint32_t CP_DRAW_INDX_INDIRECT_0_TESS_MODE(uint32_t val)
+{
+	return ((val) << CP_DRAW_INDX_INDIRECT_0_TESS_MODE__SHIFT) & CP_DRAW_INDX_INDIRECT_0_TESS_MODE__MASK;
+}
+
+#define REG_CP_DRAW_INDX_INDIRECT_1				0x00000001
+#define CP_DRAW_INDX_INDIRECT_1_INDX_BASE_LO__MASK		0xffffffff
+#define CP_DRAW_INDX_INDIRECT_1_INDX_BASE_LO__SHIFT		0
+static inline uint32_t CP_DRAW_INDX_INDIRECT_1_INDX_BASE_LO(uint32_t val)
+{
+	return ((val) << CP_DRAW_INDX_INDIRECT_1_INDX_BASE_LO__SHIFT) & CP_DRAW_INDX_INDIRECT_1_INDX_BASE_LO__MASK;
+}
+
+#define REG_CP_DRAW_INDX_INDIRECT_2				0x00000002
+#define CP_DRAW_INDX_INDIRECT_2_INDX_BASE_HI__MASK		0xffffffff
+#define CP_DRAW_INDX_INDIRECT_2_INDX_BASE_HI__SHIFT		0
+static inline uint32_t CP_DRAW_INDX_INDIRECT_2_INDX_BASE_HI(uint32_t val)
+{
+	return ((val) << CP_DRAW_INDX_INDIRECT_2_INDX_BASE_HI__SHIFT) & CP_DRAW_INDX_INDIRECT_2_INDX_BASE_HI__MASK;
+}
+
+#define REG_CP_DRAW_INDX_INDIRECT_3				0x00000003
+#define CP_DRAW_INDX_INDIRECT_3_MAX_INDICES__MASK		0xffffffff
+#define CP_DRAW_INDX_INDIRECT_3_MAX_INDICES__SHIFT		0
+static inline uint32_t CP_DRAW_INDX_INDIRECT_3_MAX_INDICES(uint32_t val)
+{
+	return ((val) << CP_DRAW_INDX_INDIRECT_3_MAX_INDICES__SHIFT) & CP_DRAW_INDX_INDIRECT_3_MAX_INDICES__MASK;
+}
+
+#define REG_CP_DRAW_INDX_INDIRECT_4				0x00000004
+#define CP_DRAW_INDX_INDIRECT_4_INDIRECT_LO__MASK		0xffffffff
+#define CP_DRAW_INDX_INDIRECT_4_INDIRECT_LO__SHIFT		0
+static inline uint32_t CP_DRAW_INDX_INDIRECT_4_INDIRECT_LO(uint32_t val)
+{
+	return ((val) << CP_DRAW_INDX_INDIRECT_4_INDIRECT_LO__SHIFT) & CP_DRAW_INDX_INDIRECT_4_INDIRECT_LO__MASK;
+}
+
+#define REG_CP_DRAW_INDX_INDIRECT_5				0x00000005
+#define CP_DRAW_INDX_INDIRECT_5_INDIRECT_HI__MASK		0xffffffff
+#define CP_DRAW_INDX_INDIRECT_5_INDIRECT_HI__SHIFT		0
+static inline uint32_t CP_DRAW_INDX_INDIRECT_5_INDIRECT_HI(uint32_t val)
+{
+	return ((val) << CP_DRAW_INDX_INDIRECT_5_INDIRECT_HI__SHIFT) & CP_DRAW_INDX_INDIRECT_5_INDIRECT_HI__MASK;
 }
 
 static inline uint32_t REG_CP_SET_DRAW_STATE_(uint32_t i0) { return 0x00000000 + 0x3*i0; }
