@@ -2881,7 +2881,7 @@ static boolean r600_dma_copy_tile(struct r600_context *rctx,
 		z = src_z;
 		base = rsrc->surface.u.legacy.level[src_level].offset;
 		addr = rdst->surface.u.legacy.level[dst_level].offset;
-		addr += rdst->surface.u.legacy.level[dst_level].slice_size * dst_z;
+		addr += (uint64_t)rdst->surface.u.legacy.level[dst_level].slice_size_dw * 4 * dst_z;
 		addr += dst_y * pitch + dst_x * bpp;
 	} else {
 		/* L2T */
@@ -2900,7 +2900,7 @@ static boolean r600_dma_copy_tile(struct r600_context *rctx,
 		z = dst_z;
 		base = rdst->surface.u.legacy.level[dst_level].offset;
 		addr = rsrc->surface.u.legacy.level[src_level].offset;
-		addr += rsrc->surface.u.legacy.level[src_level].slice_size * src_z;
+		addr += (uint64_t)rsrc->surface.u.legacy.level[src_level].slice_size_dw * 4 * src_z;
 		addr += src_y * pitch + src_x * bpp;
 	}
 	/* check that we are in dw/base alignment constraint */
@@ -3005,10 +3005,10 @@ static void r600_dma_copy(struct pipe_context *ctx,
 		 *   dst_pitch == src_pitch
 		 */
 		src_offset= rsrc->surface.u.legacy.level[src_level].offset;
-		src_offset += rsrc->surface.u.legacy.level[src_level].slice_size * src_box->z;
+		src_offset += (uint64_t)rsrc->surface.u.legacy.level[src_level].slice_size_dw * 4 * src_box->z;
 		src_offset += src_y * src_pitch + src_x * bpp;
 		dst_offset = rdst->surface.u.legacy.level[dst_level].offset;
-		dst_offset += rdst->surface.u.legacy.level[dst_level].slice_size * dst_z;
+		dst_offset += (uint64_t)rdst->surface.u.legacy.level[dst_level].slice_size_dw * 4 * dst_z;
 		dst_offset += dst_y * dst_pitch + dst_x * bpp;
 		size = src_box->height * src_pitch;
 		/* must be dw aligned */

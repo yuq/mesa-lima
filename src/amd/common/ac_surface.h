@@ -71,7 +71,7 @@ enum radeon_micro_mode {
 
 struct legacy_surf_level {
     uint64_t                    offset;
-    uint64_t                    slice_size;
+    uint32_t                    slice_size_dw; /* in dwords; max = 4GB / 4. */
     uint32_t                    dcc_offset; /* relative offset within DCC mip tree */
     uint32_t                    dcc_fast_clear_size;
     uint16_t                    nblk_x;

@@ -165,8 +165,8 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 					    rsrc->surface.tile_swizzle : 0;
 	unsigned dst_pitch = rdst->surface.u.legacy.level[dst_level].nblk_x;
 	unsigned src_pitch = rsrc->surface.u.legacy.level[src_level].nblk_x;
-	uint64_t dst_slice_pitch = rdst->surface.u.legacy.level[dst_level].slice_size / bpp;
-	uint64_t src_slice_pitch = rsrc->surface.u.legacy.level[src_level].slice_size / bpp;
+	uint64_t dst_slice_pitch = ((uint64_t)rdst->surface.u.legacy.level[dst_level].slice_size_dw * 4) / bpp;
+	uint64_t src_slice_pitch = ((uint64_t)rsrc->surface.u.legacy.level[src_level].slice_size_dw * 4) / bpp;
 	unsigned dst_width = minify_as_blocks(rdst->resource.b.b.width0,
 					      dst_level, rdst->surface.blk_w);
 	unsigned src_width = minify_as_blocks(rsrc->resource.b.b.width0,

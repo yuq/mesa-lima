@@ -199,7 +199,8 @@ static unsigned r600_texture_get_offset(struct r600_common_screen *rscreen,
 	} else {
 		*stride = rtex->surface.u.legacy.level[level].nblk_x *
 			  rtex->surface.bpe;
-		*layer_stride = rtex->surface.u.legacy.level[level].slice_size;
+		assert((uint64_t)rtex->surface.u.legacy.level[level].slice_size_dw * 4 <= UINT_MAX);
+		*layer_stride = (uint64_t)rtex->surface.u.legacy.level[level].slice_size_dw * 4;
 
 		if (!box)
 			return rtex->surface.u.legacy.level[level].offset;
@@ -207,7 +208,7 @@ static unsigned r600_texture_get_offset(struct r600_common_screen *rscreen,
 		/* Each texture is an array of mipmap levels. Each level is
 		 * an array of slices. */
 		return rtex->surface.u.legacy.level[level].offset +
-		       box->z * rtex->surface.u.legacy.level[level].slice_size +
+		       box->z * (uint64_t)rtex->surface.u.legacy.level[level].slice_size_dw * 4 +
 		       (box->y / rtex->surface.blk_h *
 		        rtex->surface.u.legacy.level[level].nblk_x +
 		        box->x / rtex->surface.blk_w) * rtex->surface.bpe;
@@ -638,7 +639,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 			offset = rtex->surface.u.legacy.level[0].offset;
 			stride = rtex->surface.u.legacy.level[0].nblk_x *
 				 rtex->surface.bpe;
-			slice_size = rtex->surface.u.legacy.level[0].slice_size;
+			slice_size = (uint64_t)rtex->surface.u.legacy.level[0].slice_size_dw * 4;
 		}
 	} else {
 		/* Move a suballocated buffer into a non-suballocated allocation. */
@@ -1066,7 +1067,7 @@ void si_print_texture_info(struct r600_common_screen *rscreen,
 			"npix_x=%u, npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
 			"mode=%u, tiling_index = %u\n",
 			i, rtex->surface.u.legacy.level[i].offset,
-			rtex->surface.u.legacy.level[i].slice_size,
+			(uint64_t)rtex->surface.u.legacy.level[i].slice_size_dw * 4,
 			u_minify(rtex->resource.b.b.width0, i),
 			u_minify(rtex->resource.b.b.height0, i),
 			u_minify(rtex->resource.b.b.depth0, i),
@@ -1084,7 +1085,7 @@ void si_print_texture_info(struct r600_common_screen *rscreen,
 				"npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
 				"mode=%u, tiling_index = %u\n",
 				i, rtex->surface.u.legacy.stencil_level[i].offset,
-				rtex->surface.u.legacy.stencil_level[i].slice_size,
+				(uint64_t)rtex->surface.u.legacy.stencil_level[i].slice_size_dw * 4,
 				u_minify(rtex->resource.b.b.width0, i),
 				u_minify(rtex->resource.b.b.height0, i),
 				u_minify(rtex->resource.b.b.depth0, i),

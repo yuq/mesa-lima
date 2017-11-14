@@ -304,7 +304,7 @@ static int gfx6_compute_level(ADDR_HANDLE addrlib,
 
 	surf_level = is_stencil ? &surf->u.legacy.stencil_level[level] : &surf->u.legacy.level[level];
 	surf_level->offset = align64(surf->surf_size, AddrSurfInfoOut->baseAlign);
-	surf_level->slice_size = AddrSurfInfoOut->sliceSize;
+	surf_level->slice_size_dw = AddrSurfInfoOut->sliceSize / 4;
 	surf_level->nblk_x = AddrSurfInfoOut->pitch;
 	surf_level->nblk_y = AddrSurfInfoOut->height;
 
