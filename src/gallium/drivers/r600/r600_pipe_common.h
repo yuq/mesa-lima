@@ -171,6 +171,12 @@ struct r600_resource {
 	/* Whether this resource is referenced by bindless handles. */
 	bool				texture_handle_allocated;
 	bool				image_handle_allocated;
+
+	/*
+	 * EG/Cayman only - for RAT operations hw need an immediate buffer
+	 * to store results in.
+	 */
+	struct r600_resource            *immed_buffer;
 };
 
 struct r600_transfer {
@@ -773,6 +779,9 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				   const union pipe_color_union *color);
 void r600_init_screen_texture_functions(struct r600_common_screen *rscreen);
 void r600_init_context_texture_functions(struct r600_common_context *rctx);
+void eg_resource_alloc_immed(struct r600_common_screen *rscreen,
+			     struct r600_resource *res,
+			     unsigned immed_size);
 
 /* r600_viewport.c */
 void evergreen_apply_scissor_bug_workaround(struct r600_common_context *rctx,
