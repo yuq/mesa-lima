@@ -322,6 +322,11 @@ etna_emit_state(struct etna_context *ctx)
       etna_stall(stream, SYNC_RECIPIENT_RA, SYNC_RECIPIENT_PE);
    }
 
+   /* Flush TS cache before changing TS configuration. */
+   if (unlikely(dirty & ETNA_DIRTY_TS)) {
+      etna_set_state(stream, VIVS_TS_FLUSH_CACHE, VIVS_TS_FLUSH_CACHE_FLUSH);
+   }
+
    /* If MULTI_SAMPLE_CONFIG.MSAA_SAMPLES changed, clobber affected shader
     * state to make sure it is always rewritten. */
    if (unlikely(dirty & (ETNA_DIRTY_FRAMEBUFFER))) {
