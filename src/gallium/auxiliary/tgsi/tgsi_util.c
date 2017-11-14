@@ -452,7 +452,7 @@ tgsi_util_get_src_from_ind(const struct tgsi_ind_register *reg)
  * sample index.
  */
 int
-tgsi_util_get_texture_coord_dim(unsigned tgsi_tex)
+tgsi_util_get_texture_coord_dim(enum tgsi_texture_type tgsi_tex)
 {
    /*
     * Depending on the texture target, (src0.xyzw, src1.x) is interpreted
@@ -513,7 +513,7 @@ tgsi_util_get_texture_coord_dim(unsigned tgsi_tex)
  * shadow reference coordinate.
  */
 int
-tgsi_util_get_shadow_ref_src_index(unsigned tgsi_tex)
+tgsi_util_get_shadow_ref_src_index(enum tgsi_texture_type tgsi_tex)
 {
    switch (tgsi_tex) {
    case TGSI_TEXTURE_SHADOW1D:
@@ -536,7 +536,7 @@ tgsi_util_get_shadow_ref_src_index(unsigned tgsi_tex)
 
 
 boolean
-tgsi_is_shadow_target(unsigned target)
+tgsi_is_shadow_target(enum tgsi_texture_type target)
 {
    switch (target) {
    case TGSI_TEXTURE_SHADOW1D:

@@ -82,24 +82,24 @@ struct tgsi_src_register
 tgsi_util_get_src_from_ind(const struct tgsi_ind_register *reg);
 
 int
-tgsi_util_get_texture_coord_dim(unsigned tgsi_tex);
+tgsi_util_get_texture_coord_dim(enum tgsi_texture_type tgsi_tex);
 
 int
-tgsi_util_get_shadow_ref_src_index(unsigned tgsi_tex);
+tgsi_util_get_shadow_ref_src_index(enum tgsi_texture_type tgsi_tex);
 
 boolean
-tgsi_is_shadow_target(unsigned target);
+tgsi_is_shadow_target(enum tgsi_texture_type target);
 
 
 static inline boolean
-tgsi_is_msaa_target(unsigned target)
+tgsi_is_msaa_target(enum tgsi_texture_type target)
 {
    return (target == TGSI_TEXTURE_2D_MSAA ||
            target == TGSI_TEXTURE_2D_ARRAY_MSAA);
 }
 
 static inline bool
-tgsi_is_array_sampler(unsigned target)
+tgsi_is_array_sampler(enum tgsi_texture_type target)
 {
    return target == TGSI_TEXTURE_1D_ARRAY ||
           target == TGSI_TEXTURE_SHADOW1D_ARRAY ||
