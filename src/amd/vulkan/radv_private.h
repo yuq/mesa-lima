@@ -702,7 +702,6 @@ enum radv_cmd_dirty_bits {
 	RADV_CMD_DIRTY_INDEX_BUFFER                      = 1 << 10,
 	RADV_CMD_DIRTY_FRAMEBUFFER                       = 1 << 11,
 };
-typedef uint32_t radv_cmd_dirty_mask_t;
 
 enum radv_cmd_flush_bits {
 	RADV_CMD_FLAG_INV_ICACHE = 1 << 0,
@@ -817,7 +816,7 @@ struct radv_cmd_state {
 
 	bool                                          push_descriptors_dirty;
 	bool predicating;
-	radv_cmd_dirty_mask_t                         dirty;
+	uint32_t                                      dirty;
 
 	struct radv_pipeline *                        pipeline;
 	struct radv_pipeline *                        emitted_pipeline;
