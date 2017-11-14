@@ -988,6 +988,12 @@
 #define   S_02880C_DUAL_EXPORT_ENABLE(x)               (((unsigned)(x) & 0x1) << 9)
 #define   G_02880C_DUAL_EXPORT_ENABLE(x)               (((x) >> 9) & 0x1)
 #define   C_02880C_DUAL_EXPORT_ENABLE                  0xFFFFFDFF
+#define   S_02880C_EXEC_ON_HIER_FAIL(x)                (((unsigned)(x) & 0x1) << 10)
+#define   G_02880C_EXEC_ON_HIER_FAIL(x)                (((x) >> 10) & 0x1)
+#define   C_02880C_EXEC_ON_HIER_FAIL                   0xFFFFFBFF
+#define   S_02880C_EXEC_ON_NOOP(x)                     (((unsigned)(x) & 0x1) << 11)
+#define   G_02880C_EXEC_ON_NOOP(x)                     (((x) >> 11) & 0x1)
+#define   C_02880C_EXEC_ON_NOOP                        0xFFFFF7FF
 #define   S_02880C_DB_SOURCE_FORMAT(x)                 (((unsigned)(x) & 0x3) << 13)
 #define   G_02880C_DB_SOURCE_FORMAT(x)                 (((x) >> 13) & 0x3)
 #define   C_02880C_DB_SOURCE_FORMAT                    0xFFFF9FFF
