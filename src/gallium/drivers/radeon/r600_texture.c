@@ -995,7 +995,7 @@ void si_print_texture_info(struct r600_common_screen *rscreen,
 		}
 
 		if (rtex->htile_offset) {
-			u_log_printf(log, "  HTile: offset=%"PRIu64", size=%"PRIu64", alignment=%u, "
+			u_log_printf(log, "  HTile: offset=%"PRIu64", size=%u, alignment=%u, "
 				"rb_aligned=%u, pipe_aligned=%u\n",
 				rtex->htile_offset,
 				rtex->surface.htile_size,
@@ -1005,7 +1005,7 @@ void si_print_texture_info(struct r600_common_screen *rscreen,
 		}
 
 		if (rtex->dcc_offset) {
-			u_log_printf(log, "  DCC: offset=%"PRIu64", size=%"PRIu64", "
+			u_log_printf(log, "  DCC: offset=%"PRIu64", size=%u, "
 				"alignment=%u, pitch_max=%u, num_dcc_levels=%u\n",
 				rtex->dcc_offset, rtex->surface.dcc_size,
 				rtex->surface.dcc_alignment,
@@ -1043,19 +1043,19 @@ void si_print_texture_info(struct r600_common_screen *rscreen,
 			rtex->cmask.slice_tile_max);
 
 	if (rtex->htile_offset)
-		u_log_printf(log, "  HTile: offset=%"PRIu64", size=%"PRIu64", "
+		u_log_printf(log, "  HTile: offset=%"PRIu64", size=%u, "
 			"alignment=%u, TC_compatible = %u\n",
 			rtex->htile_offset, rtex->surface.htile_size,
 			rtex->surface.htile_alignment,
 			rtex->tc_compatible_htile);
 
 	if (rtex->dcc_offset) {
-		u_log_printf(log, "  DCC: offset=%"PRIu64", size=%"PRIu64", alignment=%u\n",
+		u_log_printf(log, "  DCC: offset=%"PRIu64", size=%u, alignment=%u\n",
 			rtex->dcc_offset, rtex->surface.dcc_size,
 			rtex->surface.dcc_alignment);
 		for (i = 0; i <= rtex->resource.b.b.last_level; i++)
-			u_log_printf(log, "  DCCLevel[%i]: enabled=%u, offset=%"PRIu64", "
-				"fast_clear_size=%"PRIu64"\n",
+			u_log_printf(log, "  DCCLevel[%i]: enabled=%u, offset=%u, "
+				"fast_clear_size=%u\n",
 				i, i < rtex->surface.num_dcc_levels,
 				rtex->surface.u.legacy.level[i].dcc_offset,
 				rtex->surface.u.legacy.level[i].dcc_fast_clear_size);

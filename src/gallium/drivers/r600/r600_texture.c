@@ -837,7 +837,7 @@ void r600_print_texture_info(struct r600_common_screen *rscreen,
 			rtex->cmask.slice_tile_max);
 
 	if (rtex->htile_offset)
-		u_log_printf(log, "  HTile: offset=%"PRIu64", size=%"PRIu64", "
+		u_log_printf(log, "  HTile: offset=%"PRIu64", size=%u "
 			"alignment=%u\n",
 			     rtex->htile_offset, rtex->surface.htile_size,
 			     rtex->surface.htile_alignment);
