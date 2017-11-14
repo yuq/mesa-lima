@@ -911,7 +911,7 @@ radv_get_queue_global_priority(const VkDeviceQueueGlobalPriorityCreateInfoEXT *p
 
 static int
 radv_queue_init(struct radv_device *device, struct radv_queue *queue,
-		int queue_family_index, int idx,
+		uint32_t queue_family_index, int idx,
 		const VkDeviceQueueGlobalPriorityCreateInfoEXT *global_priority)
 {
 	queue->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
