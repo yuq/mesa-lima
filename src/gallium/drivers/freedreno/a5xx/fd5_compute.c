@@ -160,12 +160,7 @@ fd5_launch_grid(struct fd_context *ctx, const struct pipe_grid_info *info)
 	if (info->indirect) {
 		struct fd_resource *rsc = fd_resource(info->indirect);
 
-		OUT_PKT7(ring, CP_EVENT_WRITE, 4);
-		OUT_RING(ring, CACHE_FLUSH_TS);
-		OUT_RELOCW(ring, fd5_context(ctx)->blit_mem, 0, 0, 0);  /* ADDR_LO/HI */
-		OUT_RING(ring, 0x00000000);
-
-		OUT_WFI5(ring);
+		fd5_emit_flush(ctx, ring);
 
 		OUT_PKT7(ring, CP_EXEC_CS_INDIRECT, 4);
 		OUT_RING(ring, 0x00000000);
