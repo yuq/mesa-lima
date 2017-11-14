@@ -2971,6 +2971,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	shader->uses_atomics = ctx.info.file_mask[TGSI_FILE_HW_ATOMIC];
 	shader->nsys_inputs = 0;
 
+	shader->uses_images = ctx.info.file_count[TGSI_FILE_IMAGE] > 0;
 	indirect_gprs = ctx.info.indirect_files & ~((1 << TGSI_FILE_CONSTANT) | (1 << TGSI_FILE_SAMPLER));
 	tgsi_parse_init(&ctx.parse, tokens);
 	ctx.type = ctx.info.processor;

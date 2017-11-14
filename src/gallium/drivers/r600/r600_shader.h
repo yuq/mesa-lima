@@ -116,6 +116,7 @@ struct r600_shader {
 
 	boolean			uses_doubles;
 	boolean                 uses_atomics;
+	boolean			uses_images;
 	uint8_t                 atomic_base;
 };
 
