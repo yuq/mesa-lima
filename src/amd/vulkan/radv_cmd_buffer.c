@@ -1772,8 +1772,6 @@ radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 static bool
 radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer, bool pipeline_is_dirty)
 {
-	struct radv_device *device = cmd_buffer->device;
-
 	if ((pipeline_is_dirty ||
 	    (cmd_buffer->state.dirty & RADV_CMD_DIRTY_VERTEX_BUFFER)) &&
 	    cmd_buffer->state.pipeline->vertex_elements.count &&
@@ -1797,7 +1795,6 @@ radv_cmd_buffer_update_vertex_descriptors(struct radv_cmd_buffer *cmd_buffer, bo
 			struct radv_buffer *buffer = cmd_buffer->vertex_bindings[vb].buffer;
 			uint32_t stride = cmd_buffer->state.pipeline->binding_stride[vb];
 
-			radv_cs_add_buffer(device->ws, cmd_buffer->cs, buffer->bo, 8);
 			va = radv_buffer_get_va(buffer->bo);
 
 			offset = cmd_buffer->vertex_bindings[vb].offset + velems->offset[i];
@@ -2281,6 +2278,9 @@ void radv_CmdBindVertexBuffers(
 
 		vb[idx].buffer = radv_buffer_from_handle(pBuffers[i]);
 		vb[idx].offset = pOffsets[i];
+
+		radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs,
+				   vb[idx].buffer->bo, 8);
 	}
 
 	if (!changed) {
