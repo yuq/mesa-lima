@@ -445,12 +445,14 @@ static void si_flush_from_st(struct pipe_context *ctx,
 		}
 
 		multi_fence->fine = fine;
+		fine.buf = NULL;
 
 		if (flags & TC_FLUSH_ASYNC) {
 			util_queue_fence_signal(&multi_fence->ready);
 			tc_unflushed_batch_token_reference(&multi_fence->tc_token, NULL);
 		}
 	}
+	assert(!fine.buf);
 finish:
 	if (!(flags & PIPE_FLUSH_DEFERRED)) {
 		if (rctx->dma.cs)
