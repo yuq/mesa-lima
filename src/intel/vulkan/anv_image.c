@@ -508,6 +508,38 @@ make_surface(const struct anv_device *dev,
    return VK_SUCCESS;
 }
 
+static uint32_t
+score_drm_format_mod(uint64_t modifier)
+{
+   switch (modifier) {
+   case DRM_FORMAT_MOD_LINEAR: return 1;
+   case I915_FORMAT_MOD_X_TILED: return 2;
+   case I915_FORMAT_MOD_Y_TILED: return 3;
+   default: unreachable("bad DRM format modifier");
+   }
+}
+
+static const struct isl_drm_modifier_info *
+choose_drm_format_mod(const struct anv_physical_device *device,
+                      uint32_t modifier_count, const uint64_t *modifiers)
+{
+   uint64_t best_mod = UINT64_MAX;
+   uint32_t best_score = 0;
+
+   for (uint32_t i = 0; i < modifier_count; ++i) {
+      uint32_t score = score_drm_format_mod(modifiers[i]);
+      if (score > best_score) {
+         best_mod = modifiers[i];
+         best_score = score;
+      }
+   }
+
+   if (best_score > 0)
+      return isl_drm_modifier_get_info(best_mod);
+   else
+      return NULL;
+}
+
 VkResult
 anv_image_create(VkDevice _device,
                  const struct anv_image_create_info *create_info,
@@ -524,6 +556,12 @@ anv_image_create(VkDevice _device,
 
    const struct wsi_image_create_info *wsi_info =
       vk_find_struct_const(pCreateInfo->pNext, WSI_IMAGE_CREATE_INFO_MESA);
+   if (wsi_info && wsi_info->modifier_count > 0) {
+      isl_mod_info = choose_drm_format_mod(&device->instance->physicalDevice,
+                                           wsi_info->modifier_count,
+                                           wsi_info->modifiers);
+      assert(isl_mod_info);
+   }
 
    anv_assert(pCreateInfo->mipLevels > 0);
    anv_assert(pCreateInfo->arrayLayers > 0);
@@ -549,6 +587,8 @@ anv_image_create(VkDevice _device,
    image->tiling = pCreateInfo->tiling;
    image->disjoint = pCreateInfo->flags & VK_IMAGE_CREATE_DISJOINT_BIT_KHR;
    image->needs_set_tiling = wsi_info && wsi_info->scanout;
+   image->drm_format_mod = isl_mod_info ? isl_mod_info->modifier :
+                                          DRM_FORMAT_MOD_INVALID;
 
    const struct anv_format *format = anv_get_format(image->vk_format);
    assert(format != NULL);
