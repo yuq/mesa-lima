@@ -52,7 +52,7 @@ def parse_args():
     return p.parse_args()
 
 TEMPLATE  = Template("""\
-/* DO NOT EDIT - This file generated automatically by spirv_info_c.py script */
+/* DO NOT EDIT - This file is generated automatically by spirv_info_c.py script */
 
 """ + COPYRIGHT + """\
 #include "spirv_info.h"
