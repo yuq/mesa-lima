@@ -629,6 +629,19 @@ etna_resource_used(struct etna_context *ctx, struct pipe_resource *prsc,
    rsc->pending_ctx = ctx;
 }
 
+bool
+etna_resource_has_valid_ts(struct etna_resource *rsc)
+{
+   if (!rsc->ts_bo)
+      return false;
+
+   for (int level = 0; level <= rsc->base.last_level; level++)
+      if (rsc->levels[level].ts_valid)
+         return true;
+
+   return false;
+}
+
 void
 etna_resource_screen_init(struct pipe_screen *pscreen)
 {
