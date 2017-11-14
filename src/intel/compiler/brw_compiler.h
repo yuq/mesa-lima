@@ -26,7 +26,6 @@
 
 #include <stdio.h>
 #include "common/gen_device_info.h"
-#include "main/mtypes.h"
 #include "main/macros.h"
 #include "util/ralloc.h"
 
