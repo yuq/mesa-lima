@@ -53,4 +53,7 @@ translate_rs_format_rb_swap(enum pipe_format fmt);
 uint32_t
 translate_vertex_format_type(enum pipe_format fmt);
 
+uint32_t
+translate_ts_sampler_format(enum pipe_format fmt);
+
 #endif /* ETNAVIV_FORMAT_H_ */
