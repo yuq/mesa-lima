@@ -392,15 +392,7 @@ glXCreateContext(Display * dpy, XVisualInfo * vis,
       config = glx_config_find_visual(psc->visuals, vis->visualid);
 
    if (config == NULL) {
-      xError error;
-
-      error.errorCode = BadValue;
-      error.resourceID = vis->visualid;
-      error.sequenceNumber = dpy->request;
-      error.type = X_Error;
-      error.majorCode = __glXSetupForCommand(dpy);
-      error.minorCode = X_GLXCreateContext;
-      _XError(dpy, &error);
+      __glXSendError(dpy, BadValue, vis->visualid, X_GLXCreateContext, True);
       return None;
    }
 
