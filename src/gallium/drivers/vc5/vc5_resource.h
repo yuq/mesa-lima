@@ -100,6 +100,8 @@ struct vc5_surface {
          * TILE_RENDERING_MODE_CONFIGURATION.
          */
         uint8_t internal_bpp;
+
+        uint32_t padded_height_of_output_image_in_uif_blocks;
 };
 
 struct vc5_resource {

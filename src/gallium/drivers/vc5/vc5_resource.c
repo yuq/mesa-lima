@@ -715,6 +715,7 @@ vc5_create_surface(struct pipe_context *pctx,
 
         struct pipe_surface *psurf = &surface->base;
         unsigned level = surf_tmpl->u.tex.level;
+        struct vc5_resource_slice *slice = &rsc->slices[level];
 
         pipe_reference_init(&psurf->reference, 1);
         pipe_resource_reference(&psurf->texture, ptex);
@@ -727,9 +728,9 @@ vc5_create_surface(struct pipe_context *pctx,
         psurf->u.tex.first_layer = surf_tmpl->u.tex.first_layer;
         psurf->u.tex.last_layer = surf_tmpl->u.tex.last_layer;
 
-        surface->offset = (rsc->slices[level].offset +
+        surface->offset = (slice->offset +
                            psurf->u.tex.first_layer * rsc->cube_map_stride);
-        surface->tiling = rsc->slices[level].tiling;
+        surface->tiling = slice->tiling;
         surface->format = vc5_get_rt_format(psurf->format);
 
         if (util_format_is_depth_or_stencil(psurf->format)) {
@@ -750,6 +751,13 @@ vc5_create_surface(struct pipe_context *pctx,
                                                             &type, &bpp);
                 surface->internal_type = type;
                 surface->internal_bpp = bpp;
+        }
+
+        if (surface->tiling == VC5_TILING_UIF_NO_XOR ||
+            surface->tiling == VC5_TILING_UIF_XOR) {
+                surface->padded_height_of_output_image_in_uif_blocks =
+                        ((slice->size / slice->stride) /
+                         (2 * vc5_utile_height(rsc->cpp)));
         }
 
         return &surface->base;

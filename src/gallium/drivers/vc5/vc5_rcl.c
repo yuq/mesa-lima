@@ -36,12 +36,8 @@ load_raw(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer)
                 load.raw_mode = true;
                 load.buffer_to_load = buffer;
                 load.address = cl_address(rsc->bo, surf->offset);
-
-                struct vc5_resource_slice *slice =
-                        &rsc->slices[psurf->u.tex.level];
                 load.padded_height_of_output_image_in_uif_blocks =
-                        (slice->size / slice->stride) /
-                        (2 * vc5_utile_height(rsc->cpp));
+                        surf->padded_height_of_output_image_in_uif_blocks;
         }
 }
 
@@ -59,12 +55,8 @@ store_raw(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer,
                 store.disable_colour_buffers_clear_on_write = !color_clear;
                 store.disable_z_buffer_clear_on_write = !z_clear;
                 store.disable_stencil_buffer_clear_on_write = !s_clear;
-
-                struct vc5_resource_slice *slice =
-                        &rsc->slices[psurf->u.tex.level];
                 store.padded_height_of_output_image_in_uif_blocks =
-                        (slice->size / slice->stride) /
-                        (2 * vc5_utile_height(rsc->cpp));
+                        surf->padded_height_of_output_image_in_uif_blocks;
         }
 }
 
@@ -330,11 +322,8 @@ vc5_emit_rcl(struct vc5_job *job)
 
                         zs.internal_type = surf->internal_type;
                         zs.output_image_format = surf->format;
-
-                        struct vc5_resource_slice *slice = &rsc->slices[psurf->u.tex.level];
-                        /* XXX */
                         zs.padded_height_of_output_image_in_uif_blocks =
-                                (slice->size / slice->stride) / (2 * vc5_utile_height(rsc->cpp));
+                                surf->padded_height_of_output_image_in_uif_blocks;
 
                         assert(surf->tiling != VC5_TILING_RASTER);
                         zs.memory_format = surf->tiling;
