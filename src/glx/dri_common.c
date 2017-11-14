@@ -396,12 +396,25 @@ driDestroyConfigs(const __DRIconfig **configs)
    free(configs);
 }
 
+static struct glx_config *
+driInferDrawableConfig(struct glx_screen *psc, GLXDrawable draw)
+{
+   unsigned int fbconfig = 0;
+
+   if (__glXGetDrawableAttribute(psc->dpy, draw, GLX_FBCONFIG_ID, &fbconfig)) {
+      return glx_config_find_fbconfig(psc->configs, fbconfig);
+   }
+
+   return NULL;
+}
+
 _X_HIDDEN __GLXDRIdrawable *
 driFetchDrawable(struct glx_context *gc, GLXDrawable glxDrawable)
 {
    struct glx_display *const priv = __glXInitialize(gc->psc->dpy);
    __GLXDRIdrawable *pdraw;
    struct glx_screen *psc;
+   struct glx_config *config = gc->config;
 
    if (priv == NULL)
       return NULL;
@@ -418,8 +431,13 @@ driFetchDrawable(struct glx_context *gc, GLXDrawable glxDrawable)
       return pdraw;
    }
 
-   pdraw = psc->driScreen->createDrawable(psc, glxDrawable,
-                                          glxDrawable, gc->config);
+   if (config == NULL)
+      config = driInferDrawableConfig(gc->psc, glxDrawable);
+   if (config == NULL)
+      return NULL;
+
+   pdraw = psc->driScreen->createDrawable(psc, glxDrawable, glxDrawable,
+                                          config);
 
    if (pdraw == NULL) {
       ErrorMessageF("failed to create drawable\n");
