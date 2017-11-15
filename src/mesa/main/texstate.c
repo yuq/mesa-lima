@@ -967,55 +967,6 @@ alloc_proxy_textures( struct gl_context *ctx )
 
 
 /**
- * Initialize a texture unit.
- *
- * \param ctx GL context.
- * \param unit texture unit number to be initialized.
- */
-static void
-init_texture_unit( struct gl_context *ctx, GLuint unit )
-{
-   struct gl_texture_unit *texUnit = &ctx->Texture.Unit[unit];
-   GLuint tex;
-
-   texUnit->EnvMode = GL_MODULATE;
-   ASSIGN_4V( texUnit->EnvColor, 0.0, 0.0, 0.0, 0.0 );
-
-   texUnit->Combine = default_combine_state;
-   texUnit->_EnvMode = default_combine_state;
-   texUnit->_CurrentCombine = & texUnit->_EnvMode;
-
-   texUnit->TexGenEnabled = 0x0;
-   texUnit->GenS.Mode = GL_EYE_LINEAR;
-   texUnit->GenT.Mode = GL_EYE_LINEAR;
-   texUnit->GenR.Mode = GL_EYE_LINEAR;
-   texUnit->GenQ.Mode = GL_EYE_LINEAR;
-   texUnit->GenS._ModeBit = TEXGEN_EYE_LINEAR;
-   texUnit->GenT._ModeBit = TEXGEN_EYE_LINEAR;
-   texUnit->GenR._ModeBit = TEXGEN_EYE_LINEAR;
-   texUnit->GenQ._ModeBit = TEXGEN_EYE_LINEAR;
-
-   /* Yes, these plane coefficients are correct! */
-   ASSIGN_4V( texUnit->GenS.ObjectPlane, 1.0, 0.0, 0.0, 0.0 );
-   ASSIGN_4V( texUnit->GenT.ObjectPlane, 0.0, 1.0, 0.0, 0.0 );
-   ASSIGN_4V( texUnit->GenR.ObjectPlane, 0.0, 0.0, 0.0, 0.0 );
-   ASSIGN_4V( texUnit->GenQ.ObjectPlane, 0.0, 0.0, 0.0, 0.0 );
-   ASSIGN_4V( texUnit->GenS.EyePlane, 1.0, 0.0, 0.0, 0.0 );
-   ASSIGN_4V( texUnit->GenT.EyePlane, 0.0, 1.0, 0.0, 0.0 );
-   ASSIGN_4V( texUnit->GenR.EyePlane, 0.0, 0.0, 0.0, 0.0 );
-   ASSIGN_4V( texUnit->GenQ.EyePlane, 0.0, 0.0, 0.0, 0.0 );
-
-   /* initialize current texture object ptrs to the shared default objects */
-   for (tex = 0; tex < NUM_TEXTURE_TARGETS; tex++) {
-      _mesa_reference_texobj(&texUnit->CurrentTex[tex],
-                             ctx->Shared->DefaultTex[tex]);
-   }
-
-   texUnit->_BoundTextures = 0;
-}
-
-
-/**
  * Initialize texture state for the given context.
  */
 GLboolean
@@ -1043,8 +994,45 @@ _mesa_init_texture(struct gl_context *ctx)
     */
    ctx->Texture.CubeMapSeamless = ctx->API == API_OPENGLES2;
 
-   for (u = 0; u < ARRAY_SIZE(ctx->Texture.Unit); u++)
-      init_texture_unit(ctx, u);
+   for (u = 0; u < ARRAY_SIZE(ctx->Texture.Unit); u++) {
+      struct gl_texture_unit *texUnit = &ctx->Texture.Unit[u];
+      GLuint tex;
+
+      texUnit->EnvMode = GL_MODULATE;
+      ASSIGN_4V( texUnit->EnvColor, 0.0, 0.0, 0.0, 0.0 );
+
+      texUnit->Combine = default_combine_state;
+      texUnit->_EnvMode = default_combine_state;
+      texUnit->_CurrentCombine = & texUnit->_EnvMode;
+
+      texUnit->TexGenEnabled = 0x0;
+      texUnit->GenS.Mode = GL_EYE_LINEAR;
+      texUnit->GenT.Mode = GL_EYE_LINEAR;
+      texUnit->GenR.Mode = GL_EYE_LINEAR;
+      texUnit->GenQ.Mode = GL_EYE_LINEAR;
+      texUnit->GenS._ModeBit = TEXGEN_EYE_LINEAR;
+      texUnit->GenT._ModeBit = TEXGEN_EYE_LINEAR;
+      texUnit->GenR._ModeBit = TEXGEN_EYE_LINEAR;
+      texUnit->GenQ._ModeBit = TEXGEN_EYE_LINEAR;
+
+      /* Yes, these plane coefficients are correct! */
+      ASSIGN_4V( texUnit->GenS.ObjectPlane, 1.0, 0.0, 0.0, 0.0 );
+      ASSIGN_4V( texUnit->GenT.ObjectPlane, 0.0, 1.0, 0.0, 0.0 );
+      ASSIGN_4V( texUnit->GenR.ObjectPlane, 0.0, 0.0, 0.0, 0.0 );
+      ASSIGN_4V( texUnit->GenQ.ObjectPlane, 0.0, 0.0, 0.0, 0.0 );
+      ASSIGN_4V( texUnit->GenS.EyePlane, 1.0, 0.0, 0.0, 0.0 );
+      ASSIGN_4V( texUnit->GenT.EyePlane, 0.0, 1.0, 0.0, 0.0 );
+      ASSIGN_4V( texUnit->GenR.EyePlane, 0.0, 0.0, 0.0, 0.0 );
+      ASSIGN_4V( texUnit->GenQ.EyePlane, 0.0, 0.0, 0.0, 0.0 );
+
+      /* initialize current texture object ptrs to the shared default objects */
+      for (tex = 0; tex < NUM_TEXTURE_TARGETS; tex++) {
+         _mesa_reference_texobj(&texUnit->CurrentTex[tex],
+                                ctx->Shared->DefaultTex[tex]);
+      }
+
+      texUnit->_BoundTextures = 0;
+   }
 
    /* After we're done initializing the context's texture state the default
     * texture objects' refcounts should be at least
