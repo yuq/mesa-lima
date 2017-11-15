@@ -48,32 +48,32 @@ if with_gallium_r600
   subdir('drivers/r600')
 endif
 if with_gallium_radeonsi
+  subdir('winsys/amdgpu/drm')
   subdir('drivers/radeon')
   subdir('drivers/radeonsi')
-  subdir('winsys/amdgpu/drm')
 endif
 if with_gallium_nouveau
-  subdir('drivers/nouveau')
   subdir('winsys/nouveau/drm')
+  subdir('drivers/nouveau')
 endif
 if with_gallium_freedreno
-  subdir('drivers/freedreno')
   subdir('winsys/freedreno/drm')
+  subdir('drivers/freedreno')
 endif
 if with_gallium_pl111
   subdir('winsys/pl111/drm')
 endif
 if with_gallium_vc4
-  subdir('drivers/vc4')
   subdir('winsys/vc4/drm')
+  subdir('drivers/vc4')
 endif
 if with_gallium_vc5
-  subdir('drivers/vc5')
   subdir('winsys/vc5/drm')
+  subdir('drivers/vc5')
 endif
 if with_gallium_etnaviv
-  subdir('drivers/etnaviv')
   subdir('winsys/etnaviv/drm')
+  subdir('drivers/etnaviv')
 endif
 if with_gallium_imx
   subdir('winsys/imx/drm')
@@ -83,13 +83,13 @@ if with_gallium_i915
   subdir('drivers/i915')
 endif
 if with_gallium_svga
-  subdir('drivers/svga')
   subdir('winsys/svga/drm')
+  subdir('drivers/svga')
 endif
 if with_gallium_virgl
-  subdir('drivers/virgl')
   subdir('winsys/virgl/drm')
   subdir('winsys/virgl/vtest')
+  subdir('drivers/virgl')
 endif
 # TODO: SWR
 # TODO: clover
