@@ -79,3 +79,12 @@ libradeonsi = static_library(
   cpp_args : [cpp_vis_args],
   dependencies : dep_llvm,
 )
+
+driver_radeonsi = declare_dependency(
+  compile_args : '-DGALLIUM_RADEONSI',
+  sources : si_driinfo_h,
+  link_with : [
+    libradeonsi, libradeon, libradeonwinsys, libamdgpuwinsys, libamd_common,
+    libnir,
+  ],
+)

@@ -68,3 +68,8 @@ libi915 = static_library(
   c_args : [c_vis_args],
   include_directories : [inc_include, inc_src, inc_gallium, inc_gallium_aux],
 )
+
+driver_i915 = declare_dependency(
+  compile_args : '-DGALLIUM_I915',
+  link_with : [libi915, libi915drm],
+)

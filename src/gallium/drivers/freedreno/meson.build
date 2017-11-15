@@ -220,6 +220,11 @@ libfreedreno = static_library(
   dependencies : [dep_libdrm, dep_libdrm_freedreno],
 )
 
+driver_freedreno = declare_dependency(
+  compile_args : '-DGALLIUM_FREEDRENO',
+  link_with : [libfreedrenowinsys, libfreedreno],
+)
+
 ir3_compiler = executable(
   'ir3_compiler',
   'ir3/ir3_cmdline.c',

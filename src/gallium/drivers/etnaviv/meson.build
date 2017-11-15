@@ -100,3 +100,8 @@ etnaviv_compiler = executable(
   dependencies : [dep_libdrm_etnaviv, dep_lmsensors],
   build_by_default : false,
 )
+
+driver_etnaviv = declare_dependency(
+  compile_args : '-DGALLIUM_ETNAVIV',
+  link_with : [libetnaviv, libetnavivdrm],
+)

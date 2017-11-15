@@ -221,3 +221,8 @@ nouveau_compiler = executable(
   link_with : [libnouveau, libgallium, libmesa_util],
   build_by_default : false,
 )
+
+driver_nouveau = declare_dependency(
+  compile_args : '-DGALLIUM_NOUVEAU',
+  link_with : [libnouveauwinsys, libnouveau],
+)

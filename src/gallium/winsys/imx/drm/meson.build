@@ -26,3 +26,8 @@ libimxdrm = static_library(
     include_directories('../..'),
   ],
 )
+
+driver_imx = declare_dependency(
+  c_args : '-DGALLIUM_IMX',
+  link_with : libimxdrm,
+)

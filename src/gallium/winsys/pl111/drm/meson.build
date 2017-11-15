@@ -28,3 +28,8 @@ libpl111winsys = static_library(
   c_args : [c_vis_args],
   dependencies: dep_libdrm,
 )
+
+driver_pl111 = declare_dependency(
+  c_args : '-DGALLIUM_PL111',
+  link_with : libpl111winsys,
+)

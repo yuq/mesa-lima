@@ -37,59 +37,87 @@ if with_gallium_softpipe
   if with_llvm
     subdir('drivers/llvmpipe')
   endif
+else
+  driver_swrast = declare_dependency()
 endif
 if with_gallium_r300 or with_gallium_radeonsi or with_gallium_r600
   subdir('winsys/radeon/drm')
 endif
 if with_gallium_r300
   subdir('drivers/r300')
+else
+  driver_r300 = declare_dependency()
 endif
 if with_gallium_r600
   subdir('drivers/r600')
+else
+  driver_r600 = declare_dependency()
 endif
 if with_gallium_radeonsi
   subdir('winsys/amdgpu/drm')
   subdir('drivers/radeon')
   subdir('drivers/radeonsi')
+else
+  driver_radeonsi = declare_dependency()
 endif
 if with_gallium_nouveau
   subdir('winsys/nouveau/drm')
   subdir('drivers/nouveau')
+else
+  driver_nouveau = declare_dependency()
 endif
 if with_gallium_freedreno
   subdir('winsys/freedreno/drm')
   subdir('drivers/freedreno')
+else
+  driver_freedreno = declare_dependency()
 endif
 if with_gallium_pl111
   subdir('winsys/pl111/drm')
+else
+  driver_pl111 = declare_dependency()
 endif
 if with_gallium_vc4
   subdir('winsys/vc4/drm')
   subdir('drivers/vc4')
+else
+  driver_vc4 = declare_dependency()
 endif
 if with_gallium_vc5
   subdir('winsys/vc5/drm')
   subdir('drivers/vc5')
+else
+  driver_vc5 = declare_dependency()
 endif
 if with_gallium_etnaviv
   subdir('winsys/etnaviv/drm')
   subdir('drivers/etnaviv')
+else
+  driver_etnaviv = declare_dependency()
 endif
 if with_gallium_imx
   subdir('winsys/imx/drm')
+else
+  driver_imx = declare_dependency()
 endif
 if with_gallium_i915
   subdir('winsys/i915/drm')
   subdir('drivers/i915')
+else
+  driver_i915 = declare_dependency()
 endif
 if with_gallium_svga
   subdir('winsys/svga/drm')
   subdir('drivers/svga')
+else
+  driver_svga = declare_dependency()
 endif
 if with_gallium_virgl
   subdir('winsys/virgl/drm')
   subdir('winsys/virgl/vtest')
   subdir('drivers/virgl')
+else
+  driver_virgl = declare_dependency()
 endif
 # TODO: SWR
 # TODO: clover

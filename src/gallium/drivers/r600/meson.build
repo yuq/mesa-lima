@@ -126,3 +126,8 @@ libr600 = static_library(
   ],
   dependencies: [dep_libdrm_radeon, dep_elf, dep_llvm],
 )
+
+driver_r600 = declare_dependency(
+  compile_args : '-DGALLIUM_R600',
+  link_with : [libr600, libradeonwinsys],
+)

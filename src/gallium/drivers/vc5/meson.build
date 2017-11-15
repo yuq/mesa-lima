@@ -62,3 +62,8 @@ libvc5 = static_library(
   cpp_args : [cpp_vis_args],
   dependencies : [dep_v3dv3, dep_libdrm, dep_valgrind],
 )
+
+driver_vc5 = declare_dependency(
+  compile_args : '-DGALLIUM_VC5',
+  link_with : [libvc5, libvc5winsys, libbroadcom_cle, libbroadcom_vc5, libnir],
+)

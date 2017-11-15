@@ -86,3 +86,8 @@ libsvga = static_library(
     include_directories('include')
   ],
 )
+
+driver_svga = declare_dependency(
+  compile_args : '-DGALLIUM_VMWGFX',
+  link_with : [libsvga, libsvgadrm],
+)

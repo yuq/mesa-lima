@@ -129,6 +129,11 @@ libr300 = static_library(
   dependencies : [dep_libdrm_radeon, dep_llvm],
 )
 
+driver_r300 = declare_dependency(
+  compile_args : '-DGALLIUM_R300',
+  link_with : [libr300, libradeonwinsys],
+)
+
 if with_tests
   test('r300_compiler_test', executable(
       'r300_compiler_test',

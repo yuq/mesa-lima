@@ -37,3 +37,8 @@ libvirgl = static_library(
   include_directories : inc_common,
   dependencies : dep_libdrm,
 )
+
+driver_virgl = declare_dependency(
+  compile_args : '-DGALLIUM_VIRGL',
+  link_with : [libvirgl, libvirgldrm, libvirglvtest],
+)
