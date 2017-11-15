@@ -1,0 +1,3 @@
+C_SOURCES := \
+   rockchip_drm_public.h \
+   rockchip_drm_winsys.c
