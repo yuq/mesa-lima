@@ -28,6 +28,7 @@
 #include "util/u_math.h"
 #include "util/u_debug.h"
 #include "util/u_transfer.h"
+#include "renderonly/renderonly.h"
 
 #include "state_tracker/drm_driver.h"
 
@@ -147,6 +148,16 @@ lima_resource_create(struct pipe_screen *pscreen,
       return NULL;
    }
 
+   if (screen->ro && templat->bind & PIPE_BIND_SCANOUT) {
+      res->scanout =
+         renderonly_scanout_for_resource(pres, screen->ro, NULL);
+      if (!res->scanout) {
+         lima_buffer_free(res->buffer);
+         FREE(res);
+         return NULL;
+      }
+   }
+
    debug_printf("%s: pres=%p width=%u height=%u\n",
                 __func__, &res->base, pres->width0, pres->height0);
 
@@ -156,10 +167,14 @@ lima_resource_create(struct pipe_screen *pscreen,
 static void
 lima_resource_destroy(struct pipe_screen *pscreen, struct pipe_resource *pres)
 {
+   struct lima_screen *screen = lima_screen(pscreen);
    struct lima_resource *res = lima_resource(pres);
 
    if (res->buffer)
       lima_buffer_free(res->buffer);
+
+   if (res->scanout)
+      renderonly_scanout_destroy(res->scanout, screen->ro);
 
    FREE(res);
 }
@@ -222,6 +237,7 @@ lima_resource_get_handle(struct pipe_screen *pscreen,
                          struct pipe_resource *pres,
                          struct winsys_handle *handle, unsigned usage)
 {
+   struct lima_screen *screen = lima_screen(pscreen);
    struct lima_resource *res = lima_resource(pres);
    lima_bo_handle bo = res->buffer->bo;
    int err;
@@ -233,6 +249,8 @@ lima_resource_get_handle(struct pipe_screen *pscreen,
          return FALSE;
       break;
    case DRM_API_HANDLE_TYPE_KMS:
+      if (screen->ro && renderonly_get_handle(res->scanout, handle))
+         return TRUE;
       err = lima_bo_export(bo, lima_bo_handle_type_kms, &handle->handle);
       if (err)
          return FALSE;
