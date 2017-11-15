@@ -4685,7 +4685,7 @@ struct gl_image_unit
    /**
     * Level of the texture object bound to this unit.
     */
-   GLuint Level;
+   GLubyte Level;
 
    /**
     * \c GL_TRUE if the whole level is bound as an array of layers, \c
@@ -4698,13 +4698,13 @@ struct gl_image_unit
     * Layer of the texture object bound to this unit as specified by the
     * application.
     */
-   GLuint Layer;
+   GLushort Layer;
 
    /**
-    * Layer of the texture object bound to this unit, or zero if the
-    * whole level is bound.
+    * Layer of the texture object bound to this unit, or zero if
+    * Layered == false.
     */
-   GLuint _Layer;
+   GLushort _Layer;
 
    /**
     * Access allowed to this texture image.  Either \c GL_READ_ONLY,
@@ -4722,8 +4722,7 @@ struct gl_image_unit
    /**
     * Mesa format corresponding to \c Format.
     */
-   mesa_format _ActualFormat;
-
+   mesa_format _ActualFormat:16;
 };
 
 /**
