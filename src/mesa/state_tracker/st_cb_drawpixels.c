@@ -736,11 +736,11 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
          const struct pipe_sampler_state *samplers[PIPE_MAX_SAMPLERS];
          uint num = MAX3(fpv->drawpix_sampler + 1,
                          fpv->pixelmap_sampler + 1,
-                         st->state.num_samplers[PIPE_SHADER_FRAGMENT]);
+                         st->state.num_frag_samplers);
          uint i;
 
-         for (i = 0; i < st->state.num_samplers[PIPE_SHADER_FRAGMENT]; i++)
-            samplers[i] = &st->state.samplers[PIPE_SHADER_FRAGMENT][i];
+         for (i = 0; i < st->state.num_frag_samplers; i++)
+            samplers[i] = &st->state.frag_samplers[i];
 
          samplers[fpv->drawpix_sampler] = &sampler;
          if (sv[1])
@@ -763,7 +763,7 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
                       fpv->pixelmap_sampler + 1,
                       st->state.num_sampler_views[PIPE_SHADER_FRAGMENT]);
 
-      memcpy(sampler_views, st->state.sampler_views[PIPE_SHADER_FRAGMENT],
+      memcpy(sampler_views, st->state.frag_sampler_views,
              sizeof(sampler_views));
 
       sampler_views[fpv->drawpix_sampler] = sv[0];
