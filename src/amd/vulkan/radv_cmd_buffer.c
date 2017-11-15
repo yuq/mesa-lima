@@ -1297,7 +1297,7 @@ radv_set_depth_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 	va += image->offset + image->clear_value_offset;
 	unsigned reg_offset = 0, reg_count = 0;
 
-	if (!image->surface.htile_size || !aspects)
+	if (!image->surface.htile_size)
 		return;
 
 	if (aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {
