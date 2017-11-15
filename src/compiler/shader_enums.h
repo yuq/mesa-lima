@@ -75,7 +75,6 @@ const char *_mesa_shader_stage_to_abbrev(unsigned stage);
 typedef enum
 {
    VERT_ATTRIB_POS,
-   VERT_ATTRIB_WEIGHT,
    VERT_ATTRIB_NORMAL,
    VERT_ATTRIB_COLOR0,
    VERT_ATTRIB_COLOR1,
@@ -141,7 +140,6 @@ const char *gl_vert_attrib_name(gl_vert_attrib attrib);
  */
 /*@{*/
 #define VERT_BIT_POS             BITFIELD64_BIT(VERT_ATTRIB_POS)
-#define VERT_BIT_WEIGHT          BITFIELD64_BIT(VERT_ATTRIB_WEIGHT)
 #define VERT_BIT_NORMAL          BITFIELD64_BIT(VERT_ATTRIB_NORMAL)
 #define VERT_BIT_COLOR0          BITFIELD64_BIT(VERT_ATTRIB_COLOR0)
 #define VERT_BIT_COLOR1          BITFIELD64_BIT(VERT_ATTRIB_COLOR1)

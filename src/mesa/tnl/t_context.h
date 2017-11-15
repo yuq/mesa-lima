@@ -77,7 +77,6 @@
  */
 enum {
 	_TNL_ATTRIB_POS,
-	_TNL_ATTRIB_WEIGHT,
 	_TNL_ATTRIB_NORMAL,
 	_TNL_ATTRIB_COLOR0,
 	_TNL_ATTRIB_COLOR1,
@@ -150,7 +149,7 @@ enum {
 /**
  * Handy attribute ranges:
  */
-#define _TNL_FIRST_PROG      _TNL_ATTRIB_WEIGHT
+#define _TNL_FIRST_PROG      _TNL_ATTRIB_NORMAL
 #define _TNL_LAST_PROG       _TNL_ATTRIB_TEX7
 
 #define _TNL_FIRST_TEX       _TNL_ATTRIB_TEX0
