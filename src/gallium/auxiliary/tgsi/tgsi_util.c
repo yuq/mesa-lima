@@ -40,8 +40,7 @@ union pointer_hack
 };
 
 void *
-tgsi_align_128bit(
-   void *unaligned )
+tgsi_align_128bit(void *unaligned)
 {
    union pointer_hack ph;
 
@@ -52,9 +51,8 @@ tgsi_align_128bit(
 }
 
 unsigned
-tgsi_util_get_src_register_swizzle(
-   const struct tgsi_src_register *reg,
-   unsigned component )
+tgsi_util_get_src_register_swizzle(const struct tgsi_src_register *reg,
+                                   unsigned component)
 {
    switch (component) {
    case TGSI_CHAN_X:
@@ -74,21 +72,19 @@ tgsi_util_get_src_register_swizzle(
 
 unsigned
 tgsi_util_get_full_src_register_swizzle(
-   const struct tgsi_full_src_register  *reg,
-   unsigned component )
+   const struct tgsi_full_src_register *reg,
+   unsigned component)
 {
-   return tgsi_util_get_src_register_swizzle(
-      &reg->Register,
-      component );
+   return tgsi_util_get_src_register_swizzle(&reg->Register, component);
 }
 
+
 void
-tgsi_util_set_src_register_swizzle(
-   struct tgsi_src_register *reg,
-   unsigned swizzle,
-   unsigned component )
+tgsi_util_set_src_register_swizzle(struct tgsi_src_register *reg,
+                                   unsigned swizzle,
+                                   unsigned component)
 {
-   switch( component ) {
+   switch (component) {
    case 0:
       reg->SwizzleX = swizzle;
       break;
@@ -102,21 +98,22 @@ tgsi_util_set_src_register_swizzle(
       reg->SwizzleW = swizzle;
       break;
    default:
-      assert( 0 );
+      assert(0);
    }
 }
 
+
 unsigned
 tgsi_util_get_full_src_register_sign_mode(
-   const struct  tgsi_full_src_register *reg,
-   unsigned component )
+   const struct tgsi_full_src_register *reg,
+   unsigned component)
 {
    unsigned sign_mode;
 
-   if( reg->Register.Absolute ) {
+   if (reg->Register.Absolute) {
       /* Consider only the post-abs negation. */
 
-      if( reg->Register.Negate ) {
+      if (reg->Register.Negate) {
          sign_mode = TGSI_UTIL_SIGN_SET;
       }
       else {
@@ -124,7 +121,7 @@ tgsi_util_get_full_src_register_sign_mode(
       }
    }
    else {
-      if( reg->Register.Negate ) {
+      if (reg->Register.Negate) {
          sign_mode = TGSI_UTIL_SIGN_TOGGLE;
       }
       else {
@@ -135,13 +132,12 @@ tgsi_util_get_full_src_register_sign_mode(
    return sign_mode;
 }
 
+
 void
-tgsi_util_set_full_src_register_sign_mode(
-   struct tgsi_full_src_register *reg,
-   unsigned sign_mode )
+tgsi_util_set_full_src_register_sign_mode(struct tgsi_full_src_register *reg,
+                                          unsigned sign_mode)
 {
-   switch (sign_mode)
-   {
+   switch (sign_mode) {
    case TGSI_UTIL_SIGN_CLEAR:
       reg->Register.Negate = 0;
       reg->Register.Absolute = 1;
@@ -163,9 +159,10 @@ tgsi_util_set_full_src_register_sign_mode(
       break;
 
    default:
-      assert( 0 );
+      assert(0);
    }
 }
+
 
 /**
  * Determine which channels of the specificed src register are effectively
