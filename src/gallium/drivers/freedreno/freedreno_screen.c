@@ -295,7 +295,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
 	case PIPE_CAP_GENERATE_MIPMAP:
 	case PIPE_CAP_SURFACE_REINTERPRET_BLOCKS:
-	case PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT:
 	case PIPE_CAP_ROBUST_BUFFER_ACCESS_BEHAVIOR:
 	case PIPE_CAP_CULL_DISTANCE:
 	case PIPE_CAP_PRIMITIVE_RESTART_FOR_PATCHES:
@@ -330,6 +329,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return 0;
 
 	case PIPE_CAP_DRAW_INDIRECT:
+	case PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT:
 		if (is_a5xx(screen))
 			return 1;
 		return 0;
