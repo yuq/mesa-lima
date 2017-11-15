@@ -1134,10 +1134,10 @@ struct gl_tex_env_combine_state
    /** Source operands: GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR, etc */
    GLenum16 OperandRGB[MAX_COMBINER_TERMS];
    GLenum16 OperandA[MAX_COMBINER_TERMS];
-   GLuint ScaleShiftRGB; /**< 0, 1 or 2 */
-   GLuint ScaleShiftA;   /**< 0, 1 or 2 */
-   GLuint _NumArgsRGB;   /**< Number of inputs used for the RGB combiner */
-   GLuint _NumArgsA;     /**< Number of inputs used for the A combiner */
+   GLubyte ScaleShiftRGB; /**< 0, 1 or 2 */
+   GLubyte ScaleShiftA;   /**< 0, 1 or 2 */
+   GLubyte _NumArgsRGB;   /**< Number of inputs used for the RGB combiner */
+   GLubyte _NumArgsA;     /**< Number of inputs used for the A combiner */
 };
 
 
@@ -1268,7 +1268,7 @@ struct gl_tex_env_combine_packed
 struct gl_texgen
 {
    GLenum16 Mode;       /**< GL_EYE_LINEAR, GL_SPHERE_MAP, etc */
-   GLbitfield _ModeBit; /**< TEXGEN_x bit corresponding to Mode */
+   GLbitfield8 _ModeBit; /**< TEXGEN_x bit corresponding to Mode */
    GLfloat ObjectPlane[4];
    GLfloat EyePlane[4];
 };
@@ -1301,7 +1301,7 @@ struct gl_texture_unit
  */
 struct gl_fixedfunc_texture_unit
 {
-   GLbitfield Enabled;          /**< bitmask of TEXTURE_*_BIT flags */
+   GLbitfield16 Enabled;          /**< bitmask of TEXTURE_*_BIT flags */
 
    GLenum16 EnvMode;            /**< GL_MODULATE, GL_DECAL, GL_BLEND, etc. */
    GLclampf EnvColor[4];
@@ -1311,8 +1311,8 @@ struct gl_fixedfunc_texture_unit
    struct gl_texgen GenT;
    struct gl_texgen GenR;
    struct gl_texgen GenQ;
-   GLbitfield TexGenEnabled;	/**< Bitwise-OR of [STRQ]_BIT values */
-   GLbitfield _GenFlags;	/**< Bitwise-OR of Gen[STRQ]._ModeBit */
+   GLbitfield8 TexGenEnabled;	/**< Bitwise-OR of [STRQ]_BIT values */
+   GLbitfield8 _GenFlags;	/**< Bitwise-OR of Gen[STRQ]._ModeBit */
 
    /**
     * \name GL_EXT_texture_env_combine
@@ -1325,14 +1325,14 @@ struct gl_fixedfunc_texture_unit
     */
    struct gl_tex_env_combine_state _EnvMode;
 
+   /** Current compressed TexEnv & Combine state */
+   struct gl_tex_env_combine_packed _CurrentCombinePacked;
+
    /**
     * Currently enabled combiner state.  This will point to either
     * \c Combine or \c _EnvMode.
     */
    struct gl_tex_env_combine_state *_CurrentCombine;
-
-   /** Current compressed TexEnv & Combine state */
-   struct gl_tex_env_combine_packed _CurrentCombinePacked;
 };
 
 
@@ -1341,33 +1341,33 @@ struct gl_fixedfunc_texture_unit
  */
 struct gl_texture_attrib
 {
-   GLuint CurrentUnit;   /**< GL_ACTIVE_TEXTURE */
-
-   /** GL_ARB_seamless_cubemap */
-   GLboolean CubeMapSeamless;
-
    struct gl_texture_object *ProxyTex[NUM_TEXTURE_TARGETS];
 
    /** GL_ARB_texture_buffer_object */
    struct gl_buffer_object *BufferObject;
 
+   GLuint CurrentUnit;   /**< GL_ACTIVE_TEXTURE */
+
    /** Texture coord units/sets used for fragment texturing */
-   GLbitfield _EnabledCoordUnits;
+   GLbitfield8 _EnabledCoordUnits;
 
    /** Texture coord units that have texgen enabled */
-   GLbitfield _TexGenEnabled;
+   GLbitfield8 _TexGenEnabled;
 
    /** Texture coord units that have non-identity matrices */
-   GLbitfield _TexMatEnabled;
+   GLbitfield8 _TexMatEnabled;
 
    /** Bitwise-OR of all Texture.Unit[i]._GenFlags */
-   GLbitfield _GenFlags;
+   GLbitfield8 _GenFlags;
 
    /** Largest index of a texture unit with _Current != NULL. */
-   GLint _MaxEnabledTexImageUnit;
+   GLshort _MaxEnabledTexImageUnit;
 
    /** Largest index + 1 of texture units that have had any CurrentTex set. */
-   GLint NumCurrentTexUsed;
+   GLubyte NumCurrentTexUsed;
+
+   /** GL_ARB_seamless_cubemap */
+   GLboolean CubeMapSeamless;
 
    struct gl_texture_unit Unit[MAX_COMBINED_TEXTURE_IMAGE_UNITS];
    struct gl_fixedfunc_texture_unit FixedFuncUnit[MAX_TEXTURE_COORD_UNITS];
