@@ -24,7 +24,7 @@
 # BOARD_GPU_DRIVERS should be defined.  The valid values are
 #
 #   classic drivers: i915 i965
-#   gallium drivers: swrast freedreno i915g nouveau pl111 exynos meson sun4i r300g r600g radeonsi vc4 virgl vmwgfx etnaviv imx
+#   gallium drivers: swrast freedreno i915g nouveau pl111 exynos meson rockchip sun4i r300g r600g radeonsi vc4 virgl vmwgfx etnaviv imx
 #
 # The main target is libGLES_mesa.  For each classic driver enabled, a DRI
 # module will also be built.  DRI modules will be loaded by libGLES_mesa.
@@ -54,6 +54,7 @@ gallium_drivers := \
 	nouveau.HAVE_GALLIUM_NOUVEAU \
 	pl111.HAVE_GALLIUM_PL111 \
 	exynos.HAVE_GALLIUM_EXYNOS \
+	rockchip.HAVE_GALLIUM_ROCKCHIP \
 	sun4i.HAVE_GALLIUM_SUN4I \
 	r300g.HAVE_GALLIUM_R300 \
 	r600g.HAVE_GALLIUM_R600 \
