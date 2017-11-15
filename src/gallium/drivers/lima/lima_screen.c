@@ -26,6 +26,7 @@
 
 #include "util/ralloc.h"
 #include "util/u_debug.h"
+#include "renderonly/renderonly.h"
 
 #include "lima_screen.h"
 #include "lima_context.h"
@@ -40,6 +41,7 @@ lima_screen_destroy(struct pipe_screen *pscreen)
 
    slab_destroy_parent(&screen->transfer_pool);
 
+   free(screen->ro);
    lima_device_delete(screen->dev);
    ralloc_free(screen);
 }
@@ -262,7 +264,7 @@ bool lima_shader_debug_gp = false;
 bool lima_shader_debug_pp = false;
 
 struct pipe_screen *
-lima_screen_create(int fd)
+lima_screen_create(int fd, struct renderonly *ro)
 {
    struct lima_screen *screen;
    lima_device_handle dev;
@@ -279,6 +281,16 @@ lima_screen_create(int fd)
       goto err_out1;
 
    screen->fd = fd;
+
+   if (ro) {
+      screen->ro = renderonly_dup(ro);
+      if (!screen->ro) {
+         fprintf(stderr, "Failed to dup renderonly object\n");
+         ralloc_free(screen);
+         return NULL;
+      }
+   }
+
    screen->dev = dev;
    if (lima_device_query_info(dev, &screen->info))
       goto err_out1;

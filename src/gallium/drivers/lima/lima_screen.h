@@ -37,6 +37,7 @@ struct ra_regs;
 
 struct lima_screen {
    struct pipe_screen base;
+   struct renderonly *ro;
 
    int refcnt;
    void *winsys_priv;
@@ -57,6 +58,6 @@ lima_screen(struct pipe_screen *pscreen)
 }
 
 struct pipe_screen *
-lima_screen_create(int fd);
+lima_screen_create(int fd, struct renderonly *ro);
 
 #endif
