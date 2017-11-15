@@ -1390,7 +1390,6 @@ static const struct value_desc *
 find_value(const char *func, GLenum pname, void **p, union value *v)
 {
    GET_CURRENT_CONTEXT(ctx);
-   struct gl_texture_unit *unit;
    int mask, hash;
    const struct value_desc *d;
    int api;
@@ -1445,8 +1444,10 @@ find_value(const char *func, GLenum pname, void **p, union value *v)
       *p = ((char *) ctx->Array.VAO + d->offset);
       return d;
    case LOC_TEXUNIT:
-      unit = &ctx->Texture.Unit[ctx->Texture.CurrentUnit];
-      *p = ((char *) unit + d->offset);
+      if (ctx->Texture.CurrentUnit < ARRAY_SIZE(ctx->Texture.FixedFuncUnit)) {
+         unsigned index = ctx->Texture.CurrentUnit;
+         *p = ((char *)&ctx->Texture.FixedFuncUnit[index] + d->offset);
+      }
       return d;
    case LOC_CUSTOM:
       find_custom_value(ctx, d, v);

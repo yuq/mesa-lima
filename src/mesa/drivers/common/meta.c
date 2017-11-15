@@ -631,14 +631,14 @@ _mesa_meta_begin(struct gl_context *ctx, GLbitfield state)
       GLuint u, tgt;
 
       save->ActiveUnit = ctx->Texture.CurrentUnit;
-      save->EnvMode = ctx->Texture.Unit[0].EnvMode;
+      save->EnvMode = ctx->Texture.FixedFuncUnit[0].EnvMode;
 
       /* Disable all texture units */
       for (u = 0; u < ctx->Const.MaxTextureUnits; u++) {
-         save->TexEnabled[u] = ctx->Texture.Unit[u].Enabled;
-         save->TexGenEnabled[u] = ctx->Texture.Unit[u].TexGenEnabled;
-         if (ctx->Texture.Unit[u].Enabled ||
-             ctx->Texture.Unit[u].TexGenEnabled) {
+         save->TexEnabled[u] = ctx->Texture.FixedFuncUnit[u].Enabled;
+         save->TexGenEnabled[u] = ctx->Texture.FixedFuncUnit[u].TexGenEnabled;
+         if (ctx->Texture.FixedFuncUnit[u].Enabled ||
+             ctx->Texture.FixedFuncUnit[u].TexGenEnabled) {
             _mesa_ActiveTexture(GL_TEXTURE0 + u);
             _mesa_set_enable(ctx, GL_TEXTURE_2D, GL_FALSE);
             if (ctx->Extensions.ARB_texture_cube_map)
@@ -1065,14 +1065,14 @@ _mesa_meta_end(struct gl_context *ctx)
 
       /* Restore fixed function texture enables, texgen */
       for (u = 0; u < ctx->Const.MaxTextureUnits; u++) {
-         if (ctx->Texture.Unit[u].Enabled != save->TexEnabled[u]) {
+         if (ctx->Texture.FixedFuncUnit[u].Enabled != save->TexEnabled[u]) {
             FLUSH_VERTICES(ctx, _NEW_TEXTURE);
-            ctx->Texture.Unit[u].Enabled = save->TexEnabled[u];
+            ctx->Texture.FixedFuncUnit[u].Enabled = save->TexEnabled[u];
          }
 
-         if (ctx->Texture.Unit[u].TexGenEnabled != save->TexGenEnabled[u]) {
+         if (ctx->Texture.FixedFuncUnit[u].TexGenEnabled != save->TexGenEnabled[u]) {
             FLUSH_VERTICES(ctx, _NEW_TEXTURE);
-            ctx->Texture.Unit[u].TexGenEnabled = save->TexGenEnabled[u];
+            ctx->Texture.FixedFuncUnit[u].TexGenEnabled = save->TexGenEnabled[u];
          }
       }
 

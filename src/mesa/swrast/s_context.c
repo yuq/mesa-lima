@@ -185,7 +185,7 @@ _swrast_update_texture_env( struct gl_context *ctx )
 
    for (i = 0; i < ctx->Const.MaxTextureUnits; i++) {
       const struct gl_tex_env_combine_state *combine =
-         ctx->Texture.Unit[i]._CurrentCombine;
+         ctx->Texture.FixedFuncUnit[i]._CurrentCombine;
       GLuint term;
       for (term = 0; term < combine->_NumArgsRGB; term++) {
          if (combine->SourceRGB[term] == GL_PRIMARY_COLOR) {

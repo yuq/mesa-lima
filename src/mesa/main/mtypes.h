@@ -1275,10 +1275,31 @@ struct gl_texgen
 
 
 /**
- * Texture unit state.  Contains enable flags, texture environment/function/
- * combiners, texgen state, and pointers to current texture objects.
+ * Sampler-related subset of a texture unit, like current texture objects.
  */
 struct gl_texture_unit
+{
+   GLfloat LodBias;		/**< for biasing mipmap levels */
+
+   /** Texture targets that have a non-default texture bound */
+   GLbitfield _BoundTextures;
+
+   /** Current sampler object (GL_ARB_sampler_objects) */
+   struct gl_sampler_object *Sampler;
+
+   /** Current texture object pointers */
+   struct gl_texture_object *CurrentTex[NUM_TEXTURE_TARGETS];
+
+   /** Points to highest priority, complete and enabled texture object */
+   struct gl_texture_object *_Current;
+};
+
+
+/**
+ * Fixed-function-related subset of a texture unit, like enable flags,
+ * texture environment/function/combiners, and texgen state.
+ */
+struct gl_fixedfunc_texture_unit
 {
    GLbitfield Enabled;          /**< bitmask of TEXTURE_*_BIT flags */
 
@@ -1292,14 +1313,6 @@ struct gl_texture_unit
    struct gl_texgen GenQ;
    GLbitfield TexGenEnabled;	/**< Bitwise-OR of [STRQ]_BIT values */
    GLbitfield _GenFlags;	/**< Bitwise-OR of Gen[STRQ]._ModeBit */
-
-   GLfloat LodBias;		/**< for biasing mipmap levels */
-
-   /** Texture targets that have a non-default texture bound */
-   GLbitfield _BoundTextures;
-
-   /** Current sampler object (GL_ARB_sampler_objects) */
-   struct gl_sampler_object *Sampler;
 
    /**
     * \name GL_EXT_texture_env_combine
@@ -1317,12 +1330,6 @@ struct gl_texture_unit
     * \c Combine or \c _EnvMode.
     */
    struct gl_tex_env_combine_state *_CurrentCombine;
-
-   /** Current texture object pointers */
-   struct gl_texture_object *CurrentTex[NUM_TEXTURE_TARGETS];
-
-   /** Points to highest priority, complete and enabled texture object */
-   struct gl_texture_object *_Current;
 
    /** Current compressed TexEnv & Combine state */
    struct gl_tex_env_combine_packed _CurrentCombinePacked;
@@ -1363,6 +1370,7 @@ struct gl_texture_attrib
    GLint NumCurrentTexUsed;
 
    struct gl_texture_unit Unit[MAX_COMBINED_TEXTURE_IMAGE_UNITS];
+   struct gl_fixedfunc_texture_unit FixedFuncUnit[MAX_COMBINED_TEXTURE_IMAGE_UNITS];
 };
 
 

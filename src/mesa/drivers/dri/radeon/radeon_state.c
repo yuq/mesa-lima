@@ -1890,7 +1890,7 @@ static void update_texturematrix( struct gl_context *ctx )
 	 if (needMatrix) {
 	    rmesa->NeedTexMatrix |= 1 << unit;
 	    radeonUploadTexMatrix( rmesa, unit,
-			!ctx->Texture.Unit[unit].TexGenEnabled );
+			!ctx->Texture.FixedFuncUnit[unit].TexGenEnabled );
 	 }
       }
    }
