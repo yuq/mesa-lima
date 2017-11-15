@@ -119,12 +119,14 @@ struct r600_shader {
 	boolean			uses_images;
 	uint8_t                 atomic_base;
 	uint8_t			rat_base;
+	uint8_t                 image_size_const_offset;
 };
 
 union r600_shader_key {
 	struct {
 		unsigned	nr_cbufs:4;
 		unsigned        first_atomic_counter:4;
+		unsigned        image_size_const_offset:5;
 		unsigned	color_two_side:1;
 		unsigned	alpha_to_one:1;
 	} ps;

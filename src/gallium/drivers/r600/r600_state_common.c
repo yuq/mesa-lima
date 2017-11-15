@@ -799,6 +799,8 @@ static inline void r600_shader_selector_key(const struct pipe_context *ctx,
 		key->gs.tri_strip_adj_fix = rctx->gs_tri_strip_adj_fix;
 		break;
 	case PIPE_SHADER_FRAGMENT: {
+		if (rctx->ps_shader->info.images_declared)
+			key->ps.image_size_const_offset = util_last_bit(rctx->samplers[PIPE_SHADER_FRAGMENT].views.enabled_mask);
 		key->ps.first_atomic_counter = r600_get_hw_atomic_count(ctx, PIPE_SHADER_FRAGMENT);
 		key->ps.color_two_side = rctx->rasterizer && rctx->rasterizer->two_side;
 		key->ps.alpha_to_one = rctx->alpha_to_one &&
@@ -1330,27 +1332,47 @@ static void r600_setup_buffer_constants(struct r600_context *rctx, int shader_ty
 static void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type)
 {
 	struct r600_textures_info *samplers = &rctx->samplers[shader_type];
-	int bits;
+	struct r600_image_state *images = NULL;
+	int bits, sview_bits;
 	uint32_t array_size;
 	int i;
 	uint32_t *constants;
 	uint32_t base_offset;
-	if (!samplers->views.dirty_buffer_constants)
+
+	if (shader_type == PIPE_SHADER_FRAGMENT)
+		images = &rctx->fragment_images;
+
+	if (!samplers->views.dirty_buffer_constants &&
+	    (images && !images->dirty_buffer_constants))
 		return;
 
+	if (images)
+		images->dirty_buffer_constants = FALSE;
 	samplers->views.dirty_buffer_constants = FALSE;
 
-	bits = util_last_bit(samplers->views.enabled_mask);
+	bits = sview_bits = util_last_bit(samplers->views.enabled_mask);
+	if (images)
+		bits += util_last_bit(images->enabled_mask);
 	array_size = bits * 2 * sizeof(uint32_t) * 4;
 
 	constants = r600_alloc_buf_consts(rctx, shader_type, array_size,
 					  &base_offset);
 
-	for (i = 0; i < bits; i++) {
+	for (i = 0; i < sview_bits; i++) {
 		if (samplers->views.enabled_mask & (1 << i)) {
 			uint32_t offset = (base_offset / 4) + i * 2;
 			constants[offset] = samplers->views.views[i]->base.texture->width0 / util_format_get_blocksize(samplers->views.views[i]->base.format);
 			constants[offset + 1] = samplers->views.views[i]->base.texture->array_size / 6;
+		}
+	}
+	if (images) {
+		for (i = sview_bits; i < bits; i++) {
+			int idx = i - sview_bits;
+			if (images->enabled_mask & (1 << idx)) {
+				uint32_t offset = (base_offset / 4) + i * 2;
+				constants[offset] = images->views[i].base.resource->width0 / util_format_get_blocksize(images->views[i].base.format);
+				constants[offset + 1] = images->views[i].base.resource->array_size / 6;
+			}
 		}
 	}
 }
