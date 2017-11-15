@@ -1370,7 +1370,7 @@ struct gl_texture_attrib
    GLint NumCurrentTexUsed;
 
    struct gl_texture_unit Unit[MAX_COMBINED_TEXTURE_IMAGE_UNITS];
-   struct gl_fixedfunc_texture_unit FixedFuncUnit[MAX_COMBINED_TEXTURE_IMAGE_UNITS];
+   struct gl_fixedfunc_texture_unit FixedFuncUnit[MAX_TEXTURE_COORD_UNITS];
 };
 
 

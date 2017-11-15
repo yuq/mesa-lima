@@ -400,6 +400,15 @@ _mesa_TexEnvfv( GLenum target, GLenum pname, const GLfloat *param )
       struct gl_fixedfunc_texture_unit *texUnit =
          _mesa_get_current_fixedfunc_tex_unit(ctx);
 
+      /* The GL spec says that we should report an error if the unit is greater
+       * than GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, but in practice, only
+       * fixed-function units are usable. This is probably a spec bug.
+       * Ignore glTexEnv(GL_TEXTURE_ENV) calls for non-fixed-func units,
+       * because we don't want to process calls that have no effect.
+       */
+      if (!texUnit)
+         return;
+
       switch (pname) {
       case GL_TEXTURE_ENV_MODE:
          set_env_mode(ctx, texUnit, (GLenum) iparam0);
@@ -649,6 +658,15 @@ _mesa_GetTexEnvfv( GLenum target, GLenum pname, GLfloat *params )
       struct gl_fixedfunc_texture_unit *texUnit =
          _mesa_get_current_fixedfunc_tex_unit(ctx);
 
+      /* The GL spec says that we should report an error if the unit is greater
+       * than GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, but in practice, only
+       * fixed-function units are usable. This is probably a spec bug.
+       * Ignore calls for non-fixed-func units, because we don't process
+       * glTexEnv for them either.
+       */
+      if (!texUnit)
+         return;
+
       if (pname == GL_TEXTURE_ENV_COLOR) {
          if(ctx->NewState & (_NEW_BUFFERS | _NEW_FRAG_CLAMP))
             _mesa_update_state(ctx);
@@ -716,6 +734,15 @@ _mesa_GetTexEnviv( GLenum target, GLenum pname, GLint *params )
    if (target == GL_TEXTURE_ENV) {
       struct gl_fixedfunc_texture_unit *texUnit =
          _mesa_get_current_fixedfunc_tex_unit(ctx);
+
+      /* The GL spec says that we should report an error if the unit is greater
+       * than GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, but in practice, only
+       * fixed-function units are usable. This is probably a spec bug.
+       * Ignore calls for non-fixed-func units, because we don't process
+       * glTexEnv for them either.
+       */
+      if (!texUnit)
+         return;
 
       if (pname == GL_TEXTURE_ENV_COLOR) {
          params[0] = FLOAT_TO_INT( texUnit->EnvColor[0] );

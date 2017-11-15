@@ -103,7 +103,7 @@ _mesa_copy_texture_state( const struct gl_context *src, struct gl_context *dst )
       }
    }
 
-   for (u = 0; u < src->Const.MaxCombinedTextureImageUnits; u++) {
+   for (u = 0; u < src->Const.MaxTextureCoordUnits; u++) {
       dst->Texture.FixedFuncUnit[u].Enabled = src->Texture.FixedFuncUnit[u].Enabled;
       dst->Texture.FixedFuncUnit[u].EnvMode = src->Texture.FixedFuncUnit[u].EnvMode;
       COPY_4V(dst->Texture.FixedFuncUnit[u].EnvColor, src->Texture.FixedFuncUnit[u].EnvColor);
