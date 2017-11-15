@@ -20,8 +20,6 @@
 
 osmesa_link_with = []
 osmesa_link_args = []
-osmesa_comp_args = ['-DGALLIUM_SOFTPIPE', '-DGALLIUM_TRACE']
-osmesa_deps = []
 
 if with_shared_glapi
   osmesa_link_with += libglapi
@@ -32,18 +30,13 @@ if with_ld_version_script
   ]
 endif
 
-if with_llvm
-  osmesa_comp_args += '-DGALLIUM_LLVMPIPE'
-  osmesa_deps += dep_llvm
-  osmesa_link_with += libllvmpipe
-endif
 # TODO: swr
 
 libosmesa = shared_library(
   osmesa_lib_name,
   'target.c',
-  c_args : [c_vis_args, osmesa_comp_args],
-  cpp_args : [cpp_vis_args, osmesa_comp_args],
+  c_args : [c_vis_args, '-DGALLIUM_TRACE'],
+  cpp_args : cpp_vis_args,
   link_args : [ld_args_gc_sections, osmesa_link_args],
   include_directories : [
     inc_include, inc_src, inc_gallium, inc_gallium_aux, inc_gallium_winsys,
@@ -52,9 +45,11 @@ libosmesa = shared_library(
   link_whole : [libosmesa_st],
   link_with : [
     libmesa_gallium, libgallium, libglapi_static, libws_null, libtrace,
-    libsoftpipe, osmesa_link_with,
+    osmesa_link_with,
   ],
-  dependencies : [dep_selinux, dep_thread, dep_clock, dep_unwind, osmesa_deps],
+  dependencies : [
+    dep_selinux, dep_thread, dep_clock, dep_unwind, driver_swrast,
+  ],
   version : '8.0.0',
   install : true,
 )
