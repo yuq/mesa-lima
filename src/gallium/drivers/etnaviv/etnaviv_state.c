@@ -185,7 +185,7 @@ etna_set_framebuffer_state(struct pipe_context *pctx,
       /* Clearing VIVS_PE_COLOR_FORMAT_COMPONENTS__MASK and
        * VIVS_PE_COLOR_FORMAT_OVERWRITE prevents us from overwriting the
        * color target */
-      cs->PE_COLOR_FORMAT = 0;
+      cs->PE_COLOR_FORMAT = VIVS_PE_COLOR_FORMAT_OVERWRITE;
       cs->PE_COLOR_STRIDE = 0;
       cs->TS_COLOR_STATUS_BASE.bo = NULL;
       cs->TS_COLOR_SURFACE_BASE.bo = NULL;
