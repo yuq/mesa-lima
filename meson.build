@@ -578,7 +578,7 @@ foreach h : ['xlocale.h', 'sys/sysctl.h', 'linux/futex.h']
   endif
 endforeach
 
-foreach f : ['strtof', 'mkostemp', 'posix_memalign']
+foreach f : ['strtof', 'mkostemp', 'posix_memalign', 'timespec_get']
   if cc.has_function(f)
     pre_args += '-DHAVE_@0@'.format(f.to_upper())
   endif
