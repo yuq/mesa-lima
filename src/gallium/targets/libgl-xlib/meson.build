@@ -29,10 +29,7 @@ gallium_xlib_c_args = [
 ]
 gallium_xlib_ld_args = []
 gallium_xlib_link_with = []
-gallium_xlib_depends = []
 gallium_xlib_link_depends = []
-gallium_xlib_xlibvers = []
-gallium_xlib_sources = []
 
 if with_ld_version_script
   gallium_xlib_ld_args += ['-Wl,--version-script', join_paths(meson.current_source_dir(), 'libgl-xlib.sym')]
@@ -40,11 +37,6 @@ if with_ld_version_script
 endif
 if with_shared_glapi
   gallium_xlib_link_with += libglapi
-endif
-if with_llvm
-  gallium_xlib_c_args += '-DGALLIUM_LLVMPIPE'
-  gallium_xlib_depends += dep_llvm
-  gallium_xlib_link_with += libllvmpipe
 endif
 # TODO: SWR
 
@@ -59,10 +51,10 @@ libgl = shared_library(
   link_args : [ld_args_bsymbolic, ld_args_gc_sections, gallium_xlib_ld_args],
   link_depends : gallium_xlib_link_depends,
   link_with : [
-    libxlib, libws_xlib, libsoftpipe, libtrace, librbug, libglapi_static,
+    libxlib, libws_xlib, libtrace, librbug, libglapi_static,
     libgallium, libmesa_util, libmesa_gallium, gallium_xlib_link_with,
   ],
-  dependencies : [dep_clock, dep_unwind, gallium_xlib_depends],
+  dependencies : [dep_thread, dep_clock, dep_unwind, driver_swrast],
   install : true,
   version : '1.5.0',
 )
