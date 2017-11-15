@@ -28,6 +28,7 @@
 #include "c11/threads.h"
 #include "util/u_hash_table.h"
 #include "util/u_pointer.h"
+#include "renderonly/renderonly.h"
 
 #include "lima_drm_public.h"
 
@@ -98,7 +99,7 @@ lima_drm_screen_create(int fd)
    } else {
       int dup_fd = fcntl(fd, F_DUPFD_CLOEXEC, 3);
 
-      pscreen = lima_screen_create(dup_fd);
+      pscreen = lima_screen_create(dup_fd, NULL);
       if (pscreen) {
          util_hash_table_set(fd_tab, intptr_to_pointer(dup_fd), pscreen);
 
@@ -114,4 +115,10 @@ lima_drm_screen_create(int fd)
 unlock:
    mtx_unlock(&lima_screen_mutex);
    return pscreen;
+}
+
+struct pipe_screen *
+lima_drm_screen_create_renderonly(struct renderonly *ro)
+{
+   return lima_screen_create(fcntl(ro->gpu_fd, F_DUPFD_CLOEXEC, 3), ro);
 }

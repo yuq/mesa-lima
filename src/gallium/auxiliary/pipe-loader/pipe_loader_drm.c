@@ -111,6 +111,11 @@ static const struct drm_driver_descriptor driver_descriptors[] = {
         .configuration = pipe_default_configuration_query,
     },
     {
+       .driver_name = "sun4i-drm",
+        .create_screen = pipe_sun4i_create_screen,
+        .configuration = pipe_default_configuration_query,
+    },
+    {
         .driver_name = "virtio_gpu",
         .create_screen = pipe_virgl_create_screen,
         .configuration = pipe_default_configuration_query,
