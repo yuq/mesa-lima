@@ -121,6 +121,11 @@ static const struct drm_driver_descriptor driver_descriptors[] = {
         .configuration = pipe_default_configuration_query,
     },
     {
+        .driver_name = "rockchip",
+        .create_screen = pipe_rockchip_create_screen,
+        .configuration = pipe_default_configuration_query,
+    },
+    {
        .driver_name = "sun4i-drm",
         .create_screen = pipe_sun4i_create_screen,
         .configuration = pipe_default_configuration_query,
