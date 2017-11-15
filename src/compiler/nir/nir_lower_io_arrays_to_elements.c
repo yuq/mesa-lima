@@ -35,6 +35,9 @@ static unsigned
 get_io_offset(nir_builder *b, nir_deref_var *deref, nir_variable *var,
               unsigned *element_index)
 {
+   bool vs_in = (b->shader->info.stage == MESA_SHADER_VERTEX) &&
+                (var->data.mode == nir_var_shader_in);
+
    nir_deref *tail = &deref->deref;
 
    /* For per-vertex input arrays (i.e. geometry shader inputs), skip the
@@ -52,7 +55,7 @@ get_io_offset(nir_builder *b, nir_deref_var *deref, nir_variable *var,
          nir_deref_array *deref_array = nir_deref_as_array(tail);
          assert(deref_array->deref_array_type != nir_deref_array_type_indirect);
 
-         unsigned size = glsl_count_attribute_slots(tail->type, false);
+         unsigned size = glsl_count_attribute_slots(tail->type, vs_in);
          offset += size * deref_array->base_offset;
 
          unsigned num_elements = glsl_type_is_array(tail->type) ?
@@ -337,6 +340,45 @@ lower_io_arrays_to_elements(nir_shader *shader, nir_variable_mode mask,
          }
       }
    }
+}
+
+void
+nir_lower_io_arrays_to_elements_no_indirects(nir_shader *shader)
+{
+   struct hash_table *split_inputs =
+      _mesa_hash_table_create(NULL, _mesa_hash_pointer,
+                              _mesa_key_pointer_equal);
+   struct hash_table *split_outputs =
+      _mesa_hash_table_create(NULL, _mesa_hash_pointer,
+                              _mesa_key_pointer_equal);
+
+   uint64_t indirects[4] = {0}, patch_indirects[4] = {0};
+
+   lower_io_arrays_to_elements(shader, nir_var_shader_out, indirects,
+                               patch_indirects, split_outputs);
+
+   lower_io_arrays_to_elements(shader, nir_var_shader_in, indirects,
+                               patch_indirects, split_inputs);
+
+   /* Remove old input from the shaders inputs list */
+   struct hash_entry *entry;
+   hash_table_foreach(split_inputs, entry) {
+      nir_variable *var = (nir_variable *) entry->key;
+      exec_node_remove(&var->node);
+
+      free(entry->data);
+   }
+
+   /* Remove old output from the shaders outputs list */
+   hash_table_foreach(split_outputs, entry) {
+      nir_variable *var = (nir_variable *) entry->key;
+      exec_node_remove(&var->node);
+
+      free(entry->data);
+   }
+
+   _mesa_hash_table_destroy(split_inputs, NULL);
+   _mesa_hash_table_destroy(split_outputs, NULL);
 }
 
 void
