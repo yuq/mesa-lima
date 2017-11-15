@@ -264,7 +264,8 @@ create_indirects_mask(nir_shader *shader, uint64_t *indirects,
 static void
 lower_io_arrays_to_elements(nir_shader *shader, nir_variable_mode mask,
                             uint64_t *indirects, uint64_t *patch_indirects,
-                            struct hash_table *varyings)
+                            struct hash_table *varyings,
+                            bool after_cross_stage_opts)
 {
    nir_foreach_function(function, shader) {
       if (function->impl) {
@@ -313,14 +314,16 @@ lower_io_arrays_to_elements(nir_shader *shader, nir_variable_mode mask,
                    glsl_type_is_struct(glsl_without_array(type)))
                   continue;
 
-               if (var->data.location < VARYING_SLOT_VAR0 &&
+               /* Skip builtins */
+               if (!after_cross_stage_opts &&
+                   var->data.location < VARYING_SLOT_VAR0 &&
                    var->data.location >= 0)
                   continue;
 
                /* Don't bother splitting if we can't opt away any unused
                 * elements.
                 */
-               if (var->data.always_active_io)
+               if (!after_cross_stage_opts && var->data.always_active_io)
                   continue;
 
                switch (intr->intrinsic) {
@@ -355,10 +358,10 @@ nir_lower_io_arrays_to_elements_no_indirects(nir_shader *shader)
    uint64_t indirects[4] = {0}, patch_indirects[4] = {0};
 
    lower_io_arrays_to_elements(shader, nir_var_shader_out, indirects,
-                               patch_indirects, split_outputs);
+                               patch_indirects, split_outputs, true);
 
    lower_io_arrays_to_elements(shader, nir_var_shader_in, indirects,
-                               patch_indirects, split_inputs);
+                               patch_indirects, split_inputs, true);
 
    /* Remove old input from the shaders inputs list */
    struct hash_entry *entry;
@@ -398,10 +401,10 @@ nir_lower_io_arrays_to_elements(nir_shader *producer, nir_shader *consumer)
                          nir_var_shader_in);
 
    lower_io_arrays_to_elements(producer, nir_var_shader_out, indirects,
-                               patch_indirects, split_outputs);
+                               patch_indirects, split_outputs, false);
 
    lower_io_arrays_to_elements(consumer, nir_var_shader_in, indirects,
-                               patch_indirects, split_inputs);
+                               patch_indirects, split_inputs, false);
 
    /* Remove old input from the shaders inputs list */
    struct hash_entry *entry;
