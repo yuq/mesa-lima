@@ -1309,8 +1309,6 @@ radv_set_depth_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 	if (aspects & VK_IMAGE_ASPECT_DEPTH_BIT)
 		++reg_count;
 
-	radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs, image->bo, 8);
-
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_WRITE_DATA, 2 + reg_count, 0));
 	radeon_emit(cmd_buffer->cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
 				    S_370_WR_CONFIRM(1) |
