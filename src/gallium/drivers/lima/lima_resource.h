@@ -49,6 +49,7 @@ enum lima_buffer_alloc_flag {
 struct lima_resource {
    struct pipe_resource base;
 
+   struct renderonly_scanout *scanout;
    struct lima_buffer *buffer;
    uint32_t stride;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2017 Lima Project
+ * Copyright (c) 2017 Lima Project
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -16,18 +16,16 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
  * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
- * IN THE SOFTWARE.
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 
-#ifndef __LIMA_DRM_PUBLIC_H__
-#define __LIMA_DRM_PUBLIC_H__
+#ifndef __SUN4I_DRM_PUBLIC_H__
+#define __SUN4I_DRM_PUBLIC_H__
 
 struct pipe_screen;
-struct renderonly;
 
-struct pipe_screen *lima_drm_screen_create(int drmFD);
-struct pipe_screen *lima_drm_screen_create_renderonly(struct renderonly *ro);
+struct pipe_screen *sun4i_screen_create(int fd);
 
-#endif /* __LIMA_DRM_PUBLIC_H__ */
+#endif /* __SUN4I_DRM_PUBLIC_H__ */

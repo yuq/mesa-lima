@@ -1,0 +1,3 @@
+C_SOURCES := \
+   sun4i_drm_public.h \
+   sun4i_drm_winsys.c
