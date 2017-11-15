@@ -564,6 +564,30 @@ do_batch_dump(struct brw_context *brw)
          decode_struct(brw, spec, "DEPTH_STENCIL_STATE", state,
                        state_gtt_offset, p[1] & ~0x3fu, color);
          break;
+      case MEDIA_INTERFACE_DESCRIPTOR_LOAD: {
+         struct gen_group *group =
+            gen_spec_find_struct(spec, "RENDER_SURFACE_STATE");
+         if (!group)
+            break;
+
+         uint32_t idd_offset = p[3] & ~0x1fu;
+         decode_struct(brw, spec, "INTERFACE_DESCRIPTOR_DATA", state,
+                       state_gtt_offset, idd_offset, color);
+
+         uint32_t ss_offset = state[idd_offset / 4 + 3] & ~0x1fu;
+         decode_structs(brw, spec, "SAMPLER_STATE", state,
+                        state_gtt_offset, ss_offset, 4 * 4, color);
+
+         uint32_t bt_offset = state[idd_offset / 4 + 4] & ~0x1fu;
+         int bt_entries = brw_state_batch_size(brw, bt_offset) / 4;
+         uint32_t *bt_pointers = &state[bt_offset / 4];
+         for (int i = 0; i < bt_entries; i++) {
+            fprintf(stderr, "SURFACE_STATE - BTI = %d\n", i);
+            gen_print_group(stderr, group, state_gtt_offset + bt_pointers[i],
+                            &state[bt_pointers[i] / 4], color);
+         }
+         break;
+      }
       }
    }
 
