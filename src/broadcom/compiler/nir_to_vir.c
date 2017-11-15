@@ -1065,6 +1065,12 @@ emit_frag_end(struct v3d_compile *c)
         }
         */
 
+        bool has_any_tlb_color_write = false;
+        for (int rt = 0; rt < c->fs_key->nr_cbufs; rt++) {
+                if (c->output_color_var[rt])
+                        has_any_tlb_color_write = true;
+        }
+
         if (c->output_position_index != -1) {
                 struct qinst *inst = vir_MOV_dest(c,
                                                   vir_reg(QFILE_TLBU, 0),
@@ -1075,7 +1081,17 @@ emit_frag_end(struct v3d_compile *c)
                                        TLB_TYPE_DEPTH |
                                        TLB_DEPTH_TYPE_PER_PIXEL |
                                        0xffffff00);
-        } else if (c->s->info.fs.uses_discard) {
+        } else if (c->s->info.fs.uses_discard || !has_any_tlb_color_write) {
+                /* Emit passthrough Z if it needed to be delayed until shader
+                 * end due to potential discards.
+                 *
+                 * Since (single-threaded) fragment shaders always need a TLB
+                 * write, emit passthrouh Z if we didn't have any color
+                 * buffers and flag us as potentially discarding, so that we
+                 * can use Z as the TLB write.
+                 */
+                c->s->info.fs.uses_discard = true;
+
                 struct qinst *inst = vir_MOV_dest(c,
                                                   vir_reg(QFILE_TLBU, 0),
                                                   vir_reg(QFILE_NULL, 0));
