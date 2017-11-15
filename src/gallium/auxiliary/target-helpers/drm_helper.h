@@ -80,6 +80,29 @@ pipe_pl111_create_screen(int fd, unsigned flags)
 
 #endif
 
+#ifdef GALLIUM_SUN4I
+#include "sun4i/drm/sun4i_drm_public.h"
+
+struct pipe_screen *
+pipe_sun4i_create_screen(int fd, unsigned flags)
+{
+   struct pipe_screen *screen;
+
+   screen = sun4i_screen_create(fd);
+   return screen ? debug_screen_wrap(screen) : NULL;
+}
+
+#else
+
+struct pipe_screen *
+pipe_sun4i_create_screen(int fd, unsigned flags)
+{
+   fprintf(stderr, "sun4i-drm: driver missing\n");
+   return NULL;
+}
+
+#endif
+
 #ifdef GALLIUM_R300
 #include "radeon/radeon_winsys.h"
 #include "radeon/drm/radeon_drm_public.h"
