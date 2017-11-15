@@ -27,8 +27,9 @@
 #include "vk_util.h"
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#define WSI_CB(x) .x = anv_##x
 static const struct wsi_callbacks wsi_cbs = {
-   .get_phys_device_format_properties = anv_GetPhysicalDeviceFormatProperties,
+   WSI_CB(GetPhysicalDeviceFormatProperties),
 };
 #endif
 

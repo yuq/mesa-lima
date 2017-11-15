@@ -29,8 +29,9 @@
 #include "vk_util.h"
 #include "util/macros.h"
 
+#define WSI_CB(x) .x = radv_##x
 MAYBE_UNUSED static const struct wsi_callbacks wsi_cbs = {
-   .get_phys_device_format_properties = radv_GetPhysicalDeviceFormatProperties,
+	WSI_CB(GetPhysicalDeviceFormatProperties),
 };
 
 VkResult

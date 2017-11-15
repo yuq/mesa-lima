@@ -118,11 +118,11 @@ struct wsi_device {
     struct wsi_interface *                  wsi[VK_ICD_WSI_PLATFORM_MAX];
 };
 
+#define WSI_CB(cb) PFN_vk##cb cb
 struct wsi_callbacks {
-   void (*get_phys_device_format_properties)(VkPhysicalDevice physicalDevice,
-                                             VkFormat format,
-                                             VkFormatProperties *pFormatProperties);
+   WSI_CB(GetPhysicalDeviceFormatProperties);
 };
+#undef WSI_CB
 
 #define WSI_DEFINE_NONDISP_HANDLE_CASTS(__wsi_type, __VkType)              \
                                                                            \

@@ -84,7 +84,7 @@ wsi_wl_display_add_vk_format(struct wsi_wl_display *display, VkFormat format)
    /* Don't add formats that aren't renderable. */
    VkFormatProperties props;
 
-   display->wsi_wl->cbs->get_phys_device_format_properties(display->wsi_wl->physical_device,
+   display->wsi_wl->cbs->GetPhysicalDeviceFormatProperties(display->wsi_wl->physical_device,
                                                            format, &props);
    if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
       return;
