@@ -1359,7 +1359,7 @@ GALLIUM_DRIVERS_DEFAULT="r300,r600,svga,swrast"
 AC_ARG_WITH([gallium-drivers],
     [AS_HELP_STRING([--with-gallium-drivers@<:@=DIRS...@:>@],
         [comma delimited Gallium drivers list, e.g.
-        "i915,nouveau,r300,r600,radeonsi,freedreno,pl111,svga,swrast,swr,tegra,vc4,vc5,virgl,etnaviv,imx,lima"
+        "i915,nouveau,r300,r600,radeonsi,freedreno,pl111,sun4i,svga,swrast,swr,tegra,vc4,vc5,virgl,etnaviv,imx,lima"
         @<:@default=r300,r600,svga,swrast@:>@])],
     [with_gallium_drivers="$withval"],
     [with_gallium_drivers="$GALLIUM_DRIVERS_DEFAULT"])
@@ -2736,6 +2736,9 @@ if test -n "$with_gallium_drivers"; then
         xpl111)
             HAVE_GALLIUM_PL111=yes
             ;;
+        xsun4i)
+            HAVE_GALLIUM_SUN4I=yes
+            ;;
         xvirgl)
             HAVE_GALLIUM_VIRGL=yes
             require_libdrm "virgl"
@@ -2777,6 +2780,10 @@ fi
 
 if test "x$HAVE_GALLIUM_NOUVEAU" != xyes -a "x$HAVE_GALLIUM_TEGRA" = xyes; then
     AC_MSG_ERROR([Building with tegra requires nouveau])
+fi
+
+if test "x$HAVE_GALLIUM_LIMA" != xyes -a "x$HAVE_GALLIUM_SUN4I" = xyes  ; then
+    AC_MSG_ERROR([Building with sun4i requires lima])
 fi
 
 detect_old_buggy_llvm() {
@@ -2869,6 +2876,7 @@ fi
 AM_CONDITIONAL(HAVE_GALLIUM_SVGA, test "x$HAVE_GALLIUM_SVGA" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_I915, test "x$HAVE_GALLIUM_I915" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_PL111, test "x$HAVE_GALLIUM_PL111" = xyes)
+AM_CONDITIONAL(HAVE_GALLIUM_SUN4I, test "x$HAVE_GALLIUM_SUN4I" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_R300, test "x$HAVE_GALLIUM_R300" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_R600, test "x$HAVE_GALLIUM_R600" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_RADEONSI, test "x$HAVE_GALLIUM_RADEONSI" = xyes)
@@ -3020,6 +3028,7 @@ AC_CONFIG_FILES([Makefile
                  src/gallium/drivers/llvmpipe/Makefile
                  src/gallium/drivers/nouveau/Makefile
                  src/gallium/drivers/pl111/Makefile
+                 src/gallium/drivers/sun4i/Makefile
                  src/gallium/drivers/r300/Makefile
                  src/gallium/drivers/r600/Makefile
                  src/gallium/drivers/radeonsi/Makefile
@@ -3070,6 +3079,7 @@ AC_CONFIG_FILES([Makefile
                  src/gallium/winsys/i915/drm/Makefile
                  src/gallium/winsys/nouveau/drm/Makefile
                  src/gallium/winsys/pl111/drm/Makefile
+                 src/gallium/winsys/sun4i/drm/Makefile
                  src/gallium/winsys/radeon/drm/Makefile
                  src/gallium/winsys/amdgpu/drm/Makefile
                  src/gallium/winsys/svga/drm/Makefile
