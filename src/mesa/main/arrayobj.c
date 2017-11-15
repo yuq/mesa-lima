@@ -252,7 +252,7 @@ init_array(struct gl_context *ctx,
    binding->Offset = 0;
    binding->Stride = array->_ElementSize;
    binding->BufferObj = NULL;
-   binding->_BoundArrays = BITFIELD64_BIT(index);
+   binding->_BoundArrays = BITFIELD_BIT(index);
 
    /* Vertex array buffers */
    _mesa_reference_buffer_object(ctx, &binding->BufferObj,
@@ -314,10 +314,10 @@ void
 _mesa_update_vao_client_arrays(struct gl_context *ctx,
                                struct gl_vertex_array_object *vao)
 {
-   GLbitfield64 arrays = vao->NewArrays;
+   GLbitfield arrays = vao->NewArrays;
 
    while (arrays) {
-      const int attrib = u_bit_scan64(&arrays);
+      const int attrib = u_bit_scan(&arrays);
       struct gl_vertex_array *client_array = &vao->_VertexAttrib[attrib];
       const struct gl_array_attributes *attrib_array =
          &vao->VertexAttrib[attrib];
@@ -334,13 +334,13 @@ bool
 _mesa_all_varyings_in_vbos(const struct gl_vertex_array_object *vao)
 {
    /* Walk those enabled arrays that have the default vbo attached */
-   GLbitfield64 mask = vao->_Enabled & ~vao->VertexAttribBufferMask;
+   GLbitfield mask = vao->_Enabled & ~vao->VertexAttribBufferMask;
 
    while (mask) {
       /* Do not use u_bit_scan64 as we can walk multiple
        * attrib arrays at once
        */
-      const int i = ffsll(mask) - 1;
+      const int i = ffs(mask) - 1;
       const struct gl_array_attributes *attrib_array =
          &vao->VertexAttrib[i];
       const struct gl_vertex_buffer_binding *buffer_binding =
@@ -368,10 +368,10 @@ bool
 _mesa_all_buffers_are_unmapped(const struct gl_vertex_array_object *vao)
 {
    /* Walk the enabled arrays that have a vbo attached */
-   GLbitfield64 mask = vao->_Enabled & vao->VertexAttribBufferMask;
+   GLbitfield mask = vao->_Enabled & vao->VertexAttribBufferMask;
 
    while (mask) {
-      const int i = ffsll(mask) - 1;
+      const int i = ffs(mask) - 1;
       const struct gl_array_attributes *attrib_array =
          &vao->VertexAttrib[i];
       const struct gl_vertex_buffer_binding *buffer_binding =

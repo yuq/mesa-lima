@@ -458,7 +458,7 @@ brw_prepare_vertices(struct brw_context *brw)
    /* BRW_NEW_VS_PROG_DATA */
    const struct brw_vs_prog_data *vs_prog_data =
       brw_vs_prog_data(brw->vs.base.prog_data);
-   GLbitfield64 vs_inputs = vs_prog_data->inputs_read;
+   GLbitfield vs_inputs = vs_prog_data->inputs_read;
    const unsigned char *ptr = NULL;
    GLuint interleaved = 0;
    unsigned int min_index = brw->vb.min_index + brw->basevertex;
@@ -487,16 +487,16 @@ brw_prepare_vertices(struct brw_context *brw)
    /* Accumulate the list of enabled arrays. */
    brw->vb.nr_enabled = 0;
    while (vs_inputs) {
-      GLuint first = ffsll(vs_inputs) - 1;
+      GLuint first = ffs(vs_inputs) - 1;
       assert (first < 64);
       GLuint index =
          first - DIV_ROUND_UP(_mesa_bitcount_64(vs_prog_data->double_inputs_read &
                                                 BITFIELD64_MASK(first)), 2);
       struct brw_vertex_element *input = &brw->vb.inputs[index];
       input->is_dual_slot = (vs_prog_data->double_inputs_read & BITFIELD64_BIT(first)) != 0;
-      vs_inputs &= ~BITFIELD64_BIT(first);
+      vs_inputs &= ~BITFIELD_BIT(first);
       if (input->is_dual_slot)
-         vs_inputs &= ~BITFIELD64_BIT(first + 1);
+         vs_inputs &= ~BITFIELD_BIT(first + 1);
       brw->vb.enabled[brw->vb.nr_enabled++] = input;
    }
 
