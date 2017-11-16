@@ -56,6 +56,8 @@ __pipe_mutex_assert_locked(mtx_t *mutex)
    assert(ret == thrd_busy);
    if (ret == thrd_success)
       mtx_unlock(mutex);
+#else
+   (void)mutex;
 #endif
 }
 
