@@ -92,7 +92,8 @@ choose_isl_surf_usage(VkImageCreateFlags vk_create_flags,
 }
 
 static isl_tiling_flags_t
-choose_isl_tiling_flags(const struct anv_image_create_info *anv_info)
+choose_isl_tiling_flags(const struct anv_image_create_info *anv_info,
+                        const struct isl_drm_modifier_info *isl_mod_info)
 {
    const VkImageCreateInfo *base_info = anv_info->vk_info;
    isl_tiling_flags_t flags = 0;
@@ -110,6 +111,9 @@ choose_isl_tiling_flags(const struct anv_image_create_info *anv_info)
 
    if (anv_info->isl_tiling_flags)
       flags &= anv_info->isl_tiling_flags;
+
+   if (isl_mod_info)
+      flags &= 1 << isl_mod_info->tiling;
 
    assert(flags);
 
@@ -493,6 +497,19 @@ make_surface(const struct anv_device *dev,
    return VK_SUCCESS;
 }
 
+static const struct isl_drm_modifier_info *
+get_legacy_scanout_drm_format_mod(VkImageTiling tiling)
+{
+   switch (tiling) {
+   case VK_IMAGE_TILING_OPTIMAL:
+      return isl_drm_modifier_get_info(I915_FORMAT_MOD_X_TILED);
+   case VK_IMAGE_TILING_LINEAR:
+      return isl_drm_modifier_get_info(DRM_FORMAT_MOD_LINEAR);
+   default:
+      unreachable("bad VkImageTiling");
+   }
+}
+
 VkResult
 anv_image_create(VkDevice _device,
                  const struct anv_image_create_info *create_info,
@@ -501,10 +518,16 @@ anv_image_create(VkDevice _device,
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    const VkImageCreateInfo *pCreateInfo = create_info->vk_info;
+   const struct isl_drm_modifier_info *isl_mod_info = NULL;
    struct anv_image *image = NULL;
    VkResult r;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
+
+   const struct wsi_image_create_info *wsi_info =
+      vk_find_struct_const(pCreateInfo->pNext, WSI_IMAGE_CREATE_INFO_MESA);
+   if (wsi_info && wsi_info->scanout)
+      isl_mod_info = get_legacy_scanout_drm_format_mod(pCreateInfo->tiling);
 
    anv_assert(pCreateInfo->mipLevels > 0);
    anv_assert(pCreateInfo->arrayLayers > 0);
@@ -528,14 +551,15 @@ anv_image_create(VkDevice _device,
    image->samples = pCreateInfo->samples;
    image->usage = pCreateInfo->usage;
    image->tiling = pCreateInfo->tiling;
-   image->drm_format_mod = DRM_FORMAT_MOD_INVALID;
    image->disjoint = pCreateInfo->flags & VK_IMAGE_CREATE_DISJOINT_BIT_KHR;
+   image->drm_format_mod = isl_mod_info ? isl_mod_info->modifier :
+                                          DRM_FORMAT_MOD_INVALID;
 
    const struct anv_format *format = anv_get_format(image->vk_format);
    assert(format != NULL);
 
    const isl_tiling_flags_t isl_tiling_flags =
-      choose_isl_tiling_flags(create_info);
+      choose_isl_tiling_flags(create_info, isl_mod_info);
 
    image->n_planes = format->n_planes;
 

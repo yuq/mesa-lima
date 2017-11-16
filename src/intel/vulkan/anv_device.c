@@ -1653,8 +1653,17 @@ VkResult anv_AllocateMemory(
    if (pdevice->memory.heaps[mem->type->heapIndex].supports_48bit_addresses)
       mem->bo->flags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
 
-   if (pdevice->has_exec_async)
+   const struct wsi_memory_allocate_info *wsi_info =
+      vk_find_struct_const(pAllocateInfo->pNext, WSI_MEMORY_ALLOCATE_INFO_MESA);
+   if (wsi_info && wsi_info->implicit_sync) {
+      /* We need to set the WRITE flag on window system buffers so that GEM
+       * will know we're writing to them and synchronize uses on other rings
+       * (eg if the display server uses the blitter ring).
+       */
+      mem->bo->flags |= EXEC_OBJECT_WRITE;
+   } else if (pdevice->has_exec_async) {
       mem->bo->flags |= EXEC_OBJECT_ASYNC;
+   }
 
    *pMem = anv_device_memory_to_handle(mem);
 
