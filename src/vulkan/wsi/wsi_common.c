@@ -514,14 +514,14 @@ wsi_common_queue_present(const struct wsi_device *wsi,
                          int queue_family_index,
                          const VkPresentInfoKHR *pPresentInfo)
 {
-   VkResult result = VK_SUCCESS;
+   VkResult final_result = VK_SUCCESS;
 
    const VkPresentRegionsKHR *regions =
       vk_find_struct_const(pPresentInfo->pNext, PRESENT_REGIONS_KHR);
 
    for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
       WSI_FROM_HANDLE(wsi_swapchain, swapchain, pPresentInfo->pSwapchains[i]);
-      VkResult item_result;
+      VkResult result;
 
       if (swapchain->fences[0] == VK_NULL_HANDLE) {
          const VkFenceCreateInfo fence_info = {
@@ -529,15 +529,11 @@ wsi_common_queue_present(const struct wsi_device *wsi,
             .pNext = NULL,
             .flags = 0,
          };
-         item_result = wsi->CreateFence(device, &fence_info,
-                                        &swapchain->alloc,
-                                        &swapchain->fences[0]);
-         if (pPresentInfo->pResults != NULL)
-            pPresentInfo->pResults[i] = item_result;
-         result = result == VK_SUCCESS ? item_result : result;
-         if (item_result != VK_SUCCESS) {
-            continue;
-         }
+         result = wsi->CreateFence(device, &fence_info,
+                                   &swapchain->alloc,
+                                   &swapchain->fences[0]);
+         if (result != VK_SUCCESS)
+            goto fail_present;
       } else {
          wsi->ResetFences(device, 1, &swapchain->fences[0]);
       }
@@ -548,25 +544,22 @@ wsi_common_queue_present(const struct wsi_device *wsi,
          .waitSemaphoreCount = pPresentInfo->waitSemaphoreCount,
          .pWaitSemaphores = pPresentInfo->pWaitSemaphores,
       };
-      wsi->QueueSubmit(queue, 1, &submit_info, swapchain->fences[0]);
+      result = wsi->QueueSubmit(queue, 1, &submit_info, swapchain->fences[0]);
+      if (result != VK_SUCCESS)
+         goto fail_present;
 
       const VkPresentRegionKHR *region = NULL;
       if (regions && regions->pRegions)
          region = &regions->pRegions[i];
 
-      item_result = swapchain->queue_present(swapchain,
-                                             queue,
-                                             pPresentInfo->waitSemaphoreCount,
-                                             pPresentInfo->pWaitSemaphores,
-                                             pPresentInfo->pImageIndices[i],
-                                             region);
-
-      if (pPresentInfo->pResults != NULL)
-         pPresentInfo->pResults[i] = item_result;
-      result = result == VK_SUCCESS ? item_result : result;
-      if (item_result != VK_SUCCESS) {
-         continue;
-      }
+      result = swapchain->queue_present(swapchain,
+                                        queue,
+                                        pPresentInfo->waitSemaphoreCount,
+                                        pPresentInfo->pWaitSemaphores,
+                                        pPresentInfo->pImageIndices[i],
+                                        region);
+      if (result != VK_SUCCESS)
+         goto fail_present;
 
       VkFence last = swapchain->fences[2];
       swapchain->fences[2] = swapchain->fences[1];
@@ -576,6 +569,15 @@ wsi_common_queue_present(const struct wsi_device *wsi,
       if (last != VK_NULL_HANDLE) {
          wsi->WaitForFences(device, 1, &last, true, 1);
       }
+
+   fail_present:
+      if (pPresentInfo->pResults != NULL)
+         pPresentInfo->pResults[i] = result;
+
+      /* Let the final result be our first unsuccessful result */
+      if (final_result == VK_SUCCESS)
+         final_result = result;
    }
-   return VK_SUCCESS;
+
+   return final_result;
 }
