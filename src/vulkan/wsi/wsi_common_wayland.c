@@ -400,7 +400,6 @@ wsi_wl_surface_get_support(VkIcdSurfaceBase *surface,
                            const VkAllocationCallbacks *alloc,
                            uint32_t queueFamilyIndex,
                            int local_fd,
-                           bool can_handle_different_gpu,
                            VkBool32* pSupported)
 {
    *pSupported = true;

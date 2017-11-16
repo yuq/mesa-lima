@@ -116,7 +116,7 @@ VkResult anv_GetPhysicalDeviceSurfaceSupportKHR(
 
    return iface->get_support(surface, &device->wsi_device,
                              &device->instance->alloc,
-                             queueFamilyIndex, device->local_fd, true, pSupported);
+                             queueFamilyIndex, device->local_fd, pSupported);
 }
 
 VkResult anv_GetPhysicalDeviceSurfaceCapabilitiesKHR(

@@ -405,7 +405,6 @@ x11_surface_get_support(VkIcdSurfaceBase *icd_surface,
                         const VkAllocationCallbacks *alloc,
                         uint32_t queueFamilyIndex,
                         int local_fd,
-                        bool can_handle_different_gpu,
                         VkBool32* pSupported)
 {
    xcb_connection_t *conn = x11_surface_get_connection(icd_surface);
@@ -420,10 +419,6 @@ x11_surface_get_support(VkIcdSurfaceBase *icd_surface,
       *pSupported = false;
       return VK_SUCCESS;
    }
-
-   if (!can_handle_different_gpu)
-      if (!wsi_x11_check_dri3_compatible(conn, local_fd))
-         return false;
 
    unsigned visual_depth;
    if (!get_visualtype_for_window(conn, window, &visual_depth)) {

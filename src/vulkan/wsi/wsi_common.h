@@ -57,7 +57,6 @@ struct wsi_interface {
                            const VkAllocationCallbacks *alloc,
                            uint32_t queueFamilyIndex,
                            int local_fd,
-                           bool can_handle_different_gpu,
                            VkBool32* pSupported);
    VkResult (*get_capabilities)(VkIcdSurfaceBase *surface,
                                 VkSurfaceCapabilitiesKHR* pSurfaceCapabilities);
