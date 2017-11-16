@@ -128,9 +128,11 @@ struct wsi_device {
    WSI_CB(CmdCopyImageToBuffer);
    WSI_CB(CreateBuffer);
    WSI_CB(CreateCommandPool);
+   WSI_CB(CreateFence);
    WSI_CB(CreateImage);
    WSI_CB(DestroyBuffer);
    WSI_CB(DestroyCommandPool);
+   WSI_CB(DestroyFence);
    WSI_CB(DestroyImage);
    WSI_CB(EndCommandBuffer);
    WSI_CB(FreeMemory);
@@ -139,7 +141,9 @@ struct wsi_device {
    WSI_CB(GetImageMemoryRequirements);
    WSI_CB(GetImageSubresourceLayout);
    WSI_CB(GetMemoryFdKHR);
+   WSI_CB(ResetFences);
    WSI_CB(QueueSubmit);
+   WSI_CB(WaitForFences);
 #undef WSI_CB
 
     struct wsi_interface *                  wsi[VK_ICD_WSI_PLATFORM_MAX];
@@ -212,5 +216,11 @@ VkResult wsi_wl_init_wsi(struct wsi_device *wsi_device,
 void wsi_wl_finish_wsi(struct wsi_device *wsi_device,
                        const VkAllocationCallbacks *alloc);
 
+VkResult
+wsi_common_queue_present(const struct wsi_device *wsi,
+                         VkDevice device_h,
+                         VkQueue queue_h,
+                         int queue_family_index,
+                         const VkPresentInfoKHR *pPresentInfo);
 
 #endif

@@ -258,91 +258,9 @@ VkResult radv_QueuePresentKHR(
 	const VkPresentInfoKHR*                  pPresentInfo)
 {
 	RADV_FROM_HANDLE(radv_queue, queue, _queue);
-	VkResult result = VK_SUCCESS;
-	const VkPresentRegionsKHR *regions =
-	         vk_find_struct_const(pPresentInfo->pNext, PRESENT_REGIONS_KHR);
-
-	for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
-		RADV_FROM_HANDLE(wsi_swapchain, swapchain, pPresentInfo->pSwapchains[i]);
-		struct radeon_winsys_cs *cs;
-		const VkPresentRegionKHR *region = NULL;
-		VkResult item_result;
-		struct radv_winsys_sem_info sem_info;
-
-		item_result = radv_alloc_sem_info(&sem_info,
-						  pPresentInfo->waitSemaphoreCount,
-						  pPresentInfo->pWaitSemaphores,
-						  0,
-						  NULL);
-		if (pPresentInfo->pResults != NULL)
-			pPresentInfo->pResults[i] = item_result;
-		result = result == VK_SUCCESS ? item_result : result;
-		if (item_result != VK_SUCCESS) {
-			radv_free_sem_info(&sem_info);
-			continue;
-		}
-
-		assert(radv_device_from_handle(swapchain->device) == queue->device);
-		if (swapchain->fences[0] == VK_NULL_HANDLE) {
-			item_result = radv_CreateFence(radv_device_to_handle(queue->device),
-						  &(VkFenceCreateInfo) {
-							  .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-								  .flags = 0,
-								  }, &swapchain->alloc, &swapchain->fences[0]);
-			if (pPresentInfo->pResults != NULL)
-				pPresentInfo->pResults[i] = item_result;
-			result = result == VK_SUCCESS ? item_result : result;
-			if (item_result != VK_SUCCESS) {
-				radv_free_sem_info(&sem_info);
-				continue;
-			}
-		} else {
-			radv_ResetFences(radv_device_to_handle(queue->device),
-					 1, &swapchain->fences[0]);
-		}
-
-		cs = queue->device->empty_cs[queue->queue_family_index];
-		RADV_FROM_HANDLE(radv_fence, fence, swapchain->fences[0]);
-		struct radeon_winsys_fence *base_fence = fence->fence;
-		struct radeon_winsys_ctx *ctx = queue->hw_ctx;
-
-		queue->device->ws->cs_submit(ctx, queue->queue_idx,
-					     &cs,
-					     1, NULL, NULL,
-					     &sem_info,
-					     false, base_fence);
-		fence->submitted = true;
-
-		if (regions && regions->pRegions)
-			region = &regions->pRegions[i];
-
-		item_result = swapchain->queue_present(swapchain,
-						  _queue,
-						  pPresentInfo->waitSemaphoreCount,
-						  pPresentInfo->pWaitSemaphores,
-						  pPresentInfo->pImageIndices[i],
-						  region);
-		/* TODO: What if one of them returns OUT_OF_DATE? */
-		if (pPresentInfo->pResults != NULL)
-			pPresentInfo->pResults[i] = item_result;
-		result = result == VK_SUCCESS ? item_result : result;
-		if (item_result != VK_SUCCESS) {
-			radv_free_sem_info(&sem_info);
-			continue;
-		}
-
-		VkFence last = swapchain->fences[2];
-		swapchain->fences[2] = swapchain->fences[1];
-		swapchain->fences[1] = swapchain->fences[0];
-		swapchain->fences[0] = last;
-
-		if (last != VK_NULL_HANDLE) {
-			radv_WaitForFences(radv_device_to_handle(queue->device),
-					   1, &last, true, 1);
-		}
-
-		radv_free_sem_info(&sem_info);
-	}
-
-	return VK_SUCCESS;
+	return wsi_common_queue_present(&queue->device->physical_device->wsi_device,
+					radv_device_to_handle(queue->device),
+					_queue,
+					queue->queue_family_index,
+					pPresentInfo);
 }
