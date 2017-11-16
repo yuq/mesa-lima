@@ -676,7 +676,7 @@ get_fourcc(struct dri2_egl_display *dri2_dpy,
            __DRIimage *image, int *fourcc)
 {
    EGLBoolean query;
-   uint32_t dri_format;
+   int dri_format;
 
    query = dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FOURCC,
                                        fourcc);
