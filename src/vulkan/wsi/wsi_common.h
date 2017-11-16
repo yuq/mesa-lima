@@ -89,10 +89,15 @@ struct wsi_device {
 
 typedef PFN_vkVoidFunction (VKAPI_PTR *WSI_FN_GetPhysicalDeviceProcAddr)(VkPhysicalDevice physicalDevice, const char* pName);
 
-void
+VkResult
 wsi_device_init(struct wsi_device *wsi,
                 VkPhysicalDevice pdevice,
-                WSI_FN_GetPhysicalDeviceProcAddr proc_addr);
+                WSI_FN_GetPhysicalDeviceProcAddr proc_addr,
+                const VkAllocationCallbacks *alloc);
+
+void
+wsi_device_finish(struct wsi_device *wsi,
+                  const VkAllocationCallbacks *alloc);
 
 #define ICD_DEFINE_NONDISP_HANDLE_CASTS(__VkIcdType, __VkType)             \
                                                                            \
@@ -112,16 +117,6 @@ wsi_device_init(struct wsi_device *wsi,
    __VkIcdType *__name = __VkIcdType ## _from_handle(__handle)
 
 ICD_DEFINE_NONDISP_HANDLE_CASTS(VkIcdSurfaceBase, VkSurfaceKHR)
-
-VkResult wsi_x11_init_wsi(struct wsi_device *wsi_device,
-                          const VkAllocationCallbacks *alloc);
-void wsi_x11_finish_wsi(struct wsi_device *wsi_device,
-                        const VkAllocationCallbacks *alloc);
-VkResult wsi_wl_init_wsi(struct wsi_device *wsi_device,
-                         const VkAllocationCallbacks *alloc,
-                         VkPhysicalDevice physical_device);
-void wsi_wl_finish_wsi(struct wsi_device *wsi_device,
-                       const VkAllocationCallbacks *alloc);
 
 VkResult
 wsi_common_get_surface_support(struct wsi_device *wsi_device,

@@ -124,6 +124,16 @@ struct wsi_interface {
                                 struct wsi_swapchain **swapchain);
 };
 
+VkResult wsi_x11_init_wsi(struct wsi_device *wsi_device,
+                          const VkAllocationCallbacks *alloc);
+void wsi_x11_finish_wsi(struct wsi_device *wsi_device,
+                        const VkAllocationCallbacks *alloc);
+VkResult wsi_wl_init_wsi(struct wsi_device *wsi_device,
+                         const VkAllocationCallbacks *alloc,
+                         VkPhysicalDevice physical_device);
+void wsi_wl_finish_wsi(struct wsi_device *wsi_device,
+                       const VkAllocationCallbacks *alloc);
+
 
 #define WSI_DEFINE_NONDISP_HANDLE_CASTS(__wsi_type, __VkType)              \
                                                                            \

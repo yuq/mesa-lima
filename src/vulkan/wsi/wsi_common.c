@@ -25,11 +25,14 @@
 #include "util/macros.h"
 #include "vk_util.h"
 
-void
+VkResult
 wsi_device_init(struct wsi_device *wsi,
                 VkPhysicalDevice pdevice,
-                WSI_FN_GetPhysicalDeviceProcAddr proc_addr)
+                WSI_FN_GetPhysicalDeviceProcAddr proc_addr,
+                const VkAllocationCallbacks *alloc)
 {
+   VkResult result;
+
    memset(wsi, 0, sizeof(*wsi));
 
 #define WSI_GET_CB(func) \
@@ -69,6 +72,36 @@ wsi_device_init(struct wsi_device *wsi,
    WSI_GET_CB(QueueSubmit);
    WSI_GET_CB(WaitForFences);
 #undef WSI_GET_CB
+
+#ifdef VK_USE_PLATFORM_XCB_KHR
+   result = wsi_x11_init_wsi(wsi, alloc);
+   if (result != VK_SUCCESS)
+      return result;
+#endif
+
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+   result = wsi_wl_init_wsi(wsi, alloc, pdevice);
+   if (result != VK_SUCCESS) {
+#ifdef VK_USE_PLATFORM_XCB_KHR
+      wsi_x11_finish_wsi(wsi, alloc);
+#endif
+      return result;
+   }
+#endif
+
+   return VK_SUCCESS;
+}
+
+void
+wsi_device_finish(struct wsi_device *wsi,
+                  const VkAllocationCallbacks *alloc)
+{
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+   wsi_wl_finish_wsi(wsi, alloc);
+#endif
+#ifdef VK_USE_PLATFORM_XCB_KHR
+   wsi_x11_finish_wsi(wsi, alloc);
+#endif
 }
 
 VkResult
