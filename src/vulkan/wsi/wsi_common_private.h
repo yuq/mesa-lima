@@ -64,11 +64,4 @@ void
 wsi_destroy_image(const struct wsi_swapchain *chain,
                   struct wsi_image *image);
 
-VkResult
-wsi_prime_image_blit_to_linear(const struct wsi_swapchain *chain,
-                               struct wsi_image *image,
-                               VkQueue queue,
-                               uint32_t waitSemaphoreCount,
-                               const VkSemaphore *pWaitSemaphores);
-
 #endif /* WSI_COMMON_PRIVATE_H */

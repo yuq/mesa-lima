@@ -84,6 +84,7 @@ wsi_swapchain_init(const struct wsi_device *wsi,
    chain->wsi = wsi;
    chain->device = device;
    chain->alloc = *pAllocator;
+   chain->use_prime_blit = false;
 
    chain->cmd_pools =
       vk_zalloc(pAllocator, sizeof(VkCommandPool) * wsi->queue_family_count, 8,
@@ -484,30 +485,6 @@ wsi_destroy_image(const struct wsi_swapchain *chain,
 }
 
 VkResult
-wsi_prime_image_blit_to_linear(const struct wsi_swapchain *chain,
-                               struct wsi_image *image,
-                               VkQueue queue,
-                               uint32_t waitSemaphoreCount,
-                               const VkSemaphore *pWaitSemaphores)
-{
-   uint32_t queue_family = chain->wsi->queue_get_family_index(queue);
-
-   VkPipelineStageFlags stage_flags = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-   const VkSubmitInfo submit_info = {
-      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-      .pNext = NULL,
-      .waitSemaphoreCount = waitSemaphoreCount,
-      .pWaitSemaphores = pWaitSemaphores,
-      .pWaitDstStageMask = &stage_flags,
-      .commandBufferCount = 1,
-      .pCommandBuffers = &image->prime.blit_cmd_buffers[queue_family],
-      .signalSemaphoreCount = 0,
-      .pSignalSemaphores = NULL,
-   };
-   return chain->wsi->QueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
-}
-
-VkResult
 wsi_common_get_images(VkSwapchainKHR _swapchain,
                       uint32_t *pSwapchainImageCount,
                       VkImage *pSwapchainImages)
@@ -559,6 +536,7 @@ wsi_common_queue_present(const struct wsi_device *wsi,
          .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
          .pNext = NULL,
       };
+
       VkPipelineStageFlags *stage_flags = NULL;
       if (i == 0) {
          /* We only need/want to wait on semaphores once.  After that, we're
@@ -582,6 +560,18 @@ wsi_common_queue_present(const struct wsi_device *wsi,
 
          submit_info.pWaitDstStageMask = stage_flags;
       }
+
+      if (swapchain->use_prime_blit) {
+         /* If we are using prime blits, we need to perform the blit now.  The
+          * command buffer is attached to the image.
+          */
+         struct wsi_image *image =
+            swapchain->get_wsi_image(swapchain, pPresentInfo->pImageIndices[i]);
+         submit_info.commandBufferCount = 1;
+         submit_info.pCommandBuffers =
+            &image->prime.blit_cmd_buffers[queue_family_index];
+      }
+
       result = wsi->QueueSubmit(queue, 1, &submit_info, swapchain->fences[0]);
       vk_free(&swapchain->alloc, stage_flags);
       if (result != VK_SUCCESS)
@@ -592,9 +582,6 @@ wsi_common_queue_present(const struct wsi_device *wsi,
          region = &regions->pRegions[i];
 
       result = swapchain->queue_present(swapchain,
-                                        queue,
-                                        pPresentInfo->waitSemaphoreCount,
-                                        pPresentInfo->pWaitSemaphores,
                                         pPresentInfo->pImageIndices[i],
                                         region);
       if (result != VK_SUCCESS)

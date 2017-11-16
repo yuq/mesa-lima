@@ -625,8 +625,6 @@ struct x11_image {
 struct x11_swapchain {
    struct wsi_swapchain                        base;
 
-   bool                                         use_prime_blit;
-
    xcb_connection_t *                           conn;
    xcb_window_t                                 window;
    xcb_gc_t                                     gc;
@@ -862,24 +860,10 @@ x11_acquire_next_image(struct wsi_swapchain *anv_chain,
 
 static VkResult
 x11_queue_present(struct wsi_swapchain *anv_chain,
-                  VkQueue queue,
-                  uint32_t waitSemaphoreCount,
-                  const VkSemaphore *pWaitSemaphores,
                   uint32_t image_index,
                   const VkPresentRegionKHR *damage)
 {
    struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
-   VkResult result;
-
-   if (chain->use_prime_blit) {
-      result = wsi_prime_image_blit_to_linear(&chain->base,
-                                              &chain->images[image_index].base,
-                                              queue,
-                                              waitSemaphoreCount,
-                                              pWaitSemaphores);
-      if (result != VK_SUCCESS)
-         return result;
-   }
 
    if (chain->threaded) {
       wsi_queue_push(&chain->present_queue, image_index);
@@ -947,7 +931,7 @@ x11_image_init(VkDevice device_h, struct x11_swapchain *chain,
    VkResult result;
    uint32_t bpp = 32;
 
-   if (chain->use_prime_blit) {
+   if (chain->base.use_prime_blit) {
       result = wsi_create_prime_image(&chain->base, pCreateInfo, &image->base);
    } else {
       result = wsi_create_native_image(&chain->base, pCreateInfo, &image->base);
@@ -1104,11 +1088,8 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->threaded = false;
    chain->status = VK_SUCCESS;
 
-
-   chain->use_prime_blit = false;
-   if (!wsi_x11_check_dri3_compatible(conn, local_fd)) {
-       chain->use_prime_blit = true;
-   }
+   if (!wsi_x11_check_dri3_compatible(conn, local_fd))
+       chain->base.use_prime_blit = true;
 
    chain->event_id = xcb_generate_id(chain->conn);
    xcb_present_select_input(chain->conn, chain->event_id, chain->window,

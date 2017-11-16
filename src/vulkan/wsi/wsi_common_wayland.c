@@ -644,9 +644,6 @@ static const struct wl_callback_listener frame_listener = {
 
 static VkResult
 wsi_wl_swapchain_queue_present(struct wsi_swapchain *wsi_chain,
-                               VkQueue queue,
-                               uint32_t waitSemaphoreCount,
-                               const VkSemaphore *pWaitSemaphores,
                                uint32_t image_index,
                                const VkPresentRegionKHR *damage)
 {

@@ -59,6 +59,8 @@ struct wsi_swapchain {
    VkPresentModeKHR present_mode;
    uint32_t image_count;
 
+   bool use_prime_blit;
+
    /* Command pools, one per queue family */
    VkCommandPool *cmd_pools;
 
@@ -70,9 +72,6 @@ struct wsi_swapchain {
                                   uint64_t timeout, VkSemaphore semaphore,
                                   uint32_t *image_index);
    VkResult (*queue_present)(struct wsi_swapchain *swap_chain,
-                             VkQueue queue,
-                             uint32_t waitSemaphoreCount,
-                             const VkSemaphore *pWaitSemaphores,
                              uint32_t image_index,
                              const VkPresentRegionKHR *damage);
 };
