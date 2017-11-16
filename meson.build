@@ -660,8 +660,10 @@ endif
 
 if cc.has_function('dl_iterate_phdr')
   pre_args += '-DHAVE_DL_ITERATE_PHDR'
-else
-  # TODO: this is required for vulkan
+elif with_intel_vk
+  error('Intel "Anvil" Vulkan driver requires the dl_iterate_phdr function')
+elif with_dri_i965 and get_option('shader-cache')
+  error('Intel i965 GL driver requires dl_iterate_phdr when built with shader caching.')
 endif
 
 # Determine whether or not the rt library is needed for time functions
