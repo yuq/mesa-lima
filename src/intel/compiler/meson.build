@@ -34,6 +34,8 @@ libintel_compiler_files = files(
   'brw_dead_control_flow.cpp',
   'brw_dead_control_flow.h',
   'brw_disasm.c',
+  'brw_disasm_info.c',
+  'brw_disasm_info.h',
   'brw_eu.c',
   'brw_eu_compact.c',
   'brw_eu_defines.h',
@@ -112,8 +114,6 @@ libintel_compiler_files = files(
   'brw_wm_iz.cpp',
   'gen6_gs_visitor.cpp',
   'gen6_gs_visitor.h',
-  'intel_asm_annotation.c',
-  'intel_asm_annotation.h',
 )
 
 brw_nir_trig = custom_target(

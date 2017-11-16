@@ -37,7 +37,7 @@
 #include "brw_inst.h"
 #include "brw_eu_defines.h"
 #include "brw_reg.h"
-#include "intel_asm_annotation.h"
+#include "brw_disasm_info.h"
 
 #ifdef __cplusplus
 extern "C" {
