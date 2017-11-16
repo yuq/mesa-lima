@@ -30,51 +30,58 @@
 __attribute__((weak)) void nir_print_instr(const nir_instr *instr, FILE *fp) {}
 
 void
-dump_assembly(void *assembly, int num_annotations, struct annotation *annotation,
-              const struct gen_device_info *devinfo)
+dump_assembly(void *assembly, struct disasm_info *disasm)
 {
+   const struct gen_device_info *devinfo = disasm->devinfo;
    const char *last_annotation_string = NULL;
    const void *last_annotation_ir = NULL;
 
-   for (int i = 0; i < num_annotations; i++) {
-      int start_offset = annotation[i].offset;
-      int end_offset = annotation[i + 1].offset;
+   foreach_list_typed(struct inst_group, group, link, &disasm->group_list) {
+      struct exec_node *next_node = exec_node_get_next(&group->link);
+      if (exec_node_is_tail_sentinel(next_node))
+         break;
 
-      if (annotation[i].block_start) {
-         fprintf(stderr, "   START B%d", annotation[i].block_start->num);
+      struct inst_group *next =
+         exec_node_data(struct inst_group, next_node, link);
+
+      int start_offset = group->offset;
+      int end_offset = next->offset;
+
+      if (group->block_start) {
+         fprintf(stderr, "   START B%d", group->block_start->num);
          foreach_list_typed(struct bblock_link, predecessor_link, link,
-                            &annotation[i].block_start->parents) {
+                            &group->block_start->parents) {
             struct bblock_t *predecessor_block = predecessor_link->block;
             fprintf(stderr, " <-B%d", predecessor_block->num);
          }
-         fprintf(stderr, " (%u cycles)\n", annotation[i].block_start->cycle_count);
+         fprintf(stderr, " (%u cycles)\n", group->block_start->cycle_count);
       }
 
-      if (last_annotation_ir != annotation[i].ir) {
-         last_annotation_ir = annotation[i].ir;
+      if (last_annotation_ir != group->ir) {
+         last_annotation_ir = group->ir;
          if (last_annotation_ir) {
             fprintf(stderr, "   ");
-            nir_print_instr(annotation[i].ir, stderr);
+            nir_print_instr(group->ir, stderr);
             fprintf(stderr, "\n");
          }
       }
 
-      if (last_annotation_string != annotation[i].annotation) {
-         last_annotation_string = annotation[i].annotation;
+      if (last_annotation_string != group->annotation) {
+         last_annotation_string = group->annotation;
          if (last_annotation_string)
             fprintf(stderr, "   %s\n", last_annotation_string);
       }
 
       brw_disassemble(devinfo, assembly, start_offset, end_offset, stderr);
 
-      if (annotation[i].error) {
-         fputs(annotation[i].error, stderr);
+      if (group->error) {
+         fputs(group->error, stderr);
       }
 
-      if (annotation[i].block_end) {
-         fprintf(stderr, "   END B%d", annotation[i].block_end->num);
+      if (group->block_end) {
+         fprintf(stderr, "   END B%d", group->block_end->num);
          foreach_list_typed(struct bblock_link, successor_link, link,
-                            &annotation[i].block_end->children) {
+                            &group->block_end->children) {
             struct bblock_t *successor_block = successor_link->block;
             fprintf(stderr, " ->B%d", successor_block->num);
          }
@@ -84,43 +91,51 @@ dump_assembly(void *assembly, int num_annotations, struct annotation *annotation
    fprintf(stderr, "\n");
 }
 
-static bool
-annotation_array_ensure_space(struct annotation_info *annotation)
+struct disasm_info *
+disasm_initialize(const struct gen_device_info *devinfo,
+                  const struct cfg_t *cfg)
 {
-   if (annotation->ann_size <= annotation->ann_count) {
-      int old_size = annotation->ann_size;
-      annotation->ann_size = MAX2(1024, annotation->ann_size * 2);
-      annotation->ann = reralloc(annotation->mem_ctx, annotation->ann,
-                                 struct annotation, annotation->ann_size);
-      if (!annotation->ann)
-         return false;
-
-      memset(annotation->ann + old_size, 0,
-             (annotation->ann_size - old_size) * sizeof(struct annotation));
-   }
-
-   return true;
+   struct disasm_info *disasm = ralloc(NULL, struct disasm_info);
+   exec_list_make_empty(&disasm->group_list);
+   disasm->devinfo = devinfo;
+   disasm->cfg = cfg;
+   disasm->cur_block = 0;
+   disasm->use_tail = false;
+   return disasm;
 }
 
-void annotate(const struct gen_device_info *devinfo,
-              struct annotation_info *annotation, const struct cfg_t *cfg,
-              struct backend_instruction *inst, unsigned offset)
+struct inst_group *
+disasm_new_inst_group(struct disasm_info *disasm, unsigned next_inst_offset)
 {
-   if (annotation->mem_ctx == NULL)
-      annotation->mem_ctx = ralloc_context(NULL);
+   struct inst_group *tail = rzalloc(disasm, struct inst_group);
+   tail->offset = next_inst_offset;
+   exec_list_push_tail(&disasm->group_list, &tail->link);
+   return tail;
+}
 
-   if (!annotation_array_ensure_space(annotation))
-      return;
+void
+disasm_annotate(struct disasm_info *disasm,
+                struct backend_instruction *inst, unsigned offset)
+{
+   const struct gen_device_info *devinfo = disasm->devinfo;
+   const struct cfg_t *cfg = disasm->cfg;
 
-   struct annotation *ann = &annotation->ann[annotation->ann_count++];
-   ann->offset = offset;
-   if ((INTEL_DEBUG & DEBUG_ANNOTATION) != 0) {
-      ann->ir = inst->ir;
-      ann->annotation = inst->annotation;
+   struct inst_group *group;
+   if (!disasm->use_tail) {
+      group = disasm_new_inst_group(disasm, offset);
+      disasm->use_tail = false;
+   } else {
+      group = exec_node_data(struct inst_group,
+                             exec_list_get_tail_raw(&disasm->group_list), link);
    }
 
-   if (bblock_start(cfg->blocks[annotation->cur_block]) == inst) {
-      ann->block_start = cfg->blocks[annotation->cur_block];
+   if ((INTEL_DEBUG & DEBUG_ANNOTATION) != 0) {
+      group->ir = inst->ir;
+      group->annotation = inst->annotation;
+   }
+
+   if (bblock_start(cfg->blocks[disasm->cur_block]) == inst) {
+      group->block_start = cfg->blocks[disasm->cur_block];
    }
 
    /* There is no hardware DO instruction on Gen6+, so since DO always
@@ -132,66 +147,48 @@ void annotate(const struct gen_device_info *devinfo,
     * a corresponding hardware instruction to disassemble.
     */
    if (devinfo->gen >= 6 && inst->opcode == BRW_OPCODE_DO) {
-      annotation->ann_count--;
+      disasm->use_tail = true;
    }
 
-   if (bblock_end(cfg->blocks[annotation->cur_block]) == inst) {
-      ann->block_end = cfg->blocks[annotation->cur_block];
-      annotation->cur_block++;
+   if (bblock_end(cfg->blocks[disasm->cur_block]) == inst) {
+      group->block_end = cfg->blocks[disasm->cur_block];
+      disasm->cur_block++;
    }
 }
 
 void
-annotation_finalize(struct annotation_info *annotation,
-                    unsigned next_inst_offset)
+disasm_insert_error(struct disasm_info *disasm, unsigned offset,
+                    const char *error)
 {
-   if (!annotation->ann_count)
-      return;
+   foreach_list_typed(struct inst_group, cur, link, &disasm->group_list) {
+      struct exec_node *next_node = exec_node_get_next(&cur->link);
+      if (exec_node_is_tail_sentinel(next_node))
+         break;
 
-   if (annotation->ann_count == annotation->ann_size) {
-      annotation->ann = reralloc(annotation->mem_ctx, annotation->ann,
-                                 struct annotation, annotation->ann_size + 1);
-   }
-   annotation->ann[annotation->ann_count].offset = next_inst_offset;
-}
-
-void
-annotation_insert_error(struct annotation_info *annotation, unsigned offset,
-                        const char *error)
-{
-   if (!annotation->ann_count)
-      return;
-
-   /* We may have to split an annotation, so ensure we have enough space
-    * allocated for that case up front.
-    */
-   if (!annotation_array_ensure_space(annotation))
-      return;
-
-   assume(annotation->ann_count > 0);
-
-   for (int i = 0; i < annotation->ann_count; i++) {
-      struct annotation *cur = &annotation->ann[i];
-      struct annotation *next = &annotation->ann[i + 1];
+      struct inst_group *next =
+         exec_node_data(struct inst_group, next_node, link);
 
       if (next->offset <= offset)
          continue;
 
       if (offset + sizeof(brw_inst) != next->offset) {
-         memmove(next, cur,
-                 (annotation->ann_count - i + 2) * sizeof(struct annotation));
+         struct inst_group *new = ralloc(disasm, struct inst_group);
+         memcpy(new, cur, sizeof(struct inst_group));
+
          cur->error = NULL;
          cur->error_length = 0;
          cur->block_end = NULL;
-         next->offset = offset + sizeof(brw_inst);
-         next->block_start = NULL;
-         annotation->ann_count++;
+
+         new->offset = offset + sizeof(brw_inst);
+         new->block_start = NULL;
+
+         exec_node_insert_after(&cur->link, &new->link);
       }
 
       if (cur->error)
          ralloc_strcat(&cur->error, error);
       else
-         cur->error = ralloc_strdup(annotation->mem_ctx, error);
+         cur->error = ralloc_strdup(disasm, error);
       return;
    }
 }

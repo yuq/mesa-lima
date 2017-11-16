@@ -1638,8 +1638,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
    int spill_count = 0, fill_count = 0;
    int loop_count = 0;
 
-   struct annotation_info annotation;
-   memset(&annotation, 0, sizeof(annotation));
+   struct disasm_info *disasm_info = disasm_initialize(devinfo, cfg);
 
    foreach_block_and_inst (block, fs_inst, inst, cfg) {
       struct brw_reg src[3], dst;
@@ -1666,7 +1665,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       }
 
       if (unlikely(debug_flag))
-         annotate(p->devinfo, &annotation, cfg, inst, p->next_insn_offset);
+         disasm_annotate(disasm_info, inst, p->next_insn_offset);
 
       /* If the instruction writes to more than one register, it needs to be
        * explicitly marked as compressed on Gen <= 5.  On Gen >= 6 the
@@ -2129,7 +2128,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
           */
          if (!patch_discard_jumps_to_fb_writes()) {
             if (unlikely(debug_flag)) {
-               annotation.ann_count--;
+               disasm_info->use_tail = true;
             }
          }
          break;
@@ -2189,7 +2188,9 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
    }
 
    brw_set_uip_jip(p, start_offset);
-   annotation_finalize(&annotation, p->next_insn_offset);
+
+   /* end of program sentinel */
+   disasm_new_inst_group(disasm_info, p->next_insn_offset);
 
 #ifndef NDEBUG
    bool validated =
@@ -2199,11 +2200,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       brw_validate_instructions(devinfo, p->store,
                                 start_offset,
                                 p->next_insn_offset,
-                                &annotation);
+                                disasm_info);
 
    int before_size = p->next_insn_offset - start_offset;
-   brw_compact_instructions(p, start_offset, annotation.ann_count,
-                            annotation.ann);
+   brw_compact_instructions(p, start_offset, disasm_info);
    int after_size = p->next_insn_offset - start_offset;
 
    if (unlikely(debug_flag)) {
@@ -2214,9 +2214,8 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
               spill_count, fill_count, promoted_constants, before_size, after_size,
               100.0f * (before_size - after_size) / before_size);
 
-      dump_assembly(p->store, annotation.ann_count, annotation.ann,
-                    p->devinfo);
-      ralloc_free(annotation.mem_ctx);
+      dump_assembly(p->store, disasm_info);
+      ralloc_free(disasm_info);
    }
    assert(validated);
 

@@ -24,14 +24,15 @@
 #ifndef _INTEL_ASM_ANNOTATION_H
 #define _INTEL_ASM_ANNOTATION_H
 
+#include "brw_cfg.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct backend_instruction;
-struct cfg_t;
+struct inst_group {
+   struct exec_node link;
 
-struct annotation {
    int offset;
 
    size_t error_length;
@@ -48,30 +49,34 @@ struct annotation {
    const char *annotation;
 };
 
-struct annotation_info {
-   void *mem_ctx;
-   struct annotation *ann;
-   int ann_count;
-   int ann_size;
+struct disasm_info {
+   struct exec_list group_list;
+
+   const struct gen_device_info *devinfo;
+   const struct cfg_t *cfg;
 
    /** Block index in the cfg. */
    int cur_block;
+   bool use_tail;
 };
 
 void
-dump_assembly(void *assembly, int num_annotations, struct annotation *annotation,
-              const struct gen_device_info *devinfo);
+dump_assembly(void *assembly, struct disasm_info *disasm);
+
+struct disasm_info *
+disasm_initialize(const struct gen_device_info *devinfo,
+                  const struct cfg_t *cfg);
+
+struct inst_group *
+disasm_new_inst_group(struct disasm_info *disasm, unsigned offset);
 
 void
-annotate(const struct gen_device_info *devinfo,
-         struct annotation_info *annotation, const struct cfg_t *cfg,
-         struct backend_instruction *inst, unsigned offset);
-void
-annotation_finalize(struct annotation_info *annotation, unsigned offset);
+disasm_annotate(struct disasm_info *disasm,
+                struct backend_instruction *inst, unsigned offset);
 
 void
-annotation_insert_error(struct annotation_info *annotation, unsigned offset,
-                        const char *error);
+disasm_insert_error(struct disasm_info *disasm, unsigned offset,
+                    const char *error);
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -1500,8 +1500,7 @@ generate_code(struct brw_codegen *p,
    const char *stage_abbrev = _mesa_shader_stage_to_abbrev(nir->info.stage);
    bool debug_flag = INTEL_DEBUG &
       intel_debug_flag_for_shader_stage(nir->info.stage);
-   struct annotation_info annotation;
-   memset(&annotation, 0, sizeof(annotation));
+   struct disasm_info *disasm_info = disasm_initialize(devinfo, cfg);
    int spill_count = 0, fill_count = 0;
    int loop_count = 0;
 
@@ -1509,7 +1508,7 @@ generate_code(struct brw_codegen *p,
       struct brw_reg src[3], dst;
 
       if (unlikely(debug_flag))
-         annotate(p->devinfo, &annotation, cfg, inst, p->next_insn_offset);
+         disasm_annotate(disasm_info, inst, p->next_insn_offset);
 
       for (unsigned int i = 0; i < 3; i++) {
          src[i] = inst->src[i].as_brw_reg();
@@ -2175,7 +2174,9 @@ generate_code(struct brw_codegen *p,
    }
 
    brw_set_uip_jip(p, 0);
-   annotation_finalize(&annotation, p->next_insn_offset);
+
+   /* end of program sentinel */
+   disasm_new_inst_group(disasm_info, p->next_insn_offset);
 
 #ifndef NDEBUG
    bool validated =
@@ -2184,10 +2185,10 @@ generate_code(struct brw_codegen *p,
 #endif
       brw_validate_instructions(devinfo, p->store,
                                 0, p->next_insn_offset,
-                                &annotation);
+                                disasm_info);
 
    int before_size = p->next_insn_offset;
-   brw_compact_instructions(p, 0, annotation.ann_count, annotation.ann);
+   brw_compact_instructions(p, 0, disasm_info);
    int after_size = p->next_insn_offset;
 
    if (unlikely(debug_flag)) {
@@ -2201,9 +2202,8 @@ generate_code(struct brw_codegen *p,
               spill_count, fill_count, before_size, after_size,
               100.0f * (before_size - after_size) / before_size);
 
-      dump_assembly(p->store, annotation.ann_count, annotation.ann,
-                    p->devinfo);
-      ralloc_free(annotation.mem_ctx);
+      dump_assembly(p->store, disasm_info);
+      ralloc_free(disasm_info);
    }
    assert(validated);
 
