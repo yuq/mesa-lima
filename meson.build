@@ -542,13 +542,16 @@ endif
 
 # TODO: texture-float (gallium/mesa only)
 
-# TODO: cross-compiling. I don't think this is relavent to meson
-
-# FIXME: enable asm when cross compiler
-# This is doable (autotools does it), but it's not of immediate concern
-if meson.is_cross_build() and host_machine.cpu_family().startswith('x86')
-  message('Cross compiling, disabling x86/x86_64 asm')
-  with_asm = false
+# Building x86 assembly code requires running x86 binaries. It is possible for
+# x86_64 OSes to run x86 binaries, so don't disable asm in those cases
+# TODO: it should be possible to use an exe_wrapper to run the binary during
+# the build. 
+if meson.is_cross_build() 
+  if not (build_machine.cpu_family() == 'x86_64' and host_machine.cpu_family() == 'x86'
+          and build_machine.system() == host_machine.system())
+    message('Cross compiling to x86 from non-x86, disabling asm')
+    with_asm = false
+  endif
 endif
 
 with_asm_arch = ''
