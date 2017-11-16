@@ -502,7 +502,20 @@ foreach a : ['-Wno-override-init', '-Wno-initializer-overrides']
   endif
 endforeach
 
-# TODO: SSE41 (which is only required for core mesa)
+if host_machine.cpu_family().startswith('x86')
+  pre_args += '-DHAVE_SSE41'
+  with_sse41 = true
+  sse41_args = ['-msse4.1']
+
+  # GCC on x86 (not x86_64) with -msse* assumes a 16 byte aligned stack, but
+  # that's not guaranteed
+  if host_machine.cpu_family() == 'x86'
+    sse41_args += '-mstackrealign'
+  endif
+else
+  with_sse41 = false
+  sse41_args = []
+endif
 
 # Check for GCC style atomics
 if cc.compiles('int main() { int n; return __atomic_load_n(&n, __ATOMIC_ACQUIRE); }',
