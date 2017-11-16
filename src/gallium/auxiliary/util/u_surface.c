@@ -98,7 +98,7 @@ util_copy_rect(ubyte * dst,
    src += src_y * src_stride_pos;
    width *= blocksize;
 
-   if (width == dst_stride && width == src_stride)
+   if (width == dst_stride && width == (unsigned)src_stride)
       memcpy(dst, src, height * width);
    else {
       for (i = 0; i < height; i++) {
