@@ -198,6 +198,13 @@ with_platform_drm = false
 with_platform_surfaceless = false
 egl_native_platform = ''
 _platforms = get_option('platforms')
+if _platforms == 'auto'
+  if ['linux'].contains(host_machine.system())
+    _platforms = 'x11,wayland,drm,surfaceless'
+  else
+    error('Unknown OS, no platforms enabled. Patches gladly accepted to fix this.')
+  endif
+endif
 if _platforms != ''
   _split = _platforms.split(',')
   with_platform_android = _split.contains('android')
