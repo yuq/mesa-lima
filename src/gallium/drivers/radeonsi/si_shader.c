@@ -2083,13 +2083,12 @@ static LLVMValueRef si_llvm_pack_two_int32_as_int16(struct si_shader_context *ct
 }
 
 /* Initialize arguments for the shader export intrinsic */
-static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
+static void si_llvm_init_export_args(struct si_shader_context *ctx,
 				     LLVMValueRef *values,
 				     unsigned target,
 				     struct ac_export_args *args)
 {
-	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct lp_build_context *base = &bld_base->base;
+	LLVMValueRef f32undef = LLVMGetUndef(ctx->ac.f32);
 	LLVMBuilderRef builder = ctx->ac.builder;
 	LLVMValueRef val[4];
 	unsigned spi_shader_col_format = V_028714_SPI_SHADER_32_ABGR;
@@ -2120,10 +2119,10 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 	}
 
 	args->compr = false;
-	args->out[0] = base->undef;
-	args->out[1] = base->undef;
-	args->out[2] = base->undef;
-	args->out[3] = base->undef;
+	args->out[0] = f32undef;
+	args->out[1] = f32undef;
+	args->out[2] = f32undef;
+	args->out[3] = f32undef;
 
 	switch (spi_shader_col_format) {
 	case V_028714_SPI_SHADER_ZERO:
@@ -2182,10 +2181,10 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 	case V_028714_SPI_SHADER_SNORM16_ABGR:
 		for (chan = 0; chan < 4; chan++) {
 			/* Clamp between [-1, 1]. */
-			val[chan] = lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_MIN,
+			val[chan] = lp_build_emit_llvm_binary(&ctx->bld_base, TGSI_OPCODE_MIN,
 							      values[chan],
 							      LLVMConstReal(ctx->f32, 1));
-			val[chan] = lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_MAX,
+			val[chan] = lp_build_emit_llvm_binary(&ctx->bld_base, TGSI_OPCODE_MAX,
 							      val[chan],
 							      LLVMConstReal(ctx->f32, -1));
 			/* Convert to a signed integer in [-32767, 32767]. */
@@ -2215,7 +2214,7 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 		/* Clamp. */
 		for (chan = 0; chan < 4; chan++) {
 			val[chan] = ac_to_integer(&ctx->ac, values[chan]);
-			val[chan] = lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_UMIN,
+			val[chan] = lp_build_emit_llvm_binary(&ctx->bld_base, TGSI_OPCODE_UMIN,
 					val[chan],
 					chan == 3 ? max_alpha : max_rgb);
 		}
@@ -2239,10 +2238,10 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 		/* Clamp. */
 		for (chan = 0; chan < 4; chan++) {
 			val[chan] = ac_to_integer(&ctx->ac, values[chan]);
-			val[chan] = lp_build_emit_llvm_binary(bld_base,
+			val[chan] = lp_build_emit_llvm_binary(&ctx->bld_base,
 					TGSI_OPCODE_IMIN,
 					val[chan], chan == 3 ? max_alpha : max_rgb);
-			val[chan] = lp_build_emit_llvm_binary(bld_base,
+			val[chan] = lp_build_emit_llvm_binary(&ctx->bld_base,
 					TGSI_OPCODE_IMAX,
 					val[chan], chan == 3 ? min_alpha : min_rgb);
 		}
@@ -2312,11 +2311,9 @@ static LLVMValueRef si_scale_alpha_by_sample_mask(struct lp_build_tgsi_context *
 	return LLVMBuildFMul(ctx->ac.builder, alpha, coverage, "");
 }
 
-static void si_llvm_emit_clipvertex(struct lp_build_tgsi_context *bld_base,
+static void si_llvm_emit_clipvertex(struct si_shader_context *ctx,
 				    struct ac_export_args *pos, LLVMValueRef *out_elts)
 {
-	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct lp_build_context *base = &bld_base->base;
 	unsigned reg_index;
 	unsigned chan;
 	unsigned const_chan;
@@ -2343,8 +2340,8 @@ static void si_llvm_emit_clipvertex(struct lp_build_tgsi_context *bld_base,
 				base_elt = buffer_load_const(ctx, const_resource,
 							     addr);
 				args->out[chan] =
-					lp_build_add(base, args->out[chan],
-						     lp_build_mul(base, base_elt,
+					lp_build_add(&ctx->bld_base.base, args->out[chan],
+						     lp_build_mul(&ctx->bld_base.base, base_elt,
 								  out_elts[const_chan]));
 			}
 		}
@@ -2514,7 +2511,7 @@ static void si_export_param(struct si_shader_context *ctx, unsigned index,
 {
 	struct ac_export_args args;
 
-	si_llvm_init_export_args(&ctx->bld_base, values,
+	si_llvm_init_export_args(ctx, values,
 				 V_008DFC_SQ_EXP_PARAM + index, &args);
 	ac_build_export(&ctx->ac, &args);
 }
@@ -2567,11 +2564,10 @@ static void si_build_param_exports(struct si_shader_context *ctx,
 }
 
 /* Generate export instructions for hardware VS shader stage */
-static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
+static void si_llvm_export_vs(struct si_shader_context *ctx,
 			      struct si_shader_output_values *outputs,
 			      unsigned noutput)
 {
-	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct si_shader *shader = ctx->shader;
 	struct ac_export_args pos_args[4] = {};
 	LLVMValueRef psize_value = NULL, edgeflag_value = NULL, layer_value = NULL, viewport_index_value = NULL;
@@ -2582,7 +2578,7 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 	for (i = 0; i < noutput; i++) {
 		switch (outputs[i].semantic_name) {
 		case TGSI_SEMANTIC_POSITION:
-			si_llvm_init_export_args(bld_base, outputs[i].values,
+			si_llvm_init_export_args(ctx, outputs[i].values,
 						 V_008DFC_SQ_EXP_POS, &pos_args[0]);
 			break;
 		case TGSI_SEMANTIC_PSIZE:
@@ -2600,14 +2596,14 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 		case TGSI_SEMANTIC_CLIPDIST:
 			if (!shader->key.opt.clip_disable) {
 				unsigned index = 2 + outputs[i].semantic_index;
-				si_llvm_init_export_args(bld_base, outputs[i].values,
+				si_llvm_init_export_args(ctx, outputs[i].values,
 							 V_008DFC_SQ_EXP_POS + index,
 							 &pos_args[index]);
 			}
 			break;
 		case TGSI_SEMANTIC_CLIPVERTEX:
 			if (!shader->key.opt.clip_disable) {
-				si_llvm_emit_clipvertex(bld_base, pos_args,
+				si_llvm_emit_clipvertex(ctx, pos_args,
 							outputs[i].values);
 			}
 			break;
@@ -3344,7 +3340,7 @@ static void si_llvm_emit_vs_epilogue(struct ac_shader_abi *abi,
 		i++;
 	}
 
-	si_llvm_export_vs(&ctx->bld_base, outputs, i);
+	si_llvm_export_vs(ctx, outputs, i);
 	FREE(outputs);
 }
 
@@ -3485,7 +3481,7 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 
 		/* Get the export arguments, also find out what the last one is. */
 		for (c = 0; c <= ctx->shader->key.part.ps.epilog.last_cbuf; c++) {
-			si_llvm_init_export_args(bld_base, color,
+			si_llvm_init_export_args(ctx, color,
 						 V_008DFC_SQ_EXP_MRT + c, &args[c]);
 			if (args[c].enabled_channels)
 				last = c;
@@ -3505,7 +3501,7 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 		struct ac_export_args args;
 
 		/* Export */
-		si_llvm_init_export_args(bld_base, color, V_008DFC_SQ_EXP_MRT + index,
+		si_llvm_init_export_args(ctx, color, V_008DFC_SQ_EXP_MRT + index,
 					 &args);
 		if (is_last) {
 			args.valid_mask = 1; /* whether the EXEC mask is valid */
@@ -5486,7 +5482,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 		}
 
 		if (stream == 0)
-			si_llvm_export_vs(bld_base, outputs, gsinfo->num_outputs);
+			si_llvm_export_vs(&ctx, outputs, gsinfo->num_outputs);
 
 		LLVMBuildBr(builder, end_bb);
 	}
