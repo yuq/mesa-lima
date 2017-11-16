@@ -177,6 +177,9 @@ struct wsi_callbacks {
       return (__VkType)(uintptr_t) _obj;                                   \
    }
 
+#define WSI_FROM_HANDLE(__wsi_type, __name, __handle) \
+   struct __wsi_type *__name = __wsi_type ## _from_handle(__handle)
+
 WSI_DEFINE_NONDISP_HANDLE_CASTS(wsi_swapchain, VkSwapchainKHR)
 
 #define ICD_DEFINE_NONDISP_HANDLE_CASTS(__VkIcdType, __VkType)             \
