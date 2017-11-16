@@ -158,7 +158,7 @@ struct save_state
 
    /** MESA_META_VIEWPORT */
    GLfloat ViewportX, ViewportY, ViewportW, ViewportH;
-   GLclampd DepthNear, DepthFar;
+   GLclampf DepthNear, DepthFar;
 
    /** MESA_META_CLAMP_FRAGMENT_COLOR */
    GLenum ClampFragmentColor;

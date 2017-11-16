@@ -1407,7 +1407,7 @@ struct gl_viewport_attrib
 {
    GLfloat X, Y;		/**< position */
    GLfloat Width, Height;	/**< size */
-   GLdouble Near, Far;		/**< Depth buffer range */
+   GLfloat Near, Far;		/**< Depth buffer range */
 };
 
 
