@@ -221,6 +221,18 @@ wsi_common_get_images(VkSwapchainKHR _swapchain,
                       VkImage *pSwapchainImages);
 
 VkResult
+wsi_common_create_swapchain(struct wsi_device *wsi,
+                            VkDevice device,
+                            int fd,
+                            const VkSwapchainCreateInfoKHR *pCreateInfo,
+                            const VkAllocationCallbacks *pAllocator,
+                            VkSwapchainKHR *pSwapchain);
+void
+wsi_common_destroy_swapchain(VkDevice device,
+                             VkSwapchainKHR swapchain,
+                             const VkAllocationCallbacks *pAllocator);
+
+VkResult
 wsi_common_queue_present(const struct wsi_device *wsi,
                          VkDevice device_h,
                          VkQueue queue_h,

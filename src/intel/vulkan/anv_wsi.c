@@ -193,57 +193,32 @@ VkResult anv_CreateSwapchainKHR(
     VkSwapchainKHR*                              pSwapchain)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   ICD_FROM_HANDLE(VkIcdSurfaceBase, surface, pCreateInfo->surface);
-   struct wsi_interface *iface =
-      device->instance->physicalDevice.wsi_device.wsi[surface->platform];
-   struct wsi_swapchain *swapchain;
+   struct wsi_device *wsi_device = &device->instance->physicalDevice.wsi_device;
    const VkAllocationCallbacks *alloc;
 
    if (pAllocator)
      alloc = pAllocator;
    else
      alloc = &device->alloc;
-   VkResult result = iface->create_swapchain(surface, _device,
-                                             &device->instance->physicalDevice.wsi_device,
-                                             device->instance->physicalDevice.local_fd,
-                                             pCreateInfo,
-                                             alloc,
-                                             &swapchain);
-   if (result != VK_SUCCESS)
-      return result;
 
-   swapchain->alloc = *alloc;
-
-   for (unsigned i = 0; i < ARRAY_SIZE(swapchain->fences); i++)
-      swapchain->fences[i] = VK_NULL_HANDLE;
-
-   *pSwapchain = wsi_swapchain_to_handle(swapchain);
-
-   return VK_SUCCESS;
+   return wsi_common_create_swapchain(wsi_device, _device, device->fd,
+                                      pCreateInfo, alloc, pSwapchain);
 }
 
 void anv_DestroySwapchainKHR(
     VkDevice                                     _device,
-    VkSwapchainKHR                               _swapchain,
+    VkSwapchainKHR                               swapchain,
     const VkAllocationCallbacks*                 pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(wsi_swapchain, swapchain, _swapchain);
    const VkAllocationCallbacks *alloc;
-
-   if (!swapchain)
-      return;
 
    if (pAllocator)
      alloc = pAllocator;
    else
      alloc = &device->alloc;
-   for (unsigned i = 0; i < ARRAY_SIZE(swapchain->fences); i++) {
-      if (swapchain->fences[i] != VK_NULL_HANDLE)
-         anv_DestroyFence(_device, swapchain->fences[i], pAllocator);
-   }
 
-   swapchain->destroy(swapchain, alloc);
+   wsi_common_destroy_swapchain(_device, swapchain, alloc);
 }
 
 VkResult anv_GetSwapchainImagesKHR(

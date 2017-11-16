@@ -115,6 +115,9 @@ fail:
 void
 wsi_swapchain_finish(struct wsi_swapchain *chain)
 {
+   for (unsigned i = 0; i < ARRAY_SIZE(chain->fences); i++)
+      chain->wsi->DestroyFence(chain->device, chain->fences[i], &chain->alloc);
+
    for (uint32_t i = 0; i < chain->wsi->queue_family_count; i++) {
       chain->wsi->DestroyCommandPool(chain->device, chain->cmd_pools[i],
                                      &chain->alloc);
@@ -482,6 +485,41 @@ wsi_destroy_image(const struct wsi_swapchain *chain,
    wsi->DestroyImage(chain->device, image->image, &chain->alloc);
    wsi->FreeMemory(chain->device, image->prime.memory, &chain->alloc);
    wsi->DestroyBuffer(chain->device, image->prime.buffer, &chain->alloc);
+}
+
+VkResult
+wsi_common_create_swapchain(struct wsi_device *wsi,
+                            VkDevice device,
+                            int fd,
+                            const VkSwapchainCreateInfoKHR *pCreateInfo,
+                            const VkAllocationCallbacks *pAllocator,
+                            VkSwapchainKHR *pSwapchain)
+{
+   ICD_FROM_HANDLE(VkIcdSurfaceBase, surface, pCreateInfo->surface);
+   struct wsi_interface *iface = wsi->wsi[surface->platform];
+   struct wsi_swapchain *swapchain;
+
+   VkResult result = iface->create_swapchain(surface, device, wsi, fd,
+                                             pCreateInfo, pAllocator,
+                                             &swapchain);
+   if (result != VK_SUCCESS)
+      return result;
+
+   *pSwapchain = wsi_swapchain_to_handle(swapchain);
+
+   return VK_SUCCESS;
+}
+
+void
+wsi_common_destroy_swapchain(VkDevice device,
+                             VkSwapchainKHR _swapchain,
+                             const VkAllocationCallbacks *pAllocator)
+{
+   WSI_FROM_HANDLE(wsi_swapchain, swapchain, _swapchain);
+   if (!swapchain)
+      return;
+
+   swapchain->destroy(swapchain, pAllocator);
 }
 
 VkResult
