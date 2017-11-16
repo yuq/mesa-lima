@@ -1135,7 +1135,6 @@ glsl_to_tgsi_visitor::visit(ir_variable *ir)
 
       for (unsigned int i = 0; i < ir->get_num_state_slots(); i++) {
          int index = _mesa_add_state_reference(this->prog->Parameters,
-                                               (gl_state_index *)
                                                slots[i].tokens);
 
          if (storage->file == PROGRAM_STATE_VAR) {
@@ -1497,7 +1496,7 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
        * is a FBO or the window system buffer, respectively.
        * It is then multiplied with the source operand of DDY.
        */
-      static const gl_state_index transform_y_state[STATE_LENGTH]
+      static const gl_state_index16 transform_y_state[STATE_LENGTH]
          = { STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM };
 
       unsigned transform_y_index =
@@ -2115,7 +2114,7 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       break;
    case ir_binop_interpolate_at_offset: {
       /* The y coordinate needs to be flipped for the default fb */
-      static const gl_state_index transform_y_state[STATE_LENGTH]
+      static const gl_state_index16 transform_y_state[STATE_LENGTH]
          = { STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM };
 
       unsigned transform_y_index =
@@ -6866,7 +6865,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    if (shader->Stage == MESA_SHADER_FRAGMENT &&
        (prog->info.inputs_read & VARYING_BIT_POS ||
         prog->info.system_values_read & (1 << SYSTEM_VALUE_FRAG_COORD))) {
-      static const gl_state_index wposTransformState[STATE_LENGTH] = {
+      static const gl_state_index16 wposTransformState[STATE_LENGTH] = {
          STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM
       };
 

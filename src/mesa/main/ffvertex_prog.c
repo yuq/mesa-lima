@@ -413,7 +413,7 @@ static struct ureg register_param5(struct tnl_program *p,
 				   GLint s3,
                                    GLint s4)
 {
-   gl_state_index tokens[STATE_LENGTH];
+   gl_state_index16 tokens[STATE_LENGTH];
    GLint idx;
    tokens[0] = s0;
    tokens[1] = s1;

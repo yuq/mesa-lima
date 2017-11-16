@@ -54,7 +54,7 @@
  * The program parser will produce the state[] values.
  */
 static void
-_mesa_fetch_state(struct gl_context *ctx, const gl_state_index state[],
+_mesa_fetch_state(struct gl_context *ctx, const gl_state_index16 state[],
                   gl_constant_value *val)
 {
    GLfloat *value = &val->f;
@@ -628,7 +628,7 @@ _mesa_fetch_state(struct gl_context *ctx, const gl_state_index state[],
  * some GL state has changed.
  */
 GLbitfield
-_mesa_program_state_flags(const gl_state_index state[STATE_LENGTH])
+_mesa_program_state_flags(const gl_state_index16 state[STATE_LENGTH])
 {
    switch (state[0]) {
    case STATE_MATERIAL:
@@ -948,7 +948,7 @@ append_index(char *dst, GLint index)
  * Use free() to deallocate the string.
  */
 char *
-_mesa_program_state_string(const gl_state_index state[STATE_LENGTH])
+_mesa_program_state_string(const gl_state_index16 state[STATE_LENGTH])
 {
    char str[1000] = "";
    char tmp[30];

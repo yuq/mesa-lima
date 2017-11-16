@@ -40,7 +40,7 @@ brw_nir_setup_glsl_builtin_uniform(nir_variable *var,
        * get the same index back here.
        */
       int index = _mesa_add_state_reference(prog->Parameters,
-					    (gl_state_index *)slots[i].tokens);
+					    slots[i].tokens);
 
       /* Add each of the unique swizzles of the element as a parameter.
        * This'll end up matching the expected layout of the

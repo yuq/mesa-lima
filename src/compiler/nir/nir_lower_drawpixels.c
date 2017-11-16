@@ -67,7 +67,8 @@ get_texcoord(lower_drawpixels_state *state)
 }
 
 static nir_variable *
-create_uniform(nir_shader *shader, const char *name, const int state_tokens[5])
+create_uniform(nir_shader *shader, const char *name,
+               const gl_state_index16 state_tokens[5])
 {
    nir_variable *var = nir_variable_create(shader,
                                            nir_var_uniform,

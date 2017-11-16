@@ -138,18 +138,17 @@ typedef enum gl_state_index_ {
 } gl_state_index;
 
 
-
 extern void
 _mesa_load_state_parameters(struct gl_context *ctx,
                             struct gl_program_parameter_list *paramList);
 
 
 extern GLbitfield
-_mesa_program_state_flags(const gl_state_index state[STATE_LENGTH]);
+_mesa_program_state_flags(const gl_state_index16 state[STATE_LENGTH]);
 
 
 extern char *
-_mesa_program_state_string(const gl_state_index state[STATE_LENGTH]);
+_mesa_program_state_string(const gl_state_index16 state[STATE_LENGTH]);
 
 
 

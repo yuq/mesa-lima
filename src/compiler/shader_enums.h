@@ -48,6 +48,8 @@ typedef enum
    MESA_SHADER_COMPUTE = 5,
 } gl_shader_stage;
 
+typedef short gl_state_index16; /* see enum gl_state_index */
+
 const char *gl_shader_stage_name(gl_shader_stage stage);
 
 /**

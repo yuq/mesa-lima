@@ -1013,11 +1013,11 @@ st_create_fp_variant(struct st_context *st,
    struct st_fp_variant *variant = CALLOC_STRUCT(st_fp_variant);
    struct pipe_shader_state tgsi = {0};
    struct gl_program_parameter_list *params = stfp->Base.Parameters;
-   static const gl_state_index texcoord_state[STATE_LENGTH] =
+   static const gl_state_index16 texcoord_state[STATE_LENGTH] =
       { STATE_INTERNAL, STATE_CURRENT_ATTRIB, VERT_ATTRIB_TEX0 };
-   static const gl_state_index scale_state[STATE_LENGTH] =
+   static const gl_state_index16 scale_state[STATE_LENGTH] =
       { STATE_INTERNAL, STATE_PT_SCALE };
-   static const gl_state_index bias_state[STATE_LENGTH] =
+   static const gl_state_index16 bias_state[STATE_LENGTH] =
       { STATE_INTERNAL, STATE_PT_BIAS };
 
    if (!variant)

@@ -319,8 +319,7 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
             assert(var->state_slots != NULL);
 
             for (unsigned int i = 0; i < var->num_state_slots; i++) {
-               _mesa_add_state_reference(prog->Parameters,
-                                         (gl_state_index *)slots[i].tokens);
+               _mesa_add_state_reference(prog->Parameters, slots[i].tokens);
             }
          }
       }

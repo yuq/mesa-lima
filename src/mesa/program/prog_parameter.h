@@ -72,7 +72,7 @@ struct gl_program_parameter
    /**
     * A sequence of STATE_* tokens and integers to identify GL state.
     */
-   gl_state_index StateIndexes[STATE_LENGTH];
+   gl_state_index16 StateIndexes[STATE_LENGTH];
 };
 
 
@@ -108,7 +108,7 @@ _mesa_add_parameter(struct gl_program_parameter_list *paramList,
                     gl_register_file type, const char *name,
                     GLuint size, GLenum datatype,
                     const gl_constant_value *values,
-                    const gl_state_index state[STATE_LENGTH]);
+                    const gl_state_index16 state[STATE_LENGTH]);
 
 extern GLint
 _mesa_add_typed_unnamed_constant(struct gl_program_parameter_list *paramList,
@@ -126,7 +126,7 @@ _mesa_add_unnamed_constant(struct gl_program_parameter_list *paramList,
 
 extern GLint
 _mesa_add_state_reference(struct gl_program_parameter_list *paramList,
-                          const gl_state_index stateTokens[STATE_LENGTH]);
+                          const gl_state_index16 stateTokens[]);
 
 
 static inline GLint
