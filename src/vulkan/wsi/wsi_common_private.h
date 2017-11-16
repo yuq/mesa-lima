@@ -41,6 +41,32 @@ struct wsi_image {
    int fd;
 };
 
+struct wsi_swapchain {
+   const struct wsi_device *wsi;
+
+   VkDevice device;
+   VkAllocationCallbacks alloc;
+   VkFence fences[3];
+   VkPresentModeKHR present_mode;
+   uint32_t image_count;
+
+   bool use_prime_blit;
+
+   /* Command pools, one per queue family */
+   VkCommandPool *cmd_pools;
+
+   VkResult (*destroy)(struct wsi_swapchain *swapchain,
+                       const VkAllocationCallbacks *pAllocator);
+   struct wsi_image *(*get_wsi_image)(struct wsi_swapchain *swapchain,
+                                      uint32_t image_index);
+   VkResult (*acquire_next_image)(struct wsi_swapchain *swap_chain,
+                                  uint64_t timeout, VkSemaphore semaphore,
+                                  uint32_t *image_index);
+   VkResult (*queue_present)(struct wsi_swapchain *swap_chain,
+                             uint32_t image_index,
+                             const VkPresentRegionKHR *damage);
+};
+
 VkResult
 wsi_swapchain_init(const struct wsi_device *wsi,
                    struct wsi_swapchain *chain,
@@ -63,5 +89,25 @@ wsi_create_prime_image(const struct wsi_swapchain *chain,
 void
 wsi_destroy_image(const struct wsi_swapchain *chain,
                   struct wsi_image *image);
+
+
+#define WSI_DEFINE_NONDISP_HANDLE_CASTS(__wsi_type, __VkType)              \
+                                                                           \
+   static inline struct __wsi_type *                                       \
+   __wsi_type ## _from_handle(__VkType _handle)                            \
+   {                                                                       \
+      return (struct __wsi_type *)(uintptr_t) _handle;                     \
+   }                                                                       \
+                                                                           \
+   static inline __VkType                                                  \
+   __wsi_type ## _to_handle(struct __wsi_type *_obj)                       \
+   {                                                                       \
+      return (__VkType)(uintptr_t) _obj;                                   \
+   }
+
+#define WSI_FROM_HANDLE(__wsi_type, __name, __handle) \
+   struct __wsi_type *__name = __wsi_type ## _from_handle(__handle)
+
+WSI_DEFINE_NONDISP_HANDLE_CASTS(wsi_swapchain, VkSwapchainKHR)
 
 #endif /* WSI_COMMON_PRIVATE_H */
