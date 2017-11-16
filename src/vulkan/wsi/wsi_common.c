@@ -542,14 +542,31 @@ wsi_common_queue_present(const struct wsi_device *wsi,
          .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
          .pNext = NULL,
       };
+      VkPipelineStageFlags *stage_flags = NULL;
       if (i == 0) {
          /* We only need/want to wait on semaphores once.  After that, we're
           * guaranteed ordering since it all happens on the same queue.
           */
          submit_info.waitSemaphoreCount = pPresentInfo->waitSemaphoreCount,
          submit_info.pWaitSemaphores = pPresentInfo->pWaitSemaphores,
+
+         /* Set up the pWaitDstStageMasks */
+         stage_flags = vk_alloc(&swapchain->alloc,
+                                sizeof(VkPipelineStageFlags) *
+                                pPresentInfo->waitSemaphoreCount,
+                                8,
+                                VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
+         if (!stage_flags) {
+            result = VK_ERROR_OUT_OF_HOST_MEMORY;
+            goto fail_present;
+         }
+         for (uint32_t s = 0; s < pPresentInfo->waitSemaphoreCount; s++)
+            stage_flags[s] = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+
+         submit_info.pWaitDstStageMask = stage_flags;
       }
       result = wsi->QueueSubmit(queue, 1, &submit_info, swapchain->fences[0]);
+      vk_free(&swapchain->alloc, stage_flags);
       if (result != VK_SUCCESS)
          goto fail_present;
 
