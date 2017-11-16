@@ -4739,9 +4739,7 @@ static void create_function(struct si_shader_context *ctx)
 	if (shader->key.as_ls ||
 	    ctx->type == PIPE_SHADER_TESS_CTRL ||
 	    /* GFX9 has the ESGS ring buffer in LDS. */
-	    (ctx->screen->b.chip_class >= GFX9 &&
-	     (shader->key.as_es ||
-	      ctx->type == PIPE_SHADER_GEOMETRY)))
+	    type == SI_SHADER_MERGED_VERTEX_OR_TESSEVAL_GEOMETRY)
 		ac_declare_lds_as_pointer(&ctx->ac);
 }
 
