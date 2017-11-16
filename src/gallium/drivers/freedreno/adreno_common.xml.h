@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  33379 bytes, from 2017-11-14 19:02:59)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  33379 bytes, from 2017-11-14 21:00:47)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 111898 bytes, from 2017-06-06 18:23:59)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 143413 bytes, from 2017-11-14 19:05:14)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 143420 bytes, from 2017-11-16 20:29:34)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
 
 Copyright (C) 2013-2017 by the following authors:
