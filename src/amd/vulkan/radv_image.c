@@ -1121,11 +1121,15 @@ radv_CreateImage(VkDevice device,
 		 const VkAllocationCallbacks *pAllocator,
 		 VkImage *pImage)
 {
+	const struct wsi_image_create_info *wsi_info =
+		vk_find_struct_const(pCreateInfo->pNext, WSI_IMAGE_CREATE_INFO_MESA);
+	bool scanout = wsi_info && wsi_info->scanout;
+
 	return radv_image_create(device,
 				 &(struct radv_image_create_info) {
 					 .vk_info = pCreateInfo,
-						 .scanout = false,
-						 },
+					 .scanout = scanout,
+				 },
 				 pAllocator,
 				 pImage);
 }

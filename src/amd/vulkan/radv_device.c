@@ -2151,10 +2151,16 @@ VkResult radv_alloc_memory(VkDevice                        _device,
 	const VkMemoryDedicatedAllocateInfoKHR *dedicate_info =
 		vk_find_struct_const(pAllocateInfo->pNext, MEMORY_DEDICATED_ALLOCATE_INFO_KHR);
 
+	const struct wsi_memory_allocate_info *wsi_info =
+		vk_find_struct_const(pAllocateInfo->pNext, WSI_MEMORY_ALLOCATE_INFO_MESA);
+
 	mem = vk_alloc2(&device->alloc, pAllocator, sizeof(*mem), 8,
 			  VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 	if (mem == NULL)
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+	if (wsi_info && wsi_info->implicit_sync)
+		flags |= RADEON_FLAG_IMPLICIT_SYNC;
 
 	if (dedicate_info) {
 		mem->image = radv_image_from_handle(dedicate_info->image);
