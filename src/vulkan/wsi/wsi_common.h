@@ -30,6 +30,24 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_icd.h>
 
+/* This is guaranteed to not collide with anything because it's in the
+ * VK_KHR_swapchain namespace but not actually used by the extension.
+ */
+#define VK_STRUCTURE_TYPE_WSI_IMAGE_CREATE_INFO_MESA (VkStructureType)1000001002
+#define VK_STRUCTURE_TYPE_WSI_MEMORY_ALLOCATE_INFO_MESA (VkStructureType)1000001003
+
+struct wsi_image_create_info {
+    VkStructureType sType;
+    const void *pNext;
+    bool scanout;
+};
+
+struct wsi_memory_allocate_info {
+    VkStructureType sType;
+    const void *pNext;
+    bool implicit_sync;
+};
+
 struct wsi_image {
    VkImage image;
    VkDeviceMemory memory;
