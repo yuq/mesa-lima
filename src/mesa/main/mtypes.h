@@ -2168,7 +2168,7 @@ struct gl_program
    /** Subset of OutputsWritten outputs written with non-zero index. */
    GLbitfield64 SecondaryOutputsWritten;
    /** TEXTURE_x_BIT bitmask */
-   GLbitfield TexturesUsed[MAX_COMBINED_TEXTURE_IMAGE_UNITS];
+   GLbitfield16 TexturesUsed[MAX_COMBINED_TEXTURE_IMAGE_UNITS];
    /** Bitfield of which samplers are used */
    GLbitfield SamplersUsed;
    /** Texture units used for shadow sampling. */
@@ -2246,7 +2246,7 @@ struct gl_program
          /** Which texture target is being sampled
           * (TEXTURE_1D/2D/3D/etc_INDEX)
           */
-         gl_texture_index SamplerTargets[MAX_SAMPLERS];
+         GLubyte SamplerTargets[MAX_SAMPLERS];
 
          /**
           * Number of samplers declared with the bindless_sampler layout
