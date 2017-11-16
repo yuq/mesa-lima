@@ -26,24 +26,11 @@
 #include "vk_format_info.h"
 #include "vk_util.h"
 
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-#define WSI_CB(x) .x = anv_##x
-static const struct wsi_callbacks wsi_cbs = {
-   WSI_CB(GetPhysicalDeviceFormatProperties),
-};
-#endif
-
 static PFN_vkVoidFunction
 anv_wsi_proc_addr(VkPhysicalDevice physicalDevice, const char *pName)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
    return anv_lookup_entrypoint(&physical_device->info, pName);
-}
-
-static uint32_t
-anv_wsi_queue_get_family_index(VkQueue queue)
-{
-   return 0;
 }
 
 VkResult
@@ -55,9 +42,6 @@ anv_init_wsi(struct anv_physical_device *physical_device)
                    anv_physical_device_to_handle(physical_device),
                    anv_wsi_proc_addr);
 
-   physical_device->wsi_device.queue_get_family_index =
-      anv_wsi_queue_get_family_index;
-
 #ifdef VK_USE_PLATFORM_XCB_KHR
    result = wsi_x11_init_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
    if (result != VK_SUCCESS)
@@ -66,8 +50,7 @@ anv_init_wsi(struct anv_physical_device *physical_device)
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
    result = wsi_wl_init_wsi(&physical_device->wsi_device, &physical_device->instance->alloc,
-                            anv_physical_device_to_handle(physical_device),
-                            &wsi_cbs);
+                            anv_physical_device_to_handle(physical_device));
    if (result != VK_SUCCESS) {
 #ifdef VK_USE_PLATFORM_XCB_KHR
       wsi_x11_finish_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);

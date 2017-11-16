@@ -64,6 +64,7 @@ wsi_device_init(struct wsi_device *wsi,
    WSI_GET_CB(GetImageMemoryRequirements);
    WSI_GET_CB(GetImageSubresourceLayout);
    WSI_GET_CB(GetMemoryFdKHR);
+   WSI_GET_CB(GetPhysicalDeviceFormatProperties);
    WSI_GET_CB(ResetFences);
    WSI_GET_CB(QueueSubmit);
    WSI_GET_CB(WaitForFences);

@@ -56,8 +56,6 @@ struct wsi_device {
    VkPhysicalDeviceMemoryProperties memory_props;
    uint32_t queue_family_count;
 
-   uint32_t (*queue_get_family_index)(VkQueue queue);
-
 #define WSI_CB(cb) PFN_vk##cb cb
    WSI_CB(AllocateMemory);
    WSI_CB(AllocateCommandBuffers);
@@ -80,6 +78,7 @@ struct wsi_device {
    WSI_CB(GetImageMemoryRequirements);
    WSI_CB(GetImageSubresourceLayout);
    WSI_CB(GetMemoryFdKHR);
+   WSI_CB(GetPhysicalDeviceFormatProperties);
    WSI_CB(ResetFences);
    WSI_CB(QueueSubmit);
    WSI_CB(WaitForFences);
@@ -94,17 +93,6 @@ void
 wsi_device_init(struct wsi_device *wsi,
                 VkPhysicalDevice pdevice,
                 WSI_FN_GetPhysicalDeviceProcAddr proc_addr);
-
-#define WSI_CB(cb) PFN_vk##cb cb
-struct wsi_callbacks {
-   VkPhysicalDevice (*device_get_physical)(VkDevice);
-
-   WSI_CB(GetDeviceProcAddr);
-   WSI_CB(GetPhysicalDeviceFormatProperties);
-   WSI_CB(GetPhysicalDeviceMemoryProperties);
-   WSI_CB(GetPhysicalDeviceQueueFamilyProperties);
-};
-#undef WSI_CB
 
 #define ICD_DEFINE_NONDISP_HANDLE_CASTS(__VkIcdType, __VkType)             \
                                                                            \
@@ -131,8 +119,7 @@ void wsi_x11_finish_wsi(struct wsi_device *wsi_device,
                         const VkAllocationCallbacks *alloc);
 VkResult wsi_wl_init_wsi(struct wsi_device *wsi_device,
                          const VkAllocationCallbacks *alloc,
-                         VkPhysicalDevice physical_device,
-                         const struct wsi_callbacks *cbs);
+                         VkPhysicalDevice physical_device);
 void wsi_wl_finish_wsi(struct wsi_device *wsi_device,
                        const VkAllocationCallbacks *alloc);
 

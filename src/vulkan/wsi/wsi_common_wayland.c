@@ -67,10 +67,10 @@ struct wsi_wl_display {
 struct wsi_wayland {
    struct wsi_interface                     base;
 
+   struct wsi_device *wsi;
+
    const VkAllocationCallbacks *alloc;
    VkPhysicalDevice physical_device;
-
-   const struct wsi_callbacks *cbs;
 };
 
 static void
@@ -85,7 +85,7 @@ wsi_wl_display_add_vk_format(struct wsi_wl_display *display, VkFormat format)
    /* Don't add formats that aren't renderable. */
    VkFormatProperties props;
 
-   display->wsi_wl->cbs->GetPhysicalDeviceFormatProperties(display->wsi_wl->physical_device,
+   display->wsi_wl->wsi->GetPhysicalDeviceFormatProperties(display->wsi_wl->physical_device,
                                                            format, &props);
    if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
       return;
@@ -872,8 +872,7 @@ fail:
 VkResult
 wsi_wl_init_wsi(struct wsi_device *wsi_device,
                 const VkAllocationCallbacks *alloc,
-                VkPhysicalDevice physical_device,
-                const struct wsi_callbacks *cbs)
+                VkPhysicalDevice physical_device)
 {
    struct wsi_wayland *wsi;
    VkResult result;
@@ -887,7 +886,7 @@ wsi_wl_init_wsi(struct wsi_device *wsi_device,
 
    wsi->physical_device = physical_device;
    wsi->alloc = alloc;
-   wsi->cbs = cbs;
+   wsi->wsi = wsi_device;
 
    wsi->base.get_support = wsi_wl_surface_get_support;
    wsi->base.get_capabilities = wsi_wl_surface_get_capabilities;

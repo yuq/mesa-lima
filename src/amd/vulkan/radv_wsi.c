@@ -29,22 +29,10 @@
 #include "vk_util.h"
 #include "util/macros.h"
 
-#define WSI_CB(x) .x = radv_##x
-MAYBE_UNUSED static const struct wsi_callbacks wsi_cbs = {
-	WSI_CB(GetPhysicalDeviceFormatProperties),
-};
-
 static PFN_vkVoidFunction
 radv_wsi_proc_addr(VkPhysicalDevice physicalDevice, const char *pName)
 {
 	return radv_lookup_entrypoint(pName);
-}
-
-static uint32_t
-radv_wsi_queue_get_family_index(VkQueue _queue)
-{
-	RADV_FROM_HANDLE(radv_queue, queue, _queue);
-	return queue->queue_family_index;
 }
 
 VkResult
@@ -56,9 +44,6 @@ radv_init_wsi(struct radv_physical_device *physical_device)
 			radv_physical_device_to_handle(physical_device),
 			radv_wsi_proc_addr);
 
-	physical_device->wsi_device.queue_get_family_index =
-		radv_wsi_queue_get_family_index;
-
 #ifdef VK_USE_PLATFORM_XCB_KHR
 	result = wsi_x11_init_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
 	if (result != VK_SUCCESS)
@@ -67,8 +52,7 @@ radv_init_wsi(struct radv_physical_device *physical_device)
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 	result = wsi_wl_init_wsi(&physical_device->wsi_device, &physical_device->instance->alloc,
-				 radv_physical_device_to_handle(physical_device),
-				 &wsi_cbs);
+				 radv_physical_device_to_handle(physical_device));
 	if (result != VK_SUCCESS) {
 #ifdef VK_USE_PLATFORM_XCB_KHR
 		wsi_x11_finish_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
