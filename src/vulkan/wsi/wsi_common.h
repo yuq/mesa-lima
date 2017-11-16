@@ -64,8 +64,8 @@ struct wsi_swapchain {
 
    VkResult (*destroy)(struct wsi_swapchain *swapchain,
                        const VkAllocationCallbacks *pAllocator);
-   VkResult (*get_images)(struct wsi_swapchain *swapchain,
-                          uint32_t *pCount, VkImage *pSwapchainImages);
+   struct wsi_image *(*get_wsi_image)(struct wsi_swapchain *swapchain,
+                                      uint32_t image_index);
    VkResult (*acquire_next_image)(struct wsi_swapchain *swap_chain,
                                   uint64_t timeout, VkSemaphore semaphore,
                                   uint32_t *image_index);
@@ -215,6 +215,11 @@ VkResult wsi_wl_init_wsi(struct wsi_device *wsi_device,
                          const struct wsi_callbacks *cbs);
 void wsi_wl_finish_wsi(struct wsi_device *wsi_device,
                        const VkAllocationCallbacks *alloc);
+
+VkResult
+wsi_common_get_images(VkSwapchainKHR _swapchain,
+                      uint32_t *pSwapchainImageCount,
+                      VkImage *pSwapchainImages);
 
 VkResult
 wsi_common_queue_present(const struct wsi_device *wsi,

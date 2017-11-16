@@ -582,30 +582,12 @@ struct wsi_wl_swapchain {
    struct wsi_wl_image                          images[0];
 };
 
-static VkResult
-wsi_wl_swapchain_get_images(struct wsi_swapchain *wsi_chain,
-                            uint32_t *pCount, VkImage *pSwapchainImages)
+static struct wsi_image *
+wsi_wl_swapchain_get_wsi_image(struct wsi_swapchain *wsi_chain,
+                               uint32_t image_index)
 {
    struct wsi_wl_swapchain *chain = (struct wsi_wl_swapchain *)wsi_chain;
-   uint32_t ret_count;
-   VkResult result;
-
-   if (pSwapchainImages == NULL) {
-      *pCount = chain->base.image_count;
-      return VK_SUCCESS;
-   }
-
-   result = VK_SUCCESS;
-   ret_count = chain->base.image_count;
-   if (chain->base.image_count > *pCount) {
-     ret_count = *pCount;
-     result = VK_INCOMPLETE;
-   }
-
-   for (uint32_t i = 0; i < ret_count; i++)
-      pSwapchainImages[i] = chain->images[i].base.image;
-
-   return result;
+   return &chain->images[image_index].base;
 }
 
 static VkResult
@@ -832,7 +814,7 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
                       VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
 
    chain->base.destroy = wsi_wl_swapchain_destroy;
-   chain->base.get_images = wsi_wl_swapchain_get_images;
+   chain->base.get_wsi_image = wsi_wl_swapchain_get_wsi_image;
    chain->base.acquire_next_image = wsi_wl_swapchain_acquire_next_image;
    chain->base.queue_present = wsi_wl_swapchain_queue_present;
    chain->base.present_mode = pCreateInfo->presentMode;

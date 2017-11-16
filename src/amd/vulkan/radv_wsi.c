@@ -222,13 +222,12 @@ void radv_DestroySwapchainKHR(
 
 VkResult radv_GetSwapchainImagesKHR(
 	VkDevice                                     device,
-	VkSwapchainKHR                               _swapchain,
+	VkSwapchainKHR                               swapchain,
 	uint32_t*                                    pSwapchainImageCount,
 	VkImage*                                     pSwapchainImages)
 {
-	RADV_FROM_HANDLE(wsi_swapchain, swapchain, _swapchain);
-
-	return swapchain->get_images(swapchain, pSwapchainImageCount,
+	return wsi_common_get_images(swapchain,
+				     pSwapchainImageCount,
 				     pSwapchainImages);
 }
 

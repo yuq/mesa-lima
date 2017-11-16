@@ -648,30 +648,11 @@ struct x11_swapchain {
    struct x11_image                             images[0];
 };
 
-static VkResult
-x11_get_images(struct wsi_swapchain *anv_chain,
-               uint32_t* pCount, VkImage *pSwapchainImages)
+static struct wsi_image *
+x11_get_wsi_image(struct wsi_swapchain *wsi_chain, uint32_t image_index)
 {
-   struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
-   uint32_t ret_count;
-   VkResult result;
-
-   if (pSwapchainImages == NULL) {
-      *pCount = chain->base.image_count;
-      return VK_SUCCESS;
-   }
-
-   result = VK_SUCCESS;
-   ret_count = chain->base.image_count;
-   if (chain->base.image_count > *pCount) {
-     ret_count = *pCount;
-     result = VK_INCOMPLETE;
-   }
-
-   for (uint32_t i = 0; i < ret_count; i++)
-      pSwapchainImages[i] = chain->images[i].base.image;
-
-   return result;
+   struct x11_swapchain *chain = (struct x11_swapchain *)wsi_chain;
+   return &chain->images[image_index].base;
 }
 
 static VkResult
@@ -1109,7 +1090,7 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
       goto fail_alloc;
 
    chain->base.destroy = x11_swapchain_destroy;
-   chain->base.get_images = x11_get_images;
+   chain->base.get_wsi_image = x11_get_wsi_image;
    chain->base.acquire_next_image = x11_acquire_next_image;
    chain->base.queue_present = x11_queue_present;
    chain->base.present_mode = pCreateInfo->presentMode;

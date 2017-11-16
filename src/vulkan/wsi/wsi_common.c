@@ -508,6 +508,23 @@ wsi_prime_image_blit_to_linear(const struct wsi_swapchain *chain,
 }
 
 VkResult
+wsi_common_get_images(VkSwapchainKHR _swapchain,
+                      uint32_t *pSwapchainImageCount,
+                      VkImage *pSwapchainImages)
+{
+   WSI_FROM_HANDLE(wsi_swapchain, swapchain, _swapchain);
+   VK_OUTARRAY_MAKE(images, pSwapchainImages, pSwapchainImageCount);
+
+   for (uint32_t i = 0; i < swapchain->image_count; i++) {
+      vk_outarray_append(&images, image) {
+         *image = swapchain->get_wsi_image(swapchain, i)->image;
+      }
+   }
+
+   return vk_outarray_status(&images);
+}
+
+VkResult
 wsi_common_queue_present(const struct wsi_device *wsi,
                          VkDevice device,
                          VkQueue queue,
