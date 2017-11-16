@@ -2327,14 +2327,11 @@ static void si_initialize_color_surface(struct si_context *sctx,
 					struct r600_surface *surf)
 {
 	struct r600_texture *rtex = (struct r600_texture*)surf->base.texture;
-	unsigned color_info, color_attrib, color_view;
+	unsigned color_info, color_attrib;
 	unsigned format, swap, ntype, endian;
 	const struct util_format_description *desc;
 	int firstchan;
 	unsigned blend_clamp = 0, blend_bypass = 0;
-
-	color_view = S_028C6C_SLICE_START(surf->base.u.tex.first_layer) |
-		     S_028C6C_SLICE_MAX(surf->base.u.tex.last_layer);
 
 	desc = util_format_description(surf->base.format);
 	for (firstchan = 0; firstchan < 4; firstchan++) {
@@ -2432,10 +2429,6 @@ static void si_initialize_color_surface(struct si_context *sctx,
 		}
 	}
 
-	surf->cb_color_view = color_view;
-	surf->cb_color_info = color_info;
-	surf->cb_color_attrib = color_attrib;
-
 	if (sctx->b.chip_class >= VI) {
 		unsigned max_uncompressed_block_size = 2;
 
@@ -2453,19 +2446,26 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	/* This must be set for fast clear to work without FMASK. */
 	if (!rtex->fmask.size && sctx->b.chip_class == SI) {
 		unsigned bankh = util_logbase2(rtex->surface.u.legacy.bankh);
-		surf->cb_color_attrib |= S_028C74_FMASK_BANK_HEIGHT(bankh);
+		color_attrib |= S_028C74_FMASK_BANK_HEIGHT(bankh);
 	}
+
+	unsigned color_view = S_028C6C_SLICE_START(surf->base.u.tex.first_layer) |
+			      S_028C6C_SLICE_MAX(surf->base.u.tex.last_layer);
 
 	if (sctx->b.chip_class >= GFX9) {
 		unsigned mip0_depth = util_max_layer(&rtex->resource.b.b, 0);
 
-		surf->cb_color_view |= S_028C6C_MIP_LEVEL(surf->base.u.tex.level);
-		surf->cb_color_attrib |= S_028C74_MIP0_DEPTH(mip0_depth) |
-					 S_028C74_RESOURCE_TYPE(rtex->surface.u.gfx9.resource_type);
+		color_view |= S_028C6C_MIP_LEVEL(surf->base.u.tex.level);
+		color_attrib |= S_028C74_MIP0_DEPTH(mip0_depth) |
+				S_028C74_RESOURCE_TYPE(rtex->surface.u.gfx9.resource_type);
 		surf->cb_color_attrib2 = S_028C68_MIP0_WIDTH(surf->width0 - 1) |
 					 S_028C68_MIP0_HEIGHT(surf->height0 - 1) |
 					 S_028C68_MAX_MIP(rtex->resource.b.b.last_level);
 	}
+
+	surf->cb_color_view = color_view;
+	surf->cb_color_info = color_info;
+	surf->cb_color_attrib = color_attrib;
 
 	/* Determine pixel shader export format */
 	si_choose_spi_color_formats(surf, format, swap, ntype, rtex->is_depth);
