@@ -728,13 +728,9 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain,
                   const VkSwapchainCreateInfoKHR *pCreateInfo,
                   const VkAllocationCallbacks* pAllocator)
 {
-   VkDevice vk_device = chain->base.device;
    VkResult result;
 
-   result = chain->base.image_fns->create_wsi_image(vk_device,
-                                                    pCreateInfo,
-                                                    pAllocator,
-                                                    &image->base);
+   result = wsi_create_native_image(&chain->base, pCreateInfo, &image->base);
    if (result != VK_SUCCESS)
       return result;
 
@@ -756,7 +752,7 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain,
    return VK_SUCCESS;
 
 fail_image:
-   chain->base.image_fns->free_wsi_image(vk_device, pAllocator, &image->base);
+   wsi_destroy_image(&chain->base, &image->base);
 
    return result;
 }
@@ -770,8 +766,7 @@ wsi_wl_swapchain_destroy(struct wsi_swapchain *wsi_chain,
    for (uint32_t i = 0; i < chain->base.image_count; i++) {
       if (chain->images[i].buffer) {
          wl_buffer_destroy(chain->images[i].buffer);
-         chain->base.image_fns->free_wsi_image(chain->base.device, pAllocator,
-                                               &chain->images[i].base);
+         wsi_destroy_image(&chain->base, &chain->images[i].base);
       }
    }
 
@@ -799,7 +794,6 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
                                 int local_fd,
                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
                                 const VkAllocationCallbacks* pAllocator,
-                                const struct wsi_image_fns *image_fns,
                                 struct wsi_swapchain **swapchain_out)
 {
    VkIcdSurfaceWayland *surface = (VkIcdSurfaceWayland *)icd_surface;
@@ -841,7 +835,6 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->base.get_images = wsi_wl_swapchain_get_images;
    chain->base.acquire_next_image = wsi_wl_swapchain_acquire_next_image;
    chain->base.queue_present = wsi_wl_swapchain_queue_present;
-   chain->base.image_fns = image_fns;
    chain->base.present_mode = pCreateInfo->presentMode;
    chain->base.image_count = num_images;
    chain->extent = pCreateInfo->imageExtent;

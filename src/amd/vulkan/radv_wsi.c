@@ -157,128 +157,6 @@ VkResult radv_GetPhysicalDeviceSurfacePresentModesKHR(
 					pPresentModes);
 }
 
-static VkResult
-radv_wsi_image_create(VkDevice device_h,
-		      const VkSwapchainCreateInfoKHR *pCreateInfo,
-		      const VkAllocationCallbacks* pAllocator,
-		      struct wsi_image *wsi_image)
-{
-	VkResult result = VK_SUCCESS;
-	struct radeon_surf *surface;
-	VkImage image_h;
-	struct radv_image *image;
-	int fd;
-	RADV_FROM_HANDLE(radv_device, device, device_h);
-
-	result = radv_image_create(device_h,
-				   &(struct radv_image_create_info) {
-					   .vk_info =
-						   &(VkImageCreateInfo) {
-						   .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-						   .imageType = VK_IMAGE_TYPE_2D,
-						   .format = pCreateInfo->imageFormat,
-						   .extent = {
-							   .width = pCreateInfo->imageExtent.width,
-							   .height = pCreateInfo->imageExtent.height,
-							   .depth = 1
-						   },
-						   .mipLevels = 1,
-						   .arrayLayers = 1,
-						   .samples = 1,
-						   /* FIXME: Need a way to use X tiling to allow scanout */
-						   .tiling = VK_IMAGE_TILING_OPTIMAL,
-						   .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-						   .flags = 0,
-					   },
-						   .scanout = true},
-				   NULL,
-				   &image_h);
-	if (result != VK_SUCCESS)
-		return result;
-
-	image = radv_image_from_handle(image_h);
-
-	VkDeviceMemory memory_h;
-
-	const VkMemoryDedicatedAllocateInfoKHR ded_alloc = {
-		.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR,
-		.pNext = NULL,
-		.buffer = VK_NULL_HANDLE,
-		.image = image_h
-	};
-
-	/* Find the first VRAM memory type, or GART for PRIME images. */
-	int memory_type_index = -1;
-	for (int i = 0; i < device->physical_device->memory_properties.memoryTypeCount; ++i) {
-		bool is_local = !!(device->physical_device->memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-		if (is_local) {
-			memory_type_index = i;
-			break;
-		}
-	}
-
-	/* fallback */
-	if (memory_type_index == -1)
-		memory_type_index = 0;
-
-	result = radv_alloc_memory(device_h,
-				     &(VkMemoryAllocateInfo) {
-					     .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-					     .pNext = &ded_alloc,
-					     .allocationSize = image->size,
-					     .memoryTypeIndex = memory_type_index,
-				     },
-				     NULL /* XXX: pAllocator */,
-				     RADV_MEM_IMPLICIT_SYNC,
-				     &memory_h);
-	if (result != VK_SUCCESS)
-		goto fail_create_image;
-
-	radv_BindImageMemory(device_h, image_h, memory_h, 0);
-
-	RADV_FROM_HANDLE(radv_device_memory, memory, memory_h);
-	if (!radv_get_memory_fd(device, memory, &fd))
-		goto fail_alloc_memory;
-	wsi_image->fd = fd;
-
-	surface = &image->surface;
-
-	wsi_image->image = image_h;
-	wsi_image->memory = memory_h;
-	wsi_image->size = image->size;
-	wsi_image->offset = image->offset;
-	if (device->physical_device->rad_info.chip_class >= GFX9)
-		wsi_image->row_pitch =
-			surface->u.gfx9.surf_pitch * surface->bpe;
-	else
-		wsi_image->row_pitch =
-			surface->u.legacy.level[0].nblk_x * surface->bpe;
-
-	return VK_SUCCESS;
- fail_alloc_memory:
-	radv_FreeMemory(device_h, memory_h, pAllocator);
-
-fail_create_image:
-	radv_DestroyImage(device_h, image_h, pAllocator);
-
-	return result;
-}
-
-static void
-radv_wsi_image_free(VkDevice device,
-		    const VkAllocationCallbacks* pAllocator,
-		    struct wsi_image *wsi_image)
-{
-	radv_DestroyImage(device, wsi_image->image, pAllocator);
-
-	radv_FreeMemory(device, wsi_image->memory, pAllocator);
-}
-
-static const struct wsi_image_fns radv_wsi_image_fns = {
-   .create_wsi_image = radv_wsi_image_create,
-   .free_wsi_image = radv_wsi_image_free,
-};
-
 VkResult radv_CreateSwapchainKHR(
 	VkDevice                                     _device,
 	const VkSwapchainCreateInfoKHR*              pCreateInfo,
@@ -299,7 +177,7 @@ VkResult radv_CreateSwapchainKHR(
 						  &device->physical_device->wsi_device,
 						  device->physical_device->local_fd,
 						  pCreateInfo,
-						  alloc, &radv_wsi_image_fns,
+						  alloc,
 						  &swapchain);
 	if (result != VK_SUCCESS)
 		return result;

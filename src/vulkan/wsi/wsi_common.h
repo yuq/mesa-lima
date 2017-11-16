@@ -48,39 +48,13 @@ struct wsi_memory_allocate_info {
     bool implicit_sync;
 };
 
-struct wsi_image {
-   VkImage image;
-   VkDeviceMemory memory;
-
-   struct {
-      VkBuffer buffer;
-      VkDeviceMemory memory;
-      VkCommandBuffer *blit_cmd_buffers;
-   } prime;
-
-   uint32_t size;
-   uint32_t offset;
-   uint32_t row_pitch;
-   int fd;
-};
-
 struct wsi_device;
-struct wsi_image_fns {
-   VkResult (*create_wsi_image)(VkDevice device_h,
-                                const VkSwapchainCreateInfoKHR *pCreateInfo,
-                                const VkAllocationCallbacks *pAllocator,
-                                struct wsi_image *image_p);
-   void (*free_wsi_image)(VkDevice device,
-                          const VkAllocationCallbacks *pAllocator,
-                          struct wsi_image *image);
-};
 
 struct wsi_swapchain {
    const struct wsi_device *wsi;
 
    VkDevice device;
    VkAllocationCallbacks alloc;
-   const struct wsi_image_fns *image_fns;
    VkFence fences[3];
    VkPresentModeKHR present_mode;
    uint32_t image_count;
@@ -134,7 +108,6 @@ struct wsi_interface {
                                 int local_fd,
                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
                                 const VkAllocationCallbacks* pAllocator,
-                                const struct wsi_image_fns *image_fns,
                                 struct wsi_swapchain **swapchain);
 };
 
@@ -164,6 +137,7 @@ struct wsi_device {
    WSI_CB(FreeCommandBuffers);
    WSI_CB(GetBufferMemoryRequirements);
    WSI_CB(GetImageMemoryRequirements);
+   WSI_CB(GetImageSubresourceLayout);
    WSI_CB(GetMemoryFdKHR);
    WSI_CB(QueueSubmit);
 #undef WSI_CB

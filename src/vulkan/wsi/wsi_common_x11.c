@@ -969,10 +969,7 @@ x11_image_init(VkDevice device_h, struct x11_swapchain *chain,
    if (chain->use_prime_blit) {
       result = wsi_create_prime_image(&chain->base, pCreateInfo, &image->base);
    } else {
-      result = chain->base.image_fns->create_wsi_image(device_h,
-                                                       pCreateInfo,
-                                                       pAllocator,
-                                                       &image->base);
+      result = wsi_create_native_image(&chain->base, pCreateInfo, &image->base);
    }
    if (result != VK_SUCCESS)
       return result;
@@ -1019,11 +1016,7 @@ fail_pixmap:
    cookie = xcb_free_pixmap(chain->conn, image->pixmap);
    xcb_discard_reply(chain->conn, cookie.sequence);
 
-   if (chain->use_prime_blit) {
-      wsi_destroy_prime_image(&chain->base, &image->base);
-   } else {
-      chain->base.image_fns->free_wsi_image(device_h, pAllocator, &image->base);
-   }
+   wsi_destroy_image(&chain->base, &image->base);
 
    return result;
 }
@@ -1042,12 +1035,7 @@ x11_image_finish(struct x11_swapchain *chain,
    cookie = xcb_free_pixmap(chain->conn, image->pixmap);
    xcb_discard_reply(chain->conn, cookie.sequence);
 
-   if (chain->use_prime_blit) {
-      wsi_destroy_prime_image(&chain->base, &image->base);
-   } else {
-      chain->base.image_fns->free_wsi_image(chain->base.device,
-                                            pAllocator, &image->base);
-   }
+   wsi_destroy_image(&chain->base, &image->base);
 }
 
 static VkResult
@@ -1089,7 +1077,6 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
                              int local_fd,
                              const VkSwapchainCreateInfoKHR *pCreateInfo,
                              const VkAllocationCallbacks* pAllocator,
-                             const struct wsi_image_fns *image_fns,
                              struct wsi_swapchain **swapchain_out)
 {
    struct x11_swapchain *chain;
@@ -1125,7 +1112,6 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->base.get_images = x11_get_images;
    chain->base.acquire_next_image = x11_acquire_next_image;
    chain->base.queue_present = x11_queue_present;
-   chain->base.image_fns = image_fns;
    chain->base.present_mode = pCreateInfo->presentMode;
    chain->base.image_count = num_images;
    chain->conn = conn;

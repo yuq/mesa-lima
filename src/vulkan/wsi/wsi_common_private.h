@@ -25,6 +25,22 @@
 
 #include "wsi_common.h"
 
+struct wsi_image {
+   VkImage image;
+   VkDeviceMemory memory;
+
+   struct {
+      VkBuffer buffer;
+      VkDeviceMemory memory;
+      VkCommandBuffer *blit_cmd_buffers;
+   } prime;
+
+   uint32_t size;
+   uint32_t offset;
+   uint32_t row_pitch;
+   int fd;
+};
+
 VkResult
 wsi_swapchain_init(const struct wsi_device *wsi,
                    struct wsi_swapchain *chain,
@@ -35,13 +51,18 @@ wsi_swapchain_init(const struct wsi_device *wsi,
 void wsi_swapchain_finish(struct wsi_swapchain *chain);
 
 VkResult
+wsi_create_native_image(const struct wsi_swapchain *chain,
+                        const VkSwapchainCreateInfoKHR *pCreateInfo,
+                        struct wsi_image *image);
+
+VkResult
 wsi_create_prime_image(const struct wsi_swapchain *chain,
                        const VkSwapchainCreateInfoKHR *pCreateInfo,
                        struct wsi_image *image);
 
 void
-wsi_destroy_prime_image(const struct wsi_swapchain *chain,
-                        struct wsi_image *image);
+wsi_destroy_image(const struct wsi_swapchain *chain,
+                  struct wsi_image *image);
 
 VkResult
 wsi_prime_image_blit_to_linear(const struct wsi_swapchain *chain,

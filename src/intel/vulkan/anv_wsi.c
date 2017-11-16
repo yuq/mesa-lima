@@ -186,126 +186,6 @@ VkResult anv_GetPhysicalDeviceSurfacePresentModesKHR(
                                    pPresentModes);
 }
 
-
-static VkResult
-anv_wsi_image_create(VkDevice device_h,
-                     const VkSwapchainCreateInfoKHR *pCreateInfo,
-                     const VkAllocationCallbacks* pAllocator,
-                     struct wsi_image *wsi_image)
-{
-   struct anv_device *device = anv_device_from_handle(device_h);
-   VkImage image_h;
-   struct anv_image *image;
-
-   VkResult result;
-   result = anv_image_create(anv_device_to_handle(device),
-      &(struct anv_image_create_info) {
-         .isl_tiling_flags = ISL_TILING_X_BIT,
-         .stride = 0,
-         .vk_info =
-      &(VkImageCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-         .imageType = VK_IMAGE_TYPE_2D,
-         .format = pCreateInfo->imageFormat,
-         .extent = {
-            .width = pCreateInfo->imageExtent.width,
-            .height = pCreateInfo->imageExtent.height,
-            .depth = 1
-         },
-         .mipLevels = 1,
-         .arrayLayers = 1,
-         .samples = 1,
-         /* FIXME: Need a way to use X tiling to allow scanout */
-         .tiling = VK_IMAGE_TILING_OPTIMAL,
-         .usage = (pCreateInfo->imageUsage |
-                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
-         .flags = 0,
-      }},
-      NULL,
-      &image_h);
-   if (result != VK_SUCCESS)
-      return result;
-
-   image = anv_image_from_handle(image_h);
-   assert(vk_format_is_color(image->vk_format));
-
-   VkDeviceMemory memory_h;
-   struct anv_device_memory *memory;
-   result = anv_AllocateMemory(anv_device_to_handle(device),
-      &(VkMemoryAllocateInfo) {
-         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-         .allocationSize = image->size,
-         .memoryTypeIndex = 0,
-      },
-      NULL /* XXX: pAllocator */,
-      &memory_h);
-   if (result != VK_SUCCESS)
-      goto fail_create_image;
-
-   memory = anv_device_memory_from_handle(memory_h);
-
-   /* We need to set the WRITE flag on window system buffers so that GEM will
-    * know we're writing to them and synchronize uses on other rings (eg if
-    * the display server uses the blitter ring).
-    */
-   memory->bo->flags &= ~EXEC_OBJECT_ASYNC;
-   memory->bo->flags |= EXEC_OBJECT_WRITE;
-
-   anv_BindImageMemory(device_h, image_h, memory_h, 0);
-   assert(image->planes[0].offset == 0);
-
-   struct anv_surface *surface = &image->planes[0].surface;
-   assert(surface->isl.tiling == ISL_TILING_X);
-
-   int ret = anv_gem_set_tiling(device, memory->bo->gem_handle,
-                                surface->isl.row_pitch, I915_TILING_X);
-   if (ret) {
-      /* FINISHME: Choose a better error. */
-      result = vk_errorf(device->instance, device,
-                         VK_ERROR_OUT_OF_DEVICE_MEMORY,
-                         "set_tiling failed: %m");
-      goto fail_alloc_memory;
-   }
-
-   int fd = anv_gem_handle_to_fd(device, memory->bo->gem_handle);
-   if (fd == -1) {
-      /* FINISHME: Choose a better error. */
-      result = vk_errorf(device->instance, device,
-                         VK_ERROR_OUT_OF_DEVICE_MEMORY,
-                         "handle_to_fd failed: %m");
-      goto fail_alloc_memory;
-   }
-
-   wsi_image->image = image_h;
-   wsi_image->memory = memory_h;
-   wsi_image->fd = fd;
-   wsi_image->size = image->size;
-   wsi_image->offset = 0;
-   wsi_image->row_pitch = surface->isl.row_pitch;
-   return VK_SUCCESS;
-fail_alloc_memory:
-   anv_FreeMemory(device_h, memory_h, pAllocator);
-
-fail_create_image:
-   anv_DestroyImage(device_h, image_h, pAllocator);
-   return result;
-}
-
-static void
-anv_wsi_image_free(VkDevice device,
-                   const VkAllocationCallbacks* pAllocator,
-                   struct wsi_image *wsi_image)
-{
-   anv_DestroyImage(device, wsi_image->image, pAllocator);
-
-   anv_FreeMemory(device, wsi_image->memory, pAllocator);
-}
-
-static const struct wsi_image_fns anv_wsi_image_fns = {
-   .create_wsi_image = anv_wsi_image_create,
-   .free_wsi_image = anv_wsi_image_free,
-};
-
 VkResult anv_CreateSwapchainKHR(
     VkDevice                                     _device,
     const VkSwapchainCreateInfoKHR*              pCreateInfo,
@@ -327,7 +207,7 @@ VkResult anv_CreateSwapchainKHR(
                                              &device->instance->physicalDevice.wsi_device,
                                              device->instance->physicalDevice.local_fd,
                                              pCreateInfo,
-                                             alloc, &anv_wsi_image_fns,
+                                             alloc,
                                              &swapchain);
    if (result != VK_SUCCESS)
       return result;

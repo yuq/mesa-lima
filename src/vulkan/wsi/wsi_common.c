@@ -59,6 +59,7 @@ wsi_device_init(struct wsi_device *wsi,
    WSI_GET_CB(FreeCommandBuffers);
    WSI_GET_CB(GetBufferMemoryRequirements);
    WSI_GET_CB(GetImageMemoryRequirements);
+   WSI_GET_CB(GetImageSubresourceLayout);
    WSI_GET_CB(GetMemoryFdKHR);
    WSI_GET_CB(QueueSubmit);
 #undef WSI_GET_CB
@@ -145,6 +146,116 @@ align_u32(uint32_t v, uint32_t a)
 {
    assert(a != 0 && a == (a & -a));
    return (v + a - 1) & ~(a - 1);
+}
+
+VkResult
+wsi_create_native_image(const struct wsi_swapchain *chain,
+                        const VkSwapchainCreateInfoKHR *pCreateInfo,
+                        struct wsi_image *image)
+{
+   const struct wsi_device *wsi = chain->wsi;
+   VkResult result;
+
+   memset(image, 0, sizeof(*image));
+
+   const struct wsi_image_create_info image_wsi_info = {
+      .sType = VK_STRUCTURE_TYPE_WSI_IMAGE_CREATE_INFO_MESA,
+      .pNext = NULL,
+      .scanout = true,
+   };
+   const VkImageCreateInfo image_info = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+      .pNext = &image_wsi_info,
+      .flags = 0,
+      .imageType = VK_IMAGE_TYPE_2D,
+      .format = pCreateInfo->imageFormat,
+      .extent = {
+         .width = pCreateInfo->imageExtent.width,
+         .height = pCreateInfo->imageExtent.height,
+         .depth = 1,
+      },
+      .mipLevels = 1,
+      .arrayLayers = 1,
+      .samples = VK_SAMPLE_COUNT_1_BIT,
+      .tiling = VK_IMAGE_TILING_OPTIMAL,
+      .usage = pCreateInfo->imageUsage,
+      .sharingMode = pCreateInfo->imageSharingMode,
+      .queueFamilyIndexCount = pCreateInfo->queueFamilyIndexCount,
+      .pQueueFamilyIndices = pCreateInfo->pQueueFamilyIndices,
+      .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+   };
+   result = wsi->CreateImage(chain->device, &image_info,
+                             &chain->alloc, &image->image);
+   if (result != VK_SUCCESS)
+      goto fail;
+
+   VkMemoryRequirements reqs;
+   wsi->GetImageMemoryRequirements(chain->device, image->image, &reqs);
+
+   VkSubresourceLayout image_layout;
+   const VkImageSubresource image_subresource = {
+      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .mipLevel = 0,
+      .arrayLayer = 0,
+   };
+   wsi->GetImageSubresourceLayout(chain->device, image->image,
+                                  &image_subresource, &image_layout);
+
+   const struct wsi_memory_allocate_info memory_wsi_info = {
+      .sType = VK_STRUCTURE_TYPE_WSI_MEMORY_ALLOCATE_INFO_MESA,
+      .pNext = NULL,
+      .implicit_sync = true,
+   };
+   const VkExportMemoryAllocateInfoKHR memory_export_info = {
+      .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR,
+      .pNext = &memory_wsi_info,
+      .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
+   };
+   const VkMemoryDedicatedAllocateInfoKHR memory_dedicated_info = {
+      .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR,
+      .pNext = &memory_export_info,
+      .image = image->image,
+      .buffer = VK_NULL_HANDLE,
+   };
+   const VkMemoryAllocateInfo memory_info = {
+      .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+      .pNext = &memory_dedicated_info,
+      .allocationSize = reqs.size,
+      .memoryTypeIndex = select_memory_type(wsi, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                                            reqs.memoryTypeBits),
+   };
+   result = wsi->AllocateMemory(chain->device, &memory_info,
+                                &chain->alloc, &image->memory);
+   if (result != VK_SUCCESS)
+      goto fail;
+
+   result = wsi->BindImageMemory(chain->device, image->image,
+                                 image->memory, 0);
+   if (result != VK_SUCCESS)
+      goto fail;
+
+   const VkMemoryGetFdInfoKHR memory_get_fd_info = {
+      .sType = VK_STRUCTURE_TYPE_MEMORY_GET_FD_INFO_KHR,
+      .pNext = NULL,
+      .memory = image->memory,
+      .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
+   };
+   int fd;
+   result = wsi->GetMemoryFdKHR(chain->device, &memory_get_fd_info, &fd);
+   if (result != VK_SUCCESS)
+      goto fail;
+
+   image->size = reqs.size;
+   image->row_pitch = image_layout.rowPitch;
+   image->offset = 0;
+   image->fd = fd;
+
+   return VK_SUCCESS;
+
+fail:
+   wsi_destroy_image(chain, image);
+
+   return result;
 }
 
 #define WSI_PRIME_LINEAR_STRIDE_ALIGN 256
@@ -342,14 +453,14 @@ wsi_create_prime_image(const struct wsi_swapchain *chain,
    return VK_SUCCESS;
 
 fail:
-   wsi_destroy_prime_image(chain, image);
+   wsi_destroy_image(chain, image);
 
    return result;
 }
 
 void
-wsi_destroy_prime_image(const struct wsi_swapchain *chain,
-                        struct wsi_image *image)
+wsi_destroy_image(const struct wsi_swapchain *chain,
+                  struct wsi_image *image)
 {
    const struct wsi_device *wsi = chain->wsi;
 
