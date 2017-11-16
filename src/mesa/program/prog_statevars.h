@@ -37,12 +37,6 @@ extern "C" {
 struct gl_context;
 struct gl_program_parameter_list;
 
-/**
- * Number of STATE_* values we need to address any GL state.
- * Used to dimension arrays.
- */
-#define STATE_LENGTH 5
-
 
 /**
  * Used for describing GL state referenced from inside ARB vertex and
