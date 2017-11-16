@@ -39,7 +39,6 @@ pre_args = [
   '-DVERSION="@0@"'.format(meson.project_version()),
   '-DPACKAGE_VERSION=VERSION',
   '-DPACKAGE_BUGREPORT="https://bugs.freedesktop.org/enter_bug.cgi?product=Mesa"',
-  '-D_GNU_SOURCE',
 ]
 
 with_vulkan_icd_dir = get_option('vulkan-icd-dir')
