@@ -289,6 +289,8 @@ brw_save_primitives_written_counters(struct brw_context *brw,
    /* Check if there's enough space for a new pair of four values. */
    if ((obj->counter.bo_end + 2) * streams * sizeof(uint64_t) >= 4096) {
       aggregate_transform_feedback_counter(brw, obj->prim_count_bo,
+                                           &obj->previous_counter);
+      aggregate_transform_feedback_counter(brw, obj->prim_count_bo,
                                            &obj->counter);
    }
 
@@ -316,6 +318,7 @@ brw_save_primitives_written_counters(struct brw_context *brw,
 static void
 compute_vertices_written_so_far(struct brw_context *brw,
                                 struct brw_transform_feedback_object *obj,
+                                struct brw_transform_feedback_counter *counter,
                                 uint64_t *vertices_written)
 {
    const struct gl_context *ctx = &brw->ctx;
@@ -336,25 +339,26 @@ compute_vertices_written_so_far(struct brw_context *brw,
    }
 
    /* Get the number of primitives generated. */
-   aggregate_transform_feedback_counter(brw, obj->prim_count_bo, &obj->counter);
+   aggregate_transform_feedback_counter(brw, obj->prim_count_bo, counter);
 
    for (int i = 0; i < ctx->Const.MaxVertexStreams; i++) {
-      vertices_written[i] = vertices_per_prim * obj->counter.accum[i];
+      vertices_written[i] = vertices_per_prim * counter->accum[i];
    }
 }
 
 /**
- * Compute the number of vertices written by this transform feedback operation.
+ * Compute the number of vertices written by the last transform feedback
+ * begin/end block.
  */
-void
-brw_compute_xfb_vertices_written(struct brw_context *brw,
-                                 struct brw_transform_feedback_object *obj)
+static void
+compute_xfb_vertices_written(struct brw_context *brw,
+                             struct brw_transform_feedback_object *obj)
 {
    if (obj->vertices_written_valid || !obj->base.EndedAnytime)
       return;
 
-   compute_vertices_written_so_far(brw, obj, obj->vertices_written);
-
+   compute_vertices_written_so_far(brw, obj, &obj->previous_counter,
+                                   obj->vertices_written);
    obj->vertices_written_valid = true;
 }
 
@@ -376,7 +380,7 @@ brw_get_transform_feedback_vertex_count(struct gl_context *ctx,
    assert(obj->EndedAnytime);
    assert(stream < ctx->Const.MaxVertexStreams);
 
-   brw_compute_xfb_vertices_written(brw, brw_obj);
+   compute_xfb_vertices_written(brw, brw_obj);
    return brw_obj->vertices_written[stream];
 }
 
@@ -431,13 +435,6 @@ brw_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
       ADVANCE_BATCH();
    }
 
-   /* We're about to lose the information needed to compute the number of
-    * vertices written during the last Begin/EndTransformFeedback section,
-    * so we can't delay it any further.
-    */
-   brw_compute_xfb_vertices_written(brw, brw_obj);
-   brw_reset_transform_feedback_counter(&brw_obj->counter);
-
    /* Store the starting value of the SO_NUM_PRIMS_WRITTEN counters. */
    brw_save_primitives_written_counters(brw, brw_obj);
 
@@ -455,6 +452,14 @@ brw_end_transform_feedback(struct gl_context *ctx,
    /* Store the ending value of the SO_NUM_PRIMS_WRITTEN counters. */
    if (!obj->Paused)
       brw_save_primitives_written_counters(brw, brw_obj);
+
+   /* We've reached the end of a transform feedback begin/end block.  This
+    * means that future DrawTransformFeedback() calls will need to pick up the
+    * results of the current counter, and that it's time to roll back the
+    * current primitive counter to zero.
+    */
+   brw_obj->previous_counter = brw_obj->counter;
+   brw_reset_transform_feedback_counter(&brw_obj->counter);
 
    /* EndTransformFeedback() means that we need to update the number of
     * vertices written.  Since it's only necessary if DrawTransformFeedback()
@@ -490,7 +495,7 @@ brw_resume_transform_feedback(struct gl_context *ctx,
 
    /* Reload SVBI 0 with the count of vertices written so far. */
    uint64_t svbi;
-   compute_vertices_written_so_far(brw, brw_obj, &svbi);
+   compute_vertices_written_so_far(brw, brw_obj, &brw_obj->counter, &svbi);
 
    BEGIN_BATCH(4);
    OUT_BATCH(_3DSTATE_GS_SVB_INDEX << 16 | (4 - 2));

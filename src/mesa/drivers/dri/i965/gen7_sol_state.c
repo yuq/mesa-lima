@@ -45,13 +45,6 @@ gen7_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
 
    assert(brw->screen->devinfo.gen == 7);
 
-   /* We're about to lose the information needed to compute the number of
-    * vertices written during the last Begin/EndTransformFeedback section,
-    * so we can't delay it any further.
-    */
-   brw_compute_xfb_vertices_written(brw, brw_obj);
-   brw_reset_transform_feedback_counter(&brw_obj->counter);
-
    /* Store the starting value of the SO_NUM_PRIMS_WRITTEN counters. */
    brw_save_primitives_written_counters(brw, brw_obj);
 
@@ -85,6 +78,14 @@ gen7_end_transform_feedback(struct gl_context *ctx,
    /* Store the ending value of the SO_NUM_PRIMS_WRITTEN counters. */
    if (!obj->Paused)
       brw_save_primitives_written_counters(brw, brw_obj);
+
+   /* We've reached the end of a transform feedback begin/end block.  This
+    * means that future DrawTransformFeedback() calls will need to pick up the
+    * results of the current counter, and that it's time to roll back the
+    * current primitive counter to zero.
+    */
+   brw_obj->previous_counter = brw_obj->counter;
+   brw_reset_transform_feedback_counter(&brw_obj->counter);
 
    /* EndTransformFeedback() means that we need to update the number of
     * vertices written.  Since it's only necessary if DrawTransformFeedback()

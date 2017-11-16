@@ -579,6 +579,12 @@ struct brw_transform_feedback_object {
    struct brw_transform_feedback_counter counter;
 
    /**
+    * Count of primitives generated during the previous transform feedback
+    * operation.  Used to implement DrawTransformFeedback().
+    */
+   struct brw_transform_feedback_counter previous_counter;
+
+   /**
     * Number of vertices written between last Begin/EndTransformFeedback().
     *
     * Used to implement DrawTransformFeedback().
@@ -1519,9 +1525,6 @@ brw_resume_transform_feedback(struct gl_context *ctx,
 void
 brw_save_primitives_written_counters(struct brw_context *brw,
                                      struct brw_transform_feedback_object *obj);
-void
-brw_compute_xfb_vertices_written(struct brw_context *brw,
-                                 struct brw_transform_feedback_object *obj);
 GLsizei
 brw_get_transform_feedback_vertex_count(struct gl_context *ctx,
                                         struct gl_transform_feedback_object *obj,
