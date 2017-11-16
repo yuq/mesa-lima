@@ -2192,17 +2192,14 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
    annotation_finalize(&annotation, p->next_insn_offset);
 
 #ifndef NDEBUG
-   bool validated = brw_validate_instructions(devinfo, p->store,
-                                              start_offset,
-                                              p->next_insn_offset,
-                                              &annotation);
+   bool validated =
 #else
    if (unlikely(debug_flag))
+#endif
       brw_validate_instructions(devinfo, p->store,
                                 start_offset,
                                 p->next_insn_offset,
                                 &annotation);
-#endif
 
    int before_size = p->next_insn_offset - start_offset;
    brw_compact_instructions(p, start_offset, annotation.ann_count,
