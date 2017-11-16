@@ -60,15 +60,15 @@ typedef union gl_constant_value
 struct gl_program_parameter
 {
    const char *Name;        /**< Null-terminated string */
-   gl_register_file Type;   /**< PROGRAM_CONSTANT or STATE_VAR */
-   GLenum DataType;         /**< GL_FLOAT, GL_FLOAT_VEC2, etc */
+   gl_register_file Type:16;  /**< PROGRAM_CONSTANT or STATE_VAR */
+   GLenum16 DataType;         /**< GL_FLOAT, GL_FLOAT_VEC2, etc */
    /**
     * Number of components (1..4), or more.
     * If the number of components is greater than 4,
     * this parameter is part of a larger uniform like a GLSL matrix or array.
     * The next program parameter's Size will be Size-4 of this parameter.
     */
-   GLuint Size;
+   GLushort Size;
    /**
     * A sequence of STATE_* tokens and integers to identify GL state.
     */
