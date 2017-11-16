@@ -33,12 +33,21 @@ static const struct wsi_callbacks wsi_cbs = {
 };
 #endif
 
+static PFN_vkVoidFunction
+anv_wsi_proc_addr(VkPhysicalDevice physicalDevice, const char *pName)
+{
+   ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
+   return anv_lookup_entrypoint(&physical_device->info, pName);
+}
+
 VkResult
 anv_init_wsi(struct anv_physical_device *physical_device)
 {
    VkResult result;
 
-   memset(physical_device->wsi_device.wsi, 0, sizeof(physical_device->wsi_device.wsi));
+   wsi_device_init(&physical_device->wsi_device,
+                   anv_physical_device_to_handle(physical_device),
+                   anv_wsi_proc_addr);
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
    result = wsi_x11_init_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);

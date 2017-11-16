@@ -34,12 +34,20 @@ MAYBE_UNUSED static const struct wsi_callbacks wsi_cbs = {
 	WSI_CB(GetPhysicalDeviceFormatProperties),
 };
 
+static PFN_vkVoidFunction
+radv_wsi_proc_addr(VkPhysicalDevice physicalDevice, const char *pName)
+{
+	return radv_lookup_entrypoint(pName);
+}
+
 VkResult
 radv_init_wsi(struct radv_physical_device *physical_device)
 {
 	VkResult result;
 
-	memset(physical_device->wsi_device.wsi, 0, sizeof(physical_device->wsi_device.wsi));
+	wsi_device_init(&physical_device->wsi_device,
+			radv_physical_device_to_handle(physical_device),
+			radv_wsi_proc_addr);
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
 	result = wsi_x11_init_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);

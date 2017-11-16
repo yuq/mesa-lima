@@ -121,6 +121,13 @@ struct wsi_device {
     struct wsi_interface *                  wsi[VK_ICD_WSI_PLATFORM_MAX];
 };
 
+typedef PFN_vkVoidFunction (VKAPI_PTR *WSI_FN_GetPhysicalDeviceProcAddr)(VkPhysicalDevice physicalDevice, const char* pName);
+
+void
+wsi_device_init(struct wsi_device *wsi,
+                VkPhysicalDevice pdevice,
+                WSI_FN_GetPhysicalDeviceProcAddr proc_addr);
+
 #define WSI_CB(cb) PFN_vk##cb cb
 struct wsi_callbacks {
    WSI_CB(GetPhysicalDeviceFormatProperties);

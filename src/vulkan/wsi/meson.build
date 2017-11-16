@@ -22,6 +22,7 @@ vulkan_wsi_args = []
 vulkan_wsi_deps = []
 
 files_vulkan_wsi = files(
+  'wsi_common.c',
   'wsi_common.h',
   'wsi_common_queue.h',
 )
