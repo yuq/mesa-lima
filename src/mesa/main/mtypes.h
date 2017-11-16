@@ -1021,14 +1021,15 @@ struct gl_sampler_object
 {
    simple_mtx_t Mutex;
    GLuint Name;
-   GLint RefCount;
    GLchar *Label;               /**< GL_KHR_debug */
+   GLint RefCount;
 
    GLenum16 WrapS;		/**< S-axis texture image wrap mode */
    GLenum16 WrapT;		/**< T-axis texture image wrap mode */
    GLenum16 WrapR;		/**< R-axis texture image wrap mode */
    GLenum16 MinFilter;		/**< minification filter */
    GLenum16 MagFilter;		/**< magnification filter */
+   GLenum16 sRGBDecode;         /**< GL_DECODE_EXT or GL_SKIP_DECODE_EXT */
    union gl_color_union BorderColor;  /**< Interpreted according to texture format */
    GLfloat MinLod;		/**< min lambda, OpenGL 1.2 */
    GLfloat MaxLod;		/**< max lambda, OpenGL 1.2 */
@@ -1036,7 +1037,6 @@ struct gl_sampler_object
    GLfloat MaxAnisotropy;	/**< GL_EXT_texture_filter_anisotropic */
    GLenum16 CompareMode;		/**< GL_ARB_shadow */
    GLenum16 CompareFunc;		/**< GL_ARB_shadow */
-   GLenum16 sRGBDecode;           /**< GL_DECODE_EXT or GL_SKIP_DECODE_EXT */
    GLboolean CubeMapSeamless;   /**< GL_AMD_seamless_cubemap_per_texture */
 
    /** GL_ARB_bindless_texture */
@@ -1051,27 +1051,26 @@ struct gl_sampler_object
  */
 struct gl_texture_object
 {
-   simple_mtx_t Mutex;           /**< for thread safety */
-   GLint RefCount;               /**< reference count */
-   GLuint Name;                  /**< the user-visible texture object ID */
-   GLchar *Label;                /**< GL_KHR_debug */
-   GLenum16 Target;              /**< GL_TEXTURE_1D, GL_TEXTURE_2D, etc. */
-   gl_texture_index TargetIndex; /**< The gl_texture_unit::CurrentTex index.
-                                      Only valid when Target is valid. */
+   simple_mtx_t Mutex;         /**< for thread safety */
+   GLint RefCount;             /**< reference count */
+   GLuint Name;                /**< the user-visible texture object ID */
+   GLenum16 Target;            /**< GL_TEXTURE_1D, GL_TEXTURE_2D, etc. */
+   GLenum16 DepthMode;         /**< GL_ARB_depth_texture */
+   GLchar *Label;              /**< GL_KHR_debug */
 
    struct gl_sampler_object Sampler;
 
-   GLenum16 DepthMode;           /**< GL_ARB_depth_texture */
-
+   gl_texture_index TargetIndex; /**< The gl_texture_unit::CurrentTex index.
+                                      Only valid when Target is valid. */
    GLfloat Priority;           /**< in [0,1] */
-   GLint BaseLevel;            /**< min mipmap level, OpenGL 1.2 */
-   GLint MaxLevel;             /**< max mipmap level, OpenGL 1.2 */
-   GLint ImmutableLevels;      /**< ES 3.0 / ARB_texture_view */
-   GLint _MaxLevel;            /**< actual max mipmap level (q in the spec) */
+   GLint MaxLevel;           /**< max mipmap level (max=1000), OpenGL 1.2 */
+   GLint BaseLevel;           /**< min mipmap level, OpenGL 1.2 */
+   GLbyte _MaxLevel;           /**< actual max mipmap level (q in the spec) */
    GLfloat _MaxLambda;         /**< = _MaxLevel - BaseLevel (q - p in spec) */
    GLint CropRect[4];          /**< GL_OES_draw_texture */
    GLenum16 Swizzle[4];        /**< GL_EXT_texture_swizzle */
-   GLuint _Swizzle;            /**< same as Swizzle, but SWIZZLE_* format */
+   GLushort _Swizzle;          /**< same as Swizzle, but SWIZZLE_* format */
+   GLbyte ImmutableLevels;     /**< ES 3.0 / ARB_texture_view */
    GLboolean GenerateMipmap;   /**< GL_SGIS_generate_mipmap */
    GLboolean _BaseComplete;    /**< Is the base texture level valid? */
    GLboolean _MipmapComplete;  /**< Is the whole mipmap valid? */
@@ -1085,31 +1084,32 @@ struct gl_texture_object
    bool StencilSampling;       /**< Should we sample stencil instead of depth? */
    bool HandleAllocated;       /**< GL_ARB_bindless_texture */
 
-   GLuint MinLevel;            /**< GL_ARB_texture_view */
-   GLuint MinLayer;            /**< GL_ARB_texture_view */
-   GLuint NumLevels;           /**< GL_ARB_texture_view */
-   GLuint NumLayers;           /**< GL_ARB_texture_view */
+   /** GL_OES_EGL_image_external */
+   GLubyte RequiredTextureImageUnits;
+
+   GLubyte MinLevel;            /**< GL_ARB_texture_view */
+   GLubyte NumLevels;           /**< GL_ARB_texture_view */
+   GLushort MinLayer;            /**< GL_ARB_texture_view */
+   GLushort NumLayers;           /**< GL_ARB_texture_view */
 
    /** GL_EXT_memory_object */
    GLenum16 TextureTiling;
 
-   /** Actual texture images, indexed by [cube face] and [mipmap level] */
-   struct gl_texture_image *Image[MAX_FACES][MAX_TEXTURE_LEVELS];
+   /** GL_ARB_shader_image_load_store */
+   GLenum16 ImageFormatCompatibilityType;
 
    /** GL_ARB_texture_buffer_object */
-   struct gl_buffer_object *BufferObject;
    GLenum16 BufferObjectFormat;
    /** Equivalent Mesa format for BufferObjectFormat. */
    mesa_format _BufferObjectFormat;
+   struct gl_buffer_object *BufferObject;
+
    /** GL_ARB_texture_buffer_range */
    GLintptr BufferOffset;
    GLsizeiptr BufferSize; /**< if this is -1, use BufferObject->Size instead */
 
-   /** GL_OES_EGL_image_external */
-   GLint RequiredTextureImageUnits;
-
-   /** GL_ARB_shader_image_load_store */
-   GLenum16 ImageFormatCompatibilityType;
+   /** Actual texture images, indexed by [cube face] and [mipmap level] */
+   struct gl_texture_image *Image[MAX_FACES][MAX_TEXTURE_LEVELS];
 
    /** GL_ARB_bindless_texture */
    struct util_dynarray SamplerHandles;
@@ -3672,7 +3672,7 @@ struct gl_program_constants
 struct gl_constants
 {
    GLuint MaxTextureMbytes;      /**< Max memory per image, in MB */
-   GLuint MaxTextureLevels;      /**< Max mipmap levels. */ 
+   GLuint MaxTextureLevels;      /**< Max mipmap levels. */
    GLuint Max3DTextureLevels;    /**< Max mipmap levels for 3D textures */
    GLuint MaxCubeTextureLevels;  /**< Max mipmap levels for cube textures */
    GLuint MaxArrayTextureLayers; /**< Max layers in array textures */
