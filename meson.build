@@ -535,13 +535,6 @@ endif
 # TODO: powr8
 # TODO: shared/static? Is this even worth doing?
 
-# I don't think that I need to set any of the debug stuff, I think meson
-# handles that for us
-
-# TODO: ldflags
-
-# TODO: texture-float (gallium/mesa only)
-
 # Building x86 assembly code requires running x86 binaries. It is possible for
 # x86_64 OSes to run x86 binaries, so don't disable asm in those cases
 # TODO: it should be possible to use an exe_wrapper to run the binary during
@@ -788,11 +781,7 @@ else
   dep_unwind = []
 endif
 
-# TODO: flags for opengl, gles, dri
-
 # TODO: gallium-hud
-
-# TODO: glx provider
 
 if with_osmesa != 'none'
   if with_osmesa == 'classic' and not with_dri_swrast
@@ -885,10 +874,6 @@ if with_platform_x11
     dep_xcb_xfixes = dependency('xcb-xfixes')
   endif
 endif
-
-# TODO: osmesa
-
-# TODO: vallium G3DVL
 
 # TODO: nine
 
