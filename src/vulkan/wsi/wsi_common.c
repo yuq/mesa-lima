@@ -541,9 +541,14 @@ wsi_common_queue_present(const struct wsi_device *wsi,
       VkSubmitInfo submit_info = {
          .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
          .pNext = NULL,
-         .waitSemaphoreCount = pPresentInfo->waitSemaphoreCount,
-         .pWaitSemaphores = pPresentInfo->pWaitSemaphores,
       };
+      if (i == 0) {
+         /* We only need/want to wait on semaphores once.  After that, we're
+          * guaranteed ordering since it all happens on the same queue.
+          */
+         submit_info.waitSemaphoreCount = pPresentInfo->waitSemaphoreCount,
+         submit_info.pWaitSemaphores = pPresentInfo->pWaitSemaphores,
+      }
       result = wsi->QueueSubmit(queue, 1, &submit_info, swapchain->fences[0]);
       if (result != VK_SUCCESS)
          goto fail_present;
