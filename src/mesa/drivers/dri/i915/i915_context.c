@@ -28,6 +28,7 @@
 #include "i915_context.h"
 #include "main/api_exec.h"
 #include "main/framebuffer.h"
+#include "main/extensions.h"
 #include "main/imports.h"
 #include "main/macros.h"
 #include "main/version.h"
