@@ -206,18 +206,23 @@ VkResult radv_GetSwapchainImagesKHR(
 }
 
 VkResult radv_AcquireNextImageKHR(
-	VkDevice                                     device,
-	VkSwapchainKHR                               _swapchain,
+	VkDevice                                     _device,
+	VkSwapchainKHR                               swapchain,
 	uint64_t                                     timeout,
 	VkSemaphore                                  semaphore,
 	VkFence                                      _fence,
 	uint32_t*                                    pImageIndex)
 {
-	RADV_FROM_HANDLE(wsi_swapchain, swapchain, _swapchain);
+	RADV_FROM_HANDLE(radv_device, device, _device);
+	struct radv_physical_device *pdevice = device->physical_device;
 	RADV_FROM_HANDLE(radv_fence, fence, _fence);
 
-	VkResult result = swapchain->acquire_next_image(swapchain, timeout, semaphore,
-	                                                pImageIndex);
+	VkResult result = wsi_common_acquire_next_image(&pdevice->wsi_device,
+							_device,
+							swapchain,
+							timeout,
+							semaphore,
+							pImageIndex);
 
 	if (fence && (result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR)) {
 		fence->submitted = true;

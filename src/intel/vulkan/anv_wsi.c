@@ -234,24 +234,27 @@ VkResult anv_GetSwapchainImagesKHR(
 
 VkResult anv_AcquireNextImageKHR(
     VkDevice                                     _device,
-    VkSwapchainKHR                               _swapchain,
+    VkSwapchainKHR                               swapchain,
     uint64_t                                     timeout,
     VkSemaphore                                  semaphore,
-    VkFence                                      _fence,
+    VkFence                                      fence,
     uint32_t*                                    pImageIndex)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(wsi_swapchain, swapchain, _swapchain);
-   ANV_FROM_HANDLE(anv_fence, fence, _fence);
+   struct anv_physical_device *pdevice = &device->instance->physicalDevice;
 
-   VkResult result = swapchain->acquire_next_image(swapchain, timeout,
-                                                   semaphore, pImageIndex);
+   VkResult result = wsi_common_acquire_next_image(&pdevice->wsi_device,
+                                                   _device,
+                                                   swapchain,
+                                                   timeout,
+                                                   semaphore,
+                                                   pImageIndex);
 
    /* Thanks to implicit sync, the image is ready immediately.  However, we
     * should wait for the current GPU state to finish.
     */
-   if (fence)
-      anv_QueueSubmit(anv_queue_to_handle(&device->queue), 0, NULL, _fence);
+   if (fence != VK_NULL_HANDLE)
+      anv_QueueSubmit(anv_queue_to_handle(&device->queue), 0, NULL, fence);
 
    return result;
 }

@@ -221,6 +221,14 @@ wsi_common_get_images(VkSwapchainKHR _swapchain,
                       VkImage *pSwapchainImages);
 
 VkResult
+wsi_common_acquire_next_image(const struct wsi_device *wsi,
+                              VkDevice device,
+                              VkSwapchainKHR swapchain,
+                              uint64_t timeout,
+                              VkSemaphore semaphore,
+                              uint32_t *pImageIndex);
+
+VkResult
 wsi_common_create_swapchain(struct wsi_device *wsi,
                             VkDevice device,
                             int fd,
