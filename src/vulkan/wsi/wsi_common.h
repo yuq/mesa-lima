@@ -51,6 +51,13 @@ struct wsi_memory_allocate_info {
 struct wsi_image {
    VkImage image;
    VkDeviceMemory memory;
+
+   struct {
+      VkBuffer buffer;
+      VkDeviceMemory memory;
+      VkCommandBuffer *blit_cmd_buffers;
+   } prime;
+
    uint32_t size;
    uint32_t offset;
    uint32_t row_pitch;
@@ -62,8 +69,6 @@ struct wsi_image_fns {
    VkResult (*create_wsi_image)(VkDevice device_h,
                                 const VkSwapchainCreateInfoKHR *pCreateInfo,
                                 const VkAllocationCallbacks *pAllocator,
-                                bool needs_linear_copy,
-                                bool linear,
                                 struct wsi_image *image_p);
    void (*free_wsi_image)(VkDevice device,
                           const VkAllocationCallbacks *pAllocator,
@@ -77,11 +82,11 @@ struct wsi_swapchain {
    VkAllocationCallbacks alloc;
    const struct wsi_image_fns *image_fns;
    VkFence fences[3];
-   VkCommandBuffer *cmd_buffers;
-   VkCommandPool cmd_pools[3];
    VkPresentModeKHR present_mode;
    uint32_t image_count;
-   bool needs_linear_copy;
+
+   /* Command pools, one per queue family */
+   VkCommandPool *cmd_pools;
 
    VkResult (*destroy)(struct wsi_swapchain *swapchain,
                        const VkAllocationCallbacks *pAllocator);
@@ -91,12 +96,11 @@ struct wsi_swapchain {
                                   uint64_t timeout, VkSemaphore semaphore,
                                   uint32_t *image_index);
    VkResult (*queue_present)(struct wsi_swapchain *swap_chain,
+                             VkQueue queue,
+                             uint32_t waitSemaphoreCount,
+                             const VkSemaphore *pWaitSemaphores,
                              uint32_t image_index,
                              const VkPresentRegionKHR *damage);
-   void (*get_image_and_linear)(struct wsi_swapchain *swapchain,
-                                int imageIndex,
-                                VkImage *image,
-                                VkImage *linear_image);
 };
 
 struct wsi_interface {
@@ -137,6 +141,33 @@ struct wsi_interface {
 #define VK_ICD_WSI_PLATFORM_MAX 5
 
 struct wsi_device {
+   VkPhysicalDeviceMemoryProperties memory_props;
+   uint32_t queue_family_count;
+
+   uint32_t (*queue_get_family_index)(VkQueue queue);
+
+#define WSI_CB(cb) PFN_vk##cb cb
+   WSI_CB(AllocateMemory);
+   WSI_CB(AllocateCommandBuffers);
+   WSI_CB(BindBufferMemory);
+   WSI_CB(BindImageMemory);
+   WSI_CB(BeginCommandBuffer);
+   WSI_CB(CmdCopyImageToBuffer);
+   WSI_CB(CreateBuffer);
+   WSI_CB(CreateCommandPool);
+   WSI_CB(CreateImage);
+   WSI_CB(DestroyBuffer);
+   WSI_CB(DestroyCommandPool);
+   WSI_CB(DestroyImage);
+   WSI_CB(EndCommandBuffer);
+   WSI_CB(FreeMemory);
+   WSI_CB(FreeCommandBuffers);
+   WSI_CB(GetBufferMemoryRequirements);
+   WSI_CB(GetImageMemoryRequirements);
+   WSI_CB(GetMemoryFdKHR);
+   WSI_CB(QueueSubmit);
+#undef WSI_CB
+
     struct wsi_interface *                  wsi[VK_ICD_WSI_PLATFORM_MAX];
 };
 
@@ -149,7 +180,12 @@ wsi_device_init(struct wsi_device *wsi,
 
 #define WSI_CB(cb) PFN_vk##cb cb
 struct wsi_callbacks {
+   VkPhysicalDevice (*device_get_physical)(VkDevice);
+
+   WSI_CB(GetDeviceProcAddr);
    WSI_CB(GetPhysicalDeviceFormatProperties);
+   WSI_CB(GetPhysicalDeviceMemoryProperties);
+   WSI_CB(GetPhysicalDeviceQueueFamilyProperties);
 };
 #undef WSI_CB
 

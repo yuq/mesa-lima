@@ -616,7 +616,6 @@ VkResult wsi_create_xlib_surface(const VkAllocationCallbacks *pAllocator,
 
 struct x11_image {
    struct wsi_image                          base;
-   struct wsi_image                          linear_base;
    xcb_pixmap_t                              pixmap;
    bool                                      busy;
    struct xshmfence *                        shm_fence;
@@ -625,6 +624,8 @@ struct x11_image {
 
 struct x11_swapchain {
    struct wsi_swapchain                        base;
+
+   bool                                         use_prime_blit;
 
    xcb_connection_t *                           conn;
    xcb_window_t                                 window;
@@ -671,15 +672,6 @@ x11_get_images(struct wsi_swapchain *anv_chain,
       pSwapchainImages[i] = chain->images[i].base.image;
 
    return result;
-}
-
-static void
-x11_get_image_and_linear(struct wsi_swapchain *drv_chain,
-                         int imageIndex, VkImage *image, VkImage *linear_image)
-{
-   struct x11_swapchain *chain = (struct x11_swapchain *)drv_chain;
-   *image = chain->images[imageIndex].base.image;
-   *linear_image = chain->images[imageIndex].linear_base.image;
 }
 
 static VkResult
@@ -889,10 +881,24 @@ x11_acquire_next_image(struct wsi_swapchain *anv_chain,
 
 static VkResult
 x11_queue_present(struct wsi_swapchain *anv_chain,
+                  VkQueue queue,
+                  uint32_t waitSemaphoreCount,
+                  const VkSemaphore *pWaitSemaphores,
                   uint32_t image_index,
                   const VkPresentRegionKHR *damage)
 {
    struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
+   VkResult result;
+
+   if (chain->use_prime_blit) {
+      result = wsi_prime_image_blit_to_linear(&chain->base,
+                                              &chain->images[image_index].base,
+                                              queue,
+                                              waitSemaphoreCount,
+                                              pWaitSemaphores);
+      if (result != VK_SUCCESS)
+         return result;
+   }
 
    if (chain->threaded) {
       wsi_queue_push(&chain->present_queue, image_index);
@@ -960,46 +966,31 @@ x11_image_init(VkDevice device_h, struct x11_swapchain *chain,
    VkResult result;
    uint32_t bpp = 32;
 
-   result = chain->base.image_fns->create_wsi_image(device_h,
-                                                    pCreateInfo,
-                                                    pAllocator,
-                                                    chain->base.needs_linear_copy,
-                                                    false,
-                                                    &image->base);
-   if (result != VK_SUCCESS)
-      return result;
-
-   if (chain->base.needs_linear_copy) {
+   if (chain->use_prime_blit) {
+      result = wsi_create_prime_image(&chain->base, pCreateInfo, &image->base);
+   } else {
       result = chain->base.image_fns->create_wsi_image(device_h,
                                                        pCreateInfo,
                                                        pAllocator,
-                                                       chain->base.needs_linear_copy,
-                                                       true,
-                                                       &image->linear_base);
-
-      if (result != VK_SUCCESS) {
-         chain->base.image_fns->free_wsi_image(device_h, pAllocator,
-                                               &image->base);
-         return result;
-      }
+                                                       &image->base);
    }
+   if (result != VK_SUCCESS)
+      return result;
 
    image->pixmap = xcb_generate_id(chain->conn);
 
-   struct wsi_image *image_ws =
-      chain->base.needs_linear_copy ? &image->linear_base : &image->base;
    cookie =
       xcb_dri3_pixmap_from_buffer_checked(chain->conn,
                                           image->pixmap,
                                           chain->window,
-                                          image_ws->size,
+                                          image->base.size,
                                           pCreateInfo->imageExtent.width,
                                           pCreateInfo->imageExtent.height,
-                                          image_ws->row_pitch,
+                                          image->base.row_pitch,
                                           chain->depth, bpp,
-                                          image_ws->fd);
+                                          image->base.fd);
    xcb_discard_reply(chain->conn, cookie.sequence);
-   image_ws->fd = -1; /* XCB has now taken ownership of the FD */
+   image->base.fd = -1; /* XCB has now taken ownership of the FD */
 
    int fence_fd = xshmfence_alloc_shm();
    if (fence_fd < 0)
@@ -1028,11 +1019,11 @@ fail_pixmap:
    cookie = xcb_free_pixmap(chain->conn, image->pixmap);
    xcb_discard_reply(chain->conn, cookie.sequence);
 
-   if (chain->base.needs_linear_copy) {
-      chain->base.image_fns->free_wsi_image(device_h, pAllocator,
-                                            &image->linear_base);
+   if (chain->use_prime_blit) {
+      wsi_destroy_prime_image(&chain->base, &image->base);
+   } else {
+      chain->base.image_fns->free_wsi_image(device_h, pAllocator, &image->base);
    }
-   chain->base.image_fns->free_wsi_image(device_h, pAllocator, &image->base);
 
    return result;
 }
@@ -1051,12 +1042,12 @@ x11_image_finish(struct x11_swapchain *chain,
    cookie = xcb_free_pixmap(chain->conn, image->pixmap);
    xcb_discard_reply(chain->conn, cookie.sequence);
 
-   if (chain->base.needs_linear_copy) {
-      chain->base.image_fns->free_wsi_image(chain->base.device, pAllocator,
-                                            &image->linear_base);
+   if (chain->use_prime_blit) {
+      wsi_destroy_prime_image(&chain->base, &image->base);
+   } else {
+      chain->base.image_fns->free_wsi_image(chain->base.device,
+                                            pAllocator, &image->base);
    }
-   chain->base.image_fns->free_wsi_image(chain->base.device, pAllocator,
-                                         &image->base);
 }
 
 static VkResult
@@ -1132,7 +1123,6 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
 
    chain->base.destroy = x11_swapchain_destroy;
    chain->base.get_images = x11_get_images;
-   chain->base.get_image_and_linear = x11_get_image_and_linear;
    chain->base.acquire_next_image = x11_acquire_next_image;
    chain->base.queue_present = x11_queue_present;
    chain->base.image_fns = image_fns;
@@ -1148,9 +1138,10 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->status = VK_SUCCESS;
 
 
-   chain->base.needs_linear_copy = false;
-   if (!wsi_x11_check_dri3_compatible(conn, local_fd))
-       chain->base.needs_linear_copy = true;
+   chain->use_prime_blit = false;
+   if (!wsi_x11_check_dri3_compatible(conn, local_fd)) {
+       chain->use_prime_blit = true;
+   }
 
    chain->event_id = xcb_generate_id(chain->conn);
    xcb_present_select_input(chain->conn, chain->event_id, chain->window,

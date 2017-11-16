@@ -34,4 +34,20 @@ wsi_swapchain_init(const struct wsi_device *wsi,
 
 void wsi_swapchain_finish(struct wsi_swapchain *chain);
 
+VkResult
+wsi_create_prime_image(const struct wsi_swapchain *chain,
+                       const VkSwapchainCreateInfoKHR *pCreateInfo,
+                       struct wsi_image *image);
+
+void
+wsi_destroy_prime_image(const struct wsi_swapchain *chain,
+                        struct wsi_image *image);
+
+VkResult
+wsi_prime_image_blit_to_linear(const struct wsi_swapchain *chain,
+                               struct wsi_image *image,
+                               VkQueue queue,
+                               uint32_t waitSemaphoreCount,
+                               const VkSemaphore *pWaitSemaphores);
+
 #endif /* WSI_COMMON_PRIVATE_H */

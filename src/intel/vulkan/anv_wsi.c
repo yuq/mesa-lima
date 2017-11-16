@@ -40,6 +40,12 @@ anv_wsi_proc_addr(VkPhysicalDevice physicalDevice, const char *pName)
    return anv_lookup_entrypoint(&physical_device->info, pName);
 }
 
+static uint32_t
+anv_wsi_queue_get_family_index(VkQueue queue)
+{
+   return 0;
+}
+
 VkResult
 anv_init_wsi(struct anv_physical_device *physical_device)
 {
@@ -48,6 +54,9 @@ anv_init_wsi(struct anv_physical_device *physical_device)
    wsi_device_init(&physical_device->wsi_device,
                    anv_physical_device_to_handle(physical_device),
                    anv_wsi_proc_addr);
+
+   physical_device->wsi_device.queue_get_family_index =
+      anv_wsi_queue_get_family_index;
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
    result = wsi_x11_init_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
@@ -182,8 +191,6 @@ static VkResult
 anv_wsi_image_create(VkDevice device_h,
                      const VkSwapchainCreateInfoKHR *pCreateInfo,
                      const VkAllocationCallbacks* pAllocator,
-                     bool different_gpu,
-                     bool linear,
                      struct wsi_image *wsi_image)
 {
    struct anv_device *device = anv_device_from_handle(device_h);
@@ -434,6 +441,9 @@ VkResult anv_QueuePresentKHR(
       anv_QueueSubmit(_queue, 0, NULL, swapchain->fences[0]);
 
       item_result = swapchain->queue_present(swapchain,
+                                             _queue,
+                                             pPresentInfo->waitSemaphoreCount,
+                                             pPresentInfo->pWaitSemaphores,
                                              pPresentInfo->pImageIndices[i],
                                              region);
       /* TODO: What if one of them returns OUT_OF_DATE? */
