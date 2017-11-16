@@ -287,62 +287,11 @@ VkResult anv_QueuePresentKHR(
     const VkPresentInfoKHR*                  pPresentInfo)
 {
    ANV_FROM_HANDLE(anv_queue, queue, _queue);
-   VkResult result = VK_SUCCESS;
+   struct anv_physical_device *pdevice =
+      &queue->device->instance->physicalDevice;
 
-   const VkPresentRegionsKHR *regions =
-      vk_find_struct_const(pPresentInfo->pNext, PRESENT_REGIONS_KHR);
-
-   for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
-      ANV_FROM_HANDLE(wsi_swapchain, swapchain, pPresentInfo->pSwapchains[i]);
-      VkResult item_result;
-
-      const VkPresentRegionKHR *region = NULL;
-      if (regions && regions->pRegions)
-         region = &regions->pRegions[i];
-
-      assert(anv_device_from_handle(swapchain->device) == queue->device);
-
-      if (swapchain->fences[0] == VK_NULL_HANDLE) {
-         item_result = anv_CreateFence(anv_device_to_handle(queue->device),
-            &(VkFenceCreateInfo) {
-               .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-               .flags = 0,
-            }, &swapchain->alloc, &swapchain->fences[0]);
-         if (pPresentInfo->pResults != NULL)
-            pPresentInfo->pResults[i] = item_result;
-         result = result == VK_SUCCESS ? item_result : result;
-         if (item_result != VK_SUCCESS)
-            continue;
-      } else {
-         anv_ResetFences(anv_device_to_handle(queue->device),
-                         1, &swapchain->fences[0]);
-      }
-
-      anv_QueueSubmit(_queue, 0, NULL, swapchain->fences[0]);
-
-      item_result = swapchain->queue_present(swapchain,
-                                             _queue,
-                                             pPresentInfo->waitSemaphoreCount,
-                                             pPresentInfo->pWaitSemaphores,
-                                             pPresentInfo->pImageIndices[i],
-                                             region);
-      /* TODO: What if one of them returns OUT_OF_DATE? */
-      if (pPresentInfo->pResults != NULL)
-         pPresentInfo->pResults[i] = item_result;
-      result = result == VK_SUCCESS ? item_result : result;
-      if (item_result != VK_SUCCESS)
-            continue;
-
-      VkFence last = swapchain->fences[2];
-      swapchain->fences[2] = swapchain->fences[1];
-      swapchain->fences[1] = swapchain->fences[0];
-      swapchain->fences[0] = last;
-
-      if (last != VK_NULL_HANDLE) {
-         anv_WaitForFences(anv_device_to_handle(queue->device),
-                           1, &last, true, 1);
-      }
-   }
-
-   return VK_SUCCESS;
+   return wsi_common_queue_present(&pdevice->wsi_device,
+                                   anv_device_to_handle(queue->device),
+                                   _queue, 0,
+                                   pPresentInfo);
 }
