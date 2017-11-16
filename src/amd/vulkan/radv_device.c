@@ -2126,13 +2126,11 @@ bool radv_get_memory_fd(struct radv_device *device,
 					 pFD);
 }
 
-VkResult radv_alloc_memory(VkDevice                        _device,
-			   const VkMemoryAllocateInfo*     pAllocateInfo,
-			   const VkAllocationCallbacks*    pAllocator,
-			   enum radv_mem_flags_bits        mem_flags,
-			   VkDeviceMemory*                 pMem)
+static VkResult radv_alloc_memory(struct radv_device *device,
+				  const VkMemoryAllocateInfo*     pAllocateInfo,
+				  const VkAllocationCallbacks*    pAllocator,
+				  VkDeviceMemory*                 pMem)
 {
-	RADV_FROM_HANDLE(radv_device, device, _device);
 	struct radv_device_memory *mem;
 	VkResult result;
 	enum radeon_bo_domain domain;
@@ -2202,9 +2200,6 @@ VkResult radv_alloc_memory(VkDevice                        _device,
 	if (mem_type_index == RADV_MEM_TYPE_GTT_WRITE_COMBINE)
 		flags |= RADEON_FLAG_GTT_WC;
 
-	if (mem_flags & RADV_MEM_IMPLICIT_SYNC)
-		flags |= RADEON_FLAG_IMPLICIT_SYNC;
-
 	if (!dedicate_info && !import_info)
 		flags |= RADEON_FLAG_NO_INTERPROCESS_SHARING;
 
@@ -2233,7 +2228,8 @@ VkResult radv_AllocateMemory(
 	const VkAllocationCallbacks*                pAllocator,
 	VkDeviceMemory*                             pMem)
 {
-	return radv_alloc_memory(_device, pAllocateInfo, pAllocator, 0, pMem);
+	RADV_FROM_HANDLE(radv_device, device, _device);
+	return radv_alloc_memory(device, pAllocateInfo, pAllocator, pMem);
 }
 
 void radv_FreeMemory(
