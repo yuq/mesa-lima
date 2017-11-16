@@ -165,6 +165,15 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	foreach_bit(i, ctx->shaderbuf[PIPE_SHADER_FRAGMENT].enabled_mask)
 		resource_written(batch, ctx->shaderbuf[PIPE_SHADER_FRAGMENT].sb[i].buffer);
 
+	foreach_bit(i, ctx->shaderimg[PIPE_SHADER_FRAGMENT].enabled_mask) {
+		struct pipe_image_view *img =
+			&ctx->shaderimg[PIPE_SHADER_FRAGMENT].si[i];
+		if (img->access & PIPE_IMAGE_ACCESS_WRITE)
+			resource_written(batch, img->resource);
+		else
+			resource_read(batch, img->resource);
+	}
+
 	foreach_bit(i, ctx->constbuf[PIPE_SHADER_VERTEX].enabled_mask)
 		resource_read(batch, ctx->constbuf[PIPE_SHADER_VERTEX].cb[i].buffer);
 	foreach_bit(i, ctx->constbuf[PIPE_SHADER_FRAGMENT].enabled_mask)
@@ -439,6 +448,15 @@ fd_launch_grid(struct pipe_context *pctx, const struct pipe_grid_info *info)
 	 */
 	foreach_bit(i, ctx->shaderbuf[PIPE_SHADER_COMPUTE].enabled_mask)
 		resource_read(batch, ctx->shaderbuf[PIPE_SHADER_COMPUTE].sb[i].buffer);
+
+	foreach_bit(i, ctx->shaderimg[PIPE_SHADER_COMPUTE].enabled_mask) {
+		struct pipe_image_view *img =
+			&ctx->shaderimg[PIPE_SHADER_COMPUTE].si[i];
+		if (img->access & PIPE_IMAGE_ACCESS_WRITE)
+			resource_written(batch, img->resource);
+		else
+			resource_read(batch, img->resource);
+	}
 
 	/* UBO's are read */
 	foreach_bit(i, ctx->constbuf[PIPE_SHADER_COMPUTE].enabled_mask)
