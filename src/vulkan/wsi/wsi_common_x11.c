@@ -1107,19 +1107,21 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
 
    const unsigned num_images = pCreateInfo->minImageCount;
 
+   /* Check for whether or not we have a window up-front */
+   xcb_connection_t *conn = x11_surface_get_connection(icd_surface);
+   xcb_window_t window = x11_surface_get_window(icd_surface);
+   xcb_get_geometry_reply_t *geometry =
+      xcb_get_geometry_reply(conn, xcb_get_geometry(conn, window), NULL);
+   if (geometry == NULL)
+      return VK_ERROR_SURFACE_LOST_KHR;
+   const uint32_t bit_depth = geometry->depth;
+   free(geometry);
+
    size_t size = sizeof(*chain) + num_images * sizeof(chain->images[0]);
    chain = vk_alloc(pAllocator, size, 8,
                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (chain == NULL)
       return VK_ERROR_OUT_OF_HOST_MEMORY;
-
-   xcb_connection_t *conn = x11_surface_get_connection(icd_surface);
-   xcb_window_t window = x11_surface_get_window(icd_surface);
-   xcb_get_geometry_reply_t *geometry =
-      xcb_get_geometry_reply(conn, xcb_get_geometry(conn, window), NULL);
-
-   if (geometry == NULL)
-      return VK_ERROR_SURFACE_LOST_KHR;
 
    chain->base.device = device;
    chain->base.destroy = x11_swapchain_destroy;
@@ -1132,14 +1134,13 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->base.image_count = num_images;
    chain->conn = conn;
    chain->window = window;
-   chain->depth = geometry->depth;
+   chain->depth = bit_depth;
    chain->extent = pCreateInfo->imageExtent;
    chain->send_sbc = 0;
    chain->last_present_msc = 0;
    chain->threaded = false;
    chain->status = VK_SUCCESS;
 
-   free(geometry);
 
    chain->base.needs_linear_copy = false;
    if (!wsi_x11_check_dri3_compatible(conn, local_fd))
