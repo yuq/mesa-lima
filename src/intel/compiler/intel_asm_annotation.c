@@ -159,8 +159,6 @@ void
 annotation_insert_error(struct annotation_info *annotation, unsigned offset,
                         const char *error)
 {
-   struct annotation *ann;
-
    if (!annotation->ann_count)
       return;
 
@@ -175,7 +173,6 @@ annotation_insert_error(struct annotation_info *annotation, unsigned offset,
    for (int i = 0; i < annotation->ann_count; i++) {
       struct annotation *cur = &annotation->ann[i];
       struct annotation *next = &annotation->ann[i + 1];
-      ann = cur;
 
       if (next->offset <= offset)
          continue;
@@ -190,11 +187,11 @@ annotation_insert_error(struct annotation_info *annotation, unsigned offset,
          next->block_start = NULL;
          annotation->ann_count++;
       }
-      break;
-   }
 
-   if (ann->error)
-      ralloc_strcat(&ann->error, error);
-   else
-      ann->error = ralloc_strdup(annotation->mem_ctx, error);
+      if (cur->error)
+         ralloc_strcat(&cur->error, error);
+      else
+         cur->error = ralloc_strdup(annotation->mem_ctx, error);
+      return;
+   }
 }
