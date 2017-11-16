@@ -39,7 +39,7 @@
 #include "util/hash_table.h"
 
 #include "vk_util.h"
-#include "wsi_common.h"
+#include "wsi_common_private.h"
 #include "wsi_common_x11.h"
 #include "wsi_common_queue.h"
 
@@ -1084,6 +1084,8 @@ x11_swapchain_destroy(struct wsi_swapchain *anv_chain,
                                              XCB_PRESENT_EVENT_MASK_NO_EVENT);
    xcb_discard_reply(chain->conn, cookie.sequence);
 
+   wsi_swapchain_finish(&chain->base);
+
    vk_free(pAllocator, chain);
 
    return VK_SUCCESS;
@@ -1123,7 +1125,11 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    if (chain == NULL)
       return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-   chain->base.device = device;
+   result = wsi_swapchain_init(wsi_device, &chain->base, device,
+                               pCreateInfo, pAllocator);
+   if (result != VK_SUCCESS)
+      goto fail_alloc;
+
    chain->base.destroy = x11_swapchain_destroy;
    chain->base.get_images = x11_get_images;
    chain->base.get_image_and_linear = x11_get_image_and_linear;
@@ -1223,6 +1229,9 @@ fail_init_images:
 fail_register:
    xcb_unregister_for_special_event(chain->conn, chain->special_event);
 
+   wsi_swapchain_finish(&chain->base);
+
+fail_alloc:
    vk_free(pAllocator, chain);
 
    return result;

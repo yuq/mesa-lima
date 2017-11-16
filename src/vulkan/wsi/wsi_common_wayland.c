@@ -32,6 +32,7 @@
 #include <pthread.h>
 
 #include "vk_util.h"
+#include "wsi_common_private.h"
 #include "wsi_common_wayland.h"
 #include "wayland-drm-client-protocol.h"
 
@@ -783,6 +784,8 @@ wsi_wl_swapchain_destroy(struct wsi_swapchain *wsi_chain,
    if (chain->display)
       wsi_wl_display_unref(chain->display);
 
+   wsi_swapchain_finish(&chain->base);
+
    vk_free(pAllocator, chain);
 
    return VK_SUCCESS;
@@ -814,6 +817,13 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    if (chain == NULL)
       return VK_ERROR_OUT_OF_HOST_MEMORY;
 
+   result = wsi_swapchain_init(wsi_device, &chain->base, device,
+                               pCreateInfo, pAllocator);
+   if (result != VK_SUCCESS) {
+      vk_free(pAllocator, chain);
+      return result;
+   }
+
    /* Mark a bunch of stuff as NULL.  This way we can just call
     * destroy_swapchain for cleanup.
     */
@@ -826,7 +836,6 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    bool alpha = pCreateInfo->compositeAlpha ==
                       VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
 
-   chain->base.device = device;
    chain->base.destroy = wsi_wl_swapchain_destroy;
    chain->base.get_images = wsi_wl_swapchain_get_images;
    chain->base.acquire_next_image = wsi_wl_swapchain_acquire_next_image;

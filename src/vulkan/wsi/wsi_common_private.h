@@ -20,34 +20,18 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
+#ifndef WSI_COMMON_PRIVATE_H
+#define WSI_COMMON_PRIVATE_H
 
-#include "wsi_common_private.h"
-
-void
-wsi_device_init(struct wsi_device *wsi,
-                VkPhysicalDevice pdevice,
-                WSI_FN_GetPhysicalDeviceProcAddr proc_addr)
-{
-   memset(wsi, 0, sizeof(*wsi));
-}
+#include "wsi_common.h"
 
 VkResult
 wsi_swapchain_init(const struct wsi_device *wsi,
                    struct wsi_swapchain *chain,
                    VkDevice device,
-                   const VkSwapchainCreateInfoKHR* pCreateInfo,
-                   const VkAllocationCallbacks *pAllocator)
-{
-   memset(chain, 0, sizeof(*chain));
+                   const VkSwapchainCreateInfoKHR *pCreateInfo,
+                   const VkAllocationCallbacks *pAllocator);
 
-   chain->wsi = wsi;
-   chain->device = device;
-   chain->alloc = *pAllocator;
+void wsi_swapchain_finish(struct wsi_swapchain *chain);
 
-   return VK_SUCCESS;
-}
-
-void
-wsi_swapchain_finish(struct wsi_swapchain *chain)
-{
-}
+#endif /* WSI_COMMON_PRIVATE_H */

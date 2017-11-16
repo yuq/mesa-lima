@@ -53,6 +53,7 @@ struct wsi_image_fns {
 };
 
 struct wsi_swapchain {
+   const struct wsi_device *wsi;
 
    VkDevice device;
    VkAllocationCallbacks alloc;
