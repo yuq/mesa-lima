@@ -105,56 +105,57 @@ void radv_DestroySurfaceKHR(
 VkResult radv_GetPhysicalDeviceSurfaceSupportKHR(
 	VkPhysicalDevice                            physicalDevice,
 	uint32_t                                    queueFamilyIndex,
-	VkSurfaceKHR                                _surface,
+	VkSurfaceKHR                                surface,
 	VkBool32*                                   pSupported)
 {
 	RADV_FROM_HANDLE(radv_physical_device, device, physicalDevice);
-	ICD_FROM_HANDLE(VkIcdSurfaceBase, surface, _surface);
-	struct wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
-	return iface->get_support(surface, &device->wsi_device,
-				  &device->instance->alloc,
-				  queueFamilyIndex, device->local_fd, pSupported);
+	return wsi_common_get_surface_support(&device->wsi_device,
+					      device->local_fd,
+					      queueFamilyIndex,
+					      surface,
+					      &device->instance->alloc,
+					      pSupported);
 }
 
 VkResult radv_GetPhysicalDeviceSurfaceCapabilitiesKHR(
 	VkPhysicalDevice                            physicalDevice,
-	VkSurfaceKHR                                _surface,
+	VkSurfaceKHR                                surface,
 	VkSurfaceCapabilitiesKHR*                   pSurfaceCapabilities)
 {
 	RADV_FROM_HANDLE(radv_physical_device, device, physicalDevice);
-	ICD_FROM_HANDLE(VkIcdSurfaceBase, surface, _surface);
-	struct wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
-	return iface->get_capabilities(surface, pSurfaceCapabilities);
+	return wsi_common_get_surface_capabilities(&device->wsi_device,
+						   surface,
+						   pSurfaceCapabilities);
 }
 
 VkResult radv_GetPhysicalDeviceSurfaceFormatsKHR(
 	VkPhysicalDevice                            physicalDevice,
-	VkSurfaceKHR                                _surface,
+	VkSurfaceKHR                                surface,
 	uint32_t*                                   pSurfaceFormatCount,
 	VkSurfaceFormatKHR*                         pSurfaceFormats)
 {
 	RADV_FROM_HANDLE(radv_physical_device, device, physicalDevice);
-	ICD_FROM_HANDLE(VkIcdSurfaceBase, surface, _surface);
-	struct wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
-	return iface->get_formats(surface, &device->wsi_device, pSurfaceFormatCount,
-				  pSurfaceFormats);
+	return wsi_common_get_surface_formats(&device->wsi_device,
+					      surface,
+					      pSurfaceFormatCount,
+					      pSurfaceFormats);
 }
 
 VkResult radv_GetPhysicalDeviceSurfacePresentModesKHR(
 	VkPhysicalDevice                            physicalDevice,
-	VkSurfaceKHR                                _surface,
+	VkSurfaceKHR                                surface,
 	uint32_t*                                   pPresentModeCount,
 	VkPresentModeKHR*                           pPresentModes)
 {
 	RADV_FROM_HANDLE(radv_physical_device, device, physicalDevice);
-	ICD_FROM_HANDLE(VkIcdSurfaceBase, surface, _surface);
-	struct wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
-	return iface->get_present_modes(surface, pPresentModeCount,
-					pPresentModes);
+	return wsi_common_get_surface_present_modes(&device->wsi_device,
+						    surface,
+						    pPresentModeCount,
+						    pPresentModes);
 }
 
 VkResult radv_CreateSwapchainKHR(

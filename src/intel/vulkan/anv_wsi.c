@@ -107,28 +107,29 @@ void anv_DestroySurfaceKHR(
 VkResult anv_GetPhysicalDeviceSurfaceSupportKHR(
     VkPhysicalDevice                            physicalDevice,
     uint32_t                                    queueFamilyIndex,
-    VkSurfaceKHR                                _surface,
+    VkSurfaceKHR                                surface,
     VkBool32*                                   pSupported)
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
-   ICD_FROM_HANDLE(VkIcdSurfaceBase, surface, _surface);
-   struct wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
-   return iface->get_support(surface, &device->wsi_device,
-                             &device->instance->alloc,
-                             queueFamilyIndex, device->local_fd, pSupported);
+   return wsi_common_get_surface_support(&device->wsi_device,
+                                         device->local_fd,
+                                         queueFamilyIndex,
+                                         surface,
+                                         &device->instance->alloc,
+                                         pSupported);
 }
 
 VkResult anv_GetPhysicalDeviceSurfaceCapabilitiesKHR(
     VkPhysicalDevice                            physicalDevice,
-    VkSurfaceKHR                                _surface,
+    VkSurfaceKHR                                surface,
     VkSurfaceCapabilitiesKHR*                   pSurfaceCapabilities)
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
-   ICD_FROM_HANDLE(VkIcdSurfaceBase, surface, _surface);
-   struct wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
-   return iface->get_capabilities(surface, pSurfaceCapabilities);
+   return wsi_common_get_surface_capabilities(&device->wsi_device,
+                                              surface,
+                                              pSurfaceCapabilities);
 }
 
 VkResult anv_GetPhysicalDeviceSurfaceCapabilities2KHR(
@@ -137,25 +138,22 @@ VkResult anv_GetPhysicalDeviceSurfaceCapabilities2KHR(
     VkSurfaceCapabilities2KHR*                  pSurfaceCapabilities)
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
-   ICD_FROM_HANDLE(VkIcdSurfaceBase, surface, pSurfaceInfo->surface);
-   struct wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
-   return iface->get_capabilities2(surface, pSurfaceInfo->pNext,
-                                   pSurfaceCapabilities);
+   return wsi_common_get_surface_capabilities2(&device->wsi_device,
+                                               pSurfaceInfo,
+                                               pSurfaceCapabilities);
 }
 
 VkResult anv_GetPhysicalDeviceSurfaceFormatsKHR(
     VkPhysicalDevice                            physicalDevice,
-    VkSurfaceKHR                                _surface,
+    VkSurfaceKHR                                surface,
     uint32_t*                                   pSurfaceFormatCount,
     VkSurfaceFormatKHR*                         pSurfaceFormats)
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
-   ICD_FROM_HANDLE(VkIcdSurfaceBase, surface, _surface);
-   struct wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
-   return iface->get_formats(surface, &device->wsi_device, pSurfaceFormatCount,
-                             pSurfaceFormats);
+   return wsi_common_get_surface_formats(&device->wsi_device, surface,
+                                         pSurfaceFormatCount, pSurfaceFormats);
 }
 
 VkResult anv_GetPhysicalDeviceSurfaceFormats2KHR(
@@ -165,25 +163,22 @@ VkResult anv_GetPhysicalDeviceSurfaceFormats2KHR(
     VkSurfaceFormat2KHR*                        pSurfaceFormats)
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
-   ICD_FROM_HANDLE(VkIcdSurfaceBase, surface, pSurfaceInfo->surface);
-   struct wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
-   return iface->get_formats2(surface, &device->wsi_device, pSurfaceInfo->pNext,
-                              pSurfaceFormatCount, pSurfaceFormats);
+   return wsi_common_get_surface_formats2(&device->wsi_device, pSurfaceInfo,
+                                          pSurfaceFormatCount, pSurfaceFormats);
 }
 
 VkResult anv_GetPhysicalDeviceSurfacePresentModesKHR(
     VkPhysicalDevice                            physicalDevice,
-    VkSurfaceKHR                                _surface,
+    VkSurfaceKHR                                surface,
     uint32_t*                                   pPresentModeCount,
     VkPresentModeKHR*                           pPresentModes)
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
-   ICD_FROM_HANDLE(VkIcdSurfaceBase, surface, _surface);
-   struct wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
-   return iface->get_present_modes(surface, pPresentModeCount,
-                                   pPresentModes);
+   return wsi_common_get_surface_present_modes(&device->wsi_device, surface,
+                                               pPresentModeCount,
+                                               pPresentModes);
 }
 
 VkResult anv_CreateSwapchainKHR(
