@@ -992,10 +992,10 @@ dri2_display_destroy(_EGLDisplay *disp)
       dri2_teardown_x11(dri2_dpy);
       break;
    case _EGL_PLATFORM_DRM:
-      dri2_teardown_drm(disp);
+      dri2_teardown_drm(dri2_dpy);
       break;
    case _EGL_PLATFORM_WAYLAND:
-      dri2_teardown_wayland(disp);
+      dri2_teardown_wayland(dri2_dpy);
       break;
    default:
       /* TODO: add teardown for other platforms */
