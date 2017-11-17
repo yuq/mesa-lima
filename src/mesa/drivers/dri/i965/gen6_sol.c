@@ -197,7 +197,7 @@ brw_new_transform_feedback(struct gl_context *ctx, GLuint name)
    brw_obj->offset_bo =
       brw_bo_alloc(brw->bufmgr, "transform feedback offsets", 16, 64);
    brw_obj->prim_count_bo =
-      brw_bo_alloc(brw->bufmgr, "xfb primitive counts", 4096, 64);
+      brw_bo_alloc(brw->bufmgr, "xfb primitive counts", 16384, 64);
 
    return &brw_obj->base;
 }
@@ -287,7 +287,8 @@ brw_save_primitives_written_counters(struct brw_context *brw,
    assert(obj->prim_count_bo != NULL);
 
    /* Check if there's enough space for a new pair of four values. */
-   if ((obj->counter.bo_end + 2) * streams * sizeof(uint64_t) >= 4096) {
+   if ((obj->counter.bo_end + 2) * streams * sizeof(uint64_t) >=
+       obj->prim_count_bo->size) {
       aggregate_transform_feedback_counter(brw, obj->prim_count_bo,
                                            &obj->previous_counter);
       aggregate_transform_feedback_counter(brw, obj->prim_count_bo,
