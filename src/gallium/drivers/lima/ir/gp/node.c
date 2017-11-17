@@ -24,7 +24,6 @@
 
 #include "util/u_math.h"
 #include "util/ralloc.h"
-#include "util/hash_table.h"
 
 #include "gpir.h"
 
@@ -50,10 +49,12 @@ const gpir_op_info gpir_op_infos[] = {
    [gpir_op_complex1] = {
       .name = "complex1",
       .slots = (int []) { GPIR_INSTR_SLOT_MUL0, GPIR_INSTR_SLOT_END },
+      .spillless = true,
    },
    [gpir_op_complex2] = {
       .name = "complex2",
       .slots = (int []) { GPIR_INSTR_SLOT_MUL0, GPIR_INSTR_SLOT_END },
+      .spillless = true,
    },
    [gpir_op_add] = {
       .name = "add",
@@ -115,10 +116,12 @@ const gpir_op_info gpir_op_infos[] = {
    [gpir_op_rcp_impl] = {
       .name = "rcp_impl",
       .slots = (int []) { GPIR_INSTR_SLOT_COMPLEX, GPIR_INSTR_SLOT_END },
+      .spillless = true,
    },
    [gpir_op_rsqrt_impl] = {
       .name = "rsqrt_impl",
       .slots = (int []) { GPIR_INSTR_SLOT_COMPLEX, GPIR_INSTR_SLOT_END },
+      .spillless = true,
    },
    [gpir_op_load_uniform] = {
       .name = "ld_uni",
@@ -152,6 +155,7 @@ const gpir_op_info gpir_op_infos[] = {
          GPIR_INSTR_SLOT_END
       },
       .type = gpir_node_type_load,
+      .spillless = true,
    },
    [gpir_op_store_temp] = {
       .name = "st_tmp",
@@ -165,6 +169,7 @@ const gpir_op_info gpir_op_infos[] = {
          GPIR_INSTR_SLOT_END
       },
       .type = gpir_node_type_store,
+      .spillless = true,
    },
    [gpir_op_store_varying] = {
       .name = "st_var",
@@ -174,6 +179,7 @@ const gpir_op_info gpir_op_infos[] = {
          GPIR_INSTR_SLOT_END
       },
       .type = gpir_node_type_store,
+      .spillless = true,
    },
    [gpir_op_store_temp_load_off0] = {
       .name = "st_of0",
@@ -225,13 +231,22 @@ const gpir_op_info gpir_op_infos[] = {
    [gpir_op_tan] = {
       .name = "tan",
    },
+   [gpir_op_complex1_f] = {
+      .name = "complex1_f",
+      .type = gpir_node_type_alu,
+      .spillless = true,
+   },
+   [gpir_op_complex1_m] = {
+      .name = "complex1_m",
+      .type = gpir_node_type_alu,
+   },
    [gpir_op_branch_uncond] = {
       .name = "branch_uncond",
       .type = gpir_node_type_branch,
    },
 };
 
-void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index)
+void *gpir_node_create(gpir_block *block, gpir_op op)
 {
    static const int node_size[] = {
       [gpir_node_type_alu] = sizeof(gpir_alu_node),
@@ -243,98 +258,79 @@ void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index)
 
    gpir_node_type type = gpir_op_infos[op].type;
    int size = node_size[type];
-   gpir_node *node = rzalloc_size(comp, size);
-   if (!node)
+   gpir_node *node = rzalloc_size(block, size);
+   if (unlikely(!node))
       return NULL;
 
-   node->preds = _mesa_set_create(node, _mesa_hash_pointer, _mesa_key_pointer_equal);
-   if (!node->preds)
-      goto err_out;
-   node->succs = _mesa_set_create(node, _mesa_hash_pointer, _mesa_key_pointer_equal);
-   if (!node->succs)
-      goto err_out;
+   snprintf(node->name, sizeof(node->name), "new");
 
-   if (index >= 0) {
-      comp->var_nodes[index] = node;
-      if (index < comp->reg_base)
-         snprintf(node->name, sizeof(node->name), "ssa%d", index);
-      else
-         snprintf(node->name, sizeof(node->name), "reg%d", index - comp->reg_base);
-   }
-   else
-      snprintf(node->name, sizeof(node->name), "new");
+   list_inithead(&node->succ_list);
+   list_inithead(&node->pred_list);
 
    node->op = op;
    node->type = type;
-   node->index = comp->cur_index++;
-   node->sched_dist = -1;
-   node->sched_instr = -1;
-   node->sched_pos = -1;
+   node->index = block->comp->cur_index++;
+   node->block = block;
 
    return node;
-
-err_out:
-   ralloc_free(node);
-   return NULL;
 }
 
-static gpir_dep_info *gpir_node_create_dep(gpir_node *succ, gpir_node *pred,
-                                           bool is_child_dep, bool is_offset)
+gpir_dep *gpir_node_add_dep(gpir_node *succ, gpir_node *pred, int type)
 {
+   /* don't add dep for two nodes from different block */
+   if (succ->block != pred->block)
+      return NULL;
+
+   /* don't add self loop dep */
+   if (succ == pred)
+      return NULL;
+
    /* don't add duplicated dep */
-   gpir_node_foreach_pred(succ, entry) {
-      gpir_node *node = gpir_node_from_entry(entry, pred);
-      if (node == pred)
-         return gpir_dep_from_entry(entry);
+   gpir_node_foreach_pred(succ, dep) {
+      if (dep->pred == pred) {
+         /* use stronger dependency */
+         if (dep->type > type)
+            dep->type = type;
+         return dep;
+      }
    }
 
-   gpir_dep_info *dep = ralloc(succ, gpir_dep_info);
-
+   gpir_dep *dep = ralloc(succ, gpir_dep);
+   dep->type = type;
    dep->pred = pred;
    dep->succ = succ;
-   dep->is_child_dep = is_child_dep;
-   dep->is_offset = is_offset;
-
-   _mesa_set_add(succ->preds, dep);
-   _mesa_set_add(pred->succs, dep);
-
+   list_addtail(&dep->pred_link, &succ->pred_list);
+   list_addtail(&dep->succ_link, &pred->succ_list);
    return dep;
 }
 
-gpir_dep_info * gpir_node_add_child(gpir_node *parent, gpir_node *child)
+void gpir_node_remove_dep(gpir_node *succ, gpir_node *pred)
 {
-   return gpir_node_create_dep(parent, child, true, false);
-}
-
-gpir_dep_info * gpir_node_add_read_after_write_dep(gpir_node *read, gpir_node *write)
-{
-   return gpir_node_create_dep(read, write, false, false);
-}
-
-void gpir_node_remove_entry(struct set_entry *entry)
-{
-   uint32_t hash = entry->hash;
-   gpir_dep_info *dep = gpir_dep_from_entry(entry);
-
-   struct set *set = dep->pred->succs;
-   _mesa_set_remove(set, _mesa_set_search_pre_hashed(set, hash, dep));
-
-   set = dep->succ->preds;
-   _mesa_set_remove(set, _mesa_set_search_pre_hashed(set, hash, dep));
-
-   ralloc_free(dep);
-}
-
-void gpir_node_merge_pred(gpir_node *dst, gpir_node *src)
-{
-   gpir_node_foreach_pred(src, entry) {
-      gpir_node *pred = gpir_node_from_entry(entry, pred);
-      gpir_dep_info *dep = gpir_dep_from_entry(entry);
-      gpir_node_create_dep(pred, dst, dep->is_child_dep, dep->is_offset);
+   gpir_node_foreach_pred(succ, dep) {
+      if (dep->pred == pred) {
+         list_del(&dep->succ_link);
+         list_del(&dep->pred_link);
+         ralloc_free(dep);
+         return;
+      }
    }
 }
 
-void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child, gpir_node *new_child)
+void gpir_node_merge_dep(gpir_node *from, gpir_node *to)
+{
+   gpir_node_foreach_succ(from, dep) {
+      gpir_node_add_dep(dep->succ, to, dep->type);
+   }
+
+   gpir_node_foreach_pred(from, dep) {
+      gpir_node_add_dep(to, dep->pred, dep->type);
+   }
+
+   gpir_node_delete(from);
+}
+
+void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child,
+                             gpir_node *new_child)
 {
    if (parent->type == gpir_node_type_alu) {
       gpir_alu_node *alu = gpir_node_to_alu(parent);
@@ -350,59 +346,77 @@ void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child, gpir_node 
    }
 }
 
-void gpir_node_replace_succ(gpir_node *dst, gpir_node *src)
+void gpir_node_replace_pred(gpir_dep *dep, gpir_node *new_pred)
 {
-   gpir_node_foreach_succ(src, entry) {
-      gpir_dep_info *dep = gpir_dep_from_entry(entry);
-      gpir_node *succ = gpir_node_from_entry(entry, succ);
-
-      gpir_node_create_dep(succ, dst, dep->is_child_dep, dep->is_offset);
-      gpir_node_replace_child(succ, src, dst);
-      gpir_node_remove_entry(entry);
-   }
+   list_del(&dep->succ_link);
+   dep->pred = new_pred;
+   list_addtail(&dep->succ_link, &new_pred->succ_list);
 }
 
-void gpir_node_replace_pred(struct set_entry *entry, gpir_node *new_pred)
+void gpir_node_replace_succ(gpir_node *dst, gpir_node *src)
 {
-   gpir_dep_info *dep = gpir_dep_from_entry(entry);
-   gpir_node *succ = dep->succ, *pred = dep->pred;
-
-   dep->pred = new_pred;
-   _mesa_set_add_pre_hashed(new_pred->succs, entry->hash, dep);
-   _mesa_set_remove(pred->succs, entry);
-   gpir_node_replace_child(succ, pred, new_pred);
+   gpir_node_foreach_succ_safe(src, dep) {
+      gpir_node_replace_pred(dep, dst);
+      if (dep->type == GPIR_DEP_INPUT)
+         gpir_node_replace_child(dep->succ, src, dst);
+   }
 }
 
 void gpir_node_delete(gpir_node *node)
 {
-   gpir_node_foreach_succ(node, entry)
-      gpir_node_remove_entry(entry);
+   gpir_node_foreach_succ_safe(node, dep) {
+      list_del(&dep->succ_link);
+      list_del(&dep->pred_link);
+      ralloc_free(dep);
+   }
 
-   gpir_node_foreach_pred(node, entry)
-      gpir_node_remove_entry(entry);
+   gpir_node_foreach_pred_safe(node, dep) {
+      list_del(&dep->succ_link);
+      list_del(&dep->pred_link);
+      ralloc_free(dep);
+   }
+
+   if (node->type == gpir_node_type_store) {
+      gpir_store_node *store = gpir_node_to_store(node);
+      if (store->reg)
+         list_del(&store->reg_link);
+   }
+   else if (node->type == gpir_node_type_load) {
+      gpir_load_node *load = gpir_node_to_load(node);
+      if (load->reg)
+         list_del(&load->reg_link);
+   }
 
    list_del(&node->list);
    ralloc_free(node);
 }
 
-static void gpir_node_print_node(gpir_node *node, int space)
+static void gpir_node_print_node(gpir_node *node, int type, int space)
 {
+   static char *dep_name[] = {
+      [GPIR_DEP_INPUT] = "input",
+      [GPIR_DEP_OFFSET] = "offset",
+      [GPIR_DEP_READ_AFTER_WRITE] = "RaW",
+      [GPIR_DEP_WRITE_AFTER_READ] = "WaR",
+      [GPIR_DEP_VREG_READ_AFTER_WRITE] = "vRaW",
+      [GPIR_DEP_VREG_WRITE_AFTER_READ] = "vWaR",
+   };
+
    for (int i = 0; i < space; i++)
       printf(" ");
-   printf("%s%s %d %s\n", node->printed && !gpir_node_is_leaf(node) ? "+" : "",
-          gpir_op_infos[node->op].name, node->index, node->name);
+   printf("%s%s %d %s %s\n", node->printed && !gpir_node_is_leaf(node) ? "+" : "",
+          gpir_op_infos[node->op].name, node->index, node->name, dep_name[type]);
 
    if (!node->printed) {
-      gpir_node_foreach_pred(node, entry) {
-         gpir_node *pred = gpir_node_from_entry(entry, pred);
-         gpir_node_print_node(pred, space + 2);
+      gpir_node_foreach_pred(node, dep) {
+         gpir_node_print_node(dep->pred, dep->type, space + 2);
       }
 
       node->printed = true;
    }
 }
 
-void gpir_node_print_prog(gpir_compiler *comp)
+void gpir_node_print_prog_dep(gpir_compiler *comp)
 {
    if (!lima_shader_debug_gp)
       return;
@@ -413,13 +427,36 @@ void gpir_node_print_prog(gpir_compiler *comp)
       }
    }
 
-   printf("========prog========\n");
+   printf("======== node prog dep ========\n");
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
-      printf("-------block------\n");
       list_for_each_entry(gpir_node, node, &block->node_list, list) {
          if (gpir_node_is_root(node))
-            gpir_node_print_node(node, 0);
+            gpir_node_print_node(node, GPIR_DEP_INPUT, 0);
       }
+      printf("----------------------------\n");
    }
-   printf("====================\n");
+}
+
+void gpir_node_print_prog_seq(gpir_compiler *comp)
+{
+   if (!lima_shader_debug_gp)
+      return;
+
+   int index = 0;
+   printf("======== node prog seq ========\n");
+   list_for_each_entry(gpir_block, block, &comp->block_list, list) {
+      list_for_each_entry(gpir_node, node, &block->node_list, list) {
+         printf("%03d: %s %d %s pred", index++, gpir_op_infos[node->op].name,
+                node->index, node->name);
+         gpir_node_foreach_pred(node, dep) {
+            printf(" %d", dep->pred->index);
+         }
+         printf(" succ");
+         gpir_node_foreach_succ(node, dep) {
+            printf(" %d", dep->succ->index);
+         }
+         printf("\n");
+      }
+      printf("----------------------------\n");
+   }
 }

@@ -76,9 +76,9 @@ static gpir_codegen_src gpir_get_alu_input(gpir_node *parent, gpir_node *child)
          gpir_codegen_src_load_w, gpir_codegen_src_unused, gpir_codegen_src_unused },
    };
 
-   assert(child->sched_instr - parent->sched_instr < 3);
+   assert(child->sched.instr - parent->sched.instr < 3);
 
-   return slot_to_src[child->sched_pos][child->sched_instr - parent->sched_instr];
+   return slot_to_src[child->sched.pos][child->sched.instr - parent->sched.instr];
 }
 
 static void gpir_codegen_mul0_slot(gpir_codegen_instr *code, gpir_instr *instr)
@@ -403,7 +403,7 @@ static gpir_codegen_store_src gpir_get_store_input(gpir_node *node)
    };
 
    gpir_store_node *store = gpir_node_to_store(node);
-   return slot_to_src[store->child->sched_pos];
+   return slot_to_src[store->child->sched.pos];
 }
 
 static void gpir_codegen_store_slot(gpir_codegen_instr *code, gpir_instr *instr)
@@ -490,7 +490,7 @@ bool gpir_codegen_prog(gpir_compiler *comp)
 {
    int num_instr = 0;
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
-      num_instr += gpir_instr_array_n(&block->instrs);
+      num_instr += list_length(&block->instr_list);
    }
 
    gpir_codegen_instr *code = rzalloc_array(comp->prog, gpir_codegen_instr, num_instr);
@@ -499,9 +499,8 @@ bool gpir_codegen_prog(gpir_compiler *comp)
 
    int instr_index = 0;
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
-      gpir_instr *instrs = gpir_instr_array(&block->instrs);
-      for (int i = gpir_instr_array_n(&block->instrs) - 1; i >= 0; i--) {
-         gpir_codegen(code + instr_index, instrs + i);
+      list_for_each_entry(gpir_instr, instr, &block->instr_list, list) {
+         gpir_codegen(code + instr_index, instr);
          instr_index++;
       }
    }
