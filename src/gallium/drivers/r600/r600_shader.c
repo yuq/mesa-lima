@@ -3809,7 +3809,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			last = r600_isa_cf(ctx.bc->cf_last->op);
 
 		/* alu clause instructions don't have EOP bit, so add NOP */
-		if (!last || last->flags & CF_ALU || ctx.bc->cf_last->op == CF_OP_LOOP_END || ctx.bc->cf_last->op == CF_OP_CALL_FS || ctx.bc->cf_last->op == CF_OP_POP || ctx.bc->cf_last->op == CF_OP_GDS)
+		if (!last || last->flags & CF_ALU)
 			r600_bytecode_add_cfinst(ctx.bc, CF_OP_NOP);
 
 		ctx.bc->cf_last->end_of_program = 1;
