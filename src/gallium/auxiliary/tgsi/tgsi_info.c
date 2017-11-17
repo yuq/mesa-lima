@@ -56,6 +56,8 @@ tgsi_get_opcode_info( uint opcode )
    static boolean firsttime = 1;
 
    ASSERT_BITFIELD_SIZE(struct tgsi_opcode_info, opcode, TGSI_OPCODE_LAST - 1);
+   ASSERT_BITFIELD_SIZE(struct tgsi_opcode_info, output_mode,
+                        TGSI_OUTPUT_OTHER);
 
    if (firsttime) {
       unsigned i;
