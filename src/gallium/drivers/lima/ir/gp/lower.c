@@ -77,6 +77,49 @@ static bool gpir_lower_const(gpir_compiler *comp)
    return true;
 }
 
+/* duplicate load to all its successors */
+static bool gpir_lower_load(gpir_compiler *comp)
+{
+   list_for_each_entry(gpir_block, block, &comp->block_list, list) {
+      list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
+         if (node->type == gpir_node_type_load) {
+            gpir_load_node *load = gpir_node_to_load(node);
+
+            bool first = true;
+            gpir_node_foreach_succ_safe(node, dep) {
+               gpir_node *succ = dep->succ;
+
+               if (first) {
+                  first = false;
+                  continue;
+               }
+
+               gpir_node *new = gpir_node_create(succ->block, node->op);
+               if (unlikely(!new))
+                  return false;
+               list_addtail(&new->list, &succ->list);
+
+               gpir_debug("lower load create %d from %d for succ %d\n",
+                          new->index, node->index, succ->index);
+
+               gpir_load_node *nload = gpir_node_to_load(new);
+               nload->index = load->index;
+               nload->component = load->component;
+               if (load->reg) {
+                  nload->reg = load->reg;
+                  list_addtail(&nload->reg_link, &load->reg->uses_list);
+               }
+
+               gpir_node_replace_pred(dep, new);
+               gpir_node_replace_child(succ, node, new);
+            }
+         }
+      }
+   }
+
+   return true;
+}
+
 static bool gpir_lower_neg(gpir_block *block, gpir_node *node)
 {
    gpir_alu_node *neg = gpir_node_to_alu(node);
@@ -217,11 +260,21 @@ static bool (*gpir_lower_funcs[gpir_op_num])(gpir_block *, gpir_node *) = {
    [gpir_op_rsqrt] = gpir_lower_complex,
 };
 
-bool gpir_lower_prog(gpir_compiler *comp)
+bool gpir_pre_rsched_lower_prog(gpir_compiler *comp)
 {
    if (!gpir_lower_const(comp))
       return false;
 
+   if (!gpir_lower_load(comp))
+      return false;
+
+   gpir_debug("pre rsched lower prog\n");
+   gpir_node_print_prog_seq(comp);
+   return true;
+}
+
+bool gpir_post_rsched_lower_prog(gpir_compiler *comp)
+{
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
       list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
          if (gpir_lower_funcs[node->op] &&
@@ -230,7 +283,7 @@ bool gpir_lower_prog(gpir_compiler *comp)
       }
    }
 
-   gpir_debug("after lower prog\n");
+   gpir_debug("post rsched lower prog\n");
    gpir_node_print_prog_seq(comp);
    return true;
 }
