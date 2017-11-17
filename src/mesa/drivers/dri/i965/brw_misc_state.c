@@ -462,15 +462,13 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
                                   PIPE_CONTROL_RENDER_TARGET_FLUSH |
                                   PIPE_CONTROL_DEPTH_CACHE_FLUSH |
                                   dc_flush |
-                                  PIPE_CONTROL_NO_WRITE |
                                   PIPE_CONTROL_CS_STALL);
 
       brw_emit_pipe_control_flush(brw,
                                   PIPE_CONTROL_TEXTURE_CACHE_INVALIDATE |
                                   PIPE_CONTROL_CONST_CACHE_INVALIDATE |
                                   PIPE_CONTROL_STATE_CACHE_INVALIDATE |
-                                  PIPE_CONTROL_INSTRUCTION_INVALIDATE |
-                                  PIPE_CONTROL_NO_WRITE);
+                                  PIPE_CONTROL_INSTRUCTION_INVALIDATE);
 
    } else {
       /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]

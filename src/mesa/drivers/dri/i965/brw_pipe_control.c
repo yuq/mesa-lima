@@ -547,7 +547,7 @@ brw_emit_mi_flush(struct brw_context *brw)
          OUT_BATCH(0);
       ADVANCE_BATCH();
    } else {
-      int flags = PIPE_CONTROL_NO_WRITE | PIPE_CONTROL_RENDER_TARGET_FLUSH;
+      int flags = PIPE_CONTROL_RENDER_TARGET_FLUSH;
       if (devinfo->gen >= 6) {
          flags |= PIPE_CONTROL_INSTRUCTION_INVALIDATE |
                   PIPE_CONTROL_CONST_CACHE_INVALIDATE |
