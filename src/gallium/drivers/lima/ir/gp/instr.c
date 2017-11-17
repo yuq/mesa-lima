@@ -24,12 +24,21 @@
 
 #include <string.h>
 
+#include "util/ralloc.h"
+
 #include "gpir.h"
 
-void gpir_instr_init(gpir_instr *instr)
+gpir_instr *gpir_instr_create(gpir_block *block)
 {
+   gpir_instr *instr = rzalloc(block, gpir_instr);
+   if (unlikely(!instr))
+      return NULL;
+
+   instr->index = block->sched.instr_index++;
    instr->alu_num_slot_free = 6;
-   instr->reg_status = ~0ull;
+
+   list_add(&instr->list, &block->instr_list);
+   return instr;
 }
 
 static bool gpir_instr_insert_alu_check(gpir_instr *instr, gpir_node *node)
@@ -76,7 +85,7 @@ static void gpir_instr_remove_alu(gpir_instr *instr, gpir_node *node)
 static bool gpir_instr_insert_reg0_check(gpir_instr *instr, gpir_node *node)
 {
    gpir_load_node *load = gpir_node_to_load(node);
-   int i = node->sched_pos - GPIR_INSTR_SLOT_REG0_LOAD0;
+   int i = node->sched.pos - GPIR_INSTR_SLOT_REG0_LOAD0;
 
    if (load->component != i)
       return false;
@@ -107,7 +116,7 @@ static void gpir_instr_remove_reg0(gpir_instr *instr, gpir_node *node)
 static bool gpir_instr_insert_reg1_check(gpir_instr *instr, gpir_node *node)
 {
    gpir_load_node *load = gpir_node_to_load(node);
-   int i = node->sched_pos - GPIR_INSTR_SLOT_REG1_LOAD0;
+   int i = node->sched.pos - GPIR_INSTR_SLOT_REG1_LOAD0;
 
    if (load->component != i)
       return false;
@@ -131,7 +140,7 @@ static void gpir_instr_remove_reg1(gpir_instr *instr, gpir_node *node)
 static bool gpir_instr_insert_mem_check(gpir_instr *instr, gpir_node *node)
 {
    gpir_load_node *load = gpir_node_to_load(node);
-   int i = node->sched_pos - GPIR_INSTR_SLOT_MEM_LOAD0;
+   int i = node->sched.pos - GPIR_INSTR_SLOT_MEM_LOAD0;
 
    if (load->component != i)
       return false;
@@ -162,7 +171,7 @@ static void gpir_instr_remove_mem(gpir_instr *instr, gpir_node *node)
 static bool gpir_instr_insert_store_check(gpir_instr *instr, gpir_node *node)
 {
    gpir_store_node *store = gpir_node_to_store(node);
-   int i = node->sched_pos - GPIR_INSTR_SLOT_STORE0;
+   int i = node->sched.pos - GPIR_INSTR_SLOT_STORE0;
 
    if (store->component != i)
       return false;
@@ -237,7 +246,7 @@ out:
 static void gpir_instr_remove_store(gpir_instr *instr, gpir_node *node)
 {
    gpir_store_node *store = gpir_node_to_store(node);
-   int component = node->sched_pos - GPIR_INSTR_SLOT_STORE0;
+   int component = node->sched.pos - GPIR_INSTR_SLOT_STORE0;
    int other_slot = GPIR_INSTR_SLOT_STORE0 + (component ^ 1);
 
    for (int j = GPIR_INSTR_SLOT_STORE0; j <= GPIR_INSTR_SLOT_STORE3; j++) {
@@ -260,7 +269,7 @@ out:
 
 bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
 {
-   if (instr->slots[node->sched_pos])
+   if (instr->slots[node->sched.pos])
       return false;
 
    if (node->op == gpir_op_complex1) {
@@ -268,33 +277,33 @@ bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
          return false;
    }
 
-   if (node->sched_pos >= GPIR_INSTR_SLOT_ALU_BEGIN &&
-       node->sched_pos <= GPIR_INSTR_SLOT_ALU_END) {
+   if (node->sched.pos >= GPIR_INSTR_SLOT_ALU_BEGIN &&
+       node->sched.pos <= GPIR_INSTR_SLOT_ALU_END) {
       if (!gpir_instr_insert_alu_check(instr, node))
          return false;
    }
-   else if (node->sched_pos >= GPIR_INSTR_SLOT_REG0_LOAD0 &&
-            node->sched_pos <= GPIR_INSTR_SLOT_REG0_LOAD3) {
+   else if (node->sched.pos >= GPIR_INSTR_SLOT_REG0_LOAD0 &&
+            node->sched.pos <= GPIR_INSTR_SLOT_REG0_LOAD3) {
       if (!gpir_instr_insert_reg0_check(instr, node))
          return false;
    }
-   else if (node->sched_pos >= GPIR_INSTR_SLOT_REG1_LOAD0 &&
-            node->sched_pos <= GPIR_INSTR_SLOT_REG1_LOAD3) {
+   else if (node->sched.pos >= GPIR_INSTR_SLOT_REG1_LOAD0 &&
+            node->sched.pos <= GPIR_INSTR_SLOT_REG1_LOAD3) {
       if (!gpir_instr_insert_reg1_check(instr, node))
          return false;
    }
-   else if (node->sched_pos >= GPIR_INSTR_SLOT_MEM_LOAD0 &&
-            node->sched_pos <= GPIR_INSTR_SLOT_MEM_LOAD3) {
+   else if (node->sched.pos >= GPIR_INSTR_SLOT_MEM_LOAD0 &&
+            node->sched.pos <= GPIR_INSTR_SLOT_MEM_LOAD3) {
       if (!gpir_instr_insert_mem_check(instr, node))
          return false;
    }
-   else if (node->sched_pos >= GPIR_INSTR_SLOT_STORE0 &&
-            node->sched_pos <= GPIR_INSTR_SLOT_STORE3) {
+   else if (node->sched.pos >= GPIR_INSTR_SLOT_STORE0 &&
+            node->sched.pos <= GPIR_INSTR_SLOT_STORE3) {
       if (!gpir_instr_insert_store_check(instr, node))
          return false;
    }
 
-   instr->slots[node->sched_pos] = node;
+   instr->slots[node->sched.pos] = node;
 
    if (node->op == gpir_op_complex1)
       instr->slots[GPIR_INSTR_SLOT_MUL1] = node;
@@ -304,23 +313,23 @@ bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
 
 void gpir_instr_remove_node(gpir_instr *instr, gpir_node *node)
 {
-   if (node->sched_pos >= GPIR_INSTR_SLOT_ALU_BEGIN &&
-       node->sched_pos <= GPIR_INSTR_SLOT_ALU_END)
+   if (node->sched.pos >= GPIR_INSTR_SLOT_ALU_BEGIN &&
+       node->sched.pos <= GPIR_INSTR_SLOT_ALU_END)
       gpir_instr_remove_alu(instr, node);
-   else if (node->sched_pos >= GPIR_INSTR_SLOT_REG0_LOAD0 &&
-            node->sched_pos <= GPIR_INSTR_SLOT_REG0_LOAD3)
+   else if (node->sched.pos >= GPIR_INSTR_SLOT_REG0_LOAD0 &&
+            node->sched.pos <= GPIR_INSTR_SLOT_REG0_LOAD3)
       gpir_instr_remove_reg0(instr, node);
-   else if (node->sched_pos >= GPIR_INSTR_SLOT_REG1_LOAD0 &&
-            node->sched_pos <= GPIR_INSTR_SLOT_REG1_LOAD3)
+   else if (node->sched.pos >= GPIR_INSTR_SLOT_REG1_LOAD0 &&
+            node->sched.pos <= GPIR_INSTR_SLOT_REG1_LOAD3)
       gpir_instr_remove_reg1(instr, node);
-   else if (node->sched_pos >= GPIR_INSTR_SLOT_MEM_LOAD0 &&
-            node->sched_pos <= GPIR_INSTR_SLOT_MEM_LOAD3)
+   else if (node->sched.pos >= GPIR_INSTR_SLOT_MEM_LOAD0 &&
+            node->sched.pos <= GPIR_INSTR_SLOT_MEM_LOAD3)
       gpir_instr_remove_mem(instr, node);
-   else if (node->sched_pos >= GPIR_INSTR_SLOT_STORE0 &&
-            node->sched_pos <= GPIR_INSTR_SLOT_STORE3)
+   else if (node->sched.pos >= GPIR_INSTR_SLOT_STORE0 &&
+            node->sched.pos <= GPIR_INSTR_SLOT_STORE3)
       gpir_instr_remove_store(instr, node);
 
-   instr->slots[node->sched_pos] = NULL;
+   instr->slots[node->sched.pos] = NULL;
 
    if (node->op == gpir_op_complex1)
       instr->slots[GPIR_INSTR_SLOT_MUL1] = NULL;
@@ -355,13 +364,9 @@ void gpir_instr_print_prog(gpir_compiler *comp)
 
    int index = 0;
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
-      gpir_instr *instrs = gpir_instr_array(&block->instrs);
-
-      printf("-------block instr------\n");
-      for (int i = gpir_instr_array_n(&block->instrs) - 1; i >= 0; i--) {
+      list_for_each_entry(gpir_instr, instr, &block->instr_list, list) {
          printf("%03d: ", index++);
 
-         gpir_instr *instr = instrs + i;
          char buff[16] = "null";
          int start = 0;
          for (int j = 0; j < GPIR_INSTR_SLOT_NUM; j++) {
@@ -382,6 +387,7 @@ void gpir_instr_print_prog(gpir_compiler *comp)
          }
          printf("\n");
       }
+      printf("-----------------------\n");
    }
    printf("==========================\n");
 }

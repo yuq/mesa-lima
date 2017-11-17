@@ -6,7 +6,10 @@ gpir_SOURCES := \
 	  ir/gp/scheduler.c \
 	  ir/gp/instr.c \
 	  ir/gp/codegen.h \
-	  ir/gp/codegen.c
+	  ir/gp/codegen.c \
+	  ir/gp/reduce_scheduler.c \
+	  ir/gp/value_regalloc.c \
+	  ir/gp/physical_regalloc.c
 
 ppir_SOURCES := \
 	  ir/pp/ppir.h \
