@@ -333,12 +333,41 @@ static int gpir_get_min_end(gpir_node *node)
    return min_end;
 }
 
+static gpir_node *gpir_sched_instr_has_load(gpir_instr *instr, gpir_node *node)
+{
+   gpir_load_node *load = gpir_node_to_load(node);
+
+   for (int i = GPIR_INSTR_SLOT_REG0_LOAD0; i <= GPIR_INSTR_SLOT_MEM_LOAD3; i++) {
+      if (!instr->slots[i])
+         continue;
+
+      gpir_load_node *iload = gpir_node_to_load(instr->slots[i]);
+      if (load->node.op == iload->node.op &&
+          load->index == iload->index &&
+          load->component == iload->component)
+         return &iload->node;
+   }
+   return NULL;
+}
+
 static bool schedule_try_place_node(gpir_instr *instr, gpir_node *node)
 {
-   int *slots = gpir_op_infos[node->op].slots;
+   if (node->type == gpir_node_type_load) {
+      gpir_node *load = gpir_sched_instr_has_load(instr, node);
+      if (load) {
+         gpir_debug("same load %d in instr %d for node %d\n",
+                    load->index, instr->index, node->index);
+
+         /* not really merge two node, just fake scheduled same place */
+         node->sched.instr = load->sched.instr;
+         node->sched.pos = load->sched.pos;
+         return true;
+      }
+   }
 
    node->sched.instr = instr->index;
 
+   int *slots = gpir_op_infos[node->op].slots;
    for (int i = 0; slots[i] != GPIR_INSTR_SLOT_END; i++) {
       node->sched.pos = slots[i];
       if (node->sched.instr >= gpir_get_max_start(node) &&
