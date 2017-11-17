@@ -6549,7 +6549,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 				union si_shader_part_key vs_prolog_key;
 				si_get_vs_prolog_key(&es->info,
 						     shader->info.num_input_sgprs,
-						     &shader->key.part.tcs.ls_prolog,
+						     &shader->key.part.gs.vs_prolog,
 						     shader, &vs_prolog_key);
 				vs_prolog_key.vs_prolog.is_monolithic = true;
 				si_build_vs_prolog_function(&ctx, &vs_prolog_key);
