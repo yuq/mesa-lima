@@ -135,7 +135,7 @@ brw_emit_pipe_control(struct brw_context *brw, uint32_t flags,
             brw_emit_pipe_control_flush(brw, 0);
          }
 
-         if (devinfo->gen >= 8) {
+         if (devinfo->gen >= 9) {
             /* THE PIPE_CONTROL "VF Cache Invalidation Enable" docs continue:
              *
              *    "Project: BDW+
@@ -146,6 +146,10 @@ brw_emit_pipe_control(struct brw_context *brw, uint32_t flags,
              *
              * If there's a BO, we're already doing some kind of write.
              * If not, add a write to the workaround BO.
+             *
+             * XXX: This causes GPU hangs on Broadwell, so restrict it to
+             *      Gen9+ for now...see this bug for more information:
+             *      https://bugs.freedesktop.org/show_bug.cgi?id=103787
              */
             if (!bo) {
                flags |= PIPE_CONTROL_WRITE_IMMEDIATE;
