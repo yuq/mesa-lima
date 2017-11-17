@@ -52,14 +52,16 @@ static bool gpir_lower_const(gpir_compiler *comp)
                gpir_const_node *c = gpir_node_to_const(node);
 
                if (!gpir_node_is_root(node)) {
-                  gpir_load_node *load = gpir_node_create(comp, gpir_op_load_uniform, -1);
-                  if (!load)
+                  gpir_load_node *load = gpir_node_create(block, gpir_op_load_uniform);
+                  if (unlikely(!load))
                      return false;
 
                   load->index = comp->constant_base + (index >> 2);
                   load->component = index % 4;
                   constant[index++] = c->value;
+
                   gpir_node_replace_succ(&load->node, node);
+
                   list_addtail(&load->node.list, &node->list);
 
                   gpir_debug("lower const create uniform %d for const %d\n",
@@ -83,16 +85,8 @@ static bool gpir_lower_neg(gpir_block *block, gpir_node *node)
    /* check if child can dest negate */
    if (child->type == gpir_node_type_alu) {
       /* negate must be its only successor */
-      bool only = true;
-      gpir_node_foreach_succ(child, entry) {
-         gpir_node *succ = gpir_node_from_entry(entry, succ);
-         if (succ != node) {
-            only = false;
-            break;
-         }
-      }
-
-      if (only && gpir_op_infos[child->op].dest_neg) {
+      if (list_is_singular(&child->succ_list) &&
+          gpir_op_infos[child->op].dest_neg) {
          gpir_alu_node *alu = gpir_node_to_alu(child);
          alu->dest_negate = !alu->dest_negate;
 
@@ -103,14 +97,13 @@ static bool gpir_lower_neg(gpir_block *block, gpir_node *node)
    }
 
    /* check if child can src negate */
-   gpir_node_foreach_succ(node, entry) {
-      gpir_node *succ = gpir_node_from_entry(entry, succ);
-
+   gpir_node_foreach_succ_safe(node, dep) {
+      gpir_node *succ = dep->succ;
       if (succ->type != gpir_node_type_alu)
          continue;
 
       bool success = true;
-      gpir_alu_node *alu = gpir_node_to_alu(succ);
+      gpir_alu_node *alu = gpir_node_to_alu(dep->succ);
       for (int i = 0; i < alu->num_child; i++) {
          if (alu->children[i] == node) {
             if (gpir_op_infos[succ->op].src_neg[i]) {
@@ -122,10 +115,8 @@ static bool gpir_lower_neg(gpir_block *block, gpir_node *node)
          }
       }
 
-      if (success) {
-         gpir_node_remove_entry(entry);
-         gpir_node_add_child(succ, child);
-      }
+      if (success)
+         gpir_node_replace_pred(dep, child);
    }
 
    if (gpir_node_is_root(node))
@@ -139,12 +130,13 @@ static bool gpir_lower_complex(gpir_block *block, gpir_node *node)
    gpir_alu_node *alu = gpir_node_to_alu(node);
    gpir_node *child = alu->children[0];
 
-   gpir_alu_node *complex2 = gpir_node_create(block->comp, gpir_op_complex2, -1);
-   if (!complex2)
+   gpir_alu_node *complex2 = gpir_node_create(block, gpir_op_complex2);
+   if (unlikely(!complex2))
       return false;
+
    complex2->children[0] = child;
    complex2->num_child = 1;
-   gpir_node_add_child(&complex2->node, child);
+   gpir_node_add_dep(&complex2->node, child, GPIR_DEP_INPUT);
    list_addtail(&complex2->node.list, &node->list);
 
    int impl_op = 0;
@@ -159,22 +151,62 @@ static bool gpir_lower_complex(gpir_block *block, gpir_node *node)
       assert(0);
    }
 
-   gpir_alu_node *impl = gpir_node_create(block->comp, impl_op, -1);
-   if (!impl)
+   gpir_alu_node *impl = gpir_node_create(block, impl_op);
+   if (unlikely(!impl))
       return false;
+
    impl->children[0] = child;
    impl->num_child = 1;
-   gpir_node_add_child(&impl->node, child);
+   gpir_node_add_dep(&impl->node, child, GPIR_DEP_INPUT);
    list_addtail(&impl->node.list, &node->list);
 
    /* complex1 node */
-   node->op = gpir_op_complex1;
-   alu->children[0] = &impl->node;
-   alu->children[1] = &complex2->node;
-   alu->children[2] = child;
-   alu->num_child = 3;
-   gpir_node_add_child(node, &impl->node);
-   gpir_node_add_child(node, &complex2->node);
+   gpir_alu_node *complex1 = gpir_node_create(block, gpir_op_complex1);
+   if (unlikely(!complex1))
+      return false;
+
+   complex1->children[0] = &impl->node;
+   complex1->children[1] = &complex2->node;
+   complex1->children[2] = child;
+   complex1->num_child = 3;
+   gpir_node_add_dep(&complex1->node, &impl->node, GPIR_DEP_INPUT);
+   gpir_node_add_dep(&complex1->node, &complex2->node, GPIR_DEP_INPUT);
+   gpir_node_add_dep(&complex1->node, child, GPIR_DEP_INPUT);
+   list_addtail(&complex1->node.list, &node->list);
+
+   /* complex1_f/m are auxiliary nodes for value reg alloc:
+    * 1. before reg alloc, create fake nodes complex1_f1, complex1_m1,
+    *    so the tree become:
+    *    (complex1_m (complex1_f (complex1 (complex2 complex_impl))))
+    *    complex1_m1 can be spilled, but other nodes in the tree can't
+    *    be spilled.
+    * 2. After reg allocation and fake dep add, merge all deps of
+    *    complex1_m and complex1_f to complex1 and remove complex1_m
+    *    and complex_f
+    *
+    * We may also not use complex1_f/m, but alloc two value reg for
+    * complex1. But that means we need to make sure there're 2 free
+    * slot after the complex1 successors, but we just need one slot
+    * after to be able to schedule it because we can use one move for
+    * the two complex1. It's also not easy to handle the spill case
+    * for the alloc 2 value method.
+    *
+    * With the complex1_f/m method, there's no such requirement, the
+    * complex1 can be scheduled only when there's two slot for it,
+    * otherwise a move. And the complex1 can be spilled with one reg.
+    */
+   gpir_alu_node *complex1_f = gpir_node_create(block, gpir_op_complex1_f);
+   if (unlikely(!complex1_f))
+      return false;
+   list_addtail(&complex1_f->node.list, &node->list);
+
+   node->op = gpir_op_complex1_m;
+   alu->children[0] = &complex1->node;
+   alu->children[1] = &complex1_f->node;
+   alu->num_child = 2;
+   gpir_node_remove_dep(node, child);
+   gpir_node_add_dep(node, &complex1->node, GPIR_DEP_INPUT);
+   gpir_node_add_dep(node, &complex1_f->node, GPIR_DEP_INPUT);
 
    return true;
 }
@@ -198,6 +230,7 @@ bool gpir_lower_prog(gpir_compiler *comp)
       }
    }
 
-   gpir_node_print_prog(comp);
+   gpir_debug("after lower prog\n");
+   gpir_node_print_prog_seq(comp);
    return true;
 }
