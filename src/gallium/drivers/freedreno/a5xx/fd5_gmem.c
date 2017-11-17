@@ -473,7 +473,10 @@ emit_mem2gmem_surf(struct fd_batch *batch, uint32_t base,
 
 	debug_assert(psurf->u.tex.first_layer == psurf->u.tex.last_layer);
 
-	if (buf == BLIT_ZS) {
+	if (buf == BLIT_S)
+		rsc = rsc->stencil;
+
+	if ((buf == BLIT_ZS) || (buf == BLIT_S)) {
 		// XXX hack import via BLIT_MRT0 instead of BLIT_ZS, since I don't
 		// know otherwise how to go from linear in sysmem to tiled in gmem.
 		// possibly we want to flip this around gmem2mem and keep depth
@@ -551,7 +554,10 @@ fd5_emit_tile_mem2gmem(struct fd_batch *batch, struct fd_tile *tile)
 	if (fd_gmem_needs_restore(batch, tile, FD_BUFFER_DEPTH | FD_BUFFER_STENCIL)) {
 		struct fd_resource *rsc = fd_resource(pfb->zsbuf->texture);
 
-		emit_mem2gmem_surf(batch, gmem->zsbuf_base[0], pfb->zsbuf, BLIT_ZS);
+		if (!rsc->stencil || fd_gmem_needs_restore(batch, tile, FD_BUFFER_DEPTH))
+			emit_mem2gmem_surf(batch, gmem->zsbuf_base[0], pfb->zsbuf, BLIT_ZS);
+		if (rsc->stencil && fd_gmem_needs_restore(batch, tile, FD_BUFFER_STENCIL))
+			emit_mem2gmem_surf(batch, gmem->zsbuf_base[1], pfb->zsbuf, BLIT_S);
 	}
 }
 
@@ -602,6 +608,9 @@ emit_gmem2mem_surf(struct fd_batch *batch, uint32_t base,
 	struct fd_resource_slice *slice;
 	uint32_t offset;
 
+	if (buf == BLIT_S)
+		rsc = rsc->stencil;
+
 	slice = fd_resource_slice(rsc, psurf->u.tex.level);
 	offset = fd_resource_offset(rsc, psurf->u.tex.level,
 			psurf->u.tex.first_layer);
@@ -635,12 +644,11 @@ fd5_emit_tile_gmem2mem(struct fd_batch *batch, struct fd_tile *tile)
 
 	if (batch->resolve & (FD_BUFFER_DEPTH | FD_BUFFER_STENCIL)) {
 		struct fd_resource *rsc = fd_resource(pfb->zsbuf->texture);
-		// XXX BLIT_ZS vs BLIT_Z32 .. need some more cmdstream traces
-		// with z32_x24s8..
+
 		if (!rsc->stencil || (batch->resolve & FD_BUFFER_DEPTH))
 			emit_gmem2mem_surf(batch, gmem->zsbuf_base[0], pfb->zsbuf, BLIT_ZS);
 		if (rsc->stencil && (batch->resolve & FD_BUFFER_STENCIL))
-			emit_gmem2mem_surf(batch, gmem->zsbuf_base[1], pfb->zsbuf, BLIT_ZS);
+			emit_gmem2mem_surf(batch, gmem->zsbuf_base[1], pfb->zsbuf, BLIT_S);
 	}
 
 	if (batch->resolve & FD_BUFFER_COLOR) {
