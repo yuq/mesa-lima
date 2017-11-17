@@ -233,37 +233,36 @@ brw_delete_transform_feedback(struct gl_context *ctx,
  * Note that we expose one stream pre-Gen7, so the above is just (start, end).
  */
 static void
-tally_prims_generated(struct brw_context *brw,
-                      struct brw_transform_feedback_object *obj)
+aggregate_transform_feedback_counter(
+   struct brw_context *brw,
+   struct brw_bo *bo,
+   struct brw_transform_feedback_counter *counter)
 {
-   const struct gl_context *ctx = &brw->ctx;
-   const int streams = ctx->Const.MaxVertexStreams;
+   const unsigned streams = brw->ctx.Const.MaxVertexStreams;
 
    /* If the current batch is still contributing to the number of primitives
     * generated, flush it now so the results will be present when mapped.
     */
-   if (brw_batch_references(&brw->batch, obj->prim_count_bo))
+   if (brw_batch_references(&brw->batch, bo))
       intel_batchbuffer_flush(brw);
 
-   if (unlikely(brw->perf_debug && brw_bo_busy(obj->prim_count_bo)))
+   if (unlikely(brw->perf_debug && brw_bo_busy(bo)))
       perf_debug("Stalling for # of transform feedback primitives written.\n");
 
-   uint64_t *prim_counts = brw_bo_map(brw, obj->prim_count_bo, MAP_READ);
+   uint64_t *prim_counts = brw_bo_map(brw, bo, MAP_READ);
+   prim_counts += counter->bo_start * streams;
 
-   assert(obj->prim_count_buffer_index % (2 * streams) == 0);
-   int pairs = obj->prim_count_buffer_index / (2 * streams);
+   for (unsigned i = counter->bo_start; i + 1 < counter->bo_end; i += 2) {
+      for (unsigned s = 0; s < streams; s++)
+         counter->accum[s] += prim_counts[streams + s] - prim_counts[s];
 
-   for (int i = 0; i < pairs; i++) {
-      for (int s = 0; s < streams; s++) {
-         obj->prims_generated[s] += prim_counts[streams + s] - prim_counts[s];
-      }
-      prim_counts += 2 * streams; /* move to the next pair */
+      prim_counts += 2 * streams;
    }
 
-   brw_bo_unmap(obj->prim_count_bo);
+   brw_bo_unmap(bo);
 
    /* We've already gathered up the old data; we can safely overwrite it now. */
-   obj->prim_count_buffer_index = 0;
+   counter->bo_start = counter->bo_end = 0;
 }
 
 /**
@@ -288,9 +287,9 @@ brw_save_primitives_written_counters(struct brw_context *brw,
    assert(obj->prim_count_bo != NULL);
 
    /* Check if there's enough space for a new pair of four values. */
-   if (obj->prim_count_buffer_index + 2 * streams >= 4096 / sizeof(uint64_t)) {
-      /* Gather up the results so far and release the BO. */
-      tally_prims_generated(brw, obj);
+   if ((obj->counter.bo_end + 2) * streams * sizeof(uint64_t) >= 4096) {
+      aggregate_transform_feedback_counter(brw, obj->prim_count_bo,
+                                           &obj->counter);
    }
 
    /* Flush any drawing so that the counters have the right values. */
@@ -299,7 +298,7 @@ brw_save_primitives_written_counters(struct brw_context *brw,
    /* Emit MI_STORE_REGISTER_MEM commands to write the values. */
    if (devinfo->gen >= 7) {
       for (int i = 0; i < streams; i++) {
-         int offset = (obj->prim_count_buffer_index + i) * sizeof(uint64_t);
+         int offset = (streams * obj->counter.bo_end + i) * sizeof(uint64_t);
          brw_store_register_mem64(brw, obj->prim_count_bo,
                                   GEN7_SO_NUM_PRIMS_WRITTEN(i),
                                   offset);
@@ -307,11 +306,11 @@ brw_save_primitives_written_counters(struct brw_context *brw,
    } else {
       brw_store_register_mem64(brw, obj->prim_count_bo,
                                GEN6_SO_NUM_PRIMS_WRITTEN,
-                               obj->prim_count_buffer_index * sizeof(uint64_t));
+                               obj->counter.bo_end * sizeof(uint64_t));
    }
 
    /* Update where to write data to. */
-   obj->prim_count_buffer_index += streams;
+   obj->counter.bo_end++;
 }
 
 static void
@@ -337,10 +336,10 @@ compute_vertices_written_so_far(struct brw_context *brw,
    }
 
    /* Get the number of primitives generated. */
-   tally_prims_generated(brw, obj);
+   aggregate_transform_feedback_counter(brw, obj->prim_count_bo, &obj->counter);
 
    for (int i = 0; i < ctx->Const.MaxVertexStreams; i++) {
-      vertices_written[i] = vertices_per_prim * obj->prims_generated[i];
+      vertices_written[i] = vertices_per_prim * obj->counter.accum[i];
    }
 }
 
@@ -437,11 +436,7 @@ brw_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
     * so we can't delay it any further.
     */
    brw_compute_xfb_vertices_written(brw, brw_obj);
-
-   /* No primitives have been generated yet. */
-   for (int i = 0; i < BRW_MAX_XFB_STREAMS; i++) {
-      brw_obj->prims_generated[i] = 0;
-   }
+   brw_reset_transform_feedback_counter(&brw_obj->counter);
 
    /* Store the starting value of the SO_NUM_PRIMS_WRITTEN counters. */
    brw_save_primitives_written_counters(brw, brw_obj);

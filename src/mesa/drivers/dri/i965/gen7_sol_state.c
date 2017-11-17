@@ -50,11 +50,7 @@ gen7_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
     * so we can't delay it any further.
     */
    brw_compute_xfb_vertices_written(brw, brw_obj);
-
-   /* No primitives have been generated yet. */
-   for (int i = 0; i < BRW_MAX_XFB_STREAMS; i++) {
-      brw_obj->prims_generated[i] = 0;
-   }
+   brw_reset_transform_feedback_counter(&brw_obj->counter);
 
    /* Store the starting value of the SO_NUM_PRIMS_WRITTEN counters. */
    brw_save_primitives_written_counters(brw, brw_obj);
