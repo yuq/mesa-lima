@@ -90,6 +90,18 @@ VkResult radv_GetPhysicalDeviceSurfaceCapabilitiesKHR(
 						   pSurfaceCapabilities);
 }
 
+VkResult radv_GetPhysicalDeviceSurfaceCapabilities2KHR(
+	VkPhysicalDevice                            physicalDevice,
+	const VkPhysicalDeviceSurfaceInfo2KHR*      pSurfaceInfo,
+	VkSurfaceCapabilities2KHR*                  pSurfaceCapabilities)
+{
+	RADV_FROM_HANDLE(radv_physical_device, device, physicalDevice);
+
+	return wsi_common_get_surface_capabilities2(&device->wsi_device,
+						    pSurfaceInfo,
+						    pSurfaceCapabilities);
+}
+
 VkResult radv_GetPhysicalDeviceSurfaceFormatsKHR(
 	VkPhysicalDevice                            physicalDevice,
 	VkSurfaceKHR                                surface,
@@ -102,6 +114,20 @@ VkResult radv_GetPhysicalDeviceSurfaceFormatsKHR(
 					      surface,
 					      pSurfaceFormatCount,
 					      pSurfaceFormats);
+}
+
+VkResult radv_GetPhysicalDeviceSurfaceFormats2KHR(
+	VkPhysicalDevice                            physicalDevice,
+	const VkPhysicalDeviceSurfaceInfo2KHR*      pSurfaceInfo,
+	uint32_t*                                   pSurfaceFormatCount,
+	VkSurfaceFormat2KHR*                        pSurfaceFormats)
+{
+	RADV_FROM_HANDLE(radv_physical_device, device, physicalDevice);
+
+	return wsi_common_get_surface_formats2(&device->wsi_device,
+					       pSurfaceInfo,
+					       pSurfaceFormatCount,
+					       pSurfaceFormats);
 }
 
 VkResult radv_GetPhysicalDeviceSurfacePresentModesKHR(
