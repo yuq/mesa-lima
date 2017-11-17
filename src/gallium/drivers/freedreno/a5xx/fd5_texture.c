@@ -198,10 +198,16 @@ fd5_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 {
 	struct fd5_pipe_sampler_view *so = CALLOC_STRUCT(fd5_pipe_sampler_view);
 	struct fd_resource *rsc = fd_resource(prsc);
+	enum pipe_format format = cso->format;
 	unsigned lvl, layers;
 
 	if (!so)
 		return NULL;
+
+	if (format == PIPE_FORMAT_X32_S8X24_UINT) {
+		rsc = rsc->stencil;
+		format = rsc->base.b.format;
+	}
 
 	so->base = *cso;
 	pipe_reference(NULL, &prsc->reference);
@@ -210,25 +216,38 @@ fd5_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 	so->base.context = pctx;
 
 	so->texconst0 =
-		A5XX_TEX_CONST_0_FMT(fd5_pipe2tex(cso->format)) |
-		fd5_tex_swiz(cso->format, cso->swizzle_r, cso->swizzle_g,
+		A5XX_TEX_CONST_0_FMT(fd5_pipe2tex(format)) |
+		fd5_tex_swiz(format, cso->swizzle_r, cso->swizzle_g,
 				cso->swizzle_b, cso->swizzle_a);
 
-	if (util_format_is_srgb(cso->format)) {
-		if (use_astc_srgb_workaround(pctx, cso->format))
+	/* NOTE: since we sample z24s8 using 8888_UINT format, the swizzle
+	 * we get isn't quite right.  Use SWAP(XYZW) as a cheap and cheerful
+	 * way to re-arrange things so stencil component is where the swiz
+	 * expects.
+	 *
+	 * Note that gallium expects stencil sampler to return (s,s,s,s)
+	 * which isn't quite true.  To make that happen we'd have to massage
+	 * the swizzle.  But in practice only the .x component is used.
+	 */
+	if (format == PIPE_FORMAT_X24S8_UINT) {
+		so->texconst0 |= A5XX_TEX_CONST_0_SWAP(XYZW);
+	}
+
+	if (util_format_is_srgb(format)) {
+		if (use_astc_srgb_workaround(pctx, format))
 			so->astc_srgb = true;
 		so->texconst0 |= A5XX_TEX_CONST_0_SRGB;
 	}
 
 	if (cso->target == PIPE_BUFFER) {
-		unsigned elements = cso->u.buf.size / util_format_get_blocksize(cso->format);
+		unsigned elements = cso->u.buf.size / util_format_get_blocksize(format);
 
 		lvl = 0;
 		so->texconst1 =
 			A5XX_TEX_CONST_1_WIDTH(elements) |
 			A5XX_TEX_CONST_1_HEIGHT(1);
 		so->texconst2 =
-			A5XX_TEX_CONST_2_FETCHSIZE(fd5_pipe2fetchsize(cso->format)) |
+			A5XX_TEX_CONST_2_FETCHSIZE(fd5_pipe2fetchsize(format)) |
 			A5XX_TEX_CONST_2_PITCH(elements * rsc->cpp);
 		so->offset = cso->u.buf.offset;
 	} else {
@@ -243,10 +262,10 @@ fd5_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 			A5XX_TEX_CONST_1_WIDTH(u_minify(prsc->width0, lvl)) |
 			A5XX_TEX_CONST_1_HEIGHT(u_minify(prsc->height0, lvl));
 		so->texconst2 =
-			A5XX_TEX_CONST_2_FETCHSIZE(fd5_pipe2fetchsize(cso->format)) |
+			A5XX_TEX_CONST_2_FETCHSIZE(fd5_pipe2fetchsize(format)) |
 			A5XX_TEX_CONST_2_PITCH(
 					util_format_get_nblocksx(
-							cso->format, rsc->slices[lvl].pitch) * rsc->cpp);
+							format, rsc->slices[lvl].pitch) * rsc->cpp);
 		so->offset = fd_resource_offset(rsc, lvl, cso->u.tex.first_layer);
 	}
 
