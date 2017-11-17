@@ -241,11 +241,13 @@ anv_block_pool_expand_range(struct anv_block_pool *pool,
 VkResult
 anv_block_pool_init(struct anv_block_pool *pool,
                     struct anv_device *device,
-                    uint32_t initial_size)
+                    uint32_t initial_size,
+                    uint64_t bo_flags)
 {
    VkResult result;
 
    pool->device = device;
+   pool->bo_flags = bo_flags;
    anv_bo_init(&pool->bo, 0, 0);
 
    pool->fd = memfd_create("block pool", MFD_CLOEXEC);
@@ -398,6 +400,7 @@ anv_block_pool_expand_range(struct anv_block_pool *pool,
     * hard work for us.
     */
    anv_bo_init(&pool->bo, gem_handle, size);
+   pool->bo.flags = pool->bo_flags;
    pool->bo.map = map;
 
    return VK_SUCCESS;
@@ -515,8 +518,7 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
 
    result = anv_block_pool_expand_range(pool, center_bo_offset, size);
 
-   if (pool->device->instance->physicalDevice.has_exec_async)
-      pool->bo.flags |= EXEC_OBJECT_ASYNC;
+   pool->bo.flags = pool->bo_flags;
 
 done:
    pthread_mutex_unlock(&pool->device->mutex);
@@ -606,10 +608,12 @@ anv_block_pool_alloc_back(struct anv_block_pool *pool,
 VkResult
 anv_state_pool_init(struct anv_state_pool *pool,
                     struct anv_device *device,
-                    uint32_t block_size)
+                    uint32_t block_size,
+                    uint64_t bo_flags)
 {
    VkResult result = anv_block_pool_init(&pool->block_pool, device,
-                                         block_size * 16);
+                                         block_size * 16,
+                                         bo_flags);
    if (result != VK_SUCCESS)
       return result;
 
@@ -951,9 +955,11 @@ struct bo_pool_bo_link {
 };
 
 void
-anv_bo_pool_init(struct anv_bo_pool *pool, struct anv_device *device)
+anv_bo_pool_init(struct anv_bo_pool *pool, struct anv_device *device,
+                 uint64_t bo_flags)
 {
    pool->device = device;
+   pool->bo_flags = bo_flags;
    memset(pool->free_list, 0, sizeof(pool->free_list));
 
    VG(VALGRIND_CREATE_MEMPOOL(pool, 0, false));
@@ -1005,11 +1011,7 @@ anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo, uint32_t size)
    if (result != VK_SUCCESS)
       return result;
 
-   if (pool->device->instance->physicalDevice.supports_48bit_addresses)
-      new_bo.flags |= EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
-
-   if (pool->device->instance->physicalDevice.has_exec_async)
-      new_bo.flags |= EXEC_OBJECT_ASYNC;
+   new_bo.flags = pool->bo_flags;
 
    assert(new_bo.size == pow2_size);
 

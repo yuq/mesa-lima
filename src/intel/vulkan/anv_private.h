@@ -551,6 +551,8 @@ struct anv_block_state {
 struct anv_block_pool {
    struct anv_device *device;
 
+   uint64_t bo_flags;
+
    struct anv_bo bo;
 
    /* The offset from the start of the bo to the "center" of the block
@@ -649,7 +651,8 @@ struct anv_state_stream {
  */
 VkResult anv_block_pool_init(struct anv_block_pool *pool,
                              struct anv_device *device,
-                             uint32_t initial_size);
+                             uint32_t initial_size,
+                             uint64_t bo_flags);
 void anv_block_pool_finish(struct anv_block_pool *pool);
 int32_t anv_block_pool_alloc(struct anv_block_pool *pool,
                              uint32_t block_size);
@@ -658,7 +661,8 @@ int32_t anv_block_pool_alloc_back(struct anv_block_pool *pool,
 
 VkResult anv_state_pool_init(struct anv_state_pool *pool,
                              struct anv_device *device,
-                             uint32_t block_size);
+                             uint32_t block_size,
+                             uint64_t bo_flags);
 void anv_state_pool_finish(struct anv_state_pool *pool);
 struct anv_state anv_state_pool_alloc(struct anv_state_pool *pool,
                                       uint32_t state_size, uint32_t alignment);
@@ -678,10 +682,13 @@ struct anv_state anv_state_stream_alloc(struct anv_state_stream *stream,
 struct anv_bo_pool {
    struct anv_device *device;
 
+   uint64_t bo_flags;
+
    void *free_list[16];
 };
 
-void anv_bo_pool_init(struct anv_bo_pool *pool, struct anv_device *device);
+void anv_bo_pool_init(struct anv_bo_pool *pool, struct anv_device *device,
+                      uint64_t bo_flags);
 void anv_bo_pool_finish(struct anv_bo_pool *pool);
 VkResult anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo,
                            uint32_t size);
