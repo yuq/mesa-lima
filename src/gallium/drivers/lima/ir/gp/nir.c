@@ -363,10 +363,13 @@ bool gpir_compile_nir(struct lima_vs_shader_state *prog, struct nir_shader *nir)
    gpir_node_print_prog_seq(comp);
    gpir_node_print_prog_dep(comp);
 
+   if (!gpir_pre_rsched_lower_prog(comp))
+      goto err_out0;
+
    if (!gpir_reduce_reg_pressure_schedule_prog(comp))
       goto err_out0;
 
-   if (!gpir_lower_prog(comp))
+   if (!gpir_post_rsched_lower_prog(comp))
       goto err_out0;
 
    if (!gpir_value_regalloc_prog(comp))
