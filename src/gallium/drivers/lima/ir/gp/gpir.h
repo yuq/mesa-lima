@@ -27,8 +27,6 @@
 
 #include "util/list.h"
 #include "util/u_math.h"
-#include "util/u_dynarray.h"
-#include "util/set.h"
 
 #include "ir/lima_ir.h"
 
@@ -97,6 +95,10 @@ typedef enum {
    gpir_op_tan,
    gpir_op_branch_uncond,
 
+   /* auxiliary ops */
+   gpir_op_complex1_f,
+   gpir_op_complex1_m,
+
    gpir_op_num,
 } gpir_op;
 
@@ -114,34 +116,31 @@ typedef struct {
    bool src_neg[4];
    int *slots;
    gpir_node_type type;
+   bool spillless;
 } gpir_op_info;
 
 extern const gpir_op_info gpir_op_infos[];
 
-struct gpir_node;
-typedef struct gpir_node gpir_node;
-
-/* structure for storing information about a given dependency
- * Combined with info about instruction placement, should be enough to
- * allow the scheduler to determine if the placement is legal.
- */
 typedef struct {
-   /* predecessor - node which must be excecuted first */
-   gpir_node *pred;
-   /* successor - node which must be excecuted last */
-   gpir_node *succ;
+   enum {
+      GPIR_DEP_INPUT,     /* def is the input of use */
+      GPIR_DEP_OFFSET,    /* def is the offset of use (i.e. temp store) */
+      GPIR_DEP_READ_AFTER_WRITE,
+      GPIR_DEP_WRITE_AFTER_READ,
+      GPIR_DEP_VREG_READ_AFTER_WRITE,
+      GPIR_DEP_VREG_WRITE_AFTER_READ,
+   } type;
 
-   /* true - is a dependency between a child and parent node
-    * false - is a read/write ordering dependency
-    */
-   bool is_child_dep;
+   /* node execute before succ */
+   struct gpir_node *pred;
+   /* node execute after pred */
+   struct gpir_node *succ;
 
-   /* For temp stores, tells us whether this is an input or an offset.
-    * We need to know this because offsets and inputs must be scheduled
-    * differently.
-    */
-   bool is_offset;
-} gpir_dep_info;
+   /* for node pred_list */
+   struct list_head pred_link;
+   /* for ndoe succ_list */
+   struct list_head succ_link;
+} gpir_dep;
 
 typedef struct gpir_node {
    struct list_head list;
@@ -150,13 +149,39 @@ typedef struct gpir_node {
    int index;
    char name[16];
    bool printed;
+   struct gpir_block *block;
 
-   /* for scheduler */
-   struct set *preds, *succs;
-   int sched_dist;
-   int sched_instr, sched_pos;
-   bool scheduled;
-   struct list_head ready;
+   /* for nodes relationship */
+   /* for node who uses this node (successor) */
+   struct list_head succ_list;
+   /* for node this node uses (predecessor) */
+   struct list_head pred_list;
+
+   /* for scheduler and regalloc */
+   int value_reg;
+   union {
+      struct {
+         int instr;
+         int pos;
+         int dist;
+         int index;
+         bool ready;
+         bool inserted;
+      } sched;
+      struct {
+         int parent_index;
+         float reg_pressure;
+         int est;
+         bool scheduled;
+      } rsched;
+      struct {
+         float index;
+         struct gpir_node *last;
+      } vreg;
+      struct {
+         int index;
+      } preg;
+   };
 } gpir_node;
 
 typedef struct {
@@ -175,22 +200,34 @@ typedef struct {
 } gpir_const_node;
 
 typedef struct {
+   int index;
+   struct list_head list;
+
+   struct list_head defs_list;
+   struct list_head uses_list;
+
+   int start, end;
+} gpir_reg;
+
+typedef struct {
    gpir_node node;
 
    unsigned index;
    unsigned component;
 
-   /* for uniforms/temporaries only */
-   bool offset;
-   unsigned off_reg;
+   gpir_reg *reg;
+   struct list_head reg_link;
 } gpir_load_node;
 
 typedef struct {
    gpir_node node;
 
    unsigned index;
-   gpir_node *child;
    unsigned component;
+   gpir_node *child;
+
+   gpir_reg *reg;
+   struct list_head reg_link;
 } gpir_store_node;
 
 enum gpir_instr_slot {
@@ -226,6 +263,9 @@ enum gpir_instr_slot {
 };
 
 typedef struct {
+   int index;
+   struct list_head list;
+
    gpir_node *slots[GPIR_INSTR_SLOT_NUM];
 
    int alu_num_slot_free;
@@ -249,20 +289,24 @@ typedef struct {
       GPIR_INSTR_STORE_TEMP,
    } store_content[2];
    int store_index[2];
-
-   uint64_t reg_status;
 } gpir_instr;
 
 typedef struct gpir_block {
    struct list_head list;
    struct list_head node_list;
-   struct util_dynarray instrs;
+   struct list_head instr_list;
    struct gpir_compiler *comp;
-} gpir_block;
 
-#define gpir_instr_array(buf) ((gpir_instr *)util_dynarray_begin(buf))
-#define gpir_instr_array_n(buf) ((buf)->size / sizeof(gpir_instr))
-#define gpir_instr_array_e(buf, idx) (util_dynarray_element(buf, gpir_instr, idx))
+   /* for scheduler */
+   union {
+      struct {
+         int instr_index;
+      } sched;
+      struct {
+         int node_index;
+      } rsched;
+   };
+} gpir_block;
 
 typedef struct {
    gpir_node node;
@@ -274,63 +318,68 @@ struct lima_vs_shader_state;
 typedef struct gpir_compiler {
    struct list_head block_list;
    int cur_index;
-   /* for mark a node newly created */
-   int save_index;
 
-   /* array for searching ssa/reg node */
+   /* array for searching ssa node */
    gpir_node **var_nodes;
-   unsigned reg_base;
+
+   /* for physical reg */
+   struct list_head reg_list;
+   int cur_reg;
 
    struct lima_vs_shader_state *prog;
    int constant_base;
 } gpir_compiler;
 
-void *gpir_node_create(gpir_compiler *comp, gpir_op op, int index);
-gpir_dep_info *gpir_node_add_child(gpir_node *parent, gpir_node *child);
-gpir_dep_info *gpir_node_add_read_after_write_dep(gpir_node *read, gpir_node *write);
-void gpir_node_remove_entry(struct set_entry *entry);
+#define GPIR_VALUE_REG_NUM 11
+#define GPIR_PHYSICAL_REG_NUM 64
+
+void *gpir_node_create(gpir_block *block, gpir_op op);
+gpir_dep *gpir_node_add_dep(gpir_node *succ, gpir_node *pred, int type);
+void gpir_node_remove_dep(gpir_node *succ, gpir_node *pred);
+void gpir_node_merge_dep(gpir_node *from, gpir_node *to);
 void gpir_node_replace_succ(gpir_node *dst, gpir_node *src);
-void gpir_node_replace_pred(struct set_entry *entry, gpir_node *new_pred);
-void gpir_node_merge_pred(gpir_node *dst, gpir_node *src);
+void gpir_node_replace_pred(gpir_dep *dep, gpir_node *new_pred);
 void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child, gpir_node *new_child);
 void gpir_node_delete(gpir_node *node);
-void gpir_node_print_prog(gpir_compiler *comp);
+void gpir_node_print_prog_dep(gpir_compiler *comp);
+void gpir_node_print_prog_seq(gpir_compiler *comp);
+
+#define gpir_node_foreach_succ(node, dep) \
+   list_for_each_entry(gpir_dep, dep, &node->succ_list, succ_link)
+#define gpir_node_foreach_succ_safe(node, dep) \
+   list_for_each_entry_safe(gpir_dep, dep, &node->succ_list, succ_link)
+#define gpir_node_foreach_pred(node, dep) \
+   list_for_each_entry(gpir_dep, dep, &node->pred_list, pred_link)
+#define gpir_node_foreach_pred_safe(node, dep) \
+   list_for_each_entry_safe(gpir_dep, dep, &node->pred_list, pred_link)
 
 static inline bool gpir_node_is_root(gpir_node *node)
 {
-   return !node->succs->entries;
+   return list_empty(&node->succ_list);
 }
 
 static inline bool gpir_node_is_leaf(gpir_node *node)
 {
-   return !node->preds->entries;
+   return list_empty(&node->pred_list);
 }
-
-#define gpir_dep_from_entry(entry) ((gpir_dep_info *)(entry->key))
-#define gpir_node_from_entry(entry, direction) (gpir_dep_from_entry(entry)->direction)
-
-#define gpir_node_foreach_pred(node, entry)                                \
-   for (struct set_entry *entry = _mesa_set_next_entry(node->preds, NULL); \
-        entry != NULL;                                                     \
-        entry = _mesa_set_next_entry(node->preds, entry))
-
-#define gpir_node_foreach_succ(node, entry)                                \
-   for (struct set_entry *entry = _mesa_set_next_entry(node->succs, NULL); \
-        entry != NULL;                                                     \
-        entry = _mesa_set_next_entry(node->succs, entry))
 
 #define gpir_node_to_alu(node) ((gpir_alu_node *)(node))
 #define gpir_node_to_const(node) ((gpir_const_node *)(node))
 #define gpir_node_to_load(node) ((gpir_load_node *)(node))
 #define gpir_node_to_store(node) ((gpir_store_node *)(node))
 
-void gpir_instr_init(gpir_instr *instr);
+gpir_instr *gpir_instr_create(gpir_block *block);
 bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node);
 void gpir_instr_remove_node(gpir_instr *instr, gpir_node *node);
 void gpir_instr_print_prog(gpir_compiler *comp);
 
 bool gpir_lower_prog(gpir_compiler *comp);
+bool gpir_reduce_reg_pressure_schedule_prog(gpir_compiler *comp);
+bool gpir_value_regalloc_prog(gpir_compiler *comp);
+bool gpir_physical_regalloc_prog(gpir_compiler *comp);
 bool gpir_schedule_prog(gpir_compiler *comp);
 bool gpir_codegen_prog(gpir_compiler *comp);
+
+gpir_reg *gpir_create_reg(gpir_compiler *comp);
 
 #endif
