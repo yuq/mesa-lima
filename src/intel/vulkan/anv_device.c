@@ -362,6 +362,7 @@ anv_physical_device_init(struct anv_physical_device *device,
       goto fail;
 
    device->has_exec_async = anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_ASYNC);
+   device->has_exec_capture = anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_CAPTURE);
    device->has_exec_fence = anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_FENCE);
    device->has_syncobj = anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_FENCE_ARRAY);
    device->has_syncobj_wait = device->has_syncobj &&
@@ -1213,7 +1214,8 @@ VkResult anv_CreateDevice(
 
    uint64_t bo_flags =
       (physical_device->supports_48bit_addresses ? EXEC_OBJECT_SUPPORTS_48B_ADDRESS : 0) |
-      (physical_device->has_exec_async ? EXEC_OBJECT_ASYNC : 0);
+      (physical_device->has_exec_async ? EXEC_OBJECT_ASYNC : 0) |
+      (physical_device->has_exec_capture ? EXEC_OBJECT_CAPTURE : 0);
 
    anv_bo_pool_init(&device->batch_bo_pool, device, bo_flags);
 
@@ -1230,7 +1232,8 @@ VkResult anv_CreateDevice(
       goto fail_bo_cache;
 
    result = anv_state_pool_init(&device->instruction_state_pool, device, 16384,
-                                bo_flags);
+                                bo_flags |
+                                (physical_device->has_exec_capture ? EXEC_OBJECT_CAPTURE : 0));
    if (result != VK_SUCCESS)
       goto fail_dynamic_state_pool;
 

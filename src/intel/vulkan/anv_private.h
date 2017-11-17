@@ -773,6 +773,7 @@ struct anv_physical_device {
     struct isl_device                           isl_dev;
     int                                         cmd_parser_version;
     bool                                        has_exec_async;
+    bool                                        has_exec_capture;
     bool                                        has_exec_fence;
     bool                                        has_syncobj;
     bool                                        has_syncobj_wait;
