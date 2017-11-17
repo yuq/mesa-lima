@@ -237,6 +237,16 @@ static void schedule_update_distance(gpir_node *node)
    }
 }
 
+static bool is_complex_node(gpir_node *node)
+{
+   if (node->op == gpir_op_complex2 ||
+       node->op == gpir_op_rcp_impl ||
+       node->op == gpir_op_rsqrt_impl)
+      return true;
+
+   return false;
+}
+
 static void schedule_insert_ready_list(struct list_head *ready_list,
                                        gpir_node *insert_node)
 {
@@ -266,9 +276,18 @@ static void schedule_insert_ready_list(struct list_head *ready_list,
    if (!insert || insert_node->sched.inserted)
       return;
 
+   /* We must schedule complex2 & impl nodes right after the complex1 */
+   if (is_complex_node(insert_node)) {
+      assert(insert_node->sched.ready == true);
+      list_add(&insert_node->list, ready_list);
+      insert_node->sched.inserted = true;
+      return;
+   }
+
    struct list_head *insert_pos = ready_list;
    list_for_each_entry(gpir_node, node, ready_list, list) {
-      if (insert_node->sched.dist > node->sched.dist) {
+      if (!is_complex_node(node) &&
+          insert_node->sched.dist > node->sched.dist) {
          insert_pos = &node->list;
          break;
       }
