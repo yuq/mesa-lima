@@ -21,6 +21,8 @@
 project('mesa', ['c', 'cpp'], version : '17.3.0-devel', license : 'MIT',
         default_options : ['c_std=c99', 'cpp_std=c++11'])
 
+error('The meson build is unsupported for building mesa 17.3.x releases.')
+
 # Arguments for the preprocessor, put these in a separate array from the C and
 # C++ (cpp in meson terminology) arguments since they need to be added to the
 # default arguments for both C and C++.
