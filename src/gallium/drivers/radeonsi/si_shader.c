@@ -3176,6 +3176,9 @@ static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context *bld_base)
 					LLVMConstInt(ctx->i32, param * 4, 0), "");
 
 		for (chan = 0; chan < 4; chan++) {
+			if (!(info->output_usagemask[i] & (1 << chan)))
+				continue;
+
 			lds_store(bld_base, chan, dw_addr,
 				  LLVMBuildLoad(ctx->ac.builder, out_ptr[chan], ""));
 		}
