@@ -157,6 +157,12 @@ vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
         bool needs_color_clear = job->cleared & pipe_clear_color_buffers;
         bool needs_z_clear = job->cleared & PIPE_CLEAR_DEPTH;
         bool needs_s_clear = job->cleared & PIPE_CLEAR_STENCIL;
+        /* Note that only the color RT being stored will be cleared by a
+         * STORE_GENERAL, or all of them if the buffer is NONE.
+         */
+        bool msaa_color_clear = (needs_color_clear &&
+                                 (job->cleared & pipe_clear_color_buffers) ==
+                                 (job->resolve & pipe_clear_color_buffers));
 
         uint32_t stores_pending = job->resolve;
 
@@ -176,7 +182,7 @@ vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
 
                 stores_pending &= ~bit;
                 store_raw(cl, psurf, RENDER_TARGET_0 + i,
-                          !stores_pending && needs_color_clear,
+                          !stores_pending && msaa_color_clear,
                           !stores_pending && needs_z_clear,
                           !stores_pending && needs_s_clear);
 
@@ -189,7 +195,7 @@ vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
                 stores_pending &= ~PIPE_CLEAR_DEPTHSTENCIL;
                 store_raw(cl, job->zsbuf,
                           zs_buffer_from_pipe_bits(job->resolve),
-                          !stores_pending && needs_color_clear,
+                          false,
                           !stores_pending && needs_z_clear,
                           !stores_pending && needs_s_clear);
 
@@ -205,6 +211,9 @@ vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
                         store.enable_z_write = stores_pending & PIPE_CLEAR_DEPTH;
                         store.enable_stencil_write = stores_pending & PIPE_CLEAR_STENCIL;
 
+                        /* Note that when set this will clear all of the color
+                         * buffers.
+                         */
                         store.disable_colour_buffers_clear_on_write =
                                 !needs_color_clear;
                         store.disable_z_buffer_clear_on_write =
@@ -212,6 +221,14 @@ vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
                         store.disable_stencil_buffer_clear_on_write =
                                 !needs_s_clear;
                 };
+        } else if (needs_color_clear && !msaa_color_clear) {
+                /* If we had MSAA color stores that didn't match the set of
+                 * MSAA color clears, then we need to clear the color buffers
+                 * now.
+                 */
+                cl_emit(&job->rcl, STORE_TILE_BUFFER_GENERAL, store) {
+                        store.buffer_to_store = NONE;
+                }
         }
 
         cl_emit(cl, RETURN_FROM_SUB_LIST, ret);
