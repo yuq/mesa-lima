@@ -28,6 +28,7 @@
 
 #include "hw/common.xml.h"
 
+#include "etnaviv_blt.h"
 #include "etnaviv_context.h"
 #include "etnaviv_emit.h"
 #include "etnaviv_format.h"
@@ -216,10 +217,15 @@ etna_copy_resource_box(struct pipe_context *pctx, struct pipe_resource *dst,
 void
 etna_clear_blit_init(struct pipe_context *pctx)
 {
+   struct etna_context *ctx = etna_context(pctx);
+
    pctx->clear_render_target = etna_clear_render_target;
    pctx->clear_depth_stencil = etna_clear_depth_stencil;
    pctx->resource_copy_region = etna_resource_copy_region;
    pctx->flush_resource = etna_flush_resource;
 
-   etna_clear_blit_rs_init(pctx);
+   if (ctx->specs.use_blt)
+      etna_clear_blit_blt_init(pctx);
+   else
+      etna_clear_blit_rs_init(pctx);
 }

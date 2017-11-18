@@ -84,6 +84,8 @@ struct etna_specs {
    unsigned has_icache : 1;
    /* ASTC texture support (and has associated states) */
    unsigned tex_astc : 1;
+   /* has BLT engine instead of RS */
+   unsigned use_blt : 1;
    /* can use any kind of wrapping mode on npot textures */
    unsigned npot_tex_any_wrap;
    /* number of bits per TS tile */

@@ -349,8 +349,10 @@ etna_cmd_stream_reset_notify(struct etna_cmd_stream *stream, void *priv)
    etna_set_state(stream, VIVS_GL_UNK03854, 0x00000000);
    etna_set_state(stream, VIVS_PS_CONTROL_EXT, 0x00000000);
 
-   /* Enable SINGLE_BUFFER for resolve, if supported */
-   etna_set_state(stream, VIVS_RS_SINGLE_BUFFER, COND(ctx->specs.single_buffer, VIVS_RS_SINGLE_BUFFER_ENABLE));
+   if (!ctx->specs.use_blt) {
+      /* Enable SINGLE_BUFFER for resolve, if supported */
+      etna_set_state(stream, VIVS_RS_SINGLE_BUFFER, COND(ctx->specs.single_buffer, VIVS_RS_SINGLE_BUFFER_ENABLE));
+   }
 
    ctx->dirty = ~0L;
 

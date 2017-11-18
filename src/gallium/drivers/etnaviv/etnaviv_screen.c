@@ -818,6 +818,8 @@ etna_get_specs(struct etna_screen *screen)
 
    screen->specs.tex_astc = VIV_FEATURE(screen, chipMinorFeatures4, TEXTURE_ASTC);
 
+   screen->specs.use_blt = VIV_FEATURE(screen, chipMinorFeatures5, BLT_ENGINE);
+
    return true;
 
 fail:
