@@ -24,11 +24,15 @@
 #ifndef _INTEL_ASM_ANNOTATION_H
 #define _INTEL_ASM_ANNOTATION_H
 
-#include "brw_cfg.h"
+#include "compiler/glsl/list.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct cfg_t;
+struct backend_instruction;
+struct gen_device_info;
 
 struct inst_group {
    struct exec_node link;
