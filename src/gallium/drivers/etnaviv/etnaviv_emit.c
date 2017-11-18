@@ -91,18 +91,6 @@ etna_stall(struct etna_cmd_stream *stream, uint32_t from, uint32_t to)
 #define EMIT_STATE_RELOC(state_name, src_value) \
    etna_coalsence_emit_reloc(stream, &coalesce, VIVS_##state_name, src_value)
 
-/* Create bit field that specifies which samplers are active and thus need to be
- * programmed
- * 32 bits is enough for 32 samplers. As far as I know this is the upper bound
- * supported on any Vivante hw
- * up to GC4000.
- */
-static uint32_t
-active_samplers_bits(struct etna_context *ctx)
-{
-   return ctx->active_sampler_views & ctx->active_samplers;
-}
-
 #define ETNA_3D_CONTEXT_SIZE  (400) /* keep this number above "Total state updates (fixed)" from gen_weave_state tool */
 
 static unsigned

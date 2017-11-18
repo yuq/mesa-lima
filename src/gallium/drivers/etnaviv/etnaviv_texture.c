@@ -432,6 +432,12 @@ etna_texture_barrier(struct pipe_context *pctx, unsigned flags)
    etna_set_state(ctx->stream, VIVS_GL_FLUSH_CACHE, VIVS_GL_FLUSH_CACHE_COLOR | VIVS_GL_FLUSH_CACHE_TEXTURE);
 }
 
+uint32_t
+active_samplers_bits(struct etna_context *ctx)
+{
+   return ctx->active_sampler_views & ctx->active_samplers;
+}
+
 void
 etna_texture_init(struct pipe_context *pctx)
 {

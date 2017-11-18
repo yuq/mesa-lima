@@ -34,6 +34,8 @@
 
 #include "hw/state_3d.xml.h"
 
+struct etna_context;
+
 struct etna_sampler_state {
    struct pipe_sampler_state base;
 
@@ -82,5 +84,14 @@ etna_texture_init(struct pipe_context *pctx);
  * an appropriately tiled texture. */
 struct etna_resource *
 etna_texture_handle_incompatible(struct pipe_context *pctx, struct pipe_resource *prsc);
+
+/* Create bit field that specifies which samplers are active and thus need to be
+ * programmed
+ * 32 bits is enough for 32 samplers. As far as I know this is the upper bound
+ * supported on any Vivante hw
+ * up to GC4000.
+ */
+uint32_t
+active_samplers_bits(struct etna_context *ctx);
 
 #endif
