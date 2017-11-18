@@ -93,9 +93,6 @@ etna_set_state_multi(struct etna_cmd_stream *stream, uint32_t base,
 void
 etna_stall(struct etna_cmd_stream *stream, uint32_t from, uint32_t to);
 
-void
-etna_submit_rs_state(struct etna_context *ctx, const struct compiled_rs_state *cs);
-
 static inline void
 etna_draw_primitives(struct etna_cmd_stream *stream, uint32_t primitive_type,
                      uint32_t start, uint32_t count)
