@@ -1208,6 +1208,14 @@ brw_bo_gem_export_to_prime(struct brw_bo *bo, int *prime_fd)
    return 0;
 }
 
+uint32_t
+brw_bo_export_gem_handle(struct brw_bo *bo)
+{
+   brw_bo_make_external(bo);
+
+   return bo->gem_handle;
+}
+
 int
 brw_bo_flink(struct brw_bo *bo, uint32_t *name)
 {
