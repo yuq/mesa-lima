@@ -188,6 +188,8 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
          BUG("Index buffer upload failed.");
          return;
       }
+      /* Add start to index offset, when rendering indexed */
+      index_offset += info->start * info->index_size;
 
       ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.bo = etna_resource(indexbuf)->bo;
       ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.offset = index_offset;
@@ -273,10 +275,16 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    /* First, sync state, then emit DRAW_PRIMITIVES or DRAW_INDEXED_PRIMITIVES */
    etna_emit_state(ctx);
 
-   if (info->index_size)
-      etna_draw_indexed_primitives(ctx->stream, draw_mode, info->start, prims, info->index_bias);
-   else
-      etna_draw_primitives(ctx->stream, draw_mode, info->start, prims);
+   if (ctx->specs.halti >= 2) {
+      /* On HALTI2+ (GC3000 and higher) only use instanced drawing commands, as the blob does */
+      etna_draw_instanced(ctx->stream, info->index_size, draw_mode, 1,
+         info->count, info->index_size ? info->index_bias : info->start);
+   } else {
+      if (info->index_size)
+         etna_draw_indexed_primitives(ctx->stream, draw_mode, 0, prims, info->index_bias);
+      else
+         etna_draw_primitives(ctx->stream, draw_mode, info->start, prims);
+   }
 
    if (DBG_ENABLED(ETNA_DBG_DRAW_STALL)) {
       /* Stall the FE after every draw operation.  This allows better

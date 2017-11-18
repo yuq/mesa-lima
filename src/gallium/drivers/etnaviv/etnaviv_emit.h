@@ -117,6 +117,27 @@ etna_draw_indexed_primitives(struct etna_cmd_stream *stream,
    etna_cmd_stream_emit(stream, 0);
 }
 
+/* important: this takes a vertex count, not a primitive count */
+static inline void
+etna_draw_instanced(struct etna_cmd_stream *stream,
+                    uint32_t indexed, uint32_t primitive_type,
+                    uint32_t instance_count,
+                    uint32_t vertex_count, uint32_t offset)
+{
+   etna_cmd_stream_reserve(stream, 3 + 1);
+   etna_cmd_stream_emit(stream,
+      VIV_FE_DRAW_INSTANCED_HEADER_OP_DRAW_INSTANCED |
+      COND(indexed, VIV_FE_DRAW_INSTANCED_HEADER_INDEXED) |
+      VIV_FE_DRAW_INSTANCED_HEADER_TYPE(primitive_type) |
+      VIV_FE_DRAW_INSTANCED_HEADER_INSTANCE_COUNT_LO(instance_count & 0xffff));
+   etna_cmd_stream_emit(stream,
+      VIV_FE_DRAW_INSTANCED_COUNT_INSTANCE_COUNT_HI(instance_count >> 16) |
+      VIV_FE_DRAW_INSTANCED_COUNT_VERTEX_COUNT(vertex_count));
+   etna_cmd_stream_emit(stream,
+      VIV_FE_DRAW_INSTANCED_START_INDEX(offset));
+   etna_cmd_stream_emit(stream, 0);
+}
+
 void
 etna_emit_state(struct etna_context *ctx);
 
