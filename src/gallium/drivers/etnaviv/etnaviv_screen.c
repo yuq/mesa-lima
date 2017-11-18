@@ -738,7 +738,13 @@ etna_get_specs(struct etna_screen *screen)
    screen->specs.has_halti2_instructions =
       VIV_FEATURE(screen, chipMinorFeatures4, HALTI2);
 
-   if (VIV_FEATURE(screen, chipMinorFeatures3, INSTRUCTION_CACHE)) {
+   if (screen->specs.halti >= 5) {
+      /* GC7000 - this core must load shaders from memory. */
+      screen->specs.vs_offset = 0;
+      screen->specs.ps_offset = 0;
+      screen->specs.max_instructions = 0; /* Do not program shaders manually */
+      screen->specs.has_icache = true;
+   } else if (VIV_FEATURE(screen, chipMinorFeatures3, INSTRUCTION_CACHE)) {
       /* GC3000 - this core is capable of loading shaders from
        * memory. It can also run shaders from registers, as a fallback, but
        * "max_instructions" does not have the correct value. It has place for
@@ -791,9 +797,14 @@ etna_get_specs(struct etna_screen *screen)
       screen->specs.max_vs_uniforms = 256;
       screen->specs.max_ps_uniforms = 256;
    }
-   /* unified uniform memory on GC3000 - HALTI1 feature bit is just a guess
-   */
-   if (VIV_FEATURE(screen, chipMinorFeatures2, HALTI1)) {
+
+   if (screen->specs.halti >= 5) {
+      screen->specs.has_unified_uniforms = true;
+      screen->specs.vs_uniforms_offset = VIVS_SH_HALTI5_UNIFORMS_MIRROR(0);
+      screen->specs.ps_uniforms_offset = VIVS_SH_HALTI5_UNIFORMS(screen->specs.max_vs_uniforms*4);
+   } else if (screen->specs.halti >= 1) {
+      /* unified uniform memory on GC3000 - HALTI1 feature bit is just a guess
+      */
       screen->specs.has_unified_uniforms = true;
       screen->specs.vs_uniforms_offset = VIVS_SH_UNIFORMS(0);
       /* hardcode PS uniforms to start after end of VS uniforms -
