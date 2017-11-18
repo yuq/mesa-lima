@@ -34,6 +34,12 @@
 struct etna_context;
 struct compiled_rs_state;
 
+struct etna_coalesce {
+   uint32_t start;
+   uint32_t last_reg;
+   uint32_t last_fixp;
+};
+
 static inline void
 etna_emit_load_state(struct etna_cmd_stream *stream, const uint16_t offset,
                      const uint16_t count, const int fixp)
@@ -136,6 +142,83 @@ etna_draw_instanced(struct etna_cmd_stream *stream,
    etna_cmd_stream_emit(stream,
       VIV_FE_DRAW_INSTANCED_START_INDEX(offset));
    etna_cmd_stream_emit(stream, 0);
+}
+
+static inline void
+etna_coalesce_start(struct etna_cmd_stream *stream,
+                    struct etna_coalesce *coalesce)
+{
+   coalesce->start = etna_cmd_stream_offset(stream);
+   coalesce->last_reg = 0;
+   coalesce->last_fixp = 0;
+}
+
+static inline void
+etna_coalesce_end(struct etna_cmd_stream *stream,
+                  struct etna_coalesce *coalesce)
+{
+   uint32_t end = etna_cmd_stream_offset(stream);
+   uint32_t size = end - coalesce->start;
+
+   if (size) {
+      uint32_t offset = coalesce->start - 1;
+      uint32_t value = etna_cmd_stream_get(stream, offset);
+
+      value |= VIV_FE_LOAD_STATE_HEADER_COUNT(size);
+      etna_cmd_stream_set(stream, offset, value);
+   }
+
+   /* append needed padding */
+   if (end % 2 == 1)
+      etna_cmd_stream_emit(stream, 0xdeadbeef);
+}
+
+static inline void
+check_coalsence(struct etna_cmd_stream *stream, struct etna_coalesce *coalesce,
+                uint32_t reg, uint32_t fixp)
+{
+   if (coalesce->last_reg != 0) {
+      if (((coalesce->last_reg + 4) != reg) || (coalesce->last_fixp != fixp)) {
+         etna_coalesce_end(stream, coalesce);
+         etna_emit_load_state(stream, reg >> 2, 0, fixp);
+         coalesce->start = etna_cmd_stream_offset(stream);
+      }
+   } else {
+      etna_emit_load_state(stream, reg >> 2, 0, fixp);
+      coalesce->start = etna_cmd_stream_offset(stream);
+   }
+
+   coalesce->last_reg = reg;
+   coalesce->last_fixp = fixp;
+}
+
+static inline void
+etna_coalsence_emit(struct etna_cmd_stream *stream,
+                    struct etna_coalesce *coalesce, uint32_t reg,
+                    uint32_t value)
+{
+   check_coalsence(stream, coalesce, reg, 0);
+   etna_cmd_stream_emit(stream, value);
+}
+
+static inline void
+etna_coalsence_emit_fixp(struct etna_cmd_stream *stream,
+                         struct etna_coalesce *coalesce, uint32_t reg,
+                         uint32_t value)
+{
+   check_coalsence(stream, coalesce, reg, 1);
+   etna_cmd_stream_emit(stream, value);
+}
+
+static inline void
+etna_coalsence_emit_reloc(struct etna_cmd_stream *stream,
+                          struct etna_coalesce *coalesce, uint32_t reg,
+                          const struct etna_reloc *r)
+{
+   if (r->bo) {
+      check_coalsence(stream, coalesce, reg, 0);
+      etna_cmd_stream_reloc(stream, r);
+   }
 }
 
 void
