@@ -990,7 +990,11 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
    uint32_t bo_tiling, bo_swizzle;
    brw_bo_get_tiling(image->bo, &bo_tiling, &bo_swizzle);
 
-   const enum isl_tiling tiling = isl_tiling_from_i915_tiling(bo_tiling);
+   const struct isl_drm_modifier_info *mod_info =
+      isl_drm_modifier_get_info(image->modifier);
+
+   const enum isl_tiling tiling =
+      mod_info ? mod_info->tiling : isl_tiling_from_i915_tiling(bo_tiling);
 
    if (image->planar_format && image->planar_format->nplanes > 1)
       return miptree_create_for_planar_image(brw, image, target, tiling);
@@ -1013,9 +1017,6 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
 
    if (!brw->ctx.TextureFormatSupported[format])
       return NULL;
-
-   const struct isl_drm_modifier_info *mod_info =
-      isl_drm_modifier_get_info(image->modifier);
 
    enum intel_miptree_create_flags mt_create_flags = 0;
 
