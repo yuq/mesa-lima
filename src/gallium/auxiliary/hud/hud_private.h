@@ -40,6 +40,10 @@ enum hud_counter {
 };
 
 struct hud_context {
+   /* Context where queries are executed. */
+   struct pipe_context *record_pipe;
+
+   /* Context where the HUD is drawn: */
    struct pipe_context *pipe;
    struct cso_context *cso;
 

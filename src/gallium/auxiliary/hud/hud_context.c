@@ -680,9 +680,9 @@ hud_stop_queries(struct hud_context *hud, struct pipe_context *pipe)
 void
 hud_run(struct hud_context *hud, struct pipe_resource *tex)
 {
-   hud_stop_queries(hud, hud->pipe);
+   hud_stop_queries(hud, hud->record_pipe);
    hud_draw_results(hud, tex);
-   hud_start_queries(hud, hud->pipe);
+   hud_start_queries(hud, hud->record_pipe);
 }
 
 static void
@@ -1651,6 +1651,35 @@ fail:
    return false;
 }
 
+static void
+hud_unset_record_context(struct hud_context *hud)
+{
+   struct pipe_context *pipe = hud->record_pipe;
+   struct hud_pane *pane, *pane_tmp;
+   struct hud_graph *graph, *graph_tmp;
+
+   if (!pipe)
+      return;
+
+   LIST_FOR_EACH_ENTRY_SAFE(pane, pane_tmp, &hud->pane_list, head) {
+      LIST_FOR_EACH_ENTRY_SAFE(graph, graph_tmp, &pane->graph_list, head) {
+         LIST_DEL(&graph->head);
+         hud_graph_destroy(graph, pipe);
+      }
+      LIST_DEL(&pane->head);
+      FREE(pane);
+   }
+
+   hud_batch_query_cleanup(&hud->batch_query, pipe);
+   hud->record_pipe = NULL;
+}
+
+static void
+hud_set_record_context(struct hud_context *hud, struct pipe_context *pipe)
+{
+   hud->record_pipe = pipe;
+}
+
 struct hud_context *
 hud_create(struct cso_context *cso)
 {
@@ -1752,6 +1781,7 @@ hud_create(struct cso_context *cso)
    }
 #endif
 
+   hud_set_record_context(hud, cso_get_pipe_context(cso));
    hud_parse_env_var(hud, screen, env);
    return hud;
 }
@@ -1759,20 +1789,7 @@ hud_create(struct cso_context *cso)
 void
 hud_destroy(struct hud_context *hud)
 {
-   struct pipe_context *pipe = hud->pipe;
-   struct hud_pane *pane, *pane_tmp;
-   struct hud_graph *graph, *graph_tmp;
-
-   LIST_FOR_EACH_ENTRY_SAFE(pane, pane_tmp, &hud->pane_list, head) {
-      LIST_FOR_EACH_ENTRY_SAFE(graph, graph_tmp, &pane->graph_list, head) {
-         LIST_DEL(&graph->head);
-         hud_graph_destroy(graph, pipe);
-      }
-      LIST_DEL(&pane->head);
-      FREE(pane);
-   }
-
-   hud_batch_query_cleanup(&hud->batch_query, pipe);
+   hud_unset_record_context(hud);
    hud_unset_draw_context(hud);
    pipe_resource_reference(&hud->font.texture, NULL);
    FREE(hud);
