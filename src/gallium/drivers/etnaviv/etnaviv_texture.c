@@ -32,45 +32,12 @@
 #include "etnaviv_context.h"
 #include "etnaviv_emit.h"
 #include "etnaviv_format.h"
+#include "etnaviv_texture_state.h"
 #include "etnaviv_translate.h"
 #include "util/u_inlines.h"
 #include "util/u_memory.h"
 
 #include <drm_fourcc.h>
-
-static void *
-etna_create_sampler_state(struct pipe_context *pipe,
-                          const struct pipe_sampler_state *ss)
-{
-   struct etna_sampler_state *cs = CALLOC_STRUCT(etna_sampler_state);
-
-   if (!cs)
-      return NULL;
-
-   cs->TE_SAMPLER_CONFIG0 =
-      VIVS_TE_SAMPLER_CONFIG0_UWRAP(translate_texture_wrapmode(ss->wrap_s)) |
-      VIVS_TE_SAMPLER_CONFIG0_VWRAP(translate_texture_wrapmode(ss->wrap_t)) |
-      VIVS_TE_SAMPLER_CONFIG0_MIN(translate_texture_filter(ss->min_img_filter)) |
-      VIVS_TE_SAMPLER_CONFIG0_MIP(translate_texture_mipfilter(ss->min_mip_filter)) |
-      VIVS_TE_SAMPLER_CONFIG0_MAG(translate_texture_filter(ss->mag_img_filter)) |
-      COND(ss->normalized_coords, VIVS_TE_SAMPLER_CONFIG0_ROUND_UV);
-   cs->TE_SAMPLER_CONFIG1 = 0; /* VIVS_TE_SAMPLER_CONFIG1 (swizzle, extended
-                                  format) fully determined by sampler view */
-   cs->TE_SAMPLER_LOD_CONFIG =
-      COND(ss->lod_bias != 0.0, VIVS_TE_SAMPLER_LOD_CONFIG_BIAS_ENABLE) |
-      VIVS_TE_SAMPLER_LOD_CONFIG_BIAS(etna_float_to_fixp55(ss->lod_bias));
-
-   if (ss->min_mip_filter != PIPE_TEX_MIPFILTER_NONE) {
-      cs->min_lod = etna_float_to_fixp55(ss->min_lod);
-      cs->max_lod = etna_float_to_fixp55(ss->max_lod);
-   } else {
-      /* when not mipmapping, we need to set max/min lod so that always
-       * lowest LOD is selected */
-      cs->min_lod = cs->max_lod = etna_float_to_fixp55(ss->min_lod);
-   }
-
-   return cs;
-}
 
 static void
 etna_bind_sampler_states(struct pipe_context *pctx, enum pipe_shader_type shader,
@@ -107,9 +74,28 @@ etna_bind_sampler_states(struct pipe_context *pctx, enum pipe_shader_type shader
 }
 
 static void
-etna_delete_sampler_state(struct pipe_context *pctx, void *ss)
+etna_configure_sampler_ts(struct etna_sampler_ts *sts, struct pipe_sampler_view *pview, bool enable)
 {
-   FREE(ss);
+   assert(sts);
+   sts->enable = enable;
+   if (enable) {
+      struct etna_resource *rsc = etna_resource(pview->texture);
+      struct etna_resource_level *lev = &rsc->levels[0];
+      assert(rsc->ts_bo && lev->ts_valid);
+
+      sts->TS_SAMPLER_CONFIG =
+         VIVS_TS_SAMPLER_CONFIG_ENABLE(1) |
+         VIVS_TS_SAMPLER_CONFIG_FORMAT(translate_ts_sampler_format(rsc->base.format));
+      sts->TS_SAMPLER_CLEAR_VALUE = lev->clear_value;
+      sts->TS_SAMPLER_CLEAR_VALUE2 = lev->clear_value; /* To handle 64-bit formats this needs a different value */
+      sts->TS_SAMPLER_STATUS_BASE.bo = rsc->ts_bo;
+      sts->TS_SAMPLER_STATUS_BASE.offset = lev->ts_offset;
+      sts->TS_SAMPLER_STATUS_BASE.flags = ETNA_RELOC_READ;
+   } else {
+      sts->TS_SAMPLER_CONFIG = 0;
+      sts->TS_SAMPLER_STATUS_BASE.bo = NULL;
+   }
+   /* n.b.: relies on caller to mark ETNA_DIRTY_SAMPLER_VIEWS */
 }
 
 /* Return true if the GPU can use sampler TS with this sampler view.
@@ -142,36 +128,11 @@ etna_can_use_sampler_ts(struct pipe_sampler_view *view, int num)
 }
 
 static void
-etna_configure_sampler_ts(struct pipe_sampler_view *pview, bool enable)
-{
-   struct etna_sampler_view *view = etna_sampler_view(pview);
-   if (enable) {
-      struct etna_resource *rsc = etna_resource(view->base.texture);
-      struct etna_resource_level *lev = &rsc->levels[0];
-      assert(rsc->ts_bo && lev->ts_valid);
-
-      view->TE_SAMPLER_CONFIG1 |= VIVS_TE_SAMPLER_CONFIG1_USE_TS;
-      view->TS_SAMPLER_CONFIG =
-         VIVS_TS_SAMPLER_CONFIG_ENABLE(1) |
-         VIVS_TS_SAMPLER_CONFIG_FORMAT(translate_ts_sampler_format(rsc->base.format));
-      view->TS_SAMPLER_CLEAR_VALUE = lev->clear_value;
-      view->TS_SAMPLER_CLEAR_VALUE2 = lev->clear_value; /* To handle 64-bit formats this needs a different value */
-      view->TS_SAMPLER_STATUS_BASE.bo = rsc->ts_bo;
-      view->TS_SAMPLER_STATUS_BASE.offset = lev->ts_offset;
-      view->TS_SAMPLER_STATUS_BASE.flags = ETNA_RELOC_READ;
-   } else {
-      view->TE_SAMPLER_CONFIG1 &= ~VIVS_TE_SAMPLER_CONFIG1_USE_TS;
-      view->TS_SAMPLER_CONFIG = 0;
-      view->TS_SAMPLER_STATUS_BASE.bo = NULL;
-   }
-   /* n.b.: relies on caller to mark ETNA_DIRTY_SAMPLER_VIEWS */
-}
-
-static void
 etna_update_sampler_source(struct pipe_sampler_view *view, int num)
 {
    struct etna_resource *base = etna_resource(view->texture);
    struct etna_resource *to = base, *from = base;
+   struct etna_context *ctx = etna_context(view->context);
    bool enable_sampler_ts = false;
 
    if (base->external && etna_resource_newer(etna_resource(base->external), base))
@@ -185,7 +146,7 @@ etna_update_sampler_source(struct pipe_sampler_view *view, int num)
                          view->texture->last_level);
       to->seqno = from->seqno;
    } else if ((to == from) && etna_resource_needs_flush(to)) {
-      if (etna_can_use_sampler_ts(view, num)) {
+      if (ctx->ts_for_sampler_view && etna_can_use_sampler_ts(view, num)) {
          enable_sampler_ts = true;
          /* Do not set flush_seqno because the resolve-to-self was bypassed */
       } else {
@@ -195,7 +156,9 @@ etna_update_sampler_source(struct pipe_sampler_view *view, int num)
          to->flush_seqno = from->seqno;
       }
    }
-   etna_configure_sampler_ts(view, enable_sampler_ts);
+   if (ctx->ts_for_sampler_view) {
+      etna_configure_sampler_ts(ctx->ts_for_sampler_view(view), view, enable_sampler_ts);
+   }
 }
 
 static bool
@@ -249,104 +212,6 @@ etna_texture_handle_incompatible(struct pipe_context *pctx, struct pipe_resource
       res = etna_resource(res->texture);
    }
    return res;
-}
-
-static struct pipe_sampler_view *
-etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
-                         const struct pipe_sampler_view *so)
-{
-   struct etna_sampler_view *sv = CALLOC_STRUCT(etna_sampler_view);
-   struct etna_context *ctx = etna_context(pctx);
-   const uint32_t format = translate_texture_format(so->format);
-   const bool ext = !!(format & EXT_FORMAT);
-   const bool astc = !!(format & ASTC_FORMAT);
-   const uint32_t swiz = get_texture_swiz(so->format, so->swizzle_r,
-                                          so->swizzle_g, so->swizzle_b,
-                                          so->swizzle_a);
-
-   if (!sv)
-      return NULL;
-
-   struct etna_resource *res = etna_texture_handle_incompatible(pctx, prsc);
-   if (!res) {
-      free(sv);
-      return NULL;
-   }
-
-   sv->base = *so;
-   pipe_reference_init(&sv->base.reference, 1);
-   sv->base.texture = NULL;
-   pipe_resource_reference(&sv->base.texture, prsc);
-   sv->base.context = pctx;
-
-   /* merged with sampler state */
-   sv->TE_SAMPLER_CONFIG0 = COND(!ext && !astc, VIVS_TE_SAMPLER_CONFIG0_FORMAT(format));
-   sv->TE_SAMPLER_CONFIG0_MASK = 0xffffffff;
-
-   switch (sv->base.target) {
-   case PIPE_TEXTURE_1D:
-      /* For 1D textures, we will have a height of 1, so we can use 2D
-       * but set T wrap to repeat */
-      sv->TE_SAMPLER_CONFIG0_MASK = ~VIVS_TE_SAMPLER_CONFIG0_VWRAP__MASK;
-      sv->TE_SAMPLER_CONFIG0 |= VIVS_TE_SAMPLER_CONFIG0_VWRAP(TEXTURE_WRAPMODE_REPEAT);
-      /* fallthrough */
-   case PIPE_TEXTURE_2D:
-   case PIPE_TEXTURE_RECT:
-      sv->TE_SAMPLER_CONFIG0 |= VIVS_TE_SAMPLER_CONFIG0_TYPE(TEXTURE_TYPE_2D);
-      break;
-   case PIPE_TEXTURE_CUBE:
-      sv->TE_SAMPLER_CONFIG0 |= VIVS_TE_SAMPLER_CONFIG0_TYPE(TEXTURE_TYPE_CUBE_MAP);
-      break;
-   default:
-      BUG("Unhandled texture target");
-      free(sv);
-      return NULL;
-   }
-
-   sv->TE_SAMPLER_CONFIG1 = COND(ext, VIVS_TE_SAMPLER_CONFIG1_FORMAT_EXT(format)) |
-                            COND(astc, VIVS_TE_SAMPLER_CONFIG1_FORMAT_EXT(TEXTURE_FORMAT_EXT_ASTC)) |
-                            VIVS_TE_SAMPLER_CONFIG1_HALIGN(res->halign) | swiz;
-   sv->TE_SAMPLER_ASTC0 = COND(astc, VIVS_NTE_SAMPLER_ASTC0_ASTC_FORMAT(format)) |
-                          VIVS_NTE_SAMPLER_ASTC0_UNK8(0xc) |
-                          VIVS_NTE_SAMPLER_ASTC0_UNK16(0xc) |
-                          VIVS_NTE_SAMPLER_ASTC0_UNK24(0xc);
-   sv->TE_SAMPLER_SIZE = VIVS_TE_SAMPLER_SIZE_WIDTH(res->base.width0) |
-                         VIVS_TE_SAMPLER_SIZE_HEIGHT(res->base.height0);
-   sv->TE_SAMPLER_LOG_SIZE =
-      VIVS_TE_SAMPLER_LOG_SIZE_WIDTH(etna_log2_fixp55(res->base.width0)) |
-      VIVS_TE_SAMPLER_LOG_SIZE_HEIGHT(etna_log2_fixp55(res->base.height0)) |
-      COND(util_format_is_srgb(so->format) && !astc, VIVS_TE_SAMPLER_LOG_SIZE_SRGB) |
-      COND(astc, VIVS_TE_SAMPLER_LOG_SIZE_ASTC);
-
-   /* Set up levels-of-detail */
-   for (int lod = 0; lod <= res->base.last_level; ++lod) {
-      sv->TE_SAMPLER_LOD_ADDR[lod].bo = res->bo;
-      sv->TE_SAMPLER_LOD_ADDR[lod].offset = res->levels[lod].offset;
-      sv->TE_SAMPLER_LOD_ADDR[lod].flags = ETNA_RELOC_READ;
-   }
-   sv->min_lod = sv->base.u.tex.first_level << 5;
-   sv->max_lod = MIN2(sv->base.u.tex.last_level, res->base.last_level) << 5;
-
-   /* Workaround for npot textures -- it appears that only CLAMP_TO_EDGE is
-    * supported when the appropriate capability is not set. */
-   if (!ctx->specs.npot_tex_any_wrap &&
-       (!util_is_power_of_two(res->base.width0) || !util_is_power_of_two(res->base.height0))) {
-      sv->TE_SAMPLER_CONFIG0_MASK = ~(VIVS_TE_SAMPLER_CONFIG0_UWRAP__MASK |
-                                      VIVS_TE_SAMPLER_CONFIG0_VWRAP__MASK);
-      sv->TE_SAMPLER_CONFIG0 |=
-         VIVS_TE_SAMPLER_CONFIG0_UWRAP(TEXTURE_WRAPMODE_CLAMP_TO_EDGE) |
-         VIVS_TE_SAMPLER_CONFIG0_VWRAP(TEXTURE_WRAPMODE_CLAMP_TO_EDGE);
-   }
-
-   return &sv->base;
-}
-
-static void
-etna_sampler_view_destroy(struct pipe_context *pctx,
-                          struct pipe_sampler_view *view)
-{
-   pipe_resource_reference(&view->texture, NULL);
-   FREE(view);
 }
 
 static void
@@ -441,11 +306,8 @@ active_samplers_bits(struct etna_context *ctx)
 void
 etna_texture_init(struct pipe_context *pctx)
 {
-   pctx->create_sampler_state = etna_create_sampler_state;
    pctx->bind_sampler_states = etna_bind_sampler_states;
-   pctx->delete_sampler_state = etna_delete_sampler_state;
    pctx->set_sampler_views = etna_set_sampler_views;
-   pctx->create_sampler_view = etna_create_sampler_view;
-   pctx->sampler_view_destroy = etna_sampler_view_destroy;
    pctx->texture_barrier = etna_texture_barrier;
+   etna_texture_state_init(pctx);
 }

@@ -42,6 +42,7 @@
 
 struct pipe_screen;
 struct etna_shader_variant;
+struct etna_sampler_ts;
 
 struct etna_index_buffer {
    struct etna_reloc FE_INDEX_STREAM_BASE_ADDR;
@@ -99,6 +100,11 @@ struct etna_shader_uniform_info {
 
 struct etna_context {
    struct pipe_context base;
+
+   /* GPU-specific implementation to emit texture state */
+   void (*emit_texture_state)(struct etna_context *pctx);
+   /* Get sampler TS pointer for sampler view */
+   struct etna_sampler_ts *(*ts_for_sampler_view)(struct pipe_sampler_view *pview);
 
    struct etna_specs specs;
    struct etna_screen *screen;

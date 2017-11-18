@@ -70,6 +70,8 @@ files_etnaviv = files(
   'etnaviv_surface.h',
   'etnaviv_texture.c',
   'etnaviv_texture.h',
+  'etnaviv_texture_state.c',
+  'etnaviv_texture_state.h',
   'etnaviv_tiling.c',
   'etnaviv_tiling.h',
   'etnaviv_transfer.c',
