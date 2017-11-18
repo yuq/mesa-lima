@@ -2303,9 +2303,20 @@ emit_tex(struct ir3_context *ctx, nir_tex_instr *tex)
 	case nir_texop_txd:      opc = OPC_SAMGQ;    break;
 	case nir_texop_txf:      opc = OPC_ISAML;    break;
 	case nir_texop_lod:      opc = OPC_GETLOD;   break;
+	case nir_texop_tg4:
+		/* NOTE: a4xx might need to emulate gather w/ txf (this is
+		 * what blob does, seems gather  is broken?), and a3xx did
+		 * not support it (but probably could also emulate).
+		 */
+		switch (tex->component) {
+		case 0:              opc = OPC_GATHER4R; break;
+		case 1:              opc = OPC_GATHER4G; break;
+		case 2:              opc = OPC_GATHER4B; break;
+		case 3:              opc = OPC_GATHER4A; break;
+		}
+		break;
 	case nir_texop_txf_ms:
 	case nir_texop_txs:
-	case nir_texop_tg4:
 	case nir_texop_query_levels:
 	case nir_texop_texture_samples:
 	case nir_texop_samples_identical:
