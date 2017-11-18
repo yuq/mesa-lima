@@ -214,16 +214,10 @@ radv_physical_device_init(struct radv_physical_device *device,
 
 	device->local_fd = fd;
 	device->ws->query_info(device->ws, &device->rad_info);
-	result = radv_init_wsi(device);
-	if (result != VK_SUCCESS) {
-		device->ws->destroy(device->ws);
-		goto fail;
-	}
 
 	device->name = get_chip_name(device->rad_info.family);
 
 	if (radv_device_get_cache_uuid(device->rad_info.family, device->cache_uuid)) {
-		radv_finish_wsi(device);
 		device->ws->destroy(device->ws);
 		result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
 				   "cannot generate UUID");
@@ -259,6 +253,13 @@ radv_physical_device_init(struct radv_physical_device *device,
 	device->has_clear_state = device->rad_info.chip_class >= CIK;
 
 	radv_physical_device_init_mem_types(device);
+
+	result = radv_init_wsi(device);
+	if (result != VK_SUCCESS) {
+		device->ws->destroy(device->ws);
+		goto fail;
+	}
+
 	return VK_SUCCESS;
 
 fail:
