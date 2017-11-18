@@ -46,7 +46,6 @@ with_tests = get_option('build-tests')
 with_valgrind = get_option('valgrind')
 with_libunwind = get_option('libunwind')
 with_asm = get_option('asm')
-with_llvm = get_option('llvm')
 with_osmesa = get_option('osmesa')
 if get_option('texture-float')
   pre_args += '-DTEXTURE_FLOAT_ENABLED'
@@ -722,30 +721,33 @@ llvm_modules = ['bitwriter', 'engine', 'mcdisassembler', 'mcjit']
 if with_amd_vk
   llvm_modules += ['amdgpu', 'bitreader', 'ipo']
 endif
-dep_llvm = []
-if with_llvm
+
+_llvm = get_option('llvm')
+if _llvm == 'auto'
   dep_llvm = dependency(
-    'llvm', version : '>= 3.9.0', required : with_amd_vk, modules : llvm_modules,
+    'llvm', version : '>= 3.9.0', modules : llvm_modules,
+    required : with_amd_vk,
   )
-  if dep_llvm.found()
-    _llvm_version = dep_llvm.version().split('.')
-    # Development versions of LLVM have an 'svn' suffix, we don't want that for
-    # our version checks.
-    _llvm_patch = _llvm_version[2]
-    if _llvm_patch.endswith('svn')
-      _llvm_patch = _llvm_patch.split('s')[0]
-    endif
-    pre_args += [
-      '-DHAVE_LLVM=0x0@0@@1@@2@'.format(_llvm_version[0], _llvm_version[1], _llvm_patch),
-      '-DMESA_LLVM_VERSION_PATCH=@0@'.format(_llvm_patch),
-    ]
-  else
-    if with_gallium_softpipe
-      error('Cannot find LLVM to build LLVMPipe. If you wanted softpipe pass -Dllvm=false to meson')
-    elif with_amd_vk or with_gallium_radeonsi # etc
-      error('The following drivers requires LLVM: Radv, RadeonSI. One of these is enabled, but LLVM was not found.')
-    endif
+  with_llvm = dep_llvm.found()
+elif _llvm == 'true'
+  dep_llvm = dependency('llvm', version : '>= 3.9.0', modules : llvm_modules)
+  with_llvm = true
+else
+  dep_llvm = []
+  with_llvm = false
+endif
+if with_llvm
+  _llvm_version = dep_llvm.version().split('.')
+  # Development versions of LLVM have an 'svn' suffix, we don't want that for
+  # our version checks.
+  _llvm_patch = _llvm_version[2]
+  if _llvm_patch.endswith('svn')
+    _llvm_patch = _llvm_patch.split('s')[0]
   endif
+  pre_args += [
+    '-DHAVE_LLVM=0x0@0@@1@@2@'.format(_llvm_version[0], _llvm_version[1], _llvm_patch),
+    '-DMESA_LLVM_VERSION_PATCH=@0@'.format(_llvm_patch),
+  ]
 elif with_amd_vk or with_gallium_radeonsi
   error('The following drivers requires LLVM: Radv, RadeonSI. One of these is enabled, but LLVM is disabled.')
 endif
