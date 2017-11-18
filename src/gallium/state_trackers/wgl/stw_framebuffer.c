@@ -641,7 +641,7 @@ DrvSwapBuffers(HDC hdc)
          struct pipe_resource *back =
             stw_get_framebuffer_resource(fb->stfb, ST_ATTACHMENT_BACK_LEFT);
          if (back) {
-            hud_draw(ctx->hud, back);
+            hud_run(ctx->hud, back);
          }
       }
 

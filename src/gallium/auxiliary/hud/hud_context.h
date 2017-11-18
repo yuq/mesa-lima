@@ -41,7 +41,7 @@ void
 hud_destroy(struct hud_context *hud);
 
 void
-hud_draw(struct hud_context *hud, struct pipe_resource *tex);
+hud_run(struct hud_context *hud, struct pipe_resource *tex);
 
 void
 hud_add_queue_for_monitoring(struct hud_context *hud,

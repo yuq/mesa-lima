@@ -428,8 +428,8 @@ hud_prepare_vertices(struct hud_context *hud, struct vertex_queue *v,
  * Draw the HUD to the texture \p tex.
  * The texture is usually the back buffer being displayed.
  */
-void
-hud_draw(struct hud_context *hud, struct pipe_resource *tex)
+static void
+hud_draw_results(struct hud_context *hud, struct pipe_resource *tex)
 {
    struct cso_context *cso = hud->cso;
    struct pipe_context *pipe = hud->pipe;
@@ -439,7 +439,6 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    const struct pipe_sampler_state *sampler_states[] =
          { &hud->font_sampler_state };
    struct hud_pane *pane;
-   struct hud_graph *gr, *next;
 
    if (!huds_visible)
       return;
@@ -519,76 +518,6 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    cso_set_samplers(cso, PIPE_SHADER_FRAGMENT, 1, sampler_states);
    cso_set_constant_buffer(cso, PIPE_SHADER_VERTEX, 0, &hud->constbuf);
 
-   /* prepare vertex buffers */
-   hud_prepare_vertices(hud, &hud->bg, 16 * 256, 2 * sizeof(float));
-   hud_prepare_vertices(hud, &hud->whitelines, 4 * 256, 2 * sizeof(float));
-   hud_prepare_vertices(hud, &hud->text, 16 * 1024, 4 * sizeof(float));
-   hud_prepare_vertices(hud, &hud->color_prims, 32 * 1024, 2 * sizeof(float));
-
-   /* Allocate everything once and divide the storage into 3 portions
-    * manually, because u_upload_alloc can unmap memory from previous calls.
-    */
-   u_upload_alloc(hud->pipe->stream_uploader, 0,
-                  hud->bg.buffer_size +
-                  hud->whitelines.buffer_size +
-                  hud->text.buffer_size +
-                  hud->color_prims.buffer_size,
-                  16, &hud->bg.vbuf.buffer_offset, &hud->bg.vbuf.buffer.resource,
-                  (void**)&hud->bg.vertices);
-   if (!hud->bg.vertices) {
-      goto out;
-   }
-
-   pipe_resource_reference(&hud->whitelines.vbuf.buffer.resource, hud->bg.vbuf.buffer.resource);
-   pipe_resource_reference(&hud->text.vbuf.buffer.resource, hud->bg.vbuf.buffer.resource);
-   pipe_resource_reference(&hud->color_prims.vbuf.buffer.resource, hud->bg.vbuf.buffer.resource);
-
-   hud->whitelines.vbuf.buffer_offset = hud->bg.vbuf.buffer_offset +
-                                        hud->bg.buffer_size;
-   hud->whitelines.vertices = hud->bg.vertices +
-                              hud->bg.buffer_size / sizeof(float);
-
-   hud->text.vbuf.buffer_offset = hud->whitelines.vbuf.buffer_offset +
-                                  hud->whitelines.buffer_size;
-   hud->text.vertices = hud->whitelines.vertices +
-                        hud->whitelines.buffer_size / sizeof(float);
-
-   hud->color_prims.vbuf.buffer_offset = hud->text.vbuf.buffer_offset +
-                                         hud->text.buffer_size;
-   hud->color_prims.vertices = hud->text.vertices +
-                               hud->text.buffer_size / sizeof(float);
-
-   /* prepare all graphs */
-   hud_batch_query_update(hud->batch_query);
-
-   LIST_FOR_EACH_ENTRY(pane, &hud->pane_list, head) {
-      LIST_FOR_EACH_ENTRY(gr, &pane->graph_list, head) {
-         gr->query_new_value(gr);
-      }
-
-      if (pane->sort_items) {
-         LIST_FOR_EACH_ENTRY_SAFE(gr, next, &pane->graph_list, head) {
-            /* ignore the last one */
-            if (&gr->head == pane->graph_list.prev)
-               continue;
-
-            /* This is an incremental bubble sort, because we only do one pass
-             * per frame. It will eventually reach an equilibrium.
-             */
-            if (gr->current_value <
-                LIST_ENTRY(struct hud_graph, next, head)->current_value) {
-               LIST_DEL(&gr->head);
-               LIST_ADD(&gr->head, &next->head);
-            }
-         }
-      }
-
-      hud_pane_accumulate_vertices(hud, pane);
-   }
-
-   /* unmap the uploader's vertex buffer before drawing */
-   u_upload_unmap(pipe->stream_uploader);
-
    /* draw accumulated vertices for background quads */
    cso_set_blend(cso, &hud->alpha_blend);
    cso_set_fragment_shader_handle(hud->cso, hud->fs_color);
@@ -648,11 +577,17 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
          hud_pane_draw_colored_objects(hud, pane);
    }
 
-out:
    cso_restore_state(cso);
    cso_restore_constant_buffer_slot0(cso, PIPE_SHADER_VERTEX);
 
    pipe_surface_reference(&surf, NULL);
+}
+
+static void
+hud_start_queries(struct hud_context *hud)
+{
+   struct hud_pane *pane;
+   struct hud_graph *gr;
 
    /* Start queries. */
    hud_batch_query_begin(hud->batch_query);
@@ -663,6 +598,91 @@ out:
             gr->begin_query(gr);
       }
    }
+}
+
+/* Stop queries, query results, and record vertices for charts. */
+static void
+hud_stop_queries(struct hud_context *hud)
+{
+   struct hud_pane *pane;
+   struct hud_graph *gr, *next;
+
+   /* prepare vertex buffers */
+   hud_prepare_vertices(hud, &hud->bg, 16 * 256, 2 * sizeof(float));
+   hud_prepare_vertices(hud, &hud->whitelines, 4 * 256, 2 * sizeof(float));
+   hud_prepare_vertices(hud, &hud->text, 16 * 1024, 4 * sizeof(float));
+   hud_prepare_vertices(hud, &hud->color_prims, 32 * 1024, 2 * sizeof(float));
+
+   /* Allocate everything once and divide the storage into 3 portions
+    * manually, because u_upload_alloc can unmap memory from previous calls.
+    */
+   u_upload_alloc(hud->pipe->stream_uploader, 0,
+                  hud->bg.buffer_size +
+                  hud->whitelines.buffer_size +
+                  hud->text.buffer_size +
+                  hud->color_prims.buffer_size,
+                  16, &hud->bg.vbuf.buffer_offset, &hud->bg.vbuf.buffer.resource,
+                  (void**)&hud->bg.vertices);
+   if (!hud->bg.vertices)
+      return;
+
+   pipe_resource_reference(&hud->whitelines.vbuf.buffer.resource, hud->bg.vbuf.buffer.resource);
+   pipe_resource_reference(&hud->text.vbuf.buffer.resource, hud->bg.vbuf.buffer.resource);
+   pipe_resource_reference(&hud->color_prims.vbuf.buffer.resource, hud->bg.vbuf.buffer.resource);
+
+   hud->whitelines.vbuf.buffer_offset = hud->bg.vbuf.buffer_offset +
+                                        hud->bg.buffer_size;
+   hud->whitelines.vertices = hud->bg.vertices +
+                              hud->bg.buffer_size / sizeof(float);
+
+   hud->text.vbuf.buffer_offset = hud->whitelines.vbuf.buffer_offset +
+                                  hud->whitelines.buffer_size;
+   hud->text.vertices = hud->whitelines.vertices +
+                        hud->whitelines.buffer_size / sizeof(float);
+
+   hud->color_prims.vbuf.buffer_offset = hud->text.vbuf.buffer_offset +
+                                         hud->text.buffer_size;
+   hud->color_prims.vertices = hud->text.vertices +
+                               hud->text.buffer_size / sizeof(float);
+
+   /* prepare all graphs */
+   hud_batch_query_update(hud->batch_query);
+
+   LIST_FOR_EACH_ENTRY(pane, &hud->pane_list, head) {
+      LIST_FOR_EACH_ENTRY(gr, &pane->graph_list, head) {
+         gr->query_new_value(gr);
+      }
+
+      if (pane->sort_items) {
+         LIST_FOR_EACH_ENTRY_SAFE(gr, next, &pane->graph_list, head) {
+            /* ignore the last one */
+            if (&gr->head == pane->graph_list.prev)
+               continue;
+
+            /* This is an incremental bubble sort, because we only do one pass
+             * per frame. It will eventually reach an equilibrium.
+             */
+            if (gr->current_value <
+                LIST_ENTRY(struct hud_graph, next, head)->current_value) {
+               LIST_DEL(&gr->head);
+               LIST_ADD(&gr->head, &next->head);
+            }
+         }
+      }
+
+      hud_pane_accumulate_vertices(hud, pane);
+   }
+
+   /* unmap the uploader's vertex buffer before drawing */
+   u_upload_unmap(hud->pipe->stream_uploader);
+}
+
+void
+hud_run(struct hud_context *hud, struct pipe_resource *tex)
+{
+   hud_stop_queries(hud);
+   hud_draw_results(hud, tex);
+   hud_start_queries(hud);
 }
 
 static void

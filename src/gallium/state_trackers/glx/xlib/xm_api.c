@@ -1357,7 +1357,7 @@ void XMesaSwapBuffers( XMesaBuffer b )
    if (xmctx && xmctx->hud) {
       struct pipe_resource *back =
          xmesa_get_framebuffer_resource(b->stfb, ST_ATTACHMENT_BACK_LEFT);
-      hud_draw(xmctx->hud, back);
+      hud_run(xmctx->hud, back);
    }
 
    if (xmctx && xmctx->xm_buffer == b) {
