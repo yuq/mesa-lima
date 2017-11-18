@@ -345,12 +345,14 @@ set_sampler_views(struct etna_context *ctx, unsigned start, unsigned end,
 {
    unsigned i, j;
    uint32_t mask = 1 << start;
+   uint32_t prev_active_sampler_views = ctx->active_sampler_views;
 
    for (i = start, j = 0; j < nr; i++, j++, mask <<= 1) {
       pipe_sampler_view_reference(&ctx->sampler_view[i], views[j]);
-      if (views[j])
+      if (views[j]) {
          ctx->active_sampler_views |= mask;
-      else
+         ctx->dirty_sampler_views |= mask;
+      } else
          ctx->active_sampler_views &= ~mask;
    }
 
@@ -358,6 +360,9 @@ set_sampler_views(struct etna_context *ctx, unsigned start, unsigned end,
       pipe_sampler_view_reference(&ctx->sampler_view[i], NULL);
       ctx->active_sampler_views &= ~mask;
    }
+
+   /* sampler views that changed state (even to inactive) are also dirty */
+   ctx->dirty_sampler_views |= ctx->active_sampler_views ^ prev_active_sampler_views;
 }
 
 static inline void

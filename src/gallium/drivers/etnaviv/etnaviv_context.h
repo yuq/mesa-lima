@@ -156,6 +156,7 @@ struct etna_context {
    struct compiled_viewport_state viewport;
    unsigned num_fragment_sampler_views;
    uint32_t active_sampler_views;
+   uint32_t dirty_sampler_views;
    struct pipe_sampler_view *sampler_view[PIPE_MAX_SAMPLERS];
    struct pipe_constant_buffer constant_buffer[PIPE_SHADER_TYPES];
    struct etna_vertexbuf_state vertex_buffer;

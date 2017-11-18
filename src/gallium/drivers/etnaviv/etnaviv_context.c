@@ -382,6 +382,7 @@ etna_cmd_stream_reset_notify(struct etna_cmd_stream *stream, void *priv)
    }
 
    ctx->dirty = ~0L;
+   ctx->dirty_sampler_views = ~0L;
 
    /* go through all the used resources and clear their status flag */
    LIST_FOR_EACH_ENTRY_SAFE(rsc, rsc_tmp, &ctx->used_resources, list)
