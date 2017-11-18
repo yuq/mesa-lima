@@ -341,8 +341,10 @@ struct si_shader_selector {
 	ubyte		clipdist_mask;
 	ubyte		culldist_mask;
 
-	/* GS parameters. */
+	/* ES parameters. */
 	unsigned	esgs_itemsize;
+
+	/* GS parameters. */
 	unsigned	gs_input_verts_per_prim;
 	unsigned	gs_output_prim;
 	unsigned	gs_max_out_vertices;
