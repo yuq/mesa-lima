@@ -236,11 +236,6 @@ dri_unbind_context(__DRIcontext * cPriv)
          if (st->thread_finish)
             st->thread_finish(st);
 
-         /* For conformance, unbind is supposed to flush the context.
-          * However, if we do it here we might end up flushing a partially
-          * destroyed context. Instead, we flush in dri_make_current and
-          * in dri_destroy_context which should cover all the cases.
-          */
          stapi->make_current(stapi, NULL, NULL, NULL);
       }
    }
@@ -257,14 +252,6 @@ dri_make_current(__DRIcontext * cPriv,
    struct dri_context *ctx = dri_context(cPriv);
    struct dri_drawable *draw = dri_drawable(driDrawPriv);
    struct dri_drawable *read = dri_drawable(driReadPriv);
-   struct st_context_iface *old_st = ctx->stapi->get_current(ctx->stapi);
-
-   if (old_st && old_st->thread_finish)
-      old_st->thread_finish(old_st);
-
-   /* Flush the old context here so we don't have to flush on unbind() */
-   if (old_st && old_st != ctx->st)
-      old_st->flush(old_st, ST_FLUSH_FRONT, NULL);
 
    ++ctx->bind_count;
 
