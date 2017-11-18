@@ -584,25 +584,25 @@ hud_draw_results(struct hud_context *hud, struct pipe_resource *tex)
 }
 
 static void
-hud_start_queries(struct hud_context *hud)
+hud_start_queries(struct hud_context *hud, struct pipe_context *pipe)
 {
    struct hud_pane *pane;
    struct hud_graph *gr;
 
    /* Start queries. */
-   hud_batch_query_begin(hud->batch_query);
+   hud_batch_query_begin(hud->batch_query, pipe);
 
    LIST_FOR_EACH_ENTRY(pane, &hud->pane_list, head) {
       LIST_FOR_EACH_ENTRY(gr, &pane->graph_list, head) {
          if (gr->begin_query)
-            gr->begin_query(gr);
+            gr->begin_query(gr, pipe);
       }
    }
 }
 
 /* Stop queries, query results, and record vertices for charts. */
 static void
-hud_stop_queries(struct hud_context *hud)
+hud_stop_queries(struct hud_context *hud, struct pipe_context *pipe)
 {
    struct hud_pane *pane;
    struct hud_graph *gr, *next;
@@ -616,7 +616,7 @@ hud_stop_queries(struct hud_context *hud)
    /* Allocate everything once and divide the storage into 3 portions
     * manually, because u_upload_alloc can unmap memory from previous calls.
     */
-   u_upload_alloc(hud->pipe->stream_uploader, 0,
+   u_upload_alloc(pipe->stream_uploader, 0,
                   hud->bg.buffer_size +
                   hud->whitelines.buffer_size +
                   hud->text.buffer_size +
@@ -646,11 +646,11 @@ hud_stop_queries(struct hud_context *hud)
                                hud->text.buffer_size / sizeof(float);
 
    /* prepare all graphs */
-   hud_batch_query_update(hud->batch_query);
+   hud_batch_query_update(hud->batch_query, pipe);
 
    LIST_FOR_EACH_ENTRY(pane, &hud->pane_list, head) {
       LIST_FOR_EACH_ENTRY(gr, &pane->graph_list, head) {
-         gr->query_new_value(gr);
+         gr->query_new_value(gr, pipe);
       }
 
       if (pane->sort_items) {
@@ -674,15 +674,15 @@ hud_stop_queries(struct hud_context *hud)
    }
 
    /* unmap the uploader's vertex buffer before drawing */
-   u_upload_unmap(hud->pipe->stream_uploader);
+   u_upload_unmap(pipe->stream_uploader);
 }
 
 void
 hud_run(struct hud_context *hud, struct pipe_resource *tex)
 {
-   hud_stop_queries(hud);
+   hud_stop_queries(hud, hud->pipe);
    hud_draw_results(hud, tex);
-   hud_start_queries(hud);
+   hud_start_queries(hud, hud->pipe);
 }
 
 static void
@@ -917,11 +917,11 @@ hud_graph_add_value(struct hud_graph *gr, double value)
 }
 
 static void
-hud_graph_destroy(struct hud_graph *graph)
+hud_graph_destroy(struct hud_graph *graph, struct pipe_context *pipe)
 {
    FREE(graph->vertices);
    if (graph->free_query_data)
-      graph->free_query_data(graph->query_data);
+      graph->free_query_data(graph->query_data, pipe);
    if (graph->fd)
       fclose(graph->fd);
    FREE(graph);
@@ -1252,7 +1252,7 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
 #endif
       else if (strcmp(name, "samples-passed") == 0 &&
                has_occlusion_query(hud->pipe->screen)) {
-         hud_pipe_query_install(&hud->batch_query, pane, hud->pipe,
+         hud_pipe_query_install(&hud->batch_query, pane,
                                 "samples-passed",
                                 PIPE_QUERY_OCCLUSION_COUNTER, 0, 0,
                                 PIPE_DRIVER_QUERY_TYPE_UINT64,
@@ -1261,7 +1261,7 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
       }
       else if (strcmp(name, "primitives-generated") == 0 &&
                has_streamout(hud->pipe->screen)) {
-         hud_pipe_query_install(&hud->batch_query, pane, hud->pipe,
+         hud_pipe_query_install(&hud->batch_query, pane,
                                 "primitives-generated",
                                 PIPE_QUERY_PRIMITIVES_GENERATED, 0, 0,
                                 PIPE_DRIVER_QUERY_TYPE_UINT64,
@@ -1291,7 +1291,7 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
                if (strcmp(name, pipeline_statistics_names[i]) == 0)
                   break;
             if (i < ARRAY_SIZE(pipeline_statistics_names)) {
-               hud_pipe_query_install(&hud->batch_query, pane, hud->pipe, name,
+               hud_pipe_query_install(&hud->batch_query, pane, name,
                                       PIPE_QUERY_PIPELINE_STATISTICS, i,
                                       0, PIPE_DRIVER_QUERY_TYPE_UINT64,
                                       PIPE_DRIVER_QUERY_RESULT_TYPE_AVERAGE,
@@ -1302,8 +1302,8 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
 
          /* driver queries */
          if (!processed) {
-            if (!hud_driver_query_install(&hud->batch_query, pane, hud->pipe,
-                                          name)) {
+            if (!hud_driver_query_install(&hud->batch_query, pane,
+                                          hud->pipe->screen, name)) {
                fprintf(stderr, "gallium_hud: unknown driver query '%s'\n", name);
                fflush(stderr);
             }
@@ -1720,13 +1720,13 @@ hud_destroy(struct hud_context *hud)
    LIST_FOR_EACH_ENTRY_SAFE(pane, pane_tmp, &hud->pane_list, head) {
       LIST_FOR_EACH_ENTRY_SAFE(graph, graph_tmp, &pane->graph_list, head) {
          LIST_DEL(&graph->head);
-         hud_graph_destroy(graph);
+         hud_graph_destroy(graph, pipe);
       }
       LIST_DEL(&pane->head);
       FREE(pane);
    }
 
-   hud_batch_query_cleanup(&hud->batch_query);
+   hud_batch_query_cleanup(&hud->batch_query, pipe);
    pipe->delete_fs_state(pipe, hud->fs_color);
    pipe->delete_fs_state(pipe, hud->fs_text);
    pipe->delete_vs_state(pipe, hud->vs);
