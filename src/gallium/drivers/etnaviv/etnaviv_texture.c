@@ -226,23 +226,10 @@ etna_resource_sampler_compatible(struct etna_resource *res)
    return true;
 }
 
-static struct pipe_sampler_view *
-etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
-                         const struct pipe_sampler_view *so)
+struct etna_resource *
+etna_texture_handle_incompatible(struct pipe_context *pctx, struct pipe_resource *prsc)
 {
-   struct etna_sampler_view *sv = CALLOC_STRUCT(etna_sampler_view);
    struct etna_resource *res = etna_resource(prsc);
-   struct etna_context *ctx = etna_context(pctx);
-   const uint32_t format = translate_texture_format(so->format);
-   const bool ext = !!(format & EXT_FORMAT);
-   const bool astc = !!(format & ASTC_FORMAT);
-   const uint32_t swiz = get_texture_swiz(so->format, so->swizzle_r,
-                                          so->swizzle_g, so->swizzle_b,
-                                          so->swizzle_a);
-
-   if (!sv)
-      return NULL;
-
    if (!etna_resource_sampler_compatible(res)) {
       /* The original resource is not compatible with the sampler.
        * Allocate an appropriately tiled texture. */
@@ -257,10 +244,33 @@ etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
       }
 
       if (!res->texture) {
-         free(sv);
          return NULL;
       }
       res = etna_resource(res->texture);
+   }
+   return res;
+}
+
+static struct pipe_sampler_view *
+etna_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
+                         const struct pipe_sampler_view *so)
+{
+   struct etna_sampler_view *sv = CALLOC_STRUCT(etna_sampler_view);
+   struct etna_context *ctx = etna_context(pctx);
+   const uint32_t format = translate_texture_format(so->format);
+   const bool ext = !!(format & EXT_FORMAT);
+   const bool astc = !!(format & ASTC_FORMAT);
+   const uint32_t swiz = get_texture_swiz(so->format, so->swizzle_r,
+                                          so->swizzle_g, so->swizzle_b,
+                                          so->swizzle_a);
+
+   if (!sv)
+      return NULL;
+
+   struct etna_resource *res = etna_texture_handle_incompatible(pctx, prsc);
+   if (!res) {
+      free(sv);
+      return NULL;
    }
 
    sv->base = *so;
