@@ -1107,7 +1107,8 @@ has_pipeline_stats_query(struct pipe_screen *screen)
 }
 
 static void
-hud_parse_env_var(struct hud_context *hud, const char *env)
+hud_parse_env_var(struct hud_context *hud, struct pipe_screen *screen,
+                  const char *env)
 {
    unsigned num, i;
    char name_a[256], s[256];
@@ -1251,7 +1252,7 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
       }
 #endif
       else if (strcmp(name, "samples-passed") == 0 &&
-               has_occlusion_query(hud->pipe->screen)) {
+               has_occlusion_query(screen)) {
          hud_pipe_query_install(&hud->batch_query, pane,
                                 "samples-passed",
                                 PIPE_QUERY_OCCLUSION_COUNTER, 0, 0,
@@ -1260,7 +1261,7 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
                                 0);
       }
       else if (strcmp(name, "primitives-generated") == 0 &&
-               has_streamout(hud->pipe->screen)) {
+               has_streamout(screen)) {
          hud_pipe_query_install(&hud->batch_query, pane,
                                 "primitives-generated",
                                 PIPE_QUERY_PRIMITIVES_GENERATED, 0, 0,
@@ -1272,7 +1273,7 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
          boolean processed = FALSE;
 
          /* pipeline statistics queries */
-         if (has_pipeline_stats_query(hud->pipe->screen)) {
+         if (has_pipeline_stats_query(screen)) {
             static const char *pipeline_statistics_names[] =
             {
                "ia-vertices",
@@ -1303,7 +1304,7 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
          /* driver queries */
          if (!processed) {
             if (!hud_driver_query_install(&hud->batch_query, pane,
-                                          hud->pipe->screen, name)) {
+                                          screen, name)) {
                fprintf(stderr, "gallium_hud: unknown driver query '%s'\n", name);
                fflush(stderr);
             }
@@ -1707,7 +1708,7 @@ hud_create(struct cso_context *cso)
    }
 #endif
 
-   hud_parse_env_var(hud, env);
+   hud_parse_env_var(hud, screen, env);
    return hud;
 }
 
