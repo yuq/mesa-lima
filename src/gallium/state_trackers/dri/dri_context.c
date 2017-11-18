@@ -228,12 +228,13 @@ dri_unbind_context(__DRIcontext * cPriv)
    /* dri_util.c ensures cPriv is not null */
    struct dri_screen *screen = dri_screen(cPriv->driScreenPriv);
    struct dri_context *ctx = dri_context(cPriv);
+   struct st_context_iface *st = ctx->st;
    struct st_api *stapi = screen->st_api;
 
    if (--ctx->bind_count == 0) {
-      if (ctx->st == ctx->stapi->get_current(ctx->stapi)) {
-         if (ctx->st->thread_finish)
-            ctx->st->thread_finish(ctx->st);
+      if (st == stapi->get_current(stapi)) {
+         if (st->thread_finish)
+            st->thread_finish(st);
 
          /* For conformance, unbind is supposed to flush the context.
           * However, if we do it here we might end up flushing a partially
