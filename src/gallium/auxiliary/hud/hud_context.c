@@ -1530,59 +1530,49 @@ print_help(struct pipe_screen *screen)
    fflush(stdout);
 }
 
-struct hud_context *
-hud_create(struct cso_context *cso)
+static void
+hud_unset_draw_context(struct hud_context *hud)
 {
-   struct pipe_context *pipe = cso_get_pipe_context(cso);
-   struct pipe_screen *screen = pipe->screen;
-   struct hud_context *hud;
-   struct pipe_sampler_view view_templ;
-   unsigned i;
-   const char *env = debug_get_option("GALLIUM_HUD", NULL);
-#ifdef PIPE_OS_UNIX
-   unsigned signo = debug_get_num_option("GALLIUM_HUD_TOGGLE_SIGNAL", 0);
-   static boolean sig_handled = FALSE;
-   struct sigaction action = {};
-#endif
-   huds_visible = debug_get_bool_option("GALLIUM_HUD_VISIBLE", TRUE);
+   struct pipe_context *pipe = hud->pipe;
 
-   if (!env || !*env)
-      return NULL;
+   if (!pipe)
+      return;
 
-   if (strcmp(env, "help") == 0) {
-      print_help(screen);
-      return NULL;
+   pipe_sampler_view_reference(&hud->font_sampler_view, NULL);
+
+   if (hud->fs_color) {
+      pipe->delete_fs_state(pipe, hud->fs_color);
+      hud->fs_color = NULL;
+   }
+   if (hud->fs_text) {
+      pipe->delete_fs_state(pipe, hud->fs_text);
+      hud->fs_text = NULL;
+   }
+   if (hud->vs) {
+      pipe->delete_vs_state(pipe, hud->vs);
+      hud->vs = NULL;
    }
 
-   hud = CALLOC_STRUCT(hud_context);
-   if (!hud)
-      return NULL;
+   hud->cso = NULL;
+   hud->pipe = NULL;
+}
 
+static bool
+hud_set_draw_context(struct hud_context *hud, struct cso_context *cso)
+{
+   struct pipe_context *pipe = cso_get_pipe_context(cso);
+
+   assert(!hud->pipe);
    hud->pipe = pipe;
    hud->cso = cso;
 
-   /* font */
-   if (!util_font_create(pipe, UTIL_FONT_FIXED_8X13, &hud->font)) {
-      FREE(hud);
-      return NULL;
-   }
-
-   hud->has_srgb = screen->is_format_supported(screen,
-                                               PIPE_FORMAT_B8G8R8A8_SRGB,
-                                               PIPE_TEXTURE_2D, 0,
-                                               PIPE_BIND_RENDER_TARGET) != 0;
-
-   /* blend state */
-   hud->no_blend.rt[0].colormask = PIPE_MASK_RGBA;
-
-   hud->alpha_blend.rt[0].colormask = PIPE_MASK_RGBA;
-   hud->alpha_blend.rt[0].blend_enable = 1;
-   hud->alpha_blend.rt[0].rgb_func = PIPE_BLEND_ADD;
-   hud->alpha_blend.rt[0].rgb_src_factor = PIPE_BLENDFACTOR_SRC_ALPHA;
-   hud->alpha_blend.rt[0].rgb_dst_factor = PIPE_BLENDFACTOR_INV_SRC_ALPHA;
-   hud->alpha_blend.rt[0].alpha_func = PIPE_BLEND_ADD;
-   hud->alpha_blend.rt[0].alpha_src_factor = PIPE_BLENDFACTOR_ZERO;
-   hud->alpha_blend.rt[0].alpha_dst_factor = PIPE_BLENDFACTOR_ONE;
+   struct pipe_sampler_view view_templ;
+   u_sampler_view_default_template(
+         &view_templ, hud->font.texture, hud->font.texture->format);
+   hud->font_sampler_view = pipe->create_sampler_view(pipe, hud->font.texture,
+                                                      &view_templ);
+   if (!hud->font_sampler_view)
+      goto fail;
 
    /* fragment shader */
    hud->fs_color =
@@ -1611,23 +1601,11 @@ hud_create(struct cso_context *cso)
 
       if (!tgsi_text_translate(fragment_shader_text, tokens, ARRAY_SIZE(tokens))) {
          assert(0);
-         pipe_resource_reference(&hud->font.texture, NULL);
-         FREE(hud);
-         return NULL;
+         goto fail;
       }
       pipe_shader_state_from_tgsi(&state, tokens);
       hud->fs_text = pipe->create_fs_state(pipe, &state);
    }
-
-   /* rasterizer */
-   hud->rasterizer.half_pixel_center = 1;
-   hud->rasterizer.bottom_edge_rule = 1;
-   hud->rasterizer.depth_clip = 1;
-   hud->rasterizer.line_width = 1;
-   hud->rasterizer.line_last_pixel = 1;
-
-   hud->rasterizer_aa_lines = hud->rasterizer;
-   hud->rasterizer_aa_lines.line_smooth = 1;
 
    /* vertex shader */
    {
@@ -1659,13 +1637,79 @@ hud_create(struct cso_context *cso)
       struct pipe_shader_state state;
       if (!tgsi_text_translate(vertex_shader_text, tokens, ARRAY_SIZE(tokens))) {
          assert(0);
-         pipe_resource_reference(&hud->font.texture, NULL);
-         FREE(hud);
-         return NULL;
+         goto fail;
       }
       pipe_shader_state_from_tgsi(&state, tokens);
       hud->vs = pipe->create_vs_state(pipe, &state);
    }
+
+   return true;
+
+fail:
+   hud_unset_draw_context(hud);
+   fprintf(stderr, "hud: failed to set a draw context");
+   return false;
+}
+
+struct hud_context *
+hud_create(struct cso_context *cso)
+{
+   struct pipe_screen *screen = cso_get_pipe_context(cso)->screen;
+   struct hud_context *hud;
+   unsigned i;
+   const char *env = debug_get_option("GALLIUM_HUD", NULL);
+#ifdef PIPE_OS_UNIX
+   unsigned signo = debug_get_num_option("GALLIUM_HUD_TOGGLE_SIGNAL", 0);
+   static boolean sig_handled = FALSE;
+   struct sigaction action = {};
+#endif
+   huds_visible = debug_get_bool_option("GALLIUM_HUD_VISIBLE", TRUE);
+
+   if (!env || !*env)
+      return NULL;
+
+   if (strcmp(env, "help") == 0) {
+      print_help(screen);
+      return NULL;
+   }
+
+   hud = CALLOC_STRUCT(hud_context);
+   if (!hud)
+      return NULL;
+
+   /* font (the context is only used for the texture upload) */
+   if (!util_font_create(cso_get_pipe_context(cso),
+                         UTIL_FONT_FIXED_8X13, &hud->font)) {
+      FREE(hud);
+      return NULL;
+   }
+
+   hud->has_srgb = screen->is_format_supported(screen,
+                                               PIPE_FORMAT_B8G8R8A8_SRGB,
+                                               PIPE_TEXTURE_2D, 0,
+                                               PIPE_BIND_RENDER_TARGET) != 0;
+
+   /* blend state */
+   hud->no_blend.rt[0].colormask = PIPE_MASK_RGBA;
+
+   hud->alpha_blend.rt[0].colormask = PIPE_MASK_RGBA;
+   hud->alpha_blend.rt[0].blend_enable = 1;
+   hud->alpha_blend.rt[0].rgb_func = PIPE_BLEND_ADD;
+   hud->alpha_blend.rt[0].rgb_src_factor = PIPE_BLENDFACTOR_SRC_ALPHA;
+   hud->alpha_blend.rt[0].rgb_dst_factor = PIPE_BLENDFACTOR_INV_SRC_ALPHA;
+   hud->alpha_blend.rt[0].alpha_func = PIPE_BLEND_ADD;
+   hud->alpha_blend.rt[0].alpha_src_factor = PIPE_BLENDFACTOR_ZERO;
+   hud->alpha_blend.rt[0].alpha_dst_factor = PIPE_BLENDFACTOR_ONE;
+
+   /* rasterizer */
+   hud->rasterizer.half_pixel_center = 1;
+   hud->rasterizer.bottom_edge_rule = 1;
+   hud->rasterizer.depth_clip = 1;
+   hud->rasterizer.line_width = 1;
+   hud->rasterizer.line_last_pixel = 1;
+
+   hud->rasterizer_aa_lines = hud->rasterizer;
+   hud->rasterizer_aa_lines.line_smooth = 1;
 
    /* vertex elements */
    for (i = 0; i < 2; i++) {
@@ -1673,12 +1717,6 @@ hud_create(struct cso_context *cso)
       hud->velems[i].src_format = PIPE_FORMAT_R32G32_FLOAT;
       hud->velems[i].vertex_buffer_index = cso_get_aux_vertex_buffer_slot(cso);
    }
-
-   /* sampler view */
-   u_sampler_view_default_template(
-         &view_templ, hud->font.texture, hud->font.texture->format);
-   hud->font_sampler_view = pipe->create_sampler_view(pipe, hud->font.texture,
-                                                      &view_templ);
 
    /* sampler state (for font drawing) */
    hud->font_sampler_state.wrap_s = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
@@ -1691,6 +1729,12 @@ hud_create(struct cso_context *cso)
    hud->constbuf.user_buffer = &hud->constants;
 
    LIST_INITHEAD(&hud->pane_list);
+
+   if (!hud_set_draw_context(hud, cso)) {
+      pipe_resource_reference(&hud->font.texture, NULL);
+      FREE(hud);
+      return NULL;
+   }
 
    /* setup sig handler once for all hud contexts */
 #ifdef PIPE_OS_UNIX
@@ -1729,10 +1773,7 @@ hud_destroy(struct hud_context *hud)
    }
 
    hud_batch_query_cleanup(&hud->batch_query, pipe);
-   pipe->delete_fs_state(pipe, hud->fs_color);
-   pipe->delete_fs_state(pipe, hud->fs_text);
-   pipe->delete_vs_state(pipe, hud->vs);
-   pipe_sampler_view_reference(&hud->font_sampler_view, NULL);
+   hud_unset_draw_context(hud);
    pipe_resource_reference(&hud->font.texture, NULL);
    FREE(hud);
 }
