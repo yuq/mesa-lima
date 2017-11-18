@@ -267,15 +267,60 @@ out:
       instr->store_content[component >> 1] = GPIR_INSTR_STORE_NONE;
 }
 
-bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
+static bool gpir_instr_spill_move(gpir_instr *instr, int slot, int spill_to_start)
 {
-   if (instr->slots[node->sched.pos])
+   gpir_node *node = instr->slots[slot];
+   if (!node)
+      return true;
+
+   if (node->op != gpir_op_mov)
       return false;
 
-   if (node->op == gpir_op_complex1) {
-      if (instr->slots[GPIR_INSTR_SLOT_MUL1])
+   for (int i = spill_to_start; i <= GPIR_INSTR_SLOT_DIST_TWO_END; i++) {
+      if (i != slot && !instr->slots[i]) {
+         instr->slots[i] = node;
+         instr->slots[slot] = NULL;
+         node->sched.pos = i;
+
+         gpir_debug("instr %d spill move %d from slot %d to %d\n",
+                    instr->index, node->index, slot, i);
+         return true;
+      }
+   }
+
+   return false;
+}
+
+static bool gpir_instr_slot_free(gpir_instr *instr, gpir_node *node)
+{
+   if (node->op == gpir_op_mov ||
+       node->sched.pos > GPIR_INSTR_SLOT_DIST_TWO_END) {
+      if (instr->slots[node->sched.pos])
          return false;
    }
+   else {
+      /* for node needs dist two slot, if the slot has a move, we can
+       * spill it to other dist two slot without any side effect */
+      int spill_to_start = GPIR_INSTR_SLOT_MUL0;
+      if (node->op == gpir_op_complex1)
+         spill_to_start = GPIR_INSTR_SLOT_ADD0;
+
+      if (!gpir_instr_spill_move(instr, node->sched.pos, spill_to_start))
+         return false;
+
+      if (node->op == gpir_op_complex1) {
+         if (!gpir_instr_spill_move(instr, GPIR_INSTR_SLOT_MUL1, spill_to_start))
+            return false;
+      }
+   }
+
+   return true;
+}
+
+bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node)
+{
+   if (!gpir_instr_slot_free(instr, node))
+      return false;
 
    if (node->sched.pos >= GPIR_INSTR_SLOT_ALU_BEGIN &&
        node->sched.pos <= GPIR_INSTR_SLOT_ALU_END) {
