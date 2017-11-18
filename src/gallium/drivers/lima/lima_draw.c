@@ -216,9 +216,9 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       vs_cmd[i++] = 0x50000000; /* ARRAYS_SEMAPHORE */
    }
 
-   /* static uniform only for viewport transform now */
+   int uniform_size = ctx->const_buffer[PIPE_SHADER_VERTEX].size + ctx->vs->constant_size;
    vs_cmd[i++] = ctx->gp_buffer->va + gp_uniform_offset;
-   vs_cmd[i++] = 0x30000000 | (48 << 12); /* UNIFORMS_ADDRESS */
+   vs_cmd[i++] = 0x30000000 | (align(uniform_size, 16) << 12); /* UNIFORMS_ADDRESS */
 
    vs_cmd[i++] = ctx->gp_buffer->va + gp_vs_program_offset;
    vs_cmd[i++] = 0x40000000 | ((ctx->vs->shader_size >> 4) << 16); /* SHADER_ADDRESS */
