@@ -60,6 +60,8 @@
 
 /* GPU chip 3D specs */
 struct etna_specs {
+   /* HALTI (gross architecture) level. -1 for pre-HALTI. */
+   int halti : 8;
    /* supports SUPERTILE (64x64) tiling? */
    unsigned can_supertile : 1;
    /* needs z=(z+w)/2, for older GCxxx */

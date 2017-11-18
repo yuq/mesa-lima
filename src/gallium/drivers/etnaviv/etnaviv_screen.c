@@ -690,6 +690,27 @@ etna_get_specs(struct etna_screen *screen)
    }
    screen->specs.num_constants = val;
 
+   /* Figure out gross GPU architecture. See rnndb/common.xml for a specific
+    * description of the differences. */
+   if (VIV_FEATURE(screen, chipMinorFeatures5, HALTI5))
+      screen->specs.halti = 5; /* New GC7000/GC8x00  */
+   else if (VIV_FEATURE(screen, chipMinorFeatures5, HALTI4))
+      screen->specs.halti = 4; /* Old GC7000/GC7400 */
+   else if (VIV_FEATURE(screen, chipMinorFeatures5, HALTI3))
+      screen->specs.halti = 3; /* None? */
+   else if (VIV_FEATURE(screen, chipMinorFeatures4, HALTI2))
+      screen->specs.halti = 2; /* GC2500/GC3000/GC5000/GC6400 */
+   else if (VIV_FEATURE(screen, chipMinorFeatures2, HALTI1))
+      screen->specs.halti = 1; /* GC900/GC4000/GC7000UL */
+   else if (VIV_FEATURE(screen, chipMinorFeatures1, HALTI0))
+      screen->specs.halti = 0; /* GC880/GC2000/GC7000TM */
+   else
+      screen->specs.halti = -1; /* GC7000nanolite / pre-GC2000 except GC880 */
+   if (screen->specs.halti >= 0)
+      DBG("etnaviv: GPU arch: HALTI%d\n", screen->specs.halti);
+   else
+      DBG("etnaviv: GPU arch: pre-HALTI\n");
+
    screen->specs.can_supertile =
       VIV_FEATURE(screen, chipMinorFeatures0, SUPER_TILED);
    screen->specs.bits_per_tile =
