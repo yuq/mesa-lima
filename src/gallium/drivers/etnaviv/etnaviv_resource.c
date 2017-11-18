@@ -215,9 +215,11 @@ etna_resource_alloc(struct pipe_screen *pscreen, unsigned layout,
    if (!util_format_is_compressed(templat->format)) {
       /* If we have the TEXTURE_HALIGN feature, we can always align to the
        * resolve engine's width.  If not, we must not align resources used
-       * only for textures. */
-      bool rs_align = VIV_FEATURE(screen, chipMinorFeatures1, TEXTURE_HALIGN) ||
-                      !etna_resource_sampler_only(templat);
+       * only for textures. If this GPU uses the BLT engine, never do RS align.
+       */
+      bool rs_align = screen->specs.use_blt ? false : (
+                         VIV_FEATURE(screen, chipMinorFeatures1, TEXTURE_HALIGN) ||
+                         !etna_resource_sampler_only(templat));
       etna_layout_multiple(layout, screen->specs.pixel_pipes, rs_align, &paddingX,
                            &paddingY, &halign);
       assert(paddingX && paddingY);
@@ -228,7 +230,7 @@ etna_resource_alloc(struct pipe_screen *pscreen, unsigned layout,
       paddingY = 1;
    }
 
-   if (templat->target != PIPE_BUFFER)
+   if (!screen->specs.use_blt && templat->target != PIPE_BUFFER)
       etna_adjust_rs_align(screen->specs.pixel_pipes, NULL, &paddingY);
 
    if (templat->bind & PIPE_BIND_SCANOUT) {
@@ -237,7 +239,7 @@ etna_resource_alloc(struct pipe_screen *pscreen, unsigned layout,
       struct winsys_handle handle;
 
       /* pad scanout buffer size to be compatible with the RS */
-      if (modifier == DRM_FORMAT_MOD_LINEAR)
+      if (!screen->specs.use_blt && modifier == DRM_FORMAT_MOD_LINEAR)
          etna_adjust_rs_align(screen->specs.pixel_pipes, &paddingX, &paddingY);
 
       scanout_templat.width0 = align(scanout_templat.width0, paddingX);
@@ -520,7 +522,8 @@ etna_resource_from_handle(struct pipe_screen *pscreen,
                         VIV_FEATURE(screen, chipMinorFeatures1, TEXTURE_HALIGN),
                         &paddingX, &paddingY, &rsc->halign);
 
-   etna_adjust_rs_align(screen->specs.pixel_pipes, NULL, &paddingY);
+   if (!screen->specs.use_blt)
+      etna_adjust_rs_align(screen->specs.pixel_pipes, NULL, &paddingY);
    level->padded_width = align(level->width, paddingX);
    level->padded_height = align(level->height, paddingY);
 
