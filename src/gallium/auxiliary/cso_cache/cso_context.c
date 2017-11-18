@@ -128,6 +128,10 @@ struct cso_context {
    struct pipe_stencil_ref stencil_ref, stencil_ref_saved;
 };
 
+struct pipe_context *cso_get_pipe_context(struct cso_context *cso)
+{
+   return cso->pipe;
+}
 
 static boolean delete_blend_state(struct cso_context *ctx, void *state)
 {
