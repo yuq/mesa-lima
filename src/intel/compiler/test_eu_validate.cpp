@@ -113,20 +113,20 @@ static bool
 validate(struct brw_codegen *p)
 {
    const bool print = getenv("TEST_DEBUG");
-   struct disasm_info disasm = disasm_initialize(p->devinfo, NULL);
+   struct disasm_info *disasm = disasm_initialize(p->devinfo, NULL);
 
    if (print) {
-      disasm_new_inst_group(&disasm, 0);
-      disasm_new_inst_group(&disasm, p->next_insn_offset);
+      disasm_new_inst_group(disasm, 0);
+      disasm_new_inst_group(disasm, p->next_insn_offset);
    }
 
    bool ret = brw_validate_instructions(p->devinfo, p->store, 0,
-                                        p->next_insn_offset, &disasm);
+                                        p->next_insn_offset, disasm);
 
    if (print) {
-      dump_assembly(p->store, &disasm);
+      dump_assembly(p->store, disasm);
    }
-   ralloc_free(disasm.mem_ctx);
+   ralloc_free(disasm);
 
    return ret;
 }
