@@ -1564,6 +1564,9 @@ intel_process_dri2_buffer(struct brw_context *brw,
       return;
    }
 
+   uint32_t tiling, swizzle;
+   brw_bo_get_tiling(bo, &tiling, &swizzle);
+
    struct intel_mipmap_tree *mt =
       intel_miptree_create_for_bo(brw,
                                   bo,
@@ -1573,6 +1576,7 @@ intel_process_dri2_buffer(struct brw_context *brw,
                                   drawable->h,
                                   1,
                                   buffer->pitch,
+                                  isl_tiling_from_i915_tiling(tiling),
                                   MIPTREE_CREATE_DEFAULT);
    if (!mt) {
       brw_bo_unreference(bo);

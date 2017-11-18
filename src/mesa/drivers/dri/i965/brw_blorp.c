@@ -934,7 +934,8 @@ brw_blorp_upload_miptree(struct brw_context *brw,
                                             brw, src_bo, src_format,
                                             src_offset + i * src_image_stride,
                                             width, height, 1,
-                                            src_row_stride, 0);
+                                            src_row_stride,
+                                            ISL_TILING_LINEAR, 0);
 
       if (!src_mt) {
          perf_debug("intel_texsubimage: miptree creation for src failed\n");
@@ -1055,7 +1056,8 @@ brw_blorp_download_miptree(struct brw_context *brw,
                                             brw, dst_bo, dst_format,
                                             dst_offset + i * dst_image_stride,
                                             width, height, 1,
-                                            dst_row_stride, 0);
+                                            dst_row_stride,
+                                            ISL_TILING_LINEAR, 0);
 
       if (!dst_mt) {
          perf_debug("intel_texsubimage: miptree creation for src failed\n");

@@ -804,11 +804,11 @@ intel_miptree_create_for_bo(struct brw_context *brw,
                             uint32_t height,
                             uint32_t depth,
                             int pitch,
+                            enum isl_tiling tiling,
                             enum intel_miptree_create_flags flags)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct intel_mipmap_tree *mt;
-   uint32_t tiling, swizzle;
    const GLenum target = depth > 1 ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D;
    const GLenum base_format = _mesa_get_format_base_format(format);
 
@@ -846,12 +846,10 @@ intel_miptree_create_for_bo(struct brw_context *brw,
       return mt;
    }
 
-   brw_bo_get_tiling(bo, &tiling, &swizzle);
-
    /* Nothing will be able to use this miptree with the BO if the offset isn't
     * aligned.
     */
-   if (tiling != I915_TILING_NONE)
+   if (tiling != ISL_TILING_LINEAR)
       assert(offset % 4096 == 0);
 
    /* miptrees can't handle negative pitch.  If you need flipping of images,
@@ -866,7 +864,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
 
    mt = make_surface(brw, target, format,
                      0, 0, width, height, depth, 1,
-                     1lu << isl_tiling_from_i915_tiling(tiling),
+                     1lu << tiling,
                      ISL_SURF_USAGE_RENDER_TARGET_BIT |
                      ISL_SURF_USAGE_TEXTURE_BIT,
                      0, pitch, bo);
@@ -891,7 +889,8 @@ intel_miptree_create_for_bo(struct brw_context *brw,
 
 static struct intel_mipmap_tree *
 miptree_create_for_planar_image(struct brw_context *brw,
-                                __DRIimage *image, GLenum target)
+                                __DRIimage *image, GLenum target,
+                                enum isl_tiling tiling)
 {
    const struct intel_image_format *f = image->planar_format;
    struct intel_mipmap_tree *planar_mt = NULL;
@@ -913,6 +912,7 @@ miptree_create_for_planar_image(struct brw_context *brw,
                                      image->offsets[index],
                                      width, height, 1,
                                      image->strides[index],
+                                     tiling,
                                      MIPTREE_CREATE_NO_AUX);
       if (mt == NULL)
          return NULL;
@@ -987,8 +987,13 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
                                    mesa_format format,
                                    bool is_winsys_image)
 {
+   uint32_t bo_tiling, bo_swizzle;
+   brw_bo_get_tiling(image->bo, &bo_tiling, &bo_swizzle);
+
+   const enum isl_tiling tiling = isl_tiling_from_i915_tiling(bo_tiling);
+
    if (image->planar_format && image->planar_format->nplanes > 1)
-      return miptree_create_for_planar_image(brw, image, target);
+      return miptree_create_for_planar_image(brw, image, target, tiling);
 
    if (image->planar_format)
       assert(image->planar_format->planes[0].dri_format == image->dri_format);
@@ -1037,7 +1042,7 @@ intel_miptree_create_for_dri_image(struct brw_context *brw,
    struct intel_mipmap_tree *mt =
       intel_miptree_create_for_bo(brw, image->bo, format,
                                   image->offset, image->width, image->height, 1,
-                                  image->pitch, mt_create_flags);
+                                  image->pitch, tiling, mt_create_flags);
    if (mt == NULL)
       return NULL;
 
