@@ -41,6 +41,7 @@
 #include "etnaviv_zsa.h"
 #include "hw/common.xml.h"
 #include "hw/state.xml.h"
+#include "hw/state_blt.xml.h"
 #include "util/u_math.h"
 
 struct etna_coalesce {
@@ -60,8 +61,15 @@ CMD_STALL(struct etna_cmd_stream *stream, uint32_t from, uint32_t to)
 void
 etna_stall(struct etna_cmd_stream *stream, uint32_t from, uint32_t to)
 {
-   etna_cmd_stream_reserve(stream, 4);
+   bool blt = (from == SYNC_RECIPIENT_BLT) || (to == SYNC_RECIPIENT_BLT);
+   etna_cmd_stream_reserve(stream, blt ? 8 : 4);
 
+   if (blt) {
+      etna_emit_load_state(stream, VIVS_BLT_ENABLE >> 2, 1, 0);
+      etna_cmd_stream_emit(stream, 1);
+   }
+
+   /* TODO: set bit 28/29 of token after BLT COPY_BUFFER */
    etna_emit_load_state(stream, VIVS_GL_SEMAPHORE_TOKEN >> 2, 1, 0);
    etna_cmd_stream_emit(stream, VIVS_GL_SEMAPHORE_TOKEN_FROM(from) | VIVS_GL_SEMAPHORE_TOKEN_TO(to));
 
@@ -72,6 +80,11 @@ etna_stall(struct etna_cmd_stream *stream, uint32_t from, uint32_t to)
       /* otherwise, load the STALL token state */
       etna_emit_load_state(stream, VIVS_GL_STALL_TOKEN >> 2, 1, 0);
       etna_cmd_stream_emit(stream, VIVS_GL_STALL_TOKEN_FROM(from) | VIVS_GL_STALL_TOKEN_TO(to));
+   }
+
+   if (blt) {
+      etna_emit_load_state(stream, VIVS_BLT_ENABLE >> 2, 1, 0);
+      etna_cmd_stream_emit(stream, 0);
    }
 }
 
