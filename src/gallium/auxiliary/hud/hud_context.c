@@ -1530,8 +1530,9 @@ print_help(struct pipe_screen *screen)
 }
 
 struct hud_context *
-hud_create(struct pipe_context *pipe, struct cso_context *cso)
+hud_create(struct cso_context *cso)
 {
+   struct pipe_context *pipe = cso_get_pipe_context(cso);
    struct pipe_screen *screen = pipe->screen;
    struct hud_context *hud;
    struct pipe_sampler_view view_templ;
@@ -1548,7 +1549,7 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
       return NULL;
 
    if (strcmp(env, "help") == 0) {
-      print_help(pipe->screen);
+      print_help(screen);
       return NULL;
    }
 

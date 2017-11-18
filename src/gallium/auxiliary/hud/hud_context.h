@@ -35,7 +35,7 @@ struct pipe_resource;
 struct util_queue_monitoring;
 
 struct hud_context *
-hud_create(struct pipe_context *pipe, struct cso_context *cso);
+hud_create(struct cso_context *cso);
 
 void
 hud_destroy(struct hud_context *hud);

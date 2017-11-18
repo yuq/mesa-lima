@@ -205,7 +205,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
     if (!This->cso_sw) { return E_OUTOFMEMORY; }
 
     /* Create first, it messes up our state. */
-    This->hud = hud_create(This->context.pipe, This->context.cso); /* NULL result is fine */
+    This->hud = hud_create(This->context.cso); /* NULL result is fine */
 
     /* Available memory counter. Updated only for allocations with this device
      * instance. This is the Win 7 behavior.

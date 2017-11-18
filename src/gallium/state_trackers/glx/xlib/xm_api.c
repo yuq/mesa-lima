@@ -1035,7 +1035,7 @@ XMesaContext XMesaCreateContext( XMesaVisual v, XMesaContext share_list,
 
    c->st->st_manager_private = (void *) c;
 
-   c->hud = hud_create(c->st->pipe, c->st->cso_context);
+   c->hud = hud_create(c->st->cso_context);
 
    return c;
 

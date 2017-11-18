@@ -278,7 +278,7 @@ stw_create_context_attribs(HDC hdc, INT iLayerPlane, DHGLRC hShareContext,
    ctx->st->st_manager_private = (void *) ctx;
 
    if (ctx->st->cso_context) {
-      ctx->hud = hud_create(ctx->st->pipe, ctx->st->cso_context);
+      ctx->hud = hud_create(ctx->st->cso_context);
    }
 
    stw_lock_contexts(stw_dev);
