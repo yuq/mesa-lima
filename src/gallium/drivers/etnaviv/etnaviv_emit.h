@@ -59,7 +59,7 @@ etna_set_state(struct etna_cmd_stream *stream, uint32_t address, uint32_t value)
 
 static inline void
 etna_set_state_reloc(struct etna_cmd_stream *stream, uint32_t address,
-                     struct etna_reloc *reloc)
+                     const struct etna_reloc *reloc)
 {
    etna_cmd_stream_reserve(stream, 2);
    etna_emit_load_state(stream, address >> 2, 1, 0);
