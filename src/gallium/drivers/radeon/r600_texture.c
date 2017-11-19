@@ -848,6 +848,8 @@ static void r600_texture_alloc_cmask_separate(struct r600_common_screen *rscreen
 	assert(rtex->cmask.size == 0);
 
 	si_texture_get_cmask_info(rscreen, rtex, &rtex->cmask);
+	if (!rtex->cmask.size)
+		return;
 
 	rtex->cmask_buffer = (struct r600_resource *)
 		si_aligned_buffer_create(&rscreen->b,
