@@ -333,7 +333,7 @@ pipe_imx_drm_create_screen(int fd, unsigned flags)
 #include "lima/drm/lima_drm_public.h"
 
 struct pipe_screen *
-pipe_lima_create_screen(int fd)
+pipe_lima_create_screen(int fd, unsigned flags)
 {
    struct pipe_screen *screen;
 
@@ -344,7 +344,7 @@ pipe_lima_create_screen(int fd)
 #else
 
 struct pipe_screen *
-pipe_lima_create_screen(int fd)
+pipe_lima_create_screen(int fd, unsigned flags)
 {
    fprintf(stderr, "lima: driver missing\n");
    return NULL;
