@@ -2399,9 +2399,12 @@ emit_tex(struct ir3_context *ctx, nir_tex_instr *tex)
 	 */
 	if (has_off | has_lod | has_bias) {
 		if (has_off) {
-			for (i = 0; i < coords; i++)
+			unsigned off_coords = coords;
+			if (tex->sampler_dim == GLSL_SAMPLER_DIM_CUBE)
+				off_coords--;
+			for (i = 0; i < off_coords; i++)
 				src1[nsrc1++] = off[i];
-			if (coords < 2)
+			if (off_coords < 2)
 				src1[nsrc1++] = create_immed(b, fui(0.0));
 			flags |= IR3_INSTR_O;
 		}

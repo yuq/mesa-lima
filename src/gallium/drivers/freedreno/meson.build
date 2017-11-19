@@ -188,6 +188,7 @@ files_libfreedreno = files(
   'ir3/ir3_nir.c',
   'ir3/ir3_nir.h',
   'ir3/ir3_nir_lower_if_else.c',
+  'ir3/ir3_nir_lower_tg4_to_tex.c',
   'ir3/ir3_print.c',
   'ir3/ir3_ra.c',
   'ir3/ir3_sched.c',
