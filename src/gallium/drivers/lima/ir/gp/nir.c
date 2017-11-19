@@ -185,7 +185,7 @@ static bool gpir_emit_intrinsic(gpir_block *block, nir_instr *ni)
       gpir_store_node *store = gpir_node_create(block, gpir_op_store_varying);
       if (unlikely(!store))
          return false;
-      list_addtail(&store->node, &block->node_list);
+      list_addtail(&store->node.list, &block->node_list);
 
       store->index = nir_intrinsic_base(instr);
       store->component = nir_intrinsic_component(instr);
