@@ -116,8 +116,10 @@ dri_create_context(gl_api api, const struct gl_config * visual,
        && (ctx_config->release_behavior == __DRI_CTX_RELEASE_BEHAVIOR_NONE))
       attribs.flags |= ST_CONTEXT_FLAG_RELEASE_NONE;
 
+   struct dri_context *share_ctx = NULL;
    if (sharedContextPrivate) {
-      st_share = ((struct dri_context *)sharedContextPrivate)->st;
+      share_ctx = (struct dri_context *)sharedContextPrivate;
+      st_share = share_ctx->st;
    }
 
    ctx = CALLOC_STRUCT(dri_context);
@@ -168,7 +170,8 @@ dri_create_context(gl_api api, const struct gl_config * visual,
 
    if (ctx->st->cso_context) {
       ctx->pp = pp_init(ctx->st->pipe, screen->pp_enabled, ctx->st->cso_context);
-      ctx->hud = hud_create(ctx->st->cso_context, NULL);
+      ctx->hud = hud_create(ctx->st->cso_context,
+                            share_ctx ? share_ctx->hud : NULL);
    }
 
    /* Do this last. */
@@ -222,6 +225,7 @@ dri_destroy_context(__DRIcontext * cPriv)
    free(ctx);
 }
 
+/* This is called inside MakeCurrent to unbind the context. */
 GLboolean
 dri_unbind_context(__DRIcontext * cPriv)
 {
@@ -235,6 +239,10 @@ dri_unbind_context(__DRIcontext * cPriv)
       if (st == stapi->get_current(stapi)) {
          if (st->thread_finish)
             st->thread_finish(st);
+
+         /* Record HUD queries for the duration the context was "current". */
+         if (ctx->hud)
+            hud_record_only(ctx->hud, st->pipe);
 
          stapi->make_current(stapi, NULL, NULL, NULL);
       }

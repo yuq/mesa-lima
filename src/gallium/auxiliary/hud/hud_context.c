@@ -680,12 +680,45 @@ hud_stop_queries(struct hud_context *hud, struct pipe_context *pipe)
    u_upload_unmap(pipe->stream_uploader);
 }
 
+/**
+ * Record queries and draw the HUD. The "cso" parameter acts as a filter.
+ * If "cso" is not the recording context, recording is skipped.
+ * If "cso" is not the drawing context, drawing is skipped.
+ * cso == NULL ignores the filter.
+ */
 void
 hud_run(struct hud_context *hud, struct cso_context *cso,
         struct pipe_resource *tex)
 {
+   struct pipe_context *pipe = cso ? cso_get_pipe_context(cso) : NULL;
+
+   /* If "cso" is the recording or drawing context or NULL, execute
+    * the operation. Otherwise, don't do anything.
+    */
+   if (hud->record_pipe && (!pipe || pipe == hud->record_pipe))
+      hud_stop_queries(hud, hud->record_pipe);
+
+   if (hud->cso && (!cso || cso == hud->cso))
+      hud_draw_results(hud, tex);
+
+   if (hud->record_pipe && (!pipe || pipe == hud->record_pipe))
+      hud_start_queries(hud, hud->record_pipe);
+}
+
+/**
+ * Record query results and assemble vertices if "pipe" is a recording but
+ * not drawing context.
+ */
+void
+hud_record_only(struct hud_context *hud, struct pipe_context *pipe)
+{
+   assert(pipe);
+
+   /* If it's a drawing context, only hud_run() records query results. */
+   if (pipe == hud->pipe || pipe != hud->record_pipe)
+      return;
+
    hud_stop_queries(hud, hud->record_pipe);
-   hud_draw_results(hud, tex);
    hud_start_queries(hud, hud->record_pipe);
 }
 
@@ -1684,9 +1717,46 @@ hud_set_record_context(struct hud_context *hud, struct pipe_context *pipe)
    hud->record_pipe = pipe;
 }
 
+/**
+ * Create the HUD.
+ *
+ * If "share" is non-NULL and GALLIUM_HUD_SHARE=x,y is set, increment the
+ * reference counter of "share", set "cso" as the recording or drawing context
+ * according to the environment variable, and return "share".
+ * This allows sharing the HUD instance within a multi-context share group,
+ * record queries in one context and draw them in another.
+ */
 struct hud_context *
 hud_create(struct cso_context *cso, struct hud_context *share)
 {
+   const char *share_env = debug_get_option("GALLIUM_HUD_SHARE", NULL);
+   unsigned record_ctx = 0, draw_ctx = 0;
+
+   if (share_env && sscanf(share_env, "%u,%u", &record_ctx, &draw_ctx) != 2)
+      share_env = NULL;
+
+   if (share && share_env) {
+      /* All contexts in a share group share the HUD instance.
+       * Only one context can record queries and only one context
+       * can draw the HUD.
+       *
+       * GALLIUM_HUD_SHARE=x,y determines the context indices.
+       */
+      int context_id = p_atomic_inc_return(&share->refcount) - 1;
+
+      if (context_id == record_ctx) {
+         assert(!share->record_pipe);
+         hud_set_record_context(share, cso_get_pipe_context(cso));
+      }
+
+      if (context_id == draw_ctx) {
+         assert(!share->pipe);
+         hud_set_draw_context(share, cso);
+      }
+
+      return share;
+   }
+
    struct pipe_screen *screen = cso_get_pipe_context(cso)->screen;
    struct hud_context *hud;
    unsigned i;
@@ -1717,6 +1787,7 @@ hud_create(struct cso_context *cso, struct hud_context *share)
       return NULL;
    }
 
+   hud->refcount = 1;
    hud->has_srgb = screen->is_format_supported(screen,
                                                PIPE_FORMAT_B8G8R8A8_SRGB,
                                                PIPE_TEXTURE_2D, 0,
@@ -1763,12 +1834,6 @@ hud_create(struct cso_context *cso, struct hud_context *share)
 
    LIST_INITHEAD(&hud->pane_list);
 
-   if (!hud_set_draw_context(hud, cso)) {
-      pipe_resource_reference(&hud->font.texture, NULL);
-      FREE(hud);
-      return NULL;
-   }
-
    /* setup sig handler once for all hud contexts */
 #ifdef PIPE_OS_UNIX
    if (!sig_handled && signo != 0) {
@@ -1785,18 +1850,32 @@ hud_create(struct cso_context *cso, struct hud_context *share)
    }
 #endif
 
-   hud_set_record_context(hud, cso_get_pipe_context(cso));
+   if (record_ctx == 0)
+      hud_set_record_context(hud, cso_get_pipe_context(cso));
+   if (draw_ctx == 0)
+      hud_set_draw_context(hud, cso);
+
    hud_parse_env_var(hud, screen, env);
    return hud;
 }
 
+/**
+ * Destroy a HUD. If the HUD has several users, decrease the reference counter
+ * and detach the context from the HUD.
+ */
 void
 hud_destroy(struct hud_context *hud, struct cso_context *cso)
 {
-   hud_unset_record_context(hud);
-   hud_unset_draw_context(hud);
-   pipe_resource_reference(&hud->font.texture, NULL);
-   FREE(hud);
+   if (!cso || hud->record_pipe == cso_get_pipe_context(cso))
+      hud_unset_record_context(hud);
+
+   if (!cso || hud->cso == cso)
+      hud_unset_draw_context(hud);
+
+   if (p_atomic_dec_zero(&hud->refcount)) {
+      pipe_resource_reference(&hud->font.texture, NULL);
+      FREE(hud);
+   }
 }
 
 void

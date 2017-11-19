@@ -40,6 +40,8 @@ enum hud_counter {
 };
 
 struct hud_context {
+   int refcount;
+
    /* Context where queries are executed. */
    struct pipe_context *record_pipe;
 
