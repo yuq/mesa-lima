@@ -338,7 +338,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return 0;
 
 	case PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT:
-		if (is_a5xx(screen))
+		if (is_a4xx(screen) || is_a5xx(screen))
 			return 1;
 		return 0;
 
