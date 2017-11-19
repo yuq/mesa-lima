@@ -168,7 +168,7 @@ dri_create_context(gl_api api, const struct gl_config * visual,
 
    if (ctx->st->cso_context) {
       ctx->pp = pp_init(ctx->st->pipe, screen->pp_enabled, ctx->st->cso_context);
-      ctx->hud = hud_create(ctx->st->cso_context);
+      ctx->hud = hud_create(ctx->st->cso_context, NULL);
    }
 
    /* Do this last. */
@@ -206,7 +206,7 @@ dri_destroy_context(__DRIcontext * cPriv)
    struct dri_context *ctx = dri_context(cPriv);
 
    if (ctx->hud) {
-      hud_destroy(ctx->hud);
+      hud_destroy(ctx->hud, ctx->st->cso_context);
    }
 
    if (ctx->pp)

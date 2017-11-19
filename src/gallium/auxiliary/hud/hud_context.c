@@ -681,7 +681,8 @@ hud_stop_queries(struct hud_context *hud, struct pipe_context *pipe)
 }
 
 void
-hud_run(struct hud_context *hud, struct pipe_resource *tex)
+hud_run(struct hud_context *hud, struct cso_context *cso,
+        struct pipe_resource *tex)
 {
    hud_stop_queries(hud, hud->record_pipe);
    hud_draw_results(hud, tex);
@@ -1684,7 +1685,7 @@ hud_set_record_context(struct hud_context *hud, struct pipe_context *pipe)
 }
 
 struct hud_context *
-hud_create(struct cso_context *cso)
+hud_create(struct cso_context *cso, struct hud_context *share)
 {
    struct pipe_screen *screen = cso_get_pipe_context(cso)->screen;
    struct hud_context *hud;
@@ -1790,7 +1791,7 @@ hud_create(struct cso_context *cso)
 }
 
 void
-hud_destroy(struct hud_context *hud)
+hud_destroy(struct hud_context *hud, struct cso_context *cso)
 {
    hud_unset_record_context(hud);
    hud_unset_draw_context(hud);
