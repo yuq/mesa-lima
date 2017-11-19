@@ -105,7 +105,7 @@ fd5_draw_emit(struct fd_batch *batch, struct fd_ringbuffer *ring,
 					&batch->draw_patches);
 			OUT_RELOC(ring, fd_resource(idx)->bo,
 					index_offset, 0, 0);
-			OUT_RING(ring, CP_DRAW_INDX_INDIRECT_3_MAX_INDICES(max_indicies));
+			OUT_RING(ring, A5XX_CP_DRAW_INDX_INDIRECT_3_MAX_INDICES(max_indicies));
 			OUT_RELOC(ring, ind->bo, info->indirect->offset, 0, 0);
 		} else {
 			OUT_PKT7(ring, CP_DRAW_INDIRECT, 3);

@@ -165,9 +165,9 @@ fd5_launch_grid(struct fd_context *ctx, const struct pipe_grid_info *info)
 		OUT_PKT7(ring, CP_EXEC_CS_INDIRECT, 4);
 		OUT_RING(ring, 0x00000000);
 		OUT_RELOC(ring, rsc->bo, info->indirect_offset, 0, 0);  /* ADDR_LO/HI */
-		OUT_RING(ring, CP_EXEC_CS_INDIRECT_3_LOCALSIZEX(local_size[0] - 1) |
-				CP_EXEC_CS_INDIRECT_3_LOCALSIZEY(local_size[1] - 1) |
-				CP_EXEC_CS_INDIRECT_3_LOCALSIZEZ(local_size[2] - 1));
+		OUT_RING(ring, A5XX_CP_EXEC_CS_INDIRECT_3_LOCALSIZEX(local_size[0] - 1) |
+				A5XX_CP_EXEC_CS_INDIRECT_3_LOCALSIZEY(local_size[1] - 1) |
+				A5XX_CP_EXEC_CS_INDIRECT_3_LOCALSIZEZ(local_size[2] - 1));
 	} else {
 		OUT_PKT7(ring, CP_EXEC_CS, 4);
 		OUT_RING(ring, 0x00000000);
