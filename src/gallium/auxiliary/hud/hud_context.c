@@ -74,7 +74,10 @@ hud_draw_colored_prims(struct hud_context *hud, unsigned prim,
    struct cso_context *cso = hud->cso;
    unsigned size = num_vertices * hud->color_prims.vbuf.stride;
 
-   assert(size <= hud->color_prims.buffer_size);
+   /* If a recording context is inactive, don't draw anything. */
+   if (size > hud->color_prims.buffer_size)
+      return;
+
    memcpy(hud->color_prims.vertices, buffer, size);
 
    hud->constants.color[0] = r;
