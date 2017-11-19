@@ -861,7 +861,7 @@ static int gfx9_compute_miptree(ADDR_HANDLE addrlib,
 
 	ret = Addr2ComputeSurfaceInfo(addrlib, in, &out);
 	if (ret != ADDR_OK)
-	return ret;
+		return ret;
 
 	if (in->flags.stencil) {
 		surf->u.gfx9.stencil.swizzle_mode = in->swizzleMode;
