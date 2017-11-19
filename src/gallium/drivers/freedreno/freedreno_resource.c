@@ -672,6 +672,9 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		offset = 0;
 	}
 
+	if (usage & PIPE_TRANSFER_WRITE)
+		rsc->valid = true;
+
 	*pptrans = ptrans;
 
 	return buf + offset;
@@ -1195,6 +1198,8 @@ fd_invalidate_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
 			}
 		}
 	}
+
+	rsc->valid = false;
 }
 
 void

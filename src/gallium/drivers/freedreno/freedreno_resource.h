@@ -73,6 +73,7 @@ struct fd_resource {
 	struct fd_resource_slice slices[MAX_MIP_LEVELS];
 	/* buffer range that has been initialized */
 	struct util_range valid_buffer_range;
+	bool valid;
 
 	/* reference to the resource holding stencil data for a z32_s8 texture */
 	/* TODO rename to secondary or auxiliary? */

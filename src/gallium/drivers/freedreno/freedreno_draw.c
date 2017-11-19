@@ -54,6 +54,7 @@ resource_written(struct fd_batch *batch, struct pipe_resource *prsc)
 {
 	if (!prsc)
 		return;
+	fd_resource(prsc)->valid = true;
 	fd_batch_resource_used(batch, fd_resource(prsc), true);
 }
 
@@ -64,7 +65,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	struct fd_batch *batch = ctx->batch;
 	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 	struct pipe_scissor_state *scissor = fd_context_get_scissor(ctx);
-	unsigned i, prims, buffers = 0;
+	unsigned i, prims, buffers = 0, restore_buffers = 0;
 
 	if (!info->count_from_stream_output && !info->indirect &&
 	    !info->primitive_restart &&
@@ -127,12 +128,16 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	mtx_lock(&ctx->screen->lock);
 
 	if (fd_depth_enabled(ctx)) {
+		if (fd_resource(pfb->zsbuf->texture)->valid)
+			restore_buffers |= FD_BUFFER_DEPTH;
 		buffers |= FD_BUFFER_DEPTH;
 		resource_written(batch, pfb->zsbuf->texture);
 		batch->gmem_reason |= FD_GMEM_DEPTH_ENABLED;
 	}
 
 	if (fd_stencil_enabled(ctx)) {
+		if (fd_resource(pfb->zsbuf->texture)->valid)
+			restore_buffers |= FD_BUFFER_DEPTH;
 		buffers |= FD_BUFFER_STENCIL;
 		resource_written(batch, pfb->zsbuf->texture);
 		batch->gmem_reason |= FD_GMEM_STENCIL_ENABLED;
@@ -150,6 +155,10 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		surf = pfb->cbufs[i]->texture;
 
 		resource_written(batch, surf);
+
+		if (fd_resource(surf)->valid)
+			restore_buffers |= PIPE_CLEAR_COLOR0 << i;
+
 		buffers |= PIPE_CLEAR_COLOR0 << i;
 
 		if (surf->nr_samples > 1)
@@ -223,7 +232,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	ctx->stats.prims_generated += prims;
 
 	/* any buffers that haven't been cleared yet, we need to restore: */
-	batch->restore |= buffers & (FD_BUFFER_ALL & ~batch->cleared);
+	batch->restore |= restore_buffers & (FD_BUFFER_ALL & ~batch->cleared);
 	/* and any buffers used, need to be resolved: */
 	batch->resolve |= buffers;
 
