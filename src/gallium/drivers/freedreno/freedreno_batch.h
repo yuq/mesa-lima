@@ -70,6 +70,7 @@ struct fd_batch {
 
 	int in_fence_fd;
 	bool needs_out_fence_fd;
+	struct pipe_fence_handle *fence;
 
 	struct fd_context *ctx;
 
@@ -205,7 +206,7 @@ struct fd_batch * fd_batch_create(struct fd_context *ctx);
 
 void fd_batch_reset(struct fd_batch *batch);
 void fd_batch_sync(struct fd_batch *batch);
-void fd_batch_flush(struct fd_batch *batch, bool sync);
+void fd_batch_flush(struct fd_batch *batch, bool sync, bool force);
 void fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc, bool write);
 void fd_batch_check_size(struct fd_batch *batch);
 

@@ -31,6 +31,7 @@
 
 #include "freedreno_batch.h"
 #include "freedreno_context.h"
+#include "freedreno_fence.h"
 #include "freedreno_resource.h"
 #include "freedreno_query_hw.h"
 
@@ -62,6 +63,7 @@ batch_init(struct fd_batch *batch)
 	fd_ringbuffer_set_parent(batch->binning, batch->gmem);
 
 	batch->in_fence_fd = -1;
+	batch->fence = fd_fence_create(batch);
 
 	batch->cleared = batch->partial_cleared = 0;
 	batch->restore = batch->resolve = 0;
@@ -115,6 +117,11 @@ batch_fini(struct fd_batch *batch)
 	if (batch->in_fence_fd != -1)
 		close(batch->in_fence_fd);
 
+	/* in case batch wasn't flushed but fence was created: */
+	fd_fence_populate(batch->fence, 0, -1);
+
+	fd_fence_ref(NULL, &batch->fence, NULL);
+
 	fd_ringbuffer_del(batch->draw);
 	fd_ringbuffer_del(batch->binning);
 	fd_ringbuffer_del(batch->gmem);
@@ -147,7 +154,7 @@ batch_flush_reset_dependencies(struct fd_batch *batch, bool flush)
 
 	foreach_batch(dep, cache, batch->dependents_mask) {
 		if (flush)
-			fd_batch_flush(dep, false);
+			fd_batch_flush(dep, false, false);
 		fd_batch_reference(&dep, NULL);
 	}
 
@@ -254,12 +261,17 @@ batch_cleanup_func(void *job, int id)
 }
 
 static void
-batch_flush(struct fd_batch *batch)
+batch_flush(struct fd_batch *batch, bool force)
 {
 	DBG("%p: needs_flush=%d", batch, batch->needs_flush);
 
-	if (!batch->needs_flush)
+	if (!batch->needs_flush) {
+		if (force) {
+			fd_gmem_render_noop(batch);
+			goto out;
+		}
 		return;
+	}
 
 	batch->needs_flush = false;
 
@@ -288,6 +300,7 @@ batch_flush(struct fd_batch *batch)
 
 	debug_assert(batch->reference.count > 0);
 
+out:
 	if (batch == batch->ctx->batch) {
 		batch_reset(batch);
 	} else {
@@ -297,9 +310,16 @@ batch_flush(struct fd_batch *batch)
 	}
 }
 
-/* NOTE: could drop the last ref to batch */
+/* NOTE: could drop the last ref to batch
+ *
+ * @sync: synchronize with flush_queue, ensures batch is *actually* flushed
+ *   to kernel before this returns, as opposed to just being queued to be
+ *   flushed
+ * @force: force a flush even if no rendering, mostly useful if you need
+ *   a fence to sync on
+ */
 void
-fd_batch_flush(struct fd_batch *batch, bool sync)
+fd_batch_flush(struct fd_batch *batch, bool sync, bool force)
 {
 	/* NOTE: we need to hold an extra ref across the body of flush,
 	 * since the last ref to this batch could be dropped when cleaning
@@ -307,7 +327,7 @@ fd_batch_flush(struct fd_batch *batch, bool sync)
 	 */
 	struct fd_batch *tmp = NULL;
 	fd_batch_reference(&tmp, batch);
-	batch_flush(tmp);
+	batch_flush(tmp, force);
 	if (sync)
 		fd_batch_sync(tmp);
 	fd_batch_reference(&tmp, NULL);
@@ -342,7 +362,7 @@ batch_add_dep(struct fd_batch *batch, struct fd_batch *dep)
 	if (batch_depends_on(dep, batch)) {
 		DBG("%p: flush forced on %p!", batch, dep);
 		mtx_unlock(&batch->ctx->screen->lock);
-		fd_batch_flush(dep, false);
+		fd_batch_flush(dep, false, false);
 		mtx_lock(&batch->ctx->screen->lock);
 	} else {
 		struct fd_batch *other = NULL;
@@ -409,7 +429,7 @@ fd_batch_check_size(struct fd_batch *batch)
 	struct fd_ringbuffer *ring = batch->draw;
 	if (((ring->cur - ring->start) > (ring->size/4 - 0x1000)) ||
 			(fd_mesa_debug & FD_DBG_FLUSH))
-		fd_batch_flush(batch, true);
+		fd_batch_flush(batch, true, false);
 }
 
 /* emit a WAIT_FOR_IDLE only if needed, ie. if there has not already

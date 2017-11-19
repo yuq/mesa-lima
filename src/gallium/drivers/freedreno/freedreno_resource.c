@@ -546,7 +546,7 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 				mtx_unlock(&ctx->screen->lock);
 
 				foreach_batch(batch, &ctx->screen->batch_cache, batch_mask)
-					fd_batch_flush(batch, false);
+					fd_batch_flush(batch, false, false);
 
 				foreach_batch(batch, &ctx->screen->batch_cache, batch_mask) {
 					fd_batch_sync(batch);
@@ -554,7 +554,7 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 				}
 				assert(rsc->batch_mask == 0);
 			} else {
-				fd_batch_flush(write_batch, true);
+				fd_batch_flush(write_batch, true, false);
 			}
 			assert(!rsc->write_batch);
 		}
@@ -1166,7 +1166,7 @@ fd_flush_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
 	struct fd_resource *rsc = fd_resource(prsc);
 
 	if (rsc->write_batch)
-		fd_batch_flush(rsc->write_batch, true);
+		fd_batch_flush(rsc->write_batch, true, false);
 
 	assert(!rsc->write_batch);
 }

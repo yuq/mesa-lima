@@ -134,11 +134,12 @@ fd_bc_flush(struct fd_batch_cache *cache, struct fd_context *ctx)
 
 	hash_table_foreach(cache->ht, entry) {
 		struct fd_batch *batch = NULL;
+		/* hold a reference since we can drop screen->lock: */
 		fd_batch_reference_locked(&batch, (struct fd_batch *)entry->data);
 		if (batch->ctx == ctx) {
 			mtx_unlock(&ctx->screen->lock);
 			fd_batch_reference(&last_batch, batch);
-			fd_batch_flush(batch, false);
+			fd_batch_flush(batch, false, false);
 			mtx_lock(&ctx->screen->lock);
 		}
 		fd_batch_reference_locked(&batch, NULL);
@@ -265,7 +266,7 @@ fd_bc_alloc_batch(struct fd_batch_cache *cache, struct fd_context *ctx)
 		 */
 		mtx_unlock(&ctx->screen->lock);
 		DBG("%p: too many batches!  flush forced!", flush_batch);
-		fd_batch_flush(flush_batch, true);
+		fd_batch_flush(flush_batch, true, false);
 		mtx_lock(&ctx->screen->lock);
 
 		/* While the resources get cleaned up automatically, the flush_batch

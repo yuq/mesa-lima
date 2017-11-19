@@ -372,15 +372,14 @@ render_sysmem(struct fd_batch *batch)
 static void
 flush_ring(struct fd_batch *batch)
 {
-	struct fd_context *ctx = batch->ctx;
+	uint32_t timestamp;
 	int out_fence_fd = -1;
 
 	fd_ringbuffer_flush2(batch->gmem, batch->in_fence_fd,
 			batch->needs_out_fence_fd ? &out_fence_fd : NULL);
 
-	fd_fence_ref(&ctx->screen->base, &ctx->last_fence, NULL);
-	ctx->last_fence = fd_fence_create(ctx,
-			fd_ringbuffer_timestamp(batch->gmem), out_fence_fd);
+	timestamp = fd_ringbuffer_timestamp(batch->gmem);
+	fd_fence_populate(batch->fence, timestamp, out_fence_fd);
 }
 
 void

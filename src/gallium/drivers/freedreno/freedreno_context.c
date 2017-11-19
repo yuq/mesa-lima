@@ -40,31 +40,28 @@
 #include "util/u_upload_mgr.h"
 
 static void
-fd_context_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
+fd_context_flush(struct pipe_context *pctx, struct pipe_fence_handle **fencep,
 		unsigned flags)
 {
 	struct fd_context *ctx = fd_context(pctx);
+	struct pipe_fence_handle *fence = NULL;
+
+	/* Take a ref to the batch's fence (batch can be unref'd when flushed: */
+	fd_fence_ref(pctx->screen, &fence, ctx->batch->fence);
 
 	if (flags & PIPE_FLUSH_FENCE_FD)
 		ctx->batch->needs_out_fence_fd = true;
 
 	if (!ctx->screen->reorder) {
-		fd_batch_flush(ctx->batch, true);
+		fd_batch_flush(ctx->batch, true, false);
 	} else {
 		fd_bc_flush(&ctx->screen->batch_cache, ctx);
 	}
 
-	if (fence) {
-		/* if there hasn't been any rendering submitted yet, we might not
-		 * have actually created a fence
-		 */
-		if (!ctx->last_fence || ctx->batch->needs_out_fence_fd) {
-			ctx->batch->needs_flush = true;
-			fd_gmem_render_noop(ctx->batch);
-			fd_batch_reset(ctx->batch);
-		}
-		fd_fence_ref(pctx->screen, fence, ctx->last_fence);
-	}
+	if (fencep)
+		fd_fence_ref(pctx->screen, fencep, fence);
+
+	fd_fence_ref(pctx->screen, &fence, NULL);
 }
 
 static void
@@ -128,8 +125,6 @@ fd_context_destroy(struct pipe_context *pctx)
 
 	fd_batch_reference(&ctx->batch, NULL);  /* unref current batch */
 	fd_bc_invalidate_context(ctx);
-
-	fd_fence_ref(pctx->screen, &ctx->last_fence, NULL);
 
 	fd_prog_fini(pctx);
 
