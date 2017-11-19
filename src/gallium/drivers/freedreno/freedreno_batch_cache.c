@@ -153,6 +153,30 @@ fd_bc_flush(struct fd_batch_cache *cache, struct fd_context *ctx)
 	}
 }
 
+/* deferred flush doesn't actually flush, but it marks every other
+ * batch associated with the context as dependent on the current
+ * batch.  So when the current batch gets flushed, all other batches
+ * that came before also get flushed.
+ */
+void
+fd_bc_flush_deferred(struct fd_batch_cache *cache, struct fd_context *ctx)
+{
+	struct fd_batch *current_batch = ctx->batch;
+	struct hash_entry *entry;
+
+	mtx_lock(&ctx->screen->lock);
+
+	hash_table_foreach(cache->ht, entry) {
+		struct fd_batch *batch = entry->data;
+		if (batch == current_batch)
+			continue;
+		if (batch->ctx == ctx)
+			fd_batch_add_dep(current_batch, batch);
+	}
+
+	mtx_unlock(&ctx->screen->lock);
+}
+
 void
 fd_bc_invalidate_context(struct fd_context *ctx)
 {

@@ -350,8 +350,8 @@ batch_depends_on(struct fd_batch *batch, struct fd_batch *other)
 	return false;
 }
 
-static void
-batch_add_dep(struct fd_batch *batch, struct fd_batch *dep)
+void
+fd_batch_add_dep(struct fd_batch *batch, struct fd_batch *dep)
 {
 	if (batch->dependents_mask & (1 << dep->idx))
 		return;
@@ -398,7 +398,7 @@ fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc, bool wri
 				 * fd_bc_invalidate_batch()
 				 */
 				fd_batch_reference(&b, dep);
-				batch_add_dep(batch, b);
+				fd_batch_add_dep(batch, b);
 				fd_bc_invalidate_batch(b, false);
 				fd_batch_reference_locked(&b, NULL);
 			}
@@ -406,7 +406,7 @@ fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc, bool wri
 		fd_batch_reference_locked(&rsc->write_batch, batch);
 	} else {
 		if (rsc->write_batch) {
-			batch_add_dep(batch, rsc->write_batch);
+			fd_batch_add_dep(batch, rsc->write_batch);
 			fd_bc_invalidate_batch(rsc->write_batch, false);
 		}
 	}
