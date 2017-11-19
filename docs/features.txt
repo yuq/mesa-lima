@@ -180,7 +180,7 @@ GL 4.3, GLSL 4.30 -- all DONE: i965/gen8+, nvc0, radeonsi
   GL_ARB_robust_buffer_access_behavior                  DONE (i965)
   GL_ARB_shader_image_size                              DONE (freedreno/a5xx, i965, r600, softpipe)
   GL_ARB_shader_storage_buffer_object                   DONE (freedreno/a5xx, i965, softpipe)
-  GL_ARB_stencil_texturing                              DONE (freedreno/a5xx, i965/hsw+, nv50, r600, llvmpipe, softpipe, swr)
+  GL_ARB_stencil_texturing                              DONE (freedreno, i965/hsw+, nv50, r600, llvmpipe, softpipe, swr)
   GL_ARB_texture_buffer_range                           DONE (freedreno, nv50, i965, r600, llvmpipe)
   GL_ARB_texture_query_levels                           DONE (all drivers that support GLSL 1.30)
   GL_ARB_texture_storage_multisample                    DONE (all drivers that support GL_ARB_texture_multisample)
@@ -203,7 +203,7 @@ GL 4.4, GLSL 4.40 -- all DONE: i965/gen8+, nvc0, radeonsi
   GL_ARB_multi_bind                                     DONE (all drivers)
   GL_ARB_query_buffer_object                            DONE (i965/hsw+)
   GL_ARB_texture_mirror_clamp_to_edge                   DONE (i965, nv50, r600, llvmpipe, softpipe, swr)
-  GL_ARB_texture_stencil8                               DONE (freedreno/a5xx, i965/hsw+, nv50, r600, llvmpipe, softpipe, swr)
+  GL_ARB_texture_stencil8                               DONE (freedreno, i965/hsw+, nv50, r600, llvmpipe, softpipe, swr)
   GL_ARB_vertex_type_10f_11f_11f_rev                    DONE (i965, nv50, r600, llvmpipe, softpipe, swr)
 
 GL 4.5, GLSL 4.50 -- all DONE: nvc0, radeonsi
@@ -252,7 +252,7 @@ GLES3.1, GLSL ES 3.1 -- all DONE: i965/hsw+, nvc0, radeonsi
   GL_ARB_shader_storage_buffer_object                   DONE (freedreno/a5xx, i965/gen7+, softpipe)
   GL_ARB_shading_language_packing                       DONE (all drivers)
   GL_ARB_separate_shader_objects                        DONE (all drivers)
-  GL_ARB_stencil_texturing                              DONE (freedreno/a5xx, nv50, r600, llvmpipe, softpipe, swr)
+  GL_ARB_stencil_texturing                              DONE (freedreno, nv50, r600, llvmpipe, softpipe, swr)
   GL_ARB_texture_multisample (Multisample textures)     DONE (i965/gen7+, nv50, r600, llvmpipe, softpipe)
   GL_ARB_texture_storage_multisample                    DONE (all drivers that support GL_ARB_texture_multisample)
   GL_ARB_vertex_attrib_binding                          DONE (all drivers)

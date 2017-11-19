@@ -190,6 +190,8 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			OUT_RING(ring, view->texconst3);
 			if (view->base.texture) {
 				struct fd_resource *rsc = fd_resource(view->base.texture);
+				if (view->base.format == PIPE_FORMAT_X32_S8X24_UINT)
+					rsc = rsc->stencil;
 				OUT_RELOC(ring, rsc->bo, view->offset, view->texconst4, 0);
 			} else {
 				OUT_RING(ring, 0x00000000);
