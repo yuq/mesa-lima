@@ -393,6 +393,8 @@ fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc, bool wri
 			struct fd_batch *dep;
 			foreach_batch(dep, cache, rsc->batch_mask) {
 				struct fd_batch *b = NULL;
+				if (dep == batch)
+					continue;
 				/* note that batch_add_dep could flush and unref dep, so
 				 * we need to hold a reference to keep it live for the
 				 * fd_bc_invalidate_batch()
