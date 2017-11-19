@@ -58,7 +58,7 @@ struct pipe_screen *
 pipe_tegra_create_screen(int fd, const struct pipe_screen_config *config);
 
 struct pipe_screen *
-pipe_lima_create_screen(int fd);
+pipe_lima_create_screen(int fd, const struct pipe_screen_config *config);
 
 const struct drm_conf_ret *
 pipe_default_configuration_query(enum drm_conf conf);
