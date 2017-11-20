@@ -226,8 +226,7 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    vs_cmd[i++] = (ctx->vs->prefetch << 20) | ((align(ctx->vs->shader_size, 16) / 16 - 1) << 10);
    vs_cmd[i++] = 0x10000040; /* SHADER_INFO */
 
-   /* assume to 1 before vs compiler is ready */
-   int num_varryings = 1;
+   int num_varryings = ctx->vs->num_varying;
    int num_attributes = ctx->vertex_elements->num_elements;
 
    vs_cmd[i++] = ((num_varryings - 1) << 8) | ((num_attributes - 1) << 24);
@@ -306,8 +305,7 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       (info->index_size == 2 ? 0x00000400 : 0);
    plbu_cmd[i++] = 0x1000010B; /* PRIMITIVE_SETUP */
 
-   /* before we have a compiler, assume gl_position here */
-   uint32_t gl_position_va = ctx->share_buffer->va + sh_varying_offset;
+   uint32_t gl_position_va = ctx->share_buffer->va + sh_gl_pos_offset;
    plbu_cmd[i++] = ctx->pp_buffer->va + pp_plb_rsw_offset;
    plbu_cmd[i++] = 0x80000000 | (gl_position_va >> 4); /* RSW_VERTEX_ARRAY */
 
@@ -533,20 +531,42 @@ lima_pack_render_state(struct lima_context *ctx)
    render->shader_address = (ctx->pp_buffer->va + pp_fs_program_offset) |
       (((uint32_t *)ctx->fs->shader)[0] & 0x1F);
 
-   /* after compiler */
-   render->varying_types = 0x00000000;
-
    /* seems not needed */
    render->uniforms_address = 0x00000000;
 
    render->textures_address = 0x00000000;
 
    /* more investigation */
-   render->aux0 = 0x00000300;
+   render->aux0 = 0x00000300 | (ctx->vs->varying_stride >> 3);
    render->aux1 = 0x00003000;
 
-   /* seems not needed */
-   render->varyings_address = 0x00000000;
+   if (ctx->vs->num_varying > 1) {
+      render->varying_types = 0x00000000;
+      render->varyings_address = ctx->share_buffer->va + sh_varying_offset;
+      for (int i = 1; i < ctx->vs->num_varying; i++) {
+         int val;
+
+         struct lima_varying_info *v = ctx->vs->varying + i;
+         if (v->component_size == 4)
+            val = v->components == 4 ? 0 : 1;
+         else
+            val = v->components == 4 ? 2 : 3;
+
+         int index = i - 1;
+         if (index < 10)
+            render->varying_types |= val << (3 * index);
+         else if (index == 10) {
+            render->varying_types |= val << 30;
+            render->varyings_address |= val >> 2;
+         }
+         else if (index == 11)
+            render->varyings_address |= val << 1;
+      }
+   }
+   else {
+      render->varying_types = 0x00000000;
+      render->varyings_address = 0x00000000;
+   }
 }
 
 static void
@@ -614,11 +634,32 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
       memcpy(ctx->gp_buffer->map + gp_vs_program_offset, vs->shader, vs->shader_size);
 
-      /* no varing info build for now, just assume only gl_Position
-       * it should be built when create vs state with compiled vs info
-       */
-      varying[n++] = ctx->share_buffer->va + sh_varying_offset;
+      /* for gl_Position */
+      varying[n++] = ctx->share_buffer->va + sh_gl_pos_offset;
       varying[n++] = 0x8020;
+
+      int offset = 0;
+      for (int i = 1; i < vs->num_varying; i++) {
+         struct lima_varying_info *v = vs->varying + i;
+
+         v->components = align(v->components, 2);
+
+         int size = v->components * v->component_size;
+         size = align(size, 8);
+         if (size == 16)
+            offset = align(offset, 16);
+
+         v->offset = offset;
+         offset += size;
+      }
+
+      vs->varying_stride = align(offset, 8);
+      for (int i = 1; i < vs->num_varying; i++) {
+         struct lima_varying_info *v = vs->varying + i;
+         varying[n++] = ctx->share_buffer->va + sh_varying_offset + v->offset;
+         varying[n++] = (vs->varying_stride << 11) | (v->components - 1) |
+            (v->component_size == 2 ? 0x0C : 0);
+      }
 
       vs_need_update_const = true;
    }
@@ -651,6 +692,11 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       fprintf(stderr, "gp submit wait error\n");
    lima_buffer_update(ctx->share_buffer, LIMA_BUFFER_ALLOC_MAP);
    float *varying = ctx->share_buffer->map + sh_varying_offset;
+   debug_printf("varing %f %f %f %f %f %f %f %f %f %f %f %f\n",
+                varying[0], varying[1], varying[2], varying[3],
+                varying[4], varying[5], varying[6], varying[7],
+                varying[8], varying[9], varying[10], varying[11]);
+   varying = ctx->share_buffer->map + sh_gl_pos_offset;
    debug_printf("varing %f %f %f %f %f %f %f %f %f %f %f %f\n",
                 varying[0], varying[1], varying[2], varying[3],
                 varying[4], varying[5], varying[6], varying[7],
