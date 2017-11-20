@@ -2441,6 +2441,11 @@ const struct function gles2_functions_possible[] = {
    { "glGetQueryObjectivEXT", 20, -1 },
    { "glGetQueryObjectuivEXT", 20, -1 },
 
+   /* GL_EXT_disjoint_timer_query */
+   { "glGetQueryObjecti64vEXT", 20, -1 },
+   { "glGetQueryObjectui64vEXT", 20, -1 },
+   { "glQueryCounterEXT", 20, -1 },
+
    { NULL, 0, -1 }
 };
 
