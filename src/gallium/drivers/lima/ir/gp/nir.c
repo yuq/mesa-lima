@@ -348,6 +348,13 @@ static gpir_compiler *gpir_compiler_create(void *prog, unsigned num_reg, unsigne
    return comp;
 }
 
+static int gpir_glsl_type_size(enum glsl_base_type type)
+{
+   /* only support GLSL_TYPE_FLOAT */
+   assert(type == GLSL_TYPE_FLOAT);
+   return 4;
+}
+
 bool gpir_compile_nir(struct lima_vs_shader_state *prog, struct nir_shader *nir)
 {
    nir_function_impl *func = nir_shader_get_entrypoint(nir);
@@ -385,14 +392,15 @@ bool gpir_compile_nir(struct lima_vs_shader_state *prog, struct nir_shader *nir)
       goto err_out0;
 
    nir_foreach_variable(var, &nir->outputs) {
-      gpir_debug("nir output %s loc=%d dloc=%d base=%d comp=%d vece=%d len=%d\n",
-                 var->name, var->data.location, var->data.driver_location,
-                 glsl_get_base_type(var->type),
-                 glsl_get_components(var->type),
-                 glsl_get_vector_elements(var->type),
-                 glsl_get_length(var->type));
+      assert(var->data.driver_location == prog->num_varying);
+      if (!prog->num_varying)
+         assert(var->data.location == VARYING_SLOT_POS);
+
+      struct lima_varying_info *v = prog->varying + prog->num_varying;
+      v->components = glsl_get_components(var->type);
+      v->component_size = gpir_glsl_type_size(glsl_get_base_type(var->type));
+      prog->num_varying++;
    }
-   prog->num_varying = nir->num_outputs;
 
    ralloc_free(comp);
    return true;
