@@ -1585,7 +1585,6 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                vtn_value(b, w[4 + i], vtn_value_type_constant)->constant;
 
             unsigned j = swap ? 1 - i : i;
-            vtn_assert(bit_size == 32);
             src[j] = c->values[0];
          }
 
