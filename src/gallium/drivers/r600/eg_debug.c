@@ -148,6 +148,7 @@ static uint32_t *ac_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
 	unsigned count = PKT_COUNT_G(ib[0]);
 	unsigned op = PKT3_IT_OPCODE_G(ib[0]);
 	const char *predicate = PKT3_PREDICATE(ib[0]) ? "(predicate)" : "";
+	const char *compute_mode = (ib[0] & 0x2) ? "(C)" : "";
 	int i;
 
 	/* Print the name first. */
@@ -162,14 +163,14 @@ static uint32_t *ac_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
 		    op == PKT3_SET_CONFIG_REG ||
 		    op == PKT3_SET_UCONFIG_REG ||
 		    op == PKT3_SET_SH_REG)
-			fprintf(f, COLOR_CYAN "%s%s" COLOR_CYAN ":\n",
-				name, predicate);
+			fprintf(f, COLOR_CYAN "%s%s%s" COLOR_CYAN ":\n",
+				name, compute_mode, predicate);
 		else
-			fprintf(f, COLOR_GREEN "%s%s" COLOR_RESET ":\n",
-				name, predicate);
+			fprintf(f, COLOR_GREEN "%s%s%s" COLOR_RESET ":\n",
+				name, compute_mode, predicate);
 	} else
-		fprintf(f, COLOR_RED "PKT3_UNKNOWN 0x%x%s" COLOR_RESET ":\n",
-			op, predicate);
+		fprintf(f, COLOR_RED "PKT3_UNKNOWN 0x%x%s%s" COLOR_RESET ":\n",
+			op, compute_mode, predicate);
 
 	/* Print the contents. */
 	switch (op) {
