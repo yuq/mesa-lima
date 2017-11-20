@@ -141,8 +141,9 @@ emit_one_texture(struct vc5_context *vc5, struct vc5_texture_stateobj *stage_tex
                  * TEXTURE_SHADER_STATE that ignores psview->min/max_lod to
                  * support txf properly.
                  */
-                .min_level_of_detail = (psview->u.tex.first_level +
-                                        MAX2(psampler->min_lod, 0)),
+                .min_level_of_detail = MIN2(psview->u.tex.first_level +
+                                            MAX2(psampler->min_lod, 0),
+                                            psview->u.tex.last_level),
                 .max_level_of_detail = MIN2(psview->u.tex.first_level +
                                             psampler->max_lod,
                                             psview->u.tex.last_level),
