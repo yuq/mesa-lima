@@ -719,21 +719,21 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
       if (image->samples == 1 &&
           image->planes[plane].aux_usage != ISL_AUX_USAGE_CCS_E &&
           final_layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-         /* The CCS_D buffer may not be enabled in the final layout. Continue
-          * executing this function to perform a resolve.
+         /* The CCS_D buffer may not be enabled in the final layout. Call this
+          * function again with a initial layout of COLOR_ATTACHMENT_OPTIMAL
+          * to perform a resolve.
           */
           anv_perf_warn(cmd_buffer->device->instance, image,
                         "Performing an additional resolve for CCS_D layout "
                         "transition. Consider always leaving it on or "
                         "performing an ambiguation pass.");
-      } else {
-         /* Writes in the final layout will be aware of the auxiliary buffer.
-          * In addition, the clear buffer entries and the auxiliary buffers
-          * have been populated with values that will result in correct
-          * rendering.
-          */
-         return;
+         transition_color_buffer(cmd_buffer, image, aspect,
+                                 base_level, level_count,
+                                 base_layer, layer_count,
+                                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                                 final_layout);
       }
+      return;
    } else if (initial_layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
       /* Resolves are only necessary if the subresource may contain blocks
        * fast-cleared to values unsupported in other layouts. This only occurs
