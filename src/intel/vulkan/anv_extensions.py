@@ -49,7 +49,7 @@ class Extension:
 # and dEQP-VK.api.info.device fail due to the duplicated strings.
 EXTENSIONS = [
     Extension('VK_ANDROID_native_buffer',                 5, 'ANDROID'),
-    Extension('VK_KHR_16bit_storage',                     1, False),
+    Extension('VK_KHR_16bit_storage',                     1, 'device->info.gen >= 8'),
     Extension('VK_KHR_bind_memory2',                      1, True),
     Extension('VK_KHR_dedicated_allocation',              1, True),
     Extension('VK_KHR_descriptor_update_template',        1, True),
