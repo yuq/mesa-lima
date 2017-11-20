@@ -62,11 +62,12 @@ struct lima_fs_shader_state {
    int shader_size;
 };
 
-#define LIMA_MAX_VARYING_NUM 16
+#define LIMA_MAX_VARYING_NUM 13
 
 struct lima_varying_info {
-   int addr;
-   int size;
+   int components;
+   int component_size;
+   int offset;
 };
 
 struct lima_vs_shader_state {
@@ -78,6 +79,7 @@ struct lima_vs_shader_state {
    int constant_size;
 
    struct lima_varying_info varying[LIMA_MAX_VARYING_NUM];
+   int varying_stride;
    int num_varying;
 };
 
@@ -155,7 +157,8 @@ struct lima_context {
    #define sh_plb_offset             0x00000
    /* max_plb = 512, block_size = 0x200, size = block_size * max_plb */
    #define sh_varying_offset         0x40000
-   #define sh_buffer_size            0x41000
+   #define sh_gl_pos_offset          0x41000
+   #define sh_buffer_size            0x42000
 
    struct lima_buffer *gp_buffer;
    #define gp_vs_program_offset      0x0000
