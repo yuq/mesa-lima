@@ -66,7 +66,7 @@ struct fd_hw_sample;
 struct fd_batch {
 	struct pipe_reference reference;
 	unsigned seqno;
-	unsigned idx;
+	unsigned idx;       /* index into cache->batches[] */
 
 	int in_fence_fd;
 	bool needs_out_fence_fd;

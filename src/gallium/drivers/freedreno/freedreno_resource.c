@@ -531,14 +531,26 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 
 		if (needs_flush) {
 			if (usage & PIPE_TRANSFER_WRITE) {
-				struct fd_batch *batch, *last_batch = NULL;
-				foreach_batch(batch, &ctx->screen->batch_cache, rsc->batch_mask) {
-					fd_batch_reference(&last_batch, batch);
+				struct fd_batch *batch, *batches[32] = {0};
+				uint32_t batch_mask;
+
+				/* This is a bit awkward, probably a fd_batch_flush_locked()
+				 * would make things simpler.. but we need to hold the lock
+				 * to iterate the batches which reference this resource.  So
+				 * we must first grab references under a lock, then flush.
+				 */
+				mtx_lock(&ctx->screen->lock);
+				batch_mask = rsc->batch_mask;
+				foreach_batch(batch, &ctx->screen->batch_cache, batch_mask)
+					fd_batch_reference(&batches[batch->idx], batch);
+				mtx_unlock(&ctx->screen->lock);
+
+				foreach_batch(batch, &ctx->screen->batch_cache, batch_mask)
 					fd_batch_flush(batch, false);
-				}
-				if (last_batch) {
-					fd_batch_sync(last_batch);
-					fd_batch_reference(&last_batch, NULL);
+
+				foreach_batch(batch, &ctx->screen->batch_cache, batch_mask) {
+					fd_batch_sync(batch);
+					fd_batch_reference(&batches[batch->idx], NULL);
 				}
 				assert(rsc->batch_mask == 0);
 			} else {
