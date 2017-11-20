@@ -4625,7 +4625,7 @@ static void si_apply_opaque_metadata(struct r600_common_screen *rscreen,
 	    md->metadata[0] != 0 &&
 	    md->metadata[1] == si_get_bo_metadata_word1(rscreen) &&
 	    G_008F28_COMPRESSION_EN(desc[6])) {
-		assert(rtex->dcc_offset == ((uint64_t)desc[7] << 8));
+		rtex->dcc_offset = (uint64_t)desc[7] << 8;
 		return;
 	}
 
