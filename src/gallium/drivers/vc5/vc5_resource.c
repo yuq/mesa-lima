@@ -442,6 +442,8 @@ vc5_setup_slices(struct vc5_resource *rsc)
 
                 if (!rsc->tiled) {
                         slice->tiling = VC5_TILING_RASTER;
+                        if (prsc->target == PIPE_TEXTURE_1D)
+                                level_width = align(level_width, 64 / rsc->cpp);
                 } else {
                         if ((i != 0 || !uif_top) &&
                             (level_width <= utile_w ||
