@@ -473,6 +473,39 @@ st_nir_get_mesa_program(struct gl_context *ctx,
    NIR_PASS_V(nir, nir_lower_var_copies);
 }
 
+static void
+st_nir_link_shaders(nir_shader **producer, nir_shader **consumer)
+{
+   nir_lower_io_arrays_to_elements(*producer, *consumer);
+
+   NIR_PASS_V(*producer, nir_remove_dead_variables, nir_var_shader_out);
+   NIR_PASS_V(*consumer, nir_remove_dead_variables, nir_var_shader_in);
+
+   if (nir_remove_unused_varyings(*producer, *consumer)) {
+      NIR_PASS_V(*producer, nir_lower_global_vars_to_local);
+      NIR_PASS_V(*consumer, nir_lower_global_vars_to_local);
+
+      /* The backend might not be able to handle indirects on
+       * temporaries so we need to lower indirects on any of the
+       * varyings we have demoted here.
+       *
+       * TODO: radeonsi shouldn't need to do this, however LLVM isn't
+       * currently smart enough to handle indirects without causing excess
+       * spilling causing the gpu to hang.
+       *
+       * See the following thread for more details of the problem:
+       * https://lists.freedesktop.org/archives/mesa-dev/2017-July/162106.html
+       */
+      nir_variable_mode indirect_mask = nir_var_local;
+
+      NIR_PASS_V(*producer, nir_lower_indirect_derefs, indirect_mask);
+      NIR_PASS_V(*consumer, nir_lower_indirect_derefs, indirect_mask);
+
+      st_nir_opts(*producer);
+      st_nir_opts(*consumer);
+   }
+}
+
 extern "C" {
 
 bool
@@ -481,14 +514,53 @@ st_link_nir(struct gl_context *ctx,
 {
    struct st_context *st = st_context(ctx);
 
+   /* Determine first and last stage. */
+   unsigned first = MESA_SHADER_STAGES;
+   unsigned last = 0;
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (!shader_program->_LinkedShaders[i])
+         continue;
+      if (first == MESA_SHADER_STAGES)
+         first = i;
+      last = i;
+   }
+
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_linked_shader *shader = shader_program->_LinkedShaders[i];
       if (shader == NULL)
          continue;
 
       st_nir_get_mesa_program(ctx, shader_program, shader);
+
+      nir_variable_mode mask = (nir_variable_mode) 0;
+      if (i != first)
+         mask = (nir_variable_mode)(mask | nir_var_shader_in);
+
+      if (i != last)
+         mask = (nir_variable_mode)(mask | nir_var_shader_out);
+
+      nir_shader *nir = shader->Program->nir;
+      nir_lower_io_to_scalar_early(nir, mask);
+      st_nir_opts(nir);
    }
 
+   /* Linking the stages in the opposite order (from fragment to vertex)
+    * ensures that inter-shader outputs written to in an earlier stage
+    * are eliminated if they are (transitively) not used in a later
+    * stage.
+    */
+   int next = last;
+   for (int i = next - 1; i >= 0; i--) {
+      struct gl_linked_shader *shader = shader_program->_LinkedShaders[i];
+      if (shader == NULL)
+         continue;
+
+      st_nir_link_shaders(&shader->Program->nir,
+                          &shader_program->_LinkedShaders[next]->Program->nir);
+      next = i;
+   }
+
+   int prev = -1;
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_linked_shader *shader = shader_program->_LinkedShaders[i];
       if (shader == NULL)
@@ -530,6 +602,12 @@ st_link_nir(struct gl_context *ctx,
 
       nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir));
       shader->Program->info = nir->info;
+
+      if (prev != -1) {
+         nir_compact_varyings(shader_program->_LinkedShaders[prev]->Program->nir,
+                              nir, ctx->API != API_OPENGL_COMPAT);
+      }
+      prev = i;
 
       st_glsl_to_nir_post_opts(st, shader->Program, shader_program);
 

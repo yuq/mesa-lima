@@ -136,9 +136,6 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 	info->num_tokens = 2; /* indicate that the shader is non-empty */
 	info->num_instructions = 2;
 
-	info->num_inputs = nir->num_inputs;
-	info->num_outputs = nir->num_outputs;
-
 	if (nir->info.stage == MESA_SHADER_GEOMETRY) {
 		info->properties[TGSI_PROPERTY_GS_INPUT_PRIM] = nir->info.gs.input_primitive;
 		info->properties[TGSI_PROPERTY_GS_OUTPUT_PRIM] = nir->info.gs.output_primitive;
@@ -147,6 +144,8 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 	}
 
 	i = 0;
+	uint64_t processed_inputs = 0;
+	unsigned num_inputs = 0;
 	nir_foreach_variable(variable, &nir->inputs) {
 		unsigned semantic_name, semantic_index;
 		unsigned attrib_count = glsl_count_attribute_slots(variable->type,
@@ -167,8 +166,17 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 			if (variable->data.pixel_center_integer)
 				info->properties[TGSI_PROPERTY_FS_COORD_PIXEL_CENTER] =
 					TGSI_FS_COORD_PIXEL_CENTER_INTEGER;
+
+			num_inputs++;
 			continue;
 		}
+
+		i = variable->data.driver_location;
+		if (processed_inputs & ((uint64_t)1 << i))
+			continue;
+
+		processed_inputs |= ((uint64_t)1 << i);
+		num_inputs++;
 
 		tgsi_get_gl_varying_semantic(variable->data.location, true,
 					     &semantic_name, &semantic_index);
@@ -235,11 +243,16 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 			info->colors_read |= 0x0f;
 		else if (variable->data.location == VARYING_SLOT_COL1)
 			info->colors_read |= 0xf0;
-
-		i++;
 	}
 
+	if (nir->info.stage != MESA_SHADER_VERTEX)
+		info->num_inputs = num_inputs;
+	else
+		info->num_inputs = nir->num_inputs;
+
 	i = 0;
+	uint64_t processed_outputs = 0;
+	unsigned num_outputs = 0;
 	nir_foreach_variable(variable, &nir->outputs) {
 		unsigned semantic_name, semantic_index;
 
@@ -250,6 +263,13 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 			tgsi_get_gl_varying_semantic(variable->data.location, true,
 						     &semantic_name, &semantic_index);
 		}
+
+		i = variable->data.driver_location;
+		if (processed_outputs & ((uint64_t)1 << i))
+			continue;
+
+		processed_outputs |= ((uint64_t)1 << i);
+		num_outputs++;
 
 		info->output_semantic_name[i] = semantic_name;
 		info->output_semantic_index[i] = semantic_index;
@@ -327,9 +347,9 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 				info->writes_position = true;
 			break;
 		}
-
-		i++;
 	}
+
+	info->num_outputs = num_outputs;
 
 	nir_foreach_variable(variable, &nir->uniforms) {
 		const struct glsl_type *type = variable->type;
