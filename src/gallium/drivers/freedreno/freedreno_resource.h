@@ -132,6 +132,8 @@ pending(struct fd_resource *rsc, bool write)
 
 struct fd_transfer {
 	struct pipe_transfer base;
+	struct pipe_resource *staging_prsc;
+	struct pipe_box staging_box;
 };
 
 static inline struct fd_transfer *

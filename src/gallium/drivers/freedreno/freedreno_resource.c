@@ -278,6 +278,48 @@ fd_try_shadow_resource(struct fd_context *ctx, struct fd_resource *rsc,
 	return true;
 }
 
+static struct fd_resource *
+fd_alloc_staging(struct fd_context *ctx, struct fd_resource *rsc,
+		unsigned level, const struct pipe_box *box)
+{
+	struct pipe_context *pctx = &ctx->base;
+	struct pipe_resource tmpl = rsc->base;
+
+	tmpl.width0  = box->width;
+	tmpl.height0 = box->height;
+	tmpl.depth0  = box->depth;
+	tmpl.array_size = 1;
+	tmpl.last_level = 0;
+
+	struct pipe_resource *pstaging =
+		pctx->screen->resource_create(pctx->screen, &tmpl);
+	if (!pstaging)
+		return NULL;
+
+	return fd_resource(pstaging);
+}
+
+static void
+fd_blit_staging(struct fd_context *ctx, struct fd_transfer *trans)
+{
+	struct pipe_resource *dst = trans->base.resource;
+	struct pipe_blit_info blit = {0};
+
+	blit.dst.resource = dst;
+	blit.dst.format   = dst->format;
+	blit.dst.level    = trans->base.level;
+	blit.dst.box      = trans->base.box;
+	blit.src.resource = trans->staging_prsc;
+	blit.src.format   = trans->staging_prsc->format;
+	blit.src.level    = 0;
+	blit.src.box      = trans->staging_box;
+	blit.mask = util_format_get_mask(trans->staging_prsc->format);
+	blit.filter = PIPE_TEX_FILTER_NEAREST;
+
+	do_blit(ctx, &blit, false);
+	pipe_resource_reference(&trans->staging_prsc, NULL);
+}
+
 static unsigned
 fd_resource_layer_offset(struct fd_resource *rsc,
 						 struct fd_resource_slice *slice,
@@ -302,11 +344,60 @@ static void fd_resource_transfer_flush_region(struct pipe_context *pctx,
 }
 
 static void
+flush_resource(struct fd_context *ctx, struct fd_resource *rsc, unsigned usage)
+{
+	struct fd_batch *write_batch = NULL;
+
+	fd_batch_reference(&write_batch, rsc->write_batch);
+
+	if (usage & PIPE_TRANSFER_WRITE) {
+		struct fd_batch *batch, *batches[32] = {0};
+		uint32_t batch_mask;
+
+		/* This is a bit awkward, probably a fd_batch_flush_locked()
+		 * would make things simpler.. but we need to hold the lock
+		 * to iterate the batches which reference this resource.  So
+		 * we must first grab references under a lock, then flush.
+		 */
+		mtx_lock(&ctx->screen->lock);
+		batch_mask = rsc->batch_mask;
+		foreach_batch(batch, &ctx->screen->batch_cache, batch_mask)
+			fd_batch_reference(&batches[batch->idx], batch);
+		mtx_unlock(&ctx->screen->lock);
+
+		foreach_batch(batch, &ctx->screen->batch_cache, batch_mask)
+			fd_batch_flush(batch, false, false);
+
+		foreach_batch(batch, &ctx->screen->batch_cache, batch_mask) {
+			fd_batch_sync(batch);
+			fd_batch_reference(&batches[batch->idx], NULL);
+		}
+		assert(rsc->batch_mask == 0);
+	} else if (write_batch) {
+		fd_batch_flush(write_batch, true, false);
+	}
+
+	fd_batch_reference(&write_batch, NULL);
+
+	assert(!rsc->write_batch);
+}
+
+static void
+fd_flush_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
+{
+	flush_resource(fd_context(pctx), fd_resource(prsc), PIPE_TRANSFER_READ);
+}
+
+static void
 fd_resource_transfer_unmap(struct pipe_context *pctx,
 		struct pipe_transfer *ptrans)
 {
 	struct fd_context *ctx = fd_context(pctx);
 	struct fd_resource *rsc = fd_resource(ptrans->resource);
+	struct fd_transfer *trans = fd_transfer(ptrans);
+
+	if (trans->staging_prsc)
+		fd_blit_staging(ctx, trans);
 
 	if (!(ptrans->usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
 		fd_bo_cpu_fini(rsc->bo);
@@ -403,40 +494,51 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		 */
 		if (ctx->screen->reorder && busy && !(usage & PIPE_TRANSFER_READ) &&
 				(usage & PIPE_TRANSFER_DISCARD_RANGE)) {
-			if (fd_try_shadow_resource(ctx, rsc, level, box)) {
+			/* try shadowing only if it avoids a flush, otherwise staging would
+			 * be better:
+			 */
+			if (needs_flush && fd_try_shadow_resource(ctx, rsc, level, box)) {
 				needs_flush = busy = false;
 				rebind_resource(ctx, prsc);
+			} else {
+				struct fd_resource *staging_rsc;
+
+				if (needs_flush) {
+					flush_resource(ctx, rsc, usage);
+					needs_flush = false;
+				}
+
+				/* in this case, we don't need to shadow the whole resource,
+				 * since any draw that references the previous contents has
+				 * already had rendering flushed for all tiles.  So we can
+				 * use a staging buffer to do the upload.
+				 */
+				staging_rsc = fd_alloc_staging(ctx, rsc, level, box);
+				if (staging_rsc) {
+					trans->staging_prsc = &staging_rsc->base;
+					trans->base.stride = util_format_get_nblocksx(format,
+						staging_rsc->slices[0].pitch) * staging_rsc->cpp;
+					trans->base.layer_stride = staging_rsc->layer_first ?
+						staging_rsc->layer_size : staging_rsc->slices[0].size0;
+					trans->staging_box = *box;
+					trans->staging_box.x = 0;
+					trans->staging_box.y = 0;
+					trans->staging_box.z = 0;
+					buf = fd_bo_map(staging_rsc->bo);
+					offset = 0;
+
+					*pptrans = ptrans;
+
+					fd_batch_reference(&write_batch, NULL);
+
+					return buf;
+				}
 			}
 		}
 
 		if (needs_flush) {
-			if (usage & PIPE_TRANSFER_WRITE) {
-				struct fd_batch *batch, *batches[32] = {0};
-				uint32_t batch_mask;
-
-				/* This is a bit awkward, probably a fd_batch_flush_locked()
-				 * would make things simpler.. but we need to hold the lock
-				 * to iterate the batches which reference this resource.  So
-				 * we must first grab references under a lock, then flush.
-				 */
-				mtx_lock(&ctx->screen->lock);
-				batch_mask = rsc->batch_mask;
-				foreach_batch(batch, &ctx->screen->batch_cache, batch_mask)
-					fd_batch_reference(&batches[batch->idx], batch);
-				mtx_unlock(&ctx->screen->lock);
-
-				foreach_batch(batch, &ctx->screen->batch_cache, batch_mask)
-					fd_batch_flush(batch, false, false);
-
-				foreach_batch(batch, &ctx->screen->batch_cache, batch_mask) {
-					fd_batch_sync(batch);
-					fd_batch_reference(&batches[batch->idx], NULL);
-				}
-				assert(rsc->batch_mask == 0);
-			} else {
-				fd_batch_flush(write_batch, true, false);
-			}
-			assert(!rsc->write_batch);
+			flush_resource(ctx, rsc, usage);
+			needs_flush = false;
 		}
 
 		fd_batch_reference(&write_batch, NULL);
@@ -453,13 +555,13 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 	}
 
 	buf = fd_bo_map(rsc->bo);
-	if (!buf)
-		goto fail;
-
 	offset = slice->offset +
 		box->y / util_format_get_blockheight(format) * ptrans->stride +
 		box->x / util_format_get_blockwidth(format) * rsc->cpp +
 		fd_resource_layer_offset(rsc, slice, box->z);
+
+	if (usage & PIPE_TRANSFER_WRITE)
+		rsc->valid = true;
 
 	*pptrans = ptrans;
 
@@ -919,17 +1021,6 @@ fd_blitter_pipe_end(struct fd_context *ctx)
 	if (ctx->batch)
 		fd_batch_set_stage(ctx->batch, FD_STAGE_NULL);
 	ctx->in_blit = false;
-}
-
-static void
-fd_flush_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
-{
-	struct fd_resource *rsc = fd_resource(prsc);
-
-	if (rsc->write_batch)
-		fd_batch_flush(rsc->write_batch, true, false);
-
-	assert(!rsc->write_batch);
 }
 
 static void
