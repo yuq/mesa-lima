@@ -16,10 +16,12 @@ AM_CPPFLAGS = \
 	$(DEFINES)
 
 if HAVE_STD_CXX11
+if HAVE_SHARED_GLAPI
 TESTS = st-renumerate-test
 check_PROGRAMS = st-renumerate-test
 
 noinst_LIBRARIES = libmesa-st-tests-common.a
+endif
 endif
 
 libmesa_st_tests_common_a_SOURCES = \
