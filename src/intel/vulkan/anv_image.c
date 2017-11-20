@@ -772,12 +772,6 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
    /* Stencil has no aux */
    assert(aspect != VK_IMAGE_ASPECT_STENCIL_BIT);
 
-   /* The following switch currently only handles depth stencil aspects.
-    * TODO: Handle the color aspect.
-    */
-   if (image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV)
-      return image->planes[plane].aux_usage;
-
    switch (layout) {
 
    /* Invalid Layouts */
@@ -797,28 +791,38 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
 
 
    /* Transfer Layouts
-    *
-    * This buffer could be a depth buffer used in a transfer operation. BLORP
-    * currently doesn't use HiZ for transfer operations so we must use the main
-    * buffer for this layout. TODO: Enable HiZ in BLORP.
     */
    case VK_IMAGE_LAYOUT_GENERAL:
    case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
    case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-      return ISL_AUX_USAGE_NONE;
+      if (aspect == VK_IMAGE_ASPECT_DEPTH_BIT) {
+         /* This buffer could be a depth buffer used in a transfer operation.
+          * BLORP currently doesn't use HiZ for transfer operations so we must
+          * use the main buffer for this layout. TODO: Enable HiZ in BLORP.
+          */
+         assert(image->planes[plane].aux_usage == ISL_AUX_USAGE_HIZ);
+         return ISL_AUX_USAGE_NONE;
+      } else {
+         assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
+         return image->planes[plane].aux_usage;
+      }
 
 
    /* Sampling Layouts */
    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+   case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR:
       assert((image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) == 0);
       /* Fall-through */
    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-   case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR:
-      assert(aspect == VK_IMAGE_ASPECT_DEPTH_BIT);
-      if (anv_can_sample_with_hiz(devinfo, image))
-         return ISL_AUX_USAGE_HIZ;
-      else
-         return ISL_AUX_USAGE_NONE;
+      if (aspect == VK_IMAGE_ASPECT_DEPTH_BIT) {
+         if (anv_can_sample_with_hiz(devinfo, image))
+            return ISL_AUX_USAGE_HIZ;
+         else
+            return ISL_AUX_USAGE_NONE;
+      } else {
+         return image->planes[plane].aux_usage;
+      }
+
 
    case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
       assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
@@ -843,8 +847,14 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
 
    /* Rendering Layouts */
    case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-      assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
-      unreachable("Color images are not yet supported.");
+      assert(aspect & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
+      if (image->planes[plane].aux_usage == ISL_AUX_USAGE_NONE) {
+         assert(image->samples == 1);
+         return ISL_AUX_USAGE_CCS_D;
+      } else {
+         assert(image->planes[plane].aux_usage != ISL_AUX_USAGE_CCS_D);
+         return image->planes[plane].aux_usage;
+      }
 
    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
    case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR:
