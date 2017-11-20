@@ -124,7 +124,7 @@ get_vertex_shader_param(struct lima_screen *screen,
       return 16; /* attributes */
 
    case PIPE_SHADER_CAP_MAX_OUTPUTS:
-      return 16; /* varying */
+      return LIMA_MAX_VARYING_NUM; /* varying */
 
    case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
       return 4096; /* need investigate */
@@ -145,7 +145,7 @@ get_fragment_shader_param(struct lima_screen *screen,
 {
    switch (param) {
    case PIPE_SHADER_CAP_MAX_INPUTS:
-      return 16; /* varying */
+      return LIMA_MAX_VARYING_NUM - 1; /* varying, minus gl_Position */
 
    case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
       return 4096; /* need investigate */
