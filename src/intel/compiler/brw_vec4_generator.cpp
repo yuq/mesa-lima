@@ -2203,8 +2203,8 @@ generate_code(struct brw_codegen *p,
               100.0f * (before_size - after_size) / before_size);
 
       dump_assembly(p->store, disasm_info);
-      ralloc_free(disasm_info);
    }
+   ralloc_free(disasm_info);
    assert(validated);
 
    compiler->shader_debug_log(log_data,
