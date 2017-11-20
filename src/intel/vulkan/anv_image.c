@@ -861,6 +861,73 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
    unreachable("layout is not a VkImageLayout enumeration member.");
 }
 
+/**
+ * This function returns the level of unresolved fast-clear support of the
+ * given image in the given VkImageLayout.
+ *
+ * @param devinfo The device information of the Intel GPU.
+ * @param image The image that may contain a collection of buffers.
+ * @param aspect The aspect of the image to be accessed.
+ * @param layout The current layout of the image aspect(s).
+ */
+enum anv_fast_clear_type
+anv_layout_to_fast_clear_type(const struct gen_device_info * const devinfo,
+                              const struct anv_image * const image,
+                              const VkImageAspectFlagBits aspect,
+                              const VkImageLayout layout)
+{
+   /* The aspect must be exactly one of the image aspects. */
+   assert(_mesa_bitcount(aspect) == 1 && (aspect & image->aspects));
+
+   uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
+
+   /* If there is no auxiliary surface allocated, there are no fast-clears */
+   if (image->planes[plane].aux_surface.isl.size == 0)
+      return ANV_FAST_CLEAR_NONE;
+
+   /* All images that use an auxiliary surface are required to be tiled. */
+   assert(image->tiling == VK_IMAGE_TILING_OPTIMAL);
+
+   /* Stencil has no aux */
+   assert(aspect != VK_IMAGE_ASPECT_STENCIL_BIT);
+
+   if (aspect == VK_IMAGE_ASPECT_DEPTH_BIT) {
+      /* For depth images (with HiZ), the layout supports fast-clears if and
+       * only if it supports HiZ.  However, we only support fast-clears to the
+       * default depth value.
+       */
+      enum isl_aux_usage aux_usage =
+         anv_layout_to_aux_usage(devinfo, image, aspect, layout);
+      return aux_usage == ISL_AUX_USAGE_HIZ ?
+             ANV_FAST_CLEAR_DEFAULT_VALUE : ANV_FAST_CLEAR_NONE;
+   }
+
+   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
+
+   /* Multisample fast-clear is not yet supported. */
+   if (image->samples > 1)
+      return ANV_FAST_CLEAR_NONE;
+
+   switch (layout) {
+   case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+      return ANV_FAST_CLEAR_ANY;
+
+   case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+      return ANV_FAST_CLEAR_NONE;
+
+   default:
+      /* If the image has CCS_E enabled all the time then we can use
+       * fast-clear as long as the clear color is the default value of zero
+       * since this is the default value we program into every surface state
+       * used for texturing.
+       */
+      if (image->planes[plane].aux_usage == ISL_AUX_USAGE_CCS_E)
+         return ANV_FAST_CLEAR_DEFAULT_VALUE;
+      else
+         return ANV_FAST_CLEAR_NONE;
+   }
+}
+
 
 static struct anv_state
 alloc_surface_state(struct anv_device *device)

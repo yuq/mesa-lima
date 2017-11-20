@@ -2490,6 +2490,16 @@ struct anv_image {
    } planes[3];
 };
 
+/* The ordering of this enum is important */
+enum anv_fast_clear_type {
+   /** Image does not have/support any fast-clear blocks */
+   ANV_FAST_CLEAR_NONE = 0,
+   /** Image has/supports fast-clear but only to the default value */
+   ANV_FAST_CLEAR_DEFAULT_VALUE = 1,
+   /** Image has/supports fast-clear with an arbitrary fast-clear value */
+   ANV_FAST_CLEAR_ANY = 2,
+};
+
 /* Returns the number of auxiliary buffer levels attached to an image. */
 static inline uint8_t
 anv_image_aux_levels(const struct anv_image * const image,
@@ -2611,6 +2621,12 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
                         const struct anv_image *image,
                         const VkImageAspectFlagBits aspect,
                         const VkImageLayout layout);
+
+enum anv_fast_clear_type
+anv_layout_to_fast_clear_type(const struct gen_device_info * const devinfo,
+                              const struct anv_image * const image,
+                              const VkImageAspectFlagBits aspect,
+                              const VkImageLayout layout);
 
 /* This is defined as a macro so that it works for both
  * VkImageSubresourceRange and VkImageSubresourceLayers
