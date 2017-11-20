@@ -118,7 +118,7 @@ static void
 do_blit(struct fd_context *ctx, const struct pipe_blit_info *blit, bool fallback)
 {
 	/* TODO size threshold too?? */
-	if ((blit->src.resource->target != PIPE_BUFFER) && !fallback) {
+	if (!fallback) {
 		/* do blit on gpu: */
 		fd_blitter_pipe_begin(ctx, false, true, FD_STAGE_BLIT);
 		util_blitter_blit(ctx->blitter, blit);
@@ -134,7 +134,7 @@ do_blit(struct fd_context *ctx, const struct pipe_blit_info *blit, bool fallback
 
 static bool
 fd_try_shadow_resource(struct fd_context *ctx, struct fd_resource *rsc,
-		unsigned level, unsigned usage, const struct pipe_box *box)
+		unsigned level, const struct pipe_box *box)
 {
 	struct pipe_context *pctx = &ctx->base;
 	struct pipe_resource *prsc = &rsc->base.b;
@@ -151,19 +151,9 @@ fd_try_shadow_resource(struct fd_context *ctx, struct fd_resource *rsc,
 			PIPE_BIND_RENDER_TARGET))
 		fallback = true;
 
-	/* these cases should be handled elsewhere.. just for future
-	 * reference in case this gets split into a more generic(ish)
-	 * helper.
-	 */
-	debug_assert(!(usage & PIPE_TRANSFER_READ));
-	debug_assert(!(usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE));
-
-	/* if we do a gpu blit to clone the whole resource, we'll just
-	 * end up stalling on that.. so only allow if we can discard
-	 * current range (and blit, possibly cpu or gpu, the rest)
-	 */
-	if (!(usage & PIPE_TRANSFER_DISCARD_RANGE))
-		return false;
+	/* do shadowing back-blits on the cpu for buffers: */
+	if (prsc->target == PIPE_BUFFER)
+		fallback = true;
 
 	bool whole_level = util_texrange_covers_whole_level(prsc, level,
 		box->x, box->y, box->z, box->width, box->height, box->depth);
@@ -522,8 +512,9 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		 * ie. we only *don't* want to go down this path if the blit
 		 * will trigger a flush!
 		 */
-		if (ctx->screen->reorder && busy && !(usage & PIPE_TRANSFER_READ)) {
-			if (fd_try_shadow_resource(ctx, rsc, level, usage, box)) {
+		if (ctx->screen->reorder && busy && !(usage & PIPE_TRANSFER_READ) &&
+				(usage & PIPE_TRANSFER_DISCARD_RANGE)) {
+			if (fd_try_shadow_resource(ctx, rsc, level, box)) {
 				needs_flush = busy = false;
 				rebind_resource(ctx, prsc);
 			}
