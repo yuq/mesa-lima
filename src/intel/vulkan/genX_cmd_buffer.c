@@ -593,6 +593,7 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
                         VkImageLayout initial_layout,
                         VkImageLayout final_layout)
 {
+   const struct gen_device_info *devinfo = &cmd_buffer->device->info;
    /* Validate the inputs. */
    assert(cmd_buffer);
    assert(image && image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
@@ -734,16 +735,53 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
                                  final_layout);
       }
       return;
-   } else if (initial_layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-      /* Resolves are only necessary if the subresource may contain blocks
-       * fast-cleared to values unsupported in other layouts. This only occurs
-       * if the initial layout is COLOR_ATTACHMENT_OPTIMAL.
-       */
-      return;
-   } else if (image->samples > 1) {
-      /* MCS buffers don't need resolving. */
-      return;
    }
+
+   const enum isl_aux_usage initial_aux_usage =
+      anv_layout_to_aux_usage(devinfo, image, aspect, initial_layout);
+   const enum isl_aux_usage final_aux_usage =
+      anv_layout_to_aux_usage(devinfo, image, aspect, final_layout);
+
+   /* The current code assumes that there is no mixing of CCS_E and CCS_D.
+    * We can handle transitions between CCS_D/E to and from NONE.  What we
+    * don't yet handle is switching between CCS_E and CCS_D within a given
+    * image.  Doing so in a performant way requires more detailed aux state
+    * tracking such as what is done in i965.  For now, just assume that we
+    * only have one type of compression.
+    */
+   assert(initial_aux_usage == ISL_AUX_USAGE_NONE ||
+          final_aux_usage == ISL_AUX_USAGE_NONE ||
+          initial_aux_usage == final_aux_usage);
+
+   /* If initial aux usage is NONE, there is nothing to resolve */
+   if (initial_aux_usage == ISL_AUX_USAGE_NONE)
+      return;
+
+   enum isl_aux_op resolve_op = ISL_AUX_OP_NONE;
+
+   /* If the initial layout supports more fast clear than the final layout
+    * then we need at least a partial resolve.
+    */
+   const enum anv_fast_clear_type initial_fast_clear =
+      anv_layout_to_fast_clear_type(devinfo, image, aspect, initial_layout);
+   const enum anv_fast_clear_type final_fast_clear =
+      anv_layout_to_fast_clear_type(devinfo, image, aspect, final_layout);
+   if (final_fast_clear < initial_fast_clear)
+      resolve_op = ISL_AUX_OP_PARTIAL_RESOLVE;
+
+   if (initial_aux_usage == ISL_AUX_USAGE_CCS_E &&
+       final_aux_usage != ISL_AUX_USAGE_CCS_E)
+      resolve_op = ISL_AUX_OP_FULL_RESOLVE;
+
+   /* CCS_D only supports full resolves and BLORP will assert on us if we try
+    * to do a partial resolve on a CCS_D surface.
+    */
+   if (resolve_op == ISL_AUX_OP_PARTIAL_RESOLVE &&
+       initial_aux_usage == ISL_AUX_USAGE_CCS_D)
+      resolve_op = ISL_AUX_OP_FULL_RESOLVE;
+
+   if (resolve_op == ISL_AUX_OP_NONE)
+      return;
 
    /* Perform a resolve to synchronize data between the main and aux buffer.
     * Before we begin, we must satisfy the cache flushing requirement specified
@@ -775,10 +813,7 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
       genX(load_needs_resolve_predicate)(cmd_buffer, image, aspect, level);
 
       anv_image_ccs_op(cmd_buffer, image, aspect, level,
-                       base_layer, layer_count,
-                       image->planes[plane].aux_usage == ISL_AUX_USAGE_CCS_E ?
-                       ISL_AUX_OP_PARTIAL_RESOLVE : ISL_AUX_OP_FULL_RESOLVE,
-                       true);
+                       base_layer, layer_count, resolve_op, true);
 
       genX(set_image_needs_resolve)(cmd_buffer, image, aspect, level, false);
    }
