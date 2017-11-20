@@ -734,7 +734,7 @@ void anv_GetImageSubresourceLayout(
  *
  * @param devinfo The device information of the Intel GPU.
  * @param image The image that may contain a collection of buffers.
- * @param plane The plane of the image to be accessed.
+ * @param aspect The aspect of the image to be accessed.
  * @param layout The current layout of the image aspect(s).
  *
  * @return The primary buffer that should be used for the given layout.
