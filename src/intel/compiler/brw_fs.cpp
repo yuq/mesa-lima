@@ -191,14 +191,21 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
                             vec4_result, surf_index, vec4_offset);
    inst->size_written = 4 * vec4_result.component_size(inst->exec_size);
 
-   if (type_sz(dst.type) == 8) {
-      shuffle_32bit_load_result_to_64bit_data(
-         bld, retype(vec4_result, dst.type), vec4_result, 2);
+   fs_reg dw = offset(vec4_result, bld, (const_offset & 0xf) / 4);
+   switch (type_sz(dst.type)) {
+   case 2:
+      shuffle_32bit_load_result_to_16bit_data(bld, dst, dw, 1);
+      bld.MOV(dst, subscript(dw, dst.type, (const_offset / 2) & 1));
+      break;
+   case 4:
+      bld.MOV(dst, retype(dw, dst.type));
+      break;
+   case 8:
+      shuffle_32bit_load_result_to_64bit_data(bld, dst, dw, 1);
+      break;
+   default:
+      unreachable("Unsupported bit_size");
    }
-
-   vec4_result.type = dst.type;
-   bld.MOV(dst, offset(vec4_result, bld,
-                       (const_offset & 0xf) / type_sz(vec4_result.type)));
 }
 
 /**
