@@ -676,7 +676,7 @@ vc5_simulator_init_global(void)
         }
 
         sim_state.v3d = v3d_hw_auto_new(NULL);
-        v3d_hw_alloc_mem(sim_state.v3d, 256 * 1024 * 1024);
+        v3d_hw_alloc_mem(sim_state.v3d, 1024 * 1024 * 1024);
         sim_state.mem_base =
                 v3d_hw_get_mem(sim_state.v3d, &sim_state.mem_size,
                                &sim_state.mem);
