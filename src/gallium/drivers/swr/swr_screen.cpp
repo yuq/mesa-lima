@@ -50,7 +50,7 @@
  * Max texture sizes
  * XXX Check max texture size values against core and sampler.
  */
-#define SWR_MAX_TEXTURE_SIZE (4 * 1024 * 1024 * 1024ULL) /* 4GB */
+#define SWR_MAX_TEXTURE_SIZE (2 * 1024 * 1024 * 1024ULL) /* 2GB */
 #define SWR_MAX_TEXTURE_2D_LEVELS 14  /* 8K x 8K for now */
 #define SWR_MAX_TEXTURE_3D_LEVELS 12  /* 2K x 2K x 2K for now */
 #define SWR_MAX_TEXTURE_CUBE_LEVELS 14  /* 8K x 8K for now */
@@ -821,13 +821,15 @@ swr_texture_layout(struct swr_screen *screen,
          ComputeSurfaceOffset<false>(0, 0, 0, 0, 0, level, &res->swr);
    }
 
-   size_t total_size = res->swr.depth * res->swr.qpitch * res->swr.pitch *
-                       res->swr.numSamples;
+   size_t total_size = (uint64_t)res->swr.depth * res->swr.qpitch *
+                                 res->swr.pitch * res->swr.numSamples;
    if (total_size > SWR_MAX_TEXTURE_SIZE)
       return false;
 
    if (allocate) {
       res->swr.xpBaseAddress = (gfxptr_t)AlignedMalloc(total_size, 64);
+      if (!res->swr.xpBaseAddress)
+         return false;
 
       if (res->has_depth && res->has_stencil) {
          res->secondary = res->swr;
@@ -843,6 +845,10 @@ swr_texture_layout(struct swr_screen *screen,
                       res->secondary.pitch * res->secondary.numSamples;
 
          res->secondary.xpBaseAddress = (gfxptr_t) AlignedMalloc(total_size, 64);
+         if (!res->secondary.xpBaseAddress) {
+            AlignedFree((void *)res->swr.xpBaseAddress);
+            return false;
+         }
       }
    }
 
