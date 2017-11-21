@@ -3431,97 +3431,6 @@ cmd_buffer_subpass_transition_layouts(struct anv_cmd_buffer * const cmd_buffer,
    }
 }
 
-/* Update the clear value dword(s) in surface state objects or the fast clear
- * state buffer entry for the color attachments used in this subpass.
- */
-static void
-cmd_buffer_subpass_sync_fast_clear_values(struct anv_cmd_buffer *cmd_buffer)
-{
-   assert(cmd_buffer && cmd_buffer->state.subpass);
-
-   const struct anv_cmd_state *state = &cmd_buffer->state;
-
-   /* Iterate through every color attachment used in this subpass. */
-   for (uint32_t i = 0; i < state->subpass->color_count; ++i) {
-
-      /* The attachment should be one of the attachments described in the
-       * render pass and used in the subpass.
-       */
-      const uint32_t a = state->subpass->color_attachments[i].attachment;
-      if (a == VK_ATTACHMENT_UNUSED)
-         continue;
-
-      assert(a < state->pass->attachment_count);
-
-      /* Store some information regarding this attachment. */
-      const struct anv_attachment_state *att_state = &state->attachments[a];
-      const struct anv_image_view *iview = state->framebuffer->attachments[a];
-      const struct anv_render_pass_attachment *rp_att =
-         &state->pass->attachments[a];
-
-      if (att_state->aux_usage == ISL_AUX_USAGE_NONE)
-         continue;
-
-      /* The fast clear state entry must be updated if a fast clear is going to
-       * happen. The surface state must be updated if the clear value from a
-       * prior fast clear may be needed.
-       */
-      if (att_state->pending_clear_aspects && att_state->fast_clear) {
-         /* Update the fast clear state entry. */
-         genX(copy_fast_clear_dwords)(cmd_buffer, att_state->color.state,
-                                      iview->image,
-                                      VK_IMAGE_ASPECT_COLOR_BIT,
-                                      true /* copy from ss */);
-
-         /* Fast-clears impact whether or not a resolve will be necessary. */
-         if (att_state->clear_color_is_zero) {
-            /* This image has the auxiliary buffer enabled. We can mark the
-             * subresource as not needing a resolve because the clear color
-             * will match what's in every RENDER_SURFACE_STATE object when
-             * it's being used for sampling.
-             */
-            set_image_fast_clear_state(cmd_buffer, iview->image,
-                                       VK_IMAGE_ASPECT_COLOR_BIT,
-                                       ANV_FAST_CLEAR_DEFAULT_VALUE);
-         } else {
-            set_image_fast_clear_state(cmd_buffer, iview->image,
-                                       VK_IMAGE_ASPECT_COLOR_BIT,
-                                       ANV_FAST_CLEAR_ANY);
-         }
-      } else if (rp_att->load_op == VK_ATTACHMENT_LOAD_OP_LOAD &&
-                 iview->planes[0].isl.base_level == 0 &&
-                 iview->planes[0].isl.base_array_layer == 0) {
-         /* The attachment may have been fast-cleared in a previous render
-          * pass and the value is needed now. Update the surface state(s).
-          *
-          * TODO: Do this only once per render pass instead of every subpass.
-          */
-         genX(copy_fast_clear_dwords)(cmd_buffer, att_state->color.state,
-                                      iview->image,
-                                      VK_IMAGE_ASPECT_COLOR_BIT,
-                                      false /* copy to ss */);
-
-         if (need_input_attachment_state(rp_att) &&
-             att_state->input_aux_usage != ISL_AUX_USAGE_NONE) {
-            genX(copy_fast_clear_dwords)(cmd_buffer, att_state->input.state,
-                                         iview->image,
-                                         VK_IMAGE_ASPECT_COLOR_BIT,
-                                         false /* copy to ss */);
-         }
-      }
-
-      /* We assume that if we're starting a subpass, we're going to do some
-       * rendering so we may end up with compressed data.
-       */
-      genX(cmd_buffer_mark_image_written)(cmd_buffer, iview->image,
-                                          VK_IMAGE_ASPECT_COLOR_BIT,
-                                          att_state->aux_usage,
-                                          iview->planes[0].isl.base_level,
-                                          iview->planes[0].isl.base_array_layer,
-                                          state->framebuffer->layers);
-   }
-}
-
 static void
 cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                          uint32_t subpass_id)
@@ -3562,15 +3471,6 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
     */
    cmd_buffer_subpass_transition_layouts(cmd_buffer, false);
 
-   /* Update clear values *after* performing automatic layout transitions.
-    * This ensures that transitions from the UNDEFINED layout have had a chance
-    * to populate the clear value buffer with the correct values for the
-    * LOAD_OP_LOAD loadOp and that the fast-clears will update the buffer
-    * without the aforementioned layout transition overwriting the fast-clear
-    * value.
-    */
-   cmd_buffer_subpass_sync_fast_clear_values(cmd_buffer);
-
    VkRect2D render_area = cmd_buffer->state.render_area;
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
 
@@ -3604,6 +3504,25 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                              0, 0, 1, ISL_AUX_OP_FAST_CLEAR, false);
             base_clear_layer++;
             clear_layer_count--;
+
+            genX(copy_fast_clear_dwords)(cmd_buffer, att_state->color.state,
+                                         image, VK_IMAGE_ASPECT_COLOR_BIT,
+                                         true /* copy from ss */);
+
+            if (att_state->clear_color_is_zero) {
+               /* This image has the auxiliary buffer enabled. We can mark the
+                * subresource as not needing a resolve because the clear color
+                * will match what's in every RENDER_SURFACE_STATE object when
+                * it's being used for sampling.
+                */
+               set_image_fast_clear_state(cmd_buffer, iview->image,
+                                          VK_IMAGE_ASPECT_COLOR_BIT,
+                                          ANV_FAST_CLEAR_DEFAULT_VALUE);
+            } else {
+               set_image_fast_clear_state(cmd_buffer, iview->image,
+                                          VK_IMAGE_ASPECT_COLOR_BIT,
+                                          ANV_FAST_CLEAR_ANY);
+            }
          }
 
          if (clear_layer_count > 0) {
@@ -3645,7 +3564,36 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
          assert(att_state->pending_clear_aspects == 0);
       }
 
+      if (att_state->pending_load_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
+         if (att_state->aux_usage != ISL_AUX_USAGE_NONE) {
+            genX(copy_fast_clear_dwords)(cmd_buffer, att_state->color.state,
+                                         image, VK_IMAGE_ASPECT_COLOR_BIT,
+                                         false /* copy to ss */);
+         }
+
+         if (need_input_attachment_state(&cmd_state->pass->attachments[a]) &&
+             att_state->input_aux_usage != ISL_AUX_USAGE_NONE) {
+            genX(copy_fast_clear_dwords)(cmd_buffer, att_state->input.state,
+                                         image, VK_IMAGE_ASPECT_COLOR_BIT,
+                                         false /* copy to ss */);
+         }
+      }
+
+      if (subpass->attachments[i].usage ==
+          VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+         /* We assume that if we're starting a subpass, we're going to do some
+          * rendering so we may end up with compressed data.
+          */
+         genX(cmd_buffer_mark_image_written)(cmd_buffer, iview->image,
+                                             VK_IMAGE_ASPECT_COLOR_BIT,
+                                             att_state->aux_usage,
+                                             iview->planes[0].isl.base_level,
+                                             iview->planes[0].isl.base_array_layer,
+                                             fb->layers);
+      }
+
       att_state->pending_clear_aspects = 0;
+      att_state->pending_load_aspects = 0;
    }
 
    cmd_buffer_emit_depth_stencil(cmd_buffer);
