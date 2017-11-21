@@ -3286,130 +3286,6 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->state.hiz_enabled = info.hiz_usage == ISL_AUX_USAGE_HIZ;
 }
 
-
-/**
- * @brief Perform any layout transitions required at the beginning and/or end
- *        of the current subpass for depth buffers.
- *
- * TODO: Consider preprocessing the attachment reference array at render pass
- *       create time to determine if no layout transition is needed at the
- *       beginning and/or end of each subpass.
- *
- * @param cmd_buffer The command buffer the transition is happening within.
- * @param subpass_end If true, marks that the transition is happening at the
- *                    end of the subpass.
- */
-static void
-cmd_buffer_subpass_transition_layouts(struct anv_cmd_buffer * const cmd_buffer,
-                                      const bool subpass_end)
-{
-   /* We need a non-NULL command buffer. */
-   assert(cmd_buffer);
-
-   const struct anv_cmd_state * const cmd_state = &cmd_buffer->state;
-   const struct anv_subpass * const subpass = cmd_state->subpass;
-
-   /* This function must be called within a subpass. */
-   assert(subpass);
-
-   /* If there are attachment references, the array shouldn't be NULL.
-    */
-   if (subpass->attachment_count > 0)
-      assert(subpass->attachments);
-
-   /* Iterate over the array of attachment references. */
-   for (const struct anv_subpass_attachment *att_ref = subpass->attachments;
-        att_ref < subpass->attachments + subpass->attachment_count; att_ref++) {
-
-      /* If the attachment is unused, we can't perform a layout transition. */
-      if (att_ref->attachment == VK_ATTACHMENT_UNUSED)
-         continue;
-
-      /* This attachment index shouldn't go out of bounds. */
-      assert(att_ref->attachment < cmd_state->pass->attachment_count);
-
-      const struct anv_render_pass_attachment * const att_desc =
-         &cmd_state->pass->attachments[att_ref->attachment];
-      struct anv_attachment_state * const att_state =
-         &cmd_buffer->state.attachments[att_ref->attachment];
-
-      /* The attachment should not be used in a subpass after its last. */
-      assert(att_desc->last_subpass_idx >= anv_get_subpass_id(cmd_state));
-
-      if (subpass_end && anv_get_subpass_id(cmd_state) <
-          att_desc->last_subpass_idx) {
-         /* We're calling this function on a buffer twice in one subpass and
-          * this is not the last use of the buffer. The layout should not have
-          * changed from the first call and no transition is necessary.
-          */
-         assert(att_state->current_layout == att_ref->layout ||
-                att_state->current_layout ==
-                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-         continue;
-      }
-
-      /* The attachment index must be less than the number of attachments
-       * within the framebuffer.
-       */
-      assert(att_ref->attachment < cmd_state->framebuffer->attachment_count);
-
-      const struct anv_image_view * const iview =
-         cmd_state->framebuffer->attachments[att_ref->attachment];
-      const struct anv_image * const image = iview->image;
-
-      /* Get the appropriate target layout for this attachment. */
-      VkImageLayout target_layout;
-
-      /* A resolve is necessary before use as an input attachment if the clear
-       * color or auxiliary buffer usage isn't supported by the sampler.
-       */
-      const bool input_needs_resolve =
-            (att_state->fast_clear && !att_state->clear_color_is_zero_one) ||
-            att_state->input_aux_usage != att_state->aux_usage;
-      if (subpass_end) {
-         target_layout = att_desc->final_layout;
-      } else if (iview->aspect_mask & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV &&
-                 !input_needs_resolve) {
-         /* Layout transitions before the final only help to enable sampling as
-          * an input attachment. If the input attachment supports sampling
-          * using the auxiliary surface, we can skip such transitions by making
-          * the target layout one that is CCS-aware.
-          */
-         target_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-      } else {
-         target_layout = att_ref->layout;
-      }
-
-      /* Perform the layout transition. */
-      if (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
-         transition_depth_buffer(cmd_buffer, image,
-                                 att_state->current_layout, target_layout);
-         att_state->aux_usage =
-            anv_layout_to_aux_usage(&cmd_buffer->device->info, image,
-                                    VK_IMAGE_ASPECT_DEPTH_BIT, target_layout);
-      } else if (image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
-         assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
-
-         uint32_t base_layer, layer_count;
-         if (image->type == VK_IMAGE_TYPE_3D) {
-            base_layer = 0;
-            layer_count = anv_minify(iview->image->extent.depth,
-                                     iview->planes[0].isl.base_level);
-         } else {
-            base_layer = iview->planes[0].isl.base_array_layer;
-            layer_count = cmd_state->framebuffer->layers;
-         }
-
-         transition_color_buffer(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
-                                 iview->planes[0].isl.base_level, 1,
-                                 base_layer, layer_count,
-                                 att_state->current_layout, target_layout);
-      }
-
-      att_state->current_layout = target_layout;
-   }
-}
-
 static void
 cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                          uint32_t subpass_id)
@@ -3445,11 +3321,6 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
    cmd_buffer->state.pending_pipe_bits |=
       cmd_buffer->state.pass->subpass_flushes[subpass_id];
 
-   /* Perform transitions to the subpass layout before any writes have
-    * occurred.
-    */
-   cmd_buffer_subpass_transition_layouts(cmd_buffer, false);
-
    VkRect2D render_area = cmd_buffer->state.render_area;
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
 
@@ -3463,6 +3334,52 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
 
       struct anv_image_view *iview = fb->attachments[a];
       const struct anv_image *image = iview->image;
+
+      /* A resolve is necessary before use as an input attachment if the clear
+       * color or auxiliary buffer usage isn't supported by the sampler.
+       */
+      const bool input_needs_resolve =
+            (att_state->fast_clear && !att_state->clear_color_is_zero_one) ||
+            att_state->input_aux_usage != att_state->aux_usage;
+
+      VkImageLayout target_layout;
+      if (iview->aspect_mask & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV &&
+          !input_needs_resolve) {
+         /* Layout transitions before the final only help to enable sampling
+          * as an input attachment. If the input attachment supports sampling
+          * using the auxiliary surface, we can skip such transitions by
+          * making the target layout one that is CCS-aware.
+          */
+         target_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+      } else {
+         target_layout = subpass->attachments[i].layout;
+      }
+
+      if (image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
+         assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+
+         uint32_t base_layer, layer_count;
+         if (image->type == VK_IMAGE_TYPE_3D) {
+            base_layer = 0;
+            layer_count = anv_minify(iview->image->extent.depth,
+                                     iview->planes[0].isl.base_level);
+         } else {
+            base_layer = iview->planes[0].isl.base_array_layer;
+            layer_count = fb->layers;
+         }
+
+         transition_color_buffer(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
+                                 iview->planes[0].isl.base_level, 1,
+                                 base_layer, layer_count,
+                                 att_state->current_layout, target_layout);
+      } else if (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
+         transition_depth_buffer(cmd_buffer, image,
+                                 att_state->current_layout, target_layout);
+         att_state->aux_usage =
+            anv_layout_to_aux_usage(&cmd_buffer->device->info, image,
+                                    VK_IMAGE_ASPECT_DEPTH_BIT, target_layout);
+      }
+      att_state->current_layout = target_layout;
 
       if (att_state->pending_clear_aspects & VK_IMAGE_ASPECT_COLOR_BIT) {
          assert(att_state->pending_clear_aspects == VK_IMAGE_ASPECT_COLOR_BIT);
@@ -3610,13 +3527,52 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
 static void
 cmd_buffer_end_subpass(struct anv_cmd_buffer *cmd_buffer)
 {
+   struct anv_cmd_state *cmd_state = &cmd_buffer->state;
+   struct anv_subpass *subpass = cmd_state->subpass;
    uint32_t subpass_id = anv_get_subpass_id(&cmd_buffer->state);
 
    anv_cmd_buffer_resolve_subpass(cmd_buffer);
 
-   /* Perform transitions to the final layout after all writes have occurred.
-    */
-   cmd_buffer_subpass_transition_layouts(cmd_buffer, true);
+   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
+   for (uint32_t i = 0; i < subpass->attachment_count; ++i) {
+      const uint32_t a = subpass->attachments[i].attachment;
+      if (a == VK_ATTACHMENT_UNUSED)
+         continue;
+
+      if (cmd_state->pass->attachments[a].last_subpass_idx != subpass_id)
+         continue;
+
+      assert(a < cmd_state->pass->attachment_count);
+      struct anv_attachment_state *att_state = &cmd_state->attachments[a];
+      struct anv_image_view *iview = fb->attachments[a];
+      const struct anv_image *image = iview->image;
+
+      /* Transition the image into the final layout for this render pass */
+      VkImageLayout target_layout =
+         cmd_state->pass->attachments[a].final_layout;
+
+      if (image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
+         assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+
+         uint32_t base_layer, layer_count;
+         if (image->type == VK_IMAGE_TYPE_3D) {
+            base_layer = 0;
+            layer_count = anv_minify(iview->image->extent.depth,
+                                     iview->planes[0].isl.base_level);
+         } else {
+            base_layer = iview->planes[0].isl.base_array_layer;
+            layer_count = fb->layers;
+         }
+
+         transition_color_buffer(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
+                                 iview->planes[0].isl.base_level, 1,
+                                 base_layer, layer_count,
+                                 att_state->current_layout, target_layout);
+      } else if (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
+         transition_depth_buffer(cmd_buffer, image,
+                                 att_state->current_layout, target_layout);
+      }
+   }
 
    /* Accumulate any subpass flushes that need to happen after the subpass.
     * Yes, they do get accumulated twice in the NextSubpass case but since
