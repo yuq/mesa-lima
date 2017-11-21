@@ -3448,13 +3448,11 @@ cmd_buffer_subpass_sync_fast_clear_values(struct anv_cmd_buffer *cmd_buffer)
    }
 }
 
-
 static void
 cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
-                         struct anv_subpass *subpass)
+                         uint32_t subpass_id)
 {
-   cmd_buffer->state.subpass = subpass;
-   uint32_t subpass_id = anv_get_subpass_id(&cmd_buffer->state);
+   cmd_buffer->state.subpass = &cmd_buffer->state.pass->subpasses[subpass_id];
 
    cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_RENDER_TARGETS;
 
@@ -3545,7 +3543,7 @@ void genX(CmdBeginRenderPass)(
 
    genX(flush_pipeline_select_3d)(cmd_buffer);
 
-   cmd_buffer_begin_subpass(cmd_buffer, pass->subpasses);
+   cmd_buffer_begin_subpass(cmd_buffer, 0);
 }
 
 void genX(CmdNextSubpass)(
@@ -3559,9 +3557,9 @@ void genX(CmdNextSubpass)(
 
    assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
+   uint32_t prev_subpass = anv_get_subpass_id(&cmd_buffer->state);
    cmd_buffer_end_subpass(cmd_buffer);
-
-   cmd_buffer_begin_subpass(cmd_buffer, cmd_buffer->state.subpass + 1);
+   cmd_buffer_begin_subpass(cmd_buffer, prev_subpass + 1);
 }
 
 void genX(CmdEndRenderPass)(
