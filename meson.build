@@ -718,7 +718,7 @@ if with_gallium_freedreno
 endif
 
 llvm_modules = ['bitwriter', 'engine', 'mcdisassembler', 'mcjit']
-if with_amd_vk
+if with_amd_vk or with_gallium_radeonsi
   llvm_modules += ['amdgpu', 'bitreader', 'ipo']
 endif
 
@@ -726,7 +726,7 @@ _llvm = get_option('llvm')
 if _llvm == 'auto'
   dep_llvm = dependency(
     'llvm', version : '>= 3.9.0', modules : llvm_modules,
-    required : with_amd_vk,
+    required : with_amd_vk or with_gallium_radeonsi,
   )
   with_llvm = dep_llvm.found()
 elif _llvm == 'true'
