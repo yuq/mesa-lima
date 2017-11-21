@@ -1129,18 +1129,12 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
 #if USE_SIMD16_GATHERS
                     Value* vGatherResult[2];
                     Value* vGatherResult2[2];
-                    Value *vMask;
-                    Value *vMask2;
 
                     // if we have at least one component out of x or y to fetch
                     if (isComponentEnabled(compMask, 0) || isComponentEnabled(compMask, 1))
                     {
-                        // save mask as it is zero'd out after each gather
-                        vMask = vGatherMask;
-                        vMask2 = vGatherMask2;
-
-                        vGatherResult[0] = GATHERPS(gatherSrc, pStreamBase, vOffsets, vMask);
-                        vGatherResult2[0] = GATHERPS(gatherSrc2, pStreamBase, vOffsets2, vMask2);
+                        vGatherResult[0] = GATHERPS(gatherSrc, pStreamBase, vOffsets, vGatherMask);
+                        vGatherResult2[0] = GATHERPS(gatherSrc2, pStreamBase, vOffsets2, vGatherMask2);
                         // e.g. result of first 8x32bit integer gather for 16bit components
                         // 256i - 0    1    2    3    4    5    6    7
                         //        xyxy xyxy xyxy xyxy xyxy xyxy xyxy xyxy
@@ -1152,11 +1146,9 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                     {
                         // offset base to the next components(zw) in the vertex to gather
                         pStreamBase = GEP(pStreamBase, C((char)4));
-                        vMask = vGatherMask;
-                        vMask2 = vGatherMask2;
 
-                        vGatherResult[1] = GATHERPS(gatherSrc, pStreamBase, vOffsets, vMask);
-                        vGatherResult2[1] = GATHERPS(gatherSrc2, pStreamBase, vOffsets2, vMask2);
+                        vGatherResult[1] = GATHERPS(gatherSrc, pStreamBase, vOffsets, vGatherMask);
+                        vGatherResult2[1] = GATHERPS(gatherSrc2, pStreamBase, vOffsets2, vGatherMask2);
                         // e.g. result of second 8x32bit integer gather for 16bit components
                         // 256i - 0    1    2    3    4    5    6    7
                         //        zwzw zwzw zwzw zwzw zwzw zwzw zwzw zwzw 
@@ -1178,14 +1170,10 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                     }
 #else
                     Value* vGatherResult[2];
-                    Value *vMask;
 
                     // if we have at least one component out of x or y to fetch
                     if(isComponentEnabled(compMask, 0) || isComponentEnabled(compMask, 1)){
-                        // save mask as it is zero'd out after each gather
-                        vMask = vGatherMask;
-
-                        vGatherResult[0] = GATHERPS(gatherSrc, pStreamBase, vOffsets, vMask);
+                        vGatherResult[0] = GATHERPS(gatherSrc, pStreamBase, vOffsets, vGatherMask);
                         // e.g. result of first 8x32bit integer gather for 16bit components
                         // 256i - 0    1    2    3    4    5    6    7
                         //        xyxy xyxy xyxy xyxy xyxy xyxy xyxy xyxy
@@ -1196,9 +1184,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                     if(isComponentEnabled(compMask, 2) || isComponentEnabled(compMask, 3)){
                         // offset base to the next components(zw) in the vertex to gather
                         pStreamBase = GEP(pStreamBase, C((char)4));
-                        vMask = vGatherMask;
 
-                        vGatherResult[1] = GATHERPS(gatherSrc, pStreamBase, vOffsets, vMask);
+                        vGatherResult[1] = GATHERPS(gatherSrc, pStreamBase, vOffsets, vGatherMask);
                         // e.g. result of second 8x32bit integer gather for 16bit components
                         // 256i - 0    1    2    3    4    5    6    7
                         //        zwzw zwzw zwzw zwzw zwzw zwzw zwzw zwzw 
@@ -1236,10 +1223,6 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                             // if we need to gather the component
                             if (compCtrl[i] == StoreSrc)
                             {
-                                // save mask as it is zero'd out after each gather
-                                Value *vMask  = vGatherMask;
-                                Value *vMask2 = vGatherMask2;
-
                                 // Gather a SIMD of vertices
                                 // APIs allow a 4GB range for offsets
                                 // However, GATHERPS uses signed 32-bit offsets, so only a 2GB range :(
@@ -1257,8 +1240,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 indices = INSERT2_I(indices, vShiftedOffsets2, 1);
 
                                 Value *mask = VUNDEF2_I();
-                                mask = INSERT2_I(mask, vMask,  0);
-                                mask = INSERT2_I(mask, vMask2, 1);
+                                mask = INSERT2_I(mask, vGatherMask,  0);
+                                mask = INSERT2_I(mask, vGatherMask2, 1);
 
                                 pVtxSrc2[currentVertexElement] = GATHERPS2(src, pStreamBase, indices, mask, 2);
 #if 1
@@ -1267,8 +1250,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 vVertexElements2[currentVertexElement] = EXTRACT2_F(pVtxSrc2[currentVertexElement], 1);
 #endif
 #else
-                                vVertexElements[currentVertexElement]  = GATHERPS(gatherSrc, pStreamBase, vShiftedOffsets, vMask, 2);
-                                vVertexElements2[currentVertexElement] = GATHERPS(gatherSrc2, pStreamBase, vShiftedOffsets2, vMask2, 2);
+                                vVertexElements[currentVertexElement]  = GATHERPS(gatherSrc, pStreamBase, vShiftedOffsets, vGatherMask, 2);
+                                vVertexElements2[currentVertexElement] = GATHERPS(gatherSrc2, pStreamBase, vShiftedOffsets2, vGatherMask2, 2);
 
 #if USE_SIMD16_BUILDER
                                 // pack adjacent pairs of SIMD8s into SIMD16s
@@ -1327,16 +1310,13 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                             // if we need to gather the component
                             if (compCtrl[i] == StoreSrc)
                             {
-                                // save mask as it is zero'd out after each gather
-                                Value *vMask = vGatherMask;
-
                                 // Gather a SIMD of vertices
                                 // APIs allow a 4GB range for offsets
                                 // However, GATHERPS uses signed 32-bit offsets, so only a 2GB range :(
                                 // But, we know that elements must be aligned for FETCH. :)
                                 // Right shift the offset by a bit and then scale by 2 to remove the sign extension.
                                 Value* vShiftedOffsets = VPSRLI(vOffsets, C(1));
-                                vVertexElements[currentVertexElement++] = GATHERPS(gatherSrc, pStreamBase, vShiftedOffsets, vMask, 2);
+                                vVertexElements[currentVertexElement++] = GATHERPS(gatherSrc, pStreamBase, vShiftedOffsets, vGatherMask, 2);
                             }
                             else
                             {
@@ -1577,19 +1557,13 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                 {
 #if USE_SIMD16_GATHERS
                     Value* vGatherResult[2];
-                    Value *vMask;
                     Value* vGatherResult2[2];
-                    Value *vMask2;
 
                     // if we have at least one component out of x or y to fetch
                     if (isComponentEnabled(compMask, 0) || isComponentEnabled(compMask, 1))
                     {
-                        // save mask as it is zero'd out after each gather
-                        vMask = vGatherMask;
-                        vMask2 = vGatherMask2;
-
-                        vGatherResult[0] = GATHERDD(gatherSrc, pStreamBase, vOffsets, vMask);
-                        vGatherResult2[0] = GATHERDD(gatherSrc2, pStreamBase, vOffsets2, vMask2);
+                        vGatherResult[0] = GATHERDD(gatherSrc, pStreamBase, vOffsets, vGatherMask);
+                        vGatherResult2[0] = GATHERDD(gatherSrc2, pStreamBase, vOffsets2, vGatherMask2);
                         // e.g. result of first 8x32bit integer gather for 16bit components
                         // 256i - 0    1    2    3    4    5    6    7
                         //        xyxy xyxy xyxy xyxy xyxy xyxy xyxy xyxy
@@ -1601,11 +1575,9 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                     {
                         // offset base to the next components(zw) in the vertex to gather
                         pStreamBase = GEP(pStreamBase, C((char)4));
-                        vMask = vGatherMask;
-                        vMask2 = vGatherMask2;
 
-                        vGatherResult[1] = GATHERDD(gatherSrc, pStreamBase, vOffsets, vMask);
-                        vGatherResult2[1] = GATHERDD(gatherSrc2, pStreamBase, vOffsets2, vMask2);
+                        vGatherResult[1] = GATHERDD(gatherSrc, pStreamBase, vOffsets, vGatherMask);
+                        vGatherResult2[1] = GATHERDD(gatherSrc2, pStreamBase, vOffsets2, vGatherMask2);
                         // e.g. result of second 8x32bit integer gather for 16bit components
                         // 256i - 0    1    2    3    4    5    6    7
                         //        zwzw zwzw zwzw zwzw zwzw zwzw zwzw zwzw 
@@ -1626,14 +1598,10 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                     }
 #else
                     Value* vGatherResult[2];
-                    Value *vMask;
 
                     // if we have at least one component out of x or y to fetch
                     if(isComponentEnabled(compMask, 0) || isComponentEnabled(compMask, 1)){
-                        // save mask as it is zero'd out after each gather
-                        vMask = vGatherMask;
-
-                        vGatherResult[0] = GATHERDD(gatherSrc, pStreamBase, vOffsets, vMask);
+                        vGatherResult[0] = GATHERDD(gatherSrc, pStreamBase, vOffsets, vGatherMask);
                         // e.g. result of first 8x32bit integer gather for 16bit components
                         // 256i - 0    1    2    3    4    5    6    7
                         //        xyxy xyxy xyxy xyxy xyxy xyxy xyxy xyxy
@@ -1644,9 +1612,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                     if(isComponentEnabled(compMask, 2) || isComponentEnabled(compMask, 3)){
                         // offset base to the next components(zw) in the vertex to gather
                         pStreamBase = GEP(pStreamBase, C((char)4));
-                        vMask = vGatherMask;
 
-                        vGatherResult[1] = GATHERDD(gatherSrc, pStreamBase, vOffsets, vMask);
+                        vGatherResult[1] = GATHERDD(gatherSrc, pStreamBase, vOffsets, vGatherMask);
                         // e.g. result of second 8x32bit integer gather for 16bit components
                         // 256i - 0    1    2    3    4    5    6    7
                         //        zwzw zwzw zwzw zwzw zwzw zwzw zwzw zwzw 
@@ -1679,12 +1646,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                             if (compCtrl[i] == StoreSrc)
                             {
 #if USE_SIMD16_GATHERS
-                                // save mask as it is zero'd out after each gather
-                                Value *vMask = vGatherMask;
-                                Value *vMask2 = vGatherMask2;
-
-                                Value *pGather = GATHERDD(gatherSrc, pStreamBase, vOffsets, vMask);
-                                Value *pGather2 = GATHERDD(gatherSrc2, pStreamBase, vOffsets2, vMask2);
+                                Value *pGather = GATHERDD(gatherSrc, pStreamBase, vOffsets, vGatherMask);
+                                Value *pGather2 = GATHERDD(gatherSrc2, pStreamBase, vOffsets2, vGatherMask2);
 
                                 if (conversionType == CONVERT_USCALED)
                                 {
@@ -1710,10 +1673,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
 
                                 currentVertexElement += 1;
 #else
-                                // save mask as it is zero'd out after each gather
-                                Value *vMask = vGatherMask;
-
-                                Value* pGather = GATHERDD(gatherSrc, pStreamBase, vOffsets, vMask);
+                                Value* pGather = GATHERDD(gatherSrc, pStreamBase, vOffsets, vGatherMask);
 
                                 if (conversionType == CONVERT_USCALED)
                                 {

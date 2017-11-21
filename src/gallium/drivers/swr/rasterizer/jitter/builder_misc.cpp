@@ -1107,22 +1107,18 @@ namespace SwrJit
     }
 
     void Builder::GATHER4PS(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets, 
-                            Value* mask, Value* vGatherComponents[], bool bPackedOutput)
+                            Value* vMask, Value* vGatherComponents[], bool bPackedOutput)
     {
         switch(info.bpp / info.numComps)
         {
             case 16: 
             {
                     Value* vGatherResult[2];
-                    Value *vMask;
 
                     // TODO: vGatherMaskedVal
                     Value* vGatherMaskedVal = VIMMED1((float)0);
 
                     // always have at least one component out of x or y to fetch
-
-                    // save mask as it is zero'd out after each gather
-                    vMask = mask;
 
                     vGatherResult[0] = GATHERPS(vGatherMaskedVal, pSrcBase, byteOffsets, vMask);
                     // e.g. result of first 8x32bit integer gather for 16bit components
@@ -1135,7 +1131,6 @@ namespace SwrJit
                     {
                         // offset base to the next components(zw) in the vertex to gather
                         pSrcBase = GEP(pSrcBase, C((char)4));
-                        vMask = mask;
 
                         vGatherResult[1] =  GATHERPS(vGatherMaskedVal, pSrcBase, byteOffsets, vMask);
                         // e.g. result of second 8x32bit integer gather for 16bit components
@@ -1164,9 +1159,6 @@ namespace SwrJit
                 {
                     uint32_t swizzleIndex = info.swizzle[i];
 
-                    // save mask as it is zero'd out after each gather
-                    Value *vMask = mask;
-
                     // Gather a SIMD of components
                     vGatherComponents[swizzleIndex] = GATHERPS(vGatherComponents[swizzleIndex], pSrcBase, byteOffsets, vMask);
 
@@ -1182,14 +1174,14 @@ namespace SwrJit
     }
 
     void Builder::GATHER4DD(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
-                            Value* mask, Value* vGatherComponents[], bool bPackedOutput)
+                            Value* vMask, Value* vGatherComponents[], bool bPackedOutput)
     {
         switch (info.bpp / info.numComps)
         {
             case 8:
             {
                 Value* vGatherMaskedVal = VIMMED1((int32_t)0);
-                Value* vGatherResult = GATHERDD(vGatherMaskedVal, pSrcBase, byteOffsets, mask);
+                Value* vGatherResult = GATHERDD(vGatherMaskedVal, pSrcBase, byteOffsets, vMask);
                 // e.g. result of an 8x32bit integer gather for 8bit components
                 // 256i - 0    1    2    3    4    5    6    7
                 //        xyzw xyzw xyzw xyzw xyzw xyzw xyzw xyzw 
@@ -1200,15 +1192,11 @@ namespace SwrJit
             case 16:
             {
                 Value* vGatherResult[2];
-                Value *vMask;
 
                 // TODO: vGatherMaskedVal
                 Value* vGatherMaskedVal = VIMMED1((int32_t)0);
 
                 // always have at least one component out of x or y to fetch
-
-                // save mask as it is zero'd out after each gather
-                vMask = mask;
 
                 vGatherResult[0] = GATHERDD(vGatherMaskedVal, pSrcBase, byteOffsets, vMask);
                 // e.g. result of first 8x32bit integer gather for 16bit components
@@ -1221,7 +1209,6 @@ namespace SwrJit
                 {
                     // offset base to the next components(zw) in the vertex to gather
                     pSrcBase = GEP(pSrcBase, C((char)4));
-                    vMask = mask;
 
                     vGatherResult[1] = GATHERDD(vGatherMaskedVal, pSrcBase, byteOffsets, vMask);
                     // e.g. result of second 8x32bit integer gather for 16bit components
@@ -1250,9 +1237,6 @@ namespace SwrJit
                 for(uint32_t i = 0; i < info.numComps; i++)
                 {
                     uint32_t swizzleIndex = info.swizzle[i];
-
-                    // save mask as it is zero'd out after each gather
-                    Value *vMask = mask;
 
                     // Gather a SIMD of components
                     vGatherComponents[swizzleIndex] = GATHERDD(vGatherComponents[swizzleIndex], pSrcBase, byteOffsets, vMask);
