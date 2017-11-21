@@ -114,6 +114,25 @@ struct lima_context_constant_buffer {
    bool dirty;
 };
 
+enum lima_ctx_buff {
+   lima_ctx_buff_sh_varying,
+   lima_ctx_buff_sh_gl_pos,
+   lima_ctx_buff_gp_vs_program,
+   lima_ctx_buff_gp_varying_info,
+   lima_ctx_buff_gp_attribute_info,
+   lima_ctx_buff_gp_uniform,
+   lima_ctx_buff_gp_vs_cmd,
+   lima_ctx_buff_gp_plbu_cmd,
+   lima_ctx_buff_pp_fs_program,
+   lima_ctx_buff_pp_plb_rsw,
+   lima_ctx_buff_num,
+};
+
+struct lima_ctx_buff_state {
+   unsigned offset;
+   unsigned size;
+};
+
 struct lima_context {
    struct pipe_context base;
 
@@ -164,9 +183,9 @@ struct lima_context {
    #define gp_vs_program_offset      0x0000
    #define gp_plbu_plb_offset        0x0800
    #define gp_varying_info_offset    0x1000
-   #define gp_attribute_info_offset  0x1080
+   #define gp_attribute_info_offset  0x1100
    /* max_attr/varying_info = 16, each_info = 8, size = max * each */
-   #define gp_uniform_offset         0x1100
+   #define gp_uniform_offset         0x1200
    #define gp_vs_cmd_offset          0x2000
    #define gp_plbu_cmd_offset        0x2800
    #define gp_tile_heap_offset       0x3000
@@ -175,14 +194,19 @@ struct lima_context {
    struct lima_buffer *pp_buffer;
    #define pp_fs_program_offset      0x00000
    #define pp_frame_rsw_offset       0x00800
-   #define pp_plb_rsw_offset         0x00840
-   #define pp_clear_program_offset   0x00880
-   #define pp_plb_offset_start       0x008a0
+   #define pp_clear_program_offset   0x00840
+   #define pp_plb_rsw_offset         0x00880
+   #define pp_plb_offset_start       0x01000
    /* max_screen_w/h_size = 2048, max_pp = 4, plb_stream_size = ((max >> 4)^2 + max_pp) * 16 */
-   #define pp_stack_offset           0x40900
-   #define pp_buffer_size            0x41000
+   #define pp_stack_offset           0x41100
+   #define pp_buffer_size            0x42000
    #define pp_plb_offset(i, n)       \
       (pp_plb_offset_start + i * ((pp_stack_offset - pp_plb_offset_start) / n))
+
+   struct lima_ctx_buff_state buffer_state[lima_ctx_buff_num];
+
+   unsigned draw_start;
+   unsigned num_draws;
 
    lima_submit_handle gp_submit;
    lima_submit_handle pp_submit;
