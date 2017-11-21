@@ -619,7 +619,7 @@ if cc.links('''
       const char *s = "1.0";
       char *end;
       double d = strtod_l(s, end, loc);
-      float f = strtod_l(s, end, loc);
+      float f = strtof_l(s, end, loc);
       freelocale(loc);
       return 0;
     }''',
