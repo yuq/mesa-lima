@@ -612,6 +612,59 @@ blorp_can_hiz_clear_depth(uint8_t gen, enum isl_format format,
    return true;
 }
 
+void
+blorp_hiz_clear_depth_stencil(struct blorp_batch *batch,
+                              const struct blorp_surf *depth,
+                              const struct blorp_surf *stencil,
+                              uint32_t level,
+                              uint32_t start_layer, uint32_t num_layers,
+                              uint32_t x0, uint32_t y0,
+                              uint32_t x1, uint32_t y1,
+                              bool clear_depth, float depth_value,
+                              bool clear_stencil, uint8_t stencil_value)
+{
+   struct blorp_params params;
+   blorp_params_init(&params);
+
+   /* This requires WM_HZ_OP which only exists on gen8+ */
+   assert(ISL_DEV_GEN(batch->blorp->isl_dev) >= 8);
+
+   params.hiz_op = ISL_AUX_OP_FAST_CLEAR;
+   params.num_layers = 1;
+
+   params.x0 = x0;
+   params.y0 = y0;
+   params.x1 = x1;
+   params.y1 = y1;
+
+   for (uint32_t l = 0; l < num_layers; l++) {
+      const uint32_t layer = start_layer + l;
+      if (clear_stencil) {
+         brw_blorp_surface_info_init(batch->blorp, &params.stencil, stencil,
+                                     level, layer,
+                                     ISL_FORMAT_UNSUPPORTED, true);
+         params.stencil_mask = 0xff;
+         params.stencil_ref = stencil_value;
+         params.num_samples = params.stencil.surf.samples;
+      }
+
+      if (clear_depth) {
+         /* If we're clearing depth, we must have HiZ */
+         assert(depth && depth->aux_usage == ISL_AUX_USAGE_HIZ);
+
+         brw_blorp_surface_info_init(batch->blorp, &params.depth, depth,
+                                     level, layer,
+                                     ISL_FORMAT_UNSUPPORTED, true);
+         params.depth.clear_color.f32[0] = depth_value;
+         params.depth_format =
+            isl_format_get_depth_format(depth->surf->format, false);
+         params.num_samples = params.depth.surf.samples;
+      }
+
+      batch->blorp->exec(batch, &params);
+   }
+}
+
 /* Given a depth stencil attachment, this function performs a fast depth clear
  * on a depth portion and a regular clear on the stencil portion. When
  * performing a fast depth clear on the depth portion, the HiZ buffer is simply
