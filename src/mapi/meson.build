@@ -25,10 +25,10 @@ files_mapi_util = files(
   'u_execmem.h',
 )
 
+subdir('glapi')
 if with_shared_glapi
   subdir('shared-glapi')
 endif
-subdir('glapi')
 if with_gles1
   subdir('es1api')
 endif

@@ -45,7 +45,6 @@ sha1_h = custom_target(
 
 subdir('gtest')
 subdir('util')
-subdir('mapi/glapi/gen')
 subdir('mapi')
 # TODO: opengl
 subdir('compiler')
