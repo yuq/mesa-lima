@@ -279,8 +279,10 @@ vc5_tf_statistics_record(struct vc5_context *vc5,
                          const struct pipe_draw_info *info,
                          bool prim_tf)
 {
-        uint32_t prims = u_prims_for_vertices(info->mode, info->count);
+        if (!vc5->active_queries)
+                return;
 
+        uint32_t prims = u_prims_for_vertices(info->mode, info->count);
         vc5->prims_generated += prims;
 
         if (prim_tf) {
