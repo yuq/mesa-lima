@@ -190,46 +190,58 @@ all_formats_ccs_e_compatible(const struct gen_device_info *devinfo,
  * fast-clear values in non-trivial cases (e.g., outside of a render pass in
  * which a fast clear has occurred).
  *
- * For the purpose of discoverability, the algorithm used to manage this buffer
- * is described here. A clear value in this buffer is updated when a fast clear
- * is performed on a subresource. One of two synchronization operations is
- * performed in order for a following memory access to use the fast-clear
- * value:
- *    a. Copy the value from the buffer to the surface state object used for
- *       reading. This is done implicitly when the value is the clear value
- *       predetermined to be the default in other surface state objects. This
- *       is currently only done explicitly for the operation below.
- *    b. Do (a) and use the surface state object to resolve the subresource.
- *       This is only done during layout transitions for decent performance.
+ * In order to avoid having multiple clear colors for a single plane of an
+ * image (hence a single RENDER_SURFACE_STATE), we only allow fast-clears on
+ * the first slice (level 0, layer 0).  At the time of our testing (Jan 17,
+ * 2018), there were no known applications which would benefit from fast-
+ * clearing more than just the first slice.
  *
- * With the above scheme, we can fast-clear whenever the hardware allows except
- * for two cases in which synchronization becomes impossible or undesirable:
- *    * The subresource is in the GENERAL layout and is cleared to a value
- *      other than the special default value.
+ * The fast clear portion of the image is laid out in the following order:
  *
- *      Performing a synchronization operation in order to read from the
- *      subresource is undesirable in this case. Firstly, b) is not an option
- *      because a layout transition isn't required between a write and read of
- *      an image in the GENERAL layout. Secondly, it's undesirable to do a)
- *      explicitly because it would require large infrastructural changes. The
- *      Vulkan API supports us in deciding not to optimize this layout by
- *      stating that using this layout may cause suboptimal performance. NOTE:
- *      the auxiliary buffer must always be enabled to support a) implicitly.
+ *  * 1 or 4 dwords (depending on hardware generation) for the clear color
+ *  * 1 dword for the anv_fast_clear_type of the clear color
+ *  * On gen9+, 1 dword per level and layer of the image (3D levels count
+ *    multiple layers) in level-major order for compression state.
  *
+ * For the purpose of discoverability, the algorithm used to manage
+ * compression and fast-clears is described here:
  *
- *    * For the given miplevel, only some of the layers are cleared at once.
+ *  * On a transition from UNDEFINED or PREINITIALIZED to a defined layout,
+ *    all of the values in the fast clear portion of the image are initialized
+ *    to default values.
  *
- *      If the user clears each layer to a different value, then tries to
- *      render to multiple layers at once, we have no ability to perform a
- *      synchronization operation in between. a) is not helpful because the
- *      object can only hold one clear value. b) is not an option because a
- *      layout transition isn't required in this case.
+ *  * On fast-clear, the clear value is written into surface state and also
+ *    into the buffer and the fast clear type is set appropriately.  Both
+ *    setting the fast-clear value in the buffer and setting the fast-clear
+ *    type happen from the GPU using MI commands.
+ *
+ *  * Whenever a render or blorp operation is performed with CCS_E, we call
+ *    genX(cmd_buffer_mark_image_written) to set the compression state to
+ *    true (which is represented by UINT32_MAX).
+ *
+ *  * On pipeline barrier transitions, the worst-case transition is computed
+ *    from the image layouts.  The command streamer inspects the fast clear
+ *    type and compression state dwords and constructs a predicate.  The
+ *    worst-case resolve is performed with the given predicate and the fast
+ *    clear and compression state is set accordingly.
+ *
+ * See anv_layout_to_aux_usage and anv_layout_to_fast_clear_type functions for
+ * details on exactly what is allowed in what layouts.
+ *
+ * On gen7-9, we do not have a concept of indirect clear colors in hardware.
+ * In order to deal with this, we have to do some clear color management.
+ *
+ *  * For LOAD_OP_LOAD at the top of a renderpass, we have to copy the clear
+ *    value from the buffer into the surface state with MI commands.
+ *
+ *  * For any blorp operations, we pass the address to the clear value into
+ *    blorp and it knows to copy the clear color.
  */
 static void
-add_fast_clear_state_buffer(struct anv_image *image,
-                            VkImageAspectFlagBits aspect,
-                            uint32_t plane,
-                            const struct anv_device *device)
+add_aux_state_tracking_buffer(struct anv_image *image,
+                              VkImageAspectFlagBits aspect,
+                              uint32_t plane,
+                              const struct anv_device *device)
 {
    assert(image && device);
    assert(image->planes[plane].aux_surface.isl.size > 0 &&
@@ -251,20 +263,24 @@ add_fast_clear_state_buffer(struct anv_image *image,
              (image->planes[plane].offset + image->planes[plane].size));
    }
 
-   const unsigned entry_size = anv_fast_clear_state_entry_size(device);
-   /* There's no padding between entries, so ensure that they're always a
-    * multiple of 32 bits in order to enable GPU memcpy operations.
-    */
-   assert(entry_size % 4 == 0);
+   /* Clear color and fast clear type */
+   unsigned state_size = device->isl_dev.ss.clear_value_size + 4;
 
-   const unsigned plane_state_size =
-      entry_size * anv_image_aux_levels(image, aspect);
+   /* We only need to track compression on CCS_E surfaces. */
+   if (image->planes[plane].aux_usage == ISL_AUX_USAGE_CCS_E) {
+      if (image->type == VK_IMAGE_TYPE_3D) {
+         for (uint32_t l = 0; l < image->levels; l++)
+            state_size += anv_minify(image->extent.depth, l) * 4;
+      } else {
+         state_size += image->levels * image->array_size * 4;
+      }
+   }
 
    image->planes[plane].fast_clear_state_offset =
       image->planes[plane].offset + image->planes[plane].size;
 
-   image->planes[plane].size += plane_state_size;
-   image->size += plane_state_size;
+   image->planes[plane].size += state_size;
+   image->size += state_size;
 }
 
 /**
@@ -437,7 +453,7 @@ make_surface(const struct anv_device *dev,
             }
 
             add_surface(image, &image->planes[plane].aux_surface, plane);
-            add_fast_clear_state_buffer(image, aspect, plane, dev);
+            add_aux_state_tracking_buffer(image, aspect, plane, dev);
 
             /* For images created without MUTABLE_FORMAT_BIT set, we know that
              * they will always be used with the original format.  In
@@ -461,7 +477,7 @@ make_surface(const struct anv_device *dev,
                                  &image->planes[plane].aux_surface.isl);
       if (ok) {
          add_surface(image, &image->planes[plane].aux_surface, plane);
-         add_fast_clear_state_buffer(image, aspect, plane, dev);
+         add_aux_state_tracking_buffer(image, aspect, plane, dev);
          image->planes[plane].aux_usage = ISL_AUX_USAGE_MCS;
       }
    }

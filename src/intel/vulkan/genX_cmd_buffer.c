@@ -311,7 +311,7 @@ color_attachment_compute_aux_usage(struct anv_device * device,
 
       /* We only allow fast clears in the GENERAL layout if the auxiliary
        * buffer is always enabled and the fast-clear value is all 0's. See
-       * add_fast_clear_state_buffer() for more information.
+       * add_aux_state_tracking_buffer() for more information.
        */
       if (cmd_state->pass->attachments[att].first_subpass_layout ==
           VK_IMAGE_LAYOUT_GENERAL &&
@@ -407,28 +407,48 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
 #define MI_PREDICATE_SRC0  0x2400
 #define MI_PREDICATE_SRC1  0x2408
 
-/* Manages the state of an color image subresource to ensure resolves are
- * performed properly.
- */
 static void
-genX(set_image_needs_resolve)(struct anv_cmd_buffer *cmd_buffer,
-                        const struct anv_image *image,
-                        VkImageAspectFlagBits aspect,
-                        unsigned level, bool needs_resolve)
+set_image_compressed_bit(struct anv_cmd_buffer *cmd_buffer,
+                         const struct anv_image *image,
+                         VkImageAspectFlagBits aspect,
+                         uint32_t level,
+                         uint32_t base_layer, uint32_t layer_count,
+                         bool compressed)
 {
-   assert(cmd_buffer && image);
-   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
-   assert(level < anv_image_aux_levels(image, aspect));
+   uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
 
-   /* The HW docs say that there is no way to guarantee the completion of
-    * the following command. We use it nevertheless because it shows no
-    * issues in testing is currently being used in the GL driver.
-    */
-   anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
-      sdi.Address = anv_image_get_needs_resolve_addr(cmd_buffer->device,
-                                                     image, aspect, level);
-      sdi.ImmediateData = needs_resolve;
+   /* We only have compression tracking for CCS_E */
+   if (image->planes[plane].aux_usage != ISL_AUX_USAGE_CCS_E)
+      return;
+
+   for (uint32_t a = 0; a < layer_count; a++) {
+      uint32_t layer = base_layer + a;
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
+         sdi.Address = anv_image_get_compression_state_addr(cmd_buffer->device,
+                                                            image, aspect,
+                                                            level, layer);
+         sdi.ImmediateData = compressed ? UINT32_MAX : 0;
+      }
    }
+}
+
+static void
+set_image_fast_clear_state(struct anv_cmd_buffer *cmd_buffer,
+                           const struct anv_image *image,
+                           VkImageAspectFlagBits aspect,
+                           enum anv_fast_clear_type fast_clear)
+{
+   anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
+      sdi.Address = anv_image_get_fast_clear_type_addr(cmd_buffer->device,
+                                                       image, aspect);
+      sdi.ImmediateData = fast_clear;
+   }
+
+   /* Whenever we have fast-clear, we consider that slice to be compressed.
+    * This makes building predicates much easier.
+    */
+   if (fast_clear != ANV_FAST_CLEAR_NONE)
+      set_image_compressed_bit(cmd_buffer, image, aspect, 0, 0, 1, true);
 }
 
 #if GEN_IS_HASWELL || GEN_GEN >= 8
@@ -451,32 +471,169 @@ mi_alu(uint32_t opcode, uint32_t operand1, uint32_t operand2)
 #define CS_GPR(n) (0x2600 + (n) * 8)
 
 static void
-genX(load_needs_resolve_predicate)(struct anv_cmd_buffer *cmd_buffer,
-                                   const struct anv_image *image,
-                                   VkImageAspectFlagBits aspect,
-                                   unsigned level)
+anv_cmd_predicated_ccs_resolve(struct anv_cmd_buffer *cmd_buffer,
+                               const struct anv_image *image,
+                               VkImageAspectFlagBits aspect,
+                               uint32_t level, uint32_t array_layer,
+                               enum isl_aux_op resolve_op,
+                               enum anv_fast_clear_type fast_clear_supported)
 {
-   assert(cmd_buffer && image);
-   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
-   assert(level < anv_image_aux_levels(image, aspect));
+   const uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
+   struct anv_address fast_clear_type_addr =
+      anv_image_get_fast_clear_type_addr(cmd_buffer->device, image, aspect);
 
-   const struct anv_address resolve_flag_addr =
-      anv_image_get_needs_resolve_addr(cmd_buffer->device,
-                                       image, aspect, level);
+#if GEN_GEN >= 9
+   /* Name some registers */
+   const int image_fc_reg = MI_ALU_REG0;
+   const int fc_imm_reg = MI_ALU_REG1;
+   const int pred_reg = MI_ALU_REG2;
 
-   /* Make the pending predicated resolve a no-op if one is not needed.
-    * predicate = do_resolve = resolve_flag != 0;
+   uint32_t *dw;
+
+   if (resolve_op == ISL_AUX_OP_FULL_RESOLVE) {
+      /* In this case, we're doing a full resolve which means we want the
+       * resolve to happen if any compression (including fast-clears) is
+       * present.
+       *
+       * In order to simplify the logic a bit, we make the assumption that,
+       * if the first slice has been fast-cleared, it is also marked as
+       * compressed.  See also set_image_fast_clear_state.
+       */
+      struct anv_address compression_state_addr =
+         anv_image_get_compression_state_addr(cmd_buffer->device, image,
+                                              aspect, level, array_layer);
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
+         lrm.RegisterAddress  = MI_PREDICATE_SRC0;
+         lrm.MemoryAddress    = compression_state_addr;
+      }
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
+         sdi.Address       = compression_state_addr;
+         sdi.ImmediateData = 0;
+      }
+
+      if (level == 0 && array_layer == 0) {
+         /* If the predicate is true, we want to write 0 to the fast clear type
+          * and, if it's false, leave it alone.  We can do this by writing
+          *
+          * clear_type = clear_type & ~predicate;
+          */
+         anv_batch_emit(&cmd_buffer->batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
+            lrm.RegisterAddress  = CS_GPR(image_fc_reg);
+            lrm.MemoryAddress    = fast_clear_type_addr;
+         }
+         anv_batch_emit(&cmd_buffer->batch, GENX(MI_LOAD_REGISTER_REG), lrr) {
+            lrr.DestinationRegisterAddress   = CS_GPR(pred_reg);
+            lrr.SourceRegisterAddress        = MI_PREDICATE_SRC0;
+         }
+
+         dw = anv_batch_emitn(&cmd_buffer->batch, 5, GENX(MI_MATH));
+         dw[1] = mi_alu(MI_ALU_LOAD, MI_ALU_SRCA, image_fc_reg);
+         dw[2] = mi_alu(MI_ALU_LOADINV, MI_ALU_SRCB, pred_reg);
+         dw[3] = mi_alu(MI_ALU_AND, 0, 0);
+         dw[4] = mi_alu(MI_ALU_STORE, image_fc_reg, MI_ALU_ACCU);
+
+         anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM), srm) {
+            srm.MemoryAddress    = fast_clear_type_addr;
+            srm.RegisterAddress  = CS_GPR(image_fc_reg);
+         }
+      }
+   } else if (level == 0 && array_layer == 0) {
+      /* In this case, we are doing a partial resolve to get rid of fast-clear
+       * colors.  We don't care about the compression state but we do care
+       * about how much fast clear is allowed by the final layout.
+       */
+      assert(resolve_op == ISL_AUX_OP_PARTIAL_RESOLVE);
+      assert(fast_clear_supported < ANV_FAST_CLEAR_ANY);
+
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
+         lrm.RegisterAddress  = CS_GPR(image_fc_reg);
+         lrm.MemoryAddress    = fast_clear_type_addr;
+      }
+      emit_lri(&cmd_buffer->batch, CS_GPR(image_fc_reg) + 4, 0);
+
+      emit_lri(&cmd_buffer->batch, CS_GPR(fc_imm_reg), fast_clear_supported);
+      emit_lri(&cmd_buffer->batch, CS_GPR(fc_imm_reg) + 4, 0);
+
+      /* We need to compute (fast_clear_supported < image->fast_clear).
+       * We do this by subtracting and storing the carry bit.
+       */
+      dw = anv_batch_emitn(&cmd_buffer->batch, 5, GENX(MI_MATH));
+      dw[1] = mi_alu(MI_ALU_LOAD, MI_ALU_SRCA, fc_imm_reg);
+      dw[2] = mi_alu(MI_ALU_LOAD, MI_ALU_SRCB, image_fc_reg);
+      dw[3] = mi_alu(MI_ALU_SUB, 0, 0);
+      dw[4] = mi_alu(MI_ALU_STORE, pred_reg, MI_ALU_CF);
+
+      /* Store the predicate */
+      emit_lrr(&cmd_buffer->batch, MI_PREDICATE_SRC0, CS_GPR(pred_reg));
+
+      /* If the predicate is true, we want to write 0 to the fast clear type
+       * and, if it's false, leave it alone.  We can do this by writing
+       *
+       * clear_type = clear_type & ~predicate;
+       */
+      dw = anv_batch_emitn(&cmd_buffer->batch, 5, GENX(MI_MATH));
+      dw[1] = mi_alu(MI_ALU_LOAD, MI_ALU_SRCA, image_fc_reg);
+      dw[2] = mi_alu(MI_ALU_LOADINV, MI_ALU_SRCB, pred_reg);
+      dw[3] = mi_alu(MI_ALU_AND, 0, 0);
+      dw[4] = mi_alu(MI_ALU_STORE, image_fc_reg, MI_ALU_ACCU);
+
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_REGISTER_MEM), srm) {
+         srm.RegisterAddress  = CS_GPR(image_fc_reg);
+         srm.MemoryAddress    = fast_clear_type_addr;
+      }
+   } else {
+      /* In this case, we're trying to do a partial resolve on a slice that
+       * doesn't have clear color.  There's nothing to do.
+       */
+      assert(resolve_op == ISL_AUX_OP_PARTIAL_RESOLVE);
+      return;
+   }
+
+#else /* GEN_GEN <= 8 */
+   assert(resolve_op == ISL_AUX_OP_PARTIAL_RESOLVE);
+   assert(fast_clear_supported != ANV_FAST_CLEAR_ANY);
+
+   /* We don't support fast clears on anything other than the first slice. */
+   if (level > 0 || array_layer > 0)
+      return;
+
+   /* On gen8, we don't have a concept of default clear colors because we
+    * can't sample from CCS surfaces.  It's enough to just load the fast clear
+    * state into the predicate register.
     */
+   anv_batch_emit(&cmd_buffer->batch, GENX(MI_LOAD_REGISTER_MEM), lrm) {
+      lrm.RegisterAddress  = MI_PREDICATE_SRC0;
+      lrm.MemoryAddress    = fast_clear_type_addr;
+   }
+   anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
+      sdi.Address          = fast_clear_type_addr;
+      sdi.ImmediateData    = 0;
+   }
+#endif
+
+   /* We use the first half of src0 for the actual predicate.  Set the second
+    * half of src0 and all of src1 to 0 as the predicate operation will be
+    * doing an implicit src0 != src1.
+    */
+   emit_lri(&cmd_buffer->batch, MI_PREDICATE_SRC0 + 4, 0);
    emit_lri(&cmd_buffer->batch, MI_PREDICATE_SRC1    , 0);
    emit_lri(&cmd_buffer->batch, MI_PREDICATE_SRC1 + 4, 0);
-   emit_lri(&cmd_buffer->batch, MI_PREDICATE_SRC0    , 0);
-   emit_lrm(&cmd_buffer->batch, MI_PREDICATE_SRC0 + 4,
-            resolve_flag_addr.bo, resolve_flag_addr.offset);
+
    anv_batch_emit(&cmd_buffer->batch, GENX(MI_PREDICATE), mip) {
       mip.LoadOperation    = LOAD_LOADINV;
       mip.CombineOperation = COMBINE_SET;
       mip.CompareOperation = COMPARE_SRCS_EQUAL;
    }
+
+   /* CCS_D only supports full resolves and BLORP will assert on us if we try
+    * to do a partial resolve on a CCS_D surface.
+    */
+   if (resolve_op == ISL_AUX_OP_PARTIAL_RESOLVE &&
+       image->planes[plane].aux_usage == ISL_AUX_USAGE_NONE)
+      resolve_op = ISL_AUX_OP_FULL_RESOLVE;
+
+   anv_image_ccs_op(cmd_buffer, image, aspect, level,
+                    array_layer, 1, resolve_op, true);
 }
 
 void
@@ -490,17 +647,30 @@ genX(cmd_buffer_mark_image_written)(struct anv_cmd_buffer *cmd_buffer,
 {
    /* The aspect must be exactly one of the image aspects. */
    assert(_mesa_bitcount(aspect) == 1 && (aspect & image->aspects));
+
+   /* The only compression types with more than just fast-clears are MCS,
+    * CCS_E, and HiZ.  With HiZ we just trust the layout and don't actually
+    * track the current fast-clear and compression state.  This leaves us
+    * with just MCS and CCS_E.
+    */
+   if (aux_usage != ISL_AUX_USAGE_CCS_E &&
+       aux_usage != ISL_AUX_USAGE_MCS)
+      return;
+
+   set_image_compressed_bit(cmd_buffer, image, aspect,
+                            level, base_layer, layer_count, true);
 }
 
 static void
-init_fast_clear_state_entry(struct anv_cmd_buffer *cmd_buffer,
-                            const struct anv_image *image,
-                            VkImageAspectFlagBits aspect,
-                            unsigned level)
+init_fast_clear_color(struct anv_cmd_buffer *cmd_buffer,
+                      const struct anv_image *image,
+                      VkImageAspectFlagBits aspect)
 {
    assert(cmd_buffer && image);
    assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
-   assert(level < anv_image_aux_levels(image, aspect));
+
+   set_image_fast_clear_state(cmd_buffer, image, aspect,
+                              ANV_FAST_CLEAR_NONE);
 
    uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
    enum isl_aux_usage aux_usage = image->planes[plane].aux_usage;
@@ -517,7 +687,7 @@ init_fast_clear_state_entry(struct anv_cmd_buffer *cmd_buffer,
     * values in the clear value dword(s).
     */
    struct anv_address addr =
-      anv_image_get_clear_color_addr(cmd_buffer->device, image, aspect, level);
+      anv_image_get_clear_color_addr(cmd_buffer->device, image, aspect);
    unsigned i = 0;
    for (; i < cmd_buffer->device->isl_dev.ss.clear_value_size; i += 4) {
       anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
@@ -558,19 +728,17 @@ genX(copy_fast_clear_dwords)(struct anv_cmd_buffer *cmd_buffer,
                              struct anv_state surface_state,
                              const struct anv_image *image,
                              VkImageAspectFlagBits aspect,
-                             unsigned level,
                              bool copy_from_surface_state)
 {
    assert(cmd_buffer && image);
    assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
-   assert(level < anv_image_aux_levels(image, aspect));
 
    struct anv_bo *ss_bo =
       &cmd_buffer->device->surface_state_pool.block_pool.bo;
    uint32_t ss_clear_offset = surface_state.offset +
       cmd_buffer->device->isl_dev.ss.clear_value_offset;
    const struct anv_address entry_addr =
-      anv_image_get_clear_color_addr(cmd_buffer->device, image, aspect, level);
+      anv_image_get_clear_color_addr(cmd_buffer->device, image, aspect);
    unsigned copy_size = cmd_buffer->device->isl_dev.ss.clear_value_size;
 
    if (copy_from_surface_state) {
@@ -660,18 +828,6 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
    if (base_layer >= anv_image_aux_layers(image, aspect, base_level))
       return;
 
-   /* A transition of a 3D subresource works on all slices at a time. */
-   if (image->type == VK_IMAGE_TYPE_3D) {
-      base_layer = 0;
-      layer_count = anv_minify(image->extent.depth, base_level);
-   }
-
-   /* We're interested in the subresource range subset that has aux data. */
-   level_count = MIN2(level_count, anv_image_aux_levels(image, aspect) - base_level);
-   layer_count = MIN2(layer_count,
-                      anv_image_aux_layers(image, aspect, base_level) - base_layer);
-   last_level_num = base_level + level_count;
-
    assert(image->tiling == VK_IMAGE_TILING_OPTIMAL);
 
    if (initial_layout == VK_IMAGE_LAYOUT_UNDEFINED ||
@@ -684,8 +840,8 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
        *
        * Initialize the relevant clear buffer entries.
        */
-      for (unsigned level = base_level; level < last_level_num; level++)
-         init_fast_clear_state_entry(cmd_buffer, image, aspect, level);
+      if (base_level == 0 && base_layer == 0)
+         init_fast_clear_color(cmd_buffer, image, aspect);
 
       /* Initialize the aux buffers to enable correct rendering.  In order to
        * ensure that things such as storage images work correctly, aux buffers
@@ -723,13 +879,18 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
       if (image->samples == 1) {
          for (uint32_t l = 0; l < level_count; l++) {
             const uint32_t level = base_level + l;
-            const uint32_t level_layer_count =
+            uint32_t level_layer_count =
                MIN2(layer_count, anv_image_aux_layers(image, aspect, level));
+
             anv_image_ccs_op(cmd_buffer, image, aspect, level,
                              base_layer, level_layer_count,
                              ISL_AUX_OP_AMBIGUATE, false);
-            genX(set_image_needs_resolve)(cmd_buffer, image,
-                                          aspect, level, false);
+
+            if (image->planes[plane].aux_usage == ISL_AUX_USAGE_CCS_E) {
+               set_image_compressed_bit(cmd_buffer, image, aspect,
+                                        level, base_layer, level_layer_count,
+                                        false);
+            }
          }
       } else {
          if (image->samples == 4 || image->samples == 16) {
@@ -782,13 +943,6 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
        final_aux_usage != ISL_AUX_USAGE_CCS_E)
       resolve_op = ISL_AUX_OP_FULL_RESOLVE;
 
-   /* CCS_D only supports full resolves and BLORP will assert on us if we try
-    * to do a partial resolve on a CCS_D surface.
-    */
-   if (resolve_op == ISL_AUX_OP_PARTIAL_RESOLVE &&
-       initial_aux_usage == ISL_AUX_USAGE_CCS_D)
-      resolve_op = ISL_AUX_OP_FULL_RESOLVE;
-
    if (resolve_op == ISL_AUX_OP_NONE)
       return;
 
@@ -812,19 +966,17 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
    cmd_buffer->state.pending_pipe_bits |=
       ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
 
-   for (uint32_t level = base_level; level < last_level_num; level++) {
+   for (uint32_t l = 0; l < level_count; l++) {
+      uint32_t level = base_level + l;
+      uint32_t level_layer_count =
+         MIN2(layer_count, anv_image_aux_layers(image, aspect, level));
 
-      /* The number of layers changes at each 3D miplevel. */
-      if (image->type == VK_IMAGE_TYPE_3D) {
-         layer_count = MIN2(layer_count, anv_image_aux_layers(image, aspect, level));
+      for (uint32_t a = 0; a < level_layer_count; a++) {
+         uint32_t array_layer = base_layer + a;
+         anv_cmd_predicated_ccs_resolve(cmd_buffer, image, aspect,
+                                        level, array_layer, resolve_op,
+                                        final_fast_clear);
       }
-
-      genX(load_needs_resolve_predicate)(cmd_buffer, image, aspect, level);
-
-      anv_image_ccs_op(cmd_buffer, image, aspect, level,
-                       base_layer, layer_count, resolve_op, true);
-
-      genX(set_image_needs_resolve)(cmd_buffer, image, aspect, level, false);
    }
 
    cmd_buffer->state.pending_pipe_bits |=
@@ -1488,12 +1640,20 @@ void genX(CmdPipelineBarrier)(
             anv_image_expand_aspects(image, range->aspectMask);
          uint32_t aspect_bit;
 
+         uint32_t base_layer, layer_count;
+         if (image->type == VK_IMAGE_TYPE_3D) {
+            base_layer = 0;
+            layer_count = anv_minify(image->extent.depth, range->baseMipLevel);
+         } else {
+            base_layer = range->baseArrayLayer;
+            layer_count = anv_get_layerCount(image, range);
+         }
+
          anv_foreach_image_aspect_bit(aspect_bit, image, color_aspects) {
             transition_color_buffer(cmd_buffer, image, 1UL << aspect_bit,
                                     range->baseMipLevel,
                                     anv_get_levelCount(image, range),
-                                    range->baseArrayLayer,
-                                    anv_get_layerCount(image, range),
+                                    base_layer, layer_count,
                                     pImageMemoryBarriers[i].oldLayout,
                                     pImageMemoryBarriers[i].newLayout);
          }
@@ -3152,10 +3312,20 @@ cmd_buffer_subpass_transition_layouts(struct anv_cmd_buffer * const cmd_buffer,
                                     VK_IMAGE_ASPECT_DEPTH_BIT, target_layout);
       } else if (image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
          assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+
+         uint32_t base_layer, layer_count;
+         if (image->type == VK_IMAGE_TYPE_3D) {
+            base_layer = 0;
+            layer_count = anv_minify(iview->image->extent.depth,
+                                     iview->planes[0].isl.base_level);
+         } else {
+            base_layer = iview->planes[0].isl.base_array_layer;
+            layer_count = iview->planes[0].isl.array_len;
+         }
+
          transition_color_buffer(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
                                  iview->planes[0].isl.base_level, 1,
-                                 iview->planes[0].isl.base_array_layer,
-                                 iview->planes[0].isl.array_len,
+                                 base_layer, layer_count,
                                  att_state->current_layout, target_layout);
       }
 
@@ -3203,28 +3373,26 @@ cmd_buffer_subpass_sync_fast_clear_values(struct anv_cmd_buffer *cmd_buffer)
          genX(copy_fast_clear_dwords)(cmd_buffer, att_state->color.state,
                                       iview->image,
                                       VK_IMAGE_ASPECT_COLOR_BIT,
-                                      iview->planes[0].isl.base_level,
                                       true /* copy from ss */);
 
          /* Fast-clears impact whether or not a resolve will be necessary. */
-         if (iview->image->planes[0].aux_usage == ISL_AUX_USAGE_CCS_E &&
-             att_state->clear_color_is_zero) {
-            /* This image always has the auxiliary buffer enabled. We can mark
-             * the subresource as not needing a resolve because the clear color
-             * will match what's in every RENDER_SURFACE_STATE object when it's
-             * being used for sampling.
+         if (att_state->clear_color_is_zero) {
+            /* This image has the auxiliary buffer enabled. We can mark the
+             * subresource as not needing a resolve because the clear color
+             * will match what's in every RENDER_SURFACE_STATE object when
+             * it's being used for sampling.
              */
-            genX(set_image_needs_resolve)(cmd_buffer, iview->image,
-                                          VK_IMAGE_ASPECT_COLOR_BIT,
-                                          iview->planes[0].isl.base_level,
-                                          false);
+            set_image_fast_clear_state(cmd_buffer, iview->image,
+                                       VK_IMAGE_ASPECT_COLOR_BIT,
+                                       ANV_FAST_CLEAR_DEFAULT_VALUE);
          } else {
-            genX(set_image_needs_resolve)(cmd_buffer, iview->image,
-                                          VK_IMAGE_ASPECT_COLOR_BIT,
-                                          iview->planes[0].isl.base_level,
-                                          true);
+            set_image_fast_clear_state(cmd_buffer, iview->image,
+                                       VK_IMAGE_ASPECT_COLOR_BIT,
+                                       ANV_FAST_CLEAR_ANY);
          }
-      } else if (rp_att->load_op == VK_ATTACHMENT_LOAD_OP_LOAD) {
+      } else if (rp_att->load_op == VK_ATTACHMENT_LOAD_OP_LOAD &&
+                 iview->planes[0].isl.base_level == 0 &&
+                 iview->planes[0].isl.base_array_layer == 0) {
          /* The attachment may have been fast-cleared in a previous render
           * pass and the value is needed now. Update the surface state(s).
           *
@@ -3233,7 +3401,6 @@ cmd_buffer_subpass_sync_fast_clear_values(struct anv_cmd_buffer *cmd_buffer)
          genX(copy_fast_clear_dwords)(cmd_buffer, att_state->color.state,
                                       iview->image,
                                       VK_IMAGE_ASPECT_COLOR_BIT,
-                                      iview->planes[0].isl.base_level,
                                       false /* copy to ss */);
 
          if (need_input_attachment_state(rp_att) &&
@@ -3241,7 +3408,6 @@ cmd_buffer_subpass_sync_fast_clear_values(struct anv_cmd_buffer *cmd_buffer)
             genX(copy_fast_clear_dwords)(cmd_buffer, att_state->input.state,
                                          iview->image,
                                          VK_IMAGE_ASPECT_COLOR_BIT,
-                                         iview->planes[0].isl.base_level,
                                          false /* copy to ss */);
          }
       }

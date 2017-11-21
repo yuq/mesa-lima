@@ -2533,47 +2533,55 @@ anv_image_aux_layers(const struct anv_image * const image,
    }
 }
 
-static inline unsigned
-anv_fast_clear_state_entry_size(const struct anv_device *device)
-{
-   assert(device);
-   /* Entry contents:
-    *   +--------------------------------------------+
-    *   | clear value dword(s) | needs resolve dword |
-    *   +--------------------------------------------+
-    */
-
-   /* Ensure that the needs resolve dword is in fact dword-aligned to enable
-    * GPU memcpy operations.
-    */
-   assert(device->isl_dev.ss.clear_value_size % 4 == 0);
-   return device->isl_dev.ss.clear_value_size + 4;
-}
-
 static inline struct anv_address
 anv_image_get_clear_color_addr(const struct anv_device *device,
                                const struct anv_image *image,
-                               VkImageAspectFlagBits aspect,
-                               unsigned level)
+                               VkImageAspectFlagBits aspect)
 {
+   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
+
    uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
    return (struct anv_address) {
       .bo = image->planes[plane].bo,
       .offset = image->planes[plane].bo_offset +
-                image->planes[plane].fast_clear_state_offset +
-                anv_fast_clear_state_entry_size(device) * level,
+                image->planes[plane].fast_clear_state_offset,
    };
 }
 
 static inline struct anv_address
-anv_image_get_needs_resolve_addr(const struct anv_device *device,
-                                 const struct anv_image *image,
-                                 VkImageAspectFlagBits aspect,
-                                 unsigned level)
+anv_image_get_fast_clear_type_addr(const struct anv_device *device,
+                                   const struct anv_image *image,
+                                   VkImageAspectFlagBits aspect)
 {
    struct anv_address addr =
-      anv_image_get_clear_color_addr(device, image, aspect, level);
+      anv_image_get_clear_color_addr(device, image, aspect);
    addr.offset += device->isl_dev.ss.clear_value_size;
+   return addr;
+}
+
+static inline struct anv_address
+anv_image_get_compression_state_addr(const struct anv_device *device,
+                                     const struct anv_image *image,
+                                     VkImageAspectFlagBits aspect,
+                                     uint32_t level, uint32_t array_layer)
+{
+   assert(level < anv_image_aux_levels(image, aspect));
+   assert(array_layer < anv_image_aux_layers(image, aspect, level));
+   UNUSED uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
+   assert(image->planes[plane].aux_usage == ISL_AUX_USAGE_CCS_E);
+
+   struct anv_address addr =
+      anv_image_get_fast_clear_type_addr(device, image, aspect);
+   addr.offset += 4; /* Go past the fast clear type */
+
+   if (image->type == VK_IMAGE_TYPE_3D) {
+      for (uint32_t l = 0; l < level; l++)
+         addr.offset += anv_minify(image->extent.depth, l) * 4;
+   } else {
+      addr.offset += level * image->array_size * 4;
+   }
+   addr.offset += array_layer * 4;
+
    return addr;
 }
 

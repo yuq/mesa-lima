@@ -1758,8 +1758,7 @@ anv_image_ccs_op(struct anv_cmd_buffer *cmd_buffer,
        * particular value and don't care about format or clear value.
        */
       const struct anv_address clear_color_addr =
-         anv_image_get_clear_color_addr(cmd_buffer->device, image,
-                                        aspect, level);
+         anv_image_get_clear_color_addr(cmd_buffer->device, image, aspect);
       surf.clear_color_addr = anv_to_blorp_address(clear_color_addr);
    }
 
