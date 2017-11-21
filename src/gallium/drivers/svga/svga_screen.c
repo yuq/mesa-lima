@@ -107,7 +107,8 @@ svga_get_name( struct pipe_screen *pscreen )
 
 /** Helper for querying float-valued device cap */
 static float
-get_float_cap(struct svga_winsys_screen *sws, unsigned cap, float defaultVal)
+get_float_cap(struct svga_winsys_screen *sws, SVGA3dDevCapIndex cap,
+              float defaultVal)
 {
    SVGA3dDevCapResult result;
    if (sws->get_cap(sws, cap, &result))
@@ -119,7 +120,8 @@ get_float_cap(struct svga_winsys_screen *sws, unsigned cap, float defaultVal)
 
 /** Helper for querying uint-valued device cap */
 static unsigned
-get_uint_cap(struct svga_winsys_screen *sws, unsigned cap, unsigned defaultVal)
+get_uint_cap(struct svga_winsys_screen *sws, SVGA3dDevCapIndex cap,
+             unsigned defaultVal)
 {
    SVGA3dDevCapResult result;
    if (sws->get_cap(sws, cap, &result))
@@ -131,7 +133,8 @@ get_uint_cap(struct svga_winsys_screen *sws, unsigned cap, unsigned defaultVal)
 
 /** Helper for querying boolean-valued device cap */
 static boolean
-get_bool_cap(struct svga_winsys_screen *sws, unsigned cap, boolean defaultVal)
+get_bool_cap(struct svga_winsys_screen *sws, SVGA3dDevCapIndex cap,
+             boolean defaultVal)
 {
    SVGA3dDevCapResult result;
    if (sws->get_cap(sws, cap, &result))
