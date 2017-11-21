@@ -32,8 +32,12 @@ static bool gpir_lower_const(gpir_compiler *comp)
    int num_constant = 0;
    list_for_each_entry(gpir_block, block, &comp->block_list, list) {
       list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
-         if (node->op == gpir_op_const && !gpir_node_is_root(node))
-            num_constant++;
+         if (node->op == gpir_op_const) {
+            if (gpir_node_is_root(node))
+               gpir_node_delete(node);
+            else
+               num_constant++;
+         }
       }
    }
 
