@@ -285,15 +285,35 @@ vc5_emit_rcl(struct vc5_job *job)
                 if (!psurf)
                         continue;
                 struct vc5_surface *surf = vc5_surface(psurf);
+                struct vc5_resource *rsc = vc5_resource(psurf->texture);
+
+                uint32_t config_pad = 0;
+                uint32_t clear_pad = 0;
+
+                /* XXX: Set the pad for raster. */
+                if (surf->tiling == VC5_TILING_UIF_NO_XOR ||
+                    surf->tiling == VC5_TILING_UIF_XOR) {
+                        int uif_block_height = vc5_utile_height(rsc->cpp) * 2;
+                        uint32_t implicit_padded_height = (align(job->draw_height, uif_block_height) /
+                                                           uif_block_height);
+                        if (surf->padded_height_of_output_image_in_uif_blocks -
+                            implicit_padded_height < 15) {
+                                config_pad = (surf->padded_height_of_output_image_in_uif_blocks -
+                                              implicit_padded_height);
+                        } else {
+                                config_pad = 15;
+                                clear_pad = surf->padded_height_of_output_image_in_uif_blocks;
+                        }
+                }
 
                 cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_RENDER_TARGET_CONFIG, rt) {
-                        struct vc5_resource *rsc = vc5_resource(psurf->texture);
                         rt.address = cl_address(rsc->bo, surf->offset);
                         rt.internal_type = surf->internal_type;
                         rt.output_image_format = surf->format;
                         rt.memory_format = surf->tiling;
                         rt.internal_bpp = surf->internal_bpp;
                         rt.render_target_number = i;
+                        rt.pad = config_pad;
 
                         if (job->resolve & PIPE_CLEAR_COLOR0 << i)
                                 rsc->writes++;
@@ -319,9 +339,10 @@ vc5_emit_rcl(struct vc5_job *job)
                         };
                 }
 
-                if (surf->internal_bpp >= INTERNAL_BPP_128) {
+                if (surf->internal_bpp >= INTERNAL_BPP_128 || clear_pad) {
                         cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_CLEAR_COLORS_PART3,
                                 clear) {
+                                clear.uif_padded_height_in_uif_blocks = clear_pad;
                                 clear.clear_color_high_16_bits = job->clear_color[i][3] >> 16;
                                 clear.render_target_number = i;
                         };
