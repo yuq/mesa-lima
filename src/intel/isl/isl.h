@@ -661,31 +661,8 @@ enum isl_aux_usage {
  *
  * Drawing with or without aux enabled may implicitly cause the surface to
  * transition between these states.  There are also four types of auxiliary
- * compression operations which cause an explicit transition:
- *
- *    1) Fast Clear:  This operation writes the magic "clear" value to the
- *       auxiliary surface.  This operation will safely transition any slice
- *       of a surface from any state to the clear state so long as the entire
- *       slice is fast cleared at once.  A fast clear that only covers part of
- *       a slice of a surface is called a partial fast clear.
- *
- *    2) Full Resolve:  This operation combines the auxiliary surface data
- *       with the primary surface data and writes the result to the primary.
- *       For HiZ, the docs call this a depth resolve.  For CCS, the hardware
- *       full resolve operation does both a full resolve and an ambiguate so
- *       it actually takes you all the way to the pass-through state.
- *
- *    3) Partial Resolve:  This operation considers blocks which are in the
- *       "clear" state and writes the clear value directly into the primary or
- *       auxiliary surface.  Once this operation completes, the surface is
- *       still compressed but no longer references the clear color.  This
- *       operation is only available for CCS.
- *
- *    4) Ambiguate:  This operation throws away the current auxiliary data and
- *       replaces it with the magic pass-through value.  If an ambiguate
- *       operation is performed when the primary surface does not contain 100%
- *       of the data, data will be lost.  This operation is only implemented
- *       in hardware for depth where it is called a HiZ resolve.
+ * compression operations which cause an explicit transition which are
+ * described by the isl_aux_op enum below.
  *
  * Not all operations are valid or useful in all states.  The diagram below
  * contains a complete description of the states and all valid and useful
@@ -785,6 +762,53 @@ enum isl_aux_state {
    ISL_AUX_STATE_RESOLVED,
    ISL_AUX_STATE_PASS_THROUGH,
    ISL_AUX_STATE_AUX_INVALID,
+};
+
+/**
+ * Enum which describes explicit aux transition operations.
+ */
+enum isl_aux_op {
+   ISL_AUX_OP_NONE,
+
+   /** Fast Clear
+    *
+    * This operation writes the magic "clear" value to the auxiliary surface.
+    * This operation will safely transition any slice of a surface from any
+    * state to the clear state so long as the entire slice is fast cleared at
+    * once.  A fast clear that only covers part of a slice of a surface is
+    * called a partial fast clear.
+    */
+   ISL_AUX_OP_FAST_CLEAR,
+
+   /** Full Resolve
+    *
+    * This operation combines the auxiliary surface data with the primary
+    * surface data and writes the result to the primary.  For HiZ, the docs
+    * call this a depth resolve.  For CCS, the hardware full resolve operation
+    * does both a full resolve and an ambiguate so it actually takes you all
+    * the way to the pass-through state.
+    */
+   ISL_AUX_OP_FULL_RESOLVE,
+
+   /** Partial Resolve
+    *
+    * This operation considers blocks which are in the "clear" state and
+    * writes the clear value directly into the primary or auxiliary surface.
+    * Once this operation completes, the surface is still compressed but no
+    * longer references the clear color.  This operation is only available
+    * for CCS_E.
+    */
+   ISL_AUX_OP_PARTIAL_RESOLVE,
+
+   /** Ambiguate
+    *
+    * This operation throws away the current auxiliary data and replaces it
+    * with the magic pass-through value.  If an ambiguate operation is
+    * performed when the primary surface does not contain 100% of the data,
+    * data will be lost.  This operation is only implemented in hardware for
+    * depth where it is called a HiZ resolve.
+    */
+   ISL_AUX_OP_AMBIGUATE,
 };
 
 /* TODO(chadv): Explain */
