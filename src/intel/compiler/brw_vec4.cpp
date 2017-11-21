@@ -2238,7 +2238,12 @@ vec4_visitor::lower_simd_width()
             if (linst->src[i].file == BAD_FILE)
                continue;
 
-            if (!is_uniform(linst->src[i]))
+            bool is_interleaved_attr =
+               linst->src[i].file == ATTR &&
+               stage_uses_interleaved_attributes(stage,
+                                                 prog_data->dispatch_mode);
+
+            if (!is_uniform(linst->src[i]) && !is_interleaved_attr)
                linst->src[i] = horiz_offset(linst->src[i], channel_offset);
          }
 
