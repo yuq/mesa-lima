@@ -1145,17 +1145,6 @@ subpass_needs_clear(const struct anv_cmd_buffer *cmd_buffer)
    const struct anv_cmd_state *cmd_state = &cmd_buffer->state;
    uint32_t ds = cmd_state->subpass->depth_stencil_attachment.attachment;
 
-   for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
-      uint32_t a = cmd_state->subpass->color_attachments[i].attachment;
-      if (a == VK_ATTACHMENT_UNUSED)
-         continue;
-
-      assert(a < cmd_state->pass->attachment_count);
-      if (cmd_state->attachments[a].pending_clear_aspects) {
-         return true;
-      }
-   }
-
    if (ds != VK_ATTACHMENT_UNUSED) {
       assert(ds < cmd_state->pass->attachment_count);
       if (cmd_state->attachments[ds].pending_clear_aspects)
@@ -1189,86 +1178,6 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
    };
 
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
-   for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
-      const uint32_t a = cmd_state->subpass->color_attachments[i].attachment;
-      if (a == VK_ATTACHMENT_UNUSED)
-         continue;
-
-      assert(a < cmd_state->pass->attachment_count);
-      struct anv_attachment_state *att_state = &cmd_state->attachments[a];
-
-      if (!att_state->pending_clear_aspects)
-         continue;
-
-      assert(att_state->pending_clear_aspects == VK_IMAGE_ASPECT_COLOR_BIT);
-
-      struct anv_image_view *iview = fb->attachments[a];
-      const struct anv_image *image = iview->image;
-      struct blorp_surf surf;
-      get_blorp_surf_for_anv_image(cmd_buffer->device,
-                                   image, VK_IMAGE_ASPECT_COLOR_BIT,
-                                   att_state->aux_usage, &surf);
-
-      uint32_t base_layer = iview->planes[0].isl.base_array_layer;
-      uint32_t layer_count = fb->layers;
-
-      if (att_state->fast_clear) {
-         surf.clear_color = vk_to_isl_color(att_state->clear_value.color);
-
-         /* From the Sky Lake PRM Vol. 7, "Render Target Fast Clear":
-          *
-          *    "After Render target fast clear, pipe-control with color cache
-          *    write-flush must be issued before sending any DRAW commands on
-          *    that render target."
-          *
-          * This comment is a bit cryptic and doesn't really tell you what's
-          * going or what's really needed.  It appears that fast clear ops are
-          * not properly synchronized with other drawing.  This means that we
-          * cannot have a fast clear operation in the pipe at the same time as
-          * other regular drawing operations.  We need to use a PIPE_CONTROL
-          * to ensure that the contents of the previous draw hit the render
-          * target before we resolve and then use a second PIPE_CONTROL after
-          * the resolve to ensure that it is completed before any additional
-          * drawing occurs.
-          */
-         cmd_buffer->state.pending_pipe_bits |=
-            ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
-
-         /* We only support fast-clears on the first layer */
-         assert(iview->planes[0].isl.base_level == 0);
-         assert(iview->planes[0].isl.base_array_layer == 0);
-
-         assert(image->n_planes == 1);
-         blorp_fast_clear(&batch, &surf, iview->planes[0].isl.format, 0, 0, 1,
-                          render_area.offset.x, render_area.offset.y,
-                          render_area.offset.x + render_area.extent.width,
-                          render_area.offset.y + render_area.extent.height);
-         base_layer++;
-         layer_count--;
-
-         cmd_buffer->state.pending_pipe_bits |=
-            ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
-      }
-
-      if (layer_count > 0) {
-         assert(image->n_planes == 1);
-         anv_cmd_buffer_mark_image_written(cmd_buffer, image,
-                                           VK_IMAGE_ASPECT_COLOR_BIT,
-                                           att_state->aux_usage,
-                                           iview->planes[0].isl.base_level,
-                                           base_layer, layer_count);
-
-         blorp_clear(&batch, &surf, iview->planes[0].isl.format,
-                     anv_swizzle_for_render(iview->planes[0].isl.swizzle),
-                     iview->planes[0].isl.base_level, base_layer, layer_count,
-                     render_area.offset.x, render_area.offset.y,
-                     render_area.offset.x + render_area.extent.width,
-                     render_area.offset.y + render_area.extent.height,
-                     vk_to_isl_color(att_state->clear_value.color), NULL);
-      }
-
-      att_state->pending_clear_aspects = 0;
-   }
 
    const uint32_t ds = cmd_state->subpass->depth_stencil_attachment.attachment;
    assert(ds == VK_ATTACHMENT_UNUSED || ds < cmd_state->pass->attachment_count);
@@ -1617,6 +1526,39 @@ anv_image_copy_to_shadow(struct anv_cmd_buffer *cmd_buffer,
                     0, 0, 0, 0, extent.width, extent.height);
       }
    }
+
+   blorp_batch_finish(&batch);
+}
+
+void
+anv_image_clear_color(struct anv_cmd_buffer *cmd_buffer,
+                      const struct anv_image *image,
+                      VkImageAspectFlagBits aspect,
+                      enum isl_aux_usage aux_usage,
+                      enum isl_format format, struct isl_swizzle swizzle,
+                      uint32_t level, uint32_t base_layer, uint32_t layer_count,
+                      VkRect2D area, union isl_color_value clear_color)
+{
+   assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+
+   /* We don't support planar images with multisampling yet */
+   assert(image->n_planes == 1);
+
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
+
+   struct blorp_surf surf;
+   get_blorp_surf_for_anv_image(cmd_buffer->device, image, aspect,
+                                aux_usage, &surf);
+   anv_cmd_buffer_mark_image_written(cmd_buffer, image, aspect, aux_usage,
+                                     level, base_layer, layer_count);
+
+   blorp_clear(&batch, &surf, format, anv_swizzle_for_render(swizzle),
+               level, base_layer, layer_count,
+               area.offset.x, area.offset.y,
+               area.offset.x + area.extent.width,
+               area.offset.y + area.extent.height,
+               clear_color, NULL);
 
    blorp_batch_finish(&batch);
 }

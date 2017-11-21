@@ -3452,7 +3452,9 @@ static void
 cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                          uint32_t subpass_id)
 {
-   cmd_buffer->state.subpass = &cmd_buffer->state.pass->subpasses[subpass_id];
+   struct anv_cmd_state *cmd_state = &cmd_buffer->state;
+   struct anv_subpass *subpass = &cmd_state->pass->subpasses[subpass_id];
+   cmd_state->subpass = subpass;
 
    cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_RENDER_TARGETS;
 
@@ -3494,6 +3496,56 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
     * value.
     */
    cmd_buffer_subpass_sync_fast_clear_values(cmd_buffer);
+
+   VkRect2D render_area = cmd_buffer->state.render_area;
+   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
+   for (uint32_t i = 0; i < subpass->color_count; ++i) {
+      const uint32_t a = subpass->color_attachments[i].attachment;
+      if (a == VK_ATTACHMENT_UNUSED)
+         continue;
+
+      assert(a < cmd_state->pass->attachment_count);
+      struct anv_attachment_state *att_state = &cmd_state->attachments[a];
+
+      if (!att_state->pending_clear_aspects)
+         continue;
+
+      assert(att_state->pending_clear_aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+
+      struct anv_image_view *iview = fb->attachments[a];
+      const struct anv_image *image = iview->image;
+
+      /* Multi-planar images are not supported as attachments */
+      assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+      assert(image->n_planes == 1);
+
+      uint32_t base_clear_layer = iview->planes[0].isl.base_array_layer;
+      uint32_t clear_layer_count = fb->layers;
+
+      if (att_state->fast_clear) {
+         /* We only support fast-clears on the first layer */
+         assert(iview->planes[0].isl.base_level == 0);
+         assert(iview->planes[0].isl.base_array_layer == 0);
+
+         anv_image_ccs_op(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
+                          0, 0, 1, ISL_AUX_OP_FAST_CLEAR, false);
+         base_clear_layer++;
+         clear_layer_count--;
+      }
+
+      if (clear_layer_count > 0) {
+         assert(image->n_planes == 1);
+         anv_image_clear_color(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
+                               att_state->aux_usage,
+                               iview->planes[0].isl.format,
+                               iview->planes[0].isl.swizzle,
+                               iview->planes[0].isl.base_level,
+                               base_clear_layer, clear_layer_count, render_area,
+                               vk_to_isl_color(att_state->clear_value.color));
+      }
+
+      att_state->pending_clear_aspects = 0;
+   }
 
    cmd_buffer_emit_depth_stencil(cmd_buffer);
 
