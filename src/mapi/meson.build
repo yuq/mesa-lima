@@ -25,6 +25,8 @@ files_mapi_util = files(
   'u_execmem.h',
 )
 
+mapi_abi_py = files('mapi_abi.py')
+
 subdir('glapi')
 if with_shared_glapi
   subdir('shared-glapi')
