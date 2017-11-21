@@ -1570,25 +1570,29 @@ anv_image_copy_to_shadow(struct anv_cmd_buffer *cmd_buffer,
    blorp_batch_finish(&batch);
 }
 
-void
-anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
-                        const struct anv_image *image,
-                        enum blorp_hiz_op op)
+static enum blorp_hiz_op
+isl_to_blorp_hiz_op(enum isl_aux_op isl_op)
 {
-   assert(image);
+   switch (isl_op) {
+   case ISL_AUX_OP_FAST_CLEAR:   return BLORP_HIZ_OP_DEPTH_CLEAR;
+   case ISL_AUX_OP_FULL_RESOLVE: return BLORP_HIZ_OP_DEPTH_RESOLVE;
+   case ISL_AUX_OP_AMBIGUATE:    return BLORP_HIZ_OP_HIZ_RESOLVE;
+   default:
+      unreachable("Unsupported HiZ aux op");
+   }
+}
 
+void
+anv_image_hiz_op(struct anv_cmd_buffer *cmd_buffer,
+                 const struct anv_image *image,
+                 VkImageAspectFlagBits aspect, uint32_t level,
+                 uint32_t base_layer, uint32_t layer_count,
+                 enum isl_aux_op hiz_op)
+{
+   assert(aspect == VK_IMAGE_ASPECT_DEPTH_BIT);
+   assert(base_layer + layer_count <= anv_image_aux_layers(image, aspect, level));
    assert(anv_image_aspect_to_plane(image->aspects,
                                     VK_IMAGE_ASPECT_DEPTH_BIT) == 0);
-
-   /* Don't resolve depth buffers without an auxiliary HiZ buffer and
-    * don't perform such a resolve on gens that don't support it.
-    */
-   if (cmd_buffer->device->info.gen < 8 ||
-       image->planes[0].aux_usage != ISL_AUX_USAGE_HIZ)
-      return;
-
-   assert(op == BLORP_HIZ_OP_HIZ_RESOLVE ||
-          op == BLORP_HIZ_OP_DEPTH_RESOLVE);
 
    struct blorp_batch batch;
    blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
@@ -1599,7 +1603,9 @@ anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
                                 ISL_AUX_USAGE_HIZ, &surf);
    surf.clear_color.f32[0] = ANV_HZ_FC_VAL;
 
-   blorp_hiz_op(&batch, &surf, 0, 0, 1, op);
+   blorp_hiz_op(&batch, &surf, level, base_layer, layer_count,
+                isl_to_blorp_hiz_op(hiz_op));
+
    blorp_batch_finish(&batch);
 }
 

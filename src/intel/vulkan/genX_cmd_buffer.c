@@ -388,19 +388,20 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
       anv_layout_to_aux_usage(&cmd_buffer->device->info, image,
                               VK_IMAGE_ASPECT_DEPTH_BIT, final_layout);
 
-   enum blorp_hiz_op hiz_op;
+   enum isl_aux_op hiz_op;
    if (hiz_enabled && !enable_hiz) {
-      hiz_op = BLORP_HIZ_OP_DEPTH_RESOLVE;
+      hiz_op = ISL_AUX_OP_FULL_RESOLVE;
    } else if (!hiz_enabled && enable_hiz) {
-      hiz_op = BLORP_HIZ_OP_HIZ_RESOLVE;
+      hiz_op = ISL_AUX_OP_AMBIGUATE;
    } else {
       assert(hiz_enabled == enable_hiz);
       /* If the same buffer will be used, no resolves are necessary. */
-      hiz_op = BLORP_HIZ_OP_NONE;
+      hiz_op = ISL_AUX_OP_NONE;
    }
 
-   if (hiz_op != BLORP_HIZ_OP_NONE)
-      anv_gen8_hiz_op_resolve(cmd_buffer, image, hiz_op);
+   if (hiz_op != ISL_AUX_OP_NONE)
+      anv_image_hiz_op(cmd_buffer, image, VK_IMAGE_ASPECT_DEPTH_BIT,
+                       0, 0, 1, hiz_op);
 }
 
 #define MI_PREDICATE_SRC0  0x2400

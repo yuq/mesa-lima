@@ -2582,10 +2582,11 @@ anv_can_sample_with_hiz(const struct gen_device_info * const devinfo,
 }
 
 void
-anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
-                        const struct anv_image *image,
-                        enum blorp_hiz_op op);
-
+anv_image_hiz_op(struct anv_cmd_buffer *cmd_buffer,
+                 const struct anv_image *image,
+                 VkImageAspectFlagBits aspect, uint32_t level,
+                 uint32_t base_layer, uint32_t layer_count,
+                 enum isl_aux_op hiz_op);
 void
 anv_image_mcs_op(struct anv_cmd_buffer *cmd_buffer,
                  const struct anv_image *image,
