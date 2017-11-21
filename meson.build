@@ -52,10 +52,6 @@ if get_option('texture-float')
   message('WARNING: Floating-point texture enabled. Please consult docs/patents.txt and your lawyer before building mesa.')
 endif
 
-# XXX: yeah, do these
-with_appledri = false
-with_windowsdri = false
-
 dri_drivers_path = get_option('dri-drivers-path')
 if dri_drivers_path == ''
   dri_drivers_path = join_paths(get_option('libdir'), 'dri')
