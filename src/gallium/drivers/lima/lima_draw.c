@@ -926,6 +926,37 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 
    ctx->num_draws = 0;
    ctx->draw_start = 0;
+
+   assert(ctx->buffer_state[lima_ctx_buff_sh_varying].offset +
+          ctx->buffer_state[lima_ctx_buff_sh_varying].size <=
+          sh_gl_pos_offset - sh_varying_offset);
+   assert(ctx->buffer_state[lima_ctx_buff_sh_gl_pos].offset +
+          ctx->buffer_state[lima_ctx_buff_sh_gl_pos].size <=
+          sh_buffer_size - sh_gl_pos_offset);
+   assert(ctx->buffer_state[lima_ctx_buff_gp_vs_program].offset +
+          ctx->buffer_state[lima_ctx_buff_gp_vs_program].size <=
+          gp_plbu_plb_offset - gp_vs_program_offset);
+   assert(ctx->buffer_state[lima_ctx_buff_gp_varying_info].offset +
+          ctx->buffer_state[lima_ctx_buff_gp_varying_info].size <=
+          gp_attribute_info_offset - gp_varying_info_offset);
+   assert(ctx->buffer_state[lima_ctx_buff_gp_attribute_info].offset +
+          ctx->buffer_state[lima_ctx_buff_gp_attribute_info].size <=
+          gp_uniform_offset - gp_attribute_info_offset);
+   assert(ctx->buffer_state[lima_ctx_buff_gp_uniform].offset +
+          ctx->buffer_state[lima_ctx_buff_gp_uniform].size <=
+          gp_vs_cmd_offset - gp_uniform_offset);
+   assert(ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].offset +
+          ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].size <=
+          gp_plbu_cmd_offset - gp_vs_cmd_offset);
+   assert(ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].offset +
+          ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].size <=
+          gp_tile_heap_offset - gp_plbu_cmd_offset);
+   assert(ctx->buffer_state[lima_ctx_buff_pp_fs_program].offset +
+          ctx->buffer_state[lima_ctx_buff_pp_fs_program].size <=
+          pp_frame_rsw_offset - pp_fs_program_offset);
+   assert(ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].offset +
+          ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].size <=
+          pp_plb_offset_start - pp_plb_rsw_offset);
    memset(ctx->buffer_state, 0, sizeof(ctx->buffer_state));
 }
 
