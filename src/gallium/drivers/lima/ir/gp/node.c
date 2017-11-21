@@ -80,6 +80,7 @@ const gpir_op_info gpir_op_infos[] = {
    [gpir_op_min] = {
       .name = "min",
       .src_neg = {true, true, false, false},
+      .slots = (int []) { GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_ADD1, GPIR_INSTR_SLOT_END },
    },
    [gpir_op_max] = {
       .name = "max",
