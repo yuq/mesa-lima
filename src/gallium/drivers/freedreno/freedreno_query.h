@@ -61,6 +61,8 @@ fd_query(struct pipe_query *pq)
 #define FD_QUERY_BATCH_SYSMEM    (PIPE_QUERY_DRIVER_SPECIFIC + 2)  /* batches using system memory (GMEM bypass) */
 #define FD_QUERY_BATCH_GMEM      (PIPE_QUERY_DRIVER_SPECIFIC + 3)  /* batches using GMEM */
 #define FD_QUERY_BATCH_RESTORE   (PIPE_QUERY_DRIVER_SPECIFIC + 4)  /* batches requiring GMEM restore */
+#define FD_QUERY_STAGING_UPLOADS (PIPE_QUERY_DRIVER_SPECIFIC + 5)  /* texture/buffer uploads using staging blit */
+#define FD_QUERY_SHADOW_UPLOADS  (PIPE_QUERY_DRIVER_SPECIFIC + 6)  /* texture/buffer uploads that shadowed rsc */
 
 void fd_query_screen_init(struct pipe_screen *pscreen);
 void fd_query_context_init(struct pipe_context *pctx);

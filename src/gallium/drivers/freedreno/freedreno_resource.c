@@ -500,6 +500,7 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 			if (needs_flush && fd_try_shadow_resource(ctx, rsc, level, box)) {
 				needs_flush = busy = false;
 				rebind_resource(ctx, prsc);
+				ctx->stats.shadow_uploads++;
 			} else {
 				struct fd_resource *staging_rsc;
 
@@ -530,6 +531,8 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 					*pptrans = ptrans;
 
 					fd_batch_reference(&write_batch, NULL);
+
+					ctx->stats.staging_uploads++;
 
 					return buf;
 				}

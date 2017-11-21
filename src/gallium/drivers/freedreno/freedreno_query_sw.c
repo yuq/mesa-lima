@@ -67,6 +67,10 @@ read_counter(struct fd_context *ctx, int type)
 		return ctx->stats.batch_gmem;
 	case FD_QUERY_BATCH_RESTORE:
 		return ctx->stats.batch_restore;
+	case FD_QUERY_STAGING_UPLOADS:
+		return ctx->stats.staging_uploads;
+	case FD_QUERY_SHADOW_UPLOADS:
+		return ctx->stats.shadow_uploads;
 	}
 	return 0;
 }
@@ -79,6 +83,8 @@ is_rate_query(struct fd_query *q)
 	case FD_QUERY_BATCH_SYSMEM:
 	case FD_QUERY_BATCH_GMEM:
 	case FD_QUERY_BATCH_RESTORE:
+	case FD_QUERY_STAGING_UPLOADS:
+	case FD_QUERY_SHADOW_UPLOADS:
 		return true;
 	default:
 		return false;
@@ -142,6 +148,8 @@ fd_sw_create_query(struct fd_context *ctx, unsigned query_type)
 	case FD_QUERY_BATCH_SYSMEM:
 	case FD_QUERY_BATCH_GMEM:
 	case FD_QUERY_BATCH_RESTORE:
+	case FD_QUERY_STAGING_UPLOADS:
+	case FD_QUERY_SHADOW_UPLOADS:
 		break;
 	default:
 		return NULL;
