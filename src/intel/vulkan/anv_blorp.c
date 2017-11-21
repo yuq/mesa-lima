@@ -193,12 +193,13 @@ get_blorp_surf_for_anv_image(const struct anv_device *device,
 {
    uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
 
-   if (aux_usage == ANV_AUX_USAGE_DEFAULT)
+   if (aux_usage == ANV_AUX_USAGE_DEFAULT) {
       aux_usage = image->planes[plane].aux_usage;
 
-   if (aspect == VK_IMAGE_ASPECT_STENCIL_BIT ||
-       aux_usage == ISL_AUX_USAGE_HIZ)
-      aux_usage = ISL_AUX_USAGE_NONE;
+      /* Blorp copies and blits can't handle HiZ so disable it by default */
+      if (aux_usage == ISL_AUX_USAGE_HIZ)
+         aux_usage = ISL_AUX_USAGE_NONE;
+   }
 
    const struct anv_surface *surface = &image->planes[plane].surface;
    *blorp_surf = (struct blorp_surf) {
@@ -1595,18 +1596,7 @@ anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
    struct blorp_surf surf;
    get_blorp_surf_for_anv_image(cmd_buffer->device,
                                 image, VK_IMAGE_ASPECT_DEPTH_BIT,
-                                ISL_AUX_USAGE_NONE, &surf);
-
-   /* Manually add the aux HiZ surf */
-   surf.aux_surf = &image->planes[0].aux_surface.isl,
-   surf.aux_addr = (struct blorp_address) {
-      .buffer = image->planes[0].bo,
-      .offset = image->planes[0].bo_offset +
-                image->planes[0].aux_surface.offset,
-      .mocs = cmd_buffer->device->default_mocs,
-   };
-   surf.aux_usage = ISL_AUX_USAGE_HIZ;
-
+                                ISL_AUX_USAGE_HIZ, &surf);
    surf.clear_color.f32[0] = ANV_HZ_FC_VAL;
 
    blorp_hiz_op(&batch, &surf, 0, 0, 1, op);
