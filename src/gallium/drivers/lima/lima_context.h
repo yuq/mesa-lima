@@ -183,13 +183,13 @@ struct lima_context {
    #define gp_vs_program_offset      0x0000
    #define gp_plbu_plb_offset        0x0800
    #define gp_varying_info_offset    0x1000
-   #define gp_attribute_info_offset  0x1100
+   #define gp_attribute_info_offset  0x1800
    /* max_attr/varying_info = 16, each_info = 8, size = max * each */
-   #define gp_uniform_offset         0x1200
-   #define gp_vs_cmd_offset          0x2000
-   #define gp_plbu_cmd_offset        0x2800
-   #define gp_tile_heap_offset       0x3000
-   #define gp_buffer_size            0x5000
+   #define gp_uniform_offset         0x2000
+   #define gp_vs_cmd_offset          0x3000
+   #define gp_plbu_cmd_offset        0x3800
+   #define gp_tile_heap_offset       0x4000
+   #define gp_buffer_size            0x6000
 
    struct lima_buffer *pp_buffer;
    #define pp_fs_program_offset      0x00000
