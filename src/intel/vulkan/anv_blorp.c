@@ -1441,75 +1441,6 @@ fast_clear_aux_usage(const struct anv_image *image,
 }
 
 void
-anv_image_fast_clear(struct anv_cmd_buffer *cmd_buffer,
-                     const struct anv_image *image,
-                     VkImageAspectFlagBits aspect,
-                     const uint32_t base_level, const uint32_t level_count,
-                     const uint32_t base_layer, uint32_t layer_count)
-{
-   assert(image->type == VK_IMAGE_TYPE_3D || image->extent.depth == 1);
-
-   if (image->type == VK_IMAGE_TYPE_3D) {
-      assert(base_layer == 0);
-      assert(layer_count == anv_minify(image->extent.depth, base_level));
-   }
-
-   struct blorp_batch batch;
-   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
-
-   struct blorp_surf surf;
-   get_blorp_surf_for_anv_image(cmd_buffer->device, image, aspect,
-                                fast_clear_aux_usage(image, aspect),
-                                &surf);
-
-   /* From the Sky Lake PRM Vol. 7, "Render Target Fast Clear":
-    *
-    *    "After Render target fast clear, pipe-control with color cache
-    *    write-flush must be issued before sending any DRAW commands on
-    *    that render target."
-    *
-    * This comment is a bit cryptic and doesn't really tell you what's going
-    * or what's really needed.  It appears that fast clear ops are not
-    * properly synchronized with other drawing.  This means that we cannot
-    * have a fast clear operation in the pipe at the same time as other
-    * regular drawing operations.  We need to use a PIPE_CONTROL to ensure
-    * that the contents of the previous draw hit the render target before we
-    * resolve and then use a second PIPE_CONTROL after the resolve to ensure
-    * that it is completed before any additional drawing occurs.
-    */
-   cmd_buffer->state.pending_pipe_bits |=
-      ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
-
-   uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
-   uint32_t width_div = image->format->planes[plane].denominator_scales[0];
-   uint32_t height_div = image->format->planes[plane].denominator_scales[1];
-
-   for (uint32_t l = 0; l < level_count; l++) {
-      const uint32_t level = base_level + l;
-
-      const VkExtent3D extent = {
-         .width = anv_minify(image->extent.width, level),
-         .height = anv_minify(image->extent.height, level),
-         .depth = anv_minify(image->extent.depth, level),
-      };
-
-      if (image->type == VK_IMAGE_TYPE_3D)
-         layer_count = extent.depth;
-
-      assert(level < anv_image_aux_levels(image, aspect));
-      assert(base_layer + layer_count <= anv_image_aux_layers(image, aspect, level));
-      blorp_fast_clear(&batch, &surf, surf.surf->format,
-                       level, base_layer, layer_count,
-                       0, 0,
-                       extent.width / width_div,
-                       extent.height / height_div);
-   }
-
-   cmd_buffer->state.pending_pipe_bits |=
-      ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
-}
-
-void
 anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
@@ -1683,36 +1614,154 @@ anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
 }
 
 void
-anv_ccs_resolve(struct anv_cmd_buffer * const cmd_buffer,
-                const struct anv_image * const image,
-                VkImageAspectFlagBits aspect,
-                const uint8_t level,
-                const uint32_t start_layer, const uint32_t layer_count,
-                const enum blorp_fast_clear_op op)
+anv_image_mcs_op(struct anv_cmd_buffer *cmd_buffer,
+                 const struct anv_image *image,
+                 VkImageAspectFlagBits aspect,
+                 uint32_t base_layer, uint32_t layer_count,
+                 enum isl_aux_op mcs_op, bool predicate)
 {
-   assert(cmd_buffer && image);
+   assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+   assert(image->samples > 1);
+   assert(base_layer + layer_count <= anv_image_aux_layers(image, aspect, 0));
 
-   uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
-
-   /* The resolved subresource range must have a CCS buffer. */
-   assert(level < anv_image_aux_levels(image, aspect));
-   assert(start_layer + layer_count <=
-          anv_image_aux_layers(image, aspect, level));
-   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV && image->samples == 1);
+   /* Multisampling with multi-planar formats is not supported */
+   assert(image->n_planes == 1);
 
    struct blorp_batch batch;
    blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer,
-                    BLORP_BATCH_PREDICATE_ENABLE);
+                    predicate ? BLORP_BATCH_PREDICATE_ENABLE : 0);
+
+   struct blorp_surf surf;
+   get_blorp_surf_for_anv_image(cmd_buffer->device, image, aspect,
+                                ANV_AUX_USAGE_DEFAULT, &surf);
+
+   /* From the Sky Lake PRM Vol. 7, "Render Target Fast Clear":
+    *
+    *    "After Render target fast clear, pipe-control with color cache
+    *    write-flush must be issued before sending any DRAW commands on
+    *    that render target."
+    *
+    * This comment is a bit cryptic and doesn't really tell you what's going
+    * or what's really needed.  It appears that fast clear ops are not
+    * properly synchronized with other drawing.  This means that we cannot
+    * have a fast clear operation in the pipe at the same time as other
+    * regular drawing operations.  We need to use a PIPE_CONTROL to ensure
+    * that the contents of the previous draw hit the render target before we
+    * resolve and then use a second PIPE_CONTROL after the resolve to ensure
+    * that it is completed before any additional drawing occurs.
+    */
+   cmd_buffer->state.pending_pipe_bits |=
+      ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
+
+   switch (mcs_op) {
+   case ISL_AUX_OP_FAST_CLEAR:
+      blorp_fast_clear(&batch, &surf, surf.surf->format,
+                       0, base_layer, layer_count,
+                       0, 0, image->extent.width, image->extent.height);
+      break;
+   case ISL_AUX_OP_FULL_RESOLVE:
+   case ISL_AUX_OP_PARTIAL_RESOLVE:
+   case ISL_AUX_OP_AMBIGUATE:
+   default:
+      unreachable("Unsupported MCS operation");
+   }
+
+   cmd_buffer->state.pending_pipe_bits |=
+      ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
+
+   blorp_batch_finish(&batch);
+}
+
+static enum blorp_fast_clear_op
+isl_to_blorp_fast_clear_op(enum isl_aux_op isl_op)
+{
+   switch (isl_op) {
+   case ISL_AUX_OP_FAST_CLEAR:      return BLORP_FAST_CLEAR_OP_CLEAR;
+   case ISL_AUX_OP_FULL_RESOLVE:    return BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
+   case ISL_AUX_OP_PARTIAL_RESOLVE: return BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL;
+   default:
+      unreachable("Unsupported CCS/MCS aux op");
+   }
+}
+
+void
+anv_image_ccs_op(struct anv_cmd_buffer *cmd_buffer,
+                 const struct anv_image *image,
+                 VkImageAspectFlagBits aspect, uint32_t level,
+                 uint32_t base_layer, uint32_t layer_count,
+                 enum isl_aux_op ccs_op, bool predicate)
+{
+   assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
+   assert(image->samples == 1);
+   assert(level < anv_image_aux_levels(image, aspect));
+   /* Multi-LOD YcBcR is not allowed */
+   assert(image->n_planes == 1 || level == 0);
+   assert(base_layer + layer_count <=
+          anv_image_aux_layers(image, aspect, level));
+
+   uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
+   uint32_t width_div = image->format->planes[plane].denominator_scales[0];
+   uint32_t height_div = image->format->planes[plane].denominator_scales[1];
+   uint32_t level_width = anv_minify(image->extent.width, level) / width_div;
+   uint32_t level_height = anv_minify(image->extent.height, level) / height_div;
+
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer,
+                    predicate ? BLORP_BATCH_PREDICATE_ENABLE : 0);
 
    struct blorp_surf surf;
    get_blorp_surf_for_anv_image(cmd_buffer->device, image, aspect,
                                 fast_clear_aux_usage(image, aspect),
                                 &surf);
-   surf.clear_color_addr = anv_to_blorp_address(
-      anv_image_get_clear_color_addr(cmd_buffer->device, image, aspect, level));
 
-   blorp_ccs_resolve(&batch, &surf, level, start_layer, layer_count,
-                     image->planes[plane].surface.isl.format, op);
+   if (ccs_op == ISL_AUX_OP_FULL_RESOLVE ||
+       ccs_op == ISL_AUX_OP_PARTIAL_RESOLVE) {
+      /* If we're doing a resolve operation, then we need the indirect clear
+       * color.  The clear and ambiguate operations just stomp the CCS to a
+       * particular value and don't care about format or clear value.
+       */
+      const struct anv_address clear_color_addr =
+         anv_image_get_clear_color_addr(cmd_buffer->device, image,
+                                        aspect, level);
+      surf.clear_color_addr = anv_to_blorp_address(clear_color_addr);
+   }
+
+   /* From the Sky Lake PRM Vol. 7, "Render Target Fast Clear":
+    *
+    *    "After Render target fast clear, pipe-control with color cache
+    *    write-flush must be issued before sending any DRAW commands on
+    *    that render target."
+    *
+    * This comment is a bit cryptic and doesn't really tell you what's going
+    * or what's really needed.  It appears that fast clear ops are not
+    * properly synchronized with other drawing.  This means that we cannot
+    * have a fast clear operation in the pipe at the same time as other
+    * regular drawing operations.  We need to use a PIPE_CONTROL to ensure
+    * that the contents of the previous draw hit the render target before we
+    * resolve and then use a second PIPE_CONTROL after the resolve to ensure
+    * that it is completed before any additional drawing occurs.
+    */
+   cmd_buffer->state.pending_pipe_bits |=
+      ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
+
+   switch (ccs_op) {
+   case ISL_AUX_OP_FAST_CLEAR:
+      blorp_fast_clear(&batch, &surf, surf.surf->format,
+                       level, base_layer, layer_count,
+                       0, 0, level_width, level_height);
+      break;
+   case ISL_AUX_OP_FULL_RESOLVE:
+   case ISL_AUX_OP_PARTIAL_RESOLVE:
+      blorp_ccs_resolve(&batch, &surf, level, base_layer, layer_count,
+                        surf.surf->format, isl_to_blorp_fast_clear_op(ccs_op));
+      break;
+   case ISL_AUX_OP_AMBIGUATE:
+   default:
+      unreachable("Unsupported CCS operation");
+   }
+
+   cmd_buffer->state.pending_pipe_bits |=
+      ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
 
    blorp_batch_finish(&batch);
 }

@@ -2585,20 +2585,19 @@ void
 anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
                         const struct anv_image *image,
                         enum blorp_hiz_op op);
-void
-anv_ccs_resolve(struct anv_cmd_buffer * const cmd_buffer,
-                const struct anv_image * const image,
-                VkImageAspectFlagBits aspect,
-                const uint8_t level,
-                const uint32_t start_layer, const uint32_t layer_count,
-                const enum blorp_fast_clear_op op);
 
 void
-anv_image_fast_clear(struct anv_cmd_buffer *cmd_buffer,
-                     const struct anv_image *image,
-                     VkImageAspectFlagBits aspect,
-                     const uint32_t base_level, const uint32_t level_count,
-                     const uint32_t base_layer, uint32_t layer_count);
+anv_image_mcs_op(struct anv_cmd_buffer *cmd_buffer,
+                 const struct anv_image *image,
+                 VkImageAspectFlagBits aspect,
+                 uint32_t base_layer, uint32_t layer_count,
+                 enum isl_aux_op mcs_op, bool predicate);
+void
+anv_image_ccs_op(struct anv_cmd_buffer *cmd_buffer,
+                 const struct anv_image *image,
+                 VkImageAspectFlagBits aspect, uint32_t level,
+                 uint32_t base_layer, uint32_t layer_count,
+                 enum isl_aux_op ccs_op, bool predicate);
 
 void
 anv_image_copy_to_shadow(struct anv_cmd_buffer *cmd_buffer,

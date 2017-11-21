@@ -689,9 +689,22 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
                           "define an MCS buffer.");
          }
 
-         anv_image_fast_clear(cmd_buffer, image, aspect,
-                              base_level, level_count,
-                              base_layer, layer_count);
+         if (image->samples == 1) {
+            for (uint32_t l = 0; l < level_count; l++) {
+               const uint32_t level = base_level + l;
+               const uint32_t level_layer_count =
+                  MIN2(layer_count, anv_image_aux_layers(image, aspect, level));
+               anv_image_ccs_op(cmd_buffer, image, aspect, level,
+                                base_layer, level_layer_count,
+                                ISL_AUX_OP_FAST_CLEAR, false);
+            }
+         } else {
+            assert(image->samples > 1);
+            assert(base_level == 0 && level_count == 1);
+            anv_image_mcs_op(cmd_buffer, image, aspect,
+                             base_layer, layer_count,
+                             ISL_AUX_OP_FAST_CLEAR, false);
+         }
       }
       /* At this point, some elements of the CCS buffer may have the fast-clear
        * bit-arrangement. As the user writes to a subresource, we need to have
@@ -760,10 +773,11 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
 
       genX(load_needs_resolve_predicate)(cmd_buffer, image, aspect, level);
 
-      anv_ccs_resolve(cmd_buffer, image, aspect, level, base_layer, layer_count,
-                      image->planes[plane].aux_usage == ISL_AUX_USAGE_CCS_E ?
-                      BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL :
-                      BLORP_FAST_CLEAR_OP_RESOLVE_FULL);
+      anv_image_ccs_op(cmd_buffer, image, aspect, level,
+                       base_layer, layer_count,
+                       image->planes[plane].aux_usage == ISL_AUX_USAGE_CCS_E ?
+                       ISL_AUX_OP_PARTIAL_RESOLVE : ISL_AUX_OP_FULL_RESOLVE,
+                       true);
 
       genX(set_image_needs_resolve)(cmd_buffer, image, aspect, level, false);
    }
