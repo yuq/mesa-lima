@@ -3450,10 +3450,11 @@ cmd_buffer_subpass_sync_fast_clear_values(struct anv_cmd_buffer *cmd_buffer)
 
 
 static void
-genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
-                             struct anv_subpass *subpass)
+cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
+                         struct anv_subpass *subpass)
 {
    cmd_buffer->state.subpass = subpass;
+   uint32_t subpass_id = anv_get_subpass_id(&cmd_buffer->state);
 
    cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_RENDER_TARGETS;
 
@@ -3478,6 +3479,10 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
     */
    cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_PIPELINE;
 
+   /* Accumulate any subpass flushes that need to happen before the subpass */
+   cmd_buffer->state.pending_pipe_bits |=
+      cmd_buffer->state.pass->subpass_flushes[subpass_id];
+
    /* Perform transitions to the subpass layout before any writes have
     * occurred.
     */
@@ -3495,6 +3500,26 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
    cmd_buffer_emit_depth_stencil(cmd_buffer);
 
    anv_cmd_buffer_clear_subpass(cmd_buffer);
+}
+
+static void
+cmd_buffer_end_subpass(struct anv_cmd_buffer *cmd_buffer)
+{
+   uint32_t subpass_id = anv_get_subpass_id(&cmd_buffer->state);
+
+   anv_cmd_buffer_resolve_subpass(cmd_buffer);
+
+   /* Perform transitions to the final layout after all writes have occurred.
+    */
+   cmd_buffer_subpass_transition_layouts(cmd_buffer, true);
+
+   /* Accumulate any subpass flushes that need to happen after the subpass.
+    * Yes, they do get accumulated twice in the NextSubpass case but since
+    * genX_CmdNextSubpass just calls end/begin back-to-back, we just end up
+    * ORing the bits in twice so it's harmless.
+    */
+   cmd_buffer->state.pending_pipe_bits |=
+      cmd_buffer->state.pass->subpass_flushes[subpass_id + 1];
 }
 
 void genX(CmdBeginRenderPass)(
@@ -3520,10 +3545,7 @@ void genX(CmdBeginRenderPass)(
 
    genX(flush_pipeline_select_3d)(cmd_buffer);
 
-   cmd_buffer->state.pending_pipe_bits |=
-      cmd_buffer->state.pass->subpass_flushes[0];
-
-   genX(cmd_buffer_set_subpass)(cmd_buffer, pass->subpasses);
+   cmd_buffer_begin_subpass(cmd_buffer, pass->subpasses);
 }
 
 void genX(CmdNextSubpass)(
@@ -3537,17 +3559,9 @@ void genX(CmdNextSubpass)(
 
    assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-   anv_cmd_buffer_resolve_subpass(cmd_buffer);
+   cmd_buffer_end_subpass(cmd_buffer);
 
-   /* Perform transitions to the final layout after all writes have occurred.
-    */
-   cmd_buffer_subpass_transition_layouts(cmd_buffer, true);
-
-   uint32_t subpass_id = anv_get_subpass_id(&cmd_buffer->state);
-   cmd_buffer->state.pending_pipe_bits |=
-      cmd_buffer->state.pass->subpass_flushes[subpass_id];
-
-   genX(cmd_buffer_set_subpass)(cmd_buffer, cmd_buffer->state.subpass + 1);
+   cmd_buffer_begin_subpass(cmd_buffer, cmd_buffer->state.subpass + 1);
 }
 
 void genX(CmdEndRenderPass)(
@@ -3558,14 +3572,7 @@ void genX(CmdEndRenderPass)(
    if (anv_batch_has_error(&cmd_buffer->batch))
       return;
 
-   anv_cmd_buffer_resolve_subpass(cmd_buffer);
-
-   /* Perform transitions to the final layout after all writes have occurred.
-    */
-   cmd_buffer_subpass_transition_layouts(cmd_buffer, true);
-
-   cmd_buffer->state.pending_pipe_bits |=
-      cmd_buffer->state.pass->subpass_flushes[cmd_buffer->state.pass->subpass_count];
+   cmd_buffer_end_subpass(cmd_buffer);
 
    cmd_buffer->state.hiz_enabled = false;
 
