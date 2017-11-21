@@ -79,6 +79,7 @@ vc5_set_transform_feedback_outputs(struct vc5_uncompiled_shader *so,
                                 slots[slot_count] =
                                         v3d_slot_from_slot_and_component(VARYING_SLOT_POS, 0);
                                 slot_count++;
+                                buffer_offset++;
                         }
 
                         /* Set the coordinate shader up to output the
@@ -92,6 +93,7 @@ vc5_set_transform_feedback_outputs(struct vc5_uncompiled_shader *so,
                                         v3d_slot_from_slot_and_component(slot,
                                                                          output->start_component + j);
                                 slot_count++;
+                                buffer_offset++;
                         }
                 }
 
