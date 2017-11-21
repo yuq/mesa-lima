@@ -373,7 +373,7 @@ static struct si_pc_block groups_CIK[] = {
 };
 
 static struct si_pc_block groups_VI[] = {
-	{ &cik_CB, 396, 4 },
+	{ &cik_CB, 405, 4 },
 	{ &cik_CPF, 19 },
 	{ &cik_DB, 257, 4 },
 	{ &cik_GRBM, 34 },
