@@ -63,6 +63,7 @@ if with_gallium_radeonsi
     libamd_common,
   ]
   gallium_dri_drivers += 'radeonsi_dri.so'
+  gallium_dri_sources += [si_driinfo_h]
 endif
 if with_gallium_nouveau
   gallium_dri_c_args += '-DGALLIUM_NOUVEAU'
