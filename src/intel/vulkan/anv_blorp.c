@@ -1139,143 +1139,6 @@ enum subpass_stage {
    SUBPASS_STAGE_RESOLVE,
 };
 
-static bool
-subpass_needs_clear(const struct anv_cmd_buffer *cmd_buffer)
-{
-   const struct anv_cmd_state *cmd_state = &cmd_buffer->state;
-   uint32_t ds = cmd_state->subpass->depth_stencil_attachment.attachment;
-
-   if (ds != VK_ATTACHMENT_UNUSED) {
-      assert(ds < cmd_state->pass->attachment_count);
-      if (cmd_state->attachments[ds].pending_clear_aspects)
-         return true;
-   }
-
-   return false;
-}
-
-void
-anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
-{
-   const struct anv_cmd_state *cmd_state = &cmd_buffer->state;
-   const VkRect2D render_area = cmd_buffer->state.render_area;
-
-
-   if (!subpass_needs_clear(cmd_buffer))
-      return;
-
-   /* Because this gets called within a render pass, we tell blorp not to
-    * trash our depth and stencil buffers.
-    */
-   struct blorp_batch batch;
-   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer,
-                    BLORP_BATCH_NO_EMIT_DEPTH_STENCIL);
-
-   VkClearRect clear_rect = {
-      .rect = cmd_buffer->state.render_area,
-      .baseArrayLayer = 0,
-      .layerCount = cmd_buffer->state.framebuffer->layers,
-   };
-
-   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
-
-   const uint32_t ds = cmd_state->subpass->depth_stencil_attachment.attachment;
-   assert(ds == VK_ATTACHMENT_UNUSED || ds < cmd_state->pass->attachment_count);
-
-   if (ds != VK_ATTACHMENT_UNUSED &&
-       cmd_state->attachments[ds].pending_clear_aspects) {
-
-      VkClearAttachment clear_att = {
-         .aspectMask = cmd_state->attachments[ds].pending_clear_aspects,
-         .clearValue = cmd_state->attachments[ds].clear_value,
-      };
-
-
-      const uint8_t gen = cmd_buffer->device->info.gen;
-      bool clear_with_hiz = gen >= 8 && cmd_state->attachments[ds].aux_usage ==
-                            ISL_AUX_USAGE_HIZ;
-      const struct anv_image_view *iview = fb->attachments[ds];
-
-      if (clear_with_hiz) {
-         const bool clear_depth = clear_att.aspectMask &
-                                  VK_IMAGE_ASPECT_DEPTH_BIT;
-         const bool clear_stencil = clear_att.aspectMask &
-                                    VK_IMAGE_ASPECT_STENCIL_BIT;
-
-         /* Check against restrictions for depth buffer clearing. A great GPU
-          * performance benefit isn't expected when using the HZ sequence for
-          * stencil-only clears. Therefore, we don't emit a HZ op sequence for
-          * a stencil clear in addition to using the BLORP-fallback for depth.
-          */
-         if (clear_depth) {
-            if (!blorp_can_hiz_clear_depth(gen, iview->planes[0].isl.format,
-                                           iview->image->samples,
-                                           render_area.offset.x,
-                                           render_area.offset.y,
-                                           render_area.offset.x +
-                                           render_area.extent.width,
-                                           render_area.offset.y +
-                                           render_area.extent.height)) {
-               clear_with_hiz = false;
-            } else if (clear_att.clearValue.depthStencil.depth !=
-                       ANV_HZ_FC_VAL) {
-               /* Don't enable fast depth clears for any color not equal to
-                * ANV_HZ_FC_VAL.
-                */
-               clear_with_hiz = false;
-            } else if (gen == 8 &&
-                       anv_can_sample_with_hiz(&cmd_buffer->device->info,
-                                               iview->image)) {
-               /* Only gen9+ supports returning ANV_HZ_FC_VAL when sampling a
-                * fast-cleared portion of a HiZ buffer. Testing has revealed
-                * that Gen8 only supports returning 0.0f. Gens prior to gen8 do
-                * not support this feature at all.
-                */
-               clear_with_hiz = false;
-            }
-         }
-
-         if (clear_with_hiz) {
-            blorp_gen8_hiz_clear_attachments(&batch, iview->image->samples,
-                                             render_area.offset.x,
-                                             render_area.offset.y,
-                                             render_area.offset.x +
-                                             render_area.extent.width,
-                                             render_area.offset.y +
-                                             render_area.extent.height,
-                                             clear_depth, clear_stencil,
-                                             clear_att.clearValue.
-                                                depthStencil.stencil);
-
-            /* From the SKL PRM, Depth Buffer Clear:
-             *
-             * Depth Buffer Clear Workaround
-             * Depth buffer clear pass using any of the methods (WM_STATE,
-             * 3DSTATE_WM or 3DSTATE_WM_HZ_OP) must be followed by a
-             * PIPE_CONTROL command with DEPTH_STALL bit and Depth FLUSH bits
-             * “set” before starting to render. DepthStall and DepthFlush are
-             * not needed between consecutive depth clear passes nor is it
-             * required if the depth-clear pass was done with “full_surf_clear”
-             * bit set in the 3DSTATE_WM_HZ_OP.
-             */
-            if (clear_depth) {
-               cmd_buffer->state.pending_pipe_bits |=
-                  ANV_PIPE_DEPTH_CACHE_FLUSH_BIT | ANV_PIPE_DEPTH_STALL_BIT;
-            }
-         }
-      }
-
-      if (!clear_with_hiz) {
-         clear_depth_stencil_attachment(cmd_buffer, &batch,
-                                        &clear_att, 1, &clear_rect);
-      }
-
-      cmd_state->attachments[ds].pending_clear_aspects = 0;
-   }
-
-   blorp_batch_finish(&batch);
-}
-
 static void
 resolve_surface(struct blorp_batch *batch,
                 struct blorp_surf *src_surf,
@@ -1564,6 +1427,50 @@ anv_image_clear_color(struct anv_cmd_buffer *cmd_buffer,
 }
 
 void
+anv_image_clear_depth_stencil(struct anv_cmd_buffer *cmd_buffer,
+                              const struct anv_image *image,
+                              VkImageAspectFlags aspects,
+                              enum isl_aux_usage depth_aux_usage,
+                              uint32_t level,
+                              uint32_t base_layer, uint32_t layer_count,
+                              VkRect2D area,
+                              float depth_value, uint8_t stencil_value)
+{
+   assert(image->aspects & (VK_IMAGE_ASPECT_DEPTH_BIT |
+                            VK_IMAGE_ASPECT_STENCIL_BIT));
+
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
+
+   struct blorp_surf depth = {};
+   if (aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
+      get_blorp_surf_for_anv_image(cmd_buffer->device,
+                                   image, VK_IMAGE_ASPECT_DEPTH_BIT,
+                                   depth_aux_usage, &depth);
+      depth.clear_color.f32[0] = ANV_HZ_FC_VAL;
+   }
+
+   struct blorp_surf stencil = {};
+   if (aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {
+      get_blorp_surf_for_anv_image(cmd_buffer->device,
+                                   image, VK_IMAGE_ASPECT_STENCIL_BIT,
+                                   ISL_AUX_USAGE_NONE, &stencil);
+   }
+
+   blorp_clear_depth_stencil(&batch, &depth, &stencil,
+                             level, base_layer, layer_count,
+                             area.offset.x, area.offset.y,
+                             area.offset.x + area.extent.width,
+                             area.offset.y + area.extent.height,
+                             aspects & VK_IMAGE_ASPECT_DEPTH_BIT,
+                             depth_value,
+                             (aspects & VK_IMAGE_ASPECT_STENCIL_BIT) ? 0xff : 0,
+                             stencil_value);
+
+   blorp_batch_finish(&batch);
+}
+
+void
 anv_image_hiz_op(struct anv_cmd_buffer *cmd_buffer,
                  const struct anv_image *image,
                  VkImageAspectFlagBits aspect, uint32_t level,
@@ -1587,6 +1494,65 @@ anv_image_hiz_op(struct anv_cmd_buffer *cmd_buffer,
    blorp_hiz_op(&batch, &surf, level, base_layer, layer_count, hiz_op);
 
    blorp_batch_finish(&batch);
+}
+
+void
+anv_image_hiz_clear(struct anv_cmd_buffer *cmd_buffer,
+                    const struct anv_image *image,
+                    VkImageAspectFlags aspects,
+                    uint32_t level,
+                    uint32_t base_layer, uint32_t layer_count,
+                    VkRect2D area, uint8_t stencil_value)
+{
+   assert(image->aspects & (VK_IMAGE_ASPECT_DEPTH_BIT |
+                            VK_IMAGE_ASPECT_STENCIL_BIT));
+
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
+
+   struct blorp_surf depth = {};
+   if (aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
+      assert(base_layer + layer_count <=
+             anv_image_aux_layers(image, VK_IMAGE_ASPECT_DEPTH_BIT, level));
+      get_blorp_surf_for_anv_image(cmd_buffer->device,
+                                   image, VK_IMAGE_ASPECT_DEPTH_BIT,
+                                   ISL_AUX_USAGE_HIZ, &depth);
+      depth.clear_color.f32[0] = ANV_HZ_FC_VAL;
+   }
+
+   struct blorp_surf stencil = {};
+   if (aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {
+      get_blorp_surf_for_anv_image(cmd_buffer->device,
+                                   image, VK_IMAGE_ASPECT_STENCIL_BIT,
+                                   ISL_AUX_USAGE_NONE, &stencil);
+   }
+
+   blorp_hiz_clear_depth_stencil(&batch, &depth, &stencil,
+                                 level, base_layer, layer_count,
+                                 area.offset.x, area.offset.y,
+                                 area.offset.x + area.extent.width,
+                                 area.offset.y + area.extent.height,
+                                 aspects & VK_IMAGE_ASPECT_DEPTH_BIT,
+                                 ANV_HZ_FC_VAL,
+                                 aspects & VK_IMAGE_ASPECT_STENCIL_BIT,
+                                 stencil_value);
+
+   blorp_batch_finish(&batch);
+
+   /* From the SKL PRM, Depth Buffer Clear:
+    *
+    * Depth Buffer Clear Workaround
+    * Depth buffer clear pass using any of the methods (WM_STATE, 3DSTATE_WM
+    * or 3DSTATE_WM_HZ_OP) must be followed by a PIPE_CONTROL command with
+    * DEPTH_STALL bit and Depth FLUSH bits “set” before starting to render.
+    * DepthStall and DepthFlush are not needed between consecutive depth clear
+    * passes nor is it required if the depth-clear pass was done with
+    * “full_surf_clear” bit set in the 3DSTATE_WM_HZ_OP.
+    */
+   if (aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
+      cmd_buffer->state.pending_pipe_bits |=
+         ANV_PIPE_DEPTH_CACHE_FLUSH_BIT | ANV_PIPE_DEPTH_STALL_BIT;
+   }
 }
 
 void

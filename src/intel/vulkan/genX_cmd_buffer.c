@@ -3547,9 +3547,73 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
       att_state->pending_clear_aspects = 0;
    }
 
-   cmd_buffer_emit_depth_stencil(cmd_buffer);
+   if (subpass->depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED) {
+      const uint32_t a = subpass->depth_stencil_attachment.attachment;
 
-   anv_cmd_buffer_clear_subpass(cmd_buffer);
+      assert(a < cmd_state->pass->attachment_count);
+      struct anv_attachment_state *att_state = &cmd_state->attachments[a];
+      struct anv_image_view *iview = fb->attachments[a];
+      const struct anv_image *image = iview->image;
+
+      assert(image->aspects & (VK_IMAGE_ASPECT_DEPTH_BIT |
+                               VK_IMAGE_ASPECT_STENCIL_BIT));
+
+      if (att_state->pending_clear_aspects) {
+         bool clear_with_hiz = att_state->aux_usage == ISL_AUX_USAGE_HIZ;
+         if (clear_with_hiz &&
+             (att_state->pending_clear_aspects & VK_IMAGE_ASPECT_DEPTH_BIT)) {
+            if (!blorp_can_hiz_clear_depth(GEN_GEN,
+                                           iview->planes[0].isl.format,
+                                           iview->image->samples,
+                                           render_area.offset.x,
+                                           render_area.offset.y,
+                                           render_area.offset.x +
+                                           render_area.extent.width,
+                                           render_area.offset.y +
+                                           render_area.extent.height)) {
+               clear_with_hiz = false;
+            } else if (att_state->clear_value.depthStencil.depth != ANV_HZ_FC_VAL) {
+               clear_with_hiz = false;
+            } else if (GEN_GEN == 8 &&
+                       anv_can_sample_with_hiz(&cmd_buffer->device->info,
+                                               iview->image)) {
+               /* Only gen9+ supports returning ANV_HZ_FC_VAL when sampling a
+                * fast-cleared portion of a HiZ buffer. Testing has revealed
+                * that Gen8 only supports returning 0.0f. Gens prior to gen8
+                * do not support this feature at all.
+                */
+               clear_with_hiz = false;
+            }
+         }
+
+         if (clear_with_hiz) {
+            /* We currently only support HiZ for single-slice images */
+            assert(iview->planes[0].isl.base_level == 0);
+            assert(iview->planes[0].isl.base_array_layer == 0);
+            assert(fb->layers == 1);
+
+            anv_image_hiz_clear(cmd_buffer, image,
+                                att_state->pending_clear_aspects,
+                                iview->planes[0].isl.base_level,
+                                iview->planes[0].isl.base_array_layer,
+                                fb->layers, render_area,
+                                att_state->clear_value.depthStencil.stencil);
+         } else {
+            anv_image_clear_depth_stencil(cmd_buffer, image,
+                                          att_state->pending_clear_aspects,
+                                          att_state->aux_usage,
+                                          iview->planes[0].isl.base_level,
+                                          iview->planes[0].isl.base_array_layer,
+                                          fb->layers, render_area,
+                                          att_state->clear_value.depthStencil.depth,
+                                          att_state->clear_value.depthStencil.stencil);
+         }
+      }
+
+      att_state->pending_clear_aspects = 0;
+   }
+
+   cmd_buffer_emit_depth_stencil(cmd_buffer);
 }
 
 static void
