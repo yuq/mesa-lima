@@ -1132,26 +1132,36 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
          struct anv_render_pass_attachment *att = &pass->attachments[i];
          VkImageAspectFlags att_aspects = vk_format_aspects(att->format);
          VkImageAspectFlags clear_aspects = 0;
+         VkImageAspectFlags load_aspects = 0;
 
          if (att_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
             /* color attachment */
             if (att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
                clear_aspects |= VK_IMAGE_ASPECT_COLOR_BIT;
+            } else if (att->load_op == VK_ATTACHMENT_LOAD_OP_LOAD) {
+               load_aspects |= VK_IMAGE_ASPECT_COLOR_BIT;
             }
          } else {
             /* depthstencil attachment */
-            if ((att_aspects & VK_IMAGE_ASPECT_DEPTH_BIT) &&
-                att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-               clear_aspects |= VK_IMAGE_ASPECT_DEPTH_BIT;
+            if (att_aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
+               if (att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+                  clear_aspects |= VK_IMAGE_ASPECT_DEPTH_BIT;
+               } else if (att->load_op == VK_ATTACHMENT_LOAD_OP_LOAD) {
+                  load_aspects |= VK_IMAGE_ASPECT_DEPTH_BIT;
+               }
             }
-            if ((att_aspects & VK_IMAGE_ASPECT_STENCIL_BIT) &&
-                att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-               clear_aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            if (att_aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {
+               if (att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+                  clear_aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
+               } else if (att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_LOAD) {
+                  load_aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
+               }
             }
          }
 
          state->attachments[i].current_layout = att->initial_layout;
          state->attachments[i].pending_clear_aspects = clear_aspects;
+         state->attachments[i].pending_load_aspects = load_aspects;
          if (clear_aspects)
             state->attachments[i].clear_value = begin->pClearValues[i];
 

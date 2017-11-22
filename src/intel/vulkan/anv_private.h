@@ -1689,6 +1689,7 @@ struct anv_attachment_state {
 
    VkImageLayout                                current_layout;
    VkImageAspectFlags                           pending_clear_aspects;
+   VkImageAspectFlags                           pending_load_aspects;
    bool                                         fast_clear;
    VkClearValue                                 clear_value;
    bool                                         clear_color_is_zero_one;
