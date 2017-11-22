@@ -416,7 +416,8 @@ struct pipe_video_codec *si_vce_create_encoder(struct pipe_context *context,
 	if (sscreen->info.family >= CHIP_TONGA &&
 	    sscreen->info.family != CHIP_STONEY &&
 	    sscreen->info.family != CHIP_POLARIS11 &&
-	    sscreen->info.family != CHIP_POLARIS12)
+	    sscreen->info.family != CHIP_POLARIS12 &&
+	    sscreen->info.family != CHIP_VEGAM)
 		enc->dual_pipe = true;
 	/* TODO enable B frame with dual instance */
 	if ((sscreen->info.family >= CHIP_TONGA) &&
