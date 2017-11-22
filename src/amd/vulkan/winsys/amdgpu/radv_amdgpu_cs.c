@@ -711,7 +711,8 @@ static int radv_amdgpu_winsys_cs_submit_chained(struct radeon_winsys_ctx *_ctx,
 
 	r = radv_amdgpu_create_bo_list(cs0->ws, cs_array, cs_count, NULL, initial_preamble_cs, &bo_list);
 	if (r) {
-		fprintf(stderr, "amdgpu: Failed to created the BO list for submission\n");
+		fprintf(stderr, "amdgpu: buffer list creation failed for the "
+				"chained submission(%d)\n", r);
 		return r;
 	}
 
@@ -778,7 +779,8 @@ static int radv_amdgpu_winsys_cs_submit_fallback(struct radeon_winsys_ctx *_ctx,
 		r = radv_amdgpu_create_bo_list(cs0->ws, &cs_array[i], cnt, NULL,
 		                               preamble_cs, &bo_list);
 		if (r) {
-			fprintf(stderr, "amdgpu: Failed to created the BO list for submission\n");
+			fprintf(stderr, "amdgpu: buffer list creation failed "
+					"for the fallback submission (%d)\n", r);
 			return r;
 		}
 
@@ -900,7 +902,8 @@ static int radv_amdgpu_winsys_cs_submit_sysmem(struct radeon_winsys_ctx *_ctx,
 		                               (struct radv_amdgpu_winsys_bo*)bo,
 		                               preamble_cs, &bo_list);
 		if (r) {
-			fprintf(stderr, "amdgpu: Failed to created the BO list for submission\n");
+			fprintf(stderr, "amdgpu: buffer list creation failed "
+					"for the sysmem submission (%d)\n", r);
 			return r;
 		}
 
