@@ -122,26 +122,34 @@ st_nir_assign_vs_in_locations(struct gl_program *prog, nir_shader *nir)
 }
 
 static void
-st_nir_assign_var_locations(struct exec_list *var_list, unsigned *size)
+st_nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
+                            gl_shader_stage stage)
 {
    unsigned location = 0;
    unsigned assigned_locations[VARYING_SLOT_MAX];
    uint64_t processed_locs = 0;
 
    nir_foreach_variable(var, var_list) {
+
+      const struct glsl_type *type = var->type;
+      if (nir_is_per_vertex_io(var, stage)) {
+         assert(glsl_type_is_array(type));
+         type = glsl_get_array_element(type);
+      }
+
       /* Because component packing allows varyings to share the same location
        * we may have already have processed this location.
        */
       if (var->data.location >= VARYING_SLOT_VAR0 &&
           processed_locs & ((uint64_t)1 << var->data.location)) {
          var->data.driver_location = assigned_locations[var->data.location];
-         *size += type_size(var->type);
+         *size += type_size(type);
          continue;
       }
 
       assigned_locations[var->data.location] = location;
       var->data.driver_location = location;
-      location += type_size(var->type);
+      location += type_size(type);
 
       processed_locs |= ((uint64_t)1 << var->data.location);
    }
@@ -644,15 +652,18 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog,
 
       sort_varyings(&nir->outputs);
       st_nir_assign_var_locations(&nir->outputs,
-                                  &nir->num_outputs);
+                                  &nir->num_outputs,
+                                  nir->info.stage);
       st_nir_fixup_varying_slots(st, &nir->outputs);
    } else if (nir->info.stage == MESA_SHADER_FRAGMENT) {
       sort_varyings(&nir->inputs);
       st_nir_assign_var_locations(&nir->inputs,
-                                  &nir->num_inputs);
+                                  &nir->num_inputs,
+                                  nir->info.stage);
       st_nir_fixup_varying_slots(st, &nir->inputs);
       st_nir_assign_var_locations(&nir->outputs,
-                                  &nir->num_outputs);
+                                  &nir->num_outputs,
+                                  nir->info.stage);
    } else if (nir->info.stage == MESA_SHADER_COMPUTE) {
        /* TODO? */
    } else {
