@@ -323,8 +323,19 @@ lima_screen_create(int fd, struct renderonly *ro)
       else if (!strcmp("pp", shader_debug))
          lima_shader_debug_pp = true;
       else
-         debug_printf("lima: unsupport LIMA_SHADER_DEBUG value %s\n",
-                      shader_debug);
+         fprintf(stderr, "lima: unsupport LIMA_SHADER_DEBUG value %s\n",
+                 shader_debug);
+
+      if (lima_shader_debug_gp)
+         printf("lima: enable shader GP debug\n");
+      if (lima_shader_debug_pp)
+         printf("lima: enable shader PP debug\n");
+   }
+
+   const char *dump_command = debug_get_option("LIMA_DUMP_COMMAND_STREAM", NULL);
+   if (dump_command) {
+      printf("lima: dump command stream enabled\n");
+      lima_dump_command_stream = true;
    }
 
    return &screen->base;
