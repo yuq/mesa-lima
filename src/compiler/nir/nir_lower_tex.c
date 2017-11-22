@@ -524,10 +524,9 @@ lower_gradient_cube_map(nir_builder *b, nir_tex_instr *tex)
 }
 
 static void
-lower_gradient_shadow(nir_builder *b, nir_tex_instr *tex)
+lower_gradient(nir_builder *b, nir_tex_instr *tex)
 {
    assert(tex->sampler_dim != GLSL_SAMPLER_DIM_CUBE);
-   assert(tex->is_shadow);
    assert(tex->op == nir_texop_txd);
    assert(tex->dest.is_ssa);
 
@@ -809,16 +808,19 @@ nir_lower_tex_block(nir_block *block, nir_builder *b,
 
       if (tex->op == nir_texop_txd &&
           tex->sampler_dim == GLSL_SAMPLER_DIM_CUBE &&
-          (options->lower_txd_cube_map ||
+          (options->lower_txd ||
+           options->lower_txd_cube_map ||
            (tex->is_shadow && options->lower_txd_shadow))) {
          lower_gradient_cube_map(b, tex);
          progress = true;
          continue;
       }
 
-      if (tex->op == nir_texop_txd && options->lower_txd_shadow &&
-          tex->is_shadow && tex->sampler_dim != GLSL_SAMPLER_DIM_CUBE) {
-         lower_gradient_shadow(b, tex);
+      if (tex->op == nir_texop_txd &&
+          (options->lower_txd ||
+           (options->lower_txd_shadow &&
+            tex->is_shadow && tex->sampler_dim != GLSL_SAMPLER_DIM_CUBE))) {
+         lower_gradient(b, tex);
          progress = true;
          continue;
       }
