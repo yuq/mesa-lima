@@ -32,6 +32,16 @@
 
 #include <lima_drm.h>
 
+bool lima_dump_command_stream = false;
+
+static void lima_dump_blob(void *data, int size)
+{
+   uint32_t *blob = data;
+   for (int i = 0; i * 4 < size; i += 4)
+      printf ("%04x: 0x%08x 0x%08x 0x%08x 0x%08x\n", i * 4,
+              blob[i], blob[i + 1], blob[i + 2], blob[i + 3]);
+}
+
 static void
 lima_clear(struct pipe_context *pctx, unsigned buffers,
            const union pipe_color_union *color, double depth, unsigned stencil)
@@ -257,6 +267,13 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    vs_cmd[i++] = info->index_size ? 0x00018000 : 0x00000000; /* ARRAYS_SEMAPHORE_NEXT : ARRAYS_SEMAPHORE_END */
    vs_cmd[i++] = 0x50000000; /* ARRAYS_SEMAPHORE */
 
+   if (lima_dump_command_stream) {
+      printf("lima add vs cmd at va %x\n",
+             ctx->gp_buffer->va + gp_vs_cmd_offset +
+             ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].offset);
+      lima_dump_blob(vs_cmd, i * 4);
+   }
+
    ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].size = i * 4;
 }
 
@@ -360,6 +377,13 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       plbu_cmd[i++] = (info->count << 24) | info->start;
       plbu_cmd[i++] = 0x00000000 | 0x00200000 |
          ((info->mode & 0x1F) << 16) | (info->count >> 8); /* DRAW | DRAW_ELEMENTS */
+   }
+
+   if (lima_dump_command_stream) {
+      printf("lima add plbu cmd at va %x\n",
+             ctx->gp_buffer->va + gp_plbu_cmd_offset +
+             ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].offset);
+      lima_dump_blob(plbu_cmd, i * 4);
    }
 
    ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].size = i * 4;
@@ -588,6 +612,13 @@ lima_pack_render_state(struct lima_context *ctx)
    else {
       render->varying_types = 0x00000000;
       render->varyings_address = 0x00000000;
+   }
+
+   if (lima_dump_command_stream) {
+      printf("lima: add render state at va %x\n",
+             ctx->pp_buffer->va + pp_plb_rsw_offset +
+             ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].offset);
+      lima_dump_blob(render, sizeof(*render));
    }
 
    ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].size = sizeof(*render);
