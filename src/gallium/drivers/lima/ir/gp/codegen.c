@@ -30,7 +30,7 @@
 
 static gpir_codegen_src gpir_get_alu_input(gpir_node *parent, gpir_node *child)
 {
-   static int slot_to_src[GPIR_INSTR_SLOT_NUM][3] = {
+   static const int slot_to_src[GPIR_INSTR_SLOT_NUM][3] = {
       [GPIR_INSTR_SLOT_MUL0] = {
          gpir_codegen_src_unused, gpir_codegen_src_p1_mul_0, gpir_codegen_src_p2_mul_0 },
       [GPIR_INSTR_SLOT_MUL1] = {
@@ -171,8 +171,8 @@ static void gpir_codegen_mul1_slot(gpir_codegen_instr *code, gpir_instr *instr)
       break;
 
    case gpir_op_complex1:
-      code->mul0_src0 = gpir_get_alu_input(node, alu->children[0]);
-      code->mul0_src1 = gpir_get_alu_input(node, alu->children[2]);
+      code->mul1_src0 = gpir_get_alu_input(node, alu->children[0]);
+      code->mul1_src1 = gpir_get_alu_input(node, alu->children[2]);
       break;
 
    default:
