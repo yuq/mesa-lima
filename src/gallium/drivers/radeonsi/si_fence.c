@@ -191,9 +191,6 @@ static boolean si_fence_finish(struct pipe_screen *screen,
 	int64_t abs_timeout = os_time_get_absolute_timeout(timeout);
 
 	if (!util_queue_fence_is_signalled(&rfence->ready)) {
-		if (!timeout)
-			return false;
-
 		if (rfence->tc_token) {
 			/* Ensure that si_flush_from_st will be called for
 			 * this fence, but only if we're in the API thread
@@ -206,6 +203,9 @@ static boolean si_fence_finish(struct pipe_screen *screen,
 			threaded_context_flush(ctx, rfence->tc_token,
 					       timeout == 0);
 		}
+
+		if (!timeout)
+			return false;
 
 		if (timeout == PIPE_TIMEOUT_INFINITE) {
 			util_queue_fence_wait(&rfence->ready);
