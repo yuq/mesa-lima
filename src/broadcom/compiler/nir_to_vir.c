@@ -380,9 +380,11 @@ ntq_emit_tex(struct v3d_compile *c, nir_tex_instr *instr)
                         p0_unpacked.bias_supplied = true;
                         break;
                 case nir_tex_src_lod:
-                        /* XXX: Needs base level addition */
                         coords[next_coord++] =
-                                ntq_get_src(c, instr->src[i].src, 0);
+                                vir_FADD(c,
+                                         ntq_get_src(c, instr->src[i].src, 0),
+                                         vir_uniform(c, QUNIFORM_TEXTURE_FIRST_LEVEL,
+                                                     unit));
 
                         if (instr->op != nir_texop_txf &&
                             instr->op != nir_texop_tg4) {

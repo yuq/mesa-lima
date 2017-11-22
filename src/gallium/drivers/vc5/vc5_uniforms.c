@@ -324,6 +324,10 @@ vc5_write_uniforms(struct vc5_context *vc5, struct vc5_compiled_shader *shader,
                         break;
 
                 case QUNIFORM_TEXTURE_FIRST_LEVEL:
+                        cl_aligned_f(&uniforms,
+                                     texstate->textures[uinfo->data[i]]->u.tex.first_level);
+                        break;
+
                 case QUNIFORM_TEXTURE_BORDER_COLOR:
                         /* XXX */
                         break;
