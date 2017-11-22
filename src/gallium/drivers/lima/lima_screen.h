@@ -31,6 +31,8 @@
 
 #include "lima.h"
 
+extern bool lima_dump_command_stream;
+
 #define LIMA_MAX_MIP_LEVELS 12
 
 struct ra_regs;
