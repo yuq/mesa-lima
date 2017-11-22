@@ -36,6 +36,8 @@ files_libfreedreno = files(
   'freedreno_batch.h',
   'freedreno_batch_cache.c',
   'freedreno_batch_cache.h',
+  'freedreno_blitter.c',
+  'freedreno_blitter.h',
   'freedreno_context.c',
   'freedreno_context.h',
   'freedreno_draw.c',

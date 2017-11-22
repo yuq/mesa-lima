@@ -121,7 +121,7 @@ do_blit(struct fd_context *ctx, const struct pipe_blit_info *blit, bool fallback
 	if (!fallback) {
 		/* do blit on gpu: */
 		fd_blitter_pipe_begin(ctx, false, true, FD_STAGE_BLIT);
-		util_blitter_blit(ctx->blitter, blit);
+		ctx->blit(ctx, blit);
 		fd_blitter_pipe_end(ctx);
 	} else {
 		/* do blit on cpu: */
@@ -977,7 +977,7 @@ fd_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 	}
 
 	fd_blitter_pipe_begin(ctx, info.render_condition_enable, discard, FD_STAGE_BLIT);
-	util_blitter_blit(ctx->blitter, &info);
+	ctx->blit(ctx, &info);
 	fd_blitter_pipe_end(ctx);
 }
 

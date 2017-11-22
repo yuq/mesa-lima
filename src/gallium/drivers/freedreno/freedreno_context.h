@@ -329,6 +329,9 @@ struct fd_context {
 			struct fd_ringbuffer *ring);
 	void (*query_set_stage)(struct fd_batch *batch, enum fd_render_stage stage);
 
+	/* blit: */
+	void (*blit)(struct fd_context *ctx, const struct pipe_blit_info *info);
+
 	/*
 	 * Common pre-cooked VBO state (used for a3xx and later):
 	 */

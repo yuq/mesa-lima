@@ -27,6 +27,7 @@
  */
 
 #include "freedreno_context.h"
+#include "freedreno_blitter.h"
 #include "freedreno_draw.h"
 #include "freedreno_fence.h"
 #include "freedreno_program.h"
@@ -292,6 +293,9 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 	ctx->batch = fd_bc_alloc_batch(&screen->batch_cache, ctx);
 
 	slab_create_child(&ctx->transfer_pool, &screen->transfer_pool);
+
+	if (!ctx->blit)
+		ctx->blit = fd_blitter_blit;
 
 	fd_draw_init(pctx);
 	fd_resource_context_init(pctx);
