@@ -623,7 +623,12 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
         v3dx_pack(&so->texture_shader_state, TEXTURE_SHADER_STATE, tex) {
                 tex.image_width = prsc->width0 * msaa_scale;
                 tex.image_height = prsc->height0 * msaa_scale;
-                tex.image_depth = prsc->depth0;
+                if (prsc->target == PIPE_TEXTURE_3D) {
+                        tex.image_depth = prsc->depth0;
+                } else {
+                        tex.image_depth = (cso->u.tex.last_layer -
+                                           cso->u.tex.first_layer) + 1;
+                }
 
                 tex.srgb = util_format_is_srgb(cso->format);
 
