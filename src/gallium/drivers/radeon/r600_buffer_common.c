@@ -610,6 +610,9 @@ static struct pipe_resource *si_buffer_create(struct pipe_screen *screen,
 	struct si_screen *sscreen = (struct si_screen*)screen;
 	struct r600_resource *rbuffer = r600_alloc_buffer_struct(screen, templ);
 
+	if (templ->flags & PIPE_RESOURCE_FLAG_SPARSE)
+		rbuffer->b.b.flags |= R600_RESOURCE_FLAG_UNMAPPABLE;
+
 	si_init_resource_fields(sscreen, rbuffer, templ->width0, alignment);
 
 	if (templ->flags & PIPE_RESOURCE_FLAG_SPARSE)

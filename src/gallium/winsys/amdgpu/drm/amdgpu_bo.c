@@ -1169,6 +1169,9 @@ amdgpu_bo_create(struct radeon_winsys *rws,
    /* NO_CPU_ACCESS is valid with VRAM only. */
    assert(domain == RADEON_DOMAIN_VRAM || !(flags & RADEON_FLAG_NO_CPU_ACCESS));
 
+   /* Sparse buffers must have NO_CPU_ACCESS set. */
+   assert(!(flags & RADEON_FLAG_SPARSE) || flags & RADEON_FLAG_NO_CPU_ACCESS);
+
    /* Sub-allocate small buffers from slabs. */
    if (!(flags & (RADEON_FLAG_NO_SUBALLOC | RADEON_FLAG_SPARSE)) &&
        size <= (1 << AMDGPU_SLAB_MAX_SIZE_LOG2) &&
@@ -1200,8 +1203,6 @@ no_slab:
 
    if (flags & RADEON_FLAG_SPARSE) {
       assert(RADEON_SPARSE_PAGE_SIZE % alignment == 0);
-
-      flags |= RADEON_FLAG_NO_CPU_ACCESS;
 
       return amdgpu_bo_sparse_create(ws, size, domain, flags);
    }
