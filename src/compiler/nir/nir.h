@@ -41,9 +41,9 @@
 #include "compiler/shader_info.h"
 #include <stdio.h>
 
-#ifdef DEBUG
+#ifndef NDEBUG
 #include "util/debug.h"
-#endif /* DEBUG */
+#endif /* NDEBUG */
 
 #include "nir_opcodes.h"
 
@@ -2336,7 +2336,7 @@ nir_deref_var *nir_deref_var_clone(const nir_deref_var *deref, void *mem_ctx);
 
 nir_shader *nir_shader_serialize_deserialize(void *mem_ctx, nir_shader *s);
 
-#ifdef DEBUG
+#ifndef NDEBUG
 void nir_validate_shader(nir_shader *shader);
 void nir_metadata_set_validation_flag(nir_shader *shader);
 void nir_metadata_check_validation_flag(nir_shader *shader);
@@ -2377,7 +2377,7 @@ static inline void nir_metadata_check_validation_flag(nir_shader *shader) { (voi
 static inline bool should_clone_nir(void) { return false; }
 static inline bool should_serialize_deserialize_nir(void) { return false; }
 static inline bool should_print_nir(void) { return false; }
-#endif /* DEBUG */
+#endif /* NDEBUG */
 
 #define _PASS(nir, do_pass) do {                                     \
    do_pass                                                           \
