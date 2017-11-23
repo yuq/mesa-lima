@@ -1041,14 +1041,13 @@ static LLVMValueRef get_tcs_tes_buffer_address_from_reg(
 }
 
 static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
-                                enum tgsi_opcode_type type, unsigned swizzle,
+                                LLVMTypeRef type, unsigned swizzle,
                                 LLVMValueRef buffer, LLVMValueRef offset,
                                 LLVMValueRef base, bool can_speculate)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMValueRef value, value2;
-	LLVMTypeRef llvm_type = tgsi2llvmtype(bld_base, type);
-	LLVMTypeRef vec_type = LLVMVectorType(llvm_type, 4);
+	LLVMTypeRef vec_type = LLVMVectorType(type, 4);
 
 	if (swizzle == ~0) {
 		value = ac_build_buffer_load(&ctx->ac, buffer, 4, NULL, base, offset,
@@ -1057,7 +1056,7 @@ static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
 		return LLVMBuildBitCast(ctx->ac.builder, value, vec_type, "");
 	}
 
-	if (!tgsi_type_is_64bit(type)) {
+	if (!llvm_type_is_64bit(ctx, type)) {
 		value = ac_build_buffer_load(&ctx->ac, buffer, 4, NULL, base, offset,
 					     0, 1, 0, can_speculate, false);
 
@@ -1072,8 +1071,7 @@ static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
 	value2 = ac_build_buffer_load(&ctx->ac, buffer, 1, NULL, base, offset,
 	                           swizzle * 4 + 4, 1, 0, can_speculate, false);
 
-	return si_llvm_emit_fetch_64bit(bld_base, tgsi2llvmtype(bld_base, type),
-					value, value2);
+	return si_llvm_emit_fetch_64bit(bld_base, type, value, value2);
 }
 
 /**
@@ -1206,7 +1204,8 @@ static LLVMValueRef fetch_input_tes(
 	base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 	addr = get_tcs_tes_buffer_address_from_reg(ctx, NULL, reg);
 
-	return buffer_load(bld_base, type, swizzle, buffer, base, addr, true);
+	return buffer_load(bld_base, tgsi2llvmtype(bld_base, type), swizzle,
+			   buffer, base, addr, true);
 }
 
 static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
@@ -1788,7 +1787,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 		addr = get_tcs_tes_buffer_address(ctx, get_rel_patch_id(ctx), NULL,
 		                          LLVMConstInt(ctx->i32, param, 0));
 
-		value = buffer_load(&ctx->bld_base, TGSI_TYPE_FLOAT,
+		value = buffer_load(&ctx->bld_base, ctx->f32,
 		                    ~0, buffer, base, addr, true);
 
 		break;
