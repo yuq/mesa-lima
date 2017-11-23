@@ -34,12 +34,20 @@
 
 bool lima_dump_command_stream = false;
 
-static void lima_dump_blob(void *data, int size)
+static void lima_dump_blob(void *data, int size, bool is_float)
 {
-   uint32_t *blob = data;
-   for (int i = 0; i * 4 < size; i += 4)
-      printf ("%04x: 0x%08x 0x%08x 0x%08x 0x%08x\n", i * 4,
-              blob[i], blob[i + 1], blob[i + 2], blob[i + 3]);
+   if (is_float) {
+      float *blob = data;
+      for (int i = 0; i * 4 < size; i += 4)
+         printf ("%04x: %f %f %f %f\n", i * 4,
+                 blob[i], blob[i + 1], blob[i + 2], blob[i + 3]);
+   }
+   else {
+      uint32_t *blob = data;
+      for (int i = 0; i * 4 < size; i += 4)
+         printf ("%04x: 0x%08x 0x%08x 0x%08x 0x%08x\n", i * 4,
+                 blob[i], blob[i + 1], blob[i + 2], blob[i + 3]);
+   }
 }
 
 static void
@@ -271,7 +279,7 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       printf("lima add vs cmd at va %x\n",
              ctx->gp_buffer->va + gp_vs_cmd_offset +
              ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].offset);
-      lima_dump_blob(vs_cmd, i * 4);
+      lima_dump_blob(vs_cmd, i * 4, false);
    }
 
    ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].size = i * 4;
@@ -383,7 +391,7 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       printf("lima add plbu cmd at va %x\n",
              ctx->gp_buffer->va + gp_plbu_cmd_offset +
              ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].offset);
-      lima_dump_blob(plbu_cmd, i * 4);
+      lima_dump_blob(plbu_cmd, i * 4, false);
    }
 
    ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].size = i * 4;
@@ -618,7 +626,7 @@ lima_pack_render_state(struct lima_context *ctx)
       printf("lima: add render state at va %x\n",
              ctx->pp_buffer->va + pp_plb_rsw_offset +
              ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].offset);
-      lima_dump_blob(render, sizeof(*render));
+      lima_dump_blob(render, sizeof(*render), false);
    }
 
    ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].size = sizeof(*render);
@@ -652,6 +660,13 @@ lima_update_gp_attribute_info(struct lima_context *ctx, const struct pipe_draw_i
       attribute[n++] = (pvb->stride << 11) |
          (lima_pipe_format_to_attrib_type(pve->src_format) << 2) |
          (util_format_get_nr_components(pve->src_format) - 1);
+   }
+
+   if (lima_dump_command_stream) {
+      printf("lima: update attribute info at va %x\n",
+             ctx->gp_buffer->va + gp_attribute_info_offset +
+             ctx->buffer_state[lima_ctx_buff_gp_attribute_info].offset);
+      lima_dump_blob(attribute, n * 4, false);
    }
 
    ctx->buffer_state[lima_ctx_buff_gp_attribute_info].size = align(n * 4, 0x40);
@@ -741,6 +756,13 @@ lima_update_varying(struct lima_context *ctx, const struct pipe_draw_info *info)
          ctx->buffer_state[lima_ctx_buff_sh_varying].offset + v->offset;
       varying[n++] = (vs->varying_stride << 11) | (v->components - 1) |
          (v->component_size == 2 ? 0x0C : 0);
+   }
+
+   if (lima_dump_command_stream) {
+      printf("lima: update varying info at va %x\n",
+             ctx->gp_buffer->va + gp_varying_info_offset +
+             ctx->buffer_state[lima_ctx_buff_gp_varying_info].offset);
+      lima_dump_blob(varying, n * 4, false);
    }
 
    ctx->buffer_state[lima_ctx_buff_gp_varying_info].size = align(n * 4, 0x40);
@@ -868,25 +890,27 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
    if (lima_submit_start(ctx->gp_submit))
       fprintf(stderr, "gp submit error\n");
 
-/*
-   if (lima_submit_wait(ctx->gp_submit, 1000000000, true))
-      fprintf(stderr, "gp submit wait error\n");
-   lima_buffer_update(ctx->share_buffer, LIMA_BUFFER_ALLOC_MAP);
-   float *varying = ctx->share_buffer->map + sh_varying_offset;
-   debug_printf("varing %f %f %f %f %f %f %f %f %f %f %f %f\n",
-                varying[0], varying[1], varying[2], varying[3],
-                varying[4], varying[5], varying[6], varying[7],
-                varying[8], varying[9], varying[10], varying[11]);
-   varying = ctx->share_buffer->map + sh_gl_pos_offset;
-   debug_printf("varing %f %f %f %f %f %f %f %f %f %f %f %f\n",
-                varying[0], varying[1], varying[2], varying[3],
-                varying[4], varying[5], varying[6], varying[7],
-                varying[8], varying[9], varying[10], varying[11]);
-   uint32_t *plb = ctx->share_buffer->map + sh_plb_offset;
-   debug_printf("plb %x %x %x %x %x %x %x %x\n",
-                plb[0], plb[1], plb[2], plb[3],
-                plb[4], plb[5], plb[6], plb[7]);
-//*/
+   if (lima_dump_command_stream) {
+      if (lima_submit_wait(ctx->gp_submit, 1000000000, true))
+         fprintf(stderr, "gp submit wait error\n");
+
+      lima_buffer_update(ctx->share_buffer, LIMA_BUFFER_ALLOC_MAP);
+
+      float *varying = ctx->share_buffer->map + sh_varying_offset;
+      printf("lima varying dump at va %x\n",
+             ctx->share_buffer->va + sh_varying_offset);
+      lima_dump_blob(varying, 4 * 4 * 16, true);
+
+      varying = ctx->share_buffer->map + sh_gl_pos_offset;
+      printf("lima gl_pos dump at va %x\n",
+             ctx->share_buffer->va + sh_gl_pos_offset);
+      lima_dump_blob(varying, 4 * 4 * 16, true);
+
+      uint32_t *plb = ctx->share_buffer->map + sh_plb_offset;
+      debug_printf("plb %x %x %x %x %x %x %x %x\n",
+                   plb[0], plb[1], plb[2], plb[3],
+                   plb[4], plb[5], plb[6], plb[7]);
+   }
 
    struct lima_screen *screen = lima_screen(pctx->screen);
    struct lima_resource *res = lima_resource(ctx->framebuffer.cbuf->texture);
