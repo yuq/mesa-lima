@@ -1127,6 +1127,11 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 			 sscreen->b.family == CHIP_RAVEN);
 	}
 
+	sscreen->b.dcc_msaa_allowed =
+		!(sscreen->b.debug_flags & DBG(NO_DCC_MSAA)) &&
+		(sscreen->b.debug_flags & DBG(DCC_MSAA) ||
+		 sscreen->b.chip_class == VI);
+
 	(void) mtx_init(&sscreen->shader_parts_mutex, mtx_plain);
 	sscreen->use_monolithic_shaders =
 		(sscreen->b.debug_flags & DBG(MONOLITHIC_SHADERS)) != 0;

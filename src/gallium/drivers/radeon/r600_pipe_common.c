@@ -629,6 +629,8 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "mono", DBG(MONOLITHIC_SHADERS), "Use old-style monolithic shaders compiled on demand" },
 	{ "unsafemath", DBG(UNSAFE_MATH), "Enable unsafe math shader optimizations" },
 	{ "nodccfb", DBG(NO_DCC_FB), "Disable separate DCC on the main framebuffer" },
+	{ "nodccmsaa", DBG(NO_DCC_MSAA), "Disable DCC for MSAA" },
+	{ "dccmsaa", DBG(DCC_MSAA), "Enable DCC for MSAA" },
 	{ "nodpbb", DBG(NO_DPBB), "Disable DPBB." },
 	{ "nodfsm", DBG(NO_DFSM), "Disable DFSM." },
 	{ "dpbb", DBG(DPBB), "Enable DPBB." },

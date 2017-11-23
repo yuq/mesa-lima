@@ -119,6 +119,8 @@ enum {
 	DBG_NO_DCC,
 	DBG_NO_DCC_CLEAR,
 	DBG_NO_DCC_FB,
+	DBG_NO_DCC_MSAA,
+	DBG_DCC_MSAA,
 
 	/* Tests: */
 	DBG_TEST_DMA,
@@ -393,6 +395,7 @@ struct r600_common_screen {
 	uint64_t			debug_flags;
 	bool				has_rbplus;     /* if RB+ registers exist */
 	bool				rbplus_allowed; /* if RB+ is allowed */
+	bool				dcc_msaa_allowed;
 
 	struct disk_cache		*disk_shader_cache;
 
