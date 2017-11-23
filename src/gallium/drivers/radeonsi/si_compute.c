@@ -714,13 +714,28 @@ static void si_setup_tgsi_grid(struct si_context *sctx,
 static void si_emit_dispatch_packets(struct si_context *sctx,
                                      const struct pipe_grid_info *info)
 {
+	struct si_screen *sscreen = sctx->screen;
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	bool render_cond_bit = sctx->b.render_cond && !sctx->b.render_cond_force_off;
 	unsigned waves_per_threadgroup =
 		DIV_ROUND_UP(info->block[0] * info->block[1] * info->block[2], 64);
+	unsigned compute_resource_limits =
+		S_00B854_SIMD_DEST_CNTL(waves_per_threadgroup % 4 == 0);
+
+	if (sctx->b.chip_class >= CIK) {
+		unsigned num_cu_per_se = sscreen->b.info.num_good_compute_units /
+					 sscreen->b.info.max_se;
+
+		/* Force even distribution on all SIMDs in CU if the workgroup
+		 * size is 64. This has shown some good improvements if # of CUs
+		 * per SE is not a multiple of 4.
+		 */
+		if (num_cu_per_se % 4 && waves_per_threadgroup == 1)
+			compute_resource_limits |= S_00B854_FORCE_SIMD_DIST(1);
+	}
 
 	radeon_set_sh_reg(cs, R_00B854_COMPUTE_RESOURCE_LIMITS,
-			  S_00B854_SIMD_DEST_CNTL(waves_per_threadgroup % 4 == 0));
+			  compute_resource_limits);
 
 	radeon_set_sh_reg_seq(cs, R_00B81C_COMPUTE_NUM_THREAD_X, 3);
 	radeon_emit(cs, S_00B81C_NUM_THREAD_FULL(info->block[0]));
