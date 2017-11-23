@@ -800,20 +800,27 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    lima_bo_wait(ctx->gp_buffer->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true);
 
-   if (ctx->dirty & (LIMA_CONTEXT_DIRTY_VERTEX_ELEM|LIMA_CONTEXT_DIRTY_VERTEX_BUFF) ||
+   /* TODO:
+    *   1. dynamic command stream buffers
+    *   2. reuse buffer across draws of different frame
+    */
+
+   if (!ctx->num_draws ||
+       ctx->dirty & (LIMA_CONTEXT_DIRTY_VERTEX_ELEM|LIMA_CONTEXT_DIRTY_VERTEX_BUFF) ||
        info->start != ctx->draw_start) {
       lima_update_gp_attribute_info(ctx, info);
       ctx->draw_start = info->start;
    }
 
-   if ((ctx->dirty & LIMA_CONTEXT_DIRTY_CONST_BUFF &&
+   if (!ctx->num_draws ||
+       (ctx->dirty & LIMA_CONTEXT_DIRTY_CONST_BUFF &&
         ctx->const_buffer[PIPE_SHADER_VERTEX].dirty) ||
        ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_VERT) {
       lima_update_gp_uniform(ctx);
       ctx->const_buffer[PIPE_SHADER_VERTEX].dirty = false;
    }
 
-   if (ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_VERT)
+   if (!ctx->num_draws || ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_VERT)
       lima_update_gp_vs_program(ctx);
 
    lima_update_varying(ctx, info);
@@ -832,7 +839,7 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       }
    }
 
-   if (ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_FRAG)
+   if (!ctx->num_draws || ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_FRAG)
       lima_update_pp_fs_program(ctx);
 
    lima_pack_render_state(ctx);
@@ -979,7 +986,6 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
       fprintf(stderr, "pp submit error\n");
 
    ctx->num_draws = 0;
-   ctx->draw_start = 0;
 
    assert(ctx->buffer_state[lima_ctx_buff_sh_varying].offset +
           ctx->buffer_state[lima_ctx_buff_sh_varying].size <=
