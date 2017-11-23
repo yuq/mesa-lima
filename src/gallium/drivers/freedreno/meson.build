@@ -150,6 +150,8 @@ files_libfreedreno = files(
   'a5xx/a5xx.xml.h',
   'a5xx/fd5_blend.c',
   'a5xx/fd5_blend.h',
+  'a5xx/fd5_blitter.c',
+  'a5xx/fd5_blitter.h',
   'a5xx/fd5_compute.c',
   'a5xx/fd5_compute.h',
   'a5xx/fd5_context.c',

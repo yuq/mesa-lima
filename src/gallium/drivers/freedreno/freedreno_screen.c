@@ -80,6 +80,7 @@ static const struct debug_named_value debug_options[] = {
 		{"nogrow",    FD_DBG_NOGROW, "Disable \"growable\" cmdstream buffers, even if kernel supports it"},
 		{"lrz",       FD_DBG_LRZ,    "Enable experimental LRZ support (a5xx+)"},
 		{"noindirect",FD_DBG_NOINDR, "Disable hw indirect draws (emulate on CPU)"},
+		{"noblit",    FD_DBG_NOBLIT, "Disable blitter (fallback to generic blit path)"},
 		DEBUG_NAMED_VALUE_END
 };
 

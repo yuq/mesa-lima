@@ -75,6 +75,9 @@ struct fd5_format {
 	}
 
 static struct fd5_format formats[PIPE_FORMAT_COUNT] = {
+	/* for blitting, treat PIPE_FORMAT_NONE as 8bit R8: */
+	_T(R8_UINT,    8_UINT,  R8_UINT,  WZYX),
+
 	/* 8-bit */
 	VT(R8_UNORM,   8_UNORM, R8_UNORM, WZYX),
 	VT(R8_SNORM,   8_SNORM, R8_SNORM, WZYX),
