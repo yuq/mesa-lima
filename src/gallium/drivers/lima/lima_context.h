@@ -48,7 +48,7 @@ struct lima_context_framebuffer {
 
 struct lima_context_clear {
    unsigned buffers;
-   uint32_t color[4];
+   uint32_t color;
    uint32_t depth;
    uint32_t stencil;
 };
