@@ -391,18 +391,18 @@ etna_emit_state(struct etna_context *ctx)
       /*00644*/ EMIT_STATE_RELOC(FE_INDEX_STREAM_BASE_ADDR, &ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR);
       /*00648*/ EMIT_STATE(FE_INDEX_STREAM_CONTROL, ctx->index_buffer.FE_INDEX_STREAM_CONTROL);
    }
-   if (likely(dirty & (ETNA_DIRTY_VERTEX_BUFFERS))) {
+   if (likely((dirty & (ETNA_DIRTY_VERTEX_BUFFERS) && ctx->specs.stream_count == 1))) {
       /*0064C*/ EMIT_STATE_RELOC(FE_VERTEX_STREAM_BASE_ADDR, &ctx->vertex_buffer.cvb[0].FE_VERTEX_STREAM_BASE_ADDR);
       /*00650*/ EMIT_STATE(FE_VERTEX_STREAM_CONTROL, ctx->vertex_buffer.cvb[0].FE_VERTEX_STREAM_CONTROL);
    }
    if (likely(dirty & (ETNA_DIRTY_INDEX_BUFFER))) {
       /*00674*/ EMIT_STATE(FE_PRIMITIVE_RESTART_INDEX, ctx->index_buffer.FE_PRIMITIVE_RESTART_INDEX);
    }
-   if (likely(dirty & (ETNA_DIRTY_VERTEX_BUFFERS))) {
-      for (int x = 1; x < ctx->vertex_buffer.count; ++x) {
+   if (likely((dirty & (ETNA_DIRTY_VERTEX_BUFFERS)) && ctx->specs.stream_count > 1)) {
+      for (int x = 0; x < ctx->vertex_buffer.count; ++x) {
          /*00680*/ EMIT_STATE_RELOC(FE_VERTEX_STREAMS_BASE_ADDR(x), &ctx->vertex_buffer.cvb[x].FE_VERTEX_STREAM_BASE_ADDR);
       }
-      for (int x = 1; x < ctx->vertex_buffer.count; ++x) {
+      for (int x = 0; x < ctx->vertex_buffer.count; ++x) {
          if (ctx->vertex_buffer.cvb[x].FE_VERTEX_STREAM_BASE_ADDR.bo) {
             /*006A0*/ EMIT_STATE(FE_VERTEX_STREAMS_CONTROL(x), ctx->vertex_buffer.cvb[x].FE_VERTEX_STREAM_CONTROL);
          }
