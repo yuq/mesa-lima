@@ -1229,6 +1229,54 @@ static LLVMValueRef fetch_input_tes(
 			   buffer, base, addr, true);
 }
 
+LLVMValueRef si_nir_load_input_tes(struct ac_shader_abi *abi,
+				   LLVMValueRef vertex_index,
+				   LLVMValueRef param_index,
+				   unsigned const_index,
+				   unsigned location,
+				   unsigned driver_location,
+				   unsigned component,
+				   unsigned num_components,
+				   bool is_patch,
+				   bool is_compact)
+{
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+	struct tgsi_shader_info *info = &ctx->shader->selector->info;
+	LLVMValueRef buffer, base, addr;
+
+	driver_location = driver_location / 4;
+
+	buffer = desc_from_addr_base64k(ctx, ctx->param_tcs_offchip_addr_base64k);
+
+	base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
+
+	if (param_index) {
+		/* Add the constant index to the indirect index */
+		param_index = LLVMBuildAdd(ctx->ac.builder, param_index,
+					   LLVMConstInt(ctx->i32, const_index, 0), "");
+	} else {
+		param_index = LLVMConstInt(ctx->i32, const_index, 0);
+	}
+
+	addr = get_tcs_tes_buffer_address_from_generic_indices(ctx, vertex_index,
+							       param_index, driver_location,
+							       info->input_semantic_name,
+							       info->input_semantic_index,
+							       is_patch);
+
+	/* TODO: This will generate rather ordinary llvm code, although it
+	 * should be easy for the optimiser to fix up. In future we might want
+	 * to refactor buffer_load(), but for now this maximises code sharing
+	 * between the NIR and TGSI backends.
+	 */
+	LLVMValueRef value[4];
+	for (unsigned i = component; i < num_components + component; i++) {
+		value[i] = buffer_load(&ctx->bld_base, ctx->i32, i, buffer, base, addr, true);
+	}
+
+	return ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
+}
+
 static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 			     const struct tgsi_full_instruction *inst,
 			     const struct tgsi_opcode_info *info,
