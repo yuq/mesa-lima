@@ -2488,6 +2488,14 @@ void vi_dcc_clear_level(struct r600_common_context *rctx,
 	} else {
 		unsigned num_layers = util_max_layer(&rtex->resource.b.b, level) + 1;
 
+		/* If this is 0, fast clear isn't possible. (can occur with MSAA) */
+		assert(rtex->surface.u.legacy.level[level].dcc_fast_clear_size);
+		/* Layered MSAA DCC fast clears need to clear dcc_fast_clear_size
+		 * bytes for each layer. This is not currently implemented, and
+		 * therefore MSAA DCC isn't even enabled with multiple layers.
+		 */
+		assert(rtex->resource.b.b.nr_samples <= 1 || num_layers == 1);
+
 		dcc_offset += rtex->surface.u.legacy.level[level].dcc_offset;
 		clear_size = rtex->surface.u.legacy.level[level].dcc_fast_clear_size *
 			     num_layers;
@@ -2624,6 +2632,7 @@ void si_do_fast_color_clear(struct r600_common_context *rctx,
 	for (i = 0; i < fb->nr_cbufs; i++) {
 		struct r600_texture *tex;
 		unsigned clear_bit = PIPE_CLEAR_COLOR0 << i;
+		unsigned level = fb->cbufs[i]->u.tex.level;
 
 		if (!fb->cbufs[i])
 			continue;
@@ -2686,9 +2695,14 @@ void si_do_fast_color_clear(struct r600_common_context *rctx,
 		/* Try to clear DCC first, otherwise try CMASK. */
 		if (vi_dcc_enabled(tex, 0)) {
 			uint32_t reset_value;
-			bool clear_words_needed;
+			bool clear_words_needed, cleared_cmask = false;
 
 			if (rctx->screen->debug_flags & DBG(NO_DCC_CLEAR))
+				continue;
+
+			/* This can only occur with MSAA. */
+			if (rctx->chip_class == VI &&
+			    !tex->surface.u.legacy.level[level].dcc_fast_clear_size)
 				continue;
 
 			if (!vi_get_fast_clear_parameters(fb->cbufs[i]->format,
@@ -2696,13 +2710,24 @@ void si_do_fast_color_clear(struct r600_common_context *rctx,
 							  &clear_words_needed))
 				continue;
 
+			/* DCC fast clear with MSAA should clear CMASK to 0xC. */
+			if (tex->resource.b.b.nr_samples >= 2 && tex->cmask.size) {
+				/* TODO: This doesn't work with MSAA. */
+				if (clear_words_needed)
+					continue;
+
+				rctx->clear_buffer(&rctx->b, &tex->cmask_buffer->b.b,
+						   tex->cmask.offset, tex->cmask.size,
+						   0xCCCCCCCC, R600_COHERENCY_CB_META);
+				cleared_cmask = true;
+			}
+
 			vi_dcc_clear_level(rctx, tex, 0, reset_value);
 
-			unsigned level_bit = 1 << fb->cbufs[i]->u.tex.level;
-			if (clear_words_needed) {
+			if (clear_words_needed || cleared_cmask) {
 				bool need_compressed_update = !tex->dirty_level_mask;
 
-				tex->dirty_level_mask |= level_bit;
+				tex->dirty_level_mask |= 1 << level;
 
 				if (need_compressed_update)
 					p_atomic_inc(&rctx->screen->compressed_colortex_counter);
@@ -2731,7 +2756,7 @@ void si_do_fast_color_clear(struct r600_common_context *rctx,
 
 			bool need_compressed_update = !tex->dirty_level_mask;
 
-			tex->dirty_level_mask |= 1 << fb->cbufs[i]->u.tex.level;
+			tex->dirty_level_mask |= 1 << level;
 
 			if (need_compressed_update)
 				p_atomic_inc(&rctx->screen->compressed_colortex_counter);
