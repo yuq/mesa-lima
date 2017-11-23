@@ -54,12 +54,12 @@ lima_clear(struct pipe_context *pctx, unsigned buffers,
 
    clear->buffers = buffers;
 
-   if (buffers & PIPE_CLEAR_COLOR0) {
-      clear->color[0] = color->ui[0];
-      clear->color[1] = color->ui[1];
-      clear->color[2] = color->ui[2];
-      clear->color[3] = color->ui[3];
-   }
+   if (buffers & PIPE_CLEAR_COLOR0)
+      clear->color =
+         ((uint32_t)float_to_ubyte(color->f[3]) << 24) |
+         ((uint32_t)float_to_ubyte(color->f[2]) << 16) |
+         ((uint32_t)float_to_ubyte(color->f[1]) << 8) |
+         float_to_ubyte(color->f[0]);
 
    if (buffers & PIPE_CLEAR_DEPTH)
       clear->depth = fui(depth);
@@ -516,7 +516,7 @@ lima_pack_render_state(struct lima_context *ctx)
       (float_to_ubyte(ctx->blend_color.color[1]) << 16);
    render->blend_color_ra = float_to_ubyte(ctx->blend_color.color[0]) |
       (float_to_ubyte(ctx->blend_color.color[3]) << 16);
-#if 1
+#if 0
    render->alpha_blend = lima_blend_func(rt->rgb_func) |
       (lima_blend_func(rt->alpha_func) << 3) |
       (lima_blend_factor(rt->rgb_src_factor) << 6) |
@@ -900,13 +900,13 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
          .render_address = ctx->pp_buffer->va + pp_frame_rsw_offset,
          .unused_0 = 0,
          .flags = 0x02,
-         .clear_value_depth = ctx->clear.depth,
-         //.clear_value_depth = 0x00FFFFFF,
+         //.clear_value_depth = ctx->clear.depth,
+         .clear_value_depth = 0x00FFFFFF,
          .clear_value_stencil = ctx->clear.stencil,
-         .clear_value_color = ctx->clear.color[0],
-         .clear_value_color_1 = ctx->clear.color[1],
-         .clear_value_color_2 = ctx->clear.color[2],
-         .clear_value_color_3 = ctx->clear.color[3],
+         .clear_value_color = ctx->clear.color,
+         .clear_value_color_1 = ctx->clear.color,
+         .clear_value_color_2 = ctx->clear.color,
+         .clear_value_color_3 = ctx->clear.color,
          /* different with limare */
          .width = 0,
          .height = 0,
