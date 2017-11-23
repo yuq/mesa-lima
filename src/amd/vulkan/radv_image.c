@@ -155,7 +155,8 @@ radv_init_surface(struct radv_device *device,
             (pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) ||
             pCreateInfo->mipLevels > 1 || pCreateInfo->arrayLayers > 1 ||
             device->physical_device->rad_info.chip_class < VI ||
-            create_info->scanout || (device->instance->debug_flags & RADV_DEBUG_NO_DCC))
+            create_info->scanout || (device->instance->debug_flags & RADV_DEBUG_NO_DCC) ||
+	    pCreateInfo->samples >= 2)
 		surface->flags |= RADEON_SURF_DISABLE_DCC;
 	if (create_info->scanout)
 		surface->flags |= RADEON_SURF_SCANOUT;

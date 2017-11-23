@@ -266,7 +266,8 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 
 	if (rscreen->chip_class >= VI &&
 	    (ptex->flags & R600_RESOURCE_FLAG_DISABLE_DCC ||
-	     ptex->format == PIPE_FORMAT_R9G9B9E5_FLOAT))
+	     ptex->format == PIPE_FORMAT_R9G9B9E5_FLOAT ||
+	     ptex->nr_samples >= 2))
 		flags |= RADEON_SURF_DISABLE_DCC;
 
 	if (ptex->bind & PIPE_BIND_SCANOUT || is_scanout) {
