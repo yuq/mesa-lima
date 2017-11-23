@@ -120,6 +120,23 @@ static void si_emit_cb_render_state(struct si_context *sctx, struct r600_atom *a
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_DFSM) | EVENT_INDEX(0));
 	}
 
+	if (sctx->b.chip_class >= VI) {
+		/* DCC MSAA workaround for blending.
+		 * Alternatively, we can set CB_COLORi_DCC_CONTROL.OVERWRITE_-
+		 * COMBINER_DISABLE, but that would be more complicated.
+		 */
+		bool oc_disable = (sctx->b.chip_class == VI ||
+				   sctx->b.chip_class == GFX9) &&
+				  blend &&
+				  blend->blend_enable_4bit & cb_target_mask &&
+				  sctx->framebuffer.nr_samples >= 2;
+
+		radeon_set_context_reg(cs, R_028424_CB_DCC_CONTROL,
+				       S_028424_OVERWRITE_COMBINER_MRT_SHARING_DISABLE(1) |
+				       S_028424_OVERWRITE_COMBINER_WATERMARK(4) |
+				       S_028424_OVERWRITE_COMBINER_DISABLE(oc_disable));
+	}
+
 	/* RB+ register settings. */
 	if (sctx->screen->b.rbplus_allowed) {
 		unsigned spi_shader_col_format =
@@ -653,12 +670,14 @@ static void si_bind_blend_state(struct pipe_context *ctx, void *state)
 	if (!state)
 		return;
 
-	if (!old_blend ||
-	     old_blend->cb_target_mask != blend->cb_target_mask ||
-	     old_blend->dual_src_blend != blend->dual_src_blend)
-		si_mark_atom_dirty(sctx, &sctx->cb_render_state);
-
 	si_pm4_bind_state(sctx, blend, state);
+
+	if (!old_blend ||
+	    old_blend->cb_target_mask != blend->cb_target_mask ||
+	    old_blend->dual_src_blend != blend->dual_src_blend ||
+	    (old_blend->blend_enable_4bit != blend->blend_enable_4bit &&
+	     sctx->framebuffer.nr_samples >= 2))
+		si_mark_atom_dirty(sctx, &sctx->cb_render_state);
 
 	if (!old_blend ||
 	    old_blend->cb_target_mask != blend->cb_target_mask ||
@@ -5052,10 +5071,6 @@ static void si_init_config(struct si_context *sctx)
 
 	if (sctx->b.chip_class >= VI) {
 		unsigned vgt_tess_distribution;
-
-		si_pm4_set_reg(pm4, R_028424_CB_DCC_CONTROL,
-			       S_028424_OVERWRITE_COMBINER_MRT_SHARING_DISABLE(1) |
-			       S_028424_OVERWRITE_COMBINER_WATERMARK(4));
 
 		vgt_tess_distribution =
 			S_028B50_ACCUM_ISOLINE(32) |
