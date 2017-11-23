@@ -297,16 +297,6 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 		       pitch_in_bytes_override == surface->u.gfx9.surf_pitch * bpe);
 		surface->u.gfx9.surf_offset = offset;
 	} else {
-		if (pitch_in_bytes_override &&
-		    pitch_in_bytes_override != surface->u.legacy.level[0].nblk_x * bpe) {
-			/* old ddx on evergreen over estimate alignment for 1d, only 1 level
-			 * for those
-			 */
-			surface->u.legacy.level[0].nblk_x = pitch_in_bytes_override / bpe;
-			surface->u.legacy.level[0].slice_size = pitch_in_bytes_override *
-								surface->u.legacy.level[0].nblk_y;
-		}
-
 		if (offset) {
 			for (i = 0; i < ARRAY_SIZE(surface->u.legacy.level); ++i)
 				surface->u.legacy.level[i].offset += offset;
