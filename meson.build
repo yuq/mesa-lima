@@ -481,7 +481,7 @@ if cc.compiles('int foo(void) { return 0; } int bar(void) __attribute__((alias("
 endif
 
 # TODO: this is very incomplete
-if host_machine.system() == 'linux'
+if ['linux', 'cygwin'].contains(host_machine.system())
   pre_args += '-D_GNU_SOURCE'
 endif
 
