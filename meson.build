@@ -888,7 +888,7 @@ if with_platform_x11
     dep_x11 = dependency('x11')
     dep_xext = dependency('xext')
     dep_xcb = dependency('xcb')
-  elif with_glx == 'dri' and with_dri_platform == 'drm'
+  elif with_glx == 'dri'
     dep_x11 = dependency('x11')
     dep_xext = dependency('xext')
     dep_xdamage = dependency('xdamage', version : '>= 1.1')
@@ -896,9 +896,11 @@ if with_platform_x11
     dep_xcb_glx = dependency('xcb-glx', version : '>= 1.8.1')
     dep_xxf86vm = dependency('xxf86vm', required : false)
   endif
-  if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
+  if with_any_vk or with_glx == 'dri'
     dep_xcb = dependency('xcb')
     dep_x11_xcb = dependency('x11-xcb')
+  endif
+  if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
     dep_xcb_dri2 = dependency('xcb-dri2', version : '>= 1.8')
 
     if with_dri3
