@@ -910,7 +910,9 @@ if with_platform_x11
     endif
   endif
   if with_glx == 'dri'
-    dep_dri2proto = dependency('dri2proto', version : '>= 2.8')
+    if with_dri_platform == 'drm'
+      dep_dri2proto = dependency('dri2proto', version : '>= 2.8')
+    endif
     dep_glproto = dependency('glproto', version : '>= 1.4.14')
   endif
   if with_egl
