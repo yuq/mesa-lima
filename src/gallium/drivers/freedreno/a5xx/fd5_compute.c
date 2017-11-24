@@ -121,12 +121,43 @@ cs_program_emit(struct fd_ringbuffer *ring, struct ir3_shader_variant *v)
 }
 
 static void
+emit_setup(struct fd_context *ctx)
+{
+	struct fd_ringbuffer *ring = ctx->batch->draw;
+
+	fd5_emit_restore(ctx->batch, ring);
+	fd5_emit_lrz_flush(ring);
+
+	OUT_PKT7(ring, CP_SKIP_IB2_ENABLE_GLOBAL, 1);
+	OUT_RING(ring, 0x0);
+
+	OUT_PKT7(ring, CP_EVENT_WRITE, 1);
+	OUT_RING(ring, UNK_19);
+
+	OUT_PKT4(ring, REG_A5XX_PC_POWER_CNTL, 1);
+	OUT_RING(ring, 0x00000003);   /* PC_POWER_CNTL */
+
+	OUT_PKT4(ring, REG_A5XX_VFD_POWER_CNTL, 1);
+	OUT_RING(ring, 0x00000003);   /* VFD_POWER_CNTL */
+
+	/* 0x10000000 for BYPASS.. 0x7c13c080 for GMEM: */
+	fd_wfi(ctx->batch, ring);
+	OUT_PKT4(ring, REG_A5XX_RB_CCU_CNTL, 1);
+	OUT_RING(ring, 0x10000000);   /* RB_CCU_CNTL */
+
+	OUT_PKT4(ring, REG_A5XX_RB_CNTL, 1);
+	OUT_RING(ring, A5XX_RB_CNTL_BYPASS);
+}
+
+static void
 fd5_launch_grid(struct fd_context *ctx, const struct pipe_grid_info *info)
 {
 	struct fd5_compute_stateobj *so = ctx->compute;
 	struct ir3_shader_key key = {0};
 	struct ir3_shader_variant *v;
 	struct fd_ringbuffer *ring = ctx->batch->draw;
+
+	emit_setup(ctx);
 
 	v = ir3_shader_variant(so->shader, key, &ctx->debug);
 

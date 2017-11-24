@@ -55,12 +55,16 @@ batch_init(struct fd_batch *batch)
 	}
 
 	batch->draw    = fd_ringbuffer_new(ctx->pipe, size);
-	batch->binning = fd_ringbuffer_new(ctx->pipe, size);
-	batch->gmem    = fd_ringbuffer_new(ctx->pipe, size);
+	if (!batch->nondraw) {
+		batch->binning = fd_ringbuffer_new(ctx->pipe, size);
+		batch->gmem    = fd_ringbuffer_new(ctx->pipe, size);
 
-	fd_ringbuffer_set_parent(batch->gmem, NULL);
-	fd_ringbuffer_set_parent(batch->draw, batch->gmem);
-	fd_ringbuffer_set_parent(batch->binning, batch->gmem);
+		fd_ringbuffer_set_parent(batch->gmem, NULL);
+		fd_ringbuffer_set_parent(batch->draw, batch->gmem);
+		fd_ringbuffer_set_parent(batch->binning, batch->gmem);
+	} else {
+		fd_ringbuffer_set_parent(batch->draw, NULL);
+	}
 
 	batch->in_fence_fd = -1;
 	batch->fence = fd_fence_create(batch);
@@ -89,7 +93,7 @@ batch_init(struct fd_batch *batch)
 }
 
 struct fd_batch *
-fd_batch_create(struct fd_context *ctx)
+fd_batch_create(struct fd_context *ctx, bool nondraw)
 {
 	struct fd_batch *batch = CALLOC_STRUCT(fd_batch);
 
@@ -100,6 +104,7 @@ fd_batch_create(struct fd_context *ctx)
 
 	pipe_reference_init(&batch->reference, 1);
 	batch->ctx = ctx;
+	batch->nondraw = nondraw;
 
 	batch->resources = _mesa_set_create(NULL, _mesa_hash_pointer,
 			_mesa_key_pointer_equal);
@@ -123,8 +128,13 @@ batch_fini(struct fd_batch *batch)
 	fd_fence_ref(NULL, &batch->fence, NULL);
 
 	fd_ringbuffer_del(batch->draw);
-	fd_ringbuffer_del(batch->binning);
-	fd_ringbuffer_del(batch->gmem);
+	if (!batch->nondraw) {
+		fd_ringbuffer_del(batch->binning);
+		fd_ringbuffer_del(batch->gmem);
+	} else {
+		debug_assert(!batch->binning);
+		debug_assert(!batch->gmem);
+	}
 	if (batch->lrz_clear) {
 		fd_ringbuffer_del(batch->lrz_clear);
 		batch->lrz_clear = NULL;
@@ -326,6 +336,7 @@ fd_batch_flush(struct fd_batch *batch, bool sync, bool force)
 	 * up used_resources
 	 */
 	struct fd_batch *tmp = NULL;
+
 	fd_batch_reference(&tmp, batch);
 	batch_flush(tmp, force);
 	if (sync)

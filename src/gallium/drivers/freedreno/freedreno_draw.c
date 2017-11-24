@@ -459,7 +459,7 @@ fd_launch_grid(struct pipe_context *pctx, const struct pipe_grid_info *info)
 	struct fd_batch *batch, *save_batch = NULL;
 	unsigned i;
 
-	batch = fd_batch_create(ctx);
+	batch = fd_batch_create(ctx, true);
 	fd_batch_reference(&save_batch, ctx->batch);
 	fd_batch_reference(&ctx->batch, batch);
 
@@ -493,9 +493,10 @@ fd_launch_grid(struct pipe_context *pctx, const struct pipe_grid_info *info)
 
 	mtx_unlock(&ctx->screen->lock);
 
+	batch->needs_flush = true;
 	ctx->launch_grid(ctx, info);
 
-	fd_gmem_flush_compute(batch);
+	fd_batch_flush(batch, false, false);
 
 	fd_batch_reference(&ctx->batch, save_batch);
 	fd_batch_reference(&save_batch, NULL);

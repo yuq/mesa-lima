@@ -93,6 +93,8 @@ struct fd_batch {
 		FD_BUFFER_ALL     = FD_BUFFER_COLOR | FD_BUFFER_DEPTH | FD_BUFFER_STENCIL,
 	} cleared, partial_cleared, restore, resolve;
 
+	/* is this a non-draw batch (ie compute/blit which has no pfb state)? */
+	bool nondraw : 1;
 	bool needs_flush : 1;
 	bool blit : 1;
 	bool back_blit : 1;      /* only blit so far is resource shadowing back-blit */
@@ -202,7 +204,7 @@ struct fd_batch {
 	uint32_t dependents_mask;
 };
 
-struct fd_batch * fd_batch_create(struct fd_context *ctx);
+struct fd_batch * fd_batch_create(struct fd_context *ctx, bool nondraw);
 
 void fd_batch_reset(struct fd_batch *batch);
 void fd_batch_sync(struct fd_batch *batch);

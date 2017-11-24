@@ -65,6 +65,8 @@ read_counter(struct fd_context *ctx, int type)
 		return ctx->stats.batch_sysmem;
 	case FD_QUERY_BATCH_GMEM:
 		return ctx->stats.batch_gmem;
+	case FD_QUERY_BATCH_NONDRAW:
+		return ctx->stats.batch_nondraw;
 	case FD_QUERY_BATCH_RESTORE:
 		return ctx->stats.batch_restore;
 	case FD_QUERY_STAGING_UPLOADS:
@@ -82,6 +84,7 @@ is_rate_query(struct fd_query *q)
 	case FD_QUERY_BATCH_TOTAL:
 	case FD_QUERY_BATCH_SYSMEM:
 	case FD_QUERY_BATCH_GMEM:
+	case FD_QUERY_BATCH_NONDRAW:
 	case FD_QUERY_BATCH_RESTORE:
 	case FD_QUERY_STAGING_UPLOADS:
 	case FD_QUERY_SHADOW_UPLOADS:
@@ -147,6 +150,7 @@ fd_sw_create_query(struct fd_context *ctx, unsigned query_type)
 	case FD_QUERY_BATCH_TOTAL:
 	case FD_QUERY_BATCH_SYSMEM:
 	case FD_QUERY_BATCH_GMEM:
+	case FD_QUERY_BATCH_NONDRAW:
 	case FD_QUERY_BATCH_RESTORE:
 	case FD_QUERY_STAGING_UPLOADS:
 	case FD_QUERY_SHADOW_UPLOADS:

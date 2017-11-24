@@ -215,7 +215,7 @@ struct fd_context {
 		uint64_t prims_emitted;
 		uint64_t prims_generated;
 		uint64_t draw_calls;
-		uint64_t batch_total, batch_sysmem, batch_gmem, batch_restore;
+		uint64_t batch_total, batch_sysmem, batch_gmem, batch_nondraw, batch_restore;
 		uint64_t staging_uploads, shadow_uploads;
 	} stats;
 
@@ -304,7 +304,7 @@ struct fd_context {
 
 	/* draw: */
 	bool (*draw_vbo)(struct fd_context *ctx, const struct pipe_draw_info *info,
-                         unsigned index_offset);
+			unsigned index_offset);
 	bool (*clear)(struct fd_context *ctx, unsigned buffers,
 			const union pipe_color_union *color, double depth, unsigned stencil);
 

@@ -316,7 +316,7 @@ fd_bc_alloc_batch(struct fd_batch_cache *cache, struct fd_context *ctx)
 
 	idx--;              /* bit zero returns 1 for ffs() */
 
-	batch = fd_batch_create(ctx);
+	batch = fd_batch_create(ctx, false);
 	if (!batch)
 		goto out;
 
