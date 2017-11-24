@@ -816,6 +816,9 @@ brw_process_driconf_options(struct brw_context *brw)
    brw->dual_color_blend_by_location =
       driQueryOptionb(options, "dual_color_blend_by_location");
 
+   ctx->Const.AllowGLSLCrossStageInterpolationMismatch =
+      driQueryOptionb(options, "allow_glsl_cross_stage_interpolation_mismatch");
+
    ctx->Const.dri_config_options_sha1 = ralloc_array(brw, unsigned char, 20);
    driComputeOptionsSha1(&brw->screen->optionCache,
                          ctx->Const.dri_config_options_sha1);
