@@ -84,6 +84,28 @@
     <param name="pConstantIndex" type="const GLuint *"/>
     <param name="pConstantValue" type="const GLuint *"/>
   </function>
+
+  <enum name="PARAMETER_BUFFER" value="0x80EE"/>
+  <enum name="PARAMETER_BUFFER_BINDING" value="0x80EF"/>
+
+  <function name="MultiDrawArraysIndirectCount"
+            alias="MultiDrawArraysIndirectCountARB">
+    <param name="mode" type="GLenum"/>
+    <param name="indirect" type="GLintptr"/>
+    <param name="drawcount" type="GLintptr"/>
+    <param name="maxdrawcount" type="GLsizei"/>
+    <param name="stride" type="GLsizei"/>
+  </function>
+
+  <function name="MultiDrawElementsIndirectCount"
+            alias="MultiDrawElementsIndirectCountARB">
+    <param name="mode" type="GLenum"/>
+    <param name="type" type="GLenum"/>
+    <param name="indirect" type="GLintptr"/>
+    <param name="drawcount" type="GLintptr"/>
+    <param name="maxdrawcount" type="GLsizei"/>
+    <param name="stride" type="GLsizei"/>
+  </function>
 </category>
 
 </OpenGLAPI>
