@@ -190,6 +190,8 @@ void si_init_resource_fields(struct r600_common_screen *rscreen,
 	/* Set expected VRAM and GART usage for the buffer. */
 	res->vram_usage = 0;
 	res->gart_usage = 0;
+	res->max_forced_staging_uploads = 0;
+	res->b.max_forced_staging_uploads = 0;
 
 	if (res->domains & RADEON_DOMAIN_VRAM) {
 		res->vram_usage = size;
