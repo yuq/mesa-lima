@@ -219,7 +219,7 @@ dri_fill_in_modes(struct dri_screen *screen)
    if (dri_loader_get_cap(screen, DRI_LOADER_CAP_RGBA_ORDERING))
       num_formats = ARRAY_SIZE(mesa_formats);
    else
-      num_formats = 5;
+      num_formats = ARRAY_SIZE(mesa_formats) - 2;
 
    /* Add configs. */
    for (format = 0; format < num_formats; format++) {
