@@ -699,6 +699,11 @@ static void compute_emit_cs(struct r600_context *rctx,
 
 	r600_update_compressed_resource_state(rctx, true);
 
+	if (!rctx->cmd_buf_is_compute) {
+		rctx->b.gfx.flush(rctx, PIPE_FLUSH_ASYNC, NULL);
+		rctx->cmd_buf_is_compute = true;
+	}
+
 	r600_need_cs_space(rctx, 0, true);
 	if (rctx->cs_shader_state.shader->ir_type == PIPE_SHADER_IR_TGSI) {
 		r600_shader_select(&rctx->b.b, rctx->cs_shader_state.shader->sel, &compute_dirty);

@@ -3792,6 +3792,11 @@ static void evergreen_dma_copy(struct pipe_context *ctx,
 		goto fallback;
 	}
 
+	if (rctx->cmd_buf_is_compute) {
+		rctx->b.gfx.flush(rctx, PIPE_FLUSH_ASYNC, NULL);
+		rctx->cmd_buf_is_compute = false;
+	}
+
 	if (dst->target == PIPE_BUFFER && src->target == PIPE_BUFFER) {
 		evergreen_dma_copy_buffer(rctx, dst, src, dst_x, src_box->x, src_box->width);
 		return;

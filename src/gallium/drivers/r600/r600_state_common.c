@@ -1910,6 +1910,11 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		rctx->b.dma.flush(rctx, PIPE_FLUSH_ASYNC, NULL);
 	}
 
+	if (rctx->cmd_buf_is_compute) {
+		rctx->b.gfx.flush(rctx, PIPE_FLUSH_ASYNC, NULL);
+		rctx->cmd_buf_is_compute = false;
+	}
+
 	/* Re-emit the framebuffer state if needed. */
 	dirty_tex_counter = p_atomic_read(&rctx->b.screen->dirty_tex_counter);
 	if (unlikely(dirty_tex_counter != rctx->b.last_dirty_tex_counter)) {
