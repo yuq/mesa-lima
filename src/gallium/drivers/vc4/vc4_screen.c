@@ -64,7 +64,7 @@ static const struct debug_named_value debug_options[] = {
           "Flush after each draw call" },
         { "always_sync", VC4_DEBUG_ALWAYS_SYNC,
           "Wait for finish after each flush" },
-#if USE_VC4_SIMULATOR
+#ifdef USE_VC4_SIMULATOR
         { "dump", VC4_DEBUG_DUMP,
           "Write a GPU command stream trace file" },
 #endif
@@ -105,7 +105,7 @@ vc4_screen_destroy(struct pipe_screen *pscreen)
         slab_destroy_parent(&screen->transfer_pool);
         free(screen->ro);
 
-#if USE_VC4_SIMULATOR
+#ifdef USE_VC4_SIMULATOR
         vc4_simulator_destroy(screen);
 #endif
 
@@ -710,7 +710,7 @@ vc4_screen_create(int fd, struct renderonly *ro)
         if (vc4_debug & VC4_DEBUG_SHADERDB)
                 vc4_debug |= VC4_DEBUG_NORAST;
 
-#if USE_VC4_SIMULATOR
+#ifdef USE_VC4_SIMULATOR
         vc4_simulator_init(screen);
 #endif
 
