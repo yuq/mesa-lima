@@ -290,6 +290,66 @@ void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	}
 }
 
+static void si_pipe_clear_buffer(struct pipe_context *ctx,
+				 struct pipe_resource *dst,
+				 unsigned offset, unsigned size,
+				 const void *clear_value_ptr,
+				 int clear_value_size)
+{
+	struct si_context *sctx = (struct si_context*)ctx;
+	uint32_t dword_value;
+	unsigned i;
+
+	assert(offset % clear_value_size == 0);
+	assert(size % clear_value_size == 0);
+
+	if (clear_value_size > 4) {
+		const uint32_t *u32 = clear_value_ptr;
+		bool clear_dword_duplicated = true;
+
+		/* See if we can lower large fills to dword fills. */
+		for (i = 1; i < clear_value_size / 4; i++)
+			if (u32[0] != u32[i]) {
+				clear_dword_duplicated = false;
+				break;
+			}
+
+		if (!clear_dword_duplicated) {
+			/* Use transform feedback for 64-bit, 96-bit, and
+			 * 128-bit fills.
+			 */
+			union pipe_color_union clear_value;
+
+			memcpy(&clear_value, clear_value_ptr, clear_value_size);
+			si_blitter_begin(ctx, SI_DISABLE_RENDER_COND);
+			util_blitter_clear_buffer(sctx->blitter, dst, offset,
+						  size, clear_value_size / 4,
+						  &clear_value);
+			si_blitter_end(ctx);
+			return;
+		}
+	}
+
+	/* Expand the clear value to a dword. */
+	switch (clear_value_size) {
+	case 1:
+		dword_value = *(uint8_t*)clear_value_ptr;
+		dword_value |= (dword_value << 8) |
+			       (dword_value << 16) |
+			       (dword_value << 24);
+		break;
+	case 2:
+		dword_value = *(uint16_t*)clear_value_ptr;
+		dword_value |= dword_value << 16;
+		break;
+	default:
+		dword_value = *(uint32_t*)clear_value_ptr;
+	}
+
+	si_clear_buffer(ctx, dst, offset, size, dword_value,
+			R600_COHERENCY_SHADER);
+}
+
 /**
  * Realign the CP DMA engine. This must be done after a copy with an unaligned
  * size.
@@ -530,5 +590,6 @@ void cik_emit_prefetch_L2(struct si_context *sctx)
 
 void si_init_cp_dma_functions(struct si_context *sctx)
 {
+	sctx->b.b.clear_buffer = si_pipe_clear_buffer;
 	sctx->b.clear_buffer = si_clear_buffer;
 }
