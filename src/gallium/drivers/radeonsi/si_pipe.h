@@ -641,6 +641,10 @@ void si_init_screen_fence_functions(struct si_screen *screen);
 struct pipe_fence_handle *si_create_fence(struct pipe_context *ctx,
 					  struct tc_unflushed_batch_token *tc_token);
 
+/* si_get.c */
+const char *si_get_family_name(const struct si_screen *sscreen);
+void si_init_screen_get_functions(struct si_screen *sscreen);
+
 /* si_hw_context.c */
 void si_destroy_saved_cs(struct si_saved_cs *scs);
 void si_context_gfx_flush(void *context, unsigned flags,

@@ -30,6 +30,7 @@ files_libradeonsi = files(
   'si_descriptors.c',
   'si_dma.c',
   'si_fence.c',
+  'si_get.c',
   'si_hw_context.c',
   'si_pipe.c',
   'si_pipe.h',
