@@ -592,12 +592,6 @@ bool si_common_screen_init(struct r600_common_screen *rscreen,
 	rscreen->b.resource_destroy = u_resource_destroy_vtbl;
 	rscreen->b.resource_from_user_memory = si_buffer_from_user_memory;
 
-	if (rscreen->info.has_hw_decode) {
-		rscreen->b.is_video_format_supported = si_vid_is_format_supported;
-	} else {
-		rscreen->b.is_video_format_supported = vl_video_buffer_is_format_supported;
-	}
-
 	si_init_screen_texture_functions(rscreen);
 	si_init_screen_query_functions(rscreen);
 

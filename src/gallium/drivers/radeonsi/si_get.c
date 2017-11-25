@@ -23,9 +23,11 @@
 
 #include "si_pipe.h"
 #include "radeon/radeon_video.h"
+#include "radeon/radeon_vce.h"
 #include "ac_llvm_util.h"
 #include "vl/vl_decoder.h"
 #include "vl/vl_video_buffer.h"
+#include "util/u_video.h"
 #include "compiler/nir/nir.h"
 
 #include <sys/utsname.h>
@@ -571,6 +573,150 @@ static int si_get_video_param_no_decode(struct pipe_screen *screen,
 	}
 }
 
+static int si_get_video_param(struct pipe_screen *screen,
+			      enum pipe_video_profile profile,
+			      enum pipe_video_entrypoint entrypoint,
+			      enum pipe_video_cap param)
+{
+	struct si_screen *sscreen = (struct si_screen *)screen;
+	enum pipe_video_format codec = u_reduce_video_profile(profile);
+
+	if (entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
+		switch (param) {
+		case PIPE_VIDEO_CAP_SUPPORTED:
+			return codec == PIPE_VIDEO_FORMAT_MPEG4_AVC &&
+				(si_vce_is_fw_version_supported(&sscreen->b) ||
+				sscreen->b.family == CHIP_RAVEN);
+		case PIPE_VIDEO_CAP_NPOT_TEXTURES:
+			return 1;
+		case PIPE_VIDEO_CAP_MAX_WIDTH:
+			return (sscreen->b.family < CHIP_TONGA) ? 2048 : 4096;
+		case PIPE_VIDEO_CAP_MAX_HEIGHT:
+			return (sscreen->b.family < CHIP_TONGA) ? 1152 : 2304;
+		case PIPE_VIDEO_CAP_PREFERED_FORMAT:
+			return PIPE_FORMAT_NV12;
+		case PIPE_VIDEO_CAP_PREFERS_INTERLACED:
+			return false;
+		case PIPE_VIDEO_CAP_SUPPORTS_INTERLACED:
+			return false;
+		case PIPE_VIDEO_CAP_SUPPORTS_PROGRESSIVE:
+			return true;
+		case PIPE_VIDEO_CAP_STACKED_FRAMES:
+			return (sscreen->b.family < CHIP_TONGA) ? 1 : 2;
+		default:
+			return 0;
+		}
+	}
+
+	switch (param) {
+	case PIPE_VIDEO_CAP_SUPPORTED:
+		switch (codec) {
+		case PIPE_VIDEO_FORMAT_MPEG12:
+			return profile != PIPE_VIDEO_PROFILE_MPEG1;
+		case PIPE_VIDEO_FORMAT_MPEG4:
+			return 1;
+		case PIPE_VIDEO_FORMAT_MPEG4_AVC:
+			if ((sscreen->b.family == CHIP_POLARIS10 ||
+			     sscreen->b.family == CHIP_POLARIS11) &&
+			    sscreen->b.info.uvd_fw_version < UVD_FW_1_66_16 ) {
+				RVID_ERR("POLARIS10/11 firmware version need to be updated.\n");
+				return false;
+			}
+			return true;
+		case PIPE_VIDEO_FORMAT_VC1:
+			return true;
+		case PIPE_VIDEO_FORMAT_HEVC:
+			/* Carrizo only supports HEVC Main */
+			if (sscreen->b.family >= CHIP_STONEY)
+				return (profile == PIPE_VIDEO_PROFILE_HEVC_MAIN ||
+					profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10);
+			else if (sscreen->b.family >= CHIP_CARRIZO)
+				return profile == PIPE_VIDEO_PROFILE_HEVC_MAIN;
+			return false;
+		case PIPE_VIDEO_FORMAT_JPEG:
+			if (sscreen->b.family < CHIP_CARRIZO || sscreen->b.family >= CHIP_VEGA10)
+				return false;
+			if (!(sscreen->b.info.drm_major == 3 && sscreen->b.info.drm_minor >= 19)) {
+				RVID_ERR("No MJPEG support for the kernel version\n");
+				return false;
+			}
+			return true;
+		default:
+			return false;
+		}
+	case PIPE_VIDEO_CAP_NPOT_TEXTURES:
+		return 1;
+	case PIPE_VIDEO_CAP_MAX_WIDTH:
+		return (sscreen->b.family < CHIP_TONGA) ? 2048 : 4096;
+	case PIPE_VIDEO_CAP_MAX_HEIGHT:
+		return (sscreen->b.family < CHIP_TONGA) ? 1152 : 4096;
+	case PIPE_VIDEO_CAP_PREFERED_FORMAT:
+		if (profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10)
+			return PIPE_FORMAT_P016;
+		else
+			return PIPE_FORMAT_NV12;
+
+	case PIPE_VIDEO_CAP_PREFERS_INTERLACED:
+	case PIPE_VIDEO_CAP_SUPPORTS_INTERLACED: {
+		enum pipe_video_format format = u_reduce_video_profile(profile);
+
+		if (format == PIPE_VIDEO_FORMAT_HEVC)
+			return false; //The firmware doesn't support interlaced HEVC.
+		else if (format == PIPE_VIDEO_FORMAT_JPEG)
+			return false;
+		return true;
+	}
+	case PIPE_VIDEO_CAP_SUPPORTS_PROGRESSIVE:
+		return true;
+	case PIPE_VIDEO_CAP_MAX_LEVEL:
+		switch (profile) {
+		case PIPE_VIDEO_PROFILE_MPEG1:
+			return 0;
+		case PIPE_VIDEO_PROFILE_MPEG2_SIMPLE:
+		case PIPE_VIDEO_PROFILE_MPEG2_MAIN:
+			return 3;
+		case PIPE_VIDEO_PROFILE_MPEG4_SIMPLE:
+			return 3;
+		case PIPE_VIDEO_PROFILE_MPEG4_ADVANCED_SIMPLE:
+			return 5;
+		case PIPE_VIDEO_PROFILE_VC1_SIMPLE:
+			return 1;
+		case PIPE_VIDEO_PROFILE_VC1_MAIN:
+			return 2;
+		case PIPE_VIDEO_PROFILE_VC1_ADVANCED:
+			return 4;
+		case PIPE_VIDEO_PROFILE_MPEG4_AVC_BASELINE:
+		case PIPE_VIDEO_PROFILE_MPEG4_AVC_MAIN:
+		case PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH:
+			return (sscreen->b.family < CHIP_TONGA) ? 41 : 52;
+		case PIPE_VIDEO_PROFILE_HEVC_MAIN:
+		case PIPE_VIDEO_PROFILE_HEVC_MAIN_10:
+			return 186;
+		default:
+			return 0;
+		}
+	default:
+		return 0;
+	}
+}
+
+static boolean si_vid_is_format_supported(struct pipe_screen *screen,
+					  enum pipe_format format,
+					  enum pipe_video_profile profile,
+					  enum pipe_video_entrypoint entrypoint)
+{
+	/* HEVC 10 bit decoding should use P016 instead of NV12 if possible */
+	if (profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10)
+		return (format == PIPE_FORMAT_NV12) ||
+			(format == PIPE_FORMAT_P016);
+
+	/* we can only handle this one with UVD */
+	if (profile != PIPE_VIDEO_PROFILE_UNKNOWN)
+		return format == PIPE_FORMAT_NV12;
+
+	return vl_video_buffer_is_format_supported(screen, format, profile, entrypoint);
+}
+
 static unsigned get_max_threads_per_block(struct si_screen *screen,
 					  enum pipe_shader_ir ir_type)
 {
@@ -843,9 +989,11 @@ void si_init_screen_get_functions(struct si_screen *sscreen)
 	sscreen->b.b.get_disk_shader_cache = si_get_disk_shader_cache;
 
 	if (sscreen->b.info.has_hw_decode) {
-		sscreen->b.b.get_video_param = si_vid_get_video_param;
+		sscreen->b.b.get_video_param = si_get_video_param;
+		sscreen->b.b.is_video_format_supported = si_vid_is_format_supported;
 	} else {
 		sscreen->b.b.get_video_param = si_get_video_param_no_decode;
+		sscreen->b.b.is_video_format_supported = vl_video_buffer_is_format_supported;
 	}
 
 	si_init_renderer_string(sscreen);
