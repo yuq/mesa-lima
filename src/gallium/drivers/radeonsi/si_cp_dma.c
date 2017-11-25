@@ -203,9 +203,9 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 		*packet_flags |= CP_DMA_SYNC;
 }
 
-static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
-			    uint64_t offset, uint64_t size, unsigned value,
-			    enum r600_coherency coher)
+void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
+		     uint64_t offset, uint64_t size, unsigned value,
+		     enum r600_coherency coher)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct radeon_winsys *ws = sctx->b.ws;

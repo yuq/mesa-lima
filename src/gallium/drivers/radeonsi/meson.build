@@ -22,6 +22,7 @@ files_libradeonsi = files(
   'cik_sdma.c',
   'driinfo_radeonsi.h',
   'si_blit.c',
+  'si_clear.c',
   'si_compute.c',
   'si_compute.h',
   'si_cp_dma.c',

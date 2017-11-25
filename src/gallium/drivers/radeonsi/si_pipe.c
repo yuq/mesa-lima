@@ -209,6 +209,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	if (sscreen->b.info.drm_major == 3)
 		sctx->b.b.get_device_reset_status = si_amdgpu_get_reset_status;
 
+	si_init_clear_functions(sctx);
 	si_init_blit_functions(sctx);
 	si_init_compute_functions(sctx);
 	si_init_cp_dma_functions(sctx);

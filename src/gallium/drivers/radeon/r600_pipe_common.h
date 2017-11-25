@@ -735,6 +735,9 @@ void si_texture_get_fmask_info(struct r600_common_screen *rscreen,
 			       struct r600_texture *rtex,
 			       unsigned nr_samples,
 			       struct r600_fmask_info *out);
+void si_texture_get_cmask_info(struct r600_common_screen *rscreen,
+			       struct r600_texture *rtex,
+			       struct r600_cmask_info *out);
 bool si_init_flushed_depth_texture(struct pipe_context *ctx,
 				   struct pipe_resource *texture,
 				   struct r600_texture **staging);
@@ -757,20 +760,14 @@ struct pipe_surface *si_create_surface_custom(struct pipe_context *pipe,
 					      unsigned width0, unsigned height0,
 					      unsigned width, unsigned height);
 unsigned si_translate_colorswap(enum pipe_format format, bool do_endian_swap);
+void vi_separate_dcc_try_enable(struct r600_common_context *rctx,
+				struct r600_texture *tex);
 void vi_separate_dcc_start_query(struct pipe_context *ctx,
 				 struct r600_texture *tex);
 void vi_separate_dcc_stop_query(struct pipe_context *ctx,
 				struct r600_texture *tex);
 void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 					     struct r600_texture *tex);
-void vi_dcc_clear_level(struct r600_common_context *rctx,
-			struct r600_texture *rtex,
-			unsigned level, unsigned clear_value);
-void si_do_fast_color_clear(struct r600_common_context *rctx,
-			    struct pipe_framebuffer_state *fb,
-			    struct r600_atom *fb_state,
-			    unsigned *buffers, ubyte *dirty_cbufs,
-			    const union pipe_color_union *color);
 bool si_texture_disable_dcc(struct r600_common_context *rctx,
 			    struct r600_texture *rtex);
 void si_init_screen_texture_functions(struct r600_common_screen *rscreen);

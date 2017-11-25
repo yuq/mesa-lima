@@ -558,6 +558,16 @@ struct si_context {
 void cik_init_sdma_functions(struct si_context *sctx);
 
 /* si_blit.c */
+enum si_blitter_op /* bitmask */
+{
+	SI_SAVE_TEXTURES      = 1,
+	SI_SAVE_FRAMEBUFFER   = 2,
+	SI_SAVE_FRAGMENT_STATE = 4,
+	SI_DISABLE_RENDER_COND = 8,
+};
+
+void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op);
+void si_blitter_end(struct pipe_context *ctx);
 void si_init_blit_functions(struct si_context *sctx);
 void si_decompress_textures(struct si_context *sctx, unsigned shader_mask);
 void si_resource_copy_region(struct pipe_context *ctx,
@@ -567,6 +577,12 @@ void si_resource_copy_region(struct pipe_context *ctx,
 			     struct pipe_resource *src,
 			     unsigned src_level,
 			     const struct pipe_box *src_box);
+
+/* si_clear.c */
+void vi_dcc_clear_level(struct si_context *sctx,
+			struct r600_texture *rtex,
+			unsigned level, unsigned clear_value);
+void si_init_clear_functions(struct si_context *sctx);
 
 /* si_cp_dma.c */
 #define SI_CPDMA_SKIP_CHECK_CS_SPACE	(1 << 0) /* don't call need_cs_space */
@@ -580,6 +596,9 @@ void si_resource_copy_region(struct pipe_context *ctx,
 			   SI_CPDMA_SKIP_GFX_SYNC | \
 			   SI_CPDMA_SKIP_BO_LIST_UPDATE)
 
+void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
+		     uint64_t offset, uint64_t size, unsigned value,
+		     enum r600_coherency coher);
 void si_copy_buffer(struct si_context *sctx,
 		    struct pipe_resource *dst, struct pipe_resource *src,
 		    uint64_t dst_offset, uint64_t src_offset, unsigned size,

@@ -27,17 +27,7 @@
 #include "util/u_log.h"
 #include "util/u_surface.h"
 
-enum si_blitter_op /* bitmask */
-{
-	SI_SAVE_TEXTURES      = 1,
-	SI_SAVE_FRAMEBUFFER   = 2,
-	SI_SAVE_FRAGMENT_STATE = 4,
-	SI_DISABLE_RENDER_COND = 8,
-
-	SI_CLEAR         = SI_SAVE_FRAGMENT_STATE,
-
-	SI_CLEAR_SURFACE = SI_SAVE_FRAMEBUFFER | SI_SAVE_FRAGMENT_STATE,
-
+enum {
 	SI_COPY          = SI_SAVE_FRAMEBUFFER | SI_SAVE_TEXTURES |
 			   SI_SAVE_FRAGMENT_STATE | SI_DISABLE_RENDER_COND,
 
@@ -50,7 +40,7 @@ enum si_blitter_op /* bitmask */
 	SI_COLOR_RESOLVE = SI_SAVE_FRAMEBUFFER | SI_SAVE_FRAGMENT_STATE
 };
 
-static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
+void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 
@@ -87,7 +77,7 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 		sctx->b.render_cond_force_off = true;
 }
 
-static void si_blitter_end(struct pipe_context *ctx)
+void si_blitter_end(struct pipe_context *ctx)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 
@@ -819,155 +809,6 @@ void si_decompress_textures(struct si_context *sctx, unsigned shader_mask)
 	si_check_render_feedback(sctx);
 }
 
-static void si_clear(struct pipe_context *ctx, unsigned buffers,
-		     const union pipe_color_union *color,
-		     double depth, unsigned stencil)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-	struct pipe_framebuffer_state *fb = &sctx->framebuffer.state;
-	struct pipe_surface *zsbuf = fb->zsbuf;
-	struct r600_texture *zstex =
-		zsbuf ? (struct r600_texture*)zsbuf->texture : NULL;
-
-	if (buffers & PIPE_CLEAR_COLOR) {
-		si_do_fast_color_clear(&sctx->b, fb,
-					      &sctx->framebuffer.atom, &buffers,
-					      &sctx->framebuffer.dirty_cbufs,
-					      color);
-		if (!buffers)
-			return; /* all buffers have been fast cleared */
-	}
-
-	if (buffers & PIPE_CLEAR_COLOR) {
-		int i;
-
-		/* These buffers cannot use fast clear, make sure to disable expansion. */
-		for (i = 0; i < fb->nr_cbufs; i++) {
-			struct r600_texture *tex;
-
-			/* If not clearing this buffer, skip. */
-			if (!(buffers & (PIPE_CLEAR_COLOR0 << i)))
-				continue;
-
-			if (!fb->cbufs[i])
-				continue;
-
-			tex = (struct r600_texture *)fb->cbufs[i]->texture;
-			if (tex->fmask.size == 0)
-				tex->dirty_level_mask &= ~(1 << fb->cbufs[i]->u.tex.level);
-		}
-	}
-
-	if (zstex &&
-	    r600_htile_enabled(zstex, zsbuf->u.tex.level) &&
-	    zsbuf->u.tex.first_layer == 0 &&
-	    zsbuf->u.tex.last_layer == util_max_layer(&zstex->resource.b.b, 0)) {
-		/* TC-compatible HTILE only supports depth clears to 0 or 1. */
-		if (buffers & PIPE_CLEAR_DEPTH &&
-		    (!zstex->tc_compatible_htile ||
-		     depth == 0 || depth == 1)) {
-			/* Need to disable EXPCLEAR temporarily if clearing
-			 * to a new value. */
-			if (!zstex->depth_cleared || zstex->depth_clear_value != depth) {
-				sctx->db_depth_disable_expclear = true;
-			}
-
-			zstex->depth_clear_value = depth;
-			sctx->framebuffer.dirty_zsbuf = true;
-			si_mark_atom_dirty(sctx, &sctx->framebuffer.atom); /* updates DB_DEPTH_CLEAR */
-			sctx->db_depth_clear = true;
-			si_mark_atom_dirty(sctx, &sctx->db_render_state);
-		}
-
-		/* TC-compatible HTILE only supports stencil clears to 0. */
-		if (buffers & PIPE_CLEAR_STENCIL &&
-		    (!zstex->tc_compatible_htile || stencil == 0)) {
-			stencil &= 0xff;
-
-			/* Need to disable EXPCLEAR temporarily if clearing
-			 * to a new value. */
-			if (!zstex->stencil_cleared || zstex->stencil_clear_value != stencil) {
-				sctx->db_stencil_disable_expclear = true;
-			}
-
-			zstex->stencil_clear_value = stencil;
-			sctx->framebuffer.dirty_zsbuf = true;
-			si_mark_atom_dirty(sctx, &sctx->framebuffer.atom); /* updates DB_STENCIL_CLEAR */
-			sctx->db_stencil_clear = true;
-			si_mark_atom_dirty(sctx, &sctx->db_render_state);
-		}
-
-		/* TODO: Find out what's wrong here. Fast depth clear leads to
-		 * corruption in ARK: Survival Evolved, but that may just be
-		 * a coincidence and the root cause is elsewhere.
-		 *
-		 * The corruption can be fixed by putting the DB flush before
-		 * or after the depth clear. (surprisingly)
-		 *
-		 * https://bugs.freedesktop.org/show_bug.cgi?id=102955 (apitrace)
-		 *
-		 * This hack decreases back-to-back ClearDepth performance.
-		 */
-		if (sctx->screen->clear_db_cache_before_clear) {
-			sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_DB;
-		}
-	}
-
-	si_blitter_begin(ctx, SI_CLEAR);
-	util_blitter_clear(sctx->blitter, fb->width, fb->height,
-			   util_framebuffer_get_num_layers(fb),
-			   buffers, color, depth, stencil);
-	si_blitter_end(ctx);
-
-	if (sctx->db_depth_clear) {
-		sctx->db_depth_clear = false;
-		sctx->db_depth_disable_expclear = false;
-		zstex->depth_cleared = true;
-		si_mark_atom_dirty(sctx, &sctx->db_render_state);
-	}
-
-	if (sctx->db_stencil_clear) {
-		sctx->db_stencil_clear = false;
-		sctx->db_stencil_disable_expclear = false;
-		zstex->stencil_cleared = true;
-		si_mark_atom_dirty(sctx, &sctx->db_render_state);
-	}
-}
-
-static void si_clear_render_target(struct pipe_context *ctx,
-				   struct pipe_surface *dst,
-				   const union pipe_color_union *color,
-				   unsigned dstx, unsigned dsty,
-				   unsigned width, unsigned height,
-				   bool render_condition_enabled)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-
-	si_blitter_begin(ctx, SI_CLEAR_SURFACE |
-			 (render_condition_enabled ? 0 : SI_DISABLE_RENDER_COND));
-	util_blitter_clear_render_target(sctx->blitter, dst, color,
-					 dstx, dsty, width, height);
-	si_blitter_end(ctx);
-}
-
-static void si_clear_depth_stencil(struct pipe_context *ctx,
-				   struct pipe_surface *dst,
-				   unsigned clear_flags,
-				   double depth,
-				   unsigned stencil,
-				   unsigned dstx, unsigned dsty,
-				   unsigned width, unsigned height,
-				   bool render_condition_enabled)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-
-	si_blitter_begin(ctx, SI_CLEAR_SURFACE |
-			 (render_condition_enabled ? 0 : SI_DISABLE_RENDER_COND));
-	util_blitter_clear_depth_stencil(sctx->blitter, dst, clear_flags, depth, stencil,
-					 dstx, dsty, width, height);
-	si_blitter_end(ctx);
-}
-
 /* Helper for decompressing a portion of a color or depth resource before
  * blitting if any decompression is needed.
  * The driver doesn't decompress resources automatically while u_blitter is
@@ -1300,7 +1141,7 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 			    info->dst.resource->last_level != 0)
 				goto resolve_to_temp;
 
-			vi_dcc_clear_level(&sctx->b, dst, info->dst.level,
+			vi_dcc_clear_level(sctx, dst, info->dst.level,
 					   0xFFFFFFFF);
 			dst->dirty_level_mask &= ~(1 << info->dst.level);
 		}
@@ -1544,10 +1385,7 @@ static void si_pipe_clear_buffer(struct pipe_context *ctx,
 
 void si_init_blit_functions(struct si_context *sctx)
 {
-	sctx->b.b.clear = si_clear;
 	sctx->b.b.clear_buffer = si_pipe_clear_buffer;
-	sctx->b.b.clear_render_target = si_clear_render_target;
-	sctx->b.b.clear_depth_stencil = si_clear_depth_stencil;
 	sctx->b.b.resource_copy_region = si_resource_copy_region;
 	sctx->b.b.blit = si_blit;
 	sctx->b.b.flush_resource = si_flush_resource;
