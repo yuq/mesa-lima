@@ -342,11 +342,10 @@ static void si_set_optimal_micro_tile_mode(struct si_screen *sscreen,
 }
 
 static void si_do_fast_color_clear(struct si_context *sctx,
-				   struct pipe_framebuffer_state *fb,
-				   struct r600_atom *fb_state,
-				   unsigned *buffers, ubyte *dirty_cbufs,
+				   unsigned *buffers,
 				   const union pipe_color_union *color)
 {
+	struct pipe_framebuffer_state *fb = &sctx->framebuffer.state;
 	int i;
 
 	/* This function is broken in BE, so just disable this path for now */
@@ -495,9 +494,8 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 
 		si_set_clear_color(tex, fb->cbufs[i]->format, color);
 
-		if (dirty_cbufs)
-			*dirty_cbufs |= 1 << i;
-		sctx->b.set_atom_dirty(&sctx->b, fb_state, true);
+		sctx->framebuffer.dirty_cbufs |= 1 << i;
+		si_mark_atom_dirty(sctx, &sctx->framebuffer.atom);
 		*buffers &= ~clear_bit;
 	}
 }
@@ -513,10 +511,7 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 		zsbuf ? (struct r600_texture*)zsbuf->texture : NULL;
 
 	if (buffers & PIPE_CLEAR_COLOR) {
-		si_do_fast_color_clear(sctx, fb,
-				       &sctx->framebuffer.atom, &buffers,
-				       &sctx->framebuffer.dirty_cbufs,
-				       color);
+		si_do_fast_color_clear(sctx, &buffers, color);
 		if (!buffers)
 			return; /* all buffers have been fast cleared */
 	}
