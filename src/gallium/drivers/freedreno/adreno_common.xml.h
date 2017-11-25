@@ -11,11 +11,11 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    431 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  33379 bytes, from 2017-11-14 21:00:47)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13612 bytes, from 2017-11-28 14:06:11)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  34499 bytes, from 2017-12-17 17:36:55)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 111898 bytes, from 2017-06-06 18:23:59)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 143420 bytes, from 2017-11-16 20:29:34)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 112086 bytes, from 2017-11-28 14:06:11)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 145953 bytes, from 2017-12-17 17:36:55)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
 
 Copyright (C) 2013-2017 by the following authors:
@@ -43,6 +43,13 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+
+enum chip {
+	A2XX = 0,
+	A3XX = 0,
+	A4XX = 0,
+	A5XX = 0,
+};
 
 enum adreno_pa_su_sc_draw {
 	PC_DRAW_POINTS = 0,
@@ -181,6 +188,12 @@ enum a3xx_rb_blend_opcode {
 	BLEND_DST_MINUS_SRC = 2,
 	BLEND_MIN_DST_SRC = 3,
 	BLEND_MAX_DST_SRC = 4,
+};
+
+enum a4xx_tess_spacing {
+	EQUAL_SPACING = 0,
+	ODD_SPACING = 2,
+	EVEN_SPACING = 3,
 };
 
 #define REG_AXXX_CP_RB_BASE					0x000001c0

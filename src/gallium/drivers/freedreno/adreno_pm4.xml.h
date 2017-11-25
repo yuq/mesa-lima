@@ -8,15 +8,15 @@ http://github.com/freedreno/envytools/
 git clone https://github.com/freedreno/envytools.git
 
 The rules-ng-ng source files this header was generated from are:
-- /home/ilia/src/freedreno/envytools/rnndb/adreno.xml               (    431 bytes, from 2017-11-18 20:43:22)
-- /home/ilia/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-11 01:04:14)
-- /home/ilia/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  36805 bytes, from 2017-11-18 20:48:10)
-- /home/ilia/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  15292 bytes, from 2017-11-19 20:45:26)
-- /home/ilia/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  34349 bytes, from 2017-11-19 20:43:33)
-- /home/ilia/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-11-18 19:40:11)
-- /home/ilia/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 112609 bytes, from 2017-11-19 04:47:10)
-- /home/ilia/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 143017 bytes, from 2017-11-19 04:05:11)
-- /home/ilia/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-11-07 21:10:25)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    431 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13612 bytes, from 2017-11-28 14:06:11)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  34499 bytes, from 2017-12-17 17:36:55)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 112086 bytes, from 2017-11-28 14:06:11)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 145953 bytes, from 2017-12-17 17:36:55)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
 
 Copyright (C) 2013-2017 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -225,6 +225,7 @@ enum adreno_pm4_type3_packets {
 	IN_INCR_UPDT_STATE = 85,
 	IN_INCR_UPDT_CONST = 86,
 	IN_INCR_UPDT_INSTR = 87,
+	PKT4 = 4,
 };
 
 enum adreno_state_block {
@@ -301,6 +302,7 @@ enum render_mode_cmd {
 	GMEM = 3,
 	BLIT2D = 5,
 	BLIT2DSCALE = 7,
+	END2D = 8,
 };
 
 enum cp_blit_cmd {
@@ -1182,13 +1184,13 @@ static inline uint32_t CP_BLIT_0_OP(enum cp_blit_cmd val)
 }
 
 #define REG_CP_BLIT_1						0x00000001
-#define CP_BLIT_1_SRC_X1__MASK					0x0000ffff
+#define CP_BLIT_1_SRC_X1__MASK					0x00003fff
 #define CP_BLIT_1_SRC_X1__SHIFT					0
 static inline uint32_t CP_BLIT_1_SRC_X1(uint32_t val)
 {
 	return ((val) << CP_BLIT_1_SRC_X1__SHIFT) & CP_BLIT_1_SRC_X1__MASK;
 }
-#define CP_BLIT_1_SRC_Y1__MASK					0xffff0000
+#define CP_BLIT_1_SRC_Y1__MASK					0x3fff0000
 #define CP_BLIT_1_SRC_Y1__SHIFT					16
 static inline uint32_t CP_BLIT_1_SRC_Y1(uint32_t val)
 {
@@ -1196,13 +1198,13 @@ static inline uint32_t CP_BLIT_1_SRC_Y1(uint32_t val)
 }
 
 #define REG_CP_BLIT_2						0x00000002
-#define CP_BLIT_2_SRC_X2__MASK					0x0000ffff
+#define CP_BLIT_2_SRC_X2__MASK					0x00003fff
 #define CP_BLIT_2_SRC_X2__SHIFT					0
 static inline uint32_t CP_BLIT_2_SRC_X2(uint32_t val)
 {
 	return ((val) << CP_BLIT_2_SRC_X2__SHIFT) & CP_BLIT_2_SRC_X2__MASK;
 }
-#define CP_BLIT_2_SRC_Y2__MASK					0xffff0000
+#define CP_BLIT_2_SRC_Y2__MASK					0x3fff0000
 #define CP_BLIT_2_SRC_Y2__SHIFT					16
 static inline uint32_t CP_BLIT_2_SRC_Y2(uint32_t val)
 {
@@ -1210,13 +1212,13 @@ static inline uint32_t CP_BLIT_2_SRC_Y2(uint32_t val)
 }
 
 #define REG_CP_BLIT_3						0x00000003
-#define CP_BLIT_3_DST_X1__MASK					0x0000ffff
+#define CP_BLIT_3_DST_X1__MASK					0x00003fff
 #define CP_BLIT_3_DST_X1__SHIFT					0
 static inline uint32_t CP_BLIT_3_DST_X1(uint32_t val)
 {
 	return ((val) << CP_BLIT_3_DST_X1__SHIFT) & CP_BLIT_3_DST_X1__MASK;
 }
-#define CP_BLIT_3_DST_Y1__MASK					0xffff0000
+#define CP_BLIT_3_DST_Y1__MASK					0x3fff0000
 #define CP_BLIT_3_DST_Y1__SHIFT					16
 static inline uint32_t CP_BLIT_3_DST_Y1(uint32_t val)
 {
@@ -1224,13 +1226,13 @@ static inline uint32_t CP_BLIT_3_DST_Y1(uint32_t val)
 }
 
 #define REG_CP_BLIT_4						0x00000004
-#define CP_BLIT_4_DST_X2__MASK					0x0000ffff
+#define CP_BLIT_4_DST_X2__MASK					0x00003fff
 #define CP_BLIT_4_DST_X2__SHIFT					0
 static inline uint32_t CP_BLIT_4_DST_X2(uint32_t val)
 {
 	return ((val) << CP_BLIT_4_DST_X2__SHIFT) & CP_BLIT_4_DST_X2__MASK;
 }
-#define CP_BLIT_4_DST_Y2__MASK					0xffff0000
+#define CP_BLIT_4_DST_Y2__MASK					0x3fff0000
 #define CP_BLIT_4_DST_Y2__SHIFT					16
 static inline uint32_t CP_BLIT_4_DST_Y2(uint32_t val)
 {

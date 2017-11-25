@@ -11,11 +11,11 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    431 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13324 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  33379 bytes, from 2017-11-14 21:00:47)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13612 bytes, from 2017-11-28 14:06:11)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  34499 bytes, from 2017-12-17 17:36:55)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 111898 bytes, from 2017-06-06 18:23:59)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 143420 bytes, from 2017-11-16 20:29:34)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 112086 bytes, from 2017-11-28 14:06:11)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 145953 bytes, from 2017-12-17 17:36:55)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
 
 Copyright (C) 2013-2017 by the following authors:
@@ -934,6 +934,12 @@ enum a5xx_tex_type {
 #define REG_A5XX_CP_DRAW_STATE_ADDR				0x0000080b
 
 #define REG_A5XX_CP_DRAW_STATE_DATA				0x0000080c
+
+#define REG_A5XX_CP_ME_NRT_ADDR_LO				0x0000080d
+
+#define REG_A5XX_CP_ME_NRT_ADDR_HI				0x0000080e
+
+#define REG_A5XX_CP_ME_NRT_DATA					0x00000810
 
 #define REG_A5XX_CP_CRASH_SCRIPT_BASE_LO			0x00000817
 
@@ -2110,9 +2116,17 @@ static inline uint32_t A5XX_VSC_RESOLVE_CNTL_Y(uint32_t val)
 
 #define REG_A5XX_PC_MODE_CNTL					0x00000d02
 
-#define REG_A5XX_UNKNOWN_0D08					0x00000d08
+#define REG_A5XX_PC_INDEX_BUF_LO				0x00000d04
 
-#define REG_A5XX_UNKNOWN_0D09					0x00000d09
+#define REG_A5XX_PC_INDEX_BUF_HI				0x00000d05
+
+#define REG_A5XX_PC_START_INDEX					0x00000d06
+
+#define REG_A5XX_PC_MAX_INDEX					0x00000d07
+
+#define REG_A5XX_PC_TESSFACTOR_ADDR_LO				0x00000d08
+
+#define REG_A5XX_PC_TESSFACTOR_ADDR_HI				0x00000d09
 
 #define REG_A5XX_PC_PERFCTR_PC_SEL_0				0x00000d10
 
@@ -2739,7 +2753,7 @@ static inline uint32_t A5XX_GRAS_SU_POINT_SIZE(float val)
 	return ((((int32_t)(val * 16.0))) << A5XX_GRAS_SU_POINT_SIZE__SHIFT) & A5XX_GRAS_SU_POINT_SIZE__MASK;
 }
 
-#define REG_A5XX_UNKNOWN_E093					0x0000e093
+#define REG_A5XX_GRAS_SU_LAYERED				0x0000e093
 
 #define REG_A5XX_GRAS_SU_DEPTH_PLANE_CNTL			0x0000e094
 #define A5XX_GRAS_SU_DEPTH_PLANE_CNTL_FRAG_WRITES_Z		0x00000001
@@ -3709,6 +3723,7 @@ static inline uint32_t A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC(uint32_t val)
 	return ((val) << A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC__SHIFT) & A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC__MASK;
 }
 #define A5XX_PC_PRIMITIVE_CNTL_PRIMITIVE_RESTART		0x00000100
+#define A5XX_PC_PRIMITIVE_CNTL_COUNT_PRIMITIVES			0x00000200
 #define A5XX_PC_PRIMITIVE_CNTL_PROVOKING_VTX_LAST		0x00000400
 
 #define REG_A5XX_PC_PRIM_VTX_CNTL				0x0000e385
@@ -3733,11 +3748,43 @@ static inline uint32_t A5XX_PC_RASTER_CNTL_POLYMODE_BACK_PTYPE(enum adreno_pa_su
 
 #define REG_A5XX_PC_RESTART_INDEX				0x0000e38c
 
-#define REG_A5XX_UNKNOWN_E38D					0x0000e38d
+#define REG_A5XX_PC_GS_LAYERED					0x0000e38d
 
 #define REG_A5XX_PC_GS_PARAM					0x0000e38e
+#define A5XX_PC_GS_PARAM_MAX_VERTICES__MASK			0x000003ff
+#define A5XX_PC_GS_PARAM_MAX_VERTICES__SHIFT			0
+static inline uint32_t A5XX_PC_GS_PARAM_MAX_VERTICES(uint32_t val)
+{
+	return ((val) << A5XX_PC_GS_PARAM_MAX_VERTICES__SHIFT) & A5XX_PC_GS_PARAM_MAX_VERTICES__MASK;
+}
+#define A5XX_PC_GS_PARAM_INVOCATIONS__MASK			0x0000f800
+#define A5XX_PC_GS_PARAM_INVOCATIONS__SHIFT			11
+static inline uint32_t A5XX_PC_GS_PARAM_INVOCATIONS(uint32_t val)
+{
+	return ((val) << A5XX_PC_GS_PARAM_INVOCATIONS__SHIFT) & A5XX_PC_GS_PARAM_INVOCATIONS__MASK;
+}
+#define A5XX_PC_GS_PARAM_PRIMTYPE__MASK				0x01800000
+#define A5XX_PC_GS_PARAM_PRIMTYPE__SHIFT			23
+static inline uint32_t A5XX_PC_GS_PARAM_PRIMTYPE(enum adreno_pa_su_sc_draw val)
+{
+	return ((val) << A5XX_PC_GS_PARAM_PRIMTYPE__SHIFT) & A5XX_PC_GS_PARAM_PRIMTYPE__MASK;
+}
 
 #define REG_A5XX_PC_HS_PARAM					0x0000e38f
+#define A5XX_PC_HS_PARAM_VERTICES_OUT__MASK			0x0000003f
+#define A5XX_PC_HS_PARAM_VERTICES_OUT__SHIFT			0
+static inline uint32_t A5XX_PC_HS_PARAM_VERTICES_OUT(uint32_t val)
+{
+	return ((val) << A5XX_PC_HS_PARAM_VERTICES_OUT__SHIFT) & A5XX_PC_HS_PARAM_VERTICES_OUT__MASK;
+}
+#define A5XX_PC_HS_PARAM_SPACING__MASK				0x00600000
+#define A5XX_PC_HS_PARAM_SPACING__SHIFT				21
+static inline uint32_t A5XX_PC_HS_PARAM_SPACING(enum a4xx_tess_spacing val)
+{
+	return ((val) << A5XX_PC_HS_PARAM_SPACING__SHIFT) & A5XX_PC_HS_PARAM_SPACING__MASK;
+}
+#define A5XX_PC_HS_PARAM_CW					0x00800000
+#define A5XX_PC_HS_PARAM_CONNECTED				0x01000000
 
 #define REG_A5XX_PC_POWER_CNTL					0x0000e3b0
 
@@ -3762,10 +3809,40 @@ static inline uint32_t A5XX_VFD_CONTROL_1_REGID4INST(uint32_t val)
 {
 	return ((val) << A5XX_VFD_CONTROL_1_REGID4INST__SHIFT) & A5XX_VFD_CONTROL_1_REGID4INST__MASK;
 }
+#define A5XX_VFD_CONTROL_1_REGID4PRIMID__MASK			0x00ff0000
+#define A5XX_VFD_CONTROL_1_REGID4PRIMID__SHIFT			16
+static inline uint32_t A5XX_VFD_CONTROL_1_REGID4PRIMID(uint32_t val)
+{
+	return ((val) << A5XX_VFD_CONTROL_1_REGID4PRIMID__SHIFT) & A5XX_VFD_CONTROL_1_REGID4PRIMID__MASK;
+}
 
 #define REG_A5XX_VFD_CONTROL_2					0x0000e402
+#define A5XX_VFD_CONTROL_2_REGID_PATCHID__MASK			0x000000ff
+#define A5XX_VFD_CONTROL_2_REGID_PATCHID__SHIFT			0
+static inline uint32_t A5XX_VFD_CONTROL_2_REGID_PATCHID(uint32_t val)
+{
+	return ((val) << A5XX_VFD_CONTROL_2_REGID_PATCHID__SHIFT) & A5XX_VFD_CONTROL_2_REGID_PATCHID__MASK;
+}
 
 #define REG_A5XX_VFD_CONTROL_3					0x0000e403
+#define A5XX_VFD_CONTROL_3_REGID_PATCHID__MASK			0x0000ff00
+#define A5XX_VFD_CONTROL_3_REGID_PATCHID__SHIFT			8
+static inline uint32_t A5XX_VFD_CONTROL_3_REGID_PATCHID(uint32_t val)
+{
+	return ((val) << A5XX_VFD_CONTROL_3_REGID_PATCHID__SHIFT) & A5XX_VFD_CONTROL_3_REGID_PATCHID__MASK;
+}
+#define A5XX_VFD_CONTROL_3_REGID_TESSX__MASK			0x00ff0000
+#define A5XX_VFD_CONTROL_3_REGID_TESSX__SHIFT			16
+static inline uint32_t A5XX_VFD_CONTROL_3_REGID_TESSX(uint32_t val)
+{
+	return ((val) << A5XX_VFD_CONTROL_3_REGID_TESSX__SHIFT) & A5XX_VFD_CONTROL_3_REGID_TESSX__MASK;
+}
+#define A5XX_VFD_CONTROL_3_REGID_TESSY__MASK			0xff000000
+#define A5XX_VFD_CONTROL_3_REGID_TESSY__SHIFT			24
+static inline uint32_t A5XX_VFD_CONTROL_3_REGID_TESSY(uint32_t val)
+{
+	return ((val) << A5XX_VFD_CONTROL_3_REGID_TESSY__SHIFT) & A5XX_VFD_CONTROL_3_REGID_TESSY__MASK;
+}
 
 #define REG_A5XX_VFD_CONTROL_4					0x0000e404
 
@@ -4108,12 +4185,6 @@ static inline uint32_t A5XX_SP_FS_MRT_REG_COLOR_FORMAT(enum a5xx_color_fmt val)
 
 #define REG_A5XX_UNKNOWN_E5DB					0x0000e5db
 
-#define REG_A5XX_UNKNOWN_E5F2					0x0000e5f2
-
-#define REG_A5XX_SP_CS_OBJ_START_LO				0x0000e5f3
-
-#define REG_A5XX_SP_CS_OBJ_START_HI				0x0000e5f4
-
 #define REG_A5XX_SP_CS_CTRL_REG0				0x0000e5f0
 #define A5XX_SP_CS_CTRL_REG0_THREADSIZE__MASK			0x00000008
 #define A5XX_SP_CS_CTRL_REG0_THREADSIZE__SHIFT			3
@@ -4141,6 +4212,12 @@ static inline uint32_t A5XX_SP_CS_CTRL_REG0_BRANCHSTACK(uint32_t val)
 {
 	return ((val) << A5XX_SP_CS_CTRL_REG0_BRANCHSTACK__SHIFT) & A5XX_SP_CS_CTRL_REG0_BRANCHSTACK__MASK;
 }
+
+#define REG_A5XX_UNKNOWN_E5F2					0x0000e5f2
+
+#define REG_A5XX_SP_CS_OBJ_START_LO				0x0000e5f3
+
+#define REG_A5XX_SP_CS_OBJ_START_HI				0x0000e5f4
 
 #define REG_A5XX_UNKNOWN_E600					0x0000e600
 
@@ -4571,6 +4648,8 @@ static inline uint32_t A5XX_HLSQ_CS_CNTL_0_LOCALIDREGID(uint32_t val)
 
 #define REG_A5XX_HLSQ_CS_INSTRLEN				0x0000e7dd
 
+#define REG_A5XX_RB_2D_BLIT_CNTL				0x00002100
+
 #define REG_A5XX_RB_2D_SRC_SOLID_DW0				0x00002101
 
 #define REG_A5XX_RB_2D_SRC_SOLID_DW1				0x00002102
@@ -4586,12 +4665,19 @@ static inline uint32_t A5XX_RB_2D_SRC_INFO_COLOR_FORMAT(enum a5xx_color_fmt val)
 {
 	return ((val) << A5XX_RB_2D_SRC_INFO_COLOR_FORMAT__SHIFT) & A5XX_RB_2D_SRC_INFO_COLOR_FORMAT__MASK;
 }
+#define A5XX_RB_2D_SRC_INFO_TILE_MODE__MASK			0x00000300
+#define A5XX_RB_2D_SRC_INFO_TILE_MODE__SHIFT			8
+static inline uint32_t A5XX_RB_2D_SRC_INFO_TILE_MODE(enum a5xx_tile_mode val)
+{
+	return ((val) << A5XX_RB_2D_SRC_INFO_TILE_MODE__SHIFT) & A5XX_RB_2D_SRC_INFO_TILE_MODE__MASK;
+}
 #define A5XX_RB_2D_SRC_INFO_COLOR_SWAP__MASK			0x00000c00
 #define A5XX_RB_2D_SRC_INFO_COLOR_SWAP__SHIFT			10
 static inline uint32_t A5XX_RB_2D_SRC_INFO_COLOR_SWAP(enum a3xx_color_swap val)
 {
 	return ((val) << A5XX_RB_2D_SRC_INFO_COLOR_SWAP__SHIFT) & A5XX_RB_2D_SRC_INFO_COLOR_SWAP__MASK;
 }
+#define A5XX_RB_2D_SRC_INFO_FLAGS				0x00001000
 
 #define REG_A5XX_RB_2D_SRC_LO					0x00002108
 
@@ -4620,12 +4706,19 @@ static inline uint32_t A5XX_RB_2D_DST_INFO_COLOR_FORMAT(enum a5xx_color_fmt val)
 {
 	return ((val) << A5XX_RB_2D_DST_INFO_COLOR_FORMAT__SHIFT) & A5XX_RB_2D_DST_INFO_COLOR_FORMAT__MASK;
 }
+#define A5XX_RB_2D_DST_INFO_TILE_MODE__MASK			0x00000300
+#define A5XX_RB_2D_DST_INFO_TILE_MODE__SHIFT			8
+static inline uint32_t A5XX_RB_2D_DST_INFO_TILE_MODE(enum a5xx_tile_mode val)
+{
+	return ((val) << A5XX_RB_2D_DST_INFO_TILE_MODE__SHIFT) & A5XX_RB_2D_DST_INFO_TILE_MODE__MASK;
+}
 #define A5XX_RB_2D_DST_INFO_COLOR_SWAP__MASK			0x00000c00
 #define A5XX_RB_2D_DST_INFO_COLOR_SWAP__SHIFT			10
 static inline uint32_t A5XX_RB_2D_DST_INFO_COLOR_SWAP(enum a3xx_color_swap val)
 {
 	return ((val) << A5XX_RB_2D_DST_INFO_COLOR_SWAP__SHIFT) & A5XX_RB_2D_DST_INFO_COLOR_SWAP__MASK;
 }
+#define A5XX_RB_2D_DST_INFO_FLAGS				0x00001000
 
 #define REG_A5XX_RB_2D_DST_LO					0x00002111
 
@@ -4655,6 +4748,8 @@ static inline uint32_t A5XX_RB_2D_DST_SIZE_ARRAY_PITCH(uint32_t val)
 
 #define REG_A5XX_RB_2D_DST_FLAGS_HI				0x00002144
 
+#define REG_A5XX_GRAS_2D_BLIT_CNTL				0x00002180
+
 #define REG_A5XX_GRAS_2D_SRC_INFO				0x00002181
 #define A5XX_GRAS_2D_SRC_INFO_COLOR_FORMAT__MASK		0x000000ff
 #define A5XX_GRAS_2D_SRC_INFO_COLOR_FORMAT__SHIFT		0
@@ -4662,12 +4757,19 @@ static inline uint32_t A5XX_GRAS_2D_SRC_INFO_COLOR_FORMAT(enum a5xx_color_fmt va
 {
 	return ((val) << A5XX_GRAS_2D_SRC_INFO_COLOR_FORMAT__SHIFT) & A5XX_GRAS_2D_SRC_INFO_COLOR_FORMAT__MASK;
 }
+#define A5XX_GRAS_2D_SRC_INFO_TILE_MODE__MASK			0x00000300
+#define A5XX_GRAS_2D_SRC_INFO_TILE_MODE__SHIFT			8
+static inline uint32_t A5XX_GRAS_2D_SRC_INFO_TILE_MODE(enum a5xx_tile_mode val)
+{
+	return ((val) << A5XX_GRAS_2D_SRC_INFO_TILE_MODE__SHIFT) & A5XX_GRAS_2D_SRC_INFO_TILE_MODE__MASK;
+}
 #define A5XX_GRAS_2D_SRC_INFO_COLOR_SWAP__MASK			0x00000c00
 #define A5XX_GRAS_2D_SRC_INFO_COLOR_SWAP__SHIFT			10
 static inline uint32_t A5XX_GRAS_2D_SRC_INFO_COLOR_SWAP(enum a3xx_color_swap val)
 {
 	return ((val) << A5XX_GRAS_2D_SRC_INFO_COLOR_SWAP__SHIFT) & A5XX_GRAS_2D_SRC_INFO_COLOR_SWAP__MASK;
 }
+#define A5XX_GRAS_2D_SRC_INFO_FLAGS				0x00001000
 
 #define REG_A5XX_GRAS_2D_DST_INFO				0x00002182
 #define A5XX_GRAS_2D_DST_INFO_COLOR_FORMAT__MASK		0x000000ff
@@ -4676,12 +4778,19 @@ static inline uint32_t A5XX_GRAS_2D_DST_INFO_COLOR_FORMAT(enum a5xx_color_fmt va
 {
 	return ((val) << A5XX_GRAS_2D_DST_INFO_COLOR_FORMAT__SHIFT) & A5XX_GRAS_2D_DST_INFO_COLOR_FORMAT__MASK;
 }
+#define A5XX_GRAS_2D_DST_INFO_TILE_MODE__MASK			0x00000300
+#define A5XX_GRAS_2D_DST_INFO_TILE_MODE__SHIFT			8
+static inline uint32_t A5XX_GRAS_2D_DST_INFO_TILE_MODE(enum a5xx_tile_mode val)
+{
+	return ((val) << A5XX_GRAS_2D_DST_INFO_TILE_MODE__SHIFT) & A5XX_GRAS_2D_DST_INFO_TILE_MODE__MASK;
+}
 #define A5XX_GRAS_2D_DST_INFO_COLOR_SWAP__MASK			0x00000c00
 #define A5XX_GRAS_2D_DST_INFO_COLOR_SWAP__SHIFT			10
 static inline uint32_t A5XX_GRAS_2D_DST_INFO_COLOR_SWAP(enum a3xx_color_swap val)
 {
 	return ((val) << A5XX_GRAS_2D_DST_INFO_COLOR_SWAP__SHIFT) & A5XX_GRAS_2D_DST_INFO_COLOR_SWAP__MASK;
 }
+#define A5XX_GRAS_2D_DST_INFO_FLAGS				0x00001000
 
 #define REG_A5XX_UNKNOWN_2100					0x00002100
 
