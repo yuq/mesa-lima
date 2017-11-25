@@ -48,30 +48,34 @@
 /* Alignment for optimal CP DMA performance. */
 #define SI_CPDMA_ALIGNMENT	32
 
+/* Pipeline & streamout query controls. */
+#define SI_CONTEXT_START_PIPELINE_STATS	(1 << 0)
+#define SI_CONTEXT_STOP_PIPELINE_STATS	(1 << 1)
+#define SI_CONTEXT_FLUSH_FOR_RENDER_COND (1 << 2)
 /* Instruction cache. */
-#define SI_CONTEXT_INV_ICACHE		(R600_CONTEXT_PRIVATE_FLAG << 0)
+#define SI_CONTEXT_INV_ICACHE		(1 << 3)
 /* SMEM L1, other names: KCACHE, constant cache, DCACHE, data cache */
-#define SI_CONTEXT_INV_SMEM_L1		(R600_CONTEXT_PRIVATE_FLAG << 1)
+#define SI_CONTEXT_INV_SMEM_L1		(1 << 4)
 /* VMEM L1 can optionally be bypassed (GLC=1). Other names: TC L1 */
-#define SI_CONTEXT_INV_VMEM_L1		(R600_CONTEXT_PRIVATE_FLAG << 2)
+#define SI_CONTEXT_INV_VMEM_L1		(1 << 5)
 /* Used by everything except CB/DB, can be bypassed (SLC=1). Other names: TC L2 */
-#define SI_CONTEXT_INV_GLOBAL_L2	(R600_CONTEXT_PRIVATE_FLAG << 3)
+#define SI_CONTEXT_INV_GLOBAL_L2	(1 << 6)
 /* Write dirty L2 lines back to memory (shader and CP DMA stores), but don't
  * invalidate L2. SI-CIK can't do it, so they will do complete invalidation. */
-#define SI_CONTEXT_WRITEBACK_GLOBAL_L2	(R600_CONTEXT_PRIVATE_FLAG << 4)
+#define SI_CONTEXT_WRITEBACK_GLOBAL_L2	(1 << 7)
 /* Writeback & invalidate the L2 metadata cache. It can only be coupled with
  * a CB or DB flush. */
-#define SI_CONTEXT_INV_L2_METADATA	(R600_CONTEXT_PRIVATE_FLAG << 5)
+#define SI_CONTEXT_INV_L2_METADATA	(1 << 8)
 /* Framebuffer caches. */
-#define SI_CONTEXT_FLUSH_AND_INV_DB	(R600_CONTEXT_PRIVATE_FLAG << 6)
-#define SI_CONTEXT_FLUSH_AND_INV_DB_META (R600_CONTEXT_PRIVATE_FLAG << 7)
-#define SI_CONTEXT_FLUSH_AND_INV_CB	(R600_CONTEXT_PRIVATE_FLAG << 8)
+#define SI_CONTEXT_FLUSH_AND_INV_DB	(1 << 9)
+#define SI_CONTEXT_FLUSH_AND_INV_DB_META (1 << 10)
+#define SI_CONTEXT_FLUSH_AND_INV_CB	(1 << 11)
 /* Engine synchronization. */
-#define SI_CONTEXT_VS_PARTIAL_FLUSH	(R600_CONTEXT_PRIVATE_FLAG << 9)
-#define SI_CONTEXT_PS_PARTIAL_FLUSH	(R600_CONTEXT_PRIVATE_FLAG << 10)
-#define SI_CONTEXT_CS_PARTIAL_FLUSH	(R600_CONTEXT_PRIVATE_FLAG << 11)
-#define SI_CONTEXT_VGT_FLUSH		(R600_CONTEXT_PRIVATE_FLAG << 12)
-#define SI_CONTEXT_VGT_STREAMOUT_SYNC	(R600_CONTEXT_PRIVATE_FLAG << 13)
+#define SI_CONTEXT_VS_PARTIAL_FLUSH	(1 << 12)
+#define SI_CONTEXT_PS_PARTIAL_FLUSH	(1 << 13)
+#define SI_CONTEXT_CS_PARTIAL_FLUSH	(1 << 14)
+#define SI_CONTEXT_VGT_FLUSH		(1 << 15)
+#define SI_CONTEXT_VGT_STREAMOUT_SYNC	(1 << 16)
 
 #define SI_PREFETCH_VBO_DESCRIPTORS	(1 << 0)
 #define SI_PREFETCH_LS			(1 << 1)

@@ -1333,11 +1333,11 @@ static void si_set_active_query_state(struct pipe_context *ctx, boolean enable)
 
 	/* Pipeline stat & streamout queries. */
 	if (enable) {
-		sctx->b.flags &= ~R600_CONTEXT_STOP_PIPELINE_STATS;
-		sctx->b.flags |= R600_CONTEXT_START_PIPELINE_STATS;
+		sctx->b.flags &= ~SI_CONTEXT_STOP_PIPELINE_STATS;
+		sctx->b.flags |= SI_CONTEXT_START_PIPELINE_STATS;
 	} else {
-		sctx->b.flags &= ~R600_CONTEXT_START_PIPELINE_STATS;
-		sctx->b.flags |= R600_CONTEXT_STOP_PIPELINE_STATS;
+		sctx->b.flags &= ~SI_CONTEXT_START_PIPELINE_STATS;
+		sctx->b.flags |= SI_CONTEXT_STOP_PIPELINE_STATS;
 	}
 
 	/* Occlusion queries. */

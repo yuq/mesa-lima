@@ -349,7 +349,6 @@ void si_emit_streamout_end(struct si_context *sctx)
 	}
 
 	sctx->streamout.begin_emitted = false;
-	sctx->b.flags |= R600_CONTEXT_STREAMOUT_FLUSH;
 }
 
 /* STREAMOUT CONFIG DERIVED STATE

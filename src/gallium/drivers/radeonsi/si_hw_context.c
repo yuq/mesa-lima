@@ -191,7 +191,7 @@ void si_begin_new_cs(struct si_context *ctx)
 		ctx->b.flags |= SI_CONTEXT_INV_SMEM_L1 |
 				SI_CONTEXT_INV_ICACHE;
 
-	ctx->b.flags |= R600_CONTEXT_START_PIPELINE_STATS;
+	ctx->b.flags |= SI_CONTEXT_START_PIPELINE_STATS;
 
 	/* set all valid group as dirty so they get reemited on
 	 * next draw command

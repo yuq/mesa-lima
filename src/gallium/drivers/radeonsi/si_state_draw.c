@@ -1092,11 +1092,11 @@ void si_emit_cache_flush(struct si_context *sctx)
 	if (cp_coher_cntl)
 		si_emit_surface_sync(rctx, cp_coher_cntl);
 
-	if (rctx->flags & R600_CONTEXT_START_PIPELINE_STATS) {
+	if (rctx->flags & SI_CONTEXT_START_PIPELINE_STATS) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_PIPELINESTAT_START) |
 			        EVENT_INDEX(0));
-	} else if (rctx->flags & R600_CONTEXT_STOP_PIPELINE_STATS) {
+	} else if (rctx->flags & SI_CONTEXT_STOP_PIPELINE_STATS) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_PIPELINESTAT_STOP) |
 			        EVENT_INDEX(0));
@@ -1433,7 +1433,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		struct r600_atom *shader_pointers = &sctx->shader_pointers.atom;
 		unsigned masked_atoms = 1u << shader_pointers->id;
 
-		if (unlikely(sctx->b.flags & R600_CONTEXT_FLUSH_FOR_RENDER_COND))
+		if (unlikely(sctx->b.flags & SI_CONTEXT_FLUSH_FOR_RENDER_COND))
 			masked_atoms |= 1u << sctx->b.render_cond_atom.id;
 
 		/* Emit all states except shader pointers and render condition. */

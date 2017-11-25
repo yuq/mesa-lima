@@ -52,13 +52,6 @@ struct u_log_context;
 #define R600_RESOURCE_FLAG_DISABLE_DCC		(PIPE_RESOURCE_FLAG_DRV_PRIV << 3)
 #define R600_RESOURCE_FLAG_UNMAPPABLE		(PIPE_RESOURCE_FLAG_DRV_PRIV << 4)
 
-#define R600_CONTEXT_STREAMOUT_FLUSH		(1u << 0)
-/* Pipeline & streamout query controls. */
-#define R600_CONTEXT_START_PIPELINE_STATS	(1u << 1)
-#define R600_CONTEXT_STOP_PIPELINE_STATS	(1u << 2)
-#define R600_CONTEXT_FLUSH_FOR_RENDER_COND	(1u << 3)
-#define R600_CONTEXT_PRIVATE_FLAG		(1u << 4)
-
 /* Debug flags. */
 enum {
 	/* Shader logging options: */

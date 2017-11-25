@@ -1822,7 +1822,7 @@ static void r600_render_condition(struct pipe_context *ctx,
 			/* Settings this in the render cond atom is too late,
 			 * so set it here. */
 			rctx->flags |= rctx->screen->barrier_flags.L2_to_cp |
-				       R600_CONTEXT_FLUSH_FOR_RENDER_COND;
+				       SI_CONTEXT_FLUSH_FOR_RENDER_COND;
 
 			rctx->render_cond_force_off = old_force_off;
 		}
