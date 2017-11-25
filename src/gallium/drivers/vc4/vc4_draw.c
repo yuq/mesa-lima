@@ -286,6 +286,7 @@ static void
 vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
+        struct pipe_draw_info local_info;
 
 	if (!info->count_from_stream_output && !info->indirect &&
 	    !info->primitive_restart &&
@@ -293,11 +294,19 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		return;
 
         if (info->mode >= PIPE_PRIM_QUADS) {
-                util_primconvert_save_rasterizer_state(vc4->primconvert, &vc4->rasterizer->base);
-                util_primconvert_draw_vbo(vc4->primconvert, info);
-                perf_debug("Fallback conversion for %d %s vertices\n",
-                           info->count, u_prim_name(info->mode));
-                return;
+                if (info->mode == PIPE_PRIM_QUADS &&
+                    info->count == 4 &&
+                    !vc4->rasterizer->base.flatshade) {
+                        local_info = *info;
+                        local_info.mode = PIPE_PRIM_TRIANGLE_FAN;
+                        info = &local_info;
+                } else {
+                        util_primconvert_save_rasterizer_state(vc4->primconvert, &vc4->rasterizer->base);
+                        util_primconvert_draw_vbo(vc4->primconvert, info);
+                        perf_debug("Fallback conversion for %d %s vertices\n",
+                                   info->count, u_prim_name(info->mode));
+                        return;
+                }
         }
 
         /* Before setting up the draw, do any fixup blits necessary. */
