@@ -3029,8 +3029,8 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 				return false;
 
 			si_mark_atom_dirty(sctx, &sctx->scratch_state);
-			r600_context_add_resource_size(&sctx->b.b,
-						       &sctx->scratch_buffer->b.b);
+			si_context_add_resource_size(&sctx->b.b,
+						     &sctx->scratch_buffer->b.b);
 		}
 
 		if (!si_update_scratch_relocs(sctx))

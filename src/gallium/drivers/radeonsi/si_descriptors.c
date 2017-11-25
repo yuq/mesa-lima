@@ -199,6 +199,18 @@ si_descriptors_begin_new_cs(struct si_context *sctx, struct si_descriptors *desc
 
 /* SAMPLER VIEWS */
 
+static inline enum radeon_bo_priority
+si_get_sampler_view_priority(struct r600_resource *res)
+{
+	if (res->b.b.target == PIPE_BUFFER)
+		return RADEON_PRIO_SAMPLER_BUFFER;
+
+	if (res->b.b.nr_samples > 1)
+		return RADEON_PRIO_SAMPLER_TEXTURE_MSAA;
+
+	return RADEON_PRIO_SAMPLER_TEXTURE;
+}
+
 static unsigned
 si_sampler_and_image_descriptors_idx(unsigned shader)
 {
@@ -237,12 +249,12 @@ static void si_sampler_view_add_buffer(struct si_context *sctx,
 	if (resource->target != PIPE_BUFFER) {
 		struct r600_texture *tex = (struct r600_texture*)resource;
 
-		if (tex->is_depth && !r600_can_sample_zs(tex, is_stencil_sampler))
+		if (tex->is_depth && !si_can_sample_zs(tex, is_stencil_sampler))
 			resource = &tex->flushed_depth_texture->resource.b.b;
 	}
 
 	rres = (struct r600_resource*)resource;
-	priority = r600_get_sampler_view_priority(rres);
+	priority = si_get_sampler_view_priority(rres);
 
 	radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
 					    rres, usage, priority,
@@ -306,7 +318,7 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 {
 	uint64_t va, meta_va = 0;
 
-	if (tex->is_depth && !r600_can_sample_zs(tex, is_stencil)) {
+	if (tex->is_depth && !si_can_sample_zs(tex, is_stencil)) {
 		tex = tex->flushed_depth_texture;
 		is_stencil = false;
 	}

@@ -33,6 +33,9 @@
 
 #include "ac_debug.h"
 
+/* special primitive types */
+#define SI_PRIM_RECTANGLE_LIST	PIPE_PRIM_MAX
+
 static unsigned si_conv_pipe_prim(unsigned mode)
 {
         static const unsigned prim_conv[] = {
@@ -51,7 +54,7 @@ static unsigned si_conv_pipe_prim(unsigned mode)
 		[PIPE_PRIM_TRIANGLES_ADJACENCY]		= V_008958_DI_PT_TRILIST_ADJ,
 		[PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY]	= V_008958_DI_PT_TRISTRIP_ADJ,
 		[PIPE_PRIM_PATCHES]			= V_008958_DI_PT_PATCH,
-		[R600_PRIM_RECTANGLE_LIST]		= V_008958_DI_PT_RECTLIST
+		[SI_PRIM_RECTANGLE_LIST]		= V_008958_DI_PT_RECTLIST
         };
 	assert(mode < ARRAY_SIZE(prim_conv));
 	return prim_conv[mode];
@@ -75,7 +78,7 @@ static unsigned si_conv_prim_to_gs_out(unsigned mode)
 		[PIPE_PRIM_TRIANGLES_ADJACENCY]		= V_028A6C_OUTPRIM_TYPE_TRISTRIP,
 		[PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY]	= V_028A6C_OUTPRIM_TYPE_TRISTRIP,
 		[PIPE_PRIM_PATCHES]			= V_028A6C_OUTPRIM_TYPE_POINTLIST,
-		[R600_PRIM_RECTANGLE_LIST]		= V_028A6C_OUTPRIM_TYPE_TRISTRIP
+		[SI_PRIM_RECTANGLE_LIST]		= V_028A6C_OUTPRIM_TYPE_TRISTRIP
 	};
 	assert(mode < ARRAY_SIZE(prim_conv));
 
@@ -311,7 +314,7 @@ static unsigned si_num_prims_for_vertices(const struct pipe_draw_info *info)
 	switch (info->mode) {
 	case PIPE_PRIM_PATCHES:
 		return info->count / info->vertices_per_patch;
-	case R600_PRIM_RECTANGLE_LIST:
+	case SI_PRIM_RECTANGLE_LIST:
 		return info->count / 3;
 	default:
 		return u_prims_for_vertices(info->mode, info->count);
@@ -446,7 +449,7 @@ si_get_init_multi_vgt_param(struct si_screen *sscreen,
 
 void si_init_ia_multi_vgt_param_table(struct si_context *sctx)
 {
-	for (int prim = 0; prim <= R600_PRIM_RECTANGLE_LIST; prim++)
+	for (int prim = 0; prim <= SI_PRIM_RECTANGLE_LIST; prim++)
 	for (int uses_instancing = 0; uses_instancing < 2; uses_instancing++)
 	for (int multi_instances = 0; multi_instances < 2; multi_instances++)
 	for (int primitive_restart = 0; primitive_restart < 2; primitive_restart++)
@@ -907,7 +910,7 @@ void si_emit_cache_flush(struct si_context *sctx)
 			if (rctx->chip_class == VI)
 				si_gfx_write_event_eop(rctx, V_028A90_FLUSH_AND_INV_CB_DATA_TS,
 							 0, EOP_DATA_SEL_DISCARD, NULL,
-							 0, 0, R600_NOT_QUERY);
+							 0, 0, SI_NOT_QUERY);
 		}
 		if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB)
 			cp_coher_cntl |= S_0085F0_DB_ACTION_ENA(1) |
@@ -1023,7 +1026,7 @@ void si_emit_cache_flush(struct si_context *sctx)
 		si_gfx_write_event_eop(rctx, cb_db_event, tc_flags,
 					 EOP_DATA_SEL_VALUE_32BIT,
 					 sctx->wait_mem_scratch, va,
-					 sctx->wait_mem_number, R600_NOT_QUERY);
+					 sctx->wait_mem_number, SI_NOT_QUERY);
 		si_gfx_wait_fence(rctx, va, sctx->wait_mem_number, 0xffffffff);
 	}
 
@@ -1379,7 +1382,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		struct pipe_draw_indirect_info *indirect = info->indirect;
 
 		/* Add the buffer size for memory checking in need_cs_space. */
-		r600_context_add_resource_size(ctx, indirect->buffer);
+		si_context_add_resource_size(ctx, indirect->buffer);
 
 		/* Indirect buffers use TC L2 on GFX9, but not older hw. */
 		if (sctx->b.chip_class <= VI) {
@@ -1536,7 +1539,7 @@ void si_draw_rectangle(struct blitter_context *blitter,
 	pipe->bind_vs_state(pipe, si_get_blit_vs(sctx, type, num_instances));
 
 	struct pipe_draw_info info = {};
-	info.mode = R600_PRIM_RECTANGLE_LIST;
+	info.mode = SI_PRIM_RECTANGLE_LIST;
 	info.count = 3;
 	info.instance_count = num_instances;
 

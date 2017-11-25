@@ -46,8 +46,6 @@
 
 struct u_log_context;
 
-#define ATI_VENDOR_ID 0x1002
-
 #define R600_RESOURCE_FLAG_TRANSFER		(PIPE_RESOURCE_FLAG_DRV_PRIV << 0)
 #define R600_RESOURCE_FLAG_FLUSHED_DEPTH	(PIPE_RESOURCE_FLAG_DRV_PRIV << 1)
 #define R600_RESOURCE_FLAG_FORCE_TILING		(PIPE_RESOURCE_FLAG_DRV_PRIV << 2)
@@ -60,11 +58,6 @@ struct u_log_context;
 #define R600_CONTEXT_STOP_PIPELINE_STATS	(1u << 2)
 #define R600_CONTEXT_FLUSH_FOR_RENDER_COND	(1u << 3)
 #define R600_CONTEXT_PRIVATE_FLAG		(1u << 4)
-
-/* special primitive types */
-#define R600_PRIM_RECTANGLE_LIST	PIPE_PRIM_MAX
-
-#define R600_NOT_QUERY		0xffffffff
 
 /* Debug flags. */
 enum {
@@ -135,18 +128,6 @@ enum {
 #define R600_MAP_BUFFER_ALIGNMENT 64
 
 #define SI_MAX_VARIABLE_THREADS_PER_BLOCK 1024
-
-enum r600_coherency {
-	R600_COHERENCY_NONE, /* no cache flushes needed */
-	R600_COHERENCY_SHADER,
-	R600_COHERENCY_CB_META,
-};
-
-#ifdef PIPE_ARCH_BIG_ENDIAN
-#define R600_BIG_ENDIAN 1
-#else
-#define R600_BIG_ENDIAN 0
-#endif
 
 struct r600_common_context;
 struct r600_perfcounters;
@@ -787,96 +768,13 @@ r600_texture_reference(struct r600_texture **ptr, struct r600_texture *res)
 	pipe_resource_reference((struct pipe_resource **)ptr, &res->resource.b.b);
 }
 
-static inline void
-r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resource *r)
-{
-	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-	struct r600_resource *res = (struct r600_resource *)r;
-
-	if (res) {
-		/* Add memory usage for need_gfx_cs_space */
-		rctx->vram += res->vram_usage;
-		rctx->gtt += res->gart_usage;
-	}
-}
-
-#define     SQ_TEX_XY_FILTER_POINT                         0x00
-#define     SQ_TEX_XY_FILTER_BILINEAR                      0x01
-#define     SQ_TEX_XY_FILTER_ANISO_POINT                   0x02
-#define     SQ_TEX_XY_FILTER_ANISO_BILINEAR                0x03
-
-static inline unsigned eg_tex_filter(unsigned filter, unsigned max_aniso)
-{
-	if (filter == PIPE_TEX_FILTER_LINEAR)
-		return max_aniso > 1 ? SQ_TEX_XY_FILTER_ANISO_BILINEAR
-				     : SQ_TEX_XY_FILTER_BILINEAR;
-	else
-		return max_aniso > 1 ? SQ_TEX_XY_FILTER_ANISO_POINT
-				     : SQ_TEX_XY_FILTER_POINT;
-}
-
-static inline unsigned r600_tex_aniso_filter(unsigned filter)
-{
-	if (filter < 2)
-		return 0;
-	if (filter < 4)
-		return 1;
-	if (filter < 8)
-		return 2;
-	if (filter < 16)
-		return 3;
-	return 4;
-}
-
-static inline enum radeon_bo_priority
-r600_get_sampler_view_priority(struct r600_resource *res)
-{
-	if (res->b.b.target == PIPE_BUFFER)
-		return RADEON_PRIO_SAMPLER_BUFFER;
-
-	if (res->b.b.nr_samples > 1)
-		return RADEON_PRIO_SAMPLER_TEXTURE_MSAA;
-
-	return RADEON_PRIO_SAMPLER_TEXTURE;
-}
-
-static inline bool
-r600_can_sample_zs(struct r600_texture *tex, bool stencil_sampler)
-{
-	return (stencil_sampler && tex->can_sample_s) ||
-	       (!stencil_sampler && tex->can_sample_z);
-}
-
 static inline bool
 vi_dcc_enabled(struct r600_texture *tex, unsigned level)
 {
 	return tex->dcc_offset && level < tex->surface.num_dcc_levels;
 }
 
-static inline bool
-r600_htile_enabled(struct r600_texture *tex, unsigned level)
-{
-	return tex->htile_offset && level == 0;
-}
-
-static inline bool
-vi_tc_compat_htile_enabled(struct r600_texture *tex, unsigned level)
-{
-	assert(!tex->tc_compatible_htile || tex->htile_offset);
-	return tex->tc_compatible_htile && level == 0;
-}
-
-#define COMPUTE_DBG(rscreen, fmt, args...) \
-	do { \
-		if ((rscreen->b.debug_flags & DBG(COMPUTE))) fprintf(stderr, fmt, ##args); \
-	} while (0);
-
 #define R600_ERR(fmt, args...) \
 	fprintf(stderr, "EE %s:%d %s - " fmt, __FILE__, __LINE__, __func__, ##args)
-
-static inline int S_FIXED(float value, unsigned frac_bits)
-{
-	return value * (1 << frac_bits);
-}
 
 #endif

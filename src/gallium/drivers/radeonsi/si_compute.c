@@ -33,6 +33,11 @@
 #include "si_compute.h"
 #include "sid.h"
 
+#define COMPUTE_DBG(rscreen, fmt, args...) \
+	do { \
+		if ((rscreen->b.debug_flags & DBG(COMPUTE))) fprintf(stderr, fmt, ##args); \
+	} while (0);
+
 struct dispatch_packet {
 	uint16_t header;
 	uint16_t setup;
@@ -813,11 +818,11 @@ static void si_launch_grid(
 	si_decompress_textures(sctx, 1 << PIPE_SHADER_COMPUTE);
 
 	/* Add buffer sizes for memory checking in need_cs_space. */
-	r600_context_add_resource_size(ctx, &program->shader.bo->b.b);
+	si_context_add_resource_size(ctx, &program->shader.bo->b.b);
 	/* TODO: add the scratch buffer */
 
 	if (info->indirect) {
-		r600_context_add_resource_size(ctx, info->indirect);
+		si_context_add_resource_size(ctx, info->indirect);
 
 		/* Indirect buffers use TC L2 on GFX9, but not older hw. */
 		if (sctx->b.chip_class <= VI &&

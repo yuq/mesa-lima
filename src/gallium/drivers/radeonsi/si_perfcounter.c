@@ -612,7 +612,7 @@ static void si_pc_emit_stop(struct r600_common_context *ctx,
 
 	si_gfx_write_event_eop(ctx, V_028A90_BOTTOM_OF_PIPE_TS, 0,
 				 EOP_DATA_SEL_VALUE_32BIT,
-				 buffer, va, 0, R600_NOT_QUERY);
+				 buffer, va, 0, SI_NOT_QUERY);
 	si_gfx_wait_fence(ctx, va, 0, 0xffffffff);
 
 	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));

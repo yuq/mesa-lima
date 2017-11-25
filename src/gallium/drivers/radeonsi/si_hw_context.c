@@ -265,8 +265,8 @@ void si_begin_new_cs(struct si_context *ctx)
 
 	si_mark_atom_dirty(ctx, &ctx->scratch_state);
 	if (ctx->scratch_buffer) {
-		r600_context_add_resource_size(&ctx->b.b,
-					       &ctx->scratch_buffer->b.b);
+		si_context_add_resource_size(&ctx->b.b,
+					     &ctx->scratch_buffer->b.b);
 	}
 
 	if (ctx->streamout.suspended) {

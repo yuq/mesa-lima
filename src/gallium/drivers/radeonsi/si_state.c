@@ -2531,7 +2531,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 		surf->db_depth_size = S_02801C_X_MAX(rtex->resource.b.b.width0 - 1) |
 				      S_02801C_Y_MAX(rtex->resource.b.b.height0 - 1);
 
-		if (r600_htile_enabled(rtex, level)) {
+		if (si_htile_enabled(rtex, level)) {
 			z_info |= S_028038_TILE_SURFACE_ENABLE(1) |
 				  S_028038_ALLOW_EXPCLEAR(1);
 
@@ -2609,7 +2609,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 		surf->db_depth_slice = S_02805C_SLICE_TILE_MAX((levelinfo->nblk_x *
 								levelinfo->nblk_y) / 64 - 1);
 
-		if (r600_htile_enabled(rtex, level)) {
+		if (si_htile_enabled(rtex, level)) {
 			z_info |= S_028040_TILE_SURFACE_ENABLE(1) |
 				  S_028040_ALLOW_EXPCLEAR(1);
 
@@ -2861,7 +2861,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		if (vi_dcc_enabled(rtex, surf->base.u.tex.level))
 			sctx->framebuffer.CB_has_shader_readable_metadata = true;
 
-		r600_context_add_resource_size(ctx, surf->base.texture);
+		si_context_add_resource_size(ctx, surf->base.texture);
 
 		p_atomic_inc(&rtex->framebuffers_bound);
 
@@ -2885,7 +2885,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		if (vi_tc_compat_htile_enabled(zstex, surf->base.u.tex.level))
 			sctx->framebuffer.DB_has_shader_readable_metadata = true;
 
-		r600_context_add_resource_size(ctx, surf->base.texture);
+		si_context_add_resource_size(ctx, surf->base.texture);
 	}
 
 	si_update_poly_offset_state(sctx);
@@ -3893,7 +3893,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	pipe_format = state->format;
 
 	/* Depth/stencil texturing sometimes needs separate texture. */
-	if (tmp->is_depth && !r600_can_sample_zs(tmp, view->is_stencil_sampler)) {
+	if (tmp->is_depth && !si_can_sample_zs(tmp, view->is_stencil_sampler)) {
 		if (!tmp->flushed_depth_texture &&
 		    !si_init_flushed_depth_texture(ctx, texture, NULL)) {
 			pipe_resource_reference(&view->base.texture, NULL);
@@ -4053,6 +4053,34 @@ do { \
 	       S_008F3C_BORDER_COLOR_TYPE(V_008F3C_SQ_TEX_BORDER_COLOR_REGISTER);
 }
 
+static inline int S_FIXED(float value, unsigned frac_bits)
+{
+	return value * (1 << frac_bits);
+}
+
+static inline unsigned si_tex_filter(unsigned filter, unsigned max_aniso)
+{
+	if (filter == PIPE_TEX_FILTER_LINEAR)
+		return max_aniso > 1 ? V_008F38_SQ_TEX_XY_FILTER_ANISO_BILINEAR
+				     : V_008F38_SQ_TEX_XY_FILTER_BILINEAR;
+	else
+		return max_aniso > 1 ? V_008F38_SQ_TEX_XY_FILTER_ANISO_POINT
+				     : V_008F38_SQ_TEX_XY_FILTER_POINT;
+}
+
+static inline unsigned si_tex_aniso_filter(unsigned filter)
+{
+	if (filter < 2)
+		return 0;
+	if (filter < 4)
+		return 1;
+	if (filter < 8)
+		return 2;
+	if (filter < 16)
+		return 3;
+	return 4;
+}
+
 static void *si_create_sampler_state(struct pipe_context *ctx,
 				     const struct pipe_sampler_state *state)
 {
@@ -4061,7 +4089,7 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 	struct si_sampler_state *rstate = CALLOC_STRUCT(si_sampler_state);
 	unsigned max_aniso = rscreen->force_aniso >= 0 ? rscreen->force_aniso
 						       : state->max_anisotropy;
-	unsigned max_aniso_ratio = r600_tex_aniso_filter(max_aniso);
+	unsigned max_aniso_ratio = si_tex_aniso_filter(max_aniso);
 	union pipe_color_union clamped_border_color;
 
 	if (!rstate) {
@@ -4085,8 +4113,8 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 			  S_008F34_MAX_LOD(S_FIXED(CLAMP(state->max_lod, 0, 15), 8)) |
 			  S_008F34_PERF_MIP(max_aniso_ratio ? max_aniso_ratio + 6 : 0));
 	rstate->val[2] = (S_008F38_LOD_BIAS(S_FIXED(CLAMP(state->lod_bias, -16, 16), 8)) |
-			  S_008F38_XY_MAG_FILTER(eg_tex_filter(state->mag_img_filter, max_aniso)) |
-			  S_008F38_XY_MIN_FILTER(eg_tex_filter(state->min_img_filter, max_aniso)) |
+			  S_008F38_XY_MAG_FILTER(si_tex_filter(state->mag_img_filter, max_aniso)) |
+			  S_008F38_XY_MIN_FILTER(si_tex_filter(state->min_img_filter, max_aniso)) |
 			  S_008F38_MIP_FILTER(si_tex_mipfilter(state->min_mip_filter)) |
 			  S_008F38_MIP_POINT_PRECLAMP(0) |
 			  S_008F38_DISABLE_LSB_CEIL(sctx->b.chip_class <= VI) |
@@ -4365,7 +4393,7 @@ static void si_set_vertex_buffers(struct pipe_context *ctx,
 			pipe_resource_reference(&dsti->buffer.resource, buf);
 			dsti->buffer_offset = src->buffer_offset;
 			dsti->stride = src->stride;
-			r600_context_add_resource_size(ctx, buf);
+			si_context_add_resource_size(ctx, buf);
 			if (buf)
 				r600_resource(buf)->bind_history |= PIPE_BIND_VERTEX_BUFFER;
 		}

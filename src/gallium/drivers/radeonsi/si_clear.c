@@ -551,7 +551,7 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 	}
 
 	if (zstex &&
-	    r600_htile_enabled(zstex, zsbuf->u.tex.level) &&
+	    si_htile_enabled(zstex, zsbuf->u.tex.level) &&
 	    zsbuf->u.tex.first_layer == 0 &&
 	    zsbuf->u.tex.last_layer == util_max_layer(&zstex->resource.b.b, 0)) {
 		/* TC-compatible HTILE only supports depth clears to 0 or 1. */

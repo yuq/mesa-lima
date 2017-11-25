@@ -315,7 +315,7 @@ si_decompress_depth(struct si_context *sctx,
 		levels_z = level_mask & tex->dirty_level_mask;
 
 		if (levels_z) {
-			if (r600_can_sample_zs(tex, false))
+			if (si_can_sample_zs(tex, false))
 				inplace_planes |= PIPE_MASK_Z;
 			else
 				copy_planes |= PIPE_MASK_Z;
@@ -325,7 +325,7 @@ si_decompress_depth(struct si_context *sctx,
 		levels_s = level_mask & tex->stencil_dirty_level_mask;
 
 		if (levels_s) {
-			if (r600_can_sample_zs(tex, true))
+			if (si_can_sample_zs(tex, true))
 				inplace_planes |= PIPE_MASK_S;
 			else
 				copy_planes |= PIPE_MASK_S;
@@ -374,7 +374,7 @@ si_decompress_depth(struct si_context *sctx,
 	}
 
 	if (inplace_planes) {
-		bool has_htile = r600_htile_enabled(tex, first_level);
+		bool has_htile = si_htile_enabled(tex, first_level);
 		bool tc_compat_htile = vi_tc_compat_htile_enabled(tex, first_level);
 
 		/* Don't decompress if there is no HTILE or when HTILE is

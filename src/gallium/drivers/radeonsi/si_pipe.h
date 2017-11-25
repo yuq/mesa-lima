@@ -34,6 +34,10 @@
 #define SI_BIG_ENDIAN 0
 #endif
 
+#define ATI_VENDOR_ID 0x1002
+
+#define SI_NOT_QUERY		0xffffffff
+
 /* The base vertex and primitive restart can be any number, but we must pick
  * one which will mean "unknown" for the purpose of state tracking and
  * the number shouldn't be a commonly-used one. */
@@ -596,6 +600,12 @@ void si_init_clear_functions(struct si_context *sctx);
 			   SI_CPDMA_SKIP_GFX_SYNC | \
 			   SI_CPDMA_SKIP_BO_LIST_UPDATE)
 
+enum r600_coherency {
+	R600_COHERENCY_NONE, /* no cache flushes needed */
+	R600_COHERENCY_SHADER,
+	R600_COHERENCY_CB_META,
+};
+
 void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 		     uint64_t offset, uint64_t size, unsigned value,
 		     enum r600_coherency coher);
@@ -658,6 +668,19 @@ void si_init_viewport_functions(struct si_context *ctx);
 /*
  * common helpers
  */
+
+static inline void
+si_context_add_resource_size(struct pipe_context *ctx, struct pipe_resource *r)
+{
+	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+	struct r600_resource *res = (struct r600_resource *)r;
+
+	if (res) {
+		/* Add memory usage for need_gfx_cs_space */
+		rctx->vram += res->vram_usage;
+		rctx->gtt += res->gart_usage;
+	}
+}
 
 static inline void
 si_invalidate_draw_sh_constants(struct si_context *sctx)
@@ -791,6 +814,26 @@ si_make_DB_shader_coherent(struct si_context *sctx, unsigned num_samples,
 		/* SI-CI-VI */
 		sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
 	}
+}
+
+static inline bool
+si_can_sample_zs(struct r600_texture *tex, bool stencil_sampler)
+{
+	return (stencil_sampler && tex->can_sample_s) ||
+	       (!stencil_sampler && tex->can_sample_z);
+}
+
+static inline bool
+si_htile_enabled(struct r600_texture *tex, unsigned level)
+{
+	return tex->htile_offset && level == 0;
+}
+
+static inline bool
+vi_tc_compat_htile_enabled(struct r600_texture *tex, unsigned level)
+{
+	assert(!tex->tc_compatible_htile || tex->htile_offset);
+	return tex->tc_compatible_htile && level == 0;
 }
 
 #endif
