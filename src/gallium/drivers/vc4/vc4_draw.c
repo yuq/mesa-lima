@@ -377,7 +377,21 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 struct vc4_resource *rsc = vc4_resource(prsc);
 
                 struct vc4_cl_out *bcl = cl_start(&job->bcl);
-                cl_start_reloc(&job->bcl, &bcl, 1);
+
+                /* The original design for the VC4 kernel UABI had multiple
+                 * packets that used relocations in the BCL (some of which
+                 * needed two BOs), but later modifications eliminated all but
+                 * this one usage.  We have an arbitrary 32-bit offset value,
+                 * and need to also supply an arbitrary 32-bit index buffer
+                 * GEM handle, so we have this fake packet we emit in our BCL
+                 * to be validated, which the kernel uses at validation time
+                 * to perform the relocation in the IB packet (without
+                 * emitting to the actual HW).
+                 */
+                cl_u8(&bcl, VC4_PACKET_GEM_HANDLES);
+                cl_u32(&bcl, vc4_gem_hindex(job, rsc->bo));
+                cl_u32(&bcl, 0);
+
                 cl_u8(&bcl, VC4_PACKET_GL_INDEXED_PRIMITIVE);
                 cl_u8(&bcl,
                       info->mode |
@@ -385,8 +399,9 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                        VC4_INDEX_BUFFER_U16:
                        VC4_INDEX_BUFFER_U8));
                 cl_u32(&bcl, info->count);
-                cl_reloc(job, &job->bcl, &bcl, rsc->bo, offset);
+                cl_u32(&bcl, offset);
                 cl_u32(&bcl, vc4->max_index);
+
                 cl_end(&job->bcl, bcl);
                 job->draw_calls_queued++;
 
