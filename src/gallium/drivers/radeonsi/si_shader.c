@@ -7813,7 +7813,7 @@ void si_shader_destroy(struct si_shader *shader)
 	r600_resource_reference(&shader->bo, NULL);
 
 	if (!shader->is_binary_shared)
-		si_radeon_shader_binary_clean(&shader->binary);
+		ac_shader_binary_clean(&shader->binary);
 
 	free(shader->shader_log);
 }

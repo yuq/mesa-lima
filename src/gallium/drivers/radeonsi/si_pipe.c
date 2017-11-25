@@ -433,7 +433,7 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 			struct si_shader_part *part = parts[i];
 
 			parts[i] = part->next;
-			si_radeon_shader_binary_clean(&part->binary);
+			ac_shader_binary_clean(&part->binary);
 			FREE(part);
 		}
 	}

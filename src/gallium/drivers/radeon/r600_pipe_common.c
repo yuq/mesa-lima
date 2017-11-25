@@ -39,28 +39,6 @@
 
 #include <llvm-c/TargetMachine.h>
 
-
-/*
- * shader binary helpers.
- */
-void si_radeon_shader_binary_init(struct ac_shader_binary *b)
-{
-	memset(b, 0, sizeof(*b));
-}
-
-void si_radeon_shader_binary_clean(struct ac_shader_binary *b)
-{
-	if (!b)
-		return;
-	FREE(b->code);
-	FREE(b->config);
-	FREE(b->rodata);
-	FREE(b->global_symbol_offsets);
-	FREE(b->relocs);
-	FREE(b->disasm_string);
-	FREE(b->llvm_ir_string);
-}
-
 /*
  * pipe_context
  */
