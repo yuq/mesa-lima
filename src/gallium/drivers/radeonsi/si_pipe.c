@@ -1158,7 +1158,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	sscreen->b.aux_context = si_create_context(&sscreen->b.b, 0);
 
 	if (sscreen->b.debug_flags & DBG(TEST_DMA))
-		si_test_dma(&sscreen->b);
+		si_test_dma(sscreen);
 
 	if (sscreen->b.debug_flags & (DBG(TEST_VMFAULT_CP) |
 				      DBG(TEST_VMFAULT_SDMA) |

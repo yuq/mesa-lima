@@ -24,7 +24,7 @@
 
 /* This file implements randomized SDMA texture blit tests. */
 
-#include "r600_pipe_common.h"
+#include "si_pipe.h"
 #include "util/u_surface.h"
 #include "util/rand_xor.h"
 
@@ -135,10 +135,10 @@ static enum pipe_format get_format_from_bpp(int bpp)
 	}
 }
 
-static const char *array_mode_to_string(struct r600_common_screen *rscreen,
+static const char *array_mode_to_string(struct si_screen *sscreen,
 					struct radeon_surf *surf)
 {
-	if (rscreen->chip_class >= GFX9) {
+	if (sscreen->b.chip_class >= GFX9) {
 		/* TODO */
 		return "       UNKNOWN";
 	} else {
@@ -171,11 +171,11 @@ static unsigned generate_max_tex_side(unsigned max_tex_side)
 	}
 }
 
-void si_test_dma(struct r600_common_screen *rscreen)
+void si_test_dma(struct si_screen *sscreen)
 {
-	struct pipe_screen *screen = &rscreen->b;
+	struct pipe_screen *screen = &sscreen->b.b;
 	struct pipe_context *ctx = screen->context_create(screen, NULL, 0);
-	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
+	struct si_context *sctx = (struct si_context*)ctx;
 	uint64_t max_alloc_size;
 	unsigned i, iterations, num_partial_copies, max_levels, max_tex_side;
 	unsigned num_pass = 0, num_fail = 0;
@@ -283,16 +283,16 @@ void si_test_dma(struct r600_common_screen *rscreen)
 		printf("%4u: dst = (%5u x %5u x %u, %s), "
 		       " src = (%5u x %5u x %u, %s), bpp = %2u, ",
 		       i, tdst.width0, tdst.height0, tdst.array_size,
-		       array_mode_to_string(rscreen, &rdst->surface),
+		       array_mode_to_string(sscreen, &rdst->surface),
 		       tsrc.width0, tsrc.height0, tsrc.array_size,
-		       array_mode_to_string(rscreen, &rsrc->surface), bpp);
+		       array_mode_to_string(sscreen, &rsrc->surface), bpp);
 		fflush(stdout);
 
 		/* set src pixels */
 		set_random_pixels(ctx, src, &src_cpu);
 
 		/* clear dst pixels */
-		rctx->clear_buffer(ctx, dst, 0, rdst->surface.surf_size, 0, true);
+		sctx->b.clear_buffer(ctx, dst, 0, rdst->surface.surf_size, 0, true);
 		memset(dst_cpu.ptr, 0, dst_cpu.layer_stride * tdst.array_size);
 
 		/* preparation */
@@ -305,8 +305,8 @@ void si_test_dma(struct r600_common_screen *rscreen)
 			int width, height, depth;
 			int srcx, srcy, srcz, dstx, dsty, dstz;
 			struct pipe_box box;
-			unsigned old_num_draw_calls = rctx->num_draw_calls;
-			unsigned old_num_dma_calls = rctx->num_dma_calls;
+			unsigned old_num_draw_calls = sctx->b.num_draw_calls;
+			unsigned old_num_dma_calls = sctx->b.num_dma_calls;
 
 			if (!do_partial_copies) {
 				/* copy whole src to dst */
@@ -361,11 +361,11 @@ void si_test_dma(struct r600_common_screen *rscreen)
 
 			/* GPU copy */
 			u_box_3d(srcx, srcy, srcz, width, height, depth, &box);
-			rctx->dma_copy(ctx, dst, 0, dstx, dsty, dstz, src, 0, &box);
+			sctx->b.dma_copy(ctx, dst, 0, dstx, dsty, dstz, src, 0, &box);
 
 			/* See which engine was used. */
-			gfx_blits += rctx->num_draw_calls > old_num_draw_calls;
-			dma_blits += rctx->num_dma_calls > old_num_dma_calls;
+			gfx_blits += sctx->b.num_draw_calls > old_num_draw_calls;
+			dma_blits += sctx->b.num_dma_calls > old_num_dma_calls;
 
 			/* CPU copy */
 			util_copy_box(dst_cpu.ptr, tdst.format, dst_cpu.stride,

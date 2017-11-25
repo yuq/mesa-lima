@@ -27,7 +27,6 @@ files_libradeon = files(
   'r600_pipe_common.h',
   'r600_query.c',
   'r600_query.h',
-  'r600_test_dma.c',
   'r600_texture.c',
   'radeon_uvd.c',
   'radeon_uvd.h',

@@ -52,6 +52,7 @@ files_libradeonsi = files(
   'si_state_streamout.c',
   'si_state_viewport.c',
   'si_state.h',
+  'si_test_dma.c',
   'si_uvd.c',
 )
 

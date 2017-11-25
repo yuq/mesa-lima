@@ -640,6 +640,9 @@ void si_init_compute_functions(struct si_context *sctx);
 /* si_perfcounters.c */
 void si_init_perfcounters(struct si_screen *screen);
 
+/* si_test_dma.c */
+void si_test_dma(struct si_screen *sscreen);
+
 /* si_uvd.c */
 struct pipe_video_codec *si_uvd_create_decoder(struct pipe_context *context,
 					       const struct pipe_video_codec *templ);

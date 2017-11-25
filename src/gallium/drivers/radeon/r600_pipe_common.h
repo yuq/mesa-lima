@@ -720,9 +720,6 @@ void si_init_query_functions(struct r600_common_context *rctx);
 void si_suspend_queries(struct r600_common_context *ctx);
 void si_resume_queries(struct r600_common_context *ctx);
 
-/* r600_test_dma.c */
-void si_test_dma(struct r600_common_screen *rscreen);
-
 /* r600_texture.c */
 bool si_prepare_for_dma_blit(struct r600_common_context *rctx,
 			     struct r600_texture *rdst,
