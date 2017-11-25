@@ -388,9 +388,13 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                  * to perform the relocation in the IB packet (without
                  * emitting to the actual HW).
                  */
-                cl_u8(&bcl, VC4_PACKET_GEM_HANDLES);
-                cl_u32(&bcl, vc4_gem_hindex(job, rsc->bo));
-                cl_u32(&bcl, 0);
+                uint32_t hindex = vc4_gem_hindex(job, rsc->bo);
+                if (job->last_gem_handle_hindex != hindex) {
+                        cl_u8(&bcl, VC4_PACKET_GEM_HANDLES);
+                        cl_u32(&bcl, hindex);
+                        cl_u32(&bcl, 0);
+                        job->last_gem_handle_hindex = hindex;
+                }
 
                 cl_u8(&bcl, VC4_PACKET_GL_INDEXED_PRIMITIVE);
                 cl_u8(&bcl,
