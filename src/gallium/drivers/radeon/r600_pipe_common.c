@@ -414,13 +414,7 @@ bool si_common_context_init(struct r600_common_context *rctx,
 	rctx->family = rscreen->family;
 	rctx->chip_class = rscreen->chip_class;
 
-	rctx->b.invalidate_resource = si_invalidate_resource;
 	rctx->b.resource_commit = r600_resource_commit;
-	rctx->b.transfer_map = u_transfer_map_vtbl;
-	rctx->b.transfer_flush_region = u_transfer_flush_region_vtbl;
-	rctx->b.transfer_unmap = u_transfer_unmap_vtbl;
-	rctx->b.texture_subdata = u_default_texture_subdata;
-	rctx->b.buffer_subdata = si_buffer_subdata;
 
 	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 43) {
 		rctx->b.get_device_reset_status = r600_get_reset_status;
@@ -576,22 +570,9 @@ static const struct debug_named_value common_debug_options[] = {
 	DEBUG_NAMED_VALUE_END /* must be last */
 };
 
-struct pipe_resource *si_resource_create_common(struct pipe_screen *screen,
-						const struct pipe_resource *templ)
-{
-	if (templ->target == PIPE_BUFFER) {
-		return si_buffer_create(screen, templ, 256);
-	} else {
-		return si_texture_create(screen, templ);
-	}
-}
-
 bool si_common_screen_init(struct r600_common_screen *rscreen,
 			   struct radeon_winsys *ws)
 {
-	rscreen->b.resource_destroy = u_resource_destroy_vtbl;
-	rscreen->b.resource_from_user_memory = si_buffer_from_user_memory;
-
 	si_init_screen_texture_functions(rscreen);
 	si_init_screen_query_functions(rscreen);
 

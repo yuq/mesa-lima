@@ -45,6 +45,8 @@
 #include "util/u_threaded_context.h"
 
 struct u_log_context;
+struct si_screen;
+struct si_context;
 
 #define R600_RESOURCE_FLAG_TRANSFER		(PIPE_RESOURCE_FLAG_DRV_PRIV << 0)
 #define R600_RESOURCE_FLAG_FLUSHED_DEPTH	(PIPE_RESOURCE_FLAG_DRV_PRIV << 1)
@@ -612,32 +614,21 @@ bool si_rings_is_buffer_referenced(struct r600_common_context *ctx,
 void *si_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 				    struct r600_resource *resource,
 				    unsigned usage);
-void si_buffer_subdata(struct pipe_context *ctx,
-		       struct pipe_resource *buffer,
-		       unsigned usage, unsigned offset,
-		       unsigned size, const void *data);
 void si_init_resource_fields(struct r600_common_screen *rscreen,
 			     struct r600_resource *res,
 			     uint64_t size, unsigned alignment);
 bool si_alloc_resource(struct r600_common_screen *rscreen,
 		       struct r600_resource *res);
-struct pipe_resource *si_buffer_create(struct pipe_screen *screen,
-				       const struct pipe_resource *templ,
-				       unsigned alignment);
 struct pipe_resource *si_aligned_buffer_create(struct pipe_screen *screen,
 					       unsigned flags,
 					       unsigned usage,
 					       unsigned size,
 					       unsigned alignment);
-struct pipe_resource *
-si_buffer_from_user_memory(struct pipe_screen *screen,
-			   const struct pipe_resource *templ,
-			   void *user_memory);
-void si_invalidate_resource(struct pipe_context *ctx,
-			    struct pipe_resource *resource);
 void si_replace_buffer_storage(struct pipe_context *ctx,
 			       struct pipe_resource *dst,
 			       struct pipe_resource *src);
+void si_init_screen_buffer_functions(struct si_screen *sscreen);
+void si_init_buffer_functions(struct si_context *sctx);
 
 /* r600_common_pipe.c */
 void si_gfx_write_event_eop(struct r600_common_context *ctx,
@@ -661,8 +652,6 @@ bool si_extra_shader_checks(struct r600_common_screen *rscreen,
 			    unsigned processor);
 void si_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
 			    uint64_t offset, uint64_t size, unsigned value);
-struct pipe_resource *si_resource_create_common(struct pipe_screen *screen,
-						const struct pipe_resource *templ);
 void si_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 		       struct r600_resource *dst, struct r600_resource *src);
 void si_save_cs(struct radeon_winsys *ws, struct radeon_winsys_cs *cs,

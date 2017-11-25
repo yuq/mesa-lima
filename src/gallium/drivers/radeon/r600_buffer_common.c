@@ -21,6 +21,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "radeonsi/si_pipe.h"
 #include "r600_cs.h"
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
@@ -310,8 +311,8 @@ void si_replace_buffer_storage(struct pipe_context *ctx,
 	rctx->rebind_buffer(ctx, dst, old_gpu_address);
 }
 
-void si_invalidate_resource(struct pipe_context *ctx,
-			    struct pipe_resource *resource)
+static void si_invalidate_resource(struct pipe_context *ctx,
+				   struct pipe_resource *resource)
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
 	struct r600_resource *rbuffer = r600_resource(resource);
@@ -562,10 +563,10 @@ static void r600_buffer_transfer_unmap(struct pipe_context *ctx,
 	slab_free(&rctx->pool_transfers, transfer);
 }
 
-void si_buffer_subdata(struct pipe_context *ctx,
-		       struct pipe_resource *buffer,
-		       unsigned usage, unsigned offset,
-		       unsigned size, const void *data)
+static void si_buffer_subdata(struct pipe_context *ctx,
+			      struct pipe_resource *buffer,
+			      unsigned usage, unsigned offset,
+			      unsigned size, const void *data)
 {
 	struct pipe_transfer *transfer = NULL;
 	struct pipe_box box;
@@ -616,9 +617,9 @@ r600_alloc_buffer_struct(struct pipe_screen *screen,
 	return rbuffer;
 }
 
-struct pipe_resource *si_buffer_create(struct pipe_screen *screen,
-				       const struct pipe_resource *templ,
-				       unsigned alignment)
+static struct pipe_resource *si_buffer_create(struct pipe_screen *screen,
+					      const struct pipe_resource *templ,
+					      unsigned alignment)
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 	struct r600_resource *rbuffer = r600_alloc_buffer_struct(screen, templ);
@@ -656,7 +657,7 @@ struct pipe_resource *si_aligned_buffer_create(struct pipe_screen *screen,
 	return si_buffer_create(screen, &buffer, alignment);
 }
 
-struct pipe_resource *
+static struct pipe_resource *
 si_buffer_from_user_memory(struct pipe_screen *screen,
 			   const struct pipe_resource *templ,
 			   void *user_memory)
@@ -688,4 +689,31 @@ si_buffer_from_user_memory(struct pipe_screen *screen,
 	rbuffer->gart_usage = templ->width0;
 
 	return &rbuffer->b.b;
+}
+
+static struct pipe_resource *si_resource_create(struct pipe_screen *screen,
+						const struct pipe_resource *templ)
+{
+	if (templ->target == PIPE_BUFFER) {
+		return si_buffer_create(screen, templ, 256);
+	} else {
+		return si_texture_create(screen, templ);
+	}
+}
+
+void si_init_screen_buffer_functions(struct si_screen *sscreen)
+{
+	sscreen->b.b.resource_create = si_resource_create;
+	sscreen->b.b.resource_destroy = u_resource_destroy_vtbl;
+	sscreen->b.b.resource_from_user_memory = si_buffer_from_user_memory;
+}
+
+void si_init_buffer_functions(struct si_context *sctx)
+{
+	sctx->b.b.invalidate_resource = si_invalidate_resource;
+	sctx->b.b.transfer_map = u_transfer_map_vtbl;
+	sctx->b.b.transfer_flush_region = u_transfer_flush_region_vtbl;
+	sctx->b.b.transfer_unmap = u_transfer_unmap_vtbl;
+	sctx->b.b.texture_subdata = u_default_texture_subdata;
+	sctx->b.b.buffer_subdata = si_buffer_subdata;
 }
