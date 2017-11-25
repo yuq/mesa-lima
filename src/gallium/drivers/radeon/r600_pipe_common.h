@@ -651,8 +651,6 @@ void si_gfx_wait_fence(struct r600_common_context *ctx,
 bool si_common_screen_init(struct r600_common_screen *rscreen,
 			   struct radeon_winsys *ws);
 void si_destroy_common_screen(struct r600_common_screen *rscreen);
-void si_preflush_suspend_features(struct r600_common_context *ctx);
-void si_postflush_resume_features(struct r600_common_context *ctx);
 bool si_common_context_init(struct r600_common_context *rctx,
 			    struct r600_common_screen *rscreen,
 			    unsigned context_flags);

@@ -23,21 +23,9 @@
 
 #include "r600_pipe_common.h"
 #include "r600_cs.h"
-#include "tgsi/tgsi_parse.h"
-#include "util/list.h"
-#include "util/u_draw_quad.h"
 #include "util/u_memory.h"
-#include "util/u_format_s3tc.h"
 #include "util/u_upload_mgr.h"
-#include "util/os_time.h"
-#include "vl/vl_decoder.h"
-#include "vl/vl_video_buffer.h"
 #include "radeon/radeon_video.h"
-#include "amd/common/ac_llvm_util.h"
-#include "amd/common/sid.h"
-#include <inttypes.h>
-
-#include <llvm-c/TargetMachine.h>
 
 /*
  * pipe_context
@@ -252,24 +240,6 @@ void si_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 	ctx->num_dma_calls++;
 }
 
-static void r600_memory_barrier(struct pipe_context *ctx, unsigned flags)
-{
-}
-
-void si_preflush_suspend_features(struct r600_common_context *ctx)
-{
-	/* suspend queries */
-	if (!LIST_IS_EMPTY(&ctx->active_queries))
-		si_suspend_queries(ctx);
-}
-
-void si_postflush_resume_features(struct r600_common_context *ctx)
-{
-	/* resume queries */
-	if (!LIST_IS_EMPTY(&ctx->active_queries))
-		si_resume_queries(ctx);
-}
-
 static void r600_flush_dma_ring(void *ctx, unsigned flags,
 				struct pipe_fence_handle **fence)
 {
@@ -450,7 +420,6 @@ bool si_common_context_init(struct r600_common_context *rctx,
 	rctx->b.transfer_flush_region = u_transfer_flush_region_vtbl;
 	rctx->b.transfer_unmap = u_transfer_unmap_vtbl;
 	rctx->b.texture_subdata = u_default_texture_subdata;
-	rctx->b.memory_barrier = r600_memory_barrier;
 	rctx->b.buffer_subdata = si_buffer_subdata;
 
 	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 43) {

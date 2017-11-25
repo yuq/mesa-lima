@@ -97,7 +97,8 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 	ctx->gfx_flush_in_progress = true;
 
-	si_preflush_suspend_features(&ctx->b);
+	if (!LIST_IS_EMPTY(&ctx->b.active_queries))
+		si_suspend_queries(&ctx->b);
 
 	ctx->streamout.suspended = false;
 	if (ctx->streamout.begin_emitted) {
@@ -274,7 +275,8 @@ void si_begin_new_cs(struct si_context *ctx)
 		si_streamout_buffers_dirty(ctx);
 	}
 
-	si_postflush_resume_features(&ctx->b);
+	if (!LIST_IS_EMPTY(&ctx->b.active_queries))
+		si_resume_queries(&ctx->b);
 
 	assert(!ctx->b.gfx.cs->prev_dw);
 	ctx->b.initial_gfx_cs_size = ctx->b.gfx.cs->current.cdw;
