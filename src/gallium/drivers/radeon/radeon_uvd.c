@@ -1344,11 +1344,8 @@ struct pipe_video_codec *si_common_uvd_create_decoder(struct pipe_context *conte
 	unsigned dpb_size;
 	unsigned width = templ->width, height = templ->height;
 	unsigned bs_buf_size;
-	struct radeon_info info;
 	struct ruvd_decoder *dec;
 	int r, i;
-
-	ws->query_info(ws, &info);
 
 	switch(u_reduce_video_profile(templ->profile)) {
 	case PIPE_VIDEO_FORMAT_MPEG12:
@@ -1375,7 +1372,7 @@ struct pipe_video_codec *si_common_uvd_create_decoder(struct pipe_context *conte
 	if (!dec)
 		return NULL;
 
-	if (info.drm_major < 3)
+	if (rctx->screen->info.drm_major < 3)
 		dec->use_legacy = true;
 
 	dec->base = *templ;
@@ -1390,7 +1387,7 @@ struct pipe_video_codec *si_common_uvd_create_decoder(struct pipe_context *conte
 	dec->base.end_frame = ruvd_end_frame;
 	dec->base.flush = ruvd_flush;
 
-	dec->stream_type = profile2stream_type(dec, info.family);
+	dec->stream_type = profile2stream_type(dec, rctx->family);
 	dec->set_dtb = set_dtb;
 	dec->stream_handle = si_vid_alloc_stream_handle();
 	dec->screen = context->screen;
@@ -1401,7 +1398,7 @@ struct pipe_video_codec *si_common_uvd_create_decoder(struct pipe_context *conte
 		goto error;
 	}
 
-	dec->fb_size = (info.family == CHIP_TONGA) ? FB_BUFFER_SIZE_TONGA :
+	dec->fb_size = (rctx->family == CHIP_TONGA) ? FB_BUFFER_SIZE_TONGA :
 			FB_BUFFER_SIZE;
 	bs_buf_size = width * height * (512 / (16 * 16));
 	for (i = 0; i < NUM_BUFFERS; ++i) {
@@ -1434,7 +1431,7 @@ struct pipe_video_codec *si_common_uvd_create_decoder(struct pipe_context *conte
 		si_vid_clear_buffer(context, &dec->dpb);
 	}
 
-	if (dec->stream_type == RUVD_CODEC_H264_PERF && info.family >= CHIP_POLARIS10) {
+	if (dec->stream_type == RUVD_CODEC_H264_PERF && rctx->family >= CHIP_POLARIS10) {
 		unsigned ctx_size = calc_ctx_size_h264_perf(dec);
 		if (!si_vid_create_buffer(dec->screen, &dec->ctx, ctx_size, PIPE_USAGE_DEFAULT)) {
 			RVID_ERR("Can't allocated context buffer.\n");
@@ -1443,7 +1440,7 @@ struct pipe_video_codec *si_common_uvd_create_decoder(struct pipe_context *conte
 		si_vid_clear_buffer(context, &dec->ctx);
 	}
 
-	if (info.family >= CHIP_POLARIS10 && info.drm_minor >= 3) {
+	if (rctx->family >= CHIP_POLARIS10 && rctx->screen->info.drm_minor >= 3) {
 		if (!si_vid_create_buffer(dec->screen, &dec->sessionctx,
 					UVD_SESSION_CONTEXT_SIZE,
 					PIPE_USAGE_DEFAULT)) {
@@ -1453,7 +1450,7 @@ struct pipe_video_codec *si_common_uvd_create_decoder(struct pipe_context *conte
 		si_vid_clear_buffer(context, &dec->sessionctx);
 	}
 
-	if (info.family >= CHIP_VEGA10) {
+	if (rctx->family >= CHIP_VEGA10) {
 		dec->reg.data0 = RUVD_GPCOM_VCPU_DATA0_SOC15;
 		dec->reg.data1 = RUVD_GPCOM_VCPU_DATA1_SOC15;
 		dec->reg.cmd = RUVD_GPCOM_VCPU_CMD_SOC15;
