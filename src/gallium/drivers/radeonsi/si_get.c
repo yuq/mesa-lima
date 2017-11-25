@@ -34,6 +34,9 @@
 
 static const char *si_get_vendor(struct pipe_screen *pscreen)
 {
+	/* Don't change this. Games such as Alien Isolation are broken if this
+	 * returns "Advanced Micro Devices, Inc."
+	 */
 	return "X.Org";
 }
 
