@@ -67,7 +67,7 @@
 
 #endif
 
-#warn Unknown Endianness for this platform. Assuming little endian
+#warning Unknown Endianness for this platform. Assuming little endian
 #define PIPE_ARCH_LITTLE_ENDIAN
 
 #endif
