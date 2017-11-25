@@ -421,16 +421,6 @@ bool si_check_device_reset(struct r600_common_context *rctx)
 	return true;
 }
 
-static void r600_dma_clear_buffer_fallback(struct pipe_context *ctx,
-					   struct pipe_resource *dst,
-					   uint64_t offset, uint64_t size,
-					   unsigned value)
-{
-	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-
-	rctx->clear_buffer(ctx, dst, offset, size, value, R600_COHERENCY_NONE);
-}
-
 static bool r600_resource_commit(struct pipe_context *pctx,
 				 struct pipe_resource *resource,
 				 unsigned level, struct pipe_box *box,
@@ -484,7 +474,6 @@ bool si_common_context_init(struct r600_common_context *rctx,
 	rctx->b.transfer_unmap = u_transfer_unmap_vtbl;
 	rctx->b.texture_subdata = u_default_texture_subdata;
 	rctx->b.memory_barrier = r600_memory_barrier;
-	rctx->dma_clear_buffer = r600_dma_clear_buffer_fallback;
 	rctx->b.buffer_subdata = si_buffer_subdata;
 
 	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 43) {

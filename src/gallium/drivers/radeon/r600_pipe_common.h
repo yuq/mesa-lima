@@ -595,10 +595,6 @@ struct r600_common_context {
 	void (*dma_clear_buffer)(struct pipe_context *ctx, struct pipe_resource *dst,
 				 uint64_t offset, uint64_t size, unsigned value);
 
-	void (*clear_buffer)(struct pipe_context *ctx, struct pipe_resource *dst,
-			     uint64_t offset, uint64_t size, unsigned value,
-			     enum r600_coherency coher);
-
 	void (*blit_decompress_depth)(struct pipe_context *ctx,
 				      struct r600_texture *texture,
 				      struct r600_texture *staging,

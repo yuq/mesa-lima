@@ -591,5 +591,4 @@ void cik_emit_prefetch_L2(struct si_context *sctx)
 void si_init_cp_dma_functions(struct si_context *sctx)
 {
 	sctx->b.b.clear_buffer = si_pipe_clear_buffer;
-	sctx->b.clear_buffer = si_clear_buffer;
 }
