@@ -421,6 +421,17 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 
 		bool need_decompress_pass = false;
 
+		/* Use a slow clear for small surfaces where the cost of
+		 * the eliminate pass can be higher than the benefit of fast
+		 * clear. The closed driver does this, but the numbers may differ.
+		 *
+		 * Always use fast clear on APUs.
+		 */
+		bool too_small = sctx->screen->b.info.has_dedicated_vram &&
+				 tex->resource.b.b.nr_samples <= 1 &&
+				 tex->resource.b.b.width0 <= 256 &&
+				 tex->resource.b.b.height0 <= 256;
+
 		/* Try to clear DCC first, otherwise try CMASK. */
 		if (vi_dcc_enabled(tex, 0)) {
 			uint32_t reset_value;
@@ -437,6 +448,9 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 			if (!vi_get_fast_clear_parameters(fb->cbufs[i]->format,
 							  color, &reset_value,
 							  &clear_words_needed))
+				continue;
+
+			if (clear_words_needed && too_small)
 				continue;
 
 			/* DCC fast clear with MSAA should clear CMASK to 0xC. */
@@ -458,6 +472,9 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 
 			tex->separate_dcc_dirty = true;
 		} else {
+			if (too_small)
+				continue;
+
 			/* 128-bit formats are unusupported */
 			if (tex->surface.bpe > 8) {
 				continue;
