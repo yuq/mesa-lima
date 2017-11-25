@@ -51,6 +51,6 @@ libradeon = static_library(
   c_args : ['-Wstrict-overflow=0', c_vis_args],
   dependencies : [dep_llvm, dep_clock],
   include_directories : [
-    inc_include, inc_src, inc_gallium, inc_gallium_aux, inc_gallium_drivers,
+    inc_include, inc_src, inc_gallium, inc_gallium_aux, inc_gallium_drivers, inc_amd_common,
   ],
 )

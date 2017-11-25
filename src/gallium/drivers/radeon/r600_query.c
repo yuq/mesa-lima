@@ -22,6 +22,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "radeonsi/si_pipe.h"
 #include "r600_query.h"
 #include "r600_cs.h"
 #include "util/u_memory.h"
@@ -29,10 +30,6 @@
 #include "util/os_time.h"
 #include "tgsi/tgsi_text.h"
 #include "amd/common/sid.h"
-
-/* TODO: remove this: */
-void si_update_prims_generated_query_state(struct r600_common_context *rctx,
-					   unsigned type, int diff);
 
 #define R600_MAX_STREAMS 4
 
@@ -808,7 +805,7 @@ static void r600_query_hw_emit_start(struct r600_common_context *ctx,
 		return; // previous buffer allocation failure
 
 	r600_update_occlusion_query_state(ctx, query->b.type, 1);
-	si_update_prims_generated_query_state(ctx, query->b.type, 1);
+	si_update_prims_generated_query_state((void*)ctx, query->b.type, 1);
 
 	ctx->need_gfx_cs_space(&ctx->b, query->num_cs_dw_begin + query->num_cs_dw_end,
 			       true);
@@ -922,7 +919,7 @@ static void r600_query_hw_emit_stop(struct r600_common_context *ctx,
 		ctx->num_cs_dw_queries_suspend -= query->num_cs_dw_end;
 
 	r600_update_occlusion_query_state(ctx, query->b.type, -1);
-	si_update_prims_generated_query_state(ctx, query->b.type, -1);
+	si_update_prims_generated_query_state((void*)ctx, query->b.type, -1);
 }
 
 static void emit_set_predicate(struct r600_common_context *ctx,
