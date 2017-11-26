@@ -20,13 +20,15 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "r600_pipe_common.h"
+
+#include "radeonsi/si_pipe.h"
 #include "r600_cs.h"
 #include "r600_query.h"
 #include "util/u_format.h"
 #include "util/u_log.h"
 #include "util/u_memory.h"
 #include "util/u_pack_color.h"
+#include "util/u_resource.h"
 #include "util/u_surface.h"
 #include "util/os_time.h"
 #include <errno.h>
@@ -563,6 +565,102 @@ static void r600_reallocate_texture_inplace(struct r600_common_context *rctx,
 	p_atomic_inc(&rctx->screen->dirty_tex_counter);
 }
 
+static uint32_t si_get_bo_metadata_word1(struct r600_common_screen *rscreen)
+{
+	return (ATI_VENDOR_ID << 16) | rscreen->info.pci_id;
+}
+
+static void si_query_opaque_metadata(struct r600_common_screen *rscreen,
+				     struct r600_texture *rtex,
+			             struct radeon_bo_metadata *md)
+{
+	struct si_screen *sscreen = (struct si_screen*)rscreen;
+	struct pipe_resource *res = &rtex->resource.b.b;
+	static const unsigned char swizzle[] = {
+		PIPE_SWIZZLE_X,
+		PIPE_SWIZZLE_Y,
+		PIPE_SWIZZLE_Z,
+		PIPE_SWIZZLE_W
+	};
+	uint32_t desc[8], i;
+	bool is_array = util_resource_is_array_texture(res);
+
+	/* DRM 2.x.x doesn't support this. */
+	if (rscreen->info.drm_major != 3)
+		return;
+
+	assert(rtex->dcc_separate_buffer == NULL);
+	assert(rtex->fmask.size == 0);
+
+	/* Metadata image format format version 1:
+	 * [0] = 1 (metadata format identifier)
+	 * [1] = (VENDOR_ID << 16) | PCI_ID
+	 * [2:9] = image descriptor for the whole resource
+	 *         [2] is always 0, because the base address is cleared
+	 *         [9] is the DCC offset bits [39:8] from the beginning of
+	 *             the buffer
+	 * [10:10+LAST_LEVEL] = mipmap level offset bits [39:8] for each level
+	 */
+
+	md->metadata[0] = 1; /* metadata image format version 1 */
+
+	/* TILE_MODE_INDEX is ambiguous without a PCI ID. */
+	md->metadata[1] = si_get_bo_metadata_word1(rscreen);
+
+	si_make_texture_descriptor(sscreen, rtex, true,
+				   res->target, res->format,
+				   swizzle, 0, res->last_level, 0,
+				   is_array ? res->array_size - 1 : 0,
+				   res->width0, res->height0, res->depth0,
+				   desc, NULL);
+
+	si_set_mutable_tex_desc_fields(sscreen, rtex, &rtex->surface.u.legacy.level[0],
+				       0, 0, rtex->surface.blk_w, false, desc);
+
+	/* Clear the base address and set the relative DCC offset. */
+	desc[0] = 0;
+	desc[1] &= C_008F14_BASE_ADDRESS_HI;
+	desc[7] = rtex->dcc_offset >> 8;
+
+	/* Dwords [2:9] contain the image descriptor. */
+	memcpy(&md->metadata[2], desc, sizeof(desc));
+	md->size_metadata = 10 * 4;
+
+	/* Dwords [10:..] contain the mipmap level offsets. */
+	if (rscreen->chip_class <= VI) {
+		for (i = 0; i <= res->last_level; i++)
+			md->metadata[10+i] = rtex->surface.u.legacy.level[i].offset >> 8;
+
+		md->size_metadata += (1 + res->last_level) * 4;
+	}
+}
+
+static void si_apply_opaque_metadata(struct r600_common_screen *rscreen,
+				     struct r600_texture *rtex,
+			             struct radeon_bo_metadata *md)
+{
+	uint32_t *desc = &md->metadata[2];
+
+	if (rscreen->chip_class < VI)
+		return;
+
+	/* Return if DCC is enabled. The texture should be set up with it
+	 * already.
+	 */
+	if (md->size_metadata >= 11 * 4 &&
+	    md->metadata[0] != 0 &&
+	    md->metadata[1] == si_get_bo_metadata_word1(rscreen) &&
+	    G_008F28_COMPRESSION_EN(desc[6])) {
+		rtex->dcc_offset = (uint64_t)desc[7] << 8;
+		return;
+	}
+
+	/* Disable DCC. These are always set by texture_from_handle and must
+	 * be cleared here.
+	 */
+	rtex->dcc_offset = 0;
+}
+
 static boolean r600_texture_get_handle(struct pipe_screen* screen,
 				       struct pipe_context *ctx,
 				       struct pipe_resource *resource,
@@ -626,9 +724,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		/* Set metadata. */
 		if (!res->b.is_shared || update_metadata) {
 			r600_texture_init_metadata(rscreen, rtex, &metadata);
-			if (rscreen->query_opaque_metadata)
-				rscreen->query_opaque_metadata(rscreen, rtex,
-							       &metadata);
+			si_query_opaque_metadata(rscreen, rtex, &metadata);
 
 			rscreen->ws->buffer_set_metadata(res->buf, &metadata);
 		}
@@ -1380,8 +1476,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	rtex->resource.b.is_shared = true;
 	rtex->resource.external_usage = usage;
 
-	if (rscreen->apply_opaque_metadata)
-		rscreen->apply_opaque_metadata(rscreen, rtex, &metadata);
+	si_apply_opaque_metadata(rscreen, rtex, &metadata);
 
 	assert(rtex->surface.tile_swizzle == 0);
 	return &rtex->resource.b.b;
@@ -2346,8 +2441,7 @@ r600_texture_from_memobj(struct pipe_screen *screen,
 	rtex->resource.b.is_shared = true;
 	rtex->resource.external_usage = PIPE_HANDLE_USAGE_READ_WRITE;
 
-	if (rscreen->apply_opaque_metadata)
-		rscreen->apply_opaque_metadata(rscreen, rtex, &metadata);
+	si_apply_opaque_metadata(rscreen, rtex, &metadata);
 
 	return &rtex->resource.b.b;
 }

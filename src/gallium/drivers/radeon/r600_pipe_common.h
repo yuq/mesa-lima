@@ -434,14 +434,6 @@ struct r600_common_screen {
 		 */
 		unsigned compute_to_L2;
 	} barrier_flags;
-
-	void (*query_opaque_metadata)(struct r600_common_screen *rscreen,
-				      struct r600_texture *rtex,
-				      struct radeon_bo_metadata *md);
-
-	void (*apply_opaque_metadata)(struct r600_common_screen *rscreen,
-				    struct r600_texture *rtex,
-				    struct radeon_bo_metadata *md);
 };
 
 /* This encapsulates a state or an operation which can emitted into the GPU
