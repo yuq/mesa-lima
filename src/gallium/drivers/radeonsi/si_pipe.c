@@ -842,8 +842,6 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 		sscreen->b.barrier_flags.L2_to_cp |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
 	}
 
-	sscreen->b.barrier_flags.compute_to_L2 = SI_CONTEXT_CS_PARTIAL_FLUSH;
-
 	if (debug_get_bool_option("RADEON_DUMP_SHADERS", false))
 		sscreen->b.debug_flags |= DBG_ALL_SHADERS;
 

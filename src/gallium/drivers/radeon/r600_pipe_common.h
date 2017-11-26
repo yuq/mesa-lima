@@ -428,11 +428,6 @@ struct r600_common_screen {
 		 * that end in L2 are seen by CP.
 		 */
 		unsigned L2_to_cp;
-
-		/* Context flags to set so that all writes from earlier
-		 * compute jobs are seen by L2 clients.
-		 */
-		unsigned compute_to_L2;
 	} barrier_flags;
 };
 

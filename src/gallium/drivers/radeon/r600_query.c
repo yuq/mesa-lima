@@ -1768,7 +1768,7 @@ static void r600_query_hw_get_result_resource(struct r600_common_context *rctx,
 		}
 
 		rctx->b.launch_grid(&rctx->b, &grid);
-		rctx->flags |= rctx->screen->barrier_flags.compute_to_L2;
+		rctx->flags |= SI_CONTEXT_CS_PARTIAL_FLUSH;
 	}
 
 	r600_restore_qbo_state(rctx, &saved_state);
