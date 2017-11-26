@@ -375,6 +375,35 @@ struct brw_cache {
    uint32_t next_offset;
 };
 
+#define perf_debug(...) do {                                    \
+   static GLuint msg_id = 0;                                    \
+   if (unlikely(INTEL_DEBUG & DEBUG_PERF))                      \
+      dbg_printf(__VA_ARGS__);                                  \
+   if (brw->perf_debug)                                         \
+      _mesa_gl_debug(&brw->ctx, &msg_id,                        \
+                     MESA_DEBUG_SOURCE_API,                     \
+                     MESA_DEBUG_TYPE_PERFORMANCE,               \
+                     MESA_DEBUG_SEVERITY_MEDIUM,                \
+                     __VA_ARGS__);                              \
+} while(0)
+
+#define WARN_ONCE(cond, fmt...) do {                            \
+   if (unlikely(cond)) {                                        \
+      static bool _warned = false;                              \
+      static GLuint msg_id = 0;                                 \
+      if (!_warned) {                                           \
+         fprintf(stderr, "WARNING: ");                          \
+         fprintf(stderr, fmt);                                  \
+         _warned = true;                                        \
+                                                                \
+         _mesa_gl_debug(ctx, &msg_id,                           \
+                        MESA_DEBUG_SOURCE_API,                  \
+                        MESA_DEBUG_TYPE_OTHER,                  \
+                        MESA_DEBUG_SEVERITY_HIGH, fmt);         \
+      }                                                         \
+   }                                                            \
+} while (0)
+
 /* Considered adding a member to this struct to document which flags
  * an update might raise so that ordering of the state atoms can be
  * checked or derived at runtime.  Dropped the idea in favor of having
