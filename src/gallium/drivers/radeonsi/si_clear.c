@@ -41,12 +41,12 @@ static void si_alloc_separate_cmask(struct si_screen *sscreen,
 
 	assert(rtex->cmask.size == 0);
 
-	si_texture_get_cmask_info(&sscreen->b, rtex, &rtex->cmask);
+	si_texture_get_cmask_info(sscreen, rtex, &rtex->cmask);
 	if (!rtex->cmask.size)
 		return;
 
 	rtex->cmask_buffer = (struct r600_resource *)
-		si_aligned_buffer_create(&sscreen->b.b,
+		si_aligned_buffer_create(&sscreen->b,
 					 R600_RESOURCE_FLAG_UNMAPPABLE,
 					 PIPE_USAGE_DEFAULT,
 					 rtex->cmask.size,
@@ -61,7 +61,7 @@ static void si_alloc_separate_cmask(struct si_screen *sscreen,
 
 	rtex->cb_color_info |= S_028C70_FAST_CLEAR(1);
 
-	p_atomic_inc(&sscreen->b.compressed_colortex_counter);
+	p_atomic_inc(&sscreen->compressed_colortex_counter);
 }
 
 static void si_set_clear_color(struct r600_texture *rtex,
@@ -245,11 +245,11 @@ static void si_set_optimal_micro_tile_mode(struct si_screen *sscreen,
 	    rtex->surface.micro_tile_mode == rtex->last_msaa_resolve_target_micro_mode)
 		return;
 
-	assert(sscreen->b.chip_class >= GFX9 ||
+	assert(sscreen->info.chip_class >= GFX9 ||
 	       rtex->surface.u.legacy.level[0].mode == RADEON_SURF_MODE_2D);
 	assert(rtex->resource.b.b.last_level == 0);
 
-	if (sscreen->b.chip_class >= GFX9) {
+	if (sscreen->info.chip_class >= GFX9) {
 		/* 4K or larger tiles only. 0 is linear. 1-3 are 256B tiles. */
 		assert(rtex->surface.u.gfx9.surf.swizzle_mode >= 4);
 
@@ -280,7 +280,7 @@ static void si_set_optimal_micro_tile_mode(struct si_screen *sscreen,
 			assert(!"unexpected micro mode");
 			return;
 		}
-	} else if (sscreen->b.chip_class >= CIK) {
+	} else if (sscreen->info.chip_class >= CIK) {
 		/* These magic numbers were copied from addrlib. It doesn't use
 		 * any definitions for them either. They are all 2D_TILED_THIN1
 		 * modes with different bpp and micro tile mode.
@@ -338,7 +338,7 @@ static void si_set_optimal_micro_tile_mode(struct si_screen *sscreen,
 
 	rtex->surface.micro_tile_mode = rtex->last_msaa_resolve_target_micro_mode;
 
-	p_atomic_inc(&sscreen->b.dirty_tex_counter);
+	p_atomic_inc(&sscreen->dirty_tex_counter);
 }
 
 static void si_do_fast_color_clear(struct si_context *sctx,
@@ -397,8 +397,8 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		/* fast color clear with 1D tiling doesn't work on old kernels and CIK */
 		if (sctx->b.chip_class == CIK &&
 		    tex->surface.u.legacy.level[0].mode == RADEON_SURF_MODE_1D &&
-		    sctx->screen->b.info.drm_major == 2 &&
-		    sctx->screen->b.info.drm_minor < 38) {
+		    sctx->screen->info.drm_major == 2 &&
+		    sctx->screen->info.drm_minor < 38) {
 			continue;
 		}
 
@@ -406,7 +406,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		 * displayable surfaces.
 		 */
 		if (sctx->b.chip_class >= VI &&
-		    !(sctx->screen->b.debug_flags & DBG(NO_DCC_FB))) {
+		    !(sctx->screen->debug_flags & DBG(NO_DCC_FB))) {
 			vi_separate_dcc_try_enable(&sctx->b, tex);
 
 			/* RB+ isn't supported with a CMASK clear only on Stoney,
@@ -427,7 +427,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		 *
 		 * Always use fast clear on APUs.
 		 */
-		bool too_small = sctx->screen->b.info.has_dedicated_vram &&
+		bool too_small = sctx->screen->info.has_dedicated_vram &&
 				 tex->resource.b.b.nr_samples <= 1 &&
 				 tex->resource.b.b.width0 <= 256 &&
 				 tex->resource.b.b.height0 <= 256;
@@ -437,7 +437,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 			uint32_t reset_value;
 			bool clear_words_needed;
 
-			if (sctx->screen->b.debug_flags & DBG(NO_DCC_CLEAR))
+			if (sctx->screen->debug_flags & DBG(NO_DCC_CLEAR))
 				continue;
 
 			/* This can only occur with MSAA. */
@@ -500,7 +500,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		if (need_decompress_pass &&
 		    !(tex->dirty_level_mask & (1 << level))) {
 			tex->dirty_level_mask |= 1 << level;
-			p_atomic_inc(&sctx->screen->b.compressed_colortex_counter);
+			p_atomic_inc(&sctx->screen->compressed_colortex_counter);
 		}
 
 		/* We can change the micro tile mode before a full clear. */

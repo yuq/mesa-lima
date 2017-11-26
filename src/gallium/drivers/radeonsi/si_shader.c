@@ -105,7 +105,7 @@ enum {
 
 static bool is_merged_shader(struct si_shader *shader)
 {
-	if (shader->selector->screen->b.chip_class <= VI)
+	if (shader->selector->screen->info.chip_class <= VI)
 		return false;
 
 	return shader->key.as_ls ||
@@ -407,7 +407,7 @@ static LLVMValueRef get_tcs_in_vertex_dw_stride(struct si_shader_context *ctx)
 		return LLVMConstInt(ctx->i32, stride * 4, 0);
 
 	case PIPE_SHADER_TESS_CTRL:
-		if (ctx->screen->b.chip_class >= GFX9 &&
+		if (ctx->screen->info.chip_class >= GFX9 &&
 		    ctx->shader->is_monolithic) {
 			stride = util_last_bit64(ctx->shader->key.part.tcs.ls->outputs_written);
 			return LLVMConstInt(ctx->i32, stride * 4, 0);
@@ -1323,7 +1323,7 @@ static LLVMValueRef fetch_input_gs(
 	param = si_shader_io_get_unique_index(semantic_name, semantic_index);
 
 	/* GFX9 has the ESGS ring in LDS. */
-	if (ctx->screen->b.chip_class >= GFX9) {
+	if (ctx->screen->info.chip_class >= GFX9) {
 		unsigned index = reg->Dimension.Index;
 
 		switch (index / 2) {
@@ -2009,7 +2009,7 @@ static LLVMValueRef fetch_constant(
 		 * s_buffer_load_dword (that we have to prevent) is when we use use
 		 * a literal offset where we don't need bounds checking.
 		 */
-		if (ctx->screen->b.chip_class == SI &&
+		if (ctx->screen->info.chip_class == SI &&
                     HAVE_LLVM < 0x0600 &&
                     !reg->Register.Indirect) {
 			addr = LLVMBuildLShr(ctx->ac.builder, addr, LLVMConstInt(ctx->i32, 2, 0), "");
@@ -2658,7 +2658,7 @@ static void si_llvm_export_vs(struct si_shader_context *ctx,
 			pos_args[1].out[1] = ac_to_float(&ctx->ac, edgeflag_value);
 		}
 
-		if (ctx->screen->b.chip_class >= GFX9) {
+		if (ctx->screen->info.chip_class >= GFX9) {
 			/* GFX9 has the layer in out.z[10:0] and the viewport
 			 * index in out.z[19:16].
 			 */
@@ -2870,7 +2870,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 
 	/* Store the dynamic HS control word. */
 	offset = 0;
-	if (ctx->screen->b.chip_class <= VI) {
+	if (ctx->screen->info.chip_class <= VI) {
 		ac_build_buffer_store_dword(&ctx->ac, buffer,
 					    LLVMConstInt(ctx->i32, 0x80000000, 0),
 					    1, ctx->i32_0, tf_base,
@@ -2977,7 +2977,7 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	invocation_id = unpack_param(ctx, ctx->param_tcs_rel_ids, 8, 5);
 	tf_lds_offset = get_tcs_out_current_patch_data_offset(ctx);
 
-	if (ctx->screen->b.chip_class >= GFX9) {
+	if (ctx->screen->info.chip_class >= GFX9) {
 		LLVMBasicBlockRef blocks[2] = {
 			LLVMGetInsertBlock(builder),
 			ctx->merged_wrap_if_state.entry_block
@@ -3003,7 +3003,7 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	LLVMValueRef ret = ctx->return_value;
 	unsigned vgpr;
 
-	if (ctx->screen->b.chip_class >= GFX9) {
+	if (ctx->screen->info.chip_class >= GFX9) {
 		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_layout,
 					  8 + GFX9_SGPR_TCS_OFFCHIP_LAYOUT);
 		ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_addr_base64k,
@@ -3180,7 +3180,7 @@ static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context *bld_base)
 		}
 	}
 
-	if (ctx->screen->b.chip_class >= GFX9)
+	if (ctx->screen->info.chip_class >= GFX9)
 		si_set_ls_return_value_for_tcs(ctx);
 }
 
@@ -3195,7 +3195,7 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
 	unsigned chan;
 	int i;
 
-	if (ctx->screen->b.chip_class >= GFX9 && info->num_outputs) {
+	if (ctx->screen->info.chip_class >= GFX9 && info->num_outputs) {
 		unsigned itemsize_dw = es->selector->esgs_itemsize / 4;
 		LLVMValueRef vertex_idx = ac_get_thread_id(&ctx->ac);
 		LLVMValueRef wave_idx = unpack_param(ctx, ctx->param_merged_wave_info, 24, 4);
@@ -3222,7 +3222,7 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
 			out_val = ac_to_integer(&ctx->ac, out_val);
 
 			/* GFX9 has the ESGS ring in LDS. */
-			if (ctx->screen->b.chip_class >= GFX9) {
+			if (ctx->screen->info.chip_class >= GFX9) {
 				lds_store(bld_base, param * 4 + chan, lds_base, out_val);
 				continue;
 			}
@@ -3235,13 +3235,13 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
 		}
 	}
 
-	if (ctx->screen->b.chip_class >= GFX9)
+	if (ctx->screen->info.chip_class >= GFX9)
 		si_set_es_return_value_for_gs(ctx);
 }
 
 static LLVMValueRef si_get_gs_wave_id(struct si_shader_context *ctx)
 {
-	if (ctx->screen->b.chip_class >= GFX9)
+	if (ctx->screen->info.chip_class >= GFX9)
 		return unpack_param(ctx, ctx->param_merged_wave_info, 16, 8);
 	else
 		return LLVMGetParam(ctx->main_fn, ctx->param_gs_wave_id);
@@ -3254,7 +3254,7 @@ static void si_llvm_emit_gs_epilogue(struct lp_build_tgsi_context *bld_base)
 	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_NOP | AC_SENDMSG_GS_DONE,
 			 si_get_gs_wave_id(ctx));
 
-	if (ctx->screen->b.chip_class >= GFX9)
+	if (ctx->screen->info.chip_class >= GFX9)
 		lp_build_endif(&ctx->merged_wrap_if_state);
 }
 
@@ -3436,9 +3436,9 @@ static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
 
 	/* SI (except OLAND and HAINAN) has a bug that it only looks
 	 * at the X writemask component. */
-	if (ctx->screen->b.chip_class == SI &&
-	    ctx->screen->b.family != CHIP_OLAND &&
-	    ctx->screen->b.family != CHIP_HAINAN)
+	if (ctx->screen->info.chip_class == SI &&
+	    ctx->screen->info.family != CHIP_OLAND &&
+	    ctx->screen->info.family != CHIP_HAINAN)
 		mask |= 0x1;
 
 	/* Specify which components to enable */
@@ -4152,7 +4152,7 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 	 * The real barrier instruction isn’t needed, because an entire patch
 	 * always fits into a single wave.
 	 */
-	if (ctx->screen->b.chip_class == SI &&
+	if (ctx->screen->info.chip_class == SI &&
 	    ctx->type == PIPE_SHADER_TESS_CTRL) {
 		si_emit_waitcnt(ctx, LGKM_CNT & VM_CNT);
 		return;
@@ -4211,7 +4211,7 @@ static void si_create_function(struct si_shader_context *ctx,
 					   "no-signed-zeros-fp-math",
 					   "true");
 
-	if (ctx->screen->b.debug_flags & DBG(UNSAFE_MATH)) {
+	if (ctx->screen->debug_flags & DBG(UNSAFE_MATH)) {
 		/* These were copied from some LLVM test. */
 		LLVMAddTargetDependentFunctionAttr(ctx->main_fn,
 						   "less-precise-fpmad",
@@ -4258,10 +4258,10 @@ static unsigned si_get_max_workgroup_size(const struct si_shader *shader)
 	case PIPE_SHADER_TESS_CTRL:
 		/* Return this so that LLVM doesn't remove s_barrier
 		 * instructions on chips where we use s_barrier. */
-		return shader->selector->screen->b.chip_class >= CIK ? 128 : 64;
+		return shader->selector->screen->info.chip_class >= CIK ? 128 : 64;
 
 	case PIPE_SHADER_GEOMETRY:
-		return shader->selector->screen->b.chip_class >= GFX9 ? 128 : 64;
+		return shader->selector->screen->info.chip_class >= GFX9 ? 128 : 64;
 
 	case PIPE_SHADER_COMPUTE:
 		break; /* see below */
@@ -4387,7 +4387,7 @@ static void create_function(struct si_shader_context *ctx)
 	si_init_function_info(&fninfo);
 
 	/* Set MERGED shaders. */
-	if (ctx->screen->b.chip_class >= GFX9) {
+	if (ctx->screen->info.chip_class >= GFX9) {
 		if (shader->key.as_ls || type == PIPE_SHADER_TESS_CTRL)
 			type = SI_SHADER_MERGED_VERTEX_TESSCTRL; /* LS or HS */
 		else if (shader->key.as_es || type == PIPE_SHADER_GEOMETRY)
@@ -4754,7 +4754,7 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 	LLVMValueRef buf_ptr = LLVMGetParam(ctx->main_fn,
 					    ctx->param_rw_buffers);
 
-	if (ctx->screen->b.chip_class <= VI &&
+	if (ctx->screen->info.chip_class <= VI &&
 	    (ctx->shader->key.as_es || ctx->type == PIPE_SHADER_GEOMETRY)) {
 		unsigned ring =
 			ctx->type == PIPE_SHADER_GEOMETRY ? SI_GS_RING_ESGS
@@ -5017,14 +5017,14 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 
 	r600_resource_reference(&shader->bo, NULL);
 	shader->bo = (struct r600_resource*)
-		     pipe_buffer_create(&sscreen->b.b, 0,
+		     pipe_buffer_create(&sscreen->b, 0,
 					PIPE_USAGE_IMMUTABLE,
 					align(bo_size, SI_CPDMA_ALIGNMENT));
 	if (!shader->bo)
 		return -ENOMEM;
 
 	/* Upload. */
-	ptr = sscreen->b.ws->buffer_map(shader->bo->buf, NULL,
+	ptr = sscreen->ws->buffer_map(shader->bo->buf, NULL,
 					PIPE_TRANSFER_READ_WRITE |
 					PIPE_TRANSFER_UNSYNCHRONIZED);
 
@@ -5051,7 +5051,7 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 	else if (mainb->rodata_size > 0)
 		memcpy(ptr, mainb->rodata, mainb->rodata_size);
 
-	sscreen->b.ws->buffer_unmap(shader->bo->buf);
+	sscreen->ws->buffer_unmap(shader->bo->buf);
 	return 0;
 }
 
@@ -5113,11 +5113,11 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 	const struct si_shader_config *conf = &shader->config;
 	unsigned num_inputs = shader->selector ? shader->selector->info.num_inputs : 0;
 	unsigned code_size = si_get_shader_binary_size(shader);
-	unsigned lds_increment = sscreen->b.chip_class >= CIK ? 512 : 256;
+	unsigned lds_increment = sscreen->info.chip_class >= CIK ? 512 : 256;
 	unsigned lds_per_wave = 0;
 	unsigned max_simd_waves;
 
-	switch (sscreen->b.family) {
+	switch (sscreen->info.family) {
 	/* These always have 8 waves: */
 	case CHIP_POLARIS10:
 	case CHIP_POLARIS11:
@@ -5156,7 +5156,7 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 
 	/* Compute the per-SIMD wave counts. */
 	if (conf->num_sgprs) {
-		if (sscreen->b.chip_class >= VI)
+		if (sscreen->info.chip_class >= VI)
 			max_simd_waves = MIN2(max_simd_waves, 800 / conf->num_sgprs);
 		else
 			max_simd_waves = MIN2(max_simd_waves, 512 / conf->num_sgprs);
@@ -5261,7 +5261,7 @@ void si_shader_dump(struct si_screen *sscreen, const struct si_shader *shader,
 
 	if (!check_debug_option ||
 	    (si_can_dump_shader(sscreen, processor) &&
-	     !(sscreen->b.debug_flags & DBG(NO_ASM)))) {
+	     !(sscreen->debug_flags & DBG(NO_ASM)))) {
 		fprintf(file, "\n%s:\n", si_get_shader_name(shader, processor));
 
 		if (shader->prolog)
@@ -5296,12 +5296,12 @@ static int si_compile_llvm(struct si_screen *sscreen,
 			   const char *name)
 {
 	int r = 0;
-	unsigned count = p_atomic_inc_return(&sscreen->b.num_compilations);
+	unsigned count = p_atomic_inc_return(&sscreen->num_compilations);
 
 	if (si_can_dump_shader(sscreen, processor)) {
 		fprintf(stderr, "radeonsi: Compiling shader %d\n", count);
 
-		if (!(sscreen->b.debug_flags & (DBG(NO_IR) | DBG(PREOPT_IR)))) {
+		if (!(sscreen->debug_flags & (DBG(NO_IR) | DBG(PREOPT_IR)))) {
 			fprintf(stderr, "%s LLVM IR:\n\n", name);
 			ac_dump_module(mod);
 			fprintf(stderr, "\n");
@@ -5551,7 +5551,7 @@ static void si_dump_shader_key(unsigned processor, const struct si_shader *shade
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:
-		if (shader->selector->screen->b.chip_class >= GFX9) {
+		if (shader->selector->screen->info.chip_class >= GFX9) {
 			si_dump_shader_key_vs(key, &key->part.tcs.ls_prolog,
 					      "part.tcs.ls_prolog", f);
 		}
@@ -5569,7 +5569,7 @@ static void si_dump_shader_key(unsigned processor, const struct si_shader *shade
 		if (shader->is_gs_copy_shader)
 			break;
 
-		if (shader->selector->screen->b.chip_class >= GFX9 &&
+		if (shader->selector->screen->info.chip_class >= GFX9 &&
 		    key->part.gs.es->type == PIPE_SHADER_VERTEX) {
 			si_dump_shader_key_vs(key, &key->part.gs.vs_prolog,
 					      "part.gs.vs_prolog", f);
@@ -5794,7 +5794,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	 * For monolithic merged shaders, the first shader is wrapped in an
 	 * if-block together with its prolog in si_build_wrapper_function.
 	 */
-	if (ctx->screen->b.chip_class >= GFX9) {
+	if (ctx->screen->info.chip_class >= GFX9) {
 		if (!is_monolithic &&
 		    sel->info.num_instructions > 1 && /* not empty shader */
 		    (shader->key.as_es || shader->key.as_ls) &&
@@ -6068,7 +6068,7 @@ static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 
 	si_init_function_info(&fninfo);
 
-	if (ctx->screen->b.chip_class >= GFX9) {
+	if (ctx->screen->info.chip_class >= GFX9) {
 		num_sgprs = 8 + GFX9_GS_NUM_USER_SGPR;
 		num_vgprs = 5; /* ES inputs are not needed by GS */
 	} else {
@@ -6095,7 +6095,7 @@ static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 	 * with registers here. The main shader part will set the correct EXEC
 	 * mask.
 	 */
-	if (ctx->screen->b.chip_class >= GFX9 && !key->gs_prolog.is_monolithic)
+	if (ctx->screen->info.chip_class >= GFX9 && !key->gs_prolog.is_monolithic)
 		si_init_exec_full_mask(ctx);
 
 	/* Copy inputs to outputs. This should be no-op, as the registers match,
@@ -6130,7 +6130,7 @@ static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 		LLVMValueRef vtx_in[6], vtx_out[6];
 		LLVMValueRef prim_id, rotate;
 
-		if (ctx->screen->b.chip_class >= GFX9) {
+		if (ctx->screen->info.chip_class >= GFX9) {
 			for (unsigned i = 0; i < 3; i++) {
 				vtx_in[i*2] = unpack_param(ctx, gfx9_vtx_params[i], 0, 16);
 				vtx_in[i*2+1] = unpack_param(ctx, gfx9_vtx_params[i], 16, 16);
@@ -6150,7 +6150,7 @@ static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 			vtx_out[i] = LLVMBuildSelect(builder, rotate, rotated, base, "");
 		}
 
-		if (ctx->screen->b.chip_class >= GFX9) {
+		if (ctx->screen->info.chip_class >= GFX9) {
 			for (unsigned i = 0; i < 3; i++) {
 				LLVMValueRef hi, out;
 
@@ -6417,7 +6417,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
 	 * conversion fails. */
 	if (si_can_dump_shader(sscreen, sel->info.processor) &&
-	    !(sscreen->b.debug_flags & DBG(NO_TGSI))) {
+	    !(sscreen->debug_flags & DBG(NO_TGSI))) {
 		if (sel->tokens)
 			tgsi_dump(sel->tokens, 0);
 		else
@@ -6458,7 +6458,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		si_build_wrapper_function(&ctx, parts + !need_prolog,
 					  1 + need_prolog, need_prolog, 0);
 	} else if (is_monolithic && ctx.type == PIPE_SHADER_TESS_CTRL) {
-		if (sscreen->b.chip_class >= GFX9) {
+		if (sscreen->info.chip_class >= GFX9) {
 			struct si_shader_selector *ls = shader->key.part.tcs.ls;
 			LLVMValueRef parts[4];
 			bool vs_needs_prolog =
@@ -6523,7 +6523,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			si_build_wrapper_function(&ctx, parts, 2, 0, 0);
 		}
 	} else if (is_monolithic && ctx.type == PIPE_SHADER_GEOMETRY) {
-		if (ctx.screen->b.chip_class >= GFX9) {
+		if (ctx.screen->info.chip_class >= GFX9) {
 			struct si_shader_selector *es = shader->key.part.gs.es;
 			LLVMValueRef es_prolog = NULL;
 			LLVMValueRef es_main = NULL;
@@ -6643,7 +6643,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	if (sel->type == PIPE_SHADER_COMPUTE) {
 		unsigned wave_size = 64;
 		unsigned max_vgprs = 256;
-		unsigned max_sgprs = sscreen->b.chip_class >= VI ? 800 : 512;
+		unsigned max_sgprs = sscreen->info.chip_class >= VI ? 800 : 512;
 		unsigned max_sgprs_per_wave = 128;
 		unsigned max_block_threads = si_get_max_workgroup_size(shader);
 		unsigned min_waves_per_cu = DIV_ROUND_UP(max_block_threads, wave_size);
@@ -6814,7 +6814,7 @@ static LLVMValueRef si_prolog_get_rw_buffers(struct si_shader_context *ctx)
 {
 	LLVMValueRef ptr[2], list;
 	bool is_merged_shader =
-		ctx->screen->b.chip_class >= GFX9 &&
+		ctx->screen->info.chip_class >= GFX9 &&
 		(ctx->type == PIPE_SHADER_TESS_CTRL ||
 		 ctx->type == PIPE_SHADER_GEOMETRY ||
 		 ctx->shader->key.as_ls || ctx->shader->key.as_es);
@@ -7026,7 +7026,7 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 
 	si_init_function_info(&fninfo);
 
-	if (ctx->screen->b.chip_class >= GFX9) {
+	if (ctx->screen->info.chip_class >= GFX9) {
 		add_arg(&fninfo, ARG_SGPR, ctx->i64);
 		ctx->param_tcs_offchip_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* wave info */
@@ -7075,7 +7075,7 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 
 	/* Create the function. */
 	si_create_function(ctx, "tcs_epilog", NULL, 0, &fninfo,
-			   ctx->screen->b.chip_class >= CIK ? 128 : 64);
+			   ctx->screen->info.chip_class >= CIK ? 128 : 64);
 	ac_declare_lds_as_pointer(&ctx->ac);
 	func = ctx->main_fn;
 
@@ -7100,7 +7100,7 @@ static bool si_shader_select_tcs_parts(struct si_screen *sscreen,
 				       struct si_shader *shader,
 				       struct pipe_debug_callback *debug)
 {
-	if (sscreen->b.chip_class >= GFX9) {
+	if (sscreen->info.chip_class >= GFX9) {
 		struct si_shader *ls_main_part =
 			shader->key.part.tcs.ls->main_shader_part_ls;
 
@@ -7132,7 +7132,7 @@ static bool si_shader_select_gs_parts(struct si_screen *sscreen,
 				      struct si_shader *shader,
 				      struct pipe_debug_callback *debug)
 {
-	if (sscreen->b.chip_class >= GFX9) {
+	if (sscreen->info.chip_class >= GFX9) {
 		struct si_shader *es_main_part =
 			shader->key.part.gs.es->main_shader_part_es;
 
@@ -7647,9 +7647,9 @@ void si_multiwave_lds_size_workaround(struct si_screen *sscreen,
 	 *   Make sure we have at least 4k of LDS in use to avoid the bug.
 	 *   It applies to workgroup sizes of more than one wavefront.
 	 */
-	if (sscreen->b.family == CHIP_BONAIRE ||
-	    sscreen->b.family == CHIP_KABINI ||
-	    sscreen->b.family == CHIP_MULLINS)
+	if (sscreen->info.family == CHIP_BONAIRE ||
+	    sscreen->info.family == CHIP_KABINI ||
+	    sscreen->info.family == CHIP_MULLINS)
 		*lds_size = MAX2(*lds_size, 8);
 }
 

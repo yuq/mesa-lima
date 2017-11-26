@@ -127,12 +127,12 @@ void si_gfx_write_event_eop(struct r600_common_context *ctx,
 	}
 }
 
-unsigned si_gfx_write_fence_dwords(struct r600_common_screen *screen)
+unsigned si_gfx_write_fence_dwords(struct si_screen *screen)
 {
 	unsigned dwords = 6;
 
-	if (screen->chip_class == CIK ||
-	    screen->chip_class == VI)
+	if (screen->info.chip_class == CIK ||
+	    screen->info.chip_class == VI)
 		dwords *= 2;
 
 	if (!screen->info.has_virtual_memory)
@@ -403,20 +403,20 @@ static bool r600_resource_commit(struct pipe_context *pctx,
 }
 
 bool si_common_context_init(struct r600_common_context *rctx,
-			    struct r600_common_screen *rscreen,
+			    struct si_screen *sscreen,
 			    unsigned context_flags)
 {
-	slab_create_child(&rctx->pool_transfers, &rscreen->pool_transfers);
-	slab_create_child(&rctx->pool_transfers_unsync, &rscreen->pool_transfers);
+	slab_create_child(&rctx->pool_transfers, &sscreen->pool_transfers);
+	slab_create_child(&rctx->pool_transfers_unsync, &sscreen->pool_transfers);
 
-	rctx->screen = rscreen;
-	rctx->ws = rscreen->ws;
-	rctx->family = rscreen->family;
-	rctx->chip_class = rscreen->chip_class;
+	rctx->screen = sscreen;
+	rctx->ws = sscreen->ws;
+	rctx->family = sscreen->info.family;
+	rctx->chip_class = sscreen->info.chip_class;
 
 	rctx->b.resource_commit = r600_resource_commit;
 
-	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 43) {
+	if (sscreen->info.drm_major == 2 && sscreen->info.drm_minor >= 43) {
 		rctx->b.get_device_reset_status = r600_get_reset_status;
 		rctx->gpu_reset_counter =
 			rctx->ws->query_value(rctx->ws,
@@ -432,14 +432,14 @@ bool si_common_context_init(struct r600_common_context *rctx,
 	    rctx->chip_class == VI ||
 	    rctx->chip_class == GFX9) {
 		rctx->eop_bug_scratch = (struct r600_resource*)
-			pipe_buffer_create(&rscreen->b, 0, PIPE_USAGE_DEFAULT,
-					   16 * rscreen->info.num_render_backends);
+			pipe_buffer_create(&sscreen->b, 0, PIPE_USAGE_DEFAULT,
+					   16 * sscreen->info.num_render_backends);
 		if (!rctx->eop_bug_scratch)
 			return false;
 	}
 
 	rctx->allocator_zeroed_memory =
-		u_suballocator_create(&rctx->b, rscreen->info.gart_page_size,
+		u_suballocator_create(&rctx->b, sscreen->info.gart_page_size,
 				      0, PIPE_USAGE_DEFAULT, 0, true);
 	if (!rctx->allocator_zeroed_memory)
 		return false;
@@ -458,7 +458,7 @@ bool si_common_context_init(struct r600_common_context *rctx,
 	if (!rctx->ctx)
 		return false;
 
-	if (rscreen->info.num_sdma_rings && !(rscreen->debug_flags & DBG(NO_ASYNC_DMA))) {
+	if (sscreen->info.num_sdma_rings && !(sscreen->debug_flags & DBG(NO_ASYNC_DMA))) {
 		rctx->dma.cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
 						   r600_flush_dma_ring,
 						   rctx);
@@ -511,13 +511,13 @@ void si_common_context_cleanup(struct r600_common_context *rctx)
 }
 
 
-void si_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
+void si_screen_clear_buffer(struct si_screen *sscreen, struct pipe_resource *dst,
 			    uint64_t offset, uint64_t size, unsigned value)
 {
-	struct r600_common_context *rctx = (struct r600_common_context*)rscreen->aux_context;
+	struct r600_common_context *rctx = (struct r600_common_context*)sscreen->aux_context;
 
-	mtx_lock(&rscreen->aux_context_lock);
+	mtx_lock(&sscreen->aux_context_lock);
 	rctx->dma_clear_buffer(&rctx->b, dst, offset, size, value);
-	rscreen->aux_context->flush(rscreen->aux_context, NULL, 0);
-	mtx_unlock(&rscreen->aux_context_lock);
+	sscreen->aux_context->flush(sscreen->aux_context, NULL, 0);
+	mtx_unlock(&sscreen->aux_context_lock);
 }

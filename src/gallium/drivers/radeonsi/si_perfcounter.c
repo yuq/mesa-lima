@@ -670,10 +670,10 @@ static void si_pc_emit_read(struct r600_common_context *ctx,
 	}
 }
 
-static void si_pc_cleanup(struct r600_common_screen *rscreen)
+static void si_pc_cleanup(struct si_screen *sscreen)
 {
-	si_perfcounters_do_destroy(rscreen->perfcounters);
-	rscreen->perfcounters = NULL;
+	si_perfcounters_do_destroy(sscreen->perfcounters);
+	sscreen->perfcounters = NULL;
 }
 
 void si_init_perfcounters(struct si_screen *screen)
@@ -683,7 +683,7 @@ void si_init_perfcounters(struct si_screen *screen)
 	unsigned num_blocks;
 	unsigned i;
 
-	switch (screen->b.chip_class) {
+	switch (screen->info.chip_class) {
 	case CIK:
 		blocks = groups_CIK;
 		num_blocks = ARRAY_SIZE(groups_CIK);
@@ -701,11 +701,11 @@ void si_init_perfcounters(struct si_screen *screen)
 		return; /* not implemented */
 	}
 
-	if (screen->b.info.max_sh_per_se != 1) {
+	if (screen->info.max_sh_per_se != 1) {
 		/* This should not happen on non-SI chips. */
 		fprintf(stderr, "si_init_perfcounters: max_sh_per_se = %d not "
 			"supported (inaccurate performance counters)\n",
-			screen->b.info.max_sh_per_se);
+			screen->info.max_sh_per_se);
 	}
 
 	pc = CALLOC_STRUCT(r600_perfcounters);
@@ -713,7 +713,7 @@ void si_init_perfcounters(struct si_screen *screen)
 		return;
 
 	pc->num_start_cs_dwords = 14;
-	pc->num_stop_cs_dwords = 14 + si_gfx_write_fence_dwords(&screen->b);
+	pc->num_stop_cs_dwords = 14 + si_gfx_write_fence_dwords(screen);
 	pc->num_instance_cs_dwords = 3;
 	pc->num_shaders_cs_dwords = 4;
 
@@ -738,11 +738,11 @@ void si_init_perfcounters(struct si_screen *screen)
 		unsigned instances = block->instances;
 
 		if (!strcmp(block->b->name, "IA")) {
-			if (screen->b.info.max_se > 2)
+			if (screen->info.max_se > 2)
 				instances = 2;
 		}
 
-		si_perfcounters_add_block(&screen->b, pc,
+		si_perfcounters_add_block(screen, pc,
 					    block->b->name,
 					    block->b->flags,
 					    block->b->num_counters,
@@ -751,7 +751,7 @@ void si_init_perfcounters(struct si_screen *screen)
 					    block);
 	}
 
-	screen->b.perfcounters = pc;
+	screen->perfcounters = pc;
 	return;
 
 error:

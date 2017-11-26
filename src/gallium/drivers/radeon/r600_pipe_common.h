@@ -359,78 +359,6 @@ struct r600_memory_object {
 	uint32_t			offset;
 };
 
-struct r600_common_screen {
-	struct pipe_screen		b;
-	struct radeon_winsys		*ws;
-	enum radeon_family		family;
-	enum chip_class			chip_class;
-	struct radeon_info		info;
-	uint64_t			debug_flags;
-	bool				has_rbplus;     /* if RB+ registers exist */
-	bool				rbplus_allowed; /* if RB+ is allowed */
-	bool				dcc_msaa_allowed;
-
-	struct disk_cache		*disk_shader_cache;
-
-	struct slab_parent_pool		pool_transfers;
-
-	/* Texture filter settings. */
-	int				force_aniso; /* -1 = disabled */
-
-	/* Auxiliary context. Mainly used to initialize resources.
-	 * It must be locked prior to using and flushed before unlocking. */
-	struct pipe_context		*aux_context;
-	mtx_t				aux_context_lock;
-
-	/* This must be in the screen, because UE4 uses one context for
-	 * compilation and another one for rendering.
-	 */
-	unsigned			num_compilations;
-	/* Along with ST_DEBUG=precompile, this should show if applications
-	 * are loading shaders on demand. This is a monotonic counter.
-	 */
-	unsigned			num_shaders_created;
-	unsigned			num_shader_cache_hits;
-
-	/* GPU load thread. */
-	mtx_t				gpu_load_mutex;
-	thrd_t				gpu_load_thread;
-	union r600_mmio_counters	mmio_counters;
-	volatile unsigned		gpu_load_stop_thread; /* bool */
-
-	char				renderer_string[100];
-
-	/* Performance counters. */
-	struct r600_perfcounters	*perfcounters;
-
-	/* If pipe_screen wants to recompute and re-emit the framebuffer,
-	 * sampler, and image states of all contexts, it should atomically
-	 * increment this.
-	 *
-	 * Each context will compare this with its own last known value of
-	 * the counter before drawing and re-emit the states accordingly.
-	 */
-	unsigned			dirty_tex_counter;
-
-	/* Atomically increment this counter when an existing texture's
-	 * metadata is enabled or disabled in a way that requires changing
-	 * contexts' compressed texture binding masks.
-	 */
-	unsigned			compressed_colortex_counter;
-
-	struct {
-		/* Context flags to set so that all writes from earlier jobs
-		 * in the CP are seen by L2 clients.
-		 */
-		unsigned cp_to_L2;
-
-		/* Context flags to set so that all writes from earlier jobs
-		 * that end in L2 are seen by CP.
-		 */
-		unsigned L2_to_cp;
-	} barrier_flags;
-};
-
 /* This encapsulates a state or an operation which can emitted into the GPU
  * command stream. */
 struct r600_atom {
@@ -456,7 +384,7 @@ struct radeon_saved_cs {
 struct r600_common_context {
 	struct pipe_context b; /* base class */
 
-	struct r600_common_screen	*screen;
+	struct si_screen		*screen;
 	struct radeon_winsys		*ws;
 	struct radeon_winsys_ctx	*ctx;
 	enum radeon_family		family;
@@ -601,10 +529,10 @@ bool si_rings_is_buffer_referenced(struct r600_common_context *ctx,
 void *si_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 				    struct r600_resource *resource,
 				    unsigned usage);
-void si_init_resource_fields(struct r600_common_screen *rscreen,
+void si_init_resource_fields(struct si_screen *sscreen,
 			     struct r600_resource *res,
 			     uint64_t size, unsigned alignment);
-bool si_alloc_resource(struct r600_common_screen *rscreen,
+bool si_alloc_resource(struct si_screen *sscreen,
 		       struct r600_resource *res);
 struct pipe_resource *si_aligned_buffer_create(struct pipe_screen *screen,
 					       unsigned flags,
@@ -623,14 +551,14 @@ void si_gfx_write_event_eop(struct r600_common_context *ctx,
 			    unsigned data_sel,
 			    struct r600_resource *buf, uint64_t va,
 			    uint32_t new_fence, unsigned query_type);
-unsigned si_gfx_write_fence_dwords(struct r600_common_screen *screen);
+unsigned si_gfx_write_fence_dwords(struct si_screen *screen);
 void si_gfx_wait_fence(struct r600_common_context *ctx,
 		       uint64_t va, uint32_t ref, uint32_t mask);
 bool si_common_context_init(struct r600_common_context *rctx,
-			    struct r600_common_screen *rscreen,
+			    struct si_screen *sscreen,
 			    unsigned context_flags);
 void si_common_context_cleanup(struct r600_common_context *rctx);
-void si_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
+void si_screen_clear_buffer(struct si_screen *sscreen, struct pipe_resource *dst,
 			    uint64_t offset, uint64_t size, unsigned value);
 void si_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 		       struct r600_resource *dst, struct r600_resource *src);
@@ -640,16 +568,16 @@ void si_clear_saved_cs(struct radeon_saved_cs *saved);
 bool si_check_device_reset(struct r600_common_context *rctx);
 
 /* r600_gpu_load.c */
-void si_gpu_load_kill_thread(struct r600_common_screen *rscreen);
-uint64_t si_begin_counter(struct r600_common_screen *rscreen, unsigned type);
-unsigned si_end_counter(struct r600_common_screen *rscreen, unsigned type,
+void si_gpu_load_kill_thread(struct si_screen *sscreen);
+uint64_t si_begin_counter(struct si_screen *sscreen, unsigned type);
+unsigned si_end_counter(struct si_screen *sscreen, unsigned type,
 			uint64_t begin);
 
 /* r600_perfcounters.c */
-void si_perfcounters_destroy(struct r600_common_screen *rscreen);
+void si_perfcounters_destroy(struct si_screen *sscreen);
 
 /* r600_query.c */
-void si_init_screen_query_functions(struct r600_common_screen *rscreen);
+void si_init_screen_query_functions(struct si_screen *sscreen);
 void si_init_query_functions(struct r600_common_context *rctx);
 void si_suspend_queries(struct r600_common_context *ctx);
 void si_resume_queries(struct r600_common_context *ctx);
@@ -662,17 +590,17 @@ bool si_prepare_for_dma_blit(struct r600_common_context *rctx,
 			     struct r600_texture *rsrc,
 			     unsigned src_level,
 			     const struct pipe_box *src_box);
-void si_texture_get_fmask_info(struct r600_common_screen *rscreen,
+void si_texture_get_fmask_info(struct si_screen *sscreen,
 			       struct r600_texture *rtex,
 			       unsigned nr_samples,
 			       struct r600_fmask_info *out);
-void si_texture_get_cmask_info(struct r600_common_screen *rscreen,
+void si_texture_get_cmask_info(struct si_screen *sscreen,
 			       struct r600_texture *rtex,
 			       struct r600_cmask_info *out);
 bool si_init_flushed_depth_texture(struct pipe_context *ctx,
 				   struct pipe_resource *texture,
 				   struct r600_texture **staging);
-void si_print_texture_info(struct r600_common_screen *rscreen,
+void si_print_texture_info(struct si_screen *sscreen,
 			   struct r600_texture *rtex, struct u_log_context *log);
 struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 					const struct pipe_resource *templ);
@@ -701,7 +629,7 @@ void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 					     struct r600_texture *tex);
 bool si_texture_disable_dcc(struct r600_common_context *rctx,
 			    struct r600_texture *rtex);
-void si_init_screen_texture_functions(struct r600_common_screen *rscreen);
+void si_init_screen_texture_functions(struct si_screen *sscreen);
 void si_init_context_texture_functions(struct r600_common_context *rctx);
 
 

@@ -82,7 +82,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	if (si_check_device_reset(&ctx->b))
 		return;
 
-	if (ctx->screen->b.debug_flags & DBG(CHECK_VM))
+	if (ctx->screen->debug_flags & DBG(CHECK_VM))
 		flags &= ~RADEON_FLUSH_ASYNC;
 
 	/* If the state tracker is flushing the GFX IB, r600_flush_from_st is
@@ -136,7 +136,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	ctx->b.num_gfx_cs_flushes++;
 
 	/* Check VM faults if needed. */
-	if (ctx->screen->b.debug_flags & DBG(CHECK_VM)) {
+	if (ctx->screen->debug_flags & DBG(CHECK_VM)) {
 		/* Use conservative timeout 800ms, after which we won't wait any
 		 * longer and assume the GPU is hung.
 		 */

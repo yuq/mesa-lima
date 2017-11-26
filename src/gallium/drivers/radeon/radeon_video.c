@@ -33,7 +33,7 @@
 #include "vl/vl_defines.h"
 #include "vl/vl_video_buffer.h"
 
-#include "r600_pipe_common.h"
+#include "radeonsi/si_pipe.h"
 #include "radeon_video.h"
 #include "radeon_vce.h"
 
@@ -80,8 +80,8 @@ void si_vid_destroy_buffer(struct rvid_buffer *buffer)
 bool si_vid_resize_buffer(struct pipe_screen *screen, struct radeon_winsys_cs *cs,
 			  struct rvid_buffer *new_buf, unsigned new_size)
 {
-	struct r600_common_screen *rscreen = (struct r600_common_screen *)screen;
-	struct radeon_winsys* ws = rscreen->ws;
+	struct si_screen *sscreen = (struct si_screen *)screen;
+	struct radeon_winsys* ws = sscreen->ws;
 	unsigned bytes = MIN2(new_buf->res->buf->size, new_size);
 	struct rvid_buffer old_buf = *new_buf;
 	void *src = NULL, *dst = NULL;

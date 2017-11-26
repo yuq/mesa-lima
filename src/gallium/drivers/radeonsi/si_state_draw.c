@@ -341,24 +341,24 @@ si_get_init_multi_vgt_param(struct si_screen *sscreen,
 			ia_switch_on_eoi = true;
 
 		/* Bug with tessellation and GS on Bonaire and older 2 SE chips. */
-		if ((sscreen->b.family == CHIP_TAHITI ||
-		     sscreen->b.family == CHIP_PITCAIRN ||
-		     sscreen->b.family == CHIP_BONAIRE) &&
+		if ((sscreen->info.family == CHIP_TAHITI ||
+		     sscreen->info.family == CHIP_PITCAIRN ||
+		     sscreen->info.family == CHIP_BONAIRE) &&
 		    key->u.uses_gs)
 			partial_vs_wave = true;
 
 		/* Needed for 028B6C_DISTRIBUTION_MODE != 0 */
 		if (sscreen->has_distributed_tess) {
 			if (key->u.uses_gs) {
-				if (sscreen->b.chip_class <= VI)
+				if (sscreen->info.chip_class <= VI)
 					partial_es_wave = true;
 
 				/* GPU hang workaround. */
-				if (sscreen->b.family == CHIP_TONGA ||
-				    sscreen->b.family == CHIP_FIJI ||
-				    sscreen->b.family == CHIP_POLARIS10 ||
-				    sscreen->b.family == CHIP_POLARIS11 ||
-				    sscreen->b.family == CHIP_POLARIS12)
+				if (sscreen->info.family == CHIP_TONGA ||
+				    sscreen->info.family == CHIP_FIJI ||
+				    sscreen->info.family == CHIP_POLARIS10 ||
+				    sscreen->info.family == CHIP_POLARIS11 ||
+				    sscreen->info.family == CHIP_POLARIS12)
 					partial_vs_wave = true;
 			} else {
 				partial_vs_wave = true;
@@ -368,12 +368,12 @@ si_get_init_multi_vgt_param(struct si_screen *sscreen,
 
 	/* This is a hardware requirement. */
 	if (key->u.line_stipple_enabled ||
-	    (sscreen->b.debug_flags & DBG(SWITCH_ON_EOP))) {
+	    (sscreen->debug_flags & DBG(SWITCH_ON_EOP))) {
 		ia_switch_on_eop = true;
 		wd_switch_on_eop = true;
 	}
 
-	if (sscreen->b.chip_class >= CIK) {
+	if (sscreen->info.chip_class >= CIK) {
 		/* WD_SWITCH_ON_EOP has no effect on GPUs with less than
 		 * 4 shader engines. Set 1 to pass the assertion below.
 		 * The other cases are hardware requirements.
@@ -381,13 +381,13 @@ si_get_init_multi_vgt_param(struct si_screen *sscreen,
 		 * Polaris supports primitive restart with WD_SWITCH_ON_EOP=0
 		 * for points, line strips, and tri strips.
 		 */
-		if (sscreen->b.info.max_se < 4 ||
+		if (sscreen->info.max_se < 4 ||
 		    key->u.prim == PIPE_PRIM_POLYGON ||
 		    key->u.prim == PIPE_PRIM_LINE_LOOP ||
 		    key->u.prim == PIPE_PRIM_TRIANGLE_FAN ||
 		    key->u.prim == PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY ||
 		    (key->u.primitive_restart &&
-		     (sscreen->b.family < CHIP_POLARIS10 ||
+		     (sscreen->info.family < CHIP_POLARIS10 ||
 		      (key->u.prim != PIPE_PRIM_POINTS &&
 		       key->u.prim != PIPE_PRIM_LINE_STRIP &&
 		       key->u.prim != PIPE_PRIM_TRIANGLE_STRIP))) ||
@@ -397,7 +397,7 @@ si_get_init_multi_vgt_param(struct si_screen *sscreen,
 		/* Hawaii hangs if instancing is enabled and WD_SWITCH_ON_EOP is 0.
 		 * We don't know that for indirect drawing, so treat it as
 		 * always problematic. */
-		if (sscreen->b.family == CHIP_HAWAII &&
+		if (sscreen->info.family == CHIP_HAWAII &&
 		    key->u.uses_instancing)
 			wd_switch_on_eop = true;
 
@@ -406,24 +406,24 @@ si_get_init_multi_vgt_param(struct si_screen *sscreen,
 		 * Assume indirect draws always use small instances.
 		 * This is needed for good VS wave utilization.
 		 */
-		if (sscreen->b.chip_class <= VI &&
-		    sscreen->b.info.max_se == 4 &&
+		if (sscreen->info.chip_class <= VI &&
+		    sscreen->info.max_se == 4 &&
 		    key->u.multi_instances_smaller_than_primgroup)
 			wd_switch_on_eop = true;
 
 		/* Required on CIK and later. */
-		if (sscreen->b.info.max_se > 2 && !wd_switch_on_eop)
+		if (sscreen->info.max_se > 2 && !wd_switch_on_eop)
 			ia_switch_on_eoi = true;
 
 		/* Required by Hawaii and, for some special cases, by VI. */
 		if (ia_switch_on_eoi &&
-		    (sscreen->b.family == CHIP_HAWAII ||
-		     (sscreen->b.chip_class == VI &&
+		    (sscreen->info.family == CHIP_HAWAII ||
+		     (sscreen->info.chip_class == VI &&
 		      (key->u.uses_gs || max_primgroup_in_wave != 2))))
 			partial_vs_wave = true;
 
 		/* Instancing bug on Bonaire. */
-		if (sscreen->b.family == CHIP_BONAIRE && ia_switch_on_eoi &&
+		if (sscreen->info.family == CHIP_BONAIRE && ia_switch_on_eoi &&
 		    key->u.uses_instancing)
 			partial_vs_wave = true;
 
@@ -432,19 +432,19 @@ si_get_init_multi_vgt_param(struct si_screen *sscreen,
 	}
 
 	/* If SWITCH_ON_EOI is set, PARTIAL_ES_WAVE must be set too. */
-	if (sscreen->b.chip_class <= VI && ia_switch_on_eoi)
+	if (sscreen->info.chip_class <= VI && ia_switch_on_eoi)
 		partial_es_wave = true;
 
 	return S_028AA8_SWITCH_ON_EOP(ia_switch_on_eop) |
 		S_028AA8_SWITCH_ON_EOI(ia_switch_on_eoi) |
 		S_028AA8_PARTIAL_VS_WAVE_ON(partial_vs_wave) |
 		S_028AA8_PARTIAL_ES_WAVE_ON(partial_es_wave) |
-		S_028AA8_WD_SWITCH_ON_EOP(sscreen->b.chip_class >= CIK ? wd_switch_on_eop : 0) |
+		S_028AA8_WD_SWITCH_ON_EOP(sscreen->info.chip_class >= CIK ? wd_switch_on_eop : 0) |
 		/* The following field was moved to VGT_SHADER_STAGES_EN in GFX9. */
-		S_028AA8_MAX_PRIMGRP_IN_WAVE(sscreen->b.chip_class == VI ?
+		S_028AA8_MAX_PRIMGRP_IN_WAVE(sscreen->info.chip_class == VI ?
 					     max_primgroup_in_wave : 0) |
-		S_030960_EN_INST_OPT_BASIC(sscreen->b.chip_class >= GFX9) |
-		S_030960_EN_INST_OPT_ADV(sscreen->b.chip_class >= GFX9);
+		S_030960_EN_INST_OPT_BASIC(sscreen->info.chip_class >= GFX9) |
+		S_030960_EN_INST_OPT_ADV(sscreen->info.chip_class >= GFX9);
 }
 
 void si_init_ia_multi_vgt_param_table(struct si_context *sctx)
@@ -1361,7 +1361,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 			indexbuf = NULL;
 			u_upload_data(ctx->stream_uploader, start_offset,
 				      info->count * index_size,
-				      sctx->screen->b.info.tcc_cache_line_size,
+				      sctx->screen->info.tcc_cache_line_size,
 				      (char*)info->index.user + start_offset,
 				      &index_offset, &indexbuf);
 			if (!indexbuf)

@@ -117,7 +117,7 @@ static unsigned encode_tile_info(struct si_context *sctx,
 				 struct r600_texture *tex, unsigned level,
 				 bool set_bpp)
 {
-	struct radeon_info *info = &sctx->screen->b.info;
+	struct radeon_info *info = &sctx->screen->info;
 	unsigned tile_index = tex->surface.u.legacy.tiling_index[level];
 	unsigned macro_tile_index = tex->surface.u.legacy.macro_tile_index;
 	unsigned tile_mode = info->si_tile_mode_array[tile_index];
@@ -143,7 +143,7 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 				  unsigned src_level,
 				  const struct pipe_box *src_box)
 {
-	struct radeon_info *info = &sctx->screen->b.info;
+	struct radeon_info *info = &sctx->screen->info;
 	struct r600_texture *rsrc = (struct r600_texture*)src;
 	struct r600_texture *rdst = (struct r600_texture*)dst;
 	unsigned bpp = rdst->surface.bpe;

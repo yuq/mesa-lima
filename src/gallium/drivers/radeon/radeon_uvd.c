@@ -39,7 +39,7 @@
 #include "vl/vl_defines.h"
 #include "vl/vl_mpeg12_decoder.h"
 
-#include "r600_pipe_common.h"
+#include "radeonsi/si_pipe.h"
 #include "radeon_video.h"
 #include "radeon_uvd.h"
 
@@ -329,7 +329,7 @@ static unsigned calc_ctx_size_h265_main10(struct ruvd_decoder *dec, struct pipe_
 
 static unsigned get_db_pitch_alignment(struct ruvd_decoder *dec)
 {
-	if (((struct r600_common_screen*)dec->screen)->family < CHIP_VEGA10)
+	if (((struct si_screen*)dec->screen)->info.family < CHIP_VEGA10)
 		return 16;
 	else
 		return 32;
@@ -394,7 +394,7 @@ static unsigned calc_dpb_size(struct ruvd_decoder *dec)
 			max_references = MAX2(MIN2(NUM_H264_REFS, num_dpb_buffer), max_references);
 			dpb_size = image_size * max_references;
 			if ((dec->stream_type != RUVD_CODEC_H264_PERF) ||
-			    (((struct r600_common_screen*)dec->screen)->family < CHIP_POLARIS10)) {
+			    (((struct si_screen*)dec->screen)->info.family < CHIP_POLARIS10)) {
 				dpb_size += max_references * align(width_in_mb * height_in_mb  * 192, alignment);
 				dpb_size += align(width_in_mb * height_in_mb * 32, alignment);
 			}
@@ -404,7 +404,7 @@ static unsigned calc_dpb_size(struct ruvd_decoder *dec)
 			// reference picture buffer
 			dpb_size = image_size * max_references;
 			if ((dec->stream_type != RUVD_CODEC_H264_PERF) ||
-			    (((struct r600_common_screen*)dec->screen)->family < CHIP_POLARIS10)) {
+			    (((struct si_screen*)dec->screen)->info.family < CHIP_POLARIS10)) {
 				// macroblock context buffer
 				dpb_size += width_in_mb * height_in_mb * max_references * 192;
 				// IT surface buffer
@@ -604,7 +604,7 @@ static struct ruvd_h265 get_h265_msg(struct ruvd_decoder *dec, struct pipe_video
 	result.sps_info_flags |= pic->pps->sps->sps_temporal_mvp_enabled_flag << 6;
 	result.sps_info_flags |= pic->pps->sps->strong_intra_smoothing_enabled_flag << 7;
 	result.sps_info_flags |= pic->pps->sps->separate_colour_plane_flag << 8;
-	if (((struct r600_common_screen*)dec->screen)->family == CHIP_CARRIZO)
+	if (((struct si_screen*)dec->screen)->info.family == CHIP_CARRIZO)
 		result.sps_info_flags |= 1 << 9;
 	if (pic->UseRefPicList == true)
 		result.sps_info_flags |= 1 << 10;
@@ -1245,11 +1245,11 @@ static void ruvd_end_frame(struct pipe_video_codec *decoder,
 	dec->msg->body.decode.db_pitch = align(dec->base.width, get_db_pitch_alignment(dec));
 
 	if (dec->stream_type == RUVD_CODEC_H264_PERF &&
-	    ((struct r600_common_screen*)dec->screen)->family >= CHIP_POLARIS10)
+	    ((struct si_screen*)dec->screen)->info.family >= CHIP_POLARIS10)
 		dec->msg->body.decode.dpb_reserved = dec->ctx.res->buf->size;
 
 	dt = dec->set_dtb(dec->msg, (struct vl_video_buffer *)target);
-	if (((struct r600_common_screen*)dec->screen)->family >= CHIP_STONEY)
+	if (((struct si_screen*)dec->screen)->info.family >= CHIP_STONEY)
 		dec->msg->body.decode.dt_wa_chroma_top_offset = dec->msg->body.decode.dt_pitch / 2;
 
 	switch (u_reduce_video_profile(picture->profile)) {

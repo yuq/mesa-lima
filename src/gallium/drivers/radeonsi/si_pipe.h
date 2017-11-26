@@ -94,7 +94,14 @@ struct hash_table;
 struct u_suballocator;
 
 struct si_screen {
-	struct r600_common_screen	b;
+	struct pipe_screen		b;
+	struct radeon_winsys		*ws;
+	struct disk_cache		*disk_shader_cache;
+
+	struct radeon_info		info;
+	uint64_t			debug_flags;
+	char				renderer_string[100];
+
 	unsigned			gs_table_depth;
 	unsigned			tess_offchip_block_dw_size;
 	bool				has_clear_state;
@@ -113,6 +120,65 @@ struct si_screen {
 	/* Whether shaders are monolithic (1-part) or separate (3-part). */
 	bool				use_monolithic_shaders;
 	bool				record_llvm_ir;
+	bool				has_rbplus;     /* if RB+ registers exist */
+	bool				rbplus_allowed; /* if RB+ is allowed */
+	bool				dcc_msaa_allowed;
+
+	struct slab_parent_pool		pool_transfers;
+
+	/* Texture filter settings. */
+	int				force_aniso; /* -1 = disabled */
+
+	/* Auxiliary context. Mainly used to initialize resources.
+	 * It must be locked prior to using and flushed before unlocking. */
+	struct pipe_context		*aux_context;
+	mtx_t				aux_context_lock;
+
+	/* This must be in the screen, because UE4 uses one context for
+	 * compilation and another one for rendering.
+	 */
+	unsigned			num_compilations;
+	/* Along with ST_DEBUG=precompile, this should show if applications
+	 * are loading shaders on demand. This is a monotonic counter.
+	 */
+	unsigned			num_shaders_created;
+	unsigned			num_shader_cache_hits;
+
+	/* GPU load thread. */
+	mtx_t				gpu_load_mutex;
+	thrd_t				gpu_load_thread;
+	union r600_mmio_counters	mmio_counters;
+	volatile unsigned		gpu_load_stop_thread; /* bool */
+
+	/* Performance counters. */
+	struct r600_perfcounters	*perfcounters;
+
+	/* If pipe_screen wants to recompute and re-emit the framebuffer,
+	 * sampler, and image states of all contexts, it should atomically
+	 * increment this.
+	 *
+	 * Each context will compare this with its own last known value of
+	 * the counter before drawing and re-emit the states accordingly.
+	 */
+	unsigned			dirty_tex_counter;
+
+	/* Atomically increment this counter when an existing texture's
+	 * metadata is enabled or disabled in a way that requires changing
+	 * contexts' compressed texture binding masks.
+	 */
+	unsigned			compressed_colortex_counter;
+
+	struct {
+		/* Context flags to set so that all writes from earlier jobs
+		 * in the CP are seen by L2 clients.
+		 */
+		unsigned cp_to_L2;
+
+		/* Context flags to set so that all writes from earlier jobs
+		 * that end in L2 are seen by CP.
+		 */
+		unsigned L2_to_cp;
+	} barrier_flags;
 
 	mtx_t			shader_parts_mutex;
 	struct si_shader_part		*vs_prologs;
@@ -753,13 +819,13 @@ static inline struct si_shader* si_get_vs_state(struct si_context *sctx)
 static inline bool si_can_dump_shader(struct si_screen *sscreen,
 				      unsigned processor)
 {
-	return sscreen->b.debug_flags & (1 << processor);
+	return sscreen->debug_flags & (1 << processor);
 }
 
 static inline bool si_extra_shader_checks(struct si_screen *sscreen,
 					  unsigned processor)
 {
-	return (sscreen->b.debug_flags & DBG(CHECK_IR)) ||
+	return (sscreen->debug_flags & DBG(CHECK_IR)) ||
 	       si_can_dump_shader(sscreen, processor);
 }
 
@@ -780,7 +846,7 @@ si_optimal_tcc_alignment(struct si_context *sctx, unsigned upload_size)
 	 * If the upload size is greater, align it to the cache line size.
 	 */
 	alignment = util_next_power_of_two(upload_size);
-	tcc_cache_line_size = sctx->screen->b.info.tcc_cache_line_size;
+	tcc_cache_line_size = sctx->screen->info.tcc_cache_line_size;
 	return MIN2(alignment, tcc_cache_line_size);
 }
 

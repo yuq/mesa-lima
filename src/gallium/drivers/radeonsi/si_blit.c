@@ -772,7 +772,7 @@ void si_decompress_textures(struct si_context *sctx, unsigned shader_mask)
 		return;
 
 	/* Update the compressed_colortex_mask if necessary. */
-	compressed_colortex_counter = p_atomic_read(&sctx->screen->b.compressed_colortex_counter);
+	compressed_colortex_counter = p_atomic_read(&sctx->screen->compressed_colortex_counter);
 	if (compressed_colortex_counter != sctx->b.last_compressed_colortex_counter) {
 		sctx->b.last_compressed_colortex_counter = compressed_colortex_counter;
 		si_update_needs_color_decompress_masks(sctx);
@@ -1240,7 +1240,7 @@ static void si_blit(struct pipe_context *ctx,
 				  info->src.box.z,
 				  info->src.box.z + info->src.box.depth - 1);
 
-	if (sctx->screen->b.debug_flags & DBG(FORCE_DMA) &&
+	if (sctx->screen->debug_flags & DBG(FORCE_DMA) &&
 	    util_try_blit_via_copy_region(ctx, info))
 		return;
 

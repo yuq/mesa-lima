@@ -51,7 +51,7 @@ static LLVMValueRef get_buffer_size(
 		LLVMBuildExtractElement(builder, descriptor,
 					LLVMConstInt(ctx->i32, 2, 0), "");
 
-	if (ctx->screen->b.chip_class == VI) {
+	if (ctx->screen->info.chip_class == VI) {
 		/* On VI, the descriptor contains the size in bytes,
 		 * but TXQ must return the size in elements.
 		 * The stride is always non-zero for resources using TXQ.
@@ -114,7 +114,7 @@ static bool tgsi_is_array_image(unsigned target)
 static LLVMValueRef force_dcc_off(struct si_shader_context *ctx,
 				  LLVMValueRef rsrc)
 {
-	if (ctx->screen->b.chip_class <= CIK) {
+	if (ctx->screen->info.chip_class <= CIK) {
 		return rsrc;
 	} else {
 		LLVMValueRef i32_6 = LLVMConstInt(ctx->i32, 6, 0);
@@ -235,7 +235,7 @@ static LLVMValueRef image_fetch_coords(
 		coords[chan] = tmp;
 	}
 
-	if (ctx->screen->b.chip_class >= GFX9) {
+	if (ctx->screen->info.chip_class >= GFX9) {
 		/* 1D textures are allocated and used as 2D on GFX9. */
 		if (target == TGSI_TEXTURE_1D) {
 			coords[1] = ctx->i32_0;
@@ -647,7 +647,7 @@ static void store_fetch_args(
 		 * The only way to get unaligned stores in radeonsi is through
 		 * shader images.
 		 */
-		bool force_glc = ctx->screen->b.chip_class == SI;
+		bool force_glc = ctx->screen->info.chip_class == SI;
 
 		image_fetch_rsrc(bld_base, &memory, true, target, &rsrc);
 		coords = image_fetch_coords(bld_base, inst, 0, rsrc);
@@ -1014,7 +1014,7 @@ static LLVMValueRef fix_resinfo(struct si_shader_context *ctx,
 	LLVMBuilderRef builder = ctx->ac.builder;
 
 	/* 1D textures are allocated and used as 2D on GFX9. */
-        if (ctx->screen->b.chip_class >= GFX9 &&
+        if (ctx->screen->info.chip_class >= GFX9 &&
 	    (target == TGSI_TEXTURE_1D_ARRAY ||
 	     target == TGSI_TEXTURE_SHADOW1D_ARRAY)) {
 		LLVMValueRef layers =
@@ -1153,7 +1153,7 @@ static LLVMValueRef sici_fix_sampler_aniso(struct si_shader_context *ctx,
 {
 	LLVMValueRef img7, samp0;
 
-	if (ctx->screen->b.chip_class >= VI)
+	if (ctx->screen->info.chip_class >= VI)
 		return samp;
 
 	img7 = LLVMBuildExtractElement(ctx->ac.builder, res,
@@ -1374,7 +1374,7 @@ static void tex_fetch_args(
 		 * so the depth comparison value isn't clamped for Z16 and
 		 * Z24 anymore. Do it manually here.
 		 */
-		if (ctx->screen->b.chip_class >= VI) {
+		if (ctx->screen->info.chip_class >= VI) {
 			LLVMValueRef upgraded;
 			LLVMValueRef clamped;
 			upgraded = LLVMBuildExtractElement(ctx->ac.builder, samp_ptr,
@@ -1425,7 +1425,7 @@ static void tex_fetch_args(
 			num_src_deriv_channels = 1;
 
 			/* 1D textures are allocated and used as 2D on GFX9. */
-			if (ctx->screen->b.chip_class >= GFX9) {
+			if (ctx->screen->info.chip_class >= GFX9) {
 				num_dst_deriv_channels = 2;
 				num_deriv_channels = 2;
 			} else {
@@ -1463,7 +1463,7 @@ static void tex_fetch_args(
 	} else if (tgsi_is_array_sampler(target) &&
 		   opcode != TGSI_OPCODE_TXF &&
 		   opcode != TGSI_OPCODE_TXF_LZ &&
-		   ctx->screen->b.chip_class <= VI) {
+		   ctx->screen->info.chip_class <= VI) {
 		unsigned array_coord = target == TGSI_TEXTURE_1D_ARRAY ? 1 : 2;
 		coords[array_coord] =
 			ac_build_intrinsic(&ctx->ac, "llvm.rint.f32", ctx->f32,
@@ -1482,7 +1482,7 @@ static void tex_fetch_args(
 		address[count++] = coords[2];
 
 	/* 1D textures are allocated and used as 2D on GFX9. */
-	if (ctx->screen->b.chip_class >= GFX9) {
+	if (ctx->screen->info.chip_class >= GFX9) {
 		LLVMValueRef filler;
 
 		/* Use 0.5, so that we don't sample the border color. */
@@ -1900,7 +1900,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 	/* The hardware needs special lowering for Gather4 with integer formats. */
 	LLVMValueRef gather4_int_result_workaround = NULL;
 
-	if (ctx->screen->b.chip_class <= VI &&
+	if (ctx->screen->info.chip_class <= VI &&
 	    opcode == TGSI_OPCODE_TG4) {
 		assert(inst->Texture.ReturnType != TGSI_RETURN_TYPE_UNKNOWN);
 

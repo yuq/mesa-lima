@@ -112,7 +112,7 @@ static struct pb_buffer* si_uvd_set_dtb(struct ruvd_msg *msg, struct vl_video_bu
 	struct si_screen *sscreen = (struct si_screen*)buf->base.context->screen;
 	struct r600_texture *luma = (struct r600_texture *)buf->resources[0];
 	struct r600_texture *chroma = (struct r600_texture *)buf->resources[1];
-	enum ruvd_surface_type type =  (sscreen->b.chip_class >= GFX9) ?
+	enum ruvd_surface_type type =  (sscreen->info.chip_class >= GFX9) ?
 					RUVD_SURFACE_TYPE_GFX9 :
 					RUVD_SURFACE_TYPE_LEGACY;
 

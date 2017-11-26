@@ -35,7 +35,7 @@
 
 #define COMPUTE_DBG(rscreen, fmt, args...) \
 	do { \
-		if ((rscreen->b.debug_flags & DBG(COMPUTE))) fprintf(stderr, fmt, ##args); \
+		if ((rscreen->debug_flags & DBG(COMPUTE))) fprintf(stderr, fmt, ##args); \
 	} while (0);
 
 struct dispatch_packet {
@@ -171,7 +171,7 @@ static void *si_create_compute_state(
 
 		program->compiler_ctx_state.debug = sctx->debug;
 		program->compiler_ctx_state.is_debug_context = sctx->is_debug;
-		p_atomic_inc(&sscreen->b.num_shaders_created);
+		p_atomic_inc(&sscreen->num_shaders_created);
 		util_queue_fence_init(&program->ready);
 
 		struct util_async_debug_callback async_debug;
@@ -315,9 +315,9 @@ static void si_initialize_compute(struct si_context *sctx)
 		radeon_emit(cs, bc_va >> 8);  /* R_030E00_TA_CS_BC_BASE_ADDR */
 		radeon_emit(cs, bc_va >> 40); /* R_030E04_TA_CS_BC_BASE_ADDR_HI */
 	} else {
-		if (sctx->screen->b.info.drm_major == 3 ||
-		    (sctx->screen->b.info.drm_major == 2 &&
-		     sctx->screen->b.info.drm_minor >= 48)) {
+		if (sctx->screen->info.drm_major == 3 ||
+		    (sctx->screen->info.drm_major == 2 &&
+		     sctx->screen->info.drm_minor >= 48)) {
 			radeon_set_config_reg(cs, R_00950C_TA_CS_BC_BASE_ADDR,
 					      bc_va >> 8);
 		}
@@ -341,7 +341,7 @@ static bool si_setup_compute_scratch_buffer(struct si_context *sctx,
 		r600_resource_reference(&sctx->compute_scratch_buffer, NULL);
 
 		sctx->compute_scratch_buffer = (struct r600_resource*)
-			si_aligned_buffer_create(&sctx->screen->b.b,
+			si_aligned_buffer_create(&sctx->screen->b,
 						   R600_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT,
 						   scratch_needed, 256);
@@ -624,7 +624,7 @@ static bool si_upload_compute_input(struct si_context *sctx,
 	kernel_args_size = program->input_size + num_work_size_bytes;
 
 	u_upload_alloc(sctx->b.b.const_uploader, 0, kernel_args_size,
-		       sctx->screen->b.info.tcc_cache_line_size,
+		       sctx->screen->info.tcc_cache_line_size,
 		       &kernel_args_offset,
 		       (struct pipe_resource**)&input_buffer, &kernel_args_ptr);
 
@@ -728,8 +728,8 @@ static void si_emit_dispatch_packets(struct si_context *sctx,
 		S_00B854_SIMD_DEST_CNTL(waves_per_threadgroup % 4 == 0);
 
 	if (sctx->b.chip_class >= CIK) {
-		unsigned num_cu_per_se = sscreen->b.info.num_good_compute_units /
-					 sscreen->b.info.max_se;
+		unsigned num_cu_per_se = sscreen->info.num_good_compute_units /
+					 sscreen->info.max_se;
 
 		/* Force even distribution on all SIMDs in CU if the workgroup
 		 * size is 64. This has shown some good improvements if # of CUs

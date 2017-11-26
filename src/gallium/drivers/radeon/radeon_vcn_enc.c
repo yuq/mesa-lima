@@ -34,7 +34,7 @@
 
 #include "vl/vl_video_buffer.h"
 
-#include "r600_pipe_common.h"
+#include "radeonsi/si_pipe.h"
 #include "radeon_video.h"
 #include "radeon_vcn_enc.h"
 
@@ -221,7 +221,7 @@ struct pipe_video_codec *radeon_create_encoder(struct pipe_context *context,
 		struct radeon_winsys* ws,
 		radeon_enc_get_buffer get_buffer)
 {
-	struct r600_common_screen *rscreen = (struct r600_common_screen *)context->screen;
+	struct si_screen *sscreen = (struct si_screen *)context->screen;
 	struct r600_common_context *rctx = (struct r600_common_context*)context;
 	struct radeon_encoder *enc;
 	struct pipe_video_buffer *tmp_buf, templat = {};
@@ -275,7 +275,7 @@ struct pipe_video_codec *radeon_create_encoder(struct pipe_context *context,
 
 	get_buffer(((struct vl_video_buffer *)tmp_buf)->resources[0], NULL, &tmp_surf);
 
-	cpb_size = (rscreen->chip_class < GFX9) ?
+	cpb_size = (sscreen->info.chip_class < GFX9) ?
 			   align(tmp_surf->u.legacy.level[0].nblk_x * tmp_surf->bpe, 128) *
 			   align(tmp_surf->u.legacy.level[0].nblk_y, 32) :
 			   align(tmp_surf->u.gfx9.surf_pitch * tmp_surf->bpe, 256) *

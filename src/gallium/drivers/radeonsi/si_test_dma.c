@@ -138,7 +138,7 @@ static enum pipe_format get_format_from_bpp(int bpp)
 static const char *array_mode_to_string(struct si_screen *sscreen,
 					struct radeon_surf *surf)
 {
-	if (sscreen->b.chip_class >= GFX9) {
+	if (sscreen->info.chip_class >= GFX9) {
 		/* TODO */
 		return "       UNKNOWN";
 	} else {
@@ -173,7 +173,7 @@ static unsigned generate_max_tex_side(unsigned max_tex_side)
 
 void si_test_dma(struct si_screen *sscreen)
 {
-	struct pipe_screen *screen = &sscreen->b.b;
+	struct pipe_screen *screen = &sscreen->b;
 	struct pipe_context *ctx = screen->context_create(screen, NULL, 0);
 	struct si_context *sctx = (struct si_context*)ctx;
 	uint64_t max_alloc_size;

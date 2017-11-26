@@ -139,7 +139,7 @@ static void si_dma_copy_tile(struct si_context *ctx,
 	struct r600_texture *rtiled = detile ? rsrc : rdst;
 	unsigned linear_lvl = detile ? dst_level : src_level;
 	unsigned tiled_lvl = detile ? src_level : dst_level;
-	struct radeon_info *info = &ctx->screen->b.info;
+	struct radeon_info *info = &ctx->screen->info;
 	unsigned index = rtiled->surface.u.legacy.tiling_index[tiled_lvl];
 	unsigned tile_mode = info->si_tile_mode_array[index];
 	unsigned array_mode, lbpp, pitch_tile_max, slice_tile_max, size;

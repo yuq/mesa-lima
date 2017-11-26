@@ -325,7 +325,7 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 
 	va = tex->resource.gpu_address;
 
-	if (sscreen->b.chip_class >= GFX9) {
+	if (sscreen->info.chip_class >= GFX9) {
 		/* Only stencil_offset needs to be added here. */
 		if (is_stencil)
 			va += tex->surface.u.gfx9.stencil_offset;
@@ -342,11 +342,11 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 	/* Only macrotiled modes can set tile swizzle.
 	 * GFX9 doesn't use (legacy) base_level_info.
 	 */
-	if (sscreen->b.chip_class >= GFX9 ||
+	if (sscreen->info.chip_class >= GFX9 ||
 	    base_level_info->mode == RADEON_SURF_MODE_2D)
 		state[0] |= tex->surface.tile_swizzle;
 
-	if (sscreen->b.chip_class >= VI) {
+	if (sscreen->info.chip_class >= VI) {
 		state[6] &= C_008F28_COMPRESSION_EN;
 		state[7] = 0;
 
@@ -354,7 +354,7 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 			meta_va = (!tex->dcc_separate_buffer ? tex->resource.gpu_address : 0) +
 				  tex->dcc_offset;
 
-			if (sscreen->b.chip_class == VI) {
+			if (sscreen->info.chip_class == VI) {
 				meta_va += base_level_info->dcc_offset;
 				assert(base_level_info->mode == RADEON_SURF_MODE_2D);
 			}
@@ -370,7 +370,7 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 		}
 	}
 
-	if (sscreen->b.chip_class >= GFX9) {
+	if (sscreen->info.chip_class >= GFX9) {
 		state[3] &= C_008F1C_SW_MODE;
 		state[4] &= C_008F20_PITCH_GFX9;
 
@@ -1737,7 +1737,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 	uint64_t old_va = rbuffer->gpu_address;
 
 	/* Reallocate the buffer in the same pipe_resource. */
-	si_alloc_resource(&sctx->screen->b, rbuffer);
+	si_alloc_resource(sctx->screen, rbuffer);
 
 	si_rebind_buffer(ctx, buf, old_va);
 }

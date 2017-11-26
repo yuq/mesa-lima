@@ -234,16 +234,16 @@ static void si_dump_mmapped_reg(struct si_context *sctx, FILE *f,
 
 static void si_dump_debug_registers(struct si_context *sctx, FILE *f)
 {
-	if (sctx->screen->b.info.drm_major == 2 &&
-	    sctx->screen->b.info.drm_minor < 42)
+	if (sctx->screen->info.drm_major == 2 &&
+	    sctx->screen->info.drm_minor < 42)
 		return; /* no radeon support */
 
 	fprintf(f, "Memory-mapped registers:\n");
 	si_dump_mmapped_reg(sctx, f, R_008010_GRBM_STATUS);
 
 	/* No other registers can be read on DRM < 3.1.0. */
-	if (sctx->screen->b.info.drm_major < 3 ||
-	    sctx->screen->b.info.drm_minor < 1) {
+	if (sctx->screen->info.drm_major < 3 ||
+	    sctx->screen->info.drm_minor < 1) {
 		fprintf(f, "\n");
 		return;
 	}
@@ -692,7 +692,7 @@ static void si_dump_descriptor_list(struct si_screen *screen,
 	chunk->element_dw_size = element_dw_size;
 	chunk->num_elements = num_elements;
 	chunk->slot_remap = slot_remap;
-	chunk->chip_class = screen->b.chip_class;
+	chunk->chip_class = screen->info.chip_class;
 
 	r600_resource_reference(&chunk->buf, desc->buffer);
 	chunk->gpu_list = desc->gpu_list;
@@ -1103,7 +1103,7 @@ void si_init_debug_functions(struct si_context *sctx)
 	/* Set the initial dmesg timestamp for this context, so that
 	 * only new messages will be checked for VM faults.
 	 */
-	if (sctx->screen->b.debug_flags & DBG(CHECK_VM))
+	if (sctx->screen->debug_flags & DBG(CHECK_VM))
 		ac_vm_fault_occured(sctx->b.chip_class,
 				    &sctx->dmesg_timestamp, NULL);
 }

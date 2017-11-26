@@ -28,7 +28,7 @@
 #ifndef R600_CS_H
 #define R600_CS_H
 
-#include "r600_pipe_common.h"
+#include "radeonsi/si_pipe.h"
 #include "amd/common/sid.h"
 
 /**
@@ -39,7 +39,7 @@
  * \param gtt       GTT memory size not added to the buffer list yet
  */
 static inline bool
-radeon_cs_memory_below_limit(struct r600_common_screen *screen,
+radeon_cs_memory_below_limit(struct si_screen *screen,
 			     struct radeon_winsys_cs *cs,
 			     uint64_t vram, uint64_t gtt)
 {
