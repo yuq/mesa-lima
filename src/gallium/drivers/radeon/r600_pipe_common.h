@@ -639,9 +639,6 @@ void si_gfx_write_event_eop(struct r600_common_context *ctx,
 unsigned si_gfx_write_fence_dwords(struct r600_common_screen *screen);
 void si_gfx_wait_fence(struct r600_common_context *ctx,
 		       uint64_t va, uint32_t ref, uint32_t mask);
-bool si_common_screen_init(struct r600_common_screen *rscreen,
-			   struct radeon_winsys *ws);
-void si_destroy_common_screen(struct r600_common_screen *rscreen);
 bool si_common_context_init(struct r600_common_context *rctx,
 			    struct r600_common_screen *rscreen,
 			    unsigned context_flags);

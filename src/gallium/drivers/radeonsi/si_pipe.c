@@ -36,6 +36,69 @@
 #include "vl/vl_decoder.h"
 #include "../ddebug/dd_util.h"
 
+static const struct debug_named_value debug_options[] = {
+	/* Shader logging options: */
+	{ "vs", DBG(VS), "Print vertex shaders" },
+	{ "ps", DBG(PS), "Print pixel shaders" },
+	{ "gs", DBG(GS), "Print geometry shaders" },
+	{ "tcs", DBG(TCS), "Print tessellation control shaders" },
+	{ "tes", DBG(TES), "Print tessellation evaluation shaders" },
+	{ "cs", DBG(CS), "Print compute shaders" },
+	{ "noir", DBG(NO_IR), "Don't print the LLVM IR"},
+	{ "notgsi", DBG(NO_TGSI), "Don't print the TGSI"},
+	{ "noasm", DBG(NO_ASM), "Don't print disassembled shaders"},
+	{ "preoptir", DBG(PREOPT_IR), "Print the LLVM IR before initial optimizations" },
+
+	/* Shader compiler options the shader cache should be aware of: */
+	{ "unsafemath", DBG(UNSAFE_MATH), "Enable unsafe math shader optimizations" },
+	{ "sisched", DBG(SI_SCHED), "Enable LLVM SI Machine Instruction Scheduler." },
+
+	/* Shader compiler options (with no effect on the shader cache): */
+	{ "checkir", DBG(CHECK_IR), "Enable additional sanity checks on shader IR" },
+	{ "precompile", DBG(PRECOMPILE), "Compile one shader variant at shader creation." },
+	{ "nir", DBG(NIR), "Enable experimental NIR shaders" },
+	{ "mono", DBG(MONOLITHIC_SHADERS), "Use old-style monolithic shaders compiled on demand" },
+	{ "nooptvariant", DBG(NO_OPT_VARIANT), "Disable compiling optimized shader variants." },
+
+	/* Information logging options: */
+	{ "info", DBG(INFO), "Print driver information" },
+	{ "tex", DBG(TEX), "Print texture info" },
+	{ "compute", DBG(COMPUTE), "Print compute info" },
+	{ "vm", DBG(VM), "Print virtual addresses when creating resources" },
+
+	/* Driver options: */
+	{ "forcedma", DBG(FORCE_DMA), "Use asynchronous DMA for all operations when possible." },
+	{ "nodma", DBG(NO_ASYNC_DMA), "Disable asynchronous DMA" },
+	{ "nowc", DBG(NO_WC), "Disable GTT write combining" },
+	{ "check_vm", DBG(CHECK_VM), "Check VM faults and dump debug info." },
+	{ "reserve_vmid", DBG(RESERVE_VMID), "Force VMID reservation per context." },
+
+	/* 3D engine options: */
+	{ "switch_on_eop", DBG(SWITCH_ON_EOP), "Program WD/IA to switch on end-of-packet." },
+	{ "nooutoforder", DBG(NO_OUT_OF_ORDER), "Disable out-of-order rasterization" },
+	{ "nodpbb", DBG(NO_DPBB), "Disable DPBB." },
+	{ "nodfsm", DBG(NO_DFSM), "Disable DFSM." },
+	{ "dpbb", DBG(DPBB), "Enable DPBB." },
+	{ "dfsm", DBG(DFSM), "Enable DFSM." },
+	{ "nohyperz", DBG(NO_HYPERZ), "Disable Hyper-Z" },
+	{ "norbplus", DBG(NO_RB_PLUS), "Disable RB+." },
+	{ "no2d", DBG(NO_2D_TILING), "Disable 2D tiling" },
+	{ "notiling", DBG(NO_TILING), "Disable tiling" },
+	{ "nodcc", DBG(NO_DCC), "Disable DCC." },
+	{ "nodccclear", DBG(NO_DCC_CLEAR), "Disable DCC fast clear." },
+	{ "nodccfb", DBG(NO_DCC_FB), "Disable separate DCC on the main framebuffer" },
+	{ "nodccmsaa", DBG(NO_DCC_MSAA), "Disable DCC for MSAA" },
+	{ "dccmsaa", DBG(DCC_MSAA), "Enable DCC for MSAA" },
+
+	/* Tests: */
+	{ "testdma", DBG(TEST_DMA), "Invoke SDMA tests and exit." },
+	{ "testvmfaultcp", DBG(TEST_VMFAULT_CP), "Invoke a CP VM fault test and exit." },
+	{ "testvmfaultsdma", DBG(TEST_VMFAULT_SDMA), "Invoke a SDMA VM fault test and exit." },
+	{ "testvmfaultshader", DBG(TEST_VMFAULT_SHADER), "Invoke a shader VM fault test and exit." },
+
+	DEBUG_NAMED_VALUE_END /* must be last */
+};
+
 /*
  * pipe_context
  */
@@ -440,7 +503,19 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 	}
 	mtx_destroy(&sscreen->shader_parts_mutex);
 	si_destroy_shader_cache(sscreen);
-	si_destroy_common_screen(&sscreen->b);
+
+	si_perfcounters_destroy(&sscreen->b);
+	si_gpu_load_kill_thread(&sscreen->b);
+
+	mtx_destroy(&sscreen->b.gpu_load_mutex);
+	mtx_destroy(&sscreen->b.aux_context_lock);
+	sscreen->b.aux_context->destroy(sscreen->b.aux_context);
+
+	slab_destroy_parent(&sscreen->b.pool_transfers);
+
+	disk_cache_destroy(sscreen->b.disk_shader_cache);
+	sscreen->b.ws->destroy(sscreen->b.ws);
+	FREE(sscreen);
 }
 
 static bool si_init_gs_info(struct si_screen *sscreen)
@@ -595,6 +670,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 
 	sscreen->b.family = sscreen->b.info.family;
 	sscreen->b.chip_class = sscreen->b.info.chip_class;
+	sscreen->b.debug_flags = debug_get_flags_option("R600_DEBUG",
+							debug_options, 0);
 
 	/* Set functions first. */
 	sscreen->b.b.context_create = si_pipe_create_context;
@@ -604,6 +681,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	si_init_screen_buffer_functions(sscreen);
 	si_init_screen_fence_functions(sscreen);
 	si_init_screen_state_functions(sscreen);
+	si_init_screen_texture_functions(&sscreen->b);
+	si_init_screen_query_functions(&sscreen->b);
 
 	/* Set these flags in debug_flags early, so that the shader cache takes
 	 * them into account.
@@ -614,8 +693,24 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	if (driQueryOptionb(config->options, "radeonsi_enable_sisched"))
 		sscreen->b.debug_flags |= DBG(SI_SCHED);
 
-	if (!si_common_screen_init(&sscreen->b, ws) ||
-	    !si_init_gs_info(sscreen) ||
+
+	if (sscreen->b.debug_flags & DBG(INFO))
+		ac_print_gpu_info(&sscreen->b.info);
+
+	slab_create_parent(&sscreen->b.pool_transfers,
+			   sizeof(struct r600_transfer), 64);
+
+	sscreen->b.force_aniso = MIN2(16, debug_get_num_option("R600_TEX_ANISO", -1));
+	if (sscreen->b.force_aniso >= 0) {
+		printf("radeonsi: Forcing anisotropy filter to %ix\n",
+		       /* round down to a power of two */
+		       1 << util_logbase2(sscreen->b.force_aniso));
+	}
+
+	(void) mtx_init(&sscreen->b.aux_context_lock, mtx_plain);
+	(void) mtx_init(&sscreen->b.gpu_load_mutex, mtx_plain);
+
+	if (!si_init_gs_info(sscreen) ||
 	    !si_init_shader_cache(sscreen)) {
 		FREE(sscreen);
 		return NULL;
