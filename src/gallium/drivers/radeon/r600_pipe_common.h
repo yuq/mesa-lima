@@ -643,10 +643,6 @@ bool si_common_context_init(struct r600_common_context *rctx,
 			    struct r600_common_screen *rscreen,
 			    unsigned context_flags);
 void si_common_context_cleanup(struct r600_common_context *rctx);
-bool si_can_dump_shader(struct r600_common_screen *rscreen,
-			unsigned processor);
-bool si_extra_shader_checks(struct r600_common_screen *rscreen,
-			    unsigned processor);
 void si_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
 			    uint64_t offset, uint64_t size, unsigned value);
 void si_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,

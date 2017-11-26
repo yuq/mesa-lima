@@ -750,6 +750,19 @@ static inline struct si_shader* si_get_vs_state(struct si_context *sctx)
 	return vs->current ? vs->current : NULL;
 }
 
+static inline bool si_can_dump_shader(struct si_screen *sscreen,
+				      unsigned processor)
+{
+	return sscreen->b.debug_flags & (1 << processor);
+}
+
+static inline bool si_extra_shader_checks(struct si_screen *sscreen,
+					  unsigned processor)
+{
+	return (sscreen->b.debug_flags & DBG(CHECK_IR)) ||
+	       si_can_dump_shader(sscreen, processor);
+}
+
 static inline bool si_get_strmout_en(struct si_context *sctx)
 {
 	return sctx->streamout.streamout_enabled ||

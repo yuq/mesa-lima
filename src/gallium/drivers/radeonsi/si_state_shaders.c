@@ -2272,7 +2272,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	bool wait =
 		(sctx->debug.debug_message && !sctx->debug.async) ||
 		sctx->is_debug ||
-		si_can_dump_shader(&sscreen->b, sel->info.processor);
+		si_can_dump_shader(sscreen, sel->info.processor);
 
 	if (wait) {
 		u_async_debug_init(&async_debug);

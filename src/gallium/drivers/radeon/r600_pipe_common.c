@@ -510,17 +510,6 @@ void si_common_context_cleanup(struct r600_common_context *rctx)
 	r600_resource_reference(&rctx->eop_bug_scratch, NULL);
 }
 
-bool si_can_dump_shader(struct r600_common_screen *rscreen,
-			unsigned processor)
-{
-	return rscreen->debug_flags & (1 << processor);
-}
-
-bool si_extra_shader_checks(struct r600_common_screen *rscreen, unsigned processor)
-{
-	return (rscreen->debug_flags & DBG(CHECK_IR)) ||
-	       si_can_dump_shader(rscreen, processor);
-}
 
 void si_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
 			    uint64_t offset, uint64_t size, unsigned value)

@@ -1359,7 +1359,7 @@ void si_llvm_optimize_module(struct si_shader_context *ctx)
 
 	/* Dump LLVM IR before any optimization passes */
 	if (ctx->screen->b.debug_flags & DBG(PREOPT_IR) &&
-	    si_can_dump_shader(&ctx->screen->b, ctx->type))
+	    si_can_dump_shader(ctx->screen, ctx->type))
 		LLVMDumpModule(ctx->gallivm.module);
 
 	/* Create the pass manager */
@@ -1368,7 +1368,7 @@ void si_llvm_optimize_module(struct si_shader_context *ctx)
 	target_library_info = gallivm_create_target_library_info(triple);
 	LLVMAddTargetLibraryInfo(target_library_info, gallivm->passmgr);
 
-	if (si_extra_shader_checks(&ctx->screen->b, ctx->type))
+	if (si_extra_shader_checks(ctx->screen, ctx->type))
 		LLVMAddVerifierPass(gallivm->passmgr);
 
 	LLVMAddAlwaysInlinerPass(gallivm->passmgr);

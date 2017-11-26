@@ -178,7 +178,7 @@ static void *si_create_compute_state(
 		bool wait =
 			(sctx->debug.debug_message && !sctx->debug.async) ||
 			sctx->is_debug ||
-			si_can_dump_shader(&sscreen->b, PIPE_SHADER_COMPUTE);
+			si_can_dump_shader(sscreen, PIPE_SHADER_COMPUTE);
 
 		if (wait) {
 			u_async_debug_init(&async_debug);
