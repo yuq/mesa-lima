@@ -65,9 +65,10 @@
 # define PIPE_ARCH_BIG_ENDIAN
 #endif
 
-#endif
+#elif defined(_MSC_VER)
 
-#warning Unknown Endianness for this platform. Assuming little endian
 #define PIPE_ARCH_LITTLE_ENDIAN
+
+#endif
 
 #endif
