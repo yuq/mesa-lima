@@ -4322,7 +4322,7 @@ genX(upload_raster)(struct brw_context *brw)
          raster.CullMode = CULLMODE_NONE;
       }
 
-      point->SmoothFlag = raster.SmoothPointEnable;
+      raster.SmoothPointEnable = point->SmoothFlag;
 
       raster.DXMultisampleRasterizationEnable =
          _mesa_is_multisample_enabled(ctx);
