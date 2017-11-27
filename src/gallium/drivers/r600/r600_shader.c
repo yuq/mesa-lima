@@ -3927,29 +3927,48 @@ static void tgsi_dst(struct r600_shader_ctx *ctx,
 
 }
 
-static int tgsi_op2_64_params(struct r600_shader_ctx *ctx, bool singledest, bool swap)
+static int tgsi_op2_64_params(struct r600_shader_ctx *ctx, bool singledest, bool swap, int dest_temp, int op_override)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	unsigned write_mask = inst->Dst[0].Register.WriteMask;
 	struct r600_bytecode_alu alu;
 	int i, j, r, lasti = tgsi_last_instruction(write_mask);
 	int use_tmp = 0;
+	int swizzle_x = inst->Src[0].Register.SwizzleX;
 
 	if (singledest) {
 		switch (write_mask) {
 		case 0x1:
-			write_mask = 0x3;
+			if (swizzle_x == 2) {
+				write_mask = 0xc;
+				use_tmp = 3;
+			} else
+				write_mask = 0x3;
 			break;
 		case 0x2:
-			use_tmp = 1;
-			write_mask = 0x3;
+			if (swizzle_x == 2) {
+				write_mask = 0xc;
+				use_tmp = 3;
+			} else {
+				write_mask = 0x3;
+				use_tmp = 1;
+			}
 			break;
 		case 0x4:
-			write_mask = 0xc;
+			if (swizzle_x == 0) {
+				write_mask = 0x3;
+				use_tmp = 1;
+			} else
+				write_mask = 0xc;
 			break;
 		case 0x8:
-			write_mask = 0xc;
-			use_tmp = 3;
+			if (swizzle_x == 0) {
+				write_mask = 0x3;
+				use_tmp = 1;
+			} else {
+				write_mask = 0xc;
+				use_tmp = 3;
+			}
 			break;
 		}
 	}
@@ -3963,18 +3982,19 @@ static int tgsi_op2_64_params(struct r600_shader_ctx *ctx, bool singledest, bool
 		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 
 		if (singledest) {
-			tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
-			if (use_tmp) {
-				alu.dst.sel = ctx->temp_reg;
+			if (use_tmp || dest_temp) {
+				alu.dst.sel = use_tmp ? ctx->temp_reg : dest_temp;
 				alu.dst.chan = i;
 				alu.dst.write = 1;
+			} else {
+				tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
 			}
 			if (i == 1 || i == 3)
 				alu.dst.write = 0;
 		} else
 			tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
 
-		alu.op = ctx->inst_info->op;
+		alu.op = op_override ? op_override : ctx->inst_info->op;
 		if (ctx->parse.FullToken.FullInstruction.Instruction.Opcode == TGSI_OPCODE_DABS) {
 			r600_bytecode_src(&alu.src[0], &ctx->src[0], i);
 		} else if (!swap) {
@@ -4007,6 +4027,7 @@ static int tgsi_op2_64_params(struct r600_shader_ctx *ctx, bool singledest, bool
 	if (use_tmp) {
 		write_mask = inst->Dst[0].Register.WriteMask;
 
+		lasti = tgsi_last_instruction(write_mask);
 		/* move result from temp to dst */
 		for (i = 0; i <= lasti; i++) {
 			if (!(write_mask & (1 << i)))
@@ -4014,7 +4035,13 @@ static int tgsi_op2_64_params(struct r600_shader_ctx *ctx, bool singledest, bool
 
 			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 			alu.op = ALU_OP1_MOV;
-			tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
+
+			if (dest_temp) {
+				alu.dst.sel = dest_temp;
+				alu.dst.chan = i;
+				alu.dst.write = 1;
+			} else
+				tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
 			alu.src[0].sel = ctx->temp_reg;
 			alu.src[0].chan = use_tmp - 1;
 			alu.last = (i == lasti);
@@ -4037,17 +4064,17 @@ static int tgsi_op2_64(struct r600_shader_ctx *ctx)
 		fprintf(stderr, "illegal writemask for 64-bit: 0x%x\n", write_mask);
 		return -1;
 	}
-	return tgsi_op2_64_params(ctx, false, false);
+	return tgsi_op2_64_params(ctx, false, false, 0, 0);
 }
 
 static int tgsi_op2_64_single_dest(struct r600_shader_ctx *ctx)
 {
-	return tgsi_op2_64_params(ctx, true, false);
+	return tgsi_op2_64_params(ctx, true, false, 0, 0);
 }
 
 static int tgsi_op2_64_single_dest_s(struct r600_shader_ctx *ctx)
 {
-	return tgsi_op2_64_params(ctx, true, true);
+	return tgsi_op2_64_params(ctx, true, true, 0, 0);
 }
 
 static int tgsi_op3_64(struct r600_shader_ctx *ctx)
@@ -4341,33 +4368,25 @@ static int egcm_double_to_int(struct r600_shader_ctx *ctx)
 	struct r600_bytecode_alu alu;
 	int i, r;
 	int lasti = tgsi_last_instruction(inst->Dst[0].Register.WriteMask);
-
+	int treg = r600_get_temp(ctx);
 	assert(inst->Instruction.Opcode == TGSI_OPCODE_D2I ||
 		inst->Instruction.Opcode == TGSI_OPCODE_D2U);
 
+	/* do a 64->32 into a temp register */
+	r = tgsi_op2_64_params(ctx, true, false, treg, ALU_OP1_FLT64_TO_FLT32);
+	if (r)
+		return r;
+
 	for (i = 0; i <= lasti; i++) {
-		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-		alu.op = ALU_OP1_FLT64_TO_FLT32;
-
-		r600_bytecode_src(&alu.src[0], &ctx->src[0], fp64_switch(i));
-		alu.dst.chan = i;
-		alu.dst.sel = ctx->temp_reg;
-		alu.dst.write = i%2 == 0;
-		alu.last = i == lasti;
-
-		r = r600_bytecode_add_alu(ctx->bc, &alu);
-		if (r)
-			return r;
-	}
-
-	for (i = 0; i <= (lasti+1)/2; i++) {
+		if (!(inst->Dst[0].Register.WriteMask & (1 << i)))
+			continue;
 		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 		alu.op = ctx->inst_info->op;
 
-		alu.src[0].chan = i*2;
-		alu.src[0].sel = ctx->temp_reg;
-		tgsi_dst(ctx, &inst->Dst[0], 0, &alu.dst);
-		alu.last = 1;
+		alu.src[0].chan = i;
+		alu.src[0].sel = treg;
+		tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
+		alu.last = (i == lasti);
 
 		r = r600_bytecode_add_alu(ctx->bc, &alu);
 		if (r)
