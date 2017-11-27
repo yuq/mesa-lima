@@ -8083,9 +8083,12 @@ static int tgsi_atomic_op_rat(struct r600_shader_ctx *ctx)
 			return r;
 
 		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-	       alu.op = ALU_OP1_MOV;
+		alu.op = ALU_OP1_MOV;
 		alu.dst.sel = ctx->thread_id_gpr;
-		alu.dst.chan = 3;
+		if (ctx->bc->chip_class == CAYMAN)
+			alu.dst.chan = 2;
+		else
+			alu.dst.chan = 3;
 		alu.dst.write = 1;
 		r600_bytecode_src(&alu.src[0], &ctx->src[2], 0);
 		alu.last = 1;
