@@ -3793,3 +3793,23 @@ VkResult radv_GetFenceFdKHR(VkDevice _device,
 		return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
 	return VK_SUCCESS;
 }
+
+void radv_GetPhysicalDeviceExternalFencePropertiesKHR(
+	VkPhysicalDevice                            physicalDevice,
+	const VkPhysicalDeviceExternalFenceInfoKHR* pExternalFenceInfo,
+	VkExternalFencePropertiesKHR*           pExternalFenceProperties)
+{
+	RADV_FROM_HANDLE(radv_physical_device, pdevice, physicalDevice);
+
+	if (pdevice->rad_info.has_syncobj_wait &&
+	    pExternalFenceInfo->handleType == VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR) {
+		pExternalFenceProperties->exportFromImportedHandleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+		pExternalFenceProperties->compatibleHandleTypes = VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+		pExternalFenceProperties->externalFenceFeatures = VK_EXTERNAL_FENCE_FEATURE_EXPORTABLE_BIT_KHR |
+			VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT_KHR;
+	} else {
+		pExternalFenceProperties->exportFromImportedHandleTypes = 0;
+		pExternalFenceProperties->compatibleHandleTypes = 0;
+		pExternalFenceProperties->externalFenceFeatures = 0;
+	}
+}
