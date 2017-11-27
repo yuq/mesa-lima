@@ -460,6 +460,19 @@ genX(load_needs_resolve_predicate)(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
+void
+genX(cmd_buffer_mark_image_written)(struct anv_cmd_buffer *cmd_buffer,
+                                    const struct anv_image *image,
+                                    VkImageAspectFlagBits aspect,
+                                    enum isl_aux_usage aux_usage,
+                                    uint32_t level,
+                                    uint32_t base_layer,
+                                    uint32_t layer_count)
+{
+   /* The aspect must be exactly one of the image aspects. */
+   assert(_mesa_bitcount(aspect) == 1 && (aspect & image->aspects));
+}
+
 static void
 init_fast_clear_state_entry(struct anv_cmd_buffer *cmd_buffer,
                             const struct anv_image *image,
@@ -3034,6 +3047,27 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    isl_emit_depth_stencil_hiz_s(&device->isl_dev, dw, &info);
 
    cmd_buffer->state.hiz_enabled = info.hiz_usage == ISL_AUX_USAGE_HIZ;
+
+   /* We may be writing depth or stencil so we need to mark the surface.
+    * Unfortunately, there's no way to know at this point whether the depth or
+    * stencil tests used will actually write to the surface.
+    */
+   if (image && (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT)) {
+      genX(cmd_buffer_mark_image_written)(cmd_buffer, image,
+                                          VK_IMAGE_ASPECT_DEPTH_BIT,
+                                          info.hiz_usage,
+                                          info.view->base_level,
+                                          info.view->base_array_layer,
+                                          info.view->array_len);
+   }
+   if (image && (image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT)) {
+      genX(cmd_buffer_mark_image_written)(cmd_buffer, image,
+                                          VK_IMAGE_ASPECT_STENCIL_BIT,
+                                          ISL_AUX_USAGE_NONE,
+                                          info.view->base_level,
+                                          info.view->base_array_layer,
+                                          info.view->array_len);
+   }
 }
 
 
@@ -3232,6 +3266,16 @@ cmd_buffer_subpass_sync_fast_clear_values(struct anv_cmd_buffer *cmd_buffer)
                                          false /* copy to ss */);
          }
       }
+
+      /* We assume that if we're starting a subpass, we're going to do some
+       * rendering so we may end up with compressed data.
+       */
+      genX(cmd_buffer_mark_image_written)(cmd_buffer, iview->image,
+                                          VK_IMAGE_ASPECT_COLOR_BIT,
+                                          att_state->aux_usage,
+                                          iview->planes[0].isl.base_level,
+                                          iview->planes[0].isl.base_array_layer,
+                                          state->framebuffer->layers);
    }
 }
 

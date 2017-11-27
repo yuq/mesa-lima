@@ -283,6 +283,10 @@ void anv_CmdCopyImage(
             get_blorp_surf_for_anv_image(cmd_buffer->device,
                                          dst_image, 1UL << aspect_bit,
                                          ANV_AUX_USAGE_DEFAULT, &dst_surf);
+            anv_cmd_buffer_mark_image_written(cmd_buffer, dst_image,
+                                              1UL << aspect_bit,
+                                              dst_surf.aux_usage, dst_level,
+                                              dst_base_layer, layer_count);
 
             for (unsigned i = 0; i < layer_count; i++) {
                blorp_copy(&batch, &src_surf, src_level, src_base_layer + i,
@@ -298,6 +302,9 @@ void anv_CmdCopyImage(
                                       ANV_AUX_USAGE_DEFAULT, &src_surf);
          get_blorp_surf_for_anv_image(cmd_buffer->device, dst_image, dst_mask,
                                       ANV_AUX_USAGE_DEFAULT, &dst_surf);
+         anv_cmd_buffer_mark_image_written(cmd_buffer, dst_image, dst_mask,
+                                           dst_surf.aux_usage, dst_level,
+                                           dst_base_layer, layer_count);
 
          for (unsigned i = 0; i < layer_count; i++) {
             blorp_copy(&batch, &src_surf, src_level, src_base_layer + i,
@@ -385,6 +392,13 @@ copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
                                     extent.width, extent.height,
                                     buffer_row_pitch, buffer_format,
                                     &buffer.surf, &buffer_isl_surf);
+
+      if (&image == dst) {
+         anv_cmd_buffer_mark_image_written(cmd_buffer, anv_image,
+                                           aspect, dst->surf.aux_usage,
+                                           dst->level,
+                                           dst->offset.z, extent.depth);
+      }
 
       for (unsigned z = 0; z < extent.depth; z++) {
          blorp_copy(&batch, &src->surf, src->level, src->offset.z,
@@ -545,6 +559,12 @@ void anv_CmdBlitImage(
       bool flip_y = flip_coords(&src_y0, &src_y1, &dst_y0, &dst_y1);
 
       const unsigned num_layers = dst_end - dst_start;
+      anv_cmd_buffer_mark_image_written(cmd_buffer, dst_image,
+                                        dst_res->aspectMask,
+                                        dst.aux_usage,
+                                        dst_res->mipLevel,
+                                        dst_start, num_layers);
+
       for (unsigned i = 0; i < num_layers; i++) {
          unsigned dst_z = dst_start + i;
          unsigned src_z = src_start + i * src_z_step;
@@ -817,6 +837,11 @@ void anv_CmdClearColorImage(
             base_layer = 0;
             layer_count = anv_minify(image->extent.depth, level);
          }
+
+         anv_cmd_buffer_mark_image_written(cmd_buffer, image,
+                                           pRanges[r].aspectMask,
+                                           surf.aux_usage, level,
+                                           base_layer, layer_count);
 
          blorp_clear(&batch, &surf,
                      src_format.isl_format, src_format.swizzle,
@@ -1215,6 +1240,13 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
             ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
       } else {
          assert(image->n_planes == 1);
+         anv_cmd_buffer_mark_image_written(cmd_buffer, image,
+                                           VK_IMAGE_ASPECT_COLOR_BIT,
+                                           att_state->aux_usage,
+                                           iview->planes[0].isl.base_level,
+                                           iview->planes[0].isl.base_array_layer,
+                                           fb->layers);
+
          blorp_clear(&batch, &surf, iview->planes[0].isl.format,
                      anv_swizzle_for_render(iview->planes[0].isl.swizzle),
                      iview->planes[0].isl.base_level,
@@ -1355,6 +1387,8 @@ resolve_image(struct anv_device *device,
               uint32_t src_x, uint32_t src_y, uint32_t dst_x, uint32_t dst_y,
               uint32_t width, uint32_t height)
 {
+   struct anv_cmd_buffer *cmd_buffer = batch->driver_batch;
+
    assert(src_image->type == VK_IMAGE_TYPE_2D);
    assert(src_image->samples > 1);
    assert(dst_image->type == VK_IMAGE_TYPE_2D);
@@ -1369,6 +1403,10 @@ resolve_image(struct anv_device *device,
                                    ANV_AUX_USAGE_DEFAULT, &src_surf);
       get_blorp_surf_for_anv_image(device, dst_image, 1UL << aspect_bit,
                                    ANV_AUX_USAGE_DEFAULT, &dst_surf);
+      anv_cmd_buffer_mark_image_written(cmd_buffer, dst_image,
+                                        1UL << aspect_bit,
+                                        dst_surf.aux_usage,
+                                        dst_level, dst_layer, 1);
 
       assert(!src_image->format->can_ycbcr);
       assert(!dst_image->format->can_ycbcr);
@@ -1498,6 +1536,11 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
          get_blorp_surf_for_anv_image(cmd_buffer->device, dst_iview->image,
                                       VK_IMAGE_ASPECT_COLOR_BIT,
                                       dst_aux_usage, &dst_surf);
+         anv_cmd_buffer_mark_image_written(cmd_buffer, dst_iview->image,
+                                           VK_IMAGE_ASPECT_COLOR_BIT,
+                                           dst_surf.aux_usage,
+                                           dst_iview->planes[0].isl.base_level,
+                                           dst_iview->planes[0].isl.base_array_layer, 1);
 
          assert(!src_iview->image->format->can_ycbcr);
          assert(!dst_iview->image->format->can_ycbcr);

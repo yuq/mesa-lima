@@ -2592,6 +2592,15 @@ anv_can_sample_with_hiz(const struct gen_device_info * const devinfo,
 }
 
 void
+anv_cmd_buffer_mark_image_written(struct anv_cmd_buffer *cmd_buffer,
+                                  const struct anv_image *image,
+                                  VkImageAspectFlagBits aspect,
+                                  enum isl_aux_usage aux_usage,
+                                  uint32_t level,
+                                  uint32_t base_layer,
+                                  uint32_t layer_count);
+
+void
 anv_image_hiz_op(struct anv_cmd_buffer *cmd_buffer,
                  const struct anv_image *image,
                  VkImageAspectFlagBits aspect, uint32_t level,

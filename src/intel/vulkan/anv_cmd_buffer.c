@@ -344,6 +344,21 @@ anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
                  cmd_buffer);
 }
 
+void
+anv_cmd_buffer_mark_image_written(struct anv_cmd_buffer *cmd_buffer,
+                                  const struct anv_image *image,
+                                  VkImageAspectFlagBits aspect,
+                                  enum isl_aux_usage aux_usage,
+                                  uint32_t level,
+                                  uint32_t base_layer,
+                                  uint32_t layer_count)
+{
+   anv_genX_call(&cmd_buffer->device->info,
+                 cmd_buffer_mark_image_written,
+                 cmd_buffer, image, aspect, aux_usage,
+                 level, base_layer, layer_count);
+}
+
 void anv_CmdBindPipeline(
     VkCommandBuffer                             commandBuffer,
     VkPipelineBindPoint                         pipelineBindPoint,
