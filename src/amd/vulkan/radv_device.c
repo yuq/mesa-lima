@@ -3746,3 +3746,50 @@ void radv_GetPhysicalDeviceExternalSemaphorePropertiesKHR(
 		pExternalSemaphoreProperties->externalSemaphoreFeatures = 0;
 	}
 }
+
+VkResult radv_ImportFenceFdKHR(VkDevice _device,
+				   const VkImportFenceFdInfoKHR *pImportFenceFdInfo)
+{
+	RADV_FROM_HANDLE(radv_device, device, _device);
+	RADV_FROM_HANDLE(radv_fence, fence, pImportFenceFdInfo->fence);
+	uint32_t syncobj_handle = 0;
+	uint32_t *syncobj_dst = NULL;
+	assert(pImportFenceFdInfo->handleType == VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR);
+
+	int ret = device->ws->import_syncobj(device->ws, pImportFenceFdInfo->fd, &syncobj_handle);
+	if (ret != 0)
+		return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
+
+	if (pImportFenceFdInfo->flags & VK_FENCE_IMPORT_TEMPORARY_BIT_KHR) {
+		syncobj_dst = &fence->temp_syncobj;
+	} else {
+		syncobj_dst = &fence->syncobj;
+	}
+
+	if (*syncobj_dst)
+		device->ws->destroy_syncobj(device->ws, *syncobj_dst);
+
+	*syncobj_dst = syncobj_handle;
+	close(pImportFenceFdInfo->fd);
+	return VK_SUCCESS;
+}
+
+VkResult radv_GetFenceFdKHR(VkDevice _device,
+				const VkFenceGetFdInfoKHR *pGetFdInfo,
+				int *pFd)
+{
+	RADV_FROM_HANDLE(radv_device, device, _device);
+	RADV_FROM_HANDLE(radv_fence, fence, pGetFdInfo->fence);
+	int ret;
+	uint32_t syncobj_handle;
+
+	assert(pGetFdInfo->handleType == VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR);
+	if (fence->temp_syncobj)
+		syncobj_handle = fence->temp_syncobj;
+	else
+		syncobj_handle = fence->syncobj;
+	ret = device->ws->export_syncobj(device->ws, syncobj_handle, pFd);
+	if (ret)
+		return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
+	return VK_SUCCESS;
+}
