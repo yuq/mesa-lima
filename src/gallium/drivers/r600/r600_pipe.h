@@ -1044,4 +1044,6 @@ void evergreen_emit_atomic_buffer_save(struct r600_context *rctx,
 				       uint8_t *atomic_used_mask_p);
 void r600_update_compressed_resource_state(struct r600_context *rctx, bool compute_only);
 
+void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type);
+void r600_update_driver_const_buffers(struct r600_context *rctx, bool compute_only);
 #endif

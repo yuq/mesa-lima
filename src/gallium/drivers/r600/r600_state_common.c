@@ -1216,12 +1216,17 @@ static void r600_set_sample_mask(struct pipe_context *pipe, unsigned sample_mask
 	r600_mark_atom_dirty(rctx, &rctx->sample_mask.atom);
 }
 
-static void r600_update_driver_const_buffers(struct r600_context *rctx)
+void r600_update_driver_const_buffers(struct r600_context *rctx, bool compute_only)
 {
 	int sh, size;
 	void *ptr;
 	struct pipe_constant_buffer cb;
-	for (sh = 0; sh < PIPE_SHADER_TYPES; sh++) {
+	int start, end;
+
+	start = compute_only ? PIPE_SHADER_COMPUTE : 0;
+	end = compute_only ? PIPE_SHADER_TYPES : PIPE_SHADER_COMPUTE;
+
+	for (sh = start; sh < end; sh++) {
 		struct r600_shader_driver_constants_info *info = &rctx->driver_consts[sh];
 		if (!info->vs_ucp_dirty &&
 		    !info->texture_const_dirty &&
@@ -1341,7 +1346,7 @@ static void r600_setup_buffer_constants(struct r600_context *rctx, int shader_ty
  * 1. buffer size for TXQ
  * 2. number of cube layers in a cube map array.
  */
-static void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type)
+void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type)
 {
 	struct r600_textures_info *samplers = &rctx->samplers[shader_type];
 	struct r600_image_state *images = NULL;
@@ -1355,6 +1360,9 @@ static void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type
 	if (shader_type == PIPE_SHADER_FRAGMENT) {
 		images = &rctx->fragment_images;
 		buffers = &rctx->fragment_buffers;
+	} else if (shader_type == PIPE_SHADER_COMPUTE) {
+		images = &rctx->compute_images;
+		buffers = &rctx->compute_buffers;
 	}
 
 	if (!samplers->views.dirty_buffer_constants &&
@@ -1781,7 +1789,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		}
 	}
 
-	r600_update_driver_const_buffers(rctx);
+	r600_update_driver_const_buffers(rctx, false);
 
 	if (rctx->b.chip_class < EVERGREEN && rctx->ps_shader && rctx->vs_shader) {
 		if (!r600_adjust_gprs(rctx)) {
