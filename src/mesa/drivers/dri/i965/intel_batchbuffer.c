@@ -55,6 +55,28 @@
 static void
 intel_batchbuffer_reset(struct brw_context *brw);
 
+UNUSED static void
+dump_validation_list(struct intel_batchbuffer *batch)
+{
+   fprintf(stderr, "Validation list (length %d):\n", batch->exec_count);
+
+   for (int i = 0; i < batch->exec_count; i++) {
+      uint64_t flags = batch->validation_list[i].flags;
+      assert(batch->validation_list[i].handle ==
+             batch->exec_bos[i]->gem_handle);
+      fprintf(stderr, "[%2d]: %2d %-14s %p %s%-7s @ 0x%016llu%s (%"PRIu64"B)\n",
+              i,
+              batch->validation_list[i].handle,
+              batch->exec_bos[i]->name,
+              batch->exec_bos[i],
+              (flags & EXEC_OBJECT_SUPPORTS_48B_ADDRESS) ? "(48b" : "(32b",
+              (flags & EXEC_OBJECT_WRITE) ? " write)" : ")",
+              batch->validation_list[i].offset,
+              (flags & EXEC_OBJECT_PINNED) ? " (pinned)" : "",
+              batch->exec_bos[i]->size);
+   }
+}
+
 static bool
 uint_key_compare(const void *a, const void *b)
 {
