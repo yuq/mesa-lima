@@ -539,7 +539,7 @@ st_translate_vertex_program(struct st_context *st,
 
    if (stvp->glsl_to_tgsi) {
       stvp->glsl_to_tgsi = NULL;
-      st_store_tgsi_in_disk_cache(st, &stvp->Base, NULL);
+      st_store_tgsi_in_disk_cache(st, &stvp->Base);
    }
 
    return stvp->tgsi.tokens != NULL;
@@ -996,7 +996,7 @@ st_translate_fragment_program(struct st_context *st,
 
    if (stfp->glsl_to_tgsi) {
       stfp->glsl_to_tgsi = NULL;
-      st_store_tgsi_in_disk_cache(st, &stfp->Base, NULL);
+      st_store_tgsi_in_disk_cache(st, &stfp->Base);
    }
 
    return stfp->tgsi.tokens != NULL;
@@ -1401,6 +1401,7 @@ st_translate_program_common(struct st_context *st,
    if (tgsi_processor == PIPE_SHADER_COMPUTE) {
       struct st_compute_program *stcp = (struct st_compute_program *) prog;
       out_state->tokens = ureg_get_tokens(ureg, &stcp->num_tgsi_tokens);
+      stcp->tgsi.prog = out_state->tokens;
    } else {
       struct st_common_program *stcp = (struct st_common_program *) prog;
       out_state->tokens = ureg_get_tokens(ureg, &stcp->num_tgsi_tokens);
@@ -1411,7 +1412,7 @@ st_translate_program_common(struct st_context *st,
                                    outputMapping,
                                    &out_state->stream_output);
 
-   st_store_tgsi_in_disk_cache(st, prog, out_state);
+   st_store_tgsi_in_disk_cache(st, prog);
 
    if ((ST_DEBUG & DEBUG_TGSI) && (ST_DEBUG & DEBUG_MESA)) {
       _mesa_print_program(prog);
@@ -1624,7 +1625,6 @@ st_translate_compute_program(struct st_context *st,
                                PIPE_SHADER_COMPUTE, &prog);
 
    stcp->tgsi.ir_type = PIPE_SHADER_IR_TGSI;
-   stcp->tgsi.prog = prog.tokens;
    stcp->tgsi.req_local_mem = stcp->Base.info.cs.shared_size;
    stcp->tgsi.req_private_mem = 0;
    stcp->tgsi.req_input_mem = 0;

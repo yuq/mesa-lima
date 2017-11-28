@@ -39,12 +39,11 @@ write_stream_out_to_cache(struct blob *blob,
 }
 
 static void
-write_tgsi_to_cache(struct blob *blob, struct pipe_shader_state *tgsi,
+write_tgsi_to_cache(struct blob *blob, const struct tgsi_token *tokens,
                     struct gl_program *prog, unsigned num_tokens)
 {
    blob_write_uint32(blob, num_tokens);
-   blob_write_bytes(blob, tgsi->tokens,
-                    num_tokens * sizeof(struct tgsi_token));
+   blob_write_bytes(blob, tokens, num_tokens * sizeof(struct tgsi_token));
 
    prog->driver_cache_blob = ralloc_size(NULL, blob->size);
    memcpy(prog->driver_cache_blob, blob->data, blob->size);
@@ -55,8 +54,7 @@ write_tgsi_to_cache(struct blob *blob, struct pipe_shader_state *tgsi,
  * Store tgsi and any other required state in on-disk shader cache.
  */
 void
-st_store_tgsi_in_disk_cache(struct st_context *st, struct gl_program *prog,
-                            struct pipe_shader_state *out_state)
+st_store_tgsi_in_disk_cache(struct st_context *st, struct gl_program *prog)
 {
    if (!st->ctx->Cache)
       return;
@@ -82,7 +80,8 @@ st_store_tgsi_in_disk_cache(struct st_context *st, struct gl_program *prog,
                        sizeof(stvp->result_to_output));
 
       write_stream_out_to_cache(&blob, &stvp->tgsi);
-      write_tgsi_to_cache(&blob, &stvp->tgsi, prog, stvp->num_tgsi_tokens);
+      write_tgsi_to_cache(&blob, stvp->tgsi.tokens, prog,
+                          stvp->num_tgsi_tokens);
       break;
    }
    case MESA_SHADER_TESS_CTRL:
@@ -90,20 +89,23 @@ st_store_tgsi_in_disk_cache(struct st_context *st, struct gl_program *prog,
    case MESA_SHADER_GEOMETRY: {
       struct st_common_program *stcp = (struct st_common_program *) prog;
 
-      write_stream_out_to_cache(&blob, out_state);
-      write_tgsi_to_cache(&blob, out_state, prog, stcp->num_tgsi_tokens);
+      write_stream_out_to_cache(&blob, &stcp->tgsi);
+      write_tgsi_to_cache(&blob, stcp->tgsi.tokens, prog,
+                          stcp->num_tgsi_tokens);
       break;
    }
    case MESA_SHADER_FRAGMENT: {
       struct st_fragment_program *stfp = (struct st_fragment_program *) prog;
 
-      write_tgsi_to_cache(&blob, &stfp->tgsi, prog, stfp->num_tgsi_tokens);
+      write_tgsi_to_cache(&blob, stfp->tgsi.tokens, prog,
+                          stfp->num_tgsi_tokens);
       break;
    }
    case MESA_SHADER_COMPUTE: {
       struct st_compute_program *stcp = (struct st_compute_program *) prog;
 
-      write_tgsi_to_cache(&blob, out_state, prog, stcp->num_tgsi_tokens);
+      write_tgsi_to_cache(&blob, stcp->tgsi.prog, prog,
+                          stcp->num_tgsi_tokens);
       break;
    }
    default:

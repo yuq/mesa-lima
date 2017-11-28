@@ -37,8 +37,7 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
                              struct gl_shader_program *prog);
 
 void
-st_store_tgsi_in_disk_cache(struct st_context *st, struct gl_program *prog,
-                            struct pipe_shader_state *out_state);
+st_store_tgsi_in_disk_cache(struct st_context *st, struct gl_program *prog);
 
 #ifdef __cplusplus
 }
