@@ -365,17 +365,15 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
    }
 
    const unsigned batch_used = USED_BATCH(*batch) * 4;
-   if (batch_used + sz >= BATCH_SZ) {
-      if (!batch->no_wrap) {
-         intel_batchbuffer_flush(brw);
-      } else {
-         const unsigned new_size =
-            MIN2(batch->bo->size + batch->bo->size / 2, MAX_BATCH_SIZE);
-         grow_buffer(brw, &batch->bo, &batch->map, &batch->batch_cpu_map,
-                     batch_used, new_size);
-         batch->map_next = (void *) batch->map + batch_used;
-         assert(batch_used + sz < batch->bo->size);
-      }
+   if (batch_used + sz >= BATCH_SZ && !batch->no_wrap) {
+      intel_batchbuffer_flush(brw);
+   } else if (batch_used + sz >= batch->bo->size) {
+      const unsigned new_size =
+         MIN2(batch->bo->size + batch->bo->size / 2, MAX_BATCH_SIZE);
+      grow_buffer(brw, &batch->bo, &batch->map, &batch->batch_cpu_map,
+                  batch_used, new_size);
+      batch->map_next = (void *) batch->map + batch_used;
+      assert(batch_used + sz < batch->bo->size);
    }
 
    /* The intel_batchbuffer_flush() calls above might have changed
@@ -1066,18 +1064,16 @@ brw_state_batch(struct brw_context *brw,
 
    uint32_t offset = ALIGN(batch->state_used, alignment);
 
-   if (offset + size >= STATE_SZ) {
-      if (!batch->no_wrap) {
-         intel_batchbuffer_flush(brw);
-         offset = ALIGN(batch->state_used, alignment);
-      } else {
-         const unsigned new_size =
-            MIN2(batch->state_bo->size + batch->state_bo->size / 2,
-                 MAX_STATE_SIZE);
-         grow_buffer(brw, &batch->state_bo, &batch->state_map,
-                     &batch->state_cpu_map, batch->state_used, new_size);
-         assert(offset + size < batch->state_bo->size);
-      }
+   if (offset + size >= STATE_SZ && !batch->no_wrap) {
+      intel_batchbuffer_flush(brw);
+      offset = ALIGN(batch->state_used, alignment);
+   } else if (offset + size >= batch->state_bo->size) {
+      const unsigned new_size =
+         MIN2(batch->state_bo->size + batch->state_bo->size / 2,
+              MAX_STATE_SIZE);
+      grow_buffer(brw, &batch->state_bo, &batch->state_map,
+                  &batch->state_cpu_map, batch->state_used, new_size);
+      assert(offset + size < batch->state_bo->size);
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_BATCH)) {
