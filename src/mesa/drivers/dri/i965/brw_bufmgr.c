@@ -1035,7 +1035,7 @@ brw_bo_wait(struct brw_bo *bo, int64_t timeout_ns)
       .timeout_ns = timeout_ns,
    };
    int ret = drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_WAIT, &wait);
-   if (ret == -1)
+   if (ret != 0)
       return -errno;
 
    bo->idle = true;
