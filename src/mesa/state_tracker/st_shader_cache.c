@@ -30,6 +30,12 @@
 #include "program/ir_to_mesa.h"
 #include "util/u_memory.h"
 
+void
+st_get_program_binary_driver_sha1(struct gl_context *ctx, uint8_t *sha1)
+{
+   disk_cache_compute_key(ctx->Cache, NULL, 0, sha1);
+}
+
 static void
 write_stream_out_to_cache(struct blob *blob,
                           struct pipe_shader_state *tgsi)
