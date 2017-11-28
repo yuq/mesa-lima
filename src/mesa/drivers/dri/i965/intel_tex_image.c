@@ -461,26 +461,30 @@ intelSetTexBuffer2(__DRIcontext *pDRICtx, GLint target,
    if (!rb || !rb->mt)
       return;
 
+   /* Neither the EGL and GLX texture_from_pixmap specs say anything about
+    * sRGB.  They are both from a time where sRGB was considered an extra
+    * encoding step you did as part of rendering/blending and not a format.
+    * Even though we have concept of sRGB visuals, X has classically assumed
+    * that your data is just bits and sRGB rendering is entirely a client-side
+    * rendering construct.  The assumption is that the result of BindTexImage
+    * is a texture with a linear format even if it was rendered with sRGB
+    * encoding enabled.
+    */
+   texFormat = _mesa_get_srgb_format_linear(intel_rb_format(rb));
+
    if (rb->mt->cpp == 4) {
-      if (texture_format == __DRI_TEXTURE_FORMAT_RGB) {
+      /* The extra texture_format parameter indicates whether the alpha
+       * channel should be respected or ignored.  If we set internal_format to
+       * GL_RGB, the texture handling code is smart enough to swap the format
+       * or apply a swizzle if the underlying format is RGBA so we don't need
+       * to stomp it to RGBX or anything like that.
+       */
+      if (texture_format == __DRI_TEXTURE_FORMAT_RGB)
          internal_format = GL_RGB;
-         if (rb->mt->format == MESA_FORMAT_B10G10R10X2_UNORM ||
-             rb->mt->format == MESA_FORMAT_B10G10R10A2_UNORM)
-            texFormat = MESA_FORMAT_B10G10R10X2_UNORM;
-         else
-            texFormat = MESA_FORMAT_B8G8R8X8_UNORM;
-      }
-      else {
+      else
          internal_format = GL_RGBA;
-         if (rb->mt->format == MESA_FORMAT_B10G10R10X2_UNORM ||
-             rb->mt->format == MESA_FORMAT_B10G10R10A2_UNORM)
-            texFormat = MESA_FORMAT_B10G10R10A2_UNORM;
-         else
-            texFormat = MESA_FORMAT_B8G8R8A8_UNORM;
-      }
    } else if (rb->mt->cpp == 2) {
       internal_format = GL_RGB;
-      texFormat = MESA_FORMAT_B5G6R5_UNORM;
    }
 
    intel_miptree_make_shareable(brw, rb->mt);
