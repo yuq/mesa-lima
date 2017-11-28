@@ -313,9 +313,12 @@ grow_buffer(struct brw_context *brw,
     * This guarantees that our relocations continue to work: values we've
     * already written into the buffer, values we're going to write into the
     * buffer, and the validation/relocation lists all will match.
+    *
+    * Also preserve kflags for EXEC_OBJECT_CAPTURE.
     */
    new_bo->gtt_offset = old_bo->gtt_offset;
    new_bo->index = old_bo->index;
+   new_bo->kflags = old_bo->kflags;
 
    /* Batch/state buffers are per-context, and if we've run out of space,
     * we must have actually used them before, so...they will be in the list.
