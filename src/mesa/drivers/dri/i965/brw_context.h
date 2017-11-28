@@ -473,6 +473,9 @@ struct brw_reloc_list {
 struct brw_growing_bo {
    struct brw_bo *bo;
    uint32_t *map;
+   struct brw_bo *partial_bo;
+   uint32_t *partial_bo_map;
+   unsigned partial_bytes;
 };
 
 struct intel_batchbuffer {
