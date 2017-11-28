@@ -56,7 +56,7 @@ static void radeon_vcn_enc_get_param(struct radeon_encoder *enc, struct pipe_h26
 
 static void flush(struct radeon_encoder *enc)
 {
-	enc->ws->cs_flush(enc->cs, RADEON_FLUSH_ASYNC, NULL);
+	enc->ws->cs_flush(enc->cs, PIPE_FLUSH_ASYNC, NULL);
 }
 
 static void radeon_enc_flush(struct pipe_video_codec *encoder)

@@ -1493,7 +1493,7 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       /* The submission has been queued, unlock the fence now. */
       simple_mtx_unlock(&ws->bo_fence_lock);
 
-      if (!(flags & RADEON_FLUSH_ASYNC)) {
+      if (!(flags & PIPE_FLUSH_ASYNC)) {
          amdgpu_cs_sync_flush(rcs);
          error_code = cur->error_code;
       }

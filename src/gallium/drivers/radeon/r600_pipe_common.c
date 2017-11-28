@@ -189,7 +189,7 @@ void si_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 	     (src &&
 	      ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs, src->buf,
 					       RADEON_USAGE_WRITE))))
-		ctx->gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		ctx->gfx.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
 
 	/* Flush if there's not enough space, or if the memory usage per IB
 	 * is too large.
@@ -207,7 +207,7 @@ void si_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 	if (!ctx->ws->cs_check_space(ctx->dma.cs, num_dw) ||
 	    ctx->dma.cs->used_vram + ctx->dma.cs->used_gart > 64 * 1024 * 1024 ||
 	    !radeon_cs_memory_below_limit(ctx->screen, ctx->dma.cs, vram, gtt)) {
-		ctx->dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		ctx->dma.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
 		assert((num_dw + ctx->dma.cs->current.cdw) <= ctx->dma.cs->current.max_dw);
 	}
 
@@ -386,12 +386,12 @@ static bool r600_resource_commit(struct pipe_context *pctx,
 	if (radeon_emitted(ctx->gfx.cs, ctx->initial_gfx_cs_size) &&
 	    ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs,
 					     res->buf, RADEON_USAGE_READWRITE)) {
-		ctx->gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		ctx->gfx.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
 	}
 	if (radeon_emitted(ctx->dma.cs, 0) &&
 	    ctx->ws->cs_is_buffer_referenced(ctx->dma.cs,
 					     res->buf, RADEON_USAGE_READWRITE)) {
-		ctx->dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		ctx->dma.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
 	}
 
 	ctx->ws->cs_sync_flush(ctx->dma.cs);

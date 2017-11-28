@@ -1835,7 +1835,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 
 	/* make sure that the gfx ring is only one active */
 	if (radeon_emitted(rctx->b.dma.cs, 0)) {
-		rctx->b.dma.flush(rctx, RADEON_FLUSH_ASYNC, NULL);
+		rctx->b.dma.flush(rctx, PIPE_FLUSH_ASYNC, NULL);
 	}
 
 	/* Re-emit the framebuffer state if needed. */

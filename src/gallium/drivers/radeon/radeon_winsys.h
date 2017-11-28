@@ -31,9 +31,6 @@
 #include "amd/common/ac_gpu_info.h"
 #include "amd/common/ac_surface.h"
 
-#define RADEON_FLUSH_ASYNC		(1 << 0)
-#define RADEON_FLUSH_END_OF_FRAME       (1 << 1)
-
 /* Tiling flags. */
 enum radeon_bo_layout {
     RADEON_LAYOUT_LINEAR = 0,
@@ -531,7 +528,7 @@ struct radeon_winsys {
      * Flush a command stream.
      *
      * \param cs          A command stream to flush.
-     * \param flags,      RADEON_FLUSH_ASYNC or 0.
+     * \param flags,      PIPE_FLUSH_* flags.
      * \param fence       Pointer to a fence. If non-NULL, a fence is inserted
      *                    after the CS and is returned through this parameter.
      * \return Negative POSIX error code or 0 for success.

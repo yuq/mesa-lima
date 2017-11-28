@@ -1158,7 +1158,7 @@ static void radeon_dec_end_frame(struct pipe_video_codec *decoder,
 			 FB_BUFFER_OFFSET + FB_BUFFER_SIZE, RADEON_USAGE_READ, RADEON_DOMAIN_GTT);
 	set_reg(dec, RDECODE_ENGINE_CNTL, 1);
 
-	flush(dec, RADEON_FLUSH_ASYNC);
+	flush(dec, PIPE_FLUSH_ASYNC);
 	next_buffer(dec);
 }
 

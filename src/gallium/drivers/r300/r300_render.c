@@ -216,7 +216,7 @@ static boolean r300_reserve_cs_dwords(struct r300_context *r300,
 
     /* Reserve requested CS space. */
     if (!r300->rws->cs_check_space(r300->cs, cs_dwords)) {
-        r300_flush(&r300->context, RADEON_FLUSH_ASYNC, NULL);
+        r300_flush(&r300->context, PIPE_FLUSH_ASYNC, NULL);
         flushed = TRUE;
     }
 

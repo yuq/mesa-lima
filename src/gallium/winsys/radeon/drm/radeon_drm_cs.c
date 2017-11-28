@@ -399,7 +399,7 @@ static bool radeon_drm_cs_validate(struct radeon_winsys_cs *rcs)
 
         /* Flush if there are any relocs. Clean up otherwise. */
         if (cs->csc->num_relocs) {
-            cs->flush_cs(cs->flush_data, RADEON_FLUSH_ASYNC, NULL);
+            cs->flush_cs(cs->flush_data, PIPE_FLUSH_ASYNC, NULL);
         } else {
             radeon_cs_context_cleanup(cs->csc);
             cs->base.used_vram = 0;
@@ -655,7 +655,7 @@ static int radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
                 cs->cst->flags[0] |= RADEON_CS_USE_VM;
                 cs->cst->cs.num_chunks = 3;
             }
-            if (flags & RADEON_FLUSH_END_OF_FRAME) {
+            if (flags & PIPE_FLUSH_END_OF_FRAME) {
                 cs->cst->flags[0] |= RADEON_CS_END_OF_FRAME;
                 cs->cst->cs.num_chunks = 3;
             }
@@ -669,7 +669,7 @@ static int radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
         if (util_queue_is_initialized(&cs->ws->cs_queue)) {
             util_queue_add_job(&cs->ws->cs_queue, cs, &cs->flush_completed,
                                radeon_drm_cs_emit_ioctl_oneshot, NULL);
-            if (!(flags & RADEON_FLUSH_ASYNC))
+            if (!(flags & PIPE_FLUSH_ASYNC))
                 radeon_drm_cs_sync_flush(rcs);
         } else {
             radeon_drm_cs_emit_ioctl_oneshot(cs, 0);

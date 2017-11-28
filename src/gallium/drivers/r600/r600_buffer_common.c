@@ -66,7 +66,7 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 	    ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs,
 					     resource->buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
-			ctx->gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+			ctx->gfx.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
 			return NULL;
 		} else {
 			ctx->gfx.flush(ctx, 0, NULL);
@@ -77,7 +77,7 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 	    ctx->ws->cs_is_buffer_referenced(ctx->dma.cs,
 					     resource->buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
-			ctx->dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+			ctx->dma.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
 			return NULL;
 		} else {
 			ctx->dma.flush(ctx, 0, NULL);

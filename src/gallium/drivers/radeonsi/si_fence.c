@@ -271,7 +271,7 @@ static boolean si_fence_finish(struct pipe_screen *screen,
 			 * not going to wait.
 			 */
 			threaded_context_unwrap_sync(ctx);
-			sctx->b.gfx.flush(&sctx->b, timeout ? 0 : RADEON_FLUSH_ASYNC, NULL);
+			sctx->b.gfx.flush(&sctx->b, timeout ? 0 : PIPE_FLUSH_ASYNC, NULL);
 			rfence->gfx_unflushed.ctx = NULL;
 
 			if (!timeout)
@@ -378,10 +378,10 @@ static void si_flush_from_st(struct pipe_context *ctx,
 	struct pipe_fence_handle *sdma_fence = NULL;
 	bool deferred_fence = false;
 	struct si_fine_fence fine = {};
-	unsigned rflags = RADEON_FLUSH_ASYNC;
+	unsigned rflags = PIPE_FLUSH_ASYNC;
 
 	if (flags & PIPE_FLUSH_END_OF_FRAME)
-		rflags |= RADEON_FLUSH_END_OF_FRAME;
+		rflags |= PIPE_FLUSH_END_OF_FRAME;
 
 	if (flags & (PIPE_FLUSH_TOP_OF_PIPE | PIPE_FLUSH_BOTTOM_OF_PIPE)) {
 		assert(flags & PIPE_FLUSH_DEFERRED);

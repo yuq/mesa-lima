@@ -623,7 +623,7 @@ static void compute_emit_cs(struct r600_context *rctx,
 
 	/* make sure that the gfx ring is only one active */
 	if (radeon_emitted(rctx->b.dma.cs, 0)) {
-		rctx->b.dma.flush(rctx, RADEON_FLUSH_ASYNC, NULL);
+		rctx->b.dma.flush(rctx, PIPE_FLUSH_ASYNC, NULL);
 	}
 
 	/* Initialize all the compute-related registers.

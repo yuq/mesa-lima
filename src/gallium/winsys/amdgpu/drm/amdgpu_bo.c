@@ -235,7 +235,7 @@ static void *amdgpu_bo_map(struct pb_buffer *buf,
              * Only check whether the buffer is being used for write. */
             if (cs && amdgpu_bo_is_referenced_by_cs_with_usage(cs, bo,
                                                                RADEON_USAGE_WRITE)) {
-               cs->flush_cs(cs->flush_data, RADEON_FLUSH_ASYNC, NULL);
+               cs->flush_cs(cs->flush_data, PIPE_FLUSH_ASYNC, NULL);
                return NULL;
             }
 
@@ -245,7 +245,7 @@ static void *amdgpu_bo_map(struct pb_buffer *buf,
             }
          } else {
             if (cs && amdgpu_bo_is_referenced_by_cs(cs, bo)) {
-               cs->flush_cs(cs->flush_data, RADEON_FLUSH_ASYNC, NULL);
+               cs->flush_cs(cs->flush_data, PIPE_FLUSH_ASYNC, NULL);
                return NULL;
             }
 

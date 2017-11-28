@@ -35,13 +35,13 @@ void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
 {
 	/* Flush the DMA IB if it's not empty. */
 	if (radeon_emitted(ctx->b.dma.cs, 0))
-		ctx->b.dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		ctx->b.dma.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
 
 	if (!radeon_cs_memory_below_limit(ctx->b.screen, ctx->b.gfx.cs,
 					  ctx->b.vram, ctx->b.gtt)) {
 		ctx->b.gtt = 0;
 		ctx->b.vram = 0;
-		ctx->b.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		ctx->b.gfx.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
 		return;
 	}
 	/* all will be accounted once relocation are emited */
@@ -82,7 +82,7 @@ void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
 
 	/* Flush if there's not enough space. */
 	if (!ctx->b.ws->cs_check_space(ctx->b.gfx.cs, num_dw)) {
-		ctx->b.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		ctx->b.gfx.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
 	}
 }
 
@@ -439,7 +439,7 @@ void r600_emit_pfp_sync_me(struct r600_context *rctx)
 				     &offset, (struct pipe_resource**)&buf);
 		if (!buf) {
 			/* This is too heavyweight, but will work. */
-			rctx->b.gfx.flush(rctx, RADEON_FLUSH_ASYNC, NULL);
+			rctx->b.gfx.flush(rctx, PIPE_FLUSH_ASYNC, NULL);
 			return;
 		}
 
