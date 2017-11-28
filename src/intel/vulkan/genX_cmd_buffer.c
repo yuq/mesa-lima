@@ -692,29 +692,26 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
        * We don't have any data to show that this is a problem, but we want to
        * avoid causing difficult-to-debug problems.
        */
-      if ((GEN_GEN >= 9 && image->samples == 1) || image->samples > 1) {
+      if (GEN_GEN >= 9 && image->samples == 1) {
+         for (uint32_t l = 0; l < level_count; l++) {
+            const uint32_t level = base_level + l;
+            const uint32_t level_layer_count =
+               MIN2(layer_count, anv_image_aux_layers(image, aspect, level));
+            anv_image_ccs_op(cmd_buffer, image, aspect, level,
+                             base_layer, level_layer_count,
+                             ISL_AUX_OP_FAST_CLEAR, false);
+         }
+      } else if (image->samples > 1) {
          if (image->samples == 4 || image->samples == 16) {
             anv_perf_warn(cmd_buffer->device->instance, image,
                           "Doing a potentially unnecessary fast-clear to "
                           "define an MCS buffer.");
          }
 
-         if (image->samples == 1) {
-            for (uint32_t l = 0; l < level_count; l++) {
-               const uint32_t level = base_level + l;
-               const uint32_t level_layer_count =
-                  MIN2(layer_count, anv_image_aux_layers(image, aspect, level));
-               anv_image_ccs_op(cmd_buffer, image, aspect, level,
-                                base_layer, level_layer_count,
-                                ISL_AUX_OP_FAST_CLEAR, false);
-            }
-         } else {
-            assert(image->samples > 1);
-            assert(base_level == 0 && level_count == 1);
-            anv_image_mcs_op(cmd_buffer, image, aspect,
-                             base_layer, layer_count,
-                             ISL_AUX_OP_FAST_CLEAR, false);
-         }
+         assert(base_level == 0 && level_count == 1);
+         anv_image_mcs_op(cmd_buffer, image, aspect,
+                          base_layer, layer_count,
+                          ISL_AUX_OP_FAST_CLEAR, false);
       }
       /* At this point, some elements of the CCS buffer may have the fast-clear
        * bit-arrangement. As the user writes to a subresource, we need to have
