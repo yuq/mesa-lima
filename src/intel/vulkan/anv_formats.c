@@ -866,9 +866,11 @@ static const VkExternalMemoryPropertiesKHR prime_fd_props = {
                              VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT_KHR,
    /* For the moment, let's not support mixing and matching */
    .exportFromImportedHandleTypes =
-      VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR,
+      VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR |
+      VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
    .compatibleHandleTypes =
-      VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR,
+      VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR |
+      VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT,
 };
 
 VkResult anv_GetPhysicalDeviceImageFormatProperties2KHR(
@@ -923,6 +925,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties2KHR(
    if (external_info && external_info->handleType != 0) {
       switch (external_info->handleType) {
       case VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR:
+      case VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT:
          if (external_props)
             external_props->externalMemoryProperties = prime_fd_props;
          break;
@@ -1005,6 +1008,7 @@ void anv_GetPhysicalDeviceExternalBufferPropertiesKHR(
 
    switch (pExternalBufferInfo->handleType) {
    case VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR:
+   case VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT:
       pExternalBufferProperties->externalMemoryProperties = prime_fd_props;
       return;
    default:

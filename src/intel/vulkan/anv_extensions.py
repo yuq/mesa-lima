@@ -86,6 +86,7 @@ EXTENSIONS = [
     Extension('VK_KHR_xlib_surface',                      6, 'VK_USE_PLATFORM_XLIB_KHR'),
     Extension('VK_KHX_multiview',                         1, True),
     Extension('VK_EXT_debug_report',                      8, True),
+    Extension('VK_EXT_external_memory_dma_buf',           1, True),
 ]
 
 class VkVersion:
