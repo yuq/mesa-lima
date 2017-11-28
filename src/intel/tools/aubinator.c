@@ -223,6 +223,81 @@ handle_trace_header(uint32_t *p)
    aubinator_init(aub_pci_id, app_name);
 }
 
+static void
+handle_memtrace_version(uint32_t *p)
+{
+   int header_length = p[0] & 0xffff;
+   char app_name[64];
+   int app_name_len = MIN2(4 * (header_length + 1 - 5), ARRAY_SIZE(app_name) - 1);
+   int pci_id_len = 0;
+   int aub_pci_id = 0;
+
+   strncpy(app_name, (char *)&p[5], app_name_len);
+   app_name[app_name_len] = 0;
+   sscanf(app_name, "PCI-ID=%i %n", &aub_pci_id, &pci_id_len);
+   if (pci_id == 0)
+      pci_id = aub_pci_id;
+   aubinator_init(aub_pci_id, app_name + pci_id_len);
+}
+
+static void
+handle_memtrace_reg_write(uint32_t *p)
+{
+   uint32_t offset = p[1];
+   uint32_t value = p[5];
+   int engine;
+   static int render_elsp_writes = 0;
+   static int blitter_elsp_writes = 0;
+
+   if (offset == 0x2230) {
+      render_elsp_writes++;
+      engine = GEN_ENGINE_RENDER;
+   } else if (offset == 0x22230) {
+      blitter_elsp_writes++;
+      engine = GEN_ENGINE_BLITTER;
+   } else {
+      return;
+   }
+
+   if (render_elsp_writes > 3)
+      render_elsp_writes = 0;
+   else if (blitter_elsp_writes > 3)
+      blitter_elsp_writes = 0;
+   else
+      return;
+
+   uint8_t *pphwsp = (uint8_t*)gtt + (value & 0xfffff000);
+   const uint32_t pphwsp_size = 4096;
+   uint32_t *context = (uint32_t*)(pphwsp + pphwsp_size);
+   uint32_t ring_buffer_head = context[5];
+   uint32_t ring_buffer_tail = context[7];
+   uint32_t ring_buffer_start = context[9];
+   uint32_t *commands = (uint32_t*)((uint8_t*)gtt + ring_buffer_start + ring_buffer_head);
+   (void)engine; /* TODO */
+   gen_print_batch(&batch_ctx, commands, ring_buffer_tail - ring_buffer_head, 0);
+}
+
+static void
+handle_memtrace_mem_write(uint32_t *p)
+{
+   uint64_t address = *(uint64_t*)&p[1];
+   uint32_t address_space = p[3] >> 28;
+   uint32_t size = p[4];
+   uint32_t *data = p + 5;
+
+   if (address_space != 1)
+      return;
+
+   if (gtt_size < address + size) {
+      fprintf(stderr, "overflow gtt space: %s\n", strerror(errno));
+      exit(EXIT_FAILURE);
+   }
+
+   memcpy((char *) gtt + address, data, size);
+   if (gtt_end < address + size)
+      gtt_end = address + size;
+}
+
 struct aub_file {
    FILE *stream;
 
@@ -292,34 +367,13 @@ aub_file_stdin(void)
 
 /* Newer version AUB opcode */
 #define OPCODE_NEW_AUB      0x2e
-#define SUBOPCODE_VERSION   0x00
+#define SUBOPCODE_REG_POLL  0x02
 #define SUBOPCODE_REG_WRITE 0x03
 #define SUBOPCODE_MEM_POLL  0x05
 #define SUBOPCODE_MEM_WRITE 0x06
+#define SUBOPCODE_VERSION   0x0e
 
 #define MAKE_GEN(major, minor) ( ((major) << 8) | (minor) )
-
-struct {
-   const char *name;
-   uint32_t gen;
-} device_map[] = {
-   { "bwr", MAKE_GEN(4, 0) },
-   { "cln", MAKE_GEN(4, 0) },
-   { "blc", MAKE_GEN(4, 0) },
-   { "ctg", MAKE_GEN(4, 0) },
-   { "el", MAKE_GEN(4, 0) },
-   { "il", MAKE_GEN(4, 0) },
-   { "sbr", MAKE_GEN(6, 0) },
-   { "ivb", MAKE_GEN(7, 0) },
-   { "lrb2", MAKE_GEN(0, 0) },
-   { "hsw", MAKE_GEN(7, 5) },
-   { "vlv", MAKE_GEN(7, 0) },
-   { "bdw", MAKE_GEN(8, 0) },
-   { "skl", MAKE_GEN(9, 0) },
-   { "chv", MAKE_GEN(8, 0) },
-   { "bxt", MAKE_GEN(9, 0) },
-   { "cnl", MAKE_GEN(10, 0) },
-};
 
 enum {
    AUB_ITEM_DECODE_OK,
@@ -330,7 +384,7 @@ enum {
 static int
 aub_file_decode_batch(struct aub_file *file)
 {
-   uint32_t *p, h, device, data_type, *new_cursor;
+   uint32_t *p, h, *new_cursor;
    int header_length, bias;
 
    if (file->end - file->cursor < 1)
@@ -374,24 +428,18 @@ aub_file_decode_batch(struct aub_file *file)
    case MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_BMP):
       break;
    case MAKE_HEADER(TYPE_AUB, OPCODE_NEW_AUB, SUBOPCODE_VERSION):
-      fprintf(outfile, "version block: dw1 %08x\n", p[1]);
-      device = (p[1] >> 8) & 0xff;
-      fprintf(outfile, "  device %s\n", device_map[device].name);
+      handle_memtrace_version(p);
       break;
    case MAKE_HEADER(TYPE_AUB, OPCODE_NEW_AUB, SUBOPCODE_REG_WRITE):
-      fprintf(outfile, "register write block: (dwords %d)\n", h & 0xffff);
-      fprintf(outfile, "  reg 0x%x, data 0x%x\n", p[1], p[5]);
+      handle_memtrace_reg_write(p);
       break;
    case MAKE_HEADER(TYPE_AUB, OPCODE_NEW_AUB, SUBOPCODE_MEM_WRITE):
-      fprintf(outfile, "memory write block (dwords %d):\n", h & 0xffff);
-      fprintf(outfile, "  address 0x%"PRIx64"\n", *(uint64_t *) &p[1]);
-      data_type = (p[3] >> 20) & 0xff;
-      if (data_type != 0)
-         fprintf(outfile, "  data type 0x%x\n", data_type);
-      fprintf(outfile, "  address space 0x%x\n", (p[3] >> 28) & 0xf);
+      handle_memtrace_mem_write(p);
       break;
    case MAKE_HEADER(TYPE_AUB, OPCODE_NEW_AUB, SUBOPCODE_MEM_POLL):
       fprintf(outfile, "memory poll block (dwords %d):\n", h & 0xffff);
+      break;
+   case MAKE_HEADER(TYPE_AUB, OPCODE_NEW_AUB, SUBOPCODE_REG_POLL):
       break;
    default:
       fprintf(outfile, "unknown block type=0x%x, opcode=0x%x, "
