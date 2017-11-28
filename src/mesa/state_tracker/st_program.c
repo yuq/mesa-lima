@@ -534,13 +534,12 @@ st_translate_vertex_program(struct st_context *st,
       return false;
    }
 
-   unsigned num_tokens;
-   stvp->tgsi.tokens = ureg_get_tokens(ureg, &num_tokens);
+   stvp->tgsi.tokens = ureg_get_tokens(ureg, &stvp->num_tgsi_tokens);
    ureg_destroy(ureg);
 
    if (stvp->glsl_to_tgsi) {
       stvp->glsl_to_tgsi = NULL;
-      st_store_tgsi_in_disk_cache(st, &stvp->Base, NULL, num_tokens);
+      st_store_tgsi_in_disk_cache(st, &stvp->Base, NULL);
    }
 
    return stvp->tgsi.tokens != NULL;
@@ -992,13 +991,12 @@ st_translate_fragment_program(struct st_context *st,
                                 fs_output_semantic_name,
                                 fs_output_semantic_index);
 
-   unsigned num_tokens;
-   stfp->tgsi.tokens = ureg_get_tokens(ureg, &num_tokens);
+   stfp->tgsi.tokens = ureg_get_tokens(ureg, &stfp->num_tgsi_tokens);
    ureg_destroy(ureg);
 
    if (stfp->glsl_to_tgsi) {
       stfp->glsl_to_tgsi = NULL;
-      st_store_tgsi_in_disk_cache(st, &stfp->Base, NULL, num_tokens);
+      st_store_tgsi_in_disk_cache(st, &stfp->Base, NULL);
    }
 
    return stfp->tgsi.tokens != NULL;
@@ -1400,15 +1398,20 @@ st_translate_program_common(struct st_context *st,
                         output_semantic_name,
                         output_semantic_index);
 
-   unsigned num_tokens;
-   out_state->tokens = ureg_get_tokens(ureg, &num_tokens);
+   if (tgsi_processor == PIPE_SHADER_COMPUTE) {
+      struct st_compute_program *stcp = (struct st_compute_program *) prog;
+      out_state->tokens = ureg_get_tokens(ureg, &stcp->num_tgsi_tokens);
+   } else {
+      struct st_common_program *stcp = (struct st_common_program *) prog;
+      out_state->tokens = ureg_get_tokens(ureg, &stcp->num_tgsi_tokens);
+   }
    ureg_destroy(ureg);
 
    st_translate_stream_output_info(glsl_to_tgsi,
                                    outputMapping,
                                    &out_state->stream_output);
 
-   st_store_tgsi_in_disk_cache(st, prog, out_state, num_tokens);
+   st_store_tgsi_in_disk_cache(st, prog, out_state);
 
    if ((ST_DEBUG & DEBUG_TGSI) && (ST_DEBUG & DEBUG_MESA)) {
       _mesa_print_program(prog);

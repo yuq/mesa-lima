@@ -56,8 +56,7 @@ write_tgsi_to_cache(struct blob *blob, struct pipe_shader_state *tgsi,
  */
 void
 st_store_tgsi_in_disk_cache(struct st_context *st, struct gl_program *prog,
-                            struct pipe_shader_state *out_state,
-                            unsigned num_tokens)
+                            struct pipe_shader_state *out_state)
 {
    if (!st->ctx->Cache)
       return;
@@ -83,24 +82,28 @@ st_store_tgsi_in_disk_cache(struct st_context *st, struct gl_program *prog,
                        sizeof(stvp->result_to_output));
 
       write_stream_out_to_cache(&blob, &stvp->tgsi);
-      write_tgsi_to_cache(&blob, &stvp->tgsi, prog, num_tokens);
+      write_tgsi_to_cache(&blob, &stvp->tgsi, prog, stvp->num_tgsi_tokens);
       break;
    }
    case MESA_SHADER_TESS_CTRL:
    case MESA_SHADER_TESS_EVAL:
    case MESA_SHADER_GEOMETRY: {
+      struct st_common_program *stcp = (struct st_common_program *) prog;
+
       write_stream_out_to_cache(&blob, out_state);
-      write_tgsi_to_cache(&blob, out_state, prog, num_tokens);
+      write_tgsi_to_cache(&blob, out_state, prog, stcp->num_tgsi_tokens);
       break;
    }
    case MESA_SHADER_FRAGMENT: {
       struct st_fragment_program *stfp = (struct st_fragment_program *) prog;
 
-      write_tgsi_to_cache(&blob, &stfp->tgsi, prog, num_tokens);
+      write_tgsi_to_cache(&blob, &stfp->tgsi, prog, stfp->num_tgsi_tokens);
       break;
    }
    case MESA_SHADER_COMPUTE: {
-      write_tgsi_to_cache(&blob, out_state, prog, num_tokens);
+      struct st_compute_program *stcp = (struct st_compute_program *) prog;
+
+      write_tgsi_to_cache(&blob, out_state, prog, stcp->num_tgsi_tokens);
       break;
    }
    default:
