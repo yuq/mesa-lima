@@ -91,25 +91,19 @@ if with_gallium_virgl
   subdir('winsys/virgl/drm')
   subdir('winsys/virgl/vtest')
 endif
+# TODO: SWR
+# TODO: clover
 if with_dri
   subdir('state_trackers/dri')
+  subdir('targets/dri')
 endif
 if with_osmesa == 'gallium'
   subdir('state_trackers/osmesa')
+  subdir('targets/osmesa')
 endif
 if with_glx == 'gallium-xlib'
   subdir('winsys/sw/xlib')
   subdir('state_trackers/glx/xlib')
-endif
-# TODO: SWR
-# TODO: clover
-if with_dri
-  subdir('targets/dri')
-endif
-if with_osmesa == 'gallium'
-  subdir('targets/osmesa')
-endif
-if with_glx == 'gallium-xlib'
   subdir('targets/libgl-xlib')
 endif
 # TODO: OMX
