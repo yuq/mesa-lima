@@ -293,7 +293,8 @@ grow_buffer(struct brw_context *brw,
    uint32_t *old_map = *map_ptr;
    struct brw_bo *old_bo = *bo_ptr;
 
-   struct brw_bo *new_bo = brw_bo_alloc(bufmgr, old_bo->name, new_size, 4096);
+   struct brw_bo *new_bo =
+      brw_bo_alloc(bufmgr, old_bo->name, new_size, old_bo->align);
    uint32_t *new_map;
 
    perf_debug("Growing %s - ran out of space\n", old_bo->name);
