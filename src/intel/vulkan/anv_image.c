@@ -27,6 +27,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <drm_fourcc.h>
 
 #include "anv_private.h"
 #include "util/debug.h"
@@ -527,6 +528,7 @@ anv_image_create(VkDevice _device,
    image->samples = pCreateInfo->samples;
    image->usage = pCreateInfo->usage;
    image->tiling = pCreateInfo->tiling;
+   image->drm_format_mod = DRM_FORMAT_MOD_INVALID;
    image->disjoint = pCreateInfo->flags & VK_IMAGE_CREATE_DISJOINT_BIT_KHR;
 
    const struct anv_format *format = anv_get_format(image->vk_format);
