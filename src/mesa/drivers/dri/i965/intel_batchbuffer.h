@@ -64,7 +64,8 @@ uint64_t brw_state_reloc(struct intel_batchbuffer *batch,
                          uint32_t target_offset,
                          unsigned flags);
 
-#define USED_BATCH(batch) ((uintptr_t)((batch).map_next - (batch).map))
+#define USED_BATCH(_batch) \
+   ((uintptr_t)((_batch).map_next - (_batch).batch.map))
 
 static inline uint32_t float_as_int(float f)
 {
@@ -122,8 +123,8 @@ intel_batchbuffer_advance(struct brw_context *brw)
 static inline bool
 brw_ptr_in_state_buffer(struct intel_batchbuffer *batch, void *p)
 {
-   return (char *) p >= (char *) batch->state_map &&
-          (char *) p < (char *) batch->state_map + batch->state_bo->size;
+   return (char *) p >= (char *) batch->state.map &&
+          (char *) p < (char *) batch->state.map + batch->state.bo->size;
 }
 
 #define BEGIN_BATCH(n) do {                            \
@@ -140,7 +141,7 @@ brw_ptr_in_state_buffer(struct intel_batchbuffer *batch, void *p)
 #define OUT_BATCH_F(f) OUT_BATCH(float_as_int((f)))
 
 #define OUT_RELOC(buf, flags, delta) do {          \
-   uint32_t __offset = (__map - brw->batch.map) * 4;                    \
+   uint32_t __offset = (__map - brw->batch.batch.map) * 4;              \
    uint32_t reloc =                                                     \
       brw_batch_reloc(&brw->batch, __offset, (buf), (delta), (flags));  \
    OUT_BATCH(reloc);                                                    \
@@ -148,7 +149,7 @@ brw_ptr_in_state_buffer(struct intel_batchbuffer *batch, void *p)
 
 /* Handle 48-bit address relocations for Gen8+ */
 #define OUT_RELOC64(buf, flags, delta) do {        \
-   uint32_t __offset = (__map - brw->batch.map) * 4;                    \
+   uint32_t __offset = (__map - brw->batch.batch.map) * 4;              \
    uint64_t reloc64 =                                                   \
       brw_batch_reloc(&brw->batch, __offset, (buf), (delta), (flags));  \
    OUT_BATCH(reloc64);                                                  \
