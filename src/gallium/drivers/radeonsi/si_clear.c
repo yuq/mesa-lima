@@ -419,10 +419,12 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 				tex->num_slow_clears++;
 		}
 
+		bool need_decompress_pass = false;
+
 		/* Try to clear DCC first, otherwise try CMASK. */
 		if (vi_dcc_enabled(tex, 0)) {
 			uint32_t reset_value;
-			bool clear_words_needed, cleared_cmask = false;
+			bool clear_words_needed;
 
 			if (sctx->screen->b.debug_flags & DBG(NO_DCC_CLEAR))
 				continue;
@@ -446,19 +448,14 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 				si_clear_buffer(&sctx->b.b, &tex->cmask_buffer->b.b,
 						tex->cmask.offset, tex->cmask.size,
 						0xCCCCCCCC, R600_COHERENCY_CB_META);
-				cleared_cmask = true;
+				need_decompress_pass = true;
 			}
 
 			vi_dcc_clear_level(sctx, tex, 0, reset_value);
 
-			if (clear_words_needed || cleared_cmask) {
-				bool need_compressed_update = !tex->dirty_level_mask;
+			if (clear_words_needed)
+				need_decompress_pass = true;
 
-				tex->dirty_level_mask |= 1 << level;
-
-				if (need_compressed_update)
-					p_atomic_inc(&sctx->screen->b.compressed_colortex_counter);
-			}
 			tex->separate_dcc_dirty = true;
 		} else {
 			/* 128-bit formats are unusupported */
@@ -480,13 +477,13 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 			si_clear_buffer(&sctx->b.b, &tex->cmask_buffer->b.b,
 					tex->cmask.offset, tex->cmask.size, 0,
 					R600_COHERENCY_CB_META);
+			need_decompress_pass = true;
+		}
 
-			bool need_compressed_update = !tex->dirty_level_mask;
-
+		if (need_decompress_pass &&
+		    !(tex->dirty_level_mask & (1 << level))) {
 			tex->dirty_level_mask |= 1 << level;
-
-			if (need_compressed_update)
-				p_atomic_inc(&sctx->screen->b.compressed_colortex_counter);
+			p_atomic_inc(&sctx->screen->b.compressed_colortex_counter);
 		}
 
 		/* We can change the micro tile mode before a full clear. */
