@@ -662,20 +662,15 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
                       anv_image_aux_layers(image, aspect, base_level) - base_layer);
    last_level_num = base_level + level_count;
 
-   /* Record whether or not the layout is undefined. Pre-initialized images
-    * with auxiliary buffers have a non-linear layout and are thus undefined.
-    */
    assert(image->tiling == VK_IMAGE_TILING_OPTIMAL);
-   const bool undef_layout = initial_layout == VK_IMAGE_LAYOUT_UNDEFINED ||
-                             initial_layout == VK_IMAGE_LAYOUT_PREINITIALIZED;
 
-   /* Do preparatory work before the resolve operation or return early if no
-    * resolve is actually needed.
-    */
-   if (undef_layout) {
+   if (initial_layout == VK_IMAGE_LAYOUT_UNDEFINED ||
+       initial_layout == VK_IMAGE_LAYOUT_PREINITIALIZED) {
       /* A subresource in the undefined layout may have been aliased and
        * populated with any arrangement of bits. Therefore, we must initialize
        * the related aux buffer and clear buffer entry with desirable values.
+       * An initial layout of PREINITIALIZED is the same as UNDEFINED for
+       * images with VK_IMAGE_TILING_OPTIMAL.
        *
        * Initialize the relevant clear buffer entries.
        */
