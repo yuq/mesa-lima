@@ -1589,10 +1589,25 @@ isl_drm_modifier_has_aux(uint64_t modifier)
 
 /** Returns the default isl_aux_state for the given modifier.
  *
- * All modified images are required to be kept out of the AUX_INVALID state
- * but they may or may not actually be compressed and may or may not have
- * clear color.  This function returns the worst case aux_state that we need
- * to assume when getting a surface from another process or API.
+ * If we have a modifier which supports compression, then the auxiliary data
+ * could be in state other than ISL_AUX_STATE_AUX_INVALID.  In particular, it
+ * can be in any of the following:
+ *
+ *  - ISL_AUX_STATE_CLEAR
+ *  - ISL_AUX_STATE_PARTIAL_CLEAR
+ *  - ISL_AUX_STATE_COMPRESSED_CLEAR
+ *  - ISL_AUX_STATE_COMPRESSED_NO_CLEAR
+ *  - ISL_AUX_STATE_RESOLVED
+ *  - ISL_AUX_STATE_PASS_THROUGH
+ *
+ * If the modifier does not support fast-clears, then we are guaranteed
+ * that the surface is at least partially resolved and the first three not
+ * possible.  We return ISL_AUX_STATE_COMPRESSED_CLEAR if the modifier
+ * supports fast clears and ISL_AUX_STATE_COMPRESSED_NO_CLEAR if it does not
+ * because they are the least common denominator of the set of possible aux
+ * states and will yield a valid interpretation of the aux data.
+ *
+ * For modifiers with no aux support, ISL_AUX_STATE_AUX_INVALID is returned.
  */
 static inline enum isl_aux_state
 isl_drm_modifier_get_default_aux_state(uint64_t modifier)
@@ -1603,6 +1618,7 @@ isl_drm_modifier_get_default_aux_state(uint64_t modifier)
    if (!mod_info || mod_info->aux_usage == ISL_AUX_USAGE_NONE)
       return ISL_AUX_STATE_AUX_INVALID;
 
+   assert(mod_info->aux_usage == ISL_AUX_USAGE_CCS_E);
    return mod_info->supports_clear_color ? ISL_AUX_STATE_COMPRESSED_CLEAR :
                                            ISL_AUX_STATE_COMPRESSED_NO_CLEAR;
 }
