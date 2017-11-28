@@ -712,10 +712,17 @@ static void compute_emit_cs(struct r600_context *rctx,
 		bool need_buf_const = current->shader.uses_tex_buffers ||
 			current->shader.has_txq_cube_array_z_comp;
 
+		for (int i = 0; i < 3; i++) {
+			rctx->cs_block_grid_sizes[i] = info->block[i];
+			rctx->cs_block_grid_sizes[i + 4] = info->grid[i];
+		}
+		rctx->cs_block_grid_sizes[3] = rctx->cs_block_grid_sizes[7] = 0;
+		rctx->driver_consts[PIPE_SHADER_COMPUTE].cs_block_grid_size_dirty = true;
 		if (need_buf_const) {
 			eg_setup_buffer_constants(rctx, PIPE_SHADER_COMPUTE);
-			r600_update_driver_const_buffers(rctx, true);
 		}
+		r600_update_driver_const_buffers(rctx, true);
+
 		if (evergreen_emit_atomic_buffer_setup(rctx, current, combined_atomics, &atomic_used_mask)) {
 			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 			radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_CS_PARTIAL_FLUSH) | EVENT_INDEX(4));

@@ -1230,7 +1230,8 @@ void r600_update_driver_const_buffers(struct r600_context *rctx, bool compute_on
 		struct r600_shader_driver_constants_info *info = &rctx->driver_consts[sh];
 		if (!info->vs_ucp_dirty &&
 		    !info->texture_const_dirty &&
-		    !info->ps_sample_pos_dirty)
+		    !info->ps_sample_pos_dirty &&
+		    !info->cs_block_grid_size_dirty)
 			continue;
 
 		ptr = info->constants;
@@ -1257,6 +1258,17 @@ void r600_update_driver_const_buffers(struct r600_context *rctx, bool compute_on
 			info->ps_sample_pos_dirty = false;
 		}
 
+		if (info->cs_block_grid_size_dirty) {
+			assert(sh == PIPE_SHADER_COMPUTE);
+			if (!size) {
+				ptr = rctx->cs_block_grid_sizes;
+				size = R600_CS_BLOCK_GRID_SIZE;
+			} else {
+				memcpy(ptr, rctx->cs_block_grid_sizes, R600_CS_BLOCK_GRID_SIZE);
+			}
+			info->cs_block_grid_size_dirty = false;
+		}
+
 		if (info->texture_const_dirty) {
 			assert (ptr);
 			assert (size);
@@ -1264,6 +1276,8 @@ void r600_update_driver_const_buffers(struct r600_context *rctx, bool compute_on
 				memcpy(ptr, rctx->clip_state.state.ucp, R600_UCP_SIZE);
 			if (sh == PIPE_SHADER_FRAGMENT)
 				memcpy(ptr, rctx->sample_positions, R600_UCP_SIZE);
+			if (sh == PIPE_SHADER_COMPUTE)
+				memcpy(ptr, rctx->cs_block_grid_sizes, R600_CS_BLOCK_GRID_SIZE);
 		}
 		info->texture_const_dirty = false;
 

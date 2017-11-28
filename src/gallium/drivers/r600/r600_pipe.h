@@ -78,6 +78,7 @@
 /* start driver buffers after user buffers */
 #define R600_BUFFER_INFO_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS)
 #define R600_UCP_SIZE (4*4*8)
+#define R600_CS_BLOCK_GRID_SIZE (8 * 4)
 #define R600_BUFFER_INFO_OFFSET (R600_UCP_SIZE)
 
 #define R600_LDS_INFO_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 1)
@@ -396,6 +397,7 @@ struct r600_shader_driver_constants_info {
 	bool				vs_ucp_dirty;
 	bool				texture_const_dirty;
 	bool				ps_sample_pos_dirty;
+	bool                            cs_block_grid_size_dirty;
 };
 
 struct r600_constbuf_state
@@ -575,6 +577,7 @@ struct r600_context {
 	struct r600_isa		*isa;
 	float sample_positions[4 * 16];
 	float tess_state[8];
+	uint32_t cs_block_grid_sizes[8]; /* 3 for grid + 1 pad, 3 for block  + 1 pad*/
 	bool tess_state_dirty;
 	struct r600_pipe_shader_selector *last_ls;
 	struct r600_pipe_shader_selector *last_tcs;
