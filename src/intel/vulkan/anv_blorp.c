@@ -1793,6 +1793,11 @@ anv_image_ccs_op(struct anv_cmd_buffer *cmd_buffer,
                         surf.surf->format, isl_to_blorp_fast_clear_op(ccs_op));
       break;
    case ISL_AUX_OP_AMBIGUATE:
+      for (uint32_t a = 0; a < layer_count; a++) {
+         const uint32_t layer = base_layer + a;
+         blorp_ccs_ambiguate(&batch, &surf, level, layer);
+      }
+      break;
    default:
       unreachable("Unsupported CCS operation");
    }

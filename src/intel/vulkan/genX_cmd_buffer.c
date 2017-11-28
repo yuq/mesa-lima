@@ -486,15 +486,6 @@ init_fast_clear_state_entry(struct anv_cmd_buffer *cmd_buffer,
    uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
    enum isl_aux_usage aux_usage = image->planes[plane].aux_usage;
 
-   /* The resolve flag should updated to signify that fast-clear/compression
-    * data needs to be removed when leaving the undefined layout. Such data
-    * may need to be removed if it would cause accesses to the color buffer
-    * to return incorrect data. The fast clear data in CCS_D buffers should
-    * be removed because CCS_D isn't enabled all the time.
-    */
-   genX(set_image_needs_resolve)(cmd_buffer, image, aspect, level,
-                                 aux_usage == ISL_AUX_USAGE_NONE);
-
    /* The fast clear value dword(s) will be copied into a surface state object.
     * Ensure that the restrictions of the fields in the dword(s) are followed.
     *
@@ -677,31 +668,51 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
       for (unsigned level = base_level; level < last_level_num; level++)
          init_fast_clear_state_entry(cmd_buffer, image, aspect, level);
 
-      /* Initialize the aux buffers to enable correct rendering. This operation
-       * requires up to two steps: one to rid the aux buffer of data that may
-       * cause GPU hangs, and another to ensure that writes done without aux
-       * will be visible to reads done with aux.
+      /* Initialize the aux buffers to enable correct rendering.  In order to
+       * ensure that things such as storage images work correctly, aux buffers
+       * need to be initialized to valid data.
        *
-       * Having an aux buffer with invalid data is possible for CCS buffers
-       * SKL+ and for MCS buffers with certain sample counts (2x and 8x). One
-       * easy way to get to a valid state is to fast-clear the specified range.
+       * Having an aux buffer with invalid data is a problem for two reasons:
        *
-       * Even for MCS buffers that have sample counts that don't require
-       * certain bits to be reserved (4x and 8x), we're unsure if the hardware
-       * will be okay with the sample mappings given by the undefined buffer.
-       * We don't have any data to show that this is a problem, but we want to
-       * avoid causing difficult-to-debug problems.
+       *  1) Having an invalid value in the buffer can confuse the hardware.
+       *     For instance, with CCS_E on SKL, a two-bit CCS value of 2 is
+       *     invalid and leads to the hardware doing strange things.  It
+       *     doesn't hang as far as we can tell but rendering corruption can
+       *     occur.
+       *
+       *  2) If this transition is into the GENERAL layout and we then use the
+       *     image as a storage image, then we must have the aux buffer in the
+       *     pass-through state so that, if we then go to texture from the
+       *     image, we get the results of our storage image writes and not the
+       *     fast clear color or other random data.
+       *
+       * For CCS both of the problems above are real demonstrable issues.  In
+       * that case, the only thing we can do is to perform an ambiguate to
+       * transition the aux surface into the pass-through state.
+       *
+       * For MCS, (2) is never an issue because we don't support multisampled
+       * storage images.  In theory, issue (1) is a problem with MCS but we've
+       * never seen it in the wild.  For 4x and 16x, all bit patters could, in
+       * theory, be interpreted as something but we don't know that all bit
+       * patterns are actually valid.  For 2x and 8x, you could easily end up
+       * with the MCS referring to an invalid plane because not all bits of
+       * the MCS value are actually used.  Even though we've never seen issues
+       * in the wild, it's best to play it safe and initialize the MCS.  We
+       * can use a fast-clear for MCS because we only ever touch from render
+       * and texture (no image load store).
        */
-      if (GEN_GEN >= 9 && image->samples == 1) {
+      if (image->samples == 1) {
          for (uint32_t l = 0; l < level_count; l++) {
             const uint32_t level = base_level + l;
             const uint32_t level_layer_count =
                MIN2(layer_count, anv_image_aux_layers(image, aspect, level));
             anv_image_ccs_op(cmd_buffer, image, aspect, level,
                              base_layer, level_layer_count,
-                             ISL_AUX_OP_FAST_CLEAR, false);
+                             ISL_AUX_OP_AMBIGUATE, false);
+            genX(set_image_needs_resolve)(cmd_buffer, image,
+                                          aspect, level, false);
          }
-      } else if (image->samples > 1) {
+      } else {
          if (image->samples == 4 || image->samples == 16) {
             anv_perf_warn(cmd_buffer->device->instance, image,
                           "Doing a potentially unnecessary fast-clear to "
@@ -712,32 +723,6 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
          anv_image_mcs_op(cmd_buffer, image, aspect,
                           base_layer, layer_count,
                           ISL_AUX_OP_FAST_CLEAR, false);
-      }
-      /* At this point, some elements of the CCS buffer may have the fast-clear
-       * bit-arrangement. As the user writes to a subresource, we need to have
-       * the associated CCS elements enter the ambiguated state. This enables
-       * reads (implicit or explicit) to reflect the user-written data instead
-       * of the clear color. The only time such elements will not change their
-       * state as described above, is in a final layout that doesn't have CCS
-       * enabled. In this case, we must force the associated CCS buffers of the
-       * specified range to enter the ambiguated state in advance.
-       */
-      if (image->samples == 1 &&
-          image->planes[plane].aux_usage != ISL_AUX_USAGE_CCS_E &&
-          final_layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-         /* The CCS_D buffer may not be enabled in the final layout. Call this
-          * function again with a initial layout of COLOR_ATTACHMENT_OPTIMAL
-          * to perform a resolve.
-          */
-          anv_perf_warn(cmd_buffer->device->instance, image,
-                        "Performing an additional resolve for CCS_D layout "
-                        "transition. Consider always leaving it on or "
-                        "performing an ambiguation pass.");
-         transition_color_buffer(cmd_buffer, image, aspect,
-                                 base_level, level_count,
-                                 base_layer, layer_count,
-                                 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                 final_layout);
       }
       return;
    }
