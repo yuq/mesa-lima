@@ -192,8 +192,12 @@ handle_trace_header(uint32_t *p)
    gen_batch_decode_ctx_init(&batch_ctx, &devinfo, outfile, batch_flags,
                              xml_path, get_gen_batch_bo, NULL);
 
+   char *color = GREEN_HEADER, *reset_color = NORMAL;
+   if (option_color == COLOR_NEVER)
+      color = reset_color = "";
+
    fprintf(outfile, "%sAubinator: Intel AUB file decoder.%-80s%s\n",
-           GREEN_HEADER, "", NORMAL);
+           color, "", reset_color);
 
    if (input_file)
       fprintf(outfile, "File name:        %s\n", input_file);
