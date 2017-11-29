@@ -842,7 +842,9 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       if (const_offset) {
          offset_reg = brw_imm_ud(const_offset->u32[0] & ~15);
       } else {
-         offset_reg = get_nir_src(instr->src[1], nir_type_uint32, 1);
+         offset_reg = src_reg(this, glsl_type::uint_type);
+         emit(MOV(dst_reg(offset_reg),
+                  get_nir_src(instr->src[1], nir_type_uint32, 1)));
       }
 
       src_reg packed_consts;
