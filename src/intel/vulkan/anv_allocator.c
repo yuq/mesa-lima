@@ -109,11 +109,13 @@ struct anv_mmap_cleanup {
 
 #define ANV_MMAP_CLEANUP_INIT ((struct anv_mmap_cleanup){0})
 
+#ifndef HAVE_MEMFD_CREATE
 static inline int
 memfd_create(const char *name, unsigned int flags)
 {
    return syscall(SYS_memfd_create, name, flags);
 }
+#endif
 
 static inline uint32_t
 ilog2_round_up(uint32_t value)
