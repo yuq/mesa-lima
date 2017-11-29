@@ -13,8 +13,7 @@ Contact
 
 Status
 
-    Shipping (Mesa 4.0.4 and later.  Only implemented in particular
-    XFree86/DRI drivers.)
+    Obsolete. Effectively superseded by ARB_vertex_buffer_object.
 
 Version
 
