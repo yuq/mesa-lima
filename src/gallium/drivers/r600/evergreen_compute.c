@@ -615,30 +615,10 @@ static void evergreen_emit_dispatch(struct r600_context *rctx,
 		eg_trace_emit(rctx);
 }
 
-static void compute_emit_cs(struct r600_context *rctx,
-			    const struct pipe_grid_info *info)
+static void compute_setup_cbs(struct r600_context *rctx)
 {
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	unsigned i;
-
-	/* make sure that the gfx ring is only one active */
-	if (radeon_emitted(rctx->b.dma.cs, 0)) {
-		rctx->b.dma.flush(rctx, PIPE_FLUSH_ASYNC, NULL);
-	}
-
-	/* Initialize all the compute-related registers.
-	 *
-	 * See evergreen_init_atom_start_compute_cs() in this file for the list
-	 * of registers initialized by the start_compute_cs_cmd atom.
-	 */
-	r600_emit_command_buffer(cs, &rctx->start_compute_cs_cmd);
-
-	/* emit config state */
-	if (rctx->b.chip_class == EVERGREEN)
-		r600_emit_atom(rctx, &rctx->config_state.atom);
-
-	rctx->b.flags |= R600_CONTEXT_WAIT_3D_IDLE | R600_CONTEXT_FLUSH_AND_INV;
-	r600_flush_emit(rctx);
 
 	/* Emit colorbuffers. */
 	/* XXX support more than 8 colorbuffers (the offsets are not a multiple of 0x3C for CB8-11) */
@@ -673,8 +653,34 @@ static void compute_emit_cs(struct r600_context *rctx,
 
 	/* Set CB_TARGET_MASK  XXX: Use cb_misc_state */
 	radeon_compute_set_context_reg(cs, R_028238_CB_TARGET_MASK,
-					rctx->compute_cb_target_mask);
+				       rctx->compute_cb_target_mask);
+}
 
+static void compute_emit_cs(struct r600_context *rctx,
+			    const struct pipe_grid_info *info)
+{
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+
+	/* make sure that the gfx ring is only one active */
+	if (radeon_emitted(rctx->b.dma.cs, 0)) {
+		rctx->b.dma.flush(rctx, PIPE_FLUSH_ASYNC, NULL);
+	}
+
+	/* Initialize all the compute-related registers.
+	 *
+	 * See evergreen_init_atom_start_compute_cs() in this file for the list
+	 * of registers initialized by the start_compute_cs_cmd atom.
+	 */
+	r600_emit_command_buffer(cs, &rctx->start_compute_cs_cmd);
+
+	/* emit config state */
+	if (rctx->b.chip_class == EVERGREEN)
+		r600_emit_atom(rctx, &rctx->config_state.atom);
+
+	rctx->b.flags |= R600_CONTEXT_WAIT_3D_IDLE | R600_CONTEXT_FLUSH_AND_INV;
+	r600_flush_emit(rctx);
+
+	compute_setup_cbs(rctx);
 
 	/* Emit vertex buffer state */
 	rctx->cs_vertex_buffer_state.atom.num_dw = 12 * util_bitcount(rctx->cs_vertex_buffer_state.dirty_mask);
