@@ -1747,12 +1747,13 @@ static int do_lds_fetch_values(struct r600_shader_ctx *ctx, unsigned temp_reg,
 			       unsigned dst_reg, unsigned mask)
 {
 	struct r600_bytecode_alu alu;
-	int r, i;
+	int r, i, lasti;
 
 	if ((ctx->bc->cf_last->ndw>>1) >= 0x60)
 		ctx->bc->force_add_cf = 1;
 
-	for (i = 1; i < 4; i++) {
+	lasti = tgsi_last_instruction(mask);
+	for (i = 1; i <= lasti; i++) {
 		if (!(mask & (1 << i)))
 			continue;
 
@@ -1763,8 +1764,8 @@ static int do_lds_fetch_values(struct r600_shader_ctx *ctx, unsigned temp_reg,
 		if (r)
 			return r;
 	}
-	for (i = 0; i < 4; i++) {
-		if (! (mask & (1 << i)))
+	for (i = 0; i <= lasti; i++) {
+		if (!(mask & (1 << i)))
 			continue;
 
 		/* emit an LDS_READ_RET */
@@ -1781,9 +1782,10 @@ static int do_lds_fetch_values(struct r600_shader_ctx *ctx, unsigned temp_reg,
 		if (r)
 			return r;
 	}
-	for (i = 0; i < 4; i++) {
-		if (! (mask & (1 << i)))
+	for (i = 0; i <= lasti; i++) {
+		if (!(mask & (1 << i)))
 			continue;
+
 		/* then read from LDS_OQ_A_POP */
 		memset(&alu, 0, sizeof(alu));
 
