@@ -503,11 +503,25 @@ endif
 cpp = meson.get_compiler('cpp')
 cpp_args = []
 foreach a : ['-Wall', '-fno-math-errno', '-fno-trapping-math',
-             '-Qunused-arguments', '-Wno-non-virtual-dtor']
+             '-Qunused-arguments']
   if cpp.has_argument(a)
     cpp_args += a
   endif
 endforeach
+
+# For some reason, the test for -Wno-foo always succeeds with gcc, even if the
+# option is not supported. Hence, check for -Wfoo instead.
+if cpp.has_argument('-Wnon-virtual-dtor')
+  cpp_args += '-Wno-non-virtual-dtor'
+endif
+
+no_override_init_args = []
+foreach a : ['override-init', 'initializer-overrides']
+  if cc.has_argument('-W' + a)
+    no_override_init_args += '-Wno-' + a
+  endif
+endforeach
+
 cpp_vis_args = []
 if cpp.has_argument('-fvisibility=hidden')
   cpp_vis_args += '-fvisibility=hidden'
@@ -524,13 +538,6 @@ foreach a : ['-Werror=pointer-arith', '-Werror=vla']
   endif
   if cpp.has_argument(a)
     cpp_msvc_compat_args += a
-  endif
-endforeach
-
-no_override_init_args = []
-foreach a : ['-Wno-override-init', '-Wno-initializer-overrides']
-  if cc.has_argument(a)
-    no_override_init_args += a
   endif
 endforeach
 
