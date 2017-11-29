@@ -52,7 +52,7 @@ if with_opengl
 endif
 
 if with_glx != 'disabled'
-  install_headers('GL/glx.h', 'GL/glext.h', 'GL/glx_mangle.h', subdir : 'GL')
+  install_headers('GL/glx.h', 'GL/glxext.h', 'GL/glx_mangle.h', subdir : 'GL')
 endif
 
 if with_osmesa != 'none'
