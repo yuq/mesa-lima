@@ -27,6 +27,7 @@
  */
 
 #include "pipe/p_state.h"
+#include "util/u_draw.h"
 #include "util/u_string.h"
 #include "util/u_memory.h"
 #include "util/u_prim.h"
@@ -66,6 +67,15 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	struct pipe_framebuffer_state *pfb = &batch->framebuffer;
 	struct pipe_scissor_state *scissor = fd_context_get_scissor(ctx);
 	unsigned i, prims, buffers = 0, restore_buffers = 0;
+
+	/* for debugging problems with indirect draw, it is convenient
+	 * to be able to emulate it, to determine if game is feeding us
+	 * bogus data:
+	 */
+	if (info->indirect && (fd_mesa_debug & FD_DBG_NOINDR)) {
+		util_draw_indirect(pctx, info);
+		return;
+	}
 
 	if (!info->count_from_stream_output && !info->indirect &&
 	    !info->primitive_restart &&
