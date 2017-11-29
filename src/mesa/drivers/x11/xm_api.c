@@ -1314,14 +1314,6 @@ Display *XMesaGetCurrentDisplay(void)
 
 
 
-GLboolean XMesaSetFXmode( GLint mode )
-{
-   (void) mode;
-   return GL_FALSE;
-}
-
-
-
 /*
  * Copy the back buffer to the front buffer.  If there's no back buffer
  * this is a no-op.

@@ -1004,21 +1004,6 @@ glXCreateGLXPixmapMESA(Display *dpy, XVisualInfo *visinfo, Pixmap pixmap, Colorm
 
 
 
-/*** GLX_MESA_set_3dfx_mode ***/
-
-Bool PUBLIC
-glXSet3DfxModeMESA(int mode)
-{
-   struct _glxapi_table *t;
-   Display *dpy = glXGetCurrentDisplay();
-   GET_DISPATCH(dpy, t);
-   if (!t)
-      return False;
-   return t->Set3DfxModeMESA(mode);
-}
-
-
-
 /*** GLX_EXT_texture_from_pixmap */
 
 void PUBLIC
@@ -1065,7 +1050,6 @@ _glxapi_get_extensions(void)
       "GLX_MESA_copy_sub_buffer",
       "GLX_MESA_release_buffers",
       "GLX_MESA_pixmap_colormap",
-      "GLX_MESA_set_3dfx_mode",
       "GLX_SGIX_fbconfig",
       "GLX_SGIX_pbuffer",
       "GLX_EXT_texture_from_pixmap",
@@ -1236,9 +1220,6 @@ static struct name_address_pair GLX_functions[] = {
 
    /*** GLX_MESA_release_buffers ***/
    { "glXReleaseBuffersMESA", (__GLXextFuncPtr) glXReleaseBuffersMESA },
-
-   /*** GLX_MESA_set_3dfx_mode ***/
-   { "glXSet3DfxModeMESA", (__GLXextFuncPtr) glXSet3DfxModeMESA },
 
    /*** GLX_ARB_get_proc_address ***/
    { "glXGetProcAddressARB", (__GLXextFuncPtr) glXGetProcAddressARB },

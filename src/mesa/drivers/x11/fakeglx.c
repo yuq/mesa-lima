@@ -2749,16 +2749,6 @@ Fake_glXReleaseBuffersMESA( Display *dpy, GLXDrawable d )
 
 
 
-/*** GLX_MESA_set_3dfx_mode ***/
-
-static Bool
-Fake_glXSet3DfxModeMESA( int mode )
-{
-   return XMesaSetFXmode( mode );
-}
-
-
-
 /*** GLX_MESA_agp_offset ***/
 
 static GLuint
@@ -2983,9 +2973,6 @@ _mesa_GetGLXDispatchTable(void)
 
    /*** GLX_MESA_pixmap_colormap ***/
    glx.CreateGLXPixmapMESA = Fake_glXCreateGLXPixmapMESA;
-
-   /*** GLX_MESA_set_3dfx_mode ***/
-   glx.Set3DfxModeMESA = Fake_glXSet3DfxModeMESA;
 
    /*** GLX_EXT_texture_from_pixmap ***/
    glx.BindTexImageEXT = Fake_glXBindTexImageEXT;

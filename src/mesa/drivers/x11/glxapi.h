@@ -183,9 +183,6 @@ struct _glxapi_table {
    /*** GLX_MESA_pixmap_colormap ***/
    GLXPixmap (*CreateGLXPixmapMESA)(Display *dpy, XVisualInfo *visinfo, Pixmap pixmap, Colormap cmap);
 
-   /*** GLX_MESA_set_3dfx_mode ***/
-   Bool (*Set3DfxModeMESA)(int mode);
-
    /*** GLX_EXT_texture_from_pixmap ***/
    void (*BindTexImageEXT)(Display *dpy, GLXDrawable drawable, int buffer,
                            const int *attrib_list);
