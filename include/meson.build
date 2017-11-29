@@ -34,7 +34,7 @@ if with_gles2
     subdir : 'GLES2',
   )
   install_headers(
-    'GLES3/gl3.h', 'GLES3/gl32.h', 'GLES3/gl32.h', 'GLES3/gl3ext.h',
+    'GLES3/gl3.h', 'GLES3/gl31.h', 'GLES3/gl32.h', 'GLES3/gl3ext.h',
     'GLES3/gl3platform.h',
     subdir : 'GLES3',
   )
