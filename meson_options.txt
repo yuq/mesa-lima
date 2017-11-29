@@ -56,6 +56,12 @@ option(
   description : 'comma separated list of gallium media APIs to build (omx,va,vdpau,xvmc).'
 )
 option(
+  'gallium-extra-hud',
+  type : 'boolean',
+  value : false,
+  description : 'Enable HUD block/NIC I/O HUD status support',
+)
+option(
   'vulkan-drivers',
   type : 'string',
   value : 'auto',

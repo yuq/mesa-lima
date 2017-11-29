@@ -922,6 +922,10 @@ if with_platform_x11
   endif
 endif
 
+if get_option('gallium-extra-hud')
+  pre_args += '-DHAVE_GALLIUM_EXTRA_HUD=1'
+endif
+
 # TODO: nine
 
 # TODO: clover
