@@ -12,7 +12,7 @@ Contact
 
 Status
 
-    Shipping since Mesa 2.6 in February, 1998.
+    Obsolete.
 
 Version
 
