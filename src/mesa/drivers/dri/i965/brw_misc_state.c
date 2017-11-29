@@ -641,7 +641,7 @@ brw_upload_state_base_address(struct brw_context *brw)
       /* General state buffer size */
       OUT_BATCH(0xfffff001);
       /* Dynamic state buffer size */
-      OUT_BATCH(ALIGN(brw->batch.state_bo->size, 4096) | 1);
+      OUT_BATCH(ALIGN(MAX_STATE_SIZE, 4096) | 1);
       /* Indirect object upper bound */
       OUT_BATCH(0xfffff001);
       /* Instruction access upper bound */

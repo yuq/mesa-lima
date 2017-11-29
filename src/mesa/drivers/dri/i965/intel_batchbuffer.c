@@ -52,15 +52,6 @@
 #define BATCH_SZ (20 * 1024)
 #define STATE_SZ (16 * 1024)
 
-/* The kernel assumes batchbuffers are smaller than 256kB. */
-#define MAX_BATCH_SIZE (256 * 1024)
-
-/* 3DSTATE_BINDING_TABLE_POINTERS has a U16 offset from Surface State Base
- * Address, which means that we can't put binding tables beyond 64kB.  This
- * effectively limits the maximum statebuffer size to 64kB.
- */
-#define MAX_STATE_SIZE (64 * 1024)
-
 static void
 intel_batchbuffer_reset(struct brw_context *brw);
 
