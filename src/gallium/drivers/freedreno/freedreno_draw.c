@@ -197,6 +197,10 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	/* Mark index buffer as being read */
 	resource_read(batch, indexbuf);
 
+	/* Mark indirect draw buffer as being read */
+	if (info->indirect)
+		resource_read(batch, info->indirect->buffer);
+
 	/* Mark textures as being read */
 	foreach_bit(i, ctx->tex[PIPE_SHADER_VERTEX].valid_textures)
 		resource_read(batch, ctx->tex[PIPE_SHADER_VERTEX].textures[i]->texture);
@@ -474,6 +478,9 @@ fd_launch_grid(struct pipe_context *pctx, const struct pipe_grid_info *info)
 	/* Mark textures as being read */
 	foreach_bit(i, ctx->tex[PIPE_SHADER_COMPUTE].valid_textures)
 		resource_read(batch, ctx->tex[PIPE_SHADER_COMPUTE].textures[i]->texture);
+
+	if (info->indirect)
+		resource_read(batch, info->indirect);
 
 	mtx_unlock(&ctx->screen->lock);
 
