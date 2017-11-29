@@ -186,13 +186,6 @@ struct _glxapi_table {
    /*** GLX_MESA_set_3dfx_mode ***/
    Bool (*Set3DfxModeMESA)(int mode);
 
-   /*** GLX_NV_vertex_array_range ***/
-   void * (*AllocateMemoryNV)( GLsizei size,
-                               GLfloat readFrequency,
-                               GLfloat writeFrequency,
-                               GLfloat priority );
-   void (*FreeMemoryNV)( GLvoid *pointer );
-
    /*** GLX_MESA_agp_offset ***/
    GLuint (*GetAGPOffsetMESA)( const GLvoid *pointer );
 
