@@ -2987,9 +2987,6 @@ _mesa_GetGLXDispatchTable(void)
    /*** GLX_MESA_set_3dfx_mode ***/
    glx.Set3DfxModeMESA = Fake_glXSet3DfxModeMESA;
 
-   /*** GLX_MESA_agp_offset ***/
-   glx.GetAGPOffsetMESA = Fake_glXGetAGPOffsetMESA;
-
    /*** GLX_EXT_texture_from_pixmap ***/
    glx.BindTexImageEXT = Fake_glXBindTexImageEXT;
    glx.ReleaseTexImageEXT = Fake_glXReleaseTexImageEXT;

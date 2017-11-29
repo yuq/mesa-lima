@@ -1019,20 +1019,6 @@ glXSet3DfxModeMESA(int mode)
 
 
 
-/*** GLX_MESA_agp_offset */
-
-GLuint PUBLIC
-glXGetAGPOffsetMESA( const GLvoid *pointer )
-{
-   struct _glxapi_table *t;
-   Display *dpy = glXGetCurrentDisplay();
-   GET_DISPATCH(dpy, t);
-   if (!t)
-      return ~0;
-   return t->GetAGPOffsetMESA(pointer);
-}
-
-
 /*** GLX_EXT_texture_from_pixmap */
 
 void PUBLIC
@@ -1256,9 +1242,6 @@ static struct name_address_pair GLX_functions[] = {
 
    /*** GLX_ARB_get_proc_address ***/
    { "glXGetProcAddressARB", (__GLXextFuncPtr) glXGetProcAddressARB },
-
-   /*** GLX_MESA_agp_offset ***/
-   { "glXGetAGPOffsetMESA", (__GLXextFuncPtr) glXGetAGPOffsetMESA },
 
    /*** GLX_EXT_texture_from_pixmap ***/
    { "glXBindTexImageEXT", (__GLXextFuncPtr) glXBindTexImageEXT },
