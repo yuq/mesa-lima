@@ -694,7 +694,6 @@ public:
         if (state.backendState.readViewportArrayIndex)
         {
             pa.Assemble(VERTEX_SGV_SLOT, vpiAttrib);
-
             vpai = SIMD_T::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
         }
 
@@ -706,6 +705,10 @@ public:
             typename SIMD_T::Integer vNumViewports = SIMD_T::set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
             typename SIMD_T::Integer vClearMask = SIMD_T::cmplt_epi32(vpai, vNumViewports);
             viewportIdx = SIMD_T::and_si(vClearMask, vpai);
+        }
+        else
+        {
+            viewportIdx = vpai;
         }
 
         ComputeClipCodes(prim, viewportIdx);
