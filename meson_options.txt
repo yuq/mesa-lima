@@ -158,6 +158,13 @@ option(
   description : 'Use libunwind for stack-traces'
 )
 option(
+  'lmsensors',
+  type : 'combo',
+  value : 'auto',
+  choices : ['auto', 'true', 'false'],
+  description : 'Enable HUD lmsensors support.'
+)
+option(
   'build-tests',
   type : 'boolean',
   value : false,

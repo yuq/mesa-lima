@@ -218,6 +218,7 @@ ir3_compiler = executable(
     dep_libdrm,
     dep_libdrm_freedreno,
     dependency('threads'),
+    dep_lmsensors,
   ],
   link_with : [
     libfreedreno,

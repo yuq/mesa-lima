@@ -926,6 +926,17 @@ if get_option('gallium-extra-hud')
   pre_args += '-DHAVE_GALLIUM_EXTRA_HUD=1'
 endif
 
+_sensors = get_option('lmsensors')
+if _sensors != 'false'
+  dep_lmsensors = cc.find_library('libsensors', required : _sensors == 'true')
+  if dep_lmsensors.found()
+    pre_args += '-DHAVE_LIBSENSORS=1'
+  endif
+else
+  dep_lmsensors = []
+endif
+
+
 # TODO: nine
 
 # TODO: clover

@@ -97,6 +97,6 @@ etnaviv_compiler = executable(
   'etnaviv_compiler_cmdline.c',
   include_directories : [inc_include, inc_src, inc_gallium, inc_gallium_aux],
   link_with : [libmesa_util, libgallium, libetnaviv],
-  dependencies : dep_libdrm_etnaviv,
+  dependencies : [dep_libdrm_etnaviv, dep_lmsensors],
   build_by_default : false,
 )
