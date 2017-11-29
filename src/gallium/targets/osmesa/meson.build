@@ -20,6 +20,7 @@
 
 osmesa_link_with = []
 osmesa_link_args = []
+osmesa_link_deps = []
 
 if with_shared_glapi
   osmesa_link_with += libglapi
@@ -28,6 +29,7 @@ if with_ld_version_script
   osmesa_link_args += [
     '-Wl,--version-script', join_paths(meson.current_source_dir(), 'osmesa.sym')
   ]
+  osmesa_link_deps += files('osmesa.sym')
 endif
 
 # TODO: swr
@@ -42,6 +44,7 @@ libosmesa = shared_library(
     inc_include, inc_src, inc_gallium, inc_gallium_aux, inc_gallium_winsys,
     inc_gallium_drivers,
   ],
+  link_depends : osmesa_link_deps,
   link_whole : [libosmesa_st],
   link_with : [
     libmesa_gallium, libgallium, libglapi_static, libws_null, libtrace,
