@@ -176,20 +176,6 @@ void r600_init_resource_fields(struct r600_common_screen *rscreen,
 	     !(res->b.b.bind & PIPE_BIND_SCANOUT)))
 		res->flags |= RADEON_FLAG_NO_INTERPROCESS_SHARING;
 
-	/* If VRAM is just stolen system memory, allow both VRAM and
-	 * GTT, whichever has free space. If a buffer is evicted from
-	 * VRAM to GTT, it will stay there.
-	 *
-	 * DRM 3.6.0 has good BO move throttling, so we can allow VRAM-only
-	 * placements even with a low amount of stolen VRAM.
-	 */
-	if (!rscreen->info.has_dedicated_vram &&
-	    (rscreen->info.drm_major < 3 || rscreen->info.drm_minor < 6) &&
-	    res->domains == RADEON_DOMAIN_VRAM) {
-		res->domains = RADEON_DOMAIN_VRAM_GTT;
-		res->flags &= ~RADEON_FLAG_NO_CPU_ACCESS; /* disallowed with VRAM_GTT */
-	}
-
 	if (rscreen->debug_flags & DBG_NO_WC)
 		res->flags &= ~RADEON_FLAG_GTT_WC;
 

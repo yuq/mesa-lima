@@ -609,6 +609,13 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
     args.initial_domain = initial_domains;
     args.flags = 0;
 
+    /* If VRAM is just stolen system memory, allow both VRAM and
+     * GTT, whichever has free space. If a buffer is evicted from
+     * VRAM to GTT, it will stay there.
+     */
+    if (!rws->info.has_dedicated_vram)
+        args.initial_domain |= RADEON_DOMAIN_GTT;
+
     if (flags & RADEON_FLAG_GTT_WC)
         args.flags |= RADEON_GEM_GTT_WC;
     if (flags & RADEON_FLAG_NO_CPU_ACCESS)

@@ -171,20 +171,6 @@ void si_init_resource_fields(struct si_screen *sscreen,
 	else
 		res->flags |= RADEON_FLAG_NO_INTERPROCESS_SHARING;
 
-	/* If VRAM is just stolen system memory, allow both VRAM and
-	 * GTT, whichever has free space. If a buffer is evicted from
-	 * VRAM to GTT, it will stay there.
-	 *
-	 * DRM 3.6.0 has good BO move throttling, so we can allow VRAM-only
-	 * placements even with a low amount of stolen VRAM.
-	 */
-	if (!sscreen->info.has_dedicated_vram &&
-	    (sscreen->info.drm_major < 3 || sscreen->info.drm_minor < 6) &&
-	    res->domains == RADEON_DOMAIN_VRAM) {
-		res->domains = RADEON_DOMAIN_VRAM_GTT;
-		res->flags &= ~RADEON_FLAG_NO_CPU_ACCESS; /* disallowed with VRAM_GTT */
-	}
-
 	if (sscreen->debug_flags & DBG(NO_WC))
 		res->flags &= ~RADEON_FLAG_GTT_WC;
 
