@@ -66,3 +66,7 @@ if with_egl
     subdir : 'EGL',
   )
 endif
+
+if with_dri
+  install_headers('GL/internal/dri_interface.h', subdir : 'GL/internal')
+endif
