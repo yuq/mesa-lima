@@ -2945,7 +2945,6 @@ radv_initialise_color_surface(struct radv_device *device,
 		cb->cb_color_cmask_slice = iview->image->cmask.slice_tile_max;
 
 		cb->cb_color_attrib |= S_028C74_TILE_MODE_INDEX(tile_mode_index);
-		cb->micro_tile_mode = iview->image->surface.micro_tile_mode;
 
 		if (iview->image->fmask.size) {
 			if (device->physical_device->rad_info.chip_class >= CIK)
