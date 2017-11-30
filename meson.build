@@ -47,6 +47,7 @@ with_valgrind = get_option('valgrind')
 with_libunwind = get_option('libunwind')
 with_asm = get_option('asm')
 with_osmesa = get_option('osmesa')
+with_swr_arches = get_option('swr-arches').split(',')
 if get_option('texture-float')
   pre_args += '-DTEXTURE_FLOAT_ENABLED'
   message('WARNING: Floating-point texture enabled. Please consult docs/patents.txt and your lawyer before building mesa.')
@@ -155,6 +156,7 @@ if _drivers != ''
   with_gallium_i915 = _split.contains('i915')
   with_gallium_svga = _split.contains('svga')
   with_gallium_virgl = _split.contains('virgl')
+  with_gallium_swr = _split.contains('swr')
   with_gallium = true
 endif
 
@@ -181,7 +183,7 @@ if _vulkan_drivers != ''
   with_any_vk = with_amd_vk or with_intel_vk
 endif
 
-if with_dri_swrast and with_gallium_softpipe
+if with_dri_swrast and (with_gallium_softpipe or with_gallium_swr)
   error('Only one swrast provider can be built')
 endif
 if with_dri_i915 and with_gallium_i915
@@ -975,7 +977,7 @@ _llvm = get_option('llvm')
 if _llvm == 'auto'
   dep_llvm = dependency(
     'llvm', version : '>= 3.9.0', modules : llvm_modules,
-    required : with_amd_vk or with_gallium_radeonsi,
+    required : with_amd_vk or with_gallium_radeonsi or with_gallium_swr,
   )
   with_llvm = dep_llvm.found()
 elif _llvm == 'true'
@@ -997,8 +999,8 @@ if with_llvm
     '-DHAVE_LLVM=0x0@0@@1@@2@'.format(_llvm_version[0], _llvm_version[1], _llvm_patch),
     '-DMESA_LLVM_VERSION_PATCH=@0@'.format(_llvm_patch),
   ]
-elif with_amd_vk or with_gallium_radeonsi
-  error('The following drivers requires LLVM: Radv, RadeonSI. One of these is enabled, but LLVM is disabled.')
+elif with_amd_vk or with_gallium_radeonsi or with_gallium_swr
+  error('The following drivers requires LLVM: Radv, RadeonSI, SWR. One of these is enabled, but LLVM is disabled.')
 endif
 
 dep_glvnd = []
@@ -1157,8 +1159,6 @@ endif
 # TODO: gallium tests
 
 # TODO: various libdirs
-
-# TODO: swr
 
 # TODO: gallium driver dirs
 

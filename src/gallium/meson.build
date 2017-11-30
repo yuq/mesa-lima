@@ -32,6 +32,14 @@ subdir('winsys/sw/null')
 subdir('winsys/sw/dri')
 subdir('winsys/sw/kms-dri')
 subdir('winsys/sw/wrapper')
+if with_gallium_swr
+  if meson.version().version_compare('< 0.44.0')
+    error('SWR requires meson 0.44.0 or greater.')
+  endif
+  subdir('drivers/swr')
+else
+  driver_swr = declare_dependency()
+endif
 if with_gallium_softpipe
   subdir('drivers/softpipe')
   if with_llvm

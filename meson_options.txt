@@ -261,3 +261,9 @@ option(
   choices : ['8', '16', '32'],
   description : 'Number of channel bits for OSMesa.'
 )
+option(
+  'swr-arches',
+  type : 'string',
+  value : 'avx,avx2',
+  description : 'Comma delemited swr architectures. choices : avx,avx2,knl,skx'
+)
