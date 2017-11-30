@@ -925,7 +925,6 @@ static int gfx9_compute_miptree(ADDR_HANDLE addrlib,
 	} else {
 		/* DCC */
 		if (!(surf->flags & RADEON_SURF_DISABLE_DCC) &&
-		    !(surf->flags & RADEON_SURF_SCANOUT) &&
 		    !compressed &&
 		    in->swizzleMode != ADDR_SW_LINEAR) {
 			ADDR2_COMPUTE_DCCINFO_INPUT din = {0};
