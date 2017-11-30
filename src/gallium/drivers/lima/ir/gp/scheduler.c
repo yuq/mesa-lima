@@ -489,11 +489,17 @@ static gpir_node *gpir_sched_instr_pass(gpir_instr *instr,
          int min = gpir_get_min_scheduled_succ(node);
          assert(min >= instr->index - 1);
          if (min == instr->index - 1)
-            count++;
+            count += node->op == gpir_op_complex1 ? 2 : 1;
       }
    }
 
-   if (count > 5) {
+   /* complex1 in this instr need one mul0 slot next instr for complex2 */
+   int limit = 5;
+   gpir_node *slot0 = instr->slots[GPIR_INSTR_SLOT_MUL0];
+   if (slot0 && slot0->op == gpir_op_complex1)
+      limit--;
+
+   if (count > limit) {
       /* schedule fully ready node first */
       list_for_each_entry(gpir_node, node, ready_list, list) {
          if (gpir_is_input_node(node)) {
