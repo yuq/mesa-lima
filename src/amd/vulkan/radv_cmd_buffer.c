@@ -2140,9 +2140,6 @@ VkResult radv_AllocateCommandBuffers(
 	VkResult result = VK_SUCCESS;
 	uint32_t i;
 
-	memset(pCommandBuffers, 0,
-			sizeof(*pCommandBuffers)*pAllocateInfo->commandBufferCount);
-
 	for (i = 0; i < pAllocateInfo->commandBufferCount; i++) {
 
 		if (!list_empty(&pool->free_cmd_buffers)) {
@@ -2164,9 +2161,22 @@ VkResult radv_AllocateCommandBuffers(
 			break;
 	}
 
-	if (result != VK_SUCCESS)
+	if (result != VK_SUCCESS) {
 		radv_FreeCommandBuffers(_device, pAllocateInfo->commandPool,
 					i, pCommandBuffers);
+
+		/* From the Vulkan 1.0.66 spec:
+		 *
+		 * "vkAllocateCommandBuffers can be used to create multiple
+		 *  command buffers. If the creation of any of those command
+		 *  buffers fails, the implementation must destroy all
+		 *  successfully created command buffer objects from this
+		 *  command, set all entries of the pCommandBuffers array to
+		 *  NULL and return the error."
+		 */
+		memset(pCommandBuffers, 0,
+		       sizeof(*pCommandBuffers) * pAllocateInfo->commandBufferCount);
+	}
 
 	return result;
 }
