@@ -429,7 +429,7 @@ shader_variant_create(struct radv_device *device,
 		      unsigned *code_size_out)
 {
 	enum radeon_family chip_family = device->physical_device->rad_info.family;
-	bool dump_shaders = device->instance->debug_flags & RADV_DEBUG_DUMP_SHADERS;
+	bool dump_shaders = radv_can_dump_shader(device, module);
 	enum ac_target_machine_options tm_options = 0;
 	struct radv_shader_variant *variant;
 	struct ac_shader_binary binary;

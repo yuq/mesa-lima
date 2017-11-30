@@ -1867,10 +1867,7 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 	radv_link_shaders(pipeline, nir);
 
 	for (int i = 0; i < MESA_SHADER_STAGES; ++i) {
-		if (!(device->instance->debug_flags & RADV_DEBUG_DUMP_SHADERS))
-			continue;
-
-		if (modules[i])
+		if (modules[i] && radv_can_dump_shader(device, modules[i]))
 			nir_print_shader(nir[i], stderr);
 	}
 
