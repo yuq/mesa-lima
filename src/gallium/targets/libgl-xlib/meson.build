@@ -38,7 +38,6 @@ endif
 if with_shared_glapi
   gallium_xlib_link_with += libglapi
 endif
-# TODO: SWR
 
 libgl = shared_library(
   'GL',
@@ -55,7 +54,8 @@ libgl = shared_library(
     libgallium, libmesa_util, libmesa_gallium, gallium_xlib_link_with,
   ],
   dependencies : [
-    dep_thread, dep_clock, dep_unwind, dep_lmsensors, driver_swrast,
+    dep_thread, dep_clock, dep_unwind, dep_lmsensors,
+    driver_swrast, driver_swr,
   ],
   install : true,
   version : '1.5.0',

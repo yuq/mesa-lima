@@ -145,7 +145,6 @@ endif
 if with_gallium_st_nine
   subdir('state_trackers/nine')
 endif
-# TODO: SWR
 # TODO: clover
 if with_dri
   subdir('state_trackers/dri')

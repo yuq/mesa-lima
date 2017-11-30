@@ -32,8 +32,6 @@ if with_ld_version_script
   osmesa_link_deps += files('osmesa.sym')
 endif
 
-# TODO: swr
-
 libosmesa = shared_library(
   osmesa_lib_name,
   'target.c',
@@ -51,7 +49,8 @@ libosmesa = shared_library(
     osmesa_link_with,
   ],
   dependencies : [
-    dep_selinux, dep_thread, dep_clock, dep_unwind, driver_swrast,
+    dep_selinux, dep_thread, dep_clock, dep_unwind,
+    driver_swrast, driver_swr,
   ],
   version : '8.0.0',
   install : true,
