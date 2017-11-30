@@ -47,7 +47,7 @@ static void radeon_vcn_enc_get_param(struct radeon_encoder *enc, struct pipe_h26
 	enc->enc_pic.ref_idx_l0 = pic->ref_idx_l0;
 	enc->enc_pic.ref_idx_l1 = pic->ref_idx_l1;
 	enc->enc_pic.not_referenced = pic->not_referenced;
-	enc->enc_pic.is_idr = pic->is_idr;
+	enc->enc_pic.is_idr = (pic->picture_type == PIPE_H264_ENC_PICTURE_TYPE_IDR);
 	enc->enc_pic.crop_left = 0;
 	enc->enc_pic.crop_right = (align(enc->base.width, 16) - enc->base.width) / 2;
 	enc->enc_pic.crop_top = 0;
