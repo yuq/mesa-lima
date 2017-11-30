@@ -40,7 +40,7 @@ if with_gles2
   )
 endif
 
-if with_gles1 or with_gles2 # or with_egl
+if with_gles1 or with_gles2 or with_egl
   install_headers('KHR/khrplatform.h', subdir : 'KHR')
 endif
 
