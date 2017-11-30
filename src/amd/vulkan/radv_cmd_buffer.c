@@ -1181,9 +1181,10 @@ radv_emit_depth_biais(struct radv_cmd_buffer *cmd_buffer)
 static void
 radv_emit_fb_color_state(struct radv_cmd_buffer *cmd_buffer,
 			 int index,
-			 struct radv_color_buffer_info *cb)
+			 struct radv_attachment_info *att)
 {
 	bool is_vi = cmd_buffer->device->physical_device->rad_info.chip_class >= VI;
+	struct radv_color_buffer_info *cb = &att->cb;
 
 	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
 		radeon_set_context_reg_seq(cmd_buffer->cs, R_028C60_CB_COLOR0_BASE + index * 0x3c, 11);
@@ -1204,7 +1205,7 @@ radv_emit_fb_color_state(struct radv_cmd_buffer *cmd_buffer,
 		radeon_emit(cmd_buffer->cs, cb->cb_dcc_base >> 32);
 		
 		radeon_set_context_reg(cmd_buffer->cs, R_0287A0_CB_MRT0_EPITCH + index * 4,
-				       cb->gfx9_epitch);
+				       S_0287A0_EPITCH(att->attachment->image->surface.u.gfx9.surf.epitch));
 	} else {
 		radeon_set_context_reg_seq(cmd_buffer->cs, R_028C60_CB_COLOR0_BASE + index * 0x3c, 11);
 		radeon_emit(cmd_buffer->cs, cb->cb_color_base);
@@ -1464,7 +1465,7 @@ radv_emit_framebuffer_state(struct radv_cmd_buffer *cmd_buffer)
 		radv_cs_add_buffer(cmd_buffer->device->ws, cmd_buffer->cs, att->attachment->bo, 8);
 
 		assert(att->attachment->aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT);
-		radv_emit_fb_color_state(cmd_buffer, i, &att->cb);
+		radv_emit_fb_color_state(cmd_buffer, i, att);
 
 		radv_load_color_clear_regs(cmd_buffer, att->attachment->image, i);
 	}

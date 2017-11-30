@@ -1456,7 +1456,6 @@ struct radv_color_buffer_info {
 	uint32_t cb_clear_value0;
 	uint32_t cb_clear_value1;
 	uint32_t micro_tile_mode;
-	uint32_t gfx9_epitch;
 };
 
 struct radv_ds_buffer_info {
