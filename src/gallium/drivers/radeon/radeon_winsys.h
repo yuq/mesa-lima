@@ -654,7 +654,6 @@ static inline void radeon_emit_array(struct radeon_winsys_cs *cs,
 enum radeon_heap {
     RADEON_HEAP_VRAM_NO_CPU_ACCESS,
     RADEON_HEAP_VRAM,
-    RADEON_HEAP_VRAM_GTT, /* combined heaps */
     RADEON_HEAP_GTT_WC,
     RADEON_HEAP_GTT,
     RADEON_MAX_SLAB_HEAPS,
@@ -667,8 +666,6 @@ static inline enum radeon_bo_domain radeon_domain_from_heap(enum radeon_heap hea
     case RADEON_HEAP_VRAM_NO_CPU_ACCESS:
     case RADEON_HEAP_VRAM:
         return RADEON_DOMAIN_VRAM;
-    case RADEON_HEAP_VRAM_GTT:
-        return RADEON_DOMAIN_VRAM_GTT;
     case RADEON_HEAP_GTT_WC:
     case RADEON_HEAP_GTT:
         return RADEON_DOMAIN_GTT;
@@ -687,7 +684,6 @@ static inline unsigned radeon_flags_from_heap(enum radeon_heap heap)
                RADEON_FLAG_NO_INTERPROCESS_SHARING;
 
     case RADEON_HEAP_VRAM:
-    case RADEON_HEAP_VRAM_GTT:
     case RADEON_HEAP_GTT_WC:
         return RADEON_FLAG_GTT_WC |
                RADEON_FLAG_NO_INTERPROCESS_SHARING;
@@ -707,7 +703,6 @@ static inline unsigned radeon_get_pb_cache_bucket_index(enum radeon_heap heap)
     case RADEON_HEAP_VRAM_NO_CPU_ACCESS:
         return 0;
     case RADEON_HEAP_VRAM:
-    case RADEON_HEAP_VRAM_GTT:
         return 1;
     case RADEON_HEAP_GTT_WC:
         return 2;
@@ -742,15 +737,14 @@ static inline int radeon_get_heap_index(enum radeon_bo_domain domain,
             return RADEON_HEAP_VRAM_NO_CPU_ACCESS;
         else
             return RADEON_HEAP_VRAM;
-    case RADEON_DOMAIN_VRAM_GTT:
-        return RADEON_HEAP_VRAM_GTT;
     case RADEON_DOMAIN_GTT:
         if (flags & RADEON_FLAG_GTT_WC)
             return RADEON_HEAP_GTT_WC;
         else
             return RADEON_HEAP_GTT;
+    default:
+        return -1;
     }
-    return -1;
 }
 
 #endif
