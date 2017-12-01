@@ -171,7 +171,8 @@ if with_glx == 'dri'
     link_args : [ld_args_bsymbolic, ld_args_gc_sections, extra_ld_args_libgl],
     dependencies : [
       dep_libdrm, dep_dl, dep_m, dep_thread, dep_x11, dep_xcb_glx, dep_xcb,
-      dep_x11_xcb, dep_xcb_dri2, dep_xcb_dri3, extra_deps_libgl,
+      dep_x11_xcb, dep_xcb_dri2, dep_xext, dep_xfixes, dep_xdamage,
+      extra_deps_libgl,
     ],
     version : gl_lib_version,
     install : true,
