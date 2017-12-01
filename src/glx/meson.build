@@ -142,8 +142,10 @@ libglx = static_library(
     inc_common, inc_glapi, inc_loader,
     include_directories('../../include/GL/internal'),
   ],
-  c_args : [c_vis_args, gl_lib_cargs,
-            '-DGL_LIB_NAME="lib@0@.so.@1@"'.format(gl_lib_name, gl_lib_version.split('.')[0])],
+  c_args : [
+    c_vis_args, gl_lib_cargs,
+    '-DGL_LIB_NAME="lib@0@.so.@1@"'.format(gl_lib_name, gl_lib_version.split('.')[0]),
+  ],
   link_with : [libloader, libloader_dri3_helper, libmesa_util, libxmlconfig, extra_libs_libglx],
   dependencies : [dep_libdrm, dep_dri2proto, dep_glproto, dep_x11, dep_glvnd],
   build_by_default : false,
@@ -167,9 +169,10 @@ if with_glx == 'dri'
     link_with : [libglapi_static, libglapi],
     link_whole : libglx,
     link_args : [ld_args_bsymbolic, ld_args_gc_sections, extra_ld_args_libgl],
-    dependencies : [dep_libdrm, dep_dl, dep_m, dep_thread, dep_x11,
-                    dep_xcb_glx, dep_xcb, dep_x11_xcb,
-                    dep_xcb_dri2, dep_xcb_dri3, extra_deps_libgl],
+    dependencies : [
+      dep_libdrm, dep_dl, dep_m, dep_thread, dep_x11, dep_xcb_glx, dep_xcb,
+      dep_x11_xcb, dep_xcb_dri2, dep_xcb_dri3, extra_deps_libgl,
+    ],
     version : gl_lib_version,
     install : true,
   )
