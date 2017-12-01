@@ -1432,6 +1432,35 @@ cmd_buffer_alloc_push_constants(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_ALL_GRAPHICS;
 }
 
+static const struct anv_descriptor *
+anv_descriptor_for_binding(const struct anv_cmd_buffer *cmd_buffer,
+                           const struct anv_pipeline_binding *binding)
+{
+   assert(binding->set < MAX_SETS);
+   const struct anv_descriptor_set *set =
+      cmd_buffer->state.descriptors[binding->set];
+   const uint32_t offset =
+      set->layout->binding[binding->binding].descriptor_index;
+   return &set->descriptors[offset + binding->index];
+}
+
+static uint32_t
+dynamic_offset_for_binding(const struct anv_cmd_buffer *cmd_buffer,
+                           const struct anv_pipeline *pipeline,
+                           const struct anv_pipeline_binding *binding)
+{
+   assert(binding->set < MAX_SETS);
+   const struct anv_descriptor_set *set =
+      cmd_buffer->state.descriptors[binding->set];
+
+   uint32_t dynamic_offset_idx =
+      pipeline->layout->set[binding->set].dynamic_offset_start +
+      set->layout->binding[binding->binding].dynamic_offset_index +
+      binding->index;
+
+   return cmd_buffer->state.dynamic_offsets[dynamic_offset_idx];
+}
+
 static VkResult
 emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                    gl_shader_stage stage,
@@ -1534,10 +1563,8 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          continue;
       }
 
-      struct anv_descriptor_set *set =
-         cmd_buffer->state.descriptors[binding->set];
-      uint32_t offset = set->layout->binding[binding->binding].descriptor_index;
-      struct anv_descriptor *desc = &set->descriptors[offset + binding->index];
+      const struct anv_descriptor *desc =
+         anv_descriptor_for_binding(cmd_buffer, binding);
 
       switch (desc->type) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
@@ -1611,14 +1638,10 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
-         uint32_t dynamic_offset_idx =
-            pipeline->layout->set[binding->set].dynamic_offset_start +
-            set->layout->binding[binding->binding].dynamic_offset_index +
-            binding->index;
-
          /* Compute the offset within the buffer */
-         uint64_t offset = desc->offset +
-            cmd_buffer->state.dynamic_offsets[dynamic_offset_idx];
+         uint32_t dynamic_offset =
+            dynamic_offset_for_binding(cmd_buffer, pipeline, binding);
+         uint64_t offset = desc->offset + dynamic_offset;
          /* Clamp to the buffer size */
          offset = MIN2(offset, desc->buffer->size);
          /* Clamp the range to the buffer size */
