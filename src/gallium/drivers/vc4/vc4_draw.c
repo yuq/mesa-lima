@@ -40,7 +40,7 @@ vc4_get_draw_cl_space(struct vc4_job *job, int vert_count)
         /* The SW-5891 workaround may cause us to emit multiple shader recs
          * and draw packets.
          */
-        int num_draws = DIV_ROUND_UP(vert_count, 65535) + 1;
+        int num_draws = DIV_ROUND_UP(vert_count, 65535 - 2) + 1;
 
         /* Binner gets our packet state -- vc4_emit.c contents,
          * and the primitive itself.
