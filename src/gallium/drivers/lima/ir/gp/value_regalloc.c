@@ -122,13 +122,7 @@ static void regalloc_block(gpir_block *block)
          if (!active[reg]) {
             active[reg] = node;
             node->value_reg = reg;
-            /* complex nodes need use same regs to be scheduled together */
-            if (node->op != gpir_op_complex1 &&
-                node->op != gpir_op_complex2 &&
-                node->op != gpir_op_complex1_f &&
-                node->op != gpir_op_complex1_m &&
-                (node->op < gpir_op_exp2_impl || node->op > gpir_op_rsqrt_impl))
-               reg_search_start++;
+            reg_search_start++;
             break;
          }
       }
