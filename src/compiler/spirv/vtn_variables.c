@@ -157,6 +157,22 @@ vtn_variable_resource_index(struct vtn_builder *b, struct vtn_variable *var,
    return &instr->dest.ssa;
 }
 
+static nir_ssa_def *
+vtn_resource_reindex(struct vtn_builder *b, nir_ssa_def *base_index,
+                     nir_ssa_def *offset_index)
+{
+   nir_intrinsic_instr *instr =
+      nir_intrinsic_instr_create(b->nb.shader,
+                                 nir_intrinsic_vulkan_resource_reindex);
+   instr->src[0] = nir_src_for_ssa(base_index);
+   instr->src[1] = nir_src_for_ssa(offset_index);
+
+   nir_ssa_dest_init(&instr->instr, &instr->dest, 1, 32, NULL);
+   nir_builder_instr_insert(&b->nb, &instr->instr);
+
+   return &instr->dest.ssa;
+}
+
 static struct vtn_pointer *
 vtn_ssa_offset_pointer_dereference(struct vtn_builder *b,
                                    struct vtn_pointer *base,
@@ -167,12 +183,104 @@ vtn_ssa_offset_pointer_dereference(struct vtn_builder *b,
    struct vtn_type *type = base->type;
 
    unsigned idx = 0;
-   if (deref_chain->ptr_as_array) {
+   if (base->mode == vtn_variable_mode_ubo ||
+       base->mode == vtn_variable_mode_ssbo) {
+      if (!block_index) {
+         vtn_assert(base->var && base->type);
+         nir_ssa_def *desc_arr_idx;
+         if (glsl_type_is_array(type->type)) {
+            if (deref_chain->length >= 1) {
+               desc_arr_idx =
+                  vtn_access_link_as_ssa(b, deref_chain->link[0], 1);
+               idx++;
+               /* This consumes a level of type */
+               type = type->array_element;
+            } else {
+               /* This is annoying.  We've been asked for a pointer to the
+                * array of UBOs/SSBOs and not a specifc buffer.  Return a
+                * pointer with a descriptor index of 0 and we'll have to do
+                * a reindex later to adjust it to the right thing.
+                */
+               desc_arr_idx = nir_imm_int(&b->nb, 0);
+            }
+         } else if (deref_chain->ptr_as_array) {
+            /* You can't have a zero-length OpPtrAccessChain */
+            vtn_assert(deref_chain->length >= 1);
+            desc_arr_idx = vtn_access_link_as_ssa(b, deref_chain->link[0], 1);
+         } else {
+            /* We have a regular non-array SSBO. */
+            desc_arr_idx = NULL;
+         }
+         block_index = vtn_variable_resource_index(b, base->var, desc_arr_idx);
+      } else if (deref_chain->ptr_as_array &&
+                 type->base_type == vtn_base_type_struct && type->block) {
+         /* We are doing an OpPtrAccessChain on a pointer to a struct that is
+          * decorated block.  This is an interesting corner in the SPIR-V
+          * spec.  One interpretation would be that they client is clearly
+          * trying to treat that block as if it's an implicit array of blocks
+          * repeated in the buffer.  However, the SPIR-V spec for the
+          * OpPtrAccessChain says:
+          *
+          *    "Base is treated as the address of the first element of an
+          *    array, and the Element element’s address is computed to be the
+          *    base for the Indexes, as per OpAccessChain."
+          *
+          * Taken literally, that would mean that your struct type is supposed
+          * to be treated as an array of such a struct and, since it's
+          * decorated block, that means an array of blocks which corresponds
+          * to an array descriptor.  Therefore, we need to do a reindex
+          * operation to add the index from the first link in the access chain
+          * to the index we recieved.
+          *
+          * The downside to this interpretation (there always is one) is that
+          * this might be somewhat surprising behavior to apps if they expect
+          * the implicit array behavior described above.
+          */
+         vtn_assert(deref_chain->length >= 1);
+         nir_ssa_def *offset_index =
+            vtn_access_link_as_ssa(b, deref_chain->link[0], 1);
+         idx++;
+
+         block_index = vtn_resource_reindex(b, block_index, offset_index);
+      }
+   }
+
+   if (!offset) {
+      if (base->mode == vtn_variable_mode_workgroup) {
+         /* SLM doesn't need nor have a block index */
+         vtn_assert(!block_index);
+
+         /* We need the variable for the base offset */
+         vtn_assert(base->var);
+
+         /* We need ptr_type for size and alignment */
+         vtn_assert(base->ptr_type);
+
+         /* Assign location on first use so that we don't end up bloating SLM
+          * address space for variables which are never statically used.
+          */
+         if (base->var->shared_location < 0) {
+            vtn_assert(base->ptr_type->length > 0 && base->ptr_type->align > 0);
+            b->shader->num_shared = vtn_align_u32(b->shader->num_shared,
+                                                  base->ptr_type->align);
+            base->var->shared_location = b->shader->num_shared;
+            b->shader->num_shared += base->ptr_type->length;
+         }
+
+         offset = nir_imm_int(&b->nb, base->var->shared_location);
+      } else {
+         /* The code above should have ensured a block_index when needed. */
+         vtn_assert(block_index);
+
+         /* Start off with at the start of the buffer. */
+         offset = nir_imm_int(&b->nb, 0);
+      }
+   }
+
+   if (deref_chain->ptr_as_array && idx == 0) {
       /* We need ptr_type for the stride */
       vtn_assert(base->ptr_type);
-      /* This must be a pointer to an actual element somewhere */
-      vtn_assert(offset);
-      vtn_assert(block_index || base->mode == vtn_variable_mode_workgroup);
+
       /* We need at least one element in the chain */
       vtn_assert(deref_chain->length >= 1);
 
@@ -182,52 +290,6 @@ vtn_ssa_offset_pointer_dereference(struct vtn_builder *b,
       offset = nir_iadd(&b->nb, offset, elem_offset);
       idx++;
    }
-
-   if (!offset) {
-      /* This is the first access chain so we don't have a block index */
-      vtn_assert(!block_index);
-
-      vtn_assert(base->var);
-      vtn_assert(base->ptr_type);
-      switch (base->mode) {
-      case vtn_variable_mode_ubo:
-      case vtn_variable_mode_ssbo:
-         if (glsl_type_is_array(type->type)) {
-            /* We need at least one element in the chain */
-            vtn_assert(deref_chain->length >= 1);
-
-            nir_ssa_def *desc_arr_idx =
-               vtn_access_link_as_ssa(b, deref_chain->link[0], 1);
-            block_index = vtn_variable_resource_index(b, base->var, desc_arr_idx);
-            type = type->array_element;
-            idx++;
-         } else {
-            block_index = vtn_variable_resource_index(b, base->var, NULL);
-         }
-         offset = nir_imm_int(&b->nb, 0);
-         break;
-
-      case vtn_variable_mode_workgroup:
-         /* Assign location on first use so that we don't end up bloating SLM
-          * address space for variables which are never statically used.
-          */
-         if (base->var->shared_location < 0) {
-            assert(base->ptr_type->length > 0 && base->ptr_type->align > 0);
-            b->shader->num_shared = vtn_align_u32(b->shader->num_shared,
-                                                  base->ptr_type->align);
-            base->var->shared_location = b->shader->num_shared;
-            b->shader->num_shared += base->ptr_type->length;
-         }
-
-         block_index = NULL;
-         offset = nir_imm_int(&b->nb, base->var->shared_location);
-         break;
-
-      default:
-         vtn_fail("Invalid offset pointer mode");
-      }
-   }
-   vtn_assert(offset);
 
    for (; idx < deref_chain->length; idx++) {
       switch (glsl_get_base_type(type->type)) {
@@ -1536,12 +1598,6 @@ vtn_pointer_to_ssa(struct vtn_builder *b, struct vtn_pointer *ptr)
        * itself.
        */
       vtn_assert(!ptr->offset && !ptr->block_index);
-
-      /* We can't handle a pointer to an array of descriptors because we have
-       * no way of knowing later on that we need to add to update the block
-       * index when dereferencing.
-       */
-      vtn_assert(ptr->var && ptr->var->type->base_type == vtn_base_type_struct);
 
       struct vtn_access_chain chain = {
          .length = 0,
