@@ -42,6 +42,7 @@
 #include "util/debug.h"
 using std::cerr;
 using std::setw;
+using std::ostream;
 #endif
 
 /* If <windows.h> is included this is defined and clashes with
@@ -60,6 +61,9 @@ using std::numeric_limits;
 #endif
 
 #ifndef NDEBUG
+/* Prepare to make it possible to specify log file */
+static std::ostream& debug_log = cerr;
+
 /* Helper function to check whether we want to seen debugging output */
 static inline bool is_debug_enabled ()
 {
@@ -602,7 +606,7 @@ public:
 
 #ifndef NDEBUG
 /* Function used for debugging. */
-static void dump_instruction(int line, prog_scope *scope,
+static void dump_instruction(ostream& os, int line, prog_scope *scope,
                              const glsl_to_tgsi_instruction& inst);
 #endif
 
@@ -640,7 +644,7 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
 
    prog_scope *cur_scope = scopes.create(nullptr, outer_scope, 0, 0, line);
 
-   RENAME_DEBUG(cerr << "========= Begin shader ============\n");
+   RENAME_DEBUG(debug_log << "========= Begin shader ============\n");
 
    foreach_in_list(glsl_to_tgsi_instruction, inst, instructions) {
       if (is_at_end) {
@@ -648,7 +652,7 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
          break;
       }
 
-      RENAME_DEBUG(dump_instruction(line, cur_scope, *inst));
+      RENAME_DEBUG(dump_instruction(debug_log, line, cur_scope, *inst));
 
       switch (inst->op) {
       case TGSI_OPCODE_BGNLOOP: {
@@ -783,7 +787,7 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
       ++line;
    }
 
-   RENAME_DEBUG(cerr << "==================================\n\n");
+   RENAME_DEBUG(debug_log << "==================================\n\n");
 
    /* Make sure last scope is closed, even though no
     * TGSI_OPCODE_END was given.
@@ -791,14 +795,14 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
    if (cur_scope->end() < 0)
       cur_scope->set_end(line - 1);
 
-   RENAME_DEBUG(cerr << "========= lifetimes ==============\n");
+   RENAME_DEBUG(debug_log << "========= lifetimes ==============\n");
    for(int i = 0; i < ntemps; ++i) {
-      RENAME_DEBUG(cerr << setw(4) << i);
+      RENAME_DEBUG(debug_log << setw(4) << i);
       lifetimes[i] = acc[i].get_required_lifetime();
-      RENAME_DEBUG(cerr << ": [" << lifetimes[i].begin << ", "
+      RENAME_DEBUG(debug_log << ": [" << lifetimes[i].begin << ", "
                         << lifetimes[i].end << "]\n");
    }
-   RENAME_DEBUG(cerr << "==================================\n\n");
+   RENAME_DEBUG(debug_log << "==================================\n\n");
 
 out:
    delete[] acc;
@@ -911,20 +915,11 @@ void get_temp_registers_remapping(void *mem_ctx, int ntemps,
 
 /* Code below used for debugging */
 #ifndef NDEBUG
-static const char swizzle_txt[] = "xyzw";
-
-static const char *tgsi_file_names[PROGRAM_FILE_MAX] =  {
-   "TEMP",  "ARRAY",   "IN", "OUT", "STATE", "CONST",
-   "UNIFORM",  "WO", "ADDR", "SAMPLER",  "SV", "UNDEF",
-   "IMM", "BUF",  "MEM",  "IMAGE"
-};
-
 static
-void dump_instruction(int line, prog_scope *scope,
+void dump_instruction(ostream& os, int line, prog_scope *scope,
                       const glsl_to_tgsi_instruction& inst)
 {
-   const struct tgsi_opcode_info *info = tgsi_get_opcode_info(inst.op);
-
+   const struct tgsi_opcode_info *info = inst.info;
    int indent = scope->nesting_depth();
    if ((scope->type() == switch_case_branch ||
         scope->type() == switch_default_branch) &&
@@ -938,74 +933,8 @@ void dump_instruction(int line, prog_scope *scope,
        info->opcode == TGSI_OPCODE_ENDSWITCH)
       --indent;
 
-   cerr << setw(4) << line << ": ";
-   for (int i = 0; i < indent; ++i)
-      cerr << "    ";
-   cerr << tgsi_get_opcode_name(info->opcode) << " ";
-
-   bool has_operators = false;
-   for (unsigned j = 0; j < num_inst_dst_regs(&inst); j++) {
-      has_operators = true;
-      if (j > 0)
-         cerr << ", ";
-
-      const st_dst_reg& dst = inst.dst[j];
-      cerr << tgsi_file_names[dst.file];
-
-      if (dst.file == PROGRAM_ARRAY)
-         cerr << "(" << dst.array_id << ")";
-
-      cerr << "[" << dst.index << "]";
-
-      if (dst.writemask != TGSI_WRITEMASK_XYZW) {
-         cerr << ".";
-         if (dst.writemask & TGSI_WRITEMASK_X) cerr << "x";
-         if (dst.writemask & TGSI_WRITEMASK_Y) cerr << "y";
-         if (dst.writemask & TGSI_WRITEMASK_Z) cerr << "z";
-         if (dst.writemask & TGSI_WRITEMASK_W) cerr << "w";
-      }
-   }
-   if (has_operators)
-      cerr << " := ";
-
-   for (unsigned j = 0; j < num_inst_src_regs(&inst); j++) {
-      if (j > 0)
-         cerr << ", ";
-
-      const st_src_reg& src = inst.src[j];
-      cerr << tgsi_file_names[src.file]
-           << "[" << src.index << "]";
-      if (src.swizzle != SWIZZLE_XYZW) {
-         cerr << ".";
-         for (int idx = 0; idx < 4; ++idx) {
-            int swz = GET_SWZ(src.swizzle, idx);
-            if (swz < 4) {
-               cerr << swizzle_txt[swz];
-            }
-         }
-      }
-   }
-
-   if (inst.tex_offset_num_offset > 0) {
-      cerr << ", TEXOFS: ";
-      for (unsigned j = 0; j < inst.tex_offset_num_offset; j++) {
-         if (j > 0)
-            cerr << ", ";
-
-         const st_src_reg& src = inst.tex_offsets[j];
-         cerr << tgsi_file_names[src.file]
-               << "[" << src.index << "]";
-         if (src.swizzle != SWIZZLE_XYZW) {
-            cerr << ".";
-            for (int idx = 0; idx < 4; ++idx) {
-               int swz = GET_SWZ(src.swizzle, idx);
-               if (swz < 4) {
-                  cerr << swizzle_txt[swz];
-               }
-            }
-         }
-      }
-   }
-   cerr << "\n";
+   os << setw(4) << line << ": ";
+   os << setw(indent * 4) << " ";
+   os << inst << "\n";
 }
 #endif
