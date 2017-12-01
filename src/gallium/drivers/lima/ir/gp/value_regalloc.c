@@ -98,6 +98,7 @@ static void regalloc_block(gpir_block *block)
    }
 
    /* do linear scan regalloc */
+   int reg_search_start = 0;
    gpir_node *active[GPIR_VALUE_REG_NUM] = {0};
    list_for_each_entry(gpir_node, node, &block->node_list, list) {
       /* if some reg is expired */
@@ -116,9 +117,18 @@ static void regalloc_block(gpir_block *block)
       /* find a free reg for this node */
       int i;
       for (i = 0; i < GPIR_VALUE_REG_NUM; i++) {
-         if (!active[i]) {
-            active[i] = node;
-            node->value_reg = i;
+         /* round robin reg select to reduce false dep when schedule */
+         int reg = (reg_search_start + i) % GPIR_VALUE_REG_NUM;
+         if (!active[reg]) {
+            active[reg] = node;
+            node->value_reg = reg;
+            /* complex nodes need use same regs to be scheduled together */
+            if (node->op != gpir_op_complex1 &&
+                node->op != gpir_op_complex2 &&
+                node->op != gpir_op_complex1_f &&
+                node->op != gpir_op_complex1_m &&
+                (node->op < gpir_op_exp2_impl || node->op > gpir_op_rsqrt_impl))
+               reg_search_start++;
             break;
          }
       }
