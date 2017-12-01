@@ -800,7 +800,7 @@ dri3_create_screen(int screen, struct glx_display * priv)
    struct dri3_screen *psc;
    __GLXDRIscreen *psp;
    struct glx_config *configs = NULL, *visuals = NULL;
-   char *driverName, *deviceName, *tmp;
+   char *driverName, *tmp;
    int i;
    unsigned char disable;
 
@@ -830,7 +830,6 @@ dri3_create_screen(int screen, struct glx_display * priv)
    }
 
    psc->fd = loader_get_user_preferred_fd(psc->fd, &psc->is_different_gpu);
-   deviceName = NULL;
 
    driverName = loader_get_driver_for_fd(psc->fd);
    if (!driverName) {
@@ -956,7 +955,6 @@ dri3_create_screen(int screen, struct glx_display * priv)
       __glXEnableDirectExtension(&psc->base, "GLX_EXT_buffer_age");
 
    free(driverName);
-   free(deviceName);
 
    tmp = getenv("LIBGL_SHOW_FPS");
    psc->show_fps_interval = tmp ? atoi(tmp) : 0;
@@ -983,7 +981,6 @@ handle_error:
       dlclose(psc->driver);
 
    free(driverName);
-   free(deviceName);
    glx_screen_cleanup(&psc->base);
    free(psc);
 
