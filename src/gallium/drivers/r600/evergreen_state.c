@@ -4580,6 +4580,53 @@ void eg_trace_emit(struct r600_context *rctx)
 	radeon_emit(cs, AC_ENCODE_TRACE_POINT(rctx->trace_id));
 }
 
+static void evergreen_emit_set_append_cnt(struct r600_context *rctx,
+					  struct r600_shader_atomic *atomic,
+					  struct r600_resource *resource,
+					  uint32_t pkt_flags)
+{
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	unsigned reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
+						   resource,
+						   RADEON_USAGE_READ,
+						   RADEON_PRIO_SHADER_RW_BUFFER);
+	uint64_t dst_offset = resource->gpu_address + (atomic->start * 4);
+	uint32_t base_reg_0 = R_02872C_GDS_APPEND_COUNT_0;
+
+	uint32_t reg_val = (base_reg_0 + atomic->hw_idx * 4 - EVERGREEN_CONTEXT_REG_OFFSET) >> 2;
+
+	radeon_emit(cs, PKT3(PKT3_SET_APPEND_CNT, 2, 0) | pkt_flags);
+	radeon_emit(cs, (reg_val << 16) | 0x3);
+	radeon_emit(cs, dst_offset & 0xfffffffc);
+	radeon_emit(cs, (dst_offset >> 32) & 0xff);
+	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
+	radeon_emit(cs, reloc);
+}
+
+static void evergreen_emit_event_write_eos(struct r600_context *rctx,
+					   struct r600_shader_atomic *atomic,
+					   struct r600_resource *resource,
+					   uint32_t pkt_flags)
+{
+	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
+	uint32_t event = EVENT_TYPE_PS_DONE;
+	uint32_t base_reg_0 = R_02872C_GDS_APPEND_COUNT_0;
+	uint32_t reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
+						   resource,
+						   RADEON_USAGE_WRITE,
+						   RADEON_PRIO_SHADER_RW_BUFFER);
+	uint64_t dst_offset = resource->gpu_address + (atomic->start * 4);
+	uint32_t reg_val = (base_reg_0 + atomic->hw_idx * 4) >> 2;
+
+	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOS, 3, 0) | pkt_flags);
+	radeon_emit(cs, EVENT_TYPE(event) | EVENT_INDEX(6));
+	radeon_emit(cs, (dst_offset) & 0xffffffff);
+	radeon_emit(cs, (0 << 29) | ((dst_offset >> 32) & 0xff));
+	radeon_emit(cs, reg_val);
+	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
+	radeon_emit(cs, reloc);
+}
+
 bool evergreen_emit_atomic_buffer_setup(struct r600_context *rctx,
 					struct r600_shader_atomic *combined_atomics,
 					uint8_t *atomic_used_mask_p)
@@ -4626,21 +4673,8 @@ bool evergreen_emit_atomic_buffer_setup(struct r600_context *rctx,
 		struct r600_shader_atomic *atomic = &combined_atomics[atomic_index];
 		struct r600_resource *resource = r600_resource(astate->buffer[atomic->buffer_id].buffer);
 		assert(resource);
-		unsigned reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
-							   resource,
-							   RADEON_USAGE_READ,
-							   RADEON_PRIO_SHADER_RW_BUFFER);
-		uint64_t dst_offset = resource->gpu_address + (atomic->start * 4);
-		uint32_t base_reg_0 = R_02872C_GDS_APPEND_COUNT_0;
 
-		uint32_t reg_val = (base_reg_0 + atomic->hw_idx * 4 - EVERGREEN_CONTEXT_REG_OFFSET) >> 2;
-
-		radeon_emit(cs, PKT3(PKT3_SET_APPEND_CNT, 2, 0) | pkt_flags);
-		radeon_emit(cs, (reg_val << 16) | 0x3);
-		radeon_emit(cs, dst_offset & 0xfffffffc);
-		radeon_emit(cs, (dst_offset >> 32) & 0xff);
-		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-		radeon_emit(cs, reloc);
+		evergreen_emit_set_append_cnt(rctx, atomic, resource, pkt_flags);
 	}
 	*atomic_used_mask_p = atomic_used_mask;
 	return true;
@@ -4668,21 +4702,7 @@ void evergreen_emit_atomic_buffer_save(struct r600_context *rctx,
 		struct r600_resource *resource = r600_resource(astate->buffer[atomic->buffer_id].buffer);
 		assert(resource);
 
-		uint32_t base_reg_0 = R_02872C_GDS_APPEND_COUNT_0;
-		reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
-							   resource,
-							   RADEON_USAGE_WRITE,
-							   RADEON_PRIO_SHADER_RW_BUFFER);
-		dst_offset = resource->gpu_address + (atomic->start * 4);
-		uint32_t reg_val = (base_reg_0 + atomic->hw_idx * 4) >> 2;
-
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOS, 3, 0) | pkt_flags);
-		radeon_emit(cs, EVENT_TYPE(event) | EVENT_INDEX(6));
-		radeon_emit(cs, (dst_offset) & 0xffffffff);
-		radeon_emit(cs, (0 << 29) | ((dst_offset >> 32) & 0xff));
-		radeon_emit(cs, reg_val);
-		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-		radeon_emit(cs, reloc);
+		evergreen_emit_event_write_eos(rctx, atomic, resource, pkt_flags);
 	}
 	++rctx->append_fence_id;
 	reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.gfx,
