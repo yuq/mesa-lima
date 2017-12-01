@@ -645,6 +645,10 @@ static void schedule_build_vreg_dependency(gpir_block *block)
       gpir_node *reg = regs[node->value_reg];
       if (reg) {
          gpir_node_foreach_succ(reg, dep) {
+            /* write after read dep should only apply to real 'read' */
+            if (dep->type != GPIR_DEP_INPUT)
+               continue;
+
             gpir_node *succ = dep->succ;
             gpir_node_add_dep(node, succ, GPIR_DEP_VREG_WRITE_AFTER_READ);
          }
