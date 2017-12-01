@@ -1822,6 +1822,9 @@ cmd_buffer_emit_descriptor_pointers(struct anv_cmd_buffer *cmd_buffer,
    };
 
    anv_foreach_stage(s, stages) {
+      assert(s < ARRAY_SIZE(binding_table_opcodes));
+      assert(binding_table_opcodes[s] > 0);
+
       if (cmd_buffer->state.samplers[s].alloc_size > 0) {
          anv_batch_emit(&cmd_buffer->batch,
                         GENX(3DSTATE_SAMPLER_STATE_POINTERS_VS), ssp) {
@@ -1857,6 +1860,9 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
    anv_foreach_stage(stage, cmd_buffer->state.push_constants_dirty) {
       if (stage == MESA_SHADER_COMPUTE)
          continue;
+
+      assert(stage < ARRAY_SIZE(push_constant_opcodes));
+      assert(push_constant_opcodes[stage] > 0);
 
       struct anv_state state = anv_cmd_buffer_push_constants(cmd_buffer, stage);
 
