@@ -439,7 +439,14 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
    if (r)
       goto error_va_alloc;
 
-   r = amdgpu_bo_va_op(buf_handle, 0, size, va, 0, AMDGPU_VA_OP_MAP);
+   unsigned vm_flags = AMDGPU_VM_PAGE_READABLE |
+                       AMDGPU_VM_PAGE_EXECUTABLE;
+
+   if (!(flags & RADEON_FLAG_READ_ONLY))
+       vm_flags |= AMDGPU_VM_PAGE_WRITEABLE;
+
+   r = amdgpu_bo_va_op_raw(ws->dev, buf_handle, 0, size, va, vm_flags,
+			   AMDGPU_VA_OP_MAP);
    if (r)
       goto error_va_map;
 
