@@ -357,9 +357,11 @@ void gpir_node_replace_pred(gpir_dep *dep, gpir_node *new_pred)
 void gpir_node_replace_succ(gpir_node *dst, gpir_node *src)
 {
    gpir_node_foreach_succ_safe(src, dep) {
+      if (dep->type != GPIR_DEP_INPUT)
+         continue;
+
       gpir_node_replace_pred(dep, dst);
-      if (dep->type == GPIR_DEP_INPUT)
-         gpir_node_replace_child(dep->succ, src, dst);
+      gpir_node_replace_child(dep->succ, src, dst);
    }
 }
 
