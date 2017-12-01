@@ -696,12 +696,12 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 		return false;
 
 	rctx->b.stream_uploader = u_upload_create(&rctx->b, 1024 * 1024,
-						  0, PIPE_USAGE_STREAM);
+						  0, PIPE_USAGE_STREAM, 0);
 	if (!rctx->b.stream_uploader)
 		return false;
 
 	rctx->b.const_uploader = u_upload_create(&rctx->b, 128 * 1024,
-						 0, PIPE_USAGE_DEFAULT);
+						 0, PIPE_USAGE_DEFAULT, 0);
 	if (!rctx->b.const_uploader)
 		return false;
 
