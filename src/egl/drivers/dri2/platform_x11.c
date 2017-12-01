@@ -704,7 +704,6 @@ dri2_x11_connect(struct dri2_egl_display *dri2_dpy)
 
    if (dri2_dpy->driver_name == NULL) {
       close(dri2_dpy->fd);
-      free(dri2_dpy->driver_name);
       free(connect);
       return EGL_FALSE;
    }
