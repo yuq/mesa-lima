@@ -634,6 +634,18 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
 
    OPT(nir_split_var_copies);
 
+   /* Run opt_algebraic before int64 lowering so we can hopefully get rid
+    * of some int64 instructions.
+    */
+   OPT(nir_opt_algebraic);
+
+   /* Lower int64 instructions before nir_optimize so that loop unrolling
+    * sees their actual cost.
+    */
+   nir_lower_int64(nir, nir_lower_imul64 |
+                        nir_lower_isign64 |
+                        nir_lower_divmod64);
+
    nir = brw_nir_optimize(nir, compiler, is_scalar);
 
    if (is_scalar) {
@@ -660,10 +672,6 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    nir_variable_mode indirect_mask =
       brw_nir_no_indirect_mask(compiler, nir->info.stage);
    nir_lower_indirect_derefs(nir, indirect_mask);
-
-   nir_lower_int64(nir, nir_lower_imul64 |
-                        nir_lower_isign64 |
-                        nir_lower_divmod64);
 
    /* Get rid of split copies */
    nir = brw_nir_optimize(nir, compiler, is_scalar);
