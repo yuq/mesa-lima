@@ -1843,9 +1843,12 @@ cmd_buffer_emit_descriptor_pointers(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
-static uint32_t
-cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
+static void
+cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer,
+                                VkShaderStageFlags dirty_stages)
 {
+   UNUSED const struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
+
    static const uint32_t push_constant_opcodes[] = {
       [MESA_SHADER_VERTEX]                      = 21,
       [MESA_SHADER_TESS_CTRL]                   = 25, /* HS */
@@ -1857,39 +1860,117 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
 
    VkShaderStageFlags flushed = 0;
 
-   anv_foreach_stage(stage, cmd_buffer->state.push_constants_dirty) {
-      if (stage == MESA_SHADER_COMPUTE)
-         continue;
-
+   anv_foreach_stage(stage, dirty_stages) {
       assert(stage < ARRAY_SIZE(push_constant_opcodes));
       assert(push_constant_opcodes[stage] > 0);
 
-      struct anv_state state = anv_cmd_buffer_push_constants(cmd_buffer, stage);
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS), c) {
+         c._3DCommandSubOpcode = push_constant_opcodes[stage];
 
-      if (state.offset == 0) {
-         anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS), c)
-            c._3DCommandSubOpcode = push_constant_opcodes[stage];
-      } else {
-         anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS), c) {
-            c._3DCommandSubOpcode = push_constant_opcodes[stage],
-            c.ConstantBody = (struct GENX(3DSTATE_CONSTANT_BODY)) {
-#if GEN_GEN >= 9
-               .Buffer[2] = { &cmd_buffer->device->dynamic_state_pool.block_pool.bo, state.offset },
-               .ReadLength[2] = DIV_ROUND_UP(state.alloc_size, 32),
+         if (anv_pipeline_has_stage(cmd_buffer->state.pipeline, stage)) {
+#if GEN_GEN >= 8 || GEN_IS_HASWELL
+            const struct brw_stage_prog_data *prog_data =
+               pipeline->shaders[stage]->prog_data;
+            const struct anv_pipeline_bind_map *bind_map =
+               &pipeline->shaders[stage]->bind_map;
+
+            /* The Skylake PRM contains the following restriction:
+             *
+             *    "The driver must ensure The following case does not occur
+             *     without a flush to the 3D engine: 3DSTATE_CONSTANT_* with
+             *     buffer 3 read length equal to zero committed followed by a
+             *     3DSTATE_CONSTANT_* with buffer 0 read length not equal to
+             *     zero committed."
+             *
+             * To avoid this, we program the buffers in the highest slots.
+             * This way, slot 0 is only used if slot 3 is also used.
+             */
+            int n = 3;
+
+            for (int i = 3; i >= 0; i--) {
+               const struct brw_ubo_range *range = &prog_data->ubo_ranges[i];
+               if (range->length == 0)
+                  continue;
+
+               const unsigned surface =
+                  prog_data->binding_table.ubo_start + range->block;
+
+               assert(surface <= bind_map->surface_count);
+               const struct anv_pipeline_binding *binding =
+                  &bind_map->surface_to_descriptor[surface];
+
+               const struct anv_descriptor *desc =
+                  anv_descriptor_for_binding(cmd_buffer, binding);
+
+               struct anv_address read_addr;
+               uint32_t read_len;
+               if (desc->type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) {
+                  read_len = MIN2(range->length,
+                     DIV_ROUND_UP(desc->buffer_view->range, 32) - range->start);
+                  read_addr = (struct anv_address) {
+                     .bo = desc->buffer_view->bo,
+                     .offset = desc->buffer_view->offset +
+                               range->start * 32,
+                  };
+               } else {
+                  assert(desc->type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
+
+                  uint32_t dynamic_offset =
+                     dynamic_offset_for_binding(cmd_buffer, pipeline, binding);
+                  uint32_t buf_offset =
+                     MIN2(desc->offset + dynamic_offset, desc->buffer->size);
+                  uint32_t buf_range =
+                     MIN2(desc->range, desc->buffer->size - buf_offset);
+
+                  read_len = MIN2(range->length,
+                     DIV_ROUND_UP(buf_range, 32) - range->start);
+                  read_addr = (struct anv_address) {
+                     .bo = desc->buffer->bo,
+                     .offset = desc->buffer->offset + buf_offset +
+                               range->start * 32,
+                  };
+               }
+
+               if (read_len > 0) {
+                  c.ConstantBody.Buffer[n] = read_addr;
+                  c.ConstantBody.ReadLength[n] = read_len;
+                  n--;
+               }
+            }
+
+            struct anv_state state =
+               anv_cmd_buffer_push_constants(cmd_buffer, stage);
+
+            if (state.alloc_size > 0) {
+               c.ConstantBody.Buffer[n] = (struct anv_address) {
+                  .bo = &cmd_buffer->device->dynamic_state_pool.block_pool.bo,
+                  .offset = state.offset,
+               };
+               c.ConstantBody.ReadLength[n] =
+                  DIV_ROUND_UP(state.alloc_size, 32);
+            }
 #else
-               .Buffer[0] = { .offset = state.offset },
-               .ReadLength[0] = DIV_ROUND_UP(state.alloc_size, 32),
+            /* For Ivy Bridge, the push constants packets have a different
+             * rule that would require us to iterate in the other direction
+             * and possibly mess around with dynamic state base address.
+             * Don't bother; just emit regular push constants at n = 0.
+             */
+            struct anv_state state =
+               anv_cmd_buffer_push_constants(cmd_buffer, stage);
+
+            if (state.alloc_size > 0) {
+               c.ConstantBody.Buffer[0].offset = state.offset,
+               c.ConstantBody.ReadLength[0] =
+                  DIV_ROUND_UP(state.alloc_size, 32);
+            }
 #endif
-            };
          }
       }
 
       flushed |= mesa_to_vk_shader_stage(stage);
    }
 
-   cmd_buffer->state.push_constants_dirty &= ~VK_SHADER_STAGE_ALL_GRAPHICS;
-
-   return flushed;
+   cmd_buffer->state.push_constants_dirty &= ~flushed;
 }
 
 void
@@ -2003,16 +2084,13 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->state.descriptors_dirty)
       dirty = flush_descriptor_sets(cmd_buffer);
 
-   if (cmd_buffer->state.push_constants_dirty) {
-#if GEN_GEN >= 9
-      /* On Sky Lake and later, the binding table pointers commands are
-       * what actually flush the changes to push constant state so we need
-       * to dirty them so they get re-emitted below.
+   if (dirty || cmd_buffer->state.push_constants_dirty) {
+      /* Because we're pushing UBOs, we have to push whenever either
+       * descriptors or push constants is dirty.
        */
-      dirty |= cmd_buffer_flush_push_constants(cmd_buffer);
-#else
-      cmd_buffer_flush_push_constants(cmd_buffer);
-#endif
+      dirty |= cmd_buffer->state.push_constants_dirty;
+      dirty &= ANV_STAGE_MASK & VK_SHADER_STAGE_ALL_GRAPHICS;
+      cmd_buffer_flush_push_constants(cmd_buffer, dirty);
    }
 
    if (dirty)
