@@ -302,15 +302,6 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       NIR_PASS_V(prog->nir, nir_lower_atomics_to_ssbo,
                  prog->nir->info.num_abos);
 
-      if (brw->ctx.Cache) {
-         struct blob writer;
-         blob_init(&writer);
-         nir_serialize(&writer, prog->nir);
-         prog->driver_cache_blob = ralloc_size(NULL, writer.size);
-         memcpy(prog->driver_cache_blob, writer.data, writer.size);
-         prog->driver_cache_blob_size = writer.size;
-      }
-
       infos[stage] = &prog->nir->info;
 
       update_xfb_info(prog->sh.LinkedTransformFeedback, infos[stage]);
@@ -354,6 +345,22 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
                  i, shProg->Name);
          fprintf(stderr, "%s", sh->Source);
          fprintf(stderr, "\n");
+      }
+   }
+
+   if (brw->ctx.Cache) {
+      for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {
+         struct gl_linked_shader *shader = shProg->_LinkedShaders[stage];
+         if (!shader)
+            continue;
+
+         struct gl_program *prog = shader->Program;
+         struct blob writer;
+         blob_init(&writer);
+         nir_serialize(&writer, prog->nir);
+         prog->driver_cache_blob = ralloc_size(NULL, writer.size);
+         memcpy(prog->driver_cache_blob, writer.data, writer.size);
+         prog->driver_cache_blob_size = writer.size;
       }
    }
 
