@@ -76,7 +76,7 @@ _mesa_delete_ati_fragment_shader(struct gl_context *ctx, struct ati_fragment_sha
 static void match_pair_inst(struct ati_fragment_shader *curProg, GLuint optype)
 {
    if (optype == curProg->last_optype) {
-      curProg->last_optype = 1;
+      curProg->last_optype = ATI_FRAGMENT_SHADER_ALPHA_OP;
    }
 }
 
@@ -125,7 +125,7 @@ static void debug_op(GLint optype, GLuint arg_count, GLenum op, GLuint dst,
   
   fprintf(stderr, "%s(%s, %s", op_name, _mesa_enum_to_string(op),
 	      _mesa_enum_to_string(dst));
-  if (!optype)
+  if (optype == ATI_FRAGMENT_SHADER_COLOR_OP)
     fprintf(stderr, ", %d", dstMask);
   
   fprintf(stderr, ", %s", create_dst_mod_str(dstMod));
@@ -631,7 +631,7 @@ _mesa_FragmentOpXATI(GLint optype, GLuint arg_count, GLenum op, GLuint dst,
       _mesa_error(ctx, GL_INVALID_ENUM, "C/AFragmentOpATI(op)");
       return;
    }
-   if (optype == 1) {
+   if (optype == ATI_FRAGMENT_SHADER_ALPHA_OP) {
       if (((op == GL_DOT2_ADD_ATI) && (curI->Opcode[0] != GL_DOT2_ADD_ATI)) ||
 	 ((op == GL_DOT3_ATI) && (curI->Opcode[0] != GL_DOT3_ATI)) ||
 	 ((op == GL_DOT4_ATI) && (curI->Opcode[0] != GL_DOT4_ATI)) ||
