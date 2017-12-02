@@ -389,6 +389,9 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
                      struct brw_stage_prog_data *prog_data,
                      struct anv_pipeline_bind_map *map)
 {
+   const struct brw_compiler *compiler =
+      pipeline->device->instance->physicalDevice.compiler;
+
    nir_shader *nir = anv_shader_compile_to_nir(pipeline, mem_ctx,
                                                module, entrypoint, stage,
                                                spec_info);
@@ -437,6 +440,9 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    /* Apply the actual pipeline layout to UBOs, SSBOs, and textures */
    if (pipeline->layout)
       anv_nir_apply_pipeline_layout(pipeline, nir, prog_data, map);
+
+   if (stage != MESA_SHADER_COMPUTE)
+      brw_nir_analyze_ubo_ranges(compiler, nir, prog_data->ubo_ranges);
 
    assert(nir->num_uniforms == prog_data->nr_params * 4);
 
