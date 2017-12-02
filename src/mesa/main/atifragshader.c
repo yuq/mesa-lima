@@ -73,21 +73,6 @@ _mesa_delete_ati_fragment_shader(struct gl_context *ctx, struct ati_fragment_sha
 }
 
 
-
-static void
-new_arith_inst(struct ati_fragment_shader *prog)
-{
-/* set "default" instruction as not all may get defined.
-   there is no specified way to express a nop with ati fragment shaders we use
-   GL_NONE as the op enum and just set some params to 0 - so nothing to do here */
-   prog->numArithInstr[prog->cur_pass >> 1]++;
-}
-
-static void
-new_tex_inst(struct ati_fragment_shader *prog)
-{
-}
-
 static void match_pair_inst(struct ati_fragment_shader *curProg, GLuint optype)
 {
    if (optype == curProg->last_optype) {
@@ -159,8 +144,8 @@ static void debug_op(GLint optype, GLuint arg_count, GLenum op, GLuint dst,
 }
 #endif
 
-static int check_arith_arg(struct ati_fragment_shader *curProg,
-			GLuint optype, GLuint arg, GLuint argRep)
+static int
+check_arith_arg(GLuint optype, GLuint arg, GLuint argRep)
 {
    GET_CURRENT_CONTEXT(ctx);
 
@@ -188,11 +173,15 @@ static int check_arith_arg(struct ati_fragment_shader *curProg,
          return 0;
       }
    }
-   if ((curProg->cur_pass == 1) &&
-      ((arg == GL_PRIMARY_COLOR_ARB) || (arg == GL_SECONDARY_INTERPOLATOR_ATI))) {
-      curProg->interpinp1 = GL_TRUE;
-   }
    return 1;
+}
+
+static GLboolean
+check_arg_color(GLubyte pass, GLuint arg)
+{
+   if (pass == 1 && (arg == GL_PRIMARY_COLOR_ARB || arg == GL_SECONDARY_INTERPOLATOR_ATI))
+         return GL_TRUE;
+   return GL_FALSE;
 }
 
 GLuint GLAPIENTRY
@@ -441,18 +430,17 @@ _mesa_PassTexCoordATI(GLuint dst, GLuint coord, GLenum swizzle)
    GET_CURRENT_CONTEXT(ctx);
    struct ati_fragment_shader *curProg = ctx->ATIFragmentShader.Current;
    struct atifs_setupinst *curI;
+   GLubyte new_pass = curProg->cur_pass;
 
    if (!ctx->ATIFragmentShader.Compiling) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "glPassTexCoordATI(outsideShader)");
       return;
    }
 
-   if (curProg->cur_pass == 1) {
-      match_pair_inst(curProg, 0);
-      curProg->cur_pass = 2;
-   }
-   if ((curProg->cur_pass > 2) ||
-      ((1 << (dst - GL_REG_0_ATI)) & curProg->regsAssigned[curProg->cur_pass >> 1])) {
+   if (curProg->cur_pass == 1)
+      new_pass = 2;
+   if ((new_pass > 2) ||
+      ((1 << (dst - GL_REG_0_ATI)) & curProg->regsAssigned[new_pass >> 1])) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "glPassTexCoord(pass)");
       return;
    }
@@ -467,7 +455,7 @@ _mesa_PassTexCoordATI(GLuint dst, GLuint coord, GLenum swizzle)
       _mesa_error(ctx, GL_INVALID_ENUM, "glPassTexCoordATI(coord)");
       return;
    }
-   if ((curProg->cur_pass == 0) && (coord >= GL_REG_0_ATI)) {
+   if ((new_pass == 0) && (coord >= GL_REG_0_ATI)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "glPassTexCoordATI(coord)");
       return;
    }
@@ -490,8 +478,10 @@ _mesa_PassTexCoordATI(GLuint dst, GLuint coord, GLenum swizzle)
       }
    }
 
+   if (curProg->cur_pass == 1)
+      match_pair_inst(curProg, 0);
+   curProg->cur_pass = new_pass;
    curProg->regsAssigned[curProg->cur_pass >> 1] |= 1 << (dst - GL_REG_0_ATI);
-   new_tex_inst(curProg);
 
    /* add the instructions */
    curI = &curProg->SetupInst[curProg->cur_pass >> 1][dst - GL_REG_0_ATI];
@@ -513,18 +503,17 @@ _mesa_SampleMapATI(GLuint dst, GLuint interp, GLenum swizzle)
    GET_CURRENT_CONTEXT(ctx);
    struct ati_fragment_shader *curProg = ctx->ATIFragmentShader.Current;
    struct atifs_setupinst *curI;
+   GLubyte new_pass = curProg->cur_pass;
 
    if (!ctx->ATIFragmentShader.Compiling) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "glSampleMapATI(outsideShader)");
       return;
    }
 
-   if (curProg->cur_pass == 1) {
-      match_pair_inst(curProg, 0);
-      curProg->cur_pass = 2;
-   }
-   if ((curProg->cur_pass > 2) ||
-      ((1 << (dst - GL_REG_0_ATI)) & curProg->regsAssigned[curProg->cur_pass >> 1])) {
+   if (curProg->cur_pass == 1)
+      new_pass = 2;
+   if ((new_pass > 2) ||
+      ((1 << (dst - GL_REG_0_ATI)) & curProg->regsAssigned[new_pass >> 1])) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "glSampleMapATI(pass)");
       return;
    }
@@ -540,7 +529,7 @@ _mesa_SampleMapATI(GLuint dst, GLuint interp, GLenum swizzle)
       _mesa_error(ctx, GL_INVALID_ENUM, "glSampleMapATI(interp)");
       return;
    }
-   if ((curProg->cur_pass == 0) && (interp >= GL_REG_0_ATI)) {
+   if ((new_pass == 0) && (interp >= GL_REG_0_ATI)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "glSampleMapATI(interp)");
       return;
    }
@@ -563,8 +552,10 @@ _mesa_SampleMapATI(GLuint dst, GLuint interp, GLenum swizzle)
       }
    }
 
+   if (curProg->cur_pass == 1)
+      match_pair_inst(curProg, 0);
+   curProg->cur_pass = new_pass;
    curProg->regsAssigned[curProg->cur_pass >> 1] |= 1 << (dst - GL_REG_0_ATI);
-   new_tex_inst(curProg);
 
    /* add the instructions */
    curI = &curProg->SetupInst[curProg->cur_pass >> 1][dst - GL_REG_0_ATI];
@@ -592,17 +583,20 @@ _mesa_FragmentOpXATI(GLint optype, GLuint arg_count, GLenum op, GLuint dst,
    GLint ci;
    struct atifs_instruction *curI;
    GLuint modtemp = dstMod & ~GL_SATURATE_BIT_ATI;
+   GLubyte new_pass = curProg->cur_pass;
+   GLubyte numArithInstr;
 
    if (!ctx->ATIFragmentShader.Compiling) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "C/AFragmentOpATI(outsideShader)");
       return;
    }
 
-   if (curProg->cur_pass==0)
-      curProg->cur_pass=1;
+   if (curProg->cur_pass == 0)
+      new_pass = 1;
+   else if (curProg->cur_pass == 2)
+      new_pass = 3;
 
-   else if (curProg->cur_pass==2)
-      curProg->cur_pass=3;
+   numArithInstr = curProg->numArithInstr[new_pass >> 1];
 
    /* Decide whether this is a new instruction or not. All color instructions
     * are new, and alpha instructions might also be new if there was no
@@ -610,20 +604,15 @@ _mesa_FragmentOpXATI(GLint optype, GLuint arg_count, GLenum op, GLuint dst,
     */
    if (optype == ATI_FRAGMENT_SHADER_COLOR_OP ||
        curProg->last_optype == optype ||
-       curProg->numArithInstr[curProg->cur_pass >> 1] == 0) {
-      if (curProg->numArithInstr[curProg->cur_pass >> 1] > 7) {
+       curProg->numArithInstr[new_pass >> 1] == 0) {
+      if (curProg->numArithInstr[new_pass >> 1] > 7) {
 	 _mesa_error(ctx, GL_INVALID_OPERATION, "C/AFragmentOpATI(instrCount)");
 	 return;
       }
-      /* easier to do that here slight side effect invalid instr will still be inserted as nops */
-      match_pair_inst(curProg, optype);
-      new_arith_inst(curProg);
+      numArithInstr++;
    }
-   curProg->last_optype = optype;
-   ci = curProg->numArithInstr[curProg->cur_pass >> 1] - 1;
-
-   /* add the instructions */
-   curI = &curProg->Instructions[curProg->cur_pass >> 1][ci];
+   ci = numArithInstr - 1;
+   curI = &curProg->Instructions[new_pass >> 1][ci];
 
    /* error checking */
    if ((dst < GL_REG_0_ATI) || (dst > GL_REG_5_ATI)) {
@@ -664,16 +653,16 @@ _mesa_FragmentOpXATI(GLint optype, GLuint arg_count, GLenum op, GLuint dst,
       return;
    }
 
-   if (!check_arith_arg(curProg, optype, arg1, arg1Rep)) {
+   if (!check_arith_arg(optype, arg1, arg1Rep)) {
       return;
    }
    if (arg2) {
-      if (!check_arith_arg(curProg, optype, arg2, arg2Rep)) {
+      if (!check_arith_arg(optype, arg2, arg2Rep)) {
 	 return;
       }
    }
    if (arg3) {
-      if (!check_arith_arg(curProg, optype, arg3, arg3Rep)) {
+      if (!check_arith_arg(optype, arg3, arg3Rep)) {
 	 return;
       }
       if ((arg1 >= GL_CON_0_ATI) && (arg1 <= GL_CON_7_ATI) &&
@@ -686,6 +675,16 @@ _mesa_FragmentOpXATI(GLint optype, GLuint arg_count, GLenum op, GLuint dst,
    }
 
    /* all ok - not all fully validated though (e.g. argNMod - spec doesn't say anything) */
+
+   curProg->interpinp1 |= check_arg_color(new_pass, arg1);
+   if (arg2)
+      curProg->interpinp1 |= check_arg_color(new_pass, arg2);
+   if (arg3)
+      curProg->interpinp1 |= check_arg_color(new_pass, arg3);
+
+   curProg->numArithInstr[new_pass >> 1] = numArithInstr;
+   curProg->last_optype = optype;
+   curProg->cur_pass = new_pass;
 
    curI->Opcode[optype] = op;
    curI->SrcReg[optype][0].Index = arg1;
