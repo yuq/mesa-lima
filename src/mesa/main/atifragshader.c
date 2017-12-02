@@ -597,9 +597,13 @@ _mesa_FragmentOpXATI(GLint optype, GLuint arg_count, GLenum op, GLuint dst,
    else if (curProg->cur_pass==2)
       curProg->cur_pass=3;
 
-   /* decide whether this is a new instruction or not ... all color instructions are new,
-      and alpha instructions might also be new if there was no preceding color inst */
-   if ((optype == 0) || (curProg->last_optype == optype)) {
+   /* Decide whether this is a new instruction or not. All color instructions
+    * are new, and alpha instructions might also be new if there was no
+    * preceding color inst. This may also be the first inst of the pass
+    */
+   if (optype == ATI_FRAGMENT_SHADER_COLOR_OP ||
+       curProg->last_optype == optype ||
+       curProg->numArithInstr[curProg->cur_pass >> 1] == 0) {
       if (curProg->numArithInstr[curProg->cur_pass >> 1] > 7) {
 	 _mesa_error(ctx, GL_INVALID_OPERATION, "C/AFragmentOpATI(instrCount)");
 	 return;
