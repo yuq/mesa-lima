@@ -625,7 +625,7 @@ _mesa_FragmentOpXATI(GLint optype, GLuint arg_count, GLenum op, GLuint dst,
    }
    if ((modtemp != GL_NONE) && (modtemp != GL_2X_BIT_ATI) &&
       (modtemp != GL_4X_BIT_ATI) && (modtemp != GL_8X_BIT_ATI) &&
-      (modtemp != GL_HALF_BIT_ATI) && !(modtemp != GL_QUARTER_BIT_ATI) &&
+      (modtemp != GL_HALF_BIT_ATI) && (modtemp != GL_QUARTER_BIT_ATI) &&
       (modtemp != GL_EIGHTH_BIT_ATI)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "C/AFragmentOpATI(dstMod)%x", modtemp);
       return;
