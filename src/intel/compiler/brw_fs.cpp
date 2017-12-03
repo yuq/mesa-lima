@@ -1906,62 +1906,6 @@ fs_visitor::compact_virtual_grfs()
    return progress;
 }
 
-static void
-set_push_pull_constant_loc(unsigned uniform, int *chunk_start,
-                           unsigned *max_chunk_bitsize,
-                           bool contiguous, unsigned bitsize,
-                           const unsigned target_bitsize,
-                           int *push_constant_loc, int *pull_constant_loc,
-                           unsigned *num_push_constants,
-                           unsigned *num_pull_constants,
-                           const unsigned max_push_components,
-                           const unsigned max_chunk_size,
-                           bool allow_pull_constants,
-                           struct brw_stage_prog_data *stage_prog_data)
-{
-   /* This is the first live uniform in the chunk */
-   if (*chunk_start < 0)
-      *chunk_start = uniform;
-
-   /* Keep track of the maximum bit size access in contiguous uniforms */
-   *max_chunk_bitsize = MAX2(*max_chunk_bitsize, bitsize);
-
-   /* If this element does not need to be contiguous with the next, we
-    * split at this point and everything between chunk_start and u forms a
-    * single chunk.
-    */
-   if (!contiguous) {
-      /* If bitsize doesn't match the target one, skip it */
-      if (*max_chunk_bitsize != target_bitsize) {
-         /* FIXME: right now we only support 32 and 64-bit accesses */
-         assert(*max_chunk_bitsize == 4 || *max_chunk_bitsize == 8);
-         *max_chunk_bitsize = 0;
-         *chunk_start = -1;
-         return;
-      }
-
-      unsigned chunk_size = uniform - *chunk_start + 1;
-
-      /* Decide whether we should push or pull this parameter.  In the
-       * Vulkan driver, push constants are explicitly exposed via the API
-       * so we push everything.  In GL, we only push small arrays.
-       */
-      if (!allow_pull_constants ||
-          (*num_push_constants + chunk_size <= max_push_components &&
-           chunk_size <= max_chunk_size)) {
-         assert(*num_push_constants + chunk_size <= max_push_components);
-         for (unsigned j = *chunk_start; j <= uniform; j++)
-            push_constant_loc[j] = (*num_push_constants)++;
-      } else {
-         for (unsigned j = *chunk_start; j <= uniform; j++)
-            pull_constant_loc[j] = (*num_pull_constants)++;
-      }
-
-      *max_chunk_bitsize = 0;
-      *chunk_start = -1;
-   }
-}
-
 static int
 get_subgroup_id_param_index(const brw_stage_prog_data *prog_data)
 {
@@ -1974,6 +1918,109 @@ get_subgroup_id_param_index(const brw_stage_prog_data *prog_data)
       return prog_data->nr_params - 1;
 
    return -1;
+}
+
+/**
+ * Struct for handling complex alignments.
+ *
+ * A complex alignment is stored as multiplier and an offset.  A value is
+ * considered to be aligned if it is {offset} larger than a multiple of {mul}.
+ * For instance, with an alignment of {8, 2}, cplx_align_apply would do the
+ * following:
+ *
+ *  N  | cplx_align_apply({8, 2}, N)
+ * ----+-----------------------------
+ *  4  | 6
+ *  6  | 6
+ *  8  | 14
+ *  10 | 14
+ *  12 | 14
+ *  14 | 14
+ *  16 | 22
+ */
+struct cplx_align {
+   unsigned mul:4;
+   unsigned offset:4;
+};
+
+#define CPLX_ALIGN_MAX_MUL 8
+
+static void
+cplx_align_assert_sane(struct cplx_align a)
+{
+   assert(a.mul > 0 && util_is_power_of_two(a.mul));
+   assert(a.offset < a.mul);
+}
+
+/**
+ * Combines two alignments to produce a least multiple of sorts.
+ *
+ * The returned alignment is the smallest (in terms of multiplier) such that
+ * anything aligned to both a and b will be aligned to the new alignment.
+ * This function will assert-fail if a and b are not compatible, i.e. if the
+ * offset parameters are such that no common alignment is possible.
+ */
+static struct cplx_align
+cplx_align_combine(struct cplx_align a, struct cplx_align b)
+{
+   cplx_align_assert_sane(a);
+   cplx_align_assert_sane(b);
+
+   /* Assert that the alignments agree. */
+   assert((a.offset & (b.mul - 1)) == (b.offset & (a.mul - 1)));
+
+   return a.mul > b.mul ? a : b;
+}
+
+/**
+ * Apply a complex alignment
+ *
+ * This function will return the smallest number greater than or equal to
+ * offset that is aligned to align.
+ */
+static unsigned
+cplx_align_apply(struct cplx_align align, unsigned offset)
+{
+   return ALIGN(offset - align.offset, align.mul) + align.offset;
+}
+
+#define UNIFORM_SLOT_SIZE 4
+
+struct uniform_slot_info {
+   /** True if the given uniform slot is live */
+   unsigned is_live:1;
+
+   /** True if this slot and the next slot must remain contiguous */
+   unsigned contiguous:1;
+
+   struct cplx_align align;
+};
+
+static void
+mark_uniform_slots_read(struct uniform_slot_info *slots,
+                        unsigned num_slots, unsigned alignment)
+{
+   assert(alignment > 0 && util_is_power_of_two(alignment));
+   assert(alignment <= CPLX_ALIGN_MAX_MUL);
+
+   /* We can't align a slot to anything less than the slot size */
+   alignment = MAX2(alignment, UNIFORM_SLOT_SIZE);
+
+   struct cplx_align align = {alignment, 0};
+   cplx_align_assert_sane(align);
+
+   for (unsigned i = 0; i < num_slots; i++) {
+      slots[i].is_live = true;
+      if (i < num_slots - 1)
+         slots[i].contiguous = true;
+
+      align.offset = (i * UNIFORM_SLOT_SIZE) & (align.mul - 1);
+      if (slots[i].align.mul == 0) {
+         slots[i].align = align;
+      } else {
+         slots[i].align = cplx_align_combine(slots[i].align, align);
+      }
+   }
 }
 
 /**
@@ -1994,60 +2041,44 @@ fs_visitor::assign_constant_locations()
       return;
    }
 
-   bool is_live[uniforms];
-   memset(is_live, 0, sizeof(is_live));
-   unsigned bitsize_access[uniforms];
-   memset(bitsize_access, 0, sizeof(bitsize_access));
+   struct uniform_slot_info slots[uniforms];
+   memset(slots, 0, sizeof(slots));
 
-   /* For each uniform slot, a value of true indicates that the given slot and
-    * the next slot must remain contiguous.  This is used to keep us from
-    * splitting arrays and 64-bit values apart.
-    */
-   bool contiguous[uniforms];
-   memset(contiguous, 0, sizeof(contiguous));
-
-   /* First, we walk through the instructions and do two things:
-    *
-    *  1) Figure out which uniforms are live.
-    *
-    *  2) Mark any indirectly used ranges of registers as contiguous.
-    *
-    * Note that we don't move constant-indexed accesses to arrays.  No
-    * testing has been done of the performance impact of this choice.
-    */
    foreach_block_and_inst_safe(block, fs_inst, inst, cfg) {
       for (int i = 0 ; i < inst->sources; i++) {
          if (inst->src[i].file != UNIFORM)
             continue;
 
-         int constant_nr = inst->src[i].nr + inst->src[i].offset / 4;
+         /* NIR tightly packs things so the uniform number might not be
+          * aligned (if we have a double right after a float, for instance).
+          * This is fine because the process of re-arranging them will ensure
+          * that things are properly aligned.  The offset into that uniform,
+          * however, must be aligned.
+          *
+          * In Vulkan, we have explicit offsets but everything is crammed
+          * into a single "variable" so inst->src[i].nr will always be 0.
+          * Everything will be properly aligned relative to that one base.
+          */
+         assert(inst->src[i].offset % type_sz(inst->src[i].type) == 0);
 
+         unsigned u = inst->src[i].nr +
+                      inst->src[i].offset / UNIFORM_SLOT_SIZE;
+
+         if (u >= uniforms)
+            continue;
+
+         unsigned slots_read;
          if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT && i == 0) {
-            assert(inst->src[2].ud % 4 == 0);
-            unsigned last = constant_nr + (inst->src[2].ud / 4) - 1;
-            assert(last < uniforms);
-
-            for (unsigned j = constant_nr; j < last; j++) {
-               is_live[j] = true;
-               contiguous[j] = true;
-               bitsize_access[j] = MAX2(bitsize_access[j], type_sz(inst->src[i].type));
-            }
-            is_live[last] = true;
-            bitsize_access[last] = MAX2(bitsize_access[last], type_sz(inst->src[i].type));
+            slots_read = DIV_ROUND_UP(inst->src[2].ud, UNIFORM_SLOT_SIZE);
          } else {
-            if (constant_nr >= 0 && constant_nr < (int) uniforms) {
-               int regs_read = inst->components_read(i) *
-                  type_sz(inst->src[i].type) / 4;
-               assert(regs_read <= 2);
-               if (regs_read == 2)
-                  contiguous[constant_nr] = true;
-               for (int j = 0; j < regs_read; j++) {
-                  is_live[constant_nr + j] = true;
-                  bitsize_access[constant_nr + j] =
-                     MAX2(bitsize_access[constant_nr + j], type_sz(inst->src[i].type));
-               }
-            }
+            unsigned bytes_read = inst->components_read(i) *
+                                  type_sz(inst->src[i].type);
+            slots_read = DIV_ROUND_UP(bytes_read, UNIFORM_SLOT_SIZE);
          }
+
+         assert(u + slots_read <= uniforms);
+         mark_uniform_slots_read(&slots[u], slots_read,
+                                 type_sz(inst->src[i].type));
       }
    }
 
@@ -2082,43 +2113,64 @@ fs_visitor::assign_constant_locations()
    memset(pull_constant_loc, -1, uniforms * sizeof(*pull_constant_loc));
 
    int chunk_start = -1;
-   unsigned max_chunk_bitsize = 0;
-
-   /* First push 64-bit uniforms to ensure they are properly aligned */
-   const unsigned uniform_64_bit_size = type_sz(BRW_REGISTER_TYPE_DF);
+   struct cplx_align align;
    for (unsigned u = 0; u < uniforms; u++) {
-      if (!is_live[u])
+      if (!slots[u].is_live) {
+         assert(chunk_start == -1);
          continue;
-
-      set_push_pull_constant_loc(u, &chunk_start, &max_chunk_bitsize,
-                                 contiguous[u], bitsize_access[u],
-                                 uniform_64_bit_size,
-                                 push_constant_loc, pull_constant_loc,
-                                 &num_push_constants, &num_pull_constants,
-                                 max_push_components, max_chunk_size,
-                                 compiler->supports_pull_constants,
-                                 stage_prog_data);
-
-   }
-
-   /* Then push the rest of uniforms */
-   const unsigned uniform_32_bit_size = type_sz(BRW_REGISTER_TYPE_F);
-   for (unsigned u = 0; u < uniforms; u++) {
-      if (!is_live[u])
-         continue;
+      }
 
       /* Skip subgroup_id_index to put it in the last push register. */
       if (subgroup_id_index == (int)u)
          continue;
 
-      set_push_pull_constant_loc(u, &chunk_start, &max_chunk_bitsize,
-                                 contiguous[u], bitsize_access[u],
-                                 uniform_32_bit_size,
-                                 push_constant_loc, pull_constant_loc,
-                                 &num_push_constants, &num_pull_constants,
-                                 max_push_components, max_chunk_size,
-                                 compiler->supports_pull_constants,
-                                 stage_prog_data);
+      if (chunk_start == -1) {
+         chunk_start = u;
+         align = slots[u].align;
+      } else {
+         /* Offset into the chunk */
+         unsigned chunk_offset = (u - chunk_start) * UNIFORM_SLOT_SIZE;
+
+         /* Shift the slot alignment down by the chunk offset so it is
+          * comparable with the base chunk alignment.
+          */
+         struct cplx_align slot_align = slots[u].align;
+         slot_align.offset =
+            (slot_align.offset - chunk_offset) & (align.mul - 1);
+
+         align = cplx_align_combine(align, slot_align);
+      }
+
+      /* Sanity check the alignment */
+      cplx_align_assert_sane(align);
+
+      if (slots[u].contiguous)
+         continue;
+
+      /* Adjust the alignment to be in terms of slots, not bytes */
+      assert((align.mul & (UNIFORM_SLOT_SIZE - 1)) == 0);
+      assert((align.offset & (UNIFORM_SLOT_SIZE - 1)) == 0);
+      align.mul /= UNIFORM_SLOT_SIZE;
+      align.offset /= UNIFORM_SLOT_SIZE;
+
+      unsigned push_start_align = cplx_align_apply(align, num_push_constants);
+      unsigned chunk_size = u - chunk_start + 1;
+      if (!compiler->supports_pull_constants ||
+          (chunk_size < max_chunk_size &&
+           push_start_align + chunk_size <= max_push_components)) {
+         /* Align up the number of push constants */
+         num_push_constants = push_start_align;
+         for (unsigned i = 0; i < chunk_size; i++)
+            push_constant_loc[chunk_start + i] = num_push_constants++;
+      } else {
+         /* We need to pull this one */
+         num_pull_constants = cplx_align_apply(align, num_pull_constants);
+         for (unsigned i = 0; i < chunk_size; i++)
+            pull_constant_loc[chunk_start + i] = num_pull_constants++;
+      }
+
+      /* Reset the chunk and start again */
+      chunk_start = -1;
    }
 
    /* Add the CS local thread ID uniform at the end of the push constants */
@@ -2131,8 +2183,8 @@ fs_visitor::assign_constant_locations()
    uint32_t *param = stage_prog_data->param;
    stage_prog_data->nr_params = num_push_constants;
    if (num_push_constants) {
-      stage_prog_data->param = ralloc_array(mem_ctx, uint32_t,
-                                            num_push_constants);
+      stage_prog_data->param = rzalloc_array(mem_ctx, uint32_t,
+                                             num_push_constants);
    } else {
       stage_prog_data->param = NULL;
    }
@@ -2140,8 +2192,8 @@ fs_visitor::assign_constant_locations()
    assert(stage_prog_data->pull_param == NULL);
    if (num_pull_constants > 0) {
       stage_prog_data->nr_pull_params = num_pull_constants;
-      stage_prog_data->pull_param = ralloc_array(mem_ctx, uint32_t,
-                                                 num_pull_constants);
+      stage_prog_data->pull_param = rzalloc_array(mem_ctx, uint32_t,
+                                                  num_pull_constants);
    }
 
    /* Now that we know how many regular uniforms we'll push, reduce the
