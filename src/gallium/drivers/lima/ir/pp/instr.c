@@ -23,7 +23,6 @@
  */
 
 #include "util/ralloc.h"
-#include "util/hash_table.h"
 
 #include "ppir.h"
 
@@ -33,35 +32,29 @@ ppir_instr *ppir_instr_create(ppir_block *block)
    if (!instr)
       return NULL;
 
-   instr->preds = _mesa_set_create(instr, _mesa_hash_pointer, _mesa_key_pointer_equal);
-   if (!instr->preds)
-      goto err_out;
-   instr->succs = _mesa_set_create(instr, _mesa_hash_pointer, _mesa_key_pointer_equal);
-   if (!instr->succs)
-      goto err_out;
+   list_inithead(&instr->succ_list);
+   list_inithead(&instr->pred_list);
 
    instr->index = block->comp->cur_instr_index++;
    instr->reg_pressure = -1;
 
    list_addtail(&instr->list, &block->instr_list);
    return instr;
-
-err_out:
-   ralloc_free(instr);
-   return NULL;
 }
 
-void ppir_instr_add_depend(ppir_instr *succ, ppir_instr *pred)
+void ppir_instr_add_dep(ppir_instr *succ, ppir_instr *pred)
 {
    /* don't add duplicated instr */
-   ppir_instr_foreach_pred(succ, entry) {
-      ppir_instr *instr = ppir_instr_from_entry(entry);
-      if (instr == pred)
+   ppir_instr_foreach_pred(succ, dep) {
+      if (pred == dep->pred)
          return;
    }
 
-   _mesa_set_add(succ->preds, pred);
-   _mesa_set_add(pred->succs, succ);
+   ppir_dep *dep = ralloc(succ, ppir_dep);
+   dep->pred = pred;
+   dep->succ = succ;
+   list_addtail(&dep->pred_link, &succ->pred_list);
+   list_addtail(&dep->succ_link, &pred->succ_list);
 }
 
 /* check whether a const slot fix into another const slot */
@@ -238,9 +231,8 @@ static void ppir_instr_print_sub(ppir_instr *instr)
           instr->index);
 
    if (!instr->printed) {
-      ppir_instr_foreach_pred(instr, entry) {
-         ppir_instr *pred = ppir_instr_from_entry(entry);
-         ppir_instr_print_sub(pred);
+      ppir_instr_foreach_pred(instr, dep) {
+         ppir_instr_print_sub(dep->pred);
       }
 
       instr->printed = true;
@@ -249,7 +241,7 @@ static void ppir_instr_print_sub(ppir_instr *instr)
    printf("]");
 }
 
-void ppir_instr_print_depend(ppir_compiler *comp)
+void ppir_instr_print_dep(ppir_compiler *comp)
 {
    if (!lima_shader_debug_pp)
       return;

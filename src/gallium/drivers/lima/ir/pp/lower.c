@@ -55,12 +55,11 @@ static bool ppir_lower_dot(ppir_block *block, ppir_node *node)
    dest->ssa.live_out = 0;
    dest->write_mask = u_bit_consecutive(0, num_components);
 
-   ppir_node_foreach_pred(node, entry) {
-      ppir_node *pred = ppir_node_from_entry(entry, pred);
-      ppir_node_remove_entry(entry);
-      ppir_node_add_child(&mul->node, pred);
+   ppir_node_foreach_pred_safe(node, dep) {
+      ppir_node_remove_dep(dep);
+      ppir_node_add_dep(&mul->node, dep->pred);
    }
-   ppir_node_add_child(node, &mul->node);
+   ppir_node_add_dep(node, &mul->node);
 
    if (node->op == ppir_op_dot2) {
       node->op = ppir_op_add;
@@ -107,8 +106,8 @@ static bool ppir_lower_neg(ppir_block *block, ppir_node *node)
    ppir_alu_node *neg = ppir_node_to_alu(node);
    ppir_dest *dest = &neg->dest;
 
-   ppir_node_foreach_succ(node, entry) {
-      ppir_node *succ = ppir_node_from_entry(entry, succ);
+   ppir_node_foreach_succ_safe(node, dep) {
+      ppir_node *succ = dep->succ;
 
       if (succ->type != ppir_node_type_alu)
          continue;
@@ -122,12 +121,11 @@ static bool ppir_lower_neg(ppir_block *block, ppir_node *node)
          }
       }
 
-      ppir_node_remove_entry(entry);
+      ppir_node_remove_dep(dep);
 
       /* TODO: may not depend on all preceeds when reg */
-      ppir_node_foreach_pred(node, entry) {
-         ppir_node *pred = ppir_node_from_entry(entry, pred);
-         ppir_node_add_child(succ, pred);
+      ppir_node_foreach_pred(node, dep) {
+         ppir_node_add_dep(succ, dep->pred);
       }
    }
 
@@ -182,8 +180,8 @@ static bool ppir_lower_vec_to_scalar(ppir_block *block, ppir_node *node)
          return false;
 
       /* change all successors to use reg r */
-      ppir_node_foreach_succ(node, entry) {
-         ppir_node *succ = ppir_node_from_entry(entry, succ);
+      ppir_node_foreach_succ(node, dep) {
+         ppir_node *succ = dep->succ;
          if (succ->type == ppir_node_type_alu) {
             ppir_alu_node *sa = ppir_node_to_alu(succ);
             for (int i = 0; i < sa->num_src; i++) {
@@ -223,14 +221,12 @@ static bool ppir_lower_vec_to_scalar(ppir_block *block, ppir_node *node)
       sa->num_src = alu->num_src;
 
       /* TODO: need per reg component dependancy */
-      ppir_node_foreach_succ(node, entry) {
-         ppir_node *succ = ppir_node_from_entry(entry, succ);
-         ppir_node_add_child(succ, s);
+      ppir_node_foreach_succ(node, dep) {
+         ppir_node_add_dep(dep->succ, s);
       }
 
-      ppir_node_foreach_pred(node, entry) {
-         ppir_node *pred = ppir_node_from_entry(entry, pred);
-         ppir_node_add_child(s, pred);
+      ppir_node_foreach_pred(node, dep) {
+         ppir_node_add_dep(s, dep->pred);
       }
    }
 

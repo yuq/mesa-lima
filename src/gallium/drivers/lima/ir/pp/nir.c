@@ -98,7 +98,7 @@ static void ppir_node_add_src(ppir_compiler *comp, ppir_node *node,
 
    if (ns->is_ssa) {
       child = comp->var_nodes[ns->ssa->index];
-      ppir_node_add_child(node, child);
+      ppir_node_add_dep(node, child);
    }
    else {
       unsigned mask;
@@ -112,7 +112,7 @@ static void ppir_node_add_src(ppir_compiler *comp, ppir_node *node,
       while (mask) {
          int swizzle = ps->swizzle[u_bit_scan(&mask)];
          child = comp->var_nodes[(reg->index << 2) + comp->reg_base + swizzle];
-         ppir_node_add_child(node, child);
+         ppir_node_add_dep(node, child);
       }
    }
 

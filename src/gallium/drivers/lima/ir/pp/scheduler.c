@@ -64,13 +64,12 @@ static bool ppir_schedule_create_instr_from_node(ppir_compiler *comp)
             if (!move)
                return false;
 
-            ppir_node_foreach_pred(node, entry) {
-               ppir_node *pred = ppir_node_from_entry(entry, pred);
-               ppir_node_remove_entry(entry);
-               ppir_node_add_child(move, pred);
+            ppir_node_foreach_pred_safe(node, dep) {
+               ppir_node_remove_dep(dep);
+               ppir_node_add_dep(move, dep->pred);
             }
 
-            ppir_node_add_child(node, move);
+            ppir_node_add_dep(node, move);
             list_addtail(&move->list, &node->list);
 
             ppir_alu_node *alu = ppir_node_to_alu(move);
@@ -103,8 +102,8 @@ static bool ppir_schedule_create_instr_from_node(ppir_compiler *comp)
       list_for_each_entry(ppir_node, node, &block->node_list, list) {
          switch (node->type) {
          case ppir_node_type_const:
-            ppir_node_foreach_succ(node, entry) {
-               ppir_node *succ = ppir_node_from_entry(entry, succ);
+            ppir_node_foreach_succ(node, dep) {
+               ppir_node *succ = dep->succ;
                if (!ppir_instr_insert_node(succ->instr, node))
                   return false;
             }
@@ -120,8 +119,8 @@ static bool ppir_schedule_create_instr_from_node(ppir_compiler *comp)
             struct list_head move_list;
             list_inithead(&move_list);
 
-            ppir_node_foreach_succ(node, entry) {
-               ppir_node *succ = ppir_node_from_entry(entry, succ);
+            ppir_node_foreach_succ_safe(node, dep) {
+               ppir_node *succ = dep->succ;
                assert(succ->type == ppir_node_type_alu);
 
                if (!ppir_instr_insert_node(succ->instr, node)) {
@@ -141,10 +140,7 @@ static bool ppir_schedule_create_instr_from_node(ppir_compiler *comp)
                   for (int i = 0; i < 4; i++)
                      alu->src->swizzle[i] = i;
 
-                  ppir_dep_info *dep = ppir_dep_from_entry(entry);
-                  dep->pred = move;
-                  _mesa_set_add_pre_hashed(move->succs, entry->hash, dep);
-                  _mesa_set_remove(node->succs, entry);
+                  ppir_node_replace_pred(dep, move);
                   ppir_node_replace_child(succ, node, move);
 
                   if (!create_new_instr(block, move) ||
@@ -162,7 +158,7 @@ static bool ppir_schedule_create_instr_from_node(ppir_compiler *comp)
             }
 
             list_for_each_entry(ppir_node, move, &move_list, list) {
-               ppir_node_add_child(move, node);
+               ppir_node_add_dep(move, node);
             }
             list_splicetail(&move_list, &node->list);
             break;
@@ -183,10 +179,10 @@ static void ppir_schedule_build_instr_dependency(ppir_compiler *comp)
          for (int i = 0; i < PPIR_INSTR_SLOT_NUM; i++) {
             ppir_node *node = instr->slots[i];
             if (node) {
-               ppir_node_foreach_pred(node, entry) {
-                  ppir_node *pred = ppir_node_from_entry(entry, pred);
+               ppir_node_foreach_pred(node, dep) {
+                  ppir_node *pred = dep->pred;
                   if (pred->instr && pred->instr != instr)
-                     ppir_instr_add_depend(instr, pred->instr);
+                     ppir_instr_add_dep(instr, pred->instr);
                }
             }
          }
@@ -200,8 +196,8 @@ static void ppir_schedule_calc_sched_info(ppir_instr *instr)
    float extra_reg = 1.0;
 
    /* update all children's sched info */
-   ppir_instr_foreach_pred(instr, entry) {
-      ppir_instr *pred = ppir_instr_from_entry(entry);
+   ppir_instr_foreach_pred(instr, dep) {
+      ppir_instr *pred = dep->pred;
 
       if (pred->reg_pressure < 0)
          ppir_schedule_calc_sched_info(pred);
@@ -209,7 +205,7 @@ static void ppir_schedule_calc_sched_info(ppir_instr *instr)
       if (instr->est < pred->est + 1)
          instr->est = pred->est + 1;
 
-      float reg_weight = 1.0 - 1.0 / pred->succs->entries;
+      float reg_weight = 1.0 - 1.0 / list_length(&pred->succ_list);
       if (extra_reg > reg_weight)
          extra_reg = reg_weight;
 
@@ -223,8 +219,8 @@ static void ppir_schedule_calc_sched_info(ppir_instr *instr)
    }
 
    int i = 0, reg[n];
-   ppir_instr_foreach_pred(instr, entry) {
-      ppir_instr *pred = ppir_instr_from_entry(entry);
+   ppir_instr_foreach_pred(instr, dep) {
+      ppir_instr *pred = dep->pred;
       reg[i++] = pred->reg_pressure;
    }
 
@@ -297,13 +293,13 @@ static void ppir_schedule_ready_list(ppir_block *block,
    block->sched_instr_index--;
    instr->seq = block->sched_instr_base + block->sched_instr_index;
 
-   ppir_instr_foreach_pred(instr, entry) {
-      ppir_instr *pred = ppir_instr_from_entry(entry);
+   ppir_instr_foreach_pred(instr, dep) {
+      ppir_instr *pred = dep->pred;
       pred->parent_index = block->sched_instr_index;
 
       bool ready = true;
-      ppir_instr_foreach_succ(pred, _entry) {
-         ppir_instr *succ = ppir_instr_from_entry(_entry);
+      ppir_instr_foreach_succ(pred, dep) {
+         ppir_instr *succ = dep->succ;
          if (!succ->scheduled) {
             ready = false;
             break;
@@ -368,7 +364,7 @@ bool ppir_schedule_prog(ppir_compiler *comp)
    ppir_instr_print_list(comp);
 
    ppir_schedule_build_instr_dependency(comp);
-   ppir_instr_print_depend(comp);
+   ppir_instr_print_dep(comp);
 
    _ppir_schedule_prog(comp);
    ppir_instr_print_list(comp);
