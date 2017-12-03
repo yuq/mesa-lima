@@ -2155,7 +2155,7 @@ fs_visitor::assign_constant_locations()
 
       unsigned push_start_align = cplx_align_apply(align, num_push_constants);
       unsigned chunk_size = u - chunk_start + 1;
-      if (!compiler->supports_pull_constants ||
+      if ((!compiler->supports_pull_constants && u < UBO_START) ||
           (chunk_size < max_chunk_size &&
            push_start_align + chunk_size <= max_push_components)) {
          /* Align up the number of push constants */
