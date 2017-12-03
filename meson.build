@@ -909,6 +909,10 @@ if cc.links('int main() { return 0; }',
             name : 'dynamic-list')
   with_ld_dynamic_list = true
 endif
+ld_args_build_id = []
+if build_machine.system() != 'darwin'
+   ld_args_build_id += '-Wl,--build-id=sha1'
+endif
 
 # check for dl support
 if cc.has_function('dlopen')
