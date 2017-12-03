@@ -679,8 +679,8 @@ depends_on(struct ir3_instruction *instr, struct ir3_instruction *prior)
 	 * make accesses to unrelated objects not depend on each other (at
 	 * least as long as not declared coherent)
 	 */
-	if ((instr->barrier_class & IR3_BARRIER_EVERYTHING) ||
-			(prior->barrier_class & IR3_BARRIER_EVERYTHING))
+	if (((instr->barrier_class & IR3_BARRIER_EVERYTHING) && prior->barrier_class) ||
+			((prior->barrier_class & IR3_BARRIER_EVERYTHING) && instr->barrier_class))
 		return true;
 	return !!(instr->barrier_class & prior->barrier_conflict);
 }
