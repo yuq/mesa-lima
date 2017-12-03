@@ -27,7 +27,6 @@
 
 #include "util/u_math.h"
 #include "util/list.h"
-#include "util/set.h"
 
 #include "ir/lima_ir.h"
 
@@ -119,6 +118,12 @@ typedef struct {
 
 extern const ppir_op_info ppir_op_infos[];
 
+typedef struct {
+   void *pred, *succ;
+   struct list_head pred_link;
+   struct list_head succ_link;
+} ppir_dep;
+
 typedef struct ppir_node {
    struct list_head list;
    ppir_op op;
@@ -129,7 +134,8 @@ typedef struct ppir_node {
    struct ppir_instr *instr;
 
    /* for scheduler */
-   struct set *preds, *succs;
+   struct list_head succ_list;
+   struct list_head pred_list;
 } ppir_node;
 
 typedef enum {
@@ -226,12 +232,6 @@ typedef struct {
    ppir_src src;
 } ppir_store_node;
 
-typedef struct {
-   ppir_node *pred, *succ;
-   bool is_child_dep;
-   bool is_offset;
-} ppir_dep_info;
-
 enum ppir_instr_slot {
    PPIR_INSTR_SLOT_VARYING,
    PPIR_INSTR_SLOT_TEXLD,
@@ -258,7 +258,8 @@ typedef struct ppir_instr {
    bool is_end;
 
    /* for scheduler */
-   struct set *preds, *succs;
+   struct list_head succ_list;
+   struct list_head pred_list;
    float reg_pressure;
    int est; /* earliest start time */
    int parent_index;
@@ -299,35 +300,32 @@ typedef struct ppir_compiler {
 } ppir_compiler;
 
 void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index, unsigned mask);
-void ppir_node_add_child(ppir_node *parent, ppir_node *child);
-void ppir_node_remove_entry(struct set_entry *entry);
+void ppir_node_add_dep(ppir_node *succ, ppir_node *pred);
+void ppir_node_remove_dep(ppir_dep *dep);
 void ppir_node_delete(ppir_node *node);
 void ppir_node_print_prog(ppir_compiler *comp);
 void ppir_node_replace_child(ppir_node *parent, ppir_node *old_child, ppir_node *new_child);
 void ppir_node_replace_succ(ppir_node *dst, ppir_node *src);
+void ppir_node_replace_pred(ppir_dep *dep, ppir_node *new_pred);
 
 static inline bool ppir_node_is_root(ppir_node *node)
 {
-   return !node->succs->entries;
+   return list_empty(&node->succ_list);
 }
 
 static inline bool ppir_node_is_leaf(ppir_node *node)
 {
-   return !node->preds->entries;
+   return list_empty(&node->pred_list);
 }
 
-#define ppir_dep_from_entry(entry) ((ppir_dep_info *)(entry->key))
-#define ppir_node_from_entry(entry, direction) (ppir_dep_from_entry(entry)->direction)
-
-#define ppir_node_foreach_pred(node, entry)                                \
-   for (struct set_entry *entry = _mesa_set_next_entry(node->preds, NULL); \
-        entry != NULL;                                                     \
-        entry = _mesa_set_next_entry(node->preds, entry))
-
-#define ppir_node_foreach_succ(node, entry)                                \
-   for (struct set_entry *entry = _mesa_set_next_entry(node->succs, NULL); \
-        entry != NULL;                                                     \
-        entry = _mesa_set_next_entry(node->succs, entry))
+#define ppir_node_foreach_succ(node, dep) \
+   list_for_each_entry(ppir_dep, dep, &node->succ_list, succ_link)
+#define ppir_node_foreach_succ_safe(node, dep) \
+   list_for_each_entry_safe(ppir_dep, dep, &node->succ_list, succ_link)
+#define ppir_node_foreach_pred(node, dep) \
+   list_for_each_entry(ppir_dep, dep, &node->pred_list, pred_link)
+#define ppir_node_foreach_pred_safe(node, dep) \
+   list_for_each_entry_safe(ppir_dep, dep, &node->pred_list, pred_link)
 
 #define ppir_node_to_alu(node) ((ppir_alu_node *)(node))
 #define ppir_node_to_const(node) ((ppir_const_node *)(node))
@@ -405,30 +403,27 @@ static inline int ppir_target_get_dest_reg_index(ppir_dest *dest)
 
 ppir_instr *ppir_instr_create(ppir_block *block);
 bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node);
-void ppir_instr_add_depend(ppir_instr *succ, ppir_instr *pred);
+void ppir_instr_add_dep(ppir_instr *succ, ppir_instr *pred);
 void ppir_instr_print_list(ppir_compiler *comp);
-void ppir_instr_print_depend(ppir_compiler *comp);
+void ppir_instr_print_dep(ppir_compiler *comp);
 
-#define ppir_instr_from_entry(entry) ((ppir_instr *)(entry->key))
-
-#define ppir_instr_foreach_pred(instr, entry)                           \
-   for (struct set_entry *entry = _mesa_set_next_entry(instr->preds, NULL); \
-        entry != NULL;                                                  \
-        entry = _mesa_set_next_entry(instr->preds, entry))
-
-#define ppir_instr_foreach_succ(instr, entry)                           \
-   for (struct set_entry *entry = _mesa_set_next_entry(instr->succs, NULL); \
-        entry != NULL;                                                  \
-        entry = _mesa_set_next_entry(instr->succs, entry))
+#define ppir_instr_foreach_succ(instr, dep) \
+   list_for_each_entry(ppir_dep, dep, &instr->succ_list, succ_link)
+#define ppir_instr_foreach_succ_safe(instr, dep) \
+   list_for_each_entry_safe(ppir_dep, dep, &instr->succ_list, succ_link)
+#define ppir_instr_foreach_pred(instr, dep) \
+   list_for_each_entry(ppir_dep, dep, &instr->pred_list, pred_link)
+#define ppir_instr_foreach_pred_safe(instr, dep) \
+   list_for_each_entry_safe(ppir_dep, dep, &instr->pred_list, pred_link)
 
 static inline bool ppir_instr_is_root(ppir_instr *instr)
 {
-   return !instr->succs->entries;
+   return list_empty(&instr->succ_list);
 }
 
 static inline bool ppir_instr_is_leaf(ppir_instr *instr)
 {
-   return !instr->preds->entries;
+   return list_empty(&instr->pred_list);
 }
 
 bool ppir_lower_prog(ppir_compiler *comp);

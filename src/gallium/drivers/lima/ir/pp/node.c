@@ -24,7 +24,6 @@
 
 #include "util/u_math.h"
 #include "util/ralloc.h"
-#include "util/hash_table.h"
 #include "util/bitscan.h"
 
 #include "ppir.h"
@@ -119,12 +118,8 @@ void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index, unsigned mask
    if (!node)
       return NULL;
 
-   node->preds = _mesa_set_create(node, _mesa_hash_pointer, _mesa_key_pointer_equal);
-   if (!node->preds)
-      goto err_out;
-   node->succs = _mesa_set_create(node, _mesa_hash_pointer, _mesa_key_pointer_equal);
-   if (!node->succs)
-      goto err_out;
+   list_inithead(&node->succ_list);
+   list_inithead(&node->pred_list);
 
    if (index >= 0) {
       if (mask) {
@@ -145,49 +140,27 @@ void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index, unsigned mask
    node->index = comp->cur_index++;
 
    return node;
-
-err_out:
-   ralloc_free(node);
-   return NULL;
 }
 
-static void ppir_node_create_dep(ppir_node *succ, ppir_node *pred,
-                                 bool is_child_dep, bool is_offset)
+void ppir_node_add_dep(ppir_node *succ, ppir_node *pred)
 {
    /* don't add duplicated dep */
-   ppir_node_foreach_pred(succ, entry) {
-      ppir_node *node = ppir_node_from_entry(entry, pred);
-      if (node == pred)
+   ppir_node_foreach_pred(succ, dep) {
+      if (dep->pred == pred)
          return;
    }
 
-   ppir_dep_info *dep = ralloc(succ, ppir_dep_info);
-
+   ppir_dep *dep = ralloc(succ, ppir_dep);
    dep->pred = pred;
    dep->succ = succ;
-   dep->is_child_dep = is_child_dep;
-   dep->is_offset = is_offset;
-
-   _mesa_set_add(succ->preds, dep);
-   _mesa_set_add(pred->succs, dep);
+   list_addtail(&dep->pred_link, &succ->pred_list);
+   list_addtail(&dep->succ_link, &pred->succ_list);
 }
 
-void ppir_node_add_child(ppir_node *parent, ppir_node *child)
+void ppir_node_remove_dep(ppir_dep *dep)
 {
-   ppir_node_create_dep(parent, child, true, false);
-}
-
-void ppir_node_remove_entry(struct set_entry *entry)
-{
-   uint32_t hash = entry->hash;
-   ppir_dep_info *dep = ppir_dep_from_entry(entry);
-
-   struct set *set = dep->pred->succs;
-   _mesa_set_remove(set, _mesa_set_search_pre_hashed(set, hash, dep));
-
-   set = dep->succ->preds;
-   _mesa_set_remove(set, _mesa_set_search_pre_hashed(set, hash, dep));
-
+   list_del(&dep->succ_link);
+   list_del(&dep->pred_link);
    ralloc_free(dep);
 }
 
@@ -213,27 +186,28 @@ void ppir_node_replace_child(ppir_node *parent, ppir_node *old_child, ppir_node 
    }
 }
 
+void ppir_node_replace_pred(ppir_dep *dep, ppir_node *new_pred)
+{
+   list_del(&dep->succ_link);
+   dep->pred = new_pred;
+   list_addtail(&dep->succ_link, &new_pred->succ_list);
+}
+
 void ppir_node_replace_succ(ppir_node *dst, ppir_node *src)
 {
-   ppir_node_foreach_succ(src, entry) {
-      ppir_dep_info *dep = ppir_dep_from_entry(entry);
-      ppir_node *succ = ppir_node_from_entry(entry, succ);
-
-      _mesa_set_remove(src->succs, entry);
-      dep->pred = dst;
-      _mesa_set_add(dst->succs, dep);
-
-      ppir_node_replace_child(succ, src, dst);
+   ppir_node_foreach_succ_safe(src, dep) {
+      ppir_node_replace_pred(dep, dst);
+      ppir_node_replace_child(dep->succ, src, dst);
    }
 }
 
 void ppir_node_delete(ppir_node *node)
 {
-   ppir_node_foreach_succ(node, entry)
-      ppir_node_remove_entry(entry);
+   ppir_node_foreach_succ_safe(node, dep)
+      ppir_node_remove_dep(dep);
 
-   ppir_node_foreach_pred(node, entry)
-      ppir_node_remove_entry(entry);
+   ppir_node_foreach_pred_safe(node, dep)
+      ppir_node_remove_dep(dep);
 
    list_del(&node->list);
    ralloc_free(node);
@@ -247,8 +221,8 @@ static void ppir_node_print_node(ppir_node *node, int space)
           ppir_op_infos[node->op].name, node->index, node->name);
 
    if (!node->printed) {
-      ppir_node_foreach_pred(node, entry) {
-         ppir_node *pred = ppir_node_from_entry(entry, pred);
+      ppir_node_foreach_pred(node, dep) {
+         ppir_node *pred = dep->pred;
          ppir_node_print_node(pred, space + 2);
       }
 
