@@ -134,6 +134,7 @@ unsigned r600_gfx_write_fence_dwords(struct r600_common_screen *screen)
 }
 
 void r600_gfx_wait_fence(struct r600_common_context *ctx,
+			 struct r600_resource *buf,
 			 uint64_t va, uint32_t ref, uint32_t mask)
 {
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
@@ -145,6 +146,10 @@ void r600_gfx_wait_fence(struct r600_common_context *ctx,
 	radeon_emit(cs, ref); /* reference value */
 	radeon_emit(cs, mask); /* mask */
 	radeon_emit(cs, 4); /* poll interval */
+
+	if (buf)
+		r600_emit_reloc(ctx, &ctx->gfx, buf, RADEON_USAGE_READ,
+				RADEON_PRIO_QUERY);
 }
 
 void r600_draw_rectangle(struct blitter_context *blitter,

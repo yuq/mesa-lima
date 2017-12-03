@@ -22,6 +22,7 @@
  */
 #include "r600_formats.h"
 #include "r600_shader.h"
+#include "r600_query.h"
 #include "evergreend.h"
 
 #include "pipe/p_shader_tokens.h"
@@ -4235,6 +4236,64 @@ static void evergreen_set_shader_images(struct pipe_context *ctx,
 	r600_mark_atom_dirty(rctx, &istate->atom);
 }
 
+static void evergreen_get_pipe_constant_buffer(struct r600_context *rctx,
+					       enum pipe_shader_type shader, uint slot,
+					       struct pipe_constant_buffer *cbuf)
+{
+	struct r600_constbuf_state *state = &rctx->constbuf_state[shader];
+	struct pipe_constant_buffer *cb;
+	cbuf->user_buffer = NULL;
+
+	cb = &state->cb[slot];
+
+	cbuf->buffer_size = cb->buffer_size;
+	pipe_resource_reference(&cbuf->buffer, cb->buffer);
+}
+
+static void evergreen_get_shader_buffers(struct r600_context *rctx,
+					 enum pipe_shader_type shader,
+					 uint start_slot, uint count,
+					 struct pipe_shader_buffer *sbuf)
+{
+	assert(shader == PIPE_SHADER_COMPUTE);
+	int idx, i;
+	struct r600_image_state *istate = &rctx->compute_buffers;
+	struct r600_image_view *rview;
+
+	for (i = start_slot, idx = 0; i < start_slot + count; i++, idx++) {
+
+		rview = &istate->views[i];
+
+		pipe_resource_reference(&sbuf[idx].buffer, rview->base.resource);
+		if (rview->base.resource) {
+			uint64_t rview_va = ((struct r600_resource *)rview->base.resource)->gpu_address;
+
+			uint64_t prog_va = rview->resource_words[0];
+
+			prog_va += ((uint64_t)G_030008_BASE_ADDRESS_HI(rview->resource_words[2])) << 32;
+			prog_va -= rview_va;
+
+			sbuf[idx].buffer_offset = prog_va & 0xffffffff;
+			sbuf[idx].buffer_size = rview->resource_words[1] + 1;;
+		} else {
+			sbuf[idx].buffer_offset = 0;
+			sbuf[idx].buffer_size = 0;
+		}
+	}
+}
+
+static void evergreen_save_qbo_state(struct pipe_context *ctx, struct r600_qbo_state *st)
+{
+	struct r600_context *rctx = (struct r600_context *)ctx;
+	st->saved_compute = rctx->cs_shader_state.shader;
+
+	/* save constant buffer 0 */
+	evergreen_get_pipe_constant_buffer(rctx, PIPE_SHADER_COMPUTE, 0, &st->saved_const0);
+	/* save ssbo 0 */
+	evergreen_get_shader_buffers(rctx, PIPE_SHADER_COMPUTE, 0, 3, st->saved_ssbo);
+}
+
+
 void evergreen_init_state_functions(struct r600_context *rctx)
 {
 	unsigned id = 1;
@@ -4332,6 +4391,7 @@ void evergreen_init_state_functions(struct r600_context *rctx)
         else
                 rctx->b.b.get_sample_position = cayman_get_sample_position;
 	rctx->b.dma_copy = evergreen_dma_copy;
+	rctx->b.save_qbo_state = evergreen_save_qbo_state;
 
 	evergreen_init_compute_state_functions(rctx);
 }

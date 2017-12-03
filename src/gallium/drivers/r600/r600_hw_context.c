@@ -123,6 +123,11 @@ void r600_flush_emit(struct r600_context *rctx)
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_PS_PARTIAL_FLUSH) | EVENT_INDEX(4));
 	}
 
+	if (rctx->b.flags & R600_CONTEXT_CS_PARTIAL_FLUSH) {
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_CS_PARTIAL_FLUSH) | EVENT_INDEX(4));
+	}
+
 	if (wait_until) {
 		/* Use of WAIT_UNTIL is deprecated on Cayman+ */
 		if (rctx->b.family < CHIP_CAYMAN) {

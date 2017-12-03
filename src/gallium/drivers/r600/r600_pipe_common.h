@@ -679,6 +679,7 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 			      uint32_t new_fence, unsigned query_type);
 unsigned r600_gfx_write_fence_dwords(struct r600_common_screen *screen);
 void r600_gfx_wait_fence(struct r600_common_context *ctx,
+			 struct r600_resource *buf,
 			 uint64_t va, uint32_t ref, uint32_t mask);
 void r600_draw_rectangle(struct blitter_context *blitter,
 			 void *vertex_elements_cso,

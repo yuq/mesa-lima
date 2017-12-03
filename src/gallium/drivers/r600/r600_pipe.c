@@ -352,6 +352,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
 	case PIPE_CAP_TGSI_CLOCK:
 	case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
+	case PIPE_CAP_QUERY_BUFFER_OBJECT:
 		return family >= CHIP_CEDAR ? 1 : 0;
 	case PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS:
 		return family >= CHIP_CEDAR ? 4 : 0;
@@ -384,7 +385,6 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
 	case PIPE_CAP_GENERATE_MIPMAP:
 	case PIPE_CAP_STRING_MARKER:
-	case PIPE_CAP_QUERY_BUFFER_OBJECT:
 	case PIPE_CAP_PRIMITIVE_RESTART_FOR_PATCHES:
 	case PIPE_CAP_TGSI_VOTE:
 	case PIPE_CAP_MAX_WINDOW_RECTANGLES:
@@ -759,7 +759,7 @@ struct pipe_screen *r600_screen_create(struct radeon_winsys *ws,
 		R600_CONTEXT_INV_VERTEX_CACHE |
 		R600_CONTEXT_INV_TEX_CACHE |
 		R600_CONTEXT_INV_CONST_CACHE;
-	rscreen->b.barrier_flags.compute_to_L2 = R600_CONTEXT_PS_PARTIAL_FLUSH;
+	rscreen->b.barrier_flags.compute_to_L2 = R600_CONTEXT_CS_PARTIAL_FLUSH | R600_CONTEXT_FLUSH_AND_INV;
 
 	rscreen->global_pool = compute_memory_pool_new(rscreen);
 
