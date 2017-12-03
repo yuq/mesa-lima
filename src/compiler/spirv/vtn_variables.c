@@ -615,38 +615,41 @@ vtn_pointer_to_offset(struct vtn_builder *b, struct vtn_pointer *ptr,
    unsigned idx = 0;
    struct vtn_type *type = ptr->var->type;
    nir_ssa_def *offset = nir_imm_int(&b->nb, 0);
-   for (; idx < ptr->chain->length; idx++) {
-      enum glsl_base_type base_type = glsl_get_base_type(type->type);
-      switch (base_type) {
-      case GLSL_TYPE_UINT:
-      case GLSL_TYPE_INT:
-      case GLSL_TYPE_UINT16:
-      case GLSL_TYPE_INT16:
-      case GLSL_TYPE_UINT64:
-      case GLSL_TYPE_INT64:
-      case GLSL_TYPE_FLOAT:
-      case GLSL_TYPE_FLOAT16:
-      case GLSL_TYPE_DOUBLE:
-      case GLSL_TYPE_BOOL:
-      case GLSL_TYPE_ARRAY:
-         offset = nir_iadd(&b->nb, offset,
-                           vtn_access_link_as_ssa(b, ptr->chain->link[idx],
-                                                  type->stride));
 
-         type = type->array_element;
-         break;
+   if (ptr->chain) {
+      for (; idx < ptr->chain->length; idx++) {
+         enum glsl_base_type base_type = glsl_get_base_type(type->type);
+         switch (base_type) {
+         case GLSL_TYPE_UINT:
+         case GLSL_TYPE_INT:
+         case GLSL_TYPE_UINT16:
+         case GLSL_TYPE_INT16:
+         case GLSL_TYPE_UINT64:
+         case GLSL_TYPE_INT64:
+         case GLSL_TYPE_FLOAT:
+         case GLSL_TYPE_FLOAT16:
+         case GLSL_TYPE_DOUBLE:
+         case GLSL_TYPE_BOOL:
+         case GLSL_TYPE_ARRAY:
+            offset = nir_iadd(&b->nb, offset,
+                              vtn_access_link_as_ssa(b, ptr->chain->link[idx],
+                                                     type->stride));
 
-      case GLSL_TYPE_STRUCT: {
-         vtn_assert(ptr->chain->link[idx].mode == vtn_access_mode_literal);
-         unsigned member = ptr->chain->link[idx].id;
-         offset = nir_iadd(&b->nb, offset,
-                           nir_imm_int(&b->nb, type->offsets[member]));
-         type = type->members[member];
-         break;
-      }
+            type = type->array_element;
+            break;
 
-      default:
-         vtn_fail("Invalid type for deref");
+         case GLSL_TYPE_STRUCT: {
+            vtn_assert(ptr->chain->link[idx].mode == vtn_access_mode_literal);
+            unsigned member = ptr->chain->link[idx].id;
+            offset = nir_iadd(&b->nb, offset,
+                              nir_imm_int(&b->nb, type->offsets[member]));
+            type = type->members[member];
+            break;
+         }
+
+         default:
+            vtn_fail("Invalid type for deref");
+         }
       }
    }
 
