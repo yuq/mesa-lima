@@ -289,114 +289,16 @@ fd_resource_layer_offset(struct fd_resource *rsc,
 		return layer * slice->size0;
 }
 
-static void
-fd_resource_flush_z32s8(struct fd_transfer *trans, const struct pipe_box *box)
-{
-	struct fd_resource *rsc = fd_resource(trans->base.resource);
-	struct fd_resource_slice *slice = fd_resource_slice(rsc, trans->base.level);
-	struct fd_resource_slice *sslice = fd_resource_slice(rsc->stencil, trans->base.level);
-	enum pipe_format format = trans->base.resource->format;
-
-	float *depth = fd_bo_map(rsc->bo) + slice->offset +
-		fd_resource_layer_offset(rsc, slice, trans->base.box.z) +
-		(trans->base.box.y + box->y) * slice->pitch * 4 + (trans->base.box.x + box->x) * 4;
-	uint8_t *stencil = fd_bo_map(rsc->stencil->bo) + sslice->offset +
-		fd_resource_layer_offset(rsc->stencil, sslice, trans->base.box.z) +
-		(trans->base.box.y + box->y) * sslice->pitch + trans->base.box.x + box->x;
-
-	if (format != PIPE_FORMAT_X32_S8X24_UINT)
-		util_format_z32_float_s8x24_uint_unpack_z_float(
-				depth, slice->pitch * 4,
-				trans->staging, trans->base.stride,
-				box->width, box->height);
-
-	util_format_z32_float_s8x24_uint_unpack_s_8uint(
-			stencil, sslice->pitch,
-			trans->staging, trans->base.stride,
-			box->width, box->height);
-}
-
-static void
-fd_resource_flush_rgtc(struct fd_transfer *trans, const struct pipe_box *box)
-{
-	struct fd_resource *rsc = fd_resource(trans->base.resource);
-	struct fd_resource_slice *slice = fd_resource_slice(rsc, trans->base.level);
-	enum pipe_format format = trans->base.resource->format;
-
-	uint8_t *data = fd_bo_map(rsc->bo) + slice->offset +
-		fd_resource_layer_offset(rsc, slice, trans->base.box.z) +
-		((trans->base.box.y + box->y) * slice->pitch +
-		 trans->base.box.x + box->x) * rsc->cpp;
-
-	uint8_t *source = trans->staging +
-		util_format_get_nblocksy(format, box->y) * trans->base.stride +
-		util_format_get_stride(format, box->x);
-
-	switch (format) {
-	case PIPE_FORMAT_RGTC1_UNORM:
-	case PIPE_FORMAT_RGTC1_SNORM:
-	case PIPE_FORMAT_LATC1_UNORM:
-	case PIPE_FORMAT_LATC1_SNORM:
-		util_format_rgtc1_unorm_unpack_rgba_8unorm(
-				data, slice->pitch * rsc->cpp,
-				source, trans->base.stride,
-				box->width, box->height);
-		break;
-	case PIPE_FORMAT_RGTC2_UNORM:
-	case PIPE_FORMAT_RGTC2_SNORM:
-	case PIPE_FORMAT_LATC2_UNORM:
-	case PIPE_FORMAT_LATC2_SNORM:
-		util_format_rgtc2_unorm_unpack_rgba_8unorm(
-				data, slice->pitch * rsc->cpp,
-				source, trans->base.stride,
-				box->width, box->height);
-		break;
-	default:
-		assert(!"Unexpected format\n");
-		break;
-	}
-}
-
-static void
-fd_resource_flush(struct fd_transfer *trans, const struct pipe_box *box)
-{
-	enum pipe_format format = trans->base.resource->format;
-
-	switch (format) {
-	case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-	case PIPE_FORMAT_X32_S8X24_UINT:
-		fd_resource_flush_z32s8(trans, box);
-		break;
-	case PIPE_FORMAT_RGTC1_UNORM:
-	case PIPE_FORMAT_RGTC1_SNORM:
-	case PIPE_FORMAT_RGTC2_UNORM:
-	case PIPE_FORMAT_RGTC2_SNORM:
-	case PIPE_FORMAT_LATC1_UNORM:
-	case PIPE_FORMAT_LATC1_SNORM:
-	case PIPE_FORMAT_LATC2_UNORM:
-	case PIPE_FORMAT_LATC2_SNORM:
-		fd_resource_flush_rgtc(trans, box);
-		break;
-	default:
-		assert(!"Unexpected staging transfer type");
-		break;
-	}
-}
-
 static void fd_resource_transfer_flush_region(struct pipe_context *pctx,
 		struct pipe_transfer *ptrans,
 		const struct pipe_box *box)
 {
 	struct fd_resource *rsc = fd_resource(ptrans->resource);
-	struct fd_transfer *trans = fd_transfer(ptrans);
 
 	if (ptrans->resource->target == PIPE_BUFFER)
 		util_range_add(&rsc->valid_buffer_range,
 					   ptrans->box.x + box->x,
 					   ptrans->box.x + box->x + box->width);
-
-	if (trans->staging)
-		fd_resource_flush(trans, box);
 }
 
 static void
@@ -405,18 +307,9 @@ fd_resource_transfer_unmap(struct pipe_context *pctx,
 {
 	struct fd_context *ctx = fd_context(pctx);
 	struct fd_resource *rsc = fd_resource(ptrans->resource);
-	struct fd_transfer *trans = fd_transfer(ptrans);
-
-	if (trans->staging && !(ptrans->usage & PIPE_TRANSFER_FLUSH_EXPLICIT)) {
-		struct pipe_box box;
-		u_box_2d(0, 0, ptrans->box.width, ptrans->box.height, &box);
-		fd_resource_flush(trans, &box);
-	}
 
 	if (!(ptrans->usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
 		fd_bo_cpu_fini(rsc->bo);
-		if (rsc->stencil)
-			fd_bo_cpu_fini(rsc->stencil->bo);
 	}
 
 	util_range_add(&rsc->valid_buffer_range,
@@ -425,8 +318,6 @@ fd_resource_transfer_unmap(struct pipe_context *pctx,
 
 	pipe_resource_reference(&ptrans->resource, NULL);
 	slab_free(&ctx->transfer_pool, ptrans);
-
-	free(trans->staging);
 }
 
 static void *
@@ -476,8 +367,6 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 
 	if (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) {
 		realloc_bo(rsc, fd_bo_size(rsc->bo));
-		if (rsc->stencil)
-			realloc_bo(rsc->stencil, fd_bo_size(rsc->stencil->bo));
 		rebind_resource(ctx, prsc);
 	} else if ((usage & PIPE_TRANSFER_WRITE) &&
 			   prsc->target == PIPE_BUFFER &&
@@ -571,100 +460,6 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		box->y / util_format_get_blockheight(format) * ptrans->stride +
 		box->x / util_format_get_blockwidth(format) * rsc->cpp +
 		fd_resource_layer_offset(rsc, slice, box->z);
-
-	if (prsc->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT ||
-		prsc->format == PIPE_FORMAT_X32_S8X24_UINT) {
-		assert(trans->base.box.depth == 1);
-
-		trans->base.stride = trans->base.box.width * rsc->cpp * 2;
-		trans->staging = malloc(trans->base.stride * trans->base.box.height);
-		if (!trans->staging)
-			goto fail;
-
-		/* if we're not discarding the whole range (or resource), we must copy
-		 * the real data in.
-		 */
-		if (!(usage & (PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE |
-					   PIPE_TRANSFER_DISCARD_RANGE))) {
-			struct fd_resource_slice *sslice =
-				fd_resource_slice(rsc->stencil, level);
-			void *sbuf = fd_bo_map(rsc->stencil->bo);
-			if (!sbuf)
-				goto fail;
-
-			float *depth = (float *)(buf + slice->offset +
-				fd_resource_layer_offset(rsc, slice, box->z) +
-				box->y * slice->pitch * 4 + box->x * 4);
-			uint8_t *stencil = sbuf + sslice->offset +
-				fd_resource_layer_offset(rsc->stencil, sslice, box->z) +
-				box->y * sslice->pitch + box->x;
-
-			if (format != PIPE_FORMAT_X32_S8X24_UINT)
-				util_format_z32_float_s8x24_uint_pack_z_float(
-						trans->staging, trans->base.stride,
-						depth, slice->pitch * 4,
-						box->width, box->height);
-
-			util_format_z32_float_s8x24_uint_pack_s_8uint(
-					trans->staging, trans->base.stride,
-					stencil, sslice->pitch,
-					box->width, box->height);
-		}
-
-		buf = trans->staging;
-		offset = 0;
-	} else if (rsc->internal_format != format &&
-			   util_format_description(format)->layout == UTIL_FORMAT_LAYOUT_RGTC) {
-		assert(trans->base.box.depth == 1);
-
-		trans->base.stride = util_format_get_stride(
-				format, trans->base.box.width);
-		trans->staging = malloc(
-				util_format_get_2d_size(format, trans->base.stride,
-										trans->base.box.height));
-		if (!trans->staging)
-			goto fail;
-
-		/* if we're not discarding the whole range (or resource), we must copy
-		 * the real data in.
-		 */
-		if (!(usage & (PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE |
-					   PIPE_TRANSFER_DISCARD_RANGE))) {
-			uint8_t *rgba8 = (uint8_t *)buf + slice->offset +
-				fd_resource_layer_offset(rsc, slice, box->z) +
-				box->y * slice->pitch * rsc->cpp + box->x * rsc->cpp;
-
-			switch (format) {
-			case PIPE_FORMAT_RGTC1_UNORM:
-			case PIPE_FORMAT_RGTC1_SNORM:
-			case PIPE_FORMAT_LATC1_UNORM:
-			case PIPE_FORMAT_LATC1_SNORM:
-				util_format_rgtc1_unorm_pack_rgba_8unorm(
-					trans->staging, trans->base.stride,
-					rgba8, slice->pitch * rsc->cpp,
-					box->width, box->height);
-				break;
-			case PIPE_FORMAT_RGTC2_UNORM:
-			case PIPE_FORMAT_RGTC2_SNORM:
-			case PIPE_FORMAT_LATC2_UNORM:
-			case PIPE_FORMAT_LATC2_SNORM:
-				util_format_rgtc2_unorm_pack_rgba_8unorm(
-					trans->staging, trans->base.stride,
-					rgba8, slice->pitch * rsc->cpp,
-					box->width, box->height);
-				break;
-			default:
-				assert(!"Unexpected format");
-				break;
-			}
-		}
-
-		buf = trans->staging;
-		offset = 0;
-	}
-
-	if (usage & PIPE_TRANSFER_WRITE)
-		rsc->valid = true;
 
 	*pptrans = ptrans;
 
@@ -835,11 +630,6 @@ fd_resource_create(struct pipe_screen *pscreen,
 
 	util_range_init(&rsc->valid_buffer_range);
 
-	if (format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)
-		format = PIPE_FORMAT_Z32_FLOAT;
-	else if (screen->gpu_id < 400 &&
-			 util_format_description(format)->layout == UTIL_FORMAT_LAYOUT_RGTC)
-		format = PIPE_FORMAT_R8G8B8A8_UNORM;
 	rsc->internal_format = format;
 	rsc->cpp = util_format_get_blocksize(format);
 
@@ -893,19 +683,6 @@ fd_resource_create(struct pipe_screen *pscreen,
 	realloc_bo(rsc, size);
 	if (!rsc->bo)
 		goto fail;
-
-	/* There is no native Z32F_S8 sampling or rendering format, so this must
-	 * be emulated via two separate textures. The depth texture still keeps
-	 * its Z32F_S8 format though, and we also keep a reference to a separate
-	 * S8 texture.
-	 */
-	if (tmpl->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT) {
-		struct pipe_resource stencil = *tmpl;
-		stencil.format = PIPE_FORMAT_S8_UINT;
-		rsc->stencil = fd_resource(fd_resource_create(pscreen, &stencil));
-		if (!rsc->stencil)
-			goto fail;
-	}
 
 	return prsc;
 fail:
@@ -1183,21 +960,59 @@ fd_invalidate_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
 	rsc->valid = false;
 }
 
+static enum pipe_format
+fd_resource_get_internal_format(struct pipe_resource *prsc)
+{
+	return fd_resource(prsc)->internal_format;
+}
+
+static void
+fd_resource_set_stencil(struct pipe_resource *prsc,
+		struct pipe_resource *stencil)
+{
+	fd_resource(prsc)->stencil = fd_resource(stencil);
+}
+
+static struct pipe_resource *
+fd_resource_get_stencil(struct pipe_resource *prsc)
+{
+	struct fd_resource *rsc = fd_resource(prsc);
+	if (rsc->stencil)
+		return &rsc->stencil->base;
+	return NULL;
+}
+
+static const struct u_transfer_vtbl transfer_vtbl = {
+		.resource_create          = fd_resource_create,
+		.resource_destroy         = fd_resource_destroy,
+		.transfer_map             = fd_resource_transfer_map,
+		.transfer_flush_region    = fd_resource_transfer_flush_region,
+		.transfer_unmap           = fd_resource_transfer_unmap,
+		.get_internal_format      = fd_resource_get_internal_format,
+		.set_stencil              = fd_resource_set_stencil,
+		.get_stencil              = fd_resource_get_stencil,
+};
+
 void
 fd_resource_screen_init(struct pipe_screen *pscreen)
 {
-	pscreen->resource_create = fd_resource_create;
+	bool fake_rgtc = fd_screen(pscreen)->gpu_id < 400;
+
+	pscreen->resource_create = u_transfer_helper_resource_create;
 	pscreen->resource_from_handle = fd_resource_from_handle;
 	pscreen->resource_get_handle = fd_resource_get_handle;
-	pscreen->resource_destroy = fd_resource_destroy;
+	pscreen->resource_destroy = u_transfer_helper_resource_destroy;
+
+	pscreen->transfer_helper = u_transfer_helper_create(&transfer_vtbl,
+			true, fake_rgtc, true);
 }
 
 void
 fd_resource_context_init(struct pipe_context *pctx)
 {
-	pctx->transfer_map = fd_resource_transfer_map;
-	pctx->transfer_flush_region = fd_resource_transfer_flush_region;
-	pctx->transfer_unmap = fd_resource_transfer_unmap;
+	pctx->transfer_map = u_transfer_helper_transfer_map;
+	pctx->transfer_flush_region = u_transfer_helper_transfer_flush_region;
+	pctx->transfer_unmap = u_transfer_helper_transfer_unmap;
 	pctx->buffer_subdata = u_default_buffer_subdata;
 	pctx->texture_subdata = u_default_texture_subdata;
 	pctx->create_surface = fd_create_surface;

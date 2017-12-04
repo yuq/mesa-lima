@@ -31,6 +31,7 @@
 
 #include "util/list.h"
 #include "util/u_range.h"
+#include "util/u_transfer_helper.h"
 
 #include "freedreno_batch.h"
 #include "freedreno_util.h"
@@ -131,7 +132,6 @@ pending(struct fd_resource *rsc, bool write)
 
 struct fd_transfer {
 	struct pipe_transfer base;
-	void *staging;
 };
 
 static inline struct fd_transfer *
