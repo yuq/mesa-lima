@@ -59,6 +59,11 @@ static const struct droid_yuv_format droid_yuv_formats[] = {
    { HAL_PIXEL_FORMAT_YCbCr_420_888,   0, 1, __DRI_IMAGE_FOURCC_YUV420 },
    { HAL_PIXEL_FORMAT_YCbCr_420_888,   1, 1, __DRI_IMAGE_FOURCC_YVU420 },
    { HAL_PIXEL_FORMAT_YV12,            1, 1, __DRI_IMAGE_FOURCC_YVU420 },
+   /* HACK: See droid_create_image_from_prime_fd() and
+    * https://issuetracker.google.com/32077885. */
+   { HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED,   0, 2, __DRI_IMAGE_FOURCC_NV12 },
+   { HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED,   0, 1, __DRI_IMAGE_FOURCC_YUV420 },
+   { HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED,   1, 1, __DRI_IMAGE_FOURCC_YVU420 },
 };
 
 static int
@@ -90,6 +95,11 @@ get_format_bpp(int native)
 
    switch (native) {
    case HAL_PIXEL_FORMAT_RGBA_8888:
+   case HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED:
+      /*
+       * HACK: Hardcode this to RGBX_8888 as per cros_gralloc hack.
+       * TODO: Remove this once https://issuetracker.google.com/32077885 is fixed.
+       */
    case HAL_PIXEL_FORMAT_RGBX_8888:
    case HAL_PIXEL_FORMAT_BGRA_8888:
       bpp = 4;
@@ -112,6 +122,11 @@ static int get_fourcc(int native)
    case HAL_PIXEL_FORMAT_RGB_565:   return __DRI_IMAGE_FOURCC_RGB565;
    case HAL_PIXEL_FORMAT_BGRA_8888: return __DRI_IMAGE_FOURCC_ARGB8888;
    case HAL_PIXEL_FORMAT_RGBA_8888: return __DRI_IMAGE_FOURCC_ABGR8888;
+   case HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED:
+      /*
+       * HACK: Hardcode this to RGBX_8888 as per cros_gralloc hack.
+       * TODO: Remove this once https://issuetracker.google.com/32077885 is fixed.
+       */
    case HAL_PIXEL_FORMAT_RGBX_8888: return __DRI_IMAGE_FOURCC_XBGR8888;
    default:
       _eglLog(_EGL_WARNING, "unsupported native buffer format 0x%x", native);
@@ -125,6 +140,11 @@ static int get_format(int format)
    case HAL_PIXEL_FORMAT_BGRA_8888: return __DRI_IMAGE_FORMAT_ARGB8888;
    case HAL_PIXEL_FORMAT_RGB_565:   return __DRI_IMAGE_FORMAT_RGB565;
    case HAL_PIXEL_FORMAT_RGBA_8888: return __DRI_IMAGE_FORMAT_ABGR8888;
+   case HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED:
+      /*
+       * HACK: Hardcode this to RGBX_8888 as per cros_gralloc hack.
+       * TODO: Revert this once https://issuetracker.google.com/32077885 is fixed.
+       */
    case HAL_PIXEL_FORMAT_RGBX_8888: return __DRI_IMAGE_FORMAT_XBGR8888;
    default:
       _eglLog(_EGL_WARNING, "unsupported native buffer format 0x%x", format);
@@ -678,6 +698,11 @@ droid_create_image_from_prime_fd_yuv(_EGLDisplay *disp, _EGLContext *ctx,
    ret = dri2_dpy->gralloc->lock_ycbcr(dri2_dpy->gralloc, buf->handle,
                                        0, 0, 0, 0, 0, &ycbcr);
    if (ret) {
+      /* HACK: See droid_create_image_from_prime_fd() and
+       * https://issuetracker.google.com/32077885.*/
+      if (buf->format == HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED)
+         return NULL;
+
       _eglLog(_EGL_WARNING, "gralloc->lock_ycbcr failed: %d", ret);
       return NULL;
    }
@@ -757,8 +782,20 @@ droid_create_image_from_prime_fd(_EGLDisplay *disp, _EGLContext *ctx,
 {
    unsigned int pitch;
 
-   if (is_yuv(buf->format))
-      return droid_create_image_from_prime_fd_yuv(disp, ctx, buf, fd);
+   if (is_yuv(buf->format)) {
+      _EGLImage *image;
+
+      image = droid_create_image_from_prime_fd_yuv(disp, ctx, buf, fd);
+      /*
+       * HACK: https://issuetracker.google.com/32077885
+       * There is no API available to properly query the IMPLEMENTATION_DEFINED
+       * format. As a workaround we rely here on gralloc allocating either
+       * an arbitrary YCbCr 4:2:0 or RGBX_8888, with the latter being recognized
+       * by lock_ycbcr failing.
+       */
+      if (image || buf->format != HAL_PIXEL_FORMAT_IMPLEMENTATION_DEFINED)
+         return image;
+   }
 
    const int fourcc = get_fourcc(buf->format);
    if (fourcc == -1) {
