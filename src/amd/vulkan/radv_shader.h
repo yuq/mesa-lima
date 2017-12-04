@@ -118,8 +118,8 @@ radv_can_dump_shader(struct radv_device *device,
 		     struct radv_shader_module *module)
 {
 	/* Only dump non-meta shaders, useful for debugging purposes. */
-	return !module->nir &&
-	       device->instance->debug_flags & RADV_DEBUG_DUMP_SHADERS;
+	return device->instance->debug_flags & RADV_DEBUG_DUMP_SHADERS &&
+	       module && !module->nir;
 }
 
 #endif
