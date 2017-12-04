@@ -1076,6 +1076,7 @@ void si_check_vm_faults(struct r600_common_context *ctx,
 
 		si_log_draw_state(sctx, &log);
 		si_log_compute_state(sctx, &log);
+		si_log_cs(sctx, &log, true);
 
 		u_log_new_page_print(&log, f);
 		u_log_context_destroy(&log);
