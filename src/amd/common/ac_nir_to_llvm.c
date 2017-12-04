@@ -2984,39 +2984,36 @@ store_tcs_output(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef
-load_tes_input(struct nir_to_llvm_context *ctx,
-	       const nir_intrinsic_instr *instr)
+load_tes_input(struct ac_shader_abi *abi,
+	       LLVMValueRef vertex_index,
+	       LLVMValueRef param_index,
+	       unsigned const_index,
+	       unsigned location,
+	       unsigned driver_location,
+	       unsigned component,
+	       unsigned num_components,
+	       bool is_patch,
+	       bool is_compact)
 {
+	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
 	LLVMValueRef buf_addr;
 	LLVMValueRef result;
-	LLVMValueRef vertex_index = NULL;
-	LLVMValueRef indir_index = NULL;
-	unsigned const_index = 0;
-	unsigned param;
-	const bool per_vertex = nir_is_per_vertex_io(instr->variables[0]->var, ctx->stage);
-	const bool is_compact = instr->variables[0]->var->data.compact;
+	unsigned param = shader_io_get_unique_index(location);
 
-	get_deref_offset(ctx->nir, instr->variables[0],
-			 false, NULL, per_vertex ? &vertex_index : NULL,
-			 &const_index, &indir_index);
-	param = shader_io_get_unique_index(instr->variables[0]->var->data.location);
-	if (instr->variables[0]->var->data.location == VARYING_SLOT_CLIP_DIST0 &&
-	    is_compact && const_index > 3) {
+	if (location == VARYING_SLOT_CLIP_DIST0 && is_compact && const_index > 3) {
 		const_index -= 3;
 		param++;
 	}
 
-	unsigned comp = instr->variables[0]->var->data.location_frac;
 	buf_addr = get_tcs_tes_buffer_address_params(ctx, param, const_index,
-						     is_compact, vertex_index, indir_index);
+						     is_compact, vertex_index, param_index);
 
-	LLVMValueRef comp_offset = LLVMConstInt(ctx->ac.i32, comp * 4, false);
+	LLVMValueRef comp_offset = LLVMConstInt(ctx->ac.i32, component * 4, false);
 	buf_addr = LLVMBuildAdd(ctx->builder, buf_addr, comp_offset, "");
 
-	result = ac_build_buffer_load(&ctx->ac, ctx->hs_ring_tess_offchip, instr->num_components, NULL,
+	result = ac_build_buffer_load(&ctx->ac, ctx->hs_ring_tess_offchip, num_components, NULL,
 				      buf_addr, ctx->oc_lds, is_compact ? (4 * const_index) : 0, 1, 0, true, false);
-	result = trim_vector(&ctx->ac, result, instr->num_components);
-	result = LLVMBuildBitCast(ctx->builder, result, get_def_type(ctx->nir, &instr->dest.ssa), "");
+	result = trim_vector(&ctx->ac, result, num_components);
 	return result;
 }
 
@@ -3133,8 +3130,28 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 	case nir_var_shader_in:
 		if (ctx->stage == MESA_SHADER_TESS_CTRL)
 			return load_tcs_input(ctx->nctx, instr);
-		if (ctx->stage == MESA_SHADER_TESS_EVAL)
-			return load_tes_input(ctx->nctx, instr);
+		if (ctx->stage == MESA_SHADER_TESS_EVAL) {
+			LLVMValueRef result;
+			LLVMValueRef vertex_index = NULL;
+			LLVMValueRef indir_index = NULL;
+			unsigned const_index = 0;
+			unsigned location = instr->variables[0]->var->data.location;
+			unsigned driver_location = instr->variables[0]->var->data.driver_location;
+			const bool is_patch =  instr->variables[0]->var->data.patch;
+			const bool is_compact = instr->variables[0]->var->data.compact;
+
+			get_deref_offset(ctx, instr->variables[0],
+					 false, NULL, is_patch ? NULL : &vertex_index,
+					 &const_index, &indir_index);
+
+			result = ctx->abi->load_tess_inputs(ctx->abi, vertex_index, indir_index,
+							    const_index, location, driver_location,
+							    instr->variables[0]->var->data.location_frac,
+							    instr->num_components,
+							    is_patch, is_compact);
+			return LLVMBuildBitCast(ctx->ac.builder, result, get_def_type(ctx, &instr->dest.ssa), "");
+		}
+
 		if (ctx->stage == MESA_SHADER_GEOMETRY) {
 				LLVMValueRef indir_index;
 				unsigned const_index, vertex_index;
@@ -6680,6 +6697,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			ctx.tcs_patch_outputs_read = shaders[i]->info.patch_outputs_read;
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_EVAL) {
 			ctx.tes_primitive_mode = shaders[i]->info.tess.primitive_mode;
+			ctx.abi.load_tess_inputs = load_tes_input;
 		} else if (shaders[i]->info.stage == MESA_SHADER_VERTEX) {
 			if (shader_info->info.vs.needs_instance_id) {
 				ctx.shader_info->vs.vgpr_comp_cnt =
