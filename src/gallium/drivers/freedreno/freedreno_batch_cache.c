@@ -229,7 +229,7 @@ fd_bc_invalidate_batch(struct fd_batch *batch, bool destroy)
 void
 fd_bc_invalidate_resource(struct fd_resource *rsc, bool destroy)
 {
-	struct fd_screen *screen = fd_screen(rsc->base.b.screen);
+	struct fd_screen *screen = fd_screen(rsc->base.screen);
 	struct fd_batch *batch;
 
 	mtx_lock(&screen->lock);

@@ -484,7 +484,7 @@ emit_mem2gmem_surf(struct fd_batch *batch, uint32_t base,
 		// might be required for doing depth/stencil in bypass mode?
 		struct fd_resource_slice *slice = fd_resource_slice(rsc, 0);
 		enum a5xx_color_fmt format =
-			fd5_pipe2color(fd_gmem_restore_format(rsc->base.b.format));
+			fd5_pipe2color(fd_gmem_restore_format(rsc->base.format));
 
 		OUT_PKT4(ring, REG_A5XX_RB_MRT_BUF_INFO(0), 5);
 		OUT_RING(ring, A5XX_RB_MRT_BUF_INFO_COLOR_FORMAT(format) |

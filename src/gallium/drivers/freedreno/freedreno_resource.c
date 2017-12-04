@@ -98,7 +98,7 @@ rebind_resource(struct fd_context *ctx, struct pipe_resource *prsc)
 static void
 realloc_bo(struct fd_resource *rsc, uint32_t size)
 {
-	struct fd_screen *screen = fd_screen(rsc->base.b.screen);
+	struct fd_screen *screen = fd_screen(rsc->base.screen);
 	uint32_t flags = DRM_FREEDRENO_GEM_CACHE_WCOMBINE |
 			DRM_FREEDRENO_GEM_TYPE_KMEM; /* TODO */
 
@@ -137,7 +137,7 @@ fd_try_shadow_resource(struct fd_context *ctx, struct fd_resource *rsc,
 		unsigned level, const struct pipe_box *box)
 {
 	struct pipe_context *pctx = &ctx->base;
-	struct pipe_resource *prsc = &rsc->base.b;
+	struct pipe_resource *prsc = &rsc->base;
 	bool fallback = false;
 
 	if (prsc->next)
@@ -188,8 +188,8 @@ fd_try_shadow_resource(struct fd_context *ctx, struct fd_resource *rsc,
 	 */
 	struct fd_resource *shadow = fd_resource(pshadow);
 
-	DBG("shadow: %p (%d) -> %p (%d)\n", rsc, rsc->base.b.reference.count,
-			shadow, shadow->base.b.reference.count);
+	DBG("shadow: %p (%d) -> %p (%d)\n", rsc, rsc->base.reference.count,
+			shadow, shadow->base.reference.count);
 
 	/* TODO valid_buffer_range?? */
 	swap(rsc->bo,        shadow->bo);
@@ -689,8 +689,10 @@ fd_resource_destroy(struct pipe_screen *pscreen,
 
 static boolean
 fd_resource_get_handle(struct pipe_screen *pscreen,
+		struct pipe_context *pctx,
 		struct pipe_resource *prsc,
-		struct winsys_handle *handle)
+		struct winsys_handle *handle,
+		unsigned usage)
 {
 	struct fd_resource *rsc = fd_resource(prsc);
 
@@ -698,19 +700,10 @@ fd_resource_get_handle(struct pipe_screen *pscreen,
 			rsc->slices[0].pitch * rsc->cpp, handle);
 }
 
-
-static const struct u_resource_vtbl fd_resource_vtbl = {
-		.resource_get_handle      = fd_resource_get_handle,
-		.resource_destroy         = fd_resource_destroy,
-		.transfer_map             = fd_resource_transfer_map,
-		.transfer_flush_region    = fd_resource_transfer_flush_region,
-		.transfer_unmap           = fd_resource_transfer_unmap,
-};
-
 static uint32_t
 setup_slices(struct fd_resource *rsc, uint32_t alignment, enum pipe_format format)
 {
-	struct pipe_resource *prsc = &rsc->base.b;
+	struct pipe_resource *prsc = &rsc->base;
 	struct fd_screen *screen = fd_screen(prsc->screen);
 	enum util_format_layout layout = util_format_description(format)->layout;
 	uint32_t pitchalign = screen->gmem_alignw;
@@ -723,7 +716,7 @@ setup_slices(struct fd_resource *rsc, uint32_t alignment, enum pipe_format forma
 	 */
 	uint32_t layers_in_level = rsc->layer_first ? 1 : prsc->array_size;
 
-	if (is_a5xx(screen) && (rsc->base.b.target >= PIPE_TEXTURE_2D))
+	if (is_a5xx(screen) && (rsc->base.target >= PIPE_TEXTURE_2D))
 		height = align(height, screen->gmem_alignh);
 
 	for (level = 0; level <= prsc->last_level; level++) {
@@ -820,7 +813,7 @@ fd_resource_create(struct pipe_screen *pscreen,
 {
 	struct fd_screen *screen = fd_screen(pscreen);
 	struct fd_resource *rsc = CALLOC_STRUCT(fd_resource);
-	struct pipe_resource *prsc = &rsc->base.b;
+	struct pipe_resource *prsc = &rsc->base;
 	enum pipe_format format = tmpl->format;
 	uint32_t size, alignment;
 
@@ -841,8 +834,6 @@ fd_resource_create(struct pipe_screen *pscreen,
 	prsc->screen = pscreen;
 
 	util_range_init(&rsc->valid_buffer_range);
-
-	rsc->base.vtbl = &fd_resource_vtbl;
 
 	if (format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)
 		format = PIPE_FORMAT_Z32_FLOAT;
@@ -934,7 +925,7 @@ fd_resource_from_handle(struct pipe_screen *pscreen,
 {
 	struct fd_resource *rsc = CALLOC_STRUCT(fd_resource);
 	struct fd_resource_slice *slice = &rsc->slices[0];
-	struct pipe_resource *prsc = &rsc->base.b;
+	struct pipe_resource *prsc = &rsc->base;
 	uint32_t pitchalign = fd_screen(pscreen)->gmem_alignw;
 
 	DBG("target=%d, format=%s, %ux%ux%u, array_size=%u, last_level=%u, "
@@ -959,7 +950,6 @@ fd_resource_from_handle(struct pipe_screen *pscreen,
 	if (!rsc->bo)
 		goto fail;
 
-	rsc->base.vtbl = &fd_resource_vtbl;
 	rsc->cpp = util_format_get_blocksize(tmpl->format);
 	slice->pitch = handle->stride / rsc->cpp;
 	slice->offset = handle->offset;
@@ -1198,16 +1188,16 @@ fd_resource_screen_init(struct pipe_screen *pscreen)
 {
 	pscreen->resource_create = fd_resource_create;
 	pscreen->resource_from_handle = fd_resource_from_handle;
-	pscreen->resource_get_handle = u_resource_get_handle_vtbl;
-	pscreen->resource_destroy = u_resource_destroy_vtbl;
+	pscreen->resource_get_handle = fd_resource_get_handle;
+	pscreen->resource_destroy = fd_resource_destroy;
 }
 
 void
 fd_resource_context_init(struct pipe_context *pctx)
 {
-	pctx->transfer_map = u_transfer_map_vtbl;
-	pctx->transfer_flush_region = u_transfer_flush_region_vtbl;
-	pctx->transfer_unmap = u_transfer_unmap_vtbl;
+	pctx->transfer_map = fd_resource_transfer_map;
+	pctx->transfer_flush_region = fd_resource_transfer_flush_region;
+	pctx->transfer_unmap = fd_resource_transfer_unmap;
 	pctx->buffer_subdata = u_default_buffer_subdata;
 	pctx->texture_subdata = u_default_texture_subdata;
 	pctx->create_surface = fd_create_surface;

@@ -206,7 +206,7 @@ fd5_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 
 	if (format == PIPE_FORMAT_X32_S8X24_UINT) {
 		rsc = rsc->stencil;
-		format = rsc->base.b.format;
+		format = rsc->base.format;
 	}
 
 	so->base = *cso;
