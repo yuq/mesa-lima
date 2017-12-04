@@ -1835,13 +1835,14 @@ tc_set_log_context(struct pipe_context *_pipe, struct u_log_context *log)
 
 static void
 tc_create_fence_fd(struct pipe_context *_pipe,
-                   struct pipe_fence_handle **fence, int fd)
+                   struct pipe_fence_handle **fence, int fd,
+                   enum pipe_fd_type type)
 {
    struct threaded_context *tc = threaded_context(_pipe);
    struct pipe_context *pipe = tc->pipe;
 
    tc_sync(tc);
-   pipe->create_fence_fd(pipe, fence, fd);
+   pipe->create_fence_fd(pipe, fence, fd, type);
 }
 
 static void

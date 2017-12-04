@@ -1084,6 +1084,11 @@ struct pipe_driver_query_group_info
    unsigned num_queries;
 };
 
+enum pipe_fd_type
+{
+   PIPE_FD_TYPE_NATIVE_SYNC,
+};
+
 enum pipe_debug_type
 {
    PIPE_DEBUG_TYPE_OUT_OF_MEMORY = 1,

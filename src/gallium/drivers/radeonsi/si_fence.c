@@ -298,11 +298,14 @@ static boolean si_fence_finish(struct pipe_screen *screen,
 }
 
 static void si_create_fence_fd(struct pipe_context *ctx,
-			       struct pipe_fence_handle **pfence, int fd)
+			       struct pipe_fence_handle **pfence, int fd,
+			       enum pipe_fd_type type)
 {
 	struct si_screen *sscreen = (struct si_screen*)ctx->screen;
 	struct radeon_winsys *ws = sscreen->ws;
 	struct si_multi_fence *rfence;
+
+	assert(type == PIPE_FD_TYPE_NATIVE_SYNC);
 
 	*pfence = NULL;
 
