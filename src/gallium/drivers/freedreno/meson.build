@@ -201,12 +201,22 @@ freedreno_includes = [
   include_directories('ir3')
 ]
 
+freedreno_c_args = []
+if cc.has_argument('-Wpacked-bitfield-compat')
+  freedreno_c_args += '-Wno-packed-bitfield-compat'
+endif
+
+freedreno_cpp_args = []
+if cpp.has_argument('-Wpacked-bitfield-compat')
+  freedreno_cpp_args += '-Wno-packed-bitfield-compat'
+endif
+
 libfreedreno = static_library(
   'freedreno',
   [files_libfreedreno, ir3_nir_trig_c, nir_opcodes_h],
   include_directories : freedreno_includes,
-  c_args : [c_vis_args],
-  cpp_args : [cpp_vis_args],
+  c_args : [freedreno_c_args, c_vis_args],
+  cpp_args : [freedreno_cpp_args, cpp_vis_args],
   dependencies : [dep_libdrm, dep_libdrm_freedreno],
 )
 
