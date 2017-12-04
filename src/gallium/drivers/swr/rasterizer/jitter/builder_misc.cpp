@@ -602,7 +602,7 @@ namespace SwrJit
         if(JM()->mArch.AVX2())
         {
             // force mask to <N x float>, required by vgather
-            Value *mask = BITCAST(vMask, mSimdFP32Ty);
+            Value *mask = BITCAST(VMASK(vMask), mSimdFP32Ty);
 
             vGather = VGATHERPS(vSrc, pBase, vIndices, mask, C(scale));
         }
@@ -617,7 +617,6 @@ namespace SwrJit
             vGather = VUNDEF_F();
             Value *vScaleVec = VIMMED1((uint32_t)scale);
             Value *vOffsets = MUL(vIndices,vScaleVec);
-            Value *mask = MASK(vMask);
             for(uint32_t i = 0; i < mVWidth; ++i)
             {
                 // single component byte index
@@ -627,7 +626,7 @@ namespace SwrJit
                 loadAddress = BITCAST(loadAddress,PointerType::get(mFP32Ty,0));
                 // pointer to the value to load if we're masking off a component
                 Value *maskLoadAddress = GEP(vSrcPtr,{C(0), C(i)});
-                Value *selMask = VEXTRACT(mask,C(i));
+                Value *selMask = VEXTRACT(vMask,C(i));
                 // switch in a safe address to load if we're trying to access a vertex 
                 Value *validAddress = SELECT(selMask, loadAddress, maskLoadAddress);
                 Value *val = LOAD(validAddress);
@@ -648,7 +647,7 @@ namespace SwrJit
         if (JM()->mArch.AVX512F())
         {
             // force mask to <N-bit Integer>, required by vgather2
-            Value *mask = BITCAST(MASK2(vMask), mInt16Ty);
+            Value *mask = BITCAST(vMask, mInt16Ty);
 
             vGather = VGATHERPS2(vSrc, pBase, vIndices, mask, C((uint32_t)scale));
         }
@@ -689,7 +688,7 @@ namespace SwrJit
         // use avx2 gather instruction if available
         if(JM()->mArch.AVX2())
         {
-            vGather = VGATHERDD(vSrc, pBase, vIndices, vMask, C(scale));
+            vGather = VGATHERDD(vSrc, pBase, vIndices, VMASK(vMask), C(scale));
         }
         else
         {
@@ -702,7 +701,6 @@ namespace SwrJit
             vGather = VUNDEF_I();
             Value *vScaleVec = VIMMED1((uint32_t)scale);
             Value *vOffsets = MUL(vIndices, vScaleVec);
-            Value *mask = MASK(vMask);
             for(uint32_t i = 0; i < mVWidth; ++i)
             {
                 // single component byte index
@@ -712,7 +710,7 @@ namespace SwrJit
                 loadAddress = BITCAST(loadAddress, PointerType::get(mInt32Ty, 0));
                 // pointer to the value to load if we're masking off a component
                 Value *maskLoadAddress = GEP(vSrcPtr, {C(0), C(i)});
-                Value *selMask = VEXTRACT(mask, C(i));
+                Value *selMask = VEXTRACT(vMask, C(i));
                 // switch in a safe address to load if we're trying to access a vertex 
                 Value *validAddress = SELECT(selMask, loadAddress, maskLoadAddress);
                 Value *val = LOAD(validAddress, C(0));
@@ -739,6 +737,7 @@ namespace SwrJit
         // use avx2 gather instruction if available
         if(JM()->mArch.AVX2())
         {
+            vMask = BITCAST(S_EXT(vMask, VectorType::get(mInt64Ty, mVWidth/2)), VectorType::get(mDoubleTy, mVWidth/2));
             vGather = VGATHERPD(vSrc, pBase, vIndices, vMask, C(scale));
         }
         else
@@ -752,7 +751,6 @@ namespace SwrJit
             vGather = UndefValue::get(VectorType::get(mDoubleTy, 4));
             Value *vScaleVec = VECTOR_SPLAT(4, C((uint32_t)scale));
             Value *vOffsets = MUL(vIndices,vScaleVec);
-            Value *mask = MASK(vMask);
             for(uint32_t i = 0; i < mVWidth/2; ++i)
             {
                 // single component byte index
@@ -762,7 +760,7 @@ namespace SwrJit
                 loadAddress = BITCAST(loadAddress,PointerType::get(mDoubleTy,0));
                 // pointer to the value to load if we're masking off a component
                 Value *maskLoadAddress = GEP(vSrcPtr,{C(0), C(i)});
-                Value *selMask = VEXTRACT(mask,C(i));
+                Value *selMask = VEXTRACT(vMask,C(i));
                 // switch in a safe address to load if we're trying to access a vertex
                 Value *validAddress = SELECT(selMask, loadAddress, maskLoadAddress);
                 Value *val = LOAD(validAddress);
@@ -1094,14 +1092,10 @@ namespace SwrJit
         const SWR_FORMAT_INFO &info = GetFormatInfo(format);
         if(info.type[0] == SWR_TYPE_FLOAT && info.bpc[0] == 32)
         {
-            // ensure our mask is the correct type
-            mask = BITCAST(mask, mSimdFP32Ty);
             GATHER4PS(info, pSrcBase, byteOffsets, mask, vGatherComponents, bPackedOutput);
         }
         else
         {
-            // ensure our mask is the correct type
-            mask = BITCAST(mask, mSimdInt32Ty);
             GATHER4DD(info, pSrcBase, byteOffsets, mask, vGatherComponents, bPackedOutput);
         }
     }

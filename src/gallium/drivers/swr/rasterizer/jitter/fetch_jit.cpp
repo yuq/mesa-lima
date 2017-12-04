@@ -1004,10 +1004,6 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
         // blend in any partially OOB indices that have valid elements
         vGatherMask = SELECT(vPartialOOBMask, vElementInBoundsMask, vGatherMask);
         vGatherMask2 = SELECT(vPartialOOBMask2, vElementInBoundsMask, vGatherMask2);
-        Value *pMask = vGatherMask;
-        Value *pMask2 = vGatherMask2;
-        vGatherMask = VMASK(vGatherMask);
-        vGatherMask2 = VMASK(vGatherMask2);
 
         // calculate the actual offsets into the VB
         Value* vOffsets = MUL(vCurIndices, vStride);
@@ -1051,8 +1047,6 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
 
         // blend in any partially OOB indices that have valid elements
         vGatherMask = SELECT(vPartialOOBMask, vElementInBoundsMask, vGatherMask);
-        Value* pMask = vGatherMask;
-        vGatherMask = VMASK(vGatherMask);
 
         // calculate the actual offsets into the VB
         Value* vOffsets = MUL(vCurIndices, vStride);
@@ -1289,9 +1283,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 indices = INSERT2_I(indices, vShiftedOffsets,  0);
                                 indices = INSERT2_I(indices, vShiftedOffsets2, 1);
 
-                                Value *mask = VUNDEF2_I();
-                                mask = INSERT2_I(mask, vGatherMask,  0);
-                                mask = INSERT2_I(mask, vGatherMask2, 1);
+                                Value *mask = VSHUFFLE(vGatherMask, vGatherMask2, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15});
 
                                 pVtxSrc2[currentVertexElement] = GATHERPS2(gatherSrc16, pStreamBase, indices, mask, 2);
 #else
@@ -1396,18 +1388,10 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                             // if we need to gather the component
                             if (compCtrl[i] == StoreSrc)
                             {
-                                Value *vMaskLo = VSHUFFLE(pMask, VUNDEF(mInt1Ty, 8), C({ 0, 1, 2, 3 }));
-                                Value *vMaskLo2 = VSHUFFLE(pMask2, VUNDEF(mInt1Ty, 8), C({ 0, 1, 2, 3 }));
-                                Value *vMaskHi = VSHUFFLE(pMask, VUNDEF(mInt1Ty, 8), C({ 4, 5, 6, 7 }));
-                                Value *vMaskHi2 = VSHUFFLE(pMask2, VUNDEF(mInt1Ty, 8), C({ 4, 5, 6, 7 }));
-                                vMaskLo = S_EXT(vMaskLo, VectorType::get(mInt64Ty, 4));
-                                vMaskLo2 = S_EXT(vMaskLo2, VectorType::get(mInt64Ty, 4));
-                                vMaskHi = S_EXT(vMaskHi, VectorType::get(mInt64Ty, 4));
-                                vMaskHi2 = S_EXT(vMaskHi2, VectorType::get(mInt64Ty, 4));
-                                vMaskLo = BITCAST(vMaskLo, VectorType::get(mDoubleTy, 4));
-                                vMaskLo2 = BITCAST(vMaskLo2, VectorType::get(mDoubleTy, 4));
-                                vMaskHi = BITCAST(vMaskHi, VectorType::get(mDoubleTy, 4));
-                                vMaskHi2 = BITCAST(vMaskHi2, VectorType::get(mDoubleTy, 4));
+                                Value *vMaskLo = VSHUFFLE(vGatherMask, VUNDEF(mInt1Ty, 8), C({ 0, 1, 2, 3 }));
+                                Value *vMaskLo2 = VSHUFFLE(vGatherMask2, VUNDEF(mInt1Ty, 8), C({ 0, 1, 2, 3 }));
+                                Value *vMaskHi = VSHUFFLE(vGatherMask, VUNDEF(mInt1Ty, 8), C({ 4, 5, 6, 7 }));
+                                Value *vMaskHi2 = VSHUFFLE(vGatherMask2, VUNDEF(mInt1Ty, 8), C({ 4, 5, 6, 7 }));
 
                                 Value *vOffsetsLo = VEXTRACTI128(vOffsets, C(0));
                                 Value *vOffsetsLo2 = VEXTRACTI128(vOffsets2, C(0));
@@ -1483,12 +1467,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                             // if we need to gather the component
                             if (compCtrl[i] == StoreSrc)
                             {
-                                Value *vMaskLo = VSHUFFLE(pMask, VUNDEF(mInt1Ty, 8), C({0, 1, 2, 3}));
-                                Value *vMaskHi = VSHUFFLE(pMask, VUNDEF(mInt1Ty, 8), C({4, 5, 6, 7}));
-                                vMaskLo = S_EXT(vMaskLo, VectorType::get(mInt64Ty, 4));
-                                vMaskHi = S_EXT(vMaskHi, VectorType::get(mInt64Ty, 4));
-                                vMaskLo = BITCAST(vMaskLo, VectorType::get(mDoubleTy, 4));
-                                vMaskHi = BITCAST(vMaskHi, VectorType::get(mDoubleTy, 4));
+                                Value *vMaskLo = VSHUFFLE(vGatherMask, VUNDEF(mInt1Ty, 8), C({0, 1, 2, 3}));
+                                Value *vMaskHi = VSHUFFLE(vGatherMask, VUNDEF(mInt1Ty, 8), C({4, 5, 6, 7}));
 
                                 Value *vOffsetsLo = VEXTRACTI128(vOffsets, C(0));
                                 Value *vOffsetsHi = VEXTRACTI128(vOffsets, C(1));
