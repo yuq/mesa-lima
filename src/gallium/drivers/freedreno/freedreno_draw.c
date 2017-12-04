@@ -55,7 +55,6 @@ resource_written(struct fd_batch *batch, struct pipe_resource *prsc)
 {
 	if (!prsc)
 		return;
-	fd_resource(prsc)->valid = true;
 	fd_batch_resource_used(batch, fd_resource(prsc), true);
 }
 
@@ -147,7 +146,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
 	if (fd_stencil_enabled(ctx)) {
 		if (fd_resource(pfb->zsbuf->texture)->valid)
-			restore_buffers |= FD_BUFFER_DEPTH;
+			restore_buffers |= FD_BUFFER_STENCIL;
 		buffers |= FD_BUFFER_STENCIL;
 		resource_written(batch, pfb->zsbuf->texture);
 		batch->gmem_reason |= FD_GMEM_STENCIL_ENABLED;

@@ -382,6 +382,9 @@ fd_batch_resource_used(struct fd_batch *batch, struct fd_resource *rsc, bool wri
 
 	DBG("%p: %s %p", batch, write ? "write" : "read", rsc);
 
+	if (write)
+		rsc->valid = true;
+
 	/* note, invalidate write batch, to avoid further writes to rsc
 	 * resulting in a write-after-read hazard.
 	 */
