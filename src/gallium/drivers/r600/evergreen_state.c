@@ -3949,12 +3949,12 @@ static void evergreen_set_shader_buffers(struct pipe_context *ctx,
 
 		resource = (struct r600_resource *)rview->base.resource;
 
-		evergreen_setup_immed_buffer(rctx, rview, resource->b.b.format);
+		evergreen_setup_immed_buffer(rctx, rview, PIPE_FORMAT_R32_UINT);
 
 		color.offset = 0;
 		color.view = 0;
 		evergreen_set_color_surface_buffer(rctx, resource,
-						   PIPE_FORMAT_R32_FLOAT,
+						   PIPE_FORMAT_R32_UINT,
 						   buf->buffer_offset,
 						   buf->buffer_offset + buf->buffer_size,
 						   &color);
@@ -3974,7 +3974,7 @@ static void evergreen_set_shader_buffers(struct pipe_context *ctx,
 		rview->cb_color_fmask_slice = color.fmask_slice;
 
 		memset(&buf_params, 0, sizeof(buf_params));
-		buf_params.pipe_format = PIPE_FORMAT_R32_FLOAT;
+		buf_params.pipe_format = PIPE_FORMAT_R32_UINT;
 		buf_params.offset = buf->buffer_offset;
 		buf_params.size = buf->buffer_size;
 		buf_params.swizzle[0] = PIPE_SWIZZLE_X;
