@@ -8360,10 +8360,19 @@ static int tgsi_atomic_op_rat(struct r600_shader_ctx *ctx)
 	cf->barrier = 1;
 	cf->cf_addr = 1;
 
-	desc = util_format_description(inst->Memory.Format);
-	r600_vertex_data_type(inst->Memory.Format,
-			      &format, &num_format, &format_comp, &endian);
 	memset(&vtx, 0, sizeof(struct r600_bytecode_vtx));
+	if (inst->Src[0].Register.File == TGSI_FILE_IMAGE) {
+		desc = util_format_description(inst->Memory.Format);
+		r600_vertex_data_type(inst->Memory.Format,
+				      &format, &num_format, &format_comp, &endian);
+		vtx.dst_sel_x = desc->swizzle[0];
+	} else {
+		format = FMT_32;
+		num_format = 1;
+		format_comp = 0;
+		endian = 0;
+		vtx.dst_sel_x = 0;
+	}
 	vtx.op = FETCH_OP_VFETCH;
 	vtx.buffer_id = immed_base + inst->Src[0].Register.Index;
 	vtx.buffer_index_mode = rat_index_mode;
@@ -8371,7 +8380,6 @@ static int tgsi_atomic_op_rat(struct r600_shader_ctx *ctx)
 	vtx.src_gpr = ctx->thread_id_gpr;
 	vtx.src_sel_x = 1;
 	vtx.dst_gpr = ctx->file_offset[inst->Dst[0].Register.File] + inst->Dst[0].Register.Index;
-	vtx.dst_sel_x = desc->swizzle[0];
 	vtx.dst_sel_y = 7;
 	vtx.dst_sel_z = 7;
 	vtx.dst_sel_w = 7;
