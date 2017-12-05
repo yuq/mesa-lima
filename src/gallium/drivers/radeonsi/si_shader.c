@@ -1208,6 +1208,50 @@ static LLVMValueRef fetch_input_tcs(
 	return lds_load(bld_base, tgsi2llvmtype(bld_base, type), swizzle, dw_addr);
 }
 
+static LLVMValueRef si_nir_load_input_tcs(struct ac_shader_abi *abi,
+					  LLVMValueRef vertex_index,
+					  LLVMValueRef param_index,
+					  unsigned const_index,
+					  unsigned location,
+					  unsigned driver_location,
+					  unsigned component,
+					  unsigned num_components,
+					  bool is_patch,
+					  bool is_compact)
+{
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+	struct tgsi_shader_info *info = &ctx->shader->selector->info;
+	struct lp_build_tgsi_context *bld_base = &ctx->bld_base;
+	LLVMValueRef dw_addr, stride;
+
+	driver_location = driver_location / 4;
+
+	stride = get_tcs_in_vertex_dw_stride(ctx);
+	dw_addr = get_tcs_in_current_patch_offset(ctx);
+
+	if (param_index) {
+		/* Add the constant index to the indirect index */
+		param_index = LLVMBuildAdd(ctx->ac.builder, param_index,
+					   LLVMConstInt(ctx->i32, const_index, 0), "");
+	} else {
+		param_index = LLVMConstInt(ctx->i32, const_index, 0);
+	}
+
+	dw_addr = get_dw_address_from_generic_indices(ctx, stride, dw_addr,
+						      vertex_index, param_index,
+						      driver_location,
+						      info->input_semantic_name,
+						      info->input_semantic_index,
+						      is_patch);
+
+	LLVMValueRef value[4];
+	for (unsigned i = 0; i < num_components + component; i++) {
+		value[i] = lds_load(bld_base, ctx->i32, i, dw_addr);
+	}
+
+	return ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
+}
+
 static LLVMValueRef fetch_output_tcs(
 		struct lp_build_tgsi_context *bld_base,
 		const struct tgsi_full_src_register *reg,
@@ -5778,6 +5822,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		break;
 	case PIPE_SHADER_TESS_CTRL:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_tcs;
+		ctx->abi.load_tess_inputs = si_nir_load_input_tcs;
 		bld_base->emit_fetch_funcs[TGSI_FILE_OUTPUT] = fetch_output_tcs;
 		bld_base->emit_store = store_output_tcs;
 		bld_base->emit_epilogue = si_llvm_emit_tcs_epilogue;
