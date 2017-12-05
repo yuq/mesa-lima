@@ -1727,7 +1727,7 @@ VkResult anv_GetMemoryFdPropertiesKHR(
    struct anv_physical_device *pdevice = &device->instance->physicalDevice;
 
    switch (handleType) {
-   case VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHR:
+   case VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT:
       /* dma-buf can be imported as any memory type */
       pMemoryFdProperties->memoryTypeBits =
          (1 << pdevice->memory.type_count) - 1;
