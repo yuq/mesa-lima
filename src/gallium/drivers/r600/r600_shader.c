@@ -355,6 +355,7 @@ struct r600_shader_ctx {
 	unsigned                                tess_input_info; /* temp with tess input offsets */
 	unsigned                                tess_output_info; /* temp with tess input offsets */
 	unsigned                                thread_id_gpr; /* temp with thread id calculated for images */
+	bool thread_id_gpr_loaded;
 };
 
 struct r600_shader_tgsi_instruction {
@@ -2981,6 +2982,9 @@ static int load_thread_id_gpr(struct r600_shader_ctx *ctx)
 	struct r600_bytecode_alu alu;
 	int r;
 
+	if (ctx->thread_id_gpr_loaded)
+		return 0;
+
 	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 	alu.op = ALU_OP1_MBCNT_32LO_ACCUM_PREV_INT;
 	alu.dst.sel = ctx->temp_reg;
@@ -3025,6 +3029,7 @@ static int load_thread_id_gpr(struct r600_shader_ctx *ctx)
 			   ctx->temp_reg, 0);
 	if (r)
 		return r;
+	ctx->thread_id_gpr_loaded = true;
 	return 0;
 }
 
@@ -3128,6 +3133,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.fragcoord_input = -1;
 	ctx.colors_used = 0;
 	ctx.clip_vertex_write = 0;
+	ctx.thread_id_gpr_loaded = false;
 
 	shader->nr_ps_color_exports = 0;
 	shader->nr_ps_max_color_exports = 0;
@@ -3235,11 +3241,10 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		ctx.temp_reg = ctx.bc->ar_reg + 3;
 	}
 
-	if (shader->uses_images && ctx.type == PIPE_SHADER_FRAGMENT) {
-		ctx.thread_id_gpr = ctx.temp_reg;
-		ctx.temp_reg++;
-	} else
-		ctx.thread_id_gpr = 0;
+	if (shader->uses_images) {
+		ctx.thread_id_gpr = ctx.temp_reg++;
+		ctx.thread_id_gpr_loaded = false;
+	}
 
 	shader->max_arrays = 0;
 	shader->num_arrays = 0;
@@ -3391,10 +3396,6 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			if ((r = r600_bytecode_add_alu(ctx.bc, &alu)))
 				return r;
 		}
-	}
-
-	if (ctx.thread_id_gpr) {
-		load_thread_id_gpr(&ctx);
 	}
 
 	if (ctx.type == PIPE_SHADER_GEOMETRY) {
@@ -8037,6 +8038,10 @@ static int tgsi_load_rat(struct r600_shader_ctx *ctx)
 	unsigned rat_index_mode;
 	unsigned immed_base;
 
+	r = load_thread_id_gpr(ctx);
+	if (r)
+		return r;
+
 	rat_index_mode = inst->Src[0].Indirect.Index == 2 ? 2 : 0; // CF_INDEX_1 : CF_INDEX_NONE
 
 	immed_base = R600_IMAGE_IMMED_RESOURCE_OFFSET;
@@ -8279,6 +8284,10 @@ static int tgsi_atomic_op_rat(struct r600_shader_ctx *ctx)
 
 	immed_base = R600_IMAGE_IMMED_RESOURCE_OFFSET;
 	rat_base = ctx->shader->rat_base;
+
+	r = load_thread_id_gpr(ctx);
+	if (r)
+		return r;
 
         if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
 		immed_base += ctx->info.file_count[TGSI_FILE_IMAGE];
