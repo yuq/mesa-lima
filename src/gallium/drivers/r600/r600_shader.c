@@ -8005,17 +8005,19 @@ static int tgsi_load_buffer(struct r600_shader_ctx *ctx)
 	vtx.format_comp_all = 1;
 	vtx.srf_mode_all = 0;
 
-	if (inst->Dst[0].Register.WriteMask == 0xf) {
+	if (inst->Dst[0].Register.WriteMask & 8) {
 		vtx.data_format = FMT_32_32_32_32;
 		vtx.use_const_fields = 0;
-	} else if (inst->Dst[0].Register.WriteMask == 0x7) {
+	} else if (inst->Dst[0].Register.WriteMask & 4) {
 		vtx.data_format = FMT_32_32_32;
 		vtx.use_const_fields = 0;
-	} else if (inst->Dst[0].Register.WriteMask == 0x3) {
+	} else if (inst->Dst[0].Register.WriteMask & 2) {
 		vtx.data_format = FMT_32_32;
 		vtx.use_const_fields = 0;
-	} else
-		vtx.use_const_fields = 1;
+	} else {
+		vtx.data_format = FMT_32;
+		vtx.use_const_fields = 0;
+	}
 
 	r = r600_bytecode_add_vtx_tc(ctx->bc, &vtx);
 	if (r)
