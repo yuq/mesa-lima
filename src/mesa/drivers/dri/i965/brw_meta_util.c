@@ -293,17 +293,7 @@ brw_is_color_fast_clear_compatible(struct brw_context *brw,
        brw->mesa_to_isl_render_format[mt->format])
       return false;
 
-   /* Gen9 doesn't support fast clear on single-sampled SRGB buffers. When
-    * GL_FRAMEBUFFER_SRGB is enabled any color renderbuffers will be
-    * resolved in intel_update_state. In that case it's pointless to do a
-    * fast clear because it's very likely to be immediately resolved.
-    */
    const bool srgb_rb = _mesa_get_srgb_format_linear(mt->format) != mt->format;
-   if (devinfo->gen >= 9 &&
-       mt->surf.samples == 1 &&
-       ctx->Color.sRGBEnabled && srgb_rb)
-      return false;
-
   /* Gen10 doesn't automatically decode the clear color of sRGB buffers. Since
    * we currently don't perform this decode in software, avoid a fast-clear
    * altogether. TODO: Do this in software.
