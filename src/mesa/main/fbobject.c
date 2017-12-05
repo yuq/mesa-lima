@@ -3189,8 +3189,7 @@ check_layer(struct gl_context *ctx, GLenum target, GLint layer,
     *     and layer is negative."
     */
    if (layer < 0) {
-      _mesa_error(ctx, GL_INVALID_VALUE,
-                  "%s(layer %u < 0)", caller, layer);
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(layer %d < 0)", caller, layer);
       return false;
    }
 
