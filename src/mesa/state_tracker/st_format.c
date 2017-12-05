@@ -1988,13 +1988,13 @@ find_supported_format(struct pipe_screen *screen,
                       const enum pipe_format formats[],
                       enum pipe_texture_target target,
                       unsigned sample_count,
-                      unsigned tex_usage,
+                      unsigned bindings,
                       boolean allow_dxt)
 {
    uint i;
    for (i = 0; formats[i]; i++) {
       if (screen->is_format_supported(screen, formats[i], target,
-                                      sample_count, tex_usage)) {
+                                      sample_count, bindings)) {
          if (!allow_dxt && util_format_is_s3tc(formats[i])) {
             /* we can't return a dxt format, continue searching */
             continue;
@@ -2158,13 +2158,13 @@ enum pipe_format
 st_choose_renderbuffer_format(struct st_context *st,
                               GLenum internalFormat, unsigned sample_count)
 {
-   uint usage;
+   unsigned bindings;
    if (_mesa_is_depth_or_stencil_format(internalFormat))
-      usage = PIPE_BIND_DEPTH_STENCIL;
+      bindings = PIPE_BIND_DEPTH_STENCIL;
    else
-      usage = PIPE_BIND_RENDER_TARGET;
+      bindings = PIPE_BIND_RENDER_TARGET;
    return st_choose_format(st, internalFormat, GL_NONE, GL_NONE,
-                           PIPE_TEXTURE_2D, sample_count, usage, FALSE);
+                           PIPE_TEXTURE_2D, sample_count, bindings, FALSE);
 }
 
 
@@ -2411,17 +2411,17 @@ st_QueryInternalFormat(struct gl_context *ctx, GLenum target,
        * the driver, and if so return the same internal format, otherwise
        * return GL_NONE.
        */
-      uint usage;
+      unsigned bindings;
       if (_mesa_is_depth_or_stencil_format(internalFormat))
-         usage = PIPE_BIND_DEPTH_STENCIL;
+         bindings = PIPE_BIND_DEPTH_STENCIL;
       else
-         usage = PIPE_BIND_RENDER_TARGET;
+         bindings = PIPE_BIND_RENDER_TARGET;
       enum pipe_format pformat = st_choose_format(st,
                                                   internalFormat,
                                                   GL_NONE,
                                                   GL_NONE,
                                                   PIPE_TEXTURE_2D, 1,
-                                                  usage, FALSE);
+                                                  bindings, FALSE);
       if (pformat)
          params[0] = internalFormat;
       break;
