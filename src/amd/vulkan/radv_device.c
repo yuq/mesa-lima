@@ -1603,7 +1603,9 @@ radv_get_preamble_cs(struct radv_queue *queue,
 		                                                 size,
 		                                                 4096,
 		                                                 RADEON_DOMAIN_VRAM,
-		                                                 RADEON_FLAG_CPU_ACCESS|RADEON_FLAG_NO_INTERPROCESS_SHARING);
+		                                                 RADEON_FLAG_CPU_ACCESS |
+								 RADEON_FLAG_NO_INTERPROCESS_SHARING |
+								 RADEON_FLAG_READ_ONLY);
 		if (!descriptor_bo)
 			goto fail;
 	} else
