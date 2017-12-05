@@ -146,6 +146,7 @@ env.CodeGenerate(
 Depends(backendPixelRateFiles,
         ['rasterizer/core/backends/gen_BackendPixelRate.hpp',
          'rasterizer/archrast/gen_ar_event.hpp',
+         'rasterizer/archrast/gen_ar_eventhandler.hpp',
          'rasterizer/codegen/gen_knobs.h']
         )
 
