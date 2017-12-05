@@ -1804,7 +1804,7 @@ _mesa_CreateRenderbuffers(GLsizei n, GLuint *renderbuffers)
  * \return the base internal format, or 0 if internalFormat is illegal
  */
 GLenum
-_mesa_base_fbo_format(struct gl_context *ctx, GLenum internalFormat)
+_mesa_base_fbo_format(const struct gl_context *ctx, GLenum internalFormat)
 {
    /*
     * Notes: some formats such as alpha, luminance, etc. were added
