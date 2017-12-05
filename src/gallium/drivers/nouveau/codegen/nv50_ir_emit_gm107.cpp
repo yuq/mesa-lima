@@ -3944,6 +3944,7 @@ SchedDataCalculatorGM107::needWrDepBar(const Instruction *insn) const
 
    for (int d = 0; insn->defExists(d); ++d) {
       if (insn->def(d).getFile() == FILE_GPR ||
+          insn->def(d).getFile() == FILE_FLAGS ||
           insn->def(d).getFile() == FILE_PREDICATE)
          return true;
    }
@@ -3983,6 +3984,12 @@ SchedDataCalculatorGM107::findFirstUse(const Instruction *bari) const
                   continue;
                return insn;
             }
+            if (def.getFile() == FILE_FLAGS) {
+               if (insn->src(s).getFile() != FILE_FLAGS ||
+                   src->reg.data.id != minGPR)
+                  continue;
+               return insn;
+            }
          }
       }
    }
@@ -4002,7 +4009,8 @@ SchedDataCalculatorGM107::findFirstDef(const Instruction *bari) const
 
       for (int d = 0; insn->defExists(d); ++d) {
          const Value *def = insn->def(d).rep();
-         if (insn->def(d).getFile() != FILE_GPR)
+         if (insn->def(d).getFile() != FILE_GPR &&
+             insn->def(d).getFile() != FILE_FLAGS)
             continue;
 
          minGPR = def->reg.data.id;
@@ -4010,7 +4018,12 @@ SchedDataCalculatorGM107::findFirstDef(const Instruction *bari) const
 
          for (int s = 0; bari->srcExists(s); ++s) {
             const Value *src = bari->src(s).rep();
+            if (bari->src(s).getFile() == FILE_FLAGS &&
+                insn->def(d).getFile() == FILE_FLAGS &&
+                src->reg.data.id == minGPR)
+               return insn;
             if (bari->src(s).getFile() != FILE_GPR ||
+                insn->def(d).getFile() != FILE_GPR ||
                 src->reg.data.id + src->reg.size / 4 - 1 < minGPR ||
                 src->reg.data.id > maxGPR)
                continue;
