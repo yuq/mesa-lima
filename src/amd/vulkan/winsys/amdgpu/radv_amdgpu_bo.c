@@ -49,11 +49,13 @@ radv_amdgpu_bo_va_op(struct radv_amdgpu_winsys *ws,
 		     uint32_t ops)
 {
 	uint64_t flags = AMDGPU_VM_PAGE_READABLE |
-			 AMDGPU_VM_PAGE_WRITEABLE |
 			 AMDGPU_VM_PAGE_EXECUTABLE;
 
 	if ((bo_flags & RADEON_FLAG_VA_UNCACHED) && ws->info.chip_class >= GFX9)
 		flags |= AMDGPU_VM_MTYPE_UC;
+
+	if (!(bo_flags & RADEON_FLAG_READ_ONLY))
+		flags |= AMDGPU_VM_PAGE_WRITEABLE;
 
 	size = ALIGN(size, getpagesize());
 
