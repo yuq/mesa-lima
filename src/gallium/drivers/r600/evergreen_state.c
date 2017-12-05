@@ -3853,6 +3853,32 @@ static void evergreen_set_tess_state(struct pipe_context *ctx,
 	rctx->tess_state_dirty = true;
 }
 
+static void evergreen_setup_immed_buffer(struct r600_context *rctx,
+					 struct r600_image_view *rview,
+					 enum pipe_format pformat)
+{
+	struct r600_screen *rscreen = (struct r600_screen *)rctx->b.b.screen;
+	uint32_t immed_size = rscreen->b.info.max_se * 256 * 64 * util_format_get_blocksize(pformat);
+	struct eg_buf_res_params buf_params;
+	bool skip_reloc = false;
+	struct r600_resource *resource = (struct r600_resource *)rview->base.resource;
+	if (!resource->immed_buffer) {
+		eg_resource_alloc_immed(&rscreen->b, resource, immed_size);
+	}
+
+	memset(&buf_params, 0, sizeof(buf_params));
+	buf_params.pipe_format = pformat;
+	buf_params.size = resource->immed_buffer->b.b.width0;
+	buf_params.swizzle[0] = PIPE_SWIZZLE_X;
+	buf_params.swizzle[1] = PIPE_SWIZZLE_Y;
+	buf_params.swizzle[2] = PIPE_SWIZZLE_Z;
+	buf_params.swizzle[3] = PIPE_SWIZZLE_W;
+	buf_params.uncached = 1;
+	evergreen_fill_buffer_resource_words(rctx, &resource->immed_buffer->b.b,
+					     &buf_params, &skip_reloc,
+					     rview->immed_resource_words);
+}
+
 static void evergreen_set_hw_atomic_buffers(struct pipe_context *ctx,
 					    unsigned start_slot,
 					    unsigned count,
@@ -3891,7 +3917,6 @@ static void evergreen_set_shader_buffers(struct pipe_context *ctx,
 					 const struct pipe_shader_buffer *buffers)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
-	struct r600_screen *rscreen = (struct r600_screen *)ctx->screen;
 	struct r600_image_state *istate = NULL;
 	struct r600_image_view *rview;
 	struct r600_tex_color_info color;
@@ -3899,7 +3924,6 @@ static void evergreen_set_shader_buffers(struct pipe_context *ctx,
 	struct r600_resource *resource;
 	int i, idx;
 	unsigned old_mask;
-	bool skip_reloc = false;
 
 	if (shader != PIPE_SHADER_FRAGMENT && count == 0)
 		return;
@@ -3924,11 +3948,8 @@ static void evergreen_set_shader_buffers(struct pipe_context *ctx,
 		pipe_resource_reference((struct pipe_resource **)&rview->base.resource, buf->buffer);
 
 		resource = (struct r600_resource *)rview->base.resource;
-		if (!resource->immed_buffer) {
-			int immed_size = (rscreen->b.info.max_se * 256 * 64) * util_format_get_blocksize(resource->b.b.format);
 
-			eg_resource_alloc_immed(&rscreen->b, resource, immed_size);
-		}
+		evergreen_setup_immed_buffer(rctx, rview, resource->b.b.format);
 
 		color.offset = 0;
 		color.view = 0;
@@ -3951,18 +3972,6 @@ static void evergreen_set_shader_buffers(struct pipe_context *ctx,
 		rview->cb_color_attrib = color.attrib;
 		rview->cb_color_fmask = color.fmask;
 		rview->cb_color_fmask_slice = color.fmask_slice;
-
-		memset(&buf_params, 0, sizeof(buf_params));
-		buf_params.pipe_format = resource->b.b.format;
-		buf_params.size = resource->immed_buffer->b.b.width0;
-		buf_params.swizzle[0] = PIPE_SWIZZLE_X;
-		buf_params.swizzle[1] = PIPE_SWIZZLE_Y;
-		buf_params.swizzle[2] = PIPE_SWIZZLE_Z;
-		buf_params.swizzle[3] = PIPE_SWIZZLE_W;
-		buf_params.uncached = 1;
-		evergreen_fill_buffer_resource_words(rctx, &resource->immed_buffer->b.b,
-						     &buf_params, &skip_reloc,
-						     rview->immed_resource_words);
 
 		memset(&buf_params, 0, sizeof(buf_params));
 		buf_params.pipe_format = PIPE_FORMAT_R32_FLOAT;
@@ -4001,7 +4010,6 @@ static void evergreen_set_shader_images(struct pipe_context *ctx,
 					const struct pipe_image_view *images)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
-	struct r600_screen *rscreen = (struct r600_screen *)ctx->screen;
 	int i;
 	struct r600_image_view *rview;
 	struct pipe_resource *image;
@@ -4010,7 +4018,6 @@ static void evergreen_set_shader_images(struct pipe_context *ctx,
 	struct eg_buf_res_params buf_params;
 	struct eg_tex_res_params tex_params;
 	unsigned old_mask;
-	bool skip_reloc = false;
 	struct r600_image_state *istate = NULL;
 	int idx;
 	if (shader != PIPE_SHADER_FRAGMENT && count == 0)
@@ -4041,11 +4048,7 @@ static void evergreen_set_shader_images(struct pipe_context *ctx,
 		rview->base.resource = NULL;
 		pipe_resource_reference((struct pipe_resource **)&rview->base.resource, image);
 
-		if (!resource->immed_buffer) {
-			int immed_size = (rscreen->b.info.max_se * 256 * 64) * util_format_get_blocksize(iview->format);
-
-			eg_resource_alloc_immed(&rscreen->b, resource, immed_size);
-		}
+		evergreen_setup_immed_buffer(rctx, rview, iview->format);
 
 		bool is_buffer = image->target == PIPE_BUFFER;
 		struct r600_texture *rtex = (struct r600_texture *)image;
@@ -4117,19 +4120,6 @@ static void evergreen_set_shader_images(struct pipe_context *ctx,
 		rview->cb_color_attrib = color.attrib;
 		rview->cb_color_fmask = color.fmask;
 		rview->cb_color_fmask_slice = color.fmask_slice;
-
-		memset(&buf_params, 0, sizeof(buf_params));
-		buf_params.pipe_format = iview->format;
-		buf_params.size = resource->immed_buffer->b.b.width0;
-		buf_params.swizzle[0] = PIPE_SWIZZLE_X;
-		buf_params.swizzle[1] = PIPE_SWIZZLE_Y;
-		buf_params.swizzle[2] = PIPE_SWIZZLE_Z;
-		buf_params.swizzle[3] = PIPE_SWIZZLE_W;
-		buf_params.uncached = 1;
-		evergreen_fill_buffer_resource_words(rctx, &resource->immed_buffer->b.b,
-						     &buf_params, &skip_reloc,
-						     rview->immed_resource_words);
-
 
 		if (image->target != PIPE_BUFFER) {
 			memset(&tex_params, 0, sizeof(tex_params));
