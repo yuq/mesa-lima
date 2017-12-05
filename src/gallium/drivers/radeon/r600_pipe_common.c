@@ -454,6 +454,11 @@ bool si_common_context_init(struct r600_common_context *rctx,
 	if (!rctx->b.const_uploader)
 		return false;
 
+	rctx->cached_gtt_allocator = u_upload_create(&rctx->b, 16 * 1024,
+						     0, PIPE_USAGE_STAGING, 0);
+	if (!rctx->cached_gtt_allocator)
+		return false;
+
 	rctx->ctx = rctx->ws->ctx_create(rctx->ws);
 	if (!rctx->ctx)
 		return false;
@@ -498,6 +503,8 @@ void si_common_context_cleanup(struct r600_common_context *rctx)
 		u_upload_destroy(rctx->b.stream_uploader);
 	if (rctx->b.const_uploader)
 		u_upload_destroy(rctx->b.const_uploader);
+	if (rctx->cached_gtt_allocator)
+		u_upload_destroy(rctx->cached_gtt_allocator);
 
 	slab_destroy_child(&rctx->pool_transfers);
 	slab_destroy_child(&rctx->pool_transfers_unsync);

@@ -395,6 +395,7 @@ struct r600_common_context {
 	struct pipe_fence_handle	*last_gfx_fence;
 	struct pipe_fence_handle	*last_sdma_fence;
 	struct r600_resource		*eop_bug_scratch;
+	struct u_upload_mgr		*cached_gtt_allocator;
 	unsigned			num_gfx_cs_flushes;
 	unsigned			initial_gfx_cs_size;
 	unsigned			gpu_reset_counter;
