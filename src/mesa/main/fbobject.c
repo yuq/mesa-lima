@@ -793,7 +793,7 @@ test_attachment_completeness(const struct gl_context *ctx, GLenum format,
    /* Look for reasons why the attachment might be incomplete */
    if (att->Type == GL_TEXTURE) {
       const struct gl_texture_object *texObj = att->Texture;
-      struct gl_texture_image *texImage;
+      const struct gl_texture_image *texImage;
       GLenum baseFormat;
 
       if (!texObj) {
