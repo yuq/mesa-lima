@@ -5712,7 +5712,8 @@ _mesa_TextureBufferRange(GLuint texture, GLenum internalFormat, GLuint buffer,
 }
 
 GLboolean
-_mesa_is_renderable_texture_format(struct gl_context *ctx, GLenum internalformat)
+_mesa_is_renderable_texture_format(const struct gl_context *ctx,
+                                   GLenum internalformat)
 {
    /* Everything that is allowed for renderbuffers,
     * except for a base format of GL_STENCIL_INDEX, unless supported.
