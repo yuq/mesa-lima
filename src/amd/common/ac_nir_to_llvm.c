@@ -2832,35 +2832,33 @@ get_dw_address(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef
-load_tcs_input(struct nir_to_llvm_context *ctx,
-	       nir_intrinsic_instr *instr)
+load_tcs_input(struct ac_shader_abi *abi,
+	       LLVMValueRef vertex_index,
+	       LLVMValueRef indir_index,
+	       unsigned const_index,
+	       unsigned location,
+	       unsigned driver_location,
+	       unsigned component,
+	       unsigned num_components,
+	       bool is_patch,
+	       bool is_compact)
 {
+	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
 	LLVMValueRef dw_addr, stride;
-	unsigned const_index;
-	LLVMValueRef vertex_index;
-	LLVMValueRef indir_index;
-	unsigned param;
 	LLVMValueRef value[4], result;
-	const bool per_vertex = nir_is_per_vertex_io(instr->variables[0]->var, ctx->stage);
-	const bool is_compact = instr->variables[0]->var->data.compact;
-	param = shader_io_get_unique_index(instr->variables[0]->var->data.location);
-	get_deref_offset(ctx->nir, instr->variables[0],
-			 false, NULL, per_vertex ? &vertex_index : NULL,
-			 &const_index, &indir_index);
+	unsigned param = shader_io_get_unique_index(location);
 
 	stride = unpack_param(&ctx->ac, ctx->tcs_in_layout, 13, 8);
 	dw_addr = get_tcs_in_current_patch_offset(ctx);
 	dw_addr = get_dw_address(ctx, dw_addr, param, const_index, is_compact, vertex_index, stride,
 				 indir_index);
 
-	unsigned comp = instr->variables[0]->var->data.location_frac;
-	for (unsigned i = 0; i < instr->num_components + comp; i++) {
+	for (unsigned i = 0; i < num_components + component; i++) {
 		value[i] = ac_lds_load(&ctx->ac, dw_addr);
 		dw_addr = LLVMBuildAdd(ctx->builder, dw_addr,
 				       ctx->ac.i32_1, "");
 	}
-	result = ac_build_varying_gather_values(&ctx->ac, value, instr->num_components, comp);
-	result = LLVMBuildBitCast(ctx->builder, result, get_def_type(ctx->nir, &instr->dest.ssa), "");
+	result = ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
 	return result;
 }
 
@@ -3128,9 +3126,8 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 
 	switch (instr->variables[0]->var->data.mode) {
 	case nir_var_shader_in:
-		if (ctx->stage == MESA_SHADER_TESS_CTRL)
-			return load_tcs_input(ctx->nctx, instr);
-		if (ctx->stage == MESA_SHADER_TESS_EVAL) {
+		if (ctx->stage == MESA_SHADER_TESS_CTRL ||
+		    ctx->stage == MESA_SHADER_TESS_EVAL) {
 			LLVMValueRef result;
 			LLVMValueRef vertex_index = NULL;
 			LLVMValueRef indir_index = NULL;
@@ -6695,6 +6692,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_CTRL) {
 			ctx.tcs_outputs_read = shaders[i]->info.outputs_read;
 			ctx.tcs_patch_outputs_read = shaders[i]->info.patch_outputs_read;
+			ctx.abi.load_tess_inputs = load_tcs_input;
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_EVAL) {
 			ctx.tes_primitive_mode = shaders[i]->info.tess.primitive_mode;
 			ctx.abi.load_tess_inputs = load_tes_input;
