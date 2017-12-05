@@ -829,6 +829,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 		(sscreen->debug_flags & DBG(DCC_MSAA) ||
 		 sscreen->info.chip_class == VI);
 
+	sscreen->cpdma_prefetch_writes_memory = sscreen->info.chip_class <= VI;
+
 	(void) mtx_init(&sscreen->shader_parts_mutex, mtx_plain);
 	sscreen->use_monolithic_shaders =
 		(sscreen->debug_flags & DBG(MONOLITHIC_SHADERS)) != 0;

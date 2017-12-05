@@ -174,6 +174,9 @@ void si_init_resource_fields(struct si_screen *sscreen,
 	if (sscreen->debug_flags & DBG(NO_WC))
 		res->flags &= ~RADEON_FLAG_GTT_WC;
 
+	if (res->b.b.flags & R600_RESOURCE_FLAG_READ_ONLY)
+		res->flags |= RADEON_FLAG_READ_ONLY;
+
 	/* Set expected VRAM and GART usage for the buffer. */
 	res->vram_usage = 0;
 	res->gart_usage = 0;

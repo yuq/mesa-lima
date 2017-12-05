@@ -5057,9 +5057,12 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 
 	r600_resource_reference(&shader->bo, NULL);
 	shader->bo = (struct r600_resource*)
-		     pipe_buffer_create(&sscreen->b, 0,
-					PIPE_USAGE_IMMUTABLE,
-					align(bo_size, SI_CPDMA_ALIGNMENT));
+		     si_aligned_buffer_create(&sscreen->b,
+					      sscreen->cpdma_prefetch_writes_memory ?
+						0 : R600_RESOURCE_FLAG_READ_ONLY,
+                                              PIPE_USAGE_IMMUTABLE,
+                                              align(bo_size, SI_CPDMA_ALIGNMENT),
+                                              256);
 	if (!shader->bo)
 		return -ENOMEM;
 

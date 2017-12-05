@@ -123,6 +123,7 @@ struct si_screen {
 	bool				has_rbplus;     /* if RB+ registers exist */
 	bool				rbplus_allowed; /* if RB+ is allowed */
 	bool				dcc_msaa_allowed;
+	bool				cpdma_prefetch_writes_memory;
 
 	struct slab_parent_pool		pool_transfers;
 
