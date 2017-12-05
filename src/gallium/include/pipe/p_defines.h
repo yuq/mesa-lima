@@ -1088,6 +1088,7 @@ struct pipe_driver_query_group_info
 enum pipe_fd_type
 {
    PIPE_FD_TYPE_NATIVE_SYNC,
+   PIPE_FD_TYPE_SYNCOBJ,
 };
 
 enum pipe_debug_type
