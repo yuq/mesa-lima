@@ -934,7 +934,11 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       struct vtn_type *base = vtn_value(b, w[2], vtn_value_type_type)->type;
       unsigned elems = w[3];
 
-      vtn_assert(glsl_type_is_scalar(base->type));
+      vtn_fail_if(base->base_type != vtn_base_type_scalar,
+                  "Base type for OpTypeVector must be a scalar");
+      vtn_fail_if(elems < 2 || elems > 4,
+                  "Invalid component count for OpTypeVector");
+
       val->type->base_type = vtn_base_type_vector;
       val->type->type = glsl_vector_type(glsl_get_base_type(base->type), elems);
       val->type->length = elems;
@@ -947,12 +951,18 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       struct vtn_type *base = vtn_value(b, w[2], vtn_value_type_type)->type;
       unsigned columns = w[3];
 
-      vtn_assert(glsl_type_is_vector(base->type));
+      vtn_fail_if(base->base_type != vtn_base_type_vector,
+                  "Base type for OpTypeMatrix must be a vector");
+      vtn_fail_if(columns < 2 || columns > 4,
+                  "Invalid column count for OpTypeMatrix");
+
       val->type->base_type = vtn_base_type_matrix;
       val->type->type = glsl_matrix_type(glsl_get_base_type(base->type),
                                          glsl_get_vector_elements(base->type),
                                          columns);
-      vtn_assert(!glsl_type_is_error(val->type->type));
+      vtn_fail_if(glsl_type_is_error(val->type->type),
+                  "Unsupported base type for OpTypeMatrix");
+      assert(!glsl_type_is_error(val->type->type));
       val->type->length = columns;
       val->type->array_element = base;
       val->type->row_major = false;
