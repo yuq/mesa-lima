@@ -763,11 +763,9 @@ static LLVMValueRef get_primitive_id(struct si_shader_context *ctx,
 		return LLVMGetParam(ctx->main_fn,
 				    ctx->param_vs_prim_id);
 	case PIPE_SHADER_TESS_CTRL:
-		return LLVMGetParam(ctx->main_fn,
-				    ctx->param_tcs_patch_id);
+		return ctx->abi.tcs_patch_id;
 	case PIPE_SHADER_TESS_EVAL:
-		return LLVMGetParam(ctx->main_fn,
-				    ctx->param_tes_patch_id);
+		return ctx->abi.tes_patch_id;
 	case PIPE_SHADER_GEOMETRY:
 		return ctx->abi.gs_prim_id;
 	default:
@@ -3363,8 +3361,9 @@ static void si_set_ls_return_value_for_tcs(struct si_shader_context *ctx)
 					   8 + GFX9_SGPR_TCS_SAMPLERS_AND_IMAGES);
 
 	unsigned vgpr = 8 + GFX9_TCS_NUM_USER_SGPR;
-	ret = si_insert_input_ret_float(ctx, ret,
-					ctx->param_tcs_patch_id, vgpr++);
+	ret = LLVMBuildInsertValue(ctx->ac.builder, ret,
+				   ac_to_float(&ctx->ac, ctx->abi.tcs_patch_id),
+				   vgpr++, "");
 	ret = si_insert_input_ret_float(ctx, ret,
 					ctx->param_tcs_rel_ids, vgpr++);
 	ctx->return_value = ret;
@@ -4564,7 +4563,7 @@ static void declare_tes_input_vgprs(struct si_shader_context *ctx,
 	ctx->param_tes_u = add_arg(fninfo, ARG_VGPR, ctx->f32);
 	ctx->param_tes_v = add_arg(fninfo, ARG_VGPR, ctx->f32);
 	ctx->param_tes_rel_patch_id = add_arg(fninfo, ARG_VGPR, ctx->i32);
-	ctx->param_tes_patch_id = add_arg(fninfo, ARG_VGPR, ctx->i32);
+	add_arg_assign(fninfo, ARG_VGPR, ctx->i32, &ctx->abi.tes_patch_id);
 }
 
 enum {
@@ -4661,7 +4660,7 @@ static void create_function(struct si_shader_context *ctx)
 		ctx->param_tcs_factor_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 
 		/* VGPRs */
-		ctx->param_tcs_patch_id = add_arg(&fninfo, ARG_VGPR, ctx->i32);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->abi.tcs_patch_id);
 		ctx->param_tcs_rel_ids = add_arg(&fninfo, ARG_VGPR, ctx->i32);
 
 		/* param_tcs_offchip_offset and param_tcs_factor_offset are
@@ -4700,7 +4699,7 @@ static void create_function(struct si_shader_context *ctx)
 						ctx->type == PIPE_SHADER_TESS_CTRL);
 
 		/* VGPRs (first TCS, then VS) */
-		ctx->param_tcs_patch_id = add_arg(&fninfo, ARG_VGPR, ctx->i32);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->abi.tcs_patch_id);
 		ctx->param_tcs_rel_ids = add_arg(&fninfo, ARG_VGPR, ctx->i32);
 
 		if (ctx->type == PIPE_SHADER_VERTEX) {

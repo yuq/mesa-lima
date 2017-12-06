@@ -111,10 +111,8 @@ struct nir_to_llvm_context {
 	LLVMValueRef oc_lds;
 	LLVMValueRef merged_wave_info;
 	LLVMValueRef tess_factor_offset;
-	LLVMValueRef tcs_patch_id;
 	LLVMValueRef tcs_rel_ids;
 	LLVMValueRef tes_rel_patch_id;
-	LLVMValueRef tes_patch_id;
 	LLVMValueRef tes_u;
 	LLVMValueRef tes_v;
 
@@ -684,7 +682,7 @@ declare_tes_input_vgprs(struct nir_to_llvm_context *ctx, struct arg_info *args)
 	add_arg(args, ARG_VGPR, ctx->ac.f32, &ctx->tes_u);
 	add_arg(args, ARG_VGPR, ctx->ac.f32, &ctx->tes_v);
 	add_arg(args, ARG_VGPR, ctx->ac.i32, &ctx->tes_rel_patch_id);
-	add_arg(args, ARG_VGPR, ctx->ac.i32, &ctx->tes_patch_id);
+	add_arg(args, ARG_VGPR, ctx->ac.i32, &ctx->abi.tes_patch_id);
 }
 
 static void
@@ -850,7 +848,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 					&ctx->view_index);
 
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
-				&ctx->tcs_patch_id);
+				&ctx->abi.tcs_patch_id);
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
 				&ctx->tcs_rel_ids);
 
@@ -878,7 +876,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->tess_factor_offset);
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
-				&ctx->tcs_patch_id);
+				&ctx->abi.tcs_patch_id);
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
 				&ctx->tcs_rel_ids);
 		}
@@ -4217,9 +4215,9 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		if (ctx->stage == MESA_SHADER_GEOMETRY) {
 			result = ctx->abi->gs_prim_id;
 		} else if (ctx->stage == MESA_SHADER_TESS_CTRL) {
-			result = ctx->nctx->tcs_patch_id;
+			result = ctx->abi->tcs_patch_id;
 		} else if (ctx->stage == MESA_SHADER_TESS_EVAL) {
-			result = ctx->nctx->tes_patch_id;
+			result = ctx->abi->tes_patch_id;
 		} else
 			fprintf(stderr, "Unknown primitive id intrinsic: %d", ctx->stage);
 		break;
@@ -6542,7 +6540,7 @@ static void ac_nir_fixup_ls_hs_input_vgprs(struct nir_to_llvm_context *ctx)
 	ctx->abi.instance_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->rel_auto_id, ctx->abi.instance_id, "");
 	ctx->vs_prim_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->abi.vertex_id, ctx->vs_prim_id, "");
 	ctx->rel_auto_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->tcs_rel_ids, ctx->rel_auto_id, "");
-	ctx->abi.vertex_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->tcs_patch_id, ctx->abi.vertex_id, "");
+	ctx->abi.vertex_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->abi.tcs_patch_id, ctx->abi.vertex_id, "");
 }
 
 static void prepare_gs_input_vgprs(struct nir_to_llvm_context *ctx)

@@ -169,14 +169,12 @@ struct si_shader_context {
 	int param_tcs_factor_addr_base64k;
 	int param_tcs_offchip_offset;
 	int param_tcs_factor_offset;
-	int param_tcs_patch_id;
 	int param_tcs_rel_ids;
 
 	/* API TES */
 	int param_tes_u;
 	int param_tes_v;
 	int param_tes_rel_patch_id;
-	int param_tes_patch_id;
 	/* HW ES */
 	int param_es2gs_offset;
 	/* API GS */
