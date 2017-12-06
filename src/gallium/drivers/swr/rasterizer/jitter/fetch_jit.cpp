@@ -2014,205 +2014,85 @@ void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
     const uint32_t (&swizzle)[4] = std::get<9>(args);
 
     // cast types
-    Type* vGatherTy = mSimdInt32Ty;
     Type* v32x8Ty =  VectorType::get(mInt8Ty, mVWidth * 4 ); // vwidth is units of 32 bits
 
-    // have to do extra work for sign extending
-    if ((extendType == Instruction::CastOps::SExt) || (extendType == Instruction::CastOps::SIToFP)){
-        Type* v16x8Ty = VectorType::get(mInt8Ty, mVWidth * 2); // 8x16bit ints in a 128bit lane
-        Type* v128Ty = VectorType::get(IntegerType::getIntNTy(JM()->mContext, 128), mVWidth / 4); // vwidth is units of 32 bits
+    for (uint32_t i = 0; i < 4; i++)
+    {
+        if (!isComponentEnabled(compMask, i))
+            continue;
 
-        // shuffle mask, including any swizzling
-        const char x = (char)swizzle[0]; const char y = (char)swizzle[1];
-        const char z = (char)swizzle[2]; const char w = (char)swizzle[3];
-        Value* vConstMask = C<char>({char(x), char(x+4), char(x+8), char(x+12),
-                    char(y), char(y+4), char(y+8), char(y+12),
-                    char(z), char(z+4), char(z+8), char(z+12),
-                    char(w), char(w+4), char(w+8), char(w+12),
-                    char(x), char(x+4), char(x+8), char(x+12),
-                    char(y), char(y+4), char(y+8), char(y+12),
-                    char(z), char(z+4), char(z+8), char(z+12),
-                    char(w), char(w+4), char(w+8), char(w+12)});
-
-        Value* vShufResult = BITCAST(PSHUFB(BITCAST(vGatherResult, v32x8Ty), vConstMask), vGatherTy);
-        // after pshufb: group components together in each 128bit lane
-        // 256i - 0    1    2    3    4    5    6    7
-        //        xxxx yyyy zzzz wwww xxxx yyyy zzzz wwww
-
-        Value* vi128XY = nullptr;
-        if(isComponentEnabled(compMask, 0) || isComponentEnabled(compMask, 1)){
-            vi128XY = BITCAST(PERMD(vShufResult, C<int32_t>({0, 4, 0, 0, 1, 5, 0, 0})), v128Ty);
-            // after PERMD: move and pack xy and zw components in low 64 bits of each 128bit lane
-            // 256i - 0    1    2    3    4    5    6    7
-            //        xxxx xxxx dcdc dcdc yyyy yyyy dcdc dcdc (dc - don't care)
-        }
-
-        // do the same for zw components
-        Value* vi128ZW = nullptr;
-        if(isComponentEnabled(compMask, 2) || isComponentEnabled(compMask, 3)){
-            vi128ZW = BITCAST(PERMD(vShufResult, C<int32_t>({2, 6, 0, 0, 3, 7, 0, 0})), v128Ty);
-        }
-
-        // init denormalize variables if needed
-        Instruction::CastOps fpCast;
-        Value* conversionFactor;
-
-        switch (conversionType)
+        if (compCtrl[i] == ComponentControl::StoreSrc)
         {
-        case CONVERT_NORMALIZED:
-            fpCast = Instruction::CastOps::SIToFP;
-            conversionFactor = VIMMED1((float)(1.0 / 127.0));
-            break;
-        case CONVERT_SSCALED:
-            fpCast = Instruction::CastOps::SIToFP;
-            conversionFactor = VIMMED1((float)(1.0));
-            break;
-        case CONVERT_USCALED:
-            SWR_INVALID("Type should not be sign extended!");
-            conversionFactor = nullptr;
-            break;
-        default:
-            SWR_ASSERT(conversionType == CONVERT_NONE);
-            conversionFactor = nullptr;
-            break;
-        }
+            std::vector<uint32_t> vShuffleMasks[4] = {
+                { 0, 4,  8, 12, 16, 20, 24, 28 }, // x
+                { 1, 5,  9, 13, 17, 21, 25, 29 }, // y
+                { 2, 6, 10, 14, 18, 22, 26, 30 }, // z
+                { 3, 7, 11, 15, 19, 23, 27, 31 }, // w
+            };
 
-        // sign extend all enabled components. If we have a fill vVertexElements, output to current simdvertex
-        for (uint32_t i = 0; i < 4; i++)
-        {
-            if (isComponentEnabled(compMask, i))
-            {
-                if (compCtrl[i] == ComponentControl::StoreSrc)
+            Value *val = VSHUFFLE(BITCAST(vGatherResult, v32x8Ty),
+                                  UndefValue::get(v32x8Ty),
+                                  vShuffleMasks[swizzle[i]]);
+
+            if ((extendType == Instruction::CastOps::SExt) ||
+                (extendType == Instruction::CastOps::SIToFP)) {
+                switch (conversionType)
                 {
-                    // if x or z, extract 128bits from lane 0, else for y or w, extract from lane 1
-                    uint32_t lane = ((i == 0) || (i == 2)) ? 0 : 1;
-                    // if x or y, use vi128XY permute result, else use vi128ZW
-                    Value* selectedPermute = (i < 2) ? vi128XY : vi128ZW;
-
-                    // sign extend
-                    vVertexElements[currentVertexElement] = PMOVSXBD(BITCAST(VEXTRACT(selectedPermute, C(lane)), v16x8Ty));
-
-                    // denormalize if needed
-                    if (conversionType != CONVERT_NONE)
-                    {
-                        vVertexElements[currentVertexElement] = FMUL(CAST(fpCast, vVertexElements[currentVertexElement], mSimdFP32Ty), conversionFactor);
-                    }
-                    currentVertexElement++;
+                case CONVERT_NORMALIZED:
+                    val = FMUL(SI_TO_FP(val, mSimdFP32Ty), VIMMED1((float)(1.0 / 127.0)));
+                    break;
+                case CONVERT_SSCALED:
+                    val = SI_TO_FP(val, mSimdFP32Ty);
+                    break;
+                case CONVERT_USCALED:
+                    SWR_INVALID("Type should not be sign extended!");
+                    break;
+                default:
+                    SWR_ASSERT(conversionType == CONVERT_NONE);
+                    val = S_EXT(val, mSimdInt32Ty);
+                    break;
                 }
-                else
+            } else if ((extendType == Instruction::CastOps::ZExt) ||
+                       (extendType == Instruction::CastOps::UIToFP)) {
+                switch (conversionType)
                 {
-#if USE_SIMD16_SHADERS
-                    vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i], useVertexID2);
-#else
-                    vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
-#endif
-                }
-
-                if (currentVertexElement > 3)
-                {
-                    StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
-                    // reset to the next vVertexElement to output
-                    currentVertexElement = 0;
+                case CONVERT_NORMALIZED:
+                    val = FMUL(UI_TO_FP(val, mSimdFP32Ty), VIMMED1((float)(1.0 / 255.0)));
+                    break;
+                case CONVERT_SSCALED:
+                    SWR_INVALID("Type should not be zero extended!");
+                    break;
+                case CONVERT_USCALED:
+                    val = UI_TO_FP(val, mSimdFP32Ty);
+                    break;
+                default:
+                    SWR_ASSERT(conversionType == CONVERT_NONE);
+                    val = Z_EXT(val, mSimdInt32Ty);
+                    break;
                 }
             }
-        }
-    }
-    // else zero extend
-    else if ((extendType == Instruction::CastOps::ZExt) || (extendType == Instruction::CastOps::UIToFP))
-    {
-        // init denormalize variables if needed
-        Instruction::CastOps fpCast;
-        Value* conversionFactor;
-
-        switch (conversionType)
-        {
-        case CONVERT_NORMALIZED:
-            fpCast = Instruction::CastOps::UIToFP;
-            conversionFactor = VIMMED1((float)(1.0 / 255.0));
-            break;
-        case CONVERT_USCALED:
-            fpCast = Instruction::CastOps::UIToFP;
-            conversionFactor = VIMMED1((float)(1.0));
-            break;
-        case CONVERT_SSCALED:
-            SWR_INVALID("Type should not be zero extended!");
-            conversionFactor = nullptr;
-            break;
-        default:
-            SWR_ASSERT(conversionType == CONVERT_NONE);
-            conversionFactor = nullptr;
-            break;
-        }
-
-        // shuffle enabled components into lower byte of each 32bit lane, 0 extending to 32 bits
-        for (uint32_t i = 0; i < 4; i++)
-        {
-            if (isComponentEnabled(compMask, i))
+            else
             {
-                if (compCtrl[i] == ComponentControl::StoreSrc)
-                {
-                    // pshufb masks for each component
-                    Value* vConstMask;
-                    switch (swizzle[i])
-                    {
-                    case 0:
-                        // x shuffle mask
-                        vConstMask = C<char>({ 0, -1, -1, -1, 4, -1, -1, -1, 8, -1, -1, -1, 12, -1, -1, -1,
-                                               0, -1, -1, -1, 4, -1, -1, -1, 8, -1, -1, -1, 12, -1, -1, -1 });
-                        break;
-                    case 1:
-                        // y shuffle mask
-                        vConstMask = C<char>({ 1, -1, -1, -1, 5, -1, -1, -1, 9, -1, -1, -1, 13, -1, -1, -1,
-                                               1, -1, -1, -1, 5, -1, -1, -1, 9, -1, -1, -1, 13, -1, -1, -1 });
-                        break;
-                    case 2:
-                        // z shuffle mask
-                        vConstMask = C<char>({ 2, -1, -1, -1, 6, -1, -1, -1, 10, -1, -1, -1, 14, -1, -1, -1,
-                                               2, -1, -1, -1, 6, -1, -1, -1, 10, -1, -1, -1, 14, -1, -1, -1 });
-                        break;
-                    case 3:
-                        // w shuffle mask
-                        vConstMask = C<char>({ 3, -1, -1, -1, 7, -1, -1, -1, 11, -1, -1, -1, 15, -1, -1, -1,
-                                               3, -1, -1, -1, 7, -1, -1, -1, 11, -1, -1, -1, 15, -1, -1, -1 });
-                        break;
-                    default:
-                        vConstMask = nullptr;
-                        break;
-                    }
-
-                    vVertexElements[currentVertexElement] = BITCAST(PSHUFB(BITCAST(vGatherResult, v32x8Ty), vConstMask), vGatherTy);
-                    // after pshufb for x channel
-                    // 256i - 0    1    2    3    4    5    6    7
-                    //        x000 x000 x000 x000 x000 x000 x000 x000 
-
-                    // denormalize if needed
-                    if (conversionType != CONVERT_NONE)
-                    {
-                        vVertexElements[currentVertexElement] = FMUL(CAST(fpCast, vVertexElements[currentVertexElement], mSimdFP32Ty), conversionFactor);
-                    }
-                    currentVertexElement++;
-                }
-                else
-                {
-#if USE_SIMD16_SHADERS
-                    vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i], useVertexID2);
-#else
-                    vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
-#endif
-                }
-
-                if (currentVertexElement > 3)
-                {
-                    StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
-                    // reset to the next vVertexElement to output
-                    currentVertexElement = 0;
-                }
+                SWR_INVALID("Unsupported conversion type");
             }
+
+            vVertexElements[currentVertexElement++] = val;
         }
-    }
-    else
-    {
-        SWR_INVALID("Unsupported conversion type");
+        else
+        {
+#if USE_SIMD16_SHADERS
+            vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i], useVertexID2);
+#else
+            vVertexElements[currentVertexElement++] = GenerateCompCtrlVector(compCtrl[i]);
+#endif
+        }
+
+        if (currentVertexElement > 3)
+        {
+            StoreVertexElements(pVtxOut, outputElt++, 4, vVertexElements);
+            // reset to the next vVertexElement to output
+            currentVertexElement = 0;
+        }
     }
 }
 
