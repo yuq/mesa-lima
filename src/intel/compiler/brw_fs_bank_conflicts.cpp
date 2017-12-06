@@ -891,3 +891,22 @@ fs_visitor::opt_bank_conflicts()
    delete[] constrained;
    return true;
 }
+
+/**
+ * Estimate the number of GRF bank conflict cycles incurred by an instruction.
+ *
+ * Note that this neglects conflict cycles prior to register allocation
+ * because we don't know which bank each VGRF is going to end up aligned to.
+ */
+unsigned
+fs_visitor::bank_conflict_cycles(const fs_inst *inst) const
+{
+   if (grf_used && inst->is_3src(devinfo) &&
+       is_grf(inst->src[1]) && is_grf(inst->src[2]) &&
+       bank_of(reg_of(inst->src[1])) == bank_of(reg_of(inst->src[2])) &&
+       !is_conflict_optimized_out(devinfo, inst)) {
+      return DIV_ROUND_UP(inst->dst.component_size(inst->exec_size), REG_SIZE);
+   } else {
+      return 0;
+   }
+}
