@@ -30,6 +30,6 @@ libpl111winsys = static_library(
 )
 
 driver_pl111 = declare_dependency(
-  c_args : '-DGALLIUM_PL111',
+  compile_args : '-DGALLIUM_PL111',
   link_with : libpl111winsys,
 )
