@@ -1434,6 +1434,123 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 	}
 }
 
+static void si_nir_store_output_tcs(struct ac_shader_abi *abi,
+				    LLVMValueRef vertex_index,
+				    LLVMValueRef param_index,
+				    unsigned const_index,
+				    unsigned location,
+				    unsigned driver_location,
+				    LLVMValueRef src,
+				    unsigned component,
+				    bool is_patch,
+				    bool is_compact,
+				    unsigned writemask)
+{
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+	struct tgsi_shader_info *info = &ctx->shader->selector->info;
+	LLVMValueRef dw_addr, stride;
+	LLVMValueRef buffer, base, addr;
+	LLVMValueRef values[4];
+	bool skip_lds_store;
+	bool is_tess_factor = false, is_tess_inner = false;
+
+	driver_location = driver_location / 4;
+
+	if (param_index) {
+		/* Add the constant index to the indirect index */
+		param_index = LLVMBuildAdd(ctx->ac.builder, param_index,
+					   LLVMConstInt(ctx->i32, const_index, 0), "");
+	} else {
+		if (const_index != 0)
+			param_index = LLVMConstInt(ctx->i32, const_index, 0);
+	}
+
+	if (!is_patch) {
+		stride = get_tcs_out_vertex_dw_stride(ctx);
+		dw_addr = get_tcs_out_current_patch_offset(ctx);
+		dw_addr = get_dw_address_from_generic_indices(ctx, stride, dw_addr,
+							      vertex_index, param_index,
+							      driver_location,
+							      info->output_semantic_name,
+							      info->output_semantic_index,
+							      is_patch);
+
+		skip_lds_store = !info->reads_pervertex_outputs;
+	} else {
+		dw_addr = get_tcs_out_current_patch_data_offset(ctx);
+		dw_addr = get_dw_address_from_generic_indices(ctx, NULL, dw_addr,
+							      vertex_index, param_index,
+							      driver_location,
+							      info->output_semantic_name,
+							      info->output_semantic_index,
+							      is_patch);
+
+		skip_lds_store = !info->reads_perpatch_outputs;
+
+		if (!param_index) {
+			int name = info->output_semantic_name[driver_location];
+
+			/* Always write tess factors into LDS for the TCS epilog. */
+			if (name == TGSI_SEMANTIC_TESSINNER ||
+			    name == TGSI_SEMANTIC_TESSOUTER) {
+				/* The epilog doesn't read LDS if invocation 0 defines tess factors. */
+				skip_lds_store = !info->reads_tessfactor_outputs &&
+						 ctx->shader->selector->tcs_info.tessfactors_are_def_in_all_invocs;
+				is_tess_factor = true;
+				is_tess_inner = name == TGSI_SEMANTIC_TESSINNER;
+			}
+		}
+	}
+
+	buffer = desc_from_addr_base64k(ctx, ctx->param_tcs_offchip_addr_base64k);
+
+	base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
+
+	addr = get_tcs_tes_buffer_address_from_generic_indices(ctx, vertex_index,
+							       param_index, driver_location,
+							       info->output_semantic_name,
+							       info->output_semantic_index,
+							       is_patch);
+
+	for (unsigned chan = 0; chan < 4; chan++) {
+		if (!(writemask & (1 << chan)))
+			continue;
+		LLVMValueRef value = ac_llvm_extract_elem(&ctx->ac, src, chan - component);
+
+		/* Skip LDS stores if there is no LDS read of this output. */
+		if (!skip_lds_store)
+			ac_lds_store(&ctx->ac, dw_addr, value);
+
+		value = ac_to_integer(&ctx->ac, value);
+		values[chan] = value;
+
+		if (writemask != 0xF && !is_tess_factor) {
+			ac_build_buffer_store_dword(&ctx->ac, buffer, value, 1,
+						    addr, base,
+						    4 * chan, 1, 0, true, false);
+		}
+
+		/* Write tess factors into VGPRs for the epilog. */
+		if (is_tess_factor &&
+		    ctx->shader->selector->tcs_info.tessfactors_are_def_in_all_invocs) {
+			if (!is_tess_inner) {
+				LLVMBuildStore(ctx->ac.builder, value, /* outer */
+					       ctx->invoc0_tess_factors[chan]);
+			} else if (chan < 2) {
+				LLVMBuildStore(ctx->ac.builder, value, /* inner */
+					       ctx->invoc0_tess_factors[4 + chan]);
+			}
+		}
+	}
+
+	if (writemask == 0xF && !is_tess_factor) {
+		LLVMValueRef value = lp_build_gather_values(&ctx->gallivm,
+		                                            values, 4);
+		ac_build_buffer_store_dword(&ctx->ac, buffer, value, 4, addr,
+					    base, 0, 1, 0, true, false);
+	}
+}
+
 LLVMValueRef si_llvm_load_input_gs(struct ac_shader_abi *abi,
 				   unsigned input_index,
 				   unsigned vtx_offset_param,
@@ -5825,6 +5942,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		ctx->abi.load_tess_inputs = si_nir_load_input_tcs;
 		bld_base->emit_fetch_funcs[TGSI_FILE_OUTPUT] = fetch_output_tcs;
 		bld_base->emit_store = store_output_tcs;
+		ctx->abi.store_tcs_outputs = si_nir_store_output_tcs;
 		bld_base->emit_epilogue = si_llvm_emit_tcs_epilogue;
 		break;
 	case PIPE_SHADER_TESS_EVAL:
