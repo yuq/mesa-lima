@@ -1377,8 +1377,7 @@ radv_set_dcc_need_cmask_elim_pred(struct radv_cmd_buffer *cmd_buffer,
 	uint64_t va = radv_buffer_get_va(image->bo);
 	va += image->offset + image->dcc_pred_offset;
 
-	if (!image->surface.dcc_size)
-		return;
+	assert(image->surface.dcc_size);
 
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_WRITE_DATA, 4, 0));
 	radeon_emit(cmd_buffer->cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
