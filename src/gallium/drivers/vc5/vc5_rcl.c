@@ -369,6 +369,28 @@ vc5_emit_rcl(struct vc5_job *job)
 
                 if (job->resolve & PIPE_CLEAR_DEPTHSTENCIL)
                         rsc->writes++;
+
+                /* Emit the separate stencil packet if we have a resource for
+                 * it.  The HW will only load/store this buffer if the
+                 * Z/Stencil config doesn't have stencil in its format.
+                 */
+                if (rsc->separate_stencil) {
+                        cl_emit(&job->rcl,
+                                TILE_RENDERING_MODE_CONFIGURATION_Z_STENCIL_CONFIG,
+                                zs) {
+                                zs.address =
+                                        cl_address(rsc->separate_stencil->bo,
+                                                   surf->separate_stencil_offset);
+
+                                zs.z_stencil_id = 1; /* Separate stencil */
+
+                                zs.padded_height_of_output_image_in_uif_blocks =
+                                        surf->separate_stencil_padded_height_of_output_image_in_uif_blocks;
+
+                                assert(surf->tiling != VC5_TILING_RASTER);
+                                zs.memory_format = surf->separate_stencil_tiling;
+                        }
+                }
         }
 
         /* Ends rendering mode config. */

@@ -27,7 +27,9 @@
 #include "util/u_format.h"
 #include "util/u_inlines.h"
 #include "util/u_surface.h"
+#include "util/u_transfer_helper.h"
 #include "util/u_upload_mgr.h"
+#include "util/u_format_zs.h"
 
 #include "drm_fourcc.h"
 #include "vc5_screen.h"
@@ -368,6 +370,7 @@ vc5_resource_destroy(struct pipe_screen *pscreen,
                      struct pipe_resource *prsc)
 {
         struct vc5_resource *rsc = vc5_resource(prsc);
+
         vc5_bo_unreference(&rsc->bo);
         free(rsc);
 }
@@ -607,6 +610,8 @@ vc5_resource_create_with_modifiers(struct pipe_screen *pscreen,
                 return NULL;
         }
 
+        rsc->internal_format = prsc->format;
+
         vc5_setup_slices(rsc);
         if (!vc5_resource_bo_alloc(rsc))
                 goto fail;
@@ -719,6 +724,10 @@ vc5_create_surface(struct pipe_context *pctx,
         unsigned level = surf_tmpl->u.tex.level;
         struct vc5_resource_slice *slice = &rsc->slices[level];
 
+        struct vc5_resource_slice *separate_stencil_slice = NULL;
+        if (rsc->separate_stencil)
+                separate_stencil_slice = &rsc->separate_stencil->slices[level];
+
         pipe_reference_init(&psurf->reference, 1);
         pipe_resource_reference(&psurf->texture, ptex);
 
@@ -733,6 +742,15 @@ vc5_create_surface(struct pipe_context *pctx,
         surface->offset = (slice->offset +
                            psurf->u.tex.first_layer * rsc->cube_map_stride);
         surface->tiling = slice->tiling;
+        if (separate_stencil_slice) {
+                surface->separate_stencil_offset =
+                        (separate_stencil_slice->offset +
+                         psurf->u.tex.first_layer *
+                         rsc->separate_stencil->cube_map_stride);
+                surface->separate_stencil_tiling =
+                        separate_stencil_slice->tiling;
+        }
+
         surface->format = vc5_get_rt_format(psurf->format);
 
         if (util_format_is_depth_or_stencil(psurf->format)) {
@@ -760,6 +778,13 @@ vc5_create_surface(struct pipe_context *pctx,
                 surface->padded_height_of_output_image_in_uif_blocks =
                         ((slice->size / slice->stride) /
                          (2 * vc5_utile_height(rsc->cpp)));
+
+                if (separate_stencil_slice) {
+                        surface->separate_stencil_padded_height_of_output_image_in_uif_blocks =
+                        ((separate_stencil_slice->size /
+                          separate_stencil_slice->stride) /
+                         (2 * vc5_utile_height(rsc->separate_stencil->cpp)));
+                }
         }
 
         return &surface->base;
@@ -780,23 +805,57 @@ vc5_flush_resource(struct pipe_context *pctx, struct pipe_resource *resource)
          */
 }
 
+static enum pipe_format
+vc5_resource_get_internal_format(struct pipe_resource *prsc)
+{
+        return vc5_resource(prsc)->internal_format;
+}
+
+static void
+vc5_resource_set_stencil(struct pipe_resource *prsc,
+                         struct pipe_resource *stencil)
+{
+        vc5_resource(prsc)->separate_stencil = vc5_resource(stencil);
+}
+
+static struct pipe_resource *
+vc5_resource_get_stencil(struct pipe_resource *prsc)
+{
+        struct vc5_resource *rsc = vc5_resource(prsc);
+
+        return &rsc->separate_stencil->base;
+}
+
+static const struct u_transfer_vtbl transfer_vtbl = {
+        .resource_create          = vc5_resource_create,
+        .resource_destroy         = vc5_resource_destroy,
+        .transfer_map             = vc5_resource_transfer_map,
+        .transfer_unmap           = vc5_resource_transfer_unmap,
+        .transfer_flush_region    = u_default_transfer_flush_region,
+        .get_internal_format      = vc5_resource_get_internal_format,
+        .set_stencil              = vc5_resource_set_stencil,
+        .get_stencil              = vc5_resource_get_stencil,
+};
+
 void
 vc5_resource_screen_init(struct pipe_screen *pscreen)
 {
         pscreen->resource_create_with_modifiers =
                 vc5_resource_create_with_modifiers;
-        pscreen->resource_create = vc5_resource_create;
+        pscreen->resource_create = u_transfer_helper_resource_create;
         pscreen->resource_from_handle = vc5_resource_from_handle;
         pscreen->resource_get_handle = vc5_resource_get_handle;
-        pscreen->resource_destroy = vc5_resource_destroy;
+        pscreen->resource_destroy = u_transfer_helper_resource_destroy;
+        pscreen->transfer_helper = u_transfer_helper_create(&transfer_vtbl,
+                                                            true, false, false);
 }
 
 void
 vc5_resource_context_init(struct pipe_context *pctx)
 {
-        pctx->transfer_map = vc5_resource_transfer_map;
-        pctx->transfer_flush_region = u_default_transfer_flush_region;
-        pctx->transfer_unmap = vc5_resource_transfer_unmap;
+        pctx->transfer_map = u_transfer_helper_transfer_map;
+        pctx->transfer_flush_region = u_transfer_helper_transfer_flush_region;
+        pctx->transfer_unmap = u_transfer_helper_transfer_unmap;
         pctx->buffer_subdata = u_default_buffer_subdata;
         pctx->texture_subdata = u_default_texture_subdata;
         pctx->create_surface = vc5_create_surface;
