@@ -887,6 +887,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
    case SpvOpTypeBool:
       val->type->base_type = vtn_base_type_scalar;
       val->type->type = glsl_bool_type();
+      val->type->length = 1;
       break;
    case SpvOpTypeInt: {
       int bit_size = w[2];
@@ -905,6 +906,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       default:
          vtn_fail("Invalid int bit size");
       }
+      val->type->length = 1;
       break;
    }
 
@@ -924,6 +926,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       default:
          vtn_fail("Invalid float bit size");
       }
+      val->type->length = 1;
       break;
    }
 
@@ -934,6 +937,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       vtn_assert(glsl_type_is_scalar(base->type));
       val->type->base_type = vtn_base_type_vector;
       val->type->type = glsl_vector_type(glsl_get_base_type(base->type), elems);
+      val->type->length = elems;
       val->type->stride = glsl_get_bit_size(base->type) / 8;
       val->type->array_element = base;
       break;
