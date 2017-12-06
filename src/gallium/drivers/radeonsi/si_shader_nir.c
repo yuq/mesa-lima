@@ -157,6 +157,8 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 
 	assert(nir->info.stage == MESA_SHADER_VERTEX ||
 	       nir->info.stage == MESA_SHADER_GEOMETRY ||
+	       nir->info.stage == MESA_SHADER_TESS_CTRL ||
+	       nir->info.stage == MESA_SHADER_TESS_EVAL ||
 	       nir->info.stage == MESA_SHADER_FRAGMENT);
 
 	info->processor = pipe_shader_type_from_mesa(nir->info.stage);
