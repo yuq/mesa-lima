@@ -425,9 +425,17 @@ vtn_cfg_walk_blocks(struct vtn_builder *b, struct list_head *cf_list,
          const uint32_t *branch_end =
             block->branch + (block->branch[0] >> SpvWordCountShift);
 
-         vtn_add_case(b, swtch, break_block, block->branch[2], 0, true);
-         for (const uint32_t *w = block->branch + 3; w < branch_end; w += 2)
-            vtn_add_case(b, swtch, break_block, w[1], w[0], false);
+         bool is_default = true;
+         for (const uint32_t *w = block->branch + 2; w < branch_end;) {
+            uint32_t literal = 0;
+            if (!is_default)
+               literal = *(w++);
+
+            uint32_t block_id = *(w++);
+
+            vtn_add_case(b, swtch, break_block, block_id, literal, is_default);
+            is_default = false;
+         }
 
          /* Now, we go through and walk the blocks.  While we walk through
           * the blocks, we also gather the much-needed fall-through
