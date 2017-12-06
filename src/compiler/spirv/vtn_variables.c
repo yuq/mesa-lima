@@ -1974,6 +1974,9 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       struct vtn_value *dest = vtn_value(b, w[1], vtn_value_type_pointer);
       struct vtn_value *src = vtn_value(b, w[2], vtn_value_type_pointer);
 
+      vtn_fail_if(dest->type->deref != src->type->deref,
+                  "Dereferenced pointer types to OpCopyMemory do not match");
+
       vtn_variable_copy(b, dest->pointer, src->pointer);
       break;
    }
@@ -1981,8 +1984,11 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
    case SpvOpLoad: {
       struct vtn_type *res_type =
          vtn_value(b, w[1], vtn_value_type_type)->type;
-      struct vtn_pointer *src =
-         vtn_value(b, w[3], vtn_value_type_pointer)->pointer;
+      struct vtn_value *src_val = vtn_value(b, w[3], vtn_value_type_pointer);
+      struct vtn_pointer *src = src_val->pointer;
+
+      vtn_fail_if(res_type != src_val->type->deref,
+                  "Result and pointer types of OpLoad do not match");
 
       if (src->mode == vtn_variable_mode_image ||
           src->mode == vtn_variable_mode_sampler) {
@@ -1995,8 +2001,12 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpStore: {
-      struct vtn_pointer *dest =
-         vtn_value(b, w[1], vtn_value_type_pointer)->pointer;
+      struct vtn_value *dest_val = vtn_value(b, w[1], vtn_value_type_pointer);
+      struct vtn_pointer *dest = dest_val->pointer;
+      struct vtn_value *src_val = vtn_untyped_value(b, w[2]);
+
+      vtn_fail_if(dest_val->type->deref != src_val->type,
+                  "Value and pointer types of OpStore do not match");
 
       if (glsl_type_is_sampler(dest->type->type)) {
          vtn_warn("OpStore of a sampler detected.  Doing on-the-fly copy "
