@@ -1893,11 +1893,33 @@ static LLVMValueRef load_sample_position(struct si_shader_context *ctx, LLVMValu
 	return lp_build_gather_values(&ctx->gallivm, pos, 4);
 }
 
+static LLVMValueRef si_load_tess_coord(struct ac_shader_abi *abi,
+				       LLVMTypeRef type,
+				       unsigned num_components)
+{
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+	struct lp_build_context *bld = &ctx->bld_base.base;
+
+	LLVMValueRef coord[4] = {
+		LLVMGetParam(ctx->main_fn, ctx->param_tes_u),
+		LLVMGetParam(ctx->main_fn, ctx->param_tes_v),
+		ctx->ac.f32_0,
+		ctx->ac.f32_0
+	};
+
+	/* For triangles, the vector should be (u, v, 1-u-v). */
+	if (ctx->shader->selector->info.properties[TGSI_PROPERTY_TES_PRIM_MODE] ==
+	    PIPE_PRIM_TRIANGLES)
+		coord[2] = lp_build_sub(bld, ctx->ac.f32_1,
+					lp_build_add(bld, coord[0], coord[1]));
+
+	return lp_build_gather_values(&ctx->gallivm, coord, 4);
+}
+
 void si_load_system_value(struct si_shader_context *ctx,
 			  unsigned index,
 			  const struct tgsi_full_declaration *decl)
 {
-	struct lp_build_context *bld = &ctx->bld_base.base;
 	LLVMValueRef value = 0;
 
 	assert(index < RADEON_LLVM_MAX_SYSTEM_VALUES);
@@ -1998,23 +2020,8 @@ void si_load_system_value(struct si_shader_context *ctx,
 		break;
 
 	case TGSI_SEMANTIC_TESSCOORD:
-	{
-		LLVMValueRef coord[4] = {
-			LLVMGetParam(ctx->main_fn, ctx->param_tes_u),
-			LLVMGetParam(ctx->main_fn, ctx->param_tes_v),
-			ctx->ac.f32_0,
-			ctx->ac.f32_0
-		};
-
-		/* For triangles, the vector should be (u, v, 1-u-v). */
-		if (ctx->shader->selector->info.properties[TGSI_PROPERTY_TES_PRIM_MODE] ==
-		    PIPE_PRIM_TRIANGLES)
-			coord[2] = lp_build_sub(bld, ctx->ac.f32_1,
-						lp_build_add(bld, coord[0], coord[1]));
-
-		value = lp_build_gather_values(&ctx->gallivm, coord, 4);
+		value = si_load_tess_coord(&ctx->abi, NULL, 4);
 		break;
-	}
 
 	case TGSI_SEMANTIC_VERTICESIN:
 		if (ctx->type == PIPE_SHADER_TESS_CTRL)
@@ -5958,6 +5965,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	case PIPE_SHADER_TESS_EVAL:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_tes;
 		ctx->abi.load_tess_inputs = si_nir_load_input_tes;
+		ctx->abi.load_tess_coord = si_load_tess_coord;
 		if (shader->key.as_es)
 			ctx->abi.emit_outputs = si_llvm_emit_es_epilogue;
 		else

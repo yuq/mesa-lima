@@ -4147,9 +4147,11 @@ visit_end_primitive(struct nir_to_llvm_context *ctx,
 }
 
 static LLVMValueRef
-visit_load_tess_coord(struct nir_to_llvm_context *ctx,
-		      const nir_intrinsic_instr *instr)
+load_tess_coord(struct ac_shader_abi *abi, LLVMTypeRef type,
+		unsigned num_components)
 {
+	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
+
 	LLVMValueRef coord[4] = {
 		ctx->tes_u,
 		ctx->tes_v,
@@ -4161,9 +4163,8 @@ visit_load_tess_coord(struct nir_to_llvm_context *ctx,
 		coord[2] = LLVMBuildFSub(ctx->builder, ctx->ac.f32_1,
 					LLVMBuildFAdd(ctx->builder, coord[0], coord[1], ""), "");
 
-	LLVMValueRef result = ac_build_gather_values(&ctx->ac, coord, instr->num_components);
-	return LLVMBuildBitCast(ctx->builder, result,
-				get_def_type(ctx->nir, &instr->dest.ssa), "");
+	LLVMValueRef result = ac_build_gather_values(&ctx->ac, coord, num_components);
+	return LLVMBuildBitCast(ctx->builder, result, type, "");
 }
 
 static void visit_intrinsic(struct ac_nir_context *ctx,
@@ -4352,9 +4353,13 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	case nir_intrinsic_end_primitive:
 		visit_end_primitive(ctx->nctx, instr);
 		break;
-	case nir_intrinsic_load_tess_coord:
-		result = visit_load_tess_coord(ctx->nctx, instr);
+	case nir_intrinsic_load_tess_coord: {
+		LLVMTypeRef type = ctx->nctx ?
+			get_def_type(ctx->nctx->nir, &instr->dest.ssa) :
+			NULL;
+		result = ctx->abi->load_tess_coord(ctx->abi, type, instr->num_components);
 		break;
+	}
 	case nir_intrinsic_load_patch_vertices_in:
 		result = LLVMConstInt(ctx->ac.i32, ctx->nctx->options->key.tcs.input_vertices, false);
 		break;
@@ -6686,6 +6691,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_EVAL) {
 			ctx.tes_primitive_mode = shaders[i]->info.tess.primitive_mode;
 			ctx.abi.load_tess_inputs = load_tes_input;
+			ctx.abi.load_tess_coord = load_tess_coord;
 		} else if (shaders[i]->info.stage == MESA_SHADER_VERTEX) {
 			if (shader_info->info.vs.needs_instance_id) {
 				ctx.shader_info->vs.vgpr_comp_cnt =
