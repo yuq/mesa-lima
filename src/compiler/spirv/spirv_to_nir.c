@@ -1265,7 +1265,6 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                     const uint32_t *w, unsigned count)
 {
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_constant);
-   val->type = vtn_value(b, w[1], vtn_value_type_type)->type;
    val->constant = rzalloc(b, nir_constant);
    switch (opcode) {
    case SpvOpConstantTrue:
@@ -3287,6 +3286,8 @@ static bool
 vtn_handle_variable_or_type_instruction(struct vtn_builder *b, SpvOp opcode,
                                         const uint32_t *w, unsigned count)
 {
+   vtn_set_instruction_result_type(b, opcode, w, count);
+
    switch (opcode) {
    case SpvOpSource:
    case SpvOpSourceContinued:
@@ -3676,6 +3677,9 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    /* Handle all variable, type, and constant instructions */
    words = vtn_foreach_instruction(b, words, word_end,
                                    vtn_handle_variable_or_type_instruction);
+
+   /* Set types on all vtn_values */
+   vtn_foreach_instruction(b, words, word_end, vtn_set_instruction_result_type);
 
    vtn_build_cfg(b, words, word_end);
 
