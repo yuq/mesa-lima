@@ -241,13 +241,10 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 /**
  * Get the value of a shader input parameter and extract a bitfield.
  */
-static LLVMValueRef unpack_param(struct si_shader_context *ctx,
-				 unsigned param, unsigned rshift,
-				 unsigned bitwidth)
+static LLVMValueRef unpack_llvm_param(struct si_shader_context *ctx,
+				      LLVMValueRef value, unsigned rshift,
+				      unsigned bitwidth)
 {
-	LLVMValueRef value = LLVMGetParam(ctx->main_fn,
-					  param);
-
 	if (LLVMGetTypeKind(LLVMTypeOf(value)) == LLVMFloatTypeKind)
 		value = ac_to_integer(&ctx->ac, value);
 
@@ -262,6 +259,15 @@ static LLVMValueRef unpack_param(struct si_shader_context *ctx,
 	}
 
 	return value;
+}
+
+static LLVMValueRef unpack_param(struct si_shader_context *ctx,
+				 unsigned param, unsigned rshift,
+				 unsigned bitwidth)
+{
+	LLVMValueRef value = LLVMGetParam(ctx->main_fn, param);
+
+	return unpack_llvm_param(ctx, value, rshift, bitwidth);
 }
 
 static LLVMValueRef get_rel_patch_id(struct si_shader_context *ctx)
