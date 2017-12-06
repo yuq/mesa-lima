@@ -1300,8 +1300,7 @@ radv_set_depth_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 	va += image->offset + image->clear_value_offset;
 	unsigned reg_offset = 0, reg_count = 0;
 
-	if (!image->surface.htile_size)
-		return;
+	assert(image->surface.htile_size);
 
 	if (aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {
 		++reg_count;
@@ -1400,8 +1399,7 @@ radv_set_color_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 	uint64_t va = radv_buffer_get_va(image->bo);
 	va += image->offset + image->clear_value_offset;
 
-	if (!image->cmask.size && !image->surface.dcc_size)
-		return;
+	assert(image->cmask.size || image->surface.dcc_size);
 
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_WRITE_DATA, 4, 0));
 	radeon_emit(cmd_buffer->cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
