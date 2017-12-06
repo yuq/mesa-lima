@@ -830,6 +830,7 @@ struct radv_cmd_state {
 	uint32_t                                     index_type;
 	uint32_t                                     max_index_count;
 	uint64_t                                     index_va;
+	int32_t                                      last_index_type;
 
 	int32_t                                      last_primitive_reset_en;
 	uint32_t                                     last_primitive_reset_index;

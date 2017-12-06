@@ -1517,21 +1517,26 @@ static void
 radv_emit_index_buffer(struct radv_cmd_buffer *cmd_buffer)
 {
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
+	struct radv_cmd_state *state = &cmd_buffer->state;
 
-	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
-		radeon_set_uconfig_reg_idx(cs, R_03090C_VGT_INDEX_TYPE,
-					   2, cmd_buffer->state.index_type);
-	} else {
-		radeon_emit(cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
-		radeon_emit(cs, cmd_buffer->state.index_type);
+	if (state->index_type != state->last_index_type) {
+		if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
+			radeon_set_uconfig_reg_idx(cs, R_03090C_VGT_INDEX_TYPE,
+						   2, state->index_type);
+		} else {
+			radeon_emit(cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
+			radeon_emit(cs, state->index_type);
+		}
+
+		state->last_index_type = state->index_type;
 	}
 
 	radeon_emit(cs, PKT3(PKT3_INDEX_BASE, 1, 0));
-	radeon_emit(cs, cmd_buffer->state.index_va);
-	radeon_emit(cs, cmd_buffer->state.index_va >> 32);
+	radeon_emit(cs, state->index_va);
+	radeon_emit(cs, state->index_va >> 32);
 
 	radeon_emit(cs, PKT3(PKT3_INDEX_BUFFER_SIZE, 0, 0));
-	radeon_emit(cs, cmd_buffer->state.max_index_count);
+	radeon_emit(cs, state->max_index_count);
 
 	cmd_buffer->state.dirty &= ~RADV_CMD_DIRTY_INDEX_BUFFER;
 }
@@ -2243,6 +2248,7 @@ VkResult radv_BeginCommandBuffer(
 
 	memset(&cmd_buffer->state, 0, sizeof(cmd_buffer->state));
 	cmd_buffer->state.last_primitive_reset_en = -1;
+	cmd_buffer->state.last_index_type = -1;
 	cmd_buffer->usage_flags = pBeginInfo->flags;
 
 	/* setup initial configuration into command buffer */
@@ -2860,6 +2866,11 @@ void radv_CmdExecuteCommands(
 			primary->state.last_ia_multi_vgt_param =
 				secondary->state.last_ia_multi_vgt_param;
 		}
+
+		if (secondary->state.last_index_type != -1) {
+			primary->state.last_index_type =
+				secondary->state.last_index_type;
+		}
 	}
 
 	/* After executing commands from secondary buffers we have to dirty
@@ -3244,8 +3255,10 @@ radv_emit_all_graphics_states(struct radv_cmd_buffer *cmd_buffer,
 		 * so the state must be re-emitted before the next indexed
 		 * draw.
 		 */
-		if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK)
+		if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK) {
+			cmd_buffer->state.last_index_type = -1;
 			cmd_buffer->state.dirty |= RADV_CMD_DIRTY_INDEX_BUFFER;
+		}
 	}
 
 	radv_cmd_buffer_flush_dynamic_state(cmd_buffer);
