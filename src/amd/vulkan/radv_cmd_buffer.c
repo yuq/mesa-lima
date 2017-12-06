@@ -292,6 +292,8 @@ radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
 		cmd_buffer->gfx9_fence_bo = cmd_buffer->upload.upload_bo;
 	}
 
+	cmd_buffer->status = RADV_CMD_BUFFER_STATUS_INITIAL;
+
 	return cmd_buffer->record_result;
 }
 
@@ -2271,6 +2273,8 @@ VkResult radv_BeginCommandBuffer(
 	if (unlikely(cmd_buffer->device->trace_bo))
 		radv_cmd_buffer_trace_emit(cmd_buffer);
 
+	cmd_buffer->status = RADV_CMD_BUFFER_STATUS_RECORDING;
+
 	return result;
 }
 
@@ -2538,6 +2542,8 @@ VkResult radv_EndCommandBuffer(
 
 	if (!cmd_buffer->device->ws->cs_finalize(cmd_buffer->cs))
 		return vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
+
+	cmd_buffer->status = RADV_CMD_BUFFER_STATUS_EXECUTABLE;
 
 	return cmd_buffer->record_result;
 }
