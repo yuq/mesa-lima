@@ -111,7 +111,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef oc_lds;
 	LLVMValueRef merged_wave_info;
 	LLVMValueRef tess_factor_offset;
-	LLVMValueRef tcs_rel_ids;
 	LLVMValueRef tes_rel_patch_id;
 	LLVMValueRef tes_u;
 	LLVMValueRef tes_v;
@@ -402,7 +401,7 @@ static LLVMValueRef get_rel_patch_id(struct nir_to_llvm_context *ctx)
 {
 	switch (ctx->stage) {
 	case MESA_SHADER_TESS_CTRL:
-		return unpack_param(&ctx->ac, ctx->tcs_rel_ids, 0, 8);
+		return unpack_param(&ctx->ac, ctx->abi.tcs_rel_ids, 0, 8);
 	case MESA_SHADER_TESS_EVAL:
 		return ctx->tes_rel_patch_id;
 		break;
@@ -850,7 +849,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
 				&ctx->abi.tcs_patch_id);
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
-				&ctx->tcs_rel_ids);
+				&ctx->abi.tcs_rel_ids);
 
 			declare_vs_input_vgprs(ctx, &args);
 		} else {
@@ -878,7 +877,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
 				&ctx->abi.tcs_patch_id);
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
-				&ctx->tcs_rel_ids);
+				&ctx->abi.tcs_rel_ids);
 		}
 		break;
 	case MESA_SHADER_TESS_EVAL:
@@ -4207,7 +4206,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		break;
 	case nir_intrinsic_load_invocation_id:
 		if (ctx->stage == MESA_SHADER_TESS_CTRL)
-			result = unpack_param(&ctx->ac, ctx->nctx->tcs_rel_ids, 8, 5);
+			result = unpack_param(&ctx->ac, ctx->abi->tcs_rel_ids, 8, 5);
 		else
 			result = ctx->abi->gs_invocation_id;
 		break;
@@ -6149,8 +6148,8 @@ write_tess_factors(struct nir_to_llvm_context *ctx)
 {
 	unsigned stride, outer_comps, inner_comps;
 	struct ac_build_if_state if_ctx, inner_if_ctx;
-	LLVMValueRef invocation_id = unpack_param(&ctx->ac, ctx->tcs_rel_ids, 8, 5);
-	LLVMValueRef rel_patch_id = unpack_param(&ctx->ac, ctx->tcs_rel_ids, 0, 8);
+	LLVMValueRef invocation_id = unpack_param(&ctx->ac, ctx->abi.tcs_rel_ids, 8, 5);
+	LLVMValueRef rel_patch_id = unpack_param(&ctx->ac, ctx->abi.tcs_rel_ids, 0, 8);
 	unsigned tess_inner_index, tess_outer_index;
 	LLVMValueRef lds_base, lds_inner, lds_outer, byteoffset, buffer;
 	LLVMValueRef out[6], vec0, vec1, tf_base, inner[4], outer[4];
@@ -6539,7 +6538,7 @@ static void ac_nir_fixup_ls_hs_input_vgprs(struct nir_to_llvm_context *ctx)
 	                                      ctx->ac.i32_0, "");
 	ctx->abi.instance_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->rel_auto_id, ctx->abi.instance_id, "");
 	ctx->vs_prim_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->abi.vertex_id, ctx->vs_prim_id, "");
-	ctx->rel_auto_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->tcs_rel_ids, ctx->rel_auto_id, "");
+	ctx->rel_auto_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->abi.tcs_rel_ids, ctx->rel_auto_id, "");
 	ctx->abi.vertex_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->abi.tcs_patch_id, ctx->abi.vertex_id, "");
 }
 

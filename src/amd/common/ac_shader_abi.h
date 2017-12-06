@@ -43,6 +43,7 @@ struct ac_shader_abi {
 	LLVMValueRef vertex_id;
 	LLVMValueRef instance_id;
 	LLVMValueRef tcs_patch_id;
+	LLVMValueRef tcs_rel_ids;
 	LLVMValueRef tes_patch_id;
 	LLVMValueRef gs_prim_id;
 	LLVMValueRef gs_invocation_id;

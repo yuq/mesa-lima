@@ -274,7 +274,7 @@ static LLVMValueRef get_rel_patch_id(struct si_shader_context *ctx)
 {
 	switch (ctx->type) {
 	case PIPE_SHADER_TESS_CTRL:
-		return unpack_param(ctx, ctx->param_tcs_rel_ids, 0, 8);
+		return unpack_llvm_param(ctx, ctx->abi.tcs_rel_ids, 0, 8);
 
 	case PIPE_SHADER_TESS_EVAL:
 		return LLVMGetParam(ctx->main_fn,
@@ -1946,7 +1946,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 
 	case TGSI_SEMANTIC_INVOCATIONID:
 		if (ctx->type == PIPE_SHADER_TESS_CTRL)
-			value = unpack_param(ctx, ctx->param_tcs_rel_ids, 8, 5);
+			value = unpack_llvm_param(ctx, ctx->abi.tcs_rel_ids, 8, 5);
 		else if (ctx->type == PIPE_SHADER_GEOMETRY)
 			value = ctx->abi.gs_invocation_id;
 		else
@@ -2995,7 +2995,7 @@ static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 	LLVMValueRef lds_vertex_stride, lds_vertex_offset, lds_base;
 	uint64_t inputs;
 
-	invocation_id = unpack_param(ctx, ctx->param_tcs_rel_ids, 8, 5);
+	invocation_id = unpack_llvm_param(ctx, ctx->abi.tcs_rel_ids, 8, 5);
 	buffer = desc_from_addr_base64k(ctx, ctx->param_tcs_offchip_addr_base64k);
 	buffer_offset = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 
@@ -3248,7 +3248,7 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	si_copy_tcs_inputs(bld_base);
 
 	rel_patch_id = get_rel_patch_id(ctx);
-	invocation_id = unpack_param(ctx, ctx->param_tcs_rel_ids, 8, 5);
+	invocation_id = unpack_llvm_param(ctx, ctx->abi.tcs_rel_ids, 8, 5);
 	tf_lds_offset = get_tcs_out_current_patch_data_offset(ctx);
 
 	if (ctx->screen->info.chip_class >= GFX9) {
@@ -3309,7 +3309,7 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	tf_lds_offset = ac_to_float(&ctx->ac, tf_lds_offset);
 
 	/* Leave a hole corresponding to the two input VGPRs. This ensures that
-	 * the invocation_id output does not alias the param_tcs_rel_ids input,
+	 * the invocation_id output does not alias the tcs_rel_ids input,
 	 * which saves a V_MOV on gfx9.
 	 */
 	vgpr += 2;
@@ -3370,8 +3370,9 @@ static void si_set_ls_return_value_for_tcs(struct si_shader_context *ctx)
 	ret = LLVMBuildInsertValue(ctx->ac.builder, ret,
 				   ac_to_float(&ctx->ac, ctx->abi.tcs_patch_id),
 				   vgpr++, "");
-	ret = si_insert_input_ret_float(ctx, ret,
-					ctx->param_tcs_rel_ids, vgpr++);
+	ret = LLVMBuildInsertValue(ctx->ac.builder, ret,
+				   ac_to_float(&ctx->ac, ctx->abi.tcs_rel_ids),
+				   vgpr++, "");
 	ctx->return_value = ret;
 }
 
@@ -4667,7 +4668,7 @@ static void create_function(struct si_shader_context *ctx)
 
 		/* VGPRs */
 		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->abi.tcs_patch_id);
-		ctx->param_tcs_rel_ids = add_arg(&fninfo, ARG_VGPR, ctx->i32);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->abi.tcs_rel_ids);
 
 		/* param_tcs_offchip_offset and param_tcs_factor_offset are
 		 * placed after the user SGPRs.
@@ -4706,7 +4707,7 @@ static void create_function(struct si_shader_context *ctx)
 
 		/* VGPRs (first TCS, then VS) */
 		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->abi.tcs_patch_id);
-		ctx->param_tcs_rel_ids = add_arg(&fninfo, ARG_VGPR, ctx->i32);
+		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->abi.tcs_rel_ids);
 
 		if (ctx->type == PIPE_SHADER_VERTEX) {
 			declare_vs_input_vgprs(ctx, &fninfo,
