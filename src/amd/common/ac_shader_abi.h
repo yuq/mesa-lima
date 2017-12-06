@@ -84,6 +84,18 @@ struct ac_shader_abi {
 					 bool is_patch,
 					 bool is_compact);
 
+	void (*store_tcs_outputs)(struct ac_shader_abi *abi,
+				  LLVMValueRef vertex_index,
+				  LLVMValueRef param_index,
+				  unsigned const_index,
+				  unsigned location,
+				  unsigned driver_location,
+				  LLVMValueRef src,
+				  unsigned component,
+				  bool is_patch,
+				  bool is_compact,
+				  unsigned writemask);
+
 	LLVMValueRef (*load_ubo)(struct ac_shader_abi *abi, LLVMValueRef index);
 
 	/**

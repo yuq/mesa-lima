@@ -2902,65 +2902,64 @@ load_tcs_output(struct nir_to_llvm_context *ctx,
 }
 
 static void
-store_tcs_output(struct nir_to_llvm_context *ctx,
-		 nir_intrinsic_instr *instr,
+store_tcs_output(struct ac_shader_abi *abi,
+		 LLVMValueRef vertex_index,
+		 LLVMValueRef param_index,
+		 unsigned const_index,
+		 unsigned location,
+		 unsigned driver_location,
 		 LLVMValueRef src,
+		 unsigned component,
+		 bool is_patch,
+		 bool is_compact,
 		 unsigned writemask)
 {
+	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
 	LLVMValueRef dw_addr;
 	LLVMValueRef stride = NULL;
 	LLVMValueRef buf_addr = NULL;
-	LLVMValueRef vertex_index = NULL;
-	LLVMValueRef indir_index = NULL;
-	unsigned const_index = 0;
 	unsigned param;
-	const unsigned comp = instr->variables[0]->var->data.location_frac;
-	const bool per_vertex = nir_is_per_vertex_io(instr->variables[0]->var, ctx->stage);
-	const bool is_compact = instr->variables[0]->var->data.compact;
 	bool store_lds = true;
 
-	if (instr->variables[0]->var->data.patch) {
-		if (!(ctx->tcs_patch_outputs_read & (1U << (instr->variables[0]->var->data.location - VARYING_SLOT_PATCH0))))
+	if (is_patch) {
+		if (!(ctx->tcs_patch_outputs_read & (1U << (location - VARYING_SLOT_PATCH0))))
 			store_lds = false;
 	} else {
-		if (!(ctx->tcs_outputs_read & (1ULL << instr->variables[0]->var->data.location)))
+		if (!(ctx->tcs_outputs_read & (1ULL << location)))
 			store_lds = false;
 	}
-	get_deref_offset(ctx->nir, instr->variables[0],
-			 false, NULL, per_vertex ? &vertex_index : NULL,
-			 &const_index, &indir_index);
 
-	param = shader_io_get_unique_index(instr->variables[0]->var->data.location);
-	if (instr->variables[0]->var->data.location == VARYING_SLOT_CLIP_DIST0 &&
+	param = shader_io_get_unique_index(location);
+	if (location == VARYING_SLOT_CLIP_DIST0 &&
 	    is_compact && const_index > 3) {
 		const_index -= 3;
 		param++;
 	}
 
-	if (!instr->variables[0]->var->data.patch) {
+	if (!is_patch) {
 		stride = unpack_param(&ctx->ac, ctx->tcs_out_layout, 13, 8);
 		dw_addr = get_tcs_out_current_patch_offset(ctx);
 	} else {
 		dw_addr = get_tcs_out_current_patch_data_offset(ctx);
 	}
 
-	mark_tess_output(ctx, instr->variables[0]->var->data.patch, param);
+	mark_tess_output(ctx, is_patch, param);
 
 	dw_addr = get_dw_address(ctx, dw_addr, param, const_index, is_compact, vertex_index, stride,
-				 indir_index);
+				 param_index);
 	buf_addr = get_tcs_tes_buffer_address_params(ctx, param, const_index, is_compact,
-						     vertex_index, indir_index);
+						     vertex_index, param_index);
 
 	bool is_tess_factor = false;
-	if (instr->variables[0]->var->data.location == VARYING_SLOT_TESS_LEVEL_INNER ||
-	    instr->variables[0]->var->data.location == VARYING_SLOT_TESS_LEVEL_OUTER)
+	if (location == VARYING_SLOT_TESS_LEVEL_INNER ||
+	    location == VARYING_SLOT_TESS_LEVEL_OUTER)
 		is_tess_factor = true;
 
 	unsigned base = is_compact ? const_index : 0;
 	for (unsigned chan = 0; chan < 8; chan++) {
 		if (!(writemask & (1 << chan)))
 			continue;
-		LLVMValueRef value = llvm_extract_elem(&ctx->ac, src, chan - comp);
+		LLVMValueRef value = llvm_extract_elem(&ctx->ac, src, chan - component);
 
 		if (store_lds || is_tess_factor)
 			ac_lds_store(&ctx->ac, dw_addr, value);
@@ -3267,7 +3266,22 @@ visit_store_var(struct ac_nir_context *ctx,
 	case nir_var_shader_out:
 
 		if (ctx->stage == MESA_SHADER_TESS_CTRL) {
-			store_tcs_output(ctx->nctx, instr, src, writemask);
+			LLVMValueRef vertex_index = NULL;
+			LLVMValueRef indir_index = NULL;
+			unsigned const_index = 0;
+			const unsigned location = instr->variables[0]->var->data.location;
+			const unsigned driver_location = instr->variables[0]->var->data.driver_location;
+			const unsigned comp = instr->variables[0]->var->data.location_frac;
+			const bool is_patch = instr->variables[0]->var->data.patch;
+			const bool is_compact = instr->variables[0]->var->data.compact;
+
+			get_deref_offset(ctx, instr->variables[0],
+					 false, NULL, is_patch ? NULL : &vertex_index,
+					 &const_index, &indir_index);
+
+			ctx->abi->store_tcs_outputs(ctx->abi, vertex_index, indir_index,
+						    const_index, location, driver_location,
+						    src, comp, is_patch, is_compact, writemask);
 			return;
 		}
 
@@ -6693,6 +6707,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			ctx.tcs_outputs_read = shaders[i]->info.outputs_read;
 			ctx.tcs_patch_outputs_read = shaders[i]->info.patch_outputs_read;
 			ctx.abi.load_tess_inputs = load_tcs_input;
+			ctx.abi.store_tcs_outputs = store_tcs_output;
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_EVAL) {
 			ctx.tes_primitive_mode = shaders[i]->info.tess.primitive_mode;
 			ctx.abi.load_tess_inputs = load_tes_input;
