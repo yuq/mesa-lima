@@ -99,7 +99,6 @@ struct gl_uniform_storage;
 struct prog_instruction;
 struct gl_program_parameter_list;
 struct set;
-struct set_entry;
 struct vbo_context;
 /*@}*/
 
