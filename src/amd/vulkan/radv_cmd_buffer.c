@@ -2230,11 +2230,16 @@ VkResult radv_BeginCommandBuffer(
 	const VkCommandBufferBeginInfo *pBeginInfo)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-	VkResult result;
+	VkResult result = VK_SUCCESS;
 
-	result = radv_reset_cmd_buffer(cmd_buffer);
-	if (result != VK_SUCCESS)
-		return result;
+	if (cmd_buffer->status != RADV_CMD_BUFFER_STATUS_INITIAL) {
+		/* If the command buffer has already been resetted with
+		 * vkResetCommandBuffer, no need to do it again.
+		 */
+		result = radv_reset_cmd_buffer(cmd_buffer);
+		if (result != VK_SUCCESS)
+			return result;
+	}
 
 	memset(&cmd_buffer->state, 0, sizeof(cmd_buffer->state));
 	cmd_buffer->state.last_primitive_reset_en = -1;
