@@ -83,6 +83,9 @@ static void scan_instruction(struct tgsi_shader_info *info,
 		case nir_intrinsic_load_instance_id:
 			info->uses_instanceid = 1;
 			break;
+		case nir_intrinsic_load_invocation_id:
+			info->uses_invocationid = true;
+			break;
 		case nir_intrinsic_load_vertex_id:
 			info->uses_vertexid = 1;
 			break;
@@ -94,6 +97,10 @@ static void scan_instruction(struct tgsi_shader_info *info,
 			break;
 		case nir_intrinsic_load_primitive_id:
 			info->uses_primid = 1;
+			break;
+		case nir_intrinsic_load_tess_level_inner:
+		case nir_intrinsic_load_tess_level_outer:
+			info->reads_tess_factors = true;
 			break;
 		case nir_intrinsic_image_store:
 		case nir_intrinsic_image_atomic_add:
@@ -136,6 +143,28 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 	info->processor = pipe_shader_type_from_mesa(nir->info.stage);
 	info->num_tokens = 2; /* indicate that the shader is non-empty */
 	info->num_instructions = 2;
+
+	if (nir->info.stage == MESA_SHADER_TESS_CTRL) {
+		info->properties[TGSI_PROPERTY_TCS_VERTICES_OUT] =
+			nir->info.tess.tcs_vertices_out;
+	}
+
+	if (nir->info.stage == MESA_SHADER_TESS_EVAL) {
+		if (nir->info.tess.primitive_mode == GL_ISOLINES)
+			info->properties[TGSI_PROPERTY_TES_PRIM_MODE] = PIPE_PRIM_LINES;
+		else
+			info->properties[TGSI_PROPERTY_TES_PRIM_MODE] = nir->info.tess.primitive_mode;
+
+		STATIC_ASSERT((TESS_SPACING_EQUAL + 1) % 3 == PIPE_TESS_SPACING_EQUAL);
+		STATIC_ASSERT((TESS_SPACING_FRACTIONAL_ODD + 1) % 3 ==
+			      PIPE_TESS_SPACING_FRACTIONAL_ODD);
+		STATIC_ASSERT((TESS_SPACING_FRACTIONAL_EVEN + 1) % 3 ==
+			      PIPE_TESS_SPACING_FRACTIONAL_EVEN);
+
+		info->properties[TGSI_PROPERTY_TES_SPACING] = (nir->info.tess.spacing + 1) % 3;
+		info->properties[TGSI_PROPERTY_TES_VERTEX_ORDER_CW] = !nir->info.tess.ccw;
+		info->properties[TGSI_PROPERTY_TES_POINT_MODE] = nir->info.tess.point_mode;
+	}
 
 	if (nir->info.stage == MESA_SHADER_GEOMETRY) {
 		info->properties[TGSI_PROPERTY_GS_INPUT_PRIM] = nir->info.gs.input_primitive;
