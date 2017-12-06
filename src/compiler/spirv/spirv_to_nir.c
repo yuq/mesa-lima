@@ -257,7 +257,7 @@ vtn_ssa_value(struct vtn_builder *b, uint32_t value_id)
       return vtn_undef_ssa_value(b, val->type->type);
 
    case vtn_value_type_constant:
-      return vtn_const_ssa_value(b, val->constant, val->const_type);
+      return vtn_const_ssa_value(b, val->constant, val->type->type);
 
    case vtn_value_type_ssa:
       return val->ssa;
@@ -1253,7 +1253,7 @@ handle_workgroup_size_decoration_cb(struct vtn_builder *b,
        dec->literals[0] != SpvBuiltInWorkgroupSize)
       return;
 
-   vtn_assert(val->const_type == glsl_vector_type(GLSL_TYPE_UINT, 3));
+   vtn_assert(val->type->type == glsl_vector_type(GLSL_TYPE_UINT, 3));
 
    b->shader->info.cs.local_size[0] = val->constant->values[0].u32[0];
    b->shader->info.cs.local_size[1] = val->constant->values[0].u32[1];
@@ -1265,21 +1265,21 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                     const uint32_t *w, unsigned count)
 {
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_constant);
-   val->const_type = vtn_value(b, w[1], vtn_value_type_type)->type->type;
+   val->type = vtn_value(b, w[1], vtn_value_type_type)->type;
    val->constant = rzalloc(b, nir_constant);
    switch (opcode) {
    case SpvOpConstantTrue:
-      vtn_assert(val->const_type == glsl_bool_type());
+      vtn_assert(val->type->type == glsl_bool_type());
       val->constant->values[0].u32[0] = NIR_TRUE;
       break;
    case SpvOpConstantFalse:
-      vtn_assert(val->const_type == glsl_bool_type());
+      vtn_assert(val->type->type == glsl_bool_type());
       val->constant->values[0].u32[0] = NIR_FALSE;
       break;
 
    case SpvOpSpecConstantTrue:
    case SpvOpSpecConstantFalse: {
-      vtn_assert(val->const_type == glsl_bool_type());
+      vtn_assert(val->type->type == glsl_bool_type());
       uint32_t int_val =
          get_specialization(b, val, (opcode == SpvOpSpecConstantTrue));
       val->constant->values[0].u32[0] = int_val ? NIR_TRUE : NIR_FALSE;
@@ -1287,8 +1287,8 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpConstant: {
-      vtn_assert(glsl_type_is_scalar(val->const_type));
-      int bit_size = glsl_get_bit_size(val->const_type);
+      vtn_assert(glsl_type_is_scalar(val->type->type));
+      int bit_size = glsl_get_bit_size(val->type->type);
       switch (bit_size) {
       case 64:
          val->constant->values->u64[0] = vtn_u64_literal(&w[3]);
@@ -1305,9 +1305,9 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       break;
    }
    case SpvOpSpecConstant: {
-      vtn_assert(glsl_type_is_scalar(val->const_type));
+      vtn_assert(glsl_type_is_scalar(val->type->type));
       val->constant->values[0].u32[0] = get_specialization(b, val, w[3]);
-      int bit_size = glsl_get_bit_size(val->const_type);
+      int bit_size = glsl_get_bit_size(val->type->type);
       switch (bit_size) {
       case 64:
          val->constant->values[0].u64[0] =
@@ -1331,7 +1331,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       for (unsigned i = 0; i < elem_count; i++)
          elems[i] = vtn_value(b, w[i + 3], vtn_value_type_constant)->constant;
 
-      switch (glsl_get_base_type(val->const_type)) {
+      switch (glsl_get_base_type(val->type->type)) {
       case GLSL_TYPE_UINT:
       case GLSL_TYPE_INT:
       case GLSL_TYPE_UINT16:
@@ -1342,14 +1342,14 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       case GLSL_TYPE_FLOAT16:
       case GLSL_TYPE_BOOL:
       case GLSL_TYPE_DOUBLE: {
-         int bit_size = glsl_get_bit_size(val->const_type);
-         if (glsl_type_is_matrix(val->const_type)) {
-            vtn_assert(glsl_get_matrix_columns(val->const_type) == elem_count);
+         int bit_size = glsl_get_bit_size(val->type->type);
+         if (glsl_type_is_matrix(val->type->type)) {
+            vtn_assert(glsl_get_matrix_columns(val->type->type) == elem_count);
             for (unsigned i = 0; i < elem_count; i++)
                val->constant->values[i] = elems[i]->values[0];
          } else {
-            vtn_assert(glsl_type_is_vector(val->const_type));
-            vtn_assert(glsl_get_vector_elements(val->const_type) == elem_count);
+            vtn_assert(glsl_type_is_vector(val->type->type));
+            vtn_assert(glsl_get_vector_elements(val->type->type) == elem_count);
             for (unsigned i = 0; i < elem_count; i++) {
                switch (bit_size) {
                case 64:
@@ -1394,22 +1394,14 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
          vtn_assert(v1->value_type == vtn_value_type_constant ||
                     v1->value_type == vtn_value_type_undef);
 
-         unsigned len0 = v0->value_type == vtn_value_type_constant ?
-                         glsl_get_vector_elements(v0->const_type) :
-                         glsl_get_vector_elements(v0->type->type);
-         unsigned len1 = v1->value_type == vtn_value_type_constant ?
-                         glsl_get_vector_elements(v1->const_type) :
-                         glsl_get_vector_elements(v1->type->type);
+         unsigned len0 = glsl_get_vector_elements(v0->type->type);
+         unsigned len1 = glsl_get_vector_elements(v1->type->type);
 
          vtn_assert(len0 + len1 < 16);
 
-         unsigned bit_size = glsl_get_bit_size(val->const_type);
-         unsigned bit_size0 = v0->value_type == vtn_value_type_constant ?
-                              glsl_get_bit_size(v0->const_type) :
-                              glsl_get_bit_size(v0->type->type);
-         unsigned bit_size1 = v1->value_type == vtn_value_type_constant ?
-                              glsl_get_bit_size(v1->const_type) :
-                              glsl_get_bit_size(v1->type->type);
+         unsigned bit_size = glsl_get_bit_size(val->type->type);
+         unsigned bit_size0 = glsl_get_bit_size(v0->type->type);
+         unsigned bit_size1 = glsl_get_bit_size(v1->type->type);
 
          vtn_assert(bit_size == bit_size0 && bit_size == bit_size1);
          (void)bit_size0; (void)bit_size1;
@@ -1480,7 +1472,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
 
          int elem = -1;
          int col = 0;
-         const struct glsl_type *type = comp->const_type;
+         const struct glsl_type *type = comp->type->type;
          for (unsigned i = deref_start; i < count; i++) {
             switch (glsl_get_base_type(type)) {
             case GLSL_TYPE_UINT:
@@ -1545,7 +1537,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
          } else {
             struct vtn_value *insert =
                vtn_value(b, w[4], vtn_value_type_constant);
-            vtn_assert(insert->const_type == type);
+            vtn_assert(insert->type->type == type);
             if (elem == -1) {
                *c = insert->constant;
             } else {
@@ -1572,9 +1564,9 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
 
       default: {
          bool swap;
-         nir_alu_type dst_alu_type = nir_get_nir_type_for_glsl_type(val->const_type);
+         nir_alu_type dst_alu_type = nir_get_nir_type_for_glsl_type(val->type->type);
          nir_alu_type src_alu_type = dst_alu_type;
-         unsigned num_components = glsl_get_vector_elements(val->const_type);
+         unsigned num_components = glsl_get_vector_elements(val->type->type);
          unsigned bit_size;
 
          vtn_assert(count <= 7);
@@ -1585,13 +1577,13 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
             /* We have a source in a conversion */
             src_alu_type =
                nir_get_nir_type_for_glsl_type(
-                  vtn_value(b, w[4], vtn_value_type_constant)->const_type);
+                  vtn_value(b, w[4], vtn_value_type_constant)->type->type);
             /* We use the bitsize of the conversion source to evaluate the opcode later */
             bit_size = glsl_get_bit_size(
-               vtn_value(b, w[4], vtn_value_type_constant)->const_type);
+               vtn_value(b, w[4], vtn_value_type_constant)->type->type);
             break;
          default:
-            bit_size = glsl_get_bit_size(val->const_type);
+            bit_size = glsl_get_bit_size(val->type->type);
          };
 
          nir_op op = vtn_nir_alu_op_for_spirv_opcode(b, opcode, &swap,
@@ -1616,7 +1608,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpConstantNull:
-      val->constant = vtn_null_constant(b, val->const_type);
+      val->constant = vtn_null_constant(b, val->type->type);
       break;
 
    case SpvOpConstantSampler:

@@ -480,14 +480,11 @@ struct vtn_value {
    enum vtn_value_type value_type;
    const char *name;
    struct vtn_decoration *decoration;
+   struct vtn_type *type;
    union {
       void *ptr;
       char *str;
-      struct vtn_type *type;
-      struct {
-         nir_constant *constant;
-         const struct glsl_type *const_type;
-      };
+      nir_constant *constant;
       struct vtn_pointer *pointer;
       struct vtn_image_pointer *image;
       struct vtn_sampled_image *sampled_image;
