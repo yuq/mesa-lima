@@ -27,10 +27,6 @@
 #define _GLAPI_PRIV_H
 
 
-#ifdef HAVE_DIX_CONFIG_H
-#include <dix-config.h>
-#include "glapi/mesa.h"
-#else /* HAVE_DIX_CONFIG_H */
 #define GL_GLEXT_PROTOTYPES
 #include "GL/gl.h"
 #include "GL/glext.h"
@@ -43,8 +39,6 @@ typedef int GLclampx;
 #ifndef GL_OES_EGL_image
 typedef void *GLeglImageOES;
 #endif
-
-#endif /* HAVE_DIX_CONFIG_H */
 
 #include "glapi/glapi.h"
 
