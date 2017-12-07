@@ -652,6 +652,9 @@ const char *si_get_shader_name(const struct si_shader *shader, unsigned processo
 /* si_shader_nir.c */
 void si_nir_scan_shader(const struct nir_shader *nir,
 			struct tgsi_shader_info *info);
+void si_nir_scan_tess_ctrl(const struct nir_shader *nir,
+			   const struct tgsi_shader_info *info,
+			   struct tgsi_tessctrl_info *out);
 void si_lower_nir(struct si_shader_selector *sel);
 
 /* Inline helpers. */
