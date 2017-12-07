@@ -1313,11 +1313,15 @@ blorp_emit_surface_state(struct blorp_batch *batch,
          write_disable_mask |= ISL_CHANNEL_ALPHA_BIT;
    }
 
+   const bool use_clear_address =
+      GEN_GEN >= 10 && (surface->clear_color_addr.buffer != NULL);
+
    isl_surf_fill_state(batch->blorp->isl_dev, state,
                        .surf = &surf, .view = &surface->view,
                        .aux_surf = &surface->aux_surf, .aux_usage = aux_usage,
                        .mocs = surface->addr.mocs,
                        .clear_color = surface->clear_color,
+                       .use_clear_address = use_clear_address,
                        .write_disables = write_disable_mask);
 
    blorp_surface_reloc(batch, state_offset + isl_dev->ss.addr_offset,
@@ -1334,12 +1338,14 @@ blorp_emit_surface_state(struct blorp_batch *batch,
                           surface->aux_addr, *aux_addr);
    }
 
-   blorp_flush_range(batch, state, GENX(RENDER_SURFACE_STATE_length) * 4);
-
    if (surface->clear_color_addr.buffer) {
-#if GEN_GEN > 10
-      unreachable("Implement indirect clear support on gen11+");
-#elif GEN_GEN >= 7 && GEN_GEN <= 10
+#if GEN_GEN >= 10
+      assert((surface->clear_color_addr.offset & 0x3f) == 0);
+      uint32_t *clear_addr = state + isl_dev->ss.clear_color_state_offset;
+      blorp_surface_reloc(batch, state_offset +
+                          isl_dev->ss.clear_color_state_offset,
+                          surface->clear_color_addr, *clear_addr);
+#elif GEN_GEN >= 7
       struct blorp_address dst_addr = blorp_get_surface_base_address(batch);
       dst_addr.offset += state_offset + isl_dev->ss.clear_value_offset;
       blorp_emit_memcpy(batch, dst_addr, surface->clear_color_addr,
@@ -1348,6 +1354,8 @@ blorp_emit_surface_state(struct blorp_batch *batch,
       unreachable("Fast clears are only supported on gen7+");
 #endif
    }
+
+   blorp_flush_range(batch, state, GENX(RENDER_SURFACE_STATE_length) * 4);
 }
 
 static void
