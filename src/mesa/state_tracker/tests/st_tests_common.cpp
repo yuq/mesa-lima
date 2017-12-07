@@ -84,6 +84,30 @@ FakeCodeline::FakeCodeline(unsigned _op, const vector<pair<int,int>>& _dst,
    });
 }
 
+FakeCodeline::FakeCodeline(unsigned _op, const vector<tuple<int,int,int>>& _dst,
+                           const vector<tuple<int,int,int>>& _src,
+                           const vector<tuple<int,int,int>>&_to, RA with_reladdr):
+   op(_op),
+   max_temp_id(0)
+{
+   (void)with_reladdr;
+
+   transform(_dst.begin(), _dst.end(), std::back_inserter(dst),
+             [this](const tuple<int,int,int>& r) {
+      return create_dst_register(r);
+   });
+
+   transform(_src.begin(), _src.end(), std::back_inserter(src),
+             [this](const tuple<int,int,int>& r) {
+      return create_src_register(r);
+   });
+
+   transform(_to.begin(), _to.end(), std::back_inserter(tex_offsets),
+             [this](const tuple<int,int,int>& r) {
+      return create_src_register(r);
+   });
+}
+
 FakeCodeline::FakeCodeline(const glsl_to_tgsi_instruction& instr):
    op(instr.op),
    max_temp_id(0)
@@ -190,10 +214,43 @@ st_src_reg FakeCodeline::create_src_register(int src_idx, gl_register_file file)
    return retval;
 }
 
-st_dst_reg FakeCodeline::create_dst_register(int dst_idx)
+st_src_reg *FakeCodeline::create_rel_src_register(int idx)
 {
-   return create_dst_register(dst_idx, dst_idx < 0 ?
-                                 PROGRAM_OUTPUT : PROGRAM_TEMPORARY);
+   st_src_reg *retval = ralloc(mem_ctx, st_src_reg);
+   *retval = st_src_reg(PROGRAM_TEMPORARY, idx, GLSL_TYPE_INT);
+   if (max_temp_id < idx)
+      max_temp_id = idx;
+   return retval;
+}
+
+st_src_reg FakeCodeline::create_src_register(const tuple<int,int,int>& src)
+{
+   int src_idx = std::get<0>(src);
+   int relidx1 = std::get<1>(src);
+   int relidx2 = std::get<2>(src);
+
+   gl_register_file file = PROGRAM_TEMPORARY;
+   if (src_idx < 0)
+      file = PROGRAM_OUTPUT;
+   else if (relidx1 || relidx2) {
+      file = PROGRAM_ARRAY;
+   }
+
+   st_src_reg retval = create_src_register(src_idx, file);
+   if (src_idx >= 0) {
+      if (relidx1 || relidx2) {
+         retval.array_id = 1;
+
+         if (relidx1)
+            retval.reladdr = create_rel_src_register(relidx1);
+         if (relidx2) {
+            retval.reladdr2 = create_rel_src_register(relidx2);
+            retval.has_index2 = true;
+            retval.index2D = 10;
+         }
+      }
+   }
+   return retval;
 }
 
 st_dst_reg FakeCodeline::create_dst_register(int dst_idx,int writemask)
@@ -212,6 +269,12 @@ st_dst_reg FakeCodeline::create_dst_register(int dst_idx,int writemask)
    return st_dst_reg(file, writemask, GLSL_TYPE_INT, idx);
 }
 
+st_dst_reg FakeCodeline::create_dst_register(int dst_idx)
+{
+   return create_dst_register(dst_idx, dst_idx < 0 ?
+                                 PROGRAM_OUTPUT : PROGRAM_TEMPORARY);
+}
+
 st_dst_reg FakeCodeline::create_dst_register(int dst_idx, gl_register_file file)
 {
    st_dst_reg retval;
@@ -227,6 +290,32 @@ st_dst_reg FakeCodeline::create_dst_register(int dst_idx, gl_register_file file)
    retval.writemask = 0xF;
    retval.type = GLSL_TYPE_INT;
 
+   return retval;
+}
+
+st_dst_reg FakeCodeline::create_dst_register(const tuple<int,int,int>& dst)
+{
+   int dst_idx = std::get<0>(dst);
+   int relidx1 = std::get<1>(dst);
+   int relidx2 = std::get<2>(dst);
+
+   gl_register_file file = PROGRAM_TEMPORARY;
+   if (dst_idx < 0)
+      file = PROGRAM_OUTPUT;
+   else if (relidx1 || relidx2) {
+      file = PROGRAM_ARRAY;
+   }
+   st_dst_reg retval = create_dst_register(dst_idx, file);
+
+   if (relidx1 || relidx2) {
+      if (relidx1)
+         retval.reladdr = create_rel_src_register(relidx1);
+      if (relidx2) {
+         retval.reladdr2 = create_rel_src_register(relidx2);
+         retval.has_index2 = true;
+         retval.index2D = 10;
+      }
+   }
    return retval;
 }
 

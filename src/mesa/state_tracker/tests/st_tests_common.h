@@ -35,15 +35,22 @@
 /* Use this to make the compiler pick the swizzle constructor below */
 struct SWZ {};
 
+/* Use this to make the compiler pick the constructor with reladdr below */
+struct RA {};
+
 /* A line to describe a TGSI instruction for building mock shaders. */
 struct FakeCodeline {
-   FakeCodeline(unsigned _op): op(_op), max_temp_id(0){}
+   FakeCodeline(unsigned _op): op(_op), max_temp_id(0) {}
    FakeCodeline(unsigned _op, const std::vector<int>& _dst, const std::vector<int>& _src,
                 const std::vector<int>&_to);
 
    FakeCodeline(unsigned _op, const std::vector<std::pair<int,int>>& _dst,
                 const std::vector<std::pair<int, const char *>>& _src,
                 const std::vector<std::pair<int, const char *>>&_to, SWZ with_swizzle);
+
+   FakeCodeline(unsigned _op, const std::vector<std::tuple<int,int,int>>& _dst,
+                const std::vector<std::tuple<int,int,int>>& _src,
+                const std::vector<std::tuple<int,int,int>>&_to, RA with_reladdr);
 
    FakeCodeline(const glsl_to_tgsi_instruction& inst);
 
@@ -60,10 +67,13 @@ private:
    st_src_reg create_src_register(int src_idx);
    st_src_reg create_src_register(int src_idx, const char *swizzle);
    st_src_reg create_src_register(int src_idx, gl_register_file file);
+   st_src_reg create_src_register(const std::tuple<int,int,int>& src);
+   st_src_reg *create_rel_src_register(int idx);
 
    st_dst_reg create_dst_register(int dst_idx);
    st_dst_reg create_dst_register(int dst_idx, int writemask);
    st_dst_reg create_dst_register(int dst_idx, gl_register_file file);
+   st_dst_reg create_dst_register(const std::tuple<int,int,int>& dest);
 
    template <typename st_reg>
    void read_reg(const st_reg& s);

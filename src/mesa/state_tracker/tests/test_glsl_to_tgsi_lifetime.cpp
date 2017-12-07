@@ -1568,6 +1568,92 @@ TEST_F(LifetimeEvaluatorExactTest, NestedLoopWithWriteAfterBreak)
    run (code, temp_lt_expect({{-1,-1}, {0,8}}));
 }
 
+
+#define MT(X,Y,Z) std::make_tuple(X,Y,Z)
+/* Check lifetime estimation with a relative addressing in src.
+ * Note, since the lifetime estimation always extends the lifetime
+ * at to at least one instruction after the last write, for the
+ * test the last read must be at least two instructions after the
+ * last write to obtain a proper test.
+ */
+
+TEST_F(LifetimeEvaluatorExactTest, ReadIndirectReladdr1)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_MOV, {1}, {in1}, {}},
+      { TGSI_OPCODE_MOV, {2}, {in0}, {}},
+      { TGSI_OPCODE_MOV, {MT(3,0,0)}, {MT(2,1,0)}, {}, RA()},
+      { TGSI_OPCODE_MOV, {out0}, {3}, {}},
+      { TGSI_OPCODE_END}
+   };
+   run (code, temp_lt_expect({{-1,-1}, {0,2}, {1,2}, {2,3}}));
+}
+
+/* Check lifetime estimation with a relative addressing in src */
+TEST_F(LifetimeEvaluatorExactTest, ReadIndirectReladdr2)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_MOV , {1}, {in1}, {}},
+      { TGSI_OPCODE_MOV , {2}, {in0}, {}},
+      { TGSI_OPCODE_MOV , {MT(3,0,0)}, {MT(4,0,1)}, {}, RA()},
+      { TGSI_OPCODE_MOV , {out0}, {3}, {}},
+      { TGSI_OPCODE_END}
+   };
+   run (code, temp_lt_expect({{-1,-1}, {0,2}, {1,2},{2,3}}));
+}
+
+/* Check lifetime estimation with a relative addressing in src */
+TEST_F(LifetimeEvaluatorExactTest, ReadIndirectTexOffsReladdr1)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_MOV , {1}, {in1}, {}},
+      { TGSI_OPCODE_MOV , {2}, {in0}, {}},
+      { TGSI_OPCODE_MOV , {MT(3,0,0)}, {MT(in2,0,0)}, {MT(5,1,0)}, RA()},
+      { TGSI_OPCODE_MOV , {out0}, {3}, {}},
+      { TGSI_OPCODE_END}
+   };
+   run (code, temp_lt_expect({{-1,-1}, {0,2}, {1,2}, {2,3}}));
+}
+
+/* Check lifetime estimation with a relative addressing in src */
+TEST_F(LifetimeEvaluatorExactTest, ReadIndirectTexOffsReladdr2)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_MOV , {1}, {in1}, {}},
+      { TGSI_OPCODE_MOV , {2}, {in0}, {}},
+      { TGSI_OPCODE_MOV , {MT(3,0,0)}, {MT(in2,0,0)}, {MT(2,0,1)}, RA()},
+      { TGSI_OPCODE_MOV , {out0}, {3}, {}},
+      { TGSI_OPCODE_END}
+   };
+   run (code, temp_lt_expect({{-1,-1}, {0,2}, {1,2}, {2,3}}));
+}
+
+/* Check lifetime estimation with a relative addressing in dst */
+TEST_F(LifetimeEvaluatorExactTest, WriteIndirectReladdr1)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_MOV , {1}, {in0}, {}},
+      { TGSI_OPCODE_MOV , {1}, {in1}, {}},
+      { TGSI_OPCODE_MOV , {MT(5,1,0)}, {MT(in1,0,0)}, {}, RA()},
+      { TGSI_OPCODE_END}
+   };
+   run (code, temp_lt_expect({{-1,-1}, {0,2}}));
+}
+
+/* Check lifetime estimation with a relative addressing in dst */
+TEST_F(LifetimeEvaluatorExactTest, WriteIndirectReladdr2)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_MOV , {1}, {in0}, {}},
+      { TGSI_OPCODE_MOV , {2}, {in1}, {}},
+      { TGSI_OPCODE_MOV , {MT(5,0,1)}, {MT(in1,0,0)}, {}, RA()},
+      { TGSI_OPCODE_MOV , {out0}, {in0}, {}},
+      { TGSI_OPCODE_MOV , {out1}, {2}, {}},
+      { TGSI_OPCODE_END}
+   };
+   run (code, temp_lt_expect({{-1,-1}, {0,2}, {1,4}}));
+}
+
 /* Test remapping table of registers. The tests don't assume
  * that the sorting algorithm used to sort the lifetimes
  * based on their 'begin' is stable.
