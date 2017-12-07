@@ -419,34 +419,32 @@ if vdpau_drivers_path == ''
   vdpau_drivers_path = join_paths(get_option('libdir'), 'vdpau')
 endif
 
-dep_xvmc = []
 _xvmc = get_option('gallium-xvmc')
-if _xvmc == 'auto'
-  if not system_has_kms_drm
-    with_gallium_xvmc = false
-  elif not with_platform_x11
-    with_gallium_xvmc = false
-  elif not (with_gallium_r600 or with_gallium_nouveau)
-    with_gallium_xvmc = false
+if not system_has_kms_drm
+  if _xvmc == 'true'
+    error('XVMC state tracker can only be build on unix-like OSes.')
   else
-    dep_xvmc = dependency('xvmc', version : '>= 1.0.6', required : false)
-    with_gallium_xvmc = dep_xvmc.found()
+    _xvmc = 'false'
   endif
-elif _xvmc == 'true'
-  if not system_has_kms_drm
-    error('XVMC state tracker can only be build on DRM/KMS OSes.')
-  elif not with_platform_x11
+elif not with_platform_x11
+  if _xvmc == 'true'
     error('XVMC state tracker requires X11 support.')
-    with_gallium_xvmc = false
-  elif not (with_gallium_r600 or with_gallium_nouveau)
-    error('XVMC state tracker requires at least one of the following gallium drivers: r600, nouveau.')
+  else
+    _xvmc = 'false'
   endif
-  dep_xvmc = dependency('xvmc', version : '>= 1.0.6')
-  with_gallium_xvmc = true
-else
-  with_gallium_xvmc = false
+elif not (with_gallium_r600 or with_gallium_nouveau)
+  if _xvmc == 'true'
+    error('XVMC state tracker requires at least one of the following gallium drivers: r600, nouveau.')
+  else
+    _xvmc = 'false'
+  endif
+elif _xvmc == 'auto'
+  _xvmc = 'true'
 endif
+with_gallium_xvmc = _xvmc == 'true'
+dep_xvmc = []
 if with_gallium_xvmc
+  dep_xvmc = dependency('xvmc', version : '>= 1.0.6')
   dep_xvmc = declare_dependency(
     compile_args : run_command(prog_pkgconfig, ['xvmc', '--cflags']).stdout().split()
   )
