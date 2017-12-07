@@ -874,6 +874,69 @@ public:
    }
 };
 
+class access_recorder {
+public:
+   access_recorder(int _ntemps);
+   ~access_recorder();
+
+   void record_read(const st_src_reg& src, int line, prog_scope *scope);
+   void record_write(const st_dst_reg& src, int line, prog_scope *scope);
+
+   void get_required_lifetimes(struct lifetime *lifetimes);
+private:
+
+   int ntemps;
+   temp_access *acc;
+
+};
+
+access_recorder::access_recorder(int _ntemps):
+   ntemps(_ntemps)
+{
+   acc = new temp_access[ntemps];
+}
+
+access_recorder::~access_recorder()
+{
+   delete[] acc;
+}
+
+void access_recorder::record_read(const st_src_reg& src, int line,
+                                  prog_scope *scope)
+{
+   if (src.file == PROGRAM_TEMPORARY)
+      acc[src.index].record_read(line, scope, src.swizzle);
+
+   if (src.reladdr)
+      record_read(*src.reladdr, line, scope);
+   if (src.reladdr2)
+      record_read(*src.reladdr2, line, scope);
+}
+
+void access_recorder::record_write(const st_dst_reg& dst, int line,
+                                   prog_scope *scope)
+{
+   if (dst.file == PROGRAM_TEMPORARY)
+      acc[dst.index].record_write(line, scope, dst.writemask);
+
+   if (dst.reladdr)
+      record_read(*dst.reladdr, line, scope);
+   if (dst.reladdr2)
+      record_read(*dst.reladdr2, line, scope);
+}
+
+void access_recorder::get_required_lifetimes(struct lifetime *lifetimes)
+{
+   RENAME_DEBUG(debug_log << "========= lifetimes ==============\n");
+   for(int i = 0; i < ntemps; ++i) {
+      RENAME_DEBUG(debug_log<< setw(4) << i);
+      lifetimes[i] = acc[i].get_required_lifetime();
+      RENAME_DEBUG(debug_log << ": [" << lifetimes[i].begin << ", "
+                        << lifetimes[i].end << "]\n");
+   }
+   RENAME_DEBUG(debug_log << "==================================\n\n");
+}
+
 }
 
 #ifndef NDEBUG
@@ -894,7 +957,6 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
    int if_id = 1;
    int switch_id = 0;
    bool is_at_end = false;
-   bool ok = true;
    int n_scopes = 1;
 
    /* Count scopes to allocate the needed space without the need for
@@ -912,7 +974,8 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
    }
 
    prog_scope_storage scopes(mem_ctx, n_scopes);
-   temp_access *acc = new temp_access[ntemps];
+
+   access_recorder access(ntemps);
 
    prog_scope *cur_scope = scopes.create(nullptr, outer_scope, 0, 0, line);
 
@@ -941,9 +1004,7 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
       case TGSI_OPCODE_IF:
       case TGSI_OPCODE_UIF: {
          assert(num_inst_src_regs(inst) == 1);
-         const st_src_reg& src = inst->src[0];
-         if (src.file == PROGRAM_TEMPORARY)
-            acc[src.index].record_read(line, cur_scope, src.swizzle);
+         access.record_read(inst->src[0], line, cur_scope);
          cur_scope = scopes.create(cur_scope, if_branch, if_id++,
                                    cur_scope->nesting_depth() + 1, line + 1);
          break;
@@ -969,14 +1030,12 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
       }
       case TGSI_OPCODE_SWITCH: {
          assert(num_inst_src_regs(inst) == 1);
-         const st_src_reg& src = inst->src[0];
          prog_scope *scope = scopes.create(cur_scope, switch_body, switch_id++,
                                            cur_scope->nesting_depth() + 1, line);
          /* We record the read only for the SWITCH statement itself, like it
           * is used by the only consumer of TGSI_OPCODE_SWITCH in tgsi_exec.c.
           */
-         if (src.file == PROGRAM_TEMPORARY)
-            acc[src.index].record_read(line, cur_scope, src.swizzle);
+         access.record_read(inst->src[0], line, cur_scope);
          cur_scope = scope;
          break;
       }
@@ -998,9 +1057,7 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
                                        cur_scope : cur_scope->parent();
 
          assert(num_inst_src_regs(inst) == 1);
-         const st_src_reg& src = inst->src[0];
-         if (src.file == PROGRAM_TEMPORARY)
-            acc[src.index].record_read(line, switch_scope, src.swizzle);
+         access.record_read(inst->src[0], line, switch_scope);
 
          /* Fall through to allocate the scope. */
       }
@@ -1036,23 +1093,16 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
           * Since this is not done, we have to bail out here and signal
           * that no register merge will take place.
           */
-         ok = false;
-         goto out;
+         return false;
       default: {
          for (unsigned j = 0; j < num_inst_src_regs(inst); j++) {
-            const st_src_reg& src = inst->src[j];
-            if (src.file == PROGRAM_TEMPORARY)
-               acc[src.index].record_read(line, cur_scope, src.swizzle);
+            access.record_read(inst->src[j], line, cur_scope);
          }
          for (unsigned j = 0; j < inst->tex_offset_num_offset; j++) {
-            const st_src_reg& src = inst->tex_offsets[j];
-            if (src.file == PROGRAM_TEMPORARY)
-               acc[src.index].record_read(line, cur_scope, src.swizzle);
+            access.record_read(inst->tex_offsets[j], line, cur_scope);
          }
          for (unsigned j = 0; j < num_inst_dst_regs(inst); j++) {
-            const st_dst_reg& dst = inst->dst[j];
-            if (dst.file == PROGRAM_TEMPORARY)
-               acc[dst.index].record_write(line, cur_scope, dst.writemask);
+            access.record_write(inst->dst[j], line, cur_scope);
          }
       }
       }
@@ -1067,18 +1117,8 @@ get_temp_registers_required_lifetimes(void *mem_ctx, exec_list *instructions,
    if (cur_scope->end() < 0)
       cur_scope->set_end(line - 1);
 
-   RENAME_DEBUG(debug_log << "========= lifetimes ==============\n");
-   for(int i = 0; i < ntemps; ++i) {
-      RENAME_DEBUG(debug_log << setw(4) << i);
-      lifetimes[i] = acc[i].get_required_lifetime();
-      RENAME_DEBUG(debug_log << ": [" << lifetimes[i].begin << ", "
-                        << lifetimes[i].end << "]\n");
-   }
-   RENAME_DEBUG(debug_log << "==================================\n\n");
-
-out:
-   delete[] acc;
-   return ok;
+   access.get_required_lifetimes(lifetimes);
+   return true;
 }
 
 /* Find the next register between [start, end) that has a life time starting
