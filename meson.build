@@ -513,34 +513,32 @@ if with_gallium_omx
   )
 endif
 
-dep_va = []
 _va = get_option('gallium-va')
-if _va == 'auto'
-  if not system_has_kms_drm
-    with_gallium_va = false
-  elif not with_platform_x11
-    with_gallium_va = false
-  elif not (with_gallium_r600 or with_gallium_radeonsi or with_gallium_nouveau)
-    with_gallium_va = false
+if not system_has_kms_drm
+  if _va == 'true'
+    error('VA state tracker can only be built on unix-like OSes.')
   else
-    dep_va = dependency('libva', version : '>= 0.38.0', required : false)
-    with_gallium_va = dep_va.found()
+    _va = 'false'
   endif
-elif _va == 'true'
-  if not system_has_kms_drm
-    error('VA state tracker can only be built on DRM/KMS OSes.')
-  elif not (with_platform_x11 or with_platform_drm)
+elif not (with_platform_x11 or with_platform_drm)
+  if _va == 'true'
     error('VA state tracker requires X11 or drm or wayland platform support.')
-    with_gallium_va = false
-  elif not (with_gallium_r600 or with_gallium_radeonsi or with_gallium_nouveau)
-    error('VA state tracker requires at least one of the following gallium drivers: r600, radeonsi, nouveau.')
+  else
+    _va = 'false'
   endif
-  dep_va = dependency('libva', version : '>= 0.38.0')
-  with_gallium_va = true
-else
-  with_gallium_va = false
+elif not (with_gallium_r600 or with_gallium_radeonsi or with_gallium_nouveau)
+  if _va == 'true'
+    error('VA state tracker requires at least one of the following gallium drivers: r600, radeonsi, nouveau.')
+  else
+    _va = 'false'
+  endif
+elif _va == 'auto'
+  _va = 'true'
 endif
+with_gallium_va = _va == 'true'
+dep_va = []
 if with_gallium_va
+  dep_va = dependency('libva', version : '>= 0.38.0')
   dep_va = declare_dependency(
     compile_args : run_command(prog_pkgconfig, ['libva', '--cflags']).stdout().split()
   )
