@@ -2544,6 +2544,7 @@ typedef struct nir_lower_subgroups_options {
    bool lower_to_scalar:1;
    bool lower_vote_trivial:1;
    bool lower_subgroup_masks:1;
+   bool lower_shuffle:1;
 } nir_lower_subgroups_options;
 
 bool nir_lower_subgroups(nir_shader *shader,

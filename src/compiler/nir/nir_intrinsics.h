@@ -157,6 +157,16 @@ INTRINSIC(ballot_find_lsb, 1, ARR(4), true, 1, 0,
 INTRINSIC(ballot_find_msb, 1, ARR(4), true, 1, 0,
           0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
 
+/** Shuffle operations from SPIR-V. */
+INTRINSIC(shuffle, 2, ARR(0, 1), true, 0, 0,
+          0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(shuffle_xor, 2, ARR(0, 1), true, 0, 0,
+          0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(shuffle_up, 2, ARR(0, 1), true, 0, 0,
+          0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+INTRINSIC(shuffle_down, 2, ARR(0, 1), true, 0, 0,
+          0, xx, xx, xx, NIR_INTRINSIC_CAN_ELIMINATE)
+
 /**
  * Basic Geometry Shader intrinsics.
  *
