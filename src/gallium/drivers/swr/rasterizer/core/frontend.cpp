@@ -988,13 +988,48 @@ static void GeometryShaderStage(
                             {
 #if USE_SIMD16_FRONTEND
                                 simd16scalari vPrimId = _simd16_set1_epi32(pPrimitiveId[inputPrim]);
+
+                                // Gather the VPAI from the SVG if provided.
+                                SIMD16::Vec4 vpiAttrib[3];
+                                SIMD16::Integer vViewportIdx = SIMD16::setzero_si();
+                                if (state.backendState.readViewportArrayIndex)
                                 {
+                                    gsPa.Assemble(VERTEX_SGV_SLOT, vpiAttrib);
+                                    vViewportIdx = SIMD16::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
+                                    gsPa.viewportArrayActive = true;
+                                }
+
+                                {
+                                    // OOB VPAI indices => forced to zero.
+                                    vViewportIdx = SIMD16::max_epi32(vViewportIdx, SIMD16::setzero_si());
+                                    simd16scalari vNumViewports = SIMD16::set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
+                                    simd16scalari vClearMask = SIMD16::cmplt_epi32(vViewportIdx, vNumViewports);
+                                    vViewportIdx = SIMD16::and_si(vClearMask, vViewportIdx);
+
                                     gsPa.useAlternateOffset = false;
-                                    pfnClipFunc(pDC, gsPa, workerId, attrib_simd16, GenMask(gsPa.NumPrims()), vPrimId);
+                                    pfnClipFunc(pDC, gsPa, workerId, attrib_simd16, GenMask(gsPa.NumPrims()), vPrimId, vViewportIdx);
                                 }
 #else
                                 simdscalari vPrimId = _simd_set1_epi32(pPrimitiveId[inputPrim]);
-                                pfnClipFunc(pDC, gsPa, workerId, attrib, GenMask(gsPa.NumPrims()), vPrimId);
+
+                                // Gather the VPAI from the SVG if provided.
+                                SIMD8::Vec4 vpiAttrib[3];
+                                SIMD8::Integer vViewportIdx = SIMD8::setzero_si();
+                                if (state.backendState.readViewportArrayIndex)
+                                {
+                                    gsPa.Assemble(VERTEX_SGV_SLOT, vpiAttrib);
+                                    vViewportIdx = SIMD8::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
+
+                                    // OOB VPAI indices => forced to zero.
+                                    vViewportIdx = SIMD8::max_epi32(vViewportIdx, SIMD8::setzero_si());
+                                    simd16scalari vNumViewports = SIMD8::set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
+                                    simd16scalari vClearMask = SIMD8::cmplt_epi32(vViewportIdx, vNumViewports);
+                                    vViewportIdx = SIMD8::and_si(vClearMask, vViewportIdx);
+
+                                    gsPa.viewportArrayActive = true;
+                                }
+
+                                pfnClipFunc(pDC, gsPa, workerId, attrib, GenMask(gsPa.NumPrims()), vPrimId, vViewportIdx);
 #endif
                             }
                         }
@@ -1337,14 +1372,46 @@ static void TessellationStages(
 
                     SWR_ASSERT(pfnClipFunc);
 #if USE_SIMD16_FRONTEND
+                    // Gather the VPAI from the SVG if provided.
+                    simd16scalari vpai = SIMD16::setzero_si();
+                    if (state.backendState.readViewportArrayIndex)
+                    {
+                        simd16vector vpiAttrib[4];
+                        tessPa.Assemble(VERTEX_SGV_SLOT, vpiAttrib);
+                        vpai = SIMD16::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
+                        tessPa.viewportArrayActive = true;
+                    }
+
 
                     {
+                        // OOB VPAI indices => forced to zero.
+                        vpai = SIMD16::max_epi32(vpai, SIMD16::setzero_si());
+                        simd16scalari vNumViewports = SIMD16::set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
+                        simd16scalari vClearMask = SIMD16::cmplt_epi32(vpai, vNumViewports);
+                        vpai = SIMD16::and_si(vClearMask, vpai);
+
                         tessPa.useAlternateOffset = false;
-                        pfnClipFunc(pDC, tessPa, workerId, prim_simd16, GenMask(numPrims), primID);
+                        pfnClipFunc(pDC, tessPa, workerId, prim_simd16, GenMask(numPrims), primID, vpai);
                     }
 #else
+                    // Gather the VPAI from the SVG if provided.
+                    SIMD8::Vec4 vpiAttrib[3];
+                    SIMD8::Integer vViewportIdx = SIMD8::setzero_si();
+                    if (state.backendState.readViewportArrayIndex)
+                    {
+                        tessPa.Assemble(VERTEX_SGV_SLOT, vpiAttrib);
+                        vViewportIdx = SIMD8::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
+
+                        // OOB VPAI indices => forced to zero.
+                        vViewportIdx = SIMD8::max_epi32(vViewportIdx, SIMD8::setzero_si());
+                        simd16scalari vNumViewports = SIMD8::set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
+                        simd16scalari vClearMask = SIMD8::cmplt_epi32(vViewportIdx, vNumViewports);
+                        vViewportIdx = SIMD8::and_si(vClearMask, vViewportIdx);
+
+                        tessPa.viewportArrayActive = true;
+                    }
                     pfnClipFunc(pDC, tessPa, workerId, prim,
-                        GenMask(tessPa.NumPrims()), _simd_set1_epi32(dsContext.PrimitiveID));
+                        GenMask(tessPa.NumPrims()), _simd_set1_epi32(dsContext.PrimitiveID), vViewportIdx);
 #endif
                 }
             }
@@ -1736,9 +1803,25 @@ void ProcessDraw(
                                 if (HasRastT::value)
                                 {
                                     SWR_ASSERT(pDC->pState->pfnProcessPrims_simd16);
+                                    // Gather the VPAI from the SVG if provided.
+                                    simd16scalari vpai = SIMD16::setzero_si();
+                                    if (state.backendState.readViewportArrayIndex)
                                     {
+                                        simd16vector vpiAttrib[4];
+                                        pa.Assemble(VERTEX_SGV_SLOT, vpiAttrib);
+                                        vpai = SIMD16::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
+                                        pa.viewportArrayActive = true;
+                                    }
+
+                                    {
+                                        // OOB VPAI indices => forced to zero.
+                                        vpai = SIMD16::max_epi32(vpai, SIMD16::setzero_si());
+                                        simd16scalari vNumViewports = SIMD16::set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
+                                        simd16scalari vClearMask = SIMD16::cmplt_epi32(vpai, vNumViewports);
+                                        vpai = SIMD16::and_si(vClearMask, vpai);
+
                                         pa.useAlternateOffset = false;
-                                        pDC->pState->pfnProcessPrims_simd16(pDC, pa, workerId, prim_simd16, GenMask(numPrims), primID);
+                                        pDC->pState->pfnProcessPrims_simd16(pDC, pa, workerId, prim_simd16, GenMask(numPrims), primID, vpai);
                                     }
                                 }
                             }
@@ -1900,8 +1983,25 @@ void ProcessDraw(
                                 {
                                     SWR_ASSERT(pDC->pState->pfnProcessPrims);
 
+                                    // Gather the VPAI from the SVG if provided.
+                                    SIMD8::Vec4 vpiAttrib[3];
+                                    SIMD8::Integer vViewportIdx = SIMD8::setzero_si();
+                                    if (state.backendState.readViewportArrayIndex)
+                                    {
+                                        pa.Assemble(VERTEX_SGV_SLOT, vpiAttrib);
+                                        vViewportIdx = SIMD8::castps_si(vpiAttrib[0][VERTEX_SGV_VAI_COMP]);
+
+                                        // OOB VPAI indices => forced to zero.
+                                        vViewportIdx = SIMD8::max_epi32(vViewportIdx, SIMD8::setzero_si());
+                                        simd16scalari vNumViewports = SIMD8::set1_epi32(KNOB_NUM_VIEWPORTS_SCISSORS);
+                                        simd16scalari vClearMask = SIMD8::cmplt_epi32(vViewportIdx, vNumViewports);
+                                        vViewportIdx = SIMD8::and_si(vClearMask, vViewportIdx);
+
+                                        pa.viewportArrayActive = true;
+                                    }
+
                                     pDC->pState->pfnProcessPrims(pDC, pa, workerId, prim,
-                                        GenMask(pa.NumPrims()), pa.GetPrimID(work.startPrimID));
+                                        GenMask(pa.NumPrims()), pa.GetPrimID(work.startPrimID), vViewportIdx);
                                 }
                             }
                         }
