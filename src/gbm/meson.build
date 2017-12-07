@@ -54,7 +54,7 @@ libgbm = shared_library(
   c_args : [c_vis_args, args_gbm],
   link_args : [ld_args_gc_sections],
   link_with : [libloader, libmesa_util, libxmlconfig],
-  dependencies : [deps_gbm, dep_dl],
+  dependencies : [deps_gbm, dep_dl, dep_thread],
   version : '1.0.0',
   install : true,
 )

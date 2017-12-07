@@ -66,4 +66,5 @@ libnine_st = static_library(
   include_directories : [
     inc_d3d9, inc_gallium, inc_include, inc_src, inc_gallium_aux,
   ],
+  dependencies : dep_thread,
 )
