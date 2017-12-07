@@ -582,7 +582,7 @@ static void si_query_opaque_metadata(struct si_screen *sscreen,
 		PIPE_SWIZZLE_W
 	};
 	uint32_t desc[8], i;
-	bool is_array = util_resource_is_array_texture(res);
+	bool is_array = util_texture_is_array(res->target);
 
 	/* DRM 2.x.x doesn't support this. */
 	if (sscreen->info.drm_major != 3)
