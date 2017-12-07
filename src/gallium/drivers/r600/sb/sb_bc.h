@@ -401,6 +401,7 @@ enum sched_queue_id {
 	SQ_ALU,
 	SQ_TEX,
 	SQ_VTX,
+	SQ_GDS,
 
 	SQ_NUM
 };
@@ -580,6 +581,11 @@ struct bc_fetch {
 	unsigned mega_fetch:1;
 
 	unsigned src2_gpr:7; /* for GDS */
+	unsigned alloc_consume:1;
+	unsigned uav_id:4;
+	unsigned uav_index_mode:2;
+	unsigned bcast_first_req:1;
+
 	void set_op(unsigned op) { this->op = op; op_ptr = r600_isa_fetch(op); }
 };
 
@@ -966,6 +972,7 @@ private:
 	int build_fetch_clause(cf_node *n);
 	int build_fetch_tex(fetch_node *n);
 	int build_fetch_vtx(fetch_node *n);
+	int build_fetch_gds(fetch_node *n);
 };
 
 } // namespace r600_sb

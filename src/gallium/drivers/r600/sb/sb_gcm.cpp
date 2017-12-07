@@ -427,10 +427,22 @@ void gcm::bu_sched_bb(bb_node* bb) {
 
 				if (sq != SQ_CF) {
 					if (!clause || sampler_indexing) {
-						clause = sh.create_clause(sq == SQ_ALU ?
-								NST_ALU_CLAUSE :
-									sq == SQ_TEX ? NST_TEX_CLAUSE :
-											NST_VTX_CLAUSE);
+						node_subtype nst;
+						switch (sq) {
+						case SQ_ALU:
+							nst = NST_ALU_CLAUSE;
+							break;
+						case SQ_TEX:
+							nst = NST_TEX_CLAUSE;
+							break;
+						case SQ_GDS:
+							nst = NST_GDS_CLAUSE;
+							break;
+						default:
+							nst = NST_VTX_CLAUSE;
+							break;
+						}
+						clause = sh.create_clause(nst);
 						bb->push_front(clause);
 					}
 				} else {

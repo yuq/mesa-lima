@@ -557,6 +557,8 @@ void bc_finalizer::finalize_fetch(fetch_node* f) {
 
 	if (flags & FF_VTX) {
 		src_count = 1;
+	} else if (flags & FF_GDS) {
+		src_count = 2;
 	} else if (flags & FF_USEGRAD) {
 		emit_set_grad(f);
 	} else if (flags & FF_USE_TEXTURE_OFFSETS) {
@@ -661,6 +663,11 @@ void bc_finalizer::finalize_fetch(fetch_node* f) {
 	for (unsigned i = 0; i < 4; ++i)
 		f->bc.dst_sel[i] = dst_swz[i];
 
+	if ((flags & FF_GDS) && reg == -1) {
+		f->bc.dst_sel[0] = SEL_MASK;
+		f->bc.dst_gpr = 0;
+		return ;
+	}
 	assert(reg >= 0);
 
 	if (reg >= 0)

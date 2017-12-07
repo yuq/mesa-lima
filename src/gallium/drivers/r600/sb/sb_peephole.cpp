@@ -52,7 +52,19 @@ void peephole::run_on(container_node* c) {
 		if (n->is_container())
 			run_on(static_cast<container_node*>(n));
 		else {
+			if (n->is_fetch_inst() && (n->fetch_op_flags() & FF_GDS)) {
+				fetch_node *f = static_cast<fetch_node*>(n);
+				bool has_dst = false;
 
+				for(vvec::iterator I = f->dst.begin(), E = f->dst.end(); I != E; ++I) {
+					value *v = *I;
+					if (v)
+						has_dst = true;
+				}
+				if (!has_dst)
+					if (f->bc.op >= FETCH_OP_GDS_ADD_RET && f->bc.op <= FETCH_OP_GDS_USHORT_READ_RET)
+						f->bc.set_op(f->bc.op - FETCH_OP_GDS_ADD_RET + FETCH_OP_GDS_ADD);
+			}
 			if (n->is_alu_inst()) {
 				alu_node *a = static_cast<alu_node*>(n);
 

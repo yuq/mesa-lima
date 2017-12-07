@@ -569,7 +569,10 @@ int bc_parser::decode_fetch_clause(cf_node* cf) {
 	int r;
 	unsigned i = cf->bc.addr << 1, cnt = cf->bc.count + 1;
 
-	cf->subtype = NST_TEX_CLAUSE;
+	if (cf->bc.op_ptr->flags && FF_GDS)
+		cf->subtype = NST_GDS_CLAUSE;
+	else
+		cf->subtype = NST_TEX_CLAUSE;
 
 	while (cnt--) {
 		fetch_node *n = sh->create_fetch();
@@ -595,10 +598,14 @@ int bc_parser::prepare_fetch_clause(cf_node *cf) {
 		unsigned flags = n->bc.op_ptr->flags;
 
 		unsigned vtx = flags & FF_VTX;
-		unsigned num_src = vtx ? ctx.vtx_src_num : 4;
+		unsigned gds = flags & FF_GDS;
+		unsigned num_src = gds ? 2 : vtx ? ctx.vtx_src_num : 4;
 
 		n->dst.resize(4);
 
+		if (gds) {
+			n->flags |= NF_DONT_HOIST | NF_DONT_MOVE | NF_DONT_KILL;
+		}
 		if (flags & (FF_SETGRAD | FF_USEGRAD | FF_GETGRAD)) {
 			sh->uses_gradients = true;
 		}

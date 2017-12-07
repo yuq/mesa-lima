@@ -663,6 +663,7 @@ enum node_subtype {
 	NST_FETCH_INST,
 	NST_TEX_CLAUSE,
 	NST_VTX_CLAUSE,
+	NST_GDS_CLAUSE,
 
 	NST_BB,
 
@@ -787,7 +788,7 @@ public:
 	bool is_alu_clause() { return subtype == NST_ALU_CLAUSE; }
 
 	bool is_fetch_clause() {
-		return subtype == NST_TEX_CLAUSE || subtype == NST_VTX_CLAUSE;
+		return subtype == NST_TEX_CLAUSE || subtype == NST_VTX_CLAUSE || subtype == NST_GDS_CLAUSE;
 	}
 
 	bool is_copy() { return subtype == NST_COPY; }
