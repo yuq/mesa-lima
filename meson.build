@@ -455,32 +455,32 @@ if xvmc_drivers_path == ''
   xvmc_drivers_path = get_option('libdir')
 endif
 
-dep_omx = []
 _omx = get_option('gallium-omx')
-if _omx == 'auto'
-  if not system_has_kms_drm
-    with_gallium_omx = false
-  elif not with_platform_x11
-    with_gallium_omx = false
-  elif not (with_gallium_r600 or with_gallium_radeonsi or with_gallium_nouveau)
-    with_gallium_omx = false
+if not system_has_kms_drm
+  if _omx == 'true'
+    error('OMX state tracker can only be built on unix-like OSes.')
   else
-    dep_omx = dependency('libomxil-bellagio', required : false)
-    with_gallium_omx = dep_omx.found()
+    _omx = 'false'
   endif
-elif _omx == 'true'
-  if not system_has_kms_drm
-    error('OMX state tracker can only be built on DRM/KMS OSes.')
-  elif not (with_platform_x11 or with_platform_drm)
+elif not (with_platform_x11 or with_platform_drm)
+  if _omx == 'true'
     error('OMX state tracker requires X11 or drm platform support.')
-    with_gallium_omx = false
-  elif not (with_gallium_r600 or with_gallium_radeonsi or with_gallium_nouveau)
-    error('OMX state tracker requires at least one of the following gallium drivers: r600, radeonsi, nouveau.')
+  else
+    _omx = 'false'
   endif
+elif not (with_gallium_r600 or with_gallium_radeonsi or with_gallium_nouveau)
+  if _omx == 'true'
+    error('OMX state tracker requires at least one of the following gallium drivers: r600, radeonsi, nouveau.')
+  else
+    _omx = 'false'
+  endif
+elif _omx == 'auto'
+  _omx = 'true'
+endif
+with_gallium_omx = _omx == 'true'
+dep_omx = []
+if with_gallium_omx
   dep_omx = dependency('libomxil-bellagio')
-  with_gallium_omx = true
-else
-  with_gallium_omx = false
 endif
 
 omx_drivers_path = get_option('omx-libs-path')
