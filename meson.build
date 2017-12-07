@@ -540,26 +540,21 @@ if va_drivers_path == ''
 endif
 
 _xa = get_option('gallium-xa')
-if _xa == 'auto'
-  if not system_has_kms_drm
-    with_gallium_xa = false
-  elif not (with_gallium_nouveau or with_gallium_freedreno or with_gallium_i915
-            or with_gallium_svga)
-    with_gallium_xa = false
+if not system_has_kms_drm
+  if _xa == 'true'
+    error('XA state tracker can only be built on unix-like OSes.')
   else
-    with_gallium_xa = true
+    _xa = 'false'
   endif
-elif _xa == 'true'
-  if not system_has_kms_drm
-    error('XA state tracker can only be built on DRM/KMS OSes.')
-  elif not (with_gallium_nouveau or with_gallium_freedreno or with_gallium_i915
-            or with_gallium_svga)
+elif not (with_gallium_nouveau or with_gallium_freedreno or with_gallium_i915
+          or with_gallium_svga)
+  if _xa == 'true'
     error('XA state tracker requires at least one of the following gallium drivers: nouveau, freedreno, i915, svga.')
+  else
+    _xa = 'false'
   endif
-  with_gallium_xa = true
-else
-  with_gallium_xa = false
 endif
+with_gallium_xa = _xa != 'false'
 
 d3d_drivers_path = get_option('d3d-drivers-path')
 if d3d_drivers_path == ''
