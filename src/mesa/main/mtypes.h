@@ -3578,19 +3578,6 @@ struct gl_program_constants
    GLuint MaxShaderStorageBlocks;
 };
 
-struct nir_spirv_supported_capabilities {
-   bool float64;
-   bool image_ms_array;
-   bool tessellation;
-   bool draw_parameters;
-   bool image_read_without_format;
-   bool image_write_without_format;
-   bool int64;
-   bool multiview;
-   bool variable_pointers;
-   bool storage_16bit;
-};
-
 /**
  * Constants which may be overridden by device driver during context creation
  * but are never changed after that.

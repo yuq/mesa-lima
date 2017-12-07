@@ -29,7 +29,7 @@
 #define _NIR_SPIRV_H_
 
 #include "compiler/nir/nir.h"
-#include "main/mtypes.h"
+#include "compiler/shader_info.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,7 +58,7 @@ struct spirv_to_nir_options {
     */
    bool lower_workgroup_access_to_offsets;
 
-   struct nir_spirv_supported_capabilities caps;
+   struct spirv_supported_capabilities caps;
 
    struct {
       void (*func)(void *private_data,
