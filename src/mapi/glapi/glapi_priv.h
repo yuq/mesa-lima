@@ -31,14 +31,7 @@
 #include "GL/gl.h"
 #include "GL/glext.h"
 
-#ifndef GL_OES_fixed_point
-typedef int GLfixed;
-#endif
 typedef int GLclampx;
-
-#ifndef GL_OES_EGL_image
-typedef void *GLeglImageOES;
-#endif
 
 #include "glapi/glapi.h"
 
