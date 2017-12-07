@@ -162,7 +162,7 @@ void si_vce_52_get_param(struct rvce_encoder *enc, struct pipe_h264_enc_picture_
 		enc->enc_pic.addrmode_arraymode_disrdo_distwoinstants = 0x00000201;
 	else
 		enc->enc_pic.addrmode_arraymode_disrdo_distwoinstants = 0x01000201;
-	enc->enc_pic.is_idr = pic->is_idr;
+	enc->enc_pic.is_idr = (pic->picture_type == PIPE_H264_ENC_PICTURE_TYPE_IDR);
 }
 
 static void create(struct rvce_encoder *enc)
