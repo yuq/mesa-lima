@@ -437,7 +437,7 @@ public:
         return SIMD_T::movemask_ps(vClipCullMask);
     }
 
-    void ClipSimd(const typename SIMD_T::Float &vPrimMask, const typename SIMD_T::Float &vClipMask, PA_STATE &pa, const typename SIMD_T::Integer &vPrimId, const typename SIMD_T::Integer &vViewportIdx)
+    void ClipSimd(const typename SIMD_T::Vec4 prim[], const typename SIMD_T::Float &vPrimMask, const typename SIMD_T::Float &vClipMask, PA_STATE &pa, const typename SIMD_T::Integer &vPrimId, const typename SIMD_T::Integer &vViewportIdx)
     {
         // input/output vertex store for clipper
         SIMDVERTEX_T<SIMD_T> vertices[7]; // maximum 7 verts generated per triangle
@@ -452,10 +452,9 @@ public:
 
         // assemble pos
         typename SIMD_T::Vec4 tmpVector[NumVertsPerPrim];
-        pa.Assemble(VERTEX_POSITION_SLOT, tmpVector);
         for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
         {
-            vertices[i].attrib[VERTEX_POSITION_SLOT] = tmpVector[i];
+            vertices[i].attrib[VERTEX_POSITION_SLOT] = prim[i];
         }
 
         // assemble attribs
@@ -568,7 +567,8 @@ public:
         SIMDVERTEX_T<SIMD_T> transposedPrims[2];
 
 #endif
-        for (uint32_t inputPrim = 0; inputPrim < pa.NumPrims(); ++inputPrim)
+        uint32_t numInputPrims = pa.NumPrims();
+        for (uint32_t inputPrim = 0; inputPrim < numInputPrims; ++inputPrim)
         {
             uint32_t numEmittedVerts = pVertexCount[inputPrim];
             if (numEmittedVerts < NumVertsPerPrim)
@@ -716,7 +716,7 @@ public:
             AR_BEGIN(FEGuardbandClip, pa.pDC->drawId);
             // we have to clip tris, execute the clipper, which will also
             // call the binner
-            ClipSimd(SIMD_T::vmask_ps(primMask), SIMD_T::vmask_ps(clipMask), pa, primId, viewportIdx);
+            ClipSimd(prim, SIMD_T::vmask_ps(primMask), SIMD_T::vmask_ps(clipMask), pa, primId, viewportIdx);
             AR_END(FEGuardbandClip, 1);
         }
         else if (validMask)
