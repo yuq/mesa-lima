@@ -379,36 +379,33 @@ endif
 
 prog_pkgconfig = find_program('pkg-config')
 
-dep_vdpau = []
 _vdpau = get_option('gallium-vdpau')
-if _vdpau == 'auto'
-  if not system_has_kms_drm
-    with_gallium_vdpau = false
-  elif not with_platform_x11
-    with_gallium_vdpau = false
-  elif not (with_gallium_r300 or with_gallium_r600 or with_gallium_radeonsi or
-            with_gallium_nouveau)
-    with_gallium_vdpau = false
+if not system_has_kms_drm
+  if _vdpau == 'true'
+    error('VDPAU state tracker can only be build on unix-like OSes.')
   else
-    dep_vdpau = dependency('vdpau', version : '>= 1.1', required : false)
-    with_gallium_vdpau = dep_vdpau.found()
+    _vdpau = 'false'
   endif
-elif _vdpau == 'true'
-  if not system_has_kms_drm
-    error('VDPAU state tracker can only be build on DRM/KMS OSes.')
-  elif not with_platform_x11
+elif not with_platform_x11
+  if _vdpau == 'true'
     error('VDPAU state tracker requires X11 support.')
-    with_gallium_vdpau = false
-  elif not (with_gallium_r300 or with_gallium_r600 or with_gallium_radeonsi or
-            with_gallium_nouveau)
-    error('VDPAU state tracker requires at least one of the following gallium drivers: r300, r600, radeonsi, nouveau.')
+  else
+    _vdpau = 'false'
   endif
-  dep_vdpau = dependency('vdpau', version : '>= 1.1')
-  with_gallium_vdpau = true
-else
-  with_gallium_vdpau = false
+elif not (with_gallium_r300 or with_gallium_r600 or with_gallium_radeonsi or
+          with_gallium_nouveau)
+  if _vdpau == 'true'
+    error('VDPAU state tracker requires at least one of the following gallium drivers: r300, r600, radeonsi, nouveau.')
+  else
+    _vdpau = 'false'
+  endif
+elif _vdpau == 'auto'
+  _vdpau = 'true'
 endif
+with_gallium_vdpau = _vdpau == 'true'
+dep_vdpau = []
 if with_gallium_vdpau
+  dep_vdpau = dependency('vdpau', version : '>= 1.1')
   dep_vdpau = declare_dependency(
     compile_args : run_command(prog_pkgconfig, ['vdpau', '--cflags']).stdout().split()
   )
