@@ -149,9 +149,12 @@ int bc_parser::parse_decls() {
 		}
 	}
 
-	if (sh->target == TARGET_VS || sh->target == TARGET_ES || sh->target == TARGET_HS)
+	if (sh->target == TARGET_VS || sh->target == TARGET_ES || sh->target == TARGET_HS || sh->target == TARGET_LS)
 		sh->add_input(0, 1, 0x0F);
 	else if (sh->target == TARGET_GS) {
+		sh->add_input(0, 1, 0x0F);
+		sh->add_input(1, 1, 0x0F);
+	} else if (sh->target == TARGET_COMPUTE) {
 		sh->add_input(0, 1, 0x0F);
 		sh->add_input(1, 1, 0x0F);
 	}
