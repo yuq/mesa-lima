@@ -265,6 +265,7 @@ enum vtn_base_type {
    vtn_base_type_pointer,
    vtn_base_type_image,
    vtn_base_type_sampler,
+   vtn_base_type_sampled_image,
    vtn_base_type_function,
 };
 
@@ -345,6 +346,12 @@ struct vtn_type {
 
          /* Access qualifier for storage images */
          SpvAccessQualifier access_qualifier;
+      };
+
+      /* Members for sampled image types */
+      struct {
+         /* For sampled images, the image type */
+         struct vtn_type *image;
       };
 
       /* Members for function types */

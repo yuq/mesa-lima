@@ -511,6 +511,7 @@ vtn_type_copy(struct vtn_builder *b, struct vtn_type *src)
    case vtn_base_type_pointer:
    case vtn_base_type_image:
    case vtn_base_type_sampler:
+   case vtn_base_type_sampled_image:
       /* Nothing more to do */
       break;
 
@@ -1130,7 +1131,9 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpTypeSampledImage:
-      val->type = vtn_value(b, w[2], vtn_value_type_type)->type;
+      val->type->base_type = vtn_base_type_sampled_image;
+      val->type->image = vtn_value(b, w[2], vtn_value_type_type)->type;
+      val->type->type = val->type->image->type;
       break;
 
    case SpvOpTypeSampler:
