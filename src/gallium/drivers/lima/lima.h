@@ -29,6 +29,7 @@
 
 enum lima_gpu_type {
    GPU_MALI400,
+   GPU_MALI450,
 };
 
 enum lima_bo_handle_type {

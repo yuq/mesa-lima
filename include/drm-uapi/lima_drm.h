@@ -29,6 +29,7 @@ extern "C" {
 #endif
 
 #define LIMA_INFO_GPU_MALI400 0x00
+#define LIMA_INFO_GPU_MALI450 0x01
 
 struct drm_lima_info {
 	__u32 gpu_id;  /* out */

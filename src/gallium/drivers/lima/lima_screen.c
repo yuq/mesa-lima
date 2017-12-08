@@ -49,7 +49,14 @@ lima_screen_destroy(struct pipe_screen *pscreen)
 static const char *
 lima_screen_get_name(struct pipe_screen *pscreen)
 {
-   return "Mali400";
+   struct lima_screen *screen = lima_screen(pscreen);
+
+   switch (screen->info.gpu_type) {
+   case GPU_MALI400:
+     return "Mali400";
+   case GPU_MALI450:
+     return "Mali450";
+   }
 }
 
 static const char *
