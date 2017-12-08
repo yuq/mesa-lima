@@ -24,6 +24,21 @@
 #include "vtn_private.h"
 #include "nir/nir_vla.h"
 
+static struct vtn_pointer *
+vtn_pointer_for_image_or_sampler_variable(struct vtn_builder *b,
+                                          struct vtn_variable *var)
+{
+   assert(var->type->base_type == vtn_base_type_image ||
+          var->type->base_type == vtn_base_type_sampler);
+
+   struct vtn_type *ptr_type = rzalloc(b, struct vtn_type);
+   ptr_type->base_type = vtn_base_type_pointer;
+   ptr_type->storage_class = SpvStorageClassUniformConstant;
+   ptr_type->deref = var->type;
+
+   return vtn_pointer_for_variable(b, var, ptr_type);
+}
+
 static bool
 vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
                                    const uint32_t *w, unsigned count)
@@ -57,6 +72,17 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
              func_type->params[i]->type == NULL) {
             func->params[np].type = func_type->params[i]->deref->type;
             func->params[np].param_type = nir_parameter_inout;
+            np++;
+         } else if (func_type->params[i]->base_type ==
+                    vtn_base_type_sampled_image) {
+            /* Sampled images are actually two parameters */
+            func->params = reralloc(b->shader, func->params,
+                                    nir_parameter, func->num_params++);
+            func->params[np].type = func_type->params[i]->type;
+            func->params[np].param_type = nir_parameter_in;
+            np++;
+            func->params[np].type = glsl_bare_sampler_type();
+            func->params[np].param_type = nir_parameter_in;
             np++;
          } else {
             func->params[np].type = func_type->params[i]->type;
@@ -114,6 +140,53 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
          param->name = ralloc_strdup(param, val->name);
 
          val->pointer = vtn_pointer_for_variable(b, vtn_var, type);
+      } else if (type->base_type == vtn_base_type_image ||
+                 type->base_type == vtn_base_type_sampler ||
+                 type->base_type == vtn_base_type_sampled_image) {
+         struct vtn_variable *vtn_var = rzalloc(b, struct vtn_variable);
+         vtn_var->type = type;
+         vtn_var->var = param;
+         param->interface_type = param->type;
+
+         if (type->base_type == vtn_base_type_sampled_image) {
+            /* Sampled images are actually two parameters.  The first is the
+             * image and the second is the sampler.
+             */
+            struct vtn_value *val =
+               vtn_push_value(b, w[2], vtn_value_type_sampled_image);
+
+            /* Name the parameter so it shows up nicely in NIR */
+            param->name = ralloc_strdup(param, val->name);
+
+            /* Adjust the type of the image variable to the image type */
+            vtn_var->type = type->image;
+
+            /* Now get the sampler parameter and set up its variable */
+            param = b->func->impl->params[b->func_param_idx++];
+            struct vtn_variable *sampler_var = rzalloc(b, struct vtn_variable);
+            sampler_var->type = rzalloc(b, struct vtn_type);
+            sampler_var->type->base_type = vtn_base_type_sampler;
+            sampler_var->type->type = glsl_bare_sampler_type();
+            sampler_var->var = param;
+            param->interface_type = param->type;
+            param->name = ralloc_strdup(param, val->name);
+
+            val->sampled_image = ralloc(b, struct vtn_sampled_image);
+            val->sampled_image->type = type;
+            val->sampled_image->image =
+               vtn_pointer_for_image_or_sampler_variable(b, vtn_var);
+            val->sampled_image->sampler =
+               vtn_pointer_for_image_or_sampler_variable(b, sampler_var);
+         } else {
+            struct vtn_value *val =
+               vtn_push_value(b, w[2], vtn_value_type_pointer);
+
+            /* Name the parameter so it shows up nicely in NIR */
+            param->name = ralloc_strdup(param, val->name);
+
+            val->pointer =
+               vtn_pointer_for_image_or_sampler_variable(b, vtn_var);
+         }
       } else {
          /* We're a regular SSA value. */
          struct vtn_ssa_value *param_ssa =
