@@ -667,8 +667,7 @@ namespace SwrJit
             Value *gather0 = GATHERPS(src0, pBase, indices0, mask0, scale);
             Value *gather1 = GATHERPS(src1, pBase, indices1, mask1, scale);
 
-            vGather = INSERT2_F(vGather, gather0, 0);
-            vGather = INSERT2_F(vGather, gather1, 1);
+            vGather = JOIN2(gather0, gather1);
         }
 
         return vGather;
@@ -796,8 +795,7 @@ namespace SwrJit
             Value *result0 = PSRLI(a0, imm);
             Value *result1 = PSRLI(a1, imm);
 
-            result = INSERT2_I(result, result0, 0);
-            result = INSERT2_I(result, result1, 1);
+            result = JOIN2(result0, result1);
         }
 
         return result;
@@ -835,37 +833,13 @@ namespace SwrJit
         return BITCAST(EXTRACT2_F(a2, imm), mSimdInt32Ty);
     }
 
-    //////////////////////////////////////////////////////////////////////////
-    /// @brief
-    Value *Builder::INSERT2_F(Value *a2, Value *b, uint32_t imm)
+    Value *Builder::JOIN2(Value *a, Value *b)
     {
-        const uint32_t i0 = (imm > 0) ? mVWidth : 0;
-
-        Value *result = BITCAST(a2, mSimd2FP32Ty);
-
-        for (uint32_t i = 0; i < mVWidth; i += 1)
-        {
-#if 1
-            if (!b->getType()->getScalarType()->isFloatTy())
-            {
-                b = BITCAST(b, mSimdFP32Ty);
-            }
-
-#endif
-            Value *temp = VEXTRACT(b, C(i));
-
-            result = VINSERT(result, temp, C(i0 + i));
-        }
-
-        return result;
+        return VSHUFFLE(a, b,
+                        {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15});
     }
-
-    Value *Builder::INSERT2_I(Value *a2, Value *b, uint32_t imm)
-    {
-        return BITCAST(INSERT2_F(a2, b, imm), mSimd2Int32Ty);
-    }
-
 #endif
+
     //////////////////////////////////////////////////////////////////////////
     /// @brief convert x86 <N x float> mask to llvm <N x i1> mask
     Value *Builder::MASK(Value *vmask)

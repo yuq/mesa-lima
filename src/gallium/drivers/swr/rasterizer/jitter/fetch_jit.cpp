@@ -960,10 +960,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
             // offset indices by baseVertex
 #if USE_SIMD16_GATHERS
 #if USE_SIMD16_BUILDER
-            Value *vIndices16 = VUNDEF2_I();
-
-            vIndices16 = INSERT2_I(vIndices16, vIndices,  0);
-            vIndices16 = INSERT2_I(vIndices16, vIndices2, 1);
+            Value *vIndices16 = JOIN2(vIndices, vIndices2);
 
             vCurIndices16 = ADD(vIndices16, vBaseVertex16);
 #else
@@ -982,10 +979,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
             // offset indices by baseVertex
 #if USE_SIMD16_GATHERS
 #if USE_SIMD16_BUILDER
-            Value *vIndices16 = VUNDEF2_I();
-
-            vIndices16 = INSERT2_I(vIndices16, vIndices,  0);
-            vIndices16 = INSERT2_I(vIndices16, vIndices2, 1);
+            Value *vIndices16 = JOIN2(vIndices, vIndices2);
 
             vCurIndices16 = ADD(vIndices16, vBaseVertex16);
 #else
@@ -1206,9 +1200,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                 {
 #if USE_SIMD16_BUILDER
                     // pack adjacent pairs of SIMD8s into SIMD16s
-                    pVtxSrc2[currentVertexElement] = VUNDEF2_F();
-                    pVtxSrc2[currentVertexElement] = INSERT2_F(pVtxSrc2[currentVertexElement], pResults[c],  0);
-                    pVtxSrc2[currentVertexElement] = INSERT2_F(pVtxSrc2[currentVertexElement], pResults2[c], 1);
+                    pVtxSrc2[currentVertexElement] = JOIN2(pResults[c], pResults2[c]);
 
 #else
                     vVertexElements[currentVertexElement]  = pResults[c];
@@ -1361,14 +1353,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
 #else
                         Value *gatherResult[2];
 
-                        gatherResult[0] = VUNDEF2_I();
-                        gatherResult[1] = VUNDEF2_I();
-
-                        gatherResult[0] = INSERT2_I(gatherResult[0], vGatherResult[0],  0);
-                        gatherResult[0] = INSERT2_I(gatherResult[0], vGatherResult2[0], 1);
-
-                        gatherResult[1] = INSERT2_I(gatherResult[1], vGatherResult[1],  0);
-                        gatherResult[1] = INSERT2_I(gatherResult[1], vGatherResult2[1], 1);
+                        gatherResult[0] = JOIN2(vGatherResult[0], vGatherResult2[0]);
+                        gatherResult[1] = JOIN2(vGatherResult[1], vGatherResult2[1]);
 
 #endif
                         Value *pVtxOut2 = BITCAST(pVtxOut, PointerType::get(VectorType::get(mFP32Ty, mVWidth2), 0));
@@ -1456,9 +1442,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
 
 #if USE_SIMD16_BUILDER
                                 // pack adjacent pairs of SIMD8s into SIMD16s
-                                pVtxSrc2[currentVertexElement] = VUNDEF2_F();
-                                pVtxSrc2[currentVertexElement] = INSERT2_F(pVtxSrc2[currentVertexElement], vVertexElements[currentVertexElement],  0);
-                                pVtxSrc2[currentVertexElement] = INSERT2_F(pVtxSrc2[currentVertexElement], vVertexElements2[currentVertexElement], 1);
+                                pVtxSrc2[currentVertexElement] = JOIN2(vVertexElements[currentVertexElement],
+                                                                       vVertexElements2[currentVertexElement]);
 
 #endif
 #endif
@@ -1474,9 +1459,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
 
 #if USE_SIMD16_BUILDER
                                 // pack adjacent pairs of SIMD8s into SIMD16s
-                                pVtxSrc2[currentVertexElement] = VUNDEF2_F();
-                                pVtxSrc2[currentVertexElement] = INSERT2_F(pVtxSrc2[currentVertexElement], vVertexElements[currentVertexElement],  0);
-                                pVtxSrc2[currentVertexElement] = INSERT2_F(pVtxSrc2[currentVertexElement], vVertexElements2[currentVertexElement], 1);
+                                pVtxSrc2[currentVertexElement] = JOIN2(vVertexElements[currentVertexElement],
+                                                                       vVertexElements2[currentVertexElement]);
 
 #endif
 #endif
@@ -1579,9 +1563,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
 
 #if USE_SIMD16_BUILDER
                                 // pack adjacent pairs of SIMD8s into SIMD16s
-                                pVtxSrc2[currentVertexElement] = VUNDEF2_F();
-                                pVtxSrc2[currentVertexElement] = INSERT2_F(pVtxSrc2[currentVertexElement], pGather,  0);
-                                pVtxSrc2[currentVertexElement] = INSERT2_F(pVtxSrc2[currentVertexElement], pGather2, 1);
+                                pVtxSrc2[currentVertexElement] = JOIN2(pGather, pGather2);
 
 #else
                                 vVertexElements[currentVertexElement]  = pGather;
@@ -1738,10 +1720,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                         //        xyzw xyzw xyzw xyzw xyzw xyzw xyzw xyzw 
 
 #if USE_SIMD16_BUILDER
-                        Value *gatherResult = VUNDEF2_I();
-
-                        gatherResult = INSERT2_I(gatherResult, vGatherResult,  0);
-                        gatherResult = INSERT2_I(gatherResult, vGatherResult2, 1);
+                        Value *gatherResult = JOIN2(vGatherResult, vGatherResult2);
 
                         Value *pVtxOut2 = BITCAST(pVtxOut, PointerType::get(VectorType::get(mFP32Ty, mVWidth2), 0));
 
@@ -1826,14 +1805,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
 #if USE_SIMD16_BUILDER
                         Value *gatherResult[2];
 
-                        gatherResult[0] = VUNDEF2_I();
-                        gatherResult[1] = VUNDEF2_I();
-
-                        gatherResult[0] = INSERT2_I(gatherResult[0], vGatherResult[0],  0);
-                        gatherResult[0] = INSERT2_I(gatherResult[0], vGatherResult2[0], 1);
-
-                        gatherResult[1] = INSERT2_I(gatherResult[1], vGatherResult[1],  0);
-                        gatherResult[1] = INSERT2_I(gatherResult[1], vGatherResult2[1], 1);
+                        gatherResult[0] = JOIN2(vGatherResult[0], vGatherResult2[0]);
+                        gatherResult[1] = JOIN2(vGatherResult[1], vGatherResult2[1]);
 
                         Value *pVtxOut2 = BITCAST(pVtxOut, PointerType::get(VectorType::get(mFP32Ty, mVWidth2), 0));
 
@@ -1924,9 +1897,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
 
 #if USE_SIMD16_BUILDER
                                 // pack adjacent pairs of SIMD8s into SIMD16s
-                                pVtxSrc2[currentVertexElement] = VUNDEF2_F();
-                                pVtxSrc2[currentVertexElement] = INSERT2_F(pVtxSrc2[currentVertexElement], pGather,  0);
-                                pVtxSrc2[currentVertexElement] = INSERT2_F(pVtxSrc2[currentVertexElement], pGather2, 1);
+                                pVtxSrc2[currentVertexElement] = JOIN2(pGather, pGather2);
 
 #else
                                 vVertexElements[currentVertexElement] = pGather;
@@ -2378,9 +2349,7 @@ void FetchJit::Shuffle8bpcGatherd2(Shuffle8bpcArgs &args)
                         temp_hi = FMUL(CAST(fpCast, temp_hi, mSimdFP32Ty), conversionFactor);
                     }
 
-                    vVertexElements[currentVertexElement] = VUNDEF2_F();
-                    vVertexElements[currentVertexElement] = INSERT2_F(vVertexElements[currentVertexElement], temp_lo, 0);
-                    vVertexElements[currentVertexElement] = INSERT2_F(vVertexElements[currentVertexElement], temp_hi, 1);
+                    vVertexElements[currentVertexElement] = JOIN2(temp_lo, temp_hi);
 
                     currentVertexElement += 1;
                 }
@@ -2478,9 +2447,7 @@ void FetchJit::Shuffle8bpcGatherd2(Shuffle8bpcArgs &args)
                         temp_hi = FMUL(CAST(fpCast, temp_hi, mSimdFP32Ty), conversionFactor);
                     }
 
-                    vVertexElements[currentVertexElement] = VUNDEF2_F();
-                    vVertexElements[currentVertexElement] = INSERT2_F(vVertexElements[currentVertexElement], temp_lo, 0);
-                    vVertexElements[currentVertexElement] = INSERT2_F(vVertexElements[currentVertexElement], temp_hi, 1);
+                    vVertexElements[currentVertexElement] = JOIN2(temp_lo, temp_hi);
 
                     currentVertexElement += 1;
                 }
@@ -2785,10 +2752,7 @@ void FetchJit::Shuffle16bpcGather2(Shuffle16bpcArgs &args)
             // 256i - 0    1    2    3    4    5    6    7
             //        xxxx xxxx xxxx xxxx yyyy yyyy yyyy yyyy
 #if 0
-
-            vi128XY = VUNDEF2_I();
-            vi128XY = INSERT2_I(vi128XY, vi128XY_lo, 0);
-            vi128XY = INSERT2_I(vi128XY, vi128XY_hi, 1);
+            vi128XY = JOIN2(vi128XY_lo, vi128XY_hi);
 #endif
         }
 
@@ -2807,10 +2771,7 @@ void FetchJit::Shuffle16bpcGather2(Shuffle16bpcArgs &args)
             vi128ZW_lo = BITCAST(PERMD(vShufResult_lo, C<int32_t>({ 0, 1, 4, 5, 2, 3, 6, 7 })), v128bitTy);
             vi128ZW_hi = BITCAST(PERMD(vShufResult_hi, C<int32_t>({ 0, 1, 4, 5, 2, 3, 6, 7 })), v128bitTy);
 #if 0
-
-            vi128ZW = VUNDEF2_I();
-            vi128ZW = INSERT2_I(vi128ZW, vi128ZW_lo, 0);
-            vi128ZW = INSERT2_I(vi128ZW, vi128ZW_hi, 1);
+            vi128ZW = JOIN2(vi128ZW_lo, vi128ZW_hi);
 #endif
         }
 
@@ -2857,9 +2818,7 @@ void FetchJit::Shuffle16bpcGather2(Shuffle16bpcArgs &args)
                         Value *temp_lo = CVTPH2PS(BITCAST(VEXTRACT(selectedPermute_lo, C(lane)), v8x16Ty));
                         Value *temp_hi = CVTPH2PS(BITCAST(VEXTRACT(selectedPermute_hi, C(lane)), v8x16Ty));
 
-                        vVertexElements[currentVertexElement] = VUNDEF2_F();
-                        vVertexElements[currentVertexElement] = INSERT2_F(vVertexElements[currentVertexElement], temp_lo, 0);
-                        vVertexElements[currentVertexElement] = INSERT2_F(vVertexElements[currentVertexElement], temp_hi, 1);
+                        vVertexElements[currentVertexElement] = JOIN2(temp_lo, temp_hi);
                     }
                     else
                     {
@@ -2874,9 +2833,7 @@ void FetchJit::Shuffle16bpcGather2(Shuffle16bpcArgs &args)
                             temp_hi = FMUL(CAST(IntToFpCast, temp_hi, mSimdFP32Ty), conversionFactor);
                         }
 
-                        vVertexElements[currentVertexElement] = VUNDEF2_F();
-                        vVertexElements[currentVertexElement] = INSERT2_F(vVertexElements[currentVertexElement], temp_lo, 0);
-                        vVertexElements[currentVertexElement] = INSERT2_F(vVertexElements[currentVertexElement], temp_hi, 1);
+                        vVertexElements[currentVertexElement] = JOIN2(temp_lo, temp_hi);
                     }
 
                     currentVertexElement += 1;
@@ -2970,9 +2927,7 @@ void FetchJit::Shuffle16bpcGather2(Shuffle16bpcArgs &args)
                         temp_hi = FMUL(CAST(fpCast, temp_hi, mSimdFP32Ty), conversionFactor);
                     }
 
-                    vVertexElements[currentVertexElement] = VUNDEF2_F();
-                    vVertexElements[currentVertexElement] = INSERT2_F(vVertexElements[currentVertexElement], temp_lo, 0);
-                    vVertexElements[currentVertexElement] = INSERT2_F(vVertexElements[currentVertexElement], temp_hi, 1);
+                    vVertexElements[currentVertexElement] = JOIN2(temp_lo, temp_hi);
 
                     currentVertexElement += 1;
                 }
@@ -3117,13 +3072,10 @@ Value* FetchJit::GenerateCompCtrlVector2(const ComponentControl ctrl)
         case Store1Int: return VIMMED2_1(1);
         case StoreVertexId:
         {
-            Value* pId = VUNDEF2_F();
-
             Value* pId_lo = BITCAST(LOAD(GEP(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID  })), mSimdFP32Ty);
             Value* pId_hi = BITCAST(LOAD(GEP(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID2 })), mSimdFP32Ty);
 
-            pId = INSERT2_F(pId, pId_lo, 0);
-            pId = INSERT2_F(pId, pId_hi, 1);
+            Value *pId = JOIN2(pId_lo, pId_hi);
 
             return VBROADCAST2(pId);
         }
