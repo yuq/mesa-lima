@@ -51,16 +51,20 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
 
       func->num_params = func_type->length;
       func->params = ralloc_array(b->shader, nir_parameter, func->num_params);
-      for (unsigned i = 0; i < func->num_params; i++) {
+      unsigned np = 0;
+      for (unsigned i = 0; i < func_type->length; i++) {
          if (func_type->params[i]->base_type == vtn_base_type_pointer &&
              func_type->params[i]->type == NULL) {
-            func->params[i].type = func_type->params[i]->deref->type;
-            func->params[i].param_type = nir_parameter_inout;
+            func->params[np].type = func_type->params[i]->deref->type;
+            func->params[np].param_type = nir_parameter_inout;
+            np++;
          } else {
-            func->params[i].type = func_type->params[i]->type;
-            func->params[i].param_type = nir_parameter_in;
+            func->params[np].type = func_type->params[i]->type;
+            func->params[np].param_type = nir_parameter_in;
+            np++;
          }
       }
+      assert(np == func->num_params);
 
       func->return_type = func_type->return_type->type;
 
