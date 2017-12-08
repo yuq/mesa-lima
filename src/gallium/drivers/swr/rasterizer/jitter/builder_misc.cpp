@@ -639,7 +639,7 @@ namespace SwrJit
     }
 
 #if USE_SIMD16_BUILDER
-    Value *Builder::GATHERPS2(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale)
+    Value *Builder::GATHERPS_16(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale)
     {
         Value *vGather = VUNDEF2_F();
 
@@ -649,7 +649,7 @@ namespace SwrJit
             // force mask to <N-bit Integer>, required by vgather2
             Value *mask = BITCAST(vMask, mInt16Ty);
 
-            vGather = VGATHERPS2(vSrc, pBase, vIndices, mask, C((uint32_t)scale));
+            vGather = VGATHERPS_16(vSrc, pBase, vIndices, mask, C((uint32_t)scale));
         }
         else
         {
@@ -659,8 +659,10 @@ namespace SwrJit
             Value *indices0 = EXTRACT2_I(vIndices, 0);
             Value *indices1 = EXTRACT2_I(vIndices, 1);
 
-            Value *mask0 = EXTRACT2_I(vMask, 0);
-            Value *mask1 = EXTRACT2_I(vMask, 1);
+            Value *vmask16 = VMASK2(vMask);
+
+            Value *mask0 = MASK(EXTRACT2_I(vmask16, 0));  // TODO: do this better..
+            Value *mask1 = MASK(EXTRACT2_I(vmask16, 1));
 
             Value *gather0 = GATHERPS(src0, pBase, indices0, mask0, scale);
             Value *gather1 = GATHERPS(src1, pBase, indices1, mask1, scale);
@@ -771,6 +773,37 @@ namespace SwrJit
         return vGather;
     }
 
+#if USE_SIMD16_BUILDER
+    Value *Builder::PSRLI(Value *a, Value *imm)
+    {
+        return VPSRLI(a, imm);
+    }
+
+    Value *Builder::PSRLI_16(Value *a, Value *imm)
+    {
+        Value *result = VUNDEF2_I();
+
+        // use avx512 shift right instruction if available
+        if (JM()->mArch.AVX512F())
+        {
+            result = VPSRLI_16(a, imm);
+        }
+        else
+        {
+            Value *a0 = EXTRACT2_I(a, 0);
+            Value *a1 = EXTRACT2_I(a, 1);
+
+            Value *result0 = PSRLI(a0, imm);
+            Value *result1 = PSRLI(a1, imm);
+
+            result = INSERT2_I(result, result0, 0);
+            result = INSERT2_I(result, result1, 1);
+        }
+
+        return result;
+    }
+
+#endif
 #if USE_SIMD16_BUILDER
     //////////////////////////////////////////////////////////////////////////
     /// @brief

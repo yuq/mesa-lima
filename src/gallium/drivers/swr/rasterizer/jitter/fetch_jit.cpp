@@ -839,7 +839,15 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
     Value* startVertex = LOAD(mpFetchInfo, {0, SWR_FETCH_CONTEXT_StartVertex});
     Value* startInstance = LOAD(mpFetchInfo, {0, SWR_FETCH_CONTEXT_StartInstance});
     Value* curInstance = LOAD(mpFetchInfo, {0, SWR_FETCH_CONTEXT_CurInstance});
-    Value* vBaseVertex = VBROADCAST(LOAD(mpFetchInfo, {0, SWR_FETCH_CONTEXT_BaseVertex}));
+#if USE_SIMD16_GATHERS
+#if USE_SIMD16_BUILDER
+    Value* vBaseVertex16 = VBROADCAST2(LOAD(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_BaseVertex }));
+#else
+    Value* vBaseVertex = VBROADCAST(LOAD(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_BaseVertex }));
+#endif
+#else
+    Value* vBaseVertex = VBROADCAST(LOAD(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_BaseVertex }));
+#endif
     curInstance->setName("curInstance");
 
     for (uint32_t nInputElt = 0; nInputElt < fetchState.numAttribs; nInputElt += 1)
@@ -859,10 +867,18 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
         Value *stream = LOAD(streams, {ied.StreamIndex, SWR_VERTEX_BUFFER_STATE_pData});
 
         // VGATHER* takes an *i8 src pointer
-        Value* pStreamBase = BITCAST(stream, PointerType::get(mInt8Ty, 0));
+        Value *pStreamBase = BITCAST(stream, PointerType::get(mInt8Ty, 0));
 
         Value *stride = LOAD(streams, {ied.StreamIndex, SWR_VERTEX_BUFFER_STATE_pitch});
+#if USE_SIMD16_GATHERS
+#if USE_SIMD16_BUILDER
+        Value *vStride16 = VBROADCAST2(stride);
+#else
         Value *vStride = VBROADCAST(stride);
+#endif
+#else
+        Value *vStride = VBROADCAST(stride);
+#endif
 
         // max vertex index that is fully in bounds
         Value *maxVertex = GEP(streams, {C(ied.StreamIndex), C(SWR_VERTEX_BUFFER_STATE_maxVertex)});
@@ -885,9 +901,20 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
         Value *vCurIndices;
 #if USE_SIMD16_GATHERS
         Value *vCurIndices2;
+#if USE_SIMD16_BUILDER
+        Value *vCurIndices16;
+#endif
 #endif
         Value *startOffset;
+#if USE_SIMD16_GATHERS
+#if USE_SIMD16_BUILDER
+        Value *vInstanceStride16 = VIMMED2_1(0);
+#else
         Value *vInstanceStride = VIMMED1(0);
+#endif
+#else
+        Value *vInstanceStride = VIMMED1(0);
+#endif
 
         if (ied.InstanceEnable)
         {
@@ -903,9 +930,15 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
             // if step rate is 0, every instance gets instance 0
             calcInstance = SELECT(isNonZeroStep, calcInstance, C(0));
 
-            vCurIndices = VBROADCAST(calcInstance);
 #if USE_SIMD16_GATHERS
+#if USE_SIMD16_BUILDER
+            vCurIndices16 = VBROADCAST2(calcInstance);
+#else
+            vCurIndices = VBROADCAST(calcInstance);
             vCurIndices2 = VBROADCAST(calcInstance);
+#endif
+#else
+            vCurIndices = VBROADCAST(calcInstance);
 #endif
 
             startOffset = startInstance;
@@ -914,12 +947,31 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
         {
             // grab the instance advancement state, determines stride in bytes from one instance to the next
             Value* stepRate = C(ied.InstanceAdvancementState);
+#if USE_SIMD16_GATHERS
+#if USE_SIMD16_BUILDER
+            vInstanceStride16 = VBROADCAST2(MUL(curInstance, stepRate));
+#else
             vInstanceStride = VBROADCAST(MUL(curInstance, stepRate));
+#endif
+#else
+            vInstanceStride = VBROADCAST(MUL(curInstance, stepRate));
+#endif
 
             // offset indices by baseVertex
-            vCurIndices = ADD(vIndices, vBaseVertex);
 #if USE_SIMD16_GATHERS
+#if USE_SIMD16_BUILDER
+            Value *vIndices16 = VUNDEF2_I();
+
+            vIndices16 = INSERT2_I(vIndices16, vIndices,  0);
+            vIndices16 = INSERT2_I(vIndices16, vIndices2, 1);
+
+            vCurIndices16 = ADD(vIndices16, vBaseVertex16);
+#else
+            vCurIndices = ADD(vIndices, vBaseVertex);
             vCurIndices2 = ADD(vIndices2, vBaseVertex);
+#endif
+#else
+            vCurIndices = ADD(vIndices, vBaseVertex);
 #endif
 
             startOffset = startVertex;
@@ -928,9 +980,20 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
         else
         {
             // offset indices by baseVertex
-            vCurIndices = ADD(vIndices, vBaseVertex);
 #if USE_SIMD16_GATHERS
+#if USE_SIMD16_BUILDER
+            Value *vIndices16 = VUNDEF2_I();
+
+            vIndices16 = INSERT2_I(vIndices16, vIndices,  0);
+            vIndices16 = INSERT2_I(vIndices16, vIndices2, 1);
+
+            vCurIndices16 = ADD(vIndices16, vBaseVertex16);
+#else
+            vCurIndices = ADD(vIndices, vBaseVertex);
             vCurIndices2 = ADD(vIndices2, vBaseVertex);
+#endif
+#else
+            vCurIndices = ADD(vIndices, vBaseVertex);
 #endif
 
             startOffset = startVertex;
@@ -960,14 +1023,76 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
         // Load the in bounds size of a partially valid vertex
         Value *partialInboundsSize = GEP(streams, {C(ied.StreamIndex), C(SWR_VERTEX_BUFFER_STATE_partialInboundsSize)});
         partialInboundsSize = LOAD(partialInboundsSize);
-        Value* vPartialVertexSize = VBROADCAST(partialInboundsSize);
-        Value* vBpp = VBROADCAST(C(info.Bpp));
-        Value* vAlignmentOffsets = VBROADCAST(C(ied.AlignedByteOffset));
+#if USE_SIMD16_GATHERS
+#if USE_SIMD16_BUILDER
+        Value *vPartialVertexSize = VBROADCAST2(partialInboundsSize);
+        Value *vBpp = VBROADCAST2(C(info.Bpp));
+        Value *vAlignmentOffsets = VBROADCAST2(C(ied.AlignedByteOffset));
+#else
+        Value *vPartialVertexSize = VBROADCAST(partialInboundsSize);
+        Value *vBpp = VBROADCAST(C(info.Bpp));
+        Value *vAlignmentOffsets = VBROADCAST(C(ied.AlignedByteOffset));
+#endif
+#else
+        Value *vPartialVertexSize = VBROADCAST(partialInboundsSize);
+        Value *vBpp = VBROADCAST(C(info.Bpp));
+        Value *vAlignmentOffsets = VBROADCAST(C(ied.AlignedByteOffset));
+#endif
 
         // is the element is <= the partially valid size
-        Value* vElementInBoundsMask = ICMP_SLE(vBpp, SUB(vPartialVertexSize, vAlignmentOffsets));
+        Value *vElementInBoundsMask = ICMP_SLE(vBpp, SUB(vPartialVertexSize, vAlignmentOffsets));
 
 #if USE_SIMD16_GATHERS
+#if USE_SIMD16_BUILDER
+        // override cur indices with 0 if pitch is 0
+        Value *pZeroPitchMask16 = ICMP_EQ(vStride16, VIMMED2_1(0));
+        vCurIndices16 = SELECT(pZeroPitchMask16, VIMMED2_1(0), vCurIndices16);
+
+        // are vertices partially OOB?
+        Value *vMaxVertex16 = VBROADCAST2(maxVertex);
+        Value *vPartialOOBMask = ICMP_EQ(vCurIndices16, vMaxVertex16);
+
+        // are vertices fully in bounds?
+        Value *vMaxGatherMask16 = ICMP_ULT(vCurIndices16, vMaxVertex16);
+
+        Value *vGatherMask16;
+
+        if (fetchState.bPartialVertexBuffer)
+        {
+            // are vertices below minVertex limit?
+            Value *vMinVertex16 = VBROADCAST2(minVertex);
+            Value *vMinGatherMask16 = ICMP_UGE(vCurIndices16, vMinVertex16);
+
+            // only fetch lanes that pass both tests
+            vGatherMask16 = AND(vMaxGatherMask16, vMinGatherMask16);
+        }
+        else
+        {
+            vGatherMask16 = vMaxGatherMask16;
+        }
+
+        // blend in any partially OOB indices that have valid elements
+        vGatherMask16 = SELECT(vPartialOOBMask, vElementInBoundsMask, vGatherMask16);
+
+        // calculate the actual offsets into the VB
+        Value *vOffsets16 = MUL(vCurIndices16, vStride16);
+        vOffsets16 = ADD(vOffsets16, vAlignmentOffsets);
+
+        // if instance stride enable is:
+        //  true  - add product of the instanceID and advancement state to the offst into the VB
+        //  false - value of vInstanceStride has been initialialized to zero
+        vOffsets16 = ADD(vOffsets16, vInstanceStride16);
+
+        // TODO: remove the following simd8 interop stuff once all code paths are fully widened to SIMD16..
+        Value *vmask16 = VMASK2(vGatherMask16);
+
+        Value *vGatherMask  = MASK(EXTRACT2_I(vmask16, 0));
+        Value *vGatherMask2 = MASK(EXTRACT2_I(vmask16, 1));
+
+        Value *vOffsets  = EXTRACT2_I(vOffsets16, 0);
+        Value *vOffsets2 = EXTRACT2_I(vOffsets16, 1);
+
+#else
         // override cur indices with 0 if pitch is 0
         Value* pZeroPitchMask = ICMP_EQ(vStride, VIMMED1(0));
         vCurIndices = SELECT(pZeroPitchMask, VIMMED1(0), vCurIndices);
@@ -1018,6 +1143,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
         vOffsets = ADD(vOffsets, vInstanceStride);
         vOffsets2 = ADD(vOffsets2, vInstanceStride);
 
+#endif
 #else
         // override cur indices with 0 if pitch is 0
         Value* pZeroPitchMask = ICMP_EQ(vStride, VIMMED1(0));
@@ -1276,17 +1402,14 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 // However, GATHERPS uses signed 32-bit offsets, so only a 2GB range :(
                                 // But, we know that elements must be aligned for FETCH. :)
                                 // Right shift the offset by a bit and then scale by 2 to remove the sign extension.
-                                Value *vShiftedOffsets  = VPSRLI(vOffsets,  C(1));
-                                Value *vShiftedOffsets2 = VPSRLI(vOffsets2, C(1));
 #if USE_SIMD16_BUILDER
-                                Value *indices = VUNDEF2_I();
-                                indices = INSERT2_I(indices, vShiftedOffsets,  0);
-                                indices = INSERT2_I(indices, vShiftedOffsets2, 1);
+                                Value *shiftedOffsets = VPSRLI_16(vOffsets16, C(1));
+                                pVtxSrc2[currentVertexElement] = GATHERPS_16(gatherSrc16, pStreamBase, shiftedOffsets, vGatherMask16, 2);
 
-                                Value *mask = VSHUFFLE(vGatherMask, vGatherMask2, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15});
-
-                                pVtxSrc2[currentVertexElement] = GATHERPS2(gatherSrc16, pStreamBase, indices, mask, 2);
 #else
+                                Value *vShiftedOffsets = VPSRLI(vOffsets, C(1));
+                                Value *vShiftedOffsets2 = VPSRLI(vOffsets2, C(1));
+
                                 vVertexElements[currentVertexElement]  = GATHERPS(gatherSrc, pStreamBase, vShiftedOffsets, vGatherMask, 2);
                                 vVertexElements2[currentVertexElement] = GATHERPS(gatherSrc2, pStreamBase, vShiftedOffsets2, vGatherMask2, 2);
 
@@ -1388,29 +1511,29 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                             // if we need to gather the component
                             if (compCtrl[i] == StoreSrc)
                             {
-                                Value *vMaskLo = VSHUFFLE(vGatherMask, VUNDEF(mInt1Ty, 8), C({ 0, 1, 2, 3 }));
+                                Value *vMaskLo  = VSHUFFLE(vGatherMask, VUNDEF(mInt1Ty, 8), C({ 0, 1, 2, 3 }));
                                 Value *vMaskLo2 = VSHUFFLE(vGatherMask2, VUNDEF(mInt1Ty, 8), C({ 0, 1, 2, 3 }));
-                                Value *vMaskHi = VSHUFFLE(vGatherMask, VUNDEF(mInt1Ty, 8), C({ 4, 5, 6, 7 }));
+                                Value *vMaskHi  = VSHUFFLE(vGatherMask, VUNDEF(mInt1Ty, 8), C({ 4, 5, 6, 7 }));
                                 Value *vMaskHi2 = VSHUFFLE(vGatherMask2, VUNDEF(mInt1Ty, 8), C({ 4, 5, 6, 7 }));
 
-                                Value *vOffsetsLo = VEXTRACTI128(vOffsets, C(0));
+                                Value *vOffsetsLo  = VEXTRACTI128(vOffsets, C(0));
                                 Value *vOffsetsLo2 = VEXTRACTI128(vOffsets2, C(0));
-                                Value *vOffsetsHi = VEXTRACTI128(vOffsets, C(1));
+                                Value *vOffsetsHi  = VEXTRACTI128(vOffsets, C(1));
                                 Value *vOffsetsHi2 = VEXTRACTI128(vOffsets2, C(1));
 
                                 Value *vZeroDouble = VECTOR_SPLAT(4, ConstantFP::get(IRB()->getDoubleTy(), 0.0f));
 
-                                Value* pGatherLo = GATHERPD(vZeroDouble, pStreamBase, vOffsetsLo, vMaskLo);
+                                Value* pGatherLo  = GATHERPD(vZeroDouble, pStreamBase, vOffsetsLo, vMaskLo);
                                 Value* pGatherLo2 = GATHERPD(vZeroDouble, pStreamBase, vOffsetsLo2, vMaskLo2);
-                                Value* pGatherHi = GATHERPD(vZeroDouble, pStreamBase, vOffsetsHi, vMaskHi);
+                                Value* pGatherHi  = GATHERPD(vZeroDouble, pStreamBase, vOffsetsHi, vMaskHi);
                                 Value* pGatherHi2 = GATHERPD(vZeroDouble, pStreamBase, vOffsetsHi2, vMaskHi2);
 
-                                pGatherLo = VCVTPD2PS(pGatherLo);
+                                pGatherLo  = VCVTPD2PS(pGatherLo);
                                 pGatherLo2 = VCVTPD2PS(pGatherLo2);
-                                pGatherHi = VCVTPD2PS(pGatherHi);
+                                pGatherHi  = VCVTPD2PS(pGatherHi);
                                 pGatherHi2 = VCVTPD2PS(pGatherHi2);
 
-                                Value *pGather = VSHUFFLE(pGatherLo, pGatherHi, C({ 0, 1, 2, 3, 4, 5, 6, 7 }));
+                                Value *pGather  = VSHUFFLE(pGatherLo, pGatherHi, C({ 0, 1, 2, 3, 4, 5, 6, 7 }));
                                 Value *pGather2 = VSHUFFLE(pGatherLo2, pGatherHi2, C({ 0, 1, 2, 3, 4, 5, 6, 7 }));
 
 #if USE_SIMD16_BUILDER
