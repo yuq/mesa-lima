@@ -583,6 +583,22 @@ if with_gallium_st_nine
   endif
 endif
 
+_opencl = get_option('gallium-opencl')
+if _opencl !=' disabled'
+  if not with_gallium
+    error('OpenCL Clover implementation requires at least one gallium driver.')
+  endif
+
+  # TODO: alitvec?
+  dep_clc = dependency('libclc')
+  with_gallium_opencl = true
+  with_opencl_icd = _opencl == 'icd'
+else
+  dep_clc = []
+  with_gallium_opencl = false
+  with_gallium_icd = false
+endif
+
 gl_pkgconfig_c_flags = []
 if with_platform_x11
   if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
@@ -930,7 +946,7 @@ dep_thread = dependency('threads')
 if dep_thread.found() and host_machine.system() != 'windows'
   pre_args += '-DHAVE_PTHREAD'
 endif
-if with_amd_vk or with_gallium_radeonsi or with_gallium_r600 # TODO: clover
+if with_amd_vk or with_gallium_radeonsi or with_gallium_r600 or with_gallium_opencl
   dep_elf = dependency('libelf', required : false)
   if not dep_elf.found()
     dep_elf = cc.find_library('elf')
@@ -972,12 +988,19 @@ if with_amd_vk or with_gallium_radeonsi or with_gallium_r600
     llvm_modules += 'asmparser'
   endif
 endif
+if with_gallium_opencl
+  llvm_modules += [
+    'all-targets', 'linker', 'coverage', 'instrumentation', 'ipo', 'irreader',
+    'lto', 'option', 'objcarcopts', 'profiledata',
+  ]
+  # TODO: optional modules
+endif
 
 _llvm = get_option('llvm')
 if _llvm == 'auto'
   dep_llvm = dependency(
     'llvm', version : '>= 3.9.0', modules : llvm_modules,
-    required : with_amd_vk or with_gallium_radeonsi or with_gallium_swr,
+    required : with_amd_vk or with_gallium_radeonsi or with_gallium_swr or with_gallium_opencl,
   )
   with_llvm = dep_llvm.found()
 elif _llvm == 'true'
@@ -1153,8 +1176,6 @@ if _sensors != 'false'
 else
   dep_lmsensors = []
 endif
-
-# TODO: clover
 
 # TODO: gallium tests
 

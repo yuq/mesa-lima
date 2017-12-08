@@ -121,6 +121,13 @@ option(
   description : 'build gallium "nine" Direct3D 9.x state tracker.',
 )
 option(
+  'gallium-opencl',
+  type : 'combo',
+  choices : ['icd', 'standalone', 'disabled'],
+  value : 'disabled',
+  description : 'build gallium "clover" OpenCL state tracker.',
+)
+option(
   'd3d-drivers-path',
   type : 'string',
   value : '',

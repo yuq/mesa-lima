@@ -145,7 +145,17 @@ endif
 if with_gallium_st_nine
   subdir('state_trackers/nine')
 endif
-# TODO: clover
+if with_gallium_opencl
+  # TODO: this isn't really clover specific, but ATM clover is the only
+  # consumer
+  subdir('targets/pipe-loader')
+
+  if meson.version().version_compare('< 0.44.0')
+    error('OpenCL requires meson 0.44.0 or greater.')
+  endif
+  subdir('state_trackers/clover')
+  subdir('targets/opencl')
+endif
 if with_dri
   subdir('state_trackers/dri')
   subdir('targets/dri')

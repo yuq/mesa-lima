@@ -60,7 +60,8 @@ libpipe_loader_dynamic = static_library(
   ],
   c_args : [
     c_vis_args, libpipe_loader_defines, '-DHAVE_PIPE_LOADER_DRI',
-    '-DPIPE_SEARCH_DIR="@0@"'.format(join_paths(get_option('libdir'), 'gallium-pipe')
+    '-DPIPE_SEARCH_DIR="@0@"'.format(
+      join_paths(get_option('prefix'), get_option('libdir'), 'gallium-pipe')
     )
   ],
   link_with : [libloader, libxmlconfig],
