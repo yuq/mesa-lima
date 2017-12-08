@@ -55,12 +55,11 @@ vtn_cfg_handle_prepass_instruction(struct vtn_builder *b, SpvOp opcode,
          if (func_type->params[i]->base_type == vtn_base_type_pointer &&
              func_type->params[i]->type == NULL) {
             func->params[i].type = func_type->params[i]->deref->type;
+            func->params[i].param_type = nir_parameter_inout;
          } else {
             func->params[i].type = func_type->params[i]->type;
+            func->params[i].param_type = nir_parameter_in;
          }
-
-         /* TODO: We could do something smarter here. */
-         func->params[i].param_type = nir_parameter_inout;
       }
 
       func->return_type = func_type->return_type->type;
