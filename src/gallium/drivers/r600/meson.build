@@ -113,12 +113,15 @@ egd_tables_h = custom_target(
   capture : true,
 )
 
-# TODO: compute defines
+r600_c_args = []
+if with_gallium_opencl
+  r600_c_args += '-DHAVE_OPENCL'
+endif
 
 libr600 = static_library(
   'r600',
   [files_r600, egd_tables_h],
-  c_args : [c_vis_args],
+  c_args : [c_vis_args, r600_c_args],
   cpp_args : [cpp_vis_args],
   include_directories : [
     inc_src, inc_include, inc_gallium, inc_gallium_aux, inc_amd_common,
