@@ -432,7 +432,6 @@ handleVAEncPictureParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlV
    h264 = buf->data;
    context->desc.h264enc.frame_num = h264->frame_num;
    context->desc.h264enc.not_referenced = false;
-   context->desc.h264enc.is_idr = (h264->pic_fields.bits.idr_pic_flag == 1);
    context->desc.h264enc.pic_order_cnt = h264->CurrPic.TopFieldOrderCnt;
    if (context->desc.h264enc.gop_cnt == 0)
       context->desc.h264enc.i_remain = context->gop_coeff;
@@ -451,7 +450,7 @@ handleVAEncPictureParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlV
 		       UINT_TO_PTR(h264->CurrPic.picture_id),
 		       UINT_TO_PTR(h264->frame_num));
 
-   if (context->desc.h264enc.is_idr)
+   if (h264->pic_fields.bits.idr_pic_flag == 1)
       context->desc.h264enc.picture_type = PIPE_H264_ENC_PICTURE_TYPE_IDR;
    else
       context->desc.h264enc.picture_type = PIPE_H264_ENC_PICTURE_TYPE_P;
@@ -493,10 +492,9 @@ handleVAEncSliceParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlVaB
    else if (h264->slice_type == 0)
       context->desc.h264enc.picture_type = PIPE_H264_ENC_PICTURE_TYPE_P;
    else if (h264->slice_type == 2) {
-      if (context->desc.h264enc.is_idr){
-         context->desc.h264enc.picture_type = PIPE_H264_ENC_PICTURE_TYPE_IDR;
+      if (context->desc.h264enc.picture_type == PIPE_H264_ENC_PICTURE_TYPE_IDR)
          context->desc.h264enc.idr_pic_id++;
-	   } else
+	   else
          context->desc.h264enc.picture_type = PIPE_H264_ENC_PICTURE_TYPE_I;
    } else
       context->desc.h264enc.picture_type = PIPE_H264_ENC_PICTURE_TYPE_SKIP;
