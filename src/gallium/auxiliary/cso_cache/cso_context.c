@@ -592,6 +592,11 @@ enum pipe_error cso_set_rasterizer(struct cso_context *ctx,
                                                        (void*)templ, key_size);
    void *handle = NULL;
 
+   /* We can't have both point_quad_rasterization (sprites) and point_smooth
+    * (round AA points) enabled at the same time.
+    */
+   assert(!(templ->point_quad_rasterization && templ->point_smooth));
+
    if (cso_hash_iter_is_null(iter)) {
       struct cso_rasterizer *cso = MALLOC(sizeof(struct cso_rasterizer));
       if (!cso)
