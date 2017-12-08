@@ -102,6 +102,9 @@ int lima_device_query_info(lima_device_handle dev, struct lima_device_info *info
    case LIMA_INFO_GPU_MALI400:
       info->gpu_type = GPU_MALI400;
       break;
+   case LIMA_INFO_GPU_MALI450:
+      info->gpu_type = GPU_MALI450;
+      break;
    default:
       return -ENODEV;
    }
