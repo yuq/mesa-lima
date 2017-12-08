@@ -1277,6 +1277,43 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                 case 16:
                 {
 #if USE_SIMD16_GATHERS
+#if USE_SIMD16_BUILDER
+                    Value *gatherResult[2];
+
+                    // if we have at least one component out of x or y to fetch
+                    if (isComponentEnabled(compMask, 0) || isComponentEnabled(compMask, 1))
+                    {
+                        gatherResult[0] = GATHERPS_16(gatherSrc16, pStreamBase, vOffsets16, vGatherMask16);
+
+                        // e.g. result of first 8x32bit integer gather for 16bit components
+                        // 256i - 0    1    2    3    4    5    6    7
+                        //        xyxy xyxy xyxy xyxy xyxy xyxy xyxy xyxy
+                        //
+                    }
+                    else
+                    {
+                        gatherResult[0] = VUNDEF2_I();
+                    }
+
+                    // if we have at least one component out of z or w to fetch
+                    if (isComponentEnabled(compMask, 2) || isComponentEnabled(compMask, 3))
+                    {
+                        // offset base to the next components(zw) in the vertex to gather
+                        pStreamBase = GEP(pStreamBase, C((char)4));
+
+                        gatherResult[1] = GATHERPS_16(gatherSrc16, pStreamBase, vOffsets16, vGatherMask16);
+
+                        // e.g. result of second 8x32bit integer gather for 16bit components
+                        // 256i - 0    1    2    3    4    5    6    7
+                        //        zwzw zwzw zwzw zwzw zwzw zwzw zwzw zwzw 
+                        //
+                    }
+                    else
+                    {
+                        gatherResult[1] = VUNDEF2_I();
+                    }
+
+#else
                     Value *vGatherResult[2];
                     Value *vGatherResult2[2];
 
@@ -1315,10 +1352,13 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                         vGatherResult2[1] = VUNDEF_I();
                     }
 
+#endif
                     // if we have at least one component to shuffle into place
                     if (compMask)
                     {
 #if USE_SIMD16_BUILDER
+#if USE_SIMD16_BUILDER
+#else
                         Value *gatherResult[2];
 
                         gatherResult[0] = VUNDEF2_I();
@@ -1330,6 +1370,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                         gatherResult[1] = INSERT2_I(gatherResult[1], vGatherResult[1],  0);
                         gatherResult[1] = INSERT2_I(gatherResult[1], vGatherResult2[1], 1);
 
+#endif
                         Value *pVtxOut2 = BITCAST(pVtxOut, PointerType::get(VectorType::get(mFP32Ty, mVWidth2), 0));
 
                         Shuffle16bpcArgs args = std::forward_as_tuple(gatherResult, pVtxOut2, Instruction::CastOps::FPExt, CONVERT_NONE,
@@ -1511,21 +1552,21 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                             // if we need to gather the component
                             if (compCtrl[i] == StoreSrc)
                             {
-                                Value *vMaskLo  = VSHUFFLE(vGatherMask, VUNDEF(mInt1Ty, 8), C({ 0, 1, 2, 3 }));
+                                Value *vMaskLo  = VSHUFFLE(vGatherMask,  VUNDEF(mInt1Ty, 8), C({ 0, 1, 2, 3 }));
                                 Value *vMaskLo2 = VSHUFFLE(vGatherMask2, VUNDEF(mInt1Ty, 8), C({ 0, 1, 2, 3 }));
-                                Value *vMaskHi  = VSHUFFLE(vGatherMask, VUNDEF(mInt1Ty, 8), C({ 4, 5, 6, 7 }));
+                                Value *vMaskHi  = VSHUFFLE(vGatherMask,  VUNDEF(mInt1Ty, 8), C({ 4, 5, 6, 7 }));
                                 Value *vMaskHi2 = VSHUFFLE(vGatherMask2, VUNDEF(mInt1Ty, 8), C({ 4, 5, 6, 7 }));
 
-                                Value *vOffsetsLo  = VEXTRACTI128(vOffsets, C(0));
+                                Value *vOffsetsLo  = VEXTRACTI128(vOffsets,  C(0));
                                 Value *vOffsetsLo2 = VEXTRACTI128(vOffsets2, C(0));
-                                Value *vOffsetsHi  = VEXTRACTI128(vOffsets, C(1));
+                                Value *vOffsetsHi  = VEXTRACTI128(vOffsets,  C(1));
                                 Value *vOffsetsHi2 = VEXTRACTI128(vOffsets2, C(1));
 
                                 Value *vZeroDouble = VECTOR_SPLAT(4, ConstantFP::get(IRB()->getDoubleTy(), 0.0f));
 
-                                Value* pGatherLo  = GATHERPD(vZeroDouble, pStreamBase, vOffsetsLo, vMaskLo);
+                                Value* pGatherLo  = GATHERPD(vZeroDouble, pStreamBase, vOffsetsLo,  vMaskLo);
                                 Value* pGatherLo2 = GATHERPD(vZeroDouble, pStreamBase, vOffsetsLo2, vMaskLo2);
-                                Value* pGatherHi  = GATHERPD(vZeroDouble, pStreamBase, vOffsetsHi, vMaskHi);
+                                Value* pGatherHi  = GATHERPD(vZeroDouble, pStreamBase, vOffsetsHi,  vMaskHi);
                                 Value* pGatherHi2 = GATHERPD(vZeroDouble, pStreamBase, vOffsetsHi2, vMaskHi2);
 
                                 pGatherLo  = VCVTPD2PS(pGatherLo);
@@ -1533,7 +1574,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 pGatherHi  = VCVTPD2PS(pGatherHi);
                                 pGatherHi2 = VCVTPD2PS(pGatherHi2);
 
-                                Value *pGather  = VSHUFFLE(pGatherLo, pGatherHi, C({ 0, 1, 2, 3, 4, 5, 6, 7 }));
+                                Value *pGather  = VSHUFFLE(pGatherLo,  pGatherHi,  C({ 0, 1, 2, 3, 4, 5, 6, 7 }));
                                 Value *pGather2 = VSHUFFLE(pGatherLo2, pGatherHi2, C({ 0, 1, 2, 3, 4, 5, 6, 7 }));
 
 #if USE_SIMD16_BUILDER
