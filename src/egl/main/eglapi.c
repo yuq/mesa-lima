@@ -504,7 +504,8 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
    _EGL_CHECK_EXTENSION(KHR_gl_texture_3D_image);
    _EGL_CHECK_EXTENSION(KHR_gl_texture_cubemap_image);
    if (dpy->Extensions.KHR_image_base && dpy->Extensions.KHR_image_pixmap)
-      _eglAppendExtension(&exts, "EGL_KHR_image");
+      dpy->Extensions.KHR_image = EGL_TRUE;
+   _EGL_CHECK_EXTENSION(KHR_image);
    _EGL_CHECK_EXTENSION(KHR_image_base);
    _EGL_CHECK_EXTENSION(KHR_image_pixmap);
    _EGL_CHECK_EXTENSION(KHR_no_config_context);

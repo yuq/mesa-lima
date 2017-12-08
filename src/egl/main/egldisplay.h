@@ -122,6 +122,7 @@ struct _egl_extensions
    EGLBoolean KHR_gl_texture_2D_image;
    EGLBoolean KHR_gl_texture_3D_image;
    EGLBoolean KHR_gl_texture_cubemap_image;
+   EGLBoolean KHR_image;
    EGLBoolean KHR_image_base;
    EGLBoolean KHR_image_pixmap;
    EGLBoolean KHR_no_config_context;

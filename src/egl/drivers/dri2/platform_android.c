@@ -1249,6 +1249,7 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
 #if ANDROID_API_LEVEL >= 23
    dpy->Extensions.KHR_partial_update = EGL_TRUE;
 #endif
+   dpy->Extensions.KHR_image = EGL_TRUE;
 
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.
