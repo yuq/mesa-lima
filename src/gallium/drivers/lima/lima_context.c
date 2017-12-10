@@ -80,6 +80,7 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    lima_state_init(ctx);
    lima_draw_init(ctx);
    lima_program_init(ctx);
+   lima_query_init(ctx);
 
    ctx->uploader = u_upload_create_default(&ctx->base);
    ctx->base.stream_uploader = ctx->uploader;
