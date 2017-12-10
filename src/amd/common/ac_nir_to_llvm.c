@@ -2230,6 +2230,17 @@ static LLVMValueRef visit_vulkan_resource_index(struct nir_to_llvm_context *ctx,
 	return desc_ptr;
 }
 
+static LLVMValueRef visit_vulkan_resource_reindex(struct nir_to_llvm_context *ctx,
+                                                  nir_intrinsic_instr *instr)
+{
+	LLVMValueRef ptr = get_src(ctx->nir, instr->src[0]);
+	LLVMValueRef index = get_src(ctx->nir, instr->src[1]);
+
+	LLVMValueRef result = LLVMBuildGEP(ctx->builder, ptr, &index, 1, "");
+	LLVMSetMetadata(result, ctx->ac.uniform_md_kind, ctx->ac.empty_md);
+	return result;
+}
+
 static LLVMValueRef visit_load_push_constant(struct nir_to_llvm_context *ctx,
                                              nir_intrinsic_instr *instr)
 {
@@ -4122,6 +4133,9 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		break;
 	case nir_intrinsic_vulkan_resource_index:
 		result = visit_vulkan_resource_index(ctx->nctx, instr);
+		break;
+	case nir_intrinsic_vulkan_resource_reindex:
+		result = visit_vulkan_resource_reindex(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_store_ssbo:
 		visit_store_ssbo(ctx, instr);
