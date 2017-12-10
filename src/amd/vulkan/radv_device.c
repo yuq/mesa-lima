@@ -2162,6 +2162,8 @@ static VkResult radv_alloc_memory(struct radv_device *device,
 		vk_find_struct_const(pAllocateInfo->pNext, IMPORT_MEMORY_FD_INFO_KHR);
 	const VkMemoryDedicatedAllocateInfoKHR *dedicate_info =
 		vk_find_struct_const(pAllocateInfo->pNext, MEMORY_DEDICATED_ALLOCATE_INFO_KHR);
+	const VkExportMemoryAllocateInfoKHR *export_info =
+		vk_find_struct_const(pAllocateInfo->pNext, EXPORT_MEMORY_ALLOCATE_INFO_KHR);
 
 	const struct wsi_memory_allocate_info *wsi_info =
 		vk_find_struct_const(pAllocateInfo->pNext, WSI_MEMORY_ALLOCATE_INFO_MESA);
@@ -2213,7 +2215,7 @@ static VkResult radv_alloc_memory(struct radv_device *device,
 	if (mem_type_index == RADV_MEM_TYPE_GTT_WRITE_COMBINE)
 		flags |= RADEON_FLAG_GTT_WC;
 
-	if (!dedicate_info && !import_info)
+	if (!dedicate_info && !import_info && (!export_info || !export_info->handleTypes))
 		flags |= RADEON_FLAG_NO_INTERPROCESS_SHARING;
 
 	mem->bo = device->ws->buffer_create(device->ws, alloc_size, device->physical_device->rad_info.max_alignment,
