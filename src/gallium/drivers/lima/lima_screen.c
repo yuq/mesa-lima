@@ -57,6 +57,8 @@ lima_screen_get_name(struct pipe_screen *pscreen)
    case GPU_MALI450:
      return "Mali450";
    }
+
+   return NULL;
 }
 
 static const char *
