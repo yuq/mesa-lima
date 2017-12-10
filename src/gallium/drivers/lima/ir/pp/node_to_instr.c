@@ -38,7 +38,7 @@ static bool create_new_instr(ppir_block *block, ppir_node *node)
    return true;
 }
 
-static bool ppir_schedule_create_instr_from_node(ppir_compiler *comp)
+static bool ppir_create_instr_from_node(ppir_compiler *comp)
 {
    list_for_each_entry(ppir_block, block, &comp->block_list, list) {
       list_for_each_entry(ppir_node, node, &block->node_list, list) {
@@ -59,7 +59,7 @@ static bool ppir_schedule_create_instr_from_node(ppir_compiler *comp)
              *   2. store a load node
              *   3. store a reg assigned in another block like loop/if
              */
-            ppir_node *move = ppir_node_create(comp, ppir_op_mov, -1, 0);
+            ppir_node *move = ppir_node_create(block, ppir_op_mov, -1, 0);
             if (!move)
                return false;
 
@@ -128,7 +128,7 @@ static bool ppir_schedule_create_instr_from_node(ppir_compiler *comp)
                    *   1. one move for all failed node (less move but more reg pressure)
                    *   2. one move for one failed node
                    */
-                  ppir_node *move = ppir_node_create(comp, ppir_op_mov, -1, 0);
+                  ppir_node *move = ppir_node_create(block, ppir_op_mov, -1, 0);
                   if (!move)
                      return false;
 
@@ -171,7 +171,7 @@ static bool ppir_schedule_create_instr_from_node(ppir_compiler *comp)
    return true;
 }
 
-static void ppir_schedule_build_instr_dependency(ppir_compiler *comp)
+static void ppir_build_instr_dependency(ppir_compiler *comp)
 {
    list_for_each_entry(ppir_block, block, &comp->block_list, list) {
       list_for_each_entry(ppir_instr, instr, &block->instr_list, list) {
@@ -191,11 +191,11 @@ static void ppir_schedule_build_instr_dependency(ppir_compiler *comp)
 
 bool ppir_node_to_instr(ppir_compiler *comp)
 {
-   if (!ppir_schedule_create_instr_from_node(comp))
+   if (!ppir_create_instr_from_node(comp))
       return false;
    ppir_instr_print_list(comp);
 
-   ppir_schedule_build_instr_dependency(comp);
+   ppir_build_instr_dependency(comp);
    ppir_instr_print_dep(comp);
 
    return true;

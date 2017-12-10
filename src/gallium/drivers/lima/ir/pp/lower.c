@@ -37,7 +37,7 @@ static bool ppir_lower_const(ppir_block *block, ppir_node *node)
 /* lower dot to mul+sum */
 static bool ppir_lower_dot(ppir_block *block, ppir_node *node)
 {
-   ppir_alu_node *mul = ppir_node_create(block->comp, ppir_op_mul, -1, 0);
+   ppir_alu_node *mul = ppir_node_create(block, ppir_op_mul, -1, 0);
    if (!mul)
       return false;
    list_addtail(&mul->node.list, &node->list);
@@ -204,7 +204,7 @@ static bool ppir_lower_vec_to_scalar(ppir_block *block, ppir_node *node)
 
    /* create each component's scalar node */
    for (int i = 0; i < n; i++) {
-      ppir_node *s = ppir_node_create(block->comp, node->op, -1, 0);
+      ppir_node *s = ppir_node_create(block, node->op, -1, 0);
       if (!s)
          return false;
       list_addtail(&s->list, &node->list);
