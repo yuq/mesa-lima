@@ -222,6 +222,7 @@ void lima_state_init(struct lima_context *ctx);
 void lima_state_fini(struct lima_context *ctx);
 void lima_draw_init(struct lima_context *ctx);
 void lima_program_init(struct lima_context *ctx);
+void lima_query_init(struct lima_context *ctx);
 
 struct pipe_context *
 lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags);

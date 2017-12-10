@@ -45,5 +45,6 @@ C_SOURCES := \
 	  lima_state.c \
 	  lima_draw.c \
 	  lima_program.c \
+	  lima_query.c \
 	  $(DRM_SOURCES) \
 	  $(ir_SOURCES)
