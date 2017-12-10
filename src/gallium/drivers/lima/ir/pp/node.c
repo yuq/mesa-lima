@@ -103,8 +103,9 @@ const ppir_op_info ppir_op_infos[] = {
    },
 };
 
-void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index, unsigned mask)
+void *ppir_node_create(ppir_block *block, ppir_op op, int index, unsigned mask)
 {
+   ppir_compiler *comp = block->comp;
    static const int node_size[] = {
       [ppir_node_type_alu] = sizeof(ppir_alu_node),
       [ppir_node_type_const] = sizeof(ppir_const_node),
@@ -114,7 +115,7 @@ void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index, unsigned mask
 
    ppir_node_type type = ppir_op_infos[op].type;
    int size = node_size[type];
-   ppir_node *node = rzalloc_size(comp, size);
+   ppir_node *node = rzalloc_size(block, size);
    if (!node)
       return NULL;
 
@@ -138,12 +139,17 @@ void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index, unsigned mask
    node->op = op;
    node->type = type;
    node->index = comp->cur_index++;
+   node->block = block;
 
    return node;
 }
 
 void ppir_node_add_dep(ppir_node *succ, ppir_node *pred)
 {
+   /* don't add dep for two nodes from different block */
+   if (succ->block != pred->block)
+      return;
+
    /* don't add duplicated dep */
    ppir_node_foreach_pred(succ, dep) {
       if (dep->pred == pred)

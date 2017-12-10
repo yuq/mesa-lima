@@ -132,6 +132,7 @@ typedef struct ppir_node {
    char name[16];
    bool printed;
    struct ppir_instr *instr;
+   struct ppir_block *block;
 
    /* for scheduler */
    struct list_head succ_list;
@@ -299,7 +300,7 @@ typedef struct ppir_compiler {
    int sched_instr_base;
 } ppir_compiler;
 
-void *ppir_node_create(ppir_compiler *comp, ppir_op op, int index, unsigned mask);
+void *ppir_node_create(ppir_block *block, ppir_op op, int index, unsigned mask);
 void ppir_node_add_dep(ppir_node *succ, ppir_node *pred);
 void ppir_node_remove_dep(ppir_dep *dep);
 void ppir_node_delete(ppir_node *node);
