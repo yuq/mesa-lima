@@ -20,7 +20,8 @@ ppir_SOURCES := \
 	  ir/pp/instr.c \
 	  ir/pp/regalloc.c \
 	  ir/pp/codegen.h \
-	  ir/pp/codegen.c
+	  ir/pp/codegen.c \
+	  ir/pp/node_to_instr.c
 
 ir_SOURCES := \
 	  ir/lima_ir.h \

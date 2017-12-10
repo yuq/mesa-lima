@@ -411,6 +411,9 @@ bool ppir_compile_nir(struct lima_fs_shader_state *prog, struct nir_shader *nir,
    if (!ppir_lower_prog(comp))
       goto err_out0;
 
+   if (!ppir_node_to_instr(comp))
+      goto err_out0;
+
    if (!ppir_schedule_prog(comp))
       goto err_out0;
 
