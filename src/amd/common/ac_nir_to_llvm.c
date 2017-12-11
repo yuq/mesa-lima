@@ -4369,6 +4369,12 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = ctx->abi->load_tess_coord(ctx->abi, type, instr->num_components);
 		break;
 	}
+	case nir_intrinsic_load_tess_level_outer:
+		result = ctx->abi->load_tess_level(ctx->abi, VARYING_SLOT_TESS_LEVEL_OUTER);
+		break;
+	case nir_intrinsic_load_tess_level_inner:
+		result = ctx->abi->load_tess_level(ctx->abi, VARYING_SLOT_TESS_LEVEL_INNER);
+		break;
 	case nir_intrinsic_load_patch_vertices_in:
 		result = LLVMConstInt(ctx->ac.i32, ctx->nctx->options->key.tcs.input_vertices, false);
 		break;

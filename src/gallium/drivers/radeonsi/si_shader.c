@@ -1934,6 +1934,27 @@ static LLVMValueRef load_tess_level(struct si_shader_context *ctx,
 
 }
 
+static LLVMValueRef si_load_tess_level(struct ac_shader_abi *abi,
+				       unsigned varying_id)
+{
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+	unsigned semantic_name;
+
+	switch (varying_id) {
+	case VARYING_SLOT_TESS_LEVEL_INNER:
+		semantic_name = TGSI_SEMANTIC_TESSINNER;
+		break;
+	case VARYING_SLOT_TESS_LEVEL_OUTER:
+		semantic_name = TGSI_SEMANTIC_TESSOUTER;
+		break;
+	default:
+		unreachable("unknown tess level");
+	}
+
+	return load_tess_level(ctx, semantic_name);
+
+}
+
 void si_load_system_value(struct si_shader_context *ctx,
 			  unsigned index,
 			  const struct tgsi_full_declaration *decl)
@@ -5971,6 +5992,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_tes;
 		ctx->abi.load_tess_inputs = si_nir_load_input_tes;
 		ctx->abi.load_tess_coord = si_load_tess_coord;
+		ctx->abi.load_tess_level = si_load_tess_level;
 		if (shader->key.as_es)
 			ctx->abi.emit_outputs = si_llvm_emit_es_epilogue;
 		else
