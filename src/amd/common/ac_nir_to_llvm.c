@@ -1127,32 +1127,10 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	ctx->shader_info->num_user_sgprs = user_sgpr_idx;
 }
 
-static int get_llvm_num_components(LLVMValueRef value)
-{
-	LLVMTypeRef type = LLVMTypeOf(value);
-	unsigned num_components = LLVMGetTypeKind(type) == LLVMVectorTypeKind
-	                              ? LLVMGetVectorSize(type)
-	                              : 1;
-	return num_components;
-}
-
-static LLVMValueRef llvm_extract_elem(struct ac_llvm_context *ac,
-				      LLVMValueRef value,
-				      int index)
-{
-	int count = get_llvm_num_components(value);
-
-	if (count == 1)
-		return value;
-
-	return LLVMBuildExtractElement(ac->builder, value,
-				       LLVMConstInt(ac->i32, index, false), "");
-}
-
 static LLVMValueRef trim_vector(struct ac_llvm_context *ctx,
                                 LLVMValueRef value, unsigned count)
 {
-	unsigned num_components = get_llvm_num_components(value);
+	unsigned num_components = ac_get_llvm_num_components(value);
 	if (count == num_components)
 		return value;
 
@@ -2453,7 +2431,7 @@ static void visit_store_ssbo(struct ac_nir_context *ctx,
 
 		} else {
 			assert(count == 1);
-			if (get_llvm_num_components(base_data) > 1)
+			if (ac_get_llvm_num_components(base_data) > 1)
 				data = LLVMBuildExtractElement(ctx->ac.builder, base_data,
 							       LLVMConstInt(ctx->ac.i32, start, false), "");
 			else
@@ -2480,9 +2458,9 @@ static LLVMValueRef visit_atomic_ssbo(struct ac_nir_context *ctx,
 	int arg_count = 0;
 
 	if (instr->intrinsic == nir_intrinsic_ssbo_atomic_comp_swap) {
-		params[arg_count++] = llvm_extract_elem(&ctx->ac, get_src(ctx, instr->src[3]), 0);
+		params[arg_count++] = ac_llvm_extract_elem(&ctx->ac, get_src(ctx, instr->src[3]), 0);
 	}
-	params[arg_count++] = llvm_extract_elem(&ctx->ac, get_src(ctx, instr->src[2]), 0);
+	params[arg_count++] = ac_llvm_extract_elem(&ctx->ac, get_src(ctx, instr->src[2]), 0);
 	params[arg_count++] = ctx->abi->load_ssbo(ctx->abi,
 						 get_src(ctx, instr->src[0]),
 						 true);
@@ -2959,7 +2937,7 @@ store_tcs_output(struct ac_shader_abi *abi,
 	for (unsigned chan = 0; chan < 8; chan++) {
 		if (!(writemask & (1 << chan)))
 			continue;
-		LLVMValueRef value = llvm_extract_elem(&ctx->ac, src, chan - component);
+		LLVMValueRef value = ac_llvm_extract_elem(&ctx->ac, src, chan - component);
 
 		if (store_lds || is_tess_factor)
 			ac_lds_store(&ctx->ac, dw_addr, value);
@@ -3252,7 +3230,7 @@ visit_store_var(struct ac_nir_context *ctx,
 		int old_writemask = writemask;
 
 		src = LLVMBuildBitCast(ctx->ac.builder, src,
-		                       LLVMVectorType(ctx->ac.f32, get_llvm_num_components(src) * 2),
+		                       LLVMVectorType(ctx->ac.f32, ac_get_llvm_num_components(src) * 2),
 		                       "");
 
 		writemask = 0;
@@ -3290,7 +3268,7 @@ visit_store_var(struct ac_nir_context *ctx,
 			if (!(writemask & (1 << chan)))
 				continue;
 
-			value = llvm_extract_elem(&ctx->ac, src, chan - comp);
+			value = ac_llvm_extract_elem(&ctx->ac, src, chan - comp);
 
 			if (instr->variables[0]->var->data.compact)
 				stride = 1;
@@ -3319,7 +3297,7 @@ visit_store_var(struct ac_nir_context *ctx,
 			if (!(writemask & (1 << chan)))
 				continue;
 
-			value = llvm_extract_elem(&ctx->ac, src, chan);
+			value = ac_llvm_extract_elem(&ctx->ac, src, chan);
 			if (indir_index) {
 				unsigned count = glsl_count_attribute_slots(
 					instr->variables[0]->var->type, false);
@@ -3359,8 +3337,8 @@ visit_store_var(struct ac_nir_context *ctx,
 				LLVMValueRef ptr =
 					LLVMBuildStructGEP(ctx->ac.builder,
 							   address, chan, "");
-				LLVMValueRef src = llvm_extract_elem(&ctx->ac, val,
-								     chan);
+				LLVMValueRef src = ac_llvm_extract_elem(&ctx->ac, val,
+									chan);
 				src = LLVMBuildBitCast(
 				   ctx->ac.builder, src,
 				   LLVMGetElementType(LLVMTypeOf(ptr)), "");
@@ -3492,7 +3470,7 @@ static LLVMValueRef get_image_coords(struct ac_nir_context *ctx,
 		LLVMConstInt(ctx->ac.i32, 2, false), LLVMConstInt(ctx->ac.i32, 3, false),
 	};
 	LLVMValueRef res;
-	LLVMValueRef sample_index = llvm_extract_elem(&ctx->ac, get_src(ctx, instr->src[1]), 0);
+	LLVMValueRef sample_index = ac_llvm_extract_elem(&ctx->ac, get_src(ctx, instr->src[1]), 0);
 
 	int count;
 	enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
@@ -3539,7 +3517,7 @@ static LLVMValueRef get_image_coords(struct ac_nir_context *ctx,
 		if (is_ms)
 			count--;
 		for (chan = 0; chan < count; ++chan) {
-			coords[chan] = llvm_extract_elem(&ctx->ac, src0, chan);
+			coords[chan] = ac_llvm_extract_elem(&ctx->ac, src0, chan);
 		}
 		if (add_frag_pos) {
 			for (chan = 0; chan < 2; ++chan)
@@ -4733,7 +4711,7 @@ static void visit_tex(struct ac_nir_context *ctx, nir_tex_instr *instr)
 
 	if (coord)
 		for (chan = 0; chan < instr->coord_components; chan++)
-			coords[chan] = llvm_extract_elem(&ctx->ac, coord, chan);
+			coords[chan] = ac_llvm_extract_elem(&ctx->ac, coord, chan);
 
 	if (offsets && instr->op != nir_texop_txf) {
 		LLVMValueRef offset[3], pack;
@@ -4741,8 +4719,8 @@ static void visit_tex(struct ac_nir_context *ctx, nir_tex_instr *instr)
 			offset[chan] = ctx->ac.i32_0;
 
 		args.offset = true;
-		for (chan = 0; chan < get_llvm_num_components(offsets); chan++) {
-			offset[chan] = llvm_extract_elem(&ctx->ac, offsets, chan);
+		for (chan = 0; chan < ac_get_llvm_num_components(offsets); chan++) {
+			offset[chan] = ac_llvm_extract_elem(&ctx->ac, offsets, chan);
 			offset[chan] = LLVMBuildAnd(ctx->ac.builder, offset[chan],
 						    LLVMConstInt(ctx->ac.i32, 0x3f, false), "");
 			if (chan)
@@ -4762,7 +4740,7 @@ static void visit_tex(struct ac_nir_context *ctx, nir_tex_instr *instr)
 	/* Pack depth comparison value */
 	if (instr->is_shadow && comparator) {
 		LLVMValueRef z = ac_to_float(&ctx->ac,
-		                             llvm_extract_elem(&ctx->ac, comparator, 0));
+		                             ac_llvm_extract_elem(&ctx->ac, comparator, 0));
 
 		/* TC-compatible HTILE on radeonsi promotes Z16 and Z24 to Z32_FLOAT,
 		 * so the depth comparison value isn't clamped for Z16 and
@@ -4806,8 +4784,8 @@ static void visit_tex(struct ac_nir_context *ctx, nir_tex_instr *instr)
 		}
 
 		for (unsigned i = 0; i < num_src_deriv_channels; i++) {
-			derivs[i] = ac_to_float(&ctx->ac, llvm_extract_elem(&ctx->ac, ddx, i));
-			derivs[num_dest_deriv_channels + i] = ac_to_float(&ctx->ac, llvm_extract_elem(&ctx->ac, ddy, i));
+			derivs[i] = ac_to_float(&ctx->ac, ac_llvm_extract_elem(&ctx->ac, ddx, i));
+			derivs[num_dest_deriv_channels + i] = ac_to_float(&ctx->ac, ac_llvm_extract_elem(&ctx->ac, ddy, i));
 		}
 		for (unsigned i = num_src_deriv_channels; i < num_dest_deriv_channels; i++) {
 			derivs[i] = ctx->ac.f32_0;
