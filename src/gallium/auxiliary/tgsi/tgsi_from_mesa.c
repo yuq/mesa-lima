@@ -154,9 +154,14 @@ tgsi_get_gl_varying_semantic(gl_varying_slot attr,
    default:
       assert(attr >= VARYING_SLOT_VAR0 ||
              (attr >= VARYING_SLOT_TEX0 && attr <= VARYING_SLOT_TEX7));
-      *semantic_name = TGSI_SEMANTIC_GENERIC;
-      *semantic_index =
-         tgsi_get_generic_gl_varying_index(attr, needs_texcoord_semantic);
+      if (attr >= VARYING_SLOT_PATCH0) {
+         *semantic_name = TGSI_SEMANTIC_PATCH;
+         *semantic_index = attr - VARYING_SLOT_PATCH0;
+      } else {
+         *semantic_name = TGSI_SEMANTIC_GENERIC;
+         *semantic_index =
+            tgsi_get_generic_gl_varying_index(attr, needs_texcoord_semantic);
+      }
       break;
    }
 }
