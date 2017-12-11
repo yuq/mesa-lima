@@ -1916,6 +1916,24 @@ static LLVMValueRef si_load_tess_coord(struct ac_shader_abi *abi,
 	return lp_build_gather_values(&ctx->gallivm, coord, 4);
 }
 
+static LLVMValueRef load_tess_level(struct si_shader_context *ctx,
+				    unsigned semantic_name)
+{
+	LLVMValueRef buffer, base, addr;
+
+	int param = si_shader_io_get_unique_index_patch(semantic_name, 0);
+
+	buffer = desc_from_addr_base64k(ctx, ctx->param_tcs_offchip_addr_base64k);
+
+	base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
+	addr = get_tcs_tes_buffer_address(ctx, get_rel_patch_id(ctx), NULL,
+					  LLVMConstInt(ctx->i32, param, 0));
+
+	return buffer_load(&ctx->bld_base, ctx->f32,
+			   ~0, buffer, base, addr, true);
+
+}
+
 void si_load_system_value(struct si_shader_context *ctx,
 			  unsigned index,
 			  const struct tgsi_full_declaration *decl)
@@ -2034,21 +2052,8 @@ void si_load_system_value(struct si_shader_context *ctx,
 
 	case TGSI_SEMANTIC_TESSINNER:
 	case TGSI_SEMANTIC_TESSOUTER:
-	{
-		LLVMValueRef buffer, base, addr;
-		int param = si_shader_io_get_unique_index_patch(decl->Semantic.Name, 0);
-
-		buffer = desc_from_addr_base64k(ctx, ctx->param_tcs_offchip_addr_base64k);
-
-		base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
-		addr = get_tcs_tes_buffer_address(ctx, get_rel_patch_id(ctx), NULL,
-		                          LLVMConstInt(ctx->i32, param, 0));
-
-		value = buffer_load(&ctx->bld_base, ctx->f32,
-		                    ~0, buffer, base, addr, true);
-
+		value = load_tess_level(ctx, decl->Semantic.Name);
 		break;
-	}
 
 	case TGSI_SEMANTIC_DEFAULT_TESSOUTER_SI:
 	case TGSI_SEMANTIC_DEFAULT_TESSINNER_SI:
