@@ -3101,7 +3101,7 @@ Value* FetchJit::GenerateCompCtrlVector(const ComponentControl ctrl)
 #else
             Value* pId = BITCAST(LOAD(GEP(mpFetchInfo, { 0, SWR_FETCH_CONTEXT_VertexID })), mSimdFP32Ty);
 #endif
-            return VBROADCAST(pId);
+            return pId;
         }
         case StoreInstanceId:
         {
@@ -3129,7 +3129,7 @@ Value* FetchJit::GenerateCompCtrlVector2(const ComponentControl ctrl)
 
             Value *pId = JOIN2(pId_lo, pId_hi);
 
-            return VBROADCAST2(pId);
+            return pId;
         }
         case StoreInstanceId:
         {
