@@ -4290,7 +4290,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       ubld.MOV(src_payload, brw_imm_d(0));
 
       const unsigned index = prog_data->binding_table.ssbo_start + ssbo_index;
-      fs_inst *inst = ubld.emit(FS_OPCODE_GET_BUFFER_SIZE, ret_payload,
+      fs_inst *inst = ubld.emit(SHADER_OPCODE_GET_BUFFER_SIZE, ret_payload,
                                 src_payload, brw_imm_ud(index));
       inst->header_size = 0;
       inst->mlen = 1;

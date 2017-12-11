@@ -5007,7 +5007,7 @@ get_lowered_simd_width(const struct gen_device_info *devinfo,
       return MIN2(8, inst->exec_size);
 
    case FS_OPCODE_LINTERP:
-   case FS_OPCODE_GET_BUFFER_SIZE:
+   case SHADER_OPCODE_GET_BUFFER_SIZE:
    case FS_OPCODE_DDX_COARSE:
    case FS_OPCODE_DDX_FINE:
    case FS_OPCODE_DDY_COARSE:

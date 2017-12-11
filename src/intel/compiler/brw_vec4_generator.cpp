@@ -1773,6 +1773,10 @@ generate_code(struct brw_codegen *p,
                       inst, dst, src[0], src[1], src[2]);
          break;
 
+      case SHADER_OPCODE_GET_BUFFER_SIZE:
+         generate_get_buffer_size(p, prog_data, inst, dst, src[0], src[1]);
+         break;
+
       case VS_OPCODE_URB_WRITE:
          generate_vs_urb_write(p, inst);
          break;
@@ -1797,11 +1801,6 @@ generate_code(struct brw_codegen *p,
 
       case VS_OPCODE_SET_SIMD4X2_HEADER_GEN9:
          generate_set_simd4x2_header_gen9(p, inst, dst);
-         break;
-
-
-      case VS_OPCODE_GET_BUFFER_SIZE:
-         generate_get_buffer_size(p, prog_data, inst, dst, src[0], src[1]);
          break;
 
       case GS_OPCODE_URB_WRITE:

@@ -331,6 +331,9 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
    case SHADER_OPCODE_BROADCAST:
       return "broadcast";
 
+   case SHADER_OPCODE_GET_BUFFER_SIZE:
+      return "get_buffer_size";
+
    case VEC4_OPCODE_MOV_BYTES:
       return "mov_bytes";
    case VEC4_OPCODE_PACK_BYTES:
@@ -372,9 +375,6 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
       return "pixel_x";
    case FS_OPCODE_PIXEL_Y:
       return "pixel_y";
-
-   case FS_OPCODE_GET_BUFFER_SIZE:
-      return "fs_get_buffer_size";
 
    case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD:
       return "uniform_pull_const";
@@ -421,9 +421,6 @@ brw_instruction_name(const struct gen_device_info *devinfo, enum opcode op)
 
    case VS_OPCODE_SET_SIMD4X2_HEADER_GEN9:
       return "set_simd4x2_header_gen9";
-
-   case VS_OPCODE_GET_BUFFER_SIZE:
-      return "vs_get_buffer_size";
 
    case VS_OPCODE_UNPACK_FLAGS_SIMD4X2:
       return "unpack_flags_simd4x2";
