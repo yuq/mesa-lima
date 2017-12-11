@@ -673,6 +673,42 @@ get_3src_subreg_nr(struct brw_reg reg)
    return reg.subnr / 4;
 }
 
+static enum gen10_align1_3src_vertical_stride
+to_3src_align1_vstride(enum brw_vertical_stride vstride)
+{
+   switch (vstride) {
+   case BRW_VERTICAL_STRIDE_0:
+      return BRW_ALIGN1_3SRC_VERTICAL_STRIDE_0;
+   case BRW_VERTICAL_STRIDE_2:
+      return BRW_ALIGN1_3SRC_VERTICAL_STRIDE_2;
+   case BRW_VERTICAL_STRIDE_4:
+      return BRW_ALIGN1_3SRC_VERTICAL_STRIDE_4;
+   case BRW_VERTICAL_STRIDE_8:
+   case BRW_VERTICAL_STRIDE_16:
+      return BRW_ALIGN1_3SRC_VERTICAL_STRIDE_8;
+   default:
+      unreachable("invalid vstride");
+   }
+}
+
+
+static enum gen10_align1_3src_src_horizontal_stride
+to_3src_align1_hstride(enum brw_horizontal_stride hstride)
+{
+   switch (hstride) {
+   case BRW_HORIZONTAL_STRIDE_0:
+      return BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_0;
+   case BRW_HORIZONTAL_STRIDE_1:
+      return BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_1;
+   case BRW_HORIZONTAL_STRIDE_2:
+      return BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_2;
+   case BRW_HORIZONTAL_STRIDE_4:
+      return BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_4;
+   default:
+      unreachable("invalid hstride");
+   }
+}
+
 static brw_inst *
 brw_alu3(struct brw_codegen *p, unsigned opcode, struct brw_reg dest,
          struct brw_reg src0, struct brw_reg src1, struct brw_reg src2)
@@ -721,41 +757,18 @@ brw_alu3(struct brw_codegen *p, unsigned opcode, struct brw_reg dest,
       brw_inst_set_3src_a1_src1_type(devinfo, inst, src1.type);
       brw_inst_set_3src_a1_src2_type(devinfo, inst, src2.type);
 
-      assert((src0.vstride == BRW_VERTICAL_STRIDE_0 &&
-              src0.hstride == BRW_HORIZONTAL_STRIDE_0) ||
-             (src0.vstride == BRW_VERTICAL_STRIDE_8 &&
-              src0.hstride == BRW_HORIZONTAL_STRIDE_1));
-      assert((src1.vstride == BRW_VERTICAL_STRIDE_0 &&
-              src1.hstride == BRW_HORIZONTAL_STRIDE_0) ||
-             (src1.vstride == BRW_VERTICAL_STRIDE_8 &&
-              src1.hstride == BRW_HORIZONTAL_STRIDE_1));
-      assert((src2.vstride == BRW_VERTICAL_STRIDE_0 &&
-              src2.hstride == BRW_HORIZONTAL_STRIDE_0) ||
-             (src2.vstride == BRW_VERTICAL_STRIDE_8 &&
-              src2.hstride == BRW_HORIZONTAL_STRIDE_1));
-
       brw_inst_set_3src_a1_src0_vstride(devinfo, inst,
-                                        src0.vstride == BRW_VERTICAL_STRIDE_0 ?
-                                        BRW_ALIGN1_3SRC_VERTICAL_STRIDE_0 :
-                                        BRW_ALIGN1_3SRC_VERTICAL_STRIDE_8);
+                                        to_3src_align1_vstride(src0.vstride));
       brw_inst_set_3src_a1_src1_vstride(devinfo, inst,
-                                        src1.vstride == BRW_VERTICAL_STRIDE_0 ?
-                                        BRW_ALIGN1_3SRC_VERTICAL_STRIDE_0 :
-                                        BRW_ALIGN1_3SRC_VERTICAL_STRIDE_8);
+                                        to_3src_align1_vstride(src1.vstride));
       /* no vstride on src2 */
 
       brw_inst_set_3src_a1_src0_hstride(devinfo, inst,
-                                        src0.hstride == BRW_HORIZONTAL_STRIDE_0 ?
-                                        BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_0 :
-                                        BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_1);
+                                        to_3src_align1_hstride(src0.hstride));
       brw_inst_set_3src_a1_src1_hstride(devinfo, inst,
-                                        src1.hstride == BRW_HORIZONTAL_STRIDE_0 ?
-                                        BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_0 :
-                                        BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_1);
+                                        to_3src_align1_hstride(src1.hstride));
       brw_inst_set_3src_a1_src2_hstride(devinfo, inst,
-                                        src2.hstride == BRW_HORIZONTAL_STRIDE_0 ?
-                                        BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_0 :
-                                        BRW_ALIGN1_3SRC_SRC_HORIZONTAL_STRIDE_1);
+                                        to_3src_align1_hstride(src2.hstride));
 
       brw_inst_set_3src_a1_src0_subreg_nr(devinfo, inst, src0.subnr);
       brw_inst_set_3src_src0_reg_nr(devinfo, inst, src0.nr);
