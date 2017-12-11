@@ -1533,7 +1533,9 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
           */
          vtn_assert(vtn_var->mode == vtn_variable_mode_ubo ||
                     vtn_var->mode == vtn_variable_mode_ssbo ||
-                    vtn_var->mode == vtn_variable_mode_push_constant);
+                    vtn_var->mode == vtn_variable_mode_push_constant ||
+                    (vtn_var->mode == vtn_variable_mode_workgroup &&
+                     b->options->lower_workgroup_access_to_offsets));
       }
    }
 }
