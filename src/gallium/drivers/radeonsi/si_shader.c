@@ -827,6 +827,38 @@ LLVMValueRef si_get_bounded_indirect_index(struct si_shader_context *ctx,
 	return si_llvm_bound_index(ctx, result, num);
 }
 
+static LLVMValueRef get_dw_address_from_generic_indices(struct si_shader_context *ctx,
+							LLVMValueRef vertex_dw_stride,
+							LLVMValueRef base_addr,
+							LLVMValueRef vertex_index,
+							LLVMValueRef param_index,
+							unsigned input_index,
+							ubyte *name,
+							ubyte *index,
+							bool is_patch)
+{
+	if (vertex_dw_stride) {
+		base_addr = LLVMBuildAdd(ctx->ac.builder, base_addr,
+					 LLVMBuildMul(ctx->ac.builder, vertex_index,
+						      vertex_dw_stride, ""), "");
+	}
+
+	if (param_index) {
+		base_addr = LLVMBuildAdd(ctx->ac.builder, base_addr,
+					 LLVMBuildMul(ctx->ac.builder, param_index,
+						      LLVMConstInt(ctx->i32, 4, 0), ""), "");
+	}
+
+	int param = is_patch ?
+		si_shader_io_get_unique_index_patch(name[input_index],
+						    index[input_index]) :
+		si_shader_io_get_unique_index(name[input_index],
+					      index[input_index]);
+
+	/* Add the base address of the element. */
+	return LLVMBuildAdd(ctx->ac.builder, base_addr,
+			    LLVMConstInt(ctx->i32, param * 4, 0), "");
+}
 
 /**
  * Calculate a dword address given an input or output register and a stride.
@@ -839,8 +871,10 @@ static LLVMValueRef get_dw_address(struct si_shader_context *ctx,
 {
 	struct tgsi_shader_info *info = &ctx->shader->selector->info;
 	ubyte *name, *index, *array_first;
-	int first, param;
+	int input_index;
 	struct tgsi_full_dst_register reg;
+	LLVMValueRef vertex_index = NULL;
+	LLVMValueRef ind_index = NULL;
 
 	/* Set the register description. The address computation is the same
 	 * for sources and destinations. */
@@ -858,17 +892,11 @@ static LLVMValueRef get_dw_address(struct si_shader_context *ctx,
 	/* If the register is 2-dimensional (e.g. an array of vertices
 	 * in a primitive), calculate the base address of the vertex. */
 	if (reg.Register.Dimension) {
-		LLVMValueRef index;
-
 		if (reg.Dimension.Indirect)
-			index = si_get_indirect_index(ctx, &reg.DimIndirect,
+			vertex_index = si_get_indirect_index(ctx, &reg.DimIndirect,
 						      1, reg.Dimension.Index);
 		else
-			index = LLVMConstInt(ctx->i32, reg.Dimension.Index, 0);
-
-		base_addr = LLVMBuildAdd(ctx->ac.builder, base_addr,
-					 LLVMBuildMul(ctx->ac.builder, index,
-						      vertex_dw_stride, ""), "");
+			vertex_index = LLVMConstInt(ctx->i32, reg.Dimension.Index, 0);
 	}
 
 	/* Get information about the register. */
@@ -887,34 +915,22 @@ static LLVMValueRef get_dw_address(struct si_shader_context *ctx,
 
 	if (reg.Register.Indirect) {
 		/* Add the relative address of the element. */
-		LLVMValueRef ind_index;
-
 		if (reg.Indirect.ArrayID)
-			first = array_first[reg.Indirect.ArrayID];
+			input_index = array_first[reg.Indirect.ArrayID];
 		else
-			first = reg.Register.Index;
+			input_index = reg.Register.Index;
 
 		ind_index = si_get_indirect_index(ctx, &reg.Indirect,
-						  1, reg.Register.Index - first);
-
-		base_addr = LLVMBuildAdd(ctx->ac.builder, base_addr,
-				    LLVMBuildMul(ctx->ac.builder, ind_index,
-						 LLVMConstInt(ctx->i32, 4, 0), ""), "");
-
-		param = reg.Register.Dimension ?
-			si_shader_io_get_unique_index(name[first], index[first]) :
-			si_shader_io_get_unique_index_patch(name[first], index[first]);
+						  1, reg.Register.Index - input_index);
 	} else {
-		param = reg.Register.Dimension ?
-			si_shader_io_get_unique_index(name[reg.Register.Index],
-						      index[reg.Register.Index]) :
-			si_shader_io_get_unique_index_patch(name[reg.Register.Index],
-							    index[reg.Register.Index]);
+		input_index = reg.Register.Index;
 	}
 
-	/* Add the base address of the element. */
-	return LLVMBuildAdd(ctx->ac.builder, base_addr,
-			    LLVMConstInt(ctx->i32, param * 4, 0), "");
+	return get_dw_address_from_generic_indices(ctx, vertex_dw_stride,
+						   base_addr, vertex_index,
+						   ind_index, input_index,
+						   name, index,
+						   !reg.Register.Dimension);
 }
 
 /* The offchip buffer layout for TCS->TES is
