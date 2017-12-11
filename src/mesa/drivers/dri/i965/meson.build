@@ -140,8 +140,10 @@ foreach v : ['40', '45', '50', '60', '70', '75', '80', '90', '100']
     'libi965_gen@0@'.format(v),
     ['genX_blorp_exec.c', 'genX_state_upload.c', nir_opcodes_h, gen_xml_pack],
     include_directories : [inc_common, inc_intel, inc_dri_common],
-    c_args : [c_vis_args, no_override_init_args, '-msse2',
-              '-DGEN_VERSIONx10=@0@'.format(v)],
+    c_args : [
+      c_vis_args, no_override_init_args, '-msse2',
+      '-DGEN_VERSIONx10=@0@'.format(v),
+    ],
     dependencies : [dep_libdrm],
   )
   i965_gen_libs += _lib
@@ -149,9 +151,10 @@ endforeach
 
 oa_generator = generator(
   prog_python2,
-  arguments : ['@CURRENT_SOURCE_DIR@/brw_oa.py', '@INPUT@',
-               '--chipset', '@EXTRA_ARGS@', '--code', '@OUTPUT0@',
-               '--header', '@OUTPUT1@'],
+  arguments : [
+    '@CURRENT_SOURCE_DIR@/brw_oa.py', '@INPUT@', '--chipset', '@EXTRA_ARGS@',
+    '--code', '@OUTPUT0@', '--header', '@OUTPUT1@',
+  ],
   output : ['@BASENAME@.c', '@BASENAME@.h'],
 )
 
@@ -166,12 +169,14 @@ libi965 = static_library(
   'i965',
   [files_i965, i965_oa_sources, nir_opcodes_h, ir_expression_operation_h,
    xmlpool_options_h],
-  include_directories : [inc_common, inc_intel, inc_dri_common, inc_util,
-                         inc_drm_uapi, inc_nir],
+  include_directories : [
+    inc_common, inc_intel, inc_dri_common, inc_util, inc_drm_uapi, inc_nir,
+  ],
   c_args : [c_vis_args, no_override_init_args, '-msse2'],
   cpp_args : [cpp_vis_args, '-msse2'],
-  link_with : [i965_gen_libs, libintel_common, libisl, libintel_compiler,
-               libblorp],
+  link_with : [
+    i965_gen_libs, libintel_common, libisl, libintel_compiler, libblorp,
+  ],
   dependencies : [dep_libdrm, dep_valgrind],
 )
 

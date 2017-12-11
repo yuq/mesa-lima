@@ -22,8 +22,10 @@ ir3_nir_trig_c = custom_target(
   'ir3_nir_trig.c',
   input : 'ir3/ir3_nir_trig.py',
   output : 'ir3_nir_trig.c',
-  command : [prog_python2, '@INPUT@', '-p',
-             join_paths(meson.source_root(), 'src/compiler/nir/')],
+  command : [
+    prog_python2, '@INPUT@',
+    '-p', join_paths(meson.source_root(), 'src/compiler/nir/'),
+  ],
   capture : true,
   depend_files : nir_algebraic_py,
 )

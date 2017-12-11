@@ -29,10 +29,7 @@ if with_gallium_vc5
   libbroadcom_vc5 = static_library(
     'libbroadcom_vc5',
     [
-      files(
-        'common/v3d_debug.c',
-       'clif/clif_dump.c',
-      ),
+      files('common/v3d_debug.c', 'clif/clif_dump.c'),
       v3d_xml_pack,
     ],
     include_directories : [inc_common, inc_broadcom, inc_src],

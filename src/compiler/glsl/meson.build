@@ -24,8 +24,10 @@ glsl_parser = custom_target(
   'glsl_parser',
   input : 'glsl_parser.yy',
   output : ['glsl_parser.cpp', 'glsl_parser.h'],
-  command : [prog_bison, '-o', '@OUTPUT0@', '-p', '_mesa_glsl_',
-             '--defines=@OUTPUT1@', '@INPUT@'],
+  command : [
+    prog_bison, '-o', '@OUTPUT0@', '-p', '_mesa_glsl_', '--defines=@OUTPUT1@',
+    '@INPUT@',
+  ],
 )
 
 glsl_lexer_cpp = custom_target(

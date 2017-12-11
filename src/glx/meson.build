@@ -146,7 +146,10 @@ libglx = static_library(
     c_vis_args, gl_lib_cargs,
     '-DGL_LIB_NAME="lib@0@.so.@1@"'.format(gl_lib_name, gl_lib_version.split('.')[0]),
   ],
-  link_with : [libloader, libloader_dri3_helper, libmesa_util, libxmlconfig, extra_libs_libglx],
+  link_with : [
+    libloader, libloader_dri3_helper, libmesa_util, libxmlconfig,
+    extra_libs_libglx,
+  ],
   dependencies : [dep_libdrm, dep_dri2proto, dep_glproto, dep_x11, dep_glvnd],
   build_by_default : false,
 )
