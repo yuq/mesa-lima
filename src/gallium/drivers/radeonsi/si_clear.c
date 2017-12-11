@@ -214,7 +214,7 @@ void vi_dcc_clear_level(struct si_context *sctx,
 		assert(rtex->resource.b.b.nr_samples <= 1);
 		clear_size = rtex->surface.dcc_size;
 	} else {
-		unsigned num_layers = util_max_layer(&rtex->resource.b.b, level) + 1;
+		unsigned num_layers = util_num_layers(&rtex->resource.b.b, level);
 
 		/* If this is 0, fast clear isn't possible. (can occur with MSAA) */
 		assert(rtex->surface.u.legacy.level[level].dcc_fast_clear_size);
