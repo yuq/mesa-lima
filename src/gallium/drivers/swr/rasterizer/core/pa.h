@@ -80,6 +80,7 @@ struct PA_STATE
 #endif
 
     bool viewportArrayActive{ false };
+    bool rtArrayActive { false };
     uint32_t numVertsPerPrim{ 0 };
 
     PA_STATE(){}

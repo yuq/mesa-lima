@@ -178,11 +178,11 @@ struct BinnerChooser<SIMD256>
         };
     }
 
-    void BinFunc(DRAW_CONTEXT *pDC, PA_STATE &pa, uint32_t workerId, SIMD256::Vec4 prims[], uint32_t primMask, SIMD256::Integer const &primID, SIMD256::Integer &viewportIdx)
+    void BinFunc(DRAW_CONTEXT *pDC, PA_STATE &pa, uint32_t workerId, SIMD256::Vec4 prims[], uint32_t primMask, SIMD256::Integer const &primID, SIMD256::Integer &viewportIdx, SIMD256::Integer &rtIdx)
     {
         SWR_ASSERT(pfnBinFunc != nullptr);
 
-        pfnBinFunc(pDC, pa, workerId, prims, primMask, primID, viewportIdx);
+        pfnBinFunc(pDC, pa, workerId, prims, primMask, primID, viewportIdx, rtIdx);
     }
 };
 
@@ -231,11 +231,11 @@ struct BinnerChooser<SIMD512>
         };
     }
 
-    void BinFunc(DRAW_CONTEXT *pDC, PA_STATE &pa, uint32_t workerId, SIMD512::Vec4 prims[], uint32_t primMask, SIMD512::Integer const &primID, SIMD512::Integer &viewportIdx)
+    void BinFunc(DRAW_CONTEXT *pDC, PA_STATE &pa, uint32_t workerId, SIMD512::Vec4 prims[], uint32_t primMask, SIMD512::Integer const &primID, SIMD512::Integer &viewportIdx, SIMD512::Integer &rtIdx)
     {
         SWR_ASSERT(pfnBinFunc != nullptr);
 
-        pfnBinFunc(pDC, pa, workerId, prims, primMask, primID, viewportIdx);
+        pfnBinFunc(pDC, pa, workerId, prims, primMask, primID, viewportIdx, rtIdx);
     }
 };
 
@@ -437,7 +437,8 @@ public:
         return SIMD_T::movemask_ps(vClipCullMask);
     }
 
-    void ClipSimd(const typename SIMD_T::Vec4 prim[], const typename SIMD_T::Float &vPrimMask, const typename SIMD_T::Float &vClipMask, PA_STATE &pa, const typename SIMD_T::Integer &vPrimId, const typename SIMD_T::Integer &vViewportIdx)
+    void ClipSimd(const typename SIMD_T::Vec4 prim[], const typename SIMD_T::Float &vPrimMask, const typename SIMD_T::Float &vClipMask, PA_STATE &pa,
+                  const typename SIMD_T::Integer &vPrimId, const typename SIMD_T::Integer &vViewportIdx, const typename SIMD_T::Integer &vRtIdx)
     {
         // input/output vertex store for clipper
         SIMDVERTEX_T<SIMD_T> vertices[7]; // maximum 7 verts generated per triangle
@@ -538,6 +539,7 @@ public:
         const uint32_t *pVertexCount = reinterpret_cast<const uint32_t *>(&vNumClippedVerts);
         const uint32_t *pPrimitiveId = reinterpret_cast<const uint32_t *>(&vPrimId);
         const uint32_t *pViewportIdx = reinterpret_cast<const uint32_t *>(&vViewportIdx);
+        const uint32_t *pRtIdx = reinterpret_cast<const uint32_t *>(&vRtIdx);
 
         const SIMD256::Integer vOffsets = SIMD256::set_epi32(
             0 * sizeof(SIMDVERTEX_T<SIMD_T>), // unused lane
@@ -651,6 +653,8 @@ public:
 
             const typename SIMD_T::Integer primID = SIMD_T::set1_epi32(pPrimitiveId[inputPrim]);
             const typename SIMD_T::Integer viewportIdx = SIMD_T::set1_epi32(pViewportIdx[inputPrim]);
+            const typename SIMD_T::Integer rtIdx = SIMD_T::set1_epi32(pRtIdx[inputPrim]);
+
 
             while (clipPA.GetNextStreamOutput())
             {
@@ -662,7 +666,7 @@ public:
 
                     if (assemble)
                     {
-                        binner.pfnBinFunc(pDC, clipPA, workerId, attrib, primMask, primID, viewportIdx);
+                        binner.pfnBinFunc(pDC, clipPA, workerId, attrib, primMask, primID, viewportIdx, rtIdx);
                     }
 
                 } while (clipPA.NextPrim());
@@ -677,7 +681,8 @@ public:
         UPDATE_STAT_FE(CPrimitives, numClippedPrims);
     }
 
-    void ExecuteStage(PA_STATE &pa, typename SIMD_T::Vec4 prim[], uint32_t primMask, typename SIMD_T::Integer const &primId, typename SIMD_T::Integer const &viewportIdx)
+    void ExecuteStage(PA_STATE &pa, typename SIMD_T::Vec4 prim[], uint32_t primMask,
+                      typename SIMD_T::Integer const &primId, typename SIMD_T::Integer const &viewportIdx, typename SIMD_T::Integer const &rtIdx)
     {
         SWR_ASSERT(pa.pDC != nullptr);
 
@@ -716,7 +721,7 @@ public:
             AR_BEGIN(FEGuardbandClip, pa.pDC->drawId);
             // we have to clip tris, execute the clipper, which will also
             // call the binner
-            ClipSimd(prim, SIMD_T::vmask_ps(primMask), SIMD_T::vmask_ps(clipMask), pa, primId, viewportIdx);
+            ClipSimd(prim, SIMD_T::vmask_ps(primMask), SIMD_T::vmask_ps(clipMask), pa, primId, viewportIdx, rtIdx);
             AR_END(FEGuardbandClip, 1);
         }
         else if (validMask)
@@ -725,7 +730,7 @@ public:
             UPDATE_STAT_FE(CPrimitives, _mm_popcnt_u32(validMask));
 
             // forward valid prims directly to binner
-            binner.pfnBinFunc(this->pDC, pa, this->workerId, prim, validMask, primId, viewportIdx);
+            binner.pfnBinFunc(this->pDC, pa, this->workerId, prim, validMask, primId, viewportIdx, rtIdx);
         }
     }
 
@@ -1135,12 +1140,12 @@ private:
 
 
 // pipeline stage functions
-void ClipTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari const &primId, simdscalari const &viewportIdx);
-void ClipLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari const &primId, simdscalari const &viewportIdx);
-void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari const &primId, simdscalari const &viewportIdx);
+void ClipTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari const &primId, simdscalari const &viewportIdx, simdscalari const &rtIdx);
+void ClipLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari const &primId, simdscalari const &viewportIdx, simdscalari const &rtIdx);
+void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask, simdscalari const &primId, simdscalari const &viewportIdx, simdscalari const &rtIdx);
 #if USE_SIMD16_FRONTEND
-void SIMDCALL ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari const &primId, simd16scalari const &viewportIdx);
-void SIMDCALL ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari const &primId, simd16scalari const &viewportIdx);
-void SIMDCALL ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari const &primId, simd16scalari const &viewportIdx);
+void SIMDCALL ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari const &primId, simd16scalari const &viewportIdx, simd16scalari const &rtIdx);
+void SIMDCALL ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari const &primId, simd16scalari const &viewportIdx, simd16scalari const &rtIdx);
+void SIMDCALL ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask, simd16scalari const &primId, simd16scalari const &viewportIdx, simd16scalari const &rtIdx);
 #endif
 

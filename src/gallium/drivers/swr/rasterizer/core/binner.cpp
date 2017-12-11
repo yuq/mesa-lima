@@ -45,7 +45,8 @@ void BinPostSetupLinesImpl(
     typename SIMD_T::Float recipW[],
     uint32_t primMask,
     typename SIMD_T::Integer const &primID,
-    typename SIMD_T::Integer const &viewportIdx);
+    typename SIMD_T::Integer const &viewportIdx,
+    typename SIMD_T::Integer const &rtIdx);
 
 template <typename SIMD_T, uint32_t SIMD_WIDTH>
 void BinPostSetupPointsImpl(
@@ -55,7 +56,8 @@ void BinPostSetupPointsImpl(
     typename SIMD_T::Vec4 prim[],
     uint32_t primMask,
     typename SIMD_T::Integer const &primID,
-    typename SIMD_T::Integer const &viewportIdx);
+    typename SIMD_T::Integer const &viewportIdx,
+    typename SIMD_T::Integer const &rtIdx);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Processes attributes for the backend based on linkage mask and
@@ -308,9 +310,11 @@ void SIMDCALL BinTrianglesImpl(
     typename SIMD_T::Vec4 tri[3],
     uint32_t triMask,
     typename SIMD_T::Integer const &primID,
-    typename SIMD_T::Integer const &viewportIdx)
+    typename SIMD_T::Integer const &viewportIdx,
+    typename SIMD_T::Integer const &rtIdx)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
+    const uint32_t *aRTAI = reinterpret_cast<const uint32_t *>(&rtIdx);
 
     AR_BEGIN(FEBinTriangles, pDC->drawId);
 
@@ -604,21 +608,21 @@ endBinTriangles:
         recipW[0] = vRecipW0;
         recipW[1] = vRecipW1;
 
-        BinPostSetupLinesImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
+        BinPostSetupLinesImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx, rtIdx);
 
         line[0] = tri[1];
         line[1] = tri[2];
         recipW[0] = vRecipW1;
         recipW[1] = vRecipW2;
 
-        BinPostSetupLinesImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
+        BinPostSetupLinesImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx, rtIdx);
 
         line[0] = tri[2];
         line[1] = tri[0];
         recipW[0] = vRecipW2;
         recipW[1] = vRecipW0;
 
-        BinPostSetupLinesImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx);
+        BinPostSetupLinesImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx, rtIdx);
 
         AR_END(FEBinTriangles, 1);
         return;
@@ -626,9 +630,9 @@ endBinTriangles:
     else if (rastState.fillMode == SWR_FILLMODE_POINT)
     {
         // Bin 3 points
-        BinPostSetupPointsImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, &tri[0], triMask, primID, viewportIdx);
-        BinPostSetupPointsImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, &tri[1], triMask, primID, viewportIdx);
-        BinPostSetupPointsImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, &tri[2], triMask, primID, viewportIdx);
+        BinPostSetupPointsImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, &tri[0], triMask, primID, viewportIdx, rtIdx);
+        BinPostSetupPointsImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, &tri[1], triMask, primID, viewportIdx, rtIdx);
+        BinPostSetupPointsImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, &tri[2], triMask, primID, viewportIdx, rtIdx);
 
         AR_END(FEBinTriangles, 1);
         return;
@@ -658,22 +662,6 @@ endBinTriangles:
     TransposeVertices(vHorizY, tri[0].y, tri[1].y, tri[2].y);
     TransposeVertices(vHorizZ, tri[0].z, tri[1].z, tri[2].z);
     TransposeVertices(vHorizW, vRecipW0, vRecipW1, vRecipW2);
-
-    // store render target array index
-    OSALIGNSIMD16(uint32_t) aRTAI[SIMD_WIDTH];
-    if (state.backendState.readRenderTargetArrayIndex)
-    {
-        typename SIMD_T::Vec4 vRtai[3];
-        pa.Assemble(VERTEX_SGV_SLOT, vRtai);
-        typename SIMD_T::Integer vRtaii;
-        vRtaii = SIMD_T::castps_si(vRtai[0][VERTEX_SGV_RTAI_COMP]);
-        SIMD_T::store_si(reinterpret_cast<typename SIMD_T::Integer *>(aRTAI), vRtaii);
-    }
-    else
-    {
-        SIMD_T::store_si(reinterpret_cast<typename SIMD_T::Integer *>(aRTAI), SIMD_T::setzero_si());
-    }
-
 
     // scan remaining valid triangles and bin each separately
     while (_BitScanForward(&triIndex, triMask))
@@ -763,9 +751,10 @@ void BinTriangles(
     simdvector tri[3],
     uint32_t triMask,
     simdscalari const &primID,
-    simdscalari const &viewportIdx)
+    simdscalari const &viewportIdx,
+    simdscalari const &rtIdx)
 {
-    BinTrianglesImpl<SIMD256, KNOB_SIMD_WIDTH, CT>(pDC, pa, workerId, tri, triMask, primID, viewportIdx);
+    BinTrianglesImpl<SIMD256, KNOB_SIMD_WIDTH, CT>(pDC, pa, workerId, tri, triMask, primID, viewportIdx, rtIdx);
 }
 
 #if USE_SIMD16_FRONTEND
@@ -777,9 +766,10 @@ void SIMDCALL BinTriangles_simd16(
     simd16vector tri[3],
     uint32_t triMask,
     simd16scalari const &primID,
-    simd16scalari const &viewportIdx)
+    simd16scalari const &viewportIdx,
+    simd16scalari const &rtIdx)
 {
-    BinTrianglesImpl<SIMD512, KNOB_SIMD16_WIDTH, CT>(pDC, pa, workerId, tri, triMask, primID, viewportIdx);
+    BinTrianglesImpl<SIMD512, KNOB_SIMD16_WIDTH, CT>(pDC, pa, workerId, tri, triMask, primID, viewportIdx, rtIdx);
 }
 
 #endif
@@ -828,7 +818,8 @@ void BinPostSetupPointsImpl(
     typename SIMD_T::Vec4 prim[],
     uint32_t primMask,
     typename SIMD_T::Integer const &primID,
-    typename SIMD_T::Integer const &viewportIdx)
+    typename SIMD_T::Integer const &viewportIdx,
+    typename SIMD_T::Integer const &rtIdx)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
 
@@ -896,19 +887,8 @@ void BinPostSetupPointsImpl(
         SIMD_T::store_ps(reinterpret_cast<float *>(aZ), primVerts.z);
 
         // store render target array index
-        OSALIGNSIMD16(uint32_t) aRTAI[SIMD_WIDTH];
-        if (state.backendState.readRenderTargetArrayIndex)
-        {
-            typename SIMD_T::Vec4 vRtai;
-            pa.Assemble(VERTEX_SGV_SLOT, &vRtai);
-            typename SIMD_T::Integer vRtaii = SIMD_T::castps_si(vRtai[VERTEX_SGV_RTAI_COMP]);
-            SIMD_T::store_si(reinterpret_cast<typename SIMD_T::Integer *>(aRTAI), vRtaii);
-        }
-        else
-        {
-            SIMD_T::store_si(reinterpret_cast<typename SIMD_T::Integer *>(aRTAI), SIMD_T::setzero_si());
-        }
-
+        const uint32_t *aRTAI = reinterpret_cast<const uint32_t *>(&rtIdx);
+        
         uint32_t *pPrimID = (uint32_t *)&primID;
         DWORD primIndex = 0;
 
@@ -1155,7 +1135,8 @@ void BinPointsImpl(
     typename SIMD_T::Vec4 prim[3],
     uint32_t primMask,
     typename SIMD_T::Integer const &primID,
-    typename SIMD_T::Integer const &viewportIdx)
+    typename SIMD_T::Integer const &viewportIdx,
+    typename SIMD_T::Integer const &rtIdx)
 {
     const API_STATE& state = GetApiState(pDC);
     const SWR_FRONTEND_STATE& feState = state.frontendState;
@@ -1193,7 +1174,8 @@ void BinPointsImpl(
         prim,
         primMask,
         primID,
-        viewportIdx);
+        viewportIdx,
+        rtIdx);
 }
 
 void BinPoints(
@@ -1203,7 +1185,8 @@ void BinPoints(
     simdvector prim[3],
     uint32_t primMask,
     simdscalari const &primID,
-    simdscalari const &viewportIdx)
+    simdscalari const &viewportIdx,
+    simdscalari const &rtIdx)
 {
     BinPointsImpl<SIMD256, KNOB_SIMD_WIDTH>(
         pDC,
@@ -1212,7 +1195,8 @@ void BinPoints(
         prim,
         primMask,
         primID,
-        viewportIdx);
+        viewportIdx,
+        rtIdx);
 }
 
 #if USE_SIMD16_FRONTEND
@@ -1223,7 +1207,8 @@ void SIMDCALL BinPoints_simd16(
     simd16vector prim[3],
     uint32_t primMask,
     simd16scalari const &primID,
-    simd16scalari const &viewportIdx)
+    simd16scalari const &viewportIdx,
+    simd16scalari const & rtIdx)
 {
     BinPointsImpl<SIMD512, KNOB_SIMD16_WIDTH>(
         pDC,
@@ -1232,7 +1217,8 @@ void SIMDCALL BinPoints_simd16(
         prim,
         primMask,
         primID,
-        viewportIdx);
+        viewportIdx,
+        rtIdx);
 }
 
 #endif
@@ -1253,9 +1239,11 @@ void BinPostSetupLinesImpl(
     typename SIMD_T::Float recipW[],
     uint32_t primMask,
     typename SIMD_T::Integer const &primID,
-    typename SIMD_T::Integer const &viewportIdx)
+    typename SIMD_T::Integer const &viewportIdx,
+    typename SIMD_T::Integer const &rtIdx)
 {
     SWR_CONTEXT *pContext = pDC->pContext;
+    const uint32_t *aRTAI = reinterpret_cast<const uint32_t *>(&rtIdx);
 
     AR_BEGIN(FEBinLines, pDC->drawId);
 
@@ -1376,20 +1364,6 @@ void BinPostSetupLinesImpl(
     TransposeVertices(vHorizZ, prim[0].z, prim[1].z, SIMD_T::setzero_ps());
     TransposeVertices(vHorizW, vRecipW0,  vRecipW1,  SIMD_T::setzero_ps());
 
-    // store render target array index
-    OSALIGNSIMD16(uint32_t) aRTAI[SIMD_WIDTH];
-    if (state.backendState.readRenderTargetArrayIndex)
-    {
-        typename SIMD_T::Vec4 vRtai[2];
-        pa.Assemble(VERTEX_SGV_SLOT, vRtai);
-        typename SIMD_T::Integer vRtaii = SIMD_T::castps_si(vRtai[0][VERTEX_SGV_RTAI_COMP]);
-        SIMD_T::store_si(reinterpret_cast<typename SIMD_T::Integer *>(aRTAI), vRtaii);
-    }
-    else
-    {
-        SIMD_T::store_si(reinterpret_cast<typename SIMD_T::Integer *>(aRTAI), SIMD_T::setzero_si());
-    }
-
     // scan remaining valid prims and bin each separately
     DWORD primIndex;
     while (_BitScanForward(&primIndex, primMask))
@@ -1471,7 +1445,8 @@ void SIMDCALL BinLinesImpl(
     typename SIMD_T::Vec4 prim[3],
     uint32_t primMask,
     typename SIMD_T::Integer const &primID,
-    typename SIMD_T::Integer const &viewportIdx)
+    typename SIMD_T::Integer const &viewportIdx,
+    typename SIMD_T::Integer const & rtIdx)
 {
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;
@@ -1522,7 +1497,8 @@ void SIMDCALL BinLinesImpl(
         vRecipW,
         primMask,
         primID,
-        viewportIdx);
+        viewportIdx,
+        rtIdx);
 }
 
 void BinLines(
@@ -1532,9 +1508,10 @@ void BinLines(
     simdvector prim[],
     uint32_t primMask,
     simdscalari const &primID,
-    simdscalari const &viewportIdx)
+    simdscalari const &viewportIdx,
+    simdscalari const &rtIdx)
 {
-    BinLinesImpl<SIMD256, KNOB_SIMD_WIDTH>(pDC, pa, workerId, prim, primMask, primID, viewportIdx);
+    BinLinesImpl<SIMD256, KNOB_SIMD_WIDTH>(pDC, pa, workerId, prim, primMask, primID, viewportIdx, rtIdx);
 }
 
 #if USE_SIMD16_FRONTEND
@@ -1545,9 +1522,10 @@ void SIMDCALL BinLines_simd16(
     simd16vector prim[3],
     uint32_t primMask,
     simd16scalari const &primID,
-    simd16scalari const &viewportIdx)
+    simd16scalari const &viewportIdx,
+    simd16scalari const &rtIdx)
 {
-    BinLinesImpl<SIMD512, KNOB_SIMD16_WIDTH>(pDC, pa, workerId, prim, primMask, primID, viewportIdx);
+    BinLinesImpl<SIMD512, KNOB_SIMD16_WIDTH>(pDC, pa, workerId, prim, primMask, primID, viewportIdx, rtIdx);
 }
 
 #endif
