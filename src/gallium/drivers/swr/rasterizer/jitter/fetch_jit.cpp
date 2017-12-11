@@ -1349,14 +1349,6 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                     if (compMask)
                     {
 #if USE_SIMD16_BUILDER
-#if USE_SIMD16_BUILDER
-#else
-                        Value *gatherResult[2];
-
-                        gatherResult[0] = JOIN2(vGatherResult[0], vGatherResult2[0]);
-                        gatherResult[1] = JOIN2(vGatherResult[1], vGatherResult2[1]);
-
-#endif
                         Value *pVtxOut2 = BITCAST(pVtxOut, PointerType::get(VectorType::get(mFP32Ty, mVWidth2), 0));
 
                         Shuffle16bpcArgs args = std::forward_as_tuple(gatherResult, pVtxOut2, Instruction::CastOps::FPExt, CONVERT_NONE,
@@ -1701,6 +1693,9 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
             Value* gatherSrc = VIMMED1(0);
 #if USE_SIMD16_GATHERS
             Value* gatherSrc2 = VIMMED1(0);
+#if USE_SIMD16_BUILDER
+            Value *gatherSrc16 = VIMMED2_1(0);
+#endif
 #endif
 
             // Gather components from memory to store in a simdvertex structure
@@ -1712,6 +1707,14 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                     if (compMask)
                     {
 #if USE_SIMD16_GATHERS
+#if USE_SIMD16_BUILDER
+                        Value *gatherResult = GATHERDD_16(gatherSrc16, pStreamBase, vOffsets16, vGatherMask16);
+
+                        // e.g. result of an 8x32bit integer gather for 8bit components
+                        // 256i - 0    1    2    3    4    5    6    7
+                        //        xyzw xyzw xyzw xyzw xyzw xyzw xyzw xyzw 
+
+#else
                         Value* vGatherResult = GATHERDD(gatherSrc, pStreamBase, vOffsets, vGatherMask);
                         Value* vGatherResult2 = GATHERDD(gatherSrc2, pStreamBase, vOffsets2, vGatherMask2);
 
@@ -1719,9 +1722,8 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                         // 256i - 0    1    2    3    4    5    6    7
                         //        xyzw xyzw xyzw xyzw xyzw xyzw xyzw xyzw 
 
+#endif
 #if USE_SIMD16_BUILDER
-                        Value *gatherResult = JOIN2(vGatherResult, vGatherResult2);
-
                         Value *pVtxOut2 = BITCAST(pVtxOut, PointerType::get(VectorType::get(mFP32Ty, mVWidth2), 0));
 
                         Shuffle8bpcArgs args = std::forward_as_tuple(gatherResult, pVtxOut2, extendCastType, conversionType,
@@ -1761,6 +1763,43 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                 case 16:
                 {
 #if USE_SIMD16_GATHERS
+#if USE_SIMD16_BUILDER
+                    Value* gatherResult[2];
+
+                    // if we have at least one component out of x or y to fetch
+                    if (isComponentEnabled(compMask, 0) || isComponentEnabled(compMask, 1))
+                    {
+                        gatherResult[0] = GATHERDD_16(gatherSrc16, pStreamBase, vOffsets16, vGatherMask16);
+
+                        // e.g. result of first 8x32bit integer gather for 16bit components
+                        // 256i - 0    1    2    3    4    5    6    7
+                        //        xyxy xyxy xyxy xyxy xyxy xyxy xyxy xyxy
+                        //
+                    }
+                    else
+                    {
+                        gatherResult[0] = VUNDEF2_I();
+                    }
+
+                    // if we have at least one component out of z or w to fetch
+                    if (isComponentEnabled(compMask, 2) || isComponentEnabled(compMask, 3))
+                    {
+                        // offset base to the next components(zw) in the vertex to gather
+                        pStreamBase = GEP(pStreamBase, C((char)4));
+
+                        gatherResult[1] = GATHERDD_16(gatherSrc16, pStreamBase, vOffsets16, vGatherMask16);
+
+                        // e.g. result of second 8x32bit integer gather for 16bit components
+                        // 256i - 0    1    2    3    4    5    6    7
+                        //        zwzw zwzw zwzw zwzw zwzw zwzw zwzw zwzw 
+                        //
+                    }
+                    else
+                    {
+                        gatherResult[1] = VUNDEF2_I();
+                    }
+
+#else
                     Value* vGatherResult[2];
                     Value* vGatherResult2[2];
 
@@ -1799,15 +1838,11 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                         vGatherResult2[1] = VUNDEF_I();
                     }
 
+#endif
                     // if we have at least one component to shuffle into place
                     if (compMask)
                     {
 #if USE_SIMD16_BUILDER
-                        Value *gatherResult[2];
-
-                        gatherResult[0] = JOIN2(vGatherResult[0], vGatherResult2[0]);
-                        gatherResult[1] = JOIN2(vGatherResult[1], vGatherResult2[1]);
-
                         Value *pVtxOut2 = BITCAST(pVtxOut, PointerType::get(VectorType::get(mFP32Ty, mVWidth2), 0));
 
                         Shuffle16bpcArgs args = std::forward_as_tuple(gatherResult, pVtxOut2, extendCastType, conversionType,
@@ -1876,6 +1911,23 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                             if (compCtrl[i] == StoreSrc)
                             {
 #if USE_SIMD16_GATHERS
+#if USE_SIMD16_BUILDER
+                                Value *pGather = GATHERDD_16(gatherSrc16, pStreamBase, vOffsets16, vGatherMask16);
+
+                                if (conversionType == CONVERT_USCALED)
+                                {
+                                    pGather = UI_TO_FP(pGather, mSimd2FP32Ty);
+                                }
+                                else if (conversionType == CONVERT_SSCALED)
+                                {
+                                    pGather = SI_TO_FP(pGather, mSimd2FP32Ty);
+                                }
+                                else if (conversionType == CONVERT_SFIXED)
+                                {
+                                    pGather = FMUL(SI_TO_FP(pGather, mSimd2FP32Ty), VBROADCAST2(C(1 / 65536.0f)));
+                                }
+
+#else
                                 Value *pGather = GATHERDD(gatherSrc, pStreamBase, vOffsets, vGatherMask);
                                 Value *pGather2 = GATHERDD(gatherSrc2, pStreamBase, vOffsets2, vGatherMask2);
 
@@ -1895,9 +1947,9 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                     pGather2 = FMUL(SI_TO_FP(pGather2, mSimdFP32Ty), VBROADCAST(C(1 / 65536.0f)));
                                 }
 
+#endif
 #if USE_SIMD16_BUILDER
-                                // pack adjacent pairs of SIMD8s into SIMD16s
-                                pVtxSrc2[currentVertexElement] = JOIN2(pGather, pGather2);
+                                pVtxSrc2[currentVertexElement] = pGather;
 
 #else
                                 vVertexElements[currentVertexElement] = pGather;

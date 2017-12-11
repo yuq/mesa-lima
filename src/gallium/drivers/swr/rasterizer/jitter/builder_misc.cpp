@@ -723,6 +723,42 @@ namespace SwrJit
         return vGather;
     }
 
+#if USE_SIMD16_BUILDER
+    Value *Builder::GATHERDD_16(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale)
+    {
+        Value *vGather = VUNDEF2_F();
+
+        // use avx512 gather instruction if available
+        if (JM()->mArch.AVX512F())
+        {
+            // force mask to <N-bit Integer>, required by vgather2
+            Value *mask = BITCAST(vMask, mInt16Ty);
+
+            vGather = VGATHERDD_16(vSrc, pBase, vIndices, mask, C((uint32_t)scale));
+        }
+        else
+        {
+            Value *src0 = EXTRACT2_F(vSrc, 0);
+            Value *src1 = EXTRACT2_F(vSrc, 1);
+
+            Value *indices0 = EXTRACT2_I(vIndices, 0);
+            Value *indices1 = EXTRACT2_I(vIndices, 1);
+
+            Value *vmask16 = VMASK2(vMask);
+
+            Value *mask0 = MASK(EXTRACT2_I(vmask16, 0));  // TODO: do this better..
+            Value *mask1 = MASK(EXTRACT2_I(vmask16, 1));
+
+            Value *gather0 = GATHERDD(src0, pBase, indices0, mask0, scale);
+            Value *gather1 = GATHERDD(src1, pBase, indices1, mask1, scale);
+
+            vGather = JOIN2(gather0, gather1);
+        }
+
+        return vGather;
+    }
+
+#endif
     //////////////////////////////////////////////////////////////////////////
     /// @brief Generate a masked gather operation in LLVM IR.  If not
     /// supported on the underlying platform, emulate it with loads
