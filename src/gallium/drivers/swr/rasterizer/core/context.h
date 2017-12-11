@@ -480,6 +480,7 @@ struct SWR_CONTEXT
 
     THREAD_POOL threadPool; // Thread pool associated with this context
     SWR_THREADING_INFO threadInfo;
+    SWR_API_THREADING_INFO apiThreadInfo;
 
     uint32_t MAX_DRAWS_IN_FLIGHT;
 
