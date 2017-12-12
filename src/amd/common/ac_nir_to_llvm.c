@@ -1142,7 +1142,7 @@ static LLVMValueRef emit_int_cmp(struct ac_llvm_context *ctx,
 	LLVMValueRef result = LLVMBuildICmp(ctx->builder, pred, src0, src1, "");
 	return LLVMBuildSelect(ctx->builder, result,
 	                       LLVMConstInt(ctx->i32, 0xFFFFFFFF, false),
-	                       LLVMConstInt(ctx->i32, 0, false), "");
+	                       ctx->i32_0, "");
 }
 
 static LLVMValueRef emit_float_cmp(struct ac_llvm_context *ctx,
@@ -1155,7 +1155,7 @@ static LLVMValueRef emit_float_cmp(struct ac_llvm_context *ctx,
 	result = LLVMBuildFCmp(ctx->builder, pred, src0, src1, "");
 	return LLVMBuildSelect(ctx->builder, result,
 	                       LLVMConstInt(ctx->i32, 0xFFFFFFFF, false),
-	                       LLVMConstInt(ctx->i32, 0, false), "");
+			       ctx->i32_0, "");
 }
 
 static LLVMValueRef emit_intrin_1f_param(struct ac_llvm_context *ctx,
@@ -2147,7 +2147,7 @@ static LLVMValueRef build_tex_intrinsic(struct ac_nir_context *ctx,
 		return ac_build_buffer_load_format(&ctx->ac,
 						   args->resource,
 						   args->addr,
-						   LLVMConstInt(ctx->ac.i32, 0, false),
+						   ctx->ac.i32_0,
 						   true);
 	}
 
@@ -2283,7 +2283,7 @@ static void visit_store_ssbo(struct ac_nir_context *ctx,
 
 	params[1] = ctx->abi->load_ssbo(ctx->abi,
 				        get_src(ctx, instr->src[1]), true);
-	params[2] = LLVMConstInt(ctx->ac.i32, 0, false); /* vindex */
+	params[2] = ctx->ac.i32_0; /* vindex */
 	params[4] = ctx->ac.i1false;  /* glc */
 	params[5] = ctx->ac.i1false;  /* slc */
 
@@ -2367,7 +2367,7 @@ static LLVMValueRef visit_atomic_ssbo(struct ac_nir_context *ctx,
 	params[arg_count++] = ctx->abi->load_ssbo(ctx->abi,
 						 get_src(ctx, instr->src[0]),
 						 true);
-	params[arg_count++] = LLVMConstInt(ctx->ac.i32, 0, false); /* vindex */
+	params[arg_count++] = ctx->ac.i32_0; /* vindex */
 	params[arg_count++] = get_src(ctx, instr->src[1]);      /* voffset */
 	params[arg_count++] = LLVMConstInt(ctx->ac.i1, 0, false);  /* slc */
 
@@ -2443,7 +2443,7 @@ static LLVMValueRef visit_load_buffer(struct ac_nir_context *ctx,
 			ctx->abi->load_ssbo(ctx->abi,
 					    get_src(ctx, instr->src[0]),
 					    false),
-			LLVMConstInt(ctx->ac.i32, 0, false),
+			ctx->ac.i32_0,
 			offset,
 			ctx->ac.i1false,
 			ctx->ac.i1false,
@@ -4965,7 +4965,7 @@ static void visit_if(struct ac_nir_context *ctx, nir_if *if_stmt)
 		    ctx->ac.context, fn, "");
 
 	LLVMValueRef cond = LLVMBuildICmp(ctx->ac.builder, LLVMIntNE, value,
-	                                  LLVMConstInt(ctx->ac.i32, 0, false), "");
+	                                  ctx->ac.i32_0, "");
 	LLVMBuildCondBr(ctx->ac.builder, cond, if_block, else_block);
 
 	LLVMPositionBuilderAtEnd(ctx->ac.builder, if_block);
@@ -5061,7 +5061,7 @@ handle_vs_input_decl(struct nir_to_llvm_context *ctx,
 
 		input = ac_build_buffer_load_format(&ctx->ac, t_list,
 						    buffer_index,
-						    LLVMConstInt(ctx->ac.i32, 0, false),
+						    ctx->ac.i32_0,
 						    true);
 
 		for (unsigned chan = 0; chan < 4; chan++) {
@@ -6473,7 +6473,7 @@ static void ac_nir_fixup_ls_hs_input_vgprs(struct nir_to_llvm_context *ctx)
 	                                  LLVMConstInt(ctx->ac.i32, 8, false),
 	                                  LLVMConstInt(ctx->ac.i32, 8, false), false);
 	LLVMValueRef hs_empty = LLVMBuildICmp(ctx->ac.builder, LLVMIntEQ, count,
-	                                      LLVMConstInt(ctx->ac.i32, 0, false), "");
+	                                      ctx->ac.i32_0, "");
 	ctx->abi.instance_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->rel_auto_id, ctx->abi.instance_id, "");
 	ctx->vs_prim_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->abi.vertex_id, ctx->vs_prim_id, "");
 	ctx->rel_auto_id = LLVMBuildSelect(ctx->ac.builder, hs_empty, ctx->tcs_rel_ids, ctx->rel_auto_id, "");
