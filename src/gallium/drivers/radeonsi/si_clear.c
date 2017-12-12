@@ -425,12 +425,11 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		 * the eliminate pass can be higher than the benefit of fast
 		 * clear. The closed driver does this, but the numbers may differ.
 		 *
-		 * Always use fast clear on APUs.
+		 * This helps on both dGPUs and APUs, even small APUs like Mullins.
 		 */
-		bool too_small = sctx->screen->info.has_dedicated_vram &&
-				 tex->resource.b.b.nr_samples <= 1 &&
-				 tex->resource.b.b.width0 <= 256 &&
-				 tex->resource.b.b.height0 <= 256;
+		bool too_small = tex->resource.b.b.nr_samples <= 1 &&
+				 tex->resource.b.b.width0 *
+				 tex->resource.b.b.height0 <= 512 * 512;
 
 		/* Try to clear DCC first, otherwise try CMASK. */
 		if (vi_dcc_enabled(tex, 0)) {
