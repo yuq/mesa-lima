@@ -1422,12 +1422,12 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 // But, we know that elements must be aligned for FETCH. :)
                                 // Right shift the offset by a bit and then scale by 2 to remove the sign extension.
 #if USE_SIMD16_BUILDER
-                                Value *shiftedOffsets = VPSRLI_16(vOffsets16, C(1));
+                                Value *shiftedOffsets = LSHR(vOffsets16, 1);
                                 pVtxSrc2[currentVertexElement] = GATHERPS_16(gatherSrc16, pStreamBase, shiftedOffsets, vGatherMask16, 2);
 
 #else
-                                Value *vShiftedOffsets = VPSRLI(vOffsets, C(1));
-                                Value *vShiftedOffsets2 = VPSRLI(vOffsets2, C(1));
+                                Value *vShiftedOffsets = LSHR(vOffsets, 1);
+                                Value *vShiftedOffsets2 = LSHR(vOffsets2, 1);
 
                                 vVertexElements[currentVertexElement]  = GATHERPS(gatherSrc, pStreamBase, vShiftedOffsets, vGatherMask, 2);
                                 vVertexElements2[currentVertexElement] = GATHERPS(gatherSrc2, pStreamBase, vShiftedOffsets2, vGatherMask2, 2);
@@ -1492,7 +1492,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 // However, GATHERPS uses signed 32-bit offsets, so only a 2GB range :(
                                 // But, we know that elements must be aligned for FETCH. :)
                                 // Right shift the offset by a bit and then scale by 2 to remove the sign extension.
-                                Value* vShiftedOffsets = VPSRLI(vOffsets, C(1));
+                                Value* vShiftedOffsets = LSHR(vOffsets, 1);
                                 vVertexElements[currentVertexElement++] = GATHERPS(gatherSrc, pStreamBase, vShiftedOffsets, vGatherMask, 2);
                             }
                             else

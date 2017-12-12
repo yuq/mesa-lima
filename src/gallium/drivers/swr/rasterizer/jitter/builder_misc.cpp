@@ -809,36 +809,6 @@ namespace SwrJit
     }
 
 #if USE_SIMD16_BUILDER
-    Value *Builder::PSRLI(Value *a, Value *imm)
-    {
-        return VPSRLI(a, imm);
-    }
-
-    Value *Builder::PSRLI_16(Value *a, Value *imm)
-    {
-        Value *result = VUNDEF2_I();
-
-        // use avx512 shift right instruction if available
-        if (JM()->mArch.AVX512F())
-        {
-            result = VPSRLI_16(a, imm);
-        }
-        else
-        {
-            Value *a0 = EXTRACT2_I(a, 0);
-            Value *a1 = EXTRACT2_I(a, 1);
-
-            Value *result0 = PSRLI(a0, imm);
-            Value *result1 = PSRLI(a1, imm);
-
-            result = JOIN2(result0, result1);
-        }
-
-        return result;
-    }
-
-#endif
-#if USE_SIMD16_BUILDER
     //////////////////////////////////////////////////////////////////////////
     /// @brief
     Value *Builder::EXTRACT2_F(Value *a2, uint32_t imm)
