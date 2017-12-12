@@ -239,7 +239,6 @@ ir3_compiler = executable(
     dep_libdrm,
     dep_libdrm_freedreno,
     dep_thread,
-    dep_lmsensors,
     idep_nir,
   ],
   link_with : [

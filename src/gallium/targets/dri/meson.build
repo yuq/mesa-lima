@@ -66,7 +66,7 @@ libgallium_dri = shared_library(
     libpipe_loader_static, libws_null, libwsw,  gallium_dri_link_with,
   ],
   dependencies : [
-    dep_selinux, dep_expat, dep_libdrm, dep_llvm, dep_lmsensors, dep_thread,
+    dep_selinux, dep_expat, dep_libdrm, dep_llvm, dep_thread,
     driver_swrast, driver_r300, driver_r600, driver_radeonsi, driver_nouveau,
     driver_pl111, driver_vc4, driver_vc5, driver_freedreno, driver_etnaviv,
     driver_imx, driver_i915, driver_svga, driver_virgl, driver_swr,

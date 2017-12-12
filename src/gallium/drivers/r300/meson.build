@@ -157,9 +157,7 @@ if with_tests
         include_directories('compiler'),
       ],
       link_with : [libr300, libgallium, libmesa_util],
-      dependencies : [
-        dep_m, dep_clock, dep_dl, dep_thread, dep_unwind, dep_lmsensors,
-      ],
+      dependencies : [dep_m, dep_clock, dep_dl, dep_thread, dep_unwind],
     )
   )
 endif

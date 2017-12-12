@@ -64,7 +64,7 @@ libgallium_nine = shared_library(
     gallium_nine_link_with,
   ],
   dependencies : [
-    dep_selinux, dep_expat, dep_libdrm, dep_llvm, dep_lmsensors,
+    dep_selinux, dep_expat, dep_libdrm, dep_llvm,
     driver_swrast, driver_r300, driver_r600, driver_radeonsi, driver_nouveau,
     driver_i915, driver_svga,
   ],
