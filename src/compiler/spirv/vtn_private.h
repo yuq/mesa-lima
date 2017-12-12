@@ -585,14 +585,24 @@ vtn_pointer_from_ssa(struct vtn_builder *b, nir_ssa_def *ssa,
                      struct vtn_type *ptr_type);
 
 static inline struct vtn_value *
+vtn_untyped_value(struct vtn_builder *b, uint32_t value_id)
+{
+   vtn_fail_if(value_id >= b->value_id_bound,
+               "SPIR-V id %u is out-of-bounds", value_id);
+   return &b->values[value_id];
+}
+
+static inline struct vtn_value *
 vtn_push_value(struct vtn_builder *b, uint32_t value_id,
                enum vtn_value_type value_type)
 {
-   assert(value_id < b->value_id_bound);
-   assert(b->values[value_id].value_type == vtn_value_type_invalid);
+   struct vtn_value *val = vtn_untyped_value(b, value_id);
 
-   b->values[value_id].value_type = value_type;
+   vtn_fail_if(val->value_type != vtn_value_type_invalid,
+               "SPIR-V id %u has already been written by another instruction",
+               value_id);
 
+   val->value_type = value_type;
    return &b->values[value_id];
 }
 
@@ -612,18 +622,12 @@ vtn_push_ssa(struct vtn_builder *b, uint32_t value_id,
 }
 
 static inline struct vtn_value *
-vtn_untyped_value(struct vtn_builder *b, uint32_t value_id)
-{
-   assert(value_id < b->value_id_bound);
-   return &b->values[value_id];
-}
-
-static inline struct vtn_value *
 vtn_value(struct vtn_builder *b, uint32_t value_id,
           enum vtn_value_type value_type)
 {
    struct vtn_value *val = vtn_untyped_value(b, value_id);
-   assert(val->value_type == value_type);
+   vtn_fail_if(val->value_type != value_type,
+               "SPIR-V id %u is the wrong kind of value", value_id);
    return val;
 }
 
