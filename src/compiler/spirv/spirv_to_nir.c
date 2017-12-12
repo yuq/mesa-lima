@@ -1300,7 +1300,9 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpConstant: {
-      vtn_assert(glsl_type_is_scalar(val->type->type));
+      vtn_fail_if(val->type->base_type != vtn_base_type_scalar,
+                  "Result type of %s must be a scalar",
+                  spirv_op_to_string(opcode));
       int bit_size = glsl_get_bit_size(val->type->type);
       switch (bit_size) {
       case 64:
@@ -1317,8 +1319,11 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       }
       break;
    }
+
    case SpvOpSpecConstant: {
-      vtn_assert(glsl_type_is_scalar(val->type->type));
+      vtn_fail_if(val->type->base_type != vtn_base_type_scalar,
+                  "Result type of %s must be a scalar",
+                  spirv_op_to_string(opcode));
       int bit_size = glsl_get_bit_size(val->type->type);
       switch (bit_size) {
       case 64:
