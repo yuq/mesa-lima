@@ -567,7 +567,7 @@ static void load_emit(
 	}
 
 	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
-		si_emit_waitcnt(ctx, VM_CNT);
+		ac_build_waitcnt(&ctx->ac, VM_CNT);
 
 	can_speculate = !(inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE) &&
 			  is_oneway_access_only(inst, info,
@@ -780,7 +780,7 @@ static void store_emit(
 	}
 
 	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
-		si_emit_waitcnt(ctx, VM_CNT);
+		ac_build_waitcnt(&ctx->ac, VM_CNT);
 
 	writeonly_memory = is_oneway_access_only(inst, info,
 						 info->shader_buffers_load |

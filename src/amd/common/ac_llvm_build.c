@@ -1482,6 +1482,15 @@ LLVMValueRef ac_build_bfe(struct ac_llvm_context *ctx, LLVMValueRef input,
 				  AC_FUNC_ATTR_LEGACY);
 }
 
+void ac_build_waitcnt(struct ac_llvm_context *ctx, unsigned simm16)
+{
+	LLVMValueRef args[1] = {
+		LLVMConstInt(ctx->i32, simm16, false),
+	};
+	ac_build_intrinsic(ctx, "llvm.amdgcn.s.waitcnt",
+			   ctx->voidt, args, 1, 0);
+}
+
 void ac_get_image_intr_name(const char *base_name,
 			    LLVMTypeRef data_type,
 			    LLVMTypeRef coords_type,

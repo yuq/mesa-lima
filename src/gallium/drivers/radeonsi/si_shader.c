@@ -3681,15 +3681,6 @@ static void si_llvm_return_fs_outputs(struct ac_shader_abi *abi,
 	ctx->return_value = ret;
 }
 
-void si_emit_waitcnt(struct si_shader_context *ctx, unsigned simm16)
-{
-	LLVMValueRef args[1] = {
-		LLVMConstInt(ctx->i32, simm16, 0)
-	};
-	lp_build_intrinsic(ctx->ac.builder, "llvm.amdgcn.s.waitcnt",
-			   ctx->voidt, args, 1, 0);
-}
-
 static void membar_emit(
 		const struct lp_build_tgsi_action *action,
 		struct lp_build_tgsi_context *bld_base,
@@ -3712,7 +3703,7 @@ static void membar_emit(
 		waitcnt &= LGKM_CNT;
 
 	if (waitcnt != NOOP_WAITCNT)
-		si_emit_waitcnt(ctx, waitcnt);
+		ac_build_waitcnt(&ctx->ac, waitcnt);
 }
 
 static void clock_emit(
@@ -4198,7 +4189,7 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 	 */
 	if (ctx->screen->info.chip_class == SI &&
 	    ctx->type == PIPE_SHADER_TESS_CTRL) {
-		si_emit_waitcnt(ctx, LGKM_CNT & VM_CNT);
+		ac_build_waitcnt(&ctx->ac, LGKM_CNT & VM_CNT);
 		return;
 	}
 

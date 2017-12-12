@@ -3674,16 +3674,6 @@ static LLVMValueRef visit_image_size(struct ac_nir_context *ctx,
 #define LGKM_CNT 0x07f
 #define VM_CNT 0xf70
 
-static void emit_waitcnt(struct nir_to_llvm_context *ctx,
-			 unsigned simm16)
-{
-	LLVMValueRef args[1] = {
-		LLVMConstInt(ctx->ac.i32, simm16, false),
-	};
-	ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.s.waitcnt",
-			   ctx->ac.voidt, args, 1, 0);
-}
-
 static void emit_membar(struct nir_to_llvm_context *ctx,
 			const nir_intrinsic_instr *instr)
 {
@@ -3706,7 +3696,7 @@ static void emit_membar(struct nir_to_llvm_context *ctx,
 		break;
 	}
 	if (waitcnt != NOOP_WAITCNT)
-		emit_waitcnt(ctx, waitcnt);
+		ac_build_waitcnt(&ctx->ac, waitcnt);
 }
 
 static void emit_barrier(struct nir_to_llvm_context *ctx)
@@ -3717,7 +3707,7 @@ static void emit_barrier(struct nir_to_llvm_context *ctx)
 	 */
 	if (ctx->options->chip_class == SI &&
 	    ctx->stage == MESA_SHADER_TESS_CTRL) {
-		emit_waitcnt(ctx, LGKM_CNT & VM_CNT);
+		ac_build_waitcnt(&ctx->ac, LGKM_CNT & VM_CNT);
 		return;
 	}
 	ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.s.barrier",
