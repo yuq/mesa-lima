@@ -1996,7 +1996,7 @@ get_buffer_size(struct ac_nir_context *ctx, LLVMValueRef descriptor, bool in_ele
 		 */
 		LLVMValueRef stride =
 			LLVMBuildExtractElement(ctx->ac.builder, descriptor,
-						LLVMConstInt(ctx->ac.i32, 1, false), "");
+						ctx->ac.i32_1, "");
 		stride = LLVMBuildLShr(ctx->ac.builder, stride,
 				       LLVMConstInt(ctx->ac.i32, 16, false), "");
 		stride = LLVMBuildAnd(ctx->ac.builder, stride,
@@ -6084,20 +6084,20 @@ write_tess_factors(struct nir_to_llvm_context *ctx)
 	if (ctx->options->key.tcs.primitive_mode == GL_ISOLINES) {
 		outer[0] = out[1] = ac_lds_load(&ctx->ac, lds_outer);
 		lds_outer = LLVMBuildAdd(ctx->builder, lds_outer,
-					 LLVMConstInt(ctx->ac.i32, 1, false), "");
+					 ctx->ac.i32_1, "");
 		outer[1] = out[0] = ac_lds_load(&ctx->ac, lds_outer);
 	} else {
 		for (i = 0; i < outer_comps; i++) {
 			outer[i] = out[i] =
 				ac_lds_load(&ctx->ac, lds_outer);
 			lds_outer = LLVMBuildAdd(ctx->builder, lds_outer,
-						 LLVMConstInt(ctx->ac.i32, 1, false), "");
+						 ctx->ac.i32_1, "");
 		}
 		for (i = 0; i < inner_comps; i++) {
 			inner[i] = out[outer_comps+i] =
 				ac_lds_load(&ctx->ac, lds_inner);
 			lds_inner = LLVMBuildAdd(ctx->builder, lds_inner,
-						 LLVMConstInt(ctx->ac.i32, 1, false), "");
+						 ctx->ac.i32_1, "");
 		}
 	}
 
