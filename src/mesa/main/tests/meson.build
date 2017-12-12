@@ -33,7 +33,9 @@ else
   files_main_test += files('stub.cpp')
 endif
 
-test('main-test', executable(
+test(
+  'main-test',
+  executable(
     'main_test',
     [files_main_test, main_dispatch_h],
     include_directories : [inc_include, inc_src, inc_mapi, inc_mesa],

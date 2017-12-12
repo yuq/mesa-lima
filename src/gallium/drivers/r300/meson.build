@@ -135,7 +135,9 @@ driver_r300 = declare_dependency(
 )
 
 if with_tests
-  test('r300_compiler_test', executable(
+  test(
+    'r300_compiler_test',
+    executable(
       'r300_compiler_test',
       files(
         'compiler/tests/r300_compiler_tests.c',

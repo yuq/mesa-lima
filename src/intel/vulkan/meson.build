@@ -193,25 +193,28 @@ if with_tests
     link_whole : libanv_common,
     link_with : [
       libanv_gen_libs, libintel_compiler, libintel_common, libisl, libblorp,
-      libvulkan_util, libvulkan_wsi, libnir, libmesa_util,
+      libvulkan_util, libvulkan_wsi, libmesa_util,
     ],
     dependencies : [
       dep_libdrm, dep_thread, dep_dl, dep_m, anv_deps, dep_valgrind,
+      idep_nir,
     ],
     c_args : [c_vis_args, no_override_init_args, '-msse2', anv_flags],
   )
 
   foreach t : ['block_pool_no_free', 'state_pool_no_free',
                'state_pool_free_list_only', 'state_pool']
-    _exe = executable(
-      t,
-      ['tests/@0@.c'.format(t), dummy_cpp, block_entrypoints],
-      link_with : libvulkan_intel_test,
-      dependencies : [dep_libdrm, dep_thread, dep_m, dep_valgrind],
-      include_directories : [
-        inc_common, inc_intel, inc_compiler, inc_vulkan_util, inc_vulkan_wsi,
-      ],
+    test(
+      'anv_@0@'.format(t),
+      executable(
+        t,
+        ['tests/@0@.c'.format(t), dummy_cpp, block_entrypoints],
+        link_with : libvulkan_intel_test,
+        dependencies : [dep_libdrm, dep_thread, dep_m, dep_valgrind],
+        include_directories : [
+          inc_common, inc_intel, inc_compiler, inc_vulkan_util, inc_vulkan_wsi,
+        ],
+      )
     )
-    test('anv_@0@'.format(t), _exe)
   endforeach
 endif

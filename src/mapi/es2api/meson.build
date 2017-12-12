@@ -52,7 +52,8 @@ pkg.generate(
 )
 
 if with_tests
-  test('es2-ABI-check',
+  test(
+    'es2-ABI-check',
     find_program('ABI-check'),
     args : libgles2
   )

@@ -32,7 +32,9 @@ if with_tests
   dep_real_xvmc = dependency('xvmc')
   foreach x : ['context', 'surface', 'subpicture', 'blocks', 'rendering']
     _name = 'xvmc_@0@'.format(x)
-    test(_name, executable(
+    test(
+      _name,
+      executable(
         _name,
         files('tests/test_@0@.c'.format(x), 'tests/testlib.c'), 
         dependencies : [
@@ -42,7 +44,9 @@ if with_tests
     )
   endforeach
 
-  test('xbmc_bench', executable(
+  test(
+    'xvmc_bench',
+    executable(
       'xvmc_bench',
       files('tests/xvmc_bench.c', 'tests/testlib.c'), 
       dependencies : [

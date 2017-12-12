@@ -145,14 +145,17 @@ if with_tests
                'fs_saturate_propagation', 'vf_float_conversions',
                'vec4_register_coalesce', 'vec4_copy_propagation',
                'vec4_cmod_propagation', 'eu_compact', 'eu_validate']
-    _exe = executable(
-      [t, nir_opcodes_h, ir_expression_operation_h],
-      'test_@0@.cpp'.format(t),
-      include_directories : [inc_common, inc_intel],
-      link_with : [libintel_compiler, libintel_common, libnir, libmesa_util,
-                   libisl],
-      dependencies : [dep_thread, dep_dl, idep_gtest],
+    test(
+      t,
+      executable(
+        [t, nir_opcodes_h, ir_expression_operation_h],
+        'test_@0@.cpp'.format(t),
+        include_directories : [inc_common, inc_intel],
+        link_with : [
+          libintel_compiler, libintel_common, libnir, libmesa_util, libisl,
+        ],
+        dependencies : [dep_thread, dep_dl, idep_gtest],
+      )
     )
-    test(t, _exe)
   endforeach
 endif

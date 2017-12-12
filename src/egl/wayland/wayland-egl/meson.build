@@ -42,5 +42,8 @@ if with_tests
     find_program('wayland-egl-symbols-check'),
     args : libwayland_egl
   )
-  test('wayland-egl-abi-check', executable('wayland-egl-abi-check', 'wayland-egl-abi-check.c'))
+  test(
+    'wayland-egl-abi-check',
+    executable('wayland-egl-abi-check', 'wayland-egl-abi-check.c')
+  )
 endif

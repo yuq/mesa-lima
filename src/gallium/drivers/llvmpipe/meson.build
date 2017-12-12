@@ -111,7 +111,9 @@ driver_swrast = declare_dependency(
 if with_tests and with_gallium_softpipe and with_llvm
   foreach t : ['lp_test_format', 'lp_test_arit', 'lp_test_blend',
                'lp_test_conv', 'lp_test_printf']
-    test(t, executable(
+    test(
+      t,
+      executable(
         t,
         ['@0@.c'.format(t), 'lp_test_main.c'],
         dependencies : [dep_llvm, dep_dl, dep_thread, dep_clock],

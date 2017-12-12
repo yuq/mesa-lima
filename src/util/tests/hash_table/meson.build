@@ -21,12 +21,14 @@
 foreach t : ['clear', 'collision', 'delete_and_lookup', 'delete_management',
              'destroy_callback', 'insert_and_lookup', 'insert_many',
              'null_destroy', 'random_entry', 'remove_null', 'replacement']
-  _test = executable(
-    '@0@_test'.format(t),
-    files('@0@.c'.format(t)),
-    dependencies : [dep_thread, dep_dl],
-    include_directories : [inc_include, inc_util],
-    link_with : libmesa_util,
+  test(
+    t,
+    executable(
+      '@0@_test'.format(t),
+      files('@0@.c'.format(t)),
+      dependencies : [dep_thread, dep_dl],
+      include_directories : [inc_include, inc_util],
+      link_with : libmesa_util,
+    )
   )
-  test(t, _test)
 endforeach

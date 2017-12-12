@@ -90,13 +90,14 @@ libisl = static_library(
 )
 
 if with_tests
-  isl_surf_get_image_offset_test = executable(
-    'isl_surf_get_image_offset_test',
-    'tests/isl_surf_get_image_offset_test.c',
-    dependencies : dep_m,
-    include_directories : [inc_common, inc_intel],
-    link_with : [libisl, libintel_common],
+  test(
+    'isl_surf_get_image_offset',
+    executable(
+      'isl_surf_get_image_offset_test',
+      'tests/isl_surf_get_image_offset_test.c',
+      dependencies : dep_m,
+      include_directories : [inc_common, inc_intel],
+      link_with : [libisl, libintel_common],
+    )
   )
-
-  test('isl_surf_get_image_offset', isl_surf_get_image_offset_test)
 endif

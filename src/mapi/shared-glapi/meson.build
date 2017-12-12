@@ -51,14 +51,15 @@ libglapi = shared_library(
 )
 
 if with_tests
-  shared_glapi_test = executable(
-    ['shared-glapi-test', glapitable_h],
-    'tests/check_table.cpp',
-    cpp_args : [cpp_msvc_compat_args],
-    include_directories : [inc_src, inc_include, inc_mapi],
-    link_with : [libglapi],
-    dependencies : [dep_thread, idep_gtest],
+  test(
+    'shared-glapi-test',
+    executable(
+      ['shared-glapi-test', glapitable_h],
+      'tests/check_table.cpp',
+      cpp_args : [cpp_msvc_compat_args],
+      include_directories : [inc_src, inc_include, inc_mapi],
+      link_with : [libglapi],
+      dependencies : [dep_thread, idep_gtest],
+    )
   )
-
-  test('shared-glapi-test', shared_glapi_test)
 endif

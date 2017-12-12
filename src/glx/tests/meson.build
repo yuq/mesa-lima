@@ -33,17 +33,17 @@ if with_shared_glapi
     files_glx_test += files('query_renderer_implementation_unittest.cpp')
   endif
 
-  glx_test = executable(
+  test(
     'glx-test',
-    [files_glx_test, glx_indirect_size_h, main_dispatch_h],
-    link_with : [libglx, libglapi],
-    include_directories : [
-      include_directories('..', '../../../include/GL/internal'),
-      inc_src, inc_include, inc_mesa, inc_mapi,
-    ],
-    dependencies : [dep_libdrm, dep_thread, idep_gtest]
+    executable(
+      'glx-test',
+      [files_glx_test, glx_indirect_size_h, main_dispatch_h],
+      link_with : [libglx, libglapi],
+      include_directories : [
+        include_directories('..', '../../../include/GL/internal'),
+        inc_src, inc_include, inc_mesa, inc_mapi,
+      ],
+      dependencies : [dep_libdrm, dep_thread, idep_gtest]
+    )
   )
-
-  test('glx-test', glx_test)
-  test('glx-dispatch-index-check', find_program('dispatch-index-check'))
 endif
