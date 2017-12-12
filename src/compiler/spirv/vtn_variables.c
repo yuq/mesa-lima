@@ -1465,11 +1465,11 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    }
 
    if (val->value_type == vtn_value_type_pointer) {
-      vtn_assert(val->pointer->var == void_var);
-      vtn_assert(val->pointer->chain == NULL);
-      vtn_assert(member == -1);
+      assert(val->pointer->var == void_var);
+      assert(val->pointer->chain == NULL);
+      assert(member == -1);
    } else {
-      vtn_assert(val->value_type == vtn_value_type_type);
+      assert(val->value_type == vtn_value_type_type);
    }
 
    /* Location is odd.  If applied to a split structure, we have to walk the
@@ -1501,7 +1501,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
          vtn_var->var->data.location = location;
       } else {
          /* This handles the structure member case */
-         vtn_assert(vtn_var->members);
+         assert(vtn_var->members);
          unsigned length =
             glsl_get_length(glsl_without_array(vtn_var->type->type));
          for (unsigned i = 0; i < length; i++) {
@@ -1514,11 +1514,12 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
       return;
    } else {
       if (vtn_var->var) {
-         vtn_assert(member <= 0);
+         assert(member == -1);
          apply_var_decoration(b, vtn_var->var, dec);
       } else if (vtn_var->members) {
          if (member >= 0) {
-            vtn_assert(vtn_var->members);
+            /* Member decorations must come from a type */
+            assert(val->value_type == vtn_value_type_type);
             apply_var_decoration(b, vtn_var->members[member], dec);
          } else {
             unsigned length =
