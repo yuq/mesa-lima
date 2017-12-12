@@ -1542,9 +1542,10 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    vec4_instruction *inst = (vec4_instruction *)be_inst;
 
    if (inst->predicate) {
-      fprintf(file, "(%cf0.%d%s) ",
+      fprintf(file, "(%cf%d.%d%s) ",
               inst->predicate_inverse ? '-' : '+',
-              inst->flag_subreg,
+              inst->flag_subreg / 2,
+              inst->flag_subreg % 2,
               pred_ctrl_align16[inst->predicate]);
    }
 
@@ -1558,7 +1559,7 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
           (devinfo->gen < 5 || (inst->opcode != BRW_OPCODE_SEL &&
                                 inst->opcode != BRW_OPCODE_IF &&
                                 inst->opcode != BRW_OPCODE_WHILE))) {
-         fprintf(file, ".f0.%d", inst->flag_subreg);
+         fprintf(file, ".f%d.%d", inst->flag_subreg / 2, inst->flag_subreg % 2);
       }
    }
    fprintf(file, " ");

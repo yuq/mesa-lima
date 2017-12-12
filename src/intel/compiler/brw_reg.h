@@ -842,6 +842,13 @@ brw_flag_reg(int reg, int subreg)
                       BRW_ARF_FLAG + reg, subreg);
 }
 
+static inline struct brw_reg
+brw_flag_subreg(unsigned subreg)
+{
+   return brw_uw1_reg(BRW_ARCHITECTURE_REGISTER_FILE,
+                      BRW_ARF_FLAG + subreg / 2, subreg % 2);
+}
+
 /**
  * Return the mask register present in Gen4-5, or the related register present
  * in Gen7.5 and later hardware referred to as "channel enable" register in

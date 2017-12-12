@@ -1508,7 +1508,7 @@ fs_generator::generate_varying_pull_constant_load_gen7(fs_inst *inst,
 void
 fs_generator::generate_mov_dispatch_to_flags(fs_inst *inst)
 {
-   struct brw_reg flags = brw_flag_reg(0, inst->flag_subreg);
+   struct brw_reg flags = brw_flag_subreg(inst->flag_subreg);
    struct brw_reg dispatch_mask;
 
    if (devinfo->gen >= 6)
@@ -1764,7 +1764,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       brw_set_default_access_mode(p, BRW_ALIGN_1);
       brw_set_default_predicate_control(p, inst->predicate);
       brw_set_default_predicate_inverse(p, inst->predicate_inverse);
-      brw_set_default_flag_reg(p, 0, inst->flag_subreg);
+      brw_set_default_flag_reg(p, inst->flag_subreg / 2, inst->flag_subreg % 2);
       brw_set_default_saturate(p, inst->saturate);
       brw_set_default_mask_control(p, inst->force_writemask_all);
       brw_set_default_acc_write_control(p, inst->writes_accumulator);
