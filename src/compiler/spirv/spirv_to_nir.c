@@ -1341,60 +1341,56 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       }
       break;
    }
+
    case SpvOpSpecConstantComposite:
    case SpvOpConstantComposite: {
       unsigned elem_count = count - 3;
+      vtn_fail_if(elem_count != val->type->length,
+                  "%s has %u constituents, expected %u",
+                  spirv_op_to_string(opcode), elem_count, val->type->length);
+
       nir_constant **elems = ralloc_array(b, nir_constant *, elem_count);
       for (unsigned i = 0; i < elem_count; i++)
          elems[i] = vtn_value(b, w[i + 3], vtn_value_type_constant)->constant;
 
-      switch (glsl_get_base_type(val->type->type)) {
-      case GLSL_TYPE_UINT:
-      case GLSL_TYPE_INT:
-      case GLSL_TYPE_UINT16:
-      case GLSL_TYPE_INT16:
-      case GLSL_TYPE_UINT64:
-      case GLSL_TYPE_INT64:
-      case GLSL_TYPE_FLOAT:
-      case GLSL_TYPE_FLOAT16:
-      case GLSL_TYPE_BOOL:
-      case GLSL_TYPE_DOUBLE: {
+      switch (val->type->base_type) {
+      case vtn_base_type_vector: {
+         assert(glsl_type_is_vector(val->type->type));
          int bit_size = glsl_get_bit_size(val->type->type);
-         if (glsl_type_is_matrix(val->type->type)) {
-            vtn_assert(glsl_get_matrix_columns(val->type->type) == elem_count);
-            for (unsigned i = 0; i < elem_count; i++)
-               val->constant->values[i] = elems[i]->values[0];
-         } else {
-            vtn_assert(glsl_type_is_vector(val->type->type));
-            vtn_assert(glsl_get_vector_elements(val->type->type) == elem_count);
-            for (unsigned i = 0; i < elem_count; i++) {
-               switch (bit_size) {
-               case 64:
-                  val->constant->values[0].u64[i] = elems[i]->values[0].u64[0];
-                  break;
-               case 32:
-                  val->constant->values[0].u32[i] = elems[i]->values[0].u32[0];
-                  break;
-               case 16:
-                  val->constant->values[0].u16[i] = elems[i]->values[0].u16[0];
-                  break;
-               default:
-                  vtn_fail("Invalid SpvOpConstantComposite bit size");
-               }
+         for (unsigned i = 0; i < elem_count; i++) {
+            switch (bit_size) {
+            case 64:
+               val->constant->values[0].u64[i] = elems[i]->values[0].u64[0];
+               break;
+            case 32:
+               val->constant->values[0].u32[i] = elems[i]->values[0].u32[0];
+               break;
+            case 16:
+               val->constant->values[0].u16[i] = elems[i]->values[0].u16[0];
+               break;
+            default:
+               vtn_fail("Invalid SpvOpConstantComposite bit size");
             }
          }
-         ralloc_free(elems);
          break;
       }
-      case GLSL_TYPE_STRUCT:
-      case GLSL_TYPE_ARRAY:
+
+      case vtn_base_type_matrix:
+         assert(glsl_type_is_matrix(val->type->type));
+         for (unsigned i = 0; i < elem_count; i++)
+            val->constant->values[i] = elems[i]->values[0];
+         break;
+
+      case vtn_base_type_struct:
+      case vtn_base_type_array:
          ralloc_steal(val->constant, elems);
          val->constant->num_elements = elem_count;
          val->constant->elements = elems;
          break;
 
       default:
-         vtn_fail("Unsupported type for constants");
+         vtn_fail("Result type of %s must be a composite type",
+                  spirv_op_to_string(opcode));
       }
       break;
    }
