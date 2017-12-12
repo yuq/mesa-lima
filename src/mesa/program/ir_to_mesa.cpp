@@ -3115,15 +3115,17 @@ _mesa_glsl_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
       link_shaders(ctx, prog);
    }
 
-   if (prog->data->LinkStatus) {
-      /* Reset sampler validated to true, validation happens via the
-       * LinkShader call below.
-       */
+   /* If LinkStatus is linking_success, then reset sampler validated to true.
+    * Validation happens via the LinkShader call below. If LinkStatus is
+    * linking_skipped, then SamplersValidated will have been restored from the
+    * shader cache.
+    */
+   if (prog->data->LinkStatus == linking_success) {
       prog->SamplersValidated = GL_TRUE;
+   }
 
-      if (!ctx->Driver.LinkShader(ctx, prog)) {
-         prog->data->LinkStatus = linking_failure;
-      }
+   if (prog->data->LinkStatus && !ctx->Driver.LinkShader(ctx, prog)) {
+      prog->data->LinkStatus = linking_failure;
    }
 
    /* Return early if we are loading the shader from on-disk cache */
