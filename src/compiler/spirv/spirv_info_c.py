@@ -78,8 +78,10 @@ if __name__ == "__main__":
 
     spirv_info = json.JSONDecoder().decode(open(pargs.json, "r").read())
 
-    capabilities = collect_data(spirv_info, "Capability")
-    decorations = collect_data(spirv_info, "Decoration")
+    info = [
+        collect_data(spirv_info, "Capability"),
+        collect_data(spirv_info, "Decoration"),
+    ]
 
     with open(pargs.out, 'w') as f:
-        f.write(TEMPLATE.render(info=[capabilities, decorations]))
+        f.write(TEMPLATE.render(info=info))
