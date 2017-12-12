@@ -1281,19 +1281,20 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
    val->constant = rzalloc(b, nir_constant);
    switch (opcode) {
    case SpvOpConstantTrue:
-      vtn_assert(val->type->type == glsl_bool_type());
-      val->constant->values[0].u32[0] = NIR_TRUE;
-      break;
    case SpvOpConstantFalse:
-      vtn_assert(val->type->type == glsl_bool_type());
-      val->constant->values[0].u32[0] = NIR_FALSE;
-      break;
-
    case SpvOpSpecConstantTrue:
    case SpvOpSpecConstantFalse: {
-      vtn_assert(val->type->type == glsl_bool_type());
-      uint32_t int_val =
-         get_specialization(b, val, (opcode == SpvOpSpecConstantTrue));
+      vtn_fail_if(val->type->type != glsl_bool_type(),
+                  "Result type of %s must be OpTypeBool",
+                  spirv_op_to_string(opcode));
+
+      uint32_t int_val = (opcode == SpvOpConstantTrue ||
+                          opcode == SpvOpSpecConstantTrue);
+
+      if (opcode == SpvOpSpecConstantTrue ||
+          opcode == SpvOpSpecConstantFalse)
+         int_val = get_specialization(b, val, int_val);
+
       val->constant->values[0].u32[0] = int_val ? NIR_TRUE : NIR_FALSE;
       break;
    }
