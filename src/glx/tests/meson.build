@@ -35,7 +35,7 @@ if with_shared_glapi
 
   glx_test = executable(
     'glx-test',
-    [files_glx_test, glx_indirect_size_h],
+    [files_glx_test, glx_indirect_size_h, main_dispatch_h],
     link_with : [libglx, libglapi],
     include_directories : [
       include_directories('..', '../../../include/GL/internal'),
