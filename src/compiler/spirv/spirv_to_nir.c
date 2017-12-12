@@ -376,15 +376,27 @@ _foreach_decoration_helper(struct vtn_builder *b,
       if (dec->scope == VTN_DEC_DECORATION) {
          member = parent_member;
       } else if (dec->scope >= VTN_DEC_STRUCT_MEMBER0) {
-         vtn_assert(parent_member == -1);
+         vtn_fail_if(value->value_type != vtn_value_type_type ||
+                     value->type->base_type != vtn_base_type_struct,
+                     "OpMemberDecorate and OpGroupMemberDecorate are only "
+                     "allowed on OpTypeStruct");
+         /* This means we haven't recursed yet */
+         assert(value == base_value);
+
          member = dec->scope - VTN_DEC_STRUCT_MEMBER0;
+
+         vtn_fail_if(member >= base_value->type->length,
+                     "OpMemberDecorate specifies member %d but the "
+                     "OpTypeStruct has only %u members",
+                     member, base_value->type->length);
       } else {
          /* Not a decoration */
+         assert(dec->scope == VTN_DEC_EXECUTION_MODE);
          continue;
       }
 
       if (dec->group) {
-         vtn_assert(dec->group->value_type == vtn_value_type_decoration_group);
+         assert(dec->group->value_type == vtn_value_type_decoration_group);
          _foreach_decoration_helper(b, base_value, member, dec->group,
                                     cb, data);
       } else {
@@ -414,7 +426,7 @@ vtn_foreach_execution_mode(struct vtn_builder *b, struct vtn_value *value,
       if (dec->scope != VTN_DEC_EXECUTION_MODE)
          continue;
 
-      vtn_assert(dec->group == NULL);
+      assert(dec->group == NULL);
       cb(b, value, dec, data);
    }
 }
@@ -435,7 +447,7 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
    case SpvOpDecorate:
    case SpvOpMemberDecorate:
    case SpvOpExecutionMode: {
-      struct vtn_value *val = &b->values[target];
+      struct vtn_value *val = vtn_untyped_value(b, target);
 
       struct vtn_decoration *dec = rzalloc(b, struct vtn_decoration);
       switch (opcode) {
@@ -444,12 +456,14 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
          break;
       case SpvOpMemberDecorate:
          dec->scope = VTN_DEC_STRUCT_MEMBER0 + *(w++);
+         vtn_fail_if(dec->scope < VTN_DEC_STRUCT_MEMBER0, /* overflow */
+                     "Member argument of OpMemberDecorate too large");
          break;
       case SpvOpExecutionMode:
          dec->scope = VTN_DEC_EXECUTION_MODE;
          break;
       default:
-         vtn_fail("Invalid decoration opcode");
+         unreachable("Invalid decoration opcode");
       }
       dec->decoration = *(w++);
       dec->literals = w;
@@ -474,6 +488,8 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
             dec->scope = VTN_DEC_DECORATION;
          } else {
             dec->scope = VTN_DEC_STRUCT_MEMBER0 + *(++w);
+            vtn_fail_if(dec->scope < 0, /* Check for overflow */
+                        "Member argument of OpGroupMemberDecorate too large");
          }
 
          /* Link into the list */
@@ -484,7 +500,7 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
    }
 
    default:
-      vtn_fail("Unhandled opcode");
+      unreachable("Unhandled opcode");
    }
 }
 
@@ -561,7 +577,7 @@ struct_member_decoration_cb(struct vtn_builder *b,
    if (member < 0)
       return;
 
-   vtn_assert(member < ctx->num_fields);
+   assert(member < ctx->num_fields);
 
    switch (dec->decoration) {
    case SpvDecorationNonWritable:
@@ -664,7 +680,10 @@ struct_member_matrix_stride_cb(struct vtn_builder *b,
 {
    if (dec->decoration != SpvDecorationMatrixStride)
       return;
-   vtn_assert(member >= 0);
+
+   vtn_fail_if(member < 0,
+               "The MatrixStride decoration is only allowed on members "
+               "of OpTypeStruct");
 
    struct member_decoration_ctx *ctx = void_ctx;
 
@@ -686,8 +705,12 @@ type_decoration_cb(struct vtn_builder *b,
 {
    struct vtn_type *type = val->type;
 
-   if (member != -1)
+   if (member != -1) {
+      /* This should have been handled by OpTypeStruct */
+      assert(val->type->base_type == vtn_base_type_struct);
+      assert(member >= 0 && member < val->type->length);
       return;
+   }
 
    switch (dec->decoration) {
    case SpvDecorationArrayStride:
