@@ -368,9 +368,13 @@ brw_alloc_stage_scratch(struct brw_context *brw,
        *
        * According to the other driver team, this applies to compute shaders
        * as well.  This is not currently documented at all.
+       *
+       * brw->screen->subslice_total is the TOTAL number of subslices
+       * and we wish to view that there are 4 subslices per slice
+       * instead of the actual number of subslices per slice.
        */
       if (devinfo->gen >= 9)
-         subslices = 4;
+         subslices = 4 * brw->screen->devinfo.num_slices;
 
       /* WaCSScratchSize:hsw
        *
