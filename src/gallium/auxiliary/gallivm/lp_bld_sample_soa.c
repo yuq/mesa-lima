@@ -218,34 +218,42 @@ lp_build_sample_texel_soa(struct lp_build_sample_context *bld,
 
 
 /**
- * Helper to compute the mirror function for the PIPE_WRAP_MIRROR modes.
+ * Helper to compute the mirror function for the PIPE_WRAP_MIRROR_REPEAT mode.
+ * (Note that with pot sizes could do this much more easily post-scale
+ * with some bit arithmetic.)
  */
 static LLVMValueRef
 lp_build_coord_mirror(struct lp_build_sample_context *bld,
-                      LLVMValueRef coord)
+                      LLVMValueRef coord, boolean posOnly)
 {
    struct lp_build_context *coord_bld = &bld->coord_bld;
-   struct lp_build_context *int_coord_bld = &bld->int_coord_bld;
-   LLVMValueRef fract, flr, isOdd;
+   LLVMValueRef fract;
+   LLVMValueRef half = lp_build_const_vec(bld->gallivm, coord_bld->type, 0.5);
 
-   lp_build_ifloor_fract(coord_bld, coord, &flr, &fract);
-   /* kill off NaNs */
-   /* XXX: not safe without arch rounding, fract can be anything. */
-   fract = lp_build_max_ext(coord_bld, fract, coord_bld->zero,
-                            GALLIVM_NAN_RETURN_OTHER_SECOND_NONNAN);
+   /*
+    * We can just use 2*(x - round(0.5*x)) to do all the mirroring,
+    * it all works out. (The result is in range [-1, 1.0], negative if
+    * the coord is in the "odd" section, otherwise positive.)
+    */
 
-   /* isOdd = flr & 1 */
-   isOdd = LLVMBuildAnd(bld->gallivm->builder, flr, int_coord_bld->one, "");
+   coord = lp_build_mul(coord_bld, coord, half);
+   fract = lp_build_round(coord_bld, coord);
+   fract = lp_build_sub(coord_bld, coord, fract);
+   coord = lp_build_add(coord_bld, fract, fract);
 
-   /* make coord positive or negative depending on isOdd */
-   /* XXX slight overkill masking out sign bit is unnecessary */
-   coord = lp_build_set_sign(coord_bld, fract, isOdd);
-
-   /* convert isOdd to float */
-   isOdd = lp_build_int_to_float(coord_bld, isOdd);
-
-   /* add isOdd to coord */
-   coord = lp_build_add(coord_bld, coord, isOdd);
+   if (posOnly) {
+      /*
+       * Theoretically it's not quite 100% accurate because the spec says
+       * that ultimately a scaled coord of -x.0 should map to int coord
+       * -x + 1 with mirroring, not -x (this does not matter for bilinear
+       * filtering).
+       */
+      coord = lp_build_abs(coord_bld, coord);
+      /* kill off NaNs */
+      /* XXX: not safe without arch rounding, fract can be anything. */
+      coord = lp_build_max_ext(coord_bld, coord, coord_bld->zero,
+                               GALLIVM_NAN_RETURN_OTHER_SECOND_NONNAN);
+   }
 
    return coord;
 }
@@ -362,7 +370,13 @@ lp_build_sample_wrap_linear(struct lp_build_sample_context *bld,
          coord = lp_build_add(coord_bld, coord, offset);
       }
 
-      /* clamp to [0, length] */
+      /*
+       * clamp to [0, length]
+       *
+       * Unlike some other wrap modes, this should be correct for gather
+       * too. GL_CLAMP explicitly does this clamp on the coord prior to
+       * actual wrapping (which is per sample).
+       */
       coord = lp_build_clamp(coord_bld, coord, coord_bld->zero, length_f);
 
       coord = lp_build_sub(coord_bld, coord, half);
@@ -426,8 +440,13 @@ lp_build_sample_wrap_linear(struct lp_build_sample_context *bld,
          offset = lp_build_int_to_float(coord_bld, offset);
          coord = lp_build_add(coord_bld, coord, offset);
       }
-      /* was: clamp to [-0.5, length + 0.5], then sub 0.5 */
-      /* can skip clamp (though might not work for very large coord values) */
+      /*
+       * We don't need any clamp. Technically, for very large (pos or neg)
+       * (or infinite) values, clamp against [-length, length] would be
+       * correct, but we don't need to guarantee any specific
+       * result for such coords (the ifloor will be undefined, but for modes
+       * requiring border all resulting coords are safe).
+       */
       coord = lp_build_sub(coord_bld, coord, half);
       /* convert to int, compute lerp weight */
       lp_build_ifloor_fract(coord_bld, coord, &coord0, &weight);
@@ -440,28 +459,64 @@ lp_build_sample_wrap_linear(struct lp_build_sample_context *bld,
          offset = lp_build_div(coord_bld, offset, length_f);
          coord = lp_build_add(coord_bld, coord, offset);
       }
-      /* compute mirror function */
-      /*
-       * XXX: This looks incorrect wrt gather. Due to wrap specification,
-       * it is possible the first coord ends up larger than the second one.
-       * However, with our simplifications the coordinates will be swapped
-       * in this case. (Albeit some other api tests don't like it even
-       * with this fixed...)
-       */
-      coord = lp_build_coord_mirror(bld, coord);
+      if (!is_gather) {
+         /* compute mirror function */
+         coord = lp_build_coord_mirror(bld, coord, TRUE);
 
-      /* scale coord to length */
-      coord = lp_build_mul(coord_bld, coord, length_f);
-      coord = lp_build_sub(coord_bld, coord, half);
+         /* scale coord to length */
+         coord = lp_build_mul(coord_bld, coord, length_f);
+         coord = lp_build_sub(coord_bld, coord, half);
 
-      /* convert to int, compute lerp weight */
-      lp_build_ifloor_fract(coord_bld, coord, &coord0, &weight);
-      coord1 = lp_build_add(int_coord_bld, coord0, int_coord_bld->one);
+         /* convert to int, compute lerp weight */
+         lp_build_ifloor_fract(coord_bld, coord, &coord0, &weight);
+         coord1 = lp_build_add(int_coord_bld, coord0, int_coord_bld->one);
 
-      /* coord0 = max(coord0, 0) */
-      coord0 = lp_build_max(int_coord_bld, coord0, int_coord_bld->zero);
-      /* coord1 = min(coord1, length-1) */
-      coord1 = lp_build_min(int_coord_bld, coord1, length_minus_one);
+         /* coord0 = max(coord0, 0) */
+         coord0 = lp_build_max(int_coord_bld, coord0, int_coord_bld->zero);
+         /* coord1 = min(coord1, length-1) */
+         coord1 = lp_build_min(int_coord_bld, coord1, length_minus_one);
+      } else {
+         /*
+          * This is pretty reasonable in the end,  all what the tests care
+          * about is nasty edge cases (scaled coords x.5, so the individual
+          * coords are actually integers, which is REALLY tricky to get right
+          * due to this working differently both for negative numbers as well
+          * as for even/odd cases). But with enough magic it's not too complex
+          * after all.
+          * Maybe should try a bit arithmetic one though for POT textures...
+          */
+         LLVMValueRef isNeg;
+         /*
+          * Wrapping just once still works, even though it means we can
+          * get "wrong" sign due to performing mirror in the middle of the
+          * two coords (because this can only happen very near the odd/even
+          * edges, so both coords will actually end up as 0 or length - 1
+          * in the end).
+          * For GL4 gather with per-sample offsets we'd need to the mirroring
+          * per coord too.
+          */
+         coord = lp_build_coord_mirror(bld, coord, FALSE);
+         coord = lp_build_mul(coord_bld, coord, length_f);
+
+         /*
+          * NaNs should be safe here, we'll do away with them with
+          * the ones' complement plus min.
+          */
+         coord0 = lp_build_sub(coord_bld, coord, half);
+         coord0 = lp_build_ifloor(coord_bld, coord0);
+         coord1 = lp_build_add(int_coord_bld, coord0, int_coord_bld->one);
+         /* ones complement for neg numbers (mirror(negX) = X - 1)  */
+         isNeg = lp_build_cmp(int_coord_bld, PIPE_FUNC_LESS,
+                              coord0, int_coord_bld->zero);
+         coord0 = lp_build_xor(int_coord_bld, coord0, isNeg);
+         isNeg = lp_build_cmp(int_coord_bld, PIPE_FUNC_LESS,
+                              coord1, int_coord_bld->zero);
+         coord1 = lp_build_xor(int_coord_bld, coord1, isNeg);
+         coord0 = lp_build_min(int_coord_bld, coord0, length_minus_one);
+         coord1 = lp_build_min(int_coord_bld, coord1, length_minus_one);
+
+         weight = coord_bld->undef;
+      }
       break;
 
    case PIPE_TEX_WRAP_MIRROR_CLAMP:
@@ -473,10 +528,19 @@ lp_build_sample_wrap_linear(struct lp_build_sample_context *bld,
          offset = lp_build_int_to_float(coord_bld, offset);
          coord = lp_build_add(coord_bld, coord, offset);
       }
+      /*
+       * XXX: probably not correct for gather, albeit I'm not
+       * entirely sure as it's poorly specified. The wrapping looks
+       * correct according to the spec which is against gl 1.2.1,
+       * however negative values will be swapped - gl re-specified
+       * wrapping with newer versions (no more pre-clamp except with
+       * GL_CLAMP).
+       */
       coord = lp_build_abs(coord_bld, coord);
 
       /* clamp to [0, length] */
-      coord = lp_build_min(coord_bld, coord, length_f);
+      coord = lp_build_min_ext(coord_bld, coord, length_f,
+                               GALLIVM_NAN_RETURN_OTHER_SECOND_NONNAN);
 
       coord = lp_build_sub(coord_bld, coord, half);
 
@@ -498,35 +562,59 @@ lp_build_sample_wrap_linear(struct lp_build_sample_context *bld,
             offset = lp_build_int_to_float(coord_bld, offset);
             coord = lp_build_add(coord_bld, coord, offset);
          }
-         /*
-          * XXX: This looks incorrect wrt gather. Due to wrap specification,
-          * the first and second texel actually end up with "different order"
-          * for negative coords. For example, if the scaled coord would
-          * be -0.6, then the first coord should end up as 1
-          * (floor(-0.6 - 0.5) == -2, mirror makes that 1), the second as 0
-          * (floor(-0.6 - 0.5) + 1 == -1, mirror makes that 0).
-          * But with our simplifications the second coord will always be the
-          * larger one. The other two mirror_clamp modes have the same problem.
-          * Moreover, for coords close to zero we should end up with both
-          * coords being 0, but we will end up with coord1 being 1 instead
-          * (with bilinear filtering this is ok as the weight is 0.0) (this
-          * problem is specific to mirror_clamp_to_edge).
-          */
-         coord = lp_build_abs(coord_bld, coord);
+         if (!is_gather) {
+            coord = lp_build_abs(coord_bld, coord);
 
-         /* clamp to length max */
-         coord = lp_build_min_ext(coord_bld, coord, length_f,
-                                  GALLIVM_NAN_RETURN_OTHER_SECOND_NONNAN);
-         /* subtract 0.5 */
-         coord = lp_build_sub(coord_bld, coord, half);
-         /* clamp to [0, length - 0.5] */
-         coord = lp_build_max(coord_bld, coord, coord_bld->zero);
+            /* clamp to length max */
+            coord = lp_build_min_ext(coord_bld, coord, length_f,
+                                     GALLIVM_NAN_RETURN_OTHER_SECOND_NONNAN);
+            /* subtract 0.5 */
+            coord = lp_build_sub(coord_bld, coord, half);
+            /* clamp to [0, length - 0.5] */
+            coord = lp_build_max(coord_bld, coord, coord_bld->zero);
 
-         /* convert to int, compute lerp weight */
-         lp_build_ifloor_fract(&abs_coord_bld, coord, &coord0, &weight);
-         coord1 = lp_build_add(int_coord_bld, coord0, int_coord_bld->one);
-         /* coord1 = min(coord1, length-1) */
-         coord1 = lp_build_min(int_coord_bld, coord1, length_minus_one);
+            /* convert to int, compute lerp weight */
+            lp_build_ifloor_fract(&abs_coord_bld, coord, &coord0, &weight);
+            coord1 = lp_build_add(int_coord_bld, coord0, int_coord_bld->one);
+            /* coord1 = min(coord1, length-1) */
+            coord1 = lp_build_min(int_coord_bld, coord1, length_minus_one);
+         } else {
+            /*
+             * The non-gather path will swap coord0/1 if coord was negative,
+             * which is ok for filtering since the filter weight matches
+             * accordingly. Also, if coord is close to zero, coord0/1 will
+             * be 0 and 1, instead of 0 and 0 (again ok due to filter
+             * weight being 0.0). Both issues need to be fixed for gather.
+             */
+            LLVMValueRef isNeg;
+
+            /*
+             * Actually wanted to cheat here and use:
+             * coord1 = lp_build_iround(coord_bld, coord);
+             * but it's not good enough for some tests (even piglit
+             * textureGather is set up in a way so the coords area always
+             * .5, that is right at the crossover points).
+             * So do ordinary sub/floor, then do ones' complement
+             * for negative numbers.
+             * (Note can't just do sub|add/abs/itrunc per coord neither -
+             * because the spec demands that mirror(3.0) = 3 but
+             * mirror(-3.0) = 2.)
+             */
+            coord = lp_build_sub(coord_bld, coord, half);
+            coord0 = lp_build_ifloor(coord_bld, coord);
+            coord1 = lp_build_add(int_coord_bld, coord0, int_coord_bld->one);
+            isNeg = lp_build_cmp(int_coord_bld, PIPE_FUNC_LESS, coord0,
+                                 int_coord_bld->zero);
+            coord0 = lp_build_xor(int_coord_bld, isNeg, coord0);
+            coord0 = lp_build_min(int_coord_bld, coord0, length_minus_one);
+
+            isNeg = lp_build_cmp(int_coord_bld, PIPE_FUNC_LESS, coord1,
+                                 int_coord_bld->zero);
+            coord1 = lp_build_xor(int_coord_bld, isNeg, coord1);
+            coord1 = lp_build_min(int_coord_bld, coord1, length_minus_one);
+
+            weight = coord_bld->undef;
+         }
       }
       break;
 
@@ -540,11 +628,20 @@ lp_build_sample_wrap_linear(struct lp_build_sample_context *bld,
             offset = lp_build_int_to_float(coord_bld, offset);
             coord = lp_build_add(coord_bld, coord, offset);
          }
+         /*
+          * XXX: probably not correct for gather due to swapped
+          * order if coord is negative (same rationale as for
+          * MIRROR_CLAMP).
+          */
          coord = lp_build_abs(coord_bld, coord);
 
-         /* was: clamp to [-0.5, length + 0.5] then sub 0.5 */
-         /* skip clamp - always positive, and other side
-            only potentially matters for very large coords */
+         /*
+          * We don't need any clamp. Technically, for very large
+          * (or infinite) values, clamp against length would be
+          * correct, but we don't need to guarantee any specific
+          * result for such coords (the ifloor will be undefined, but
+          * for modes requiring border all resulting coords are safe).
+          */
          coord = lp_build_sub(coord_bld, coord, half);
 
          /* convert to int, compute lerp weight */
@@ -652,7 +749,7 @@ lp_build_sample_wrap_nearest(struct lp_build_sample_context *bld,
          coord = lp_build_add(coord_bld, coord, offset);
       }
       /* compute mirror function */
-      coord = lp_build_coord_mirror(bld, coord);
+      coord = lp_build_coord_mirror(bld, coord, TRUE);
 
       /* scale coord to length */
       assert(bld->static_sampler_state->normalized_coords);
