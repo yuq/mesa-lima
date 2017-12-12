@@ -53,15 +53,13 @@ foreach g : [['40', isl_gen4_files], ['50', []], ['60', isl_gen6_files],
              ['70', isl_gen7_files], ['75', []], ['80', isl_gen8_files],
              ['90', isl_gen9_files], ['100', []]]
   _gen = g[0]
-  _sources = g[1]
-  _lib = static_library(
+  isl_gen_libs += static_library(
     'libisl_gen@0@'.format(_gen),
-    [_sources, isl_gen_files, gen_xml_pack],
+    [g[1], isl_gen_files, gen_xml_pack],
     include_directories : [inc_common, inc_intel],
     c_args : [c_vis_args, no_override_init_args,
               '-DGEN_VERSIONx10=@0@'.format(_gen)],
   )
-  isl_gen_libs += _lib
 endforeach
 
 isl_format_layout_c = custom_target(

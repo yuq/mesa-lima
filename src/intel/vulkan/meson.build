@@ -89,10 +89,9 @@ foreach g : [['70', ['gen7_cmd_buffer.c']], ['75', ['gen7_cmd_buffer.c']],
              ['80', ['gen8_cmd_buffer.c']], ['90', ['gen8_cmd_buffer.c']],
              ['100', ['gen8_cmd_buffer.c']]]
   _gen = g[0]
-  _files = g[1]
-  _lib = static_library(
+  libanv_gen_libs += static_library(
     'libanv_gen@0@'.format(_gen),
-    [anv_gen_files, _files, block_entrypoints],
+    [anv_gen_files, g[1], block_entrypoints],
     include_directories : [
       inc_common, inc_compiler, inc_drm_uapi, inc_intel, inc_vulkan_util,
       inc_vulkan_wsi,
@@ -103,7 +102,6 @@ foreach g : [['70', ['gen7_cmd_buffer.c']], ['75', ['gen7_cmd_buffer.c']],
     ],
     dependencies : [dep_libdrm, dep_valgrind],
   )
-  libanv_gen_libs += _lib
 endforeach
 
 libanv_files = files(

@@ -136,7 +136,7 @@ files_i965 = files(
 
 i965_gen_libs = []
 foreach v : ['40', '45', '50', '60', '70', '75', '80', '90', '100']
-  _lib = static_library(
+  i965_gen_libs += static_library(
     'libi965_gen@0@'.format(v),
     ['genX_blorp_exec.c', 'genX_state_upload.c', nir_opcodes_h, gen_xml_pack],
     include_directories : [inc_common, inc_intel, inc_dri_common],
@@ -146,7 +146,6 @@ foreach v : ['40', '45', '50', '60', '70', '75', '80', '90', '100']
     ],
     dependencies : [dep_libdrm],
   )
-  i965_gen_libs += _lib
 endforeach
 
 oa_generator = generator(
