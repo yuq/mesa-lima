@@ -22,11 +22,7 @@
  */
 
 #include "glspirv.h"
-
 #include "errors.h"
-
-#include "errors.h"
-
 #include "util/u_atomic.h"
 
 void
