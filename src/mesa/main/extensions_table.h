@@ -210,6 +210,7 @@ EXT(EXT_copy_image                          , OES_copy_image                    
 EXT(EXT_copy_texture                        , dummy_true                             , GLL,  x ,  x ,  x , 1995)
 EXT(EXT_depth_bounds_test                   , EXT_depth_bounds_test                  , GLL, GLC,  x ,  x , 2002)
 EXT(EXT_discard_framebuffer                 , dummy_true                             ,  x ,  x , ES1, ES2, 2009)
+EXT(EXT_disjoint_timer_query                , EXT_disjoint_timer_query               ,  x ,  x ,  x , ES2, 2016)
 EXT(EXT_draw_buffers                        , dummy_true                             ,  x ,  x ,  x , ES2, 2012)
 EXT(EXT_draw_buffers2                       , EXT_draw_buffers2                      , GLL, GLC,  x ,  x , 2006)
 EXT(EXT_draw_buffers_indexed                , ARB_draw_buffers_blend                 ,  x ,  x ,  x ,  30, 2014)
