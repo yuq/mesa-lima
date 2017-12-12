@@ -277,7 +277,7 @@ public:
 
    struct brw_reg interp_reg(int location, int channel);
 
-   int implied_mrf_writes(fs_inst *inst);
+   int implied_mrf_writes(fs_inst *inst) const;
 
    virtual void dump_instructions();
    virtual void dump_instructions(const char *name);

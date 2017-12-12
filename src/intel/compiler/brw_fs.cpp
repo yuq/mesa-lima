@@ -945,7 +945,7 @@ fs_inst::flags_written() const
  * instruction -- the FS opcodes often generate MOVs in addition.
  */
 int
-fs_visitor::implied_mrf_writes(fs_inst *inst)
+fs_visitor::implied_mrf_writes(fs_inst *inst) const
 {
    if (inst->mlen == 0)
       return 0;

@@ -530,12 +530,12 @@ namespace {
       for (unsigned reg = 0; reg < 2; reg++)
          constrained[p.atom_of_reg(reg)] = true;
 
-      /* Assume that anything referenced via fixed GRFs is baked into the
-       * hardware's fixed-function logic and may be unsafe to move around.
-       * Also take into account the source GRF restrictions of EOT
-       * send-message instructions.
-       */
       foreach_block_and_inst(block, fs_inst, inst, v->cfg) {
+         /* Assume that anything referenced via fixed GRFs is baked into the
+          * hardware's fixed-function logic and may be unsafe to move around.
+          * Also take into account the source GRF restrictions of EOT
+          * send-message instructions.
+          */
          if (inst->dst.file == FIXED_GRF)
             constrained[p.atom_of_reg(reg_of(inst->dst))] = true;
 
@@ -543,6 +543,18 @@ namespace {
             if (inst->src[i].file == FIXED_GRF ||
                 (is_grf(inst->src[i]) && inst->eot))
                constrained[p.atom_of_reg(reg_of(inst->src[i]))] = true;
+         }
+
+         /* The location of the Gen7 MRF hack registers is hard-coded in the
+          * rest of the compiler back-end.  Don't attempt to move them around.
+          */
+         if (v->devinfo->gen >= 7) {
+            assert(inst->dst.file != MRF);
+
+            for (int i = 0; i < v->implied_mrf_writes(inst); i++) {
+               const unsigned reg = GEN7_MRF_HACK_START + inst->base_mrf + i;
+               constrained[p.atom_of_reg(reg)] = true;
+            }
          }
       }
 
