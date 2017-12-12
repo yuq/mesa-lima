@@ -1075,10 +1075,12 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
    case SpvOpTypeImage: {
       val->type->base_type = vtn_base_type_image;
 
-      const struct glsl_type *sampled_type =
-         vtn_value(b, w[2], vtn_value_type_type)->type->type;
+      const struct vtn_type *sampled_type =
+         vtn_value(b, w[2], vtn_value_type_type)->type;
 
-      vtn_assert(glsl_type_is_vector_or_scalar(sampled_type));
+      vtn_fail_if(sampled_type->base_type != vtn_base_type_scalar ||
+                  glsl_get_bit_size(sampled_type->type) != 32,
+                  "Sampled type of OpTypeImage must be a 32-bit scalar");
 
       enum glsl_sampler_dim dim;
       switch ((SpvDim)w[3]) {
@@ -1090,7 +1092,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       case SpvDimBuffer:   dim = GLSL_SAMPLER_DIM_BUF;   break;
       case SpvDimSubpassData: dim = GLSL_SAMPLER_DIM_SUBPASS; break;
       default:
-         vtn_fail("Invalid SPIR-V Sampler dimension");
+         vtn_fail("Invalid SPIR-V image dimensionality");
       }
 
       bool is_shadow = w[4];
@@ -1115,15 +1117,16 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 
       val->type->image_format = translate_image_format(b, format);
 
+      enum glsl_base_type sampled_base_type =
+         glsl_get_base_type(sampled_type->type);
       if (sampled == 1) {
          val->type->sampled = true;
          val->type->type = glsl_sampler_type(dim, is_shadow, is_array,
-                                             glsl_get_base_type(sampled_type));
+                                             sampled_base_type);
       } else if (sampled == 2) {
          vtn_assert(!is_shadow);
          val->type->sampled = false;
-         val->type->type = glsl_image_type(dim, is_array,
-                                           glsl_get_base_type(sampled_type));
+         val->type->type = glsl_image_type(dim, is_array, sampled_base_type);
       } else {
          vtn_fail("We need to know if the image will be sampled");
       }
