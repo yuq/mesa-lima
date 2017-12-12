@@ -1319,7 +1319,6 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
    }
    case SpvOpSpecConstant: {
       vtn_assert(glsl_type_is_scalar(val->type->type));
-      val->constant->values[0].u32[0] = get_specialization(b, val, w[3]);
       int bit_size = glsl_get_bit_size(val->type->type);
       switch (bit_size) {
       case 64:
