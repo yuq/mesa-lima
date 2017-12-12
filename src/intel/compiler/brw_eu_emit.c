@@ -2883,7 +2883,8 @@ brw_untyped_atomic(struct brw_codegen *p,
                    struct brw_reg surface,
                    unsigned atomic_op,
                    unsigned msg_length,
-                   bool response_expected)
+                   bool response_expected,
+                   bool header_present)
 {
    const struct gen_device_info *devinfo = p->devinfo;
    const unsigned sfid = (devinfo->gen >= 8 || devinfo->is_haswell ?
@@ -2901,7 +2902,7 @@ brw_untyped_atomic(struct brw_codegen *p,
       p, sfid, brw_writemask(dst, mask), payload, surface, msg_length,
       brw_surface_payload_size(p, response_expected,
                                devinfo->gen >= 8 || devinfo->is_haswell, true),
-      align1);
+      header_present);
 
    brw_set_dp_untyped_atomic_message(
       p, insn, atomic_op, response_expected);
@@ -2984,7 +2985,8 @@ brw_untyped_surface_write(struct brw_codegen *p,
                           struct brw_reg payload,
                           struct brw_reg surface,
                           unsigned msg_length,
-                          unsigned num_channels)
+                          unsigned num_channels,
+                          bool header_present)
 {
    const struct gen_device_info *devinfo = p->devinfo;
    const unsigned sfid = (devinfo->gen >= 8 || devinfo->is_haswell ?
@@ -2996,7 +2998,7 @@ brw_untyped_surface_write(struct brw_codegen *p,
                           WRITEMASK_X : WRITEMASK_XYZW;
    struct brw_inst *insn = brw_send_indirect_surface_message(
       p, sfid, brw_writemask(brw_null_reg(), mask),
-      payload, surface, msg_length, 0, align1);
+      payload, surface, msg_length, 0, header_present);
 
    brw_set_dp_untyped_surface_write_message(
       p, insn, num_channels);
@@ -3054,7 +3056,8 @@ brw_byte_scattered_write(struct brw_codegen *p,
                          struct brw_reg payload,
                          struct brw_reg surface,
                          unsigned msg_length,
-                         unsigned bit_size)
+                         unsigned bit_size,
+                         bool header_present)
 {
    const struct gen_device_info *devinfo = p->devinfo;
    assert(devinfo->gen > 7 || devinfo->is_haswell);
@@ -3063,7 +3066,7 @@ brw_byte_scattered_write(struct brw_codegen *p,
 
    struct brw_inst *insn = brw_send_indirect_surface_message(
       p, sfid, brw_writemask(brw_null_reg(), WRITEMASK_XYZW),
-      payload, surface, msg_length, 0, true);
+      payload, surface, msg_length, 0, header_present);
 
    unsigned msg_control =
       brw_byte_scattered_data_element_from_bit_size(bit_size) << 2;
@@ -3119,7 +3122,8 @@ brw_typed_atomic(struct brw_codegen *p,
                  struct brw_reg surface,
                  unsigned atomic_op,
                  unsigned msg_length,
-                 bool response_expected) {
+                 bool response_expected,
+                 bool header_present) {
    const struct gen_device_info *devinfo = p->devinfo;
    const unsigned sfid = (devinfo->gen >= 8 || devinfo->is_haswell ?
                           HSW_SFID_DATAPORT_DATA_CACHE_1 :
@@ -3131,7 +3135,7 @@ brw_typed_atomic(struct brw_codegen *p,
       p, sfid, brw_writemask(dst, mask), payload, surface, msg_length,
       brw_surface_payload_size(p, response_expected,
                                devinfo->gen >= 8 || devinfo->is_haswell, false),
-      true);
+      header_present);
 
    brw_set_dp_typed_atomic_message(
       p, insn, atomic_op, response_expected);
@@ -3175,7 +3179,8 @@ brw_typed_surface_read(struct brw_codegen *p,
                        struct brw_reg payload,
                        struct brw_reg surface,
                        unsigned msg_length,
-                       unsigned num_channels)
+                       unsigned num_channels,
+                       bool header_present)
 {
    const struct gen_device_info *devinfo = p->devinfo;
    const unsigned sfid = (devinfo->gen >= 8 || devinfo->is_haswell ?
@@ -3185,7 +3190,7 @@ brw_typed_surface_read(struct brw_codegen *p,
       p, sfid, dst, payload, surface, msg_length,
       brw_surface_payload_size(p, num_channels,
                                devinfo->gen >= 8 || devinfo->is_haswell, false),
-      true);
+      header_present);
 
    brw_set_dp_typed_surface_read_message(
       p, insn, num_channels);
@@ -3229,7 +3234,8 @@ brw_typed_surface_write(struct brw_codegen *p,
                         struct brw_reg payload,
                         struct brw_reg surface,
                         unsigned msg_length,
-                        unsigned num_channels)
+                        unsigned num_channels,
+                        bool header_present)
 {
    const struct gen_device_info *devinfo = p->devinfo;
    const unsigned sfid = (devinfo->gen >= 8 || devinfo->is_haswell ?
@@ -3241,7 +3247,7 @@ brw_typed_surface_write(struct brw_codegen *p,
                           WRITEMASK_X : WRITEMASK_XYZW);
    struct brw_inst *insn = brw_send_indirect_surface_message(
       p, sfid, brw_writemask(brw_null_reg(), mask),
-      payload, surface, msg_length, 0, true);
+      payload, surface, msg_length, 0, header_present);
 
    brw_set_dp_typed_surface_write_message(
       p, insn, num_channels);

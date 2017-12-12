@@ -2118,10 +2118,12 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case SHADER_OPCODE_UNTYPED_ATOMIC:
          assert(src[2].file == BRW_IMMEDIATE_VALUE);
          brw_untyped_atomic(p, dst, src[0], src[1], src[2].ud,
-                            inst->mlen, !inst->dst.is_null());
+                            inst->mlen, !inst->dst.is_null(),
+                            inst->header_size);
          break;
 
       case SHADER_OPCODE_UNTYPED_SURFACE_READ:
+         assert(!inst->header_size);
          assert(src[2].file == BRW_IMMEDIATE_VALUE);
          brw_untyped_surface_read(p, dst, src[0], src[1],
                                   inst->mlen, src[2].ud);
@@ -2130,10 +2132,12 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
          assert(src[2].file == BRW_IMMEDIATE_VALUE);
          brw_untyped_surface_write(p, src[0], src[1],
-                                   inst->mlen, src[2].ud);
+                                   inst->mlen, src[2].ud,
+                                   inst->header_size);
          break;
 
       case SHADER_OPCODE_BYTE_SCATTERED_READ:
+         assert(!inst->header_size);
          assert(src[2].file == BRW_IMMEDIATE_VALUE);
          brw_byte_scattered_read(p, dst, src[0], src[1],
                                  inst->mlen, src[2].ud);
@@ -2142,24 +2146,28 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case SHADER_OPCODE_BYTE_SCATTERED_WRITE:
          assert(src[2].file == BRW_IMMEDIATE_VALUE);
          brw_byte_scattered_write(p, src[0], src[1],
-                                  inst->mlen, src[2].ud);
+                                  inst->mlen, src[2].ud,
+                                  inst->header_size);
          break;
 
       case SHADER_OPCODE_TYPED_ATOMIC:
          assert(src[2].file == BRW_IMMEDIATE_VALUE);
          brw_typed_atomic(p, dst, src[0], src[1],
-                          src[2].ud, inst->mlen, !inst->dst.is_null());
+                          src[2].ud, inst->mlen, !inst->dst.is_null(),
+                          inst->header_size);
          break;
 
       case SHADER_OPCODE_TYPED_SURFACE_READ:
          assert(src[2].file == BRW_IMMEDIATE_VALUE);
          brw_typed_surface_read(p, dst, src[0], src[1],
-                                inst->mlen, src[2].ud);
+                                inst->mlen, src[2].ud,
+                                inst->header_size);
          break;
 
       case SHADER_OPCODE_TYPED_SURFACE_WRITE:
          assert(src[2].file == BRW_IMMEDIATE_VALUE);
-         brw_typed_surface_write(p, src[0], src[1], inst->mlen, src[2].ud);
+         brw_typed_surface_write(p, src[0], src[1], inst->mlen, src[2].ud,
+                                 inst->header_size);
          break;
 
       case SHADER_OPCODE_MEMORY_FENCE:
