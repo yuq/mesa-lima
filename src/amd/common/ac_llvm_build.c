@@ -439,6 +439,7 @@ ac_build_fdiv(struct ac_llvm_context *ctx,
 {
 	LLVMValueRef ret = LLVMBuildFDiv(ctx->builder, num, den, "");
 
+	/* Use v_rcp_f32 instead of precise division. */
 	if (!LLVMIsConstant(ret))
 		LLVMSetMetadata(ret, ctx->fpmath_md_kind, ctx->fpmath_md_2p5_ulp);
 	return ret;
