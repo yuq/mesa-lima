@@ -1485,44 +1485,39 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
 
          int elem = -1;
          int col = 0;
-         const struct glsl_type *type = comp->type->type;
+         const struct vtn_type *type = comp->type;
          for (unsigned i = deref_start; i < count; i++) {
-            switch (glsl_get_base_type(type)) {
-            case GLSL_TYPE_UINT:
-            case GLSL_TYPE_INT:
-            case GLSL_TYPE_UINT16:
-            case GLSL_TYPE_INT16:
-            case GLSL_TYPE_UINT64:
-            case GLSL_TYPE_INT64:
-            case GLSL_TYPE_FLOAT:
-            case GLSL_TYPE_FLOAT16:
-            case GLSL_TYPE_DOUBLE:
-            case GLSL_TYPE_BOOL:
-               /* If we hit this granularity, we're picking off an element */
-               if (glsl_type_is_matrix(type)) {
-                  vtn_assert(col == 0 && elem == -1);
-                  col = w[i];
-                  elem = 0;
-                  type = glsl_get_column_type(type);
-               } else {
-                  vtn_assert(elem <= 0 && glsl_type_is_vector(type));
-                  elem = w[i];
-                  type = glsl_scalar_type(glsl_get_base_type(type));
-               }
-               continue;
+            vtn_fail_if(w[i] > type->length,
+                        "%uth index of %s is %u but the type has only "
+                        "%u elements", i - deref_start,
+                        spirv_op_to_string(opcode), w[i], type->length);
 
-            case GLSL_TYPE_ARRAY:
-               c = &(*c)->elements[w[i]];
-               type = glsl_get_array_element(type);
-               continue;
+            switch (type->base_type) {
+            case vtn_base_type_vector:
+               elem = w[i];
+               type = type->array_element;
+               break;
 
-            case GLSL_TYPE_STRUCT:
+            case vtn_base_type_matrix:
+               assert(col == 0 && elem == -1);
+               col = w[i];
+               elem = 0;
+               type = type->array_element;
+               break;
+
+            case vtn_base_type_array:
                c = &(*c)->elements[w[i]];
-               type = glsl_get_struct_field(type, w[i]);
-               continue;
+               type = type->array_element;
+               break;
+
+            case vtn_base_type_struct:
+               c = &(*c)->elements[w[i]];
+               type = type->members[w[i]];
+               break;
 
             default:
-               vtn_fail("Invalid constant type");
+               vtn_fail("%s must only index into composite types",
+                        spirv_op_to_string(opcode));
             }
          }
 
@@ -1530,8 +1525,8 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
             if (elem == -1) {
                val->constant = *c;
             } else {
-               unsigned num_components = glsl_get_vector_elements(type);
-               unsigned bit_size = glsl_get_bit_size(type);
+               unsigned num_components = type->length;
+               unsigned bit_size = glsl_get_bit_size(type->type);
                for (unsigned i = 0; i < num_components; i++)
                   switch(bit_size) {
                   case 64:
@@ -1550,12 +1545,12 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
          } else {
             struct vtn_value *insert =
                vtn_value(b, w[4], vtn_value_type_constant);
-            vtn_assert(insert->type->type == type);
+            vtn_assert(insert->type == type);
             if (elem == -1) {
                *c = insert->constant;
             } else {
-               unsigned num_components = glsl_get_vector_elements(type);
-               unsigned bit_size = glsl_get_bit_size(type);
+               unsigned num_components = type->length;
+               unsigned bit_size = glsl_get_bit_size(type->type);
                for (unsigned i = 0; i < num_components; i++)
                   switch (bit_size) {
                   case 64:
