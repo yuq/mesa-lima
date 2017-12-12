@@ -100,7 +100,7 @@ foreach g : [['70', ['gen7_cmd_buffer.c']], ['75', ['gen7_cmd_buffer.c']],
       c_vis_args, no_override_init_args, '-msse2',
       '-DGEN_VERSIONx10=@0@'.format(_gen),
     ],
-    dependencies : [dep_libdrm, dep_valgrind],
+    dependencies : [dep_libdrm, dep_valgrind, idep_nir_headers],
   )
 endforeach
 
@@ -153,13 +153,13 @@ endif
 
 libanv_common = static_library(
   'anv_common',
-  [libanv_files, anv_entrypoints, anv_extensions_c, nir_opcodes_h],
+  [libanv_files, anv_entrypoints, anv_extensions_c],
   include_directories : [
     inc_common, inc_intel, inc_compiler, inc_drm_uapi, inc_vulkan_util,
     inc_vulkan_wsi,
   ],
   c_args : [c_vis_args, no_override_init_args, '-msse2', anv_flags],
-  dependencies : [dep_valgrind, anv_deps, dep_libdrm],
+  dependencies : [dep_valgrind, anv_deps, dep_libdrm, idep_nir_headers],
 )
 
 libvulkan_intel = shared_library(
@@ -172,9 +172,11 @@ libvulkan_intel = shared_library(
   link_whole : [libanv_common, libanv_gen_libs],
   link_with : [
     libintel_compiler, libintel_common, libisl, libblorp, libvulkan_util,
-    libvulkan_wsi, libnir, libmesa_util,
+    libvulkan_wsi, libmesa_util,
   ],
-  dependencies : [dep_libdrm, dep_thread, dep_dl, dep_m, anv_deps, dep_valgrind],
+  dependencies : [
+    dep_libdrm, dep_thread, dep_dl, dep_m, anv_deps, dep_valgrind, idep_nir,
+  ],
   c_args : [c_vis_args, no_override_init_args, '-msse2', anv_flags],
   link_args : ['-Wl,--build-id=sha1', ld_args_bsymbolic, ld_args_gc_sections],
   install : true,

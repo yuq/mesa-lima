@@ -101,7 +101,7 @@ endif
 
 libvc4 = static_library(
   'vc4',
-  [files_libvc4, v3d_xml_pack, nir_opcodes_h, nir_builder_opcodes_h],
+  [files_libvc4, v3d_xml_pack],
   include_directories : [
     inc_src, inc_include, inc_gallium, inc_gallium_aux, inc_broadcom,
     inc_gallium_drivers, inc_drm_uapi,
@@ -109,11 +109,12 @@ libvc4 = static_library(
   link_with: libvc4_neon,
   c_args : [c_vis_args, simpenrose_c_args],
   cpp_args : [cpp_vis_args],
-  dependencies : [dep_simpenrose, dep_libdrm, dep_valgrind],
+  dependencies : [dep_simpenrose, dep_libdrm, dep_valgrind, idep_nir_headers],
   build_by_default : false,
 )
 
 driver_vc4 = declare_dependency(
   compile_args : '-DGALLIUM_VC4',
-  link_with : [libvc4, libvc4winsys, libbroadcom_cle, libnir],
+  link_with : [libvc4, libvc4winsys, libbroadcom_cle],
+  dependencies : idep_nir,
 )

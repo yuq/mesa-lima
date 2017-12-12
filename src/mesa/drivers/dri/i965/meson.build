@@ -138,13 +138,13 @@ i965_gen_libs = []
 foreach v : ['40', '45', '50', '60', '70', '75', '80', '90', '100']
   i965_gen_libs += static_library(
     'libi965_gen@0@'.format(v),
-    ['genX_blorp_exec.c', 'genX_state_upload.c', nir_opcodes_h, gen_xml_pack],
+    ['genX_blorp_exec.c', 'genX_state_upload.c', gen_xml_pack],
     include_directories : [inc_common, inc_intel, inc_dri_common],
     c_args : [
       c_vis_args, no_override_init_args, '-msse2',
       '-DGEN_VERSIONx10=@0@'.format(v),
     ],
-    dependencies : [dep_libdrm],
+    dependencies : [dep_libdrm, idep_nir_headers],
   )
 endforeach
 
@@ -166,17 +166,17 @@ endforeach
 
 libi965 = static_library(
   'i965',
-  [files_i965, i965_oa_sources, nir_opcodes_h, ir_expression_operation_h,
+  [files_i965, i965_oa_sources, ir_expression_operation_h,
    xmlpool_options_h],
   include_directories : [
-    inc_common, inc_intel, inc_dri_common, inc_util, inc_drm_uapi, inc_nir,
+    inc_common, inc_intel, inc_dri_common, inc_util, inc_drm_uapi,
   ],
   c_args : [c_vis_args, no_override_init_args, '-msse2'],
   cpp_args : [cpp_vis_args, '-msse2'],
   link_with : [
     i965_gen_libs, libintel_common, libisl, libintel_compiler, libblorp,
   ],
-  dependencies : [dep_libdrm, dep_valgrind],
+  dependencies : [dep_libdrm, dep_valgrind, idep_nir_headers],
 )
 
 dri_drivers += libi965

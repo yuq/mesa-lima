@@ -70,14 +70,14 @@ si_driinfo_h = custom_target(
 
 libradeonsi = static_library(
   'radeonsi',
-  [files_libradeonsi, si_driinfo_h, nir_opcodes_h, sid_tables_h],
+  [files_libradeonsi, si_driinfo_h, sid_tables_h],
   include_directories : [
     inc_src, inc_include, inc_gallium, inc_gallium_aux, inc_amd_common,
     inc_gallium_drivers,
   ],
   c_args : [c_vis_args],
   cpp_args : [cpp_vis_args],
-  dependencies : dep_llvm,
+  dependencies : [dep_llvm, idep_nir_headers],
 )
 
 driver_radeonsi = declare_dependency(
@@ -85,6 +85,6 @@ driver_radeonsi = declare_dependency(
   sources : si_driinfo_h,
   link_with : [
     libradeonsi, libradeon, libradeonwinsys, libamdgpuwinsys, libamd_common,
-    libnir,
   ],
+  dependencies : idep_nir,
 )

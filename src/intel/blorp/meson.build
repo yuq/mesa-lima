@@ -30,7 +30,8 @@ files_libblorp = files(
 
 libblorp = static_library(
   'blorp',
-  [files_libblorp, nir_opcodes_h],
+  files_libblorp,
   include_directories : [inc_common, inc_intel],
   c_args : [c_vis_args, no_override_init_args],
+  dependencies : idep_nir_headers,
 )

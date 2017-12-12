@@ -205,8 +205,9 @@ libglsl = static_library(
    ir_expression_operation_strings_h, ir_expression_operation_constant_h],
   c_args : [c_vis_args, c_msvc_compat_args, no_override_init_args],
   cpp_args : [cpp_vis_args, cpp_msvc_compat_args],
-  link_with : [libnir, libglcpp],
+  link_with : libglcpp,
   include_directories : [inc_common, inc_compiler, inc_nir],
+  dependencies : idep_nir,
   build_by_default : false,
 )
 

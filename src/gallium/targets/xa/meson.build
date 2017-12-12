@@ -40,7 +40,7 @@ libxatracker = shared_library(
     inc_common, inc_util, inc_gallium_winsys, inc_gallium_drivers,
   ],
   link_with : [
-    libxa_st, libgalliumvl_stub, libgallium, libmesa_util, libnir,
+    libxa_st, libgalliumvl_stub, libgallium, libmesa_util,
     libpipe_loader_static, libws_null, libwsw,
   ],
   link_depends : xa_link_depends,
