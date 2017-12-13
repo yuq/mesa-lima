@@ -114,10 +114,10 @@ ac_llvm_extract_elem(struct ac_llvm_context *ac,
 		     LLVMValueRef value,
 		     int index)
 {
-	int count = ac_get_llvm_num_components(value);
-
-	if (count == 1)
+	if (LLVMGetTypeKind(LLVMTypeOf(value)) != LLVMVectorTypeKind) {
+		assert(index == 0);
 		return value;
+	}
 
 	return LLVMBuildExtractElement(ac->builder, value,
 				       LLVMConstInt(ac->i32, index, false), "");
