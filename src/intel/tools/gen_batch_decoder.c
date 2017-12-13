@@ -642,6 +642,18 @@ decode_3dstate_scissor_state_pointers(struct gen_batch_decode_ctx *ctx,
    decode_dynamic_state_pointers(ctx, "SCISSOR_RECT", p, 1);
 }
 
+static void
+decode_load_register_imm(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
+{
+   struct gen_group *reg = gen_spec_find_register(ctx->spec, p[1]);
+
+   if (reg != NULL) {
+      fprintf(ctx->fp, "register %s (0x%x): 0x%x\n",
+              reg->name, reg->register_offset, p[2]);
+      ctx_print_group(ctx, reg, reg->register_offset, &p[2]);
+   }
+}
+
 struct custom_decoder {
    const char *cmd_name;
    void (*decode)(struct gen_batch_decode_ctx *ctx, const uint32_t *p);
@@ -679,6 +691,7 @@ struct custom_decoder {
    { "3DSTATE_BLEND_STATE_POINTERS", decode_3dstate_blend_state_pointers },
    { "3DSTATE_CC_STATE_POINTERS", decode_3dstate_cc_state_pointers },
    { "3DSTATE_SCISSOR_STATE_POINTERS", decode_3dstate_scissor_state_pointers },
+   { "MI_LOAD_REGISTER_IMM", decode_load_register_imm }
 };
 
 static inline uint64_t
