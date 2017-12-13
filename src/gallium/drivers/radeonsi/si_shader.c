@@ -5673,14 +5673,6 @@ static void si_count_scratch_private_memory(struct si_shader_context *ctx)
 	}
 }
 
-static void si_init_exec_full_mask(struct si_shader_context *ctx)
-{
-	LLVMValueRef full_mask = LLVMConstInt(ctx->i64, ~0ull, 0);
-	lp_build_intrinsic(ctx->ac.builder,
-			   "llvm.amdgcn.init.exec", ctx->voidt,
-			   &full_mask, 1, LP_FUNC_ATTR_CONVERGENT);
-}
-
 static void si_init_exec_from_input(struct si_shader_context *ctx,
 				    unsigned param, unsigned bitoffset)
 {
@@ -5783,7 +5775,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		} else if (ctx->type == PIPE_SHADER_TESS_CTRL ||
 			   ctx->type == PIPE_SHADER_GEOMETRY) {
 			if (!is_monolithic)
-				si_init_exec_full_mask(ctx);
+				ac_init_exec_full_mask(&ctx->ac);
 
 			/* The barrier must execute for all shaders in a
 			 * threadgroup.
@@ -6073,7 +6065,7 @@ static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 	 * mask.
 	 */
 	if (ctx->screen->info.chip_class >= GFX9 && !key->gs_prolog.is_monolithic)
-		si_init_exec_full_mask(ctx);
+		ac_init_exec_full_mask(&ctx->ac);
 
 	/* Copy inputs to outputs. This should be no-op, as the registers match,
 	 * but it will prevent the compiler from overwriting them unintentionally.
@@ -6225,7 +6217,7 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 			   si_get_max_workgroup_size(ctx->shader));
 
 	if (is_merged_shader(ctx->shader))
-		si_init_exec_full_mask(ctx);
+		ac_init_exec_full_mask(&ctx->ac);
 
 	/* Record the arguments of the function as if they were an output of
 	 * a previous part.
