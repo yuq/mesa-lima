@@ -512,6 +512,61 @@ decode_ps_kernels(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
    fprintf(ctx->fp, "\n");
 }
 
+static void
+decode_3dstate_constant(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
+{
+   struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
+
+   uint32_t read_length[4];
+   struct gen_batch_decode_bo buffer[4];
+   memset(buffer, 0, sizeof(buffer));
+
+   int rlidx = 0, bidx = 0;
+
+   struct gen_field_iterator iter;
+   gen_field_iterator_init(&iter, inst, p, 0, false);
+   do {
+      if (strcmp(iter.name, "Read Length") == 0) {
+         read_length[rlidx++] = iter.raw_value;
+      } else if (strcmp(iter.name, "Buffer") == 0) {
+         buffer[bidx++] = ctx_get_bo(ctx, iter.raw_value);
+      }
+   } while (gen_field_iterator_next(&iter));
+
+   for (int i = 0; i < 4; i++) {
+      if (read_length[i] == 0 || buffer[i].map == NULL)
+         continue;
+
+      unsigned size = read_length[i] * 32;
+      fprintf(ctx->fp, "constant buffer %d, size %u\n", i, size);
+
+      ctx_print_buffer(ctx, buffer[i], size, 0);
+   }
+}
+
+static void
+decode_3dstate_binding_table_pointers(struct gen_batch_decode_ctx *ctx,
+                                      const uint32_t *p)
+{
+   dump_binding_table(ctx, p[1], -1);
+}
+
+static void
+decode_3dstate_sampler_state_pointers(struct gen_batch_decode_ctx *ctx,
+                                      const uint32_t *p)
+{
+   dump_samplers(ctx, p[1], -1);
+}
+
+static void
+decode_3dstate_sampler_state_pointers_gen6(struct gen_batch_decode_ctx *ctx,
+                                           const uint32_t *p)
+{
+   dump_samplers(ctx, p[1], -1);
+   dump_samplers(ctx, p[2], -1);
+   dump_samplers(ctx, p[3], -1);
+}
+
 struct custom_decoder {
    const char *cmd_name;
    void (*decode)(struct gen_batch_decode_ctx *ctx, const uint32_t *p);
@@ -525,6 +580,24 @@ struct custom_decoder {
    { "3DSTATE_DS", decode_single_ksp },
    { "3DSTATE_HS", decode_single_ksp },
    { "3DSTATE_PS", decode_ps_kernels },
+   { "3DSTATE_CONSTANT_VS", decode_3dstate_constant },
+   { "3DSTATE_CONSTANT_GS", decode_3dstate_constant },
+   { "3DSTATE_CONSTANT_PS", decode_3dstate_constant },
+   { "3DSTATE_CONSTANT_HS", decode_3dstate_constant },
+   { "3DSTATE_CONSTANT_DS", decode_3dstate_constant },
+
+   { "3DSTATE_BINDING_TABLE_POINTERS_VS", decode_3dstate_binding_table_pointers },
+   { "3DSTATE_BINDING_TABLE_POINTERS_HS", decode_3dstate_binding_table_pointers },
+   { "3DSTATE_BINDING_TABLE_POINTERS_DS", decode_3dstate_binding_table_pointers },
+   { "3DSTATE_BINDING_TABLE_POINTERS_GS", decode_3dstate_binding_table_pointers },
+   { "3DSTATE_BINDING_TABLE_POINTERS_PS", decode_3dstate_binding_table_pointers },
+
+   { "3DSTATE_SAMPLER_STATE_POINTERS_VS", decode_3dstate_sampler_state_pointers },
+   { "3DSTATE_SAMPLER_STATE_POINTERS_HS", decode_3dstate_sampler_state_pointers },
+   { "3DSTATE_SAMPLER_STATE_POINTERS_DS", decode_3dstate_sampler_state_pointers },
+   { "3DSTATE_SAMPLER_STATE_POINTERS_GS", decode_3dstate_sampler_state_pointers },
+   { "3DSTATE_SAMPLER_STATE_POINTERS_PS", decode_3dstate_sampler_state_pointers },
+   { "3DSTATE_SAMPLER_STATE_POINTERS", decode_3dstate_sampler_state_pointers_gen6 },
 };
 
 static inline uint64_t
