@@ -847,27 +847,29 @@ iter_advance_field(struct gen_field_iterator *iter)
 }
 
 static uint64_t
-iter_decode_field_raw(struct gen_field *field,
-                      const uint32_t *p,
-                      const uint32_t *end)
+iter_decode_field_raw(struct gen_field_iterator *iter)
 {
    uint64_t qw = 0;
 
-   if ((field->end - field->start) > 32) {
-      if ((p + 1) < end)
+   int field_start = iter->bit;
+   int field_end = iter->bit + (iter->field->end - iter->field->start);
+
+   const uint32_t *p = iter->p + (iter->bit / 32);
+   if ((field_end - field_start) > 32) {
+      if ((p + 1) < iter->p_end)
          qw = ((uint64_t) p[1]) << 32;
       qw |= p[0];
    } else
       qw = p[0];
 
-   qw = field_value(qw, field->start, field->end);
+   qw = field_value(qw, field_start, field_end);
 
    /* Address & offset types have to be aligned to dwords, their start bit is
     * a reminder of the alignment requirement.
     */
-   if (field->type.kind == GEN_TYPE_ADDRESS ||
-       field->type.kind == GEN_TYPE_OFFSET)
-      qw <<= field->start % 32;
+   if (iter->field->type.kind == GEN_TYPE_ADDRESS ||
+       iter->field->type.kind == GEN_TYPE_OFFSET)
+      qw <<= field_start % 32;
 
    return qw;
 }
@@ -887,8 +889,7 @@ iter_decode_field(struct gen_field_iterator *iter)
 
    memset(&v, 0, sizeof(v));
 
-   v.qw = iter_decode_field_raw(iter->field,
-                                &iter->p[iter->bit / 32], iter->p_end);
+   v.qw = iter_decode_field_raw(iter);
 
    const char *enum_name = NULL;
 
