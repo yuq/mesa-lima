@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "common/gen_device_info.h"
 #include "util/hash_table.h"
@@ -182,6 +183,53 @@ void gen_print_group(FILE *out,
                      struct gen_group *group,
                      uint64_t offset, const uint32_t *p, int p_bit,
                      bool color);
+
+enum gen_batch_decode_flags {
+   /** Print in color! */
+   GEN_BATCH_DECODE_IN_COLOR  = (1 << 0),
+   /** Print everything, not just headers */
+   GEN_BATCH_DECODE_FULL      = (1 << 1),
+   /** Print offsets along with the batch */
+   GEN_BATCH_DECODE_OFFSETS   = (1 << 2),
+};
+
+struct gen_batch_decode_bo {
+   uint64_t addr;
+   uint32_t size;
+   const void *map;
+};
+
+struct gen_disasm *disasm;
+
+struct gen_batch_decode_ctx {
+   struct gen_batch_decode_bo (*get_bo)(void *user_data,
+                                        uint64_t base_address);
+   void *user_data;
+
+   FILE *fp;
+   struct gen_spec *spec;
+   enum gen_batch_decode_flags flags;
+
+   struct gen_disasm *disasm;
+
+   struct gen_batch_decode_bo surface_base;
+   struct gen_batch_decode_bo dynamic_base;
+   struct gen_batch_decode_bo instruction_base;
+};
+
+void gen_batch_decode_ctx_init(struct gen_batch_decode_ctx *ctx,
+                               const struct gen_device_info *devinfo,
+                               FILE *fp, enum gen_batch_decode_flags flags,
+                               const char *xml_path,
+                               struct gen_batch_decode_bo (*get_bo)(void *,
+                                                                    uint64_t),
+                               void *user_data);
+void gen_batch_decode_ctx_finish(struct gen_batch_decode_ctx *ctx);
+
+
+void gen_print_batch(struct gen_batch_decode_ctx *ctx,
+                     const uint32_t *batch, uint32_t batch_size,
+                     uint64_t batch_addr);
 
 #ifdef __cplusplus
 }
