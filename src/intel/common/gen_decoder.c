@@ -889,10 +889,11 @@ iter_decode_field(struct gen_field_iterator *iter)
 
    memset(&v, 0, sizeof(v));
 
-   v.qw = iter_decode_field_raw(iter);
+   iter->raw_value = iter_decode_field_raw(iter);
 
    const char *enum_name = NULL;
 
+   v.qw = iter->raw_value;
    switch (iter->field->type.kind) {
    case GEN_TYPE_UNKNOWN:
    case GEN_TYPE_INT: {

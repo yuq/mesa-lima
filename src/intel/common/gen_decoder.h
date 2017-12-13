@@ -67,6 +67,7 @@ struct gen_field_iterator {
    struct gen_group *group;
    char name[128];
    char value[128];
+   uint64_t raw_value;
    struct gen_group *struct_desc;
    const uint32_t *p;
    int p_bit; /**< bit offset into p */
