@@ -603,7 +603,7 @@ read_data_file(FILE *file)
                exit(EXIT_FAILURE);
             }
 
-            disasm = gen_disasm_create(reg);
+            disasm = gen_disasm_create(&devinfo);
 
             printf("Detected GEN%i chipset\n", devinfo.gen);
 

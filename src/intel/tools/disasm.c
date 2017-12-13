@@ -108,7 +108,7 @@ gen_disasm_disassemble(struct gen_disasm *disasm, void *assembly,
 }
 
 struct gen_disasm *
-gen_disasm_create(int pciid)
+gen_disasm_create(const struct gen_device_info *devinfo)
 {
    struct gen_disasm *gd;
 
@@ -116,10 +116,7 @@ gen_disasm_create(int pciid)
    if (gd == NULL)
       return NULL;
 
-   if (!gen_get_device_info(pciid, &gd->devinfo)) {
-      free(gd);
-      return NULL;
-   }
+   gd->devinfo = *devinfo;
 
    brw_init_compaction_tables(&gd->devinfo);
 

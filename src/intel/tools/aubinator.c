@@ -846,7 +846,7 @@ handle_trace_header(uint32_t *p)
       spec = gen_spec_load(&devinfo);
    else
       spec = gen_spec_load_from_path(&devinfo, xml_path);
-   disasm = gen_disasm_create(pci_id);
+   disasm = gen_disasm_create(&devinfo);
 
    if (spec == NULL || disasm == NULL)
       exit(EXIT_FAILURE);
