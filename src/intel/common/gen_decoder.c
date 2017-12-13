@@ -1011,14 +1011,6 @@ gen_field_is_header(struct gen_field *field)
    return (field->parent->opcode_mask & bits) != 0;
 }
 
-void gen_field_decode(struct gen_field *field,
-                      const uint32_t *p, const uint32_t *end,
-                      union gen_field_value *value)
-{
-   uint32_t dword = field->start / 32;
-   value->u64 = iter_decode_field_raw(field, &p[dword], end);
-}
-
 void
 gen_print_group(FILE *outfile, struct gen_group *group,
                 uint64_t offset, const uint32_t *p, bool color)

@@ -62,9 +62,6 @@ struct gen_field *gen_group_find_field(struct gen_group *group, const char *name
 struct gen_enum *gen_spec_find_enum(struct gen_spec *spec, const char *name);
 
 bool gen_field_is_header(struct gen_field *field);
-void gen_field_decode(struct gen_field *field,
-                      const uint32_t *p, const uint32_t *end,
-                      union gen_field_value *value);
 
 struct gen_field_iterator {
    struct gen_group *group;
