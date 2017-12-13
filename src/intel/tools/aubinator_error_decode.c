@@ -40,7 +40,6 @@
 
 #include "common/gen_decoder.h"
 #include "util/macros.h"
-#include "gen_disasm.h"
 
 #define CSI "\e["
 #define BLUE_HEADER  CSI "0;44m"
@@ -223,204 +222,6 @@ struct section {
 #define MAX_SECTIONS 30
 static struct section sections[MAX_SECTIONS];
 
-static void
-disassemble_program(struct gen_disasm *disasm, const char *type,
-                    const struct section *instruction_section,
-                    uint64_t ksp)
-{
-   if (!instruction_section)
-      return;
-
-   printf("\nReferenced %s:\n", type);
-   gen_disasm_disassemble(disasm, instruction_section->data, ksp, stdout);
-}
-
-static const struct section *
-find_section(const char *str_base_address)
-{
-   uint64_t base_address = strtol(str_base_address, NULL, 16);
-   for (int s = 0; s < MAX_SECTIONS; s++) {
-      if (sections[s].gtt_offset == base_address)
-         return &sections[s];
-   }
-   return NULL;
-}
-
-static void
-decode(struct gen_spec *spec, struct gen_disasm *disasm,
-       const struct section *section)
-{
-   uint64_t gtt_offset = section->gtt_offset;
-   uint32_t *data = section->data;
-   uint32_t *p, *end = (data + section->count);
-   int length;
-   struct gen_group *inst;
-   const struct section *current_instruction_buffer = NULL;
-   const struct section *current_dynamic_state_buffer = NULL;
-
-   for (p = data; p < end; p += length) {
-      const char *color = option_full_decode ? BLUE_HEADER : NORMAL,
-         *reset_color = NORMAL;
-      uint64_t offset = gtt_offset + 4 * (p - data);
-
-      inst = gen_spec_find_instruction(spec, p);
-      length = gen_group_get_length(inst, p);
-      assert(inst == NULL || length > 0);
-      length = MAX2(1, length);
-      if (inst == NULL) {
-         printf("unknown instruction %08x\n", p[0]);
-         continue;
-      }
-      if (option_color == COLOR_NEVER) {
-         color = "";
-         reset_color = "";
-      }
-
-      printf("%s0x%08"PRIx64":  0x%08x:  %-80s%s\n",
-             color, offset, p[0], gen_group_get_name(inst), reset_color);
-
-      gen_print_group(stdout, inst, offset, p, 0,
-                      option_color == COLOR_ALWAYS);
-
-      if (strcmp(inst->name, "MI_BATCH_BUFFER_END") == 0)
-         break;
-
-      if (strcmp(inst->name, "STATE_BASE_ADDRESS") == 0) {
-         struct gen_field_iterator iter;
-         gen_field_iterator_init(&iter, inst, p, 0, false);
-
-         do {
-            if (strcmp(iter.name, "Instruction Base Address") == 0) {
-               current_instruction_buffer = find_section(iter.value);
-            } else if (strcmp(iter.name, "Dynamic State Base Address") == 0) {
-               current_dynamic_state_buffer = find_section(iter.value);
-            }
-         } while (gen_field_iterator_next(&iter));
-      } else if (strcmp(inst->name,   "WM_STATE") == 0 ||
-                 strcmp(inst->name, "3DSTATE_PS") == 0 ||
-                 strcmp(inst->name, "3DSTATE_WM") == 0) {
-         struct gen_field_iterator iter;
-         gen_field_iterator_init(&iter, inst, p, 0, false);
-         uint64_t ksp[3] = {0, 0, 0};
-         bool enabled[3] = {false, false, false};
-
-         do {
-            if (strncmp(iter.name, "Kernel Start Pointer ",
-                        strlen("Kernel Start Pointer ")) == 0) {
-               int idx = iter.name[strlen("Kernel Start Pointer ")] - '0';
-               ksp[idx] = strtol(iter.value, NULL, 16);
-            } else if (strcmp(iter.name, "8 Pixel Dispatch Enable") == 0) {
-               enabled[0] = strcmp(iter.value, "true") == 0;
-            } else if (strcmp(iter.name, "16 Pixel Dispatch Enable") == 0) {
-               enabled[1] = strcmp(iter.value, "true") == 0;
-            } else if (strcmp(iter.name, "32 Pixel Dispatch Enable") == 0) {
-               enabled[2] = strcmp(iter.value, "true") == 0;
-            }
-         } while (gen_field_iterator_next(&iter));
-
-         /* Reorder KSPs to be [8, 16, 32] instead of the hardware order. */
-         if (enabled[0] + enabled[1] + enabled[2] == 1) {
-            if (enabled[1]) {
-               ksp[1] = ksp[0];
-               ksp[0] = 0;
-            } else if (enabled[2]) {
-               ksp[2] = ksp[0];
-               ksp[0] = 0;
-            }
-         } else {
-            uint64_t tmp = ksp[1];
-            ksp[1] = ksp[2];
-            ksp[2] = tmp;
-         }
-
-         /* FINISHME: Broken for multi-program WM_STATE,
-          * which Mesa does not use
-          */
-         if (enabled[0]) {
-            disassemble_program(disasm, "SIMD8 fragment shader",
-                                current_instruction_buffer, ksp[0]);
-         }
-         if (enabled[1]) {
-            disassemble_program(disasm, "SIMD16 fragment shader",
-                                current_instruction_buffer, ksp[1]);
-         }
-         if (enabled[2]) {
-            disassemble_program(disasm, "SIMD32 fragment shader",
-                                current_instruction_buffer, ksp[2]);
-         }
-         printf("\n");
-      } else if (strcmp(inst->name,   "VS_STATE") == 0 ||
-                 strcmp(inst->name,   "GS_STATE") == 0 ||
-                 strcmp(inst->name,   "SF_STATE") == 0 ||
-                 strcmp(inst->name, "CLIP_STATE") == 0 ||
-                 strcmp(inst->name, "3DSTATE_DS") == 0 ||
-                 strcmp(inst->name, "3DSTATE_HS") == 0 ||
-                 strcmp(inst->name, "3DSTATE_GS") == 0 ||
-                 strcmp(inst->name, "3DSTATE_VS") == 0) {
-         struct gen_field_iterator iter;
-         gen_field_iterator_init(&iter, inst, p, 0, false);
-         uint64_t ksp = 0;
-         bool is_simd8 = false; /* vertex shaders on Gen8+ only */
-         bool is_enabled = true;
-
-         do {
-            if (strcmp(iter.name, "Kernel Start Pointer") == 0) {
-               ksp = strtol(iter.value, NULL, 16);
-            } else if (strcmp(iter.name, "SIMD8 Dispatch Enable") == 0) {
-               is_simd8 = strcmp(iter.value, "true") == 0;
-            } else if (strcmp(iter.name, "Dispatch Enable") == 0) {
-               is_simd8 = strcmp(iter.value, "SIMD8") == 0;
-            } else if (strcmp(iter.name, "Enable") == 0) {
-               is_enabled = strcmp(iter.value, "true") == 0;
-            }
-         } while (gen_field_iterator_next(&iter));
-
-         const char *type =
-            strcmp(inst->name,   "VS_STATE") == 0 ? "vertex shader" :
-            strcmp(inst->name,   "GS_STATE") == 0 ? "geometry shader" :
-            strcmp(inst->name,   "SF_STATE") == 0 ? "strips and fans shader" :
-            strcmp(inst->name, "CLIP_STATE") == 0 ? "clip shader" :
-            strcmp(inst->name, "3DSTATE_DS") == 0 ? "tessellation control shader" :
-            strcmp(inst->name, "3DSTATE_HS") == 0 ? "tessellation evaluation shader" :
-            strcmp(inst->name, "3DSTATE_VS") == 0 ? (is_simd8 ? "SIMD8 vertex shader" : "vec4 vertex shader") :
-            strcmp(inst->name, "3DSTATE_GS") == 0 ? (is_simd8 ? "SIMD8 geometry shader" : "vec4 geometry shader") :
-            NULL;
-
-         if (is_enabled) {
-            disassemble_program(disasm, type, current_instruction_buffer, ksp);
-            printf("\n");
-         }
-      } else if (strcmp(inst->name, "MEDIA_INTERFACE_DESCRIPTOR_LOAD") == 0) {
-         struct gen_field_iterator iter;
-         gen_field_iterator_init(&iter, inst, p, 0, false);
-         uint64_t interface_offset = 0;
-         do {
-            if (strcmp(iter.name, "Interface Descriptor Data Start Address") == 0) {
-               interface_offset = strtol(iter.value, NULL, 16);
-               break;
-            }
-         } while (gen_field_iterator_next(&iter));
-
-         if (current_dynamic_state_buffer && interface_offset != 0) {
-            struct gen_group *desc =
-               gen_spec_find_struct(spec, "INTERFACE_DESCRIPTOR_DATA");
-            uint32_t *desc_p =
-               ((void *)current_dynamic_state_buffer->data) + interface_offset;
-            gen_field_iterator_init(&iter, desc, desc_p, 0, false);
-            do {
-               if (strcmp(iter.name, "Kernel Start Pointer") == 0) {
-                  uint64_t ksp = strtol(iter.value, NULL, 16);
-                  disassemble_program(disasm, "compute shader",
-                                      current_instruction_buffer, ksp);
-                  printf("\n");
-                  break;
-               }
-            } while (gen_field_iterator_next(&iter));
-         }
-      }
-   }
-}
-
 static int zlib_inflate(uint32_t **ptr, int len)
 {
    struct z_stream_s zstream;
@@ -506,6 +307,23 @@ static int ascii85_decode(const char *in, uint32_t **out, bool inflate)
    return zlib_inflate(out, len);
 }
 
+static struct gen_batch_decode_bo
+get_gen_batch_bo(void *user_data, uint64_t address)
+{
+   for (int s = 0; s < MAX_SECTIONS; s++) {
+      if (sections[s].gtt_offset <= address &&
+          address < sections[s].gtt_offset + sections[s].count) {
+         return (struct gen_batch_decode_bo) {
+            .addr = sections[s].gtt_offset,
+            .map = sections[s].data,
+            .size = sections[s].count,
+         };
+      }
+   }
+
+   return (struct gen_batch_decode_bo) { .map = NULL };
+}
+
 static void
 read_data_file(FILE *file)
 {
@@ -517,7 +335,6 @@ read_data_file(FILE *file)
    uint32_t offset, value;
    char *ring_name = NULL;
    struct gen_device_info devinfo;
-   struct gen_disasm *disasm = NULL;
    int sect_num = 0;
 
    while (getline(&line, &line_size, file) > 0) {
@@ -603,8 +420,6 @@ read_data_file(FILE *file)
                exit(EXIT_FAILURE);
             }
 
-            disasm = gen_disasm_create(&devinfo);
-
             printf("Detected GEN%i chipset\n", devinfo.gen);
 
             if (xml_path == NULL)
@@ -680,6 +495,20 @@ read_data_file(FILE *file)
    free(line);
    free(ring_name);
 
+   enum gen_batch_decode_flags batch_flags = 0;
+   if (option_color == COLOR_ALWAYS)
+      batch_flags |= GEN_BATCH_DECODE_IN_COLOR;
+   if (option_full_decode)
+      batch_flags |= GEN_BATCH_DECODE_FULL;
+   if (option_print_offsets)
+      batch_flags |= GEN_BATCH_DECODE_OFFSETS;
+   batch_flags |= GEN_BATCH_DECODE_FLOATS;
+
+   struct gen_batch_decode_ctx batch_ctx;
+   gen_batch_decode_ctx_init(&batch_ctx, &devinfo, stdout, batch_flags,
+                             xml_path, get_gen_batch_bo, NULL);
+
+
    for (int s = 0; s < sect_num; s++) {
       printf("--- %s (%s) at 0x%08x %08x\n",
              sections[s].buffer_name, sections[s].ring_name,
@@ -689,14 +518,15 @@ read_data_file(FILE *file)
       if (strcmp(sections[s].buffer_name, "batch buffer") == 0 ||
           strcmp(sections[s].buffer_name, "ring buffer") == 0 ||
           strcmp(sections[s].buffer_name, "HW Context") == 0) {
-         decode(spec, disasm, &sections[s]);
+         gen_print_batch(&batch_ctx, sections[s].data, sections[s].count,
+                         sections[s].gtt_offset);
       }
 
       free(sections[s].ring_name);
       free(sections[s].data);
    }
 
-   gen_disasm_destroy(disasm);
+   gen_batch_decode_ctx_finish(&batch_ctx);
 }
 
 static void

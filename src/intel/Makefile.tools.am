@@ -47,6 +47,7 @@ tools_aubinator_LDADD = \
 tools_aubinator_error_decode_SOURCES = \
 	tools/aubinator_error_decode.c \
 	tools/disasm.c \
+	tools/gen_batch_decoder.c \
 	tools/gen_disasm.h
 
 tools_aubinator_error_decode_LDADD = \
