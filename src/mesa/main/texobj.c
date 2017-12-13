@@ -1511,6 +1511,47 @@ delete_textures(struct gl_context *ctx, GLsizei n, const GLuint *textures)
    }
 }
 
+/**
+ * This deletes a texObj without altering the hash table.
+ */
+void
+_mesa_delete_nameless_texture(struct gl_context *ctx,
+                              struct gl_texture_object *texObj)
+{
+   if (!texObj)
+      return;
+
+   FLUSH_VERTICES(ctx, 0);
+
+   _mesa_lock_texture(ctx, texObj);
+   {
+      /* Check if texture is bound to any framebuffer objects.
+       * If so, unbind.
+       * See section 4.4.2.3 of GL_EXT_framebuffer_object.
+       */
+      unbind_texobj_from_fbo(ctx, texObj);
+
+      /* Check if this texture is currently bound to any texture units.
+       * If so, unbind it.
+       */
+      unbind_texobj_from_texunits(ctx, texObj);
+
+      /* Check if this texture is currently bound to any shader
+       * image unit.  If so, unbind it.
+       * See section 3.9.X of GL_ARB_shader_image_load_store.
+       */
+      unbind_texobj_from_image_units(ctx, texObj);
+   }
+   _mesa_unlock_texture(ctx, texObj);
+
+   ctx->NewState |= _NEW_TEXTURE_OBJECT;
+
+   /* Unreference the texobj.  If refcount hits zero, the texture
+    * will be deleted.
+    */
+   _mesa_reference_texobj(&texObj, NULL);
+}
+
 
 void GLAPIENTRY
 _mesa_DeleteTextures_no_error(GLsizei n, const GLuint *textures)
