@@ -422,6 +422,96 @@ handle_3dstate_index_buffer(struct gen_batch_decode_ctx *ctx,
    fprintf(ctx->fp, "\n");
 }
 
+static void
+decode_single_ksp(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
+{
+   struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
+
+   uint64_t ksp = 0;
+   bool is_simd8 = false; /* vertex shaders on Gen8+ only */
+   bool is_enabled = true;
+
+   struct gen_field_iterator iter;
+   gen_field_iterator_init(&iter, inst, p, 0, false);
+   do {
+      if (strcmp(iter.name, "Kernel Start Pointer") == 0) {
+         ksp = iter.raw_value;
+      } else if (strcmp(iter.name, "SIMD8 Dispatch Enable") == 0) {
+         is_simd8 = iter.raw_value;
+      } else if (strcmp(iter.name, "Dispatch Mode") == 0) {
+         is_simd8 = strcmp(iter.value, "SIMD8") == 0;
+      } else if (strcmp(iter.name, "Dispatch Enable") == 0) {
+         is_simd8 = strcmp(iter.value, "SIMD8") == 0;
+      } else if (strcmp(iter.name, "Enable") == 0) {
+         is_enabled = iter.raw_value;
+      }
+   } while (gen_field_iterator_next(&iter));
+
+   const char *type =
+      strcmp(inst->name,   "VS_STATE") == 0 ? "vertex shader" :
+      strcmp(inst->name,   "GS_STATE") == 0 ? "geometry shader" :
+      strcmp(inst->name,   "SF_STATE") == 0 ? "strips and fans shader" :
+      strcmp(inst->name, "CLIP_STATE") == 0 ? "clip shader" :
+      strcmp(inst->name, "3DSTATE_DS") == 0 ? "tessellation control shader" :
+      strcmp(inst->name, "3DSTATE_HS") == 0 ? "tessellation evaluation shader" :
+      strcmp(inst->name, "3DSTATE_VS") == 0 ? (is_simd8 ? "SIMD8 vertex shader" : "vec4 vertex shader") :
+      strcmp(inst->name, "3DSTATE_GS") == 0 ? (is_simd8 ? "SIMD8 geometry shader" : "vec4 geometry shader") :
+      NULL;
+
+   if (is_enabled) {
+      ctx_disassemble_program(ctx, ksp, type);
+      printf("\n");
+   }
+}
+
+static void
+decode_ps_kernels(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
+{
+   struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
+
+   uint64_t ksp[3] = {0, 0, 0};
+   bool enabled[3] = {false, false, false};
+
+   struct gen_field_iterator iter;
+   gen_field_iterator_init(&iter, inst, p, 0, false);
+   do {
+      if (strncmp(iter.name, "Kernel Start Pointer ",
+                  strlen("Kernel Start Pointer ")) == 0) {
+         int idx = iter.name[strlen("Kernel Start Pointer ")] - '0';
+         ksp[idx] = strtol(iter.value, NULL, 16);
+      } else if (strcmp(iter.name, "8 Pixel Dispatch Enable") == 0) {
+         enabled[0] = strcmp(iter.value, "true") == 0;
+      } else if (strcmp(iter.name, "16 Pixel Dispatch Enable") == 0) {
+         enabled[1] = strcmp(iter.value, "true") == 0;
+      } else if (strcmp(iter.name, "32 Pixel Dispatch Enable") == 0) {
+         enabled[2] = strcmp(iter.value, "true") == 0;
+      }
+   } while (gen_field_iterator_next(&iter));
+
+   /* Reorder KSPs to be [8, 16, 32] instead of the hardware order. */
+   if (enabled[0] + enabled[1] + enabled[2] == 1) {
+      if (enabled[1]) {
+         ksp[1] = ksp[0];
+         ksp[0] = 0;
+      } else if (enabled[2]) {
+         ksp[2] = ksp[0];
+         ksp[0] = 0;
+      }
+   } else {
+      uint64_t tmp = ksp[1];
+      ksp[1] = ksp[2];
+      ksp[2] = tmp;
+   }
+
+   if (enabled[0])
+      ctx_disassemble_program(ctx, ksp[0], "SIMD8 fragment shader");
+   if (enabled[1])
+      ctx_disassemble_program(ctx, ksp[1], "SIMD16 fragment shader");
+   if (enabled[2])
+      ctx_disassemble_program(ctx, ksp[2], "SIMD32 fragment shader");
+   fprintf(ctx->fp, "\n");
+}
+
 struct custom_decoder {
    const char *cmd_name;
    void (*decode)(struct gen_batch_decode_ctx *ctx, const uint32_t *p);
@@ -430,6 +520,11 @@ struct custom_decoder {
    { "MEDIA_INTERFACE_DESCRIPTOR_LOAD", handle_media_interface_descriptor_load },
    { "3DSTATE_VERTEX_BUFFERS", handle_3dstate_vertex_buffers },
    { "3DSTATE_INDEX_BUFFER", handle_3dstate_index_buffer },
+   { "3DSTATE_VS", decode_single_ksp },
+   { "3DSTATE_GS", decode_single_ksp },
+   { "3DSTATE_DS", decode_single_ksp },
+   { "3DSTATE_HS", decode_single_ksp },
+   { "3DSTATE_PS", decode_ps_kernels },
 };
 
 static inline uint64_t
