@@ -73,6 +73,10 @@ intel_miptree_supports_mcs(struct brw_context *brw,
    if (devinfo->gen < 7)
       return false;
 
+   /* See isl_surf_get_mcs_surf for details. */
+   if (mt->surf.samples == 16 && mt->surf.logical_level0_px.width > 8192)
+      return false;
+
    /* In Gen7, IMS layout is only used for depth and stencil buffers. */
    switch (_mesa_get_format_base_format(mt->format)) {
    case GL_DEPTH_COMPONENT:
