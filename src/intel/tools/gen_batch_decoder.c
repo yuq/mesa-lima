@@ -103,6 +103,19 @@ ctx_get_bo(struct gen_batch_decode_ctx *ctx, uint64_t addr)
 }
 
 static void
+ctx_disassemble_program(struct gen_batch_decode_ctx *ctx,
+                        uint32_t ksp, const char *type)
+{
+   if (!ctx->instruction_base.map)
+      return;
+
+   printf("\nReferenced %s:\n", type);
+   gen_disasm_disassemble(ctx->disasm,
+                          (void *)ctx->instruction_base.map, ksp,
+                          ctx->fp);
+}
+
+static void
 handle_state_base_address(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
 {
    struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
@@ -121,11 +134,143 @@ handle_state_base_address(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
    } while (gen_field_iterator_next(&iter));
 }
 
+static void
+dump_binding_table(struct gen_batch_decode_ctx *ctx, uint32_t offset, int count)
+{
+   struct gen_group *strct =
+      gen_spec_find_struct(ctx->spec, "RENDER_SURFACE_STATE");
+   if (strct == NULL) {
+      fprintf(ctx->fp, "did not find RENDER_SURFACE_STATE info\n");
+      return;
+   }
+
+   /* If we don't know the actual count, guess. */
+   if (count < 0)
+      count = 8;
+
+   if (ctx->surface_base.map == NULL) {
+      fprintf(ctx->fp, "  binding table unavailable\n");
+      return;
+   }
+
+   if (offset % 32 != 0 || offset >= UINT16_MAX ||
+       offset >= ctx->surface_base.size) {
+      fprintf(ctx->fp, "  invalid binding table pointer\n");
+      return;
+   }
+
+   const uint32_t *pointers = ctx->surface_base.map + offset;
+   for (int i = 0; i < count; i++) {
+      if (pointers[i] == 0)
+         continue;
+
+      if (pointers[i] % 32 != 0 ||
+          (pointers[i] + strct->dw_length * 4) >= ctx->surface_base.size) {
+         fprintf(ctx->fp, "pointer %u: %08x <not valid>\n", i, pointers[i]);
+         continue;
+      }
+
+      fprintf(ctx->fp, "pointer %u: %08x\n", i, pointers[i]);
+      ctx_print_group(ctx, strct, ctx->surface_base.addr + pointers[i],
+                      ctx->surface_base.map + pointers[i]);
+   }
+}
+
+static void
+dump_samplers(struct gen_batch_decode_ctx *ctx, uint32_t offset, int count)
+{
+   struct gen_group *strct = gen_spec_find_struct(ctx->spec, "SAMPLER_STATE");
+
+   /* If we don't know the actual count, guess. */
+   if (count < 0)
+      count = 4;
+
+   if (ctx->dynamic_base.map == NULL) {
+      fprintf(ctx->fp, "  samplers unavailable\n");
+      return;
+   }
+
+   if (offset % 32 != 0 || offset >= ctx->dynamic_base.size) {
+      fprintf(ctx->fp, "  invalid sampler state pointer\n");
+      return;
+   }
+
+   uint64_t state_addr = ctx->dynamic_base.addr + offset;
+   const void *state_map = ctx->dynamic_base.map + offset;
+   for (int i = 0; i < count; i++) {
+      fprintf(ctx->fp, "sampler state %d\n", i);
+      ctx_print_group(ctx, strct, state_addr, state_map);
+      state_addr += 16;
+      state_map += 16;
+   }
+}
+
+static void
+handle_media_interface_descriptor_load(struct gen_batch_decode_ctx *ctx,
+                                       const uint32_t *p)
+{
+   if (ctx->dynamic_base.map == NULL)
+      return;
+
+   struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
+   struct gen_group *desc =
+      gen_spec_find_struct(ctx->spec, "INTERFACE_DESCRIPTOR_DATA");
+
+   struct gen_field_iterator iter;
+   gen_field_iterator_init(&iter, inst, p, 0, false);
+   uint32_t descriptor_offset = 0;
+   int descriptor_count = 0;
+   do {
+      if (strcmp(iter.name, "Interface Descriptor Data Start Address") == 0) {
+         descriptor_offset = strtol(iter.value, NULL, 16);
+      } else if (strcmp(iter.name, "Interface Descriptor Total Length") == 0) {
+         descriptor_count =
+            strtol(iter.value, NULL, 16) / (desc->dw_length * 4);
+      }
+   } while (gen_field_iterator_next(&iter));
+
+   uint64_t desc_addr = ctx->dynamic_base.addr + descriptor_offset;
+   const uint32_t *desc_map = ctx->dynamic_base.map + descriptor_offset;
+   for (int i = 0; i < descriptor_count; i++) {
+      fprintf(ctx->fp, "descriptor %d: %08x\n", i, descriptor_offset);
+
+      ctx_print_group(ctx, inst, desc_addr, desc_map);
+
+      gen_field_iterator_init(&iter, desc, desc_map, 0, false);
+      uint64_t ksp;
+      uint32_t sampler_offset, sampler_count;
+      uint32_t binding_table_offset, binding_entry_count;
+      do {
+         if (strcmp(iter.name, "Kernel Start Pointer") == 0) {
+            ksp = strtoll(iter.value, NULL, 16);
+         } else if (strcmp(iter.name, "Sampler State Pointer") == 0) {
+            sampler_offset = strtol(iter.value, NULL, 16);
+         } else if (strcmp(iter.name, "Sampler Count") == 0) {
+            sampler_count = strtol(iter.value, NULL, 10);
+         } else if (strcmp(iter.name, "Binding Table Pointer") == 0) {
+            binding_table_offset = strtol(iter.value, NULL, 16);
+         } else if (strcmp(iter.name, "Binding Table Entry Count") == 0) {
+            binding_entry_count = strtol(iter.value, NULL, 10);
+         }
+      } while (gen_field_iterator_next(&iter));
+
+      ctx_disassemble_program(ctx, ksp, "compute shader");
+      printf("\n");
+
+      dump_samplers(ctx, sampler_offset, sampler_count);
+      dump_binding_table(ctx, binding_table_offset, binding_entry_count);
+
+      desc_map += desc->dw_length;
+      desc_addr += desc->dw_length * 4;
+   }
+}
+
 struct custom_decoder {
    const char *cmd_name;
    void (*decode)(struct gen_batch_decode_ctx *ctx, const uint32_t *p);
 } custom_decoders[] = {
    { "STATE_BASE_ADDRESS", handle_state_base_address },
+   { "MEDIA_INTERFACE_DESCRIPTOR_LOAD", handle_media_interface_descriptor_load },
 };
 
 static inline uint64_t
