@@ -840,9 +840,7 @@ iter_advance_field(struct gen_field_iterator *iter)
 
    int group_member_offset = iter_group_offset_bits(iter, iter->group_iter);
 
-   iter->start = group_member_offset + iter->field->start;
-   iter->end = group_member_offset + iter->field->end;
-   iter->dword = iter->start / 32;
+   iter->bit = group_member_offset + iter->field->start;
    iter->struct_desc = NULL;
 
    return true;
@@ -890,7 +888,7 @@ iter_decode_field(struct gen_field_iterator *iter)
    memset(&v, 0, sizeof(v));
 
    v.qw = iter_decode_field_raw(iter->field,
-                                &iter->p[iter->dword], iter->p_end);
+                                &iter->p[iter->bit / 32], iter->p_end);
 
    const char *enum_name = NULL;
 
@@ -1020,17 +1018,18 @@ gen_print_group(FILE *outfile, struct gen_group *group,
 
    gen_field_iterator_init(&iter, group, p, color);
    do {
-      if (last_dword != iter.dword) {
-         for (int i = last_dword + 1; i <= iter.dword; i++)
+      int iter_dword = iter.bit / 32;
+      if (last_dword != iter_dword) {
+         for (int i = last_dword + 1; i <= iter_dword; i++)
             print_dword_header(outfile, &iter, offset, i);
-         last_dword = iter.dword;
+         last_dword = iter_dword;
       }
       if (!gen_field_is_header(iter.field)) {
          fprintf(outfile, "    %s: %s\n", iter.name, iter.value);
          if (iter.struct_desc) {
-            uint64_t struct_offset = offset + 4 * iter.dword;
+            uint64_t struct_offset = offset + 4 * iter_dword;
             gen_print_group(outfile, iter.struct_desc, struct_offset,
-                            &p[iter.dword], color);
+                            &p[iter_dword], color);
          }
       }
    } while (gen_field_iterator_next(&iter));

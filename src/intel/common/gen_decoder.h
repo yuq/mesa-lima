@@ -70,9 +70,7 @@ struct gen_field_iterator {
    struct gen_group *struct_desc;
    const uint32_t *p;
    const uint32_t *p_end;
-   int dword; /**< current field starts at &p[dword] */
-   int start; /**< current field starts at this bit number */
-   int end;   /**< current field ends at this bit number */
+   int bit; /**< current field starts at this bit offset into p */
 
    int group_iter;
 
