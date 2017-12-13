@@ -1030,20 +1030,13 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
    LLVMValueRef neighbors[2][2][4];
    int chan, texel_index;
    boolean seamless_cube_filter, accurate_cube_corners;
+   unsigned chan_swiz = bld->static_texture_state->swizzle_r;
 
    seamless_cube_filter = (bld->static_texture_state->target == PIPE_TEXTURE_CUBE ||
                            bld->static_texture_state->target == PIPE_TEXTURE_CUBE_ARRAY) &&
                           bld->static_sampler_state->seamless_cube_map;
-   /*
-    * XXX I don't know how this is really supposed to work with gather. From GL
-    * spec wording (not gather specific) it sounds like the 4th missing texel
-    * should be an average of the other 3, hence for gather could return this.
-    * This is however NOT how the code here works, which just fixes up the
-    * weights used for filtering instead. And of course for gather there is
-    * no filter to tweak...
-    */
-   accurate_cube_corners = ACCURATE_CUBE_CORNERS && seamless_cube_filter &&
-                           !is_gather;
+
+   accurate_cube_corners = ACCURATE_CUBE_CORNERS && seamless_cube_filter;
 
    lp_build_extract_image_sizes(bld,
                                 &bld->int_size_bld,
@@ -1382,94 +1375,191 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
        * as well) here.
        */
       if (accurate_cube_corners) {
-         LLVMValueRef w00, w01, w10, w11, wx0, wy0;
-         LLVMValueRef c_weight, c00, c01, c10, c11;
-         LLVMValueRef have_corner, one_third, tmp;
+         LLVMValueRef c00, c01, c10, c11, c00f, c01f, c10f, c11f;
+         LLVMValueRef have_corner, one_third;
 
-         colorss[0] = lp_build_alloca(bld->gallivm, coord_bld->vec_type, "cs");
-         colorss[1] = lp_build_alloca(bld->gallivm, coord_bld->vec_type, "cs");
-         colorss[2] = lp_build_alloca(bld->gallivm, coord_bld->vec_type, "cs");
-         colorss[3] = lp_build_alloca(bld->gallivm, coord_bld->vec_type, "cs");
+         colorss[0] = lp_build_alloca(bld->gallivm, coord_bld->vec_type, "cs0");
+         colorss[1] = lp_build_alloca(bld->gallivm, coord_bld->vec_type, "cs1");
+         colorss[2] = lp_build_alloca(bld->gallivm, coord_bld->vec_type, "cs2");
+         colorss[3] = lp_build_alloca(bld->gallivm, coord_bld->vec_type, "cs3");
 
          have_corner = LLVMBuildLoad(builder, have_corners, "");
 
          lp_build_if(&corner_if, bld->gallivm, have_corner);
 
-         /*
-          * we can't use standard 2d lerp as we need per-element weight
-          * in case of corners, so just calculate bilinear result as
-          * w00*s00 + w01*s01 + w10*s10 + w11*s11.
-          * (This is actually less work than using 2d lerp, 7 vs. 9 instructions,
-          * however calculating the weights needs another 6, so actually probably
-          * not slower than 2d lerp only for 4 channels as weights only need
-          * to be calculated once - of course fixing the weights has additional cost.)
-          */
-         wx0 = lp_build_sub(coord_bld, coord_bld->one, s_fpart);
-         wy0 = lp_build_sub(coord_bld, coord_bld->one, t_fpart);
-         w00 = lp_build_mul(coord_bld, wx0, wy0);
-         w01 = lp_build_mul(coord_bld, s_fpart, wy0);
-         w10 = lp_build_mul(coord_bld, wx0, t_fpart);
-         w11 = lp_build_mul(coord_bld, s_fpart, t_fpart);
+         one_third = lp_build_const_vec(bld->gallivm, coord_bld->type,
+                                        1.0f/3.0f);
 
-         /* find corner weight */
+         /* find corner */
          c00 = lp_build_and(ivec_bld, fall_off[0], fall_off[2]);
-         c_weight = lp_build_select(coord_bld, c00, w00, coord_bld->zero);
+         c00f = LLVMBuildBitCast(builder, c00, coord_bld->vec_type, "");
          c01 = lp_build_and(ivec_bld, fall_off[1], fall_off[2]);
-         c_weight = lp_build_select(coord_bld, c01, w01, c_weight);
+         c01f = LLVMBuildBitCast(builder, c01, coord_bld->vec_type, "");
          c10 = lp_build_and(ivec_bld, fall_off[0], fall_off[3]);
-         c_weight = lp_build_select(coord_bld, c10, w10, c_weight);
+         c10f = LLVMBuildBitCast(builder, c10, coord_bld->vec_type, "");
          c11 = lp_build_and(ivec_bld, fall_off[1], fall_off[3]);
-         c_weight = lp_build_select(coord_bld, c11, w11, c_weight);
+         c11f = LLVMBuildBitCast(builder, c11, coord_bld->vec_type, "");
 
-         /*
-          * add 1/3 of the corner weight to each of the 3 other samples
-          * and null out corner weight
-          */
-         one_third = lp_build_const_vec(bld->gallivm, coord_bld->type, 1.0f/3.0f);
-         c_weight = lp_build_mul(coord_bld, c_weight, one_third);
-         w00 = lp_build_add(coord_bld, w00, c_weight);
-         c00 = LLVMBuildBitCast(builder, c00, coord_bld->vec_type, "");
-         w00 = lp_build_andnot(coord_bld, w00, c00);
-         w01 = lp_build_add(coord_bld, w01, c_weight);
-         c01 = LLVMBuildBitCast(builder, c01, coord_bld->vec_type, "");
-         w01 = lp_build_andnot(coord_bld, w01, c01);
-         w10 = lp_build_add(coord_bld, w10, c_weight);
-         c10 = LLVMBuildBitCast(builder, c10, coord_bld->vec_type, "");
-         w10 = lp_build_andnot(coord_bld, w10, c10);
-         w11 = lp_build_add(coord_bld, w11, c_weight);
-         c11 = LLVMBuildBitCast(builder, c11, coord_bld->vec_type, "");
-         w11 = lp_build_andnot(coord_bld, w11, c11);
+         if (!is_gather) {
+            /*
+             * we can't use standard 2d lerp as we need per-element weight
+             * in case of corners, so just calculate bilinear result as
+             * w00*s00 + w01*s01 + w10*s10 + w11*s11.
+             * (This is actually less work than using 2d lerp, 7 vs. 9
+             * instructions, however calculating the weights needs another 6,
+             * so actually probably not slower than 2d lerp only for 4 channels
+             * as weights only need to be calculated once - of course fixing
+             * the weights has additional cost.)
+             */
+            LLVMValueRef w00, w01, w10, w11, wx0, wy0, c_weight, tmp;
+            wx0 = lp_build_sub(coord_bld, coord_bld->one, s_fpart);
+            wy0 = lp_build_sub(coord_bld, coord_bld->one, t_fpart);
+            w00 = lp_build_mul(coord_bld, wx0, wy0);
+            w01 = lp_build_mul(coord_bld, s_fpart, wy0);
+            w10 = lp_build_mul(coord_bld, wx0, t_fpart);
+            w11 = lp_build_mul(coord_bld, s_fpart, t_fpart);
 
-         if (bld->static_sampler_state->compare_mode == PIPE_TEX_COMPARE_NONE) {
-            for (chan = 0; chan < 4; chan++) {
-               colors0[chan] = lp_build_mul(coord_bld, w00, neighbors[0][0][chan]);
-               tmp = lp_build_mul(coord_bld, w01, neighbors[0][1][chan]);
-               colors0[chan] = lp_build_add(coord_bld, tmp, colors0[chan]);
-               tmp = lp_build_mul(coord_bld, w10, neighbors[1][0][chan]);
-               colors0[chan] = lp_build_add(coord_bld, tmp, colors0[chan]);
-               tmp = lp_build_mul(coord_bld, w11, neighbors[1][1][chan]);
-               colors0[chan] = lp_build_add(coord_bld, tmp, colors0[chan]);
+            /* find corner weight */
+            c_weight = lp_build_select(coord_bld, c00, w00, coord_bld->zero);
+            c_weight = lp_build_select(coord_bld, c01, w01, c_weight);
+            c_weight = lp_build_select(coord_bld, c10, w10, c_weight);
+            c_weight = lp_build_select(coord_bld, c11, w11, c_weight);
+
+            /*
+             * add 1/3 of the corner weight to the weight of the 3 other
+             * samples and null out corner weight.
+             */
+            c_weight = lp_build_mul(coord_bld, c_weight, one_third);
+            w00 = lp_build_add(coord_bld, w00, c_weight);
+            w00 = lp_build_andnot(coord_bld, w00, c00f);
+            w01 = lp_build_add(coord_bld, w01, c_weight);
+            w01 = lp_build_andnot(coord_bld, w01, c01f);
+            w10 = lp_build_add(coord_bld, w10, c_weight);
+            w10 = lp_build_andnot(coord_bld, w10, c10f);
+            w11 = lp_build_add(coord_bld, w11, c_weight);
+            w11 = lp_build_andnot(coord_bld, w11, c11f);
+
+            if (bld->static_sampler_state->compare_mode ==
+                PIPE_TEX_COMPARE_NONE) {
+               for (chan = 0; chan < 4; chan++) {
+                  colors0[chan] = lp_build_mul(coord_bld, w00,
+                                               neighbors[0][0][chan]);
+                  tmp = lp_build_mul(coord_bld, w01, neighbors[0][1][chan]);
+                  colors0[chan] = lp_build_add(coord_bld, tmp, colors0[chan]);
+                  tmp = lp_build_mul(coord_bld, w10, neighbors[1][0][chan]);
+                  colors0[chan] = lp_build_add(coord_bld, tmp, colors0[chan]);
+                  tmp = lp_build_mul(coord_bld, w11, neighbors[1][1][chan]);
+                  colors0[chan] = lp_build_add(coord_bld, tmp, colors0[chan]);
+               }
+            }
+            else {
+               LLVMValueRef cmpval00, cmpval01, cmpval10, cmpval11;
+               cmpval00 = lp_build_sample_comparefunc(bld, coords[4],
+                                                      neighbors[0][0][0]);
+               cmpval01 = lp_build_sample_comparefunc(bld, coords[4],
+                                                      neighbors[0][1][0]);
+               cmpval10 = lp_build_sample_comparefunc(bld, coords[4],
+                                                      neighbors[1][0][0]);
+               cmpval11 = lp_build_sample_comparefunc(bld, coords[4],
+                                                      neighbors[1][1][0]);
+               /*
+                * inputs to interpolation are just masks so just add
+                * masked weights together
+                */
+               cmpval00 = LLVMBuildBitCast(builder, cmpval00,
+                                           coord_bld->vec_type, "");
+               cmpval01 = LLVMBuildBitCast(builder, cmpval01,
+                                           coord_bld->vec_type, "");
+               cmpval10 = LLVMBuildBitCast(builder, cmpval10,
+                                           coord_bld->vec_type, "");
+               cmpval11 = LLVMBuildBitCast(builder, cmpval11,
+                                           coord_bld->vec_type, "");
+               colors0[0] = lp_build_and(coord_bld, w00, cmpval00);
+               tmp = lp_build_and(coord_bld, w01, cmpval01);
+               colors0[0] = lp_build_add(coord_bld, tmp, colors0[0]);
+               tmp = lp_build_and(coord_bld, w10, cmpval10);
+               colors0[0] = lp_build_add(coord_bld, tmp, colors0[0]);
+               tmp = lp_build_and(coord_bld, w11, cmpval11);
+               colors0[0] = lp_build_add(coord_bld, tmp, colors0[0]);
+               colors0[1] = colors0[2] = colors0[3] = colors0[0];
             }
          }
          else {
-            LLVMValueRef cmpval00, cmpval01, cmpval10, cmpval11;
-            cmpval00 = lp_build_sample_comparefunc(bld, coords[4], neighbors[0][0][0]);
-            cmpval01 = lp_build_sample_comparefunc(bld, coords[4], neighbors[0][1][0]);
-            cmpval10 = lp_build_sample_comparefunc(bld, coords[4], neighbors[1][0][0]);
-            cmpval11 = lp_build_sample_comparefunc(bld, coords[4], neighbors[1][1][0]);
-            /* inputs to interpolation are just masks so just add masked weights together */
-            cmpval00 = LLVMBuildBitCast(builder, cmpval00, coord_bld->vec_type, "");
-            cmpval01 = LLVMBuildBitCast(builder, cmpval01, coord_bld->vec_type, "");
-            cmpval10 = LLVMBuildBitCast(builder, cmpval10, coord_bld->vec_type, "");
-            cmpval11 = LLVMBuildBitCast(builder, cmpval11, coord_bld->vec_type, "");
-            colors0[0] = lp_build_and(coord_bld, w00, cmpval00);
-            tmp = lp_build_and(coord_bld, w01, cmpval01);
-            colors0[0] = lp_build_add(coord_bld, tmp, colors0[0]);
-            tmp = lp_build_and(coord_bld, w10, cmpval10);
-            colors0[0] = lp_build_add(coord_bld, tmp, colors0[0]);
-            tmp = lp_build_and(coord_bld, w11, cmpval11);
-            colors0[0] = lp_build_add(coord_bld, tmp, colors0[0]);
-            colors0[1] = colors0[2] = colors0[3] = colors0[0];
+            /*
+             * We don't have any weights to adjust, so instead calculate
+             * the fourth texel as simply the average of the other 3.
+             * (This would work for non-gather too, however we'd have
+             * a boatload more of the select stuff due to there being
+             * 4 times as many colors as weights.)
+             */
+            LLVMValueRef col00, col01, col10, col11;
+            LLVMValueRef colc, colc0, colc1;
+            col10 = lp_build_swizzle_soa_channel(texel_bld,
+                                                 neighbors[1][0], chan_swiz);
+            col11 = lp_build_swizzle_soa_channel(texel_bld,
+                                                 neighbors[1][1], chan_swiz);
+            col01 = lp_build_swizzle_soa_channel(texel_bld,
+                                                 neighbors[0][1], chan_swiz);
+            col00 = lp_build_swizzle_soa_channel(texel_bld,
+                                                 neighbors[0][0], chan_swiz);
+
+            /*
+             * The spec says for comparison filtering, the comparison
+             * must happen before synthesizing the new value.
+             * This means all gathered values are always 0 or 1,
+             * except for the non-existing texel, which can be 0,1/3,2/3,1...
+             * Seems like we'd be allowed to just return 0 or 1 too, so we
+             * could simplify and pass down the compare mask values to the
+             * end (using int arithmetic/compare on the mask values to
+             * construct the fourth texel) and only there convert to floats
+             * but it's probably not worth it (it might be easier for the cpu
+             * but not for the code)...
+             */
+            if (bld->static_sampler_state->compare_mode !=
+                PIPE_TEX_COMPARE_NONE) {
+               LLVMValueRef cmpval00, cmpval01, cmpval10, cmpval11;
+               cmpval00 = lp_build_sample_comparefunc(bld, coords[4], col00);
+               cmpval01 = lp_build_sample_comparefunc(bld, coords[4], col01);
+               cmpval10 = lp_build_sample_comparefunc(bld, coords[4], col10);
+               cmpval11 = lp_build_sample_comparefunc(bld, coords[4], col11);
+               col00 = lp_build_select(texel_bld, cmpval00,
+                                       texel_bld->one, texel_bld->zero);
+               col01 = lp_build_select(texel_bld, cmpval01,
+                                       texel_bld->one, texel_bld->zero);
+               col10 = lp_build_select(texel_bld, cmpval10,
+                                       texel_bld->one, texel_bld->zero);
+               col11 = lp_build_select(texel_bld, cmpval11,
+                                       texel_bld->one, texel_bld->zero);
+            }
+
+            /*
+             * Null out corner color.
+             */
+            col00 = lp_build_andnot(coord_bld, col00, c00f);
+            col01 = lp_build_andnot(coord_bld, col01, c01f);
+            col10 = lp_build_andnot(coord_bld, col10, c10f);
+            col11 = lp_build_andnot(coord_bld, col11, c11f);
+
+            /*
+             * New corner texel color is all colors added / 3.
+             */
+            colc0 = lp_build_add(coord_bld, col00, col01);
+            colc1 = lp_build_add(coord_bld, col10, col11);
+            colc = lp_build_add(coord_bld, colc0, colc1);
+            colc = lp_build_mul(coord_bld, one_third, colc);
+
+            /*
+             * Replace the corner texel color with the new value.
+             */
+            col00 = lp_build_select(coord_bld, c00, colc, col00);
+            col01 = lp_build_select(coord_bld, c01, colc, col01);
+            col10 = lp_build_select(coord_bld, c10, colc, col10);
+            col11 = lp_build_select(coord_bld, c11, colc, col11);
+
+            colors0[0] = col10;
+            colors0[1] = col11;
+            colors0[2] = col01;
+            colors0[3] = col00;
          }
 
          LLVMBuildStore(builder, colors0[0], colorss[0]);
@@ -1488,7 +1578,6 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
              * end of sampling (much less values to swizzle), but this
              * obviously cannot work when using gather.
              */
-            unsigned chan_swiz = bld->static_texture_state->swizzle_r;
             colors0[0] = lp_build_swizzle_soa_channel(texel_bld,
                                                       neighbors[1][0],
                                                       chan_swiz);
@@ -1524,25 +1613,14 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
 
          if (is_gather) {
             /* more hacks for swizzling, should be X, ONE or ZERO... */
-            unsigned chan_swiz = bld->static_texture_state->swizzle_r;
-            if (chan_swiz <= PIPE_SWIZZLE_W) {
-               colors0[0] = lp_build_select(texel_bld, cmpval10,
-                                            texel_bld->one, texel_bld->zero);
-               colors0[1] = lp_build_select(texel_bld, cmpval11,
-                                            texel_bld->one, texel_bld->zero);
-               colors0[2] = lp_build_select(texel_bld, cmpval01,
-                                            texel_bld->one, texel_bld->zero);
-               colors0[3] = lp_build_select(texel_bld, cmpval00,
-                                            texel_bld->one, texel_bld->zero);
-            }
-            else if (chan_swiz == PIPE_SWIZZLE_0) {
-               colors0[0] = colors0[1] = colors0[2] = colors0[3] =
-                            texel_bld->zero;
-            }
-            else {
-               colors0[0] = colors0[1] = colors0[2] = colors0[3] =
-                            texel_bld->one;
-            }
+            colors0[0] = lp_build_select(texel_bld, cmpval10,
+                                         texel_bld->one, texel_bld->zero);
+            colors0[1] = lp_build_select(texel_bld, cmpval11,
+                                         texel_bld->one, texel_bld->zero);
+            colors0[2] = lp_build_select(texel_bld, cmpval01,
+                                         texel_bld->one, texel_bld->zero);
+            colors0[3] = lp_build_select(texel_bld, cmpval00,
+                                         texel_bld->one, texel_bld->zero);
          }
          else {
             colors0[0] = lp_build_masklerp2d(texel_bld, s_fpart, t_fpart,
@@ -1632,6 +1710,26 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
          /* 2D tex */
          for (chan = 0; chan < 4; chan++) {
             colors_out[chan] = colors0[chan];
+         }
+      }
+   }
+   if (is_gather) {
+      /*
+       * For gather, we can't do our usual channel swizzling done later,
+       * so do it here. It only really matters for 0/1 swizzles in case
+       * of comparison filtering, since in this case the results would be
+       * wrong, without comparison it should all work out alright but it
+       * can't hurt to do that here, since it will instantly drop all
+       * calculations above, though it's a rather stupid idea to do
+       * gather on a channel which will always return 0 or 1 in any case...
+       */
+      if (chan_swiz == PIPE_SWIZZLE_1) {
+         for (chan = 0; chan < 4; chan++) {
+            colors_out[chan] = texel_bld->one;
+         }
+      } else if (chan_swiz == PIPE_SWIZZLE_0) {
+         for (chan = 0; chan < 4; chan++) {
+            colors_out[chan] = texel_bld->zero;
          }
       }
    }
