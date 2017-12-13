@@ -115,6 +115,57 @@ ctx_disassemble_program(struct gen_batch_decode_ctx *ctx,
                           ctx->fp);
 }
 
+/* Heuristic to determine whether a uint32_t is probably actually a float
+ * (http://stackoverflow.com/a/2953466)
+ */
+
+static bool
+probably_float(uint32_t bits)
+{
+   int exp = ((bits & 0x7f800000U) >> 23) - 127;
+   uint32_t mant = bits & 0x007fffff;
+
+   /* +- 0.0 */
+   if (exp == -127 && mant == 0)
+      return true;
+
+   /* +- 1 billionth to 1 billion */
+   if (-30 <= exp && exp <= 30)
+      return true;
+
+   /* some value with only a few binary digits */
+   if ((mant & 0x0000ffff) == 0)
+      return true;
+
+   return false;
+}
+
+static void
+ctx_print_buffer(struct gen_batch_decode_ctx *ctx,
+                 struct gen_batch_decode_bo bo,
+                 uint32_t read_length,
+                 uint32_t pitch)
+{
+   const uint32_t *dw_end = bo.map + MIN2(bo.size, read_length);
+
+   unsigned line_count = 0;
+   for (const uint32_t *dw = bo.map; dw < dw_end; dw++) {
+      if (line_count * 4 == pitch || line_count == 8) {
+         fprintf(ctx->fp, "\n");
+         line_count = 0;
+      }
+      fprintf(ctx->fp, line_count == 0 ? "  " : " ");
+
+      if ((ctx->flags & GEN_BATCH_DECODE_FLOATS) && probably_float(*dw))
+         fprintf(ctx->fp, "  %8.2f", *(float *) dw);
+      else
+         fprintf(ctx->fp, "  0x%08x", *dw);
+
+      line_count++;
+   }
+   fprintf(ctx->fp, "\n");
+}
+
 static void
 handle_state_base_address(struct gen_batch_decode_ctx *ctx, const uint32_t *p)
 {
@@ -265,12 +316,120 @@ handle_media_interface_descriptor_load(struct gen_batch_decode_ctx *ctx,
    }
 }
 
+static void
+handle_3dstate_vertex_buffers(struct gen_batch_decode_ctx *ctx,
+                              const uint32_t *p)
+{
+   struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
+
+   struct gen_batch_decode_bo vb = {};
+   uint32_t vb_size = 0;
+   int index = -1;
+   int pitch = -1;
+   bool ready = false;
+
+   struct gen_field_iterator iter;
+   gen_field_iterator_init(&iter, inst, p, 0, false);
+   do {
+      if (strcmp(iter.name, "Vertex Buffer Index") == 0) {
+         index = iter.raw_value;
+      } else if (strcmp(iter.name, "Buffer Pitch") == 0) {
+         pitch = iter.raw_value;
+      } else if (strcmp(iter.name, "Buffer Starting Address") == 0) {
+         vb = ctx_get_bo(ctx, iter.raw_value);
+      } else if (strcmp(iter.name, "Buffer Size") == 0) {
+         vb_size = iter.raw_value;
+         ready = true;
+      } else if (strcmp(iter.name, "End Address") == 0) {
+         if (vb.map && iter.raw_value >= vb.addr)
+            vb_size = iter.raw_value - vb.addr;
+         else
+            vb_size = 0;
+         ready = true;
+      }
+
+      if (!ready)
+         continue;
+
+      fprintf(ctx->fp, "vertex buffer %d, size %d\n", index, vb_size);
+
+      if (vb.map == NULL) {
+         fprintf(ctx->fp, "  buffer contents unavailable\n");
+         continue;
+      }
+
+      if (vb.map == 0 || vb_size == 0)
+         continue;
+
+      ctx_print_buffer(ctx, vb, vb_size, pitch);
+
+      vb.map = NULL;
+      vb_size = 0;
+      index = -1;
+      pitch = -1;
+      ready = false;
+   } while (gen_field_iterator_next(&iter));
+}
+
+static void
+handle_3dstate_index_buffer(struct gen_batch_decode_ctx *ctx,
+                            const uint32_t *p)
+{
+   struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
+
+   struct gen_batch_decode_bo ib = {};
+   uint32_t ib_size = 0;
+   uint32_t format = 0;
+
+   struct gen_field_iterator iter;
+   gen_field_iterator_init(&iter, inst, p, 0, false);
+   do {
+      if (strcmp(iter.name, "Index Format") == 0) {
+         format = iter.raw_value;
+      } else if (strcmp(iter.name, "Buffer Starting Address") == 0) {
+         ib = ctx_get_bo(ctx, iter.raw_value);
+      } else if (strcmp(iter.name, "Buffer Size") == 0) {
+         ib_size = iter.raw_value;
+      }
+   } while (gen_field_iterator_next(&iter));
+
+   if (ib.map == NULL) {
+      fprintf(ctx->fp, "  buffer contents unavailable\n");
+      return;
+   }
+
+   const void *m = ib.map;
+   const void *ib_end = ib.map + MIN2(ib.size, ib_size);
+   for (int i = 0; m < ib_end && i < 10; i++) {
+      switch (format) {
+      case 0:
+         fprintf(ctx->fp, "%3d ", *(uint8_t *)m);
+         m += 1;
+         break;
+      case 1:
+         fprintf(ctx->fp, "%3d ", *(uint16_t *)m);
+         m += 2;
+         break;
+      case 2:
+         fprintf(ctx->fp, "%3d ", *(uint32_t *)m);
+         m += 4;
+         break;
+      }
+   }
+
+   if (m < ib_end)
+      fprintf(ctx->fp, "...");
+   fprintf(ctx->fp, "\n");
+}
+
 struct custom_decoder {
    const char *cmd_name;
    void (*decode)(struct gen_batch_decode_ctx *ctx, const uint32_t *p);
 } custom_decoders[] = {
    { "STATE_BASE_ADDRESS", handle_state_base_address },
    { "MEDIA_INTERFACE_DESCRIPTOR_LOAD", handle_media_interface_descriptor_load },
+   { "3DSTATE_VERTEX_BUFFERS", handle_3dstate_vertex_buffers },
+   { "3DSTATE_INDEX_BUFFER", handle_3dstate_index_buffer },
 };
 
 static inline uint64_t

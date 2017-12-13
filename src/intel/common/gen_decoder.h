@@ -191,6 +191,8 @@ enum gen_batch_decode_flags {
    GEN_BATCH_DECODE_FULL      = (1 << 1),
    /** Print offsets along with the batch */
    GEN_BATCH_DECODE_OFFSETS   = (1 << 2),
+   /** Guess when a value is a float and print it as such */
+   GEN_BATCH_DECODE_FLOATS    = (1 << 3),
 };
 
 struct gen_batch_decode_bo {
