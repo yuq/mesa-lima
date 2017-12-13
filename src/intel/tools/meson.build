@@ -20,7 +20,8 @@
 
 aubinator = executable(
   'aubinator',
-  files('aubinator.c', 'disasm.c', 'gen_disasm.h', 'intel_aub.h'),
+  files('aubinator.c', 'disasm.c', 'gen_batch_decoder.c',
+        'gen_disasm.h', 'intel_aub.h'),
   dependencies : [dep_expat, dep_zlib, dep_dl, dep_thread, dep_m],
   include_directories : [inc_common, inc_intel],
   link_with : [libintel_common, libintel_compiler, libmesa_util],

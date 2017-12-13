@@ -26,6 +26,7 @@ noinst_PROGRAMS += \
 tools_aubinator_SOURCES = \
 	tools/aubinator.c \
 	tools/disasm.c \
+	tools/gen_batch_decoder.c \
 	tools/gen_disasm.h \
 	tools/intel_aub.h
 
