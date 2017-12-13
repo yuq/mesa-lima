@@ -1130,6 +1130,17 @@ lp_build_sample_image_linear(struct lp_build_sample_context *bld,
        */
       /* should always have normalized coords, and offsets are undefined */
       assert(bld->static_sampler_state->normalized_coords);
+      /*
+       * The coords should all be between [0,1] however we can have NaNs,
+       * which will wreak havoc. In particular the y1_clamped value below
+       * can be -INT_MAX (on x86) and be propagated right through (probably
+       * other values might be bogus in the end too).
+       * So kill off the NaNs here.
+       */
+      coords[0] = lp_build_max_ext(coord_bld, coords[0], coord_bld->zero,
+                                   GALLIVM_NAN_RETURN_OTHER_SECOND_NONNAN);
+      coords[1] = lp_build_max_ext(coord_bld, coords[1], coord_bld->zero,
+                                   GALLIVM_NAN_RETURN_OTHER_SECOND_NONNAN);
       coord = lp_build_mul(coord_bld, coords[0], flt_width_vec);
       /* instead of clamp, build mask if overflowed */
       coord = lp_build_sub(coord_bld, coord, half);
