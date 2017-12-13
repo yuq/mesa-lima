@@ -567,6 +567,81 @@ decode_3dstate_sampler_state_pointers_gen6(struct gen_batch_decode_ctx *ctx,
    dump_samplers(ctx, p[3], -1);
 }
 
+static bool
+str_ends_with(const char *str, const char *end)
+{
+   int offset = strlen(str) - strlen(end);
+   if (offset < 0)
+      return false;
+
+   return strcmp(str + offset, end) == 0;
+}
+
+static void
+decode_dynamic_state_pointers(struct gen_batch_decode_ctx *ctx,
+                              const char *struct_type, const uint32_t *p,
+                              int count)
+{
+   struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
+   struct gen_group *state = gen_spec_find_struct(ctx->spec, struct_type);
+
+   uint32_t state_offset;
+
+   struct gen_field_iterator iter;
+   gen_field_iterator_init(&iter, inst, p, 0, false);
+   do {
+      if (str_ends_with(iter.name, "Pointer")) {
+         state_offset = iter.raw_value;
+         break;
+      }
+   } while (gen_field_iterator_next(&iter));
+
+   uint32_t state_addr = ctx->dynamic_base.addr + state_offset;
+   const uint32_t *state_map = ctx->dynamic_base.map + state_offset;
+   for (int i = 0; i < count; i++) {
+      fprintf(ctx->fp, "%s %d\n", struct_type, i);
+      ctx_print_group(ctx, state, state_offset, state_map);
+
+      state_addr += state->dw_length * 4;
+      state_map += state->dw_length;
+   }
+}
+
+static void
+decode_3dstate_viewport_state_pointers_cc(struct gen_batch_decode_ctx *ctx,
+                                          const uint32_t *p)
+{
+   decode_dynamic_state_pointers(ctx, "CC_VIEWPORT", p, 4);
+}
+
+static void
+decode_3dstate_viewport_state_pointers_sf_clip(struct gen_batch_decode_ctx *ctx,
+                                               const uint32_t *p)
+{
+   decode_dynamic_state_pointers(ctx, "SF_CLIP_VIEWPORT", p, 4);
+}
+
+static void
+decode_3dstate_blend_state_pointers(struct gen_batch_decode_ctx *ctx,
+                                    const uint32_t *p)
+{
+   decode_dynamic_state_pointers(ctx, "BLEND_STATE", p, 1);
+}
+
+static void
+decode_3dstate_cc_state_pointers(struct gen_batch_decode_ctx *ctx,
+                                 const uint32_t *p)
+{
+   decode_dynamic_state_pointers(ctx, "COLOR_CALC_STATE", p, 1);
+}
+
+static void
+decode_3dstate_scissor_state_pointers(struct gen_batch_decode_ctx *ctx,
+                                      const uint32_t *p)
+{
+   decode_dynamic_state_pointers(ctx, "SCISSOR_RECT", p, 1);
+}
+
 struct custom_decoder {
    const char *cmd_name;
    void (*decode)(struct gen_batch_decode_ctx *ctx, const uint32_t *p);
@@ -598,6 +673,12 @@ struct custom_decoder {
    { "3DSTATE_SAMPLER_STATE_POINTERS_GS", decode_3dstate_sampler_state_pointers },
    { "3DSTATE_SAMPLER_STATE_POINTERS_PS", decode_3dstate_sampler_state_pointers },
    { "3DSTATE_SAMPLER_STATE_POINTERS", decode_3dstate_sampler_state_pointers_gen6 },
+
+   { "3DSTATE_VIEWPORT_STATE_POINTERS_CC", decode_3dstate_viewport_state_pointers_cc },
+   { "3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP", decode_3dstate_viewport_state_pointers_sf_clip },
+   { "3DSTATE_BLEND_STATE_POINTERS", decode_3dstate_blend_state_pointers },
+   { "3DSTATE_CC_STATE_POINTERS", decode_3dstate_cc_state_pointers },
+   { "3DSTATE_SCISSOR_STATE_POINTERS", decode_3dstate_scissor_state_pointers },
 };
 
 static inline uint64_t
