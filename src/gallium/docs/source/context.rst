@@ -64,7 +64,10 @@ objects. They all follow simple, one-method binding calls, e.g.
 * ``set_stencil_ref`` sets the stencil front and back reference values
   which are used as comparison values in stencil test.
 * ``set_blend_color``
-* ``set_sample_mask``
+* ``set_sample_mask``  sets the per-context multisample sample mask.  Note
+  that this takes effect even if multisampling is not explicitly enabled if
+  the frambuffer surface(s) are multisampled.  Also, this mask is AND-ed
+  with the optional fragment shader sample mask output (when emitted).
 * ``set_min_samples`` sets the minimum number of samples that must be run.
 * ``set_clip_state``
 * ``set_polygon_stipple``
