@@ -68,8 +68,10 @@ print_register(struct gen_spec *spec, const char *name, uint32_t reg)
 {
    struct gen_group *reg_spec = gen_spec_find_register_by_name(spec, name);
 
-   if (reg_spec)
-      gen_print_group(stdout, reg_spec, 0, &reg, option_color == COLOR_ALWAYS);
+   if (reg_spec) {
+      gen_print_group(stdout, reg_spec, 0, &reg, 0,
+                      option_color == COLOR_ALWAYS);
+   }
 }
 
 struct ring_register_mapping {
@@ -277,7 +279,7 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
       printf("%s0x%08"PRIx64":  0x%08x:  %-80s%s\n",
              color, offset, p[0], gen_group_get_name(inst), reset_color);
 
-      gen_print_group(stdout, inst, offset, p,
+      gen_print_group(stdout, inst, offset, p, 0,
                       option_color == COLOR_ALWAYS);
 
       if (strcmp(inst->name, "MI_BATCH_BUFFER_END") == 0)
@@ -285,7 +287,7 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
 
       if (strcmp(inst->name, "STATE_BASE_ADDRESS") == 0) {
          struct gen_field_iterator iter;
-         gen_field_iterator_init(&iter, inst, p, false);
+         gen_field_iterator_init(&iter, inst, p, 0, false);
 
          do {
             if (strcmp(iter.name, "Instruction Base Address") == 0) {
@@ -298,7 +300,7 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
                  strcmp(inst->name, "3DSTATE_PS") == 0 ||
                  strcmp(inst->name, "3DSTATE_WM") == 0) {
          struct gen_field_iterator iter;
-         gen_field_iterator_init(&iter, inst, p, false);
+         gen_field_iterator_init(&iter, inst, p, 0, false);
          uint64_t ksp[3] = {0, 0, 0};
          bool enabled[3] = {false, false, false};
 
@@ -356,7 +358,7 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
                  strcmp(inst->name, "3DSTATE_GS") == 0 ||
                  strcmp(inst->name, "3DSTATE_VS") == 0) {
          struct gen_field_iterator iter;
-         gen_field_iterator_init(&iter, inst, p, false);
+         gen_field_iterator_init(&iter, inst, p, 0, false);
          uint64_t ksp = 0;
          bool is_simd8 = false; /* vertex shaders on Gen8+ only */
          bool is_enabled = true;
@@ -390,7 +392,7 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
          }
       } else if (strcmp(inst->name, "MEDIA_INTERFACE_DESCRIPTOR_LOAD") == 0) {
          struct gen_field_iterator iter;
-         gen_field_iterator_init(&iter, inst, p, false);
+         gen_field_iterator_init(&iter, inst, p, 0, false);
          uint64_t interface_offset = 0;
          do {
             if (strcmp(iter.name, "Interface Descriptor Data Start Address") == 0) {
@@ -404,7 +406,7 @@ decode(struct gen_spec *spec, struct gen_disasm *disasm,
                gen_spec_find_struct(spec, "INTERFACE_DESCRIPTOR_DATA");
             uint32_t *desc_p =
                ((void *)current_dynamic_state_buffer->data) + interface_offset;
-            gen_field_iterator_init(&iter, desc, desc_p, false);
+            gen_field_iterator_init(&iter, desc, desc_p, 0, false);
             do {
                if (strcmp(iter.name, "Kernel Start Pointer") == 0) {
                   uint64_t ksp = strtol(iter.value, NULL, 16);

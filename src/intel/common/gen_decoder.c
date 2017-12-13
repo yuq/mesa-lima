@@ -851,8 +851,8 @@ iter_decode_field_raw(struct gen_field_iterator *iter)
 {
    uint64_t qw = 0;
 
-   int field_start = iter->bit;
-   int field_end = iter->bit + (iter->field->end - iter->field->start);
+   int field_start = iter->p_bit + iter->bit;
+   int field_end = field_start + (iter->field->end - iter->field->start);
 
    const uint32_t *p = iter->p + (iter->bit / 32);
    if ((field_end - field_start) > 32) {
@@ -959,7 +959,7 @@ iter_decode_field(struct gen_field_iterator *iter)
 void
 gen_field_iterator_init(struct gen_field_iterator *iter,
                         struct gen_group *group,
-                        const uint32_t *p,
+                        const uint32_t *p, int p_bit,
                         bool print_colors)
 {
    memset(iter, 0, sizeof(*iter));
@@ -970,6 +970,7 @@ gen_field_iterator_init(struct gen_field_iterator *iter,
    else
       iter->field = group->next->fields;
    iter->p = p;
+   iter->p_bit = p_bit;
    iter->p_end = &p[gen_group_get_length(iter->group, iter->p)];
    iter->print_colors = print_colors;
 
@@ -1011,13 +1012,13 @@ gen_field_is_header(struct gen_field *field)
 }
 
 void
-gen_print_group(FILE *outfile, struct gen_group *group,
-                uint64_t offset, const uint32_t *p, bool color)
+gen_print_group(FILE *outfile, struct gen_group *group, uint64_t offset,
+                const uint32_t *p, int p_bit, bool color)
 {
    struct gen_field_iterator iter;
    int last_dword = -1;
 
-   gen_field_iterator_init(&iter, group, p, color);
+   gen_field_iterator_init(&iter, group, p, p_bit, color);
    do {
       int iter_dword = iter.bit / 32;
       if (last_dword != iter_dword) {
@@ -1030,7 +1031,7 @@ gen_print_group(FILE *outfile, struct gen_group *group,
          if (iter.struct_desc) {
             uint64_t struct_offset = offset + 4 * iter_dword;
             gen_print_group(outfile, iter.struct_desc, struct_offset,
-                            &p[iter_dword], color);
+                            &p[iter_dword], iter.bit % 32, color);
          }
       }
    } while (gen_field_iterator_next(&iter));

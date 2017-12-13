@@ -69,6 +69,7 @@ struct gen_field_iterator {
    char value[128];
    struct gen_group *struct_desc;
    const uint32_t *p;
+   int p_bit; /**< bit offset into p */
    const uint32_t *p_end;
    int bit; /**< current field starts at this bit offset into p */
 
@@ -171,14 +172,14 @@ struct gen_field {
 
 void gen_field_iterator_init(struct gen_field_iterator *iter,
                              struct gen_group *group,
-                             const uint32_t *p,
+                             const uint32_t *p, int p_bit,
                              bool print_colors);
 
 bool gen_field_iterator_next(struct gen_field_iterator *iter);
 
 void gen_print_group(FILE *out,
                      struct gen_group *group,
-                     uint64_t offset, const uint32_t *p,
+                     uint64_t offset, const uint32_t *p, int p_bit,
                      bool color);
 
 #ifdef __cplusplus
