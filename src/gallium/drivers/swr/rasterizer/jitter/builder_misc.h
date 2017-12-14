@@ -117,8 +117,7 @@ Value *VMASK2(Value *mask);
 //////////////////////////////////////////////////////////////////////////
 
 #if USE_SIMD16_BUILDER
-Value *EXTRACT2_F(Value *a2, uint32_t imm);
-Value *EXTRACT2_I(Value *a2, uint32_t imm);
+Value *EXTRACT2(Value *x, uint32_t imm);
 Value *JOIN2(Value *a, Value *b);
 #endif
 

@@ -653,16 +653,14 @@ namespace SwrJit
         }
         else
         {
-            Value *src0 = EXTRACT2_F(vSrc, 0);
-            Value *src1 = EXTRACT2_F(vSrc, 1);
+            Value *src0 = EXTRACT2(vSrc, 0);
+            Value *src1 = EXTRACT2(vSrc, 1);
 
-            Value *indices0 = EXTRACT2_I(vIndices, 0);
-            Value *indices1 = EXTRACT2_I(vIndices, 1);
+            Value *indices0 = EXTRACT2(vIndices, 0);
+            Value *indices1 = EXTRACT2(vIndices, 1);
 
-            Value *vmask16 = VMASK2(vMask);
-
-            Value *mask0 = MASK(EXTRACT2_I(vmask16, 0));  // TODO: do this better..
-            Value *mask1 = MASK(EXTRACT2_I(vmask16, 1));
+            Value *mask0 = EXTRACT2(vMask, 0);
+            Value *mask1 = EXTRACT2(vMask, 1);
 
             Value *gather0 = GATHERPS(src0, pBase, indices0, mask0, scale);
             Value *gather1 = GATHERPS(src1, pBase, indices1, mask1, scale);
@@ -738,16 +736,14 @@ namespace SwrJit
         }
         else
         {
-            Value *src0 = EXTRACT2_F(vSrc, 0);
-            Value *src1 = EXTRACT2_F(vSrc, 1);
+            Value *src0 = EXTRACT2(vSrc, 0);
+            Value *src1 = EXTRACT2(vSrc, 1);
 
-            Value *indices0 = EXTRACT2_I(vIndices, 0);
-            Value *indices1 = EXTRACT2_I(vIndices, 1);
+            Value *indices0 = EXTRACT2(vIndices, 0);
+            Value *indices1 = EXTRACT2(vIndices, 1);
 
-            Value *vmask16 = VMASK2(vMask);
-
-            Value *mask0 = MASK(EXTRACT2_I(vmask16, 0));  // TODO: do this better..
-            Value *mask1 = MASK(EXTRACT2_I(vmask16, 1));
+            Value *mask0 = EXTRACT2(vMask, 0);
+            Value *mask1 = EXTRACT2(vMask, 1);
 
             Value *gather0 = GATHERDD(src0, pBase, indices0, mask0, scale);
             Value *gather1 = GATHERDD(src1, pBase, indices1, mask1, scale);
@@ -809,34 +805,12 @@ namespace SwrJit
     }
 
 #if USE_SIMD16_BUILDER
-    //////////////////////////////////////////////////////////////////////////
-    /// @brief
-    Value *Builder::EXTRACT2_F(Value *a2, uint32_t imm)
+    Value *Builder::EXTRACT2(Value *x, uint32_t imm)
     {
-        const uint32_t i0 = (imm > 0) ? mVWidth : 0;
-
-        Value *result = VUNDEF_F();
-
-        for (uint32_t i = 0; i < mVWidth; i += 1)
-        {
-#if 1
-            if (!a2->getType()->getScalarType()->isFloatTy())
-            {
-                a2 = BITCAST(a2, mSimd2FP32Ty);
-            }
-
-#endif
-            Value *temp = VEXTRACT(a2, C(i0 + i));
-
-            result = VINSERT(result, temp, C(i));
-        }
-
-        return result;
-    }
-
-    Value *Builder::EXTRACT2_I(Value *a2, uint32_t imm)
-    {
-        return BITCAST(EXTRACT2_F(a2, imm), mSimdInt32Ty);
+        if (imm == 0)
+            return VSHUFFLE(x, UndefValue::get(x->getType()), {0, 1, 2, 3, 4, 5, 6, 7});
+        else
+            return VSHUFFLE(x, UndefValue::get(x->getType()), {8, 9, 10, 11, 12, 13, 14, 15});
     }
 
     Value *Builder::JOIN2(Value *a, Value *b)

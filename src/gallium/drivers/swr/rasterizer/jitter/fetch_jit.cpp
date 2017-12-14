@@ -1078,14 +1078,12 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
         vOffsets16 = ADD(vOffsets16, vInstanceStride16);
 
         // TODO: remove the following simd8 interop stuff once all code paths are fully widened to SIMD16..
-        Value *vmask16 = VMASK2(vGatherMask16);
 
-        Value *vGatherMask  = MASK(EXTRACT2_I(vmask16, 0));
-        Value *vGatherMask2 = MASK(EXTRACT2_I(vmask16, 1));
+        Value *vGatherMask = EXTRACT2(vGatherMask16, 0);
+        Value *vGatherMask2 = EXTRACT2(vGatherMask16, 1);
 
-        Value *vOffsets  = EXTRACT2_I(vOffsets16, 0);
-        Value *vOffsets2 = EXTRACT2_I(vOffsets16, 1);
-
+        Value *vOffsets = EXTRACT2(vOffsets16, 0);
+        Value *vOffsets2 = EXTRACT2(vOffsets16, 1);
 #else
         // override cur indices with 0 if pitch is 0
         Value* pZeroPitchMask = ICMP_EQ(vStride, VIMMED1(0));
@@ -2322,8 +2320,8 @@ void FetchJit::Shuffle8bpcGatherd2(Shuffle8bpcArgs &args)
 
         // SIMD16 PSHUFB isnt part of AVX-512F, so split into SIMD8 for the sake of KNL, for now..
 
-        Value *vGatherResult_lo = EXTRACT2_I(vGatherResult, 0);
-        Value *vGatherResult_hi = EXTRACT2_I(vGatherResult, 1);
+        Value *vGatherResult_lo = EXTRACT2(vGatherResult, 0);
+        Value *vGatherResult_hi = EXTRACT2(vGatherResult, 1);
 
         Value *vShufResult_lo = BITCAST(PSHUFB(BITCAST(vGatherResult_lo, v32x8Ty), vConstMask), vGatherTy);
         Value *vShufResult_hi = BITCAST(PSHUFB(BITCAST(vGatherResult_hi, v32x8Ty), vConstMask), vGatherTy);
@@ -2482,8 +2480,8 @@ void FetchJit::Shuffle8bpcGatherd2(Shuffle8bpcArgs &args)
                         break;
                     }
 
-                    Value *vGatherResult_lo = EXTRACT2_I(vGatherResult, 0);
-                    Value *vGatherResult_hi = EXTRACT2_I(vGatherResult, 1);
+                    Value *vGatherResult_lo = EXTRACT2(vGatherResult, 0);
+                    Value *vGatherResult_hi = EXTRACT2(vGatherResult, 1);
 
                     Value *temp_lo = BITCAST(PSHUFB(BITCAST(vGatherResult_lo, v32x8Ty), vConstMask), vGatherTy);
                     Value *temp_hi = BITCAST(PSHUFB(BITCAST(vGatherResult_hi, v32x8Ty), vConstMask), vGatherTy);
@@ -2787,8 +2785,8 @@ void FetchJit::Shuffle16bpcGather2(Shuffle16bpcArgs &args)
         {
             // SIMD16 PSHUFB isnt part of AVX-512F, so split into SIMD8 for the sake of KNL, for now..
 
-            Value *vGatherResult_lo = EXTRACT2_I(vGatherResult[0], 0);
-            Value *vGatherResult_hi = EXTRACT2_I(vGatherResult[0], 1);
+            Value *vGatherResult_lo = EXTRACT2(vGatherResult[0], 0);
+            Value *vGatherResult_hi = EXTRACT2(vGatherResult[0], 1);
 
             Value *vShufResult_lo = BITCAST(PSHUFB(BITCAST(vGatherResult_lo, v32x8Ty), vConstMask), vGatherTy);
             Value *vShufResult_hi = BITCAST(PSHUFB(BITCAST(vGatherResult_hi, v32x8Ty), vConstMask), vGatherTy);
@@ -2814,8 +2812,8 @@ void FetchJit::Shuffle16bpcGather2(Shuffle16bpcArgs &args)
         Value *vi128ZW_hi = nullptr;
         if (isComponentEnabled(compMask, 2) || isComponentEnabled(compMask, 3))
         {
-            Value *vGatherResult_lo = EXTRACT2_I(vGatherResult[1], 0);
-            Value *vGatherResult_hi = EXTRACT2_I(vGatherResult[1], 1);
+            Value *vGatherResult_lo = EXTRACT2(vGatherResult[1], 0);
+            Value *vGatherResult_hi = EXTRACT2(vGatherResult[1], 1);
 
             Value *vShufResult_lo = BITCAST(PSHUFB(BITCAST(vGatherResult_lo, v32x8Ty), vConstMask), vGatherTy);
             Value *vShufResult_hi = BITCAST(PSHUFB(BITCAST(vGatherResult_hi, v32x8Ty), vConstMask), vGatherTy);
@@ -2962,8 +2960,8 @@ void FetchJit::Shuffle16bpcGather2(Shuffle16bpcArgs &args)
 
                     // SIMD16 PSHUFB isnt part of AVX-512F, so split into SIMD8 for the sake of KNL, for now..
 
-                    Value *vGatherResult_lo = EXTRACT2_I(vGatherResult[selectedGather], 0);
-                    Value *vGatherResult_hi = EXTRACT2_I(vGatherResult[selectedGather], 1);
+                    Value *vGatherResult_lo = EXTRACT2(vGatherResult[selectedGather], 0);
+                    Value *vGatherResult_hi = EXTRACT2(vGatherResult[selectedGather], 1);
 
                     Value *temp_lo = BITCAST(PSHUFB(BITCAST(vGatherResult_lo, v32x8Ty), vConstMask[selectedMask]), vGatherTy);
                     Value *temp_hi = BITCAST(PSHUFB(BITCAST(vGatherResult_hi, v32x8Ty), vConstMask[selectedMask]), vGatherTy);
