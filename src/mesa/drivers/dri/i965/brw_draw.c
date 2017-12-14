@@ -508,6 +508,8 @@ brw_predraw_resolve_framebuffer(struct brw_context *brw)
                                    irb->mt_layer, irb->layer_count,
                                    isl_format,
                                    ctx->Color.BlendEnabled & (1 << i));
+
+      brw_cache_flush_for_render(brw, irb->mt->bo);
    }
 }
 
