@@ -32,6 +32,7 @@
 #include <llvm-c/Transforms/Scalar.h>
 #include "ac_shader_abi.h"
 #include "ac_shader_info.h"
+#include "ac_shader_util.h"
 #include "ac_exp_param.h"
 
 enum radeon_llvm_calling_convention {
@@ -6211,19 +6212,42 @@ si_export_mrt_z(struct nir_to_llvm_context *ctx,
 	args.out[2] = LLVMGetUndef(ctx->ac.f32); /* B, sample mask */
 	args.out[3] = LLVMGetUndef(ctx->ac.f32); /* A, alpha to mask */
 
-	if (depth) {
-		args.out[0] = depth;
-		args.enabled_channels |= 0x1;
-	}
+	unsigned format = ac_get_spi_shader_z_format(depth != NULL,
+						     stencil != NULL,
+						     samplemask != NULL);
 
-	if (stencil) {
-		args.out[1] = stencil;
-		args.enabled_channels |= 0x2;
-	}
+	if (format == V_028710_SPI_SHADER_UINT16_ABGR) {
+		assert(!depth);
+		args.compr = 1; /* COMPR flag */
 
-	if (samplemask) {
-		args.out[2] = samplemask;
-		args.enabled_channels |= 0x4;
+		if (stencil) {
+			/* Stencil should be in X[23:16]. */
+			stencil = ac_to_integer(&ctx->ac, stencil);
+			stencil = LLVMBuildShl(ctx->builder, stencil,
+					       LLVMConstInt(ctx->ac.i32, 16, 0), "");
+			args.out[0] = ac_to_float(&ctx->ac, stencil);
+			args.enabled_channels |= 0x3;
+		}
+		if (samplemask) {
+			/* SampleMask should be in Y[15:0]. */
+			args.out[1] = samplemask;
+			args.enabled_channels |= 0xc;
+		}
+	} else {
+		if (depth) {
+			args.out[0] = depth;
+			args.enabled_channels |= 0x1;
+		}
+
+		if (stencil) {
+			args.out[1] = stencil;
+			args.enabled_channels |= 0x2;
+		}
+
+		if (samplemask) {
+			args.out[2] = samplemask;
+			args.enabled_channels |= 0x4;
+		}
 	}
 
 	/* SI (except OLAND and HAINAN) has a bug that it only looks
