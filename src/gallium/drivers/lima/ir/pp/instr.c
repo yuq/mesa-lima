@@ -57,6 +57,43 @@ void ppir_instr_add_dep(ppir_instr *succ, ppir_instr *pred)
    list_addtail(&dep->succ_link, &pred->succ_list);
 }
 
+void ppir_instr_insert_mul_node(ppir_node *add, ppir_node *mul)
+{
+   ppir_instr *instr = add->instr;
+   int pos = mul->instr_pos;
+   int *slots = ppir_op_infos[mul->op].slots;
+
+   for (int i = 0; slots[i] != PPIR_INSTR_SLOT_END; i++) {
+      /* possible to insert at required place */
+      if (slots[i] == pos) {
+         if (!instr->slots[pos]) {
+            ppir_alu_node *add_alu = ppir_node_to_alu(add);
+            ppir_alu_node *mul_alu = ppir_node_to_alu(mul);
+            ppir_dest *dest = &mul_alu->dest;
+            int pipeline = pos == PPIR_INSTR_SLOT_ALU_VEC_MUL ?
+               ppir_pipeline_reg_vmul : ppir_pipeline_reg_fmul;
+
+            /* update add node src to use pipeline reg */
+            for (int j = 0; j < add_alu->num_src; j++) {
+               ppir_src *src = add_alu->src + j;
+               if (ppir_node_target_equal(src, dest)) {
+                  src->type = ppir_target_pipeline;
+                  src->pipeline = pipeline;
+               }
+            }
+
+            /* update mul node dest to output to pipeline reg */
+            dest->type = ppir_target_pipeline;
+            dest->pipeline = pipeline;
+
+            instr->slots[pos] = mul;
+            mul->instr = instr;
+         }
+         return;
+      }
+   }
+}
+
 /* check whether a const slot fix into another const slot */
 static bool ppir_instr_insert_const(ppir_const *dst, const ppir_const *src,
                                     uint8_t *swizzle)
@@ -107,28 +144,7 @@ static void ppir_instr_update_src_pipeline(ppir_instr *instr, ppir_pipeline pipe
 
 bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
 {
-   switch (node->op) {
-   case ppir_op_mov:
-   case ppir_op_mul:
-   case ppir_op_max:
-      instr->slots[PPIR_INSTR_SLOT_ALU_VEC_MUL] = node;
-      break;
-
-   case ppir_op_add:
-   case ppir_op_sum3:
-   case ppir_op_sum4:
-      instr->slots[PPIR_INSTR_SLOT_ALU_VEC_ADD] = node;
-      break;
-
-   case ppir_op_rsqrt:
-   case ppir_op_log2:
-   case ppir_op_exp2:
-   case ppir_op_rcp:
-      instr->slots[PPIR_INSTR_SLOT_ALU_COMBINE] = node;
-      break;
-
-   case ppir_op_const:
-   {
+   if (node->op == ppir_op_const) {
       int i;
       ppir_const_node *c = ppir_node_to_const(node);
       const ppir_const *nc = &c->constant;
@@ -149,30 +165,38 @@ bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
       if (i == 2)
          return false;
 
-      break;
+      return true;
    }
-   case ppir_op_load_varying:
-      if (instr->slots[PPIR_INSTR_SLOT_VARYING])
-         return false;
-      instr->slots[PPIR_INSTR_SLOT_VARYING] = node;
-      break;
+   else {
+      int *slots = ppir_op_infos[node->op].slots;
+      for (int i = 0; slots[i] != PPIR_INSTR_SLOT_END; i++) {
+         int pos = slots[i];
 
-   case ppir_op_load_uniform:
-   {
-      if (instr->slots[PPIR_INSTR_SLOT_UNIFORM])
-         return false;
-      instr->slots[PPIR_INSTR_SLOT_UNIFORM] = node;
+         if (instr->slots[pos])
+            continue;
 
-      ppir_load_node *l = ppir_node_to_load(node);
-      ppir_instr_update_src_pipeline(
-         instr, ppir_pipeline_reg_uniform, &l->dest, NULL);
-      break;
-   }
-   default:
+         if (pos == PPIR_INSTR_SLOT_ALU_SCL_MUL ||
+             pos == PPIR_INSTR_SLOT_ALU_SCL_ADD) {
+            ppir_dest *dest = ppir_node_get_dest(node);
+            if (!ppir_target_is_scaler(dest))
+               continue;
+         }
+
+         instr->slots[pos] = node;
+         node->instr = instr;
+         node->instr_pos = pos;
+
+         if (node->op == ppir_op_load_uniform) {
+            ppir_load_node *l = ppir_node_to_load(node);
+            ppir_instr_update_src_pipeline(
+               instr, ppir_pipeline_reg_uniform, &l->dest, NULL);
+         }
+
+         return true;
+      }
+
       return false;
    }
-
-   return true;
 }
 
 static struct {
