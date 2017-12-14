@@ -745,8 +745,10 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	switch (stage) {
 	case MESA_SHADER_COMPUTE:
 		radv_define_common_user_sgprs_phase1(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_info, &args, &desc_sets);
-		if (ctx->shader_info->info.cs.grid_components_used)
-			add_user_sgpr_argument(&args, LLVMVectorType(ctx->ac.i32, ctx->shader_info->info.cs.grid_components_used), &ctx->num_work_groups); /* grid size */
+		if (ctx->shader_info->info.cs.grid_components_used) {
+			add_user_sgpr_argument(&args, ctx->ac.v3i32,
+					       &ctx->num_work_groups);
+		}
 		add_sgpr_argument(&args, ctx->ac.v3i32, &ctx->workgroup_ids);
 		add_sgpr_argument(&args, ctx->ac.i32, &ctx->tg_size);
 		add_vgpr_argument(&args, ctx->ac.v3i32, &ctx->local_invocation_ids);
@@ -950,7 +952,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	switch (stage) {
 	case MESA_SHADER_COMPUTE:
 		if (ctx->shader_info->info.cs.grid_components_used) {
-			set_userdata_location_shader(ctx, AC_UD_CS_GRID_SIZE, &user_sgpr_idx, ctx->shader_info->info.cs.grid_components_used);
+			set_userdata_location_shader(ctx, AC_UD_CS_GRID_SIZE,
+						     &user_sgpr_idx, 3);
 		}
 		break;
 	case MESA_SHADER_VERTEX:

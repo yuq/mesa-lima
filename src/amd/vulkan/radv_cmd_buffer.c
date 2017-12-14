@@ -3487,9 +3487,6 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	struct ac_userdata_info *loc;
 	unsigned dispatch_initiator;
-	uint8_t grid_used;
-
-	grid_used = compute_shader->info.info.cs.grid_components_used;
 
 	loc = radv_lookup_user_sgpr(pipeline, MESA_SHADER_COMPUTE,
 				    AC_UD_CS_GRID_SIZE);
@@ -3514,7 +3511,7 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 		radv_cs_add_buffer(ws, cs, info->indirect->bo, 8);
 
 		if (loc->sgpr_idx != -1) {
-			for (unsigned i = 0; i < grid_used; ++i) {
+			for (unsigned i = 0; i < 3; ++i) {
 				radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
 				radeon_emit(cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
 						COPY_DATA_DST_SEL(COPY_DATA_REG));
@@ -3581,15 +3578,13 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 
 		if (loc->sgpr_idx != -1) {
 			assert(!loc->indirect);
-			assert(loc->num_sgprs == grid_used);
+			assert(loc->num_sgprs == 3);
 
 			radeon_set_sh_reg_seq(cs, R_00B900_COMPUTE_USER_DATA_0 +
-						  loc->sgpr_idx * 4, grid_used);
+						  loc->sgpr_idx * 4, 3);
 			radeon_emit(cs, blocks[0]);
-			if (grid_used > 1)
-				radeon_emit(cs, blocks[1]);
-			if (grid_used > 2)
-				radeon_emit(cs, blocks[2]);
+			radeon_emit(cs, blocks[1]);
+			radeon_emit(cs, blocks[2]);
 		}
 
 		radeon_emit(cs, PKT3(PKT3_DISPATCH_DIRECT, 3, 0) |
