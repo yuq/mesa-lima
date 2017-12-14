@@ -526,6 +526,12 @@ struct pipe_context {
                              struct pipe_fence_handle *fence);
 
    /**
+    * Insert commands to have the GPU signal a fence.
+    */
+   void (*fence_server_signal)(struct pipe_context *pipe,
+                               struct pipe_fence_handle *fence);
+
+   /**
     * Create a view on a texture to be used by a shader stage.
     */
    struct pipe_sampler_view * (*create_sampler_view)(struct pipe_context *ctx,
