@@ -37,6 +37,7 @@
 #include "util/disk_cache.h"
 #include "util/mesa-sha1.h"
 #include "ac_exp_param.h"
+#include "ac_shader_util.h"
 
 /* SHADER_CACHE */
 
@@ -1123,7 +1124,7 @@ static void si_shader_ps(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_0286D8_SPI_PS_IN_CONTROL, spi_ps_in_control);
 
 	si_pm4_set_reg(pm4, R_028710_SPI_SHADER_Z_FORMAT,
-		       si_get_spi_shader_z_format(info->writes_z,
+		       ac_get_spi_shader_z_format(info->writes_z,
 						  info->writes_stencil,
 						  info->writes_samplemask));
 

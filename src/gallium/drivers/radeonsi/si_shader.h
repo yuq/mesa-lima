@@ -647,8 +647,6 @@ void si_shader_apply_scratch_relocs(struct si_shader *shader,
 void si_shader_binary_read_config(struct ac_shader_binary *binary,
 				  struct si_shader_config *conf,
 				  unsigned symbol_offset);
-unsigned si_get_spi_shader_z_format(bool writes_z, bool writes_stencil,
-				    bool writes_samplemask);
 const char *si_get_shader_name(const struct si_shader *shader, unsigned processor);
 
 /* si_shader_nir.c */

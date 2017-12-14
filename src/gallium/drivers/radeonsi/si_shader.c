@@ -37,6 +37,7 @@
 #include "ac_binary.h"
 #include "ac_llvm_util.h"
 #include "ac_exp_param.h"
+#include "ac_shader_util.h"
 #include "si_shader_internal.h"
 #include "si_pipe.h"
 #include "sid.h"
@@ -3419,25 +3420,6 @@ struct si_ps_exports {
 	struct ac_export_args args[10];
 };
 
-unsigned si_get_spi_shader_z_format(bool writes_z, bool writes_stencil,
-				    bool writes_samplemask)
-{
-	if (writes_z) {
-		/* Z needs 32 bits. */
-		if (writes_samplemask)
-			return V_028710_SPI_SHADER_32_ABGR;
-		else if (writes_stencil)
-			return V_028710_SPI_SHADER_32_GR;
-		else
-			return V_028710_SPI_SHADER_32_R;
-	} else if (writes_stencil || writes_samplemask) {
-		/* Both stencil and sample mask need only 16 bits. */
-		return V_028710_SPI_SHADER_UINT16_ABGR;
-	} else {
-		return V_028710_SPI_SHADER_ZERO;
-	}
-}
-
 static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
 			    LLVMValueRef depth, LLVMValueRef stencil,
 			    LLVMValueRef samplemask, struct si_ps_exports *exp)
@@ -3446,7 +3428,7 @@ static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
 	struct lp_build_context *base = &bld_base->base;
 	struct ac_export_args args;
 	unsigned mask = 0;
-	unsigned format = si_get_spi_shader_z_format(depth != NULL,
+	unsigned format = ac_get_spi_shader_z_format(depth != NULL,
 						     stencil != NULL,
 						     samplemask != NULL);
 
