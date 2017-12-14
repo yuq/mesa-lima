@@ -114,6 +114,7 @@ typedef enum {
 typedef struct {
    char *name;
    ppir_node_type type;
+   int *slots;
 } ppir_op_info;
 
 extern const ppir_op_info ppir_op_infos[];
@@ -132,6 +133,7 @@ typedef struct ppir_node {
    char name[16];
    bool printed;
    struct ppir_instr *instr;
+   int instr_pos;
    struct ppir_block *block;
 
    /* for scheduler */
@@ -244,6 +246,7 @@ enum ppir_instr_slot {
    PPIR_INSTR_SLOT_ALU_COMBINE,
    PPIR_INSTR_SLOT_STORE_TEMP,
    PPIR_INSTR_SLOT_NUM,
+   PPIR_INSTR_SLOT_END,
    PPIR_INSTR_SLOT_ALU_START = PPIR_INSTR_SLOT_ALU_VEC_MUL,
    PPIR_INSTR_SLOT_ALU_END = PPIR_INSTR_SLOT_ALU_COMBINE,
 };
@@ -317,6 +320,16 @@ static inline bool ppir_node_is_root(ppir_node *node)
 static inline bool ppir_node_is_leaf(ppir_node *node)
 {
    return list_empty(&node->pred_list);
+}
+
+static inline bool ppir_node_has_single_succ(ppir_node *node)
+{
+   return list_is_singular(&node->succ_list);
+}
+
+static inline ppir_node *ppir_node_first_succ(ppir_node *node)
+{
+   return list_first_entry(&node->succ_list, ppir_dep, succ_link)->succ;
 }
 
 #define ppir_node_foreach_succ(node, dep) \
@@ -402,11 +415,35 @@ static inline int ppir_target_get_dest_reg_index(ppir_dest *dest)
    return -1;
 }
 
+static inline bool ppir_target_is_scaler(ppir_dest *dest)
+{
+   switch (dest->type) {
+   case ppir_target_ssa:
+      return dest->ssa.num_components == 1;
+   case ppir_target_register:
+      /* only one bit in mask is set */
+      if ((dest->write_mask & 0x3) || (dest->write_mask & 0x5) ||
+          (dest->write_mask & 0x9) || (dest->write_mask & 0x6) ||
+          (dest->write_mask & 0xa) || (dest->write_mask & 0xc))
+         return false;
+      else
+         return true;
+   case ppir_target_pipeline:
+      if (dest->pipeline == ppir_pipeline_reg_fmul)
+         return true;
+      else
+         return false;
+   default:
+      return false;
+   }
+}
+
 ppir_instr *ppir_instr_create(ppir_block *block);
 bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node);
 void ppir_instr_add_dep(ppir_instr *succ, ppir_instr *pred);
 void ppir_instr_print_list(ppir_compiler *comp);
 void ppir_instr_print_dep(ppir_compiler *comp);
+void ppir_instr_insert_mul_node(ppir_node *add, ppir_node *mul);
 
 #define ppir_instr_foreach_succ(instr, dep) \
    list_for_each_entry(ppir_dep, dep, &instr->succ_list, succ_link)
