@@ -2561,6 +2561,7 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 {
 	struct radv_shader_variant *compute_shader;
 	struct radv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
+	struct radv_device *device = cmd_buffer->device;
 	unsigned compute_resource_limits;
 	unsigned waves_per_threadgroup;
 	uint64_t va;
@@ -2601,6 +2602,19 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 			     compute_shader->info.cs.block_size[2], 64);
 	compute_resource_limits =
 		S_00B854_SIMD_DEST_CNTL(waves_per_threadgroup % 4 == 0);
+
+	if (device->physical_device->rad_info.chip_class >= CIK) {
+		unsigned num_cu_per_se =
+			device->physical_device->rad_info.num_good_compute_units /
+			device->physical_device->rad_info.max_se;
+
+		/* Force even distribution on all SIMDs in CU if the workgroup
+		 * size is 64. This has shown some good improvements if # of
+		 * CUs per SE is not a multiple of 4.
+		 */
+		if (num_cu_per_se % 4 && waves_per_threadgroup == 1)
+			compute_resource_limits |= S_00B854_FORCE_SIMD_DIST(1);
+	}
 
 	radeon_set_sh_reg(cmd_buffer->cs, R_00B854_COMPUTE_RESOURCE_LIMITS,
 			  compute_resource_limits);
