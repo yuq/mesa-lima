@@ -1023,18 +1023,7 @@ void BinPostSetupPointsImpl(
         SIMD_T::store_si(reinterpret_cast<typename SIMD_T::Integer *>(aMTBottom), bbox.ymax);
 
         // store render target array index
-        OSALIGNSIMD16(uint32_t) aRTAI[SIMD_WIDTH];
-        if (state.backendState.readRenderTargetArrayIndex)
-        {
-            typename SIMD_T::Vec4 vRtai[2];
-            pa.Assemble(VERTEX_SGV_SLOT, vRtai);
-            typename SIMD_T::Integer vRtaii = SIMD_T::castps_si(vRtai[0][VERTEX_SGV_RTAI_COMP]);
-            SIMD_T::store_si(reinterpret_cast<typename SIMD_T::Integer *>(aRTAI), vRtaii);
-        }
-        else
-        {
-            SIMD_T::store_si(reinterpret_cast<typename SIMD_T::Integer *>(aRTAI), SIMD_T::setzero_si());
-        }
+        const uint32_t *aRTAI = reinterpret_cast<const uint32_t *>(&rtIdx);
 
         OSALIGNSIMD16(float) aPointSize[SIMD_WIDTH];
         SIMD_T::store_ps(reinterpret_cast<float *>(aPointSize), vPointSize);

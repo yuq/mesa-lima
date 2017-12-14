@@ -646,6 +646,7 @@ public:
 
             PA_STATE_OPT clipPA(pDC, numEmittedPrims, reinterpret_cast<uint8_t *>(&transposedPrims[0]), numEmittedVerts, SWR_VTX_NUM_SLOTS, true, NumVertsPerPrim, clipTopology);
             clipPA.viewportArrayActive = pa.viewportArrayActive;
+            clipPA.rtArrayActive = pa.rtArrayActive;
 
             static const uint32_t primMaskMap[] = { 0x0, 0x1, 0x3, 0x7, 0xf, 0x1f, 0x3f, 0x7f };
 
