@@ -1101,6 +1101,16 @@ VkResult radv_CreateDevice(
 	device->scratch_waves = MAX2(32 * physical_device->rad_info.num_good_compute_units,
 				     max_threads_per_block / 64);
 
+	device->dispatch_initiator = S_00B800_COMPUTE_SHADER_EN(1) |
+				     S_00B800_FORCE_START_AT_000(1);
+
+	if (device->physical_device->rad_info.chip_class >= CIK) {
+		/* If the KMD allows it (there is a KMD hw register for it),
+		 * allow launching waves out-of-order.
+		 */
+		device->dispatch_initiator |= S_00B800_ORDER_MODE(1);
+	}
+
 	radv_device_init_gs_info(device);
 
 	device->tess_offchip_block_dw_size =

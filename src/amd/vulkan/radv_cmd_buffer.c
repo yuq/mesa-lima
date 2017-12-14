@@ -3483,25 +3483,15 @@ radv_emit_dispatch_packets(struct radv_cmd_buffer *cmd_buffer,
 {
 	struct radv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
 	struct radv_shader_variant *compute_shader = pipeline->shaders[MESA_SHADER_COMPUTE];
+	unsigned dispatch_initiator = cmd_buffer->device->dispatch_initiator;
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	struct ac_userdata_info *loc;
-	unsigned dispatch_initiator;
 
 	loc = radv_lookup_user_sgpr(pipeline, MESA_SHADER_COMPUTE,
 				    AC_UD_CS_GRID_SIZE);
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(ws, cs, 25);
-
-	dispatch_initiator = S_00B800_COMPUTE_SHADER_EN(1) |
-			     S_00B800_FORCE_START_AT_000(1);
-
-	if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK) {
-		/* If the KMD allows it (there is a KMD hw register for it),
-		 * allow launching waves out-of-order.
-		 */
-		dispatch_initiator |= S_00B800_ORDER_MODE(1);
-	}
 
 	if (info->indirect) {
 		uint64_t va = radv_buffer_get_va(info->indirect->bo);
