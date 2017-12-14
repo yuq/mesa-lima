@@ -239,8 +239,11 @@ genX(blorp_exec)(struct blorp_batch *batch,
     */
    if (params->src.enabled)
       brw_cache_flush_for_read(brw, params->src.addr.buffer);
-   if (params->dst.enabled)
-      brw_cache_flush_for_render(brw, params->dst.addr.buffer);
+   if (params->dst.enabled) {
+      brw_cache_flush_for_render(brw, params->dst.addr.buffer,
+                                 params->dst.view.format,
+                                 params->dst.aux_usage);
+   }
    if (params->depth.enabled)
       brw_cache_flush_for_depth(brw, params->depth.addr.buffer);
    if (params->stencil.enabled)
@@ -310,8 +313,11 @@ retry:
                               !params->stencil.enabled;
    brw->ib.index_size = -1;
 
-   if (params->dst.enabled)
-      brw_render_cache_add_bo(brw, params->dst.addr.buffer);
+   if (params->dst.enabled) {
+      brw_render_cache_add_bo(brw, params->dst.addr.buffer,
+                              params->dst.view.format,
+                              params->dst.aux_usage);
+   }
    if (params->depth.enabled)
       brw_depth_cache_add_bo(brw, params->depth.addr.buffer);
    if (params->stencil.enabled)

@@ -764,7 +764,7 @@ struct brw_context
     * and would need flushing before being used from another cache domain that
     * isn't coherent with it (i.e. the sampler).
     */
-   struct set *render_cache;
+   struct hash_table *render_cache;
 
    /**
     * Set of struct brw_bo * that have been used as a depth buffer within this

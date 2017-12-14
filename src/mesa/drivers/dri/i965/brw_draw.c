@@ -503,13 +503,17 @@ brw_predraw_resolve_framebuffer(struct brw_context *brw)
       mesa_format mesa_format =
          _mesa_get_render_format(ctx, intel_rb_format(irb));
       enum isl_format isl_format = brw_isl_format_for_mesa_format(mesa_format);
+      bool blend_enabled = ctx->Color.BlendEnabled & (1 << i);
+      enum isl_aux_usage aux_usage =
+         intel_miptree_render_aux_usage(brw, irb->mt, isl_format,
+                                        blend_enabled);
 
       intel_miptree_prepare_render(brw, irb->mt, irb->mt_level,
                                    irb->mt_layer, irb->layer_count,
-                                   isl_format,
-                                   ctx->Color.BlendEnabled & (1 << i));
+                                   isl_format, blend_enabled);
 
-      brw_cache_flush_for_render(brw, irb->mt->bo);
+      brw_cache_flush_for_render(brw, irb->mt->bo,
+                                 isl_format, aux_usage);
    }
 }
 
@@ -575,12 +579,16 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
       mesa_format mesa_format =
          _mesa_get_render_format(ctx, intel_rb_format(irb));
       enum isl_format isl_format = brw_isl_format_for_mesa_format(mesa_format);
+      bool blend_enabled = ctx->Color.BlendEnabled & (1 << i);
+      enum isl_aux_usage aux_usage =
+         intel_miptree_render_aux_usage(brw, irb->mt, isl_format,
+                                        blend_enabled);
 
-      brw_render_cache_add_bo(brw, irb->mt->bo);
+      brw_render_cache_add_bo(brw, irb->mt->bo, isl_format, aux_usage);
+
       intel_miptree_finish_render(brw, irb->mt, irb->mt_level,
                                   irb->mt_layer, irb->layer_count,
-                                  isl_format,
-                                  ctx->Color.BlendEnabled & (1 << i));
+                                  isl_format, blend_enabled);
    }
 }
 
