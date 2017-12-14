@@ -576,7 +576,8 @@ static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
 
 	switch (ctx->stage) {
 	case MESA_SHADER_COMPUTE:
-		user_sgpr_info->sgpr_count += ctx->shader_info->info.cs.grid_components_used;
+		if (ctx->shader_info->info.cs.uses_grid_size)
+			user_sgpr_info->sgpr_count += 3;
 		break;
 	case MESA_SHADER_FRAGMENT:
 		user_sgpr_info->sgpr_count += ctx->shader_info->info.ps.needs_sample_positions;
@@ -745,7 +746,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	switch (stage) {
 	case MESA_SHADER_COMPUTE:
 		radv_define_common_user_sgprs_phase1(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_info, &args, &desc_sets);
-		if (ctx->shader_info->info.cs.grid_components_used) {
+		if (ctx->shader_info->info.cs.uses_grid_size) {
 			add_user_sgpr_argument(&args, ctx->ac.v3i32,
 					       &ctx->num_work_groups);
 		}
@@ -951,7 +952,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 	switch (stage) {
 	case MESA_SHADER_COMPUTE:
-		if (ctx->shader_info->info.cs.grid_components_used) {
+		if (ctx->shader_info->info.cs.uses_grid_size) {
 			set_userdata_location_shader(ctx, AC_UD_CS_GRID_SIZE,
 						     &user_sgpr_idx, 3);
 		}

@@ -43,7 +43,7 @@ gather_intrinsic_info(nir_intrinsic_instr *instr, struct ac_shader_info *info)
 		info->vs.needs_instance_id = true;
 		break;
 	case nir_intrinsic_load_num_work_groups:
-		info->cs.grid_components_used = instr->num_components;
+		info->cs.uses_grid_size = true;
 		break;
 	case nir_intrinsic_load_sample_id:
 		info->ps.force_persample = true;
