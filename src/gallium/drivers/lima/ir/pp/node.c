@@ -31,67 +31,100 @@
 const ppir_op_info ppir_op_infos[] = {
    [ppir_op_mov] = {
       .name = "mov",
-      .type = ppir_node_type_alu,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_ALU_SCL_ADD, PPIR_INSTR_SLOT_ALU_SCL_MUL,
+         PPIR_INSTR_SLOT_ALU_VEC_ADD, PPIR_INSTR_SLOT_ALU_VEC_MUL,
+         PPIR_INSTR_SLOT_END
+      },
    },
    [ppir_op_mul] = {
       .name = "mul",
-      .type = ppir_node_type_alu,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_ALU_SCL_MUL, PPIR_INSTR_SLOT_ALU_VEC_MUL,
+         PPIR_INSTR_SLOT_END
+      },
    },
    [ppir_op_add] = {
       .name = "add",
-      .type = ppir_node_type_alu,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_ALU_SCL_ADD, PPIR_INSTR_SLOT_ALU_VEC_ADD,
+         PPIR_INSTR_SLOT_END
+      },
    },
    [ppir_op_neg] = {
       .name = "neg",
-      .type = ppir_node_type_alu,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_ALU_SCL_ADD, PPIR_INSTR_SLOT_ALU_SCL_MUL,
+         PPIR_INSTR_SLOT_ALU_VEC_ADD, PPIR_INSTR_SLOT_ALU_VEC_MUL,
+         PPIR_INSTR_SLOT_END
+      },
    },
    [ppir_op_dot2] = {
       .name = "dot2",
-      .type = ppir_node_type_alu,
    },
    [ppir_op_dot3] = {
       .name = "dot3",
-      .type = ppir_node_type_alu,
    },
    [ppir_op_dot4] = {
       .name = "dot4",
-      .type = ppir_node_type_alu,
    },
    [ppir_op_sum3] = {
       .name = "sum3",
-      .type = ppir_node_type_alu,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_ALU_VEC_ADD, PPIR_INSTR_SLOT_END
+      },
    },
    [ppir_op_sum4] = {
       .name = "sum4",
-      .type = ppir_node_type_alu,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_ALU_VEC_ADD, PPIR_INSTR_SLOT_END
+      },
    },
    [ppir_op_rsqrt] = {
       .name = "rsqrt",
-      .type = ppir_node_type_alu,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_ALU_COMBINE, PPIR_INSTR_SLOT_END
+      },
    },
    [ppir_op_log2] = {
       .name = "log2",
-      .type = ppir_node_type_alu,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_ALU_COMBINE, PPIR_INSTR_SLOT_END
+      },
    },
    [ppir_op_exp2] = {
       .name = "exp2",
-      .type = ppir_node_type_alu,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_ALU_COMBINE, PPIR_INSTR_SLOT_END
+      },
    },
    [ppir_op_max] = {
       .name = "max",
-      .type = ppir_node_type_alu,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_ALU_SCL_ADD, PPIR_INSTR_SLOT_ALU_SCL_MUL,
+         PPIR_INSTR_SLOT_ALU_VEC_ADD, PPIR_INSTR_SLOT_ALU_VEC_MUL,
+         PPIR_INSTR_SLOT_END
+      },
    },
    [ppir_op_rcp] = {
       .name = "rcp",
-      .type = ppir_node_type_alu,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_ALU_COMBINE, PPIR_INSTR_SLOT_END
+      },
    },
    [ppir_op_load_varying] = {
       .name = "ld_var",
       .type = ppir_node_type_load,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_VARYING, PPIR_INSTR_SLOT_END
+      },
    },
    [ppir_op_load_uniform] = {
       .name = "ld_uni",
       .type = ppir_node_type_load,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_UNIFORM, PPIR_INSTR_SLOT_END
+      },
    },
    [ppir_op_const] = {
       .name = "const",
