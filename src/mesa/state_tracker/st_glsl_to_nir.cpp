@@ -617,6 +617,12 @@ st_link_nir(struct gl_context *ctx,
                               nir, ctx->API != API_OPENGL_COMPAT);
       }
       prev = i;
+   }
+
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_linked_shader *shader = shader_program->_LinkedShaders[i];
+      if (shader == NULL)
+         continue;
 
       st_glsl_to_nir_post_opts(st, shader->Program, shader_program);
 
