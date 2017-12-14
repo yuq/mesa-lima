@@ -58,6 +58,9 @@ gather_intrinsic_info(nir_intrinsic_instr *instr, struct ac_shader_info *info)
 		}
 		break;
 	}
+	case nir_intrinsic_load_local_invocation_index:
+		info->cs.uses_local_invocation_idx = true;
+		break;
 	case nir_intrinsic_load_sample_id:
 		info->ps.force_persample = true;
 		break;

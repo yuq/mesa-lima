@@ -400,7 +400,7 @@ radv_fill_shader_variant(struct radv_device *device,
 			S_00B84C_TGID_Z_EN(info->cs.uses_block_id[2]) |
 			S_00B84C_TIDIG_COMP_CNT(info->cs.uses_thread_id[2] ? 2 :
 						info->cs.uses_thread_id[1] ? 1 : 0) |
-			S_00B84C_TG_SIZE_EN(1) |
+			S_00B84C_TG_SIZE_EN(info->cs.uses_local_invocation_idx) |
 			S_00B84C_LDS_SIZE(variant->config.lds_size);
 		break;
 	}

@@ -751,7 +751,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 					       &ctx->num_work_groups);
 		}
 		add_sgpr_argument(&args, ctx->ac.v3i32, &ctx->workgroup_ids);
-		add_sgpr_argument(&args, ctx->ac.i32, &ctx->tg_size);
+		if (ctx->shader_info->info.cs.uses_local_invocation_idx)
+			add_sgpr_argument(&args, ctx->ac.i32, &ctx->tg_size);
 		add_vgpr_argument(&args, ctx->ac.v3i32, &ctx->local_invocation_ids);
 		break;
 	case MESA_SHADER_VERTEX:

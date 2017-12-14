@@ -45,6 +45,7 @@ struct ac_shader_info {
 		bool uses_grid_size;
 		bool uses_block_id[3];
 		bool uses_thread_id[3];
+		bool uses_local_invocation_idx;
 	} cs;
 };
 
