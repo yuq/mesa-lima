@@ -43,6 +43,7 @@ struct ac_shader_info {
 	} ps;
 	struct {
 		bool uses_grid_size;
+		bool uses_block_id[3];
 	} cs;
 };
 
