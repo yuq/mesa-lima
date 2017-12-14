@@ -2561,6 +2561,8 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 {
 	struct radv_shader_variant *compute_shader;
 	struct radv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
+	unsigned compute_resource_limits;
+	unsigned waves_per_threadgroup;
 	uint64_t va;
 
 	if (!pipeline || pipeline == cmd_buffer->state.emitted_compute_pipeline)
@@ -2572,7 +2574,7 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 	va = radv_buffer_get_va(compute_shader->bo) + compute_shader->bo_offset;
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
-							   cmd_buffer->cs, 16);
+							   cmd_buffer->cs, 19);
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B830_COMPUTE_PGM_LO, 2);
 	radeon_emit(cmd_buffer->cs, va >> 8);
@@ -2591,6 +2593,17 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 	radeon_set_sh_reg(cmd_buffer->cs, R_00B860_COMPUTE_TMPRING_SIZE,
 			  S_00B860_WAVES(pipeline->max_waves) |
 			  S_00B860_WAVESIZE(pipeline->scratch_bytes_per_wave >> 10));
+
+	/* Calculate best compute resource limits. */
+	waves_per_threadgroup =
+		DIV_ROUND_UP(compute_shader->info.cs.block_size[0] *
+			     compute_shader->info.cs.block_size[1] *
+			     compute_shader->info.cs.block_size[2], 64);
+	compute_resource_limits =
+		S_00B854_SIMD_DEST_CNTL(waves_per_threadgroup % 4 == 0);
+
+	radeon_set_sh_reg(cmd_buffer->cs, R_00B854_COMPUTE_RESOURCE_LIMITS,
+			  compute_resource_limits);
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B81C_COMPUTE_NUM_THREAD_X, 3);
 	radeon_emit(cmd_buffer->cs,
