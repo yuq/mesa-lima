@@ -1775,6 +1775,7 @@ varying_matches::assign_locations(struct gl_shader_program *prog,
    unsigned generic_location = 0;
    unsigned generic_patch_location = MAX_VARYING*4;
    bool previous_var_xfb_only = false;
+   unsigned previous_packing_class = ~0u;
 
    for (unsigned i = 0; i < this->num_matches; i++) {
       unsigned *location = &generic_location;
@@ -1809,12 +1810,12 @@ varying_matches::assign_locations(struct gl_shader_program *prog,
       if (var->data.must_be_shader_input ||
           (this->disable_varying_packing &&
            !(previous_var_xfb_only && var->data.is_xfb_only)) ||
-          (i > 0 && this->matches[i - 1].packing_class
-          != this->matches[i].packing_class )) {
+          (previous_packing_class != this->matches[i].packing_class )) {
          *location = ALIGN(*location, 4);
       }
 
       previous_var_xfb_only = var->data.is_xfb_only;
+      previous_packing_class = this->matches[i].packing_class;
 
       /* The number of components taken up by this variable. For vertex shader
        * inputs, we use the number of slots * 4, as they have different
