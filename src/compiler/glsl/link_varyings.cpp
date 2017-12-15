@@ -1468,7 +1468,7 @@ public:
    ~varying_matches();
    void record(ir_variable *producer_var, ir_variable *consumer_var);
    unsigned assign_locations(struct gl_shader_program *prog,
-                             uint8_t *components,
+                             uint8_t components[],
                              uint64_t reserved_slots);
    void store_locations() const;
 
@@ -1742,10 +1742,15 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
 /**
  * Choose locations for all of the variable matches that were previously
  * passed to varying_matches::record().
+ * \param components  returns array[slot] of number of components used
+ *                    per slot (1, 2, 3 or 4)
+ * \param reserved_slots  bitmask indicating which varying slots are already
+ *                        allocated
+ * \return number of slots (4-element vectors) allocated
  */
 unsigned
 varying_matches::assign_locations(struct gl_shader_program *prog,
-                                  uint8_t *components,
+                                  uint8_t components[],
                                   uint64_t reserved_slots)
 {
    /* If packing has been disabled then we cannot safely sort the varyings by
