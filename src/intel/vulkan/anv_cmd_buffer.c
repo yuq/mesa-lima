@@ -124,12 +124,20 @@ anv_cmd_state_init(struct anv_cmd_buffer *cmd_buffer)
 }
 
 static void
+anv_cmd_pipeline_state_finish(struct anv_cmd_buffer *cmd_buffer,
+                              struct anv_cmd_pipeline_state *pipe_state)
+{
+   for (uint32_t i = 0; i < ARRAY_SIZE(pipe_state->push_descriptors); i++)
+      vk_free(&cmd_buffer->pool->alloc, pipe_state->push_descriptors[i]);
+}
+
+static void
 anv_cmd_state_finish(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_cmd_state *state = &cmd_buffer->state;
 
-   for (uint32_t i = 0; i < ARRAY_SIZE(state->push_descriptors); i++)
-      vk_free(&cmd_buffer->pool->alloc, state->push_descriptors[i]);
+   anv_cmd_pipeline_state_finish(cmd_buffer, &state->gfx.base);
+   anv_cmd_pipeline_state_finish(cmd_buffer, &state->compute.base);
 
    for (uint32_t i = 0; i < MESA_SHADER_STAGES; i++)
       vk_free(&cmd_buffer->pool->alloc, state->push_constants[i]);
@@ -495,6 +503,7 @@ void anv_CmdSetStencilReference(
 
 static void
 anv_cmd_buffer_bind_descriptor_set(struct anv_cmd_buffer *cmd_buffer,
+                                   VkPipelineBindPoint bind_point,
                                    struct anv_pipeline_layout *layout,
                                    uint32_t set_index,
                                    struct anv_descriptor_set *set,
@@ -504,7 +513,14 @@ anv_cmd_buffer_bind_descriptor_set(struct anv_cmd_buffer *cmd_buffer,
    struct anv_descriptor_set_layout *set_layout =
       layout->set[set_index].layout;
 
-   cmd_buffer->state.descriptors[set_index] = set;
+   struct anv_cmd_pipeline_state *pipe_state;
+   if (bind_point == VK_PIPELINE_BIND_POINT_COMPUTE) {
+      pipe_state = &cmd_buffer->state.compute.base;
+   } else {
+      assert(bind_point == VK_PIPELINE_BIND_POINT_GRAPHICS);
+      pipe_state = &cmd_buffer->state.gfx.base;
+   }
+   pipe_state->descriptors[set_index] = set;
 
    if (dynamic_offsets) {
       if (set_layout->dynamic_offset_count > 0) {
@@ -514,9 +530,9 @@ anv_cmd_buffer_bind_descriptor_set(struct anv_cmd_buffer *cmd_buffer,
          /* Assert that everything is in range */
          assert(set_layout->dynamic_offset_count <= *dynamic_offset_count);
          assert(dynamic_offset_start + set_layout->dynamic_offset_count <=
-                ARRAY_SIZE(cmd_buffer->state.dynamic_offsets));
+                ARRAY_SIZE(pipe_state->dynamic_offsets));
 
-         typed_memcpy(&cmd_buffer->state.dynamic_offsets[dynamic_offset_start],
+         typed_memcpy(&pipe_state->dynamic_offsets[dynamic_offset_start],
                       *dynamic_offsets, set_layout->dynamic_offset_count);
 
          *dynamic_offsets += set_layout->dynamic_offset_count;
@@ -524,7 +540,13 @@ anv_cmd_buffer_bind_descriptor_set(struct anv_cmd_buffer *cmd_buffer,
       }
    }
 
-   cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
+   if (bind_point == VK_PIPELINE_BIND_POINT_COMPUTE) {
+      cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_COMPUTE_BIT;
+   } else {
+      assert(bind_point == VK_PIPELINE_BIND_POINT_GRAPHICS);
+      cmd_buffer->state.descriptors_dirty |=
+         set_layout->shader_stages & VK_SHADER_STAGE_ALL_GRAPHICS;
+   }
 }
 
 void anv_CmdBindDescriptorSets(
@@ -544,8 +566,8 @@ void anv_CmdBindDescriptorSets(
 
    for (uint32_t i = 0; i < descriptorSetCount; i++) {
       ANV_FROM_HANDLE(anv_descriptor_set, set, pDescriptorSets[i]);
-      anv_cmd_buffer_bind_descriptor_set(cmd_buffer, layout,
-                                         firstSet + i, set,
+      anv_cmd_buffer_bind_descriptor_set(cmd_buffer, pipelineBindPoint,
+                                         layout, firstSet + i, set,
                                          &dynamicOffsetCount,
                                          &pDynamicOffsets);
    }
@@ -851,10 +873,19 @@ anv_cmd_buffer_get_depth_stencil_view(const struct anv_cmd_buffer *cmd_buffer)
 
 static struct anv_push_descriptor_set *
 anv_cmd_buffer_get_push_descriptor_set(struct anv_cmd_buffer *cmd_buffer,
+                                       VkPipelineBindPoint bind_point,
                                        uint32_t set)
 {
+   struct anv_cmd_pipeline_state *pipe_state;
+   if (bind_point == VK_PIPELINE_BIND_POINT_COMPUTE) {
+      pipe_state = &cmd_buffer->state.compute.base;
+   } else {
+      assert(bind_point == VK_PIPELINE_BIND_POINT_GRAPHICS);
+      pipe_state = &cmd_buffer->state.gfx.base;
+   }
+
    struct anv_push_descriptor_set **push_set =
-      &cmd_buffer->state.push_descriptors[set];
+      &pipe_state->push_descriptors[set];
 
    if (*push_set == NULL) {
       *push_set = vk_alloc(&cmd_buffer->pool->alloc,
@@ -880,15 +911,14 @@ void anv_CmdPushDescriptorSetKHR(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, _layout);
 
-   assert(pipelineBindPoint == VK_PIPELINE_BIND_POINT_GRAPHICS ||
-          pipelineBindPoint == VK_PIPELINE_BIND_POINT_COMPUTE);
    assert(_set < MAX_SETS);
 
    const struct anv_descriptor_set_layout *set_layout =
       layout->set[_set].layout;
 
    struct anv_push_descriptor_set *push_set =
-      anv_cmd_buffer_get_push_descriptor_set(cmd_buffer, _set);
+      anv_cmd_buffer_get_push_descriptor_set(cmd_buffer,
+                                             pipelineBindPoint, _set);
    if (!push_set)
       return;
 
@@ -958,8 +988,8 @@ void anv_CmdPushDescriptorSetKHR(
       }
    }
 
-   anv_cmd_buffer_bind_descriptor_set(cmd_buffer, layout, _set,
-                                      set, NULL, NULL);
+   anv_cmd_buffer_bind_descriptor_set(cmd_buffer, pipelineBindPoint,
+                                      layout, _set, set, NULL, NULL);
 }
 
 void anv_CmdPushDescriptorSetWithTemplateKHR(
@@ -980,7 +1010,8 @@ void anv_CmdPushDescriptorSetWithTemplateKHR(
       layout->set[_set].layout;
 
    struct anv_push_descriptor_set *push_set =
-      anv_cmd_buffer_get_push_descriptor_set(cmd_buffer, _set);
+      anv_cmd_buffer_get_push_descriptor_set(cmd_buffer,
+                                             template->bind_point, _set);
    if (!push_set)
       return;
 
@@ -997,6 +1028,6 @@ void anv_CmdPushDescriptorSetWithTemplateKHR(
                                      template,
                                      pData);
 
-   anv_cmd_buffer_bind_descriptor_set(cmd_buffer, layout, _set,
-                                      set, NULL, NULL);
+   anv_cmd_buffer_bind_descriptor_set(cmd_buffer, template->bind_point,
+                                      layout, _set, set, NULL, NULL);
 }
