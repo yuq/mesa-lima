@@ -212,6 +212,8 @@ struct dri2_egl_display
    struct wl_event_queue    *wl_queue;
    struct zwp_linux_dmabuf_v1 *wl_dmabuf;
    struct {
+      struct u_vector        xrgb2101010;
+      struct u_vector        argb2101010;
       struct u_vector        xrgb8888;
       struct u_vector        argb8888;
       struct u_vector        rgb565;

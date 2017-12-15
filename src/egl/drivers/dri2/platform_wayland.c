@@ -354,9 +354,13 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    switch (dri2_surf->format) {
    case WL_DRM_FORMAT_ARGB2101010:
       dri_image_format = __DRI_IMAGE_FORMAT_ARGB2101010;
+      modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.argb2101010);
+      num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.argb2101010);
       break;
    case WL_DRM_FORMAT_XRGB2101010:
       dri_image_format = __DRI_IMAGE_FORMAT_XRGB2101010;
+      modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.xrgb2101010);
+      num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.xrgb2101010);
       break;
    case WL_DRM_FORMAT_ARGB8888:
       dri_image_format = __DRI_IMAGE_FORMAT_ARGB8888;
@@ -1143,6 +1147,14 @@ dmabuf_handle_modifier(void *data, struct zwp_linux_dmabuf_v1 *dmabuf,
       return;
 
    switch (format) {
+   case WL_DRM_FORMAT_ARGB2101010:
+      mod = u_vector_add(&dri2_dpy->wl_modifiers.argb2101010);
+      dri2_dpy->formats |= HAS_ARGB2101010;
+      break;
+   case WL_DRM_FORMAT_XRGB2101010:
+      mod = u_vector_add(&dri2_dpy->wl_modifiers.xrgb2101010);
+      dri2_dpy->formats |= HAS_XRGB2101010;
+      break;
    case WL_DRM_FORMAT_ARGB8888:
       mod = u_vector_add(&dri2_dpy->wl_modifiers.argb8888);
       dri2_dpy->formats |= HAS_ARGB8888;
@@ -1314,7 +1326,9 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
       dri2_dpy->wl_dpy = disp->PlatformDisplay;
    }
 
-   if (!u_vector_init(&dri2_dpy->wl_modifiers.xrgb8888, sizeof(uint64_t), 32) ||
+   if (!u_vector_init(&dri2_dpy->wl_modifiers.xrgb2101010, sizeof(uint64_t), 32) ||
+       !u_vector_init(&dri2_dpy->wl_modifiers.argb2101010, sizeof(uint64_t), 32) ||
+       !u_vector_init(&dri2_dpy->wl_modifiers.xrgb8888, sizeof(uint64_t), 32) ||
        !u_vector_init(&dri2_dpy->wl_modifiers.argb8888, sizeof(uint64_t), 32) ||
        !u_vector_init(&dri2_dpy->wl_modifiers.rgb565, sizeof(uint64_t), 32)) {
       goto cleanup;
@@ -2055,6 +2069,8 @@ dri2_teardown_wayland(struct dri2_egl_display *dri2_dpy)
       wl_event_queue_destroy(dri2_dpy->wl_queue);
    if (dri2_dpy->wl_dpy_wrapper)
       wl_proxy_wrapper_destroy(dri2_dpy->wl_dpy_wrapper);
+   u_vector_finish(&dri2_dpy->wl_modifiers.argb2101010);
+   u_vector_finish(&dri2_dpy->wl_modifiers.xrgb2101010);
    u_vector_finish(&dri2_dpy->wl_modifiers.argb8888);
    u_vector_finish(&dri2_dpy->wl_modifiers.xrgb8888);
    u_vector_finish(&dri2_dpy->wl_modifiers.rgb565);
