@@ -1256,7 +1256,6 @@ struct radv_cmask_info {
 	uint64_t size;
 	unsigned alignment;
 	unsigned slice_tile_max;
-	unsigned base_address_reg;
 };
 
 struct radv_image {
