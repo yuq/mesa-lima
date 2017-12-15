@@ -1752,10 +1752,8 @@ emit_samplers(struct anv_cmd_buffer *cmd_buffer,
 
    for (uint32_t s = 0; s < map->sampler_count; s++) {
       struct anv_pipeline_binding *binding = &map->sampler_to_descriptor[s];
-      struct anv_descriptor_set *set =
-         cmd_buffer->state.descriptors[binding->set];
-      uint32_t offset = set->layout->binding[binding->binding].descriptor_index;
-      struct anv_descriptor *desc = &set->descriptors[offset + binding->index];
+      const struct anv_descriptor *desc =
+         anv_descriptor_for_binding(cmd_buffer, binding);
 
       if (desc->type != VK_DESCRIPTOR_TYPE_SAMPLER &&
           desc->type != VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
