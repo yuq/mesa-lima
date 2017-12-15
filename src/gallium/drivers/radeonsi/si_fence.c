@@ -305,18 +305,32 @@ static void si_create_fence_fd(struct pipe_context *ctx,
 	struct radeon_winsys *ws = sscreen->ws;
 	struct si_multi_fence *rfence;
 
-	assert(type == PIPE_FD_TYPE_NATIVE_SYNC);
-
 	*pfence = NULL;
-
-	if (!sscreen->info.has_fence_to_handle)
-		return;
 
 	rfence = si_create_multi_fence();
 	if (!rfence)
 		return;
 
-	rfence->gfx = ws->fence_import_sync_file(ws, fd);
+	switch (type) {
+	case PIPE_FD_TYPE_NATIVE_SYNC:
+		if (!sscreen->info.has_fence_to_handle)
+			goto finish;
+
+		rfence->gfx = ws->fence_import_sync_file(ws, fd);
+		break;
+
+	case PIPE_FD_TYPE_SYNCOBJ:
+		if (!sscreen->info.has_syncobj)
+			goto finish;
+
+		rfence->gfx = ws->fence_import_syncobj(ws, fd);
+		break;
+
+	default:
+		unreachable("bad fence fd type when importing");
+	}
+
+finish:
 	if (!rfence->gfx) {
 		FREE(rfence);
 		return;
