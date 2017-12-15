@@ -1465,30 +1465,6 @@ static const struct radv_prim_vertex_count prim_size_table[] = {
 	[V_008958_DI_PT_2D_TRI_STRIP] = {0, 0},
 };
 
-static uint32_t si_vgt_gs_mode(struct radv_shader_variant *gs,
-                               enum chip_class chip_class)
-{
-	unsigned gs_max_vert_out = gs->info.gs.vertices_out;
-	unsigned cut_mode;
-
-	if (gs_max_vert_out <= 128) {
-		cut_mode = V_028A40_GS_CUT_128;
-	} else if (gs_max_vert_out <= 256) {
-		cut_mode = V_028A40_GS_CUT_256;
-	} else if (gs_max_vert_out <= 512) {
-		cut_mode = V_028A40_GS_CUT_512;
-	} else {
-		assert(gs_max_vert_out <= 1024);
-		cut_mode = V_028A40_GS_CUT_1024;
-	}
-
-	return S_028A40_MODE(V_028A40_GS_SCENARIO_G) |
-	       S_028A40_CUT_MODE(cut_mode)|
-	       S_028A40_ES_WRITE_OPTIMIZE(chip_class <= VI) |
-	       S_028A40_GS_WRITE_OPTIMIZE(1) |
-	       S_028A40_ONCHIP(chip_class >= GFX9 ? 1 : 0);
-}
-
 static struct ac_vs_output_info *get_vs_output_info(struct radv_pipeline *pipeline)
 {
 	if (radv_pipeline_has_gs(pipeline))
@@ -1507,8 +1483,12 @@ static void calculate_vgt_gs_mode(struct radv_pipeline *pipeline)
 	pipeline->graphics.vgt_gs_mode = 0;
 
 	if (radv_pipeline_has_gs(pipeline)) {
-		pipeline->graphics.vgt_gs_mode = si_vgt_gs_mode(pipeline->shaders[MESA_SHADER_GEOMETRY],
-		                                                pipeline->device->physical_device->rad_info.chip_class);
+		struct radv_shader_variant *gs =
+			pipeline->shaders[MESA_SHADER_GEOMETRY];
+
+		pipeline->graphics.vgt_gs_mode =
+			ac_vgt_gs_mode(gs->info.gs.vertices_out,
+				       pipeline->device->physical_device->rad_info.chip_class);
 	} else if (outinfo->export_prim_id) {
 		pipeline->graphics.vgt_gs_mode = S_028A40_MODE(V_028A40_GS_SCENARIO_A);
 		pipeline->graphics.vgt_primitiveid_en = true;

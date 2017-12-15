@@ -573,34 +573,6 @@ static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
 	polaris_set_vgt_vertex_reuse(sscreen, shader->selector, shader, pm4);
 }
 
-/**
- * Calculate the appropriate setting of VGT_GS_MODE when \p shader is a
- * geometry shader.
- */
-static uint32_t si_vgt_gs_mode(struct si_shader_selector *sel)
-{
-	enum chip_class chip_class = sel->screen->info.chip_class;
-	unsigned gs_max_vert_out = sel->gs_max_out_vertices;
-	unsigned cut_mode;
-
-	if (gs_max_vert_out <= 128) {
-		cut_mode = V_028A40_GS_CUT_128;
-	} else if (gs_max_vert_out <= 256) {
-		cut_mode = V_028A40_GS_CUT_256;
-	} else if (gs_max_vert_out <= 512) {
-		cut_mode = V_028A40_GS_CUT_512;
-	} else {
-		assert(gs_max_vert_out <= 1024);
-		cut_mode = V_028A40_GS_CUT_1024;
-	}
-
-	return S_028A40_MODE(V_028A40_GS_SCENARIO_G) |
-	       S_028A40_CUT_MODE(cut_mode)|
-	       S_028A40_ES_WRITE_OPTIMIZE(chip_class <= VI) |
-	       S_028A40_GS_WRITE_OPTIMIZE(1) |
-	       S_028A40_ONCHIP(chip_class >= GFX9 ? 1 : 0);
-}
-
 struct gfx9_gs_info {
 	unsigned es_verts_per_subgroup;
 	unsigned gs_prims_per_subgroup;
@@ -867,7 +839,9 @@ static void si_shader_vs(struct si_screen *sscreen, struct si_shader *shader,
 		si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE, S_028A40_MODE(mode));
 		si_pm4_set_reg(pm4, R_028A84_VGT_PRIMITIVEID_EN, enable_prim_id);
 	} else {
-		si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE, si_vgt_gs_mode(gs));
+		si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE,
+			       ac_vgt_gs_mode(gs->gs_max_out_vertices,
+					      sscreen->info.chip_class));
 		si_pm4_set_reg(pm4, R_028A84_VGT_PRIMITIVEID_EN, 0);
 	}
 
