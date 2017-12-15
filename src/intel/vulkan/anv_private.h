@@ -1691,7 +1691,6 @@ struct anv_cmd_state {
    struct anv_state                             binding_tables[MESA_SHADER_STAGES];
    struct anv_state                             samplers[MESA_SHADER_STAGES];
    struct anv_dynamic_state                     dynamic;
-   bool                                         need_query_wa;
 
    struct anv_push_descriptor_set *             push_descriptors[MAX_SETS];
 
