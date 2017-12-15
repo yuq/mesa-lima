@@ -835,9 +835,9 @@ anv_cmd_buffer_get_depth_stencil_view(const struct anv_cmd_buffer *cmd_buffer)
    return iview;
 }
 
-static VkResult
-anv_cmd_buffer_ensure_push_descriptor_set(struct anv_cmd_buffer *cmd_buffer,
-                                          uint32_t set)
+static struct anv_push_descriptor_set *
+anv_cmd_buffer_get_push_descriptor_set(struct anv_cmd_buffer *cmd_buffer,
+                                       uint32_t set)
 {
    struct anv_push_descriptor_set **push_set =
       &cmd_buffer->state.push_descriptors[set];
@@ -848,11 +848,11 @@ anv_cmd_buffer_ensure_push_descriptor_set(struct anv_cmd_buffer *cmd_buffer,
                            VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
       if (*push_set == NULL) {
          anv_batch_set_error(&cmd_buffer->batch, VK_ERROR_OUT_OF_HOST_MEMORY);
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+         return NULL;
       }
    }
 
-   return VK_SUCCESS;
+   return *push_set;
 }
 
 void anv_CmdPushDescriptorSetKHR(
@@ -873,10 +873,11 @@ void anv_CmdPushDescriptorSetKHR(
    const struct anv_descriptor_set_layout *set_layout =
       layout->set[_set].layout;
 
-   if (anv_cmd_buffer_ensure_push_descriptor_set(cmd_buffer, _set) != VK_SUCCESS)
-      return;
    struct anv_push_descriptor_set *push_set =
-      cmd_buffer->state.push_descriptors[_set];
+      anv_cmd_buffer_get_push_descriptor_set(cmd_buffer, _set);
+   if (!push_set)
+      return;
+
    struct anv_descriptor_set *set = &push_set->set;
 
    set->layout = set_layout;
@@ -964,10 +965,11 @@ void anv_CmdPushDescriptorSetWithTemplateKHR(
    const struct anv_descriptor_set_layout *set_layout =
       layout->set[_set].layout;
 
-   if (anv_cmd_buffer_ensure_push_descriptor_set(cmd_buffer, _set) != VK_SUCCESS)
-      return;
    struct anv_push_descriptor_set *push_set =
-      cmd_buffer->state.push_descriptors[_set];
+      anv_cmd_buffer_get_push_descriptor_set(cmd_buffer, _set);
+   if (!push_set)
+      return;
+
    struct anv_descriptor_set *set = &push_set->set;
 
    set->layout = set_layout;
