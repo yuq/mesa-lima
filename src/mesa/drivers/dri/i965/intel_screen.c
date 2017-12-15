@@ -1602,7 +1602,13 @@ intelCreateBuffer(__DRIscreen *dri_screen,
       fb->Visual.samples = num_samples;
    }
 
-   if (mesaVis->redBits == 5) {
+   if (mesaVis->redBits == 10 && mesaVis->alphaBits > 0) {
+      rgbFormat = mesaVis->redMask == 0x3ff00000 ? MESA_FORMAT_B10G10R10A2_UNORM
+                                                 : MESA_FORMAT_R10G10B10A2_UNORM;
+   } else if (mesaVis->redBits == 10) {
+      rgbFormat = mesaVis->redMask == 0x3ff00000 ? MESA_FORMAT_B10G10R10X2_UNORM
+                                                 : MESA_FORMAT_R10G10B10X2_UNORM;
+   } else if (mesaVis->redBits == 5) {
       rgbFormat = mesaVis->redMask == 0x1f ? MESA_FORMAT_R5G6B5_UNORM
                                            : MESA_FORMAT_B5G6R5_UNORM;
    } else if (mesaVis->sRGBCapable) {
@@ -2011,6 +2017,10 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
       MESA_FORMAT_B8G8R8X8_UNORM,
 
       MESA_FORMAT_B8G8R8A8_SRGB,
+
+      /* For 10 bpc, 30 bit depth framebuffers. */
+      MESA_FORMAT_B10G10R10A2_UNORM,
+      MESA_FORMAT_B10G10R10X2_UNORM,
 
       /* The 32-bit RGBA format must not precede the 32-bit BGRA format.
        * Likewise for RGBX and BGRX.  Otherwise, the GLX client and the GLX
