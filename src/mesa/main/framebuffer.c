@@ -889,7 +889,8 @@ _mesa_get_color_read_type(struct gl_context *ctx,
       if (format == MESA_FORMAT_B5G6R5_UNORM)
          return GL_UNSIGNED_SHORT_5_6_5;
 
-      if (format == MESA_FORMAT_B10G10R10A2_UNORM)
+      if (format == MESA_FORMAT_B10G10R10A2_UNORM ||
+          format == MESA_FORMAT_B10G10R10X2_UNORM)
          return GL_UNSIGNED_INT_2_10_10_10_REV;
 
       switch (data_type) {
