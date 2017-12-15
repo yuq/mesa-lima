@@ -1676,7 +1676,6 @@ struct anv_cmd_state {
    struct anv_bo                                *num_workgroups_bo;
    VkShaderStageFlags                           descriptors_dirty;
    VkShaderStageFlags                           push_constants_dirty;
-   uint32_t                                     scratch_size;
    struct anv_pipeline *                        pipeline;
    struct anv_pipeline *                        compute_pipeline;
    struct anv_framebuffer *                     framebuffer;
