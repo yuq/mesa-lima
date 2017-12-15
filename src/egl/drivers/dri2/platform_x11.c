@@ -782,13 +782,14 @@ dri2_x11_add_configs_for_visuals(struct dri2_egl_display *dri2_dpy,
                   config_count++;
 
             /* Allow a 24-bit RGB visual to match a 32-bit RGBA EGLConfig.
+             * Ditto for 30-bit RGB visuals to match a 32-bit RGBA EGLConfig.
              * Otherwise it will only match a 32-bit RGBA visual.  On a
              * composited window manager on X11, this will make all of the
              * EGLConfigs with destination alpha get blended by the
              * compositor.  This is probably not what the application
              * wants... especially on drivers that only have 32-bit RGBA
              * EGLConfigs! */
-            if (d.data->depth == 24) {
+            if (d.data->depth == 24 || d.data->depth == 30) {
                rgba_masks[3] =
                   ~(rgba_masks[0] | rgba_masks[1] | rgba_masks[2]);
                dri2_conf = dri2_add_config(disp, config, config_count + 1,
