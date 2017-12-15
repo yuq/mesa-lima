@@ -162,10 +162,14 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
       assert(dri2_dpy->wl_shm);
       if (conf->RedSize == 5)
          dri2_surf->format = WL_SHM_FORMAT_RGB565;
-      else if (conf->AlphaSize == 0)
+      else if (conf->RedSize == 8 && conf->AlphaSize == 0)
          dri2_surf->format = WL_SHM_FORMAT_XRGB8888;
-      else
+      else if (conf->RedSize == 8)
          dri2_surf->format = WL_SHM_FORMAT_ARGB8888;
+      else if (conf->RedSize == 10 && conf->AlphaSize == 0)
+         dri2_surf->format = WL_SHM_FORMAT_XRGB2101010;
+      else if (conf->RedSize == 10)
+         dri2_surf->format = WL_SHM_FORMAT_ARGB2101010;
    }
 
    dri2_surf->wl_queue = wl_display_create_queue(dri2_dpy->wl_dpy);
@@ -1469,7 +1473,7 @@ dri2_wl_swrast_get_stride_for_format(int format, int w)
 {
    if (format == WL_SHM_FORMAT_RGB565)
       return 2 * w;
-   else /* ARGB8888 || XRGB8888 */
+   else /* ARGB8888 || XRGB8888 || ARGB2101010 || XRGB2101010 */
       return 4 * w;
 }
 
@@ -1894,6 +1898,12 @@ shm_handle_format(void *data, struct wl_shm *shm, uint32_t format)
    struct dri2_egl_display *dri2_dpy = data;
 
    switch (format) {
+   case WL_SHM_FORMAT_ARGB2101010:
+      dri2_dpy->formats |= HAS_ARGB2101010;
+      break;
+   case WL_SHM_FORMAT_XRGB2101010:
+      dri2_dpy->formats |= HAS_XRGB2101010;
+      break;
    case WL_SHM_FORMAT_ARGB8888:
       dri2_dpy->formats |= HAS_ARGB8888;
       break;
