@@ -1530,7 +1530,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
    if (stage == MESA_SHADER_COMPUTE &&
-       get_cs_prog_data(cmd_buffer->state.compute_pipeline)->uses_num_work_groups) {
+       get_cs_prog_data(pipeline)->uses_num_work_groups) {
       struct anv_bo *bo = cmd_buffer->state.num_workgroups_bo;
       uint32_t bo_offset = cmd_buffer->state.num_workgroups_offset;
 
@@ -1876,7 +1876,7 @@ static void
 cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer,
                                 VkShaderStageFlags dirty_stages)
 {
-   UNUSED const struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
+   const struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
 
    static const uint32_t push_constant_opcodes[] = {
       [MESA_SHADER_VERTEX]                      = 21,
@@ -1896,7 +1896,7 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer,
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CONSTANT_VS), c) {
          c._3DCommandSubOpcode = push_constant_opcodes[stage];
 
-         if (anv_pipeline_has_stage(cmd_buffer->state.pipeline, stage)) {
+         if (anv_pipeline_has_stage(pipeline, stage)) {
 #if GEN_GEN >= 8 || GEN_IS_HASWELL
             const struct brw_stage_prog_data *prog_data =
                pipeline->shaders[stage]->prog_data;
@@ -2067,8 +2067,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
       /* The exact descriptor layout is pulled from the pipeline, so we need
        * to re-emit binding tables on every pipeline change.
        */
-      cmd_buffer->state.descriptors_dirty |=
-         cmd_buffer->state.pipeline->active_stages;
+      cmd_buffer->state.descriptors_dirty |= pipeline->active_stages;
 
       /* If the pipeline changed, we may need to re-allocate push constant
        * space in the URB.
