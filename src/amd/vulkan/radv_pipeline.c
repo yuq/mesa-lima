@@ -416,38 +416,6 @@ static unsigned si_choose_spi_color_format(VkFormat vk_format,
 		return normal;
 }
 
-static unsigned si_get_cb_shader_mask(unsigned spi_shader_col_format)
-{
-	unsigned i, cb_shader_mask = 0;
-
-	for (i = 0; i < 8; i++) {
-		switch ((spi_shader_col_format >> (i * 4)) & 0xf) {
-		case V_028714_SPI_SHADER_ZERO:
-			break;
-		case V_028714_SPI_SHADER_32_R:
-			cb_shader_mask |= 0x1 << (i * 4);
-			break;
-		case V_028714_SPI_SHADER_32_GR:
-			cb_shader_mask |= 0x3 << (i * 4);
-			break;
-		case V_028714_SPI_SHADER_32_AR:
-			cb_shader_mask |= 0x9 << (i * 4);
-			break;
-		case V_028714_SPI_SHADER_FP16_ABGR:
-		case V_028714_SPI_SHADER_UNORM16_ABGR:
-		case V_028714_SPI_SHADER_SNORM16_ABGR:
-		case V_028714_SPI_SHADER_UINT16_ABGR:
-		case V_028714_SPI_SHADER_SINT16_ABGR:
-		case V_028714_SPI_SHADER_32_ABGR:
-			cb_shader_mask |= 0xf << (i * 4);
-			break;
-		default:
-			assert(0);
-		}
-	}
-	return cb_shader_mask;
-}
-
 static void
 radv_pipeline_compute_spi_color_formats(struct radv_pipeline *pipeline,
 					const VkGraphicsPipelineCreateInfo *pCreateInfo,
@@ -477,7 +445,7 @@ radv_pipeline_compute_spi_color_formats(struct radv_pipeline *pipeline,
 		col_format |= cf << (4 * i);
 	}
 
-	blend->cb_shader_mask = si_get_cb_shader_mask(col_format);
+	blend->cb_shader_mask = ac_get_cb_shader_mask(col_format);
 
 	if (blend_mrt0_is_dual_src)
 		col_format |= (col_format & 0xf) << 4;

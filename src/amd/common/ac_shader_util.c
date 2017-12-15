@@ -21,6 +21,8 @@
  * IN THE SOFTWARE.
  */
 
+#include <assert.h>
+
 #include "ac_shader_util.h"
 #include "sid.h"
 
@@ -42,4 +44,37 @@ ac_get_spi_shader_z_format(bool writes_z, bool writes_stencil,
 	} else {
 		return V_028710_SPI_SHADER_ZERO;
 	}
+}
+
+unsigned
+ac_get_cb_shader_mask(unsigned spi_shader_col_format)
+{
+	unsigned i, cb_shader_mask = 0;
+
+	for (i = 0; i < 8; i++) {
+		switch ((spi_shader_col_format >> (i * 4)) & 0xf) {
+		case V_028714_SPI_SHADER_ZERO:
+			break;
+		case V_028714_SPI_SHADER_32_R:
+			cb_shader_mask |= 0x1 << (i * 4);
+			break;
+		case V_028714_SPI_SHADER_32_GR:
+			cb_shader_mask |= 0x3 << (i * 4);
+			break;
+		case V_028714_SPI_SHADER_32_AR:
+			cb_shader_mask |= 0x9 << (i * 4);
+			break;
+		case V_028714_SPI_SHADER_FP16_ABGR:
+		case V_028714_SPI_SHADER_UNORM16_ABGR:
+		case V_028714_SPI_SHADER_SNORM16_ABGR:
+		case V_028714_SPI_SHADER_UINT16_ABGR:
+		case V_028714_SPI_SHADER_SINT16_ABGR:
+		case V_028714_SPI_SHADER_32_ABGR:
+			cb_shader_mask |= 0xf << (i * 4);
+			break;
+		default:
+			assert(0);
+		}
+	}
+	return cb_shader_mask;
 }

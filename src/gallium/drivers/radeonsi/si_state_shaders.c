@@ -981,38 +981,6 @@ static unsigned si_get_spi_shader_col_format(struct si_shader *shader)
 	return value;
 }
 
-static unsigned si_get_cb_shader_mask(unsigned spi_shader_col_format)
-{
-	unsigned i, cb_shader_mask = 0;
-
-	for (i = 0; i < 8; i++) {
-		switch ((spi_shader_col_format >> (i * 4)) & 0xf) {
-		case V_028714_SPI_SHADER_ZERO:
-			break;
-		case V_028714_SPI_SHADER_32_R:
-			cb_shader_mask |= 0x1 << (i * 4);
-			break;
-		case V_028714_SPI_SHADER_32_GR:
-			cb_shader_mask |= 0x3 << (i * 4);
-			break;
-		case V_028714_SPI_SHADER_32_AR:
-			cb_shader_mask |= 0x9 << (i * 4);
-			break;
-		case V_028714_SPI_SHADER_FP16_ABGR:
-		case V_028714_SPI_SHADER_UNORM16_ABGR:
-		case V_028714_SPI_SHADER_SNORM16_ABGR:
-		case V_028714_SPI_SHADER_UINT16_ABGR:
-		case V_028714_SPI_SHADER_SINT16_ABGR:
-		case V_028714_SPI_SHADER_32_ABGR:
-			cb_shader_mask |= 0xf << (i * 4);
-			break;
-		default:
-			assert(0);
-		}
-	}
-	return cb_shader_mask;
-}
-
 static void si_shader_ps(struct si_shader *shader)
 {
 	struct tgsi_shader_info *info = &shader->selector->info;
@@ -1095,7 +1063,7 @@ static void si_shader_ps(struct si_shader *shader)
 		spi_baryc_cntl |= S_0286E0_POS_FLOAT_ULC(1);
 
 	spi_shader_col_format = si_get_spi_shader_col_format(shader);
-	cb_shader_mask = si_get_cb_shader_mask(spi_shader_col_format);
+	cb_shader_mask = ac_get_cb_shader_mask(spi_shader_col_format);
 
 	/* Ensure that some export memory is always allocated, for two reasons:
 	 *
