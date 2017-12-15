@@ -493,6 +493,40 @@ void anv_CmdSetStencilReference(
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE;
 }
 
+static void
+anv_cmd_buffer_bind_descriptor_set(struct anv_cmd_buffer *cmd_buffer,
+                                   struct anv_pipeline_layout *layout,
+                                   uint32_t set_index,
+                                   struct anv_descriptor_set *set,
+                                   uint32_t *dynamic_offset_count,
+                                   const uint32_t **dynamic_offsets)
+{
+   struct anv_descriptor_set_layout *set_layout =
+      layout->set[set_index].layout;
+
+   cmd_buffer->state.descriptors[set_index] = set;
+
+   if (dynamic_offsets) {
+      if (set_layout->dynamic_offset_count > 0) {
+         uint32_t dynamic_offset_start =
+            layout->set[set_index].dynamic_offset_start;
+
+         /* Assert that everything is in range */
+         assert(set_layout->dynamic_offset_count <= *dynamic_offset_count);
+         assert(dynamic_offset_start + set_layout->dynamic_offset_count <=
+                ARRAY_SIZE(cmd_buffer->state.dynamic_offsets));
+
+         typed_memcpy(&cmd_buffer->state.dynamic_offsets[dynamic_offset_start],
+                      *dynamic_offsets, set_layout->dynamic_offset_count);
+
+         *dynamic_offsets += set_layout->dynamic_offset_count;
+         *dynamic_offset_count -= set_layout->dynamic_offset_count;
+      }
+   }
+
+   cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
+}
+
 void anv_CmdBindDescriptorSets(
     VkCommandBuffer                             commandBuffer,
     VkPipelineBindPoint                         pipelineBindPoint,
@@ -505,35 +539,15 @@ void anv_CmdBindDescriptorSets(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_pipeline_layout, layout, _layout);
-   struct anv_descriptor_set_layout *set_layout;
 
    assert(firstSet + descriptorSetCount < MAX_SETS);
 
-   uint32_t dynamic_slot = 0;
    for (uint32_t i = 0; i < descriptorSetCount; i++) {
       ANV_FROM_HANDLE(anv_descriptor_set, set, pDescriptorSets[i]);
-      set_layout = layout->set[firstSet + i].layout;
-
-      cmd_buffer->state.descriptors[firstSet + i] = set;
-
-      if (set_layout->dynamic_offset_count > 0) {
-         uint32_t dynamic_offset_start =
-            layout->set[firstSet + i].dynamic_offset_start;
-
-         /* Assert that everything is in range */
-         assert(dynamic_offset_start + set_layout->dynamic_offset_count <=
-                ARRAY_SIZE(cmd_buffer->state.dynamic_offsets));
-         assert(dynamic_slot + set_layout->dynamic_offset_count <=
-                dynamicOffsetCount);
-
-         typed_memcpy(&cmd_buffer->state.dynamic_offsets[dynamic_offset_start],
-                      &pDynamicOffsets[dynamic_slot],
-                      set_layout->dynamic_offset_count);
-
-         dynamic_slot += set_layout->dynamic_offset_count;
-      }
-
-      cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
+      anv_cmd_buffer_bind_descriptor_set(cmd_buffer, layout,
+                                         firstSet + i, set,
+                                         &dynamicOffsetCount,
+                                         &pDynamicOffsets);
    }
 }
 
@@ -944,8 +958,8 @@ void anv_CmdPushDescriptorSetKHR(
       }
    }
 
-   cmd_buffer->state.descriptors[_set] = set;
-   cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
+   anv_cmd_buffer_bind_descriptor_set(cmd_buffer, layout, _set,
+                                      set, NULL, NULL);
 }
 
 void anv_CmdPushDescriptorSetWithTemplateKHR(
@@ -983,6 +997,6 @@ void anv_CmdPushDescriptorSetWithTemplateKHR(
                                      template,
                                      pData);
 
-   cmd_buffer->state.descriptors[_set] = set;
-   cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
+   anv_cmd_buffer_bind_descriptor_set(cmd_buffer, layout, _set,
+                                      set, NULL, NULL);
 }
