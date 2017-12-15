@@ -1982,12 +1982,17 @@ varying_matches::compute_packing_class(const ir_variable *var)
     *
     * Therefore, the packing class depends only on the interpolation type.
     */
-   unsigned packing_class = var->data.centroid | (var->data.sample << 1) |
-                            (var->data.patch << 2) |
-                            (var->data.must_be_shader_input << 3);
-   packing_class *= 8;
-   packing_class += var->is_interpolation_flat()
+   const unsigned interp = var->is_interpolation_flat()
       ? unsigned(INTERP_MODE_FLAT) : var->data.interpolation;
+
+   assert(interp < (1 << 3));
+
+   const unsigned packing_class = (interp << 0) |
+                                  (var->data.centroid << 3) |
+                                  (var->data.sample << 4) |
+                                  (var->data.patch << 5) |
+                                  (var->data.must_be_shader_input << 6);
+
    return packing_class;
 }
 
