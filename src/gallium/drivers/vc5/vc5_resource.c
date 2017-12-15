@@ -124,15 +124,8 @@ vc5_resource_transfer_unmap(struct pipe_context *pctx,
         struct vc5_transfer *trans = vc5_transfer(ptrans);
 
         if (trans->map) {
-                struct vc5_resource *rsc;
-                struct vc5_resource_slice *slice;
-                if (trans->ss_resource) {
-                        rsc = vc5_resource(trans->ss_resource);
-                        slice = &rsc->slices[0];
-                } else {
-                        rsc = vc5_resource(ptrans->resource);
-                        slice = &rsc->slices[ptrans->level];
-                }
+                struct vc5_resource *rsc = vc5_resource(ptrans->resource);
+                struct vc5_resource_slice *slice = &rsc->slices[ptrans->level];
 
                 if (ptrans->usage & PIPE_TRANSFER_WRITE) {
                         vc5_store_tiled_image(rsc->bo->map + slice->offset +
@@ -146,49 +139,8 @@ vc5_resource_transfer_unmap(struct pipe_context *pctx,
                 free(trans->map);
         }
 
-        if (trans->ss_resource && (ptrans->usage & PIPE_TRANSFER_WRITE)) {
-                struct pipe_blit_info blit;
-                memset(&blit, 0, sizeof(blit));
-
-                blit.src.resource = trans->ss_resource;
-                blit.src.format = trans->ss_resource->format;
-                blit.src.box.width = trans->ss_box.width;
-                blit.src.box.height = trans->ss_box.height;
-                blit.src.box.depth = 1;
-
-                blit.dst.resource = ptrans->resource;
-                blit.dst.format = ptrans->resource->format;
-                blit.dst.level = ptrans->level;
-                blit.dst.box = trans->ss_box;
-
-                blit.mask = util_format_get_mask(ptrans->resource->format);
-                blit.filter = PIPE_TEX_FILTER_NEAREST;
-
-                pctx->blit(pctx, &blit);
-
-                pipe_resource_reference(&trans->ss_resource, NULL);
-        }
-
         pipe_resource_reference(&ptrans->resource, NULL);
         slab_free(&vc5->transfer_pool, ptrans);
-}
-
-static struct pipe_resource *
-vc5_get_temp_resource(struct pipe_context *pctx,
-                      struct pipe_resource *prsc,
-                      const struct pipe_box *box)
-{
-        struct pipe_resource temp_setup;
-
-        memset(&temp_setup, 0, sizeof(temp_setup));
-        temp_setup.target = prsc->target;
-        temp_setup.format = prsc->format;
-        temp_setup.width0 = box->width;
-        temp_setup.height0 = box->height;
-        temp_setup.depth0 = 1;
-        temp_setup.array_size = 1;
-
-        return pctx->screen->resource_create(pctx->screen, &temp_setup);
 }
 
 static void *
@@ -204,6 +156,9 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
         struct pipe_transfer *ptrans;
         enum pipe_format format = prsc->format;
         char *buf;
+
+        /* MSAA maps should have been handled by u_transfer_helper. */
+        assert(prsc->nr_samples <= 1);
 
         /* Upgrade DISCARD_RANGE to WHOLE_RESOURCE if the whole resource is
          * being mapped.
@@ -266,50 +221,6 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
         ptrans->level = level;
         ptrans->usage = usage;
         ptrans->box = *box;
-
-        /* If the resource is multisampled, we need to resolve to single
-         * sample.  This seems like it should be handled at a higher layer.
-         */
-        if (prsc->nr_samples > 1) {
-                trans->ss_resource = vc5_get_temp_resource(pctx, prsc, box);
-                if (!trans->ss_resource)
-                        goto fail;
-                assert(!trans->ss_resource->nr_samples);
-
-                /* The ptrans->box gets modified for tile alignment, so save
-                 * the original box for unmap time.
-                 */
-                trans->ss_box = *box;
-
-                if (usage & PIPE_TRANSFER_READ) {
-                        struct pipe_blit_info blit;
-                        memset(&blit, 0, sizeof(blit));
-
-                        blit.src.resource = ptrans->resource;
-                        blit.src.format = ptrans->resource->format;
-                        blit.src.level = ptrans->level;
-                        blit.src.box = trans->ss_box;
-
-                        blit.dst.resource = trans->ss_resource;
-                        blit.dst.format = trans->ss_resource->format;
-                        blit.dst.box.width = trans->ss_box.width;
-                        blit.dst.box.height = trans->ss_box.height;
-                        blit.dst.box.depth = 1;
-
-                        blit.mask = util_format_get_mask(prsc->format);
-                        blit.filter = PIPE_TEX_FILTER_NEAREST;
-
-                        pctx->blit(pctx, &blit);
-                        vc5_flush_jobs_writing_resource(vc5, blit.dst.resource);
-                }
-
-                /* The rest of the mapping process should use our temporary. */
-                prsc = trans->ss_resource;
-                rsc = vc5_resource(prsc);
-                ptrans->box.x = 0;
-                ptrans->box.y = 0;
-                ptrans->box.z = 0;
-        }
 
         /* Note that the current kernel implementation is synchronous, so no
          * need to do syncing stuff here yet.
@@ -847,7 +758,7 @@ vc5_resource_screen_init(struct pipe_screen *pscreen)
         pscreen->resource_get_handle = vc5_resource_get_handle;
         pscreen->resource_destroy = u_transfer_helper_resource_destroy;
         pscreen->transfer_helper = u_transfer_helper_create(&transfer_vtbl,
-                                                            true, false, false);
+                                                            true, false, true);
 }
 
 void

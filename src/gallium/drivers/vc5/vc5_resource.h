@@ -68,9 +68,6 @@ enum vc5_tiling_mode {
 struct vc5_transfer {
         struct pipe_transfer base;
         void *map;
-
-        struct pipe_resource *ss_resource;
-        struct pipe_box ss_box;
 };
 
 struct vc5_resource_slice {
