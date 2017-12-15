@@ -55,6 +55,8 @@
 #endif
 
 static const int fourcc_formats[] = {
+   __DRI_IMAGE_FOURCC_ARGB2101010,
+   __DRI_IMAGE_FOURCC_XRGB2101010,
    __DRI_IMAGE_FOURCC_ARGB8888,
    __DRI_IMAGE_FOURCC_ABGR8888,
    __DRI_IMAGE_FOURCC_SARGB8888,
@@ -103,6 +105,14 @@ static int convert_fourcc(int format, int *dri_components_p)
       break;
    case __DRI_IMAGE_FOURCC_XBGR8888:
       format = __DRI_IMAGE_FORMAT_XBGR8888;
+      dri_components = __DRI_IMAGE_COMPONENTS_RGB;
+      break;
+   case __DRI_IMAGE_FOURCC_ARGB2101010:
+      format = __DRI_IMAGE_FORMAT_ARGB2101010;
+      dri_components = __DRI_IMAGE_COMPONENTS_RGBA;
+      break;
+   case __DRI_IMAGE_FOURCC_XRGB2101010:
+      format = __DRI_IMAGE_FORMAT_XRGB2101010;
       dri_components = __DRI_IMAGE_COMPONENTS_RGB;
       break;
    case __DRI_IMAGE_FOURCC_R8:
@@ -170,6 +180,12 @@ static int convert_to_fourcc(int format)
    case __DRI_IMAGE_FORMAT_XBGR8888:
       format = __DRI_IMAGE_FOURCC_XBGR8888;
       break;
+   case __DRI_IMAGE_FORMAT_ARGB2101010:
+      format = __DRI_IMAGE_FOURCC_ARGB2101010;
+      break;
+   case __DRI_IMAGE_FORMAT_XRGB2101010:
+      format = __DRI_IMAGE_FOURCC_XRGB2101010;
+      break;
    case __DRI_IMAGE_FORMAT_R8:
       format = __DRI_IMAGE_FOURCC_R8;
       break;
@@ -201,6 +217,12 @@ static enum pipe_format dri2_format_to_pipe_format (int format)
       break;
    case __DRI_IMAGE_FORMAT_ABGR8888:
       pf = PIPE_FORMAT_RGBA8888_UNORM;
+      break;
+   case __DRI_IMAGE_FORMAT_XRGB2101010:
+      pf = PIPE_FORMAT_B10G10R10X2_UNORM;
+      break;
+   case __DRI_IMAGE_FORMAT_ARGB2101010:
+      pf = PIPE_FORMAT_B10G10R10A2_UNORM;
       break;
    case __DRI_IMAGE_FORMAT_R8:
       pf = PIPE_FORMAT_R8_UNORM;
@@ -259,6 +281,12 @@ static enum pipe_format fourcc_to_pipe_format(int fourcc)
       break;
    case __DRI_IMAGE_FOURCC_XBGR8888:
       pf = PIPE_FORMAT_RGBX8888_UNORM;
+      break;
+   case __DRI_IMAGE_FOURCC_ARGB2101010:
+      pf = PIPE_FORMAT_B10G10R10A2_UNORM;
+      break;
+   case __DRI_IMAGE_FOURCC_XRGB2101010:
+      pf = PIPE_FORMAT_B10G10R10X2_UNORM;
       break;
 
    case __DRI_IMAGE_FOURCC_NV12:
