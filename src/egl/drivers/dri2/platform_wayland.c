@@ -61,6 +61,8 @@ enum wl_drm_format_flags {
    HAS_ARGB8888 = 1,
    HAS_XRGB8888 = 2,
    HAS_RGB565 = 4,
+   HAS_ARGB2101010 = 8,
+   HAS_XRGB2101010 = 16,
 };
 
 static int
@@ -148,10 +150,14 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
    if (dri2_dpy->wl_dmabuf || dri2_dpy->wl_drm) {
       if (conf->RedSize == 5)
          dri2_surf->format = WL_DRM_FORMAT_RGB565;
-      else if (conf->AlphaSize == 0)
+      else if (conf->RedSize == 8 && conf->AlphaSize == 0)
          dri2_surf->format = WL_DRM_FORMAT_XRGB8888;
-      else
+      else if (conf->RedSize == 8)
          dri2_surf->format = WL_DRM_FORMAT_ARGB8888;
+      else if (conf->RedSize == 10 && conf->AlphaSize == 0)
+         dri2_surf->format = WL_DRM_FORMAT_XRGB2101010;
+      else if (conf->RedSize == 10)
+         dri2_surf->format = WL_DRM_FORMAT_ARGB2101010;
    } else {
       assert(dri2_dpy->wl_shm);
       if (conf->RedSize == 5)
@@ -340,11 +346,18 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    uint64_t *modifiers;
    int num_modifiers;
 
-   /* currently supports three WL DRM formats,
+   /* currently supports five WL DRM formats,
+    * WL_DRM_FORMAT_ARGB2101010, WL_DRM_FORMAT_XRGB2101010,
     * WL_DRM_FORMAT_ARGB8888, WL_DRM_FORMAT_XRGB8888,
     * and WL_DRM_FORMAT_RGB565
     */
    switch (dri2_surf->format) {
+   case WL_DRM_FORMAT_ARGB2101010:
+      dri_image_format = __DRI_IMAGE_FORMAT_ARGB2101010;
+      break;
+   case WL_DRM_FORMAT_XRGB2101010:
+      dri_image_format = __DRI_IMAGE_FORMAT_XRGB2101010;
+      break;
    case WL_DRM_FORMAT_ARGB8888:
       dri_image_format = __DRI_IMAGE_FORMAT_ARGB8888;
       modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.argb8888);
@@ -581,6 +594,8 @@ dri2_wl_get_buffers(__DRIdrawable * driDrawable,
    unsigned int bpp;
 
    switch (dri2_surf->format) {
+   case WL_DRM_FORMAT_ARGB2101010:
+   case WL_DRM_FORMAT_XRGB2101010:
    case WL_DRM_FORMAT_ARGB8888:
    case WL_DRM_FORMAT_XRGB8888:
       bpp = 32;
@@ -972,6 +987,14 @@ dri2_wl_create_wayland_buffer_from_image(_EGLDriver *drv,
 
    dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FORMAT, &format);
    switch (format) {
+   case __DRI_IMAGE_FORMAT_ARGB2101010:
+      if (!(dri2_dpy->formats & HAS_ARGB2101010))
+         goto bad_format;
+      break;
+   case __DRI_IMAGE_FORMAT_XRGB2101010:
+      if (!(dri2_dpy->formats & HAS_XRGB2101010))
+         goto bad_format;
+      break;
    case __DRI_IMAGE_FORMAT_ARGB8888:
       if (!(dri2_dpy->formats & HAS_ARGB8888))
          goto bad_format;
@@ -1059,6 +1082,12 @@ drm_handle_format(void *data, struct wl_drm *drm, uint32_t format)
    struct dri2_egl_display *dri2_dpy = data;
 
    switch (format) {
+   case WL_DRM_FORMAT_ARGB2101010:
+      dri2_dpy->formats |= HAS_ARGB2101010;
+      break;
+   case WL_DRM_FORMAT_XRGB2101010:
+      dri2_dpy->formats |= HAS_XRGB2101010;
+      break;
    case WL_DRM_FORMAT_ARGB8888:
       dri2_dpy->formats |= HAS_ARGB8888;
       break;
@@ -1227,6 +1256,8 @@ dri2_wl_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
       int has_format;
       unsigned int rgba_masks[4];
    } visuals[] = {
+      { "XRGB2101010", HAS_XRGB2101010, { 0x3ff00000, 0xffc00, 0x3ff, 0 } },
+      { "ARGB2101010", HAS_ARGB2101010, { 0x3ff00000, 0xffc00, 0x3ff, 0xc0000000 } },
       { "XRGB8888", HAS_XRGB8888, { 0xff0000, 0xff00, 0x00ff, 0xff000000 } },
       { "ARGB8888", HAS_ARGB8888, { 0xff0000, 0xff00, 0x00ff, 0 } },
       { "RGB565",   HAS_RGB565,   { 0x00f800, 0x07e0, 0x001f, 0 } },
