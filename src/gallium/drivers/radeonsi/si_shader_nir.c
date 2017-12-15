@@ -209,8 +209,13 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 		 * tracker has already mapped them to attributes via
 		 * variable->data.driver_location.
 		 */
-		if (nir->info.stage == MESA_SHADER_VERTEX)
+		if (nir->info.stage == MESA_SHADER_VERTEX) {
+			if (glsl_type_is_dual_slot(variable->type))
+				num_inputs += 2;
+			else
+				num_inputs++;
 			continue;
+		}
 
 		assert(nir->info.stage != MESA_SHADER_FRAGMENT ||
 		       (attrib_count == 1 && "not implemented"));
@@ -303,10 +308,8 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 			info->colors_read |= 0xf0;
 	}
 
-	if (nir->info.stage != MESA_SHADER_VERTEX)
-		info->num_inputs = num_inputs;
-	else
-		info->num_inputs = nir->num_inputs;
+	info->num_inputs = num_inputs;
+
 
 	i = 0;
 	uint64_t processed_outputs = 0;
