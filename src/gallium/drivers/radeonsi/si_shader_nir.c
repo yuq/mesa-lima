@@ -681,6 +681,11 @@ bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 			if (nir->info.stage == MESA_SHADER_VERTEX) {
 				declare_nir_input_vs(ctx, variable, input_idx / 4, data);
 				bitcast_inputs(ctx, data, input_idx);
+				if (glsl_type_is_dual_slot(variable->type)) {
+					input_idx += 4;
+					declare_nir_input_vs(ctx, variable, input_idx / 4, data);
+					bitcast_inputs(ctx, data, input_idx);
+				}
 			} else if (nir->info.stage == MESA_SHADER_FRAGMENT) {
 				declare_nir_input_fs(ctx, variable, input_idx / 4, data);
 				bitcast_inputs(ctx, data, input_idx);
