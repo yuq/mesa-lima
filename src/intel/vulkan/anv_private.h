@@ -313,10 +313,10 @@ VkResult __vk_errorf(struct anv_instance *instance, const void *object,
 #ifdef DEBUG
 #define vk_error(error) __vk_errorf(NULL, NULL,\
                                     VK_DEBUG_REPORT_OBJECT_TYPE_UNKNOWN_EXT,\
-                                    error, __FILE__, __LINE__, NULL);
+                                    error, __FILE__, __LINE__, NULL)
 #define vk_errorf(instance, obj, error, format, ...)\
     __vk_errorf(instance, obj, REPORT_OBJECT_TYPE(obj), error,\
-                __FILE__, __LINE__, format, ## __VA_ARGS__);
+                __FILE__, __LINE__, format, ## __VA_ARGS__)
 #else
 #define vk_error(error) error
 #define vk_errorf(instance, obj, error, format, ...) error
