@@ -2063,10 +2063,19 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
    else
       num_formats = ARRAY_SIZE(formats) - 2; /* all - RGBA_ORDERING formats */
 
+   /* Shall we expose 10 bpc formats? */
+   bool allow_rgb10_configs = driQueryOptionb(&dri_screen->optionCache,
+                                              "allow_rgb10_configs");
+
    /* Generate singlesample configs without accumulation buffer. */
    for (unsigned i = 0; i < num_formats; i++) {
       __DRIconfig **new_configs;
       int num_depth_stencil_bits = 2;
+
+      if (!allow_rgb10_configs &&
+          (formats[i] == MESA_FORMAT_B10G10R10A2_UNORM ||
+           formats[i] == MESA_FORMAT_B10G10R10X2_UNORM))
+         continue;
 
       /* Starting with DRI2 protocol version 1.1 we can request a depth/stencil
        * buffer that has a different number of bits per pixel than the color
@@ -2104,6 +2113,11 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
    for (unsigned i = 0; i < num_formats; i++) {
       __DRIconfig **new_configs;
 
+      if (!allow_rgb10_configs &&
+          (formats[i] == MESA_FORMAT_B10G10R10A2_UNORM ||
+          formats[i] == MESA_FORMAT_B10G10R10X2_UNORM))
+         continue;
+
       if (formats[i] == MESA_FORMAT_B5G6R5_UNORM) {
          depth_bits[0] = 16;
          stencil_bits[0] = 0;
@@ -2136,6 +2150,11 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
    for (unsigned i = 0; i < num_formats; i++) {
       if (devinfo->gen < 6)
          break;
+
+      if (!allow_rgb10_configs &&
+          (formats[i] == MESA_FORMAT_B10G10R10A2_UNORM ||
+          formats[i] == MESA_FORMAT_B10G10R10X2_UNORM))
+         continue;
 
       __DRIconfig **new_configs;
       const int num_depth_stencil_bits = 2;
