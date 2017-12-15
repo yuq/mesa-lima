@@ -1475,7 +1475,7 @@ public:
 
 private:
    bool is_varying_packing_safe(const glsl_type *type,
-                                const ir_variable *var);
+                                const ir_variable *var) const;
 
    /**
     * If true, this driver disables varying packing, so all varyings need to
@@ -1608,7 +1608,7 @@ varying_matches::~varying_matches()
  */
 bool
 varying_matches::is_varying_packing_safe(const glsl_type *type,
-                                         const ir_variable *var)
+                                         const ir_variable *var) const
 {
    if (consumer_stage == MESA_SHADER_TESS_EVAL ||
        consumer_stage == MESA_SHADER_TESS_CTRL ||
