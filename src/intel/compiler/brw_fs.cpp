@@ -3640,13 +3640,18 @@ fs_visitor::lower_integer_multiplication()
                 regions_overlap(inst->dst, inst->size_written,
                                 inst->src[1], inst->size_read(1))) {
                needs_mov = true;
-               low.nr = alloc.allocate(regs_written(inst));
-               low.offset = low.offset % REG_SIZE;
+               /* Get a new VGRF but keep the same stride as inst->dst */
+               low = fs_reg(VGRF, alloc.allocate(regs_written(inst)),
+                            inst->dst.type);
+               low.stride = inst->dst.stride;
+               low.offset = inst->dst.offset % REG_SIZE;
             }
 
-            fs_reg high = inst->dst;
-            high.nr = alloc.allocate(regs_written(inst));
-            high.offset = high.offset % REG_SIZE;
+            /* Get a new VGRF but keep the same stride as inst->dst */
+            fs_reg high(VGRF, alloc.allocate(regs_written(inst)),
+                        inst->dst.type);
+            high.stride = inst->dst.stride;
+            high.offset = inst->dst.offset % REG_SIZE;
 
             if (devinfo->gen >= 7) {
                if (inst->src[1].file == IMM) {
