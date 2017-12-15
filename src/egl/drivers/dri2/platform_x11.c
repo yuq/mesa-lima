@@ -75,6 +75,7 @@ swrastCreateDrawable(struct dri2_egl_display * dri2_dpy,
    xcb_create_gc(dri2_dpy->conn, dri2_surf->swapgc, dri2_surf->drawable, mask, valgc);
    switch (dri2_surf->depth) {
       case 32:
+      case 30:
       case 24:
          dri2_surf->bytes_per_pixel = 4;
          break;
