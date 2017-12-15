@@ -91,6 +91,8 @@ struct ruvd_decoder {
 		unsigned		cmd;
 		unsigned		cntl;
 	} reg;
+
+	void				*render_pic_list[16];
 };
 
 /* flush IB to the hardware */
@@ -590,7 +592,7 @@ static struct ruvd_h265 get_h265_msg(struct ruvd_decoder *dec, struct pipe_video
 				     struct pipe_h265_picture_desc *pic)
 {
 	struct ruvd_h265 result;
-	unsigned i;
+	unsigned i, j;
 
 	memset(&result, 0, sizeof(result));
 
@@ -670,11 +672,28 @@ static struct ruvd_h265 get_h265_msg(struct ruvd_decoder *dec, struct pipe_video
 		result.row_height_minus1[i] = pic->pps->row_height_minus1[i];
 
 	result.num_delta_pocs_ref_rps_idx = pic->NumDeltaPocsOfRefRpsIdx;
-	result.curr_idx = pic->CurrPicOrderCntVal;
 	result.curr_poc = pic->CurrPicOrderCntVal;
 
+	for (i = 0 ; i < 16 ; i++) {
+		for (j = 0; (pic->ref[j] != NULL) && (j < 16) ; j++) {
+			if (dec->render_pic_list[i] == pic->ref[j])
+				break;
+			if (j == 15)
+				dec->render_pic_list[i] = NULL;
+			else if (pic->ref[j+1] == NULL)
+				dec->render_pic_list[i] = NULL;
+		}
+	}
+	for (i = 0 ; i < 16 ; i++) {
+		if (dec->render_pic_list[i] == NULL) {
+			dec->render_pic_list[i] = target;
+			result.curr_idx = i;
+			break;
+		}
+	}
+
 	vl_video_buffer_set_associated_data(target, &dec->base,
-					    (void *)(uintptr_t)pic->CurrPicOrderCntVal,
+					    (void *)(uintptr_t)result.curr_idx,
 					    &ruvd_destroy_associated_data);
 
 	for (i = 0; i < 16; ++i) {
@@ -717,7 +736,7 @@ static struct ruvd_h265 get_h265_msg(struct ruvd_decoder *dec, struct pipe_video
 	memcpy(dec->it + 864, pic->pps->sps->ScalingList32x32, 2 * 64);
 
 	for (i = 0 ; i < 2 ; i++) {
-		for (int j = 0 ; j < 15 ; j++)
+		for (j = 0 ; j < 15 ; j++)
 			result.direct_reflist[i][j] = pic->RefPicList[i][j];
 	}
 
@@ -1398,6 +1417,8 @@ struct pipe_video_codec *si_common_uvd_create_decoder(struct pipe_context *conte
 		goto error;
 	}
 
+	for (i = 0; i < 16; i++)
+		 dec->render_pic_list[i] = NULL;
 	dec->fb_size = (rctx->family == CHIP_TONGA) ? FB_BUFFER_SIZE_TONGA :
 			FB_BUFFER_SIZE;
 	bs_buf_size = width * height * (512 / (16 * 16));
