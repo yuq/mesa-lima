@@ -2514,11 +2514,9 @@ assign_varying_locations(struct gl_context *ctx,
        */
       foreach_in_list(ir_instruction, node, consumer->ir) {
          ir_variable *const input_var = node->as_variable();
-
-         if (input_var == NULL || input_var->data.mode != ir_var_shader_in)
-            continue;
-
-         matches.record(NULL, input_var);
+         if (input_var && input_var->data.mode == ir_var_shader_in) {
+            matches.record(NULL, input_var);
+         }
       }
    }
 
