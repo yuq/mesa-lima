@@ -644,6 +644,16 @@ si_nir_load_sampler_desc(struct ac_shader_abi *abi,
 	return si_load_sampler_desc(ctx, list, index, desc_type);
 }
 
+static void bitcast_inputs(struct si_shader_context *ctx,
+			   LLVMValueRef data[4],
+			   unsigned input_idx)
+{
+	for (unsigned chan = 0; chan < 4; chan++) {
+		ctx->inputs[input_idx + chan] =
+			LLVMBuildBitCast(ctx->ac.builder, data[chan], ctx->ac.i32, "");
+	}
+}
+
 bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 {
 	struct tgsi_shader_info *info = &ctx->shader->selector->info;
@@ -667,15 +677,14 @@ bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 			if (processed_inputs & ((uint64_t)1 << loc))
 				continue;
 
-			if (nir->info.stage == MESA_SHADER_VERTEX)
+			if (nir->info.stage == MESA_SHADER_VERTEX) {
 				declare_nir_input_vs(ctx, variable, data);
-			else if (nir->info.stage == MESA_SHADER_FRAGMENT)
+				bitcast_inputs(ctx, data, input_idx);
+			} else if (nir->info.stage == MESA_SHADER_FRAGMENT) {
 				declare_nir_input_fs(ctx, variable, input_idx / 4, data);
-
-			for (unsigned chan = 0; chan < 4; chan++) {
-				ctx->inputs[input_idx + chan] =
-					LLVMBuildBitCast(ctx->ac.builder, data[chan], ctx->ac.i32, "");
+				bitcast_inputs(ctx, data, input_idx);
 			}
+
 			processed_inputs |= ((uint64_t)1 << loc);
 		}
 	}
