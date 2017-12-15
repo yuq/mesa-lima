@@ -1663,11 +1663,49 @@ struct anv_attachment_state {
    bool                                         clear_color_is_zero;
 };
 
+/** State tracking for particular pipeline bind point
+ *
+ * This struct is the base struct for anv_cmd_graphics_state and
+ * anv_cmd_compute_state.  These are used to track state which is bound to a
+ * particular type of pipeline.  Generic state that applies per-stage such as
+ * binding table offsets and push constants is tracked generically with a
+ * per-stage array in anv_cmd_state.
+ */
+struct anv_cmd_pipeline_state {
+   struct anv_pipeline *pipeline;
+};
+
+/** State tracking for graphics pipeline
+ *
+ * This has anv_cmd_pipeline_state as a base struct to track things which get
+ * bound to a graphics pipeline.  Along with general pipeline bind point state
+ * which is in the anv_cmd_pipeline_state base struct, it also contains other
+ * state which is graphics-specific.
+ */
+struct anv_cmd_graphics_state {
+   struct anv_cmd_pipeline_state base;
+};
+
+/** State tracking for compute pipeline
+ *
+ * This has anv_cmd_pipeline_state as a base struct to track things which get
+ * bound to a compute pipeline.  Along with general pipeline bind point state
+ * which is in the anv_cmd_pipeline_state base struct, it also contains other
+ * state which is compute-specific.
+ */
+struct anv_cmd_compute_state {
+   struct anv_cmd_pipeline_state base;
+};
+
 /** State required while building cmd buffer */
 struct anv_cmd_state {
    /* PIPELINE_SELECT.PipelineSelection */
    uint32_t                                     current_pipeline;
    const struct gen_l3_config *                 current_l3_config;
+
+   struct anv_cmd_graphics_state                gfx;
+   struct anv_cmd_compute_state                 compute;
+
    uint32_t                                     vb_dirty;
    anv_cmd_dirty_mask_t                         dirty;
    anv_cmd_dirty_mask_t                         compute_dirty;
@@ -1676,8 +1714,7 @@ struct anv_cmd_state {
    struct anv_bo                                *num_workgroups_bo;
    VkShaderStageFlags                           descriptors_dirty;
    VkShaderStageFlags                           push_constants_dirty;
-   struct anv_pipeline *                        pipeline;
-   struct anv_pipeline *                        compute_pipeline;
+
    struct anv_framebuffer *                     framebuffer;
    struct anv_render_pass *                     pass;
    struct anv_subpass *                         subpass;

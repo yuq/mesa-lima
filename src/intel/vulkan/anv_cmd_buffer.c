@@ -336,14 +336,14 @@ void anv_CmdBindPipeline(
 
    switch (pipelineBindPoint) {
    case VK_PIPELINE_BIND_POINT_COMPUTE:
-      cmd_buffer->state.compute_pipeline = pipeline;
+      cmd_buffer->state.compute.base.pipeline = pipeline;
       cmd_buffer->state.compute_dirty |= ANV_CMD_DIRTY_PIPELINE;
       cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_COMPUTE_BIT;
       cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_COMPUTE_BIT;
       break;
 
    case VK_PIPELINE_BIND_POINT_GRAPHICS:
-      cmd_buffer->state.pipeline = pipeline;
+      cmd_buffer->state.gfx.base.pipeline = pipeline;
       cmd_buffer->state.vb_dirty |= pipeline->vb_used;
       cmd_buffer->state.dirty |= ANV_CMD_DIRTY_PIPELINE;
       cmd_buffer->state.push_constants_dirty |= pipeline->active_stages;
@@ -636,14 +636,16 @@ struct anv_state
 anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
                               gl_shader_stage stage)
 {
+   struct anv_pipeline *pipeline = cmd_buffer->state.gfx.base.pipeline;
+
    /* If we don't have this stage, bail. */
-   if (!anv_pipeline_has_stage(cmd_buffer->state.pipeline, stage))
+   if (!anv_pipeline_has_stage(pipeline, stage))
       return (struct anv_state) { .offset = 0 };
 
    struct anv_push_constants *data =
       cmd_buffer->state.push_constants[stage];
    const struct brw_stage_prog_data *prog_data =
-      cmd_buffer->state.pipeline->shaders[stage]->prog_data;
+      pipeline->shaders[stage]->prog_data;
 
    /* If we don't actually have any push constants, bail. */
    if (data == NULL || prog_data == NULL || prog_data->nr_params == 0)
@@ -669,7 +671,7 @@ anv_cmd_buffer_cs_push_constants(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_push_constants *data =
       cmd_buffer->state.push_constants[MESA_SHADER_COMPUTE];
-   struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
+   struct anv_pipeline *pipeline = cmd_buffer->state.compute.base.pipeline;
    const struct brw_cs_prog_data *cs_prog_data = get_cs_prog_data(pipeline);
    const struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
 
