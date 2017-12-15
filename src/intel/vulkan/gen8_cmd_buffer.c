@@ -399,8 +399,7 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       sf.LineWidth = cmd_buffer->state.dynamic.line_width,
 #endif
       GENX(3DSTATE_SF_pack)(NULL, sf_dw, &sf);
-      anv_batch_emit_merge(&cmd_buffer->batch, sf_dw,
-                           cmd_buffer->state.pipeline->gen8.sf);
+      anv_batch_emit_merge(&cmd_buffer->batch, sf_dw, pipeline->gen8.sf);
    }
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
