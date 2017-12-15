@@ -1277,13 +1277,12 @@ parse_tfeedback_decls(struct gl_context *ctx, struct gl_shader_program *prog,
        * feedback of arrays would be useless otherwise.
        */
       for (unsigned j = 0; j < i; ++j) {
-         if (!decls[j].is_varying())
-            continue;
-
-         if (tfeedback_decl::is_same(decls[i], decls[j])) {
-            linker_error(prog, "Transform feedback varying %s specified "
-                         "more than once.", varying_names[i]);
-            return false;
+         if (decls[j].is_varying()) {
+            if (tfeedback_decl::is_same(decls[i], decls[j])) {
+               linker_error(prog, "Transform feedback varying %s specified "
+                            "more than once.", varying_names[i]);
+               return false;
+            }
          }
       }
    }
@@ -2571,12 +2570,11 @@ assign_varying_locations(struct gl_context *ctx,
    matches.store_locations();
 
    for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
-      if (!tfeedback_decls[i].is_varying())
-         continue;
-
-      if (!tfeedback_decls[i].assign_location(ctx, prog)) {
-         _mesa_hash_table_destroy(tfeedback_candidates, NULL);
-         return false;
+      if (tfeedback_decls[i].is_varying()) {
+         if (!tfeedback_decls[i].assign_location(ctx, prog)) {
+            _mesa_hash_table_destroy(tfeedback_candidates, NULL);
+            return false;
+         }
       }
    }
    _mesa_hash_table_destroy(tfeedback_candidates, NULL);
