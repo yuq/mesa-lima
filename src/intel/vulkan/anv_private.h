@@ -1306,6 +1306,8 @@ struct anv_descriptor_template_entry {
 };
 
 struct anv_descriptor_update_template {
+    VkPipelineBindPoint bind_point;
+
    /* The descriptor set this template corresponds to. This value is only
     * valid if the template was created with the templateType
     * VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET_KHR.
@@ -1673,6 +1675,11 @@ struct anv_attachment_state {
  */
 struct anv_cmd_pipeline_state {
    struct anv_pipeline *pipeline;
+
+   struct anv_descriptor_set *descriptors[MAX_SETS];
+   uint32_t dynamic_offsets[MAX_DYNAMIC_BUFFERS];
+
+   struct anv_push_descriptor_set *push_descriptors[MAX_SETS];
 };
 
 /** State tracking for graphics pipeline
@@ -1721,15 +1728,11 @@ struct anv_cmd_state {
    VkRect2D                                     render_area;
    uint32_t                                     restart_index;
    struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
-   struct anv_descriptor_set *                  descriptors[MAX_SETS];
-   uint32_t                                     dynamic_offsets[MAX_DYNAMIC_BUFFERS];
    VkShaderStageFlags                           push_constant_stages;
    struct anv_push_constants *                  push_constants[MESA_SHADER_STAGES];
    struct anv_state                             binding_tables[MESA_SHADER_STAGES];
    struct anv_state                             samplers[MESA_SHADER_STAGES];
    struct anv_dynamic_state                     dynamic;
-
-   struct anv_push_descriptor_set *             push_descriptors[MAX_SETS];
 
    /**
     * Whether or not the gen8 PMA fix is enabled.  We ensure that, at the top
