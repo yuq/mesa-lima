@@ -758,7 +758,7 @@ vc5_resource_screen_init(struct pipe_screen *pscreen)
         pscreen->resource_get_handle = vc5_resource_get_handle;
         pscreen->resource_destroy = u_transfer_helper_resource_destroy;
         pscreen->transfer_helper = u_transfer_helper_create(&transfer_vtbl,
-                                                            true, false, true);
+                                                            true, true, true);
 }
 
 void
