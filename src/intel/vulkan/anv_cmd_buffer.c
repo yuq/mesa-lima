@@ -113,46 +113,35 @@ anv_dynamic_state_copy(struct anv_dynamic_state *dest,
 }
 
 static void
-anv_cmd_state_reset(struct anv_cmd_buffer *cmd_buffer)
+anv_cmd_state_init(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_cmd_state *state = &cmd_buffer->state;
 
-   cmd_buffer->batch.status = VK_SUCCESS;
+   memset(state, 0, sizeof(*state));
 
-   memset(&state->descriptors, 0, sizeof(state->descriptors));
-   for (uint32_t i = 0; i < ARRAY_SIZE(state->push_descriptors); i++) {
-      vk_free(&cmd_buffer->pool->alloc, state->push_descriptors[i]);
-      state->push_descriptors[i] = NULL;
-   }
-   for (uint32_t i = 0; i < MESA_SHADER_STAGES; i++) {
-      vk_free(&cmd_buffer->pool->alloc, state->push_constants[i]);
-      state->push_constants[i] = NULL;
-   }
-   memset(state->binding_tables, 0, sizeof(state->binding_tables));
-   memset(state->samplers, 0, sizeof(state->samplers));
-
-   /* 0 isn't a valid config.  This ensures that we always configure L3$. */
-   cmd_buffer->state.current_l3_config = 0;
-
-   state->dirty = 0;
-   state->vb_dirty = 0;
-   state->pending_pipe_bits = 0;
-   state->descriptors_dirty = 0;
-   state->push_constants_dirty = 0;
-   state->pipeline = NULL;
-   state->framebuffer = NULL;
-   state->pass = NULL;
-   state->subpass = NULL;
-   state->push_constant_stages = 0;
    state->restart_index = UINT32_MAX;
    state->dynamic = default_dynamic_state;
-   state->pma_fix_enabled = false;
-   state->hiz_enabled = false;
+}
+
+static void
+anv_cmd_state_finish(struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_cmd_state *state = &cmd_buffer->state;
+
+   for (uint32_t i = 0; i < ARRAY_SIZE(state->push_descriptors); i++)
+      vk_free(&cmd_buffer->pool->alloc, state->push_descriptors[i]);
+
+   for (uint32_t i = 0; i < MESA_SHADER_STAGES; i++)
+      vk_free(&cmd_buffer->pool->alloc, state->push_constants[i]);
 
    vk_free(&cmd_buffer->pool->alloc, state->attachments);
-   state->attachments = NULL;
+}
 
-   state->gen7.index_buffer = NULL;
+static void
+anv_cmd_state_reset(struct anv_cmd_buffer *cmd_buffer)
+{
+   anv_cmd_state_finish(cmd_buffer);
+   anv_cmd_state_init(cmd_buffer);
 }
 
 VkResult
@@ -197,14 +186,10 @@ static VkResult anv_create_cmd_buffer(
 
    cmd_buffer->batch.status = VK_SUCCESS;
 
-   for (uint32_t i = 0; i < MESA_SHADER_STAGES; i++) {
-      cmd_buffer->state.push_constants[i] = NULL;
-   }
    cmd_buffer->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    cmd_buffer->device = device;
    cmd_buffer->pool = pool;
    cmd_buffer->level = level;
-   cmd_buffer->state.attachments = NULL;
 
    result = anv_cmd_buffer_init_batch_bo_chain(cmd_buffer);
    if (result != VK_SUCCESS)
@@ -215,8 +200,7 @@ static VkResult anv_create_cmd_buffer(
    anv_state_stream_init(&cmd_buffer->dynamic_state_stream,
                          &device->dynamic_state_pool, 16384);
 
-   memset(cmd_buffer->state.push_descriptors, 0,
-          sizeof(cmd_buffer->state.push_descriptors));
+   anv_cmd_state_init(cmd_buffer);
 
    if (pool) {
       list_addtail(&cmd_buffer->pool_link, &pool->cmd_buffers);
@@ -275,7 +259,7 @@ anv_cmd_buffer_destroy(struct anv_cmd_buffer *cmd_buffer)
    anv_state_stream_finish(&cmd_buffer->surface_state_stream);
    anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
 
-   anv_cmd_state_reset(cmd_buffer);
+   anv_cmd_state_finish(cmd_buffer);
 
    vk_free(&cmd_buffer->pool->alloc, cmd_buffer);
 }
