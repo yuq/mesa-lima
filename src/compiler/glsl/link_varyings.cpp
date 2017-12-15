@@ -1834,13 +1834,13 @@ varying_matches::assign_locations(struct gl_shader_program *prog,
          const uint64_t slot_mask = ((1ull << slots) - 1) << (*location / 4u);
 
          assert(slots > 0);
-         if (reserved_slots & slot_mask) {
-            *location = ALIGN(*location + 1, 4);
-            slot_end = *location + num_components - 1;
-            continue;
+
+         if ((reserved_slots & slot_mask) == 0) {
+            break;
          }
 
-         break;
+         *location = ALIGN(*location + 1, 4);
+         slot_end = *location + num_components - 1;
       }
 
       if (!var->data.patch && slot_end >= MAX_VARYING * 4u) {
