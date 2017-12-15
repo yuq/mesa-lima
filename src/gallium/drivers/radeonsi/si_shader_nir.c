@@ -554,9 +554,10 @@ si_lower_nir(struct si_shader_selector* sel)
 
 static void declare_nir_input_vs(struct si_shader_context *ctx,
 				 struct nir_variable *variable,
+				 unsigned input_index,
 				 LLVMValueRef out[4])
 {
-	si_llvm_load_input_vs(ctx, variable->data.driver_location / 4, out);
+	si_llvm_load_input_vs(ctx, input_index, out);
 }
 
 static void declare_nir_input_fs(struct si_shader_context *ctx,
@@ -678,7 +679,7 @@ bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 				continue;
 
 			if (nir->info.stage == MESA_SHADER_VERTEX) {
-				declare_nir_input_vs(ctx, variable, data);
+				declare_nir_input_vs(ctx, variable, input_idx / 4, data);
 				bitcast_inputs(ctx, data, input_idx);
 			} else if (nir->info.stage == MESA_SHADER_FRAGMENT) {
 				declare_nir_input_fs(ctx, variable, input_idx / 4, data);
