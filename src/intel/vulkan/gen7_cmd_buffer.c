@@ -113,7 +113,7 @@ void genX(CmdBindIndexBuffer)(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
-   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_INDEX_BUFFER;
+   cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_INDEX_BUFFER;
    if (GEN_IS_HASWELL)
       cmd_buffer->state.restart_index = restart_index_for_type[indexType];
    cmd_buffer->state.gen7.index_buffer = buffer;
@@ -156,10 +156,10 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.gfx.base.pipeline;
 
-   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
-                                  ANV_CMD_DIRTY_RENDER_TARGETS |
-                                  ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH |
-                                  ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS)) {
+   if (cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                      ANV_CMD_DIRTY_RENDER_TARGETS |
+                                      ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH |
+                                      ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS)) {
       uint32_t sf_dw[GENX(3DSTATE_SF_length)];
       struct GENX(3DSTATE_SF) sf = {
          GENX(3DSTATE_SF_header),
@@ -174,8 +174,8 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit_merge(&cmd_buffer->batch, sf_dw, pipeline->gen7.sf);
    }
 
-   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS |
-                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
+   if (cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS |
+                                      ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
       struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
       struct anv_state cc_state =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
@@ -197,10 +197,10 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
-   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
-                                  ANV_CMD_DIRTY_RENDER_TARGETS |
-                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
-                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK)) {
+   if (cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                      ANV_CMD_DIRTY_RENDER_TARGETS |
+                                      ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
+                                      ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK)) {
       uint32_t depth_stencil_dw[GENX(DEPTH_STENCIL_STATE_length)];
       struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
 
@@ -229,8 +229,8 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
    }
 
    if (cmd_buffer->state.gen7.index_buffer &&
-       cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
-                                  ANV_CMD_DIRTY_INDEX_BUFFER)) {
+       cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                      ANV_CMD_DIRTY_INDEX_BUFFER)) {
       struct anv_buffer *buffer = cmd_buffer->state.gen7.index_buffer;
       uint32_t offset = cmd_buffer->state.gen7.index_offset;
 
@@ -255,7 +255,7 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
-   cmd_buffer->state.dirty = 0;
+   cmd_buffer->state.gfx.dirty = 0;
 }
 
 void
