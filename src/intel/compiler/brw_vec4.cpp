@@ -2769,7 +2769,7 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
    }
 
    prog_data->inputs_read = shader->info.inputs_read;
-   prog_data->double_inputs_read = shader->info.double_inputs_read;
+   prog_data->double_inputs_read = shader->info.vs.double_inputs;
 
    brw_nir_lower_vs_inputs(shader, key->gl_attrib_wa_flags);
    brw_nir_lower_vue_outputs(shader, is_scalar);
