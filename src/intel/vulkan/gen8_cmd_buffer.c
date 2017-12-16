@@ -382,6 +382,7 @@ void
 genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.gfx.base.pipeline;
+   struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
 
    if (cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                       ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH)) {
@@ -391,12 +392,12 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       };
 #if GEN_GEN == 8
       if (cmd_buffer->device->info.is_cherryview) {
-         sf.CHVLineWidth = cmd_buffer->state.dynamic.line_width;
+         sf.CHVLineWidth = d->line_width;
       } else {
-         sf.LineWidth = cmd_buffer->state.dynamic.line_width;
+         sf.LineWidth = d->line_width;
       }
 #else
-      sf.LineWidth = cmd_buffer->state.dynamic.line_width,
+      sf.LineWidth = d->line_width,
 #endif
       GENX(3DSTATE_SF_pack)(NULL, sf_dw, &sf);
       anv_batch_emit_merge(&cmd_buffer->batch, sf_dw, pipeline->gen8.sf);
@@ -407,9 +408,9 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       uint32_t raster_dw[GENX(3DSTATE_RASTER_length)];
       struct GENX(3DSTATE_RASTER) raster = {
          GENX(3DSTATE_RASTER_header),
-         .GlobalDepthOffsetConstant = cmd_buffer->state.dynamic.depth_bias.bias,
-         .GlobalDepthOffsetScale = cmd_buffer->state.dynamic.depth_bias.slope,
-         .GlobalDepthOffsetClamp = cmd_buffer->state.dynamic.depth_bias.clamp
+         .GlobalDepthOffsetConstant = d->depth_bias.bias,
+         .GlobalDepthOffsetScale = d->depth_bias.slope,
+         .GlobalDepthOffsetClamp = d->depth_bias.clamp
       };
       GENX(3DSTATE_RASTER_pack)(NULL, raster_dw, &raster);
       anv_batch_emit_merge(&cmd_buffer->batch, raster_dw,
@@ -424,16 +425,15 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
 #if GEN_GEN == 8
    if (cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS |
                                       ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
-      struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
       struct anv_state cc_state =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
                                             GENX(COLOR_CALC_STATE_length) * 4,
                                             64);
       struct GENX(COLOR_CALC_STATE) cc = {
-         .BlendConstantColorRed = cmd_buffer->state.dynamic.blend_constants[0],
-         .BlendConstantColorGreen = cmd_buffer->state.dynamic.blend_constants[1],
-         .BlendConstantColorBlue = cmd_buffer->state.dynamic.blend_constants[2],
-         .BlendConstantColorAlpha = cmd_buffer->state.dynamic.blend_constants[3],
+         .BlendConstantColorRed = d->blend_constants[0],
+         .BlendConstantColorGreen = d->blend_constants[1],
+         .BlendConstantColorBlue = d->blend_constants[2],
+         .BlendConstantColorAlpha = d->blend_constants[3],
          .StencilReferenceValue = d->stencil_reference.front & 0xff,
          .BackfaceStencilReferenceValue = d->stencil_reference.back & 0xff,
       };
@@ -452,7 +452,6 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
                                       ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
                                       ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK)) {
       uint32_t wm_depth_stencil_dw[GENX(3DSTATE_WM_DEPTH_STENCIL_length)];
-      struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
 
       struct GENX(3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil) = {
          GENX(3DSTATE_WM_DEPTH_STENCIL_header),
@@ -483,10 +482,10 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
                                             GENX(COLOR_CALC_STATE_length) * 4,
                                             64);
       struct GENX(COLOR_CALC_STATE) cc = {
-         .BlendConstantColorRed = cmd_buffer->state.dynamic.blend_constants[0],
-         .BlendConstantColorGreen = cmd_buffer->state.dynamic.blend_constants[1],
-         .BlendConstantColorBlue = cmd_buffer->state.dynamic.blend_constants[2],
-         .BlendConstantColorAlpha = cmd_buffer->state.dynamic.blend_constants[3],
+         .BlendConstantColorRed = d->blend_constants[0],
+         .BlendConstantColorGreen = d->blend_constants[1],
+         .BlendConstantColorBlue = d->blend_constants[2],
+         .BlendConstantColorAlpha = d->blend_constants[3],
       };
       GENX(COLOR_CALC_STATE_pack)(NULL, cc_state.map, &cc);
 
@@ -504,7 +503,6 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
                                       ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK |
                                       ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
       uint32_t dwords[GENX(3DSTATE_WM_DEPTH_STENCIL_length)];
-      struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
       struct GENX(3DSTATE_WM_DEPTH_STENCIL) wm_depth_stencil = {
          GENX(3DSTATE_WM_DEPTH_STENCIL_header),
 
