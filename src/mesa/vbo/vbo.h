@@ -226,17 +226,6 @@ vbo_split_prims(struct gl_context *ctx,
 
 
 void
-vbo_rebase_prims(struct gl_context *ctx,
-                 const struct gl_vertex_array *arrays[],
-                 const struct _mesa_prim *prim,
-                 GLuint nr_prims,
-                 const struct _mesa_index_buffer *ib,
-                 GLuint min_index,
-                 GLuint max_index,
-                 vbo_draw_func draw);
-
-
-void
 vbo_delete_minmax_cache(struct gl_buffer_object *bufferObj);
 
 void
