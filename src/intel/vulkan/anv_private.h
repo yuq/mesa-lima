@@ -1709,6 +1709,8 @@ struct anv_cmd_compute_state {
    struct anv_cmd_pipeline_state base;
 
    bool pipeline_dirty;
+
+   struct anv_address num_workgroups;
 };
 
 /** State required while building cmd buffer */
@@ -1721,8 +1723,6 @@ struct anv_cmd_state {
    struct anv_cmd_compute_state                 compute;
 
    enum anv_pipe_bits                           pending_pipe_bits;
-   uint32_t                                     num_workgroups_offset;
-   struct anv_bo                                *num_workgroups_bo;
    VkShaderStageFlags                           descriptors_dirty;
    VkShaderStageFlags                           push_constants_dirty;
 
