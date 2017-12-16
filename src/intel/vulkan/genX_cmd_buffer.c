@@ -1534,8 +1534,8 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
    if (stage == MESA_SHADER_COMPUTE &&
        get_cs_prog_data(pipeline)->uses_num_work_groups) {
-      struct anv_bo *bo = cmd_buffer->state.num_workgroups_bo;
-      uint32_t bo_offset = cmd_buffer->state.num_workgroups_offset;
+      struct anv_bo *bo = cmd_buffer->state.compute.num_workgroups.bo;
+      uint32_t bo_offset = cmd_buffer->state.compute.num_workgroups.offset;
 
       struct anv_state surface_state;
       surface_state =
@@ -2623,9 +2623,10 @@ void genX(CmdDispatch)(
       sizes[1] = y;
       sizes[2] = z;
       anv_state_flush(cmd_buffer->device, state);
-      cmd_buffer->state.num_workgroups_offset = state.offset;
-      cmd_buffer->state.num_workgroups_bo =
-         &cmd_buffer->device->dynamic_state_pool.block_pool.bo;
+      cmd_buffer->state.compute.num_workgroups = (struct anv_address) {
+         .bo = &cmd_buffer->device->dynamic_state_pool.block_pool.bo,
+         .offset = state.offset,
+      };
    }
 
    genX(cmd_buffer_flush_compute_state)(cmd_buffer);
@@ -2672,8 +2673,10 @@ void genX(CmdDispatchIndirect)(
 #endif
 
    if (prog_data->uses_num_work_groups) {
-      cmd_buffer->state.num_workgroups_offset = bo_offset;
-      cmd_buffer->state.num_workgroups_bo = bo;
+      cmd_buffer->state.compute.num_workgroups = (struct anv_address) {
+         .bo = bo,
+         .offset = bo_offset,
+      };
    }
 
    genX(cmd_buffer_flush_compute_state)(cmd_buffer);
