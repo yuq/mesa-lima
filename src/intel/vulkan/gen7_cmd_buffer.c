@@ -116,9 +116,9 @@ void genX(CmdBindIndexBuffer)(
    cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_INDEX_BUFFER;
    if (GEN_IS_HASWELL)
       cmd_buffer->state.restart_index = restart_index_for_type[indexType];
-   cmd_buffer->state.gen7.index_buffer = buffer;
-   cmd_buffer->state.gen7.index_type = vk_to_gen_index_type[indexType];
-   cmd_buffer->state.gen7.index_offset = offset;
+   cmd_buffer->state.gfx.gen7.index_buffer = buffer;
+   cmd_buffer->state.gfx.gen7.index_type = vk_to_gen_index_type[indexType];
+   cmd_buffer->state.gfx.gen7.index_offset = offset;
 }
 
 static uint32_t
@@ -227,11 +227,11 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
-   if (cmd_buffer->state.gen7.index_buffer &&
+   if (cmd_buffer->state.gfx.gen7.index_buffer &&
        cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                       ANV_CMD_DIRTY_INDEX_BUFFER)) {
-      struct anv_buffer *buffer = cmd_buffer->state.gen7.index_buffer;
-      uint32_t offset = cmd_buffer->state.gen7.index_offset;
+      struct anv_buffer *buffer = cmd_buffer->state.gfx.gen7.index_buffer;
+      uint32_t offset = cmd_buffer->state.gfx.gen7.index_offset;
 
 #if GEN_IS_HASWELL
       anv_batch_emit(&cmd_buffer->batch, GEN75_3DSTATE_VF, vf) {
@@ -244,7 +244,7 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
 #if !GEN_IS_HASWELL
          ib.CutIndexEnable             = pipeline->primitive_restart;
 #endif
-         ib.IndexFormat                = cmd_buffer->state.gen7.index_type;
+         ib.IndexFormat                = cmd_buffer->state.gfx.gen7.index_type;
          ib.MemoryObjectControlState   = GENX(MOCS);
 
          ib.BufferStartingAddress =
