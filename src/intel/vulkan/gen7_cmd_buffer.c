@@ -48,8 +48,8 @@ clamp_int64(int64_t x, int64_t min, int64_t max)
 void
 gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer)
 {
-   uint32_t count = cmd_buffer->state.dynamic.scissor.count;
-   const VkRect2D *scissors =  cmd_buffer->state.dynamic.scissor.scissors;
+   uint32_t count = cmd_buffer->state.gfx.dynamic.scissor.count;
+   const VkRect2D *scissors = cmd_buffer->state.gfx.dynamic.scissor.scissors;
    struct anv_state scissor_state =
       anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 8, 32);
 
@@ -155,7 +155,7 @@ void
 genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.gfx.base.pipeline;
-   struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
+   struct anv_dynamic_state *d = &cmd_buffer->state.gfx.dynamic;
 
    if (cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                       ANV_CMD_DIRTY_RENDER_TARGETS |

@@ -120,7 +120,7 @@ anv_cmd_state_init(struct anv_cmd_buffer *cmd_buffer)
    memset(state, 0, sizeof(*state));
 
    state->restart_index = UINT32_MAX;
-   state->dynamic = default_dynamic_state;
+   state->gfx.dynamic = default_dynamic_state;
 }
 
 static void
@@ -359,7 +359,7 @@ void anv_CmdBindPipeline(
 
       /* Apply the dynamic state from the pipeline */
       cmd_buffer->state.gfx.dirty |= pipeline->dynamic_state_mask;
-      anv_dynamic_state_copy(&cmd_buffer->state.dynamic,
+      anv_dynamic_state_copy(&cmd_buffer->state.gfx.dynamic,
                              &pipeline->dynamic_state,
                              pipeline->dynamic_state_mask);
       break;
@@ -379,10 +379,10 @@ void anv_CmdSetViewport(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    const uint32_t total_count = firstViewport + viewportCount;
-   if (cmd_buffer->state.dynamic.viewport.count < total_count)
-      cmd_buffer->state.dynamic.viewport.count = total_count;
+   if (cmd_buffer->state.gfx.dynamic.viewport.count < total_count)
+      cmd_buffer->state.gfx.dynamic.viewport.count = total_count;
 
-   memcpy(cmd_buffer->state.dynamic.viewport.viewports + firstViewport,
+   memcpy(cmd_buffer->state.gfx.dynamic.viewport.viewports + firstViewport,
           pViewports, viewportCount * sizeof(*pViewports));
 
    cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_VIEWPORT;
@@ -397,10 +397,10 @@ void anv_CmdSetScissor(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    const uint32_t total_count = firstScissor + scissorCount;
-   if (cmd_buffer->state.dynamic.scissor.count < total_count)
-      cmd_buffer->state.dynamic.scissor.count = total_count;
+   if (cmd_buffer->state.gfx.dynamic.scissor.count < total_count)
+      cmd_buffer->state.gfx.dynamic.scissor.count = total_count;
 
-   memcpy(cmd_buffer->state.dynamic.scissor.scissors + firstScissor,
+   memcpy(cmd_buffer->state.gfx.dynamic.scissor.scissors + firstScissor,
           pScissors, scissorCount * sizeof(*pScissors));
 
    cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_SCISSOR;
@@ -412,7 +412,7 @@ void anv_CmdSetLineWidth(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
-   cmd_buffer->state.dynamic.line_width = lineWidth;
+   cmd_buffer->state.gfx.dynamic.line_width = lineWidth;
    cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH;
 }
 
@@ -424,9 +424,9 @@ void anv_CmdSetDepthBias(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
-   cmd_buffer->state.dynamic.depth_bias.bias = depthBiasConstantFactor;
-   cmd_buffer->state.dynamic.depth_bias.clamp = depthBiasClamp;
-   cmd_buffer->state.dynamic.depth_bias.slope = depthBiasSlopeFactor;
+   cmd_buffer->state.gfx.dynamic.depth_bias.bias = depthBiasConstantFactor;
+   cmd_buffer->state.gfx.dynamic.depth_bias.clamp = depthBiasClamp;
+   cmd_buffer->state.gfx.dynamic.depth_bias.slope = depthBiasSlopeFactor;
 
    cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS;
 }
@@ -437,7 +437,7 @@ void anv_CmdSetBlendConstants(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
-   memcpy(cmd_buffer->state.dynamic.blend_constants,
+   memcpy(cmd_buffer->state.gfx.dynamic.blend_constants,
           blendConstants, sizeof(float) * 4);
 
    cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS;
@@ -450,8 +450,8 @@ void anv_CmdSetDepthBounds(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
-   cmd_buffer->state.dynamic.depth_bounds.min = minDepthBounds;
-   cmd_buffer->state.dynamic.depth_bounds.max = maxDepthBounds;
+   cmd_buffer->state.gfx.dynamic.depth_bounds.min = minDepthBounds;
+   cmd_buffer->state.gfx.dynamic.depth_bounds.max = maxDepthBounds;
 
    cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_DEPTH_BOUNDS;
 }
@@ -464,9 +464,9 @@ void anv_CmdSetStencilCompareMask(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    if (faceMask & VK_STENCIL_FACE_FRONT_BIT)
-      cmd_buffer->state.dynamic.stencil_compare_mask.front = compareMask;
+      cmd_buffer->state.gfx.dynamic.stencil_compare_mask.front = compareMask;
    if (faceMask & VK_STENCIL_FACE_BACK_BIT)
-      cmd_buffer->state.dynamic.stencil_compare_mask.back = compareMask;
+      cmd_buffer->state.gfx.dynamic.stencil_compare_mask.back = compareMask;
 
    cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK;
 }
@@ -479,9 +479,9 @@ void anv_CmdSetStencilWriteMask(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    if (faceMask & VK_STENCIL_FACE_FRONT_BIT)
-      cmd_buffer->state.dynamic.stencil_write_mask.front = writeMask;
+      cmd_buffer->state.gfx.dynamic.stencil_write_mask.front = writeMask;
    if (faceMask & VK_STENCIL_FACE_BACK_BIT)
-      cmd_buffer->state.dynamic.stencil_write_mask.back = writeMask;
+      cmd_buffer->state.gfx.dynamic.stencil_write_mask.back = writeMask;
 
    cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK;
 }
@@ -494,9 +494,9 @@ void anv_CmdSetStencilReference(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    if (faceMask & VK_STENCIL_FACE_FRONT_BIT)
-      cmd_buffer->state.dynamic.stencil_reference.front = reference;
+      cmd_buffer->state.gfx.dynamic.stencil_reference.front = reference;
    if (faceMask & VK_STENCIL_FACE_BACK_BIT)
-      cmd_buffer->state.dynamic.stencil_reference.back = reference;
+      cmd_buffer->state.gfx.dynamic.stencil_reference.back = reference;
 
    cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE;
 }

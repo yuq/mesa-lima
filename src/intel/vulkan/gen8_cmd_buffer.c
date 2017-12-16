@@ -36,8 +36,9 @@
 void
 gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
 {
-   uint32_t count = cmd_buffer->state.dynamic.viewport.count;
-   const VkViewport *viewports = cmd_buffer->state.dynamic.viewport.viewports;
+   uint32_t count = cmd_buffer->state.gfx.dynamic.viewport.count;
+   const VkViewport *viewports =
+      cmd_buffer->state.gfx.dynamic.viewport.viewports;
    struct anv_state sf_clip_state =
       anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 64, 64);
 
@@ -79,8 +80,9 @@ void
 gen8_cmd_buffer_emit_depth_viewport(struct anv_cmd_buffer *cmd_buffer,
                                     bool depth_clamp_enable)
 {
-   uint32_t count = cmd_buffer->state.dynamic.viewport.count;
-   const VkViewport *viewports = cmd_buffer->state.dynamic.viewport.viewports;
+   uint32_t count = cmd_buffer->state.gfx.dynamic.viewport.count;
+   const VkViewport *viewports =
+      cmd_buffer->state.gfx.dynamic.viewport.viewports;
    struct anv_state cc_state =
       anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 8, 32);
 
@@ -382,7 +384,7 @@ void
 genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.gfx.base.pipeline;
-   struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
+   struct anv_dynamic_state *d = &cmd_buffer->state.gfx.dynamic;
 
    if (cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_PIPELINE |
                                       ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH)) {
