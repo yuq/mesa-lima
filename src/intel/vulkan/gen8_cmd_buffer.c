@@ -383,8 +383,8 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.gfx.base.pipeline;
 
-   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
-                                  ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH)) {
+   if (cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                      ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH)) {
       uint32_t sf_dw[GENX(3DSTATE_SF_length)];
       struct GENX(3DSTATE_SF) sf = {
          GENX(3DSTATE_SF_header),
@@ -402,8 +402,8 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit_merge(&cmd_buffer->batch, sf_dw, pipeline->gen8.sf);
    }
 
-   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
-                                  ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS)){
+   if (cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                      ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS)){
       uint32_t raster_dw[GENX(3DSTATE_RASTER_length)];
       struct GENX(3DSTATE_RASTER) raster = {
          GENX(3DSTATE_RASTER_header),
@@ -422,8 +422,8 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
     * using a big old #if switch here.
     */
 #if GEN_GEN == 8
-   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS |
-                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
+   if (cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS |
+                                      ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
       struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
       struct anv_state cc_state =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
@@ -447,10 +447,10 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
-   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
-                                  ANV_CMD_DIRTY_RENDER_TARGETS |
-                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
-                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK)) {
+   if (cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                      ANV_CMD_DIRTY_RENDER_TARGETS |
+                                      ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
+                                      ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK)) {
       uint32_t wm_depth_stencil_dw[GENX(3DSTATE_WM_DEPTH_STENCIL_length)];
       struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
 
@@ -477,7 +477,7 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
                                       want_depth_pma_fix(cmd_buffer));
    }
 #else
-   if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS) {
+   if (cmd_buffer->state.gfx.dirty & ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS) {
       struct anv_state cc_state =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
                                             GENX(COLOR_CALC_STATE_length) * 4,
@@ -498,11 +498,11 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
-   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
-                                  ANV_CMD_DIRTY_RENDER_TARGETS |
-                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
-                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK |
-                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
+   if (cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                      ANV_CMD_DIRTY_RENDER_TARGETS |
+                                      ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
+                                      ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK |
+                                      ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
       uint32_t dwords[GENX(3DSTATE_WM_DEPTH_STENCIL_length)];
       struct anv_dynamic_state *d = &cmd_buffer->state.dynamic;
       struct GENX(3DSTATE_WM_DEPTH_STENCIL) wm_depth_stencil = {
@@ -531,15 +531,15 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
    }
 #endif
 
-   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
-                                  ANV_CMD_DIRTY_INDEX_BUFFER)) {
+   if (cmd_buffer->state.gfx.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                      ANV_CMD_DIRTY_INDEX_BUFFER)) {
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_VF), vf) {
          vf.IndexedDrawCutIndexEnable  = pipeline->primitive_restart;
          vf.CutIndex                   = cmd_buffer->state.restart_index;
       }
    }
 
-   cmd_buffer->state.dirty = 0;
+   cmd_buffer->state.gfx.dirty = 0;
 }
 
 void genX(CmdBindIndexBuffer)(
@@ -571,7 +571,7 @@ void genX(CmdBindIndexBuffer)(
       ib.BufferSize                 = buffer->size - offset;
    }
 
-   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_INDEX_BUFFER;
+   cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_INDEX_BUFFER;
 }
 
 /* Set of stage bits for which are pipelined, i.e. they get queued by the

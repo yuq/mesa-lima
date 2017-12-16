@@ -345,7 +345,7 @@ void anv_CmdBindPipeline(
    switch (pipelineBindPoint) {
    case VK_PIPELINE_BIND_POINT_COMPUTE:
       cmd_buffer->state.compute.base.pipeline = pipeline;
-      cmd_buffer->state.compute_dirty |= ANV_CMD_DIRTY_PIPELINE;
+      cmd_buffer->state.compute.pipeline_dirty = true;
       cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_COMPUTE_BIT;
       cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_COMPUTE_BIT;
       break;
@@ -353,12 +353,12 @@ void anv_CmdBindPipeline(
    case VK_PIPELINE_BIND_POINT_GRAPHICS:
       cmd_buffer->state.gfx.base.pipeline = pipeline;
       cmd_buffer->state.vb_dirty |= pipeline->vb_used;
-      cmd_buffer->state.dirty |= ANV_CMD_DIRTY_PIPELINE;
+      cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_PIPELINE;
       cmd_buffer->state.push_constants_dirty |= pipeline->active_stages;
       cmd_buffer->state.descriptors_dirty |= pipeline->active_stages;
 
       /* Apply the dynamic state from the pipeline */
-      cmd_buffer->state.dirty |= pipeline->dynamic_state_mask;
+      cmd_buffer->state.gfx.dirty |= pipeline->dynamic_state_mask;
       anv_dynamic_state_copy(&cmd_buffer->state.dynamic,
                              &pipeline->dynamic_state,
                              pipeline->dynamic_state_mask);
@@ -385,7 +385,7 @@ void anv_CmdSetViewport(
    memcpy(cmd_buffer->state.dynamic.viewport.viewports + firstViewport,
           pViewports, viewportCount * sizeof(*pViewports));
 
-   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_VIEWPORT;
+   cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_VIEWPORT;
 }
 
 void anv_CmdSetScissor(
@@ -403,7 +403,7 @@ void anv_CmdSetScissor(
    memcpy(cmd_buffer->state.dynamic.scissor.scissors + firstScissor,
           pScissors, scissorCount * sizeof(*pScissors));
 
-   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_SCISSOR;
+   cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_SCISSOR;
 }
 
 void anv_CmdSetLineWidth(
@@ -413,7 +413,7 @@ void anv_CmdSetLineWidth(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
    cmd_buffer->state.dynamic.line_width = lineWidth;
-   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH;
+   cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH;
 }
 
 void anv_CmdSetDepthBias(
@@ -428,7 +428,7 @@ void anv_CmdSetDepthBias(
    cmd_buffer->state.dynamic.depth_bias.clamp = depthBiasClamp;
    cmd_buffer->state.dynamic.depth_bias.slope = depthBiasSlopeFactor;
 
-   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS;
+   cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS;
 }
 
 void anv_CmdSetBlendConstants(
@@ -440,7 +440,7 @@ void anv_CmdSetBlendConstants(
    memcpy(cmd_buffer->state.dynamic.blend_constants,
           blendConstants, sizeof(float) * 4);
 
-   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS;
+   cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS;
 }
 
 void anv_CmdSetDepthBounds(
@@ -453,7 +453,7 @@ void anv_CmdSetDepthBounds(
    cmd_buffer->state.dynamic.depth_bounds.min = minDepthBounds;
    cmd_buffer->state.dynamic.depth_bounds.max = maxDepthBounds;
 
-   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_DEPTH_BOUNDS;
+   cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_DEPTH_BOUNDS;
 }
 
 void anv_CmdSetStencilCompareMask(
@@ -468,7 +468,7 @@ void anv_CmdSetStencilCompareMask(
    if (faceMask & VK_STENCIL_FACE_BACK_BIT)
       cmd_buffer->state.dynamic.stencil_compare_mask.back = compareMask;
 
-   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK;
+   cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK;
 }
 
 void anv_CmdSetStencilWriteMask(
@@ -483,7 +483,7 @@ void anv_CmdSetStencilWriteMask(
    if (faceMask & VK_STENCIL_FACE_BACK_BIT)
       cmd_buffer->state.dynamic.stencil_write_mask.back = writeMask;
 
-   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK;
+   cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK;
 }
 
 void anv_CmdSetStencilReference(
@@ -498,7 +498,7 @@ void anv_CmdSetStencilReference(
    if (faceMask & VK_STENCIL_FACE_BACK_BIT)
       cmd_buffer->state.dynamic.stencil_reference.back = reference;
 
-   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE;
+   cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE;
 }
 
 static void
