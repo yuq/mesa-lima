@@ -352,7 +352,7 @@ void anv_CmdBindPipeline(
 
    case VK_PIPELINE_BIND_POINT_GRAPHICS:
       cmd_buffer->state.gfx.base.pipeline = pipeline;
-      cmd_buffer->state.vb_dirty |= pipeline->vb_used;
+      cmd_buffer->state.gfx.vb_dirty |= pipeline->vb_used;
       cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_PIPELINE;
       cmd_buffer->state.push_constants_dirty |= pipeline->active_stages;
       cmd_buffer->state.descriptors_dirty |= pipeline->active_stages;
@@ -590,7 +590,7 @@ void anv_CmdBindVertexBuffers(
    for (uint32_t i = 0; i < bindingCount; i++) {
       vb[firstBinding + i].buffer = anv_buffer_from_handle(pBuffers[i]);
       vb[firstBinding + i].offset = pOffsets[i];
-      cmd_buffer->state.vb_dirty |= 1 << (firstBinding + i);
+      cmd_buffer->state.gfx.vb_dirty |= 1 << (firstBinding + i);
    }
 }
 

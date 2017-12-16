@@ -1693,6 +1693,7 @@ struct anv_cmd_graphics_state {
    struct anv_cmd_pipeline_state base;
 
    anv_cmd_dirty_mask_t dirty;
+   uint32_t vb_dirty;
 };
 
 /** State tracking for compute pipeline
@@ -1717,7 +1718,6 @@ struct anv_cmd_state {
    struct anv_cmd_graphics_state                gfx;
    struct anv_cmd_compute_state                 compute;
 
-   uint32_t                                     vb_dirty;
    enum anv_pipe_bits                           pending_pipe_bits;
    uint32_t                                     num_workgroups_offset;
    struct anv_bo                                *num_workgroups_bo;
