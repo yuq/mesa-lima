@@ -741,8 +741,6 @@ void anv_GetPhysicalDeviceFeatures2KHR(
       }
 
       case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES_KHR: {
-         ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
-
          VkPhysicalDevice16BitStorageFeaturesKHR *features =
             (VkPhysicalDevice16BitStorageFeaturesKHR *)ext;
 
