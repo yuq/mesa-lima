@@ -1694,6 +1694,8 @@ struct anv_cmd_graphics_state {
 
    anv_cmd_dirty_mask_t dirty;
    uint32_t vb_dirty;
+
+   struct anv_dynamic_state dynamic;
 };
 
 /** State tracking for compute pipeline
@@ -1734,7 +1736,6 @@ struct anv_cmd_state {
    struct anv_push_constants *                  push_constants[MESA_SHADER_STAGES];
    struct anv_state                             binding_tables[MESA_SHADER_STAGES];
    struct anv_state                             samplers[MESA_SHADER_STAGES];
-   struct anv_dynamic_state                     dynamic;
 
    /**
     * Whether or not the gen8 PMA fix is enabled.  We ensure that, at the top
