@@ -2011,7 +2011,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
    struct anv_pipeline *pipeline = cmd_buffer->state.gfx.base.pipeline;
    uint32_t *p;
 
-   uint32_t vb_emit = cmd_buffer->state.vb_dirty & pipeline->vb_used;
+   uint32_t vb_emit = cmd_buffer->state.gfx.vb_dirty & pipeline->vb_used;
 
    assert((pipeline->active_stages & VK_SHADER_STAGE_COMPUTE_BIT) == 0);
 
@@ -2062,7 +2062,7 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
-   cmd_buffer->state.vb_dirty &= ~vb_emit;
+   cmd_buffer->state.gfx.vb_dirty &= ~vb_emit;
 
    if (cmd_buffer->state.gfx.dirty & ANV_CMD_DIRTY_PIPELINE) {
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
@@ -3150,7 +3150,7 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
     * of each subpass.
     */
    if (GEN_GEN == 7)
-      cmd_buffer->state.vb_dirty |= ~0;
+      cmd_buffer->state.gfx.vb_dirty |= ~0;
 
    /* Perform transitions to the subpass layout before any writes have
     * occurred.
