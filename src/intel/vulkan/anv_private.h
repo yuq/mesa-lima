@@ -1696,6 +1696,12 @@ struct anv_cmd_graphics_state {
    uint32_t vb_dirty;
 
    struct anv_dynamic_state dynamic;
+
+   struct {
+      struct anv_buffer *index_buffer;
+      uint32_t index_type; /**< 3DSTATE_INDEX_BUFFER.IndexFormat */
+      uint32_t index_offset;
+   } gen7;
 };
 
 /** State tracking for compute pipeline
@@ -1769,12 +1775,6 @@ struct anv_cmd_state {
     * is one of the states in render_pass_states.
     */
    struct anv_state                             null_surface_state;
-
-   struct {
-      struct anv_buffer *                       index_buffer;
-      uint32_t                                  index_type; /**< 3DSTATE_INDEX_BUFFER.IndexFormat */
-      uint32_t                                  index_offset;
-   } gen7;
 };
 
 struct anv_cmd_pool {
