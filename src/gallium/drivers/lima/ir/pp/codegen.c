@@ -137,7 +137,43 @@ static void ppir_codegen_encode_vec_mul(ppir_node *node, void *code)
 
 static void ppir_codegen_encode_scl_mul(ppir_node *node, void *code)
 {
-   
+   ppir_codegen_field_float_mul *f = code;
+   ppir_alu_node *alu = ppir_node_to_alu(node);
+
+   ppir_dest *dest = &alu->dest;
+   int index = ppir_target_get_dest_reg_index(dest);
+   f->dest = index;
+   f->dest_modifier = dest->modifier;
+   if (dest->type != ppir_target_pipeline)
+      f->output_en = true;
+
+   switch (node->op) {
+   case ppir_op_mul:
+      f->op = shift_to_op(alu->shift);
+      break;
+   case ppir_op_mov:
+      f->op = ppir_codegen_float_mul_op_mov;
+      break;
+   case ppir_op_max:
+      f->op = ppir_codegen_float_mul_op_max;
+      break;
+   default:
+      break;
+   }
+
+   ppir_src *src = alu->src;
+   index = ppir_target_get_src_reg_index(src);
+   f->arg0_source = index;
+   f->arg0_absolute = src->absolute;
+   f->arg0_negate = src->negate;
+
+   if (alu->num_src == 2) {
+      src = alu->src + 1;
+      index = ppir_target_get_src_reg_index(src);
+      f->arg1_source = index;
+      f->arg1_absolute = src->absolute;
+      f->arg1_negate = src->negate;
+   }
 }
 
 static void ppir_codegen_encode_vec_add(ppir_node *node, void *code)
