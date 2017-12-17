@@ -25,6 +25,7 @@
 #include "util/u_math.h"
 #include "util/u_format.h"
 #include "util/u_debug.h"
+#include "util/u_half.h"
 
 #include "lima_context.h"
 #include "lima_screen.h"
@@ -593,6 +594,13 @@ lima_pack_render_state(struct lima_context *ctx)
    render->aux0 = 0x00000300 | (ctx->vs->varying_stride >> 3);
    render->aux1 = 0x00003000;
 
+   if (ctx->buffer_state[lima_ctx_buff_pp_uniform].size) {
+       render->uniforms_address = ctx->pp_buffer->va + pp_uniform_array_offset;
+       render->uniforms_address |= ((ctx->buffer_state[lima_ctx_buff_pp_uniform].size) / 4 - 1);
+       render->aux0 |= 0x80;
+       render->aux1 |= 0x10000;
+   }
+
    if (ctx->vs->num_varying > 1) {
       render->varying_types = 0x00000000;
       render->varyings_address = ctx->share_buffer->va + sh_varying_offset +
@@ -696,6 +704,30 @@ lima_update_gp_uniform(struct lima_context *ctx)
 
    ctx->buffer_state[lima_ctx_buff_gp_uniform].size =
       align(ctx->buffer_state[lima_ctx_buff_gp_uniform].size, 0x40);
+}
+
+static void
+lima_update_pp_uniform(struct lima_context *ctx)
+{
+   uint32_t addr = ctx->pp_buffer->va + pp_uniform_offset +
+      ctx->buffer_state[lima_ctx_buff_pp_uniform].offset;
+   uint16_t *fp16_const_buff = ctx->pp_buffer->map + pp_uniform_offset +
+      ctx->buffer_state[lima_ctx_buff_pp_uniform].offset;
+   const float *const_buff = ctx->const_buffer[PIPE_SHADER_FRAGMENT].buffer;
+   size_t const_buff_size = ctx->const_buffer[PIPE_SHADER_FRAGMENT].size / sizeof(float);
+
+   ctx->buffer_state[lima_ctx_buff_pp_uniform].size = 0;
+
+   if (!const_buff)
+       return;
+
+   memcpy(ctx->pp_buffer->map + pp_uniform_array_offset, &addr, sizeof(addr));
+
+   for (int i = 0; i < const_buff_size; i++)
+       fp16_const_buff[i] = util_float_to_half(const_buff[i]);
+
+   ctx->buffer_state[lima_ctx_buff_pp_uniform].size =
+      align(const_buff_size * sizeof(uint16_t), 0x4);
 }
 
 static void
@@ -837,6 +869,14 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
          lima_update_plb(ctx);
          fb->dirty_dim = false;
       }
+   }
+
+   if (!ctx->num_draws ||
+       (ctx->dirty & LIMA_CONTEXT_DIRTY_CONST_BUFF &&
+        ctx->const_buffer[PIPE_SHADER_FRAGMENT].dirty) ||
+       ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_FRAG) {
+      lima_update_pp_uniform(ctx);
+      ctx->const_buffer[PIPE_SHADER_FRAGMENT].dirty = false;
    }
 
    if (!ctx->num_draws || ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_FRAG)
