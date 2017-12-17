@@ -277,13 +277,10 @@ namespace {
    struct weight_vector_type {
       weight_vector_type() : v(NULL), size(0) {}
 
-      weight_vector_type(unsigned n) :
-         v(new vector_type[DIV_ROUND_UP(n, vector_width)]()),
-         size(n) {}
+      weight_vector_type(unsigned n) : v(alloc(n)), size(n) {}
 
       weight_vector_type(const weight_vector_type &u) :
-         v(new vector_type[DIV_ROUND_UP(u.size, vector_width)]()),
-         size(u.size)
+         v(alloc(u.size)), size(u.size)
       {
          memcpy(v, u.v,
                 DIV_ROUND_UP(u.size, vector_width) * sizeof(vector_type));
@@ -291,7 +288,7 @@ namespace {
 
       ~weight_vector_type()
       {
-         delete[] v;
+         free(v);
       }
 
       weight_vector_type &
@@ -304,6 +301,19 @@ namespace {
 
       vector_type *v;
       unsigned size;
+
+   private:
+      static vector_type *
+      alloc(unsigned n)
+      {
+         const unsigned align = MAX2(sizeof(void *), __alignof__(vector_type));
+         const unsigned size = DIV_ROUND_UP(n, vector_width) * sizeof(vector_type);
+         void *p;
+         if (posix_memalign(&p, align, size))
+            return NULL;
+         memset(p, 0, size);
+         return reinterpret_cast<vector_type *>(p);
+      }
    };
 
    /**
