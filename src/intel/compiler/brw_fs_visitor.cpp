@@ -898,6 +898,7 @@ fs_visitor::init()
 
    this->promoted_constants = 0,
 
+   this->grf_used = 0;
    this->spilled_any_registers = false;
 }
 
