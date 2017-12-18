@@ -52,23 +52,6 @@ static const nir_shader_compiler_options options = {
 		.lower_extract_word = true,
 };
 
-static const nir_shader_compiler_options options_5xx = {
-		.lower_fpow = true,
-		.lower_fsat = true,
-		.lower_scmp = true,
-		.lower_flrp32 = true,
-		.lower_flrp64 = true,
-		.lower_ffract = true,
-		.lower_fmod32 = true,
-		.lower_fmod64 = true,
-		.lower_fdiv = true,
-		.fuse_ffma = true,
-		.native_integers = true,
-		.vertex_id_zero_based = false,
-		.lower_extract_byte = true,
-		.lower_extract_word = true,
-};
-
 struct nir_shader *
 ir3_tgsi_to_nir(const struct tgsi_token *tokens)
 {
@@ -78,8 +61,6 @@ ir3_tgsi_to_nir(const struct tgsi_token *tokens)
 const nir_shader_compiler_options *
 ir3_get_compiler_options(struct ir3_compiler *compiler)
 {
-	if (compiler->gpu_id >= 500)
-		return &options_5xx;
 	return &options;
 }
 
