@@ -149,7 +149,8 @@ ac_nir_shader_info_pass(struct nir_shader *nir,
 	struct nir_function *func = (struct nir_function *)exec_list_get_head(&nir->functions);
 
 	info->needs_push_constants = false;
-	if (options->layout->push_constant_size ||
+	if ((options->layout->push_constant_size &&
+	     options->layout->push_constant_stages & (1 << nir->info.stage)) ||
 	    options->layout->dynamic_offset_count)
 		info->needs_push_constants = true;
 
