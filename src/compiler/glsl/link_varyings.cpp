@@ -1777,6 +1777,16 @@ varying_matches::assign_locations(struct gl_shader_program *prog,
    bool previous_var_xfb_only = false;
    unsigned previous_packing_class = ~0u;
 
+   /* For tranform feedback separate mode, we know the number of attributes
+    * is <= the number of buffers.  So packing isn't critical.  In fact,
+    * packing vec3 attributes can cause trouble because splitting a vec3
+    * effectively creates an additional transform feedback output.  The
+    * extra TFB output may exceed device driver limits.
+    */
+   const bool dont_pack_vec3 =
+      (prog->TransformFeedback.BufferMode == GL_SEPARATE_ATTRIBS &&
+       prog->TransformFeedback.NumVarying > 0);
+
    for (unsigned i = 0; i < this->num_matches; i++) {
       unsigned *location = &generic_location;
       const ir_variable *var;
@@ -1810,7 +1820,9 @@ varying_matches::assign_locations(struct gl_shader_program *prog,
       if (var->data.must_be_shader_input ||
           (this->disable_varying_packing &&
            !(previous_var_xfb_only && var->data.is_xfb_only)) ||
-          (previous_packing_class != this->matches[i].packing_class )) {
+          (previous_packing_class != this->matches[i].packing_class) ||
+          (this->matches[i].packing_order == PACKING_ORDER_VEC3 &&
+           dont_pack_vec3)) {
          *location = ALIGN(*location, 4);
       }
 
