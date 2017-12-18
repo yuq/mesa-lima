@@ -186,8 +186,7 @@ fs_copy_prop_dataflow::setup_initial_values()
 
    /* Populate the initial values for the livein and liveout sets.  For the
     * block at the start of the program, livein = 0 and liveout = copy.
-    * For the others, set liveout to 0 (the empty set) and livein to ~0
-    * (the universal set).
+    * For the others, set liveout and livein to ~0 (the universal set).
     */
    foreach_block (block, cfg) {
       if (block->parents.is_empty()) {
@@ -197,7 +196,7 @@ fs_copy_prop_dataflow::setup_initial_values()
          }
       } else {
          for (int i = 0; i < bitset_words; i++) {
-            bd[block->num].liveout[i] = 0u;
+            bd[block->num].liveout[i] = ~0u;
             bd[block->num].livein[i] = ~0u;
          }
       }
@@ -228,34 +227,17 @@ fs_copy_prop_dataflow::run()
    do {
       progress = false;
 
-      /* Update liveout for all blocks. */
       foreach_block (block, cfg) {
          if (block->parents.is_empty())
             continue;
 
          for (int i = 0; i < bitset_words; i++) {
             const BITSET_WORD old_liveout = bd[block->num].liveout[i];
-
-            bd[block->num].liveout[i] =
-               bd[block->num].copy[i] | (bd[block->num].livein[i] &
-                                         ~bd[block->num].kill[i]);
-
-            if (old_liveout != bd[block->num].liveout[i])
-               progress = true;
-         }
-      }
-
-      /* Update livein for all blocks.  If a copy is live out of all parent
-       * blocks, it's live coming in to this block.
-       */
-      foreach_block (block, cfg) {
-         if (block->parents.is_empty())
-            continue;
-
-         for (int i = 0; i < bitset_words; i++) {
-            const BITSET_WORD old_livein = bd[block->num].livein[i];
             BITSET_WORD livein_from_any_block = 0;
 
+            /* Update livein for this block.  If a copy is live out of all
+             * parent blocks, it's live coming in to this block.
+             */
             bd[block->num].livein[i] = ~0u;
             foreach_list_typed(bblock_link, parent_link, link, &block->parents) {
                bblock_t *parent = parent_link->block;
@@ -278,7 +260,12 @@ fs_copy_prop_dataflow::run()
              */
             bd[block->num].livein[i] &= livein_from_any_block;
 
-            if (old_livein != bd[block->num].livein[i])
+            /* Update liveout for this block. */
+            bd[block->num].liveout[i] =
+               bd[block->num].copy[i] | (bd[block->num].livein[i] &
+                                         ~bd[block->num].kill[i]);
+
+            if (old_liveout != bd[block->num].liveout[i])
                progress = true;
          }
       }
