@@ -536,6 +536,9 @@ brw_set_dp_write_message(struct brw_codegen *p,
    if (devinfo->gen < 7) {
       brw_inst_set_dp_write_commit(devinfo, insn, send_commit_msg);
    }
+
+   if (devinfo->gen >= 11)
+      brw_inst_set_null_rt(devinfo, insn, false);
 }
 
 void
