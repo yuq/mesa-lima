@@ -602,7 +602,9 @@ static int r600_get_shader_param(struct pipe_screen* pscreen,
 			return PIPE_SHADER_IR_TGSI;
 		}
 	case PIPE_SHADER_CAP_SUPPORTED_IRS:
-		return (1 << PIPE_SHADER_IR_TGSI);
+		if (rscreen->b.family >= CHIP_CEDAR)
+			return (1 << PIPE_SHADER_IR_TGSI);
+		return 0;
 	case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
 		if (rscreen->b.family == CHIP_ARUBA ||
 		    rscreen->b.family == CHIP_CAYMAN ||
