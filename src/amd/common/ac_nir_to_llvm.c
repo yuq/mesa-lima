@@ -2803,7 +2803,7 @@ store_tcs_output(struct nir_to_llvm_context *ctx,
 	bool store_lds = true;
 
 	if (instr->variables[0]->var->data.patch) {
-		if (!(ctx->tcs_patch_outputs_read & (1U << instr->variables[0]->var->data.location)))
+		if (!(ctx->tcs_patch_outputs_read & (1U << (instr->variables[0]->var->data.location - VARYING_SLOT_PATCH0))))
 			store_lds = false;
 	} else {
 		if (!(ctx->tcs_outputs_read & (1ULL << instr->variables[0]->var->data.location)))
