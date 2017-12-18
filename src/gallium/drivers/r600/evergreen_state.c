@@ -4707,7 +4707,6 @@ bool evergreen_emit_atomic_buffer_setup(struct r600_context *rctx,
 					struct r600_shader_atomic *combined_atomics,
 					uint8_t *atomic_used_mask_p)
 {
-	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_atomic_buffer_state *astate = &rctx->atomic_buffer_state;
 	unsigned pkt_flags = 0;
 	uint8_t atomic_used_mask = 0;
