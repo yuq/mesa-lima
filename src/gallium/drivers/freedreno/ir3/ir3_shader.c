@@ -879,20 +879,8 @@ ir3_emit_cs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *rin
 					0x1000);
 				indirect_offset = 0;
 
-				if (is_a5xx(ctx->screen)) {
-					struct fd_bo *src = fd_resource(info->indirect)->bo;
-					struct fd_bo *dst = fd_resource(indirect)->bo;
-					for (unsigned i = 0; i < 3; i++) {
-						unsigned dst_off = i * 4;
-						unsigned src_off = (i * 4) + info->indirect_offset;
-						OUT_PKT7(ring, CP_MEM_TO_MEM, 5);
-						OUT_RING(ring, 0x00000000);
-						OUT_RELOCW(ring, dst, dst_off, 0, 0);
-						OUT_RELOC (ring, src, src_off, 0, 0);
-					}
-				} else {
-					assert(0);
-				}
+				ctx->mem_to_mem(ring, indirect, 0, info->indirect,
+						info->indirect_offset, 3);
 			} else {
 				pipe_resource_reference(&indirect, info->indirect);
 				indirect_offset = info->indirect_offset;

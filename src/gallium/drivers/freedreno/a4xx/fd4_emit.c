@@ -912,6 +912,26 @@ fd4_emit_ib(struct fd_ringbuffer *ring, struct fd_ringbuffer *target)
 	__OUT_IB(ring, true, target);
 }
 
+static void
+fd4_mem_to_mem(struct fd_ringbuffer *ring, struct pipe_resource *dst,
+		unsigned dst_off, struct pipe_resource *src, unsigned src_off,
+		unsigned sizedwords)
+{
+	struct fd_bo *src_bo = fd_resource(src)->bo;
+	struct fd_bo *dst_bo = fd_resource(dst)->bo;
+	unsigned i;
+
+	for (i = 0; i < sizedwords; i++) {
+		OUT_PKT3(ring, CP_MEM_TO_MEM, 3);
+		OUT_RING(ring, 0x00000000);
+		OUT_RELOCW(ring, dst_bo, dst_off, 0, 0);
+		OUT_RELOC (ring, src_bo, src_off, 0, 0);
+
+		dst_off += 4;
+		src_off += 4;
+	}
+}
+
 void
 fd4_emit_init(struct pipe_context *pctx)
 {
@@ -919,4 +939,5 @@ fd4_emit_init(struct pipe_context *pctx)
 	ctx->emit_const = fd4_emit_const;
 	ctx->emit_const_bo = fd4_emit_const_bo;
 	ctx->emit_ib = fd4_emit_ib;
+	ctx->mem_to_mem = fd4_mem_to_mem;
 }

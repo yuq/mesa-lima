@@ -332,6 +332,11 @@ struct fd_context {
 	/* blit: */
 	void (*blit)(struct fd_context *ctx, const struct pipe_blit_info *info);
 
+	/* simple gpu "memcpy": */
+	void (*mem_to_mem)(struct fd_ringbuffer *ring, struct pipe_resource *dst,
+			unsigned dst_off, struct pipe_resource *src, unsigned src_off,
+			unsigned sizedwords);
+
 	/*
 	 * Common pre-cooked VBO state (used for a3xx and later):
 	 */
