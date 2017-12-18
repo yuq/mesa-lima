@@ -2096,6 +2096,15 @@ fs_visitor::assign_constant_locations()
    if (subgroup_id_index >= 0)
       max_push_components--; /* Save a slot for the thread ID */
 
+   /* FIXME: We currently have some GPU hangs that happen apparently when using
+    * push constants. Since we have no solution for such hangs yet, just
+    * go ahead and use pull constants for now.
+    */
+   if (devinfo->gen == 10 && compiler->supports_pull_constants) {
+      compiler->shader_perf_log(log_data, "Disabling push constants.");
+      max_push_components = 0;
+   }
+
    /* We push small arrays, but no bigger than 16 floats.  This is big enough
     * for a vec4 but hopefully not large enough to push out other stuff.  We
     * should probably use a better heuristic at some point.
