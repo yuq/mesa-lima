@@ -64,6 +64,12 @@ lima_program_get_compiler_options(enum pipe_shader_type shader)
    }
 }
 
+static int
+type_size(const struct glsl_type *type)
+{
+   return glsl_count_attribute_slots(type, false);
+}
+
 static void
 lima_program_optimize_vs_nir(struct nir_shader *s)
 {
@@ -146,9 +152,20 @@ lima_create_fs_state(struct pipe_context *pctx,
 
    debug_checkpoint();
 
-   assert(cso->type == PIPE_SHADER_IR_NIR);
+   nir_shader *nir;
+   if (cso->type == PIPE_SHADER_IR_NIR) {
+      nir = cso->ir.nir;
 
-   nir_shader *nir = cso->ir.nir;
+      NIR_PASS_V(nir, nir_lower_io, nir_var_all, type_size,
+                 (nir_lower_io_options)0);
+   }
+   else {
+      assert(cso->type == PIPE_SHADER_IR_TGSI);
+
+      /* not supported */
+      assert(0);
+   }
+
    lima_program_optimize_fs_nir(nir);
 
    if (lima_shader_debug_pp)
@@ -192,9 +209,20 @@ lima_create_vs_state(struct pipe_context *pctx,
 
    debug_checkpoint();
 
-   assert(cso->type == PIPE_SHADER_IR_NIR);
+   nir_shader *nir;
+   if (cso->type == PIPE_SHADER_IR_NIR) {
+      nir = cso->ir.nir;
 
-   nir_shader *nir = cso->ir.nir;
+      NIR_PASS_V(nir, nir_lower_io, nir_var_all, type_size,
+                 (nir_lower_io_options)0);
+   }
+   else {
+      assert(cso->type == PIPE_SHADER_IR_TGSI);
+
+      /* not supported */
+      assert(0);
+   }
+
    lima_program_optimize_vs_nir(nir);
 
    if (lima_shader_debug_gp)
