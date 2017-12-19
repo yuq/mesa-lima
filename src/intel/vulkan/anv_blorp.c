@@ -989,6 +989,7 @@ clear_color_attachment(struct anv_cmd_buffer *cmd_buffer,
    for (uint32_t r = 0; r < rectCount; ++r) {
       const VkOffset2D offset = pRects[r].rect.offset;
       const VkExtent2D extent = pRects[r].rect.extent;
+      assert(pRects[r].layerCount != VK_REMAINING_ARRAY_LAYERS);
       blorp_clear_attachments(batch, binding_table,
                               ISL_FORMAT_UNSUPPORTED, pass_att->samples,
                               pRects[r].baseArrayLayer,
@@ -1060,6 +1061,7 @@ clear_depth_stencil_attachment(struct anv_cmd_buffer *cmd_buffer,
       const VkOffset2D offset = pRects[r].rect.offset;
       const VkExtent2D extent = pRects[r].rect.extent;
       VkClearDepthStencilValue value = attachment->clearValue.depthStencil;
+      assert(pRects[r].layerCount != VK_REMAINING_ARRAY_LAYERS);
       blorp_clear_attachments(batch, binding_table,
                               depth_format, pass_att->samples,
                               pRects[r].baseArrayLayer,
