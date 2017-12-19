@@ -73,14 +73,25 @@ void ppir_instr_insert_mul_node(ppir_node *add, ppir_node *mul)
             int pipeline = pos == PPIR_INSTR_SLOT_ALU_VEC_MUL ?
                ppir_pipeline_reg_vmul : ppir_pipeline_reg_fmul;
 
-            /* update add node src to use pipeline reg */
-            for (int j = 0; j < add_alu->num_src; j++) {
-               ppir_src *src = add_alu->src + j;
-               if (ppir_node_target_equal(src, dest)) {
-                  src->type = ppir_target_pipeline;
-                  src->pipeline = pipeline;
+            assert(add_alu->num_src < 3);
+
+            if (add_alu->num_src == 2) {
+               bool src0 = ppir_node_target_equal(add_alu->src, dest);
+               bool src1 = ppir_node_target_equal(add_alu->src + 1, dest);
+               /* only one src0 can use ^vmul/^fmul */
+               if (src0 && src1)
+                  return;
+               /* swap src0 and src1 if needed */
+               if (src1) {
+                  ppir_src tmp = add_alu->src[0];
+                  add_alu->src[0] = add_alu->src[1];
+                  add_alu->src[1] = tmp;
                }
             }
+
+            /* update add node src to use pipeline reg */
+            add_alu->src->type = ppir_target_pipeline;
+            add_alu->src->pipeline = pipeline;
 
             /* update mul node dest to output to pipeline reg */
             dest->type = ppir_target_pipeline;
