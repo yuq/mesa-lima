@@ -693,21 +693,17 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                         tex.swizzle_a = translate_swizzle(PIPE_SWIZZLE_W);
                 }
 
-                /* XXX: While we need to use this flag to enable tiled
-                 * resource sharing (even a small shared buffer should be UIF,
-                 * not UBLINEAR or raster), this is also at the moment
-                 * patching up the fact that our resource layout's decisions
-                 * about XOR don't quite match the HW's.
+                /* Since other platform devices may produce UIF images even
+                 * when they're not big enough for V3D to assume they're UIF,
+                 * we force images with level 0 as UIF to be always treated
+                 * that way.
                  */
-                switch (rsc->slices[0].tiling) {
-                case VC5_TILING_UIF_NO_XOR:
-                case VC5_TILING_UIF_XOR:
-                        tex.level_0_is_strictly_uif = true;
-                        tex.level_0_xor_enable = false;
-                        break;
-                default:
-                        break;
-                }
+                tex.level_0_is_strictly_uif = (rsc->slices[0].tiling ==
+                                               VC5_TILING_UIF_XOR ||
+                                               rsc->slices[0].tiling ==
+                                               VC5_TILING_UIF_NO_XOR);
+                tex.level_0_xor_enable = (rsc->slices[0].tiling ==
+                                          VC5_TILING_UIF_XOR);
         };
 
         return &so->base;
