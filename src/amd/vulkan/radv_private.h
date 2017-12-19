@@ -401,15 +401,15 @@ struct radv_meta_state {
 	struct {
 		VkRenderPass render_passes[NUM_META_FS_KEYS];
 
-		VkPipelineLayout p_layouts[2];
-		VkDescriptorSetLayout ds_layouts[2];
-		VkPipeline pipelines[2][NUM_META_FS_KEYS];
+		VkPipelineLayout p_layouts[3];
+		VkDescriptorSetLayout ds_layouts[3];
+		VkPipeline pipelines[3][NUM_META_FS_KEYS];
 
 		VkRenderPass depth_only_rp;
-		VkPipeline depth_only_pipeline[2];
+		VkPipeline depth_only_pipeline[3];
 
 		VkRenderPass stencil_only_rp;
-		VkPipeline stencil_only_pipeline[2];
+		VkPipeline stencil_only_pipeline[3];
 	} blit2d;
 
 	struct {
