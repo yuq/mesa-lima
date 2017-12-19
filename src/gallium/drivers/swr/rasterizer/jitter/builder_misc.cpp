@@ -196,9 +196,19 @@ namespace SwrJit
         return ConstantVector::getSplat(mVWidth, cast<ConstantInt>(C(i)));
     }
 
+    Value *Builder::VIMMED1_16(int i)
+    {
+        return ConstantVector::getSplat(mVWidth16, cast<ConstantInt>(C(i)));
+    }
+
     Value *Builder::VIMMED1(uint32_t i)
     {
         return ConstantVector::getSplat(mVWidth, cast<ConstantInt>(C(i)));
+    }
+
+    Value *Builder::VIMMED1_16(uint32_t i)
+    {
+        return ConstantVector::getSplat(mVWidth16, cast<ConstantInt>(C(i)));
     }
 
     Value *Builder::VIMMED1(float i)
@@ -206,36 +216,29 @@ namespace SwrJit
         return ConstantVector::getSplat(mVWidth, cast<ConstantFP>(C(i)));
     }
 
+    Value *Builder::VIMMED1_16(float i)
+    {
+        return ConstantVector::getSplat(mVWidth16, cast<ConstantFP>(C(i)));
+    }
+
     Value *Builder::VIMMED1(bool i)
     {
         return ConstantVector::getSplat(mVWidth, cast<ConstantInt>(C(i)));
     }
 
-#if USE_SIMD16_BUILDER
-    Value *Builder::VIMMED2_1(int i)
+    Value *Builder::VIMMED1_16(bool i)
     {
-        return ConstantVector::getSplat(mVWidth2, cast<ConstantInt>(C(i)));
+        return ConstantVector::getSplat(mVWidth16, cast<ConstantInt>(C(i)));
     }
 
-    Value *Builder::VIMMED2_1(uint32_t i)
-    {
-        return ConstantVector::getSplat(mVWidth2, cast<ConstantInt>(C(i)));
-    }
-
-    Value *Builder::VIMMED2_1(float i)
-    {
-        return ConstantVector::getSplat(mVWidth2, cast<ConstantFP>(C(i)));
-    }
-
-    Value *Builder::VIMMED2_1(bool i)
-    {
-        return ConstantVector::getSplat(mVWidth2, cast<ConstantInt>(C(i)));
-    }
-
-#endif
     Value *Builder::VUNDEF_IPTR()
     {
         return UndefValue::get(VectorType::get(mInt32PtrTy,mVWidth));
+    }
+
+    Value *Builder::VUNDEF(Type* t)
+    {
+        return UndefValue::get(VectorType::get(t, mVWidth));
     }
 
     Value *Builder::VUNDEF_I()
@@ -243,9 +246,9 @@ namespace SwrJit
         return UndefValue::get(VectorType::get(mInt32Ty, mVWidth));
     }
 
-    Value *Builder::VUNDEF(Type *ty, uint32_t size)
+    Value *Builder::VUNDEF_I_16()
     {
-        return UndefValue::get(VectorType::get(ty, size));
+        return UndefValue::get(VectorType::get(mInt32Ty, mVWidth16));
     }
 
     Value *Builder::VUNDEF_F()
@@ -253,21 +256,14 @@ namespace SwrJit
         return UndefValue::get(VectorType::get(mFP32Ty, mVWidth));
     }
 
-#if USE_SIMD16_BUILDER
-    Value *Builder::VUNDEF2_F()
+    Value *Builder::VUNDEF_F_16()
     {
-        return UndefValue::get(VectorType::get(mFP32Ty, mVWidth2));
+        return UndefValue::get(VectorType::get(mFP32Ty, mVWidth16));
     }
 
-    Value *Builder::VUNDEF2_I()
+    Value *Builder::VUNDEF(Type *ty, uint32_t size)
     {
-        return UndefValue::get(VectorType::get(mInt32Ty, mVWidth2));
-    }
-
-#endif
-    Value *Builder::VUNDEF(Type* t)
-    {
-        return UndefValue::get(VectorType::get(t, mVWidth));
+        return UndefValue::get(VectorType::get(ty, size));
     }
 
     Value *Builder::VBROADCAST(Value *src)
@@ -281,8 +277,7 @@ namespace SwrJit
         return VECTOR_SPLAT(mVWidth, src);
     }
 
-#if USE_SIMD16_BUILDER
-    Value *Builder::VBROADCAST2(Value *src)
+    Value *Builder::VBROADCAST_16(Value *src)
     {
         // check if src is already a vector
         if (src->getType()->isVectorTy())
@@ -290,10 +285,9 @@ namespace SwrJit
             return src;
         }
 
-        return VECTOR_SPLAT(mVWidth2, src);
+        return VECTOR_SPLAT(mVWidth16, src);
     }
 
-#endif
     uint32_t Builder::IMMED(Value* v)
     {
         SWR_ASSERT(isa<ConstantInt>(v));
@@ -632,18 +626,18 @@ namespace SwrJit
                 Value *val = LOAD(validAddress);
                 vGather = VINSERT(vGather,val,C(i));
             }
+
             STACKRESTORE(pStack);
         }
 
         return vGather;
     }
 
-#if USE_SIMD16_BUILDER
     Value *Builder::GATHERPS_16(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale)
     {
-        Value *vGather = VUNDEF2_F();
+        Value *vGather = VUNDEF_F_16();
 
-        // use avx512 gather instruction if available
+        // use AVX512F gather instruction if available
         if (JM()->mArch.AVX512F())
         {
             // force mask to <N-bit Integer>, required by vgather2
@@ -653,25 +647,24 @@ namespace SwrJit
         }
         else
         {
-            Value *src0 = EXTRACT2(vSrc, 0);
-            Value *src1 = EXTRACT2(vSrc, 1);
+            Value *src0 = EXTRACT_16(vSrc, 0);
+            Value *src1 = EXTRACT_16(vSrc, 1);
 
-            Value *indices0 = EXTRACT2(vIndices, 0);
-            Value *indices1 = EXTRACT2(vIndices, 1);
+            Value *indices0 = EXTRACT_16(vIndices, 0);
+            Value *indices1 = EXTRACT_16(vIndices, 1);
 
-            Value *mask0 = EXTRACT2(vMask, 0);
-            Value *mask1 = EXTRACT2(vMask, 1);
+            Value *mask0 = EXTRACT_16(vMask, 0);
+            Value *mask1 = EXTRACT_16(vMask, 1);
 
             Value *gather0 = GATHERPS(src0, pBase, indices0, mask0, scale);
             Value *gather1 = GATHERPS(src1, pBase, indices1, mask1, scale);
 
-            vGather = JOIN2(gather0, gather1);
+            vGather = JOIN_16(gather0, gather1);
         }
 
         return vGather;
     }
 
-#endif
     //////////////////////////////////////////////////////////////////////////
     /// @brief Generate a masked gather operation in LLVM IR.  If not  
     /// supported on the underlying platform, emulate it with loads
@@ -718,15 +711,15 @@ namespace SwrJit
 
             STACKRESTORE(pStack);
         }
+
         return vGather;
     }
 
-#if USE_SIMD16_BUILDER
     Value *Builder::GATHERDD_16(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale)
     {
-        Value *vGather = VUNDEF2_F();
+        Value *vGather = VUNDEF_I_16();
 
-        // use avx512 gather instruction if available
+        // use AVX512F gather instruction if available
         if (JM()->mArch.AVX512F())
         {
             // force mask to <N-bit Integer>, required by vgather2
@@ -736,25 +729,24 @@ namespace SwrJit
         }
         else
         {
-            Value *src0 = EXTRACT2(vSrc, 0);
-            Value *src1 = EXTRACT2(vSrc, 1);
+            Value *src0 = EXTRACT_16(vSrc, 0);
+            Value *src1 = EXTRACT_16(vSrc, 1);
 
-            Value *indices0 = EXTRACT2(vIndices, 0);
-            Value *indices1 = EXTRACT2(vIndices, 1);
+            Value *indices0 = EXTRACT_16(vIndices, 0);
+            Value *indices1 = EXTRACT_16(vIndices, 1);
 
-            Value *mask0 = EXTRACT2(vMask, 0);
-            Value *mask1 = EXTRACT2(vMask, 1);
+            Value *mask0 = EXTRACT_16(vMask, 0);
+            Value *mask1 = EXTRACT_16(vMask, 1);
 
             Value *gather0 = GATHERDD(src0, pBase, indices0, mask0, scale);
             Value *gather1 = GATHERDD(src1, pBase, indices1, mask1, scale);
 
-            vGather = JOIN2(gather0, gather1);
+            vGather = JOIN_16(gather0, gather1);
         }
 
         return vGather;
     }
 
-#endif
     //////////////////////////////////////////////////////////////////////////
     /// @brief Generate a masked gather operation in LLVM IR.  If not
     /// supported on the underlying platform, emulate it with loads
@@ -804,21 +796,22 @@ namespace SwrJit
         return vGather;
     }
 
-#if USE_SIMD16_BUILDER
-    Value *Builder::EXTRACT2(Value *x, uint32_t imm)
+    Value *Builder::EXTRACT_16(Value *x, uint32_t imm)
     {
         if (imm == 0)
-            return VSHUFFLE(x, UndefValue::get(x->getType()), {0, 1, 2, 3, 4, 5, 6, 7});
+        {
+            return VSHUFFLE(x, UndefValue::get(x->getType()), { 0, 1, 2, 3, 4, 5, 6, 7 });
+        }
         else
-            return VSHUFFLE(x, UndefValue::get(x->getType()), {8, 9, 10, 11, 12, 13, 14, 15});
+        {
+            return VSHUFFLE(x, UndefValue::get(x->getType()), { 8, 9, 10, 11, 12, 13, 14, 15 });
+        }
     }
 
-    Value *Builder::JOIN2(Value *a, Value *b)
+    Value *Builder::JOIN_16(Value *a, Value *b)
     {
-        return VSHUFFLE(a, b,
-                        {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15});
+        return VSHUFFLE(a, b, { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 });
     }
-#endif
 
     //////////////////////////////////////////////////////////////////////////
     /// @brief convert x86 <N x float> mask to llvm <N x i1> mask
@@ -828,14 +821,12 @@ namespace SwrJit
         return ICMP_SLT(src, VIMMED1(0));
     }
 
-#if USE_SIMD16_BUILDER
-    Value *Builder::MASK2(Value *vmask)
+    Value *Builder::MASK_16(Value *vmask)
     {
-        Value *src = BITCAST(vmask, mSimd2Int32Ty);
-        return ICMP_SLT(src, VIMMED2_1(0));
+        Value *src = BITCAST(vmask, mSimd16Int32Ty);
+        return ICMP_SLT(src, VIMMED1_16(0));
     }
 
-#endif
     //////////////////////////////////////////////////////////////////////////
     /// @brief convert llvm <N x i1> mask to x86 <N x i32> mask
     Value *Builder::VMASK(Value *mask)
@@ -843,13 +834,11 @@ namespace SwrJit
         return S_EXT(mask, mSimdInt32Ty);
     }
 
-#if USE_SIMD16_BUILDER
-    Value *Builder::VMASK2(Value *mask)
+    Value *Builder::VMASK_16(Value *mask)
     {
-        return S_EXT(mask, mSimd2Int32Ty);
+        return S_EXT(mask, mSimd16Int32Ty);
     }
 
-#endif
     //////////////////////////////////////////////////////////////////////////
     /// @brief Generate a VPSHUFB operation in LLVM IR.  If not  
     /// supported on the underlying platform, emulate it

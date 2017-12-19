@@ -40,52 +40,56 @@ namespace SwrJit
     Builder::Builder(JitManager *pJitMgr)
         : mpJitMgr(pJitMgr)
     {
+        SWR_ASSERT(pJitMgr->mVWidth == 8);
+
         mVWidth = pJitMgr->mVWidth;
-#if USE_SIMD16_BUILDER
-        mVWidth2 = pJitMgr->mVWidth * 2;
-#endif
+        mVWidth16 = pJitMgr->mVWidth * 2;
 
         mpIRBuilder = &pJitMgr->mBuilder;
 
-        mVoidTy = Type::getVoidTy(pJitMgr->mContext);
-        mFP16Ty = Type::getHalfTy(pJitMgr->mContext);
-        mFP32Ty = Type::getFloatTy(pJitMgr->mContext);
-        mFP32PtrTy = PointerType::get(mFP32Ty, 0);
-        mDoubleTy = Type::getDoubleTy(pJitMgr->mContext);
-        mInt1Ty = Type::getInt1Ty(pJitMgr->mContext);
-        mInt8Ty = Type::getInt8Ty(pJitMgr->mContext);
-        mInt16Ty = Type::getInt16Ty(pJitMgr->mContext);
-        mInt32Ty = Type::getInt32Ty(pJitMgr->mContext);
-        mInt8PtrTy = PointerType::get(mInt8Ty, 0);
+        // Built in types: scalar
+
+        mVoidTy     = Type::getVoidTy(pJitMgr->mContext);
+        mFP16Ty     = Type::getHalfTy(pJitMgr->mContext);
+        mFP32Ty     = Type::getFloatTy(pJitMgr->mContext);
+        mFP32PtrTy  = PointerType::get(mFP32Ty, 0);
+        mDoubleTy   = Type::getDoubleTy(pJitMgr->mContext);
+        mInt1Ty     = Type::getInt1Ty(pJitMgr->mContext);
+        mInt8Ty     = Type::getInt8Ty(pJitMgr->mContext);
+        mInt16Ty    = Type::getInt16Ty(pJitMgr->mContext);
+        mInt32Ty    = Type::getInt32Ty(pJitMgr->mContext);
+        mInt8PtrTy  = PointerType::get(mInt8Ty, 0);
         mInt16PtrTy = PointerType::get(mInt16Ty, 0);
         mInt32PtrTy = PointerType::get(mInt32Ty, 0);
-        mInt64Ty = Type::getInt64Ty(pJitMgr->mContext);
-        mSimdInt1Ty = VectorType::get(mInt1Ty, mVWidth);
-        mSimdInt16Ty = VectorType::get(mInt16Ty, mVWidth);
-        mSimdInt32Ty = VectorType::get(mInt32Ty, mVWidth);
-        mSimdInt64Ty = VectorType::get(mInt64Ty, mVWidth);
-        mSimdFP16Ty = VectorType::get(mFP16Ty, mVWidth);
-        mSimdFP32Ty = VectorType::get(mFP32Ty, mVWidth);
-        mSimdVectorTy = ArrayType::get(mSimdFP32Ty, 4);
+        mInt64Ty    = Type::getInt64Ty(pJitMgr->mContext);
+
+        // Built in types: simd8
+
+        mSimdInt1Ty     = VectorType::get(mInt1Ty,  mVWidth);
+        mSimdInt16Ty    = VectorType::get(mInt16Ty, mVWidth);
+        mSimdInt32Ty    = VectorType::get(mInt32Ty, mVWidth);
+        mSimdInt64Ty    = VectorType::get(mInt64Ty, mVWidth);
+        mSimdFP16Ty     = VectorType::get(mFP16Ty,  mVWidth);
+        mSimdFP32Ty     = VectorType::get(mFP32Ty,  mVWidth);
+        mSimdVectorTy   = ArrayType::get(mSimdFP32Ty, 4);
         mSimdVectorTRTy = ArrayType::get(mSimdFP32Ty, 5);
-#if USE_SIMD16_BUILDER
-        mSimd2Int1Ty = VectorType::get(mInt1Ty, mVWidth2);
-        mSimd2Int16Ty = VectorType::get(mInt16Ty, mVWidth2);
-        mSimd2Int32Ty = VectorType::get(mInt32Ty, mVWidth2);
-        mSimd2Int64Ty = VectorType::get(mInt64Ty, mVWidth2);
-        mSimd2FP16Ty = VectorType::get(mFP16Ty, mVWidth2);
-        mSimd2FP32Ty = VectorType::get(mFP32Ty, mVWidth2);
-        mSimd2VectorTy = ArrayType::get(mSimd2FP32Ty, 4);
-        mSimd2VectorTRTy = ArrayType::get(mSimd2FP32Ty, 5);
-#endif
+
+        // Built in types: simd16
+
+        mSimd16Int1Ty       = VectorType::get(mInt1Ty,  mVWidth16);
+        mSimd16Int16Ty      = VectorType::get(mInt16Ty, mVWidth16);
+        mSimd16Int32Ty      = VectorType::get(mInt32Ty, mVWidth16);
+        mSimd16Int64Ty      = VectorType::get(mInt64Ty, mVWidth16);
+        mSimd16FP16Ty       = VectorType::get(mFP16Ty,  mVWidth16);
+        mSimd16FP32Ty       = VectorType::get(mFP32Ty,  mVWidth16);
+        mSimd16VectorTy     = ArrayType::get(mSimd16FP32Ty, 4);
+        mSimd16VectorTRTy   = ArrayType::get(mSimd16FP32Ty, 5);
 
         if (sizeof(uint32_t*) == 4)
         {
             mIntPtrTy = mInt32Ty;
             mSimdIntPtrTy = mSimdInt32Ty;
-#if USE_SIMD16_BUILDER
-            mSimd2IntPtrTy = mSimd2Int32Ty;
-#endif
+            mSimd16IntPtrTy = mSimd16Int32Ty;
         }
         else
         {
@@ -93,9 +97,7 @@ namespace SwrJit
 
             mIntPtrTy = mInt64Ty;
             mSimdIntPtrTy = mSimdInt64Ty;
-#if USE_SIMD16_BUILDER
-            mSimd2IntPtrTy = mSimd2Int64Ty;
-#endif
+            mSimd16IntPtrTy = mSimd16Int64Ty;
         }
     }
 }
