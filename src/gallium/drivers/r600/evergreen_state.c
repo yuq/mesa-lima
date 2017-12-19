@@ -4071,6 +4071,8 @@ static void evergreen_set_shader_images(struct pipe_context *ctx,
 		if (!images || !images[idx].resource) {
 			pipe_resource_reference((struct pipe_resource **)&rview->base.resource, NULL);
 			istate->enabled_mask &= ~(1 << i);
+			istate->compressed_colortex_mask &= ~(1 << i);
+			istate->compressed_depthtex_mask &= ~(1 << i);
 			continue;
 		}
 
