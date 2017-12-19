@@ -98,10 +98,13 @@ static void ppir_codegen_encode_vec_mul(ppir_node *node, void *code)
    ppir_alu_node *alu = ppir_node_to_alu(node);
 
    ppir_dest *dest = &alu->dest;
-   int index = ppir_target_get_dest_reg_index(dest);
-   int dest_shift = index & 0x3;
-   f->dest = index >> 2;
-   f->mask = dest->write_mask << dest_shift;
+   int dest_shift = 0;
+   if (dest->type != ppir_target_pipeline) {
+      int index = ppir_target_get_dest_reg_index(dest);
+      dest_shift = index & 0x3;
+      f->dest = index >> 2;
+      f->mask = dest->write_mask << dest_shift;
+   }
    f->dest_modifier = dest->modifier;
 
    switch (node->op) {
@@ -119,7 +122,7 @@ static void ppir_codegen_encode_vec_mul(ppir_node *node, void *code)
    }
 
    ppir_src *src = alu->src;
-   index = ppir_target_get_src_reg_index(src);
+   int index = ppir_target_get_src_reg_index(src);
    f->arg0_source = index >> 2;
    f->arg0_swizzle = encode_swizzle(src->swizzle, index & 0x3, dest_shift);
    f->arg0_absolute = src->absolute;
@@ -141,11 +144,12 @@ static void ppir_codegen_encode_scl_mul(ppir_node *node, void *code)
    ppir_alu_node *alu = ppir_node_to_alu(node);
 
    ppir_dest *dest = &alu->dest;
-   int index = ppir_target_get_dest_reg_index(dest);
-   f->dest = index;
-   f->dest_modifier = dest->modifier;
-   if (dest->type != ppir_target_pipeline)
+   if (dest->type != ppir_target_pipeline) {
+      int index = ppir_target_get_dest_reg_index(dest);
+      f->dest = index;
       f->output_en = true;
+   }
+   f->dest_modifier = dest->modifier;
 
    switch (node->op) {
    case ppir_op_mul:
@@ -162,7 +166,7 @@ static void ppir_codegen_encode_scl_mul(ppir_node *node, void *code)
    }
 
    ppir_src *src = alu->src;
-   index = ppir_target_get_src_reg_index(src);
+   int index = ppir_target_get_src_reg_index(src);
    f->arg0_source = index;
    f->arg0_absolute = src->absolute;
    f->arg0_negate = src->negate;
