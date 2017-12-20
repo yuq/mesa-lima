@@ -603,25 +603,6 @@ static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
 }
 
 static void
-radv_define_vs_user_sgprs_phase2(struct nir_to_llvm_context *ctx,
-                                 gl_shader_stage stage,
-                                 bool has_previous_stage,
-                                 gl_shader_stage previous_stage,
-                                 uint8_t *user_sgpr_idx)
-{
-	if (!ctx->is_gs_copy_shader && (stage == MESA_SHADER_VERTEX || (has_previous_stage && previous_stage == MESA_SHADER_VERTEX))) {
-		if (ctx->shader_info->info.vs.has_vertex_buffers) {
-			set_userdata_location_shader(ctx, AC_UD_VS_VERTEX_BUFFERS, user_sgpr_idx, 2);
-		}
-		unsigned vs_num = 2;
-		if (ctx->shader_info->info.vs.needs_draw_id)
-			vs_num++;
-
-		set_userdata_location_shader(ctx, AC_UD_VS_BASE_VERTEX_START_INSTANCE, user_sgpr_idx, vs_num);
-	}
-}
-
-static void
 declare_global_input_sgprs(struct nir_to_llvm_context *ctx,
 			   gl_shader_stage stage,
 			   bool has_previous_stage,
@@ -743,6 +724,31 @@ set_global_input_locs(struct nir_to_llvm_context *ctx, gl_shader_stage stage,
 	if (ctx->shader_info->info.needs_push_constants) {
 		set_userdata_location_shader(ctx, AC_UD_PUSH_CONSTANTS,
 					     user_sgpr_idx, 2);
+	}
+}
+
+static void
+set_vs_specific_input_locs(struct nir_to_llvm_context *ctx,
+			   gl_shader_stage stage, bool has_previous_stage,
+			   gl_shader_stage previous_stage,
+			   uint8_t *user_sgpr_idx)
+{
+	if (!ctx->is_gs_copy_shader &&
+	    (stage == MESA_SHADER_VERTEX ||
+	     (has_previous_stage && previous_stage == MESA_SHADER_VERTEX))) {
+		if (ctx->shader_info->info.vs.has_vertex_buffers) {
+			set_userdata_location_shader(ctx,
+						     AC_UD_VS_VERTEX_BUFFERS,
+						     user_sgpr_idx, 2);
+		}
+
+		unsigned vs_num = 2;
+		if (ctx->shader_info->info.vs.needs_draw_id)
+			vs_num++;
+
+		set_userdata_location_shader(ctx,
+					     AC_UD_VS_BASE_VERTEX_START_INSTANCE,
+					     user_sgpr_idx, vs_num);
 	}
 }
 
@@ -1061,7 +1067,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		}
 		break;
 	case MESA_SHADER_VERTEX:
-		radv_define_vs_user_sgprs_phase2(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_idx);
+		set_vs_specific_input_locs(ctx, stage, has_previous_stage,
+					   previous_stage, &user_sgpr_idx);
 		if (ctx->view_index)
 			set_userdata_location_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
 		if (ctx->options->key.vs.as_ls) {
@@ -1071,7 +1078,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			ac_declare_lds_as_pointer(&ctx->ac);
 		break;
 	case MESA_SHADER_TESS_CTRL:
-		radv_define_vs_user_sgprs_phase2(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_idx);
+		set_vs_specific_input_locs(ctx, stage, has_previous_stage,
+					   previous_stage, &user_sgpr_idx);
 		if (has_previous_stage)
 			set_userdata_location_shader(ctx, AC_UD_VS_LS_TCS_IN_LAYOUT, &user_sgpr_idx, 1);
 		set_userdata_location_shader(ctx, AC_UD_TCS_OFFCHIP_LAYOUT, &user_sgpr_idx, 4);
@@ -1087,7 +1095,10 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	case MESA_SHADER_GEOMETRY:
 		if (has_previous_stage) {
 			if (previous_stage == MESA_SHADER_VERTEX)
-				radv_define_vs_user_sgprs_phase2(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_idx);
+				set_vs_specific_input_locs(ctx, stage,
+							   has_previous_stage,
+							   previous_stage,
+							   &user_sgpr_idx);
 			else
 				set_userdata_location_shader(ctx, AC_UD_TES_OFFCHIP_LAYOUT, &user_sgpr_idx, 1);
 		}
