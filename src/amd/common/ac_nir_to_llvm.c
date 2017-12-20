@@ -880,7 +880,6 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			}
 		} else {
 			radv_define_common_user_sgprs_phase1(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_info, &args, &desc_sets);
-			radv_define_vs_user_sgprs_phase1(ctx, stage, has_previous_stage, previous_stage, &args);
 			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->gsvs_ring_stride); // gsvs stride
 			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->gsvs_num_entries); // gsvs num entires
 			if (ctx->shader_info->info.needs_multiview_view_index)
