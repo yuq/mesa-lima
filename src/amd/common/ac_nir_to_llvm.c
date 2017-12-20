@@ -723,6 +723,14 @@ radv_define_vs_user_sgprs_phase2(struct nir_to_llvm_context *ctx,
 	}
 }
 
+static void
+declare_tes_input_vgprs(struct nir_to_llvm_context *ctx, struct arg_info *args)
+{
+	add_vgpr_argument(args, ctx->ac.f32, &ctx->tes_u);
+	add_vgpr_argument(args, ctx->ac.f32, &ctx->tes_v);
+	add_vgpr_argument(args, ctx->ac.i32, &ctx->tes_rel_patch_id);
+	add_vgpr_argument(args, ctx->ac.i32, &ctx->tes_patch_id);
+}
 
 static void create_function(struct nir_to_llvm_context *ctx,
                             gl_shader_stage stage,
@@ -831,10 +839,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			add_sgpr_argument(&args, ctx->ac.i32, NULL); //
 			add_sgpr_argument(&args, ctx->ac.i32, &ctx->oc_lds); // OC LDS
 		}
-		add_vgpr_argument(&args, ctx->ac.f32, &ctx->tes_u); // tes_u
-		add_vgpr_argument(&args, ctx->ac.f32, &ctx->tes_v); // tes_v
-		add_vgpr_argument(&args, ctx->ac.i32, &ctx->tes_rel_patch_id); // tes rel patch id
-		add_vgpr_argument(&args, ctx->ac.i32, &ctx->tes_patch_id); // tes patch id
+		declare_tes_input_vgprs(ctx, &args);
 		break;
 	case MESA_SHADER_GEOMETRY:
 		if (has_previous_stage) {
@@ -869,10 +874,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 				add_vgpr_argument(&args, ctx->ac.i32, &ctx->vs_prim_id); // vs prim id
 				add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.instance_id); // instance id
 			} else {
-				add_vgpr_argument(&args, ctx->ac.f32, &ctx->tes_u); // tes_u
-				add_vgpr_argument(&args, ctx->ac.f32, &ctx->tes_v); // tes_v
-				add_vgpr_argument(&args, ctx->ac.i32, &ctx->tes_rel_patch_id); // tes rel patch id
-				add_vgpr_argument(&args, ctx->ac.i32, &ctx->tes_patch_id); // tes patch id
+				declare_tes_input_vgprs(ctx, &args);
 			}
 		} else {
 			radv_define_common_user_sgprs_phase1(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_info, &args, &desc_sets);
