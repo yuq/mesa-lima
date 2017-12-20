@@ -282,25 +282,6 @@ add_arg(struct arg_info *info, enum ac_arg_regfile regfile, LLVMTypeRef type,
 }
 
 static inline void
-add_argument(struct arg_info *info,
-	     LLVMTypeRef type, LLVMValueRef *param_ptr)
-{
-	assert(info->count < MAX_ARGS);
-	info->assign[info->count] = param_ptr;
-	info->types[info->count] = type;
-	info->count++;
-}
-
-static inline void
-add_sgpr_argument(struct arg_info *info,
-		  LLVMTypeRef type, LLVMValueRef *param_ptr)
-{
-	add_argument(info, type, param_ptr);
-	info->num_sgprs_used += ac_get_type_size(type) / 4;
-	info->sgpr_count++;
-}
-
-static inline void
 add_user_sgpr_array_argument(struct arg_info *info,
 			     LLVMTypeRef type,
 			     LLVMValueRef *param_ptr)
@@ -794,13 +775,13 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		for (int i = 0; i < 3; i++) {
 			ctx->workgroup_ids[i] = NULL;
 			if (ctx->shader_info->info.cs.uses_block_id[i]) {
-				add_sgpr_argument(&args, ctx->ac.i32,
-						  &ctx->workgroup_ids[i]);
+				add_arg(&args, ARG_SGPR, ctx->ac.i32,
+					&ctx->workgroup_ids[i]);
 			}
 		}
 
 		if (ctx->shader_info->info.cs.uses_local_invocation_idx)
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->tg_size);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->tg_size);
 		add_arg(&args, ARG_VGPR, ctx->ac.v3i32,
 			&ctx->local_invocation_ids);
 		break;
@@ -814,7 +795,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		if (ctx->shader_info->info.needs_multiview_view_index || (!ctx->options->key.vs.as_es && !ctx->options->key.vs.as_ls && ctx->options->key.has_multiview_view_index))
 			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->view_index);
 		if (ctx->options->key.vs.as_es)
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->es2gs_offset); // es2gs offset
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->es2gs_offset);
 		else if (ctx->options->key.vs.as_ls)
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->ls_out_layout);
@@ -824,13 +806,15 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	case MESA_SHADER_TESS_CTRL:
 		if (has_previous_stage) {
 			// First 6 system regs
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->oc_lds); // param oc lds
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->merged_wave_info); // merged wave info
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->tess_factor_offset); // tess factor offset
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->oc_lds);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->merged_wave_info);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->tess_factor_offset);
 
-			add_sgpr_argument(&args, ctx->ac.i32, NULL); // scratch offset
-			add_sgpr_argument(&args, ctx->ac.i32, NULL); // unknown
-			add_sgpr_argument(&args, ctx->ac.i32, NULL); // unknown
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, NULL); // scratch offset
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, NULL); // unknown
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, NULL); // unknown
 
 			declare_global_input_sgprs(ctx, stage,
 						   has_previous_stage,
@@ -881,8 +865,9 @@ static void create_function(struct nir_to_llvm_context *ctx,
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
 					&ctx->view_index);
 
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->oc_lds); // param oc lds
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->tess_factor_offset); // tess factor offset
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->oc_lds);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->tess_factor_offset);
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
 				&ctx->tcs_patch_id);
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
@@ -899,25 +884,28 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->view_index);
 
 		if (ctx->options->key.tes.as_es) {
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->oc_lds); // OC LDS
-			add_sgpr_argument(&args, ctx->ac.i32, NULL); //
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->es2gs_offset); // es2gs offset
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->oc_lds);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, NULL);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->es2gs_offset);
 		} else {
-			add_sgpr_argument(&args, ctx->ac.i32, NULL); //
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->oc_lds); // OC LDS
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, NULL);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->oc_lds);
 		}
 		declare_tes_input_vgprs(ctx, &args);
 		break;
 	case MESA_SHADER_GEOMETRY:
 		if (has_previous_stage) {
 			// First 6 system regs
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->gs2vs_offset); // tess factor offset
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->merged_wave_info); // merged wave info
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->oc_lds); // param oc lds
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->gs2vs_offset);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->merged_wave_info);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->oc_lds);
 
-			add_sgpr_argument(&args, ctx->ac.i32, NULL); // scratch offset
-			add_sgpr_argument(&args, ctx->ac.i32, NULL); // unknown
-			add_sgpr_argument(&args, ctx->ac.i32, NULL); // unknown
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, NULL); // scratch offset
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, NULL); // unknown
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, NULL); // unknown
 
 			declare_global_input_sgprs(ctx, stage,
 						   has_previous_stage,
@@ -974,8 +962,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
 					&ctx->view_index);
 
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->gs2vs_offset); // gs2vs offset
-			add_sgpr_argument(&args, ctx->ac.i32, &ctx->gs_wave_id); // wave id
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->gs2vs_offset);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->gs_wave_id);
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
 				&ctx->gs_vtx_offset[0]);
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
@@ -1003,7 +991,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->sample_pos_offset);
 
-		add_sgpr_argument(&args, ctx->ac.i32, &ctx->prim_mask); /* prim mask */
+		add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->prim_mask);
 		add_arg(&args, ARG_VGPR, ctx->ac.v2i32, &ctx->persp_sample);
 		add_arg(&args, ARG_VGPR, ctx->ac.v2i32, &ctx->persp_center);
 		add_arg(&args, ARG_VGPR, ctx->ac.v2i32, &ctx->persp_centroid);
