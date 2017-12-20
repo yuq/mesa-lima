@@ -824,6 +824,18 @@ lima_update_pp_fs_program(struct lima_context *ctx)
    ctx->buffer_state[lima_ctx_buff_pp_fs_program].size = align(fs->shader_size, 0x40);
 }
 
+static bool
+lima_is_scissor_zero(struct lima_context *ctx)
+{
+   if (!(ctx->dirty & LIMA_CONTEXT_DIRTY_SCISSOR))
+      return false;
+
+   struct pipe_scissor_state *scissor = &ctx->scissor;
+   return
+      scissor->minx == scissor->maxx
+      && scissor->miny == scissor->maxy;
+}
+
 static void
 lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
@@ -833,6 +845,11 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    if (!ctx->vs || !ctx->fs) {
       debug_warn_once("no shader, skip draw\n");
+      return;
+   }
+
+   if (lima_is_scissor_zero(ctx)) {
+      debug_warn_once("zero scissor, skip draw\n");
       return;
    }
 
