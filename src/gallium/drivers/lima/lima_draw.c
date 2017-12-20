@@ -353,6 +353,12 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].size;
    plbu_cmd[i++] = 0x80000000 | (gl_position_va >> 4); /* RSW_VERTEX_ARRAY */
 
+   if (ctx->dirty & LIMA_CONTEXT_DIRTY_SCISSOR) {
+      struct pipe_scissor_state *scissor = &ctx->scissor;
+      plbu_cmd[i++] = (scissor->minx << 30) | (scissor->maxy - 1) << 15 | scissor->miny;
+      plbu_cmd[i++] = 0x70000000 | (scissor->maxx - 1) << 13 | (scissor->minx >> 2); /* PLBU_CMD_SCISSORS */
+   }
+
    plbu_cmd[i++] = 0x00000000;
    plbu_cmd[i++] = 0x1000010A; /* ?? */
 
