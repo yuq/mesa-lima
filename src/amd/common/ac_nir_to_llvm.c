@@ -253,7 +253,6 @@ struct arg_info {
 	unsigned array_params_mask;
 	uint8_t count;
 	uint8_t sgpr_count;
-	uint8_t num_user_sgprs_used;
 	uint8_t num_sgprs_used;
 	uint8_t num_vgprs_used;
 };
@@ -283,7 +282,6 @@ add_user_sgpr_argument(struct arg_info *info,
 		       LLVMValueRef *param_ptr)
 {
 	add_sgpr_argument(info, type, param_ptr);
-	info->num_user_sgprs_used += ac_get_type_size(type) / 4;
 }
 
 static inline void
