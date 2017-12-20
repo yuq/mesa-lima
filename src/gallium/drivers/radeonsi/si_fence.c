@@ -114,30 +114,6 @@ struct pipe_fence_handle *si_create_fence(struct pipe_context *ctx,
 	return (struct pipe_fence_handle *)fence;
 }
 
-static void si_fence_server_sync(struct pipe_context *ctx,
-				 struct pipe_fence_handle *fence)
-{
-	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-	struct si_multi_fence *rfence = (struct si_multi_fence *)fence;
-
-	util_queue_fence_wait(&rfence->ready);
-
-	/* Unflushed fences from the same context are no-ops. */
-	if (rfence->gfx_unflushed.ctx &&
-	    rfence->gfx_unflushed.ctx == rctx)
-		return;
-
-	/* All unflushed commands will not start execution before
-	 * this fence dependency is signalled.
-	 *
-	 * Should we flush the context to allow more GPU parallelism?
-	 */
-	if (rfence->sdma)
-		si_add_fence_dependency(rctx, rfence->sdma);
-	if (rfence->gfx)
-		si_add_fence_dependency(rctx, rfence->gfx);
-}
-
 static bool si_fine_fence_signaled(struct radeon_winsys *rws,
 				   const struct si_fine_fence *fine)
 {
@@ -515,6 +491,31 @@ static void si_fence_server_signal(struct pipe_context *ctx,
 	si_flush_from_st(ctx, NULL, PIPE_FLUSH_ASYNC);
 }
 
+static void si_fence_server_sync(struct pipe_context *ctx,
+				 struct pipe_fence_handle *fence)
+{
+	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+	struct si_multi_fence *rfence = (struct si_multi_fence *)fence;
+
+	util_queue_fence_wait(&rfence->ready);
+
+	/* Unflushed fences from the same context are no-ops. */
+	if (rfence->gfx_unflushed.ctx &&
+	    rfence->gfx_unflushed.ctx == rctx)
+		return;
+
+	/* All unflushed commands will not start execution before
+	 * this fence dependency is signalled.
+	 *
+	 * Therefore we must flush before inserting the dependency
+	 */
+	si_flush_from_st(ctx, NULL, PIPE_FLUSH_ASYNC);
+
+	if (rfence->sdma)
+		si_add_fence_dependency(rctx, rfence->sdma);
+	if (rfence->gfx)
+		si_add_fence_dependency(rctx, rfence->gfx);
+}
 
 void si_init_fence_functions(struct si_context *ctx)
 {
