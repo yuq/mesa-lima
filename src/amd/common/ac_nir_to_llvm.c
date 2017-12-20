@@ -4209,14 +4209,10 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		break;
 	case nir_intrinsic_load_primitive_id:
 		if (ctx->stage == MESA_SHADER_GEOMETRY) {
-			if (ctx->nctx)
-				ctx->nctx->shader_info->gs.uses_prim_id = true;
 			result = ctx->abi->gs_prim_id;
 		} else if (ctx->stage == MESA_SHADER_TESS_CTRL) {
-			ctx->nctx->shader_info->tcs.uses_prim_id = true;
 			result = ctx->nctx->tcs_patch_id;
 		} else if (ctx->stage == MESA_SHADER_TESS_EVAL) {
-			ctx->nctx->shader_info->tcs.uses_prim_id = true;
 			result = ctx->nctx->tes_patch_id;
 		} else
 			fprintf(stderr, "Unknown primitive id intrinsic: %d", ctx->stage);
