@@ -519,13 +519,17 @@ static void set_userdata_location_shader(struct nir_to_llvm_context *ctx,
 	set_userdata_location(&ctx->shader_info->user_sgprs_locs.shader_data[idx], sgpr_idx, num_sgprs);
 }
 
-
-static void set_userdata_location_indirect(struct ac_userdata_info *ud_info, uint8_t sgpr_idx, uint8_t num_sgprs,
-					   uint32_t indirect_offset)
+static void
+set_loc_desc(struct nir_to_llvm_context *ctx, int idx,  uint8_t *sgpr_idx,
+	     uint32_t indirect_offset)
 {
-	ud_info->sgpr_idx = sgpr_idx;
-	ud_info->num_sgprs = num_sgprs;
-	ud_info->indirect = true;
+	struct ac_userdata_info *ud_info =
+		&ctx->shader_info->user_sgprs_locs.descriptor_sets[idx];
+	assert(ud_info);
+
+	ud_info->sgpr_idx = *sgpr_idx;
+	ud_info->num_sgprs = 2;
+	ud_info->indirect = indirect_offset > 0;
 	ud_info->indirect_offset = indirect_offset;
 }
 
@@ -695,21 +699,18 @@ set_global_input_locs(struct nir_to_llvm_context *ctx, gl_shader_stage stage,
 	if (!user_sgpr_info->indirect_all_descriptor_sets) {
 		for (unsigned i = 0; i < num_sets; ++i) {
 			if (ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
-				set_userdata_location(&ctx->shader_info->user_sgprs_locs.descriptor_sets[i],
-						      user_sgpr_idx, 2);
+				set_loc_desc(ctx, i, user_sgpr_idx, 0);
 			} else
 				ctx->descriptor_sets[i] = NULL;
 		}
 	} else {
-		uint32_t desc_sgpr_idx = *user_sgpr_idx;
 		set_userdata_location_shader(ctx,
 					     AC_UD_INDIRECT_DESCRIPTOR_SETS,
 					     user_sgpr_idx, 2);
 
 		for (unsigned i = 0; i < num_sets; ++i) {
 			if (ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
-				set_userdata_location_indirect(&ctx->shader_info->user_sgprs_locs.descriptor_sets[i],
-							       desc_sgpr_idx, 2, i * 8);
+				set_loc_desc(ctx, i, user_sgpr_idx, i * 8);
 				ctx->descriptor_sets[i] =
 					ac_build_load_to_sgpr(&ctx->ac,
 							      desc_sets,
