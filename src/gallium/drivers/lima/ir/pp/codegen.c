@@ -236,7 +236,44 @@ static void ppir_codegen_encode_vec_add(ppir_node *node, void *code)
 
 static void ppir_codegen_encode_scl_add(ppir_node *node, void *code)
 {
-   
+   ppir_codegen_field_float_acc *f = code;
+   ppir_alu_node *alu = ppir_node_to_alu(node);
+
+   ppir_dest *dest = &alu->dest;
+   int index = ppir_target_get_dest_reg_index(dest);
+   f->dest = index;
+   f->output_en = true;
+   f->dest_modifier = dest->modifier;
+
+   switch (node->op) {
+   case ppir_op_add:
+      f->op = shift_to_op(alu->shift);
+      break;
+   case ppir_op_mov:
+      f->op = ppir_codegen_float_acc_op_mov;
+      break;
+   case ppir_op_max:
+      f->op = ppir_codegen_float_acc_op_max;
+      break;
+   default:
+      break;
+   }
+
+   ppir_src *src = alu->src;
+   if (src->type == ppir_target_pipeline &&
+       src->pipeline == ppir_pipeline_reg_fmul)
+      f->mul_in = true;
+   else
+      f->arg0_source = ppir_target_get_src_reg_index(src);
+   f->arg0_absolute = src->absolute;
+   f->arg0_negate = src->negate;
+
+   if (alu->num_src == 2) {
+      src = alu->src + 1;
+      f->arg1_source = ppir_target_get_src_reg_index(src);
+      f->arg1_absolute = src->absolute;
+      f->arg1_negate = src->negate;
+   }
 }
 
 static void ppir_codegen_encode_combine(ppir_node *node, void *code)
