@@ -603,48 +603,6 @@ static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
 }
 
 static void
-radv_define_common_user_sgprs_phase2(struct nir_to_llvm_context *ctx,
-                                     gl_shader_stage stage,
-                                     bool has_previous_stage,
-                                     gl_shader_stage previous_stage,
-                                     const struct user_sgpr_info *user_sgpr_info,
-				     LLVMValueRef desc_sets,
-                                     uint8_t *user_sgpr_idx)
-{
-	unsigned num_sets = ctx->options->layout ? ctx->options->layout->num_sets : 0;
-	unsigned stage_mask = 1 << stage;
-	if (has_previous_stage)
-		stage_mask |= 1 << previous_stage;
-
-	if (!user_sgpr_info->indirect_all_descriptor_sets) {
-		for (unsigned i = 0; i < num_sets; ++i) {
-			if (ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
-				set_userdata_location(&ctx->shader_info->user_sgprs_locs.descriptor_sets[i], user_sgpr_idx, 2);
-			} else
-				ctx->descriptor_sets[i] = NULL;
-		}
-	} else {
-		uint32_t desc_sgpr_idx = *user_sgpr_idx;
-		set_userdata_location_shader(ctx, AC_UD_INDIRECT_DESCRIPTOR_SETS, user_sgpr_idx, 2);
-
-		for (unsigned i = 0; i < num_sets; ++i) {
-			if (ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
-				set_userdata_location_indirect(&ctx->shader_info->user_sgprs_locs.descriptor_sets[i], desc_sgpr_idx, 2, i * 8);
-				ctx->descriptor_sets[i] = ac_build_load_to_sgpr(&ctx->ac, desc_sets, LLVMConstInt(ctx->ac.i32, i, false));
-
-			} else
-				ctx->descriptor_sets[i] = NULL;
-		}
-		ctx->shader_info->need_indirect_descriptor_sets = true;
-	}
-
-	if (ctx->shader_info->info.needs_push_constants) {
-		set_userdata_location_shader(ctx, AC_UD_PUSH_CONSTANTS, user_sgpr_idx, 2);
-	}
-}
-
-
-static void
 radv_define_vs_user_sgprs_phase2(struct nir_to_llvm_context *ctx,
                                  gl_shader_stage stage,
                                  bool has_previous_stage,
@@ -738,6 +696,54 @@ declare_tes_input_vgprs(struct nir_to_llvm_context *ctx, struct arg_info *args)
 	add_arg(args, ARG_VGPR, ctx->ac.f32, &ctx->tes_v);
 	add_arg(args, ARG_VGPR, ctx->ac.i32, &ctx->tes_rel_patch_id);
 	add_arg(args, ARG_VGPR, ctx->ac.i32, &ctx->tes_patch_id);
+}
+
+static void
+set_global_input_locs(struct nir_to_llvm_context *ctx, gl_shader_stage stage,
+		      bool has_previous_stage, gl_shader_stage previous_stage,
+		      const struct user_sgpr_info *user_sgpr_info,
+		      LLVMValueRef desc_sets, uint8_t *user_sgpr_idx)
+{
+	unsigned num_sets = ctx->options->layout ?
+			    ctx->options->layout->num_sets : 0;
+	unsigned stage_mask = 1 << stage;
+
+	if (has_previous_stage)
+		stage_mask |= 1 << previous_stage;
+
+	if (!user_sgpr_info->indirect_all_descriptor_sets) {
+		for (unsigned i = 0; i < num_sets; ++i) {
+			if (ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
+				set_userdata_location(&ctx->shader_info->user_sgprs_locs.descriptor_sets[i],
+						      user_sgpr_idx, 2);
+			} else
+				ctx->descriptor_sets[i] = NULL;
+		}
+	} else {
+		uint32_t desc_sgpr_idx = *user_sgpr_idx;
+		set_userdata_location_shader(ctx,
+					     AC_UD_INDIRECT_DESCRIPTOR_SETS,
+					     user_sgpr_idx, 2);
+
+		for (unsigned i = 0; i < num_sets; ++i) {
+			if (ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
+				set_userdata_location_indirect(&ctx->shader_info->user_sgprs_locs.descriptor_sets[i],
+							       desc_sgpr_idx, 2, i * 8);
+				ctx->descriptor_sets[i] =
+					ac_build_load_to_sgpr(&ctx->ac,
+							      desc_sets,
+							      LLVMConstInt(ctx->ac.i32, i, false));
+
+			} else
+				ctx->descriptor_sets[i] = NULL;
+		}
+		ctx->shader_info->need_indirect_descriptor_sets = true;
+	}
+
+	if (ctx->shader_info->info.needs_push_constants) {
+		set_userdata_location_shader(ctx, AC_UD_PUSH_CONSTANTS,
+					     user_sgpr_idx, 2);
+	}
 }
 
 static void create_function(struct nir_to_llvm_context *ctx,
@@ -1044,7 +1050,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	if (has_previous_stage)
 		user_sgpr_idx = 0;
 
-	radv_define_common_user_sgprs_phase2(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_info, desc_sets, &user_sgpr_idx);
+	set_global_input_locs(ctx, stage, has_previous_stage, previous_stage,
+			      &user_sgpr_info, desc_sets, &user_sgpr_idx);
 
 	switch (stage) {
 	case MESA_SHADER_COMPUTE:
