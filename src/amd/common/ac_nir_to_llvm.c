@@ -309,15 +309,6 @@ add_user_sgpr_argument(struct arg_info *info,
 }
 
 static inline void
-add_vgpr_argument(struct arg_info *info,
-		  LLVMTypeRef type,
-		  LLVMValueRef *param_ptr)
-{
-	add_argument(info, type, param_ptr);
-	info->num_vgprs_used += ac_get_type_size(type) / 4;
-}
-
-static inline void
 add_user_sgpr_array_argument(struct arg_info *info,
 			     LLVMTypeRef type,
 			     LLVMValueRef *param_ptr)
@@ -767,21 +758,21 @@ declare_vs_specific_input_sgprs(struct nir_to_llvm_context *ctx,
 static void
 declare_vs_input_vgprs(struct nir_to_llvm_context *ctx, struct arg_info *args)
 {
-	add_vgpr_argument(args, ctx->ac.i32, &ctx->abi.vertex_id);
+	add_arg(args, ARG_VGPR, ctx->ac.i32, &ctx->abi.vertex_id);
 	if (!ctx->is_gs_copy_shader) {
-		add_vgpr_argument(args, ctx->ac.i32, &ctx->rel_auto_id);
-		add_vgpr_argument(args, ctx->ac.i32, &ctx->vs_prim_id);
-		add_vgpr_argument(args, ctx->ac.i32, &ctx->abi.instance_id);
+		add_arg(args, ARG_VGPR, ctx->ac.i32, &ctx->rel_auto_id);
+		add_arg(args, ARG_VGPR, ctx->ac.i32, &ctx->vs_prim_id);
+		add_arg(args, ARG_VGPR, ctx->ac.i32, &ctx->abi.instance_id);
 	}
 }
 
 static void
 declare_tes_input_vgprs(struct nir_to_llvm_context *ctx, struct arg_info *args)
 {
-	add_vgpr_argument(args, ctx->ac.f32, &ctx->tes_u);
-	add_vgpr_argument(args, ctx->ac.f32, &ctx->tes_v);
-	add_vgpr_argument(args, ctx->ac.i32, &ctx->tes_rel_patch_id);
-	add_vgpr_argument(args, ctx->ac.i32, &ctx->tes_patch_id);
+	add_arg(args, ARG_VGPR, ctx->ac.f32, &ctx->tes_u);
+	add_arg(args, ARG_VGPR, ctx->ac.f32, &ctx->tes_v);
+	add_arg(args, ARG_VGPR, ctx->ac.i32, &ctx->tes_rel_patch_id);
+	add_arg(args, ARG_VGPR, ctx->ac.i32, &ctx->tes_patch_id);
 }
 
 static void create_function(struct nir_to_llvm_context *ctx,
@@ -821,7 +812,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 		if (ctx->shader_info->info.cs.uses_local_invocation_idx)
 			add_sgpr_argument(&args, ctx->ac.i32, &ctx->tg_size);
-		add_vgpr_argument(&args, ctx->ac.v3i32, &ctx->local_invocation_ids);
+		add_arg(&args, ARG_VGPR, ctx->ac.v3i32,
+			&ctx->local_invocation_ids);
 		break;
 	case MESA_SHADER_VERTEX:
 		declare_global_input_sgprs(ctx, stage, has_previous_stage,
@@ -868,8 +860,10 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			if (ctx->shader_info->info.needs_multiview_view_index)
 				add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->view_index);
 
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->tcs_patch_id); // patch id
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->tcs_rel_ids); // rel ids;
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->tcs_patch_id);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->tcs_rel_ids);
 
 			declare_vs_input_vgprs(ctx, &args);
 		} else {
@@ -887,8 +881,10 @@ static void create_function(struct nir_to_llvm_context *ctx,
 				add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->view_index);
 			add_sgpr_argument(&args, ctx->ac.i32, &ctx->oc_lds); // param oc lds
 			add_sgpr_argument(&args, ctx->ac.i32, &ctx->tess_factor_offset); // tess factor offset
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->tcs_patch_id); // patch id
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->tcs_rel_ids); // rel ids;
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->tcs_patch_id);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->tcs_rel_ids);
 		}
 		break;
 	case MESA_SHADER_TESS_EVAL:
@@ -940,11 +936,16 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			if (ctx->shader_info->info.needs_multiview_view_index)
 				add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->view_index);
 
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->gs_vtx_offset[0]); // vtx01
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->gs_vtx_offset[2]); // vtx23
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.gs_prim_id); // prim id
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.gs_invocation_id);
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->gs_vtx_offset[4]);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->gs_vtx_offset[0]);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->gs_vtx_offset[2]);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->abi.gs_prim_id);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->abi.gs_invocation_id);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->gs_vtx_offset[4]);
 
 			if (previous_stage == MESA_SHADER_VERTEX) {
 				declare_vs_input_vgprs(ctx, &args);
@@ -964,14 +965,22 @@ static void create_function(struct nir_to_llvm_context *ctx,
 				add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->view_index);
 			add_sgpr_argument(&args, ctx->ac.i32, &ctx->gs2vs_offset); // gs2vs offset
 			add_sgpr_argument(&args, ctx->ac.i32, &ctx->gs_wave_id); // wave id
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->gs_vtx_offset[0]); // vtx0
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->gs_vtx_offset[1]); // vtx1
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.gs_prim_id); // prim id
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->gs_vtx_offset[2]);
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->gs_vtx_offset[3]);
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->gs_vtx_offset[4]);
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->gs_vtx_offset[5]);
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.gs_invocation_id);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->gs_vtx_offset[0]);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->gs_vtx_offset[1]);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->abi.gs_prim_id);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->gs_vtx_offset[2]);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->gs_vtx_offset[3]);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->gs_vtx_offset[4]);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->gs_vtx_offset[5]);
+			add_arg(&args, ARG_VGPR, ctx->ac.i32,
+				&ctx->abi.gs_invocation_id);
 		}
 		break;
 	case MESA_SHADER_FRAGMENT:
@@ -982,22 +991,22 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		if (ctx->shader_info->info.ps.needs_sample_positions)
 			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->sample_pos_offset); /* sample position offset */
 		add_sgpr_argument(&args, ctx->ac.i32, &ctx->prim_mask); /* prim mask */
-		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->persp_sample); /* persp sample */
-		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->persp_center); /* persp center */
-		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->persp_centroid); /* persp centroid */
-		add_vgpr_argument(&args, ctx->ac.v3i32, NULL); /* persp pull model */
-		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->linear_sample); /* linear sample */
-		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->linear_center); /* linear center */
-		add_vgpr_argument(&args, ctx->ac.v2i32, &ctx->linear_centroid); /* linear centroid */
-		add_vgpr_argument(&args, ctx->ac.f32, NULL);  /* line stipple tex */
-		add_vgpr_argument(&args, ctx->ac.f32, &ctx->abi.frag_pos[0]);  /* pos x float */
-		add_vgpr_argument(&args, ctx->ac.f32, &ctx->abi.frag_pos[1]);  /* pos y float */
-		add_vgpr_argument(&args, ctx->ac.f32, &ctx->abi.frag_pos[2]);  /* pos z float */
-		add_vgpr_argument(&args, ctx->ac.f32, &ctx->abi.frag_pos[3]);  /* pos w float */
-		add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.front_face);  /* front face */
-		add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.ancillary);  /* ancillary */
-		add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.sample_coverage);  /* sample coverage */
-		add_vgpr_argument(&args, ctx->ac.i32, NULL);  /* fixed pt */
+		add_arg(&args, ARG_VGPR, ctx->ac.v2i32, &ctx->persp_sample);
+		add_arg(&args, ARG_VGPR, ctx->ac.v2i32, &ctx->persp_center);
+		add_arg(&args, ARG_VGPR, ctx->ac.v2i32, &ctx->persp_centroid);
+		add_arg(&args, ARG_VGPR, ctx->ac.v3i32, NULL); /* persp pull model */
+		add_arg(&args, ARG_VGPR, ctx->ac.v2i32, &ctx->linear_sample);
+		add_arg(&args, ARG_VGPR, ctx->ac.v2i32, &ctx->linear_center);
+		add_arg(&args, ARG_VGPR, ctx->ac.v2i32, &ctx->linear_centroid);
+		add_arg(&args, ARG_VGPR, ctx->ac.f32, NULL);  /* line stipple tex */
+		add_arg(&args, ARG_VGPR, ctx->ac.f32, &ctx->abi.frag_pos[0]);
+		add_arg(&args, ARG_VGPR, ctx->ac.f32, &ctx->abi.frag_pos[1]);
+		add_arg(&args, ARG_VGPR, ctx->ac.f32, &ctx->abi.frag_pos[2]);
+		add_arg(&args, ARG_VGPR, ctx->ac.f32, &ctx->abi.frag_pos[3]);
+		add_arg(&args, ARG_VGPR, ctx->ac.i32, &ctx->abi.front_face);
+		add_arg(&args, ARG_VGPR, ctx->ac.i32, &ctx->abi.ancillary);
+		add_arg(&args, ARG_VGPR, ctx->ac.i32, &ctx->abi.sample_coverage);
+		add_arg(&args, ARG_VGPR, ctx->ac.i32, NULL);  /* fixed pt */
 		break;
 	default:
 		unreachable("Shader stage not implemented");
