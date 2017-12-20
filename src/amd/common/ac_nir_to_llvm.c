@@ -724,6 +724,17 @@ radv_define_vs_user_sgprs_phase2(struct nir_to_llvm_context *ctx,
 }
 
 static void
+declare_vs_input_vgprs(struct nir_to_llvm_context *ctx, struct arg_info *args)
+{
+	add_vgpr_argument(args, ctx->ac.i32, &ctx->abi.vertex_id);
+	if (!ctx->is_gs_copy_shader) {
+		add_vgpr_argument(args, ctx->ac.i32, &ctx->rel_auto_id);
+		add_vgpr_argument(args, ctx->ac.i32, &ctx->vs_prim_id);
+		add_vgpr_argument(args, ctx->ac.i32, &ctx->abi.instance_id);
+	}
+}
+
+static void
 declare_tes_input_vgprs(struct nir_to_llvm_context *ctx, struct arg_info *args)
 {
 	add_vgpr_argument(args, ctx->ac.f32, &ctx->tes_u);
@@ -777,12 +788,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			add_sgpr_argument(&args, ctx->ac.i32, &ctx->es2gs_offset); // es2gs offset
 		else if (ctx->options->key.vs.as_ls)
 			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->ls_out_layout); // ls out layout
-		add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.vertex_id); // vertex id
-		if (!ctx->is_gs_copy_shader) {
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->rel_auto_id); // rel auto id
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->vs_prim_id); // vs prim id
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.instance_id); // instance id
-		}
+
+		declare_vs_input_vgprs(ctx, &args);
 		break;
 	case MESA_SHADER_TESS_CTRL:
 		if (has_previous_stage) {
@@ -808,10 +815,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 			add_vgpr_argument(&args, ctx->ac.i32, &ctx->tcs_patch_id); // patch id
 			add_vgpr_argument(&args, ctx->ac.i32, &ctx->tcs_rel_ids); // rel ids;
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.vertex_id); // vertex id
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->rel_auto_id); // rel auto id
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->vs_prim_id); // vs prim id
-			add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.instance_id); // instance id
+
+			declare_vs_input_vgprs(ctx, &args);
 		} else {
 			radv_define_common_user_sgprs_phase1(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_info, &args, &desc_sets);
 			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->tcs_offchip_layout); // tcs offchip layout
@@ -869,10 +874,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			add_vgpr_argument(&args, ctx->ac.i32, &ctx->gs_vtx_offset[4]);
 
 			if (previous_stage == MESA_SHADER_VERTEX) {
-				add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.vertex_id); // vertex id
-				add_vgpr_argument(&args, ctx->ac.i32, &ctx->rel_auto_id); // rel auto id
-				add_vgpr_argument(&args, ctx->ac.i32, &ctx->vs_prim_id); // vs prim id
-				add_vgpr_argument(&args, ctx->ac.i32, &ctx->abi.instance_id); // instance id
+				declare_vs_input_vgprs(ctx, &args);
 			} else {
 				declare_tes_input_vgprs(ctx, &args);
 			}
