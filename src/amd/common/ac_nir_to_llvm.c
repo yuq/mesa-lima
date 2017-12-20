@@ -504,12 +504,14 @@ get_tcs_out_current_patch_data_offset(struct nir_to_llvm_context *ctx)
 			    "");
 }
 
-static void set_userdata_location(struct ac_userdata_info *ud_info, uint8_t *sgpr_idx, uint8_t num_sgprs)
+static void
+set_loc(struct ac_userdata_info *ud_info, uint8_t *sgpr_idx, uint8_t num_sgprs,
+	uint32_t indirect_offset)
 {
 	ud_info->sgpr_idx = *sgpr_idx;
 	ud_info->num_sgprs = num_sgprs;
-	ud_info->indirect = false;
-	ud_info->indirect_offset = 0;
+	ud_info->indirect = indirect_offset > 0;
+	ud_info->indirect_offset = indirect_offset;
 	*sgpr_idx += num_sgprs;
 }
 
@@ -517,7 +519,11 @@ static void
 set_loc_shader(struct nir_to_llvm_context *ctx, int idx, uint8_t *sgpr_idx,
 	       uint8_t num_sgprs)
 {
-	set_userdata_location(&ctx->shader_info->user_sgprs_locs.shader_data[idx], sgpr_idx, num_sgprs);
+	struct ac_userdata_info *ud_info =
+		&ctx->shader_info->user_sgprs_locs.shader_data[idx];
+	assert(ud_info);
+
+	set_loc(ud_info, sgpr_idx, num_sgprs, 0);
 }
 
 static void
@@ -528,10 +534,7 @@ set_loc_desc(struct nir_to_llvm_context *ctx, int idx,  uint8_t *sgpr_idx,
 		&ctx->shader_info->user_sgprs_locs.descriptor_sets[idx];
 	assert(ud_info);
 
-	ud_info->sgpr_idx = *sgpr_idx;
-	ud_info->num_sgprs = 2;
-	ud_info->indirect = indirect_offset > 0;
-	ud_info->indirect_offset = indirect_offset;
+	set_loc(ud_info, sgpr_idx, 2, indirect_offset);
 }
 
 struct user_sgpr_info {
