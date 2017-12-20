@@ -84,7 +84,11 @@ static bool insert_to_each_succ_instr(ppir_block *block, ppir_node *node)
    }
 
    /* dupliacte node for each successor */
+
    bool first = true;
+   struct list_head dup_list;
+   list_inithead(&dup_list);
+
    ppir_node_foreach_succ_safe(node, dep) {
       ppir_node *succ = dep->succ;
 
@@ -94,9 +98,20 @@ static bool insert_to_each_succ_instr(ppir_block *block, ppir_node *node)
          continue;
       }
 
+      if (succ->instr == node->instr)
+         continue;
+
+      list_for_each_entry(ppir_node, dup, &dup_list, list) {
+         if (succ->instr == dup->instr) {
+            ppir_node_replace_pred(dep, dup);
+            continue;
+         }
+      }
+
       ppir_node *dup = ppir_node_create(block, node->op, -1, 0);
       if (unlikely(!dup))
          return false;
+      list_addtail(&dup->list, &dup_list);
 
       ppir_debug("node_to_instr duplicate %s %d from %d\n",
                  ppir_op_infos[dup->op].name, dup->index, node->index);
@@ -115,6 +130,8 @@ static bool insert_to_each_succ_instr(ppir_block *block, ppir_node *node)
          instr->slots[node->instr_pos] = dup;
       }
    }
+
+   list_splicetail(&dup_list, &node->list);
 
    return true;
 }
