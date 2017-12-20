@@ -301,20 +301,12 @@ add_sgpr_argument(struct arg_info *info,
 }
 
 static inline void
-add_user_sgpr_argument(struct arg_info *info,
-		       LLVMTypeRef type,
-		       LLVMValueRef *param_ptr)
-{
-	add_sgpr_argument(info, type, param_ptr);
-}
-
-static inline void
 add_user_sgpr_array_argument(struct arg_info *info,
 			     LLVMTypeRef type,
 			     LLVMValueRef *param_ptr)
 {
 	info->array_params_mask |= (1 << info->count);
-	add_user_sgpr_argument(info, type, param_ptr);
+	add_arg(info, ARG_SGPR, type, param_ptr);
 }
 
 static void assign_arguments(LLVMValueRef main_function,
@@ -740,17 +732,13 @@ declare_vs_specific_input_sgprs(struct nir_to_llvm_context *ctx,
 	    (stage == MESA_SHADER_VERTEX ||
 	     (has_previous_stage && previous_stage == MESA_SHADER_VERTEX))) {
 		if (ctx->shader_info->info.vs.has_vertex_buffers) {
-			add_user_sgpr_argument(args,
-					       const_array(ctx->ac.v4i32, 16),
-					       &ctx->vertex_buffers);
+			add_arg(args, ARG_SGPR, const_array(ctx->ac.v4i32, 16),
+				&ctx->vertex_buffers);
 		}
-		add_user_sgpr_argument(args, ctx->ac.i32,
-				       &ctx->abi.base_vertex);
-		add_user_sgpr_argument(args, ctx->ac.i32,
-				       &ctx->abi.start_instance);
+		add_arg(args, ARG_SGPR, ctx->ac.i32, &ctx->abi.base_vertex);
+		add_arg(args, ARG_SGPR, ctx->ac.i32, &ctx->abi.start_instance);
 		if (ctx->shader_info->info.vs.needs_draw_id) {
-			add_user_sgpr_argument(args, ctx->ac.i32,
-					       &ctx->abi.draw_id);
+			add_arg(args, ARG_SGPR, ctx->ac.i32, &ctx->abi.draw_id);
 		}
 	}
 }
@@ -788,7 +776,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	allocate_user_sgprs(ctx, &user_sgpr_info);
 
 	if (user_sgpr_info.need_ring_offsets && !ctx->options->supports_spill) {
-		add_user_sgpr_argument(&args, const_array(ctx->ac.v4i32, 16), &ctx->ring_offsets); /* address of rings */
+		add_arg(&args, ARG_SGPR, const_array(ctx->ac.v4i32, 16),
+			&ctx->ring_offsets);
 	}
 
 	switch (stage) {
@@ -798,8 +787,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 					   &args, &desc_sets);
 
 		if (ctx->shader_info->info.cs.uses_grid_size) {
-			add_user_sgpr_argument(&args, ctx->ac.v3i32,
-					       &ctx->num_work_groups);
+			add_arg(&args, ARG_SGPR, ctx->ac.v3i32,
+				&ctx->num_work_groups);
 		}
 
 		for (int i = 0; i < 3; i++) {
@@ -823,11 +812,12 @@ static void create_function(struct nir_to_llvm_context *ctx,
 						previous_stage, &args);
 
 		if (ctx->shader_info->info.needs_multiview_view_index || (!ctx->options->key.vs.as_es && !ctx->options->key.vs.as_ls && ctx->options->key.has_multiview_view_index))
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->view_index);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->view_index);
 		if (ctx->options->key.vs.as_es)
 			add_sgpr_argument(&args, ctx->ac.i32, &ctx->es2gs_offset); // es2gs offset
 		else if (ctx->options->key.vs.as_ls)
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->ls_out_layout); // ls out layout
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->ls_out_layout);
 
 		declare_vs_input_vgprs(ctx, &args);
 		break;
@@ -851,14 +841,20 @@ static void create_function(struct nir_to_llvm_context *ctx,
 							has_previous_stage,
 							previous_stage, &args);
 
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->ls_out_layout); // ls out layout
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->ls_out_layout);
 
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->tcs_offchip_layout); // tcs offchip layout
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->tcs_out_offsets); // tcs out offsets
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->tcs_out_layout); // tcs out layout
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->tcs_in_layout); // tcs in layout
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->tcs_offchip_layout);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->tcs_out_offsets);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->tcs_out_layout);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->tcs_in_layout);
 			if (ctx->shader_info->info.needs_multiview_view_index)
-				add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->view_index);
+				add_arg(&args, ARG_SGPR, ctx->ac.i32,
+					&ctx->view_index);
 
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
 				&ctx->tcs_patch_id);
@@ -873,12 +869,18 @@ static void create_function(struct nir_to_llvm_context *ctx,
 						   &user_sgpr_info, &args,
 						   &desc_sets);
 
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->tcs_offchip_layout); // tcs offchip layout
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->tcs_out_offsets); // tcs out offsets
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->tcs_out_layout); // tcs out layout
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->tcs_in_layout); // tcs in layout
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->tcs_offchip_layout);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->tcs_out_offsets);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->tcs_out_layout);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->tcs_in_layout);
 			if (ctx->shader_info->info.needs_multiview_view_index)
-				add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->view_index);
+				add_arg(&args, ARG_SGPR, ctx->ac.i32,
+					&ctx->view_index);
+
 			add_sgpr_argument(&args, ctx->ac.i32, &ctx->oc_lds); // param oc lds
 			add_sgpr_argument(&args, ctx->ac.i32, &ctx->tess_factor_offset); // tess factor offset
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
@@ -892,9 +894,10 @@ static void create_function(struct nir_to_llvm_context *ctx,
 					   previous_stage, &user_sgpr_info,
 					   &args, &desc_sets);
 
-		add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->tcs_offchip_layout); // tcs offchip layout
+		add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->tcs_offchip_layout);
 		if (ctx->shader_info->info.needs_multiview_view_index || (!ctx->options->key.tes.as_es && ctx->options->key.has_multiview_view_index))
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->view_index);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->view_index);
+
 		if (ctx->options->key.tes.as_es) {
 			add_sgpr_argument(&args, ctx->ac.i32, &ctx->oc_lds); // OC LDS
 			add_sgpr_argument(&args, ctx->ac.i32, NULL); //
@@ -923,7 +926,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 						   &desc_sets);
 
 			if (previous_stage == MESA_SHADER_TESS_EVAL) {
-				add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->tcs_offchip_layout); // tcs offchip layout
+				add_arg(&args, ARG_SGPR, ctx->ac.i32,
+					&ctx->tcs_offchip_layout);
 			} else {
 				declare_vs_specific_input_sgprs(ctx, stage,
 								has_previous_stage,
@@ -931,10 +935,13 @@ static void create_function(struct nir_to_llvm_context *ctx,
 								&args);
 			}
 
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->gsvs_ring_stride); // gsvs stride
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->gsvs_num_entries); // gsvs num entires
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->gsvs_ring_stride);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->gsvs_num_entries);
 			if (ctx->shader_info->info.needs_multiview_view_index)
-				add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->view_index);
+				add_arg(&args, ARG_SGPR, ctx->ac.i32,
+					&ctx->view_index);
 
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
 				&ctx->gs_vtx_offset[0]);
@@ -959,10 +966,14 @@ static void create_function(struct nir_to_llvm_context *ctx,
 						   &user_sgpr_info, &args,
 						   &desc_sets);
 
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->gsvs_ring_stride); // gsvs stride
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->gsvs_num_entries); // gsvs num entires
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->gsvs_ring_stride);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->gsvs_num_entries);
 			if (ctx->shader_info->info.needs_multiview_view_index)
-				add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->view_index);
+				add_arg(&args, ARG_SGPR, ctx->ac.i32,
+					&ctx->view_index);
+
 			add_sgpr_argument(&args, ctx->ac.i32, &ctx->gs2vs_offset); // gs2vs offset
 			add_sgpr_argument(&args, ctx->ac.i32, &ctx->gs_wave_id); // wave id
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
@@ -989,7 +1000,9 @@ static void create_function(struct nir_to_llvm_context *ctx,
 					   &args, &desc_sets);
 
 		if (ctx->shader_info->info.ps.needs_sample_positions)
-			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->sample_pos_offset); /* sample position offset */
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->sample_pos_offset);
+
 		add_sgpr_argument(&args, ctx->ac.i32, &ctx->prim_mask); /* prim mask */
 		add_arg(&args, ARG_VGPR, ctx->ac.v2i32, &ctx->persp_sample);
 		add_arg(&args, ARG_VGPR, ctx->ac.v2i32, &ctx->persp_center);
