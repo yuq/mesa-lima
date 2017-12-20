@@ -422,9 +422,12 @@ static inline bool ppir_target_is_scaler(ppir_dest *dest)
       return dest->ssa.num_components == 1;
    case ppir_target_register:
       /* only one bit in mask is set */
-      if ((dest->write_mask & 0x3) || (dest->write_mask & 0x5) ||
-          (dest->write_mask & 0x9) || (dest->write_mask & 0x6) ||
-          (dest->write_mask & 0xa) || (dest->write_mask & 0xc))
+      if ((dest->write_mask & 0x3) == 0x3 ||
+          (dest->write_mask & 0x5) == 0x5 ||
+          (dest->write_mask & 0x9) == 0x9 ||
+          (dest->write_mask & 0x6) == 0x6 ||
+          (dest->write_mask & 0xa) == 0xa ||
+          (dest->write_mask & 0xc) == 0xc)
          return false;
       else
          return true;
