@@ -88,7 +88,7 @@ _eglMatchDriver(_EGLDisplay *dpy)
       env_var_as_boolean("LIBGL_ALWAYS_SOFTWARE", false);
 
    best_drv = _eglMatchAndInitialize(dpy);
-   if (!best_drv) {
+   if (!best_drv && !dpy->Options.ForceSoftware) {
       dpy->Options.ForceSoftware = EGL_TRUE;
       best_drv = _eglMatchAndInitialize(dpy);
    }
