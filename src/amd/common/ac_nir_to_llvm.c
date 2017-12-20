@@ -282,9 +282,7 @@ add_arg(struct arg_info *info, enum ac_arg_regfile regfile, LLVMTypeRef type,
 }
 
 static inline void
-add_user_sgpr_array_argument(struct arg_info *info,
-			     LLVMTypeRef type,
-			     LLVMValueRef *param_ptr)
+add_array_arg(struct arg_info *info, LLVMTypeRef type, LLVMValueRef *param_ptr)
 {
 	info->array_params_mask |= (1 << info->count);
 	add_arg(info, ARG_SGPR, type, param_ptr);
@@ -686,19 +684,17 @@ declare_global_input_sgprs(struct nir_to_llvm_context *ctx,
 	if (!user_sgpr_info->indirect_all_descriptor_sets) {
 		for (unsigned i = 0; i < num_sets; ++i) {
 			if (ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
-				add_user_sgpr_array_argument(args, type,
-							     &ctx->descriptor_sets[i]);
+				add_array_arg(args, type,
+					      &ctx->descriptor_sets[i]);
 			}
 		}
 	} else {
-		add_user_sgpr_array_argument(args, const_array(type, 32),
-					     desc_sets);
+		add_array_arg(args, const_array(type, 32), desc_sets);
 	}
 
 	if (ctx->shader_info->info.needs_push_constants) {
 		/* 1 for push constants and dynamic descriptors */
-		add_user_sgpr_array_argument(args, type,
-					     &ctx->push_constants);
+		add_array_arg(args, type, &ctx->push_constants);
 	}
 }
 
