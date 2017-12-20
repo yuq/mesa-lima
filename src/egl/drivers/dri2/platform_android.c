@@ -1179,6 +1179,10 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
    const char *err;
    int ret;
 
+   /* Not supported yet */
+   if (disp->Options.UseFallback)
+      return EGL_FALSE;
+
    loader_set_logger(_eglLog);
 
    dri2_dpy = calloc(1, sizeof(*dri2_dpy));
