@@ -183,8 +183,13 @@ bool ppir_instr_insert_node(ppir_instr *instr, ppir_node *node)
       for (int i = 0; slots[i] != PPIR_INSTR_SLOT_END; i++) {
          int pos = slots[i];
 
-         if (instr->slots[pos])
-            continue;
+         if (instr->slots[pos]) {
+            /* node already in this instr, i.e. load_uniform */
+            if (instr->slots[pos] == node)
+               return true;
+            else
+               continue;
+         }
 
          if (pos == PPIR_INSTR_SLOT_ALU_SCL_MUL ||
              pos == PPIR_INSTR_SLOT_ALU_SCL_ADD) {
