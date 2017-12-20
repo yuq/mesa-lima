@@ -541,19 +541,20 @@ struct user_sgpr_info {
 };
 
 static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
+				gl_shader_stage stage,
 				struct user_sgpr_info *user_sgpr_info)
 {
 	memset(user_sgpr_info, 0, sizeof(struct user_sgpr_info));
 
 	/* until we sort out scratch/global buffers always assign ring offsets for gs/vs/es */
-	if (ctx->stage == MESA_SHADER_GEOMETRY ||
-	    ctx->stage == MESA_SHADER_VERTEX ||
-	    ctx->stage == MESA_SHADER_TESS_CTRL ||
-	    ctx->stage == MESA_SHADER_TESS_EVAL ||
+	if (stage == MESA_SHADER_GEOMETRY ||
+	    stage == MESA_SHADER_VERTEX ||
+	    stage == MESA_SHADER_TESS_CTRL ||
+	    stage == MESA_SHADER_TESS_EVAL ||
 	    ctx->is_gs_copy_shader)
 		user_sgpr_info->need_ring_offsets = true;
 
-	if (ctx->stage == MESA_SHADER_FRAGMENT &&
+	if (stage == MESA_SHADER_FRAGMENT &&
 	    ctx->shader_info->info.ps.needs_sample_positions)
 		user_sgpr_info->need_ring_offsets = true;
 
@@ -562,7 +563,8 @@ static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
 		user_sgpr_info->sgpr_count += 2;
 	}
 
-	switch (ctx->stage) {
+	/* FIXME: fix the number of user sgprs for merged shaders on GFX9 */
+	switch (stage) {
 	case MESA_SHADER_COMPUTE:
 		if (ctx->shader_info->info.cs.uses_grid_size)
 			user_sgpr_info->sgpr_count += 3;
@@ -760,7 +762,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	struct arg_info args = {};
 	LLVMValueRef desc_sets;
 
-	allocate_user_sgprs(ctx, &user_sgpr_info);
+	allocate_user_sgprs(ctx, stage, &user_sgpr_info);
 
 	if (user_sgpr_info.need_ring_offsets && !ctx->options->supports_spill) {
 		add_arg(&args, ARG_SGPR, const_array(ctx->ac.v4i32, 16),
