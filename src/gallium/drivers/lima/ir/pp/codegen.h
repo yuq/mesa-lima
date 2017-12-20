@@ -219,12 +219,12 @@ typedef enum {
 } ppir_codegen_float_mul_op;
 
 typedef struct __attribute__((__packed__)) {
-   unsigned                  arg1_source   : 6;
-   bool                      arg1_absolute : 1;
-   bool                      arg1_negate   : 1;
    unsigned                  arg0_source   : 6;
    bool                      arg0_absolute : 1;
    bool                      arg0_negate   : 1;
+   unsigned                  arg1_source   : 6;
+   bool                      arg1_absolute : 1;
+   bool                      arg1_negate   : 1;
    unsigned                  dest          : 6;
    bool                      output_en     : 1; /* Set to 0 when outputting directly to float_acc below. */
    ppir_codegen_outmod       dest_modifier : 2;
@@ -248,12 +248,12 @@ typedef enum {
 } ppir_codegen_float_acc_op;
 
 typedef struct __attribute__((__packed__)) {
-   unsigned                  arg1_source   : 6;
-   bool                      arg1_absolute : 1;
-   bool                      arg1_negate   : 1;
    unsigned                  arg0_source   : 6;
    bool                      arg0_absolute : 1;
    bool                      arg0_negate   : 1;
+   unsigned                  arg1_source   : 6;
+   bool                      arg1_absolute : 1;
+   bool                      arg1_negate   : 1;
    unsigned                  dest          : 6;
    bool                      output_en     : 1; /* Always true */
    ppir_codegen_outmod       dest_modifier : 2;
