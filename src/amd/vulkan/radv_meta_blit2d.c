@@ -1156,31 +1156,33 @@ static VkFormat pipeline_formats[] = {
    VK_FORMAT_R32G32B32A32_SFLOAT
 };
 
-VkResult
-radv_device_init_meta_blit2d_state(struct radv_device *device)
+static VkResult
+meta_blit2d_create_pipe_layout(struct radv_device *device,
+			       int idx)
 {
 	VkResult result;
-	bool create_3d = device->physical_device->rad_info.chip_class >= GFX9;
-
+	VkDescriptorType desc_type = (idx == BLIT2D_SRC_TYPE_BUFFER) ? VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER : VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 	const VkPushConstantRange push_constant_ranges[] = {
 		{VK_SHADER_STAGE_VERTEX_BIT, 0, 16},
 		{VK_SHADER_STAGE_FRAGMENT_BIT, 16, 4},
 	};
+	int num_push_constant_range = (idx != BLIT2D_SRC_TYPE_IMAGE) ? 2 : 1;
+
 	result = radv_CreateDescriptorSetLayout(radv_device_to_handle(device),
 						&(VkDescriptorSetLayoutCreateInfo) {
 							.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 							.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR,
-								.bindingCount = 1,
-								.pBindings = (VkDescriptorSetLayoutBinding[]) {
-								{
-									.binding = 0,
-									.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-									.descriptorCount = 1,
-									.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-									.pImmutableSamplers = NULL
-								},
+							.bindingCount = 1,
+							.pBindings = (VkDescriptorSetLayoutBinding[]) {
+							{
+								.binding = 0,
+								.descriptorType = desc_type,
+								.descriptorCount = 1,
+								.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+								.pImmutableSamplers = NULL
+							},
 							}
-						}, &device->meta_state.alloc, &device->meta_state.blit2d.ds_layouts[BLIT2D_SRC_TYPE_IMAGE]);
+						}, &device->meta_state.alloc, &device->meta_state.blit2d.ds_layouts[idx]);
 	if (result != VK_SUCCESS)
 		goto fail;
 
@@ -1188,79 +1190,32 @@ radv_device_init_meta_blit2d_state(struct radv_device *device)
 					   &(VkPipelineLayoutCreateInfo) {
 						   .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 							   .setLayoutCount = 1,
-							   .pSetLayouts = &device->meta_state.blit2d.ds_layouts[BLIT2D_SRC_TYPE_IMAGE],
-							   .pushConstantRangeCount = 1,
+							   .pSetLayouts = &device->meta_state.blit2d.ds_layouts[idx],
+							   .pushConstantRangeCount = num_push_constant_range,
 							   .pPushConstantRanges = push_constant_ranges,
 							   },
-					   &device->meta_state.alloc, &device->meta_state.blit2d.p_layouts[BLIT2D_SRC_TYPE_IMAGE]);
+					   &device->meta_state.alloc, &device->meta_state.blit2d.p_layouts[idx]);
 	if (result != VK_SUCCESS)
 		goto fail;
+	return VK_SUCCESS;
+fail:
+	return result;
+}
 
-	if (create_3d) {
-		result = radv_CreateDescriptorSetLayout(radv_device_to_handle(device),
-							&(VkDescriptorSetLayoutCreateInfo) {
-								.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-									.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR,
-									.bindingCount = 1,
-									.pBindings = (VkDescriptorSetLayoutBinding[]) {
-									{
-										.binding = 0,
-										.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-										.descriptorCount = 1,
-										.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-										.pImmutableSamplers = NULL
-									},
-								}
-							}, &device->meta_state.alloc, &device->meta_state.blit2d.ds_layouts[BLIT2D_SRC_TYPE_IMAGE_3D]);
-		if (result != VK_SUCCESS)
-			goto fail;
-		result = radv_CreatePipelineLayout(radv_device_to_handle(device),
-						   &(VkPipelineLayoutCreateInfo) {
-							   .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-								   .setLayoutCount = 1,
-								   .pSetLayouts = &device->meta_state.blit2d.ds_layouts[BLIT2D_SRC_TYPE_IMAGE_3D],
-								   .pushConstantRangeCount = 2,
-								   .pPushConstantRanges = push_constant_ranges,
-								   },
-						   &device->meta_state.alloc, &device->meta_state.blit2d.p_layouts[BLIT2D_SRC_TYPE_IMAGE_3D]);
-		if (result != VK_SUCCESS)
-			goto fail;
-	}
-
-	result = radv_CreateDescriptorSetLayout(radv_device_to_handle(device),
-						&(VkDescriptorSetLayoutCreateInfo) {
-							.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-							.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR,
-								.bindingCount = 1,
-								.pBindings = (VkDescriptorSetLayoutBinding[]) {
-								{
-									.binding = 0,
-									.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
-									.descriptorCount = 1,
-									.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-									.pImmutableSamplers = NULL
-								},
-							}
-						}, &device->meta_state.alloc, &device->meta_state.blit2d.ds_layouts[BLIT2D_SRC_TYPE_BUFFER]);
-	if (result != VK_SUCCESS)
-		goto fail;
-
-
-	result = radv_CreatePipelineLayout(radv_device_to_handle(device),
-					   &(VkPipelineLayoutCreateInfo) {
-						   .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-						   .setLayoutCount = 1,
-						   .pSetLayouts = &device->meta_state.blit2d.ds_layouts[BLIT2D_SRC_TYPE_BUFFER],
-						   .pushConstantRangeCount = 2,
-						   .pPushConstantRanges = push_constant_ranges,
-					   },
-					   &device->meta_state.alloc, &device->meta_state.blit2d.p_layouts[BLIT2D_SRC_TYPE_BUFFER]);
-	if (result != VK_SUCCESS)
-		goto fail;
+VkResult
+radv_device_init_meta_blit2d_state(struct radv_device *device)
+{
+	VkResult result;
+	bool create_3d = device->physical_device->rad_info.chip_class >= GFX9;
 
 	for (unsigned src = 0; src < BLIT2D_NUM_SRC_TYPES; src++) {
 		if (src == BLIT2D_SRC_TYPE_IMAGE_3D && !create_3d)
 			continue;
+
+		result = meta_blit2d_create_pipe_layout(device, src);
+		if (result != VK_SUCCESS)
+			goto fail;
+
 		for (unsigned j = 0; j < ARRAY_SIZE(pipeline_formats); ++j) {
 			result = blit2d_init_color_pipeline(device, src, pipeline_formats[j]);
 			if (result != VK_SUCCESS)
