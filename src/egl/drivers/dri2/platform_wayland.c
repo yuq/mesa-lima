@@ -1999,7 +1999,7 @@ dri2_initialize_wayland(_EGLDriver *drv, _EGLDisplay *disp)
 {
    EGLBoolean initialized = EGL_FALSE;
 
-   if (!disp->Options.UseFallback)
+   if (!disp->Options.ForceSoftware)
       initialized = dri2_initialize_wayland_drm(drv, disp);
 
    if (!initialized)

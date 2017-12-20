@@ -160,7 +160,7 @@ struct _egl_display
 
    /* options that affect how the driver initializes the display */
    struct {
-      EGLBoolean UseFallback; /**< Use fallback driver (sw or less features) */
+      EGLBoolean ForceSoftware; /**< Use software path only */
       void *Platform;         /**< Platform-specific options */
    } Options;
 

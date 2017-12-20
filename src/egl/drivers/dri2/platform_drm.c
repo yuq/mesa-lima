@@ -653,7 +653,7 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    const char *err;
 
    /* Not supported yet */
-   if (disp->Options.UseFallback)
+   if (disp->Options.ForceSoftware)
       return EGL_FALSE;
 
    loader_set_logger(_eglLog);
