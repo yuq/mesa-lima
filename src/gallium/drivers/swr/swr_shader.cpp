@@ -339,22 +339,53 @@ BuilderSWR::swr_gs_llvm_fetch_input(const struct lp_build_tgsi_gs_iface *gs_ifac
                            LLVMValueRef swizzle_index)
 {
     swr_gs_llvm_iface *iface = (swr_gs_llvm_iface*)gs_iface;
+    Value *vert_index = unwrap(vertex_index);
+    Value *attr_index = unwrap(attrib_index);
 
     IRB()->SetInsertPoint(unwrap(LLVMGetInsertBlock(gallivm->builder)));
 
-    assert(is_vindex_indirect == false && is_aindex_indirect == false);
+    if (is_vindex_indirect || is_aindex_indirect) {
+       int i;
+       Value *res = unwrap(bld_base->base.zero);
+       struct lp_type type = bld_base->base.type;
 
-    Value *attrib =
-       LOAD(GEP(iface->pVtxAttribMap, {C(0), unwrap(attrib_index)}));
+       for (i = 0; i < type.length; i++) {
+          Value *vert_chan_index = vert_index;
+          Value *attr_chan_index = attr_index;
 
-    Value *pVertex = LOAD(iface->pGsCtx, {0, SWR_GS_CONTEXT_pVerts});
-    Value *pInputVertStride = LOAD(iface->pGsCtx, {0, SWR_GS_CONTEXT_inputVertStride});
+          if (is_vindex_indirect) {
+             vert_chan_index = VEXTRACT(vert_index, C(i));
+          }
+          if (is_aindex_indirect) {
+             attr_chan_index = VEXTRACT(attr_index, C(i));
+          }
 
-    Value *pVector = ADD(MUL(unwrap(vertex_index), pInputVertStride), attrib);
+          Value *attrib =
+             LOAD(GEP(iface->pVtxAttribMap, {C(0), attr_chan_index}));
 
-    Value *pInput = LOAD(GEP(pVertex, {pVector, unwrap(swizzle_index)}));
+          Value *pVertex = LOAD(iface->pGsCtx, {0, SWR_GS_CONTEXT_pVerts});
+          Value *pInputVertStride = LOAD(iface->pGsCtx, {0, SWR_GS_CONTEXT_inputVertStride});
 
-    return wrap(pInput);
+          Value *pVector = ADD(MUL(vert_chan_index, pInputVertStride), attrib);
+          Value *pInput = LOAD(GEP(pVertex, {pVector, unwrap(swizzle_index)}));
+
+          Value *value = VEXTRACT(pInput, C(i));
+          res = VINSERT(res, value, C(i));
+       }
+
+       return wrap(res);
+    } else {
+       Value *attrib = LOAD(GEP(iface->pVtxAttribMap, {C(0), attr_index}));
+
+       Value *pVertex = LOAD(iface->pGsCtx, {0, SWR_GS_CONTEXT_pVerts});
+       Value *pInputVertStride = LOAD(iface->pGsCtx, {0, SWR_GS_CONTEXT_inputVertStride});
+
+       Value *pVector = ADD(MUL(vert_index, pInputVertStride), attrib);
+
+       Value *pInput = LOAD(GEP(pVertex, {pVector, unwrap(swizzle_index)}));
+
+       return wrap(pInput);
+    }
 }
 
 // GS output stream layout
