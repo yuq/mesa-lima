@@ -257,6 +257,30 @@ struct arg_info {
 	uint8_t num_vgprs_used;
 };
 
+enum ac_arg_regfile {
+	ARG_SGPR,
+	ARG_VGPR,
+};
+
+static void
+add_arg(struct arg_info *info, enum ac_arg_regfile regfile, LLVMTypeRef type,
+	LLVMValueRef *param_ptr)
+{
+	assert(info->count < MAX_ARGS);
+
+	info->assign[info->count] = param_ptr;
+	info->types[info->count] = type;
+	info->count++;
+
+	if (regfile == ARG_SGPR) {
+		info->num_sgprs_used += ac_get_type_size(type) / 4;
+		info->sgpr_count++;
+	} else {
+		assert(regfile == ARG_VGPR);
+		info->num_vgprs_used += ac_get_type_size(type) / 4;
+	}
+}
+
 static inline void
 add_argument(struct arg_info *info,
 	     LLVMTypeRef type, LLVMValueRef *param_ptr)
