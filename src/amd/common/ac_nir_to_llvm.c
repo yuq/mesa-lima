@@ -687,22 +687,6 @@ radv_define_common_user_sgprs_phase2(struct nir_to_llvm_context *ctx,
 	}
 }
 
-static void
-radv_define_vs_user_sgprs_phase1(struct nir_to_llvm_context *ctx,
-                                 gl_shader_stage stage,
-                                 bool has_previous_stage,
-                                 gl_shader_stage previous_stage,
-                                 struct arg_info *args)
-{
-	if (!ctx->is_gs_copy_shader && (stage == MESA_SHADER_VERTEX || (has_previous_stage && previous_stage == MESA_SHADER_VERTEX))) {
-		if (ctx->shader_info->info.vs.has_vertex_buffers)
-			add_user_sgpr_argument(args, const_array(ctx->ac.v4i32, 16), &ctx->vertex_buffers); /* vertex buffers */
-		add_user_sgpr_argument(args, ctx->ac.i32, &ctx->abi.base_vertex); // base vertex
-		add_user_sgpr_argument(args, ctx->ac.i32, &ctx->abi.start_instance);// start instance
-		if (ctx->shader_info->info.vs.needs_draw_id)
-			add_user_sgpr_argument(args, ctx->ac.i32, &ctx->abi.draw_id); // draw id
-	}
-}
 
 static void
 radv_define_vs_user_sgprs_phase2(struct nir_to_llvm_context *ctx,
@@ -720,6 +704,32 @@ radv_define_vs_user_sgprs_phase2(struct nir_to_llvm_context *ctx,
 			vs_num++;
 
 		set_userdata_location_shader(ctx, AC_UD_VS_BASE_VERTEX_START_INSTANCE, user_sgpr_idx, vs_num);
+	}
+}
+
+static void
+declare_vs_specific_input_sgprs(struct nir_to_llvm_context *ctx,
+				gl_shader_stage stage,
+				bool has_previous_stage,
+				gl_shader_stage previous_stage,
+				struct arg_info *args)
+{
+	if (!ctx->is_gs_copy_shader &&
+	    (stage == MESA_SHADER_VERTEX ||
+	     (has_previous_stage && previous_stage == MESA_SHADER_VERTEX))) {
+		if (ctx->shader_info->info.vs.has_vertex_buffers) {
+			add_user_sgpr_argument(args,
+					       const_array(ctx->ac.v4i32, 16),
+					       &ctx->vertex_buffers);
+		}
+		add_user_sgpr_argument(args, ctx->ac.i32,
+				       &ctx->abi.base_vertex);
+		add_user_sgpr_argument(args, ctx->ac.i32,
+				       &ctx->abi.start_instance);
+		if (ctx->shader_info->info.vs.needs_draw_id) {
+			add_user_sgpr_argument(args, ctx->ac.i32,
+					       &ctx->abi.draw_id);
+		}
 	}
 }
 
@@ -781,7 +791,9 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		break;
 	case MESA_SHADER_VERTEX:
 		radv_define_common_user_sgprs_phase1(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_info, &args, &desc_sets);
-		radv_define_vs_user_sgprs_phase1(ctx, stage, has_previous_stage, previous_stage, &args);
+		declare_vs_specific_input_sgprs(ctx, stage, has_previous_stage,
+						previous_stage, &args);
+
 		if (ctx->shader_info->info.needs_multiview_view_index || (!ctx->options->key.vs.as_es && !ctx->options->key.vs.as_ls && ctx->options->key.has_multiview_view_index))
 			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->view_index);
 		if (ctx->options->key.vs.as_es)
@@ -803,7 +815,10 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			add_sgpr_argument(&args, ctx->ac.i32, NULL); // unknown
 
 			radv_define_common_user_sgprs_phase1(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_info, &args, &desc_sets);
-			radv_define_vs_user_sgprs_phase1(ctx, stage, has_previous_stage, previous_stage, &args);
+			declare_vs_specific_input_sgprs(ctx, stage,
+							has_previous_stage,
+							previous_stage, &args);
+
 			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->ls_out_layout); // ls out layout
 
 			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->tcs_offchip_layout); // tcs offchip layout
@@ -858,10 +873,16 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			add_sgpr_argument(&args, ctx->ac.i32, NULL); // unknown
 
 			radv_define_common_user_sgprs_phase1(ctx, stage, has_previous_stage, previous_stage, &user_sgpr_info, &args, &desc_sets);
-			if (previous_stage == MESA_SHADER_TESS_EVAL)
+
+			if (previous_stage == MESA_SHADER_TESS_EVAL) {
 				add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->tcs_offchip_layout); // tcs offchip layout
-			else
-				radv_define_vs_user_sgprs_phase1(ctx, stage, has_previous_stage, previous_stage, &args);
+			} else {
+				declare_vs_specific_input_sgprs(ctx, stage,
+								has_previous_stage,
+								previous_stage,
+								&args);
+			}
+
 			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->gsvs_ring_stride); // gsvs stride
 			add_user_sgpr_argument(&args, ctx->ac.i32, &ctx->gsvs_num_entries); // gsvs num entires
 			if (ctx->shader_info->info.needs_multiview_view_index)
