@@ -401,12 +401,12 @@ struct radv_meta_state {
 		/** Pipeline that blits from a 3D image. */
 		VkPipeline pipeline_3d_src[NUM_META_FS_KEYS];
 
-		VkRenderPass depth_only_rp;
+		VkRenderPass depth_only_rp[RADV_BLIT_DS_LAYOUT_COUNT];
 		VkPipeline depth_only_1d_pipeline;
 		VkPipeline depth_only_2d_pipeline;
 		VkPipeline depth_only_3d_pipeline;
 
-		VkRenderPass stencil_only_rp;
+		VkRenderPass stencil_only_rp[RADV_BLIT_DS_LAYOUT_COUNT];
 		VkPipeline stencil_only_1d_pipeline;
 		VkPipeline stencil_only_2d_pipeline;
 		VkPipeline stencil_only_3d_pipeline;
