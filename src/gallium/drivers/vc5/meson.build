@@ -39,6 +39,7 @@ files_libvc5 = files(
   'vc5_screen.c',
   'vc5_screen.h',
   'vc5_simulator.c',
+  'vc5_simulator_wrapper.cpp',
   'vc5_state.c',
   'vc5_tiling.c',
   'vc5_tiling.h',
@@ -59,7 +60,7 @@ libvc5 = static_library(
     inc_gallium_drivers, inc_drm_uapi,
   ],
   c_args : [c_vis_args, v3dv3_c_args],
-  cpp_args : [cpp_vis_args],
+  cpp_args : [cpp_vis_args, v3dv3_c_args],
   dependencies : [dep_v3dv3, dep_libdrm, dep_valgrind],
 )
 

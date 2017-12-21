@@ -54,6 +54,7 @@
 #include "util/set.h"
 #include "util/u_memory.h"
 #include "util/u_mm.h"
+#include "vc5_simulator_wrapper.h"
 
 #define HW_REGISTER_RO(x) (x)
 #define HW_REGISTER_RW(x) (x)
@@ -61,12 +62,6 @@
 
 #include "vc5_screen.h"
 #include "vc5_context.h"
-#define V3D_TECH_VERSION 3
-#define V3D_REVISION 3
-#define V3D_SUB_REV 0
-#define V3D_HIDDEN_REV 0
-#undef unreachable
-#include "v3d_hw_auto.h"
 
 /** Global (across GEM fds) state for the simulator */
 static struct vc5_simulator_state {
