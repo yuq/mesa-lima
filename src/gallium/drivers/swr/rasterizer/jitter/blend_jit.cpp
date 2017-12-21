@@ -27,12 +27,11 @@
 * Notes:
 *
 ******************************************************************************/
+#include "jit_pch.hpp"
 #include "builder.h"
 #include "jit_api.h"
 #include "blend_jit.h"
 #include "gen_state_llvm.h"
-
-#include <sstream>
 
 // components with bit-widths <= the QUANTIZE_THRESHOLD will be quantized
 #define QUANTIZE_THRESHOLD 2

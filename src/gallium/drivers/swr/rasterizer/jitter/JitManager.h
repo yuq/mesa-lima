@@ -29,52 +29,9 @@
 ******************************************************************************/
 #pragma once
 
-#if defined(_WIN32)
-#pragma warning(disable : 4146 4244 4267 4800 4996)
-#endif
-
-// llvm 3.7+ reuses "DEBUG" as an enum value
-#pragma push_macro("DEBUG")
-#undef DEBUG
-
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/ExecutionEngine/ObjectCache.h"
-
-#include "llvm/Config/llvm-config.h"
-
-#include "llvm/IR/Verifier.h"
-#include "llvm/ExecutionEngine/MCJIT.h"
-#include "llvm/Support/FileSystem.h"
-#define LLVM_F_NONE sys::fs::F_None
-
-#include "llvm/Analysis/Passes.h"
-
-#include "llvm/IR/LegacyPassManager.h"
-using FunctionPassManager = llvm::legacy::FunctionPassManager;
-using PassManager = llvm::legacy::PassManager;
-
-#include "llvm/CodeGen/Passes.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/Scalar.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/DynamicLibrary.h"
-
-
-#include "common/os.h"
+#include "jit_pch.hpp"
 #include "common/isa.hpp"
 
-#include <mutex>
-
-#pragma pop_macro("DEBUG")
 
 //////////////////////////////////////////////////////////////////////////
 /// JitInstructionSet
@@ -172,6 +129,7 @@ struct JitManager
     uint32_t mJitNumber;
 
     uint32_t                 mVWidth;
+
 
     // Built in types.
     llvm::Type*                mInt8Ty;

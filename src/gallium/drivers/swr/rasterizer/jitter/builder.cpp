@@ -28,6 +28,7 @@
 * 
 ******************************************************************************/
 
+#include "jit_pch.hpp"
 #include "builder.h"
 
 namespace SwrJit

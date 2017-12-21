@@ -27,12 +27,11 @@
 * Notes:
 *
 ******************************************************************************/
+#include "jit_pch.hpp"
 #include "builder.h"
 #include "jit_api.h"
 #include "fetch_jit.h"
 #include "gen_state_llvm.h"
-#include <sstream>
-#include <tuple>
 
 //#define FETCH_DUMP_VERTEX 1
 using namespace llvm;
