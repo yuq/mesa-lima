@@ -278,10 +278,11 @@ radv_meta_blit2d_normal_dst(struct radv_cmd_buffer *cmd_buffer,
 
 				bind_pipeline(cmd_buffer, src_type, fs_key);
 			} else if (aspect_mask == VK_IMAGE_ASPECT_DEPTH_BIT) {
+				enum radv_blit_ds_layout ds_layout = radv_meta_blit_ds_to_type(dst->current_layout);
 				radv_CmdBeginRenderPass(radv_cmd_buffer_to_handle(cmd_buffer),
 							&(VkRenderPassBeginInfo) {
 								.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-									.renderPass = device->meta_state.blit2d.depth_only_rp,
+									.renderPass = device->meta_state.blit2d.depth_only_rp[ds_layout],
 									.framebuffer = dst_temps.fb,
 									.renderArea = {
 									.offset = { rects[r].dst_x, rects[r].dst_y, },
@@ -295,10 +296,11 @@ radv_meta_blit2d_normal_dst(struct radv_cmd_buffer *cmd_buffer,
 				bind_depth_pipeline(cmd_buffer, src_type);
 
 			} else if (aspect_mask == VK_IMAGE_ASPECT_STENCIL_BIT) {
+				enum radv_blit_ds_layout ds_layout = radv_meta_blit_ds_to_type(dst->current_layout);
 				radv_CmdBeginRenderPass(radv_cmd_buffer_to_handle(cmd_buffer),
 							&(VkRenderPassBeginInfo) {
 								.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-									.renderPass = device->meta_state.blit2d.stencil_only_rp,
+									.renderPass = device->meta_state.blit2d.stencil_only_rp[ds_layout],
 									.framebuffer = dst_temps.fb,
 									.renderArea = {
 									.offset = { rects[r].dst_x, rects[r].dst_y, },
@@ -614,10 +616,12 @@ radv_device_finish_meta_blit2d_state(struct radv_device *device)
 				       &state->alloc);
 	}
 
-	radv_DestroyRenderPass(radv_device_to_handle(device),
-			       state->blit2d.depth_only_rp, &state->alloc);
-	radv_DestroyRenderPass(radv_device_to_handle(device),
-			       state->blit2d.stencil_only_rp, &state->alloc);
+	for (enum radv_blit_ds_layout j = RADV_BLIT_DS_LAYOUT_TILE_ENABLE; j < RADV_BLIT_DS_LAYOUT_COUNT; j++) {
+		radv_DestroyRenderPass(radv_device_to_handle(device),
+				       state->blit2d.depth_only_rp[j], &state->alloc);
+		radv_DestroyRenderPass(radv_device_to_handle(device),
+				       state->blit2d.stencil_only_rp[j], &state->alloc);
+	}
 
 	for (unsigned src = 0; src < BLIT2D_NUM_SRC_TYPES; src++) {
 		radv_DestroyPipelineLayout(radv_device_to_handle(device),
@@ -859,34 +863,37 @@ blit2d_init_depth_only_pipeline(struct radv_device *device,
 		},
 	};
 
-	if (!device->meta_state.blit2d.depth_only_rp) {
-		result = radv_CreateRenderPass(radv_device_to_handle(device),
-					       &(VkRenderPassCreateInfo) {
-						       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+	for (enum radv_blit_ds_layout ds_layout = RADV_BLIT_DS_LAYOUT_TILE_ENABLE; ds_layout < RADV_BLIT_DS_LAYOUT_COUNT; ds_layout++) {
+		if (!device->meta_state.blit2d.depth_only_rp[ds_layout]) {
+			VkImageLayout layout = radv_meta_blit_ds_to_layout(ds_layout);
+			result = radv_CreateRenderPass(radv_device_to_handle(device),
+						       &(VkRenderPassCreateInfo) {
+							       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 							       .attachmentCount = 1,
 							       .pAttachments = &(VkAttachmentDescription) {
-							       .format = VK_FORMAT_D32_SFLOAT,
-							       .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-							       .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-							       .initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-							       .finalLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-						       },
-						       .subpassCount = 1,
-						       .pSubpasses = &(VkSubpassDescription) {
-						       .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-						       .inputAttachmentCount = 0,
-						       .colorAttachmentCount = 0,
-						       .pColorAttachments = NULL,
-						       .pResolveAttachments = NULL,
-						       .pDepthStencilAttachment = &(VkAttachmentReference) {
-							       .attachment = 0,
-							       .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-						       },
-						       .preserveAttachmentCount = 1,
-						       .pPreserveAttachments = (uint32_t[]) { 0 },
-					       },
-								.dependencyCount = 0,
-						 }, &device->meta_state.alloc, &device->meta_state.blit2d.depth_only_rp);
+								       .format = VK_FORMAT_D32_SFLOAT,
+								       .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+								       .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+								       .initialLayout = layout,
+								       .finalLayout = layout,
+							       },
+							       .subpassCount = 1,
+							       .pSubpasses = &(VkSubpassDescription) {
+								       .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+								       .inputAttachmentCount = 0,
+								       .colorAttachmentCount = 0,
+								       .pColorAttachments = NULL,
+								       .pResolveAttachments = NULL,
+								       .pDepthStencilAttachment = &(VkAttachmentReference) {
+									       .attachment = 0,
+									       .layout = layout,
+								       },
+								       .preserveAttachmentCount = 1,
+								       .pPreserveAttachments = (uint32_t[]) { 0 },
+							       },
+							       .dependencyCount = 0,
+							}, &device->meta_state.alloc, &device->meta_state.blit2d.depth_only_rp[ds_layout]);
+		}
 	}
 
 	const VkGraphicsPipelineCreateInfo vk_pipeline_info = {
@@ -945,7 +952,7 @@ blit2d_init_depth_only_pipeline(struct radv_device *device,
 		},
 		.flags = 0,
 		.layout = device->meta_state.blit2d.p_layouts[src_type],
-		.renderPass = device->meta_state.blit2d.depth_only_rp,
+		.renderPass = device->meta_state.blit2d.depth_only_rp[0],
 		.subpass = 0,
 	};
 
@@ -1018,34 +1025,37 @@ blit2d_init_stencil_only_pipeline(struct radv_device *device,
 		},
 	};
 
-	if (!device->meta_state.blit2d.stencil_only_rp) {
-		result = radv_CreateRenderPass(radv_device_to_handle(device),
-					       &(VkRenderPassCreateInfo) {
-						       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+	for (enum radv_blit_ds_layout ds_layout = RADV_BLIT_DS_LAYOUT_TILE_ENABLE; ds_layout < RADV_BLIT_DS_LAYOUT_COUNT; ds_layout++) {
+		if (!device->meta_state.blit2d.stencil_only_rp[ds_layout]) {
+			VkImageLayout layout = radv_meta_blit_ds_to_layout(ds_layout);
+			result = radv_CreateRenderPass(radv_device_to_handle(device),
+						       &(VkRenderPassCreateInfo) {
+							       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 							       .attachmentCount = 1,
 							       .pAttachments = &(VkAttachmentDescription) {
-							       .format = VK_FORMAT_S8_UINT,
-							       .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-							       .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-							       .initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-							       .finalLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-						       },
-						       .subpassCount = 1,
-						       .pSubpasses = &(VkSubpassDescription) {
-						       .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-						       .inputAttachmentCount = 0,
-						       .colorAttachmentCount = 0,
-						       .pColorAttachments = NULL,
-						       .pResolveAttachments = NULL,
-						       .pDepthStencilAttachment = &(VkAttachmentReference) {
-							       .attachment = 0,
-							       .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-						       },
-						       .preserveAttachmentCount = 1,
-						       .pPreserveAttachments = (uint32_t[]) { 0 },
-					       },
-								.dependencyCount = 0,
-						 }, &device->meta_state.alloc, &device->meta_state.blit2d.stencil_only_rp);
+								       .format = VK_FORMAT_S8_UINT,
+								       .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+								       .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+								       .initialLayout = layout,
+								       .finalLayout = layout,
+							       },
+							       .subpassCount = 1,
+							       .pSubpasses = &(VkSubpassDescription) {
+								       .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+								       .inputAttachmentCount = 0,
+								       .colorAttachmentCount = 0,
+								       .pColorAttachments = NULL,
+								       .pResolveAttachments = NULL,
+								       .pDepthStencilAttachment = &(VkAttachmentReference) {
+									       .attachment = 0,
+									       .layout = layout,
+								       },
+								       .preserveAttachmentCount = 1,
+								       .pPreserveAttachments = (uint32_t[]) { 0 },
+							       },
+							       .dependencyCount = 0,
+						       }, &device->meta_state.alloc, &device->meta_state.blit2d.stencil_only_rp[ds_layout]);
+		}
 	}
 
 	const VkGraphicsPipelineCreateInfo vk_pipeline_info = {
@@ -1120,7 +1130,7 @@ blit2d_init_stencil_only_pipeline(struct radv_device *device,
 		},
 		.flags = 0,
 		.layout = device->meta_state.blit2d.p_layouts[src_type],
-		.renderPass = device->meta_state.blit2d.stencil_only_rp,
+		.renderPass = device->meta_state.blit2d.stencil_only_rp[0],
 		.subpass = 0,
 	};
 
