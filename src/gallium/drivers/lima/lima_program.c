@@ -75,6 +75,8 @@ lima_program_optimize_vs_nir(struct nir_shader *s)
 {
    bool progress;
 
+   NIR_PASS_V(s, nir_opt_global_to_local);
+   NIR_PASS_V(s, nir_lower_regs_to_ssa);
    NIR_PASS_V(s, nir_lower_load_const_to_scalar);
    NIR_PASS_V(s, nir_lower_io_to_scalar,
               nir_var_shader_in|nir_var_shader_out|nir_var_uniform);
@@ -110,6 +112,9 @@ static void
 lima_program_optimize_fs_nir(struct nir_shader *s)
 {
    bool progress;
+
+   NIR_PASS_V(s, nir_opt_global_to_local);
+   NIR_PASS_V(s, nir_lower_regs_to_ssa);
 
    do {
       progress = false;
@@ -162,8 +167,7 @@ lima_create_fs_state(struct pipe_context *pctx,
    else {
       assert(cso->type == PIPE_SHADER_IR_TGSI);
 
-      /* not supported */
-      assert(0);
+      nir = tgsi_to_nir(cso->tokens, &fs_nir_options);
    }
 
    lima_program_optimize_fs_nir(nir);
@@ -219,8 +223,7 @@ lima_create_vs_state(struct pipe_context *pctx,
    else {
       assert(cso->type == PIPE_SHADER_IR_TGSI);
 
-      /* not supported */
-      assert(0);
+      nir = tgsi_to_nir(cso->tokens, &vs_nir_options);
    }
 
    lima_program_optimize_vs_nir(nir);

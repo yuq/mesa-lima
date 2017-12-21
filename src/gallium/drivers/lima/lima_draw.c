@@ -353,6 +353,12 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].size;
    plbu_cmd[i++] = 0x80000000 | (gl_position_va >> 4); /* RSW_VERTEX_ARRAY */
 
+   if (ctx->rasterizer->base.scissor) {
+      struct pipe_scissor_state *scissor = &ctx->scissor;
+      plbu_cmd[i++] = (scissor->minx << 30) | (scissor->maxy - 1) << 15 | scissor->miny;
+      plbu_cmd[i++] = 0x70000000 | (scissor->maxx - 1) << 13 | (scissor->minx >> 2); /* PLBU_CMD_SCISSORS */
+   }
+
    plbu_cmd[i++] = 0x00000000;
    plbu_cmd[i++] = 0x1000010A; /* ?? */
 
@@ -818,6 +824,18 @@ lima_update_pp_fs_program(struct lima_context *ctx)
    ctx->buffer_state[lima_ctx_buff_pp_fs_program].size = align(fs->shader_size, 0x40);
 }
 
+static bool
+lima_is_scissor_zero(struct lima_context *ctx)
+{
+   if (!ctx->rasterizer->base.scissor)
+      return false;
+
+   struct pipe_scissor_state *scissor = &ctx->scissor;
+   return
+      scissor->minx == scissor->maxx
+      && scissor->miny == scissor->maxy;
+}
+
 static void
 lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
@@ -827,6 +845,11 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    if (!ctx->vs || !ctx->fs) {
       debug_warn_once("no shader, skip draw\n");
+      return;
+   }
+
+   if (lima_is_scissor_zero(ctx)) {
+      debug_warn_once("zero scissor, skip draw\n");
       return;
    }
 
