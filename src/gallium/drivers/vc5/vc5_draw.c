@@ -101,11 +101,6 @@ vc5_start_draw(struct vc5_context *vc5)
          */
         cl_emit(&job->bcl, START_TILE_BINNING, bin);
 
-        cl_emit(&job->bcl, PRIMITIVE_LIST_FORMAT, fmt) {
-                fmt.data_type = LIST_INDEXED;
-                fmt.primitive_type = LIST_TRIANGLES;
-        }
-
         job->needs_flush = true;
         job->draw_width = vc5->framebuffer.width;
         job->draw_height = vc5->framebuffer.height;

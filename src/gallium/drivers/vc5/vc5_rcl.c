@@ -152,6 +152,14 @@ vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
          */
         cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
 
+        /* The binner starts out writing tiles assuming that the initial mode
+         * is triangles, so make sure that's the case.
+         */
+        cl_emit(cl, PRIMITIVE_LIST_FORMAT, fmt) {
+                fmt.data_type = LIST_INDEXED;
+                fmt.primitive_type = LIST_TRIANGLES;
+        }
+
         cl_emit(cl, BRANCH_TO_IMPLICIT_TILE_LIST, branch);
 
         bool needs_color_clear = job->cleared & pipe_clear_color_buffers;
