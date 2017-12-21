@@ -809,7 +809,7 @@ _mesa_ImportMemoryFdEXT(GLuint memory,
    }
 
    if (handleType != GL_HANDLE_TYPE_OPAQUE_FD_EXT) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "%s(handleType=%u)", func, handleType);
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(handleType=%u)", func, handleType);
       return;
    }
 
@@ -836,7 +836,7 @@ _mesa_ImportSemaphoreFdEXT(GLuint semaphore,
    }
 
    if (handleType != GL_HANDLE_TYPE_OPAQUE_FD_EXT) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "%s(handleType=%u)", func, handleType);
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(handleType=%u)", func, handleType);
       return;
    }
 
