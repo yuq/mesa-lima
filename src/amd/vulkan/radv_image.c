@@ -813,7 +813,7 @@ static inline bool
 radv_image_can_enable_dcc_or_cmask(struct radv_image *image)
 {
 	if (image->info.samples <= 1 &&
-	    image->info.width <= 512 && image->info.height <= 512) {
+	    image->info.width * image->info.height <= 512 * 512) {
 		/* Do not enable CMASK or DCC for small surfaces where the cost
 		 * of the eliminate pass can be higher than the benefit of fast
 		 * clear. RadeonSI does this, but the image threshold is
