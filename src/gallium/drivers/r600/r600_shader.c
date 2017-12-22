@@ -350,7 +350,6 @@ struct r600_shader_ctx {
 	int                                     cs_grid_size_reg;
 	bool cs_block_size_loaded, cs_grid_size_loaded;
 	int					fragcoord_input;
-	int					native_integers;
 	int					next_ring_offset;
 	int					gs_out_ring_offset;
 	int					gs_next_vertex;
@@ -998,22 +997,6 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 			d->Semantic.Name == TGSI_SEMANTIC_SAMPLEPOS) {
 			break; /* Already handled from allocate_system_value_inputs */
 		} else if (d->Semantic.Name == TGSI_SEMANTIC_INSTANCEID) {
-			if (!ctx->native_integers) {
-				struct r600_bytecode_alu alu;
-				memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-
-				alu.op = ALU_OP1_INT_TO_FLT;
-				alu.src[0].sel = 0;
-				alu.src[0].chan = 3;
-
-				alu.dst.sel = 0;
-				alu.dst.chan = 3;
-				alu.dst.write = 1;
-				alu.last = 1;
-
-				if ((r = r600_bytecode_add_alu(ctx->bc, &alu)))
-					return r;
-			}
 			break;
 		} else if (d->Semantic.Name == TGSI_SEMANTIC_VERTEXID)
 			break;
@@ -3128,7 +3111,6 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 
 	ctx.bc = &shader->bc;
 	ctx.shader = shader;
-	ctx.native_integers = true;
 
 	r600_bytecode_init(ctx.bc, rscreen->b.chip_class, rscreen->b.family,
 			   rscreen->has_compressed_msaa_texturing);
