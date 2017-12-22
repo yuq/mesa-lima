@@ -2574,6 +2574,9 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
       return TYPE_INT;
 
    /* GL_EXT_external_objects */
+   case GL_NUM_DEVICE_UUIDS_EXT:
+      v->value_int = 1;
+      return TYPE_INT;
    case GL_DRIVER_UUID_EXT:
       _mesa_get_driver_uuid(ctx, v->value_int_4);
       return TYPE_INT_4;
