@@ -832,6 +832,7 @@ fd_resource_from_handle(struct pipe_screen *pscreen,
 	if (!rsc->bo)
 		goto fail;
 
+	rsc->internal_format = tmpl->format;
 	rsc->cpp = util_format_get_blocksize(tmpl->format);
 	slice->pitch = handle->stride / rsc->cpp;
 	slice->offset = handle->offset;
