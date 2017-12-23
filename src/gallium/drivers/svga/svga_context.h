@@ -211,7 +211,7 @@ struct svga_sampler_state {
    unsigned view_min_lod;
    unsigned view_max_lod;
 
-   SVGA3dSamplerId id;
+   SVGA3dSamplerId id[2];
 };
 
 

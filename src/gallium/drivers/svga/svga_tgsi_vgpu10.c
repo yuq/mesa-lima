@@ -181,6 +181,9 @@ struct svga_shader_emitter_v10
 
       unsigned fragcoord_input_index;  /**< real fragment position input reg */
       unsigned fragcoord_tmp_index;    /**< 1/w modified position temp reg */
+
+      /** Which texture units are doing shadow comparison in the FS code */
+      unsigned shadow_compare_units;
    } fs;
 
    /* For geometry shaders only */
@@ -4851,6 +4854,8 @@ begin_tex_swizzle(struct svga_shader_emitter_v10 *emit,
    }
    swz->inst_dst = &inst->Dst[0];
    swz->coord_src = &inst->Src[0];
+
+   emit->fs.shadow_compare_units |= shadow_compare << unit;
 }
 
 
@@ -4909,11 +4914,8 @@ end_tex_swizzle(struct svga_shader_emitter_v10 *emit,
       }
 
       /* COMPARE tmp, coord, texel */
-      /* XXX it would seem that the texel and coord arguments should
-       * be transposed here, but piglit tests indicate otherwise.
-       */
       emit_comparison(emit, compare_func,
-                      &swz->tmp_dst, &texel_src, &coord_src);
+                      &swz->tmp_dst, &coord_src, &texel_src);
 
       /* AND dest, tmp, {1.0} */
       begin_emit_instruction(emit);
@@ -6564,6 +6566,8 @@ svga_tgsi_vgpu10_translate(struct svga_context *svga,
          tokens = transform_fs_aapoint(tokens, key->fs.aa_point_coord_index);
       }
    }
+
+   variant->fs_shadow_compare_units = emit->fs.shadow_compare_units;
 
    if (SVGA_DEBUG & DEBUG_TGSI) {
       debug_printf("#####################################\n");
