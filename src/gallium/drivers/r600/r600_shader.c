@@ -6955,9 +6955,9 @@ static int r600_do_buffer_txq(struct r600_shader_ctx *ctx, int reg_idx, int offs
 	alu.op = ALU_OP1_MOV;
 	alu.src[0].sel = R600_SHADER_BUFFER_INFO_SEL;
 	if (ctx->bc->chip_class >= EVERGREEN) {
-		/* channel 0 or 2 of each word */
-		alu.src[0].sel += (id / 2);
-		alu.src[0].chan = (id % 2) * 2;
+		/* with eg each dword is either buf size or number of cubes */
+		alu.src[0].sel += id / 4;
+		alu.src[0].chan = id % 4;
 	} else {
 		/* r600 we have them at channel 2 of the second dword */
 		alu.src[0].sel += (id * 2) + 1;
@@ -7615,9 +7615,9 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 
 		alu.src[0].sel = R600_SHADER_BUFFER_INFO_SEL;
 		if (ctx->bc->chip_class >= EVERGREEN) {
-			/* channel 1 or 3 of each word */
-			alu.src[0].sel += (id / 2);
-			alu.src[0].chan = ((id % 2) * 2) + 1;
+			/* with eg each dword is either buf size or number of cubes */
+			alu.src[0].sel += id / 4;
+			alu.src[0].chan = id % 4;
 		} else {
 			/* r600 we have them at channel 2 of the second dword */
 			alu.src[0].sel += (id * 2) + 1;
@@ -8782,9 +8782,9 @@ static int tgsi_resq(struct r600_shader_ctx *ctx)
 		alu.op = ALU_OP1_MOV;
 
 		alu.src[0].sel = R600_SHADER_BUFFER_INFO_SEL;
-		/* channel 1 or 3 of each word */
-		alu.src[0].sel += (id / 2);
-		alu.src[0].chan = ((id % 2) * 2) + 1;
+		/* with eg each dword is either buf size or number of cubes */
+		alu.src[0].sel += id / 4;
+		alu.src[0].chan = id % 4;
 		alu.src[0].kc_bank = R600_BUFFER_INFO_CONST_BUFFER;
 		tgsi_dst(ctx, &inst->Dst[0], 2, &alu.dst);
 		alu.last = 1;

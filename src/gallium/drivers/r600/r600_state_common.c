@@ -902,7 +902,6 @@ struct r600_pipe_shader_selector *r600_create_shader_state_tokens(struct pipe_co
 								  unsigned pipe_shader_type)
 {
 	struct r600_pipe_shader_selector *sel = CALLOC_STRUCT(r600_pipe_shader_selector);
-	int i;
 
 	sel->type = pipe_shader_type;
 	sel->tokens = tgsi_dup_tokens(tokens);
@@ -1326,7 +1325,7 @@ static void r600_setup_buffer_constants(struct r600_context *rctx, int shader_ty
 	samplers->views.dirty_buffer_constants = FALSE;
 
 	bits = util_last_bit(samplers->views.enabled_mask);
-	array_size = bits * 8 * sizeof(uint32_t) * 4;
+	array_size = bits * 8 * sizeof(uint32_t);
 
 	constants = r600_alloc_buf_consts(rctx, shader_type, array_size, &base_offset);
 
@@ -1349,15 +1348,16 @@ static void r600_setup_buffer_constants(struct r600_context *rctx, int shader_ty
 			} else
 				constants[offset + 4] = 0;
 
-			constants[offset + 5] = samplers->views.views[i]->base.texture->width0 / util_format_get_blocksize(samplers->views.views[i]->base.format);
+			constants[offset + 5] = samplers->views.views[i]->base.u.buf.size /
+				            util_format_get_blocksize(samplers->views.views[i]->base.format);
 			constants[offset + 6] = samplers->views.views[i]->base.texture->array_size / 6;
 		}
 	}
 
 }
 
-/* On evergreen we store two values
- * 1. buffer size for TXQ
+/* On evergreen we store one value
+ * 1. buffer size for TXQ or
  * 2. number of cube layers in a cube map array.
  */
 void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type)
@@ -1396,25 +1396,33 @@ void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type)
 	img_bits = bits;
 	if (buffers)
 		bits += util_last_bit(buffers->enabled_mask);
-	array_size = bits * 2 * sizeof(uint32_t) * 4;
+	array_size = bits * sizeof(uint32_t);
 
 	constants = r600_alloc_buf_consts(rctx, shader_type, array_size,
 					  &base_offset);
 
 	for (i = 0; i < sview_bits; i++) {
 		if (samplers->views.enabled_mask & (1 << i)) {
-			uint32_t offset = (base_offset / 4) + i * 2;
-			constants[offset] = samplers->views.views[i]->base.texture->width0 / util_format_get_blocksize(samplers->views.views[i]->base.format);
-			constants[offset + 1] = samplers->views.views[i]->base.texture->array_size / 6;
+			uint32_t offset = (base_offset / 4) + i;
+			if (samplers->views.views[i]->base.target == PIPE_BUFFER) {
+				constants[offset] = samplers->views.views[i]->base.u.buf.size /
+					        util_format_get_blocksize(samplers->views.views[i]->base.format);
+			} else {
+				constants[offset] = samplers->views.views[i]->base.texture->array_size / 6;
+			}
 		}
 	}
 	if (images) {
 		for (i = sview_bits; i < img_bits; i++) {
 			int idx = i - sview_bits;
 			if (images->enabled_mask & (1 << idx)) {
-				uint32_t offset = (base_offset / 4) + i * 2;
-				constants[offset] = images->views[i].base.resource->width0 / util_format_get_blocksize(images->views[i].base.format);
-				constants[offset + 1] = images->views[i].base.resource->array_size / 6;
+				uint32_t offset = (base_offset / 4) + i;
+				if (images->views[i].base.resource->target == PIPE_BUFFER) {
+					constants[offset] = images->views[i].base.u.buf.size /
+						        util_format_get_blocksize(images->views[i].base.format);
+				} else {
+					constants[offset] = images->views[i].base.resource->array_size / 6;
+				}
 			}
 		}
 	}
@@ -1422,9 +1430,10 @@ void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type)
 		for (i = img_bits; i < bits; i++) {
 			int idx = i - img_bits;
 			if (buffers->enabled_mask & (1 << idx)) {
-				uint32_t offset = (base_offset / 4) + i * 2;
-				constants[offset] = buffers->views[i].base.resource->width0 / util_format_get_blocksize(buffers->views[i].base.format);
-				constants[offset + 1] = 0;
+				uint32_t offset = (base_offset / 4) + i;
+				assert(buffers->views[i].base.resource->target == PIPE_BUFFER);
+				constants[offset] = buffers->views[i].base.u.buf.size /
+					        util_format_get_blocksize(buffers->views[i].base.format);
 			}
 		}
 	}
