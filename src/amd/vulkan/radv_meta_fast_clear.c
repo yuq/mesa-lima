@@ -248,7 +248,7 @@ create_pipeline(struct radv_device *device,
 					       &device->meta_state.alloc,
 					       &device->meta_state.fast_clear_flush.fmask_decompress_pipeline);
 	if (result != VK_SUCCESS)
-		goto cleanup_cmask;
+		goto cleanup;
 
 	result = radv_graphics_pipeline_create(device_h,
 					       radv_pipeline_cache_to_handle(&device->meta_state.cache),
@@ -294,13 +294,10 @@ create_pipeline(struct radv_device *device,
 					       &device->meta_state.alloc,
 					       &device->meta_state.fast_clear_flush.dcc_decompress_pipeline);
 	if (result != VK_SUCCESS)
-		goto cleanup_fmask;
+		goto cleanup;
 
 	goto cleanup;
-cleanup_fmask:
-	radv_DestroyPipeline(device_h, device->meta_state.fast_clear_flush.fmask_decompress_pipeline, &device->meta_state.alloc);
-cleanup_cmask:
-	radv_DestroyPipeline(device_h, device->meta_state.fast_clear_flush.cmask_eliminate_pipeline, &device->meta_state.alloc);
+
 cleanup:
 	ralloc_free(fs_module.nir);
 	return result;
