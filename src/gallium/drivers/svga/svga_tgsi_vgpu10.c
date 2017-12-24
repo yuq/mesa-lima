@@ -4898,11 +4898,9 @@ end_tex_swizzle(struct svga_shader_emitter_v10 *emit,
       switch (swz->texture_target) {
       case TGSI_TEXTURE_SHADOW2D:
       case TGSI_TEXTURE_SHADOWRECT:
+      case TGSI_TEXTURE_SHADOW1D:
       case TGSI_TEXTURE_SHADOW1D_ARRAY:
          coord_src = scalar_src(swz->coord_src, TGSI_SWIZZLE_Z);
-         break;
-      case TGSI_TEXTURE_SHADOW1D:
-         coord_src = scalar_src(swz->coord_src, TGSI_SWIZZLE_Y);
          break;
       case TGSI_TEXTURE_SHADOWCUBE:
       case TGSI_TEXTURE_SHADOW2D_ARRAY:
