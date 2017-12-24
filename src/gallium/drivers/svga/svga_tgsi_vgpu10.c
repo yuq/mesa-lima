@@ -4782,16 +4782,12 @@ emit_tex_compare_refcoord(struct svga_shader_emitter_v10 *emit,
                           const struct tgsi_full_src_register *coord)
 {
    struct tgsi_full_src_register coord_src_ref;
-   unsigned component;
+   int component;
 
    assert(tgsi_is_shadow_target(target));
 
-   assert(target != TGSI_TEXTURE_SHADOWCUBE_ARRAY); /* XXX not implemented */
-   if (target == TGSI_TEXTURE_SHADOW2D_ARRAY ||
-       target == TGSI_TEXTURE_SHADOWCUBE)
-      component = TGSI_SWIZZLE_W;
-   else
-      component = TGSI_SWIZZLE_Z;
+   component = tgsi_util_get_shadow_ref_src_index(target) % 4;
+   assert(component >= 0);
 
    coord_src_ref = scalar_src(coord, component);
 
@@ -4895,21 +4891,10 @@ end_tex_swizzle(struct svga_shader_emitter_v10 *emit,
 
       assert(emit->unit == PIPE_SHADER_FRAGMENT);
 
-      switch (swz->texture_target) {
-      case TGSI_TEXTURE_SHADOW2D:
-      case TGSI_TEXTURE_SHADOWRECT:
-      case TGSI_TEXTURE_SHADOW1D:
-      case TGSI_TEXTURE_SHADOW1D_ARRAY:
-         coord_src = scalar_src(swz->coord_src, TGSI_SWIZZLE_Z);
-         break;
-      case TGSI_TEXTURE_SHADOWCUBE:
-      case TGSI_TEXTURE_SHADOW2D_ARRAY:
-         coord_src = scalar_src(swz->coord_src, TGSI_SWIZZLE_W);
-         break;
-      default:
-         assert(!"Unexpected texture target in end_tex_swizzle()");
-         coord_src = scalar_src(swz->coord_src, TGSI_SWIZZLE_Z);
-      }
+      int component =
+         tgsi_util_get_shadow_ref_src_index(swz->texture_target) % 4;
+      assert(component >= 0);
+      coord_src = scalar_src(swz->coord_src, component);
 
       /* COMPARE tmp, coord, texel */
       emit_comparison(emit, compare_func,
