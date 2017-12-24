@@ -506,8 +506,12 @@ tgsi_util_get_texture_coord_dim(enum tgsi_texture_type tgsi_tex)
 
 
 /**
- * Given a TGSI_TEXTURE_x target, return the src register index for the
- * shadow reference coordinate.
+ * Given a TGSI_TEXTURE_x target, return register component where the
+ * shadow reference/distance coordinate is found.  Typically, components
+ * 0 and 1 are the (s,t) texcoords and component 2 or 3 hold the shadow
+ * reference value.  But if we return 4, it means the reference value is
+ * found in the 0th component of the second coordinate argument to the
+ * TEX2 instruction.
  */
 int
 tgsi_util_get_shadow_ref_src_index(enum tgsi_texture_type tgsi_tex)
