@@ -3163,6 +3163,8 @@ radv_initialise_color_surface(struct radv_device *device,
 	if (device->physical_device->rad_info.chip_class >= VI) {
 		unsigned max_uncompressed_block_size = V_028C78_MAX_BLOCK_SIZE_256B;
 		unsigned min_compressed_block_size = V_028C78_MIN_BLOCK_SIZE_32B;
+		unsigned independent_64b_blocks = 0;
+		unsigned max_compressed_block_size;
 
 		/* amdvlk: [min-compressed-block-size] should be set to 32 for dGPU and
 		   64 for APU because all of our APUs to date use DIMMs which have
@@ -3178,9 +3180,16 @@ radv_initialise_color_surface(struct radv_device *device,
 				max_uncompressed_block_size = V_028C78_MAX_BLOCK_SIZE_128B;
 		}
 
+		if (iview->image->usage & (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)) {
+			independent_64b_blocks = 1;
+			max_compressed_block_size = V_028C78_MAX_BLOCK_SIZE_64B;
+		} else
+			max_compressed_block_size = max_uncompressed_block_size;
+
 		cb->cb_dcc_control = S_028C78_MAX_UNCOMPRESSED_BLOCK_SIZE(max_uncompressed_block_size) |
+			S_028C78_MAX_COMPRESSED_BLOCK_SIZE(max_compressed_block_size) |
 			S_028C78_MIN_COMPRESSED_BLOCK_SIZE(min_compressed_block_size) |
-			S_028C78_INDEPENDENT_64B_BLOCKS(1);
+			S_028C78_INDEPENDENT_64B_BLOCKS(independent_64b_blocks);
 	}
 
 	/* This must be set for fast clear to work without FMASK. */
