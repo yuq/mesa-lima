@@ -1123,7 +1123,6 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
                const struct brw_vs_prog_key *key,
                struct brw_vs_prog_data *prog_data,
                const struct nir_shader *shader,
-               bool use_legacy_snorm_formula,
                int shader_time_index,
                char **error_str);
 

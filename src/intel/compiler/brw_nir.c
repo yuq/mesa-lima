@@ -211,7 +211,6 @@ remap_patch_urb_offsets(nir_block *block, nir_builder *b,
 
 void
 brw_nir_lower_vs_inputs(nir_shader *nir,
-                        bool use_legacy_snorm_formula,
                         const uint8_t *vs_attrib_wa_flags)
 {
    /* Start with the location of the variable's base. */
@@ -230,8 +229,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
 
    add_const_offset_to_base(nir, nir_var_shader_in);
 
-   brw_nir_apply_attribute_workarounds(nir, use_legacy_snorm_formula,
-                                       vs_attrib_wa_flags);
+   brw_nir_apply_attribute_workarounds(nir, vs_attrib_wa_flags);
 
    /* The last step is to remap VERT_ATTRIB_* to actual registers */
 

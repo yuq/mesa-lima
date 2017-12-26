@@ -2744,7 +2744,6 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
                const struct brw_vs_prog_key *key,
                struct brw_vs_prog_data *prog_data,
                const nir_shader *src_shader,
-               bool use_legacy_snorm_formula,
                int shader_time_index,
                char **error_str)
 {
@@ -2772,8 +2771,7 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
    prog_data->inputs_read = shader->info.inputs_read;
    prog_data->double_inputs_read = shader->info.double_inputs_read;
 
-   brw_nir_lower_vs_inputs(shader, use_legacy_snorm_formula,
-                           key->gl_attrib_wa_flags);
+   brw_nir_lower_vs_inputs(shader, key->gl_attrib_wa_flags);
    brw_nir_lower_vue_outputs(shader, is_scalar);
    shader = brw_postprocess_nir(shader, compiler, is_scalar);
 
@@ -2891,8 +2889,7 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
       prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
       vec4_vs_visitor v(compiler, log_data, key, prog_data,
-                        shader, mem_ctx,
-                        shader_time_index, use_legacy_snorm_formula);
+                        shader, mem_ctx, shader_time_index);
       if (!v.run()) {
          if (error_str)
             *error_str = ralloc_strdup(mem_ctx, v.fail_msg);

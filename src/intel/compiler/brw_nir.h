@@ -102,7 +102,6 @@ brw_nir_link_shaders(const struct brw_compiler *compiler,
 bool brw_nir_lower_cs_intrinsics(nir_shader *nir,
                                  unsigned dispatch_width);
 void brw_nir_lower_vs_inputs(nir_shader *nir,
-                             bool use_legacy_snorm_formula,
                              const uint8_t *vs_attrib_wa_flags);
 void brw_nir_lower_vue_inputs(nir_shader *nir,
                               const struct brw_vue_map *vue_map);
@@ -121,7 +120,6 @@ nir_shader *brw_postprocess_nir(nir_shader *nir,
                                 bool is_scalar);
 
 bool brw_nir_apply_attribute_workarounds(nir_shader *nir,
-                                         bool use_legacy_snorm_formula,
                                          const uint8_t *attrib_wa_flags);
 
 bool brw_nir_apply_trig_workarounds(nir_shader *nir);
