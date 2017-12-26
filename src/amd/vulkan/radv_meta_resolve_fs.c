@@ -407,8 +407,8 @@ emit_resolve(struct radv_cmd_buffer *cmd_buffer,
 	cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB;
 
 	unsigned push_constants[2] = {
-		src_offset->x,
-		src_offset->y,
+		src_offset->x - dest_offset->x,
+		src_offset->y - dest_offset->y,
 	};
 	radv_CmdPushConstants(radv_cmd_buffer_to_handle(cmd_buffer),
 			      device->meta_state.resolve_fragment.p_layout,
