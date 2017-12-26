@@ -3161,12 +3161,12 @@ radv_initialise_color_surface(struct radv_device *device,
 		cb->cb_color_info |= S_028C70_DCC_ENABLE(1);
 
 	if (device->physical_device->rad_info.chip_class >= VI) {
-		unsigned max_uncompressed_block_size = 2;
+		unsigned max_uncompressed_block_size = V_028C78_MAX_BLOCK_SIZE_256B;
 		if (iview->image->info.samples > 1) {
 			if (iview->image->surface.bpe == 1)
-				max_uncompressed_block_size = 0;
+				max_uncompressed_block_size = V_028C78_MAX_BLOCK_SIZE_64B;
 			else if (iview->image->surface.bpe == 2)
-				max_uncompressed_block_size = 1;
+				max_uncompressed_block_size = V_028C78_MAX_BLOCK_SIZE_128B;
 		}
 
 		cb->cb_dcc_control = S_028C78_MAX_UNCOMPRESSED_BLOCK_SIZE(max_uncompressed_block_size) |

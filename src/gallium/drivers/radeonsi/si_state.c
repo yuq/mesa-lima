@@ -2450,13 +2450,13 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	}
 
 	if (sctx->b.chip_class >= VI) {
-		unsigned max_uncompressed_block_size = 2;
+		unsigned max_uncompressed_block_size = V_028C78_MAX_BLOCK_SIZE_256B;
 
 		if (rtex->resource.b.b.nr_samples > 1) {
 			if (rtex->surface.bpe == 1)
-				max_uncompressed_block_size = 0;
+				max_uncompressed_block_size = V_028C78_MAX_BLOCK_SIZE_64B;
 			else if (rtex->surface.bpe == 2)
-				max_uncompressed_block_size = 1;
+				max_uncompressed_block_size = V_028C78_MAX_BLOCK_SIZE_128B;
 		}
 
 		surf->cb_dcc_control = S_028C78_MAX_UNCOMPRESSED_BLOCK_SIZE(max_uncompressed_block_size) |
