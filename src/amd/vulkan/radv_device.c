@@ -3162,6 +3162,15 @@ radv_initialise_color_surface(struct radv_device *device,
 
 	if (device->physical_device->rad_info.chip_class >= VI) {
 		unsigned max_uncompressed_block_size = V_028C78_MAX_BLOCK_SIZE_256B;
+		unsigned min_compressed_block_size = V_028C78_MIN_BLOCK_SIZE_32B;
+
+		/* amdvlk: [min-compressed-block-size] should be set to 32 for dGPU and
+		   64 for APU because all of our APUs to date use DIMMs which have
+		   a request granularity size of 64B while all other chips have a
+		   32B request size */
+		if (!device->physical_device->rad_info.has_dedicated_vram)
+			min_compressed_block_size = V_028C78_MIN_BLOCK_SIZE_64B;
+
 		if (iview->image->info.samples > 1) {
 			if (iview->image->surface.bpe == 1)
 				max_uncompressed_block_size = V_028C78_MAX_BLOCK_SIZE_64B;
@@ -3170,6 +3179,7 @@ radv_initialise_color_surface(struct radv_device *device,
 		}
 
 		cb->cb_dcc_control = S_028C78_MAX_UNCOMPRESSED_BLOCK_SIZE(max_uncompressed_block_size) |
+			S_028C78_MIN_COMPRESSED_BLOCK_SIZE(min_compressed_block_size) |
 			S_028C78_INDEPENDENT_64B_BLOCKS(1);
 	}
 
