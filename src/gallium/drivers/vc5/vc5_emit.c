@@ -501,12 +501,39 @@ vc5_emit_state(struct pipe_context *pctx)
                 emit_textures(vc5, &vc5->verttex);
 
         if (vc5->dirty & VC5_DIRTY_FLAT_SHADE_FLAGS) {
-                /* XXX: Need to handle more than 24 entries. */
-                cl_emit(&job->bcl, FLAT_SHADE_FLAGS, flags) {
-                        flags.varying_offset_v0 = 0;
+                bool emitted_any = false;
 
-                        flags.flat_shade_flags_for_varyings_v024 =
-                                vc5->prog.fs->prog_data.fs->flat_shade_flags[0] & 0xfffff;
+                for (int i = 0; i < ARRAY_SIZE(vc5->prog.fs->prog_data.fs->flat_shade_flags); i++) {
+                        if (!vc5->prog.fs->prog_data.fs->flat_shade_flags[i])
+                                continue;
+
+                        cl_emit(&job->bcl, FLAT_SHADE_FLAGS, flags) {
+                                flags.varying_offset_v0 = i;
+
+                                if (emitted_any) {
+                                        flags.action_for_flat_shade_flags_of_lower_numbered_varyings =
+                                                V3D_FLAT_SHADE_ACTION_UNCHANGED;
+                                        flags.action_for_flat_shade_flags_of_higher_numbered_varyings =
+                                                V3D_FLAT_SHADE_ACTION_UNCHANGED;
+                                } else {
+                                        flags.action_for_flat_shade_flags_of_lower_numbered_varyings =
+                                                ((i == 0) ?
+                                                 V3D_FLAT_SHADE_ACTION_UNCHANGED :
+                                                 V3D_FLAT_SHADE_ACTION_ZEROED);
+
+                                        flags.action_for_flat_shade_flags_of_higher_numbered_varyings =
+                                                V3D_FLAT_SHADE_ACTION_ZEROED;
+                                }
+
+                                flags.flat_shade_flags_for_varyings_v024 =
+                                        vc5->prog.fs->prog_data.fs->flat_shade_flags[i];
+                        }
+
+                        emitted_any = true;
+                }
+
+                if (!emitted_any) {
+                        cl_emit(&job->bcl, ZERO_ALL_FLAT_SHADE_FLAGS, flags);
                 }
         }
 

@@ -421,7 +421,7 @@ struct v3d_compile {
          * flat-shaded.  This includes gl_FragColor flat-shading, which is
          * customized based on the shademodel_flat shader key.
          */
-        BITSET_WORD flat_shade_flags[BITSET_WORDS(V3D_MAX_FS_INPUTS)];
+        uint32_t flat_shade_flags[BITSET_WORDS(V3D_MAX_FS_INPUTS)];
 
         struct v3d_ubo_range *ubo_ranges;
         bool *ubo_range_used;
@@ -569,9 +569,12 @@ struct v3d_fs_prog_data {
 
         struct v3d_varying_slot input_slots[V3D_MAX_FS_INPUTS];
 
-        /* Bitmask for whether the corresponding input is flat-shaded.
+        /* Array of flat shade flags.
+         *
+         * Each entry is only 24 bits (high 8 bits 0), to match the hardware
+         * packet layout.
          */
-        BITSET_WORD flat_shade_flags[BITSET_WORDS(V3D_MAX_FS_INPUTS)];
+        uint32_t flat_shade_flags[((V3D_MAX_FS_INPUTS - 1) / 24) + 1];
 
         bool writes_z;
         bool discard;
