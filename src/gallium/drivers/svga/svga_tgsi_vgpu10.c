@@ -6550,8 +6550,6 @@ svga_tgsi_vgpu10_translate(struct svga_context *svga,
       }
    }
 
-   variant->fs_shadow_compare_units = emit->fs.shadow_compare_units;
-
    if (SVGA_DEBUG & DEBUG_TGSI) {
       debug_printf("#####################################\n");
       debug_printf("### TGSI Shader %u\n", shader->id);
@@ -6665,6 +6663,8 @@ svga_tgsi_vgpu10_translate(struct svga_context *svga,
     *  for any of the varyings.
     */
    variant->uses_flat_interp = emit->uses_flat_interp;
+
+   variant->fs_shadow_compare_units = emit->fs.shadow_compare_units;
 
    if (tokens != shader->tokens) {
       tgsi_free_tokens(tokens);
