@@ -7902,7 +7902,7 @@ static int tgsi_set_gds_temp(struct r600_shader_ctx *ctx,
 			     int *uav_id_p, int *uav_index_mode_p)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
-	int uav_id, uav_index_mode;
+	int uav_id, uav_index_mode = 0;
 	int r;
 	bool is_cm = (ctx->bc->chip_class == CAYMAN);
 
