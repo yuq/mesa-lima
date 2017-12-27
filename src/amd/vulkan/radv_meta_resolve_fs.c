@@ -540,8 +540,8 @@ void radv_meta_resolve_fragment_image(struct radv_cmd_buffer *cmd_buffer,
 					       .pAttachments = (VkImageView[]) {
 					       radv_image_view_to_handle(&dest_iview),
 				       },
-				       .width = extent.width,
-				       .height = extent.height,
+				       .width = extent.width + dstOffset.x,
+				       .height = extent.height + dstOffset.y,
 				       .layers = 1
 				}, &cmd_buffer->pool->alloc, &fb);
 
