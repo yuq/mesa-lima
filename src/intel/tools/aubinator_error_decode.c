@@ -521,12 +521,14 @@ read_data_file(FILE *file)
          gen_print_batch(&batch_ctx, sections[s].data, sections[s].count,
                          sections[s].gtt_offset);
       }
-
-      free(sections[s].ring_name);
-      free(sections[s].data);
    }
 
    gen_batch_decode_ctx_finish(&batch_ctx);
+
+   for (int s = 0; s < sect_num; s++) {
+      free(sections[s].ring_name);
+      free(sections[s].data);
+   }
 }
 
 static void
