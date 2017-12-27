@@ -582,6 +582,11 @@ decode_dynamic_state_pointers(struct gen_batch_decode_ctx *ctx,
                               const char *struct_type, const uint32_t *p,
                               int count)
 {
+   if (ctx->dynamic_base.map == NULL) {
+      fprintf(ctx->fp, "  dynamic %s state unavailable\n", struct_type);
+      return;
+   }
+
    struct gen_group *inst = gen_spec_find_instruction(ctx->spec, p);
    struct gen_group *state = gen_spec_find_struct(ctx->spec, struct_type);
 
