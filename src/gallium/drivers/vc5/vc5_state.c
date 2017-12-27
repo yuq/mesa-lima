@@ -272,13 +272,6 @@ static void
 vc5_rasterizer_state_bind(struct pipe_context *pctx, void *hwcso)
 {
         struct vc5_context *vc5 = vc5_context(pctx);
-        struct vc5_rasterizer_state *rast = hwcso;
-
-        if (vc5->rasterizer && rast &&
-            vc5->rasterizer->base.flatshade != rast->base.flatshade) {
-                vc5->dirty |= VC5_DIRTY_FLAT_SHADE_FLAGS;
-        }
-
         vc5->rasterizer = hwcso;
         vc5->dirty |= VC5_DIRTY_RASTERIZER;
 }

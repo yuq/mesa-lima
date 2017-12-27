@@ -507,11 +507,6 @@ vc5_emit_state(struct pipe_context *pctx)
 
                         flags.flat_shade_flags_for_varyings_v024 =
                                 vc5->prog.fs->prog_data.fs->flat_shade_flags[0] & 0xfffff;
-
-                        if (vc5->rasterizer->base.flatshade) {
-                                flags.flat_shade_flags_for_varyings_v024 |=
-                                        vc5->prog.fs->prog_data.fs->shade_model_flags[0] & 0xfffff;
-                        }
                 }
         }
 

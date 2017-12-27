@@ -716,8 +716,6 @@ v3d_set_fs_prog_data_inputs(struct v3d_compile *c,
 
         memcpy(prog_data->flat_shade_flags, c->flat_shade_flags,
                sizeof(c->flat_shade_flags));
-        memcpy(prog_data->shade_model_flags, c->shade_model_flags,
-               sizeof(c->shade_model_flags));
 }
 
 uint64_t *v3d_compile_fs(const struct v3d_compiler *compiler,

@@ -390,6 +390,7 @@ vc5_update_compiled_fs(struct vc5_context *vc5, uint8_t prim_mode)
         }
 
         key->light_twoside = vc5->rasterizer->base.light_twoside;
+        key->shade_model_flat = vc5->rasterizer->base.flatshade;
 
         struct vc5_compiled_shader *old_fs = vc5->prog.fs;
         vc5->prog.fs = vc5_get_compiled_shader(vc5, &key->base);
@@ -399,11 +400,8 @@ vc5_update_compiled_fs(struct vc5_context *vc5, uint8_t prim_mode)
         vc5->dirty |= VC5_DIRTY_COMPILED_FS;
 
         if (old_fs &&
-            (vc5->prog.fs->prog_data.fs->flat_shade_flags !=
-             old_fs->prog_data.fs->flat_shade_flags ||
-             (vc5->rasterizer->base.flatshade &&
-              vc5->prog.fs->prog_data.fs->shade_model_flags !=
-              old_fs->prog_data.fs->shade_model_flags))) {
+            vc5->prog.fs->prog_data.fs->flat_shade_flags !=
+            old_fs->prog_data.fs->flat_shade_flags) {
                 vc5->dirty |= VC5_DIRTY_FLAT_SHADE_FLAGS;
         }
 
