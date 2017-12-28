@@ -20,7 +20,8 @@
 
 v3d_versions = [
   21,
-  33
+  33,
+  41,
 ]
 
 v3d_xml_files = []
