@@ -114,6 +114,30 @@
     <value name="all samples" value="3"/>
   </enum>
 
+  <enum name="Internal Type" prefix="V3D_INTERNAL_TYPE">
+    <value name="8i" value="0"/>
+    <value name="8ui" value="1"/>
+    <value name="8" value="2"/>
+    <value name="16i" value="4"/>
+    <value name="16ui" value="5"/>
+    <value name="16f" value="6"/>
+    <value name="32i" value="8"/>
+    <value name="32ui" value="9"/>
+    <value name="32f" value="10"/>
+  </enum>
+
+  <enum name="Internal BPP" prefix="V3D_INTERNAL_BPP">
+    <value name="32" value="0"/>
+    <value name="64" value="1"/>
+    <value name="128" value="2"/>
+  </enum>
+
+  <enum name="Internal Depth Type" prefix="V3D_INTERNAL_TYPE">
+    <value name="depth_32f" value="0"/>
+    <value name="depth_24" value="1"/>
+    <value name="depth_16" value="2"/>
+  </enum>
+
   <enum name="Output Image Format" prefix="V3D_OUTPUT_IMAGE_FORMAT">
     <!--
 	Formats appear with their channels named from the low bits to
@@ -482,11 +506,7 @@
     <field name="Double-buffer in non-ms mode" size="1" start="63" type="bool"/>
     <field name="Multisample Mode (4x)" size="1" start="62" type="bool"/>
 
-    <field name="Maximum BPP of all render targets" size="2" start="60" type="uint">
-      <value name="Render target maximum 32bpp" value="0"/>
-      <value name="Render target maximum 64bpp" value="1"/>
-      <value name="Render target maximum 128bpp" value="2"/>
-    </field>
+    <field name="Maximum BPP of all render targets" size="2" start="60" type="Internal BPP"/>
 
     <field name="Number of Render Targets" size="4" start="56" type="uint"/>
     <field name="Height (in tiles)" size="12" start="44" type="uint"/>
@@ -560,23 +580,8 @@
 
     <field name="Decimate mode" size="2" start="14" type="Decimate Mode"/>
 
-    <field name="Internal Type" size="4" start="10" type="uint" prefix="Internal Type">
-      <value name="8i" value="0"/>
-      <value name="8ui" value="1"/>
-      <value name="8" value="2"/>
-      <value name="16i" value="4"/>
-      <value name="16ui" value="5"/>
-      <value name="16f" value="6"/>
-      <value name="32i" value="8"/>
-      <value name="32ui" value="9"/>
-      <value name="32f" value="10"/>
-    </field>
-
-    <field name="Internal BPP" size="2" start="8" type="uint" prefix="Internal Bpp">
-      <value name="32" value="0"/>
-      <value name="64" value="1"/>
-      <value name="128" value="2"/>
-    </field>
+    <field name="Internal Type" size="4" start="10" type="Internal Type"/>
+    <field name="Internal BPP" size="2" start="8" type="Internal BPP"/>
     <field name="Render Target Number" size="4" start="4" type="uint"/>
     <field name="sub-id" size="4" start="0" type="uint" default="2"/>
   </packet>
@@ -592,11 +597,7 @@
 
     <field name="Decimate mode" size="2" start="14" type="uint"/>
 
-    <field name="Internal Type" size="4" start="10" type="uint" prefix="Internal Type">
-      <value name="depth_32f" value="0"/>
-      <value name="depth_24" value="1"/>
-      <value name="depth_16" value="2"/>
-    </field>
+    <field name="Internal Type" size="4" start="10" type="Internal Depth Type"/>
 
     <field name="Internal BPP (ignored)" size="2" start="8" type="uint"/>
     <!-- selects between Z/Stencil config packet and Separate Stencil packet. -->

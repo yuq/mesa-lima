@@ -334,7 +334,7 @@ vc5_emit_rcl(struct vc5_job *job)
                         clear.render_target_number = i;
                 };
 
-                if (surf->internal_bpp >= INTERNAL_BPP_64) {
+                if (surf->internal_bpp >= V3D_INTERNAL_BPP_64) {
                         cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_CLEAR_COLORS_PART2,
                                 clear) {
                                 clear.clear_color_mid_low_32_bits =
@@ -347,7 +347,7 @@ vc5_emit_rcl(struct vc5_job *job)
                         };
                 }
 
-                if (surf->internal_bpp >= INTERNAL_BPP_128 || clear_pad) {
+                if (surf->internal_bpp >= V3D_INTERNAL_BPP_128 || clear_pad) {
                         cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_CLEAR_COLORS_PART3,
                                 clear) {
                                 clear.uif_padded_height_in_uif_blocks = clear_pad;

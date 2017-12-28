@@ -443,13 +443,13 @@ vc5_resource_setup(struct pipe_screen *pscreen,
                                                             &internal_type,
                                                             &internal_bpp);
                 switch (internal_bpp) {
-                case INTERNAL_BPP_32:
+                case V3D_INTERNAL_BPP_32:
                         rsc->cpp = 4;
                         break;
-                case INTERNAL_BPP_64:
+                case V3D_INTERNAL_BPP_64:
                         rsc->cpp = 8;
                         break;
-                case INTERNAL_BPP_128:
+                case V3D_INTERNAL_BPP_128:
                         rsc->cpp = 16;
                         break;
                 }
@@ -667,14 +667,14 @@ vc5_create_surface(struct pipe_context *pctx,
         if (util_format_is_depth_or_stencil(psurf->format)) {
                 switch (psurf->format) {
                 case PIPE_FORMAT_Z16_UNORM:
-                        surface->internal_type = INTERNAL_TYPE_DEPTH_16;
+                        surface->internal_type = V3D_INTERNAL_TYPE_DEPTH_16;
                         break;
                 case PIPE_FORMAT_Z32_FLOAT:
                 case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-                        surface->internal_type = INTERNAL_TYPE_DEPTH_32F;
+                        surface->internal_type = V3D_INTERNAL_TYPE_DEPTH_32F;
                         break;
                 default:
-                        surface->internal_type = INTERNAL_TYPE_DEPTH_24;
+                        surface->internal_type = V3D_INTERNAL_TYPE_DEPTH_24;
                 }
         } else {
                 uint32_t bpp, type;

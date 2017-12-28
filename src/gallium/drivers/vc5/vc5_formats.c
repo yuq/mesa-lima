@@ -309,22 +309,22 @@ vc5_get_internal_type_bpp_for_output_format(uint32_t format,
         case V3D_OUTPUT_IMAGE_FORMAT_ABGR4444:
         case V3D_OUTPUT_IMAGE_FORMAT_BGR565:
         case V3D_OUTPUT_IMAGE_FORMAT_ABGR1555:
-                *type = INTERNAL_TYPE_8;
-                *bpp = INTERNAL_BPP_32;
+                *type = V3D_INTERNAL_TYPE_8;
+                *bpp = V3D_INTERNAL_BPP_32;
                 break;
 
         case V3D_OUTPUT_IMAGE_FORMAT_RGBA8I:
         case V3D_OUTPUT_IMAGE_FORMAT_RG8I:
         case V3D_OUTPUT_IMAGE_FORMAT_R8I:
-                *type = INTERNAL_TYPE_8I;
-                *bpp = INTERNAL_BPP_32;
+                *type = V3D_INTERNAL_TYPE_8I;
+                *bpp = V3D_INTERNAL_BPP_32;
                 break;
 
         case V3D_OUTPUT_IMAGE_FORMAT_RGBA8UI:
         case V3D_OUTPUT_IMAGE_FORMAT_RG8UI:
         case V3D_OUTPUT_IMAGE_FORMAT_R8UI:
-                *type = INTERNAL_TYPE_8UI;
-                *bpp = INTERNAL_BPP_32;
+                *type = V3D_INTERNAL_TYPE_8UI;
+                *bpp = V3D_INTERNAL_BPP_32;
                 break;
 
         case V3D_OUTPUT_IMAGE_FORMAT_SRGB8_ALPHA8:
@@ -337,76 +337,76 @@ vc5_get_internal_type_bpp_for_output_format(uint32_t format,
                  * and the conversion to sRGB happens at tilebuffer
                  * load/store.
                  */
-                *type = INTERNAL_TYPE_16F;
-                *bpp = INTERNAL_BPP_64;
+                *type = V3D_INTERNAL_TYPE_16F;
+                *bpp = V3D_INTERNAL_BPP_64;
                 break;
 
         case V3D_OUTPUT_IMAGE_FORMAT_RG16F:
         case V3D_OUTPUT_IMAGE_FORMAT_R16F:
-                *type = INTERNAL_TYPE_16F;
+                *type = V3D_INTERNAL_TYPE_16F;
                 /* Use 64bpp to make sure the TLB doesn't throw away the alpha
                  * channel before alpha test happens.
                  */
-                *bpp = INTERNAL_BPP_64;
+                *bpp = V3D_INTERNAL_BPP_64;
                 break;
 
         case V3D_OUTPUT_IMAGE_FORMAT_RGBA16I:
-                *type = INTERNAL_TYPE_16I;
-                *bpp = INTERNAL_BPP_64;
+                *type = V3D_INTERNAL_TYPE_16I;
+                *bpp = V3D_INTERNAL_BPP_64;
                 break;
         case V3D_OUTPUT_IMAGE_FORMAT_RG16I:
         case V3D_OUTPUT_IMAGE_FORMAT_R16I:
-                *type = INTERNAL_TYPE_16I;
-                *bpp = INTERNAL_BPP_32;
+                *type = V3D_INTERNAL_TYPE_16I;
+                *bpp = V3D_INTERNAL_BPP_32;
                 break;
 
         case V3D_OUTPUT_IMAGE_FORMAT_RGBA16UI:
-                *type = INTERNAL_TYPE_16UI;
-                *bpp = INTERNAL_BPP_64;
+                *type = V3D_INTERNAL_TYPE_16UI;
+                *bpp = V3D_INTERNAL_BPP_64;
                 break;
         case V3D_OUTPUT_IMAGE_FORMAT_RG16UI:
         case V3D_OUTPUT_IMAGE_FORMAT_R16UI:
-                *type = INTERNAL_TYPE_16UI;
-                *bpp = INTERNAL_BPP_32;
+                *type = V3D_INTERNAL_TYPE_16UI;
+                *bpp = V3D_INTERNAL_BPP_32;
                 break;
 
         case V3D_OUTPUT_IMAGE_FORMAT_RGBA32I:
-                *type = INTERNAL_TYPE_32I;
-                *bpp = INTERNAL_BPP_128;
+                *type = V3D_INTERNAL_TYPE_32I;
+                *bpp = V3D_INTERNAL_BPP_128;
                 break;
         case V3D_OUTPUT_IMAGE_FORMAT_RG32I:
-                *type = INTERNAL_TYPE_32I;
-                *bpp = INTERNAL_BPP_64;
+                *type = V3D_INTERNAL_TYPE_32I;
+                *bpp = V3D_INTERNAL_BPP_64;
                 break;
         case V3D_OUTPUT_IMAGE_FORMAT_R32I:
-                *type = INTERNAL_TYPE_32I;
-                *bpp = INTERNAL_BPP_32;
+                *type = V3D_INTERNAL_TYPE_32I;
+                *bpp = V3D_INTERNAL_BPP_32;
                 break;
 
         case V3D_OUTPUT_IMAGE_FORMAT_RGBA32UI:
-                *type = INTERNAL_TYPE_32UI;
-                *bpp = INTERNAL_BPP_128;
+                *type = V3D_INTERNAL_TYPE_32UI;
+                *bpp = V3D_INTERNAL_BPP_128;
                 break;
         case V3D_OUTPUT_IMAGE_FORMAT_RG32UI:
-                *type = INTERNAL_TYPE_32UI;
-                *bpp = INTERNAL_BPP_64;
+                *type = V3D_INTERNAL_TYPE_32UI;
+                *bpp = V3D_INTERNAL_BPP_64;
                 break;
         case V3D_OUTPUT_IMAGE_FORMAT_R32UI:
-                *type = INTERNAL_TYPE_32UI;
-                *bpp = INTERNAL_BPP_32;
+                *type = V3D_INTERNAL_TYPE_32UI;
+                *bpp = V3D_INTERNAL_BPP_32;
                 break;
 
         case V3D_OUTPUT_IMAGE_FORMAT_RGBA32F:
-                *type = INTERNAL_TYPE_32F;
-                *bpp = INTERNAL_BPP_128;
+                *type = V3D_INTERNAL_TYPE_32F;
+                *bpp = V3D_INTERNAL_BPP_128;
                 break;
         case V3D_OUTPUT_IMAGE_FORMAT_RG32F:
-                *type = INTERNAL_TYPE_32F;
-                *bpp = INTERNAL_BPP_64;
+                *type = V3D_INTERNAL_TYPE_32F;
+                *bpp = V3D_INTERNAL_BPP_64;
                 break;
         case V3D_OUTPUT_IMAGE_FORMAT_R32F:
-                *type = INTERNAL_TYPE_32F;
-                *bpp = INTERNAL_BPP_32;
+                *type = V3D_INTERNAL_TYPE_32F;
+                *bpp = V3D_INTERNAL_BPP_32;
                 break;
 
         default:
@@ -414,8 +414,8 @@ vc5_get_internal_type_bpp_for_output_format(uint32_t format,
                  * creation time, even if an RB with this format isn't
                  * supported.
                  */
-                *type = INTERNAL_TYPE_8;
-                *bpp = INTERNAL_BPP_32;
+                *type = V3D_INTERNAL_TYPE_8;
+                *bpp = V3D_INTERNAL_BPP_32;
                 break;
         }
 }

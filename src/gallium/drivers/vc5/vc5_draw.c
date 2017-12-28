@@ -524,7 +524,7 @@ vc5_clear(struct pipe_context *pctx, unsigned buffers,
                 }
 
                 switch (surf->internal_type) {
-                case INTERNAL_TYPE_8:
+                case V3D_INTERNAL_TYPE_8:
                         if (surf->format == PIPE_FORMAT_B4G4R4A4_UNORM ||
                             surf->format == PIPE_FORMAT_B4G4R4A4_UNORM) {
                                 /* Our actual hardware layout is ABGR4444, but
@@ -539,28 +539,28 @@ vc5_clear(struct pipe_context *pctx, unsigned buffers,
                         }
                         memcpy(job->clear_color[i], uc.ui, internal_size);
                         break;
-                case INTERNAL_TYPE_8I:
-                case INTERNAL_TYPE_8UI:
+                case V3D_INTERNAL_TYPE_8I:
+                case V3D_INTERNAL_TYPE_8UI:
                         job->clear_color[i][0] = ((uc.ui[0] & 0xff) |
                                                   (uc.ui[1] & 0xff) << 8 |
                                                   (uc.ui[2] & 0xff) << 16 |
                                                   (uc.ui[3] & 0xff) << 24);
                         break;
-                case INTERNAL_TYPE_16F:
+                case V3D_INTERNAL_TYPE_16F:
                         util_pack_color(color->f, PIPE_FORMAT_R16G16B16A16_FLOAT,
                                         &uc);
                         memcpy(job->clear_color[i], uc.ui, internal_size);
                         break;
-                case INTERNAL_TYPE_16I:
-                case INTERNAL_TYPE_16UI:
+                case V3D_INTERNAL_TYPE_16I:
+                case V3D_INTERNAL_TYPE_16UI:
                         job->clear_color[i][0] = ((uc.ui[0] & 0xffff) |
                                                   uc.ui[1] << 16);
                         job->clear_color[i][1] = ((uc.ui[2] & 0xffff) |
                                                   uc.ui[3] << 16);
                         break;
-                case INTERNAL_TYPE_32F:
-                case INTERNAL_TYPE_32I:
-                case INTERNAL_TYPE_32UI:
+                case V3D_INTERNAL_TYPE_32F:
+                case V3D_INTERNAL_TYPE_32I:
+                case V3D_INTERNAL_TYPE_32UI:
                         memcpy(job->clear_color[i], color->ui, internal_size);
                         break;
                 }

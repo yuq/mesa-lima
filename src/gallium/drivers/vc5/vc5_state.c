@@ -617,10 +617,10 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                                                                     &internal_bpp);
 
                         switch (internal_type) {
-                        case INTERNAL_TYPE_8:
+                        case V3D_INTERNAL_TYPE_8:
                                 tex.texture_type = TEXTURE_DATA_FORMAT_RGBA8;
                                 break;
-                        case INTERNAL_TYPE_16F:
+                        case V3D_INTERNAL_TYPE_16F:
                                 tex.texture_type = TEXTURE_DATA_FORMAT_RGBA16F;
                                 break;
                         default:
