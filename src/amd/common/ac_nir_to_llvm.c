@@ -6892,6 +6892,20 @@ static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
 	/* +3 for scratch wave offset and VCC */
 	config->num_sgprs = MAX2(config->num_sgprs,
 	                         shader_info->num_input_sgprs + 3);
+
+	/* Enable 64-bit and 16-bit denormals, because there is no performance
+	 * cost.
+	 *
+	 * If denormals are enabled, all floating-point output modifiers are
+	 * ignored.
+	 *
+	 * Don't enable denormals for 32-bit floats, because:
+	 * - Floating-point output modifiers would be ignored by the hw.
+	 * - Some opcodes don't support denormals, such as v_mad_f32. We would
+	 *   have to stop using those.
+	 * - SI & CI would be very slow.
+	 */
+	config->float_mode |= V_00B028_FP_64_DENORMS;
 }
 
 static void
