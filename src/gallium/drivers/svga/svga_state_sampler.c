@@ -399,7 +399,7 @@ update_samplers(struct svga_context *svga, unsigned dirty )
              * for this texture unit, don't enable shadow compare in
              * the texture sampler state.
              */
-            if (fs->fs_shadow_compare_units & (1 << i)) {
+            if (fs && (fs->fs_shadow_compare_units & (1 << i))) {
                fs_shadow = true;
             }
          }
