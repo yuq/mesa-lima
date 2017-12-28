@@ -1113,6 +1113,18 @@ bool radv_layout_can_fast_clear(const struct radv_image *image,
 		queue_mask == (1u << RADV_QUEUE_GENERAL);
 }
 
+bool radv_layout_dcc_compressed(const struct radv_image *image,
+			        VkImageLayout layout,
+			        unsigned queue_mask)
+{
+	/* Don't compress compute transfer dst, as image stores are not supported. */
+	if (layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+	    (queue_mask & (1u << RADV_QUEUE_COMPUTE)))
+		return false;
+
+	return image->surface.num_dcc_levels > 0 && layout != VK_IMAGE_LAYOUT_GENERAL;
+}
+
 
 unsigned radv_image_queue_family_mask(const struct radv_image *image, uint32_t family, uint32_t queue_family)
 {

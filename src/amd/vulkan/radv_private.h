@@ -1355,6 +1355,10 @@ bool radv_layout_can_fast_clear(const struct radv_image *image,
 			        VkImageLayout layout,
 			        unsigned queue_mask);
 
+bool radv_layout_dcc_compressed(const struct radv_image *image,
+			        VkImageLayout layout,
+			        unsigned queue_mask);
+
 static inline bool
 radv_vi_dcc_enabled(const struct radv_image *image, unsigned level)
 {
