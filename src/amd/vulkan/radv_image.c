@@ -148,8 +148,7 @@ radv_init_surface(struct radv_device *device,
 		}
 	}
 
-	if ((pCreateInfo->usage & (VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
-	                           VK_IMAGE_USAGE_STORAGE_BIT)) ||
+	if ((pCreateInfo->usage & VK_IMAGE_USAGE_STORAGE_BIT) ||
 	    (pCreateInfo->flags & VK_IMAGE_CREATE_EXTENDED_USAGE_BIT_KHR) ||
 	    !dcc_compatible_formats ||
             (pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) ||
