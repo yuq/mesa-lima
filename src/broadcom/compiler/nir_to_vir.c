@@ -1214,7 +1214,8 @@ emit_frag_end(struct v3d_compile *c)
                                                 vir_uniform_ui(c, conf);
                                 }
 
-                                inst = vir_VFPACK_dest(c, vir_reg(QFILE_TLB, 0), b, a);
+                                if (num_components >= 3)
+                                        inst = vir_VFPACK_dest(c, vir_reg(QFILE_TLB, 0), b, a);
                         }
                         break;
                 }
