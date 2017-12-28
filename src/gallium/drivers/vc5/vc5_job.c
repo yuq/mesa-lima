@@ -382,7 +382,10 @@ vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job)
                 goto done;
         }
 
-        vc5_emit_rcl(job);
+        if (vc5->screen->devinfo.ver >= 41)
+                v3d41_emit_rcl(job);
+        else
+                v3d33_emit_rcl(job);
 
         if (cl_offset(&job->bcl) > 0) {
                 vc5_cl_ensure_space_with_branch(&job->bcl,

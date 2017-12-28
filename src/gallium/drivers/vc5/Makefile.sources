@@ -14,7 +14,6 @@ C_SOURCES := \
 	vc5_job.c \
 	vc5_program.c \
 	vc5_query.c \
-	vc5_rcl.c \
 	vc5_resource.c \
 	vc5_resource.h \
 	vc5_screen.c \
@@ -24,4 +23,8 @@ C_SOURCES := \
 	vc5_tiling.c \
 	vc5_tiling.h \
 	vc5_uniforms.c \
+	$()
+
+VC5_PER_VERSION_SOURCES = \
+	vc5_rcl.c \
 	$()

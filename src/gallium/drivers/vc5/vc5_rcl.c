@@ -24,7 +24,6 @@
 #include "util/u_format.h"
 #include "vc5_context.h"
 #include "vc5_tiling.h"
-#define V3D_VERSION 33
 #include "broadcom/common/v3d_macros.h"
 #include "broadcom/cle/v3dx_pack.h"
 
@@ -36,36 +35,129 @@
 #define PIPE_FIRST_COLOR_BUFFER_BIT (ffs(PIPE_CLEAR_COLOR0) - 1)
 
 static void
-load_raw(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer)
+load_general(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer)
 {
         struct vc5_surface *surf = vc5_surface(psurf);
         struct vc5_resource *rsc = vc5_resource(psurf->texture);
 
+        struct vc5_resource *separate_stencil = NULL;
+        if (rsc->separate_stencil && buffer == STENCIL)
+                separate_stencil = rsc->separate_stencil;
+
         cl_emit(cl, LOAD_TILE_BUFFER_GENERAL, load) {
-                load.raw_mode = true;
                 load.buffer_to_load = buffer;
-                load.address = cl_address(rsc->bo, surf->offset);
+                if (separate_stencil) {
+                        load.address = cl_address(separate_stencil->bo,
+                                                  surf->separate_stencil_offset);
+                } else {
+                        load.address = cl_address(rsc->bo, surf->offset);
+                }
+
+#if V3D_VERSION >= 40
+                if (separate_stencil) {
+                        load.input_image_format = V3D_OUTPUT_IMAGE_FORMAT_S8;
+                        load.memory_format = surf->separate_stencil_tiling;
+                }  else {
+                        load.input_image_format = surf->format;
+                        load.memory_format = surf->tiling;
+                }
+
+                if (surf->tiling == VC5_TILING_UIF_NO_XOR ||
+                    surf->tiling == VC5_TILING_UIF_XOR) {
+                        if (separate_stencil) {
+                                load.height_in_ub_or_stride =
+                                        surf->separate_stencil_padded_height_of_output_image_in_uif_blocks;
+                        } else {
+                                load.height_in_ub_or_stride =
+                                        surf->padded_height_of_output_image_in_uif_blocks;
+                        }
+                } else if (surf->tiling == VC5_TILING_RASTER) {
+                        struct vc5_resource_slice *slice =
+                                &rsc->slices[psurf->u.tex.level];
+                        load.height_in_ub_or_stride = slice->stride;
+                }
+
+                /* XXX: MSAA */
+#else /* V3D_VERSION < 40 */
+                load.raw_mode = true;
                 load.padded_height_of_output_image_in_uif_blocks =
                         surf->padded_height_of_output_image_in_uif_blocks;
+#endif /* V3D_VERSION < 40 */
         }
 }
 
 static void
-store_raw(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer,
-          bool color_clear, bool z_clear, bool s_clear)
+store_general(struct vc5_job *job,
+              struct vc5_cl *cl, struct pipe_surface *psurf, int buffer,
+              int pipe_bit, bool last_store, bool general_color_clear)
 {
         struct vc5_surface *surf = vc5_surface(psurf);
         struct vc5_resource *rsc = vc5_resource(psurf->texture);
 
+        struct vc5_resource *separate_stencil = NULL;
+        if (rsc->separate_stencil && buffer == STENCIL) {
+                separate_stencil = rsc->separate_stencil;
+                separate_stencil->writes++;
+        } else {
+                rsc->writes++;
+        }
+
         cl_emit(cl, STORE_TILE_BUFFER_GENERAL, store) {
-                store.raw_mode = true;
                 store.buffer_to_store = buffer;
-                store.address = cl_address(rsc->bo, surf->offset);
-                store.disable_colour_buffers_clear_on_write = !color_clear;
-                store.disable_z_buffer_clear_on_write = !z_clear;
-                store.disable_stencil_buffer_clear_on_write = !s_clear;
+                if (separate_stencil) {
+                        store.address = cl_address(separate_stencil->bo,
+                                                   surf->separate_stencil_offset);
+                } else {
+                        store.address = cl_address(rsc->bo, surf->offset);
+                }
+
+#if V3D_VERSION >= 40
+                store.clear_buffer_being_stored =
+                        ((job->cleared & pipe_bit) &&
+                         (general_color_clear ||
+                          !(pipe_bit & PIPE_CLEAR_COLOR_BUFFERS)));
+
+                if (separate_stencil) {
+                        store.output_image_format = V3D_OUTPUT_IMAGE_FORMAT_S8;
+                        store.memory_format = surf->separate_stencil_tiling;
+                }  else {
+                        store.output_image_format = surf->format;
+                        store.memory_format = surf->tiling;
+                }
+
+                if (surf->tiling == VC5_TILING_UIF_NO_XOR ||
+                    surf->tiling == VC5_TILING_UIF_XOR) {
+                        if (separate_stencil) {
+                                store.height_in_ub_or_stride =
+                                        surf->separate_stencil_padded_height_of_output_image_in_uif_blocks;
+                        } else {
+                                store.height_in_ub_or_stride =
+                                        surf->padded_height_of_output_image_in_uif_blocks;
+                        }
+                } else if (surf->tiling == VC5_TILING_RASTER) {
+                        struct vc5_resource_slice *slice =
+                                &rsc->slices[psurf->u.tex.level];
+                        store.height_in_ub_or_stride = slice->stride;
+                }
+#else /* V3D_VERSION < 40 */
+                store.raw_mode = true;
+                if (!last_store) {
+                        store.disable_colour_buffers_clear_on_write = true;
+                        store.disable_z_buffer_clear_on_write = true;
+                        store.disable_stencil_buffer_clear_on_write = true;
+                } else {
+                        store.disable_colour_buffers_clear_on_write =
+                                !(((pipe_bit & PIPE_CLEAR_COLOR_BUFFERS) &&
+                                   general_color_clear &&
+                                   (job->cleared & pipe_bit)));
+                        store.disable_z_buffer_clear_on_write =
+                                !(job->cleared & PIPE_CLEAR_DEPTH);
+                        store.disable_stencil_buffer_clear_on_write =
+                                !(job->cleared & PIPE_CLEAR_STENCIL);
+                }
                 store.padded_height_of_output_image_in_uif_blocks =
                         surf->padded_height_of_output_image_in_uif_blocks;
+#endif /* V3D_VERSION < 40 */
         }
 }
 
@@ -92,6 +184,9 @@ zs_buffer_from_pipe_bits(int pipe_clear_bits)
 static void
 flush_last_load(struct vc5_cl *cl)
 {
+        if (V3D_VERSION >= 40)
+                return;
+
         cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
         cl_emit(cl, STORE_TILE_BUFFER_GENERAL, store) {
                 store.buffer_to_store = NONE;
@@ -109,25 +204,29 @@ vc5_rcl_emit_loads(struct vc5_job *job, struct vc5_cl *cl)
                         continue;
 
                 struct pipe_surface *psurf = job->cbufs[i];
-                if (!psurf || psurf->texture->nr_samples <= 1)
+                if (!psurf || (V3D_VERSION < 40 &&
+                               psurf->texture->nr_samples <= 1)) {
                         continue;
+                }
 
-                load_raw(cl, psurf, RENDER_TARGET_0 + i);
+                load_general(cl, psurf, RENDER_TARGET_0 + i);
                 read_but_not_cleared &= ~bit;
 
                 if (read_but_not_cleared)
                         flush_last_load(cl);
         }
 
-        if (job->zsbuf && job->zsbuf->texture->nr_samples > 1 &&
-            read_but_not_cleared & PIPE_CLEAR_DEPTHSTENCIL) {
-                load_raw(cl, job->zsbuf,
-                         zs_buffer_from_pipe_bits(read_but_not_cleared));
+        if (read_but_not_cleared & PIPE_CLEAR_DEPTHSTENCIL &&
+            (V3D_VERSION >= 40 ||
+             (job->zsbuf && job->zsbuf->texture->nr_samples > 1))) {
+                load_general(cl, job->zsbuf,
+                             zs_buffer_from_pipe_bits(read_but_not_cleared));
                 read_but_not_cleared &= ~PIPE_CLEAR_DEPTHSTENCIL;
                 if (read_but_not_cleared)
                         cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
         }
 
+#if V3D_VERSION < 40
         /* The initial reload will be queued until we get the
          * tile coordinates.
          */
@@ -143,27 +242,47 @@ vc5_rcl_emit_loads(struct vc5_job *job, struct vc5_cl *cl)
                                 read_but_not_cleared & PIPE_CLEAR_STENCIL;
                 }
         }
+#else /* V3D_VERSION >= 40 */
+        assert(!read_but_not_cleared);
+        cl_emit(cl, END_OF_LOADS, end);
+#endif
 }
 
 static void
 vc5_rcl_emit_stores(struct vc5_job *job, struct vc5_cl *cl)
 {
-        bool needs_color_clear = job->cleared & PIPE_CLEAR_COLOR_BUFFERS;
-        bool needs_z_clear = job->cleared & PIPE_CLEAR_DEPTH;
-        bool needs_s_clear = job->cleared & PIPE_CLEAR_STENCIL;
-        /* Note that only the color RT being stored will be cleared by a
-         * STORE_GENERAL, or all of them if the buffer is NONE.
+        MAYBE_UNUSED bool needs_color_clear = job->cleared & PIPE_CLEAR_COLOR_BUFFERS;
+        MAYBE_UNUSED bool needs_z_clear = job->cleared & PIPE_CLEAR_DEPTH;
+        MAYBE_UNUSED bool needs_s_clear = job->cleared & PIPE_CLEAR_STENCIL;
+
+        /* For clearing color in a TLB general on V3D 3.3:
+         *
+         * - NONE buffer store clears all TLB color buffers.
+         * - color buffer store clears just the TLB color buffer being stored.
+         * - Z/S buffers store may not clear the TLB color buffer.
+         *
+         * And on V3D 4.1, we only have one flag for "clear the buffer being
+         * stored" in the general packet, and a separate packet to clear all
+         * color TLB buffers.
+         *
+         * As a result, we only bother flagging TLB color clears in a general
+         * packet when we don't have to emit a separate packet to clear all
+         * TLB color buffers.
          */
-        bool msaa_color_clear = (needs_color_clear &&
-                                 (job->cleared & PIPE_CLEAR_COLOR_BUFFERS) ==
-                                 (job->resolve & PIPE_CLEAR_COLOR_BUFFERS));
+        bool general_color_clear = (needs_color_clear &&
+                                    (job->cleared & PIPE_CLEAR_COLOR_BUFFERS) ==
+                                    (job->resolve & PIPE_CLEAR_COLOR_BUFFERS));
 
         uint32_t stores_pending = job->resolve;
 
-        /* Use raw stores for any MSAA surfaces.  These output UIF tiled
-         * images where each 4x MSAA pixel is a 2x2 quad, and the format will
-         * be that of the internal_type/internal_bpp, rather than the format
-         * from GL's perspective.
+        /* For V3D 4.1, use general stores for all TLB stores.
+         *
+         * For V3D 3.3, we only use general stores to do raw stores for any
+         * MSAA surfaces.  These output UIF tiled images where each 4x MSAA
+         * pixel is a 2x2 quad, and the format will be that of the
+         * internal_type/internal_bpp, rather than the format from GL's
+         * perspective.  Non-MSAA surfaces will use
+         * STORE_MULTI_SAMPLE_RESOLVED_TILE_COLOR_BUFFER_EXTENDED.
          */
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
                 uint32_t bit = PIPE_CLEAR_COLOR0 << i;
@@ -171,33 +290,49 @@ vc5_rcl_emit_stores(struct vc5_job *job, struct vc5_cl *cl)
                         continue;
 
                 struct pipe_surface *psurf = job->cbufs[i];
-                if (!psurf || psurf->texture->nr_samples <= 1)
+                if (!psurf ||
+                    (V3D_VERSION < 40 && psurf->texture->nr_samples <= 1)) {
                         continue;
+                }
 
                 stores_pending &= ~bit;
-                store_raw(cl, psurf, RENDER_TARGET_0 + i,
-                          !stores_pending && msaa_color_clear,
-                          !stores_pending && needs_z_clear,
-                          !stores_pending && needs_s_clear);
-
-                if (stores_pending)
+                store_general(job, cl, psurf, RENDER_TARGET_0 + i, bit,
+                              !stores_pending, general_color_clear);
+                if (V3D_VERSION < 40 && stores_pending)
                         cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
         }
 
         if (job->resolve & PIPE_CLEAR_DEPTHSTENCIL && job->zsbuf &&
-            job->zsbuf->texture->nr_samples > 1) {
+            !(V3D_VERSION < 40 && job->zsbuf->texture->nr_samples <= 1)) {
                 stores_pending &= ~PIPE_CLEAR_DEPTHSTENCIL;
-                store_raw(cl, job->zsbuf,
-                          zs_buffer_from_pipe_bits(job->resolve),
-                          false,
-                          !stores_pending && needs_z_clear,
-                          !stores_pending && needs_s_clear);
 
-                if (stores_pending)
+                struct vc5_resource *rsc = vc5_resource(job->zsbuf->texture);
+                if (rsc->separate_stencil) {
+                        if (job->resolve & PIPE_CLEAR_DEPTH) {
+                                store_general(job, cl, job->zsbuf, Z,
+                                              PIPE_CLEAR_DEPTH,
+                                              !stores_pending,
+                                              general_color_clear);
+                        }
+                        if (job->resolve & PIPE_CLEAR_STENCIL) {
+                                store_general(job, cl, job->zsbuf, STENCIL,
+                                              PIPE_CLEAR_STENCIL,
+                                              !stores_pending,
+                                              general_color_clear);
+                        }
+                } else {
+                        store_general(job, cl, job->zsbuf,
+                                      zs_buffer_from_pipe_bits(job->resolve),
+                                      job->resolve & PIPE_CLEAR_DEPTHSTENCIL,
+                                      !stores_pending, general_color_clear);
+                }
+
+                if (V3D_VERSION < 40 && stores_pending)
                         cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
         }
 
         if (stores_pending) {
+#if V3D_VERSION < 40
                 cl_emit(cl, STORE_MULTI_SAMPLE_RESOLVED_TILE_COLOR_BUFFER_EXTENDED, store) {
 
                         store.disable_color_buffer_write =
@@ -216,14 +351,22 @@ vc5_rcl_emit_stores(struct vc5_job *job, struct vc5_cl *cl)
                         store.disable_stencil_buffer_clear_on_write =
                                 !needs_s_clear;
                 };
-        } else if (needs_color_clear && !msaa_color_clear) {
-                /* If we had MSAA color stores that didn't match the set of
-                 * MSAA color clears, then we need to clear the color buffers
-                 * now.
+#else /* V3D_VERSION >= 40 */
+                unreachable("All color buffers should have been stored.");
+#endif /* V3D_VERSION >= 40 */
+        } else if (needs_color_clear && !general_color_clear) {
+                /* If we didn't do our color clears in the general packet,
+                 * then emit a packet to clear all the TLB color buffers now.
                  */
+#if V3D_VERSION < 40
                 cl_emit(cl, STORE_TILE_BUFFER_GENERAL, store) {
                         store.buffer_to_store = NONE;
                 }
+#else /* V3D_VERSION >= 40 */
+                cl_emit(cl, CLEAR_TILE_BUFFERS, clear) {
+                        clear.clear_all_render_targets = true;
+                }
+#endif /* V3D_VERSION >= 40 */
         }
 }
 
@@ -237,12 +380,21 @@ vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
         vc5_cl_ensure_space(cl, 200, 1);
         struct vc5_cl_reloc tile_list_start = cl_get_address(cl);
 
+        if (V3D_VERSION >= 40) {
+                /* V3D 4.x only requires a single tile coordinates, and
+                 * END_OF_LOADS switches us between loading and rendering.
+                 */
+                cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
+        }
+
         vc5_rcl_emit_loads(job, cl);
 
-        /* Tile Coordinates triggers the reload and sets where the stores
-         * go. There must be one per store packet.
-         */
-        cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
+        if (V3D_VERSION < 40) {
+                /* Tile Coordinates triggers the last reload and sets where
+                 * the stores go. There must be one per store packet.
+                 */
+                cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
+        }
 
         /* The binner starts out writing tiles assuming that the initial mode
          * is triangles, so make sure that's the case.
@@ -256,6 +408,10 @@ vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
 
         vc5_rcl_emit_stores(job, cl);
 
+#if V3D_VERSION >= 40
+        cl_emit(cl, END_OF_TILE_MARKER, end);
+#endif
+
         cl_emit(cl, RETURN_FROM_SUB_LIST, ret);
 
         cl_emit(&job->rcl, START_ADDRESS_OF_GENERIC_TILE_LIST, branch) {
@@ -264,10 +420,25 @@ vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
         }
 }
 
+#if V3D_VERSION >= 40
+static void
+v3d_setup_render_target(struct vc5_job *job, int cbuf,
+                        uint32_t *rt_bpp, uint32_t *rt_type, uint32_t *rt_clamp)
+{
+        if (!job->cbufs[cbuf])
+                return;
+
+        struct vc5_surface *surf = vc5_surface(job->cbufs[cbuf]);
+        *rt_bpp = surf->internal_bpp;
+        *rt_type = surf->internal_type;
+        *rt_clamp = V3D_RENDER_TARGET_CLAMP_NONE;
+}
+#endif /* V3D_VERSION >= 40 */
+
 #define div_round_up(a, b) (((a) + (b) - 1) / b)
 
 void
-vc5_emit_rcl(struct vc5_job *job)
+v3dX(emit_rcl)(struct vc5_job *job)
 {
         /* The RCL list should be empty. */
         assert(!job->rcl.bo);
@@ -289,8 +460,17 @@ vc5_emit_rcl(struct vc5_job *job)
          */
         cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_COMMON_CONFIGURATION,
                 config) {
+#if V3D_VERSION < 40
                 config.enable_z_store = job->resolve & PIPE_CLEAR_DEPTH;
                 config.enable_stencil_store = job->resolve & PIPE_CLEAR_STENCIL;
+#else /* V3D_VERSION >= 40 */
+                if (job->zsbuf) {
+                        struct vc5_surface *surf = vc5_surface(job->zsbuf);
+                        config.internal_depth_type = surf->internal_type;
+                }
+#endif /* V3D_VERSION >= 40 */
+
+                /* XXX: Early D/S clear */
 
                 config.early_z_disable = !job->uses_early_z;
 
@@ -312,7 +492,7 @@ vc5_emit_rcl(struct vc5_job *job)
                 struct vc5_surface *surf = vc5_surface(psurf);
                 struct vc5_resource *rsc = vc5_resource(psurf->texture);
 
-                uint32_t config_pad = 0;
+                MAYBE_UNUSED uint32_t config_pad = 0;
                 uint32_t clear_pad = 0;
 
                 /* XXX: Set the pad for raster. */
@@ -331,6 +511,7 @@ vc5_emit_rcl(struct vc5_job *job)
                         }
                 }
 
+#if V3D_VERSION < 40
                 cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_RENDER_TARGET_CONFIG, rt) {
                         rt.address = cl_address(rsc->bo, surf->offset);
                         rt.internal_type = surf->internal_type;
@@ -343,6 +524,7 @@ vc5_emit_rcl(struct vc5_job *job)
                         if (job->resolve & PIPE_CLEAR_COLOR0 << i)
                                 rsc->writes++;
                 }
+#endif /* V3D_VERSION < 40 */
 
                 cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_CLEAR_COLORS_PART1,
                         clear) {
@@ -374,6 +556,28 @@ vc5_emit_rcl(struct vc5_job *job)
                 }
         }
 
+#if V3D_VERSION >= 40
+        cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_RENDER_TARGET_CONFIG, rt) {
+                v3d_setup_render_target(job, 0,
+                                        &rt.render_target_0_internal_bpp,
+                                        &rt.render_target_0_internal_type,
+                                        &rt.render_target_0_clamp);
+                v3d_setup_render_target(job, 1,
+                                        &rt.render_target_1_internal_bpp,
+                                        &rt.render_target_1_internal_type,
+                                        &rt.render_target_1_clamp);
+                v3d_setup_render_target(job, 2,
+                                        &rt.render_target_2_internal_bpp,
+                                        &rt.render_target_2_internal_type,
+                                        &rt.render_target_2_clamp);
+                v3d_setup_render_target(job, 3,
+                                        &rt.render_target_3_internal_bpp,
+                                        &rt.render_target_3_internal_type,
+                                        &rt.render_target_3_clamp);
+        }
+#endif
+
+#if V3D_VERSION < 40
         /* TODO: Don't bother emitting if we don't load/clear Z/S. */
         if (job->zsbuf) {
                 struct pipe_surface *psurf = job->zsbuf;
@@ -417,6 +621,7 @@ vc5_emit_rcl(struct vc5_job *job)
                         }
                 }
         }
+#endif /* V3D_VERSION < 40 */
 
         /* Ends rendering mode config. */
         cl_emit(&job->rcl, TILE_RENDERING_MODE_CONFIGURATION_Z_STENCIL_CLEAR_VALUES,
@@ -480,9 +685,21 @@ vc5_emit_rcl(struct vc5_job *job)
                 coords.tile_row_number = 0;
         }
 
+#if V3D_VERSION < 40
         cl_emit(&job->rcl, STORE_TILE_BUFFER_GENERAL, store) {
                 store.buffer_to_store = NONE;
         }
+#else
+        cl_emit(&job->rcl, END_OF_LOADS, end);
+        cl_emit(&job->rcl, STORE_TILE_BUFFER_GENERAL, store) {
+                store.buffer_to_store = NONE;
+        }
+        cl_emit(&job->rcl, CLEAR_TILE_BUFFERS, clear) {
+                clear.clear_z_stencil_buffer = true;
+                clear.clear_all_render_targets = true;
+        }
+        cl_emit(&job->rcl, END_OF_TILE_MARKER, end);
+#endif
 
         cl_emit(&job->rcl, FLUSH_VCD_CACHE, flush);
 

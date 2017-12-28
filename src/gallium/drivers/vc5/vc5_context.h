@@ -25,6 +25,10 @@
 #ifndef VC5_CONTEXT_H
 #define VC5_CONTEXT_H
 
+#ifdef V3D_VERSION
+#include "broadcom/common/v3d_macros.h"
+#endif
+
 #include <stdio.h>
 
 #include "pipe/p_context.h"
@@ -504,7 +508,17 @@ void vc5_get_internal_type_bpp_for_output_format(uint32_t format,
 void vc5_init_query_functions(struct vc5_context *vc5);
 void vc5_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info);
 void vc5_blitter_save(struct vc5_context *vc5);
-void vc5_emit_rcl(struct vc5_job *job);
 
+#ifdef v3dX
+#  include "v3dx_context.h"
+#else
+#  define v3dX(x) v3d33_##x
+#  include "v3dx_context.h"
+#  undef v3dX
+
+#  define v3dX(x) v3d41_##x
+#  include "v3dx_context.h"
+#  undef v3dX
+#endif
 
 #endif /* VC5_CONTEXT_H */
