@@ -165,8 +165,10 @@ vc5_create_depth_stencil_alpha_state(struct pipe_context *pctx,
                           cso->depth.func == PIPE_FUNC_LEQUAL) &&
                          (!cso->stencil[0].enabled ||
                           (cso->stencil[0].zfail_op == PIPE_STENCIL_OP_KEEP &&
+                           cso->stencil[0].func == PIPE_FUNC_ALWAYS &&
                            (!cso->stencil[1].enabled ||
-                            cso->stencil[1].zfail_op == PIPE_STENCIL_OP_KEEP))));
+                            (cso->stencil[1].zfail_op == PIPE_STENCIL_OP_KEEP &&
+                             cso->stencil[1].func == PIPE_FUNC_ALWAYS)))));
         }
 
         const struct pipe_stencil_state *front = &cso->stencil[0];
