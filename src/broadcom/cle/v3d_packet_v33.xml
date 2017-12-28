@@ -107,6 +107,13 @@
     <value name="UIF (XOR)" value="5"/>
   </enum>
 
+  <enum name="Decimate Mode" prefix="V3D_DECIMATE_MODE">
+    <value name="sample 0" value="0"/>
+    <value name="4x" value="1"/>
+    <value name="16x" value="2"/>
+    <value name="all samples" value="3"/>
+  </enum>
+
   <enum name="Output Image Format" prefix="V3D_OUTPUT_IMAGE_FORMAT">
     <!--
 	Formats appear with their channels named from the low bits to
@@ -551,7 +558,7 @@
 
     <field name="Output image format" size="6" start="16" type="Output Image Format"/>
 
-    <field name="Decimate mode" size="2" start="14" type="uint"/>
+    <field name="Decimate mode" size="2" start="14" type="Decimate Mode"/>
 
     <field name="Internal Type" size="4" start="10" type="uint" prefix="Internal Type">
       <value name="8i" value="0"/>
