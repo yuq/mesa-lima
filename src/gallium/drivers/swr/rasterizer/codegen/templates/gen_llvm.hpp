@@ -40,15 +40,22 @@ namespace SwrJit
     INLINE static StructType *Gen_${type['name']}(JitManager* pJitMgr)
     {
         LLVMContext& ctx = pJitMgr->mContext;
-        std::vector<Type*> members;
-        <%
-            (max_type_len, max_name_len) = calc_max_len(type['members'])
-        %>
-        %for member in type['members']:
-        /* ${member['name']} ${pad(len(member['name']), max_name_len)}*/ members.push_back( ${member['type']} );
-        %endfor
 
-        return StructType::get(ctx, members, false);
+        StructType* pRetType = pJitMgr->mpCurrentModule->getTypeByName("${type['name']}");
+        if (pRetType == nullptr)
+        {
+            std::vector<Type*> members;
+            <%
+                (max_type_len, max_name_len) = calc_max_len(type['members'])
+            %>
+            %for member in type['members']:
+            /* ${member['name']} ${pad(len(member['name']), max_name_len)}*/ members.push_back(${ member['type'] });
+            %endfor
+
+            pRetType = StructType::create(members, "${type['name']}", false);
+        }
+
+        return pRetType;
     }
 
     %for member in type['members']:
