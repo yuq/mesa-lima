@@ -92,6 +92,7 @@ struct _egl_resource
 struct _egl_extensions
 {
    /* Please keep these sorted alphabetically. */
+   EGLBoolean ANDROID_blob_cache;
    EGLBoolean ANDROID_framebuffer_target;
    EGLBoolean ANDROID_image_native_buffer;
    EGLBoolean ANDROID_native_fence_sync;
@@ -181,6 +182,9 @@ struct _egl_display
    _EGLResource *ResourceLists[_EGL_NUM_RESOURCES];
 
    EGLLabelKHR Label;
+
+   EGLSetBlobFuncANDROID BlobCacheSet;
+   EGLGetBlobFuncANDROID BlobCacheGet;
 };
 
 

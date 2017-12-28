@@ -458,6 +458,7 @@ static const struct dri2_extension_match optional_core_extensions[] = {
    { __DRI2_INTEROP, 1, offsetof(struct dri2_egl_display, interop) },
    { __DRI_IMAGE, 1, offsetof(struct dri2_egl_display, image) },
    { __DRI2_FLUSH_CONTROL, 1, offsetof(struct dri2_egl_display, flush_control) },
+   { __DRI2_BLOB, 1, offsetof(struct dri2_egl_display, blob) },
    { NULL, 0, 0 }
 };
 
@@ -726,6 +727,9 @@ dri2_setup_screen(_EGLDisplay *disp)
             (capabilities & __DRI_FENCE_CAP_NATIVE_FD) != 0;
       }
    }
+
+   if (dri2_dpy->blob)
+      disp->Extensions.ANDROID_blob_cache = EGL_TRUE;
 
    disp->Extensions.KHR_reusable_sync = EGL_TRUE;
 
@@ -3016,6 +3020,17 @@ dri2_dup_native_fence_fd(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync)
    return dup(sync->SyncFd);
 }
 
+static void
+dri2_set_blob_cache_funcs(_EGLDriver *drv, _EGLDisplay *dpy,
+                          EGLSetBlobFuncANDROID set,
+                          EGLGetBlobFuncANDROID get)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
+   dri2_dpy->blob->set_cache_funcs(dri2_dpy->dri_screen,
+                                   dpy->BlobCacheSet,
+                                   dpy->BlobCacheGet);
+}
+
 static EGLint
 dri2_client_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
                       EGLint flags, EGLTime timeout)
@@ -3234,6 +3249,7 @@ _eglBuiltInDriver(void)
    dri2_drv->API.GLInteropQueryDeviceInfo = dri2_interop_query_device_info;
    dri2_drv->API.GLInteropExportObject = dri2_interop_export_object;
    dri2_drv->API.DupNativeFenceFDANDROID = dri2_dup_native_fence_fd;
+   dri2_drv->API.SetBlobCacheFuncsANDROID = dri2_set_blob_cache_funcs;
 
    dri2_drv->Name = "DRI2";
 
