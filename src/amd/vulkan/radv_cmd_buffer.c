@@ -4002,7 +4002,7 @@ static void write_event(struct radv_cmd_buffer *cmd_buffer,
 	si_cs_emit_write_event_eop(cs,
 				   cmd_buffer->state.predicating,
 				   cmd_buffer->device->physical_device->rad_info.chip_class,
-				   false,
+				   radv_cmd_buffer_uses_mec(cmd_buffer),
 				   V_028A90_BOTTOM_OF_PIPE_TS, 0,
 				   1, va, 2, value);
 
