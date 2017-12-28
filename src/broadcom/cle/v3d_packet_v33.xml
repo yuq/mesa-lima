@@ -107,6 +107,59 @@
     <value name="UIF (XOR)" value="5"/>
   </enum>
 
+  <enum name="Output Image Format" prefix="V3D_OUTPUT_IMAGE_FORMAT">
+    <!--
+	Formats appear with their channels named from the low bits to
+	the high bits.
+    -->
+    <value name="srgb8_alpha8" value="0"/>
+    <value name="srgb" value="1"/>
+    <value name="rgb10_a2ui" value="2"/>
+    <value name="rgb10_a2" value="3"/>
+    <value name="abgr1555" value="4"/>
+    <value name="alpha-masked abgr1555" value="5"/>
+    <value name="abgr4444" value="6"/>
+    <value name="bgr565" value="7"/>
+    <value name="r11f_g11f_b10f" value="8"/>
+    <value name="rgba32f"  value="9"/>
+    <value name="rg32f"    value="10"/>
+    <value name="r32f"     value="11"/>
+    <value name="rgba32i"  value="12"/>
+    <value name="rg32i"    value="13"/>
+    <value name="r32i"     value="14"/>
+    <value name="rgba32ui" value="15"/>
+    <value name="rg32ui"   value="16"/>
+    <value name="r32ui"    value="17"/>
+    <value name="rgba16f"  value="18"/>
+    <value name="rg16f"    value="19"/>
+    <value name="r16f"     value="20"/>
+    <value name="rgba16i"  value="21"/>
+    <value name="rg16i"    value="22"/>
+    <value name="r16i"     value="23"/>
+    <value name="rgba16ui" value="24"/>
+    <value name="rg16ui"   value="25"/>
+    <value name="r16ui"    value="26"/>
+    <value name="rgba8"    value="27"/>
+    <value name="rgb8"     value="28"/>
+    <value name="rg8"      value="29"/>
+    <value name="r8"       value="30"/>
+    <value name="rgba8i"   value="31"/>
+    <value name="rg8i"     value="32"/>
+    <value name="r8i"      value="33"/>
+    <value name="rgba8ui"  value="34"/>
+    <value name="rg8ui"    value="35"/>
+    <value name="r8ui"     value="36"/>
+    <value name="srgbx8"   value="37"/>
+    <value name="rgbx8"    value="38"/>
+  </enum>
+
+  <enum name="Z/S Output Image Format" prefix="V3D_OUTPUT_IMAGE_FORMAT_ZS">
+    <value name="depth_component32f" value="0"/>
+    <value name="depth_component24" value="1"/> <!-- depth low, pad high -->
+    <value name="depth_component16" value="2"/>
+    <value name="depth24_stencil8" value="3"/> <!-- stencil low, depth high -->
+  </enum>
+
   <packet code="0" name="Halt"/>
   <packet code="1" name="NOP"/>
   <packet code="4" name="Flush"/>
@@ -496,51 +549,7 @@
     <field name="A dithered" size="1" start="23" type="bool"/>
     <field name="BGR dithered" size="1" start="22" type="bool"/>
 
-    <field name="Output image format" size="6" start="16" type="uint" prefix="Output Image Format">
-    <!--
-	Formats appear with their channels named from the low bits to
-	the high bits.
-    -->
-      <value name="srgb8_alpha8" value="0"/>
-      <value name="srgb" value="1"/>
-      <value name="rgb10_a2ui" value="2"/>
-      <value name="rgb10_a2" value="3"/>
-      <value name="abgr1555" value="4"/>
-      <value name="alpha-masked abgr1555" value="5"/>
-      <value name="abgr4444" value="6"/>
-      <value name="bgr565" value="7"/>
-      <value name="r11f_g11f_b10f" value="8"/>
-      <value name="rgba32f"  value="9"/>
-      <value name="rg32f"    value="10"/>
-      <value name="r32f"     value="11"/>
-      <value name="rgba32i"  value="12"/>
-      <value name="rg32i"    value="13"/>
-      <value name="r32i"     value="14"/>
-      <value name="rgba32ui" value="15"/>
-      <value name="rg32ui"   value="16"/>
-      <value name="r32ui"    value="17"/>
-      <value name="rgba16f"  value="18"/>
-      <value name="rg16f"    value="19"/>
-      <value name="r16f"     value="20"/>
-      <value name="rgba16i"  value="21"/>
-      <value name="rg16i"    value="22"/>
-      <value name="r16i"     value="23"/>
-      <value name="rgba16ui" value="24"/>
-      <value name="rg16ui"   value="25"/>
-      <value name="r16ui"    value="26"/>
-      <value name="rgba8"    value="27"/>
-      <value name="rgb8"     value="28"/>
-      <value name="rg8"      value="29"/>
-      <value name="r8"       value="30"/>
-      <value name="rgba8i"   value="31"/>
-      <value name="rg8i"     value="32"/>
-      <value name="r8i"      value="33"/>
-      <value name="rgba8ui"  value="34"/>
-      <value name="rg8ui"    value="35"/>
-      <value name="r8ui"     value="36"/>
-      <value name="srgbx8"   value="37"/>
-      <value name="rgbx8"    value="38"/>
-    </field>
+    <field name="Output image format" size="6" start="16" type="Output Image Format"/>
 
     <field name="Decimate mode" size="2" start="14" type="uint"/>
 
@@ -572,12 +581,7 @@
 
     <field name="Memory Format" size="3" start="22" type="Memory Format"/>
 
-    <field name="Output image format" size="6" start="16" type="uint" prefix="Output Image Format">
-      <value name="depth_component32f" value="0"/>
-      <value name="depth_component24" value="1"/> <!-- depth low, pad high -->
-      <value name="depth_component16" value="2"/>
-      <value name="depth24_stencil8" value="3"/> <!-- stencil low, depth high -->
-    </field>
+    <field name="Output image format" size="6" start="16" type="Z/S Output Image Format"/>
 
     <field name="Decimate mode" size="2" start="14" type="uint"/>
 

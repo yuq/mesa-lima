@@ -38,7 +38,7 @@
 #include "vc5_context.h"
 #include "broadcom/cle/v3d_packet_v33_pack.h"
 
-#define OUTPUT_IMAGE_FORMAT_NO 255
+#define V3D_OUTPUT_IMAGE_FORMAT_NO 255
 
 struct vc5_format {
         /** Set if the pipe format is defined in the table. */
@@ -77,7 +77,7 @@ struct vc5_format {
 #define FORMAT(pipe, rt, tex, swiz, return_size, return_channels)       \
         [PIPE_FORMAT_##pipe] = {                                        \
                 true,                                                   \
-                OUTPUT_IMAGE_FORMAT_##rt,                               \
+                V3D_OUTPUT_IMAGE_FORMAT_##rt,                           \
                 TEXTURE_DATA_FORMAT_##tex,                              \
                 swiz,                                                   \
                 return_size,                                            \
@@ -182,14 +182,14 @@ static const struct vc5_format vc5_format_table[] = {
         FORMAT(R11G11B10_FLOAT,   R11F_G11F_B10F, R11F_G11F_B10F, SWIZ_XYZW, 16, 0),
         FORMAT(R9G9B9E5_FLOAT,    NO,           RGB9_E5,     SWIZ_XYZW, 16, 0),
 
-        FORMAT(S8_UINT_Z24_UNORM, DEPTH24_STENCIL8, DEPTH24_X8, SWIZ_XXXX, 32, 1),
-        FORMAT(X8Z24_UNORM,       DEPTH24_STENCIL8, DEPTH24_X8, SWIZ_XXXX, 32, 1),
+        FORMAT(S8_UINT_Z24_UNORM, ZS_DEPTH24_STENCIL8, DEPTH24_X8, SWIZ_XXXX, 32, 1),
+        FORMAT(X8Z24_UNORM,       ZS_DEPTH24_STENCIL8, DEPTH24_X8, SWIZ_XXXX, 32, 1),
         FORMAT(S8X24_UINT,        NO,           R32F,        SWIZ_XXXX, 32, 1),
-        FORMAT(Z32_FLOAT,         DEPTH_COMPONENT32F, R32F, SWIZ_XXXX, 32, 1),
-        FORMAT(Z16_UNORM,         DEPTH_COMPONENT16,  DEPTH_COMP16, SWIZ_XXXX, 32, 1),
+        FORMAT(Z32_FLOAT,         ZS_DEPTH_COMPONENT32F, R32F, SWIZ_XXXX, 32, 1),
+        FORMAT(Z16_UNORM,         ZS_DEPTH_COMPONENT16,  DEPTH_COMP16, SWIZ_XXXX, 32, 1),
 
         /* Pretend we support this, but it'll be separate Z32F depth and S8. */
-        FORMAT(Z32_FLOAT_S8X24_UINT, DEPTH_COMPONENT32F, R32F, SWIZ_XXXX, 32, 1),
+        FORMAT(Z32_FLOAT_S8X24_UINT, ZS_DEPTH_COMPONENT32F, R32F, SWIZ_XXXX, 32, 1),
 
         FORMAT(ETC2_RGB8,         NO,           RGB8_ETC2,   SWIZ_XYZ1, 16, 0),
         FORMAT(ETC2_SRGB8,        NO,           RGB8_ETC2,   SWIZ_XYZ1, 16, 0),
@@ -225,7 +225,7 @@ vc5_rt_format_supported(enum pipe_format f)
         if (!vf)
                 return false;
 
-        return vf->rt_type != OUTPUT_IMAGE_FORMAT_NO;
+        return vf->rt_type != V3D_OUTPUT_IMAGE_FORMAT_NO;
 }
 
 uint8_t
@@ -301,38 +301,38 @@ vc5_get_internal_type_bpp_for_output_format(uint32_t format,
                                             uint32_t *bpp)
 {
         switch (format) {
-        case OUTPUT_IMAGE_FORMAT_RGBA8:
-        case OUTPUT_IMAGE_FORMAT_RGBX8:
-        case OUTPUT_IMAGE_FORMAT_RGB8:
-        case OUTPUT_IMAGE_FORMAT_RG8:
-        case OUTPUT_IMAGE_FORMAT_R8:
-        case OUTPUT_IMAGE_FORMAT_ABGR4444:
-        case OUTPUT_IMAGE_FORMAT_BGR565:
-        case OUTPUT_IMAGE_FORMAT_ABGR1555:
+        case V3D_OUTPUT_IMAGE_FORMAT_RGBA8:
+        case V3D_OUTPUT_IMAGE_FORMAT_RGBX8:
+        case V3D_OUTPUT_IMAGE_FORMAT_RGB8:
+        case V3D_OUTPUT_IMAGE_FORMAT_RG8:
+        case V3D_OUTPUT_IMAGE_FORMAT_R8:
+        case V3D_OUTPUT_IMAGE_FORMAT_ABGR4444:
+        case V3D_OUTPUT_IMAGE_FORMAT_BGR565:
+        case V3D_OUTPUT_IMAGE_FORMAT_ABGR1555:
                 *type = INTERNAL_TYPE_8;
                 *bpp = INTERNAL_BPP_32;
                 break;
 
-        case OUTPUT_IMAGE_FORMAT_RGBA8I:
-        case OUTPUT_IMAGE_FORMAT_RG8I:
-        case OUTPUT_IMAGE_FORMAT_R8I:
+        case V3D_OUTPUT_IMAGE_FORMAT_RGBA8I:
+        case V3D_OUTPUT_IMAGE_FORMAT_RG8I:
+        case V3D_OUTPUT_IMAGE_FORMAT_R8I:
                 *type = INTERNAL_TYPE_8I;
                 *bpp = INTERNAL_BPP_32;
                 break;
 
-        case OUTPUT_IMAGE_FORMAT_RGBA8UI:
-        case OUTPUT_IMAGE_FORMAT_RG8UI:
-        case OUTPUT_IMAGE_FORMAT_R8UI:
+        case V3D_OUTPUT_IMAGE_FORMAT_RGBA8UI:
+        case V3D_OUTPUT_IMAGE_FORMAT_RG8UI:
+        case V3D_OUTPUT_IMAGE_FORMAT_R8UI:
                 *type = INTERNAL_TYPE_8UI;
                 *bpp = INTERNAL_BPP_32;
                 break;
 
-        case OUTPUT_IMAGE_FORMAT_SRGB8_ALPHA8:
-        case OUTPUT_IMAGE_FORMAT_SRGB:
-        case OUTPUT_IMAGE_FORMAT_RGB10_A2:
-        case OUTPUT_IMAGE_FORMAT_R11F_G11F_B10F:
-        case OUTPUT_IMAGE_FORMAT_SRGBX8:
-        case OUTPUT_IMAGE_FORMAT_RGBA16F:
+        case V3D_OUTPUT_IMAGE_FORMAT_SRGB8_ALPHA8:
+        case V3D_OUTPUT_IMAGE_FORMAT_SRGB:
+        case V3D_OUTPUT_IMAGE_FORMAT_RGB10_A2:
+        case V3D_OUTPUT_IMAGE_FORMAT_R11F_G11F_B10F:
+        case V3D_OUTPUT_IMAGE_FORMAT_SRGBX8:
+        case V3D_OUTPUT_IMAGE_FORMAT_RGBA16F:
                 /* Note that sRGB RTs are stored in the tile buffer at 16F,
                  * and the conversion to sRGB happens at tilebuffer
                  * load/store.
@@ -341,8 +341,8 @@ vc5_get_internal_type_bpp_for_output_format(uint32_t format,
                 *bpp = INTERNAL_BPP_64;
                 break;
 
-        case OUTPUT_IMAGE_FORMAT_RG16F:
-        case OUTPUT_IMAGE_FORMAT_R16F:
+        case V3D_OUTPUT_IMAGE_FORMAT_RG16F:
+        case V3D_OUTPUT_IMAGE_FORMAT_R16F:
                 *type = INTERNAL_TYPE_16F;
                 /* Use 64bpp to make sure the TLB doesn't throw away the alpha
                  * channel before alpha test happens.
@@ -350,61 +350,61 @@ vc5_get_internal_type_bpp_for_output_format(uint32_t format,
                 *bpp = INTERNAL_BPP_64;
                 break;
 
-        case OUTPUT_IMAGE_FORMAT_RGBA16I:
+        case V3D_OUTPUT_IMAGE_FORMAT_RGBA16I:
                 *type = INTERNAL_TYPE_16I;
                 *bpp = INTERNAL_BPP_64;
                 break;
-        case OUTPUT_IMAGE_FORMAT_RG16I:
-        case OUTPUT_IMAGE_FORMAT_R16I:
+        case V3D_OUTPUT_IMAGE_FORMAT_RG16I:
+        case V3D_OUTPUT_IMAGE_FORMAT_R16I:
                 *type = INTERNAL_TYPE_16I;
                 *bpp = INTERNAL_BPP_32;
                 break;
 
-        case OUTPUT_IMAGE_FORMAT_RGBA16UI:
+        case V3D_OUTPUT_IMAGE_FORMAT_RGBA16UI:
                 *type = INTERNAL_TYPE_16UI;
                 *bpp = INTERNAL_BPP_64;
                 break;
-        case OUTPUT_IMAGE_FORMAT_RG16UI:
-        case OUTPUT_IMAGE_FORMAT_R16UI:
+        case V3D_OUTPUT_IMAGE_FORMAT_RG16UI:
+        case V3D_OUTPUT_IMAGE_FORMAT_R16UI:
                 *type = INTERNAL_TYPE_16UI;
                 *bpp = INTERNAL_BPP_32;
                 break;
 
-        case OUTPUT_IMAGE_FORMAT_RGBA32I:
+        case V3D_OUTPUT_IMAGE_FORMAT_RGBA32I:
                 *type = INTERNAL_TYPE_32I;
                 *bpp = INTERNAL_BPP_128;
                 break;
-        case OUTPUT_IMAGE_FORMAT_RG32I:
+        case V3D_OUTPUT_IMAGE_FORMAT_RG32I:
                 *type = INTERNAL_TYPE_32I;
                 *bpp = INTERNAL_BPP_64;
                 break;
-        case OUTPUT_IMAGE_FORMAT_R32I:
+        case V3D_OUTPUT_IMAGE_FORMAT_R32I:
                 *type = INTERNAL_TYPE_32I;
                 *bpp = INTERNAL_BPP_32;
                 break;
 
-        case OUTPUT_IMAGE_FORMAT_RGBA32UI:
+        case V3D_OUTPUT_IMAGE_FORMAT_RGBA32UI:
                 *type = INTERNAL_TYPE_32UI;
                 *bpp = INTERNAL_BPP_128;
                 break;
-        case OUTPUT_IMAGE_FORMAT_RG32UI:
+        case V3D_OUTPUT_IMAGE_FORMAT_RG32UI:
                 *type = INTERNAL_TYPE_32UI;
                 *bpp = INTERNAL_BPP_64;
                 break;
-        case OUTPUT_IMAGE_FORMAT_R32UI:
+        case V3D_OUTPUT_IMAGE_FORMAT_R32UI:
                 *type = INTERNAL_TYPE_32UI;
                 *bpp = INTERNAL_BPP_32;
                 break;
 
-        case OUTPUT_IMAGE_FORMAT_RGBA32F:
+        case V3D_OUTPUT_IMAGE_FORMAT_RGBA32F:
                 *type = INTERNAL_TYPE_32F;
                 *bpp = INTERNAL_BPP_128;
                 break;
-        case OUTPUT_IMAGE_FORMAT_RG32F:
+        case V3D_OUTPUT_IMAGE_FORMAT_RG32F:
                 *type = INTERNAL_TYPE_32F;
                 *bpp = INTERNAL_BPP_64;
                 break;
-        case OUTPUT_IMAGE_FORMAT_R32F:
+        case V3D_OUTPUT_IMAGE_FORMAT_R32F:
                 *type = INTERNAL_TYPE_32F;
                 *bpp = INTERNAL_BPP_32;
                 break;
