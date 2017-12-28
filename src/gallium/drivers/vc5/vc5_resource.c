@@ -238,6 +238,14 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
 
         *pptrans = ptrans;
 
+        /* Our load/store routines work on entire compressed blocks. */
+        ptrans->box.x /= util_format_get_blockwidth(format);
+        ptrans->box.y /= util_format_get_blockheight(format);
+        ptrans->box.width = DIV_ROUND_UP(ptrans->box.width,
+                                         util_format_get_blockwidth(format));
+        ptrans->box.height = DIV_ROUND_UP(ptrans->box.height,
+                                          util_format_get_blockheight(format));
+
         struct vc5_resource_slice *slice = &rsc->slices[level];
         if (rsc->tiled) {
                 /* No direct mappings of tiled, since we need to manually
@@ -266,8 +274,8 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
                 ptrans->layer_stride = ptrans->stride;
 
                 return buf + slice->offset +
-                        ptrans->box.y / util_format_get_blockheight(format) * ptrans->stride +
-                        ptrans->box.x / util_format_get_blockwidth(format) * rsc->cpp +
+                        ptrans->box.y * ptrans->stride +
+                        ptrans->box.x * rsc->cpp +
                         ptrans->box.z * rsc->cube_map_stride;
         }
 
@@ -332,6 +340,8 @@ vc5_setup_slices(struct vc5_resource *rsc)
         uint32_t utile_h = vc5_utile_height(rsc->cpp);
         uint32_t uif_block_w = utile_w * 2;
         uint32_t uif_block_h = utile_h * 2;
+        uint32_t block_width = util_format_get_blockwidth(prsc->format);
+        uint32_t block_height = util_format_get_blockheight(prsc->format);
         bool msaa = prsc->nr_samples > 1;
         /* MSAA textures/renderbuffers are always laid out as single-level
          * UIF.
@@ -354,6 +364,9 @@ vc5_setup_slices(struct vc5_resource *rsc)
                         level_width *= 2;
                         level_height *= 2;
                 }
+
+                level_width = DIV_ROUND_UP(level_width, block_width);
+                level_height = DIV_ROUND_UP(level_height, block_height);
 
                 if (!rsc->tiled) {
                         slice->tiling = VC5_TILING_RASTER;
