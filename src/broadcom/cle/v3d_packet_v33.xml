@@ -98,6 +98,15 @@
     <value name="set" value="2"/>
   </enum>
 
+  <enum name="Memory Format" prefix="V3D_MEMORY_FORMAT">
+    <value name="Raster" value="0"/>
+    <value name="Lineartile" value="1"/>
+    <value name="UB-linear (1 UIF block wide)" value="2"/>
+    <value name="UB-linear (2 UIF blocks wide)" value="3"/>
+    <value name="UIF (No XOR)" value="4"/>
+    <value name="UIF (XOR)" value="5"/>
+  </enum>
+
   <packet code="0" name="Halt"/>
   <packet code="1" name="NOP"/>
   <packet code="4" name="Flush"/>
@@ -482,14 +491,7 @@
 
     <field name="Flip Y" size="1" start="27" type="bool"/>
 
-    <field name="Memory Format" size="3" start="24" type="uint" prefix="Memory Format">
-      <value name="Raster" value="0"/>
-      <value name="Lineartile" value="1"/>
-      <value name="UB-linear (1 UIF block wide)" value="2"/>
-      <value name="UB-linear (2 UIF blocks wide)" value="3"/>
-      <value name="UIF (No XOR)" value="4"/>
-      <value name="UIF (XOR)" value="5"/>
-    </field>
+    <field name="Memory Format" size="3" start="24" type="Memory Format"/>
 
     <field name="A dithered" size="1" start="23" type="bool"/>
     <field name="BGR dithered" size="1" start="22" type="bool"/>
@@ -568,14 +570,7 @@
 
     <field name="Padded height of output image in UIF blocks" size="13" start="25" type="uint"/>
 
-    <field name="Memory Format" size="3" start="22" type="uint" prefix="Memory Format">
-      <value name="Raster" value="0"/>
-      <value name="Lineartile" value="1"/>
-      <value name="UB-linear (1 UIF block wide)" value="2"/>
-      <value name="UB-linear (2 UIF blocks wide)" value="3"/>
-      <value name="UIF (No XOR)" value="4"/>
-      <value name="UIF (XOR)" value="5"/>
-    </field>
+    <field name="Memory Format" size="3" start="22" type="Memory Format"/>
 
     <field name="Output image format" size="6" start="16" type="uint" prefix="Output Image Format">
       <value name="depth_component32f" value="0"/>
