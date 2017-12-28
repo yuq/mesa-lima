@@ -393,6 +393,7 @@ update_samplers(struct svga_context *svga, unsigned dirty )
       for (i = 0; i < count; i++) {
          bool fs_shadow = false;
 
+         /* _NEW_FS */
          if (shader == PIPE_SHADER_FRAGMENT) {
             struct svga_shader_variant *fs = svga->state.hw_draw.fs;
             /* If the fragment shader is doing the shadow comparison
@@ -469,8 +470,8 @@ update_samplers(struct svga_context *svga, unsigned dirty )
 
 struct svga_tracked_state svga_hw_sampler = {
    "texture sampler emit",
-   (SVGA_NEW_SAMPLER |
-    SVGA_NEW_STIPPLE |
-    SVGA_NEW_TEXTURE_FLAGS),
+   (SVGA_NEW_FS |
+    SVGA_NEW_SAMPLER |
+    SVGA_NEW_STIPPLE),
    update_samplers
 };
