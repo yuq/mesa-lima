@@ -3181,7 +3181,8 @@ radv_initialise_color_surface(struct radv_device *device,
 				max_uncompressed_block_size = V_028C78_MAX_BLOCK_SIZE_128B;
 		}
 
-		if (iview->image->usage & (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)) {
+		if (iview->image->usage & (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+		                           VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)) {
 			independent_64b_blocks = 1;
 			max_compressed_block_size = V_028C78_MAX_BLOCK_SIZE_64B;
 		} else
