@@ -68,6 +68,7 @@ do {                                                            \
 static inline void
 svga_queue_rs(struct rs_queue *q, unsigned rss, unsigned value)
 {
+   assert(q->rs_count < ARRAY_SIZE(q->rs));
    q->rs[q->rs_count].state = rss;
    q->rs[q->rs_count].uintValue = value;
    q->rs_count++;
