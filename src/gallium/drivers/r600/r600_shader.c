@@ -2851,7 +2851,7 @@ static int r600_store_tcs_output(struct r600_shader_ctx *ctx)
 }
 
 static int r600_tess_factor_read(struct r600_shader_ctx *ctx,
-				 int output_idx)
+				 int output_idx, int nc)
 {
 	int param;
 	unsigned temp_reg = r600_get_temp(ctx);
@@ -2871,7 +2871,7 @@ static int r600_tess_factor_read(struct r600_shader_ctx *ctx,
 	if (r)
 		return r;
 
-	do_lds_fetch_values(ctx, temp_reg, dreg, 0xf);
+	do_lds_fetch_values(ctx, temp_reg, dreg, ((1u << nc) - 1));
 	return 0;
 }
 
@@ -2941,13 +2941,13 @@ static int r600_emit_tess_factor(struct r600_shader_ctx *ctx)
 		return -1;
 
 	if (tessouter_idx != -1) {
-		r = r600_tess_factor_read(ctx, tessouter_idx);
+		r = r600_tess_factor_read(ctx, tessouter_idx, outer_comps);
 		if (r)
 			return r;
 	}
 
 	if (tessinner_idx != -1) {
-		r = r600_tess_factor_read(ctx, tessinner_idx);
+		r = r600_tess_factor_read(ctx, tessinner_idx, inner_comps);
 		if (r)
 			return r;
 	}
