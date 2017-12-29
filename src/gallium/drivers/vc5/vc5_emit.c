@@ -91,7 +91,8 @@ swizzled_border_color(struct pipe_sampler_state *sampler,
          * For swizzling in the shader, we don't do any pre-swizzling of the
          * border color.
          */
-        if (vc5_get_tex_return_size(sview->base.format) != 32)
+        if (vc5_get_tex_return_size(sview->base.format,
+                                    sampler->compare_mode) != 32)
                 swiz = desc->swizzle[swiz];
 
         switch (swiz) {
@@ -101,6 +102,24 @@ swizzled_border_color(struct pipe_sampler_state *sampler,
                 return util_float_to_half(1.0);
         default:
                 return util_float_to_half(sampler->border_color.f[swiz]);
+        }
+}
+
+static uint32_t
+translate_swizzle(unsigned char pipe_swizzle)
+{
+        switch (pipe_swizzle) {
+        case PIPE_SWIZZLE_0:
+                return 0;
+        case PIPE_SWIZZLE_1:
+                return 1;
+        case PIPE_SWIZZLE_X:
+        case PIPE_SWIZZLE_Y:
+        case PIPE_SWIZZLE_Z:
+        case PIPE_SWIZZLE_W:
+                return 2 + pipe_swizzle;
+        default:
+                unreachable("unknown swizzle");
         }
 }
 
@@ -122,6 +141,9 @@ emit_one_texture(struct vc5_context *vc5, struct vc5_texture_stateobj *stage_tex
                                     32);
         vc5_bo_set_reference(&stage_tex->texture_state[i].bo,
                              job->indirect.bo);
+
+        uint32_t return_size = vc5_get_tex_return_size(psview->format,
+                                                       psampler->compare_mode);
 
         struct V3D33_TEXTURE_SHADER_STATE unpacked = {
                 /* XXX */
@@ -150,13 +172,34 @@ emit_one_texture(struct vc5_context *vc5, struct vc5_texture_stateobj *stage_tex
 
                 .texture_base_pointer = cl_address(rsc->bo,
                                                    rsc->slices[0].offset),
+
+                .output_32_bit = return_size == 32,
         };
+
+        /* Set up the sampler swizzle if we're doing 16-bit sampling.  For
+         * 32-bit, we leave swizzling up to the shader compiler.
+         *
+         * Note: Contrary to the docs, the swizzle still applies even if the
+         * return size is 32.  It's just that you probably want to swizzle in
+         * the shader, because you need the Y/Z/W channels to be defined.
+         */
+        if (return_size == 32) {
+                unpacked.swizzle_r = translate_swizzle(PIPE_SWIZZLE_X);
+                unpacked.swizzle_g = translate_swizzle(PIPE_SWIZZLE_Y);
+                unpacked.swizzle_b = translate_swizzle(PIPE_SWIZZLE_Z);
+                unpacked.swizzle_a = translate_swizzle(PIPE_SWIZZLE_W);
+        } else {
+                unpacked.swizzle_r = translate_swizzle(sview->swizzle[0]);
+                unpacked.swizzle_g = translate_swizzle(sview->swizzle[1]);
+                unpacked.swizzle_b = translate_swizzle(sview->swizzle[2]);
+                unpacked.swizzle_a = translate_swizzle(sview->swizzle[3]);
+        }
 
         int min_img_filter = psampler->min_img_filter;
         int min_mip_filter = psampler->min_mip_filter;
         int mag_img_filter = psampler->mag_img_filter;
 
-        if (vc5_get_tex_return_size(psview->format) == 32) {
+        if (return_size == 32) {
                 min_mip_filter = PIPE_TEX_MIPFILTER_NEAREST;
                 mag_img_filter = PIPE_TEX_FILTER_NEAREST;
                 mag_img_filter = PIPE_TEX_FILTER_NEAREST;

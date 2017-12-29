@@ -556,24 +556,6 @@ vc5_sampler_states_bind(struct pipe_context *pctx,
         stage_tex->num_samplers = new_nr;
 }
 
-static uint32_t
-translate_swizzle(unsigned char pipe_swizzle)
-{
-        switch (pipe_swizzle) {
-        case PIPE_SWIZZLE_0:
-                return 0;
-        case PIPE_SWIZZLE_1:
-                return 1;
-        case PIPE_SWIZZLE_X:
-        case PIPE_SWIZZLE_Y:
-        case PIPE_SWIZZLE_Z:
-        case PIPE_SWIZZLE_W:
-                return 2 + pipe_swizzle;
-        default:
-                unreachable("unknown swizzle");
-        }
-}
-
 static struct pipe_sampler_view *
 vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                         const struct pipe_sampler_view *cso)
@@ -661,23 +643,6 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                         tex.srgb = false;
                 } else {
                         tex.texture_type = vc5_get_tex_format(cso->format);
-                }
-
-                /* Note: Contrary to the docs, the swizzle still applies even
-                 * if the return size is 32.  It's just that you probably want
-                 * to swizzle in the shader, because you need the Y/Z/W
-                 * channels to be defined.
-                 */
-                if (vc5_get_tex_return_size(cso->format) != 32) {
-                        tex.swizzle_r = translate_swizzle(so->swizzle[0]);
-                        tex.swizzle_g = translate_swizzle(so->swizzle[1]);
-                        tex.swizzle_b = translate_swizzle(so->swizzle[2]);
-                        tex.swizzle_a = translate_swizzle(so->swizzle[3]);
-                } else {
-                        tex.swizzle_r = translate_swizzle(PIPE_SWIZZLE_X);
-                        tex.swizzle_g = translate_swizzle(PIPE_SWIZZLE_Y);
-                        tex.swizzle_b = translate_swizzle(PIPE_SWIZZLE_Z);
-                        tex.swizzle_a = translate_swizzle(PIPE_SWIZZLE_W);
                 }
 
                 tex.uif_xor_disable = (rsc->slices[0].tiling ==

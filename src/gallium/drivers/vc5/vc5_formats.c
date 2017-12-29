@@ -259,12 +259,15 @@ vc5_get_tex_format(enum pipe_format f)
 }
 
 uint8_t
-vc5_get_tex_return_size(enum pipe_format f)
+vc5_get_tex_return_size(enum pipe_format f, enum pipe_tex_compare compare)
 {
         const struct vc5_format *vf = get_format(f);
 
         if (!vf)
                 return 0;
+
+        if (compare == PIPE_TEX_COMPARE_R_TO_TEXTURE)
+                return 16;
 
         return vf->return_size;
 }

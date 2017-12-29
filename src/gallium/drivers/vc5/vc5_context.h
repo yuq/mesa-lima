@@ -493,7 +493,8 @@ bool vc5_rt_format_supported(enum pipe_format f);
 bool vc5_tex_format_supported(enum pipe_format f);
 uint8_t vc5_get_rt_format(enum pipe_format f);
 uint8_t vc5_get_tex_format(enum pipe_format f);
-uint8_t vc5_get_tex_return_size(enum pipe_format f);
+uint8_t vc5_get_tex_return_size(enum pipe_format f,
+                                enum pipe_tex_compare compare);
 uint8_t vc5_get_tex_return_channels(enum pipe_format f);
 const uint8_t *vc5_get_format_swizzle(enum pipe_format f);
 void vc5_get_internal_type_bpp_for_output_format(uint32_t format,
