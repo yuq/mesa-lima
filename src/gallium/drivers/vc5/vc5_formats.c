@@ -360,6 +360,7 @@ vc5_get_internal_type_bpp_for_output_format(uint32_t format,
                 *bpp = V3D_INTERNAL_BPP_32;
                 break;
 
+        case V3D_OUTPUT_IMAGE_FORMAT_RGB10_A2UI:
         case V3D_OUTPUT_IMAGE_FORMAT_RGBA16UI:
                 *type = V3D_INTERNAL_TYPE_16UI;
                 *bpp = V3D_INTERNAL_BPP_64;
