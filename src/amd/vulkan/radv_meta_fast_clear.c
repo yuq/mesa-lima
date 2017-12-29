@@ -194,8 +194,8 @@ create_pass(struct radv_device *device)
 	attachment.samples = 1;
 	attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 	attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	attachment.initialLayout = VK_IMAGE_LAYOUT_GENERAL;
-	attachment.finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+	attachment.initialLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	attachment.finalLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
 	result = radv_CreateRenderPass(device_h,
 				       &(VkRenderPassCreateInfo) {
@@ -210,7 +210,7 @@ create_pass(struct radv_device *device)
 						       .pColorAttachments = (VkAttachmentReference[]) {
 							       {
 								       .attachment = 0,
-								       .layout = VK_IMAGE_LAYOUT_GENERAL,
+								       .layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 							       },
 						       },
 						       .pResolveAttachments = NULL,

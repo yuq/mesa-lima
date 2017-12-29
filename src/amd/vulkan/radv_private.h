@@ -369,6 +369,22 @@ static inline VkImageLayout radv_meta_blit_ds_to_layout(enum radv_blit_ds_layout
 	return ds_layout == RADV_BLIT_DS_LAYOUT_TILE_ENABLE ? VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
 }
 
+enum radv_meta_dst_layout {
+	RADV_META_DST_LAYOUT_GENERAL,
+	RADV_META_DST_LAYOUT_OPTIMAL,
+	RADV_META_DST_LAYOUT_COUNT,
+};
+
+static inline enum radv_meta_dst_layout radv_meta_dst_layout_from_layout(VkImageLayout layout)
+{
+	return (layout == VK_IMAGE_LAYOUT_GENERAL) ? RADV_META_DST_LAYOUT_GENERAL : RADV_META_DST_LAYOUT_OPTIMAL;
+}
+
+static inline VkImageLayout radv_meta_dst_layout_to_layout(enum radv_meta_dst_layout layout)
+{
+	return layout == RADV_META_DST_LAYOUT_OPTIMAL ? VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
+}
+
 struct radv_meta_state {
 	VkAllocationCallbacks alloc;
 
@@ -390,7 +406,7 @@ struct radv_meta_state {
 	VkPipelineLayout                          clear_color_p_layout;
 	VkPipelineLayout                          clear_depth_p_layout;
 	struct {
-		VkRenderPass render_pass[NUM_META_FS_KEYS];
+		VkRenderPass render_pass[NUM_META_FS_KEYS][RADV_META_DST_LAYOUT_COUNT];
 
 		/** Pipeline that blits from a 1D image. */
 		VkPipeline pipeline_1d_src[NUM_META_FS_KEYS];
@@ -415,7 +431,7 @@ struct radv_meta_state {
 	} blit;
 
 	struct {
-		VkRenderPass render_passes[NUM_META_FS_KEYS];
+		VkRenderPass render_passes[NUM_META_FS_KEYS][RADV_META_DST_LAYOUT_COUNT];
 
 		VkPipelineLayout p_layouts[3];
 		VkDescriptorSetLayout ds_layouts[3];
@@ -474,7 +490,7 @@ struct radv_meta_state {
 		VkPipelineLayout                          p_layout;
 
 		struct {
-			VkRenderPass render_pass[NUM_META_FS_KEYS];
+			VkRenderPass render_pass[NUM_META_FS_KEYS][RADV_META_DST_LAYOUT_COUNT];
 			VkPipeline   pipeline[NUM_META_FS_KEYS];
 		} rc[MAX_SAMPLES_LOG2];
 	} resolve_fragment;
