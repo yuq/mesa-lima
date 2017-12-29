@@ -1753,7 +1753,7 @@ ntq_emit_intrinsic(struct v3d_compile *c, nir_intrinsic_instr *instr)
                          * the condition so that we can use zero as "executing
                          * and discarding."
                          */
-                        vir_PF(c, vir_AND(c, c->execute, vir_NOT(c, cond)),
+                        vir_PF(c, vir_OR(c, c->execute, vir_NOT(c, cond)),
                                V3D_QPU_PF_PUSHZ);
                         vir_set_cond(vir_SETMSF_dest(c, vir_reg(QFILE_NULL, 0),
                                                      vir_uniform_ui(c, 0)),
