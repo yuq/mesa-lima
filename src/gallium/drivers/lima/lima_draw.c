@@ -287,6 +287,18 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].size = i * 4;
 }
 
+static bool
+lima_is_scissor_zero(struct lima_context *ctx)
+{
+   if (!ctx->rasterizer->base.scissor)
+      return false;
+
+   struct pipe_scissor_state *scissor = &ctx->scissor;
+   return
+      scissor->minx == scissor->maxx
+      && scissor->miny == scissor->maxy;
+}
+
 static void
 lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
 {
@@ -328,6 +340,10 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       plbu_cmd[i++] = fui(ctx->viewport.height);
       plbu_cmd[i++] = 0x10000106; /* VIEWPORT_H */
    }
+
+   /* If it's zero scissor, we skip adding all other commands */
+   if (lima_is_scissor_zero(ctx))
+      goto done;
 
    if (!info->index_size) {
       plbu_cmd[i++] = 0x00010002; /* ARRAYS_SEMAPHORE_BEGIN */
@@ -399,6 +415,7 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
          ((info->mode & 0x1F) << 16) | (info->count >> 8); /* DRAW | DRAW_ELEMENTS */
    }
 
+done:
    if (lima_dump_command_stream) {
       printf("lima add plbu cmd at va %x\n",
              ctx->gp_buffer->va + gp_plbu_cmd_offset +
@@ -867,7 +884,11 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       lima_update_gp_vs_program(ctx);
 
    lima_update_varying(ctx, info);
-   lima_pack_vs_cmd(ctx, info);
+
+   /* If it's zero scissor, don't build vs cmd list */
+   if (!lima_is_scissor_zero(ctx))
+      lima_pack_vs_cmd(ctx, info);
+
    lima_pack_plbu_cmd(ctx, info);
 
    lima_bo_wait(ctx->pp_buffer->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true);
