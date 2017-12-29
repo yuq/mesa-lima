@@ -275,29 +275,24 @@ emit_rss_vgpu9(struct svga_context *svga, unsigned dirty)
    if (queue.rs_count) {
       SVGA3dRenderState *rs;
 
-      if (SVGA3D_BeginSetRenderState(svga->swc,
-                                      &rs,
-                                      queue.rs_count) != PIPE_OK)
-         goto fail;
+      if (SVGA3D_BeginSetRenderState(svga->swc, &rs, queue.rs_count)
+          != PIPE_OK) {
+         /* XXX: need to poison cached hardware state on failure to ensure
+          * dirty state gets re-emitted.  Fix this by re-instating partial
+          * FIFOCommit command and only updating cached hw state once the
+          * initial allocation has succeeded.
+          */
+         memset(svga->state.hw_draw.rs, 0xcd, sizeof(svga->state.hw_draw.rs));
 
-      memcpy(rs,
-              queue.rs,
-              queue.rs_count * sizeof queue.rs[0]);
+         return PIPE_ERROR_OUT_OF_MEMORY;
+      }
+
+      memcpy(rs, queue.rs, queue.rs_count * sizeof queue.rs[0]);
 
       SVGA_FIFOCommitAll(svga->swc);
    }
 
    return PIPE_OK;
-
-fail:
-   /* XXX: need to poison cached hardware state on failure to ensure
-    * dirty state gets re-emitted.  Fix this by re-instating partial
-    * FIFOCommit command and only updating cached hw state once the
-    * initial allocation has succeeded.
-    */
-   memset(svga->state.hw_draw.rs, 0xcd, sizeof(svga->state.hw_draw.rs));
-
-   return PIPE_ERROR_OUT_OF_MEMORY;
 }
 
 
