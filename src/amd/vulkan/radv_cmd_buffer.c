@@ -1043,6 +1043,21 @@ radv_emit_vgt_vertex_reuse(struct radv_cmd_buffer *cmd_buffer,
 }
 
 static void
+radv_emit_binning_state(struct radv_cmd_buffer *cmd_buffer,
+			   struct radv_pipeline *pipeline)
+{
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
+
+	if (cmd_buffer->device->physical_device->rad_info.chip_class < GFX9)
+		return;
+
+	radeon_set_context_reg(cs, R_028C44_PA_SC_BINNER_CNTL_0,
+			       pipeline->graphics.bin.pa_sc_binner_cntl_0);
+	radeon_set_context_reg(cs, R_028060_DB_DFSM_CONTROL,
+			       pipeline->graphics.bin.db_dfsm_control);
+}
+
+static void
 radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer)
 {
 	struct radv_pipeline *pipeline = cmd_buffer->state.pipeline;
@@ -1059,6 +1074,7 @@ radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer)
 	radv_emit_geometry_shader(cmd_buffer, pipeline);
 	radv_emit_fragment_shader(cmd_buffer, pipeline);
 	radv_emit_vgt_vertex_reuse(cmd_buffer, pipeline);
+	radv_emit_binning_state(cmd_buffer, pipeline);
 
 	cmd_buffer->scratch_size_needed =
 	                          MAX2(cmd_buffer->scratch_size_needed,

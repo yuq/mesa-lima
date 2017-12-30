@@ -518,12 +518,6 @@ si_emit_config(struct radv_physical_device *physical_device,
 			assert(0);
 		}
 
-		radeon_set_context_reg(cs, R_028060_DB_DFSM_CONTROL,
-				       S_028060_PUNCHOUT_MODE(V_028060_FORCE_OFF));
-		/* TODO: Enable the binner: */
-		radeon_set_context_reg(cs, R_028C44_PA_SC_BINNER_CNTL_0,
-				       S_028C44_BINNING_MODE(V_028C44_DISABLE_BINNING_USE_LEGACY_SC) |
-				       S_028C44_DISABLE_START_OF_PRIM(1));
 		radeon_set_context_reg(cs, R_028C48_PA_SC_BINNER_CNTL_1,
 				       S_028C48_MAX_ALLOC_COUNT(MIN2(128, pc_lines / (4 * num_se))) |
 				       S_028C48_MAX_PRIM_PER_BATCH(1023));
