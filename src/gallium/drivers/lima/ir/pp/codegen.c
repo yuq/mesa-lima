@@ -379,11 +379,11 @@ static int get_instr_encode_size(ppir_instr *instr)
 static void bitcopy(void *dst, int dst_offset, void *src, int src_size)
 {
    int off1 = dst_offset & 0x1f;
+   uint32_t *cpy_dst = dst, *cpy_src = src;
+
+   cpy_dst += (dst_offset >> 5);
 
    if (off1) {
-      uint32_t *cpy_dst = dst, *cpy_src = src;
-      cpy_dst += (dst_offset >> 5);
-
       int off2 = 32 - off1;
       int cpy_size = 0;
       while (1) {
@@ -403,7 +403,7 @@ static void bitcopy(void *dst, int dst_offset, void *src, int src_size)
       }
    }
    else
-      memcpy(dst, src, align_to_word(src_size) * 4);
+      memcpy(cpy_dst, cpy_src, align_to_word(src_size) * 4);
 }
 
 static int encode_instr(ppir_instr *instr, void *code, void *last_code)
@@ -413,8 +413,8 @@ static int encode_instr(ppir_instr *instr, void *code, void *last_code)
 
    for (int i = 0; i < PPIR_INSTR_SLOT_NUM; i++) {
       if (instr->slots[i]) {
-         /* max field size (73) */
-         uint8_t output[10] = {0};
+         /* max field size (73), align to dword */
+         uint8_t output[12] = {0};
 
          ppir_codegen_encode_slot[i](instr->slots[i], output);
          bitcopy(ctrl + 1, size, output, ppir_codegen_field_size[i]);
