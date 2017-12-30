@@ -345,7 +345,7 @@ void nvc0_validate_surfaces(struct nvc0_context *);
 void nve4_set_surface_info(struct nouveau_pushbuf *, struct pipe_image_view *,
                            struct nvc0_context *);
 void nvc0_mark_image_range_valid(const struct pipe_image_view *);
-void nvc0_update_tic(struct nvc0_context *, struct nv50_tic_entry *,
+bool nvc0_update_tic(struct nvc0_context *, struct nv50_tic_entry *,
                      struct nv04_resource *);
 
 struct pipe_sampler_view *

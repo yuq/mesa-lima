@@ -449,23 +449,30 @@ nvc0_create_texture_view(struct pipe_context *pipe,
    return gf100_create_texture_view(pipe, texture, templ, flags, target);
 }
 
-void
+bool
 nvc0_update_tic(struct nvc0_context *nvc0, struct nv50_tic_entry *tic,
                 struct nv04_resource *res)
 {
    uint64_t address = res->address;
    if (res->base.target != PIPE_BUFFER)
-      return;
+      return false;
    address += tic->pipe.u.buf.offset;
    if (tic->tic[1] == (uint32_t)address &&
        (tic->tic[2] & 0xff) == address >> 32)
-      return;
+      return false;
 
-   nvc0_screen_tic_unlock(nvc0->screen, tic);
-   tic->id = -1;
    tic->tic[1] = address;
    tic->tic[2] &= 0xffffff00;
    tic->tic[2] |= address >> 32;
+
+   if (tic->id >= 0) {
+      nvc0->base.push_data(&nvc0->base, nvc0->screen->txc, tic->id * 32,
+                           NV_VRAM_DOMAIN(&nvc0->screen->base), 32,
+                           tic->tic);
+      return true;
+   }
+
+   return false;
 }
 
 bool
@@ -488,14 +495,14 @@ nvc0_validate_tic(struct nvc0_context *nvc0, int s)
          continue;
       }
       res = nv04_resource(tic->pipe.texture);
-      nvc0_update_tic(nvc0, tic, res);
+      need_flush |= nvc0_update_tic(nvc0, tic, res);
 
       if (tic->id < 0) {
          tic->id = nvc0_screen_tic_alloc(nvc0->screen, tic);
 
-         nvc0_m2mf_push_linear(&nvc0->base, nvc0->screen->txc, tic->id * 32,
-                               NV_VRAM_DOMAIN(&nvc0->screen->base), 32,
-                               tic->tic);
+         nvc0->base.push_data(&nvc0->base, nvc0->screen->txc, tic->id * 32,
+                              NV_VRAM_DOMAIN(&nvc0->screen->base), 32,
+                              tic->tic);
          need_flush = true;
       } else
       if (res->status & NOUVEAU_BUFFER_STATUS_GPU_WRITING) {
@@ -554,14 +561,14 @@ nve4_validate_tic(struct nvc0_context *nvc0, unsigned s)
          continue;
       }
       res = nv04_resource(tic->pipe.texture);
-      nvc0_update_tic(nvc0, tic, res);
+      need_flush |= nvc0_update_tic(nvc0, tic, res);
 
       if (tic->id < 0) {
          tic->id = nvc0_screen_tic_alloc(nvc0->screen, tic);
 
-         nve4_p2mf_push_linear(&nvc0->base, nvc0->screen->txc, tic->id * 32,
-                               NV_VRAM_DOMAIN(&nvc0->screen->base), 32,
-                               tic->tic);
+         nvc0->base.push_data(&nvc0->base, nvc0->screen->txc, tic->id * 32,
+                              NV_VRAM_DOMAIN(&nvc0->screen->base), 32,
+                              tic->tic);
          need_flush = true;
       } else
       if (res->status & NOUVEAU_BUFFER_STATUS_GPU_WRITING) {
