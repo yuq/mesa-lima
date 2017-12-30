@@ -344,6 +344,7 @@ static const struct debug_control radv_perftest_options[] = {
 	{"nobatchchain", RADV_PERFTEST_NO_BATCHCHAIN},
 	{"sisched", RADV_PERFTEST_SISCHED},
 	{"localbos", RADV_PERFTEST_LOCAL_BOS},
+	{"binning", RADV_PERFTEST_BINNING},
 	{NULL, 0}
 };
 
@@ -1079,6 +1080,13 @@ VkResult radv_CreateDevice(
 				goto fail;
 		}
 	}
+
+	device->pbb_allowed = device->physical_device->rad_info.chip_class >= GFX9 &&
+	                      (device->instance->perftest_flags & RADV_PERFTEST_BINNING);
+
+	/* Disabled and not implemented for now. */
+	device->dfsm_allowed = device->pbb_allowed && false;
+
 
 #if HAVE_LLVM < 0x0400
 	device->llvm_supports_spill = false;
