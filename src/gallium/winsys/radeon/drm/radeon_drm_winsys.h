@@ -48,6 +48,7 @@ enum radeon_generation {
 struct radeon_vm_heap {
     mtx_t mutex;
     uint64_t start;
+    uint64_t end;
     struct list_head holes;
 };
 
@@ -84,6 +85,7 @@ struct radeon_drm_winsys {
     mtx_t bo_handles_mutex;
     mtx_t bo_fence_lock;
 
+    struct radeon_vm_heap vm32;
     struct radeon_vm_heap vm64;
 
     bool check_vm;

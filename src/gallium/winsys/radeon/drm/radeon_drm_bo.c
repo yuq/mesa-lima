@@ -249,6 +249,12 @@ static uint64_t radeon_bomgr_find_va(const struct radeon_info *info,
     offset = heap->start;
     waste = offset % alignment;
     waste = waste ? alignment - waste : 0;
+
+    if (offset + waste + size > heap->end) {
+        mtx_unlock(&heap->mutex);
+        return 0;
+    }
+
     if (waste) {
         n = CALLOC_STRUCT(radeon_bo_va_hole);
         n->size = waste;
@@ -259,6 +265,22 @@ static uint64_t radeon_bomgr_find_va(const struct radeon_info *info,
     heap->start += size + waste;
     mtx_unlock(&heap->mutex);
     return offset;
+}
+
+static uint64_t radeon_bomgr_find_va64(struct radeon_drm_winsys *ws,
+                                       uint64_t size, uint64_t alignment)
+{
+    uint64_t va = 0;
+
+    /* Try to allocate from the 64-bit address space first.
+     * If it doesn't exist (start = 0) or if it doesn't have enough space,
+     * fall back to the 32-bit address space.
+     */
+    if (ws->vm64.start)
+        va = radeon_bomgr_find_va(&ws->info, &ws->vm64, size, alignment);
+    if (!va)
+        va = radeon_bomgr_find_va(&ws->info, &ws->vm32, size, alignment);
+    return va;
 }
 
 static void radeon_bomgr_free_va(const struct radeon_info *info,
@@ -370,7 +392,9 @@ void radeon_bo_destroy(struct pb_buffer *_buf)
             }
 	}
 
-	radeon_bomgr_free_va(&rws->info, &rws->vm64, bo->va, bo->base.size);
+	radeon_bomgr_free_va(&rws->info,
+                             bo->va < rws->vm32.end ? &rws->vm32 : &rws->vm64,
+                             bo->va, bo->base.size);
     }
 
     /* Close object. */
@@ -660,8 +684,14 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
         unsigned va_gap_size;
 
         va_gap_size = rws->check_vm ? MAX2(4 * alignment, 64 * 1024) : 0;
-        bo->va = radeon_bomgr_find_va(&rws->info, &rws->vm64,
-                                      size + va_gap_size, alignment);
+
+        if (flags & RADEON_FLAG_32BIT) {
+            bo->va = radeon_bomgr_find_va(&rws->info, &rws->vm32,
+                                          size + va_gap_size, alignment);
+            assert(bo->va + size < rws->vm32.end);
+        } else {
+            bo->va = radeon_bomgr_find_va64(rws, size + va_gap_size, alignment);
+        }
 
         va.handle = bo->handle;
         va.vm_id = 0;
@@ -1062,8 +1092,7 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
     if (ws->info.has_virtual_memory) {
         struct drm_radeon_gem_va va;
 
-        bo->va = radeon_bomgr_find_va(&ws->info, &ws->vm64,
-                                      bo->base.size, 1 << 20);
+        bo->va = radeon_bomgr_find_va64(ws, bo->base.size, 1 << 20);
 
         va.handle = bo->handle;
         va.operation = RADEON_VA_MAP;
@@ -1206,8 +1235,7 @@ done:
     if (ws->info.has_virtual_memory && !bo->va) {
         struct drm_radeon_gem_va va;
 
-        bo->va = radeon_bomgr_find_va(&ws->info, &ws->vm64,
-                                      bo->base.size, 1 << 20);
+        bo->va = radeon_bomgr_find_va64(ws, bo->base.size, 1 << 20);
 
         va.handle = bo->handle;
         va.operation = RADEON_VA_MAP;
