@@ -687,30 +687,24 @@ static inline enum radeon_bo_domain radeon_domain_from_heap(enum radeon_heap hea
 
 static inline unsigned radeon_flags_from_heap(enum radeon_heap heap)
 {
+    unsigned flags = RADEON_FLAG_NO_INTERPROCESS_SHARING |
+                     (heap != RADEON_HEAP_GTT ? RADEON_FLAG_GTT_WC : 0);
+
     switch (heap) {
     case RADEON_HEAP_VRAM_NO_CPU_ACCESS:
-        return RADEON_FLAG_GTT_WC |
-               RADEON_FLAG_NO_CPU_ACCESS |
-               RADEON_FLAG_NO_INTERPROCESS_SHARING;
+        return flags |
+               RADEON_FLAG_NO_CPU_ACCESS;
 
     case RADEON_HEAP_VRAM_READ_ONLY:
-        return RADEON_FLAG_GTT_WC |
-               RADEON_FLAG_NO_INTERPROCESS_SHARING |
+    case RADEON_HEAP_GTT_WC_READ_ONLY:
+        return flags |
                RADEON_FLAG_READ_ONLY;
 
     case RADEON_HEAP_VRAM:
     case RADEON_HEAP_GTT_WC:
-        return RADEON_FLAG_GTT_WC |
-               RADEON_FLAG_NO_INTERPROCESS_SHARING;
-
-    case RADEON_HEAP_GTT_WC_READ_ONLY:
-        return RADEON_FLAG_GTT_WC |
-               RADEON_FLAG_NO_INTERPROCESS_SHARING |
-               RADEON_FLAG_READ_ONLY;
-
     case RADEON_HEAP_GTT:
     default:
-        return RADEON_FLAG_NO_INTERPROCESS_SHARING;
+        return flags;
     }
 }
 
