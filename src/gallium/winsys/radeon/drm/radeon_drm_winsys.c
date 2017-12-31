@@ -553,7 +553,7 @@ static void radeon_winsys_destroy(struct radeon_winsys *rws)
     util_hash_table_destroy(ws->bo_handles);
     util_hash_table_destroy(ws->bo_vas);
     mtx_destroy(&ws->bo_handles_mutex);
-    mtx_destroy(&ws->bo_va_mutex);
+    mtx_destroy(&ws->vm64.mutex);
     mtx_destroy(&ws->bo_fence_lock);
 
     if (ws->fd >= 0)
@@ -816,10 +816,11 @@ radeon_drm_winsys_create(int fd, const struct pipe_screen_config *config,
     ws->bo_handles = util_hash_table_create(handle_hash, handle_compare);
     ws->bo_vas = util_hash_table_create(handle_hash, handle_compare);
     (void) mtx_init(&ws->bo_handles_mutex, mtx_plain);
-    (void) mtx_init(&ws->bo_va_mutex, mtx_plain);
+    (void) mtx_init(&ws->vm64.mutex, mtx_plain);
     (void) mtx_init(&ws->bo_fence_lock, mtx_plain);
-    ws->va_offset = ws->va_start;
-    list_inithead(&ws->va_holes);
+    list_inithead(&ws->vm64.holes);
+
+    ws->vm64.start = ws->va_start;
 
     /* TTM aligns the BO size to the CPU page size */
     ws->info.gart_page_size = sysconf(_SC_PAGESIZE);
