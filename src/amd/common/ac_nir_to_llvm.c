@@ -323,14 +323,12 @@ create_llvm_function(LLVMContextRef ctx, LLVMModuleRef module,
 
 	LLVMSetFunctionCallConv(main_function, RADEON_LLVM_AMDGPU_CS);
 	for (unsigned i = 0; i < args->sgpr_count; ++i) {
+		ac_add_function_attr(ctx, main_function, i + 1, AC_FUNC_ATTR_INREG);
+
 		if (args->array_params_mask & (1 << i)) {
 			LLVMValueRef P = LLVMGetParam(main_function, i);
-			ac_add_function_attr(ctx, main_function, i + 1, AC_FUNC_ATTR_BYVAL);
 			ac_add_function_attr(ctx, main_function, i + 1, AC_FUNC_ATTR_NOALIAS);
 			ac_add_attr_dereferenceable(P, UINT64_MAX);
-		}
-		else {
-			ac_add_function_attr(ctx, main_function, i + 1, AC_FUNC_ATTR_INREG);
 		}
 	}
 

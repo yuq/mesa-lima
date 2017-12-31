@@ -4452,18 +4452,18 @@ static void si_create_function(struct si_shader_context *ctx,
 		LLVMValueRef P = LLVMGetParam(ctx->main_fn, i);
 
 		/* The combination of:
-		 * - ByVal
+		 * - noalias
 		 * - dereferenceable
 		 * - invariant.load
 		 * allows the optimization passes to move loads and reduces
 		 * SGPR spilling significantly.
 		 */
+		lp_add_function_attr(ctx->main_fn, i + 1, LP_FUNC_ATTR_INREG);
+
 		if (LLVMGetTypeKind(LLVMTypeOf(P)) == LLVMPointerTypeKind) {
-			lp_add_function_attr(ctx->main_fn, i + 1, LP_FUNC_ATTR_BYVAL);
 			lp_add_function_attr(ctx->main_fn, i + 1, LP_FUNC_ATTR_NOALIAS);
 			ac_add_attr_dereferenceable(P, UINT64_MAX);
-		} else
-			lp_add_function_attr(ctx->main_fn, i + 1, LP_FUNC_ATTR_INREG);
+		}
 	}
 
 	for (i = 0; i < fninfo->num_params; ++i) {
@@ -6595,15 +6595,8 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 			param_size = ac_get_type_size(param_type) / 4;
 			is_sgpr = ac_is_sgpr_param(param);
 
-			if (is_sgpr) {
-#if HAVE_LLVM < 0x0400
-				LLVMRemoveAttribute(param, LLVMByValAttribute);
-#else
-				unsigned kind_id = LLVMGetEnumAttributeKindForName("byval", 5);
-				LLVMRemoveEnumAttributeAtIndex(parts[part], param_idx + 1, kind_id);
-#endif
+			if (is_sgpr)
 				lp_add_function_attr(parts[part], param_idx + 1, LP_FUNC_ATTR_INREG);
-			}
 
 			assert(out_idx + param_size <= (is_sgpr ? num_out_sgpr : num_out));
 			assert(is_sgpr || out_idx >= num_out_sgpr);
