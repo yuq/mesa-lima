@@ -1214,6 +1214,12 @@ static void si_pipe_set_constant_buffer(struct pipe_context *ctx,
 	if (shader >= SI_NUM_SHADERS)
 		return;
 
+	if (slot == 0 && input && input->buffer &&
+	    !(r600_resource(input->buffer)->flags & RADEON_FLAG_32BIT)) {
+		assert(!"constant buffer 0 must have a 32-bit VM address, use const_uploader");
+		return;
+	}
+
 	slot = si_get_constbuf_slot(slot);
 	si_set_constant_buffer(sctx, &sctx->const_and_shader_buffers[shader],
 			       si_const_and_shader_buffer_descriptors_idx(shader),
