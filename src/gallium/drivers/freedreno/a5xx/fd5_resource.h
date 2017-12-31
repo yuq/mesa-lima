@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Rob Clark <robclark@freedesktop.org>
+ * Copyright (C) 2018 Rob Clark <robclark@freedesktop.org>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,14 +24,11 @@
  *    Rob Clark <robclark@freedesktop.org>
  */
 
-#ifndef FD5_BLIT_H_
-#define FD5_BLIT_H_
+#ifndef FD5_RESOURCE_H_
+#define FD5_RESOURCE_H_
 
-#include "pipe/p_state.h"
+#include "freedreno_resource.h"
 
-#include "freedreno_context.h"
+uint32_t fd5_setup_slices(struct fd_resource *rsc);
 
-void fd5_blitter_blit(struct fd_context *ctx, const struct pipe_blit_info *info);
-unsigned fd5_tile_mode(const struct pipe_resource *tmpl);
-
-#endif /* FD5_BLIT_H_ */
+#endif /* FD5_RESOURCE_H_ */

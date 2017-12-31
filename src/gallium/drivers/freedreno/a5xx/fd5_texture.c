@@ -272,6 +272,7 @@ fd5_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 	so->texconst2 |= A5XX_TEX_CONST_2_TYPE(fd5_tex_type(cso->target));
 
 	switch (cso->target) {
+	case PIPE_TEXTURE_RECT:
 	case PIPE_TEXTURE_1D:
 	case PIPE_TEXTURE_2D:
 		so->texconst3 =

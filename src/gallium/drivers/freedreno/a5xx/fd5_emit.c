@@ -36,6 +36,7 @@
 
 #include "fd5_emit.h"
 #include "fd5_blend.h"
+#include "fd5_blitter.h"
 #include "fd5_context.h"
 #include "fd5_image.h"
 #include "fd5_program.h"
@@ -337,8 +338,13 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			const struct fd5_pipe_sampler_view *view = tex->textures[i] ?
 					fd5_pipe_sampler_view(tex->textures[i]) :
 					&dummy_view;
+			enum a5xx_tile_mode tile_mode = TILE5_LINEAR;
 
-			OUT_RING(ring, view->texconst0);
+			if (view->base.texture)
+				tile_mode = fd_resource(view->base.texture)->tile_mode;
+
+			OUT_RING(ring, view->texconst0 |
+					A5XX_TEX_CONST_0_TILE_MODE(tile_mode));
 			OUT_RING(ring, view->texconst1);
 			OUT_RING(ring, view->texconst2);
 			OUT_RING(ring, view->texconst3);

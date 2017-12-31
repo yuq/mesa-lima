@@ -52,6 +52,9 @@ ok_dims(const struct pipe_resource *r, const struct pipe_box *b, int lvl)
 static bool
 ok_format(enum pipe_format fmt)
 {
+	if (util_format_is_compressed(fmt))
+		return false;
+
 	switch (fmt) {
 	case PIPE_FORMAT_R10G10B10A2_SSCALED:
 	case PIPE_FORMAT_R10G10B10A2_SNORM:
@@ -66,8 +69,13 @@ ok_format(enum pipe_format fmt)
 	case PIPE_FORMAT_R10G10B10A2_UINT:
 		return false;
 	default:
-		return true;
+		break;
 	}
+
+	if (fd5_pipe2color(fmt) == ~0)
+		return false;
+
+	return true;
 }
 
 static bool
@@ -126,12 +134,6 @@ can_do_blit(const struct pipe_blit_info *info)
 		return false;
 
 	if (info->mask != util_format_get_mask(info->dst.format))
-		return false;
-
-	if (util_format_is_compressed(info->dst.format))
-		return false;
-
-	if (util_format_is_compressed(info->src.format))
 		return false;
 
 	return true;
@@ -254,6 +256,7 @@ emit_blit_buffer(struct fd_ringbuffer *ring, const struct pipe_blit_info *info)
 		 */
 		OUT_PKT4(ring, REG_A5XX_RB_2D_SRC_INFO, 9);
 		OUT_RING(ring, A5XX_RB_2D_SRC_INFO_COLOR_FORMAT(RB5_R8_UNORM) |
+				A5XX_RB_2D_SRC_INFO_TILE_MODE(TILE5_LINEAR) |
 				A5XX_RB_2D_SRC_INFO_COLOR_SWAP(WZYX));
 		OUT_RELOC(ring, src->bo, soff, 0, 0);    /* RB_2D_SRC_LO/HI */
 		OUT_RING(ring, A5XX_RB_2D_SRC_SIZE_PITCH(p) |
@@ -273,6 +276,7 @@ emit_blit_buffer(struct fd_ringbuffer *ring, const struct pipe_blit_info *info)
 		 */
 		OUT_PKT4(ring, REG_A5XX_RB_2D_DST_INFO, 9);
 		OUT_RING(ring, A5XX_RB_2D_DST_INFO_COLOR_FORMAT(RB5_R8_UNORM) |
+				A5XX_RB_2D_DST_INFO_TILE_MODE(TILE5_LINEAR) |
 				A5XX_RB_2D_DST_INFO_COLOR_SWAP(WZYX));
 		OUT_RELOCW(ring, dst->bo, doff, 0, 0);   /* RB_2D_DST_LO/HI */
 		OUT_RING(ring, A5XX_RB_2D_DST_SIZE_PITCH(p) |
@@ -312,6 +316,7 @@ emit_blit(struct fd_ringbuffer *ring, const struct pipe_blit_info *info)
 	struct fd_resource *src, *dst;
 	struct fd_resource_slice *sslice, *dslice;
 	enum a5xx_color_fmt sfmt, dfmt;
+	enum a5xx_tile_mode stile, dtile;
 	enum a3xx_color_swap sswap, dswap;
 	unsigned ssize, dsize, spitch, dpitch;
 	unsigned sx1, sy1, sx2, sy2;
@@ -325,6 +330,11 @@ emit_blit(struct fd_ringbuffer *ring, const struct pipe_blit_info *info)
 
 	sfmt = fd5_pipe2color(info->src.format);
 	dfmt = fd5_pipe2color(info->dst.format);
+
+	stile = fd_resource_level_linear(info->src.resource, info->src.level) ?
+			TILE5_LINEAR : src->tile_mode;
+	dtile = fd_resource_level_linear(info->dst.resource, info->dst.level) ?
+			TILE5_LINEAR : dst->tile_mode;
 
 	sswap = fd5_pipe2swap(info->src.format);
 	dswap = fd5_pipe2swap(info->dst.format);
@@ -367,6 +377,7 @@ emit_blit(struct fd_ringbuffer *ring, const struct pipe_blit_info *info)
 		 */
 		OUT_PKT4(ring, REG_A5XX_RB_2D_SRC_INFO, 9);
 		OUT_RING(ring, A5XX_RB_2D_SRC_INFO_COLOR_FORMAT(sfmt) |
+				A5XX_RB_2D_SRC_INFO_TILE_MODE(stile) |
 				A5XX_RB_2D_SRC_INFO_COLOR_SWAP(sswap));
 		OUT_RELOC(ring, src->bo, soff, 0, 0);    /* RB_2D_SRC_LO/HI */
 		OUT_RING(ring, A5XX_RB_2D_SRC_SIZE_PITCH(spitch) |
@@ -379,6 +390,7 @@ emit_blit(struct fd_ringbuffer *ring, const struct pipe_blit_info *info)
 
 		OUT_PKT4(ring, REG_A5XX_GRAS_2D_SRC_INFO, 1);
 		OUT_RING(ring, A5XX_GRAS_2D_SRC_INFO_COLOR_FORMAT(sfmt) |
+				A5XX_GRAS_2D_SRC_INFO_TILE_MODE(stile) |
 				A5XX_GRAS_2D_SRC_INFO_COLOR_SWAP(sswap));
 
 		/*
@@ -386,6 +398,7 @@ emit_blit(struct fd_ringbuffer *ring, const struct pipe_blit_info *info)
 		 */
 		OUT_PKT4(ring, REG_A5XX_RB_2D_DST_INFO, 9);
 		OUT_RING(ring, A5XX_RB_2D_DST_INFO_COLOR_FORMAT(dfmt) |
+				A5XX_RB_2D_DST_INFO_TILE_MODE(dtile) |
 				A5XX_RB_2D_DST_INFO_COLOR_SWAP(dswap));
 		OUT_RELOCW(ring, dst->bo, doff, 0, 0);   /* RB_2D_DST_LO/HI */
 		OUT_RING(ring, A5XX_RB_2D_DST_SIZE_PITCH(dpitch) |
@@ -398,6 +411,7 @@ emit_blit(struct fd_ringbuffer *ring, const struct pipe_blit_info *info)
 
 		OUT_PKT4(ring, REG_A5XX_GRAS_2D_DST_INFO, 1);
 		OUT_RING(ring, A5XX_GRAS_2D_DST_INFO_COLOR_FORMAT(dfmt) |
+				A5XX_GRAS_2D_DST_INFO_TILE_MODE(dtile) |
 				A5XX_GRAS_2D_DST_INFO_COLOR_SWAP(dswap));
 
 		/*
@@ -434,6 +448,8 @@ fd5_blitter_blit(struct fd_context *ctx, const struct pipe_blit_info *info)
 
 	if ((info->src.resource->target == PIPE_BUFFER) &&
 			(info->dst.resource->target == PIPE_BUFFER)) {
+		assert(fd_resource(info->src.resource)->tile_mode == TILE5_LINEAR);
+		assert(fd_resource(info->dst.resource)->tile_mode == TILE5_LINEAR);
 		emit_blit_buffer(batch->draw, info);
 	} else {
 		/* I don't *think* we need to handle blits between buffer <-> !buffer */
@@ -441,8 +457,21 @@ fd5_blitter_blit(struct fd_context *ctx, const struct pipe_blit_info *info)
 		debug_assert(info->dst.resource->target != PIPE_BUFFER);
 		emit_blit(batch->draw, info);
 	}
+
 	fd_resource(info->dst.resource)->valid = true;
 	batch->needs_flush = true;
 
 	fd_batch_flush(batch, false, false);
+}
+
+unsigned
+fd5_tile_mode(const struct pipe_resource *tmpl)
+{
+	/* basically just has to be a format we can blit, so uploads/downloads
+	 * via linear staging buffer works:
+	 */
+	if (ok_format(tmpl->format))
+		return TILE5_3;
+
+	return TILE5_LINEAR;
 }

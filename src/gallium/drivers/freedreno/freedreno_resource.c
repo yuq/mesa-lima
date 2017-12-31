@@ -290,6 +290,7 @@ fd_alloc_staging(struct fd_context *ctx, struct fd_resource *rsc,
 	tmpl.depth0  = box->depth;
 	tmpl.array_size = 1;
 	tmpl.last_level = 0;
+	tmpl.bind |= PIPE_BIND_LINEAR;
 
 	struct pipe_resource *pstaging =
 		pctx->screen->resource_create(pctx->screen, &tmpl);
@@ -300,7 +301,7 @@ fd_alloc_staging(struct fd_context *ctx, struct fd_resource *rsc,
 }
 
 static void
-fd_blit_staging(struct fd_context *ctx, struct fd_transfer *trans)
+fd_blit_from_staging(struct fd_context *ctx, struct fd_transfer *trans)
 {
 	struct pipe_resource *dst = trans->base.resource;
 	struct pipe_blit_info blit = {0};
@@ -317,7 +318,26 @@ fd_blit_staging(struct fd_context *ctx, struct fd_transfer *trans)
 	blit.filter = PIPE_TEX_FILTER_NEAREST;
 
 	do_blit(ctx, &blit, false);
-	pipe_resource_reference(&trans->staging_prsc, NULL);
+}
+
+static void
+fd_blit_to_staging(struct fd_context *ctx, struct fd_transfer *trans)
+{
+	struct pipe_resource *src = trans->base.resource;
+	struct pipe_blit_info blit = {0};
+
+	blit.src.resource = src;
+	blit.src.format   = src->format;
+	blit.src.level    = trans->base.level;
+	blit.src.box      = trans->base.box;
+	blit.dst.resource = trans->staging_prsc;
+	blit.dst.format   = trans->staging_prsc->format;
+	blit.dst.level    = 0;
+	blit.dst.box      = trans->staging_box;
+	blit.mask = util_format_get_mask(trans->staging_prsc->format);
+	blit.filter = PIPE_TEX_FILTER_NEAREST;
+
+	do_blit(ctx, &blit, false);
 }
 
 static unsigned
@@ -396,8 +416,11 @@ fd_resource_transfer_unmap(struct pipe_context *pctx,
 	struct fd_resource *rsc = fd_resource(ptrans->resource);
 	struct fd_transfer *trans = fd_transfer(ptrans);
 
-	if (trans->staging_prsc)
-		fd_blit_staging(ctx, trans);
+	if (trans->staging_prsc) {
+		if (ptrans->usage & PIPE_TRANSFER_WRITE)
+			fd_blit_from_staging(ctx, trans);
+		pipe_resource_reference(&trans->staging_prsc, NULL);
+	}
 
 	if (!(ptrans->usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
 		fd_bo_cpu_fini(rsc->bo);
@@ -446,6 +469,44 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 	ptrans->box = *box;
 	ptrans->stride = util_format_get_nblocksx(format, slice->pitch) * rsc->cpp;
 	ptrans->layer_stride = rsc->layer_first ? rsc->layer_size : slice->size0;
+
+	/* we always need a staging texture for tiled buffers:
+	 *
+	 * TODO we might sometimes want to *also* shadow the resource to avoid
+	 * splitting a batch.. for ex, mid-frame texture uploads to a tiled
+	 * texture.
+	 */
+	if (rsc->tile_mode) {
+		struct fd_resource *staging_rsc;
+
+		staging_rsc = fd_alloc_staging(ctx, rsc, level, box);
+		if (staging_rsc) {
+			// TODO for PIPE_TRANSFER_READ, need to do untiling blit..
+			trans->staging_prsc = &staging_rsc->base;
+			trans->base.stride = util_format_get_nblocksx(format,
+				staging_rsc->slices[0].pitch) * staging_rsc->cpp;
+			trans->base.layer_stride = staging_rsc->layer_first ?
+				staging_rsc->layer_size : staging_rsc->slices[0].size0;
+			trans->staging_box = *box;
+			trans->staging_box.x = 0;
+			trans->staging_box.y = 0;
+			trans->staging_box.z = 0;
+
+			if (usage & PIPE_TRANSFER_READ) {
+				fd_blit_to_staging(ctx, trans);
+				fd_bo_cpu_prep(rsc->bo, ctx->pipe, DRM_FREEDRENO_PREP_READ);
+			}
+
+			buf = fd_bo_map(staging_rsc->bo);
+			offset = 0;
+
+			*pptrans = ptrans;
+
+			ctx->stats.staging_uploads++;
+
+			return buf;
+		}
+	}
 
 	if (ctx->in_shadow && !(usage & PIPE_TRANSFER_READ))
 		usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
@@ -616,9 +677,6 @@ setup_slices(struct fd_resource *rsc, uint32_t alignment, enum pipe_format forma
 	 */
 	uint32_t layers_in_level = rsc->layer_first ? 1 : prsc->array_size;
 
-	if (is_a5xx(screen) && (rsc->base.target >= PIPE_TEXTURE_2D))
-		height = align(height, screen->gmem_alignh);
-
 	for (level = 0; level <= prsc->last_level; level++) {
 		struct fd_resource_slice *slice = fd_resource_slice(rsc, level);
 		uint32_t blocks;
@@ -686,7 +744,7 @@ fd_setup_slices(struct fd_resource *rsc)
 	alignment = slice_alignment(rsc->base.target);
 
 	struct fd_screen *screen = fd_screen(rsc->base.screen);
-	if (is_a4xx(screen) || is_a5xx(screen)) {
+	if (is_a4xx(screen)) {
 		switch (rsc->base.target) {
 		case PIPE_TEXTURE_3D:
 			rsc->layer_first = false;
@@ -758,6 +816,18 @@ fd_resource_create(struct pipe_screen *pscreen,
 		return NULL;
 
 	*prsc = *tmpl;
+
+#define LINEAR \
+	(PIPE_BIND_SCANOUT | \
+	 PIPE_BIND_LINEAR  | \
+	 PIPE_BIND_DISPLAY_TARGET)
+
+	if (screen->tile_mode &&
+			(tmpl->target != PIPE_BUFFER) &&
+			(tmpl->bind & PIPE_BIND_SAMPLER_VIEW) &&
+			!(tmpl->bind & LINEAR)) {
+		rsc->tile_mode = screen->tile_mode(tmpl);
+	}
 
 	pipe_reference_init(&prsc->reference, 1);
 

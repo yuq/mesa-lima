@@ -49,12 +49,6 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 	enum a5xx_tile_mode tile_mode;
 	unsigned i;
 
-	if (gmem) {
-		tile_mode = TILE5_2;
-	} else {
-		tile_mode = TILE5_LINEAR;
-	}
-
 	for (i = 0; i < A5XX_MAX_RENDER_TARGETS; i++) {
 		enum a5xx_color_fmt format = 0;
 		enum a3xx_color_swap swap = WZYX;
@@ -65,6 +59,12 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		uint32_t size = 0;
 		uint32_t base = 0;
 		uint32_t offset = 0;
+
+		if (gmem) {
+			tile_mode = TILE5_2;
+		} else {
+			tile_mode = TILE5_LINEAR;
+		}
 
 		if ((i < nr_bufs) && bufs[i]) {
 			struct pipe_surface *psurf = bufs[i];
@@ -91,6 +91,9 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 			} else {
 				stride = slice->pitch * rsc->cpp;
 				size = slice->size0;
+
+				if (!fd_resource_level_linear(psurf->texture, psurf->u.tex.level))
+					tile_mode = rsc->tile_mode;
 			}
 		}
 
@@ -488,7 +491,7 @@ emit_mem2gmem_surf(struct fd_batch *batch, uint32_t base,
 
 		OUT_PKT4(ring, REG_A5XX_RB_MRT_BUF_INFO(0), 5);
 		OUT_RING(ring, A5XX_RB_MRT_BUF_INFO_COLOR_FORMAT(format) |
-				A5XX_RB_MRT_BUF_INFO_COLOR_TILE_MODE(TILE5_LINEAR) |
+				A5XX_RB_MRT_BUF_INFO_COLOR_TILE_MODE(rsc->tile_mode) |
 				A5XX_RB_MRT_BUF_INFO_COLOR_SWAP(WZYX));
 		OUT_RING(ring, A5XX_RB_MRT_PITCH(slice->pitch * rsc->cpp));
 		OUT_RING(ring, A5XX_RB_MRT_ARRAY_PITCH(slice->size0));
@@ -606,6 +609,7 @@ emit_gmem2mem_surf(struct fd_batch *batch, uint32_t base,
 	struct fd_ringbuffer *ring = batch->gmem;
 	struct fd_resource *rsc = fd_resource(psurf->texture);
 	struct fd_resource_slice *slice;
+	bool tiled;
 	uint32_t offset;
 
 	if (buf == BLIT_S)
@@ -623,8 +627,12 @@ emit_gmem2mem_surf(struct fd_batch *batch, uint32_t base,
 	OUT_RING(ring, 0x00000000);   /* RB_BLIT_FLAG_DST_PITCH */
 	OUT_RING(ring, 0x00000000);   /* RB_BLIT_FLAG_DST_ARRAY_PITCH */
 
+	tiled = rsc->tile_mode &&
+		!fd_resource_level_linear(psurf->texture, psurf->u.tex.level);
+
 	OUT_PKT4(ring, REG_A5XX_RB_RESOLVE_CNTL_3, 5);
-	OUT_RING(ring, 0x00000004);   /* XXX RB_RESOLVE_CNTL_3 */
+	OUT_RING(ring, 0x00000004 |   /* XXX RB_RESOLVE_CNTL_3 */
+			COND(tiled, A5XX_RB_RESOLVE_CNTL_3_TILED));
 	OUT_RELOCW(ring, rsc->bo, offset, 0, 0);     /* RB_BLIT_DST_LO/HI */
 	OUT_RING(ring, A5XX_RB_BLIT_DST_PITCH(slice->pitch * rsc->cpp));
 	OUT_RING(ring, A5XX_RB_BLIT_DST_ARRAY_PITCH(slice->size0));

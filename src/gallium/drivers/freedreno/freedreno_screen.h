@@ -81,6 +81,7 @@ struct fd_screen {
 	struct fd_pipe *pipe;
 
 	uint32_t (*setup_slices)(struct fd_resource *rsc);
+	unsigned (*tile_mode)(const struct pipe_resource *prsc);
 
 	int64_t cpu_gpu_time_delta;
 

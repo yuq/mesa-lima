@@ -174,6 +174,8 @@ files_libfreedreno = files(
   'a5xx/fd5_query.h',
   'a5xx/fd5_rasterizer.c',
   'a5xx/fd5_rasterizer.h',
+  'a5xx/fd5_resource.c',
+  'a5xx/fd5_resource.h',
   'a5xx/fd5_screen.c',
   'a5xx/fd5_screen.h',
   'a5xx/fd5_texture.c',

@@ -28,8 +28,11 @@
 #include "util/u_format.h"
 
 #include "fd5_screen.h"
+#include "fd5_blitter.h"
 #include "fd5_context.h"
 #include "fd5_format.h"
+#include "fd5_resource.h"
+
 #include "ir3_compiler.h"
 
 static boolean
@@ -106,4 +109,8 @@ fd5_screen_init(struct pipe_screen *pscreen)
 	screen->compiler = ir3_compiler_create(screen->dev, screen->gpu_id);
 	pscreen->context_create = fd5_context_create;
 	pscreen->is_format_supported = fd5_screen_is_format_supported;
+
+	screen->setup_slices = fd5_setup_slices;
+	if (fd_mesa_debug & FD_DBG_TTILE)
+		screen->tile_mode = fd5_tile_mode;
 }

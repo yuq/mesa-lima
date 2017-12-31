@@ -82,6 +82,7 @@ static const struct debug_named_value debug_options[] = {
 		{"noindirect",FD_DBG_NOINDR, "Disable hw indirect draws (emulate on CPU)"},
 		{"noblit",    FD_DBG_NOBLIT, "Disable blitter (fallback to generic blit path)"},
 		{"hiprio",    FD_DBG_HIPRIO, "Force high-priority context"},
+		{"ttile",     FD_DBG_TTILE,  "Enable texture tiling (a5xx)"},
 		DEBUG_NAMED_VALUE_END
 };
 
