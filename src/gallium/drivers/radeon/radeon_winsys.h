@@ -53,6 +53,7 @@ enum radeon_bo_flag { /* bitfield */
     RADEON_FLAG_SPARSE =        (1 << 3),
     RADEON_FLAG_NO_INTERPROCESS_SHARING = (1 << 4),
     RADEON_FLAG_READ_ONLY =     (1 << 5),
+    RADEON_FLAG_32BIT =    (1 << 6),
 };
 
 enum radeon_bo_usage { /* bitfield */
@@ -672,9 +673,13 @@ static inline void radeon_emit_array(struct radeon_winsys_cs *cs,
 enum radeon_heap {
     RADEON_HEAP_VRAM_NO_CPU_ACCESS,
     RADEON_HEAP_VRAM_READ_ONLY,
+    RADEON_HEAP_VRAM_READ_ONLY_32BIT,
+    RADEON_HEAP_VRAM_32BIT,
     RADEON_HEAP_VRAM,
     RADEON_HEAP_GTT_WC,
     RADEON_HEAP_GTT_WC_READ_ONLY,
+    RADEON_HEAP_GTT_WC_READ_ONLY_32BIT,
+    RADEON_HEAP_GTT_WC_32BIT,
     RADEON_HEAP_GTT,
     RADEON_MAX_SLAB_HEAPS,
     RADEON_MAX_CACHED_HEAPS = RADEON_MAX_SLAB_HEAPS,
@@ -685,10 +690,14 @@ static inline enum radeon_bo_domain radeon_domain_from_heap(enum radeon_heap hea
     switch (heap) {
     case RADEON_HEAP_VRAM_NO_CPU_ACCESS:
     case RADEON_HEAP_VRAM_READ_ONLY:
+    case RADEON_HEAP_VRAM_READ_ONLY_32BIT:
+    case RADEON_HEAP_VRAM_32BIT:
     case RADEON_HEAP_VRAM:
         return RADEON_DOMAIN_VRAM;
     case RADEON_HEAP_GTT_WC:
     case RADEON_HEAP_GTT_WC_READ_ONLY:
+    case RADEON_HEAP_GTT_WC_READ_ONLY_32BIT:
+    case RADEON_HEAP_GTT_WC_32BIT:
     case RADEON_HEAP_GTT:
         return RADEON_DOMAIN_GTT;
     default:
@@ -711,6 +720,17 @@ static inline unsigned radeon_flags_from_heap(enum radeon_heap heap)
     case RADEON_HEAP_GTT_WC_READ_ONLY:
         return flags |
                RADEON_FLAG_READ_ONLY;
+
+    case RADEON_HEAP_VRAM_READ_ONLY_32BIT:
+    case RADEON_HEAP_GTT_WC_READ_ONLY_32BIT:
+        return flags |
+               RADEON_FLAG_READ_ONLY |
+               RADEON_FLAG_32BIT;
+
+    case RADEON_HEAP_VRAM_32BIT:
+    case RADEON_HEAP_GTT_WC_32BIT:
+        return flags |
+               RADEON_FLAG_32BIT;
 
     case RADEON_HEAP_VRAM:
     case RADEON_HEAP_GTT_WC:
@@ -737,31 +757,52 @@ static inline int radeon_get_heap_index(enum radeon_bo_domain domain,
     if (flags & ~(RADEON_FLAG_GTT_WC |
                   RADEON_FLAG_NO_CPU_ACCESS |
                   RADEON_FLAG_NO_INTERPROCESS_SHARING |
-                  RADEON_FLAG_READ_ONLY))
+                  RADEON_FLAG_READ_ONLY |
+                  RADEON_FLAG_32BIT))
         return -1;
 
     switch (domain) {
     case RADEON_DOMAIN_VRAM:
-        switch (flags & (RADEON_FLAG_NO_CPU_ACCESS | RADEON_FLAG_READ_ONLY)) {
+        switch (flags & (RADEON_FLAG_NO_CPU_ACCESS |
+                         RADEON_FLAG_READ_ONLY |
+                         RADEON_FLAG_32BIT)) {
+        case RADEON_FLAG_NO_CPU_ACCESS | RADEON_FLAG_READ_ONLY | RADEON_FLAG_32BIT:
         case RADEON_FLAG_NO_CPU_ACCESS | RADEON_FLAG_READ_ONLY:
             assert(!"NO_CPU_ACCESS | READ_ONLY doesn't make sense");
             return -1;
+        case RADEON_FLAG_NO_CPU_ACCESS | RADEON_FLAG_32BIT:
+            assert(!"NO_CPU_ACCESS with 32BIT is disallowed");
+            return -1;
         case RADEON_FLAG_NO_CPU_ACCESS:
             return RADEON_HEAP_VRAM_NO_CPU_ACCESS;
+        case RADEON_FLAG_READ_ONLY | RADEON_FLAG_32BIT:
+            return RADEON_HEAP_VRAM_READ_ONLY_32BIT;
         case RADEON_FLAG_READ_ONLY:
             return RADEON_HEAP_VRAM_READ_ONLY;
+        case RADEON_FLAG_32BIT:
+            return RADEON_HEAP_VRAM_32BIT;
         case 0:
             return RADEON_HEAP_VRAM;
         }
         break;
     case RADEON_DOMAIN_GTT:
-        switch (flags & (RADEON_FLAG_GTT_WC | RADEON_FLAG_READ_ONLY)) {
+        switch (flags & (RADEON_FLAG_GTT_WC |
+                         RADEON_FLAG_READ_ONLY |
+                         RADEON_FLAG_32BIT)) {
+        case RADEON_FLAG_GTT_WC | RADEON_FLAG_READ_ONLY | RADEON_FLAG_32BIT:
+            return RADEON_HEAP_GTT_WC_READ_ONLY_32BIT;
         case RADEON_FLAG_GTT_WC | RADEON_FLAG_READ_ONLY:
             return RADEON_HEAP_GTT_WC_READ_ONLY;
+        case RADEON_FLAG_GTT_WC | RADEON_FLAG_32BIT:
+            return RADEON_HEAP_GTT_WC_32BIT;
         case RADEON_FLAG_GTT_WC:
             return RADEON_HEAP_GTT_WC;
+        case RADEON_FLAG_READ_ONLY | RADEON_FLAG_32BIT:
         case RADEON_FLAG_READ_ONLY:
             assert(!"READ_ONLY without WC is disallowed");
+            return -1;
+        case RADEON_FLAG_32BIT:
+            assert(!"32BIT without WC is disallowed");
             return -1;
         case 0:
             return RADEON_HEAP_GTT;
