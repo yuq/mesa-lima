@@ -310,8 +310,6 @@ LLVMValueRef si_get_bounded_indirect_index(struct si_shader_context *ctx,
 					   const struct tgsi_ind_register *ind,
 					   int rel_index, unsigned num);
 
-LLVMTypeRef si_const_array(LLVMTypeRef elem_type, int num_elements);
-
 void si_shader_context_init_alu(struct lp_build_tgsi_context *bld_base);
 void si_shader_context_init_mem(struct si_shader_context *ctx);
 

@@ -1876,3 +1876,9 @@ LLVMValueRef ac_find_lsb(struct ac_llvm_context *ctx,
 							   ctx->i32_0, ""),
 			       LLVMConstInt(ctx->i32, -1, 0), lsb, "");
 }
+
+LLVMTypeRef ac_array_in_const_addr_space(LLVMTypeRef elem_type)
+{
+	return LLVMPointerType(LLVMArrayType(elem_type, 0),
+			       AC_CONST_ADDR_SPACE);
+}

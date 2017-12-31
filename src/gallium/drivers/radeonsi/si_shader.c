@@ -3945,12 +3945,6 @@ static void clock_emit(
 		LLVMBuildExtractElement(ctx->ac.builder, tmp, ctx->i32_1, "");
 }
 
-LLVMTypeRef si_const_array(LLVMTypeRef elem_type, int num_elements)
-{
-	return LLVMPointerType(LLVMArrayType(elem_type, num_elements),
-			       AC_CONST_ADDR_SPACE);
-}
-
 static void si_llvm_emit_ddxy(
 	const struct lp_build_tgsi_action *action,
 	struct lp_build_tgsi_context *bld_base,
@@ -4562,12 +4556,11 @@ static void declare_per_stage_desc_pointers(struct si_shader_context *ctx,
 
 	unsigned const_and_shader_buffers =
 		add_arg(fninfo, ARG_SGPR,
-			si_const_array(const_shader_buf_type, 0));
+			ac_array_in_const_addr_space(const_shader_buf_type));
 
 	unsigned samplers_and_images =
 		add_arg(fninfo, ARG_SGPR,
-			si_const_array(ctx->v8i32,
-				       SI_NUM_IMAGES + SI_NUM_SAMPLERS * 2));
+			ac_array_in_const_addr_space(ctx->v8i32));
 
 	if (assign_params) {
 		ctx->param_const_and_shader_buffers = const_and_shader_buffers;
@@ -4579,16 +4572,16 @@ static void declare_global_desc_pointers(struct si_shader_context *ctx,
 					 struct si_function_info *fninfo)
 {
 	ctx->param_rw_buffers = add_arg(fninfo, ARG_SGPR,
-		si_const_array(ctx->v4i32, SI_NUM_RW_BUFFERS));
+		ac_array_in_const_addr_space(ctx->v4i32));
 	ctx->param_bindless_samplers_and_images = add_arg(fninfo, ARG_SGPR,
-		si_const_array(ctx->v8i32, 0));
+		ac_array_in_const_addr_space(ctx->v8i32));
 }
 
 static void declare_vs_specific_input_sgprs(struct si_shader_context *ctx,
 					    struct si_function_info *fninfo)
 {
 	ctx->param_vertex_buffers = add_arg(fninfo, ARG_SGPR,
-		si_const_array(ctx->v4i32, SI_NUM_VERTEX_BUFFERS));
+		ac_array_in_const_addr_space(ctx->v4i32));
 	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.base_vertex);
 	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.start_instance);
 	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.draw_id);
@@ -7083,7 +7076,7 @@ static LLVMValueRef si_prolog_get_rw_buffers(struct si_shader_context *ctx)
 	list = lp_build_gather_values(&ctx->gallivm, ptr, 2);
 	list = LLVMBuildBitCast(ctx->ac.builder, list, ctx->i64, "");
 	list = LLVMBuildIntToPtr(ctx->ac.builder, list,
-				 si_const_array(ctx->v4i32, SI_NUM_RW_BUFFERS), "");
+				 ac_array_in_const_addr_space(ctx->v4i32), "");
 	return list;
 }
 
