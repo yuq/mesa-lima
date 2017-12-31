@@ -249,7 +249,8 @@ dri_fill_in_modes(struct dri_screen *screen)
 
       if (!p_screen->is_format_supported(p_screen, pipe_formats[format],
                                          PIPE_TEXTURE_2D, 0,
-                                         PIPE_BIND_RENDER_TARGET))
+                                         PIPE_BIND_RENDER_TARGET |
+                                         PIPE_BIND_DISPLAY_TARGET))
          continue;
 
       for (i = 1; i <= msaa_samples_max; i++) {
