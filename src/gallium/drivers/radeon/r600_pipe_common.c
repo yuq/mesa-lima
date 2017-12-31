@@ -452,8 +452,9 @@ bool si_common_context_init(struct r600_common_context *rctx,
 
 	rctx->b.const_uploader = u_upload_create(&rctx->b, 128 * 1024,
 						 0, PIPE_USAGE_DEFAULT,
-						 sscreen->cpdma_prefetch_writes_memory ?
-							0 : R600_RESOURCE_FLAG_READ_ONLY);
+						 R600_RESOURCE_FLAG_32BIT |
+						 (sscreen->cpdma_prefetch_writes_memory ?
+							0 : R600_RESOURCE_FLAG_READ_ONLY));
 	if (!rctx->b.const_uploader)
 		return false;
 
