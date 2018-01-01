@@ -1284,7 +1284,7 @@ static int load_sample_position(struct r600_shader_ctx *ctx, struct r600_shader_
 	vtx.num_format_all = 2;
 	vtx.format_comp_all = 1;
 	vtx.use_const_fields = 0;
-	vtx.offset = 1; // first element is size of buffer
+	vtx.offset = 0;
 	vtx.endian = r600_endian_swap(32);
 	vtx.srf_mode_all = 1; /* SRF_MODE_NO_ZERO */
 
