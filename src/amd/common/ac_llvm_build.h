@@ -34,10 +34,13 @@
 extern "C" {
 #endif
 
+#define HAVE_32BIT_POINTERS (HAVE_LLVM >= 0x0700)
+
 enum {
 	/* CONST is the only address space that selects SMEM loads */
 	AC_CONST_ADDR_SPACE = HAVE_LLVM >= 0x700 ? 4 : 2,
 	AC_LOCAL_ADDR_SPACE = 3,
+	AC_CONST_32BIT_ADDR_SPACE = 6, /* same as CONST, but the pointer type has 32 bits */
 };
 
 struct ac_llvm_context {
@@ -51,6 +54,7 @@ struct ac_llvm_context {
 	LLVMTypeRef i16;
 	LLVMTypeRef i32;
 	LLVMTypeRef i64;
+	LLVMTypeRef intptr;
 	LLVMTypeRef f16;
 	LLVMTypeRef f32;
 	LLVMTypeRef f64;
@@ -355,6 +359,7 @@ LLVMValueRef ac_find_lsb(struct ac_llvm_context *ctx,
 			 LLVMValueRef src0);
 
 LLVMTypeRef ac_array_in_const_addr_space(LLVMTypeRef elem_type);
+LLVMTypeRef ac_array_in_const32_addr_space(LLVMTypeRef elem_type);
 
 #ifdef __cplusplus
 }

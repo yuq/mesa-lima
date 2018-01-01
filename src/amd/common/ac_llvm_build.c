@@ -64,6 +64,7 @@ ac_llvm_context_init(struct ac_llvm_context *ctx, LLVMContextRef context,
 	ctx->i16 = LLVMIntTypeInContext(ctx->context, 16);
 	ctx->i32 = LLVMIntTypeInContext(ctx->context, 32);
 	ctx->i64 = LLVMIntTypeInContext(ctx->context, 64);
+	ctx->intptr = HAVE_32BIT_POINTERS ? ctx->i32 : ctx->i64;
 	ctx->f16 = LLVMHalfTypeInContext(ctx->context);
 	ctx->f32 = LLVMFloatTypeInContext(ctx->context);
 	ctx->f64 = LLVMDoubleTypeInContext(ctx->context);
@@ -158,7 +159,10 @@ ac_get_type_size(LLVMTypeRef type)
 	case LLVMFloatTypeKind:
 		return 4;
 	case LLVMDoubleTypeKind:
+		return 8;
 	case LLVMPointerTypeKind:
+		if (LLVMGetPointerAddressSpace(type) == AC_CONST_32BIT_ADDR_SPACE)
+			return 4;
 		return 8;
 	case LLVMVectorTypeKind:
 		return LLVMGetVectorSize(type) *
@@ -2050,4 +2054,13 @@ LLVMTypeRef ac_array_in_const_addr_space(LLVMTypeRef elem_type)
 {
 	return LLVMPointerType(LLVMArrayType(elem_type, 0),
 			       AC_CONST_ADDR_SPACE);
+}
+
+LLVMTypeRef ac_array_in_const32_addr_space(LLVMTypeRef elem_type)
+{
+	if (!HAVE_32BIT_POINTERS)
+		return ac_array_in_const_addr_space(elem_type);
+
+	return LLVMPointerType(LLVMArrayType(elem_type, 0),
+			       AC_CONST_32BIT_ADDR_SPACE);
 }

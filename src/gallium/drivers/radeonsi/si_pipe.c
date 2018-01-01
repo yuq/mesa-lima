@@ -634,12 +634,18 @@ static void si_disk_cache_create(struct si_screen *sscreen)
 
 		if (res != -1) {
 			/* These flags affect shader compilation. */
-			uint64_t shader_debug_flags =
-				sscreen->debug_flags &
-				(DBG(FS_CORRECT_DERIVS_AFTER_KILL) |
-				 DBG(SI_SCHED) |
-				 DBG(UNSAFE_MATH) |
-				 DBG(NIR));
+			#define ALL_FLAGS (DBG(FS_CORRECT_DERIVS_AFTER_KILL) | \
+					   DBG(SI_SCHED) | \
+					   DBG(UNSAFE_MATH) | \
+					   DBG(NIR))
+			uint64_t shader_debug_flags = sscreen->debug_flags &
+						      ALL_FLAGS;
+
+			/* Add the high bits of 32-bit addresses, which affects
+			 * how 32-bit addresses are expanded to 64 bits.
+			 */
+			STATIC_ASSERT(ALL_FLAGS <= UINT_MAX);
+			shader_debug_flags |= (uint64_t)sscreen->info.address32_hi << 32;
 
 			sscreen->disk_shader_cache =
 				disk_cache_create(si_get_family_name(sscreen),

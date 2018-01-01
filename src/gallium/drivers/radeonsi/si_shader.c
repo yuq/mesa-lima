@@ -3227,11 +3227,17 @@ si_insert_input_ret_float(struct si_shader_context *ctx, LLVMValueRef ret,
 }
 
 static LLVMValueRef
-si_insert_input_ptr_as_2xi32(struct si_shader_context *ctx, LLVMValueRef ret,
-			     unsigned param, unsigned return_index)
+si_insert_input_ptr(struct si_shader_context *ctx, LLVMValueRef ret,
+		    unsigned param, unsigned return_index)
 {
 	LLVMBuilderRef builder = ctx->ac.builder;
 	LLVMValueRef ptr, lo, hi;
+
+	if (HAVE_32BIT_POINTERS) {
+		ptr = LLVMGetParam(ctx->main_fn, param);
+		ptr = LLVMBuildPtrToInt(builder, ptr, ctx->i32, "");
+		return LLVMBuildInsertValue(builder, ret, ptr, return_index, "");
+	}
 
 	ptr = LLVMGetParam(ctx->main_fn, param);
 	ptr = LLVMBuildPtrToInt(builder, ptr, ctx->i64, "");
@@ -3348,11 +3354,11 @@ static void si_set_ls_return_value_for_tcs(struct si_shader_context *ctx)
 	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_factor_offset, 4);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_scratch_offset, 5);
 
-	ret = si_insert_input_ptr_as_2xi32(ctx, ret, ctx->param_rw_buffers,
-					   8 + SI_SGPR_RW_BUFFERS);
-	ret = si_insert_input_ptr_as_2xi32(ctx, ret,
-		ctx->param_bindless_samplers_and_images,
-		8 + SI_SGPR_BINDLESS_SAMPLERS_AND_IMAGES);
+	ret = si_insert_input_ptr(ctx, ret, ctx->param_rw_buffers,
+				  8 + SI_SGPR_RW_BUFFERS);
+	ret = si_insert_input_ptr(ctx, ret,
+				  ctx->param_bindless_samplers_and_images,
+				  8 + SI_SGPR_BINDLESS_SAMPLERS_AND_IMAGES);
 
 	ret = si_insert_input_ret(ctx, ret, ctx->param_vs_state_bits,
 				  8 + SI_SGPR_VS_STATE_BITS);
@@ -3367,11 +3373,12 @@ static void si_set_ls_return_value_for_tcs(struct si_shader_context *ctx)
 	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_factor_addr_base64k,
 				  8 + GFX9_SGPR_TCS_FACTOR_ADDR_BASE64K);
 
-	unsigned desc_param = ctx->param_tcs_factor_addr_base64k + 2;
-	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param,
-					   8 + GFX9_SGPR_TCS_CONST_AND_SHADER_BUFFERS);
-	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 1,
-					   8 + GFX9_SGPR_TCS_SAMPLERS_AND_IMAGES);
+	unsigned desc_param = ctx->param_tcs_factor_addr_base64k +
+			      (HAVE_32BIT_POINTERS ? 1 : 2);
+	ret = si_insert_input_ptr(ctx, ret, desc_param,
+				  8 + GFX9_SGPR_TCS_CONST_AND_SHADER_BUFFERS);
+	ret = si_insert_input_ptr(ctx, ret, desc_param + 1,
+				  8 + GFX9_SGPR_TCS_SAMPLERS_AND_IMAGES);
 
 	unsigned vgpr = 8 + GFX9_TCS_NUM_USER_SGPR;
 	ret = LLVMBuildInsertValue(ctx->ac.builder, ret,
@@ -3392,17 +3399,17 @@ static void si_set_es_return_value_for_gs(struct si_shader_context *ctx)
 	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_wave_info, 3);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_scratch_offset, 5);
 
-	ret = si_insert_input_ptr_as_2xi32(ctx, ret, ctx->param_rw_buffers,
-					   8 + SI_SGPR_RW_BUFFERS);
-	ret = si_insert_input_ptr_as_2xi32(ctx, ret,
-		ctx->param_bindless_samplers_and_images,
-		8 + SI_SGPR_BINDLESS_SAMPLERS_AND_IMAGES);
+	ret = si_insert_input_ptr(ctx, ret, ctx->param_rw_buffers,
+				  8 + SI_SGPR_RW_BUFFERS);
+	ret = si_insert_input_ptr(ctx, ret,
+				  ctx->param_bindless_samplers_and_images,
+				  8 + SI_SGPR_BINDLESS_SAMPLERS_AND_IMAGES);
 
 	unsigned desc_param = ctx->param_vs_state_bits + 1;
-	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param,
-					   8 + GFX9_SGPR_GS_CONST_AND_SHADER_BUFFERS);
-	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 1,
-					   8 + GFX9_SGPR_GS_SAMPLERS_AND_IMAGES);
+	ret = si_insert_input_ptr(ctx, ret, desc_param,
+				  8 + GFX9_SGPR_GS_CONST_AND_SHADER_BUFFERS);
+	ret = si_insert_input_ptr(ctx, ret, desc_param + 1,
+				  8 + GFX9_SGPR_GS_SAMPLERS_AND_IMAGES);
 
 	unsigned vgpr = 8 + GFX9_GS_NUM_USER_SGPR;
 	for (unsigned i = 0; i < 5; i++) {
@@ -4395,6 +4402,9 @@ static void si_create_function(struct si_shader_context *ctx,
 			*fninfo->assign[i] = LLVMGetParam(ctx->main_fn, i);
 	}
 
+	si_llvm_add_attribute(ctx->main_fn, "amdgpu-32bit-address-high-bits",
+			      ctx->screen->info.address32_hi);
+
 	if (max_workgroup_size) {
 		si_llvm_add_attribute(ctx->main_fn, "amdgpu-max-work-group-size",
 				      max_workgroup_size);
@@ -4491,11 +4501,11 @@ static void declare_per_stage_desc_pointers(struct si_shader_context *ctx,
 
 	unsigned const_and_shader_buffers =
 		add_arg(fninfo, ARG_SGPR,
-			ac_array_in_const_addr_space(const_shader_buf_type));
+			ac_array_in_const32_addr_space(const_shader_buf_type));
 
 	unsigned samplers_and_images =
 		add_arg(fninfo, ARG_SGPR,
-			ac_array_in_const_addr_space(ctx->v8i32));
+			ac_array_in_const32_addr_space(ctx->v8i32));
 
 	if (assign_params) {
 		ctx->param_const_and_shader_buffers = const_and_shader_buffers;
@@ -4507,16 +4517,16 @@ static void declare_global_desc_pointers(struct si_shader_context *ctx,
 					 struct si_function_info *fninfo)
 {
 	ctx->param_rw_buffers = add_arg(fninfo, ARG_SGPR,
-		ac_array_in_const_addr_space(ctx->v4i32));
+		ac_array_in_const32_addr_space(ctx->v4i32));
 	ctx->param_bindless_samplers_and_images = add_arg(fninfo, ARG_SGPR,
-		ac_array_in_const_addr_space(ctx->v8i32));
+		ac_array_in_const32_addr_space(ctx->v8i32));
 }
 
 static void declare_vs_specific_input_sgprs(struct si_shader_context *ctx,
 					    struct si_function_info *fninfo)
 {
 	ctx->param_vertex_buffers = add_arg(fninfo, ARG_SGPR,
-		ac_array_in_const_addr_space(ctx->v4i32));
+		ac_array_in_const32_addr_space(ctx->v4i32));
 	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.base_vertex);
 	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.start_instance);
 	add_arg_assign(fninfo, ARG_SGPR, ctx->i32, &ctx->abi.draw_id);
@@ -4684,7 +4694,8 @@ static void create_function(struct si_shader_context *ctx)
 		ctx->param_tcs_out_lds_layout = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_offchip_addr_base64k = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_factor_addr_base64k = add_arg(&fninfo, ARG_SGPR, ctx->i32);
-		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
+		if (!HAVE_32BIT_POINTERS)
+			add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
 
 		declare_per_stage_desc_pointers(ctx, &fninfo,
 						ctx->type == PIPE_SHADER_TESS_CTRL);
@@ -4740,7 +4751,8 @@ static void create_function(struct si_shader_context *ctx)
 			ctx->param_tcs_offchip_addr_base64k = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 			add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
 			add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
-			add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
+			if (!HAVE_32BIT_POINTERS)
+				add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
 			ctx->param_vs_state_bits = add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
 		}
 
@@ -6475,6 +6487,11 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 		unsigned size = ac_get_type_size(param_type) / 4;
 
 		if (size == 1) {
+			if (LLVMGetTypeKind(param_type) == LLVMPointerTypeKind) {
+				param = LLVMBuildPtrToInt(builder, param, ctx->i32, "");
+				param_type = ctx->i32;
+			}
+
 			if (param_type != out_type)
 				param = LLVMBuildBitCast(builder, param, out_type, "");
 			out[num_out++] = param;
@@ -6550,8 +6567,14 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 
 			if (LLVMTypeOf(arg) != param_type) {
 				if (LLVMGetTypeKind(param_type) == LLVMPointerTypeKind) {
-					arg = LLVMBuildBitCast(builder, arg, ctx->i64, "");
-					arg = LLVMBuildIntToPtr(builder, arg, param_type, "");
+					if (LLVMGetPointerAddressSpace(param_type) ==
+					    AC_CONST_32BIT_ADDR_SPACE) {
+						arg = LLVMBuildBitCast(builder, arg, ctx->i32, "");
+						arg = LLVMBuildIntToPtr(builder, arg, param_type, "");
+					} else {
+						arg = LLVMBuildBitCast(builder, arg, ctx->i64, "");
+						arg = LLVMBuildIntToPtr(builder, arg, param_type, "");
+					}
 				} else {
 					arg = LLVMBuildBitCast(builder, arg, param_type, "");
 				}
@@ -7026,9 +7049,16 @@ static LLVMValueRef si_prolog_get_rw_buffers(struct si_shader_context *ctx)
 		 ctx->type == PIPE_SHADER_GEOMETRY ||
 		 ctx->shader->key.as_ls || ctx->shader->key.as_es);
 
+	if (HAVE_32BIT_POINTERS) {
+		ptr[0] = LLVMGetParam(ctx->main_fn, (is_merged_shader ? 8 : 0) + SI_SGPR_RW_BUFFERS);
+		list = LLVMBuildIntToPtr(ctx->ac.builder, ptr[0],
+					 ac_array_in_const32_addr_space(ctx->v4i32), "");
+		return list;
+	}
+
 	/* Get the pointer to rw buffers. */
 	ptr[0] = LLVMGetParam(ctx->main_fn, (is_merged_shader ? 8 : 0) + SI_SGPR_RW_BUFFERS);
-	ptr[1] = LLVMGetParam(ctx->main_fn, (is_merged_shader ? 8 : 0) + SI_SGPR_RW_BUFFERS_HI);
+	ptr[1] = LLVMGetParam(ctx->main_fn, (is_merged_shader ? 8 : 0) + SI_SGPR_RW_BUFFERS + 1);
 	list = lp_build_gather_values(&ctx->gallivm, ptr, 2);
 	list = LLVMBuildBitCast(ctx->ac.builder, list, ctx->i64, "");
 	list = LLVMBuildIntToPtr(ctx->ac.builder, list,
@@ -7241,11 +7271,11 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
-		add_arg(&fninfo, ARG_SGPR, ctx->i64);
-		add_arg(&fninfo, ARG_SGPR, ctx->i64);
-		add_arg(&fninfo, ARG_SGPR, ctx->i64);
-		add_arg(&fninfo, ARG_SGPR, ctx->i64);
-		add_arg(&fninfo, ARG_SGPR, ctx->i64);
+		add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
+		add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
+		add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
+		add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
+		add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
@@ -7256,10 +7286,10 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 		ctx->param_tcs_offchip_addr_base64k = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_factor_addr_base64k = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 	} else {
-		add_arg(&fninfo, ARG_SGPR, ctx->i64);
-		add_arg(&fninfo, ARG_SGPR, ctx->i64);
-		add_arg(&fninfo, ARG_SGPR, ctx->i64);
-		add_arg(&fninfo, ARG_SGPR, ctx->i64);
+		add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
+		add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
+		add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
+		add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
 		ctx->param_tcs_offchip_layout = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
@@ -7661,10 +7691,10 @@ static void si_build_ps_epilog_function(struct si_shader_context *ctx,
 	si_init_function_info(&fninfo);
 
 	/* Declare input SGPRs. */
-	ctx->param_rw_buffers = add_arg(&fninfo, ARG_SGPR, ctx->i64);
-	ctx->param_bindless_samplers_and_images = add_arg(&fninfo, ARG_SGPR, ctx->i64);
-	ctx->param_const_and_shader_buffers = add_arg(&fninfo, ARG_SGPR, ctx->i64);
-	ctx->param_samplers_and_images = add_arg(&fninfo, ARG_SGPR, ctx->i64);
+	ctx->param_rw_buffers = add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
+	ctx->param_bindless_samplers_and_images = add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
+	ctx->param_const_and_shader_buffers = add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
+	ctx->param_samplers_and_images = add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
 	add_arg_checked(&fninfo, ARG_SGPR, ctx->f32, SI_PARAM_ALPHA_REF);
 
 	/* Declare input VGPRs. */

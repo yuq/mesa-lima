@@ -140,7 +140,7 @@ LLVMValueRef si_load_image_desc(struct si_shader_context *ctx,
 		index = LLVMBuildAdd(builder, index,
 				     ctx->i32_1, "");
 		list = LLVMBuildPointerCast(builder, list,
-					    ac_array_in_const_addr_space(ctx->v4i32), "");
+					    ac_array_in_const32_addr_space(ctx->v4i32), "");
 	} else {
 		assert(desc_type == AC_DESC_IMAGE);
 	}
@@ -1107,7 +1107,7 @@ LLVMValueRef si_load_sampler_desc(struct si_shader_context *ctx,
 		index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, 4, 0), "");
 		index = LLVMBuildAdd(builder, index, ctx->i32_1, "");
 		list = LLVMBuildPointerCast(builder, list,
-					    ac_array_in_const_addr_space(ctx->v4i32), "");
+					    ac_array_in_const32_addr_space(ctx->v4i32), "");
 		break;
 	case AC_DESC_FMASK:
 		/* The FMASK is at [8:15]. */
@@ -1119,7 +1119,7 @@ LLVMValueRef si_load_sampler_desc(struct si_shader_context *ctx,
 		index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, 4, 0), "");
 		index = LLVMBuildAdd(builder, index, LLVMConstInt(ctx->i32, 3, 0), "");
 		list = LLVMBuildPointerCast(builder, list,
-					    ac_array_in_const_addr_space(ctx->v4i32), "");
+					    ac_array_in_const32_addr_space(ctx->v4i32), "");
 		break;
 	}
 

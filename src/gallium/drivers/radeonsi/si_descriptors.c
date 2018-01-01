@@ -2003,17 +2003,22 @@ static void si_emit_shader_pointer_head(struct radeon_winsys_cs *cs,
 					unsigned sh_base,
 					unsigned pointer_count)
 {
-	radeon_emit(cs, PKT3(PKT3_SET_SH_REG, pointer_count * 2, 0));
+	radeon_emit(cs, PKT3(PKT3_SET_SH_REG, pointer_count * (HAVE_32BIT_POINTERS ? 1 : 2), 0));
 	radeon_emit(cs, (sh_base + desc->shader_userdata_offset - SI_SH_REG_OFFSET) >> 2);
 }
 
-static void si_emit_shader_pointer_body(struct radeon_winsys_cs *cs,
+static void si_emit_shader_pointer_body(struct si_screen *sscreen,
+					struct radeon_winsys_cs *cs,
 					struct si_descriptors *desc)
 {
 	uint64_t va = desc->gpu_address;
 
 	radeon_emit(cs, va);
-	radeon_emit(cs, va >> 32);
+
+	if (HAVE_32BIT_POINTERS)
+		assert((va >> 32) == sscreen->info.address32_hi);
+	else
+		radeon_emit(cs, va >> 32);
 }
 
 static void si_emit_shader_pointer(struct si_context *sctx,
@@ -2023,7 +2028,7 @@ static void si_emit_shader_pointer(struct si_context *sctx,
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 
 	si_emit_shader_pointer_head(cs, desc, sh_base, 1);
-	si_emit_shader_pointer_body(cs, desc);
+	si_emit_shader_pointer_body(sctx->screen, cs, desc);
 }
 
 static void si_emit_consecutive_shader_pointers(struct si_context *sctx,
@@ -2044,7 +2049,7 @@ static void si_emit_consecutive_shader_pointers(struct si_context *sctx,
 
 		si_emit_shader_pointer_head(cs, descs, sh_base, count);
 		for (int i = 0; i < count; i++)
-			si_emit_shader_pointer_body(cs, descs + i);
+			si_emit_shader_pointer_body(sctx->screen, cs, descs + i);
 	}
 }
 
@@ -2566,8 +2571,10 @@ void si_init_all_descriptors(struct si_context *sctx)
 {
 	int i;
 
+#if !HAVE_32BIT_POINTERS
 	STATIC_ASSERT(GFX9_SGPR_TCS_CONST_AND_SHADER_BUFFERS % 2 == 0);
 	STATIC_ASSERT(GFX9_SGPR_GS_CONST_AND_SHADER_BUFFERS % 2 == 0);
+#endif
 
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
 		bool gfx9_tcs = false;
