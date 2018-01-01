@@ -1008,6 +1008,7 @@ static int r600_bytecode_alloc_inst_kcache_lines(struct r600_bytecode *bc,
 			continue;
 
 		bank = alu->src[i].kc_bank;
+		assert(bank < R600_MAX_HW_CONST_BUFFERS);
 		line = (sel-512)>>4;
 		index_mode = alu->src[i].kc_rel ? 1 : 0; // V_SQ_CF_INDEX_0 / V_SQ_CF_INDEX_NONE
 

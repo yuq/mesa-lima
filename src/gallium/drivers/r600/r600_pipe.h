@@ -69,11 +69,12 @@
 #define R600_MAX_DRAW_CS_DWORDS		58
 #define R600_MAX_PFP_SYNC_ME_DWORDS	16
 
-#define R600_MAX_USER_CONST_BUFFERS 13
+#define EG_MAX_ATOMIC_BUFFERS 8
+
+#define R600_MAX_USER_CONST_BUFFERS 14
 #define R600_MAX_DRIVER_CONST_BUFFERS 3
 #define R600_MAX_CONST_BUFFERS (R600_MAX_USER_CONST_BUFFERS + R600_MAX_DRIVER_CONST_BUFFERS)
-
-#define EG_MAX_ATOMIC_BUFFERS 8
+#define R600_MAX_HW_CONST_BUFFERS 16
 
 /* start driver buffers after user buffers */
 #define R600_BUFFER_INFO_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS)
@@ -84,7 +85,8 @@
 #define R600_LDS_INFO_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 1)
 /*
  * Note GS doesn't use a constant buffer binding, just a resource index,
- * so it's fine to have it exist at index 16.
+ * so it's fine to have it exist at index 16. I.e. it's not actually
+ * a const buffer, just a buffer resource.
  */
 #define R600_GS_RING_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 2)
 /* Currently R600_MAX_CONST_BUFFERS just fits on the hw, which has a limit
