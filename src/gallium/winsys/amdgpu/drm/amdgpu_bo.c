@@ -1226,7 +1226,6 @@ no_slab:
        usage = 1 << heap; /* Only set one usage bit for each heap. */
 
        pb_cache_bucket = radeon_get_pb_cache_bucket_index(heap);
-       assert(pb_cache_bucket < ARRAY_SIZE(ws->bo_cache.buckets));
 
        /* Get a buffer from the cache. */
        bo = (struct amdgpu_winsys_bo*)

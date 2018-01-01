@@ -985,7 +985,6 @@ no_slab:
         usage = 1 << heap; /* Only set one usage bit for each heap. */
 
         pb_cache_bucket = radeon_get_pb_cache_bucket_index(heap);
-        assert(pb_cache_bucket < ARRAY_SIZE(ws->bo_cache.buckets));
 
         bo = radeon_bo(pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment,
                                                usage, pb_cache_bucket));
