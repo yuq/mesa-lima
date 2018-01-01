@@ -54,20 +54,18 @@ destroy_buffer_locked(struct pb_cache_entry *entry)
  * Free as many cache buffers from the list head as possible.
  */
 static void
-release_expired_buffers_locked(struct list_head *cache)
+release_expired_buffers_locked(struct list_head *cache,
+                               int64_t current_time)
 {
    struct list_head *curr, *next;
    struct pb_cache_entry *entry;
-   int64_t now;
-
-   now = os_time_get();
 
    curr = cache->next;
    next = curr->next;
    while (curr != cache) {
       entry = LIST_ENTRY(struct pb_cache_entry, curr, head);
 
-      if (!os_time_timeout(entry->start, entry->end, now))
+      if (!os_time_timeout(entry->start, entry->end, current_time))
          break;
 
       destroy_buffer_locked(entry);
@@ -92,8 +90,10 @@ pb_cache_add_buffer(struct pb_cache_entry *entry)
    mtx_lock(&mgr->mutex);
    assert(!pipe_is_referenced(&buf->reference));
 
+   int64_t current_time = os_time_get();
+
    for (i = 0; i < ARRAY_SIZE(mgr->buckets); i++)
-      release_expired_buffers_locked(&mgr->buckets[i]);
+      release_expired_buffers_locked(&mgr->buckets[i], current_time);
 
    /* Directly release any buffer that exceeds the limit. */
    if (mgr->cache_size + buf->size > mgr->max_cache_size) {
