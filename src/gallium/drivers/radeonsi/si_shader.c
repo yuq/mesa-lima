@@ -99,11 +99,6 @@ static void si_build_ps_epilog_function(struct si_shader_context *ctx,
  */
 #define PS_EPILOG_SAMPLEMASK_MIN_LOC 14
 
-enum {
-	CONST_ADDR_SPACE = 2,
-	LOCAL_ADDR_SPACE = 3,
-};
-
 static bool llvm_type_is_64bit(struct si_shader_context *ctx,
 			       LLVMTypeRef type)
 {
@@ -2224,7 +2219,7 @@ void si_declare_compute_memory(struct si_shader_context *ctx,
 {
 	struct si_shader_selector *sel = ctx->shader->selector;
 
-	LLVMTypeRef i8p = LLVMPointerType(ctx->i8, LOCAL_ADDR_SPACE);
+	LLVMTypeRef i8p = LLVMPointerType(ctx->i8, AC_LOCAL_ADDR_SPACE);
 	LLVMValueRef var;
 
 	assert(decl->Declaration.MemType == TGSI_MEMORY_TYPE_SHARED);
@@ -2234,7 +2229,7 @@ void si_declare_compute_memory(struct si_shader_context *ctx,
 	var = LLVMAddGlobalInAddressSpace(ctx->ac.module,
 	                                  LLVMArrayType(ctx->i8, sel->local_size),
 	                                  "compute_lds",
-	                                  LOCAL_ADDR_SPACE);
+	                                  AC_LOCAL_ADDR_SPACE);
 	LLVMSetAlignment(var, 4);
 
 	ctx->ac.lds = LLVMBuildBitCast(ctx->ac.builder, var, i8p, "");
@@ -3953,7 +3948,7 @@ static void clock_emit(
 LLVMTypeRef si_const_array(LLVMTypeRef elem_type, int num_elements)
 {
 	return LLVMPointerType(LLVMArrayType(elem_type, num_elements),
-			       CONST_ADDR_SPACE);
+			       AC_CONST_ADDR_SPACE);
 }
 
 static void si_llvm_emit_ddxy(

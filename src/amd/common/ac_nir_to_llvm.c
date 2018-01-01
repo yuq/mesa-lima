@@ -43,9 +43,6 @@ enum radeon_llvm_calling_convention {
 	RADEON_LLVM_AMDGPU_HS = 93,
 };
 
-#define CONST_ADDR_SPACE 2
-#define LOCAL_ADDR_SPACE 3
-
 #define RADEON_LLVM_MAX_INPUTS (VARYING_SLOT_VAR31 + 1)
 #define RADEON_LLVM_MAX_OUTPUTS (VARYING_SLOT_VAR31 + 1)
 
@@ -361,7 +358,7 @@ create_llvm_function(LLVMContextRef ctx, LLVMModuleRef module,
 static LLVMTypeRef const_array(LLVMTypeRef elem_type, int num_elements)
 {
 	return LLVMPointerType(LLVMArrayType(elem_type, num_elements),
-	                       CONST_ADDR_SPACE);
+	                       AC_CONST_ADDR_SPACE);
 }
 
 static int get_elem_bits(struct ac_llvm_context *ctx, LLVMTypeRef type)
@@ -1082,7 +1079,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			       &user_sgpr_idx, 2);
 		if (ctx->options->supports_spill) {
 			ctx->ring_offsets = ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.implicit.buffer.ptr",
-							       LLVMPointerType(ctx->ac.i8, CONST_ADDR_SPACE),
+							       LLVMPointerType(ctx->ac.i8, AC_CONST_ADDR_SPACE),
 							       NULL, 0, AC_FUNC_ATTR_READNONE);
 			ctx->ring_offsets = LLVMBuildBitCast(ctx->builder, ctx->ring_offsets,
 							     const_array(ctx->ac.v4i32, 16), "");
@@ -5762,7 +5759,7 @@ setup_shared(struct ac_nir_context *ctx,
 			LLVMAddGlobalInAddressSpace(
 			   ctx->ac.module, glsl_to_llvm_type(ctx->nctx, variable->type),
 			   variable->name ? variable->name : "",
-			   LOCAL_ADDR_SPACE);
+			   AC_LOCAL_ADDR_SPACE);
 		_mesa_hash_table_insert(ctx->vars, variable, shared);
 	}
 }
