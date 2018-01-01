@@ -1812,6 +1812,22 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		}
 	}
 
+	if (rctx->tes_shader) {
+		assert(rctx->b.chip_class >= EVERGREEN);
+		need_buf_const = rctx->tes_shader->current->shader.uses_tex_buffers ||
+				 rctx->tes_shader->current->shader.has_txq_cube_array_z_comp;
+		if (need_buf_const) {
+			eg_setup_buffer_constants(rctx, PIPE_SHADER_TESS_EVAL);
+		}
+		if (rctx->tcs_shader) {
+			need_buf_const = rctx->tcs_shader->current->shader.uses_tex_buffers ||
+					 rctx->tcs_shader->current->shader.has_txq_cube_array_z_comp;
+			if (need_buf_const) {
+				eg_setup_buffer_constants(rctx, PIPE_SHADER_TESS_CTRL);
+			}
+		}
+	}
+
 	r600_update_driver_const_buffers(rctx, false);
 
 	if (rctx->b.chip_class < EVERGREEN && rctx->ps_shader && rctx->vs_shader) {
