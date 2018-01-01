@@ -741,6 +741,13 @@ nvc0_screen_resize_tls_area(struct nvc0_screen *screen,
                         NULL, &bo);
    if (ret)
       return ret;
+
+   /* Make sure that the pushbuf has acquired a reference to the old tls
+    * segment, as it may have commands that will reference it.
+    */
+   if (screen->tls)
+      PUSH_REFN(screen->base.pushbuf, screen->tls,
+                NV_VRAM_DOMAIN(&screen->base) | NOUVEAU_BO_RDWR);
    nouveau_bo_ref(NULL, &screen->tls);
    screen->tls = bo;
    return 0;
@@ -758,6 +765,12 @@ nvc0_screen_resize_text_area(struct nvc0_screen *screen, uint64_t size)
    if (ret)
       return ret;
 
+   /* Make sure that the pushbuf has acquired a reference to the old text
+    * segment, as it may have commands that will reference it.
+    */
+   if (screen->text)
+      PUSH_REFN(push, screen->text,
+                NV_VRAM_DOMAIN(&screen->base) | NOUVEAU_BO_RD);
    nouveau_bo_ref(NULL, &screen->text);
    screen->text = bo;
 
