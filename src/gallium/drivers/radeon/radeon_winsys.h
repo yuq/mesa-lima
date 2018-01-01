@@ -708,26 +708,6 @@ static inline unsigned radeon_flags_from_heap(enum radeon_heap heap)
     }
 }
 
-/* The pb cache bucket is chosen to minimize pb_cache misses.
- * It must be between 0 and 3 inclusive.
- */
-static inline unsigned radeon_get_pb_cache_bucket_index(enum radeon_heap heap)
-{
-    switch (heap) {
-    case RADEON_HEAP_VRAM_NO_CPU_ACCESS:
-        return 0;
-    case RADEON_HEAP_VRAM_READ_ONLY:
-    case RADEON_HEAP_VRAM:
-        return 1;
-    case RADEON_HEAP_GTT_WC:
-    case RADEON_HEAP_GTT_WC_READ_ONLY:
-        return 2;
-    case RADEON_HEAP_GTT:
-    default:
-        return 3;
-    }
-}
-
 /* Return the heap index for winsys allocators, or -1 on failure. */
 static inline int radeon_get_heap_index(enum radeon_bo_domain domain,
                                         enum radeon_bo_flag flags)

@@ -373,10 +373,9 @@ static void amdgpu_add_buffer_to_global_list(struct amdgpu_winsys_bo *bo)
 static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
                                                  uint64_t size,
                                                  unsigned alignment,
-                                                 unsigned usage,
                                                  enum radeon_bo_domain initial_domain,
                                                  unsigned flags,
-                                                 unsigned pb_cache_bucket)
+                                                 int heap)
 {
    struct amdgpu_bo_alloc_request request = {0};
    amdgpu_bo_handle buf_handle;
@@ -394,8 +393,10 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
       return NULL;
    }
 
-   pb_cache_init_entry(&ws->bo_cache, &bo->u.real.cache_entry, &bo->base,
-                       pb_cache_bucket);
+   if (heap >= 0) {
+      pb_cache_init_entry(&ws->bo_cache, &bo->u.real.cache_entry, &bo->base,
+                          heap);
+   }
    request.alloc_size = size;
    request.phys_alignment = alignment;
 
@@ -453,7 +454,7 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
 
    pipe_reference_init(&bo->base.reference, 1);
    bo->base.alignment = alignment;
-   bo->base.usage = usage;
+   bo->base.usage = 0;
    bo->base.size = size;
    bo->base.vtbl = &amdgpu_winsys_bo_vtbl;
    bo->ws = ws;
@@ -1162,7 +1163,7 @@ amdgpu_bo_create(struct radeon_winsys *rws,
 {
    struct amdgpu_winsys *ws = amdgpu_winsys(rws);
    struct amdgpu_winsys_bo *bo;
-   unsigned usage = 0, pb_cache_bucket = 0;
+   int heap = -1;
 
    /* VRAM implies WC. This is not optional. */
    assert(!(domain & RADEON_DOMAIN_VRAM) || flags & RADEON_FLAG_GTT_WC);
@@ -1221,29 +1222,23 @@ no_slab:
    bool use_reusable_pool = flags & RADEON_FLAG_NO_INTERPROCESS_SHARING;
 
    if (use_reusable_pool) {
-       int heap = radeon_get_heap_index(domain, flags);
+       heap = radeon_get_heap_index(domain, flags);
        assert(heap >= 0 && heap < RADEON_MAX_CACHED_HEAPS);
-       usage = 1 << heap; /* Only set one usage bit for each heap. */
-
-       pb_cache_bucket = radeon_get_pb_cache_bucket_index(heap);
 
        /* Get a buffer from the cache. */
        bo = (struct amdgpu_winsys_bo*)
-            pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment, usage,
-                                    pb_cache_bucket);
+            pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment, 0, heap);
        if (bo)
           return &bo->base;
    }
 
    /* Create a new one. */
-   bo = amdgpu_create_bo(ws, size, alignment, usage, domain, flags,
-                         pb_cache_bucket);
+   bo = amdgpu_create_bo(ws, size, alignment, domain, flags, heap);
    if (!bo) {
       /* Clear the cache and try again. */
       pb_slabs_reclaim(&ws->bo_slabs);
       pb_cache_release_all_buffers(&ws->bo_cache);
-      bo = amdgpu_create_bo(ws, size, alignment, usage, domain, flags,
-                            pb_cache_bucket);
+      bo = amdgpu_create_bo(ws, size, alignment, domain, flags, heap);
       if (!bo)
          return NULL;
    }

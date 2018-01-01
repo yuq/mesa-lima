@@ -763,7 +763,7 @@ radeon_drm_winsys_create(int fd, const struct pipe_screen_config *config,
     if (!do_winsys_init(ws))
         goto fail1;
 
-    pb_cache_init(&ws->bo_cache, 4,
+    pb_cache_init(&ws->bo_cache, RADEON_MAX_CACHED_HEAPS,
                   500000, ws->check_vm ? 1.0f : 2.0f, 0,
                   MIN2(ws->info.vram_size, ws->info.gart_size),
                   radeon_bo_destroy,

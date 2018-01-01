@@ -589,10 +589,9 @@ static const struct pb_vtbl radeon_bo_vtbl = {
 
 static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
                                           unsigned size, unsigned alignment,
-                                          unsigned usage,
                                           unsigned initial_domains,
                                           unsigned flags,
-                                          unsigned pb_cache_bucket)
+                                          int heap)
 {
     struct radeon_bo *bo;
     struct drm_radeon_gem_create args;
@@ -639,7 +638,7 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
 
     pipe_reference_init(&bo->base.reference, 1);
     bo->base.alignment = alignment;
-    bo->base.usage = usage;
+    bo->base.usage = 0;
     bo->base.size = size;
     bo->base.vtbl = &radeon_bo_vtbl;
     bo->rws = rws;
@@ -648,8 +647,11 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
     bo->initial_domain = initial_domains;
     bo->hash = __sync_fetch_and_add(&rws->next_bo_hash, 1);
     (void) mtx_init(&bo->u.real.map_mutex, mtx_plain);
-    pb_cache_init_entry(&rws->bo_cache, &bo->u.real.cache_entry, &bo->base,
-                        pb_cache_bucket);
+
+    if (heap >= 0) {
+        pb_cache_init_entry(&rws->bo_cache, &bo->u.real.cache_entry, &bo->base,
+                            heap);
+    }
 
     if (rws->info.has_virtual_memory) {
         struct drm_radeon_gem_va va;
@@ -921,7 +923,7 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
 {
     struct radeon_drm_winsys *ws = radeon_drm_winsys(rws);
     struct radeon_bo *bo;
-    unsigned usage = 0, pb_cache_bucket = 0;
+    int heap = -1;
 
     assert(!(flags & RADEON_FLAG_SPARSE)); /* not supported */
 
@@ -980,27 +982,22 @@ no_slab:
 
     /* Shared resources don't use cached heaps. */
     if (use_reusable_pool) {
-        int heap = radeon_get_heap_index(domain, flags);
+        heap = radeon_get_heap_index(domain, flags);
         assert(heap >= 0 && heap < RADEON_MAX_CACHED_HEAPS);
-        usage = 1 << heap; /* Only set one usage bit for each heap. */
-
-        pb_cache_bucket = radeon_get_pb_cache_bucket_index(heap);
 
         bo = radeon_bo(pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment,
-                                               usage, pb_cache_bucket));
+                                               0, heap));
         if (bo)
             return &bo->base;
     }
 
-    bo = radeon_create_bo(ws, size, alignment, usage, domain, flags,
-                          pb_cache_bucket);
+    bo = radeon_create_bo(ws, size, alignment, domain, flags, heap);
     if (!bo) {
         /* Clear the cache and try again. */
         if (ws->info.has_virtual_memory)
             pb_slabs_reclaim(&ws->bo_slabs);
         pb_cache_release_all_buffers(&ws->bo_cache);
-        bo = radeon_create_bo(ws, size, alignment, usage, domain, flags,
-                              pb_cache_bucket);
+        bo = radeon_create_bo(ws, size, alignment, domain, flags, heap);
         if (!bo)
             return NULL;
     }
