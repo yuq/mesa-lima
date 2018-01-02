@@ -6949,30 +6949,47 @@ static int do_vtx_fetch_inst(struct r600_shader_ctx *ctx, boolean src_requires_l
 static int r600_do_buffer_txq(struct r600_shader_ctx *ctx, int reg_idx, int offset)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
-	struct r600_bytecode_alu alu;
 	int r;
 	int id = tgsi_tex_get_src_gpr(ctx, reg_idx) + offset;
+	int sampler_index_mode = inst->Src[reg_idx].Indirect.Index == 2 ? 2 : 0; // CF_INDEX_1 : CF_INDEX_NONE
 
-	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-	alu.op = ALU_OP1_MOV;
-	alu.src[0].sel = R600_SHADER_BUFFER_INFO_SEL;
-	if (ctx->bc->chip_class >= EVERGREEN) {
-		/* with eg each dword is either buf size or number of cubes */
-		alu.src[0].sel += id / 4;
-		alu.src[0].chan = id % 4;
-	} else {
+	if (ctx->bc->chip_class < EVERGREEN) {
+		struct r600_bytecode_alu alu;
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ALU_OP1_MOV;
+		alu.src[0].sel = R600_SHADER_BUFFER_INFO_SEL;
 		/* r600 we have them at channel 2 of the second dword */
 		alu.src[0].sel += (id * 2) + 1;
 		alu.src[0].chan = 1;
+		alu.src[0].kc_bank = R600_BUFFER_INFO_CONST_BUFFER;
+		tgsi_dst(ctx, &inst->Dst[0], 0, &alu.dst);
+		alu.last = 1;
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+		return 0;
+	} else {
+		struct r600_bytecode_vtx vtx;
+		memset(&vtx, 0, sizeof(vtx));
+		vtx.op = FETCH_OP_GDS_MIN_UINT; /* aka GET_BUFFER_RESINFO */
+		vtx.buffer_id = id + R600_MAX_CONST_BUFFERS;
+		vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
+		vtx.src_gpr = 0;
+		vtx.mega_fetch_count = 16; /* no idea here really... */
+		vtx.dst_gpr = ctx->file_offset[inst->Dst[0].Register.File] + inst->Dst[0].Register.Index;
+		vtx.dst_sel_x = (inst->Dst[0].Register.WriteMask & 1) ? 0 : 7;		/* SEL_X */
+		vtx.dst_sel_y = (inst->Dst[0].Register.WriteMask & 2) ? 4 : 7;		/* SEL_Y */
+		vtx.dst_sel_z = (inst->Dst[0].Register.WriteMask & 4) ? 4 : 7;		/* SEL_Z */
+		vtx.dst_sel_w = (inst->Dst[0].Register.WriteMask & 8) ? 4 : 7;		/* SEL_W */
+		vtx.data_format = FMT_32_32_32_32;
+		vtx.buffer_index_mode = sampler_index_mode;
+
+		if ((r = r600_bytecode_add_vtx_tc(ctx->bc, &vtx)))
+			return r;
+		return 0;
 	}
-	alu.src[0].kc_bank = R600_BUFFER_INFO_CONST_BUFFER;
-	tgsi_dst(ctx, &inst->Dst[0], 0, &alu.dst);
-	alu.last = 1;
-	r = r600_bytecode_add_alu(ctx->bc, &alu);
-	if (r)
-		return r;
-	return 0;
 }
+
 
 static int tgsi_tex(struct r600_shader_ctx *ctx)
 {
@@ -7027,7 +7044,8 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 
 	if (inst->Texture.Texture == TGSI_TEXTURE_BUFFER) {
 		if (inst->Instruction.Opcode == TGSI_OPCODE_TXQ) {
-			ctx->shader->uses_tex_buffers = true;
+			if (ctx->bc->chip_class < EVERGREEN)
+				ctx->shader->uses_tex_buffers = true;
 			return r600_do_buffer_txq(ctx, 1, 0);
 		}
 		else if (inst->Instruction.Opcode == TGSI_OPCODE_TXF) {
@@ -7617,7 +7635,7 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 
 		alu.src[0].sel = R600_SHADER_BUFFER_INFO_SEL;
 		if (ctx->bc->chip_class >= EVERGREEN) {
-			/* with eg each dword is either buf size or number of cubes */
+			/* with eg each dword is number of cubes */
 			alu.src[0].sel += id / 4;
 			alu.src[0].chan = id % 4;
 		} else {
@@ -8760,7 +8778,8 @@ static int tgsi_resq(struct r600_shader_ctx *ctx)
 
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER ||
 	    (inst->Src[0].Register.File == TGSI_FILE_IMAGE && inst->Memory.Texture == TGSI_TEXTURE_BUFFER)) {
-		ctx->shader->uses_tex_buffers = true;
+		if (ctx->bc->chip_class < EVERGREEN)
+			ctx->shader->uses_tex_buffers = true;
 		return r600_do_buffer_txq(ctx, 0, ctx->shader->image_size_const_offset);
 	}
 
@@ -8784,7 +8803,7 @@ static int tgsi_resq(struct r600_shader_ctx *ctx)
 		alu.op = ALU_OP1_MOV;
 
 		alu.src[0].sel = R600_SHADER_BUFFER_INFO_SEL;
-		/* with eg each dword is either buf size or number of cubes */
+		/* with eg each dword is either number of cubes */
 		alu.src[0].sel += id / 4;
 		alu.src[0].chan = id % 4;
 		alu.src[0].kc_bank = R600_BUFFER_INFO_CONST_BUFFER;

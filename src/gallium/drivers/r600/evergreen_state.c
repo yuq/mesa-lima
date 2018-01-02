@@ -653,11 +653,12 @@ static void evergreen_fill_buffer_resource_words(struct r600_context *rctx,
 		S_030008_ENDIAN_SWAP(endian);
 	tex_resource_words[3] = swizzle_res | S_03000C_UNCACHED(params->uncached);
 	/*
-	 * in theory dword 4 is for number of elements, for use with resinfo,
-	 * but it seems to utterly fail to work, the amd gpu shader analyser
+	 * dword 4 is for number of elements, for use with resinfo,
+	 * albeit the amd gpu shader analyser
 	 * uses a const buffer to store the element sizes for buffer txq
 	 */
-	tex_resource_words[4] = 0;
+	tex_resource_words[4] = params->size / stride;
+
 	tex_resource_words[5] = tex_resource_words[6] = 0;
 	tex_resource_words[7] = S_03001C_TYPE(V_03001C_SQ_TEX_VTX_VALID_BUFFER);
 }
