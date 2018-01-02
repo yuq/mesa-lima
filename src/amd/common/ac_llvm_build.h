@@ -244,7 +244,10 @@ LLVMValueRef ac_build_imsb(struct ac_llvm_context *ctx,
 LLVMValueRef ac_build_umsb(struct ac_llvm_context *ctx,
 			  LLVMValueRef arg,
 			  LLVMTypeRef dst_type);
-
+LLVMValueRef ac_build_fmin(struct ac_llvm_context *ctx, LLVMValueRef a,
+			   LLVMValueRef b);
+LLVMValueRef ac_build_fmax(struct ac_llvm_context *ctx, LLVMValueRef a,
+			   LLVMValueRef b);
 LLVMValueRef ac_build_umin(struct ac_llvm_context *ctx, LLVMValueRef a, LLVMValueRef b);
 LLVMValueRef ac_build_clamp(struct ac_llvm_context *ctx, LLVMValueRef value);
 

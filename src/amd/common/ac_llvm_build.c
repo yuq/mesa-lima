@@ -1222,6 +1222,22 @@ ac_build_umsb(struct ac_llvm_context *ctx,
 			       LLVMConstInt(ctx->i32, -1, true), msb, "");
 }
 
+LLVMValueRef ac_build_fmin(struct ac_llvm_context *ctx, LLVMValueRef a,
+			   LLVMValueRef b)
+{
+	LLVMValueRef args[2] = {a, b};
+	return ac_build_intrinsic(ctx, "llvm.minnum.f32", ctx->f32, args, 2,
+				  AC_FUNC_ATTR_READNONE);
+}
+
+LLVMValueRef ac_build_fmax(struct ac_llvm_context *ctx, LLVMValueRef a,
+			   LLVMValueRef b)
+{
+	LLVMValueRef args[2] = {a, b};
+	return ac_build_intrinsic(ctx, "llvm.maxnum.f32", ctx->f32, args, 2,
+				  AC_FUNC_ATTR_READNONE);
+}
+
 LLVMValueRef ac_build_umin(struct ac_llvm_context *ctx, LLVMValueRef a,
 			   LLVMValueRef b)
 {
@@ -1232,20 +1248,8 @@ LLVMValueRef ac_build_umin(struct ac_llvm_context *ctx, LLVMValueRef a,
 LLVMValueRef ac_build_clamp(struct ac_llvm_context *ctx, LLVMValueRef value)
 {
 	if (HAVE_LLVM >= 0x0500) {
-		LLVMValueRef max[2] = {
-			value,
-			LLVMConstReal(ctx->f32, 0),
-		};
-		LLVMValueRef min[2] = {
-			LLVMConstReal(ctx->f32, 1),
-		};
-
-		min[1] = ac_build_intrinsic(ctx, "llvm.maxnum.f32",
-					    ctx->f32, max, 2,
-					    AC_FUNC_ATTR_READNONE);
-		return ac_build_intrinsic(ctx, "llvm.minnum.f32",
-					  ctx->f32, min, 2,
-					  AC_FUNC_ATTR_READNONE);
+		return ac_build_fmin(ctx, ac_build_fmax(ctx, value, ctx->f32_0),
+				     ctx->f32_1);
 	}
 
 	LLVMValueRef args[3] = {
