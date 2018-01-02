@@ -531,6 +531,7 @@ struct vtn_builder {
    jmp_buf fail_jump;
 
    const uint32_t *spirv;
+   size_t spirv_word_count;
 
    nir_shader *shader;
    const struct spirv_to_nir_options *options;

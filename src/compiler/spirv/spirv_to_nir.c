@@ -31,6 +31,8 @@
 #include "nir/nir_constant_expressions.h"
 #include "spirv_info.h"
 
+#include <stdio.h>
+
 void
 vtn_log(struct vtn_builder *b, enum nir_spirv_debug_level level,
         size_t spirv_offset, const char *message)
@@ -94,6 +96,27 @@ vtn_log_err(struct vtn_builder *b,
    ralloc_free(msg);
 }
 
+static void
+vtn_dump_shader(struct vtn_builder *b, const char *path, const char *prefix)
+{
+   static int idx = 0;
+
+   char filename[1024];
+   int len = snprintf(filename, sizeof(filename), "%s/%s-%d.spirv",
+                      path, prefix, idx++);
+   if (len < 0 || len >= sizeof(filename))
+      return;
+
+   FILE *f = fopen(filename, "w");
+   if (f == NULL)
+      return;
+
+   fwrite(b->spirv, sizeof(*b->spirv), b->spirv_word_count, f);
+   fclose(f);
+
+   vtn_info("SPIR-V shader dumped to %s", filename);
+}
+
 void
 _vtn_warn(struct vtn_builder *b, const char *file, unsigned line,
           const char *fmt, ...)
@@ -116,6 +139,10 @@ _vtn_fail(struct vtn_builder *b, const char *file, unsigned line,
    vtn_log_err(b, NIR_SPIRV_DEBUG_LEVEL_ERROR, "SPIR-V parsing FAILED:\n",
                file, line, fmt, args);
    va_end(args);
+
+   const char *dump_path = getenv("MESA_SPIRV_FAIL_DUMP_PATH");
+   if (dump_path)
+      vtn_dump_shader(b, dump_path, "fail");
 
    longjmp(b->fail_jump, 1);
 }
@@ -3706,6 +3733,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    /* Initialize the stn_builder object */
    struct vtn_builder *b = rzalloc(NULL, struct vtn_builder);
    b->spirv = words;
+   b->spirv_word_count = word_count;
    b->file = NULL;
    b->line = -1;
    b->col = -1;
