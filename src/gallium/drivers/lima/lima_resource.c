@@ -134,12 +134,23 @@ lima_resource_create(struct pipe_screen *pscreen,
    res->base.screen = pscreen;
    pipe_reference_init(&res->base.reference, 1);
 
-   /* TODO: mipmap, padding */
+   /* TODO: mipmap */
    struct pipe_resource *pres = &res->base;
-   res->stride = util_format_get_stride(pres->format, pres->width0);
+   unsigned width, height;
+   if (pres->bind & PIPE_BIND_RENDER_TARGET) {
+      width = align(pres->width0, 16);
+      height = align(pres->height0, 16);
+   }
+   else {
+      width = pres->width0;
+      height = pres->height0;
+   }
+
+   res->stride = util_format_get_stride(pres->format, width);
+   res->layer_stride = res->stride * height;
 
    uint32_t size = res->stride *
-      util_format_get_nblocksy(pres->format, pres->height0) *
+      util_format_get_nblocksy(pres->format, height) *
       pres->array_size * pres->depth0;
 
    res->buffer = lima_buffer_alloc(screen, align(size, 0x1000), 0);
@@ -158,8 +169,9 @@ lima_resource_create(struct pipe_screen *pscreen,
       }
    }
 
-   debug_printf("%s: pres=%p width=%u height=%u\n",
-                __func__, &res->base, pres->width0, pres->height0);
+   debug_printf("%s: pres=%p width=%u height=%u depth=%u target=%d bind=%x\n",
+                __func__, &res->base, pres->width0, pres->height0, pres->depth0,
+                pres->target, pres->bind);
 
    return pres;
 }
@@ -359,8 +371,8 @@ lima_transfer_map(struct pipe_context *pctx,
    ptrans->level = level;
    ptrans->usage = usage;
    ptrans->box = *box;
-   ptrans->stride = util_format_get_stride(pres->format, pres->width0);
-   ptrans->layer_stride = ptrans->stride * util_format_get_nblocksy(pres->format, pres->height0);
+   ptrans->stride = res->stride;
+   ptrans->layer_stride = res->layer_stride;
 
    *pptrans = ptrans;
 
