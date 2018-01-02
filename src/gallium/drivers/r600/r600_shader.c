@@ -6856,6 +6856,7 @@ static int do_vtx_fetch_inst(struct r600_shader_ctx *ctx, boolean src_requires_l
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	int src_gpr, r, i;
 	int id = tgsi_tex_get_src_gpr(ctx, 1);
+	int sampler_index_mode = inst->Src[1].Indirect.Index == 2 ? 2 : 0; // CF_INDEX_1 : CF_INDEX_NONE
 
 	src_gpr = tgsi_tex_get_src_gpr(ctx, 0);
 	if (src_requires_loading) {
@@ -6887,6 +6888,7 @@ static int do_vtx_fetch_inst(struct r600_shader_ctx *ctx, boolean src_requires_l
 	vtx.dst_sel_z = (inst->Dst[0].Register.WriteMask & 4) ? 2 : 7;		/* SEL_Z */
 	vtx.dst_sel_w = (inst->Dst[0].Register.WriteMask & 8) ? 3 : 7;		/* SEL_W */
 	vtx.use_const_fields = 1;
+	vtx.buffer_index_mode = sampler_index_mode;
 
 	if ((r = r600_bytecode_add_vtx(ctx->bc, &vtx)))
 		return r;

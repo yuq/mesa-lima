@@ -1380,8 +1380,8 @@ void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type)
 	}
 
 	if (!samplers->views.dirty_buffer_constants &&
-	    (images && !images->dirty_buffer_constants) &&
-	    (buffers && !buffers->dirty_buffer_constants))
+	    !(images && images->dirty_buffer_constants) &&
+	    !(buffers && buffers->dirty_buffer_constants))
 		return;
 
 	if (images)
