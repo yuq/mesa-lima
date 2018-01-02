@@ -537,6 +537,58 @@ struct member_decoration_ctx {
    struct vtn_type *type;
 };
 
+/** Returns true if two types are "compatible", i.e. you can do an OpLoad,
+ * OpStore, or OpCopyMemory between them without breaking anything.
+ * Technically, the SPIR-V rules require the exact same type ID but this lets
+ * us internally be a bit looser.
+ */
+bool
+vtn_types_compatible(struct vtn_builder *b,
+                     struct vtn_type *t1, struct vtn_type *t2)
+{
+   if (t1->id == t2->id)
+      return true;
+
+   if (t1->base_type != t2->base_type)
+      return false;
+
+   switch (t1->base_type) {
+   case vtn_base_type_void:
+   case vtn_base_type_scalar:
+   case vtn_base_type_vector:
+   case vtn_base_type_matrix:
+   case vtn_base_type_image:
+   case vtn_base_type_sampler:
+   case vtn_base_type_sampled_image:
+      return t1->type == t2->type;
+
+   case vtn_base_type_array:
+      return t1->length == t2->length &&
+             vtn_types_compatible(b, t1->array_element, t2->array_element);
+
+   case vtn_base_type_pointer:
+      return vtn_types_compatible(b, t1->deref, t2->deref);
+
+   case vtn_base_type_struct:
+      if (t1->length != t2->length)
+         return false;
+
+      for (unsigned i = 0; i < t1->length; i++) {
+         if (!vtn_types_compatible(b, t1->members[i], t2->members[i]))
+            return false;
+      }
+      return true;
+
+   case vtn_base_type_function:
+      /* This case shouldn't get hit since you can't copy around function
+       * types.  Just require them to be identical.
+       */
+      return false;
+   }
+
+   vtn_fail("Invalid base type");
+}
+
 /* does a shallow copy of a vtn_type */
 
 static struct vtn_type *
