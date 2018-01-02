@@ -1902,6 +1902,36 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
    }
 }
 
+static void
+vtn_assert_types_equal(struct vtn_builder *b, SpvOp opcode,
+                       struct vtn_type *dst_type,
+                       struct vtn_type *src_type)
+{
+   if (dst_type->id == src_type->id)
+      return;
+
+   if (vtn_types_compatible(b, dst_type, src_type)) {
+      /* Early versions of GLSLang would re-emit types unnecessarily and you
+       * would end up with OpLoad, OpStore, or OpCopyMemory opcodes which have
+       * mismatched source and destination types.
+       *
+       * https://github.com/KhronosGroup/glslang/issues/304
+       * https://github.com/KhronosGroup/glslang/issues/307
+       * https://bugs.freedesktop.org/show_bug.cgi?id=104338
+       * https://bugs.freedesktop.org/show_bug.cgi?id=104424
+       */
+      vtn_warn("Source and destination types of %s do not have the same "
+               "ID (but are compatible): %u vs %u",
+                spirv_op_to_string(opcode), dst_type->id, src_type->id);
+      return;
+   }
+
+   vtn_fail("Source and destination types of %s do not match: %s vs. %s",
+            spirv_op_to_string(opcode),
+            glsl_get_type_name(dst_type->type),
+            glsl_get_type_name(src_type->type));
+}
+
 void
 vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
                      const uint32_t *w, unsigned count)
@@ -1978,8 +2008,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       struct vtn_value *dest = vtn_value(b, w[1], vtn_value_type_pointer);
       struct vtn_value *src = vtn_value(b, w[2], vtn_value_type_pointer);
 
-      vtn_fail_if(dest->type->deref != src->type->deref,
-                  "Dereferenced pointer types to OpCopyMemory do not match");
+      vtn_assert_types_equal(b, opcode, dest->type->deref, src->type->deref);
 
       vtn_variable_copy(b, dest->pointer, src->pointer);
       break;
@@ -1991,8 +2020,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       struct vtn_value *src_val = vtn_value(b, w[3], vtn_value_type_pointer);
       struct vtn_pointer *src = src_val->pointer;
 
-      vtn_fail_if(res_type != src_val->type->deref,
-                  "Result and pointer types of OpLoad do not match");
+      vtn_assert_types_equal(b, opcode, res_type, src_val->type->deref);
 
       if (src->mode == vtn_variable_mode_image ||
           src->mode == vtn_variable_mode_sampler) {
@@ -2013,8 +2041,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       vtn_fail_if(dest->type->type == NULL,
                   "Invalid destination type for OpStore");
 
-      vtn_fail_if(dest_val->type->deref != src_val->type,
-                  "Value and pointer types of OpStore do not match");
+      vtn_assert_types_equal(b, opcode, dest_val->type->deref, src_val->type);
 
       if (glsl_type_is_sampler(dest->type->type)) {
          vtn_warn("OpStore of a sampler detected.  Doing on-the-fly copy "
