@@ -53,6 +53,7 @@ struct ac_llvm_context {
 	LLVMTypeRef f16;
 	LLVMTypeRef f32;
 	LLVMTypeRef f64;
+	LLVMTypeRef v2i16;
 	LLVMTypeRef v2i32;
 	LLVMTypeRef v3i32;
 	LLVMTypeRef v4i32;
@@ -258,6 +259,10 @@ LLVMValueRef ac_build_fmin(struct ac_llvm_context *ctx, LLVMValueRef a,
 			   LLVMValueRef b);
 LLVMValueRef ac_build_fmax(struct ac_llvm_context *ctx, LLVMValueRef a,
 			   LLVMValueRef b);
+LLVMValueRef ac_build_imin(struct ac_llvm_context *ctx, LLVMValueRef a,
+			   LLVMValueRef b);
+LLVMValueRef ac_build_imax(struct ac_llvm_context *ctx, LLVMValueRef a,
+			   LLVMValueRef b);
 LLVMValueRef ac_build_umin(struct ac_llvm_context *ctx, LLVMValueRef a, LLVMValueRef b);
 LLVMValueRef ac_build_clamp(struct ac_llvm_context *ctx, LLVMValueRef value);
 
@@ -302,6 +307,14 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 				   struct ac_image_args *a);
 LLVMValueRef ac_build_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
 				    LLVMValueRef args[2]);
+LLVMValueRef ac_build_cvt_pknorm_i16(struct ac_llvm_context *ctx,
+				     LLVMValueRef args[2]);
+LLVMValueRef ac_build_cvt_pknorm_u16(struct ac_llvm_context *ctx,
+				     LLVMValueRef args[2]);
+LLVMValueRef ac_build_cvt_pk_i16(struct ac_llvm_context *ctx,
+				 LLVMValueRef args[2], unsigned bits, bool hi);
+LLVMValueRef ac_build_cvt_pk_u16(struct ac_llvm_context *ctx,
+				 LLVMValueRef args[2], unsigned bits, bool hi);
 LLVMValueRef ac_build_wqm_vote(struct ac_llvm_context *ctx, LLVMValueRef i1);
 void ac_build_kill_if_false(struct ac_llvm_context *ctx, LLVMValueRef i1);
 LLVMValueRef ac_build_bfe(struct ac_llvm_context *ctx, LLVMValueRef input,
