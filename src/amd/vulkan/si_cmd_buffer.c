@@ -673,7 +673,8 @@ si_write_scissors(struct radeon_winsys_cs *cs, int first,
 	int i;
 	float scale[3], translate[3], guardband_x = INFINITY, guardband_y = INFINITY;
 	const float max_range = 32767.0f;
-	assert(count);
+	if (!count)
+		return;
 
 	radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL + first * 4 * 2, count * 2);
 	for (i = 0; i < count; i++) {
