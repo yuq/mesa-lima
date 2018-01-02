@@ -215,9 +215,9 @@ enum quniform_contents {
          * A reference to a texture config parameter 1 uniform.
          *
          * This is a uniform implicitly loaded with a QPU_W_TMU* write, which
-         * defines texture width, height, filters, and wrap modes.  It will be
-         * found as a parameter to the second QOP_TEX_[STRB] instruction in a
-         * sequence.
+         * has the pointer to the indirect texture state.  Our data[] field
+         * will have a packed p1 value, but the address field will be just
+         * which texture unit's texture should be referenced.
          */
         QUNIFORM_TEXTURE_CONFIG_P1,
 

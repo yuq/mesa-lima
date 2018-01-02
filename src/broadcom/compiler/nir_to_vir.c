@@ -337,6 +337,9 @@ ntq_emit_tex(struct v3d_compile *c, nir_tex_instr *instr)
                 .fetch_sample_mode = instr->op == nir_texop_txf,
         };
 
+        struct V3D33_TEXTURE_UNIFORM_PARAMETER_1_CFG_MODE1 p1_unpacked = {
+        };
+
         switch (instr->sampler_dim) {
         case GLSL_SAMPLER_DIM_1D:
                 if (instr->is_array)
@@ -419,10 +422,34 @@ ntq_emit_tex(struct v3d_compile *c, nir_tex_instr *instr)
                 }
         }
 
+        bool return_16 = (c->key->tex[unit].return_size == 16 ||
+                          p0_unpacked.shadow);
+
+        /* Limit the number of channels returned to both how many the NIR
+         * instruction writes and how many the instruction could produce.
+         */
+        uint32_t instr_return_channels = nir_tex_instr_dest_size(instr);
+        if (return_16)
+                instr_return_channels = (instr_return_channels + 1) / 2;
+
+        p1_unpacked.return_words_of_texture_data =
+                (1 << MIN2(instr_return_channels,
+                           c->key->tex[unit].return_channels)) - 1;
+
         uint32_t p0_packed;
         V3D33_TEXTURE_UNIFORM_PARAMETER_0_CFG_MODE1_pack(NULL,
                                                          (uint8_t *)&p0_packed,
                                                          &p0_unpacked);
+
+        uint32_t p1_packed;
+        V3D33_TEXTURE_UNIFORM_PARAMETER_1_CFG_MODE1_pack(NULL,
+                                                         (uint8_t *)&p1_packed,
+                                                         &p1_unpacked);
+        /* Load unit number into the address field, which will be be used by
+         * the driver to decide which texture to put in the actual address
+         * field.
+         */
+        p1_packed |= unit << 5;
 
         /* There is no native support for GL texture rectangle coordinates, so
          * we have to rescale from ([0, width], [0, height]) to ([0, 1], [0,
@@ -439,7 +466,7 @@ ntq_emit_tex(struct v3d_compile *c, nir_tex_instr *instr)
 
         struct qreg texture_u[] = {
                 vir_uniform(c, QUNIFORM_TEXTURE_CONFIG_P0_0 + unit, p0_packed),
-                vir_uniform(c, QUNIFORM_TEXTURE_CONFIG_P1, unit),
+                vir_uniform(c, QUNIFORM_TEXTURE_CONFIG_P1, p1_packed),
         };
         uint32_t next_texture_u = 0;
 
@@ -460,17 +487,16 @@ ntq_emit_tex(struct v3d_compile *c, nir_tex_instr *instr)
                 }
         }
 
-        bool return_16 = (c->key->tex[unit].return_size == 16 ||
-                          p0_unpacked.shadow);
-
         struct qreg return_values[4];
-        for (int i = 0; i < c->key->tex[unit].return_channels; i++)
-                return_values[i] = vir_LDTMU(c);
-        /* Swizzling .zw of an RG texture should give undefined results, not
-         * crash the compiler.
-         */
-        for (int i = c->key->tex[unit].return_channels; i < 4; i++)
-                return_values[i] = c->undef;
+        for (int i = 0; i < 4; i++) {
+                /* Swizzling .zw of an RG texture should give undefined
+                 * results, not crash the compiler.
+                 */
+                if (p1_unpacked.return_words_of_texture_data & (1 << i))
+                        return_values[i] = vir_LDTMU(c);
+                else
+                        return_values[i] = c->undef;
+        }
 
         for (int i = 0; i < nir_tex_instr_dest_size(instr); i++) {
                 struct qreg chan;

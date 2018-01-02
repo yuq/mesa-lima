@@ -193,8 +193,14 @@ static void
 write_texture_p1(struct vc5_job *job,
                  struct vc5_cl_out **uniforms,
                  struct vc5_texture_stateobj *texstate,
-                 uint32_t unit)
+                 uint32_t data)
 {
+        /* Extract the texture unit from the top bits, and the compiler's
+         * packed p1 from the bottom.
+         */
+        uint32_t unit = data >> 5;
+        uint32_t p1 = data & 0x1f;
+
         struct pipe_sampler_view *psview = texstate->textures[unit];
         struct vc5_sampler_view *sview = vc5_sampler_view(psview);
 
@@ -207,7 +213,7 @@ write_texture_p1(struct vc5_job *job,
                                                          (uint8_t *)&packed,
                                                          &unpacked);
 
-        cl_aligned_u32(uniforms, packed | sview->p1);
+        cl_aligned_u32(uniforms, p1 | packed | sview->p1);
 }
 
 struct vc5_cl_reloc

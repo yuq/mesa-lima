@@ -588,19 +588,6 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
 
         pipe_reference(NULL, &prsc->reference);
 
-        v3dx_pack(&so->p1, TEXTURE_UNIFORM_PARAMETER_1_CFG_MODE1, p1) {
-                p1.return_word_0_of_texture_data = true;
-                if (vc5_get_tex_return_size(cso->format) == 16) {
-                        p1.return_word_1_of_texture_data = true;
-                } else {
-                        int chans = vc5_get_tex_return_channels(cso->format);
-
-                        p1.return_word_1_of_texture_data = chans > 1;
-                        p1.return_word_2_of_texture_data = chans > 2;
-                        p1.return_word_3_of_texture_data = chans > 3;
-                }
-        }
-
         /* Compute the sampler view's swizzle up front. This will be plugged
          * into either the sampler (for 16-bit returns) or the shader's
          * texture key (for 32)
