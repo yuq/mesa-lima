@@ -498,7 +498,11 @@ std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module* M)
             break;
         }
 
+#if LLVM_VERSION_MAJOR < 6
         pBuf = llvm::MemoryBuffer::getNewUninitMemBuffer(size_t(header.GetBufferSize()));
+#else
+        pBuf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(size_t(header.GetBufferSize()));
+#endif
         if (!fread(const_cast<char*>(pBuf->getBufferStart()), header.GetBufferSize(), 1, fpIn))
         {
             pBuf = nullptr;
