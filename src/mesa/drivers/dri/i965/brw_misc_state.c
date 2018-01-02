@@ -516,6 +516,21 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
       OUT_BATCH(0);
       ADVANCE_BATCH();
    }
+
+   if (devinfo->is_geminilake) {
+      /* Project: DevGLK
+       *
+       * "This chicken bit works around a hardware issue with barrier logic
+       *  encountered when switching between GPGPU and 3D pipelines.  To
+       *  workaround the issue, this mode bit should be set after a pipeline
+       *  is selected."
+       */
+      const unsigned barrier_mode =
+         pipeline == BRW_RENDER_PIPELINE ? GLK_SCEC_BARRIER_MODE_3D_HULL
+                                         : GLK_SCEC_BARRIER_MODE_GPGPU;
+      brw_load_register_imm32(brw, SLICE_COMMON_ECO_CHICKEN1,
+                              barrier_mode | GLK_SCEC_BARRIER_MODE_MASK);
+   }
 }
 
 /**

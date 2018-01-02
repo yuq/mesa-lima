@@ -1656,4 +1656,9 @@ enum brw_pixel_shader_coverage_mask_mode {
 #define CS_DEBUG_MODE2                     0x20d8 /* Gen9+ */
 # define CSDBG2_CONSTANT_BUFFER_ADDRESS_OFFSET_DISABLE (1 << 4)
 
+#define SLICE_COMMON_ECO_CHICKEN1          0x731c /* Gen9+ */
+# define GLK_SCEC_BARRIER_MODE_GPGPU       (0 << 7)
+# define GLK_SCEC_BARRIER_MODE_3D_HULL     (1 << 7)
+# define GLK_SCEC_BARRIER_MODE_MASK        REG_MASK(1 << 7)
+
 #endif

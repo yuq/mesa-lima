@@ -2734,6 +2734,8 @@ static void
 genX(flush_pipeline_select)(struct anv_cmd_buffer *cmd_buffer,
                             uint32_t pipeline)
 {
+   UNUSED const struct gen_device_info *devinfo = &cmd_buffer->device->info;
+
    if (cmd_buffer->state.current_pipeline == pipeline)
       return;
 
@@ -2783,6 +2785,25 @@ genX(flush_pipeline_select)(struct anv_cmd_buffer *cmd_buffer,
 #endif
       ps.PipelineSelection = pipeline;
    }
+
+#if GEN_GEN == 9
+   if (devinfo->is_geminilake) {
+      /* Project: DevGLK
+       *
+       * "This chicken bit works around a hardware issue with barrier logic
+       *  encountered when switching between GPGPU and 3D pipelines.  To
+       *  workaround the issue, this mode bit should be set after a pipeline
+       *  is selected."
+       */
+      uint32_t scec;
+      anv_pack_struct(&scec, GENX(SLICE_COMMON_ECO_CHICKEN1),
+                      .GLKBarrierMode =
+                          pipeline == GPGPU ? GLK_BARRIER_MODE_GPGPU
+                                            : GLK_BARRIER_MODE_3D_HULL,
+                      .GLKBarrierModeMask = 1);
+      emit_lri(&cmd_buffer->batch, GENX(SLICE_COMMON_ECO_CHICKEN1_num), scec);
+   }
+#endif
 
    cmd_buffer->state.current_pipeline = pipeline;
 }

@@ -3710,6 +3710,14 @@
     <field name="Color Compression Disable Mask" start="31" end="31" type="bool"/>
   </register>
 
+  <register name="SLICE_COMMON_ECO_CHICKEN1" length="1" num="0x731c">
+    <field name="GLK Barrier Mode" start="7" end="7" type="uint">
+      <value name="GLK_BARRIER_MODE_GPGPU" value="0"/>
+      <value name="GLK_BARRIER_MODE_3D_HULL" value="1"/>
+    </field>
+    <field name="GLK Barrier Mode Mask" start="23" end="23" type="bool"/>
+  </register>
+
   <register name="GFX_ARB_ERROR_RPT" length="1" num="0x40a0">
     <field name="TLB Page Fault Error" start="0" end="0" type="bool"/>
     <field name="RSTRM PAVP Read Invalid" start="1" end="1" type="bool"/>
