@@ -741,7 +741,66 @@ void FetchJit::CreateGatherOddFormats(SWR_FORMAT format, Value* pMask, Value* pB
     // only works if pixel size is <= 32bits
     SWR_ASSERT(info.bpp <= 32);
 
-    Value *pGather = GATHERDD(VIMMED1(0), pBase, pOffsets, pMask);
+    Value *pGather;
+    if (info.bpp == 32)
+    {
+        pGather = GATHERDD(VIMMED1(0), pBase, pOffsets, pMask);
+    }
+    else
+    {
+        // Can't use 32-bit gather for items less than 32-bits, could cause page faults.
+        Value *pMem = ALLOCA(mSimdInt32Ty);
+        STORE(VIMMED1(0u), pMem);
+
+        pBase = BITCAST(pBase, PointerType::get(mInt8Ty, 0));
+        Value* pDstMem = BITCAST(pMem, mInt32PtrTy);
+
+        for (uint32_t lane = 0; lane < mVWidth; ++lane)
+        {
+            // Get index
+            Value* index = VEXTRACT(pOffsets, C(lane));
+            Value* mask = VEXTRACT(pMask, C(lane));
+            switch (info.bpp)
+            {
+            case 8:
+            {
+                Value* pDst = BITCAST(GEP(pDstMem, C(lane)), PointerType::get(mInt8Ty, 0));
+                Value* pSrc = BITCAST(GEP(pBase, index), PointerType::get(mInt8Ty, 0));
+                STORE(LOAD(SELECT(mask, pSrc, pDst)), pDst);
+                break;
+            }
+
+            case 16:
+            {
+                Value* pDst = BITCAST(GEP(pDstMem, C(lane)), PointerType::get(mInt16Ty, 0));
+                Value* pSrc = BITCAST(GEP(pBase, index), PointerType::get(mInt16Ty, 0));
+                STORE(LOAD(SELECT(mask, pSrc, pDst)), pDst);
+                break;
+            }
+            break;
+
+            case 24:
+            {
+                // First 16-bits of data
+                Value* pDst = BITCAST(GEP(pDstMem, C(lane)), PointerType::get(mInt16Ty, 0));
+                Value* pSrc = BITCAST(GEP(pBase, index), PointerType::get(mInt16Ty, 0));
+                STORE(LOAD(SELECT(mask, pSrc, pDst)), pDst);
+
+                // Last 8-bits of data
+                pDst = BITCAST(GEP(pDst, C(1)), PointerType::get(mInt8Ty, 0));
+                pSrc = BITCAST(GEP(pSrc, C(1)), PointerType::get(mInt8Ty, 0));
+                STORE(LOAD(SELECT(mask, pSrc, pDst)), pDst);
+                break;
+            }
+
+            default:
+                SWR_INVALID("Shouldn't have BPP = %d now", info.bpp);
+                break;
+            }
+        }
+
+        pGather = LOAD(pMem);
+    }
 
     for (uint32_t comp = 0; comp < 4; ++comp)
     {
