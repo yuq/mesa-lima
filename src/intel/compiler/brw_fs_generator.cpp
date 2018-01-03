@@ -287,8 +287,6 @@ fs_generator::fire_fb_write(fs_inst *inst,
     * messages set "Render Target Index" to 0.  Using a different binding
     * table index would make it impossible to use headerless messages.
     */
-   assert(prog_data->binding_table.render_target_start == 0);
-
    const uint32_t surf_index = inst->target;
 
    bool last_render_target = inst->eot ||
@@ -427,8 +425,8 @@ fs_generator::generate_fb_read(fs_inst *inst, struct brw_reg dst,
 {
    assert(inst->size_written % REG_SIZE == 0);
    struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
-   const unsigned surf_index =
-      prog_data->binding_table.render_target_start + inst->target;
+   /* We assume that render targets start at binding table index 0. */
+   const unsigned surf_index = inst->target;
 
    gen9_fb_READ(p, dst, payload, surf_index,
                 inst->header_size, inst->size_written / REG_SIZE,
