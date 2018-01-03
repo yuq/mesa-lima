@@ -905,7 +905,7 @@ logic_op(struct gl_context *ctx, GLenum opcode, bool no_error)
    ctx->Color._LogicOp = color_logicop_mapping[opcode & 0x0f];
 
    if (ctx->Driver.LogicOpcode)
-      ctx->Driver.LogicOpcode(ctx, opcode);
+      ctx->Driver.LogicOpcode(ctx, ctx->Color._LogicOp);
 }
 
 

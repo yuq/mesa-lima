@@ -139,7 +139,6 @@ struct intel_screen
 #define get_time                            old_get_time
 #define intel_translate_blend_factor        old_intel_translate_blend_factor
 #define intel_translate_compare_func        old_intel_translate_compare_func
-#define intel_translate_logic_op            old_intel_translate_logic_op
 #define intel_translate_shadow_compare_func old_intel_translate_shadow_compare_func
 #define intel_translate_stencil_op          old_intel_translate_stencil_op
 #define intel_init_syncobj_functions        old_intel_init_syncobj_functions

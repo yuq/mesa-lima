@@ -298,7 +298,7 @@ nouveau_line_width(struct gl_context *ctx, GLfloat width)
 }
 
 static void
-nouveau_logic_opcode(struct gl_context *ctx, GLenum opcode)
+nouveau_logic_opcode(struct gl_context *ctx, UNUSED enum gl_logicop_mode opcode)
 {
 	context_dirty(ctx, LOGIC_OPCODE);
 }

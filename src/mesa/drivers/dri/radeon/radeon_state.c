@@ -1408,35 +1408,14 @@ static void radeonRenderMode( struct gl_context *ctx, GLenum mode )
    FALLBACK( rmesa, RADEON_FALLBACK_RENDER_MODE, (mode != GL_RENDER) );
 }
 
-
-static GLuint radeon_rop_tab[] = {
-   RADEON_ROP_CLEAR,
-   RADEON_ROP_AND,
-   RADEON_ROP_AND_REVERSE,
-   RADEON_ROP_COPY,
-   RADEON_ROP_AND_INVERTED,
-   RADEON_ROP_NOOP,
-   RADEON_ROP_XOR,
-   RADEON_ROP_OR,
-   RADEON_ROP_NOR,
-   RADEON_ROP_EQUIV,
-   RADEON_ROP_INVERT,
-   RADEON_ROP_OR_REVERSE,
-   RADEON_ROP_COPY_INVERTED,
-   RADEON_ROP_OR_INVERTED,
-   RADEON_ROP_NAND,
-   RADEON_ROP_SET,
-};
-
-static void radeonLogicOpCode( struct gl_context *ctx, GLenum opcode )
+static void radeonLogicOpCode(struct gl_context *ctx, enum gl_logicop_mode opcode)
 {
    r100ContextPtr rmesa = R100_CONTEXT(ctx);
-   GLuint rop = (GLuint)opcode - GL_CLEAR;
 
-   assert( rop < 16 );
+   assert((unsigned) opcode <= 15);
 
    RADEON_STATECHANGE( rmesa, msk );
-   rmesa->hw.msk.cmd[MSK_RB3D_ROPCNTL] = radeon_rop_tab[rop];
+   rmesa->hw.msk.cmd[MSK_RB3D_ROPCNTL] = opcode;
 }
 
 /* =============================================================
