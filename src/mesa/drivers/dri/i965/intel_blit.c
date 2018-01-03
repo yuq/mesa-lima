@@ -44,27 +44,9 @@ intel_miptree_set_alpha_to_one(struct brw_context *brw,
                                struct intel_mipmap_tree *mt,
                                int x, int y, int width, int height);
 
-static GLuint translate_raster_op(GLenum logicop)
+static GLuint translate_raster_op(enum gl_logicop_mode logicop)
 {
-   switch(logicop) {
-   case GL_CLEAR: return 0x00;
-   case GL_AND: return 0x88;
-   case GL_AND_REVERSE: return 0x44;
-   case GL_COPY: return 0xCC;
-   case GL_AND_INVERTED: return 0x22;
-   case GL_NOOP: return 0xAA;
-   case GL_XOR: return 0x66;
-   case GL_OR: return 0xEE;
-   case GL_NOR: return 0x11;
-   case GL_EQUIV: return 0x99;
-   case GL_INVERT: return 0x55;
-   case GL_OR_REVERSE: return 0xDD;
-   case GL_COPY_INVERTED: return 0x33;
-   case GL_OR_INVERTED: return 0xBB;
-   case GL_NAND: return 0x77;
-   case GL_SET: return 0xFF;
-   default: return 0;
-   }
+   return logicop | (logicop << 4);
 }
 
 static uint32_t
@@ -227,7 +209,7 @@ emit_miptree_blit(struct brw_context *brw,
                   struct intel_mipmap_tree *dst_mt,
                   uint32_t dst_x, uint32_t dst_y,
                   uint32_t width, uint32_t height,
-                  bool reverse, GLenum logicop)
+                  bool reverse, enum gl_logicop_mode logicop)
 {
    /* According to the Ivy Bridge PRM, Vol1 Part4, section 1.2.1.2 (Graphics
     * Data Size Limitations):
@@ -319,7 +301,7 @@ intel_miptree_blit(struct brw_context *brw,
                    int dst_level, int dst_slice,
                    uint32_t dst_x, uint32_t dst_y, bool dst_flip,
                    uint32_t width, uint32_t height,
-                   GLenum logicop)
+                   enum gl_logicop_mode logicop)
 {
    /* The blitter doesn't understand multisampling at all. */
    if (src_mt->surf.samples > 1 || dst_mt->surf.samples > 1)
@@ -463,7 +445,7 @@ intel_miptree_copy(struct brw_context *brw,
 
    return emit_miptree_blit(brw, src_mt, src_x, src_y,
                             dst_mt, dst_x, dst_y,
-                            src_width, src_height, false, GL_COPY);
+                            src_width, src_height, false, COLOR_LOGICOP_COPY);
 }
 
 static bool
@@ -527,7 +509,7 @@ intelEmitCopyBlit(struct brw_context *brw,
 		  GLshort src_x, GLshort src_y,
 		  GLshort dst_x, GLshort dst_y,
 		  GLshort w, GLshort h,
-		  GLenum logic_op)
+		  enum gl_logicop_mode logic_op)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    GLuint CMD, BR13;
@@ -654,7 +636,7 @@ intelEmitImmediateColorExpandBlit(struct brw_context *brw,
 				  enum isl_tiling dst_tiling,
 				  GLshort x, GLshort y,
 				  GLshort w, GLshort h,
-				  GLenum logic_op)
+				  enum gl_logicop_mode logic_op)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    int dwords = ALIGN(src_size, 8) / 4;
@@ -667,7 +649,7 @@ intelEmitImmediateColorExpandBlit(struct brw_context *brw,
 	 return false;
    }
 
-   assert((logic_op >= GL_CLEAR) && (logic_op <= (GL_CLEAR + 0x0f)));
+   assert((unsigned) logic_op <= 0x0f);
    assert(dst_pitch > 0);
 
    if (w < 0 || h < 0)
@@ -763,7 +745,7 @@ intel_emit_linear_blit(struct brw_context *brw,
                              src_x, 0, /* src x/y */
                              dst_x, 0, /* dst x/y */
                              MIN2(size, pitch), height, /* w, h */
-                             GL_COPY);
+                             COLOR_LOGICOP_COPY);
       if (!ok) {
          _mesa_problem(ctx, "Failed to linear blit %dx%d\n",
                        MIN2(size, pitch), height);

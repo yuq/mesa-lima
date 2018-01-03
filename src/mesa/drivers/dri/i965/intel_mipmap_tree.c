@@ -1584,7 +1584,7 @@ intel_miptree_copy_slice(struct brw_context *brw,
    if (!intel_miptree_blit(brw,
                            src_mt, src_level, src_layer, 0, 0, false,
                            dst_mt, dst_level, dst_layer, 0, 0, false,
-                           width, height, GL_COPY)) {
+                           width, height, COLOR_LOGICOP_COPY)) {
       perf_debug("miptree validate blit for %s failed\n",
                  _mesa_get_format_name(format));
 

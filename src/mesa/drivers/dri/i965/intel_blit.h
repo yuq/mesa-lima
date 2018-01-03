@@ -42,7 +42,7 @@ intelEmitCopyBlit(struct brw_context *brw,
                   GLshort srcx, GLshort srcy,
                   GLshort dstx, GLshort dsty,
                   GLshort w, GLshort h,
-                  GLenum logicop);
+                  enum gl_logicop_mode logicop);
 
 bool intel_miptree_blit_compatible_formats(mesa_format src, mesa_format dst);
 
@@ -54,7 +54,7 @@ bool intel_miptree_blit(struct brw_context *brw,
                         int dst_level, int dst_slice,
                         uint32_t dst_x, uint32_t dst_y, bool dst_flip,
                         uint32_t width, uint32_t height,
-                        GLenum logicop);
+                        enum gl_logicop_mode logicop);
 
 bool intel_miptree_copy(struct brw_context *brw,
                         struct intel_mipmap_tree *src_mt,
@@ -76,7 +76,7 @@ intelEmitImmediateColorExpandBlit(struct brw_context *brw,
                                   enum isl_tiling dst_tiling,
 				  GLshort x, GLshort y,
 				  GLshort w, GLshort h,
-				  GLenum logic_op);
+				  enum gl_logicop_mode logic_op);
 void intel_emit_linear_blit(struct brw_context *brw,
 			    struct brw_bo *dst_bo,
 			    unsigned int dst_offset,
