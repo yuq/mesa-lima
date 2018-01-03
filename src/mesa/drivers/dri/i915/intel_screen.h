@@ -117,7 +117,6 @@ struct intel_screen
 #define intel_check_front_buffer_rendering  old_intel_check_front_buffer_rendering
 #define intelInitBufferFuncs                old_intelInitBufferFuncs
 #define intelClearWithBlit                  old_intelClearWithBlit
-#define intelEmitCopyBlit                   old_intelEmitCopyBlit
 #define intelEmitImmediateColorExpandBlit   old_intelEmitImmediateColorExpandBlit
 #define intel_emit_linear_blit              old_intel_emit_linear_blit
 #define intel_miptree_blit                  old_intel_miptree_blit
