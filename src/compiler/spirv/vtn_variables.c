@@ -1793,7 +1793,8 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
       vtn_foreach_decoration(b, val, var_is_patch_cb, &var->patch);
       if (glsl_type_is_array(var->type->type) &&
           glsl_type_is_struct(without_array->type)) {
-         vtn_foreach_decoration(b, without_array->val,
+         vtn_foreach_decoration(b, vtn_value(b, without_array->id,
+                                             vtn_value_type_type),
                                 var_is_patch_cb, &var->patch);
       }
 
@@ -1849,7 +1850,9 @@ vtn_create_variable(struct vtn_builder *b, struct vtn_value *val,
       /* For inputs and outputs, we need to grab locations and builtin
        * information from the interface type.
        */
-      vtn_foreach_decoration(b, interface_type->val, var_decoration_cb, var);
+      vtn_foreach_decoration(b, vtn_value(b, interface_type->id,
+                                          vtn_value_type_type),
+                             var_decoration_cb, var);
       break;
    }
 

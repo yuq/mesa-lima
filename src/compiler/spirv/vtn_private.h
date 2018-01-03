@@ -274,8 +274,8 @@ struct vtn_type {
 
    const struct glsl_type *type;
 
-   /* The value that declares this type.  Used for finding decorations */
-   struct vtn_value *val;
+   /* The SPIR-V id of the given type. */
+   uint32_t id;
 
    /* Specifies the length of complex types.
     *
