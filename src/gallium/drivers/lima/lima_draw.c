@@ -506,6 +506,20 @@ lima_blend_factor(enum pipe_blendfactor pipe)
 }
 
 static int
+lima_calculate_alpha_blend(enum pipe_blend_func rgb_func, enum pipe_blend_func alpha_func,
+                           enum pipe_blendfactor rgb_src_factor, enum pipe_blendfactor rgb_dst_factor,
+                           enum pipe_blendfactor alpha_src_factor, enum pipe_blendfactor alpha_dst_factor)
+{
+   return lima_blend_func(rgb_func) |
+      (lima_blend_func(alpha_func) << 3) |
+      (lima_blend_factor(rgb_src_factor) << 6) |
+      (lima_blend_factor(rgb_dst_factor) << 11) |
+      ((lima_blend_factor(alpha_src_factor) & 0xF) << 16) |
+      ((lima_blend_factor(alpha_dst_factor) & 0xF) << 20) |
+      0xFC000000; /* need check if this GLESv1 glAlphaFunc */
+}
+
+static int
 lima_stencil_op(enum pipe_stencil_op pipe)
 {
    switch (pipe) {
@@ -538,10 +552,7 @@ lima_pack_render_state(struct lima_context *ctx)
    struct lima_render_state *render = ctx->pp_buffer->map + pp_plb_rsw_offset +
       ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].offset;
 
-   /* do we need to check if blend enabled to setup these fields?
-    * ctx->blend->base.rt[0].blend_enable
-    *
-    * do hw support RGBA independ blend?
+   /* do hw support RGBA independ blend?
     * PIPE_CAP_INDEP_BLEND_ENABLE
     *
     * how to handle the no cbuf only zbuf case?
@@ -551,17 +562,23 @@ lima_pack_render_state(struct lima_context *ctx)
       (float_to_ubyte(ctx->blend_color.color[1]) << 16);
    render->blend_color_ra = float_to_ubyte(ctx->blend_color.color[0]) |
       (float_to_ubyte(ctx->blend_color.color[3]) << 16);
-#if 0
-   render->alpha_blend = lima_blend_func(rt->rgb_func) |
-      (lima_blend_func(rt->alpha_func) << 3) |
-      (lima_blend_factor(rt->rgb_src_factor) << 6) |
-      (lima_blend_factor(rt->rgb_dst_factor) << 11) |
-      ((lima_blend_factor(rt->alpha_src_factor) & 0xF) << 16) |
-      ((lima_blend_factor(rt->alpha_dst_factor) & 0xF) << 20) |
-      0xFC000000; /* need check if this GLESv1 glAlphaFunc */
-#else
-   render->alpha_blend = 0xfc3b1ad2;
-#endif
+
+   if (rt->blend_enable) {
+      render->alpha_blend = lima_calculate_alpha_blend(rt->rgb_func, rt->alpha_func,
+         rt->rgb_src_factor, rt->rgb_dst_factor,
+         rt->alpha_src_factor, rt->alpha_dst_factor);
+   }
+   else {
+      /*
+       * Special handling for blending disabled.
+       * Binary driver is generating the same alpha_value,
+       * as when we would just enable blending, without changing/setting any blend equation/params.
+       * Normaly in this case mesa would set all rt fields (func/factor) to zero.
+       */
+      render->alpha_blend = lima_calculate_alpha_blend(PIPE_BLEND_ADD, PIPE_BLEND_ADD,
+         PIPE_BLENDFACTOR_ONE, PIPE_BLENDFACTOR_ZERO,
+         PIPE_BLENDFACTOR_ONE, PIPE_BLENDFACTOR_ZERO);
+   }
 
 #if 0
    struct pipe_depth_state *depth = &ctx->zsa->base.depth;
