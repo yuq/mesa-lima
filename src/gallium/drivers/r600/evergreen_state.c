@@ -2168,8 +2168,7 @@ static void evergreen_emit_constant_buffers(struct r600_context *rctx,
 
 		va = rbuffer->gpu_address + cb->buffer_offset;
 
-		if (!gs_ring_buffer) {
-			assert(buffer_index < R600_MAX_HW_CONST_BUFFERS);
+		if (buffer_index < R600_MAX_HW_CONST_BUFFERS) {
 			radeon_set_context_reg_flag(cs, reg_alu_constbuf_size + buffer_index * 4,
 						    DIV_ROUND_UP(cb->buffer_size, 256), pkt_flags);
 			radeon_set_context_reg_flag(cs, reg_alu_const_cache + buffer_index * 4, va >> 8,
@@ -3880,7 +3879,7 @@ static void evergreen_set_tess_state(struct pipe_context *ctx,
 
 	memcpy(rctx->tess_state, default_outer_level, sizeof(float) * 4);
 	memcpy(rctx->tess_state+4, default_inner_level, sizeof(float) * 2);
-	rctx->tess_state_dirty = true;
+	rctx->driver_consts[PIPE_SHADER_TESS_CTRL].tcs_default_levels_dirty = true;
 }
 
 static void evergreen_setup_immed_buffer(struct r600_context *rctx,
@@ -4344,7 +4343,7 @@ void evergreen_setup_tess_constants(struct r600_context *rctx, const struct pipe
 	unsigned input_vertex_size, output_vertex_size;
 	unsigned input_patch_size, pervertex_output_patch_size, output_patch_size;
 	unsigned output_patch0_offset, perpatch_output_offset, lds_size;
-	uint32_t values[16];
+	uint32_t values[8];
 	unsigned num_waves;
 	unsigned num_pipes = rctx->screen->b.info.r600_max_quad_pipes;
 	unsigned wave_divisor = (16 * num_pipes);
@@ -4364,7 +4363,6 @@ void evergreen_setup_tess_constants(struct r600_context *rctx, const struct pipe
 
 	if (rctx->lds_alloc != 0 &&
 	    rctx->last_ls == ls &&
-	    !rctx->tess_state_dirty &&
 	    rctx->last_num_tcs_input_cp == num_tcs_input_cp &&
 	    rctx->last_tcs == tcs)
 		return;
@@ -4411,17 +4409,12 @@ void evergreen_setup_tess_constants(struct r600_context *rctx, const struct pipe
 
 	rctx->lds_alloc = (lds_size | (num_waves << 14));
 
-	memcpy(&values[8], rctx->tess_state, 6 * sizeof(float));
-	values[14] = 0;
-	values[15] = 0;
-
-	rctx->tess_state_dirty = false;
 	rctx->last_ls = ls;
 	rctx->last_tcs = tcs;
 	rctx->last_num_tcs_input_cp = num_tcs_input_cp;
 
 	constbuf.user_buffer = values;
-	constbuf.buffer_size = 16 * 4;
+	constbuf.buffer_size = 8 * 4;
 
 	rctx->b.b.set_constant_buffer(&rctx->b.b, PIPE_SHADER_VERTEX,
 				      R600_LDS_INFO_CONST_BUFFER, &constbuf);

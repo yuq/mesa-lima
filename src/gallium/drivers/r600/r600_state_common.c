@@ -1230,6 +1230,7 @@ void r600_update_driver_const_buffers(struct r600_context *rctx, bool compute_on
 		if (!info->vs_ucp_dirty &&
 		    !info->texture_const_dirty &&
 		    !info->ps_sample_pos_dirty &&
+		    !info->tcs_default_levels_dirty &&
 		    !info->cs_block_grid_size_dirty)
 			continue;
 
@@ -1246,7 +1247,7 @@ void r600_update_driver_const_buffers(struct r600_context *rctx, bool compute_on
 			info->vs_ucp_dirty = false;
 		}
 
-		if (info->ps_sample_pos_dirty) {
+		else if (info->ps_sample_pos_dirty) {
 			assert(sh == PIPE_SHADER_FRAGMENT);
 			if (!size) {
 				ptr = rctx->sample_positions;
@@ -1257,7 +1258,7 @@ void r600_update_driver_const_buffers(struct r600_context *rctx, bool compute_on
 			info->ps_sample_pos_dirty = false;
 		}
 
-		if (info->cs_block_grid_size_dirty) {
+		else if (info->cs_block_grid_size_dirty) {
 			assert(sh == PIPE_SHADER_COMPUTE);
 			if (!size) {
 				ptr = rctx->cs_block_grid_sizes;
@@ -1266,6 +1267,20 @@ void r600_update_driver_const_buffers(struct r600_context *rctx, bool compute_on
 				memcpy(ptr, rctx->cs_block_grid_sizes, R600_CS_BLOCK_GRID_SIZE);
 			}
 			info->cs_block_grid_size_dirty = false;
+		}
+
+		else if (info->tcs_default_levels_dirty) {
+			/*
+			 * We'd only really need this for default tcs shader.
+			 */
+			assert(sh == PIPE_SHADER_TESS_CTRL);
+			if (!size) {
+				ptr = rctx->tess_state;
+				size = R600_TCS_DEFAULT_LEVELS_SIZE;
+			} else {
+				memcpy(ptr, rctx->tess_state, R600_TCS_DEFAULT_LEVELS_SIZE);
+			}
+			info->tcs_default_levels_dirty = false;
 		}
 
 		if (info->texture_const_dirty) {
@@ -1277,6 +1292,8 @@ void r600_update_driver_const_buffers(struct r600_context *rctx, bool compute_on
 				memcpy(ptr, rctx->sample_positions, R600_UCP_SIZE);
 			if (sh == PIPE_SHADER_COMPUTE)
 				memcpy(ptr, rctx->cs_block_grid_sizes, R600_CS_BLOCK_GRID_SIZE);
+			if (sh == PIPE_SHADER_TESS_CTRL)
+				memcpy(ptr, rctx->tess_state, R600_TCS_DEFAULT_LEVELS_SIZE);
 		}
 		info->texture_const_dirty = false;
 
@@ -1521,11 +1538,11 @@ static void r600_generate_fixed_func_tcs(struct r600_context *rctx)
 
 	assert(!rctx->fixed_func_tcs_shader);
 
-	ureg_DECL_constant2D(ureg, 0, 3, R600_LDS_INFO_CONST_BUFFER);
-	const0 = ureg_src_dimension(ureg_src_register(TGSI_FILE_CONSTANT, 2),
-				    R600_LDS_INFO_CONST_BUFFER);
-	const1 = ureg_src_dimension(ureg_src_register(TGSI_FILE_CONSTANT, 3),
-				    R600_LDS_INFO_CONST_BUFFER);
+	ureg_DECL_constant2D(ureg, 0, 1, R600_BUFFER_INFO_CONST_BUFFER);
+	const0 = ureg_src_dimension(ureg_src_register(TGSI_FILE_CONSTANT, 0),
+				    R600_BUFFER_INFO_CONST_BUFFER);
+	const1 = ureg_src_dimension(ureg_src_register(TGSI_FILE_CONSTANT, 1),
+				    R600_BUFFER_INFO_CONST_BUFFER);
 
 	tessouter = ureg_DECL_output(ureg, TGSI_SEMANTIC_TESSOUTER, 0);
 	tessinner = ureg_DECL_output(ureg, TGSI_SEMANTIC_TESSINNER, 0);
