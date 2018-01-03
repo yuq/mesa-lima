@@ -306,7 +306,7 @@ static void si_create_fence_fd(struct pipe_context *ctx,
 
 	*pfence = NULL;
 
-	if (!sscreen->info.has_sync_file)
+	if (!sscreen->info.has_fence_to_handle)
 		return;
 
 	rfence = si_create_multi_fence();
@@ -330,7 +330,7 @@ static int si_fence_get_fd(struct pipe_screen *screen,
 	struct si_multi_fence *rfence = (struct si_multi_fence *)fence;
 	int gfx_fd = -1, sdma_fd = -1;
 
-	if (!sscreen->info.has_sync_file)
+	if (!sscreen->info.has_fence_to_handle)
 		return -1;
 
 	util_queue_fence_wait(&rfence->ready);

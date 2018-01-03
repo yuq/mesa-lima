@@ -82,7 +82,7 @@ struct radeon_info {
 	bool                        has_userptr;
 	bool                        has_syncobj;
 	bool                        has_syncobj_wait_for_submit;
-	bool                        has_sync_file;
+	bool                        has_fence_to_handle;
 	bool                        has_ctx_priority;
 
 	/* Shader cores. */

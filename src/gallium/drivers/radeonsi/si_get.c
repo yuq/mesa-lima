@@ -278,7 +278,7 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return 0;
 
 	case PIPE_CAP_NATIVE_FENCE_FD:
-		return sscreen->info.has_sync_file;
+		return sscreen->info.has_fence_to_handle;
 
 	case PIPE_CAP_QUERY_BUFFER_OBJECT:
 		return si_have_tgsi_compute(sscreen);
