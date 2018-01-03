@@ -1724,6 +1724,21 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 		}
 	}
 
+	/*
+	 * XXX: I believe there's some fatal flaw in the dirty state logic when
+	 * enabling/disabling tes.
+	 * VS/ES share all buffer/resource/sampler slots. If TES is enabled,
+	 * it will therefore overwrite the VS slots. If it now gets disabled,
+	 * the VS needs to rebind all buffer/resource/sampler slots - not only
+	 * has TES overwritten the corresponding slots, but when the VS was
+	 * operating as LS the things with correpsonding dirty bits got bound
+	 * to LS slots and won't reflect what is dirty as VS stage even if the
+	 * TES didn't overwrite it. The story for re-enabled TES is similar.
+	 * In any case, we're not allowed to submit any TES state when
+	 * TES is disabled (the state tracker may not do this but this looks
+	 * like an optimization to me, not something which can be relied on).
+	 */
+
 	/* Update clip misc state. */
 	if (clip_so_current) {
 		r600_update_clip_state(rctx, clip_so_current);

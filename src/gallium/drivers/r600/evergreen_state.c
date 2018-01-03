@@ -2334,6 +2334,8 @@ static void evergreen_emit_tcs_sampler_views(struct r600_context *rctx, struct r
 
 static void evergreen_emit_tes_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
 {
+	if (!rctx->tes_shader)
+		return;
 	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_TESS_EVAL].views,
 	                             EG_FETCH_CONSTANTS_OFFSET_VS + R600_MAX_CONST_BUFFERS, 0);
 }
@@ -2404,6 +2406,8 @@ static void evergreen_emit_tcs_sampler_states(struct r600_context *rctx, struct 
 
 static void evergreen_emit_tes_sampler_states(struct r600_context *rctx, struct r600_atom *atom)
 {
+	if (!rctx->tes_shader)
+		return;
 	evergreen_emit_sampler_states(rctx, &rctx->samplers[PIPE_SHADER_TESS_EVAL], 18,
 				      R_00A414_TD_VS_SAMPLER0_BORDER_INDEX, 0);
 }
