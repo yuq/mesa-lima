@@ -31,7 +31,9 @@
 #include "util/u_helpers.h"
 
 #include "vc5_context.h"
-#include "broadcom/cle/v3d_packet_v33_pack.h"
+#define V3D_VERSION 33
+#include "broadcom/common/v3d_macros.h"
+#include "broadcom/cle/v3dx_pack.h"
 
 static void *
 vc5_generic_cso_state_create(const void *src, uint32_t size)

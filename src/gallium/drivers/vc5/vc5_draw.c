@@ -32,8 +32,10 @@
 #include "vc5_context.h"
 #include "vc5_resource.h"
 #include "vc5_cl.h"
-#include "broadcom/cle/v3d_packet_v33_pack.h"
 #include "broadcom/compiler/v3d_compiler.h"
+#define V3D_VERSION 33
+#include "broadcom/common/v3d_macros.h"
+#include "broadcom/cle/v3dx_pack.h"
 
 /**
  * Does the initial bining command list setup for drawing to a given FBO.

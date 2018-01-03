@@ -185,10 +185,10 @@ cl_address(struct vc5_bo *bo, uint32_t offset)
 uint32_t vc5_cl_ensure_space(struct vc5_cl *cl, uint32_t size, uint32_t align);
 void vc5_cl_ensure_space_with_branch(struct vc5_cl *cl, uint32_t size);
 
-#define cl_packet_header(packet) V3D33_ ## packet ## _header
-#define cl_packet_length(packet) V3D33_ ## packet ## _length
-#define cl_packet_pack(packet)   V3D33_ ## packet ## _pack
-#define cl_packet_struct(packet) V3D33_ ## packet
+#define cl_packet_header(packet) V3DX(packet ## _header)
+#define cl_packet_length(packet) V3DX(packet ## _length)
+#define cl_packet_pack(packet)   V3DX(packet ## _pack)
+#define cl_packet_struct(packet) V3DX(packet)
 
 static inline void *
 cl_get_emit_space(struct vc5_cl_out **cl, size_t size)

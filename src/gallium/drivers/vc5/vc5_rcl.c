@@ -24,7 +24,9 @@
 #include "util/u_format.h"
 #include "vc5_context.h"
 #include "vc5_tiling.h"
-#include "broadcom/cle/v3d_packet_v33_pack.h"
+#define V3D_VERSION 33
+#include "broadcom/common/v3d_macros.h"
+#include "broadcom/cle/v3dx_pack.h"
 
 static void
 load_raw(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer)

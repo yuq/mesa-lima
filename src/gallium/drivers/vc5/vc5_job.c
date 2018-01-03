@@ -28,11 +28,14 @@
 
 #include <xf86drm.h>
 #include "vc5_context.h"
+/* The OQ/semaphore packets are the same across V3D versions. */
+#define V3D_VERSION 33
+#include "broadcom/cle/v3dx_pack.h"
+#include "broadcom/common/v3d_macros.h"
 #include "util/hash_table.h"
 #include "util/ralloc.h"
 #include "util/set.h"
 #include "broadcom/clif/clif_dump.h"
-#include "broadcom/cle/v3d_packet_v33_pack.h"
 
 static void
 remove_from_ht(struct hash_table *ht, void *key)
