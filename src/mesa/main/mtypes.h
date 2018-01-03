@@ -413,6 +413,43 @@ union gl_color_union
    GLuint ui[4];
 };
 
+/**
+ * Remapped color logical operations
+ *
+ * With the exception of NVIDIA hardware, which consumes the OpenGL enumerants
+ * directly, everything wants this mapping of color logical operations.
+ *
+ * Fun fact: These values are just the bit-reverse of the low-nibble of the GL
+ * enumerant values (i.e., `GL_NOOP & 0x0f` is `b0101' while
+ * \c COLOR_LOGICOP_NOOP is `b1010`).
+ *
+ * Fun fact #2: These values are just an encoding of the operation as a table
+ * of bit values. The result of the logic op is:
+ *
+ *    result_bit = (logic_op >> (2 * src_bit + dst_bit)) & 1
+ *
+ * For the GL enums, the result is:
+ *
+ *    result_bit = logic_op & (1 << (2 * src_bit + dst_bit))
+ */
+enum PACKED gl_logicop_mode {
+   COLOR_LOGICOP_CLEAR = 0,
+   COLOR_LOGICOP_NOR = 1,
+   COLOR_LOGICOP_AND_INVERTED = 2,
+   COLOR_LOGICOP_COPY_INVERTED = 3,
+   COLOR_LOGICOP_AND_REVERSE = 4,
+   COLOR_LOGICOP_INVERT = 5,
+   COLOR_LOGICOP_XOR = 6,
+   COLOR_LOGICOP_NAND = 7,
+   COLOR_LOGICOP_AND = 8,
+   COLOR_LOGICOP_EQUIV = 9,
+   COLOR_LOGICOP_NOOP = 10,
+   COLOR_LOGICOP_OR_INVERTED = 11,
+   COLOR_LOGICOP_COPY = 12,
+   COLOR_LOGICOP_OR_REVERSE = 13,
+   COLOR_LOGICOP_OR = 14,
+   COLOR_LOGICOP_SET = 15
+};
 
 /**
  * Color buffer attribute group (GL_COLOR_BUFFER_BIT).
@@ -488,6 +525,7 @@ struct gl_colorbuffer_attrib
    GLboolean IndexLogicOpEnabled;	/**< Color index logic op enabled flag */
    GLboolean ColorLogicOpEnabled;	/**< RGBA logic op enabled flag */
    GLenum LogicOp;			/**< Logic operator */
+   enum gl_logicop_mode _LogicOp;
 
    /*@}*/
 
