@@ -2041,6 +2041,25 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       vtn_fail_if(dest->type->type == NULL,
                   "Invalid destination type for OpStore");
 
+      if (glsl_get_base_type(dest->type->type) == GLSL_TYPE_BOOL &&
+          glsl_get_base_type(src_val->type->type) == GLSL_TYPE_UINT) {
+         /* Early versions of GLSLang would use uint types for UBOs/SSBOs but
+          * would then store them to a local variable as bool.  Work around
+          * the issue by doing an implicit conversion.
+          *
+          * https://github.com/KhronosGroup/glslang/issues/170
+          * https://bugs.freedesktop.org/show_bug.cgi?id=104424
+          */
+         vtn_warn("OpStore of value of type OpTypeInt to a pointer to type "
+                  "OpTypeBool.  Doing an implicit conversion to work around "
+                  "the problem.");
+         struct vtn_ssa_value *bool_ssa =
+            vtn_create_ssa_value(b, dest->type->type);
+         bool_ssa->def = nir_i2b(&b->nb, vtn_ssa_value(b, w[2])->def);
+         vtn_variable_store(b, bool_ssa, dest);
+         break;
+      }
+
       vtn_assert_types_equal(b, opcode, dest_val->type->deref, src_val->type);
 
       if (glsl_type_is_sampler(dest->type->type)) {
