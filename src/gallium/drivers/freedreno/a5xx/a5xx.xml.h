@@ -11,14 +11,14 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    431 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2017-05-17 13:21:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  37162 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13612 bytes, from 2017-11-28 14:06:11)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  34499 bytes, from 2017-12-17 17:36:55)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  13612 bytes, from 2017-12-19 18:19:46)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  34499 bytes, from 2018-01-03 15:58:51)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2017-05-17 13:21:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 112086 bytes, from 2017-11-28 14:06:11)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 145953 bytes, from 2017-12-17 17:36:55)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 112086 bytes, from 2017-12-19 18:19:46)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          ( 146261 bytes, from 2018-01-03 15:58:51)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2017-05-17 13:21:27)
 
-Copyright (C) 2013-2017 by the following authors:
+Copyright (C) 2013-2018 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
 - Ilia Mirkin <imirkin@alum.mit.edu> (imirkin)
 
@@ -2379,6 +2379,14 @@ static inline uint32_t A5XX_VSC_RESOLVE_CNTL_Y(uint32_t val)
 
 #define REG_A5XX_VBIF_PERF_CNT_EN3				0x000030c3
 
+#define REG_A5XX_VBIF_PERF_CNT_CLR0				0x000030c8
+
+#define REG_A5XX_VBIF_PERF_CNT_CLR1				0x000030c8
+
+#define REG_A5XX_VBIF_PERF_CNT_CLR2				0x000030c8
+
+#define REG_A5XX_VBIF_PERF_CNT_CLR3				0x000030c8
+
 #define REG_A5XX_VBIF_PERF_CNT_SEL0				0x000030d0
 
 #define REG_A5XX_VBIF_PERF_CNT_SEL1				0x000030d1
@@ -3515,6 +3523,7 @@ static inline uint32_t A5XX_RB_RESOLVE_CNTL_2_Y(uint32_t val)
 }
 
 #define REG_A5XX_RB_RESOLVE_CNTL_3				0x0000e213
+#define A5XX_RB_RESOLVE_CNTL_3_TILED				0x00000001
 
 #define REG_A5XX_RB_BLIT_DST_LO					0x0000e214
 
