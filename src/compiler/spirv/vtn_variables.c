@@ -2009,6 +2009,10 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       struct vtn_pointer *dest = dest_val->pointer;
       struct vtn_value *src_val = vtn_untyped_value(b, w[2]);
 
+      /* OpStore requires us to actually have a storage type */
+      vtn_fail_if(dest->type->type == NULL,
+                  "Invalid destination type for OpStore");
+
       vtn_fail_if(dest_val->type->deref != src_val->type,
                   "Value and pointer types of OpStore do not match");
 
