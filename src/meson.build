@@ -67,6 +67,8 @@ subdir('loader')
 subdir('glx')
 if with_gbm
   subdir('gbm')
+else
+  inc_gbm = []
 endif
 if with_egl
   subdir('egl')
