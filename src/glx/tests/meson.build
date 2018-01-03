@@ -40,8 +40,8 @@ if with_shared_glapi
       [files_glx_test, glx_indirect_size_h, main_dispatch_h],
       link_with : [libglx, libglapi],
       include_directories : [
-        include_directories('..', '../../../include/GL/internal'),
-        inc_src, inc_include, inc_mesa, inc_mapi,
+        inc_src, inc_include, inc_mesa, inc_mapi, inc_gl_internal,
+        include_directories('..'),
       ],
       dependencies : [dep_libdrm, dep_thread, idep_gtest]
     )
