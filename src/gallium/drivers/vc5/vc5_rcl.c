@@ -28,6 +28,13 @@
 #include "broadcom/common/v3d_macros.h"
 #include "broadcom/cle/v3dx_pack.h"
 
+#define PIPE_CLEAR_COLOR_BUFFERS (PIPE_CLEAR_COLOR0 |                   \
+                                  PIPE_CLEAR_COLOR1 |                   \
+                                  PIPE_CLEAR_COLOR2 |                   \
+                                  PIPE_CLEAR_COLOR3)                    \
+
+#define PIPE_FIRST_COLOR_BUFFER_BIT (ffs(PIPE_CLEAR_COLOR0) - 1)
+
 static void
 load_raw(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer)
 {
@@ -92,21 +99,8 @@ flush_last_load(struct vc5_cl *cl)
 }
 
 static void
-vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
+vc5_rcl_emit_loads(struct vc5_job *job, struct vc5_cl *cl)
 {
-        /* Emit the generic list in our indirect state -- the rcl will just
-         * have pointers into it.
-         */
-        struct vc5_cl *cl = &job->indirect;
-        vc5_cl_ensure_space(cl, 200, 1);
-        struct vc5_cl_reloc tile_list_start = cl_get_address(cl);
-
-        const uint32_t pipe_clear_color_buffers = (PIPE_CLEAR_COLOR0 |
-                                                   PIPE_CLEAR_COLOR1 |
-                                                   PIPE_CLEAR_COLOR2 |
-                                                   PIPE_CLEAR_COLOR3);
-        const uint32_t first_color_buffer_bit = (ffs(PIPE_CLEAR_COLOR0) - 1);
-
         uint32_t read_but_not_cleared = job->resolve & ~job->cleared;
 
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
@@ -140,39 +134,29 @@ vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
         if (read_but_not_cleared) {
                 cl_emit(cl, RELOAD_TILE_COLOUR_BUFFER, load) {
                         load.disable_colour_buffer_load =
-                                (~read_but_not_cleared & pipe_clear_color_buffers) >>
-                                first_color_buffer_bit;
+                                (~read_but_not_cleared &
+                                 PIPE_CLEAR_COLOR_BUFFERS) >>
+                                PIPE_FIRST_COLOR_BUFFER_BIT;
                         load.enable_z_load =
                                 read_but_not_cleared & PIPE_CLEAR_DEPTH;
                         load.enable_stencil_load =
                                 read_but_not_cleared & PIPE_CLEAR_STENCIL;
                 }
         }
+}
 
-        /* Tile Coordinates triggers the reload and sets where the stores
-         * go. There must be one per store packet.
-         */
-        cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
-
-        /* The binner starts out writing tiles assuming that the initial mode
-         * is triangles, so make sure that's the case.
-         */
-        cl_emit(cl, PRIMITIVE_LIST_FORMAT, fmt) {
-                fmt.data_type = LIST_INDEXED;
-                fmt.primitive_type = LIST_TRIANGLES;
-        }
-
-        cl_emit(cl, BRANCH_TO_IMPLICIT_TILE_LIST, branch);
-
-        bool needs_color_clear = job->cleared & pipe_clear_color_buffers;
+static void
+vc5_rcl_emit_stores(struct vc5_job *job, struct vc5_cl *cl)
+{
+        bool needs_color_clear = job->cleared & PIPE_CLEAR_COLOR_BUFFERS;
         bool needs_z_clear = job->cleared & PIPE_CLEAR_DEPTH;
         bool needs_s_clear = job->cleared & PIPE_CLEAR_STENCIL;
         /* Note that only the color RT being stored will be cleared by a
          * STORE_GENERAL, or all of them if the buffer is NONE.
          */
         bool msaa_color_clear = (needs_color_clear &&
-                                 (job->cleared & pipe_clear_color_buffers) ==
-                                 (job->resolve & pipe_clear_color_buffers));
+                                 (job->cleared & PIPE_CLEAR_COLOR_BUFFERS) ==
+                                 (job->resolve & PIPE_CLEAR_COLOR_BUFFERS));
 
         uint32_t stores_pending = job->resolve;
 
@@ -217,7 +201,8 @@ vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
                 cl_emit(cl, STORE_MULTI_SAMPLE_RESOLVED_TILE_COLOR_BUFFER_EXTENDED, store) {
 
                         store.disable_color_buffer_write =
-                                (~stores_pending >> first_color_buffer_bit) & 0xf;
+                                (~stores_pending >>
+                                 PIPE_FIRST_COLOR_BUFFER_BIT) & 0xf;
                         store.enable_z_write = stores_pending & PIPE_CLEAR_DEPTH;
                         store.enable_stencil_write = stores_pending & PIPE_CLEAR_STENCIL;
 
@@ -240,6 +225,36 @@ vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
                         store.buffer_to_store = NONE;
                 }
         }
+}
+
+static void
+vc5_rcl_emit_generic_per_tile_list(struct vc5_job *job, int last_cbuf)
+{
+        /* Emit the generic list in our indirect state -- the rcl will just
+         * have pointers into it.
+         */
+        struct vc5_cl *cl = &job->indirect;
+        vc5_cl_ensure_space(cl, 200, 1);
+        struct vc5_cl_reloc tile_list_start = cl_get_address(cl);
+
+        vc5_rcl_emit_loads(job, cl);
+
+        /* Tile Coordinates triggers the reload and sets where the stores
+         * go. There must be one per store packet.
+         */
+        cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
+
+        /* The binner starts out writing tiles assuming that the initial mode
+         * is triangles, so make sure that's the case.
+         */
+        cl_emit(cl, PRIMITIVE_LIST_FORMAT, fmt) {
+                fmt.data_type = LIST_INDEXED;
+                fmt.primitive_type = LIST_TRIANGLES;
+        }
+
+        cl_emit(cl, BRANCH_TO_IMPLICIT_TILE_LIST, branch);
+
+        vc5_rcl_emit_stores(job, cl);
 
         cl_emit(cl, RETURN_FROM_SUB_LIST, ret);
 
