@@ -2819,8 +2819,7 @@ set_blend_entry_bits(struct brw_context *brw, BLEND_ENTRY_GENXML *entry, int i,
                 _mesa_enum_to_string(rb_type));
       if (GEN_GEN >= 8 || rb_type == GL_UNSIGNED_NORMALIZED) {
          entry->LogicOpEnable = true;
-         entry->LogicOpFunction =
-            intel_translate_logic_op(ctx->Color.LogicOp);
+         entry->LogicOpFunction = ctx->Color._LogicOp;
       }
    } else if (blend_enabled && !ctx->Color._AdvancedBlendMode
               && (GEN_GEN <= 5 || !integer)) {
