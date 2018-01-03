@@ -176,7 +176,7 @@ do_blit_copypixels(struct gl_context * ctx,
                            dstx, dsty, _mesa_is_winsys_fbo(fb),
                            width, height,
                            (ctx->Color.ColorLogicOpEnabled ?
-                            ctx->Color.LogicOp : GL_COPY))) {
+                            ctx->Color._LogicOp : COLOR_LOGICOP_COPY))) {
       DBG("%s: blit failure\n", __func__);
       return false;
    }
