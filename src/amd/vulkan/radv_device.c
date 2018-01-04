@@ -263,6 +263,8 @@ radv_physical_device_init(struct radv_physical_device *device,
 	 */
 	device->has_clear_state = device->rad_info.chip_class >= CIK;
 
+	device->cpdma_prefetch_writes_memory = device->rad_info.chip_class <= VI;
+
 	radv_physical_device_init_mem_types(device);
 
 	result = radv_init_wsi(device);

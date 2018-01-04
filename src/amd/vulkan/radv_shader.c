@@ -330,7 +330,10 @@ radv_alloc_shader_memory(struct radv_device *device,
 
 	slab->size = 256 * 1024;
 	slab->bo = device->ws->buffer_create(device->ws, slab->size, 256,
-	                                     RADEON_DOMAIN_VRAM, RADEON_FLAG_NO_INTERPROCESS_SHARING);
+	                                     RADEON_DOMAIN_VRAM,
+					     RADEON_FLAG_NO_INTERPROCESS_SHARING |
+					     device->physical_device->cpdma_prefetch_writes_memory ?
+					             0 : RADEON_FLAG_READ_ONLY);
 	slab->ptr = (char*)device->ws->buffer_map(slab->bo);
 	list_inithead(&slab->shaders);
 
