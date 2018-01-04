@@ -1147,6 +1147,15 @@ radv_CreateImage(VkDevice device,
 		 const VkAllocationCallbacks *pAllocator,
 		 VkImage *pImage)
 {
+#ifdef ANDROID
+	const VkNativeBufferANDROID *gralloc_info =
+		vk_find_struct_const(pCreateInfo->pNext, NATIVE_BUFFER_ANDROID);
+
+	if (gralloc_info)
+		return radv_image_from_gralloc(device, pCreateInfo, gralloc_info,
+		                              pAllocator, pImage);
+#endif
+
 	const struct wsi_image_create_info *wsi_info =
 		vk_find_struct_const(pCreateInfo->pNext, WSI_IMAGE_CREATE_INFO_MESA);
 	bool scanout = wsi_info && wsi_info->scanout;
@@ -1172,6 +1181,9 @@ radv_DestroyImage(VkDevice _device, VkImage _image,
 
 	if (image->flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT)
 		device->ws->buffer_destroy(image->bo);
+
+	if (image->owned_memory != VK_NULL_HANDLE)
+		radv_FreeMemory(_device, image->owned_memory, pAllocator);
 
 	vk_free2(&device->alloc, pAllocator, image);
 }
