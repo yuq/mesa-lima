@@ -1118,7 +1118,12 @@ radv_emit_scissor(struct radv_cmd_buffer *cmd_buffer)
 {
 	uint32_t count = cmd_buffer->state.dynamic.scissor.count;
 
-	if (cmd_buffer->device->physical_device->rad_info.chip_class >= GFX9) {
+	/* Vega10/Raven scissor bug workaround. This must be done before VPORT
+	 * scissor registers are changed. There is also a more efficient but
+	 * more involved alternative workaround.
+	 */
+	if (cmd_buffer->device->physical_device->rad_info.family == CHIP_VEGA10 ||
+	    cmd_buffer->device->physical_device->rad_info.family == CHIP_RAVEN) {
 		cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_PS_PARTIAL_FLUSH;
 		si_emit_cache_flush(cmd_buffer);
 	}
