@@ -2252,7 +2252,9 @@ static LLVMValueRef build_tex_intrinsic(struct ac_nir_context *ctx,
 	case nir_texop_txf:
 	case nir_texop_txf_ms:
 	case nir_texop_samples_identical:
-		args->opcode = instr->sampler_dim == GLSL_SAMPLER_DIM_MS ? ac_image_load : ac_image_load_mip;
+		args->opcode = lod_is_zero ||
+			       instr->sampler_dim == GLSL_SAMPLER_DIM_MS ?
+					ac_image_load : ac_image_load_mip;
 		args->compare = false;
 		args->offset = false;
 		break;
