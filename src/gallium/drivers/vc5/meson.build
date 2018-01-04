@@ -46,6 +46,7 @@ files_libvc5 = files(
 )
 
 files_per_version = files(
+  'v3dx_simulator.c',
   'vc5_rcl.c',
 )
 

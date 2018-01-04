@@ -37,6 +37,7 @@ bool v3d_hw_has_gca(struct v3d_hw *hw);
 uint32_t v3d_hw_read_reg(struct v3d_hw *hw, uint32_t reg);
 void v3d_hw_write_reg(struct v3d_hw *hw, uint32_t reg, uint32_t val);
 void v3d_hw_tick(struct v3d_hw *hw);
+int v3d_hw_get_version(struct v3d_hw *hw);
 
 #ifdef __cplusplus
 }

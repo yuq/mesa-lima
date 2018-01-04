@@ -76,6 +76,13 @@ void v3d_hw_tick(struct v3d_hw *hw)
         return hw->tick();
 }
 
+int v3d_hw_get_version(struct v3d_hw *hw)
+{
+        const V3D_HUB_IDENT_T *ident = hw->get_hub_ident();
+
+        return ident->tech_version * 10 + ident->revision;
+}
+
 }
 
 #endif /* USE_VC5_SIMULATOR */

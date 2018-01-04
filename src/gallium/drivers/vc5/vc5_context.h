@@ -452,8 +452,6 @@ void vc5_program_fini(struct pipe_context *pctx);
 void vc5_query_init(struct pipe_context *pctx);
 
 void vc5_simulator_init(struct vc5_screen *screen);
-void vc5_simulator_init(struct vc5_screen *screen);
-void vc5_simulator_destroy(struct vc5_screen *screen);
 void vc5_simulator_destroy(struct vc5_screen *screen);
 int vc5_simulator_flush(struct vc5_context *vc5,
                         struct drm_vc5_submit_cl *args,

@@ -26,4 +26,12 @@
  * be included from vc5_context.h.
  */
 
+struct v3d_hw;
+
 void v3dX(emit_rcl)(struct vc5_job *job);
+
+void v3dX(simulator_init_regs)(struct v3d_hw *v3d);
+int v3dX(simulator_get_param_ioctl)(struct v3d_hw *v3d,
+                                    struct drm_vc5_get_param *args);
+void v3dX(simulator_flush)(struct v3d_hw *v3d, struct drm_vc5_submit_cl *submit,
+                           uint32_t gmp_ofs);

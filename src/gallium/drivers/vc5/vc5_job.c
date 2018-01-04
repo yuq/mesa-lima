@@ -371,6 +371,8 @@ vc5_clif_dump(struct vc5_context *vc5, struct vc5_job *job)
 void
 vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job)
 {
+        MAYBE_UNUSED struct vc5_screen *screen = vc5->screen;
+
         if (!job->needs_flush)
                 goto done;
 

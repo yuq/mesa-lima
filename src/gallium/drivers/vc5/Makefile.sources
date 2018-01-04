@@ -26,5 +26,6 @@ C_SOURCES := \
 	$()
 
 VC5_PER_VERSION_SOURCES = \
+	v3dx_simulator.c \
 	vc5_rcl.c \
 	$()
