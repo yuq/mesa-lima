@@ -80,6 +80,7 @@ static const struct {
         /* v4.1 opcodes */
         { 41, 0x3de020c7bdfd200dull, "ldvpmg_in  rf7, r2, r2; mov  r3, 13" },
         { 41, 0x3de02040f8ff7201ull, "stvpmv  1, rf8       ; mov  r1, 1" },
+        { 41, 0xd8000e50bb2d3000ull, "sampid  rf16         ; fmul  rf57.h, r3, r1.l" },
 };
 
 static void
