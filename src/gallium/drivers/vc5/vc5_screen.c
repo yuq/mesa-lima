@@ -560,7 +560,7 @@ vc5_get_device_info(struct vc5_screen *screen)
         uint32_t minor = (ident1.value >> 0) & 0xf;
         screen->devinfo.ver = major * 10 + minor;
 
-        if (screen->devinfo.ver != 33) {
+        if (screen->devinfo.ver != 33 && screen->devinfo.ver != 41) {
                 fprintf(stderr,
                         "V3D %d.%d not supported by this version of Mesa.\n",
                         screen->devinfo.ver / 10,
