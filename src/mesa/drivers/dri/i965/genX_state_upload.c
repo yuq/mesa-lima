@@ -507,26 +507,13 @@ genX(emit_vertices)(struct brw_context *brw)
    } else {
       brw_batch_emit(brw, GENX(3DSTATE_VF_SGVS), vfs);
    }
+#endif
 
-   /* Normally we don't need an element for the SGVS attribute because the
-    * 3DSTATE_VF_SGVS instruction lets you store the generated attribute in an
-    * element that is past the list in 3DSTATE_VERTEX_ELEMENTS. However if
-    * we're using draw parameters then we need an element for the those
-    * values.  Additionally if there is an edge flag element then the SGVS
-    * can't be inserted past that so we need a dummy element to ensure that
-    * the edge flag is the last one.
-    */
-   const bool needs_sgvs_element = (vs_prog_data->uses_basevertex ||
-                                    vs_prog_data->uses_baseinstance ||
-                                    ((vs_prog_data->uses_instanceid ||
-                                      vs_prog_data->uses_vertexid)
-                                     && uses_edge_flag));
-#else
    const bool needs_sgvs_element = (vs_prog_data->uses_basevertex ||
                                     vs_prog_data->uses_baseinstance ||
                                     vs_prog_data->uses_instanceid ||
                                     vs_prog_data->uses_vertexid);
-#endif
+
    unsigned nr_elements =
       brw->vb.nr_enabled + needs_sgvs_element + vs_prog_data->uses_drawid;
 
