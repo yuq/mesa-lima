@@ -2014,11 +2014,11 @@ radv_dst_access_flush(struct radv_cmd_buffer *cmd_buffer,
 		switch ((VkAccessFlagBits)(1 << b)) {
 		case VK_ACCESS_INDIRECT_COMMAND_READ_BIT:
 		case VK_ACCESS_INDEX_READ_BIT:
-		case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:
 			break;
 		case VK_ACCESS_UNIFORM_READ_BIT:
 			flush_bits |= RADV_CMD_FLAG_INV_VMEM_L1 | RADV_CMD_FLAG_INV_SMEM_L1;
 			break;
+		case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:
 		case VK_ACCESS_SHADER_READ_BIT:
 		case VK_ACCESS_TRANSFER_READ_BIT:
 		case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:
