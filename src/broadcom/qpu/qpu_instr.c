@@ -47,10 +47,6 @@
 
 #define VC5_QPU_SIG_SHIFT                   53
 #define VC5_QPU_SIG_MASK                    QPU_MASK(57, 53)
-# define VC5_QPU_SIG_THRSW_BIT              0x1
-# define VC5_QPU_SIG_LDUNIF_BIT             0x2
-# define VC5_QPU_SIG_LDTMU_BIT              0x4
-# define VC5_QPU_SIG_LDVARY_BIT             0x8
 
 #define VC5_QPU_COND_SHIFT                  46
 #define VC5_QPU_COND_MASK                   QPU_MASK(52, 46)
