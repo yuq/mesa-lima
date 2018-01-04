@@ -1460,6 +1460,7 @@ struct radv_image_view {
 struct radv_image_create_info {
 	const VkImageCreateInfo *vk_info;
 	bool scanout;
+	bool no_metadata_planes;
 };
 
 VkResult radv_image_create(VkDevice _device,
