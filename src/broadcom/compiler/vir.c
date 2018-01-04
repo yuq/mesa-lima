@@ -92,6 +92,9 @@ vir_has_side_effects(struct v3d_compile *c, struct qinst *inst)
                 case V3D_QPU_A_SETREVF:
                 case V3D_QPU_A_SETMSF:
                 case V3D_QPU_A_VPMSETUP:
+                case V3D_QPU_A_STVPMV:
+                case V3D_QPU_A_STVPMD:
+                case V3D_QPU_A_STVPMP:
                         return true;
                 default:
                         break;
@@ -412,10 +415,6 @@ static void
 vir_emit(struct v3d_compile *c, struct qinst *inst)
 {
         list_addtail(&inst->link, &c->cur_block->instructions);
-
-        if (inst->dst.file == QFILE_MAGIC &&
-            inst->dst.index == V3D_QPU_WADDR_VPM)
-                c->num_vpm_writes++;
 }
 
 /* Updates inst to write to a new temporary, emits it, and notes the def. */

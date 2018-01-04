@@ -173,10 +173,13 @@ enum v3d_qpu_add_op {
         V3D_QPU_A_TMUWT,
         V3D_QPU_A_VPMSETUP,
         V3D_QPU_A_VPMWT,
-        V3D_QPU_A_LDVPMV,
-        V3D_QPU_A_LDVPMD,
+        V3D_QPU_A_LDVPMV_IN,
+        V3D_QPU_A_LDVPMV_OUT,
+        V3D_QPU_A_LDVPMD_IN,
+        V3D_QPU_A_LDVPMD_OUT,
         V3D_QPU_A_LDVPMP,
-        V3D_QPU_A_LDVPMG,
+        V3D_QPU_A_LDVPMG_IN,
+        V3D_QPU_A_LDVPMG_OUT,
         V3D_QPU_A_FCMP,
         V3D_QPU_A_VFMAX,
         V3D_QPU_A_FROUND,
@@ -425,6 +428,7 @@ bool v3d_qpu_writes_r4(const struct v3d_device_info *devinfo,
 bool v3d_qpu_writes_r5(const struct v3d_device_info *devinfo,
                        const struct v3d_qpu_instr *instr) ATTRIBUTE_CONST;
 bool v3d_qpu_uses_mux(const struct v3d_qpu_instr *inst, enum v3d_qpu_mux mux);
+bool v3d_qpu_uses_vpm(const struct v3d_qpu_instr *inst);
 bool v3d_qpu_sig_writes_address(const struct v3d_device_info *devinfo,
                                 const struct v3d_qpu_sig *sig) ATTRIBUTE_CONST;
 

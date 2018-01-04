@@ -160,6 +160,28 @@ v3d_register_allocate(struct v3d_compile *c)
                         }
                 }
 
+                if (inst->qpu.type == V3D_QPU_INSTR_TYPE_ALU) {
+                        switch (inst->qpu.alu.add.op) {
+                        case V3D_QPU_A_LDVPMV_IN:
+                        case V3D_QPU_A_LDVPMV_OUT:
+                        case V3D_QPU_A_LDVPMD_IN:
+                        case V3D_QPU_A_LDVPMD_OUT:
+                        case V3D_QPU_A_LDVPMP:
+                        case V3D_QPU_A_LDVPMG_IN:
+                        case V3D_QPU_A_LDVPMG_OUT:
+                                /* LDVPMs only store to temps (the MA flag
+                                 * decides whether the LDVPM is in or out)
+                                 */
+                                assert(inst->dst.file == QFILE_TEMP);
+                                class_bits[temp_to_node[inst->dst.index]] &=
+                                        CLASS_BIT_PHYS;
+                                break;
+
+                        default:
+                                break;
+                        }
+                }
+
                 if (inst->src[0].file == QFILE_REG) {
                         switch (inst->src[0].index) {
                         case 0:

@@ -594,15 +594,15 @@ qpu_magic_waddr_is_periph(enum v3d_qpu_waddr waddr)
 static bool
 qpu_accesses_peripheral(const struct v3d_qpu_instr *inst)
 {
+        if (v3d_qpu_uses_vpm(inst))
+                return true;
+
         if (inst->type == V3D_QPU_INSTR_TYPE_ALU) {
                 if (inst->alu.add.op != V3D_QPU_A_NOP &&
                     inst->alu.add.magic_write &&
                     qpu_magic_waddr_is_periph(inst->alu.add.waddr)) {
                         return true;
                 }
-
-                if (inst->alu.add.op == V3D_QPU_A_VPMSETUP)
-                        return true;
 
                 if (inst->alu.mul.op != V3D_QPU_M_NOP &&
                     inst->alu.mul.magic_write &&

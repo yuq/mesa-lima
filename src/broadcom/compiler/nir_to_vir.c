@@ -29,6 +29,7 @@
 #include "util/hash_table.h"
 #include "compiler/nir/nir.h"
 #include "compiler/nir/nir_builder.h"
+#include "common/v3d_device_info.h"
 #include "v3d_compiler.h"
 
 /* We don't do any address packing. */
@@ -1224,7 +1225,21 @@ emit_frag_end(struct v3d_compile *c)
 }
 
 static void
-emit_scaled_viewport_write(struct v3d_compile *c, struct qreg rcp_w)
+vir_VPM_WRITE(struct v3d_compile *c, struct qreg val, uint32_t *vpm_index)
+{
+        if (c->devinfo->ver >= 40) {
+                vir_STVPMV(c, vir_uniform_ui(c, *vpm_index), val);
+                *vpm_index = *vpm_index + 1;
+        } else {
+                vir_MOV_dest(c, vir_reg(QFILE_MAGIC, V3D_QPU_WADDR_VPM), val);
+        }
+
+        c->num_vpm_writes++;
+}
+
+static void
+emit_scaled_viewport_write(struct v3d_compile *c, struct qreg rcp_w,
+                           uint32_t *vpm_index)
 {
         for (int i = 0; i < 2; i++) {
                 struct qreg coord = c->outputs[c->output_position_index + i];
@@ -1232,34 +1247,32 @@ emit_scaled_viewport_write(struct v3d_compile *c, struct qreg rcp_w)
                                  vir_uniform(c, QUNIFORM_VIEWPORT_X_SCALE + i,
                                              0));
                 coord = vir_FMUL(c, coord, rcp_w);
-                vir_FTOIN_dest(c, vir_reg(QFILE_MAGIC, V3D_QPU_WADDR_VPM),
-                               coord);
+                vir_VPM_WRITE(c, vir_FTOIN(c, coord), vpm_index);
         }
 
 }
 
 static void
-emit_zs_write(struct v3d_compile *c, struct qreg rcp_w)
+emit_zs_write(struct v3d_compile *c, struct qreg rcp_w, uint32_t *vpm_index)
 {
         struct qreg zscale = vir_uniform(c, QUNIFORM_VIEWPORT_Z_SCALE, 0);
         struct qreg zoffset = vir_uniform(c, QUNIFORM_VIEWPORT_Z_OFFSET, 0);
 
-        vir_FADD_dest(c, vir_reg(QFILE_MAGIC, V3D_QPU_WADDR_VPM),
-                      vir_FMUL(c, vir_FMUL(c,
-                                           c->outputs[c->output_position_index + 2],
-                                           zscale),
-                               rcp_w),
-                      zoffset);
+        struct qreg z = c->outputs[c->output_position_index + 2];
+        z = vir_FMUL(c, z, zscale);
+        z = vir_FMUL(c, z, rcp_w);
+        z = vir_FADD(c, z, zoffset);
+        vir_VPM_WRITE(c, z, vpm_index);
 }
 
 static void
-emit_rcp_wc_write(struct v3d_compile *c, struct qreg rcp_w)
+emit_rcp_wc_write(struct v3d_compile *c, struct qreg rcp_w, uint32_t *vpm_index)
 {
-        vir_VPM_WRITE(c, rcp_w);
+        vir_VPM_WRITE(c, rcp_w, vpm_index);
 }
 
 static void
-emit_point_size_write(struct v3d_compile *c)
+emit_point_size_write(struct v3d_compile *c, uint32_t *vpm_index)
 {
         struct qreg point_size;
 
@@ -1273,12 +1286,15 @@ emit_point_size_write(struct v3d_compile *c)
          */
         point_size = vir_FMAX(c, point_size, vir_uniform_f(c, .125));
 
-        vir_VPM_WRITE(c, point_size);
+        vir_VPM_WRITE(c, point_size, vpm_index);
 }
 
 static void
 emit_vpm_write_setup(struct v3d_compile *c)
 {
+        if (c->devinfo->ver >= 40)
+                return;
+
         uint32_t packed;
         struct V3D33_VPM_GENERIC_BLOCK_WRITE_SETUP unpacked = {
                 V3D33_VPM_GENERIC_BLOCK_WRITE_SETUP_header,
@@ -1300,6 +1316,7 @@ emit_vpm_write_setup(struct v3d_compile *c)
 static void
 emit_vert_end(struct v3d_compile *c)
 {
+        uint32_t vpm_index = 0;
         struct qreg rcp_w = vir_SFU(c, V3D_QPU_WADDR_RECIP,
                                     c->outputs[c->output_position_index + 3]);
 
@@ -1307,21 +1324,22 @@ emit_vert_end(struct v3d_compile *c)
 
         if (c->vs_key->is_coord) {
                 for (int i = 0; i < 4; i++)
-                        vir_VPM_WRITE(c, c->outputs[c->output_position_index + i]);
-                emit_scaled_viewport_write(c, rcp_w);
+                        vir_VPM_WRITE(c, c->outputs[c->output_position_index + i],
+                                      &vpm_index);
+                emit_scaled_viewport_write(c, rcp_w, &vpm_index);
                 if (c->vs_key->per_vertex_point_size) {
-                        emit_point_size_write(c);
+                        emit_point_size_write(c, &vpm_index);
                         /* emit_rcp_wc_write(c, rcp_w); */
                 }
                 /* XXX: Z-only rendering */
                 if (0)
-                        emit_zs_write(c, rcp_w);
+                        emit_zs_write(c, rcp_w, &vpm_index);
         } else {
-                emit_scaled_viewport_write(c, rcp_w);
-                emit_zs_write(c, rcp_w);
-                emit_rcp_wc_write(c, rcp_w);
+                emit_scaled_viewport_write(c, rcp_w, &vpm_index);
+                emit_zs_write(c, rcp_w, &vpm_index);
+                emit_rcp_wc_write(c, rcp_w, &vpm_index);
                 if (c->vs_key->per_vertex_point_size)
-                        emit_point_size_write(c);
+                        emit_point_size_write(c, &vpm_index);
         }
 
         for (int i = 0; i < c->vs_key->num_fs_inputs; i++) {
@@ -1332,7 +1350,8 @@ emit_vert_end(struct v3d_compile *c)
                         struct v3d_varying_slot output = c->output_slots[j];
 
                         if (!memcmp(&input, &output, sizeof(input))) {
-                                vir_VPM_WRITE(c, c->outputs[j]);
+                                vir_VPM_WRITE(c, c->outputs[j],
+                                              &vpm_index);
                                 break;
                         }
                 }
@@ -1340,7 +1359,8 @@ emit_vert_end(struct v3d_compile *c)
                  * this FS input.
                  */
                 if (j == c->num_outputs)
-                        vir_VPM_WRITE(c, vir_uniform_f(c, 0.0));
+                        vir_VPM_WRITE(c, vir_uniform_f(c, 0.0),
+                                      &vpm_index);
         }
 }
 
@@ -1383,6 +1403,12 @@ ntq_emit_vpm_read(struct v3d_compile *c,
                   uint32_t vpm_index)
 {
         struct qreg vpm = vir_reg(QFILE_VPM, vpm_index);
+
+        if (c->devinfo->ver >= 40 ) {
+                return vir_LDVPMV_IN(c,
+                                     vir_uniform_ui(c,
+                                                    (*num_components_queued)++));
+        }
 
         if (*num_components_queued != 0) {
                 (*num_components_queued)--;
@@ -1501,8 +1527,12 @@ ntq_setup_inputs(struct v3d_compile *c)
         }
 
         if (c->s->info.stage == MESA_SHADER_VERTEX) {
-                assert(vpm_components_queued == 0);
-                assert(num_components == 0);
+                if (c->devinfo->ver >= 40) {
+                        assert(vpm_components_queued == num_components);
+                } else {
+                        assert(vpm_components_queued == 0);
+                        assert(num_components == 0);
+                }
         }
 }
 

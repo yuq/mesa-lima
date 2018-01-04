@@ -515,7 +515,11 @@ static const struct opcode_desc add_ops[] = {
         { 187, 187, 1 << 2, 1 << 5, V3D_QPU_A_TMUWT },
         { 187, 187, 1 << 2, 1 << 6, V3D_QPU_A_VPMWT },
 
-        { 187, 187, 1 << 3, ANYMUX, V3D_QPU_A_VPMSETUP },
+        { 187, 187, 1 << 3, ANYMUX, V3D_QPU_A_VPMSETUP, 33 },
+        { 188, 188, 1 << 0, ANYMUX, V3D_QPU_A_LDVPMV_IN, 40 },
+        { 188, 188, 1 << 1, ANYMUX, V3D_QPU_A_LDVPMD_IN, 40 },
+        { 188, 188, 1 << 2, ANYMUX, V3D_QPU_A_LDVPMP, 40 },
+        { 189, 189, ANYMUX, ANYMUX, V3D_QPU_A_LDVPMG_IN, 40 },
 
         /* FIXME: MORE COMPLICATED */
         /* { 190, 191, ANYMUX, ANYMUX, V3D_QPU_A_VFMOVABSNEGNAB }, */
@@ -823,7 +827,24 @@ v3d_qpu_add_unpack(const struct v3d_device_info *devinfo, uint64_t packed_inst,
         instr->alu.add.a = mux_a;
         instr->alu.add.b = mux_b;
         instr->alu.add.waddr = QPU_GET_FIELD(packed_inst, V3D_QPU_WADDR_A);
-        instr->alu.add.magic_write = packed_inst & VC5_QPU_MA;
+
+        instr->alu.add.magic_write = false;
+        if (packed_inst & VC5_QPU_MA) {
+                switch (instr->alu.add.op) {
+                case V3D_QPU_A_LDVPMV_IN:
+                        instr->alu.add.op = V3D_QPU_A_LDVPMV_OUT;
+                        break;
+                case V3D_QPU_A_LDVPMD_IN:
+                        instr->alu.add.op = V3D_QPU_A_LDVPMD_OUT;
+                        break;
+                case V3D_QPU_A_LDVPMG_IN:
+                        instr->alu.add.op = V3D_QPU_A_LDVPMG_OUT;
+                        break;
+                default:
+                        instr->alu.add.magic_write = true;
+                        break;
+                }
+        }
 
         return true;
 }
@@ -930,16 +951,36 @@ v3d_qpu_add_pack(const struct v3d_device_info *devinfo,
         if (nsrc < 1)
                 mux_a = ffs(desc->mux_a_mask) - 1;
 
+        bool no_magic_write = false;
+
         switch (instr->alu.add.op) {
         case V3D_QPU_A_STVPMV:
                 waddr = 0;
+                no_magic_write = true;
                 break;
         case V3D_QPU_A_STVPMD:
                 waddr = 1;
+                no_magic_write = true;
                 break;
         case V3D_QPU_A_STVPMP:
                 waddr = 2;
+                no_magic_write = true;
                 break;
+
+        case V3D_QPU_A_LDVPMV_IN:
+        case V3D_QPU_A_LDVPMD_IN:
+        case V3D_QPU_A_LDVPMP:
+        case V3D_QPU_A_LDVPMG_IN:
+                assert(!instr->alu.add.magic_write);
+                break;
+
+        case V3D_QPU_A_LDVPMV_OUT:
+        case V3D_QPU_A_LDVPMD_OUT:
+        case V3D_QPU_A_LDVPMG_OUT:
+                assert(!instr->alu.add.magic_write);
+                *packed_instr |= VC5_QPU_MA;
+                break;
+
         default:
                 break;
         }
@@ -1065,7 +1106,7 @@ v3d_qpu_add_pack(const struct v3d_device_info *devinfo,
         *packed_instr |= QPU_SET_FIELD(mux_b, VC5_QPU_ADD_B);
         *packed_instr |= QPU_SET_FIELD(opcode, VC5_QPU_OP_ADD);
         *packed_instr |= QPU_SET_FIELD(waddr, V3D_QPU_WADDR_A);
-        if (instr->alu.add.magic_write)
+        if (instr->alu.add.magic_write && !no_magic_write)
                 *packed_instr |= VC5_QPU_MA;
 
         return true;

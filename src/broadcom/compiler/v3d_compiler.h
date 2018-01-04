@@ -791,6 +791,7 @@ VIR_A_ALU2(OR)
 VIR_A_ALU2(XOR)
 VIR_A_ALU2(VADD)
 VIR_A_ALU2(VSUB)
+VIR_A_ALU2(STVPMV)
 VIR_A_ALU1(NOT)
 VIR_A_ALU1(NEG)
 VIR_A_ALU1(FLAPUSH)
@@ -800,6 +801,8 @@ VIR_A_ALU1(SETMSF)
 VIR_A_ALU1(SETREVF)
 VIR_A_ALU1(TIDX)
 VIR_A_ALU1(EIDX)
+VIR_A_ALU1(LDVPMV_IN)
+VIR_A_ALU1(LDVPMV_OUT)
 
 VIR_A_ALU0(FXCD)
 VIR_A_ALU0(XCD)
@@ -852,12 +855,6 @@ vir_SEL(struct v3d_compile *c, enum v3d_qpu_cond cond,
         vir_MOV_dest(c, t, src1);
         vir_MOV_cond(c, cond, t, src0);
         return t;
-}
-
-static inline void
-vir_VPM_WRITE(struct v3d_compile *c, struct qreg val)
-{
-        vir_MOV_dest(c, vir_reg(QFILE_MAGIC, V3D_QPU_WADDR_VPM), val);
 }
 
 static inline struct qinst *
