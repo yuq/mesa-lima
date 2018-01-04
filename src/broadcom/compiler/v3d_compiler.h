@@ -650,8 +650,8 @@ bool vir_is_add(struct qinst *inst);
 bool vir_is_mul(struct qinst *inst);
 bool vir_is_float_input(struct qinst *inst);
 bool vir_depends_on_flags(struct qinst *inst);
-bool vir_writes_r3(struct qinst *inst);
-bool vir_writes_r4(struct qinst *inst);
+bool vir_writes_r3(const struct v3d_device_info *devinfo, struct qinst *inst);
+bool vir_writes_r4(const struct v3d_device_info *devinfo, struct qinst *inst);
 struct qreg vir_follow_movs(struct v3d_compile *c, struct qreg reg);
 uint8_t vir_channels_written(struct qinst *inst);
 

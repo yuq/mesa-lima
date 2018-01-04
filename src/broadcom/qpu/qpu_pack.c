@@ -55,11 +55,7 @@
 
 #define VC5_QPU_COND_SHIFT                  46
 #define VC5_QPU_COND_MASK                   QPU_MASK(52, 46)
-
-#define VC5_QPU_COND_IFA                    0
-#define VC5_QPU_COND_IFB                    1
-#define VC5_QPU_COND_IFNA                   2
-#define VC5_QPU_COND_IFNB                   3
+#define VC5_QPU_COND_SIG_MAGIC_ADDR         (1 << 6)
 
 #define VC5_QPU_MM                          QPU_MASK(45, 45)
 #define VC5_QPU_MA                          QPU_MASK(44, 44)
@@ -113,6 +109,9 @@
 
 #define THRSW .thrsw = true
 #define LDUNIF .ldunif = true
+#define LDUNIFRF .ldunifrf = true
+#define LDUNIFA .ldunifa = true
+#define LDUNIFARF .ldunifarf = true
 #define LDTMU .ldtmu = true
 #define LDVARY .ldvary = true
 #define LDVPM .ldvpm = true
@@ -156,6 +155,67 @@ static const struct v3d_qpu_sig v33_sig_map[] = {
         [31] = { SMIMM,                        },
 };
 
+static const struct v3d_qpu_sig v40_sig_map[] = {
+        /*      MISC    R3      R4      R5 */
+        [0]  = {                               },
+        [1]  = { THRSW,                        },
+        [2]  = {                        LDUNIF },
+        [3]  = { THRSW,                 LDUNIF },
+        [4]  = {                LDTMU,         },
+        [5]  = { THRSW,         LDTMU,         },
+        [6]  = {                LDTMU,  LDUNIF },
+        [7]  = { THRSW,         LDTMU,  LDUNIF },
+        [8]  = {        LDVARY,                },
+        [9]  = { THRSW, LDVARY,                },
+        [10] = {        LDVARY,         LDUNIF },
+        [11] = { THRSW, LDVARY,         LDUNIF },
+        /* 12-13 reserved */
+        [14] = { SMIMM, LDVARY,                },
+        [15] = { SMIMM,                        },
+        [16] = {        LDTLB,                 },
+        [17] = {        LDTLBU,                },
+        [18] = {                        WRTMUC },
+        [19] = { THRSW,                 WRTMUC },
+        [20] = {        LDVARY,         WRTMUC },
+        [21] = { THRSW, LDVARY,         WRTMUC },
+        [22] = { UCB,                          },
+        [23] = { ROT,                          },
+        /* 24-30 reserved */
+        [31] = { SMIMM,         LDTMU,         },
+};
+
+static const struct v3d_qpu_sig v41_sig_map[] = {
+        /*      MISC       phys    R5 */
+        [0]  = {                          },
+        [1]  = { THRSW,                   },
+        [2]  = {                   LDUNIF },
+        [3]  = { THRSW,            LDUNIF },
+        [4]  = {           LDTMU,         },
+        [5]  = { THRSW,    LDTMU,         },
+        [6]  = {           LDTMU,  LDUNIF },
+        [7]  = { THRSW,    LDTMU,  LDUNIF },
+        [8]  = {           LDVARY,        },
+        [9]  = { THRSW,    LDVARY,        },
+        [10] = {           LDVARY, LDUNIF },
+        [11] = { THRSW,    LDVARY, LDUNIF },
+        [12] = { LDUNIFRF                 },
+        [13] = { THRSW,    LDUNIFRF       },
+        [14] = { SMIMM,    LDVARY,        },
+        [15] = { SMIMM,                   },
+        [16] = {           LDTLB,         },
+        [17] = {           LDTLBU,        },
+        [18] = {                          WRTMUC },
+        [19] = { THRSW,                   WRTMUC },
+        [20] = {           LDVARY,        WRTMUC },
+        [21] = { THRSW,    LDVARY,        WRTMUC },
+        [22] = { UCB,                     },
+        [23] = { ROT,                     },
+        /* 24-30 reserved */
+        [24] = {                   LDUNIFA},
+        [25] = { LDUNIFARF                },
+        [31] = { SMIMM,            LDTMU, },
+};
+
 bool
 v3d_qpu_sig_unpack(const struct v3d_device_info *devinfo,
                    uint32_t packed_sig,
@@ -164,7 +224,12 @@ v3d_qpu_sig_unpack(const struct v3d_device_info *devinfo,
         if (packed_sig >= ARRAY_SIZE(v33_sig_map))
                 return false;
 
-        *sig = v33_sig_map[packed_sig];
+        if (devinfo->ver >= 41)
+                *sig = v41_sig_map[packed_sig];
+        else if (devinfo->ver == 40)
+                *sig = v40_sig_map[packed_sig];
+        else
+                *sig = v33_sig_map[packed_sig];
 
         /* Signals with zeroed unpacked contents after element 0 are reserved. */
         return (packed_sig == 0 ||
@@ -178,7 +243,12 @@ v3d_qpu_sig_pack(const struct v3d_device_info *devinfo,
 {
         static const struct v3d_qpu_sig *map;
 
-        map = v33_sig_map;
+        if (devinfo->ver >= 41)
+                map = v41_sig_map;
+        else if (devinfo->ver == 40)
+                map = v40_sig_map;
+        else
+                map = v33_sig_map;
 
         for (int i = 0; i < ARRAY_SIZE(v33_sig_map); i++) {
                 if (memcmp(&map[i], sig, sizeof(*sig)) == 0) {
@@ -1063,10 +1133,21 @@ v3d_qpu_instr_unpack_alu(const struct v3d_device_info *devinfo,
                                 &instr->sig))
                 return false;
 
-        if (!v3d_qpu_flags_unpack(devinfo,
-                                  QPU_GET_FIELD(packed_instr, VC5_QPU_COND),
-                                  &instr->flags))
-                return false;
+        uint32_t packed_cond = QPU_GET_FIELD(packed_instr, VC5_QPU_COND);
+        if (v3d_qpu_sig_writes_address(devinfo, &instr->sig)) {
+                instr->sig_addr = packed_cond & ~VC5_QPU_COND_SIG_MAGIC_ADDR;
+                instr->sig_magic = packed_cond & VC5_QPU_COND_SIG_MAGIC_ADDR;
+
+                instr->flags.ac = V3D_QPU_COND_NONE;
+                instr->flags.mc = V3D_QPU_COND_NONE;
+                instr->flags.apf = V3D_QPU_PF_NONE;
+                instr->flags.mpf = V3D_QPU_PF_NONE;
+                instr->flags.auf = V3D_QPU_UF_NONE;
+                instr->flags.muf = V3D_QPU_UF_NONE;
+        } else {
+                if (!v3d_qpu_flags_unpack(devinfo, packed_cond, &instr->flags))
+                        return false;
+        }
 
         instr->raddr_a = QPU_GET_FIELD(packed_instr, VC5_QPU_RADDR_A);
         instr->raddr_b = QPU_GET_FIELD(packed_instr, VC5_QPU_RADDR_B);
@@ -1164,9 +1245,28 @@ v3d_qpu_instr_pack_alu(const struct v3d_device_info *devinfo,
                         return false;
 
                 uint32_t flags;
-                if (!v3d_qpu_flags_pack(devinfo, &instr->flags, &flags))
-                        return false;
+                if (v3d_qpu_sig_writes_address(devinfo, &instr->sig)) {
+                        if (instr->flags.ac != V3D_QPU_COND_NONE ||
+                            instr->flags.mc != V3D_QPU_COND_NONE ||
+                            instr->flags.apf != V3D_QPU_PF_NONE ||
+                            instr->flags.mpf != V3D_QPU_PF_NONE ||
+                            instr->flags.auf != V3D_QPU_UF_NONE ||
+                            instr->flags.muf != V3D_QPU_UF_NONE) {
+                                return false;
+                        }
+
+                        flags = instr->sig_addr;
+                        if (instr->sig_magic)
+                                flags |= VC5_QPU_COND_SIG_MAGIC_ADDR;
+                } else {
+                        if (!v3d_qpu_flags_pack(devinfo, &instr->flags, &flags))
+                                return false;
+                }
+
                 *packed_instr |= QPU_SET_FIELD(flags, VC5_QPU_COND);
+        } else {
+                if (v3d_qpu_sig_writes_address(devinfo, &instr->sig))
+                        return false;
         }
 
         return true;

@@ -63,6 +63,13 @@ static const struct {
         { 33, 0x041618d57c453000ull, "shl.andn  exp, r3, r2; add.ifb  rf35, r1, r2" },
         { 33, 0x7048e5da49272800ull, "fsub.ifa  rf26, r2.l, rf32; fmul.pushc  sin, r1.h, r1.abs; ldunif" },
 
+        /* v4.1 signals */
+        { 41, 0x1f010520cf60a000ull, "fcmp.andz  rf32, r2.h, r1.h; vfmul  rf20, r0.hh, r3; ldunifa" },
+        { 41, 0x932045e6c16ea000ull, "fcmp  rf38, r2.abs, r5; fmul  rf23.l, r3, r3.abs; ldunifarf.rf1" },
+        { 41, 0xd72f0434e43ae5c0ull, "fcmp  rf52.h, rf23, r5.abs; fmul  rf16.h, rf23, r1; ldunifarf.rf60" },
+        { 41, 0xdb3048eb9d533780ull, "fmax  rf43.l, r3.h, rf30; fmul  rf35.h, r4, r2.l; ldunifarf.r1" },
+        { 41, 0x733620471e6ce700ull, "faddnf  rf7.l, rf28.h, r1.l; fmul  r1, r3.h, r3.abs; ldunifarf.rsqrt2" },
+        { 41, 0x9c094adef634b000ull, "ffloor.ifb  rf30.l, r3; fmul.pushz  rf43.l, r5, r1.h" },
 };
 
 static void

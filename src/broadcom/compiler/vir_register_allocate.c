@@ -139,7 +139,7 @@ v3d_register_allocate(struct v3d_compile *c)
                  * result to a temp), nothing else can be stored in r3/r4 across
                  * it.
                  */
-                if (vir_writes_r3(inst)) {
+                if (vir_writes_r3(c->devinfo, inst)) {
                         for (int i = 0; i < c->num_temps; i++) {
                                 if (c->temp_start[i] < ip &&
                                     c->temp_end[i] > ip) {
@@ -149,7 +149,7 @@ v3d_register_allocate(struct v3d_compile *c)
                                 }
                         }
                 }
-                if (vir_writes_r4(inst)) {
+                if (vir_writes_r4(c->devinfo, inst)) {
                         for (int i = 0; i < c->num_temps; i++) {
                                 if (c->temp_start[i] < ip &&
                                     c->temp_end[i] > ip) {

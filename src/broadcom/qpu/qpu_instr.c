@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include "util/macros.h"
+#include "broadcom/common/v3d_device_info.h"
 #include "qpu_instr.h"
 
 #ifndef QPU_MASK
@@ -600,7 +601,8 @@ v3d_qpu_magic_waddr_is_tsy(enum v3d_qpu_waddr waddr)
 }
 
 bool
-v3d_qpu_writes_r3(const struct v3d_qpu_instr *inst)
+v3d_qpu_writes_r3(const struct v3d_device_info *devinfo,
+                  const struct v3d_qpu_instr *inst)
 {
         if (inst->type == V3D_QPU_INSTR_TYPE_ALU) {
                 if (inst->alu.add.magic_write &&
@@ -614,11 +616,17 @@ v3d_qpu_writes_r3(const struct v3d_qpu_instr *inst)
                 }
         }
 
+        if (v3d_qpu_sig_writes_address(devinfo, &inst->sig) &&
+            inst->sig_magic && inst->sig_addr == V3D_QPU_WADDR_R3) {
+                return true;
+        }
+
         return inst->sig.ldvary || inst->sig.ldvpm;
 }
 
 bool
-v3d_qpu_writes_r4(const struct v3d_qpu_instr *inst)
+v3d_qpu_writes_r4(const struct v3d_device_info *devinfo,
+                  const struct v3d_qpu_instr *inst)
 {
         if (inst->sig.ldtmu)
                 return true;
@@ -637,11 +645,17 @@ v3d_qpu_writes_r4(const struct v3d_qpu_instr *inst)
                 }
         }
 
+        if (v3d_qpu_sig_writes_address(devinfo, &inst->sig) &&
+            inst->sig_magic && inst->sig_addr == V3D_QPU_WADDR_R4) {
+                return true;
+        }
+
         return false;
 }
 
 bool
-v3d_qpu_writes_r5(const struct v3d_qpu_instr *inst)
+v3d_qpu_writes_r5(const struct v3d_device_info *devinfo,
+                  const struct v3d_qpu_instr *inst)
 {
         if (inst->type == V3D_QPU_INSTR_TYPE_ALU) {
                 if (inst->alu.add.magic_write &&
@@ -655,7 +669,12 @@ v3d_qpu_writes_r5(const struct v3d_qpu_instr *inst)
                 }
         }
 
-        return inst->sig.ldvary || inst->sig.ldunif;
+        if (v3d_qpu_sig_writes_address(devinfo, &inst->sig) &&
+            inst->sig_magic && inst->sig_addr == V3D_QPU_WADDR_R5) {
+                return true;
+        }
+
+        return inst->sig.ldvary || inst->sig.ldunif || inst->sig.ldunifa;
 }
 
 bool
@@ -668,4 +687,19 @@ v3d_qpu_uses_mux(const struct v3d_qpu_instr *inst, enum v3d_qpu_mux mux)
                 (add_nsrc > 1 && inst->alu.add.b == mux) ||
                 (mul_nsrc > 0 && inst->alu.mul.a == mux) ||
                 (mul_nsrc > 1 && inst->alu.mul.b == mux));
+}
+
+bool
+v3d_qpu_sig_writes_address(const struct v3d_device_info *devinfo,
+                           const struct v3d_qpu_sig *sig)
+{
+        if (devinfo->ver < 41)
+                return false;
+
+        return (sig->ldunifrf ||
+                sig->ldunifarf ||
+                sig->ldvary ||
+                sig->ldtmu ||
+                sig->ldtlb ||
+                sig->ldtlbu);
 }

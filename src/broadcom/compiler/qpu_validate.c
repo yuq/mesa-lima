@@ -85,6 +85,7 @@ qpu_magic_waddr_matches(const struct v3d_qpu_instr *inst,
 static void
 qpu_validate_inst(struct v3d_qpu_validate_state *state, struct qinst *qinst)
 {
+        const struct v3d_device_info *devinfo = state->c->devinfo;
         const struct v3d_qpu_instr *inst = &qinst->qpu;
 
         if (inst->type != V3D_QPU_INSTR_TYPE_ALU)
@@ -94,7 +95,8 @@ qpu_validate_inst(struct v3d_qpu_validate_state *state, struct qinst *qinst)
          * r5 one instruction later, which is illegal to have
          * together.
          */
-        if (state->last && state->last->sig.ldvary && inst->sig.ldunif) {
+        if (state->last && state->last->sig.ldvary &&
+            (inst->sig.ldunif || inst->sig.ldunifa)) {
                 fail_instr(state, "LDUNIF after a LDVARY");
         }
 
@@ -143,7 +145,7 @@ qpu_validate_inst(struct v3d_qpu_validate_state *state, struct qinst *qinst)
                 if (v3d_qpu_uses_mux(inst, V3D_QPU_MUX_R4))
                         fail_instr(state, "R4 read too soon after SFU");
 
-                if (v3d_qpu_writes_r4(inst))
+                if (v3d_qpu_writes_r4(devinfo, inst))
                         fail_instr(state, "R4 write too soon after SFU");
 
                 if (sfu_writes)

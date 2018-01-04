@@ -264,7 +264,14 @@ v3d_generate_code_block(struct v3d_compile *c,
                 }
 
                 if (qinst->qpu.type == V3D_QPU_INSTR_TYPE_ALU) {
-                        if (qinst->qpu.alu.add.op != V3D_QPU_A_NOP) {
+                        if (v3d_qpu_sig_writes_address(c->devinfo,
+                                                       &qinst->qpu.sig)) {
+                                assert(qinst->qpu.alu.add.op == V3D_QPU_A_NOP);
+                                assert(qinst->qpu.alu.mul.op == V3D_QPU_M_NOP);
+
+                                qinst->qpu.sig_addr = dst.index;
+                                qinst->qpu.sig_magic = dst.magic;
+                        } else if (qinst->qpu.alu.add.op != V3D_QPU_A_NOP) {
                                 assert(qinst->qpu.alu.mul.op == V3D_QPU_M_NOP);
                                 if (nsrc >= 1) {
                                         set_src(&qinst->qpu,

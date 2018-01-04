@@ -21,6 +21,7 @@
  * IN THE SOFTWARE.
  */
 
+#include "broadcom/common/v3d_device_info.h"
 #include "v3d_compiler.h"
 
 int
@@ -198,7 +199,7 @@ vir_depends_on_flags(struct qinst *inst)
 }
 
 bool
-vir_writes_r3(struct qinst *inst)
+vir_writes_r3(const struct v3d_device_info *devinfo, struct qinst *inst)
 {
         for (int i = 0; i < vir_get_nsrc(inst); i++) {
                 switch (inst->src[i].file) {
@@ -210,11 +211,18 @@ vir_writes_r3(struct qinst *inst)
                 }
         }
 
+        if (devinfo->ver < 41 && (inst->qpu.sig.ldvary ||
+                                  inst->qpu.sig.ldtlb ||
+                                  inst->qpu.sig.ldtlbu ||
+                                  inst->qpu.sig.ldvpm)) {
+                return true;
+        }
+
         return false;
 }
 
 bool
-vir_writes_r4(struct qinst *inst)
+vir_writes_r4(const struct v3d_device_info *devinfo, struct qinst *inst)
 {
         switch (inst->dst.file) {
         case QFILE_MAGIC:
@@ -231,7 +239,7 @@ vir_writes_r4(struct qinst *inst)
                 break;
         }
 
-        if (inst->qpu.sig.ldtmu)
+        if (devinfo->ver < 41 && inst->qpu.sig.ldtmu)
                 return true;
 
         return false;

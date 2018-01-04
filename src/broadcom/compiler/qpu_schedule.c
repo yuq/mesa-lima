@@ -78,6 +78,7 @@ struct schedule_node_child {
 enum direction { F, R };
 
 struct schedule_state {
+        const struct v3d_device_info *devinfo;
         struct schedule_node *last_r[6];
         struct schedule_node *last_rf[64];
         struct schedule_node *last_sf;
@@ -265,6 +266,7 @@ process_uf_deps(struct schedule_state *state, struct schedule_node *n,
 static void
 calculate_deps(struct schedule_state *state, struct schedule_node *n)
 {
+        const struct v3d_device_info *devinfo = state->devinfo;
         struct qinst *qinst = n->inst;
         struct v3d_qpu_instr *inst = &qinst->qpu;
 
@@ -356,12 +358,16 @@ calculate_deps(struct schedule_state *state, struct schedule_node *n)
                 process_waddr_deps(state, n, inst->alu.mul.waddr,
                                    inst->alu.mul.magic_write);
         }
+        if (v3d_qpu_sig_writes_address(devinfo, &inst->sig)) {
+                process_waddr_deps(state, n, inst->sig_addr,
+                                   inst->sig_magic);
+        }
 
-        if (v3d_qpu_writes_r3(inst))
+        if (v3d_qpu_writes_r3(devinfo, inst))
                 add_write_dep(state, &state->last_r[3], n);
-        if (v3d_qpu_writes_r4(inst))
+        if (v3d_qpu_writes_r4(devinfo, inst))
                 add_write_dep(state, &state->last_r[4], n);
-        if (v3d_qpu_writes_r5(inst))
+        if (v3d_qpu_writes_r5(devinfo, inst))
                 add_write_dep(state, &state->last_r[5], n);
 
         if (inst->sig.thrsw) {
@@ -410,6 +416,7 @@ calculate_forward_deps(struct v3d_compile *c, struct list_head *schedule_list)
         struct schedule_state state;
 
         memset(&state, 0, sizeof(state));
+        state.devinfo = c->devinfo;
         state.dir = F;
 
         list_for_each_entry(struct schedule_node, node, schedule_list, link)
@@ -423,6 +430,7 @@ calculate_reverse_deps(struct v3d_compile *c, struct list_head *schedule_list)
         struct schedule_state state;
 
         memset(&state, 0, sizeof(state));
+        state.devinfo = c->devinfo;
         state.dir = R;
 
         for (node = schedule_list->prev; schedule_list != node; node = node->prev) {
@@ -514,7 +522,8 @@ reads_too_soon_after_write(struct choose_scoreboard *scoreboard,
 }
 
 static bool
-writes_too_soon_after_write(struct choose_scoreboard *scoreboard,
+writes_too_soon_after_write(const struct v3d_device_info *devinfo,
+                            struct choose_scoreboard *scoreboard,
                             struct qinst *qinst)
 {
         const struct v3d_qpu_instr *inst = &qinst->qpu;
@@ -524,7 +533,7 @@ writes_too_soon_after_write(struct choose_scoreboard *scoreboard,
          * occur if a dead SFU computation makes it to scheduling.
          */
         if (scoreboard->tick - scoreboard->last_sfu_write_tick < 2 &&
-            v3d_qpu_writes_r4(inst))
+            v3d_qpu_writes_r4(devinfo, inst))
                 return true;
 
         return false;
@@ -605,7 +614,8 @@ qpu_accesses_peripheral(const struct v3d_qpu_instr *inst)
         return (inst->sig.ldvpm ||
                 inst->sig.ldtmu ||
                 inst->sig.ldtlb ||
-                inst->sig.ldtlbu);
+                inst->sig.ldtlbu ||
+                inst->sig.wrtmuc);
 }
 
 static bool
@@ -619,7 +629,11 @@ qpu_merge_inst(const struct v3d_device_info *devinfo,
                 return false;
         }
 
-        /* Can't do more than one peripheral access in an instruction. */
+        /* Can't do more than one peripheral access in an instruction.
+         *
+         * XXX: V3D 4.1 allows TMU read along with a VPM read or write, and
+         * WRTMUC with a TMU magic register write (other than tmuc).
+         */
         if (qpu_accesses_peripheral(a) && qpu_accesses_peripheral(b))
                 return false;
 
@@ -663,6 +677,9 @@ qpu_merge_inst(const struct v3d_device_info *devinfo,
 
         merge.sig.thrsw |= b->sig.thrsw;
         merge.sig.ldunif |= b->sig.ldunif;
+        merge.sig.ldunifrf |= b->sig.ldunifrf;
+        merge.sig.ldunifa |= b->sig.ldunifa;
+        merge.sig.ldunifarf |= b->sig.ldunifarf;
         merge.sig.ldtmu |= b->sig.ldtmu;
         merge.sig.ldvary |= b->sig.ldvary;
         merge.sig.ldvpm |= b->sig.ldvpm;
@@ -672,6 +689,12 @@ qpu_merge_inst(const struct v3d_device_info *devinfo,
         merge.sig.ucb |= b->sig.ucb;
         merge.sig.rotate |= b->sig.rotate;
         merge.sig.wrtmuc |= b->sig.wrtmuc;
+
+        if (v3d_qpu_sig_writes_address(devinfo, &a->sig) &&
+            v3d_qpu_sig_writes_address(devinfo, &b->sig))
+                return false;
+        merge.sig_addr |= b->sig_addr;
+        merge.sig_magic |= b->sig_magic;
 
         uint64_t packed;
         bool ok = v3d_qpu_instr_pack(devinfo, &merge, &packed);
@@ -719,7 +742,7 @@ choose_instruction_to_schedule(const struct v3d_device_info *devinfo,
                 if (reads_too_soon_after_write(scoreboard, n->inst))
                         continue;
 
-                if (writes_too_soon_after_write(scoreboard, n->inst))
+                if (writes_too_soon_after_write(devinfo, scoreboard, n->inst))
                         continue;
 
                 /* "A scoreboard wait must not occur in the first two
@@ -735,7 +758,7 @@ choose_instruction_to_schedule(const struct v3d_device_info *devinfo,
                  * otherwise get scheduled so ldunif and ldvary try to update
                  * r5 in the same tick.
                  */
-                if (inst->sig.ldunif &&
+                if ((inst->sig.ldunif || inst->sig.ldunifa) &&
                     scoreboard->tick == scoreboard->last_ldvary_tick + 1) {
                         continue;
                 }
