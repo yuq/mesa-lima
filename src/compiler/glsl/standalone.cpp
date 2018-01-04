@@ -229,6 +229,7 @@ initialize_context(struct gl_context *ctx, gl_api api)
       ctx->Const.MaxLights = 8;
       ctx->Const.MaxTextureCoordUnits = 8;
       ctx->Const.MaxTextureUnits = 2;
+      ctx->Const.MaxUniformBufferBindings = 84;
 
       ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs = 16;
       ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits = 16;
@@ -262,6 +263,7 @@ initialize_context(struct gl_context *ctx, gl_api api)
       ctx->Const.MaxLights = 8;
       ctx->Const.MaxTextureCoordUnits = 8;
       ctx->Const.MaxTextureUnits = 2;
+      ctx->Const.MaxUniformBufferBindings = 84;
 
       ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs = 16;
       ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits = 16;
@@ -303,6 +305,7 @@ initialize_context(struct gl_context *ctx, gl_api api)
       ctx->Const.MaxLights = 0;
       ctx->Const.MaxTextureCoordUnits = 0;
       ctx->Const.MaxTextureUnits = 0;
+      ctx->Const.MaxUniformBufferBindings = 84;
 
       ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs = 16;
       ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits = 16;
