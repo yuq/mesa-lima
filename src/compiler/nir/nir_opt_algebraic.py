@@ -209,6 +209,14 @@ optimizations = [
    (('~ior', ('flt', '#a', c), ('flt', '#b', c)), ('flt', ('fmin', a, b), c)),
    (('~ior', ('fge', a, '#b'), ('fge', a, '#c')), ('fge', a, ('fmin', b, c))),
    (('~ior', ('fge', '#a', c), ('fge', '#b', c)), ('fge', ('fmax', a, b), c)),
+   (('~iand', ('flt(is_used_once)', a, b), ('flt', a, c)), ('flt', a, ('fmin', b, c))),
+   (('~iand', ('flt(is_used_once)', a, c), ('flt', b, c)), ('flt', ('fmax', a, b), c)),
+   (('~iand', ('fge(is_used_once)', a, b), ('fge', a, c)), ('fge', a, ('fmax', b, c))),
+   (('~iand', ('fge(is_used_once)', a, c), ('fge', b, c)), ('fge', ('fmin', a, b), c)),
+   (('~iand', ('flt', a, '#b'), ('flt', a, '#c')), ('flt', a, ('fmin', b, c))),
+   (('~iand', ('flt', '#a', c), ('flt', '#b', c)), ('flt', ('fmax', a, b), c)),
+   (('~iand', ('fge', a, '#b'), ('fge', a, '#c')), ('fge', a, ('fmax', b, c))),
+   (('~iand', ('fge', '#a', c), ('fge', '#b', c)), ('fge', ('fmin', a, b), c)),
 
    # These patterns can result when (a < b || a < c) => (a < min(b, c))
    # transformations occur before constant propagation and loop-unrolling.
