@@ -26,7 +26,6 @@ files_libvc5 = files(
   'vc5_cl.h',
   'vc5_context.c',
   'vc5_context.h',
-  'vc5_draw.c',
   'vc5_emit.c',
   'vc5_fence.c',
   'vc5_formats.c',
@@ -47,6 +46,7 @@ files_libvc5 = files(
 
 files_per_version = files(
   'v3dx_simulator.c',
+  'vc5_draw.c',
   'vc5_rcl.c',
 )
 

@@ -198,6 +198,7 @@ struct vc5_job {
         struct vc5_cl rcl;
         struct vc5_cl indirect;
         struct vc5_bo *tile_alloc;
+        struct vc5_bo *tile_state;
         uint32_t shader_rec_count;
 
         struct drm_vc5_submit_cl submit;
@@ -445,7 +446,6 @@ vc5_sampler_state(struct pipe_sampler_state *psampler)
 
 struct pipe_context *vc5_context_create(struct pipe_screen *pscreen,
                                         void *priv, unsigned flags);
-void vc5_draw_init(struct pipe_context *pctx);
 void vc5_state_init(struct pipe_context *pctx);
 void vc5_program_init(struct pipe_context *pctx);
 void vc5_program_fini(struct pipe_context *pctx);

@@ -84,6 +84,7 @@ vc5_job_free(struct vc5_context *vc5, struct vc5_job *job)
         vc5_destroy_cl(&job->rcl);
         vc5_destroy_cl(&job->indirect);
         vc5_bo_unreference(&job->tile_alloc);
+        vc5_bo_unreference(&job->tile_state);
 
         ralloc_free(job);
 }
@@ -418,6 +419,18 @@ vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job)
 
         job->submit.bcl_end = job->bcl.bo->offset + cl_offset(&job->bcl);
         job->submit.rcl_end = job->rcl.bo->offset + cl_offset(&job->rcl);
+
+        /* On V3D 4.1, the tile alloc/state setup moved to register writes
+         * instead of binner pac`kets.
+         */
+        if (screen->devinfo.ver >= 41) {
+                vc5_job_add_bo(job, job->tile_alloc);
+                job->submit.qma = job->tile_alloc->offset;
+                job->submit.qms = job->tile_alloc->size;
+
+                vc5_job_add_bo(job, job->tile_state);
+                job->submit.qts = job->tile_state->offset;
+        }
 
         vc5_clif_dump(vc5, job);
 

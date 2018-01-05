@@ -33,7 +33,6 @@
 #include "vc5_resource.h"
 #include "vc5_cl.h"
 #include "broadcom/compiler/v3d_compiler.h"
-#define V3D_VERSION 33
 #include "broadcom/common/v3d_macros.h"
 #include "broadcom/cle/v3dx_pack.h"
 
@@ -57,12 +56,14 @@ vc5_start_draw(struct vc5_context *vc5)
         vc5_job_add_bo(job, job->bcl.bo);
 
         job->tile_alloc = vc5_bo_alloc(vc5->screen, 1024 * 1024, "tile alloc");
-        struct vc5_bo *tsda = vc5_bo_alloc(vc5->screen,
-                                           job->draw_tiles_y *
-                                           job->draw_tiles_x *
-                                           64,
-                                           "TSDA");
+        uint32_t tsda_per_tile_size = vc5->screen->devinfo.ver >= 40 ? 256 : 64;
+        job->tile_state = vc5_bo_alloc(vc5->screen,
+                                       job->draw_tiles_y *
+                                       job->draw_tiles_x *
+                                       tsda_per_tile_size,
+                                       "TSDA");
 
+#if V3D_VERSION < 40
         /* "Binning mode lists start with a Tile Binning Mode Configuration
          * item (120)"
          *
@@ -73,24 +74,29 @@ vc5_start_draw(struct vc5_context *vc5)
                         cl_address(job->tile_alloc, 0);
                 config.tile_allocation_memory_size = job->tile_alloc->size;
         }
+#endif
 
         cl_emit(&job->bcl, TILE_BINNING_MODE_CONFIGURATION_PART1, config) {
+#if V3D_VERSION >= 40
+                config.width_in_pixels_minus_1 = vc5->framebuffer.width - 1;
+                config.height_in_pixels_minus_1 = vc5->framebuffer.height - 1;
+                config.number_of_render_targets_minus_1 =
+                        MAX2(vc5->framebuffer.nr_cbufs, 1) - 1;
+#else /* V3D_VERSION < 40 */
                 config.tile_state_data_array_base_address =
-                        cl_address(tsda, 0);
+                        cl_address(job->tile_state, 0);
 
                 config.width_in_tiles = job->draw_tiles_x;
                 config.height_in_tiles = job->draw_tiles_y;
-
                 /* Must be >= 1 */
                 config.number_of_render_targets =
                         MAX2(vc5->framebuffer.nr_cbufs, 1);
+#endif /* V3D_VERSION < 40 */
 
                 config.multisample_mode_4x = job->msaa;
 
                 config.maximum_bpp_of_all_render_targets = job->internal_bpp;
         }
-
-        vc5_bo_unreference(&tsda);
 
         /* There's definitely nothing in the VCD cache we want. */
         cl_emit(&job->bcl, FLUSH_VCD_CACHE, bin);
@@ -202,6 +208,12 @@ vc5_emit_gl_shader_state(struct vc5_context *vc5,
                 shader.vertex_shader_uniforms_address = vs_uniforms;
                 shader.fragment_shader_uniforms_address = fs_uniforms;
 
+#if V3D_VERSION >= 41
+                shader.coordinate_shader_start_in_final_thread_section = true;
+                shader.vertex_shader_start_in_final_thread_section = true;
+                shader.fragment_shader_start_in_final_thread_section = true;
+#endif
+
                 shader.vertex_id_read_by_coordinate_shader =
                         vc5->prog.cs->prog_data.vs->uses_vid;
                 shader.instance_id_read_by_coordinate_shader =
@@ -234,6 +246,9 @@ vc5_emit_gl_shader_state(struct vc5_context *vc5,
                                 vc5->prog.cs->prog_data.vs->vattr_sizes[i];
                         attr.number_of_values_read_by_vertex_shader =
                                 vc5->prog.vs->prog_data.vs->vattr_sizes[i];
+#if V3D_VERSION >= 41
+                        attr.maximum_index = 0xffffff;
+#endif
                 }
         }
 
@@ -374,14 +389,16 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 }
         }
 
-        /* The HW only processes transform feedback on primitives with the
-         * flag set.
-         */
         uint32_t prim_tf_enable = 0;
+#if V3D_VERSION < 40
+        /* V3D 3.x: The HW only processes transform feedback on primitives
+         * with the flag set.
+         */
         if (vc5->streamout.num_targets)
                 prim_tf_enable = (V3D_PRIM_POINTS_TF - V3D_PRIM_POINTS);
+#endif
 
-        vc5_tf_statistics_record(vc5, info, prim_tf_enable);
+        vc5_tf_statistics_record(vc5, info, vc5->streamout.num_targets);
 
         /* Note that the primitive type fields match with OpenGL/gallium
          * definitions, up to but not including QUADS.
@@ -401,12 +418,23 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 }
                 struct vc5_resource *rsc = vc5_resource(prsc);
 
+#if V3D_VERSION >= 40
+                cl_emit(&job->bcl, INDEX_BUFFER_SETUP, ib) {
+                        ib.address = cl_address(rsc->bo, 0);
+                        ib.size = rsc->bo->size;
+                }
+#endif
+
                 if (info->instance_count > 1) {
                         cl_emit(&job->bcl, INDEXED_INSTANCED_PRIMITIVE_LIST, prim) {
                                 prim.index_type = ffs(info->index_size) - 1;
+#if V3D_VERSION >= 40
+                                prim.index_offset = offset;
+#else /* V3D_VERSION < 40 */
                                 prim.maximum_index = (1u << 31) - 1; /* XXX */
                                 prim.address_of_indices_list =
                                         cl_address(rsc->bo, offset);
+#endif /* V3D_VERSION < 40 */
                                 prim.mode = info->mode | prim_tf_enable;
                                 prim.enable_primitive_restarts = info->primitive_restart;
 
@@ -417,9 +445,13 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                         cl_emit(&job->bcl, INDEXED_PRIMITIVE_LIST, prim) {
                                 prim.index_type = ffs(info->index_size) - 1;
                                 prim.length = info->count;
+#if V3D_VERSION >= 40
+                                prim.index_offset = offset;
+#else /* V3D_VERSION < 40 */
                                 prim.maximum_index = (1u << 31) - 1; /* XXX */
                                 prim.address_of_indices_list =
                                         cl_address(rsc->bo, offset);
+#endif /* V3D_VERSION < 40 */
                                 prim.mode = info->mode | prim_tf_enable;
                                 prim.enable_primitive_restarts = info->primitive_restart;
                         }
@@ -612,7 +644,7 @@ vc5_clear_depth_stencil(struct pipe_context *pctx, struct pipe_surface *ps,
 }
 
 void
-vc5_draw_init(struct pipe_context *pctx)
+v3dX(draw_init)(struct pipe_context *pctx)
 {
         pctx->draw_vbo = vc5_draw_vbo;
         pctx->clear = vc5_clear;

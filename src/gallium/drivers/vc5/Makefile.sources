@@ -6,7 +6,6 @@ C_SOURCES := \
 	vc5_cl.h \
 	vc5_context.c \
 	vc5_context.h \
-	vc5_draw.c \
 	vc5_drm.h \
 	vc5_emit.c \
 	vc5_fence.c \
@@ -27,5 +26,6 @@ C_SOURCES := \
 
 VC5_PER_VERSION_SOURCES = \
 	v3dx_simulator.c \
+	vc5_draw.c \
 	vc5_rcl.c \
 	$()

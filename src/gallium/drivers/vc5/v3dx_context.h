@@ -29,6 +29,7 @@
 struct v3d_hw;
 
 void v3dX(emit_rcl)(struct vc5_job *job);
+void v3dX(draw_init)(struct pipe_context *pctx);
 
 void v3dX(simulator_init_regs)(struct v3d_hw *v3d);
 int v3dX(simulator_get_param_ioctl)(struct v3d_hw *v3d,

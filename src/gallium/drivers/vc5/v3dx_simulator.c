@@ -154,6 +154,17 @@ v3dX(simulator_flush)(struct v3d_hw *v3d, struct drm_vc5_submit_cl *submit,
 
         vc5_flush_caches(v3d);
 
+        if (submit->qma) {
+                V3D_WRITE(V3D_CLE_0_CT0QMA, submit->qma);
+                V3D_WRITE(V3D_CLE_0_CT0QMS, submit->qms);
+        }
+#if V3D_VERSION >= 41
+        if (submit->qts) {
+                V3D_WRITE(V3D_CLE_0_CT0QTS,
+                          V3D_CLE_0_CT0QTS_CTQTSEN_SET |
+                          submit->qts);
+        }
+#endif
         V3D_WRITE(V3D_CLE_0_CT0QBA, submit->bcl_start);
         V3D_WRITE(V3D_CLE_0_CT0QEA, submit->bcl_end);
 
