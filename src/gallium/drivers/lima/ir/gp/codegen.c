@@ -526,3 +526,25 @@ bool gpir_codegen_prog(gpir_compiler *comp)
 
    return true;
 }
+
+static gpir_codegen_acc_op gpir_codegen_get_acc_op(gpir_op op)
+{
+   switch (op) {
+   case gpir_op_add:
+   case gpir_op_neg:
+   case gpir_op_mov:
+      return gpir_codegen_acc_op_add;
+   case gpir_op_min:
+      return gpir_codegen_acc_op_min;
+   case gpir_op_max:
+      return gpir_codegen_acc_op_max;
+   default:
+      assert(0);
+   }
+   return -1;
+}
+
+bool gpir_codegen_acc_same_op(gpir_op op1, gpir_op op2)
+{
+   return gpir_codegen_get_acc_op(op1) == gpir_codegen_get_acc_op(op2);
+}

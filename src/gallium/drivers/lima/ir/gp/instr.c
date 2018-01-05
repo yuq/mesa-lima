@@ -43,6 +43,16 @@ gpir_instr *gpir_instr_create(gpir_block *block)
 
 static bool gpir_instr_insert_alu_check(gpir_instr *instr, gpir_node *node)
 {
+   /* two ACC slots must share the same op code */
+   gpir_node *acc_node = NULL;
+   if (node->sched.pos == GPIR_INSTR_SLOT_ADD0)
+      acc_node = instr->slots[GPIR_INSTR_SLOT_ADD1];
+   else if (node->sched.pos == GPIR_INSTR_SLOT_ADD1)
+      acc_node = instr->slots[GPIR_INSTR_SLOT_ADD0];
+
+   if (acc_node && !gpir_codegen_acc_same_op(node->op, acc_node->op))
+      return false;
+
    /* check if this node is child of one store node.
     * complex1 won't be any of this instr's store node's child,
     * because it has two instr latency before store can use it.
