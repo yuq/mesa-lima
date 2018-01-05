@@ -692,9 +692,9 @@ brw_finish_batch(struct brw_context *brw)
     * necessary by emitting an extra MI_NOOP after the end.
     */
    intel_batchbuffer_require_space(brw, 8, brw->batch.ring);
-   intel_batchbuffer_emit_dword(&brw->batch, MI_BATCH_BUFFER_END);
+   *brw->batch.map_next++ = MI_BATCH_BUFFER_END;
    if (USED_BATCH(brw->batch) & 1) {
-      intel_batchbuffer_emit_dword(&brw->batch, MI_NOOP);
+      *brw->batch.map_next++ = MI_NOOP;
    }
 
    brw->batch.no_wrap = false;
