@@ -44,18 +44,22 @@ vir_init_reg_sets(struct v3d_compiler *compiler)
          * can be divided up for fragment shader threading.
          */
         for (int threads = 0; threads < 3; threads++) {
-                compiler->reg_class[threads] =
+                compiler->reg_class_phys_or_acc[threads] =
+                        ra_alloc_reg_class(compiler->regs);
+                compiler->reg_class_phys[threads] =
                         ra_alloc_reg_class(compiler->regs);
 
                 for (int i = PHYS_INDEX;
                      i < PHYS_INDEX + (PHYS_COUNT >> threads); i++) {
                         ra_class_add_reg(compiler->regs,
-                                         compiler->reg_class[threads], i);
+                                         compiler->reg_class_phys_or_acc[threads], i);
+                        ra_class_add_reg(compiler->regs,
+                                         compiler->reg_class_phys[threads], i);
                 }
 
                 for (int i = ACC_INDEX + 0; i < ACC_INDEX + ACC_COUNT; i++) {
                         ra_class_add_reg(compiler->regs,
-                                         compiler->reg_class[threads], i);
+                                         compiler->reg_class_phys_or_acc[threads], i);
                 }
         }
 
@@ -173,8 +177,7 @@ v3d_register_allocate(struct v3d_compile *c)
                                  * decides whether the LDVPM is in or out)
                                  */
                                 assert(inst->dst.file == QFILE_TEMP);
-                                class_bits[temp_to_node[inst->dst.index]] &=
-                                        CLASS_BIT_PHYS;
+                                class_bits[inst->dst.index] &= CLASS_BIT_PHYS;
                                 break;
 
                         default:
@@ -223,8 +226,17 @@ v3d_register_allocate(struct v3d_compile *c)
         }
 
         for (uint32_t i = 0; i < c->num_temps; i++) {
-                ra_set_node_class(g, temp_to_node[i],
-                                  c->compiler->reg_class[c->fs_threaded]);
+                if (class_bits[i] == CLASS_BIT_PHYS) {
+                        ra_set_node_class(g, temp_to_node[i],
+                                          c->compiler->reg_class_phys[c->fs_threaded]);
+                } else {
+                        assert(class_bits[i] == (CLASS_BIT_PHYS |
+                                                 CLASS_BIT_R0_R2 |
+                                                 CLASS_BIT_R3 |
+                                                 CLASS_BIT_R4));
+                        ra_set_node_class(g, temp_to_node[i],
+                                          c->compiler->reg_class_phys_or_acc[c->fs_threaded]);
+                }
         }
 
         for (uint32_t i = 0; i < c->num_temps; i++) {
