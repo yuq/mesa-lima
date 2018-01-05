@@ -395,6 +395,16 @@ v3d_qpu_flags_unpack(const struct v3d_device_info *devinfo,
                      struct v3d_qpu_flags *cond);
 
 bool
+v3d_qpu_small_imm_pack(const struct v3d_device_info *devinfo,
+                       uint32_t value,
+                       uint32_t *packed_small_immediate);
+
+bool
+v3d_qpu_small_imm_unpack(const struct v3d_device_info *devinfo,
+                         uint32_t packed_small_immediate,
+                         uint32_t *small_immediate);
+
+bool
 v3d_qpu_instr_pack(const struct v3d_device_info *devinfo,
                    const struct v3d_qpu_instr *instr,
                    uint64_t *packed_instr);

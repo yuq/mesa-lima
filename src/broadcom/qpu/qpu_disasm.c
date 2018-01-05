@@ -62,7 +62,21 @@ v3d_qpu_disasm_raddr(struct disasm_state *disasm,
         if (mux == V3D_QPU_MUX_A) {
                 append(disasm, "rf%d", instr->raddr_a);
         } else if (mux == V3D_QPU_MUX_B) {
-                append(disasm, "rf%d", instr->raddr_b);
+                if (instr->sig.small_imm) {
+                        uint32_t val;
+                        MAYBE_UNUSED bool ok =
+                                v3d_qpu_small_imm_unpack(disasm->devinfo,
+                                                         instr->raddr_b,
+                                                         &val);
+
+                        if ((int)val >= -16 && (int)val <= 15)
+                                append(disasm, "%d", val);
+                        else
+                                append(disasm, "0x%08x", val);
+                        assert(ok);
+                } else {
+                        append(disasm, "rf%d", instr->raddr_b);
+                }
         } else {
                 append(disasm, "r%d", mux);
         }

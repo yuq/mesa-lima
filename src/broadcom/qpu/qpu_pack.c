@@ -255,6 +255,69 @@ v3d_qpu_sig_pack(const struct v3d_device_info *devinfo,
 
         return false;
 }
+static inline unsigned
+fui( float f )
+{
+        union {float f; unsigned ui;} fi;
+   fi.f = f;
+   return fi.ui;
+}
+
+static const uint32_t small_immediates[] = {
+        0, 1, 2, 3,
+        4, 5, 6, 7,
+        8, 9, 10, 11,
+        12, 13, 14, 15,
+        -16, -15, -14, -13,
+        -12, -11, -10, -9,
+        -8, -7, -6, -5,
+        -4, -3, -2, -1,
+        0x3b800000, /* 2.0^-8 */
+        0x3c000000, /* 2.0^-7 */
+        0x3c800000, /* 2.0^-6 */
+        0x3d000000, /* 2.0^-5 */
+        0x3d800000, /* 2.0^-4 */
+        0x3e000000, /* 2.0^-3 */
+        0x3e800000, /* 2.0^-2 */
+        0x3f000000, /* 2.0^-1 */
+        0x3f800000, /* 2.0^0 */
+        0x40000000, /* 2.0^1 */
+        0x40800000, /* 2.0^2 */
+        0x41000000, /* 2.0^3 */
+        0x41800000, /* 2.0^4 */
+        0x42000000, /* 2.0^5 */
+        0x42800000, /* 2.0^6 */
+        0x43000000, /* 2.0^7 */
+};
+
+bool
+v3d_qpu_small_imm_unpack(const struct v3d_device_info *devinfo,
+                         uint32_t packed_small_immediate,
+                         uint32_t *small_immediate)
+{
+        if (packed_small_immediate >= ARRAY_SIZE(small_immediates))
+                return false;
+
+        *small_immediate = small_immediates[packed_small_immediate];
+        return true;
+}
+
+bool
+v3d_qpu_small_imm_pack(const struct v3d_device_info *devinfo,
+                       uint32_t value,
+                       uint32_t *packed_small_immediate)
+{
+        STATIC_ASSERT(ARRAY_SIZE(small_immediates) == 48);
+
+        for (int i = 0; i < ARRAY_SIZE(small_immediates); i++) {
+                if (small_immediates[i] == value) {
+                        *packed_small_immediate = i;
+                        return true;
+                }
+        }
+
+        return false;
+}
 
 bool
 v3d_qpu_flags_unpack(const struct v3d_device_info *devinfo,
