@@ -59,12 +59,7 @@ get_scale(lower_viewport_transform_state *state)
       state->scale = create_uniform(state->shader, "gl_viewportScale",
                                     state->options->scale);
 
-   nir_ssa_def *def = nir_load_var(&state->b, state->scale);
-   return nir_vec4(&state->b,
-                   nir_channel(&state->b, def, 0),
-                   nir_channel(&state->b, def, 1),
-                   nir_channel(&state->b, def, 2),
-                   nir_imm_float(&state->b, 1));
+   return nir_load_var(&state->b, state->scale);
 }
 
 static nir_ssa_def *
@@ -74,12 +69,7 @@ get_translate(lower_viewport_transform_state *state)
       state->translate = create_uniform(state->shader, "gl_viewportTranslate",
                                         state->options->translate);
 
-   nir_ssa_def *def = nir_load_var(&state->b, state->translate);
-   return nir_vec4(&state->b,
-                   nir_channel(&state->b, def, 0),
-                   nir_channel(&state->b, def, 1),
-                   nir_channel(&state->b, def, 2),
-                   nir_imm_float(&state->b, 0));
+   return nir_load_var(&state->b, state->translate);
 }
 
 static void
@@ -100,15 +90,25 @@ lower_viewport_transform_block(lower_viewport_transform_state *state, nir_block 
 
                nir_ssa_def *def = nir_ssa_for_src(&state->b, intr->src[0], intr->num_components);
 
+               nir_ssa_def *xyz = nir_vec3(&state->b,
+                                           nir_channel(&state->b, def, 0),
+                                           nir_channel(&state->b, def, 1),
+                                           nir_channel(&state->b, def, 2));
+               nir_ssa_def *w = nir_frcp(&state->b,
+                                         nir_channel(&state->b, def, 3));
+
                /* homogenization */
-               def = nir_fmul(&state->b, def,
-                              nir_frcp(&state->b,
-                                       nir_channel(&state->b, def, 3)));
+               xyz = nir_fmul(&state->b, xyz, w);
 
                /* viewport transform*/
-               def = nir_fmul(&state->b, def, get_scale(state));
-               def = nir_fadd(&state->b, def, get_translate(state));
+               xyz = nir_fmul(&state->b, xyz, get_scale(state));
+               xyz = nir_fadd(&state->b, xyz, get_translate(state));
 
+               def = nir_vec4(&state->b,
+                              nir_channel(&state->b, xyz, 0),
+                              nir_channel(&state->b, xyz, 1),
+                              nir_channel(&state->b, xyz, 2),
+                              w);
                nir_instr_rewrite_src(instr, &intr->src[0], nir_src_for_ssa(def));
             }
          }
