@@ -83,12 +83,12 @@ intel_batchbuffer_init(struct brw_context *brw)
    struct intel_batchbuffer *batch = &brw->batch;
    const struct gen_device_info *devinfo = &screen->devinfo;
 
-   if (!devinfo->has_llc) {
-      batch->batch.cpu_map = malloc(BATCH_SZ);
-      batch->batch.map = batch->batch.cpu_map;
+   batch->use_shadow_copy = !devinfo->has_llc;
+
+   if (batch->use_shadow_copy) {
+      batch->batch.map = malloc(BATCH_SZ);
       batch->map_next = batch->batch.map;
-      batch->state.cpu_map = malloc(STATE_SZ);
-      batch->state.map = batch->state.cpu_map;
+      batch->state.map = malloc(STATE_SZ);
    }
 
    init_reloc_list(&batch->batch_relocs, 250);
@@ -174,7 +174,7 @@ intel_batchbuffer_reset(struct brw_context *brw)
    batch->last_bo = batch->batch.bo;
 
    batch->batch.bo = brw_bo_alloc(bufmgr, "batchbuffer", BATCH_SZ, 4096);
-   if (!batch->batch.cpu_map) {
+   if (!batch->use_shadow_copy) {
       batch->batch.map =
          brw_bo_map(brw, batch->batch.bo, MAP_READ | MAP_WRITE);
    }
@@ -183,7 +183,7 @@ intel_batchbuffer_reset(struct brw_context *brw)
    batch->state.bo = brw_bo_alloc(bufmgr, "statebuffer", STATE_SZ, 4096);
    batch->state.bo->kflags =
       can_do_exec_capture(screen) ? EXEC_OBJECT_CAPTURE : 0;
-   if (!batch->state.cpu_map) {
+   if (!batch->use_shadow_copy) {
       batch->state.map =
          brw_bo_map(brw, batch->state.bo, MAP_READ | MAP_WRITE);
    }
@@ -243,8 +243,10 @@ intel_batchbuffer_reset_to_saved(struct brw_context *brw)
 void
 intel_batchbuffer_free(struct intel_batchbuffer *batch)
 {
-   free(batch->batch.cpu_map);
-   free(batch->state.cpu_map);
+   if (batch->use_shadow_copy) {
+      free(batch->batch.map);
+      free(batch->state.map);
+   }
 
    for (int i = 0; i < batch->exec_count; i++) {
       brw_bo_unreference(batch->exec_bos[i]);
@@ -284,7 +286,6 @@ static void
 grow_buffer(struct brw_context *brw,
             struct brw_bo **bo_ptr,
             uint32_t **map_ptr,
-            uint32_t **cpu_map_ptr,
             unsigned existing_bytes,
             unsigned new_size)
 {
@@ -301,8 +302,8 @@ grow_buffer(struct brw_context *brw,
    perf_debug("Growing %s - ran out of space\n", old_bo->name);
 
    /* Copy existing data to the new larger buffer */
-   if (*cpu_map_ptr) {
-      *cpu_map_ptr = new_map = realloc(*cpu_map_ptr, new_size);
+   if (batch->use_shadow_copy) {
+      new_map = realloc(*map_ptr, new_size);
    } else {
       new_map = brw_bo_map(brw, new_bo, MAP_READ | MAP_WRITE);
       memcpy(new_map, old_map, existing_bytes);
@@ -373,7 +374,7 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
          MIN2(batch->batch.bo->size + batch->batch.bo->size / 2,
               MAX_BATCH_SIZE);
       grow_buffer(brw, &batch->batch.bo, &batch->batch.map,
-                  &batch->batch.cpu_map, batch_used, new_size);
+                  batch_used, new_size);
       batch->map_next = (void *) batch->batch.map + batch_used;
       assert(batch_used + sz < batch->batch.bo->size);
    }
@@ -806,14 +807,12 @@ submit_batch(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
    struct intel_batchbuffer *batch = &brw->batch;
    int ret = 0;
 
-   if (batch->batch.cpu_map) {
+   if (batch->use_shadow_copy) {
       void *bo_map = brw_bo_map(brw, batch->batch.bo, MAP_WRITE);
-      memcpy(bo_map, batch->batch.cpu_map, 4 * USED_BATCH(*batch));
-   }
+      memcpy(bo_map, batch->batch.map, 4 * USED_BATCH(*batch));
 
-   if (batch->state.cpu_map) {
-      void *bo_map = brw_bo_map(brw, batch->state.bo, MAP_WRITE);
-      memcpy(bo_map, batch->state.cpu_map, batch->state_used);
+      bo_map = brw_bo_map(brw, batch->state.bo, MAP_WRITE);
+      memcpy(bo_map, batch->state.map, batch->state_used);
    }
 
    brw_bo_unmap(batch->batch.bo);
@@ -1077,7 +1076,7 @@ brw_state_batch(struct brw_context *brw,
          MIN2(batch->state.bo->size + batch->state.bo->size / 2,
               MAX_STATE_SIZE);
       grow_buffer(brw, &batch->state.bo, &batch->state.map,
-                  &batch->state.cpu_map, batch->state_used, new_size);
+                  batch->state_used, new_size);
       assert(offset + size < batch->state.bo->size);
    }
 

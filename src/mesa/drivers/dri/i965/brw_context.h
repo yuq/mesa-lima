@@ -473,7 +473,6 @@ struct brw_reloc_list {
 struct brw_growing_bo {
    struct brw_bo *bo;
    uint32_t *map;
-   uint32_t *cpu_map;
 };
 
 struct intel_batchbuffer {
@@ -492,6 +491,7 @@ struct intel_batchbuffer {
    uint32_t state_used;
 
    enum brw_gpu_ring ring;
+   bool use_shadow_copy;
    bool use_batch_first;
    bool needs_sol_reset;
    bool state_base_address_emitted;
