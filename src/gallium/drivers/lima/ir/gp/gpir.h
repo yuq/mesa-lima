@@ -373,6 +373,8 @@ bool gpir_instr_try_insert_node(gpir_instr *instr, gpir_node *node);
 void gpir_instr_remove_node(gpir_instr *instr, gpir_node *node);
 void gpir_instr_print_prog(gpir_compiler *comp);
 
+bool gpir_codegen_acc_same_op(gpir_op op1, gpir_op op2);
+
 bool gpir_pre_rsched_lower_prog(gpir_compiler *comp);
 bool gpir_post_rsched_lower_prog(gpir_compiler *comp);
 bool gpir_reduce_reg_pressure_schedule_prog(gpir_compiler *comp);
