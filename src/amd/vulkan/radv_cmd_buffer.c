@@ -1122,8 +1122,7 @@ radv_emit_scissor(struct radv_cmd_buffer *cmd_buffer)
 	 * scissor registers are changed. There is also a more efficient but
 	 * more involved alternative workaround.
 	 */
-	if (cmd_buffer->device->physical_device->rad_info.family == CHIP_VEGA10 ||
-	    cmd_buffer->device->physical_device->rad_info.family == CHIP_RAVEN) {
+	if (cmd_buffer->device->physical_device->has_scissor_bug) {
 		cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_PS_PARTIAL_FLUSH;
 		si_emit_cache_flush(cmd_buffer);
 	}

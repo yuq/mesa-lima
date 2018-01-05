@@ -265,6 +265,10 @@ radv_physical_device_init(struct radv_physical_device *device,
 
 	device->cpdma_prefetch_writes_memory = device->rad_info.chip_class <= VI;
 
+	/* Vega10/Raven need a special workaround for a hardware bug. */
+	device->has_scissor_bug = device->rad_info.family == CHIP_VEGA10 ||
+				  device->rad_info.family == CHIP_RAVEN;
+
 	radv_physical_device_init_mem_types(device);
 
 	result = radv_init_wsi(device);
