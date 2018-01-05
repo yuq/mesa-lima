@@ -1758,13 +1758,15 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 
       case BRW_OPCODE_MAD:
          assert(devinfo->gen >= 6);
-	 brw_set_default_access_mode(p, BRW_ALIGN_16);
+         if (devinfo->gen < 10)
+            brw_set_default_access_mode(p, BRW_ALIGN_16);
          brw_MAD(p, dst, src[0], src[1], src[2]);
 	 break;
 
       case BRW_OPCODE_LRP:
          assert(devinfo->gen >= 6);
-	 brw_set_default_access_mode(p, BRW_ALIGN_16);
+         if (devinfo->gen < 10)
+            brw_set_default_access_mode(p, BRW_ALIGN_16);
          brw_LRP(p, dst, src[0], src[1], src[2]);
 	 break;
 
@@ -1862,7 +1864,8 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 
       case BRW_OPCODE_BFE:
          assert(devinfo->gen >= 7);
-         brw_set_default_access_mode(p, BRW_ALIGN_16);
+         if (devinfo->gen < 10)
+            brw_set_default_access_mode(p, BRW_ALIGN_16);
          brw_BFE(p, dst, src[0], src[1], src[2]);
          break;
 
@@ -1872,7 +1875,8 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          break;
       case BRW_OPCODE_BFI2:
          assert(devinfo->gen >= 7);
-         brw_set_default_access_mode(p, BRW_ALIGN_16);
+         if (devinfo->gen < 10)
+            brw_set_default_access_mode(p, BRW_ALIGN_16);
          brw_BFI2(p, dst, src[0], src[1], src[2]);
          break;
 
