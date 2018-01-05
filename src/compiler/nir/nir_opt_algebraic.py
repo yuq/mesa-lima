@@ -205,6 +205,15 @@ optimizations = [
    (('~ior', ('fge', a, '#b'), ('fge', a, '#c')), ('fge', a, ('fmin', b, c))),
    (('~ior', ('fge', '#a', c), ('fge', '#b', c)), ('fge', ('fmax', a, b), c)),
 
+   # These patterns can result when (a < b || a < c) => (a < min(b, c))
+   # transformations occur before constant propagation and loop-unrolling.
+   (('~flt', a, ('fmax', b, a)), ('flt', a, b)),
+   (('~flt', ('fmin', a, b), a), ('flt', b, a)),
+   (('~fge', a, ('fmin', b, a)), True),
+   (('~fge', ('fmax', a, b), a), True),
+   (('~flt', a, ('fmin', b, a)), False),
+   (('~flt', ('fmax', a, b), a), False),
+
    (('fabs', ('slt', a, b)), ('slt', a, b)),
    (('fabs', ('sge', a, b)), ('sge', a, b)),
    (('fabs', ('seq', a, b)), ('seq', a, b)),
