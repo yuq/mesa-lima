@@ -2733,15 +2733,28 @@ void radv_CmdSetViewport(
 	const VkViewport*                           pViewports)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	struct radv_cmd_state *state = &cmd_buffer->state;
 	MAYBE_UNUSED const uint32_t total_count = firstViewport + viewportCount;
 
 	assert(firstViewport < MAX_VIEWPORTS);
 	assert(total_count >= 1 && total_count <= MAX_VIEWPORTS);
 
-	memcpy(cmd_buffer->state.dynamic.viewport.viewports + firstViewport,
-	       pViewports, viewportCount * sizeof(*pViewports));
+	if (cmd_buffer->device->physical_device->has_scissor_bug) {
+		/* Try to skip unnecessary PS partial flushes when the viewports
+		 * don't change.
+		 */
+		if (!(state->dirty & (RADV_CMD_DIRTY_DYNAMIC_VIEWPORT |
+				      RADV_CMD_DIRTY_DYNAMIC_SCISSOR)) &&
+		    !memcmp(state->dynamic.viewport.viewports + firstViewport,
+			    pViewports, viewportCount * sizeof(*pViewports))) {
+			return;
+		}
+	}
 
-	cmd_buffer->state.dirty |= RADV_CMD_DIRTY_DYNAMIC_VIEWPORT;
+	memcpy(state->dynamic.viewport.viewports + firstViewport, pViewports,
+	       viewportCount * sizeof(*pViewports));
+
+	state->dirty |= RADV_CMD_DIRTY_DYNAMIC_VIEWPORT;
 }
 
 void radv_CmdSetScissor(
@@ -2751,14 +2764,28 @@ void radv_CmdSetScissor(
 	const VkRect2D*                             pScissors)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	struct radv_cmd_state *state = &cmd_buffer->state;
 	MAYBE_UNUSED const uint32_t total_count = firstScissor + scissorCount;
 
 	assert(firstScissor < MAX_SCISSORS);
 	assert(total_count >= 1 && total_count <= MAX_SCISSORS);
 
-	memcpy(cmd_buffer->state.dynamic.scissor.scissors + firstScissor,
-	       pScissors, scissorCount * sizeof(*pScissors));
-	cmd_buffer->state.dirty |= RADV_CMD_DIRTY_DYNAMIC_SCISSOR;
+	if (cmd_buffer->device->physical_device->has_scissor_bug) {
+		/* Try to skip unnecessary PS partial flushes when the scissors
+		 * don't change.
+		 */
+		if (!(state->dirty & (RADV_CMD_DIRTY_DYNAMIC_VIEWPORT |
+				      RADV_CMD_DIRTY_DYNAMIC_SCISSOR)) &&
+		    !memcmp(state->dynamic.scissor.scissors + firstScissor,
+			    pScissors, scissorCount * sizeof(*pScissors))) {
+			return;
+		}
+	}
+
+	memcpy(state->dynamic.scissor.scissors + firstScissor, pScissors,
+	       scissorCount * sizeof(*pScissors));
+
+	state->dirty |= RADV_CMD_DIRTY_DYNAMIC_SCISSOR;
 }
 
 void radv_CmdSetLineWidth(
