@@ -516,7 +516,7 @@ lima_calculate_alpha_blend(enum pipe_blend_func rgb_func, enum pipe_blend_func a
       (lima_blend_factor(rgb_dst_factor) << 11) |
       ((lima_blend_factor(alpha_src_factor) & 0xF) << 16) |
       ((lima_blend_factor(alpha_dst_factor) & 0xF) << 20) |
-      0xFC000000; /* need check if this GLESv1 glAlphaFunc */
+      0x0C000000; /* need check if this GLESv1 glAlphaFunc */
 }
 
 static int
@@ -579,6 +579,8 @@ lima_pack_render_state(struct lima_context *ctx)
          PIPE_BLENDFACTOR_ONE, PIPE_BLENDFACTOR_ZERO,
          PIPE_BLENDFACTOR_ONE, PIPE_BLENDFACTOR_ZERO);
    }
+
+   render->alpha_blend |= (rt->colormask & PIPE_MASK_RGBA) << 28;
 
 #if 0
    struct pipe_depth_state *depth = &ctx->zsa->base.depth;
