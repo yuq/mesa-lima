@@ -2583,7 +2583,7 @@ assign_attribute_or_color_locations(void *mem_ctx,
    /* Mark invalid locations as being used.
     */
    unsigned used_locations = (max_index >= 32)
-      ? ~0 : ~((1 << max_index) - 1);
+      ? 0 : ~((1 << max_index) - 1);
    unsigned double_storage_locations = 0;
 
    assert((target_index == MESA_SHADER_VERTEX)
