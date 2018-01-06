@@ -1362,6 +1362,11 @@ emit_vert_end(struct v3d_compile *c)
                         vir_VPM_WRITE(c, vir_uniform_f(c, 0.0),
                                       &vpm_index);
         }
+
+        /* GFXH-1684: VPM writes need to be complete by the end of the shader.
+         */
+        if (c->devinfo->ver >= 40 && c->devinfo->ver <= 41)
+                vir_VPMWT(c);
 }
 
 void

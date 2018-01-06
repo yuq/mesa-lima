@@ -744,6 +744,14 @@ vir_##name##_dest(struct v3d_compile *c, struct qreg dest,               \
         return vir_emit_nondef(c, vir_inst(op, dest, a, b));     \
 }
 
+#define VIR_NODST_0(name, vir_inst, op)                                 \
+static inline struct qinst *                                            \
+vir_##name(struct v3d_compile *c)                                       \
+{                                                                       \
+        return vir_emit_nondef(c, vir_inst(op, c->undef,                \
+                                           c->undef, c->undef));        \
+}
+
 #define VIR_NODST_1(name, vir_inst, op)                                               \
 static inline struct qinst *                                            \
 vir_##name(struct v3d_compile *c, struct qreg a)                        \
@@ -770,6 +778,7 @@ vir_##name(struct v3d_compile *c, struct qreg a, struct qreg b)         \
 #define VIR_M_NODST_2(name) VIR_NODST_2(name, vir_mul_inst, V3D_QPU_M_##name)
 #define VIR_A_NODST_1(name) VIR_NODST_1(name, vir_add_inst, V3D_QPU_A_##name)
 #define VIR_M_NODST_1(name) VIR_NODST_1(name, vir_mul_inst, V3D_QPU_M_##name)
+#define VIR_A_NODST_0(name) VIR_NODST_0(name, vir_add_inst, V3D_QPU_A_##name)
 
 VIR_A_ALU2(FADD)
 VIR_A_ALU2(VFPACK)
@@ -812,6 +821,7 @@ VIR_A_ALU0(YCD)
 VIR_A_ALU0(MSF)
 VIR_A_ALU0(REVF)
 VIR_A_NODST_1(VPMSETUP)
+VIR_A_NODST_0(VPMWT)
 VIR_A_ALU2(FCMP)
 VIR_A_ALU2(VFMAX)
 

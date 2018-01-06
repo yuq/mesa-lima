@@ -310,6 +310,10 @@ calculate_deps(struct schedule_state *state, struct schedule_node *n)
                 add_write_dep(state, &state->last_vpm, n);
                 break;
 
+        case V3D_QPU_A_VPMWT:
+                add_read_dep(state, state->last_vpm, n);
+                break;
+
         case V3D_QPU_A_MSF:
                 add_read_dep(state, state->last_tlb, n);
                 break;

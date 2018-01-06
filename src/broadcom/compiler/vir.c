@@ -95,6 +95,7 @@ vir_has_side_effects(struct v3d_compile *c, struct qinst *inst)
                 case V3D_QPU_A_STVPMV:
                 case V3D_QPU_A_STVPMD:
                 case V3D_QPU_A_STVPMP:
+                case V3D_QPU_A_VPMWT:
                         return true;
                 default:
                         break;
