@@ -41,16 +41,26 @@ gpir_instr *gpir_instr_create(gpir_block *block)
    return instr;
 }
 
-static bool gpir_instr_insert_alu_check(gpir_instr *instr, gpir_node *node)
+static bool gpir_instr_check_acc_same_op(gpir_instr *instr, gpir_node *node, int slot)
 {
    /* two ACC slots must share the same op code */
    gpir_node *acc_node = NULL;
-   if (node->sched.pos == GPIR_INSTR_SLOT_ADD0)
+   if (slot == GPIR_INSTR_SLOT_ADD0)
       acc_node = instr->slots[GPIR_INSTR_SLOT_ADD1];
-   else if (node->sched.pos == GPIR_INSTR_SLOT_ADD1)
+   else if (slot == GPIR_INSTR_SLOT_ADD1)
       acc_node = instr->slots[GPIR_INSTR_SLOT_ADD0];
 
-   if (acc_node && !gpir_codegen_acc_same_op(node->op, acc_node->op))
+   /* spill move case may get acc_node == node */
+   if (acc_node && acc_node != node &&
+       !gpir_codegen_acc_same_op(node->op, acc_node->op))
+      return false;
+
+   return true;
+}
+
+static bool gpir_instr_insert_alu_check(gpir_instr *instr, gpir_node *node)
+{
+   if (!gpir_instr_check_acc_same_op(instr, node, node->sched.pos))
       return false;
 
    /* check if this node is child of one store node.
@@ -287,7 +297,8 @@ static bool gpir_instr_spill_move(gpir_instr *instr, int slot, int spill_to_star
       return false;
 
    for (int i = spill_to_start; i <= GPIR_INSTR_SLOT_DIST_TWO_END; i++) {
-      if (i != slot && !instr->slots[i]) {
+      if (i != slot && !instr->slots[i] &&
+          gpir_instr_check_acc_same_op(instr, node, i)) {
          instr->slots[i] = node;
          instr->slots[slot] = NULL;
          node->sched.pos = i;
