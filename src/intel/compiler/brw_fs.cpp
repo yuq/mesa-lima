@@ -1256,16 +1256,16 @@ fs_visitor::emit_sampleid_setup()
        * TODO: These payload bits exist on Gen7 too, but they appear to always
        *       be zero, so this code fails to work.  We should find out why.
        */
-      fs_reg tmp(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_W);
+      fs_reg tmp(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_UW);
 
       abld.SHR(tmp, fs_reg(stride(retype(brw_vec1_grf(1, 0),
-                                         BRW_REGISTER_TYPE_B), 1, 8, 0)),
+                                         BRW_REGISTER_TYPE_UB), 1, 8, 0)),
                     brw_imm_v(0x44440000));
       abld.AND(*reg, tmp, brw_imm_w(0xf));
    } else {
       const fs_reg t1 = component(fs_reg(VGRF, alloc.allocate(1),
                                          BRW_REGISTER_TYPE_D), 0);
-      const fs_reg t2(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_W);
+      const fs_reg t2(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_UW);
 
       /* The PS will be run in MSDISPMODE_PERSAMPLE. For example with
        * 8x multisampling, subspan 0 will represent sample N (where N

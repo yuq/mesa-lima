@@ -237,7 +237,7 @@ fs_visitor::nir_emit_system_values()
    {
       const fs_builder abld = bld.annotate("gl_SubgroupInvocation", NULL);
       fs_reg &reg = nir_system_values[SYSTEM_VALUE_SUBGROUP_INVOCATION];
-      reg = abld.vgrf(BRW_REGISTER_TYPE_W);
+      reg = abld.vgrf(BRW_REGISTER_TYPE_UW);
 
       const fs_builder allbld8 = abld.group(8, 0).exec_all();
       allbld8.MOV(reg, brw_imm_v(0x76543210));
@@ -2134,7 +2134,7 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
           * by 32 (shifting by 5), and add the two together.  This is
           * the final indirect byte offset.
           */
-         fs_reg sequence = bld.vgrf(BRW_REGISTER_TYPE_W, 1);
+         fs_reg sequence = bld.vgrf(BRW_REGISTER_TYPE_UW, 1);
          fs_reg channel_offsets = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
          fs_reg vertex_offset_bytes = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
          fs_reg icp_offset_bytes = bld.vgrf(BRW_REGISTER_TYPE_UD, 1);
