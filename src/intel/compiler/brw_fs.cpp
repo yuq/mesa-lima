@@ -1219,7 +1219,7 @@ fs_visitor::emit_sampleid_setup()
    assert(devinfo->gen >= 6);
 
    const fs_builder abld = bld.annotate("compute sample id");
-   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::int_type));
+   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::uint_type));
 
    if (!key->multisample_fbo) {
       /* As per GL_ARB_sample_shading specification:
@@ -1264,7 +1264,7 @@ fs_visitor::emit_sampleid_setup()
       abld.AND(*reg, tmp, brw_imm_w(0xf));
    } else {
       const fs_reg t1 = component(fs_reg(VGRF, alloc.allocate(1),
-                                         BRW_REGISTER_TYPE_D), 0);
+                                         BRW_REGISTER_TYPE_UD), 0);
       const fs_reg t2(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_UW);
 
       /* The PS will be run in MSDISPMODE_PERSAMPLE. For example with
@@ -1291,7 +1291,7 @@ fs_visitor::emit_sampleid_setup()
        * accomodate 16x MSAA.
        */
       abld.exec_all().group(1, 0)
-          .AND(t1, fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_D)),
+          .AND(t1, fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD)),
                brw_imm_ud(0xc0));
       abld.exec_all().group(1, 0).SHR(t1, t1, brw_imm_d(5));
 
