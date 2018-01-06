@@ -2552,6 +2552,8 @@ find_available_slots(unsigned used_mask, unsigned needed_count)
 }
 
 
+#define SAFE_MASK_FROM_INDEX(i) (((i) >= 32) ? ~0 : ((1 << (i)) - 1))
+
 /**
  * Assign locations for either VS inputs or FS outputs
  *
@@ -2582,8 +2584,7 @@ assign_attribute_or_color_locations(void *mem_ctx,
 
    /* Mark invalid locations as being used.
     */
-   unsigned used_locations = (max_index >= 32)
-      ? 0 : ~((1 << max_index) - 1);
+   unsigned used_locations = ~SAFE_MASK_FROM_INDEX(max_index);
    unsigned double_storage_locations = 0;
 
    assert((target_index == MESA_SHADER_VERTEX)
@@ -2936,7 +2937,7 @@ assign_attribute_or_color_locations(void *mem_ctx,
 
    if (target_index == MESA_SHADER_VERTEX) {
       unsigned total_attribs_size =
-         _mesa_bitcount(used_locations & ((1 << max_index) - 1)) +
+         _mesa_bitcount(used_locations & SAFE_MASK_FROM_INDEX(max_index)) +
          _mesa_bitcount(double_storage_locations);
       if (total_attribs_size > max_index) {
          linker_error(prog,
@@ -3000,7 +3001,7 @@ assign_attribute_or_color_locations(void *mem_ctx,
     */
    if (target_index == MESA_SHADER_VERTEX) {
       unsigned total_attribs_size =
-         _mesa_bitcount(used_locations & ((1 << max_index) - 1)) +
+         _mesa_bitcount(used_locations & SAFE_MASK_FROM_INDEX(max_index)) +
          _mesa_bitcount(double_storage_locations);
       if (total_attribs_size > max_index) {
          linker_error(prog,
