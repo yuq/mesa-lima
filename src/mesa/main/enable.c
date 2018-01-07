@@ -329,7 +329,8 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
             GLbitfield newEnabled =
                state * ((1 << ctx->Const.MaxDrawBuffers) - 1);
             if (newEnabled != ctx->Color.BlendEnabled) {
-               _mesa_flush_vertices_for_blend_state(ctx);
+               _mesa_flush_vertices_for_blend_adv(ctx, newEnabled,
+                                               ctx->Color._AdvancedBlendMode);
                ctx->Color.BlendEnabled = newEnabled;
             }
          }
@@ -1198,11 +1199,16 @@ _mesa_set_enablei(struct gl_context *ctx, GLenum cap,
          return;
       }
       if (((ctx->Color.BlendEnabled >> index) & 1) != state) {
-         _mesa_flush_vertices_for_blend_state(ctx);
+         GLbitfield enabled = ctx->Color.BlendEnabled;
+
          if (state)
-            ctx->Color.BlendEnabled |= (1 << index);
+            enabled |= (1 << index);
          else
-            ctx->Color.BlendEnabled &= ~(1 << index);
+            enabled &= ~(1 << index);
+
+         _mesa_flush_vertices_for_blend_adv(ctx, enabled,
+                                            ctx->Color._AdvancedBlendMode);
+         ctx->Color.BlendEnabled = enabled;
       }
       break;
    case GL_SCISSOR_TEST:
