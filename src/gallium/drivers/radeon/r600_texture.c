@@ -36,8 +36,6 @@
 #include "state_tracker/drm_driver.h"
 #include "amd/common/sid.h"
 
-static void r600_texture_discard_cmask(struct si_screen *sscreen,
-				       struct r600_texture *rtex);
 static enum radeon_surf_mode
 r600_choose_tiling(struct si_screen *sscreen,
 		   const struct pipe_resource *templ);
@@ -90,7 +88,7 @@ bool si_prepare_for_dma_blit(struct r600_common_context *rctx,
 						      src_box->height, src_box->depth))
 			return false;
 
-		r600_texture_discard_cmask(rctx->screen, rdst);
+		si_texture_discard_cmask(rctx->screen, rdst);
 	}
 
 	/* All requirements are met. Prepare textures for SDMA. */
@@ -382,8 +380,8 @@ static void r600_surface_import_metadata(struct si_screen *sscreen,
 	}
 }
 
-static void r600_eliminate_fast_color_clear(struct r600_common_context *rctx,
-					    struct r600_texture *rtex)
+void si_eliminate_fast_color_clear(struct r600_common_context *rctx,
+				   struct r600_texture *rtex)
 {
 	struct si_screen *sscreen = rctx->screen;
 	struct pipe_context *ctx = &rctx->b;
@@ -398,8 +396,8 @@ static void r600_eliminate_fast_color_clear(struct r600_common_context *rctx,
 		mtx_unlock(&sscreen->aux_context_lock);
 }
 
-static void r600_texture_discard_cmask(struct si_screen *sscreen,
-				       struct r600_texture *rtex)
+void si_texture_discard_cmask(struct si_screen *sscreen,
+			      struct r600_texture *rtex)
 {
 	if (!rtex->cmask.size)
 		return;
@@ -531,7 +529,7 @@ static void r600_reallocate_texture_inplace(struct r600_common_context *rctx,
 	}
 
 	if (new_bind_flag == PIPE_BIND_LINEAR) {
-		r600_texture_discard_cmask(rctx->screen, rtex);
+		si_texture_discard_cmask(rctx->screen, rtex);
 		r600_texture_discard_dcc(rctx->screen, rtex);
 	}
 
@@ -725,7 +723,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		if (!(usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH) &&
 		    (rtex->cmask.size || rtex->dcc_offset)) {
 			/* Eliminate fast clear (both CMASK and DCC) */
-			r600_eliminate_fast_color_clear(rctx, rtex);
+			si_eliminate_fast_color_clear(rctx, rtex);
 			/* eliminate_fast_color_clear flushes the context */
 			flush = false;
 
@@ -733,7 +731,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 			 * to be called.
 			 */
 			if (rtex->cmask.size)
-				r600_texture_discard_cmask(sscreen, rtex);
+				si_texture_discard_cmask(sscreen, rtex);
 		}
 
 		/* Set metadata. */
@@ -2270,7 +2268,7 @@ void vi_separate_dcc_try_enable(struct r600_common_context *rctx,
 	assert(tex->surface.num_dcc_levels);
 	assert(!tex->dcc_separate_buffer);
 
-	r600_texture_discard_cmask(rctx->screen, tex);
+	si_texture_discard_cmask(rctx->screen, tex);
 
 	/* Get a DCC buffer. */
 	if (tex->last_dcc_separate_buffer) {
