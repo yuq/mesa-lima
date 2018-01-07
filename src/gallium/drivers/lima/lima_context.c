@@ -27,6 +27,7 @@
 #include "util/u_upload_mgr.h"
 #include "util/u_math.h"
 #include "util/u_debug.h"
+#include "util/u_transfer.h"
 
 #include "lima_screen.h"
 #include "lima_context.h"
@@ -88,6 +89,7 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    ctx->uploader = u_upload_create_default(&ctx->base);
    ctx->base.stream_uploader = ctx->uploader;
    ctx->base.const_uploader = ctx->uploader;
+   ctx->base.texture_subdata = u_default_texture_subdata;
 
    slab_create_child(&ctx->transfer_pool, &screen->transfer_pool);
 

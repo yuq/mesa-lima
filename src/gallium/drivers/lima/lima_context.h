@@ -214,6 +214,26 @@ lima_context(struct pipe_context *pctx)
    return (struct lima_context *)pctx;
 }
 
+struct lima_sampler_state {
+   struct pipe_sampler_state base;
+};
+
+static inline struct lima_sampler_state *
+lima_sampler_state(struct pipe_sampler_state *psstate)
+{
+   return (struct lima_sampler_state *)psstate;
+}
+
+struct lima_sampler_view {
+   struct pipe_sampler_view base;
+};
+
+static inline struct lima_sampler_view *
+lima_sampler_view(struct pipe_sampler_view *psview)
+{
+   return (struct lima_sampler_view *)psview;
+}
+
 void lima_state_init(struct lima_context *ctx);
 void lima_state_fini(struct lima_context *ctx);
 void lima_draw_init(struct lima_context *ctx);
