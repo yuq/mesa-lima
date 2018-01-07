@@ -119,11 +119,25 @@ const ppir_op_info ppir_op_infos[] = {
          PPIR_INSTR_SLOT_VARYING, PPIR_INSTR_SLOT_END
       },
    },
+   [ppir_op_load_coords] = {
+      .name = "ld_coords",
+      .type = ppir_node_type_load,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_VARYING, PPIR_INSTR_SLOT_END
+      },
+   },
    [ppir_op_load_uniform] = {
       .name = "ld_uni",
       .type = ppir_node_type_load,
       .slots = (int []) {
          PPIR_INSTR_SLOT_UNIFORM, PPIR_INSTR_SLOT_END
+      },
+   },
+   [ppir_op_load_texture] = {
+      .name = "ld_tex",
+      .type = ppir_node_type_load_texture,
+      .slots = (int []) {
+         PPIR_INSTR_SLOT_TEXLD, PPIR_INSTR_SLOT_END
       },
    },
    [ppir_op_const] = {
@@ -144,6 +158,7 @@ void *ppir_node_create(ppir_block *block, ppir_op op, int index, unsigned mask)
       [ppir_node_type_const] = sizeof(ppir_const_node),
       [ppir_node_type_load] = sizeof(ppir_load_node),
       [ppir_node_type_store] = sizeof(ppir_store_node),
+      [ppir_node_type_load_texture] = sizeof(ppir_load_texture_node),
    };
 
    ppir_node_type type = ppir_op_infos[op].type;
