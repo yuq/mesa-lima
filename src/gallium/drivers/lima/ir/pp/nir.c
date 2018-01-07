@@ -259,8 +259,44 @@ static ppir_node *ppir_emit_ssa_undef(ppir_block *block, nir_instr *ni)
 
 static ppir_node *ppir_emit_tex(ppir_block *block, nir_instr *ni)
 {
-   ppir_error("nir_tex_instr not support\n");
-   return NULL;
+   nir_tex_instr *instr = nir_instr_as_tex(ni);
+   ppir_load_texture_node *node;
+
+   if (instr->op != nir_texop_tex) {
+      ppir_error("unsupported texop %d\n", instr->op);
+      return NULL;
+   }
+
+   node = ppir_node_create_dest(block, ppir_op_load_texture, &instr->dest, 0);
+   if (!node)
+      return NULL;
+
+   node->sampler = instr->texture_index;
+
+   switch (instr->sampler_dim) {
+   case GLSL_SAMPLER_DIM_2D:
+   case GLSL_SAMPLER_DIM_RECT:
+   case GLSL_SAMPLER_DIM_EXTERNAL:
+      break;
+   default:
+      ppir_debug("unsupported sampler dim: %d\n", instr->sampler_dim);
+      return NULL;
+   }
+
+   node->sampler_dim = instr->sampler_dim;
+
+   for (int i = 0; i < instr->num_srcs; i++) {
+      switch (instr->src[i].src_type) {
+      case nir_tex_src_coord:
+         ppir_node_add_src(block->comp, &node->node, &node->src_coords, &instr->src[i].src);
+         break;
+      default:
+         ppir_debug("unknown texture source");
+         return NULL;
+      }
+   }
+
+   return &node->node;
 }
 
 static ppir_node *ppir_emit_jump(ppir_block *block, nir_instr *ni)
