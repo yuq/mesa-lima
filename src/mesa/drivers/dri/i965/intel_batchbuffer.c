@@ -161,11 +161,25 @@ add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
 }
 
 static void
-intel_batchbuffer_reset(struct brw_context *brw)
+recreate_growing_buffer(struct brw_context *brw,
+                        struct brw_growing_bo *grow,
+                        const char *name, unsigned size)
 {
    struct intel_screen *screen = brw->screen;
    struct intel_batchbuffer *batch = &brw->batch;
    struct brw_bufmgr *bufmgr = screen->bufmgr;
+
+   grow->bo = brw_bo_alloc(bufmgr, name, size, 4096);
+   grow->bo->kflags = can_do_exec_capture(screen) ? EXEC_OBJECT_CAPTURE : 0;
+
+   if (!batch->use_shadow_copy)
+      grow->map = brw_bo_map(brw, grow->bo, MAP_READ | MAP_WRITE);
+}
+
+static void
+intel_batchbuffer_reset(struct brw_context *brw)
+{
+   struct intel_batchbuffer *batch = &brw->batch;
 
    if (batch->last_bo != NULL) {
       brw_bo_unreference(batch->last_bo);
@@ -173,20 +187,10 @@ intel_batchbuffer_reset(struct brw_context *brw)
    }
    batch->last_bo = batch->batch.bo;
 
-   batch->batch.bo = brw_bo_alloc(bufmgr, "batchbuffer", BATCH_SZ, 4096);
-   if (!batch->use_shadow_copy) {
-      batch->batch.map =
-         brw_bo_map(brw, batch->batch.bo, MAP_READ | MAP_WRITE);
-   }
+   recreate_growing_buffer(brw, &batch->batch, "batchbuffer", BATCH_SZ);
    batch->map_next = batch->batch.map;
 
-   batch->state.bo = brw_bo_alloc(bufmgr, "statebuffer", STATE_SZ, 4096);
-   batch->state.bo->kflags =
-      can_do_exec_capture(screen) ? EXEC_OBJECT_CAPTURE : 0;
-   if (!batch->use_shadow_copy) {
-      batch->state.map =
-         brw_bo_map(brw, batch->state.bo, MAP_READ | MAP_WRITE);
-   }
+   recreate_growing_buffer(brw, &batch->state, "statebuffer", STATE_SZ);
 
    /* Avoid making 0 a valid state offset - otherwise the decoder will try
     * and decode data when we use offset 0 as a null pointer.
