@@ -1873,6 +1873,63 @@ static void si_llvm_emit_txqs(
 	emit_data->output[emit_data->chan] = samples;
 }
 
+static void si_llvm_emit_fbfetch(const struct lp_build_tgsi_action *action,
+				 struct lp_build_tgsi_context *bld_base,
+				 struct lp_build_emit_data *emit_data)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct ac_image_args args = {};
+	LLVMValueRef ptr, image, fmask, addr_vec;
+
+	/* Ignore src0, because KHR_blend_func_extended disallows multiple render
+	 * targets.
+	 */
+
+	/* Load the image descriptor. */
+	STATIC_ASSERT(SI_PS_IMAGE_COLORBUF0 % 2 == 0);
+	ptr = LLVMGetParam(ctx->main_fn, ctx->param_rw_buffers);
+	ptr = LLVMBuildPointerCast(ctx->ac.builder, ptr,
+				   ac_array_in_const32_addr_space(ctx->v8i32), "");
+	image = ac_build_load_to_sgpr(&ctx->ac, ptr,
+			LLVMConstInt(ctx->i32, SI_PS_IMAGE_COLORBUF0 / 2, 0));
+
+	LLVMValueRef addr[4];
+	unsigned chan = 0;
+
+	addr[chan++] = si_unpack_param(ctx, SI_PARAM_POS_FIXED_PT, 0, 16);
+
+	if (!ctx->shader->key.mono.u.ps.fbfetch_is_1D)
+		addr[chan++] = si_unpack_param(ctx, SI_PARAM_POS_FIXED_PT, 16, 16);
+
+	/* Get the current render target layer index. */
+	if (ctx->shader->key.mono.u.ps.fbfetch_layered)
+		addr[chan++] = si_unpack_param(ctx, SI_PARAM_ANCILLARY, 16, 11);
+
+	if (ctx->shader->key.mono.u.ps.fbfetch_msaa)
+		addr[chan++] = si_get_sample_id(ctx);
+
+	while (chan < 4)
+		addr[chan++] = LLVMGetUndef(ctx->i32);
+
+	if (ctx->shader->key.mono.u.ps.fbfetch_msaa) {
+		fmask = ac_build_load_to_sgpr(&ctx->ac, ptr,
+			LLVMConstInt(ctx->i32, SI_PS_IMAGE_COLORBUF0_FMASK / 2, 0));
+
+		ac_apply_fmask_to_sample(&ctx->ac, fmask, addr, false);
+	}
+
+	addr_vec = ac_build_gather_values(&ctx->ac, addr, ARRAY_SIZE(addr));
+
+	args.opcode = ac_image_load;
+	args.resource = image;
+	args.addr = addr_vec;
+	args.dmask = 0xf;
+	args.da = ctx->shader->key.mono.u.ps.fbfetch_layered;
+
+	emit_data->output[emit_data->chan] =
+		ac_build_image_opcode(&ctx->ac, &args);
+}
+
 static const struct lp_build_tgsi_action tex_action = {
 	.fetch_args = tex_fetch_args,
 	.emit = build_tex_intrinsic,
@@ -1904,6 +1961,8 @@ void si_shader_context_init_mem(struct si_shader_context *ctx)
 	bld_base->op_actions[TGSI_OPCODE_TG4] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_LODQ] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_TXQS].emit = si_llvm_emit_txqs;
+
+	bld_base->op_actions[TGSI_OPCODE_FBFETCH].emit = si_llvm_emit_fbfetch;
 
 	bld_base->op_actions[TGSI_OPCODE_LOAD].fetch_args = load_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_LOAD].emit = load_emit;

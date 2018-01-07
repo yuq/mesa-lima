@@ -687,7 +687,7 @@ si_mark_image_range_valid(const struct pipe_image_view *view)
 static void si_set_shader_image_desc(struct si_context *ctx,
 				     const struct pipe_image_view *view,
 				     bool skip_decompress,
-				     uint32_t *desc)
+				     uint32_t *desc, uint32_t *fmask_desc)
 {
 	struct si_screen *screen = ctx->screen;
 	struct r600_resource *res;
@@ -715,13 +715,14 @@ static void si_set_shader_image_desc(struct si_context *ctx,
 		 * Note that DCC_DECOMPRESS for MSAA doesn't work in some cases,
 		 * so we don't wanna trigger it.
 		 */
-		if (tex->is_depth || tex->resource.b.b.nr_samples >= 2) {
+		if (tex->is_depth ||
+		    (!fmask_desc && tex->fmask.size != 0)) {
 			assert(!"Z/S and MSAA image stores are not supported");
 			access &= ~PIPE_IMAGE_ACCESS_WRITE;
 		}
 
 		assert(!tex->is_depth);
-		assert(tex->fmask.size == 0);
+		assert(fmask_desc || tex->fmask.size == 0);
 
 		if (uses_dcc && !skip_decompress &&
 		    (view->access & PIPE_IMAGE_ACCESS_WRITE ||
@@ -762,7 +763,7 @@ static void si_set_shader_image_desc(struct si_context *ctx,
 					   view->u.tex.first_layer,
 					   view->u.tex.last_layer,
 					   width, height, depth,
-					   desc, NULL);
+					   desc, fmask_desc);
 		si_set_mutable_tex_desc_fields(screen, tex,
 					       &tex->surface.u.legacy.level[level],
 					       level, level,
@@ -792,7 +793,7 @@ static void si_set_shader_image(struct si_context *ctx,
 	if (&images->views[slot] != view)
 		util_copy_image_view(&images->views[slot], view);
 
-	si_set_shader_image_desc(ctx, view, skip_decompress, desc);
+	si_set_shader_image_desc(ctx, view, skip_decompress, desc, NULL);
 
 	if (res->b.b.target == PIPE_BUFFER) {
 		images->needs_color_decompress_mask &= ~(1 << slot);
@@ -868,6 +869,77 @@ si_images_update_needs_color_decompress_mask(struct si_images *images)
 			}
 		}
 	}
+}
+
+void si_update_ps_colorbuf0_slot(struct si_context *sctx)
+{
+	struct si_buffer_resources *buffers = &sctx->rw_buffers;
+	struct si_descriptors *descs = &sctx->descriptors[SI_DESCS_RW_BUFFERS];
+	unsigned slot = SI_PS_IMAGE_COLORBUF0;
+	struct pipe_surface *surf = NULL;
+
+	/* si_texture_disable_dcc can get us here again. */
+	if (sctx->blitter->running)
+		return;
+
+	/* See whether FBFETCH is used and color buffer 0 is set. */
+	if (sctx->ps_shader.cso &&
+	    sctx->ps_shader.cso->info.opcode_count[TGSI_OPCODE_FBFETCH] &&
+	    sctx->framebuffer.state.nr_cbufs &&
+	    sctx->framebuffer.state.cbufs[0])
+		surf = sctx->framebuffer.state.cbufs[0];
+
+	/* Return if FBFETCH transitions from disabled to disabled. */
+	if (!buffers->buffers[slot] && !surf)
+		return;
+
+	sctx->ps_uses_fbfetch = surf != NULL;
+	si_update_ps_iter_samples(sctx);
+
+	if (surf) {
+		struct r600_texture *tex = (struct r600_texture*)surf->texture;
+		struct pipe_image_view view;
+
+		assert(tex);
+		assert(!tex->is_depth);
+
+		/* Disable DCC, because the texture is used as both a sampler
+		 * and color buffer.
+		 */
+		si_texture_disable_dcc(&sctx->b, tex);
+
+		if (tex->resource.b.b.nr_samples <= 1 && tex->cmask_buffer) {
+			/* Disable CMASK. */
+			assert(tex->cmask_buffer != &tex->resource);
+			si_eliminate_fast_color_clear(&sctx->b, tex);
+			si_texture_discard_cmask(sctx->screen, tex);
+		}
+
+		view.resource = surf->texture;
+		view.format = surf->format;
+		view.access = PIPE_IMAGE_ACCESS_READ;
+		view.u.tex.first_layer = surf->u.tex.first_layer;
+		view.u.tex.last_layer = surf->u.tex.last_layer;
+		view.u.tex.level = surf->u.tex.level;
+
+		/* Set the descriptor. */
+		uint32_t *desc = descs->list + slot*4;
+		memset(desc, 0, 16 * 4);
+		si_set_shader_image_desc(sctx, &view, true, desc, desc + 8);
+
+		pipe_resource_reference(&buffers->buffers[slot], &tex->resource.b.b);
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+					  &tex->resource, RADEON_USAGE_READ,
+					  RADEON_PRIO_SHADER_RW_IMAGE);
+		buffers->enabled_mask |= 1u << slot;
+	} else {
+		/* Clear the descriptor. */
+		memset(descs->list + slot*4, 0, 8*4);
+		pipe_resource_reference(&buffers->buffers[slot], NULL);
+		buffers->enabled_mask &= ~(1u << slot);
+	}
+
+	sctx->descriptors_dirty |= 1u << SI_DESCS_RW_BUFFERS;
 }
 
 /* SAMPLER STATES */
@@ -1855,7 +1927,7 @@ static void si_update_bindless_image_descriptor(struct si_context *sctx,
 	memcpy(desc_list, desc->list + desc_slot_offset,
 	       sizeof(desc_list));
 	si_set_shader_image_desc(sctx, view, true,
-				 desc->list + desc_slot_offset);
+				 desc->list + desc_slot_offset, NULL);
 
 	if (memcmp(desc_list, desc->list + desc_slot_offset,
 		   sizeof(desc_list))) {
@@ -1921,6 +1993,7 @@ void si_update_all_texture_descriptors(struct si_context *sctx)
 	}
 
 	si_update_all_resident_texture_descriptors(sctx);
+	si_update_ps_colorbuf0_slot(sctx);
 }
 
 /* SHADER USER DATA */
@@ -2460,7 +2533,7 @@ static uint64_t si_create_image_handle(struct pipe_context *ctx,
 	memset(desc_list, 0, sizeof(desc_list));
 	si_init_descriptor_list(&desc_list[0], 8, 1, null_image_descriptor);
 
-	si_set_shader_image_desc(sctx, view, false, &desc_list[0]);
+	si_set_shader_image_desc(sctx, view, false, &desc_list[0], NULL);
 
 	img_handle->desc_slot = si_create_bindless_descriptor(sctx, desc_list,
 							      sizeof(desc_list));

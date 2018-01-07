@@ -1460,6 +1460,23 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		}
 
 		key->part.ps.epilog.alpha_func = si_get_alpha_test_func(sctx);
+
+		/* ps_uses_fbfetch is true only if the color buffer is bound. */
+		if (sctx->ps_uses_fbfetch) {
+			struct pipe_surface *cb0 = sctx->framebuffer.state.cbufs[0];
+			struct pipe_resource *tex = cb0->texture;
+
+			/* 1D textures are allocated and used as 2D on GFX9. */
+			key->mono.u.ps.fbfetch_msaa = sctx->framebuffer.nr_samples > 1;
+			key->mono.u.ps.fbfetch_is_1D = sctx->b.chip_class != GFX9 &&
+						       (tex->target == PIPE_TEXTURE_1D ||
+							tex->target == PIPE_TEXTURE_1D_ARRAY);
+			key->mono.u.ps.fbfetch_layered = tex->target == PIPE_TEXTURE_1D_ARRAY ||
+							 tex->target == PIPE_TEXTURE_2D_ARRAY ||
+							 tex->target == PIPE_TEXTURE_CUBE ||
+							 tex->target == PIPE_TEXTURE_CUBE_ARRAY ||
+							 tex->target == PIPE_TEXTURE_3D;
+		}
 		break;
 	}
 	default:
@@ -2426,6 +2443,7 @@ static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 			si_mark_atom_dirty(sctx, &sctx->msaa_config);
 	}
 	si_set_active_descriptors_for_shader(sctx, sel);
+	si_update_ps_colorbuf0_slot(sctx);
 }
 
 static void si_delete_shader(struct si_context *sctx, struct si_shader *shader)

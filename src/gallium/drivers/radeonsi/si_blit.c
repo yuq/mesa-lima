@@ -806,6 +806,14 @@ void si_decompress_textures(struct si_context *sctx, unsigned shader_mask)
 			si_decompress_resident_images(sctx);
 	}
 
+	if (sctx->ps_uses_fbfetch) {
+		struct pipe_surface *cb0 = sctx->framebuffer.state.cbufs[0];
+		si_decompress_color_texture(sctx,
+					    (struct r600_texture*)cb0->texture,
+					    cb0->u.tex.first_layer,
+					    cb0->u.tex.last_layer);
+	}
+
 	si_check_render_feedback(sctx);
 }
 

@@ -541,6 +541,9 @@ struct si_shader_key {
 			unsigned	vs_export_prim_id:1;
 			struct {
 				unsigned interpolate_at_sample_force_center:1;
+				unsigned fbfetch_msaa;
+				unsigned fbfetch_is_1D;
+				unsigned fbfetch_layered;
 			} ps;
 		} u;
 	} mono;

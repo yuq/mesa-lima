@@ -217,6 +217,12 @@ enum {
 	SI_PS_CONST_POLY_STIPPLE,
 	SI_PS_CONST_SAMPLE_POSITIONS,
 
+	/* Image descriptor of color buffer 0 for KHR_blend_equation_advanced. */
+	SI_PS_IMAGE_COLORBUF0,
+	SI_PS_IMAGE_COLORBUF0_HI,
+	SI_PS_IMAGE_COLORBUF0_FMASK,
+	SI_PS_IMAGE_COLORBUF0_FMASK_HI,
+
 	SI_NUM_RW_BUFFERS,
 };
 
@@ -324,6 +330,7 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 				    unsigned base_level, unsigned first_level,
 				    unsigned block_width, bool is_stencil,
 				    uint32_t *state);
+void si_update_ps_colorbuf0_slot(struct si_context *sctx);
 void si_get_pipe_constant_buffer(struct si_context *sctx, uint shader,
 				 uint slot, struct pipe_constant_buffer *cbuf);
 void si_get_shader_buffers(struct si_context *sctx,
@@ -395,6 +402,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 			      unsigned width0, unsigned height0,
 			      unsigned force_level);
 void si_update_fb_dirtiness_after_rendering(struct si_context *sctx);
+void si_update_ps_iter_samples(struct si_context *sctx);
 
 /* si_state_binning.c */
 void si_emit_dpbb_state(struct si_context *sctx, struct r600_atom *state);

@@ -1929,7 +1929,7 @@ static void declare_input_fs(
 	si_llvm_load_input_fs(ctx, input_index, out);
 }
 
-static LLVMValueRef get_sample_id(struct si_shader_context *ctx)
+LLVMValueRef si_get_sample_id(struct si_shader_context *ctx)
 {
 	return si_unpack_param(ctx, SI_PARAM_ANCILLARY, 8, 4);
 }
@@ -2152,7 +2152,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 		break;
 
 	case TGSI_SEMANTIC_SAMPLEID:
-		value = get_sample_id(ctx);
+		value = si_get_sample_id(ctx);
 		break;
 
 	case TGSI_SEMANTIC_SAMPLEPOS: {

@@ -82,7 +82,7 @@ static struct uvec2 si_get_color_bin_size(struct si_context *sctx,
 
 	/* Multiply the sum by some function of the number of samples. */
 	if (nr_samples >= 2) {
-		if (sctx->ps_iter_samples >= 2)
+		if (si_get_ps_iter_samples(sctx) >= 2)
 			sum *= nr_samples;
 		else
 			sum *= 2;

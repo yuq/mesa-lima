@@ -2899,6 +2899,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		si_context_add_resource_size(ctx, surf->base.texture);
 	}
 
+	si_update_ps_colorbuf0_slot(sctx);
 	si_update_poly_offset_state(sctx);
 	si_mark_atom_dirty(sctx, &sctx->cb_render_state);
 	si_mark_atom_dirty(sctx, &sctx->framebuffer.atom);
@@ -3361,8 +3362,9 @@ static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
 			8, /* 16x MSAA */
 		};
 		unsigned log_samples = util_logbase2(setup_samples);
+		unsigned ps_iter_samples = si_get_ps_iter_samples(sctx);
 		unsigned log_ps_iter_samples =
-			util_logbase2(util_next_power_of_two(sctx->ps_iter_samples));
+			util_logbase2(util_next_power_of_two(ps_iter_samples));
 
 		radeon_set_context_reg_seq(cs, R_028BDC_PA_SC_LINE_CNTL, 2);
 		radeon_emit(cs, sc_line_cntl |
@@ -3380,7 +3382,7 @@ static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
 					       S_028804_HIGH_QUALITY_INTERSECTIONS(1) |
 					       S_028804_STATIC_ANCHOR_ASSOCIATIONS(1));
 			radeon_set_context_reg(cs, R_028A4C_PA_SC_MODE_CNTL_1,
-					       S_028A4C_PS_ITER_SAMPLE(sctx->ps_iter_samples > 1) |
+					       S_028A4C_PS_ITER_SAMPLE(ps_iter_samples > 1) |
 					       sc_mode_cntl_1);
 		} else if (sctx->smoothing_enabled) {
 			radeon_set_context_reg(cs, R_028804_DB_EQAA,
@@ -3409,6 +3411,14 @@ static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
 	}
 }
 
+void si_update_ps_iter_samples(struct si_context *sctx)
+{
+	if (sctx->framebuffer.nr_samples > 1)
+		si_mark_atom_dirty(sctx, &sctx->msaa_config);
+	if (sctx->screen->dpbb_allowed)
+		si_mark_atom_dirty(sctx, &sctx->dpbb_state);
+}
+
 static void si_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
@@ -3419,10 +3429,7 @@ static void si_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
 	sctx->ps_iter_samples = min_samples;
 	sctx->do_update_shaders = true;
 
-	if (sctx->framebuffer.nr_samples > 1)
-		si_mark_atom_dirty(sctx, &sctx->msaa_config);
-	if (sctx->screen->dpbb_allowed)
-		si_mark_atom_dirty(sctx, &sctx->dpbb_state);
+	si_update_ps_iter_samples(sctx);
 }
 
 /*
