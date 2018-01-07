@@ -57,6 +57,7 @@ static const struct nir_shader_compiler_options scalar_nir_options = {
    .lower_unpack_snorm_4x8 = true,
    .lower_unpack_unorm_2x16 = true,
    .lower_unpack_unorm_4x8 = true,
+   .vs_inputs_dual_locations = true,
    .max_unroll_iterations = 32,
 };
 
@@ -78,6 +79,7 @@ static const struct nir_shader_compiler_options vector_nir_options = {
    .lower_unpack_unorm_2x16 = true,
    .lower_extract_byte = true,
    .lower_extract_word = true,
+   .vs_inputs_dual_locations = true,
    .max_unroll_iterations = 32,
 };
 
@@ -96,6 +98,7 @@ static const struct nir_shader_compiler_options vector_nir_options_gen6 = {
    .lower_unpack_unorm_2x16 = true,
    .lower_extract_byte = true,
    .lower_extract_word = true,
+   .vs_inputs_dual_locations = true,
    .max_unroll_iterations = 32,
 };
 

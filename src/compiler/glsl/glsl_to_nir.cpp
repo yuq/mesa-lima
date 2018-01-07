@@ -130,11 +130,15 @@ private:
 } /* end of anonymous namespace */
 
 static void
-nir_remap_attributes(nir_shader *shader)
+nir_remap_attributes(nir_shader *shader,
+                     const nir_shader_compiler_options *options)
 {
-   nir_foreach_variable(var, &shader->inputs) {
-      var->data.location += _mesa_bitcount_64(shader->info.vs.double_inputs &
-                                              BITFIELD64_MASK(var->data.location));
+   if (options->vs_inputs_dual_locations) {
+      nir_foreach_variable(var, &shader->inputs) {
+         var->data.location +=
+            _mesa_bitcount_64(shader->info.vs.double_inputs &
+                              BITFIELD64_MASK(var->data.location));
+      }
    }
 
    /* Once the remap is done, reset double_inputs_read, so later it will have
@@ -164,7 +168,7 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
     * location 0 and vec4 attr1 in location 1, in NIR attr0 will use
     * locations/slots 0 and 1, and attr1 will use location/slot 2 */
    if (shader->info.stage == MESA_SHADER_VERTEX)
-      nir_remap_attributes(shader);
+      nir_remap_attributes(shader, options);
 
    shader->info.name = ralloc_asprintf(shader, "GLSL%d", shader_prog->Name);
    if (shader_prog->Label)
