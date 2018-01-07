@@ -36,7 +36,7 @@
 static void
 gen10_emit_wa_cs_stall_flush(struct brw_context *brw)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   UNUSED const struct gen_device_info *devinfo = &brw->screen->devinfo;
    assert(devinfo->gen == 10);
    brw_emit_pipe_control_flush(brw,
                                PIPE_CONTROL_CS_STALL |
@@ -54,7 +54,7 @@ gen10_emit_wa_cs_stall_flush(struct brw_context *brw)
 static void
 gen10_emit_wa_lri_to_cache_mode_zero(struct brw_context *brw)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   UNUSED const struct gen_device_info *devinfo = &brw->screen->devinfo;
    assert(devinfo->gen == 10);
 
    /* Write to CACHE_MODE_0 (0x7000) */
