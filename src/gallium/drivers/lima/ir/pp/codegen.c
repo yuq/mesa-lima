@@ -37,10 +37,12 @@ static void ppir_codegen_encode_varying(ppir_node *node, void *code)
 
    ppir_dest *dest = &load->dest;
    int index = ppir_target_get_dest_reg_index(dest);
+
    f->imm.dest = index >> 2;
    f->imm.mask = dest->write_mask << (index & 0x3);
 
-   if (node->op == ppir_op_load_varying) {
+   if (node->op == ppir_op_load_varying ||
+       node->op == ppir_op_load_coords) {
       int num_components = load->num_components;
       int alignment = num_components == 3 ? 3 : num_components - 1;
 
@@ -59,7 +61,14 @@ static void ppir_codegen_encode_varying(ppir_node *node, void *code)
 
 static void ppir_codegen_encode_texld(ppir_node *node, void *code)
 {
-   
+   ppir_codegen_field_sampler *f = code;
+   ppir_load_texture_node *ldtex = ppir_node_to_load_texture(node);
+
+   f->index = ldtex->sampler;
+   f->lod_bias_en = 0;
+   f->type = ppir_codegen_sampler_type_2d;
+   f->offset_en = 0;
+   f->unknown_2 = 0x39001;
 }
 
 static void ppir_codegen_encode_uniform(ppir_node *node, void *code)
@@ -423,6 +432,9 @@ static int encode_instr(ppir_instr *instr, void *code, void *last_code)
          ctrl->fields |= 1 << i;
       }
    }
+
+   if (instr->slots[PPIR_INSTR_SLOT_TEXLD])
+      ctrl->sync = true;
 
    for (int i = 0; i < 2; i++) {
       if (instr->constant[i].num) {

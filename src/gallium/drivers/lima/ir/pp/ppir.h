@@ -94,6 +94,7 @@ typedef enum {
 
    ppir_op_load_uniform,
    ppir_op_load_varying,
+   ppir_op_load_coords,
    ppir_op_load_texture,
 
    ppir_op_store_temp,
@@ -109,6 +110,7 @@ typedef enum {
    ppir_node_type_const,
    ppir_node_type_load,
    ppir_node_type_store,
+   ppir_node_type_load_texture,
 } ppir_node_type;
 
 typedef struct {
@@ -235,6 +237,14 @@ typedef struct {
    ppir_src src;
 } ppir_store_node;
 
+typedef struct {
+   ppir_node node;
+   ppir_dest dest;
+   ppir_src src_coords;
+   int sampler;
+   int sampler_dim;
+} ppir_load_texture_node;
+
 enum ppir_instr_slot {
    PPIR_INSTR_SLOT_VARYING,
    PPIR_INSTR_SLOT_TEXLD,
@@ -332,6 +342,16 @@ static inline ppir_node *ppir_node_first_succ(ppir_node *node)
    return list_first_entry(&node->succ_list, ppir_dep, succ_link)->succ;
 }
 
+static inline bool ppir_node_has_single_pred(ppir_node *node)
+{
+   return list_is_singular(&node->pred_list);
+}
+
+static inline ppir_node *ppir_node_first_pred(ppir_node *node)
+{
+   return list_first_entry(&node->pred_list, ppir_dep, pred_link)->pred;
+}
+
 #define ppir_node_foreach_succ(node, dep) \
    list_for_each_entry(ppir_dep, dep, &node->succ_list, succ_link)
 #define ppir_node_foreach_succ_safe(node, dep) \
@@ -345,6 +365,7 @@ static inline ppir_node *ppir_node_first_succ(ppir_node *node)
 #define ppir_node_to_const(node) ((ppir_const_node *)(node))
 #define ppir_node_to_load(node) ((ppir_load_node *)(node))
 #define ppir_node_to_store(node) ((ppir_store_node *)(node))
+#define ppir_node_to_load_texture(node) ((ppir_load_texture_node *)(node))
 
 static inline ppir_dest *ppir_node_get_dest(ppir_node *node)
 {
@@ -355,6 +376,8 @@ static inline ppir_dest *ppir_node_get_dest(ppir_node *node)
       return &ppir_node_to_load(node)->dest;
    case ppir_node_type_const:
       return &ppir_node_to_const(node)->dest;
+   case ppir_node_type_load_texture:
+      return &ppir_node_to_load_texture(node)->dest;
    default:
       return NULL;
    }
@@ -409,6 +432,8 @@ static inline int ppir_target_get_dest_reg_index(ppir_dest *dest)
    case ppir_target_register:
       return dest->reg->index;
    case ppir_target_pipeline:
+      if (dest->pipeline == ppir_pipeline_reg_discard)
+         return 15 * 4;
       return (dest->pipeline + 12) * 4;
    }
 
