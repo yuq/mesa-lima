@@ -37,6 +37,53 @@ static bool create_new_instr(ppir_block *block, ppir_node *node)
    return true;
 }
 
+static bool insert_to_load_tex(ppir_block *block, ppir_node *load_coords, ppir_node *ldtex)
+{
+   ppir_dest *dest = ppir_node_get_dest(ldtex);
+   ppir_node *move = NULL;
+
+   ppir_load_node *load = ppir_node_to_load(load_coords);
+   load->dest.type = ppir_target_pipeline;
+   load->dest.pipeline = ppir_pipeline_reg_discard;
+
+   ppir_load_texture_node *load_texture = ppir_node_to_load_texture(ldtex);
+   load_texture->src_coords.type = ppir_target_pipeline;
+   load_texture->src_coords.pipeline = ppir_pipeline_reg_discard;
+
+   /* Insert load_coords to ldtex instruction */
+   if (!ppir_instr_insert_node(ldtex->instr, load_coords))
+      return false;
+
+   /* Create move node */
+   move = ppir_node_create(block, ppir_op_mov, -1 , 0);
+   if (unlikely(!move))
+      return false;
+
+   ppir_debug("insert_load_tex: create move %d for %d\n",
+              move->index, ldtex->index);
+
+   ppir_alu_node *alu = ppir_node_to_alu(move);
+   alu->dest = *dest;
+
+   ppir_node_replace_succ(move, ldtex);
+
+   dest->type = ppir_target_pipeline;
+   dest->pipeline = ppir_pipeline_reg_sampler;
+
+   alu->num_src = 1;
+   ppir_node_target_assign(&alu->src[0], dest);
+   for (int i = 0; i < 4; i++)
+      alu->src->swizzle[i] = i;
+
+   ppir_node_add_dep(move, ldtex);
+   list_addtail(&move->list, &ldtex->list);
+
+   if (!ppir_instr_insert_node(ldtex->instr, move))
+      return false;
+
+   return true;
+}
+
 static bool insert_to_each_succ_instr(ppir_block *block, ppir_node *node)
 {
    ppir_dest *dest = ppir_node_get_dest(node);
@@ -181,10 +228,19 @@ static bool ppir_do_node_to_instr(ppir_block *block, ppir_node *node)
          if (!create_new_instr(block, node))
             return false;
       }
+      else if (node->op == ppir_op_load_coords) {
+         ppir_node *ldtex = ppir_node_first_succ(node);
+         if (!insert_to_load_tex(block, node, ldtex))
+            return false;
+      }
       else {
          /* not supported yet */
          return false;
       }
+      break;
+   case ppir_node_type_load_texture:
+      if (!create_new_instr(block, node))
+         return false;
       break;
    case ppir_node_type_const:
       if (!insert_to_each_succ_instr(block, node))
