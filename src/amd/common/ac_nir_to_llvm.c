@@ -3831,19 +3831,18 @@ static void emit_membar(struct nir_to_llvm_context *ctx,
 		ac_build_waitcnt(&ctx->ac, waitcnt);
 }
 
-static void emit_barrier(struct nir_to_llvm_context *ctx)
+static void emit_barrier(struct ac_llvm_context *ac, gl_shader_stage stage)
 {
 	/* SI only (thanks to a hw bug workaround):
 	 * The real barrier instruction isn’t needed, because an entire patch
 	 * always fits into a single wave.
 	 */
-	if (ctx->options->chip_class == SI &&
-	    ctx->stage == MESA_SHADER_TESS_CTRL) {
-		ac_build_waitcnt(&ctx->ac, LGKM_CNT & VM_CNT);
+	if (ac->chip_class == SI && stage == MESA_SHADER_TESS_CTRL) {
+		ac_build_waitcnt(ac, LGKM_CNT & VM_CNT);
 		return;
 	}
-	ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.s.barrier",
-			   ctx->ac.voidt, NULL, 0, AC_FUNC_ATTR_CONVERGENT);
+	ac_build_intrinsic(ac, "llvm.amdgcn.s.barrier",
+			   ac->voidt, NULL, 0, AC_FUNC_ATTR_CONVERGENT);
 }
 
 static void emit_discard_if(struct ac_nir_context *ctx,
@@ -4336,7 +4335,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		emit_membar(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_barrier:
-		emit_barrier(ctx->nctx);
+		emit_barrier(&ctx->ac, ctx->stage);
 		break;
 	case nir_intrinsic_var_atomic_add:
 	case nir_intrinsic_var_atomic_imin:
@@ -6179,7 +6178,7 @@ write_tess_factors(struct nir_to_llvm_context *ctx)
 	LLVMValueRef lds_base, lds_inner, lds_outer, byteoffset, buffer;
 	LLVMValueRef out[6], vec0, vec1, tf_base, inner[4], outer[4];
 	int i;
-	emit_barrier(ctx);
+	emit_barrier(&ctx->ac, ctx->stage);
 
 	switch (ctx->options->key.tcs.primitive_mode) {
 	case GL_ISOLINES:
@@ -6728,7 +6727,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		}
 
 		if (i)
-			emit_barrier(&ctx);
+			emit_barrier(&ctx.ac, ctx.stage);
 
 		ac_setup_rings(&ctx);
 
