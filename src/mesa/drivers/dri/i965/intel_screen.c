@@ -92,6 +92,7 @@ DRI_CONF_BEGIN
 
    DRI_CONF_SECTION_MISCELLANEOUS
       DRI_CONF_GLSL_ZERO_INIT("false")
+      DRI_CONF_ALLOW_RGB10_CONFIGS("false")
    DRI_CONF_SECTION_END
 DRI_CONF_END
 };
@@ -2064,7 +2065,7 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
       num_formats = ARRAY_SIZE(formats) - 2; /* all - RGBA_ORDERING formats */
 
    /* Shall we expose 10 bpc formats? */
-   bool allow_rgb10_configs = driQueryOptionb(&dri_screen->optionCache,
+   bool allow_rgb10_configs = driQueryOptionb(&screen->optionCache,
                                               "allow_rgb10_configs");
 
    /* Generate singlesample configs without accumulation buffer. */
