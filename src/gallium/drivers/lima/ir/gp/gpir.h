@@ -96,8 +96,8 @@ typedef enum {
    gpir_op_branch_uncond,
 
    /* auxiliary ops */
-   gpir_op_complex1_f,
-   gpir_op_complex1_m,
+   gpir_op_dummy_f,
+   gpir_op_dummy_m,
 
    gpir_op_num,
 } gpir_op;
@@ -117,6 +117,7 @@ typedef struct {
    int *slots;
    gpir_node_type type;
    bool spillless;
+   bool may_consume_two_slots;
 } gpir_op_info;
 
 extern const gpir_op_info gpir_op_infos[];
@@ -336,7 +337,6 @@ typedef struct gpir_compiler {
 void *gpir_node_create(gpir_block *block, gpir_op op);
 gpir_dep *gpir_node_add_dep(gpir_node *succ, gpir_node *pred, int type);
 void gpir_node_remove_dep(gpir_node *succ, gpir_node *pred);
-void gpir_node_merge_dep(gpir_node *from, gpir_node *to);
 void gpir_node_replace_succ(gpir_node *dst, gpir_node *src);
 void gpir_node_replace_pred(gpir_dep *dep, gpir_node *new_pred);
 void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child, gpir_node *new_child);

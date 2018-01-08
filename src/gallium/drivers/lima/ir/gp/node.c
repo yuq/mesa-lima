@@ -50,6 +50,7 @@ const gpir_op_info gpir_op_infos[] = {
       .name = "complex1",
       .slots = (int []) { GPIR_INSTR_SLOT_MUL0, GPIR_INSTR_SLOT_END },
       .spillless = true,
+      .may_consume_two_slots = true,
    },
    [gpir_op_complex2] = {
       .name = "complex2",
@@ -81,11 +82,15 @@ const gpir_op_info gpir_op_infos[] = {
       .name = "min",
       .src_neg = {true, true, false, false},
       .slots = (int []) { GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_ADD1, GPIR_INSTR_SLOT_END },
+      .spillless = true,
+      .may_consume_two_slots = true,
    },
    [gpir_op_max] = {
       .name = "max",
       .src_neg = {true, true, false, false},
       .slots = (int []) { GPIR_INSTR_SLOT_ADD0, GPIR_INSTR_SLOT_ADD1, GPIR_INSTR_SLOT_END },
+      .spillless = true,
+      .may_consume_two_slots = true,
    },
    [gpir_op_abs] = {
       .name = "abs",
@@ -232,13 +237,13 @@ const gpir_op_info gpir_op_infos[] = {
    [gpir_op_tan] = {
       .name = "tan",
    },
-   [gpir_op_complex1_f] = {
-      .name = "complex1_f",
+   [gpir_op_dummy_f] = {
+      .name = "dummy_f",
       .type = gpir_node_type_alu,
       .spillless = true,
    },
-   [gpir_op_complex1_m] = {
-      .name = "complex1_m",
+   [gpir_op_dummy_m] = {
+      .name = "dummy_m",
       .type = gpir_node_type_alu,
    },
    [gpir_op_branch_uncond] = {
@@ -315,19 +320,6 @@ void gpir_node_remove_dep(gpir_node *succ, gpir_node *pred)
          return;
       }
    }
-}
-
-void gpir_node_merge_dep(gpir_node *from, gpir_node *to)
-{
-   gpir_node_foreach_succ(from, dep) {
-      gpir_node_add_dep(dep->succ, to, dep->type);
-   }
-
-   gpir_node_foreach_pred(from, dep) {
-      gpir_node_add_dep(to, dep->pred, dep->type);
-   }
-
-   gpir_node_delete(from);
 }
 
 void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child,

@@ -469,7 +469,7 @@ static gpir_node *gpir_sched_instr_pass(gpir_instr *instr,
          int min = gpir_get_min_scheduled_succ(node);
          assert(min >= instr->index - 1);
          if (min == instr->index - 1)
-            count += node->op == gpir_op_complex1 ? 2 : 1;
+            count += gpir_op_infos[node->op].may_consume_two_slots ? 2 : 1;
       }
    }
 
@@ -630,21 +630,23 @@ static void schedule_build_vreg_dependency(gpir_block *block)
       regs[node->value_reg] = node;
    }
 
-   /* merge complex1_f/m to complex1 */
-   list_for_each_entry(gpir_node, node, &block->node_list, list) {
-      if (node->op == gpir_op_complex1_m) {
+   /* merge dummy_f/m to the node created from */
+   list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
+      if (node->op == gpir_op_dummy_m) {
          gpir_alu_node *alu = gpir_node_to_alu(node);
-         gpir_alu_node *complex1 = gpir_node_to_alu(alu->children[0]);
-         gpir_alu_node *complex1_f = gpir_node_to_alu(alu->children[1]);
+         gpir_node *origin = alu->children[0];
+         gpir_node *dummy_f = alu->children[1];
 
-         node->op = gpir_op_complex1;
-         alu->children[0] = complex1->children[0];
-         alu->children[1] = complex1->children[1];
-         alu->children[2] = complex1->children[2];
-         alu->num_child = 3;
-
-         gpir_node_merge_dep(&complex1->node, node);
-         gpir_node_merge_dep(&complex1_f->node, node);
+         gpir_node_foreach_succ(node, dep) {
+            gpir_node *succ = dep->succ;
+            /* origin and node may have same succ (by VREG/INPUT or
+             * VREG/VREG dep), so use gpir_node_add_dep() instead of
+             * gpir_node_replace_pred() */
+            gpir_node_add_dep(succ, origin, dep->type);
+            gpir_node_replace_child(succ, node, origin);
+         }
+         gpir_node_delete(dummy_f);
+         gpir_node_delete(node);
       }
    }
 }

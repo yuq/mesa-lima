@@ -207,53 +207,64 @@ static bool gpir_lower_complex(gpir_block *block, gpir_node *node)
    gpir_node_add_dep(&impl->node, child, GPIR_DEP_INPUT);
    list_addtail(&impl->node.list, &node->list);
 
-   /* complex1 node */
-   gpir_alu_node *complex1 = gpir_node_create(block, gpir_op_complex1);
-   if (unlikely(!complex1))
-      return false;
+   /* change node to complex1 node */
+   node->op = gpir_op_complex1;
+   alu->children[0] = &impl->node;
+   alu->children[1] = &complex2->node;
+   alu->children[2] = child;
+   alu->num_child = 3;
+   gpir_node_add_dep(node, &impl->node, GPIR_DEP_INPUT);
+   gpir_node_add_dep(node, &complex2->node, GPIR_DEP_INPUT);
 
-   complex1->children[0] = &impl->node;
-   complex1->children[1] = &complex2->node;
-   complex1->children[2] = child;
-   complex1->num_child = 3;
-   gpir_node_add_dep(&complex1->node, &impl->node, GPIR_DEP_INPUT);
-   gpir_node_add_dep(&complex1->node, &complex2->node, GPIR_DEP_INPUT);
-   gpir_node_add_dep(&complex1->node, child, GPIR_DEP_INPUT);
-   list_addtail(&complex1->node.list, &node->list);
+   return true;
+}
 
-   /* complex1_f/m are auxiliary nodes for value reg alloc:
-    * 1. before reg alloc, create fake nodes complex1_f1, complex1_m1,
-    *    so the tree become:
-    *    (complex1_m (complex1_f (complex1 (complex2 complex_impl))))
-    *    complex1_m1 can be spilled, but other nodes in the tree can't
-    *    be spilled.
-    * 2. After reg allocation and fake dep add, merge all deps of
-    *    complex1_m and complex1_f to complex1 and remove complex1_m
-    *    and complex_f
-    *
-    * We may also not use complex1_f/m, but alloc two value reg for
-    * complex1. But that means we need to make sure there're 2 free
-    * slot after the complex1 successors, but we just need one slot
-    * after to be able to schedule it because we can use one move for
-    * the two complex1. It's also not easy to handle the spill case
-    * for the alloc 2 value method.
-    *
-    * With the complex1_f/m method, there's no such requirement, the
-    * complex1 can be scheduled only when there's two slot for it,
-    * otherwise a move. And the complex1 can be spilled with one reg.
-    */
-   gpir_alu_node *complex1_f = gpir_node_create(block, gpir_op_complex1_f);
-   if (unlikely(!complex1_f))
-      return false;
-   list_addtail(&complex1_f->node.list, &node->list);
+static bool gpir_lower_node_may_consume_two_slots(gpir_compiler *comp)
+{
+   list_for_each_entry(gpir_block, block, &comp->block_list, list) {
+      list_for_each_entry_safe(gpir_node, node, &block->node_list, list) {
+         if (gpir_op_infos[node->op].may_consume_two_slots) {
+            /* dummy_f/m are auxiliary nodes for value reg alloc:
+             * 1. before reg alloc, create fake nodes dummy_f, dummy_m,
+             *    so the tree become: (dummy_m (node dummy_f))
+             *    dummy_m can be spilled, but other nodes in the tree can't
+             *    be spilled.
+             * 2. After reg allocation and fake dep add, merge all deps of
+             *    dummy_m and dummy_f to node and remove dummy_m & dummy_f
+             *
+             * We may also not use dummy_f/m, but alloc two value reg for
+             * node. But that means we need to make sure there're 2 free
+             * slot after the node successors, but we just need one slot
+             * after to be able to schedule it because we can use one move for
+             * the two slot node. It's also not easy to handle the spill case
+             * for the alloc 2 value method.
+             *
+             * With the dummy_f/m method, there's no such requirement, the
+             * node can be scheduled only when there's two slots for it,
+             * otherwise a move. And the node can be spilled with one reg.
+             */
+            gpir_node *dummy_m = gpir_node_create(block, gpir_op_dummy_m);
+            if (unlikely(!dummy_m))
+               return false;
+            list_add(&dummy_m->list, &node->list);
 
-   node->op = gpir_op_complex1_m;
-   alu->children[0] = &complex1->node;
-   alu->children[1] = &complex1_f->node;
-   alu->num_child = 2;
-   gpir_node_remove_dep(node, child);
-   gpir_node_add_dep(node, &complex1->node, GPIR_DEP_INPUT);
-   gpir_node_add_dep(node, &complex1_f->node, GPIR_DEP_INPUT);
+            gpir_node *dummy_f = gpir_node_create(block, gpir_op_dummy_f);
+            if (unlikely(!dummy_f))
+               return false;
+            list_add(&dummy_f->list, &node->list);
+
+            gpir_alu_node *alu = gpir_node_to_alu(dummy_m);
+            alu->children[0] = node;
+            alu->children[1] = dummy_f;
+            alu->num_child = 2;
+
+            gpir_node_replace_succ(dummy_m, node);
+            gpir_node_add_dep(dummy_m, node, GPIR_DEP_INPUT);
+            gpir_node_add_dep(dummy_m, dummy_f, GPIR_DEP_INPUT);
+
+         }
+      }
+   }
 
    return true;
 }
@@ -286,6 +297,9 @@ bool gpir_post_rsched_lower_prog(gpir_compiler *comp)
             return false;
       }
    }
+
+   if (!gpir_lower_node_may_consume_two_slots(comp))
+      return false;
 
    gpir_debug("post rsched lower prog\n");
    gpir_node_print_prog_seq(comp);

@@ -41,14 +41,20 @@ gpir_instr *gpir_instr_create(gpir_block *block)
    return instr;
 }
 
+static gpir_node *gpir_instr_get_the_other_acc_node(gpir_instr *instr, int slot)
+{
+   if (slot == GPIR_INSTR_SLOT_ADD0)
+      return instr->slots[GPIR_INSTR_SLOT_ADD1];
+   else if (slot == GPIR_INSTR_SLOT_ADD1)
+      return instr->slots[GPIR_INSTR_SLOT_ADD0];
+
+   return NULL;
+}
+
 static bool gpir_instr_check_acc_same_op(gpir_instr *instr, gpir_node *node, int slot)
 {
    /* two ACC slots must share the same op code */
-   gpir_node *acc_node = NULL;
-   if (slot == GPIR_INSTR_SLOT_ADD0)
-      acc_node = instr->slots[GPIR_INSTR_SLOT_ADD1];
-   else if (slot == GPIR_INSTR_SLOT_ADD1)
-      acc_node = instr->slots[GPIR_INSTR_SLOT_ADD0];
+   gpir_node *acc_node = gpir_instr_get_the_other_acc_node(instr, slot);
 
    /* spill move case may get acc_node == node */
    if (acc_node && acc_node != node &&
@@ -58,10 +64,27 @@ static bool gpir_instr_check_acc_same_op(gpir_instr *instr, gpir_node *node, int
    return true;
 }
 
+static int gpir_instr_get_consume_slot(gpir_instr *instr, gpir_node *node)
+{
+   if (gpir_op_infos[node->op].may_consume_two_slots) {
+      gpir_node *acc_node = gpir_instr_get_the_other_acc_node(instr, node->sched.pos);
+      if (acc_node)
+         /* at this point node must have the same acc op with acc_node,
+          * so it just consumes the extra slot acc_node consumed */
+         return 0;
+      else
+         return 2;
+   }
+   else
+      return 1;
+}
+
 static bool gpir_instr_insert_alu_check(gpir_instr *instr, gpir_node *node)
 {
    if (!gpir_instr_check_acc_same_op(instr, node, node->sched.pos))
       return false;
+
+   int consume_slot = gpir_instr_get_consume_slot(instr, node);
 
    /* check if this node is child of one store node.
     * complex1 won't be any of this instr's store node's child,
@@ -70,13 +93,18 @@ static bool gpir_instr_insert_alu_check(gpir_instr *instr, gpir_node *node)
    for (int i = GPIR_INSTR_SLOT_STORE0; i < GPIR_INSTR_SLOT_STORE3; i++) {
       gpir_store_node *s = gpir_node_to_store(instr->slots[i]);
       if (s && s->child == node) {
+         /* acc node may consume 2 slots, so even it's the child of a
+          * store node, it may not be inserted successfully, in which
+          * case we need a move node for it */
+         if (instr->alu_num_slot_free - consume_slot <
+             instr->alu_num_slot_needed_by_store - 1)
+            return false;
+
          instr->alu_num_slot_needed_by_store--;
-         instr->alu_num_slot_free--;
+         instr->alu_num_slot_free -= consume_slot;
          return true;
       }
    }
-
-   int consume_slot = node->op == gpir_op_complex1 ? 2 : 1;
 
    /* not a child of any store node, so must reserve alu slot for store node */
    if (instr->alu_num_slot_free - consume_slot <
@@ -89,17 +117,18 @@ static bool gpir_instr_insert_alu_check(gpir_instr *instr, gpir_node *node)
 
 static void gpir_instr_remove_alu(gpir_instr *instr, gpir_node *node)
 {
+   int consume_slot = gpir_instr_get_consume_slot(instr, node);
+
    for (int i = GPIR_INSTR_SLOT_STORE0; i < GPIR_INSTR_SLOT_STORE3; i++) {
       gpir_store_node *s = gpir_node_to_store(instr->slots[i]);
       if (s && s->child == node) {
          instr->alu_num_slot_needed_by_store++;
-         instr->alu_num_slot_free++;
+         instr->alu_num_slot_free += consume_slot;
          return;
       }
    }
 
-   int resume_slot = node->op == gpir_op_complex1 ? 2 : 1;
-   instr->alu_num_slot_free += resume_slot;
+   instr->alu_num_slot_free += consume_slot;
 }
 
 static bool gpir_instr_insert_reg0_check(gpir_instr *instr, gpir_node *node)
