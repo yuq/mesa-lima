@@ -600,7 +600,9 @@ static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
 	if (ctx->shader_info->info.loads_push_constants)
 		user_sgpr_info->sgpr_count += 2;
 
-	uint32_t remaining_sgprs = 16 - user_sgpr_info->sgpr_count;
+	uint32_t available_sgprs = ctx->options->chip_class >= GFX9 ? 32 : 16;
+	uint32_t remaining_sgprs = available_sgprs - user_sgpr_info->sgpr_count;
+
 	if (remaining_sgprs / 2 < util_bitcount(ctx->shader_info->info.desc_set_used_mask)) {
 		user_sgpr_info->sgpr_count += 2;
 		user_sgpr_info->indirect_all_descriptor_sets = true;
