@@ -1097,12 +1097,29 @@ qpu_instruction_valid_in_thrend_slot(struct v3d_compile *c,
 }
 
 static bool
-valid_thrend_sequence(struct v3d_compile *c,
-                      struct qinst *qinst, int instructions_in_sequence)
+valid_thrsw_sequence(struct v3d_compile *c,
+                     struct qinst *qinst, int instructions_in_sequence,
+                     bool is_thrend)
 {
         for (int slot = 0; slot < instructions_in_sequence; slot++) {
-                if (!qpu_instruction_valid_in_thrend_slot(c, qinst, slot))
+                /* No scheduling SFU when the result would land in the other
+                 * thread.  The simulator complains for safety, though it
+                 * would only occur for dead code in our case.
+                 */
+                if (slot > 0 &&
+                    qinst->qpu.type == V3D_QPU_INSTR_TYPE_ALU &&
+                    (v3d_qpu_magic_waddr_is_sfu(qinst->qpu.alu.add.waddr) ||
+                     v3d_qpu_magic_waddr_is_sfu(qinst->qpu.alu.mul.waddr))) {
                         return false;
+                }
+
+                if (slot > 0 && qinst->qpu.sig.ldvary)
+                        return false;
+
+                if (is_thrend &&
+                    !qpu_instruction_valid_in_thrend_slot(c, qinst, slot)) {
+                        return false;
+                }
 
                 /* Note that the list is circular, so we can only do this up
                  * to instructions_in_sequence.
@@ -1121,7 +1138,8 @@ static int
 emit_thrsw(struct v3d_compile *c,
            struct qblock *block,
            struct choose_scoreboard *scoreboard,
-           struct qinst *inst)
+           struct qinst *inst,
+           bool is_thrend)
 {
         int time = 0;
 
@@ -1143,20 +1161,25 @@ emit_thrsw(struct v3d_compile *c,
                 if (!v3d_qpu_sig_pack(c->devinfo, &sig, &packed_sig))
                         break;
 
-                if (!valid_thrend_sequence(c, prev_inst, slots_filled + 1))
+                if (!valid_thrsw_sequence(c, prev_inst, slots_filled + 1,
+                                          is_thrend)) {
                         break;
+                }
 
                 merge_inst = prev_inst;
                 if (++slots_filled == 3)
                         break;
         }
 
+        bool needs_free = false;
         if (merge_inst) {
                 merge_inst->qpu.sig.thrsw = true;
+                needs_free = true;
         } else {
                 insert_scheduled_instruction(c, block, scoreboard, inst);
                 time++;
                 slots_filled++;
+                merge_inst = inst;
         }
 
         /* Insert any extra delay slot NOPs we need. */
@@ -1165,10 +1188,19 @@ emit_thrsw(struct v3d_compile *c,
                 time++;
         }
 
+        /* If we're emitting the last THRSW (other than program end), then
+         * signal that to the HW by emitting two THRSWs in a row.
+         */
+        if (inst->is_last_thrsw) {
+                struct qinst *second_inst =
+                        (struct qinst *)merge_inst->link.next;
+                second_inst->qpu.sig.thrsw = true;
+        }
+
         /* If we put our THRSW into another instruction, free up the
          * instruction that didn't end up scheduled into the list.
          */
-        if (merge_inst)
+        if (needs_free)
                 free(inst);
 
         return time;
@@ -1293,40 +1325,24 @@ schedule_instructions(struct v3d_compile *c,
                         free(merge->inst);
                 }
 
-                if (0 && inst->sig.thrsw) {
-                        /* XXX emit_thrsw(c, scoreboard, qinst); */
+                if (inst->sig.thrsw) {
+                        time += emit_thrsw(c, block, scoreboard, qinst, false);
                 } else {
-                        c->qpu_inst_count++;
-                        list_addtail(&qinst->link, &block->instructions);
-                        update_scoreboard_for_chosen(scoreboard, inst);
-                }
+                        insert_scheduled_instruction(c, block,
+                                                     scoreboard, qinst);
 
-                scoreboard->tick++;
-                time++;
-
-                if (inst->type == V3D_QPU_INSTR_TYPE_BRANCH ||
-                    inst->sig.thrsw /* XXX */) {
-                        block->branch_qpu_ip = c->qpu_inst_count - 1;
-                        /* Fill the delay slots.
-                         *
-                         * We should fill these with actual instructions,
-                         * instead, but that will probably need to be done
-                         * after this, once we know what the leading
-                         * instructions of the successors are (so we can
-                         * handle A/B register file write latency)
-                        */
-                        /* XXX: scoreboard */
-                        int slots = (inst->type == V3D_QPU_INSTR_TYPE_BRANCH ?
-                                     3 : 2);
-                        for (int i = 0; i < slots; i++) {
-                                struct qinst *nop = vir_nop();
-                                list_addtail(&nop->link, &block->instructions);
-
-                                update_scoreboard_for_chosen(scoreboard,
-                                                             &nop->qpu);
-                                c->qpu_inst_count++;
-                                scoreboard->tick++;
-                                time++;
+                        if (inst->type == V3D_QPU_INSTR_TYPE_BRANCH) {
+                                block->branch_qpu_ip = c->qpu_inst_count - 1;
+                                /* Fill the delay slots.
+                                 *
+                                 * We should fill these with actual instructions,
+                                 * instead, but that will probably need to be done
+                                 * after this, once we know what the leading
+                                 * instructions of the successors are (so we can
+                                 * handle A/B register file write latency)
+                                 */
+                                for (int i = 0; i < 3; i++)
+                                        emit_nop(c, block, scoreboard);
                         }
                 }
         }
@@ -1488,7 +1504,7 @@ v3d_qpu_schedule_instructions(struct v3d_compile *c)
         /* Emit the program-end THRSW instruction. */;
         struct qinst *thrsw = vir_nop();
         thrsw->qpu.sig.thrsw = true;
-        emit_thrsw(c, end_block, &scoreboard, thrsw);
+        emit_thrsw(c, end_block, &scoreboard, thrsw, true);
 
         qpu_set_branch_targets(c);
 

@@ -319,10 +319,8 @@ v3d_dump_qpu(struct v3d_compile *c)
 }
 
 void
-v3d_vir_to_qpu(struct v3d_compile *c)
+v3d_vir_to_qpu(struct v3d_compile *c, struct qpu_reg *temp_registers)
 {
-        struct qpu_reg *temp_registers = v3d_register_allocate(c);
-
         /* Reset the uniform count to how many will be actually loaded by the
          * generated QPU code.
          */

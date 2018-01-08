@@ -65,6 +65,23 @@ resize_qreg_array(struct v3d_compile *c,
                 (*regs)[i] = c->undef;
 }
 
+static void
+vir_emit_thrsw(struct v3d_compile *c)
+{
+        if (c->threads == 1)
+                return;
+
+        /* Always thread switch after each texture operation for now.
+         *
+         * We could do better by batching a bunch of texture fetches up and
+         * then doing one thread switch and collecting all their results
+         * afterward.
+         */
+        c->last_thrsw = vir_NOP(c);
+        c->last_thrsw->qpu.sig.thrsw = true;
+        c->last_thrsw_at_top_level = (c->execute.file == QFILE_NULL);
+}
+
 static struct qreg
 vir_SFU(struct v3d_compile *c, int waddr, struct qreg src)
 {
@@ -118,6 +135,7 @@ indirect_uniform_load(struct v3d_compile *c, nir_intrinsic_instr *intr)
                      vir_uniform(c, QUNIFORM_UBO_ADDR, 0),
                      indirect_offset);
 
+        vir_emit_thrsw(c);
         return vir_LDTMU(c);
 }
 
@@ -487,6 +505,8 @@ ntq_emit_tex(struct v3d_compile *c, nir_tex_instr *instr)
                                 texture_u[next_texture_u++];
                 }
         }
+
+        vir_emit_thrsw(c);
 
         struct qreg return_values[4];
         for (int i = 0; i < 4; i++) {
@@ -1685,6 +1705,8 @@ ntq_emit_intrinsic(struct v3d_compile *c, nir_intrinsic_instr *instr)
                                              ntq_get_src(c, instr->src[1], 0),
                                              vir_uniform_ui(c, i * 4)));
 
+                        vir_emit_thrsw(c);
+
                         ntq_store_dest(c, &instr->dest, i, vir_LDTMU(c));
                 }
                 break;
@@ -2124,6 +2146,62 @@ count_nir_instrs(nir_shader *nir)
 }
 #endif
 
+/**
+ * When demoting a shader down to single-threaded, removes the THRSW
+ * instructions (one will still be inserted at v3d_vir_to_qpu() for the
+ * program end).
+ */
+static void
+vir_remove_thrsw(struct v3d_compile *c)
+{
+        vir_for_each_block(block, c) {
+                vir_for_each_inst_safe(inst, block) {
+                        if (inst->qpu.sig.thrsw)
+                                vir_remove_instruction(c, inst);
+                }
+        }
+
+        c->last_thrsw = NULL;
+}
+
+static void
+vir_emit_last_thrsw(struct v3d_compile *c)
+{
+        /* On V3D before 4.1, we need a TMU op to be outstanding when thread
+         * switching, so disable threads if we didn't do any TMU ops (each of
+         * which would have emitted a THRSW).
+         */
+        if (!c->last_thrsw_at_top_level && c->devinfo->ver < 41) {
+                c->threads = 1;
+                if (c->last_thrsw)
+                        vir_remove_thrsw(c);
+                return;
+        }
+
+        /* If we're threaded and the last THRSW was in conditional code, then
+         * we need to emit another one so that we can flag it as the last
+         * thrsw.
+         */
+        if (c->last_thrsw && !c->last_thrsw_at_top_level) {
+                assert(c->devinfo->ver >= 41);
+                vir_emit_thrsw(c);
+        }
+
+        /* If we're threaded, then we need to mark the last THRSW instruction
+         * so we can emit a pair of them at QPU emit time.
+         *
+         * For V3D 4.x, we can spawn the non-fragment shaders already in the
+         * post-last-THRSW state, so we can skip this.
+         */
+        if (!c->last_thrsw && c->s->info.stage == MESA_SHADER_FRAGMENT) {
+                assert(c->devinfo->ver >= 41);
+                vir_emit_thrsw(c);
+        }
+
+        if (c->last_thrsw)
+                c->last_thrsw->is_last_thrsw = true;
+}
+
 void
 v3d_nir_to_vir(struct v3d_compile *c)
 {
@@ -2136,6 +2214,9 @@ v3d_nir_to_vir(struct v3d_compile *c)
         }
 
         nir_to_vir(c);
+
+        /* Emit the last THRSW before STVPM and TLB writes. */
+        vir_emit_last_thrsw(c);
 
         switch (c->s->info.stage) {
         case MESA_SHADER_FRAGMENT:
@@ -2171,5 +2252,33 @@ v3d_nir_to_vir(struct v3d_compile *c)
                 fprintf(stderr, "\n");
         }
 
-        v3d_vir_to_qpu(c);
+        /* Compute the live ranges so we can figure out interference. */
+        vir_calculate_live_intervals(c);
+
+        /* Attempt to allocate registers for the temporaries.  If we fail,
+         * reduce thread count and try again.
+         */
+        int min_threads = (c->devinfo->ver >= 41) ? 2 : 1;
+        struct qpu_reg *temp_registers;
+        while (true) {
+                temp_registers = v3d_register_allocate(c);
+
+                if (temp_registers)
+                        break;
+
+                if (c->threads == min_threads) {
+                        fprintf(stderr, "Failed to register allocate at %d threads:\n",
+                                c->threads);
+                        vir_dump(c);
+                        c->failed = true;
+                        return;
+                }
+
+                c->threads /= 2;
+
+                if (c->threads == 1)
+                        vir_remove_thrsw(c);
+        }
+
+        v3d_vir_to_qpu(c, temp_registers);
 }

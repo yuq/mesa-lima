@@ -209,9 +209,32 @@ vc5_emit_gl_shader_state(struct vc5_context *vc5,
                 shader.fragment_shader_uniforms_address = fs_uniforms;
 
 #if V3D_VERSION >= 41
-                shader.coordinate_shader_start_in_final_thread_section = true;
-                shader.vertex_shader_start_in_final_thread_section = true;
-                shader.fragment_shader_start_in_final_thread_section = true;
+                shader.coordinate_shader_4_way_threadable =
+                        vc5->prog.cs->prog_data.vs->base.threads == 4;
+                shader.vertex_shader_4_way_threadable =
+                        vc5->prog.vs->prog_data.vs->base.threads == 4;
+                shader.fragment_shader_4_way_threadable =
+                        vc5->prog.fs->prog_data.fs->base.threads == 4;
+
+                shader.coordinate_shader_start_in_final_thread_section =
+                        vc5->prog.cs->prog_data.vs->base.single_seg;
+                shader.vertex_shader_start_in_final_thread_section =
+                        vc5->prog.vs->prog_data.vs->base.single_seg;
+                shader.fragment_shader_start_in_final_thread_section =
+                        vc5->prog.fs->prog_data.fs->base.single_seg;
+#else
+                shader.coordinate_shader_4_way_threadable =
+                        vc5->prog.cs->prog_data.vs->base.threads == 4;
+                shader.coordinate_shader_2_way_threadable =
+                        vc5->prog.cs->prog_data.vs->base.threads == 2;
+                shader.vertex_shader_4_way_threadable =
+                        vc5->prog.vs->prog_data.vs->base.threads == 4;
+                shader.vertex_shader_2_way_threadable =
+                        vc5->prog.vs->prog_data.vs->base.threads == 2;
+                shader.fragment_shader_4_way_threadable =
+                        vc5->prog.fs->prog_data.fs->base.threads == 4;
+                shader.fragment_shader_2_way_threadable =
+                        vc5->prog.fs->prog_data.fs->base.threads == 2;
 #endif
 
                 shader.vertex_id_read_by_coordinate_shader =

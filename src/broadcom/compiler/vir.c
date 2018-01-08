@@ -109,7 +109,7 @@ vir_has_side_effects(struct v3d_compile *c, struct qinst *inst)
                 }
         }
 
-        if (inst->qpu.sig.ldtmu)
+        if (inst->qpu.sig.ldtmu || inst->qpu.sig.thrsw)
                 return true;
 
         return false;
@@ -528,6 +528,7 @@ vir_compile_init(const struct v3d_compiler *compiler,
         c->key = key;
         c->program_id = program_id;
         c->variant_id = variant_id;
+        c->threads = 4;
 
         s = nir_shader_clone(c, s);
         c->s = s;
@@ -637,6 +638,9 @@ static void
 v3d_set_prog_data(struct v3d_compile *c,
                   struct v3d_prog_data *prog_data)
 {
+        prog_data->threads = c->threads;
+        prog_data->single_seg = !c->last_thrsw;
+
         v3d_set_prog_data_uniforms(c, prog_data);
         v3d_set_prog_data_ubo(c, prog_data);
 }

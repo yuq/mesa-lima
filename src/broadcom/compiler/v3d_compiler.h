@@ -134,6 +134,7 @@ struct qinst {
         struct qreg src[3];
         bool cond_is_exec_mask;
         bool has_implicit_uniform;
+        bool is_last_thrsw;
 
         /* After vir_to_qpu.c: If instr reads a uniform, which uniform from
          * the uncompiled stream it is.
@@ -522,12 +523,16 @@ struct v3d_compile {
         uint32_t program_id;
         uint32_t variant_id;
 
-        /* Set to compile program in threaded FS mode, where SIG_THREAD_SWITCH
-         * is used to hide texturing latency at the cost of limiting ourselves
-         * to the bottom half of physical reg space.
+        /* Set to compile program in in 1x, 2x, or 4x threaded mode, where
+         * SIG_THREAD_SWITCH is used to hide texturing latency at the cost of
+         * limiting ourselves to the part of the physical reg space.
+         *
+         * On V3D 3.x, 2x or 4x divide the physical reg space by 2x or 4x.  On
+         * V3D 4.x, all shaders are 2x threaded, and 4x only divides the
+         * physical reg space in half.
          */
-        bool fs_threaded;
-
+        uint8_t threads;
+        struct qinst *last_thrsw;
         bool last_thrsw_at_top_level;
 
         bool failed;
@@ -547,7 +552,12 @@ struct v3d_prog_data {
         uint32_t ubo_size;
 
         uint8_t num_inputs;
+        uint8_t threads;
 
+        /* For threads > 1, whether the program should be dispatched in the
+         * after-final-THRSW state.
+         */
+        bool single_seg;
 };
 
 struct v3d_vs_prog_data {
@@ -674,7 +684,7 @@ void v3d_nir_lower_io(nir_shader *s, struct v3d_compile *c);
 void v3d_nir_lower_txf_ms(nir_shader *s, struct v3d_compile *c);
 void vir_lower_uniforms(struct v3d_compile *c);
 
-void v3d_vir_to_qpu(struct v3d_compile *c);
+void v3d_vir_to_qpu(struct v3d_compile *c, struct qpu_reg *temp_registers);
 uint32_t v3d_qpu_schedule_instructions(struct v3d_compile *c);
 void qpu_validate(struct v3d_compile *c);
 struct qpu_reg *v3d_register_allocate(struct v3d_compile *c);
