@@ -288,16 +288,16 @@ replace_bo_in_reloc_list(struct brw_reloc_list *rlist,
  */
 static void
 grow_buffer(struct brw_context *brw,
-            struct brw_bo **bo_ptr,
-            uint32_t **map_ptr,
+            struct brw_growing_bo *grow,
             unsigned existing_bytes,
             unsigned new_size)
 {
    struct intel_batchbuffer *batch = &brw->batch;
    struct brw_bufmgr *bufmgr = brw->bufmgr;
+   struct brw_bo *bo = grow->bo;
 
-   uint32_t *old_map = *map_ptr;
-   struct brw_bo *old_bo = *bo_ptr;
+   uint32_t *old_map = grow->map;
+   struct brw_bo *old_bo = grow->bo;
 
    struct brw_bo *new_bo =
       brw_bo_alloc(bufmgr, old_bo->name, new_size, old_bo->align);
@@ -307,7 +307,7 @@ grow_buffer(struct brw_context *brw,
 
    /* Copy existing data to the new larger buffer */
    if (batch->use_shadow_copy) {
-      new_map = realloc(*map_ptr, new_size);
+      new_map = realloc(old_map, new_size);
    } else {
       new_map = brw_bo_map(brw, new_bo, MAP_READ | MAP_WRITE);
       memcpy(new_map, old_map, existing_bytes);
@@ -353,8 +353,8 @@ grow_buffer(struct brw_context *brw,
    /* Drop the *bo_ptr reference.  This should free the old BO. */
    brw_bo_unreference(old_bo);
 
-   *bo_ptr = new_bo;
-   *map_ptr = new_map;
+   grow->bo = new_bo;
+   grow->map = new_map;
 }
 
 void
@@ -377,8 +377,7 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
       const unsigned new_size =
          MIN2(batch->batch.bo->size + batch->batch.bo->size / 2,
               MAX_BATCH_SIZE);
-      grow_buffer(brw, &batch->batch.bo, &batch->batch.map,
-                  batch_used, new_size);
+      grow_buffer(brw, &batch->batch, batch_used, new_size);
       batch->map_next = (void *) batch->batch.map + batch_used;
       assert(batch_used + sz < batch->batch.bo->size);
    }
@@ -1079,8 +1078,7 @@ brw_state_batch(struct brw_context *brw,
       const unsigned new_size =
          MIN2(batch->state.bo->size + batch->state.bo->size / 2,
               MAX_STATE_SIZE);
-      grow_buffer(brw, &batch->state.bo, &batch->state.map,
-                  batch->state_used, new_size);
+      grow_buffer(brw, &batch->state, batch->state_used, new_size);
       assert(offset + size < batch->state.bo->size);
    }
 
