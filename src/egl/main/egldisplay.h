@@ -115,6 +115,7 @@ struct _egl_extensions
    EGLBoolean KHR_config_attribs;
    EGLBoolean KHR_context_flush_control;
    EGLBoolean KHR_create_context;
+   EGLBoolean KHR_create_context_no_error;
    EGLBoolean KHR_fence_sync;
    EGLBoolean KHR_get_all_proc_addresses;
    EGLBoolean KHR_gl_colorspace;
@@ -130,7 +131,6 @@ struct _egl_extensions
    EGLBoolean KHR_reusable_sync;
    EGLBoolean KHR_surfaceless_context;
    EGLBoolean KHR_wait_sync;
-   EGLBoolean KHR_create_context_no_error;
 
    EGLBoolean MESA_drm_image;
    EGLBoolean MESA_image_dma_buf_export;
