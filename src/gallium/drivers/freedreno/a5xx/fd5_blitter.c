@@ -93,6 +93,16 @@ can_do_blit(const struct pipe_blit_info *info)
 	if (!ok_format(info->src.format))
 		return false;
 
+	/* hw ignores {SRC,DST}_INFO.COLOR_SWAP if {SRC,DST}_INFO.TILE_MODE
+	 * is set (not linear).  We can kind of get around that when tiling/
+	 * untiling by setting both src and dst COLOR_SWAP=WZYX, but that
+	 * means the formats must match:
+	 */
+	if ((fd_resource(info->dst.resource)->tile_mode ||
+				fd_resource(info->src.resource)->tile_mode) &&
+			info->dst.format != info->src.format)
+		return false;
+
 	/* until we figure out a few more registers: */
 	if ((info->dst.box.width != info->src.box.width) ||
 			(info->dst.box.height != info->src.box.height))
@@ -341,6 +351,16 @@ emit_blit(struct fd_ringbuffer *ring, const struct pipe_blit_info *info)
 
 	spitch = sslice->pitch * src->cpp;
 	dpitch = dslice->pitch * dst->cpp;
+
+	/* if dtile, then dswap ignored by hw, and likewise if stile then sswap
+	 * ignored by hw.. but in this case we have already rejected the blit
+	 * if src and dst formats differ, so juse use WZYX for both src and
+	 * dst swap mode (so we don't change component order)
+	 */
+	if (stile || dtile) {
+		debug_assert(info->src.format == info->dst.format);
+		sswap = dswap = WZYX;
+	}
 
 	sx1 = sbox->x;
 	sy1 = sbox->y;
