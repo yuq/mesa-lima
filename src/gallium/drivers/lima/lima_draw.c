@@ -894,8 +894,7 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    if (!ctx->num_draws ||
        (ctx->dirty & LIMA_CONTEXT_DIRTY_CONST_BUFF &&
-        ctx->const_buffer[PIPE_SHADER_FRAGMENT].dirty) ||
-       ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_FRAG) {
+        ctx->const_buffer[PIPE_SHADER_FRAGMENT].dirty)) {
       lima_update_pp_uniform(ctx);
       ctx->const_buffer[PIPE_SHADER_FRAGMENT].dirty = false;
    }
