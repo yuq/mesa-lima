@@ -60,6 +60,7 @@ struct lima_depth_stencil_alpha_state {
 struct lima_fs_shader_state {
    void *shader;
    int shader_size;
+   struct lima_buffer *bo;
 };
 
 #define LIMA_MAX_VARYING_NUM 13
@@ -81,6 +82,8 @@ struct lima_vs_shader_state {
    struct lima_varying_info varying[LIMA_MAX_VARYING_NUM];
    int varying_stride;
    int num_varying;
+
+   struct lima_buffer *bo;
 };
 
 struct lima_rasterizer_state {
@@ -117,13 +120,11 @@ struct lima_context_constant_buffer {
 enum lima_ctx_buff {
    lima_ctx_buff_sh_varying,
    lima_ctx_buff_sh_gl_pos,
-   lima_ctx_buff_gp_vs_program,
    lima_ctx_buff_gp_varying_info,
    lima_ctx_buff_gp_attribute_info,
    lima_ctx_buff_gp_uniform,
    lima_ctx_buff_gp_vs_cmd,
    lima_ctx_buff_gp_plbu_cmd,
-   lima_ctx_buff_pp_fs_program,
    lima_ctx_buff_pp_plb_rsw,
    lima_ctx_buff_pp_uniform,
    lima_ctx_buff_num,
@@ -181,10 +182,9 @@ struct lima_context {
    #define sh_buffer_size            0x42000
 
    struct lima_buffer *gp_buffer;
-   #define gp_vs_program_offset      0x0000
-   #define gp_plbu_plb_offset        0x0800
-   #define gp_varying_info_offset    0x1000
-   #define gp_attribute_info_offset  0x1800
+   #define gp_plbu_plb_offset        0x0000
+   #define gp_varying_info_offset    0x0800
+   #define gp_attribute_info_offset  0x1000
    /* max_attr/varying_info = 16, each_info = 8, size = max * each */
    #define gp_uniform_offset         0x2000
    #define gp_vs_cmd_offset          0x3000
@@ -193,9 +193,8 @@ struct lima_context {
    #define gp_buffer_size            0x6000
 
    struct lima_buffer *pp_buffer;
-   #define pp_fs_program_offset      0x00000
-   #define pp_uniform_array_offset   0x00800
-   #define pp_uniform_offset         0x00840
+   #define pp_uniform_array_offset   0x00000
+   #define pp_uniform_offset         0x00040
    #define pp_frame_rsw_offset       0x01840
    #define pp_clear_program_offset   0x01880
    #define pp_plb_rsw_offset         0x018c0
