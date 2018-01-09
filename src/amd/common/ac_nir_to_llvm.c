@@ -597,7 +597,7 @@ static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
 		break;
 	}
 
-	if (ctx->shader_info->info.needs_push_constants)
+	if (ctx->shader_info->info.loads_push_constants)
 		user_sgpr_info->sgpr_count += 2;
 
 	uint32_t remaining_sgprs = 16 - user_sgpr_info->sgpr_count;
@@ -638,7 +638,7 @@ declare_global_input_sgprs(struct nir_to_llvm_context *ctx,
 		add_array_arg(args, const_array(type, 32), desc_sets);
 	}
 
-	if (ctx->shader_info->info.needs_push_constants) {
+	if (ctx->shader_info->info.loads_push_constants) {
 		/* 1 for push constants and dynamic descriptors */
 		add_array_arg(args, type, &ctx->push_constants);
 	}
@@ -729,7 +729,7 @@ set_global_input_locs(struct nir_to_llvm_context *ctx, gl_shader_stage stage,
 		ctx->shader_info->need_indirect_descriptor_sets = true;
 	}
 
-	if (ctx->shader_info->info.needs_push_constants) {
+	if (ctx->shader_info->info.loads_push_constants) {
 		set_loc_shader(ctx, AC_UD_PUSH_CONSTANTS, user_sgpr_idx, 2);
 	}
 }
