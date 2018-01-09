@@ -584,7 +584,7 @@ if with_gallium_st_nine
 endif
 
 _opencl = get_option('gallium-opencl')
-if _opencl !=' disabled'
+if _opencl != 'disabled'
   if not with_gallium
     error('OpenCL Clover implementation requires at least one gallium driver.')
   endif
