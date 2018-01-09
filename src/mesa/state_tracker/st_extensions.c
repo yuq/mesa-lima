@@ -873,7 +873,8 @@ void st_init_extensions(struct pipe_screen *screen,
    extensions->ARB_internalformat_query = GL_TRUE;
    extensions->ARB_internalformat_query2 = GL_TRUE;
    extensions->ARB_map_buffer_range = GL_TRUE;
-   extensions->ARB_texture_border_clamp = GL_TRUE; /* XXX temp */
+   extensions->ARB_sync = GL_TRUE;
+   extensions->ARB_texture_border_clamp = GL_TRUE;
    extensions->ARB_texture_cube_map = GL_TRUE;
    extensions->ARB_texture_env_combine = GL_TRUE;
    extensions->ARB_texture_env_crossbar = GL_TRUE;
@@ -1019,10 +1020,6 @@ void st_init_extensions(struct pipe_screen *screen,
        screen->get_shader_param(screen, PIPE_SHADER_GEOMETRY,
                                 PIPE_SHADER_CAP_MAX_INSTRUCTIONS) > 0) {
       extensions->OES_geometry_shader = GL_TRUE;
-   }
-
-   if (screen->fence_finish) {
-      extensions->ARB_sync = GL_TRUE;
    }
 
    /* Needs PIPE_CAP_SAMPLE_SHADING + all the sample-related bits of
