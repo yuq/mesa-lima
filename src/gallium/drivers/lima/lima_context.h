@@ -207,7 +207,6 @@ struct lima_context {
 
    struct lima_ctx_buff_state buffer_state[lima_ctx_buff_num];
 
-   unsigned draw_start;
    unsigned num_draws;
 
    lima_submit_handle gp_submit;

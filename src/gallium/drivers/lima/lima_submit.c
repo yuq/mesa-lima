@@ -78,20 +78,6 @@ int lima_submit_add_bo(lima_submit_handle submit, lima_bo_handle bo, uint32_t fl
    return 0;
 }
 
-void lima_submit_remove_bo(lima_submit_handle submit, lima_bo_handle bo)
-{
-   uint32_t i;
-
-   for (i = 0; i < submit->nr_bos; i++) {
-      if (submit->bos[i].handle == bo->handle) {
-         submit->nr_bos--;
-         memmove(submit->bos + i, submit->bos + i + 1,
-                 sizeof(*submit->bos) * (submit->nr_bos - i));
-         return;
-      }
-   }
-}
-
 void lima_submit_set_frame(lima_submit_handle submit, void *frame, uint32_t size)
 {
    submit->frame = frame;
@@ -114,6 +100,7 @@ int lima_submit_start(lima_submit_handle submit)
    if (err)
       return err;
 
+   submit->nr_bos = 0;
    submit->fence = req.fence;
    return 0;
 }
