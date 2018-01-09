@@ -221,7 +221,7 @@ vc5_rcl_emit_stores(struct vc5_job *job, struct vc5_cl *cl)
                  * MSAA color clears, then we need to clear the color buffers
                  * now.
                  */
-                cl_emit(&job->rcl, STORE_TILE_BUFFER_GENERAL, store) {
+                cl_emit(cl, STORE_TILE_BUFFER_GENERAL, store) {
                         store.buffer_to_store = NONE;
                 }
         }
