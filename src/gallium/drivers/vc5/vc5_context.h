@@ -491,15 +491,21 @@ void vc5_flush_jobs_reading_resource(struct vc5_context *vc5,
 void vc5_emit_state(struct pipe_context *pctx);
 void vc5_update_compiled_shaders(struct vc5_context *vc5, uint8_t prim_mode);
 
-bool vc5_rt_format_supported(enum pipe_format f);
-bool vc5_tex_format_supported(enum pipe_format f);
-uint8_t vc5_get_rt_format(enum pipe_format f);
-uint8_t vc5_get_tex_format(enum pipe_format f);
-uint8_t vc5_get_tex_return_size(enum pipe_format f,
+bool vc5_rt_format_supported(const struct v3d_device_info *devinfo,
+                             enum pipe_format f);
+bool vc5_tex_format_supported(const struct v3d_device_info *devinfo,
+                              enum pipe_format f);
+uint8_t vc5_get_rt_format(const struct v3d_device_info *devinfo, enum pipe_format f);
+uint8_t vc5_get_tex_format(const struct v3d_device_info *devinfo, enum pipe_format f);
+uint8_t vc5_get_tex_return_size(const struct v3d_device_info *devinfo,
+                                enum pipe_format f,
                                 enum pipe_tex_compare compare);
-uint8_t vc5_get_tex_return_channels(enum pipe_format f);
-const uint8_t *vc5_get_format_swizzle(enum pipe_format f);
-void vc5_get_internal_type_bpp_for_output_format(uint32_t format,
+uint8_t vc5_get_tex_return_channels(const struct v3d_device_info *devinfo,
+                                    enum pipe_format f);
+const uint8_t *vc5_get_format_swizzle(const struct v3d_device_info *devinfo,
+                                      enum pipe_format f);
+void vc5_get_internal_type_bpp_for_output_format(const struct v3d_device_info *devinfo,
+                                                 uint32_t format,
                                                  uint32_t *type,
                                                  uint32_t *bpp);
 

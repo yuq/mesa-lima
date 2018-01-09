@@ -436,6 +436,7 @@ static struct vc5_resource *
 vc5_resource_setup(struct pipe_screen *pscreen,
                    const struct pipe_resource *tmpl)
 {
+        struct vc5_screen *screen = vc5_screen(pscreen);
         struct vc5_resource *rsc = CALLOC_STRUCT(vc5_resource);
         if (!rsc)
                 return NULL;
@@ -449,11 +450,13 @@ vc5_resource_setup(struct pipe_screen *pscreen,
         if (prsc->nr_samples <= 1) {
                 rsc->cpp = util_format_get_blocksize(prsc->format);
         } else {
-                assert(vc5_rt_format_supported(prsc->format));
-                uint32_t output_image_format = vc5_get_rt_format(prsc->format);
+                assert(vc5_rt_format_supported(&screen->devinfo, prsc->format));
+                uint32_t output_image_format =
+                        vc5_get_rt_format(&screen->devinfo, prsc->format);
                 uint32_t internal_type;
                 uint32_t internal_bpp;
-                vc5_get_internal_type_bpp_for_output_format(output_image_format,
+                vc5_get_internal_type_bpp_for_output_format(&screen->devinfo,
+                                                            output_image_format,
                                                             &internal_type,
                                                             &internal_bpp);
                 switch (internal_bpp) {
@@ -637,6 +640,8 @@ vc5_create_surface(struct pipe_context *pctx,
                    struct pipe_resource *ptex,
                    const struct pipe_surface *surf_tmpl)
 {
+        struct vc5_context *vc5 = vc5_context(pctx);
+        struct vc5_screen *screen = vc5->screen;
         struct vc5_surface *surface = CALLOC_STRUCT(vc5_surface);
         struct vc5_resource *rsc = vc5_resource(ptex);
 
@@ -676,7 +681,7 @@ vc5_create_surface(struct pipe_context *pctx,
                         separate_stencil_slice->tiling;
         }
 
-        surface->format = vc5_get_rt_format(psurf->format);
+        surface->format = vc5_get_rt_format(&screen->devinfo, psurf->format);
 
         if (util_format_is_depth_or_stencil(psurf->format)) {
                 switch (psurf->format) {
@@ -692,7 +697,8 @@ vc5_create_surface(struct pipe_context *pctx,
                 }
         } else {
                 uint32_t bpp, type;
-                vc5_get_internal_type_bpp_for_output_format(surface->format,
+                vc5_get_internal_type_bpp_for_output_format(&screen->devinfo,
+                                                            surface->format,
                                                             &type, &bpp);
                 surface->internal_type = type;
                 surface->internal_bpp = bpp;

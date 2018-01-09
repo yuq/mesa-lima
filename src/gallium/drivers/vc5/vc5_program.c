@@ -263,6 +263,8 @@ static void
 vc5_setup_shared_key(struct vc5_context *vc5, struct v3d_key *key,
                      struct vc5_texture_stateobj *texstate)
 {
+        const struct v3d_device_info *devinfo = &vc5->screen->devinfo;
+
         for (int i = 0; i < texstate->num_textures; i++) {
                 struct pipe_sampler_view *sampler = texstate->textures[i];
                 struct vc5_sampler_view *vc5_sampler = vc5_sampler_view(sampler);
@@ -273,7 +275,7 @@ vc5_setup_shared_key(struct vc5_context *vc5, struct v3d_key *key,
                         continue;
 
                 key->tex[i].return_size =
-                        vc5_get_tex_return_size(sampler->format,
+                        vc5_get_tex_return_size(devinfo, sampler->format,
                                                 sampler_state->compare_mode);
 
                 /* For 16-bit, we set up the sampler to always return 2
@@ -284,7 +286,8 @@ vc5_setup_shared_key(struct vc5_context *vc5, struct v3d_key *key,
                         key->tex[i].return_channels = 2;
                 } else {
                         key->tex[i].return_channels =
-                                vc5_get_tex_return_channels(sampler->format);
+                                vc5_get_tex_return_channels(devinfo,
+                                                            sampler->format);
                 }
 
                 if (key->tex[i].return_size == 32) {

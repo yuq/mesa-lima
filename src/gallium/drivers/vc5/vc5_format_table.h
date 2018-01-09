@@ -1,6 +1,5 @@
 /*
- * Copyright © 2014-2017 Broadcom
- * Copyright (C) 2012 Rob Clark <robclark@freedesktop.org>
+ * Copyright © 2014-2018 Broadcom
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,22 +21,34 @@
  * IN THE SOFTWARE.
  */
 
-/* This file generates the per-v3d-version function prototypes.  It must only
- * be included from vc5_context.h.
- */
+#define V3D_OUTPUT_IMAGE_FORMAT_NO 255
 
-struct v3d_hw;
-struct vc5_format;
+#include <stdbool.h>
+#include <stdint.h>
 
-void v3dX(emit_rcl)(struct vc5_job *job);
-void v3dX(draw_init)(struct pipe_context *pctx);
+struct vc5_format {
+        /** Set if the pipe format is defined in the table. */
+        bool present;
 
-void v3dX(simulator_init_regs)(struct v3d_hw *v3d);
-int v3dX(simulator_get_param_ioctl)(struct v3d_hw *v3d,
-                                    struct drm_vc5_get_param *args);
-void v3dX(simulator_flush)(struct v3d_hw *v3d, struct drm_vc5_submit_cl *submit,
-                           uint32_t gmp_ofs);
-const struct vc5_format *v3dX(get_format_desc)(enum pipe_format f);
-void v3dX(get_internal_type_bpp_for_output_format)(uint32_t format,
-                                                   uint32_t *type,
-                                                   uint32_t *bpp);
+        /** One of V3D33_OUTPUT_IMAGE_FORMAT_*, or OUTPUT_IMAGE_FORMAT_NO */
+        uint8_t rt_type;
+
+        /** One of V3D33_TEXTURE_DATA_FORMAT_*. */
+        uint8_t tex_type;
+
+        /**
+         * Swizzle to apply to the RGBA shader output for storing to the tile
+         * buffer, to the RGBA tile buffer to produce shader input (for
+         * blending), and for turning the rgba8888 texture sampler return
+         * value into shader rgba values.
+         */
+        uint8_t swizzle[4];
+
+        /* Whether the return value is 16F/I/UI or 32F/I/UI. */
+        uint8_t return_size;
+
+        /* If return_size == 32, how many channels are returned by texturing.
+         * 16 always returns 2 pairs of 16 bit values.
+         */
+        uint8_t return_channels;
+};

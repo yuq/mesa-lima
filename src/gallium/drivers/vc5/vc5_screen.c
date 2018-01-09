@@ -419,6 +419,7 @@ vc5_screen_is_format_supported(struct pipe_screen *pscreen,
                                unsigned sample_count,
                                unsigned usage)
 {
+        struct vc5_screen *screen = vc5_screen(pscreen);
         unsigned retval = 0;
 
         if (sample_count > 1 && sample_count != VC5_MAX_SAMPLES)
@@ -483,12 +484,12 @@ vc5_screen_is_format_supported(struct pipe_screen *pscreen,
         }
 
         if ((usage & PIPE_BIND_RENDER_TARGET) &&
-            vc5_rt_format_supported(format)) {
+            vc5_rt_format_supported(&screen->devinfo, format)) {
                 retval |= PIPE_BIND_RENDER_TARGET;
         }
 
         if ((usage & PIPE_BIND_SAMPLER_VIEW) &&
-            vc5_tex_format_supported(format)) {
+            vc5_tex_format_supported(&screen->devinfo, format)) {
                 retval |= PIPE_BIND_SAMPLER_VIEW;
         }
 

@@ -77,7 +77,8 @@ vc5_factor(enum pipe_blendfactor factor, bool dst_alpha_one)
 }
 
 static inline uint16_t
-swizzled_border_color(struct pipe_sampler_state *sampler,
+swizzled_border_color(const struct v3d_device_info *devinfo,
+                      struct pipe_sampler_state *sampler,
                       struct vc5_sampler_view *sview,
                       int chan)
 {
@@ -93,7 +94,7 @@ swizzled_border_color(struct pipe_sampler_state *sampler,
          * For swizzling in the shader, we don't do any pre-swizzling of the
          * border color.
          */
-        if (vc5_get_tex_return_size(sview->base.format,
+        if (vc5_get_tex_return_size(devinfo, sview->base.format,
                                     sampler->compare_mode) != 32)
                 swiz = desc->swizzle[swiz];
 
@@ -136,6 +137,7 @@ emit_one_texture(struct vc5_context *vc5, struct vc5_texture_stateobj *stage_tex
         struct vc5_sampler_view *sview = vc5_sampler_view(psview);
         struct pipe_resource *prsc = psview->texture;
         struct vc5_resource *rsc = vc5_resource(prsc);
+        const struct v3d_device_info *devinfo = &vc5->screen->devinfo;
 
         stage_tex->texture_state[i].offset =
                 vc5_cl_ensure_space(&job->indirect,
@@ -144,15 +146,19 @@ emit_one_texture(struct vc5_context *vc5, struct vc5_texture_stateobj *stage_tex
         vc5_bo_set_reference(&stage_tex->texture_state[i].bo,
                              job->indirect.bo);
 
-        uint32_t return_size = vc5_get_tex_return_size(psview->format,
+        uint32_t return_size = vc5_get_tex_return_size(devinfo, psview->format,
                                                        psampler->compare_mode);
 
         struct V3D33_TEXTURE_SHADER_STATE unpacked = {
                 /* XXX */
-                .border_color_red = swizzled_border_color(psampler, sview, 0),
-                .border_color_green = swizzled_border_color(psampler, sview, 1),
-                .border_color_blue = swizzled_border_color(psampler, sview, 2),
-                .border_color_alpha = swizzled_border_color(psampler, sview, 3),
+                .border_color_red = swizzled_border_color(devinfo, psampler,
+                                                          sview, 0),
+                .border_color_green = swizzled_border_color(devinfo, psampler,
+                                                            sview, 1),
+                .border_color_blue = swizzled_border_color(devinfo, psampler,
+                                                           sview, 2),
+                .border_color_alpha = swizzled_border_color(devinfo, psampler,
+                                                            sview, 3),
 
                 /* In the normal texturing path, the LOD gets clamped between
                  * min/max, and the base_level field (set in the sampler view

@@ -557,6 +557,8 @@ static struct pipe_sampler_view *
 vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                         const struct pipe_sampler_view *cso)
 {
+        struct vc5_context *vc5 = vc5_context(pctx);
+        struct vc5_screen *screen = vc5->screen;
         struct vc5_sampler_view *so = CALLOC_STRUCT(vc5_sampler_view);
         struct vc5_resource *rsc = vc5_resource(prsc);
 
@@ -577,7 +579,8 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                 cso->swizzle_b,
                 cso->swizzle_a
         };
-        const uint8_t *fmt_swizzle = vc5_get_format_swizzle(so->base.format);
+        const uint8_t *fmt_swizzle =
+                vc5_get_format_swizzle(&screen->devinfo, so->base.format);
         util_format_compose_swizzles(fmt_swizzle, view_swizzle, so->swizzle);
 
         so->base.texture = prsc;
@@ -613,10 +616,11 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                         assert(util_format_linear(cso->format) ==
                                util_format_linear(prsc->format));
                         uint32_t output_image_format =
-                                vc5_get_rt_format(cso->format);
+                                vc5_get_rt_format(&screen->devinfo, cso->format);
                         uint32_t internal_type;
                         uint32_t internal_bpp;
-                        vc5_get_internal_type_bpp_for_output_format(output_image_format,
+                        vc5_get_internal_type_bpp_for_output_format(&screen->devinfo,
+                                                                    output_image_format,
                                                                     &internal_type,
                                                                     &internal_bpp);
 
@@ -639,7 +643,8 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                          */
                         tex.srgb = false;
                 } else {
-                        tex.texture_type = vc5_get_tex_format(cso->format);
+                        tex.texture_type = vc5_get_tex_format(&screen->devinfo,
+                                                              cso->format);
                 }
 
                 tex.uif_xor_disable = (rsc->slices[0].tiling ==
