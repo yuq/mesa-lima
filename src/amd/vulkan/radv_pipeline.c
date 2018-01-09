@@ -984,11 +984,38 @@ static unsigned si_map_swizzle(unsigned swizzle)
 	}
 }
 
+
+static unsigned radv_dynamic_state_mask(VkDynamicState state)
+{
+	switch(state) {
+	case VK_DYNAMIC_STATE_VIEWPORT:
+		return RADV_DYNAMIC_VIEWPORT;
+	case VK_DYNAMIC_STATE_SCISSOR:
+		return RADV_DYNAMIC_SCISSOR;
+	case VK_DYNAMIC_STATE_LINE_WIDTH:
+		return RADV_DYNAMIC_LINE_WIDTH;
+	case VK_DYNAMIC_STATE_DEPTH_BIAS:
+		return RADV_DYNAMIC_DEPTH_BIAS;
+	case VK_DYNAMIC_STATE_BLEND_CONSTANTS:
+		return RADV_DYNAMIC_BLEND_CONSTANTS;
+	case VK_DYNAMIC_STATE_DEPTH_BOUNDS:
+		return RADV_DYNAMIC_DEPTH_BOUNDS;
+	case VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK:
+		return RADV_DYNAMIC_STENCIL_COMPARE_MASK;
+	case VK_DYNAMIC_STATE_STENCIL_WRITE_MASK:
+		return RADV_DYNAMIC_STENCIL_WRITE_MASK;
+	case VK_DYNAMIC_STATE_STENCIL_REFERENCE:
+		return RADV_DYNAMIC_STENCIL_REFERENCE;
+	default:
+		unreachable("Unhandled dynamic state");
+	}
+}
+
 static void
 radv_pipeline_init_dynamic_state(struct radv_pipeline *pipeline,
 				 const VkGraphicsPipelineCreateInfo *pCreateInfo)
 {
-	uint32_t states = RADV_CMD_DIRTY_DYNAMIC_ALL;
+	uint32_t states = RADV_DYNAMIC_ALL;
 	RADV_FROM_HANDLE(radv_render_pass, pass, pCreateInfo->renderPass);
 	struct radv_subpass *subpass = &pass->subpasses[pCreateInfo->subpass];
 
@@ -998,7 +1025,7 @@ radv_pipeline_init_dynamic_state(struct radv_pipeline *pipeline,
 		/* Remove all of the states that are marked as dynamic */
 		uint32_t count = pCreateInfo->pDynamicState->dynamicStateCount;
 		for (uint32_t s = 0; s < count; s++)
-			states &= ~(1 << pCreateInfo->pDynamicState->pDynamicStates[s]);
+			states &= ~radv_dynamic_state_mask(pCreateInfo->pDynamicState->pDynamicStates[s]);
 	}
 
 	struct radv_dynamic_state *dynamic = &pipeline->dynamic_state;
@@ -1012,26 +1039,26 @@ radv_pipeline_init_dynamic_state(struct radv_pipeline *pipeline,
 		assert(pCreateInfo->pViewportState);
 
 		dynamic->viewport.count = pCreateInfo->pViewportState->viewportCount;
-		if (states & (1 << VK_DYNAMIC_STATE_VIEWPORT)) {
+		if (states & RADV_DYNAMIC_VIEWPORT) {
 			typed_memcpy(dynamic->viewport.viewports,
 				     pCreateInfo->pViewportState->pViewports,
 				     pCreateInfo->pViewportState->viewportCount);
 		}
 
 		dynamic->scissor.count = pCreateInfo->pViewportState->scissorCount;
-		if (states & (1 << VK_DYNAMIC_STATE_SCISSOR)) {
+		if (states & RADV_DYNAMIC_SCISSOR) {
 			typed_memcpy(dynamic->scissor.scissors,
 				     pCreateInfo->pViewportState->pScissors,
 				     pCreateInfo->pViewportState->scissorCount);
 		}
 	}
 
-	if (states & (1 << VK_DYNAMIC_STATE_LINE_WIDTH)) {
+	if (states & RADV_DYNAMIC_LINE_WIDTH) {
 		assert(pCreateInfo->pRasterizationState);
 		dynamic->line_width = pCreateInfo->pRasterizationState->lineWidth;
 	}
 
-	if (states & (1 << VK_DYNAMIC_STATE_DEPTH_BIAS)) {
+	if (states & RADV_DYNAMIC_DEPTH_BIAS) {
 		assert(pCreateInfo->pRasterizationState);
 		dynamic->depth_bias.bias =
 			pCreateInfo->pRasterizationState->depthBiasConstantFactor;
@@ -1055,7 +1082,7 @@ radv_pipeline_init_dynamic_state(struct radv_pipeline *pipeline,
 		}
 	}
 
-	if (uses_color_att && states & (1 << VK_DYNAMIC_STATE_BLEND_CONSTANTS)) {
+	if (uses_color_att && states & RADV_DYNAMIC_BLEND_CONSTANTS) {
 		assert(pCreateInfo->pColorBlendState);
 		typed_memcpy(dynamic->blend_constants,
 			     pCreateInfo->pColorBlendState->blendConstants, 4);
@@ -1077,28 +1104,28 @@ radv_pipeline_init_dynamic_state(struct radv_pipeline *pipeline,
 	    subpass->depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED) {
 		assert(pCreateInfo->pDepthStencilState);
 
-		if (states & (1 << VK_DYNAMIC_STATE_DEPTH_BOUNDS)) {
+		if (states & RADV_DYNAMIC_DEPTH_BOUNDS) {
 			dynamic->depth_bounds.min =
 				pCreateInfo->pDepthStencilState->minDepthBounds;
 			dynamic->depth_bounds.max =
 				pCreateInfo->pDepthStencilState->maxDepthBounds;
 		}
 
-		if (states & (1 << VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK)) {
+		if (states & RADV_DYNAMIC_STENCIL_COMPARE_MASK) {
 			dynamic->stencil_compare_mask.front =
 				pCreateInfo->pDepthStencilState->front.compareMask;
 			dynamic->stencil_compare_mask.back =
 				pCreateInfo->pDepthStencilState->back.compareMask;
 		}
 
-		if (states & (1 << VK_DYNAMIC_STATE_STENCIL_WRITE_MASK)) {
+		if (states & RADV_DYNAMIC_STENCIL_WRITE_MASK) {
 			dynamic->stencil_write_mask.front =
 				pCreateInfo->pDepthStencilState->front.writeMask;
 			dynamic->stencil_write_mask.back =
 				pCreateInfo->pDepthStencilState->back.writeMask;
 		}
 
-		if (states & (1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE)) {
+		if (states & RADV_DYNAMIC_STENCIL_REFERENCE) {
 			dynamic->stencil_reference.front =
 				pCreateInfo->pDepthStencilState->front.reference;
 			dynamic->stencil_reference.back =

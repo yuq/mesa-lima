@@ -92,79 +92,79 @@ radv_bind_dynamic_state(struct radv_cmd_buffer *cmd_buffer,
 	dest->viewport.count = src->viewport.count;
 	dest->scissor.count = src->scissor.count;
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_VIEWPORT)) {
+	if (copy_mask & RADV_DYNAMIC_VIEWPORT) {
 		if (memcmp(&dest->viewport.viewports, &src->viewport.viewports,
 			   src->viewport.count * sizeof(VkViewport))) {
 			typed_memcpy(dest->viewport.viewports,
 				     src->viewport.viewports,
 				     src->viewport.count);
-			dest_mask |= 1 << VK_DYNAMIC_STATE_VIEWPORT;
+			dest_mask |= RADV_DYNAMIC_VIEWPORT;
 		}
 	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_SCISSOR)) {
+	if (copy_mask & RADV_DYNAMIC_SCISSOR) {
 		if (memcmp(&dest->scissor.scissors, &src->scissor.scissors,
 			   src->scissor.count * sizeof(VkRect2D))) {
 			typed_memcpy(dest->scissor.scissors,
 				     src->scissor.scissors, src->scissor.count);
-			dest_mask |= 1 << VK_DYNAMIC_STATE_SCISSOR;
+			dest_mask |= RADV_DYNAMIC_SCISSOR;
 		}
 	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_LINE_WIDTH)) {
+	if (copy_mask & RADV_DYNAMIC_LINE_WIDTH) {
 		if (dest->line_width != src->line_width) {
 			dest->line_width = src->line_width;
-			dest_mask |= 1 << VK_DYNAMIC_STATE_LINE_WIDTH;
+			dest_mask |= RADV_DYNAMIC_LINE_WIDTH;
 		}
 	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_DEPTH_BIAS)) {
+	if (copy_mask & RADV_DYNAMIC_DEPTH_BIAS) {
 		if (memcmp(&dest->depth_bias, &src->depth_bias,
 			   sizeof(src->depth_bias))) {
 			dest->depth_bias = src->depth_bias;
-			dest_mask |= 1 << VK_DYNAMIC_STATE_DEPTH_BIAS;
+			dest_mask |= RADV_DYNAMIC_DEPTH_BIAS;
 		}
 	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_BLEND_CONSTANTS)) {
+	if (copy_mask & RADV_DYNAMIC_BLEND_CONSTANTS) {
 		if (memcmp(&dest->blend_constants, &src->blend_constants,
 			   sizeof(src->blend_constants))) {
 			typed_memcpy(dest->blend_constants,
 				     src->blend_constants, 4);
-			dest_mask |= 1 << VK_DYNAMIC_STATE_BLEND_CONSTANTS;
+			dest_mask |= RADV_DYNAMIC_BLEND_CONSTANTS;
 		}
 	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_DEPTH_BOUNDS)) {
+	if (copy_mask & RADV_DYNAMIC_DEPTH_BOUNDS) {
 		if (memcmp(&dest->depth_bounds, &src->depth_bounds,
 			   sizeof(src->depth_bounds))) {
 			dest->depth_bounds = src->depth_bounds;
-			dest_mask |= 1 << VK_DYNAMIC_STATE_DEPTH_BOUNDS;
+			dest_mask |= RADV_DYNAMIC_DEPTH_BOUNDS;
 		}
 	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK)) {
+	if (copy_mask & RADV_DYNAMIC_STENCIL_COMPARE_MASK) {
 		if (memcmp(&dest->stencil_compare_mask,
 			   &src->stencil_compare_mask,
 			   sizeof(src->stencil_compare_mask))) {
 			dest->stencil_compare_mask = src->stencil_compare_mask;
-			dest_mask |= 1 << VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK;
+			dest_mask |= RADV_DYNAMIC_STENCIL_COMPARE_MASK;
 		}
 	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_STENCIL_WRITE_MASK)) {
+	if (copy_mask & RADV_DYNAMIC_STENCIL_WRITE_MASK) {
 		if (memcmp(&dest->stencil_write_mask, &src->stencil_write_mask,
 			   sizeof(src->stencil_write_mask))) {
 			dest->stencil_write_mask = src->stencil_write_mask;
-			dest_mask |= 1 << VK_DYNAMIC_STATE_STENCIL_WRITE_MASK;
+			dest_mask |= RADV_DYNAMIC_STENCIL_WRITE_MASK;
 		}
 	}
 
-	if (copy_mask & (1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE)) {
+	if (copy_mask & RADV_DYNAMIC_STENCIL_REFERENCE) {
 		if (memcmp(&dest->stencil_reference, &src->stencil_reference,
 			   sizeof(src->stencil_reference))) {
 			dest->stencil_reference = src->stencil_reference;
-			dest_mask |= 1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE;
+			dest_mask |= RADV_DYNAMIC_STENCIL_REFERENCE;
 		}
 	}
 

@@ -729,17 +729,31 @@ struct radv_buffer {
 	bool shareable;
 };
 
+enum radv_dynamic_state_bits {
+	RADV_DYNAMIC_VIEWPORT             = 1 << 0,
+	RADV_DYNAMIC_SCISSOR              = 1 << 1,
+	RADV_DYNAMIC_LINE_WIDTH           = 1 << 2,
+	RADV_DYNAMIC_DEPTH_BIAS           = 1 << 3,
+	RADV_DYNAMIC_BLEND_CONSTANTS      = 1 << 4,
+	RADV_DYNAMIC_DEPTH_BOUNDS         = 1 << 5,
+	RADV_DYNAMIC_STENCIL_COMPARE_MASK = 1 << 6,
+	RADV_DYNAMIC_STENCIL_WRITE_MASK   = 1 << 7,
+	RADV_DYNAMIC_STENCIL_REFERENCE    = 1 << 8,
+	RADV_DYNAMIC_ALL                  = (1 << 9) - 1,
+};
 
 enum radv_cmd_dirty_bits {
-	RADV_CMD_DIRTY_DYNAMIC_VIEWPORT                  = 1 << 0, /* VK_DYNAMIC_STATE_VIEWPORT */
-	RADV_CMD_DIRTY_DYNAMIC_SCISSOR                   = 1 << 1, /* VK_DYNAMIC_STATE_SCISSOR */
-	RADV_CMD_DIRTY_DYNAMIC_LINE_WIDTH                = 1 << 2, /* VK_DYNAMIC_STATE_LINE_WIDTH */
-	RADV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS                = 1 << 3, /* VK_DYNAMIC_STATE_DEPTH_BIAS */
-	RADV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS           = 1 << 4, /* VK_DYNAMIC_STATE_BLEND_CONSTANTS */
-	RADV_CMD_DIRTY_DYNAMIC_DEPTH_BOUNDS              = 1 << 5, /* VK_DYNAMIC_STATE_DEPTH_BOUNDS */
-	RADV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK      = 1 << 6, /* VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK */
-	RADV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK        = 1 << 7, /* VK_DYNAMIC_STATE_STENCIL_WRITE_MASK */
-	RADV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE         = 1 << 8, /* VK_DYNAMIC_STATE_STENCIL_REFERENCE */
+	/* Keep the dynamic state dirty bits in sync with
+	 * enum radv_dynamic_state_bits */
+	RADV_CMD_DIRTY_DYNAMIC_VIEWPORT                  = 1 << 0,
+	RADV_CMD_DIRTY_DYNAMIC_SCISSOR                   = 1 << 1,
+	RADV_CMD_DIRTY_DYNAMIC_LINE_WIDTH                = 1 << 2,
+	RADV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS                = 1 << 3,
+	RADV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS           = 1 << 4,
+	RADV_CMD_DIRTY_DYNAMIC_DEPTH_BOUNDS              = 1 << 5,
+	RADV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK      = 1 << 6,
+	RADV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK        = 1 << 7,
+	RADV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE         = 1 << 8,
 	RADV_CMD_DIRTY_DYNAMIC_ALL                       = (1 << 9) - 1,
 	RADV_CMD_DIRTY_PIPELINE                          = 1 << 9,
 	RADV_CMD_DIRTY_INDEX_BUFFER                      = 1 << 10,
