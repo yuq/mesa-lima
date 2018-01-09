@@ -1818,7 +1818,19 @@ void r600_query_fix_enabled_rb_mask(struct r600_common_screen *rscreen)
 	struct r600_resource *buffer;
 	uint32_t *results;
 	unsigned i, mask = 0;
-	unsigned max_rbs = ctx->screen->info.num_render_backends;
+	unsigned max_rbs;
+	
+	if (ctx->family == CHIP_JUNIPER) {
+		/*
+		 * Fix for predication lockups - the chip can only ever have
+		 * 4 RBs, however it looks like the predication logic assumes
+		 * there's 8, trying to read results from query buffers never
+		 * written to. By increasing this number we'll write the
+		 * status bit for these as per the normal disabled rb logic.
+		 */
+		ctx->screen->info.num_render_backends = 8;
+	}
+	max_rbs = ctx->screen->info.num_render_backends;
 
 	assert(rscreen->chip_class <= CAYMAN);
 
@@ -1890,8 +1902,13 @@ void r600_query_fix_enabled_rb_mask(struct r600_common_screen *rscreen)
 
 	r600_resource_reference(&buffer, NULL);
 
-	if (mask)
+	if (mask) {
+		if (rscreen->debug_flags & DBG_INFO &&
+		    mask != rscreen->info.enabled_rb_mask) {
+			printf("enabled_rb_mask (fixed) = 0x%x\n", mask);
+		}
 		rscreen->info.enabled_rb_mask = mask;
+	}
 }
 
 #define XFULL(name_, query_type_, type_, result_type_, group_id_) \
