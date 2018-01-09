@@ -81,7 +81,10 @@ static bool
 clif_dump_packet(struct clif_dump *clif, uint32_t offset, const uint8_t *cl,
                  uint32_t *size)
 {
-        return v3d33_clif_dump_packet(clif, offset, cl, size);
+        if (clif->devinfo->ver >= 41)
+                return v3d41_clif_dump_packet(clif, offset, cl, size);
+        else
+                return v3d33_clif_dump_packet(clif, offset, cl, size);
 }
 
 static void
@@ -133,8 +136,15 @@ clif_process_worklist(struct clif_dump *clif)
 
                 switch (reloc->type) {
                 case reloc_gl_shader_state:
-                        v3d33_clif_dump_gl_shader_state_record(clif, reloc,
-                                                               vaddr);
+                        if (clif->devinfo->ver >= 41) {
+                                v3d41_clif_dump_gl_shader_state_record(clif,
+                                                                       reloc,
+                                                                       vaddr);
+                        } else {
+                                v3d33_clif_dump_gl_shader_state_record(clif,
+                                                                       reloc,
+                                                                       vaddr);
+                        }
                         break;
                 case reloc_generic_tile_list:
                         clif_dump_cl(clif, reloc->addr,

@@ -50,9 +50,9 @@ v3dX(clif_dump_packet)(struct clif_dump *clif, uint32_t offset,
         v3d_print_group(clif->out, inst, 0, cl, "");
 
         switch (*cl) {
-        case V3D33_GL_SHADER_STATE_opcode: {
-                struct V3D33_GL_SHADER_STATE values;
-                V3D33_GL_SHADER_STATE_unpack(cl, &values);
+        case V3DX(GL_SHADER_STATE_opcode): {
+                struct V3DX(GL_SHADER_STATE) values;
+                V3DX(GL_SHADER_STATE_unpack)(cl, &values);
 
                 struct reloc_worklist_entry *reloc =
                         clif_dump_add_address_to_worklist(clif,
@@ -65,18 +65,38 @@ v3dX(clif_dump_packet)(struct clif_dump *clif, uint32_t offset,
                 return true;
         }
 
-        case V3D33_STORE_MULTI_SAMPLE_RESOLVED_TILE_COLOR_BUFFER_EXTENDED_opcode: {
-                struct V3D33_STORE_MULTI_SAMPLE_RESOLVED_TILE_COLOR_BUFFER_EXTENDED values;
-                V3D33_STORE_MULTI_SAMPLE_RESOLVED_TILE_COLOR_BUFFER_EXTENDED_unpack(cl, &values);
+#if V3D_VERSION < 40
+        case V3DX(STORE_MULTI_SAMPLE_RESOLVED_TILE_COLOR_BUFFER_EXTENDED_opcode): {
+                struct V3DX(STORE_MULTI_SAMPLE_RESOLVED_TILE_COLOR_BUFFER_EXTENDED) values;
+                V3DX(STORE_MULTI_SAMPLE_RESOLVED_TILE_COLOR_BUFFER_EXTENDED_unpack)(cl, &values);
 
                 if (values.last_tile_of_frame)
                         return false;
                 break;
         }
+#endif /* V3D_VERSION < 40 */
 
-        case V3D33_TRANSFORM_FEEDBACK_ENABLE_opcode: {
-                struct V3D33_TRANSFORM_FEEDBACK_ENABLE values;
-                V3D33_TRANSFORM_FEEDBACK_ENABLE_unpack(cl, &values);
+#if V3D_VERSION > 40
+        case V3DX(TRANSFORM_FEEDBACK_SPECS_opcode): {
+                struct V3DX(TRANSFORM_FEEDBACK_SPECS) values;
+                V3DX(TRANSFORM_FEEDBACK_SPECS_unpack)(cl, &values);
+                struct v3d_group *spec = v3d_spec_find_struct(clif->spec,
+                                                              "Transform Feedback Output Data Spec");
+                assert(spec);
+
+                cl += *size;
+
+                for (int i = 0; i < values.number_of_16_bit_output_data_specs_following; i++) {
+                        v3d_print_group(clif->out, spec, 0, cl, "");
+                        cl += v3d_group_get_length(spec);
+                        *size += v3d_group_get_length(spec);
+                }
+                break;
+        }
+#else /* V3D_VERSION < 40 */
+        case V3DX(TRANSFORM_FEEDBACK_ENABLE_opcode): {
+                struct V3DX(TRANSFORM_FEEDBACK_ENABLE) values;
+                V3DX(TRANSFORM_FEEDBACK_ENABLE_unpack)(cl, &values);
                 struct v3d_group *spec = v3d_spec_find_struct(clif->spec,
                                                               "Transform Feedback Output Data Spec");
                 struct v3d_group *addr = v3d_spec_find_struct(clif->spec,
@@ -99,10 +119,11 @@ v3dX(clif_dump_packet)(struct clif_dump *clif, uint32_t offset,
                 }
                 break;
         }
+#endif /* V3D_VERSION < 40 */
 
-        case V3D33_START_ADDRESS_OF_GENERIC_TILE_LIST_opcode: {
-                struct V3D33_START_ADDRESS_OF_GENERIC_TILE_LIST values;
-                V3D33_START_ADDRESS_OF_GENERIC_TILE_LIST_unpack(cl, &values);
+        case V3DX(START_ADDRESS_OF_GENERIC_TILE_LIST_opcode): {
+                struct V3DX(START_ADDRESS_OF_GENERIC_TILE_LIST) values;
+                V3DX(START_ADDRESS_OF_GENERIC_TILE_LIST_unpack)(cl, &values);
                 struct reloc_worklist_entry *reloc =
                         clif_dump_add_address_to_worklist(clif,
                                                           reloc_generic_tile_list,
@@ -111,7 +132,7 @@ v3dX(clif_dump_packet)(struct clif_dump *clif, uint32_t offset,
                 break;
         }
 
-        case V3D33_HALT_opcode:
+        case V3DX(HALT_opcode):
                 return false;
         }
 
