@@ -33,21 +33,6 @@
 #include "lima_resource.h"
 
 static void
-lima_update_resource(lima_submit_handle submit, struct pipe_resource *dst,
-                     struct pipe_resource *src, unsigned flags)
-{
-   if (dst) {
-      struct lima_resource *res = lima_resource(dst);
-      lima_submit_remove_bo(submit, res->buffer->bo);
-   }
-
-   if (src) {
-      struct lima_resource *res = lima_resource(src);
-      lima_submit_add_bo(submit, res->buffer->bo, flags);
-   }
-}
-
-static void
 lima_set_framebuffer_state(struct pipe_context *pctx,
                            const struct pipe_framebuffer_state *framebuffer)
 {
@@ -59,14 +44,7 @@ lima_set_framebuffer_state(struct pipe_context *pctx,
    struct lima_context *ctx = lima_context(pctx);
    struct lima_context_framebuffer *fb = &ctx->framebuffer;
 
-   lima_update_resource(ctx->pp_submit, fb->cbuf ? fb->cbuf->texture : NULL,
-                        framebuffer->cbufs[0] ? framebuffer->cbufs[0]->texture : NULL,
-                        LIMA_SUBMIT_BO_FLAG_WRITE);
    pipe_surface_reference(&fb->cbuf, framebuffer->cbufs[0]);
-
-   lima_update_resource(ctx->pp_submit, fb->zsbuf ? fb->zsbuf->texture : NULL,
-                        framebuffer->zsbuf ? framebuffer->zsbuf->texture : NULL,
-                        LIMA_SUBMIT_BO_FLAG_WRITE);
    pipe_surface_reference(&fb->zsbuf, framebuffer->zsbuf);
 
    /* need align here? */
@@ -271,13 +249,6 @@ lima_set_vertex_buffers(struct pipe_context *pctx,
 
    struct lima_context *ctx = lima_context(pctx);
    struct lima_context_vertex_buffer *so = &ctx->vertex_buffers;
-   unsigned i;
-
-   for (i = 0; i < count; i++)
-      lima_update_resource(ctx->gp_submit,
-                           so->vb[start_slot + i].buffer.resource,
-                           vb ? vb[i].buffer.resource : NULL,
-                           LIMA_SUBMIT_BO_FLAG_READ);
 
    util_set_vertex_buffers_mask(so->vb + start_slot, &so->enabled_mask,
                                 vb, start_slot, count);
