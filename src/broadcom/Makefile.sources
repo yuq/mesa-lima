@@ -39,6 +39,10 @@ BROADCOM_FILES = \
 	qpu/qpu_pack.c \
 	$()
 
+BROADCOM_PER_VERSION_SOURCES = \
+	clif/v3dx_dump.c \
+	$()
+
 BROADCOM_DECODER_FILES = \
 	cle/v3d_decoder.c \
 	cle/v3d_decoder.h \
