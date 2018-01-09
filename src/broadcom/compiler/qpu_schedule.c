@@ -1012,6 +1012,19 @@ mark_instruction_scheduled(struct list_head *schedule_list,
         }
 }
 
+static void
+insert_scheduled_instruction(struct v3d_compile *c,
+                             struct qblock *block,
+                             struct choose_scoreboard *scoreboard,
+                             struct qinst *inst)
+{
+        list_addtail(&inst->link, &block->instructions);
+
+        update_scoreboard_for_chosen(scoreboard, &inst->qpu);
+        c->qpu_inst_count++;
+        scoreboard->tick++;
+}
+
 static struct qinst *
 vir_nop()
 {
@@ -1021,61 +1034,145 @@ vir_nop()
         return qinst;
 }
 
-#if 0
-static struct qinst *
-nop_after(struct qinst *inst)
+static void
+emit_nop(struct v3d_compile *c, struct qblock *block,
+         struct choose_scoreboard *scoreboard)
 {
-        struct qinst *q = vir_nop();
+        insert_scheduled_instruction(c, block, scoreboard, vir_nop());
+}
 
-        list_add(&q->link, &inst->link);
+static bool
+qpu_instruction_valid_in_thrend_slot(struct v3d_compile *c,
+                                     const struct qinst *qinst, int slot)
+{
+        const struct v3d_qpu_instr *inst = &qinst->qpu;
 
-        return q;
+        /* Only TLB Z writes are prohibited in the last slot, but we don't
+         * have those flagged so prohibit all TLB ops for now.
+         */
+        if (slot == 2 && qpu_inst_is_tlb(inst))
+                return false;
+
+        if (slot > 0 && qinst->uniform != ~0)
+                return false;
+
+        if (v3d_qpu_uses_vpm(inst))
+                return false;
+
+        if (inst->sig.ldvary)
+                return false;
+
+        if (inst->type == V3D_QPU_INSTR_TYPE_ALU) {
+                /* No writing physical registers at the end. */
+                if (!inst->alu.add.magic_write ||
+                    !inst->alu.mul.magic_write) {
+                        return false;
+                }
+
+                if (c->devinfo->ver < 40 && inst->alu.add.op == V3D_QPU_A_SETMSF)
+                        return false;
+
+                /* RF0-2 might be overwritten during the delay slots by
+                 * fragment shader setup.
+                 */
+                if (inst->raddr_a < 3 &&
+                    (inst->alu.add.a == V3D_QPU_MUX_A ||
+                     inst->alu.add.b == V3D_QPU_MUX_A ||
+                     inst->alu.mul.a == V3D_QPU_MUX_A ||
+                     inst->alu.mul.b == V3D_QPU_MUX_A)) {
+                        return false;
+                }
+
+                if (inst->raddr_b < 3 &&
+                    !inst->sig.small_imm &&
+                    (inst->alu.add.a == V3D_QPU_MUX_B ||
+                     inst->alu.add.b == V3D_QPU_MUX_B ||
+                     inst->alu.mul.a == V3D_QPU_MUX_B ||
+                     inst->alu.mul.b == V3D_QPU_MUX_B)) {
+                        return false;
+                }
+        }
+
+        return true;
+}
+
+static bool
+valid_thrend_sequence(struct v3d_compile *c,
+                      struct qinst *qinst, int instructions_in_sequence)
+{
+        for (int slot = 0; slot < instructions_in_sequence; slot++) {
+                if (!qpu_instruction_valid_in_thrend_slot(c, qinst, slot))
+                        return false;
+
+                /* Note that the list is circular, so we can only do this up
+                 * to instructions_in_sequence.
+                 */
+                qinst = (struct qinst *)qinst->link.next;
+        }
+
+        return true;
 }
 
 /**
- * Emits a THRSW/LTHRSW signal in the stream, trying to move it up to pair
- * with another instruction.
+ * Emits a THRSW signal in the stream, trying to move it up to pair with
+ * another instruction.
  */
-static void
+static int
 emit_thrsw(struct v3d_compile *c,
+           struct qblock *block,
            struct choose_scoreboard *scoreboard,
-           const struct v3d_qpu_instr *inst)
+           struct qinst *inst)
 {
+        int time = 0;
+
         /* There should be nothing in a thrsw inst being scheduled other than
          * the signal bits.
          */
-        assert(inst->type == V3D_QPU_INSTR_TYPE_ALU);
-        assert(inst->alu.add.op == V3D_QPU_A_NOP);
-        assert(inst->alu.mul.op == V3D_QPU_M_NOP);
+        assert(inst->qpu.type == V3D_QPU_INSTR_TYPE_ALU);
+        assert(inst->qpu.alu.add.op == V3D_QPU_A_NOP);
+        assert(inst->qpu.alu.mul.op == V3D_QPU_M_NOP);
 
-        /* Try to find an earlier scheduled instruction that we can merge the
-         * thrsw into.
-         */
-        int thrsw_ip = c->qpu_inst_count;
-        for (int i = 1; i <= MIN2(c->qpu_inst_count, 3); i++) {
-                uint64_t prev_instr = c->qpu_insts[c->qpu_inst_count - i];
-                uint32_t prev_sig = QPU_GET_FIELD(prev_instr, QPU_SIG);
+        /* Find how far back into previous instructions we can put the THRSW. */
+        int slots_filled = 0;
+        struct qinst *merge_inst = NULL;
+        vir_for_each_inst_rev(prev_inst, block) {
+                struct v3d_qpu_sig sig = prev_inst->qpu.sig;
+                sig.thrsw = true;
+                uint32_t packed_sig;
 
-                if (prev_sig == QPU_SIG_NONE)
-                        thrsw_ip = c->qpu_inst_count - i;
+                if (!v3d_qpu_sig_pack(c->devinfo, &sig, &packed_sig))
+                        break;
+
+                if (!valid_thrend_sequence(c, prev_inst, slots_filled + 1))
+                        break;
+
+                merge_inst = prev_inst;
+                if (++slots_filled == 3)
+                        break;
         }
 
-        if (thrsw_ip != c->qpu_inst_count) {
-                /* Merge the thrsw into the existing instruction. */
-                c->qpu_insts[thrsw_ip] =
-                        QPU_UPDATE_FIELD(c->qpu_insts[thrsw_ip], sig, QPU_SIG);
+        if (merge_inst) {
+                merge_inst->qpu.sig.thrsw = true;
         } else {
-                qpu_serialize_one_inst(c, inst);
-                update_scoreboard_for_chosen(scoreboard, inst);
+                insert_scheduled_instruction(c, block, scoreboard, inst);
+                time++;
+                slots_filled++;
         }
 
-        /* Fill the delay slots. */
-        while (c->qpu_inst_count < thrsw_ip + 3) {
-                update_scoreboard_for_chosen(scoreboard, v3d_qpu_nop());
-                qpu_serialize_one_inst(c, v3d_qpu_nop());
+        /* Insert any extra delay slot NOPs we need. */
+        for (int i = 0; i < 3 - slots_filled; i++) {
+                emit_nop(c, block, scoreboard);
+                time++;
         }
+
+        /* If we put our THRSW into another instruction, free up the
+         * instruction that didn't end up scheduled into the list.
+         */
+        if (merge_inst)
+                free(inst);
+
+        return time;
 }
-#endif
 
 static uint32_t
 schedule_instructions(struct v3d_compile *c,
@@ -1337,6 +1434,8 @@ uint32_t
 v3d_qpu_schedule_instructions(struct v3d_compile *c)
 {
         const struct v3d_device_info *devinfo = c->devinfo;
+        struct qblock *end_block = list_last_entry(&c->blocks,
+                                                   struct qblock, link);
 
         /* We reorder the uniforms as we schedule instructions, so save the
          * old data off and replace it.
@@ -1385,6 +1484,11 @@ v3d_qpu_schedule_instructions(struct v3d_compile *c)
 
                 block->end_qpu_ip = c->qpu_inst_count - 1;
         }
+
+        /* Emit the program-end THRSW instruction. */;
+        struct qinst *thrsw = vir_nop();
+        thrsw->qpu.sig.thrsw = true;
+        emit_thrsw(c, end_block, &scoreboard, thrsw);
 
         qpu_set_branch_targets(c);
 

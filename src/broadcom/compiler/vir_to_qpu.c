@@ -322,8 +322,6 @@ void
 v3d_vir_to_qpu(struct v3d_compile *c)
 {
         struct qpu_reg *temp_registers = v3d_register_allocate(c);
-        struct qblock *end_block = list_last_entry(&c->blocks,
-                                                   struct qblock, link);
 
         /* Reset the uniform count to how many will be actually loaded by the
          * generated QPU code.
@@ -332,10 +330,6 @@ v3d_vir_to_qpu(struct v3d_compile *c)
 
         vir_for_each_block(block, c)
                 v3d_generate_code_block(c, block, temp_registers);
-
-        struct qinst *thrsw = vir_nop();
-        list_addtail(&thrsw->link, &end_block->instructions);
-        thrsw->qpu.sig.thrsw = true;
 
         uint32_t cycles = v3d_qpu_schedule_instructions(c);
 
