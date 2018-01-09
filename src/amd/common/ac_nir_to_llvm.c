@@ -6984,6 +6984,14 @@ void ac_compile_nir_shader(LLVMTargetMachineRef tm,
 	ac_compile_llvm_module(tm, llvm_module, binary, config, shader_info, nir[0]->info.stage, dump_shader, options->supports_spill);
 	for (int i = 0; i < nir_count; ++i)
 		ac_fill_shader_info(shader_info, nir[i], options);
+
+	/* Determine the ES type (VS or TES) for the GS on GFX9. */
+	if (options->chip_class == GFX9) {
+		if (nir_count == 2 &&
+		    nir[1]->info.stage == MESA_SHADER_GEOMETRY) {
+			shader_info->gs.es_type = nir[0]->info.stage;
+		}
+	}
 }
 
 static void
