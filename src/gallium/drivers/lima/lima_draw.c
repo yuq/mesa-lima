@@ -708,6 +708,8 @@ lima_update_gp_attribute_info(struct lima_context *ctx, const struct pipe_draw_i
       struct lima_resource *res = lima_resource(pvb->buffer.resource);
       lima_buffer_update(res->buffer, LIMA_BUFFER_ALLOC_VA);
 
+      lima_submit_add_bo(ctx->gp_submit, res->buffer->bo, LIMA_SUBMIT_BO_FLAG_READ);
+
       attribute[n++] = res->buffer->va + pvb->buffer_offset + pve->src_offset
          + info->start * pvb->stride;
       attribute[n++] = (pvb->stride << 11) |
@@ -850,6 +852,9 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    if (!lima_update_vs_state(ctx) || !lima_update_fs_state(ctx))
       return;
 
+   lima_submit_add_bo(ctx->gp_submit, ctx->vs->bo->bo, LIMA_SUBMIT_BO_FLAG_READ);
+   lima_submit_add_bo(ctx->pp_submit, ctx->fs->bo->bo, LIMA_SUBMIT_BO_FLAG_READ);
+
    lima_bo_wait(ctx->gp_buffer->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true);
 
    /* TODO:
@@ -857,12 +862,7 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
     *   2. reuse buffer across draws of different frame
     */
 
-   if (!ctx->num_draws ||
-       ctx->dirty & (LIMA_CONTEXT_DIRTY_VERTEX_ELEM|LIMA_CONTEXT_DIRTY_VERTEX_BUFF) ||
-       info->start != ctx->draw_start) {
-      lima_update_gp_attribute_info(ctx, info);
-      ctx->draw_start = info->start;
-   }
+   lima_update_gp_attribute_info(ctx, info);
 
    if (!ctx->num_draws ||
        (ctx->dirty & LIMA_CONTEXT_DIRTY_CONST_BUFF &&
@@ -937,6 +937,11 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 
    lima_finish_plbu_cmd(ctx);
 
+   lima_submit_add_bo(ctx->gp_submit, ctx->gp_buffer->bo,
+                      LIMA_SUBMIT_BO_FLAG_READ|LIMA_SUBMIT_BO_FLAG_WRITE);
+   lima_submit_add_bo(ctx->gp_submit, ctx->share_buffer->bo,
+                      LIMA_SUBMIT_BO_FLAG_WRITE);
+
    int vs_cmd_size = ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].offset +
       ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].size;
    int plbu_cmd_size = ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].offset +
@@ -980,6 +985,11 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
    struct lima_screen *screen = lima_screen(pctx->screen);
    struct lima_resource *res = lima_resource(ctx->framebuffer.cbuf->texture);
    lima_buffer_update(res->buffer, LIMA_BUFFER_ALLOC_VA);
+
+   lima_submit_add_bo(ctx->pp_submit, res->buffer->bo, LIMA_SUBMIT_BO_FLAG_WRITE);
+   lima_submit_add_bo(ctx->pp_submit, ctx->share_buffer->bo, LIMA_SUBMIT_BO_FLAG_READ);
+   lima_submit_add_bo(ctx->pp_submit, ctx->pp_buffer->bo,
+                      LIMA_SUBMIT_BO_FLAG_READ|LIMA_SUBMIT_BO_FLAG_WRITE);
 
    int num_pp = screen->info.num_pp;
    struct drm_lima_m400_pp_frame pp_frame = {
