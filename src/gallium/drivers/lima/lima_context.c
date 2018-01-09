@@ -108,14 +108,6 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    if (lima_submit_create(screen->dev, LIMA_PIPE_GP, &ctx->gp_submit))
       goto err_out;
 
-   if (lima_submit_add_bo(ctx->gp_submit, ctx->share_buffer->bo,
-                          LIMA_SUBMIT_BO_FLAG_WRITE))
-      goto err_out;
-
-   if (lima_submit_add_bo(ctx->gp_submit, ctx->gp_buffer->bo,
-                          LIMA_SUBMIT_BO_FLAG_READ|LIMA_SUBMIT_BO_FLAG_WRITE))
-      goto err_out;
-
    ctx->pp_buffer = lima_buffer_alloc(
       screen, pp_buffer_size, LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
    if (!ctx->pp_buffer)
@@ -136,14 +128,6 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    pp_frame_rsw[13] = 0x00000100;
 
    if (lima_submit_create(screen->dev, LIMA_PIPE_PP, &ctx->pp_submit))
-      goto err_out;
-
-   if (lima_submit_add_bo(ctx->pp_submit, ctx->share_buffer->bo,
-                          LIMA_SUBMIT_BO_FLAG_READ))
-      goto err_out;
-
-   if (lima_submit_add_bo(ctx->pp_submit, ctx->pp_buffer->bo,
-                          LIMA_SUBMIT_BO_FLAG_READ | LIMA_SUBMIT_BO_FLAG_WRITE))
       goto err_out;
 
    return &ctx->base;
