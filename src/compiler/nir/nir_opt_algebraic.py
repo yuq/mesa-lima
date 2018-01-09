@@ -354,7 +354,8 @@ optimizations = [
    # a single non-constant.  We could do better eventually.
    (('~fmul', '#a', ('fmul', b, '#c')), ('fmul', ('fmul', a, c), b)),
    (('imul', '#a', ('imul', b, '#c')), ('imul', ('imul', a, c), b)),
-   (('~fadd', '#a', ('fadd', b, '#c')), ('fadd', ('fadd', a, c), b)),
+   (('~fadd', '#a',          ('fadd', b, '#c')),  ('fadd', ('fadd', a,          c),           b)),
+   (('~fadd', '#a', ('fneg', ('fadd', b, '#c'))), ('fadd', ('fadd', a, ('fneg', c)), ('fneg', b))),
    (('iadd', '#a', ('iadd', b, '#c')), ('iadd', ('iadd', a, c), b)),
 
    # By definition...
@@ -569,8 +570,10 @@ before_ffma_optimizations = [
 late_optimizations = [
    # Most of these optimizations aren't quite safe when you get infinity or
    # Nan involved but the first one should be fine.
-   (('flt', ('fadd', a, b), 0.0), ('flt', a, ('fneg', b))),
-   (('~fge', ('fadd', a, b), 0.0), ('fge', a, ('fneg', b))),
+   (('flt',          ('fadd', a, b),  0.0), ('flt',          a, ('fneg', b))),
+   (('flt', ('fneg', ('fadd', a, b)), 0.0), ('flt', ('fneg', a),         b)),
+   (('~fge',          ('fadd', a, b),  0.0), ('fge',          a, ('fneg', b))),
+   (('~fge', ('fneg', ('fadd', a, b)), 0.0), ('fge', ('fneg', a),         b)),
    (('~feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
    (('~fne', ('fadd', a, b), 0.0), ('fne', a, ('fneg', b))),
 
