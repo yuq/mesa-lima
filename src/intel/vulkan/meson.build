@@ -109,7 +109,6 @@ libanv_files = files(
   'anv_batch_chain.c',
   'anv_blorp.c',
   'anv_cmd_buffer.c',
-  'anv_debug_report.c',
   'anv_descriptor_set.c',
   'anv_device.c',
   'anv_dump.c',

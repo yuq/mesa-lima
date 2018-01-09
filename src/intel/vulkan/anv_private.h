@@ -50,6 +50,7 @@
 #include "util/u_atomic.h"
 #include "util/u_vector.h"
 #include "vk_alloc.h"
+#include "vk_debug_report.h"
 
 /* Pre-declarations needed for WSI entrypoints */
 struct wl_surface;
@@ -62,7 +63,6 @@ struct anv_buffer;
 struct anv_buffer_view;
 struct anv_image_view;
 struct anv_instance;
-struct anv_debug_report_callback;
 
 struct gen_l3_config;
 
@@ -291,7 +291,7 @@ vk_to_isl_color(VkClearColorValue color)
    __builtin_types_compatible_p (__typeof (o), struct wsi_swapchain*),             \
    VK_DEBUG_REPORT_OBJECT_TYPE_SWAPCHAIN_KHR_EXT,                                  \
    __builtin_choose_expr (                                                         \
-   __builtin_types_compatible_p (__typeof (o), struct anv_debug_callback*),        \
+   __builtin_types_compatible_p (__typeof (o), struct vk_debug_callback*),         \
    VK_DEBUG_REPORT_OBJECT_TYPE_DEBUG_REPORT_CALLBACK_EXT_EXT,                      \
    __builtin_choose_expr (                                                         \
    __builtin_types_compatible_p (__typeof (o), void*),                             \
@@ -345,15 +345,6 @@ void __anv_perf_warn(struct anv_instance *instance, const void *object,
    anv_printflike(6, 7);
 void anv_loge(const char *format, ...) anv_printflike(1, 2);
 void anv_loge_v(const char *format, va_list va);
-
-void anv_debug_report(struct anv_instance *instance,
-                      VkDebugReportFlagsEXT flags,
-                      VkDebugReportObjectTypeEXT object_type,
-                      uint64_t handle,
-                      size_t location,
-                      int32_t messageCode,
-                      const char* pLayerPrefix,
-                      const char *pMessage);
 
 /**
  * Print a FINISHME message, including its source location.
@@ -796,14 +787,6 @@ struct anv_physical_device {
     int                                         local_fd;
 };
 
-struct anv_debug_report_callback {
-   /* Link in the 'callbacks' list in anv_instance struct. */
-   struct list_head                             link;
-   VkDebugReportFlagsEXT                        flags;
-   PFN_vkDebugReportCallbackEXT                 callback;
-   void *                                       data;
-};
-
 struct anv_instance {
     VK_LOADER_DATA                              _loader_data;
 
@@ -813,10 +796,7 @@ struct anv_instance {
     int                                         physicalDeviceCount;
     struct anv_physical_device                  physicalDevice;
 
-    /* VK_EXT_debug_report debug callbacks */
-    pthread_mutex_t                             callbacks_mutex;
-    struct list_head                            callbacks;
-    struct anv_debug_report_callback            destroy_debug_cb;
+    struct vk_debug_report_instance             debug_report_callbacks;
 };
 
 VkResult anv_init_wsi(struct anv_physical_device *physical_device);
@@ -2922,7 +2902,7 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_render_pass, VkRenderPass)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_sampler, VkSampler)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_semaphore, VkSemaphore)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_shader_module, VkShaderModule)
-ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_debug_report_callback, VkDebugReportCallbackEXT)
+ANV_DEFINE_NONDISP_HANDLE_CASTS(vk_debug_report_callback, VkDebugReportCallbackEXT)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_ycbcr_conversion, VkSamplerYcbcrConversionKHR)
 
 /* Gen-specific function declarations */

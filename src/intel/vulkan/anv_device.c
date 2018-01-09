@@ -482,6 +482,7 @@ VkResult anv_CreateInstance(
     VkInstance*                                 pInstance)
 {
    struct anv_instance *instance;
+   VkResult result;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO);
 
@@ -541,18 +542,10 @@ VkResult anv_CreateInstance(
    instance->apiVersion = client_version;
    instance->physicalDeviceCount = -1;
 
-   if (pthread_mutex_init(&instance->callbacks_mutex, NULL) != 0) {
+   result = vk_debug_report_instance_init(&instance->debug_report_callbacks);
+   if (result != VK_SUCCESS) {
       vk_free2(&default_alloc, pAllocator, instance);
-      return vk_error(VK_ERROR_INITIALIZATION_FAILED);
-   }
-
-   list_inithead(&instance->callbacks);
-
-   /* Store report debug callback to be used during DestroyInstance. */
-   if (ctor_cb) {
-      instance->destroy_debug_cb.flags = ctor_cb->flags;
-      instance->destroy_debug_cb.callback = ctor_cb->pfnCallback;
-      instance->destroy_debug_cb.data = ctor_cb->pUserData;
+      return vk_error(result);
    }
 
    _mesa_locale_init();
@@ -581,7 +574,7 @@ void anv_DestroyInstance(
 
    VG(VALGRIND_DESTROY_MEMPOOL(instance));
 
-   pthread_mutex_destroy(&instance->callbacks_mutex);
+   vk_debug_report_instance_destroy(&instance->debug_report_callbacks);
 
    _mesa_locale_fini();
 
@@ -1064,6 +1057,43 @@ PFN_vkVoidFunction anv_GetDeviceProcAddr(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    return anv_lookup_entrypoint(&device->info, pName);
+}
+
+VkResult
+anv_CreateDebugReportCallbackEXT(VkInstance _instance,
+                                 const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
+                                 const VkAllocationCallbacks* pAllocator,
+                                 VkDebugReportCallbackEXT* pCallback)
+{
+   ANV_FROM_HANDLE(anv_instance, instance, _instance);
+   return vk_create_debug_report_callback(&instance->debug_report_callbacks,
+                                          pCreateInfo, pAllocator, &instance->alloc,
+                                          pCallback);
+}
+
+void
+anv_DestroyDebugReportCallbackEXT(VkInstance _instance,
+                                  VkDebugReportCallbackEXT _callback,
+                                  const VkAllocationCallbacks* pAllocator)
+{
+   ANV_FROM_HANDLE(anv_instance, instance, _instance);
+   vk_destroy_debug_report_callback(&instance->debug_report_callbacks,
+                                    _callback, pAllocator, &instance->alloc);
+}
+
+void
+anv_DebugReportMessageEXT(VkInstance _instance,
+                          VkDebugReportFlagsEXT flags,
+                          VkDebugReportObjectTypeEXT objectType,
+                          uint64_t object,
+                          size_t location,
+                          int32_t messageCode,
+                          const char* pLayerPrefix,
+                          const char* pMessage)
+{
+   ANV_FROM_HANDLE(anv_instance, instance, _instance);
+   vk_debug_report(&instance->debug_report_callbacks, flags, objectType,
+                   object, location, messageCode, pLayerPrefix, pMessage);
 }
 
 static void
