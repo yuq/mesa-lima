@@ -283,7 +283,8 @@ LLVMValueRef si_nir_load_input_tes(struct ac_shader_abi *abi,
 				   unsigned component,
 				   unsigned num_components,
 				   bool is_patch,
-				   bool is_compact);
+				   bool is_compact,
+				   bool load_input);
 
 LLVMValueRef si_llvm_load_input_gs(struct ac_shader_abi *abi,
 				   unsigned input_index,

@@ -2850,7 +2850,8 @@ load_tcs_input(struct ac_shader_abi *abi,
 	       unsigned component,
 	       unsigned num_components,
 	       bool is_patch,
-	       bool is_compact)
+	       bool is_compact,
+	       bool load_input)
 {
 	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
 	LLVMValueRef dw_addr, stride;
@@ -2999,7 +3000,8 @@ load_tes_input(struct ac_shader_abi *abi,
 	       unsigned component,
 	       unsigned num_components,
 	       bool is_patch,
-	       bool is_compact)
+	       bool is_compact,
+	       bool load_input)
 {
 	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
 	LLVMValueRef buf_addr;
@@ -3149,11 +3151,11 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 					 false, NULL, is_patch ? NULL : &vertex_index,
 					 &const_index, &indir_index);
 
-			result = ctx->abi->load_tess_inputs(ctx->abi, vertex_index, indir_index,
-							    const_index, location, driver_location,
-							    instr->variables[0]->var->data.location_frac,
-							    instr->num_components,
-							    is_patch, is_compact);
+			result = ctx->abi->load_tess_varyings(ctx->abi, vertex_index, indir_index,
+							      const_index, location, driver_location,
+							      instr->variables[0]->var->data.location_frac,
+							      instr->num_components,
+							      is_patch, is_compact, true);
 			return LLVMBuildBitCast(ctx->ac.builder, result, get_def_type(ctx, &instr->dest.ssa), "");
 		}
 
@@ -6742,12 +6744,12 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_CTRL) {
 			ctx.tcs_outputs_read = shaders[i]->info.outputs_read;
 			ctx.tcs_patch_outputs_read = shaders[i]->info.patch_outputs_read;
-			ctx.abi.load_tess_inputs = load_tcs_input;
+			ctx.abi.load_tess_varyings = load_tcs_input;
 			ctx.abi.load_patch_vertices_in = load_patch_vertices_in;
 			ctx.abi.store_tcs_outputs = store_tcs_output;
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_EVAL) {
 			ctx.tes_primitive_mode = shaders[i]->info.tess.primitive_mode;
-			ctx.abi.load_tess_inputs = load_tes_input;
+			ctx.abi.load_tess_varyings = load_tes_input;
 			ctx.abi.load_tess_coord = load_tess_coord;
 			ctx.abi.load_patch_vertices_in = load_patch_vertices_in;
 		} else if (shaders[i]->info.stage == MESA_SHADER_VERTEX) {

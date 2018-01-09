@@ -1212,16 +1212,17 @@ static LLVMValueRef fetch_input_tcs(
 	return lds_load(bld_base, tgsi2llvmtype(bld_base, type), swizzle, dw_addr);
 }
 
-static LLVMValueRef si_nir_load_input_tcs(struct ac_shader_abi *abi,
-					  LLVMValueRef vertex_index,
-					  LLVMValueRef param_index,
-					  unsigned const_index,
-					  unsigned location,
-					  unsigned driver_location,
-					  unsigned component,
-					  unsigned num_components,
-					  bool is_patch,
-					  bool is_compact)
+static LLVMValueRef si_nir_load_tcs_varyings(struct ac_shader_abi *abi,
+					     LLVMValueRef vertex_index,
+					     LLVMValueRef param_index,
+					     unsigned const_index,
+					     unsigned location,
+					     unsigned driver_location,
+					     unsigned component,
+					     unsigned num_components,
+					     bool is_patch,
+					     bool is_compact,
+					     bool load_input)
 {
 	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	struct tgsi_shader_info *info = &ctx->shader->selector->info;
@@ -1230,8 +1231,18 @@ static LLVMValueRef si_nir_load_input_tcs(struct ac_shader_abi *abi,
 
 	driver_location = driver_location / 4;
 
-	stride = get_tcs_in_vertex_dw_stride(ctx);
-	dw_addr = get_tcs_in_current_patch_offset(ctx);
+	if (load_input) {
+		stride = get_tcs_in_vertex_dw_stride(ctx);
+		dw_addr = get_tcs_in_current_patch_offset(ctx);
+	} else {
+		if (is_patch) {
+			stride = NULL;
+			dw_addr = get_tcs_out_current_patch_data_offset(ctx);
+		} else {
+			stride = get_tcs_out_vertex_dw_stride(ctx);
+			dw_addr = get_tcs_out_current_patch_offset(ctx);
+		}
+	}
 
 	if (param_index) {
 		/* Add the constant index to the indirect index */
@@ -1302,7 +1313,8 @@ LLVMValueRef si_nir_load_input_tes(struct ac_shader_abi *abi,
 				   unsigned component,
 				   unsigned num_components,
 				   bool is_patch,
-				   bool is_compact)
+				   bool is_compact,
+				   bool load_input)
 {
 	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	struct tgsi_shader_info *info = &ctx->shader->selector->info;
@@ -5987,7 +5999,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		break;
 	case PIPE_SHADER_TESS_CTRL:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_tcs;
-		ctx->abi.load_tess_inputs = si_nir_load_input_tcs;
+		ctx->abi.load_tess_varyings = si_nir_load_tcs_varyings;
 		bld_base->emit_fetch_funcs[TGSI_FILE_OUTPUT] = fetch_output_tcs;
 		bld_base->emit_store = store_output_tcs;
 		ctx->abi.store_tcs_outputs = si_nir_store_output_tcs;
@@ -5997,7 +6009,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		break;
 	case PIPE_SHADER_TESS_EVAL:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_tes;
-		ctx->abi.load_tess_inputs = si_nir_load_input_tes;
+		ctx->abi.load_tess_varyings = si_nir_load_input_tes;
 		ctx->abi.load_tess_coord = si_load_tess_coord;
 		ctx->abi.load_tess_level = si_load_tess_level;
 		ctx->abi.load_patch_vertices_in = si_load_patch_vertices_in;
