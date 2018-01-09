@@ -89,14 +89,32 @@ brw_create_nir(struct brw_context *brw,
    nir_validate_shader(nir);
 
    /* Lower PatchVerticesIn from system value to uniform. This needs to
-    * happen before brw_preprocess_nir, since that will lower system values.
+    * happen before brw_preprocess_nir, since that will lower system values
+    * to intrinsics.
+    *
+    * We only do this for TES if no TCS is present, since otherwise we know
+    * the number of vertices in the patch at link time and we can lower it
+    * directly to a constant. We do this in nir_lower_patch_vertices, which
+    * needs to run after brw_nir_preprocess has turned the system values
+    * into intrinsics.
     */
-   if ((stage == MESA_SHADER_TESS_CTRL && brw->screen->devinfo.gen >= 8) ||
-       stage == MESA_SHADER_TESS_EVAL) {
+   const bool lower_patch_vertices_in_to_uniform =
+      (stage == MESA_SHADER_TESS_CTRL && brw->screen->devinfo.gen >= 8) ||
+      (stage == MESA_SHADER_TESS_EVAL &&
+       !shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]);
+
+   if (lower_patch_vertices_in_to_uniform)
       brw_nir_lower_patch_vertices_in_to_uniform(nir);
-   }
 
    nir = brw_preprocess_nir(brw->screen->compiler, nir);
+
+   if (stage == MESA_SHADER_TESS_EVAL && !lower_patch_vertices_in_to_uniform) {
+      assert(shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]);
+      struct gl_linked_shader *linked_tcs =
+         shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL];
+      uint32_t patch_vertices = linked_tcs->Program->info.tess.tcs_vertices_out;
+      nir_lower_tes_patch_vertices(nir, patch_vertices);
+   }
 
    if (stage == MESA_SHADER_FRAGMENT) {
       static const struct nir_lower_wpos_ytransform_options wpos_options = {
