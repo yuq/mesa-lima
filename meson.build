@@ -125,6 +125,7 @@ with_gallium_imx = false
 with_gallium_i915 = false
 with_gallium_svga = false
 with_gallium_virgl = false
+with_gallium_swr = false
 _drivers = get_option('gallium-drivers')
 if _drivers == 'auto'
   if not ['darwin', 'windows'].contains(host_machine.system())
