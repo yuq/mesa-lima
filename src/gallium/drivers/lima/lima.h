@@ -89,7 +89,6 @@ int lima_bo_va_unmap(lima_bo_handle bo, uint32_t va);
 int lima_submit_create(lima_device_handle dev, uint32_t pipe, lima_submit_handle *submit);
 void lima_submit_delete(lima_submit_handle submit);
 int lima_submit_add_bo(lima_submit_handle submit, lima_bo_handle bo, uint32_t flags);
-void lima_submit_remove_bo(lima_submit_handle submit, lima_bo_handle bo);
 void lima_submit_set_frame(lima_submit_handle submit, void *frame, uint32_t size);
 int lima_submit_start(lima_submit_handle submit);
 int lima_submit_wait(lima_submit_handle submit, uint64_t timeout_ns, bool relative);
