@@ -1822,8 +1822,15 @@ void r600_query_fix_enabled_rb_mask(struct r600_common_screen *rscreen)
 
 	assert(rscreen->chip_class <= CAYMAN);
 
-	/* if backend_map query is supported by the kernel */
-	if (rscreen->info.r600_gb_backend_map_valid) {
+	/*
+	 * if backend_map query is supported by the kernel.
+	 * Note the kernel drm driver for a long time never filled in the
+	 * associated data on eg/cm, only on r600/r700, hence ignore the valid
+	 * bit there if the map is zero.
+	 * (Albeit some chips with just one active rb can have a valid 0 map.)
+	 */ 
+	if (rscreen->info.r600_gb_backend_map_valid &&
+	    (ctx->chip_class < EVERGREEN || rscreen->info.r600_gb_backend_map != 0)) {
 		unsigned num_tile_pipes = rscreen->info.num_tile_pipes;
 		unsigned backend_map = rscreen->info.r600_gb_backend_map;
 		unsigned item_width, item_mask;
