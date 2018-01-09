@@ -30,6 +30,7 @@
 #include "lima_context.h"
 #include "lima_screen.h"
 #include "lima_resource.h"
+#include "lima_program.h"
 
 #include <lima_drm.h>
 
@@ -243,8 +244,7 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       ctx->buffer_state[lima_ctx_buff_gp_uniform].offset;
    vs_cmd[i++] = 0x30000000 | (align(uniform_size, 16) << 12); /* UNIFORMS_ADDRESS */
 
-   vs_cmd[i++] = ctx->gp_buffer->va + gp_vs_program_offset +
-      ctx->buffer_state[lima_ctx_buff_gp_vs_program].offset;
+   vs_cmd[i++] = ctx->vs->bo->va;
    vs_cmd[i++] = 0x40000000 | ((ctx->vs->shader_size >> 4) << 16); /* SHADER_ADDRESS */
 
    vs_cmd[i++] = (ctx->vs->prefetch << 20) | ((align(ctx->vs->shader_size, 16) / 16 - 1) << 10);
@@ -627,9 +627,7 @@ lima_pack_render_state(struct lima_context *ctx)
    render->multi_sample = 0x0000F807;
 
    render->shader_address =
-      (ctx->pp_buffer->va + pp_fs_program_offset +
-       ctx->buffer_state[lima_ctx_buff_pp_fs_program].offset) |
-      (((uint32_t *)ctx->fs->shader)[0] & 0x1F);
+      ctx->fs->bo->va | (((uint32_t *)ctx->fs->bo->map)[0] & 0x1F);
 
    /* seems not needed */
    render->uniforms_address = 0x00000000;
@@ -777,20 +775,6 @@ lima_update_pp_uniform(struct lima_context *ctx)
 }
 
 static void
-lima_update_gp_vs_program(struct lima_context *ctx)
-{
-   ctx->buffer_state[lima_ctx_buff_gp_vs_program].offset +=
-      ctx->buffer_state[lima_ctx_buff_gp_vs_program].size;
-
-   void *vs_program = ctx->gp_buffer->map + gp_vs_program_offset +
-      ctx->buffer_state[lima_ctx_buff_gp_vs_program].offset;
-
-   struct lima_vs_shader_state *vs = ctx->vs;
-   memcpy(vs_program, vs->shader, vs->shader_size);
-   ctx->buffer_state[lima_ctx_buff_gp_vs_program].size = align(vs->shader_size, 0x40);
-}
-
-static void
 lima_update_varying(struct lima_context *ctx, const struct pipe_draw_info *info)
 {
    ctx->buffer_state[lima_ctx_buff_gp_varying_info].offset +=
@@ -851,20 +835,6 @@ lima_update_varying(struct lima_context *ctx, const struct pipe_draw_info *info)
 }
 
 static void
-lima_update_pp_fs_program(struct lima_context *ctx)
-{
-   ctx->buffer_state[lima_ctx_buff_pp_fs_program].offset +=
-      ctx->buffer_state[lima_ctx_buff_pp_fs_program].size;
-
-   void *fs_program = ctx->pp_buffer->map + pp_fs_program_offset +
-      ctx->buffer_state[lima_ctx_buff_pp_fs_program].offset;
-
-   struct lima_fs_shader_state *fs = ctx->fs;
-   memcpy(fs_program, fs->shader, fs->shader_size);
-   ctx->buffer_state[lima_ctx_buff_pp_fs_program].size = align(fs->shader_size, 0x40);
-}
-
-static void
 lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
    debug_checkpoint();
@@ -875,6 +845,9 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       debug_warn_once("no shader, skip draw\n");
       return;
    }
+
+   if (!lima_update_vs_state(ctx) || !lima_update_fs_state(ctx))
+      return;
 
    lima_bo_wait(ctx->gp_buffer->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true);
 
@@ -897,9 +870,6 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       lima_update_gp_uniform(ctx);
       ctx->const_buffer[PIPE_SHADER_VERTEX].dirty = false;
    }
-
-   if (!ctx->num_draws || ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_VERT)
-      lima_update_gp_vs_program(ctx);
 
    lima_update_varying(ctx, info);
 
@@ -928,9 +898,6 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       lima_update_pp_uniform(ctx);
       ctx->const_buffer[PIPE_SHADER_FRAGMENT].dirty = false;
    }
-
-   if (!ctx->num_draws || ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_FRAG)
-      lima_update_pp_fs_program(ctx);
 
    lima_pack_render_state(ctx);
 
@@ -1083,9 +1050,6 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
    assert(ctx->buffer_state[lima_ctx_buff_sh_gl_pos].offset +
           ctx->buffer_state[lima_ctx_buff_sh_gl_pos].size <=
           sh_buffer_size - sh_gl_pos_offset);
-   assert(ctx->buffer_state[lima_ctx_buff_gp_vs_program].offset +
-          ctx->buffer_state[lima_ctx_buff_gp_vs_program].size <=
-          gp_plbu_plb_offset - gp_vs_program_offset);
    assert(ctx->buffer_state[lima_ctx_buff_gp_varying_info].offset +
           ctx->buffer_state[lima_ctx_buff_gp_varying_info].size <=
           gp_attribute_info_offset - gp_varying_info_offset);
@@ -1101,9 +1065,6 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
    assert(ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].offset +
           ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].size <=
           gp_tile_heap_offset - gp_plbu_cmd_offset);
-   assert(ctx->buffer_state[lima_ctx_buff_pp_fs_program].offset +
-          ctx->buffer_state[lima_ctx_buff_pp_fs_program].size <=
-          pp_frame_rsw_offset - pp_fs_program_offset);
    assert(ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].offset +
           ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].size <=
           pp_plb_offset_start - pp_plb_rsw_offset);
