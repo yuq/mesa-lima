@@ -88,6 +88,14 @@ brw_create_nir(struct brw_context *brw,
    }
    nir_validate_shader(nir);
 
+   /* Lower PatchVerticesIn from system value to uniform. This needs to
+    * happen before brw_preprocess_nir, since that will lower system values.
+    */
+   if ((stage == MESA_SHADER_TESS_CTRL && brw->screen->devinfo.gen >= 8) ||
+       stage == MESA_SHADER_TESS_EVAL) {
+      brw_nir_lower_patch_vertices_in_to_uniform(nir);
+   }
+
    nir = brw_preprocess_nir(brw->screen->compiler, nir);
 
    if (stage == MESA_SHADER_FRAGMENT) {
