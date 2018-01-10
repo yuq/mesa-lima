@@ -498,12 +498,17 @@ static rvcn_dec_message_mpeg2_vld_t get_mpeg2_msg(struct radeon_decoder *dec,
 	result.forward_ref_pic_idx = get_ref_pic_idx(dec, pic->ref[0]);
 	result.backward_ref_pic_idx = get_ref_pic_idx(dec, pic->ref[1]);
 
-	result.load_intra_quantiser_matrix = 1;
-	result.load_nonintra_quantiser_matrix = 1;
-
-	for (i = 0; i < 64; ++i) {
-		result.intra_quantiser_matrix[i] = pic->intra_matrix[zscan[i]];
-		result.nonintra_quantiser_matrix[i] = pic->non_intra_matrix[zscan[i]];
+	if(pic->intra_matrix) {
+		result.load_intra_quantiser_matrix = 1;
+		for (i = 0; i < 64; ++i) {
+			result.intra_quantiser_matrix[i] = pic->intra_matrix[zscan[i]];
+		}
+	}
+	if(pic->non_intra_matrix) {
+		result.load_nonintra_quantiser_matrix = 1;
+		for (i = 0; i < 64; ++i) {
+			result.nonintra_quantiser_matrix[i] = pic->non_intra_matrix[zscan[i]];
+		}
 	}
 
 	result.profile_and_level_indication = 0;
