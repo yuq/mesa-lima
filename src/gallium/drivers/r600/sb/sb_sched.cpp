@@ -2034,6 +2034,9 @@ bool alu_clause_tracker::check_clause_limits() {
 	// ...and index registers
 	reserve_slots += (current_idx[0] != NULL) + (current_idx[1] != NULL);
 
+	if (gt.get_consumes_lds_oqa() && !outstanding_lds_oqa_reads)
+		reserve_slots += 60;
+
 	if (slot_count + slots > MAX_ALU_SLOTS - reserve_slots)
 		return false;
 
