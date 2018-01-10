@@ -110,10 +110,6 @@ The integer capabilities:
   aligned to 4.  If false, there are no restrictions on src_offset.
 * ``PIPE_CAP_COMPUTE``: Whether the implementation supports the
   compute entry points defined in pipe_context and pipe_screen.
-* ``PIPE_CAP_USER_CONSTANT_BUFFERS``: Whether user-space constant buffers
-  are supported.  If not, the state tracker must put constants into HW
-  resources/buffers.  If user-space constant buffers are supported, the
-  driver must still accept HW constant buffers also.
 * ``PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT``: Describes the required
   alignment of pipe_constant_buffer::buffer_offset.
 * ``PIPE_CAP_START_INSTANCE``: Whether the driver supports

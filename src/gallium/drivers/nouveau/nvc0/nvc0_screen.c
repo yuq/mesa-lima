@@ -212,7 +212,6 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_START_INSTANCE:
    case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
    case PIPE_CAP_DRAW_INDIRECT:
-   case PIPE_CAP_USER_CONSTANT_BUFFERS:
    case PIPE_CAP_USER_VERTEX_BUFFERS:
    case PIPE_CAP_TEXTURE_QUERY_LOD:
    case PIPE_CAP_SAMPLE_SHADING:

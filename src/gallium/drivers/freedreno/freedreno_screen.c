@@ -190,9 +190,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_VERTEXID_NOBASE:
 		return is_a3xx(screen) || is_a4xx(screen);
 
-	case PIPE_CAP_USER_CONSTANT_BUFFERS:
-		return is_a4xx(screen) ? 0 : 1;
-
 	case PIPE_CAP_COMPUTE:
 		return has_compute(screen);
 
