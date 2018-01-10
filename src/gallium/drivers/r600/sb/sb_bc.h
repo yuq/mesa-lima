@@ -711,6 +711,9 @@ public:
 			mask = 0x0F;
 		if (!is_cayman() && (slot_flags & AF_S))
 			mask |= 0x10;
+		/* Force LDS_IDX ops into SLOT_X */
+		if (op_ptr->opcode[0] == -1 && ((op_ptr->opcode[1] & 0xFF) == 0x11))
+			mask = 0x01;
 		return mask;
 	}
 

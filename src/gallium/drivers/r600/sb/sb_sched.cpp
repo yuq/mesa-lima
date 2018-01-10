@@ -461,6 +461,10 @@ bool alu_group_tracker::try_reserve(alu_node* n) {
 	if (n->uses_ar() && has_mova)
 		return false;
 
+	if (consumes_lds_oqa)
+		return false;
+	if (n->consumes_lds_oq() && available_slots != (sh.get_ctx().has_trans ? 0x1F : 0x0F))
+		return false;
 	for (unsigned i = 0; i < nsrc; ++i) {
 
 		unsigned last_id = next_id;
