@@ -428,6 +428,18 @@ bool bc_finalizer::finalize_alu_src(alu_group_node* g, alu_node* a, alu_group_no
 			src.chan = k.chan();
 			break;
 		}
+		case VLK_SPECIAL_REG:
+			if (v->select.sel() == SV_LDS_OQA) {
+				src.sel = ALU_SRC_LDS_OQ_A_POP;
+				src.chan = 0;
+			} else if (v->select.sel() == SV_LDS_OQB) {
+				src.sel = ALU_SRC_LDS_OQ_B_POP;
+				src.chan = 0;
+			} else {
+				src.sel = ALU_SRC_0;
+				src.chan = 0;
+			}
+			break;
 		case VLK_PARAM:
 		case VLK_SPECIAL_CONST:
 			src.sel = v->select.sel();
