@@ -2315,11 +2315,14 @@ static LLVMValueRef build_tex_intrinsic(struct ac_nir_context *ctx,
 					struct ac_image_args *args)
 {
 	if (instr->sampler_dim == GLSL_SAMPLER_DIM_BUF) {
+		unsigned mask = nir_ssa_def_components_read(&instr->dest.ssa);
+
 		return ac_build_buffer_load_format(&ctx->ac,
 						   args->resource,
 						   args->addr,
 						   ctx->ac.i32_0,
-						   4, true);
+						   util_last_bit(mask),
+						   true);
 	}
 
 	args->opcode = ac_image_sample;
