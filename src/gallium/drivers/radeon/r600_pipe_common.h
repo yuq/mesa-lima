@@ -76,7 +76,6 @@ enum {
 
 	/* Shader compiler options (with no effect on the shader cache): */
 	DBG_CHECK_IR,
-	DBG_PRECOMPILE,
 	DBG_NIR,
 	DBG_MONOLITHIC_SHADERS,
 	DBG_NO_OPT_VARIANT,

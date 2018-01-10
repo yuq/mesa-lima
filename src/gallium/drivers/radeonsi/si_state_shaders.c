@@ -1785,7 +1785,6 @@ static void si_init_shader_selector_async(void *job, int thread_index)
 	struct si_screen *sscreen = sel->screen;
 	LLVMTargetMachineRef tm;
 	struct pipe_debug_callback *debug = &sel->compiler_ctx_state.debug;
-	unsigned i;
 
 	assert(!debug->debug_message || debug->async);
 	assert(thread_index >= 0);
@@ -1887,54 +1886,6 @@ static void si_init_shader_selector_async(void *job, int thread_index)
 				}
 			}
 		}
-	}
-
-	/* Pre-compilation. */
-	if (sscreen->debug_flags & DBG(PRECOMPILE) &&
-	    /* GFX9 needs LS or ES for compilation, which we don't have here. */
-	    (sscreen->info.chip_class <= VI ||
-	     (sel->type != PIPE_SHADER_TESS_CTRL &&
-	      sel->type != PIPE_SHADER_GEOMETRY))) {
-		struct si_shader_ctx_state state = {sel};
-		struct si_shader_key key;
-
-		memset(&key, 0, sizeof(key));
-		si_parse_next_shader_property(&sel->info,
-					      sel->so.num_outputs != 0,
-					      &key);
-
-		/* GFX9 doesn't have LS and ES. */
-		if (sscreen->info.chip_class >= GFX9) {
-			key.as_ls = 0;
-			key.as_es = 0;
-		}
-
-		/* Set reasonable defaults, so that the shader key doesn't
-		 * cause any code to be eliminated.
-		 */
-		switch (sel->type) {
-		case PIPE_SHADER_TESS_CTRL:
-			key.part.tcs.epilog.prim_mode = PIPE_PRIM_TRIANGLES;
-			break;
-		case PIPE_SHADER_FRAGMENT:
-			key.part.ps.prolog.bc_optimize_for_persp =
-				sel->info.uses_persp_center &&
-				sel->info.uses_persp_centroid;
-			key.part.ps.prolog.bc_optimize_for_linear =
-				sel->info.uses_linear_center &&
-				sel->info.uses_linear_centroid;
-			key.part.ps.epilog.alpha_func = PIPE_FUNC_ALWAYS;
-			for (i = 0; i < 8; i++)
-				if (sel->info.colors_written & (1 << i))
-					key.part.ps.epilog.spi_shader_col_format |=
-						V_028710_SPI_SHADER_FP16_ABGR << (i * 4);
-			break;
-		}
-
-		if (si_shader_select_with_key(sscreen, &state,
-					      &sel->compiler_ctx_state, &key,
-					      thread_index))
-			fprintf(stderr, "radeonsi: can't create a monolithic shader\n");
 	}
 
 	/* The GS copy shader is always pre-compiled. */
