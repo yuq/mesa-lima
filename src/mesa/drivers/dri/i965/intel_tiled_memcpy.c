@@ -684,8 +684,8 @@ ytiled_to_linear_faster(uint32_t x0, uint32_t x1, uint32_t x2, uint32_t x3,
  * copy function (\ref tile_copy_fn).
  * The X range is in bytes, i.e. pixels * bytes-per-pixel.
  * The Y range is in pixels (i.e. unitless).
- * 'dst' is the start of the texture and 'src' is the corresponding
- * address to copy from, though copying begins at (xt1, yt1).
+ * 'dst' is the address of (0, 0) in the destination tiled texture.
+ * 'src' is the address of (xt1, yt1) in the source linear texture.
  */
 void
 linear_to_tiled(uint32_t xt1, uint32_t xt2,
@@ -758,8 +758,8 @@ linear_to_tiled(uint32_t xt1, uint32_t xt2,
          /* Translate by (xt,yt) for single-tile copier. */
          tile_copy(x0-xt, x1-xt, x2-xt, x3-xt,
                    y0-yt, y1-yt,
-                   dst + (ptrdiff_t) xt * th + (ptrdiff_t) yt * dst_pitch,
-                   src + (ptrdiff_t) xt      + (ptrdiff_t) yt * src_pitch,
+                   dst + (ptrdiff_t)xt * th  +  (ptrdiff_t)yt        * dst_pitch,
+                   src + (ptrdiff_t)xt - xt1 + ((ptrdiff_t)yt - yt1) * src_pitch,
                    src_pitch,
                    swizzle_bit,
                    mem_copy);
@@ -775,8 +775,8 @@ linear_to_tiled(uint32_t xt1, uint32_t xt2,
  * copy function (\ref tile_copy_fn).
  * The X range is in bytes, i.e. pixels * bytes-per-pixel.
  * The Y range is in pixels (i.e. unitless).
- * 'dst' is the start of the texture and 'src' is the corresponding
- * address to copy from, though copying begins at (xt1, yt1).
+ * 'dst' is the address of (xt1, yt1) in the destination linear texture.
+ * 'src' is the address of (0, 0) in the source tiled texture.
  */
 void
 tiled_to_linear(uint32_t xt1, uint32_t xt2,
@@ -849,8 +849,8 @@ tiled_to_linear(uint32_t xt1, uint32_t xt2,
          /* Translate by (xt,yt) for single-tile copier. */
          tile_copy(x0-xt, x1-xt, x2-xt, x3-xt,
                    y0-yt, y1-yt,
-                   dst + (ptrdiff_t) xt      + (ptrdiff_t) yt * dst_pitch,
-                   src + (ptrdiff_t) xt * th + (ptrdiff_t) yt * src_pitch,
+                   dst + (ptrdiff_t)xt - xt1 + ((ptrdiff_t)yt - yt1) * dst_pitch,
+                   src + (ptrdiff_t)xt * th  +  (ptrdiff_t)yt        * src_pitch,
                    dst_pitch,
                    swizzle_bit,
                    mem_copy);
