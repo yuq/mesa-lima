@@ -1006,6 +1006,8 @@ static unsigned radv_dynamic_state_mask(VkDynamicState state)
 		return RADV_DYNAMIC_STENCIL_WRITE_MASK;
 	case VK_DYNAMIC_STATE_STENCIL_REFERENCE:
 		return RADV_DYNAMIC_STENCIL_REFERENCE;
+	case VK_DYNAMIC_STATE_DISCARD_RECTANGLE_EXT:
+		return RADV_DYNAMIC_DISCARD_RECTANGLE;
 	default:
 		unreachable("Unhandled dynamic state");
 	}
@@ -1133,6 +1135,39 @@ radv_pipeline_init_dynamic_state(struct radv_pipeline *pipeline,
 		}
 	}
 
+	const  VkPipelineDiscardRectangleStateCreateInfoEXT *discard_rectangle_info =
+			vk_find_struct_const(pCreateInfo->pNext, PIPELINE_DISCARD_RECTANGLE_STATE_CREATE_INFO_EXT);
+	if (discard_rectangle_info) {
+		dynamic->discard_rectangle.count = discard_rectangle_info->discardRectangleCount;
+		typed_memcpy(dynamic->discard_rectangle.rectangles,
+		             discard_rectangle_info->pDiscardRectangles,
+		             discard_rectangle_info->discardRectangleCount);
+
+		unsigned mask = 0;
+
+		for (unsigned i = 0; i < (1u << MAX_DISCARD_RECTANGLES); ++i) {
+			/* Interpret i as a bitmask, and then set the bit in the mask if
+			 * that combination of rectangles in which the pixel is contained
+			 * should pass the cliprect test. */
+			unsigned relevant_subset = i & ((1u << discard_rectangle_info->discardRectangleCount) - 1);
+
+			if (discard_rectangle_info->discardRectangleMode == VK_DISCARD_RECTANGLE_MODE_INCLUSIVE_EXT &&
+			    !relevant_subset)
+				continue;
+
+			if (discard_rectangle_info->discardRectangleMode == VK_DISCARD_RECTANGLE_MODE_EXCLUSIVE_EXT &&
+			    relevant_subset)
+				continue;
+
+			mask |= 1u << i;
+		}
+		pipeline->graphics.pa_sc_cliprect_rule = mask;
+	} else {
+		states &= ~RADV_DYNAMIC_DISCARD_RECTANGLE;
+
+		/* Allow from all rectangle combinations */
+		pipeline->graphics.pa_sc_cliprect_rule = 0xffff;
+	}
 	pipeline->dynamic_state.mask = states;
 }
 
