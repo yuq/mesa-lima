@@ -73,8 +73,6 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return vscreen->caps.caps.v1.bset.occlusion_query;
    case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
       return vscreen->caps.caps.v1.bset.mirror_clamp;
-   case PIPE_CAP_TEXTURE_SHADOW_MAP:
-      return 1;
    case PIPE_CAP_TEXTURE_SWIZZLE:
       return 1;
    case PIPE_CAP_MAX_TEXTURE_2D_LEVELS:

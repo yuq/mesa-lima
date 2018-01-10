@@ -625,12 +625,10 @@ void st_init_extensions(struct pipe_screen *screen,
       { o(OES_copy_image),                   PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS },
       { o(ARB_cull_distance),                PIPE_CAP_CULL_DISTANCE                    },
       { o(ARB_depth_clamp),                  PIPE_CAP_DEPTH_CLIP_DISABLE               },
-      { o(ARB_depth_texture),                PIPE_CAP_TEXTURE_SHADOW_MAP               },
       { o(ARB_derivative_control),           PIPE_CAP_TGSI_FS_FINE_DERIVATIVE          },
       { o(ARB_draw_buffers_blend),           PIPE_CAP_INDEP_BLEND_FUNC                 },
       { o(ARB_draw_indirect),                PIPE_CAP_DRAW_INDIRECT                    },
       { o(ARB_draw_instanced),               PIPE_CAP_TGSI_INSTANCEID                  },
-      { o(ARB_fragment_program_shadow),      PIPE_CAP_TEXTURE_SHADOW_MAP               },
       { o(ARB_framebuffer_object),           PIPE_CAP_MIXED_FRAMEBUFFER_SIZES          },
       { o(ARB_gpu_shader_int64),             PIPE_CAP_INT64                            },
       { o(ARB_indirect_parameters),          PIPE_CAP_MULTI_DRAW_INDIRECT_PARAMS       },
@@ -652,7 +650,6 @@ void st_init_extensions(struct pipe_screen *screen,
       { o(ARB_shader_stencil_export),        PIPE_CAP_SHADER_STENCIL_EXPORT            },
       { o(ARB_shader_texture_image_samples), PIPE_CAP_TGSI_TXQS                        },
       { o(ARB_shader_texture_lod),           PIPE_CAP_SM3                              },
-      { o(ARB_shadow),                       PIPE_CAP_TEXTURE_SHADOW_MAP               },
       { o(ARB_sparse_buffer),                PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE          },
       { o(ARB_texture_buffer_object),        PIPE_CAP_TEXTURE_BUFFER_OBJECTS           },
       { o(ARB_texture_cube_map_array),       PIPE_CAP_CUBE_MAP_ARRAY                   },
@@ -863,16 +860,19 @@ void st_init_extensions(struct pipe_screen *screen,
     * Extensions that are supported by all Gallium drivers:
     */
    extensions->ARB_ES2_compatibility = GL_TRUE;
+   extensions->ARB_depth_texture = GL_TRUE;
    extensions->ARB_draw_elements_base_vertex = GL_TRUE;
    extensions->ARB_explicit_attrib_location = GL_TRUE;
    extensions->ARB_explicit_uniform_location = GL_TRUE;
    extensions->ARB_fragment_coord_conventions = GL_TRUE;
    extensions->ARB_fragment_program = GL_TRUE;
+   extensions->ARB_fragment_program_shadow = GL_TRUE;
    extensions->ARB_fragment_shader = GL_TRUE;
    extensions->ARB_half_float_vertex = GL_TRUE;
    extensions->ARB_internalformat_query = GL_TRUE;
    extensions->ARB_internalformat_query2 = GL_TRUE;
    extensions->ARB_map_buffer_range = GL_TRUE;
+   extensions->ARB_shadow = GL_TRUE;
    extensions->ARB_sync = GL_TRUE;
    extensions->ARB_texture_border_clamp = GL_TRUE;
    extensions->ARB_texture_cube_map = GL_TRUE;

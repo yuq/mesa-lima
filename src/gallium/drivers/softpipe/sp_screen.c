@@ -87,8 +87,6 @@ softpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return 1;
    case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
       return 1;
-   case PIPE_CAP_TEXTURE_SHADOW_MAP:
-      return 1;
    case PIPE_CAP_TEXTURE_SWIZZLE:
       return 1;
    case PIPE_CAP_TEXTURE_BORDER_COLOR_QUIRK:

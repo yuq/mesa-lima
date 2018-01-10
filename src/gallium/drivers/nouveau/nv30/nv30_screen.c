@@ -81,7 +81,6 @@ nv30_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_OCCLUSION_QUERY:
    case PIPE_CAP_QUERY_TIME_ELAPSED:
    case PIPE_CAP_QUERY_TIMESTAMP:
-   case PIPE_CAP_TEXTURE_SHADOW_MAP:
    case PIPE_CAP_TEXTURE_SWIZZLE:
    case PIPE_CAP_DEPTH_CLIP_DISABLE:
    case PIPE_CAP_TGSI_FS_COORD_ORIGIN_UPPER_LEFT:
