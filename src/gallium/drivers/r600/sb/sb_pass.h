@@ -634,7 +634,11 @@ class ssa_rename : public vpass {
 	typedef sb_map<value*, unsigned> def_map;
 
 	def_map def_count;
+	def_map lds_oq_count;
+	def_map lds_rw_count;
 	std::stack<def_map> rename_stack;
+	std::stack<def_map> rename_lds_oq_stack;
+	std::stack<def_map> rename_lds_rw_stack;
 
 	typedef std::map<uint32_t, value*> val_map;
 	val_map values;
