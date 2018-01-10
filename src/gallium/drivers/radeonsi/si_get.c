@@ -96,7 +96,6 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	switch (param) {
 	/* Supported features (boolean caps). */
 	case PIPE_CAP_ACCELERATED:
-	case PIPE_CAP_TWO_SIDED_STENCIL:
 	case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:
 	case PIPE_CAP_ANISOTROPIC_FILTER:
 	case PIPE_CAP_POINT_SPRITE:
