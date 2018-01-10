@@ -312,7 +312,7 @@ alu_group_tracker::alu_group_tracker(shader &sh)
 	  gpr(), lt(), slots(),
 	  max_slots(sh.get_ctx().is_cayman() ? 4 : 5),
 	  has_mova(), uses_ar(), has_predset(), has_kill(),
-	  updates_exec_mask(), chan_count(), interp_param(), next_id() {
+	  updates_exec_mask(), consumes_lds_oqa(), produces_lds_oqa(), chan_count(), interp_param(), next_id() {
 
 	available_slots = sh.get_ctx().has_trans ? 0x1F : 0x0F;
 }
@@ -680,6 +680,8 @@ void alu_group_tracker::reset(bool keep_packed) {
 	memset(slots, 0, sizeof(slots));
 	vmap.clear();
 	next_id = 0;
+	produces_lds_oqa = 0;
+	consumes_lds_oqa = 0;
 	has_mova = false;
 	uses_ar = false;
 	has_predset = false;
@@ -703,7 +705,8 @@ void alu_group_tracker::update_flags(alu_node* n) {
 	has_mova |= (flags & AF_MOVA);
 	has_predset |= (flags & AF_ANY_PRED);
 	uses_ar |= n->uses_ar();
-
+	consumes_lds_oqa |= n->consumes_lds_oq();
+	produces_lds_oqa |= n->produces_lds_oq();
 	if (flags & AF_ANY_PRED) {
 		if (n->dst[2] != NULL)
 			updates_exec_mask = true;
@@ -1958,6 +1961,7 @@ void alu_kcache_tracker::reset() {
 void alu_clause_tracker::reset() {
 	group = 0;
 	slot_count = 0;
+	outstanding_lds_oqa_reads = 0;
 	grp0.reset();
 	grp1.reset();
 }
@@ -1966,7 +1970,7 @@ alu_clause_tracker::alu_clause_tracker(shader &sh)
 	: sh(sh), kt(sh.get_ctx().hw_class), slot_count(),
 	  grp0(sh), grp1(sh),
 	  group(), clause(),
-	  push_exec_mask(),
+	  push_exec_mask(), outstanding_lds_oqa_reads(),
 	  current_ar(), current_pr(), current_idx() {}
 
 void alu_clause_tracker::emit_group() {
@@ -1988,6 +1992,8 @@ void alu_clause_tracker::emit_group() {
 
 	clause->push_front(g);
 
+	outstanding_lds_oqa_reads += grp().get_consumes_lds_oqa();
+	outstanding_lds_oqa_reads -= grp().get_produces_lds_oqa();
 	slot_count += grp().slot_count();
 
 	new_group();
@@ -2000,6 +2006,7 @@ void alu_clause_tracker::emit_clause(container_node *c) {
 
 	kt.init_clause(clause->bc);
 
+	assert(!outstanding_lds_oqa_reads);
 	assert(!current_ar);
 	assert(!current_pr);
 
