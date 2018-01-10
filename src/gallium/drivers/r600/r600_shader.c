@@ -2864,12 +2864,14 @@ static int r600_tess_factor_read(struct r600_shader_ctx *ctx,
 	if (r)
 		return r;
 
-	r = single_alu_op2(ctx, ALU_OP2_ADD_INT,
-			   temp_reg, 0,
-			   temp_reg, 0,
-			   V_SQ_ALU_SRC_LITERAL, param * 16);
-	if (r)
-		return r;
+	if (param) {
+		r = single_alu_op2(ctx, ALU_OP2_ADD_INT,
+				   temp_reg, 0,
+				   temp_reg, 0,
+				   V_SQ_ALU_SRC_LITERAL, param * 16);
+		if (r)
+			return r;
+	}
 
 	do_lds_fetch_values(ctx, temp_reg, dreg, ((1u << nc) - 1));
 	return 0;
