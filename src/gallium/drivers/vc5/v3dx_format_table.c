@@ -24,7 +24,7 @@
 #include "util/u_format.h"
 
 #include "vc5_context.h"
-#include "broadcom/cle/v3d_packet_v33_pack.h"
+#include "broadcom/cle/v3dx_pack.h"
 #include "broadcom/common/v3d_macros.h"
 #include "vc5_format_table.h"
 
@@ -143,6 +143,16 @@ static const struct vc5_format format_table[] = {
         FORMAT(R11G11B10_FLOAT,   R11F_G11F_B10F, R11F_G11F_B10F, SWIZ_XYZW, 16, 0),
         FORMAT(R9G9B9E5_FLOAT,    NO,           RGB9_E5,     SWIZ_XYZW, 16, 0),
 
+#if V3D_VERSION >= 40
+        FORMAT(S8_UINT_Z24_UNORM, D24S8,        DEPTH24_X8,  SWIZ_XXXX, 32, 1),
+        FORMAT(X8Z24_UNORM,       D24S8,        DEPTH24_X8,  SWIZ_XXXX, 32, 1),
+        FORMAT(S8X24_UINT,        S8,           R32F,        SWIZ_XXXX, 32, 1),
+        FORMAT(Z32_FLOAT,         D32F,         R32F,        SWIZ_XXXX, 32, 1),
+        FORMAT(Z16_UNORM,         D16,          DEPTH_COMP16,SWIZ_XXXX, 32, 1),
+
+        /* Pretend we support this, but it'll be separate Z32F depth and S8. */
+        FORMAT(Z32_FLOAT_S8X24_UINT, D32F,      R32F,        SWIZ_XXXX, 32, 1),
+#else
         FORMAT(S8_UINT_Z24_UNORM, ZS_DEPTH24_STENCIL8, DEPTH24_X8, SWIZ_XXXX, 32, 1),
         FORMAT(X8Z24_UNORM,       ZS_DEPTH24_STENCIL8, DEPTH24_X8, SWIZ_XXXX, 32, 1),
         FORMAT(S8X24_UINT,        NO,           R32F,        SWIZ_XXXX, 32, 1),
@@ -151,6 +161,7 @@ static const struct vc5_format format_table[] = {
 
         /* Pretend we support this, but it'll be separate Z32F depth and S8. */
         FORMAT(Z32_FLOAT_S8X24_UINT, ZS_DEPTH_COMPONENT32F, R32F, SWIZ_XXXX, 32, 1),
+#endif
 
         FORMAT(ETC2_RGB8,         NO,           RGB8_ETC2,   SWIZ_XYZ1, 16, 0),
         FORMAT(ETC2_SRGB8,        NO,           RGB8_ETC2,   SWIZ_XYZ1, 16, 0),
