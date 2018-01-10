@@ -109,8 +109,11 @@ vir_has_side_effects(struct v3d_compile *c, struct qinst *inst)
                 }
         }
 
-        if (inst->qpu.sig.ldtmu || inst->qpu.sig.thrsw)
+        if (inst->qpu.sig.ldtmu ||
+            inst->qpu.sig.wrtmuc ||
+            inst->qpu.sig.thrsw) {
                 return true;
+        }
 
         return false;
 }

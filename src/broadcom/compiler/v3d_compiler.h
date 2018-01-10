@@ -33,6 +33,7 @@
 
 #include "util/macros.h"
 #include "common/v3d_debug.h"
+#include "common/v3d_device_info.h"
 #include "compiler/nir/nir.h"
 #include "util/list.h"
 #include "util/u_math.h"
@@ -172,7 +173,7 @@ enum quniform_contents {
         QUNIFORM_USER_CLIP_PLANE,
 
         /**
-         * A reference to a texture config parameter 0 uniform.
+         * A reference to a V3D 3.x texture config parameter 0 uniform.
          *
          * This is a uniform implicitly loaded with a QPU_W_TMU* write, which
          * defines texture type, miplevels, and such.  It will be found as a
@@ -213,7 +214,7 @@ enum quniform_contents {
         QUNIFORM_TEXTURE_CONFIG_P0_32,
 
         /**
-         * A reference to a texture config parameter 1 uniform.
+         * A reference to a V3D 3.x texture config parameter 1 uniform.
          *
          * This is a uniform implicitly loaded with a QPU_W_TMU* write, which
          * has the pointer to the indirect texture state.  Our data[] field
@@ -221,6 +222,13 @@ enum quniform_contents {
          * which texture unit's texture should be referenced.
          */
         QUNIFORM_TEXTURE_CONFIG_P1,
+
+        /* A a V3D 4.x texture config parameter.  The high 8 bits will be
+         * which texture or sampler is being sampled, and the driver must
+         * replace the address field with the appropriate address.
+         */
+        QUNIFORM_TMU_CONFIG_P0,
+        QUNIFORM_TMU_CONFIG_P1,
 
         QUNIFORM_TEXTURE_FIRST_LEVEL,
 
@@ -691,6 +699,7 @@ void vir_lower_uniforms(struct v3d_compile *c);
 void v3d33_vir_vpm_read_setup(struct v3d_compile *c, int num_components);
 void v3d33_vir_vpm_write_setup(struct v3d_compile *c);
 void v3d33_vir_emit_tex(struct v3d_compile *c, nir_tex_instr *instr);
+void v3d40_vir_emit_tex(struct v3d_compile *c, nir_tex_instr *instr);
 
 void v3d_vir_to_qpu(struct v3d_compile *c, struct qpu_reg *temp_registers);
 uint32_t v3d_qpu_schedule_instructions(struct v3d_compile *c);
@@ -896,8 +905,16 @@ vir_NOP(struct v3d_compile *c)
 static inline struct qreg
 vir_LDTMU(struct v3d_compile *c)
 {
-        vir_NOP(c)->qpu.sig.ldtmu = true;
-        return vir_MOV(c, vir_reg(QFILE_MAGIC, V3D_QPU_WADDR_R4));
+        if (c->devinfo->ver >= 41) {
+                struct qinst *ldtmu = vir_add_inst(V3D_QPU_A_NOP, c->undef,
+                                                   c->undef, c->undef);
+                ldtmu->qpu.sig.ldtmu = true;
+
+                return vir_emit_def(c, ldtmu);
+        } else {
+                vir_NOP(c)->qpu.sig.ldtmu = true;
+                return vir_MOV(c, vir_reg(QFILE_MAGIC, V3D_QPU_WADDR_R4));
+        }
 }
 
 /*

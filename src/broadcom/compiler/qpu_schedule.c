@@ -84,6 +84,7 @@ struct schedule_state {
         struct schedule_node *last_sf;
         struct schedule_node *last_vpm_read;
         struct schedule_node *last_tmu_write;
+        struct schedule_node *last_tmu_config;
         struct schedule_node *last_tlb;
         struct schedule_node *last_vpm;
         struct schedule_node *last_unif;
@@ -195,6 +196,16 @@ process_waddr_deps(struct schedule_state *state, struct schedule_node *n,
                 add_write_dep(state, &state->last_rf[waddr], n);
         } else if (v3d_qpu_magic_waddr_is_tmu(waddr)) {
                 add_write_dep(state, &state->last_tmu_write, n);
+                switch (waddr) {
+                case V3D_QPU_WADDR_TMUS:
+                case V3D_QPU_WADDR_TMUSCM:
+                case V3D_QPU_WADDR_TMUSF:
+                case V3D_QPU_WADDR_TMUSLOD:
+                        add_write_dep(state, &state->last_tmu_config, n);
+                        break;
+                default:
+                        break;
+                }
         } else if (v3d_qpu_magic_waddr_is_sfu(waddr)) {
                 /* Handled by v3d_qpu_writes_r4() check. */
         } else {
@@ -388,6 +399,7 @@ calculate_deps(struct schedule_state *state, struct schedule_node *n)
                 add_write_dep(state, &state->last_tlb, n);
 
                 add_write_dep(state, &state->last_tmu_write, n);
+                add_write_dep(state, &state->last_tmu_config, n);
         }
 
         if (inst->sig.ldtmu) {
@@ -395,6 +407,9 @@ calculate_deps(struct schedule_state *state, struct schedule_node *n)
                  */
                 add_write_dep(state, &state->last_tmu_write, n);
         }
+
+        if (inst->sig.wrtmuc)
+                add_write_dep(state, &state->last_tmu_config, n);
 
         if (inst->sig.ldtlb | inst->sig.ldtlbu)
                 add_read_dep(state, state->last_tlb, n);

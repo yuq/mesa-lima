@@ -334,7 +334,10 @@ ntq_emit_tex(struct v3d_compile *c, nir_tex_instr *instr)
                 break;
         }
 
-        v3d33_vir_emit_tex(c, instr);
+        if (c->devinfo->ver >= 40)
+                v3d40_vir_emit_tex(c, instr);
+        else
+                v3d33_vir_emit_tex(c, instr);
 }
 
 static struct qreg
