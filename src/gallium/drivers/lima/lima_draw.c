@@ -640,7 +640,8 @@ lima_pack_render_state(struct lima_context *ctx)
    render->aux1 = 0x00003000;
 
    if (ctx->buffer_state[lima_ctx_buff_pp_uniform].size) {
-       render->uniforms_address = ctx->pp_buffer->va + pp_uniform_array_offset;
+       render->uniforms_address = ctx->pp_buffer->va + pp_uniform_array_offset +
+          ctx->buffer_state[lima_ctx_buff_pp_uniform_array].offset;
        render->uniforms_address |= ((ctx->buffer_state[lima_ctx_buff_pp_uniform].size) / 4 - 1);
        render->aux0 |= 0x80;
        render->aux1 |= 0x10000;
@@ -756,25 +757,32 @@ lima_update_gp_uniform(struct lima_context *ctx)
 static void
 lima_update_pp_uniform(struct lima_context *ctx)
 {
-   uint32_t addr = ctx->pp_buffer->va + pp_uniform_offset +
-      ctx->buffer_state[lima_ctx_buff_pp_uniform].offset;
+   ctx->buffer_state[lima_ctx_buff_pp_uniform].offset +=
+      ctx->buffer_state[lima_ctx_buff_pp_uniform].size;
+   ctx->buffer_state[lima_ctx_buff_pp_uniform].size = 0;
+   ctx->buffer_state[lima_ctx_buff_pp_uniform_array].offset +=
+      ctx->buffer_state[lima_ctx_buff_pp_uniform_array].size;
+   ctx->buffer_state[lima_ctx_buff_pp_uniform_array].size = 0;
+
    uint16_t *fp16_const_buff = ctx->pp_buffer->map + pp_uniform_offset +
       ctx->buffer_state[lima_ctx_buff_pp_uniform].offset;
    const float *const_buff = ctx->const_buffer[PIPE_SHADER_FRAGMENT].buffer;
    size_t const_buff_size = ctx->const_buffer[PIPE_SHADER_FRAGMENT].size / sizeof(float);
 
-   ctx->buffer_state[lima_ctx_buff_pp_uniform].size = 0;
-
    if (!const_buff)
        return;
-
-   memcpy(ctx->pp_buffer->map + pp_uniform_array_offset, &addr, sizeof(addr));
 
    for (int i = 0; i < const_buff_size; i++)
        fp16_const_buff[i] = util_float_to_half(const_buff[i]);
 
    ctx->buffer_state[lima_ctx_buff_pp_uniform].size =
       align(const_buff_size * sizeof(uint16_t), 0x4);
+
+   uint32_t *array = ctx->pp_buffer->map + pp_uniform_array_offset +
+      ctx->buffer_state[lima_ctx_buff_pp_uniform_array].offset;
+   *array = ctx->pp_buffer->va + pp_uniform_offset +
+      ctx->buffer_state[lima_ctx_buff_pp_uniform].offset;
+   ctx->buffer_state[lima_ctx_buff_pp_uniform_array].size = 0x40;
 }
 
 static void
