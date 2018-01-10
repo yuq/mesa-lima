@@ -1013,20 +1013,12 @@ LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
 					 LLVMValueRef rsrc,
 					 LLVMValueRef vindex,
 					 LLVMValueRef voffset,
+					 unsigned num_channels,
 					 bool can_speculate)
 {
-	LLVMValueRef args [] = {
-		LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
-		vindex,
-		voffset,
-		ctx->i1false, /* glc */
-		ctx->i1false, /* slc */
-	};
-
-	return ac_build_intrinsic(ctx,
-				  "llvm.amdgcn.buffer.load.format.v4f32",
-				  ctx->v4f32, args, ARRAY_SIZE(args),
-				  ac_get_load_intr_attribs(can_speculate));
+	return ac_build_buffer_load_common(ctx, rsrc, vindex, voffset,
+					   num_channels, false, false,
+					   can_speculate, true);
 }
 
 /**

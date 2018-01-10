@@ -1826,7 +1826,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 						    emit_data->args[0],
 						    emit_data->args[2],
 						    emit_data->args[1],
-						    true);
+						    4, true);
 		return;
 	}
 

@@ -2319,7 +2319,7 @@ static LLVMValueRef build_tex_intrinsic(struct ac_nir_context *ctx,
 						   args->resource,
 						   args->addr,
 						   ctx->ac.i32_0,
-						   true);
+						   4, true);
 	}
 
 	args->opcode = ac_image_sample;
@@ -5361,7 +5361,7 @@ handle_vs_input_decl(struct nir_to_llvm_context *ctx,
 		input = ac_build_buffer_load_format(&ctx->ac, t_list,
 						    buffer_index,
 						    ctx->ac.i32_0,
-						    true);
+						    4, true);
 
 		for (unsigned chan = 0; chan < 4; chan++) {
 			LLVMValueRef llvm_chan = LLVMConstInt(ctx->ac.i32, chan, false);

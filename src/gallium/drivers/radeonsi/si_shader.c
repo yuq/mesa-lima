@@ -610,7 +610,7 @@ void si_llvm_load_input_vs(
 
 		input[i] = ac_build_buffer_load_format(&ctx->ac, t_list,
 						       vertex_index, voffset,
-						       true);
+						       4, true);
 	}
 
 	/* Break up the vec4 into individual components */
