@@ -29,6 +29,7 @@ BROADCOM_FILES = \
 	compiler/vir_to_qpu.c \
 	compiler/qpu_schedule.c \
 	compiler/qpu_validate.c \
+	compiler/v3d33_vpm_setup.c \
 	compiler/v3d_compiler.h \
 	compiler/v3d_nir_lower_io.c \
 	compiler/v3d_nir_lower_txf_ms.c \

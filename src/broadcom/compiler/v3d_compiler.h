@@ -684,6 +684,9 @@ void v3d_nir_lower_io(nir_shader *s, struct v3d_compile *c);
 void v3d_nir_lower_txf_ms(nir_shader *s, struct v3d_compile *c);
 void vir_lower_uniforms(struct v3d_compile *c);
 
+void v3d33_vir_vpm_read_setup(struct v3d_compile *c, int num_components);
+void v3d33_vir_vpm_write_setup(struct v3d_compile *c);
+
 void v3d_vir_to_qpu(struct v3d_compile *c, struct qpu_reg *temp_registers);
 uint32_t v3d_qpu_schedule_instructions(struct v3d_compile *c);
 void qpu_validate(struct v3d_compile *c);

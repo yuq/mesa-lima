@@ -1315,22 +1315,7 @@ emit_vpm_write_setup(struct v3d_compile *c)
         if (c->devinfo->ver >= 40)
                 return;
 
-        uint32_t packed;
-        struct V3D33_VPM_GENERIC_BLOCK_WRITE_SETUP unpacked = {
-                V3D33_VPM_GENERIC_BLOCK_WRITE_SETUP_header,
-
-                .horiz = true,
-                .laned = false,
-                .segs = true,
-                .stride = 1,
-                .size = VPM_SETUP_SIZE_32_BIT,
-                .addr = 0,
-        };
-
-        V3D33_VPM_GENERIC_BLOCK_WRITE_SETUP_pack(NULL,
-                                                (uint8_t *)&packed,
-                                                &unpacked);
-        vir_VPMSETUP(c, vir_uniform_ui(c, packed));
+        v3d33_vir_vpm_write_setup(c);
 }
 
 static void
@@ -1443,24 +1428,7 @@ ntq_emit_vpm_read(struct v3d_compile *c,
 
         uint32_t num_components = MIN2(*remaining, 32);
 
-        struct V3D33_VPM_GENERIC_BLOCK_READ_SETUP unpacked = {
-                V3D33_VPM_GENERIC_BLOCK_READ_SETUP_header,
-
-                .horiz = true,
-                .laned = false,
-                /* If the field is 0, that means a read count of 32. */
-                .num = num_components & 31,
-                .segs = true,
-                .stride = 1,
-                .size = VPM_SETUP_SIZE_32_BIT,
-                .addr = c->num_inputs,
-        };
-
-        uint32_t packed;
-        V3D33_VPM_GENERIC_BLOCK_READ_SETUP_pack(NULL,
-                                                (uint8_t *)&packed,
-                                                &unpacked);
-        vir_VPMSETUP(c, vir_uniform_ui(c, packed));
+        v3d33_vir_vpm_read_setup(c, num_components);
 
         *num_components_queued = num_components - 1;
         *remaining -= num_components;
