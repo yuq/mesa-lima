@@ -126,6 +126,7 @@ enum lima_ctx_buff {
    lima_ctx_buff_gp_vs_cmd,
    lima_ctx_buff_gp_plbu_cmd,
    lima_ctx_buff_pp_plb_rsw,
+   lima_ctx_buff_pp_uniform_array,
    lima_ctx_buff_pp_uniform,
    lima_ctx_buff_num,
 };
@@ -194,13 +195,13 @@ struct lima_context {
 
    struct lima_buffer *pp_buffer;
    #define pp_uniform_array_offset   0x00000
-   #define pp_uniform_offset         0x00040
-   #define pp_frame_rsw_offset       0x01840
-   #define pp_clear_program_offset   0x01880
-   #define pp_plb_rsw_offset         0x018c0
-   #define pp_plb_offset_start       0x02040
+   #define pp_uniform_offset         0x00400
+   #define pp_frame_rsw_offset       0x01400
+   #define pp_clear_program_offset   0x01440
+   #define pp_plb_rsw_offset         0x01480
+   #define pp_plb_offset_start       0x02000
    /* max_screen_w/h_size = 2048, max_pp = 4, plb_stream_size = ((max >> 4)^2 + max_pp) * 16 */
-   #define pp_stack_offset           0x42140
+   #define pp_stack_offset           0x42100
    #define pp_buffer_size            0x44000
    #define pp_plb_offset(i, n)       \
       (pp_plb_offset_start + i * ((pp_stack_offset - pp_plb_offset_start) / n))
