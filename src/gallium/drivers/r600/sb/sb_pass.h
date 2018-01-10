@@ -223,6 +223,7 @@ class gcm : public pass {
 	sched_queue ready;
 	sched_queue ready_above;
 
+	unsigned outstanding_lds_oq;
 	container_node pending;
 
 	struct op_info {
@@ -263,7 +264,8 @@ public:
 
 	gcm(shader &sh) : pass(sh),
 		bu_ready(), bu_ready_next(), bu_ready_early(),
-		ready(), op_map(), uses(), nuc_stk(1), ucs_level(),
+		ready(), outstanding_lds_oq(),
+		op_map(), uses(), nuc_stk(1), ucs_level(),
 		bu_bb(), pending_defs(), pending_nodes(), cur_sq(),
 		live(), live_count(), pending_exec_mask_update() {}
 

@@ -366,6 +366,9 @@ void gcm::bu_sched_bb(bb_node* bb) {
 				continue;
 			}
 
+			if (sq != SQ_ALU && outstanding_lds_oq)
+				continue;
+
 			if (!bu_ready_next[sq].empty())
 				bu_ready[sq].splice(bu_ready[sq].end(), bu_ready_next[sq]);
 
@@ -388,7 +391,7 @@ void gcm::bu_sched_bb(bb_node* bb) {
 				}
 
 				// simple heuristic to limit register pressure,
-				if (sq == SQ_ALU && live_count > rp_threshold &&
+				if (sq == SQ_ALU && live_count > rp_threshold && !outstanding_lds_oq &&
 						(!bu_ready[SQ_TEX].empty() ||
 						 !bu_ready[SQ_VTX].empty() ||
 						 !bu_ready_next[SQ_TEX].empty() ||
@@ -423,6 +426,12 @@ void gcm::bu_sched_bb(bb_node* bb) {
 						check_alu_ready_count(24))
 					break;
 
+
+				if (sq == SQ_ALU && n->consumes_lds_oq() &&
+				    (bu_ready[SQ_TEX].size() || bu_ready[SQ_VTX].size() || bu_ready[SQ_GDS].size())) {
+					GCM_DUMP( sblog << "switching scheduling due to lds op\n"; );
+					break;
+				}
 				bu_ready[sq].pop_front();
 
 				if (sq != SQ_CF) {
@@ -513,6 +522,10 @@ void gcm::bu_schedule(container_node* c, node* n) {
 
 	assert(op_map[n].bottom_bb == bu_bb);
 
+	if (n->produces_lds_oq())
+		outstanding_lds_oq--;
+	if (n->consumes_lds_oq())
+		outstanding_lds_oq++;
 	bu_release_defs(n->src, true);
 	bu_release_defs(n->dst, false);
 
