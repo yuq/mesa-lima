@@ -5427,15 +5427,29 @@ static void si_calculate_max_simd_waves(struct si_shader *shader)
 	conf->max_simd_waves = max_simd_waves;
 }
 
+void si_shader_dump_stats_for_shader_db(const struct si_shader *shader,
+					struct pipe_debug_callback *debug)
+{
+	const struct si_shader_config *conf = &shader->config;
+
+	pipe_debug_message(debug, SHADER_INFO,
+			   "Shader Stats: SGPRS: %d VGPRS: %d Code Size: %d "
+			   "LDS: %d Scratch: %d Max Waves: %d Spilled SGPRs: %d "
+			   "Spilled VGPRs: %d PrivMem VGPRs: %d",
+			   conf->num_sgprs, conf->num_vgprs,
+			   si_get_shader_binary_size(shader),
+			   conf->lds_size, conf->scratch_bytes_per_wave,
+			   conf->max_simd_waves, conf->spilled_sgprs,
+			   conf->spilled_vgprs, conf->private_mem_vgprs);
+}
+
 static void si_shader_dump_stats(struct si_screen *sscreen,
 				 const struct si_shader *shader,
-			         struct pipe_debug_callback *debug,
 			         unsigned processor,
 				 FILE *file,
 				 bool check_debug_option)
 {
 	const struct si_shader_config *conf = &shader->config;
-	unsigned code_size = si_get_shader_binary_size(shader);
 
 	if (!check_debug_option ||
 	    si_can_dump_shader(sscreen, processor)) {
@@ -5459,19 +5473,11 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 			"********************\n\n\n",
 			conf->num_sgprs, conf->num_vgprs,
 			conf->spilled_sgprs, conf->spilled_vgprs,
-			conf->private_mem_vgprs, code_size,
+			conf->private_mem_vgprs,
+			si_get_shader_binary_size(shader),
 			conf->lds_size, conf->scratch_bytes_per_wave,
 			conf->max_simd_waves);
 	}
-
-	pipe_debug_message(debug, SHADER_INFO,
-			   "Shader Stats: SGPRS: %d VGPRS: %d Code Size: %d "
-			   "LDS: %d Scratch: %d Max Waves: %d Spilled SGPRs: %d "
-			   "Spilled VGPRs: %d PrivMem VGPRs: %d",
-			   conf->num_sgprs, conf->num_vgprs, code_size,
-			   conf->lds_size, conf->scratch_bytes_per_wave,
-			   conf->max_simd_waves, conf->spilled_sgprs,
-			   conf->spilled_vgprs, conf->private_mem_vgprs);
 }
 
 const char *si_get_shader_name(const struct si_shader *shader, unsigned processor)
@@ -5549,7 +5555,7 @@ void si_shader_dump(struct si_screen *sscreen, const struct si_shader *shader,
 		fprintf(file, "\n");
 	}
 
-	si_shader_dump_stats(sscreen, shader, debug, processor, file,
+	si_shader_dump_stats(sscreen, shader, processor, file,
 			     check_debug_option);
 }
 
@@ -6980,6 +6986,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	}
 
 	si_calculate_max_simd_waves(shader);
+	si_shader_dump_stats_for_shader_db(shader, debug);
 	return 0;
 }
 
