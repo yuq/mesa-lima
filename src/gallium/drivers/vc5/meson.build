@@ -38,7 +38,6 @@ files_libvc5 = files(
   'vc5_screen.h',
   'vc5_simulator.c',
   'vc5_simulator_wrapper.cpp',
-  'vc5_state.c',
   'vc5_tiling.c',
   'vc5_tiling.h',
   'vc5_uniforms.c',
@@ -49,6 +48,7 @@ files_per_version = files(
   'v3dx_simulator.c',
   'vc5_draw.c',
   'vc5_rcl.c',
+  'vc5_state.c',
 )
 
 v3dv3_c_args = []

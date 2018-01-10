@@ -93,6 +93,8 @@ struct vc5_sampler_view {
         uint8_t swizzle[4];
 
         uint8_t texture_shader_state[32];
+        /* V3D 4.x: Texture state struct. */
+        struct vc5_bo *bo;
 };
 
 struct vc5_sampler_state {
@@ -100,7 +102,10 @@ struct vc5_sampler_state {
         uint32_t p0;
         uint32_t p1;
 
+        /* V3D 3.x: Packed texture state. */
         uint8_t texture_shader_state[32];
+        /* V3D 4.x: Sampler state struct. */
+        struct vc5_bo *bo;
 };
 
 struct vc5_texture_stateobj {
@@ -446,7 +451,6 @@ vc5_sampler_state(struct pipe_sampler_state *psampler)
 
 struct pipe_context *vc5_context_create(struct pipe_screen *pscreen,
                                         void *priv, unsigned flags);
-void vc5_state_init(struct pipe_context *pctx);
 void vc5_program_init(struct pipe_context *pctx);
 void vc5_program_fini(struct pipe_context *pctx);
 void vc5_query_init(struct pipe_context *pctx);

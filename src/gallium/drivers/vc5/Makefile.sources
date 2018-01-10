@@ -18,7 +18,6 @@ C_SOURCES := \
 	vc5_screen.c \
 	vc5_screen.h \
 	vc5_simulator.c \
-	vc5_state.c \
 	vc5_tiling.c \
 	vc5_tiling.h \
 	vc5_uniforms.c \
@@ -29,4 +28,5 @@ VC5_PER_VERSION_SOURCES = \
 	v3dx_simulator.c \
 	vc5_draw.c \
 	vc5_rcl.c \
+	vc5_state.c \
 	$()
