@@ -1212,7 +1212,7 @@ radv_emit_depth_bounds(struct radv_cmd_buffer *cmd_buffer)
 }
 
 static void
-radv_emit_depth_biais(struct radv_cmd_buffer *cmd_buffer)
+radv_emit_depth_bias(struct radv_cmd_buffer *cmd_buffer)
 {
 	struct radv_raster_state *raster = &cmd_buffer->state.pipeline->graphics.raster;
 	struct radv_dynamic_state *d = &cmd_buffer->state.dynamic;
@@ -1654,7 +1654,7 @@ radv_cmd_buffer_flush_dynamic_state(struct radv_cmd_buffer *cmd_buffer)
 
 	if (cmd_buffer->state.dirty & (RADV_CMD_DIRTY_PIPELINE |
 				       RADV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS))
-		radv_emit_depth_biais(cmd_buffer);
+		radv_emit_depth_bias(cmd_buffer);
 
 	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_DYNAMIC_DISCARD_RECTANGLE)
 		radv_emit_discard_rectangle(cmd_buffer);
