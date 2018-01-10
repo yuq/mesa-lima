@@ -266,6 +266,7 @@ void bc_finalizer::run_on(container_node* c) {
 						}
 					}
 				}
+				last_cf = c;
 			} else if (n->is_fetch_inst()) {
 				finalize_fetch(static_cast<fetch_node*>(n));
 			} else if (n->is_cf_inst()) {
