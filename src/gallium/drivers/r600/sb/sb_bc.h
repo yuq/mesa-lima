@@ -722,6 +722,10 @@ public:
 		return ((sel >= 128 && sel < 192) || (sel >= 256 && sel < 320));
 	}
 
+	bool is_lds_oq(unsigned sel) {
+		return (sel >= 0xdb && sel <= 0xde);
+	}
+
 	const char * get_hw_class_name();
 	const char * get_hw_chip_name();
 
