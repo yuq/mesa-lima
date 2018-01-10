@@ -232,7 +232,7 @@ static void print_dst(sb_ostream &s, bc_alu &alu)
 		reg_char = 'T';
 	}
 
-	if (alu.write_mask || alu.op_ptr->src_count == 3) {
+	if (alu.write_mask || (alu.op_ptr->src_count == 3 && alu.op < LDS_OP2_LDS_ADD)) {
 		s << reg_char;
 		print_sel(s, sel, alu.dst_rel, alu.index_mode, 0);
 	} else {
