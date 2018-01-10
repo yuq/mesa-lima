@@ -68,7 +68,14 @@ void peephole::run_on(container_node* c) {
 			if (n->is_alu_inst()) {
 				alu_node *a = static_cast<alu_node*>(n);
 
-				if (a->bc.op_ptr->flags &
+				if (a->bc.op_ptr->flags & AF_LDS) {
+					if (!a->dst[0]) {
+						if (a->bc.op >= LDS_OP2_LDS_ADD_RET && a->bc.op <= LDS_OP3_LDS_MSKOR_RET)
+							a->bc.set_op(a->bc.op - LDS_OP2_LDS_ADD_RET + LDS_OP2_LDS_ADD);
+						if (a->bc.op == LDS_OP1_LDS_READ_RET)
+							a->src[0] = sh.get_undef_value();
+					}
+				} else if (a->bc.op_ptr->flags &
 						(AF_PRED | AF_SET | AF_CMOV | AF_KILL)) {
 					optimize_cc_op(a);
 				} else if (a->bc.op == ALU_OP1_FLT_TO_INT) {
