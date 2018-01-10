@@ -5556,6 +5556,7 @@ setup_locals(struct ac_nir_context *ctx,
 	nir_foreach_variable(variable, &func->impl->locals) {
 		unsigned attrib_count = glsl_count_attribute_slots(variable->type, false);
 		variable->data.driver_location = ctx->num_locals * 4;
+		variable->data.location_frac = 0;
 		ctx->num_locals += attrib_count;
 	}
 	ctx->locals = malloc(4 * ctx->num_locals * sizeof(LLVMValueRef));
