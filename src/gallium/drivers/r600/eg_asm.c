@@ -225,9 +225,10 @@ int eg_bytecode_gds_build(struct r600_bytecode *bc, struct r600_bytecode_gds *gd
 {
 	unsigned gds_op = (r600_isa_fetch_opcode(bc->isa->hw_class, gds->op) >> 8) & 0x3f;
 	unsigned opcode;
-	if (gds->op == FETCH_OP_TF_WRITE)
+	if (gds->op == FETCH_OP_TF_WRITE) {
 		opcode = 5;
-	else
+		gds_op = 0;
+	} else
 		opcode = 4;
 	bc->bytecode[id++] = S_SQ_MEM_GDS_WORD0_MEM_INST(2) |
 		S_SQ_MEM_GDS_WORD0_MEM_OP(opcode) |
