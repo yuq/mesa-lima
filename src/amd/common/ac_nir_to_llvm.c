@@ -4166,6 +4166,13 @@ load_tess_coord(struct ac_shader_abi *abi, LLVMTypeRef type,
 	return LLVMBuildBitCast(ctx->builder, result, type, "");
 }
 
+static LLVMValueRef
+load_patch_vertices_in(struct ac_shader_abi *abi)
+{
+	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
+	return LLVMConstInt(ctx->ac.i32, ctx->options->key.tcs.input_vertices, false);
+}
+
 static void visit_intrinsic(struct ac_nir_context *ctx,
                             nir_intrinsic_instr *instr)
 {
@@ -4366,7 +4373,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = ctx->abi->load_tess_level(ctx->abi, VARYING_SLOT_TESS_LEVEL_INNER);
 		break;
 	case nir_intrinsic_load_patch_vertices_in:
-		result = LLVMConstInt(ctx->ac.i32, ctx->nctx->options->key.tcs.input_vertices, false);
+		result = ctx->abi->load_patch_vertices_in(ctx->abi);
 		break;
 	default:
 		fprintf(stderr, "Unknown intrinsic: ");
@@ -6698,11 +6705,13 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			ctx.tcs_outputs_read = shaders[i]->info.outputs_read;
 			ctx.tcs_patch_outputs_read = shaders[i]->info.patch_outputs_read;
 			ctx.abi.load_tess_inputs = load_tcs_input;
+			ctx.abi.load_patch_vertices_in = load_patch_vertices_in;
 			ctx.abi.store_tcs_outputs = store_tcs_output;
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_EVAL) {
 			ctx.tes_primitive_mode = shaders[i]->info.tess.primitive_mode;
 			ctx.abi.load_tess_inputs = load_tes_input;
 			ctx.abi.load_tess_coord = load_tess_coord;
+			ctx.abi.load_patch_vertices_in = load_patch_vertices_in;
 		} else if (shaders[i]->info.stage == MESA_SHADER_VERTEX) {
 			if (shader_info->info.vs.needs_instance_id) {
 				if (ctx.ac.chip_class == GFX9 &&

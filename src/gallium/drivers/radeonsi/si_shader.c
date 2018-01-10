@@ -1955,6 +1955,17 @@ static LLVMValueRef si_load_tess_level(struct ac_shader_abi *abi,
 
 }
 
+static LLVMValueRef si_load_patch_vertices_in(struct ac_shader_abi *abi)
+{
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+	if (ctx->type == PIPE_SHADER_TESS_CTRL)
+		return unpack_param(ctx, ctx->param_tcs_out_lds_layout, 26, 6);
+	else if (ctx->type == PIPE_SHADER_TESS_EVAL)
+		return get_num_tcs_out_vertices(ctx);
+	else
+		assert(!"invalid shader stage for TGSI_SEMANTIC_VERTICESIN");
+}
+
 void si_load_system_value(struct si_shader_context *ctx,
 			  unsigned index,
 			  const struct tgsi_full_declaration *decl)
@@ -2063,12 +2074,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 		break;
 
 	case TGSI_SEMANTIC_VERTICESIN:
-		if (ctx->type == PIPE_SHADER_TESS_CTRL)
-			value = unpack_param(ctx, ctx->param_tcs_out_lds_layout, 26, 6);
-		else if (ctx->type == PIPE_SHADER_TESS_EVAL)
-			value = get_num_tcs_out_vertices(ctx);
-		else
-			assert(!"invalid shader stage for TGSI_SEMANTIC_VERTICESIN");
+		value = si_load_patch_vertices_in(&ctx->abi);
 		break;
 
 	case TGSI_SEMANTIC_TESSINNER:
@@ -5986,6 +5992,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		bld_base->emit_store = store_output_tcs;
 		ctx->abi.store_tcs_outputs = si_nir_store_output_tcs;
 		ctx->abi.emit_outputs = si_llvm_emit_tcs_epilogue;
+		ctx->abi.load_patch_vertices_in = si_load_patch_vertices_in;
 		bld_base->emit_epilogue = si_tgsi_emit_epilogue;
 		break;
 	case PIPE_SHADER_TESS_EVAL:
@@ -5993,6 +6000,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		ctx->abi.load_tess_inputs = si_nir_load_input_tes;
 		ctx->abi.load_tess_coord = si_load_tess_coord;
 		ctx->abi.load_tess_level = si_load_tess_level;
+		ctx->abi.load_patch_vertices_in = si_load_patch_vertices_in;
 		if (shader->key.as_es)
 			ctx->abi.emit_outputs = si_llvm_emit_es_epilogue;
 		else
