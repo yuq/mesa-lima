@@ -390,22 +390,6 @@ static void load_fetch_args(
 	}
 }
 
-static unsigned get_load_intr_attribs(bool can_speculate)
-{
-	/* READNONE means writes can't affect it, while READONLY means that
-	 * writes can affect it. */
-	return can_speculate && HAVE_LLVM >= 0x0400 ?
-				 LP_FUNC_ATTR_READNONE :
-				 LP_FUNC_ATTR_READONLY;
-}
-
-static unsigned get_store_intr_attribs(bool writeonly_memory)
-{
-	return writeonly_memory && HAVE_LLVM >= 0x0400 ?
-				  LP_FUNC_ATTR_INACCESSIBLE_MEM_ONLY :
-				  LP_FUNC_ATTR_WRITEONLY;
-}
-
 static void load_emit_buffer(struct si_shader_context *ctx,
 			     struct lp_build_emit_data *emit_data,
 			     bool can_speculate, bool allow_smem)
@@ -586,7 +570,7 @@ static void load_emit(
 			lp_build_intrinsic(
 				builder, "llvm.amdgcn.buffer.load.format.v4f32", emit_data->dst_type,
 				emit_data->args, emit_data->arg_count,
-				get_load_intr_attribs(can_speculate));
+				ac_get_load_intr_attribs(can_speculate));
 	} else {
 		ac_get_image_intr_name("llvm.amdgcn.image.load",
 				       emit_data->dst_type,		/* vdata */
@@ -598,7 +582,7 @@ static void load_emit(
 			lp_build_intrinsic(
 				builder, intrinsic_name, emit_data->dst_type,
 				emit_data->args, emit_data->arg_count,
-				get_load_intr_attribs(can_speculate));
+				ac_get_load_intr_attribs(can_speculate));
 	}
 }
 
@@ -734,7 +718,7 @@ static void store_emit_buffer(
 		lp_build_intrinsic(
 			builder, intrinsic_name, emit_data->dst_type,
 			emit_data->args, emit_data->arg_count,
-			get_store_intr_attribs(writeonly_memory));
+			ac_get_store_intr_attribs(writeonly_memory));
 	}
 }
 
@@ -798,7 +782,7 @@ static void store_emit(
 			builder, "llvm.amdgcn.buffer.store.format.v4f32",
 			emit_data->dst_type, emit_data->args,
 			emit_data->arg_count,
-			get_store_intr_attribs(writeonly_memory));
+			ac_get_store_intr_attribs(writeonly_memory));
 	} else {
 		ac_get_image_intr_name("llvm.amdgcn.image.store",
 				       LLVMTypeOf(emit_data->args[0]), /* vdata */
@@ -810,7 +794,7 @@ static void store_emit(
 			lp_build_intrinsic(
 				builder, intrinsic_name, emit_data->dst_type,
 				emit_data->args, emit_data->arg_count,
-				get_store_intr_attribs(writeonly_memory));
+				ac_get_store_intr_attribs(writeonly_memory));
 	}
 }
 
