@@ -54,6 +54,22 @@ v3d_qpu_magic_waddr_name(enum v3d_qpu_waddr waddr)
                 [V3D_QPU_WADDR_LOG] = "log",
                 [V3D_QPU_WADDR_SIN] = "sin",
                 [V3D_QPU_WADDR_RSQRT2] = "rsqrt2",
+                [V3D_QPU_WADDR_TMUC] = "tmuc",
+                [V3D_QPU_WADDR_TMUS] = "tmus",
+                [V3D_QPU_WADDR_TMUT] = "tmut",
+                [V3D_QPU_WADDR_TMUR] = "tmur",
+                [V3D_QPU_WADDR_TMUI] = "tmui",
+                [V3D_QPU_WADDR_TMUB] = "tmub",
+                [V3D_QPU_WADDR_TMUDREF] = "tmudref",
+                [V3D_QPU_WADDR_TMUOFF] = "tmuoff",
+                [V3D_QPU_WADDR_TMUSCM] = "tmuscm",
+                [V3D_QPU_WADDR_TMUSF] = "tmusf",
+                [V3D_QPU_WADDR_TMUSLOD] = "tmuslod",
+                [V3D_QPU_WADDR_TMUHS] = "tmuhs",
+                [V3D_QPU_WADDR_TMUHSCM] = "tmuscm",
+                [V3D_QPU_WADDR_TMUHSF] = "tmuhsf",
+                [V3D_QPU_WADDR_TMUHSLOD] = "tmuhslod",
+                [V3D_QPU_WADDR_R5REP] = "r5rep",
         };
 
         return waddr_magic[waddr];
@@ -489,16 +505,11 @@ v3d_qpu_magic_waddr_is_sfu(enum v3d_qpu_waddr waddr)
 bool
 v3d_qpu_magic_waddr_is_tmu(enum v3d_qpu_waddr waddr)
 {
-        switch (waddr) {
-        case V3D_QPU_WADDR_TMU:
-        case V3D_QPU_WADDR_TMUL:
-        case V3D_QPU_WADDR_TMUD:
-        case V3D_QPU_WADDR_TMUA:
-        case V3D_QPU_WADDR_TMUAU:
-                return true;
-        default:
-                return false;
-        }
+        /* XXX: WADDR_TMU changed to UNIFA on 4.x */
+        return ((waddr >= V3D_QPU_WADDR_TMU &&
+                 waddr <= V3D_QPU_WADDR_TMUAU) ||
+                (waddr >= V3D_QPU_WADDR_TMUC &&
+                 waddr <= V3D_QPU_WADDR_TMUHSLOD));
 }
 
 bool
