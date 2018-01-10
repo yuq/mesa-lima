@@ -399,6 +399,20 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 				info->writes_position = true;
 			break;
 		}
+
+		if (nir->info.stage == MESA_SHADER_TESS_CTRL) {
+			switch (semantic_name) {
+			case TGSI_SEMANTIC_PATCH:
+				info->reads_perpatch_outputs = true;
+			break;
+			case TGSI_SEMANTIC_TESSINNER:
+			case TGSI_SEMANTIC_TESSOUTER:
+				info->reads_tessfactor_outputs = true;
+			break;
+			default:
+				info->reads_pervertex_outputs = true;
+			}
+		}
 	}
 
 	info->num_outputs = num_outputs;
