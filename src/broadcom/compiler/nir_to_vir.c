@@ -32,15 +32,6 @@
 #include "common/v3d_device_info.h"
 #include "v3d_compiler.h"
 
-/* We don't do any address packing. */
-#define __gen_user_data void
-#define __gen_address_type uint32_t
-#define __gen_address_offset(reloc) (*reloc)
-#define __gen_emit_reloc(cl, reloc)
-#include "cle/v3d_packet_v33_pack.h"
-
-static struct qreg
-ntq_get_src(struct v3d_compile *c, nir_src src, int i);
 static void
 ntq_emit_cf_list(struct v3d_compile *c, struct exec_list *list);
 
@@ -65,7 +56,7 @@ resize_qreg_array(struct v3d_compile *c,
                 (*regs)[i] = c->undef;
 }
 
-static void
+void
 vir_emit_thrsw(struct v3d_compile *c)
 {
         if (c->threads == 1)
@@ -87,13 +78,6 @@ vir_SFU(struct v3d_compile *c, int waddr, struct qreg src)
 {
         vir_FMOV_dest(c, vir_reg(QFILE_MAGIC, waddr), src);
         return vir_FMOV(c, vir_reg(QFILE_MAGIC, V3D_QPU_WADDR_R4));
-}
-
-static struct qreg
-vir_LDTMU(struct v3d_compile *c)
-{
-        vir_NOP(c)->qpu.sig.ldtmu = true;
-        return vir_MOV(c, vir_reg(QFILE_MAGIC, V3D_QPU_WADDR_R4));
 }
 
 static struct qreg
@@ -163,7 +147,7 @@ ntq_init_ssa_def(struct v3d_compile *c, nir_ssa_def *def)
  * (knowing that the previous instruction doesn't depend on flags) and rewrite
  * its destination to be the NIR reg's destination
  */
-static void
+void
 ntq_store_dest(struct v3d_compile *c, nir_dest *dest, int chan,
                struct qreg result)
 {
@@ -229,7 +213,7 @@ ntq_store_dest(struct v3d_compile *c, nir_dest *dest, int chan,
         }
 }
 
-static struct qreg
+struct qreg
 ntq_get_src(struct v3d_compile *c, nir_src src, int i)
 {
         struct hash_entry *entry;
@@ -350,216 +334,7 @@ ntq_emit_tex(struct v3d_compile *c, nir_tex_instr *instr)
                 break;
         }
 
-        struct V3D33_TEXTURE_UNIFORM_PARAMETER_0_CFG_MODE1 p0_unpacked = {
-                V3D33_TEXTURE_UNIFORM_PARAMETER_0_CFG_MODE1_header,
-
-                .fetch_sample_mode = instr->op == nir_texop_txf,
-        };
-
-        struct V3D33_TEXTURE_UNIFORM_PARAMETER_1_CFG_MODE1 p1_unpacked = {
-        };
-
-        switch (instr->sampler_dim) {
-        case GLSL_SAMPLER_DIM_1D:
-                if (instr->is_array)
-                        p0_unpacked.lookup_type = TEXTURE_1D_ARRAY;
-                else
-                        p0_unpacked.lookup_type = TEXTURE_1D;
-                break;
-        case GLSL_SAMPLER_DIM_2D:
-        case GLSL_SAMPLER_DIM_RECT:
-                if (instr->is_array)
-                        p0_unpacked.lookup_type = TEXTURE_2D_ARRAY;
-                else
-                        p0_unpacked.lookup_type = TEXTURE_2D;
-                break;
-        case GLSL_SAMPLER_DIM_3D:
-                p0_unpacked.lookup_type = TEXTURE_3D;
-                break;
-        case GLSL_SAMPLER_DIM_CUBE:
-                p0_unpacked.lookup_type = TEXTURE_CUBE_MAP;
-                break;
-        default:
-                unreachable("Bad sampler type");
-        }
-
-        struct qreg coords[5];
-        int next_coord = 0;
-        for (unsigned i = 0; i < instr->num_srcs; i++) {
-                switch (instr->src[i].src_type) {
-                case nir_tex_src_coord:
-                        for (int j = 0; j < instr->coord_components; j++) {
-                                coords[next_coord++] =
-                                        ntq_get_src(c, instr->src[i].src, j);
-                        }
-                        if (instr->coord_components < 2)
-                                coords[next_coord++] = vir_uniform_f(c, 0.5);
-                        break;
-                case nir_tex_src_bias:
-                        coords[next_coord++] =
-                                ntq_get_src(c, instr->src[i].src, 0);
-
-                        p0_unpacked.bias_supplied = true;
-                        break;
-                case nir_tex_src_lod:
-                        coords[next_coord++] =
-                                vir_FADD(c,
-                                         ntq_get_src(c, instr->src[i].src, 0),
-                                         vir_uniform(c, QUNIFORM_TEXTURE_FIRST_LEVEL,
-                                                     unit));
-
-                        if (instr->op != nir_texop_txf &&
-                            instr->op != nir_texop_tg4) {
-                                p0_unpacked.disable_autolod_use_bias_only = true;
-                        }
-                        break;
-                case nir_tex_src_comparator:
-                        coords[next_coord++] =
-                                ntq_get_src(c, instr->src[i].src, 0);
-
-                        p0_unpacked.shadow = true;
-                        break;
-
-                case nir_tex_src_offset: {
-                        nir_const_value *offset =
-                                nir_src_as_const_value(instr->src[i].src);
-                        p0_unpacked.texel_offset_for_s_coordinate =
-                                offset->i32[0];
-
-                        if (instr->coord_components >= 2)
-                                p0_unpacked.texel_offset_for_t_coordinate =
-                                        offset->i32[1];
-
-                        if (instr->coord_components >= 3)
-                                p0_unpacked.texel_offset_for_r_coordinate =
-                                        offset->i32[2];
-                        break;
-                }
-
-                default:
-                        unreachable("unknown texture source");
-                }
-        }
-
-        bool return_16 = (c->key->tex[unit].return_size == 16 ||
-                          p0_unpacked.shadow);
-
-        /* Limit the number of channels returned to both how many the NIR
-         * instruction writes and how many the instruction could produce.
-         */
-        uint32_t instr_return_channels = nir_tex_instr_dest_size(instr);
-        if (return_16)
-                instr_return_channels = (instr_return_channels + 1) / 2;
-
-        p1_unpacked.return_words_of_texture_data =
-                (1 << MIN2(instr_return_channels,
-                           c->key->tex[unit].return_channels)) - 1;
-
-        uint32_t p0_packed;
-        V3D33_TEXTURE_UNIFORM_PARAMETER_0_CFG_MODE1_pack(NULL,
-                                                         (uint8_t *)&p0_packed,
-                                                         &p0_unpacked);
-
-        uint32_t p1_packed;
-        V3D33_TEXTURE_UNIFORM_PARAMETER_1_CFG_MODE1_pack(NULL,
-                                                         (uint8_t *)&p1_packed,
-                                                         &p1_unpacked);
-        /* Load unit number into the address field, which will be be used by
-         * the driver to decide which texture to put in the actual address
-         * field.
-         */
-        p1_packed |= unit << 5;
-
-        /* There is no native support for GL texture rectangle coordinates, so
-         * we have to rescale from ([0, width], [0, height]) to ([0, 1], [0,
-         * 1]).
-         */
-        if (instr->sampler_dim == GLSL_SAMPLER_DIM_RECT) {
-                coords[0] = vir_FMUL(c, coords[0],
-                                     vir_uniform(c, QUNIFORM_TEXRECT_SCALE_X,
-                                                 unit));
-                coords[1] = vir_FMUL(c, coords[1],
-                                     vir_uniform(c, QUNIFORM_TEXRECT_SCALE_Y,
-                                                 unit));
-        }
-
-        struct qreg texture_u[] = {
-                vir_uniform(c, QUNIFORM_TEXTURE_CONFIG_P0_0 + unit, p0_packed),
-                vir_uniform(c, QUNIFORM_TEXTURE_CONFIG_P1, p1_packed),
-        };
-        uint32_t next_texture_u = 0;
-
-        for (int i = 0; i < next_coord; i++) {
-                struct qreg dst;
-
-                if (i == next_coord - 1)
-                        dst = vir_reg(QFILE_MAGIC, V3D_QPU_WADDR_TMUL);
-                else
-                        dst = vir_reg(QFILE_MAGIC, V3D_QPU_WADDR_TMU);
-
-                struct qinst *tmu = vir_MOV_dest(c, dst, coords[i]);
-
-                if (i < 2) {
-                        tmu->has_implicit_uniform = true;
-                        tmu->src[vir_get_implicit_uniform_src(tmu)] =
-                                texture_u[next_texture_u++];
-                }
-        }
-
-        vir_emit_thrsw(c);
-
-        struct qreg return_values[4];
-        for (int i = 0; i < 4; i++) {
-                /* Swizzling .zw of an RG texture should give undefined
-                 * results, not crash the compiler.
-                 */
-                if (p1_unpacked.return_words_of_texture_data & (1 << i))
-                        return_values[i] = vir_LDTMU(c);
-                else
-                        return_values[i] = c->undef;
-        }
-
-        for (int i = 0; i < nir_tex_instr_dest_size(instr); i++) {
-                struct qreg chan;
-
-                if (return_16) {
-                        STATIC_ASSERT(PIPE_SWIZZLE_X == 0);
-                        chan = return_values[i / 2];
-
-                        if (nir_alu_type_get_base_type(instr->dest_type) ==
-                            nir_type_float) {
-                                enum v3d_qpu_input_unpack unpack;
-                                if (i & 1)
-                                        unpack = V3D_QPU_UNPACK_H;
-                                else
-                                        unpack = V3D_QPU_UNPACK_L;
-
-                                chan = vir_FMOV(c, chan);
-                                vir_set_unpack(c->defs[chan.index], 0, unpack);
-                        } else {
-                                /* If we're unpacking the low field, shift it
-                                 * up to the top first.
-                                 */
-                                if ((i & 1) == 0) {
-                                        chan = vir_SHL(c, chan,
-                                                       vir_uniform_ui(c, 16));
-                                }
-
-                                /* Do proper sign extension to a 32-bit int. */
-                                if (nir_alu_type_get_base_type(instr->dest_type) ==
-                                    nir_type_int) {
-                                        chan = vir_ASR(c, chan,
-                                                       vir_uniform_ui(c, 16));
-                                } else {
-                                        chan = vir_SHR(c, chan,
-                                                       vir_uniform_ui(c, 16));
-                                }
-                        }
-                } else {
-                        chan = vir_MOV(c, return_values[i]);
-                }
-                ntq_store_dest(c, &instr->dest, i, chan);
-        }
+        v3d33_vir_emit_tex(c, instr);
 }
 
 static struct qreg

@@ -665,6 +665,10 @@ bool vir_writes_r3(const struct v3d_device_info *devinfo, struct qinst *inst);
 bool vir_writes_r4(const struct v3d_device_info *devinfo, struct qinst *inst);
 struct qreg vir_follow_movs(struct v3d_compile *c, struct qreg reg);
 uint8_t vir_channels_written(struct qinst *inst);
+struct qreg ntq_get_src(struct v3d_compile *c, nir_src src, int i);
+void ntq_store_dest(struct v3d_compile *c, nir_dest *dest, int chan,
+                    struct qreg result);
+void vir_emit_thrsw(struct v3d_compile *c);
 
 void vir_dump(struct v3d_compile *c);
 void vir_dump_inst(struct v3d_compile *c, struct qinst *inst);
@@ -686,6 +690,7 @@ void vir_lower_uniforms(struct v3d_compile *c);
 
 void v3d33_vir_vpm_read_setup(struct v3d_compile *c, int num_components);
 void v3d33_vir_vpm_write_setup(struct v3d_compile *c);
+void v3d33_vir_emit_tex(struct v3d_compile *c, nir_tex_instr *instr);
 
 void v3d_vir_to_qpu(struct v3d_compile *c, struct qpu_reg *temp_registers);
 uint32_t v3d_qpu_schedule_instructions(struct v3d_compile *c);
@@ -887,6 +892,14 @@ vir_NOP(struct v3d_compile *c)
         return vir_emit_nondef(c, vir_add_inst(V3D_QPU_A_NOP,
                                                c->undef, c->undef, c->undef));
 }
+
+static inline struct qreg
+vir_LDTMU(struct v3d_compile *c)
+{
+        vir_NOP(c)->qpu.sig.ldtmu = true;
+        return vir_MOV(c, vir_reg(QFILE_MAGIC, V3D_QPU_WADDR_R4));
+}
+
 /*
 static inline struct qreg
 vir_LOAD_IMM(struct v3d_compile *c, uint32_t val)
