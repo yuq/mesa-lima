@@ -57,6 +57,11 @@ vlVaBeginPicture(VADriverContextP ctx, VAContextID context_id, VASurfaceID rende
       return VA_STATUS_ERROR_INVALID_CONTEXT;
    }
 
+   if (u_reduce_video_profile(context->templat.profile) == PIPE_VIDEO_FORMAT_MPEG12) {
+      context->desc.mpeg12.intra_matrix = NULL;
+      context->desc.mpeg12.non_intra_matrix = NULL;
+   }
+
    surf = handle_table_get(drv->htab, render_target);
    mtx_unlock(&drv->mutex);
    if (!surf || !surf->buffer)
