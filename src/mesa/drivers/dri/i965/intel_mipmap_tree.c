@@ -1652,7 +1652,7 @@ intel_miptree_init_mcs(struct brw_context *brw,
     *
     * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
     */
-   void *map = brw_bo_map(brw, mt->mcs_buf->bo, MAP_WRITE);
+   void *map = brw_bo_map(brw, mt->mcs_buf->bo, MAP_WRITE | MAP_RAW);
    if (unlikely(map == NULL)) {
       fprintf(stderr, "Failed to map mcs buffer into GTT\n");
       brw_bo_unreference(mt->mcs_buf->bo);
