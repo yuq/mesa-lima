@@ -1130,6 +1130,9 @@ void post_scheduler::emit_clause() {
 	if (alu.current_ar) {
 		emit_load_ar();
 		process_group();
+		if (!alu.check_clause_limits()) {
+			// Can't happen since clause only contains MOVA/CF_SET_IDX0/1
+		}
 		alu.emit_group();
 	}
 
