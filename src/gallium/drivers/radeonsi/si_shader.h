@@ -557,6 +557,7 @@ struct si_shader_config {
 	unsigned			spilled_vgprs;
 	unsigned			private_mem_vgprs;
 	unsigned			lds_size;
+	unsigned			max_simd_waves;
 	unsigned			spi_ps_input_ena;
 	unsigned			spi_ps_input_addr;
 	unsigned			float_mode;

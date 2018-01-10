@@ -5362,16 +5362,11 @@ static void si_shader_dump_disassembly(const struct ac_shader_binary *binary,
 	}
 }
 
-static void si_shader_dump_stats(struct si_screen *sscreen,
-				 const struct si_shader *shader,
-			         struct pipe_debug_callback *debug,
-			         unsigned processor,
-				 FILE *file,
-				 bool check_debug_option)
+static void si_calculate_max_simd_waves(struct si_shader *shader)
 {
-	const struct si_shader_config *conf = &shader->config;
-	unsigned num_inputs = shader->selector ? shader->selector->info.num_inputs : 0;
-	unsigned code_size = si_get_shader_binary_size(shader);
+	struct si_screen *sscreen = shader->selector->screen;
+	struct si_shader_config *conf = &shader->config;
+	unsigned num_inputs = shader->selector->info.num_inputs;
 	unsigned lds_increment = sscreen->info.chip_class >= CIK ? 512 : 256;
 	unsigned lds_per_wave = 0;
 	unsigned max_simd_waves;
@@ -5388,7 +5383,7 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 	}
 
 	/* Compute LDS usage for PS. */
-	switch (processor) {
+	switch (shader->selector->type) {
 	case PIPE_SHADER_FRAGMENT:
 		/* The minimum usage per wave is (num_inputs * 48). The maximum
 		 * usage is (num_inputs * 48 * 16).
@@ -5429,6 +5424,19 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 	if (lds_per_wave)
 		max_simd_waves = MIN2(max_simd_waves, 16384 / lds_per_wave);
 
+	conf->max_simd_waves = max_simd_waves;
+}
+
+static void si_shader_dump_stats(struct si_screen *sscreen,
+				 const struct si_shader *shader,
+			         struct pipe_debug_callback *debug,
+			         unsigned processor,
+				 FILE *file,
+				 bool check_debug_option)
+{
+	const struct si_shader_config *conf = &shader->config;
+	unsigned code_size = si_get_shader_binary_size(shader);
+
 	if (!check_debug_option ||
 	    si_can_dump_shader(sscreen, processor)) {
 		if (processor == PIPE_SHADER_FRAGMENT) {
@@ -5453,7 +5461,7 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 			conf->spilled_sgprs, conf->spilled_vgprs,
 			conf->private_mem_vgprs, code_size,
 			conf->lds_size, conf->scratch_bytes_per_wave,
-			max_simd_waves);
+			conf->max_simd_waves);
 	}
 
 	pipe_debug_message(debug, SHADER_INFO,
@@ -5462,7 +5470,7 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 			   "Spilled VGPRs: %d PrivMem VGPRs: %d",
 			   conf->num_sgprs, conf->num_vgprs, code_size,
 			   conf->lds_size, conf->scratch_bytes_per_wave,
-			   max_simd_waves, conf->spilled_sgprs,
+			   conf->max_simd_waves, conf->spilled_sgprs,
 			   conf->spilled_vgprs, conf->private_mem_vgprs);
 }
 
@@ -6971,6 +6979,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			shader->info.num_input_vgprs += 1;
 	}
 
+	si_calculate_max_simd_waves(shader);
 	return 0;
 }
 
@@ -8044,6 +8053,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 			shader->config.num_vgprs = MAX2(shader->config.num_vgprs,
 							shader->epilog->config.num_vgprs);
 		}
+		si_calculate_max_simd_waves(shader);
 	}
 
 	si_fix_resource_usage(sscreen, shader);
