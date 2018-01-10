@@ -60,11 +60,11 @@
 
 static const struct vc5_format format_table[] = {
         FORMAT(B8G8R8A8_UNORM,    RGBA8,        RGBA8,       SWIZ_ZYXW, 16, 0),
-        FORMAT(B8G8R8X8_UNORM,    RGBX8,        RGBA8,       SWIZ_ZYX1, 16, 0),
+        FORMAT(B8G8R8X8_UNORM,    RGBA8,        RGBA8,       SWIZ_ZYX1, 16, 0),
         FORMAT(B8G8R8A8_SRGB,     SRGB8_ALPHA8, RGBA8,       SWIZ_ZYXW, 16, 0),
-        FORMAT(B8G8R8X8_SRGB,     SRGBX8,       RGBA8,       SWIZ_ZYX1, 16, 0),
+        FORMAT(B8G8R8X8_SRGB,     SRGB8_ALPHA8, RGBA8,       SWIZ_ZYX1, 16, 0),
         FORMAT(R8G8B8A8_UNORM,    RGBA8,        RGBA8,       SWIZ_XYZW, 16, 0),
-        FORMAT(R8G8B8X8_UNORM,    RGBX8,        RGBA8,       SWIZ_XYZ1, 16, 0),
+        FORMAT(R8G8B8X8_UNORM,    RGBA8,        RGBA8,       SWIZ_XYZ1, 16, 0),
         FORMAT(R8G8B8A8_SNORM,    NO,           RGBA8_SNORM, SWIZ_XYZW, 16, 0),
         FORMAT(R8G8B8X8_SNORM,    NO,           RGBA8_SNORM, SWIZ_XYZ1, 16, 0),
         FORMAT(R10G10B10A2_UNORM, RGB10_A2,     RGB10_A2,    SWIZ_XYZW, 16, 0),
@@ -184,7 +184,9 @@ v3dX(get_internal_type_bpp_for_output_format)(uint32_t format,
 {
         switch (format) {
         case V3D_OUTPUT_IMAGE_FORMAT_RGBA8:
+#if V3D_VERSION < 41
         case V3D_OUTPUT_IMAGE_FORMAT_RGBX8:
+#endif
         case V3D_OUTPUT_IMAGE_FORMAT_RGB8:
         case V3D_OUTPUT_IMAGE_FORMAT_RG8:
         case V3D_OUTPUT_IMAGE_FORMAT_R8:
@@ -213,7 +215,9 @@ v3dX(get_internal_type_bpp_for_output_format)(uint32_t format,
         case V3D_OUTPUT_IMAGE_FORMAT_SRGB:
         case V3D_OUTPUT_IMAGE_FORMAT_RGB10_A2:
         case V3D_OUTPUT_IMAGE_FORMAT_R11F_G11F_B10F:
+#if V3D_VERSION < 41
         case V3D_OUTPUT_IMAGE_FORMAT_SRGBX8:
+#endif
         case V3D_OUTPUT_IMAGE_FORMAT_RGBA16F:
                 /* Note that sRGB RTs are stored in the tile buffer at 16F,
                  * and the conversion to sRGB happens at tilebuffer
