@@ -35,7 +35,7 @@
 #include "lima_screen.h"
 #include "lima_context.h"
 #include "lima_program.h"
-#include "lima_resource.h"
+#include "lima_bo.h"
 #include "ir/lima_ir.h"
 
 static const nir_shader_compiler_options vs_nir_options = {
@@ -202,7 +202,7 @@ lima_delete_fs_state(struct pipe_context *pctx, void *hwcso)
    struct lima_fs_shader_state *so = hwcso;
 
    if (so->bo)
-      lima_buffer_free(so->bo);
+      lima_bo_free(so->bo);
 
    ralloc_free(so);
 }
@@ -213,8 +213,7 @@ lima_update_vs_state(struct lima_context *ctx)
    struct lima_vs_shader_state *vs = ctx->vs;
    if (!vs->bo) {
       struct lima_screen *screen = lima_screen(ctx->base.screen);
-      vs->bo = lima_buffer_alloc(screen, vs->shader_size,
-                                 LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
+      vs->bo = lima_bo_create(screen, vs->shader_size, 0, true, true);
       if (!vs->bo) {
          fprintf(stderr, "lima: create vs shader bo fail\n");
          return false;
@@ -234,8 +233,7 @@ lima_update_fs_state(struct lima_context *ctx)
    struct lima_fs_shader_state *fs = ctx->fs;
    if (!fs->bo) {
       struct lima_screen *screen = lima_screen(ctx->base.screen);
-      fs->bo = lima_buffer_alloc(screen, fs->shader_size,
-                                 LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
+      fs->bo = lima_bo_create(screen, fs->shader_size, 0, true, true);
       if (!fs->bo) {
          fprintf(stderr, "lima: create fs shader bo fail\n");
          return false;
@@ -303,7 +301,7 @@ lima_delete_vs_state(struct pipe_context *pctx, void *hwcso)
    struct lima_vs_shader_state *so = hwcso;
 
    if (so->bo)
-      lima_buffer_free(so->bo);
+      lima_bo_free(so->bo);
 
    ralloc_free(so);
 }

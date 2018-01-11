@@ -30,12 +30,6 @@
 #include "pipe/p_context.h"
 #include "pipe/p_state.h"
 
-#include "lima.h"
-
-struct pipe_screen;
-struct pipe_surface;
-struct lima_buffer;
-
 struct lima_context_framebuffer {
    struct pipe_surface *cbuf, *zsbuf;
    int width, height;
@@ -60,7 +54,7 @@ struct lima_depth_stencil_alpha_state {
 struct lima_fs_shader_state {
    void *shader;
    int shader_size;
-   struct lima_buffer *bo;
+   struct lima_bo *bo;
 };
 
 #define LIMA_MAX_VARYING_NUM 13
@@ -83,7 +77,7 @@ struct lima_vs_shader_state {
    int varying_stride;
    int num_varying;
 
-   struct lima_buffer *bo;
+   struct lima_bo *bo;
 };
 
 struct lima_rasterizer_state {
@@ -175,14 +169,14 @@ struct lima_context {
    struct pipe_stencil_ref stencil_ref;
    struct lima_context_constant_buffer const_buffer[PIPE_SHADER_TYPES];
 
-   struct lima_buffer *share_buffer;
+   struct lima_bo *share_buffer;
    #define sh_plb_offset             0x00000
    /* max_plb = 512, block_size = 0x200, size = block_size * max_plb */
    #define sh_varying_offset         0x40000
    #define sh_gl_pos_offset          0x41000
    #define sh_buffer_size            0x42000
 
-   struct lima_buffer *gp_buffer;
+   struct lima_bo *gp_buffer;
    #define gp_plbu_plb_offset        0x0000
    #define gp_varying_info_offset    0x0800
    #define gp_attribute_info_offset  0x1000
@@ -193,7 +187,7 @@ struct lima_context {
    #define gp_tile_heap_offset       0x4000
    #define gp_buffer_size            0x6000
 
-   struct lima_buffer *pp_buffer;
+   struct lima_bo *pp_buffer;
    #define pp_uniform_array_offset   0x00000
    #define pp_uniform_offset         0x00400
    #define pp_frame_rsw_offset       0x01400
@@ -210,8 +204,8 @@ struct lima_context {
 
    unsigned num_draws;
 
-   lima_submit_handle gp_submit;
-   lima_submit_handle pp_submit;
+   struct lima_submit *gp_submit;
+   struct lima_submit *pp_submit;
 };
 
 static inline struct lima_context *
