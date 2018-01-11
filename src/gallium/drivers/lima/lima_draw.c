@@ -31,6 +31,8 @@
 #include "lima_screen.h"
 #include "lima_resource.h"
 #include "lima_program.h"
+#include "lima_bo.h"
+#include "lima_submit.h"
 
 #include <lima_drm.h>
 
@@ -131,7 +133,7 @@ lima_update_plb(struct lima_context *ctx)
    int dim = util_logbase2_ceil(max);
    int count = 1 << (dim + dim);
    int index = 0, i;
-   int num_pp = screen->info.num_pp;
+   int num_pp = screen->num_pp;
    uint32_t *stream[4];
 
    for (i = 0; i < num_pp; i++)
@@ -393,8 +395,8 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       plbu_cmd[i++] = 0x10000100; /* INDEXED_DEST */
 
       struct lima_resource *res = lima_resource(info->index.resource);
-      lima_buffer_update(res->buffer, LIMA_BUFFER_ALLOC_VA);
-      plbu_cmd[i++] = res->buffer->va + info->start +
+      lima_bo_update(res->bo, false, true);
+      plbu_cmd[i++] = res->bo->va + info->start +
          info->start_instance * info->index_size;
       plbu_cmd[i++] = 0x10000101; /* INDICES */
    }
@@ -706,11 +708,11 @@ lima_update_gp_attribute_info(struct lima_context *ctx, const struct pipe_draw_i
 
       struct pipe_vertex_buffer *pvb = vb->vb + pve->vertex_buffer_index;
       struct lima_resource *res = lima_resource(pvb->buffer.resource);
-      lima_buffer_update(res->buffer, LIMA_BUFFER_ALLOC_VA);
+      lima_bo_update(res->bo, false, true);
 
-      lima_submit_add_bo(ctx->gp_submit, res->buffer->bo, LIMA_SUBMIT_BO_FLAG_READ);
+      lima_submit_add_bo(ctx->gp_submit, res->bo, LIMA_SUBMIT_BO_READ);
 
-      attribute[n++] = res->buffer->va + pvb->buffer_offset + pve->src_offset
+      attribute[n++] = res->bo->va + pvb->buffer_offset + pve->src_offset
          + info->start * pvb->stride;
       attribute[n++] = (pvb->stride << 11) |
          (lima_pipe_format_to_attrib_type(pve->src_format) << 2) |
@@ -859,10 +861,10 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    if (!lima_update_vs_state(ctx) || !lima_update_fs_state(ctx))
       return;
 
-   lima_submit_add_bo(ctx->gp_submit, ctx->vs->bo->bo, LIMA_SUBMIT_BO_FLAG_READ);
-   lima_submit_add_bo(ctx->pp_submit, ctx->fs->bo->bo, LIMA_SUBMIT_BO_FLAG_READ);
+   lima_submit_add_bo(ctx->gp_submit, ctx->vs->bo, LIMA_SUBMIT_BO_READ);
+   lima_submit_add_bo(ctx->pp_submit, ctx->fs->bo, LIMA_SUBMIT_BO_READ);
 
-   lima_bo_wait(ctx->gp_buffer->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true);
+   lima_bo_wait(ctx->gp_buffer, LIMA_GEM_WAIT_WRITE, 1000000000, true);
 
    /* TODO:
     *   1. dynamic command stream buffers
@@ -887,7 +889,7 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    lima_pack_plbu_cmd(ctx, info);
 
-   lima_bo_wait(ctx->pp_buffer->bo, LIMA_BO_WAIT_FLAG_WRITE, 1000000000, true);
+   lima_bo_wait(ctx->pp_buffer, LIMA_GEM_WAIT_WRITE, 1000000000, true);
 
    /* TODO: handle fb change case */
    if (ctx->dirty & LIMA_CONTEXT_DIRTY_FRAMEBUFFER) {
@@ -943,10 +945,10 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 
    lima_finish_plbu_cmd(ctx);
 
-   lima_submit_add_bo(ctx->gp_submit, ctx->gp_buffer->bo,
-                      LIMA_SUBMIT_BO_FLAG_READ|LIMA_SUBMIT_BO_FLAG_WRITE);
-   lima_submit_add_bo(ctx->gp_submit, ctx->share_buffer->bo,
-                      LIMA_SUBMIT_BO_FLAG_WRITE);
+   lima_submit_add_bo(ctx->gp_submit, ctx->gp_buffer,
+                      LIMA_SUBMIT_BO_READ|LIMA_SUBMIT_BO_WRITE);
+   lima_submit_add_bo(ctx->gp_submit, ctx->share_buffer,
+                      LIMA_SUBMIT_BO_WRITE);
 
    int vs_cmd_size = ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].offset +
       ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].size;
@@ -963,14 +965,14 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
    };
 
    lima_submit_set_frame(ctx->gp_submit, &gp_frame, sizeof(gp_frame));
-   if (lima_submit_start(ctx->gp_submit))
+   if (!lima_submit_start(ctx->gp_submit))
       fprintf(stderr, "gp submit error\n");
 
    if (lima_dump_command_stream) {
-      if (lima_submit_wait(ctx->gp_submit, 1000000000, true))
+      if (!lima_submit_wait(ctx->gp_submit, 1000000000, true))
          fprintf(stderr, "gp submit wait error\n");
 
-      lima_buffer_update(ctx->share_buffer, LIMA_BUFFER_ALLOC_MAP);
+      lima_bo_update(ctx->share_buffer, true, false);
 
       float *varying = ctx->share_buffer->map + sh_varying_offset;
       printf("lima varying dump at va %x\n",
@@ -990,14 +992,14 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 
    struct lima_screen *screen = lima_screen(pctx->screen);
    struct lima_resource *res = lima_resource(ctx->framebuffer.cbuf->texture);
-   lima_buffer_update(res->buffer, LIMA_BUFFER_ALLOC_VA);
+   lima_bo_update(res->bo, false, true);
 
-   lima_submit_add_bo(ctx->pp_submit, res->buffer->bo, LIMA_SUBMIT_BO_FLAG_WRITE);
-   lima_submit_add_bo(ctx->pp_submit, ctx->share_buffer->bo, LIMA_SUBMIT_BO_FLAG_READ);
-   lima_submit_add_bo(ctx->pp_submit, ctx->pp_buffer->bo,
-                      LIMA_SUBMIT_BO_FLAG_READ|LIMA_SUBMIT_BO_FLAG_WRITE);
+   lima_submit_add_bo(ctx->pp_submit, res->bo, LIMA_SUBMIT_BO_WRITE);
+   lima_submit_add_bo(ctx->pp_submit, ctx->share_buffer, LIMA_SUBMIT_BO_READ);
+   lima_submit_add_bo(ctx->pp_submit, ctx->pp_buffer,
+                      LIMA_SUBMIT_BO_READ|LIMA_SUBMIT_BO_WRITE);
 
-   int num_pp = screen->info.num_pp;
+   int num_pp = screen->num_pp;
    struct drm_lima_m400_pp_frame pp_frame = {
       .frame = {
          .plbu_array_address = 0,
@@ -1031,7 +1033,7 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 
       .wb[0] = {
          .type = 0x02, /* 1 for depth, stencil */
-         .address = res->buffer->va,
+         .address = res->bo->va,
          .pixel_format = 0x03, /* RGBA8888 */
          .downsample_factor = 0,
          .pixel_layout = 0,
@@ -1056,7 +1058,7 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 
    lima_submit_set_frame(ctx->pp_submit, &pp_frame, sizeof(pp_frame));
 
-   if (lima_submit_start(ctx->pp_submit))
+   if (!lima_submit_start(ctx->pp_submit))
       fprintf(stderr, "pp submit error\n");
 
    ctx->num_draws = 0;

@@ -30,6 +30,8 @@
 #include "lima_screen.h"
 #include "lima_context.h"
 #include "lima_resource.h"
+#include "lima_bo.h"
+#include "lima_submit.h"
 
 #include <lima_drm.h>
 
@@ -52,13 +54,13 @@ lima_context_destroy(struct pipe_context *pctx)
       lima_submit_delete(ctx->pp_submit);
 
    if (ctx->share_buffer)
-      lima_buffer_free(ctx->share_buffer);
+      lima_bo_free(ctx->share_buffer);
 
    if (ctx->gp_buffer)
-      lima_buffer_free(ctx->gp_buffer);
+      lima_bo_free(ctx->gp_buffer);
 
    if (ctx->pp_buffer)
-      lima_buffer_free(ctx->pp_buffer);
+      lima_bo_free(ctx->pp_buffer);
 
    FREE(ctx);
 }
@@ -88,13 +90,11 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 
    slab_create_child(&ctx->transfer_pool, &screen->transfer_pool);
 
-   ctx->share_buffer =
-      lima_buffer_alloc(screen, sh_buffer_size, LIMA_BUFFER_ALLOC_VA);
+   ctx->share_buffer = lima_bo_create(screen, sh_buffer_size, 0, false, true);
    if (!ctx->share_buffer)
       goto err_out;
 
-   ctx->gp_buffer = lima_buffer_alloc(
-      screen, gp_buffer_size, LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
+   ctx->gp_buffer = lima_bo_create(screen, gp_buffer_size, 0, true, true);
    if (!ctx->gp_buffer)
       goto err_out;
 
@@ -104,11 +104,11 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    for (int i = 0; i < max_plb; i++)
       plbu_stream[i] = ctx->share_buffer->va + sh_plb_offset + block_size * i;
 
-   if (lima_submit_create(screen->dev, LIMA_PIPE_GP, &ctx->gp_submit))
+   ctx->gp_submit = lima_submit_create(screen, LIMA_PIPE_GP);
+   if (!ctx->gp_submit)
       goto err_out;
 
-   ctx->pp_buffer = lima_buffer_alloc(
-      screen, pp_buffer_size, LIMA_BUFFER_ALLOC_MAP | LIMA_BUFFER_ALLOC_VA);
+   ctx->pp_buffer = lima_bo_create(screen, pp_buffer_size, 0, true, true);
    if (!ctx->pp_buffer)
       goto err_out;
 
@@ -126,7 +126,8 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    pp_frame_rsw[9] = ctx->pp_buffer->va + pp_clear_program_offset;
    pp_frame_rsw[13] = 0x00000100;
 
-   if (lima_submit_create(screen->dev, LIMA_PIPE_PP, &ctx->pp_submit))
+   ctx->pp_submit = lima_submit_create(screen, LIMA_PIPE_PP);
+   if (!ctx->pp_submit)
       goto err_out;
 
    return &ctx->base;
