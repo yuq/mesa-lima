@@ -1338,14 +1338,26 @@ static LLVMValueRef emit_iabs(struct ac_llvm_context *ctx,
 }
 
 static LLVMValueRef emit_fsign(struct ac_llvm_context *ctx,
-			       LLVMValueRef src0)
+			       LLVMValueRef src0,
+			       unsigned bitsize)
 {
-	LLVMValueRef cmp, val;
+	LLVMValueRef cmp, val, zero, one;
+	LLVMTypeRef type;
 
-	cmp = LLVMBuildFCmp(ctx->builder, LLVMRealOGT, src0, ctx->f32_0, "");
-	val = LLVMBuildSelect(ctx->builder, cmp, ctx->f32_1, src0, "");
-	cmp = LLVMBuildFCmp(ctx->builder, LLVMRealOGE, val, ctx->f32_0, "");
-	val = LLVMBuildSelect(ctx->builder, cmp, val, LLVMConstReal(ctx->f32, -1.0), "");
+	if (bitsize == 32) {
+		type = ctx->f32;
+		zero = ctx->f32_0;
+		one = ctx->f32_1;
+	} else {
+		type = ctx->f64;
+		zero = ctx->f64_0;
+		one = ctx->f64_1;
+	}
+
+	cmp = LLVMBuildFCmp(ctx->builder, LLVMRealOGT, src0, zero, "");
+	val = LLVMBuildSelect(ctx->builder, cmp, one, src0, "");
+	cmp = LLVMBuildFCmp(ctx->builder, LLVMRealOGE, val, zero, "");
+	val = LLVMBuildSelect(ctx->builder, cmp, val, LLVMConstReal(type, -1.0), "");
 	return val;
 }
 
@@ -1799,7 +1811,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		break;
 	case nir_op_fsign:
 		src[0] = ac_to_float(&ctx->ac, src[0]);
-		result = emit_fsign(&ctx->ac, src[0]);
+		result = emit_fsign(&ctx->ac, src[0], instr->dest.dest.ssa.bit_size);
 		break;
 	case nir_op_ffloor:
 		result = emit_intrin_1f_param(&ctx->ac, "llvm.floor",
