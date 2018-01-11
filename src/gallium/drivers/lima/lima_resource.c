@@ -67,7 +67,6 @@ lima_resource_create(struct pipe_screen *pscreen,
    }
 
    res->stride = util_format_get_stride(pres->format, width);
-   res->layer_stride = res->stride * height;
 
    uint32_t size = res->stride *
       util_format_get_nblocksy(pres->format, height) *
@@ -264,7 +263,6 @@ lima_transfer_map(struct pipe_context *pctx,
    ptrans->usage = usage;
    ptrans->box = *box;
    ptrans->stride = res->stride;
-   ptrans->layer_stride = res->layer_stride;
 
    *pptrans = ptrans;
 
