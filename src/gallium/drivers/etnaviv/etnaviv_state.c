@@ -611,7 +611,8 @@ etna_update_ts_config(struct etna_context *ctx)
       }
    }
 
-   if (new_ts_config != ctx->framebuffer.TS_MEM_CONFIG) {
+   if (new_ts_config != ctx->framebuffer.TS_MEM_CONFIG ||
+       (ctx->dirty & ETNA_DIRTY_FRAMEBUFFER)) {
       ctx->framebuffer.TS_MEM_CONFIG = new_ts_config;
       ctx->dirty |= ETNA_DIRTY_TS;
    }
