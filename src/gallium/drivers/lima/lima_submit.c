@@ -59,7 +59,7 @@ bool lima_submit_add_bo(struct lima_submit *submit, struct lima_bo *bo, uint32_t
    uint32_t i, new_bos = 8;
 
    for (i = 0; i < submit->nr_bos; i++) {
-      if (submit->bos[i].handle == bo->handle)
+      if (submit->bos[i] == bo)
          return true;
    }
 
@@ -67,15 +67,21 @@ bool lima_submit_add_bo(struct lima_submit *submit, struct lima_bo *bo, uint32_t
       new_bos = submit->max_bos * 2;
 
    if (new_bos > submit->max_bos) {
-      void *bos = realloc(submit->bos, sizeof(*submit->bos) * new_bos);
+      void *bos = realloc(submit->bos,
+         (sizeof(*submit->bos) + sizeof(*submit->gem_bos)) * new_bos);
       if (!bos)
          return false;
       submit->max_bos = new_bos;
       submit->bos = bos;
+      submit->gem_bos = bos + sizeof(*submit->bos) * new_bos;
    }
 
-   submit->bos[submit->nr_bos].handle = bo->handle;
-   submit->bos[submit->nr_bos].flags = flags;
+   /* prevent bo from being freed when submit start */
+   lima_bo_reference(bo);
+
+   submit->bos[submit->nr_bos] = bo;
+   submit->gem_bos[submit->nr_bos].handle = bo->handle;
+   submit->gem_bos[submit->nr_bos].flags = flags;
    submit->nr_bos++;
    return true;
 }
@@ -86,13 +92,16 @@ bool lima_submit_start(struct lima_submit *submit)
       .fence = 0,
       .pipe = submit->pipe,
       .nr_bos = submit->nr_bos,
-      .bos = VOID2U64(submit->bos),
+      .bos = VOID2U64(submit->gem_bos),
       .frame = VOID2U64(submit->frame),
       .frame_size = submit->frame_size,
    };
 
    if (drmIoctl(submit->screen->fd, DRM_IOCTL_LIMA_GEM_SUBMIT, &req))
       return false;
+
+   for (int i = 0; i < submit->nr_bos; i++)
+      lima_bo_free(submit->bos[i]);
 
    submit->nr_bos = 0;
    submit->fence = req.fence;
