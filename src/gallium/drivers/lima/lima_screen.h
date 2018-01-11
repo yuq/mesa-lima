@@ -26,10 +26,10 @@
 #define H_LIMA_SCREEN
 
 #include "util/slab.h"
+#include "util/list.h"
+#include "os/os_thread.h"
 
 #include "pipe/p_screen.h"
-
-#include "lima.h"
 
 extern bool lima_dump_command_stream;
 
@@ -44,9 +44,18 @@ struct lima_screen {
    int refcnt;
    void *winsys_priv;
 
-   struct lima_device_info info;
-   lima_device_handle dev;
    int fd;
+   int gpu_type;
+   int num_pp;
+
+   /* va mgr */
+   mtx_t va_lock;
+   struct list_head va_holes;
+
+   /* bo table */
+   mtx_t bo_table_lock;
+   struct util_hash_table *bo_handles;
+   struct util_hash_table *bo_flink_names;
 
    struct slab_parent_pool transfer_pool;
 

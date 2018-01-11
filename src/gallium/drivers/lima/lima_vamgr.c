@@ -21,53 +21,58 @@
  *
  */
 
-#include <stdbool.h>
 #include <stdlib.h>
-#include <errno.h>
 
-#include "lima_priv.h"
-#include "lima.h"
+#include "lima_screen.h"
+#include "lima_vamgr.h"
+#include "lima_util.h"
+
 #include "util/u_math.h"
 
-int lima_vamgr_init(struct lima_va_mgr *mgr)
+struct lima_va_hole {
+   struct list_head list;
+   uint64_t offset;
+   uint64_t size;
+};
+
+bool lima_vamgr_init(struct lima_screen *screen)
 {
    struct lima_va_hole *hole;
 
-   list_inithead(&mgr->va_holes);
-   pthread_mutex_init(&mgr->lock, NULL);
+   list_inithead(&screen->va_holes);
+   mtx_init(&screen->va_lock, mtx_plain);
 
    hole = malloc(sizeof(*hole));
    if (!hole)
-      return -ENOMEM;
+      return false;
 
    hole->offset = 0;
    hole->size = 0x100000000;
-   list_add(&hole->list, &mgr->va_holes);
-   return 0;
+   list_add(&hole->list, &screen->va_holes);
+   return true;
 }
 
-void lima_vamgr_fini(struct lima_va_mgr *mgr)
+void lima_vamgr_fini(struct lima_screen *screen)
 {
-   list_for_each_entry_safe(struct lima_va_hole, hole, &mgr->va_holes, list) {
+   list_for_each_entry_safe(struct lima_va_hole, hole, &screen->va_holes, list) {
       list_del(&hole->list);
       free(hole);
    }
-   pthread_mutex_destroy(&mgr->lock);
+   mtx_destroy(&screen->va_lock);
 }
 
-int lima_va_range_alloc(lima_device_handle dev, uint32_t size, uint32_t *va)
+bool lima_va_range_alloc(struct lima_screen *screen, uint32_t size, uint32_t *va)
 {
-   struct lima_va_mgr *mgr = &dev->vamgr;
-   int err = -ENOENT;
+   bool ret = false;
 
    size = align(size, LIMA_PAGE_SIZE);
 
-   pthread_mutex_lock(&mgr->lock);
+   mtx_lock(&screen->va_lock);
 
-   list_for_each_entry(struct lima_va_hole, hole, &mgr->va_holes, list) {
+   list_for_each_entry(struct lima_va_hole, hole, &screen->va_holes, list) {
       if (hole->size == size) {
          *va = hole->offset;
-         err = 0;
+         ret = true;
 
          list_del(&hole->list);
          free(hole);
@@ -75,7 +80,7 @@ int lima_va_range_alloc(lima_device_handle dev, uint32_t size, uint32_t *va)
       }
       else if (hole->size > size) {
          *va = hole->offset;
-         err = 0;
+         ret = true;
 
          hole->offset += size;
          hole->size -= size;
@@ -83,50 +88,49 @@ int lima_va_range_alloc(lima_device_handle dev, uint32_t size, uint32_t *va)
       }
    }
 
-   pthread_mutex_unlock(&mgr->lock);
-   return err;
+   mtx_unlock(&screen->va_lock);
+   return ret;
 }
 
-static int add_va_hole(struct list_head *head, uint32_t size, uint32_t va)
+static bool add_va_hole(struct list_head *head, uint32_t size, uint32_t va)
 {
    struct lima_va_hole *hole;
 
    hole = malloc(sizeof(*hole));
    if (!hole)
-      return -ENOMEM;
+      return false;
 
    hole->offset = va;
    hole->size = size;
 
    list_addtail(&hole->list, head);
-   return 0;
+   return true;
 }
 
-int lima_va_range_free(lima_device_handle dev, uint32_t size, uint32_t va)
+bool lima_va_range_free(struct lima_screen *screen, uint32_t size, uint32_t va)
 {
-   struct lima_va_mgr *mgr = &dev->vamgr;
-   int err = 0;
+   bool ret = true;
 
    va &= ~(LIMA_PAGE_SIZE - 1);
    size = align(size, LIMA_PAGE_SIZE);
 
-   pthread_mutex_lock(&mgr->lock);
+   mtx_lock(&screen->va_lock);
 
-   if (list_empty(&mgr->va_holes))
-      err = add_va_hole(&mgr->va_holes, size, va);
+   if (list_empty(&screen->va_holes))
+      ret = add_va_hole(&screen->va_holes, size, va);
    else {
-      list_for_each_entry(struct lima_va_hole, hole, &mgr->va_holes, list) {
+      list_for_each_entry(struct lima_va_hole, hole, &screen->va_holes, list) {
          if (va + size == hole->offset) {
             hole->offset = va;
             hole->size += size;
             break;
          }
          else if (va + size < hole->offset) {
-            err = add_va_hole(&hole->list, size, va);
+            ret = add_va_hole(&hole->list, size, va);
             break;
          }
          else if (va == hole->offset + hole->size) {
-            if (hole->list.next != &mgr->va_holes) {
+            if (hole->list.next != &screen->va_holes) {
                struct lima_va_hole *next;
                next = list_first_entry(&hole->list, struct lima_va_hole, list);
                if (next->offset == va + size) {
@@ -139,14 +143,14 @@ int lima_va_range_free(lima_device_handle dev, uint32_t size, uint32_t va)
             break;
          }
          else if (va > hole->offset + hole->size) {
-            if (hole->list.next == &mgr->va_holes) {
-               err = add_va_hole(&mgr->va_holes, size, va);
+            if (hole->list.next == &screen->va_holes) {
+               ret = add_va_hole(&screen->va_holes, size, va);
                break;
             }
          }
       }
    }
 
-   pthread_mutex_unlock(&mgr->lock);
-   return err;
+   mtx_unlock(&screen->va_lock);
+   return ret;
 }

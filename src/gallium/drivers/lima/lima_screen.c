@@ -32,7 +32,12 @@
 #include "lima_context.h"
 #include "lima_resource.h"
 #include "lima_program.h"
+#include "lima_vamgr.h"
+#include "lima_bo.h"
 #include "ir/lima_ir.h"
+
+#include "xf86drm.h"
+#include "lima_drm.h"
 
 static void
 lima_screen_destroy(struct pipe_screen *pscreen)
@@ -41,8 +46,11 @@ lima_screen_destroy(struct pipe_screen *pscreen)
 
    slab_destroy_parent(&screen->transfer_pool);
 
-   free(screen->ro);
-   lima_device_delete(screen->dev);
+   if (screen->ro)
+      free(screen->ro);
+
+   lima_bo_table_fini(screen);
+   lima_vamgr_fini(screen);
    ralloc_free(screen);
 }
 
@@ -51,10 +59,10 @@ lima_screen_get_name(struct pipe_screen *pscreen)
 {
    struct lima_screen *screen = lima_screen(pscreen);
 
-   switch (screen->info.gpu_type) {
-   case GPU_MALI400:
+   switch (screen->gpu_type) {
+   case LIMA_INFO_GPU_MALI400:
      return "Mali400";
-   case GPU_MALI450:
+   case LIMA_INFO_GPU_MALI450:
      return "Mali450";
    }
 
@@ -269,6 +277,27 @@ lima_screen_get_compiler_options(struct pipe_screen *pscreen,
    return lima_program_get_compiler_options(shader);
 }
 
+static bool
+lima_screen_query_info(struct lima_screen *screen)
+{
+   struct drm_lima_info drm_info;
+
+   if (drmIoctl(screen->fd, DRM_IOCTL_LIMA_INFO, &drm_info))
+      return false;
+
+   switch (drm_info.gpu_id) {
+   case LIMA_INFO_GPU_MALI400:
+   case LIMA_INFO_GPU_MALI450:
+      screen->gpu_type = drm_info.gpu_id;
+      break;
+   default:
+      return false;
+   }
+
+   screen->num_pp = drm_info.num_pp;
+   return true;
+}
+
 bool lima_shader_debug_gp = false;
 bool lima_shader_debug_pp = false;
 
@@ -276,33 +305,33 @@ struct pipe_screen *
 lima_screen_create(int fd, struct renderonly *ro)
 {
    struct lima_screen *screen;
-   lima_device_handle dev;
-
-   if (lima_device_create(fd, &dev))
-      return NULL;
 
    screen = rzalloc(NULL, struct lima_screen);
    if (!screen)
+      return NULL;
+
+   if (!lima_vamgr_init(screen))
       goto err_out0;
+
+   if (!lima_bo_table_init(screen))
+      goto err_out1;
 
    screen->pp_ra = ppir_regalloc_init(screen);
    if (!screen->pp_ra)
-      goto err_out1;
+      goto err_out2;
 
    screen->fd = fd;
+
+   if (!lima_screen_query_info(screen))
+      goto err_out2;
 
    if (ro) {
       screen->ro = renderonly_dup(ro);
       if (!screen->ro) {
          fprintf(stderr, "Failed to dup renderonly object\n");
-         ralloc_free(screen);
-         return NULL;
+         goto err_out2;
       }
    }
-
-   screen->dev = dev;
-   if (lima_device_query_info(dev, &screen->info))
-      goto err_out1;
 
    screen->base.destroy = lima_screen_destroy;
    screen->base.get_name = lima_screen_get_name;
@@ -349,9 +378,11 @@ lima_screen_create(int fd, struct renderonly *ro)
 
    return &screen->base;
 
+err_out2:
+   lima_bo_table_fini(screen);
 err_out1:
-   ralloc_free(screen);
+   lima_vamgr_fini(screen);
 err_out0:
-   lima_device_delete(dev);
+   ralloc_free(screen);
    return NULL;
 }
