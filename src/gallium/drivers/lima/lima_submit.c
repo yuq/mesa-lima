@@ -23,42 +23,44 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
 #include "xf86drm.h"
-#include "lima_priv.h"
-#include "lima.h"
 #include "lima_drm.h"
 
+#include "lima_screen.h"
+#include "lima_submit.h"
+#include "lima_bo.h"
+#include "lima_util.h"
 
-int lima_submit_create(lima_device_handle dev, uint32_t pipe, lima_submit_handle *submit)
+#define VOID2U64(x) ((uint64_t)(unsigned long)(x))
+
+struct lima_submit *lima_submit_create(struct lima_screen *screen, uint32_t pipe)
 {
    struct lima_submit *s;
 
-   s = calloc(sizeof(*s), 1);
+   s = calloc(1, sizeof(*s));
    if (!s)
-      return -ENOMEM;
+      return NULL;
 
-   s->dev = dev;
+   s->screen = screen;
    s->pipe = pipe;
-   *submit = s;
-   return 0;
+   return s;
 }
 
-void lima_submit_delete(lima_submit_handle submit)
+void lima_submit_delete(struct lima_submit *submit)
 {
    if (submit->bos)
       free(submit->bos);
    free(submit);
 }
 
-int lima_submit_add_bo(lima_submit_handle submit, lima_bo_handle bo, uint32_t flags)
+bool lima_submit_add_bo(struct lima_submit *submit, struct lima_bo *bo, uint32_t flags)
 {
    uint32_t i, new_bos = 8;
 
    for (i = 0; i < submit->nr_bos; i++) {
       if (submit->bos[i].handle == bo->handle)
-         return 0;
+         return true;
    }
 
    if (submit->bos && submit->max_bos == submit->nr_bos)
@@ -67,7 +69,7 @@ int lima_submit_add_bo(lima_submit_handle submit, lima_bo_handle bo, uint32_t fl
    if (new_bos > submit->max_bos) {
       void *bos = realloc(submit->bos, sizeof(*submit->bos) * new_bos);
       if (!bos)
-         return -ENOMEM;
+         return false;
       submit->max_bos = new_bos;
       submit->bos = bos;
    }
@@ -75,18 +77,11 @@ int lima_submit_add_bo(lima_submit_handle submit, lima_bo_handle bo, uint32_t fl
    submit->bos[submit->nr_bos].handle = bo->handle;
    submit->bos[submit->nr_bos].flags = flags;
    submit->nr_bos++;
-   return 0;
+   return true;
 }
 
-void lima_submit_set_frame(lima_submit_handle submit, void *frame, uint32_t size)
+bool lima_submit_start(struct lima_submit *submit)
 {
-   submit->frame = frame;
-   submit->frame_size = size;
-}
-
-int lima_submit_start(lima_submit_handle submit)
-{
-   int err;
    struct drm_lima_gem_submit req = {
       .fence = 0,
       .pipe = submit->pipe,
@@ -96,45 +91,24 @@ int lima_submit_start(lima_submit_handle submit)
       .frame_size = submit->frame_size,
    };
 
-   err = drmIoctl(submit->dev->fd, DRM_IOCTL_LIMA_GEM_SUBMIT, &req);
-   if (err)
-      return err;
+   if (drmIoctl(submit->screen->fd, DRM_IOCTL_LIMA_GEM_SUBMIT, &req))
+      return false;
 
    submit->nr_bos = 0;
    submit->fence = req.fence;
-   return 0;
+   return true;
 }
 
-int lima_get_absolute_timeout(uint64_t *timeout, bool relative)
-{
-   if (relative) {
-      struct timespec current;
-      uint64_t current_ns;
-      int err;
-
-      err = clock_gettime(CLOCK_MONOTONIC, &current);
-      if (err)
-         return err;
-
-      current_ns = ((uint64_t)current.tv_sec) * 1000000000ull;
-      current_ns += current.tv_nsec;
-      *timeout += current_ns;
-   }
-   return 0;
-}
-
-int lima_submit_wait(lima_submit_handle submit, uint64_t timeout_ns, bool relative)
+bool lima_submit_wait(struct lima_submit *submit, uint64_t timeout_ns, bool relative)
 {
    struct drm_lima_wait_fence req = {
       .pipe = submit->pipe,
       .fence = submit->fence,
       .timeout_ns = timeout_ns,
    };
-   int err;
 
-   err = lima_get_absolute_timeout(&req.timeout_ns, relative);
-   if (err)
-      return err;
+   if (lima_get_absolute_timeout(&req.timeout_ns, relative))
+      return false;
 
-   return drmIoctl(submit->dev->fd, DRM_IOCTL_LIMA_WAIT_FENCE, &req);
+   return drmIoctl(submit->screen->fd, DRM_IOCTL_LIMA_WAIT_FENCE, &req) == 0;
 }
