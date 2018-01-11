@@ -194,7 +194,7 @@ hud_batch_query_cleanup(struct hud_batch_query_context **pbq,
 
 struct query_info {
    struct hud_batch_query_context *batch;
-   unsigned query_type;
+   enum pipe_query_type query_type;
    unsigned result_index; /* unit depends on query_type */
    enum pipe_driver_query_result_type result_type;
 
@@ -349,7 +349,8 @@ free_query_info(void *ptr, struct pipe_context *pipe)
 void
 hud_pipe_query_install(struct hud_batch_query_context **pbq,
                        struct hud_pane *pane,
-                       const char *name, unsigned query_type,
+                       const char *name,
+                       enum pipe_query_type query_type,
                        unsigned result_index,
                        uint64_t max_value, enum pipe_driver_query_type type,
                        enum pipe_driver_query_result_type result_type,
