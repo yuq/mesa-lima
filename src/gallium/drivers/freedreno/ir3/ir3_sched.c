@@ -157,7 +157,8 @@ distance(struct ir3_sched_ctx *ctx, struct ir3_instruction *instr,
 static unsigned
 delay_calc_srcn(struct ir3_sched_ctx *ctx,
 		struct ir3_instruction *assigner,
-		struct ir3_instruction *consumer, unsigned srcn)
+		struct ir3_instruction *consumer,
+		unsigned srcn, bool soft)
 {
 	unsigned delay = 0;
 
@@ -167,11 +168,19 @@ delay_calc_srcn(struct ir3_sched_ctx *ctx,
 			unsigned d;
 			if (src->block != assigner->block)
 				break;
-			d = delay_calc_srcn(ctx, src, consumer, srcn);
+			d = delay_calc_srcn(ctx, src, consumer, srcn, soft);
 			delay = MAX2(delay, d);
 		}
 	} else {
-		delay = ir3_delayslots(assigner, consumer, srcn);
+		if (soft) {
+			if (is_sfu(assigner)) {
+				delay = 4;
+			} else {
+				delay = ir3_delayslots(assigner, consumer, srcn);
+			}
+		} else {
+			delay = ir3_delayslots(assigner, consumer, srcn);
+		}
 		delay -= distance(ctx, assigner, delay);
 	}
 
@@ -180,7 +189,7 @@ delay_calc_srcn(struct ir3_sched_ctx *ctx,
 
 /* calculate delay for instruction (maximum of delay for all srcs): */
 static unsigned
-delay_calc(struct ir3_sched_ctx *ctx, struct ir3_instruction *instr)
+delay_calc(struct ir3_sched_ctx *ctx, struct ir3_instruction *instr, bool soft)
 {
 	unsigned delay = 0;
 	struct ir3_instruction *src;
@@ -192,7 +201,7 @@ delay_calc(struct ir3_sched_ctx *ctx, struct ir3_instruction *instr)
 			continue;
 		if (src->block != instr->block)
 			continue;
-		d = delay_calc_srcn(ctx, src, instr, i);
+		d = delay_calc_srcn(ctx, src, instr, i, soft);
 		delay = MAX2(delay, d);
 	}
 
@@ -367,7 +376,8 @@ find_instr_recursive(struct ir3_sched_ctx *ctx, struct ir3_sched_notes *notes,
 
 /* find instruction to schedule: */
 static struct ir3_instruction *
-find_eligible_instr(struct ir3_sched_ctx *ctx, struct ir3_sched_notes *notes)
+find_eligible_instr(struct ir3_sched_ctx *ctx, struct ir3_sched_notes *notes,
+		bool soft)
 {
 	struct ir3_instruction *best_instr = NULL;
 	unsigned min_delay = ~0;
@@ -386,7 +396,7 @@ find_eligible_instr(struct ir3_sched_ctx *ctx, struct ir3_sched_notes *notes)
 		if (!candidate)
 			continue;
 
-		delay = delay_calc(ctx, candidate);
+		delay = delay_calc(ctx, candidate, soft);
 		if (delay < min_delay) {
 			best_instr = candidate;
 			min_delay = delay;
@@ -522,10 +532,12 @@ sched_block(struct ir3_sched_ctx *ctx, struct ir3_block *block)
 		struct ir3_sched_notes notes = {0};
 		struct ir3_instruction *instr;
 
-		instr = find_eligible_instr(ctx, &notes);
+		instr = find_eligible_instr(ctx, &notes, true);
+		if (!instr)
+			instr = find_eligible_instr(ctx, &notes, false);
 
 		if (instr) {
-			unsigned delay = delay_calc(ctx, instr);
+			unsigned delay = delay_calc(ctx, instr, false);
 
 			/* and if we run out of instructions that can be scheduled,
 			 * then it is time for nop's:
