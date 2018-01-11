@@ -189,12 +189,6 @@ v3d_generate_code_block(struct v3d_compile *c,
 
                                 src[i] = qpu_acc(5);
                                 break;
-                        case QFILE_VARY:
-                                temp = new_qpu_nop_before(qinst);
-                                temp->qpu.sig.ldvary = true;
-
-                                src[i] = qpu_acc(3);
-                                break;
                         case QFILE_SMALL_IMM:
                                 abort(); /* XXX */
 #if 0
@@ -255,7 +249,6 @@ v3d_generate_code_block(struct v3d_compile *c,
                         dst = qpu_magic(V3D_QPU_WADDR_TLBU);
                         break;
 
-                case QFILE_VARY:
                 case QFILE_UNIF:
                 case QFILE_SMALL_IMM:
                 case QFILE_LOAD_IMM:

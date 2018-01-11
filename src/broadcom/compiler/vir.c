@@ -110,6 +110,7 @@ vir_has_side_effects(struct v3d_compile *c, struct qinst *inst)
         }
 
         if (inst->qpu.sig.ldtmu ||
+            inst->qpu.sig.ldvary ||
             inst->qpu.sig.wrtmuc ||
             inst->qpu.sig.thrsw) {
                 return true;
@@ -210,7 +211,6 @@ vir_writes_r3(const struct v3d_device_info *devinfo, struct qinst *inst)
 {
         for (int i = 0; i < vir_get_nsrc(inst); i++) {
                 switch (inst->src[i].file) {
-                case QFILE_VARY:
                 case QFILE_VPM:
                         return true;
                 default:

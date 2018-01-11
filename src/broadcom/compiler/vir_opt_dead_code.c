@@ -78,12 +78,6 @@ has_nonremovable_reads(struct v3d_compile *c, struct qinst *inst)
                         if (total_size == 1)
                                 return true;
                 }
-
-                /* Dead code removal of varyings is tricky, so just assert
-                 * that it all happened at the NIR level.
-                 */
-                if (inst->src[i].file == QFILE_VARY)
-                        return true;
         }
 
         return false;

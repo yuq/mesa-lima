@@ -395,8 +395,19 @@ static struct qreg
 emit_fragment_varying(struct v3d_compile *c, nir_variable *var,
                       uint8_t swizzle)
 {
-        struct qreg vary = vir_reg(QFILE_VARY, ~0);
+        struct qreg r3 = vir_reg(QFILE_MAGIC, V3D_QPU_WADDR_R3);
         struct qreg r5 = vir_reg(QFILE_MAGIC, V3D_QPU_WADDR_R5);
+
+        struct qreg vary;
+        if (c->devinfo->ver >= 41) {
+                struct qinst *ldvary = vir_add_inst(V3D_QPU_A_NOP, c->undef,
+                                                    c->undef, c->undef);
+                ldvary->qpu.sig.ldvary = true;
+                vary = vir_emit_def(c, ldvary);
+        } else {
+                vir_NOP(c)->qpu.sig.ldvary = true;
+                vary = r3;
+        }
 
         /* For gl_PointCoord input or distance along a line, we'll be called
          * with no nir_variable, and we don't count toward VPM size so we

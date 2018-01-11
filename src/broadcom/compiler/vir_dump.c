@@ -29,7 +29,6 @@ vir_print_reg(struct v3d_compile *c, struct qreg reg)
 {
         static const char *files[] = {
                 [QFILE_TEMP] = "t",
-                [QFILE_VARY] = "v",
                 [QFILE_UNIF] = "u",
                 [QFILE_TLB] = "tlb",
                 [QFILE_TLBU] = "tlbu",
