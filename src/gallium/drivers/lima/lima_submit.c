@@ -97,15 +97,14 @@ bool lima_submit_start(struct lima_submit *submit)
       .frame_size = submit->frame_size,
    };
 
-   if (drmIoctl(submit->screen->fd, DRM_IOCTL_LIMA_GEM_SUBMIT, &req))
-      return false;
+   bool ret = drmIoctl(submit->screen->fd, DRM_IOCTL_LIMA_GEM_SUBMIT, &req) == 0;
 
    for (int i = 0; i < submit->nr_bos; i++)
       lima_bo_free(submit->bos[i]);
 
    submit->nr_bos = 0;
    submit->fence = req.fence;
-   return true;
+   return ret;
 }
 
 bool lima_submit_wait(struct lima_submit *submit, uint64_t timeout_ns, bool relative)
