@@ -55,7 +55,7 @@ struct ac_shader_info {
  * for the RADV user sgprs
  */
 void
-ac_nir_shader_info_pass(struct nir_shader *nir,
+ac_nir_shader_info_pass(const struct nir_shader *nir,
 			const struct ac_nir_compiler_options *options,
 			struct ac_shader_info *info);
 
