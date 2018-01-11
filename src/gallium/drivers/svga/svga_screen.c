@@ -845,6 +845,8 @@ svga_get_driver_query_info(struct pipe_screen *screen,
             PIPE_DRIVER_QUERY_TYPE_UINT64),
       QUERY("num-failed-allocations", SVGA_QUERY_NUM_FAILED_ALLOCATIONS,
             PIPE_DRIVER_QUERY_TYPE_UINT64),
+      QUERY("num-commands-per-draw", SVGA_QUERY_NUM_COMMANDS_PER_DRAW,
+            PIPE_DRIVER_QUERY_TYPE_FLOAT),
    };
 #undef QUERY
 
