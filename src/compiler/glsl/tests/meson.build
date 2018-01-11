@@ -92,3 +92,8 @@ test(
     ),
   ],
 )
+test(
+  'glsl optimization',
+  find_program('optimization_test.py'),
+  args : ['--test-runner', glsl_test],
+)
