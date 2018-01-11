@@ -596,6 +596,8 @@ late_optimizations = [
    (('~feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
    (('~fne', ('fadd', a, b), 0.0), ('fne', a, ('fneg', b))),
 
+   (('~fge', ('fmin(is_used_once)', ('fadd(is_used_once)', a, b), ('fadd', c, d)), 0.0), ('iand', ('fge', a, ('fneg', b)), ('fge', c, ('fneg', d)))),
+
    (('fdot2', a, b), ('fdot_replicated2', a, b), 'options->fdot_replicates'),
    (('fdot3', a, b), ('fdot_replicated3', a, b), 'options->fdot_replicates'),
    (('fdot4', a, b), ('fdot_replicated4', a, b), 'options->fdot_replicates'),
