@@ -35,7 +35,6 @@ struct lima_resource {
    struct renderonly_scanout *scanout;
    struct lima_bo *bo;
    uint32_t stride;
-   uint32_t layer_stride;
 };
 
 struct lima_surface {
