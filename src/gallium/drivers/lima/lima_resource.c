@@ -128,6 +128,7 @@ lima_resource_from_handle(struct pipe_screen *pscreen,
    *pres = *templat;
    pres->screen = pscreen;
    pipe_reference_init(&pres->reference, 1);
+   res->stride = handle->stride;
 
    res->bo = lima_bo_import(screen, handle);
    if (!res->bo) {
@@ -135,7 +136,21 @@ lima_resource_from_handle(struct pipe_screen *pscreen,
       return NULL;
    }
 
-   res->stride = handle->stride;
+   /* check alignment for the buffer */
+   if (pres->bind & PIPE_BIND_RENDER_TARGET) {
+      unsigned width, height, stride, size;
+
+      width = align(pres->width0, 16);
+      height = align(pres->height0, 16);
+      stride = util_format_get_stride(pres->format, width);
+      size = util_format_get_2d_size(pres->format, stride, height);
+
+      if (res->stride != stride || res->bo->size < size) {
+         debug_error("import buffer not properly aligned\n");
+         lima_resource_destroy(pscreen, pres);
+         return NULL;
+      }
+   }
 
    return pres;
 }
