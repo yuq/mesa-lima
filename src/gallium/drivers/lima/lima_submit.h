@@ -35,7 +35,8 @@ struct lima_submit {
    uint32_t pipe;
    uint32_t fence;
 
-   struct drm_lima_gem_submit_bo *bos;
+   struct lima_bo **bos;
+   struct drm_lima_gem_submit_bo *gem_bos;
    uint32_t max_bos;
    uint32_t nr_bos;
 
