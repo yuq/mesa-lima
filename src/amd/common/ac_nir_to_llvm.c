@@ -3867,14 +3867,20 @@ static void emit_barrier(struct ac_llvm_context *ac, gl_shader_stage stage)
 			   ac->voidt, NULL, 0, AC_FUNC_ATTR_CONVERGENT);
 }
 
-static void emit_discard_if(struct ac_nir_context *ctx,
-			    const nir_intrinsic_instr *instr)
+static void emit_discard(struct ac_nir_context *ctx,
+			 const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef cond;
 
-	cond = LLVMBuildICmp(ctx->ac.builder, LLVMIntEQ,
-			     get_src(ctx, instr->src[0]),
-			     ctx->ac.i32_0, "");
+	if (instr->intrinsic == nir_intrinsic_discard_if) {
+		cond = LLVMBuildICmp(ctx->ac.builder, LLVMIntEQ,
+				     get_src(ctx, instr->src[0]),
+				     ctx->ac.i32_0, "");
+	} else {
+		assert(instr->intrinsic == nir_intrinsic_discard);
+		cond = LLVMConstInt(ctx->ac.i1, false, 0);
+	}
+
 	ac_build_kill_if_false(&ctx->ac, cond);
 }
 
@@ -4348,12 +4354,8 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = visit_image_size(ctx, instr);
 		break;
 	case nir_intrinsic_discard:
-		ac_build_intrinsic(&ctx->ac, "llvm.AMDGPU.kilp",
-				   LLVMVoidTypeInContext(ctx->ac.context),
-				   NULL, 0, AC_FUNC_ATTR_LEGACY);
-		break;
 	case nir_intrinsic_discard_if:
-		emit_discard_if(ctx, instr);
+		emit_discard(ctx, instr);
 		break;
 	case nir_intrinsic_memory_barrier:
 	case nir_intrinsic_group_memory_barrier:
