@@ -2607,7 +2607,7 @@ static LLVMValueRef visit_load_ubo_buffer(struct ac_nir_context *ctx,
 
 	ret = ac_build_buffer_load(&ctx->ac, rsrc, num_components, NULL, offset,
 				   NULL, 0, false, false, true, true);
-
+	ret = trim_vector(&ctx->ac, ret, num_components);
 	return LLVMBuildBitCast(ctx->ac.builder, ret,
 	                        get_def_type(ctx, &instr->dest.ssa), "");
 }
