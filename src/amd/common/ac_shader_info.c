@@ -136,9 +136,7 @@ gather_info_block(nir_block *block, struct ac_shader_info *info)
 }
 
 static void
-gather_info_input_decl(nir_shader *nir,
-		       const struct ac_nir_compiler_options *options,
-		       nir_variable *var,
+gather_info_input_decl(nir_shader *nir, nir_variable *var,
 		       struct ac_shader_info *info)
 {
 	switch (nir->info.stage) {
@@ -161,7 +159,7 @@ ac_nir_shader_info_pass(struct nir_shader *nir,
 		info->loads_push_constants = true;
 
 	nir_foreach_variable(variable, &nir->inputs)
-		gather_info_input_decl(nir, options, variable, info);
+		gather_info_input_decl(nir, variable, info);
 
 	nir_foreach_block(block, func->impl) {
 		gather_info_block(block, info);
