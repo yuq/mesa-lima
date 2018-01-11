@@ -18,7 +18,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-subdir('trivial')
-if with_gallium_softpipe
-  subdir('unit')
-endif
+foreach t : ['pipe_barrier_test', 'u_cache_test', 'u_half_test',
+             'u_format_test', 'u_format_compatible_test', 'translate_test']
+  executable(
+    t,
+    '@0@.c'.format(t),
+    include_directories : [inc_common, inc_gallium_drivers, inc_gallium_winsys],
+    link_with : [libgallium, libmesa_util, libws_null],
+    dependencies : [driver_swrast, dep_thread],
+    install : false,
+  )
+endforeach
