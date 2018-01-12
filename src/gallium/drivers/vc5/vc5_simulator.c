@@ -257,8 +257,10 @@ vc5_simulator_unpin_bos(int fd, struct vc5_job *job)
                 struct vc5_simulator_bo *sim_bo =
                         vc5_get_simulator_bo(file, bo->handle);
 
-                assert(*(uint32_t *)(sim_bo->vaddr +
-                                     sim_bo->size) == BO_SENTINEL);
+                if (*(uint32_t *)(sim_bo->vaddr +
+                                  sim_bo->size) != BO_SENTINEL) {
+                        fprintf(stderr, "Buffer overflow in %s\n", bo->name);
+                }
 
                 vc5_bo_map(bo);
                 memcpy(bo->map, sim_bo->vaddr, bo->size);
