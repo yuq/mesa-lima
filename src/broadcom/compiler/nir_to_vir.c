@@ -1596,7 +1596,7 @@ ntq_emit_intrinsic(struct v3d_compile *c, nir_intrinsic_instr *instr)
 static void
 ntq_activate_execute_for_block(struct v3d_compile *c)
 {
-        vir_PF(c, vir_SUB(c, c->execute, vir_uniform_ui(c, c->cur_block->index)),
+        vir_PF(c, vir_XOR(c, c->execute, vir_uniform_ui(c, c->cur_block->index)),
                V3D_QPU_PF_PUSHZ);
 
         vir_MOV_cond(c, V3D_QPU_COND_IFA, c->execute, vir_uniform_ui(c, 0));
@@ -1658,7 +1658,7 @@ ntq_emit_if(struct v3d_compile *c, nir_if *if_stmt)
                              vir_uniform_ui(c, after_block->index));
 
                 /* If everything points at ENDIF, then jump there immediately. */
-                vir_PF(c, vir_SUB(c, c->execute,
+                vir_PF(c, vir_XOR(c, c->execute,
                                   vir_uniform_ui(c, after_block->index)),
                        V3D_QPU_PF_PUSHZ);
                 vir_BRANCH(c, V3D_QPU_BRANCH_COND_ALLA);
@@ -1772,7 +1772,7 @@ ntq_emit_loop(struct v3d_compile *c, nir_loop *loop)
          *
          * XXX: Use the .ORZ flags update, instead.
          */
-        vir_PF(c, vir_SUB(c,
+        vir_PF(c, vir_XOR(c,
                           c->execute,
                           vir_uniform_ui(c, c->loop_cont_block->index)),
                V3D_QPU_PF_PUSHZ);
