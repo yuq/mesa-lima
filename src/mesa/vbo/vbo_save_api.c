@@ -213,7 +213,7 @@ alloc_vertex_store(struct gl_context *ctx)
       _mesa_install_save_vtxfmt(ctx, &save->vtxfmt_noop);
    }
 
-   vertex_store->buffer = NULL;
+   vertex_store->buffer_map = NULL;
    vertex_store->used = 0;
    vertex_store->refcount = 1;
 
@@ -225,7 +225,7 @@ static void
 free_vertex_store(struct gl_context *ctx,
                   struct vbo_save_vertex_store *vertex_store)
 {
-   assert(!vertex_store->buffer);
+   assert(!vertex_store->buffer_map);
 
    if (vertex_store->bufferobj) {
       _mesa_reference_buffer_object(ctx, &vertex_store->bufferobj, NULL);
@@ -245,7 +245,7 @@ vbo_save_map_vertex_store(struct gl_context *ctx,
                               GL_MAP_FLUSH_EXPLICIT_BIT);
 
    assert(vertex_store->bufferobj);
-   assert(!vertex_store->buffer);  /* the buffer should not be mapped */
+   assert(!vertex_store->buffer_map);  /* the buffer should not be mapped */
 
    if (vertex_store->bufferobj->Size > 0) {
       /* Map the remaining free space in the VBO */
@@ -257,12 +257,12 @@ vbo_save_map_vertex_store(struct gl_context *ctx,
                                     MAP_INTERNAL);
       if (range) {
          /* compute address of start of whole buffer (needed elsewhere) */
-         vertex_store->buffer = range - vertex_store->used;
-         assert(vertex_store->buffer);
+         vertex_store->buffer_map = range - vertex_store->used;
+         assert(vertex_store->buffer_map);
          return range;
       }
       else {
-         vertex_store->buffer = NULL;
+         vertex_store->buffer_map = NULL;
          return NULL;
       }
    }
@@ -289,7 +289,7 @@ vbo_save_unmap_vertex_store(struct gl_context *ctx,
 
       ctx->Driver.UnmapBuffer(ctx, vertex_store->bufferobj, MAP_INTERNAL);
    }
-   vertex_store->buffer = NULL;
+   vertex_store->buffer_map = NULL;
 }
 
 
@@ -311,7 +311,7 @@ _save_reset_counters(struct gl_context *ctx)
    struct vbo_save_context *save = &vbo_context(ctx)->save;
 
    save->prim = save->prim_store->prims + save->prim_store->used;
-   save->buffer = save->vertex_store->buffer + save->vertex_store->used;
+   save->buffer = save->vertex_store->buffer_map + save->vertex_store->used;
 
    assert(save->buffer == save->buffer_ptr);
 
@@ -436,7 +436,7 @@ _save_compile_vertex_list(struct gl_context *ctx)
    memcpy(node->attrtype, save->attrtype, sizeof(node->attrtype));
    node->vertex_size = save->vertex_size;
    node->buffer_offset =
-      (save->buffer - save->vertex_store->buffer) * sizeof(GLfloat);
+      (save->buffer - save->vertex_store->buffer_map) * sizeof(GLfloat);
    node->count = save->vert_count;
    node->wrap_count = save->copied.nr;
    node->dangling_attr_ref = save->dangling_attr_ref;
@@ -462,7 +462,7 @@ _save_compile_vertex_list(struct gl_context *ctx)
           */
          node->current_data = malloc(node->current_size * sizeof(GLfloat));
          if (node->current_data) {
-            const char *buffer = (const char *) save->vertex_store->buffer;
+            const char *buffer = (const char *) save->vertex_store->buffer_map;
             unsigned attr_offset = node->attrsz[0] * sizeof(GLfloat);
             unsigned vertex_offset = 0;
 
@@ -504,7 +504,7 @@ _save_compile_vertex_list(struct gl_context *ctx)
 
       vbo_loopback_vertex_list(ctx,
                                (const GLfloat *) ((const char *) save->
-                                                  vertex_store->buffer +
+                                                  vertex_store->buffer_map +
                                                   node->buffer_offset),
                                node->attrsz, node->prim, node->prim_count,
                                node->wrap_count, node->vertex_size);
@@ -536,7 +536,8 @@ _save_compile_vertex_list(struct gl_context *ctx)
    }
    else {
       /* update buffer_ptr for next vertex */
-      save->buffer_ptr = save->vertex_store->buffer + save->vertex_store->used;
+      save->buffer_ptr = save->vertex_store->buffer_map
+         + save->vertex_store->used;
    }
 
    if (save->prim_store->used > VBO_SAVE_PRIM_SIZE - 6) {

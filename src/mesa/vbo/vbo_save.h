@@ -108,7 +108,7 @@ struct vbo_save_vertex_list {
  */
 struct vbo_save_vertex_store {
    struct gl_buffer_object *bufferobj;
-   fi_type *buffer;
+   fi_type *buffer_map;
    GLuint used;
    GLuint refcount;
 };
