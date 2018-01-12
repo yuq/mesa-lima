@@ -1422,9 +1422,15 @@ static LLVMValueRef emit_f2b(struct ac_llvm_context *ctx,
 }
 
 static LLVMValueRef emit_b2i(struct ac_llvm_context *ctx,
-			     LLVMValueRef src0)
+			     LLVMValueRef src0,
+			     unsigned bitsize)
 {
-	return LLVMBuildAnd(ctx->builder, src0, ctx->i32_1, "");
+	LLVMValueRef result = LLVMBuildAnd(ctx->builder, src0, ctx->i32_1, "");
+
+	if (bitsize == 32)
+		return result;
+
+	return LLVMBuildZExt(ctx->builder, result, ctx->i64, "");
 }
 
 static LLVMValueRef emit_i2b(struct ac_llvm_context *ctx,
@@ -1979,7 +1985,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		result = emit_f2b(&ctx->ac, src[0]);
 		break;
 	case nir_op_b2i:
-		result = emit_b2i(&ctx->ac, src[0]);
+		result = emit_b2i(&ctx->ac, src[0], instr->dest.dest.ssa.bit_size);
 		break;
 	case nir_op_i2b:
 		src[0] = ac_to_integer(&ctx->ac, src[0]);
