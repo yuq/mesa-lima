@@ -1780,7 +1780,11 @@ ntq_emit_loop(struct v3d_compile *c, nir_loop *loop)
 
         vir_PF(c, c->execute, V3D_QPU_PF_PUSHZ);
 
-        vir_BRANCH(c, V3D_QPU_BRANCH_COND_ANYA);
+        struct qinst *branch = vir_BRANCH(c, V3D_QPU_BRANCH_COND_ANYA);
+        /* Pixels that were not dispatched or have been discarded should not
+         * contribute to looping again.
+         */
+        branch->qpu.branch.msfign = V3D_QPU_MSFIGN_P;
         vir_link_blocks(c->cur_block, c->loop_cont_block);
         vir_link_blocks(c->cur_block, c->loop_break_block);
 
