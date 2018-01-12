@@ -62,9 +62,10 @@ _playback_copy_to_current(struct gl_context *ctx,
    else {
       data = vertex;
 
-      if (node->count)
+      if (node->vertex_count)
          offset = (node->buffer_offset +
-                   (node->count - 1) * node->vertex_size * sizeof(GLfloat));
+                   (node->vertex_count - 1)
+                   * node->vertex_size * sizeof(GLfloat));
       else
          offset = node->buffer_offset;
 
@@ -312,14 +313,14 @@ vbo_save_playback_vertex_list(struct gl_context *ctx, void *data)
       if (ctx->NewState)
          _mesa_update_state(ctx);
 
-      if (node->count > 0) {
+      if (node->vertex_count > 0) {
          vbo_context(ctx)->draw_prims(ctx,
                                       node->prim,
                                       node->prim_count,
                                       NULL,
                                       GL_TRUE,
                                       0,    /* Node is a VBO, so this is ok */
-                                      node->count - 1,
+                                      node->vertex_count - 1,
                                       NULL, 0, NULL);
       }
    }

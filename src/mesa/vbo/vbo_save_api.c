@@ -389,7 +389,7 @@ convert_line_loop_to_strip(struct vbo_save_context *save,
       memcpy(dst, src, sz * sizeof(float));
 
       prim->count++;
-      node->count++;
+      node->vertex_count++;
       save->vert_count++;
       save->buffer_ptr += sz;
       save->vertex_store->used += sz;
@@ -437,7 +437,7 @@ _save_compile_vertex_list(struct gl_context *ctx)
    node->vertex_size = save->vertex_size;
    node->buffer_offset =
       (save->buffer - save->vertex_store->buffer_map) * sizeof(GLfloat);
-   node->count = save->vert_count;
+   node->vertex_count = save->vert_count;
    node->wrap_count = save->copied.nr;
    node->dangling_attr_ref = save->dangling_attr_ref;
    node->prim = save->prim;
@@ -466,9 +466,9 @@ _save_compile_vertex_list(struct gl_context *ctx)
             unsigned attr_offset = node->attrsz[0] * sizeof(GLfloat);
             unsigned vertex_offset = 0;
 
-            if (node->count)
+            if (node->vertex_count)
                vertex_offset =
-                  (node->count - 1) * node->vertex_size * sizeof(GLfloat);
+                  (node->vertex_count - 1) * node->vertex_size * sizeof(GLfloat);
 
             memcpy(node->current_data,
                    buffer + node->buffer_offset + vertex_offset + attr_offset,
@@ -477,12 +477,12 @@ _save_compile_vertex_list(struct gl_context *ctx)
       }
    }
 
-   assert(node->attrsz[VBO_ATTRIB_POS] != 0 || node->count == 0);
+   assert(node->attrsz[VBO_ATTRIB_POS] != 0 || node->vertex_count == 0);
 
    if (save->dangling_attr_ref)
       ctx->ListState.CurrentList->Flags |= DLIST_DANGLING_REFS;
 
-   save->vertex_store->used += save->vertex_size * node->count;
+   save->vertex_store->used += save->vertex_size * node->vertex_count;
    save->prim_store->used += node->prim_count;
 
    /* Copy duplicated vertices
@@ -1665,7 +1665,7 @@ vbo_print_vertex_list(struct gl_context *ctx, void *data, FILE *f)
 
    fprintf(f, "VBO-VERTEX-LIST, %u vertices, %d primitives, %d vertsize, "
            "buffer %p\n",
-           node->count, node->prim_count, node->vertex_size,
+           node->vertex_count, node->prim_count, node->vertex_size,
            buffer);
 
    for (i = 0; i < node->prim_count; i++) {
