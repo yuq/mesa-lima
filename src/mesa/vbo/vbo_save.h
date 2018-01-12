@@ -76,8 +76,8 @@ struct vbo_save_vertex_list {
    GLuint buffer_offset;
    GLuint count;                /**< vertex count */
    GLuint wrap_count;		/* number of copied vertices at start */
-   GLboolean dangling_attr_ref;	/* current attr implicitly referenced 
-				   outside the list */
+   GLboolean dangling_attr_ref;	/* current attr implicitly referenced
+                                   outside the list */
 
    struct _mesa_prim *prim;
    GLuint prim_count;
@@ -156,30 +156,32 @@ struct vbo_save_context {
    GLuint opcode_vertex_list;
 
    struct vbo_save_copied_vtx copied;
-   
+
    fi_type *current[VBO_ATTRIB_MAX]; /* points into ctx->ListState */
    GLubyte *currentsz[VBO_ATTRIB_MAX];
 };
 
-void vbo_save_init( struct gl_context *ctx );
-void vbo_save_destroy( struct gl_context *ctx );
-void vbo_save_fallback( struct gl_context *ctx, GLboolean fallback );
+void vbo_save_init(struct gl_context *ctx);
+void vbo_save_destroy(struct gl_context *ctx);
+void vbo_save_fallback(struct gl_context *ctx, GLboolean fallback);
 
 /* save_loopback.c:
  */
-void vbo_loopback_vertex_list( struct gl_context *ctx,
-			       const GLfloat *buffer,
-			       const GLubyte *attrsz,
-			       const struct _mesa_prim *prim,
-			       GLuint prim_count,
-			       GLuint wrap_count,
-			       GLuint vertex_size);
+void vbo_loopback_vertex_list(struct gl_context *ctx,
+                              const GLfloat *buffer,
+                              const GLubyte *attrsz,
+                              const struct _mesa_prim *prim,
+                              GLuint prim_count,
+                              GLuint wrap_count,
+                              GLuint vertex_size);
 
 /* Callbacks:
  */
-void vbo_save_playback_vertex_list( struct gl_context *ctx, void *data );
+void
+vbo_save_playback_vertex_list(struct gl_context *ctx, void *data);
 
-void vbo_save_api_init( struct vbo_save_context *save );
+void
+vbo_save_api_init(struct vbo_save_context *save);
 
 fi_type *
 vbo_save_map_vertex_store(struct gl_context *ctx,
