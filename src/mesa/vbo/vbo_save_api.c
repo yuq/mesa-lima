@@ -501,10 +501,11 @@ _save_compile_vertex_list(struct gl_context *ctx)
 
       _glapi_set_dispatch(ctx->Exec);
 
-      vbo_loopback_vertex_list(ctx,
-                               (const GLfloat *) ((const char *) save->
-                                                  vertex_store->buffer_map +
-                                                  node->buffer_offset),
+      const GLfloat *buffer = (const GLfloat *)
+         ((const char *) save->vertex_store->buffer_map +
+          node->buffer_offset);
+
+      vbo_loopback_vertex_list(ctx, buffer,
                                node->attrsz, node->prims, node->prim_count,
                                node->wrap_count, node->vertex_size);
 
