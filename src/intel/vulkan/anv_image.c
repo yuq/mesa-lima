@@ -335,10 +335,8 @@ make_surface(const struct anv_device *dev,
       .usage = usage,
       .tiling_flags = tiling_flags);
 
-   /* isl_surf_init() will fail only if provided invalid input. Invalid input
-    * is illegal in Vulkan.
-    */
-   assert(ok);
+   if (!ok)
+      return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
    image->planes[plane].aux_usage = ISL_AUX_USAGE_NONE;
 
