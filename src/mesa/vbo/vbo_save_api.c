@@ -1559,6 +1559,9 @@ vbo_save_SaveFlushVertices(struct gl_context *ctx)
 }
 
 
+/**
+ * Called from glNewList when we're starting to compile a display list.
+ */
 void
 vbo_save_NewList(struct gl_context *ctx, GLuint list, GLenum mode)
 {
@@ -1581,6 +1584,9 @@ vbo_save_NewList(struct gl_context *ctx, GLuint list, GLenum mode)
 }
 
 
+/**
+ * Called from glEndList when we're finished compiling a display list.
+ */
 void
 vbo_save_EndList(struct gl_context *ctx)
 {
@@ -1615,6 +1621,10 @@ vbo_save_EndList(struct gl_context *ctx)
 }
 
 
+/**
+ * Called from the display list code when we're about to execute a
+ * display list.
+ */
 void
 vbo_save_BeginCallList(struct gl_context *ctx, struct gl_display_list *dlist)
 {
@@ -1623,6 +1633,10 @@ vbo_save_BeginCallList(struct gl_context *ctx, struct gl_display_list *dlist)
 }
 
 
+/**
+ * Called from the display list code when we're finished executing a
+ * display list.
+ */
 void
 vbo_save_EndCallList(struct gl_context *ctx)
 {
@@ -1637,6 +1651,9 @@ vbo_save_EndCallList(struct gl_context *ctx)
 }
 
 
+/**
+ * Called by display list code when a display list is being deleted.
+ */
 static void
 vbo_destroy_vertex_list(struct gl_context *ctx, void *data)
 {
