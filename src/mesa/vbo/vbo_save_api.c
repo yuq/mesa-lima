@@ -310,7 +310,7 @@ _save_reset_counters(struct gl_context *ctx)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
 
-   save->prim = save->prim_store->buffer + save->prim_store->used;
+   save->prim = save->prim_store->prims + save->prim_store->used;
    save->buffer = save->vertex_store->buffer + save->vertex_store->used;
 
    assert(save->buffer == save->buffer_ptr);

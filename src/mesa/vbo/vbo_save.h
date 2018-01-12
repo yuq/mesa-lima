@@ -114,7 +114,7 @@ struct vbo_save_vertex_store {
 };
 
 struct vbo_save_primitive_store {
-   struct _mesa_prim buffer[VBO_SAVE_PRIM_SIZE];
+   struct _mesa_prim prims[VBO_SAVE_PRIM_SIZE];
    GLuint used;
    GLuint refcount;
 };
