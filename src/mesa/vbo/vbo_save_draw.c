@@ -51,7 +51,6 @@ playback_copy_to_current(struct gl_context *ctx,
    fi_type vertex[VBO_ATTRIB_MAX * 4];
    fi_type *data;
    GLbitfield64 mask;
-   GLuint offset;
 
    if (node->current_size == 0)
       return;
@@ -60,14 +59,13 @@ playback_copy_to_current(struct gl_context *ctx,
       data = node->current_data;
    }
    else {
-      data = vertex;
+      /* Position of last vertex */
+      const GLuint pos = node->vertex_count > 0 ? node->vertex_count - 1 : 0;
+      /* Offset to last vertex in the vertex buffer */
+      const GLuint offset = node->buffer_offset
+         + pos * node->vertex_size * sizeof(GLfloat);
 
-      if (node->vertex_count)
-         offset = (node->buffer_offset +
-                   (node->vertex_count - 1)
-                   * node->vertex_size * sizeof(GLfloat));
-      else
-         offset = node->buffer_offset;
+      data = vertex;
 
       ctx->Driver.GetBufferSubData(ctx, offset,
                                    node->vertex_size * sizeof(GLfloat),
