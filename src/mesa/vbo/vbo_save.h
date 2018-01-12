@@ -135,7 +135,6 @@ struct vbo_save_context {
 
    GLboolean out_of_memory;  /**< True if last VBO allocation failed */
 
-   fi_type *buffer;
    GLuint wrap_count;
    GLbitfield replay_flags;
 
@@ -145,7 +144,8 @@ struct vbo_save_context {
    struct vbo_save_vertex_store *vertex_store;
    struct vbo_save_primitive_store *prim_store;
 
-   fi_type *buffer_ptr;		   /* cursor, points into buffer */
+   fi_type *buffer_map;            /**< Mapping of vertex_store's buffer */
+   fi_type *buffer_ptr;		   /**< cursor, points into buffer_map */
    fi_type vertex[VBO_ATTRIB_MAX*4];	   /* current values */
    fi_type *attrptr[VBO_ATTRIB_MAX];
    GLuint vert_count;

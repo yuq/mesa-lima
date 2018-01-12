@@ -311,9 +311,9 @@ _save_reset_counters(struct gl_context *ctx)
    struct vbo_save_context *save = &vbo_context(ctx)->save;
 
    save->prim = save->prim_store->prims + save->prim_store->used;
-   save->buffer = save->vertex_store->buffer_map + save->vertex_store->used;
+   save->buffer_map = save->vertex_store->buffer_map + save->vertex_store->used;
 
-   assert(save->buffer == save->buffer_ptr);
+   assert(save->buffer_map == save->buffer_ptr);
 
    if (save->vertex_size)
       save->max_vert = (VBO_SAVE_BUFFER_SIZE - save->vertex_store->used) /
@@ -382,9 +382,9 @@ convert_line_loop_to_strip(struct vbo_save_context *save,
        */
       const GLuint sz = save->vertex_size;
       /* 0th vertex: */
-      const fi_type *src = save->buffer + prim->start * sz;
+      const fi_type *src = save->buffer_map + prim->start * sz;
       /* end of buffer: */
-      fi_type *dst = save->buffer + (prim->start + prim->count) * sz;
+      fi_type *dst = save->buffer_map + (prim->start + prim->count) * sz;
 
       memcpy(dst, src, sz * sizeof(float));
 
@@ -436,7 +436,7 @@ _save_compile_vertex_list(struct gl_context *ctx)
    memcpy(node->attrtype, save->attrtype, sizeof(node->attrtype));
    node->vertex_size = save->vertex_size;
    node->buffer_offset =
-      (save->buffer - save->vertex_store->buffer_map) * sizeof(GLfloat);
+      (save->buffer_map - save->vertex_store->buffer_map) * sizeof(GLfloat);
    node->vertex_count = save->vert_count;
    node->wrap_count = save->copied.nr;
    node->dangling_attr_ref = save->dangling_attr_ref;
@@ -487,7 +487,7 @@ _save_compile_vertex_list(struct gl_context *ctx)
 
    /* Copy duplicated vertices
     */
-   save->copied.nr = _save_copy_vertices(ctx, node, save->buffer);
+   save->copied.nr = _save_copy_vertices(ctx, node, save->buffer_map);
 
    if (node->prim[node->prim_count - 1].mode == GL_LINE_LOOP) {
       convert_line_loop_to_strip(save, node);
@@ -732,7 +732,7 @@ _save_upgrade_vertex(struct gl_context *ctx, GLuint attr, GLuint newsz)
     */
    if (save->copied.nr) {
       const fi_type *data = save->copied.buffer;
-      fi_type *dest = save->buffer;
+      fi_type *dest = save->buffer_map;
 
       /* Need to note this and fix up at runtime (or loopback):
        */
