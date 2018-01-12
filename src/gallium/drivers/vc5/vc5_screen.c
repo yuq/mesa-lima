@@ -82,6 +82,8 @@ vc5_screen_destroy(struct pipe_screen *pscreen)
 static int
 vc5_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 {
+        struct vc5_screen *screen = vc5_screen(pscreen);
+
         switch (param) {
                 /* Supported features (boolean caps). */
         case PIPE_CAP_VERTEX_COLOR_CLAMPED:
@@ -127,11 +129,19 @@ vc5_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
                 return 1;
 
         case PIPE_CAP_TGSI_FS_COORD_ORIGIN_UPPER_LEFT:
-        case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_INTEGER:
                 return 1;
         case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
-        case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_HALF_INTEGER:
                 return 0;
+        case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_INTEGER:
+                if (screen->devinfo.ver >= 40)
+                        return 0;
+                else
+                        return 1;
+        case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_HALF_INTEGER:
+                if (screen->devinfo.ver >= 40)
+                        return 1;
+                else
+                        return 0;
 
         case PIPE_CAP_MIXED_FRAMEBUFFER_SIZES:
         case PIPE_CAP_MIXED_COLOR_DEPTH_BITS:
