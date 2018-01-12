@@ -47,4 +47,6 @@ C_SOURCES := \
 	  lima_vamgr.h \
 	  lima_util.c \
 	  lima_util.h \
+	  lima_texture.c \
+	  lima_texture.h \
 	  $(ir_SOURCES)
