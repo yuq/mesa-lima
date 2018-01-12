@@ -546,6 +546,20 @@ compile_vertex_list(struct gl_context *ctx)
       save->prim_store = alloc_prim_store();
    }
 
+   /*
+    * If the vertex buffer offset is a multiple of the vertex size,
+    * we can use the _mesa_prim::start value to indicate where the
+    * vertices starts, instead of the buffer offset.  Also see the
+    * bind_vertex_list() function.
+    */
+   if (aligned_vertex_buffer_offset(node)) {
+      const unsigned start_offset =
+         node->buffer_offset / (node->vertex_size * sizeof(GLfloat));
+      for (unsigned i = 0; i < save->prim_count; i++) {
+         save->prims[i].start += start_offset;
+      }
+   }
+
    /* Reset our structures for the next run of vertices:
     */
    reset_counters(ctx);

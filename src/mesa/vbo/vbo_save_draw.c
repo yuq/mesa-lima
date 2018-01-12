@@ -146,6 +146,18 @@ bind_vertex_list(struct gl_context *ctx,
    memcpy(node_attrsz, node->attrsz, sizeof(node->attrsz));
    memcpy(node_attrtype, node->attrtype, sizeof(node->attrtype));
 
+   if (aligned_vertex_buffer_offset(node)) {
+      /* The vertex size is an exact multiple of the buffer offset.
+       * This means that we can use zero-based vertex attribute pointers
+       * and specify the start of the primitive with the _mesa_prim::start
+       * field.  This results in issuing several draw calls with identical
+       * vertex attribute information.  This can result in fewer state
+       * changes in drivers.  In particular, the Gallium CSO module will
+       * filter out redundant vertex buffer changes.
+       */
+      buffer_offset = 0;
+   }
+
    /* Install the default (ie Current) attributes first, then overlay
     * all active ones.
     */

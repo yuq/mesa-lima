@@ -86,6 +86,20 @@ struct vbo_save_vertex_list {
    struct vbo_save_primitive_store *prim_store;
 };
 
+
+/**
+ * Is the vertex lists's buffer offset an exact multiple of the
+ * vertex size (in bytes)?  This is used to check for a vertex array /
+ * drawing optimization.
+ */
+static inline bool
+aligned_vertex_buffer_offset(const struct vbo_save_vertex_list *node)
+{
+   unsigned vertex_size = node->vertex_size * sizeof(GLfloat); /* in bytes */
+   return vertex_size != 0 && node->buffer_offset % vertex_size == 0;
+}
+
+
 /* These buffers should be a reasonable size to support upload to
  * hardware.  Current vbo implementation will re-upload on any
  * changes, so don't make too big or apps which dynamically create
