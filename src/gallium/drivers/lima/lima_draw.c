@@ -33,26 +33,12 @@
 #include "lima_program.h"
 #include "lima_bo.h"
 #include "lima_submit.h"
+#include "lima_texture.h"
+#include "lima_util.h"
 
 #include <lima_drm.h>
 
 bool lima_dump_command_stream = false;
-
-static void lima_dump_blob(void *data, int size, bool is_float)
-{
-   if (is_float) {
-      float *blob = data;
-      for (int i = 0; i * 4 < size; i += 4)
-         printf ("%04x: %f %f %f %f\n", i * 4,
-                 blob[i], blob[i + 1], blob[i + 2], blob[i + 3]);
-   }
-   else {
-      uint32_t *blob = data;
-      for (int i = 0; i * 4 < size; i += 4)
-         printf ("%04x: 0x%08x 0x%08x 0x%08x 0x%08x\n", i * 4,
-                 blob[i], blob[i + 1], blob[i + 2], blob[i + 3]);
-   }
-}
 
 static void
 lima_clear(struct pipe_context *pctx, unsigned buffers,
@@ -640,6 +626,13 @@ lima_pack_render_state(struct lima_context *ctx)
    render->aux0 = 0x00000300 | (ctx->vs->varying_stride >> 3);
    render->aux1 = 0x00003000;
 
+   if (ctx->tex_stateobj.num_samplers) {
+      render->textures_address = ctx->pp_buffer->va + pp_tex_descs_offset +
+         ctx->buffer_state[lima_ctx_buff_pp_tex_desc].offset;
+      render->aux0 |= ctx->tex_stateobj.num_samplers << 14;
+      render->aux0 |= 0x20;
+   }
+
    if (ctx->buffer_state[lima_ctx_buff_pp_uniform].size) {
        render->uniforms_address = ctx->pp_buffer->va + pp_uniform_array_offset +
           ctx->buffer_state[lima_ctx_buff_pp_uniform_array].offset;
@@ -906,6 +899,11 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         ctx->const_buffer[PIPE_SHADER_FRAGMENT].dirty)) {
       lima_update_pp_uniform(ctx);
       ctx->const_buffer[PIPE_SHADER_FRAGMENT].dirty = false;
+   }
+
+   if (!ctx->num_draws ||
+      (ctx->dirty & LIMA_CONTEXT_DIRTY_TEXTURES)) {
+      lima_update_textures(ctx);
    }
 
    lima_pack_render_state(ctx);
