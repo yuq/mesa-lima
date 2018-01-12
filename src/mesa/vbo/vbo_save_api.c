@@ -104,7 +104,7 @@ _save_copy_vertices(struct gl_context *ctx,
                     const fi_type * src_buffer)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
-   const struct _mesa_prim *prim = &node->prim[node->prim_count - 1];
+   const struct _mesa_prim *prim = &node->prims[node->prim_count - 1];
    GLuint nr = prim->count;
    GLuint sz = save->vertex_size;
    const fi_type *src = src_buffer + prim->start * sz;
@@ -309,7 +309,7 @@ _save_reset_counters(struct gl_context *ctx)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
 
-   save->prim = save->prim_store->prims + save->prim_store->used;
+   save->prims = save->prim_store->prims + save->prim_store->used;
    save->buffer_map = save->vertex_store->buffer_map + save->vertex_store->used;
 
    assert(save->buffer_map == save->buffer_ptr);
@@ -371,7 +371,7 @@ static void
 convert_line_loop_to_strip(struct vbo_save_context *save,
                            struct vbo_save_vertex_list *node)
 {
-   struct _mesa_prim *prim = &node->prim[node->prim_count - 1];
+   struct _mesa_prim *prim = &node->prims[node->prim_count - 1];
 
    assert(prim->mode == GL_LINE_LOOP);
 
@@ -439,7 +439,7 @@ _save_compile_vertex_list(struct gl_context *ctx)
    node->vertex_count = save->vert_count;
    node->wrap_count = save->copied.nr;
    node->dangling_attr_ref = save->dangling_attr_ref;
-   node->prim = save->prim;
+   node->prims = save->prims;
    node->prim_count = save->prim_count;
    node->vertex_store = save->vertex_store;
    node->prim_store = save->prim_store;
@@ -447,7 +447,7 @@ _save_compile_vertex_list(struct gl_context *ctx)
    node->vertex_store->refcount++;
    node->prim_store->refcount++;
 
-   if (node->prim[0].no_current_update) {
+   if (node->prims[0].no_current_update) {
       node->current_size = 0;
       node->current_data = NULL;
    }
@@ -488,11 +488,11 @@ _save_compile_vertex_list(struct gl_context *ctx)
     */
    save->copied.nr = _save_copy_vertices(ctx, node, save->buffer_map);
 
-   if (node->prim[node->prim_count - 1].mode == GL_LINE_LOOP) {
+   if (node->prims[node->prim_count - 1].mode == GL_LINE_LOOP) {
       convert_line_loop_to_strip(save, node);
    }
 
-   merge_prims(node->prim, &node->prim_count);
+   merge_prims(node->prims, &node->prim_count);
 
    /* Deal with GL_COMPILE_AND_EXECUTE:
     */
@@ -505,7 +505,7 @@ _save_compile_vertex_list(struct gl_context *ctx)
                                (const GLfloat *) ((const char *) save->
                                                   vertex_store->buffer_map +
                                                   node->buffer_offset),
-                               node->attrsz, node->prim, node->prim_count,
+                               node->attrsz, node->prims, node->prim_count,
                                node->wrap_count, node->vertex_size);
 
       _glapi_set_dispatch(dispatch);
@@ -570,10 +570,10 @@ _save_wrap_buffers(struct gl_context *ctx)
 
    /* Close off in-progress primitive.
     */
-   save->prim[i].count = (save->vert_count - save->prim[i].start);
-   mode = save->prim[i].mode;
-   weak = save->prim[i].weak;
-   no_current_update = save->prim[i].no_current_update;
+   save->prims[i].count = (save->vert_count - save->prims[i].start);
+   mode = save->prims[i].mode;
+   weak = save->prims[i].weak;
+   no_current_update = save->prims[i].no_current_update;
 
    /* store the copied vertices, and allocate a new list.
     */
@@ -581,17 +581,17 @@ _save_wrap_buffers(struct gl_context *ctx)
 
    /* Restart interrupted primitive
     */
-   save->prim[0].mode = mode;
-   save->prim[0].weak = weak;
-   save->prim[0].no_current_update = no_current_update;
-   save->prim[0].begin = 0;
-   save->prim[0].end = 0;
-   save->prim[0].pad = 0;
-   save->prim[0].start = 0;
-   save->prim[0].count = 0;
-   save->prim[0].num_instances = 1;
-   save->prim[0].base_instance = 0;
-   save->prim[0].is_indirect = 0;
+   save->prims[0].mode = mode;
+   save->prims[0].weak = weak;
+   save->prims[0].no_current_update = no_current_update;
+   save->prims[0].begin = 0;
+   save->prims[0].end = 0;
+   save->prims[0].pad = 0;
+   save->prims[0].start = 0;
+   save->prims[0].count = 0;
+   save->prims[0].num_instances = 1;
+   save->prims[0].base_instance = 0;
+   save->prims[0].is_indirect = 0;
    save->prim_count = 1;
 }
 
@@ -940,7 +940,7 @@ dlist_fallback(struct gl_context *ctx)
       if (save->prim_count > 0) {
          /* Close off in-progress primitive. */
          GLint i = save->prim_count - 1;
-         save->prim[i].count = save->vert_count - save->prim[i].start;
+         save->prims[i].count = save->vert_count - save->prims[i].start;
       }
 
       /* Need to replay this display list with loopback,
@@ -1042,18 +1042,18 @@ vbo_save_NotifyBegin(struct gl_context *ctx, GLenum mode)
    const GLuint i = save->prim_count++;
 
    assert(i < save->prim_max);
-   save->prim[i].mode = mode & VBO_SAVE_PRIM_MODE_MASK;
-   save->prim[i].begin = 1;
-   save->prim[i].end = 0;
-   save->prim[i].weak = (mode & VBO_SAVE_PRIM_WEAK) ? 1 : 0;
-   save->prim[i].no_current_update =
+   save->prims[i].mode = mode & VBO_SAVE_PRIM_MODE_MASK;
+   save->prims[i].begin = 1;
+   save->prims[i].end = 0;
+   save->prims[i].weak = (mode & VBO_SAVE_PRIM_WEAK) ? 1 : 0;
+   save->prims[i].no_current_update =
       (mode & VBO_SAVE_PRIM_NO_CURRENT_UPDATE) ? 1 : 0;
-   save->prim[i].pad = 0;
-   save->prim[i].start = save->vert_count;
-   save->prim[i].count = 0;
-   save->prim[i].num_instances = 1;
-   save->prim[i].base_instance = 0;
-   save->prim[i].is_indirect = 0;
+   save->prims[i].pad = 0;
+   save->prims[i].start = save->vert_count;
+   save->prims[i].count = 0;
+   save->prims[i].num_instances = 1;
+   save->prims[i].base_instance = 0;
+   save->prims[i].is_indirect = 0;
 
    if (save->out_of_memory) {
       _mesa_install_save_vtxfmt(ctx, &save->vtxfmt_noop);
@@ -1075,8 +1075,8 @@ _save_End(void)
    const GLint i = save->prim_count - 1;
 
    ctx->Driver.CurrentSavePrimitive = PRIM_OUTSIDE_BEGIN_END;
-   save->prim[i].end = 1;
-   save->prim[i].count = (save->vert_count - save->prim[i].start);
+   save->prims[i].end = 1;
+   save->prims[i].count = (save->vert_count - save->prims[i].start);
 
    if (i == (GLint) save->prim_max - 1) {
       _save_compile_vertex_list(ctx);
@@ -1119,7 +1119,7 @@ _save_PrimitiveRestartNV(void)
                           "glPrimitiveRestartNV called outside glBegin/End");
    } else {
       /* get current primitive mode */
-      GLenum curPrim = save->prim[save->prim_count - 1].mode;
+      GLenum curPrim = save->prims[save->prim_count - 1].mode;
 
       /* restart primitive */
       CALL_End(GET_DISPATCH(), ());
@@ -1591,8 +1591,8 @@ vbo_save_EndList(struct gl_context *ctx)
       if (save->prim_count > 0) {
          GLint i = save->prim_count - 1;
          ctx->Driver.CurrentSavePrimitive = PRIM_OUTSIDE_BEGIN_END;
-         save->prim[i].end = 0;
-         save->prim[i].count = save->vert_count - save->prim[i].start;
+         save->prims[i].end = 0;
+         save->prims[i].count = save->vert_count - save->prims[i].start;
       }
 
       /* Make sure this vertex list gets replayed by the "loopback"
@@ -1668,7 +1668,7 @@ vbo_print_vertex_list(struct gl_context *ctx, void *data, FILE *f)
            buffer);
 
    for (i = 0; i < node->prim_count; i++) {
-      struct _mesa_prim *prim = &node->prim[i];
+      struct _mesa_prim *prim = &node->prims[i];
       fprintf(f, "   prim %d: %s%s %d..%d %s %s\n",
              i,
              _mesa_lookup_prim_by_nr(prim->mode),

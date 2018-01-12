@@ -79,7 +79,7 @@ struct vbo_save_vertex_list {
    GLboolean dangling_attr_ref;	/* current attr implicitly referenced
                                    outside the list */
 
-   struct _mesa_prim *prim;
+   struct _mesa_prim *prims;
    GLuint prim_count;
 
    struct vbo_save_vertex_store *vertex_store;
@@ -138,7 +138,7 @@ struct vbo_save_context {
    GLuint wrap_count;
    GLbitfield replay_flags;
 
-   struct _mesa_prim *prim;
+   struct _mesa_prim *prims;
    GLuint prim_count, prim_max;
 
    struct vbo_save_vertex_store *vertex_store;

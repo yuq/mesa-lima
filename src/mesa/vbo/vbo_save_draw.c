@@ -117,7 +117,7 @@ _playback_copy_to_current(struct gl_context *ctx,
    /* CurrentExecPrimitive
     */
    if (node->prim_count) {
-      const struct _mesa_prim *prim = &node->prim[node->prim_count - 1];
+      const struct _mesa_prim *prim = &node->prims[node->prim_count - 1];
       if (prim->end)
          ctx->Driver.CurrentExecPrimitive = PRIM_OUTSIDE_BEGIN_END;
       else
@@ -235,7 +235,7 @@ vbo_save_loopback_vertex_list(struct gl_context *ctx,
    vbo_loopback_vertex_list(ctx,
                             (const GLfloat *)(buffer + list->buffer_offset),
                             list->attrsz,
-                            list->prim,
+                            list->prims,
                             list->prim_count,
                             list->wrap_count,
                             list->vertex_size);
@@ -274,7 +274,7 @@ vbo_save_playback_vertex_list(struct gl_context *ctx, void *data)
 
    if (node->prim_count > 0) {
 
-      if (_mesa_inside_begin_end(ctx) && node->prim[0].begin) {
+      if (_mesa_inside_begin_end(ctx) && node->prims[0].begin) {
          /* Error: we're about to begin a new primitive but we're already
           * inside a glBegin/End pair.
           */
@@ -315,7 +315,7 @@ vbo_save_playback_vertex_list(struct gl_context *ctx, void *data)
 
       if (node->vertex_count > 0) {
          vbo_context(ctx)->draw_prims(ctx,
-                                      node->prim,
+                                      node->prims,
                                       node->prim_count,
                                       NULL,
                                       GL_TRUE,
