@@ -122,12 +122,20 @@ enum lima_ctx_buff {
    lima_ctx_buff_pp_plb_rsw,
    lima_ctx_buff_pp_uniform_array,
    lima_ctx_buff_pp_uniform,
+   lima_ctx_buff_pp_tex_desc,
    lima_ctx_buff_num,
 };
 
 struct lima_ctx_buff_state {
    unsigned offset;
    unsigned size;
+};
+
+struct lima_texture_stateobj {
+   struct pipe_sampler_view *textures[PIPE_MAX_SAMPLERS];
+   unsigned num_textures;
+   struct pipe_sampler_state *samplers[PIPE_MAX_SAMPLERS];
+   unsigned num_samplers;
 };
 
 struct lima_context {
@@ -148,6 +156,7 @@ struct lima_context {
       LIMA_CONTEXT_DIRTY_BLEND        = (1 << 11),
       LIMA_CONTEXT_DIRTY_STENCIL_REF  = (1 << 12),
       LIMA_CONTEXT_DIRTY_CONST_BUFF   = (1 << 13),
+      LIMA_CONTEXT_DIRTY_TEXTURES     = (1 << 14),
    } dirty;
 
    struct u_upload_mgr *uploader;
@@ -168,6 +177,7 @@ struct lima_context {
    struct lima_blend_state *blend;
    struct pipe_stencil_ref stencil_ref;
    struct lima_context_constant_buffer const_buffer[PIPE_SHADER_TYPES];
+   struct lima_texture_stateobj tex_stateobj;
 
    struct lima_bo *share_buffer;
    #define sh_plb_offset             0x00000
@@ -190,15 +200,17 @@ struct lima_context {
    struct lima_bo *pp_buffer;
    #define pp_uniform_array_offset   0x00000
    #define pp_uniform_offset         0x00400
-   #define pp_frame_rsw_offset       0x01400
-   #define pp_clear_program_offset   0x01440
-   #define pp_plb_rsw_offset         0x01480
-   #define pp_plb_offset_start       0x02000
+   #define pp_tex_descs_offset       0x01400
+   #define pp_frame_rsw_offset       0x02400
+   #define pp_clear_program_offset   0x02440
+   #define pp_plb_rsw_offset         0x02480
+   #define pp_plb_offset_start       0x03000
    /* max_screen_w/h_size = 2048, max_pp = 4, plb_stream_size = ((max >> 4)^2 + max_pp) * 16 */
-   #define pp_stack_offset           0x42100
-   #define pp_buffer_size            0x44000
+   #define pp_stack_offset           0x43100
+   #define pp_buffer_size            0x45000
    #define pp_plb_offset(i, n)       \
       (pp_plb_offset_start + i * ((pp_stack_offset - pp_plb_offset_start) / n))
+
 
    struct lima_ctx_buff_state buffer_state[lima_ctx_buff_num];
 

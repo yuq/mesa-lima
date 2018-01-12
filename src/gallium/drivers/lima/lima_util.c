@@ -21,6 +21,7 @@
  *
  */
 
+#include <stdio.h>
 #include <time.h>
 
 #include "lima_util.h"
@@ -39,4 +40,20 @@ bool lima_get_absolute_timeout(uint64_t *timeout, bool relative)
       *timeout += current_ns;
    }
    return true;
+}
+
+void lima_dump_blob(void *data, int size, bool is_float)
+{
+   if (is_float) {
+      float *blob = data;
+      for (int i = 0; i * 4 < size; i += 4)
+         printf ("%04x: %f %f %f %f\n", i * 4,
+                 blob[i], blob[i + 1], blob[i + 2], blob[i + 3]);
+   }
+   else {
+      uint32_t *blob = data;
+      for (int i = 0; i * 4 < size; i += 4)
+         printf ("%04x: 0x%08x 0x%08x 0x%08x 0x%08x\n", i * 4,
+                 blob[i], blob[i + 1], blob[i + 2], blob[i + 3]);
+   }
 }
