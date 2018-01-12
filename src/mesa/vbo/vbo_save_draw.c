@@ -44,8 +44,8 @@
  * last vertex to the saved state
  */
 static void
-_playback_copy_to_current(struct gl_context *ctx,
-                          const struct vbo_save_vertex_list *node)
+playback_copy_to_current(struct gl_context *ctx,
+                         const struct vbo_save_vertex_list *node)
 {
    struct vbo_context *vbo = vbo_context(ctx);
    fi_type vertex[VBO_ATTRIB_MAX * 4];
@@ -132,8 +132,8 @@ _playback_copy_to_current(struct gl_context *ctx,
  * into it:
  */
 static void
-vbo_bind_vertex_list(struct gl_context *ctx,
-                     const struct vbo_save_vertex_list *node)
+bind_vertex_list(struct gl_context *ctx,
+                 const struct vbo_save_vertex_list *node)
 {
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_save_context *save = &vbo->save;
@@ -222,8 +222,8 @@ vbo_bind_vertex_list(struct gl_context *ctx,
 
 
 static void
-vbo_save_loopback_vertex_list(struct gl_context *ctx,
-                              const struct vbo_save_vertex_list *list)
+loopback_vertex_list(struct gl_context *ctx,
+                     const struct vbo_save_vertex_list *list)
 {
    const char *buffer =
       ctx->Driver.MapBufferRange(ctx, 0,
@@ -286,7 +286,7 @@ vbo_save_playback_vertex_list(struct gl_context *ctx, void *data)
          /* Various degenerate cases: translate into immediate mode
           * calls rather than trying to execute in place.
           */
-         vbo_save_loopback_vertex_list(ctx, node);
+         loopback_vertex_list(ctx, node);
 
          goto end;
       }
@@ -304,7 +304,7 @@ vbo_save_playback_vertex_list(struct gl_context *ctx, void *data)
          return;
       }
 
-      vbo_bind_vertex_list(ctx, node);
+      bind_vertex_list(ctx, node);
 
       vbo_draw_method(vbo_context(ctx), DRAW_DISPLAY_LIST);
 
@@ -327,7 +327,7 @@ vbo_save_playback_vertex_list(struct gl_context *ctx, void *data)
 
    /* Copy to current?
     */
-   _playback_copy_to_current(ctx, node);
+   playback_copy_to_current(ctx, node);
 
 end:
    if (remap_vertex_store) {
