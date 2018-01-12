@@ -138,7 +138,7 @@ struct vbo_save_context {
    fi_type *buffer;
    GLuint count;
    GLuint wrap_count;
-   GLuint replay_flags;
+   GLbitfield replay_flags;
 
    struct _mesa_prim *prim;
    GLuint prim_count, prim_max;
