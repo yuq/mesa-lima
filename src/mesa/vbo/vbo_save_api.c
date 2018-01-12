@@ -294,11 +294,10 @@ vbo_save_unmap_vertex_store(struct gl_context *ctx,
 
 
 static struct vbo_save_primitive_store *
-alloc_prim_store(struct gl_context *ctx)
+alloc_prim_store(void)
 {
    struct vbo_save_primitive_store *store =
       CALLOC_STRUCT(vbo_save_primitive_store);
-   (void) ctx;
    store->used = 0;
    store->refcount = 1;
    return store;
@@ -543,7 +542,7 @@ _save_compile_vertex_list(struct gl_context *ctx)
    if (save->prim_store->used > VBO_SAVE_PRIM_SIZE - 6) {
       save->prim_store->refcount--;
       assert(save->prim_store->refcount != 0);
-      save->prim_store = alloc_prim_store(ctx);
+      save->prim_store = alloc_prim_store();
    }
 
    /* Reset our structures for the next run of vertices:
@@ -1568,7 +1567,7 @@ vbo_save_NewList(struct gl_context *ctx, GLuint list, GLenum mode)
    (void) mode;
 
    if (!save->prim_store)
-      save->prim_store = alloc_prim_store(ctx);
+      save->prim_store = alloc_prim_store();
 
    if (!save->vertex_store)
       save->vertex_store = alloc_vertex_store(ctx);
