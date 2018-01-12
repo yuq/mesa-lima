@@ -1963,7 +1963,7 @@ static LLVMValueRef si_load_patch_vertices_in(struct ac_shader_abi *abi)
 	else if (ctx->type == PIPE_SHADER_TESS_EVAL)
 		return get_num_tcs_out_vertices(ctx);
 	else
-		assert(!"invalid shader stage for TGSI_SEMANTIC_VERTICESIN");
+		unreachable("invalid shader stage for TGSI_SEMANTIC_VERTICESIN");
 }
 
 void si_load_system_value(struct si_shader_context *ctx,
