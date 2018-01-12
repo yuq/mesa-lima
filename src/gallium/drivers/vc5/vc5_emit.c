@@ -520,17 +520,17 @@ vc5_emit_state(struct pipe_context *pctx)
 
                                 if (emitted_any) {
                                         flags.action_for_flat_shade_flags_of_lower_numbered_varyings =
-                                                V3D_FLAT_SHADE_ACTION_UNCHANGED;
+                                                V3D_VARYING_FLAGS_ACTION_UNCHANGED;
                                         flags.action_for_flat_shade_flags_of_higher_numbered_varyings =
-                                                V3D_FLAT_SHADE_ACTION_UNCHANGED;
+                                                V3D_VARYING_FLAGS_ACTION_UNCHANGED;
                                 } else {
                                         flags.action_for_flat_shade_flags_of_lower_numbered_varyings =
                                                 ((i == 0) ?
-                                                 V3D_FLAT_SHADE_ACTION_UNCHANGED :
-                                                 V3D_FLAT_SHADE_ACTION_ZEROED);
+                                                 V3D_VARYING_FLAGS_ACTION_UNCHANGED :
+                                                 V3D_VARYING_FLAGS_ACTION_ZEROED);
 
                                         flags.action_for_flat_shade_flags_of_higher_numbered_varyings =
-                                                V3D_FLAT_SHADE_ACTION_ZEROED;
+                                                V3D_VARYING_FLAGS_ACTION_ZEROED;
                                 }
 
                                 flags.flat_shade_flags_for_varyings_v024 =

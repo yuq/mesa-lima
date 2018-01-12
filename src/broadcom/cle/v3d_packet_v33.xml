@@ -92,7 +92,7 @@
     <value name="ANISOTROPIC_16_1" value="15"/>
   </enum>
 
-  <enum name="Flat Shade Action" prefix="V3D_FLAT_SHADE_ACTION">
+  <enum name="Varying Flags Action" prefix="V3D_VARYING_FLAGS_ACTION">
     <value name="unchanged" value="0"/>
     <value name="zeroed" value="1"/>
     <value name="set" value="2"/>
@@ -456,8 +456,8 @@
 
   <packet code="98" name="Flat Shade Flags">
     <field name="Flat Shade Flags for varyings V0*24" size="24" start="8" type="uint"/>
-    <field name="Action for Flat Shade Flags of higher numbered varyings" size="2" start="6" type="Flat Shade Action"/>
-    <field name="Action for Flat Shade Flags of lower numbered varyings" size="2" start="4" type="Flat Shade Action"/>
+    <field name="Action for Flat Shade Flags of higher numbered varyings" size="2" start="6" type="Varying Flags Action"/>
+    <field name="Action for Flat Shade Flags of lower numbered varyings" size="2" start="4" type="Varying Flags Action"/>
     <field name="Varying offset V0" size="4" start="0" type="uint"/>
   </packet>
 
