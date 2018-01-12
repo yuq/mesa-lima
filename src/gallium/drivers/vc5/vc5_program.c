@@ -275,7 +275,8 @@ vc5_setup_shared_key(struct vc5_context *vc5, struct v3d_key *key,
                         continue;
 
                 key->tex[i].return_size =
-                        vc5_get_tex_return_size(devinfo, sampler->format,
+                        vc5_get_tex_return_size(devinfo,
+                                                sampler->format,
                                                 sampler_state->compare_mode);
 
                 /* For 16-bit, we set up the sampler to always return 2
@@ -284,13 +285,15 @@ vc5_setup_shared_key(struct vc5_context *vc5, struct v3d_key *key,
                  */
                 if (key->tex[i].return_size == 16) {
                         key->tex[i].return_channels = 2;
+                } else if (devinfo->ver > 40) {
+                        key->tex[i].return_channels = 4;
                 } else {
                         key->tex[i].return_channels =
                                 vc5_get_tex_return_channels(devinfo,
                                                             sampler->format);
                 }
 
-                if (key->tex[i].return_size == 32) {
+                if (key->tex[i].return_size == 32 && devinfo->ver < 40) {
                         memcpy(key->tex[i].swizzle,
                                vc5_sampler->swizzle,
                                sizeof(vc5_sampler->swizzle));
