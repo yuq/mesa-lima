@@ -1032,7 +1032,16 @@ intel_create_image_from_fds_common(__DRIscreen *dri_screen,
 
    image->planar_format = f;
 
-   image->bo = brw_bo_gem_create_from_prime(screen->bufmgr, fds[0]);
+   if (modifier != DRM_FORMAT_MOD_INVALID) {
+      const struct isl_drm_modifier_info *mod_info =
+         isl_drm_modifier_get_info(modifier);
+      uint32_t tiling = isl_tiling_to_i915_tiling(mod_info->tiling);
+      image->bo = brw_bo_gem_create_from_prime_tiled(screen->bufmgr, fds[0],
+                                                     tiling, strides[0]);
+   } else {
+      image->bo = brw_bo_gem_create_from_prime(screen->bufmgr, fds[0]);
+   }
+
    if (image->bo == NULL) {
       free(image);
       return NULL;
