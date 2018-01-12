@@ -106,6 +106,10 @@ gather_intrinsic_info(const nir_intrinsic_instr *instr,
 		mark_sampler_desc(instr->variables[0]->var, info);
 		break;
 	}
+	case nir_intrinsic_load_tess_level_inner:
+	case nir_intrinsic_load_tess_level_outer:
+		info->tes.reads_tess_factors = true;
+		break;
 	default:
 		break;
 	}

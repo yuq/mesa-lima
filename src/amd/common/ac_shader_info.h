@@ -49,6 +49,9 @@ struct ac_shader_info {
 		bool uses_thread_id[3];
 		bool uses_local_invocation_idx;
 	} cs;
+	struct {
+		bool reads_tess_factors;
+	} tes;
 };
 
 /* A NIR pass to gather all the info needed to optimise the allocation patterns
