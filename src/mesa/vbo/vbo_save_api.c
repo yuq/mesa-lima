@@ -99,9 +99,9 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
  * wrong-footed on replay.
  */
 static GLuint
-_save_copy_vertices(struct gl_context *ctx,
-                    const struct vbo_save_vertex_list *node,
-                    const fi_type * src_buffer)
+copy_vertices(struct gl_context *ctx,
+              const struct vbo_save_vertex_list *node,
+              const fi_type * src_buffer)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
    const struct _mesa_prim *prim = &node->prims[node->prim_count - 1];
@@ -305,7 +305,7 @@ alloc_prim_store(void)
 
 
 static void
-_save_reset_counters(struct gl_context *ctx)
+reset_counters(struct gl_context *ctx)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
 
@@ -411,7 +411,7 @@ convert_line_loop_to_strip(struct vbo_save_context *save,
  * being built.
  */
 static void
-_save_compile_vertex_list(struct gl_context *ctx)
+compile_vertex_list(struct gl_context *ctx)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
    struct vbo_save_vertex_list *node;
@@ -486,7 +486,7 @@ _save_compile_vertex_list(struct gl_context *ctx)
 
    /* Copy duplicated vertices
     */
-   save->copied.nr = _save_copy_vertices(ctx, node, save->buffer_map);
+   save->copied.nr = copy_vertices(ctx, node, save->buffer_map);
 
    if (node->prims[node->prim_count - 1].mode == GL_LINE_LOOP) {
       convert_line_loop_to_strip(save, node);
@@ -548,7 +548,7 @@ _save_compile_vertex_list(struct gl_context *ctx)
 
    /* Reset our structures for the next run of vertices:
     */
-   _save_reset_counters(ctx);
+   reset_counters(ctx);
 }
 
 
@@ -558,7 +558,7 @@ _save_compile_vertex_list(struct gl_context *ctx)
  * TODO -- If no new vertices have been stored, don't bother saving it.
  */
 static void
-_save_wrap_buffers(struct gl_context *ctx)
+wrap_buffers(struct gl_context *ctx)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
    GLint i = save->prim_count - 1;
@@ -578,7 +578,7 @@ _save_wrap_buffers(struct gl_context *ctx)
 
    /* store the copied vertices, and allocate a new list.
     */
-   _save_compile_vertex_list(ctx);
+   compile_vertex_list(ctx);
 
    /* Restart interrupted primitive
     */
@@ -602,14 +602,14 @@ _save_wrap_buffers(struct gl_context *ctx)
  * vertex_store struct.
  */
 static void
-_save_wrap_filled_vertex(struct gl_context *ctx)
+wrap_filled_vertex(struct gl_context *ctx)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
    unsigned numComponents;
 
    /* Emit a glEnd to close off the last vertex list.
     */
-   _save_wrap_buffers(ctx);
+   wrap_buffers(ctx);
 
    /* Copy stored stored vertices to start of new list.
     */
@@ -625,7 +625,7 @@ _save_wrap_filled_vertex(struct gl_context *ctx)
 
 
 static void
-_save_copy_to_current(struct gl_context *ctx)
+copy_to_current(struct gl_context *ctx)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
    GLbitfield64 enabled = save->enabled & (~BITFIELD64_BIT(VBO_ATTRIB_POS));
@@ -642,7 +642,7 @@ _save_copy_to_current(struct gl_context *ctx)
 
 
 static void
-_save_copy_from_current(struct gl_context *ctx)
+copy_from_current(struct gl_context *ctx)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
    GLbitfield64 enabled = save->enabled & (~BITFIELD64_BIT(VBO_ATTRIB_POS));
@@ -675,7 +675,7 @@ _save_copy_from_current(struct gl_context *ctx)
  * Flush existing data, set new attrib size, replay copied vertices.
  */
 static void
-_save_upgrade_vertex(struct gl_context *ctx, GLuint attr, GLuint newsz)
+upgrade_vertex(struct gl_context *ctx, GLuint attr, GLuint newsz)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
    GLuint oldsz;
@@ -686,7 +686,7 @@ _save_upgrade_vertex(struct gl_context *ctx, GLuint attr, GLuint newsz)
     * BEGIN in the new buffer.
     */
    if (save->vert_count)
-      _save_wrap_buffers(ctx);
+      wrap_buffers(ctx);
    else
       assert(save->copied.nr == 0);
 
@@ -694,7 +694,7 @@ _save_upgrade_vertex(struct gl_context *ctx, GLuint attr, GLuint newsz)
     * when the attribute already exists in the vertex and is having
     * its size increased.
     */
-   _save_copy_to_current(ctx);
+   copy_to_current(ctx);
 
    /* Fix up sizes:
     */
@@ -722,7 +722,7 @@ _save_upgrade_vertex(struct gl_context *ctx, GLuint attr, GLuint newsz)
 
    /* Copy from current to repopulate the vertex with correct values.
     */
-   _save_copy_from_current(ctx);
+   copy_from_current(ctx);
 
    /* Replay stored vertices to translate them to new format here.
     *
@@ -779,7 +779,7 @@ _save_upgrade_vertex(struct gl_context *ctx, GLuint attr, GLuint newsz)
  * get a glTexCoord4f() or glTexCoord1f() call.
  */
 static void
-save_fixup_vertex(struct gl_context *ctx, GLuint attr, GLuint sz)
+fixup_vertex(struct gl_context *ctx, GLuint attr, GLuint sz)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
 
@@ -787,7 +787,7 @@ save_fixup_vertex(struct gl_context *ctx, GLuint attr, GLuint sz)
       /* New size is larger.  Need to flush existing vertices and get
        * an enlarged vertex format.
        */
-      _save_upgrade_vertex(ctx, attr, sz);
+      upgrade_vertex(ctx, attr, sz);
    }
    else if (sz < save->active_sz[attr]) {
       GLuint i;
@@ -810,7 +810,7 @@ save_fixup_vertex(struct gl_context *ctx, GLuint attr, GLuint sz)
  * commands such as glNormal3f() or glTexCoord2f().
  */
 static void
-_save_reset_vertex(struct gl_context *ctx)
+reset_vertex(struct gl_context *ctx)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
 
@@ -840,7 +840,7 @@ do {								\
    struct vbo_save_context *save = &vbo_context(ctx)->save;	\
 								\
    if (save->active_sz[A] != N)					\
-      save_fixup_vertex(ctx, A, N);				\
+      fixup_vertex(ctx, A, N);					\
 								\
    {								\
       C *dest = (C *)save->attrptr[A];                          \
@@ -860,7 +860,7 @@ do {								\
       save->buffer_ptr += save->vertex_size;			\
 								\
       if (++save->vert_count >= save->max_vert)			\
-	 _save_wrap_filled_vertex(ctx);				\
+	 wrap_filled_vertex(ctx);				\
    }								\
 } while (0)
 
@@ -950,12 +950,12 @@ dlist_fallback(struct gl_context *ctx)
        */
       save->dangling_attr_ref = GL_TRUE;
 
-      _save_compile_vertex_list(ctx);
+      compile_vertex_list(ctx);
    }
 
-   _save_copy_to_current(ctx);
-   _save_reset_vertex(ctx);
-   _save_reset_counters(ctx);
+   copy_to_current(ctx);
+   reset_vertex(ctx);
+   reset_counters(ctx);
    if (save->out_of_memory) {
       _mesa_install_save_vtxfmt(ctx, &save->vtxfmt_noop);
    }
@@ -1080,7 +1080,7 @@ _save_End(void)
    save->prims[i].count = (save->vert_count - save->prims[i].start);
 
    if (i == (GLint) save->prim_max - 1) {
-      _save_compile_vertex_list(ctx);
+      compile_vertex_list(ctx);
       assert(save->copied.nr == 0);
    }
 
@@ -1359,7 +1359,7 @@ _save_OBE_MultiDrawElementsBaseVertex(GLenum mode, const GLsizei *count,
 
 
 static void
-_save_vtxfmt_init(struct gl_context *ctx)
+vtxfmt_init(struct gl_context *ctx)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
    GLvertexformat *vfmt = &save->vtxfmt;
@@ -1550,11 +1550,11 @@ vbo_save_SaveFlushVertices(struct gl_context *ctx)
       return;
 
    if (save->vert_count || save->prim_count)
-      _save_compile_vertex_list(ctx);
+      compile_vertex_list(ctx);
 
-   _save_copy_to_current(ctx);
-   _save_reset_vertex(ctx);
-   _save_reset_counters(ctx);
+   copy_to_current(ctx);
+   reset_vertex(ctx);
+   reset_counters(ctx);
    ctx->Driver.SaveNeedFlush = GL_FALSE;
 }
 
@@ -1575,8 +1575,8 @@ vbo_save_NewList(struct gl_context *ctx, GLuint list, GLenum mode)
 
    save->buffer_ptr = vbo_save_map_vertex_store(ctx, save->vertex_store);
 
-   _save_reset_vertex(ctx);
-   _save_reset_counters(ctx);
+   reset_vertex(ctx);
+   reset_counters(ctx);
    ctx->Driver.SaveNeedFlush = GL_FALSE;
 }
 
@@ -1686,7 +1686,7 @@ vbo_print_vertex_list(struct gl_context *ctx, void *data, FILE *f)
  * Called during context creation/init.
  */
 static void
-_save_current_init(struct gl_context *ctx)
+current_init(struct gl_context *ctx)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
    GLint i;
@@ -1723,8 +1723,8 @@ vbo_save_api_init(struct vbo_save_context *save)
                                vbo_destroy_vertex_list,
                                vbo_print_vertex_list);
 
-   _save_vtxfmt_init(ctx);
-   _save_current_init(ctx);
+   vtxfmt_init(ctx);
+   current_init(ctx);
    _mesa_noop_vtxfmt_init(&save->vtxfmt_noop);
 
    /* These will actually get set again when binding/drawing */
