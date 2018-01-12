@@ -492,7 +492,6 @@ void vc5_flush_jobs_writing_resource(struct vc5_context *vc5,
                                      struct pipe_resource *prsc);
 void vc5_flush_jobs_reading_resource(struct vc5_context *vc5,
                                      struct pipe_resource *prsc);
-void vc5_emit_state(struct pipe_context *pctx);
 void vc5_update_compiled_shaders(struct vc5_context *vc5, uint8_t prim_mode);
 
 bool vc5_rt_format_supported(const struct v3d_device_info *devinfo,

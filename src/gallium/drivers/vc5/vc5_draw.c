@@ -385,7 +385,11 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         vc5_start_draw(vc5);
         vc5_update_compiled_shaders(vc5, info->mode);
 
-        vc5_emit_state(pctx);
+#if V3D_VERSION >= 41
+        v3d41_emit_state(pctx);
+#else
+        v3d33_emit_state(pctx);
+#endif
 
         if (vc5->dirty & (VC5_DIRTY_VTXBUF |
                           VC5_DIRTY_VTXSTATE |
