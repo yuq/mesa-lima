@@ -3284,27 +3284,6 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    isl_emit_depth_stencil_hiz_s(&device->isl_dev, dw, &info);
 
    cmd_buffer->state.hiz_enabled = info.hiz_usage == ISL_AUX_USAGE_HIZ;
-
-   /* We may be writing depth or stencil so we need to mark the surface.
-    * Unfortunately, there's no way to know at this point whether the depth or
-    * stencil tests used will actually write to the surface.
-    */
-   if (image && (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT)) {
-      genX(cmd_buffer_mark_image_written)(cmd_buffer, image,
-                                          VK_IMAGE_ASPECT_DEPTH_BIT,
-                                          info.hiz_usage,
-                                          info.view->base_level,
-                                          info.view->base_array_layer,
-                                          info.view->array_len);
-   }
-   if (image && (image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT)) {
-      genX(cmd_buffer_mark_image_written)(cmd_buffer, image,
-                                          VK_IMAGE_ASPECT_STENCIL_BIT,
-                                          ISL_AUX_USAGE_NONE,
-                                          info.view->base_level,
-                                          info.view->base_array_layer,
-                                          info.view->array_len);
-   }
 }
 
 
@@ -3590,6 +3569,35 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                                              iview->planes[0].isl.base_level,
                                              iview->planes[0].isl.base_array_layer,
                                              fb->layers);
+      } else if (subpass->attachments[i].usage ==
+                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+         /* We may be writing depth or stencil so we need to mark the surface.
+          * Unfortunately, there's no way to know at this point whether the
+          * depth or stencil tests used will actually write to the surface.
+          *
+          * Even though stencil may be plane 1, it always shares a base_level
+          * with depth.
+          */
+         const struct isl_view *ds_view = &iview->planes[0].isl;
+         if (iview->aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) {
+            genX(cmd_buffer_mark_image_written)(cmd_buffer, image,
+                                                VK_IMAGE_ASPECT_DEPTH_BIT,
+                                                att_state->aux_usage,
+                                                ds_view->base_level,
+                                                ds_view->base_array_layer,
+                                                fb->layers);
+         }
+         if (iview->aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT) {
+            /* Even though stencil may be plane 1, it always shares a
+             * base_level with depth.
+             */
+            genX(cmd_buffer_mark_image_written)(cmd_buffer, image,
+                                                VK_IMAGE_ASPECT_STENCIL_BIT,
+                                                ISL_AUX_USAGE_NONE,
+                                                ds_view->base_level,
+                                                ds_view->base_array_layer,
+                                                fb->layers);
+         }
       }
 
       att_state->pending_clear_aspects = 0;
