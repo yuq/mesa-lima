@@ -266,9 +266,8 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
       return class_3d >= GM200_3D_CLASS;
    case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
    case PIPE_CAP_TGSI_BALLOT:
-      return class_3d >= NVE4_3D_CLASS;
    case PIPE_CAP_BINDLESS_TEXTURE:
-      return class_3d >= NVE4_3D_CLASS && class_3d < GM107_3D_CLASS;
+      return class_3d >= NVE4_3D_CLASS;
 
    /* unsupported caps */
    case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
