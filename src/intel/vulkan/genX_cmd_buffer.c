@@ -3339,7 +3339,7 @@ cmd_buffer_subpass_transition_layouts(struct anv_cmd_buffer * const cmd_buffer,
       assert(subpass->attachments);
 
    /* Iterate over the array of attachment references. */
-   for (const VkAttachmentReference *att_ref = subpass->attachments;
+   for (const struct anv_subpass_attachment *att_ref = subpass->attachments;
         att_ref < subpass->attachments + subpass->attachment_count; att_ref++) {
 
       /* If the attachment is unused, we can't perform a layout transition. */

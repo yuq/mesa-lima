@@ -2876,6 +2876,12 @@ struct anv_framebuffer {
    struct anv_image_view *                      attachments[0];
 };
 
+struct anv_subpass_attachment {
+   VkImageUsageFlagBits usage;
+   uint32_t attachment;
+   VkImageLayout layout;
+};
+
 struct anv_subpass {
    uint32_t                                     attachment_count;
 
@@ -2883,14 +2889,14 @@ struct anv_subpass {
     * A pointer to all attachment references used in this subpass.
     * Only valid if ::attachment_count > 0.
     */
-   VkAttachmentReference *                      attachments;
+   struct anv_subpass_attachment *              attachments;
    uint32_t                                     input_count;
-   VkAttachmentReference *                      input_attachments;
+   struct anv_subpass_attachment *              input_attachments;
    uint32_t                                     color_count;
-   VkAttachmentReference *                      color_attachments;
-   VkAttachmentReference *                      resolve_attachments;
+   struct anv_subpass_attachment *              color_attachments;
+   struct anv_subpass_attachment *              resolve_attachments;
 
-   VkAttachmentReference                        depth_stencil_attachment;
+   struct anv_subpass_attachment                depth_stencil_attachment;
 
    uint32_t                                     view_mask;
 
