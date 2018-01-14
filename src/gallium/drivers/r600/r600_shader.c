@@ -3336,6 +3336,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 
 	ctx.nliterals = 0;
 	ctx.literals = NULL;
+	ctx.max_driver_temp_used = 0;
 
 	shader->fs_write_all = ctx.info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] &&
 			       ctx.info.colors_written == 1;
