@@ -640,10 +640,10 @@ static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec,
 	index->size = sizeof(rvcn_dec_message_avc_t);
 	index->filled = 0;
 
-	decode->stream_type = dec->stream_type;;
+	decode->stream_type = dec->stream_type;
 	decode->decode_flags = 0x1;
-	decode->width_in_samples = dec->base.width;;
-	decode->height_in_samples = dec->base.height;;
+	decode->width_in_samples = dec->base.width;
+	decode->height_in_samples = dec->base.height;
 
 	decode->bsd_size = align(dec->bs_size, 128);
 	decode->dpb_size = dec->dpb.res->buf->size;
