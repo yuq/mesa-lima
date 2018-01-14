@@ -3277,6 +3277,69 @@ VkResult radv_CreateGraphicsPipelines(
 	return result;
 }
 
+
+static void
+radv_compute_generate_pm4(struct radv_pipeline *pipeline)
+{
+	struct radv_shader_variant *compute_shader;
+	struct radv_device *device = pipeline->device;
+	unsigned compute_resource_limits;
+	unsigned waves_per_threadgroup;
+	uint64_t va;
+
+	pipeline->cs.buf = malloc(20 * 4);
+	pipeline->cs.max_dw = 20;
+
+	compute_shader = pipeline->shaders[MESA_SHADER_COMPUTE];
+	va = radv_buffer_get_va(compute_shader->bo) + compute_shader->bo_offset;
+
+	radeon_set_sh_reg_seq(&pipeline->cs, R_00B830_COMPUTE_PGM_LO, 2);
+	radeon_emit(&pipeline->cs, va >> 8);
+	radeon_emit(&pipeline->cs, va >> 40);
+
+	radeon_set_sh_reg_seq(&pipeline->cs, R_00B848_COMPUTE_PGM_RSRC1, 2);
+	radeon_emit(&pipeline->cs, compute_shader->rsrc1);
+	radeon_emit(&pipeline->cs, compute_shader->rsrc2);
+
+	radeon_set_sh_reg(&pipeline->cs, R_00B860_COMPUTE_TMPRING_SIZE,
+			  S_00B860_WAVES(pipeline->max_waves) |
+			  S_00B860_WAVESIZE(pipeline->scratch_bytes_per_wave >> 10));
+
+	/* Calculate best compute resource limits. */
+	waves_per_threadgroup =
+		DIV_ROUND_UP(compute_shader->info.cs.block_size[0] *
+			     compute_shader->info.cs.block_size[1] *
+			     compute_shader->info.cs.block_size[2], 64);
+	compute_resource_limits =
+		S_00B854_SIMD_DEST_CNTL(waves_per_threadgroup % 4 == 0);
+
+	if (device->physical_device->rad_info.chip_class >= CIK) {
+		unsigned num_cu_per_se =
+			device->physical_device->rad_info.num_good_compute_units /
+			device->physical_device->rad_info.max_se;
+
+		/* Force even distribution on all SIMDs in CU if the workgroup
+		 * size is 64. This has shown some good improvements if # of
+		 * CUs per SE is not a multiple of 4.
+		 */
+		if (num_cu_per_se % 4 && waves_per_threadgroup == 1)
+			compute_resource_limits |= S_00B854_FORCE_SIMD_DIST(1);
+	}
+
+	radeon_set_sh_reg(&pipeline->cs, R_00B854_COMPUTE_RESOURCE_LIMITS,
+			  compute_resource_limits);
+
+	radeon_set_sh_reg_seq(&pipeline->cs, R_00B81C_COMPUTE_NUM_THREAD_X, 3);
+	radeon_emit(&pipeline->cs,
+		    S_00B81C_NUM_THREAD_FULL(compute_shader->info.cs.block_size[0]));
+	radeon_emit(&pipeline->cs,
+		    S_00B81C_NUM_THREAD_FULL(compute_shader->info.cs.block_size[1]));
+	radeon_emit(&pipeline->cs,
+		    S_00B81C_NUM_THREAD_FULL(compute_shader->info.cs.block_size[2]));
+
+	assert(pipeline->cs.cdw <= pipeline->cs.max_dw);
+}
+
 static VkResult radv_compute_pipeline_create(
 	VkDevice                                    _device,
 	VkPipelineCache                             _cache,
@@ -3310,6 +3373,8 @@ static VkResult radv_compute_pipeline_create(
 		return result;
 	}
 
+	radv_compute_generate_pm4(pipeline);
+
 	*pPipeline = radv_pipeline_to_handle(pipeline);
 
 	if (device->instance->debug_flags & RADV_DEBUG_DUMP_SHADER_STATS) {
@@ -3317,6 +3382,7 @@ static VkResult radv_compute_pipeline_create(
 	}
 	return VK_SUCCESS;
 }
+
 VkResult radv_CreateComputePipelines(
 	VkDevice                                    _device,
 	VkPipelineCache                             pipelineCache,
