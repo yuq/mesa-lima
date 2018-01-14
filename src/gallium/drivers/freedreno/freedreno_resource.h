@@ -171,6 +171,7 @@ void fd_blitter_pipe_end(struct fd_context *ctx);
 void fd_resource_screen_init(struct pipe_screen *pscreen);
 void fd_resource_context_init(struct pipe_context *pctx);
 
+uint32_t fd_setup_slices(struct fd_resource *rsc);
 void fd_resource_resize(struct pipe_resource *prsc, uint32_t sz);
 
 bool fd_render_condition_check(struct pipe_context *pctx);

@@ -656,12 +656,12 @@ setup_slices(struct fd_resource *rsc, uint32_t alignment, enum pipe_format forma
 }
 
 static uint32_t
-slice_alignment(struct pipe_screen *pscreen, const struct pipe_resource *tmpl)
+slice_alignment(enum pipe_texture_target target)
 {
 	/* on a3xx, 2d array and 3d textures seem to want their
 	 * layers aligned to page boundaries:
 	 */
-	switch (tmpl->target) {
+	switch (target) {
 	case PIPE_TEXTURE_3D:
 	case PIPE_TEXTURE_1D_ARRAY:
 	case PIPE_TEXTURE_2D_ARRAY:
@@ -669,6 +669,36 @@ slice_alignment(struct pipe_screen *pscreen, const struct pipe_resource *tmpl)
 	default:
 		return 1;
 	}
+}
+
+/* cross generation texture layout to plug in to screen->setup_slices()..
+ * replace with generation specific one as-needed.
+ *
+ * TODO for a4xx probably can extract out the a4xx specific logic int
+ * a small fd4_setup_slices() wrapper that sets up layer_first, and then
+ * calls this.
+ */
+uint32_t
+fd_setup_slices(struct fd_resource *rsc)
+{
+	uint32_t alignment;
+
+	alignment = slice_alignment(rsc->base.target);
+
+	struct fd_screen *screen = fd_screen(rsc->base.screen);
+	if (is_a4xx(screen) || is_a5xx(screen)) {
+		switch (rsc->base.target) {
+		case PIPE_TEXTURE_3D:
+			rsc->layer_first = false;
+			break;
+		default:
+			rsc->layer_first = true;
+			alignment = 1;
+			break;
+		}
+	}
+
+	return setup_slices(rsc, alignment, rsc->base.format);
 }
 
 /* special case to resize query buf after allocated.. */
@@ -682,7 +712,7 @@ fd_resource_resize(struct pipe_resource *prsc, uint32_t sz)
 	debug_assert(prsc->bind == PIPE_BIND_QUERY_BUFFER);
 
 	prsc->width0 = sz;
-	realloc_bo(rsc, setup_slices(rsc, 1, prsc->format));
+	realloc_bo(rsc, fd_screen(prsc->screen)->setup_slices(rsc));
 }
 
 // TODO common helper?
@@ -715,7 +745,7 @@ fd_resource_create(struct pipe_screen *pscreen,
 	struct fd_resource *rsc = CALLOC_STRUCT(fd_resource);
 	struct pipe_resource *prsc = &rsc->base;
 	enum pipe_format format = tmpl->format;
-	uint32_t size, alignment;
+	uint32_t size;
 
 	DBG("%p: target=%d, format=%s, %ux%ux%u, array_size=%u, last_level=%u, "
 			"nr_samples=%u, usage=%u, bind=%x, flags=%x", prsc,
@@ -756,20 +786,7 @@ fd_resource_create(struct pipe_screen *pscreen,
 		rsc->lrz = fd_bo_new(screen->dev, size, flags);
 	}
 
-	alignment = slice_alignment(pscreen, tmpl);
-	if (is_a4xx(screen) || is_a5xx(screen)) {
-		switch (tmpl->target) {
-		case PIPE_TEXTURE_3D:
-			rsc->layer_first = false;
-			break;
-		default:
-			rsc->layer_first = true;
-			alignment = 1;
-			break;
-		}
-	}
-
-	size = setup_slices(rsc, alignment, format);
+	size = screen->setup_slices(rsc);
 
 	/* special case for hw-query buffer, which we need to allocate before we
 	 * know the size:
@@ -1091,7 +1108,8 @@ static const struct u_transfer_vtbl transfer_vtbl = {
 void
 fd_resource_screen_init(struct pipe_screen *pscreen)
 {
-	bool fake_rgtc = fd_screen(pscreen)->gpu_id < 400;
+	struct fd_screen *screen = fd_screen(pscreen);
+	bool fake_rgtc = screen->gpu_id < 400;
 
 	pscreen->resource_create = u_transfer_helper_resource_create;
 	pscreen->resource_from_handle = fd_resource_from_handle;
@@ -1100,6 +1118,9 @@ fd_resource_screen_init(struct pipe_screen *pscreen)
 
 	pscreen->transfer_helper = u_transfer_helper_create(&transfer_vtbl,
 			true, fake_rgtc, true);
+
+	if (!screen->setup_slices)
+		screen->setup_slices = fd_setup_slices;
 }
 
 void

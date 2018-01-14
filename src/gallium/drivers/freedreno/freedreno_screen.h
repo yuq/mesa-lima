@@ -80,6 +80,8 @@ struct fd_screen {
 	 */
 	struct fd_pipe *pipe;
 
+	uint32_t (*setup_slices)(struct fd_resource *rsc);
+
 	int64_t cpu_gpu_time_delta;
 
 	struct fd_batch_cache batch_cache;
