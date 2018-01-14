@@ -2797,6 +2797,27 @@ radv_pipeline_generate_ps_inputs(struct radeon_winsys_cs *cs,
 	}
 }
 
+static uint32_t
+radv_compute_db_shader_control(const struct radv_device *device,
+                               const struct radv_shader_variant *ps)
+{
+	unsigned z_order;
+	if (ps->info.fs.early_fragment_test || !ps->info.info.ps.writes_memory)
+		z_order = V_02880C_EARLY_Z_THEN_LATE_Z;
+	else
+		z_order = V_02880C_LATE_Z;
+
+	return  S_02880C_Z_EXPORT_ENABLE(ps->info.fs.writes_z) |
+		S_02880C_STENCIL_TEST_VAL_EXPORT_ENABLE(ps->info.fs.writes_stencil) |
+		S_02880C_KILL_ENABLE(!!ps->info.fs.can_discard) |
+		S_02880C_MASK_EXPORT_ENABLE(ps->info.fs.writes_sample_mask) |
+		S_02880C_Z_ORDER(z_order) |
+		S_02880C_DEPTH_BEFORE_SHADER(ps->info.fs.early_fragment_test) |
+		S_02880C_EXEC_ON_HIER_FAIL(ps->info.info.ps.writes_memory) |
+		S_02880C_EXEC_ON_NOOP(ps->info.info.ps.writes_memory) |
+		S_02880C_DUAL_QUAD_DISABLE(!!device->physical_device->has_rbplus);
+}
+
 static void
 radv_pipeline_generate_fragment_shader(struct radeon_winsys_cs *cs,
 				       struct radv_pipeline *pipeline)
@@ -2816,7 +2837,7 @@ radv_pipeline_generate_fragment_shader(struct radeon_winsys_cs *cs,
 	radeon_emit(cs, ps->rsrc2);
 
 	radeon_set_context_reg(cs, R_02880C_DB_SHADER_CONTROL,
-			       pipeline->graphics.db_shader_control);
+	                       radv_compute_db_shader_control(pipeline->device, ps));
 
 	radeon_set_context_reg(cs, R_0286CC_SPI_PS_INPUT_ENA,
 			       ps->config.spi_ps_input_ena);
@@ -2975,26 +2996,6 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		    !ps->info.fs.writes_sample_mask)
 			pipeline->graphics.blend.spi_shader_col_format = V_028714_SPI_SHADER_32_R;
 	}
-
-	unsigned z_order;
-	pipeline->graphics.db_shader_control = 0;
-	if (ps->info.fs.early_fragment_test || !ps->info.info.ps.writes_memory)
-		z_order = V_02880C_EARLY_Z_THEN_LATE_Z;
-	else
-		z_order = V_02880C_LATE_Z;
-
-	pipeline->graphics.db_shader_control =
-		S_02880C_Z_EXPORT_ENABLE(ps->info.fs.writes_z) |
-		S_02880C_STENCIL_TEST_VAL_EXPORT_ENABLE(ps->info.fs.writes_stencil) |
-		S_02880C_KILL_ENABLE(!!ps->info.fs.can_discard) |
-		S_02880C_MASK_EXPORT_ENABLE(ps->info.fs.writes_sample_mask) |
-		S_02880C_Z_ORDER(z_order) |
-		S_02880C_DEPTH_BEFORE_SHADER(ps->info.fs.early_fragment_test) |
-		S_02880C_EXEC_ON_HIER_FAIL(ps->info.info.ps.writes_memory) |
-		S_02880C_EXEC_ON_NOOP(ps->info.info.ps.writes_memory);
-
-	if (pipeline->device->physical_device->has_rbplus)
-		pipeline->graphics.db_shader_control |= S_02880C_DUAL_QUAD_DISABLE(1);
 
 	calculate_vgt_gs_mode(pipeline);
 

@@ -1217,7 +1217,6 @@ struct radv_pipeline {
 			struct radv_multisample_state ms;
 			struct radv_tessellation_state tess;
 			struct radv_gs_state gs;
-			uint32_t db_shader_control;
 			uint32_t spi_baryc_cntl;
 			unsigned prim;
 			unsigned gs_out;
