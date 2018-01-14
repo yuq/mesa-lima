@@ -2401,19 +2401,19 @@ radv_compute_bin_size(struct radv_pipeline *pipeline, const VkGraphicsPipelineCr
 }
 
 static void
-radv_compute_binning_state(struct radv_pipeline *pipeline, const VkGraphicsPipelineCreateInfo *pCreateInfo)
+radv_pipeline_generate_binning_state(struct radeon_winsys_cs *cs,
+				     struct radv_pipeline *pipeline,
+				     const VkGraphicsPipelineCreateInfo *pCreateInfo)
 {
-	pipeline->graphics.bin.pa_sc_binner_cntl_0 =
+	if (pipeline->device->physical_device->rad_info.chip_class < GFX9)
+		return;
+
+	uint32_t pa_sc_binner_cntl_0 =
 	                S_028C44_BINNING_MODE(V_028C44_DISABLE_BINNING_USE_LEGACY_SC) |
 	                S_028C44_DISABLE_START_OF_PRIM(1);
-	pipeline->graphics.bin.db_dfsm_control = S_028060_PUNCHOUT_MODE(V_028060_FORCE_OFF);
-
-	if (!pipeline->device->pbb_allowed)
-		return;
+	uint32_t db_dfsm_control = S_028060_PUNCHOUT_MODE(V_028060_FORCE_OFF);
 
 	VkExtent2D bin_size = radv_compute_bin_size(pipeline, pCreateInfo);
-	if (!bin_size.width || !bin_size.height)
-		return;
 
 	unsigned context_states_per_bin; /* allowed range: [1, 6] */
 	unsigned persistent_states_per_bin; /* allowed range: [1, 32] */
@@ -2434,7 +2434,8 @@ radv_compute_binning_state(struct radv_pipeline *pipeline, const VkGraphicsPipel
 		unreachable("unhandled family while determining binning state.");
 	}
 
-	pipeline->graphics.bin.pa_sc_binner_cntl_0 =
+	if (pipeline->device->pbb_allowed && bin_size.width && bin_size.height) {
+		pa_sc_binner_cntl_0 =
 	                S_028C44_BINNING_MODE(V_028C44_BINNING_ALLOWED) |
 	                S_028C44_BIN_SIZE_X(bin_size.width == 16) |
 	                S_028C44_BIN_SIZE_Y(bin_size.height == 16) |
@@ -2445,9 +2446,12 @@ radv_compute_binning_state(struct radv_pipeline *pipeline, const VkGraphicsPipel
 	                S_028C44_DISABLE_START_OF_PRIM(1) |
 	                S_028C44_FPOVS_PER_BATCH(fpovs_per_batch) |
 	                S_028C44_OPTIMAL_BIN_SELECTION(1);
+	}
 
-	/* DFSM is not implemented yet */
-	assert(!pipeline->device->dfsm_allowed);
+	radeon_set_context_reg(cs, R_028C44_PA_SC_BINNER_CNTL_0,
+			       pa_sc_binner_cntl_0);
+	radeon_set_context_reg(cs, R_028060_DB_DFSM_CONTROL,
+			       db_dfsm_control);
 }
 
 
@@ -2876,20 +2880,8 @@ radv_pipeline_generate_vgt_vertex_reuse(struct radeon_winsys_cs *cs,
 }
 
 static void
-radv_pipeline_generate_binning_state(struct radeon_winsys_cs *cs,
-				     struct radv_pipeline *pipeline)
-{
-	if (pipeline->device->physical_device->rad_info.chip_class < GFX9)
-		return;
-
-	radeon_set_context_reg(cs, R_028C44_PA_SC_BINNER_CNTL_0,
-			       pipeline->graphics.bin.pa_sc_binner_cntl_0);
-	radeon_set_context_reg(cs, R_028060_DB_DFSM_CONTROL,
-			       pipeline->graphics.bin.db_dfsm_control);
-}
-
-static void
-radv_pipeline_generate_pm4(struct radv_pipeline *pipeline)
+radv_pipeline_generate_pm4(struct radv_pipeline *pipeline,
+                           const VkGraphicsPipelineCreateInfo *pCreateInfo)
 {
 	pipeline->cs.buf = malloc(4 * 256);
 	pipeline->cs.max_dw = 256;
@@ -2903,7 +2895,7 @@ radv_pipeline_generate_pm4(struct radv_pipeline *pipeline)
 	radv_pipeline_generate_geometry_shader(&pipeline->cs, pipeline);
 	radv_pipeline_generate_fragment_shader(&pipeline->cs, pipeline);
 	radv_pipeline_generate_vgt_vertex_reuse(&pipeline->cs, pipeline);
-	radv_pipeline_generate_binning_state(&pipeline->cs, pipeline);
+	radv_pipeline_generate_binning_state(&pipeline->cs, pipeline, pCreateInfo);
 
 	radeon_set_context_reg(&pipeline->cs, R_0286E8_SPI_TMPRING_SIZE,
 			       S_0286E8_WAVES(pipeline->max_waves) |
@@ -3212,10 +3204,8 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		radv_dump_pipeline_stats(device, pipeline);
 	}
 
-	radv_compute_binning_state(pipeline, pCreateInfo);
-
 	result = radv_pipeline_scratch_init(device, pipeline);
-	radv_pipeline_generate_pm4(pipeline);
+	radv_pipeline_generate_pm4(pipeline, pCreateInfo);
 
 	return result;
 }

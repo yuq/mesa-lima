@@ -1203,11 +1203,6 @@ struct radv_vs_state {
 	uint32_t vgt_reuse_off;
 };
 
-struct radv_binning_state {
-	uint32_t pa_sc_binner_cntl_0;
-	uint32_t db_dfsm_control;
-};
-
 #define SI_GS_PER_ES 128
 
 struct radv_pipeline {
@@ -1238,7 +1233,6 @@ struct radv_pipeline {
 			struct radv_tessellation_state tess;
 			struct radv_gs_state gs;
 			struct radv_vs_state vs;
-			struct radv_binning_state bin;
 			uint32_t db_shader_control;
 			uint32_t shader_z_format;
 			uint32_t spi_baryc_cntl;
