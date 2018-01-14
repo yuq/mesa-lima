@@ -1879,8 +1879,9 @@ static LLVMValueRef buffer_load_const(struct si_shader_context *ctx,
 				    0, 0, 0, true, true);
 }
 
-static LLVMValueRef load_sample_position(struct si_shader_context *ctx, LLVMValueRef sample_id)
+static LLVMValueRef load_sample_position(struct ac_shader_abi *abi, LLVMValueRef sample_id)
 {
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	struct lp_build_context *uint_bld = &ctx->bld_base.uint_bld;
 	LLVMValueRef desc = LLVMGetParam(ctx->main_fn, ctx->param_rw_buffers);
 	LLVMValueRef buf_index = LLVMConstInt(ctx->i32, SI_PS_CONST_SAMPLE_POSITIONS, 0);
@@ -4046,7 +4047,7 @@ static void interp_fetch_args(
 
 			sample_position = lp_build_gather_values(&ctx->gallivm, center, 4);
 		} else {
-			sample_position = load_sample_position(ctx, sample_id);
+			sample_position = load_sample_position(&ctx->abi, sample_id);
 		}
 
 		emit_data->args[0] = LLVMBuildExtractElement(ctx->ac.builder,
