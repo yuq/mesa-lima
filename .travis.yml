@@ -133,7 +133,7 @@ matrix:
         - DRI_LOADERS="--disable-glx --disable-gbm --disable-egl"
         - DRI_DRIVERS=""
         - GALLIUM_ST="--enable-dri --disable-opencl --disable-xa --disable-nine --disable-xvmc --disable-vdpau --disable-va --disable-omx-bellagio --disable-gallium-osmesa"
-        - GALLIUM_DRIVERS="i915,nouveau,pl111,sun4i,r300,r600,radeonsi,freedreno,svga,swrast,vc4,virgl,etnaviv,imx"
+        - GALLIUM_DRIVERS="i915,nouveau,pl111,exynos,sun4i,r300,r600,radeonsi,freedreno,svga,swrast,vc4,virgl,etnaviv,imx"
         - VULKAN_DRIVERS=""
         - LIBUNWIND_FLAGS="--enable-libunwind"
       addons:
