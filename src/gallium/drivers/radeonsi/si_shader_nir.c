@@ -127,6 +127,40 @@ static void scan_instruction(struct tgsi_shader_info *info,
 		case nir_intrinsic_ssbo_atomic_comp_swap:
 			info->writes_memory = true;
 			break;
+		case nir_intrinsic_load_var: {
+			nir_variable *var = intr->variables[0]->var;
+			nir_variable_mode mode = var->data.mode;
+			enum glsl_base_type base_type =
+				glsl_get_base_type(glsl_without_array(var->type));
+
+			if (mode == nir_var_shader_in) {
+				switch (var->data.interpolation) {
+				case INTERP_MODE_NONE:
+					if (glsl_base_type_is_integer(base_type))
+						break;
+
+					/* fall-through */
+				case INTERP_MODE_SMOOTH:
+					if (var->data.sample)
+						info->uses_persp_sample = true;
+					else if (var->data.centroid)
+						info->uses_persp_centroid = true;
+					else
+						info->uses_persp_center = true;
+					break;
+
+				case INTERP_MODE_NOPERSPECTIVE:
+					if (var->data.sample)
+						info->uses_linear_sample = true;
+					else if (var->data.centroid)
+						info->uses_linear_centroid = true;
+					else
+						info->uses_linear_center = true;
+					break;
+				}
+			}
+			break;
+		}
 		case nir_intrinsic_interp_var_at_centroid:
 		case nir_intrinsic_interp_var_at_sample:
 		case nir_intrinsic_interp_var_at_offset: {
@@ -296,34 +330,20 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 
 			if (semantic_name == TGSI_SEMANTIC_COLOR) {
 				info->input_interpolate[i] = TGSI_INTERPOLATE_COLOR;
-				goto persp_locations;
+				break;
 			}
 			/* fall-through */
+
 		case INTERP_MODE_SMOOTH:
 			assert(!glsl_base_type_is_integer(base_type));
 
 			info->input_interpolate[i] = TGSI_INTERPOLATE_PERSPECTIVE;
-
-		persp_locations:
-			if (variable->data.sample)
-				info->uses_persp_sample = true;
-			else if (variable->data.centroid)
-				info->uses_persp_centroid = true;
-			else
-				info->uses_persp_center = true;
 			break;
 
 		case INTERP_MODE_NOPERSPECTIVE:
 			assert(!glsl_base_type_is_integer(base_type));
 
 			info->input_interpolate[i] = TGSI_INTERPOLATE_LINEAR;
-
-			if (variable->data.sample)
-				info->uses_linear_sample = true;
-			else if (variable->data.centroid)
-				info->uses_linear_centroid = true;
-			else
-				info->uses_linear_center = true;
 			break;
 
 		case INTERP_MODE_FLAT:
