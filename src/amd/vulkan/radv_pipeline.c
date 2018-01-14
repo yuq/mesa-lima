@@ -1606,79 +1606,6 @@ static void calculate_vgt_gs_mode(struct radv_pipeline *pipeline)
 	}
 }
 
-static uint32_t offset_to_ps_input(uint32_t offset, bool flat_shade)
-{
-	uint32_t ps_input_cntl;
-	if (offset <= AC_EXP_PARAM_OFFSET_31) {
-		ps_input_cntl = S_028644_OFFSET(offset);
-		if (flat_shade)
-			ps_input_cntl |= S_028644_FLAT_SHADE(1);
-	} else {
-		/* The input is a DEFAULT_VAL constant. */
-		assert(offset >= AC_EXP_PARAM_DEFAULT_VAL_0000 &&
-		       offset <= AC_EXP_PARAM_DEFAULT_VAL_1111);
-		offset -= AC_EXP_PARAM_DEFAULT_VAL_0000;
-		ps_input_cntl = S_028644_OFFSET(0x20) |
-			S_028644_DEFAULT_VAL(offset);
-	}
-	return ps_input_cntl;
-}
-
-static void calculate_ps_inputs(struct radv_pipeline *pipeline)
-{
-	struct radv_shader_variant *ps;
-	const struct ac_vs_output_info *outinfo = get_vs_output_info(pipeline);
-
-	ps = pipeline->shaders[MESA_SHADER_FRAGMENT];
-
-	unsigned ps_offset = 0;
-
-	if (ps->info.fs.prim_id_input) {
-		unsigned vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_PRIMITIVE_ID];
-		if (vs_offset != AC_EXP_PARAM_UNDEFINED) {
-			pipeline->graphics.ps_input_cntl[ps_offset] = offset_to_ps_input(vs_offset, true);
-			++ps_offset;
-		}
-	}
-
-	if (ps->info.fs.layer_input) {
-		unsigned vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_LAYER];
-		if (vs_offset != AC_EXP_PARAM_UNDEFINED)
-			pipeline->graphics.ps_input_cntl[ps_offset] = offset_to_ps_input(vs_offset, true);
-		else
-			pipeline->graphics.ps_input_cntl[ps_offset] = offset_to_ps_input(AC_EXP_PARAM_DEFAULT_VAL_0000, true);
-		++ps_offset;
-	}
-
-	if (ps->info.fs.has_pcoord) {
-		unsigned val;
-		val = S_028644_PT_SPRITE_TEX(1) | S_028644_OFFSET(0x20);
-		pipeline->graphics.ps_input_cntl[ps_offset] = val;
-		ps_offset++;
-	}
-
-	for (unsigned i = 0; i < 32 && (1u << i) <= ps->info.fs.input_mask; ++i) {
-		unsigned vs_offset;
-		bool flat_shade;
-		if (!(ps->info.fs.input_mask & (1u << i)))
-			continue;
-
-		vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_VAR0 + i];
-		if (vs_offset == AC_EXP_PARAM_UNDEFINED) {
-			pipeline->graphics.ps_input_cntl[ps_offset] = S_028644_OFFSET(0x20);
-			++ps_offset;
-			continue;
-		}
-
-		flat_shade = !!(ps->info.fs.flat_shaded_mask & (1u << ps_offset));
-
-		pipeline->graphics.ps_input_cntl[ps_offset] = offset_to_ps_input(vs_offset, flat_shade);
-		++ps_offset;
-	}
-
-	pipeline->graphics.ps_input_cntl_num = ps_offset;
-}
-
 static void
 radv_link_shaders(struct radv_pipeline *pipeline, nir_shader **shaders)
 {
@@ -2798,6 +2725,84 @@ radv_pipeline_generate_geometry_shader(struct radeon_winsys_cs *cs,
 	}
 }
 
+static uint32_t offset_to_ps_input(uint32_t offset, bool flat_shade)
+{
+	uint32_t ps_input_cntl;
+	if (offset <= AC_EXP_PARAM_OFFSET_31) {
+		ps_input_cntl = S_028644_OFFSET(offset);
+		if (flat_shade)
+			ps_input_cntl |= S_028644_FLAT_SHADE(1);
+	} else {
+		/* The input is a DEFAULT_VAL constant. */
+		assert(offset >= AC_EXP_PARAM_DEFAULT_VAL_0000 &&
+		       offset <= AC_EXP_PARAM_DEFAULT_VAL_1111);
+		offset -= AC_EXP_PARAM_DEFAULT_VAL_0000;
+		ps_input_cntl = S_028644_OFFSET(0x20) |
+			S_028644_DEFAULT_VAL(offset);
+	}
+	return ps_input_cntl;
+}
+
+static void
+radv_pipeline_generate_ps_inputs(struct radeon_winsys_cs *cs,
+                                 struct radv_pipeline *pipeline)
+{
+	struct radv_shader_variant *ps = pipeline->shaders[MESA_SHADER_FRAGMENT];
+	const struct ac_vs_output_info *outinfo = get_vs_output_info(pipeline);
+	uint32_t ps_input_cntl[32];
+
+	unsigned ps_offset = 0;
+
+	if (ps->info.fs.prim_id_input) {
+		unsigned vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_PRIMITIVE_ID];
+		if (vs_offset != AC_EXP_PARAM_UNDEFINED) {
+			ps_input_cntl[ps_offset] = offset_to_ps_input(vs_offset, true);
+			++ps_offset;
+		}
+	}
+
+	if (ps->info.fs.layer_input) {
+		unsigned vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_LAYER];
+		if (vs_offset != AC_EXP_PARAM_UNDEFINED)
+			ps_input_cntl[ps_offset] = offset_to_ps_input(vs_offset, true);
+		else
+			ps_input_cntl[ps_offset] = offset_to_ps_input(AC_EXP_PARAM_DEFAULT_VAL_0000, true);
+		++ps_offset;
+	}
+
+	if (ps->info.fs.has_pcoord) {
+		unsigned val;
+		val = S_028644_PT_SPRITE_TEX(1) | S_028644_OFFSET(0x20);
+		ps_input_cntl[ps_offset] = val;
+		ps_offset++;
+	}
+
+	for (unsigned i = 0; i < 32 && (1u << i) <= ps->info.fs.input_mask; ++i) {
+		unsigned vs_offset;
+		bool flat_shade;
+		if (!(ps->info.fs.input_mask & (1u << i)))
+			continue;
+
+		vs_offset = outinfo->vs_output_param_offset[VARYING_SLOT_VAR0 + i];
+		if (vs_offset == AC_EXP_PARAM_UNDEFINED) {
+			ps_input_cntl[ps_offset] = S_028644_OFFSET(0x20);
+			++ps_offset;
+			continue;
+		}
+
+		flat_shade = !!(ps->info.fs.flat_shaded_mask & (1u << ps_offset));
+
+		ps_input_cntl[ps_offset] = offset_to_ps_input(vs_offset, flat_shade);
+		++ps_offset;
+	}
+
+	if (ps_offset) {
+		radeon_set_context_reg_seq(cs, R_028644_SPI_PS_INPUT_CNTL_0, ps_offset);
+		for (unsigned i = 0; i < ps_offset; i++) {
+			radeon_emit(cs, ps_input_cntl[i]);
+		}
+	}
+}
 
 static void
 radv_pipeline_generate_fragment_shader(struct radeon_winsys_cs *cs,
@@ -2844,13 +2849,6 @@ radv_pipeline_generate_fragment_shader(struct radeon_winsys_cs *cs,
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_DFSM) | EVENT_INDEX(0));
 	}
-
-	if (pipeline->graphics.ps_input_cntl_num) {
-		radeon_set_context_reg_seq(cs, R_028644_SPI_PS_INPUT_CNTL_0, pipeline->graphics.ps_input_cntl_num);
-		for (unsigned i = 0; i < pipeline->graphics.ps_input_cntl_num; i++) {
-			radeon_emit(cs, pipeline->graphics.ps_input_cntl[i]);
-		}
-	}
 }
 
 static void
@@ -2884,6 +2882,7 @@ radv_pipeline_generate_pm4(struct radv_pipeline *pipeline,
 	radv_pipeline_generate_tess_shaders(&pipeline->cs, pipeline);
 	radv_pipeline_generate_geometry_shader(&pipeline->cs, pipeline);
 	radv_pipeline_generate_fragment_shader(&pipeline->cs, pipeline);
+	radv_pipeline_generate_ps_inputs(&pipeline->cs, pipeline);
 	radv_pipeline_generate_vgt_vertex_reuse(&pipeline->cs, pipeline);
 	radv_pipeline_generate_binning_state(&pipeline->cs, pipeline, pCreateInfo);
 
@@ -3009,7 +3008,6 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	pipeline->graphics.shader_z_format = shader_z_format;
 
 	calculate_vgt_gs_mode(pipeline);
-	calculate_ps_inputs(pipeline);
 
 	for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
 		if (pipeline->shaders[i]) {
