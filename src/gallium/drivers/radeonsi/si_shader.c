@@ -1848,7 +1848,7 @@ void si_llvm_load_input_fs(
 	interp_fs_input(ctx, input_index, semantic_name,
 			semantic_index, 0, /* this param is unused */
 			shader->selector->info.colors_read, interp_param,
-			LLVMGetParam(main_fn, SI_PARAM_PRIM_MASK),
+			ctx->abi.prim_mask,
 			LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE),
 			&out[0]);
 }
@@ -4076,7 +4076,7 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	int input_base, input_array_size;
 	int chan;
 	int i;
-	LLVMValueRef prim_mask = LLVMGetParam(ctx->main_fn, SI_PARAM_PRIM_MASK);
+	LLVMValueRef prim_mask = ctx->abi.prim_mask;
 	LLVMValueRef array_idx;
 	int interp_param_idx;
 	unsigned interp;
@@ -4879,7 +4879,8 @@ static void create_function(struct si_shader_context *ctx)
 		declare_global_desc_pointers(ctx, &fninfo);
 		declare_per_stage_desc_pointers(ctx, &fninfo, true);
 		add_arg_checked(&fninfo, ARG_SGPR, ctx->f32, SI_PARAM_ALPHA_REF);
-		add_arg_checked(&fninfo, ARG_SGPR, ctx->i32, SI_PARAM_PRIM_MASK);
+		add_arg_assign_checked(&fninfo, ARG_SGPR, ctx->i32,
+				       &ctx->abi.prim_mask, SI_PARAM_PRIM_MASK);
 
 		add_arg_checked(&fninfo, ARG_VGPR, ctx->v2i32, SI_PARAM_PERSP_SAMPLE);
 		add_arg_checked(&fninfo, ARG_VGPR, ctx->v2i32, SI_PARAM_PERSP_CENTER);

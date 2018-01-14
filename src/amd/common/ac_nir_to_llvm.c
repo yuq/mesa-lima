@@ -123,7 +123,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef hs_ring_tess_offchip;
 	LLVMValueRef hs_ring_tess_factor;
 
-	LLVMValueRef prim_mask;
 	LLVMValueRef sample_pos_offset;
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
 	LLVMValueRef linear_sample, linear_center, linear_centroid;
@@ -1005,7 +1004,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->sample_pos_offset);
 
-		add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->prim_mask);
+		add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->abi.prim_mask);
 		add_arg(&args, ARG_VGPR, ctx->ac.v2i32, &ctx->persp_sample);
 		add_arg(&args, ARG_VGPR, ctx->ac.v2i32, &ctx->persp_center);
 		add_arg(&args, ARG_VGPR, ctx->ac.v2i32, &ctx->persp_centroid);
@@ -4146,12 +4145,12 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 
 			result[chan] = ac_build_fs_interp(&ctx->ac,
 							  llvm_chan, attr_number,
-							  ctx->prim_mask, i, j);
+							  ctx->abi.prim_mask, i, j);
 		} else {
 			result[chan] = ac_build_fs_interp_mov(&ctx->ac,
 							      LLVMConstInt(ctx->ac.i32, 2, false),
 							      llvm_chan, attr_number,
-							      ctx->prim_mask);
+							      ctx->abi.prim_mask);
 		}
 	}
 	return ac_build_varying_gather_values(&ctx->ac, result, instr->num_components,
@@ -5464,7 +5463,7 @@ prepare_interp_optimize(struct nir_to_llvm_context *ctx,
 	}
 
 	if (uses_center && uses_centroid) {
-		LLVMValueRef sel = LLVMBuildICmp(ctx->builder, LLVMIntSLT, ctx->prim_mask, ctx->ac.i32_0, "");
+		LLVMValueRef sel = LLVMBuildICmp(ctx->builder, LLVMIntSLT, ctx->abi.prim_mask, ctx->ac.i32_0, "");
 		ctx->persp_centroid = LLVMBuildSelect(ctx->builder, sel, ctx->persp_center, ctx->persp_centroid, "");
 		ctx->linear_centroid = LLVMBuildSelect(ctx->builder, sel, ctx->linear_center, ctx->linear_centroid, "");
 	}
@@ -5495,7 +5494,7 @@ handle_fs_inputs(struct nir_to_llvm_context *ctx,
 		if (i >= VARYING_SLOT_VAR0 || i == VARYING_SLOT_PNTC ||
 		    i == VARYING_SLOT_PRIMITIVE_ID || i == VARYING_SLOT_LAYER) {
 			interp_param = *inputs;
-			interp_fs_input(ctx, index, interp_param, ctx->prim_mask,
+			interp_fs_input(ctx, index, interp_param, ctx->abi.prim_mask,
 					inputs);
 
 			if (!interp_param)
