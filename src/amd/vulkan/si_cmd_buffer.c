@@ -741,21 +741,21 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 	bool ia_switch_on_eop = false;
 	bool ia_switch_on_eoi = false;
 	bool partial_vs_wave = false;
-	bool partial_es_wave = cmd_buffer->state.pipeline->graphics.partial_es_wave;
+	bool partial_es_wave = cmd_buffer->state.pipeline->graphics.ia_multi_vgt_param.partial_es_wave;
 	bool multi_instances_smaller_than_primgroup;
 
 	multi_instances_smaller_than_primgroup = indirect_draw;
 	if (!multi_instances_smaller_than_primgroup && instanced_draw) {
 		uint32_t num_prims = radv_prims_for_vertices(&cmd_buffer->state.pipeline->graphics.prim_vertex_count, draw_vertex_count);
-		if (num_prims < cmd_buffer->state.pipeline->graphics.primgroup_size)
+		if (num_prims < cmd_buffer->state.pipeline->graphics.ia_multi_vgt_param.primgroup_size)
 			multi_instances_smaller_than_primgroup = true;
 	}
 
-	ia_switch_on_eoi = cmd_buffer->state.pipeline->graphics.ia_switch_on_eoi;
-	partial_vs_wave = cmd_buffer->state.pipeline->graphics.partial_vs_wave;
+	ia_switch_on_eoi = cmd_buffer->state.pipeline->graphics.ia_multi_vgt_param.ia_switch_on_eoi;
+	partial_vs_wave = cmd_buffer->state.pipeline->graphics.ia_multi_vgt_param.partial_vs_wave;
 
 	if (chip_class >= CIK) {
-		wd_switch_on_eop = cmd_buffer->state.pipeline->graphics.wd_switch_on_eop;
+		wd_switch_on_eop = cmd_buffer->state.pipeline->graphics.ia_multi_vgt_param.wd_switch_on_eop;
 
 		/* Hawaii hangs if instancing is enabled and WD_SWITCH_ON_EOP is 0.
 		 * We don't know that for indirect drawing, so treat it as
@@ -815,7 +815,7 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 		}
 	}
 
-	return cmd_buffer->state.pipeline->graphics.base_ia_multi_vgt_param |
+	return cmd_buffer->state.pipeline->graphics.ia_multi_vgt_param.base |
 		S_028AA8_SWITCH_ON_EOP(ia_switch_on_eop) |
 		S_028AA8_SWITCH_ON_EOI(ia_switch_on_eoi) |
 		S_028AA8_PARTIAL_VS_WAVE_ON(partial_vs_wave) |

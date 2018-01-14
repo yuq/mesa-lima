@@ -1189,6 +1189,15 @@ struct radv_vertex_elements_info {
 	uint32_t count;
 };
 
+struct radv_ia_multi_vgt_param_helpers {
+	uint32_t base;
+	bool partial_es_wave;
+	uint8_t primgroup_size;
+	bool wd_switch_on_eop;
+	bool ia_switch_on_eoi;
+	bool partial_vs_wave;
+};
+
 #define SI_GS_PER_ES 128
 
 struct radv_pipeline {
@@ -1223,16 +1232,11 @@ struct radv_pipeline {
 			uint32_t vgt_gs_mode;
 			bool vgt_primitiveid_en;
 			bool prim_restart_enable;
-			bool partial_es_wave;
-			uint8_t primgroup_size;
 			unsigned esgs_ring_size;
 			unsigned gsvs_ring_size;
 			uint32_t vgt_shader_stages_en;
 			uint32_t vtx_base_sgpr;
-			uint32_t base_ia_multi_vgt_param;
-			bool wd_switch_on_eop;
-			bool ia_switch_on_eoi;
-			bool partial_vs_wave;
+			struct radv_ia_multi_vgt_param_helpers ia_multi_vgt_param;
 			uint8_t vtx_emit_num;
 			struct radv_prim_vertex_count prim_vertex_count;
  			bool can_use_guardband;
