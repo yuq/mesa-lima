@@ -106,6 +106,29 @@ pipe_pl111_create_screen(int fd, const struct pipe_screen_config *config)
 
 #endif
 
+#ifdef GALLIUM_EXYNOS
+#include "exynos/drm/exynos_drm_public.h"
+
+struct pipe_screen *
+pipe_exynos_create_screen(int fd, const struct pipe_screen_config *config)
+{
+   struct pipe_screen *screen;
+
+   screen = exynos_screen_create(fd);
+   return screen ? debug_screen_wrap(screen) : NULL;
+}
+
+#else
+
+struct pipe_screen *
+pipe_exynos_create_screen(int fd, const struct pipe_screen_config *config)
+{
+   fprintf(stderr, "exynos: driver missing\n");
+   return NULL;
+}
+
+#endif
+
 #ifdef GALLIUM_SUN4I
 #include "sun4i/drm/sun4i_drm_public.h"
 

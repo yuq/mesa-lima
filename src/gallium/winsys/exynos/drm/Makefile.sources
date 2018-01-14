@@ -1,0 +1,3 @@
+C_SOURCES := \
+   exynos_drm_public.h \
+   exynos_drm_winsys.c
