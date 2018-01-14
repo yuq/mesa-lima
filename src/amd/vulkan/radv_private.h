@@ -1127,13 +1127,6 @@ mesa_to_vk_shader_stage(gl_shader_stage mesa_stage)
 	     stage = __builtin_ffs(__tmp) - 1, __tmp;			\
 	     __tmp &= ~(1 << (stage)))
 
-struct radv_depth_stencil_state {
-	uint32_t db_depth_control;
-	uint32_t db_stencil_control;
-	uint32_t db_render_control;
-	uint32_t db_render_override2;
-};
-
 struct radv_blend_state {
 	uint32_t cb_color_control;
 	uint32_t cb_target_mask;
@@ -1220,7 +1213,6 @@ struct radv_pipeline {
 	union {
 		struct {
 			struct radv_blend_state blend;
-			struct radv_depth_stencil_state ds;
 			struct radv_raster_state raster;
 			struct radv_multisample_state ms;
 			struct radv_tessellation_state tess;
