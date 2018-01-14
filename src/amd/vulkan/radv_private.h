@@ -1246,7 +1246,6 @@ struct radv_pipeline {
 			bool ia_switch_on_eoi;
 			bool partial_vs_wave;
 			uint8_t vtx_emit_num;
-			uint32_t vtx_reuse_depth;
 			struct radv_prim_vertex_count prim_vertex_count;
  			bool can_use_guardband;
 			uint32_t pa_sc_cliprect_rule;
