@@ -6424,8 +6424,6 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx)
 		si_export_mrt_color(ctx, NULL, V_008DFC_SQ_EXP_NULL, true, &color_args[0]);
 		ac_build_export(&ctx->ac, &color_args[0]);
 	}
-
-	ctx->shader_info->fs.output_mask = index ? ((1ull << index) - 1) : 0;
 }
 
 static void
