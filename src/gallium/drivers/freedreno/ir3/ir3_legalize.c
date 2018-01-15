@@ -116,6 +116,7 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 				 */
 				if (regmask_get(&needs_ss, reg)) {
 					n->flags |= IR3_INSTR_SS;
+					regmask_init(&needs_ss_war);
 					regmask_init(&needs_ss);
 				}
 
@@ -137,7 +138,8 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 			reg = n->regs[0];
 			if (regmask_get(&needs_ss_war, reg)) {
 				n->flags |= IR3_INSTR_SS;
-				regmask_init(&needs_ss_war); // ??? I assume?
+				regmask_init(&needs_ss_war);
+				regmask_init(&needs_ss);
 			}
 
 			if (last_rel && (reg->num == regid(REG_A0, 0))) {
