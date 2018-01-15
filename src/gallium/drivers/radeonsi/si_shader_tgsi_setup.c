@@ -1160,11 +1160,11 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	LLVMDisposeMessage(data_layout_str);
 
 	bool unsafe_fpmath = (sscreen->debug_flags & DBG(UNSAFE_MATH)) != 0;
-	enum lp_float_mode float_mode =
-		unsafe_fpmath ? LP_FLOAT_MODE_UNSAFE_FP_MATH :
-				LP_FLOAT_MODE_NO_SIGNED_ZEROS_FP_MATH;
+	enum ac_float_mode float_mode =
+		unsafe_fpmath ? AC_FLOAT_MODE_UNSAFE_FP_MATH :
+				AC_FLOAT_MODE_NO_SIGNED_ZEROS_FP_MATH;
 
-	ctx->gallivm.builder = lp_create_builder(ctx->gallivm.context,
+	ctx->gallivm.builder = ac_create_builder(ctx->gallivm.context,
 						 float_mode);
 
 	ac_llvm_context_init(&ctx->ac, ctx->gallivm.context,
