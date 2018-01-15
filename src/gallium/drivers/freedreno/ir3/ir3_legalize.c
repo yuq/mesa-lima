@@ -335,7 +335,22 @@ resolve_jump(struct ir3_instruction *instr)
 	target = list_first_entry(&tblock->instr_list,
 				struct ir3_instruction, node);
 
-	if ((!target) || (target->ip == (instr->ip + 1))) {
+	/* TODO maybe a less fragile way to do this.  But we are expecting
+	 * a pattern from sched_block() that looks like:
+	 *
+	 *   br !p0.x, #else-block
+	 *   br p0.x, #if-block
+	 *
+	 * if the first branch target is +2, or if 2nd branch target is +1
+	 * then we can just drop the jump.
+	 */
+	unsigned next_block;
+	if (instr->cat0.inv == true)
+		next_block = 2;
+	else
+		next_block = 1;
+
+	if ((!target) || (target->ip == (instr->ip + next_block))) {
 		list_delinit(&instr->node);
 		return true;
 	} else {
