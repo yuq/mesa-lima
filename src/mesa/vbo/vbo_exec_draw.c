@@ -180,14 +180,14 @@ vbo_exec_bind_arrays( struct gl_context *ctx )
    GLbitfield varying_inputs = 0x0;
    bool swap_pos = false;
 
-   /* Install the default (ie Current) attributes first, then overlay
-    * all active ones.
-    */
+   /* Install the default (ie Current) attributes first */
+   for (attr = 0; attr < VERT_ATTRIB_FF_MAX; attr++) {
+      exec->vtx.inputs[attr] = &vbo->currval[VBO_ATTRIB_POS+attr];
+   }
+
+   /* Overlay other active attributes */
    switch (get_program_mode(exec->ctx)) {
    case VP_NONE:
-      for (attr = 0; attr < VERT_ATTRIB_FF_MAX; attr++) {
-         exec->vtx.inputs[attr] = &vbo->currval[VBO_ATTRIB_POS+attr];
-      }
       for (attr = 0; attr < MAT_ATTRIB_MAX; attr++) {
          assert(VERT_ATTRIB_GENERIC(attr) < ARRAY_SIZE(exec->vtx.inputs));
          exec->vtx.inputs[VERT_ATTRIB_GENERIC(attr)] =
@@ -196,9 +196,6 @@ vbo_exec_bind_arrays( struct gl_context *ctx )
       map = vbo->map_vp_none;
       break;
    case VP_ARB:
-      for (attr = 0; attr < VERT_ATTRIB_FF_MAX; attr++) {
-         exec->vtx.inputs[attr] = &vbo->currval[VBO_ATTRIB_POS+attr];
-      }
       for (attr = 0; attr < VERT_ATTRIB_GENERIC_MAX; attr++) {
          assert(VERT_ATTRIB_GENERIC(attr) < ARRAY_SIZE(exec->vtx.inputs));
          exec->vtx.inputs[VERT_ATTRIB_GENERIC(attr)] =

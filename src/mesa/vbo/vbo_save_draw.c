@@ -158,14 +158,14 @@ bind_vertex_list(struct gl_context *ctx,
       buffer_offset = 0;
    }
 
-   /* Install the default (ie Current) attributes first, then overlay
-    * all active ones.
-    */
+   /* Install the default (ie Current) attributes first */
+   for (attr = 0; attr < VERT_ATTRIB_FF_MAX; attr++) {
+      save->inputs[attr] = &vbo->currval[VBO_ATTRIB_POS+attr];
+   }
+
+   /* Overlay other active attributes */
    switch (get_program_mode(ctx)) {
    case VP_NONE:
-      for (attr = 0; attr < VERT_ATTRIB_FF_MAX; attr++) {
-         save->inputs[attr] = &vbo->currval[VBO_ATTRIB_POS+attr];
-      }
       for (attr = 0; attr < MAT_ATTRIB_MAX; attr++) {
          save->inputs[VERT_ATTRIB_GENERIC(attr)] =
             &vbo->currval[VBO_ATTRIB_MAT_FRONT_AMBIENT+attr];
@@ -173,9 +173,6 @@ bind_vertex_list(struct gl_context *ctx,
       map = vbo->map_vp_none;
       break;
    case VP_ARB:
-      for (attr = 0; attr < VERT_ATTRIB_FF_MAX; attr++) {
-         save->inputs[attr] = &vbo->currval[VBO_ATTRIB_POS+attr];
-      }
       for (attr = 0; attr < VERT_ATTRIB_GENERIC_MAX; attr++) {
          save->inputs[VERT_ATTRIB_GENERIC(attr)] =
             &vbo->currval[VBO_ATTRIB_GENERIC0+attr];
