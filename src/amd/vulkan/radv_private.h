@@ -1204,8 +1204,6 @@ struct radv_pipeline {
 			uint32_t spi_baryc_cntl;
 			unsigned prim;
 			unsigned gs_out;
-			uint32_t vgt_gs_mode;
-			bool vgt_primitiveid_en;
 			bool prim_restart_enable;
 			unsigned esgs_ring_size;
 			unsigned gsvs_ring_size;
