@@ -3073,6 +3073,48 @@ radv_compute_ia_multi_vgt_param_helpers(struct radv_pipeline *pipeline,
 	return ia_multi_vgt_param;
 }
 
+
+static void
+radv_compute_vertex_input_state(struct radv_pipeline *pipeline,
+                                const VkGraphicsPipelineCreateInfo *pCreateInfo)
+{
+	const VkPipelineVertexInputStateCreateInfo *vi_info =
+		pCreateInfo->pVertexInputState;
+	struct radv_vertex_elements_info *velems = &pipeline->vertex_elements;
+
+	for (uint32_t i = 0; i < vi_info->vertexAttributeDescriptionCount; i++) {
+		const VkVertexInputAttributeDescription *desc =
+			&vi_info->pVertexAttributeDescriptions[i];
+		unsigned loc = desc->location;
+		const struct vk_format_description *format_desc;
+		int first_non_void;
+		uint32_t num_format, data_format;
+		format_desc = vk_format_description(desc->format);
+		first_non_void = vk_format_get_first_non_void_channel(desc->format);
+
+		num_format = radv_translate_buffer_numformat(format_desc, first_non_void);
+		data_format = radv_translate_buffer_dataformat(format_desc, first_non_void);
+
+		velems->rsrc_word3[loc] = S_008F0C_DST_SEL_X(si_map_swizzle(format_desc->swizzle[0])) |
+			S_008F0C_DST_SEL_Y(si_map_swizzle(format_desc->swizzle[1])) |
+			S_008F0C_DST_SEL_Z(si_map_swizzle(format_desc->swizzle[2])) |
+			S_008F0C_DST_SEL_W(si_map_swizzle(format_desc->swizzle[3])) |
+			S_008F0C_NUM_FORMAT(num_format) |
+			S_008F0C_DATA_FORMAT(data_format);
+		velems->format_size[loc] = format_desc->block.bits / 8;
+		velems->offset[loc] = desc->offset;
+		velems->binding[loc] = desc->binding;
+		velems->count = MAX2(velems->count, loc + 1);
+	}
+
+	for (uint32_t i = 0; i < vi_info->vertexBindingDescriptionCount; i++) {
+		const VkVertexInputBindingDescription *desc =
+			&vi_info->pVertexBindingDescriptions[i];
+
+		pipeline->binding_stride[desc->binding] = desc->stride;
+	}
+}
+
 static VkResult
 radv_pipeline_init(struct radv_pipeline *pipeline,
 		   struct radv_device *device,
@@ -3174,41 +3216,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 
 	pipeline->graphics.ia_multi_vgt_param = radv_compute_ia_multi_vgt_param_helpers(pipeline, &tess);
 
-	const VkPipelineVertexInputStateCreateInfo *vi_info =
-		pCreateInfo->pVertexInputState;
-	struct radv_vertex_elements_info *velems = &pipeline->vertex_elements;
-
-	for (uint32_t i = 0; i < vi_info->vertexAttributeDescriptionCount; i++) {
-		const VkVertexInputAttributeDescription *desc =
-			&vi_info->pVertexAttributeDescriptions[i];
-		unsigned loc = desc->location;
-		const struct vk_format_description *format_desc;
-		int first_non_void;
-		uint32_t num_format, data_format;
-		format_desc = vk_format_description(desc->format);
-		first_non_void = vk_format_get_first_non_void_channel(desc->format);
-
-		num_format = radv_translate_buffer_numformat(format_desc, first_non_void);
-		data_format = radv_translate_buffer_dataformat(format_desc, first_non_void);
-
-		velems->rsrc_word3[loc] = S_008F0C_DST_SEL_X(si_map_swizzle(format_desc->swizzle[0])) |
-			S_008F0C_DST_SEL_Y(si_map_swizzle(format_desc->swizzle[1])) |
-			S_008F0C_DST_SEL_Z(si_map_swizzle(format_desc->swizzle[2])) |
-			S_008F0C_DST_SEL_W(si_map_swizzle(format_desc->swizzle[3])) |
-			S_008F0C_NUM_FORMAT(num_format) |
-			S_008F0C_DATA_FORMAT(data_format);
-		velems->format_size[loc] = format_desc->block.bits / 8;
-		velems->offset[loc] = desc->offset;
-		velems->binding[loc] = desc->binding;
-		velems->count = MAX2(velems->count, loc + 1);
-	}
-
-	for (uint32_t i = 0; i < vi_info->vertexBindingDescriptionCount; i++) {
-		const VkVertexInputBindingDescription *desc =
-			&vi_info->pVertexBindingDescriptions[i];
-
-		pipeline->binding_stride[desc->binding] = desc->stride;
-	}
+	radv_compute_vertex_input_state(pipeline, pCreateInfo);
 
 	for (uint32_t i = 0; i < MESA_SHADER_STAGES; i++)
 		pipeline->user_data_0[i] = radv_pipeline_stage_to_user_data_0(pipeline, i, device->physical_device->rad_info.chip_class);
