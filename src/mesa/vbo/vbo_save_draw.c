@@ -201,22 +201,23 @@ bind_vertex_list(struct gl_context *ctx,
       const GLuint src = map[attr];
 
       if (node_attrsz[src]) {
-         /* override the default array set above */
-         save->inputs[attr] = &arrays[attr];
+         struct gl_vertex_array *array = &arrays[attr];
 
-         arrays[attr].Ptr = (const GLubyte *) NULL + buffer_offset;
-         arrays[attr].Size = node_attrsz[src];
-         arrays[attr].StrideB = node->vertex_size * sizeof(GLfloat);
-         arrays[attr].Type = node_attrtype[src];
-         arrays[attr].Integer =
-               vbo_attrtype_to_integer_flag(node_attrtype[src]);
-         arrays[attr].Format = GL_RGBA;
-         arrays[attr]._ElementSize = arrays[attr].Size * sizeof(GLfloat);
+         /* override the default array set above */
+         save->inputs[attr] = array;
+
+         array->Ptr = (const GLubyte *) NULL + buffer_offset;
+         array->Size = node_attrsz[src];
+         array->StrideB = node->vertex_size * sizeof(GLfloat);
+         array->Type = node_attrtype[src];
+         array->Integer = vbo_attrtype_to_integer_flag(node_attrtype[src]);
+         array->Format = GL_RGBA;
+         array->_ElementSize = array->Size * sizeof(GLfloat);
          _mesa_reference_buffer_object(ctx,
-                                       &arrays[attr].BufferObj,
+                                       &array->BufferObj,
                                        node->vertex_store->bufferobj);
 
-         assert(arrays[attr].BufferObj->Name);
+         assert(array->BufferObj->Name);
 
          buffer_offset += node_attrsz[src] * sizeof(GLfloat);
          varying_inputs |= VERT_BIT(attr);
