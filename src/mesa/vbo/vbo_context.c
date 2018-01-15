@@ -25,9 +25,7 @@
  *    Keith Whitwell <keithw@vmware.com>
  */
 
-#include "main/imports.h"
 #include "main/mtypes.h"
-#include "main/api_arrayelt.h"
 #include "main/bufferobj.h"
 #include "math/m_eval.h"
 #include "vbo.h"
