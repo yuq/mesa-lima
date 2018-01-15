@@ -1127,17 +1127,6 @@ mesa_to_vk_shader_stage(gl_shader_stage mesa_stage)
 	     stage = __builtin_ffs(__tmp) - 1, __tmp;			\
 	     __tmp &= ~(1 << (stage)))
 
-struct radv_blend_state {
-	uint32_t cb_color_control;
-	uint32_t cb_target_mask;
-	uint32_t sx_mrt_blend_opt[8];
-	uint32_t cb_blend_control[8];
-
-	uint32_t spi_shader_col_format;
-	uint32_t cb_shader_mask;
-	uint32_t db_alpha_to_mask;
-};
-
 unsigned radv_format_meta_fs_key(VkFormat format);
 
 struct radv_raster_state {
@@ -1221,7 +1210,6 @@ struct radv_pipeline {
 	uint32_t user_data_0[MESA_SHADER_STAGES];
 	union {
 		struct {
-			struct radv_blend_state blend;
 			struct radv_raster_state raster;
 			struct radv_multisample_state ms;
 			struct radv_tessellation_state tess;
