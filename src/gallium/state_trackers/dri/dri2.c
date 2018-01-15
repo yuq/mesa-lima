@@ -2003,7 +2003,6 @@ static const __DRIextension *dri_screen_extensions[] = {
    &dri2FenceExtension.base,
    &dri2InteropExtension.base,
    &dri2NoErrorExtension.base,
-   &dri2FlushControlExtension.base,
    NULL
 };
 
@@ -2018,7 +2017,6 @@ static const __DRIextension *dri_robust_screen_extensions[] = {
    &dri2InteropExtension.base,
    &dri2Robustness.base,
    &dri2NoErrorExtension.base,
-   &dri2FlushControlExtension.base,
    NULL
 };
 
