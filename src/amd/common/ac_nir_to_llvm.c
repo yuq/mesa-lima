@@ -6683,7 +6683,11 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	LLVMDisposeTargetData(data_layout);
 	LLVMDisposeMessage(data_layout_str);
 
-	ctx.builder = LLVMCreateBuilderInContext(ctx.context);
+	enum ac_float_mode float_mode =
+		options->unsafe_math ? AC_FLOAT_MODE_UNSAFE_FP_MATH :
+				       AC_FLOAT_MODE_DEFAULT;
+
+	ctx.builder = ac_create_builder(ctx.context, float_mode);
 	ctx.ac.builder = ctx.builder;
 
 	memset(shader_info, 0, sizeof(*shader_info));
@@ -7095,7 +7099,11 @@ void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
 	ctx.is_gs_copy_shader = true;
 	LLVMSetTarget(ctx.module, "amdgcn--");
 
-	ctx.builder = LLVMCreateBuilderInContext(ctx.context);
+	enum ac_float_mode float_mode =
+		options->unsafe_math ? AC_FLOAT_MODE_UNSAFE_FP_MATH :
+				       AC_FLOAT_MODE_DEFAULT;
+
+	ctx.builder = ac_create_builder(ctx.context, float_mode);
 	ctx.ac.builder = ctx.builder;
 	ctx.stage = MESA_SHADER_VERTEX;
 
