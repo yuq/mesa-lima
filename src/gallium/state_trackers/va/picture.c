@@ -682,9 +682,11 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
             vl_compositor_yuv_deint_full(&drv->cstate, &drv->compositor,
                                          old_buf, surf->buffer,
                                          &src_rect, &dst_rect, VL_COMPOSITOR_WEAVE);
-         } else
+         } else {
             /* Can't convert from progressive to interlaced yet */
+            mtx_unlock(&drv->mutex);
             return VA_STATUS_ERROR_INVALID_SURFACE;
+         }
       }
 
       old_buf->destroy(old_buf);
