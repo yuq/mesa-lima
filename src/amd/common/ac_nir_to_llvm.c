@@ -352,6 +352,9 @@ create_llvm_function(LLVMContextRef ctx, LLVMModuleRef module,
 		LLVMAddTargetDependentFunctionAttr(main_function,
 						   "unsafe-fp-math",
 						   "true");
+		LLVMAddTargetDependentFunctionAttr(main_function,
+					   "no-signed-zeros-fp-math",
+					   "true");
 	}
 	return main_function;
 }
