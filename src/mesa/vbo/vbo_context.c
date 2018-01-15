@@ -34,12 +34,16 @@
 #include "vbo_context.h"
 
 
-static GLuint check_size( const GLfloat *attr )
+static GLuint
+check_size(const GLfloat *attr)
 {
-   if (attr[3] != 1.0F) return 4;
-   if (attr[2] != 0.0F) return 3;
-   if (attr[1] != 0.0F) return 2;
-   return 1;		
+   if (attr[3] != 1.0F)
+      return 4;
+   if (attr[2] != 0.0F)
+      return 3;
+   if (attr[1] != 0.0F)
+      return 2;
+   return 1;
 }
 
 
@@ -68,7 +72,8 @@ init_array(struct gl_context *ctx, struct gl_vertex_array *cl,
  * Set up the vbo->currval arrays to point at the context's current
  * vertex attributes (with strides = 0).
  */
-static void init_legacy_currval(struct gl_context *ctx)
+static void
+init_legacy_currval(struct gl_context *ctx)
 {
    struct vbo_context *vbo = vbo_context(ctx);
    GLuint i;
@@ -86,7 +91,8 @@ static void init_legacy_currval(struct gl_context *ctx)
 }
 
 
-static void init_generic_currval(struct gl_context *ctx)
+static void
+init_generic_currval(struct gl_context *ctx)
 {
    struct vbo_context *vbo = vbo_context(ctx);
    GLuint i;
@@ -99,7 +105,8 @@ static void init_generic_currval(struct gl_context *ctx)
 }
 
 
-static void init_mat_currval(struct gl_context *ctx)
+static void
+init_mat_currval(struct gl_context *ctx)
 {
    struct vbo_context *vbo = vbo_context(ctx);
    GLuint i;
@@ -176,7 +183,8 @@ vbo_draw_indirect_prims(struct gl_context *ctx,
 }
 
 
-GLboolean _vbo_CreateContext( struct gl_context *ctx )
+GLboolean
+_vbo_CreateContext(struct gl_context *ctx)
 {
    struct vbo_context *vbo = CALLOC_STRUCT(vbo_context);
 
@@ -185,13 +193,13 @@ GLboolean _vbo_CreateContext( struct gl_context *ctx )
    /* Initialize the arrayelt helper
     */
    if (!ctx->aelt_context &&
-       !_ae_create_context( ctx )) {
+       !_ae_create_context(ctx)) {
       return GL_FALSE;
    }
 
-   init_legacy_currval( ctx );
-   init_generic_currval( ctx );
-   init_mat_currval( ctx );
+   init_legacy_currval(ctx);
+   init_generic_currval(ctx);
+   init_mat_currval(ctx);
    vbo_set_indirect_draw_func(ctx, vbo_draw_indirect_prims);
 
    /* Build mappings from VERT_ATTRIB -> VBO_ATTRIB depending on type
@@ -204,15 +212,15 @@ GLboolean _vbo_CreateContext( struct gl_context *ctx )
       STATIC_ASSERT(VBO_ATTRIB_MAX <= 255);
 
       /* identity mapping */
-      for (i = 0; i < ARRAY_SIZE(vbo->map_vp_none); i++) 
-	 vbo->map_vp_none[i] = i;
+      for (i = 0; i < ARRAY_SIZE(vbo->map_vp_none); i++)
+         vbo->map_vp_none[i] = i;
       /* map material attribs to generic slots */
       for (i = 0; i < MAT_ATTRIB_MAX; i++)
-	 vbo->map_vp_none[VERT_ATTRIB_GENERIC(i)]
+         vbo->map_vp_none[VERT_ATTRIB_GENERIC(i)]
             = VBO_ATTRIB_MAT_FRONT_AMBIENT + i;
 
       for (i = 0; i < ARRAY_SIZE(vbo->map_vp_arb); i++)
-	 vbo->map_vp_arb[i] = i;
+         vbo->map_vp_arb[i] = i;
    }
 
 
@@ -220,9 +228,9 @@ GLboolean _vbo_CreateContext( struct gl_context *ctx )
     * will pretty much be permanently installed, which means that the
     * vtxfmt mechanism can be removed now.
     */
-   vbo_exec_init( ctx );
+   vbo_exec_init(ctx);
    if (ctx->API == API_OPENGL_COMPAT)
-      vbo_save_init( ctx );
+      vbo_save_init(ctx);
 
    _math_init_eval();
 
@@ -230,12 +238,13 @@ GLboolean _vbo_CreateContext( struct gl_context *ctx )
 }
 
 
-void _vbo_DestroyContext( struct gl_context *ctx )
+void
+_vbo_DestroyContext(struct gl_context *ctx)
 {
    struct vbo_context *vbo = vbo_context(ctx);
 
    if (ctx->aelt_context) {
-      _ae_destroy_context( ctx );
+      _ae_destroy_context(ctx);
       ctx->aelt_context = NULL;
    }
 
@@ -255,15 +264,17 @@ void _vbo_DestroyContext( struct gl_context *ctx )
 }
 
 
-void vbo_set_draw_func(struct gl_context *ctx, vbo_draw_func func)
+void
+vbo_set_draw_func(struct gl_context *ctx, vbo_draw_func func)
 {
    struct vbo_context *vbo = vbo_context(ctx);
    vbo->draw_prims = func;
 }
 
 
-void vbo_set_indirect_draw_func(struct gl_context *ctx,
-                                vbo_indirect_draw_func func)
+void
+vbo_set_indirect_draw_func(struct gl_context *ctx,
+                           vbo_indirect_draw_func func)
 {
    struct vbo_context *vbo = vbo_context(ctx);
    vbo->draw_indirect_prims = func;
