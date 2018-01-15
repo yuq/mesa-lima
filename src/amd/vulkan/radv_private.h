@@ -1234,7 +1234,6 @@ struct radv_pipeline {
 			bool prim_restart_enable;
 			unsigned esgs_ring_size;
 			unsigned gsvs_ring_size;
-			uint32_t vgt_shader_stages_en;
 			uint32_t vtx_base_sgpr;
 			struct radv_ia_multi_vgt_param_helpers ia_multi_vgt_param;
 			uint8_t vtx_emit_num;

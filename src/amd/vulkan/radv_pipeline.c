@@ -2883,6 +2883,32 @@ radv_pipeline_generate_vgt_vertex_reuse(struct radeon_winsys_cs *cs,
 	                       S_028C58_VTX_REUSE_DEPTH(vtx_reuse_depth));
 }
 
+static uint32_t
+radv_compute_vgt_shader_stages_en(const struct radv_pipeline *pipeline)
+{
+	uint32_t stages = 0;
+	if (radv_pipeline_has_tess(pipeline)) {
+		stages |= S_028B54_LS_EN(V_028B54_LS_STAGE_ON) |
+			S_028B54_HS_EN(1) | S_028B54_DYNAMIC_HS(1);
+
+		if (radv_pipeline_has_gs(pipeline))
+			stages |=  S_028B54_ES_EN(V_028B54_ES_STAGE_DS) |
+				S_028B54_GS_EN(1) |
+				S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
+		else
+			stages |= S_028B54_VS_EN(V_028B54_VS_STAGE_DS);
+
+	} else if (radv_pipeline_has_gs(pipeline))
+		stages |= S_028B54_ES_EN(V_028B54_ES_STAGE_REAL) |
+			S_028B54_GS_EN(1) |
+			S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
+
+	if (pipeline->device->physical_device->rad_info.chip_class >= GFX9)
+		stages |= S_028B54_MAX_PRIMGRP_IN_WAVE(2);
+
+	return stages;
+}
+
 static void
 radv_pipeline_generate_pm4(struct radv_pipeline *pipeline,
                            const VkGraphicsPipelineCreateInfo *pCreateInfo,
@@ -2907,7 +2933,7 @@ radv_pipeline_generate_pm4(struct radv_pipeline *pipeline,
 			       S_0286E8_WAVES(pipeline->max_waves) |
 			       S_0286E8_WAVESIZE(pipeline->scratch_bytes_per_wave >> 10));
 
-	radeon_set_context_reg(&pipeline->cs, R_028B54_VGT_SHADER_STAGES_EN, pipeline->graphics.vgt_shader_stages_en);
+	radeon_set_context_reg(&pipeline->cs, R_028B54_VGT_SHADER_STAGES_EN, radv_compute_vgt_shader_stages_en(pipeline));
 
 	if (pipeline->device->physical_device->rad_info.chip_class >= CIK) {
 		radeon_set_uconfig_reg_idx(&pipeline->cs, R_030908_VGT_PRIMITIVE_TYPE, 1, pipeline->graphics.prim);
@@ -3093,28 +3119,6 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 			pipeline->need_indirect_descriptor_sets |= pipeline->shaders[i]->info.need_indirect_descriptor_sets;
 		}
 	}
-
-	uint32_t stages = 0;
-	if (radv_pipeline_has_tess(pipeline)) {
-		stages |= S_028B54_LS_EN(V_028B54_LS_STAGE_ON) |
-			S_028B54_HS_EN(1) | S_028B54_DYNAMIC_HS(1);
-
-		if (radv_pipeline_has_gs(pipeline))
-			stages |=  S_028B54_ES_EN(V_028B54_ES_STAGE_DS) |
-				S_028B54_GS_EN(1) |
-				S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
-		else
-			stages |= S_028B54_VS_EN(V_028B54_VS_STAGE_DS);
-
-	} else if (radv_pipeline_has_gs(pipeline))
-		stages |= S_028B54_ES_EN(V_028B54_ES_STAGE_REAL) |
-			S_028B54_GS_EN(1) |
-			S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
-
-	if (device->physical_device->rad_info.chip_class >= GFX9)
-		stages |= S_028B54_MAX_PRIMGRP_IN_WAVE(2);
-
-	pipeline->graphics.vgt_shader_stages_en = stages;
 
 	if (radv_pipeline_has_gs(pipeline)) {
 		calculate_gs_ring_sizes(pipeline);
