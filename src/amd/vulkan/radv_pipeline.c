@@ -1576,7 +1576,7 @@ static const struct radv_prim_vertex_count prim_size_table[] = {
 	[V_008958_DI_PT_2D_TRI_STRIP] = {0, 0},
 };
 
-static struct ac_vs_output_info *get_vs_output_info(struct radv_pipeline *pipeline)
+static const struct ac_vs_output_info *get_vs_output_info(const struct radv_pipeline *pipeline)
 {
 	if (radv_pipeline_has_gs(pipeline))
 		return &pipeline->gs_copy_shader->info.vs.outinfo;
@@ -1588,7 +1588,7 @@ static struct ac_vs_output_info *get_vs_output_info(struct radv_pipeline *pipeli
 
 static void calculate_vgt_gs_mode(struct radv_pipeline *pipeline)
 {
-	struct ac_vs_output_info *outinfo = get_vs_output_info(pipeline);
+	const struct ac_vs_output_info *outinfo = get_vs_output_info(pipeline);
 
 	pipeline->graphics.vgt_primitiveid_en = false;
 	pipeline->graphics.vgt_gs_mode = 0;
@@ -1608,7 +1608,7 @@ static void calculate_vgt_gs_mode(struct radv_pipeline *pipeline)
 
 static void calculate_vs_outinfo(struct radv_pipeline *pipeline)
 {
-	struct ac_vs_output_info *outinfo = get_vs_output_info(pipeline);
+	const struct ac_vs_output_info *outinfo = get_vs_output_info(pipeline);
 
 	unsigned clip_dist_mask, cull_dist_mask, total_mask;
 	clip_dist_mask = outinfo->clip_dist_mask;
@@ -1667,7 +1667,7 @@ static uint32_t offset_to_ps_input(uint32_t offset, bool flat_shade)
 static void calculate_ps_inputs(struct radv_pipeline *pipeline)
 {
 	struct radv_shader_variant *ps;
-	struct ac_vs_output_info *outinfo = get_vs_output_info(pipeline);
+	const struct ac_vs_output_info *outinfo = get_vs_output_info(pipeline);
 
 	ps = pipeline->shaders[MESA_SHADER_FRAGMENT];
 

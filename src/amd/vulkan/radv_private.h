@@ -1272,12 +1272,12 @@ struct radv_pipeline {
 	unsigned scratch_bytes_per_wave;
 };
 
-static inline bool radv_pipeline_has_gs(struct radv_pipeline *pipeline)
+static inline bool radv_pipeline_has_gs(const struct radv_pipeline *pipeline)
 {
 	return pipeline->shaders[MESA_SHADER_GEOMETRY] ? true : false;
 }
 
-static inline bool radv_pipeline_has_tess(struct radv_pipeline *pipeline)
+static inline bool radv_pipeline_has_tess(const struct radv_pipeline *pipeline)
 {
 	return pipeline->shaders[MESA_SHADER_TESS_CTRL] ? true : false;
 }
