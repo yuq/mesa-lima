@@ -137,7 +137,7 @@ bind_vertex_list(struct gl_context *ctx,
    struct vbo_save_context *save = &vbo->save;
    struct gl_vertex_array *arrays = save->arrays;
    GLuint buffer_offset = node->buffer_offset;
-   const GLuint *map;
+   const GLubyte *map;
    GLuint attr;
    GLubyte node_attrsz[VBO_ATTRIB_MAX];  /* copy of node->attrsz[] */
    GLenum node_attrtype[VBO_ATTRIB_MAX];  /* copy of node->attrtype[] */
@@ -160,7 +160,7 @@ bind_vertex_list(struct gl_context *ctx,
 
    /* Install the default (ie Current) attributes first */
    for (attr = 0; attr < VERT_ATTRIB_FF_MAX; attr++) {
-      save->inputs[attr] = &vbo->currval[VBO_ATTRIB_POS+attr];
+      save->inputs[attr] = &vbo->currval[VBO_ATTRIB_POS + attr];
    }
 
    /* Overlay other active attributes */

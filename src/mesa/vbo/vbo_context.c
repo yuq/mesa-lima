@@ -200,6 +200,9 @@ GLboolean _vbo_CreateContext( struct gl_context *ctx )
    {
       GLuint i;
 
+      /* make sure all VBO_ATTRIB_ values can fit in an unsigned byte */
+      STATIC_ASSERT(VBO_ATTRIB_MAX <= 255);
+
       /* identity mapping */
       for (i = 0; i < ARRAY_SIZE(vbo->map_vp_none); i++) 
 	 vbo->map_vp_none[i] = i;
