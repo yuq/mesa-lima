@@ -60,6 +60,18 @@ struct radv_blend_state {
 	uint32_t db_alpha_to_mask;
 };
 
+struct radv_tessellation_state {
+	uint32_t ls_hs_config;
+	uint32_t tcs_in_layout;
+	uint32_t tcs_out_layout;
+	uint32_t tcs_out_offsets;
+	uint32_t offchip_layout;
+	unsigned num_patches;
+	unsigned lds_size;
+	unsigned num_tcs_input_cp;
+	uint32_t tf_param;
+};
+
 static void
 radv_pipeline_destroy(struct radv_device *device,
                       struct radv_pipeline *pipeline,
@@ -1363,7 +1375,7 @@ radv_get_tess_eval_shader(struct radv_pipeline *pipeline)
 	return pipeline->shaders[MESA_SHADER_GEOMETRY];
 }
 
-static void
+static struct radv_tessellation_state
 calculate_tess_state(struct radv_pipeline *pipeline,
 		     const VkGraphicsPipelineCreateInfo *pCreateInfo)
 {
@@ -1375,7 +1387,7 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 	unsigned lds_size, hardware_lds_size;
 	unsigned perpatch_output_offset;
 	unsigned num_patches;
-	struct radv_tessellation_state *tess = &pipeline->graphics.tess;
+	struct radv_tessellation_state tess = {0};
 
 	/* This calculates how shader inputs and outputs among VS, TCS, and TES
 	 * are laid out in LDS. */
@@ -1438,22 +1450,22 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 	}
 	si_multiwave_lds_size_workaround(pipeline->device, &lds_size);
 
-	tess->lds_size = lds_size;
+	tess.lds_size = lds_size;
 
-	tess->tcs_in_layout = (input_patch_size / 4) |
+	tess.tcs_in_layout = (input_patch_size / 4) |
 		((input_vertex_size / 4) << 13);
-	tess->tcs_out_layout = (output_patch_size / 4) |
+	tess.tcs_out_layout = (output_patch_size / 4) |
 		((output_vertex_size / 4) << 13);
-	tess->tcs_out_offsets = (output_patch0_offset / 16) |
+	tess.tcs_out_offsets = (output_patch0_offset / 16) |
 		((perpatch_output_offset / 16) << 16);
-	tess->offchip_layout = (pervertex_output_patch_size * num_patches << 16) |
+	tess.offchip_layout = (pervertex_output_patch_size * num_patches << 16) |
 		(num_tcs_output_cp << 9) | num_patches;
 
-	tess->ls_hs_config = S_028B58_NUM_PATCHES(num_patches) |
+	tess.ls_hs_config = S_028B58_NUM_PATCHES(num_patches) |
 		S_028B58_HS_NUM_INPUT_CP(num_tcs_input_cp) |
 		S_028B58_HS_NUM_OUTPUT_CP(num_tcs_output_cp);
-	tess->num_patches = num_patches;
-	tess->num_tcs_input_cp = num_tcs_input_cp;
+	tess.num_patches = num_patches;
+	tess.num_tcs_input_cp = num_tcs_input_cp;
 
 	struct radv_shader_variant *tes = radv_get_tess_eval_shader(pipeline);
 	unsigned type = 0, partitioning = 0, topology = 0, distribution_mode = 0;
@@ -1510,10 +1522,12 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 	} else
 		distribution_mode = V_028B6C_DISTRIBUTION_MODE_NO_DIST;
 
-	tess->tf_param = S_028B6C_TYPE(type) |
+	tess.tf_param = S_028B6C_TYPE(type) |
 		S_028B6C_PARTITIONING(partitioning) |
 		S_028B6C_TOPOLOGY(topology) |
 		S_028B6C_DISTRIBUTION_MODE(distribution_mode);
+
+	return tess;
 }
 
 static const struct radv_prim_vertex_count prim_size_table[] = {
@@ -2528,7 +2542,8 @@ radv_pipeline_generate_hw_es(struct radeon_winsys_cs *cs,
 static void
 radv_pipeline_generate_hw_ls(struct radeon_winsys_cs *cs,
 			     struct radv_pipeline *pipeline,
-			     struct radv_shader_variant *shader)
+			     struct radv_shader_variant *shader,
+			     const struct radv_tessellation_state *tess)
 {
 	uint64_t va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
 	uint32_t rsrc2 = shader->rsrc2;
@@ -2537,7 +2552,7 @@ radv_pipeline_generate_hw_ls(struct radeon_winsys_cs *cs,
 	radeon_emit(cs, va >> 8);
 	radeon_emit(cs, va >> 40);
 
-	rsrc2 |= S_00B52C_LDS_SIZE(pipeline->graphics.tess.lds_size);
+	rsrc2 |= S_00B52C_LDS_SIZE(tess->lds_size);
 	if (pipeline->device->physical_device->rad_info.chip_class == CIK &&
 	    pipeline->device->physical_device->rad_info.family != CHIP_HAWAII)
 		radeon_set_sh_reg(cs, R_00B52C_SPI_SHADER_PGM_RSRC2_LS, rsrc2);
@@ -2550,7 +2565,8 @@ radv_pipeline_generate_hw_ls(struct radeon_winsys_cs *cs,
 static void
 radv_pipeline_generate_hw_hs(struct radeon_winsys_cs *cs,
 			     struct radv_pipeline *pipeline,
-			     struct radv_shader_variant *shader)
+			     struct radv_shader_variant *shader,
+			     const struct radv_tessellation_state *tess)
 {
 	uint64_t va = radv_buffer_get_va(shader->bo) + shader->bo_offset;
 
@@ -2562,7 +2578,7 @@ radv_pipeline_generate_hw_hs(struct radeon_winsys_cs *cs,
 		radeon_set_sh_reg_seq(cs, R_00B428_SPI_SHADER_PGM_RSRC1_HS, 2);
 		radeon_emit(cs, shader->rsrc1);
 		radeon_emit(cs, shader->rsrc2 |
-		                            S_00B42C_LDS_SIZE(pipeline->graphics.tess.lds_size));
+		                S_00B42C_LDS_SIZE(tess->lds_size));
 	} else {
 		radeon_set_sh_reg_seq(cs, R_00B420_SPI_SHADER_PGM_LO_HS, 4);
 		radeon_emit(cs, va >> 8);
@@ -2574,7 +2590,8 @@ radv_pipeline_generate_hw_hs(struct radeon_winsys_cs *cs,
 
 static void
 radv_pipeline_generate_vertex_shader(struct radeon_winsys_cs *cs,
-				     struct radv_pipeline *pipeline)
+				     struct radv_pipeline *pipeline,
+				     const struct radv_tessellation_state *tess)
 {
 	struct radv_shader_variant *vs;
 
@@ -2586,7 +2603,7 @@ radv_pipeline_generate_vertex_shader(struct radeon_winsys_cs *cs,
 		return;
 
 	if (vs->info.vs.as_ls)
-		radv_pipeline_generate_hw_ls(cs, pipeline, vs);
+		radv_pipeline_generate_hw_ls(cs, pipeline, vs, tess);
 	else if (vs->info.vs.as_es)
 		radv_pipeline_generate_hw_es(cs, pipeline, vs);
 	else
@@ -2595,7 +2612,8 @@ radv_pipeline_generate_vertex_shader(struct radeon_winsys_cs *cs,
 
 static void
 radv_pipeline_generate_tess_shaders(struct radeon_winsys_cs *cs,
-				    struct radv_pipeline *pipeline)
+				    struct radv_pipeline *pipeline,
+				    const struct radv_tessellation_state *tess)
 {
 	if (!radv_pipeline_has_tess(pipeline))
 		return;
@@ -2612,17 +2630,17 @@ radv_pipeline_generate_tess_shaders(struct radeon_winsys_cs *cs,
 			radv_pipeline_generate_hw_vs(cs, pipeline, tes);
 	}
 
-	radv_pipeline_generate_hw_hs(cs, pipeline, tcs);
+	radv_pipeline_generate_hw_hs(cs, pipeline, tcs, tess);
 
 	radeon_set_context_reg(cs, R_028B6C_VGT_TF_PARAM,
-			       pipeline->graphics.tess.tf_param);
+			       tess->tf_param);
 
 	if (pipeline->device->physical_device->rad_info.chip_class >= CIK)
 		radeon_set_context_reg_idx(cs, R_028B58_VGT_LS_HS_CONFIG, 2,
-					   pipeline->graphics.tess.ls_hs_config);
+					   tess->ls_hs_config);
 	else
 		radeon_set_context_reg(cs, R_028B58_VGT_LS_HS_CONFIG,
-				       pipeline->graphics.tess.ls_hs_config);
+				       tess->ls_hs_config);
 
 	struct ac_userdata_info *loc;
 
@@ -2632,11 +2650,11 @@ radv_pipeline_generate_tess_shaders(struct radeon_winsys_cs *cs,
 		assert(loc->num_sgprs == 4);
 		assert(!loc->indirect);
 		radeon_set_sh_reg_seq(cs, base_reg + loc->sgpr_idx * 4, 4);
-		radeon_emit(cs, pipeline->graphics.tess.offchip_layout);
-		radeon_emit(cs, pipeline->graphics.tess.tcs_out_offsets);
-		radeon_emit(cs, pipeline->graphics.tess.tcs_out_layout |
-			    pipeline->graphics.tess.num_tcs_input_cp << 26);
-		radeon_emit(cs, pipeline->graphics.tess.tcs_in_layout);
+		radeon_emit(cs, tess->offchip_layout);
+		radeon_emit(cs, tess->tcs_out_offsets);
+		radeon_emit(cs, tess->tcs_out_layout |
+			    tess->num_tcs_input_cp << 26);
+		radeon_emit(cs, tess->tcs_in_layout);
 	}
 
 	loc = radv_lookup_user_sgpr(pipeline, MESA_SHADER_TESS_EVAL, AC_UD_TES_OFFCHIP_LAYOUT);
@@ -2646,7 +2664,7 @@ radv_pipeline_generate_tess_shaders(struct radeon_winsys_cs *cs,
 		assert(!loc->indirect);
 
 		radeon_set_sh_reg(cs, base_reg + loc->sgpr_idx * 4,
-				  pipeline->graphics.tess.offchip_layout);
+				  tess->offchip_layout);
 	}
 
 	loc = radv_lookup_user_sgpr(pipeline, MESA_SHADER_VERTEX, AC_UD_VS_LS_TCS_IN_LAYOUT);
@@ -2656,7 +2674,7 @@ radv_pipeline_generate_tess_shaders(struct radeon_winsys_cs *cs,
 		assert(!loc->indirect);
 
 		radeon_set_sh_reg(cs, base_reg + loc->sgpr_idx * 4,
-				  pipeline->graphics.tess.tcs_in_layout);
+				  tess->tcs_in_layout);
 	}
 }
 
@@ -2929,7 +2947,8 @@ static void
 radv_pipeline_generate_pm4(struct radv_pipeline *pipeline,
                            const VkGraphicsPipelineCreateInfo *pCreateInfo,
                            const struct radv_graphics_pipeline_create_info *extra,
-                           const struct radv_blend_state *blend)
+                           const struct radv_blend_state *blend,
+                           const struct radv_tessellation_state *tess)
 {
 	pipeline->cs.buf = malloc(4 * 256);
 	pipeline->cs.max_dw = 256;
@@ -2938,8 +2957,8 @@ radv_pipeline_generate_pm4(struct radv_pipeline *pipeline,
 	radv_pipeline_generate_blend_state(&pipeline->cs, pipeline, blend);
 	radv_pipeline_generate_raster_state(&pipeline->cs, pipeline);
 	radv_pipeline_generate_multisample_state(&pipeline->cs, pipeline);
-	radv_pipeline_generate_vertex_shader(&pipeline->cs, pipeline);
-	radv_pipeline_generate_tess_shaders(&pipeline->cs, pipeline);
+	radv_pipeline_generate_vertex_shader(&pipeline->cs, pipeline, tess);
+	radv_pipeline_generate_tess_shaders(&pipeline->cs, pipeline, tess);
 	radv_pipeline_generate_geometry_shader(&pipeline->cs, pipeline);
 	radv_pipeline_generate_fragment_shader(&pipeline->cs, pipeline);
 	radv_pipeline_generate_ps_inputs(&pipeline->cs, pipeline);
@@ -2965,13 +2984,14 @@ radv_pipeline_generate_pm4(struct radv_pipeline *pipeline,
 }
 
 static struct radv_ia_multi_vgt_param_helpers
-radv_compute_ia_multi_vgt_param_helpers(struct radv_pipeline *pipeline)
+radv_compute_ia_multi_vgt_param_helpers(struct radv_pipeline *pipeline,
+                                        const struct radv_tessellation_state *tess)
 {
 	struct radv_ia_multi_vgt_param_helpers ia_multi_vgt_param = {0};
 	const struct radv_device *device = pipeline->device;
 
 	if (radv_pipeline_has_tess(pipeline))
-		ia_multi_vgt_param.primgroup_size = pipeline->graphics.tess.num_patches;
+		ia_multi_vgt_param.primgroup_size = tess->num_patches;
 	else if (radv_pipeline_has_gs(pipeline))
 		ia_multi_vgt_param.primgroup_size = 64;
 	else
@@ -3143,15 +3163,16 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 			calculate_gfx9_gs_info(pCreateInfo, pipeline);
 	}
 
+	struct radv_tessellation_state tess = {0};
 	if (radv_pipeline_has_tess(pipeline)) {
 		if (pipeline->graphics.prim == V_008958_DI_PT_PATCH) {
 			pipeline->graphics.prim_vertex_count.min = pCreateInfo->pTessellationState->patchControlPoints;
 			pipeline->graphics.prim_vertex_count.incr = 1;
 		}
-		calculate_tess_state(pipeline, pCreateInfo);
+		tess = calculate_tess_state(pipeline, pCreateInfo);
 	}
 
-	pipeline->graphics.ia_multi_vgt_param = radv_compute_ia_multi_vgt_param_helpers(pipeline);
+	pipeline->graphics.ia_multi_vgt_param = radv_compute_ia_multi_vgt_param_helpers(pipeline, &tess);
 
 	const VkPipelineVertexInputStateCreateInfo *vi_info =
 		pCreateInfo->pVertexInputState;
@@ -3208,7 +3229,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	}
 
 	result = radv_pipeline_scratch_init(device, pipeline);
-	radv_pipeline_generate_pm4(pipeline, pCreateInfo, extra, &blend);
+	radv_pipeline_generate_pm4(pipeline, pCreateInfo, extra, &blend, &tess);
 
 	return result;
 }

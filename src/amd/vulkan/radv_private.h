@@ -1151,18 +1151,6 @@ struct radv_prim_vertex_count {
 	uint8_t incr;
 };
 
-struct radv_tessellation_state {
-	uint32_t ls_hs_config;
-	uint32_t tcs_in_layout;
-	uint32_t tcs_out_layout;
-	uint32_t tcs_out_offsets;
-	uint32_t offchip_layout;
-	unsigned num_patches;
-	unsigned lds_size;
-	unsigned num_tcs_input_cp;
-	uint32_t tf_param;
-};
-
 struct radv_gs_state {
 	uint32_t vgt_gs_onchip_cntl;
 	uint32_t vgt_gs_max_prims_per_subgroup;
@@ -1212,7 +1200,6 @@ struct radv_pipeline {
 		struct {
 			struct radv_raster_state raster;
 			struct radv_multisample_state ms;
-			struct radv_tessellation_state tess;
 			struct radv_gs_state gs;
 			uint32_t spi_baryc_cntl;
 			unsigned prim;
