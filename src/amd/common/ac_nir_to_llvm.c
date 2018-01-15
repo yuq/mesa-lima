@@ -6310,7 +6310,7 @@ write_tess_factors(struct nir_to_llvm_context *ctx)
 					    16 + tf_offset, 1, 0, true, false);
 
 	//store to offchip for TES to read - only if TES reads them
-	if (ctx->shader_info->info.tes.reads_tess_factors) {
+	if (ctx->options->key.tcs.tes_reads_tess_factors) {
 		LLVMValueRef inner_vec, outer_vec, tf_outer_offset;
 		LLVMValueRef tf_inner_offset;
 		unsigned param_outer, param_inner;

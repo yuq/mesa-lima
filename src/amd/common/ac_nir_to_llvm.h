@@ -55,6 +55,7 @@ struct ac_tcs_variant_key {
 	struct ac_vs_variant_key vs_key;
 	unsigned primitive_mode;
 	unsigned input_vertices;
+	uint32_t tes_reads_tess_factors:1;
 };
 
 struct ac_fs_variant_key {

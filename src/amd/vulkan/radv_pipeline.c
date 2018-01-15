@@ -1759,6 +1759,8 @@ radv_fill_shader_keys(struct ac_shader_variant_key *keys,
 		keys[MESA_SHADER_VERTEX].vs.as_ls = true;
 		keys[MESA_SHADER_TESS_CTRL].tcs.input_vertices = key->tess_input_vertices;
 		keys[MESA_SHADER_TESS_CTRL].tcs.primitive_mode = nir[MESA_SHADER_TESS_EVAL]->info.tess.primitive_mode;
+
+		keys[MESA_SHADER_TESS_CTRL].tcs.tes_reads_tess_factors = !!(nir[MESA_SHADER_TESS_EVAL]->info.inputs_read & (VARYING_BIT_TESS_LEVEL_INNER | VARYING_BIT_TESS_LEVEL_OUTER));
 	}
 
 	if (nir[MESA_SHADER_GEOMETRY]) {
