@@ -58,7 +58,48 @@ def _init_exts_from_xml(xml):
         ext = ext_name_map[ext_name]
         ext.type = ext_elem.attrib['type']
 
-_TEMPLATE = Template(COPYRIGHT + """
+_TEMPLATE_H = Template(COPYRIGHT + """
+
+#ifndef ANV_EXTENSIONS_H
+#define ANV_EXTENSIONS_H
+
+#include "stdbool.h"
+
+#define ANV_INSTANCE_EXTENSION_COUNT ${len(instance_extensions)}
+
+extern const VkExtensionProperties anv_instance_extensions[];
+
+struct anv_instance_extension_table {
+   union {
+      bool extensions[ANV_INSTANCE_EXTENSION_COUNT];
+      struct {
+%for ext in instance_extensions:
+         bool ${ext.name[3:]};
+%endfor
+      };
+   };
+};
+
+
+#define ANV_DEVICE_EXTENSION_COUNT ${len(device_extensions)}
+
+extern const VkExtensionProperties anv_device_extensions[];
+
+struct anv_device_extension_table {
+   union {
+      bool extensions[ANV_DEVICE_EXTENSION_COUNT];
+      struct {
+%for ext in device_extensions:
+        bool ${ext.name[3:]};
+%endfor
+      };
+   };
+};
+
+#endif /* ANV_EXTENSIONS_H */
+""")
+
+_TEMPLATE_C = Template(COPYRIGHT + """
 #include "anv_private.h"
 
 #include "vk_util.h"
@@ -84,6 +125,12 @@ _TEMPLATE = Template(COPYRIGHT + """
 #define ANV_HAS_SURFACE (VK_USE_PLATFORM_WAYLAND_KHR || \\
                          VK_USE_PLATFORM_XCB_KHR || \\
                          VK_USE_PLATFORM_XLIB_KHR)
+
+const VkExtensionProperties anv_instance_extensions[ANV_INSTANCE_EXTENSION_COUNT] = {
+%for ext in instance_extensions:
+   {"${ext.name}", ${ext.ext_version}},
+%endfor
+};
 
 bool
 anv_instance_extension_supported(const char *name)
@@ -121,6 +168,12 @@ anv_physical_device_api_version(struct anv_physical_device *dev)
 {
     return ${MAX_API_VERSION.c_vk_version()};
 }
+
+const VkExtensionProperties anv_device_extensions[ANV_DEVICE_EXTENSION_COUNT] = {
+%for ext in device_extensions:
+   {"${ext.name}", ${ext.ext_version}},
+%endfor
+};
 
 bool
 anv_physical_device_extension_supported(struct anv_physical_device *device,
@@ -160,7 +213,8 @@ VkResult anv_EnumerateDeviceExtensionProperties(
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--out', help='Output C file.', required=True)
+    parser.add_argument('--out-c', help='Output C file.')
+    parser.add_argument('--out-h', help='Output H file.')
     parser.add_argument('--xml',
                         help='Vulkan API XML file.',
                         required=True,
@@ -180,5 +234,10 @@ if __name__ == '__main__':
         'device_extensions': [e for e in EXTENSIONS if e.type == 'device'],
     }
 
-    with open(args.out, 'w') as f:
-        f.write(_TEMPLATE.render(**template_env))
+    if args.out_h:
+        with open(args.out_h, 'w') as f:
+            f.write(_TEMPLATE_H.render(**template_env))
+
+    if args.out_c:
+        with open(args.out_c, 'w') as f:
+            f.write(_TEMPLATE_C.render(**template_env))

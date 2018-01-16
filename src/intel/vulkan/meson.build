@@ -37,7 +37,18 @@ anv_extensions_c = custom_target(
   output : 'anv_extensions.c',
   command : [
     prog_python2, '@INPUT0@', '--xml', '@INPUT1@', '--xml', '@INPUT2@',
-    '--out', '@OUTPUT@',
+    '--out-c', '@OUTPUT@',
+  ],
+)
+
+anv_extensions_h = custom_target(
+  'anv_extensions.h',
+  input : ['anv_extensions_gen.py', vk_api_xml, vk_android_native_buffer_xml,
+           'anv_extensions.py'],
+  output : 'anv_extensions.h',
+  command : [
+    prog_python2, '@INPUT0@', '--xml', '@INPUT1@', '--xml', '@INPUT2@',
+    '--out-h', '@OUTPUT@',
   ],
 )
 
@@ -162,7 +173,7 @@ endif
 
 libanv_common = static_library(
   'anv_common',
-  [libanv_files, anv_entrypoints, anv_extensions_c],
+  [libanv_files, anv_entrypoints, anv_extensions_c, anv_extensions_h],
   include_directories : [
     inc_common, inc_intel, inc_compiler, inc_drm_uapi, inc_vulkan_util,
     inc_vulkan_wsi,
@@ -173,7 +184,7 @@ libanv_common = static_library(
 
 libvulkan_intel = shared_library(
   'vulkan_intel',
-  [files('anv_gem.c'), block_entrypoints],
+  [files('anv_gem.c'), block_entrypoints, anv_extensions_h],
   include_directories : [
     inc_common, inc_intel, inc_compiler, inc_drm_uapi, inc_vulkan_util,
     inc_vulkan_wsi,
@@ -194,7 +205,7 @@ libvulkan_intel = shared_library(
 if with_tests
   libvulkan_intel_test = static_library(
     'vulkan_intel_test',
-    [files('anv_gem_stubs.c'), block_entrypoints],
+    [files('anv_gem_stubs.c'), block_entrypoints, anv_extensions_h],
     include_directories : [
       inc_common, inc_intel, inc_compiler, inc_drm_uapi, inc_vulkan_util,
       inc_vulkan_wsi,

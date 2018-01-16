@@ -72,6 +72,7 @@ struct gen_l3_config;
 #include <vulkan/vk_android_native_buffer.h>
 
 #include "anv_entrypoints.h"
+#include "anv_extensions.h"
 #include "isl/isl.h"
 
 #include "common/gen_debug.h"

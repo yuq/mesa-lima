@@ -44,7 +44,17 @@ vulkan/anv_extensions.c: vulkan/anv_extensions_gen.py \
 	$(AM_V_GEN)$(PYTHON2) $(srcdir)/vulkan/anv_extensions_gen.py \
 		--xml $(vulkan_api_xml) \
 		--xml $(vk_android_native_buffer_xml) \
-		--out $@
+		--out-c $@
+
+vulkan/anv_extensions.h: vulkan/anv_extensions_gen.py \
+			 vulkan/anv_extensions.py \
+			 $(vulkan_api_xml) \
+			 $(vk_android_native_buffer_xml)
+	$(MKDIR_GEN)
+	$(AM_V_GEN)$(PYTHON2) $(srcdir)/vulkan/anv_extensions_gen.py \
+		--xml $(vulkan_api_xml) \
+		--xml $(vk_android_native_buffer_xml) \
+		--out-h $@
 
 BUILT_SOURCES += $(VULKAN_GENERATED_FILES)
 CLEANFILES += \
