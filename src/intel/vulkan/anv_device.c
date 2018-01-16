@@ -476,6 +476,24 @@ static const VkAllocationCallbacks default_alloc = {
    .pfnFree = default_free_func,
 };
 
+VkResult anv_EnumerateInstanceExtensionProperties(
+    const char*                                 pLayerName,
+    uint32_t*                                   pPropertyCount,
+    VkExtensionProperties*                      pProperties)
+{
+   VK_OUTARRAY_MAKE(out, pProperties, pPropertyCount);
+
+   for (int i = 0; i < ANV_INSTANCE_EXTENSION_COUNT; i++) {
+      if (anv_instance_extensions_supported.extensions[i]) {
+         vk_outarray_append(&out, prop) {
+            *prop = anv_instance_extensions[i];
+         }
+      }
+   }
+
+   return vk_outarray_status(&out);
+}
+
 VkResult anv_CreateInstance(
     const VkInstanceCreateInfo*                 pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
@@ -522,8 +540,17 @@ VkResult anv_CreateInstance(
    }
 
    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-      const char *ext_name = pCreateInfo->ppEnabledExtensionNames[i];
-      if (!anv_instance_extension_supported(ext_name))
+      int idx;
+      for (idx = 0; idx < ANV_INSTANCE_EXTENSION_COUNT; idx++) {
+         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
+                    anv_instance_extensions[idx].extensionName) == 0)
+            break;
+      }
+
+      if (idx >= ANV_INSTANCE_EXTENSION_COUNT)
+         return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
+
+      if (!anv_instance_extensions_supported.extensions[idx])
          return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
    }
 

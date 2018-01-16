@@ -80,6 +80,8 @@ struct anv_instance_extension_table {
    };
 };
 
+extern const struct anv_instance_extension_table anv_instance_extensions_supported;
+
 
 #define ANV_DEVICE_EXTENSION_COUNT ${len(device_extensions)}
 
@@ -132,36 +134,11 @@ const VkExtensionProperties anv_instance_extensions[ANV_INSTANCE_EXTENSION_COUNT
 %endfor
 };
 
-bool
-anv_instance_extension_supported(const char *name)
-{
+const struct anv_instance_extension_table anv_instance_extensions_supported = {
 %for ext in instance_extensions:
-    if (strcmp(name, "${ext.name}") == 0)
-        return ${ext.enable};
+   .${ext.name[3:]} = ${ext.enable},
 %endfor
-    return false;
-}
-
-VkResult anv_EnumerateInstanceExtensionProperties(
-    const char*                                 pLayerName,
-    uint32_t*                                   pPropertyCount,
-    VkExtensionProperties*                      pProperties)
-{
-    VK_OUTARRAY_MAKE(out, pProperties, pPropertyCount);
-
-%for ext in instance_extensions:
-    if (${ext.enable}) {
-        vk_outarray_append(&out, prop) {
-            *prop = (VkExtensionProperties) {
-                .extensionName = "${ext.name}",
-                .specVersion = ${ext.ext_version},
-            };
-        }
-    }
-%endfor
-
-    return vk_outarray_status(&out);
-}
+};
 
 uint32_t
 anv_physical_device_api_version(struct anv_physical_device *dev)

@@ -803,7 +803,6 @@ struct anv_instance {
 VkResult anv_init_wsi(struct anv_physical_device *physical_device);
 void anv_finish_wsi(struct anv_physical_device *physical_device);
 
-bool anv_instance_extension_supported(const char *name);
 uint32_t anv_physical_device_api_version(struct anv_physical_device *dev);
 bool anv_physical_device_extension_supported(struct anv_physical_device *dev,
                                              const char *name);
