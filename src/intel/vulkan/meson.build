@@ -20,7 +20,8 @@
 
 anv_entrypoints = custom_target(
   'anv_entrypoints.[ch]',
-  input : ['anv_entrypoints_gen.py', vk_api_xml, vk_android_native_buffer_xml],
+  input : ['anv_entrypoints_gen.py', vk_api_xml, vk_android_native_buffer_xml,
+           'anv_extensions.py'],
   output : ['anv_entrypoints.h', 'anv_entrypoints.c'],
   command : [
     prog_python2, '@INPUT0@', '--xml', '@INPUT1@', '--xml', '@INPUT2@',
