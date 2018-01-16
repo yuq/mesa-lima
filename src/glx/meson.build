@@ -113,7 +113,6 @@ elif with_dri_platform == 'windows'
   extra_ld_args_libgl = '-Wl,--disable-stdcall-fixup'
 endif
 
-dri_driver_dir = join_paths(get_option('prefix'), dri_drivers_path)
 if not with_glvnd
   gl_lib_name = 'GL'
   gl_lib_version = '1.2.0'
@@ -130,7 +129,8 @@ else
 endif
 
 gl_lib_cargs = [
-  '-D_REENTRANT', '-DDEFAULT_DRIVER_DIR="@0@"'.format(dri_driver_dir),
+  '-D_REENTRANT',
+  '-DDEFAULT_DRIVER_DIR="@0@"'.format(dri_search_path),
 ]
 
 if dep_xxf86vm != [] and dep_xxf86vm.found()
