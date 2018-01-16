@@ -2404,9 +2404,9 @@ static LLVMValueRef visit_load_push_constant(struct nir_to_llvm_context *ctx,
 static LLVMValueRef visit_get_buffer_size(struct ac_nir_context *ctx,
                                           const nir_intrinsic_instr *instr)
 {
-	LLVMValueRef ptr = get_src(ctx, instr->src[0]);
+	LLVMValueRef index = get_src(ctx, instr->src[0]);
 
-	return get_buffer_size(ctx, LLVMBuildLoad(ctx->ac.builder, ptr, ""), false);
+	return get_buffer_size(ctx, ctx->abi->load_ssbo(ctx->abi, index, false), false);
 }
 static void visit_store_ssbo(struct ac_nir_context *ctx,
                              nir_intrinsic_instr *instr)
