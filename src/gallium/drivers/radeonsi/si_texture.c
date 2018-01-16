@@ -1740,16 +1740,14 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 
 			if (!si_init_flushed_depth_texture(ctx, &resource, &staging_depth)) {
 				PRINT_ERR("failed to create temporary texture to hold untiled copy\n");
-				FREE(trans);
-				return NULL;
+				goto fail_trans;
 			}
 
 			if (usage & PIPE_TRANSFER_READ) {
 				struct pipe_resource *temp = ctx->screen->resource_create(ctx->screen, &resource);
 				if (!temp) {
 					PRINT_ERR("failed to create a temporary depth texture\n");
-					FREE(trans);
-					return NULL;
+					goto fail_trans;
 				}
 
 				si_copy_region_with_blit(ctx, temp, 0, 0, 0, 0, texture, level, box);
@@ -1767,8 +1765,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 			/* XXX: when discard is true, no need to read back from depth texture */
 			if (!si_init_flushed_depth_texture(ctx, texture, &staging_depth)) {
 				PRINT_ERR("failed to create temporary texture to hold untiled copy\n");
-				FREE(trans);
-				return NULL;
+				goto fail_trans;
 			}
 
 			si_blit_decompress_depth(ctx, rtex, staging_depth,
@@ -1797,8 +1794,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 		staging = (struct r600_texture*)ctx->screen->resource_create(ctx->screen, &resource);
 		if (!staging) {
 			PRINT_ERR("failed to create temporary texture to hold untiled copy\n");
-			FREE(trans);
-			return NULL;
+			goto fail_trans;
 		}
 		trans->staging = &staging->resource;
 
@@ -1821,14 +1817,17 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 		buf = &rtex->resource;
 	}
 
-	if (!(map = si_buffer_map_sync_with_rings(sctx, buf, usage))) {
-		r600_resource_reference(&trans->staging, NULL);
-		FREE(trans);
-		return NULL;
-	}
+	if (!(map = si_buffer_map_sync_with_rings(sctx, buf, usage)))
+		goto fail_trans;
 
 	*ptransfer = &trans->b.b;
 	return map + offset;
+
+fail_trans:
+	r600_resource_reference(&trans->staging, NULL);
+	pipe_resource_reference(&trans->b.b.resource, NULL);
+	FREE(trans);
+	return NULL;
 }
 
 static void si_texture_transfer_unmap(struct pipe_context *ctx,
