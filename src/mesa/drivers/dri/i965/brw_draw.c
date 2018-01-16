@@ -482,8 +482,10 @@ brw_predraw_resolve_inputs(struct brw_context *brw, bool rendering)
             tex_obj = intel_texture_object(u->TexObj);
 
             if (tex_obj && tex_obj->mt) {
-               intel_disable_rb_aux_buffer(brw, tex_obj->mt, 0, ~0,
-                                           "as a shader image");
+               if (rendering) {
+                  intel_disable_rb_aux_buffer(brw, tex_obj->mt, 0, ~0,
+                                              "as a shader image");
+               }
 
                intel_miptree_prepare_image(brw, tex_obj->mt);
 
