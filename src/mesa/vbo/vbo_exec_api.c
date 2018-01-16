@@ -270,6 +270,7 @@ vbo_exec_copy_from_current(struct vbo_exec_context *exec)
  * to a larger one.  Ex: glTexCoord2f -> glTexCoord4f.
  * We need to go back over the previous 2-component texcoords and insert
  * zero and one values.
+ * \param attr  VBO_ATTRIB_x vertex attribute value
  */
 static void
 vbo_exec_wrap_upgrade_vertex(struct vbo_exec_context *exec,
@@ -282,6 +283,8 @@ vbo_exec_wrap_upgrade_vertex(struct vbo_exec_context *exec,
    const GLuint old_vtx_size = exec->vtx.vertex_size; /* floats per vertex */
    const GLuint oldSize = exec->vtx.attrsz[attr];
    GLuint i;
+
+   assert(attr < VBO_ATTRIB_MAX);
 
    /* Run pipeline on current vertices, copy wrapped vertices
     * to exec->vtx.copied.
@@ -401,12 +404,15 @@ vbo_exec_wrap_upgrade_vertex(struct vbo_exec_context *exec,
  * For example, we saw a bunch of glTexCoord2f() calls and now we got a
  * glTexCoord4f() call.  We promote the array from size=2 to size=4.
  * \param newSize  size of new vertex (number of 32-bit words).
+ * \param attr  VBO_ATTRIB_x vertex attribute value
  */
 static void
 vbo_exec_fixup_vertex(struct gl_context *ctx, GLuint attr,
                       GLuint newSize, GLenum newType)
 {
    struct vbo_exec_context *exec = &vbo_context(ctx)->exec;
+
+   assert(attr < VBO_ATTRIB_MAX);
 
    if (newSize > exec->vtx.attrsz[attr] ||
        newType != exec->vtx.attrtype[attr]) {
@@ -459,7 +465,7 @@ vbo_exec_begin_vertices(struct gl_context *ctx)
 /**
  * This macro is used to implement all the glVertex, glColor, glTexCoord,
  * glVertexAttrib, etc functions.
- * \param A  attribute index
+ * \param A  VBO_ATTRIB_x attribute index
  * \param N  attribute size (1..4)
  * \param T  type (GL_FLOAT, GL_DOUBLE, GL_INT, GL_UNSIGNED_INT)
  * \param C  cast type (fi_type or double)
