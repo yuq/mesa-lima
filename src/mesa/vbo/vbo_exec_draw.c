@@ -208,10 +208,10 @@ vbo_exec_bind_arrays( struct gl_context *ctx )
        * glVertexAttrib(0, val) calls to feed into the GENERIC0 input.
        * The original state gets essentially restored below.
        */
-      if ((ctx->VertexProgram._Current->info.inputs_read &
-           VERT_BIT_POS) == 0 &&
-          (ctx->VertexProgram._Current->info.inputs_read &
-           VERT_BIT_GENERIC0)) {
+      const GLbitfield64 inputs_read =
+         ctx->VertexProgram._Current->info.inputs_read;
+      if ((inputs_read & VERT_BIT_POS) == 0 &&
+          (inputs_read & VERT_BIT_GENERIC0)) {
          swap_pos = true;
          exec->vtx.inputs[VERT_ATTRIB_GENERIC0] = exec->vtx.inputs[0];
          exec->vtx.attrsz[VERT_ATTRIB_GENERIC0] = exec->vtx.attrsz[0];
