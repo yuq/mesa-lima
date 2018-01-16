@@ -1218,20 +1218,18 @@ radv_emit_depth_bounds(struct radv_cmd_buffer *cmd_buffer)
 static void
 radv_emit_depth_bias(struct radv_cmd_buffer *cmd_buffer)
 {
-	struct radv_raster_state *raster = &cmd_buffer->state.pipeline->graphics.raster;
 	struct radv_dynamic_state *d = &cmd_buffer->state.dynamic;
 	unsigned slope = fui(d->depth_bias.slope * 16.0f);
 	unsigned bias = fui(d->depth_bias.bias * cmd_buffer->state.offset_scale);
 
-	if (G_028814_POLY_OFFSET_FRONT_ENABLE(raster->pa_su_sc_mode_cntl)) {
-		radeon_set_context_reg_seq(cmd_buffer->cs,
-					   R_028B7C_PA_SU_POLY_OFFSET_CLAMP, 5);
-		radeon_emit(cmd_buffer->cs, fui(d->depth_bias.clamp)); /* CLAMP */
-		radeon_emit(cmd_buffer->cs, slope); /* FRONT SCALE */
-		radeon_emit(cmd_buffer->cs, bias); /* FRONT OFFSET */
-		radeon_emit(cmd_buffer->cs, slope); /* BACK SCALE */
-		radeon_emit(cmd_buffer->cs, bias); /* BACK OFFSET */
-	}
+
+	radeon_set_context_reg_seq(cmd_buffer->cs,
+				   R_028B7C_PA_SU_POLY_OFFSET_CLAMP, 5);
+	radeon_emit(cmd_buffer->cs, fui(d->depth_bias.clamp)); /* CLAMP */
+	radeon_emit(cmd_buffer->cs, slope); /* FRONT SCALE */
+	radeon_emit(cmd_buffer->cs, bias); /* FRONT OFFSET */
+	radeon_emit(cmd_buffer->cs, slope); /* BACK SCALE */
+	radeon_emit(cmd_buffer->cs, bias); /* BACK OFFSET */
 }
 
 static void
@@ -1633,37 +1631,35 @@ void radv_set_db_count_control(struct radv_cmd_buffer *cmd_buffer)
 static void
 radv_cmd_buffer_flush_dynamic_state(struct radv_cmd_buffer *cmd_buffer)
 {
-	if (G_028810_DX_RASTERIZATION_KILL(cmd_buffer->state.pipeline->graphics.raster.pa_cl_clip_cntl))
-		return;
+	uint32_t states = cmd_buffer->state.dirty & cmd_buffer->state.emitted_pipeline->graphics.needed_dynamic_state;
 
-	if (cmd_buffer->state.dirty & (RADV_CMD_DIRTY_DYNAMIC_VIEWPORT))
+	if (states & (RADV_CMD_DIRTY_DYNAMIC_VIEWPORT))
 		radv_emit_viewport(cmd_buffer);
 
-	if (cmd_buffer->state.dirty & (RADV_CMD_DIRTY_DYNAMIC_SCISSOR | RADV_CMD_DIRTY_DYNAMIC_VIEWPORT))
+	if (states & (RADV_CMD_DIRTY_DYNAMIC_SCISSOR | RADV_CMD_DIRTY_DYNAMIC_VIEWPORT))
 		radv_emit_scissor(cmd_buffer);
 
-	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_DYNAMIC_LINE_WIDTH)
+	if (states & RADV_CMD_DIRTY_DYNAMIC_LINE_WIDTH)
 		radv_emit_line_width(cmd_buffer);
 
-	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS)
+	if (states & RADV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS)
 		radv_emit_blend_constants(cmd_buffer);
 
-	if (cmd_buffer->state.dirty & (RADV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE |
+	if (states & (RADV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE |
 				       RADV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK |
 				       RADV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK))
 		radv_emit_stencil(cmd_buffer);
 
-	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_DYNAMIC_DEPTH_BOUNDS)
+	if (states & RADV_CMD_DIRTY_DYNAMIC_DEPTH_BOUNDS)
 		radv_emit_depth_bounds(cmd_buffer);
 
-	if (cmd_buffer->state.dirty & (RADV_CMD_DIRTY_PIPELINE |
-				       RADV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS))
+	if (states & RADV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS)
 		radv_emit_depth_bias(cmd_buffer);
 
-	if (cmd_buffer->state.dirty & RADV_CMD_DIRTY_DYNAMIC_DISCARD_RECTANGLE)
+	if (states & RADV_CMD_DIRTY_DYNAMIC_DISCARD_RECTANGLE)
 		radv_emit_discard_rectangle(cmd_buffer);
 
-	cmd_buffer->state.dirty &= ~RADV_CMD_DIRTY_DYNAMIC_ALL;
+	cmd_buffer->state.dirty &= ~states;
 }
 
 static void

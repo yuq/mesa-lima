@@ -1262,6 +1262,7 @@ struct radv_pipeline {
 			struct radv_prim_vertex_count prim_vertex_count;
  			bool can_use_guardband;
 			uint32_t pa_sc_cliprect_rule;
+			uint32_t needed_dynamic_state;
 		} graphics;
 	};
 
