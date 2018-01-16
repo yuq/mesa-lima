@@ -36,11 +36,12 @@ vulkan/anv_entrypoints.c: vulkan/anv_entrypoints_gen.py \
 		--outdir $(builddir)/vulkan
 vulkan/anv_entrypoints.h: vulkan/anv_entrypoints.c
 
-vulkan/anv_extensions.c: vulkan/anv_extensions.py \
+vulkan/anv_extensions.c: vulkan/anv_extensions_gen.py \
+			 vulkan/anv_extensions.py \
 			 $(vulkan_api_xml) \
 			 $(vk_android_native_buffer_xml)
 	$(MKDIR_GEN)
-	$(AM_V_GEN)$(PYTHON2) $(srcdir)/vulkan/anv_extensions.py \
+	$(AM_V_GEN)$(PYTHON2) $(srcdir)/vulkan/anv_extensions_gen.py \
 		--xml $(vulkan_api_xml) \
 		--xml $(vk_android_native_buffer_xml) \
 		--out $@
