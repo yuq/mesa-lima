@@ -1129,13 +1129,6 @@ mesa_to_vk_shader_stage(gl_shader_stage mesa_stage)
 
 unsigned radv_format_meta_fs_key(VkFormat format);
 
-struct radv_raster_state {
-	uint32_t pa_cl_clip_cntl;
-	uint32_t spi_interp_control;
-	uint32_t pa_su_vtx_cntl;
-	uint32_t pa_su_sc_mode_cntl;
-};
-
 struct radv_multisample_state {
 	uint32_t db_eqaa;
 	uint32_t pa_sc_line_cntl;
@@ -1191,11 +1184,8 @@ struct radv_pipeline {
 	uint32_t user_data_0[MESA_SHADER_STAGES];
 	union {
 		struct {
-			struct radv_raster_state raster;
 			struct radv_multisample_state ms;
 			uint32_t spi_baryc_cntl;
-			unsigned prim;
-			unsigned gs_out;
 			bool prim_restart_enable;
 			unsigned esgs_ring_size;
 			unsigned gsvs_ring_size;

@@ -739,47 +739,6 @@ static uint32_t si_translate_fill(VkPolygonMode func)
 		return V_028814_X_DRAW_POINTS;
 	}
 }
-static void
-radv_pipeline_init_raster_state(struct radv_pipeline *pipeline,
-				const VkGraphicsPipelineCreateInfo *pCreateInfo)
-{
-	const VkPipelineRasterizationStateCreateInfo *vkraster = pCreateInfo->pRasterizationState;
-	struct radv_raster_state *raster = &pipeline->graphics.raster;
-
-	raster->spi_interp_control =
-		S_0286D4_FLAT_SHADE_ENA(1) |
-		S_0286D4_PNT_SPRITE_ENA(1) |
-		S_0286D4_PNT_SPRITE_OVRD_X(V_0286D4_SPI_PNT_SPRITE_SEL_S) |
-		S_0286D4_PNT_SPRITE_OVRD_Y(V_0286D4_SPI_PNT_SPRITE_SEL_T) |
-		S_0286D4_PNT_SPRITE_OVRD_Z(V_0286D4_SPI_PNT_SPRITE_SEL_0) |
-		S_0286D4_PNT_SPRITE_OVRD_W(V_0286D4_SPI_PNT_SPRITE_SEL_1) |
-		S_0286D4_PNT_SPRITE_TOP_1(0); // vulkan is top to bottom - 1.0 at bottom
-
-
-	raster->pa_cl_clip_cntl = S_028810_PS_UCP_MODE(3) |
-		S_028810_DX_CLIP_SPACE_DEF(1) | // vulkan uses DX conventions.
-		S_028810_ZCLIP_NEAR_DISABLE(vkraster->depthClampEnable ? 1 : 0) |
-		S_028810_ZCLIP_FAR_DISABLE(vkraster->depthClampEnable ? 1 : 0) |
-		S_028810_DX_RASTERIZATION_KILL(vkraster->rasterizerDiscardEnable ? 1 : 0) |
-		S_028810_DX_LINEAR_ATTR_CLIP_ENA(1);
-
-	raster->pa_su_vtx_cntl =
-		S_028BE4_PIX_CENTER(1) | // TODO verify
-		S_028BE4_ROUND_MODE(V_028BE4_X_ROUND_TO_EVEN) |
-		S_028BE4_QUANT_MODE(V_028BE4_X_16_8_FIXED_POINT_1_256TH);
-
-	raster->pa_su_sc_mode_cntl =
-		S_028814_FACE(vkraster->frontFace) |
-		S_028814_CULL_FRONT(!!(vkraster->cullMode & VK_CULL_MODE_FRONT_BIT)) |
-		S_028814_CULL_BACK(!!(vkraster->cullMode & VK_CULL_MODE_BACK_BIT)) |
-		S_028814_POLY_MODE(vkraster->polygonMode != VK_POLYGON_MODE_FILL) |
-		S_028814_POLYMODE_FRONT_PTYPE(si_translate_fill(vkraster->polygonMode)) |
-		S_028814_POLYMODE_BACK_PTYPE(si_translate_fill(vkraster->polygonMode)) |
-		S_028814_POLY_OFFSET_FRONT_ENABLE(vkraster->depthBiasEnable ? 1 : 0) |
-		S_028814_POLY_OFFSET_BACK_ENABLE(vkraster->depthBiasEnable ? 1 : 0) |
-		S_028814_POLY_OFFSET_PARA_ENABLE(vkraster->depthBiasEnable ? 1 : 0);
-
-}
 
 static uint8_t radv_pipeline_get_ps_iter_samples(const VkPipelineMultisampleStateCreateInfo *vkms)
 {
@@ -2373,18 +2332,42 @@ radv_pipeline_generate_blend_state(struct radeon_winsys_cs *cs,
 
 static void
 radv_pipeline_generate_raster_state(struct radeon_winsys_cs *cs,
-                                    struct radv_pipeline *pipeline)
+                                    const VkGraphicsPipelineCreateInfo *pCreateInfo)
 {
-	struct radv_raster_state *raster = &pipeline->graphics.raster;
+	const VkPipelineRasterizationStateCreateInfo *vkraster = pCreateInfo->pRasterizationState;
 
 	radeon_set_context_reg(cs, R_028810_PA_CL_CLIP_CNTL,
-			       raster->pa_cl_clip_cntl);
+	                       S_028810_PS_UCP_MODE(3) |
+	                       S_028810_DX_CLIP_SPACE_DEF(1) | // vulkan uses DX conventions.
+	                       S_028810_ZCLIP_NEAR_DISABLE(vkraster->depthClampEnable ? 1 : 0) |
+	                       S_028810_ZCLIP_FAR_DISABLE(vkraster->depthClampEnable ? 1 : 0) |
+	                       S_028810_DX_RASTERIZATION_KILL(vkraster->rasterizerDiscardEnable ? 1 : 0) |
+	                       S_028810_DX_LINEAR_ATTR_CLIP_ENA(1));
+
 	radeon_set_context_reg(cs, R_0286D4_SPI_INTERP_CONTROL_0,
-			       raster->spi_interp_control);
+	                       S_0286D4_FLAT_SHADE_ENA(1) |
+	                       S_0286D4_PNT_SPRITE_ENA(1) |
+	                       S_0286D4_PNT_SPRITE_OVRD_X(V_0286D4_SPI_PNT_SPRITE_SEL_S) |
+	                       S_0286D4_PNT_SPRITE_OVRD_Y(V_0286D4_SPI_PNT_SPRITE_SEL_T) |
+	                       S_0286D4_PNT_SPRITE_OVRD_Z(V_0286D4_SPI_PNT_SPRITE_SEL_0) |
+	                       S_0286D4_PNT_SPRITE_OVRD_W(V_0286D4_SPI_PNT_SPRITE_SEL_1) |
+	                       S_0286D4_PNT_SPRITE_TOP_1(0)); /* vulkan is top to bottom - 1.0 at bottom */
+
 	radeon_set_context_reg(cs, R_028BE4_PA_SU_VTX_CNTL,
-			       raster->pa_su_vtx_cntl);
+	                       S_028BE4_PIX_CENTER(1) | // TODO verify
+	                       S_028BE4_ROUND_MODE(V_028BE4_X_ROUND_TO_EVEN) |
+	                       S_028BE4_QUANT_MODE(V_028BE4_X_16_8_FIXED_POINT_1_256TH));
+
 	radeon_set_context_reg(cs, R_028814_PA_SU_SC_MODE_CNTL,
-			       raster->pa_su_sc_mode_cntl);
+	                       S_028814_FACE(vkraster->frontFace) |
+	                       S_028814_CULL_FRONT(!!(vkraster->cullMode & VK_CULL_MODE_FRONT_BIT)) |
+	                       S_028814_CULL_BACK(!!(vkraster->cullMode & VK_CULL_MODE_BACK_BIT)) |
+	                       S_028814_POLY_MODE(vkraster->polygonMode != VK_POLYGON_MODE_FILL) |
+	                       S_028814_POLYMODE_FRONT_PTYPE(si_translate_fill(vkraster->polygonMode)) |
+	                       S_028814_POLYMODE_BACK_PTYPE(si_translate_fill(vkraster->polygonMode)) |
+	                       S_028814_POLY_OFFSET_FRONT_ENABLE(vkraster->depthBiasEnable ? 1 : 0) |
+	                       S_028814_POLY_OFFSET_BACK_ENABLE(vkraster->depthBiasEnable ? 1 : 0) |
+	                       S_028814_POLY_OFFSET_PARA_ENABLE(vkraster->depthBiasEnable ? 1 : 0));
 }
 
 
@@ -2965,14 +2948,15 @@ radv_pipeline_generate_pm4(struct radv_pipeline *pipeline,
                            const struct radv_graphics_pipeline_create_info *extra,
                            const struct radv_blend_state *blend,
                            const struct radv_tessellation_state *tess,
-                           const struct radv_gs_state *gs)
+                           const struct radv_gs_state *gs,
+                           unsigned prim, unsigned gs_out)
 {
 	pipeline->cs.buf = malloc(4 * 256);
 	pipeline->cs.max_dw = 256;
 
 	radv_pipeline_generate_depth_stencil_state(&pipeline->cs, pipeline, pCreateInfo, extra);
 	radv_pipeline_generate_blend_state(&pipeline->cs, pipeline, blend);
-	radv_pipeline_generate_raster_state(&pipeline->cs, pipeline);
+	radv_pipeline_generate_raster_state(&pipeline->cs, pCreateInfo);
 	radv_pipeline_generate_multisample_state(&pipeline->cs, pipeline);
 	radv_pipeline_generate_vgt_gs_mode(&pipeline->cs, pipeline);
 	radv_pipeline_generate_vertex_shader(&pipeline->cs, pipeline, tess);
@@ -2990,11 +2974,11 @@ radv_pipeline_generate_pm4(struct radv_pipeline *pipeline,
 	radeon_set_context_reg(&pipeline->cs, R_028B54_VGT_SHADER_STAGES_EN, radv_compute_vgt_shader_stages_en(pipeline));
 
 	if (pipeline->device->physical_device->rad_info.chip_class >= CIK) {
-		radeon_set_uconfig_reg_idx(&pipeline->cs, R_030908_VGT_PRIMITIVE_TYPE, 1, pipeline->graphics.prim);
+		radeon_set_uconfig_reg_idx(&pipeline->cs, R_030908_VGT_PRIMITIVE_TYPE, 1, prim);
 	} else {
-		radeon_set_config_reg(&pipeline->cs, R_008958_VGT_PRIMITIVE_TYPE, pipeline->graphics.prim);
+		radeon_set_config_reg(&pipeline->cs, R_008958_VGT_PRIMITIVE_TYPE, prim);
 	}
-	radeon_set_context_reg(&pipeline->cs, R_028A6C_VGT_GS_OUT_PRIM_TYPE, pipeline->graphics.gs_out);
+	radeon_set_context_reg(&pipeline->cs, R_028A6C_VGT_GS_OUT_PRIM_TYPE, gs_out);
 
 	radeon_set_context_reg(&pipeline->cs, R_02820C_PA_SC_CLIPRECT_RULE, radv_compute_cliprect_rule(pCreateInfo));
 
@@ -3003,7 +2987,8 @@ radv_pipeline_generate_pm4(struct radv_pipeline *pipeline,
 
 static struct radv_ia_multi_vgt_param_helpers
 radv_compute_ia_multi_vgt_param_helpers(struct radv_pipeline *pipeline,
-                                        const struct radv_tessellation_state *tess)
+                                        const struct radv_tessellation_state *tess,
+                                        uint32_t prim)
 {
 	struct radv_ia_multi_vgt_param_helpers ia_multi_vgt_param = {0};
 	const struct radv_device *device = pipeline->device;
@@ -3028,7 +3013,6 @@ radv_compute_ia_multi_vgt_param_helpers(struct radv_pipeline *pipeline,
 
 	ia_multi_vgt_param.wd_switch_on_eop = false;
 	if (device->physical_device->rad_info.chip_class >= CIK) {
-		unsigned prim = pipeline->graphics.prim;
 		/* WD_SWITCH_ON_EOP has no effect on GPUs with less than
 		 * 4 shader engines. Set 1 to pass the assertion below.
 		 * The other cases are hardware requirements. */
@@ -3168,25 +3152,26 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	                    pStages);
 
 	pipeline->graphics.spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
-	radv_pipeline_init_raster_state(pipeline, pCreateInfo);
 	radv_pipeline_init_multisample_state(pipeline, pCreateInfo);
-	pipeline->graphics.prim = si_translate_prim(pCreateInfo->pInputAssemblyState->topology);
+	uint32_t gs_out;
+	uint32_t prim = si_translate_prim(pCreateInfo->pInputAssemblyState->topology);
+
 	pipeline->graphics.can_use_guardband = radv_prim_can_use_guardband(pCreateInfo->pInputAssemblyState->topology);
 
 	if (radv_pipeline_has_gs(pipeline)) {
-		pipeline->graphics.gs_out = si_conv_gl_prim_to_gs_out(pipeline->shaders[MESA_SHADER_GEOMETRY]->info.gs.output_prim);
-		pipeline->graphics.can_use_guardband = pipeline->graphics.gs_out == V_028A6C_OUTPRIM_TYPE_TRISTRIP;
+		gs_out = si_conv_gl_prim_to_gs_out(pipeline->shaders[MESA_SHADER_GEOMETRY]->info.gs.output_prim);
+		pipeline->graphics.can_use_guardband = gs_out == V_028A6C_OUTPRIM_TYPE_TRISTRIP;
 	} else {
-		pipeline->graphics.gs_out = si_conv_prim_to_gs_out(pCreateInfo->pInputAssemblyState->topology);
+		gs_out = si_conv_prim_to_gs_out(pCreateInfo->pInputAssemblyState->topology);
 	}
 	if (extra && extra->use_rectlist) {
-		pipeline->graphics.prim = V_008958_DI_PT_RECTLIST;
-		pipeline->graphics.gs_out = V_028A6C_OUTPRIM_TYPE_TRISTRIP;
+		prim = V_008958_DI_PT_RECTLIST;
+		gs_out = V_028A6C_OUTPRIM_TYPE_TRISTRIP;
 		pipeline->graphics.can_use_guardband = true;
 	}
 	pipeline->graphics.prim_restart_enable = !!pCreateInfo->pInputAssemblyState->primitiveRestartEnable;
 	/* prim vertex count will need TESS changes */
-	pipeline->graphics.prim_vertex_count = prim_size_table[pipeline->graphics.prim];
+	pipeline->graphics.prim_vertex_count = prim_size_table[prim];
 
 	radv_pipeline_init_dynamic_state(pipeline, pCreateInfo);
 
@@ -3223,14 +3208,14 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 
 	struct radv_tessellation_state tess = {0};
 	if (radv_pipeline_has_tess(pipeline)) {
-		if (pipeline->graphics.prim == V_008958_DI_PT_PATCH) {
+		if (prim == V_008958_DI_PT_PATCH) {
 			pipeline->graphics.prim_vertex_count.min = pCreateInfo->pTessellationState->patchControlPoints;
 			pipeline->graphics.prim_vertex_count.incr = 1;
 		}
 		tess = calculate_tess_state(pipeline, pCreateInfo);
 	}
 
-	pipeline->graphics.ia_multi_vgt_param = radv_compute_ia_multi_vgt_param_helpers(pipeline, &tess);
+	pipeline->graphics.ia_multi_vgt_param = radv_compute_ia_multi_vgt_param_helpers(pipeline, &tess, prim);
 
 	radv_compute_vertex_input_state(pipeline, pCreateInfo);
 
@@ -3253,7 +3238,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	}
 
 	result = radv_pipeline_scratch_init(device, pipeline);
-	radv_pipeline_generate_pm4(pipeline, pCreateInfo, extra, &blend, &tess, &gs);
+	radv_pipeline_generate_pm4(pipeline, pCreateInfo, extra, &blend, &tess, &gs, prim, gs_out);
 
 	return result;
 }
