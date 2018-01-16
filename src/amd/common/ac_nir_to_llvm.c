@@ -2588,8 +2588,11 @@ static LLVMValueRef visit_load_buffer(struct ac_nir_context *ctx,
 			ctx->ac.i1false,
 		};
 
-		results[i] = ac_build_intrinsic(&ctx->ac, load_name, data_type, params, 5, 0);
+		int idx = i;
+		if (instr->dest.ssa.bit_size == 64)
+			idx = i > 1 ? 1 : 0;
 
+		results[idx] = ac_build_intrinsic(&ctx->ac, load_name, data_type, params, 5, 0);
 	}
 
 	assume(results[0]);
