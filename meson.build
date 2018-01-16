@@ -57,6 +57,10 @@ dri_drivers_path = get_option('dri-drivers-path')
 if dri_drivers_path == ''
   dri_drivers_path = join_paths(get_option('libdir'), 'dri')
 endif
+dri_search_path = get_option('dri-search-path')
+if dri_search_path == ''
+  dri_search_path = join_paths(get_option('prefix'), dri_drivers_path)
+endif
 
 with_gles1 = get_option('gles1')
 with_gles2 = get_option('gles2')
