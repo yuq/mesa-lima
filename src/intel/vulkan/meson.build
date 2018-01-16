@@ -134,8 +134,16 @@ libanv_files = files(
   'vk_format_info.h',
 )
 
-anv_deps = []
-anv_flags = []
+anv_deps = [
+  dep_libdrm,
+  dep_valgrind,
+  idep_nir_headers,
+]
+anv_flags = [
+  c_vis_args,
+  no_override_init_args,
+  '-msse2',
+]
 
 if with_platform_x11
   anv_deps += dep_xcb_dri3
@@ -159,8 +167,8 @@ libanv_common = static_library(
     inc_common, inc_intel, inc_compiler, inc_drm_uapi, inc_vulkan_util,
     inc_vulkan_wsi,
   ],
-  c_args : [c_vis_args, no_override_init_args, '-msse2', anv_flags],
-  dependencies : [dep_valgrind, anv_deps, dep_libdrm, idep_nir_headers],
+  c_args : anv_flags,
+  dependencies : anv_deps,
 )
 
 libvulkan_intel = shared_library(
@@ -176,9 +184,9 @@ libvulkan_intel = shared_library(
     libvulkan_wsi, libmesa_util,
   ],
   dependencies : [
-    dep_libdrm, dep_thread, dep_dl, dep_m, anv_deps, dep_valgrind, idep_nir,
+    dep_thread, dep_dl, dep_m, anv_deps, idep_nir,
   ],
-  c_args : [c_vis_args, no_override_init_args, '-msse2', anv_flags],
+  c_args : anv_flags,
   link_args : ['-Wl,--build-id=sha1', ld_args_bsymbolic, ld_args_gc_sections],
   install : true,
 )
@@ -197,10 +205,9 @@ if with_tests
       libvulkan_util, libvulkan_wsi, libmesa_util,
     ],
     dependencies : [
-      dep_libdrm, dep_thread, dep_dl, dep_m, anv_deps, dep_valgrind,
-      idep_nir,
+      dep_thread, dep_dl, dep_m, anv_deps, idep_nir,
     ],
-    c_args : [c_vis_args, no_override_init_args, '-msse2', anv_flags],
+    c_args : anv_flags,
   )
 
   foreach t : ['block_pool_no_free', 'state_pool_no_free',
