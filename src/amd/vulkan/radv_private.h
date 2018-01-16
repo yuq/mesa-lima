@@ -1151,13 +1151,6 @@ struct radv_prim_vertex_count {
 	uint8_t incr;
 };
 
-struct radv_gs_state {
-	uint32_t vgt_gs_onchip_cntl;
-	uint32_t vgt_gs_max_prims_per_subgroup;
-	uint32_t vgt_esgs_ring_itemsize;
-	uint32_t lds_size;
-};
-
 struct radv_vertex_elements_info {
 	uint32_t rsrc_word3[MAX_VERTEX_ATTRIBS];
 	uint32_t format_size[MAX_VERTEX_ATTRIBS];
@@ -1200,7 +1193,6 @@ struct radv_pipeline {
 		struct {
 			struct radv_raster_state raster;
 			struct radv_multisample_state ms;
-			struct radv_gs_state gs;
 			uint32_t spi_baryc_cntl;
 			unsigned prim;
 			unsigned gs_out;
