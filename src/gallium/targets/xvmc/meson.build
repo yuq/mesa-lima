@@ -44,10 +44,7 @@ libxvmc_gallium = shared_library(
     libxvmc_st, libgalliumvlwinsys, libgalliumvl, libgallium, libmesa_util,
     libpipe_loader_static, libws_null, libwsw,
   ],
-  dependencies : [
-    dep_xcb, dep_x11_xcb, dep_xcb_dri2, dep_xcb_dri3, dep_libdrm, dep_thread,
-    driver_r600, driver_nouveau,
-  ],
+  dependencies : [dep_thread, driver_r600, driver_nouveau],
   link_depends : xvmc_link_depends,
 )
 
