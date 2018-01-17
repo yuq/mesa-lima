@@ -34,6 +34,7 @@
 #include "ir_uniform.h"
 #include "main/mtypes.h"
 #include "string_to_uint_map.h"
+#include "util/bitscan.h"
 
 extern "C" {
 #include "main/shaderobj.h"
