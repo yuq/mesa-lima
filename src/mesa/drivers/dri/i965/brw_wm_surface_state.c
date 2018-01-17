@@ -1095,6 +1095,14 @@ const struct brw_tracked_state brw_renderbuffer_read_surfaces = {
    .emit = update_renderbuffer_read_surfaces,
 };
 
+static bool
+is_depth_texture(struct intel_texture_object *iobj)
+{
+   GLenum base_format = _mesa_get_format_base_format(iobj->_Format);
+   return base_format == GL_DEPTH_COMPONENT ||
+          (base_format == GL_DEPTH_STENCIL && !iobj->base.StencilSampling);
+}
+
 static void
 update_stage_texture_surfaces(struct brw_context *brw,
                               const struct gl_program *prog,
@@ -1121,9 +1129,32 @@ update_stage_texture_surfaces(struct brw_context *brw,
       if (prog->SamplersUsed & (1 << s)) {
          const unsigned unit = prog->SamplerUnits[s];
          const bool used_by_txf = prog->info.textures_used_by_txf & (1 << s);
+         struct gl_texture_object *obj = ctx->Texture.Unit[unit]._Current;
+         struct intel_texture_object *iobj = intel_texture_object(obj);
 
          /* _NEW_TEXTURE */
-         if (ctx->Texture.Unit[unit]._Current) {
+         if (!obj)
+            continue;
+
+         if ((prog->ShadowSamplers & (1 << s)) && !is_depth_texture(iobj)) {
+            /* A programming note for the sample_c message says:
+             *
+             *    "The Surface Format of the associated surface must be
+             *     indicated as supporting shadow mapping as indicated in the
+             *     surface format table."
+             *
+             * Accessing non-depth textures via a sampler*Shadow type is
+             * undefined.  GLSL 4.50 page 162 says:
+             *
+             *    "If a shadow texture call is made to a sampler that does not
+             *     represent a depth texture, then results are undefined."
+             *
+             * We give them a null surface (zeros) for undefined.  We've seen
+             * GPU hangs with color buffers and sample_c, so we try and avoid
+             * those with this hack.
+             */
+            emit_null_surface_state(brw, NULL, surf_offset + s);
+         } else {
             brw_update_texture_surface(ctx, unit, surf_offset + s, for_gather,
                                        used_by_txf, plane);
          }
