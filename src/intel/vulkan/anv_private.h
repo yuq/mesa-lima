@@ -797,6 +797,7 @@ struct anv_instance {
 
     uint32_t                                    apiVersion;
     struct anv_instance_extension_table         enabled_extensions;
+    struct anv_dispatch_table                   dispatch;
 
     int                                         physicalDeviceCount;
     struct anv_physical_device                  physicalDevice;
