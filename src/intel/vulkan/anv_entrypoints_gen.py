@@ -36,6 +36,15 @@ from anv_extensions import *
 # function and a power-of-two size table. The prime numbers are determined
 # experimentally.
 
+LAYERS = [
+    'anv',
+    'gen7',
+    'gen75',
+    'gen8',
+    'gen9',
+    'gen10'
+]
+
 TEMPLATE_H = Template("""\
 /* This file generated from ${filename}, don't edit directly. */
 
@@ -62,12 +71,9 @@ struct anv_dispatch_table {
   % if e.guard is not None:
 #ifdef ${e.guard}
   % endif
-  ${e.return_type} ${e.prefixed_name('anv')}(${e.params});
-  ${e.return_type} ${e.prefixed_name('gen7')}(${e.params});
-  ${e.return_type} ${e.prefixed_name('gen75')}(${e.params});
-  ${e.return_type} ${e.prefixed_name('gen8')}(${e.params});
-  ${e.return_type} ${e.prefixed_name('gen9')}(${e.params});
-  ${e.return_type} ${e.prefixed_name('gen10')}(${e.params});
+  % for layer in LAYERS:
+  ${e.return_type} ${e.prefixed_name(layer)}(${e.params});
+  % endfor
   % if e.guard is not None:
 #endif // ${e.guard}
   % endif
@@ -129,7 +135,7 @@ static const struct anv_entrypoint entrypoints[] = {
  * either pick the correct entry point.
  */
 
-% for layer in ['anv', 'gen7', 'gen75', 'gen8', 'gen9', 'gen10']:
+% for layer in LAYERS:
   % for e in entrypoints:
     % if e.guard is not None:
 #ifdef ${e.guard}
@@ -341,6 +347,7 @@ def gen_code(entrypoints):
         mapping[h & HASH_MASK] = e.num
 
     return TEMPLATE_C.render(entrypoints=entrypoints,
+                             LAYERS=LAYERS,
                              offsets=offsets,
                              collisions=collisions,
                              mapping=mapping,
@@ -387,6 +394,7 @@ def main():
     try:
         with open(os.path.join(args.outdir, 'anv_entrypoints.h'), 'wb') as f:
             f.write(TEMPLATE_H.render(entrypoints=entrypoints,
+                                      LAYERS=LAYERS,
                                       filename=os.path.basename(__file__)))
         with open(os.path.join(args.outdir, 'anv_entrypoints.c'), 'wb') as f:
             f.write(gen_code(entrypoints))
