@@ -29,7 +29,6 @@
 #include <stdio.h>
 #include "main/glheader.h"
 #include "main/bufferobj.h"
-#include "main/compiler.h"
 #include "main/context.h"
 #include "main/enums.h"
 #include "main/state.h"
