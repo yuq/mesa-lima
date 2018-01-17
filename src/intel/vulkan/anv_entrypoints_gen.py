@@ -215,8 +215,8 @@ static const uint16_t map[] = {
 % endfor
 };
 
-void *
-anv_lookup_entrypoint(const struct gen_device_info *devinfo, const char *name)
+int
+anv_get_entrypoint_index(const char *name)
 {
    static const uint32_t prime_factor = ${prime_factor};
    static const uint32_t prime_step = ${prime_step};
@@ -232,15 +232,24 @@ anv_lookup_entrypoint(const struct gen_device_info *devinfo, const char *name)
    do {
       i = map[h & ${hash_mask}];
       if (i == none)
-         return NULL;
+         return -1;
       e = &entrypoints[i];
       h += prime_step;
    } while (e->hash != hash);
 
    if (strcmp(name, strings + e->name) != 0)
-      return NULL;
+      return -1;
 
-   return anv_resolve_entrypoint(devinfo, i);
+   return i;
+}
+
+void *
+anv_lookup_entrypoint(const struct gen_device_info *devinfo, const char *name)
+{
+   int idx = anv_get_entrypoint_index(name);
+   if (idx < 0)
+      return NULL;
+   return anv_resolve_entrypoint(devinfo, idx);
 }""", output_encoding='utf-8')
 
 NONE = 0xffff

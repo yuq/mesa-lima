@@ -2816,6 +2816,8 @@ struct anv_query_pool {
    struct anv_bo                                bo;
 };
 
+int anv_get_entrypoint_index(const char *name);
+
 void *anv_lookup_entrypoint(const struct gen_device_info *devinfo,
                             const char *name);
 
