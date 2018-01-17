@@ -349,20 +349,20 @@ lima_set_constant_buffer(struct pipe_context *pctx,
    if (unlikely(!cb)) {
       so->buffer = NULL;
       so->size = 0;
-
-   }
-   else {
+      debug_printf("shader %d index %u cb is null\n",
+                   shader, index);
+   } else {
       assert(!cb->buffer);
 
       so->buffer = cb->user_buffer + cb->buffer_offset;
       so->size = cb->buffer_size;
+      debug_printf("shader %d index %u cb buffer %p offset %x size %x\n",
+                   shader, index, cb->buffer, cb->buffer_offset, cb->buffer_size);
    }
 
    so->dirty = true;
    ctx->dirty |= LIMA_CONTEXT_DIRTY_CONST_BUFF;
 
-   debug_printf("shader %d index %u cb buffer %p offset %x size %x\n",
-                shader, index, cb->buffer, cb->buffer_offset, cb->buffer_size);
 }
 
 static void *
