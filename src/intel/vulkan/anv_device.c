@@ -574,7 +574,19 @@ VkResult anv_CreateInstance(
 
    instance->apiVersion = client_version;
    instance->enabled_extensions = enabled_extensions;
-   instance->dispatch = anv_dispatch_table;
+
+   for (unsigned i = 0; i < ARRAY_SIZE(instance->dispatch.entrypoints); i++) {
+      /* Vulkan requires that entrypoints for extensions which have not been
+       * enabled must not be advertised.
+       */
+      if (!anv_entrypoint_is_enabled(i, instance->apiVersion,
+                                     &instance->enabled_extensions, NULL)) {
+         instance->dispatch.entrypoints[i] = NULL;
+      } else {
+         instance->dispatch.entrypoints[i] = anv_dispatch_table.entrypoints[i];
+      }
+   }
+
    instance->physicalDeviceCount = -1;
 
    result = vk_debug_report_instance_init(&instance->debug_report_callbacks);
@@ -1289,10 +1301,18 @@ anv_device_init_dispatch(struct anv_device *device)
    }
 
    for (unsigned i = 0; i < ARRAY_SIZE(device->dispatch.entrypoints); i++) {
-      if (genX_table->entrypoints[i])
+      /* Vulkan requires that entrypoints for extensions which have not been
+       * enabled must not be advertised.
+       */
+      if (!anv_entrypoint_is_enabled(i, device->instance->apiVersion,
+                                     &device->instance->enabled_extensions,
+                                     &device->enabled_extensions)) {
+         device->dispatch.entrypoints[i] = NULL;
+      } else if (genX_table->entrypoints[i]) {
          device->dispatch.entrypoints[i] = genX_table->entrypoints[i];
-      else
+      } else {
          device->dispatch.entrypoints[i] = anv_dispatch_table.entrypoints[i];
+      }
    }
 }
 

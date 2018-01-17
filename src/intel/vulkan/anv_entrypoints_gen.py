@@ -164,6 +164,36 @@ static const struct anv_entrypoint entrypoints[] = {
   };
 % endfor
 
+/** Return true if the core version or extension in which the given entrypoint
+ * is defined is enabled.
+ *
+ * If device is NULL, all device extensions are considered enabled.
+ */
+bool
+anv_entrypoint_is_enabled(int index, uint32_t core_version,
+                          const struct anv_instance_extension_table *instance,
+                          const struct anv_device_extension_table *device)
+{
+   switch (index) {
+% for e in entrypoints:
+   case ${e.num}:
+   % if e.core_version:
+      return ${e.core_version.c_vk_version()} <= core_version;
+   % elif e.extension:
+      % if e.extension.type == 'instance':
+      return instance->${e.extension.name[3:]};
+      % else:
+      return !device || device->${e.extension.name[3:]};
+      % endif
+   % else:
+      return true;
+   % endif
+% endfor
+   default:
+      return false;
+   }
+}
+
 static void * __attribute__ ((noinline))
 anv_resolve_entrypoint(const struct gen_device_info *devinfo, uint32_t index)
 {
@@ -279,6 +309,9 @@ class Entrypoint(object):
         self.guard = guard
         self.enabled = False
         self.num = None
+        # Extensions which require this entrypoint
+        self.core_version = None
+        self.extension = None
 
     def prefixed_name(self, prefix):
         assert self.name.startswith('vk')
@@ -303,24 +336,34 @@ def get_entrypoints(doc, entrypoints_to_defines, start_index):
     enabled_commands = set()
     for feature in doc.findall('./feature'):
         assert feature.attrib['api'] == 'vulkan'
-        if VkVersion(feature.attrib['number']) > MAX_API_VERSION:
+        version = VkVersion(feature.attrib['number'])
+        if version > MAX_API_VERSION:
             continue
 
         for command in feature.findall('./require/command'):
             e = entrypoints[command.attrib['name']]
             e.enabled = True
+            assert e.core_version is None
+            e.core_version = version
 
-    supported = set(ext.name for ext in EXTENSIONS)
+    supported_exts = dict((ext.name, ext) for ext in EXTENSIONS)
     for extension in doc.findall('.extensions/extension'):
-        if extension.attrib['name'] not in supported:
+        ext_name = extension.attrib['name']
+        if ext_name not in supported_exts:
             continue
 
         if extension.attrib['supported'] != 'vulkan':
             continue
 
+        ext = supported_exts[ext_name]
+        ext.type = extension.attrib['type']
+
         for command in extension.findall('./require/command'):
             e = entrypoints[command.attrib['name']]
             e.enabled = True
+            assert e.core_version is None
+            assert e.extension is None
+            e.extension = ext
 
     return [e for e in entrypoints.itervalues() if e.enabled]
 
