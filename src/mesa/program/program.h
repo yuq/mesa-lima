@@ -158,6 +158,11 @@ _mesa_shader_stage_to_program(unsigned stage)
    return GL_VERTEX_PROGRAM_ARB;
 }
 
+
+GLbitfield
+gl_external_samplers(const struct gl_program *prog);
+
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
