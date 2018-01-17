@@ -433,6 +433,9 @@ anv_physical_device_init(struct anv_physical_device *device,
       goto fail;
    }
 
+   anv_physical_device_get_supported_extensions(device,
+                                                &device->supported_extensions);
+
    device->local_fd = fd;
    return VK_SUCCESS;
 
@@ -1205,6 +1208,27 @@ anv_device_init_trivial_batch(struct anv_device *device)
    anv_gem_munmap(map, device->trivial_batch_bo.size);
 }
 
+VkResult anv_EnumerateDeviceExtensionProperties(
+    VkPhysicalDevice                            physicalDevice,
+    const char*                                 pLayerName,
+    uint32_t*                                   pPropertyCount,
+    VkExtensionProperties*                      pProperties)
+{
+   ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
+   VK_OUTARRAY_MAKE(out, pProperties, pPropertyCount);
+   (void)device;
+
+   for (int i = 0; i < ANV_DEVICE_EXTENSION_COUNT; i++) {
+      if (device->supported_extensions.extensions[i]) {
+         vk_outarray_append(&out, prop) {
+            *prop = anv_device_extensions[i];
+         }
+      }
+   }
+
+   return vk_outarray_status(&out);
+}
+
 VkResult anv_CreateDevice(
     VkPhysicalDevice                            physicalDevice,
     const VkDeviceCreateInfo*                   pCreateInfo,
@@ -1218,8 +1242,17 @@ VkResult anv_CreateDevice(
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
 
    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-      const char *ext_name = pCreateInfo->ppEnabledExtensionNames[i];
-      if (!anv_physical_device_extension_supported(physical_device, ext_name))
+      int idx;
+      for (idx = 0; idx < ANV_DEVICE_EXTENSION_COUNT; idx++) {
+         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
+                    anv_device_extensions[idx].extensionName) == 0)
+            break;
+      }
+
+      if (idx >= ANV_DEVICE_EXTENSION_COUNT)
+         return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
+
+      if (!physical_device->supported_extensions.extensions[idx])
          return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
    }
 

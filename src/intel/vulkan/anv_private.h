@@ -770,6 +770,8 @@ struct anv_physical_device {
     bool                                        has_syncobj;
     bool                                        has_syncobj_wait;
 
+    struct anv_device_extension_table           supported_extensions;
+
     uint32_t                                    eu_total;
     uint32_t                                    subslice_total;
 
