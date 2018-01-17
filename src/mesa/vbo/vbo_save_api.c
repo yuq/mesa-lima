@@ -174,7 +174,7 @@ copy_vertices(struct gl_context *ctx,
                 sz * sizeof(GLfloat));
       return i;
    default:
-      assert(0);
+      unreachable("Unexpected primitive type");
       return 0;
    }
 }
@@ -675,8 +675,7 @@ copy_from_current(struct gl_context *ctx)
          save->attrptr[i][0] = save->current[i][0];
          break;
       case 0:
-         assert(0);
-         break;
+         unreachable("Unexpected vertex attribute size");
       }
    }
 }

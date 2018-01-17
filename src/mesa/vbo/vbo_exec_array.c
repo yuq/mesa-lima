@@ -150,7 +150,7 @@ check_draw_elements_data(struct gl_context *ctx, GLsizei count,
          j = ((const GLuint *) elements)[i];
          break;
       default:
-         assert(0);
+         unreachable("Unexpected index buffer type");
       }
 
       /* check element j of each enabled array */

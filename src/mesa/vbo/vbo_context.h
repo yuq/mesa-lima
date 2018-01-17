@@ -154,7 +154,7 @@ vbo_draw_method(struct vbo_context *vbo, gl_draw_method method)
          ctx->Array._DrawArrays = vbo->save.inputs;
          break;
       default:
-         assert(0);
+         unreachable("Bad VBO drawing method");
       }
 
       ctx->NewDriverState |= ctx->DriverFlags.NewArray;
@@ -178,7 +178,7 @@ vbo_attrtype_to_integer_flag(GLenum format)
    case GL_UNSIGNED_INT64_ARB:
       return GL_TRUE;
    default:
-      assert(0);
+      unreachable("Bad vertex attribute type");
       return GL_FALSE;
    }
 }
@@ -195,7 +195,7 @@ vbo_attrtype_to_double_flag(GLenum format)
    case GL_DOUBLE:
       return GL_TRUE;
    default:
-      assert(0);
+      unreachable("Bad vertex attribute type");
       return GL_FALSE;
    }
 }
@@ -218,7 +218,7 @@ vbo_get_default_vals_as_union(GLenum format)
    case GL_UNSIGNED_INT:
       return (fi_type *)default_int;
    default:
-      assert(0);
+      unreachable("Bad vertex format");
       return NULL;
    }
 }

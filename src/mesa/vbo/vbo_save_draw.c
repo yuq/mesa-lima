@@ -194,7 +194,7 @@ bind_vertex_list(struct gl_context *ctx,
       }
       break;
    default:
-      assert(0);
+      unreachable("Bad vertex program mode");
    }
 
    for (attr = 0; attr < VERT_ATTRIB_MAX; attr++) {
