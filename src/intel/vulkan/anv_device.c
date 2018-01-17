@@ -1063,9 +1063,31 @@ void anv_GetPhysicalDeviceMemoryProperties2KHR(
 }
 
 PFN_vkVoidFunction anv_GetInstanceProcAddr(
-    VkInstance                                  instance,
+    VkInstance                                  _instance,
     const char*                                 pName)
 {
+   ANV_FROM_HANDLE(anv_instance, instance, _instance);
+
+   /* The Vulkan 1.0 spec for vkGetInstanceProcAddr has a table of exactly
+    * when we have to return valid function pointers, NULL, or it's left
+    * undefined.  See the table for exact details.
+    */
+   if (pName == NULL)
+      return NULL;
+
+#define LOOKUP_ANV_ENTRYPOINT(entrypoint) \
+   if (strcmp(pName, "vk" #entrypoint) == 0) \
+      return (PFN_vkVoidFunction)anv_##entrypoint
+
+   LOOKUP_ANV_ENTRYPOINT(EnumerateInstanceExtensionProperties);
+   LOOKUP_ANV_ENTRYPOINT(EnumerateInstanceLayerProperties);
+   LOOKUP_ANV_ENTRYPOINT(CreateInstance);
+
+#undef LOOKUP_ANV_ENTRYPOINT
+
+   if (instance == NULL)
+      return NULL;
+
    return anv_lookup_entrypoint(NULL, pName);
 }
 
