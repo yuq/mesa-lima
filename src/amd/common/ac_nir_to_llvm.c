@@ -2434,6 +2434,16 @@ static LLVMValueRef visit_get_buffer_size(struct ac_nir_context *ctx,
 
 	return get_buffer_size(ctx, ctx->abi->load_ssbo(ctx->abi, index, false), false);
 }
+
+static uint32_t widen_mask(uint32_t mask, unsigned multiplier)
+{
+	uint32_t new_mask = 0;
+	for(unsigned i = 0; i < 32 && (1u << i) <= mask; ++i)
+		if (mask & (1u << i))
+			new_mask |= ((1u << multiplier) - 1u) << (i * multiplier);
+	return new_mask;
+}
+
 static void visit_store_ssbo(struct ac_nir_context *ctx,
                              nir_intrinsic_instr *instr)
 {
@@ -2455,6 +2465,8 @@ static void visit_store_ssbo(struct ac_nir_context *ctx,
 	if (components_32bit > 1)
 		data_type = LLVMVectorType(ctx->ac.f32, components_32bit);
 
+	writemask = widen_mask(writemask, elem_size_mult);
+
 	base_data = ac_to_float(&ctx->ac, src_data);
 	base_data = trim_vector(&ctx->ac, base_data, instr->num_components);
 	base_data = LLVMBuildBitCast(ctx->ac.builder, base_data,
@@ -2473,9 +2485,6 @@ static void visit_store_ssbo(struct ac_nir_context *ctx,
 			writemask |= 1 << (start + 2);
 			count = 2;
 		}
-
-		start *= elem_size_mult;
-		count *= elem_size_mult;
 
 		if (count > 4) {
 			writemask |= ((1u << (count - 4)) - 1u) << (start + 4);
@@ -3266,17 +3275,12 @@ visit_store_var(struct ac_nir_context *ctx,
 		         NULL, NULL, &const_index, &indir_index);
 
 	if (get_elem_bits(&ctx->ac, LLVMTypeOf(src)) == 64) {
-		int old_writemask = writemask;
 
 		src = LLVMBuildBitCast(ctx->ac.builder, src,
 		                       LLVMVectorType(ctx->ac.f32, ac_get_llvm_num_components(src) * 2),
 		                       "");
 
-		writemask = 0;
-		for (unsigned chan = 0; chan < 4; chan++) {
-			if (old_writemask & (1 << chan))
-				writemask |= 3u << (2 * chan);
-		}
+		writemask = widen_mask(writemask, 2);
 	}
 
 	switch (instr->variables[0]->var->data.mode) {
