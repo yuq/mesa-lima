@@ -74,40 +74,95 @@ print_register(struct gen_spec *spec, const char *name, uint32_t reg)
 }
 
 struct ring_register_mapping {
-   const char *ring_name;
+   unsigned ring_class;
+   unsigned ring_instance;
    const char *register_name;
 };
 
+enum {
+   RCS,
+   BCS,
+   VCS,
+   VECS,
+};
+
 static const struct ring_register_mapping acthd_registers[] = {
-   { "blt", "BCS_ACTHD_UDW" },
-   { "bsd", "VCS_ACTHD_UDW" },
-   { "bsd2", "VCS2_ACTHD_UDW" },
-   { "render", "ACTHD_UDW" },
-   { "vebox", "VECS_ACTHD_UDW" },
+   { BCS, 0, "BCS_ACTHD_UDW" },
+   { VCS, 0, "VCS_ACTHD_UDW" },
+   { VCS, 1, "VCS2_ACTHD_UDW" },
+   { RCS, 0, "ACTHD_UDW" },
+   { VECS, 0, "VECS_ACTHD_UDW" },
 };
 
 static const struct ring_register_mapping ctl_registers[] = {
-   { "blt", "BCS_RING_BUFFER_CTL" },
-   { "bsd", "VCS_RING_BUFFER_CTL" },
-   { "bsd2", "VCS2_RING_BUFFER_CTL" },
-   { "render", "RCS_RING_BUFFER_CTL" },
-   { "vebox", "VECS_RING_BUFFER_CTL" },
+   { BCS, 0, "BCS_RING_BUFFER_CTL" },
+   { VCS, 0, "VCS_RING_BUFFER_CTL" },
+   { VCS, 1, "VCS2_RING_BUFFER_CTL" },
+   { RCS, 0, "RCS_RING_BUFFER_CTL" },
+   { VECS, 0,  "VECS_RING_BUFFER_CTL" },
 };
 
 static const struct ring_register_mapping fault_registers[] = {
-   { "blt", "BCS_FAULT_REG" },
-   { "bsd", "VCS_FAULT_REG" },
-   { "render", "RCS_FAULT_REG" },
-   { "vebox", "VECS_FAULT_REG" },
+   { BCS, 0, "BCS_FAULT_REG" },
+   { VCS, 0, "VCS_FAULT_REG" },
+   { RCS, 0, "RCS_FAULT_REG" },
+   { VECS, 0, "VECS_FAULT_REG" },
 };
+
+static int ring_name_to_class(const char *ring_name,
+                              unsigned int *class)
+{
+   static const char *class_names[] = {
+      [RCS] = "rcs",
+      [BCS] = "bcs",
+      [VCS] = "vcs",
+      [VECS] = "vecs",
+   };
+   for (size_t i = 0; i < ARRAY_SIZE(class_names); i++) {
+      if (strcmp(ring_name, class_names[i]))
+         continue;
+
+      *class = i;
+      return atoi(ring_name + strlen(class_names[i]));
+   }
+
+   static const struct {
+      const char *name;
+      unsigned int class;
+      int instance;
+   } legacy_names[] = {
+      { "render", RCS, 0 },
+      { "blt", BCS, 0 },
+      { "bsd", VCS, 0 },
+      { "bsd2", VCS, 1 },
+      { "vebox", VECS, 0 },
+   };
+   for (size_t i = 0; i < ARRAY_SIZE(legacy_names); i++) {
+      if (strcmp(ring_name, legacy_names[i].name))
+         continue;
+
+      *class = legacy_names[i].class;
+      return legacy_names[i].instance;
+   }
+
+   return -1;
+}
 
 static const char *
 register_name_from_ring(const struct ring_register_mapping *mapping,
                         unsigned nb_mapping,
                         const char *ring_name)
 {
+   unsigned int class;
+   int instance;
+
+   instance = ring_name_to_class(ring_name, &class);
+   if (instance < 0)
+      return NULL;
+
    for (unsigned i = 0; i < nb_mapping; i++) {
-      if (strcmp(mapping[i].ring_name, ring_name) == 0)
+      if (mapping[i].ring_class == class &&
+          mapping[i].ring_instance == instance)
          return mapping[i].register_name;
    }
    return NULL;
@@ -117,16 +172,35 @@ static const char *
 instdone_register_for_ring(const struct gen_device_info *devinfo,
                            const char *ring_name)
 {
-   if (strcmp(ring_name, "blt") == 0)
-      return "BCS_INSTDONE";
-   else if (strcmp(ring_name, "vebox") == 0)
-      return "VECS_INSTDONE";
-   else if (strcmp(ring_name, "bsd") == 0)
-      return "VCS_INSTDONE";
-   else if (strcmp(ring_name, "render") == 0) {
+   unsigned int class;
+   int instance;
+
+   instance = ring_name_to_class(ring_name, &class);
+   if (instance < 0)
+      return NULL;
+
+   switch (class) {
+   case RCS:
       if (devinfo->gen == 6)
          return "INSTDONE_2";
-      return "INSTDONE_1";
+      else
+         return "INSTDONE_1";
+
+   case BCS:
+      return "BCS_INSTDONE";
+
+   case VCS:
+      switch (instance) {
+      case 0:
+         return "VCS_INSTDONE";
+      case 1:
+         return "VCS2_INSTDONE";
+      default:
+         return NULL;
+      }
+
+   case VECS:
+      return "VECS_INSTDONE";
    }
 
    return NULL;
