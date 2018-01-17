@@ -1117,7 +1117,15 @@ PFN_vkVoidFunction anv_GetDeviceProcAddr(
     const char*                                 pName)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   return anv_lookup_entrypoint(&device->info, pName);
+
+   if (!device || !pName)
+      return NULL;
+
+   int idx = anv_get_entrypoint_index(pName);
+   if (idx < 0)
+      return NULL;
+
+   return device->dispatch.entrypoints[idx];
 }
 
 VkResult
@@ -1256,6 +1264,38 @@ VkResult anv_EnumerateDeviceExtensionProperties(
    return vk_outarray_status(&out);
 }
 
+static void
+anv_device_init_dispatch(struct anv_device *device)
+{
+   const struct anv_dispatch_table *genX_table;
+   switch (device->info.gen) {
+   case 10:
+      genX_table = &gen10_dispatch_table;
+      break;
+   case 9:
+      genX_table = &gen9_dispatch_table;
+      break;
+   case 8:
+      genX_table = &gen8_dispatch_table;
+      break;
+   case 7:
+      if (device->info.is_haswell)
+         genX_table = &gen75_dispatch_table;
+      else
+         genX_table = &gen7_dispatch_table;
+      break;
+   default:
+      unreachable("unsupported gen\n");
+   }
+
+   for (unsigned i = 0; i < ARRAY_SIZE(device->dispatch.entrypoints); i++) {
+      if (genX_table->entrypoints[i])
+         device->dispatch.entrypoints[i] = genX_table->entrypoints[i];
+      else
+         device->dispatch.entrypoints[i] = anv_dispatch_table.entrypoints[i];
+   }
+}
+
 VkResult anv_CreateDevice(
     VkPhysicalDevice                            physicalDevice,
     const VkDeviceCreateInfo*                   pCreateInfo,
@@ -1341,6 +1381,8 @@ VkResult anv_CreateDevice(
    device->robust_buffer_access = pCreateInfo->pEnabledFeatures &&
       pCreateInfo->pEnabledFeatures->robustBufferAccess;
    device->enabled_extensions = enabled_extensions;
+
+   anv_device_init_dispatch(device);
 
    if (pthread_mutex_init(&device->mutex, NULL) != 0) {
       result = vk_error(VK_ERROR_INITIALIZATION_FAILED);

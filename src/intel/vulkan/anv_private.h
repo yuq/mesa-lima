@@ -859,6 +859,7 @@ struct anv_device {
     bool                                        can_chain_batches;
     bool                                        robust_buffer_access;
     struct anv_device_extension_table           enabled_extensions;
+    struct anv_dispatch_table                   dispatch;
 
     struct anv_bo_pool                          batch_bo_pool;
 
