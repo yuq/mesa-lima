@@ -49,8 +49,7 @@ libvdpau_gallium = shared_library(
     libpipe_loader_static, libws_null, libwsw,
   ],
   dependencies : [
-    dep_thread, dep_xcb, dep_x11_xcb, dep_xcb_dri2, dep_libdrm,
-    driver_r300, driver_r600, driver_radeonsi, driver_nouveau,
+    dep_thread, driver_r300, driver_r600, driver_radeonsi, driver_nouveau,
   ],
   link_depends : vdpau_link_depends,
 )
