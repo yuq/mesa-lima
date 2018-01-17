@@ -88,7 +88,7 @@ struct vbo_save_vertex_list {
 
 
 /**
- * Is the vertex lists's buffer offset an exact multiple of the
+ * Is the vertex list's buffer offset an exact multiple of the
  * vertex size (in bytes)?  This is used to check for a vertex array /
  * drawing optimization.
  */
@@ -123,7 +123,7 @@ aligned_vertex_buffer_offset(const struct vbo_save_vertex_list *node)
 struct vbo_save_vertex_store {
    struct gl_buffer_object *bufferobj;
    fi_type *buffer_map;
-   GLuint used;
+   GLuint used;           /**< Number of 4-byte words used in buffer */
    GLuint refcount;
 };
 
