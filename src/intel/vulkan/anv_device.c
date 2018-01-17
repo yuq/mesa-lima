@@ -539,6 +539,7 @@ VkResult anv_CreateInstance(
                        VK_VERSION_PATCH(client_version));
    }
 
+   struct anv_instance_extension_table enabled_extensions = {};
    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
       int idx;
       for (idx = 0; idx < ANV_INSTANCE_EXTENSION_COUNT; idx++) {
@@ -552,6 +553,8 @@ VkResult anv_CreateInstance(
 
       if (!anv_instance_extensions_supported.extensions[idx])
          return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
+
+      enabled_extensions.extensions[idx] = true;
    }
 
    instance = vk_alloc2(&default_alloc, pAllocator, sizeof(*instance), 8,
@@ -567,6 +570,7 @@ VkResult anv_CreateInstance(
       instance->alloc = default_alloc;
 
    instance->apiVersion = client_version;
+   instance->enabled_extensions = enabled_extensions;
    instance->physicalDeviceCount = -1;
 
    result = vk_debug_report_instance_init(&instance->debug_report_callbacks);
