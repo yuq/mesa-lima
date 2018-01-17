@@ -52,3 +52,5 @@ libvc5_la_LIBADD = \
 	libvc5_v33.la \
 	libvc5_v41.la \
 	$()
+
+EXTRA_DIST = meson.build

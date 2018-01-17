@@ -54,7 +54,7 @@ libxatracker_la_LDFLAGS += \
 endif
 
 EXTRA_libxatracker_la_DEPENDENCIES = xa.sym
-EXTRA_DIST = xa.sym
+EXTRA_DIST = xa.sym meson.build
 
 if HAVE_GALLIUM_STATIC_TARGETS
 

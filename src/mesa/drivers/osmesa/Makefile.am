@@ -21,7 +21,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-EXTRA_DIST = osmesa.def SConscript
+EXTRA_DIST = osmesa.def SConscript meson.build
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/include \

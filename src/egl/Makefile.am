@@ -219,4 +219,5 @@ EXTRA_DIST = \
 	main/egl.def \
 	main/README.txt \
 	$(GLVND_GEN_DEPS) \
-	main/50_mesa.json
+	main/50_mesa.json \
+	meson.build

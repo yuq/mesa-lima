@@ -77,7 +77,7 @@ d3dadapter9_la_LIBADD = \
 	$(GALLIUM_COMMON_LIB_DEPS)
 
 EXTRA_d3dadapter9_la_DEPENDENCIES = d3dadapter9.sym
-EXTRA_DIST = d3dadapter9.sym
+EXTRA_DIST = d3dadapter9.sym meson.build
 
 TARGET_DRIVERS =
 TARGET_CPPFLAGS =

@@ -83,6 +83,6 @@ AM_CPPFLAGS += -DGALLIUM_SWR
 endif
 
 EXTRA_lib@GL_LIB@_la_DEPENDENCIES = libgl-xlib.sym
-EXTRA_DIST = SConscript libgl-xlib.sym
+EXTRA_DIST = SConscript libgl-xlib.sym meson.build
 
 include $(top_srcdir)/install-gallium-links.mk

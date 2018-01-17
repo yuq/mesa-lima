@@ -32,3 +32,5 @@ libwindowsglx_la_CFLAGS = \
 	$(VISIBILITY_CFLAGS) \
 	$(DEFINES) \
 	$(X11_INCLUDES)
+
+EXTRA_DIST = meson.build

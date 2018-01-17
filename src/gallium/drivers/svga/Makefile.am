@@ -37,4 +37,5 @@ libsvga_la_SOURCES = $(C_SOURCES)
 
 EXTRA_DIST = SConscript \
 	include/README \
-	svgadump/svga_dump.py
+	svgadump/svga_dump.py \
+	meson.build
