@@ -67,6 +67,10 @@ struct anv_dispatch_table {
    };
 };
 
+%for layer in LAYERS:
+extern const struct anv_dispatch_table ${layer}_dispatch_table;
+%endfor
+
 % for e in entrypoints:
   % if e.guard is not None:
 #ifdef ${e.guard}
@@ -146,7 +150,7 @@ static const struct anv_entrypoint entrypoints[] = {
     % endif
   % endfor
 
-  const struct anv_dispatch_table ${layer}_layer = {
+  const struct anv_dispatch_table ${layer}_dispatch_table = {
   % for e in entrypoints:
     % if e.guard is not None:
 #ifdef ${e.guard}
@@ -163,25 +167,25 @@ static void * __attribute__ ((noinline))
 anv_resolve_entrypoint(const struct gen_device_info *devinfo, uint32_t index)
 {
    if (devinfo == NULL) {
-      return anv_layer.entrypoints[index];
+      return anv_dispatch_table.entrypoints[index];
    }
 
    const struct anv_dispatch_table *genX_table;
    switch (devinfo->gen) {
    case 10:
-      genX_table = &gen10_layer;
+      genX_table = &gen10_dispatch_table;
       break;
    case 9:
-      genX_table = &gen9_layer;
+      genX_table = &gen9_dispatch_table;
       break;
    case 8:
-      genX_table = &gen8_layer;
+      genX_table = &gen8_dispatch_table;
       break;
    case 7:
       if (devinfo->is_haswell)
-         genX_table = &gen75_layer;
+         genX_table = &gen75_dispatch_table;
       else
-         genX_table = &gen7_layer;
+         genX_table = &gen7_dispatch_table;
       break;
    default:
       unreachable("unsupported gen\\n");
@@ -190,7 +194,7 @@ anv_resolve_entrypoint(const struct gen_device_info *devinfo, uint32_t index)
    if (genX_table->entrypoints[index])
       return genX_table->entrypoints[index];
    else
-      return anv_layer.entrypoints[index];
+      return anv_dispatch_table.entrypoints[index];
 }
 
 /* Hash table stats:
