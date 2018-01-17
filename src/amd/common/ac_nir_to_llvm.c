@@ -2444,6 +2444,36 @@ static uint32_t widen_mask(uint32_t mask, unsigned multiplier)
 	return new_mask;
 }
 
+static LLVMValueRef extract_vector_range(struct ac_llvm_context *ctx, LLVMValueRef src,
+                                         unsigned start, unsigned count)
+{
+	LLVMTypeRef type = LLVMTypeOf(src);
+
+	if (LLVMGetTypeKind(type) != LLVMVectorTypeKind) {
+		assert(start == 0);
+		assert(count == 1);
+		return src;
+	}
+
+	unsigned src_elements = LLVMGetVectorSize(type);
+	assert(start < src_elements);
+	assert(start + count <= src_elements);
+
+	if (start == 0 && count == src_elements)
+		return src;
+
+	if (count == 1)
+		return LLVMBuildExtractElement(ctx->builder, src, LLVMConstInt(ctx->i32, start, false), "");
+
+	assert(count <= 8);
+	LLVMValueRef indices[8];
+	for (unsigned i = 0; i < count; ++i)
+		indices[i] = LLVMConstInt(ctx->i32, start + i, false);
+
+	LLVMValueRef swizzle = LLVMConstVector(indices, count);
+	return LLVMBuildShuffleVector(ctx->builder, src, src, swizzle, "");
+}
+
 static void visit_store_ssbo(struct ac_nir_context *ctx,
                              nir_intrinsic_instr *instr)
 {
@@ -2476,7 +2506,7 @@ static void visit_store_ssbo(struct ac_nir_context *ctx,
 		int start, count;
 		LLVMValueRef data;
 		LLVMValueRef offset;
-		LLVMValueRef tmp;
+
 		u_bit_scan_consecutive_range(&writemask, &start, &count);
 
 		/* Due to an LLVM limitation, split 3-element writes
@@ -2493,28 +2523,14 @@ static void visit_store_ssbo(struct ac_nir_context *ctx,
 
 		if (count == 4) {
 			store_name = "llvm.amdgcn.buffer.store.v4f32";
-			data = base_data;
 		} else if (count == 2) {
-			tmp = LLVMBuildExtractElement(ctx->ac.builder,
-						      base_data, LLVMConstInt(ctx->ac.i32, start, false), "");
-			data = LLVMBuildInsertElement(ctx->ac.builder, LLVMGetUndef(ctx->ac.v2f32), tmp,
-						      ctx->ac.i32_0, "");
-
-			tmp = LLVMBuildExtractElement(ctx->ac.builder,
-						      base_data, LLVMConstInt(ctx->ac.i32, start + 1, false), "");
-			data = LLVMBuildInsertElement(ctx->ac.builder, data, tmp,
-						      ctx->ac.i32_1, "");
 			store_name = "llvm.amdgcn.buffer.store.v2f32";
 
 		} else {
 			assert(count == 1);
-			if (ac_get_llvm_num_components(base_data) > 1)
-				data = LLVMBuildExtractElement(ctx->ac.builder, base_data,
-							       LLVMConstInt(ctx->ac.i32, start, false), "");
-			else
-				data = base_data;
 			store_name = "llvm.amdgcn.buffer.store.f32";
 		}
+		data = extract_vector_range(&ctx->ac, base_data, start, count);
 
 		offset = base_offset;
 		if (start != 0) {
