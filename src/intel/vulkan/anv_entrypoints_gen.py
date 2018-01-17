@@ -27,6 +27,7 @@ import functools
 import os
 import xml.etree.cElementTree as et
 
+from collections import OrderedDict
 from mako.template import Template
 
 from anv_extensions import *
@@ -276,6 +277,7 @@ class Entrypoint(object):
         self.return_type = return_type
         self.params = ', '.join(params)
         self.guard = guard
+        self.enabled = False
         self.num = None
 
     def prefixed_name(self, prefix):
@@ -287,7 +289,16 @@ class Entrypoint(object):
 
 def get_entrypoints(doc, entrypoints_to_defines, start_index):
     """Extract the entry points from the registry."""
-    entrypoints = []
+    entrypoints = OrderedDict()
+
+    for command in doc.findall('./commands/command'):
+        ret_type = command.find('./proto/type').text
+        fullname = command.find('./proto/name').text
+        params = (''.join(p.itertext()) for p in command.findall('./param'))
+        guard = entrypoints_to_defines.get(fullname)
+        # They really need to be unique
+        assert fullname not in entrypoints
+        entrypoints[fullname] = Entrypoint(fullname, ret_type, params, guard)
 
     enabled_commands = set()
     for feature in doc.findall('./feature'):
@@ -296,7 +307,8 @@ def get_entrypoints(doc, entrypoints_to_defines, start_index):
             continue
 
         for command in feature.findall('./require/command'):
-            enabled_commands.add(command.attrib['name'])
+            e = entrypoints[command.attrib['name']]
+            e.enabled = True
 
     supported = set(ext.name for ext in EXTENSIONS)
     for extension in doc.findall('.extensions/extension'):
@@ -307,20 +319,10 @@ def get_entrypoints(doc, entrypoints_to_defines, start_index):
             continue
 
         for command in extension.findall('./require/command'):
-            enabled_commands.add(command.attrib['name'])
+            e = entrypoints[command.attrib['name']]
+            e.enabled = True
 
-    for command in doc.findall('./commands/command'):
-        ret_type = command.find('./proto/type').text
-        fullname = command.find('./proto/name').text
-
-        if fullname not in enabled_commands:
-            continue
-
-        params = (''.join(p.itertext()) for p in command.findall('./param'))
-        guard = entrypoints_to_defines.get(fullname)
-        entrypoints.append(Entrypoint(fullname, ret_type, params, guard))
-
-    return entrypoints
+    return [e for e in entrypoints.itervalues() if e.enabled]
 
 
 def get_entrypoints_defines(doc):
