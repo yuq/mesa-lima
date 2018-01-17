@@ -971,6 +971,20 @@ update_renderbuffer_surfaces(struct brw_context *brw)
       emit_null_surface_state(brw, fb, &surf_offsets[rt_start]);
    }
 
+   /* The PIPE_CONTROL command description says:
+    *
+    * "Whenever a Binding Table Index (BTI) used by a Render Taget Message
+    *  points to a different RENDER_SURFACE_STATE, SW must issue a Render
+    *  Target Cache Flush by enabling this bit. When render target flush
+    *  is set due to new association of BTI, PS Scoreboard Stall bit must
+    *  be set in this packet."
+   */
+   if (devinfo->gen >= 11) {
+      brw_emit_pipe_control_flush(brw,
+                                  PIPE_CONTROL_RENDER_TARGET_FLUSH |
+                                  PIPE_CONTROL_STALL_AT_SCOREBOARD);
+   }
+
    brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
 }
 
