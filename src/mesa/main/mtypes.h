@@ -4360,15 +4360,6 @@ struct gl_matrix_stack
 #include "dd.h"
 
 
-/**
- * Display list flags.
- * Strictly this is a tnl-private concept, but it doesn't seem
- * worthwhile adding a tnl private structure just to hold this one bit
- * of information:
- */
-#define DLIST_DANGLING_REFS     0x1 
-
-
 /** Opaque declaration of display list payload data type */
 union gl_dlist_node;
 

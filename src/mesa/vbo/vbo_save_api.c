@@ -89,6 +89,11 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 #undef ERROR
 #endif
 
+/**
+ * Display list flag only used by this VBO code.
+ */
+#define DLIST_DANGLING_REFS     0x1
+
 
 /* An interesting VBO number/name to help with debugging */
 #define VBO_BUF_ID  12345
