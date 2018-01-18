@@ -5055,12 +5055,13 @@ static void visit_ssa_undef(struct ac_nir_context *ctx,
 			    const nir_ssa_undef_instr *instr)
 {
 	unsigned num_components = instr->def.num_components;
+	LLVMTypeRef type = LLVMIntTypeInContext(ctx->ac.context, instr->def.bit_size);
 	LLVMValueRef undef;
 
 	if (num_components == 1)
-		undef = LLVMGetUndef(ctx->ac.i32);
+		undef = LLVMGetUndef(type);
 	else {
-		undef = LLVMGetUndef(LLVMVectorType(ctx->ac.i32, num_components));
+		undef = LLVMGetUndef(LLVMVectorType(type, num_components));
 	}
 	_mesa_hash_table_insert(ctx->defs, &instr->def, undef);
 }
