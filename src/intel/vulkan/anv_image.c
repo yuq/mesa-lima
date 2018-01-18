@@ -235,18 +235,11 @@ add_fast_clear_state_buffer(struct anv_image *image,
    assert(image->planes[plane].aux_surface.isl.size > 0 &&
           image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
 
-   /* The offset to the buffer of clear values must be dword-aligned for GPU
-    * memcpy operations. It is located immediately after the auxiliary surface.
-    */
-
-   /* Tiled images are guaranteed to be 4K aligned, so the image alignment
-    * should also be dword-aligned.
+   /* Compressed images must be tiled and therefore everything should be 4K
+    * aligned.  The CCS has the same alignment requirements.  This is good
+    * because we need at least dword-alignment for MI_LOAD/STORE operations.
     */
    assert(image->alignment % 4 == 0);
-
-   /* Auxiliary buffers should be a multiple of 4K, so the start of the clear
-    * values buffer should already be dword-aligned.
-    */
    assert((image->planes[plane].offset + image->planes[plane].size) % 4 == 0);
 
    /* This buffer should be at the very end of the plane. */
