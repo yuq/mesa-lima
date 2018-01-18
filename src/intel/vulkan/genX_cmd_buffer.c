@@ -309,23 +309,6 @@ color_attachment_compute_aux_usage(struct anv_device * device,
       if (GEN_GEN <= 8 && !att_state->clear_color_is_zero_one)
          att_state->fast_clear = false;
 
-      /* We allow fast clears when all aux layers of the miplevel are targeted.
-       * See add_fast_clear_state_buffer() for more information. Also, because
-       * we only either do a fast clear or a normal clear and not both, this
-       * complies with the gen7 restriction of not fast-clearing multiple
-       * layers.
-       */
-      if (cmd_state->framebuffer->layers !=
-          anv_image_aux_layers(iview->image, VK_IMAGE_ASPECT_COLOR_BIT,
-                               iview->planes[0].isl.base_level)) {
-         att_state->fast_clear = false;
-         if (GEN_GEN == 7) {
-            anv_perf_warn(device->instance, iview->image,
-                          "Not fast-clearing the first layer in "
-                          "a multi-layer fast clear.");
-         }
-      }
-
       /* We only allow fast clears in the GENERAL layout if the auxiliary
        * buffer is always enabled and the fast-clear value is all 0's. See
        * add_fast_clear_state_buffer() for more information.
@@ -334,6 +317,23 @@ color_attachment_compute_aux_usage(struct anv_device * device,
           VK_IMAGE_LAYOUT_GENERAL &&
           (!att_state->clear_color_is_zero ||
            iview->image->planes[0].aux_usage == ISL_AUX_USAGE_NONE)) {
+         att_state->fast_clear = false;
+      }
+
+      /* We only allow fast clears to the first slice of an image (level 0,
+       * layer 0) and only for the entire slice.  This guarantees us that, at
+       * any given time, there is only one clear color on any given image at
+       * any given time.  At the time of our testing (Jan 17, 2018), there
+       * were no known applications which would benefit from fast-clearing
+       * more than just the first slice.
+       */
+      if (att_state->fast_clear &&
+          (iview->planes[0].isl.base_level > 0 ||
+           iview->image->extent.depth > 0 ||
+           iview->image->array_size > 0)) {
+         anv_perf_warn(device->instance, iview->image,
+                       "Rendering to a multi-LOD or multi-layer framebuffer "
+                       "with LOAD_OP_CLEAR.  Not fast-clearing");
          att_state->fast_clear = false;
       }
 
