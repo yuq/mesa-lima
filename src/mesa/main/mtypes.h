@@ -4372,9 +4372,7 @@ union gl_dlist_node;
 
 
 /**
- * Provide a location where information about a display list can be
- * collected.  Could be extended with driverPrivate structures,
- * etc. in the future.
+ * Per-display list information.
  */
 struct gl_display_list
 {
