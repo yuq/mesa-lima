@@ -4207,10 +4207,9 @@ visit_emit_vertex(struct ac_shader_abi *abi, unsigned stream, LLVMValueRef *addr
 }
 
 static void
-visit_end_primitive(struct nir_to_llvm_context *ctx,
-		    const nir_intrinsic_instr *instr)
+visit_end_primitive(struct nir_to_llvm_context *ctx, unsigned stream)
 {
-	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_CUT | AC_SENDMSG_GS | (0 << 8), ctx->gs_wave_id);
+	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_CUT | AC_SENDMSG_GS | (stream << 8), ctx->gs_wave_id);
 }
 
 static LLVMValueRef
@@ -4458,7 +4457,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		ctx->abi->emit_vertex(ctx->abi, 0, ctx->outputs);
 		break;
 	case nir_intrinsic_end_primitive:
-		visit_end_primitive(ctx->nctx, instr);
+		visit_end_primitive(ctx->nctx, nir_intrinsic_stream_id(instr));
 		break;
 	case nir_intrinsic_load_tess_coord: {
 		LLVMTypeRef type = ctx->nctx ?
