@@ -543,8 +543,31 @@ struct user_sgpr_info {
 	bool indirect_all_descriptor_sets;
 };
 
+static bool needs_view_index_sgpr(struct nir_to_llvm_context *ctx,
+				  gl_shader_stage stage)
+{
+	switch (stage) {
+	case MESA_SHADER_VERTEX:
+		if (ctx->shader_info->info.needs_multiview_view_index ||
+		    (!ctx->options->key.vs.as_es && !ctx->options->key.vs.as_ls && ctx->options->key.has_multiview_view_index))
+			return true;
+		break;
+	case MESA_SHADER_TESS_EVAL:
+		if (ctx->shader_info->info.needs_multiview_view_index || (!ctx->options->key.tes.as_es && ctx->options->key.has_multiview_view_index))
+			return true;
+	case MESA_SHADER_GEOMETRY:
+	case MESA_SHADER_TESS_CTRL:
+		if (ctx->shader_info->info.needs_multiview_view_index)
+			return true;
+	default:
+		break;
+	}
+	return false;
+}
+
 static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
 				gl_shader_stage stage,
+				bool needs_view_index,
 				struct user_sgpr_info *user_sgpr_info)
 {
 	memset(user_sgpr_info, 0, sizeof(struct user_sgpr_info));
@@ -599,6 +622,9 @@ static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
 	default:
 		break;
 	}
+
+	if (needs_view_index)
+		user_sgpr_info->sgpr_count++;
 
 	if (ctx->shader_info->info.loads_push_constants)
 		user_sgpr_info->sgpr_count += 2;
@@ -771,8 +797,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	struct user_sgpr_info user_sgpr_info;
 	struct arg_info args = {};
 	LLVMValueRef desc_sets;
-
-	allocate_user_sgprs(ctx, stage, &user_sgpr_info);
+	bool needs_view_index = needs_view_index_sgpr(ctx, stage);
+	allocate_user_sgprs(ctx, stage, needs_view_index, &user_sgpr_info);
 
 	if (user_sgpr_info.need_ring_offsets && !ctx->options->supports_spill) {
 		add_arg(&args, ARG_SGPR, const_array(ctx->ac.v4i32, 16),
@@ -810,7 +836,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		declare_vs_specific_input_sgprs(ctx, stage, has_previous_stage,
 						previous_stage, &args);
 
-		if (ctx->shader_info->info.needs_multiview_view_index || (!ctx->options->key.vs.as_es && !ctx->options->key.vs.as_ls && ctx->options->key.has_multiview_view_index))
+		if (needs_view_index)
 			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->view_index);
 		if (ctx->options->key.vs.as_es)
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
@@ -854,7 +880,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 				&ctx->tcs_out_layout);
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->tcs_in_layout);
-			if (ctx->shader_info->info.needs_multiview_view_index)
+			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
 					&ctx->view_index);
 
@@ -879,7 +905,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 				&ctx->tcs_out_layout);
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->tcs_in_layout);
-			if (ctx->shader_info->info.needs_multiview_view_index)
+			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
 					&ctx->view_index);
 
@@ -898,7 +924,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 					   &args, &desc_sets);
 
 		add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->tcs_offchip_layout);
-		if (ctx->shader_info->info.needs_multiview_view_index || (!ctx->options->key.tes.as_es && ctx->options->key.has_multiview_view_index))
+		if (needs_view_index)
 			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->view_index);
 
 		if (ctx->options->key.tes.as_es) {
@@ -945,7 +971,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 				&ctx->gsvs_ring_stride);
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->gsvs_num_entries);
-			if (ctx->shader_info->info.needs_multiview_view_index)
+			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
 					&ctx->view_index);
 
@@ -976,7 +1002,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 				&ctx->gsvs_ring_stride);
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->gsvs_num_entries);
-			if (ctx->shader_info->info.needs_multiview_view_index)
+			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
 					&ctx->view_index);
 
