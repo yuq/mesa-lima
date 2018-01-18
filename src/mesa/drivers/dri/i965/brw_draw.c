@@ -1057,12 +1057,11 @@ void
 brw_draw_init(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
-   struct vbo_context *vbo = vbo_context(ctx);
 
    /* Register our drawing function:
     */
-   vbo->draw_prims = brw_draw_prims;
-   vbo->draw_indirect_prims = brw_draw_indirect_prims;
+   vbo_set_draw_func(ctx, brw_draw_prims);
+   vbo_set_indirect_draw_func(ctx, brw_draw_indirect_prims);
 
    for (int i = 0; i < VERT_ATTRIB_MAX; i++)
       brw->vb.inputs[i].buffer = -1;
