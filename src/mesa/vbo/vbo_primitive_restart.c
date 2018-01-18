@@ -29,7 +29,6 @@
  */
 
 #include "main/imports.h"
-#include "main/bufferobj.h"
 #include "main/macros.h"
 #include "main/varray.h"
 

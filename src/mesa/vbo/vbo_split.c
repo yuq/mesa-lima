@@ -48,9 +48,7 @@
  */
 
 #include "main/glheader.h"
-#include "main/imports.h"
 #include "main/mtypes.h"
-#include "main/macros.h"
 
 #include "vbo_split.h"
 #include "vbo.h"
