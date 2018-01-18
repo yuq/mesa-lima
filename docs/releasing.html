@@ -474,9 +474,9 @@ Here is one solution that I've been using.
 	cd .. &amp;&amp; rm -rf mesa-$__version
 
 	# Test the automake binaries
-	tar -xaf mesa-$__version.tar.xz &amp;&amp; cd mesa-$__version
 	# Restore LLVM_CONFIG, if applicable:
 	# export LLVM_CONFIG=`echo $save_LLVM_CONFIG`; unset save_LLVM_CONFIG
+	tar -xaf mesa-$__version.tar.xz &amp;&amp; cd mesa-$__version
 	./configure \
 		--with-dri-drivers=i965,swrast \
 		--with-gallium-drivers=swrast \
