@@ -1,0 +1,3 @@
+C_SOURCES := \
+   meson_drm_public.h \
+   meson_drm_winsys.c
