@@ -4207,8 +4207,9 @@ visit_emit_vertex(struct ac_shader_abi *abi, unsigned stream, LLVMValueRef *addr
 }
 
 static void
-visit_end_primitive(struct nir_to_llvm_context *ctx, unsigned stream)
+visit_end_primitive(struct ac_shader_abi *abi, unsigned stream)
 {
+	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
 	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_CUT | AC_SENDMSG_GS | (stream << 8), ctx->gs_wave_id);
 }
 
@@ -4457,7 +4458,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		ctx->abi->emit_vertex(ctx->abi, 0, ctx->outputs);
 		break;
 	case nir_intrinsic_end_primitive:
-		visit_end_primitive(ctx->nctx, nir_intrinsic_stream_id(instr));
+		ctx->abi->emit_primitive(ctx->abi, nir_intrinsic_stream_id(instr));
 		break;
 	case nir_intrinsic_load_tess_coord: {
 		LLVMTypeRef type = ctx->nctx ?
@@ -6819,6 +6820,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			ctx.gs_next_vertex = ac_build_alloca(&ctx.ac, ctx.ac.i32, "gs_next_vertex");
 			ctx.gs_max_out_vertices = shaders[i]->info.gs.vertices_out;
 			ctx.abi.load_inputs = load_gs_input;
+			ctx.abi.emit_primitive = visit_end_primitive;
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_CTRL) {
 			ctx.tcs_outputs_read = shaders[i]->info.outputs_read;
 			ctx.tcs_patch_outputs_read = shaders[i]->info.patch_outputs_read;
