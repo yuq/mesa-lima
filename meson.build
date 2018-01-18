@@ -539,7 +539,7 @@ with_gallium_va = _va == 'true'
 dep_va = []
 if with_gallium_va
   dep_va = dependency('libva', version : '>= 0.38.0')
-  dep_va = declare_dependency(
+  dep_va_headers = declare_dependency(
     compile_args : run_command(prog_pkgconfig, ['libva', '--cflags']).stdout().split()
   )
 endif
