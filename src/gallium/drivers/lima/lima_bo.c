@@ -135,6 +135,9 @@ void lima_bo_free(struct lima_bo *bo)
       lima_va_range_free(bo->screen, bo->size, bo->va);
    }
 
+   if (bo->map)
+      lima_bo_unmap(bo);
+
    lima_close_kms_handle(screen, bo->handle);
    free(bo);
 }
@@ -203,9 +206,17 @@ bool lima_bo_update(struct lima_bo *bo, bool need_map, bool need_va)
    }
 
    if (need_va && !bo->va) {
-      if (!lima_va_range_alloc(bo->screen, bo->size, &bo->va) ||
-          !lima_bo_va_map(bo, bo->va, 0))
-          return false;
+      uint32_t va;
+
+      if (!lima_va_range_alloc(bo->screen, bo->size, &va))
+         return false;
+
+      if (!lima_bo_va_map(bo, va, 0)) {
+         lima_va_range_free(bo->screen, bo->size, va);
+         return false;
+      }
+
+      bo->va = va;
    }
 
    return true;
