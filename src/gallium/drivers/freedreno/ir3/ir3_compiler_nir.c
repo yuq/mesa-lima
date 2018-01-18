@@ -194,6 +194,7 @@ compile_init(struct ir3_compiler *compiler,
 	 * in ir3_optimize_nir():
 	 */
 	NIR_PASS_V(ctx->s, nir_lower_locals_to_regs);
+	NIR_PASS_V(ctx->s, nir_convert_from_ssa, true);
 
 	if (fd_mesa_debug & FD_DBG_DISASM) {
 		DBG("dump nir%dv%d: type=%d, k={bp=%u,cts=%u,hp=%u}",
@@ -906,8 +907,6 @@ emit_alu(struct ir3_context *ctx, nir_alu_instr *alu)
 		put_dst(ctx, &alu->dest.dest);
 		return;
 	}
-
-	compile_assert(ctx, alu->dest.dest.is_ssa);
 
 	/* General case: We can just grab the one used channel per src. */
 	for (int i = 0; i < info->num_inputs; i++) {
