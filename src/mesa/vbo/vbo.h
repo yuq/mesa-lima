@@ -196,10 +196,6 @@ void vbo_set_draw_func(struct gl_context *ctx, vbo_draw_func func);
 void vbo_set_indirect_draw_func(struct gl_context *ctx,
                                 vbo_indirect_draw_func func);
 
-size_t
-vbo_count_tessellated_primitives(GLenum mode, GLuint count,
-                                 GLuint num_instances);
-
 void
 vbo_try_prim_conversion(struct _mesa_prim *p);
 
