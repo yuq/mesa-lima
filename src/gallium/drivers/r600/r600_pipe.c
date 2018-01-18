@@ -351,6 +351,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_SAMPLER_VIEW_TARGET:
 	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
 	case PIPE_CAP_TGSI_CLOCK:
+	case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
 		return family >= CHIP_CEDAR ? 1 : 0;
 	case PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS:
 		return family >= CHIP_CEDAR ? 4 : 0;
@@ -387,7 +388,6 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_PRIMITIVE_RESTART_FOR_PATCHES:
 	case PIPE_CAP_TGSI_VOTE:
 	case PIPE_CAP_MAX_WINDOW_RECTANGLES:
-	case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
 	case PIPE_CAP_TGSI_CAN_READ_OUTPUTS:
 	case PIPE_CAP_NATIVE_FENCE_FD:
 	case PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY:
