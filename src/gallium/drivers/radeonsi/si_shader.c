@@ -4389,18 +4389,25 @@ static void si_tgsi_emit_vertex(
 }
 
 /* Cut one primitive from the geometry shader */
-static void si_llvm_emit_primitive(
+static void si_llvm_emit_primitive(struct ac_shader_abi *abi,
+				   unsigned stream)
+{
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+
+	/* Signal primitive cut */
+	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_CUT | AC_SENDMSG_GS | (stream << 8),
+			 si_get_gs_wave_id(ctx));
+}
+
+/* Cut one primitive from the geometry shader */
+static void si_tgsi_emit_primitive(
 	const struct lp_build_tgsi_action *action,
 	struct lp_build_tgsi_context *bld_base,
 	struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	unsigned stream;
 
-	/* Signal primitive cut */
-	stream = si_llvm_get_stream(bld_base, emit_data);
-	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_CUT | AC_SENDMSG_GS | (stream << 8),
-			 si_get_gs_wave_id(ctx));
+	si_llvm_emit_primitive(&ctx->abi, si_llvm_get_stream(bld_base, emit_data));
 }
 
 static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
@@ -5910,7 +5917,7 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_READ_INVOC].emit = read_lane_emit;
 
 	bld_base->op_actions[TGSI_OPCODE_EMIT].emit = si_tgsi_emit_vertex;
-	bld_base->op_actions[TGSI_OPCODE_ENDPRIM].emit = si_llvm_emit_primitive;
+	bld_base->op_actions[TGSI_OPCODE_ENDPRIM].emit = si_tgsi_emit_primitive;
 	bld_base->op_actions[TGSI_OPCODE_BARRIER].emit = si_llvm_emit_barrier;
 }
 
