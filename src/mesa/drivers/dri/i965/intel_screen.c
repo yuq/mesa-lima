@@ -2395,7 +2395,12 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
       return NULL;
    }
    /* parse information in __driConfigOptions */
-   driParseOptionInfo(&screen->optionCache, brw_config_options.xml);
+   driOptionCache options;
+   memset(&options, 0, sizeof(options));
+
+   driParseOptionInfo(&options, brw_config_options.xml);
+   driParseConfigFiles(&screen->optionCache, &options, dri_screen->myNum, "i965");
+   driDestroyOptionCache(&options);
 
    screen->driScrnPriv = dri_screen;
    dri_screen->driverPrivate = (void *) screen;
