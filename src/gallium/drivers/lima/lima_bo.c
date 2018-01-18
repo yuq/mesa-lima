@@ -130,8 +130,10 @@ void lima_bo_free(struct lima_bo *bo)
       util_hash_table_remove(screen->bo_flink_names, (void *)bo->flink_name);
    mtx_unlock(&screen->bo_table_lock);
 
-   if (bo->va)
+   if (bo->va) {
+      lima_bo_va_unmap(bo, bo->va);
       lima_va_range_free(bo->screen, bo->size, bo->va);
+   }
 
    lima_close_kms_handle(screen, bo->handle);
    free(bo);
