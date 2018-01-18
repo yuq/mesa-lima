@@ -466,7 +466,7 @@ vtn_foreach_execution_mode(struct vtn_builder *b, struct vtn_value *value,
    }
 }
 
-static void
+void
 vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
                       const uint32_t *w, unsigned count)
 {
@@ -3191,6 +3191,24 @@ stage_for_execution_model(struct vtn_builder *b, SpvExecutionModel model)
                   spirv_capability_to_string(cap));     \
    } while(0)
 
+
+void
+vtn_handle_entry_point(struct vtn_builder *b, const uint32_t *w,
+                       unsigned count)
+{
+   struct vtn_value *entry_point = &b->values[w[2]];
+   /* Let this be a name label regardless */
+   unsigned name_words;
+   entry_point->name = vtn_string_literal(b, &w[3], count - 3, &name_words);
+
+   if (strcmp(entry_point->name, b->entry_point_name) != 0 ||
+       stage_for_execution_model(b, w[1]) != b->entry_point_stage)
+      return;
+
+   vtn_assert(b->entry_point == NULL);
+   b->entry_point = entry_point;
+}
+
 static bool
 vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
                                 const uint32_t *w, unsigned count)
@@ -3379,20 +3397,9 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
                  w[2] == SpvMemoryModelGLSL450);
       break;
 
-   case SpvOpEntryPoint: {
-      struct vtn_value *entry_point = &b->values[w[2]];
-      /* Let this be a name label regardless */
-      unsigned name_words;
-      entry_point->name = vtn_string_literal(b, &w[3], count - 3, &name_words);
-
-      if (strcmp(entry_point->name, b->entry_point_name) != 0 ||
-          stage_for_execution_model(b, w[1]) != b->entry_point_stage)
-         break;
-
-      vtn_assert(b->entry_point == NULL);
-      b->entry_point = entry_point;
+   case SpvOpEntryPoint:
+      vtn_handle_entry_point(b, w, count);
       break;
-   }
 
    case SpvOpString:
       vtn_push_value(b, w[1], vtn_value_type_string)->str =

@@ -186,6 +186,7 @@ files_libnir = files(
   'nir_worklist.h',
   '../spirv/GLSL.ext.AMD.h',
   '../spirv/GLSL.std.450.h',
+  '../spirv/gl_spirv.c',
   '../spirv/nir_spirv.h',
   '../spirv/spirv.h',
   '../spirv/spirv_info.h',
