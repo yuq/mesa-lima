@@ -28,6 +28,7 @@
 #include "main/mtypes.h"
 #include "main/bufferobj.h"
 #include "math/m_eval.h"
+#include "main/vtxfmt.h"
 #include "vbo.h"
 #include "vbo_context.h"
 
@@ -178,6 +179,15 @@ vbo_draw_indirect_prims(struct gl_context *ctx,
                    ctx->DrawIndirectBuffer);
 
    free(prim);
+}
+
+
+void
+_vbo_install_exec_vtxfmt(struct gl_context *ctx)
+{
+   struct vbo_context *vbo = vbo_context(ctx);
+
+   _mesa_install_exec_vtxfmt(ctx, &vbo->exec.vtxfmt);
 }
 
 

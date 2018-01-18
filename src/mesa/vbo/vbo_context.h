@@ -110,6 +110,10 @@ vbo_exec_invalidate_state(struct gl_context *ctx)
 }
 
 
+void
+_vbo_install_exec_vtxfmt(struct gl_context *ctx);
+
+
 /**
  * Return VP_x token to indicate whether we're running fixed-function
  * vertex transformation, an NV vertex program or ARB vertex program/shader.
