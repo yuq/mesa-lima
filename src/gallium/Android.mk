@@ -40,6 +40,7 @@ SUBDIRS += winsys/i915/drm drivers/i915
 SUBDIRS += winsys/nouveau/drm drivers/nouveau
 SUBDIRS += winsys/pl111/drm drivers/pl111
 SUBDIRS += winsys/exynos/drm drivers/exynos
+SUBDIRS += winsys/meson/drm drivers/meson
 SUBDIRS += winsys/sun4i/drm drivers/sun4i
 SUBDIRS += winsys/radeon/drm drivers/r300
 SUBDIRS += winsys/radeon/drm drivers/r600
