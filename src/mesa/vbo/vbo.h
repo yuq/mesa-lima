@@ -153,8 +153,6 @@ void vbo_split_prims( struct gl_context *ctx,
 		      const struct split_limits *limits );
 
 
-GLboolean vbo_all_varyings_in_vbos( const struct gl_vertex_array *arrays[] );
-
 void vbo_rebase_prims( struct gl_context *ctx,
 		       const struct gl_vertex_array *arrays[],
 		       const struct _mesa_prim *prim,

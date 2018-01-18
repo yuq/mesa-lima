@@ -906,6 +906,22 @@ retry:
    return;
 }
 
+
+static bool
+all_varyings_in_vbos(const struct gl_vertex_array *arrays[])
+{
+   GLuint i;
+
+   for (i = 0; i < VERT_ATTRIB_MAX; i++)
+      if (arrays[i]->StrideB &&
+          arrays[i]->BufferObj->Name == 0)
+         return false;
+
+   return true;
+}
+
+
+
 void
 brw_draw_prims(struct gl_context *ctx,
                const struct _mesa_prim *prims,
@@ -951,7 +967,7 @@ brw_draw_prims(struct gl_context *ctx,
     * get the minimum and maximum of their index buffer so we know what range
     * to upload.
     */
-   if (!index_bounds_valid && !vbo_all_varyings_in_vbos(arrays)) {
+   if (!index_bounds_valid && !all_varyings_in_vbos(arrays)) {
       perf_debug("Scanning index buffer to compute index buffer bounds.  "
                  "Use glDrawRangeElements() to avoid this.\n");
       vbo_get_minmax_indices(ctx, prims, ib, &min_index, &max_index, nr_prims);
