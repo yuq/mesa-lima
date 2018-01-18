@@ -1359,7 +1359,7 @@ GALLIUM_DRIVERS_DEFAULT="r300,r600,svga,swrast"
 AC_ARG_WITH([gallium-drivers],
     [AS_HELP_STRING([--with-gallium-drivers@<:@=DIRS...@:>@],
         [comma delimited Gallium drivers list, e.g.
-        "i915,nouveau,r300,r600,radeonsi,freedreno,pl111,exynos,sun4i,svga,swrast,swr,tegra,vc4,vc5,virgl,etnaviv,imx,lima"
+        "i915,nouveau,r300,r600,radeonsi,freedreno,pl111,exynos,meson,sun4i,svga,swrast,swr,tegra,vc4,vc5,virgl,etnaviv,imx,lima"
         @<:@default=r300,r600,svga,swrast@:>@])],
     [with_gallium_drivers="$withval"],
     [with_gallium_drivers="$GALLIUM_DRIVERS_DEFAULT"])
@@ -2739,6 +2739,9 @@ if test -n "$with_gallium_drivers"; then
         xexynos)
             HAVE_GALLIUM_EXYNOS=yes
             ;;
+        xmeson)
+            HAVE_GALLIUM_MESON=yes
+            ;;
         xsun4i)
             HAVE_GALLIUM_SUN4I=yes
             ;;
@@ -2787,6 +2790,10 @@ fi
 
 if test "x$HAVE_GALLIUM_LIMA" != xyes -a "X$HAVE_GALLIUM_EXYNOS" = xyes ; then
     AC_MSG_ERROR([Building with exynos requires lima])
+fi
+
+if test "x$HAVE_GALLIUM_LIMA" != xyes -a "x$HAVE_GALLIUM_MESON" = xyes  ; then
+    AC_MSG_ERROR([Building with meson requires lima])
 fi
 
 if test "x$HAVE_GALLIUM_LIMA" != xyes -a "x$HAVE_GALLIUM_SUN4I" = xyes  ; then
@@ -2884,6 +2891,7 @@ AM_CONDITIONAL(HAVE_GALLIUM_SVGA, test "x$HAVE_GALLIUM_SVGA" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_I915, test "x$HAVE_GALLIUM_I915" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_PL111, test "x$HAVE_GALLIUM_PL111" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_EXYNOS, test "x$HAVE_GALLIUM_EXYNOS" = xyes)
+AM_CONDITIONAL(HAVE_GALLIUM_MESON, test "x$HAVE_GALLIUM_MESON" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_SUN4I, test "x$HAVE_GALLIUM_SUN4I" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_R300, test "x$HAVE_GALLIUM_R300" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_R600, test "x$HAVE_GALLIUM_R600" = xyes)
@@ -3037,6 +3045,7 @@ AC_CONFIG_FILES([Makefile
                  src/gallium/drivers/nouveau/Makefile
                  src/gallium/drivers/pl111/Makefile
                  src/gallium/drivers/exynos/Makefile
+                 src/gallium/drivers/meson/Makefile
                  src/gallium/drivers/sun4i/Makefile
                  src/gallium/drivers/r300/Makefile
                  src/gallium/drivers/r600/Makefile
@@ -3089,6 +3098,7 @@ AC_CONFIG_FILES([Makefile
                  src/gallium/winsys/nouveau/drm/Makefile
                  src/gallium/winsys/pl111/drm/Makefile
                  src/gallium/winsys/exynos/drm/Makefile
+                 src/gallium/winsys/meson/drm/Makefile
                  src/gallium/winsys/sun4i/drm/Makefile
                  src/gallium/winsys/radeon/drm/Makefile
                  src/gallium/winsys/amdgpu/drm/Makefile

@@ -72,6 +72,10 @@ if HAVE_GALLIUM_EXYNOS
 SUBDIRS += drivers/exynos winsys/exynos/drm
 endif
 
+if HAVE_GALLIUM_MESON
+SUBDIRS += drivers/meson winsys/meson/drm
+endif
+
 if HAVE_GALLIUM_SUN4I
 SUBDIRS += drivers/sun4i winsys/sun4i/drm
 endif
