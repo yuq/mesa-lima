@@ -47,21 +47,21 @@ endif
 pipe_loader_install_dir = join_paths(get_option('libdir'), 'gallium-pipe')
 
 pipe_loaders = [
-  [with_gallium_i915, 'i915', driver_i915, []],
-  [with_gallium_nouveau, 'nouveau', driver_nouveau, []],
-  [with_gallium_r300, 'r300', driver_r300, []],
-  [with_gallium_r600, 'r600', driver_r600, []],
-  [with_gallium_radeonsi, 'radeonsi', driver_radeonsi, [libxmlconfig]],
-  [with_gallium_freedreno, 'msm', driver_freedreno, []],
-  [with_gallium_svga, 'vmwgfx', driver_svga, []],
-  [with_gallium_softpipe, 'swrast', [driver_swrast, driver_swr], [libwsw, libws_null]],
+  [with_gallium_i915, 'i915', driver_i915, [], []],
+  [with_gallium_nouveau, 'nouveau', driver_nouveau, [], []],
+  [with_gallium_r300, 'r300', driver_r300, [], []],
+  [with_gallium_r600, 'r600', driver_r600, [], []],
+  [with_gallium_radeonsi, 'radeonsi', driver_radeonsi, [libxmlconfig], [xmlpool_options_h]],
+  [with_gallium_freedreno, 'msm', driver_freedreno, [], []],
+  [with_gallium_svga, 'vmwgfx', driver_svga, [], []],
+  [with_gallium_softpipe, 'swrast', [driver_swrast, driver_swr], [libwsw, libws_null], []],
 ]
 
 foreach x : pipe_loaders
   if x[0]
     shared_library(
       'pipe_@0@'.format(x[1]),
-      'pipe_@0@.c'.format(x[1]),
+      ['pipe_@0@.c'.format(x[1]), x[4]],
       c_args : [pipe_loader_comp_args, c_vis_args],
       cpp_args : [pipe_loader_comp_args, cpp_vis_args],
       link_args : pipe_loader_link_args,

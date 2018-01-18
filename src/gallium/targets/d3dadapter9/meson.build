@@ -47,7 +47,7 @@ endif
 
 libgallium_nine = shared_library(
   'd3dadapter9',
-  files('description.c', 'getproc.c', 'drm.c'),
+  [files('description.c', 'getproc.c', 'drm.c'), xmlpool_options_h],
   include_directories : [
     inc_include, inc_src, inc_loader, inc_mapi, inc_mesa, inc_util,
     inc_dri_common, inc_gallium, inc_gallium_aux, inc_gallium_winsys,
