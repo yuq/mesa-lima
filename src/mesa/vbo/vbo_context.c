@@ -31,6 +31,7 @@
 #include "main/vtxfmt.h"
 #include "vbo.h"
 #include "vbo_context.h"
+#include "vbo_private.h"
 
 
 static GLuint
@@ -188,6 +189,24 @@ _vbo_install_exec_vtxfmt(struct gl_context *ctx)
    struct vbo_context *vbo = vbo_context(ctx);
 
    _mesa_install_exec_vtxfmt(ctx, &vbo->exec.vtxfmt);
+}
+
+
+void
+vbo_exec_invalidate_state(struct gl_context *ctx)
+{
+   struct vbo_context *vbo = vbo_context(ctx);
+   struct vbo_exec_context *exec = &vbo->exec;
+
+   if (ctx->NewState & (_NEW_PROGRAM | _NEW_ARRAY)) {
+      if (!exec->validating)
+         exec->array.recalculate_inputs = GL_TRUE;
+
+      _ae_invalidate_state(ctx);
+   }
+
+   if (ctx->NewState & _NEW_EVAL)
+      exec->eval.recalculate_maps = GL_TRUE;
 }
 
 

@@ -30,6 +30,7 @@
 #include "main/mtypes.h"
 #include "main/vtxfmt.h"
 #include "vbo_context.h"
+#include "vbo_private.h"
 
 
 

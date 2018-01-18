@@ -181,15 +181,6 @@ void vbo_set_indirect_draw_func(struct gl_context *ctx,
                                 vbo_indirect_draw_func func);
 
 void
-vbo_try_prim_conversion(struct _mesa_prim *p);
-
-bool
-vbo_can_merge_prims(const struct _mesa_prim *p0, const struct _mesa_prim *p1);
-
-void
-vbo_merge_prims(struct _mesa_prim *p0, const struct _mesa_prim *p1);
-
-void
 vbo_sw_primitive_restart(struct gl_context *ctx,
                          const struct _mesa_prim *prim,
                          GLuint nr_prims,

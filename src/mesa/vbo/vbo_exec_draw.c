@@ -36,6 +36,7 @@
 
 #include "vbo_context.h"
 #include "vbo_noop.h"
+#include "vbo_private.h"
 
 
 static void
