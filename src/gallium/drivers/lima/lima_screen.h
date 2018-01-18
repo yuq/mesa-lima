@@ -33,7 +33,10 @@
 
 extern bool lima_dump_command_stream;
 
-#define LIMA_MAX_MIP_LEVELS 12
+/* TODO: what's the max of the HW cap, current value indicates
+ * max texture size is 8192x8192
+ */
+#define LIMA_MAX_MIP_LEVELS 14
 
 struct ra_regs;
 
