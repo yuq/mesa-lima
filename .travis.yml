@@ -396,6 +396,36 @@ matrix:
             - libexpat1-dev
             - libx11-xcb-dev
             - libelf-dev
+    - env:
+        - LABEL="macOS make"
+        - BUILD=make
+        - MAKEFLAGS="-j4"
+        - MAKE_CHECK_COMMAND="make check"
+        - DRI_LOADERS="--with-platforms=x11 --disable-egl"
+      os: osx
+
+before_install:
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      HOMEBREW_NO_AUTO_UPDATE=1 brew install python3 ninja expat gettext
+      # Set PATH for homebrew pip3 installs
+      PATH="$HOME/Library/Python/3.6/bin:${PATH}"
+      # Set PKG_CONFIG_PATH for keg-only expat
+      PKG_CONFIG_PATH="/usr/local/opt/expat/lib/pkgconfig:${PKG_CONFIG_PATH}"
+      # Set PATH for keg-only gettext
+      PATH="/usr/local/opt/gettext/bin:${PATH}"
+
+      # Install xquartz for prereqs ...
+      XQUARTZ_VERSION="2.7.11"
+      wget -nv https://dl.bintray.com/xquartz/downloads/XQuartz-${XQUARTZ_VERSION}.dmg
+      hdiutil attach XQuartz-${XQUARTZ_VERSION}.dmg
+      sudo installer -pkg /Volumes/XQuartz-${XQUARTZ_VERSION}/XQuartz.pkg -target /
+      hdiutil detach /Volumes/XQuartz-${XQUARTZ_VERSION}
+      # ... and set paths
+      PATH="/opt/X11/bin:${PATH}"
+      PKG_CONFIG_PATH="/opt/X11/share/pkgconfig:/opt/X11/lib/pkgconfig:${PKG_CONFIG_PATH}"
+      ACLOCAL="aclocal -I /opt/X11/share/aclocal -I /usr/local/share/aclocal"
+    fi
 
 install:
   - pip2 install --user mako
