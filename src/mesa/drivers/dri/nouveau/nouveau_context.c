@@ -202,8 +202,7 @@ nouveau_context_deinit(struct gl_context *ctx)
 	if (TNL_CONTEXT(ctx))
 		_tnl_DestroyContext(ctx);
 
-	if (vbo_context(ctx))
-		_vbo_DestroyContext(ctx);
+	_vbo_DestroyContext(ctx);
 
 	if (SWRAST_CONTEXT(ctx))
 		_swrast_DestroyContext(ctx);
