@@ -1704,6 +1704,11 @@ struct anv_surface_state {
     * gen8, the bottom 12 bits of this address include extra aux information.
     */
    uint64_t aux_address;
+   /* Address of the clear color, if any
+    *
+    * This address is relative to the start of the BO.
+    */
+   uint64_t clear_address;
 };
 
 /**

@@ -200,6 +200,17 @@ add_image_view_relocs(struct anv_cmd_buffer *cmd_buffer,
       if (result != VK_SUCCESS)
          anv_batch_set_error(&cmd_buffer->batch, result);
    }
+
+   if (state.clear_address) {
+      VkResult result =
+         anv_reloc_list_add(&cmd_buffer->surface_relocs,
+                            &cmd_buffer->pool->alloc,
+                            state.state.offset +
+                            isl_dev->ss.clear_color_state_offset,
+                            image->planes[image_plane].bo, state.clear_address);
+      if (result != VK_SUCCESS)
+         anv_batch_set_error(&cmd_buffer->batch, result);
+   }
 }
 
 static void
@@ -1122,6 +1133,34 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
 
    cmd_buffer->state.pending_pipe_bits |=
       ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
+}
+
+static void
+update_fast_clear_color(struct anv_cmd_buffer *cmd_buffer,
+                        const struct anv_attachment_state *att_state,
+                        const struct anv_image_view *iview)
+{
+   assert(GEN_GEN >= 10);
+   assert(iview->image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+
+   struct anv_address clear_address =
+      anv_image_get_clear_color_addr(cmd_buffer->device, iview->image,
+                                     VK_IMAGE_ASPECT_COLOR_BIT);
+   union isl_color_value clear_color;
+   anv_clear_color_from_att_state(&clear_color, att_state, iview);
+
+   /* Clear values are stored at the same bo as the aux surface, right
+    * after the surface.
+    */
+   for (int i = 0; i < 4; i++) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
+         sdi.Address = (struct anv_address) {
+            .bo = clear_address.bo,
+            .offset = clear_address.offset + i * 4,
+         };
+         sdi.ImmediateData = clear_color.u32[i];
+      }
+   }
 }
 
 /**
@@ -3567,9 +3606,13 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
             if (is_multiview)
                att_state->pending_clear_views &= ~1;
 
-            genX(copy_fast_clear_dwords)(cmd_buffer, att_state->color.state,
-                                         image, VK_IMAGE_ASPECT_COLOR_BIT,
-                                         true /* copy from ss */);
+            if (GEN_GEN < 10) {
+               genX(copy_fast_clear_dwords)(cmd_buffer, att_state->color.state,
+                                            image, VK_IMAGE_ASPECT_COLOR_BIT,
+                                            true /* copy from ss */);
+            } else {
+               update_fast_clear_color(cmd_buffer, att_state, iview);
+            }
 
             if (att_state->clear_color_is_zero) {
                /* This image has the auxiliary buffer enabled. We can mark the
@@ -3681,7 +3724,8 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
          assert(att_state->pending_clear_aspects == 0);
       }
 
-      if ((att_state->pending_load_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) &&
+      if (GEN_GEN < 10 &&
+          (att_state->pending_load_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) &&
           image->planes[0].aux_surface.isl.size > 0 &&
           iview->planes[0].isl.base_level == 0 &&
           iview->planes[0].isl.base_array_layer == 0) {
