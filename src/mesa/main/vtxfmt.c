@@ -34,7 +34,7 @@
 #include "eval.h"
 #include "dlist.h"
 #include "main/dispatch.h"
-#include "vbo/vbo_context.h"
+#include "vbo/vbo.h"
 
 
 /**

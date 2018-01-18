@@ -32,7 +32,6 @@
 #define VBO_PRIVATE_H
 
 
-#include "vbo/vbo_context.h"
 #include "vbo/vbo_attrib.h"
 #include "vbo/vbo_exec.h"
 #include "vbo/vbo_save.h"

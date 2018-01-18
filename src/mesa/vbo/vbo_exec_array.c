@@ -39,7 +39,6 @@
 #include "main/macros.h"
 #include "main/transformfeedback.h"
 
-#include "vbo_context.h"
 #include "vbo_private.h"
 
 

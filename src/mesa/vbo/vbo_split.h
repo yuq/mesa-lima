@@ -23,7 +23,6 @@
  */
 
 /**
- * \file vbo_context.h
  * \brief VBO builder module datatypes and definitions.
  * \author Keith Whitwell
  */

@@ -36,7 +36,6 @@
 #include "main/state.h"
 #include "util/bitscan.h"
 
-#include "vbo_context.h"
 #include "vbo_private.h"
 
 

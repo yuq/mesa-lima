@@ -34,7 +34,6 @@
 #include "main/varray.h"
 
 #include "vbo.h"
-#include "vbo_context.h"
 #include "vbo_private.h"
 
 
