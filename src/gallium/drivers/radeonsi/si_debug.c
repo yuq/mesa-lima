@@ -31,6 +31,7 @@
 #include "util/u_dump.h"
 #include "util/u_log.h"
 #include "util/u_memory.h"
+#include "util/u_string.h"
 #include "ac_debug.h"
 
 static void si_dump_bo_list(struct si_context *sctx,
@@ -859,42 +860,40 @@ static void si_dump_compute_descriptors(struct si_context *sctx,
 }
 
 struct si_shader_inst {
-	char text[160];  /* one disasm line */
-	unsigned offset; /* instruction offset */
+	const char *text; /* start of disassembly for this instruction */
+	unsigned textlen;
 	unsigned size;   /* instruction size = 4 or 8 */
+	uint64_t addr; /* instruction address */
 };
 
-/* Split a disassembly string into lines and add them to the array pointed
- * to by "instructions". */
+/**
+ * Split a disassembly string into instructions and add them to the array
+ * pointed to by \p instructions.
+ *
+ * Labels are considered to be part of the following instruction.
+ */
 static void si_add_split_disasm(const char *disasm,
-				uint64_t start_addr,
+				uint64_t *addr,
 				unsigned *num,
 				struct si_shader_inst *instructions)
 {
-	struct si_shader_inst *last_inst = *num ? &instructions[*num - 1] : NULL;
-	char *next;
+	const char *semicolon;
 
-	while ((next = strchr(disasm, '\n'))) {
-		struct si_shader_inst *inst = &instructions[*num];
-		unsigned len = next - disasm;
+	while ((semicolon = strchr(disasm, ';'))) {
+		struct si_shader_inst *inst = &instructions[(*num)++];
+		const char *end = util_strchrnul(semicolon, '\n');
 
-		assert(len < ARRAY_SIZE(inst->text));
-		memcpy(inst->text, disasm, len);
-		inst->text[len] = 0;
-		inst->offset = last_inst ? last_inst->offset + last_inst->size : 0;
+		inst->text = disasm;
+		inst->textlen = end - disasm;
 
-		const char *semicolon = strchr(disasm, ';');
-		assert(semicolon);
+		inst->addr = *addr;
 		/* More than 16 chars after ";" means the instruction is 8 bytes long. */
-		inst->size = next - semicolon > 16 ? 8 : 4;
+		inst->size = end - semicolon > 16 ? 8 : 4;
+		*addr += inst->size;
 
-		snprintf(inst->text + len, ARRAY_SIZE(inst->text) - len,
-			" [PC=0x%"PRIx64", off=%u, size=%u]",
-			start_addr + inst->offset, inst->offset, inst->size);
-
-		last_inst = inst;
-		(*num)++;
-		disasm = next + 1;
+		if (!(*end))
+			break;
+		disasm = end + 1;
 	}
 }
 
@@ -930,26 +929,27 @@ static void si_print_annotated_shader(struct si_shader *shader,
 	 * Buffer size / 4 is the upper bound of the instruction count.
 	 */
 	unsigned num_inst = 0;
+	uint64_t inst_addr = start_addr;
 	struct si_shader_inst *instructions =
 		calloc(shader->bo->b.b.width0 / 4, sizeof(struct si_shader_inst));
 
 	if (shader->prolog) {
 		si_add_split_disasm(shader->prolog->binary.disasm_string,
-				    start_addr, &num_inst, instructions);
+				    &inst_addr, &num_inst, instructions);
 	}
 	if (shader->previous_stage) {
 		si_add_split_disasm(shader->previous_stage->binary.disasm_string,
-				    start_addr, &num_inst, instructions);
+				    &inst_addr, &num_inst, instructions);
 	}
 	if (shader->prolog2) {
 		si_add_split_disasm(shader->prolog2->binary.disasm_string,
-				    start_addr, &num_inst, instructions);
+				    &inst_addr, &num_inst, instructions);
 	}
 	si_add_split_disasm(shader->binary.disasm_string,
-			    start_addr, &num_inst, instructions);
+			    &inst_addr, &num_inst, instructions);
 	if (shader->epilog) {
 		si_add_split_disasm(shader->epilog->binary.disasm_string,
-				    start_addr, &num_inst, instructions);
+				    &inst_addr, &num_inst, instructions);
 	}
 
 	fprintf(f, COLOR_YELLOW "%s - annotated disassembly:" COLOR_RESET "\n",
@@ -959,10 +959,11 @@ static void si_print_annotated_shader(struct si_shader *shader,
 	for (i = 0; i < num_inst; i++) {
 		struct si_shader_inst *inst = &instructions[i];
 
-		fprintf(f, "%s\n", inst->text);
+		fprintf(f, "%.*s [PC=0x%"PRIx64", size=%u]\n",
+			inst->textlen, inst->text, inst->addr, inst->size);
 
 		/* Print which waves execute the instruction right now. */
-		while (num_waves && start_addr + inst->offset == waves->pc) {
+		while (num_waves && inst->addr == waves->pc) {
 			fprintf(f,
 				"          " COLOR_GREEN "^ SE%u SH%u CU%u "
 				"SIMD%u WAVE%u  EXEC=%016"PRIx64 "  ",
