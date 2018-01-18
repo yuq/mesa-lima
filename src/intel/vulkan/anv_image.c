@@ -1149,19 +1149,16 @@ anv_image_fill_surface_state(struct anv_device *device,
                           .x_offset_sa = tile_x_sa,
                           .y_offset_sa = tile_y_sa);
       state_inout->address = address + offset_B;
-      if (device->info.gen >= 8) {
-         state_inout->aux_address = aux_address;
-      } else {
-         /* On gen7 and prior, the bottom 12 bits of the MCS base address are
-          * used to store other information.  This should be ok, however,
-          * because surface buffer addresses are always 4K page alinged.
-          */
-         uint32_t *aux_addr_dw = state_inout->state.map +
-                                 device->isl_dev.ss.aux_addr_offset;
-         assert((aux_address & 0xfff) == 0);
-         assert(aux_address == (*aux_addr_dw & 0xfffff000));
-         state_inout->aux_address = *aux_addr_dw;
-      }
+
+      /* With the exception of gen8, the bottom 12 bits of the MCS base address
+       * are used to store other information.  This should be ok, however,
+       * because the surface buffer addresses are always 4K page aligned.
+       */
+      uint32_t *aux_addr_dw = state_inout->state.map +
+         device->isl_dev.ss.aux_addr_offset;
+      assert((aux_address & 0xfff) == 0);
+      assert(aux_address == (*aux_addr_dw & 0xfffff000));
+      state_inout->aux_address = *aux_addr_dw;
    }
 
    anv_state_flush(device, state_inout->state);
