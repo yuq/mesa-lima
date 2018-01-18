@@ -26,13 +26,9 @@ AM_CXXFLAGS = $(GALLIUM_DRIVER_CFLAGS) $(CXX11_CXXFLAGS)
 
 noinst_LTLIBRARIES = libmesaswr.la
 
-# gen_knobs.* included here to provide driver access to swr configuration
 libmesaswr_la_SOURCES = \
 	$(CXX_SOURCES) \
-	$(COMMON_CXX_SOURCES) \
 	$(JITTER_CXX_SOURCES) \
-	rasterizer/codegen/gen_knobs.cpp \
-	rasterizer/codegen/gen_knobs.h \
 	$(LOADER_SOURCES)
 
 COMMON_CXXFLAGS = \
@@ -243,8 +239,6 @@ COMMON_LDFLAGS = \
 lib_LTLIBRARIES =
 
 if HAVE_SWR_AVX
-lib_LTLIBRARIES += libswrAVX.la
-
 libswrAVX_la_CXXFLAGS = \
 	$(PTHREAD_CFLAGS) \
 	$(SWR_AVX_CXXFLAGS) \
@@ -262,7 +256,6 @@ libswrAVX_la_LDFLAGS = \
 endif
 
 if HAVE_SWR_AVX2
-lib_LTLIBRARIES += libswrAVX2.la
 libswrAVX2_la_CXXFLAGS = \
 	$(PTHREAD_CFLAGS) \
 	$(SWR_AVX2_CXXFLAGS) \
@@ -280,8 +273,6 @@ libswrAVX2_la_LDFLAGS = \
 endif
 
 if HAVE_SWR_KNL
-lib_LTLIBRARIES += libswrKNL.la
-
 libswrKNL_la_CXXFLAGS = \
 	$(PTHREAD_CFLAGS) \
 	$(SWR_KNL_CXXFLAGS) \
@@ -299,8 +290,6 @@ libswrKNL_la_LDFLAGS = \
 endif
 
 if HAVE_SWR_SKX
-lib_LTLIBRARIES += libswrSKX.la
-
 libswrSKX_la_CXXFLAGS = \
 	$(PTHREAD_CFLAGS) \
 	$(SWR_SKX_CXXFLAGS) \
@@ -315,6 +304,45 @@ libswrSKX_la_LIBADD = \
 
 libswrSKX_la_LDFLAGS = \
 	$(COMMON_LDFLAGS)
+endif
+
+if HAVE_SWR_BUILTIN
+libmesaswr_la_CXXFLAGS += -DHAVE_SWR_BUILTIN
+libmesaswr_la_LIBADD =
+if HAVE_SWR_AVX
+noinst_LTLIBRARIES += libswrAVX.la
+libmesaswr_la_LIBADD += libswrAVX.la
+endif
+if HAVE_SWR_AVX2
+noinst_LTLIBRARIES += libswrAVX2.la
+libmesaswr_la_LIBADD += libswrAVX2.la
+endif
+if HAVE_SWR_KNL
+noinst_LTLIBRARIES += libswrKNL.la
+libmesaswr_la_LIBADD += libswrKNL.la
+endif
+if HAVE_SWR_SKX
+noinst_LTLIBRARIES += libswrSKX.la
+libmesaswr_la_LIBADD += libswrSKX.la
+endif
+else # !HAVE_SWR_BUILTIN
+# gen_knobs.* included here to provide driver access to swr configuration
+libmesaswr_la_SOURCES += \
+       $(COMMON_CXX_SOURCES) \
+       rasterizer/codegen/gen_knobs.cpp \
+       rasterizer/codegen/gen_knobs.h
+if HAVE_SWR_AVX
+lib_LTLIBRARIES += libswrAVX.la
+endif
+if HAVE_SWR_AVX2
+lib_LTLIBRARIES += libswrAVX2.la
+endif
+if HAVE_SWR_KNL
+lib_LTLIBRARIES += libswrKNL.la
+endif
+if HAVE_SWR_SKX
+lib_LTLIBRARIES += libswrSKX.la
+endif
 endif
 
 include $(top_srcdir)/install-gallium-links.mk
