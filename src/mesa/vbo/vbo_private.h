@@ -33,12 +33,37 @@
 
 
 #include "vbo/vbo_context.h"
+#include "vbo/vbo_attrib.h"
+#include "vbo/vbo_exec.h"
+#include "vbo/vbo_save.h"
 #include "main/mtypes.h"
 
 
 struct _glapi_table;
 struct _mesa_prim;
 
+
+struct vbo_context {
+   struct gl_vertex_array currval[VBO_ATTRIB_MAX];
+
+   /** Map VERT_ATTRIB_x to VBO_ATTRIB_y */
+   GLubyte map_vp_none[VERT_ATTRIB_MAX];
+   GLubyte map_vp_arb[VERT_ATTRIB_MAX];
+
+   struct vbo_exec_context exec;
+   struct vbo_save_context save;
+
+   /* Callback into the driver.  This must always succeed, the driver
+    * is responsible for initiating any fallback actions required:
+    */
+   vbo_draw_func draw_prims;
+
+   /* Optional callback for indirect draws. This allows multidraws to not be
+    * broken up, as well as for the actual count to be passed in as a separate
+    * indirect parameter.
+    */
+   vbo_indirect_draw_func draw_indirect_prims;
+};
 
 
 static inline struct vbo_context *

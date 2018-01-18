@@ -52,46 +52,6 @@
 #define _VBO_CONTEXT_H
 
 #include "vbo.h"
-#include "vbo_attrib.h"
-#include "vbo_exec.h"
-#include "vbo_save.h"
-
-#include "main/api_arrayelt.h"
-#include "main/macros.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-struct vbo_context {
-   struct gl_vertex_array currval[VBO_ATTRIB_MAX];
-   
-   /** Map VERT_ATTRIB_x to VBO_ATTRIB_y */
-   GLubyte map_vp_none[VERT_ATTRIB_MAX];
-   GLubyte map_vp_arb[VERT_ATTRIB_MAX];
-
-   struct vbo_exec_context exec;
-   struct vbo_save_context save;
-
-   /* Callback into the driver.  This must always succeed, the driver
-    * is responsible for initiating any fallback actions required:
-    */
-   vbo_draw_func draw_prims;
-
-   /* Optional callback for indirect draws. This allows multidraws to not be
-    * broken up, as well as for the actual count to be passed in as a separate
-    * indirect parameter.
-    */
-   vbo_indirect_draw_func draw_indirect_prims;
-};
-
-
-void
-vbo_exec_invalidate_state(struct gl_context *ctx);
-
-
-void
-_vbo_install_exec_vtxfmt(struct gl_context *ctx);
 
 
 #ifdef __cplusplus
