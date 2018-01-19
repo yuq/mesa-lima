@@ -348,13 +348,35 @@ create_array_load(struct ir3_context *ctx, struct ir3_array *arr, int n,
 }
 
 /* relative (indirect) if address!=NULL */
-static struct ir3_instruction *
+static void
 create_array_store(struct ir3_context *ctx, struct ir3_array *arr, int n,
 		struct ir3_instruction *src, struct ir3_instruction *address)
 {
 	struct ir3_block *block = ctx->block;
 	struct ir3_instruction *mov;
 	struct ir3_register *dst;
+
+	/* if not relative store, don't create an extra mov, since that
+	 * ends up being difficult for cp to remove.
+	 */
+	if (!address) {
+		dst = src->regs[0];
+
+		src->barrier_class |= IR3_BARRIER_ARRAY_W;
+		src->barrier_conflict |= IR3_BARRIER_ARRAY_R | IR3_BARRIER_ARRAY_W;
+
+		dst->flags |= IR3_REG_ARRAY;
+		dst->instr = arr->last_write;
+		dst->size = arr->length;
+		dst->array.id = arr->id;
+		dst->array.offset = n;
+
+		arr->last_write = src;
+
+		array_insert(block, block->keeps, src);
+
+		return;
+	}
 
 	mov = ir3_instr_create(block, OPC_MOV);
 	mov->cat1.src_type = TYPE_U32;
@@ -379,8 +401,6 @@ create_array_store(struct ir3_context *ctx, struct ir3_array *arr, int n,
 	 * pass won't know this.. so keep all array stores:
 	 */
 	array_insert(block, block->keeps, mov);
-
-	return mov;
 }
 
 /* allocate a n element value array (to be populated by caller) and
