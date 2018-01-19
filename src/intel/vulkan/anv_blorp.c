@@ -247,6 +247,7 @@ void anv_CmdCopyImage(
       VkExtent3D extent =
          anv_sanitize_image_extent(src_image->type, pRegions[r].extent);
 
+      const uint32_t dst_level = pRegions[r].dstSubresource.mipLevel;
       unsigned dst_base_layer, layer_count;
       if (dst_image->type == VK_IMAGE_TYPE_3D) {
          dst_base_layer = pRegions[r].dstOffset.z;
@@ -257,6 +258,7 @@ void anv_CmdCopyImage(
             anv_get_layerCount(dst_image, &pRegions[r].dstSubresource);
       }
 
+      const uint32_t src_level = pRegions[r].srcSubresource.mipLevel;
       unsigned src_base_layer;
       if (src_image->type == VK_IMAGE_TYPE_3D) {
          src_base_layer = pRegions[r].srcOffset.z;
@@ -283,10 +285,8 @@ void anv_CmdCopyImage(
                                          ANV_AUX_USAGE_DEFAULT, &dst_surf);
 
             for (unsigned i = 0; i < layer_count; i++) {
-               blorp_copy(&batch, &src_surf, pRegions[r].srcSubresource.mipLevel,
-                          src_base_layer + i,
-                          &dst_surf, pRegions[r].dstSubresource.mipLevel,
-                          dst_base_layer + i,
+               blorp_copy(&batch, &src_surf, src_level, src_base_layer + i,
+                          &dst_surf, dst_level, dst_base_layer + i,
                           srcOffset.x, srcOffset.y,
                           dstOffset.x, dstOffset.y,
                           extent.width, extent.height);
@@ -300,10 +300,8 @@ void anv_CmdCopyImage(
                                       ANV_AUX_USAGE_DEFAULT, &dst_surf);
 
          for (unsigned i = 0; i < layer_count; i++) {
-            blorp_copy(&batch, &src_surf, pRegions[r].srcSubresource.mipLevel,
-                       src_base_layer + i,
-                       &dst_surf, pRegions[r].dstSubresource.mipLevel,
-                       dst_base_layer + i,
+            blorp_copy(&batch, &src_surf, src_level, src_base_layer + i,
+                       &dst_surf, dst_level, dst_base_layer + i,
                        srcOffset.x, srcOffset.y,
                        dstOffset.x, dstOffset.y,
                        extent.width, extent.height);
