@@ -239,6 +239,9 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 		info->input_semantic_name[i] = semantic_name;
 		info->input_semantic_index[i] = semantic_index;
 
+		if (semantic_name == TGSI_SEMANTIC_PRIMID)
+			info->uses_primid = true;
+
 		if (variable->data.sample)
 			info->input_interpolate_loc[i] = TGSI_INTERPOLATE_LOC_SAMPLE;
 		else if (variable->data.centroid)
