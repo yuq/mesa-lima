@@ -455,12 +455,16 @@ extern "C"
 //////////////////////////////////////////////////////////////////////////
 struct JitCacheFileHeader
 {
-    void Init(uint32_t llCRC, uint32_t objCRC, const std::string& moduleID, const std::string& cpu, uint32_t optLevel, uint64_t bufferSize)
+    void Init(
+        uint32_t llCRC,
+        uint32_t objCRC,
+        const std::string& moduleID,
+        const std::string& cpu,
+        uint32_t optLevel,
+        uint64_t objSize)
     {
-        m_MagicNumber = JC_MAGIC_NUMBER;
-        m_BufferSize = bufferSize;
+        m_objSize = objSize;
         m_llCRC = llCRC;
-        m_platformKey = JC_PLATFORM_KEY;
         m_objCRC = objCRC;
         strncpy(m_ModuleID, moduleID.c_str(), JC_STR_MAX_LEN - 1);
         m_ModuleID[JC_STR_MAX_LEN - 1] = 0;
@@ -468,6 +472,31 @@ struct JitCacheFileHeader
         m_Cpu[JC_STR_MAX_LEN - 1] = 0;
         m_optLevel = optLevel;
     }
+
+#if defined(ENABLE_JIT_DEBUG)
+    void Init(
+        uint32_t llCRC,
+        uint32_t objCRC,
+        const std::string& moduleID,
+        const std::string& cpu,
+        uint32_t optLevel,
+        uint64_t objSize,
+        uint32_t modCRC,
+        uint64_t modSize)
+    {
+        Init(llCRC, objCRC, moduleID, cpu, optLevel, objSize);
+        m_modCRC = modCRC;
+        m_modSize = modSize;
+    }
+
+    void Init(
+        uint32_t modCRC,
+        uint64_t modSize)
+    {
+        m_modCRC = modCRC;
+        m_modSize = modSize;
+    }
+#endif
 
     bool IsValid(uint32_t llCRC, const std::string& moduleID, const std::string& cpu, uint32_t optLevel)
     {
@@ -494,8 +523,12 @@ struct JitCacheFileHeader
         return true;
     }
 
-    uint64_t GetBufferSize() const { return m_BufferSize; }
-    uint64_t GetBufferCRC() const { return m_objCRC; }
+    uint64_t GetObjectSize() const { return m_objSize; }
+    uint64_t GetObjectCRC() const { return m_objCRC; }
+#if defined(ENABLE_JIT_DEBUG)
+    uint64_t GetSharedModuleSize() const { return m_modSize; }
+    uint64_t GetSharedModuleCRC() const { return m_modCRC; }
+#endif
 
 private:
     static const uint64_t   JC_MAGIC_NUMBER = 0xfedcba9876543211ULL + 2;
@@ -506,14 +539,18 @@ private:
         (LLVM_VERSION_PATCH << 8)   |
         ((sizeof(void*) > sizeof(uint32_t)) ? 1 : 0);
 
-    uint64_t m_MagicNumber;
-    uint64_t m_BufferSize;
-    uint32_t m_llCRC;
-    uint32_t m_platformKey;
-    uint32_t m_objCRC;
-    uint32_t m_optLevel;
-    char m_ModuleID[JC_STR_MAX_LEN];
-    char m_Cpu[JC_STR_MAX_LEN];
+    uint64_t m_MagicNumber = JC_MAGIC_NUMBER;
+    uint64_t m_objSize = 0;
+    uint32_t m_llCRC = 0;
+    uint32_t m_platformKey = JC_PLATFORM_KEY;
+    uint32_t m_objCRC = 0;
+    uint32_t m_optLevel = 0;
+    char m_ModuleID[JC_STR_MAX_LEN] = {};
+    char m_Cpu[JC_STR_MAX_LEN] = {};
+#if defined(ENABLE_JIT_DEBUG)
+    uint32_t m_modCRC = 0;
+    uint64_t m_modSize = 0;
+#endif
 };
 
 static inline uint32_t ComputeModuleCRC(const llvm::Module* M)
@@ -607,8 +644,21 @@ void JitCache::notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef
         return;
     }
 
+    JitCacheFileHeader header;
+
     llvm::SmallString<MAX_PATH> filePath = mCacheDir;
     llvm::sys::path::append(filePath, moduleID);
+
+    llvm::SmallString<MAX_PATH> objPath = filePath;
+    objPath += JIT_OBJ_EXT;
+
+    {
+        std::error_code err;
+        llvm::raw_fd_ostream fileObj(objPath.c_str(), err, llvm::sys::fs::F_None);
+        fileObj << Obj.getBuffer();
+        fileObj.flush();
+    }
+
 
     {
         std::error_code err;
@@ -616,22 +666,11 @@ void JitCache::notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef
 
         uint32_t objcrc = ComputeCRC(0, Obj.getBufferStart(), Obj.getBufferSize());
 
-        JitCacheFileHeader header;
         header.Init(mCurrentModuleCRC, objcrc, moduleID, mCpu, mOptLevel, Obj.getBufferSize());
 
         fileObj.write((const char*)&header, sizeof(header));
         fileObj.flush();
     }
-
-    filePath += JIT_OBJ_EXT;
-
-    {
-        std::error_code err;
-        llvm::raw_fd_ostream fileObj(filePath.c_str(), err, llvm::sys::fs::F_None);
-        fileObj << Obj.getBuffer();
-        fileObj.flush();
-    }
-
 }
 
 /// Returns a pointer to a newly allocated MemoryBuffer that contains the
@@ -658,6 +697,9 @@ std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module* M)
     llvm::SmallString<MAX_PATH> objFilePath = filePath;
     objFilePath += JIT_OBJ_EXT;
 
+#if defined(ENABLE_JIT_DEBUG)
+    FILE* fpModuleIn = nullptr;
+#endif
     FILE* fpObjIn = nullptr;
     FILE* fpIn = fopen(filePath.c_str(), "rb");
     if (!fpIn)
@@ -686,23 +728,25 @@ std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module* M)
         }
 
 #if LLVM_VERSION_MAJOR < 6
-        pBuf = llvm::MemoryBuffer::getNewUninitMemBuffer(size_t(header.GetBufferSize()));
+        pBuf = llvm::MemoryBuffer::getNewUninitMemBuffer(size_t(header.GetObjectSize()));
 #else
-        pBuf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(size_t(header.GetBufferSize()));
+        pBuf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(size_t(header.GetObjectSize()));
 #endif
-        if (!fread(const_cast<char*>(pBuf->getBufferStart()), header.GetBufferSize(), 1, fpObjIn))
+        if (!fread(const_cast<char*>(pBuf->getBufferStart()), header.GetObjectSize(), 1, fpObjIn))
         {
             pBuf = nullptr;
             break;
         }
 
-        if (header.GetBufferCRC() != ComputeCRC(0, pBuf->getBufferStart(), pBuf->getBufferSize()))
+        if (header.GetObjectCRC() != ComputeCRC(0, pBuf->getBufferStart(), pBuf->getBufferSize()))
         {
             SWR_TRACE("Invalid object cache file, ignoring: %s", filePath.c_str());
             pBuf = nullptr;
             break;
         }
-    } while (0);
+
+    }
+    while (0);
 
     fclose(fpIn);
 
@@ -710,6 +754,13 @@ std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module* M)
     {
         fclose(fpObjIn);
     }
+
+#if defined(ENABLE_JIT_DEBUG)
+    if (fpModuleIn)
+    {
+        fclose(fpModuleIn);
+    }
+#endif
 
     return pBuf;
 }
