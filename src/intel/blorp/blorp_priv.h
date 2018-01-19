@@ -190,7 +190,7 @@ struct blorp_params
    uint32_t depth_format;
    struct brw_blorp_surface_info src;
    struct brw_blorp_surface_info dst;
-   enum blorp_hiz_op hiz_op;
+   enum isl_aux_op hiz_op;
    bool full_surface_hiz_op;
    enum isl_aux_op fast_clear_op;
    bool color_write_disable[4];

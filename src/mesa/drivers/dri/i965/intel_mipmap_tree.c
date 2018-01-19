@@ -2308,17 +2308,17 @@ intel_miptree_prepare_hiz_access(struct brw_context *brw,
 {
    assert(aux_usage == ISL_AUX_USAGE_NONE || aux_usage == ISL_AUX_USAGE_HIZ);
 
-   enum blorp_hiz_op hiz_op = BLORP_HIZ_OP_NONE;
+   enum isl_aux_op hiz_op = ISL_AUX_OP_NONE;
    switch (intel_miptree_get_aux_state(mt, level, layer)) {
    case ISL_AUX_STATE_CLEAR:
    case ISL_AUX_STATE_COMPRESSED_CLEAR:
       if (aux_usage != ISL_AUX_USAGE_HIZ || !fast_clear_supported)
-         hiz_op = BLORP_HIZ_OP_DEPTH_RESOLVE;
+         hiz_op = ISL_AUX_OP_FULL_RESOLVE;
       break;
 
    case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
       if (aux_usage != ISL_AUX_USAGE_HIZ)
-         hiz_op = BLORP_HIZ_OP_DEPTH_RESOLVE;
+         hiz_op = ISL_AUX_OP_FULL_RESOLVE;
       break;
 
    case ISL_AUX_STATE_PASS_THROUGH:
@@ -2327,23 +2327,23 @@ intel_miptree_prepare_hiz_access(struct brw_context *brw,
 
    case ISL_AUX_STATE_AUX_INVALID:
       if (aux_usage == ISL_AUX_USAGE_HIZ)
-         hiz_op = BLORP_HIZ_OP_HIZ_RESOLVE;
+         hiz_op = ISL_AUX_OP_AMBIGUATE;
       break;
 
    case ISL_AUX_STATE_PARTIAL_CLEAR:
       unreachable("Invalid HiZ state");
    }
 
-   if (hiz_op != BLORP_HIZ_OP_NONE) {
+   if (hiz_op != ISL_AUX_OP_NONE) {
       intel_hiz_exec(brw, mt, level, layer, 1, hiz_op);
 
       switch (hiz_op) {
-      case BLORP_HIZ_OP_DEPTH_RESOLVE:
+      case ISL_AUX_OP_FULL_RESOLVE:
          intel_miptree_set_aux_state(brw, mt, level, layer, 1,
                                      ISL_AUX_STATE_RESOLVED);
          break;
 
-      case BLORP_HIZ_OP_HIZ_RESOLVE:
+      case ISL_AUX_OP_AMBIGUATE:
          /* The HiZ resolve operation is actually an ambiguate */
          intel_miptree_set_aux_state(brw, mt, level, layer, 1,
                                      ISL_AUX_STATE_PASS_THROUGH);

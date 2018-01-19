@@ -206,7 +206,7 @@ brw_fast_clear_depth(struct gl_context *ctx)
              * value so this shouldn't happen often.
              */
             intel_hiz_exec(brw, mt, level, layer, 1,
-                           BLORP_HIZ_OP_DEPTH_RESOLVE);
+                           ISL_AUX_OP_FULL_RESOLVE);
             intel_miptree_set_aux_state(brw, mt, level, layer, 1,
                                         ISL_AUX_STATE_RESOLVED);
          }
@@ -243,7 +243,7 @@ brw_fast_clear_depth(struct gl_context *ctx)
       if (aux_state != ISL_AUX_STATE_CLEAR) {
          intel_hiz_exec(brw, mt, depth_irb->mt_level,
                         depth_irb->mt_layer + a, 1,
-                        BLORP_HIZ_OP_DEPTH_CLEAR);
+                        ISL_AUX_OP_FAST_CLEAR);
       }
    }
 

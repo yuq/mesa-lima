@@ -1525,26 +1525,26 @@ brw_blorp_mcs_partial_resolve(struct brw_context *brw,
 void
 intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
                unsigned int level, unsigned int start_layer,
-               unsigned int num_layers, enum blorp_hiz_op op)
+               unsigned int num_layers, enum isl_aux_op op)
 {
    assert(intel_miptree_level_has_hiz(mt, level));
-   assert(op != BLORP_HIZ_OP_NONE);
+   assert(op != ISL_AUX_OP_NONE);
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const char *opname = NULL;
 
    switch (op) {
-   case BLORP_HIZ_OP_DEPTH_RESOLVE:
+   case ISL_AUX_OP_FULL_RESOLVE:
       opname = "depth resolve";
       break;
-   case BLORP_HIZ_OP_HIZ_RESOLVE:
+   case ISL_AUX_OP_AMBIGUATE:
       opname = "hiz ambiguate";
       break;
-   case BLORP_HIZ_OP_DEPTH_CLEAR:
+   case ISL_AUX_OP_FAST_CLEAR:
       opname = "depth clear";
       break;
-   case BLORP_HIZ_OP_NONE:
-      opname = "noop?";
-      break;
+   case ISL_AUX_OP_PARTIAL_RESOLVE:
+   case ISL_AUX_OP_NONE:
+      unreachable("Invalid HiZ op");
    }
 
    DBG("%s %s to mt %p level %d layers %d-%d\n",

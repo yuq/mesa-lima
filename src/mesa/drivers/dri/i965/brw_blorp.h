@@ -109,7 +109,7 @@ brw_blorp_mcs_partial_resolve(struct brw_context *brw,
 void
 intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
                unsigned int level, unsigned int start_layer,
-               unsigned int num_layers, enum blorp_hiz_op op);
+               unsigned int num_layers, enum isl_aux_op op);
 
 void gen4_blorp_exec(struct blorp_batch *batch,
                      const struct blorp_params *params);

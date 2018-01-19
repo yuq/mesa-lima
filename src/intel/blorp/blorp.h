@@ -207,27 +207,10 @@ blorp_mcs_partial_resolve(struct blorp_batch *batch,
                           enum isl_format format,
                           uint32_t start_layer, uint32_t num_layers);
 
-/**
- * For an overview of the HiZ operations, see the following sections of the
- * Sandy Bridge PRM, Volume 1, Part2:
- *   - 7.5.3.1 Depth Buffer Clear
- *   - 7.5.3.2 Depth Buffer Resolve
- *   - 7.5.3.3 Hierarchical Depth Buffer Resolve
- *
- * Of these, two get entered in the resolve map as needing to be done to the
- * buffer: depth resolve and hiz resolve.
- */
-enum blorp_hiz_op {
-   BLORP_HIZ_OP_NONE,
-   BLORP_HIZ_OP_DEPTH_CLEAR,
-   BLORP_HIZ_OP_DEPTH_RESOLVE,
-   BLORP_HIZ_OP_HIZ_RESOLVE,
-};
-
 void
 blorp_hiz_op(struct blorp_batch *batch, struct blorp_surf *surf,
              uint32_t level, uint32_t start_layer, uint32_t num_layers,
-             enum blorp_hiz_op op);
+             enum isl_aux_op op);
 
 #ifdef __cplusplus
 } /* end extern "C" */

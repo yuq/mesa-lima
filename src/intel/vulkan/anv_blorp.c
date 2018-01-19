@@ -1618,18 +1618,6 @@ anv_image_copy_to_shadow(struct anv_cmd_buffer *cmd_buffer,
    blorp_batch_finish(&batch);
 }
 
-static enum blorp_hiz_op
-isl_to_blorp_hiz_op(enum isl_aux_op isl_op)
-{
-   switch (isl_op) {
-   case ISL_AUX_OP_FAST_CLEAR:   return BLORP_HIZ_OP_DEPTH_CLEAR;
-   case ISL_AUX_OP_FULL_RESOLVE: return BLORP_HIZ_OP_DEPTH_RESOLVE;
-   case ISL_AUX_OP_AMBIGUATE:    return BLORP_HIZ_OP_HIZ_RESOLVE;
-   default:
-      unreachable("Unsupported HiZ aux op");
-   }
-}
-
 void
 anv_image_hiz_op(struct anv_cmd_buffer *cmd_buffer,
                  const struct anv_image *image,
@@ -1651,8 +1639,7 @@ anv_image_hiz_op(struct anv_cmd_buffer *cmd_buffer,
                                 ISL_AUX_USAGE_HIZ, &surf);
    surf.clear_color.f32[0] = ANV_HZ_FC_VAL;
 
-   blorp_hiz_op(&batch, &surf, level, base_layer, layer_count,
-                isl_to_blorp_hiz_op(hiz_op));
+   blorp_hiz_op(&batch, &surf, level, base_layer, layer_count, hiz_op);
 
    blorp_batch_finish(&batch);
 }

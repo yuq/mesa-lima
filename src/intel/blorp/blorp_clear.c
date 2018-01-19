@@ -630,7 +630,7 @@ blorp_gen8_hiz_clear_attachments(struct blorp_batch *batch,
    struct blorp_params params;
    blorp_params_init(&params);
    params.num_layers = 1;
-   params.hiz_op = BLORP_HIZ_OP_DEPTH_CLEAR;
+   params.hiz_op = ISL_AUX_OP_FAST_CLEAR;
    params.x0 = x0;
    params.y0 = y0;
    params.x1 = x1;
