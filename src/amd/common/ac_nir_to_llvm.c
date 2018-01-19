@@ -6848,6 +6848,9 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 
 	LLVMBuildRetVoid(ctx.builder);
 
+	if (options->dump_preoptir)
+		ac_dump_module(ctx.module);
+
 	ac_llvm_finalize_module(&ctx);
 
 	if (shader_count == 1)

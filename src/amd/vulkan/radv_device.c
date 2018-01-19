@@ -336,6 +336,7 @@ static const struct debug_control radv_debug_options[] = {
 	{"zerovram", RADV_DEBUG_ZERO_VRAM},
 	{"syncshaders", RADV_DEBUG_SYNC_SHADERS},
 	{"nosisched", RADV_DEBUG_NO_SISCHED},
+	{"preoptir", RADV_DEBUG_PREOPTIR},
 	{NULL, 0}
 };
 
