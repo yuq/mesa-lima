@@ -40,6 +40,7 @@ namespace SwrJit
     INLINE static StructType *Gen_${type['name']}(JitManager* pJitMgr)
     {
         LLVMContext& ctx = pJitMgr->mContext;
+	(void) ctx;
 
         StructType* pRetType = pJitMgr->mpCurrentModule->getTypeByName("${type['name']}");
         if (pRetType == nullptr)
