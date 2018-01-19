@@ -49,6 +49,12 @@ Constant *C(const std::initializer_list<Ty> &constList)
     return ConstantVector::get(vConsts);
 }
 
+template<typename Ty>
+Constant *CA(LLVMContext& ctx, ArrayRef<Ty> constList)
+{
+    return ConstantDataArray::get(ctx, constList);
+}
+
 Constant *PRED(bool pred);
 
 Value *VIMMED1(int i);
