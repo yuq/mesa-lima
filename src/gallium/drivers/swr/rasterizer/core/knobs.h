@@ -165,6 +165,16 @@
 // enables cut-aware primitive assembler
 #define KNOB_ENABLE_CUT_AWARE_PA               TRUE
 
+// enables early rasterization (useful for small triangles)
+#if !defined(KNOB_ENABLE_EARLY_RAST)
+#define KNOB_ENABLE_EARLY_RAST                 0
+#endif
+
+#if KNOB_ENABLE_EARLY_RAST
+#define ER_SIMD_TILE_X_SHIFT 2
+#define ER_SIMD_TILE_Y_SHIFT 2
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////
 // Debug knobs
 ///////////////////////////////////////////////////////////////////////////////
