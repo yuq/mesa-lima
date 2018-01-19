@@ -104,7 +104,7 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
 
     if (KNOB_JIT_ENABLE_CACHE)
     {
-        mCache.SetCpu(hostCPUName);
+        mCache.Init(this, hostCPUName);
         mpExec->setObjectCache(&mCache);
     }
 
@@ -474,7 +474,7 @@ struct JitCacheFileHeader
     uint64_t GetBufferCRC() const { return m_objCRC; }
 
 private:
-    static const uint64_t   JC_MAGIC_NUMBER = 0xfedcba9876543211ULL;
+    static const uint64_t   JC_MAGIC_NUMBER = 0xfedcba9876543211ULL + 1;
     static const size_t     JC_STR_MAX_LEN = 32;
     static const uint32_t   JC_PLATFORM_KEY =
         (LLVM_VERSION_MAJOR << 24)  |
@@ -522,6 +522,45 @@ JitCache::JitCache()
     }
 }
 
+#if defined(_WIN32)
+int ExecUnhookedProcess(const char* pCmdLine)
+{
+    static const char *g_pEnv = "RASTY_DISABLE_HOOK=1\0";
+
+    STARTUPINFOA StartupInfo{};
+    StartupInfo.cb = sizeof(STARTUPINFOA);
+    PROCESS_INFORMATION procInfo{};
+
+    BOOL ProcessValue = CreateProcessA(
+        NULL,
+        (LPSTR)pCmdLine,
+        NULL,
+        NULL,
+        TRUE,
+        0,
+        (LPVOID)g_pEnv,
+        NULL,
+        &StartupInfo,
+        &procInfo);
+
+    if (ProcessValue && procInfo.hProcess)
+    {
+        WaitForSingleObject(procInfo.hProcess, INFINITE);
+        DWORD exitVal = 0;
+        if (!GetExitCodeProcess(procInfo.hProcess, &exitVal))
+        {
+            exitVal = 1;
+        }
+
+        CloseHandle(procInfo.hProcess);
+
+        return exitVal;
+    }
+
+    return -1;
+}
+#endif
+
 /// notifyObjectCompiled - Provides a pointer to compiled code for Module M.
 void JitCache::notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef Obj)
 {
@@ -541,24 +580,28 @@ void JitCache::notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef
     llvm::SmallString<MAX_PATH> filePath = mCacheDir;
     llvm::sys::path::append(filePath, moduleID);
 
-    std::error_code err;
-    llvm::raw_fd_ostream fileObj(filePath.c_str(), err, llvm::sys::fs::F_None);
+    {
+        std::error_code err;
+        llvm::raw_fd_ostream fileObj(filePath.c_str(), err, llvm::sys::fs::F_None);
 
-    uint32_t objcrc = ComputeCRC(0, Obj.getBufferStart(), Obj.getBufferSize());
+        uint32_t objcrc = ComputeCRC(0, Obj.getBufferStart(), Obj.getBufferSize());
 
-    JitCacheFileHeader header;
-    header.Init(mCurrentModuleCRC, objcrc, moduleID, mCpu, Obj.getBufferSize());
+        JitCacheFileHeader header;
+        header.Init(mCurrentModuleCRC, objcrc, moduleID, mCpu, Obj.getBufferSize());
 
-    fileObj.write((const char*)&header, sizeof(header));
-    fileObj << Obj.getBuffer();
-    fileObj.flush();
+        fileObj.write((const char*)&header, sizeof(header));
+        fileObj.flush();
+    }
 
-    llvm::SmallString<MAX_PATH> filePath2 = filePath;
-    filePath2 += ".obj";
-    
-    llvm::raw_fd_ostream fileObj2(filePath2.c_str(), err, llvm::sys::fs::F_None);
-    fileObj2 << Obj.getBuffer();
-    fileObj2.flush();
+    filePath += JIT_OBJ_EXT;
+
+    {
+        std::error_code err;
+        llvm::raw_fd_ostream fileObj(filePath.c_str(), err, llvm::sys::fs::F_None);
+        fileObj << Obj.getBuffer();
+        fileObj.flush();
+    }
+
 }
 
 /// Returns a pointer to a newly allocated MemoryBuffer that contains the
@@ -582,6 +625,10 @@ std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module* M)
     llvm::SmallString<MAX_PATH> filePath = mCacheDir;
     llvm::sys::path::append(filePath, moduleID);
 
+    llvm::SmallString<MAX_PATH> objFilePath = filePath;
+    objFilePath += JIT_OBJ_EXT;
+
+    FILE* fpObjIn = nullptr;
     FILE* fpIn = fopen(filePath.c_str(), "rb");
     if (!fpIn)
     {
@@ -602,12 +649,18 @@ std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module* M)
             break;
         }
 
+        fpObjIn = fopen(objFilePath.c_str(), "rb");
+        if (!fpObjIn)
+        {
+            break;
+        }
+
 #if LLVM_VERSION_MAJOR < 6
         pBuf = llvm::MemoryBuffer::getNewUninitMemBuffer(size_t(header.GetBufferSize()));
 #else
         pBuf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(size_t(header.GetBufferSize()));
 #endif
-        if (!fread(const_cast<char*>(pBuf->getBufferStart()), header.GetBufferSize(), 1, fpIn))
+        if (!fread(const_cast<char*>(pBuf->getBufferStart()), header.GetBufferSize(), 1, fpObjIn))
         {
             pBuf = nullptr;
             break;
@@ -622,6 +675,11 @@ std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module* M)
     } while (0);
 
     fclose(fpIn);
+
+    if (fpObjIn)
+    {
+        fclose(fpObjIn);
+    }
 
     return pBuf;
 }

@@ -358,6 +358,7 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
 
     JitManager::DumpToFile(fetch, "opt");
 
+
     return fetch;
 }
 
@@ -2915,6 +2916,7 @@ PFN_FETCH_FUNC JitFetchFunc(HANDLE hJitMgr, const HANDLE hFunc)
 #endif
 
     pJitMgr->DumpAsm(const_cast<llvm::Function*>(func), "final");
+
 
 
     return pfnFetch;

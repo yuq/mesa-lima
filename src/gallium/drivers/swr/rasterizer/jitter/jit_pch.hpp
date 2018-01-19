@@ -132,3 +132,9 @@ using PassManager = llvm::legacy::PassManager;
 #include <mutex>
 
 #include "common/os.h"
+
+#if defined(_WIN32)
+#define JIT_OBJ_EXT ".obj"
+#else
+#define JIT_OBJ_EXT ".o"
+#endif // _WIN32

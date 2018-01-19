@@ -84,9 +84,11 @@ struct JitLLVMContext : llvm::LLVMContext
 {
 };
 
+
 //////////////////////////////////////////////////////////////////////////
 /// JitCache
 //////////////////////////////////////////////////////////////////////////
+struct JitManager; // Forward Decl
 class JitCache : public llvm::ObjectCache
 {
 public:
@@ -94,7 +96,7 @@ public:
     JitCache();
     virtual ~JitCache() {}
 
-    void SetCpu(const llvm::StringRef& cpu) { mCpu = cpu.str(); }
+    void Init(JitManager* pJitMgr, const llvm::StringRef& cpu) { mCpu = cpu.str(); mpJitMgr = pJitMgr; }
 
     /// notifyObjectCompiled - Provides a pointer to compiled code for Module M.
     virtual void notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef Obj);
@@ -107,7 +109,8 @@ public:
 private:
     std::string mCpu;
     llvm::SmallString<MAX_PATH> mCacheDir;
-    uint32_t mCurrentModuleCRC;
+    uint32_t mCurrentModuleCRC = 0;
+    JitManager* mpJitMgr = nullptr;
 };
 
 //////////////////////////////////////////////////////////////////////////
