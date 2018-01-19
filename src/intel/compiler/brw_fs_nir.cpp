@@ -2414,28 +2414,19 @@ fs_visitor::nir_emit_vs_intrinsic(const fs_builder &bld,
       fs_reg src = fs_reg(ATTR, nir_intrinsic_base(instr) * 4, dest.type);
       unsigned first_component = nir_intrinsic_component(instr);
       unsigned num_components = instr->num_components;
-      enum brw_reg_type type = dest.type;
 
       nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
       assert(const_offset && "Indirect input loads not allowed");
       src = offset(src, bld, const_offset->u32[0]);
 
-      if (type_sz(type) == 8)
+      if (type_sz(dest.type) == 8)
          first_component /= 2;
 
       for (unsigned j = 0; j < num_components; j++) {
          bld.MOV(offset(dest, bld, j), offset(src, bld, j + first_component));
       }
 
-      if (type == BRW_REGISTER_TYPE_DF) {
-         /* Once the double vector is read, set again its original register
-          * type to continue with normal execution.
-          */
-         src = retype(src, type);
-         dest = retype(dest, type);
-      }
-
-      if (type_sz(src.type) == 8) {
+      if (type_sz(dest.type) == 8) {
          shuffle_32bit_load_result_to_64bit_data(bld,
                                                  dest,
                                                  retype(dest, BRW_REGISTER_TYPE_F),
