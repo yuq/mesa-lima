@@ -895,6 +895,7 @@ struct anv_device {
 
     struct anv_bo                               workaround_bo;
     struct anv_bo                               trivial_batch_bo;
+    struct anv_bo                               hiz_clear_bo;
 
     struct anv_pipeline_cache                   blorp_shader_cache;
     struct blorp_context                        blorp;

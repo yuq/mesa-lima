@@ -1422,6 +1422,20 @@ vk_priority_to_gen(int priority)
    }
 }
 
+static void
+anv_device_init_hiz_clear_batch(struct anv_device *device)
+{
+   anv_bo_init_new(&device->hiz_clear_bo, device, 4096);
+   uint32_t *map = anv_gem_mmap(device, device->hiz_clear_bo.gem_handle,
+                                0, 4096, 0);
+
+   union isl_color_value hiz_clear = { .u32 = { 0, } };
+   hiz_clear.f32[0] = ANV_HZ_FC_VAL;
+
+   memcpy(map, hiz_clear.u32, sizeof(hiz_clear.u32));
+   anv_gem_munmap(map, device->hiz_clear_bo.size);
+}
+
 VkResult anv_CreateDevice(
     VkPhysicalDevice                            physicalDevice,
     const VkDeviceCreateInfo*                   pCreateInfo,
@@ -1602,6 +1616,9 @@ VkResult anv_CreateDevice(
 
    anv_device_init_trivial_batch(device);
 
+   if (device->info.gen >= 10)
+      anv_device_init_hiz_clear_batch(device);
+
    anv_scratch_pool_init(device, &device->scratch_pool);
 
    anv_queue_init(device, &device->queue);
@@ -1695,6 +1712,8 @@ void anv_DestroyDevice(
    anv_gem_close(device, device->workaround_bo.gem_handle);
 
    anv_gem_close(device, device->trivial_batch_bo.gem_handle);
+   if (device->info.gen >= 10)
+      anv_gem_close(device, device->hiz_clear_bo.gem_handle);
 
    anv_state_pool_finish(&device->surface_state_pool);
    anv_state_pool_finish(&device->instruction_state_pool);

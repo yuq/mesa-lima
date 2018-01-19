@@ -1061,9 +1061,13 @@ anv_image_fill_surface_state(struct anv_device *device,
 
    struct anv_address clear_address = { .bo = NULL };
    state_inout->clear_address = 0;
-   if (device->info.gen >= 10 && aux_usage != ISL_AUX_USAGE_NONE &&
-       aux_usage != ISL_AUX_USAGE_HIZ) {
-      clear_address = anv_image_get_clear_color_addr(device, image, aspect);
+
+   if (device->info.gen >= 10 && aux_usage != ISL_AUX_USAGE_NONE) {
+      if (aux_usage == ISL_AUX_USAGE_HIZ) {
+         clear_address = (struct anv_address) { .bo = &device->hiz_clear_bo };
+      } else {
+         clear_address = anv_image_get_clear_color_addr(device, image, aspect);
+      }
    }
 
    if (view_usage == ISL_SURF_USAGE_STORAGE_BIT &&
