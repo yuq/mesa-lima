@@ -586,6 +586,11 @@ int ExecUnhookedProcess(const char* pCmdLine)
 }
 #endif
 
+#if defined(_WIN64) && defined(ENABLE_JIT_DEBUG) && defined(JIT_BASE_DIR)
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+static __inline HINSTANCE GetModuleHINSTANCE() { return (HINSTANCE)&__ImageBase; }
+#endif
+
 /// notifyObjectCompiled - Provides a pointer to compiled code for Module M.
 void JitCache::notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef Obj)
 {
