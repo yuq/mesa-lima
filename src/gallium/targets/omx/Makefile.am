@@ -19,11 +19,12 @@ libomx_mesa_la_LDFLAGS = \
 
 if HAVE_LD_VERSION_SCRIPT
 libomx_mesa_la_LDFLAGS += \
-	-Wl,--version-script=$(top_srcdir)/src/gallium/targets/omx-bellagio/omx.sym
+	-Wl,--version-script=$(top_srcdir)/src/gallium/targets/omx/omx.sym
 endif # HAVE_LD_VERSION_SCRIPT
 
 libomx_mesa_la_LIBADD = \
-	$(top_builddir)/src/gallium/state_trackers/omx_bellagio/libomxtracker.la \
+	$(top_builddir)/src/gallium/state_trackers/omx/libomxtracker_common.la \
+	$(top_builddir)/src/gallium/state_trackers/omx/bellagio/libomxtracker.la \
 	$(top_builddir)/src/gallium/auxiliary/libgalliumvlwinsys.la \
 	$(top_builddir)/src/gallium/auxiliary/libgalliumvl.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \

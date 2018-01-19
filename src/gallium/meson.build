@@ -145,7 +145,7 @@ if with_gallium_xvmc
   subdir('state_trackers/xvmc')
 endif
 if with_gallium_omx
-  subdir('state_trackers/omx_bellagio')
+  subdir('state_trackers/omx')
 endif
 if with_gallium_va
   subdir('state_trackers/va')
@@ -190,7 +190,7 @@ if with_gallium_xvmc
   subdir('targets/xvmc')
 endif
 if with_gallium_omx
-  subdir('targets/omx-bellagio')
+  subdir('targets/omx')
 endif
 if with_gallium_va
   subdir('targets/va')

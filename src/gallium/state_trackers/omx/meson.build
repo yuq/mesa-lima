@@ -18,12 +18,20 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+if gallium_omx == 'bellagio'
+files_omx = files(
+  'bellagio/entrypoint.c',
+  'bellagio/vid_dec.c',
+  'bellagio/vid_dec_mpeg12.c',
+  'bellagio/vid_dec_h264.c',
+  'bellagio/vid_dec_h265.c',
+  'bellagio/vid_enc.c'
+)
+endif
+
 libomx_st = static_library(
   'omx_st',
-  files(
-    'entrypoint.c', 'vid_dec.c', 'vid_dec_mpeg12.c', 'vid_dec_h264.c',
-    'vid_dec_h265.c', 'vid_enc.c',
-  ),
+  files_omx,
   c_args : [c_vis_args],
   include_directories : [inc_common],
   dependencies : [dep_omx, dep_x11_xcb, dep_xcb, dep_xcb_dri2, dep_xcb_dri3],

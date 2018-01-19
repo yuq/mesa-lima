@@ -159,7 +159,7 @@ static OMX_ERRORTYPE vid_enc_Constructor(OMX_COMPONENTTYPE *comp, OMX_STRING nam
 
    r = omx_base_filter_Constructor(comp, name);
    if (r)
-	return r;
+       return r;
 
    priv->BufferMgmtCallback = vid_enc_BufferEncoded;
    priv->messageHandler = vid_enc_MessageHandler;
