@@ -1484,7 +1484,7 @@ namespace SwrJit
         Function* pfnCttz = Intrinsic::getDeclaration(mpJitMgr->mpCurrentModule, Intrinsic::cttz, { mInt32Ty });
     
         // Setup loop basic block
-        BasicBlock* pLoop = BasicBlock::Create(mpJitMgr->mContext, "Scatter Loop", pFunc);
+        BasicBlock* pLoop = BasicBlock::Create(mpJitMgr->mContext, "Scatter_Loop", pFunc);
 
         // compute first set bit
         Value* pIndex = CALL(pfnCttz, { pMask, C(false) });

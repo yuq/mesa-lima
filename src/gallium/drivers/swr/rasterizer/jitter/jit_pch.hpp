@@ -70,7 +70,7 @@ using PassManager = llvm::legacy::PassManager;
 #include "llvm/Support/Host.h"
 #include "llvm/Support/DynamicLibrary.h"
 
-
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Type.h"

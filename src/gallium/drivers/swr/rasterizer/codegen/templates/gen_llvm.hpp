@@ -53,6 +53,18 @@ namespace SwrJit
             %endfor
 
             pRetType = StructType::create(members, "${type['name']}", false);
+
+            // Compute debug metadata
+            llvm::DIBuilder builder(*pJitMgr->mpCurrentModule);
+            llvm::DIFile* pFile = builder.createFile("${input_file}", "${input_dir}");
+
+            std::vector<std::pair<std::string, uint32_t>> dbgMembers;
+            %for member in type['members']:
+            dbgMembers.push_back(std::make_pair("${member['name']}", ${ member['lineNum'] }));
+            %endfor
+            
+            pJitMgr->CreateDebugStructType(pRetType, "${type['name']}", pFile, ${type['lineNum']}, dbgMembers);
+
         }
 
         return pRetType;

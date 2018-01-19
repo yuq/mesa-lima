@@ -157,8 +157,32 @@ struct JitManager
     JitInstructionSet mArch;
     std::string mCore;
 
+    // Debugging support
+    std::unordered_map<llvm::StructType*, llvm::DIType*> mDebugStructMap;
+
     void SetupNewModule();
 
     void DumpAsm(llvm::Function* pFunction, const char* fileName);
     static void DumpToFile(llvm::Function *f, const char *fileName);
+    static void DumpToFile(llvm::Module *M, const char *fileName);
+    static std::string GetOutputDir();
+
+    // Debugging support methods
+    llvm::DIType* GetDebugType(llvm::Type* pTy);
+    llvm::DIType* GetDebugIntegerType(llvm::Type* pTy);
+    llvm::DIType* GetDebugArrayType(llvm::Type* pTy);
+    llvm::DIType* GetDebugVectorType(llvm::Type* pTy);
+
+    llvm::DIType* GetDebugStructType(llvm::Type* pType)
+    {
+        llvm::StructType* pStructTy = llvm::cast<llvm::StructType>(pType);
+        if (mDebugStructMap.find(pStructTy) == mDebugStructMap.end())
+        {
+            return nullptr;
+        }
+        return mDebugStructMap[pStructTy];
+    }
+
+    llvm::DIType* CreateDebugStructType(llvm::StructType* pType, const std::string& name, llvm::DIFile* pFile, uint32_t lineNum,
+        const std::vector<std::pair<std::string, uint32_t>>& members);
 };
