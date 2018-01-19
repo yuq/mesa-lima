@@ -254,9 +254,29 @@ DIType* JitManager::GetDebugType(Type* pTy)
     case Type::ArrayTyID: return GetDebugArrayType(pTy); break;
     case Type::PointerTyID: return builder.createPointerType(GetDebugType(pTy->getPointerElementType()), 64, 64); break;
     case Type::VectorTyID: return GetDebugVectorType(pTy); break;
+    case Type::FunctionTyID: return GetDebugFunctionType(pTy); break;
     default: SWR_ASSERT(false, "Unimplemented llvm type");
     }
     return nullptr;
+}
+
+// Create a DISubroutineType from an llvm FunctionType
+DIType* JitManager::GetDebugFunctionType(Type* pTy)
+{
+    SmallVector<Metadata*, 8> ElemTypes;
+    FunctionType* pFuncTy = cast<FunctionType>(pTy);
+    DIBuilder builder(*mpCurrentModule);
+
+    // Add result type
+    ElemTypes.push_back(GetDebugType(pFuncTy->getReturnType()));
+
+    // Add arguments
+    for (auto& param : pFuncTy->params())
+    {
+        ElemTypes.push_back(GetDebugType(param));
+    }
+
+    return builder.createSubroutineType(builder.getOrCreateTypeArray(ElemTypes));
 }
 
 DIType* JitManager::GetDebugIntegerType(Type* pTy)

@@ -175,6 +175,7 @@ struct JitManager
     llvm::DIType* GetDebugIntegerType(llvm::Type* pTy);
     llvm::DIType* GetDebugArrayType(llvm::Type* pTy);
     llvm::DIType* GetDebugVectorType(llvm::Type* pTy);
+    llvm::DIType* GetDebugFunctionType(llvm::Type* pTy);
 
     llvm::DIType* GetDebugStructType(llvm::Type* pType)
     {
