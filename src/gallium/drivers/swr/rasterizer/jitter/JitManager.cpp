@@ -128,7 +128,8 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
 #endif
     std::vector<Type*> fsArgs;
 
-    fsArgs.push_back(PointerType::get(Type::getVoidTy(mContext), 0));
+    // llvm5 is picky and does not take a void * type
+    fsArgs.push_back(PointerType::get(Gen_SWR_FETCH_CONTEXT(this), 0));
 
     fsArgs.push_back(PointerType::get(Gen_SWR_FETCH_CONTEXT(this), 0));
 #if USE_SIMD16_SHADERS
