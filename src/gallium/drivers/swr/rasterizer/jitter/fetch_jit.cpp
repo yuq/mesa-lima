@@ -133,7 +133,7 @@ struct FetchJit : public Builder
 
 Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
 {
-    std::stringstream fnName("FetchShader_", std::ios_base::in | std::ios_base::out | std::ios_base::ate);
+    std::stringstream fnName("FCH_", std::ios_base::in | std::ios_base::out | std::ios_base::ate);
     fnName << ComputeCRC(0, &fetchState, sizeof(fetchState));
 
     Function*    fetch = Function::Create(JM()->mFetchShaderTy, GlobalValue::ExternalLinkage, fnName.str(), JM()->mpCurrentModule);

@@ -513,7 +513,7 @@ struct BlendJit : public Builder
 
     Function* Create(const BLEND_COMPILE_STATE& state)
     {
-        std::stringstream fnName("BlendShader_", std::ios_base::in | std::ios_base::out | std::ios_base::ate);
+        std::stringstream fnName("BLND_", std::ios_base::in | std::ios_base::out | std::ios_base::ate);
         fnName << ComputeCRC(0, &state, sizeof(state));
 
         // blend function signature
