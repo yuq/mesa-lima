@@ -178,7 +178,7 @@ void JitManager::SetupNewModule()
 #if defined(_WIN32)
     // Needed for MCJIT on windows
     Triple hostTriple(sys::getProcessTriple());
-    hostTriple.setObjectFormat(Triple::ELF);
+    hostTriple.setObjectFormat(Triple::COFF);
     newModule->setTargetTriple(hostTriple.getTriple());
 #endif // _WIN32
 
