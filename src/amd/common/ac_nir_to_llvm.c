@@ -3518,9 +3518,7 @@ static LLVMValueRef adjust_sample_index_using_fmask(struct ac_llvm_context *ctx,
 static LLVMValueRef get_image_coords(struct ac_nir_context *ctx,
 				     const nir_intrinsic_instr *instr)
 {
-	const struct glsl_type *type = instr->variables[0]->var->type;
-	if(instr->variables[0]->deref.child)
-		type = instr->variables[0]->deref.child->type;
+	const struct glsl_type *type = glsl_without_array(instr->variables[0]->var->type);
 
 	LLVMValueRef src0 = get_src(ctx, instr->src[0]);
 	LLVMValueRef coords[4];
