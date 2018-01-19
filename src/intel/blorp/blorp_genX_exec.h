@@ -750,21 +750,21 @@ blorp_emit_ps_config(struct blorp_batch *batch,
          ps.MaximumNumberofThreadsPerPSD = 64 - 2;
 
       switch (params->fast_clear_op) {
-      case BLORP_FAST_CLEAR_OP_NONE:
+      case ISL_AUX_OP_NONE:
          break;
 #if GEN_GEN >= 9
-      case BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL:
+      case ISL_AUX_OP_PARTIAL_RESOLVE:
          ps.RenderTargetResolveType = RESOLVE_PARTIAL;
          break;
-      case BLORP_FAST_CLEAR_OP_RESOLVE_FULL:
+      case ISL_AUX_OP_FULL_RESOLVE:
          ps.RenderTargetResolveType = RESOLVE_FULL;
          break;
 #else
-      case BLORP_FAST_CLEAR_OP_RESOLVE_FULL:
+      case ISL_AUX_OP_FULL_RESOLVE:
          ps.RenderTargetResolveEnable = true;
          break;
 #endif
-      case BLORP_FAST_CLEAR_OP_CLEAR:
+      case ISL_AUX_OP_FAST_CLEAR:
          ps.RenderTargetFastClearEnable = true;
          break;
       default:
@@ -852,12 +852,12 @@ blorp_emit_ps_config(struct blorp_batch *batch,
          ps.SamplerCount = 1; /* Up to 4 samplers */
 
       switch (params->fast_clear_op) {
-      case BLORP_FAST_CLEAR_OP_NONE:
+      case ISL_AUX_OP_NONE:
          break;
-      case BLORP_FAST_CLEAR_OP_RESOLVE_FULL:
+      case ISL_AUX_OP_FULL_RESOLVE:
          ps.RenderTargetResolveEnable = true;
          break;
-      case BLORP_FAST_CLEAR_OP_CLEAR:
+      case ISL_AUX_OP_FAST_CLEAR:
          ps.RenderTargetFastClearEnable = true;
          break;
       default:

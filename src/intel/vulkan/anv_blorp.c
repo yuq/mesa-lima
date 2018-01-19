@@ -1716,18 +1716,6 @@ anv_image_mcs_op(struct anv_cmd_buffer *cmd_buffer,
    blorp_batch_finish(&batch);
 }
 
-static enum blorp_fast_clear_op
-isl_to_blorp_fast_clear_op(enum isl_aux_op isl_op)
-{
-   switch (isl_op) {
-   case ISL_AUX_OP_FAST_CLEAR:      return BLORP_FAST_CLEAR_OP_CLEAR;
-   case ISL_AUX_OP_FULL_RESOLVE:    return BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
-   case ISL_AUX_OP_PARTIAL_RESOLVE: return BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL;
-   default:
-      unreachable("Unsupported CCS/MCS aux op");
-   }
-}
-
 void
 anv_image_ccs_op(struct anv_cmd_buffer *cmd_buffer,
                  const struct anv_image *image,
@@ -1796,7 +1784,7 @@ anv_image_ccs_op(struct anv_cmd_buffer *cmd_buffer,
    case ISL_AUX_OP_FULL_RESOLVE:
    case ISL_AUX_OP_PARTIAL_RESOLVE:
       blorp_ccs_resolve(&batch, &surf, level, base_layer, layer_count,
-                        surf.surf->format, isl_to_blorp_fast_clear_op(ccs_op));
+                        surf.surf->format, ccs_op);
       break;
    case ISL_AUX_OP_AMBIGUATE:
       for (uint32_t a = 0; a < layer_count; a++) {

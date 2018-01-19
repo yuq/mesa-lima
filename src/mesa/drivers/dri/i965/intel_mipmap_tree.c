@@ -2046,7 +2046,7 @@ intel_miptree_check_color_resolve(const struct brw_context *brw,
    (void)layer;
 }
 
-static enum blorp_fast_clear_op
+static enum isl_aux_op
 get_ccs_d_resolve_op(enum isl_aux_state aux_state,
                      enum isl_aux_usage aux_usage,
                      bool fast_clear_supported)
@@ -2061,12 +2061,12 @@ get_ccs_d_resolve_op(enum isl_aux_state aux_state,
    case ISL_AUX_STATE_CLEAR:
    case ISL_AUX_STATE_PARTIAL_CLEAR:
       if (!ccs_supported)
-         return BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
+         return ISL_AUX_OP_FULL_RESOLVE;
       else
-         return BLORP_FAST_CLEAR_OP_NONE;
+         return ISL_AUX_OP_NONE;
 
    case ISL_AUX_STATE_PASS_THROUGH:
-      return BLORP_FAST_CLEAR_OP_NONE;
+      return ISL_AUX_OP_NONE;
 
    case ISL_AUX_STATE_RESOLVED:
    case ISL_AUX_STATE_AUX_INVALID:
@@ -2078,7 +2078,7 @@ get_ccs_d_resolve_op(enum isl_aux_state aux_state,
    unreachable("Invalid aux state for CCS_D");
 }
 
-static enum blorp_fast_clear_op
+static enum isl_aux_op
 get_ccs_e_resolve_op(enum isl_aux_state aux_state,
                      enum isl_aux_usage aux_usage,
                      bool fast_clear_supported)
@@ -2095,28 +2095,28 @@ get_ccs_e_resolve_op(enum isl_aux_state aux_state,
    case ISL_AUX_STATE_CLEAR:
    case ISL_AUX_STATE_PARTIAL_CLEAR:
       if (fast_clear_supported)
-         return BLORP_FAST_CLEAR_OP_NONE;
+         return ISL_AUX_OP_NONE;
       else if (aux_usage == ISL_AUX_USAGE_CCS_E)
-         return BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL;
+         return ISL_AUX_OP_PARTIAL_RESOLVE;
       else
-         return BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
+         return ISL_AUX_OP_FULL_RESOLVE;
 
    case ISL_AUX_STATE_COMPRESSED_CLEAR:
       if (aux_usage != ISL_AUX_USAGE_CCS_E)
-         return BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
+         return ISL_AUX_OP_FULL_RESOLVE;
       else if (!fast_clear_supported)
-         return BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL;
+         return ISL_AUX_OP_PARTIAL_RESOLVE;
       else
-         return BLORP_FAST_CLEAR_OP_NONE;
+         return ISL_AUX_OP_NONE;
 
    case ISL_AUX_STATE_COMPRESSED_NO_CLEAR:
       if (aux_usage != ISL_AUX_USAGE_CCS_E)
-         return BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
+         return ISL_AUX_OP_FULL_RESOLVE;
       else
-         return BLORP_FAST_CLEAR_OP_NONE;
+         return ISL_AUX_OP_NONE;
 
    case ISL_AUX_STATE_PASS_THROUGH:
-      return BLORP_FAST_CLEAR_OP_NONE;
+      return ISL_AUX_OP_NONE;
 
    case ISL_AUX_STATE_RESOLVED:
    case ISL_AUX_STATE_AUX_INVALID:
@@ -2135,7 +2135,7 @@ intel_miptree_prepare_ccs_access(struct brw_context *brw,
 {
    enum isl_aux_state aux_state = intel_miptree_get_aux_state(mt, level, layer);
 
-   enum blorp_fast_clear_op resolve_op;
+   enum isl_aux_op resolve_op;
    if (mt->aux_usage == ISL_AUX_USAGE_CCS_E) {
       resolve_op = get_ccs_e_resolve_op(aux_state, aux_usage,
                                         fast_clear_supported);
@@ -2145,12 +2145,12 @@ intel_miptree_prepare_ccs_access(struct brw_context *brw,
                                         fast_clear_supported);
    }
 
-   if (resolve_op != BLORP_FAST_CLEAR_OP_NONE) {
+   if (resolve_op != ISL_AUX_OP_NONE) {
       intel_miptree_check_color_resolve(brw, mt, level, layer);
       brw_blorp_resolve_color(brw, mt, level, layer, resolve_op);
 
       switch (resolve_op) {
-      case BLORP_FAST_CLEAR_OP_RESOLVE_FULL:
+      case ISL_AUX_OP_FULL_RESOLVE:
          /* The CCS full resolve operation destroys the CCS and sets it to the
           * pass-through state.  (You can also think of this as being both a
           * resolve and an ambiguate in one operation.)
@@ -2159,7 +2159,7 @@ intel_miptree_prepare_ccs_access(struct brw_context *brw,
                                      ISL_AUX_STATE_PASS_THROUGH);
          break;
 
-      case BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL:
+      case ISL_AUX_OP_PARTIAL_RESOLVE:
          intel_miptree_set_aux_state(brw, mt, level, layer, 1,
                                      ISL_AUX_STATE_COMPRESSED_NO_CLEAR);
          break;

@@ -1449,7 +1449,7 @@ brw_blorp_clear_depth_stencil(struct brw_context *brw,
 void
 brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt,
                         unsigned level, unsigned layer,
-                        enum blorp_fast_clear_op resolve_op)
+                        enum isl_aux_op resolve_op)
 {
    DBG("%s to mt %p level %u layer %u\n", __FUNCTION__, mt, level, layer);
 

@@ -322,7 +322,7 @@ blorp_fast_clear(struct blorp_batch *batch,
    params.y1 = y1;
 
    memset(&params.wm_inputs.clear_color, 0xff, 4*sizeof(float));
-   params.fast_clear_op = BLORP_FAST_CLEAR_OP_CLEAR;
+   params.fast_clear_op = ISL_AUX_OP_FAST_CLEAR;
 
    get_fast_clear_rect(batch->blorp->isl_dev, surf->aux_surf,
                        &params.x0, &params.y0, &params.x1, &params.y1);
@@ -720,7 +720,7 @@ blorp_ccs_resolve(struct blorp_batch *batch,
                   struct blorp_surf *surf, uint32_t level,
                   uint32_t start_layer, uint32_t num_layers,
                   enum isl_format format,
-                  enum blorp_fast_clear_op resolve_op)
+                  enum isl_aux_op resolve_op)
 {
    struct blorp_params params;
 
@@ -759,11 +759,11 @@ blorp_ccs_resolve(struct blorp_batch *batch,
    params.y1 = ALIGN(params.y1, y_scaledown) / y_scaledown;
 
    if (batch->blorp->isl_dev->info->gen >= 9) {
-      assert(resolve_op == BLORP_FAST_CLEAR_OP_RESOLVE_FULL ||
-             resolve_op == BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL);
+      assert(resolve_op == ISL_AUX_OP_FULL_RESOLVE ||
+             resolve_op == ISL_AUX_OP_PARTIAL_RESOLVE);
    } else {
       /* Broadwell and earlier do not have a partial resolve */
-      assert(resolve_op == BLORP_FAST_CLEAR_OP_RESOLVE_FULL);
+      assert(resolve_op == ISL_AUX_OP_FULL_RESOLVE);
    }
    params.fast_clear_op = resolve_op;
    params.num_layers = num_layers;

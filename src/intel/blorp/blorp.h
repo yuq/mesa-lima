@@ -189,19 +189,12 @@ blorp_clear_attachments(struct blorp_batch *batch,
                         bool clear_depth, float depth_value,
                         uint8_t stencil_mask, uint8_t stencil_value);
 
-enum blorp_fast_clear_op {
-   BLORP_FAST_CLEAR_OP_NONE = 0,
-   BLORP_FAST_CLEAR_OP_CLEAR,
-   BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL,
-   BLORP_FAST_CLEAR_OP_RESOLVE_FULL,
-};
-
 void
 blorp_ccs_resolve(struct blorp_batch *batch,
                   struct blorp_surf *surf, uint32_t level,
                   uint32_t start_layer, uint32_t num_layers,
                   enum isl_format format,
-                  enum blorp_fast_clear_op resolve_op);
+                  enum isl_aux_op resolve_op);
 
 void
 blorp_ccs_ambiguate(struct blorp_batch *batch,

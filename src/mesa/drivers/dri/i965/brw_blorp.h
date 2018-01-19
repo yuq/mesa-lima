@@ -99,7 +99,7 @@ void
 brw_blorp_resolve_color(struct brw_context *brw,
                         struct intel_mipmap_tree *mt,
                         unsigned level, unsigned layer,
-                        enum blorp_fast_clear_op resolve_op);
+                        enum isl_aux_op resolve_op);
 
 void
 brw_blorp_mcs_partial_resolve(struct brw_context *brw,
