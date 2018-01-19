@@ -2968,16 +2968,17 @@ store_tcs_output(struct ac_shader_abi *abi,
 			continue;
 		LLVMValueRef value = ac_llvm_extract_elem(&ctx->ac, src, chan - component);
 
-		if (store_lds || is_tess_factor)
-			ac_lds_store(&ctx->ac, dw_addr, value);
+		if (store_lds || is_tess_factor) {
+			LLVMValueRef dw_addr_chan =
+				LLVMBuildAdd(ctx->builder, dw_addr,
+				                           LLVMConstInt(ctx->ac.i32, chan, false), "");
+			ac_lds_store(&ctx->ac, dw_addr_chan, value);
+		}
 
 		if (!is_tess_factor && writemask != 0xF)
 			ac_build_buffer_store_dword(&ctx->ac, ctx->hs_ring_tess_offchip, value, 1,
 						    buf_addr, ctx->oc_lds,
 						    4 * (base + chan), 1, 0, true, false);
-
-		dw_addr = LLVMBuildAdd(ctx->builder, dw_addr,
-				       ctx->ac.i32_1, "");
 	}
 
 	if (writemask == 0xF) {
