@@ -485,6 +485,13 @@ static INLINE simdscalari GenerateMask(uint32_t numItemsRemaining)
     return _simd_castps_si(_simd_vmask_ps(mask));
 }
 
+static INLINE simd16scalari GenerateMask16(uint32_t numItemsRemaining)
+{
+    uint32_t numActive = (numItemsRemaining >= KNOB_SIMD16_WIDTH) ? KNOB_SIMD16_WIDTH : numItemsRemaining;
+    uint32_t mask = (numActive > 0) ? ((1 << numActive) - 1) : 0;
+    return _simd16_castps_si(_simd16_vmask_ps(mask));
+}
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief StreamOut - Streams vertex data out to SO buffers.
 ///        Generally, we are only streaming out a SIMDs worth of triangles.
@@ -1733,9 +1740,11 @@ void ProcessDraw(
 
                 // forward fetch generated vertex IDs to the vertex shader
 #if USE_SIMD16_SHADERS
-#if 0
-                vsContext_lo.VertexID = _simd16_extract(fetchInfo_lo.VertexID, 0);
-                vsContext_hi.VertexID = _simd16_extract(fetchInfo_lo.VertexID, 1);
+#if USE_SIMD16_VS
+                vsContext_lo.VertexID16 = _simd16_insert_si(
+                    vsContext_lo.VertexID16, fetchInfo_lo.VertexID, 0);
+                vsContext_lo.VertexID16 = _simd16_insert_si(
+                    vsContext_lo.VertexID16, fetchInfo_lo.VertexID2, 1);
 #else
                 vsContext_lo.VertexID = fetchInfo_lo.VertexID;
                 vsContext_hi.VertexID = fetchInfo_lo.VertexID2;
@@ -1746,20 +1755,19 @@ void ProcessDraw(
 #endif
 
                 // Setup active mask for vertex shader.
+#if USE_SIMD16_VS
+                vsContext_lo.mask16 = GenerateMask16(endVertex - i);
+#else
                 vsContext_lo.mask = GenerateMask(endVertex - i);
                 vsContext_hi.mask = GenerateMask(endVertex - (i + KNOB_SIMD_WIDTH));
+#endif
 
                 // forward cut mask to the PA
                 if (IsIndexedT::value)
                 {
 #if USE_SIMD16_SHADERS
-#if 0
-                    *pvCutIndices_lo = _simd_movemask_ps(_simd_castsi_ps(_simd16_extract(fetchInfo_lo.CutMask, 0)));
-                    *pvCutIndices_hi = _simd_movemask_ps(_simd_castsi_ps(_simd16_extract(fetchInfo_lo.CutMask, 1)));
-#else
                     *pvCutIndices_lo = _simd_movemask_ps(_simd_castsi_ps(fetchInfo_lo.CutMask));
                     *pvCutIndices_hi = _simd_movemask_ps(_simd_castsi_ps(fetchInfo_lo.CutMask2));
-#endif
 #else
                     *pvCutIndices_lo = _simd_movemask_ps(_simd_castsi_ps(fetchInfo_lo.CutMask));
                     *pvCutIndices_hi = _simd_movemask_ps(_simd_castsi_ps(fetchInfo_hi.CutMask));
@@ -1773,12 +1781,16 @@ void ProcessDraw(
 #endif
                 {
                     AR_BEGIN(FEVertexShader, pDC->drawId);
+#if USE_SIMD16_VS
+                    state.pfnVertexFunc(GetPrivateState(pDC), &vsContext_lo);
+#else
                     state.pfnVertexFunc(GetPrivateState(pDC), &vsContext_lo);
 
                     if ((i + KNOB_SIMD_WIDTH) < endVertex)  // 1/2 of KNOB_SIMD16_WIDTH
                     {
                         state.pfnVertexFunc(GetPrivateState(pDC), &vsContext_hi);
                     }
+#endif
                     AR_END(FEVertexShader, 0);
 
                     UPDATE_STAT_FE(VsInvocations, GetNumInvocations(i, endVertex));

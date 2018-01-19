@@ -227,6 +227,10 @@ struct SWR_VS_CONTEXT
     simdscalari mask;           // IN: Active mask for shader
 #if USE_SIMD16_FRONTEND
     uint32_t AlternateOffset;   // IN: amount to offset for interleaving even/odd simd8 in simd16vertex output
+#if USE_SIMD16_VS
+    simd16scalari mask16;	// IN: Active mask for shader (16-wide)
+    simd16scalari VertexID16;	// IN: Vertex ID (16-wide)
+#endif
 #endif
 };
 

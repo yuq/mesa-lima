@@ -60,6 +60,10 @@ def gen_llvm_type(type, name, idx, is_pointer, is_pointer_pointer, is_array, is_
             llvm_type = 'VectorType::get(Type::getFloatTy(ctx), pJitMgr->mVWidth)'
         elif type == 'simdscalari':
             llvm_type = 'VectorType::get(Type::getInt32Ty(ctx), pJitMgr->mVWidth)'
+        elif type == 'simd16scalar':
+            llvm_type = 'VectorType::get(Type::getFloatTy(ctx), 16)'
+        elif type == 'simd16scalari':
+            llvm_type = 'VectorType::get(Type::getInt32Ty(ctx), 16)'
         elif type == '__m128i':
             llvm_type = 'VectorType::get(Type::getInt32Ty(ctx), 4)'
         elif type == 'SIMD256::Float':

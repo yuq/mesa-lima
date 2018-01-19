@@ -42,6 +42,7 @@
 #define USE_8x2_TILE_BACKEND    1
 #define USE_SIMD16_FRONTEND     1
 #define USE_SIMD16_SHADERS      0   // requires USE_SIMD16_FRONTEND
+#define USE_SIMD16_VS           0   // requires USE_SIMD16_SHADERS
 
 ///////////////////////////////////////////////////////////////////////////////
 // Architecture validation
