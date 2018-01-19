@@ -4162,6 +4162,8 @@ visit_emit_vertex(struct ac_shader_abi *abi, unsigned stream, LLVMValueRef *addr
 	int idx;
 	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
 
+	assert(stream == 0);
+
 	/* Write vertex attribute values to GSVS ring */
 	gs_next_vertex = LLVMBuildLoad(ctx->builder,
 				       ctx->gs_next_vertex,
@@ -4468,8 +4470,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = visit_interp(ctx->nctx, instr);
 		break;
 	case nir_intrinsic_emit_vertex:
-		assert(instr->const_index[0] == 0);
-		ctx->abi->emit_vertex(ctx->abi, 0, ctx->outputs);
+		ctx->abi->emit_vertex(ctx->abi, nir_intrinsic_stream_id(instr), ctx->outputs);
 		break;
 	case nir_intrinsic_end_primitive:
 		ctx->abi->emit_primitive(ctx->abi, nir_intrinsic_stream_id(instr));
