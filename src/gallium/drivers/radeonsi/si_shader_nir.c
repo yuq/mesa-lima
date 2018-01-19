@@ -98,6 +98,9 @@ static void scan_instruction(struct tgsi_shader_info *info,
 		case nir_intrinsic_load_primitive_id:
 			info->uses_primid = 1;
 			break;
+		case nir_intrinsic_load_sample_mask_in:
+			info->reads_samplemask = true;
+			break;
 		case nir_intrinsic_load_tess_level_inner:
 		case nir_intrinsic_load_tess_level_outer:
 			info->reads_tess_factors = true;
