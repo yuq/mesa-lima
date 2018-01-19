@@ -81,10 +81,10 @@ Value *VUNDEF(Type* ty, uint32_t size);
 
 Value *VUNDEF_IPTR();
 
-Value *VBROADCAST(Value *src);
+Value *VBROADCAST(Value *src, const llvm::Twine& name = "");
 Value *VBROADCAST_16(Value *src);
 
-Value *VRCP(Value *va);
+Value *VRCP(Value *va, const llvm::Twine& name = "");
 Value *VPLANEPS(Value* vA, Value* vB, Value* vC, Value* &vX, Value* &vY);
 
 uint32_t IMMED(Value* i);
@@ -95,7 +95,7 @@ Value *GEP(Value* ptr, const std::initializer_list<uint32_t> &indexList);
 Value *IN_BOUNDS_GEP(Value* ptr, const std::initializer_list<Value*> &indexList);
 Value *IN_BOUNDS_GEP(Value* ptr, const std::initializer_list<uint32_t> &indexList);
 
-CallInst *CALL(Value *Callee, const std::initializer_list<Value*> &args);
+CallInst *CALL(Value *Callee, const std::initializer_list<Value*> &args, const llvm::Twine& name = "");
 CallInst *CALL(Value *Callee) { return CALLA(Callee); }
 CallInst *CALL(Value *Callee, Value* arg);
 CallInst *CALL2(Value *Callee, Value* arg1, Value* arg2);
@@ -158,7 +158,7 @@ Value *PMOVSXBD(Value* a);
 Value *PMOVSXWD(Value* a);
 Value *PERMD(Value* a, Value* idx);
 Value *PERMPS(Value* a, Value* idx);
-Value *CVTPH2PS(Value* a);
+Value *CVTPH2PS(Value* a, const llvm::Twine& name = "");
 Value *CVTPS2PH(Value* a, Value* rounding);
 Value *PMAXSD(Value* a, Value* b);
 Value *PMINSD(Value* a, Value* b);

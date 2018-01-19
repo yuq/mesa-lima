@@ -223,7 +223,7 @@ def generate_x86_h(output_dir):
         declargs = 'Value* ' + ', Value* '.join(inst[2])
 
         functions.append({
-            'decl'      : 'Value* %s(%s)' % (inst[0], declargs),
+            'decl'      : 'Value* %s(%s, const llvm::Twine& name = "")' % (inst[0], declargs),
             'args'      : ', '.join(inst[2]),
             'intrin'    : inst[1],
         })

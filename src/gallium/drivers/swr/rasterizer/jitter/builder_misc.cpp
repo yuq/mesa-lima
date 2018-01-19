@@ -267,7 +267,7 @@ namespace SwrJit
         return UndefValue::get(VectorType::get(ty, size));
     }
 
-    Value *Builder::VBROADCAST(Value *src)
+    Value *Builder::VBROADCAST(Value *src, const llvm::Twine& name)
     {
         // check if src is already a vector
         if (src->getType()->isVectorTy())
@@ -275,7 +275,7 @@ namespace SwrJit
             return src;
         }
 
-        return VECTOR_SPLAT(mVWidth, src);
+        return VECTOR_SPLAT(mVWidth, src, name);
     }
 
     Value *Builder::VBROADCAST_16(Value *src)
@@ -367,12 +367,12 @@ namespace SwrJit
         return STORE(val, GEPA(basePtr, valIndices));
     }
 
-    CallInst *Builder::CALL(Value *Callee, const std::initializer_list<Value*> &argsList)
+    CallInst *Builder::CALL(Value *Callee, const std::initializer_list<Value*> &argsList, const llvm::Twine& name)
     {
         std::vector<Value*> args;
         for (auto arg : argsList)
             args.push_back(arg);
-        return CALLA(Callee, args);
+        return CALLA(Callee, args, name);
     }
 
     CallInst *Builder::CALL(Value *Callee, Value* arg)
@@ -406,9 +406,9 @@ namespace SwrJit
         return CALL(func);
     }
 
-    Value *Builder::VRCP(Value *va)
+    Value *Builder::VRCP(Value *va, const llvm::Twine& name)
     {
-        return FDIV(VIMMED1(1.0f), va);  // 1 / a
+        return FDIV(VIMMED1(1.0f), va, name);  // 1 / a
     }
 
     Value *Builder::VPLANEPS(Value* vA, Value* vB, Value* vC, Value* &vX, Value* &vY)
@@ -990,11 +990,11 @@ namespace SwrJit
     /// @brief Generate a VCVTPH2PS operation (float16->float32 conversion)
     /// in LLVM IR.  If not supported on the underlying platform, emulate it
     /// @param a - 128bit SIMD lane(8x16bit) of float16 in int16 format.
-    Value *Builder::CVTPH2PS(Value* a)
+    Value *Builder::CVTPH2PS(Value* a, const llvm::Twine& name)
     {
         if (JM()->mArch.F16C())
         {
-            return VCVTPH2PS(a);
+            return VCVTPH2PS(a, name);
         }
         else
         {
@@ -1014,6 +1014,7 @@ namespace SwrJit
                 pResult = VINSERT(pResult, pConv, C(i));
             }
 
+            pResult->setName(name);
             return pResult;
         }
     }
