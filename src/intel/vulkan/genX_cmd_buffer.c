@@ -431,6 +431,25 @@ genX(set_image_needs_resolve)(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
+#if GEN_IS_HASWELL || GEN_GEN >= 8
+static inline uint32_t
+mi_alu(uint32_t opcode, uint32_t operand1, uint32_t operand2)
+{
+   struct GENX(MI_MATH_ALU_INSTRUCTION) instr = {
+      .ALUOpcode = opcode,
+      .Operand1 = operand1,
+      .Operand2 = operand2,
+   };
+
+   uint32_t dw;
+   GENX(MI_MATH_ALU_INSTRUCTION_pack)(NULL, &dw, &instr);
+
+   return dw;
+}
+#endif
+
+#define CS_GPR(n) (0x2600 + (n) * 8)
+
 static void
 genX(load_needs_resolve_predicate)(struct anv_cmd_buffer *cmd_buffer,
                                    const struct anv_image *image,
@@ -2381,23 +2400,6 @@ void genX(CmdDrawIndexed)(
 
 /* MI_MATH only exists on Haswell+ */
 #if GEN_IS_HASWELL || GEN_GEN >= 8
-
-static uint32_t
-mi_alu(uint32_t opcode, uint32_t op1, uint32_t op2)
-{
-   struct GENX(MI_MATH_ALU_INSTRUCTION) instr = {
-      .ALUOpcode = opcode,
-      .Operand1 = op1,
-      .Operand2 = op2,
-   };
-
-   uint32_t dw;
-   GENX(MI_MATH_ALU_INSTRUCTION_pack)(NULL, &dw, &instr);
-
-   return dw;
-}
-
-#define CS_GPR(n) (0x2600 + (n) * 8)
 
 /* Emit dwords to multiply GPR0 by N */
 static void
