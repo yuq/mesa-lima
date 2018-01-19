@@ -167,7 +167,7 @@
 
 // enables early rasterization (useful for small triangles)
 #if !defined(KNOB_ENABLE_EARLY_RAST)
-#define KNOB_ENABLE_EARLY_RAST                 0
+#define KNOB_ENABLE_EARLY_RAST                 1
 #endif
 
 #if KNOB_ENABLE_EARLY_RAST
