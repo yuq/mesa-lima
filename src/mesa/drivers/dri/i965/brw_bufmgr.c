@@ -1107,8 +1107,9 @@ brw_bo_get_tiling(struct brw_bo *bo, uint32_t *tiling_mode,
    return 0;
 }
 
-struct brw_bo *
-brw_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr, int prime_fd)
+static struct brw_bo *
+brw_bo_gem_create_from_prime_internal(struct brw_bufmgr *bufmgr, int prime_fd,
+                                      int tiling_mode, uint32_t stride)
 {
    uint32_t handle;
    struct brw_bo *bo;
@@ -1157,13 +1158,17 @@ brw_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr, int prime_fd)
    bo->reusable = false;
    bo->external = true;
 
-   struct drm_i915_gem_get_tiling get_tiling = { .handle = bo->gem_handle };
-   if (drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_GET_TILING, &get_tiling))
-      goto err;
+   if (tiling_mode < 0) {
+      struct drm_i915_gem_get_tiling get_tiling = { .handle = bo->gem_handle };
+      if (drmIoctl(bufmgr->fd, DRM_IOCTL_I915_GEM_GET_TILING, &get_tiling))
+         goto err;
 
-   bo->tiling_mode = get_tiling.tiling_mode;
-   bo->swizzle_mode = get_tiling.swizzle_mode;
-   /* XXX stride is unknown */
+      bo->tiling_mode = get_tiling.tiling_mode;
+      bo->swizzle_mode = get_tiling.swizzle_mode;
+      /* XXX stride is unknown */
+   } else {
+      bo_set_tiling_internal(bo, tiling_mode, stride);
+   }
 
 out:
    mtx_unlock(&bufmgr->lock);
@@ -1173,6 +1178,24 @@ err:
    bo_free(bo);
    mtx_unlock(&bufmgr->lock);
    return NULL;
+}
+
+struct brw_bo *
+brw_bo_gem_create_from_prime(struct brw_bufmgr *bufmgr, int prime_fd)
+{
+   return brw_bo_gem_create_from_prime_internal(bufmgr, prime_fd, -1, 0);
+}
+
+struct brw_bo *
+brw_bo_gem_create_from_prime_tiled(struct brw_bufmgr *bufmgr, int prime_fd,
+                                   uint32_t tiling_mode, uint32_t stride)
+{
+   assert(tiling_mode == I915_TILING_NONE ||
+          tiling_mode == I915_TILING_X ||
+          tiling_mode == I915_TILING_Y);
+
+   return brw_bo_gem_create_from_prime_internal(bufmgr, prime_fd,
+                                                tiling_mode, stride);
 }
 
 static void
