@@ -97,7 +97,7 @@ ir3_optimize_loop(nir_shader *s)
 		progress |= OPT(s, nir_copy_prop);
 		progress |= OPT(s, nir_opt_dce);
 		progress |= OPT(s, nir_opt_cse);
-		progress |= OPT(s, ir3_nir_lower_if_else);
+		progress |= OPT(s, nir_opt_peephole_select, 16);
 		progress |= OPT(s, nir_opt_algebraic);
 		progress |= OPT(s, nir_opt_constant_folding);
 
