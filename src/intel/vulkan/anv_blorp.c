@@ -1206,6 +1206,9 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
                                    image, VK_IMAGE_ASPECT_COLOR_BIT,
                                    att_state->aux_usage, &surf);
 
+      uint32_t base_layer = iview->planes[0].isl.base_array_layer;
+      uint32_t layer_count = fb->layers;
+
       if (att_state->fast_clear) {
          surf.clear_color = vk_to_isl_color(att_state->clear_value.color);
 
@@ -1228,29 +1231,33 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
          cmd_buffer->state.pending_pipe_bits |=
             ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
 
+         /* We only support fast-clears on the first layer */
+         assert(iview->planes[0].isl.base_level == 0);
+         assert(iview->planes[0].isl.base_array_layer == 0);
+
          assert(image->n_planes == 1);
-         blorp_fast_clear(&batch, &surf, iview->planes[0].isl.format,
-                          iview->planes[0].isl.base_level,
-                          iview->planes[0].isl.base_array_layer, fb->layers,
+         blorp_fast_clear(&batch, &surf, iview->planes[0].isl.format, 0, 0, 1,
                           render_area.offset.x, render_area.offset.y,
                           render_area.offset.x + render_area.extent.width,
                           render_area.offset.y + render_area.extent.height);
+         base_layer++;
+         layer_count--;
 
          cmd_buffer->state.pending_pipe_bits |=
             ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
-      } else {
+      }
+
+      if (layer_count > 0) {
          assert(image->n_planes == 1);
          anv_cmd_buffer_mark_image_written(cmd_buffer, image,
                                            VK_IMAGE_ASPECT_COLOR_BIT,
                                            att_state->aux_usage,
                                            iview->planes[0].isl.base_level,
-                                           iview->planes[0].isl.base_array_layer,
-                                           fb->layers);
+                                           base_layer, layer_count);
 
          blorp_clear(&batch, &surf, iview->planes[0].isl.format,
                      anv_swizzle_for_render(iview->planes[0].isl.swizzle),
-                     iview->planes[0].isl.base_level,
-                     iview->planes[0].isl.base_array_layer, fb->layers,
+                     iview->planes[0].isl.base_level, base_layer, layer_count,
                      render_area.offset.x, render_area.offset.y,
                      render_area.offset.x + render_area.extent.width,
                      render_area.offset.y + render_area.extent.height,

@@ -329,12 +329,16 @@ color_attachment_compute_aux_usage(struct anv_device * device,
        */
       if (att_state->fast_clear &&
           (iview->planes[0].isl.base_level > 0 ||
-           iview->image->extent.depth > 0 ||
-           iview->image->array_size > 0)) {
+           iview->planes[0].isl.base_array_layer > 0)) {
          anv_perf_warn(device->instance, iview->image,
-                       "Rendering to a multi-LOD or multi-layer framebuffer "
-                       "with LOAD_OP_CLEAR.  Not fast-clearing");
+                       "Rendering with multi-lod or multi-layer framebuffer "
+                       "with LOAD_OP_LOAD and baseMipLevel > 0 or "
+                       "baseArrayLayer > 0.  Not fast clearing.");
          att_state->fast_clear = false;
+      } else if (att_state->fast_clear && cmd_state->framebuffer->layers > 1) {
+         anv_perf_warn(device->instance, iview->image,
+                       "Rendering to a multi-layer framebuffer with "
+                       "LOAD_OP_CLEAR.  Only fast-clearing the first slice");
       }
 
       if (att_state->fast_clear) {
