@@ -724,7 +724,7 @@ swr_compile_gs(struct swr_context *ctx, swr_jit_gs_key &key)
 void
 BuilderSWR::WriteVS(Value *pVal, Value *pVsContext, Value *pVtxOutput, unsigned slot, unsigned channel)
 {
-#if USE_SIMD16_FRONTEND && !USE_SIMD16_SHADERS
+#if USE_SIMD16_FRONTEND && !USE_SIMD16_VS
    // interleave the simdvertex components into the dest simd16vertex
    //   slot16offset = slot8offset * 2
    //   comp16offset = comp8offset * 2 + alternateOffset
@@ -787,7 +787,7 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
    const_sizes_ptr->setName("num_vs_constants");
 
    Value *vtxInput = LOAD(pVsCtx, {0, SWR_VS_CONTEXT_pVin});
-#if USE_SIMD16_SHADERS
+#if USE_SIMD16_VS
    vtxInput = BITCAST(vtxInput, PointerType::get(Gen_simd16vertex(JM()), 0));
 #endif
 
@@ -807,11 +807,22 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
    struct lp_bld_tgsi_system_values system_values;
    memset(&system_values, 0, sizeof(system_values));
    system_values.instance_id = wrap(LOAD(pVsCtx, {0, SWR_VS_CONTEXT_InstanceID}));
+
+#if USE_SIMD16_VS
+   system_values.vertex_id = wrap(LOAD(pVsCtx, {0, SWR_VS_CONTEXT_VertexID16}));
+#else
    system_values.vertex_id = wrap(LOAD(pVsCtx, {0, SWR_VS_CONTEXT_VertexID}));
+#endif
+
+#if USE_SIMD16_VS
+   uint32_t vectorWidth = mVWidth16;
+#else
+   uint32_t vectorWidth = mVWidth;
+#endif
 
    lp_build_tgsi_soa(gallivm,
                      swr_vs->pipe.tokens,
-                     lp_type_float_vec(32, 32 * mVWidth),
+                     lp_type_float_vec(32, 32 * vectorWidth),
                      NULL, // mask
                      wrap(consts_ptr),
                      wrap(const_sizes_ptr),
@@ -829,7 +840,7 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
    IRB()->SetInsertPoint(unwrap(LLVMGetInsertBlock(gallivm->builder)));
 
    Value *vtxOutput = LOAD(pVsCtx, {0, SWR_VS_CONTEXT_pVout});
-#if USE_SIMD16_SHADERS
+#if USE_SIMD16_VS
    vtxOutput = BITCAST(vtxOutput, PointerType::get(Gen_simd16vertex(JM()), 0));
 #endif
 
@@ -905,10 +916,21 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
          Value *py = LOAD(GEP(hPrivateData, {0, swr_draw_context_userClipPlanes, val, 1}));
          Value *pz = LOAD(GEP(hPrivateData, {0, swr_draw_context_userClipPlanes, val, 2}));
          Value *pw = LOAD(GEP(hPrivateData, {0, swr_draw_context_userClipPlanes, val, 3}));
-         Value *dist = FADD(FMUL(unwrap(cx), VBROADCAST(px)),
-                            FADD(FMUL(unwrap(cy), VBROADCAST(py)),
-                                 FADD(FMUL(unwrap(cz), VBROADCAST(pz)),
-                                      FMUL(unwrap(cw), VBROADCAST(pw)))));
+#if USE_SIMD16_VS
+         Value *bpx = VBROADCAST_16(px);
+         Value *bpy = VBROADCAST_16(py);
+         Value *bpz = VBROADCAST_16(pz);
+         Value *bpw = VBROADCAST_16(pw);
+#else
+         Value *bpx = VBROADCAST(px);
+         Value *bpy = VBROADCAST(py);
+         Value *bpz = VBROADCAST(pz);
+         Value *bpw = VBROADCAST(pw);
+#endif
+         Value *dist = FADD(FMUL(unwrap(cx), bpx),
+                            FADD(FMUL(unwrap(cy), bpy),
+                                 FADD(FMUL(unwrap(cz), bpz),
+                                      FMUL(unwrap(cw), bpw))));
 
          if (val < 4)
             WriteVS(dist, pVsCtx, vtxOutput, VERTEX_CLIPCULL_DIST_LO_SLOT, val);
@@ -942,11 +964,7 @@ swr_compile_vs(struct swr_context *ctx, swr_jit_vs_key &key)
       return NULL;
 
    BuilderSWR builder(
-#if USE_SIMD16_SHADERS
-      reinterpret_cast<JitManager *>(swr_screen(ctx->pipe.screen)->hJitMgr16),
-#else
       reinterpret_cast<JitManager *>(swr_screen(ctx->pipe.screen)->hJitMgr),
-#endif
       "VS");
    PFN_VERTEX_FUNC func = builder.CompileVS(ctx, key);
 
