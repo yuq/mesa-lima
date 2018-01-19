@@ -96,7 +96,15 @@ public:
     JitCache();
     virtual ~JitCache() {}
 
-    void Init(JitManager* pJitMgr, const llvm::StringRef& cpu) { mCpu = cpu.str(); mpJitMgr = pJitMgr; }
+    void Init(
+        JitManager* pJitMgr,
+        const llvm::StringRef& cpu,
+        llvm::CodeGenOpt::Level level)
+    {
+        mCpu = cpu.str();
+        mpJitMgr = pJitMgr;
+        mOptLevel = level;
+    }
 
     /// notifyObjectCompiled - Provides a pointer to compiled code for Module M.
     virtual void notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef Obj);
@@ -111,6 +119,7 @@ private:
     llvm::SmallString<MAX_PATH> mCacheDir;
     uint32_t mCurrentModuleCRC = 0;
     JitManager* mpJitMgr = nullptr;
+    llvm::CodeGenOpt::Level mOptLevel = llvm::CodeGenOpt::None;
 };
 
 //////////////////////////////////////////////////////////////////////////

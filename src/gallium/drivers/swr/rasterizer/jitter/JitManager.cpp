@@ -96,15 +96,17 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
     mpCurrentModule->setTargetTriple(hostTriple.getTriple());
 #endif // _WIN32
 
+    auto optLevel = CodeGenOpt::Aggressive;
+
     mpExec = EngineBuilder(std::move(newModule))
         .setTargetOptions(tOpts)
-        .setOptLevel(CodeGenOpt::Aggressive)
+        .setOptLevel(optLevel)
         .setMCPU(hostCPUName)
         .create();
 
     if (KNOB_JIT_ENABLE_CACHE)
     {
-        mCache.Init(this, hostCPUName);
+        mCache.Init(this, hostCPUName, optLevel);
         mpExec->setObjectCache(&mCache);
     }
 
@@ -453,7 +455,7 @@ extern "C"
 //////////////////////////////////////////////////////////////////////////
 struct JitCacheFileHeader
 {
-    void Init(uint32_t llCRC, uint32_t objCRC, const std::string& moduleID, const std::string& cpu, uint64_t bufferSize)
+    void Init(uint32_t llCRC, uint32_t objCRC, const std::string& moduleID, const std::string& cpu, uint32_t optLevel, uint64_t bufferSize)
     {
         m_MagicNumber = JC_MAGIC_NUMBER;
         m_BufferSize = bufferSize;
@@ -464,13 +466,15 @@ struct JitCacheFileHeader
         m_ModuleID[JC_STR_MAX_LEN - 1] = 0;
         strncpy(m_Cpu, cpu.c_str(), JC_STR_MAX_LEN - 1);
         m_Cpu[JC_STR_MAX_LEN - 1] = 0;
+        m_optLevel = optLevel;
     }
 
-    bool IsValid(uint32_t llCRC, const std::string& moduleID, const std::string& cpu)
+    bool IsValid(uint32_t llCRC, const std::string& moduleID, const std::string& cpu, uint32_t optLevel)
     {
         if ((m_MagicNumber != JC_MAGIC_NUMBER) ||
             (m_llCRC != llCRC) ||
-            (m_platformKey != JC_PLATFORM_KEY))
+            (m_platformKey != JC_PLATFORM_KEY) ||
+            (m_optLevel != optLevel))
         {
             return false;
         }
@@ -494,7 +498,7 @@ struct JitCacheFileHeader
     uint64_t GetBufferCRC() const { return m_objCRC; }
 
 private:
-    static const uint64_t   JC_MAGIC_NUMBER = 0xfedcba9876543211ULL + 1;
+    static const uint64_t   JC_MAGIC_NUMBER = 0xfedcba9876543211ULL + 2;
     static const size_t     JC_STR_MAX_LEN = 32;
     static const uint32_t   JC_PLATFORM_KEY =
         (LLVM_VERSION_MAJOR << 24)  |
@@ -507,6 +511,7 @@ private:
     uint32_t m_llCRC;
     uint32_t m_platformKey;
     uint32_t m_objCRC;
+    uint32_t m_optLevel;
     char m_ModuleID[JC_STR_MAX_LEN];
     char m_Cpu[JC_STR_MAX_LEN];
 };
@@ -607,7 +612,7 @@ void JitCache::notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef
         uint32_t objcrc = ComputeCRC(0, Obj.getBufferStart(), Obj.getBufferSize());
 
         JitCacheFileHeader header;
-        header.Init(mCurrentModuleCRC, objcrc, moduleID, mCpu, Obj.getBufferSize());
+        header.Init(mCurrentModuleCRC, objcrc, moduleID, mCpu, mOptLevel, Obj.getBufferSize());
 
         fileObj.write((const char*)&header, sizeof(header));
         fileObj.flush();
@@ -664,7 +669,7 @@ std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module* M)
             break;
         }
 
-        if (!header.IsValid(mCurrentModuleCRC, moduleID, mCpu))
+        if (!header.IsValid(mCurrentModuleCRC, moduleID, mCpu, mOptLevel))
         {
             break;
         }
