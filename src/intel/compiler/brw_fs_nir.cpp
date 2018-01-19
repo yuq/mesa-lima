@@ -2420,6 +2420,9 @@ fs_visitor::nir_emit_vs_intrinsic(const fs_builder &bld,
       assert(const_offset && "Indirect input loads not allowed");
       src = offset(src, bld, const_offset->u32[0]);
 
+      if (type_sz(type) == 8)
+         first_component /= 2;
+
       for (unsigned j = 0; j < num_components; j++) {
          bld.MOV(offset(dest, bld, j), offset(src, bld, j + first_component));
       }
