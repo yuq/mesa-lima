@@ -174,7 +174,7 @@ Value *VPCMPGTD(Value* a, Value* b)
     return S_EXT(vIndexMask,VectorType::get(mInt32Ty,JM()->mVWidth));
 }
 
-Value *ICLAMP(Value* src, Value* low, Value* high);
+Value *ICLAMP(Value* src, Value* low, Value* high, const llvm::Twine& name = "");
 Value *FCLAMP(Value* src, Value* low, Value* high);
 Value *FCLAMP(Value* src, float low, float high);
 

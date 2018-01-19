@@ -1545,13 +1545,13 @@ namespace SwrJit
         return result;
     }
 
-    Value *Builder::ICLAMP(Value* src, Value* low, Value* high)
+    Value *Builder::ICLAMP(Value* src, Value* low, Value* high, const llvm::Twine& name)
     {
         Value *lowCmp = ICMP_SLT(src, low);
         Value *ret = SELECT(lowCmp, low, src);
 
         Value *highCmp = ICMP_SGT(ret, high);
-        ret = SELECT(highCmp, high, ret);
+        ret = SELECT(highCmp, high, ret, name);
 
         return ret;
     }
