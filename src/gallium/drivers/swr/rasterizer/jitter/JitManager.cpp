@@ -125,6 +125,9 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
     // typedef void(__cdecl *PFN_FETCH_FUNC)(SWR_FETCH_CONTEXT& fetchInfo, simdvertex& out);
 #endif
     std::vector<Type*> fsArgs;
+
+    fsArgs.push_back(PointerType::get(Type::getVoidTy(mContext), 0));
+
     fsArgs.push_back(PointerType::get(Gen_SWR_FETCH_CONTEXT(this), 0));
 #if USE_SIMD16_SHADERS
     fsArgs.push_back(PointerType::get(Gen_simd16vertex(this), 0));

@@ -1720,13 +1720,13 @@ void ProcessDraw(
                 // 1. Execute FS/VS for a single SIMD.
                 AR_BEGIN(FEFetchShader, pDC->drawId);
 #if USE_SIMD16_SHADERS
-                state.pfnFetchFunc(fetchInfo_lo, vin);
+                state.pfnFetchFunc(GetPrivateState(pDC), fetchInfo_lo, vin);
 #else
-                state.pfnFetchFunc(fetchInfo_lo, vin_lo);
+                state.pfnFetchFunc(GetPrivateState(pDC), fetchInfo_lo, vin_lo);
 
                 if ((i + KNOB_SIMD_WIDTH) < endVertex)  // 1/2 of KNOB_SIMD16_WIDTH
                 {
-                    state.pfnFetchFunc(fetchInfo_hi, vin_hi);
+                    state.pfnFetchFunc(GetPrivateState(pDC), fetchInfo_hi, vin_hi);
                 }
 #endif
                 AR_END(FEFetchShader, 0);
@@ -1968,7 +1968,7 @@ void ProcessDraw(
 
                 // 1. Execute FS/VS for a single SIMD.
                 AR_BEGIN(FEFetchShader, pDC->drawId);
-                state.pfnFetchFunc(fetchInfo, vout);
+                state.pfnFetchFunc(GetPrivateState(pDC), fetchInfo, vout);
                 AR_END(FEFetchShader, 0);
 
                 // forward fetch generated vertex IDs to the vertex shader
