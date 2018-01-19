@@ -660,7 +660,7 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog,
    NIR_PASS_V(nir, nir_lower_var_copies);
    if (nir->info.stage != MESA_SHADER_TESS_CTRL &&
        nir->info.stage != MESA_SHADER_TESS_EVAL)
-      NIR_PASS_V(nir, nir_lower_io_arrays_to_elements_no_indirects);
+      NIR_PASS_V(nir, nir_lower_io_arrays_to_elements_no_indirects, false);
 
    if (nir->info.stage == MESA_SHADER_VERTEX) {
       /* Needs special handling so drvloc matches the vbo state: */
