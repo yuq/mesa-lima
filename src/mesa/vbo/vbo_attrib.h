@@ -34,22 +34,23 @@
 
 
 /*
- * Note: The first attributes match the VERT_ATTRIB_* definitions
- * in mtypes.h.  However, the tnl module has additional attributes
- * for materials, color indexes, edge flags, etc.
+ * Note: The first 32 attributes match the VERT_ATTRIB_* definitions.
+ * However, we have extra attributes for storing per-vertex glMaterial
+ * values.  The material attributes get shifted into the generic positions
+ * at draw time.
+ *
+ * One reason we can't alias materials and generics here is display lists.
+ * A display list might contain both generic attributes and material
+ * attributes which are selected at draw time depending on whether we're
+ * using fixed function or a shader.  <sigh>
  */
-/* Although it's nice to use these as bit indexes in a DWORD flag, we
- * could manage without if necessary.  Another limit currently is the
- * number of bits allocated for these numbers in places like vertex
- * program instruction formats and register layouts.
- */
-enum {
+enum vbo_attrib {
    VBO_ATTRIB_POS,
    VBO_ATTRIB_NORMAL,
    VBO_ATTRIB_COLOR0,
    VBO_ATTRIB_COLOR1,
    VBO_ATTRIB_FOG,
-   VBO_ATTRIB_INDEX,
+   VBO_ATTRIB_COLOR_INDEX,
    VBO_ATTRIB_EDGEFLAG,
    VBO_ATTRIB_TEX0,
    VBO_ATTRIB_TEX1,
