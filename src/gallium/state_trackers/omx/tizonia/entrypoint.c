@@ -44,6 +44,40 @@
 #include "h264eoutport.h"
 #include "names.h"
 
+#include "util/u_debug.h"
+
+DEBUG_GET_ONCE_BOOL_OPTION(mesa_enable_omx_eglimage,
+                           "MESA_ENABLE_OMX_EGLIMAGE",
+                           false)
+
+static OMX_BOOL egl_image_validation_hook(const OMX_HANDLETYPE ap_hdl,
+                                          OMX_U32 pid, OMX_PTR ap_eglimage,
+                                          void *ap_args)
+{
+   const void * p_krn = NULL;
+   const tiz_port_t * p_port = NULL;
+
+   assert(ap_hdl);
+   assert(ap_eglimage);
+   assert(!ap_args);
+
+   if (!debug_get_option_mesa_enable_omx_eglimage()) {
+      return OMX_FALSE;
+   }
+
+   p_krn = tiz_get_krn(ap_hdl);
+   p_port = tiz_krn_get_port(p_krn, pid);
+
+   const OMX_VIDEO_PORTDEFINITIONTYPE * p_video_portdef
+      = &(p_port->portdef_.format.video);
+
+   if (!p_video_portdef->pNativeWindow) {
+      return OMX_FALSE;
+   }
+
+   return OMX_TRUE;
+}
+
 OMX_ERRORTYPE OMX_ComponentInit (OMX_HANDLETYPE ap_hdl)
 {
    tiz_role_factory_t h264d_role;
@@ -59,6 +93,11 @@ OMX_ERRORTYPE OMX_ComponentInit (OMX_HANDLETYPE ap_hdl)
                                            &h264eprc_type,
                                            &h264e_inport_type,
                                            &h264e_outport_type};
+   const tiz_eglimage_hook_t egl_validation_hook = {
+      OMX_VID_DEC_AVC_OUTPUT_PORT_INDEX,
+      egl_image_validation_hook,
+      NULL
+   };
 
    /* Settings for roles */
    strcpy ((OMX_STRING) h264d_role.role, OMX_VID_DEC_AVC_ROLE);
@@ -109,6 +148,11 @@ OMX_ERRORTYPE OMX_ComponentInit (OMX_HANDLETYPE ap_hdl)
 
    /* Register the component roles */
    tiz_comp_register_roles (ap_hdl, rf_list, 2);
+
+   /* Register egl image validation hook for the decoder */
+   tiz_check_omx (tiz_comp_register_role_eglimage_hook
+                     (ap_hdl, (const OMX_U8 *) OMX_VID_DEC_AVC_ROLE,
+                      &egl_validation_hook));
 
    return OMX_ErrorNone;
 }

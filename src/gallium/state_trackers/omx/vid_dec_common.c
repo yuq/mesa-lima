@@ -90,6 +90,44 @@ void vid_dec_FillOutput(vid_dec_PrivateType *priv, struct pipe_video_buffer *buf
 
    views = buf->get_sampler_view_planes(buf);
 
+#if ENABLE_ST_OMX_TIZONIA
+   if (!output->pBuffer) {
+      struct pipe_video_buffer *dst_buf = NULL;
+      struct pipe_surface **dst_surface = NULL;
+      struct u_rect src_rect;
+      struct u_rect dst_rect;
+      struct vl_compositor *compositor = &priv->compositor;
+      struct vl_compositor_state *s = &priv->cstate;
+      enum vl_compositor_deinterlace deinterlace = VL_COMPOSITOR_WEAVE;
+
+      dst_buf = util_hash_table_get(priv->video_buffer_map, output);
+      assert(dst_buf);
+
+      dst_surface = dst_buf->get_surfaces(dst_buf);
+      assert(views);
+
+      src_rect.x0 = 0;
+      src_rect.y0 = 0;
+      src_rect.x1 = def->nFrameWidth;
+      src_rect.y1 = def->nFrameHeight;
+
+      dst_rect.x0 = 0;
+      dst_rect.y0 = 0;
+      dst_rect.x1 = def->nFrameWidth;
+      dst_rect.y1 = def->nFrameHeight;
+
+      vl_compositor_clear_layers(s);
+      vl_compositor_set_buffer_layer(s, compositor, 0, buf,
+              &src_rect, NULL, deinterlace);
+      vl_compositor_set_layer_dst_area(s, 0, &dst_rect);
+      vl_compositor_render(s, compositor, dst_surface[0], NULL, false);
+
+      priv->pipe->flush(priv->pipe, NULL, 0);
+
+      return;
+   }
+#endif
+
    for (i = 0; i < 2 /* NV12 */; i++) {
       if (!views[i]) continue;
       width = def->nFrameWidth;

@@ -18,6 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+inc_st_omx = [inc_common]
+dep_st_omx = [dep_omx, dep_x11_xcb, dep_xcb, dep_xcb_dri2, dep_xcb_dri3]
+
 files_omx = files(
 	'vid_dec_common.c',
 	'vid_dec_h264_common.c',
@@ -45,12 +48,23 @@ files_omx += files(
 	'tizonia/h264einport.c',
 	'tizonia/h264eoutport.c'
 )
+inc_st_omx = [
+  inc_st_omx,
+  inc_dri_common,
+  include_directories('../../state_trackers/dri'),
+  include_directories('../../../egl/drivers/dri2'),
+  include_directories('../../../egl/main'),
+  include_directories('../../../gbm/backends/dri'),
+  include_directories('../../../gbm/main'),
+  include_directories('../../../loader')
+]
+dep_st_omx = [dep_st_omx, dep_omx_other, dep_libdrm]
 endif
 
 libomx_st = static_library(
   'omx_st',
   files_omx,
   c_args : [c_vis_args],
-  include_directories : [inc_common],
-  dependencies : [dep_omx, dep_omx_other, dep_x11_xcb, dep_xcb, dep_xcb_dri2, dep_xcb_dri3],
+  include_directories : inc_st_omx,
+  dependencies : dep_st_omx,
 )

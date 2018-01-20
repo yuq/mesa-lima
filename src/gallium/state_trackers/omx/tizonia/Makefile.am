@@ -22,8 +22,21 @@ include Makefile.sources
 include $(top_srcdir)/src/gallium/Automake.inc
 
 AM_CFLAGS = \
+	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/src/mapi \
+	-I$(top_srcdir)/src/mesa \
+	-I$(top_builddir)/src/mesa/drivers/dri/common \
+	-I$(top_srcdir)/src/mesa/drivers/dri/common \
+	-I$(top_srcdir)/src/egl/drivers/dri2 \
+	-I$(top_srcdir)/src/egl/wayland/wayland-egl \
+	-I$(top_srcdir)/src/egl/main \
+	-I$(top_srcdir)/src/gbm/main \
+	-I$(top_srcdir)/src/loader \
+	-I$(top_srcdir)/src/gbm/backends/dri \
+	-I$(top_srcdir)/src/gallium/state_trackers/dri \
 	-I$(top_srcdir)/src/gallium/state_trackers/omx \
 	$(GALLIUM_CFLAGS) \
+	$(LIBDRM_CFLAGS) \
 	$(VISIBILITY_CFLAGS) \
 	$(VL_CFLAGS) \
 	$(XCB_DRI3_CFLAGS) \
