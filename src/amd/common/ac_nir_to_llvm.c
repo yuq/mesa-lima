@@ -3635,6 +3635,7 @@ static LLVMValueRef visit_image_load(struct ac_nir_context *ctx,
 	} else {
 		bool is_da = glsl_sampler_type_is_array(type) ||
 			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE ||
+			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_3D ||
 			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_SUBPASS ||
 			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_SUBPASS_MS;
 		LLVMValueRef da = is_da ? ctx->ac.i1true : ctx->ac.i1false;
@@ -3693,7 +3694,8 @@ static void visit_image_store(struct ac_nir_context *ctx,
 				   params, 6, 0);
 	} else {
 		bool is_da = glsl_sampler_type_is_array(type) ||
-			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE;
+			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE ||
+			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_3D;
 		LLVMValueRef da = is_da ? ctx->ac.i1true : ctx->ac.i1false;
 		LLVMValueRef slc = ctx->ac.i1false;
 
