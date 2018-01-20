@@ -172,7 +172,7 @@ struct drm_vc5_mmap_bo {
 };
 
 enum drm_vc5_param {
-        DRM_VC5_PARAM_V3D_UIFCFG,
+        DRM_VC5_PARAM_V3D_HUB_UIFCFG,
         DRM_VC5_PARAM_V3D_HUB_IDENT1,
         DRM_VC5_PARAM_V3D_HUB_IDENT2,
         DRM_VC5_PARAM_V3D_HUB_IDENT3,
