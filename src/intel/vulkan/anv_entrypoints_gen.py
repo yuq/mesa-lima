@@ -27,7 +27,7 @@ import functools
 import os
 import xml.etree.cElementTree as et
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from mako.template import Template
 
 from anv_extensions import *
@@ -77,7 +77,7 @@ extern const struct anv_dispatch_table ${layer}_dispatch_table;
 #ifdef ${e.guard}
   % endif
   % for layer in LAYERS:
-  ${e.return_type} ${e.prefixed_name(layer)}(${e.params});
+  ${e.return_type} ${e.prefixed_name(layer)}(${e.decl_params()});
   % endfor
   % if e.guard is not None:
 #endif // ${e.guard}
@@ -145,7 +145,7 @@ static const struct anv_entrypoint entrypoints[] = {
     % if e.guard is not None:
 #ifdef ${e.guard}
     % endif
-    ${e.return_type} ${e.prefixed_name(layer)}(${e.params}) __attribute__ ((weak));
+    ${e.return_type} ${e.prefixed_name(layer)}(${e.decl_params()}) __attribute__ ((weak));
     % if e.guard is not None:
 #endif // ${e.guard}
     % endif
@@ -301,11 +301,13 @@ def cal_hash(name):
     return functools.reduce(
         lambda h, c: (h * PRIME_FACTOR + ord(c)) & U32_MASK, name, 0)
 
+EntrypointParam = namedtuple('EntrypointParam', 'type name decl')
+
 class Entrypoint(object):
     def __init__(self, name, return_type, params, guard = None):
         self.name = name
         self.return_type = return_type
-        self.params = ', '.join(params)
+        self.params = params
         self.guard = guard
         self.enabled = False
         self.num = None
@@ -317,6 +319,9 @@ class Entrypoint(object):
         assert self.name.startswith('vk')
         return prefix + '_' + self.name[2:]
 
+    def decl_params(self):
+        return ', '.join(p.decl for p in self.params)
+
     def get_c_hash(self):
         return cal_hash(self.name)
 
@@ -327,7 +332,11 @@ def get_entrypoints(doc, entrypoints_to_defines, start_index):
     for command in doc.findall('./commands/command'):
         ret_type = command.find('./proto/type').text
         fullname = command.find('./proto/name').text
-        params = (''.join(p.itertext()) for p in command.findall('./param'))
+        params = [EntrypointParam(
+            type = p.find('./type').text,
+            name = p.find('./name').text,
+            decl = ''.join(p.itertext())
+        ) for p in command.findall('./param')]
         guard = entrypoints_to_defines.get(fullname)
         # They really need to be unique
         assert fullname not in entrypoints
@@ -437,12 +446,15 @@ def main():
 
     # Manually add CreateDmaBufImageINTEL for which we don't have an extension
     # defined.
-    entrypoints.append(Entrypoint('vkCreateDmaBufImageINTEL', 'VkResult',
-                                  ['VkDevice device',
-                                   'const VkDmaBufImageCreateInfo* pCreateInfo',
-                                   'const VkAllocationCallbacks* pAllocator',
-                                   'VkDeviceMemory* pMem',
-                                   'VkImage* pImage']))
+    entrypoints.append(Entrypoint('vkCreateDmaBufImageINTEL', 'VkResult', [
+        EntrypointParam('VkDevice', 'device', 'VkDevice device'),
+        EntrypointParam('VkDmaBufImageCreateInfo', 'pCreateInfo',
+                        'const VkDmaBufImageCreateInfo* pCreateInfo'),
+        EntrypointParam('VkAllocationCallbacks', 'pAllocator',
+                        'const VkAllocationCallbacks* pAllocator'),
+        EntrypointParam('VkDeviceMemory', 'pMem', 'VkDeviceMemory* pMem'),
+        EntrypointParam('VkImage', 'pImage', 'VkImage* pImage')
+    ]))
 
     for num, e in enumerate(entrypoints):
         e.num = num
