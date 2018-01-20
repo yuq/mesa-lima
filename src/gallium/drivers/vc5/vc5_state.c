@@ -443,6 +443,9 @@ vc5_set_framebuffer_state(struct pipe_context *pctx,
         vc5->blend_dst_alpha_one = 0;
         for (int i = 0; i < vc5->framebuffer.nr_cbufs; i++) {
                 struct pipe_surface *cbuf = vc5->framebuffer.cbufs[i];
+                if (!cbuf)
+                        continue;
+
                 const struct util_format_description *desc =
                         util_format_description(cbuf->format);
 

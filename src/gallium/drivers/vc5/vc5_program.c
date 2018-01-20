@@ -378,6 +378,9 @@ vc5_update_compiled_fs(struct vc5_context *vc5, uint8_t prim_mode)
 
         for (int i = 0; i < key->nr_cbufs; i++) {
                 struct pipe_surface *cbuf = vc5->framebuffer.cbufs[i];
+                if (!cbuf)
+                        continue;
+
                 const struct util_format_description *desc =
                         util_format_description(cbuf->format);
 
