@@ -860,7 +860,9 @@ brwCreateContext(gl_api api,
       return false;
    }
 
-   if (ctx_config->attribute_mask & ~__DRIVER_CONTEXT_ATTRIB_RESET_STRATEGY) {
+   if (ctx_config->attribute_mask &
+       ~(__DRIVER_CONTEXT_ATTRIB_RESET_STRATEGY |
+         __DRIVER_CONTEXT_ATTRIB_PRIORITY)) {
       *dri_ctx_error = __DRI_CTX_ERROR_UNKNOWN_ATTRIBUTE;
       return false;
    }
