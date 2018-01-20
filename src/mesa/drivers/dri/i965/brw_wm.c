@@ -126,11 +126,6 @@ brw_wm_debug_recompile(struct brw_context *brw, struct gl_program *prog,
    }
 }
 
-/**
- * All Mesa program -> GPU code generation goes through this function.
- * Depending on the instructions used (i.e. flow control instructions)
- * we'll use one of two code generators.
- */
 static bool
 brw_codegen_wm_prog(struct brw_context *brw,
                     struct brw_program *fp,
