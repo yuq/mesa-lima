@@ -319,8 +319,8 @@ recalculate_input_bindings(struct gl_context *ctx)
    GLbitfield const_inputs = 0x0;
    GLuint i;
 
-   switch (get_program_mode(ctx)) {
-   case VP_NONE:
+   switch (get_vp_mode(ctx)) {
+   case VP_FF:
       /* When no vertex program is active (or the vertex program is generated
        * from fixed-function state).  We put the material values into the
        * generic slots.  This is the only situation where material values
@@ -351,7 +351,7 @@ recalculate_input_bindings(struct gl_context *ctx)
       }
       break;
 
-   case VP_ARB:
+   case VP_SHADER:
       /* There are no shaders in OpenGL ES 1.x, so this code path should be
        * impossible to reach.  The meta code is careful to not use shaders in
        * ES1.

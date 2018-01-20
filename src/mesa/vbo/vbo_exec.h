@@ -52,13 +52,6 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define VBO_VERT_BUFFER_SIZE (1024*64)	/* bytes */
 
 
-/** Current vertex program mode */
-enum vp_mode {
-   VP_NONE,   /**< fixed function */
-   VP_ARB     /**< ARB vertex program or GLSL vertex shader */
-};
-
-
 struct vbo_exec_eval1_map {
    struct gl_1d_map *map;
    GLuint sz;

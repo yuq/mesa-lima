@@ -73,18 +73,28 @@ vbo_context(struct gl_context *ctx)
 
 
 /**
- * Return VP_x token to indicate whether we're running fixed-function
- * vertex transformation, an NV vertex program or ARB vertex program/shader.
+ * Current vertex processing mode: fixed function vs. shader.
+ * In reality, fixed function is probably implemented by a shader but that's
+ * not what we care about here.
+ */
+enum vp_mode {
+   VP_FF,    /**< legacy / fixed function */
+   VP_SHADER /**< ARB vertex program or GLSL vertex shader */
+};
+
+
+/**
+ * Get current vertex processing mode (fixed function vs. shader).
  */
 static inline enum vp_mode
-get_program_mode( struct gl_context *ctx )
+get_vp_mode( struct gl_context *ctx )
 {
    if (!ctx->VertexProgram._Current)
-      return VP_NONE;
+      return VP_FF;
    else if (ctx->VertexProgram._Current == ctx->VertexProgram._TnlProgram)
-      return VP_NONE;
+      return VP_FF;
    else
-      return VP_ARB;
+      return VP_SHADER;
 }
 
 
