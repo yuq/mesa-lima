@@ -38,15 +38,27 @@
 #include "h264d.h"
 #include "h264dprc.h"
 #include "h264dinport.h"
+#include "h264e.h"
+#include "h264eprc.h"
+#include "h264einport.h"
+#include "h264eoutport.h"
 #include "names.h"
 
 OMX_ERRORTYPE OMX_ComponentInit (OMX_HANDLETYPE ap_hdl)
 {
    tiz_role_factory_t h264d_role;
-   const tiz_role_factory_t * rf_list[] = {&h264d_role};
+   tiz_role_factory_t h264e_role;
+   const tiz_role_factory_t * rf_list[] = {&h264d_role, &h264e_role};
    tiz_type_factory_t h264dprc_type;
    tiz_type_factory_t h264d_inport_type;
-   const tiz_type_factory_t * tf_list[] = {&h264dprc_type, &h264d_inport_type};
+   tiz_type_factory_t h264eprc_type;
+   tiz_type_factory_t h264e_inport_type;
+   tiz_type_factory_t h264e_outport_type;
+   const tiz_type_factory_t * tf_list[] = {&h264dprc_type,
+                                           &h264d_inport_type,
+                                           &h264eprc_type,
+                                           &h264e_inport_type,
+                                           &h264e_outport_type};
 
    /* Settings for roles */
    strcpy ((OMX_STRING) h264d_role.role, OMX_VID_DEC_AVC_ROLE);
@@ -55,6 +67,13 @@ OMX_ERRORTYPE OMX_ComponentInit (OMX_HANDLETYPE ap_hdl)
    h264d_role.pf_port[1] = instantiate_h264d_output_port;
    h264d_role.nports = 2;
    h264d_role.pf_proc = instantiate_h264d_processor;
+
+   strcpy ((OMX_STRING) h264e_role.role, OMX_VID_ENC_AVC_ROLE);
+   h264e_role.pf_cport = instantiate_h264e_config_port;
+   h264e_role.pf_port[0] = instantiate_h264e_input_port;
+   h264e_role.pf_port[1] = instantiate_h264e_output_port;
+   h264e_role.nports = 2;
+   h264e_role.pf_proc = instantiate_h264e_processor;
 
    /* Settings for classes */
    strcpy ((OMX_STRING) h264dprc_type.class_name, "h264dprc_class");
@@ -67,14 +86,29 @@ OMX_ERRORTYPE OMX_ComponentInit (OMX_HANDLETYPE ap_hdl)
    strcpy ((OMX_STRING) h264d_inport_type.object_name, "h264dinport");
    h264d_inport_type.pf_object_init = h264d_inport_init;
 
+   strcpy ((OMX_STRING) h264eprc_type.class_name, "h264eprc_class");
+   h264eprc_type.pf_class_init = h264e_prc_class_init;
+   strcpy ((OMX_STRING) h264eprc_type.object_name, "h264eprc");
+   h264eprc_type.pf_object_init = h264e_prc_init;
+
+   strcpy ((OMX_STRING) h264e_inport_type.class_name, "h264einport_class");
+   h264e_inport_type.pf_class_init = h264e_inport_class_init;
+   strcpy ((OMX_STRING) h264e_inport_type.object_name, "h264einport");
+   h264e_inport_type.pf_object_init = h264e_inport_init;
+
+   strcpy ((OMX_STRING) h264e_outport_type.class_name, "h264eoutport_class");
+   h264e_outport_type.pf_class_init = h264e_outport_class_init;
+   strcpy ((OMX_STRING) h264e_outport_type.object_name, "h264eoutport");
+   h264e_outport_type.pf_object_init = h264e_outport_init;
+
    /* Initialize the component infrastructure */
    tiz_comp_init (ap_hdl, OMX_VID_COMP_NAME);
 
    /* Classes need to be registered first */
-   tiz_comp_register_types (ap_hdl, tf_list, 2);
+   tiz_comp_register_types (ap_hdl, tf_list, 5);
 
    /* Register the component roles */
-   tiz_comp_register_roles (ap_hdl, rf_list, 1);
+   tiz_comp_register_roles (ap_hdl, rf_list, 2);
 
    return OMX_ErrorNone;
 }

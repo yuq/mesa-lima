@@ -1,8 +1,5 @@
 /**************************************************************************
  *
- * Copyright 2013 Advanced Micro Devices, Inc.
- * All Rights Reserved.
- *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -25,24 +22,27 @@
  *
  **************************************************************************/
 
-/*
- * Authors:
- *      Christian König <christian.koenig@amd.com>
- *
- */
+#ifndef H264EINPORT_DECLS_H
+#define H264EINPORT_DECLS_H
 
-#ifndef OMX_VID_ENC_H
-#define OMX_VID_ENC_H
-
+#include <OMX_TizoniaExt.h>
 #include <OMX_Types.h>
-#include <OMX_Component.h>
 
-#include <bellagio/st_static_component_loader.h>
+#include <tizvideoport_decls.h>
 
-#define OMX_VID_ENC_BASE_NAME "OMX.mesa.video_encoder"
-#define OMX_VID_ENC_AVC_NAME "OMX.mesa.video_encoder.avc"
-#define OMX_VID_ENC_AVC_ROLE "video_encoder.avc"
+typedef struct h264e_inport h264e_inport_t;
+struct h264e_inport
+{
+   /* Object */
+   const tiz_videoport_t _;
+};
 
-OMX_ERRORTYPE vid_enc_LoaderComponent(stLoaderComponentType *comp);
+typedef struct h264e_inport_class h264e_inport_class_t;
+struct h264e_inport_class
+{
+   /* Class */
+   const tiz_videoport_class_t _;
+   /* NOTE: Class methods might be added in the future */
+};
 
-#endif
+#endif /* H264EINPORT_DECLS_H */

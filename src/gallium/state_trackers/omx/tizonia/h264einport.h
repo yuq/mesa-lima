@@ -1,8 +1,5 @@
 /**************************************************************************
  *
- * Copyright 2013 Advanced Micro Devices, Inc.
- * All Rights Reserved.
- *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -25,24 +22,10 @@
  *
  **************************************************************************/
 
-/*
- * Authors:
- *      Christian König <christian.koenig@amd.com>
- *
- */
+#ifndef H264EINPORT_H
+#define H264EINPORT_H
 
-#ifndef OMX_VID_ENC_H
-#define OMX_VID_ENC_H
+void * h264e_inport_class_init(void * ap_tos, void * ap_hdl);
+void * h264e_inport_init(void * ap_tos, void * ap_hdl);
 
-#include <OMX_Types.h>
-#include <OMX_Component.h>
-
-#include <bellagio/st_static_component_loader.h>
-
-#define OMX_VID_ENC_BASE_NAME "OMX.mesa.video_encoder"
-#define OMX_VID_ENC_AVC_NAME "OMX.mesa.video_encoder.avc"
-#define OMX_VID_ENC_AVC_ROLE "video_encoder.avc"
-
-OMX_ERRORTYPE vid_enc_LoaderComponent(stLoaderComponentType *comp);
-
-#endif
+#endif /* H264EINPORT_H */

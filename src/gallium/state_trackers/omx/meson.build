@@ -21,6 +21,7 @@
 files_omx = files(
 	'vid_dec_common.c',
 	'vid_dec_h264_common.c',
+	'vid_enc_common.c',
 	'vid_omx_common.c'
 )
 
@@ -38,7 +39,11 @@ files_omx += files(
   'tizonia/entrypoint.c',
 	'tizonia/h264d.c',
 	'tizonia/h264dprc.c',
-	'tizonia/h264dinport.c'
+	'tizonia/h264dinport.c',
+	'tizonia/h264e.c',
+	'tizonia/h264eprc.c',
+	'tizonia/h264einport.c',
+	'tizonia/h264eoutport.c'
 )
 endif
 
