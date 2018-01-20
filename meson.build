@@ -487,8 +487,10 @@ gallium_omx = _omx
 dep_omx = []
 dep_omx_other = []
 if gallium_omx == 'bellagio'
+  pre_args += '-DENABLE_ST_OMX_BELLAGIO'
   dep_omx = dependency('libomxil-bellagio')
 elif gallium_omx == 'tizonia'
+  pre_args += '-DENABLE_ST_OMX_TIZONIA'
   dep_omx = dependency('libtizonia', version : '>= 0.10.0')
   dep_omx_other = [
     dependency('libtizplatform'),

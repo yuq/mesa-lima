@@ -25,46 +25,16 @@
  *
  **************************************************************************/
 
-/*
- * Authors:
- *      Christian König <christian.koenig@amd.com>
- *
- */
+#ifndef H264D_H
+#define H264D_H
 
-#ifndef OMX_VID_DEC_H
-#define OMX_VID_DEC_H
-
-#include <string.h>
-
+#include <OMX_Core.h>
 #include <OMX_Types.h>
-#include <OMX_Component.h>
+#include <OMX_Video.h>
 
-#include "os/os_thread.h"
+OMX_PTR instantiate_h264d_config_port(OMX_HANDLETYPE ap_hdl);
+OMX_PTR instantiate_h264d_input_port(OMX_HANDLETYPE ap_hdl);
+OMX_PTR instantiate_h264d_output_port(OMX_HANDLETYPE ap_hdl);
+OMX_PTR instantiate_h264d_processor(OMX_HANDLETYPE ap_hdl);
 
-#include "vid_dec_common.h"
-
-#define OMX_VID_DEC_BASE_NAME "OMX.mesa.video_decoder"
-
-#define OMX_VID_DEC_MPEG2_NAME "OMX.mesa.video_decoder.mpeg2"
-#define OMX_VID_DEC_MPEG2_ROLE "video_decoder.mpeg2"
-
-#define OMX_VID_DEC_AVC_NAME "OMX.mesa.video_decoder.avc"
-#define OMX_VID_DEC_AVC_ROLE "video_decoder.avc"
-
-#define OMX_VID_DEC_HEVC_NAME "OMX.mesa.video_decoder.hevc"
-#define OMX_VID_DEC_HEVC_ROLE "video_decoder.hevc"
-
-#define OMX_VID_DEC_TIMESTAMP_INVALID ((OMX_TICKS) -1)
-
-OMX_ERRORTYPE vid_dec_LoaderComponent(stLoaderComponentType *comp);
-
-/* vid_dec_mpeg12.c */
-void vid_dec_mpeg12_Init(vid_dec_PrivateType *priv);
-
-/* vid_dec_h264.c */
-void vid_dec_h264_Init(vid_dec_PrivateType *priv);
-
-/* vid_dec_h265.c */
-void vid_dec_h265_Init(vid_dec_PrivateType *priv);
-
-#endif
+#endif                          /* H264D_H */

@@ -1,3 +1,11 @@
 C_SOURCES := \
 	entrypoint.c \
-	entrypoint.h
+	entrypoint.h \
+	h264d.c \
+	h264d.h \
+	h264dprc.c \
+	h264dprc.h \
+	h264dinport.c \
+	h264dinport.h \
+	h264dinport_decls.h \
+	names.h

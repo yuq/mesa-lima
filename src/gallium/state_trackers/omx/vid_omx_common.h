@@ -25,46 +25,12 @@
  *
  **************************************************************************/
 
-/*
- * Authors:
- *      Christian König <christian.koenig@amd.com>
- *
- */
+#ifndef VID_OMX_COMMON_H
+#define VID_OMX_COMMON_H
 
-#ifndef OMX_VID_DEC_H
-#define OMX_VID_DEC_H
+#include "vl/vl_winsys.h"
 
-#include <string.h>
-
-#include <OMX_Types.h>
-#include <OMX_Component.h>
-
-#include "os/os_thread.h"
-
-#include "vid_dec_common.h"
-
-#define OMX_VID_DEC_BASE_NAME "OMX.mesa.video_decoder"
-
-#define OMX_VID_DEC_MPEG2_NAME "OMX.mesa.video_decoder.mpeg2"
-#define OMX_VID_DEC_MPEG2_ROLE "video_decoder.mpeg2"
-
-#define OMX_VID_DEC_AVC_NAME "OMX.mesa.video_decoder.avc"
-#define OMX_VID_DEC_AVC_ROLE "video_decoder.avc"
-
-#define OMX_VID_DEC_HEVC_NAME "OMX.mesa.video_decoder.hevc"
-#define OMX_VID_DEC_HEVC_ROLE "video_decoder.hevc"
-
-#define OMX_VID_DEC_TIMESTAMP_INVALID ((OMX_TICKS) -1)
-
-OMX_ERRORTYPE vid_dec_LoaderComponent(stLoaderComponentType *comp);
-
-/* vid_dec_mpeg12.c */
-void vid_dec_mpeg12_Init(vid_dec_PrivateType *priv);
-
-/* vid_dec_h264.c */
-void vid_dec_h264_Init(vid_dec_PrivateType *priv);
-
-/* vid_dec_h265.c */
-void vid_dec_h265_Init(vid_dec_PrivateType *priv);
+struct vl_screen *omx_get_screen(void);
+void omx_put_screen(void);
 
 #endif

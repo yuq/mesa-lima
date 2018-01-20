@@ -18,8 +18,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-if gallium_omx == 'bellagio'
 files_omx = files(
+	'vid_dec_common.c',
+	'vid_dec_h264_common.c',
+	'vid_omx_common.c'
+)
+
+if gallium_omx == 'bellagio'
+files_omx += files(
   'bellagio/entrypoint.c',
   'bellagio/vid_dec.c',
   'bellagio/vid_dec_mpeg12.c',
@@ -28,8 +34,11 @@ files_omx = files(
   'bellagio/vid_enc.c'
 )
 elif gallium_omx == 'tizonia'
-files_omx = files(
+files_omx += files(
   'tizonia/entrypoint.c',
+	'tizonia/h264d.c',
+	'tizonia/h264dprc.c',
+	'tizonia/h264dinport.c'
 )
 endif
 

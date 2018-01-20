@@ -53,6 +53,7 @@
 
 #include "entrypoint.h"
 #include "vid_enc.h"
+#include "vid_omx_common.h"
 
 struct encode_task {
    struct list_head list;
