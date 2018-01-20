@@ -71,6 +71,7 @@ struct anv_dispatch_table {
 %for layer in LAYERS:
 extern const struct anv_dispatch_table ${layer}_dispatch_table;
 %endfor
+extern const struct anv_dispatch_table anv_tramp_dispatch_table;
 
 % for e in entrypoints:
   % if e.guard is not None:
@@ -163,6 +164,48 @@ static const struct anv_entrypoint entrypoints[] = {
   % endfor
   };
 % endfor
+
+
+/** Trampoline entrypoints for all device functions */
+
+% for e in entrypoints:
+  % if e.params[0].type not in ('VkDevice', 'VkCommandBuffer'):
+    <% continue %>
+  % endif
+  % if e.guard is not None:
+#ifdef ${e.guard}
+  % endif
+  static ${e.return_type}
+  ${e.prefixed_name('anv_tramp')}(${e.decl_params()})
+  {
+    % if e.params[0].type == 'VkDevice':
+      ANV_FROM_HANDLE(anv_device, anv_device, ${e.params[0].name});
+      return anv_device->dispatch.${e.name}(${e.call_params()});
+    % else:
+      ANV_FROM_HANDLE(anv_cmd_buffer, anv_cmd_buffer, ${e.params[0].name});
+      return anv_cmd_buffer->device->dispatch.${e.name}(${e.call_params()});
+    % endif
+  }
+  % if e.guard is not None:
+#endif // ${e.guard}
+  % endif
+% endfor
+
+const struct anv_dispatch_table anv_tramp_dispatch_table = {
+% for e in entrypoints:
+  % if e.params[0].type not in ('VkDevice', 'VkCommandBuffer'):
+    <% continue %>
+  % endif
+  % if e.guard is not None:
+#ifdef ${e.guard}
+  % endif
+    .${e.name} = ${e.prefixed_name('anv_tramp')},
+  % if e.guard is not None:
+#endif // ${e.guard}
+  % endif
+% endfor
+};
+
 
 /** Return true if the core version or extension in which the given entrypoint
  * is defined is enabled.
@@ -321,6 +364,9 @@ class Entrypoint(object):
 
     def decl_params(self):
         return ', '.join(p.decl for p in self.params)
+
+    def call_params(self):
+        return ', '.join(p.name for p in self.params)
 
     def get_c_hash(self):
         return cal_hash(self.name)

@@ -582,8 +582,11 @@ VkResult anv_CreateInstance(
       if (!anv_entrypoint_is_enabled(i, instance->apiVersion,
                                      &instance->enabled_extensions, NULL)) {
          instance->dispatch.entrypoints[i] = NULL;
-      } else {
+      } else if (anv_dispatch_table.entrypoints[i] != NULL) {
          instance->dispatch.entrypoints[i] = anv_dispatch_table.entrypoints[i];
+      } else {
+         instance->dispatch.entrypoints[i] =
+            anv_tramp_dispatch_table.entrypoints[i];
       }
    }
 
