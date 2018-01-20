@@ -18,7 +18,7 @@ C_SOURCES := \
 	vc5_screen.c \
 	vc5_screen.h \
 	vc5_simulator.c \
-	vc5_simulator_wrapper.c \
+	vc5_simulator_wrapper.cpp \
 	vc5_simulator_wrapper.h \
 	vc5_tiling.c \
 	vc5_tiling.h \
