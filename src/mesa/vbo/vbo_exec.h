@@ -136,28 +136,31 @@ struct vbo_exec_context
 
 
 
-/* External API:
- */
-void vbo_exec_init( struct gl_context *ctx );
-void vbo_exec_destroy( struct gl_context *ctx );
+void
+vbo_exec_init(struct gl_context *ctx);
 
+void
+vbo_exec_destroy(struct gl_context *ctx);
 
-/* Internal functions:
- */
-void vbo_exec_vtx_init( struct vbo_exec_context *exec );
-void vbo_exec_vtx_destroy( struct vbo_exec_context *exec );
+void
+vbo_exec_vtx_init(struct vbo_exec_context *exec);
 
+void
+vbo_exec_vtx_destroy(struct vbo_exec_context *exec);
 
-void vbo_exec_vtx_flush( struct vbo_exec_context *exec, GLboolean unmap );
-void vbo_exec_vtx_map( struct vbo_exec_context *exec );
+void
+vbo_exec_vtx_flush(struct vbo_exec_context *exec, GLboolean unmap);
 
+void
+vbo_exec_vtx_map(struct vbo_exec_context *exec);
 
-void vbo_exec_eval_update( struct vbo_exec_context *exec );
+void
+vbo_exec_eval_update(struct vbo_exec_context *exec);
 
-void vbo_exec_do_EvalCoord2f( struct vbo_exec_context *exec, 
-				     GLfloat u, GLfloat v );
+void
+vbo_exec_do_EvalCoord2f(struct vbo_exec_context *exec, GLfloat u, GLfloat v);
 
-void vbo_exec_do_EvalCoord1f( struct vbo_exec_context *exec,
-				     GLfloat u);
+void
+vbo_exec_do_EvalCoord1f(struct vbo_exec_context *exec, GLfloat u);
 
 #endif
