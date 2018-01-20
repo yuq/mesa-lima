@@ -31,14 +31,15 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  */
 
-#ifndef __VBO_EXEC_H__
-#define __VBO_EXEC_H__
+#ifndef VBO_EXEC_H
+#define VBO_EXEC_H
+
 
 #include "main/mtypes.h"
+#include "main/imports.h"
 #include "vbo.h"
 #include "vbo_attrib.h"
 
-#include "main/imports.h"
 
 /**
  * Max number of primitives (number of glBegin/End pairs) per VBO.
@@ -47,9 +48,9 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 /**
- * Size of the VBO to use for glBegin/glVertex/glEnd-style rendering.
+ * Size (in bytes) of the VBO to use for glBegin/glVertex/glEnd-style rendering.
  */
-#define VBO_VERT_BUFFER_SIZE (1024*64)	/* bytes */
+#define VBO_VERT_BUFFER_SIZE (1024 * 64)
 
 
 struct vbo_exec_eval1_map {
