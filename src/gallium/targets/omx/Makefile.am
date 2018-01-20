@@ -3,7 +3,12 @@ include $(top_srcdir)/src/gallium/Automake.inc
 AM_CFLAGS = \
 	$(GALLIUM_TARGET_CFLAGS)
 
+if HAVE_ST_OMX_BELLAGIO
 omxdir = $(OMX_BELLAGIO_LIB_INSTALL_DIR)
+else
+omxdir = $(OMX_TIZONIA_LIB_INSTALL_DIR)
+endif
+
 omx_LTLIBRARIES = libomx_mesa.la
 
 nodist_EXTRA_libomx_mesa_la_SOURCES = dummy.cpp
@@ -24,14 +29,24 @@ endif # HAVE_LD_VERSION_SCRIPT
 
 libomx_mesa_la_LIBADD = \
 	$(top_builddir)/src/gallium/state_trackers/omx/libomxtracker_common.la \
-	$(top_builddir)/src/gallium/state_trackers/omx/bellagio/libomxtracker.la \
 	$(top_builddir)/src/gallium/auxiliary/libgalliumvlwinsys.la \
 	$(top_builddir)/src/gallium/auxiliary/libgalliumvl.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/util/libmesautil.la \
-	$(OMX_BELLAGIO_LIBS) \
 	$(LIBDRM_LIBS) \
 	$(GALLIUM_COMMON_LIB_DEPS)
+
+if HAVE_ST_OMX_BELLAGIO
+libomx_mesa_la_LIBADD += \
+	$(top_builddir)/src/gallium/state_trackers/omx/bellagio/libomxtracker.la \
+	$(OMX_BELLAGIO_LIBS)
+else
+libomx_mesa_la_LIBADD += \
+	$(top_builddir)/src/gallium/state_trackers/omx/tizonia/libomxtiztracker.la \
+	$(OMX_TIZONIA_LIBS) \
+	$(OMX_TIZILHEADERS_LIBS) \
+	$(OMX_TIZPLATFORM_LIBS)
+endif
 
 if HAVE_PLATFORM_X11
 libomx_mesa_la_LIBADD += \

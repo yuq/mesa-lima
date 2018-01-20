@@ -1,5 +1,3 @@
-# Copyright © 2012 Intel Corporation
-#
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
 # to deal in the Software without restriction, including without limitation
@@ -23,19 +21,8 @@
 include Makefile.sources
 include $(top_srcdir)/src/gallium/Automake.inc
 
-if HAVE_ST_OMX_BELLAGIO
-SUBDIRS = bellagio
-
 AM_CFLAGS = \
-	$(GALLIUM_CFLAGS) \
-	$(VISIBILITY_CFLAGS) \
-	$(VL_CFLAGS) \
-	$(XCB_DRI3_CFLAGS) \
-	$(OMX_BELLAGIO_CFLAGS)
-else
-SUBDIRS = tizonia
-
-AM_CFLAGS = \
+	-I$(top_srcdir)/src/gallium/state_trackers/omx \
 	$(GALLIUM_CFLAGS) \
 	$(VISIBILITY_CFLAGS) \
 	$(VL_CFLAGS) \
@@ -43,10 +30,7 @@ AM_CFLAGS = \
 	$(OMX_TIZONIA_CFLAGS) \
 	$(OMX_TIZILHEADERS_CFLAGS) \
 	$(OMX_TIZPLATFORM_CFLAGS)
-endif
 
-noinst_LTLIBRARIES = libomxtracker_common.la
+noinst_LTLIBRARIES = libomxtiztracker.la
 
-libomxtracker_common_la_SOURCES = $(C_SOURCES)
-
-EXTRA_DIST = meson.build
+libomxtiztracker_la_SOURCES = $(C_SOURCES)

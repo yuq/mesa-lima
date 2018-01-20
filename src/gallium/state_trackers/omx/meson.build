@@ -27,6 +27,8 @@ files_omx = files(
   'bellagio/vid_dec_h265.c',
   'bellagio/vid_enc.c'
 )
+elif gallium_omx == 'tizonia'
+files_omx = files()
 endif
 
 libomx_st = static_library(
@@ -34,5 +36,5 @@ libomx_st = static_library(
   files_omx,
   c_args : [c_vis_args],
   include_directories : [inc_common],
-  dependencies : [dep_omx, dep_x11_xcb, dep_xcb, dep_xcb_dri2, dep_xcb_dri3],
+  dependencies : [dep_omx, dep_omx_other, dep_x11_xcb, dep_xcb, dep_xcb_dri2, dep_xcb_dri3],
 )

@@ -1,5 +1,6 @@
 {
 	global:
+		OMX_ComponentInit;
 		omx_component_library_Setup;
 
 		# Workaround for an LLVM warning with -simplifycfg-sink-common

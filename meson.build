@@ -485,8 +485,15 @@ endif
 with_gallium_omx = _omx != 'disabled'
 gallium_omx = _omx
 dep_omx = []
+dep_omx_other = []
 if gallium_omx == 'bellagio'
   dep_omx = dependency('libomxil-bellagio')
+elif gallium_omx == 'tizonia'
+  dep_omx = dependency('libtizonia', version : '>= 0.10.0')
+  dep_omx_other = [
+    dependency('libtizplatform'),
+    dependency('tizilheaders')
+  ]
 endif
 
 omx_drivers_path = get_option('omx-libs-path')
