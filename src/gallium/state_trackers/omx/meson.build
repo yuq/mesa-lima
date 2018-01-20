@@ -28,7 +28,9 @@ files_omx = files(
   'bellagio/vid_enc.c'
 )
 elif gallium_omx == 'tizonia'
-files_omx = files()
+files_omx = files(
+  'tizonia/entrypoint.c',
+)
 endif
 
 libomx_st = static_library(

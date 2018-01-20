@@ -1,1 +1,3 @@
-C_SOURCES :=
+C_SOURCES := \
+	entrypoint.c \
+	entrypoint.h
