@@ -599,44 +599,12 @@ JitCache::JitCache()
     }
 }
 
-#if defined(_WIN32)
-int ExecUnhookedProcess(const char* pCmdLine)
+int ExecUnhookedProcess(const std::string& CmdLine, std::string* pStdOut, std::string* pStdErr)
 {
     static const char *g_pEnv = "RASTY_DISABLE_HOOK=1\0";
 
-    STARTUPINFOA StartupInfo{};
-    StartupInfo.cb = sizeof(STARTUPINFOA);
-    PROCESS_INFORMATION procInfo{};
-
-    BOOL ProcessValue = CreateProcessA(
-        NULL,
-        (LPSTR)pCmdLine,
-        NULL,
-        NULL,
-        TRUE,
-        0,
-        (LPVOID)g_pEnv,
-        NULL,
-        &StartupInfo,
-        &procInfo);
-
-    if (ProcessValue && procInfo.hProcess)
-    {
-        WaitForSingleObject(procInfo.hProcess, INFINITE);
-        DWORD exitVal = 0;
-        if (!GetExitCodeProcess(procInfo.hProcess, &exitVal))
-        {
-            exitVal = 1;
-        }
-
-        CloseHandle(procInfo.hProcess);
-
-        return exitVal;
-    }
-
-    return -1;
+    return ExecCmd(CmdLine, g_pEnv, pStdOut, pStdErr);
 }
-#endif
 
 #if defined(_WIN64) && defined(ENABLE_JIT_DEBUG) && defined(JIT_BASE_DIR)
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
