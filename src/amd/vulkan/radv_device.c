@@ -707,6 +707,15 @@ void radv_GetPhysicalDeviceFeatures2(
 			features->protectedMemory = false;
 			break;
 		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES: {
+			VkPhysicalDevice16BitStorageFeatures *features =
+			    (VkPhysicalDevice16BitStorageFeatures*)ext;
+			features->storageBuffer16BitAccess = false;
+			features->uniformAndStorageBuffer16BitAccess = false;
+			features->storagePushConstant16 = false;
+			features->storageInputOutput16 = false;
+			break;
+		}
 		default:
 			break;
 		}
