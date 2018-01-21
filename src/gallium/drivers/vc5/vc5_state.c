@@ -31,6 +31,7 @@
 #include "util/u_helpers.h"
 
 #include "vc5_context.h"
+#include "vc5_tiling.h"
 #include "broadcom/common/v3d_macros.h"
 #include "broadcom/cle/v3dx_pack.h"
 
@@ -786,6 +787,9 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                                                VC5_TILING_UIF_NO_XOR);
                 tex.level_0_xor_enable = (rsc->slices[0].tiling ==
                                           VC5_TILING_UIF_XOR);
+
+                if (tex.level_0_is_strictly_uif)
+                        tex.level_0_ub_pad = rsc->slices[0].ub_pad;
 
 #if V3D_VERSION >= 40
                 if (tex.uif_xor_disable ||

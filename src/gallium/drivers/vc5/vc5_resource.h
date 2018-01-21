@@ -74,6 +74,7 @@ struct vc5_resource_slice {
         uint32_t offset;
         uint32_t stride;
         uint32_t size;
+        uint8_t ub_pad;
         enum vc5_tiling_mode tiling;
 };
 

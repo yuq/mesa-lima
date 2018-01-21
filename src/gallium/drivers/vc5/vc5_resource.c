@@ -327,6 +327,52 @@ vc5_resource_get_handle(struct pipe_screen *pscreen,
         return FALSE;
 }
 
+/**
+ * Computes the HW's UIFblock padding for a given height/cpp.
+ *
+ * The goal of the padding is to keep pages of the same color (bank number) at
+ * least half a page away from each other vertically when crossing between
+ * between columns of UIF blocks.
+ */
+static uint32_t
+vc5_get_ub_pad(struct vc5_resource *rsc, uint32_t height)
+{
+        uint32_t utile_h = vc5_utile_height(rsc->cpp);
+        uint32_t uif_block_h = utile_h * 2;
+        uint32_t height_ub = height / uif_block_h;
+        uint32_t ub_row_size = 256 * 4;
+
+        uint32_t page_ub_rows = VC5_UIFCFG_PAGE_SIZE / ub_row_size;
+        uint32_t pc_ub_rows = VC5_PAGE_CACHE_SIZE / ub_row_size;
+        uint32_t height_offset_in_pc = height_ub % pc_ub_rows;
+
+        /* For the perfectly-aligned-for-UIF-XOR case, don't add any pad. */
+        if (height_offset_in_pc == 0)
+                return 0;
+
+        uint32_t half_page_ub_rows = (page_ub_rows * 3) >> 1;
+
+        /* Try padding up to where we're offset by at least half a page. */
+        if (height_offset_in_pc < half_page_ub_rows) {
+                /* If we fit entirely in the page cache, don't pad. */
+                if (height_ub < pc_ub_rows)
+                        return 0;
+                else
+                        return half_page_ub_rows - height_offset_in_pc;
+        }
+
+        /* If we're close to being aligned to page cache size, then round up
+         * and rely on XOR.
+         */
+        if (height_offset_in_pc > (pc_ub_rows - half_page_ub_rows))
+                return pc_ub_rows - height_offset_in_pc;
+
+        /* Otherwise, we're far enough away (top and bottom) to not need any
+         * padding.
+         */
+        return 0;
+}
+
 static void
 vc5_setup_slices(struct vc5_resource *rsc)
 {
@@ -400,6 +446,10 @@ vc5_setup_slices(struct vc5_resource *rsc)
                                                     4 * uif_block_w);
                                 level_height = align(level_height,
                                                      uif_block_h);
+
+                                slice->ub_pad = vc5_get_ub_pad(rsc,
+                                                               level_height);
+                                level_height += slice->ub_pad * uif_block_h;
                         }
                 }
 
