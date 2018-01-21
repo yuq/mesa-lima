@@ -61,6 +61,8 @@ gather_intrinsic_info(const nir_shader *nir, const nir_intrinsic_instr *instr,
 		break;
 	}
 	case nir_intrinsic_load_local_invocation_index:
+	case nir_intrinsic_load_subgroup_id:
+	case nir_intrinsic_load_num_subgroups:
 		info->cs.uses_local_invocation_idx = true;
 		break;
 	case nir_intrinsic_load_sample_id:

@@ -210,6 +210,7 @@ radv_shader_compile_to_nir(struct radv_device *device,
 				.tessellation = true,
 				.int64 = true,
 				.multiview = true,
+				.subgroup_basic = true,
 				.variable_pointers = true,
 			},
 		};
@@ -266,6 +267,15 @@ radv_shader_compile_to_nir(struct radv_device *device,
 	nir_lower_global_vars_to_local(nir);
 	nir_remove_dead_variables(nir, nir_var_local);
 	ac_lower_indirect_derefs(nir, device->physical_device->rad_info.chip_class);
+	nir_lower_subgroups(nir, &(struct nir_lower_subgroups_options) {
+			.subgroup_size = 64,
+			.ballot_bit_size = 64,
+			.lower_to_scalar = 1,
+			.lower_subgroup_masks = 1,
+			.lower_shuffle = 1,
+			.lower_quad =  1,
+		});
+
 	radv_optimize_nir(nir);
 
 	return nir;

@@ -866,6 +866,15 @@ void radv_GetPhysicalDeviceProperties2(
 			properties->minImportedHostPointerAlignment = 4096;
 			break;
 		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES: {
+			VkPhysicalDeviceSubgroupProperties *properties =
+			    (VkPhysicalDeviceSubgroupProperties*)ext;
+			properties->subgroupSize = 64;
+			properties->supportedStages = VK_SHADER_STAGE_ALL;
+			properties->supportedOperations = VK_SUBGROUP_FEATURE_BASIC_BIT;
+			properties->quadOperationsInAllStages = false;
+			break;
+		}
 		default:
 			break;
 		}
