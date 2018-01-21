@@ -4439,6 +4439,21 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	case nir_intrinsic_load_patch_vertices_in:
 		result = ctx->abi->load_patch_vertices_in(ctx->abi);
 		break;
+	case nir_intrinsic_vote_all: {
+		LLVMValueRef tmp = ac_build_vote_all(&ctx->ac, get_src(ctx, instr->src[0]));
+		result = LLVMBuildSExt(ctx->ac.builder, tmp, ctx->ac.i32, "");
+		break;
+	}
+	case nir_intrinsic_vote_any: {
+		LLVMValueRef tmp = ac_build_vote_any(&ctx->ac, get_src(ctx, instr->src[0]));
+		result = LLVMBuildSExt(ctx->ac.builder, tmp, ctx->ac.i32, "");
+		break;
+	}
+	case nir_intrinsic_vote_eq: {
+		LLVMValueRef tmp = ac_build_vote_eq(&ctx->ac, get_src(ctx, instr->src[0]));
+		result = LLVMBuildSExt(ctx->ac.builder, tmp, ctx->ac.i32, "");
+		break;
+	}
 	default:
 		fprintf(stderr, "Unknown intrinsic: ");
 		nir_print_instr(&instr->instr, stderr);
