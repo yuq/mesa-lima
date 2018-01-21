@@ -31,6 +31,20 @@
 #include "radv_private.h"
 #include "sid.h"
 
+
+static bool has_equal_immutable_samplers(const VkSampler *samplers, uint32_t count)
+{
+	if (!samplers)
+		return false;
+	for(uint32_t i = 1; i < count; ++i) {
+		if (memcmp(radv_sampler_from_handle(samplers[0])->state,
+		           radv_sampler_from_handle(samplers[i])->state, 16)) {
+			return false;
+		}
+	}
+	return true;
+}
+
 VkResult radv_CreateDescriptorSetLayout(
 	VkDevice                                    _device,
 	const VkDescriptorSetLayoutCreateInfo*      pCreateInfo,
@@ -132,15 +146,13 @@ VkResult radv_CreateDescriptorSetLayout(
 
 		if (binding->pImmutableSamplers) {
 			set_layout->binding[b].immutable_samplers_offset = samplers_offset;
-			set_layout->binding[b].immutable_samplers_equal = true;
+			set_layout->binding[b].immutable_samplers_equal =
+				has_equal_immutable_samplers(binding->pImmutableSamplers, binding->descriptorCount);
 			set_layout->has_immutable_samplers = true;
 
 
 			for (uint32_t i = 0; i < binding->descriptorCount; i++)
 				memcpy(samplers + 4 * i, &radv_sampler_from_handle(binding->pImmutableSamplers[i])->state, 16);
-			for (uint32_t i = 1; i < binding->descriptorCount; i++)
-				if (memcmp(samplers + 4 * i, samplers, 16) != 0)
-					set_layout->binding[b].immutable_samplers_equal = false;
 
 			/* Don't reserve space for the samplers if they're not accessed. */
 			if (set_layout->binding[b].immutable_samplers_equal) {
@@ -180,6 +192,69 @@ void radv_DestroyDescriptorSetLayout(
 		return;
 
 	vk_free2(&device->alloc, pAllocator, set_layout);
+}
+
+void radv_GetDescriptorSetLayoutSupport(VkDevice device,
+                                        const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
+                                        VkDescriptorSetLayoutSupport* pSupport)
+{
+	bool supported = true;
+	uint64_t size = 0;
+	for (uint32_t i = 0; i < pCreateInfo->bindingCount; i++) {
+		const VkDescriptorSetLayoutBinding *binding = &pCreateInfo->pBindings[i];
+
+		if (binding->descriptorCount == 0)
+			continue;
+
+		uint64_t descriptor_size = 0;
+		uint64_t descriptor_alignment = 1;
+		switch (binding->descriptorType) {
+		case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+		case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+			break;
+		case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+		case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+		case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+		case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+			descriptor_size = 16;
+			descriptor_alignment = 16;
+			break;
+		case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+		case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+		case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+			descriptor_size = 64;
+			descriptor_alignment = 32;
+			break;
+		case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+			if (!has_equal_immutable_samplers(binding->pImmutableSamplers, binding->descriptorCount)) {
+				descriptor_size = 64;
+			} else {
+				descriptor_size = 96;
+			}
+			descriptor_alignment = 32;
+			break;
+		case VK_DESCRIPTOR_TYPE_SAMPLER:
+			if (!has_equal_immutable_samplers(binding->pImmutableSamplers, binding->descriptorCount)) {
+				descriptor_size = 16;
+				descriptor_alignment = 16;
+			}
+			break;
+		default:
+			unreachable("unknown descriptor type\n");
+			break;
+		}
+
+		if (size && !align_u64(size, descriptor_alignment)) {
+			supported = false;
+		}
+		size = align_u64(size, descriptor_alignment);
+		if (descriptor_size && (UINT64_MAX - size) / descriptor_size < binding->descriptorCount) {
+			supported = false;
+		}
+		size += binding->descriptorCount * descriptor_size;
+	}
+
+	pSupport->supported = supported;
 }
 
 /*

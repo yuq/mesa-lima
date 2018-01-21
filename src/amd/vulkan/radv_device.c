@@ -875,6 +875,16 @@ void radv_GetPhysicalDeviceProperties2(
 			properties->quadOperationsInAllStages = false;
 			break;
 		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_3_PROPERTIES: {
+			VkPhysicalDeviceMaintenance3Properties *properties =
+			    (VkPhysicalDeviceMaintenance3Properties*)ext;
+			/* Make sure everything is addressable by a signed 32-bit int, and
+			 * our largest descriptors are 96 bytes. */
+			properties->maxPerSetDescriptors = (1ull << 31) / 96;
+			/* Our buffer size fields allow only this much */
+			properties->maxMemoryAllocationSize = 0xFFFFFFFFull;
+			break;
+		}
 		default:
 			break;
 		}
