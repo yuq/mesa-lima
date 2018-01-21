@@ -204,6 +204,7 @@ struct ir3_instruction {
 		IR3_INSTR_S     = 0x100,
 		IR3_INSTR_S2EN  = 0x200,
 		IR3_INSTR_G     = 0x400,
+		IR3_INSTR_SAT   = 0x800,
 		/* meta-flags, for intermediate stages of IR, ie.
 		 * before register assignment is done:
 		 */

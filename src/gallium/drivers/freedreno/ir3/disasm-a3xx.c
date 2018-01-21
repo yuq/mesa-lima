@@ -980,18 +980,18 @@ static void print_instr(uint32_t *dwords, int level, int n)
 	 * diff'ing..
 	 */
 
+	repeat = instr_repeat(instr);
+
 	if (instr->sync)
 		printf("(sy)");
 	if (instr->ss && ((instr->opc_cat <= 4) || (instr->opc_cat == 7)))
 		printf("(ss)");
 	if (instr->jmp_tgt)
 		printf("(jp)");
-	if (instr->repeat && (instr->opc_cat <= 4)) {
-		printf("(rpt%d)", instr->repeat);
-		repeat = instr->repeat;
-	} else {
-		repeat = 0;
-	}
+	if (instr_sat(instr))
+		printf("(sat)");
+	if (repeat)
+		printf("(rpt%d)", repeat);
 	if (instr->ul && ((2 <= instr->opc_cat) && (instr->opc_cat <= 4)))
 		printf("(ul)");
 
