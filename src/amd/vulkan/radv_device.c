@@ -666,6 +666,12 @@ void radv_GetPhysicalDeviceFeatures2(
 			features->multiviewTessellationShader = true;
 			break;
 		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETER_FEATURES: {
+			VkPhysicalDeviceShaderDrawParameterFeatures *features =
+			    (VkPhysicalDeviceShaderDrawParameterFeatures*)ext;
+			features->shaderDrawParameters = true;
+			break;
+		}
 		default:
 			break;
 		}
