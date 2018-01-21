@@ -262,6 +262,13 @@ void radv_fill_device_extension_table(const struct radv_physical_device *device,
 %endfor
 }
 
+VkResult radv_EnumerateInstanceVersion(
+    uint32_t*                                   pApiVersion)
+{
+    *pApiVersion = ${MAX_API_VERSION.c_vk_version()};
+    return VK_SUCCESS;
+}
+
 uint32_t
 radv_physical_device_api_version(struct radv_physical_device *dev)
 {
