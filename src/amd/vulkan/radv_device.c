@@ -647,7 +647,7 @@ void radv_GetPhysicalDeviceFeatures(
 	};
 }
 
-void radv_GetPhysicalDeviceFeatures2KHR(
+void radv_GetPhysicalDeviceFeatures2(
 	VkPhysicalDevice                            physicalDevice,
 	VkPhysicalDeviceFeatures2KHR               *pFeatures)
 {
@@ -820,7 +820,7 @@ void radv_GetPhysicalDeviceProperties(
 	memcpy(pProperties->pipelineCacheUUID, pdevice->cache_uuid, VK_UUID_SIZE);
 }
 
-void radv_GetPhysicalDeviceProperties2KHR(
+void radv_GetPhysicalDeviceProperties2(
 	VkPhysicalDevice                            physicalDevice,
 	VkPhysicalDeviceProperties2KHR             *pProperties)
 {
@@ -941,7 +941,7 @@ void radv_GetPhysicalDeviceQueueFamilyProperties(
 	assert(*pCount <= 3);
 }
 
-void radv_GetPhysicalDeviceQueueFamilyProperties2KHR(
+void radv_GetPhysicalDeviceQueueFamilyProperties2(
 	VkPhysicalDevice                            physicalDevice,
 	uint32_t*                                   pCount,
 	VkQueueFamilyProperties2KHR                *pQueueFamilyProperties)
@@ -969,7 +969,7 @@ void radv_GetPhysicalDeviceMemoryProperties(
 	*pMemoryProperties = physical_device->memory_properties;
 }
 
-void radv_GetPhysicalDeviceMemoryProperties2KHR(
+void radv_GetPhysicalDeviceMemoryProperties2(
 	VkPhysicalDevice                            physicalDevice,
 	VkPhysicalDeviceMemoryProperties2KHR       *pMemoryProperties)
 {
@@ -2567,7 +2567,7 @@ void radv_GetBufferMemoryRequirements(
 	pMemoryRequirements->size = align64(buffer->size, pMemoryRequirements->alignment);
 }
 
-void radv_GetBufferMemoryRequirements2KHR(
+void radv_GetBufferMemoryRequirements2(
 	VkDevice                                     device,
 	const VkBufferMemoryRequirementsInfo2KHR*    pInfo,
 	VkMemoryRequirements2KHR*                    pMemoryRequirements)
@@ -2604,7 +2604,7 @@ void radv_GetImageMemoryRequirements(
 	pMemoryRequirements->alignment = image->alignment;
 }
 
-void radv_GetImageMemoryRequirements2KHR(
+void radv_GetImageMemoryRequirements2(
 	VkDevice                                    device,
 	const VkImageMemoryRequirementsInfo2KHR*    pInfo,
 	VkMemoryRequirements2KHR*                   pMemoryRequirements)
@@ -2638,7 +2638,7 @@ void radv_GetImageSparseMemoryRequirements(
 	stub();
 }
 
-void radv_GetImageSparseMemoryRequirements2KHR(
+void radv_GetImageSparseMemoryRequirements2(
 	VkDevice                                    device,
 	const VkImageSparseMemoryRequirementsInfo2KHR* pInfo,
 	uint32_t*                                   pSparseMemoryRequirementCount,
@@ -2655,9 +2655,9 @@ void radv_GetDeviceMemoryCommitment(
 	*pCommittedMemoryInBytes = 0;
 }
 
-VkResult radv_BindBufferMemory2KHR(VkDevice device,
-                                   uint32_t bindInfoCount,
-                                   const VkBindBufferMemoryInfoKHR *pBindInfos)
+VkResult radv_BindBufferMemory2(VkDevice device,
+                                uint32_t bindInfoCount,
+                                const VkBindBufferMemoryInfoKHR *pBindInfos)
 {
 	for (uint32_t i = 0; i < bindInfoCount; ++i) {
 		RADV_FROM_HANDLE(radv_device_memory, mem, pBindInfos[i].memory);
@@ -2686,12 +2686,12 @@ VkResult radv_BindBufferMemory(
 		.memoryOffset = memoryOffset
 	};
 
-	return radv_BindBufferMemory2KHR(device, 1, &info);
+	return radv_BindBufferMemory2(device, 1, &info);
 }
 
-VkResult radv_BindImageMemory2KHR(VkDevice device,
-                                  uint32_t bindInfoCount,
-                                  const VkBindImageMemoryInfoKHR *pBindInfos)
+VkResult radv_BindImageMemory2(VkDevice device,
+                               uint32_t bindInfoCount,
+                               const VkBindImageMemoryInfoKHR *pBindInfos)
 {
 	for (uint32_t i = 0; i < bindInfoCount; ++i) {
 		RADV_FROM_HANDLE(radv_device_memory, mem, pBindInfos[i].memory);
@@ -2722,7 +2722,7 @@ VkResult radv_BindImageMemory(
 		.memoryOffset = memoryOffset
 	};
 
-	return radv_BindImageMemory2KHR(device, 1, &info);
+	return radv_BindImageMemory2(device, 1, &info);
 }
 
 
@@ -4080,7 +4080,7 @@ VkResult radv_GetSemaphoreFdKHR(VkDevice _device,
 	return VK_SUCCESS;
 }
 
-void radv_GetPhysicalDeviceExternalSemaphorePropertiesKHR(
+void radv_GetPhysicalDeviceExternalSemaphoreProperties(
 	VkPhysicalDevice                            physicalDevice,
 	const VkPhysicalDeviceExternalSemaphoreInfoKHR* pExternalSemaphoreInfo,
 	VkExternalSemaphorePropertiesKHR*           pExternalSemaphoreProperties)
@@ -4169,7 +4169,7 @@ VkResult radv_GetFenceFdKHR(VkDevice _device,
 	return VK_SUCCESS;
 }
 
-void radv_GetPhysicalDeviceExternalFencePropertiesKHR(
+void radv_GetPhysicalDeviceExternalFenceProperties(
 	VkPhysicalDevice                            physicalDevice,
 	const VkPhysicalDeviceExternalFenceInfoKHR* pExternalFenceInfo,
 	VkExternalFencePropertiesKHR*           pExternalFenceProperties)

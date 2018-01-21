@@ -31,7 +31,7 @@ import xml.etree.cElementTree as et
 
 from mako.template import Template
 
-MAX_API_VERSION = '1.0.57'
+MAX_API_VERSION = '1.1.0'
 
 class Extension:
     def __init__(self, name, ext_version, enable):
@@ -262,7 +262,7 @@ void radv_fill_device_extension_table(const struct radv_physical_device *device,
 uint32_t
 radv_physical_device_api_version(struct radv_physical_device *dev)
 {
-    return ${MAX_API_VERSION.c_vk_version()};
+    return VK_MAKE_VERSION(1, 0, 68);
 }
 """)
 

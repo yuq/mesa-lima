@@ -2652,7 +2652,7 @@ VkResult radv_ResetCommandPool(
 	return VK_SUCCESS;
 }
 
-void radv_TrimCommandPoolKHR(
+void radv_TrimCommandPool(
     VkDevice                                    device,
     VkCommandPool                               commandPool,
     VkCommandPoolTrimFlagsKHR                   flags)

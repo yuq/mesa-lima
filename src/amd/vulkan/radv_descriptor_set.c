@@ -829,10 +829,10 @@ void radv_UpdateDescriptorSets(
 			            descriptorCopyCount, pDescriptorCopies);
 }
 
-VkResult radv_CreateDescriptorUpdateTemplateKHR(VkDevice _device,
-                                                const VkDescriptorUpdateTemplateCreateInfoKHR *pCreateInfo,
-                                                const VkAllocationCallbacks *pAllocator,
-                                                VkDescriptorUpdateTemplateKHR *pDescriptorUpdateTemplate)
+VkResult radv_CreateDescriptorUpdateTemplate(VkDevice _device,
+                                             const VkDescriptorUpdateTemplateCreateInfoKHR *pCreateInfo,
+                                             const VkAllocationCallbacks *pAllocator,
+                                             VkDescriptorUpdateTemplateKHR *pDescriptorUpdateTemplate)
 {
 	RADV_FROM_HANDLE(radv_device, device, _device);
 	RADV_FROM_HANDLE(radv_descriptor_set_layout, set_layout, pCreateInfo->descriptorSetLayout);
@@ -902,9 +902,9 @@ VkResult radv_CreateDescriptorUpdateTemplateKHR(VkDevice _device,
 	return VK_SUCCESS;
 }
 
-void radv_DestroyDescriptorUpdateTemplateKHR(VkDevice _device,
-                                             VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
-                                             const VkAllocationCallbacks *pAllocator)
+void radv_DestroyDescriptorUpdateTemplate(VkDevice _device,
+                                          VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
+                                          const VkAllocationCallbacks *pAllocator)
 {
 	RADV_FROM_HANDLE(radv_device, device, _device);
 	RADV_FROM_HANDLE(radv_descriptor_update_template, templ, descriptorUpdateTemplate);
@@ -983,10 +983,10 @@ void radv_update_descriptor_set_with_template(struct radv_device *device,
 	}
 }
 
-void radv_UpdateDescriptorSetWithTemplateKHR(VkDevice _device,
-                                             VkDescriptorSet descriptorSet,
-                                             VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
-                                             const void *pData)
+void radv_UpdateDescriptorSetWithTemplate(VkDevice _device,
+                                          VkDescriptorSet descriptorSet,
+                                          VkDescriptorUpdateTemplateKHR descriptorUpdateTemplate,
+                                          const void *pData)
 {
 	RADV_FROM_HANDLE(radv_device, device, _device);
 	RADV_FROM_HANDLE(radv_descriptor_set, set, descriptorSet);
