@@ -946,6 +946,17 @@ ra_add_interference(struct ir3_ra_ctx *ctx)
 				ctx->use[i] = MAX2(ctx->use[i], block->end_ip);
 			}
 		}
+
+		list_for_each_entry (struct ir3_array, arr, &ctx->ir->array_list, node) {
+			for (unsigned i = 0; i < arr->length; i++) {
+				if (BITSET_TEST(bd->livein, i + arr->base)) {
+					arr->start_ip = MIN2(arr->start_ip, block->start_ip);
+				}
+				if (BITSET_TEST(bd->livein, i + arr->base)) {
+					arr->end_ip = MAX2(arr->end_ip, block->end_ip);
+				}
+			}
+		}
 	}
 
 	/* need to fix things up to keep outputs live: */
