@@ -1403,15 +1403,29 @@ VkResult radv_EnumerateDeviceLayerProperties(
 	return vk_error(VK_ERROR_LAYER_NOT_PRESENT);
 }
 
+void radv_GetDeviceQueue2(
+	VkDevice                                    _device,
+	const VkDeviceQueueInfo2*                   pQueueInfo,
+	VkQueue*                                    pQueue)
+{
+	RADV_FROM_HANDLE(radv_device, device, _device);
+
+	*pQueue = radv_queue_to_handle(&device->queues[pQueueInfo->queueFamilyIndex][pQueueInfo->queueIndex]);
+}
+
 void radv_GetDeviceQueue(
 	VkDevice                                    _device,
 	uint32_t                                    queueFamilyIndex,
 	uint32_t                                    queueIndex,
 	VkQueue*                                    pQueue)
 {
-	RADV_FROM_HANDLE(radv_device, device, _device);
+	const VkDeviceQueueInfo2 info = (VkDeviceQueueInfo2) {
+		.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2,
+		.queueFamilyIndex = queueFamilyIndex,
+		.queueIndex = queueIndex
+	};
 
-	*pQueue = radv_queue_to_handle(&device->queues[queueFamilyIndex][queueIndex]);
+	radv_GetDeviceQueue2(_device, &info, pQueue);
 }
 
 static void
