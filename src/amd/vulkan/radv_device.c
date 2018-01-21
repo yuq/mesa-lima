@@ -672,6 +672,12 @@ void radv_GetPhysicalDeviceFeatures2(
 			features->shaderDrawParameters = true;
 			break;
 		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROTECTED_MEMORY_FEATURES: {
+			VkPhysicalDeviceProtectedMemoryFeatures *features =
+			    (VkPhysicalDeviceProtectedMemoryFeatures*)ext;
+			features->protectedMemory = false;
+			break;
+		}
 		default:
 			break;
 		}
