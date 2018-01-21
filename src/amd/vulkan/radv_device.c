@@ -1196,13 +1196,15 @@ VkResult radv_CreateDevice(
 	result = radv_CreatePipelineCache(radv_device_to_handle(device),
 					  &ci, NULL, &pc);
 	if (result != VK_SUCCESS)
-		goto fail;
+		goto fail_meta;
 
 	device->mem_cache = radv_pipeline_cache_from_handle(pc);
 
 	*pDevice = radv_device_to_handle(device);
 	return VK_SUCCESS;
 
+fail_meta:
+	radv_device_finish_meta(device);
 fail:
 	if (device->trace_bo)
 		device->ws->buffer_destroy(device->trace_bo);
