@@ -964,6 +964,27 @@ emit_alu(struct ir3_context *ctx, nir_alu_instr *alu)
 	case nir_op_fmin:
 		dst[0] = ir3_MIN_F(b, src[0], 0, src[1], 0);
 		break;
+	case nir_op_fsat:
+		/* if there is just a single use of the src, and it supports
+		 * (sat) bit, we can just fold the (sat) flag back to the
+		 * src instruction and create a mov.  This is easier for cp
+		 * to eliminate.
+		 *
+		 * TODO probably opc_cat==4 is ok too
+		 */
+		if (alu->src[0].src.is_ssa &&
+				(list_length(&alu->src[0].src.ssa->uses) == 1) &&
+				((opc_cat(src[0]->opc) == 2) || (opc_cat(src[0]->opc) == 3))) {
+			src[0]->flags |= IR3_INSTR_SAT;
+			dst[0] = ir3_MOV(b, src[0], TYPE_U32);
+		} else {
+			/* otherwise generate a max.f that saturates.. blob does
+			 * similar (generating a cat2 mov using max.f)
+			 */
+			dst[0] = ir3_MAX_F(b, src[0], 0, src[0], 0);
+			dst[0]->flags |= IR3_INSTR_SAT;
+		}
+		break;
 	case nir_op_fmul:
 		dst[0] = ir3_MUL_F(b, src[0], 0, src[1], 0);
 		break;

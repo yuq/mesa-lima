@@ -37,7 +37,6 @@
 
 static const nir_shader_compiler_options options = {
 		.lower_fpow = true,
-		.lower_fsat = true,
 		.lower_scmp = true,
 		.lower_flrp32 = true,
 		.lower_flrp64 = true,

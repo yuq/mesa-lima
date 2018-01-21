@@ -616,6 +616,8 @@ static inline bool is_same_type_mov(struct ir3_instruction *instr)
 		break;
 	case OPC_ABSNEG_F:
 	case OPC_ABSNEG_S:
+		if (instr->flags & IR3_INSTR_SAT)
+			return false;
 		break;
 	default:
 		return false;
