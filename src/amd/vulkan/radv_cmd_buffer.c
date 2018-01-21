@@ -3810,3 +3810,10 @@ void radv_CmdWaitEvents(VkCommandBuffer commandBuffer,
 					RADV_CMD_FLAG_INV_VMEM_L1 |
 					RADV_CMD_FLAG_INV_SMEM_L1;
 }
+
+
+void radv_CmdSetDeviceMask(VkCommandBuffer commandBuffer,
+                           uint32_t deviceMask)
+{
+   /* No-op */
+}

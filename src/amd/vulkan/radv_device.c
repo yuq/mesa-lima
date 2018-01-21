@@ -592,6 +592,35 @@ VkResult radv_EnumeratePhysicalDevices(
 	                                                             : VK_SUCCESS;
 }
 
+VkResult radv_EnumeratePhysicalDeviceGroups(
+    VkInstance                                  _instance,
+    uint32_t*                                   pPhysicalDeviceGroupCount,
+    VkPhysicalDeviceGroupProperties*            pPhysicalDeviceGroupProperties)
+{
+	RADV_FROM_HANDLE(radv_instance, instance, _instance);
+	VkResult result;
+
+	if (instance->physicalDeviceCount < 0) {
+		result = radv_enumerate_devices(instance);
+		if (result != VK_SUCCESS &&
+		    result != VK_ERROR_INCOMPATIBLE_DRIVER)
+			return result;
+	}
+
+	if (!pPhysicalDeviceGroupProperties) {
+		*pPhysicalDeviceGroupCount = instance->physicalDeviceCount;
+	} else {
+		*pPhysicalDeviceGroupCount = MIN2(*pPhysicalDeviceGroupCount, instance->physicalDeviceCount);
+		for (unsigned i = 0; i < *pPhysicalDeviceGroupCount; ++i) {
+			pPhysicalDeviceGroupProperties[i].physicalDeviceCount = 1;
+			pPhysicalDeviceGroupProperties[i].physicalDevices[0] = radv_physical_device_to_handle(instance->physicalDevices + i);
+			pPhysicalDeviceGroupProperties[i].subsetAllocation = false;
+		}
+	}
+	return *pPhysicalDeviceGroupCount < instance->physicalDeviceCount ? VK_INCOMPLETE
+	                                                                  : VK_SUCCESS;
+}
+
 void radv_GetPhysicalDeviceFeatures(
 	VkPhysicalDevice                            physicalDevice,
 	VkPhysicalDeviceFeatures*                   pFeatures)
@@ -4269,4 +4298,20 @@ radv_DebugReportMessageEXT(VkInstance _instance,
 	RADV_FROM_HANDLE(radv_instance, instance, _instance);
 	vk_debug_report(&instance->debug_report_callbacks, flags, objectType,
 	                object, location, messageCode, pLayerPrefix, pMessage);
+}
+
+void
+radv_GetDeviceGroupPeerMemoryFeatures(
+    VkDevice                                    device,
+    uint32_t                                    heapIndex,
+    uint32_t                                    localDeviceIndex,
+    uint32_t                                    remoteDeviceIndex,
+    VkPeerMemoryFeatureFlags*                   pPeerMemoryFeatures)
+{
+	assert(localDeviceIndex == remoteDeviceIndex);
+
+	*pPeerMemoryFeatures = VK_PEER_MEMORY_FEATURE_COPY_SRC_BIT |
+	                       VK_PEER_MEMORY_FEATURE_COPY_DST_BIT |
+	                       VK_PEER_MEMORY_FEATURE_GENERIC_SRC_BIT |
+	                       VK_PEER_MEMORY_FEATURE_GENERIC_DST_BIT;
 }

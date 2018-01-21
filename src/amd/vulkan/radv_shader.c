@@ -53,6 +53,7 @@ static const struct nir_shader_compiler_options nir_options = {
 	.lower_scmp = true,
 	.lower_flrp32 = true,
 	.lower_flrp64 = true,
+	.lower_device_index_to_zero = true,
 	.lower_fsat = true,
 	.lower_fdiv = true,
 	.lower_sub = true,
@@ -203,6 +204,7 @@ radv_shader_compile_to_nir(struct radv_device *device,
 		}
 		const struct spirv_to_nir_options spirv_options = {
 			.caps = {
+				.device_group = true,
 				.draw_parameters = true,
 				.float64 = true,
 				.image_read_without_format = true,
