@@ -317,6 +317,11 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 		if (nir->info.stage == MESA_SHADER_FRAGMENT) {
 			tgsi_get_gl_frag_result_semantic(variable->data.location,
 				&semantic_name, &semantic_index);
+
+			/* Adjust for dual source blending */
+			if (variable->data.index > 0) {
+				semantic_index++;
+			}
 		} else {
 			tgsi_get_gl_varying_semantic(variable->data.location, true,
 						     &semantic_name, &semantic_index);
