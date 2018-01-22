@@ -3191,16 +3191,17 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 		}
 
 		if (ctx->stage == MESA_SHADER_GEOMETRY) {
+				LLVMTypeRef type = LLVMIntTypeInContext(ctx->ac.context, instr->dest.ssa.bit_size);
 				LLVMValueRef indir_index;
 				unsigned const_index, vertex_index;
 				get_deref_offset(ctx, instr->variables[0],
 						 false, &vertex_index, NULL,
 						 &const_index, &indir_index);
+
 			return ctx->abi->load_inputs(ctx->abi, instr->variables[0]->var->data.location,
 						     instr->variables[0]->var->data.driver_location,
 						     instr->variables[0]->var->data.location_frac, ve,
-						     vertex_index, const_index,
-						     nir2llvmtype(ctx, instr->variables[0]->var->type));
+						     vertex_index, const_index, type);
 		}
 
 		for (unsigned chan = comp; chan < ve + comp; chan++) {
