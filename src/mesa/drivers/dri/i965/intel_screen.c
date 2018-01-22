@@ -45,6 +45,8 @@
 #include "util/disk_cache.h"
 #include "util/xmlpool.h"
 
+#include "common/gen_defines.h"
+
 static const __DRIconfigOptionsExtension brw_config_options = {
    .base = { __DRI_CONFIG_OPTIONS, 1 },
    .xml =
@@ -1462,14 +1464,14 @@ brw_query_renderer_integer(__DRIscreen *dri_screen,
    case __DRI2_RENDERER_HAS_CONTEXT_PRIORITY:
       value[0] = 0;
       if (brw_hw_context_set_priority(screen->bufmgr,
-				      0, BRW_CONTEXT_HIGH_PRIORITY) == 0)
+				      0, GEN_CONTEXT_HIGH_PRIORITY) == 0)
          value[0] |= __DRI2_RENDERER_HAS_CONTEXT_PRIORITY_HIGH;
       if (brw_hw_context_set_priority(screen->bufmgr,
-				      0, BRW_CONTEXT_LOW_PRIORITY) == 0)
+				      0, GEN_CONTEXT_LOW_PRIORITY) == 0)
          value[0] |= __DRI2_RENDERER_HAS_CONTEXT_PRIORITY_LOW;
       /* reset to default last, just in case */
       if (brw_hw_context_set_priority(screen->bufmgr,
-				      0, BRW_CONTEXT_MEDIUM_PRIORITY) == 0)
+				      0, GEN_CONTEXT_MEDIUM_PRIORITY) == 0)
          value[0] |= __DRI2_RENDERER_HAS_CONTEXT_PRIORITY_MEDIUM;
       return 0;
    case __DRI2_RENDERER_HAS_FRAMEBUFFER_SRGB:
