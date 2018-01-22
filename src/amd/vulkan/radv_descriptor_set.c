@@ -1068,3 +1068,21 @@ void radv_UpdateDescriptorSetWithTemplate(VkDevice _device,
 
 	radv_update_descriptor_set_with_template(device, NULL, set, descriptorUpdateTemplate, pData);
 }
+
+
+VkResult radv_CreateSamplerYcbcrConversion(VkDevice device,
+					   const VkSamplerYcbcrConversionCreateInfo* pCreateInfo,
+					   const VkAllocationCallbacks* pAllocator,
+					   VkSamplerYcbcrConversion* pYcbcrConversion)
+{
+	*pYcbcrConversion = VK_NULL_HANDLE;
+	return VK_SUCCESS;
+}
+
+
+void radv_DestroySamplerYcbcrConversion(VkDevice device,
+					VkSamplerYcbcrConversion ycbcrConversion,
+					const VkAllocationCallbacks* pAllocator)
+{
+	/* Do nothing. */
+}

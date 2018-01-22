@@ -716,6 +716,12 @@ void radv_GetPhysicalDeviceFeatures2(
 			features->storageInputOutput16 = false;
 			break;
 		}
+		case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_YCBCR_CONVERSION_FEATURES: {
+			VkPhysicalDeviceSamplerYcbcrConversionFeatures *features =
+			    (VkPhysicalDeviceSamplerYcbcrConversionFeatures*)ext;
+			features->samplerYcbcrConversion = false;
+			break;
+		}
 		default:
 			break;
 		}
