@@ -156,28 +156,6 @@ nir_to_llvm_context_from_abi(struct ac_shader_abi *abi)
 	return container_of(abi, ctx, abi);
 }
 
-static LLVMTypeRef
-nir2llvmtype(struct ac_nir_context *ctx,
-	     const struct glsl_type *type)
-{
-	switch (glsl_get_base_type(glsl_without_array(type))) {
-	case GLSL_TYPE_UINT:
-	case GLSL_TYPE_INT:
-		return ctx->ac.i32;
-	case GLSL_TYPE_UINT64:
-	case GLSL_TYPE_INT64:
-		return ctx->ac.i64;
-	case GLSL_TYPE_DOUBLE:
-		return ctx->ac.f64;
-	case GLSL_TYPE_FLOAT:
-		return ctx->ac.f32;
-	default:
-		assert(!"Unsupported type in nir2llvmtype()");
-		break;
-	}
-	return 0;
-}
-
 static LLVMValueRef get_sampler_desc(struct ac_nir_context *ctx,
 				     const nir_deref_var *deref,
 				     enum ac_descriptor_type desc_type,
