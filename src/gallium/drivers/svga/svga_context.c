@@ -327,6 +327,7 @@ cleanup:
    util_bitmask_destroy(svga->stream_output_id_bm);
    util_bitmask_destroy(svga->query_id_bm);
    FREE(svga);
+   svga = NULL;
 
 done:
    SVGA_STATS_TIME_POP(svgascreen->sws);
