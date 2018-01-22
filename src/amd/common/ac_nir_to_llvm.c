@@ -4247,6 +4247,43 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	LLVMValueRef result = NULL;
 
 	switch (instr->intrinsic) {
+	case nir_intrinsic_ballot:
+		result = ac_build_ballot(&ctx->ac, get_src(ctx, instr->src[0]));
+		break;
+	case nir_intrinsic_read_invocation:
+	case nir_intrinsic_read_first_invocation: {
+		LLVMValueRef args[2];
+
+		/* Value */
+		args[0] = get_src(ctx, instr->src[0]);
+
+		unsigned num_args;
+		const char *intr_name;
+		if (instr->intrinsic == nir_intrinsic_read_invocation) {
+			num_args = 2;
+			intr_name = "llvm.amdgcn.readlane";
+
+			/* Invocation */
+			args[1] = get_src(ctx, instr->src[1]);
+		} else {
+			num_args = 1;
+			intr_name = "llvm.amdgcn.readfirstlane";
+		}
+
+		/* We currently have no other way to prevent LLVM from lifting the icmp
+		 * calls to a dominating basic block.
+		 */
+		ac_build_optimization_barrier(&ctx->ac, &args[0]);
+
+		result = ac_build_intrinsic(&ctx->ac, intr_name,
+					    ctx->ac.i32, args, num_args,
+					    AC_FUNC_ATTR_READNONE |
+					    AC_FUNC_ATTR_CONVERGENT);
+		break;
+	}
+	case nir_intrinsic_load_subgroup_invocation:
+		result = ac_get_thread_id(&ctx->ac);
+		break;
 	case nir_intrinsic_load_work_group_id: {
 		LLVMValueRef values[3];
 

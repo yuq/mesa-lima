@@ -505,6 +505,15 @@ si_lower_nir(struct si_shader_selector* sel)
 	};
 	NIR_PASS_V(sel->nir, nir_lower_tex, &lower_tex_options);
 
+	const nir_lower_subgroups_options subgroups_options = {
+		.subgroup_size = 64,
+		.ballot_bit_size = 32,
+		.lower_to_scalar = true,
+		.lower_subgroup_masks = true,
+		.lower_vote_trivial = false,
+	};
+	NIR_PASS_V(sel->nir, nir_lower_subgroups, &subgroups_options);
+
 	bool progress;
 	do {
 		progress = false;
