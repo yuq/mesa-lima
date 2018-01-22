@@ -5311,21 +5311,20 @@ handle_vs_input_decl(struct nir_to_llvm_context *ctx,
 
 	variable->data.driver_location = idx * 4;
 
-	if (ctx->options->key.vs.instance_rate_inputs & (1u << index)) {
-		buffer_index = LLVMBuildAdd(ctx->builder, ctx->abi.instance_id,
-					    ctx->abi.start_instance, "");
-		if (ctx->options->key.vs.as_ls) {
-			ctx->shader_info->vs.vgpr_comp_cnt =
-				MAX2(2, ctx->shader_info->vs.vgpr_comp_cnt);
-		} else {
-			ctx->shader_info->vs.vgpr_comp_cnt =
-				MAX2(1, ctx->shader_info->vs.vgpr_comp_cnt);
-		}
-	} else
-		buffer_index = LLVMBuildAdd(ctx->builder, ctx->abi.vertex_id,
-					    ctx->abi.base_vertex, "");
-
 	for (unsigned i = 0; i < attrib_count; ++i, ++idx) {
+		if (ctx->options->key.vs.instance_rate_inputs & (1u << (index + i))) {
+			buffer_index = LLVMBuildAdd(ctx->builder, ctx->abi.instance_id,
+			                            ctx->abi.start_instance, "");
+			if (ctx->options->key.vs.as_ls) {
+				ctx->shader_info->vs.vgpr_comp_cnt =
+					MAX2(2, ctx->shader_info->vs.vgpr_comp_cnt);
+			} else {
+				ctx->shader_info->vs.vgpr_comp_cnt =
+					MAX2(1, ctx->shader_info->vs.vgpr_comp_cnt);
+			}
+		} else
+			buffer_index = LLVMBuildAdd(ctx->builder, ctx->abi.vertex_id,
+			                            ctx->abi.base_vertex, "");
 		t_offset = LLVMConstInt(ctx->ac.i32, index + i, false);
 
 		t_list = ac_build_load_to_sgpr(&ctx->ac, t_list_ptr, t_offset);
