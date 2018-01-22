@@ -773,9 +773,6 @@ vc5_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                                                               cso->format);
                 }
 
-                tex.uif_xor_disable = (rsc->slices[0].tiling ==
-                                       VC5_TILING_UIF_NO_XOR);
-
                 /* Since other platform devices may produce UIF images even
                  * when they're not big enough for V3D to assume they're UIF,
                  * we force images with level 0 as UIF to be always treated

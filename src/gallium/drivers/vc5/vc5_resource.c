@@ -435,8 +435,6 @@ vc5_setup_slices(struct vc5_resource *rsc)
                                 level_width = align(level_width, 2 * uif_block_w);
                                 level_height = align(level_height, uif_block_h);
                         } else {
-                                slice->tiling = VC5_TILING_UIF_NO_XOR;
-
                                 /* We align the width to a 4-block column of
                                  * UIF blocks, but we only align height to UIF
                                  * blocks.
@@ -449,6 +447,19 @@ vc5_setup_slices(struct vc5_resource *rsc)
                                 slice->ub_pad = vc5_get_ub_pad(rsc,
                                                                level_height);
                                 level_height += slice->ub_pad * uif_block_h;
+
+                                /* If the padding set us to to be aligned to
+                                 * the page cache size, then the HW will use
+                                 * the XOR bit on odd columns to get us
+                                 * perfectly misaligned
+                                 */
+                                if ((level_height / uif_block_h) %
+                                    (VC5_PAGE_CACHE_SIZE /
+                                     VC5_UIFBLOCK_ROW_SIZE) == 0) {
+                                        slice->tiling = VC5_TILING_UIF_XOR;
+                                } else {
+                                        slice->tiling = VC5_TILING_UIF_NO_XOR;
+                                }
                         }
                 }
 
