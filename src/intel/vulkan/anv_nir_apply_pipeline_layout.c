@@ -147,7 +147,7 @@ lower_res_reindex_intrinsic(nir_intrinsic_instr *intrin,
     * array elements are sequential.  A resource_reindex just turns into an
     * add of the two indices.
     */
-   assert(intrin->src[0].is_ssa && intrin->src[0].is_ssa);
+   assert(intrin->src[0].is_ssa && intrin->src[1].is_ssa);
    nir_ssa_def *new_index = nir_iadd(b, intrin->src[0].ssa,
                                         intrin->src[1].ssa);
 
