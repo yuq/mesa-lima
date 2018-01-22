@@ -1052,6 +1052,24 @@ swr_flush_frontbuffer(struct pipe_screen *p_screen,
 }
 
 
+void
+swr_destroy_screen_internal(struct swr_screen **screen)
+{
+   struct pipe_screen *p_screen = &(*screen)->base;
+
+   swr_fence_finish(p_screen, NULL, (*screen)->flush_fence, 0);
+   swr_fence_reference(p_screen, &(*screen)->flush_fence, NULL);
+
+   JitDestroyContext((*screen)->hJitMgr);
+
+   if ((*screen)->pLibrary)
+      util_dl_close((*screen)->pLibrary);
+
+   FREE(*screen);
+   *screen = NULL;
+}
+
+
 static void
 swr_destroy_screen(struct pipe_screen *p_screen)
 {
@@ -1060,15 +1078,10 @@ swr_destroy_screen(struct pipe_screen *p_screen)
 
    fprintf(stderr, "SWR destroy screen!\n");
 
-   swr_fence_finish(p_screen, NULL, screen->flush_fence, 0);
-   swr_fence_reference(p_screen, &screen->flush_fence, NULL);
-
-   JitDestroyContext(screen->hJitMgr);
-
    if (winsys->destroy)
       winsys->destroy(winsys);
 
-   FREE(screen);
+   swr_destroy_screen_internal(&screen);
 }
 
 
@@ -1119,6 +1132,7 @@ struct pipe_screen *
 swr_create_screen_internal(struct sw_winsys *winsys)
 {
    struct swr_screen *screen = CALLOC_STRUCT(swr_screen);
+   memset(screen, 0, sizeof(struct swr_screen));
 
    if (!screen)
       return NULL;

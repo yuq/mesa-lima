@@ -29,96 +29,98 @@
 #include <stdio.h>
 
 // Helper function to resolve the backend filename based on architecture
-inline void get_swr_arch_filename(const char arch[], char filename[])
+static bool
+swr_initialize_screen_interface(struct swr_screen *screen, const char arch[])
 {
 #ifdef HAVE_SWR_BUILTIN
-   strcpy(filename , "builtin");
+   screen->pLibrary = NULL;
+   screen->pfnSwrGetInterface = SwrGetInterface;
+   fprintf(stderr, "(using: builtin).\n");
 #else
+   char filename[256] = { 0 };
    sprintf(filename, "%sswr%s%s", UTIL_DL_PREFIX, arch, UTIL_DL_EXT);
+
+   screen->pLibrary = util_dl_open(filename);
+   if (!screen->pLibrary) {
+      fprintf(stderr, "(skipping: %s).\n", util_dl_error());
+      return false;
+   }
+
+   util_dl_proc pApiProc = util_dl_get_proc_address(screen->pLibrary,
+      "SwrGetInterface");
+   if (!pApiProc) {
+      fprintf(stderr, "(skipping: %s).\n", util_dl_error());
+      util_dl_close(screen->pLibrary);
+      screen->pLibrary = NULL;
+      return false;
+   }
+
+   screen->pfnSwrGetInterface = (PFNSwrGetInterface)pApiProc;
+   fprintf(stderr, "(using: %s).\n", filename);
 #endif
+   return true;
 }
+
 
 struct pipe_screen *
 swr_create_screen(struct sw_winsys *winsys)
 {
-   char filename[256] = { 0 };
-   bool found = false;
-   bool is_knl = false;
-   PFNSwrGetInterface pfnSwrGetInterface = nullptr;
+   struct pipe_screen *p_screen = swr_create_screen_internal(winsys);
+   if (!p_screen) {
+      return NULL;
+   }
+
+   struct swr_screen *screen = swr_screen(p_screen);
+   screen->is_knl = false;
 
    util_cpu_detect();
 
-   if (!found && util_cpu_caps.has_avx512f && util_cpu_caps.has_avx512er) {
+   if (util_cpu_caps.has_avx512f && util_cpu_caps.has_avx512er) {
       fprintf(stderr, "SWR detected KNL instruction support ");
 #ifndef HAVE_SWR_KNL
-      fprintf(stderr, "(skipping not built).\n");
+      fprintf(stderr, "(skipping: not built).\n");
 #else
-      get_swr_arch_filename("KNL", filename);
-      found = true;
-      is_knl = true;
+      if (swr_initialize_screen_interface(screen, "KNL")) {
+         screen->is_knl = true;
+         return p_screen;
+      }
 #endif
    }
 
-   if (!found && util_cpu_caps.has_avx512f && util_cpu_caps.has_avx512bw) {
+   if (util_cpu_caps.has_avx512f && util_cpu_caps.has_avx512bw) {
       fprintf(stderr, "SWR detected SKX instruction support ");
 #ifndef HAVE_SWR_SKX
       fprintf(stderr, "(skipping not built).\n");
 #else
-      get_swr_arch_filename("SKX", filename);
-      found = true;
+      if (swr_initialize_screen_interface(screen, "SKX"))
+         return p_screen;
 #endif
    }
 
-   if (!found && util_cpu_caps.has_avx2) {
+   if (util_cpu_caps.has_avx2) {
       fprintf(stderr, "SWR detected AVX2 instruction support ");
 #ifndef HAVE_SWR_AVX2
       fprintf(stderr, "(skipping not built).\n");
 #else
-      get_swr_arch_filename("AVX2", filename);
-      found = true;
+      if (swr_initialize_screen_interface(screen, "AVX2"))
+         return p_screen;
 #endif
    }
 
-   if (!found && util_cpu_caps.has_avx) {
+   if (util_cpu_caps.has_avx) {
       fprintf(stderr, "SWR detected AVX instruction support ");
 #ifndef HAVE_SWR_AVX
       fprintf(stderr, "(skipping not built).\n");
 #else
-      get_swr_arch_filename("AVX", filename);
-      found = true;
+      if (swr_initialize_screen_interface(screen, "AVX"))
+         return p_screen;
 #endif
    }
 
-   if (!found) {
-      fprintf(stderr, "SWR could not detect a supported CPU architecture.\n");
-      exit(-1);
-   }
+   fprintf(stderr, "SWR could not initialize a supported CPU architecture.\n");
+   swr_destroy_screen_internal(&screen);
 
-   fprintf(stderr, "(using %s).\n", filename);
-
-#ifdef HAVE_SWR_BUILTIN
-   pfnSwrGetInterface = SwrGetInterface;
-#else
-   util_dl_library *pLibrary = util_dl_open(filename);
-   if (!pLibrary) {
-      fprintf(stderr, "SWR library load failure: %s\n", util_dl_error());
-      exit(-1);
-   }
-
-   util_dl_proc pApiProc = util_dl_get_proc_address(pLibrary, "SwrGetInterface");
-   if (!pApiProc) {
-      fprintf(stderr, "SWR library search failure: %s\n", util_dl_error());
-      exit(-1);
-   }
-
-   pfnSwrGetInterface = (PFNSwrGetInterface)pApiProc;
-#endif
-
-   struct pipe_screen *screen = swr_create_screen_internal(winsys);
-   swr_screen(screen)->is_knl = is_knl;
-   swr_screen(screen)->pfnSwrGetInterface = pfnSwrGetInterface;
-
-   return screen;
+   return NULL;
 }
 
 

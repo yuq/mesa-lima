@@ -28,6 +28,7 @@
 
 #include "pipe/p_screen.h"
 #include "pipe/p_defines.h"
+#include "util/u_dl.h"
 #include "util/u_format.h"
 #include "api.h"
 
@@ -50,6 +51,8 @@ struct swr_screen {
 
    HANDLE hJitMgr;
 
+   /* Dynamic backend implementations */
+   util_dl_library *pLibrary;
    PFNSwrGetInterface pfnSwrGetInterface;
 
    /* Do we run on Xeon Phi? */
