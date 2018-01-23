@@ -90,21 +90,11 @@ Value *VPLANEPS(Value* vA, Value* vB, Value* vC, Value* &vX, Value* &vY);
 uint32_t IMMED(Value* i);
 int32_t S_IMMED(Value* i);
 
-Value *GEP(Value* ptr, const std::initializer_list<Value*> &indexList);
-Value *GEP(Value* ptr, const std::initializer_list<uint32_t> &indexList);
-Value *IN_BOUNDS_GEP(Value* ptr, const std::initializer_list<Value*> &indexList);
-Value *IN_BOUNDS_GEP(Value* ptr, const std::initializer_list<uint32_t> &indexList);
-
 CallInst *CALL(Value *Callee, const std::initializer_list<Value*> &args, const llvm::Twine& name = "");
 CallInst *CALL(Value *Callee) { return CALLA(Callee); }
 CallInst *CALL(Value *Callee, Value* arg);
 CallInst *CALL2(Value *Callee, Value* arg1, Value* arg2);
 CallInst *CALL3(Value *Callee, Value* arg1, Value* arg2, Value* arg3);
-
-LoadInst *LOAD(Value *BasePtr, const std::initializer_list<uint32_t> &offset, const llvm::Twine& name = "");
-LoadInst *LOADV(Value *BasePtr, const std::initializer_list<Value*> &offset, const llvm::Twine& name = "");
-StoreInst *STORE(Value *Val, Value *BasePtr, const std::initializer_list<uint32_t> &offset);
-StoreInst *STOREV(Value *Val, Value *BasePtr, const std::initializer_list<Value*> &offset);
 
 Value *VCMPPS_EQ(Value* a, Value* b)    { return VCMPPS(a, b, C((uint8_t)_CMP_EQ_OQ)); }
 Value *VCMPPS_LT(Value* a, Value* b)    { return VCMPPS(a, b, C((uint8_t)_CMP_LT_OQ)); }
@@ -128,30 +118,6 @@ Value *VMASK_16(Value *mask);
 
 Value *EXTRACT_16(Value *x, uint32_t imm);
 Value *JOIN_16(Value *a, Value *b);
-
-Value *MASKLOADD(Value* src, Value* mask);
-
-void Gather4(const SWR_FORMAT format, Value* pSrcBase, Value* byteOffsets,
-                      Value* mask, Value* vGatherComponents[], bool bPackedOutput);
-
-virtual Value *GATHERPS(Value *src, Value *pBase, Value *indices, Value *mask, uint8_t scale = 1, Value *pDrawContext = nullptr);
-Value *GATHERPS_16(Value *src, Value *pBase, Value *indices, Value *mask, uint8_t scale = 1);
-
-void GATHER4PS(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
-               Value* mask, Value* vGatherComponents[], bool bPackedOutput);
-
-Value *GATHERDD(Value* src, Value* pBase, Value* indices, Value* mask, uint8_t scale = 1);
-Value *GATHERDD_16(Value *src, Value *pBase, Value *indices, Value *mask, uint8_t scale = 1);
-
-void GATHER4DD(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
-               Value* mask, Value* vGatherComponents[], bool bPackedOutput);
-
-Value *GATHERPD(Value* src, Value* pBase, Value* indices, Value* mask, uint8_t scale = 1);
-
-void SCATTERPS(Value* pDst, Value* vSrc, Value* vOffsets, Value* vMask);
-
-void Shuffle8bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInput, Value* vGatherOutput[], bool bPackedOutput);
-void Shuffle16bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInput[], Value* vGatherOutput[], bool bPackedOutput);
 
 Value *PSHUFB(Value* a, Value* b);
 Value *PMOVSXBD(Value* a);
@@ -180,8 +146,6 @@ Value *FCLAMP(Value* src, float low, float high);
 
 CallInst *PRINT(const std::string &printStr);
 CallInst *PRINT(const std::string &printStr,const std::initializer_list<Value*> &printArgs);
-Value* STACKSAVE();
-void STACKRESTORE(Value* pSaved);
 
 Value* POPCNT(Value* a);
 
@@ -198,10 +162,5 @@ void RDTSC_STOP(Value* pBucketMgr, Value* pId);
 
 Value* CreateEntryAlloca(Function* pFunc, Type* pType);
 Value* CreateEntryAlloca(Function* pFunc, Type* pType, Value* pArraySize);
-
-// Static stack allocations for scatter operations
-Value* pScatterStackSrc{ nullptr };
-Value* pScatterStackOffsets{ nullptr };
-
 
 uint32_t GetTypeSize(Type* pType);
