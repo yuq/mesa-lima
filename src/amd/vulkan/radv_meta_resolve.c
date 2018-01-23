@@ -26,6 +26,7 @@
 
 #include "radv_meta.h"
 #include "radv_private.h"
+#include "vk_format.h"
 #include "nir/nir_builder.h"
 #include "sid.h"
 
@@ -351,6 +352,10 @@ static void radv_pick_resolve_method_images(struct radv_image *src_image,
 	uint32_t queue_mask = radv_image_queue_family_mask(dest_image,
 	                                                   cmd_buffer->queue_family_index,
 	                                                   cmd_buffer->queue_family_index);
+
+	if (vk_format_is_int(src_image->vk_format))
+		*method = RESOLVE_COMPUTE;
+	
 	if (radv_layout_dcc_compressed(dest_image, dest_image_layout, queue_mask)) {
 		*method = RESOLVE_FRAGMENT;
 	} else if (dest_image->surface.micro_tile_mode != src_image->surface.micro_tile_mode) {
