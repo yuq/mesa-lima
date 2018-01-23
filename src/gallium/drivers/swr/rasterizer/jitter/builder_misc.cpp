@@ -589,7 +589,7 @@ namespace SwrJit
     /// @param vIndices - SIMD wide value of VB byte offsets
     /// @param vMask - SIMD wide mask that controls whether to access memory or the src values
     /// @param scale - value to scale indices by
-    Value *Builder::GATHERPS(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale)
+    Value *Builder::GATHERPS(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale, Value *pDrawContext)
     {
         Value *vGather;
 

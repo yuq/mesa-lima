@@ -55,9 +55,12 @@ enum ConversionType
 //////////////////////////////////////////////////////////////////////////
 /// Interface to Jitting a fetch shader
 //////////////////////////////////////////////////////////////////////////
-struct FetchJit : public Builder
+struct FetchJit : 
+    public Builder
 {
-    FetchJit(JitManager* pJitMgr) : Builder(pJitMgr){};
+    FetchJit(JitManager* pJitMgr) :
+        Builder(pJitMgr)
+    {}
 
     Function* Create(const FETCH_COMPILE_STATE& fetchState);
 
@@ -1361,7 +1364,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 // But, we know that elements must be aligned for FETCH. :)
                                 // Right shift the offset by a bit and then scale by 2 to remove the sign extension.
                                 Value *vShiftedOffsets = LSHR(vOffsets, 1);
-                                vVertexElements[currentVertexElement++] = GATHERPS(gatherSrc, pStreamBase, vShiftedOffsets, vGatherMask, 2);
+                                vVertexElements[currentVertexElement++] = GATHERPS(gatherSrc, pStreamBase, vShiftedOffsets, vGatherMask, 2, mpPrivateContext);
                             }
                             else
                             {
