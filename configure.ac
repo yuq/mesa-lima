@@ -2780,6 +2780,18 @@ if test "x$enable_llvm" = xyes; then
             fi
         fi
     fi
+
+    dnl The gallium-xlib GLX and gallium OSMesa targets directly embed the
+    dnl swr/llvmpipe driver into the final binary.  Adding LLVM_LIBS results in 
+    dnl the LLVM library propagated in the Libs.private of the respective .pc
+    dnl file which ensures complete dependency information when statically
+    dnl linking.
+    if test "x$enable_glx" == xgallium-xlib; then
+        GL_PC_LIB_PRIV="$GL_PC_LIB_PRIV $LLVM_LIBS"
+    fi
+    if test "x$enable_gallium_osmesa" = xyes; then
+        OSMESA_PC_LIB_PRIV="$OSMESA_PC_LIB_PRIV $LLVM_LIBS"
+    fi
 fi
 
 AM_CONDITIONAL(HAVE_GALLIUM_SVGA, test "x$HAVE_GALLIUM_SVGA" = xyes)
