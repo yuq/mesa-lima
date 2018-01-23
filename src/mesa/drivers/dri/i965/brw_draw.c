@@ -549,7 +549,8 @@ brw_predraw_resolve_framebuffer(struct brw_context *brw)
       bool blend_enabled = ctx->Color.BlendEnabled & (1 << i);
       enum isl_aux_usage aux_usage =
          intel_miptree_render_aux_usage(brw, irb->mt, isl_format,
-                                        blend_enabled);
+                                        blend_enabled,
+                                        brw->draw_aux_buffer_disabled[i]);
 
       intel_miptree_prepare_render(brw, irb->mt, irb->mt_level,
                                    irb->mt_layer, irb->layer_count,
@@ -625,7 +626,8 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
       bool blend_enabled = ctx->Color.BlendEnabled & (1 << i);
       enum isl_aux_usage aux_usage =
          intel_miptree_render_aux_usage(brw, irb->mt, isl_format,
-                                        blend_enabled);
+                                        blend_enabled,
+                                        brw->draw_aux_buffer_disabled[i]);
 
       brw_render_cache_add_bo(brw, irb->mt->bo, isl_format, aux_usage);
 

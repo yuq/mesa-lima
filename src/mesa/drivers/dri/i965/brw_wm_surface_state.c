@@ -230,9 +230,9 @@ gen6_update_renderbuffer_surface(struct brw_context *brw,
    enum isl_format isl_format = brw->mesa_to_isl_render_format[rb_format];
 
    enum isl_aux_usage aux_usage =
-      brw->draw_aux_buffer_disabled[unit] ? ISL_AUX_USAGE_NONE :
       intel_miptree_render_aux_usage(brw, mt, isl_format,
-                                     ctx->Color.BlendEnabled & (1 << unit));
+                                     ctx->Color.BlendEnabled & (1 << unit),
+                                     brw->draw_aux_buffer_disabled[unit]);
 
    struct isl_view view = {
       .format = isl_format,

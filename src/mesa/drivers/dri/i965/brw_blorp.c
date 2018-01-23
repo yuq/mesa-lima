@@ -320,7 +320,8 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    enum isl_format dst_isl_format =
       brw_blorp_to_isl_format(brw, dst_format, true);
    enum isl_aux_usage dst_aux_usage =
-      intel_miptree_render_aux_usage(brw, dst_mt, dst_isl_format, false);
+      intel_miptree_render_aux_usage(brw, dst_mt, dst_isl_format,
+                                     false, false);
    const bool dst_clear_supported = dst_aux_usage != ISL_AUX_USAGE_NONE;
    intel_miptree_prepare_access(brw, dst_mt, dst_level, 1, dst_layer, 1,
                                 dst_aux_usage, dst_clear_supported);
@@ -1267,7 +1268,8 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
           irb->mt, irb->mt_level, irb->mt_layer, num_layers);
 
       enum isl_aux_usage aux_usage =
-         intel_miptree_render_aux_usage(brw, irb->mt, isl_format, false);
+         intel_miptree_render_aux_usage(brw, irb->mt, isl_format,
+                                        false, false);
       intel_miptree_prepare_render(brw, irb->mt, level, irb->mt_layer,
                                    num_layers, aux_usage);
 
