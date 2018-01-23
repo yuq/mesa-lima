@@ -553,7 +553,7 @@ brw_predraw_resolve_framebuffer(struct brw_context *brw)
 
       intel_miptree_prepare_render(brw, irb->mt, irb->mt_level,
                                    irb->mt_layer, irb->layer_count,
-                                   isl_format, blend_enabled);
+                                   aux_usage);
 
       brw_cache_flush_for_render(brw, irb->mt->bo,
                                  isl_format, aux_usage);
@@ -631,7 +631,7 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
 
       intel_miptree_finish_render(brw, irb->mt, irb->mt_level,
                                   irb->mt_layer, irb->layer_count,
-                                  isl_format, blend_enabled);
+                                  aux_usage);
    }
 }
 
