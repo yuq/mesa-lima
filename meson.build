@@ -692,14 +692,14 @@ if cc.compiles('struct __attribute__((packed)) foo { int bar; };',
 endif
 if cc.compiles('int *foo(void) __attribute__((returns_nonnull));',
                name : '__attribute__((returns_nonnull))')
-  pre_args += '-DHAVE_FUNC_ATTRIBUTE_NONNULL'
+  pre_args += '-DHAVE_FUNC_ATTRIBUTE_RETURNS_NONNULL'
 endif
 if cc.compiles('''int foo_def(void) __attribute__((visibility("default")));
                   int foo_hid(void) __attribute__((visibility("hidden")));
                   int foo_int(void) __attribute__((visibility("internal")));
                   int foo_pro(void) __attribute__((visibility("protected")));''',
                name : '__attribute__((visibility(...)))')
-  pre_args += '-DHAVE_FUNC_ATTRIBUTE_VISBILITY'
+  pre_args += '-DHAVE_FUNC_ATTRIBUTE_VISIBILITY'
 endif
 if cc.compiles('int foo(void) { return 0; } int bar(void) __attribute__((alias("foo")));',
                name : '__attribute__((alias(...)))')
