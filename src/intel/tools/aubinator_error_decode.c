@@ -390,7 +390,7 @@ get_gen_batch_bo(void *user_data, uint64_t address)
          return (struct gen_batch_decode_bo) {
             .addr = sections[s].gtt_offset,
             .map = sections[s].data,
-            .size = sections[s].count,
+            .size = sections[s].count * 4,
          };
       }
    }
