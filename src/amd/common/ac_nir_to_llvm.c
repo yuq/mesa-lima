@@ -3621,7 +3621,9 @@ static LLVMValueRef visit_image_load(struct ac_nir_context *ctx,
 		type = instr->variables[0]->deref.child->type;
 
 	type = glsl_without_array(type);
-	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_BUF) {
+
+	const enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
+	if (dim == GLSL_SAMPLER_DIM_BUF) {
 		params[0] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_BUFFER, NULL, true, false);
 		params[1] = LLVMBuildExtractElement(ctx->ac.builder, get_src(ctx, instr->src[0]),
 						    ctx->ac.i32_0, ""); /* vindex */
@@ -3635,10 +3637,10 @@ static LLVMValueRef visit_image_load(struct ac_nir_context *ctx,
 		res = ac_to_integer(&ctx->ac, res);
 	} else {
 		bool is_da = glsl_sampler_type_is_array(type) ||
-			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE ||
-			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_3D ||
-			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_SUBPASS ||
-			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_SUBPASS_MS;
+			     dim == GLSL_SAMPLER_DIM_CUBE ||
+			     dim == GLSL_SAMPLER_DIM_3D ||
+			     dim == GLSL_SAMPLER_DIM_SUBPASS ||
+			     dim == GLSL_SAMPLER_DIM_SUBPASS_MS;
 		LLVMValueRef da = is_da ? ctx->ac.i1true : ctx->ac.i1false;
 		LLVMValueRef glc = ctx->ac.i1false;
 		LLVMValueRef slc = ctx->ac.i1false;
@@ -3678,12 +3680,13 @@ static void visit_image_store(struct ac_nir_context *ctx,
 	char intrinsic_name[64];
 	const nir_variable *var = instr->variables[0]->var;
 	const struct glsl_type *type = glsl_without_array(var->type);
+	const enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
 	LLVMValueRef glc = ctx->ac.i1false;
 	bool force_glc = ctx->ac.chip_class == SI;
 	if (force_glc)
 		glc = ctx->ac.i1true;
 
-	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_BUF) {
+	if (dim == GLSL_SAMPLER_DIM_BUF) {
 		params[0] = ac_to_float(&ctx->ac, get_src(ctx, instr->src[2])); /* data */
 		params[1] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_BUFFER, NULL, true, true);
 		params[2] = LLVMBuildExtractElement(ctx->ac.builder, get_src(ctx, instr->src[0]),
@@ -3695,8 +3698,8 @@ static void visit_image_store(struct ac_nir_context *ctx,
 				   params, 6, 0);
 	} else {
 		bool is_da = glsl_sampler_type_is_array(type) ||
-			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE ||
-			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_3D;
+			     dim == GLSL_SAMPLER_DIM_CUBE ||
+			     dim == GLSL_SAMPLER_DIM_3D;
 		LLVMValueRef da = is_da ? ctx->ac.i1true : ctx->ac.i1false;
 		LLVMValueRef slc = ctx->ac.i1false;
 
