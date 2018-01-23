@@ -2682,9 +2682,13 @@ enum isl_aux_usage
 intel_miptree_render_aux_usage(struct brw_context *brw,
                                struct intel_mipmap_tree *mt,
                                enum isl_format render_format,
-                               bool blend_enabled)
+                               bool blend_enabled,
+                               bool draw_aux_disabled)
 {
    struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   if (draw_aux_disabled)
+      return ISL_AUX_USAGE_NONE;
 
    switch (mt->aux_usage) {
    case ISL_AUX_USAGE_MCS:
