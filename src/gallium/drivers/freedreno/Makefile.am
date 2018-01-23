@@ -46,4 +46,4 @@ ir3_compiler_LDADD = \
 	$(GALLIUM_COMMON_LIB_DEPS) \
 	$(FREEDRENO_LIBS)
 
-EXTRA_DIST = meson.build
+EXTRA_DIST += meson.build
