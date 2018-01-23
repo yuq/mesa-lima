@@ -31,13 +31,13 @@ anv_entrypoints = custom_target(
 
 anv_extensions_c = custom_target(
   'anv_extensions.c',
-  input : ['anv_extensions_gen.py', vk_api_xml, vk_android_native_buffer_xml,
-           'anv_extensions.py'],
+  input : ['anv_extensions_gen.py', vk_api_xml, vk_android_native_buffer_xml],
   output : 'anv_extensions.c',
   command : [
     prog_python2, '@INPUT0@', '--xml', '@INPUT1@', '--xml', '@INPUT2@',
     '--out-c', '@OUTPUT@',
   ],
+  depend_files : files('anv_extensions.py'),
 )
 
 anv_extensions_h = custom_target(
