@@ -353,7 +353,10 @@ static void radv_pick_resolve_method_images(struct radv_image *src_image,
 	                                                   cmd_buffer->queue_family_index,
 	                                                   cmd_buffer->queue_family_index);
 
-	if (vk_format_is_int(src_image->vk_format))
+	if (src_image->vk_format == VK_FORMAT_R16G16_UNORM ||
+	    src_image->vk_format == VK_FORMAT_R16G16_SNORM)
+		*method = RESOLVE_COMPUTE;
+	else if (vk_format_is_int(src_image->vk_format))
 		*method = RESOLVE_COMPUTE;
 	
 	if (radv_layout_dcc_compressed(dest_image, dest_image_layout, queue_mask)) {
