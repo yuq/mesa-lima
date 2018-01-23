@@ -37,6 +37,7 @@
 #include "util/build_id.h"
 #include "util/mesa-sha1.h"
 #include "vk_util.h"
+#include "common/gen_defines.h"
 
 #include "genxml/gen7_pack.h"
 
@@ -373,6 +374,9 @@ anv_physical_device_init(struct anv_physical_device *device,
    device->has_syncobj = anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_FENCE_ARRAY);
    device->has_syncobj_wait = device->has_syncobj &&
                               anv_gem_supports_syncobj_wait(fd);
+
+   if (anv_gem_has_context_priority(fd))
+      device->has_context_priority = true;
 
    bool swizzled = anv_gem_get_bit6_swizzle(fd, I915_TILING_X);
 
@@ -1324,6 +1328,23 @@ anv_device_init_dispatch(struct anv_device *device)
    }
 }
 
+static int
+vk_priority_to_gen(int priority)
+{
+   switch (priority) {
+   case VK_QUEUE_GLOBAL_PRIORITY_LOW_EXT:
+      return GEN_CONTEXT_LOW_PRIORITY;
+   case VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_EXT:
+      return GEN_CONTEXT_MEDIUM_PRIORITY;
+   case VK_QUEUE_GLOBAL_PRIORITY_HIGH_EXT:
+      return GEN_CONTEXT_HIGH_PRIORITY;
+   case VK_QUEUE_GLOBAL_PRIORITY_REALTIME_EXT:
+      return GEN_CONTEXT_REALTIME_PRIORITY;
+   default:
+      unreachable("Invalid priority");
+   }
+}
+
 VkResult anv_CreateDevice(
     VkPhysicalDevice                            physicalDevice,
     const VkDeviceCreateInfo*                   pCreateInfo,
@@ -1367,6 +1388,15 @@ VkResult anv_CreateDevice(
       }
    }
 
+   /* Check if client specified queue priority. */
+   const VkDeviceQueueGlobalPriorityCreateInfoEXT *queue_priority =
+      vk_find_struct_const(pCreateInfo->pQueueCreateInfos[0].pNext,
+                           DEVICE_QUEUE_GLOBAL_PRIORITY_CREATE_INFO_EXT);
+
+   VkQueueGlobalPriorityEXT priority =
+      queue_priority ? queue_priority->globalPriority :
+         VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_EXT;
+
    device = vk_alloc2(&physical_device->instance->alloc, pAllocator,
                        sizeof(*device), 8,
                        VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
@@ -1395,6 +1425,20 @@ VkResult anv_CreateDevice(
    if (device->context_id == -1) {
       result = vk_error(VK_ERROR_INITIALIZATION_FAILED);
       goto fail_fd;
+   }
+
+   /* As per spec, the driver implementation may deny requests to acquire
+    * a priority above the default priority (MEDIUM) if the caller does not
+    * have sufficient privileges. In this scenario VK_ERROR_NOT_PERMITTED_EXT
+    * is returned.
+    */
+   if (physical_device->has_context_priority) {
+      int err =
+         anv_gem_set_context_priority(device, vk_priority_to_gen(priority));
+      if (err != 0 && priority > VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_EXT) {
+         result = vk_error(VK_ERROR_NOT_PERMITTED_EXT);
+         goto fail_fd;
+      }
    }
 
    device->info = physical_device->info;
