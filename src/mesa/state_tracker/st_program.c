@@ -465,6 +465,7 @@ st_translate_vertex_program(struct st_context *st,
                                           &stvp->tgsi.stream_output);
       }
 
+      st_store_ir_in_disk_cache(st, &stvp->Base, true);
       return true;
    }
 
@@ -899,9 +900,11 @@ st_translate_fragment_program(struct st_context *st,
       }
    }
 
-   /* We have already compiler to NIR so just return */
-   if (stfp->shader_program)
+   /* We have already compiled to NIR so just return */
+   if (stfp->shader_program) {
+      st_store_ir_in_disk_cache(st, &stfp->Base, true);
       return true;
+   }
 
    ureg = ureg_create_with_screen(PIPE_SHADER_FRAGMENT, st->pipe->screen);
    if (ureg == NULL)
@@ -1471,6 +1474,7 @@ st_translate_geometry_program(struct st_context *st,
    /* We have already compiled to NIR so just return */
    if (stgp->shader_program) {
       st_translate_program_stream_output(&stgp->Base, &stgp->tgsi.stream_output);
+      st_store_ir_in_disk_cache(st, &stgp->Base, true);
       return true;
    }
 
@@ -1570,8 +1574,10 @@ st_translate_tessctrl_program(struct st_context *st,
    struct ureg_program *ureg;
 
    /* We have already compiled to NIR so just return */
-   if (sttcp->shader_program)
+   if (sttcp->shader_program) {
+      st_store_ir_in_disk_cache(st, &sttcp->Base, true);
       return true;
+   }
 
    ureg = ureg_create_with_screen(PIPE_SHADER_TESS_CTRL, st->pipe->screen);
    if (ureg == NULL)
@@ -1601,6 +1607,7 @@ st_translate_tesseval_program(struct st_context *st,
    /* We have already compiled to NIR so just return */
    if (sttep->shader_program) {
       st_translate_program_stream_output(&sttep->Base, &sttep->tgsi.stream_output);
+      st_store_ir_in_disk_cache(st, &sttep->Base, true);
       return true;
    }
 
@@ -1651,7 +1658,7 @@ st_translate_compute_program(struct st_context *st,
       /* no compute variants: */
       st_finalize_nir(st, &stcp->Base, stcp->shader_program,
                       (struct nir_shader *) stcp->tgsi.prog);
-
+      st_store_ir_in_disk_cache(st, &stcp->Base, true);
       return true;
    }
 
