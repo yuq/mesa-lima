@@ -65,6 +65,7 @@ CLEANFILES += \
 EXTRA_DIST += \
 	$(top_srcdir)/include/vulkan/vk_icd.h \
 	vulkan/anv_entrypoints_gen.py \
+	vulkan/anv_extensions_gen.py \
 	vulkan/anv_extensions.py \
 	vulkan/anv_icd.py \
 	vulkan/TODO
