@@ -1269,7 +1269,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       enum isl_aux_usage aux_usage =
          intel_miptree_render_aux_usage(brw, irb->mt, isl_format, false);
       intel_miptree_prepare_render(brw, irb->mt, level, irb->mt_layer,
-                                   num_layers, isl_format, false);
+                                   num_layers, aux_usage);
 
       struct isl_surf isl_tmp[2];
       struct blorp_surf surf;
@@ -1288,7 +1288,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       blorp_batch_finish(&batch);
 
       intel_miptree_finish_render(brw, irb->mt, level, irb->mt_layer,
-                                  num_layers, isl_format, false);
+                                  num_layers, aux_usage);
    }
 
    return;

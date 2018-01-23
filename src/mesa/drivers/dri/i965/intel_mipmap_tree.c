@@ -2724,11 +2724,8 @@ void
 intel_miptree_prepare_render(struct brw_context *brw,
                              struct intel_mipmap_tree *mt, uint32_t level,
                              uint32_t start_layer, uint32_t layer_count,
-                             enum isl_format render_format,
-                             bool blend_enabled)
+                             enum isl_aux_usage aux_usage)
 {
-   enum isl_aux_usage aux_usage =
-      intel_miptree_render_aux_usage(brw, mt, render_format, blend_enabled);
    intel_miptree_prepare_access(brw, mt, level, 1, start_layer, layer_count,
                                 aux_usage, aux_usage != ISL_AUX_USAGE_NONE);
 }
@@ -2737,13 +2734,10 @@ void
 intel_miptree_finish_render(struct brw_context *brw,
                             struct intel_mipmap_tree *mt, uint32_t level,
                             uint32_t start_layer, uint32_t layer_count,
-                            enum isl_format render_format,
-                            bool blend_enabled)
+                            enum isl_aux_usage aux_usage)
 {
    assert(_mesa_is_format_color_format(mt->format));
 
-   enum isl_aux_usage aux_usage =
-      intel_miptree_render_aux_usage(brw, mt, render_format, blend_enabled);
    intel_miptree_finish_write(brw, mt, level, start_layer, layer_count,
                               aux_usage);
 }
