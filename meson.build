@@ -202,18 +202,20 @@ if with_dri_i915 or with_gallium_i915
   dep_libdrm_intel = dependency('libdrm_intel', version : '>= 2.4.75')
 endif
 
+system_has_kms_drm = ['openbsd', 'netbsd', 'freebsd', 'dragonfly', 'linux'].contains(host_machine.system())
+
 if host_machine.system() == 'darwin'
   with_dri_platform = 'apple'
 elif ['windows', 'cygwin'].contains(host_machine.system())
   with_dri_platform = 'windows'
-elif host_machine.system() == 'linux'
-  # FIXME: This should include BSD and possibly other systems
+elif system_has_kms_drm
   with_dri_platform = 'drm'
 else
   # FIXME: haiku doesn't use dri, and xlib doesn't use dri, probably should
   # assert here that one of those cases has been met.
   # FIXME: GNU (hurd) ends up here as well, but meson doesn't officially
   # support Hurd at time of writing (2017/11)
+  # FIXME: illumos ends up here as well
   with_dri_platform = 'none'
 endif
 
@@ -225,7 +227,7 @@ with_platform_surfaceless = false
 egl_native_platform = ''
 _platforms = get_option('platforms')
 if _platforms == 'auto'
-  if ['linux'].contains(host_machine.system())
+  if system_has_kms_drm
     _platforms = 'x11,wayland,drm,surfaceless'
   else
     error('Unknown OS, no platforms enabled. Patches gladly accepted to fix this.')
@@ -272,10 +274,10 @@ endif
 
 with_gbm = get_option('gbm')
 if with_gbm == 'auto' and with_dri  # TODO: or gallium
-  with_gbm = host_machine.system() == 'linux'
+  with_gbm = system_has_kms_drm
 elif with_gbm == 'true'
-  if not ['linux', 'bsd'].contains(host_machine.system())
-    error('GBM only supports unix-like platforms')
+  if not system_has_kms_drm
+    error('GBM only supports DRM/KMS platforms')
   endif
   with_gbm = true
 else
@@ -351,7 +353,7 @@ endif
 with_dri2 = (with_dri or with_any_vk) and with_dri_platform == 'drm'
 with_dri3 = get_option('dri3')
 if with_dri3 == 'auto'
-  if host_machine.system() == 'linux' and with_dri2
+  if system_has_kms_drm and with_dri2
     with_dri3 = true
   else
     with_dri3 = false
@@ -374,7 +376,7 @@ endif
 dep_vdpau = []
 _vdpau = get_option('gallium-vdpau')
 if _vdpau == 'auto'
-  if not ['linux', 'bsd'].contains(host_machine.system())
+  if not system_has_kms_drm
     with_gallium_vdpau = false
   elif not with_platform_x11
     with_gallium_vdpau = false
@@ -386,8 +388,8 @@ if _vdpau == 'auto'
     with_gallium_vdpau = dep_vdpau.found()
   endif
 elif _vdpau == 'true'
-  if not ['linux', 'bsd'].contains(host_machine.system())
-    error('VDPAU state tracker can only be build on unix-like OSes.')
+  if not system_has_kms_drm
+    error('VDPAU state tracker can only be build on DRM/KMS OSes.')
   elif not with_platform_x11
     error('VDPAU state tracker requires X11 support.')
     with_gallium_vdpau = false
@@ -417,7 +419,7 @@ endif
 dep_xvmc = []
 _xvmc = get_option('gallium-xvmc')
 if _xvmc == 'auto'
-  if not ['linux', 'bsd'].contains(host_machine.system())
+  if not system_has_kms_drm
     with_gallium_xvmc = false
   elif not with_platform_x11
     with_gallium_xvmc = false
@@ -428,8 +430,8 @@ if _xvmc == 'auto'
     with_gallium_xvmc = dep_xvmc.found()
   endif
 elif _xvmc == 'true'
-  if not ['linux', 'bsd'].contains(host_machine.system())
-    error('XVMC state tracker can only be build on unix-like OSes.')
+  if not system_has_kms_drm
+    error('XVMC state tracker can only be build on DRM/KMS OSes.')
   elif not with_platform_x11
     error('XVMC state tracker requires X11 support.')
     with_gallium_xvmc = false
@@ -455,7 +457,7 @@ endif
 dep_omx = []
 _omx = get_option('gallium-omx')
 if _omx == 'auto'
-  if not ['linux', 'bsd'].contains(host_machine.system())
+  if not system_has_kms_drm
     with_gallium_omx = false
   elif not with_platform_x11
     with_gallium_omx = false
@@ -466,8 +468,8 @@ if _omx == 'auto'
     with_gallium_omx = dep_omx.found()
   endif
 elif _omx == 'true'
-  if not ['linux', 'bsd'].contains(host_machine.system())
-    error('OMX state tracker can only be built on unix-like OSes.')
+  if not system_has_kms_drm
+    error('OMX state tracker can only be built on DRM/KMS OSes.')
   elif not (with_platform_x11 or with_platform_drm)
     error('OMX state tracker requires X11 or drm platform support.')
     with_gallium_omx = false
@@ -513,7 +515,7 @@ endif
 dep_va = []
 _va = get_option('gallium-va')
 if _va == 'auto'
-  if not ['linux', 'bsd'].contains(host_machine.system())
+  if not system_has_kms_drm
     with_gallium_va = false
   elif not with_platform_x11
     with_gallium_va = false
@@ -524,8 +526,8 @@ if _va == 'auto'
     with_gallium_va = dep_va.found()
   endif
 elif _va == 'true'
-  if not ['linux', 'bsd'].contains(host_machine.system())
-    error('VA state tracker can only be built on unix-like OSes.')
+  if not system_has_kms_drm
+    error('VA state tracker can only be built on DRM/KMS OSes.')
   elif not (with_platform_x11 or with_platform_drm)
     error('VA state tracker requires X11 or drm or wayland platform support.')
     with_gallium_va = false
@@ -550,7 +552,7 @@ endif
 
 _xa = get_option('gallium-xa')
 if _xa == 'auto'
-  if not ['linux', 'bsd'].contains(host_machine.system())
+  if not system_has_kms_drm
     with_gallium_xa = false
   elif not (with_gallium_nouveau or with_gallium_freedreno or with_gallium_i915
             or with_gallium_svga)
@@ -559,8 +561,8 @@ if _xa == 'auto'
     with_gallium_xa = true
   endif
 elif _xa == 'true'
-  if not ['linux', 'bsd'].contains(host_machine.system())
-    error('XA state tracker can only be built on unix-like OSes.')
+  if not system_has_kms_drm
+    error('XA state tracker can only be built on DRM/KMS OSes.')
   elif not (with_gallium_nouveau or with_gallium_freedreno or with_gallium_i915
             or with_gallium_svga)
     error('XA state tracker requires at least one of the following gallium drivers: nouveau, freedreno, i915, svga.')
@@ -820,23 +822,23 @@ with_asm_arch = ''
 if with_asm
   # TODO: SPARC and PPC
   if host_machine.cpu_family() == 'x86'
-    if ['linux', 'bsd'].contains(host_machine.system()) # FIXME: hurd?
+    if system_has_kms_drm
       with_asm_arch = 'x86'
       pre_args += ['-DUSE_X86_ASM', '-DUSE_MMX_ASM', '-DUSE_3DNOW_ASM',
                    '-DUSE_SSE_ASM']
     endif
   elif host_machine.cpu_family() == 'x86_64'
-    if host_machine.system() == 'linux'
+    if system_has_kms_drm
       with_asm_arch = 'x86_64'
       pre_args += ['-DUSE_X86_64_ASM']
     endif
   elif host_machine.cpu_family() == 'arm'
-    if host_machine.system() == 'linux'
+    if system_has_kms_drm
       with_asm_arch = 'arm'
       pre_args += ['-DUSE_ARM_ASM']
     endif
   elif host_machine.cpu_family() == 'aarch64'
-    if host_machine.system() == 'linux'
+    if system_has_kms_drm
       with_asm_arch = 'aarch64'
       pre_args += ['-DUSE_AARCH64_ASM']
     endif
