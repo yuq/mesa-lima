@@ -266,14 +266,18 @@ anv_entrypoint_is_enabled(int index, uint32_t core_version,
    switch (index) {
 % for e in entrypoints:
    case ${e.num}:
+      /* ${e.name} */
    % if e.core_version:
       return ${e.core_version.c_vk_version()} <= core_version;
-   % elif e.extension:
-      % if e.extension.type == 'instance':
-      return !device && instance->${e.extension.name[3:]};
-      % else:
-      return !device || device->${e.extension.name[3:]};
-      % endif
+   % elif e.extensions:
+     % for ext in e.extensions:
+       % if ext.type == 'instance':
+      if (!device && instance->${ext.name[3:]}) return true;
+        % else:
+      if (!device || device->${ext.name[3:]}) return true;
+        % endif
+     % endfor
+      return false;
    % else:
       return true;
    % endif
@@ -404,7 +408,7 @@ class Entrypoint(object):
         self.num = None
         # Extensions which require this entrypoint
         self.core_version = None
-        self.extension = None
+        self.extensions = []
 
     def is_device_entrypoint(self):
         return self.params[0].type in ('VkDevice', 'VkCommandBuffer')
@@ -465,8 +469,7 @@ def get_entrypoints(doc, entrypoints_to_defines, start_index):
             e = entrypoints[command.attrib['name']]
             e.enabled = True
             assert e.core_version is None
-            assert e.extension is None
-            e.extension = ext
+            e.extensions.append(ext)
 
     return [e for e in entrypoints.itervalues() if e.enabled]
 
