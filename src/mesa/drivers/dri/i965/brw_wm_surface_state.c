@@ -441,23 +441,6 @@ swizzle_to_scs(GLenum swizzle, bool need_green_to_blue)
    return (need_green_to_blue && scs == HSW_SCS_GREEN) ? HSW_SCS_BLUE : scs;
 }
 
-static bool
-brw_aux_surface_disabled(const struct brw_context *brw,
-                         const struct intel_mipmap_tree *mt)
-{
-   const struct gl_framebuffer *fb = brw->ctx.DrawBuffer;
-
-   for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
-      const struct intel_renderbuffer *irb =
-         intel_renderbuffer(fb->_ColorDrawBuffers[i]);
-
-      if (irb && irb->mt == mt)
-         return brw->draw_aux_buffer_disabled[i];
-   }
-
-   return false;
-}
-
 static void
 brw_update_texture_surface(struct gl_context *ctx,
                            unsigned unit,
@@ -587,9 +570,6 @@ brw_update_texture_surface(struct gl_context *ctx,
 
       enum isl_aux_usage aux_usage =
          intel_miptree_texture_aux_usage(brw, mt, format);
-
-      if (brw_aux_surface_disabled(brw, mt))
-         aux_usage = ISL_AUX_USAGE_NONE;
 
       brw_emit_surface_state(brw, mt, mt->target, view, aux_usage,
                              surf_offset, surf_index,
