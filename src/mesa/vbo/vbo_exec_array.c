@@ -369,11 +369,11 @@ recalculate_input_bindings(struct gl_context *ctx)
        */
       if (ctx->API == API_OPENGL_COMPAT) {
          if (array[VERT_ATTRIB_GENERIC0].Enabled)
-            inputs[0] = &vertexAttrib[VERT_ATTRIB_GENERIC0];
+            inputs[VERT_ATTRIB_POS] = &vertexAttrib[VERT_ATTRIB_GENERIC0];
          else if (array[VERT_ATTRIB_POS].Enabled)
-            inputs[0] = &vertexAttrib[VERT_ATTRIB_POS];
+            inputs[VERT_ATTRIB_POS] = &vertexAttrib[VERT_ATTRIB_POS];
          else {
-            inputs[0] = &vbo->currval[VBO_ATTRIB_GENERIC0];
+            inputs[VERT_ATTRIB_POS] = &vbo->currval[VBO_ATTRIB_GENERIC0];
             const_inputs |= VERT_BIT_POS;
          }
 
