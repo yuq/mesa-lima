@@ -553,7 +553,10 @@ brw_predraw_resolve_framebuffer(struct brw_context *brw,
          intel_miptree_render_aux_usage(brw, irb->mt, isl_format,
                                         blend_enabled,
                                         draw_aux_buffer_disabled[i]);
-      brw->draw_aux_usage[i] = aux_usage;
+      if (brw->draw_aux_usage[i] != aux_usage) {
+         brw->ctx.NewDriverState |= BRW_NEW_AUX_STATE;
+         brw->draw_aux_usage[i] = aux_usage;
+      }
 
       intel_miptree_prepare_render(brw, irb->mt, irb->mt_level,
                                    irb->mt_layer, irb->layer_count,
