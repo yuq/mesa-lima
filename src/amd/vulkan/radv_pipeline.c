@@ -714,6 +714,9 @@ radv_pipeline_init_depth_stencil_state(struct radv_pipeline *pipeline,
 		                       S_028800_Z_WRITE_ENABLE(vkds->depthWriteEnable ? 1 : 0) |
 		                       S_028800_ZFUNC(vkds->depthCompareOp) |
 		                       S_028800_DEPTH_BOUNDS_ENABLE(vkds->depthBoundsTestEnable ? 1 : 0);
+
+		/* from amdvlk: For 4xAA and 8xAA need to decompress on flush for better performance */
+		ds->db_render_override2 |= S_028010_DECOMPRESS_Z_ON_FLUSH(attachment->samples > 2);
 	}
 
 	if (has_stencil_attachment && vkds->stencilTestEnable) {
