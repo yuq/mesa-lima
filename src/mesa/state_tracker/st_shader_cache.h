@@ -44,11 +44,13 @@ st_deserialise_tgsi_program(struct gl_context *ctx,
                             struct gl_program *prog);
 
 bool
-st_load_tgsi_from_disk_cache(struct gl_context *ctx,
-                             struct gl_shader_program *prog);
+st_load_ir_from_disk_cache(struct gl_context *ctx,
+                           struct gl_shader_program *prog,
+                             bool nir);
 
 void
-st_store_tgsi_in_disk_cache(struct st_context *st, struct gl_program *prog);
+st_store_ir_in_disk_cache(struct st_context *st, struct gl_program *prog,
+                          bool nir);
 
 #ifdef __cplusplus
 }

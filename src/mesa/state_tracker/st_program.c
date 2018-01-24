@@ -538,7 +538,7 @@ st_translate_vertex_program(struct st_context *st,
 
    if (stvp->glsl_to_tgsi) {
       stvp->glsl_to_tgsi = NULL;
-      st_store_tgsi_in_disk_cache(st, &stvp->Base);
+      st_store_ir_in_disk_cache(st, &stvp->Base, false);
    }
 
    return stvp->tgsi.tokens != NULL;
@@ -995,7 +995,7 @@ st_translate_fragment_program(struct st_context *st,
 
    if (stfp->glsl_to_tgsi) {
       stfp->glsl_to_tgsi = NULL;
-      st_store_tgsi_in_disk_cache(st, &stfp->Base);
+      st_store_ir_in_disk_cache(st, &stfp->Base, false);
    }
 
    return stfp->tgsi.tokens != NULL;
@@ -1411,7 +1411,7 @@ st_translate_program_common(struct st_context *st,
                                    outputMapping,
                                    &out_state->stream_output);
 
-   st_store_tgsi_in_disk_cache(st, prog);
+   st_store_ir_in_disk_cache(st, prog, false);
 
    if ((ST_DEBUG & DEBUG_TGSI) && (ST_DEBUG & DEBUG_MESA)) {
       _mesa_print_program(prog);
