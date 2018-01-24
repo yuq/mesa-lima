@@ -4558,9 +4558,6 @@ static LLVMValueRef radv_load_ssbo(struct ac_shader_abi *abi,
 {
 	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
 
-	if (write && ctx->stage == MESA_SHADER_FRAGMENT)
-		ctx->shader_info->fs.writes_memory = true;
-
 	return LLVMBuildLoad(ctx->builder, buffer_ptr, "");
 }
 
@@ -4590,9 +4587,6 @@ static LLVMValueRef radv_get_sampler_desc(struct ac_shader_abi *abi,
 	LLVMTypeRef type;
 
 	assert(base_index < layout->binding_count);
-
-	if (write && ctx->stage == MESA_SHADER_FRAGMENT)
-		ctx->shader_info->fs.writes_memory = true;
 
 	switch (desc_type) {
 	case AC_DESC_IMAGE:
