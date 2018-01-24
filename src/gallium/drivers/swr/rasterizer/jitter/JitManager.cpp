@@ -421,8 +421,7 @@ void JitManager::DumpToFile(Function *f, const char *fileName)
         sprintf(fName, "%s.%s.ll", funcName, fileName);
 #endif
         raw_fd_ostream fd(fName, EC, llvm::sys::fs::F_None);
-        Module* pModule = f->getParent();
-        pModule->print(fd, nullptr);
+        f->print(fd, nullptr);
 
 #if defined(_WIN32)
         sprintf(fName, "%s\\cfg.%s.%s.dot", outDir.c_str(), funcName, fileName);
