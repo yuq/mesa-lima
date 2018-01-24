@@ -165,6 +165,18 @@ class VkEnum(object):
         if value not in self.values:
             self.values[value] = name
 
+    def add_value_from_xml(self, elem, extension=None):
+        if 'value' in elem.attrib:
+            self.add_value(elem.attrib['name'],
+                           value=int(elem.attrib['value']))
+        else:
+            error = 'dir' in elem.attrib and elem.attrib['dir'] == '-'
+            print(elem.attrib['name'])
+            self.add_value(elem.attrib['name'],
+                           extension=extension,
+                           offset=int(elem.attrib['offset']),
+                           error=error)
+
 
 def parse_xml(enum_factory, ext_factory, filename):
     """Parse the XML file. Accumulate results into the factories.
@@ -178,8 +190,7 @@ def parse_xml(enum_factory, ext_factory, filename):
     for enum_type in xml.findall('./enums[@type="enum"]'):
         enum = enum_factory(enum_type.attrib['name'])
         for value in enum_type.findall('./enum'):
-            enum.add_value(value.attrib['name'],
-                           value=int(value.attrib['value']))
+            enum.add_value_from_xml(value)
 
     for ext_elem in xml.findall('./extensions/extension[@supported="vulkan"]'):
         extension = ext_factory(ext_elem.attrib['name'],
@@ -187,17 +198,8 @@ def parse_xml(enum_factory, ext_factory, filename):
 
         for value in ext_elem.findall('./require/enum[@extends]'):
             enum = enum_factory.get(value.attrib['extends'])
-            if enum is None:
-                continue
-            if 'value' in value.attrib:
-                enum.add_value(value.attrib['name'],
-                               value=int(value.attrib['value']))
-            else:
-                error = 'dir' in value.attrib and value.attrib['dir'] == '-'
-                enum.add_value(value.attrib['name'],
-                               extension=extension,
-                               offset=int(value.attrib['offset']),
-                               error=error)
+            if enum is not None:
+                enum.add_value_from_xml(value, extension)
 
 
 def main():
