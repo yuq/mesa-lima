@@ -1239,6 +1239,7 @@ struct radv_pipeline {
 			struct radv_binning_state bin;
 			uint32_t db_shader_control;
 			uint32_t shader_z_format;
+			uint32_t spi_baryc_cntl;
 			unsigned prim;
 			unsigned gs_out;
 			uint32_t vgt_gs_mode;

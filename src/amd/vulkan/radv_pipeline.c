@@ -861,6 +861,8 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 			S_028BE0_MAX_SAMPLE_DIST(radv_cayman_get_maxdist(log_samples)) |
 			S_028BE0_MSAA_EXPOSED_SAMPLES(log_samples); /* CM_R_028BE0_PA_SC_AA_CONFIG */
 		ms->pa_sc_mode_cntl_1 |= S_028A4C_PS_ITER_SAMPLE(ps_iter_samples > 1);
+		if (ps_iter_samples > 1)
+			pipeline->graphics.spi_baryc_cntl |= S_0286E0_POS_FLOAT_LOCATION(2);
 	}
 
 	const struct VkPipelineRasterizationStateRasterizationOrderAMD *raster_order =
@@ -2449,6 +2451,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	                    radv_generate_graphics_pipeline_key(pipeline, pCreateInfo, has_view_index),
 	                    pStages);
 
+	pipeline->graphics.spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
 	radv_pipeline_init_depth_stencil_state(pipeline, pCreateInfo, extra);
 	radv_pipeline_init_raster_state(pipeline, pCreateInfo);
 	radv_pipeline_init_multisample_state(pipeline, pCreateInfo);
