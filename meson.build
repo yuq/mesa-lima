@@ -774,7 +774,7 @@ foreach a : ['-Werror=pointer-arith', '-Werror=vla']
 endforeach
 
 if host_machine.cpu_family().startswith('x86')
-  pre_args += '-DHAVE_SSE41'
+  pre_args += '-DUSE_SSE41'
   with_sse41 = true
   sse41_args = ['-msse4.1']
 
