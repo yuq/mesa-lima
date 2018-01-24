@@ -215,7 +215,7 @@ string_map_lookup(const char *str)
 /** Trampoline entrypoints for all device functions */
 
 % for e in entrypoints:
-  % if e.params[0].type not in ('VkDevice', 'VkCommandBuffer'):
+  % if not e.is_device_entrypoint():
     <% continue %>
   % endif
   % if e.guard is not None:
@@ -239,7 +239,7 @@ string_map_lookup(const char *str)
 
 const struct anv_dispatch_table anv_tramp_dispatch_table = {
 % for e in entrypoints:
-  % if e.params[0].type not in ('VkDevice', 'VkCommandBuffer'):
+  % if not e.is_device_entrypoint():
     <% continue %>
   % endif
   % if e.guard is not None:
@@ -405,6 +405,9 @@ class Entrypoint(object):
         # Extensions which require this entrypoint
         self.core_version = None
         self.extension = None
+
+    def is_device_entrypoint(self):
+        return self.params[0].type in ('VkDevice', 'VkCommandBuffer')
 
     def prefixed_name(self, prefix):
         assert self.name.startswith('vk')
