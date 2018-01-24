@@ -133,8 +133,7 @@ vc5_resource_transfer_unmap(struct pipe_context *pctx,
                                               slice->stride,
                                               trans->map, ptrans->stride,
                                               slice->tiling, rsc->cpp,
-                                              u_minify(rsc->base.height0,
-                                                       ptrans->level),
+                                              slice->size / slice->stride,
                                               &ptrans->box);
                 }
                 free(trans->map);
@@ -265,7 +264,7 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
                                              ptrans->box.z * rsc->cube_map_stride,
                                              slice->stride,
                                              slice->tiling, rsc->cpp,
-                                             rsc->base.height0,
+                                             slice->size / slice->stride,
                                              &ptrans->box);
                 }
                 return trans->map;
