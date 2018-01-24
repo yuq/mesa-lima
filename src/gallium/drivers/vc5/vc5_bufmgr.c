@@ -348,6 +348,18 @@ vc5_bo_open_handle(struct vc5_screen *screen,
         bo->name = "winsys";
         bo->private = false;
 
+        struct drm_vc5_get_bo_offset get = {
+                .handle = handle,
+        };
+        int ret = vc5_ioctl(screen->fd, DRM_IOCTL_VC5_GET_BO_OFFSET, &get);
+        if (ret) {
+                fprintf(stderr, "Failed to get BO offset: %s\n",
+                        strerror(errno));
+                free(bo);
+                return NULL;
+        }
+        bo->offset = get.offset;
+
 #ifdef USE_VC5_SIMULATOR
         vc5_simulator_open_from_handle(screen->fd, winsys_stride,
                                        bo->handle, bo->size);
