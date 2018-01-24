@@ -444,7 +444,7 @@ vbo_bind_arrays(struct gl_context *ctx)
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_exec_context *exec = &vbo->exec;
 
-   vbo_draw_method(vbo, DRAW_ARRAYS);
+   _mesa_set_drawing_arrays(ctx, vbo->exec.array.inputs);
 
    if (exec->array.recalculate_inputs) {
       recalculate_input_bindings(ctx);

@@ -99,43 +99,6 @@ get_vp_mode( struct gl_context *ctx )
 
 
 /**
- * This is called by glBegin, glDrawArrays and glDrawElements (and
- * variations of those calls).  When we transition from immediate mode
- * drawing to array drawing we need to invalidate the array state.
- *
- * glBegin/End builds vertex arrays.  Those arrays may look identical
- * to glDrawArrays arrays except that the position of the elements may
- * be different.  For example, arrays of (position3v, normal3f) vs. arrays
- * of (normal3f, position3f).  So we need to make sure we notify drivers
- * that arrays may be changing.
- */
-static inline void
-vbo_draw_method(struct vbo_context *vbo, gl_draw_method method)
-{
-   struct gl_context *ctx = vbo->exec.ctx;
-
-   if (ctx->Array.DrawMethod != method) {
-      switch (method) {
-      case DRAW_ARRAYS:
-         ctx->Array._DrawArrays = vbo->exec.array.inputs;
-         break;
-      case DRAW_BEGIN_END:
-         ctx->Array._DrawArrays = vbo->exec.vtx.inputs;
-         break;
-      case DRAW_DISPLAY_LIST:
-         ctx->Array._DrawArrays = vbo->save.inputs;
-         break;
-      default:
-         unreachable("Bad VBO drawing method");
-      }
-
-      ctx->NewDriverState |= ctx->DriverFlags.NewArray;
-      ctx->Array.DrawMethod = method;
-   }
-}
-
-
-/**
  * Return if format is integer. The immediate mode commands only emit floats
  * for non-integer types, thus everything else is integer.
  */

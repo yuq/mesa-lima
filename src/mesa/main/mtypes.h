@@ -1604,19 +1604,6 @@ struct gl_vertex_array_object
 
 
 /**
- * Used to signal when transitioning from one kind of drawing method
- * to another.
- */
-typedef enum
-{
-   DRAW_NONE,          /**< Initial value only */
-   DRAW_BEGIN_END,
-   DRAW_DISPLAY_LIST,
-   DRAW_ARRAYS
-} gl_draw_method;
-
-
-/**
  * Enum for the OpenGL APIs we know about and may support.
  *
  * NOTE: This must match the api_enum table in
@@ -1665,9 +1652,6 @@ struct gl_array_attrib
    GLboolean _PrimitiveRestart;
    GLuint RestartIndex;
    /*@}*/
-
-   /** One of the DRAW_xxx flags, not consumed by drivers */
-   gl_draw_method DrawMethod;
 
    /* GL_ARB_vertex_buffer_object */
    struct gl_buffer_object *ArrayBufferObj;
