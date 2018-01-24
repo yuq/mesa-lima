@@ -4561,8 +4561,14 @@ static LLVMValueRef radv_load_ssbo(struct ac_shader_abi *abi,
 				   LLVMValueRef buffer_ptr, bool write)
 {
 	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
+	LLVMValueRef result;
 
-	return LLVMBuildLoad(ctx->builder, buffer_ptr, "");
+	LLVMSetMetadata(buffer_ptr, ctx->ac.uniform_md_kind, ctx->ac.empty_md);
+
+	result = LLVMBuildLoad(ctx->builder, buffer_ptr, "");
+	LLVMSetMetadata(result, ctx->ac.invariant_load_md_kind, ctx->ac.empty_md);
+
+	return result;
 }
 
 static LLVMValueRef radv_load_ubo(struct ac_shader_abi *abi, LLVMValueRef buffer_ptr)
