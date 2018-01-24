@@ -1,4 +1,4 @@
-# Copyright (C) 2014-2016 Intel Corporation.   All Rights Reserved.
+# Copyright (C) 2014-2018 Intel Corporation.   All Rights Reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
