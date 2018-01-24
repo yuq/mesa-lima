@@ -373,6 +373,8 @@ if with_dri or with_gallium
   endif
 endif
 
+prog_pkgconfig = find_program('pkg-config')
+
 dep_vdpau = []
 _vdpau = get_option('gallium-vdpau')
 if _vdpau == 'auto'
@@ -404,7 +406,7 @@ else
 endif
 if with_gallium_vdpau
   dep_vdpau = declare_dependency(
-    compile_args : dep_vdpau.get_pkgconfig_variable('cflags').split()
+    compile_args : run_command(prog_pkgconfig, ['vdpau', '--cflags']).stdout().split()
   )
 endif
 
@@ -445,7 +447,7 @@ else
 endif
 if with_gallium_xvmc
   dep_xvmc = declare_dependency(
-    compile_args : dep_xvmc.get_pkgconfig_variable('cflags').split()
+    compile_args : run_command(prog_pkgconfig, ['xvmc', '--cflags']).stdout().split()
   )
 endif
 
@@ -508,7 +510,7 @@ if with_gallium_omx
 endif
 if with_gallium_omx
   dep_omx = declare_dependency(
-    compile_args : dep_omx.get_pkgconfig_variable('cflags').split()
+    compile_args : run_command(prog_pkgconfig, ['libomxil-bellagio', '--cflags']).stdout().split()
   )
 endif
 
@@ -541,7 +543,7 @@ else
 endif
 if with_gallium_va
   dep_va = declare_dependency(
-    compile_args : dep_va.get_pkgconfig_variable('cflags').split()
+    compile_args : run_command(prog_pkgconfig, ['libva', '--cflags']).stdout().split()
   )
 endif
 
