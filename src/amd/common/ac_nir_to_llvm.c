@@ -1913,18 +1913,24 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 	case nir_op_fmax:
 		result = emit_intrin_2f_param(&ctx->ac, "llvm.maxnum",
 		                              ac_to_float_type(&ctx->ac, def_type), src[0], src[1]);
-		if (instr->dest.dest.ssa.bit_size == 32)
+		if (ctx->ac.chip_class < GFX9 &&
+		    instr->dest.dest.ssa.bit_size == 32) {
+			/* Only pre-GFX9 chips do not flush denorms. */
 			result = emit_intrin_1f_param(&ctx->ac, "llvm.canonicalize",
 						      ac_to_float_type(&ctx->ac, def_type),
 						      result);
+		}
 		break;
 	case nir_op_fmin:
 		result = emit_intrin_2f_param(&ctx->ac, "llvm.minnum",
 		                              ac_to_float_type(&ctx->ac, def_type), src[0], src[1]);
-		if (instr->dest.dest.ssa.bit_size == 32)
+		if (ctx->ac.chip_class < GFX9 &&
+		    instr->dest.dest.ssa.bit_size == 32) {
+			/* Only pre-GFX9 chips do not flush denorms. */
 			result = emit_intrin_1f_param(&ctx->ac, "llvm.canonicalize",
 						      ac_to_float_type(&ctx->ac, def_type),
 						      result);
+		}
 		break;
 	case nir_op_ffma:
 		result = emit_intrin_3f_param(&ctx->ac, "llvm.fmuladd",
