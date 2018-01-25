@@ -1694,6 +1694,7 @@ struct anv_attachment_state {
  */
 struct anv_cmd_pipeline_state {
    struct anv_pipeline *pipeline;
+   struct anv_pipeline_layout *layout;
 
    struct anv_descriptor_set *descriptors[MAX_SETS];
    uint32_t dynamic_offsets[MAX_DYNAMIC_BUFFERS];

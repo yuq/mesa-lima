@@ -1476,7 +1476,6 @@ anv_descriptor_for_binding(const struct anv_cmd_pipeline_state *pipe_state,
 
 static uint32_t
 dynamic_offset_for_binding(const struct anv_cmd_pipeline_state *pipe_state,
-                           const struct anv_pipeline *pipeline,
                            const struct anv_pipeline_binding *binding)
 {
    assert(binding->set < MAX_SETS);
@@ -1484,7 +1483,7 @@ dynamic_offset_for_binding(const struct anv_cmd_pipeline_state *pipe_state,
       pipe_state->descriptors[binding->set];
 
    uint32_t dynamic_offset_idx =
-      pipeline->layout->set[binding->set].dynamic_offset_start +
+      pipe_state->layout->set[binding->set].dynamic_offset_start +
       set->layout->binding[binding->binding].dynamic_offset_index +
       binding->index;
 
@@ -1672,7 +1671,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
          /* Compute the offset within the buffer */
          uint32_t dynamic_offset =
-            dynamic_offset_for_binding(pipe_state, pipeline, binding);
+            dynamic_offset_for_binding(pipe_state, binding);
          uint64_t offset = desc->offset + dynamic_offset;
          /* Clamp to the buffer size */
          offset = MIN2(offset, desc->buffer->size);
@@ -1947,8 +1946,7 @@ cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer,
                   assert(desc->type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC);
 
                   uint32_t dynamic_offset =
-                     dynamic_offset_for_binding(&gfx_state->base,
-                                                pipeline, binding);
+                     dynamic_offset_for_binding(&gfx_state->base, binding);
                   uint32_t buf_offset =
                      MIN2(desc->offset + dynamic_offset, desc->buffer->size);
                   uint32_t buf_range =

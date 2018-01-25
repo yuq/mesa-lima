@@ -547,6 +547,14 @@ anv_cmd_buffer_bind_descriptor_set(struct anv_cmd_buffer *cmd_buffer,
       cmd_buffer->state.descriptors_dirty |=
          set_layout->shader_stages & VK_SHADER_STAGE_ALL_GRAPHICS;
    }
+
+   /* Pipeline layout objects are required to live at least while any command
+    * buffers that use them are in recording state. We need to grab a reference
+    * to the pipeline layout being bound here so we can compute correct dynamic
+    * offsets for VK_DESCRIPTOR_TYPE_*_DYNAMIC in dynamic_offset_for_binding()
+    * when we record draw commands that come after this.
+    */
+   pipe_state->layout = layout;
 }
 
 void anv_CmdBindDescriptorSets(
