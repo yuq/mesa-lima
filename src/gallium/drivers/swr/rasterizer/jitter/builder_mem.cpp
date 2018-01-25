@@ -222,7 +222,7 @@ namespace SwrJit
     /// @param vIndices - SIMD wide value of VB byte offsets
     /// @param vMask - SIMD wide mask that controls whether to access memory or the src values
     /// @param scale - value to scale indices by
-    Value *Builder::GATHERDD(Value* vSrc, Value* pBase, Value* vIndices, Value* vMask, uint8_t scale)
+    Value *Builder::GATHERDD(Value* vSrc, Value* pBase, Value* vIndices, Value* vMask, uint8_t scale, Value *pDrawContext)
     {
         Value* vGather;
 
@@ -346,21 +346,21 @@ namespace SwrJit
     }
 
     void Builder::Gather4(const SWR_FORMAT format, Value* pSrcBase, Value* byteOffsets,
-        Value* mask, Value* vGatherComponents[], bool bPackedOutput)
+        Value* mask, Value* vGatherComponents[], bool bPackedOutput, Value *pDrawContext)
     {
         const SWR_FORMAT_INFO &info = GetFormatInfo(format);
         if (info.type[0] == SWR_TYPE_FLOAT && info.bpc[0] == 32)
         {
-            GATHER4PS(info, pSrcBase, byteOffsets, mask, vGatherComponents, bPackedOutput);
+            GATHER4PS(info, pSrcBase, byteOffsets, mask, vGatherComponents, bPackedOutput, pDrawContext);
         }
         else
         {
-            GATHER4DD(info, pSrcBase, byteOffsets, mask, vGatherComponents, bPackedOutput);
+            GATHER4DD(info, pSrcBase, byteOffsets, mask, vGatherComponents, bPackedOutput, pDrawContext);
         }
     }
 
     void Builder::GATHER4PS(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
-        Value* vMask, Value* vGatherComponents[], bool bPackedOutput)
+        Value* vMask, Value* vGatherComponents[], bool bPackedOutput, Value *pDrawContext)
     {
         switch (info.bpp / info.numComps)
         {
@@ -427,7 +427,7 @@ namespace SwrJit
     }
 
     void Builder::GATHER4DD(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
-        Value* vMask, Value* vGatherComponents[], bool bPackedOutput)
+        Value* vMask, Value* vGatherComponents[], bool bPackedOutput, Value* pDrawContext)
     {
         switch (info.bpp / info.numComps)
         {
