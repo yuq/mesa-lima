@@ -913,8 +913,7 @@ void anv_CmdPushDescriptorSetKHR(
 
    assert(_set < MAX_SETS);
 
-   const struct anv_descriptor_set_layout *set_layout =
-      layout->set[_set].layout;
+   struct anv_descriptor_set_layout *set_layout = layout->set[_set].layout;
 
    struct anv_push_descriptor_set *push_set =
       anv_cmd_buffer_get_push_descriptor_set(cmd_buffer,
@@ -1006,8 +1005,7 @@ void anv_CmdPushDescriptorSetWithTemplateKHR(
 
    assert(_set < MAX_PUSH_DESCRIPTORS);
 
-   const struct anv_descriptor_set_layout *set_layout =
-      layout->set[_set].layout;
+   struct anv_descriptor_set_layout *set_layout = layout->set[_set].layout;
 
    struct anv_push_descriptor_set *push_set =
       anv_cmd_buffer_get_push_descriptor_set(cmd_buffer,

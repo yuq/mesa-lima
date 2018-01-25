@@ -1199,6 +1199,9 @@ struct anv_descriptor_set_binding_layout {
 };
 
 struct anv_descriptor_set_layout {
+   /* Descriptor set layouts can be destroyed at almost any time */
+   uint32_t ref_cnt;
+
    /* Number of bindings in this descriptor set */
    uint16_t binding_count;
 
@@ -1217,6 +1220,22 @@ struct anv_descriptor_set_layout {
    /* Bindings in this descriptor set */
    struct anv_descriptor_set_binding_layout binding[0];
 };
+
+static inline void
+anv_descriptor_set_layout_ref(struct anv_descriptor_set_layout *layout)
+{
+   assert(layout && layout->ref_cnt >= 1);
+   p_atomic_inc(&layout->ref_cnt);
+}
+
+static inline void
+anv_descriptor_set_layout_unref(struct anv_device *device,
+                                struct anv_descriptor_set_layout *layout)
+{
+   assert(layout && layout->ref_cnt >= 1);
+   if (p_atomic_dec_zero(&layout->ref_cnt))
+      vk_free(&device->alloc, layout);
+}
 
 struct anv_descriptor {
    VkDescriptorType type;
@@ -1239,7 +1258,7 @@ struct anv_descriptor {
 };
 
 struct anv_descriptor_set {
-   const struct anv_descriptor_set_layout *layout;
+   struct anv_descriptor_set_layout *layout;
    uint32_t size;
    uint32_t buffer_count;
    struct anv_buffer_view *buffer_views;
@@ -1363,7 +1382,7 @@ anv_descriptor_set_write_template(struct anv_descriptor_set *set,
 VkResult
 anv_descriptor_set_create(struct anv_device *device,
                           struct anv_descriptor_pool *pool,
-                          const struct anv_descriptor_set_layout *layout,
+                          struct anv_descriptor_set_layout *layout,
                           struct anv_descriptor_set **out_set);
 
 void

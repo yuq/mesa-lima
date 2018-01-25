@@ -57,16 +57,21 @@ VkResult anv_CreateDescriptorSetLayout(
    struct anv_descriptor_set_binding_layout *bindings;
    struct anv_sampler **samplers;
 
+   /* We need to allocate decriptor set layouts off the device allocator
+    * with DEVICE scope because they are reference counted and may not be
+    * destroyed when vkDestroyDescriptorSetLayout is called.
+    */
    ANV_MULTIALLOC(ma);
    anv_multialloc_add(&ma, &set_layout, 1);
    anv_multialloc_add(&ma, &bindings, max_binding + 1);
    anv_multialloc_add(&ma, &samplers, immutable_sampler_count);
 
-   if (!anv_multialloc_alloc2(&ma, &device->alloc, pAllocator,
-                              VK_SYSTEM_ALLOCATION_SCOPE_OBJECT))
+   if (!anv_multialloc_alloc(&ma, &device->alloc,
+                             VK_SYSTEM_ALLOCATION_SCOPE_DEVICE))
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    memset(set_layout, 0, sizeof(*set_layout));
+   set_layout->ref_cnt = 1;
    set_layout->binding_count = max_binding + 1;
 
    for (uint32_t b = 0; b <= max_binding; b++) {
@@ -204,7 +209,7 @@ void anv_DestroyDescriptorSetLayout(
    if (!set_layout)
       return;
 
-   vk_free2(&device->alloc, pAllocator, set_layout);
+   anv_descriptor_set_layout_unref(device, set_layout);
 }
 
 static void
@@ -246,6 +251,7 @@ VkResult anv_CreatePipelineLayout(
       ANV_FROM_HANDLE(anv_descriptor_set_layout, set_layout,
                       pCreateInfo->pSetLayouts[set]);
       layout->set[set].layout = set_layout;
+      anv_descriptor_set_layout_ref(set_layout);
 
       layout->set[set].dynamic_offset_start = dynamic_offset_count;
       for (uint32_t b = 0; b < set_layout->binding_count; b++) {
@@ -289,6 +295,9 @@ void anv_DestroyPipelineLayout(
 
    if (!pipeline_layout)
       return;
+
+   for (uint32_t i = 0; i < pipeline_layout->num_sets; i++)
+      anv_descriptor_set_layout_unref(device, pipeline_layout->set[i].layout);
 
    vk_free2(&device->alloc, pAllocator, pipeline_layout);
 }
@@ -423,7 +432,7 @@ struct surface_state_free_list_entry {
 VkResult
 anv_descriptor_set_create(struct anv_device *device,
                           struct anv_descriptor_pool *pool,
-                          const struct anv_descriptor_set_layout *layout,
+                          struct anv_descriptor_set_layout *layout,
                           struct anv_descriptor_set **out_set)
 {
    struct anv_descriptor_set *set;
@@ -455,8 +464,10 @@ anv_descriptor_set_create(struct anv_device *device,
       }
    }
 
-   set->size = size;
    set->layout = layout;
+   anv_descriptor_set_layout_ref(layout);
+
+   set->size = size;
    set->buffer_views =
       (struct anv_buffer_view *) &set->descriptors[layout->size];
    set->buffer_count = layout->buffer_count;
@@ -512,6 +523,8 @@ anv_descriptor_set_destroy(struct anv_device *device,
                            struct anv_descriptor_pool *pool,
                            struct anv_descriptor_set *set)
 {
+   anv_descriptor_set_layout_unref(device, set->layout);
+
    /* Put the buffer view surface state back on the free list. */
    for (uint32_t b = 0; b < set->buffer_count; b++) {
       struct surface_state_free_list_entry *entry =
