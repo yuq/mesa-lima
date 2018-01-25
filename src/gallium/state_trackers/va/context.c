@@ -263,16 +263,18 @@ vlVaCreateContext(VADriverContextP ctx, VAConfigID config_id, int picture_width,
 
      case PIPE_VIDEO_FORMAT_HEVC:
          context->templat.max_references = num_render_targets;
-         context->desc.h265.pps = CALLOC_STRUCT(pipe_h265_pps);
-         if (!context->desc.h265.pps) {
-            FREE(context);
-            return VA_STATUS_ERROR_ALLOCATION_FAILED;
-         }
-         context->desc.h265.pps->sps = CALLOC_STRUCT(pipe_h265_sps);
-         if (!context->desc.h265.pps->sps) {
-            FREE(context->desc.h265.pps);
-            FREE(context);
-            return VA_STATUS_ERROR_ALLOCATION_FAILED;
+         if (config->entrypoint != PIPE_VIDEO_ENTRYPOINT_ENCODE) {
+            context->desc.h265.pps = CALLOC_STRUCT(pipe_h265_pps);
+            if (!context->desc.h265.pps) {
+               FREE(context);
+               return VA_STATUS_ERROR_ALLOCATION_FAILED;
+            }
+            context->desc.h265.pps->sps = CALLOC_STRUCT(pipe_h265_sps);
+            if (!context->desc.h265.pps->sps) {
+               FREE(context->desc.h265.pps);
+               FREE(context);
+               return VA_STATUS_ERROR_ALLOCATION_FAILED;
+            }
          }
          break;
 
