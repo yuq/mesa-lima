@@ -2403,10 +2403,14 @@ struct anv_image {
    VkImageUsageFlags usage; /**< Superset of VkImageCreateInfo::usage. */
    VkImageTiling tiling; /** VkImageCreateInfo::tiling */
 
-   /**
-    * DRM format modifier for this image or DRM_FORMAT_MOD_INVALID.
+   /** True if this is needs to be bound to an appropriately tiled BO.
+    *
+    * When not using modifiers, consumers such as X11, Wayland, and KMS need
+    * the tiling passed via I915_GEM_SET_TILING.  When exporting these buffers
+    * we require a dedicated allocation so that we can know to allocate a
+    * tiled buffer.
     */
-   uint64_t drm_format_mod;
+   bool needs_set_tiling;
 
    VkDeviceSize size;
    uint32_t alignment;

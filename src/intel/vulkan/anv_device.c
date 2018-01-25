@@ -1835,21 +1835,10 @@ VkResult anv_AllocateMemory(
       if (dedicated_info && dedicated_info->image != VK_NULL_HANDLE) {
          ANV_FROM_HANDLE(anv_image, image, dedicated_info->image);
 
-         /* For images using modifiers, we require a dedicated allocation
-          * and we set the BO tiling to match the tiling of the underlying
-          * modifier.  This is a bit unfortunate as this is completely
-          * pointless for Vulkan.  However, GL needs to be able to map things
-          * so it needs the tiling to be set.  The only way to do this in a
-          * non-racy way is to set the tiling in the creator of the BO so that
-          * makes it our job.
-          *
-          * One of these days, once the GL driver learns to not map things
-          * through the GTT in random places, we can drop this and start
-          * allowing multiple modified images in the same BO.
+         /* Some legacy (non-modifiers) consumers need the tiling to be set on
+          * the BO.  In this case, we have a dedicated allocation.
           */
-         if (image->drm_format_mod != DRM_FORMAT_MOD_INVALID) {
-            assert(isl_drm_modifier_get_info(image->drm_format_mod)->tiling ==
-                   image->planes[0].surface.isl.tiling);
+         if (image->needs_set_tiling) {
             const uint32_t i915_tiling =
                isl_tiling_to_i915_tiling(image->planes[0].surface.isl.tiling);
             int ret = anv_gem_set_tiling(device, mem->bo->gem_handle,
@@ -2217,8 +2206,9 @@ void anv_GetImageMemoryRequirements2KHR(
       switch (ext->sType) {
       case VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS_KHR: {
          VkMemoryDedicatedRequirementsKHR *requirements = (void *)ext;
-         if (image->drm_format_mod != DRM_FORMAT_MOD_INVALID) {
-            /* Require a dedicated allocation for images with modifiers.
+         if (image->needs_set_tiling) {
+            /* If we need to set the tiling for external consumers, we need a
+             * dedicated allocation.
              *
              * See also anv_AllocateMemory.
              */
