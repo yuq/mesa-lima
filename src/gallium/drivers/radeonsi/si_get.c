@@ -583,8 +583,10 @@ static int si_get_video_param(struct pipe_screen *screen,
 	if (entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
 		switch (param) {
 		case PIPE_VIDEO_CAP_SUPPORTED:
-			return codec == PIPE_VIDEO_FORMAT_MPEG4_AVC &&
+			return (codec == PIPE_VIDEO_FORMAT_MPEG4_AVC &&
 				(si_vce_is_fw_version_supported(sscreen) ||
+				sscreen->info.family == CHIP_RAVEN)) ||
+				(profile == PIPE_VIDEO_PROFILE_HEVC_MAIN &&
 				sscreen->info.family == CHIP_RAVEN);
 		case PIPE_VIDEO_CAP_NPOT_TEXTURES:
 			return 1;
