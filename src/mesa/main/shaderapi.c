@@ -1071,7 +1071,7 @@ set_shader_source(struct gl_shader *sh, const GLchar *source)
     */
    _mesa_shader_spirv_data_reference(&sh->spirv_data, NULL);
 
-   if (sh->CompileStatus == compile_skipped && !sh->FallbackSource) {
+   if (sh->CompileStatus == COMPILE_SKIPPED && !sh->FallbackSource) {
       /* If shader was previously compiled back-up the source in case of cache
        * fallback.
        */
@@ -1114,7 +1114,7 @@ _mesa_compile_shader(struct gl_context *ctx, struct gl_shader *sh)
       /* If the user called glCompileShader without first calling
        * glShaderSource, we should fail to compile, but not raise a GL_ERROR.
        */
-      sh->CompileStatus = compile_failure;
+      sh->CompileStatus = COMPILE_FAILURE;
    } else {
       if (ctx->_Shader->Flags & GLSL_DUMP) {
          _mesa_log("GLSL source for %s shader %d:\n",

@@ -2609,10 +2609,10 @@ struct gl_linked_shader
  */
 enum gl_compile_status
 {
-   compile_failure = 0,
-   compile_success,
-   compile_skipped,
-   compiled_no_opts
+   COMPILE_FAILURE = 0,
+   COMPILE_SUCCESS,
+   COMPILE_SKIPPED,
+   COMPILED_NO_OPTS
 };
 
 /**
