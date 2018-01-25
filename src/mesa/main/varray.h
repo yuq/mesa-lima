@@ -28,11 +28,9 @@
 #define VARRAY_H
 
 
-#include "glheader.h"
+#include "mtypes.h"
 #include "bufferobj.h"
 
-struct gl_vertex_array;
-struct gl_context;
 
 /**
  * Returns a pointer to the vertex attribute data in a client array,
