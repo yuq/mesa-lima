@@ -555,10 +555,12 @@ static bool needs_view_index_sgpr(struct nir_to_llvm_context *ctx,
 	case MESA_SHADER_TESS_EVAL:
 		if (ctx->shader_info->info.needs_multiview_view_index || (!ctx->options->key.tes.as_es && ctx->options->key.has_multiview_view_index))
 			return true;
+		break;
 	case MESA_SHADER_GEOMETRY:
 	case MESA_SHADER_TESS_CTRL:
 		if (ctx->shader_info->info.needs_multiview_view_index)
 			return true;
+		break;
 	default:
 		break;
 	}
