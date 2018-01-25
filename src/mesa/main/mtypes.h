@@ -1541,7 +1541,7 @@ struct gl_vertex_array_object
    /**
     * Derived vertex attribute arrays
     *
-    * This is a legacy data structure created from gl_vertex_attrib_array and
+    * This is a legacy data structure created from gl_array_attributes and
     * gl_vertex_buffer_binding, for compatibility with existing driver code.
     */
    struct gl_vertex_array _VertexAttrib[VERT_ATTRIB_MAX];

@@ -51,7 +51,7 @@ _mesa_vertex_attrib_address(const struct gl_array_attributes *array,
 
 /**
  * Sets the fields in a gl_vertex_array to values derived from a
- * gl_vertex_attrib_array and a gl_vertex_buffer_binding.
+ * gl_array_attributes and a gl_vertex_buffer_binding.
  */
 static inline void
 _mesa_update_client_array(struct gl_context *ctx,
