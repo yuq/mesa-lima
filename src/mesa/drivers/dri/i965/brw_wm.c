@@ -181,7 +181,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
 
    if (program == NULL) {
       if (!fp->program.is_arb_asm) {
-         fp->program.sh.data->LinkStatus = linking_failure;
+         fp->program.sh.data->LinkStatus = LINKING_FAILURE;
          ralloc_strcat(&fp->program.sh.data->InfoLog, error_str);
       }
 

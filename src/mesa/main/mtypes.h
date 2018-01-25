@@ -2603,7 +2603,7 @@ struct gl_linked_shader
 
 
 /**
- * Compile status enum. compile_skipped is used to indicate the compile
+ * Compile status enum. COMPILE_SKIPPED is used to indicate the compile
  * was skipped due to the shader matching one that's been seen before by
  * the on-disk cache.
  */
@@ -2895,14 +2895,14 @@ struct gl_program_resource
 };
 
 /**
- * Link status enum. linking_skipped is used to indicate linking
+ * Link status enum. LINKING_SKIPPED is used to indicate linking
  * was skipped due to the shader being loaded from the on-disk cache.
  */
 enum gl_link_status
 {
-   linking_failure = 0,
-   linking_success,
-   linking_skipped
+   LINKING_FAILURE = 0,
+   LINKING_SUCCESS,
+   LINKING_SKIPPED
 };
 
 /**

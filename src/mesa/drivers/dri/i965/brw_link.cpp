@@ -225,7 +225,7 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
    unsigned int stage;
    struct shader_info *infos[MESA_SHADER_STAGES] = { 0, };
 
-   if (shProg->data->LinkStatus == linking_skipped)
+   if (shProg->data->LinkStatus == LINKING_SKIPPED)
       return GL_TRUE;
 
    for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {

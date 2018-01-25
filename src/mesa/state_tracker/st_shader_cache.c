@@ -289,7 +289,7 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
    /* If we didn't load the GLSL metadata from cache then we could not have
     * loaded the tgsi either.
     */
-   if (prog->data->LinkStatus != linking_skipped)
+   if (prog->data->LinkStatus != LINKING_SKIPPED)
       return false;
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {

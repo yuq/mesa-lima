@@ -248,7 +248,7 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
    }
 
    /* This is used to flag a shader retrieved from cache */
-   prog->data->LinkStatus = linking_skipped;
+   prog->data->LinkStatus = LINKING_SKIPPED;
 
    /* Since the program load was successful, CompileStatus of all shaders at
     * this point should normally be compile_skipped. However because of how
