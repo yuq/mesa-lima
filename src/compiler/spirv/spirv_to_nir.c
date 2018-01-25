@@ -207,6 +207,8 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_INT16:
    case GLSL_TYPE_UINT16:
+   case GLSL_TYPE_UINT8:
+   case GLSL_TYPE_INT8:
    case GLSL_TYPE_INT64:
    case GLSL_TYPE_UINT64:
    case GLSL_TYPE_BOOL:
@@ -1009,6 +1011,9 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       case 16:
          val->type->type = (signedness ? glsl_int16_t_type() : glsl_uint16_t_type());
          break;
+      case 8:
+         val->type->type = (signedness ? glsl_int8_t_type() : glsl_uint8_t_type());
+         break;
       default:
          vtn_fail("Invalid int bit size");
       }
@@ -1283,6 +1288,8 @@ vtn_null_constant(struct vtn_builder *b, const struct glsl_type *type)
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_INT16:
    case GLSL_TYPE_UINT16:
+   case GLSL_TYPE_UINT8:
+   case GLSL_TYPE_INT8:
    case GLSL_TYPE_INT64:
    case GLSL_TYPE_UINT64:
    case GLSL_TYPE_BOOL:
@@ -1422,6 +1429,9 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       case 16:
          val->constant->values->u16[0] = w[3];
          break;
+      case 8:
+         val->constant->values->u8[0] = w[3];
+         break;
       default:
          vtn_fail("Unsupported SpvOpConstant bit size");
       }
@@ -1443,6 +1453,9 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
          break;
       case 16:
          val->constant->values[0].u16[0] = get_specialization(b, val, w[3]);
+         break;
+      case 8:
+         val->constant->values[0].u8[0] = get_specialization(b, val, w[3]);
          break;
       default:
          vtn_fail("Unsupported SpvOpSpecConstant bit size");
@@ -1475,6 +1488,9 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                break;
             case 16:
                val->constant->values[0].u16[i] = elems[i]->values[0].u16[0];
+               break;
+            case 8:
+               val->constant->values[0].u8[i] = elems[i]->values[0].u8[0];
                break;
             default:
                vtn_fail("Invalid SpvOpConstantComposite bit size");
@@ -1646,6 +1662,9 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                   case 16:
                      val->constant->values[0].u16[i] = (*c)->values[col].u16[elem + i];
                      break;
+                  case 8:
+                     val->constant->values[0].u8[i] = (*c)->values[col].u8[elem + i];
+                     break;
                   default:
                      vtn_fail("Invalid SpvOpCompositeExtract bit size");
                   }
@@ -1669,6 +1688,9 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                      break;
                   case 16:
                      (*c)->values[col].u16[elem + i] = insert->constant->values[0].u16[i];
+                     break;
+                  case 8:
+                     (*c)->values[col].u8[elem + i] = insert->constant->values[0].u8[i];
                      break;
                   default:
                      vtn_fail("Invalid SpvOpCompositeInsert bit size");
@@ -1804,6 +1826,8 @@ vtn_create_ssa_value(struct vtn_builder *b, const struct glsl_type *type)
          case GLSL_TYPE_UINT:
          case GLSL_TYPE_INT16:
          case GLSL_TYPE_UINT16:
+         case GLSL_TYPE_UINT8:
+         case GLSL_TYPE_INT8:
          case GLSL_TYPE_INT64:
          case GLSL_TYPE_UINT64:
          case GLSL_TYPE_BOOL:

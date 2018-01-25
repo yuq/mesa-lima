@@ -44,10 +44,14 @@ brw_type_for_base_type(const struct glsl_type *type)
       return BRW_REGISTER_TYPE_D;
    case GLSL_TYPE_INT16:
       return BRW_REGISTER_TYPE_W;
+   case GLSL_TYPE_INT8:
+      return BRW_REGISTER_TYPE_B;
    case GLSL_TYPE_UINT:
       return BRW_REGISTER_TYPE_UD;
    case GLSL_TYPE_UINT16:
       return BRW_REGISTER_TYPE_UW;
+   case GLSL_TYPE_UINT8:
+      return BRW_REGISTER_TYPE_UB;
    case GLSL_TYPE_ARRAY:
       return brw_type_for_base_type(type->fields.array);
    case GLSL_TYPE_STRUCT:
