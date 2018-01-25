@@ -429,15 +429,14 @@ void radv_cmd_buffer_trace_emit(struct radv_cmd_buffer *cmd_buffer)
 }
 
 static void
-radv_cmd_buffer_after_draw(struct radv_cmd_buffer *cmd_buffer)
+radv_cmd_buffer_after_draw(struct radv_cmd_buffer *cmd_buffer,
+			   enum radv_cmd_flush_bits flags)
 {
 	if (cmd_buffer->device->instance->debug_flags & RADV_DEBUG_SYNC_SHADERS) {
-		enum radv_cmd_flush_bits flags;
+		assert(flags & (RADV_CMD_FLAG_PS_PARTIAL_FLUSH |
+				RADV_CMD_FLAG_CS_PARTIAL_FLUSH));
 
-		/* Force wait for graphics/compute engines to be idle. */
-		flags = RADV_CMD_FLAG_PS_PARTIAL_FLUSH |
-			RADV_CMD_FLAG_CS_PARTIAL_FLUSH;
-
+		/* Force wait for graphics or compute engines to be idle. */
 		si_cs_emit_cache_flush(cmd_buffer->cs, false,
 				       cmd_buffer->device->physical_device->rad_info.chip_class,
 				       NULL, 0,
@@ -3501,7 +3500,7 @@ radv_draw(struct radv_cmd_buffer *cmd_buffer,
 	}
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
-	radv_cmd_buffer_after_draw(cmd_buffer);
+	radv_cmd_buffer_after_draw(cmd_buffer, RADV_CMD_FLAG_PS_PARTIAL_FLUSH);
 }
 
 void radv_CmdDraw(
@@ -3821,7 +3820,7 @@ radv_dispatch(struct radv_cmd_buffer *cmd_buffer,
 		radv_emit_dispatch_packets(cmd_buffer, info);
 	}
 
-	radv_cmd_buffer_after_draw(cmd_buffer);
+	radv_cmd_buffer_after_draw(cmd_buffer, RADV_CMD_FLAG_CS_PARTIAL_FLUSH);
 }
 
 void radv_CmdDispatch(
