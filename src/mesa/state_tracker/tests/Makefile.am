@@ -23,7 +23,8 @@ noinst_LIBRARIES = libmesa-st-tests-common.a
 endif
 
 libmesa_st_tests_common_a_SOURCES = \
-	st_tests_common.cpp
+	st_tests_common.cpp \
+	st_tests_common.h
 
 st_renumerate_test_SOURCES =			\
 	test_glsl_to_tgsi_lifetime.cpp
