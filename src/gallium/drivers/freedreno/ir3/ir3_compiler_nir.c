@@ -2182,11 +2182,10 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 			ctx->ir->outputs[n] = src[i];
 		}
 		break;
-	case nir_intrinsic_load_base_vertex:
+	case nir_intrinsic_load_first_vertex:
 		if (!ctx->basevertex) {
 			ctx->basevertex = create_driver_param(ctx, IR3_DP_VTXID_BASE);
-			add_sysval_input(ctx, SYSTEM_VALUE_BASE_VERTEX,
-					ctx->basevertex);
+			add_sysval_input(ctx, SYSTEM_VALUE_FIRST_VERTEX, ctx->basevertex);
 		}
 		dst[0] = ctx->basevertex;
 		break;

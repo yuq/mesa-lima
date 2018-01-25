@@ -97,7 +97,6 @@ emit_vertex_input(struct anv_pipeline *pipeline,
    const uint32_t elements_double = double_inputs_read >> VERT_ATTRIB_GENERIC0;
    const bool needs_svgs_elem = vs_prog_data->uses_vertexid ||
                                 vs_prog_data->uses_instanceid ||
-                                vs_prog_data->uses_basevertex ||
                                 vs_prog_data->uses_firstvertex ||
                                 vs_prog_data->uses_baseinstance;
 
@@ -178,8 +177,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
        * This means, that if we have BaseInstance, we need BaseVertex as
        * well.  Just do all or nothing.
        */
-      uint32_t base_ctrl = (vs_prog_data->uses_basevertex ||
-                            vs_prog_data->uses_firstvertex ||
+      uint32_t base_ctrl = (vs_prog_data->uses_firstvertex ||
                             vs_prog_data->uses_baseinstance) ?
                            VFCOMP_STORE_SRC : VFCOMP_STORE_0;
 
