@@ -98,6 +98,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
    const bool needs_svgs_elem = vs_prog_data->uses_vertexid ||
                                 vs_prog_data->uses_instanceid ||
                                 vs_prog_data->uses_basevertex ||
+                                vs_prog_data->uses_firstvertex ||
                                 vs_prog_data->uses_baseinstance;
 
    uint32_t elem_count = __builtin_popcount(elements) -
@@ -178,6 +179,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
        * well.  Just do all or nothing.
        */
       uint32_t base_ctrl = (vs_prog_data->uses_basevertex ||
+                            vs_prog_data->uses_firstvertex ||
                             vs_prog_data->uses_baseinstance) ?
                            VFCOMP_STORE_SRC : VFCOMP_STORE_0;
 
