@@ -1291,8 +1291,6 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    assert(pCreateInfo->subpass < render_pass->subpass_count);
    pipeline->subpass = &render_pass->subpasses[pCreateInfo->subpass];
 
-   pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
-
    result = anv_reloc_list_init(&pipeline->batch_relocs, alloc);
    if (result != VK_SUCCESS)
       return result;
