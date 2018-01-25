@@ -1008,6 +1008,50 @@ genX(BeginCommandBuffer)(
    return result;
 }
 
+/**
+ * From the PRM, Volume 2a:
+ *
+ *    "Indirect State Pointers Disable
+ *
+ *    At the completion of the post-sync operation associated with this pipe
+ *    control packet, the indirect state pointers in the hardware are
+ *    considered invalid; the indirect pointers are not saved in the context.
+ *    If any new indirect state commands are executed in the command stream
+ *    while the pipe control is pending, the new indirect state commands are
+ *    preserved.
+ *
+ *    [DevIVB+]: Using Invalidate State Pointer (ISP) only inhibits context
+ *    restoring of Push Constant (3DSTATE_CONSTANT_*) commands. Push Constant
+ *    commands are only considered as Indirect State Pointers. Once ISP is
+ *    issued in a context, SW must initialize by programming push constant
+ *    commands for all the shaders (at least to zero length) before attempting
+ *    any rendering operation for the same context."
+ *
+ * 3DSTATE_CONSTANT_* packets are restored during a context restore,
+ * even though they point to a BO that has been already unreferenced at
+ * the end of the previous batch buffer. This has been fine so far since
+ * we are protected by these scratch page (every address not covered by
+ * a BO should be pointing to the scratch page). But on CNL, it is
+ * causing a GPU hang during context restore at the 3DSTATE_CONSTANT_*
+ * instruction.
+ *
+ * The flag "Indirect State Pointers Disable" in PIPE_CONTROL tells the
+ * hardware to ignore previous 3DSTATE_CONSTANT_* packets during a
+ * context restore, so the mentioned hang doesn't happen. However,
+ * software must program push constant commands for all stages prior to
+ * rendering anything, so we flag them as dirty.
+ */
+static void
+emit_isp_disable(struct anv_cmd_buffer *cmd_buffer)
+{
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+         pc.IndirectStatePointersDisable = true;
+         pc.PostSyncOperation = WriteImmediateData;
+         pc.Address           =
+            (struct anv_address) { &cmd_buffer->device->workaround_bo, 0 };
+   }
+}
+
 VkResult
 genX(EndCommandBuffer)(
     VkCommandBuffer                             commandBuffer)
@@ -1023,6 +1067,9 @@ genX(EndCommandBuffer)(
    genX(cmd_buffer_enable_pma_fix)(cmd_buffer, false);
 
    genX(cmd_buffer_apply_pipe_flushes)(cmd_buffer);
+
+   if (GEN_GEN == 10)
+      emit_isp_disable(cmd_buffer);
 
    anv_cmd_buffer_end_batch_buffer(cmd_buffer);
 
