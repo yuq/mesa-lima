@@ -58,20 +58,6 @@ files_egl = files(
   'drivers/dri2/egl_dri2_fallbacks.h',
 )
 
-linux_dmabuf_unstable_v1_protocol_c = custom_target(
-  'linux-dmabuf-unstable-v1-protocol.c',
-  input : wayland_dmabuf_xml,
-  output : 'linux-dmabuf-unstable-v1-protocol.c',
-  command : [prog_wl_scanner, 'code', '@INPUT@', '@OUTPUT@'],
-)
-
-linux_dmabuf_unstable_v1_client_protocol_h = custom_target(
-  'linux-dmabuf-unstable-v1-client-protocol.h',
-  input : wayland_dmabuf_xml,
-  output : 'linux-dmabuf-unstable-v1-client-protocol.h',
-  command : [prog_wl_scanner, 'client-header', '@INPUT@', '@OUTPUT@'],
-)
-
 g_egldispatchstubs_c = custom_target(
   'g_egldispatchstubs.c',
   input : [
