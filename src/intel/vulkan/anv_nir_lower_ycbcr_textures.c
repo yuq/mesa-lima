@@ -316,13 +316,13 @@ swizzle_channel(struct isl_swizzle swizzle, unsigned channel)
 }
 
 static bool
-try_lower_tex_ycbcr(struct anv_pipeline *pipeline,
+try_lower_tex_ycbcr(struct anv_pipeline_layout *layout,
                     nir_builder *builder,
                     nir_tex_instr *tex)
 {
    nir_variable *var = tex->texture->var;
    const struct anv_descriptor_set_layout *set_layout =
-      pipeline->layout->set[var->data.descriptor_set].layout;
+      layout->set[var->data.descriptor_set].layout;
    const struct anv_descriptor_set_binding_layout *binding =
       &set_layout->binding[var->data.binding];
 
@@ -440,7 +440,8 @@ try_lower_tex_ycbcr(struct anv_pipeline *pipeline,
 }
 
 bool
-anv_nir_lower_ycbcr_textures(nir_shader *shader, struct anv_pipeline *pipeline)
+anv_nir_lower_ycbcr_textures(nir_shader *shader,
+                             struct anv_pipeline_layout *layout)
 {
    bool progress = false;
 
@@ -458,7 +459,7 @@ anv_nir_lower_ycbcr_textures(nir_shader *shader, struct anv_pipeline *pipeline)
                continue;
 
             nir_tex_instr *tex = nir_instr_as_tex(instr);
-            function_progress |= try_lower_tex_ycbcr(pipeline, &builder, tex);
+            function_progress |= try_lower_tex_ycbcr(layout, &builder, tex);
          }
       }
 

@@ -326,11 +326,11 @@ setup_vec4_uniform_value(uint32_t *params, uint32_t offset, unsigned n)
 
 void
 anv_nir_apply_pipeline_layout(struct anv_pipeline *pipeline,
+                              struct anv_pipeline_layout *layout,
                               nir_shader *shader,
                               struct brw_stage_prog_data *prog_data,
                               struct anv_pipeline_bind_map *map)
 {
-   struct anv_pipeline_layout *layout = pipeline->layout;
    gl_shader_stage stage = shader->info.stage;
 
    struct apply_pipeline_layout_state state = {
