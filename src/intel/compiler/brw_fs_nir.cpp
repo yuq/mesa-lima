@@ -116,6 +116,7 @@ emit_system_values_block(nir_block *block, fs_visitor *v)
 
       case nir_intrinsic_load_vertex_id_zero_base:
       case nir_intrinsic_load_base_vertex:
+      case nir_intrinsic_load_first_vertex:
       case nir_intrinsic_load_instance_id:
       case nir_intrinsic_load_base_instance:
       case nir_intrinsic_load_draw_id:
@@ -2457,6 +2458,9 @@ fs_visitor::nir_emit_vs_intrinsic(const fs_builder &bld,
       }
       break;
    }
+
+   case nir_intrinsic_load_first_vertex:
+      unreachable("lowered by brw_nir_lower_vs_inputs");
 
    default:
       nir_emit_intrinsic(bld, instr);

@@ -887,8 +887,12 @@ struct brw_context
 
    struct {
       struct {
-         /** The value of gl_BaseVertex for the current _mesa_prim. */
-         int gl_basevertex;
+         /**
+          * Either the value of gl_BaseVertex for indexed draw calls or the
+          * value of the argument <first> for non-indexed draw calls for the
+          * current _mesa_prim.
+          */
+         int firstvertex;
 
          /** The value of gl_BaseInstance for the current _mesa_prim. */
          int gl_baseinstance;

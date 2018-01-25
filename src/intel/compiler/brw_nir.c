@@ -239,6 +239,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
    const bool has_sgvs =
       nir->info.system_values_read &
       (BITFIELD64_BIT(SYSTEM_VALUE_BASE_VERTEX) |
+       BITFIELD64_BIT(SYSTEM_VALUE_FIRST_VERTEX) |
        BITFIELD64_BIT(SYSTEM_VALUE_BASE_INSTANCE) |
        BITFIELD64_BIT(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) |
        BITFIELD64_BIT(SYSTEM_VALUE_INSTANCE_ID));
@@ -261,6 +262,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
 
             switch (intrin->intrinsic) {
             case nir_intrinsic_load_base_vertex:
+            case nir_intrinsic_load_first_vertex:
             case nir_intrinsic_load_base_instance:
             case nir_intrinsic_load_vertex_id_zero_base:
             case nir_intrinsic_load_instance_id:
@@ -278,6 +280,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
                nir_intrinsic_set_base(load, num_inputs);
                switch (intrin->intrinsic) {
                case nir_intrinsic_load_base_vertex:
+               case nir_intrinsic_load_first_vertex:
                   nir_intrinsic_set_component(load, 0);
                   break;
                case nir_intrinsic_load_base_instance:

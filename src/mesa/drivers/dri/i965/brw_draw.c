@@ -819,25 +819,29 @@ brw_draw_single_prim(struct gl_context *ctx,
     * always flag if the shader uses one of the values. For direct draws,
     * we only flag if the values change.
     */
-   const int new_basevertex =
+   const int new_firstvertex =
       prim->indexed ? prim->basevertex : prim->start;
    const int new_baseinstance = prim->base_instance;
    const struct brw_vs_prog_data *vs_prog_data =
       brw_vs_prog_data(brw->vs.base.prog_data);
    if (prim_id > 0) {
-      const bool uses_draw_parameters =
+      const bool uses_firstvertex =
          vs_prog_data->uses_basevertex ||
+         vs_prog_data->uses_firstvertex;
+
+      const bool uses_draw_parameters =
+         uses_firstvertex ||
          vs_prog_data->uses_baseinstance;
 
       if ((uses_draw_parameters && prim->is_indirect) ||
-          (vs_prog_data->uses_basevertex &&
-           brw->draw.params.gl_basevertex != new_basevertex) ||
+          (uses_firstvertex &&
+           brw->draw.params.firstvertex != new_firstvertex) ||
           (vs_prog_data->uses_baseinstance &&
            brw->draw.params.gl_baseinstance != new_baseinstance))
          brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
    }
 
-   brw->draw.params.gl_basevertex = new_basevertex;
+   brw->draw.params.firstvertex = new_firstvertex;
    brw->draw.params.gl_baseinstance = new_baseinstance;
    brw_bo_unreference(brw->draw.draw_params_bo);
 

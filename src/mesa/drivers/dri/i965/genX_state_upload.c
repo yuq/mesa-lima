@@ -539,7 +539,10 @@ genX(emit_vertices)(struct brw_context *brw)
    }
 #endif
 
-   const bool needs_sgvs_element = (vs_prog_data->uses_basevertex ||
+   const bool uses_firstvertex =
+      vs_prog_data->uses_basevertex || vs_prog_data->uses_firstvertex;
+
+   const bool needs_sgvs_element = (uses_firstvertex ||
                                     vs_prog_data->uses_baseinstance ||
                                     vs_prog_data->uses_instanceid ||
                                     vs_prog_data->uses_vertexid);
@@ -586,7 +589,7 @@ genX(emit_vertices)(struct brw_context *brw)
 
    /* Now emit 3DSTATE_VERTEX_BUFFERS and 3DSTATE_VERTEX_ELEMENTS packets. */
    const bool uses_draw_params =
-      vs_prog_data->uses_basevertex ||
+      uses_firstvertex ||
       vs_prog_data->uses_baseinstance;
    const unsigned nr_buffers = brw->vb.nr_buffers +
       uses_draw_params + vs_prog_data->uses_drawid;
@@ -769,7 +772,7 @@ genX(emit_vertices)(struct brw_context *brw)
       };
 
 #if GEN_GEN >= 8
-      if (vs_prog_data->uses_basevertex ||
+      if (uses_firstvertex ||
           vs_prog_data->uses_baseinstance) {
          elem_state.VertexBufferIndex = brw->vb.nr_buffers;
          elem_state.SourceElementFormat = ISL_FORMAT_R32G32_UINT;
@@ -779,7 +782,7 @@ genX(emit_vertices)(struct brw_context *brw)
 #else
       elem_state.VertexBufferIndex = brw->vb.nr_buffers;
       elem_state.SourceElementFormat = ISL_FORMAT_R32G32_UINT;
-      if (vs_prog_data->uses_basevertex)
+      if (uses_firstvertex)
          elem_state.Component0Control = VFCOMP_STORE_SRC;
 
       if (vs_prog_data->uses_baseinstance)
