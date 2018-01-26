@@ -2794,10 +2794,10 @@ _mesa_VertexArrayBindingDivisor(GLuint vaobj, GLuint bindingIndex,
 
 
 /**
- * Copy one client vertex array to another.
+ * Copy one vertex array to another.
  */
 void
-_mesa_copy_client_array(struct gl_context *ctx,
+_mesa_copy_vertex_array(struct gl_context *ctx,
                         struct gl_vertex_array *dst,
                         struct gl_vertex_array *src)
 {

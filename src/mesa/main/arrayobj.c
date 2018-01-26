@@ -315,8 +315,8 @@ _mesa_initialize_vao(struct gl_context *ctx,
  * or a gl_vertex_buffer_binding has changed.
  */
 void
-_mesa_update_vao_client_arrays(struct gl_context *ctx,
-                               struct gl_vertex_array_object *vao)
+_mesa_update_vao_derived_arrays(struct gl_context *ctx,
+                                struct gl_vertex_array_object *vao)
 {
    GLbitfield arrays = vao->NewArrays;
 
@@ -328,7 +328,7 @@ _mesa_update_vao_client_arrays(struct gl_context *ctx,
       const struct gl_vertex_buffer_binding *buffer_binding =
          &vao->BufferBinding[attrib_array->BufferBindingIndex];
 
-      _mesa_update_client_array(ctx, client_array, attrib_array,
+      _mesa_update_vertex_array(ctx, client_array, attrib_array,
                                 buffer_binding);
    }
 }

@@ -53,7 +53,7 @@ _mesa_vertex_attrib_address(const struct gl_array_attributes *array,
  * gl_array_attributes and a gl_vertex_buffer_binding.
  */
 static inline void
-_mesa_update_client_array(struct gl_context *ctx,
+_mesa_update_vertex_array(struct gl_context *ctx,
                           struct gl_vertex_array *dst,
                           const struct gl_array_attributes *attribs,
                           const struct gl_vertex_buffer_binding *binding)
@@ -475,7 +475,7 @@ _mesa_VertexArrayBindingDivisor(GLuint vaobj, GLuint bindingIndex,
                                 GLuint divisor);
 
 extern void
-_mesa_copy_client_array(struct gl_context *ctx,
+_mesa_copy_vertex_array(struct gl_context *ctx,
                         struct gl_vertex_array *dst,
                         struct gl_vertex_array *src);
 
