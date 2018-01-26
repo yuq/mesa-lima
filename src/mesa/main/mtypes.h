@@ -1497,18 +1497,19 @@ struct gl_pixelstore_attrib
  */
 struct gl_vertex_array
 {
-   GLint Size;                  /**< components per element (1,2,3,4) */
+   /** if NULL, vertex data are in user memory */
+   struct gl_buffer_object *BufferObj;
+   /** Pointer into user memory, or offset into the BufferObj */
+   const GLubyte *Ptr;
+   GLsizei StrideB;		/**< actual stride in bytes */
+   GLuint InstanceDivisor;      /**< GL_ARB_instanced_arrays */
    GLenum16 Type;               /**< datatype: GL_FLOAT, GL_INT, etc */
    GLenum16 Format;             /**< default: GL_RGBA, but may be GL_BGRA */
-   GLsizei StrideB;		/**< actual stride in bytes */
-   GLuint _ElementSize;         /**< size of each element in bytes */
-   const GLubyte *Ptr;          /**< Points to array data */
-   GLboolean Normalized;        /**< GL_ARB_vertex_program */
-   GLboolean Integer;           /**< Integer-valued? */
-   GLboolean Doubles;       /**< double precision values are not converted to floats */
-   GLuint InstanceDivisor;      /**< GL_ARB_instanced_arrays */
-
-   struct gl_buffer_object *BufferObj;/**< GL_ARB_vertex_buffer_object */
+   unsigned Size:4;             /**< components per element (1,2,3,4) */
+   unsigned _ElementSize:8;     /**< in bytes, up to 4*sizeof(GLdouble) */
+   unsigned Normalized:1;       /**< GL_ARB_vertex_program */
+   unsigned Integer:1;          /**< Integer-valued? */
+   unsigned Doubles:1;          /**< doubles not converted to floats */
 };
 
 
