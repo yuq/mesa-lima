@@ -41,6 +41,7 @@
 #include "compiler/nir/nir.h"
 
 #include "utils.h"
+#include "util/disk_cache.h"
 #include "util/xmlpool.h"
 
 static const __DRIconfigOptionsExtension brw_config_options = {
@@ -1572,6 +1573,8 @@ intelDestroyScreen(__DRIscreen * sPriv)
    brw_bufmgr_destroy(screen->bufmgr);
    driDestroyOptionInfo(&screen->optionCache);
 
+   disk_cache_destroy(screen->disk_cache);
+
    ralloc_free(screen);
    sPriv->driverPrivate = NULL;
 }
@@ -2682,6 +2685,8 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
             fprintf(stderr, "  - Preemption enabled\n");
       }
    }
+
+   brw_disk_cache_init(screen);
 
    return (const __DRIconfig**) intel_screen_make_configs(dri_screen);
 }

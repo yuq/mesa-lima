@@ -404,7 +404,7 @@ brw_disk_cache_write_compute_program(struct brw_context *brw)
 }
 
 void
-brw_disk_cache_init(struct brw_context *brw)
+brw_disk_cache_init(struct intel_screen *screen)
 {
 #ifdef ENABLE_SHADER_CACHE
    if (env_var_as_boolean("MESA_GLSL_CACHE_DISABLE", true))
@@ -412,7 +412,7 @@ brw_disk_cache_init(struct brw_context *brw)
 
    char renderer[10];
    MAYBE_UNUSED int len = snprintf(renderer, sizeof(renderer), "i965_%04x",
-                                   brw->screen->deviceID);
+                                   screen->deviceID);
    assert(len == sizeof(renderer) - 1);
 
    const struct build_id_note *note =
@@ -425,6 +425,6 @@ brw_disk_cache_init(struct brw_context *brw)
    char timestamp[41];
    _mesa_sha1_format(timestamp, id_sha1);
 
-   brw->ctx.Cache = disk_cache_create(renderer, timestamp, 0);
+   screen->disk_cache = disk_cache_create(renderer, timestamp, 0);
 #endif
 }

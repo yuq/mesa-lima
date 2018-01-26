@@ -1066,7 +1066,7 @@ brwCreateContext(gl_api api,
    vbo_use_buffer_objects(ctx);
    vbo_always_unmap_buffers(ctx);
 
-   brw_disk_cache_init(brw);
+   brw->ctx.Cache = brw->screen->disk_cache;
 
    return true;
 }
@@ -1129,8 +1129,6 @@ intelDestroyContext(__DRIcontext * driContextPriv)
    brw->throttle_batch[0] = NULL;
 
    driDestroyOptionCache(&brw->optionCache);
-
-   disk_cache_destroy(brw->ctx.Cache);
 
    /* free the Mesa context */
    _mesa_free_context_data(&brw->ctx);

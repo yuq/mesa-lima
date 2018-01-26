@@ -117,6 +117,8 @@ struct intel_screen
    bool mesa_format_supports_texture[MESA_FORMAT_COUNT];
    bool mesa_format_supports_render[MESA_FORMAT_COUNT];
    enum isl_format mesa_to_isl_render_format[MESA_FORMAT_COUNT];
+
+   struct disk_cache *disk_cache;
 };
 
 extern void intelDestroyContext(__DRIcontext * driContextPriv);
