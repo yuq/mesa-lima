@@ -975,8 +975,7 @@ genX(BeginCommandBuffer)(
     * emit push constants again before any rendering operation. So we
     * flag them dirty here to make sure they get emitted.
     */
-   if (GEN_GEN == 10)
-      cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_ALL_GRAPHICS;
+   cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_ALL_GRAPHICS;
 
    VkResult result = VK_SUCCESS;
    if (cmd_buffer->usage_flags &
@@ -1074,8 +1073,7 @@ genX(EndCommandBuffer)(
 
    genX(cmd_buffer_apply_pipe_flushes)(cmd_buffer);
 
-   if (GEN_GEN == 10)
-      emit_isp_disable(cmd_buffer);
+   emit_isp_disable(cmd_buffer);
 
    anv_cmd_buffer_end_batch_buffer(cmd_buffer);
 
