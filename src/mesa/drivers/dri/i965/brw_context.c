@@ -73,6 +73,7 @@
 #include "tnl/t_pipeline.h"
 #include "util/ralloc.h"
 #include "util/debug.h"
+#include "util/disk_cache.h"
 #include "isl/isl.h"
 
 /***************************************
@@ -1128,6 +1129,8 @@ intelDestroyContext(__DRIcontext * driContextPriv)
    brw->throttle_batch[0] = NULL;
 
    driDestroyOptionCache(&brw->optionCache);
+
+   disk_cache_destroy(brw->ctx.Cache);
 
    /* free the Mesa context */
    _mesa_free_context_data(&brw->ctx);
