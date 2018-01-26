@@ -141,10 +141,12 @@ bind_vertex_list(struct gl_context *ctx,
    const GLubyte *map;
    GLuint attr;
    GLubyte node_attrsz[VBO_ATTRIB_MAX];  /* copy of node->attrsz[] */
-   GLenum node_attrtype[VBO_ATTRIB_MAX];  /* copy of node->attrtype[] */
+   GLenum16 node_attrtype[VBO_ATTRIB_MAX];  /* copy of node->attrtype[] */
    GLbitfield varying_inputs = 0x0;
 
+   STATIC_ASSERT(sizeof(node_attrsz) == sizeof(node->attrsz));
    memcpy(node_attrsz, node->attrsz, sizeof(node->attrsz));
+   STATIC_ASSERT(sizeof(node_attrtype) == sizeof(node->attrtype));
    memcpy(node_attrtype, node->attrtype, sizeof(node->attrtype));
 
    if (aligned_vertex_buffer_offset(node)) {

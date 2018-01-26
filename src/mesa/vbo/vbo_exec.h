@@ -97,7 +97,7 @@ struct vbo_exec_context
 
       GLbitfield64 enabled;             /**< mask of enabled vbo arrays. */
       GLubyte attrsz[VBO_ATTRIB_MAX];   /**< nr. of attrib components (1..4) */
-      GLenum attrtype[VBO_ATTRIB_MAX];  /**< GL_FLOAT, GL_DOUBLE, GL_INT, etc */
+      GLenum16 attrtype[VBO_ATTRIB_MAX];  /**< GL_FLOAT, GL_DOUBLE, GL_INT, etc */
       GLubyte active_sz[VBO_ATTRIB_MAX];  /**< attrib size (nr. 32-bit words) */
 
       /** pointers into the current 'vertex' array, declared above */

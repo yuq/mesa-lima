@@ -49,8 +49,8 @@ struct combiner_state {
 
 	/* GL state */
 	GLenum mode;
-	GLenum *source;
-	GLenum *operand;
+	GLenum16 *source;
+	GLenum16 *operand;
 	GLuint logscale;
 
 	/* Derived HW state */

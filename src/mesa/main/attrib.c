@@ -1005,11 +1005,16 @@ _mesa_PopAttrib(void)
                    * user FBO bound, GL_FRONT will be illegal and we'll need
                    * to record that error.  Per OpenGL ARB decision.
                    */
-                  if (multipleBuffers)
-                     _mesa_DrawBuffers(ctx->Const.MaxDrawBuffers,
-                                          color->DrawBuffer);
-                  else
+                  if (multipleBuffers) {
+                     GLenum buffers[MAX_DRAW_BUFFERS];
+
+                     for (unsigned i = 0; i < ctx->Const.MaxDrawBuffers; i++)
+                        buffers[i] = color->DrawBuffer[i];
+
+                     _mesa_DrawBuffers(ctx->Const.MaxDrawBuffers, buffers);
+                  } else {
                      _mesa_DrawBuffer(color->DrawBuffer[0]);
+                  }
                }
                _mesa_set_enable(ctx, GL_ALPHA_TEST, color->AlphaEnabled);
                _mesa_AlphaFunc(color->AlphaFunc, color->AlphaRefUnclamped);
