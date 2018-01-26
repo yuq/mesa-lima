@@ -1,0 +1,3 @@
+# fixes: The following commits were applied without the "cherry-picked from" tag
+50265cd9ee4caffee853700bdcd75b92eedc0e7b automake: anv: ship anv_extensions_gen.py in the tarball
+ac4437b20b87c7285b89466f05b51518ae616873 automake: small cleanup after the meson.build inclusion
