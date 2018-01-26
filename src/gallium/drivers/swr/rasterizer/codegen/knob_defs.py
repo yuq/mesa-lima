@@ -51,7 +51,7 @@ KNOBS = [
         'default'   : 'false',
         'desc'      : ['Always use generic function for performing StoreTile.',
                        'Will be slightly slower than using optimized (jitted) path'],
-        'category'  : 'debug',
+        'category'  : 'debug_adv',
     }],
 
     ['FAST_CLEAR', {
@@ -59,16 +59,7 @@ KNOBS = [
         'default'   : 'true',
         'desc'      : ['Replace 3D primitive execute with a SWRClearRT operation and',
                        'defer clear execution to first backend op on hottile, or hottile store'],
-        'category'  : 'perf',
-    }],
-
-    ['BASE_NUMA_NODE', {
-        'type'      : 'uint32_t',
-        'default'   : '0',
-        'desc'      : ['Starting NUMA node index to use when allocating compute resources.',
-                       'Setting this to a non-zero value will reduce the maximum # of NUMA nodes used.'],
-        'category'  : 'perf',
-        'advanced'  : True,
+        'category'  : 'perf_adv',
     }],
 
     ['MAX_NUMA_NODES', {
@@ -80,15 +71,6 @@ KNOBS = [
         'category'  : 'perf',
     }],
 
-    ['BASE_CORE', {
-        'type'      : 'uint32_t',
-        'default'   : '0',
-        'desc'      : ['Starting core index to use when allocating compute resources.',
-                       'Setting this to a non-zero value will reduce the maximum # of cores used.'],
-        'category'  : 'perf',
-        'advanced'  : True,
-    }],
-
     ['MAX_CORES_PER_NUMA_NODE', {
         'type'      : 'uint32_t',
         'default'   : '0',
@@ -96,15 +78,6 @@ KNOBS = [
                        '  0 == ALL non-API thread cores per NUMA-node',
                        '  N == Use at most N cores per NUMA-node'],
         'category'  : 'perf',
-    }],
-
-    ['BASE_THREAD', {
-        'type'      : 'uint32_t',
-        'default'   : '0',
-        'desc'      : ['Starting thread index to use when allocating compute resources.',
-                       'Setting this to a non-zero value will reduce the maximum # of threads used.'],
-        'category'  : 'perf',
-        'advanced'  : True,
     }],
 
     ['MAX_THREADS_PER_CORE', {
@@ -127,6 +100,30 @@ KNOBS = [
         'category'  : 'perf',
     }],
 
+    ['BASE_NUMA_NODE', {
+        'type'      : 'uint32_t',
+        'default'   : '0',
+        'desc'      : ['Starting NUMA node index to use when allocating compute resources.',
+                       'Setting this to a non-zero value will reduce the maximum # of NUMA nodes used.'],
+        'category'  : 'perf',
+    }],
+
+    ['BASE_CORE', {
+        'type'      : 'uint32_t',
+        'default'   : '0',
+        'desc'      : ['Starting core index to use when allocating compute resources.',
+                       'Setting this to a non-zero value will reduce the maximum # of cores used.'],
+        'category'  : 'perf',
+    }],
+
+    ['BASE_THREAD', {
+        'type'      : 'uint32_t',
+        'default'   : '0',
+        'desc'      : ['Starting thread index to use when allocating compute resources.',
+                       'Setting this to a non-zero value will reduce the maximum # of threads used.'],
+        'category'  : 'perf',
+    }],
+
     ['BUCKETS_START_FRAME', {
         'type'      : 'uint32_t',
         'default'   : '1200',
@@ -134,7 +131,7 @@ KNOBS = [
                        '',
                        'NOTE: KNOB_ENABLE_RDTSC must be enabled in core/knobs.h',
                        'for this to have an effect.'],
-        'category'  : 'perf',
+        'category'  : 'perf_adv',
     }],
 
     ['BUCKETS_END_FRAME', {
@@ -144,7 +141,7 @@ KNOBS = [
                        '',
                        'NOTE: KNOB_ENABLE_RDTSC must be enabled in core/knobs.h',
                        'for this to have an effect.'],
-        'category'  : 'perf',
+        'category'  : 'perf_adv',
     }],
 
     ['WORKER_SPIN_LOOP_COUNT', {
@@ -152,7 +149,7 @@ KNOBS = [
         'default'   : '5000',
         'desc'      : ['Number of spin-loop iterations worker threads will perform',
                        'before going to sleep when waiting for work'],
-        'category'  : 'perf',
+        'category'  : 'perf_adv',
     }],
 
     ['MAX_DRAWS_IN_FLIGHT', {
@@ -160,7 +157,7 @@ KNOBS = [
         'default'   : '256',
         'desc'      : ['Maximum number of draws outstanding before API thread blocks.',
                        'This value MUST be evenly divisible into 2^32'],
-        'category'  : 'perf',
+        'category'  : 'perf_adv',
     }],
 
     ['MAX_PRIMS_PER_DRAW', {
@@ -169,7 +166,7 @@ KNOBS = [
         'desc'      : ['Maximum primitives in a single Draw().',
                        'Larger primitives are split into smaller Draw calls.',
                        'Should be a multiple of (3 * vectorWidth).'],
-        'category'  : 'perf',
+        'category'  : 'perf_adv',
     }],
 
     ['MAX_TESS_PRIMS_PER_DRAW', {
@@ -178,7 +175,7 @@ KNOBS = [
         'desc'      : ['Maximum primitives in a single Draw() with tessellation enabled.',
                        'Larger primitives are split into smaller Draw calls.',
                        'Should be a multiple of (vectorWidth).'],
-        'category'  : 'perf',
+        'category'  : 'perf_adv',
     }],
 
 
@@ -193,7 +190,7 @@ KNOBS = [
         'type'      : 'bool',
         'default'   : 'false',
         'desc'      : ['Enables caching of compiled shaders'],
-        'category'  : 'debug',
+        'category'  : 'debug_adv',
     }],
 
     ['JIT_CACHE_DIR', {
@@ -216,8 +213,7 @@ KNOBS = [
         'desc'      : ['Stop per-draw execution at worker FE',
                        '',
                        'NOTE: Requires KNOB_ENABLE_TOSS_POINTS to be enabled in core/knobs.h'],
-        'category'  : 'perf',
-        'advanced'  : 'true',
+        'category'  : 'perf_adv',
     }],
 
     ['TOSS_FETCH', {
@@ -226,8 +222,7 @@ KNOBS = [
         'desc'      : ['Stop per-draw execution at vertex fetch',
                        '',
                        'NOTE: Requires KNOB_ENABLE_TOSS_POINTS to be enabled in core/knobs.h'],
-        'category'  : 'perf',
-        'advanced'  : 'true',
+        'category'  : 'perf_adv',
     }],
 
     ['TOSS_IA', {
@@ -236,8 +231,7 @@ KNOBS = [
         'desc'      : ['Stop per-draw execution at input assembler',
                        '',
                        'NOTE: Requires KNOB_ENABLE_TOSS_POINTS to be enabled in core/knobs.h'],
-        'category'  : 'perf',
-        'advanced'  : 'true',
+        'category'  : 'perf_adv',
     }],
 
     ['TOSS_VS', {
@@ -246,8 +240,7 @@ KNOBS = [
         'desc'      : ['Stop per-draw execution at vertex shader',
                        '',
                        'NOTE: Requires KNOB_ENABLE_TOSS_POINTS to be enabled in core/knobs.h'],
-        'category'  : 'perf',
-        'advanced'  : 'true',
+        'category'  : 'perf_adv',
     }],
 
     ['TOSS_SETUP_TRIS', {
@@ -256,8 +249,7 @@ KNOBS = [
         'desc'      : ['Stop per-draw execution at primitive setup',
                        '',
                        'NOTE: Requires KNOB_ENABLE_TOSS_POINTS to be enabled in core/knobs.h'],
-        'category'  : 'perf',
-        'advanced'  : 'true',
+        'category'  : 'perf_adv',
     }],
 
     ['TOSS_BIN_TRIS', {
@@ -266,8 +258,7 @@ KNOBS = [
         'desc'      : ['Stop per-draw execution at primitive binning',
                        '',
                        'NOTE: Requires KNOB_ENABLE_TOSS_POINTS to be enabled in core/knobs.h'],
-        'category'  : 'perf',
-        'advanced'  : 'true',
+        'category'  : 'perf_adv',
     }],
 
     ['TOSS_RS', {
@@ -276,8 +267,7 @@ KNOBS = [
         'desc'      : ['Stop per-draw execution at rasterizer',
                        '',
                        'NOTE: Requires KNOB_ENABLE_TOSS_POINTS to be enabled in core/knobs.h'],
-        'category'  : 'perf',
-        'advanced'  : 'true',
+        'category'  : 'perf_adv',
     }],
     
     ]
