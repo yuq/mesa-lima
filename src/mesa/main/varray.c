@@ -166,6 +166,7 @@ _mesa_bind_vertex_buffer(struct gl_context *ctx,
                          struct gl_buffer_object *vbo,
                          GLintptr offset, GLsizei stride)
 {
+   assert(index < ARRAY_SIZE(vao->BufferBinding));
    struct gl_vertex_buffer_binding *binding = &vao->BufferBinding[index];
 
    if (binding->BufferObj != vbo ||
