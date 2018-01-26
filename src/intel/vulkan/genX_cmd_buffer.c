@@ -969,6 +969,15 @@ genX(BeginCommandBuffer)(
    if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY)
       cmd_buffer->state.pending_pipe_bits |= ANV_PIPE_VF_CACHE_INVALIDATE_BIT;
 
+   /* We send an "Indirect State Pointers Disable" packet at
+    * EndCommandBuffer, so all push contant packets are ignored during a
+    * context restore. Documentation says after that command, we need to
+    * emit push constants again before any rendering operation. So we
+    * flag them dirty here to make sure they get emitted.
+    */
+   if (GEN_GEN == 10)
+      cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_ALL_GRAPHICS;
+
    VkResult result = VK_SUCCESS;
    if (cmd_buffer->usage_flags &
        VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
@@ -1008,8 +1017,7 @@ genX(BeginCommandBuffer)(
    return result;
 }
 
-/**
- * From the PRM, Volume 2a:
+/* From the PRM, Volume 2a:
  *
  *    "Indirect State Pointers Disable
  *
@@ -1039,16 +1047,14 @@ genX(BeginCommandBuffer)(
  * hardware to ignore previous 3DSTATE_CONSTANT_* packets during a
  * context restore, so the mentioned hang doesn't happen. However,
  * software must program push constant commands for all stages prior to
- * rendering anything, so we flag them as dirty.
+ * rendering anything. So we flag them dirty in BeginCommandBuffer.
  */
 static void
 emit_isp_disable(struct anv_cmd_buffer *cmd_buffer)
 {
    anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
          pc.IndirectStatePointersDisable = true;
-         pc.PostSyncOperation = WriteImmediateData;
-         pc.Address           =
-            (struct anv_address) { &cmd_buffer->device->workaround_bo, 0 };
+         pc.CommandStreamerStallEnable = true;
    }
 }
 
