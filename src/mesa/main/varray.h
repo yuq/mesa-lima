@@ -55,19 +55,19 @@ _mesa_vertex_attrib_address(const struct gl_array_attributes *array,
 static inline void
 _mesa_update_client_array(struct gl_context *ctx,
                           struct gl_vertex_array *dst,
-                          const struct gl_array_attributes *src,
+                          const struct gl_array_attributes *attribs,
                           const struct gl_vertex_buffer_binding *binding)
 {
-   dst->Size = src->Size;
-   dst->Type = src->Type;
-   dst->Format = src->Format;
+   dst->Size = attribs->Size;
+   dst->Type = attribs->Type;
+   dst->Format = attribs->Format;
    dst->StrideB = binding->Stride;
-   dst->Ptr = _mesa_vertex_attrib_address(src, binding);
-   dst->Normalized = src->Normalized;
-   dst->Integer = src->Integer;
-   dst->Doubles = src->Doubles;
+   dst->Ptr = _mesa_vertex_attrib_address(attribs, binding);
+   dst->Normalized = attribs->Normalized;
+   dst->Integer = attribs->Integer;
+   dst->Doubles = attribs->Doubles;
    dst->InstanceDivisor = binding->InstanceDivisor;
-   dst->_ElementSize = src->_ElementSize;
+   dst->_ElementSize = attribs->_ElementSize;
    _mesa_reference_buffer_object(ctx, &dst->BufferObj, binding->BufferObj);
 }
 
