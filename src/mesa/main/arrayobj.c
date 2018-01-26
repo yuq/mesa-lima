@@ -222,7 +222,7 @@ _mesa_reference_vao_(struct gl_context *ctx,
 
 
 /**
- * Initialize attribtes of a vertex array within a vertex array object.
+ * Initialize attributes of a vertex array within a vertex array object.
  * \param vao  the container vertex array object
  * \param index  which array in the VAO to initialize
  * \param size  number of components (1, 2, 3 or 4) per attribute
