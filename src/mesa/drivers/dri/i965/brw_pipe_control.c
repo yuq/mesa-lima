@@ -353,12 +353,10 @@ gen7_emit_vs_workaround_flush(struct brw_context *brw)
 void
 gen10_emit_isp_disable(struct brw_context *brw)
 {
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-
-   brw_emit_pipe_control_write(brw,
-                               PIPE_CONTROL_ISP_DIS |
-                               PIPE_CONTROL_WRITE_IMMEDIATE,
-                               brw->workaround_bo, 0, 0);
+   brw_emit_pipe_control(brw,
+                         PIPE_CONTROL_ISP_DIS |
+                         PIPE_CONTROL_CS_STALL,
+                         NULL, 0, 0);
 
    brw->vs.base.push_constants_dirty = true;
    brw->tcs.base.push_constants_dirty = true;
