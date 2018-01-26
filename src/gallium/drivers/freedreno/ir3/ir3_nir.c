@@ -98,8 +98,22 @@ ir3_optimize_loop(nir_shader *s)
 		progress |= OPT(s, nir_opt_dce);
 		progress |= OPT(s, nir_opt_cse);
 		progress |= OPT(s, nir_opt_peephole_select, 16);
+		progress |= OPT(s, nir_opt_intrinsics);
 		progress |= OPT(s, nir_opt_algebraic);
 		progress |= OPT(s, nir_opt_constant_folding);
+		progress |= OPT(s, nir_opt_dead_cf);
+		if (OPT(s, nir_opt_trivial_continues)) {
+			progress |= true;
+			/* If nir_opt_trivial_continues makes progress, then we need to clean
+			 * things up if we want any hope of nir_opt_if or nir_opt_loop_unroll
+			 * to make progress.
+			 */
+			OPT(s, nir_copy_prop);
+			OPT(s, nir_opt_dce);
+		}
+		progress |= OPT(s, nir_opt_if);
+		progress |= OPT(s, nir_opt_remove_phis);
+		progress |= OPT(s, nir_opt_undef);
 
 	} while (progress);
 }
