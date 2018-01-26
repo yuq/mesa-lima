@@ -1064,6 +1064,7 @@ _mesa_enable_vertex_array_attrib(struct gl_context *ctx,
                                  struct gl_vertex_array_object *vao,
                                  unsigned attrib)
 {
+   assert(attrib >= VERT_ATTRIB_GENERIC0);
    assert(attrib < ARRAY_SIZE(vao->VertexAttrib));
 
    if (!vao->VertexAttrib[attrib].Enabled) {
