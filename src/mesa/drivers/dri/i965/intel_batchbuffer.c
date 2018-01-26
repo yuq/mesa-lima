@@ -766,7 +766,7 @@ brw_finish_batch(struct brw_context *brw)
       }
 
       /* Do not restore push constant packets during context restore. */
-      if (devinfo->gen == 10)
+      if (devinfo->gen >= 7)
          gen10_emit_isp_disable(brw);
    }
 
