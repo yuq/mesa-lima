@@ -670,11 +670,10 @@ static bool amdgpu_ib_new_buffer(struct amdgpu_winsys *ws, struct amdgpu_ib *ib,
                                ws->info.gart_page_size,
                                RADEON_DOMAIN_GTT,
                                RADEON_FLAG_NO_INTERPROCESS_SHARING |
-                               RADEON_FLAG_READ_ONLY |
                                (ring_type == RING_GFX ||
                                 ring_type == RING_COMPUTE ||
                                 ring_type == RING_DMA ?
-                                   RADEON_FLAG_GTT_WC : 0));
+                                   RADEON_FLAG_READ_ONLY | RADEON_FLAG_GTT_WC : 0));
    if (!pb)
       return false;
 
