@@ -76,7 +76,7 @@ struct state_key {
       unsigned texunit_really_enabled:1;
       unsigned texmat_enabled:1;
       unsigned coord_replace:1;
-      unsigned texgen_enabled:4;
+      unsigned texgen_enabled:1;
       unsigned texgen_mode0:4;
       unsigned texgen_mode1:4;
       unsigned texgen_mode2:4;
