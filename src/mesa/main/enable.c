@@ -29,6 +29,7 @@
 
 
 #include "glheader.h"
+#include "arrayobj.h"
 #include "blend.h"
 #include "clip.h"
 #include "context.h"
@@ -137,6 +138,10 @@ client_state(struct gl_context *ctx, GLenum cap, GLboolean state)
       vao->_Enabled &= ~vert_attrib_bit;
 
    vao->NewArrays |= vert_attrib_bit;
+
+   /* Something got en/disabled, so update the map mode */
+   if (vert_attrib_bit & (VERT_BIT_POS|VERT_BIT_GENERIC0))
+      _mesa_update_attribute_map_mode(ctx, vao);
 
    if (ctx->Driver.Enable) {
       ctx->Driver.Enable( ctx, cap, state );
