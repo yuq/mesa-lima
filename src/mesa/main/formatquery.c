@@ -960,9 +960,6 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
       mesa_format texformat;
 
       if (target != GL_RENDERBUFFER) {
-         if (!_mesa_legal_get_tex_level_parameter_target(ctx, target, true))
-            goto end;
-
          baseformat = _mesa_base_tex_format(ctx, internalformat);
       } else {
          baseformat = _mesa_base_fbo_format(ctx, internalformat);
