@@ -64,7 +64,6 @@ struct state_key {
    unsigned fog_distance_mode:2;
    unsigned separate_specular:1;
    unsigned point_attenuated:1;
-   unsigned point_array:1;
    unsigned texture_enabled_global:1;
    unsigned fragprog_inputs_read:12;
 
@@ -227,9 +226,6 @@ static void make_state_key( struct gl_context *ctx, struct state_key *key )
 
    if (ctx->Point._Attenuated)
       key->point_attenuated = 1;
-
-   if (ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_POINT_SIZE].Enabled)
-      key->point_array = 1;
 
    if (ctx->Texture._TexGenEnabled ||
        ctx->Texture._TexMatEnabled ||
@@ -1589,7 +1585,7 @@ static void build_tnl_program( struct tnl_program *p )
 
    if (p->state->point_attenuated)
       build_atten_pointsize(p);
-   else if (p->state->point_array)
+   else if (p->state->varying_vp_inputs & VERT_BIT_POINT_SIZE)
       build_array_pointsize(p);
 
    /* Finish up:
