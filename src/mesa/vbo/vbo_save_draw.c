@@ -26,6 +26,7 @@
  *    Keith Whitwell <keithw@vmware.com>
  */
 
+#include <stdbool.h>
 #include "main/glheader.h"
 #include "main/bufferobj.h"
 #include "main/context.h"
@@ -137,29 +138,10 @@ bind_vertex_list(struct gl_context *ctx,
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_save_context *save = &vbo->save;
    struct gl_vertex_array *arrays = save->arrays;
-   GLuint buffer_offset = node->buffer_offset;
    const GLubyte *map;
    GLuint attr;
-   GLubyte node_attrsz[VBO_ATTRIB_MAX];  /* copy of node->attrsz[] */
-   GLenum16 node_attrtype[VBO_ATTRIB_MAX];  /* copy of node->attrtype[] */
    GLbitfield varying_inputs = 0x0;
-
-   STATIC_ASSERT(sizeof(node_attrsz) == sizeof(node->attrsz));
-   memcpy(node_attrsz, node->attrsz, sizeof(node->attrsz));
-   STATIC_ASSERT(sizeof(node_attrtype) == sizeof(node->attrtype));
-   memcpy(node_attrtype, node->attrtype, sizeof(node->attrtype));
-
-   if (aligned_vertex_buffer_offset(node)) {
-      /* The vertex size is an exact multiple of the buffer offset.
-       * This means that we can use zero-based vertex attribute pointers
-       * and specify the start of the primitive with the _mesa_prim::start
-       * field.  This results in issuing several draw calls with identical
-       * vertex attribute information.  This can result in fewer state
-       * changes in drivers.  In particular, the Gallium CSO module will
-       * filter out redundant vertex buffer changes.
-       */
-      buffer_offset = 0;
-   }
+   bool generic_from_pos = false;
 
    /* Install the default (ie Current) attributes first */
    for (attr = 0; attr < VERT_ATTRIB_FF_MAX; attr++) {
@@ -191,10 +173,7 @@ bind_vertex_list(struct gl_context *ctx,
          ctx->VertexProgram._Current->info.inputs_read;
       if ((inputs_read & VERT_BIT_POS) == 0 &&
           (inputs_read & VERT_BIT_GENERIC0)) {
-         save->inputs[VERT_ATTRIB_GENERIC0] = save->inputs[0];
-         node_attrsz[VERT_ATTRIB_GENERIC0] = node_attrsz[0];
-         node_attrtype[VERT_ATTRIB_GENERIC0] = node_attrtype[0];
-         node_attrsz[0] = 0;
+         generic_from_pos = true;
       }
       break;
    default:
@@ -203,29 +182,35 @@ bind_vertex_list(struct gl_context *ctx,
 
    for (attr = 0; attr < VERT_ATTRIB_MAX; attr++) {
       const GLuint src = map[attr];
+      const GLubyte size = node->attrsz[src];
 
-      if (node_attrsz[src]) {
+      if (size) {
          struct gl_vertex_array *array = &arrays[attr];
+         const GLenum16 type = node->attrtype[src];
 
          /* override the default array set above */
          save->inputs[attr] = array;
 
-         array->Ptr = (const GLubyte *) NULL + buffer_offset;
-         array->Size = node_attrsz[src];
+         array->Ptr = (const GLubyte *) NULL + node->offsets[src];
+         array->Size = size;
          array->StrideB = node->vertex_size * sizeof(GLfloat);
-         array->Type = node_attrtype[src];
-         array->Integer = vbo_attrtype_to_integer_flag(node_attrtype[src]);
+         array->Type = type;
+         array->Integer = vbo_attrtype_to_integer_flag(type);
          array->Format = GL_RGBA;
-         array->_ElementSize = array->Size * sizeof(GLfloat);
+         array->_ElementSize = size * sizeof(GLfloat);
          _mesa_reference_buffer_object(ctx,
                                        &array->BufferObj,
                                        node->vertex_store->bufferobj);
 
          assert(array->BufferObj->Name);
 
-         buffer_offset += node_attrsz[src] * sizeof(GLfloat);
          varying_inputs |= VERT_BIT(attr);
       }
+   }
+
+   if (generic_from_pos) {
+      varying_inputs |= (varying_inputs & VERT_BIT_POS) << VERT_ATTRIB_GENERIC0;
+      save->inputs[VERT_ATTRIB_GENERIC0] = save->inputs[VERT_ATTRIB_POS];
    }
 
    _mesa_set_varying_vp_inputs(ctx, varying_inputs);
