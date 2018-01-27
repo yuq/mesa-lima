@@ -166,9 +166,6 @@ static void make_state_key( struct gl_context *ctx, struct state_key *key )
       key->fragprog_inputs_read |= (VARYING_BIT_COL0 | VARYING_BIT_TEX0);
    }
 
-   key->separate_specular = (ctx->Light.Model.ColorControl ==
-			     GL_SEPARATE_SPECULAR_COLOR);
-
    if (ctx->Light.Enabled) {
       key->light_global_enabled = 1;
 
@@ -177,6 +174,9 @@ static void make_state_key( struct gl_context *ctx, struct state_key *key )
 
       if (ctx->Light.Model.TwoSide)
 	 key->light_twoside = 1;
+
+      if (ctx->Light.Model.ColorControl == GL_SEPARATE_SPECULAR_COLOR)
+         key->separate_specular = 1;
 
       if (ctx->Light.ColorMaterialEnabled) {
 	 key->light_color_material_mask = ctx->Light._ColorMaterialBitmask;
