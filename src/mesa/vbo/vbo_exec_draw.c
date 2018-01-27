@@ -187,11 +187,15 @@ vbo_exec_bind_arrays(struct gl_context *ctx)
    /* Overlay other active attributes */
    switch (get_vp_mode(exec->ctx)) {
    case VP_FF:
-      /* Point the generic attributes at the legacy material values */
-      for (attr = 0; attr < MAT_ATTRIB_MAX; attr++) {
+      for (attr = 0; attr < VERT_ATTRIB_MAT_MAX; attr++) {
+         assert(VERT_ATTRIB_MAT(attr) < ARRAY_SIZE(exec->vtx.inputs));
+         exec->vtx.inputs[VERT_ATTRIB_MAT(attr)] =
+            &vbo->currval[VBO_ATTRIB_MAT_FRONT_AMBIENT+attr];
+      }
+      for (attr = VERT_ATTRIB_MAT_MAX; attr < VERT_ATTRIB_GENERIC_MAX; attr++) {
          assert(VERT_ATTRIB_GENERIC(attr) < ARRAY_SIZE(exec->vtx.inputs));
          exec->vtx.inputs[VERT_ATTRIB_GENERIC(attr)] =
-            &vbo->currval[VBO_ATTRIB_MAT_FRONT_AMBIENT+attr];
+            &vbo->currval[VBO_ATTRIB_GENERIC0+attr];
       }
       map = vbo->map_vp_none;
       break;

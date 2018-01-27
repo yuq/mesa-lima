@@ -118,8 +118,8 @@ vbo_choose_render_mode(struct gl_context *ctx, const struct gl_vertex_array **ar
 	render->mode = VBO;
 
 	if (ctx->Light.Enabled) {
-		for (i = 0; i < MAT_ATTRIB_MAX; i++) {
-			if (arrays[VERT_ATTRIB_GENERIC0 + i]->StrideB) {
+		for (i = 0; i < VERT_ATTRIB_MAT_MAX; i++) {
+			if (arrays[VERT_ATTRIB_MAT(i)]->StrideB) {
 				render->mode = IMM;
 				break;
 			}
@@ -138,7 +138,7 @@ vbo_emit_attr(struct gl_context *ctx, const struct gl_vertex_array **arrays,
 	RENDER_LOCALS(ctx);
 
 	if (!array->StrideB) {
-		if (attr >= VERT_ATTRIB_GENERIC0)
+		if (attr >= VERT_ATTRIB_MAT(0))
 			/* nouveau_update_state takes care of materials. */
 			return;
 
@@ -165,7 +165,7 @@ vbo_emit_attr(struct gl_context *ctx, const struct gl_vertex_array **arrays,
 	}
 }
 
-#define MAT(a) (VERT_ATTRIB_GENERIC0 + MAT_ATTRIB_##a)
+#define MAT(a) VERT_ATTRIB_MAT(MAT_ATTRIB_##a)
 
 static void
 vbo_choose_attrs(struct gl_context *ctx, const struct gl_vertex_array **arrays)

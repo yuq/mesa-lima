@@ -331,20 +331,20 @@ recalculate_input_bindings(struct gl_context *ctx)
             inputs[i] = &vertexAttrib[VERT_ATTRIB_FF(i)];
          else {
             inputs[i] = &vbo->currval[VBO_ATTRIB_POS + i];
-            const_inputs |= VERT_BIT(i);
+            const_inputs |= VERT_BIT_FF(i);
          }
       }
 
-      for (i = 0; i < MAT_ATTRIB_MAX; i++) {
-         inputs[VERT_ATTRIB_GENERIC(i)] =
+      for (i = 0; i < VERT_ATTRIB_MAT_MAX; i++) {
+         inputs[VERT_ATTRIB_MAT(i)] =
             &vbo->currval[VBO_ATTRIB_MAT_FRONT_AMBIENT + i];
-         const_inputs |= VERT_BIT_GENERIC(i);
+         const_inputs |= VERT_BIT_MAT(i);
       }
 
       /* Could use just about anything, just to fill in the empty
        * slots:
        */
-      for (i = MAT_ATTRIB_MAX; i < VERT_ATTRIB_GENERIC_MAX; i++) {
+      for (i = VERT_ATTRIB_MAT_MAX; i < VERT_ATTRIB_GENERIC_MAX; i++) {
          inputs[VERT_ATTRIB_GENERIC(i)] =
             &vbo->currval[VBO_ATTRIB_GENERIC0 + i];
          const_inputs |= VERT_BIT_GENERIC(i);

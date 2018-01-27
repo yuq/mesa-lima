@@ -249,8 +249,8 @@ _vbo_CreateContext(struct gl_context *ctx)
       for (i = 0; i < ARRAY_SIZE(vbo->map_vp_none); i++)
          vbo->map_vp_none[i] = i;
       /* map material attribs to generic slots */
-      for (i = 0; i < MAT_ATTRIB_MAX; i++)
-         vbo->map_vp_none[VERT_ATTRIB_GENERIC(i)]
+      for (i = 0; i < VERT_ATTRIB_MAT_MAX; i++)
+         vbo->map_vp_none[VERT_ATTRIB_MAT(i)]
             = VBO_ATTRIB_MAT_FRONT_AMBIENT + i;
 
       for (i = 0; i < ARRAY_SIZE(vbo->map_vp_arb); i++)
