@@ -22,7 +22,7 @@ inc_broadcom = include_directories('.', 'cle')
 
 subdir('cle')
 
-vc5_versions = ['33', '41']
+vc5_versions = ['33', '41', '42']
 
 if with_gallium_vc5
   subdir('compiler')
