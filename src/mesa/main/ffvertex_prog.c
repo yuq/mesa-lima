@@ -222,9 +222,11 @@ static void make_state_key( struct gl_context *ctx, struct state_key *key )
    if (ctx->Transform.RescaleNormals)
       key->rescale_normals = 1;
 
-   key->fog_distance_mode =
-      translate_fog_distance_mode(ctx->Fog.FogCoordinateSource,
-                                  ctx->Fog.FogDistanceMode);
+   /* Only distinguish fog parameters if we actually need */
+   if (key->fragprog_inputs_read & VARYING_BIT_FOGC)
+      key->fog_distance_mode =
+         translate_fog_distance_mode(ctx->Fog.FogCoordinateSource,
+                                     ctx->Fog.FogDistanceMode);
 
    if (ctx->Point._Attenuated)
       key->point_attenuated = 1;
