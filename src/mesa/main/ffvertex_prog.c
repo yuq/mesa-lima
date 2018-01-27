@@ -72,7 +72,6 @@ struct state_key {
       unsigned light_eyepos3_is_zero:1;
       unsigned light_spotcutoff_is_180:1;
       unsigned light_attenuated:1;
-      unsigned texunit_really_enabled:1;
       unsigned texmat_enabled:1;
       unsigned coord_replace:1;
       unsigned texgen_enabled:1;
@@ -234,9 +233,6 @@ static void make_state_key( struct gl_context *ctx, struct state_key *key )
    while (mask) {
       const int i = u_bit_scan(&mask);
       struct gl_texture_unit *texUnit = &ctx->Texture.Unit[i];
-
-      if (texUnit->_Current)
-	 key->unit[i].texunit_really_enabled = 1;
 
       if (ctx->Point.PointSprite)
 	 if (ctx->Point.CoordReplace & (1u << i))
