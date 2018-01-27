@@ -414,6 +414,10 @@ The integer capabilities:
   contexts can return 0.
 * ``PIPE_CAP_FENCE_SIGNAL``: True if the driver supports signaling semaphores
   using fence_server_signal().
+* ``PIPE_CAP_CONSTBUF0_FLAGS``: The bits of pipe_resource::flags that must be
+  set when binding that buffer as constant buffer 0. If the buffer doesn't have
+  those bits set, pipe_context::set_constant_buffer(.., 0, ..) is ignored
+  by the driver, and the driver can throw assertion failures.
 
 
 .. _pipe_capf:
