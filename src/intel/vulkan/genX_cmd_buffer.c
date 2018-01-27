@@ -3204,6 +3204,17 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
    if (GEN_GEN == 7)
       cmd_buffer->state.gfx.vb_dirty |= ~0;
 
+   /* It is possible to start a render pass with an old pipeline.  Because the
+    * render pass and subpass index are both baked into the pipeline, this is
+    * highly unlikely.  In order to do so, it requires that you have a render
+    * pass with a single subpass and that you use that render pass twice
+    * back-to-back and use the same pipeline at the start of the second render
+    * pass as at the end of the first.  In order to avoid unpredictable issues
+    * with this edge case, we just dirty the pipeline at the start of every
+    * subpass.
+    */
+   cmd_buffer->state.gfx.dirty |= ANV_CMD_DIRTY_PIPELINE;
+
    /* Perform transitions to the subpass layout before any writes have
     * occurred.
     */
