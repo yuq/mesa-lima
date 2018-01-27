@@ -137,7 +137,7 @@ namespace SwrJit
     /// @param vIndices - SIMD wide value of VB byte offsets
     /// @param vMask - SIMD wide mask that controls whether to access memory or the src values
     /// @param scale - value to scale indices by
-    Value *Builder::GATHERPS(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale, Value *pDrawContext)
+    Value *Builder::GATHERPS(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale)
     {
         Value *vGather;
 
@@ -222,7 +222,7 @@ namespace SwrJit
     /// @param vIndices - SIMD wide value of VB byte offsets
     /// @param vMask - SIMD wide mask that controls whether to access memory or the src values
     /// @param scale - value to scale indices by
-    Value *Builder::GATHERDD(Value* vSrc, Value* pBase, Value* vIndices, Value* vMask, uint8_t scale, Value *pDrawContext)
+    Value *Builder::GATHERDD(Value* vSrc, Value* pBase, Value* vIndices, Value* vMask, uint8_t scale)
     {
         Value* vGather;
 
@@ -346,21 +346,21 @@ namespace SwrJit
     }
 
     void Builder::Gather4(const SWR_FORMAT format, Value* pSrcBase, Value* byteOffsets,
-        Value* mask, Value* vGatherComponents[], bool bPackedOutput, Value *pDrawContext)
+        Value* mask, Value* vGatherComponents[], bool bPackedOutput)
     {
         const SWR_FORMAT_INFO &info = GetFormatInfo(format);
         if (info.type[0] == SWR_TYPE_FLOAT && info.bpc[0] == 32)
         {
-            GATHER4PS(info, pSrcBase, byteOffsets, mask, vGatherComponents, bPackedOutput, pDrawContext);
+            GATHER4PS(info, pSrcBase, byteOffsets, mask, vGatherComponents, bPackedOutput);
         }
         else
         {
-            GATHER4DD(info, pSrcBase, byteOffsets, mask, vGatherComponents, bPackedOutput, pDrawContext);
+            GATHER4DD(info, pSrcBase, byteOffsets, mask, vGatherComponents, bPackedOutput);
         }
     }
 
     void Builder::GATHER4PS(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
-        Value* vMask, Value* vGatherComponents[], bool bPackedOutput, Value *pDrawContext)
+        Value* vMask, Value* vGatherComponents[], bool bPackedOutput)
     {
         switch (info.bpp / info.numComps)
         {
@@ -427,7 +427,7 @@ namespace SwrJit
     }
 
     void Builder::GATHER4DD(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
-        Value* vMask, Value* vGatherComponents[], bool bPackedOutput, Value* pDrawContext)
+        Value* vMask, Value* vGatherComponents[], bool bPackedOutput)
     {
         switch (info.bpp / info.numComps)
         {

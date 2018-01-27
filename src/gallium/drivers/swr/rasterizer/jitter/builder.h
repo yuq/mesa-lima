@@ -95,5 +95,9 @@ namespace SwrJit
 #include "builder_misc.h"
 #include "builder_math.h"
 #include "builder_mem.h"
+
+    protected:
+        Value* mpPrivateContext;
+
     };
 }

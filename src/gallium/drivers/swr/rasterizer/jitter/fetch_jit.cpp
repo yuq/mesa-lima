@@ -130,7 +130,6 @@ struct FetchJit :
     void CreateGatherOddFormats(SWR_FORMAT format, Value* pMask, Value* pBase, Value* offsets, Value* result[4]);
     void ConvertFormat(SWR_FORMAT format, Value *texels[4]);
 
-    Value* mpPrivateContext;
     Value* mpFetchInfo;
 };
 
@@ -1364,7 +1363,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 // But, we know that elements must be aligned for FETCH. :)
                                 // Right shift the offset by a bit and then scale by 2 to remove the sign extension.
                                 Value *vShiftedOffsets = LSHR(vOffsets, 1);
-                                vVertexElements[currentVertexElement++] = GATHERPS(gatherSrc, pStreamBase, vShiftedOffsets, vGatherMask, 2, mpPrivateContext);
+                                vVertexElements[currentVertexElement++] = GATHERPS(gatherSrc, pStreamBase, vShiftedOffsets, vGatherMask, 2);
                             }
                             else
                             {
