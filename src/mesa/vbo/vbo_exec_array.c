@@ -313,43 +313,25 @@ recalculate_input_bindings(struct gl_context *ctx)
 {
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_exec_context *exec = &vbo->exec;
-   const struct gl_array_attributes *array = ctx->Array.VAO->VertexAttrib;
-   struct gl_vertex_array *vertexAttrib = ctx->Array.VAO->_VertexAttrib;
+   const struct gl_vertex_array_object *vao = ctx->Array.VAO;
+   const struct gl_vertex_array *vertexAttrib = vao->_VertexAttrib;
    const struct gl_vertex_array **inputs = &exec->array.inputs[0];
-   GLbitfield const_inputs = 0x0;
-   GLuint i;
+
+   /* May shuffle the position and generic0 bits around */
+   GLbitfield vp_inputs = _mesa_get_vao_vp_inputs(vao);
 
    const enum vp_mode program_mode = get_vp_mode(ctx);
+   const GLubyte *const map = _vbo_attribute_alias_map[program_mode];
    switch (program_mode) {
    case VP_FF:
       /* When no vertex program is active (or the vertex program is generated
        * from fixed-function state).  We put the material values into the
-       * generic slots.  This is the only situation where material values
-       * are available as per-vertex attributes.
+       * generic slots.  Since the vao has no material arrays, mute these
+       * slots from the enabled arrays so that the current material values
+       * are pulled instead of the vao arrays.
        */
-      for (i = 0; i < VERT_ATTRIB_FF_MAX; i++) {
-         if (array[VERT_ATTRIB_FF(i)].Enabled)
-            inputs[i] = &vertexAttrib[VERT_ATTRIB_FF(i)];
-         else {
-            inputs[i] = &vbo->currval[VBO_ATTRIB_POS + i];
-            const_inputs |= VERT_BIT_FF(i);
-         }
-      }
+      vp_inputs &= VERT_BIT_FF_ALL;
 
-      /* Could use just about anything, just to fill in the empty
-       * slots:
-       */
-      for (i = 0; i < VERT_ATTRIB_MAT0; i++) {
-         inputs[VERT_ATTRIB_GENERIC(i)] =
-            &vbo->currval[VBO_ATTRIB_GENERIC0 + i];
-         const_inputs |= VERT_BIT_GENERIC(i);
-      }
-
-      for (i = 0; i < VERT_ATTRIB_MAT_MAX; i++) {
-         inputs[VERT_ATTRIB_MAT(i)] =
-            &vbo->currval[VBO_ATTRIB_MAT_FRONT_AMBIENT + i];
-         const_inputs |= VERT_BIT_MAT(i);
-      }
       break;
 
    case VP_SHADER:
@@ -368,68 +350,30 @@ recalculate_input_bindings(struct gl_context *ctx)
        * In all other APIs, only the generic attributes exist, and none of the
        * slots are considered "magic."
        */
-      if (ctx->API == API_OPENGL_COMPAT) {
-         if (array[VERT_ATTRIB_GENERIC0].Enabled)
-            inputs[VERT_ATTRIB_POS] = &vertexAttrib[VERT_ATTRIB_GENERIC0];
-         else if (array[VERT_ATTRIB_POS].Enabled)
-            inputs[VERT_ATTRIB_POS] = &vertexAttrib[VERT_ATTRIB_POS];
-         else {
-            inputs[VERT_ATTRIB_POS] = &vbo->currval[VBO_ATTRIB_GENERIC0];
-            const_inputs |= VERT_BIT_POS;
-         }
 
-         for (i = 1; i < VERT_ATTRIB_FF_MAX; i++) {
-            if (array[VERT_ATTRIB_FF(i)].Enabled)
-               inputs[i] = &vertexAttrib[VERT_ATTRIB_FF(i)];
-            else {
-               inputs[i] = &vbo->currval[VBO_ATTRIB_POS + i];
-               const_inputs |= VERT_BIT_FF(i);
-            }
-         }
-
-         for (i = 1; i < VERT_ATTRIB_GENERIC_MAX; i++) {
-            if (array[VERT_ATTRIB_GENERIC(i)].Enabled)
-               inputs[VERT_ATTRIB_GENERIC(i)] =
-                  &vertexAttrib[VERT_ATTRIB_GENERIC(i)];
-            else {
-               inputs[VERT_ATTRIB_GENERIC(i)] =
-                  &vbo->currval[VBO_ATTRIB_GENERIC0 + i];
-               const_inputs |= VERT_BIT_GENERIC(i);
-            }
-         }
-
-         inputs[VERT_ATTRIB_GENERIC0] = inputs[0];
-      } else {
-         /* Other parts of the code assume that inputs[0] through
-          * inputs[VERT_ATTRIB_FF_MAX] will be non-NULL.  However, in OpenGL
-          * ES 2.0+ or OpenGL core profile, none of these arrays should ever
-          * be enabled.
-          */
-         for (i = 0; i < VERT_ATTRIB_FF_MAX; i++) {
-            assert(!array[VERT_ATTRIB_FF(i)].Enabled);
-
-            inputs[i] = &vbo->currval[VBO_ATTRIB_POS + i];
-            const_inputs |= VERT_BIT_FF(i);
-         }
-
-         for (i = 0; i < VERT_ATTRIB_GENERIC_MAX; i++) {
-            if (array[VERT_ATTRIB_GENERIC(i)].Enabled)
-               inputs[VERT_ATTRIB_GENERIC(i)] =
-                  &vertexAttrib[VERT_ATTRIB_GENERIC(i)];
-            else {
-               inputs[VERT_ATTRIB_GENERIC(i)] =
-                  &vbo->currval[VBO_ATTRIB_GENERIC0 + i];
-               const_inputs |= VERT_BIT_GENERIC(i);
-            }
-         }
-      }
+      /* Other parts of the code assume that inputs[VERT_ATTRIB_POS] through
+       * inputs[VERT_ATTRIB_FF_MAX] will be non-NULL.  However, in OpenGL
+       * ES 2.0+ or OpenGL core profile, none of these arrays should ever
+       * be enabled.
+       */
+      if (ctx->API != API_OPENGL_COMPAT)
+         vp_inputs &= VERT_BIT_GENERIC_ALL;
 
       break;
    default:
       assert(0);
    }
 
-   _mesa_set_varying_vp_inputs(ctx, VERT_BIT_ALL & (~const_inputs));
+   const gl_attribute_map_mode mode = vao->_AttributeMapMode;
+   const GLubyte *const vao_map = _mesa_vao_attribute_map[mode];
+   for (unsigned vp_attrib = 0; vp_attrib < VERT_ATTRIB_MAX; ++vp_attrib) {
+      if (unlikely(vp_inputs & VERT_BIT(vp_attrib)))
+         inputs[vp_attrib] = &vertexAttrib[vao_map[vp_attrib]];
+      else
+         inputs[vp_attrib] = &vbo->currval[map[vp_attrib]];
+   }
+
+   _mesa_set_varying_vp_inputs(ctx, vp_inputs);
    ctx->NewDriverState |= ctx->DriverFlags.NewArray;
 }
 
