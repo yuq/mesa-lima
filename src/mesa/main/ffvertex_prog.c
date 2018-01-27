@@ -60,7 +60,6 @@ struct state_key {
    unsigned normalize:1;
    unsigned rescale_normals:1;
 
-   unsigned fog_source_is_depth:1;
    unsigned fog_distance_mode:2;
    unsigned separate_specular:1;
    unsigned point_attenuated:1;
@@ -111,17 +110,22 @@ static GLuint translate_texgen( GLboolean enabled, GLenum mode )
 #define FDM_EYE_RADIAL    0
 #define FDM_EYE_PLANE     1
 #define FDM_EYE_PLANE_ABS 2
+#define FDM_FROM_ARRAY    3
 
-static GLuint translate_fog_distance_mode( GLenum mode )
+static GLuint translate_fog_distance_mode(GLenum source, GLenum mode)
 {
-   switch (mode) {
-   case GL_EYE_RADIAL_NV:
-      return FDM_EYE_RADIAL;
-   case GL_EYE_PLANE:
-      return FDM_EYE_PLANE;
-   default: /* shouldn't happen; fall through to a sensible default */
-   case GL_EYE_PLANE_ABSOLUTE_NV:
-      return FDM_EYE_PLANE_ABS;
+   if (source == GL_FRAGMENT_DEPTH_EXT) {
+      switch (mode) {
+      case GL_EYE_RADIAL_NV:
+         return FDM_EYE_RADIAL;
+      case GL_EYE_PLANE:
+         return FDM_EYE_PLANE;
+      default: /* shouldn't happen; fall through to a sensible default */
+      case GL_EYE_PLANE_ABSOLUTE_NV:
+         return FDM_EYE_PLANE_ABS;
+      }
+   } else {
+      return FDM_FROM_ARRAY;
    }
 }
 
@@ -219,10 +223,9 @@ static void make_state_key( struct gl_context *ctx, struct state_key *key )
    if (ctx->Transform.RescaleNormals)
       key->rescale_normals = 1;
 
-   if (ctx->Fog.FogCoordinateSource == GL_FRAGMENT_DEPTH_EXT) {
-      key->fog_source_is_depth = 1;
-      key->fog_distance_mode = translate_fog_distance_mode(ctx->Fog.FogDistanceMode);
-   }
+   key->fog_distance_mode =
+      translate_fog_distance_mode(ctx->Fog.FogCoordinateSource,
+                                  ctx->Fog.FogDistanceMode);
 
    if (ctx->Point._Attenuated)
       key->point_attenuated = 1;
@@ -1297,32 +1300,28 @@ static void build_fog( struct tnl_program *p )
    struct ureg fog = register_output(p, VARYING_SLOT_FOGC);
    struct ureg input;
 
-   if (p->state->fog_source_is_depth) {
-
-      switch (p->state->fog_distance_mode) {
-      case FDM_EYE_RADIAL: /* Z = sqrt(Xe*Xe + Ye*Ye + Ze*Ze) */
-         input = get_eye_position(p);
-         emit_op2(p, OPCODE_DP3, fog, WRITEMASK_X, input, input);
-         emit_op1(p, OPCODE_RSQ, fog, WRITEMASK_X, fog);
-         emit_op1(p, OPCODE_RCP, fog, WRITEMASK_X, fog);
-         break;
-      case FDM_EYE_PLANE: /* Z = Ze */
-         input = get_eye_position_z(p);
-         emit_op1(p, OPCODE_MOV, fog, WRITEMASK_X, input);
-         break;
-      case FDM_EYE_PLANE_ABS: /* Z = abs(Ze) */
-         input = get_eye_position_z(p);
-         emit_op1(p, OPCODE_ABS, fog, WRITEMASK_X, input);
-         break;
-      default:
-         assert(!"Bad fog mode in build_fog()");
-         break;
-      }
-
-   }
-   else {
+   switch (p->state->fog_distance_mode) {
+   case FDM_EYE_RADIAL: /* Z = sqrt(Xe*Xe + Ye*Ye + Ze*Ze) */
+      input = get_eye_position(p);
+      emit_op2(p, OPCODE_DP3, fog, WRITEMASK_X, input, input);
+      emit_op1(p, OPCODE_RSQ, fog, WRITEMASK_X, fog);
+      emit_op1(p, OPCODE_RCP, fog, WRITEMASK_X, fog);
+      break;
+   case FDM_EYE_PLANE: /* Z = Ze */
+      input = get_eye_position_z(p);
+      emit_op1(p, OPCODE_MOV, fog, WRITEMASK_X, input);
+      break;
+   case FDM_EYE_PLANE_ABS: /* Z = abs(Ze) */
+      input = get_eye_position_z(p);
+      emit_op1(p, OPCODE_ABS, fog, WRITEMASK_X, input);
+      break;
+   case FDM_FROM_ARRAY:
       input = swizzle1(register_input(p, VERT_ATTRIB_FOG), X);
       emit_op1(p, OPCODE_ABS, fog, WRITEMASK_X, input);
+      break;
+   default:
+      assert(!"Bad fog mode in build_fog()");
+      break;
    }
 
    emit_op1(p, OPCODE_MOV, fog, WRITEMASK_YZW, get_identity_param(p));
