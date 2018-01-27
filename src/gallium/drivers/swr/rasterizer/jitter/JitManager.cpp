@@ -487,30 +487,6 @@ struct JitCacheFileHeader
         m_optLevel = optLevel;
     }
 
-#if defined(ENABLE_JIT_DEBUG)
-    void Init(
-        uint32_t llCRC,
-        uint32_t objCRC,
-        const std::string& moduleID,
-        const std::string& cpu,
-        uint32_t optLevel,
-        uint64_t objSize,
-        uint32_t modCRC,
-        uint64_t modSize)
-    {
-        Init(llCRC, objCRC, moduleID, cpu, optLevel, objSize);
-        m_modCRC = modCRC;
-        m_modSize = modSize;
-    }
-
-    void Init(
-        uint32_t modCRC,
-        uint64_t modSize)
-    {
-        m_modCRC = modCRC;
-        m_modSize = modSize;
-    }
-#endif
 
     bool IsValid(uint32_t llCRC, const std::string& moduleID, const std::string& cpu, uint32_t optLevel)
     {
@@ -539,10 +515,6 @@ struct JitCacheFileHeader
 
     uint64_t GetObjectSize() const { return m_objSize; }
     uint64_t GetObjectCRC() const { return m_objCRC; }
-#if defined(ENABLE_JIT_DEBUG)
-    uint64_t GetSharedModuleSize() const { return m_modSize; }
-    uint64_t GetSharedModuleCRC() const { return m_modCRC; }
-#endif
 
 private:
     static const uint64_t   JC_MAGIC_NUMBER = 0xfedcba9876543211ULL + 3;
@@ -561,10 +533,6 @@ private:
     uint32_t m_optLevel = 0;
     char m_ModuleID[JC_STR_MAX_LEN] = {};
     char m_Cpu[JC_STR_MAX_LEN] = {};
-#if defined(ENABLE_JIT_DEBUG)
-    uint32_t m_modCRC = 0;
-    uint64_t m_modSize = 0;
-#endif
 };
 
 static inline uint32_t ComputeModuleCRC(const llvm::Module* M)
@@ -605,10 +573,6 @@ int ExecUnhookedProcess(const std::string& CmdLine, std::string* pStdOut, std::s
     return ExecCmd(CmdLine, g_pEnv, pStdOut, pStdErr);
 }
 
-#if defined(_WIN64) && defined(ENABLE_JIT_DEBUG) && defined(JIT_BASE_DIR)
-EXTERN_C IMAGE_DOS_HEADER __ImageBase;
-static __inline HINSTANCE GetModuleHINSTANCE() { return (HINSTANCE)&__ImageBase; }
-#endif
 
 /// notifyObjectCompiled - Provides a pointer to compiled code for Module M.
 void JitCache::notifyObjectCompiled(const llvm::Module *M, llvm::MemoryBufferRef Obj)
@@ -679,9 +643,6 @@ std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module* M)
     llvm::SmallString<MAX_PATH> objFilePath = filePath;
     objFilePath += JIT_OBJ_EXT;
 
-#if defined(ENABLE_JIT_DEBUG)
-    FILE* fpModuleIn = nullptr;
-#endif
     FILE* fpObjIn = nullptr;
     FILE* fpIn = fopen(filePath.c_str(), "rb");
     if (!fpIn)
@@ -737,12 +698,6 @@ std::unique_ptr<llvm::MemoryBuffer> JitCache::getObject(const llvm::Module* M)
         fclose(fpObjIn);
     }
 
-#if defined(ENABLE_JIT_DEBUG)
-    if (fpModuleIn)
-    {
-        fclose(fpModuleIn);
-    }
-#endif
 
     return pBuf;
 }
