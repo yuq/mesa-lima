@@ -392,14 +392,12 @@ _is_target_supported(struct gl_context *ctx, GLenum target)
     *     implementation the "unsupported" answer should be given.
     *     This is not an error."
     *
-    * For OpenGL ES, queries can only be used with GL_RENDERBUFFER or MS.
+    * Note that legality of targets has already been verified.
     */
    switch(target){
    case GL_TEXTURE_1D:
    case GL_TEXTURE_2D:
    case GL_TEXTURE_3D:
-      if (!_mesa_is_desktop_gl(ctx))
-         return false;
       break;
 
    case GL_TEXTURE_1D_ARRAY:
