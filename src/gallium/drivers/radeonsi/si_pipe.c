@@ -587,7 +587,7 @@ static void si_test_vmfault(struct si_screen *sscreen)
 	struct pipe_context *ctx = sscreen->aux_context;
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct pipe_resource *buf =
-		pipe_buffer_create(&sscreen->b, 0, PIPE_USAGE_DEFAULT, 64);
+		pipe_buffer_create_const0(&sscreen->b, 0, PIPE_USAGE_DEFAULT, 64);
 
 	if (!buf) {
 		puts("Buffer allocation failed.");
