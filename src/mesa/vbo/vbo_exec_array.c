@@ -335,19 +335,19 @@ recalculate_input_bindings(struct gl_context *ctx)
          }
       }
 
+      /* Could use just about anything, just to fill in the empty
+       * slots:
+       */
+      for (i = 0; i < VERT_ATTRIB_MAT0; i++) {
+         inputs[VERT_ATTRIB_GENERIC(i)] =
+            &vbo->currval[VBO_ATTRIB_GENERIC0 + i];
+         const_inputs |= VERT_BIT_GENERIC(i);
+      }
+
       for (i = 0; i < VERT_ATTRIB_MAT_MAX; i++) {
          inputs[VERT_ATTRIB_MAT(i)] =
             &vbo->currval[VBO_ATTRIB_MAT_FRONT_AMBIENT + i];
          const_inputs |= VERT_BIT_MAT(i);
-      }
-
-      /* Could use just about anything, just to fill in the empty
-       * slots:
-       */
-      for (i = VERT_ATTRIB_MAT_MAX; i < VERT_ATTRIB_GENERIC_MAX; i++) {
-         inputs[VERT_ATTRIB_GENERIC(i)] =
-            &vbo->currval[VBO_ATTRIB_GENERIC0 + i];
-         const_inputs |= VERT_BIT_GENERIC(i);
       }
       break;
 

@@ -127,6 +127,8 @@ const char *gl_vert_attrib_name(gl_vert_attrib attrib);
  * VERT_ATTRIB_MAT
  *   include the generic shader attributes used to alias
  *   varying material values for the TNL shader programs.
+ *   They are located at the end of the generic attribute
+ *   block not to overlap with the generic 0 attribute.
  */
 #define VERT_ATTRIB_FF(i)           (VERT_ATTRIB_POS + (i))
 #define VERT_ATTRIB_FF_MAX          VERT_ATTRIB_GENERIC0
@@ -137,7 +139,10 @@ const char *gl_vert_attrib_name(gl_vert_attrib attrib);
 #define VERT_ATTRIB_GENERIC(i)      (VERT_ATTRIB_GENERIC0 + (i))
 #define VERT_ATTRIB_GENERIC_MAX     MAX_VERTEX_GENERIC_ATTRIBS
 
-#define VERT_ATTRIB_MAT(i)          VERT_ATTRIB_GENERIC(i)
+#define VERT_ATTRIB_MAT0            \
+   (VERT_ATTRIB_GENERIC_MAX - VERT_ATTRIB_MAT_MAX)
+#define VERT_ATTRIB_MAT(i)          \
+   VERT_ATTRIB_GENERIC((i) + VERT_ATTRIB_MAT0)
 #define VERT_ATTRIB_MAT_MAX         MAT_ATTRIB_MAX
 
 /**
