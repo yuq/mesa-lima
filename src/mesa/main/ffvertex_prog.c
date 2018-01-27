@@ -51,6 +51,10 @@
 #define NUM_UNITS MAX2(MAX_TEXTURE_COORD_UNITS, MAX_LIGHTS)
 
 struct state_key {
+   GLbitfield varying_vp_inputs;
+
+   unsigned fragprog_inputs_read:12;
+
    unsigned light_color_material_mask:12;
    unsigned light_global_enabled:1;
    unsigned light_local_viewer:1;
@@ -63,22 +67,19 @@ struct state_key {
    unsigned fog_distance_mode:2;
    unsigned separate_specular:1;
    unsigned point_attenuated:1;
-   unsigned fragprog_inputs_read:12;
-
-   GLbitfield varying_vp_inputs;
 
    struct {
-      unsigned light_enabled:1;
-      unsigned light_eyepos3_is_zero:1;
-      unsigned light_spotcutoff_is_180:1;
-      unsigned light_attenuated:1;
-      unsigned texmat_enabled:1;
-      unsigned coord_replace:1;
-      unsigned texgen_enabled:1;
-      unsigned texgen_mode0:4;
-      unsigned texgen_mode1:4;
-      unsigned texgen_mode2:4;
-      unsigned texgen_mode3:4;
+      unsigned char light_enabled:1;
+      unsigned char light_eyepos3_is_zero:1;
+      unsigned char light_spotcutoff_is_180:1;
+      unsigned char light_attenuated:1;
+      unsigned char texmat_enabled:1;
+      unsigned char coord_replace:1;
+      unsigned char texgen_enabled:1;
+      unsigned char texgen_mode0:4;
+      unsigned char texgen_mode1:4;
+      unsigned char texgen_mode2:4;
+      unsigned char texgen_mode3:4;
    } unit[NUM_UNITS];
 };
 
