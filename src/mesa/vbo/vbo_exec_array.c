@@ -319,7 +319,8 @@ recalculate_input_bindings(struct gl_context *ctx)
    GLbitfield const_inputs = 0x0;
    GLuint i;
 
-   switch (get_vp_mode(ctx)) {
+   const enum vp_mode program_mode = get_vp_mode(ctx);
+   switch (program_mode) {
    case VP_FF:
       /* When no vertex program is active (or the vertex program is generated
        * from fixed-function state).  We put the material values into the
@@ -424,6 +425,8 @@ recalculate_input_bindings(struct gl_context *ctx)
       }
 
       break;
+   default:
+      assert(0);
    }
 
    _mesa_set_varying_vp_inputs(ctx, VERT_BIT_ALL & (~const_inputs));

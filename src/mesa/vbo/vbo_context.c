@@ -236,27 +236,8 @@ _vbo_CreateContext(struct gl_context *ctx)
    init_mat_currval(ctx);
    vbo_set_indirect_draw_func(ctx, vbo_draw_indirect_prims);
 
-   /* Build mappings from VERT_ATTRIB -> VBO_ATTRIB depending on type
-    * of vertex program active.
-    */
-   {
-      GLuint i;
-
-      /* make sure all VBO_ATTRIB_ values can fit in an unsigned byte */
-      STATIC_ASSERT(VBO_ATTRIB_MAX <= 255);
-
-      /* identity mapping */
-      for (i = 0; i < ARRAY_SIZE(vbo->map_vp_none); i++)
-         vbo->map_vp_none[i] = i;
-      /* map material attribs to generic slots */
-      for (i = 0; i < VERT_ATTRIB_MAT_MAX; i++)
-         vbo->map_vp_none[VERT_ATTRIB_MAT(i)]
-            = VBO_ATTRIB_MAT_FRONT_AMBIENT + i;
-
-      for (i = 0; i < ARRAY_SIZE(vbo->map_vp_arb); i++)
-         vbo->map_vp_arb[i] = i;
-   }
-
+   /* make sure all VBO_ATTRIB_ values can fit in an unsigned byte */
+   STATIC_ASSERT(VBO_ATTRIB_MAX <= 255);
 
    /* Hook our functions into exec and compile dispatch tables.  These
     * will pretty much be permanently installed, which means that the

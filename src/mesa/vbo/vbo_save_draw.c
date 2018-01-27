@@ -138,10 +138,12 @@ bind_vertex_list(struct gl_context *ctx,
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_save_context *save = &vbo->save;
    struct gl_vertex_array *arrays = save->arrays;
-   const GLubyte *map;
    GLuint attr;
    GLbitfield varying_inputs = 0x0;
    bool generic_from_pos = false;
+
+   const enum vp_mode program_mode = get_vp_mode(ctx);
+   const GLubyte * const map = _vbo_attribute_alias_map[program_mode];
 
    /* Install the default (ie Current) attributes first */
    for (attr = 0; attr < VERT_ATTRIB_FF_MAX; attr++) {
@@ -149,7 +151,7 @@ bind_vertex_list(struct gl_context *ctx,
    }
 
    /* Overlay other active attributes */
-   switch (get_vp_mode(ctx)) {
+   switch (program_mode) {
    case VP_FF:
       for (attr = 0; attr < VERT_ATTRIB_MAT0; attr++) {
          save->inputs[VERT_ATTRIB_GENERIC(attr)] =
@@ -159,14 +161,12 @@ bind_vertex_list(struct gl_context *ctx,
          save->inputs[VERT_ATTRIB_MAT(attr)] =
             &vbo->currval[VBO_ATTRIB_MAT_FRONT_AMBIENT+attr];
       }
-      map = vbo->map_vp_none;
       break;
    case VP_SHADER:
       for (attr = 0; attr < VERT_ATTRIB_GENERIC_MAX; attr++) {
          save->inputs[VERT_ATTRIB_GENERIC(attr)] =
             &vbo->currval[VBO_ATTRIB_GENERIC0+attr];
       }
-      map = vbo->map_vp_arb;
 
       /* check if VERT_ATTRIB_POS is not read but VERT_BIT_GENERIC0 is read.
        * In that case we effectively need to route the data from

@@ -174,10 +174,12 @@ vbo_exec_bind_arrays(struct gl_context *ctx)
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_exec_context *exec = &vbo->exec;
    struct gl_vertex_array *arrays = exec->vtx.arrays;
-   const GLubyte *map;
    GLuint attr;
    GLbitfield varying_inputs = 0x0;
    bool swap_pos = false;
+
+   const enum vp_mode program_mode = get_vp_mode(exec->ctx);
+   const GLubyte * const map = _vbo_attribute_alias_map[program_mode];
 
    /* Install the default (ie Current) attributes first */
    for (attr = 0; attr < VERT_ATTRIB_FF_MAX; attr++) {
@@ -185,7 +187,7 @@ vbo_exec_bind_arrays(struct gl_context *ctx)
    }
 
    /* Overlay other active attributes */
-   switch (get_vp_mode(exec->ctx)) {
+   switch (program_mode) {
    case VP_FF:
       for (attr = 0; attr < VERT_ATTRIB_MAT0; attr++) {
          assert(VERT_ATTRIB_GENERIC(attr) < ARRAY_SIZE(exec->vtx.inputs));
@@ -197,7 +199,6 @@ vbo_exec_bind_arrays(struct gl_context *ctx)
          exec->vtx.inputs[VERT_ATTRIB_MAT(attr)] =
             &vbo->currval[VBO_ATTRIB_MAT_FRONT_AMBIENT+attr];
       }
-      map = vbo->map_vp_none;
       break;
    case VP_SHADER:
       for (attr = 0; attr < VERT_ATTRIB_GENERIC_MAX; attr++) {
@@ -205,7 +206,6 @@ vbo_exec_bind_arrays(struct gl_context *ctx)
          exec->vtx.inputs[VERT_ATTRIB_GENERIC(attr)] =
             &vbo->currval[VBO_ATTRIB_GENERIC0+attr];
       }
-      map = vbo->map_vp_arb;
 
       /* check if VERT_ATTRIB_POS is not read but VERT_BIT_GENERIC0 is read.
        * In that case we effectively need to route the data from
