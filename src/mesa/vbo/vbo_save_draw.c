@@ -27,6 +27,7 @@
  */
 
 #include <stdbool.h>
+#include "main/arrayobj.h"
 #include "main/glheader.h"
 #include "main/bufferobj.h"
 #include "main/context.h"
@@ -140,54 +141,20 @@ bind_vertex_list(struct gl_context *ctx,
    struct gl_vertex_array *arrays = save->arrays;
    GLuint attr;
    GLbitfield varying_inputs = 0x0;
-   bool generic_from_pos = false;
 
    const enum vp_mode program_mode = get_vp_mode(ctx);
    const GLubyte * const map = _vbo_attribute_alias_map[program_mode];
 
-   /* Install the default (ie Current) attributes first */
-   for (attr = 0; attr < VERT_ATTRIB_FF_MAX; attr++) {
-      save->inputs[attr] = &vbo->currval[VBO_ATTRIB_POS + attr];
-   }
-
-   /* Overlay other active attributes */
-   switch (program_mode) {
-   case VP_FF:
-      for (attr = 0; attr < VERT_ATTRIB_MAT0; attr++) {
-         save->inputs[VERT_ATTRIB_GENERIC(attr)] =
-            &vbo->currval[VBO_ATTRIB_GENERIC0+attr];
-      }
-      for (attr = 0; attr < VERT_ATTRIB_MAT_MAX; attr++) {
-         save->inputs[VERT_ATTRIB_MAT(attr)] =
-            &vbo->currval[VBO_ATTRIB_MAT_FRONT_AMBIENT+attr];
-      }
-      break;
-   case VP_SHADER:
-      for (attr = 0; attr < VERT_ATTRIB_GENERIC_MAX; attr++) {
-         save->inputs[VERT_ATTRIB_GENERIC(attr)] =
-            &vbo->currval[VBO_ATTRIB_GENERIC0+attr];
-      }
-
-      /* check if VERT_ATTRIB_POS is not read but VERT_BIT_GENERIC0 is read.
-       * In that case we effectively need to route the data from
-       * glVertexAttrib(0, val) calls to feed into the GENERIC0 input.
-       */
-      const GLbitfield64 inputs_read =
-         ctx->VertexProgram._Current->info.inputs_read;
-      if ((inputs_read & VERT_BIT_POS) == 0 &&
-          (inputs_read & VERT_BIT_GENERIC0)) {
-         generic_from_pos = true;
-      }
-      break;
-   default:
-      unreachable("Bad vertex program mode");
-   }
-
+   /* Grab VERT_ATTRIB_{POS,GENERIC0} from VBO_ATTRIB_POS */
+   const gl_attribute_map_mode mode = ATTRIBUTE_MAP_MODE_POSITION;
+   const GLubyte *const array_map = _mesa_vao_attribute_map[mode];
    for (attr = 0; attr < VERT_ATTRIB_MAX; attr++) {
-      const GLuint src = map[attr];
+      const GLuint src = map[array_map[attr]];
       const GLubyte size = node->attrsz[src];
 
-      if (size) {
+      if (size == 0) {
+         save->inputs[attr] = &vbo->currval[map[attr]];
+      } else {
          struct gl_vertex_array *array = &arrays[attr];
          const GLenum16 type = node->attrtype[src];
 
@@ -209,11 +176,6 @@ bind_vertex_list(struct gl_context *ctx,
 
          varying_inputs |= VERT_BIT(attr);
       }
-   }
-
-   if (generic_from_pos) {
-      varying_inputs |= (varying_inputs & VERT_BIT_POS) << VERT_ATTRIB_GENERIC0;
-      save->inputs[VERT_ATTRIB_GENERIC0] = save->inputs[VERT_ATTRIB_POS];
    }
 
    _mesa_set_varying_vp_inputs(ctx, varying_inputs);
