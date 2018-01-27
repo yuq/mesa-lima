@@ -558,15 +558,29 @@ _is_internalformat_supported(struct gl_context *ctx, GLenum target,
     *         implementation accepts it for any texture specification commands, and
     *         - unsized or base internal format, if the implementation accepts
     *         it for texture or image specification.
+    *
+    * But also:
+    * "If the particualar <target> and <internalformat> combination do not make
+    * sense, or if a particular type of <target> is not supported by the
+    * implementation the "unsupported" answer should be given. This is not an
+    * error.
     */
    GLint buffer[1];
 
-   /* At this point an internalformat is valid if it is valid as a texture or
-    * as a renderbuffer format. The checks are different because those methods
-    * return different values when passing non supported internalformats */
-   if (_mesa_base_tex_format(ctx, internalformat) < 0 &&
-       _mesa_base_fbo_format(ctx, internalformat) == 0)
-      return false;
+   if (target == GL_RENDERBUFFER) {
+      if (_mesa_base_fbo_format(ctx, internalformat) == 0) {
+         return false;
+      }
+   } else if (target == GL_TEXTURE_BUFFER) {
+      if (_mesa_validate_texbuffer_format(ctx, internalformat) ==
+          MESA_FORMAT_NONE) {
+         return false;
+      }
+   } else {
+      if (_mesa_base_tex_format(ctx, internalformat) < 0) {
+         return false;
+      }
+   }
 
    /* Let the driver have the final word */
    ctx->Driver.QueryInternalFormat(ctx, target, internalformat,
@@ -969,10 +983,7 @@ _mesa_GetInternalformativ(GLenum target, GLenum internalformat, GLenum pname,
        * and glGetRenderbufferParameteriv functions.
        */
       if (pname == GL_INTERNALFORMAT_SHARED_SIZE) {
-         if (_mesa_has_EXT_texture_shared_exponent(ctx) &&
-             target != GL_TEXTURE_BUFFER &&
-             target != GL_RENDERBUFFER &&
-             texformat == MESA_FORMAT_R9G9B9E5_FLOAT) {
+         if (texformat == MESA_FORMAT_R9G9B9E5_FLOAT) {
             buffer[0] = 5;
          }
          goto end;
