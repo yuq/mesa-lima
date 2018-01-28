@@ -286,14 +286,15 @@ print_draw_arrays(struct gl_context *ctx,
             _mesa_vertex_attrib_address(array, binding);
          float *f = (float *) (p + offset);
          int *k = (int *) f;
-         int i;
+	 int i = 0;
          int n = (count * binding->Stride) / 4;
          if (n > 32)
             n = 32;
          printf("  Data at offset %d:\n", offset);
-         for (i = 0; i < n; i++) {
+	 do {
             printf("    float[%d] = 0x%08x %f\n", i, k[i], f[i]);
-         }
+	    i++;
+	 } while (i < n);
          ctx->Driver.UnmapBuffer(ctx, bufObj, MAP_INTERNAL);
       }
    }
