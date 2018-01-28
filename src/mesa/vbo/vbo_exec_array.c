@@ -284,15 +284,32 @@ print_draw_arrays(struct gl_context *ctx,
                                                  MAP_INTERNAL);
          int offset = (int) (GLintptr)
             _mesa_vertex_attrib_address(array, binding);
+
+	 unsigned multiplier;
+	 switch (array->Type) {
+	 case GL_DOUBLE:
+	 case GL_INT64_ARB:
+	 case GL_UNSIGNED_INT64_ARB:
+	    multiplier = 2;
+	    break;
+	 default:
+	    multiplier = 1;
+	 }
+
          float *f = (float *) (p + offset);
          int *k = (int *) f;
 	 int i = 0;
-	 int n = (count - 1) * (binding->Stride / 4) + array->Size;
+	 int n = (count - 1) * (binding->Stride / (4 * multiplier))
+	   + array->Size;
          if (n > 32)
             n = 32;
          printf("  Data at offset %d:\n", offset);
 	 do {
-            printf("    float[%d] = 0x%08x %f\n", i, k[i], f[i]);
+	    if (multiplier == 2)
+	       printf("    double[%d] = 0x%016llx %lf\n", i,
+		      ((unsigned long long *) k)[i], ((double *) f)[i]);
+	    else
+	       printf("    float[%d] = 0x%08x %f\n", i, k[i], f[i]);
 	    i++;
 	 } while (i < n);
          ctx->Driver.UnmapBuffer(ctx, bufObj, MAP_INTERNAL);
