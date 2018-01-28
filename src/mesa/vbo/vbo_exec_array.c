@@ -287,7 +287,7 @@ print_draw_arrays(struct gl_context *ctx,
          float *f = (float *) (p + offset);
          int *k = (int *) f;
 	 int i = 0;
-         int n = (count * binding->Stride) / 4;
+	 int n = (count - 1) * (binding->Stride / 4) + array->Size;
          if (n > 32)
             n = 32;
          printf("  Data at offset %d:\n", offset);
