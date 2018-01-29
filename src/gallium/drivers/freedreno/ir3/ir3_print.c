@@ -50,20 +50,13 @@ static void print_instr_name(struct ir3_instruction *instr)
 		printf("(ss)");
 
 	if (is_meta(instr)) {
-		switch(instr->opc) {
-		case OPC_META_PHI:
-			printf("&#934;");
-			break;
-		default:
-			/* shouldn't hit here.. just for debugging: */
-			switch (instr->opc) {
-			case OPC_META_INPUT:  printf("_meta:in");   break;
-			case OPC_META_FO:     printf("_meta:fo");   break;
-			case OPC_META_FI:     printf("_meta:fi");   break;
+		switch (instr->opc) {
+		case OPC_META_INPUT:  printf("_meta:in");   break;
+		case OPC_META_FO:     printf("_meta:fo");   break;
+		case OPC_META_FI:     printf("_meta:fi");   break;
 
-			default: printf("_meta:%d", instr->opc); break;
-			}
-			break;
+		/* shouldn't hit here.. just for debugging: */
+		default: printf("_meta:%d", instr->opc);    break;
 		}
 	} else if (instr->opc == OPC_MOV) {
 		static const char *type[] = {

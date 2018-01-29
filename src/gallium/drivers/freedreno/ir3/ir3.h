@@ -93,7 +93,6 @@ struct ir3_register {
 		 */
 		IR3_REG_SSA    = 0x4000,   /* 'instr' is ptr to assigning instr */
 		IR3_REG_ARRAY  = 0x8000,
-		IR3_REG_PHI_SRC= 0x10000,  /* phi src, regs[0]->instr points to phi */
 
 	} flags;
 	union {
@@ -261,12 +260,6 @@ struct ir3_instruction {
 		struct {
 			int off;              /* component/offset */
 		} fo;
-		struct {
-			/* used to temporarily hold reference to nir_phi_instr
-			 * until we resolve the phi srcs
-			 */
-			void *nphi;
-		} phi;
 		struct {
 			struct ir3_block *block;
 		} inout;

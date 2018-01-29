@@ -202,7 +202,6 @@ typedef enum {
 	/* meta instructions (category -1): */
 	/* placeholder instr to mark shader inputs: */
 	OPC_META_INPUT      = _OPC(-1, 0),
-	OPC_META_PHI        = _OPC(-1, 1),
 	/* The "fan-in" and "fan-out" instructions are used for keeping
 	 * track of instructions that write to multiple dst registers
 	 * (fan-out) like texture sample instructions, or read multiple

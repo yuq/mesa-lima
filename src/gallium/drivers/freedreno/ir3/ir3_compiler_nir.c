@@ -2594,64 +2594,6 @@ emit_tex_txs(struct ir3_context *ctx, nir_tex_instr *tex)
 }
 
 static void
-emit_phi(struct ir3_context *ctx, nir_phi_instr *nphi)
-{
-	struct ir3_instruction *phi, **dst;
-
-	/* NOTE: phi's should be lowered to scalar at this point */
-	compile_assert(ctx, nphi->dest.ssa.num_components == 1);
-
-	dst = get_dst(ctx, &nphi->dest, 1);
-
-	phi = ir3_instr_create2(ctx->block, OPC_META_PHI,
-			1 + exec_list_length(&nphi->srcs));
-	ir3_reg_create(phi, 0, 0);         /* dst */
-	phi->phi.nphi = nphi;
-
-	dst[0] = phi;
-
-	put_dst(ctx, &nphi->dest);
-}
-
-/* phi instructions are left partially constructed.  We don't resolve
- * their srcs until the end of the block, since (eg. loops) one of
- * the phi's srcs might be defined after the phi due to back edges in
- * the CFG.
- */
-static void
-resolve_phis(struct ir3_context *ctx, struct ir3_block *block)
-{
-	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
-		nir_phi_instr *nphi;
-
-		/* phi's only come at start of block: */
-		if (instr->opc != OPC_META_PHI)
-			break;
-
-		if (!instr->phi.nphi)
-			break;
-
-		nphi = instr->phi.nphi;
-		instr->phi.nphi = NULL;
-
-		foreach_list_typed(nir_phi_src, nsrc, node, &nphi->srcs) {
-			struct ir3_instruction *src = get_src(ctx, &nsrc->src)[0];
-
-			/* NOTE: src might not be in the same block as it comes from
-			 * according to the phi.. but in the end the backend assumes
-			 * it will be able to assign the same register to each (which
-			 * only works if it is assigned in the src block), so insert
-			 * an extra mov to make sure the phi src is assigned in the
-			 * block it comes from:
-			 */
-			src = ir3_MOV(get_block(ctx, nsrc->pred), src, TYPE_U32);
-
-			ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = src;
-		}
-	}
-}
-
-static void
 emit_jump(struct ir3_context *ctx, nir_jump_instr *jump)
 {
 	switch (jump->type) {
@@ -2701,11 +2643,12 @@ emit_instr(struct ir3_context *ctx, nir_instr *instr)
 		}
 		break;
 	}
-	case nir_instr_type_phi:
-		emit_phi(ctx, nir_instr_as_phi(instr));
-		break;
 	case nir_instr_type_jump:
 		emit_jump(ctx, nir_instr_as_jump(instr));
+		break;
+	case nir_instr_type_phi:
+		/* we have converted phi webs to regs in NIR by now */
+		compile_error(ctx, "Unexpected NIR instruction type: %d\n", instr->type);
 		break;
 	case nir_instr_type_call:
 	case nir_instr_type_parallel_copy:
@@ -3180,10 +3123,6 @@ emit_instructions(struct ir3_context *ctx)
 	/* And emit the body: */
 	ctx->impl = fxn;
 	emit_function(ctx, fxn);
-
-	list_for_each_entry (struct ir3_block, block, &ctx->ir->block_list, node) {
-		resolve_phis(ctx, block);
-	}
 }
 
 /* from NIR perspective, we actually have inputs.  But most of the "inputs"

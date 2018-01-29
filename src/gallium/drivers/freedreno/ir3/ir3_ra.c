@@ -484,41 +484,6 @@ get_definer(struct ir3_ra_ctx *ctx, struct ir3_instruction *instr,
 		d = instr;
 	}
 
-	if (d->regs[0]->flags & IR3_REG_PHI_SRC) {
-		struct ir3_instruction *phi = d->regs[0]->instr;
-		struct ir3_instruction *dd;
-		int dsz, doff;
-
-		dd = get_definer(ctx, phi, &dsz, &doff);
-
-		*sz = MAX2(*sz, dsz);
-		*off = doff;
-
-		if (instr_before(dd, d)) {
-			d = dd;
-		}
-	}
-
-	if (d->opc == OPC_META_PHI) {
-		/* we have already inserted parallel-copies into
-		 * the phi, so we don't need to chase definers
-		 */
-		struct ir3_register *src;
-		struct ir3_instruction *dd = d;
-
-		/* note: don't use foreach_ssa_src as this gets called once
-		 * while assigning regs (which clears SSA flag)
-		 */
-		foreach_src(src, d) {
-			if (!src->instr)
-				continue;
-			if (instr_before(src->instr, dd))
-				dd = src->instr;
-		}
-
-		d = dd;
-	}
-
 	if (d->opc == OPC_META_FO) {
 		struct ir3_instruction *dd;
 		int dsz, doff;
@@ -713,13 +678,7 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 		 *     to texture sample instructions;  We consider these to be
 		 *     defined at the earliest fanin source.
 		 *
-		 * phi: used to merge values from different flow control paths
-		 *     to the same reg.  Consider defined at earliest phi src,
-		 *     and update all the other phi src's (which may come later
-		 *     in the program) as users to extend the var's live range.
-		 *
-		 * Most of this, other than phi, is completely handled in the
-		 * get_definer() helper.
+		 * Most of this is handled in the get_definer() helper.
 		 *
 		 * In either case, we trace the instruction back to the original
 		 * definer and consider that as the def/use ip.
@@ -733,8 +692,6 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 				struct ir3_array *arr =
 					ir3_lookup_array(ctx->ir, dst->array.id);
 				unsigned i;
-
-				debug_assert(!(dst->flags & IR3_REG_PHI_SRC));
 
 				arr->start_ip = MIN2(arr->start_ip, instr->ip);
 				arr->end_ip = MAX2(arr->end_ip, instr->ip);
@@ -779,24 +736,6 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 				} else {
 					ra_set_node_class(ctx->g, name,
 							ctx->set->classes[id->cls]);
-				}
-
-				/* extend the live range for phi srcs, which may come
-				 * from the bottom of the loop
-				 */
-				if (id->defn->regs[0]->flags & IR3_REG_PHI_SRC) {
-					struct ir3_instruction *phi = id->defn->regs[0]->instr;
-					foreach_ssa_src(src, phi) {
-						/* if src is after phi, then we need to extend
-						 * the liverange to the end of src's block:
-						 */
-						if (src->ip > phi->ip) {
-							struct ir3_instruction *last =
-									list_last_entry(&src->block->instr_list,
-											struct ir3_instruction, node);
-							ctx->use[name] = MAX2(ctx->use[name], last->ip);
-						}
-					}
 				}
 			}
 		}
@@ -1064,7 +1003,7 @@ reg_assign(struct ir3_ra_ctx *ctx, struct ir3_register *reg,
 			num += FIRST_HIGH_REG;
 
 		reg->num = num;
-		reg->flags &= ~(IR3_REG_SSA | IR3_REG_PHI_SRC);
+		reg->flags &= ~IR3_REG_SSA;
 
 		if (is_half(id->defn))
 			reg->flags |= IR3_REG_HALF;

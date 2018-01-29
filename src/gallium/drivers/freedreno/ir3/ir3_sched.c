@@ -516,12 +516,12 @@ sched_block(struct ir3_sched_ctx *ctx, struct ir3_block *block)
 	list_inithead(&block->instr_list);
 	list_inithead(&ctx->depth_list);
 
-	/* first a pre-pass to schedule all meta:input/phi instructions
+	/* first a pre-pass to schedule all meta:input instructions
 	 * (which need to appear first so that RA knows the register is
 	 * occupied), and move remaining to depth sorted list:
 	 */
 	list_for_each_entry_safe (struct ir3_instruction, instr, &unscheduled_list, node) {
-		if ((instr->opc == OPC_META_INPUT) || (instr->opc == OPC_META_PHI)) {
+		if (instr->opc == OPC_META_INPUT) {
 			schedule(ctx, instr);
 		} else {
 			ir3_insert_by_depth(instr, &ctx->depth_list);
@@ -633,46 +633,10 @@ sched_block(struct ir3_sched_ctx *ctx, struct ir3_block *block)
 	 */
 }
 
-/* this is needed to ensure later RA stage succeeds: */
-static void
-sched_insert_parallel_copies(struct ir3_block *block)
-{
-	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
-		if (instr->opc == OPC_META_PHI) {
-			struct ir3_register *reg, *reg2;
-			foreach_src(reg, instr) {
-				struct ir3_instruction *src = reg->instr;
-				struct ir3_instruction *mov = NULL;
-
-				/* after CP we could end up w/ duplicate phi srcs: */
-				foreach_src(reg2, instr) {
-					if (reg == reg2)
-						break;
-					/* reg2 is before reg1 so already an inserted mov: */
-					else if (reg2->instr->regs[1]->instr == src) {
-						mov = reg2->instr;
-						break;
-					}
-				}
-
-				if (!mov) {
-					mov = ir3_MOV(src->block, src, TYPE_U32);
-					mov->regs[0]->flags |= IR3_REG_PHI_SRC;
-					mov->regs[0]->instr = instr;
-				}
-
-				reg->instr = mov;
-			}
-		}
-	}
-}
-
 int ir3_sched(struct ir3 *ir)
 {
 	struct ir3_sched_ctx ctx = {0};
-	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
-		sched_insert_parallel_copies(block);
-	}
+
 	ir3_clear_mark(ir);
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
 		sched_block(&ctx, block);

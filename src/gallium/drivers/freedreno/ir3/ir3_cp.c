@@ -67,13 +67,7 @@ static bool is_eligible_mov(struct ir3_instruction *instr, bool allow_flags)
 		/* TODO: remove this hack: */
 		if (src_instr->opc == OPC_META_FO)
 			return false;
-		/* TODO: we currently don't handle left/right neighbors
-		 * very well when inserting parallel-copies into phi..
-		 * to avoid problems don't eliminate a mov coming out
-		 * of phi..
-		 */
-		if (src_instr->opc == OPC_META_PHI)
-			return false;
+
 		return true;
 	}
 	return false;
@@ -327,12 +321,6 @@ reg_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr,
 		struct ir3_register *reg, unsigned n)
 {
 	struct ir3_instruction *src = ssa(reg);
-
-	/* don't propagate copies into a PHI, since we don't know if the
-	 * src block executed:
-	 */
-	if (instr->opc == OPC_META_PHI)
-		return;
 
 	if (is_eligible_mov(src, true)) {
 		/* simple case, no immed/const/relativ, only mov's w/ ssa src: */

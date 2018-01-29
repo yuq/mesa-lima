@@ -133,10 +133,6 @@ restart:
 			conflict = conflicts(instr->cp.left, left) ||
 				conflicts(instr->cp.right, right);
 
-			/* RA can't yet deal very well w/ group'd phi's: */
-			if (instr->opc == OPC_META_PHI)
-				conflict = true;
-
 			/* Mixing array elements and higher register classes
 			 * (ie. groups) doesn't really work out in RA.  See:
 			 *
