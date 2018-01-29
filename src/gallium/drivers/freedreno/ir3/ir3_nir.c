@@ -50,6 +50,7 @@ static const nir_shader_compiler_options options = {
 		.vertex_id_zero_based = true,
 		.lower_extract_byte = true,
 		.lower_extract_word = true,
+		.lower_all_io_to_temps = true,
 };
 
 struct nir_shader *
