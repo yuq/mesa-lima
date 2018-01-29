@@ -4490,44 +4490,109 @@ static int egcm_int_to_double(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	struct r600_bytecode_alu alu;
-	int i, r;
-	int lasti = tgsi_last_instruction(inst->Dst[0].Register.WriteMask);
+	int i, c, r;
+	int write_mask = inst->Dst[0].Register.WriteMask;
+	int temp_reg = r600_get_temp(ctx);
 
 	assert(inst->Instruction.Opcode == TGSI_OPCODE_I2D ||
 		inst->Instruction.Opcode == TGSI_OPCODE_U2D);
 
-	for (i = 0; i <= (lasti+1)/2; i++) {
-		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-		alu.op = ctx->inst_info->op;
+	for (c = 0; c < 2; c++) {
+		int dchan = c * 2;
+		if (write_mask & (0x3 << dchan)) {
+	/* split into 24-bit int and 8-bit int */
+			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+			alu.op = ALU_OP2_AND_INT;
+			alu.dst.sel = temp_reg;
+			alu.dst.chan = dchan;
+			r600_bytecode_src(&alu.src[0], &ctx->src[0], c);
+			alu.src[1].sel = V_SQ_ALU_SRC_LITERAL;
+			alu.src[1].value = 0xffffff00;
+			alu.dst.write = 1;
+			r = r600_bytecode_add_alu(ctx->bc, &alu);
+			if (r)
+				return r;
 
-		r600_bytecode_src(&alu.src[0], &ctx->src[0], i);
-		alu.dst.sel = ctx->temp_reg;
-		alu.dst.chan = i;
-		alu.dst.write = 1;
-		alu.last = 1;
-
-		r = r600_bytecode_add_alu(ctx->bc, &alu);
-		if (r)
-			return r;
+			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+			alu.op = ALU_OP2_AND_INT;
+			alu.dst.sel = temp_reg;
+			alu.dst.chan = dchan + 1;
+			r600_bytecode_src(&alu.src[0], &ctx->src[0], c);
+			alu.src[1].sel = V_SQ_ALU_SRC_LITERAL;
+			alu.src[1].value = 0xff;
+			alu.dst.write = 1;
+			alu.last = 1;
+			r = r600_bytecode_add_alu(ctx->bc, &alu);
+			if (r)
+				return r;
+		}
 	}
 
-	for (i = 0; i <= lasti; i++) {
-		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-		alu.op = ALU_OP1_FLT32_TO_FLT64;
+	for (c = 0; c < 2; c++) {
+		int dchan = c * 2;
+		if (write_mask & (0x3 << dchan)) {
+			for (i = dchan; i <= dchan + 1; i++) {
+				memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+				alu.op = i == dchan ? ctx->inst_info->op : ALU_OP1_UINT_TO_FLT;
 
-		alu.src[0].chan = i/2;
-		if (i%2 == 0)
-			alu.src[0].sel = ctx->temp_reg;
-		else {
-			alu.src[0].sel = V_SQ_ALU_SRC_LITERAL;
-			alu.src[0].value = 0x0;
+				alu.src[0].sel = temp_reg;
+				alu.src[0].chan = i;
+				alu.dst.sel = temp_reg;
+				alu.dst.chan = i;
+				alu.dst.write = 1;
+				if (ctx.bc->chip_class == CAYMAN)
+					alu.last = i == dchan + 1;
+				else
+					alu.last = 1; /* trans only ops on evergreen */
+				
+				r = r600_bytecode_add_alu(ctx->bc, &alu);
+				if (r)
+					return r;
+			}
 		}
-		tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
-		alu.last = i == lasti;
+	}
 
-		r = r600_bytecode_add_alu(ctx->bc, &alu);
-		if (r)
-			return r;
+	for (c = 0; c < 2; c++) {
+		int dchan = c * 2;
+		if (write_mask & (0x3 << dchan)) {
+			for (i = 0; i < 4; i++) {
+				memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+				alu.op = ALU_OP1_FLT32_TO_FLT64;
+
+				alu.src[0].chan = dchan + (i / 2);
+				if (i == 0 || i == 2)
+					alu.src[0].sel = temp_reg;
+				else {
+					alu.src[0].sel = V_SQ_ALU_SRC_LITERAL;
+					alu.src[0].value = 0x0;
+				}
+				alu.dst.sel = ctx->temp_reg;
+				alu.dst.chan = i;
+				alu.last = i == 3;
+				alu.dst.write = 1;
+
+				r = r600_bytecode_add_alu(ctx->bc, &alu);
+				if (r)
+					return r;
+			}
+
+			for (i = 0; i <= 1; i++) {
+				memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+				alu.op = ALU_OP2_ADD_64;
+
+				alu.src[0].chan = fp64_switch(i);
+				alu.src[0].sel = ctx->temp_reg;
+
+				alu.src[1].chan = fp64_switch(i + 2);
+				alu.src[1].sel = ctx->temp_reg;
+				tgsi_dst(ctx, &inst->Dst[0], dchan + i, &alu.dst);
+				alu.last = i == 1;
+
+				r = r600_bytecode_add_alu(ctx->bc, &alu);
+				if (r)
+					return r;
+			}
+		}
 	}
 
 	return 0;
