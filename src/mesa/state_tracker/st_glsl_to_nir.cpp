@@ -319,6 +319,10 @@ st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
 
    nir_shader *nir = glsl_to_nir(shader_program, stage, options);
 
+   nir_variable_mode mask =
+      (nir_variable_mode) (nir_var_shader_in | nir_var_shader_out);
+   nir_remove_dead_variables(nir, mask);
+
    st_nir_opts(nir);
 
    return nir;
