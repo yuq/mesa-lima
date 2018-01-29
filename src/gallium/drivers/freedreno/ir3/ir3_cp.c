@@ -348,6 +348,9 @@ reg_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr,
 			}
 			reg->flags = new_flags;
 			reg->instr = ssa(src_reg);
+
+			instr->barrier_class |= src->barrier_class;
+			instr->barrier_conflict |= src->barrier_conflict;
 		}
 
 	} else if (is_same_type_mov(src) &&
@@ -563,6 +566,8 @@ instr_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr)
 			instr->address = cond->address;
 			instr->regs[1] = cond->regs[1];
 			instr->regs[2] = cond->regs[2];
+			instr->barrier_class |= cond->barrier_class;
+			instr->barrier_conflict |= cond->barrier_conflict;
 			break;
 		default:
 			break;
