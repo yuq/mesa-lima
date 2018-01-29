@@ -683,6 +683,7 @@ void * ir3_assemble(struct ir3 *shader, struct ir3_info *info,
 	info->max_const     = -1;
 	info->instrs_count  = 0;
 	info->sizedwords    = 0;
+	info->ss = info->sy = 0;
 
 	list_for_each_entry (struct ir3_block, block, &shader->block_list, node) {
 		list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
@@ -709,6 +710,12 @@ void * ir3_assemble(struct ir3 *shader, struct ir3_info *info,
 				goto fail;
 			info->instrs_count += 1 + instr->repeat;
 			dwords += 2;
+
+			if (instr->flags & IR3_INSTR_SS)
+				info->ss++;
+
+			if (instr->flags & IR3_INSTR_SY)
+				info->sy++;
 		}
 	}
 

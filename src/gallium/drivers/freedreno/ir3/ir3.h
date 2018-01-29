@@ -51,6 +51,9 @@ struct ir3_info {
 	int8_t   max_reg;   /* highest GPR # used by shader */
 	int8_t   max_half_reg;
 	int16_t  max_const;
+
+	/* number of sync bits: */
+	uint16_t ss, sy;
 };
 
 struct ir3_register {

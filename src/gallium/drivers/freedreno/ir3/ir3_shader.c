@@ -169,7 +169,8 @@ dump_shader_info(struct ir3_shader_variant *v, struct pipe_debug_callback *debug
 	pipe_debug_message(debug, SHADER_INFO, "\n"
 			"SHADER-DB: %s prog %d/%d: %u instructions, %u dwords\n"
 			"SHADER-DB: %s prog %d/%d: %u half, %u full\n"
-			"SHADER-DB: %s prog %d/%d: %u const, %u constlen\n",
+			"SHADER-DB: %s prog %d/%d: %u const, %u constlen\n"
+			"SHADER-DB: %s prog %d/%d: %u (ss), %u (sy)\n",
 			ir3_shader_stage(v->shader),
 			v->shader->id, v->id,
 			v->info.instrs_count,
@@ -181,7 +182,10 @@ dump_shader_info(struct ir3_shader_variant *v, struct pipe_debug_callback *debug
 			ir3_shader_stage(v->shader),
 			v->shader->id, v->id,
 			v->info.max_const + 1,
-			v->constlen);
+			v->constlen,
+			ir3_shader_stage(v->shader),
+			v->shader->id, v->id,
+			v->info.ss, v->info.sy);
 }
 
 static struct ir3_shader_variant *
@@ -485,6 +489,8 @@ ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin)
 	debug_printf("; %d const, %u constlen\n",
 			so->info.max_const + 1,
 			so->constlen);
+
+	debug_printf("; %u (ss), %u (sy)\n", so->info.ss, so->info.sy);
 
 	/* print shader type specific info: */
 	switch (so->type) {
