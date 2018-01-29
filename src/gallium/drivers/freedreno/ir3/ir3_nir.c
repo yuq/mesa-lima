@@ -97,6 +97,13 @@ ir3_optimize_loop(nir_shader *s)
 		progress |= OPT(s, nir_copy_prop);
 		progress |= OPT(s, nir_opt_dce);
 		progress |= OPT(s, nir_opt_cse);
+		static int gcm = -1;
+		if (gcm == -1)
+			gcm = env2u("GCM");
+		if (gcm == 1)
+			progress |= OPT(s, nir_opt_gcm, true);
+		else if (gcm == 2)
+			progress |= OPT(s, nir_opt_gcm, false);
 		progress |= OPT(s, nir_opt_peephole_select, 16);
 		progress |= OPT(s, nir_opt_intrinsics);
 		progress |= OPT(s, nir_opt_algebraic);
