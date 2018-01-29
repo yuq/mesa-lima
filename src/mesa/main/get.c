@@ -2064,7 +2064,7 @@ _mesa_GetUnsignedBytevEXT(GLenum pname, GLubyte *data)
 
    d = find_value(func, pname, &p, &v);
    size = get_value_size(d->type, &v);
-   if (size >= 0) {
+   if (size <= 0) {
       _mesa_problem(ctx, "invalid value type in GetUnsignedBytevEXT()");
    }
 
