@@ -97,6 +97,16 @@ namespace SwrJit
 #include "builder_mem.h"
 
     protected:
+
+        void SetPrivateContext(Value* pPrivateContext) 
+        { 
+            mpPrivateContext = pPrivateContext; 
+            NotifyPrivateContextSet();
+        }
+        virtual void NotifyPrivateContextSet() {}
+        inline Value* GetPrivateContext() { return mpPrivateContext; }
+
+    private: 
         Value* mpPrivateContext;
 
     };

@@ -148,8 +148,9 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     auto    argitr = fetch->arg_begin();
 
     // Fetch shader arguments
-    mpPrivateContext = &*argitr; ++argitr;
-    mpPrivateContext->setName("privateContext");
+    Value* privateContext = &*argitr; ++argitr;
+    privateContext->setName("privateContext");
+    SetPrivateContext(privateContext);
 
     mpFetchInfo = &*argitr; ++argitr;
     mpFetchInfo->setName("fetchInfo");

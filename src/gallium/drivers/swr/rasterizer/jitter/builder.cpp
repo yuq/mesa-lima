@@ -39,7 +39,8 @@ namespace SwrJit
     /// @brief Contructor for Builder.
     /// @param pJitMgr - JitManager which contains modules, function passes, etc.
     Builder::Builder(JitManager *pJitMgr)
-        : mpJitMgr(pJitMgr)
+        : mpJitMgr(pJitMgr),
+          mpPrivateContext(nullptr)
     {
         SWR_ASSERT(pJitMgr->mVWidth == 8);
 
