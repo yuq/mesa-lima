@@ -56,6 +56,7 @@ static const struct gen_info {
    { "glk", 9, IS_GLK },
    { "cfl", 9, IS_CFL },
    { "cnl", 10 },
+   { "icl", 11 },
 };
 
 class validation_test: public ::testing::TestWithParam<struct gen_info> {
