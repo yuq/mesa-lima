@@ -350,9 +350,6 @@ reg_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr,
 			reg->instr = ssa(src_reg);
 		}
 
-		src = ssa(reg);      /* could be null for IR3_REG_ARRAY case */
-		if (!src)
-			return;
 	} else if (is_same_type_mov(src) &&
 			/* cannot collapse const/immed/etc into meta instrs: */
 			!is_meta(instr)) {
