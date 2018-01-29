@@ -1528,18 +1528,21 @@ struct gl_vertex_array
  */
 struct gl_array_attributes
 {
-   GLint Size;              /**< Components per element (1,2,3,4) */
+   /** Points to client array data. Not used when a VBO is bound */
+   const GLubyte *Ptr;
+   /** Offset of the first element relative to the binding offset */
+   GLuint RelativeOffset;
+   GLshort Stride;          /**< Stride as specified with gl*Pointer() */
    GLenum16 Type;           /**< Datatype: GL_FLOAT, GL_INT, etc */
    GLenum16 Format;         /**< Default: GL_RGBA, but may be GL_BGRA */
-   GLsizei Stride;          /**< Stride as specified with gl*Pointer() */
-   const GLubyte *Ptr;      /**< Points to client array data. Not used when a VBO is bound */
-   GLintptr RelativeOffset; /**< Offset of the first element relative to the binding offset */
    GLboolean Enabled;       /**< Whether the array is enabled */
-   GLboolean Normalized;    /**< Fixed-point values are normalized when converted to floats */
-   GLboolean Integer;       /**< Fixed-point values are not converted to floats */
-   GLboolean Doubles;       /**< double precision values are not converted to floats */
-   GLuint _ElementSize;     /**< Size of each element in bytes */
-   GLuint BufferBindingIndex;    /**< Vertex buffer binding */
+   GLubyte Size;            /**< Components per element (1,2,3,4) */
+   unsigned Normalized:1;   /**< Fixed-point values are normalized when converted to floats */
+   unsigned Integer:1;      /**< Fixed-point values are not converted to floats */
+   unsigned Doubles:1;      /**< double precision values are not converted to floats */
+   unsigned _ElementSize:8; /**< Size of each element in bytes */
+   /** Index into gl_vertex_array_object::BufferBinding[] array */
+   unsigned BufferBindingIndex:6;
 };
 
 
