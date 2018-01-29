@@ -794,6 +794,30 @@ TEST_F(LifetimeEvaluatorExactTest, WriteInIfElseBranchSecondIfInLoop)
    run (code, temp_lt_expect({{-1,-1}, {2,9}}));
 }
 
+/** Regression test for bug #104803,
+ *  Read and write in if/else path outside loop and later read in conditional
+ *  within a loop. The first write is to be considered the dominant write.
+ */
+TEST_F(LifetimeEvaluatorExactTest, IfElseWriteInBothOutsideLoopReadInElseInLoop)
+{
+   const vector<FakeCodeline> code = {
+      { TGSI_OPCODE_IF, {}, {in0}, {} },
+      {   TGSI_OPCODE_MOV, {1}, {in0}, {} },
+      { TGSI_OPCODE_ELSE, {}, {}, {} },
+      {   TGSI_OPCODE_MOV, {1}, {in1}, {} },
+      { TGSI_OPCODE_ENDIF, {}, {}, {} },
+      { TGSI_OPCODE_BGNLOOP },
+      {   TGSI_OPCODE_IF, {}, {in0}, {} },
+      {     TGSI_OPCODE_MOV, {2}, {in1}, {} },
+      {   TGSI_OPCODE_ELSE, {}, {}, {} },
+      {     TGSI_OPCODE_MOV, {2}, {1}, {} },
+      {   TGSI_OPCODE_ENDIF, {}, {}, {} },
+      { TGSI_OPCODE_ENDLOOP },
+      { TGSI_OPCODE_MOV, {out0}, {2}, {}},
+      { TGSI_OPCODE_END}
+   };
+   run (code, temp_lt_expect({{-1,-1}, {1,11}, {7, 12}}));
+}
 
 /* A continue in the loop is not relevant */
 TEST_F(LifetimeEvaluatorExactTest, LoopWithWriteAfterContinue)
