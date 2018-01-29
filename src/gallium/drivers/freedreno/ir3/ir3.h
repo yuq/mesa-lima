@@ -360,6 +360,8 @@ struct ir3_instruction {
 	/* Entry in ir3_block's instruction list: */
 	struct list_head node;
 
+	int use_count;      /* currently just updated/used by cp */
+
 #ifdef DEBUG
 	uint32_t serialno;
 #endif
