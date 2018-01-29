@@ -745,8 +745,7 @@ static void insert_instr(struct ir3_block *block,
 {
 	struct ir3 *shader = block->shader;
 #ifdef DEBUG
-	static uint32_t serialno = 0;
-	instr->serialno = ++serialno;
+	instr->serialno = ++shader->instr_count;
 #endif
 	list_addtail(&instr->node, &block->instr_list);
 
@@ -758,8 +757,7 @@ struct ir3_block * ir3_block_create(struct ir3 *shader)
 {
 	struct ir3_block *block = ir3_alloc(shader, sizeof(*block));
 #ifdef DEBUG
-	static uint32_t serialno = 0;
-	block->serialno = ++serialno;
+	block->serialno = ++shader->block_count;
 #endif
 	block->shader = shader;
 	list_inithead(&block->node);

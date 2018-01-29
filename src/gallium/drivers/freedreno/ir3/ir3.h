@@ -444,6 +444,10 @@ struct ir3 {
 
 	/* List of ir3_array's: */
 	struct list_head array_list;
+
+#ifdef DEBUG
+	unsigned block_count, instr_count;
+#endif
 };
 
 typedef struct nir_register nir_register;
