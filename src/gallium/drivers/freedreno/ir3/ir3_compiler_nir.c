@@ -3352,6 +3352,11 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 	 */
 	ir3_group(ir);
 
+	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
+		printf("AFTER GROUPING:\n");
+		ir3_print(ir);
+	}
+
 	ir3_depth(ir);
 
 	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
