@@ -1021,7 +1021,6 @@ void si_emit_wait_fence(struct radeon_winsys_cs *cs,
 			uint64_t va, uint32_t ref,
 			uint32_t mask);
 void si_cs_emit_cache_flush(struct radeon_winsys_cs *cs,
-			    bool predicated,
 			    enum chip_class chip_class,
 			    uint32_t *fence_ptr, uint64_t va,
 			    bool is_mec,

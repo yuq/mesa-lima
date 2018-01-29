@@ -446,7 +446,7 @@ radv_cmd_buffer_after_draw(struct radv_cmd_buffer *cmd_buffer,
 		}
 
 		/* Force wait for graphics or compute engines to be idle. */
-		si_cs_emit_cache_flush(cmd_buffer->cs, false,
+		si_cs_emit_cache_flush(cmd_buffer->cs,
 				       cmd_buffer->device->physical_device->rad_info.chip_class,
 				       ptr, va,
 				       radv_cmd_buffer_uses_mec(cmd_buffer),
