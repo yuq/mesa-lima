@@ -82,6 +82,15 @@
  * access is treated as a single element use/def, and indirect access
  * is treated as use or def of all array elements.  (Only the first
  * def is tracked, in case of multiple indirect writes, etc.)
+ *
+ * TODO arrays that fit in one of the pre-defined class sizes should
+ * not need to be pre-colored, but instead could be given a normal
+ * vreg name.  (Ignoring this for now since it is a good way to work
+ * out the kinks with arbitrary sized arrays.)
+ *
+ * TODO might be easier for debugging to split this into two passes,
+ * the first assigning vreg names in a way that we could ir3_print()
+ * the result.
  */
 
 static const unsigned class_sizes[] = {
@@ -546,7 +555,6 @@ ra_block_find_definers(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 			id->cls = -1;
 		} else if (instr->regs[0]->flags & IR3_REG_ARRAY) {
 			id->cls = total_class_count;
-			id->defn = instr;
 		} else {
 			id->defn = get_definer(ctx, instr, &id->sz, &id->off);
 			id->cls = size_to_class(id->sz, is_half(id->defn), is_high(id->defn));
@@ -581,7 +589,7 @@ ra_block_name_instructions(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 		/* arrays which don't fit in one of the pre-defined class
 		 * sizes are pre-colored:
 		 */
-		if (id->cls >= 0) {
+		if ((id->cls >= 0) && (id->cls < total_class_count)) {
 			instr->name = ctx->class_alloc_count[id->cls]++;
 			ctx->alloc_count++;
 		}
@@ -799,6 +807,7 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 					ir3_lookup_array(ctx->ir, reg->array.id);
 				arr->start_ip = MIN2(arr->start_ip, instr->ip);
 				arr->end_ip = MAX2(arr->end_ip, instr->ip);
+
 				/* indirect read is treated like a read fromall array
 				 * elements, since we don't know which one is actually
 				 * read:
@@ -812,6 +821,10 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 				} else {
 					unsigned name = arr->base + reg->array.offset;
 					use(name, instr);
+					/* NOTE: arrays are not SSA so unconditionally
+					 * set use bit:
+					 */
+					BITSET_SET(bd->use, name);
 					debug_assert(reg->array.offset < arr->length);
 				}
 			} else if ((src = ssa(reg)) && writes_gpr(src)) {
