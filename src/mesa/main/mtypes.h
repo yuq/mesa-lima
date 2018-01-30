@@ -966,7 +966,7 @@ typedef enum
 struct gl_texture_image
 {
    GLint InternalFormat;	/**< Internal format as given by the user */
-   GLenum _BaseFormat;		/**< Either GL_RGB, GL_RGBA, GL_ALPHA,
+   GLenum16 _BaseFormat;	/**< Either GL_RGB, GL_RGBA, GL_ALPHA,
                                  *   GL_LUMINANCE, GL_LUMINANCE_ALPHA,
                                  *   GL_INTENSITY, GL_DEPTH_COMPONENT or
                                  *   GL_DEPTH_STENCIL_EXT only. Used for
@@ -1070,7 +1070,7 @@ struct gl_texture_object
    GLint _MaxLevel;            /**< actual max mipmap level (q in the spec) */
    GLfloat _MaxLambda;         /**< = _MaxLevel - BaseLevel (q - p in spec) */
    GLint CropRect[4];          /**< GL_OES_draw_texture */
-   GLenum Swizzle[4];          /**< GL_EXT_texture_swizzle */
+   GLenum16 Swizzle[4];        /**< GL_EXT_texture_swizzle */
    GLuint _Swizzle;            /**< same as Swizzle, but SWIZZLE_* format */
    GLboolean GenerateMipmap;   /**< GL_SGIS_generate_mipmap */
    GLboolean _BaseComplete;    /**< Is the base texture level valid? */
@@ -3229,7 +3229,7 @@ struct gl_shader_compiler_options
  */
 struct gl_query_object
 {
-   GLenum Target;      /**< The query target, when active */
+   GLenum16 Target;    /**< The query target, when active */
    GLuint Id;          /**< hash table ID/name */
    GLchar *Label;      /**< GL_KHR_debug */
    GLuint64EXT Result; /**< the counter */
