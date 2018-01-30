@@ -389,8 +389,12 @@ void si_eliminate_fast_color_clear(struct r600_common_context *rctx,
 	if (ctx == sscreen->aux_context)
 		mtx_lock(&sscreen->aux_context_lock);
 
+	unsigned n = rctx->num_decompress_calls;
 	ctx->flush_resource(ctx, &rtex->resource.b.b);
-	ctx->flush(ctx, NULL, 0);
+
+	/* Flush only if any fast clear elimination took place. */
+	if (n != rctx->num_decompress_calls)
+		ctx->flush(ctx, NULL, 0);
 
 	if (ctx == sscreen->aux_context)
 		mtx_unlock(&sscreen->aux_context_lock);
