@@ -1194,13 +1194,6 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	bld_base->emit_declaration = emit_declaration;
 	bld_base->emit_immediate = emit_immediate;
 
-	/* metadata allowing 2.5 ULP */
-	ctx->fpmath_md_kind = LLVMGetMDKindIDInContext(ctx->ac.context,
-						       "fpmath", 6);
-	LLVMValueRef arg = LLVMConstReal(ctx->ac.f32, 2.5);
-	ctx->fpmath_md_2p5_ulp = LLVMMDNodeInContext(ctx->ac.context,
-						     &arg, 1);
-
 	bld_base->op_actions[TGSI_OPCODE_BGNLOOP].emit = bgnloop_emit;
 	bld_base->op_actions[TGSI_OPCODE_BRK].emit = brk_emit;
 	bld_base->op_actions[TGSI_OPCODE_CONT].emit = cont_emit;
