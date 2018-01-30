@@ -6984,15 +6984,20 @@ extern "C" {
 GLboolean
 st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
 {
+   struct pipe_screen *pscreen = ctx->st->pipe->screen;
+
+   enum pipe_shader_ir preferred_ir = (enum pipe_shader_ir)
+      pscreen->get_shader_param(pscreen, PIPE_SHADER_VERTEX,
+                                PIPE_SHADER_CAP_PREFERRED_IR);
+   bool use_nir = preferred_ir == PIPE_SHADER_IR_NIR;
+
    /* Return early if we are loading the shader from on-disk cache */
    if (st_load_tgsi_from_disk_cache(ctx, prog)) {
       return GL_TRUE;
    }
 
-   struct pipe_screen *pscreen = ctx->st->pipe->screen;
    assert(prog->data->LinkStatus);
 
-   bool use_nir = false;
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i] == NULL)
          continue;
@@ -7011,12 +7016,6 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
                                                   PIPE_SHADER_CAP_TGSI_LDEXP_SUPPORTED);
       unsigned if_threshold = pscreen->get_shader_param(pscreen, ptarget,
                                                         PIPE_SHADER_CAP_LOWER_IF_THRESHOLD);
-
-      enum pipe_shader_ir preferred_ir = (enum pipe_shader_ir)
-         pscreen->get_shader_param(pscreen, ptarget,
-                                   PIPE_SHADER_CAP_PREFERRED_IR);
-      if (preferred_ir == PIPE_SHADER_IR_NIR)
-         use_nir = true;
 
       /* If there are forms of indirect addressing that the driver
        * cannot handle, perform the lowering pass.
