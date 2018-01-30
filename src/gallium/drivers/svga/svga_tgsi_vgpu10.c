@@ -5360,8 +5360,7 @@ emit_simple(struct svga_shader_emitter_v10 *emit,
    unsigned i;
 
    begin_emit_instruction(emit);
-   emit_opcode(emit, translate_opcode(inst->Instruction.Opcode),
-               inst->Instruction.Saturate);
+   emit_opcode(emit, translate_opcode(opcode), inst->Instruction.Saturate);
    for (i = 0; i < op->num_dst; i++) {
       emit_dst_register(emit, &inst->Dst[i]);
    }
@@ -5412,8 +5411,7 @@ emit_simple_1dst(struct svga_shader_emitter_v10 *emit,
    unsigned i;
 
    begin_emit_instruction(emit);
-   emit_opcode(emit, translate_opcode(inst->Instruction.Opcode),
-               inst->Instruction.Saturate);
+   emit_opcode(emit, translate_opcode(opcode), inst->Instruction.Saturate);
 
    for (i = 0; i < dst_count; i++) {
       if (i == dst_index) {
