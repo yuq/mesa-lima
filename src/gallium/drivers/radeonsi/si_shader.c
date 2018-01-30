@@ -480,8 +480,8 @@ void si_llvm_load_input_vs(
 	unsigned input_index,
 	LLVMValueRef out[4])
 {
-	unsigned vs_blit_property =
-		ctx->shader->selector->info.properties[TGSI_PROPERTY_VS_BLIT_SGPRS];
+	const struct tgsi_shader_info *info = &ctx->shader->selector->info;
+	unsigned vs_blit_property = info->properties[TGSI_PROPERTY_VS_BLIT_SGPRS];
 
 	if (vs_blit_property) {
 		LLVMValueRef vertex_id = ctx->abi.vertex_id;
@@ -555,6 +555,7 @@ void si_llvm_load_input_vs(
 	unsigned fix_fetch;
 	unsigned num_fetches;
 	unsigned fetch_stride;
+	unsigned num_channels;
 
 	LLVMValueRef t_list_ptr;
 	LLVMValueRef t_offset;
@@ -580,24 +581,29 @@ void si_llvm_load_input_vs(
 	case SI_FIX_FETCH_RGB_64_FLOAT:
 		num_fetches = 3; /* 3 2-dword loads */
 		fetch_stride = 8;
+		num_channels = 2;
 		break;
 	case SI_FIX_FETCH_RGBA_64_FLOAT:
 		num_fetches = 2; /* 2 4-dword loads */
 		fetch_stride = 16;
+		num_channels = 4;
 		break;
 	case SI_FIX_FETCH_RGB_8:
 	case SI_FIX_FETCH_RGB_8_INT:
 		num_fetches = 3;
 		fetch_stride = 1;
+		num_channels = 1;
 		break;
 	case SI_FIX_FETCH_RGB_16:
 	case SI_FIX_FETCH_RGB_16_INT:
 		num_fetches = 3;
 		fetch_stride = 2;
+		num_channels = 1;
 		break;
 	default:
 		num_fetches = 1;
 		fetch_stride = 0;
+		num_channels = util_last_bit(info->input_usage_mask[input_index]);
 	}
 
 	for (unsigned i = 0; i < num_fetches; i++) {
@@ -605,7 +611,8 @@ void si_llvm_load_input_vs(
 
 		input[i] = ac_build_buffer_load_format(&ctx->ac, t_list,
 						       vertex_index, voffset,
-						       4, true);
+						       num_channels, true);
+		input[i] = ac_build_expand_to_vec4(&ctx->ac, input[i], num_channels);
 	}
 
 	/* Break up the vec4 into individual components */
