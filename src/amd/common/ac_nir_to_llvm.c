@@ -3976,10 +3976,6 @@ static LLVMValueRef visit_var_atomic(struct nir_to_llvm_context *ctx,
 	return result;
 }
 
-#define INTERP_CENTER 0
-#define INTERP_CENTROID 1
-#define INTERP_SAMPLE 2
-
 static LLVMValueRef lookup_interp_param(struct nir_to_llvm_context *ctx,
 					enum glsl_interp_mode interp, unsigned location)
 {
