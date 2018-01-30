@@ -700,6 +700,12 @@ _mesa_query_internal_format_default(struct gl_context *ctx, GLenum target,
    case GL_FRAMEBUFFER_RENDERABLE_LAYERED:
    case GL_FRAMEBUFFER_BLEND:
    case GL_FILTER:
+      /*
+       * TODO seems a tad optimistic just saying yes to everything here.
+       * Even for combinations which make no sense...
+       * And things like TESS_CONTROL_TEXTURE should definitely default to
+       * NONE if the driver doesn't even support tessellation...
+       */
       params[0] = GL_FULL_SUPPORT;
       break;
    case GL_NUM_TILING_TYPES_EXT:
