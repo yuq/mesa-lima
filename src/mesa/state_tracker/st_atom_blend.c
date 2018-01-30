@@ -153,6 +153,10 @@ st_update_blend( struct st_context *st )
       num_state = ctx->Const.MaxDrawBuffers;
       blend->independent_blend_enable = 1;
    }
+
+   for (i = 0; i < num_state; i++)
+      blend->rt[i].colormask = GET_COLORMASK(ctx->Color.ColorMask, i);
+
    if (ctx->Color.ColorLogicOpEnabled) {
       /* logicop enabled */
       blend->logicop_enable = 1;
@@ -161,7 +165,8 @@ st_update_blend( struct st_context *st )
    else if (ctx->Color.BlendEnabled && !ctx->Color._AdvancedBlendMode) {
       /* blending enabled */
       for (i = 0, j = 0; i < num_state; i++) {
-         if (!(ctx->Color.BlendEnabled & (1 << i)))
+         if (!(ctx->Color.BlendEnabled & (1 << i)) ||
+             !blend->rt[i].colormask)
             continue;
 
 	 if (ctx->Extensions.ARB_draw_buffers_blend)
@@ -204,9 +209,6 @@ st_update_blend( struct st_context *st )
    else {
       /* no blending / logicop */
    }
-
-   for (i = 0; i < num_state; i++)
-      blend->rt[i].colormask = GET_COLORMASK(ctx->Color.ColorMask, i);
 
    blend->dither = ctx->Color.DitherFlag;
 
