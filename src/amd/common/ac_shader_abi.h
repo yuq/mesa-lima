@@ -26,6 +26,8 @@
 
 #include <llvm-c/Core.h>
 
+#include "compiler/shader_enums.h"
+
 enum ac_descriptor_type {
 	AC_DESC_IMAGE,
 	AC_DESC_FMASK,

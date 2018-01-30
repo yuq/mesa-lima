@@ -648,6 +648,42 @@ LLVMValueRef si_nir_load_input_gs(struct ac_shader_abi *abi,
 	return ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
 }
 
+LLVMValueRef
+si_nir_lookup_interp_param(struct ac_shader_abi *abi,
+			   enum glsl_interp_mode interp, unsigned location)
+{
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+	int interp_param_idx = -1;
+
+	switch (interp) {
+	case INTERP_MODE_FLAT:
+		return NULL;
+	case INTERP_MODE_SMOOTH:
+	case INTERP_MODE_NONE:
+		if (location == INTERP_CENTER)
+			interp_param_idx = SI_PARAM_PERSP_CENTER;
+		else if (location == INTERP_CENTROID)
+			interp_param_idx = SI_PARAM_PERSP_CENTROID;
+		else if (location == INTERP_SAMPLE)
+			interp_param_idx = SI_PARAM_PERSP_SAMPLE;
+		break;
+	case INTERP_MODE_NOPERSPECTIVE:
+		if (location == INTERP_CENTER)
+			interp_param_idx = SI_PARAM_LINEAR_CENTER;
+		else if (location == INTERP_CENTROID)
+			interp_param_idx = SI_PARAM_LINEAR_CENTROID;
+		else if (location == INTERP_SAMPLE)
+			interp_param_idx = SI_PARAM_LINEAR_SAMPLE;
+		break;
+	default:
+		assert(!"Unhandled interpolation mode.");
+		return NULL;
+	}
+
+	return interp_param_idx != -1 ?
+		LLVMGetParam(ctx->main_fn, interp_param_idx) : NULL;
+}
+
 static LLVMValueRef
 si_nir_load_sampler_desc(struct ac_shader_abi *abi,
 		         unsigned descriptor_set, unsigned base_index,

@@ -292,6 +292,10 @@ LLVMValueRef si_llvm_load_input_gs(struct ac_shader_abi *abi,
 				   LLVMTypeRef type,
 				   unsigned swizzle);
 
+LLVMValueRef si_nir_lookup_interp_param(struct ac_shader_abi *abi,
+					enum glsl_interp_mode interp,
+					unsigned location);
+
 void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 			const struct tgsi_full_instruction *inst,
 			const struct tgsi_opcode_info *info,
