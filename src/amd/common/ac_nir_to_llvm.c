@@ -3611,14 +3611,19 @@ static LLVMValueRef visit_image_load(struct ac_nir_context *ctx,
 
 	const enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
 	if (dim == GLSL_SAMPLER_DIM_BUF) {
-		params[0] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_BUFFER, NULL, true, false);
-		params[1] = LLVMBuildExtractElement(ctx->ac.builder, get_src(ctx, instr->src[0]),
-						    ctx->ac.i32_0, ""); /* vindex */
-		params[2] = ctx->ac.i32_0; /* voffset */
-		params[3] = ctx->ac.i1false;  /* glc */
-		params[4] = ctx->ac.i1false;  /* slc */
-		res = ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.buffer.load.format.v4f32", ctx->ac.v4f32,
-					 params, 5, 0);
+		unsigned mask = nir_ssa_def_components_read(&instr->dest.ssa);
+		unsigned num_channels = util_last_bit(mask);
+		LLVMValueRef rsrc, vindex;
+
+		rsrc = get_sampler_desc(ctx, instr->variables[0], AC_DESC_BUFFER, NULL, true, false);
+		vindex = LLVMBuildExtractElement(ctx->ac.builder, get_src(ctx, instr->src[0]),
+						 ctx->ac.i32_0, "");
+
+		/* TODO: set "glc" and "can_speculate" when OpenGL needs it. */
+		res = ac_build_buffer_load_format(&ctx->ac, rsrc, vindex,
+						  ctx->ac.i32_0, num_channels,
+						  false, false);
+		res = ac_build_expand_to_vec4(&ctx->ac, res, num_channels);
 
 		res = trim_vector(&ctx->ac, res, instr->dest.ssa.num_components);
 		res = ac_to_integer(&ctx->ac, res);
