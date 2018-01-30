@@ -304,14 +304,8 @@ st_glsl_to_nir(struct st_context *st, struct gl_program *prog,
                struct gl_shader_program *shader_program,
                gl_shader_stage stage)
 {
-   struct pipe_screen *pscreen = st->pipe->screen;
-   enum pipe_shader_type ptarget = pipe_shader_type_from_mesa(stage);
-   const nir_shader_compiler_options *options;
-
-   assert(pscreen->get_compiler_options);   /* drivers using NIR must implement this */
-
-   options = (const nir_shader_compiler_options *)
-      pscreen->get_compiler_options(pscreen, PIPE_SHADER_IR_NIR, ptarget);
+   const nir_shader_compiler_options *options =
+      st->ctx->Const.ShaderCompilerOptions[prog->info.stage].NirOptions;
    assert(options);
 
    if (prog->nir)
