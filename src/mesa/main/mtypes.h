@@ -651,7 +651,6 @@ struct gl_fog_attrib
    GLfloat Index;		/**< Fog index */
    GLenum16 Mode;		/**< Fog mode */
    GLenum16 FogCoordinateSource;/**< GL_EXT_fog_coord */
-   GLfloat _Scale;		/**< (End == Start) ? 1.0 : 1.0 / (End - Start) */
    GLenum16 FogDistanceMode;     /**< GL_NV_fog_distance */
 };
 
