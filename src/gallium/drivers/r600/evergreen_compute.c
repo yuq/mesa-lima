@@ -630,13 +630,25 @@ static void evergreen_emit_dispatch(struct r600_context *rctx,
 	radeon_compute_set_context_reg(cs, R_0288E8_SQ_LDS_ALLOC,
 					lds_size | (num_waves << 14));
 
-	/* Dispatch packet */
-	radeon_emit(cs, PKT3C(PKT3_DISPATCH_DIRECT, 3, 0));
-	radeon_emit(cs, info->grid[0]);
-	radeon_emit(cs, info->grid[1]);
-	radeon_emit(cs, info->grid[2]);
-	/* VGT_DISPATCH_INITIATOR = COMPUTE_SHADER_EN */
-	radeon_emit(cs, 1);
+	if (info->indirect) {
+		struct r600_resource *indirect_resource = (struct r600_resource *)info->indirect;
+		unsigned *data = r600_buffer_map_sync_with_rings(&rctx->b, indirect_resource, PIPE_TRANSFER_READ);
+		if (data) {
+			radeon_emit(cs, PKT3C(PKT3_DISPATCH_DIRECT, 3, 0));
+			radeon_emit(cs, data[0]);
+			radeon_emit(cs, data[1]);
+			radeon_emit(cs, data[2]);
+			radeon_emit(cs, 1);
+		}
+	} else {
+		/* Dispatch packet */
+		radeon_emit(cs, PKT3C(PKT3_DISPATCH_DIRECT, 3, 0));
+		radeon_emit(cs, info->grid[0]);
+		radeon_emit(cs, info->grid[1]);
+		radeon_emit(cs, info->grid[2]);
+		/* VGT_DISPATCH_INITIATOR = COMPUTE_SHADER_EN */
+		radeon_emit(cs, 1);
+	}
 
 	if (rctx->is_debug)
 		eg_trace_emit(rctx);
