@@ -4290,7 +4290,36 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       inst->mlen = 1;
       inst->size_written = 4 * REG_SIZE;
 
-      bld.MOV(retype(dest, ret_payload.type), component(ret_payload, 0));
+      /* SKL PRM, vol07, 3D Media GPGPU Engine, Bounds Checking and Faulting:
+       *
+       * "Out-of-bounds checking is always performed at a DWord granularity. If
+       * any part of the DWord is out-of-bounds then the whole DWord is
+       * considered out-of-bounds."
+       *
+       * This implies that types with size smaller than 4-bytes need to be
+       * padded if they don't complete the last dword of the buffer. But as we
+       * need to maintain the original size we need to reverse the padding
+       * calculation to return the correct size to know the number of elements
+       * of an unsized array. As we stored in the last two bits of the surface
+       * size the needed padding for the buffer, we calculate here the
+       * original buffer_size reversing the surface_size calculation:
+       *
+       * surface_size = isl_align(buffer_size, 4) +
+       *                (isl_align(buffer_size) - buffer_size)
+       *
+       * buffer_size = surface_size & ~3 - surface_size & 3
+       */
+
+      fs_reg size_aligned4 = ubld.vgrf(BRW_REGISTER_TYPE_UD);
+      fs_reg size_padding = ubld.vgrf(BRW_REGISTER_TYPE_UD);
+      fs_reg buffer_size = ubld.vgrf(BRW_REGISTER_TYPE_UD);
+
+      ubld.AND(size_padding, ret_payload, brw_imm_ud(3));
+      ubld.AND(size_aligned4, ret_payload, brw_imm_ud(~3));
+      ubld.ADD(buffer_size, size_aligned4, negate(size_padding));
+
+      bld.MOV(retype(dest, ret_payload.type), component(buffer_size, 0));
+
       brw_mark_surface_used(prog_data, index);
       break;
    }

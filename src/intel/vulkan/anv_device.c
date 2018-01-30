@@ -2155,6 +2155,17 @@ void anv_GetBufferMemoryRequirements(
 
    pMemoryRequirements->size = buffer->size;
    pMemoryRequirements->alignment = alignment;
+
+   /* Storage and Uniform buffers should have their size aligned to
+    * 32-bits to avoid boundary checks when last DWord is not complete.
+    * This would ensure that not internal padding would be needed for
+    * 16-bit types.
+    */
+   if (device->robust_buffer_access &&
+       (buffer->usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT ||
+        buffer->usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT))
+      pMemoryRequirements->size = align_u64(buffer->size, 4);
+
    pMemoryRequirements->memoryTypeBits = memory_types;
 }
 
