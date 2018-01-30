@@ -611,7 +611,7 @@ void si_llvm_load_input_vs(
 
 		input[i] = ac_build_buffer_load_format(&ctx->ac, t_list,
 						       vertex_index, voffset,
-						       num_channels, true);
+						       num_channels, false, true);
 		input[i] = ac_build_expand_to_vec4(&ctx->ac, input[i], num_channels);
 	}
 
