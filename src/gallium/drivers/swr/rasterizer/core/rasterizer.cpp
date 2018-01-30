@@ -53,7 +53,7 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
 #endif
 
     // bloat line to two tris and call the triangle rasterizer twice
-    AR_BEGIN(BERasterizeLine, pDC->drawId);
+    RDTSC_BEGIN(BERasterizeLine, pDC->drawId);
 
     const API_STATE &state = GetApiState(pDC);
     const SWR_RASTSTATE &rastState = state.rastState;
@@ -246,7 +246,7 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
         pfnTriRast(pDC, workerId, macroTile, (void*)&newWorkDesc);
     }
 
-    AR_END(BERasterizeLine, 1);
+    RDTSC_BEGIN(BERasterizeLine, 1);
 }
 
 void RasterizeSimplePoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void* pData)
@@ -308,9 +308,9 @@ void RasterizeSimplePoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTi
     GetRenderHotTiles(pDC, macroTile, tileAlignedX >> KNOB_TILE_X_DIM_SHIFT , tileAlignedY >> KNOB_TILE_Y_DIM_SHIFT, 
         renderBuffers, triDesc.triFlags.renderTargetArrayIndex);
 
-    AR_BEGIN(BEPixelBackend, pDC->drawId);
+    RDTSC_BEGIN(BEPixelBackend, pDC->drawId);
     backendFuncs.pfnBackend(pDC, workerId, tileAlignedX, tileAlignedY, triDesc, renderBuffers);
-    AR_END(BEPixelBackend, 0);
+    RDTSC_END(BEPixelBackend, 0);
 }
 
 void RasterizeTriPoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void* pData)

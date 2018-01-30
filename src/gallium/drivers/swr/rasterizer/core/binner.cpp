@@ -651,7 +651,7 @@ void SIMDCALL BinTrianglesImpl(
     SWR_CONTEXT *pContext = pDC->pContext;
     const uint32_t *aRTAI = reinterpret_cast<const uint32_t *>(&rtIdx);
 
-    AR_BEGIN(FEBinTriangles, pDC->drawId);
+    RDTSC_BEGIN(FEBinTriangles, pDC->drawId);
 
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;
@@ -958,7 +958,7 @@ void SIMDCALL BinTrianglesImpl(
 
             if (!triMask)
             {
-                AR_END(FEBinTriangles, 1);
+                RDTSC_END(FEBinTriangles, 1);
                 return;
             }
         }
@@ -998,7 +998,7 @@ endBinTriangles:
 
         BinPostSetupLinesImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, line, recipW, triMask, primID, viewportIdx, rtIdx);
 
-        AR_END(FEBinTriangles, 1);
+        RDTSC_END(FEBinTriangles, 1);
         return;
     }
     else if (rastState.fillMode == SWR_FILLMODE_POINT)
@@ -1008,7 +1008,7 @@ endBinTriangles:
         BinPostSetupPointsImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, &tri[1], triMask, primID, viewportIdx, rtIdx);
         BinPostSetupPointsImpl<SIMD_T, SIMD_WIDTH>(pDC, pa, workerId, &tri[2], triMask, primID, viewportIdx, rtIdx);
 
-        AR_END(FEBinTriangles, 1);
+        RDTSC_END(FEBinTriangles, 1);
         return;
     }
 
@@ -1114,7 +1114,7 @@ endBinTriangles:
                      triMask &= ~(1 << triIndex);
     }
 
-    AR_END(FEBinTriangles, 1);
+    RDTSC_END(FEBinTriangles, 1);
 }
 
 template <typename CT>
@@ -1197,7 +1197,7 @@ void BinPostSetupPointsImpl(
 {
     SWR_CONTEXT *pContext = pDC->pContext;
 
-    AR_BEGIN(FEBinPoints, pDC->drawId);
+    RDTSC_BEGIN(FEBinPoints, pDC->drawId);
 
     typename SIMD_T::Vec4 &primVerts = prim[0];
 
@@ -1480,7 +1480,7 @@ void BinPostSetupPointsImpl(
         }
     }
 
-    AR_END(FEBinPoints, 1);
+    RDTSC_END(FEBinPoints, 1);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1608,7 +1608,7 @@ void BinPostSetupLinesImpl(
     SWR_CONTEXT *pContext = pDC->pContext;
     const uint32_t *aRTAI = reinterpret_cast<const uint32_t *>(&rtIdx);
 
-    AR_BEGIN(FEBinLines, pDC->drawId);
+    RDTSC_BEGIN(FEBinLines, pDC->drawId);
 
     const API_STATE &state = GetApiState(pDC);
     const SWR_RASTSTATE &rastState = state.rastState;
@@ -1789,7 +1789,7 @@ void BinPostSetupLinesImpl(
 
 endBinLines:
 
-    AR_END(FEBinLines, 1);
+    RDTSC_END(FEBinLines, 1);
 }
 
 //////////////////////////////////////////////////////////////////////////

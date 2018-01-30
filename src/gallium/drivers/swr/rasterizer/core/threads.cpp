@@ -541,7 +541,7 @@ bool WorkOnFifoBE(
             {
                 BE_WORK *pWork;
 
-                AR_BEGIN(WorkerFoundWork, pDC->drawId);
+                RDTSC_BEGIN(WorkerFoundWork, pDC->drawId);
 
                 uint32_t numWorkItems = tile->getNumQueued();
                 SWR_ASSERT(numWorkItems);
@@ -562,7 +562,7 @@ bool WorkOnFifoBE(
                     pWork->pfnWork(pDC, workerId, tileID, &pWork->desc);
                     tile->dequeue();
                 }
-                AR_END(WorkerFoundWork, numWorkItems);
+                RDTSC_END(WorkerFoundWork, numWorkItems);
 
                 _ReadWriteBarrier();
 
@@ -849,9 +849,9 @@ DWORD workerThreadMain(LPVOID pData)
 
         if (IsBEThread)
         {
-            AR_BEGIN(WorkerWorkOnFifoBE, 0);
+            RDTSC_BEGIN(WorkerWorkOnFifoBE, 0);
             bShutdown |= WorkOnFifoBE(pContext, workerId, curDrawBE, lockedTiles, numaNode, numaMask);
-            AR_END(WorkerWorkOnFifoBE, 0);
+            RDTSC_END(WorkerWorkOnFifoBE, 0);
 
             WorkOnCompute(pContext, workerId, curDrawBE);
         }

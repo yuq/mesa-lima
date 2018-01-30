@@ -526,30 +526,25 @@ struct SWR_CONTEXT
 #define AR_WORKER_CTX  pContext->pArContext[workerId]
 #define AR_API_CTX     pContext->pArContext[pContext->NumWorkerThreads]
 
+#ifdef KNOB_ENABLE_RDTSC
+#define RDTSC_BEGIN(type, drawid) RDTSC_START(type)
+#define RDTSC_END(type, count)   RDTSC_STOP(type, count, 0)
+#else
+#define RDTSC_BEGIN(type, count)
+#define RDTSC_END(type, count)
+#endif
+
 #ifdef KNOB_ENABLE_AR
-    #define _AR_BEGIN(ctx, type, id)    ArchRast::Dispatch(ctx, ArchRast::Start(ArchRast::type, id))
-    #define _AR_END(ctx, type, count)   ArchRast::Dispatch(ctx, ArchRast::End(ArchRast::type, count))
     #define _AR_EVENT(ctx, event)       ArchRast::Dispatch(ctx, ArchRast::event)
     #define _AR_FLUSH(ctx, id)          ArchRast::FlushDraw(ctx, id)
 #else
-    #ifdef KNOB_ENABLE_RDTSC
-        #define _AR_BEGIN(ctx, type, id) (void)ctx; RDTSC_START(type)
-        #define _AR_END(ctx, type, id)   RDTSC_STOP(type, id, 0)
-    #else
-        #define _AR_BEGIN(ctx, type, id) (void)ctx
-        #define _AR_END(ctx, type, id)
-    #endif
     #define _AR_EVENT(ctx, event)
     #define _AR_FLUSH(ctx, id)
 #endif
 
 // Use these macros for api thread.
-#define AR_API_BEGIN(type, id) _AR_BEGIN(AR_API_CTX, type, id)
-#define AR_API_END(type, count) _AR_END(AR_API_CTX, type, count)
 #define AR_API_EVENT(event) _AR_EVENT(AR_API_CTX, event)
 
 // Use these macros for worker threads.
-#define AR_BEGIN(type, id) _AR_BEGIN(AR_WORKER_CTX, type, id)
-#define AR_END(type, count) _AR_END(AR_WORKER_CTX, type, count)
 #define AR_EVENT(event) _AR_EVENT(AR_WORKER_CTX, event)
 #define AR_FLUSH(id) _AR_FLUSH(AR_WORKER_CTX, id)

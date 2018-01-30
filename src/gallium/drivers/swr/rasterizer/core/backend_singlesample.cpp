@@ -42,8 +42,8 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
 {
     SWR_CONTEXT *pContext = pDC->pContext;
 
-    AR_BEGIN(BESingleSampleBackend, pDC->drawId);
-    AR_BEGIN(BESetup, pDC->drawId);
+    RDTSC_BEGIN(BESingleSampleBackend, pDC->drawId);
+    RDTSC_BEGIN(BESetup, pDC->drawId);
 
     const API_STATE &state = GetApiState(pDC);
 
@@ -57,7 +57,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
     uint8_t *pDepthBuffer, *pStencilBuffer;
     SetupRenderBuffers(psContext.pColorBuffer, &pDepthBuffer, &pStencilBuffer, state.colorHottileEnable, renderBuffers);
 
-    AR_END(BESetup, 1);
+    RDTSC_END(BESetup, 1);
 
     psContext.vY.UL     = _simd_add_ps(vULOffsetsY,     _simd_set1_ps(static_cast<float>(y)));
     psContext.vY.center = _simd_add_ps(vCenterOffsetsY, _simd_set1_ps(static_cast<float>(y)));
@@ -99,7 +99,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                     generateInputCoverage<T, T::InputCoverage>(pCoverageMask, psContext.inputMask, state.blendState.sampleMask);
                 }
 
-                AR_BEGIN(BEBarycentric, pDC->drawId);
+                RDTSC_BEGIN(BEBarycentric, pDC->drawId);
 
                 CalcPixelBarycentrics(coeffs, psContext);
 
@@ -109,7 +109,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                 psContext.vZ = vplaneps(coeffs.vZa, coeffs.vZb, coeffs.vZc, psContext.vI.center, psContext.vJ.center);
                 psContext.vZ = state.pfnQuantizeDepth(psContext.vZ);
 
-                AR_END(BEBarycentric, 1);
+                RDTSC_END(BEBarycentric, 1);
 
                 // interpolate user clip distance if available
                 if (state.backendState.clipDistanceMask)
@@ -124,11 +124,11 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                 // Early-Z?
                 if (T::bCanEarlyZ)
                 {
-                    AR_BEGIN(BEEarlyDepthTest, pDC->drawId);
+                    RDTSC_BEGIN(BEEarlyDepthTest, pDC->drawId);
                     depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
                                                      psContext.vZ, pDepthBuffer, vCoverageMask, pStencilBuffer, &stencilPassMask);
                     AR_EVENT(EarlyDepthStencilInfoSingleSample(_simd_movemask_ps(depthPassMask), _simd_movemask_ps(stencilPassMask), _simd_movemask_ps(vCoverageMask)));
-                    AR_END(BEEarlyDepthTest, 0);
+                    RDTSC_END(BEEarlyDepthTest, 0);
 
                     // early-exit if no pixels passed depth or earlyZ is forced on
                     if (state.psState.forceEarlyZ || !_simd_movemask_ps(depthPassMask))
@@ -147,21 +147,21 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                 psContext.activeMask = _simd_castps_si(vCoverageMask);
 
                 // execute pixel shader
-                AR_BEGIN(BEPixelShader, pDC->drawId);
+                RDTSC_BEGIN(BEPixelShader, pDC->drawId);
                 UPDATE_STAT_BE(PsInvocations, _mm_popcnt_u32(_simd_movemask_ps(vCoverageMask)));
                 state.psState.pfnPixelShader(GetPrivateState(pDC), &psContext);
-                AR_END(BEPixelShader, 0);
+                RDTSC_END(BEPixelShader, 0);
 
                 vCoverageMask = _simd_castsi_ps(psContext.activeMask);
 
                 // late-Z
                 if (!T::bCanEarlyZ)
                 {
-                    AR_BEGIN(BELateDepthTest, pDC->drawId);
+                    RDTSC_BEGIN(BELateDepthTest, pDC->drawId);
                     depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
                                                         psContext.vZ, pDepthBuffer, vCoverageMask, pStencilBuffer, &stencilPassMask);
                     AR_EVENT(LateDepthStencilInfoSingleSample(_simd_movemask_ps(depthPassMask), _simd_movemask_ps(stencilPassMask), _simd_movemask_ps(vCoverageMask)));
-                    AR_END(BELateDepthTest, 0);
+                    RDTSC_END(BELateDepthTest, 0);
 
                     if (!_simd_movemask_ps(depthPassMask))
                     {
@@ -181,7 +181,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                 UPDATE_STAT_BE(DepthPassCount, statCount);
 
                 // output merger
-                AR_BEGIN(BEOutputMerger, pDC->drawId);
+                RDTSC_BEGIN(BEOutputMerger, pDC->drawId);
 #if USE_8x2_TILE_BACKEND
                 OutputMerger8x2(psContext, psContext.pColorBuffer, 0, &state.blendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, state.psState.renderTargetMask, useAlternateOffset);
 #else
@@ -194,11 +194,11 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                     DepthStencilWrite(&state.vp[work.triFlags.viewportIndex], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
                         pDepthBuffer, depthPassMask, vCoverageMask, pStencilBuffer, stencilPassMask);
                 }
-                AR_END(BEOutputMerger, 0);
+                RDTSC_END(BEOutputMerger, 0);
             }
 
 Endtile:
-            AR_BEGIN(BEEndTile, pDC->drawId);
+            RDTSC_BEGIN(BEEndTile, pDC->drawId);
 
             work.coverageMask[0] >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
             if(T::InputCoverage == SWR_INPUT_COVERAGE_INNER_CONSERVATIVE)
@@ -229,7 +229,7 @@ Endtile:
             pDepthBuffer += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp) / 8;
             pStencilBuffer += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp) / 8;
 
-            AR_END(BEEndTile, 0);
+            RDTSC_END(BEEndTile, 0);
 
             psContext.vX.UL     = _simd_add_ps(psContext.vX.UL,     dx);
             psContext.vX.center = _simd_add_ps(psContext.vX.center, dx);
@@ -239,7 +239,7 @@ Endtile:
         psContext.vY.center = _simd_add_ps(psContext.vY.center, dy);
     }
 
-    AR_END(BESingleSampleBackend, 0);
+    RDTSC_END(BESingleSampleBackend, 0);
 }
 
 // Recursive template used to auto-nest conditionals.  Converts dynamic enum function

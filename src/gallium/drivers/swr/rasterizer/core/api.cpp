@@ -256,9 +256,9 @@ void QueueWork(SWR_CONTEXT *pContext)
     }
     else
     {
-        AR_API_BEGIN(APIDrawWakeAllThreads, pDC->drawId);
+        RDTSC_BEGIN(APIDrawWakeAllThreads, pDC->drawId);
         WakeAllThreads(pContext);
-        AR_API_END(APIDrawWakeAllThreads, 1);
+        RDTSC_END(APIDrawWakeAllThreads, 1);
     }
 
     // Set current draw context to NULL so that next state call forces a new draw context to be created and populated.
@@ -278,7 +278,7 @@ INLINE void QueueDispatch(SWR_CONTEXT* pContext)
 
 DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
 {
-    AR_API_BEGIN(APIGetDrawContext, 0);
+    RDTSC_BEGIN(APIGetDrawContext, 0);
     // If current draw context is null then need to obtain a new draw context to use from ring.
     if (pContext->pCurDrawContext == nullptr)
     {
@@ -367,7 +367,7 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         SWR_ASSERT(isSplitDraw == false, "Split draw should only be used when obtaining a new DC");
     }
 
-    AR_API_END(APIGetDrawContext, 0);
+    RDTSC_END(APIGetDrawContext, 0);
     return pContext->pCurDrawContext;
 }
 
@@ -477,7 +477,7 @@ void SwrSync(HANDLE hContext, PFN_CALLBACK_FUNC pfnFunc, uint64_t userData, uint
     SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
-    AR_API_BEGIN(APISync, 0);
+    RDTSC_BEGIN(APISync, 0);
 
     pDC->FeWork.type = SYNC;
     pDC->FeWork.pfnWork = ProcessSync;
@@ -493,7 +493,7 @@ void SwrSync(HANDLE hContext, PFN_CALLBACK_FUNC pfnFunc, uint64_t userData, uint
     //enqueue
     QueueDraw(pContext);
 
-    AR_API_END(APISync, 1);
+    RDTSC_END(APISync, 1);
 }
 
 void SwrStallBE(HANDLE hContext)
@@ -508,28 +508,28 @@ void SwrWaitForIdle(HANDLE hContext)
 {
     SWR_CONTEXT *pContext = GetContext(hContext);
 
-    AR_API_BEGIN(APIWaitForIdle, 0);
+    RDTSC_BEGIN(APIWaitForIdle, 0);
 
     while (!pContext->dcRing.IsEmpty())
     {
         _mm_pause();
     }
 
-    AR_API_END(APIWaitForIdle, 1);
+    RDTSC_END(APIWaitForIdle, 1);
 }
 
 void SwrWaitForIdleFE(HANDLE hContext)
 {
     SWR_CONTEXT *pContext = GetContext(hContext);
 
-    AR_API_BEGIN(APIWaitForIdle, 0);
+    RDTSC_BEGIN(APIWaitForIdle, 0);
 
     while (pContext->drawsOutstandingFE > 0)
     {
         _mm_pause();
     }
 
-    AR_API_END(APIWaitForIdle, 1);
+    RDTSC_END(APIWaitForIdle, 1);
 }
 
 void SwrSetVertexBuffers(
@@ -1167,7 +1167,7 @@ void DrawInstanced(
     SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
-    AR_API_BEGIN(APIDraw, pDC->drawId);
+    RDTSC_BEGIN(APIDraw, pDC->drawId);
     AR_API_EVENT(DrawInstancedEvent(pDC->drawId, topology, numVertices, startVertex, numInstances, startInstance));
 
     uint32_t maxVertsPerDraw = MaxVertsPerDraw(pDC, numVertices, topology);
@@ -1230,7 +1230,7 @@ void DrawInstanced(
     pDC = GetDrawContext(pContext);
     pDC->pState->state.rastState.cullMode = oldCullMode;
 
-    AR_API_END(APIDraw, numVertices * numInstances);
+    RDTSC_END(APIDraw, numVertices * numInstances);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1295,7 +1295,7 @@ void DrawIndexedInstance(
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
     API_STATE* pState = &pDC->pState->state;
 
-    AR_API_BEGIN(APIDrawIndexed, pDC->drawId);
+    RDTSC_BEGIN(APIDrawIndexed, pDC->drawId);
     AR_API_EVENT(DrawIndexedInstancedEvent(pDC->drawId, topology, numIndices, indexOffset, baseVertex, numInstances, startInstance));
 
     uint32_t maxIndicesPerDraw = MaxVertsPerDraw(pDC, numIndices, topology);
@@ -1376,7 +1376,7 @@ void DrawIndexedInstance(
     pDC = GetDrawContext(pContext);
     pDC->pState->state.rastState.cullMode = oldCullMode;
  
-    AR_API_END(APIDrawIndexed, numIndices * numInstances);
+    RDTSC_END(APIDrawIndexed, numIndices * numInstances);
 }
 
 
@@ -1508,7 +1508,7 @@ void SwrDispatch(
     SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
-    AR_API_BEGIN(APIDispatch, pDC->drawId);
+    RDTSC_BEGIN(APIDispatch, pDC->drawId);
     AR_API_EVENT(DispatchEvent(pDC->drawId, threadGroupCountX, threadGroupCountY, threadGroupCountZ));
     pDC->isCompute = true;      // This is a compute context.
 
@@ -1524,7 +1524,7 @@ void SwrDispatch(
     pDC->pDispatch->initialize(totalThreadGroups, pTaskData, &ProcessComputeBE);
 
     QueueDispatch(pContext);
-    AR_API_END(APIDispatch, threadGroupCountX * threadGroupCountY * threadGroupCountZ);
+    RDTSC_END(APIDispatch, threadGroupCountX * threadGroupCountY * threadGroupCountZ);
 }
 
 // Deswizzles, converts and stores current contents of the hot tiles to surface
@@ -1543,7 +1543,7 @@ void SWR_API SwrStoreTiles(
     SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
-    AR_API_BEGIN(APIStoreTiles, pDC->drawId);
+    RDTSC_BEGIN(APIStoreTiles, pDC->drawId);
 
     pDC->FeWork.type = STORETILES;
     pDC->FeWork.pfnWork = ProcessStoreTiles;
@@ -1557,7 +1557,7 @@ void SWR_API SwrStoreTiles(
 
     AR_API_EVENT(SwrStoreTilesEvent(pDC->drawId));
 
-    AR_API_END(APIStoreTiles, 1);
+    RDTSC_END(APIStoreTiles, 1);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1586,7 +1586,7 @@ void SWR_API SwrClearRenderTarget(
     SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
-    AR_API_BEGIN(APIClearRenderTarget, pDC->drawId);
+    RDTSC_BEGIN(APIClearRenderTarget, pDC->drawId);
 
     pDC->FeWork.type = CLEAR;
     pDC->FeWork.pfnWork = ProcessClear;
@@ -1604,7 +1604,7 @@ void SWR_API SwrClearRenderTarget(
     // enqueue draw
     QueueDraw(pContext);
 
-    AR_API_END(APIClearRenderTarget, 1);
+    RDTSC_END(APIClearRenderTarget, 1);
 }
 
 //////////////////////////////////////////////////////////////////////////

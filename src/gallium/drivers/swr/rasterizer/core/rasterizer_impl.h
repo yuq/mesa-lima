@@ -781,9 +781,9 @@ struct GenerateSVInnerCoverage<RT, AllEdgesValidT, InnerConservativeCoverageT>
         }
 
         // not trivial accept or reject, must rasterize full tile
-        AR_BEGIN(BERasterizePartial, pDC->drawId);
+        RDTSC_BEGIN(BERasterizePartial, pDC->drawId);
         innerCoverageMask = rasterizePartialTile<RT::NumEdgesT::value, typename RT::ValidEdgeMaskT>(pDC, startQuadEdgesAdj, pRastEdges);
-        AR_END(BERasterizePartial, 0);
+        RDTSC_END(BERasterizePartial, 0);
     }
 };
 
@@ -847,8 +847,8 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
         return;
     }
 #endif
-    AR_BEGIN(BERasterizeTriangle, pDC->drawId);
-    AR_BEGIN(BETriangleSetup, pDC->drawId);
+    RDTSC_BEGIN(BERasterizeTriangle, pDC->drawId);
+    RDTSC_BEGIN(BETriangleSetup, pDC->drawId);
 
     const API_STATE &state = GetApiState(pDC);
     const SWR_RASTSTATE &rastState = state.rastState;
@@ -1014,7 +1014,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
 
     SWR_ASSERT(intersect.xmin <= intersect.xmax && intersect.ymin <= intersect.ymax && intersect.xmin >= 0 && intersect.xmax >= 0 && intersect.ymin >= 0 && intersect.ymax >= 0);
 
-    AR_END(BETriangleSetup, 0);
+    RDTSC_END(BETriangleSetup, 0);
 
     // update triangle desc
     uint32_t minTileX = intersect.xmin >> (KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT);
@@ -1027,11 +1027,11 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     if (numTilesX == 0 || numTilesY == 0) 
     {
         RDTSC_EVENT(BEEmptyTriangle, 1, 0);
-        AR_END(BERasterizeTriangle, 1);
+        RDTSC_END(BERasterizeTriangle, 1);
         return;
     }
 
-    AR_BEGIN(BEStepSetup, pDC->drawId);
+    RDTSC_BEGIN(BEStepSetup, pDC->drawId);
 
     // Step to pixel center of top-left pixel of the triangle bbox
     // Align intersect bbox (top/left) to raster tile's (top/left).
@@ -1140,7 +1140,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
         }
     }
 
-    AR_END(BEStepSetup, 0);
+    RDTSC_END(BEStepSetup, 0);
 
     uint32_t tY = minTileY;
     uint32_t tX = minTileX;
@@ -1233,9 +1233,9 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
                         }
 
                         // not trivial accept or reject, must rasterize full tile
-                        AR_BEGIN(BERasterizePartial, pDC->drawId);
+                        RDTSC_BEGIN(BERasterizePartial, pDC->drawId);
                         triDesc.coverageMask[sampleNum] = rasterizePartialTile<RT::NumEdgesT::value, typename RT::ValidEdgeMaskT>(pDC, startQuadEdges, rastEdges);
-                        AR_END(BERasterizePartial, 0);
+                        RDTSC_END(BERasterizePartial, 0);
 
                         triDesc.anyCoveredSamples |= triDesc.coverageMask[sampleNum]; 
                         
@@ -1271,9 +1271,9 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
                     UnrollerL<1, RT::MT::numSamples, 1>::step(copyCoverage);
                 }
 
-                AR_BEGIN(BEPixelBackend, pDC->drawId);
+                RDTSC_BEGIN(BEPixelBackend, pDC->drawId);
                 backendFuncs.pfnBackend(pDC, workerId, tileX << KNOB_TILE_X_DIM_SHIFT, tileY << KNOB_TILE_Y_DIM_SHIFT, triDesc, renderBuffers);
-                AR_END(BEPixelBackend, 0);
+                RDTSC_END(BEPixelBackend, 0);
             }
 
             // step to the next tile in X
@@ -1292,7 +1292,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
         StepRasterTileY<RT>(state.colorHottileEnable, renderBuffers, currentRenderBufferRow);
     }
 
-    AR_END(BERasterizeTriangle, 1);
+    RDTSC_END(BERasterizeTriangle, 1);
 }
 
 // Get pointers to hot tile memory for color RT, depth, stencil

@@ -181,7 +181,7 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
 
         SWR_ASSERT(pClear->attachmentMask != 0); // shouldn't be here without a reason.
 
-        AR_BEGIN(BEClear, pDC->drawId);
+        RDTSC_BEGIN(BEClear, pDC->drawId);
 
         if (pClear->attachmentMask & SWR_ATTACHMENT_MASK_COLOR)
         {
@@ -217,13 +217,13 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
             pHotTile->state = HOTTILE_CLEAR;
         }
 
-        AR_END(BEClear, 1);
+        RDTSC_END(BEClear, 1);
     }
     else
     {
         // Legacy clear
         CLEAR_DESC *pClear = (CLEAR_DESC*)pUserData;
-        AR_BEGIN(BEClear, pDC->drawId);
+        RDTSC_BEGIN(BEClear, pDC->drawId);
 
         if (pClear->attachmentMask & SWR_ATTACHMENT_MASK_COLOR)
         {
@@ -265,7 +265,7 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
             pfnClearTiles(pDC, SWR_ATTACHMENT_STENCIL, macroTile, pClear->renderTargetArrayIndex, clearData, pClear->rect);
         }
 
-        AR_END(BEClear, 1);
+        RDTSC_END(BEClear, 1);
     }
 }
 
