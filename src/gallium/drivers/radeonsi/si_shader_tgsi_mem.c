@@ -566,11 +566,17 @@ static void load_emit(
 	}
 
 	if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
+		unsigned num_channels = util_last_bit(inst->Dst[0].Register.WriteMask);
+		LLVMValueRef result =
+			ac_build_buffer_load_format(&ctx->ac,
+						    emit_data->args[0],
+						    emit_data->args[1],
+						    emit_data->args[2],
+						    num_channels,
+						    LLVMConstIntGetZExtValue(emit_data->args[3]),
+						    can_speculate);
 		emit_data->output[emit_data->chan] =
-			lp_build_intrinsic(
-				builder, "llvm.amdgcn.buffer.load.format.v4f32", emit_data->dst_type,
-				emit_data->args, emit_data->arg_count,
-				ac_get_load_intr_attribs(can_speculate));
+			ac_build_expand_to_vec4(&ctx->ac, result, num_channels);
 	} else {
 		ac_get_image_intr_name("llvm.amdgcn.image.load",
 				       emit_data->dst_type,		/* vdata */
