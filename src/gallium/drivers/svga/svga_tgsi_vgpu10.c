@@ -1198,7 +1198,7 @@ emit_face_register(struct svga_shader_emitter_v10 *emit)
  */
 static void
 emit_opcode(struct svga_shader_emitter_v10 *emit,
-            unsigned vgpu10_opcode, boolean saturate)
+            VGPU10_OPCODE_TYPE vgpu10_opcode, boolean saturate)
 {
    VGPU10OpcodeToken0 token0;
 
@@ -2053,7 +2053,7 @@ emit_decl_instruction(struct svga_shader_emitter_v10 *emit,
  */
 static void
 emit_input_declaration(struct svga_shader_emitter_v10 *emit,
-                       unsigned opcodeType, unsigned operandType,
+                       VGPU10_OPCODE_TYPE opcodeType, unsigned operandType,
                        unsigned dim, unsigned index, unsigned size,
                        unsigned name, unsigned numComp,
                        unsigned selMode, unsigned usageMask,
@@ -2411,7 +2411,7 @@ emit_input_declarations(struct svga_shader_emitter_v10 *emit)
          enum tgsi_semantic semantic_name = emit->info.input_semantic_name[i];
          unsigned usage_mask = emit->info.input_usage_mask[i];
          unsigned index = emit->linkage.input_map[i];
-         unsigned opcodeType, operandType;
+         VGPU10_OPCODE_TYPE opcodeType, operandType;
          unsigned numComp, selMode;
          unsigned name;
          unsigned dim;
@@ -3106,7 +3106,7 @@ emit_resource_declarations(struct svga_shader_emitter_v10 *emit)
 
 static void
 emit_instruction_op1(struct svga_shader_emitter_v10 *emit,
-                     unsigned opcode,
+                     VGPU10_OPCODE_TYPE opcode,
                      const struct tgsi_full_dst_register *dst,
                      const struct tgsi_full_src_register *src,
                      boolean saturate)
@@ -3120,7 +3120,7 @@ emit_instruction_op1(struct svga_shader_emitter_v10 *emit,
 
 static void
 emit_instruction_op2(struct svga_shader_emitter_v10 *emit,
-                     unsigned opcode,
+                     VGPU10_OPCODE_TYPE opcode,
                      const struct tgsi_full_dst_register *dst,
                      const struct tgsi_full_src_register *src1,
                      const struct tgsi_full_src_register *src2,
@@ -3136,7 +3136,7 @@ emit_instruction_op2(struct svga_shader_emitter_v10 *emit,
 
 static void
 emit_instruction_op3(struct svga_shader_emitter_v10 *emit,
-                     unsigned opcode,
+                     VGPU10_OPCODE_TYPE opcode,
                      const struct tgsi_full_dst_register *dst,
                      const struct tgsi_full_src_register *src1,
                      const struct tgsi_full_src_register *src2,
@@ -3484,7 +3484,7 @@ emit_arl_uarl(struct svga_shader_emitter_v10 *emit,
 {
    unsigned index = inst->Dst[0].Register.Index;
    struct tgsi_full_dst_register dst;
-   unsigned opcode;
+   VGPU10_OPCODE_TYPE opcode;
 
    assert(index < MAX_VGPU10_ADDR_REGS);
    dst = make_dst_temp_reg(emit->address_reg_index[index]);
@@ -5061,7 +5061,7 @@ emit_tex(struct svga_shader_emitter_v10 *emit,
 {
    const uint unit = inst->Src[1].Register.Index;
    const enum tgsi_texture_type target = inst->Texture.Texture;
-   unsigned opcode;
+   VGPU10_OPCODE_TYPE opcode;
    struct tgsi_full_src_register coord;
    int offsets[3];
    struct tex_swizzle_info swz_info;
@@ -5111,7 +5111,7 @@ emit_txp(struct svga_shader_emitter_v10 *emit,
 {
    const uint unit = inst->Src[1].Register.Index;
    const enum tgsi_texture_type target = inst->Texture.Texture;
-   unsigned opcode;
+   VGPU10_OPCODE_TYPE opcode;
    int offsets[3];
    unsigned tmp = get_temp_index(emit);
    struct tgsi_full_src_register tmp_src = make_src_temp_reg(tmp);
@@ -5263,7 +5263,8 @@ emit_txl_txb(struct svga_shader_emitter_v10 *emit,
              const struct tgsi_full_instruction *inst)
 {
    const enum tgsi_texture_type target = inst->Texture.Texture;
-   unsigned opcode, unit;
+   VGPU10_OPCODE_TYPE opcode;
+   unsigned unit;
    int offsets[3];
    struct tgsi_full_src_register coord, lod_bias;
    struct tex_swizzle_info swz_info;
