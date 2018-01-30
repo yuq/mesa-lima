@@ -367,12 +367,13 @@ reg_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr,
 			 */
 			if ((n == 1) && is_mad(instr->opc) &&
 					!(instr->regs[0 + 1]->flags & (IR3_REG_CONST | IR3_REG_RELATIV)) &&
-					valid_flags(instr, 0, new_flags)) {
+					valid_flags(instr, 0, new_flags & ~IR3_REG_IMMED)) {
 				/* swap src[0] and src[1]: */
 				struct ir3_register *tmp;
 				tmp = instr->regs[0 + 1];
 				instr->regs[0 + 1] = instr->regs[1 + 1];
 				instr->regs[1 + 1] = tmp;
+
 				n = 0;
 			} else {
 				return;
@@ -437,7 +438,8 @@ reg_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr,
 
 			debug_assert((opc_cat(instr->opc) == 1) ||
 					(opc_cat(instr->opc) == 6) ||
-					ir3_cat2_int(instr->opc));
+					ir3_cat2_int(instr->opc) ||
+					(is_mad(instr->opc) && (n == 0)));
 
 			if (new_flags & IR3_REG_SABS)
 				iim_val = abs(iim_val);
