@@ -386,7 +386,7 @@ get_gen_batch_bo(void *user_data, uint64_t address)
 {
    for (int s = 0; s < MAX_SECTIONS; s++) {
       if (sections[s].gtt_offset <= address &&
-          address < sections[s].gtt_offset + sections[s].count) {
+          address < sections[s].gtt_offset + sections[s].count * 4) {
          return (struct gen_batch_decode_bo) {
             .addr = sections[s].gtt_offset,
             .map = sections[s].data,
