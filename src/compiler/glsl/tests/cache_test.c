@@ -147,6 +147,41 @@ check_directories_created(const char *cache_dir)
    expect_true(sub_dirs_created, "create sub dirs");
 }
 
+static bool
+does_cache_contain(struct disk_cache *cache, const cache_key key)
+{
+   void *result;
+
+   result = disk_cache_get(cache, key, NULL);
+
+   if (result) {
+      free(result);
+      return true;
+   }
+
+   return false;
+}
+
+static void
+wait_until_file_written(struct disk_cache *cache, const cache_key key)
+{
+   struct timespec req;
+   struct timespec rem;
+
+   /* Set 100ms delay */
+   req.tv_sec = 0;
+   req.tv_nsec = 100000000;
+
+   unsigned retries = 0;
+   while (retries++ < 20) {
+      if (does_cache_contain(cache, key)) {
+         break;
+      }
+
+      nanosleep(&req, &rem);
+   }
+}
+
 #define CACHE_TEST_TMP "./cache-test-tmp"
 
 static void
@@ -207,41 +242,6 @@ test_disk_cache_create(void)
                              CACHE_DIR_NAME);
 
    disk_cache_destroy(cache);
-}
-
-static bool
-does_cache_contain(struct disk_cache *cache, const cache_key key)
-{
-   void *result;
-
-   result = disk_cache_get(cache, key, NULL);
-
-   if (result) {
-      free(result);
-      return true;
-   }
-
-   return false;
-}
-
-static void
-wait_until_file_written(struct disk_cache *cache, const cache_key key)
-{
-   struct timespec req;
-   struct timespec rem;
-
-   /* Set 100ms delay */
-   req.tv_sec = 0;
-   req.tv_nsec = 100000000;
-
-   unsigned retries = 0;
-   while (retries++ < 20) {
-      if (does_cache_contain(cache, key)) {
-         break;
-      }
-
-      nanosleep(&req, &rem);
-   }
 }
 
 static void
