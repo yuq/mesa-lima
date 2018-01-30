@@ -161,12 +161,13 @@ st_update_blend( struct st_context *st )
    else if (ctx->Color.BlendEnabled && !ctx->Color._AdvancedBlendMode) {
       /* blending enabled */
       for (i = 0, j = 0; i < num_state; i++) {
+         if (!(ctx->Color.BlendEnabled & (1 << i)))
+            continue;
 
-         blend->rt[i].blend_enable = (ctx->Color.BlendEnabled >> i) & 0x1;
-
-         if (ctx->Extensions.ARB_draw_buffers_blend)
+	 if (ctx->Extensions.ARB_draw_buffers_blend)
             j = i;
 
+         blend->rt[i].blend_enable = 1;
          blend->rt[i].rgb_func =
             translate_blend(ctx->Color.Blend[j].EquationRGB);
 
