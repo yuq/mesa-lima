@@ -521,11 +521,11 @@ descriptor=[
   [ "PROGRAM_PIPELINE_BINDING", "LOC_CUSTOM, TYPE_INT, GL_PROGRAM_PIPELINE_BINDING, NO_EXTRA" ],
 
 # GL_ARB_vertex_attrib_binding / GLES 3.1
-  [ "MAX_VERTEX_ATTRIB_RELATIVE_OFFSET", "CONTEXT_ENUM16(Const.MaxVertexAttribRelativeOffset), NO_EXTRA" ],
-  [ "MAX_VERTEX_ATTRIB_BINDINGS", "CONTEXT_ENUM16(Const.MaxVertexAttribBindings), NO_EXTRA" ],
+  [ "MAX_VERTEX_ATTRIB_RELATIVE_OFFSET", "CONTEXT_INT(Const.MaxVertexAttribRelativeOffset), NO_EXTRA" ],
+  [ "MAX_VERTEX_ATTRIB_BINDINGS", "CONTEXT_INT(Const.MaxVertexAttribBindings), NO_EXTRA" ],
 
 # GL 4.4 / GLES 3.1
-  [ "MAX_VERTEX_ATTRIB_STRIDE", "CONTEXT_ENUM16(Const.MaxVertexAttribStride), NO_EXTRA" ],
+  [ "MAX_VERTEX_ATTRIB_STRIDE", "CONTEXT_UINT(Const.MaxVertexAttribStride), NO_EXTRA" ],
 
   # GL_ARB_shader_storage_buffer_object / GLES 3.1
   [ "MAX_VERTEX_SHADER_STORAGE_BLOCKS", "CONTEXT_INT(Const.Program[MESA_SHADER_VERTEX].MaxShaderStorageBlocks), extra_ARB_shader_storage_buffer_object_es31" ],
