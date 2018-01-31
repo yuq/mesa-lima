@@ -140,15 +140,19 @@ init_mat_currval(struct gl_context *ctx)
    }
 }
 
+
+/**
+ * Fallback for when a driver does not call vbo_set_indirect_draw_func().
+ */
 static void
 vbo_draw_indirect_prims(struct gl_context *ctx,
                         GLuint mode,
-                        struct gl_buffer_object *indirect_data,
+                        struct gl_buffer_object *indirect_buffer,
                         GLsizeiptr indirect_offset,
                         unsigned draw_count,
                         unsigned stride,
-                        struct gl_buffer_object *indirect_params,
-                        GLsizeiptr indirect_params_offset,
+                        struct gl_buffer_object *indirect_draw_count_buffer,
+                        GLsizeiptr indirect_draw_count_offset,
                         const struct _mesa_index_buffer *ib)
 {
    struct vbo_context *vbo = vbo_context(ctx);
@@ -160,7 +164,7 @@ vbo_draw_indirect_prims(struct gl_context *ctx,
       _mesa_error(ctx, GL_OUT_OF_MEMORY, "gl%sDraw%sIndirect%s",
                   (draw_count > 1) ? "Multi" : "",
                   ib ? "Elements" : "Arrays",
-                  indirect_params ? "CountARB" : "");
+                  indirect_buffer ? "CountARB" : "");
       return;
    }
 
@@ -174,10 +178,13 @@ vbo_draw_indirect_prims(struct gl_context *ctx,
       prim[i].draw_id = i;
    }
 
+   /* This should always be true at this time */
+   assert(indirect_buffer == ctx->DrawIndirectBuffer);
+
    vbo->draw_prims(ctx, prim, draw_count,
                    ib, false, 0, ~0,
                    NULL, 0,
-                   ctx->DrawIndirectBuffer);
+                   indirect_buffer);
 
    free(prim);
 }
