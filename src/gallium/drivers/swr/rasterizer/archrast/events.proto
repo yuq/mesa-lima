@@ -262,14 +262,16 @@ event GSVertsInput
     uint64_t vertsInput;
 };
 
-event VertsClipped
-{
-    uint32_t drawId;
-    uint64_t clipCount;
-};
-
 event TessPrims
 {
     uint32_t drawId;
     uint64_t primCount;
+};
+
+event ClipperEvent
+{
+    uint32_t drawId;
+    uint32_t trivialRejectCount;
+    uint32_t trivialAcceptCount;
+    uint32_t mustClipCount;
 };

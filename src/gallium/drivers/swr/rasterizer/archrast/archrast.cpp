@@ -50,7 +50,9 @@ namespace ArchRast
 
     struct CStats
     {
-        uint32_t clippedVerts = 0;
+        uint32_t trivialRejectCount;
+        uint32_t trivialAcceptCount;
+        uint32_t mustClipCount;
     };
 
     struct TEStats
@@ -164,6 +166,13 @@ namespace ArchRast
         }
 
 
+        virtual void Handle(const ClipInfoEvent& event)
+        {
+            mClipper.mustClipCount += _mm_popcnt_u32(event.data.clipMask);
+            mClipper.trivialRejectCount += event.data.numInvocations - _mm_popcnt_u32(event.data.validMask);
+            mClipper.trivialAcceptCount += _mm_popcnt_u32(event.data.validMask & ~event.data.clipMask);
+        }
+
         // Flush cached events for this draw
         virtual void FlushDraw(uint32_t drawId)
         {
@@ -202,7 +211,7 @@ namespace ArchRast
         virtual void Handle(const FrontendDrawEndEvent& event)
         {
             //Clipper
-            EventHandlerFile::Handle(VertsClipped(event.data.drawId, mClipper.clippedVerts));
+            EventHandlerFile::Handle(ClipperEvent(event.data.drawId, mClipper.trivialRejectCount, mClipper.trivialAcceptCount, mClipper.mustClipCount));
 
             //Tesselator
             EventHandlerFile::Handle(TessPrims(event.data.drawId, mTS.inputPrims));
@@ -223,11 +232,6 @@ namespace ArchRast
             mGS.inputPrimCount += event.data.inputPrimCount;
             mGS.primGeneratedCount += event.data.primGeneratedCount;
             mGS.vertsInput += event.data.vertsInput;
-        }
-
-        virtual void Handle(const ClipVertexCount& event)
-        {
-            mClipper.clippedVerts += (_mm_popcnt_u32(event.data.primMask) * event.data.vertsPerPrim);
         }
 
         virtual void Handle(const TessPrimCount& event)

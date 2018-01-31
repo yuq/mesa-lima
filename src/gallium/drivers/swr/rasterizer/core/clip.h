@@ -715,6 +715,8 @@ public:
             clipMask = primMask & ComputeClipMask();
         }
 
+        AR_EVENT(ClipInfoEvent(numInvoc, validMask, clipMask));
+
         if (clipMask)
         {
             RDTSC_BEGIN(FEGuardbandClip, pa.pDC->drawId);

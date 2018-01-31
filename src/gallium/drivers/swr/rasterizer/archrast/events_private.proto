@@ -90,12 +90,6 @@ event FrontendDrawEndEvent
     uint32_t drawId;
 };
 
-event ClipVertexCount
-{
-    uint64_t vertsPerPrim;
-    uint64_t primMask;
-};
-
 event TessPrimCount
 {
     uint64_t primCount;
@@ -106,4 +100,16 @@ event GSPrimInfo
     uint64_t inputPrimCount;
     uint64_t primGeneratedCount;
     uint64_t vertsInput;
+};
+
+// validMask is primitives that still need to be clipped. They weren't rejected due to trivial reject or nan.
+// clipMask is primitives that need to be clipped. So trivial accepts will be 0 while validMask for that is 1.
+// Trivial reject is numInvocations - pop_cnt32(validMask)
+// Trivial accept is validMask & ~clipMask
+// Must clip count is pop_cnt32(clipMask)
+event ClipInfoEvent
+{
+    uint32_t numInvocations;
+    uint32_t validMask;
+    uint32_t clipMask;
 };
