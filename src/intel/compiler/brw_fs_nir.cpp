@@ -2304,28 +2304,51 @@ do_untyped_vector_read(const fs_builder &bld,
 {
    if (type_sz(dest.type) <= 2) {
       assert(dest.stride == 1);
+      boolean is_const_offset = offset_reg.file == BRW_IMMEDIATE_VALUE;
 
-      if (num_components > 1) {
-         /* Pairs of 16-bit components can be read with untyped read, for 16-bit
-          * vec3 4th component is ignored.
+      if (is_const_offset) {
+         uint32_t start = offset_reg.ud & ~3;
+         uint32_t end = offset_reg.ud + num_components * type_sz(dest.type);
+         end = ALIGN(end, 4);
+         assert (end - start <= 16);
+
+         /* At this point we have 16-bit component/s that have constant
+          * offset aligned to 4-bytes that can be read with untyped_reads.
+          * untyped_read message requires 32-bit aligned offsets.
           */
+         unsigned first_component = (offset_reg.ud & 3) / type_sz(dest.type);
+         unsigned num_components_32bit = (end - start) / 4;
+
          fs_reg read_result =
-            emit_untyped_read(bld, surf_index, offset_reg,
-                              1 /* dims */, DIV_ROUND_UP(num_components, 2),
+            emit_untyped_read(bld, surf_index, brw_imm_ud(start),
+                              1 /* dims */,
+                              num_components_32bit,
                               BRW_PREDICATE_NONE);
          shuffle_32bit_load_result_to_16bit_data(bld,
                retype(dest, BRW_REGISTER_TYPE_W),
                retype(read_result, BRW_REGISTER_TYPE_D),
-               0, num_components);
+               first_component, num_components);
       } else {
-         assert(num_components == 1);
-         /* scalar 16-bit are read using one byte_scattered_read message */
-         fs_reg read_result =
-            emit_byte_scattered_read(bld, surf_index, offset_reg,
-                                     1 /* dims */, 1,
-                                     type_sz(dest.type) * 8 /* bit_size */,
-                                     BRW_PREDICATE_NONE);
-         bld.MOV(dest, subscript(read_result, dest.type, 0));
+         fs_reg read_offset = bld.vgrf(BRW_REGISTER_TYPE_UD);
+         for (unsigned i = 0; i < num_components; i++) {
+            if (i == 0) {
+               bld.MOV(read_offset, offset_reg);
+            } else {
+               bld.ADD(read_offset, offset_reg,
+                       brw_imm_ud(i * type_sz(dest.type)));
+            }
+            /* Non constant offsets are not guaranteed to be aligned 32-bits
+             * so they are read using one byte_scattered_read message
+             * for each component.
+             */
+            fs_reg read_result =
+               emit_byte_scattered_read(bld, surf_index, read_offset,
+                                        1 /* dims */, 1,
+                                        type_sz(dest.type) * 8 /* bit_size */,
+                                        BRW_PREDICATE_NONE);
+            bld.MOV(offset(dest, bld, i),
+                    subscript (read_result, dest.type, 0));
+         }
       }
    } else if (type_sz(dest.type) == 4) {
       fs_reg read_result = emit_untyped_read(bld, surf_index, offset_reg,
