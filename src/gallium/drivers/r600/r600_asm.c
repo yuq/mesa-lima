@@ -2099,9 +2099,12 @@ void r600_bytecode_disasm(struct r600_bytecode *bc)
 				fprintf(stderr, "%04d %08X %08X  %s ", id, bc->bytecode[id],
 						bc->bytecode[id + 1], cfop->name);
 				fprintf(stderr, "%d @%d ", cf->ndw / 4, cf->addr);
-				fprintf(stderr, "\n");
+				if (cf->vpm)
+					fprintf(stderr, "VPM ");
 				if (cf->end_of_program)
 					fprintf(stderr, "EOP ");
+				fprintf(stderr, "\n");
+
 			} else if (cfop->flags & CF_EXP) {
 				int o = 0;
 				const char *exp_type[] = {"PIXEL", "POS  ", "PARAM"};
@@ -2198,6 +2201,8 @@ void r600_bytecode_disasm(struct r600_bytecode *bc)
 					fprintf(stderr, "POP:%X ", cf->pop_count);
 				if (cf->count && (cfop->flags & CF_EMIT))
 					fprintf(stderr, "STREAM%d ", cf->count);
+				if (cf->vpm)
+					fprintf(stderr, "VPM ");
 				if (cf->end_of_program)
 					fprintf(stderr, "EOP ");
 				fprintf(stderr, "\n");

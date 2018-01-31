@@ -197,6 +197,7 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
 
 	use_sb &= !shader->shader.uses_atomics;
 	use_sb &= !shader->shader.uses_images;
+	use_sb &= !shader->shader.uses_helper_invocation;
 
 	/* Check if the bytecode has already been built. */
 	if (!shader->shader.bc.bytecode) {
@@ -346,6 +347,7 @@ struct r600_shader_ctx {
 	boolean                 clip_vertex_write;
 	unsigned                cv_output;
 	unsigned		edgeflag_output;
+	int					helper_invoc_reg;
 	int                                     cs_block_size_reg;
 	int                                     cs_grid_size_reg;
 	bool cs_block_size_loaded, cs_grid_size_loaded;
@@ -1295,6 +1297,75 @@ static int load_sample_position(struct r600_shader_ctx *ctx, struct r600_shader_
 	return t1;
 }
 
+static int eg_load_helper_invocation(struct r600_shader_ctx *ctx)
+{
+	int r;
+	struct r600_bytecode_alu alu;
+
+	/* do a vtx fetch with wqm set on the vtx fetch */
+	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+	alu.op = ALU_OP1_MOV;
+	alu.dst.sel = ctx->helper_invoc_reg;
+	alu.dst.chan = 0;
+	alu.src[0].sel = V_SQ_ALU_SRC_LITERAL;
+	alu.src[0].value = 0xffffffff;
+	alu.dst.write = 1;
+	alu.last = 1;
+	r = r600_bytecode_add_alu(ctx->bc, &alu);
+	if (r)
+		return r;
+
+	/* do a vtx fetch in VPM mode */
+	struct r600_bytecode_vtx vtx;
+	memset(&vtx, 0, sizeof(vtx));
+	vtx.op = FETCH_OP_GET_BUFFER_RESINFO;
+	vtx.buffer_id = R600_BUFFER_INFO_CONST_BUFFER;
+	vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
+	vtx.src_gpr = 0;
+	vtx.mega_fetch_count = 16; /* no idea here really... */
+	vtx.dst_gpr = ctx->helper_invoc_reg;
+	vtx.dst_sel_x = 4;
+	vtx.dst_sel_y = 7;		/* SEL_Y */
+	vtx.dst_sel_z = 7;		/* SEL_Z */
+	vtx.dst_sel_w = 7;		/* SEL_W */
+	vtx.data_format = FMT_32;
+	if ((r = r600_bytecode_add_vtx_tc(ctx->bc, &vtx)))
+		return r;
+	ctx->bc->cf_last->vpm = 1;
+	return 0;
+}
+
+static int cm_load_helper_invocation(struct r600_shader_ctx *ctx)
+{
+	int r;
+	struct r600_bytecode_alu alu;
+
+	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+	alu.op = ALU_OP1_MOV;
+	alu.dst.sel = ctx->helper_invoc_reg;
+	alu.dst.chan = 0;
+	alu.src[0].sel = V_SQ_ALU_SRC_LITERAL;
+	alu.src[0].value = 0xffffffff;
+	alu.dst.write = 1;
+	alu.last = 1;
+	r = r600_bytecode_add_alu(ctx->bc, &alu);
+	if (r)
+		return r;
+
+	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+	alu.op = ALU_OP1_MOV;
+	alu.dst.sel = ctx->helper_invoc_reg;
+	alu.dst.chan = 0;
+	alu.src[0].sel = V_SQ_ALU_SRC_0;
+	alu.dst.write = 1;
+	alu.last = 1;
+	r = r600_bytecode_add_alu_type(ctx->bc, &alu, CF_OP_ALU_VALID_PIXEL_MODE);
+	if (r)
+		return r;
+
+	return ctx->helper_invoc_reg;
+}
+
 static int load_block_grid_size(struct r600_shader_ctx *ctx, bool load_block)
 {
 	struct r600_bytecode_vtx vtx;
@@ -1458,6 +1529,12 @@ static void tgsi_src(struct r600_shader_ctx *ctx,
 			r600_src->sel = load_block_grid_size(ctx, false);
 		} else if (ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_BLOCK_SIZE) {
 			r600_src->sel = load_block_grid_size(ctx, true);
+		} else if (ctx->info.system_value_semantic_name[tgsi_src->Register.Index] == TGSI_SEMANTIC_HELPER_INVOCATION) {
+			r600_src->sel = ctx->helper_invoc_reg;
+			r600_src->swizzle[0] = 0;
+			r600_src->swizzle[1] = 0;
+			r600_src->swizzle[2] = 0;
+			r600_src->swizzle[3] = 0;
 		}
 	} else {
 		if (tgsi_src->Register.Indirect)
@@ -3120,6 +3197,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	tgsi_scan_shader(tokens, &ctx.info);
 	shader->indirect_files = ctx.info.indirect_files;
 
+	shader->uses_helper_invocation = false;
 	shader->uses_doubles = ctx.info.uses_doubles;
 	shader->uses_atomics = ctx.info.file_mask[TGSI_FILE_HW_ATOMIC];
 	shader->nsys_inputs = 0;
@@ -3193,6 +3271,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.clip_vertex_write = 0;
 	ctx.thread_id_gpr_loaded = false;
 
+	ctx.helper_invoc_reg = -1;
 	ctx.cs_block_size_reg = -1;
 	ctx.cs_grid_size_reg = -1;
 	ctx.cs_block_size_loaded = false;
@@ -3238,6 +3317,13 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			ctx.file_offset[TGSI_FILE_INPUT] = evergreen_gpr_count(&ctx);
 		else
 			ctx.file_offset[TGSI_FILE_INPUT] = allocate_system_value_inputs(&ctx, ctx.file_offset[TGSI_FILE_INPUT]);
+
+		for (i = 0; i < PIPE_MAX_SHADER_INPUTS; i++) {
+			if (ctx.info.system_value_semantic_name[i] == TGSI_SEMANTIC_HELPER_INVOCATION) {
+				ctx.helper_invoc_reg = ctx.file_offset[TGSI_FILE_INPUT]++;
+				shader->uses_helper_invocation = true;
+			}
+		}
 	}
 	if (ctx.type == PIPE_SHADER_GEOMETRY) {
 		/* FIXME 1 would be enough in some cases (3 or less input vertices) */
@@ -3439,6 +3525,15 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	if (shader->fs_write_all && rscreen->b.chip_class >= EVERGREEN)
 		shader->nr_ps_max_color_exports = 8;
 
+	if (ctx.shader->uses_helper_invocation) {
+		if (ctx.bc->chip_class == CAYMAN)
+			r = cm_load_helper_invocation(&ctx);
+		else
+			r = eg_load_helper_invocation(&ctx);
+		if (r)
+			return r;
+
+	}
 	if (ctx.fragcoord_input >= 0) {
 		if (ctx.bc->chip_class == CAYMAN) {
 			for (j = 0 ; j < 4; j++) {
