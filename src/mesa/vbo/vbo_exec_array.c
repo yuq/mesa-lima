@@ -1803,7 +1803,7 @@ static void
 vbo_validated_multidrawarraysindirectcount(struct gl_context *ctx,
                                            GLenum mode,
                                            GLintptr indirect,
-                                           GLintptr drawcount,
+                                           GLintptr drawcount_offset,
                                            GLsizei maxdrawcount,
                                            GLsizei stride)
 {
@@ -1818,7 +1818,7 @@ vbo_validated_multidrawarraysindirectcount(struct gl_context *ctx,
    vbo->draw_indirect_prims(ctx, mode,
                             ctx->DrawIndirectBuffer, offset,
                             maxdrawcount, stride,
-                            ctx->ParameterBuffer, drawcount, NULL);
+                            ctx->ParameterBuffer, drawcount_offset, NULL);
 
    if (MESA_DEBUG_FLAGS & DEBUG_ALWAYS_FLUSH)
       _mesa_flush(ctx);
@@ -1829,7 +1829,7 @@ static void
 vbo_validated_multidrawelementsindirectcount(struct gl_context *ctx,
                                              GLenum mode, GLenum type,
                                              GLintptr indirect,
-                                             GLintptr drawcount,
+                                             GLintptr drawcount_offset,
                                              GLsizei maxdrawcount,
                                              GLsizei stride)
 {
@@ -1852,7 +1852,7 @@ vbo_validated_multidrawelementsindirectcount(struct gl_context *ctx,
    vbo->draw_indirect_prims(ctx, mode,
                             ctx->DrawIndirectBuffer, offset,
                             maxdrawcount, stride,
-                            ctx->ParameterBuffer, drawcount, &ib);
+                            ctx->ParameterBuffer, drawcount_offset, &ib);
 
    if (MESA_DEBUG_FLAGS & DEBUG_ALWAYS_FLUSH)
       _mesa_flush(ctx);
@@ -1861,7 +1861,7 @@ vbo_validated_multidrawelementsindirectcount(struct gl_context *ctx,
 
 static void GLAPIENTRY
 vbo_exec_MultiDrawArraysIndirectCount(GLenum mode, GLintptr indirect,
-                                      GLintptr drawcount,
+                                      GLintptr drawcount_offset,
                                       GLsizei maxdrawcount, GLsizei stride)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -1870,7 +1870,7 @@ vbo_exec_MultiDrawArraysIndirectCount(GLenum mode, GLintptr indirect,
       _mesa_debug(ctx, "glMultiDrawArraysIndirectCountARB"
                   "(%s, %lx, %lx, %i, %i)\n",
                   _mesa_enum_to_string(mode),
-                  (unsigned long) indirect, (unsigned long) drawcount,
+                  (unsigned long) indirect, (unsigned long) drawcount_offset,
                   maxdrawcount, stride);
 
    /* If <stride> is zero, the array elements are treated as tightly packed. */
@@ -1884,7 +1884,8 @@ vbo_exec_MultiDrawArraysIndirectCount(GLenum mode, GLintptr indirect,
          _mesa_update_state(ctx);
    } else {
       if (!_mesa_validate_MultiDrawArraysIndirectCount(ctx, mode,
-                                                       indirect, drawcount,
+                                                       indirect,
+                                                       drawcount_offset,
                                                        maxdrawcount, stride))
          return;
    }
@@ -1892,14 +1893,16 @@ vbo_exec_MultiDrawArraysIndirectCount(GLenum mode, GLintptr indirect,
    if (skip_validated_draw(ctx))
       return;
 
-   vbo_validated_multidrawarraysindirectcount(ctx, mode, indirect, drawcount,
+   vbo_validated_multidrawarraysindirectcount(ctx, mode, indirect,
+                                              drawcount_offset,
                                               maxdrawcount, stride);
 }
 
 
 static void GLAPIENTRY
 vbo_exec_MultiDrawElementsIndirectCount(GLenum mode, GLenum type,
-                                        GLintptr indirect, GLintptr drawcount,
+                                        GLintptr indirect,
+                                        GLintptr drawcount_offset,
                                         GLsizei maxdrawcount, GLsizei stride)
 {
    GET_CURRENT_CONTEXT(ctx);
@@ -1908,7 +1911,7 @@ vbo_exec_MultiDrawElementsIndirectCount(GLenum mode, GLenum type,
       _mesa_debug(ctx, "glMultiDrawElementsIndirectCountARB"
                   "(%s, %s, %lx, %lx, %i, %i)\n",
                   _mesa_enum_to_string(mode), _mesa_enum_to_string(type),
-                  (unsigned long) indirect, (unsigned long) drawcount,
+                  (unsigned long) indirect, (unsigned long) drawcount_offset,
                   maxdrawcount, stride);
 
    /* If <stride> is zero, the array elements are treated as tightly packed. */
@@ -1922,7 +1925,8 @@ vbo_exec_MultiDrawElementsIndirectCount(GLenum mode, GLenum type,
          _mesa_update_state(ctx);
    } else {
       if (!_mesa_validate_MultiDrawElementsIndirectCount(ctx, mode, type,
-                                                         indirect, drawcount,
+                                                         indirect,
+                                                         drawcount_offset,
                                                          maxdrawcount, stride))
          return;
    }
@@ -1931,7 +1935,7 @@ vbo_exec_MultiDrawElementsIndirectCount(GLenum mode, GLenum type,
       return;
 
    vbo_validated_multidrawelementsindirectcount(ctx, mode, type, indirect,
-                                                drawcount, maxdrawcount,
+                                                drawcount_offset, maxdrawcount,
                                                 stride);
 }
 
