@@ -112,23 +112,26 @@ translate_blend(GLenum blend)
  * Figure out if colormasks are different per rt.
  */
 static GLboolean
-colormask_per_rt(const struct gl_context *ctx)
+colormask_per_rt(const struct gl_context *ctx, unsigned num_cb)
 {
+   GLbitfield full_mask = _mesa_replicate_colormask(0xf, num_cb);
    GLbitfield repl_mask0 =
       _mesa_replicate_colormask(GET_COLORMASK(ctx->Color.ColorMask, 0),
-                                ctx->Const.MaxDrawBuffers);
+                                num_cb);
 
-   return ctx->Color.ColorMask != repl_mask0;
+   return (ctx->Color.ColorMask & full_mask) != repl_mask0;
 }
 
 /**
  * Figure out if blend enables/state are different per rt.
  */
 static GLboolean
-blend_per_rt(const struct gl_context *ctx)
+blend_per_rt(const struct gl_context *ctx, unsigned num_cb)
 {
-   if (ctx->Color.BlendEnabled &&
-      (ctx->Color.BlendEnabled != ((1U << ctx->Const.MaxDrawBuffers) - 1))) {
+   GLbitfield cb_mask = u_bit_consecutive(0, num_cb);
+   GLbitfield blend_enabled = ctx->Color.BlendEnabled & cb_mask;
+
+   if (blend_enabled && blend_enabled != cb_mask) {
       /* This can only happen if GL_EXT_draw_buffers2 is enabled */
       return GL_TRUE;
    }
@@ -144,13 +147,15 @@ st_update_blend( struct st_context *st )
 {
    struct pipe_blend_state *blend = &st->state.blend;
    const struct gl_context *ctx = st->ctx;
+   unsigned num_cb = st->state.fb_num_cb;
    unsigned num_state = 1;
    unsigned i, j;
 
    memset(blend, 0, sizeof(*blend));
 
-   if (blend_per_rt(ctx) || colormask_per_rt(ctx)) {
-      num_state = ctx->Const.MaxDrawBuffers;
+   if (num_cb > 1 &&
+       (blend_per_rt(ctx, num_cb) || colormask_per_rt(ctx, num_cb))) {
+      num_state = num_cb;
       blend->independent_blend_enable = 1;
    }
 
