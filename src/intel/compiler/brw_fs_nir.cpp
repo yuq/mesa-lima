@@ -4130,6 +4130,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          unsigned num_components = ffs(~(writemask >> first_component)) - 1;
          fs_reg write_src = offset(val_reg, bld, first_component);
 
+         nir_const_value *const_offset = nir_src_as_const_value(instr->src[2]);
+
          if (type_size > 4) {
             /* We can't write more than 2 64-bit components at once. Limit
              * the num_components of the write to what we can do and let the next
@@ -4145,14 +4147,19 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
              * 32-bit-aligned we need to use byte-scattered writes because
              * untyped writes works with 32-bit components with 32-bit
              * alignment. byte_scattered_write messages only support one
-             * 16-bit component at a time.
+             * 16-bit component at a time. As VK_KHR_relaxed_block_layout
+             * could be enabled we can not guarantee that not constant offsets
+             * to be 32-bit aligned for 16-bit types. For example an array, of
+             * 16-bit vec3 with array element stride of 6.
              *
-             * For example, if there is a 3-components vector we submit one
-             * untyped-write message of 32-bit (first two components), and one
-             * byte-scattered write message (the last component).
+             * In the case of 32-bit aligned constant offsets if there is
+             * a 3-components vector we submit one untyped-write message
+             * of 32-bit (first two components), and one byte-scattered
+             * write message (the last component).
              */
 
-            if (first_component % 2) {
+            if ( !const_offset || ((const_offset->u32[0] +
+                                   type_size * first_component) % 4)) {
                /* If we use a .yz writemask we also need to emit 2
                 * byte-scattered write messages because of y-component not
                 * being aligned to 32-bit.
@@ -4178,7 +4185,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          }
 
          fs_reg offset_reg;
-         nir_const_value *const_offset = nir_src_as_const_value(instr->src[2]);
+
          if (const_offset) {
             offset_reg = brw_imm_ud(const_offset->u32[0] +
                                     type_size * first_component);
@@ -4217,7 +4224,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          } else {
             assert(num_components * type_size <= 16);
             assert((num_components * type_size) % 4 == 0);
-            assert((first_component * type_size) % 4 == 0);
+            assert(offset_reg.file != BRW_IMMEDIATE_VALUE ||
+                   offset_reg.ud % 4 == 0);
             unsigned num_slots = (num_components * type_size) / 4;
 
             emit_untyped_write(bld, surf_index, offset_reg,
