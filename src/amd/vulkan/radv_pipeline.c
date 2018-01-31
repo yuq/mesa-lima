@@ -110,18 +110,6 @@ void radv_DestroyPipeline(
 	radv_pipeline_destroy(device, pipeline, pAllocator);
 }
 
-static void radv_dump_pipeline_stats(struct radv_device *device, struct radv_pipeline *pipeline)
-{
-	int i;
-
-	for (i = 0; i < MESA_SHADER_STAGES; i++) {
-		if (!pipeline->shaders[i])
-			continue;
-
-		radv_shader_dump_stats(device, pipeline->shaders[i], i, stderr);
-	}
-}
-
 static uint32_t get_hash_flags(struct radv_device *device)
 {
 	uint32_t hash_flags = 0;
@@ -1861,8 +1849,15 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 
 	for (int i = 0; i < MESA_SHADER_STAGES; ++i) {
 		free(codes[i]);
-		if (modules[i] && !pipeline->device->keep_shader_info)
-			ralloc_free(nir[i]);
+		if (modules[i]) {
+			if (!pipeline->device->keep_shader_info)
+				ralloc_free(nir[i]);
+
+			if (radv_can_dump_shader_stats(device, modules[i]))
+				radv_shader_dump_stats(device,
+						       pipeline->shaders[i],
+						       i, stderr);
+		}
 	}
 
 	if (fs_m.nir)
@@ -3233,10 +3228,6 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 			pipeline->graphics.vtx_emit_num = 2;
 	}
 
-	if (device->instance->debug_flags & RADV_DEBUG_DUMP_SHADER_STATS) {
-		radv_dump_pipeline_stats(device, pipeline);
-	}
-
 	result = radv_pipeline_scratch_init(device, pipeline);
 	radv_pipeline_generate_pm4(pipeline, pCreateInfo, extra, &blend, &tess, &gs, prim, gs_out);
 
@@ -3400,9 +3391,6 @@ static VkResult radv_compute_pipeline_create(
 
 	*pPipeline = radv_pipeline_to_handle(pipeline);
 
-	if (device->instance->debug_flags & RADV_DEBUG_DUMP_SHADER_STATS) {
-		radv_dump_pipeline_stats(device, pipeline);
-	}
 	return VK_SUCCESS;
 }
 
