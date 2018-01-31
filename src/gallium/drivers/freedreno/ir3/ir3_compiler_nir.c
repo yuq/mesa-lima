@@ -138,7 +138,7 @@ static unsigned pointer_size(struct ir3_context *ctx)
 }
 
 static struct ir3_instruction * create_immed(struct ir3_block *block, uint32_t val);
-static struct ir3_block * get_block(struct ir3_context *ctx, nir_block *nblock);
+static struct ir3_block * get_block(struct ir3_context *ctx, const nir_block *nblock);
 
 
 static struct ir3_context *
@@ -2658,17 +2658,28 @@ emit_instr(struct ir3_context *ctx, nir_instr *instr)
 }
 
 static struct ir3_block *
-get_block(struct ir3_context *ctx, nir_block *nblock)
+get_block(struct ir3_context *ctx, const nir_block *nblock)
 {
 	struct ir3_block *block;
-	struct hash_entry *entry;
-	entry = _mesa_hash_table_search(ctx->block_ht, nblock);
-	if (entry)
-		return entry->data;
+	struct hash_entry *hentry;
+	struct set_entry *sentry;
+	unsigned i;
+
+	hentry = _mesa_hash_table_search(ctx->block_ht, nblock);
+	if (hentry)
+		return hentry->data;
 
 	block = ir3_block_create(ctx->ir);
 	block->nblock = nblock;
 	_mesa_hash_table_insert(ctx->block_ht, nblock, block);
+
+	block->predecessors_count = nblock->predecessors->entries;
+	block->predecessors = ralloc_array_size(block,
+		sizeof(block->predecessors[0]), block->predecessors_count);
+	i = 0;
+	set_foreach(nblock->predecessors, sentry) {
+		block->predecessors[i++] = get_block(ctx, sentry->key);
+	}
 
 	return block;
 }
@@ -2785,6 +2796,10 @@ emit_stream_out(struct ir3_context *ctx)
 	 * append stream-out block and new-end block
 	 */
 	orig_end_block = ctx->block;
+
+// TODO these blocks need to update predecessors..
+// maybe w/ store_global intrinsic, we could do this
+// stuff in nir->nir pass
 
 	stream_out_block = ir3_block_create(ir);
 	list_addtail(&stream_out_block->node, &ir->block_list);

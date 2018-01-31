@@ -476,7 +476,7 @@ struct ir3_block {
 	struct list_head node;
 	struct ir3 *shader;
 
-	nir_block *nblock;
+	const nir_block *nblock;
 
 	struct list_head instr_list;  /* list of ir3_instruction */
 
@@ -486,6 +486,9 @@ struct ir3_block {
 	 */
 	struct ir3_instruction *condition;
 	struct ir3_block *successors[2];
+
+	unsigned predecessors_count;
+	struct ir3_block **predecessors;
 
 	uint16_t start_ip, end_ip;
 
