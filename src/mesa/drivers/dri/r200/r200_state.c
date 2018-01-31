@@ -688,10 +688,10 @@ static void r200ColorMask( struct gl_context *ctx,
    if (!rrb)
      return;
    mask = radeonPackColor( rrb->cpp,
-			   ctx->Color.ColorMask[0][RCOMP],
-			   ctx->Color.ColorMask[0][GCOMP],
-			   ctx->Color.ColorMask[0][BCOMP],
-			   ctx->Color.ColorMask[0][ACOMP] );
+			   GET_COLORMASK_BIT(ctx->Color.ColorMask, 0, 0),
+			   GET_COLORMASK_BIT(ctx->Color.ColorMask, 0, 1),
+			   GET_COLORMASK_BIT(ctx->Color.ColorMask, 0, 2),
+			   GET_COLORMASK_BIT(ctx->Color.ColorMask, 0, 3) );
 
 
    if (!(r && g && b && a))

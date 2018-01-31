@@ -1117,7 +1117,7 @@ err:
 
 static bool
 set_write_disables(const struct intel_renderbuffer *irb,
-                   const GLubyte *color_mask, bool *color_write_disable)
+                   const unsigned color_mask, bool *color_write_disable)
 {
    /* Format information in the renderbuffer represents the requirements
     * given by the client. There are cases where the backing miptree uses,
@@ -1131,8 +1131,8 @@ set_write_disables(const struct intel_renderbuffer *irb,
    assert(components > 0);
 
    for (int i = 0; i < components; i++) {
-      color_write_disable[i] = !color_mask[i];
-      disables = disables || !color_mask[i];
+      color_write_disable[i] = !(color_mask & (1 << i));
+      disables = disables || color_write_disable[i];
    }
 
    return disables;
@@ -1169,7 +1169,8 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    bool can_fast_clear = !partial_clear;
 
    bool color_write_disable[4] = { false, false, false, false };
-   if (set_write_disables(irb, ctx->Color.ColorMask[buf], color_write_disable))
+   if (set_write_disables(irb, GET_COLORMASK(ctx->Color.ColorMask, buf),
+                          color_write_disable))
       can_fast_clear = false;
 
    /* We store clear colors as floats or uints as needed.  If there are

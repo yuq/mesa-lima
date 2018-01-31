@@ -1751,10 +1751,7 @@ brw_color_buffer_write_enabled(struct brw_context *brw)
       /* _NEW_COLOR */
       if (rb && (outputs_written & BITFIELD64_BIT(FRAG_RESULT_COLOR) ||
                  outputs_written & BITFIELD64_BIT(FRAG_RESULT_DATA0 + i)) &&
-          (ctx->Color.ColorMask[i][0] ||
-           ctx->Color.ColorMask[i][1] ||
-           ctx->Color.ColorMask[i][2] ||
-           ctx->Color.ColorMask[i][3])) {
+          GET_COLORMASK(ctx->Color.ColorMask, i)) {
          return true;
       }
    }
@@ -2993,10 +2990,10 @@ genX(upload_blend_state)(struct brw_context *brw)
          entry.PostBlendColorClampEnable = true;
          entry.ColorClampRange = COLORCLAMP_RTFORMAT;
 
-         entry.WriteDisableRed   = !ctx->Color.ColorMask[i][0];
-         entry.WriteDisableGreen = !ctx->Color.ColorMask[i][1];
-         entry.WriteDisableBlue  = !ctx->Color.ColorMask[i][2];
-         entry.WriteDisableAlpha = !ctx->Color.ColorMask[i][3];
+         entry.WriteDisableRed   = !GET_COLORMASK_BIT(ctx->Color.ColorMask, i, 0);
+         entry.WriteDisableGreen = !GET_COLORMASK_BIT(ctx->Color.ColorMask, i, 1);
+         entry.WriteDisableBlue  = !GET_COLORMASK_BIT(ctx->Color.ColorMask, i, 2);
+         entry.WriteDisableAlpha = !GET_COLORMASK_BIT(ctx->Color.ColorMask, i, 3);
 
 #if GEN_GEN >= 8
          GENX(BLEND_STATE_ENTRY_pack)(NULL, &blend_map[1 + i * 2], &entry);

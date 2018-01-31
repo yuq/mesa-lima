@@ -40,6 +40,7 @@
 #include "cso_cache/cso_context.h"
 
 #include "framebuffer.h"
+#include "main/blend.h"
 #include "main/macros.h"
 
 /**
@@ -113,14 +114,11 @@ translate_blend(GLenum blend)
 static GLboolean
 colormask_per_rt(const struct gl_context *ctx)
 {
-   /* a bit suboptimal have to compare lots of values */
-   unsigned i;
-   for (i = 1; i < ctx->Const.MaxDrawBuffers; i++) {
-      if (memcmp(ctx->Color.ColorMask[0], ctx->Color.ColorMask[i], 4)) {
-         return GL_TRUE;
-      }
-   }
-   return GL_FALSE;
+   GLbitfield repl_mask0 =
+      _mesa_replicate_colormask(GET_COLORMASK(ctx->Color.ColorMask, 0),
+                                ctx->Const.MaxDrawBuffers);
+
+   return ctx->Color.ColorMask != repl_mask0;
 }
 
 /**
@@ -206,17 +204,8 @@ st_update_blend( struct st_context *st )
       /* no blending / logicop */
    }
 
-   /* Colormask - maybe reverse these bits? */
-   for (i = 0; i < num_state; i++) {
-      if (ctx->Color.ColorMask[i][0])
-         blend->rt[i].colormask |= PIPE_MASK_R;
-      if (ctx->Color.ColorMask[i][1])
-         blend->rt[i].colormask |= PIPE_MASK_G;
-      if (ctx->Color.ColorMask[i][2])
-         blend->rt[i].colormask |= PIPE_MASK_B;
-      if (ctx->Color.ColorMask[i][3])
-         blend->rt[i].colormask |= PIPE_MASK_A;
-   }
+   for (i = 0; i < num_state; i++)
+      blend->rt[i].colormask = GET_COLORMASK(ctx->Color.ColorMask, i);
 
    blend->dither = ctx->Color.DitherFlag;
 

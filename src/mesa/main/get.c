@@ -677,10 +677,10 @@ find_custom_value(struct gl_context *ctx, const struct value_desc *d, union valu
       break;
 
    case GL_COLOR_WRITEMASK:
-      v->value_int_4[0] = ctx->Color.ColorMask[0][RCOMP] ? 1 : 0;
-      v->value_int_4[1] = ctx->Color.ColorMask[0][GCOMP] ? 1 : 0;
-      v->value_int_4[2] = ctx->Color.ColorMask[0][BCOMP] ? 1 : 0;
-      v->value_int_4[3] = ctx->Color.ColorMask[0][ACOMP] ? 1 : 0;
+      v->value_int_4[0] = GET_COLORMASK_BIT(ctx->Color.ColorMask, 0, 0);
+      v->value_int_4[1] = GET_COLORMASK_BIT(ctx->Color.ColorMask, 0, 1);
+      v->value_int_4[2] = GET_COLORMASK_BIT(ctx->Color.ColorMask, 0, 2);
+      v->value_int_4[3] = GET_COLORMASK_BIT(ctx->Color.ColorMask, 0, 3);
       break;
 
    case GL_EDGE_FLAG:
@@ -2262,10 +2262,10 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
          goto invalid_value;
       if (!ctx->Extensions.EXT_draw_buffers2)
          goto invalid_enum;
-      v->value_int_4[0] = ctx->Color.ColorMask[index][RCOMP] ? 1 : 0;
-      v->value_int_4[1] = ctx->Color.ColorMask[index][GCOMP] ? 1 : 0;
-      v->value_int_4[2] = ctx->Color.ColorMask[index][BCOMP] ? 1 : 0;
-      v->value_int_4[3] = ctx->Color.ColorMask[index][ACOMP] ? 1 : 0;
+      v->value_int_4[0] = GET_COLORMASK_BIT(ctx->Color.ColorMask, index, 0);
+      v->value_int_4[1] = GET_COLORMASK_BIT(ctx->Color.ColorMask, index, 1);
+      v->value_int_4[2] = GET_COLORMASK_BIT(ctx->Color.ColorMask, index, 2);
+      v->value_int_4[3] = GET_COLORMASK_BIT(ctx->Color.ColorMask, index, 3);
       return TYPE_INT_4;
 
    case GL_SCISSOR_BOX:

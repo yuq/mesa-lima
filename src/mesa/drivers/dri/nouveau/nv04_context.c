@@ -57,10 +57,7 @@ nv04_context_engine(struct gl_context *ctx)
 	     texunit_needs_combiners(&ctx->Texture.Unit[0])) ||
 	    ctx->Texture.Unit[1]._Current ||
 	    ctx->Stencil.Enabled ||
-	    !(ctx->Color.ColorMask[0][RCOMP] &&
-	      ctx->Color.ColorMask[0][GCOMP] &&
-	      ctx->Color.ColorMask[0][BCOMP] &&
-	      ctx->Color.ColorMask[0][ACOMP]))
+	    GET_COLORMASK(ctx->Color.ColorMask, 0) != 0xf)
 		fahrenheit = hw->eng3dm;
 	else
 		fahrenheit = hw->eng3d;

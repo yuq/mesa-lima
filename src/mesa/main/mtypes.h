@@ -81,6 +81,10 @@ typedef GLuint64 GLbitfield64;
    (BITFIELD64_MASK((b) + (count)) & ~BITFIELD64_MASK(b))
 
 
+#define GET_COLORMASK_BIT(mask, buf, chan) (((mask) >> (4 * (buf) + (chan))) & 0x1)
+#define GET_COLORMASK(mask, buf) (((mask) >> (4 * (buf))) & 0xf)
+
+
 /**
  * \name Some forward type declarations
  */
@@ -459,7 +463,9 @@ struct gl_colorbuffer_attrib
    GLuint ClearIndex;                      /**< Index for glClear */
    union gl_color_union ClearColor;        /**< Color for glClear, unclamped */
    GLuint IndexMask;                       /**< Color index write mask */
-   GLubyte ColorMask[MAX_DRAW_BUFFERS][4]; /**< Each flag is 0xff or 0x0 */
+
+   /** 4 colormask bits per draw buffer, max 8 draw buffers. 4*8 = 32 bits */
+   GLbitfield ColorMask;
 
    GLenum16 DrawBuffer[MAX_DRAW_BUFFERS];  /**< Which buffer to draw into */
 

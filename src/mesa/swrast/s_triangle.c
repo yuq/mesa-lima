@@ -1027,10 +1027,10 @@ _swrast_choose_triangle( struct gl_context *ctx )
           !_mesa_stencil_is_enabled(ctx) &&
           depthRb &&
           depthRb->Format == MESA_FORMAT_Z_UNORM16) {
-         if (ctx->Color.ColorMask[0][0] == 0 &&
-	     ctx->Color.ColorMask[0][1] == 0 &&
-	     ctx->Color.ColorMask[0][2] == 0 &&
-	     ctx->Color.ColorMask[0][3] == 0) {
+         if (GET_COLORMASK_BIT(ctx->Color.ColorMask, 0, 0) == 0 &&
+	     GET_COLORMASK_BIT(ctx->Color.ColorMask, 0, 1) == 0 &&
+	     GET_COLORMASK_BIT(ctx->Color.ColorMask, 0, 2) == 0 &&
+	     GET_COLORMASK_BIT(ctx->Color.ColorMask, 0, 3) == 0) {
             USE(occlusion_zless_16_triangle);
             return;
          }
