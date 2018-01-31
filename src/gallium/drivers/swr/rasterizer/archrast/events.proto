@@ -131,72 +131,6 @@ event BackendStatsEvent
 
 };
 
-event EarlyDepthStencilInfoSingleSample
-{
-    uint64_t depthPassMask;
-    uint64_t stencilPassMask;
-    uint64_t coverageMask;
-};
-
-event EarlyDepthStencilInfoSampleRate
-{
-    uint64_t depthPassMask;
-    uint64_t stencilPassMask;
-    uint64_t coverageMask;
-};
-
-event EarlyDepthStencilInfoNullPS
-{
-    uint64_t depthPassMask;
-    uint64_t stencilPassMask;
-    uint64_t coverageMask;
-};
-
-event LateDepthStencilInfoSingleSample
-{
-    uint64_t depthPassMask;
-    uint64_t stencilPassMask;
-    uint64_t coverageMask;
-};
-
-event LateDepthStencilInfoSampleRate
-{
-    uint64_t depthPassMask;
-    uint64_t stencilPassMask;
-    uint64_t coverageMask;
-};
-
-event LateDepthStencilInfoNullPS
-{
-    uint64_t depthPassMask;
-    uint64_t stencilPassMask;
-    uint64_t coverageMask;
-};
-
-event EarlyDepthInfoPixelRate
-{
-    uint64_t depthPassCount;
-    uint64_t activeLanes;
-};
-
-
-event LateDepthInfoPixelRate
-{
-    uint64_t depthPassCount;
-    uint64_t activeLanes;
-};
-
-
-event BackendDrawEndEvent
-{
-    uint32_t drawId;
-};
-
-event FrontendDrawEndEvent
-{
-    uint32_t drawId;
-};
-
 event EarlyZSingleSample
 {
     uint32_t drawId;
@@ -310,13 +244,6 @@ event LateOmStencil
     uint64_t failCount;
 };
 
-event GSPrimInfo
-{
-    uint64_t inputPrimCount;
-    uint64_t primGeneratedCount;
-    uint64_t vertsInput;
-};
-
 event GSInputPrims
 {
     uint32_t drawId;
@@ -335,33 +262,10 @@ event GSVertsInput
     uint64_t vertsInput;
 };
 
-event ClipVertexCount
-{
-    uint64_t vertsPerPrim;
-    uint64_t primMask;
-};
-
-//REMOVE AND REPLACE
-event FlushVertClip
-{
-    uint32_t drawId;
-};
-
 event VertsClipped
 {
     uint32_t drawId;
     uint64_t clipCount;
-};
-
-event TessPrimCount
-{
-    uint64_t primCount;
-};
-
-//REMOVE AND REPLACE
-event TessPrimFlush
-{
-    uint32_t drawId;
 };
 
 event TessPrims

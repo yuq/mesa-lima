@@ -77,18 +77,12 @@ def parse_enums(lines, idx, event_dict):
     event_dict['names'] = enum_names
     return idx
 
-def parse_protos(filename):
-    protos = {}
+def parse_protos(protos, filename):
 
     with open(filename, 'r') as f:
         lines=f.readlines()
 
         idx = 0
-
-        protos['events'] = {}       # event dictionary containing events with their fields
-        protos['event_names'] = []  # needed to keep events in order parsed. dict is not ordered.
-        protos['enums'] = {}
-        protos['enum_names'] = []
 
         eventId = 0
         raw_text = []
@@ -118,13 +112,12 @@ def parse_protos(filename):
                 protos['enums'][enum_name] = {}
                 idx = parse_enums(lines, idx, protos['enums'][enum_name])
 
-    return protos
-
 def main():
 
     # Parse args...
     parser = ArgumentParser()
     parser.add_argument('--proto', '-p', help='Path to proto file', required=True)
+    parser.add_argument('--proto_private', '-pp', help='Path to private proto file', required=True)
     parser.add_argument('--output', '-o', help='Output filename (i.e. event.hpp)', required=True)
     parser.add_argument('--gen_event_hpp', help='Generate event header', action='store_true', default=False)
     parser.add_argument('--gen_event_cpp', help='Generate event cpp', action='store_true', default=False)
@@ -133,6 +126,7 @@ def main():
     args = parser.parse_args()
 
     proto_filename = args.proto
+    proto_private_filename = args.proto_private
 
     (output_dir, output_filename) = os.path.split(args.output)
 
@@ -146,7 +140,18 @@ def main():
         print('Error: Could not find proto file %s' % proto_filename, file=sys.stderr)
         return 1
 
-    protos = parse_protos(proto_filename)
+    if not os.path.exists(proto_private_filename):
+        print('Error: Could not find private proto file %s' % proto_private_filename, file=sys.stderr)
+        return 1
+
+    protos = {}
+    protos['events'] = {}       # event dictionary containing events with their fields
+    protos['event_names'] = []  # needed to keep events in order parsed. dict is not ordered.
+    protos['enums'] = {}
+    protos['enum_names'] = []
+
+    parse_protos(protos, proto_filename)
+    parse_protos(protos, proto_private_filename)
 
     # Generate event header
     if args.gen_event_hpp:

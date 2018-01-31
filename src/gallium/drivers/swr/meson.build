@@ -151,6 +151,7 @@ files_swr_arch = files(
 swr_context_files = files('swr_context.h')
 swr_state_files = files('rasterizer/core/state.h')
 swr_event_proto_files = files('rasterizer/archrast/events.proto')
+swr_event_pproto_files = files('rasterizer/archrast/events_private.proto')
 swr_gen_backend_files = files('rasterizer/codegen/templates/gen_backend.cpp')
 swr_gen_rasterizer_files = files('rasterizer/codegen/templates/gen_rasterizer.cpp')
 swr_gen_header_init_files = files('rasterizer/codegen/templates/gen_header_init.hpp')
