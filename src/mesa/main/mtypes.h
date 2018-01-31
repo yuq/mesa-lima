@@ -843,8 +843,8 @@ struct gl_point_attrib
 struct gl_polygon_attrib
 {
    GLenum16 FrontFace;		/**< Either GL_CW or GL_CCW */
-   GLenum16 FrontMode;		/**< Either GL_POINT, GL_LINE or GL_FILL */
-   GLenum16 BackMode;		/**< Either GL_POINT, GL_LINE or GL_FILL */
+   GLenum FrontMode;		/**< Either GL_POINT, GL_LINE or GL_FILL */
+   GLenum BackMode;		/**< Either GL_POINT, GL_LINE or GL_FILL */
    GLboolean CullFlag;		/**< Culling on/off flag */
    GLboolean SmoothFlag;	/**< True if GL_POLYGON_SMOOTH is enabled */
    GLboolean StippleFlag;	/**< True if GL_POLYGON_STIPPLE is enabled */
