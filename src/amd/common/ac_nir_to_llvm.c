@@ -1383,15 +1383,24 @@ static LLVMValueRef emit_isign(struct ac_llvm_context *ctx,
 }
 
 static LLVMValueRef emit_ffract(struct ac_llvm_context *ctx,
-				LLVMValueRef src0)
+				LLVMValueRef src0, unsigned bitsize)
 {
-	const char *intr = "llvm.floor.f32";
+	LLVMTypeRef type;
+	char *intr;
+
+	if (bitsize == 32) {
+		intr = "llvm.floor.f32";
+		type = ctx->f32;
+	} else {
+		intr = "llvm.floor.f64";
+		type = ctx->f64;
+	}
+
 	LLVMValueRef fsrc0 = ac_to_float(ctx, src0);
 	LLVMValueRef params[] = {
 		fsrc0,
 	};
-	LLVMValueRef floor = ac_build_intrinsic(ctx, intr,
-						ctx->f32, params, 1,
+	LLVMValueRef floor = ac_build_intrinsic(ctx, intr, type, params, 1,
 						AC_FUNC_ATTR_READNONE);
 	return LLVMBuildFSub(ctx->builder, fsrc0, floor, "");
 }
@@ -1845,7 +1854,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		                              ac_to_float_type(&ctx->ac, def_type),src[0]);
 		break;
 	case nir_op_ffract:
-		result = emit_ffract(&ctx->ac, src[0]);
+		result = emit_ffract(&ctx->ac, src[0], instr->dest.dest.ssa.bit_size);
 		break;
 	case nir_op_fsin:
 		result = emit_intrin_1f_param(&ctx->ac, "llvm.sin",
@@ -4026,8 +4035,8 @@ static LLVMValueRef load_sample_pos(struct ac_nir_context *ctx)
 {
 	LLVMValueRef values[2];
 
-	values[0] = emit_ffract(&ctx->ac, ctx->abi->frag_pos[0]);
-	values[1] = emit_ffract(&ctx->ac, ctx->abi->frag_pos[1]);
+	values[0] = emit_ffract(&ctx->ac, ctx->abi->frag_pos[0], 32);
+	values[1] = emit_ffract(&ctx->ac, ctx->abi->frag_pos[1], 32);
 	return ac_build_gather_values(&ctx->ac, values, 2);
 }
 
