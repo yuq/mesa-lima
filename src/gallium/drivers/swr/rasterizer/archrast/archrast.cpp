@@ -74,10 +74,6 @@ namespace ArchRast
     public:
         EventHandlerStatsFile(uint32_t id) : EventHandlerFile(id), mNeedFlush(false) {}
 
-        // These are events that we're not interested in saving in stats event files.
-        virtual void Handle(const Start& event) {}
-        virtual void Handle(const End& event) {}
-
         virtual void Handle(const EarlyDepthStencilInfoSingleSample& event)
         {
             //earlyZ test compute
