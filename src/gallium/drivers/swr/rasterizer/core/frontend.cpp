@@ -1334,7 +1334,7 @@ static void TessellationStages(
             dsContext.vectorStride,
 #endif
             SWR_VTX_NUM_SLOTS,
-            tsState.numDsOutputAttribs,
+            tsState.numDsOutputAttribs + tsState.dsOutVtxAttribOffset,
             tsData.ppIndices,
             tsData.NumPrimitives,
             tsState.postDSTopology,
