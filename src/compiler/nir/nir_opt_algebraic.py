@@ -152,6 +152,19 @@ optimizations = [
 
    (('fge', ('fneg', ('b2f', a)), 0.0), ('inot', a)),
 
+   # fmin(-b2f(a), b) >= 0.0
+   # -b2f(a) >= 0.0 && b >= 0.0
+   # -b2f(a) == 0.0 && b >= 0.0    -b2f can only be 0 or -1, never >0
+   # b2f(a) == 0.0 && b >= 0.0
+   # a == False && b >= 0.0
+   # !a && b >= 0.0
+   #
+   # The fge in the second replacement is not a typo.  I leave the proof that
+   # "fmin(-b2f(a), b) >= 0 <=> fmin(-b2f(a), b) == 0" as an exercise for the
+   # reader.
+   (('fge', ('fmin', ('fneg', ('b2f', a)), b), 0.0), ('iand', ('inot', a), ('fge', b, 0.0))),
+   (('feq', ('fmin', ('fneg', ('b2f', a)), b), 0.0), ('iand', ('inot', a), ('fge', b, 0.0))),
+
    # 0.0 < fabs(a)
    # fabs(a) > 0.0
    # fabs(a) != 0.0 because fabs(a) must be >= 0
