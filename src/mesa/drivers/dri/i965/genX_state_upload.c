@@ -365,7 +365,7 @@ is_passthru_format(uint32_t format)
 
 UNUSED static int
 uploads_needed(uint32_t format,
-	       bool is_dual_slot)
+               bool is_dual_slot)
 {
    if (!is_passthru_format(format))
       return 1;
@@ -409,14 +409,14 @@ downsize_format_if_needed(uint32_t format,
     */
    switch (format) {
    case ISL_FORMAT_R64_PASSTHRU:
-      return !upload ? ISL_FORMAT_R32G32_FLOAT
-                     : ISL_FORMAT_R32_FLOAT;
+      return upload == 0 ? ISL_FORMAT_R32G32_FLOAT
+                         : ISL_FORMAT_R32_FLOAT;
    case ISL_FORMAT_R64G64_PASSTHRU:
-      return !upload ? ISL_FORMAT_R32G32B32A32_FLOAT
-                     : ISL_FORMAT_R32_FLOAT;
+      return upload == 0 ? ISL_FORMAT_R32G32B32A32_FLOAT
+                         : ISL_FORMAT_R32_FLOAT;
    case ISL_FORMAT_R64G64B64_PASSTHRU:
-      return !upload ? ISL_FORMAT_R32G32B32A32_FLOAT
-                     : ISL_FORMAT_R32G32_FLOAT;
+      return upload == 0 ? ISL_FORMAT_R32G32B32A32_FLOAT
+                         : ISL_FORMAT_R32G32_FLOAT;
    case ISL_FORMAT_R64G64B64A64_PASSTHRU:
       return ISL_FORMAT_R32G32B32A32_FLOAT;
    default:
@@ -635,7 +635,7 @@ genX(emit_vertices)(struct brw_context *brw)
       uint32_t comp2 = VFCOMP_STORE_SRC;
       uint32_t comp3 = VFCOMP_STORE_SRC;
       const unsigned num_uploads = GEN_GEN < 8 ?
-	 uploads_needed(format, input->is_dual_slot) : 1;
+         uploads_needed(format, input->is_dual_slot) : 1;
 
 #if GEN_GEN >= 8
       /* From the BDW PRM, Volume 2d, page 588 (VERTEX_ELEMENT_STATE):
