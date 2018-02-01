@@ -283,8 +283,9 @@ static void radeon_enc_spec_misc(struct radeon_encoder *enc)
 	RADEON_ENC_END();
 }
 
-static void radeon_enc_rc_session_init(struct radeon_encoder *enc, struct pipe_h264_enc_picture_desc *pic)
+static void radeon_enc_rc_session_init(struct radeon_encoder *enc, struct pipe_picture_desc *picture)
 {
+	struct pipe_h264_enc_picture_desc *pic = (struct pipe_h264_enc_picture_desc *)picture;
 	switch(pic->rate_ctrl.rate_ctrl_method) {
 		case PIPE_H264_ENC_RATE_CONTROL_METHOD_DISABLE:
 			enc->enc_pic.rc_session_init.rate_control_method = RENCODE_RATE_CONTROL_METHOD_NONE;
@@ -309,8 +310,9 @@ static void radeon_enc_rc_session_init(struct radeon_encoder *enc, struct pipe_h
 	RADEON_ENC_END();
 }
 
-static void radeon_enc_rc_layer_init(struct radeon_encoder *enc, struct pipe_h264_enc_picture_desc *pic)
+static void radeon_enc_rc_layer_init(struct radeon_encoder *enc, struct pipe_picture_desc *picture)
 {
+	struct pipe_h264_enc_picture_desc *pic = (struct pipe_h264_enc_picture_desc *)picture;
 	enc->enc_pic.rc_layer_init.target_bit_rate = pic->rate_ctrl.target_bitrate;
 	enc->enc_pic.rc_layer_init.peak_bit_rate = pic->rate_ctrl.peak_bitrate;
 	enc->enc_pic.rc_layer_init.frame_rate_num = pic->rate_ctrl.frame_rate_num;
@@ -664,8 +666,9 @@ static void radeon_enc_intra_refresh(struct radeon_encoder *enc)
 	RADEON_ENC_END();
 }
 
-static void radeon_enc_rc_per_pic(struct radeon_encoder *enc, struct pipe_h264_enc_picture_desc *pic)
+static void radeon_enc_rc_per_pic(struct radeon_encoder *enc, struct pipe_picture_desc *picture)
 {
+	struct pipe_h264_enc_picture_desc *pic = (struct pipe_h264_enc_picture_desc *)picture;
 	enc->enc_pic.rc_per_pic.qp = pic->quant_i_frames;
 	enc->enc_pic.rc_per_pic.min_qp_app = 0;
 	enc->enc_pic.rc_per_pic.max_qp_app = 51;
@@ -780,7 +783,7 @@ static void radeon_enc_op_speed(struct radeon_encoder *enc)
 	RADEON_ENC_END();
 }
 
-static void begin(struct radeon_encoder *enc, struct pipe_h264_enc_picture_desc *pic)
+static void begin(struct radeon_encoder *enc, struct pipe_picture_desc *pic)
 {
 	radeon_enc_session_info(enc);
 	enc->total_task_size = 0;

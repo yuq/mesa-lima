@@ -447,7 +447,7 @@ struct radeon_enc_pic {
 struct radeon_encoder {
 	struct pipe_video_codec		base;
 
-	void (*begin)(struct radeon_encoder *enc, struct pipe_h264_enc_picture_desc *pic);
+	void (*begin)(struct radeon_encoder *enc, struct pipe_picture_desc *pic);
 	void (*encode)(struct radeon_encoder *enc);
 	void (*destroy)(struct radeon_encoder *enc);
 
