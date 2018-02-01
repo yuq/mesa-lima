@@ -91,7 +91,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef push_constants;
 	LLVMValueRef view_index;
 	LLVMValueRef num_work_groups;
-	LLVMValueRef workgroup_ids[3];
 	LLVMValueRef local_invocation_ids;
 	LLVMValueRef tg_size;
 
@@ -786,10 +785,10 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		}
 
 		for (int i = 0; i < 3; i++) {
-			ctx->workgroup_ids[i] = NULL;
+			ctx->abi.workgroup_ids[i] = NULL;
 			if (ctx->shader_info->info.cs.uses_block_id[i]) {
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
-					&ctx->workgroup_ids[i]);
+					&ctx->abi.workgroup_ids[i]);
 			}
 		}
 
@@ -4299,8 +4298,8 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		LLVMValueRef values[3];
 
 		for (int i = 0; i < 3; i++) {
-			values[i] = ctx->nctx->workgroup_ids[i] ?
-				    ctx->nctx->workgroup_ids[i] : ctx->ac.i32_0;
+			values[i] = ctx->abi->workgroup_ids[i] ?
+				    ctx->abi->workgroup_ids[i] : ctx->ac.i32_0;
 		}
 
 		result = ac_build_gather_values(&ctx->ac, values, 3);

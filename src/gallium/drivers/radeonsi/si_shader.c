@@ -2152,9 +2152,8 @@ void si_load_system_value(struct si_shader_context *ctx,
 
 		for (int i = 0; i < 3; i++) {
 			values[i] = ctx->i32_0;
-			if (ctx->param_block_id[i] >= 0) {
-				values[i] = LLVMGetParam(ctx->main_fn,
-							 ctx->param_block_id[i]);
+			if (ctx->abi.workgroup_ids[i]) {
+				values[i] = ctx->abi.workgroup_ids[i];
 			}
 		}
 		value = lp_build_gather_values(&ctx->gallivm, values, 3);
@@ -4882,9 +4881,9 @@ static void create_function(struct si_shader_context *ctx)
 			ctx->param_block_size = add_arg(&fninfo, ARG_SGPR, v3i32);
 
 		for (i = 0; i < 3; i++) {
-			ctx->param_block_id[i] = -1;
+			ctx->abi.workgroup_ids[i] = NULL;
 			if (shader->selector->info.uses_block_id[i])
-				ctx->param_block_id[i] = add_arg(&fninfo, ARG_SGPR, ctx->i32);
+				add_arg_assign(&fninfo, ARG_SGPR, ctx->i32, &ctx->abi.workgroup_ids[i]);
 		}
 
 		ctx->param_thread_id = add_arg(&fninfo, ARG_VGPR, v3i32);
