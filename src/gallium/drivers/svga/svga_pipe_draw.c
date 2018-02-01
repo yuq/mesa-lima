@@ -65,18 +65,13 @@ retry_draw_range_elements( struct svga_context *svga,
                            unsigned start,
                            unsigned count,
                            unsigned start_instance,
-                           unsigned instance_count,
-                           boolean do_retry )
+                           unsigned instance_count)
 {
-   enum pipe_error ret = PIPE_OK;
+   enum pipe_error ret;
 
    SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_DRAWELEMENTS);
 
    svga_hwtnl_set_fillmode(svga->hwtnl, svga->curr.rast->hw_fillmode);
-
-   ret = svga_update_state( svga, SVGA_STATE_HW_DRAW );
-   if (ret != PIPE_OK)
-      goto retry;
 
    /** determine if flatshade is to be used after svga_update_state()
     *  in case the fragment shader is changed.
@@ -86,29 +81,21 @@ retry_draw_range_elements( struct svga_context *svga,
                             is_using_flat_shading(svga),
                             svga->curr.rast->templ.flatshade_first);
 
-   ret = svga_hwtnl_draw_range_elements( svga->hwtnl,
-                                         index_buffer, index_size, index_bias,
-                                         min_index, max_index,
-                                         prim, start, count,
-                                         start_instance, instance_count);
-   if (ret != PIPE_OK)
-      goto retry;
-
-   goto done;
-
-retry:
-   svga_context_flush( svga, NULL );
-
-   if (do_retry)
-   {
-      ret = retry_draw_range_elements(svga,
-                                      index_buffer, index_size, index_bias,
-                                      min_index, max_index,
-                                      prim, start, count,
-                                      start_instance, instance_count, FALSE);
+   for (unsigned try = 0; try < 2; try++) {
+      ret = svga_update_state(svga, SVGA_STATE_HW_DRAW);
+      if (ret == PIPE_OK) {
+         ret = svga_hwtnl_draw_range_elements(svga->hwtnl,
+                                              index_buffer, index_size,
+                                              index_bias,
+                                              min_index, max_index,
+                                              prim, start, count,
+                                              start_instance, instance_count);
+         if (ret == PIPE_OK)
+            break;
+      }
+      svga_context_flush(svga, NULL);
    }
 
-done:
    SVGA_STATS_TIME_POP(svga_sws(svga));
    return ret;
 }
@@ -117,18 +104,13 @@ done:
 static enum pipe_error
 retry_draw_arrays( struct svga_context *svga,
                    enum pipe_prim_type prim, unsigned start, unsigned count,
-                   unsigned start_instance, unsigned instance_count,
-                   boolean do_retry )
+                   unsigned start_instance, unsigned instance_count)
 {
    enum pipe_error ret;
 
    SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_DRAWARRAYS);
 
    svga_hwtnl_set_fillmode(svga->hwtnl, svga->curr.rast->hw_fillmode);
-
-   ret = svga_update_state( svga, SVGA_STATE_HW_DRAW );
-   if (ret != PIPE_OK)
-      goto retry;
 
    /** determine if flatshade is to be used after svga_update_state()
     *  in case the fragment shader is changed.
@@ -138,24 +120,17 @@ retry_draw_arrays( struct svga_context *svga,
                             is_using_flat_shading(svga),
                             svga->curr.rast->templ.flatshade_first);
 
-   ret = svga_hwtnl_draw_arrays(svga->hwtnl, prim, start, count,
-                                start_instance, instance_count);
-   if (ret != PIPE_OK)
-      goto retry;
-
-   goto done;
-
-retry:
-   if (ret == PIPE_ERROR_OUT_OF_MEMORY && do_retry)
-   {
-      svga_context_flush( svga, NULL );
-
-      ret = retry_draw_arrays(svga, prim, start, count,
-                              start_instance, instance_count,
-                              FALSE);
+   for (unsigned try = 0; try < 2; try++) {
+      ret = svga_update_state( svga, SVGA_STATE_HW_DRAW );
+      if (ret == PIPE_OK) {
+         ret = svga_hwtnl_draw_arrays(svga->hwtnl, prim, start, count,
+                                      start_instance, instance_count);
+         if (ret == PIPE_OK)
+            break;
+      }
+      svga_context_flush(svga, NULL);
    }
 
-done:
    SVGA_STATS_TIME_POP(svga_sws(svga));
    return ret;
 }
@@ -277,13 +252,11 @@ svga_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
                                           info->start + offset,
                                           count,
                                           info->start_instance,
-                                          info->instance_count,
-                                          TRUE );
+                                          info->instance_count);
       }
       else {
          ret = retry_draw_arrays(svga, info->mode, info->start, count,
-                                 info->start_instance, info->instance_count,
-                                 TRUE);
+                                 info->start_instance, info->instance_count);
       }
    }
 
