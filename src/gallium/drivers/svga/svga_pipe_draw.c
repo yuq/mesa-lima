@@ -24,21 +24,14 @@
  **********************************************************/
 
 
-#include "util/u_format.h"
 #include "util/u_helpers.h"
 #include "util/u_inlines.h"
 #include "util/u_prim.h"
 #include "util/u_prim_restart.h"
-#include "util/u_upload_mgr.h"
-#include "indices/u_indices.h"
 
-#include "svga_hw_reg.h"
-#include "svga_cmd.h"
 #include "svga_context.h"
-#include "svga_screen.h"
 #include "svga_draw.h"
 #include "svga_shader.h"
-#include "svga_state.h"
 #include "svga_surface.h"
 #include "svga_swtnl.h"
 #include "svga_debug.h"
