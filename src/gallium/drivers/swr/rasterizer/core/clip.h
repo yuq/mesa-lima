@@ -417,6 +417,7 @@ public:
             uint32_t slot = index >> 2;
             uint32_t component = index & 0x3;
 
+            typename SIMD_T::Float vCullMaskElem = SIMD_T::set1_ps(-1.0f);
             for (uint32_t e = 0; e < NumVertsPerPrim; ++e)
             {
                 typename SIMD_T::Float vClipComp;
@@ -430,8 +431,11 @@ public:
                 }
 
                 typename SIMD_T::Float vClip = SIMD_T::template cmp_ps<SIMD_T::CompareType::UNORD_Q>(vClipComp, vClipComp);
+                typename SIMD_T::Float vCull = SIMD_T::template cmp_ps<SIMD_T::CompareType::NLE_UQ>(SIMD_T::setzero_ps(), vClipComp);
+                vCullMaskElem = SIMD_T::and_ps(vCullMaskElem, vCull);
                 vClipCullMask = SIMD_T::or_ps(vClipCullMask, vClip);
             }
+            vClipCullMask = SIMD_T::or_ps(vClipCullMask, vCullMaskElem);
         }
 
         return SIMD_T::movemask_ps(vClipCullMask);
