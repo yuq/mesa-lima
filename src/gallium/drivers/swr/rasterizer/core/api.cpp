@@ -921,7 +921,7 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
     };
 
 
-    // disable clipper if viewport transform is disabled
+    // Disable clipper if viewport transform is disabled
     if (pState->state.frontendState.vpTransformDisable)
     {
         pState->pfnProcessPrims = pfnBinner;
@@ -930,6 +930,7 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
 #endif
     }
 
+    // Disable rasterizer and backend if no pixel, no depth/stencil, and no attributes
     if ((pState->state.psState.pfnPixelShader == nullptr) &&
         (pState->state.depthStencilState.depthTestEnable == FALSE) &&
         (pState->state.depthStencilState.depthWriteEnable == FALSE) &&
