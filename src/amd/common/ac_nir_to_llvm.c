@@ -6749,8 +6749,9 @@ void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 	visit_cf_list(&ctx, &func->impl->body);
 	phi_post_pass(&ctx);
 
-	ctx.abi->emit_outputs(ctx.abi, RADEON_LLVM_MAX_OUTPUTS,
-			      ctx.outputs);
+	if (nir->info.stage != MESA_SHADER_COMPUTE)
+		ctx.abi->emit_outputs(ctx.abi, RADEON_LLVM_MAX_OUTPUTS,
+				      ctx.outputs);
 
 	free(ctx.locals);
 	ralloc_free(ctx.defs);
