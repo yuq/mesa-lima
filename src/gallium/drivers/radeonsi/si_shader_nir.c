@@ -86,6 +86,27 @@ static void scan_instruction(struct tgsi_shader_info *info,
 		case nir_intrinsic_load_invocation_id:
 			info->uses_invocationid = true;
 			break;
+		case nir_intrinsic_load_num_work_groups:
+			info->uses_grid_size = true;
+			break;
+		case nir_intrinsic_load_local_group_size:
+			/* The block size is translated to IMM with a fixed block size. */
+			if (info->properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] == 0)
+				info->uses_block_size = true;
+			break;
+		case nir_intrinsic_load_local_invocation_id:
+		case nir_intrinsic_load_work_group_id: {
+			unsigned mask = nir_ssa_def_components_read(&intr->dest.ssa);
+			while (mask) {
+				unsigned i = u_bit_scan(&mask);
+
+				if (intr->intrinsic == nir_intrinsic_load_work_group_id)
+					info->uses_block_id[i] = true;
+				else
+					info->uses_thread_id[i] = true;
+			}
+			break;
+		}
 		case nir_intrinsic_load_vertex_id:
 			info->uses_vertexid = 1;
 			break;
@@ -222,12 +243,6 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 	nir_function *func;
 	unsigned i;
 
-	assert(nir->info.stage == MESA_SHADER_VERTEX ||
-	       nir->info.stage == MESA_SHADER_GEOMETRY ||
-	       nir->info.stage == MESA_SHADER_TESS_CTRL ||
-	       nir->info.stage == MESA_SHADER_TESS_EVAL ||
-	       nir->info.stage == MESA_SHADER_FRAGMENT);
-
 	info->processor = pipe_shader_type_from_mesa(nir->info.stage);
 	info->num_tokens = 2; /* indicate that the shader is non-empty */
 	info->num_instructions = 2;
@@ -259,6 +274,12 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 		info->properties[TGSI_PROPERTY_GS_OUTPUT_PRIM] = nir->info.gs.output_primitive;
 		info->properties[TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES] = nir->info.gs.vertices_out;
 		info->properties[TGSI_PROPERTY_GS_INVOCATIONS] = nir->info.gs.invocations;
+	}
+
+	if (nir->info.stage == MESA_SHADER_COMPUTE) {
+		info->properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] = nir->info.cs.local_size[0];
+		info->properties[TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT] = nir->info.cs.local_size[1];
+		info->properties[TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH] = nir->info.cs.local_size[2];
 	}
 
 	i = 0;
