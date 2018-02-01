@@ -54,6 +54,8 @@ struct ac_shader_abi {
 	LLVMValueRef ancillary;
 	LLVMValueRef sample_coverage;
 	LLVMValueRef prim_mask;
+	/* CS */
+	LLVMValueRef local_invocation_ids;
 	LLVMValueRef workgroup_ids[3];
 
 	/* For VS and PS: pre-loaded shader inputs.

@@ -91,7 +91,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef push_constants;
 	LLVMValueRef view_index;
 	LLVMValueRef num_work_groups;
-	LLVMValueRef local_invocation_ids;
 	LLVMValueRef tg_size;
 
 	LLVMValueRef vertex_buffers;
@@ -795,7 +794,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		if (ctx->shader_info->info.cs.uses_local_invocation_idx)
 			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->tg_size);
 		add_arg(&args, ARG_VGPR, ctx->ac.v3i32,
-			&ctx->local_invocation_ids);
+			&ctx->abi.local_invocation_ids);
 		break;
 	case MESA_SHADER_VERTEX:
 		declare_global_input_sgprs(ctx, stage, has_previous_stage,
@@ -4314,7 +4313,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		break;
 	}
 	case nir_intrinsic_load_local_invocation_id: {
-		result = ctx->nctx->local_invocation_ids;
+		result = ctx->abi->local_invocation_ids;
 		break;
 	}
 	case nir_intrinsic_load_base_instance:

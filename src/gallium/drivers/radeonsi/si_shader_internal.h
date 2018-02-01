@@ -186,7 +186,6 @@ struct si_shader_context {
 	/* CS */
 	int param_grid_size;
 	int param_block_size;
-	int param_thread_id;
 
 	LLVMTargetMachineRef tm;
 

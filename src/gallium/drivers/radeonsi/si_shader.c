@@ -2161,7 +2161,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 	}
 
 	case TGSI_SEMANTIC_THREAD_ID:
-		value = LLVMGetParam(ctx->main_fn, ctx->param_thread_id);
+		value = ctx->abi.local_invocation_ids;
 		break;
 
 	case TGSI_SEMANTIC_HELPER_INVOCATION:
@@ -4886,7 +4886,7 @@ static void create_function(struct si_shader_context *ctx)
 				add_arg_assign(&fninfo, ARG_SGPR, ctx->i32, &ctx->abi.workgroup_ids[i]);
 		}
 
-		ctx->param_thread_id = add_arg(&fninfo, ARG_VGPR, v3i32);
+		add_arg_assign(&fninfo, ARG_VGPR, v3i32, &ctx->abi.local_invocation_ids);
 		break;
 	default:
 		assert(0 && "unimplemented shader");
