@@ -249,6 +249,7 @@ vc5_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_TGSI_CLOCK:
         case PIPE_CAP_TGSI_TEX_TXF_LZ:
         case PIPE_CAP_NATIVE_FENCE_FD:
+        case PIPE_CAP_FENCE_SIGNAL:
         case PIPE_CAP_TGSI_MUL_ZERO_WINS:
         case PIPE_CAP_NIR_SAMPLERS_AS_DEREF:
         case PIPE_CAP_QUERY_SO_OVERFLOW:
