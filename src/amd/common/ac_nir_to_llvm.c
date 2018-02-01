@@ -5317,6 +5317,9 @@ handle_vs_input_decl(struct nir_to_llvm_context *ctx,
 	int index = variable->data.location - VERT_ATTRIB_GENERIC0;
 	int idx = variable->data.location;
 	unsigned attrib_count = glsl_count_attribute_slots(variable->type, true);
+	uint8_t input_usage_mask =
+		ctx->shader_info->info.vs.input_usage_mask[variable->data.location];
+	unsigned num_channels = util_last_bit(input_usage_mask);
 
 	variable->data.driver_location = idx * 4;
 
@@ -5341,7 +5344,9 @@ handle_vs_input_decl(struct nir_to_llvm_context *ctx,
 		input = ac_build_buffer_load_format(&ctx->ac, t_list,
 						    buffer_index,
 						    ctx->ac.i32_0,
-						    4, false, true);
+						    num_channels, false, true);
+
+		input = ac_build_expand_to_vec4(&ctx->ac, input, num_channels);
 
 		for (unsigned chan = 0; chan < 4; chan++) {
 			LLVMValueRef llvm_chan = LLVMConstInt(ctx->ac.i32, chan, false);
