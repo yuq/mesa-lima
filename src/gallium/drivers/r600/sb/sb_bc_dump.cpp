@@ -330,6 +330,21 @@ static void print_src(sb_ostream &s, bc_alu &alu, unsigned idx)
 		case ALU_SRC_0:
 			s << "0";
 			break;
+		case ALU_SRC_MASK_LO:
+			s << "MASK_LO";
+			break;
+		case ALU_SRC_MASK_HI:
+			s << "MASK_HI";
+			break;
+		case ALU_SRC_HW_WAVE_ID:
+			s << "HW_WAVE_ID";
+			break;
+		case ALU_SRC_SIMD_ID:
+			s << "SIMD_ID";
+			break;
+		case ALU_SRC_SE_ID:
+			s << "SE_ID";
+			break;
 		default:
 			s << "??IMM_" <<  sel;
 			break;
