@@ -531,8 +531,8 @@ pipe_screen::get_compute_param.
 
 * ``PIPE_COMPUTE_CAP_IR_TARGET``: A description of the target of the form
   ``processor-arch-manufacturer-os`` that will be passed on to the compiler.
-  This CAP is only relevant for drivers that specify PIPE_SHADER_IR_LLVM
-  or PIPE_SHADER_IR_NATIVE for their preferred IR.
+  This CAP is only relevant for drivers that specify PIPE_SHADER_IR_NATIVE for
+  their preferred IR.
   Value type: null-terminated string. Shader IR type dependent.
 * ``PIPE_COMPUTE_CAP_GRID_DIMENSION``: Number of supported dimensions
   for grid and block coordinates.  Value type: ``uint64_t``. Shader IR type dependent.

@@ -291,9 +291,6 @@ clover::llvm::link_program(const std::vector<module> &modules,
    if (create_library) {
       return build_module_library(*mod, module::section::text_library);
 
-   } else if (ir == PIPE_SHADER_IR_LLVM) {
-      return build_module_bitcode(*mod, *c);
-
    } else if (ir == PIPE_SHADER_IR_NATIVE) {
       if (has_flag(debug::native))
          debug::log(id +  ".asm", print_module_native(*mod, target));

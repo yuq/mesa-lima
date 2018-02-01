@@ -71,12 +71,6 @@ namespace {
    }
 }
 
-module
-clover::llvm::build_module_bitcode(const ::llvm::Module &mod,
-                                   const clang::CompilerInstance &c) {
-   return build_module_common(mod, emit_code(mod), get_symbol_offsets(mod), c);
-}
-
 std::string
 clover::llvm::print_module_bitcode(const ::llvm::Module &mod) {
    std::string s;
