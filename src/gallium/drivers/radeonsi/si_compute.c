@@ -98,8 +98,19 @@ static void si_create_compute_state_async(void *job, int thread_index)
 	memset(&sel, 0, sizeof(sel));
 
 	sel.screen = program->screen;
-	tgsi_scan_shader(program->tokens, &sel.info);
-	sel.tokens = program->tokens;
+
+	if (program->ir_type == PIPE_SHADER_IR_TGSI) {
+		tgsi_scan_shader(program->ir.tgsi, &sel.info);
+		sel.tokens = program->ir.tgsi;
+	} else {
+		assert(program->ir_type == PIPE_SHADER_IR_NIR);
+		sel.nir = program->ir.nir;
+
+		si_nir_scan_shader(sel.nir, &sel.info);
+		si_lower_nir(&sel);
+	}
+
+
 	sel.type = PIPE_SHADER_COMPUTE;
 	sel.local_size = program->local_size;
 	si_get_active_slot_masks(&sel.info,
@@ -141,7 +152,9 @@ static void si_create_compute_state_async(void *job, int thread_index)
 			sel.info.properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] == 0;
 	}
 
-	FREE(program->tokens);
+	if (program->ir_type == PIPE_SHADER_IR_TGSI)
+		FREE(program->ir.tgsi);
+
 	program->shader.selector = NULL;
 }
 
@@ -161,11 +174,16 @@ static void *si_create_compute_state(
 	program->input_size = cso->req_input_mem;
 	program->use_code_object_v2 = cso->ir_type == PIPE_SHADER_IR_NATIVE;
 
-	if (cso->ir_type == PIPE_SHADER_IR_TGSI) {
-		program->tokens = tgsi_dup_tokens(cso->prog);
-		if (!program->tokens) {
-			FREE(program);
-			return NULL;
+	if (cso->ir_type != PIPE_SHADER_IR_NATIVE) {
+		if (cso->ir_type == PIPE_SHADER_IR_TGSI) {
+			program->ir.tgsi = tgsi_dup_tokens(cso->prog);
+			if (!program->ir.tgsi) {
+				FREE(program);
+				return NULL;
+			}
+		} else {
+			assert(cso->ir_type == PIPE_SHADER_IR_NIR);
+			program->ir.nir = (struct nir_shader *) cso->prog;
 		}
 
 		program->compiler_ctx_state.debug = sctx->debug;
@@ -230,7 +248,7 @@ static void si_bind_compute_state(struct pipe_context *ctx, void *state)
 		return;
 
 	/* Wait because we need active slot usage masks. */
-	if (program->ir_type == PIPE_SHADER_IR_TGSI)
+	if (program->ir_type != PIPE_SHADER_IR_NATIVE)
 		util_queue_fence_wait(&program->ready);
 
 	si_set_active_descriptors(sctx,
@@ -379,7 +397,7 @@ static bool si_switch_compute_shader(struct si_context *sctx,
 	    sctx->cs_shader_state.offset == offset)
 		return true;
 
-	if (program->ir_type == PIPE_SHADER_IR_TGSI) {
+	if (program->ir_type != PIPE_SHADER_IR_NATIVE) {
 		config = &shader->config;
 	} else {
 		unsigned lds_blocks;
@@ -805,7 +823,7 @@ static void si_launch_grid(
 		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
 				 SI_CONTEXT_CS_PARTIAL_FLUSH;
 
-	if (program->ir_type == PIPE_SHADER_IR_TGSI &&
+	if (program->ir_type != PIPE_SHADER_IR_NATIVE &&
 	    program->shader.compilation_failed)
 		return;
 
@@ -870,7 +888,7 @@ static void si_launch_grid(
 					  RADEON_PRIO_COMPUTE_GLOBAL);
 	}
 
-	if (program->ir_type == PIPE_SHADER_IR_TGSI)
+	if (program->ir_type != PIPE_SHADER_IR_NATIVE)
 		si_setup_tgsi_grid(sctx, info);
 
 	si_emit_dispatch_packets(sctx, info);
@@ -891,7 +909,7 @@ static void si_launch_grid(
 
 void si_destroy_compute(struct si_compute *program)
 {
-	if (program->ir_type == PIPE_SHADER_IR_TGSI) {
+	if (program->ir_type != PIPE_SHADER_IR_NATIVE) {
 		util_queue_drop_job(&program->screen->shader_compiler_queue,
 				    &program->ready);
 		util_queue_fence_destroy(&program->ready);

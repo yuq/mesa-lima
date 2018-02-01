@@ -721,7 +721,7 @@ static boolean si_vid_is_format_supported(struct pipe_screen *screen,
 static unsigned get_max_threads_per_block(struct si_screen *screen,
 					  enum pipe_shader_ir ir_type)
 {
-	if (ir_type != PIPE_SHADER_IR_TGSI)
+	if (ir_type == PIPE_SHADER_IR_NATIVE)
 		return 256;
 
 	/* Only 16 waves per thread-group on gfx9. */
@@ -869,10 +869,10 @@ static int si_get_compute_param(struct pipe_screen *screen,
 	case PIPE_COMPUTE_CAP_MAX_VARIABLE_THREADS_PER_BLOCK:
 		if (ret) {
 			uint64_t *max_variable_threads_per_block = ret;
-			if (ir_type == PIPE_SHADER_IR_TGSI)
-				*max_variable_threads_per_block = SI_MAX_VARIABLE_THREADS_PER_BLOCK;
-			else
+			if (ir_type == PIPE_SHADER_IR_NATIVE)
 				*max_variable_threads_per_block = 0;
+			else
+				*max_variable_threads_per_block = SI_MAX_VARIABLE_THREADS_PER_BLOCK;
 		}
 		return sizeof(uint64_t);
 	}
