@@ -398,7 +398,7 @@ matrix:
             - libelf-dev
 
 install:
-  - pip install --user mako
+  - pip2 install --user mako
 
   # Install the latest meson from pip, since the version in the ubuntu repos is
   # often quite old.
