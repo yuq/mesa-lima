@@ -3047,7 +3047,6 @@ load_gs_input(struct ac_shader_abi *abi,
 {
 	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
 	LLVMValueRef vtx_offset;
-	LLVMValueRef args[9];
 	unsigned param, vtx_offset_param;
 	LLVMValueRef value[4], result;
 
@@ -3065,20 +3064,16 @@ load_gs_input(struct ac_shader_abi *abi,
 			                       LLVMConstInt(ctx->ac.i32, param * 4 + i + const_index, 0), "");
 			value[i] = ac_lds_load(&ctx->ac, dw_addr);
 		} else {
-			args[0] = ctx->esgs_ring;
-			args[1] = vtx_offset;
-			args[2] = LLVMConstInt(ctx->ac.i32, (param * 4 + i + const_index) * 256, false);
-			args[3] = ctx->ac.i32_0;
-			args[4] = ctx->ac.i32_1; /* OFFEN */
-			args[5] = ctx->ac.i32_0; /* IDXEN */
-			args[6] = ctx->ac.i32_1; /* GLC */
-			args[7] = ctx->ac.i32_0; /* SLC */
-			args[8] = ctx->ac.i32_0; /* TFE */
+			LLVMValueRef soffset =
+				LLVMConstInt(ctx->ac.i32,
+					     (param * 4 + i + const_index) * 256,
+					     false);
 
-			value[i] = ac_build_intrinsic(&ctx->ac, "llvm.SI.buffer.load.dword.i32.i32",
-			                              ctx->ac.i32, args, 9,
-			                              AC_FUNC_ATTR_READONLY |
-			                              AC_FUNC_ATTR_LEGACY);
+			value[i] = ac_build_buffer_load(&ctx->ac,
+							ctx->esgs_ring, 1,
+							ctx->ac.i32_0,
+							vtx_offset, soffset,
+							0, 1, 0, true, false);
 		}
 	}
 	result = ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
@@ -7166,16 +7161,9 @@ void ac_compile_nir_shader(LLVMTargetMachineRef tm,
 static void
 ac_gs_copy_shader_emit(struct nir_to_llvm_context *ctx)
 {
-	LLVMValueRef args[9];
-	args[0] = ctx->gsvs_ring;
-	args[1] = LLVMBuildMul(ctx->builder, ctx->abi.vertex_id, LLVMConstInt(ctx->ac.i32, 4, false), "");
-	args[3] = ctx->ac.i32_0;
-	args[4] = ctx->ac.i32_1;  /* OFFEN */
-	args[5] = ctx->ac.i32_0; /* IDXEN */
-	args[6] = ctx->ac.i32_1;  /* GLC */
-	args[7] = ctx->ac.i32_1;  /* SLC */
-	args[8] = ctx->ac.i32_0; /* TFE */
-
+	LLVMValueRef vtx_offset =
+		LLVMBuildMul(ctx->builder, ctx->abi.vertex_id,
+			     LLVMConstInt(ctx->ac.i32, 4, false), "");
 	int idx = 0;
 
 	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
@@ -7193,16 +7181,16 @@ ac_gs_copy_shader_emit(struct nir_to_llvm_context *ctx)
 		}
 
 		for (unsigned j = 0; j < length; j++) {
-			LLVMValueRef value;
-			args[2] = LLVMConstInt(ctx->ac.i32,
+			LLVMValueRef value, soffset;
+
+			soffset = LLVMConstInt(ctx->ac.i32,
 					       (slot * 4 + j) *
 					       ctx->gs_max_out_vertices * 16 * 4, false);
 
-			value = ac_build_intrinsic(&ctx->ac,
-						   "llvm.SI.buffer.load.dword.i32.i32",
-						   ctx->ac.i32, args, 9,
-						   AC_FUNC_ATTR_READONLY |
-						   AC_FUNC_ATTR_LEGACY);
+			value = ac_build_buffer_load(&ctx->ac, ctx->gsvs_ring,
+						     1, ctx->ac.i32_0,
+						     vtx_offset, soffset,
+						     0, 1, 1, true, false);
 
 			LLVMBuildStore(ctx->builder,
 				       ac_to_float(&ctx->ac, value), ctx->nir->outputs[radeon_llvm_reg_index_soa(i, j)]);
