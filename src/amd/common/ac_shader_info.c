@@ -133,6 +133,19 @@ gather_intrinsic_info(const nir_shader *nir, const nir_intrinsic_instr *instr,
 		if (nir->info.stage == MESA_SHADER_FRAGMENT)
 			info->ps.writes_memory = true;
 		break;
+	case nir_intrinsic_load_var:
+		if (nir->info.stage == MESA_SHADER_VERTEX) {
+			nir_deref_var *dvar = instr->variables[0];
+			nir_variable *var = dvar->var;
+
+			if (var->data.mode == nir_var_shader_in) {
+				unsigned idx = var->data.location;
+				uint8_t mask =
+					nir_ssa_def_components_read(&instr->dest.ssa);
+				info->vs.input_usage_mask[idx] |= mask;
+			}
+		}
+		break;
 	default:
 		break;
 	}

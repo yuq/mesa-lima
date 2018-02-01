@@ -24,6 +24,8 @@
 #ifndef AC_SHADER_INFO_H
 #define AC_SHADER_INFO_H
 
+#include "compiler/shader_enums.h"
+
 struct nir_shader;
 struct ac_nir_compiler_options;
 
@@ -34,6 +36,7 @@ struct ac_shader_info {
 	bool uses_invocation_id;
 	bool uses_prim_id;
 	struct {
+		uint8_t input_usage_mask[VERT_ATTRIB_MAX];
 		bool has_vertex_buffers; /* needs vertex buffers and base/start */
 		bool needs_draw_id;
 		bool needs_instance_id;
