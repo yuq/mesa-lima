@@ -1510,7 +1510,7 @@ int cm_bytecode_add_cf_end(struct r600_bytecode *bc)
 /* common to all 3 families */
 static int r600_bytecode_vtx_build(struct r600_bytecode *bc, struct r600_bytecode_vtx *vtx, unsigned id)
 {
-	bc->bytecode[id] = S_SQ_VTX_WORD0_VTX_INST(vtx->op) |
+	bc->bytecode[id] = S_SQ_VTX_WORD0_VTX_INST(r600_isa_fetch_opcode(bc->isa->hw_class, vtx->op)) |
 			S_SQ_VTX_WORD0_BUFFER_ID(vtx->buffer_id) |
 			S_SQ_VTX_WORD0_FETCH_TYPE(vtx->fetch_type) |
 			S_SQ_VTX_WORD0_SRC_GPR(vtx->src_gpr) |

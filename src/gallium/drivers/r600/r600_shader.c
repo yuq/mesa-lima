@@ -6875,7 +6875,7 @@ static int r600_do_buffer_txq(struct r600_shader_ctx *ctx, int reg_idx, int offs
 	} else {
 		struct r600_bytecode_vtx vtx;
 		memset(&vtx, 0, sizeof(vtx));
-		vtx.op = FETCH_OP_GDS_MIN_UINT; /* aka GET_BUFFER_RESINFO */
+		vtx.op = FETCH_OP_GET_BUFFER_RESINFO;
 		vtx.buffer_id = id + R600_MAX_CONST_BUFFERS;
 		vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
 		vtx.src_gpr = 0;
