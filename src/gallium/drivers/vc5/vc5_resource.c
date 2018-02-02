@@ -74,7 +74,7 @@ vc5_debug_resource_layout(struct vc5_resource *rsc, const char *caller)
                 struct vc5_resource_slice *slice = &rsc->slices[i];
 
                 int level_width = slice->stride / rsc->cpp;
-                int level_height = slice->size / slice->stride;
+                int level_height = slice->padded_height;
 
                 fprintf(stderr,
                         "rsc %s %p (format %s), %dx%d: "
@@ -133,7 +133,7 @@ vc5_resource_transfer_unmap(struct pipe_context *pctx,
                                               slice->stride,
                                               trans->map, ptrans->stride,
                                               slice->tiling, rsc->cpp,
-                                              slice->size / slice->stride,
+                                              slice->padded_height,
                                               &ptrans->box);
                 }
                 free(trans->map);
@@ -264,7 +264,7 @@ vc5_resource_transfer_map(struct pipe_context *pctx,
                                              ptrans->box.z * rsc->cube_map_stride,
                                              slice->stride,
                                              slice->tiling, rsc->cpp,
-                                             slice->size / slice->stride,
+                                             slice->padded_height,
                                              &ptrans->box);
                 }
                 return trans->map;
@@ -326,6 +326,11 @@ vc5_resource_get_handle(struct pipe_screen *pscreen,
         return FALSE;
 }
 
+#define PAGE_UB_ROWS (VC5_UIFCFG_PAGE_SIZE / VC5_UIFBLOCK_ROW_SIZE)
+#define PAGE_UB_ROWS_TIMES_1_5 ((PAGE_UB_ROWS * 3) >> 1)
+#define PAGE_CACHE_UB_ROWS (VC5_PAGE_CACHE_SIZE / VC5_UIFBLOCK_ROW_SIZE)
+#define PAGE_CACHE_MINUS_1_5_UB_ROWS (PAGE_CACHE_UB_ROWS - PAGE_UB_ROWS_TIMES_1_5)
+
 /**
  * Computes the HW's UIFblock padding for a given height/cpp.
  *
@@ -339,32 +344,27 @@ vc5_get_ub_pad(struct vc5_resource *rsc, uint32_t height)
         uint32_t utile_h = vc5_utile_height(rsc->cpp);
         uint32_t uif_block_h = utile_h * 2;
         uint32_t height_ub = height / uif_block_h;
-        uint32_t ub_row_size = 256 * 4;
 
-        uint32_t page_ub_rows = VC5_UIFCFG_PAGE_SIZE / ub_row_size;
-        uint32_t pc_ub_rows = VC5_PAGE_CACHE_SIZE / ub_row_size;
-        uint32_t height_offset_in_pc = height_ub % pc_ub_rows;
+        uint32_t height_offset_in_pc = height_ub % PAGE_CACHE_UB_ROWS;
 
         /* For the perfectly-aligned-for-UIF-XOR case, don't add any pad. */
         if (height_offset_in_pc == 0)
                 return 0;
 
-        uint32_t half_page_ub_rows = (page_ub_rows * 3) >> 1;
-
         /* Try padding up to where we're offset by at least half a page. */
-        if (height_offset_in_pc < half_page_ub_rows) {
+        if (height_offset_in_pc < PAGE_UB_ROWS_TIMES_1_5) {
                 /* If we fit entirely in the page cache, don't pad. */
-                if (height_ub < pc_ub_rows)
+                if (height_ub < PAGE_CACHE_UB_ROWS)
                         return 0;
                 else
-                        return half_page_ub_rows - height_offset_in_pc;
+                        return PAGE_UB_ROWS_TIMES_1_5 - height_offset_in_pc;
         }
 
         /* If we're close to being aligned to page cache size, then round up
          * and rely on XOR.
          */
-        if (height_offset_in_pc > (pc_ub_rows - half_page_ub_rows))
-                return pc_ub_rows - height_offset_in_pc;
+        if (height_offset_in_pc > PAGE_CACHE_MINUS_1_5_UB_ROWS)
+                return PAGE_CACHE_UB_ROWS - height_offset_in_pc;
 
         /* Otherwise, we're far enough away (top and bottom) to not need any
          * padding.
@@ -454,7 +454,19 @@ vc5_setup_slices(struct vc5_resource *rsc)
 
                 slice->offset = offset;
                 slice->stride = level_width * rsc->cpp;
+                slice->padded_height = level_height;
                 slice->size = level_height * slice->stride;
+
+                /* The HW aligns level 1's base to a page if any of level 1 or
+                 * below could be UIF XOR.  The lower levels then inherit the
+                 * alignment for as long as necesary, thanks to being power of
+                 * two aligned.
+                 */
+                if (i == 1 &&
+                    level_width > 4 * uif_block_w &&
+                    level_height > PAGE_CACHE_MINUS_1_5_UB_ROWS * uif_block_h) {
+                        slice->size = align(slice->size, VC5_UIFCFG_PAGE_SIZE);
+                }
 
                 offset += slice->size;
         }
@@ -744,7 +756,7 @@ vc5_create_surface(struct pipe_context *pctx,
         if (surface->tiling == VC5_TILING_UIF_NO_XOR ||
             surface->tiling == VC5_TILING_UIF_XOR) {
                 surface->padded_height_of_output_image_in_uif_blocks =
-                        ((slice->size / slice->stride) /
+                        (slice->padded_height /
                          (2 * vc5_utile_height(rsc->cpp)));
         }
 
