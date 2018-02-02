@@ -233,7 +233,8 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 
 	tcs_in_layout = S_VS_STATE_LS_OUT_PATCH_SIZE(input_patch_size / 4) |
 			S_VS_STATE_LS_OUT_VERTEX_SIZE(input_vertex_size / 4);
-	tcs_out_layout = output_patch_size / 4;
+	tcs_out_layout = (output_patch_size / 4) |
+			 (num_tcs_input_cp << 13);
 	tcs_out_offsets = (output_patch0_offset / 16) |
 			  ((perpatch_output_offset / 16) << 16);
 	offchip_layout = *num_patches |
@@ -268,7 +269,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 				      GFX9_SGPR_TCS_OFFCHIP_LAYOUT * 4, 3);
 		radeon_emit(cs, offchip_layout);
 		radeon_emit(cs, tcs_out_offsets);
-		radeon_emit(cs, tcs_out_layout | (num_tcs_input_cp << 26));
+		radeon_emit(cs, tcs_out_layout);
 	} else {
 		unsigned ls_rsrc2 = ls_current->config.rsrc2;
 
@@ -288,7 +289,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 			R_00B430_SPI_SHADER_USER_DATA_HS_0 + GFX6_SGPR_TCS_OFFCHIP_LAYOUT * 4, 4);
 		radeon_emit(cs, offchip_layout);
 		radeon_emit(cs, tcs_out_offsets);
-		radeon_emit(cs, tcs_out_layout | (num_tcs_input_cp << 26));
+		radeon_emit(cs, tcs_out_layout);
 		radeon_emit(cs, tcs_in_layout);
 	}
 
