@@ -1874,6 +1874,32 @@ static LLVMValueRef get_sample_id(struct si_shader_context *ctx)
 	return unpack_param(ctx, SI_PARAM_ANCILLARY, 8, 4);
 }
 
+static LLVMValueRef get_block_size(struct ac_shader_abi *abi)
+{
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+
+	LLVMValueRef values[3];
+	LLVMValueRef result;
+	unsigned i;
+	unsigned *properties = ctx->shader->selector->info.properties;
+
+	if (properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] != 0) {
+		unsigned sizes[3] = {
+			properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH],
+			properties[TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT],
+			properties[TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH]
+		};
+
+		for (i = 0; i < 3; ++i)
+			values[i] = LLVMConstInt(ctx->i32, sizes[i], 0);
+
+		result = lp_build_gather_values(&ctx->gallivm, values, 3);
+	} else {
+		result = LLVMGetParam(ctx->main_fn, ctx->param_block_size);
+	}
+
+	return result;
+}
 
 /**
  * Load a dword from a constant buffer.
@@ -2124,27 +2150,8 @@ void si_load_system_value(struct si_shader_context *ctx,
 		break;
 
 	case TGSI_SEMANTIC_BLOCK_SIZE:
-	{
-		LLVMValueRef values[3];
-		unsigned i;
-		unsigned *properties = ctx->shader->selector->info.properties;
-
-		if (properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] != 0) {
-			unsigned sizes[3] = {
-				properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH],
-				properties[TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT],
-				properties[TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH]
-			};
-
-			for (i = 0; i < 3; ++i)
-				values[i] = LLVMConstInt(ctx->i32, sizes[i], 0);
-
-			value = lp_build_gather_values(&ctx->gallivm, values, 3);
-		} else {
-			value = LLVMGetParam(ctx->main_fn, ctx->param_block_size);
-		}
+		value = get_block_size(&ctx->abi);
 		break;
-	}
 
 	case TGSI_SEMANTIC_BLOCK_ID:
 	{
