@@ -3074,6 +3074,9 @@ load_gs_input(struct ac_shader_abi *abi,
 							ctx->ac.i32_0,
 							vtx_offset, soffset,
 							0, 1, 0, true, false);
+
+			value[i] = LLVMBuildBitCast(ctx->builder, value[i],
+						    type, "");
 		}
 	}
 	result = ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
