@@ -223,16 +223,27 @@ color_attachment_compute_aux_usage(struct anv_device * device,
       att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
       att_state->fast_clear = false;
       return;
-   } else if (iview->image->planes[0].aux_usage == ISL_AUX_USAGE_MCS) {
-      att_state->aux_usage = ISL_AUX_USAGE_MCS;
+   }
+
+   att_state->aux_usage =
+      anv_layout_to_aux_usage(&device->info, iview->image,
+                              VK_IMAGE_ASPECT_COLOR_BIT,
+                              VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+   /* If we don't have aux, then we should have returned early in the layer
+    * check above.  If we got here, we must have something.
+    */
+   assert(att_state->aux_usage != ISL_AUX_USAGE_NONE);
+
+   if (att_state->aux_usage == ISL_AUX_USAGE_MCS) {
       att_state->input_aux_usage = ISL_AUX_USAGE_MCS;
       att_state->fast_clear = false;
       return;
-   } else if (iview->image->planes[0].aux_usage == ISL_AUX_USAGE_CCS_E) {
-      att_state->aux_usage = ISL_AUX_USAGE_CCS_E;
+   }
+
+   if (att_state->aux_usage == ISL_AUX_USAGE_CCS_E) {
       att_state->input_aux_usage = ISL_AUX_USAGE_CCS_E;
    } else {
-      att_state->aux_usage = ISL_AUX_USAGE_CCS_D;
       /* From the Sky Lake PRM, RENDER_SURFACE_STATE::AuxiliarySurfaceMode:
        *
        *    "If Number of Multisamples is MULTISAMPLECOUNT_1, AUX_CCS_D
@@ -286,8 +297,25 @@ color_attachment_compute_aux_usage(struct anv_device * device,
       isl_color_value_is_zero(clear_color, iview->planes[0].isl.format);
 
    if (att_state->pending_clear_aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
-      /* Start off assuming fast clears are possible */
-      att_state->fast_clear = true;
+      /* Start by getting the fast clear type.  We use the first subpass
+       * layout here because we don't want to fast-clear if the first subpass
+       * to use the attachment can't handle fast-clears.
+       */
+      enum anv_fast_clear_type fast_clear_type =
+         anv_layout_to_fast_clear_type(&device->info, iview->image,
+                                       VK_IMAGE_ASPECT_COLOR_BIT,
+                                       cmd_state->pass->attachments[att].first_subpass_layout);
+      switch (fast_clear_type) {
+      case ANV_FAST_CLEAR_NONE:
+         att_state->fast_clear = false;
+         break;
+      case ANV_FAST_CLEAR_DEFAULT_VALUE:
+         att_state->fast_clear = att_state->clear_color_is_zero;
+         break;
+      case ANV_FAST_CLEAR_ANY:
+         att_state->fast_clear = true;
+         break;
+      }
 
       /* Potentially, we could do partial fast-clears but doing so has crazy
        * alignment restrictions.  It's easier to just restrict to full size
@@ -302,17 +330,6 @@ color_attachment_compute_aux_usage(struct anv_device * device,
       /* On Broadwell and earlier, we can only handle 0/1 clear colors */
       if (GEN_GEN <= 8 && !att_state->clear_color_is_zero_one)
          att_state->fast_clear = false;
-
-      /* We only allow fast clears in the GENERAL layout if the auxiliary
-       * buffer is always enabled and the fast-clear value is all 0's. See
-       * add_aux_state_tracking_buffer() for more information.
-       */
-      if (cmd_state->pass->attachments[att].first_subpass_layout ==
-          VK_IMAGE_LAYOUT_GENERAL &&
-          (!att_state->clear_color_is_zero ||
-           iview->image->planes[0].aux_usage == ISL_AUX_USAGE_NONE)) {
-         att_state->fast_clear = false;
-      }
 
       /* We only allow fast clears to the first slice of an image (level 0,
        * layer 0) and only for the entire slice.  This guarantees us that, at
