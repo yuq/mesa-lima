@@ -2146,7 +2146,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 		break;
 
 	case TGSI_SEMANTIC_GRID_SIZE:
-		value = LLVMGetParam(ctx->main_fn, ctx->param_grid_size);
+		value = ctx->abi.num_work_groups;
 		break;
 
 	case TGSI_SEMANTIC_BLOCK_SIZE:
@@ -4879,7 +4879,7 @@ static void create_function(struct si_shader_context *ctx)
 		declare_global_desc_pointers(ctx, &fninfo);
 		declare_per_stage_desc_pointers(ctx, &fninfo, true);
 		if (shader->selector->info.uses_grid_size)
-			ctx->param_grid_size = add_arg(&fninfo, ARG_SGPR, v3i32);
+			add_arg_assign(&fninfo, ARG_SGPR, v3i32, &ctx->abi.num_work_groups);
 		if (shader->selector->info.uses_block_size)
 			ctx->param_block_size = add_arg(&fninfo, ARG_SGPR, v3i32);
 

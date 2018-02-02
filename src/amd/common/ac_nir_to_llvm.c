@@ -90,7 +90,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef ring_offsets;
 	LLVMValueRef push_constants;
 	LLVMValueRef view_index;
-	LLVMValueRef num_work_groups;
 	LLVMValueRef tg_size;
 
 	LLVMValueRef vertex_buffers;
@@ -780,7 +779,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 		if (ctx->shader_info->info.cs.uses_grid_size) {
 			add_arg(&args, ARG_SGPR, ctx->ac.v3i32,
-				&ctx->num_work_groups);
+				&ctx->abi.num_work_groups);
 		}
 
 		for (int i = 0; i < 3; i++) {
@@ -4376,7 +4375,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = ctx->abi->instance_id;
 		break;
 	case nir_intrinsic_load_num_work_groups:
-		result = ctx->nctx->num_work_groups;
+		result = ctx->abi->num_work_groups;
 		break;
 	case nir_intrinsic_load_local_invocation_index:
 		result = visit_load_local_invocation_index(ctx->nctx);
