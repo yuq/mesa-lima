@@ -740,9 +740,6 @@ init_fast_clear_color(struct anv_cmd_buffer *cmd_buffer,
    set_image_fast_clear_state(cmd_buffer, image, aspect,
                               ANV_FAST_CLEAR_NONE);
 
-   uint32_t plane = anv_image_aspect_to_plane(image->aspects, aspect);
-   enum isl_aux_usage aux_usage = image->planes[plane].aux_usage;
-
    /* The fast clear value dword(s) will be copied into a surface state object.
     * Ensure that the restrictions of the fields in the dword(s) are followed.
     *
@@ -763,7 +760,7 @@ init_fast_clear_color(struct anv_cmd_buffer *cmd_buffer,
 
          if (GEN_GEN >= 9) {
             /* MCS buffers on SKL+ can only have 1/0 clear colors. */
-            assert(aux_usage == ISL_AUX_USAGE_MCS);
+            assert(image->samples > 1);
             sdi.ImmediateData = 0;
          } else if (GEN_VERSIONx10 >= 75) {
             /* Pre-SKL, the dword containing the clear values also contains
