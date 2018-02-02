@@ -3247,7 +3247,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		break;
 	case PIPE_SHADER_COMPUTE:
 		shader->rat_base = 0;
-		shader->image_size_const_offset = 0;
+		shader->image_size_const_offset = ctx.info.file_count[TGSI_FILE_SAMPLER];
 		break;
 	default:
 		break;
