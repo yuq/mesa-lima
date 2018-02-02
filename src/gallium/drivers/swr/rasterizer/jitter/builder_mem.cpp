@@ -346,6 +346,18 @@ namespace SwrJit
         return vGather;
     }
 
+    //////////////////////////////////////////////////////////////////////////
+    /// @brief Alternative masked gather where source is a vector of pointers
+    /// @param pVecSrcPtr   - SIMD wide vector of pointers
+    /// @param pVecMask     - SIMD active lanes
+    /// @param pVecPassthru - SIMD wide vector of values to load when lane is inactive
+    Value* Builder::GATHER_PTR(Value* pVecSrcPtr, Value* pVecMask, Value* pVecPassthru)
+    {
+        Function* pMaskedGather = llvm::Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::masked_gather, { pVecPassthru->getType() });
+
+        return CALL(pMaskedGather, { pVecSrcPtr, C(0), pVecMask, pVecPassthru });
+    }
+
     void Builder::Gather4(const SWR_FORMAT format, Value* pSrcBase, Value* byteOffsets,
         Value* mask, Value* vGatherComponents[], bool bPackedOutput)
     {
