@@ -1325,7 +1325,7 @@ swr_update_derived(struct pipe_context *pipe,
          swrVertexBuffers[i] = {0};
          swrVertexBuffers[i].index = i;
          swrVertexBuffers[i].pitch = pitch;
-         swrVertexBuffers[i].pData = p_data;
+         swrVertexBuffers[i].xpData = (gfxptr_t) p_data;
          swrVertexBuffers[i].size = size;
          swrVertexBuffers[i].minVertex = min_vertex_index;
          swrVertexBuffers[i].maxVertex = elems;

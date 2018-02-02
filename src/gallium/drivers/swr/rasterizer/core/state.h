@@ -555,7 +555,7 @@ struct SWR_VERTEX_BUFFER_STATE
 {
     uint32_t index;
     uint32_t pitch;
-    const uint8_t *pData;
+    gfxptr_t xpData;
     uint32_t size;
     uint32_t numaNode;
     uint32_t minVertex;             // min vertex (for bounds checking)
