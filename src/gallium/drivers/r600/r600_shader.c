@@ -8759,7 +8759,10 @@ static int tgsi_resq(struct r600_shader_ctx *ctx)
 	    (inst->Src[0].Register.File == TGSI_FILE_IMAGE && inst->Memory.Texture == TGSI_TEXTURE_BUFFER)) {
 		if (ctx->bc->chip_class < EVERGREEN)
 			ctx->shader->uses_tex_buffers = true;
-		return r600_do_buffer_txq(ctx, 0, ctx->shader->image_size_const_offset);
+		unsigned offset = 0;
+		if (inst->Src[0].Register.File == TGSI_FILE_IMAGE)
+			offset += R600_IMAGE_REAL_RESOURCE_OFFSET - R600_MAX_CONST_BUFFERS + ctx->shader->image_size_const_offset;
+		return r600_do_buffer_txq(ctx, 0, offset);
 	}
 
 	if (inst->Memory.Texture == TGSI_TEXTURE_CUBE_ARRAY &&
