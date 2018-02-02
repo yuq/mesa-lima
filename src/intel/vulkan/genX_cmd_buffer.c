@@ -432,18 +432,6 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
                         VkImageLayout initial_layout,
                         VkImageLayout final_layout)
 {
-   assert(image);
-
-   /* A transition is a no-op if HiZ is not enabled, or if the initial and
-    * final layouts are equal.
-    *
-    * The undefined layout indicates that the user doesn't care about the data
-    * that's currently in the buffer. Therefore, a data-preserving resolve
-    * operation is not needed.
-    */
-   if (image->planes[0].aux_usage != ISL_AUX_USAGE_HIZ || initial_layout == final_layout)
-      return;
-
    const bool hiz_enabled = ISL_AUX_USAGE_HIZ ==
       anv_layout_to_aux_usage(&cmd_buffer->device->info, image,
                               VK_IMAGE_ASPECT_DEPTH_BIT, initial_layout);
