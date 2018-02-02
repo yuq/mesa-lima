@@ -296,7 +296,7 @@ static void image_append_args(
 	LLVMValueRef slc = i1false;
 	LLVMValueRef lwe = i1false;
 
-	if (atomic || (HAVE_LLVM <= 0x0309)) {
+	if (atomic) {
 		emit_data->args[emit_data->arg_count++] = r128;
 		emit_data->args[emit_data->arg_count++] = da;
 		if (!atomic) {
@@ -306,7 +306,6 @@ static void image_append_args(
 		return;
 	}
 
-	/* HAVE_LLVM >= 0x0400 */
 	emit_data->args[emit_data->arg_count++] = glc;
 	emit_data->args[emit_data->arg_count++] = slc;
 	emit_data->args[emit_data->arg_count++] = lwe;

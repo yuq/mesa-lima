@@ -159,8 +159,7 @@ static void *si_create_compute_state(
 	program->local_size = cso->req_local_mem;
 	program->private_size = cso->req_private_mem;
 	program->input_size = cso->req_input_mem;
-	program->use_code_object_v2 = HAVE_LLVM >= 0x0400 &&
-					cso->ir_type == PIPE_SHADER_IR_NATIVE;
+	program->use_code_object_v2 = cso->ir_type == PIPE_SHADER_IR_NATIVE;
 
 	if (cso->ir_type == PIPE_SHADER_IR_TGSI) {
 		program->tokens = tgsi_dup_tokens(cso->prog);

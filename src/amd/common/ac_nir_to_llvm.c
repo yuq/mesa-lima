@@ -3635,18 +3635,10 @@ static LLVMValueRef visit_image_load(struct ac_nir_context *ctx,
 		params[0] = get_image_coords(ctx, instr);
 		params[1] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE, NULL, true, false);
 		params[2] = LLVMConstInt(ctx->ac.i32, 15, false); /* dmask */
-		if (HAVE_LLVM <= 0x0309) {
-			params[3] = ctx->ac.i1false;  /* r128 */
-			params[4] = da;
-			params[5] = glc;
-			params[6] = slc;
-		} else {
-			LLVMValueRef lwe = ctx->ac.i1false;
-			params[3] = glc;
-			params[4] = slc;
-			params[5] = lwe;
-			params[6] = da;
-		}
+		params[3] = glc;
+		params[4] = slc;
+		params[5] = ctx->ac.i1false;
+		params[6] = da;
 
 		ac_get_image_intr_name("llvm.amdgcn.image.load",
 				       ctx->ac.v4f32, /* vdata */
@@ -3694,18 +3686,10 @@ static void visit_image_store(struct ac_nir_context *ctx,
 		params[1] = get_image_coords(ctx, instr); /* coords */
 		params[2] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE, NULL, true, true);
 		params[3] = LLVMConstInt(ctx->ac.i32, 15, false); /* dmask */
-		if (HAVE_LLVM <= 0x0309) {
-			params[4] = ctx->ac.i1false;  /* r128 */
-			params[5] = da;
-			params[6] = glc;
-			params[7] = slc;
-		} else {
-			LLVMValueRef lwe = ctx->ac.i1false;
-			params[4] = glc;
-			params[5] = slc;
-			params[6] = lwe;
-			params[7] = da;
-		}
+		params[4] = glc;
+		params[5] = slc;
+		params[6] = ctx->ac.i1false;
+		params[7] = da;
 
 		ac_get_image_intr_name("llvm.amdgcn.image.store",
 				       LLVMTypeOf(params[0]), /* vdata */

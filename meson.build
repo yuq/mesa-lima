@@ -992,9 +992,9 @@ if with_gallium_opencl
   # TODO: optional modules
 endif
 
-if with_amd_vk
+if with_amd_vk or with_gallium_radeonsi
   _llvm_version = '>= 4.0.0'
-elif with_gallium_opencl or with_gallium_swr or with_gallium_r600 or with_gallium_radeonsi
+elif with_gallium_opencl or with_gallium_swr or with_gallium_r600
   _llvm_version = '>= 3.9.0'
 else
   _llvm_version = '>= 3.3.0'
@@ -1031,7 +1031,7 @@ if with_llvm
     '-DMESA_LLVM_VERSION_PATCH=@0@'.format(_llvm_patch),
   ]
 elif with_amd_vk or with_gallium_radeonsi or with_gallium_swr
-  error('The following drivers requires LLVM: Radv, RadeonSI, SWR. One of these is enabled, but LLVM is disabled.')
+  error('The following drivers require LLVM: Radv, RadeonSI, SWR. One of these is enabled, but LLVM is disabled.')
 endif
 
 dep_glvnd = []

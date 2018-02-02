@@ -188,10 +188,8 @@ static int si_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_ALLOW_MAPPED_BUFFERS_DURING_EXECUTION:
 	case PIPE_CAP_TGSI_ANY_REG_AS_ADDRESS:
 	case PIPE_CAP_SIGNED_VERTEX_BUFFER_OFFSET:
-		return 1;
-
 	case PIPE_CAP_TGSI_VOTE:
-		return HAVE_LLVM >= 0x0400;
+		return 1;
 
 	case PIPE_CAP_TGSI_BALLOT:
 		return HAVE_LLVM >= 0x0500;
@@ -744,14 +742,9 @@ static int si_get_compute_param(struct pipe_screen *screen,
 	//TODO: select these params by asic
 	switch (param) {
 	case PIPE_COMPUTE_CAP_IR_TARGET: {
-		const char *gpu;
-		const char *triple;
+		const char *gpu, *triple;
 
-		if (HAVE_LLVM < 0x0400)
-			triple = "amdgcn--";
-		else
-			triple = "amdgcn-mesa-mesa3d";
-
+		triple = "amdgcn-mesa-mesa3d";
 		gpu = ac_get_llvm_processor_name(sscreen->info.family);
 		if (ret) {
 			sprintf(ret, "%s-%s", gpu, triple);
