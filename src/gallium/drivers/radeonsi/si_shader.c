@@ -5985,6 +5985,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		ctx->abi.load_sample_position = load_sample_position;
 		break;
 	case PIPE_SHADER_COMPUTE:
+		ctx->abi.load_local_group_size = get_block_size;
 		break;
 	default:
 		assert(!"Unsupported shader type");

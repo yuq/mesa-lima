@@ -157,6 +157,8 @@ struct ac_shader_abi {
 	LLVMValueRef (*load_sample_position)(struct ac_shader_abi *abi,
 					     LLVMValueRef sample_id);
 
+	LLVMValueRef (*load_local_group_size)(struct ac_shader_abi *abi);
+
 	/* Whether to clamp the shadow reference value to [0,1]on VI. Radeonsi currently
 	 * uses it due to promoting D16 to D32, but radv needs it off. */
 	bool clamp_shadow_reference;
