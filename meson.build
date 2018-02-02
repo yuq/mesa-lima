@@ -507,11 +507,6 @@ if with_gallium_omx
     endif
   endif
 endif
-if with_gallium_omx
-  dep_omx = declare_dependency(
-    compile_args : run_command(prog_pkgconfig, ['libomxil-bellagio', '--cflags']).stdout().split()
-  )
-endif
 
 _va = get_option('gallium-va')
 if not system_has_kms_drm
