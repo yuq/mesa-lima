@@ -92,13 +92,16 @@ with_dri_nouveau = false
 with_dri_swrast = false
 _drivers = get_option('dri-drivers')
 if _drivers == 'auto'
-  # TODO: PPC, Sparc
-  if not ['darwin', 'windows'].contains(host_machine.system())
+  if host_machine.system() == 'linux'
+    # TODO: PPC, Sparc
     if ['x86', 'x86_64'].contains(host_machine.cpu_family())
       _drivers = 'i915,i965,r100,r200,nouveau'
     else
       error('Unknown architecture. Please pass -Ddri-drivers to set driver options. Patches gladly accepted to fix this.')
     endif
+  elif ['darwin', 'windows', 'cygwin'].contains(host_machine.system())
+    # only swrast would make sense here, but gallium swrast is a much better default
+    _drivers = ''
   else
     error('Unknown OS. Please pass -Ddri-drivers to set driver options. Patches gladly accepted to fix this.')
   endif
@@ -132,7 +135,7 @@ with_gallium_virgl = false
 with_gallium_swr = false
 _drivers = get_option('gallium-drivers')
 if _drivers == 'auto'
-  if not ['darwin', 'windows'].contains(host_machine.system())
+  if host_machine.system() == 'linux'
     # TODO: PPC, Sparc
     if ['x86', 'x86_64'].contains(host_machine.cpu_family())
       _drivers = 'r300,r600,radeonsi,nouveau,virgl,svga,swrast'
@@ -141,6 +144,8 @@ if _drivers == 'auto'
     else
       error('Unknown architecture. Please pass -Dgallium-drivers to set driver options. Patches gladly accepted to fix this.')
     endif
+  elif ['darwin', 'windows', 'cygwin'].contains(host_machine.system())
+    _drivers = 'swrast'
   else
     error('Unknown OS. Please pass -Dgallium-drivers to set driver options. Patches gladly accepted to fix this.')
   endif
@@ -170,15 +175,17 @@ with_amd_vk = false
 with_any_vk = false
 _vulkan_drivers = get_option('vulkan-drivers')
 if _vulkan_drivers == 'auto'
-  if not ['darwin', 'windows'].contains(host_machine.system())
+  if host_machine.system() == 'linux'
     if host_machine.cpu_family().startswith('x86')
       _vulkan_drivers = 'amd,intel'
     else
       error('Unknown architecture. Please pass -Dvulkan-drivers to set driver options. Patches gladly accepted to fix this.')
     endif
-  else
+  elif ['darwin', 'windows', 'cygwin'].contains(host_machine.system())
     # No vulkan driver supports windows or macOS currently
     _vulkan_drivers = ''
+  else
+    error('Unknown OS. Please pass -Dvulkan-drivers to set driver options. Patches gladly accepted to fix this.')
   endif
 endif
 if _vulkan_drivers != ''
@@ -233,8 +240,10 @@ _platforms = get_option('platforms')
 if _platforms == 'auto'
   if system_has_kms_drm
     _platforms = 'x11,wayland,drm,surfaceless'
+  elif ['darwin', 'windows', 'cygwin'].contains(host_machine.system())
+    _platforms = 'x11,surfaceless'
   else
-    error('Unknown OS, no platforms enabled. Patches gladly accepted to fix this.')
+    error('Unknown OS. Please pass -Dplatforms to set platforms. Patches gladly accepted to fix this.')
   endif
 endif
 if _platforms != ''
