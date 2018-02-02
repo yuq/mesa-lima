@@ -123,6 +123,7 @@
 #include "shared.h"
 #include "shaderobj.h"
 #include "shaderimage.h"
+#include "state.h"
 #include "util/debug.h"
 #include "util/disk_cache.h"
 #include "util/strtod.h"
@@ -1578,6 +1579,8 @@ handle_first_current(struct gl_context *ctx)
    }
 
    check_context_limits(ctx);
+
+   _mesa_update_vertex_processing_mode(ctx);
 
    /* According to GL_MESA_configless_context the default value of
     * glDrawBuffers depends on the config of the first surface it is bound to.

@@ -1012,6 +1012,8 @@ _mesa_meta_end(struct gl_context *ctx)
 
          _mesa_reference_pipeline_object(ctx, &save->Pipeline, NULL);
       }
+
+      _mesa_update_vertex_processing_mode(ctx);
    }
 
    if (state & MESA_META_STENCIL_TEST) {

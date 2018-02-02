@@ -177,15 +177,18 @@ update_program(struct gl_context *ctx)
     */
    if (vsProg) {
       /* Use GLSL vertex shader */
+      assert(VP_MODE_SHADER == ctx->VertexProgram._VPMode);
       _mesa_reference_program(ctx, &ctx->VertexProgram._Current, vsProg);
    }
    else if (_mesa_arb_vertex_program_enabled(ctx)) {
       /* Use user-defined vertex program */
+      assert(VP_MODE_SHADER == ctx->VertexProgram._VPMode);
       _mesa_reference_program(ctx, &ctx->VertexProgram._Current,
                               ctx->VertexProgram.Current);
    }
    else if (ctx->VertexProgram._MaintainTnlProgram) {
       /* Use vertex program generated from fixed-function state */
+      assert(VP_MODE_FF == ctx->VertexProgram._VPMode);
       _mesa_reference_program(ctx, &ctx->VertexProgram._Current,
                               _mesa_get_fixed_func_vertex_program(ctx));
       _mesa_reference_program(ctx, &ctx->VertexProgram._TnlProgram,
@@ -193,6 +196,7 @@ update_program(struct gl_context *ctx)
    }
    else {
       /* no vertex program */
+      assert(VP_MODE_FF == ctx->VertexProgram._VPMode);
       _mesa_reference_program(ctx, &ctx->VertexProgram._Current, NULL);
    }
 
@@ -455,4 +459,23 @@ _mesa_set_vp_override(struct gl_context *ctx, GLboolean flag)
        */
       ctx->NewState |= _NEW_PROGRAM;
    }
+}
+
+
+/**
+ * Update ctx->VertexProgram._VPMode.
+ * This is to distinguish whether we're running
+ *   a vertex program/shader,
+ *   a fixed-function TNL program or
+ *   a fixed function vertex transformation without any program.
+ */
+void
+_mesa_update_vertex_processing_mode(struct gl_context *ctx)
+{
+   if (ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX])
+      ctx->VertexProgram._VPMode = VP_MODE_SHADER;
+   else if (_mesa_arb_vertex_program_enabled(ctx))
+      ctx->VertexProgram._VPMode = VP_MODE_SHADER;
+   else
+      ctx->VertexProgram._VPMode = VP_MODE_FF;
 }

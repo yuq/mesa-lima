@@ -2137,6 +2137,19 @@ typedef enum
 
 
 /**
+ * Current vertex processing mode: fixed function vs. shader.
+ * In reality, fixed function is probably implemented by a shader but that's
+ * not what we care about here.
+ */
+typedef enum
+{
+   VP_MODE_FF,     /**< legacy / fixed function */
+   VP_MODE_SHADER, /**< ARB vertex program or GLSL vertex shader */
+   VP_MODE_MAX     /**< for sizing arrays */
+} gl_vertex_processing_mode;
+
+
+/**
  * Base class for any kind of program object
  */
 struct gl_program
@@ -2362,6 +2375,17 @@ struct gl_vertex_program_state
    struct gl_program_cache *Cache;
 
    GLboolean _Overriden;
+
+   /**
+    * If we have a vertex program, a TNL program or no program at all.
+    * Note that this value should be kept up to date all the time,
+    * nevertheless its correctness is asserted in _mesa_update_state.
+    * The reason is to avoid calling _mesa_update_state twice we need
+    * this value on draw *before* actually calling _mesa_update_state.
+    * Also it should need to get recomputed only on changes to the
+    * vertex program which are heavyweight already.
+    */
+   gl_vertex_processing_mode _VPMode;
 };
 
 /**

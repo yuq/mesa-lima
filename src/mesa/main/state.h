@@ -46,6 +46,13 @@ extern void
 _mesa_set_vp_override(struct gl_context *ctx, GLboolean flag);
 
 
+/**
+ * Update ctx->VertexProgram._VertexProgramMode.
+ */
+extern void
+_mesa_update_vertex_processing_mode(struct gl_context *ctx);
+
+
 static inline bool
 _mesa_ati_fragment_shader_enabled(const struct gl_context *ctx)
 {

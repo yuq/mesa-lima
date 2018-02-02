@@ -50,6 +50,7 @@
 #include "main/program_binary.h"
 #include "main/shaderapi.h"
 #include "main/shaderobj.h"
+#include "main/state.h"
 #include "main/transformfeedback.h"
 #include "main/uniforms.h"
 #include "compiler/glsl/glsl_parser_extras.h"
@@ -1258,6 +1259,8 @@ link_program(struct gl_context *ctx, struct gl_shader_program *shProg,
                   shProg->Name, shProg->data->InfoLog);
    }
 
+   _mesa_update_vertex_processing_mode(ctx);
+
    /* debug code */
    if (0) {
       GLuint i;
@@ -2432,6 +2435,8 @@ _mesa_use_program(struct gl_context *ctx, gl_shader_stage stage,
                                      &shTarget->ReferencedPrograms[stage],
                                      shProg);
       _mesa_reference_program(ctx, target, prog);
+      if (stage == MESA_SHADER_VERTEX)
+         _mesa_update_vertex_processing_mode(ctx);
       return;
    }
 
