@@ -3351,6 +3351,9 @@ static void si_set_ls_return_value_for_tcs(struct si_shader_context *ctx)
 {
 	LLVMValueRef ret = ctx->return_value;
 
+	ret = si_insert_input_ptr(ctx, ret, 0, 0);
+	if (HAVE_32BIT_POINTERS)
+		ret = si_insert_input_ptr(ctx, ret, 1, 1);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_offset, 2);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_wave_info, 3);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_factor_offset, 4);
@@ -3364,6 +3367,12 @@ static void si_set_ls_return_value_for_tcs(struct si_shader_context *ctx)
 
 	ret = si_insert_input_ret(ctx, ret, ctx->param_vs_state_bits,
 				  8 + SI_SGPR_VS_STATE_BITS);
+
+#if !HAVE_32BIT_POINTERS
+	ret = si_insert_input_ptr(ctx, ret, ctx->param_vs_state_bits + 1,
+				  8 + GFX9_SGPR_2ND_SAMPLERS_AND_IMAGES);
+#endif
+
 	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_layout,
 				  8 + GFX9_SGPR_TCS_OFFCHIP_LAYOUT);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_out_lds_offsets,
@@ -3374,13 +3383,6 @@ static void si_set_ls_return_value_for_tcs(struct si_shader_context *ctx)
 				  8 + GFX9_SGPR_TCS_OFFCHIP_ADDR_BASE64K);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_factor_addr_base64k,
 				  8 + GFX9_SGPR_TCS_FACTOR_ADDR_BASE64K);
-
-	unsigned desc_param = ctx->param_tcs_factor_addr_base64k +
-			      (HAVE_32BIT_POINTERS ? 1 : 2);
-	ret = si_insert_input_ptr(ctx, ret, desc_param,
-				  8 + GFX9_SGPR_TCS_CONST_AND_SHADER_BUFFERS);
-	ret = si_insert_input_ptr(ctx, ret, desc_param + 1,
-				  8 + GFX9_SGPR_TCS_SAMPLERS_AND_IMAGES);
 
 	unsigned vgpr = 8 + GFX9_TCS_NUM_USER_SGPR;
 	ret = LLVMBuildInsertValue(ctx->ac.builder, ret,
@@ -3397,6 +3399,9 @@ static void si_set_es_return_value_for_gs(struct si_shader_context *ctx)
 {
 	LLVMValueRef ret = ctx->return_value;
 
+	ret = si_insert_input_ptr(ctx, ret, 0, 0);
+	if (HAVE_32BIT_POINTERS)
+		ret = si_insert_input_ptr(ctx, ret, 1, 1);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_gs2vs_offset, 2);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_wave_info, 3);
 	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_scratch_offset, 5);
@@ -3407,11 +3412,10 @@ static void si_set_es_return_value_for_gs(struct si_shader_context *ctx)
 				  ctx->param_bindless_samplers_and_images,
 				  8 + SI_SGPR_BINDLESS_SAMPLERS_AND_IMAGES);
 
-	unsigned desc_param = ctx->param_vs_state_bits + 1;
-	ret = si_insert_input_ptr(ctx, ret, desc_param,
-				  8 + GFX9_SGPR_GS_CONST_AND_SHADER_BUFFERS);
-	ret = si_insert_input_ptr(ctx, ret, desc_param + 1,
-				  8 + GFX9_SGPR_GS_SAMPLERS_AND_IMAGES);
+#if !HAVE_32BIT_POINTERS
+	ret = si_insert_input_ptr(ctx, ret, ctx->param_vs_state_bits + 1,
+				  8 + GFX9_SGPR_2ND_SAMPLERS_AND_IMAGES);
+#endif
 
 	unsigned vgpr = 8 + GFX9_GS_NUM_USER_SGPR;
 	for (unsigned i = 0; i < 5; i++) {
@@ -4489,9 +4493,9 @@ static unsigned si_get_max_workgroup_size(const struct si_shader *shader)
 	return max_work_group_size;
 }
 
-static void declare_per_stage_desc_pointers(struct si_shader_context *ctx,
-					    struct si_function_info *fninfo,
-					    bool assign_params)
+static void declare_const_and_shader_buffers(struct si_shader_context *ctx,
+					     struct si_function_info *fninfo,
+					     bool assign_params)
 {
 	LLVMTypeRef const_shader_buf_type;
 
@@ -4505,14 +4509,28 @@ static void declare_per_stage_desc_pointers(struct si_shader_context *ctx,
 		add_arg(fninfo, ARG_SGPR,
 			ac_array_in_const32_addr_space(const_shader_buf_type));
 
+	if (assign_params)
+		ctx->param_const_and_shader_buffers = const_and_shader_buffers;
+}
+
+static void declare_samplers_and_images(struct si_shader_context *ctx,
+					struct si_function_info *fninfo,
+					bool assign_params)
+{
 	unsigned samplers_and_images =
 		add_arg(fninfo, ARG_SGPR,
 			ac_array_in_const32_addr_space(ctx->v8i32));
 
-	if (assign_params) {
-		ctx->param_const_and_shader_buffers = const_and_shader_buffers;
+	if (assign_params)
 		ctx->param_samplers_and_images = samplers_and_images;
-	}
+}
+
+static void declare_per_stage_desc_pointers(struct si_shader_context *ctx,
+					    struct si_function_info *fninfo,
+					    bool assign_params)
+{
+	declare_const_and_shader_buffers(ctx, fninfo, assign_params);
+	declare_samplers_and_images(ctx, fninfo, assign_params);
 }
 
 static void declare_global_desc_pointers(struct si_shader_context *ctx,
@@ -4677,8 +4695,14 @@ static void create_function(struct si_shader_context *ctx)
 
 	case SI_SHADER_MERGED_VERTEX_TESSCTRL:
 		/* Merged stages have 8 system SGPRs at the beginning. */
-		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* SPI_SHADER_USER_DATA_ADDR_LO_HS */
-		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* SPI_SHADER_USER_DATA_ADDR_HI_HS */
+		/* SPI_SHADER_USER_DATA_ADDR_LO/HI_HS */
+		if (HAVE_32BIT_POINTERS) {
+			declare_per_stage_desc_pointers(ctx, &fninfo,
+							ctx->type == PIPE_SHADER_TESS_CTRL);
+		} else {
+			declare_const_and_shader_buffers(ctx, &fninfo,
+							 ctx->type == PIPE_SHADER_TESS_CTRL);
+		}
 		ctx->param_tcs_offchip_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_merged_wave_info = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_factor_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
@@ -4691,16 +4715,15 @@ static void create_function(struct si_shader_context *ctx)
 						ctx->type == PIPE_SHADER_VERTEX);
 		declare_vs_specific_input_sgprs(ctx, &fninfo);
 
+		if (!HAVE_32BIT_POINTERS) {
+			declare_samplers_and_images(ctx, &fninfo,
+						    ctx->type == PIPE_SHADER_TESS_CTRL);
+		}
 		ctx->param_tcs_offchip_layout = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_out_lds_offsets = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_out_lds_layout = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_offchip_addr_base64k = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_factor_addr_base64k = add_arg(&fninfo, ARG_SGPR, ctx->i32);
-		if (!HAVE_32BIT_POINTERS)
-			add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
-
-		declare_per_stage_desc_pointers(ctx, &fninfo,
-						ctx->type == PIPE_SHADER_TESS_CTRL);
 
 		/* VGPRs (first TCS, then VS) */
 		add_arg_assign(&fninfo, ARG_VGPR, ctx->i32, &ctx->abi.tcs_patch_id);
@@ -4731,8 +4754,14 @@ static void create_function(struct si_shader_context *ctx)
 
 	case SI_SHADER_MERGED_VERTEX_OR_TESSEVAL_GEOMETRY:
 		/* Merged stages have 8 system SGPRs at the beginning. */
-		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused (SPI_SHADER_USER_DATA_ADDR_LO_GS) */
-		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused (SPI_SHADER_USER_DATA_ADDR_HI_GS) */
+		/* SPI_SHADER_USER_DATA_ADDR_LO/HI_GS */
+		if (HAVE_32BIT_POINTERS) {
+			declare_per_stage_desc_pointers(ctx, &fninfo,
+							ctx->type == PIPE_SHADER_GEOMETRY);
+		} else {
+			declare_const_and_shader_buffers(ctx, &fninfo,
+							 ctx->type == PIPE_SHADER_GEOMETRY);
+		}
 		ctx->param_gs2vs_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_merged_wave_info = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_offchip_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
@@ -4758,8 +4787,10 @@ static void create_function(struct si_shader_context *ctx)
 			ctx->param_vs_state_bits = add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
 		}
 
-		declare_per_stage_desc_pointers(ctx, &fninfo,
-						ctx->type == PIPE_SHADER_GEOMETRY);
+		if (!HAVE_32BIT_POINTERS) {
+			declare_samplers_and_images(ctx, &fninfo,
+						    ctx->type == PIPE_SHADER_GEOMETRY);
+		}
 
 		/* VGPRs (first GS, then VS/TES) */
 		ctx->param_gs_vtx01_offset = add_arg(&fninfo, ARG_VGPR, ctx->i32);
@@ -7266,7 +7297,8 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 	si_init_function_info(&fninfo);
 
 	if (ctx->screen->info.chip_class >= GFX9) {
-		add_arg(&fninfo, ARG_SGPR, ctx->i64);
+		add_arg(&fninfo, ARG_SGPR, ctx->i32);
+		add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		ctx->param_tcs_offchip_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32); /* wave info */
 		ctx->param_tcs_factor_offset = add_arg(&fninfo, ARG_SGPR, ctx->i32);
@@ -7282,6 +7314,8 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
+		if (!HAVE_32BIT_POINTERS)
+			add_arg(&fninfo, ARG_SGPR, ctx->ac.intptr);
 		ctx->param_tcs_offchip_layout = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);
 		add_arg(&fninfo, ARG_SGPR, ctx->i32);

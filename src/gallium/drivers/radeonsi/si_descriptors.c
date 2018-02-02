@@ -2053,6 +2053,24 @@ static void si_emit_consecutive_shader_pointers(struct si_context *sctx,
 	}
 }
 
+static void si_emit_disjoint_shader_pointers(struct si_context *sctx,
+					     unsigned pointer_mask,
+					     unsigned sh_base)
+{
+	if (!sh_base)
+		return;
+
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	unsigned mask = sctx->shader_pointers_dirty & pointer_mask;
+
+	while (mask) {
+		struct si_descriptors *descs = &sctx->descriptors[u_bit_scan(&mask)];
+
+		si_emit_shader_pointer_head(cs, descs, sh_base, 1);
+		si_emit_shader_pointer_body(sctx->screen, cs, descs);
+	}
+}
+
 static void si_emit_global_shader_pointers(struct si_context *sctx,
 					   struct si_descriptors *descs)
 {
@@ -2089,14 +2107,21 @@ void si_emit_graphics_shader_pointers(struct si_context *sctx,
 
 	si_emit_consecutive_shader_pointers(sctx, SI_DESCS_SHADER_MASK(VERTEX),
 					    sh_base[PIPE_SHADER_VERTEX]);
-	si_emit_consecutive_shader_pointers(sctx, SI_DESCS_SHADER_MASK(TESS_CTRL),
-					    sh_base[PIPE_SHADER_TESS_CTRL]);
 	si_emit_consecutive_shader_pointers(sctx, SI_DESCS_SHADER_MASK(TESS_EVAL),
 					    sh_base[PIPE_SHADER_TESS_EVAL]);
-	si_emit_consecutive_shader_pointers(sctx, SI_DESCS_SHADER_MASK(GEOMETRY),
-					    sh_base[PIPE_SHADER_GEOMETRY]);
 	si_emit_consecutive_shader_pointers(sctx, SI_DESCS_SHADER_MASK(FRAGMENT),
 					    sh_base[PIPE_SHADER_FRAGMENT]);
+	if (HAVE_32BIT_POINTERS || sctx->b.chip_class <= VI) {
+		si_emit_consecutive_shader_pointers(sctx, SI_DESCS_SHADER_MASK(TESS_CTRL),
+						    sh_base[PIPE_SHADER_TESS_CTRL]);
+		si_emit_consecutive_shader_pointers(sctx, SI_DESCS_SHADER_MASK(GEOMETRY),
+						    sh_base[PIPE_SHADER_GEOMETRY]);
+	} else {
+		si_emit_disjoint_shader_pointers(sctx, SI_DESCS_SHADER_MASK(TESS_CTRL),
+						 sh_base[PIPE_SHADER_TESS_CTRL]);
+		si_emit_disjoint_shader_pointers(sctx, SI_DESCS_SHADER_MASK(GEOMETRY),
+						 sh_base[PIPE_SHADER_GEOMETRY]);
+	}
 
 	sctx->shader_pointers_dirty &=
 		~u_bit_consecutive(SI_DESCS_RW_BUFFERS, SI_DESCS_FIRST_COMPUTE);
@@ -2572,40 +2597,56 @@ void si_init_all_descriptors(struct si_context *sctx)
 	int i;
 
 #if !HAVE_32BIT_POINTERS
-	STATIC_ASSERT(GFX9_SGPR_TCS_CONST_AND_SHADER_BUFFERS % 2 == 0);
-	STATIC_ASSERT(GFX9_SGPR_GS_CONST_AND_SHADER_BUFFERS % 2 == 0);
+	STATIC_ASSERT(GFX9_SGPR_2ND_SAMPLERS_AND_IMAGES % 2 == 0);
 #endif
 
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
-		bool gfx9_tcs = false;
-		bool gfx9_gs = false;
+		bool is_2nd = sctx->b.chip_class >= GFX9 &&
+				     (i == PIPE_SHADER_TESS_CTRL ||
+				      i == PIPE_SHADER_GEOMETRY);
 		unsigned num_sampler_slots = SI_NUM_IMAGES / 2 + SI_NUM_SAMPLERS;
 		unsigned num_buffer_slots = SI_NUM_SHADER_BUFFERS + SI_NUM_CONST_BUFFERS;
+		int rel_dw_offset;
 		struct si_descriptors *desc;
 
-		if (sctx->b.chip_class >= GFX9) {
-			gfx9_tcs = i == PIPE_SHADER_TESS_CTRL;
-			gfx9_gs = i == PIPE_SHADER_GEOMETRY;
+		if (is_2nd) {
+			if (i == PIPE_SHADER_TESS_CTRL) {
+				rel_dw_offset = (R_00B408_SPI_SHADER_USER_DATA_ADDR_LO_HS -
+						 R_00B430_SPI_SHADER_USER_DATA_LS_0) / 4;
+			} else { /* PIPE_SHADER_GEOMETRY */
+				rel_dw_offset = (R_00B208_SPI_SHADER_USER_DATA_ADDR_LO_GS -
+						 R_00B330_SPI_SHADER_USER_DATA_ES_0) / 4;
+			}
+		} else {
+			rel_dw_offset = SI_SGPR_CONST_AND_SHADER_BUFFERS;
 		}
-
 		desc = si_const_and_shader_buffer_descriptors(sctx, i);
 		si_init_buffer_resources(&sctx->const_and_shader_buffers[i], desc,
-					 num_buffer_slots,
-					 gfx9_tcs ? GFX9_SGPR_TCS_CONST_AND_SHADER_BUFFERS :
-					 gfx9_gs ? GFX9_SGPR_GS_CONST_AND_SHADER_BUFFERS :
-						   SI_SGPR_CONST_AND_SHADER_BUFFERS,
+					 num_buffer_slots, rel_dw_offset,
 					 RADEON_USAGE_READWRITE,
 					 RADEON_USAGE_READ,
 					 RADEON_PRIO_SHADER_RW_BUFFER,
 					 RADEON_PRIO_CONST_BUFFER);
 		desc->slot_index_to_bind_directly = si_get_constbuf_slot(0);
 
+		if (is_2nd) {
+#if HAVE_32BIT_POINTERS
+			if (i == PIPE_SHADER_TESS_CTRL) {
+				rel_dw_offset = (R_00B40C_SPI_SHADER_USER_DATA_ADDR_HI_HS -
+						 R_00B430_SPI_SHADER_USER_DATA_LS_0) / 4;
+			} else { /* PIPE_SHADER_GEOMETRY */
+				rel_dw_offset = (R_00B20C_SPI_SHADER_USER_DATA_ADDR_HI_GS -
+						 R_00B330_SPI_SHADER_USER_DATA_ES_0) / 4;
+			}
+#else
+			rel_dw_offset = GFX9_SGPR_2ND_SAMPLERS_AND_IMAGES;
+#endif
+		} else {
+			rel_dw_offset = SI_SGPR_SAMPLERS_AND_IMAGES;
+		}
+
 		desc = si_sampler_and_image_descriptors(sctx, i);
-		si_init_descriptors(desc,
-				    gfx9_tcs ? GFX9_SGPR_TCS_SAMPLERS_AND_IMAGES :
-				    gfx9_gs ? GFX9_SGPR_GS_SAMPLERS_AND_IMAGES :
-					      SI_SGPR_SAMPLERS_AND_IMAGES,
-				    16, num_sampler_slots);
+		si_init_descriptors(desc, rel_dw_offset, 16, num_sampler_slots);
 
 		int j;
 		for (j = 0; j < SI_NUM_IMAGES; j++)
