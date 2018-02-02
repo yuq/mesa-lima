@@ -452,9 +452,6 @@ with_gallium_xvmc = _xvmc == 'true'
 dep_xvmc = []
 if with_gallium_xvmc
   dep_xvmc = dependency('xvmc', version : '>= 1.0.6')
-  dep_xvmc = declare_dependency(
-    compile_args : run_command(prog_pkgconfig, ['xvmc', '--cflags']).stdout().split()
-  )
 endif
 
 xvmc_drivers_path = get_option('xvmc-libs-path')
