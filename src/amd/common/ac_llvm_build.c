@@ -344,6 +344,14 @@ ac_build_optimization_barrier(struct ac_llvm_context *ctx,
 }
 
 LLVMValueRef
+ac_build_shader_clock(struct ac_llvm_context *ctx)
+{
+	LLVMValueRef tmp = ac_build_intrinsic(ctx, "llvm.readcyclecounter",
+					      ctx->i64, NULL, 0, 0);
+	return LLVMBuildBitCast(ctx->builder, tmp, ctx->v2i32, "");
+}
+
+LLVMValueRef
 ac_build_ballot(struct ac_llvm_context *ctx,
 		LLVMValueRef value)
 {

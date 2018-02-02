@@ -3873,11 +3873,7 @@ static void clock_emit(
 		struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMValueRef tmp;
-
-	tmp = lp_build_intrinsic(ctx->ac.builder, "llvm.readcyclecounter",
-				 ctx->i64, NULL, 0, 0);
-	tmp = LLVMBuildBitCast(ctx->ac.builder, tmp, ctx->v2i32, "");
+	LLVMValueRef tmp = ac_build_shader_clock(&ctx->ac);
 
 	emit_data->output[0] =
 		LLVMBuildExtractElement(ctx->ac.builder, tmp, ctx->i32_0, "");
