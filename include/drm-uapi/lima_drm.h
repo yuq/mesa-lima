@@ -134,9 +134,9 @@ struct drm_lima_gem_submit {
 	__u32 fence;       /* out */
 	__u32 pipe;        /* in */
 	__u32 nr_bos;      /* in */
+	__u32 frame_size;  /* in */
 	__u64 bos;         /* in */
 	__u64 frame;       /* in */
-	__u64 frame_size;  /* in */
 };
 
 struct drm_lima_wait_fence {
