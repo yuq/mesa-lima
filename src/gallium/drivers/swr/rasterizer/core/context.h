@@ -227,8 +227,9 @@ OSALIGNLINE(struct) API_STATE
     // Vertex Buffers
     SWR_VERTEX_BUFFER_STATE vertexBuffers[KNOB_NUM_STREAMS];
 
-    // Index Buffer
-    SWR_INDEX_BUFFER_STATE  indexBuffer;
+    // GS - Geometry Shader State
+    SWR_GS_STATE            gsState;
+    PFN_GS_FUNC             pfnGsFunc;
 
     // FS - Fetch Shader State
     PFN_FETCH_FUNC          pfnFetchFunc;
@@ -236,9 +237,8 @@ OSALIGNLINE(struct) API_STATE
     // VS - Vertex Shader State
     PFN_VERTEX_FUNC         pfnVertexFunc;
 
-    // GS - Geometry Shader State
-    PFN_GS_FUNC             pfnGsFunc;
-    SWR_GS_STATE            gsState;
+    // Index Buffer
+    SWR_INDEX_BUFFER_STATE  indexBuffer;
 
     // CS - Compute Shader
     PFN_CS_FUNC             pfnCsFunc;
@@ -265,8 +265,6 @@ OSALIGNLINE(struct) API_STATE
     // Number of attributes used by the frontend (vs, so, gs)
     uint32_t                feNumAttributes;
 
-    PRIMITIVE_TOPOLOGY      topology;
-    bool                    forceFront;
 
     // RS - Rasterizer State
     SWR_RASTSTATE           rastState;
@@ -282,8 +280,12 @@ OSALIGNLINE(struct) API_STATE
     SWR_RECT                scissorsInFixedPoint[KNOB_NUM_VIEWPORTS_SCISSORS];
     bool                    scissorsTileAligned;
 
+    bool                    forceFront;
+    PRIMITIVE_TOPOLOGY      topology;
+
+
     // Backend state
-    SWR_BACKEND_STATE       backendState;
+    OSALIGNLINE(SWR_BACKEND_STATE) backendState;
 
     SWR_DEPTH_BOUNDS_STATE  depthBoundsState;
 
@@ -400,8 +402,6 @@ struct DRAW_CONTEXT
         DispatchQueue*  pDispatch;      // Queue for thread groups. (isCompute)
     };
     DRAW_STATE*     pState;             // Read-only state. Core should not update this outside of API thread.
-    DRAW_DYNAMIC_STATE dynState;
-
     CachingArena*   pArena;
 
     uint32_t        drawId;
@@ -412,11 +412,13 @@ struct DRAW_CONTEXT
 
     FE_WORK         FeWork;
 
+    SYNC_DESC       retireCallback; // Call this func when this DC is retired.
+
+    DRAW_DYNAMIC_STATE dynState;
+
     volatile OSALIGNLINE(bool)       doneFE;         // Is FE work done for this draw?
     volatile OSALIGNLINE(uint32_t)   FeLock;
     volatile OSALIGNLINE(uint32_t)   threadsDone;
-
-    SYNC_DESC       retireCallback; // Call this func when this DC is retired.
 };
 
 static_assert((sizeof(DRAW_CONTEXT) & 63) == 0, "Invalid size for DRAW_CONTEXT");
