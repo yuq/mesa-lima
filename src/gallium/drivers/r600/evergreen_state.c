@@ -811,18 +811,21 @@ static int evergreen_fill_tex_resource_words(struct r600_context *rctx,
 	}
 	nbanks = eg_num_banks(rscreen->b.info.r600_num_banks);
 
-	if (params->target == PIPE_TEXTURE_1D_ARRAY) {
-	        height = 1;
-		depth = texture->array_size;
-	} else if (params->target == PIPE_TEXTURE_2D_ARRAY) {
-		depth = texture->array_size;
-	} else if (params->target == PIPE_TEXTURE_CUBE_ARRAY)
-		depth = texture->array_size / 6;
 
 	va = tmp->resource.gpu_address;
 
 	/* array type views and views into array types need to use layer offset */
 	dim = r600_tex_dim(tmp, params->target, texture->nr_samples);
+
+	if (dim == V_030000_SQ_TEX_DIM_1D_ARRAY) {
+	        height = 1;
+		depth = texture->array_size;
+	} else if (dim == V_030000_SQ_TEX_DIM_2D_ARRAY ||
+		   dim == V_030000_SQ_TEX_DIM_2D_ARRAY_MSAA) {
+		depth = texture->array_size;
+	} else if (dim == V_030000_SQ_TEX_DIM_CUBEMAP)
+		depth = texture->array_size / 6;
+
 	tex_resource_words[0] = (S_030000_DIM(dim) |
 				 S_030000_PITCH((pitch / 8) - 1) |
 				 S_030000_TEX_WIDTH(width - 1));
