@@ -427,17 +427,13 @@ st_bufferobj_invalidate(struct gl_context *ctx,
 
 
 /**
- * Called via glMapBufferRange().
+ * Convert GLbitfield of GL_MAP_x flags to gallium pipe_transfer_usage flags.
+ * \param wholeBuffer  is the whole buffer being mapped?
  */
-static void *
-st_bufferobj_map_range(struct gl_context *ctx,
-                       GLintptr offset, GLsizeiptr length, GLbitfield access,
-                       struct gl_buffer_object *obj,
-                       gl_map_buffer_index index)
+enum pipe_transfer_usage
+st_access_flags_to_transfer_flags(GLbitfield access, bool wholeBuffer)
 {
-   struct pipe_context *pipe = st_context(ctx)->pipe;
-   struct st_buffer_object *st_obj = st_buffer_object(obj);
-   enum pipe_transfer_usage flags = 0x0;
+   enum pipe_transfer_usage flags = 0;
 
    if (access & GL_MAP_WRITE_BIT)
       flags |= PIPE_TRANSFER_WRITE;
@@ -452,7 +448,7 @@ st_bufferobj_map_range(struct gl_context *ctx,
       flags |= PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE;
    }
    else if (access & GL_MAP_INVALIDATE_RANGE_BIT) {
-      if (offset == 0 && length == obj->Size)
+      if (wholeBuffer)
          flags |= PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE;
       else
          flags |= PIPE_TRANSFER_DISCARD_RANGE;
@@ -473,15 +469,35 @@ st_bufferobj_map_range(struct gl_context *ctx,
    if (access & MESA_MAP_NOWAIT_BIT)
       flags |= PIPE_TRANSFER_DONTBLOCK;
 
+   return flags;
+}
+
+
+/**
+ * Called via glMapBufferRange().
+ */
+static void *
+st_bufferobj_map_range(struct gl_context *ctx,
+                       GLintptr offset, GLsizeiptr length, GLbitfield access,
+                       struct gl_buffer_object *obj,
+                       gl_map_buffer_index index)
+{
+   struct pipe_context *pipe = st_context(ctx)->pipe;
+   struct st_buffer_object *st_obj = st_buffer_object(obj);
+
    assert(offset >= 0);
    assert(length >= 0);
    assert(offset < obj->Size);
    assert(offset + length <= obj->Size);
 
+   const enum pipe_transfer_usage transfer_flags =
+      st_access_flags_to_transfer_flags(access,
+                                        offset == 0 && length == obj->Size);
+
    obj->Mappings[index].Pointer = pipe_buffer_map_range(pipe,
                                                         st_obj->buffer,
                                                         offset, length,
-                                                        flags,
+                                                        transfer_flags,
                                                         &st_obj->transfer[index]);
    if (obj->Mappings[index].Pointer) {
       obj->Mappings[index].Offset = offset;
