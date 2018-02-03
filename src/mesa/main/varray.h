@@ -106,6 +106,13 @@ _mesa_enable_vertex_array_attrib(struct gl_context *ctx,
                                  struct gl_vertex_array_object *vao,
                                  gl_vert_attrib attrib);
 
+
+extern void
+_mesa_disable_vertex_array_attrib(struct gl_context *ctx,
+                                  struct gl_vertex_array_object *vao,
+                                  gl_vert_attrib attrib);
+
+
 extern void
 _mesa_bind_vertex_buffer(struct gl_context *ctx,
                          struct gl_vertex_array_object *vao,
