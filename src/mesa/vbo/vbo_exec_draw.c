@@ -178,8 +178,9 @@ vbo_exec_bind_arrays(struct gl_context *ctx)
    GLuint attr;
    GLbitfield varying_inputs = 0x0;
 
-   const enum vp_mode program_mode = get_vp_mode(exec->ctx);
-   const GLubyte * const map = _vbo_attribute_alias_map[program_mode];
+   const gl_vertex_processing_mode processing_mode
+      = ctx->VertexProgram._VPMode;
+   const GLubyte * const map = _vbo_attribute_alias_map[processing_mode];
 
    /* Grab VERT_ATTRIB_{POS,GENERIC0} from VBO_ATTRIB_POS */
    const gl_attribute_map_mode mode = ATTRIBUTE_MAP_MODE_POSITION;

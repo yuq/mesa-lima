@@ -338,10 +338,11 @@ recalculate_input_bindings(struct gl_context *ctx)
    /* May shuffle the position and generic0 bits around */
    GLbitfield vp_inputs = _mesa_get_vao_vp_inputs(vao);
 
-   const enum vp_mode program_mode = get_vp_mode(ctx);
-   const GLubyte *const map = _vbo_attribute_alias_map[program_mode];
-   switch (program_mode) {
-   case VP_FF:
+   const gl_vertex_processing_mode processing_mode
+      = ctx->VertexProgram._VPMode;
+   const GLubyte * const map = _vbo_attribute_alias_map[processing_mode];
+   switch (processing_mode) {
+   case VP_MODE_FF:
       /* When no vertex program is active (or the vertex program is generated
        * from fixed-function state).  We put the material values into the
        * generic slots.  Since the vao has no material arrays, mute these
@@ -352,7 +353,7 @@ recalculate_input_bindings(struct gl_context *ctx)
 
       break;
 
-   case VP_SHADER:
+   case VP_MODE_SHADER:
       /* There are no shaders in OpenGL ES 1.x, so this code path should be
        * impossible to reach.  The meta code is careful to not use shaders in
        * ES1.

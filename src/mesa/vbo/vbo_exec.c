@@ -34,7 +34,7 @@
 
 const GLubyte
 _vbo_attribute_alias_map[VP_MODE_MAX][VERT_ATTRIB_MAX] = {
-   /* VP_FF: */
+   /* VP_MODE_FF: */
    {
       VBO_ATTRIB_POS,                 /* VERT_ATTRIB_POS */
       VBO_ATTRIB_NORMAL,              /* VERT_ATTRIB_NORMAL */
@@ -70,7 +70,7 @@ _vbo_attribute_alias_map[VP_MODE_MAX][VERT_ATTRIB_MAX] = {
       VBO_ATTRIB_MAT_BACK_INDEXES     /* VERT_ATTRIB_GENERIC15 */
    },
 
-   /* VP_SHADER: */
+   /* VP_MODE_SHADER: */
    {
       VBO_ATTRIB_POS,                 /* VERT_ATTRIB_POS */
       VBO_ATTRIB_NORMAL,              /* VERT_ATTRIB_NORMAL */
