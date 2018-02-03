@@ -1608,6 +1608,13 @@ struct gl_vertex_array_object
    GLboolean EverBound;
 
    /**
+    * Marked to true if the object is shared between contexts and immutable.
+    * Then reference counting is done using atomics and thread safe.
+    * Is used for dlist VAOs.
+    */
+   bool SharedAndImmutable;
+
+   /**
     * Derived vertex attribute arrays
     *
     * This is a legacy data structure created from gl_array_attributes and
