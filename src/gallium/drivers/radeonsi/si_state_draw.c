@@ -296,7 +296,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	/* Set userdata SGPRs for TES. */
 	radeon_set_sh_reg_seq(cs, tes_sh_base + SI_SGPR_TES_OFFCHIP_LAYOUT * 4, 2);
 	radeon_emit(cs, offchip_layout);
-	radeon_emit(cs, r600_resource(sctx->tess_offchip_ring)->gpu_address >> 16);
+	radeon_emit(cs, r600_resource(sctx->tess_rings)->gpu_address >> 16);
 
 	ls_hs_config = S_028B58_NUM_PATCHES(*num_patches) |
 		       S_028B58_HS_NUM_INPUT_CP(num_tcs_input_cp) |

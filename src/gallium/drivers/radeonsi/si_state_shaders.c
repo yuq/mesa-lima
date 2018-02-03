@@ -2970,38 +2970,29 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 
 static void si_init_tess_factor_ring(struct si_context *sctx)
 {
-	assert(!sctx->tf_ring);
+	assert(!sctx->tess_rings);
 
 	/* Use 64K alignment for both rings, so that we can pass the address
 	 * to shaders as one SGPR containing bits [16:47].
 	 */
-	sctx->tf_ring = si_aligned_buffer_create(sctx->b.b.screen,
-						 R600_RESOURCE_FLAG_UNMAPPABLE,
-						 PIPE_USAGE_DEFAULT,
-						 sctx->screen->tess_factor_ring_size,
-						 64 * 1024);
-	if (!sctx->tf_ring)
-		return;
-
-	sctx->tess_offchip_ring =
-		si_aligned_buffer_create(sctx->b.b.screen,
-					 R600_RESOURCE_FLAG_UNMAPPABLE,
-					 PIPE_USAGE_DEFAULT,
-					 sctx->screen->tess_offchip_ring_size,
-					 64 * 1024);
-	if (!sctx->tess_offchip_ring)
+	sctx->tess_rings = si_aligned_buffer_create(sctx->b.b.screen,
+						    R600_RESOURCE_FLAG_UNMAPPABLE,
+						    PIPE_USAGE_DEFAULT,
+						    align(sctx->screen->tess_offchip_ring_size,
+							  64 * 1024) +
+						    sctx->screen->tess_factor_ring_size,
+						    64 * 1024);
+	if (!sctx->tess_rings)
 		return;
 
 	si_init_config_add_vgt_flush(sctx);
 
-	uint64_t offchip_va = r600_resource(sctx->tess_offchip_ring)->gpu_address;
-	uint64_t factor_va = r600_resource(sctx->tf_ring)->gpu_address;
+	uint64_t offchip_va = r600_resource(sctx->tess_rings)->gpu_address;
 	assert((offchip_va & 0xffff) == 0);
-	assert((factor_va & 0xffff) == 0);
+	uint64_t factor_va = offchip_va +
+			     align(sctx->screen->tess_offchip_ring_size, 64 * 1024);
 
-	si_pm4_add_bo(sctx->init_config, r600_resource(sctx->tess_offchip_ring),
-		      RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RINGS);
-	si_pm4_add_bo(sctx->init_config, r600_resource(sctx->tf_ring),
+	si_pm4_add_bo(sctx->init_config, r600_resource(sctx->tess_rings),
 		      RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RINGS);
 
 	/* Append these registers to the init config state. */
@@ -3138,9 +3129,9 @@ bool si_update_shaders(struct si_context *sctx)
 
 	/* Update stages before GS. */
 	if (sctx->tes_shader.cso) {
-		if (!sctx->tf_ring) {
+		if (!sctx->tess_rings) {
 			si_init_tess_factor_ring(sctx);
-			if (!sctx->tf_ring)
+			if (!sctx->tess_rings)
 				return false;
 		}
 
