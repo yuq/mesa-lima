@@ -1323,15 +1323,13 @@ static LLVMValueRef fetch_input_tes(
 	enum tgsi_opcode_type type, unsigned swizzle)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMValueRef buffer, base, addr;
-
-	buffer = get_tess_ring_descriptor(ctx, TESS_OFFCHIP_RING_TES);
+	LLVMValueRef base, addr;
 
 	base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 	addr = get_tcs_tes_buffer_address_from_reg(ctx, NULL, reg);
 
 	return buffer_load(bld_base, tgsi2llvmtype(bld_base, type), swizzle,
-			   buffer, base, addr, true);
+			   ctx->tess_offchip_ring, base, addr, true);
 }
 
 LLVMValueRef si_nir_load_input_tes(struct ac_shader_abi *abi,
@@ -1349,11 +1347,9 @@ LLVMValueRef si_nir_load_input_tes(struct ac_shader_abi *abi,
 {
 	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	struct tgsi_shader_info *info = &ctx->shader->selector->info;
-	LLVMValueRef buffer, base, addr;
+	LLVMValueRef base, addr;
 
 	driver_location = driver_location / 4;
-
-	buffer = get_tess_ring_descriptor(ctx, TESS_OFFCHIP_RING_TES);
 
 	base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 
@@ -1378,7 +1374,8 @@ LLVMValueRef si_nir_load_input_tes(struct ac_shader_abi *abi,
 	 */
 	LLVMValueRef value[4];
 	for (unsigned i = component; i < num_components + component; i++) {
-		value[i] = buffer_load(&ctx->bld_base, type, i, buffer, base, addr, true);
+		value[i] = buffer_load(&ctx->bld_base, type, i,
+				       ctx->tess_offchip_ring, base, addr, true);
 	}
 
 	return ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
@@ -1992,18 +1989,16 @@ static LLVMValueRef si_load_tess_coord(struct ac_shader_abi *abi)
 static LLVMValueRef load_tess_level(struct si_shader_context *ctx,
 				    unsigned semantic_name)
 {
-	LLVMValueRef buffer, base, addr;
+	LLVMValueRef base, addr;
 
 	int param = si_shader_io_get_unique_index_patch(semantic_name, 0);
-
-	buffer = get_tess_ring_descriptor(ctx, TESS_OFFCHIP_RING_TES);
 
 	base = LLVMGetParam(ctx->main_fn, ctx->param_tcs_offchip_offset);
 	addr = get_tcs_tes_buffer_address(ctx, get_rel_patch_id(ctx), NULL,
 					  LLVMConstInt(ctx->i32, param, 0));
 
 	return buffer_load(&ctx->bld_base, ctx->f32,
-			   ~0, buffer, base, addr, true);
+			   ~0, ctx->tess_offchip_ring, base, addr, true);
 
 }
 
@@ -5080,6 +5075,8 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 
 			ctx->gsvs_ring[stream] = ring;
 		}
+	} else if (ctx->type == PIPE_SHADER_TESS_EVAL) {
+		ctx->tess_offchip_ring = get_tess_ring_descriptor(ctx, TESS_OFFCHIP_RING_TES);
 	}
 }
 

@@ -191,6 +191,7 @@ struct si_shader_context {
 	/* Preloaded descriptors. */
 	LLVMValueRef esgs_ring;
 	LLVMValueRef gsvs_ring[4];
+	LLVMValueRef tess_offchip_ring;
 
 	LLVMValueRef invoc0_tess_factors[6]; /* outer[4], inner[2] */
 	LLVMValueRef gs_next_vertex[4];
