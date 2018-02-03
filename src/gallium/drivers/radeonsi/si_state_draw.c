@@ -231,10 +231,14 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	assert(num_tcs_input_cp <= 32);
 	assert(num_tcs_output_cp <= 32);
 
+	uint64_t ring_va = r600_resource(sctx->tess_rings)->gpu_address;
+	assert((ring_va & u_bit_consecutive(0, 19)) == 0);
+
 	tcs_in_layout = S_VS_STATE_LS_OUT_PATCH_SIZE(input_patch_size / 4) |
 			S_VS_STATE_LS_OUT_VERTEX_SIZE(input_vertex_size / 4);
 	tcs_out_layout = (output_patch_size / 4) |
-			 (num_tcs_input_cp << 13);
+			 (num_tcs_input_cp << 13) |
+			 ring_va;
 	tcs_out_offsets = (output_patch0_offset / 16) |
 			  ((perpatch_output_offset / 16) << 16);
 	offchip_layout = *num_patches |
@@ -296,7 +300,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	/* Set userdata SGPRs for TES. */
 	radeon_set_sh_reg_seq(cs, tes_sh_base + SI_SGPR_TES_OFFCHIP_LAYOUT * 4, 2);
 	radeon_emit(cs, offchip_layout);
-	radeon_emit(cs, r600_resource(sctx->tess_rings)->gpu_address >> 16);
+	radeon_emit(cs, ring_va);
 
 	ls_hs_config = S_028B58_NUM_PATCHES(*num_patches) |
 		       S_028B58_HS_NUM_INPUT_CP(num_tcs_input_cp) |
