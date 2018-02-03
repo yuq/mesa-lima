@@ -104,6 +104,9 @@ struct si_screen {
 
 	unsigned			gs_table_depth;
 	unsigned			tess_offchip_block_dw_size;
+	unsigned			tess_offchip_ring_size;
+	unsigned			tess_factor_ring_size;
+	unsigned			vgt_hs_offchip_param;
 	bool				has_clear_state;
 	bool				has_distributed_tess;
 	bool				has_draw_indirect_multi;

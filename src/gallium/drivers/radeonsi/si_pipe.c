@@ -749,11 +749,45 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws,
 	if (!debug_get_bool_option("RADEON_DISABLE_PERFCOUNTERS", false))
 		si_init_perfcounters(sscreen);
 
+	/* Determine tessellation ring info. */
+	bool double_offchip_buffers = sscreen->info.chip_class >= CIK &&
+				      sscreen->info.family != CHIP_CARRIZO &&
+				      sscreen->info.family != CHIP_STONEY;
+	/* This must be one less than the maximum number due to a hw limitation.
+	 * Various hardware bugs in SI, CIK, and GFX9 need this.
+	 */
+	unsigned max_offchip_buffers_per_se = double_offchip_buffers ? 127 : 63;
+	unsigned max_offchip_buffers = max_offchip_buffers_per_se *
+				       sscreen->info.max_se;
+	unsigned offchip_granularity;
+
 	/* Hawaii has a bug with offchip buffers > 256 that can be worked
 	 * around by setting 4K granularity.
 	 */
-	sscreen->tess_offchip_block_dw_size =
-		sscreen->info.family == CHIP_HAWAII ? 4096 : 8192;
+	if (sscreen->info.family == CHIP_HAWAII) {
+		sscreen->tess_offchip_block_dw_size = 4096;
+		offchip_granularity = V_03093C_X_4K_DWORDS;
+	} else {
+		sscreen->tess_offchip_block_dw_size = 8192;
+		offchip_granularity = V_03093C_X_8K_DWORDS;
+	}
+
+	sscreen->tess_factor_ring_size = 32768 * sscreen->info.max_se;
+	assert(((sscreen->tess_factor_ring_size / 4) & C_030938_SIZE) == 0);
+	sscreen->tess_offchip_ring_size = max_offchip_buffers *
+					  sscreen->tess_offchip_block_dw_size * 4;
+
+	if (sscreen->info.chip_class >= CIK) {
+		if (sscreen->info.chip_class >= VI)
+			--max_offchip_buffers;
+		sscreen->vgt_hs_offchip_param =
+			S_03093C_OFFCHIP_BUFFERING(max_offchip_buffers) |
+			S_03093C_OFFCHIP_GRANULARITY(offchip_granularity);
+	} else {
+		assert(offchip_granularity == V_03093C_X_8K_DWORDS);
+		sscreen->vgt_hs_offchip_param =
+			S_0089B0_OFFCHIP_BUFFERING(max_offchip_buffers);
+	}
 
 	/* The mere presense of CLEAR_STATE in the IB causes random GPU hangs
 	 * on SI. */
