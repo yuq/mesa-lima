@@ -36,6 +36,7 @@
 #include "vbo/vbo_exec.h"
 #include "vbo/vbo_save.h"
 #include "main/mtypes.h"
+#include "main/varray.h"
 
 
 struct _glapi_table;
@@ -170,6 +171,58 @@ vbo_can_merge_prims(const struct _mesa_prim *p0, const struct _mesa_prim *p1);
 
 void
 vbo_merge_prims(struct _mesa_prim *p0, const struct _mesa_prim *p1);
+
+
+/**
+ * Get the filter mask for vbo draws depending on the vertex_processing_mode.
+ */
+static inline GLbitfield
+_vbo_get_vao_filter(gl_vertex_processing_mode vertex_processing_mode)
+{
+   if (vertex_processing_mode == VP_MODE_FF) {
+      /* The materials mapped into the generic arrays */
+      return VERT_BIT_FF_ALL | VERT_BIT_MAT_ALL;
+   } else {
+      return VERT_BIT_ALL;
+   }
+}
+
+
+/**
+ * Translate the bitmask of VBO_ATTRIB_BITs to VERT_ATTRIB_BITS.
+ * Note that position/generic0 attribute aliasing is done
+ * generically in the VAO.
+ */
+static inline GLbitfield
+_vbo_get_vao_enabled_from_vbo(gl_vertex_processing_mode vertex_processing_mode,
+                              GLbitfield64 enabled)
+{
+   if (vertex_processing_mode == VP_MODE_FF) {
+      /* The materials mapped into the generic arrays */
+      return (((GLbitfield)enabled) & VERT_BIT_FF_ALL)
+         | (((GLbitfield)(enabled >> VBO_MATERIAL_SHIFT)) & VERT_BIT_MAT_ALL);
+   } else {
+      return ((GLbitfield)enabled) & VERT_BIT_ALL;
+   }
+}
+
+
+/**
+ * Set the vertex attrib for vbo draw use.
+ */
+static inline void
+_vbo_set_attrib_format(struct gl_context *ctx,
+                       struct gl_vertex_array_object *vao,
+                       gl_vert_attrib attr, GLintptr buffer_offset,
+                       GLubyte size, GLenum16 type, GLuint offset)
+{
+   const GLboolean integer = vbo_attrtype_to_integer_flag(type);
+   const GLboolean doubles = vbo_attrtype_to_double_flag(type);
+   _mesa_update_array_format(ctx, vao, attr, size, type, GL_RGBA,
+                             GL_FALSE, integer, doubles, offset);
+   /* Ptr for userspace arrays */
+   vao->VertexAttrib[attr].Ptr = ADD_POINTERS(buffer_offset, offset);
+}
 
 
 #endif /* VBO_PRIVATE_H */
