@@ -155,11 +155,11 @@ update_attribute_map_mode(const struct gl_context *ctx,
  * Sets the BufferBindingIndex field for the vertex attribute given by
  * attribIndex.
  */
-static void
-vertex_attrib_binding(struct gl_context *ctx,
-                      struct gl_vertex_array_object *vao,
-                      gl_vert_attrib attribIndex,
-                      GLuint bindingIndex)
+void
+_mesa_vertex_attrib_binding(struct gl_context *ctx,
+                            struct gl_vertex_array_object *vao,
+                            gl_vert_attrib attribIndex,
+                            GLuint bindingIndex, bool flush_vertices)
 {
    struct gl_array_attributes *array = &vao->VertexAttrib[attribIndex];
 
@@ -171,7 +171,9 @@ vertex_attrib_binding(struct gl_context *ctx,
       else
          vao->VertexAttribBufferMask &= ~array_bit;
 
-      FLUSH_VERTICES(ctx, _NEW_ARRAY);
+      if (flush_vertices) {
+         FLUSH_VERTICES(ctx, _NEW_ARRAY);
+      }
 
       vao->BufferBinding[array->BufferBindingIndex]._BoundArrays &= ~array_bit;
       vao->BufferBinding[bindingIndex]._BoundArrays |= array_bit;
@@ -592,7 +594,7 @@ update_array(struct gl_context *ctx,
                              normalized, integer, doubles, 0);
 
    /* Reset the vertex attrib binding */
-   vertex_attrib_binding(ctx, vao, attrib, attrib);
+   _mesa_vertex_attrib_binding(ctx, vao, attrib, attrib, true);
 
    /* The Stride and Ptr fields are not set by update_array_format() */
    struct gl_array_attributes *array = &vao->VertexAttrib[attrib];
@@ -2030,7 +2032,7 @@ _mesa_VertexAttribDivisor_no_error(GLuint index, GLuint divisor)
     *       VertexAttribBinding(index, index);
     *       VertexBindingDivisor(index, divisor);"
     */
-   vertex_attrib_binding(ctx, vao, genericIndex, genericIndex);
+   _mesa_vertex_attrib_binding(ctx, vao, genericIndex, genericIndex, true);
    vertex_binding_divisor(ctx, vao, genericIndex, divisor);
 }
 
@@ -2072,7 +2074,7 @@ _mesa_VertexAttribDivisor(GLuint index, GLuint divisor)
     *       VertexAttribBinding(index, index);
     *       VertexBindingDivisor(index, divisor);"
     */
-   vertex_attrib_binding(ctx, vao, genericIndex, genericIndex);
+   _mesa_vertex_attrib_binding(ctx, vao, genericIndex, genericIndex, true);
    vertex_binding_divisor(ctx, vao, genericIndex, divisor);
 }
 
@@ -2674,9 +2676,9 @@ vertex_array_attrib_binding(struct gl_context *ctx,
 
    assert(VERT_ATTRIB_GENERIC(attribIndex) < ARRAY_SIZE(vao->VertexAttrib));
 
-   vertex_attrib_binding(ctx, vao,
-                         VERT_ATTRIB_GENERIC(attribIndex),
-                         VERT_ATTRIB_GENERIC(bindingIndex));
+   _mesa_vertex_attrib_binding(ctx, vao,
+                               VERT_ATTRIB_GENERIC(attribIndex),
+                               VERT_ATTRIB_GENERIC(bindingIndex), true);
 }
 
 
@@ -2684,9 +2686,9 @@ void GLAPIENTRY
 _mesa_VertexAttribBinding_no_error(GLuint attribIndex, GLuint bindingIndex)
 {
    GET_CURRENT_CONTEXT(ctx);
-   vertex_attrib_binding(ctx, ctx->Array.VAO,
-                         VERT_ATTRIB_GENERIC(attribIndex),
-                         VERT_ATTRIB_GENERIC(bindingIndex));
+   _mesa_vertex_attrib_binding(ctx, ctx->Array.VAO,
+                               VERT_ATTRIB_GENERIC(attribIndex),
+                               VERT_ATTRIB_GENERIC(bindingIndex), true);
 }
 
 
@@ -2720,9 +2722,9 @@ _mesa_VertexArrayAttribBinding_no_error(GLuint vaobj, GLuint attribIndex,
    GET_CURRENT_CONTEXT(ctx);
 
    struct gl_vertex_array_object *vao = _mesa_lookup_vao(ctx, vaobj);
-   vertex_attrib_binding(ctx, vao,
-                         VERT_ATTRIB_GENERIC(attribIndex),
-                         VERT_ATTRIB_GENERIC(bindingIndex));
+   _mesa_vertex_attrib_binding(ctx, vao,
+                               VERT_ATTRIB_GENERIC(attribIndex),
+                               VERT_ATTRIB_GENERIC(bindingIndex), true);
 }
 
 
