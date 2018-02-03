@@ -234,6 +234,7 @@ _vbo_CreateContext(struct gl_context *ctx)
    init_legacy_currval(ctx);
    init_generic_currval(ctx);
    init_mat_currval(ctx);
+   _vbo_init_inputs(&vbo->draw_arrays);
    vbo_set_indirect_draw_func(ctx, vbo_draw_indirect_prims);
 
    /* make sure all VBO_ATTRIB_ values can fit in an unsigned byte */
