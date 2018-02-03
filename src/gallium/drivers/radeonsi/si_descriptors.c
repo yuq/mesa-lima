@@ -1999,20 +1999,17 @@ void si_shader_change_notify(struct si_context *sctx)
 }
 
 static void si_emit_shader_pointer_head(struct radeon_winsys_cs *cs,
-					struct si_descriptors *desc,
-					unsigned sh_base,
+					unsigned sh_offset,
 					unsigned pointer_count)
 {
 	radeon_emit(cs, PKT3(PKT3_SET_SH_REG, pointer_count * (HAVE_32BIT_POINTERS ? 1 : 2), 0));
-	radeon_emit(cs, (sh_base + desc->shader_userdata_offset - SI_SH_REG_OFFSET) >> 2);
+	radeon_emit(cs, (sh_offset - SI_SH_REG_OFFSET) >> 2);
 }
 
 static void si_emit_shader_pointer_body(struct si_screen *sscreen,
 					struct radeon_winsys_cs *cs,
-					struct si_descriptors *desc)
+					uint64_t va)
 {
-	uint64_t va = desc->gpu_address;
-
 	radeon_emit(cs, va);
 
 	if (HAVE_32BIT_POINTERS)
@@ -2026,9 +2023,10 @@ static void si_emit_shader_pointer(struct si_context *sctx,
 				   unsigned sh_base)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	unsigned sh_offset = sh_base + desc->shader_userdata_offset;
 
-	si_emit_shader_pointer_head(cs, desc, sh_base, 1);
-	si_emit_shader_pointer_body(sctx->screen, cs, desc);
+	si_emit_shader_pointer_head(cs, sh_offset, 1);
+	si_emit_shader_pointer_body(sctx->screen, cs, desc->gpu_address);
 }
 
 static void si_emit_consecutive_shader_pointers(struct si_context *sctx,
@@ -2046,10 +2044,12 @@ static void si_emit_consecutive_shader_pointers(struct si_context *sctx,
 		u_bit_scan_consecutive_range(&mask, &start, &count);
 
 		struct si_descriptors *descs = &sctx->descriptors[start];
+		unsigned sh_offset = sh_base + descs->shader_userdata_offset;
 
-		si_emit_shader_pointer_head(cs, descs, sh_base, count);
+		si_emit_shader_pointer_head(cs, sh_offset, count);
 		for (int i = 0; i < count; i++)
-			si_emit_shader_pointer_body(sctx->screen, cs, descs + i);
+			si_emit_shader_pointer_body(sctx->screen, cs,
+						    descs[i].gpu_address);
 	}
 }
 
@@ -2065,9 +2065,10 @@ static void si_emit_disjoint_shader_pointers(struct si_context *sctx,
 
 	while (mask) {
 		struct si_descriptors *descs = &sctx->descriptors[u_bit_scan(&mask)];
+		unsigned sh_offset = sh_base + descs->shader_userdata_offset;
 
-		si_emit_shader_pointer_head(cs, descs, sh_base, 1);
-		si_emit_shader_pointer_body(sctx->screen, cs, descs);
+		si_emit_shader_pointer_head(cs, sh_offset, 1);
+		si_emit_shader_pointer_body(sctx->screen, cs, descs->gpu_address);
 	}
 }
 
