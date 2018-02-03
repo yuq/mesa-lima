@@ -2265,7 +2265,8 @@ static uint64_t si_create_texture_handle(struct pipe_context *ctx,
 
 	handle = tex_handle->desc_slot;
 
-	if (!_mesa_hash_table_insert(sctx->tex_handles, (void *)handle,
+	if (!_mesa_hash_table_insert(sctx->tex_handles,
+				     (void *)(uintptr_t)handle,
 				     tex_handle)) {
 		FREE(tex_handle);
 		return 0;
@@ -2284,7 +2285,8 @@ static void si_delete_texture_handle(struct pipe_context *ctx, uint64_t handle)
 	struct si_texture_handle *tex_handle;
 	struct hash_entry *entry;
 
-	entry = _mesa_hash_table_search(sctx->tex_handles, (void *)handle);
+	entry = _mesa_hash_table_search(sctx->tex_handles,
+					(void *)(uintptr_t)handle);
 	if (!entry)
 		return;
 
@@ -2306,7 +2308,8 @@ static void si_make_texture_handle_resident(struct pipe_context *ctx,
 	struct si_sampler_view *sview;
 	struct hash_entry *entry;
 
-	entry = _mesa_hash_table_search(sctx->tex_handles, (void *)handle);
+	entry = _mesa_hash_table_search(sctx->tex_handles,
+					(void *)(uintptr_t)handle);
 	if (!entry)
 		return;
 
@@ -2408,7 +2411,8 @@ static uint64_t si_create_image_handle(struct pipe_context *ctx,
 
 	handle = img_handle->desc_slot;
 
-	if (!_mesa_hash_table_insert(sctx->img_handles, (void *)handle,
+	if (!_mesa_hash_table_insert(sctx->img_handles,
+				     (void *)(uintptr_t)handle,
 				     img_handle)) {
 		FREE(img_handle);
 		return 0;
@@ -2427,7 +2431,8 @@ static void si_delete_image_handle(struct pipe_context *ctx, uint64_t handle)
 	struct si_image_handle *img_handle;
 	struct hash_entry *entry;
 
-	entry = _mesa_hash_table_search(sctx->img_handles, (void *)handle);
+	entry = _mesa_hash_table_search(sctx->img_handles,
+					(void *)(uintptr_t)handle);
 	if (!entry)
 		return;
 
@@ -2448,7 +2453,8 @@ static void si_make_image_handle_resident(struct pipe_context *ctx,
 	struct r600_resource *res;
 	struct hash_entry *entry;
 
-	entry = _mesa_hash_table_search(sctx->img_handles, (void *)handle);
+	entry = _mesa_hash_table_search(sctx->img_handles,
+					(void *)(uintptr_t)handle);
 	if (!entry)
 		return;
 
