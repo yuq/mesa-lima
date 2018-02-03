@@ -69,33 +69,6 @@ vbo_context(struct gl_context *ctx)
 
 
 /**
- * Current vertex processing mode: fixed function vs. shader.
- * In reality, fixed function is probably implemented by a shader but that's
- * not what we care about here.
- */
-enum vp_mode {
-   VP_FF,    /**< legacy / fixed function */
-   VP_SHADER, /**< ARB vertex program or GLSL vertex shader */
-   VP_MODE_MAX /**< for sizing arrays */
-};
-
-
-/**
- * Get current vertex processing mode (fixed function vs. shader).
- */
-static inline enum vp_mode
-get_vp_mode( struct gl_context *ctx )
-{
-   if (!ctx->VertexProgram._Current)
-      return VP_FF;
-   else if (ctx->VertexProgram._Current == ctx->VertexProgram._TnlProgram)
-      return VP_FF;
-   else
-      return VP_SHADER;
-}
-
-
-/**
  * Array to apply the fixed function material aliasing map to
  * an attribute value used in vbo processing inputs to an attribute
  * as they appear in the vao.
