@@ -176,6 +176,15 @@ optimizations = [
    (('fmin',                        ('b2f(is_used_once)', a),           ('b2f', b)),           ('b2f', ('iand', a, b))),
    (('fmin', ('fneg(is_used_once)', ('b2f(is_used_once)', a)), ('fneg', ('b2f', b))), ('fneg', ('b2f', ('iand', a, b)))),
 
+   # fmin(b2f(a), b)
+   # bcsel(a, fmin(b2f(a), b), fmin(b2f(a), b))
+   # bcsel(a, fmin(b2f(True), b), fmin(b2f(False), b))
+   # bcsel(a, fmin(1.0, b), fmin(0.0, b))
+   #
+   # Since b is a constant, constant folding will eliminate the fmin and the
+   # fmax.  If b is > 1.0, the bcsel will be replaced with a b2f.
+   (('fmin', ('b2f', a), '#b'), ('bcsel', a, ('fmin', b, 1.0), ('fmin', b, 0.0))),
+
    # ignore this opt when the result is used by a bcsel or if so we can make
    # use of conditional modifiers on supported hardware.
    (('flt(is_not_used_by_conditional)', ('fadd(is_used_once)', a, ('fneg', b)), 0.0), ('flt', a, b)),
