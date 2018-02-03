@@ -1443,7 +1443,6 @@ typedef enum
  */
 struct gl_buffer_object
 {
-   simple_mtx_t Mutex;
    GLint RefCount;
    GLuint Name;
    GLchar *Label;       /**< GL_KHR_debug */
@@ -1464,6 +1463,7 @@ struct gl_buffer_object
    struct gl_buffer_mapping Mappings[MAP_COUNT];
 
    /** Memoization of min/max index computations for static index buffers */
+   simple_mtx_t MinMaxCacheMutex;
    struct hash_table *MinMaxCache;
    unsigned MinMaxCacheHitIndices;
    unsigned MinMaxCacheMissIndices;
