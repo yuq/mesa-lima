@@ -740,10 +740,20 @@ static void si_dump_descriptors(struct si_context *sctx,
 		enabled_images = sctx->images[processor].enabled_mask;
 	}
 
-	if (processor == PIPE_SHADER_VERTEX) {
+	if (processor == PIPE_SHADER_VERTEX &&
+	    sctx->vb_descriptors_buffer &&
+	    sctx->vb_descriptors_gpu_list &&
+	    sctx->vertex_elements) {
 		assert(info); /* only CS may not have an info struct */
+		struct si_descriptors desc = {};
 
-		si_dump_descriptor_list(sctx->screen, &sctx->vertex_buffers, name,
+		desc.buffer = sctx->vb_descriptors_buffer;
+		desc.list = sctx->vb_descriptors_gpu_list;
+		desc.gpu_list = sctx->vb_descriptors_gpu_list;
+		desc.element_dw_size = 4;
+		desc.num_active_slots = sctx->vertex_elements->desc_list_byte_size / 16;
+
+		si_dump_descriptor_list(sctx->screen, &desc, name,
 					" - Vertex buffer", 4, info->num_inputs,
 					si_identity, log);
 	}

@@ -216,7 +216,7 @@ void si_begin_new_cs(struct si_context *ctx)
 		ctx->prefetch_L2_mask |= SI_PREFETCH_VS;
 	if (ctx->queued.named.ps)
 		ctx->prefetch_L2_mask |= SI_PREFETCH_PS;
-	if (ctx->vertex_buffers.buffer && ctx->vertex_elements)
+	if (ctx->vb_descriptors_buffer && ctx->vertex_elements)
 		ctx->prefetch_L2_mask |= SI_PREFETCH_VBO_DESCRIPTORS;
 
 	/* CLEAR_STATE disables all colorbuffers, so only enable bound ones. */

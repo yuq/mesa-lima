@@ -497,8 +497,12 @@ struct si_context {
 	bool				flatshade;
 	bool				do_update_shaders;
 
+	/* vertex buffer descriptors */
+	uint32_t *vb_descriptors_gpu_list;
+	struct r600_resource *vb_descriptors_buffer;
+	unsigned vb_descriptors_offset;
+
 	/* shader descriptors */
-	struct si_descriptors		vertex_buffers;
 	struct si_descriptors		descriptors[SI_NUM_DESCS];
 	unsigned			descriptors_dirty;
 	unsigned			shader_pointers_dirty;
