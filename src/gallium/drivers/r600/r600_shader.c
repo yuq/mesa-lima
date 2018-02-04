@@ -1138,6 +1138,11 @@ static int allocate_system_value_inputs(struct r600_shader_ctx *ctx, int gpr_off
 
 	tgsi_parse_free(&parse);
 
+	if (ctx->info.reads_samplemask &&
+	    (ctx->info.uses_linear_sample || ctx->info.uses_linear_sample)) {
+		inputs[1].enabled = true;
+	}
+
 	if (ctx->bc->chip_class >= EVERGREEN) {
 		int num_baryc = 0;
 		/* assign gpr to each interpolator according to priority */
@@ -3503,8 +3508,57 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			r = eg_load_helper_invocation(&ctx);
 		if (r)
 			return r;
-
 	}
+
+	/*
+	 * XXX this relies on fixed_pt_position_gpr only being present when
+	 * this shader should be executed per sample. Should be the case for now...
+	 */
+	if (ctx.fixed_pt_position_gpr != -1 && ctx.info.reads_samplemask) {
+		/*
+		 * Fix up sample mask. The hw always gives us coverage mask for
+		 * the pixel. However, for per-sample shading, we need the
+		 * coverage for the shader invocation only.
+		 * Also, with disabled msaa, only the first bit should be set
+		 * (luckily the same fixup works for both problems).
+		 * For now, we can only do it if we know this shader is always
+		 * executed per sample (due to usage of bits in the shader
+		 * forcing per-sample execution).
+		 * If the fb is not multisampled, we'd do unnecessary work but
+		 * it should still be correct.
+		 * It will however do nothing for sample shading according
+		 * to MinSampleShading.
+		 */
+		struct r600_bytecode_alu alu;
+		int tmp = r600_get_temp(&ctx);
+		assert(ctx.face_gpr != -1);
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+
+		alu.op = ALU_OP2_LSHL_INT;
+		alu.src[0].sel = V_SQ_ALU_SRC_LITERAL;
+		alu.src[0].value = 0x1;
+		alu.src[1].sel = ctx.fixed_pt_position_gpr;
+		alu.src[1].chan = 3;
+		alu.dst.sel = tmp;
+		alu.dst.chan = 0;
+		alu.dst.write = 1;
+		alu.last = 1;
+		if ((r = r600_bytecode_add_alu(ctx.bc, &alu)))
+			return r;
+
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ALU_OP2_AND_INT;
+		alu.src[0].sel = tmp;
+		alu.src[1].sel = ctx.face_gpr;
+		alu.src[1].chan = 2;
+		alu.dst.sel = ctx.face_gpr;
+		alu.dst.chan = 2;
+		alu.dst.write = 1;
+		alu.last = 1;
+		if ((r = r600_bytecode_add_alu(ctx.bc, &alu)))
+			return r;
+	}
+
 	if (ctx.fragcoord_input >= 0) {
 		if (ctx.bc->chip_class == CAYMAN) {
 			for (j = 0 ; j < 4; j++) {
