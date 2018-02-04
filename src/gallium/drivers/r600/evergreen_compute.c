@@ -571,7 +571,8 @@ static void evergreen_compute_upload_input(struct pipe_context *ctx,
 }
 
 static void evergreen_emit_dispatch(struct r600_context *rctx,
-				    const struct pipe_grid_info *info)
+				    const struct pipe_grid_info *info,
+				    uint32_t indirect_grid[3])
 {
 	int i;
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
@@ -631,15 +632,11 @@ static void evergreen_emit_dispatch(struct r600_context *rctx,
 					lds_size | (num_waves << 14));
 
 	if (info->indirect) {
-		struct r600_resource *indirect_resource = (struct r600_resource *)info->indirect;
-		unsigned *data = r600_buffer_map_sync_with_rings(&rctx->b, indirect_resource, PIPE_TRANSFER_READ);
-		if (data) {
-			radeon_emit(cs, PKT3C(PKT3_DISPATCH_DIRECT, 3, 0));
-			radeon_emit(cs, data[0]);
-			radeon_emit(cs, data[1]);
-			radeon_emit(cs, data[2]);
-			radeon_emit(cs, 1);
-		}
+		radeon_emit(cs, PKT3C(PKT3_DISPATCH_DIRECT, 3, 0));
+		radeon_emit(cs, indirect_grid[0]);
+		radeon_emit(cs, indirect_grid[1]);
+		radeon_emit(cs, indirect_grid[2]);
+		radeon_emit(cs, 1);
 	} else {
 		/* Dispatch packet */
 		radeon_emit(cs, PKT3C(PKT3_DISPATCH_DIRECT, 3, 0));
@@ -703,6 +700,7 @@ static void compute_emit_cs(struct r600_context *rctx,
 	struct r600_pipe_shader *current;
 	struct r600_shader_atomic combined_atomics[8];
 	uint8_t atomic_used_mask;
+	uint32_t indirect_grid[3] = { 0, 0, 0 };
 
 	/* make sure that the gfx ring is only one active */
 	if (radeon_emitted(rctx->b.dma.cs, 0)) {
@@ -729,9 +727,17 @@ static void compute_emit_cs(struct r600_context *rctx,
 		bool need_buf_const = current->shader.uses_tex_buffers ||
 			current->shader.has_txq_cube_array_z_comp;
 
+		if (info->indirect) {
+			struct r600_resource *indirect_resource = (struct r600_resource *)info->indirect;
+			unsigned *data = r600_buffer_map_sync_with_rings(&rctx->b, indirect_resource, PIPE_TRANSFER_READ);
+			unsigned offset = info->indirect_offset / 4;
+			indirect_grid[0] = data[offset];
+			indirect_grid[1] = data[offset + 1];
+			indirect_grid[2] = data[offset + 2];
+		}
 		for (int i = 0; i < 3; i++) {
 			rctx->cs_block_grid_sizes[i] = info->block[i];
-			rctx->cs_block_grid_sizes[i + 4] = info->grid[i];
+			rctx->cs_block_grid_sizes[i + 4] = info->indirect ? indirect_grid[i] : info->grid[i];
 		}
 		rctx->cs_block_grid_sizes[3] = rctx->cs_block_grid_sizes[7] = 0;
 		rctx->driver_consts[PIPE_SHADER_COMPUTE].cs_block_grid_size_dirty = true;
@@ -802,7 +808,7 @@ static void compute_emit_cs(struct r600_context *rctx,
 	r600_emit_atom(rctx, &rctx->cs_shader_state.atom);
 
 	/* Emit dispatch state and dispatch packet */
-	evergreen_emit_dispatch(rctx, info);
+	evergreen_emit_dispatch(rctx, info, indirect_grid);
 
 	/* XXX evergreen_flush_emit() hardcodes the CP_COHER_SIZE to 0xffffffff
 	 */
