@@ -577,6 +577,7 @@ static void evergreen_emit_dispatch(struct r600_context *rctx,
 	int i;
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_pipe_compute *shader = rctx->cs_shader_state.shader;
+	bool render_cond_bit = rctx->b.render_cond && !rctx->b.render_cond_force_off;
 	unsigned num_waves;
 	unsigned num_pipes = rctx->screen->b.info.r600_max_quad_pipes;
 	unsigned wave_divisor = (16 * num_pipes);
@@ -632,14 +633,14 @@ static void evergreen_emit_dispatch(struct r600_context *rctx,
 					lds_size | (num_waves << 14));
 
 	if (info->indirect) {
-		radeon_emit(cs, PKT3C(PKT3_DISPATCH_DIRECT, 3, 0));
+		radeon_emit(cs, PKT3C(PKT3_DISPATCH_DIRECT, 3, render_cond_bit));
 		radeon_emit(cs, indirect_grid[0]);
 		radeon_emit(cs, indirect_grid[1]);
 		radeon_emit(cs, indirect_grid[2]);
 		radeon_emit(cs, 1);
 	} else {
 		/* Dispatch packet */
-		radeon_emit(cs, PKT3C(PKT3_DISPATCH_DIRECT, 3, 0));
+		radeon_emit(cs, PKT3C(PKT3_DISPATCH_DIRECT, 3, render_cond_bit));
 		radeon_emit(cs, info->grid[0]);
 		radeon_emit(cs, info->grid[1]);
 		radeon_emit(cs, info->grid[2]);
@@ -788,6 +789,8 @@ static void compute_emit_cs(struct r600_context *rctx,
 		radeon_compute_set_context_reg(cs, R_028238_CB_TARGET_MASK,
 					       rat_mask);
 	}
+
+	r600_emit_atom(rctx, &rctx->b.render_cond_atom);
 
 	/* Emit constant buffer state */
 	r600_emit_atom(rctx, &rctx->constbuf_state[PIPE_SHADER_COMPUTE].atom);
