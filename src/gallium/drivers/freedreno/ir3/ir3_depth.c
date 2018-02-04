@@ -133,7 +133,7 @@ ir3_insert_by_depth(struct ir3_instruction *instr, struct list_head *list)
 }
 
 static void
-ir3_instr_depth(struct ir3_instruction *instr)
+ir3_instr_depth(struct ir3_instruction *instr, unsigned boost)
 {
 	struct ir3_instruction *src;
 
@@ -147,13 +147,14 @@ ir3_instr_depth(struct ir3_instruction *instr)
 		unsigned sd;
 
 		/* visit child to compute it's depth: */
-		ir3_instr_depth(src);
+		ir3_instr_depth(src, boost);
 
 		/* for array writes, no need to delay on previous write: */
 		if (i == 0)
 			continue;
 
 		sd = ir3_delayslots(src, instr, i) + src->depth;
+		sd += boost;
 
 		instr->depth = MAX2(instr->depth, sd);
 	}
@@ -189,15 +190,15 @@ ir3_depth(struct ir3 *ir)
 	ir3_clear_mark(ir);
 	for (i = 0; i < ir->noutputs; i++)
 		if (ir->outputs[i])
-			ir3_instr_depth(ir->outputs[i]);
+			ir3_instr_depth(ir->outputs[i], 0);
 
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
 		for (i = 0; i < block->keeps_count; i++)
-			ir3_instr_depth(block->keeps[i]);
+			ir3_instr_depth(block->keeps[i], 0);
 
 		/* We also need to account for if-condition: */
 		if (block->condition)
-			ir3_instr_depth(block->condition);
+			ir3_instr_depth(block->condition, 6);
 	}
 
 	/* mark un-used instructions: */
