@@ -503,14 +503,6 @@ brw_nir_lower_fs_outputs(nir_shader *nir)
    nir_lower_io(nir, nir_var_shader_out, type_size_dvec4, 0);
 }
 
-void
-brw_nir_lower_cs_shared(nir_shader *nir)
-{
-   nir_assign_var_locations(&nir->shared, &nir->num_shared,
-                            type_size_scalar_bytes);
-   nir_lower_io(nir, nir_var_shared, type_size_scalar_bytes, 0);
-}
-
 #define OPT(pass, ...) ({                                  \
    bool this_progress = false;                             \
    NIR_PASS(this_progress, nir, pass, ##__VA_ARGS__);      \
