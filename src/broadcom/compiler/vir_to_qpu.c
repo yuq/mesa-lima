@@ -334,6 +334,13 @@ v3d_vir_to_qpu(struct v3d_compile *c, struct qpu_reg *temp_registers)
         assert(i == c->qpu_inst_count);
 
         if (V3D_DEBUG & V3D_DEBUG_SHADERDB) {
+                fprintf(stderr, "SHADER-DB: %s prog %d/%d: %d instructions\n",
+                        vir_get_stage_name(c),
+                        c->program_id, c->variant_id,
+                        c->qpu_inst_count);
+        }
+
+        if (V3D_DEBUG & V3D_DEBUG_SHADERDB) {
                 fprintf(stderr, "SHADER-DB: %s prog %d/%d: %d estimated cycles\n",
                         vir_get_stage_name(c),
                         c->program_id, c->variant_id,
