@@ -1111,7 +1111,6 @@ static int allocate_system_value_inputs(struct r600_shader_ctx *ctx, int gpr_off
 
 				if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE) {
 					location = TGSI_INTERPOLATE_LOC_CENTER;
-					inputs[1].enabled = true; /* needs SAMPLEID */
 				} else if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET) {
 					location = TGSI_INTERPOLATE_LOC_CENTER;
 					/* Needs sample positions, currently those are always available */
@@ -1139,6 +1138,19 @@ static int allocate_system_value_inputs(struct r600_shader_ctx *ctx, int gpr_off
 
 	tgsi_parse_free(&parse);
 
+	if (ctx->bc->chip_class >= EVERGREEN) {
+		int num_baryc = 0;
+		/* assign gpr to each interpolator according to priority */
+		for (i = 0; i < ARRAY_SIZE(ctx->eg_interpolators); i++) {
+			if (ctx->eg_interpolators[i].enabled) {
+				ctx->eg_interpolators[i].ij_index = num_baryc;
+				num_baryc++;
+			}
+		}
+		num_baryc = (num_baryc + 1) >> 1;
+		gpr_offset += num_baryc;
+	}
+
 	for (i = 0; i < ARRAY_SIZE(inputs); i++) {
 		boolean enabled = inputs[i].enabled;
 		int *reg = inputs[i].reg;
@@ -1165,18 +1177,21 @@ static int allocate_system_value_inputs(struct r600_shader_ctx *ctx, int gpr_off
  * for evergreen we need to scan the shader to find the number of GPRs we need to
  * reserve for interpolation and system values
  *
- * we need to know if we are going to emit
- * any sample or centroid inputs
+ * we need to know if we are going to emit any sample or centroid inputs
  * if perspective and linear are required
 */
 static int evergreen_gpr_count(struct r600_shader_ctx *ctx)
 {
 	unsigned i;
-	int num_baryc;
-	struct tgsi_parse_context parse;
 
 	memset(&ctx->eg_interpolators, 0, sizeof(ctx->eg_interpolators));
 
+	/*
+	 * Could get this information from the shader info. But right now
+	 * we interpolate all declared inputs, whereas the shader info will
+	 * only contain the bits if the inputs are actually used, so it might
+	 * not be safe...
+	 */
 	for (i = 0; i < ctx->info.num_inputs; i++) {
 		int k;
 		/* skip position/face/mask/sampleid */
@@ -1193,53 +1208,9 @@ static int evergreen_gpr_count(struct r600_shader_ctx *ctx)
 			ctx->eg_interpolators[k].enabled = TRUE;
 	}
 
-	if (tgsi_parse_init(&parse, ctx->tokens) != TGSI_PARSE_OK) {
-		return 0;
-	}
-
-	/* need to scan shader for system values and interpolateAtSample/Offset/Centroid */
-	while (!tgsi_parse_end_of_tokens(&parse)) {
-		tgsi_parse_token(&parse);
-
-		if (parse.FullToken.Token.Type == TGSI_TOKEN_TYPE_INSTRUCTION) {
-			const struct tgsi_full_instruction *inst = &parse.FullToken.FullInstruction;
-			if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE ||
-				inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET ||
-				inst->Instruction.Opcode == TGSI_OPCODE_INTERP_CENTROID)
-			{
-				int interpolate, location, k;
-
-				if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE) {
-					location = TGSI_INTERPOLATE_LOC_CENTER;
-				} else if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET) {
-					location = TGSI_INTERPOLATE_LOC_CENTER;
-				} else {
-					location = TGSI_INTERPOLATE_LOC_CENTROID;
-				}
-
-				interpolate = ctx->info.input_interpolate[inst->Src[0].Register.Index];
-				k = eg_get_interpolator_index(interpolate, location);
-				if (k >= 0)
-					ctx->eg_interpolators[k].enabled = true;
-			}
-		}
-	}
-
-	tgsi_parse_free(&parse);
-
-	/* assign gpr to each interpolator according to priority */
-	num_baryc = 0;
-	for (i = 0; i < ARRAY_SIZE(ctx->eg_interpolators); i++) {
-		if (ctx->eg_interpolators[i].enabled) {
-			ctx->eg_interpolators[i].ij_index = num_baryc;
-			num_baryc ++;
-		}
-	}
-
 	/* XXX PULL MODEL and LINE STIPPLE */
 
-	num_baryc = (num_baryc + 1) >> 1;
-	return allocate_system_value_inputs(ctx, num_baryc);
+	return allocate_system_value_inputs(ctx, 0);
 }
 
 /* sample_id_sel == NULL means fetch for current sample */
@@ -1248,8 +1219,6 @@ static int load_sample_position(struct r600_shader_ctx *ctx, struct r600_shader_
 	struct r600_bytecode_vtx vtx;
 	int r, t1;
 
-	assert(ctx->fixed_pt_position_gpr != -1);
-
 	t1 = r600_get_temp(ctx);
 
 	memset(&vtx, 0, sizeof(struct r600_bytecode_vtx));
@@ -1257,6 +1226,8 @@ static int load_sample_position(struct r600_shader_ctx *ctx, struct r600_shader_
 	vtx.buffer_id = R600_BUFFER_INFO_CONST_BUFFER;
 	vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
 	if (sample_id == NULL) {
+		assert(ctx->fixed_pt_position_gpr != -1);
+
 		vtx.src_gpr = ctx->fixed_pt_position_gpr; // SAMPLEID is in .w;
 		vtx.src_sel_x = 3;
 	}
