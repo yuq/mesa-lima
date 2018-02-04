@@ -7010,7 +7010,7 @@ static int do_vtx_fetch_inst(struct r600_shader_ctx *ctx, boolean src_requires_l
 	return 0;
 }
 
-static int r600_do_buffer_txq(struct r600_shader_ctx *ctx, int reg_idx, int offset)
+static int r600_do_buffer_txq(struct r600_shader_ctx *ctx, int reg_idx, int offset, int eg_buffer_base)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	int r;
@@ -7036,7 +7036,7 @@ static int r600_do_buffer_txq(struct r600_shader_ctx *ctx, int reg_idx, int offs
 		struct r600_bytecode_vtx vtx;
 		memset(&vtx, 0, sizeof(vtx));
 		vtx.op = FETCH_OP_GET_BUFFER_RESINFO;
-		vtx.buffer_id = id + R600_MAX_CONST_BUFFERS;
+		vtx.buffer_id = id + eg_buffer_base;
 		vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
 		vtx.src_gpr = 0;
 		vtx.mega_fetch_count = 16; /* no idea here really... */
@@ -7110,7 +7110,7 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 		if (inst->Instruction.Opcode == TGSI_OPCODE_TXQ) {
 			if (ctx->bc->chip_class < EVERGREEN)
 				ctx->shader->uses_tex_buffers = true;
-			return r600_do_buffer_txq(ctx, 1, 0);
+			return r600_do_buffer_txq(ctx, 1, 0, R600_MAX_CONST_BUFFERS);
 		}
 		else if (inst->Instruction.Opcode == TGSI_OPCODE_TXF) {
 			if (ctx->bc->chip_class < EVERGREEN)
@@ -8854,10 +8854,11 @@ static int tgsi_resq(struct r600_shader_ctx *ctx)
 	    (inst->Src[0].Register.File == TGSI_FILE_IMAGE && inst->Memory.Texture == TGSI_TEXTURE_BUFFER)) {
 		if (ctx->bc->chip_class < EVERGREEN)
 			ctx->shader->uses_tex_buffers = true;
-		unsigned offset = 0;
-		if (inst->Src[0].Register.File == TGSI_FILE_IMAGE)
-			offset += R600_IMAGE_REAL_RESOURCE_OFFSET - R600_MAX_CONST_BUFFERS + ctx->shader->image_size_const_offset;
-		return r600_do_buffer_txq(ctx, 0, offset);
+		unsigned eg_buffer_base = 0;
+		eg_buffer_base = R600_IMAGE_REAL_RESOURCE_OFFSET;
+		if (inst->Src[0].Register.File == TGSI_FILE_BUFFER)
+			eg_buffer_base += ctx->info.file_count[TGSI_FILE_IMAGE];
+		return r600_do_buffer_txq(ctx, 0, ctx->shader->image_size_const_offset, eg_buffer_base);
 	}
 
 	if (inst->Memory.Texture == TGSI_TEXTURE_CUBE_ARRAY &&
