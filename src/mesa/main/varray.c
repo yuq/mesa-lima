@@ -168,6 +168,8 @@ vertex_attrib_binding(struct gl_context *ctx,
 
       if (_mesa_is_bufferobj(vao->BufferBinding[bindingIndex].BufferObj))
          vao->VertexAttribBufferMask |= array_bit;
+      else
+         vao->VertexAttribBufferMask &= ~array_bit;
 
       FLUSH_VERTICES(ctx, _NEW_ARRAY);
 
