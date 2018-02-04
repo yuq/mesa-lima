@@ -616,6 +616,7 @@ struct eg_buf_res_params {
 	unsigned char swizzle[4];
 	bool uncached;
 	bool force_swizzle;
+	bool size_in_bytes;
 };
 
 static void evergreen_fill_buffer_resource_words(struct r600_context *rctx,
@@ -658,7 +659,7 @@ static void evergreen_fill_buffer_resource_words(struct r600_context *rctx,
 	 * albeit the amd gpu shader analyser
 	 * uses a const buffer to store the element sizes for buffer txq
 	 */
-	tex_resource_words[4] = params->size / stride;
+	tex_resource_words[4] = params->size_in_bytes ? params->size : (params->size / stride);
 
 	tex_resource_words[5] = tex_resource_words[6] = 0;
 	tex_resource_words[7] = S_03001C_TYPE(V_03001C_SQ_TEX_VTX_VALID_BUFFER);
@@ -4041,6 +4042,7 @@ static void evergreen_set_shader_buffers(struct pipe_context *ctx,
 		buf_params.swizzle[3] = PIPE_SWIZZLE_W;
 		buf_params.force_swizzle = true;
 		buf_params.uncached = 1;
+		buf_params.size_in_bytes = true;
 		evergreen_fill_buffer_resource_words(rctx, &resource->b.b,
 						     &buf_params,
 						     &rview->skip_mip_address_reloc,
