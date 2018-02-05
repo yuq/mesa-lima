@@ -851,7 +851,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 	}
 
 	case TGSI_FILE_MEMORY:
-		si_declare_compute_memory(ctx, decl);
+		si_tgsi_declare_compute_memory(ctx, decl);
 		break;
 
 	default:

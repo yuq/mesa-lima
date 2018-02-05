@@ -320,8 +320,9 @@ LLVMValueRef si_load_image_desc(struct si_shader_context *ctx,
 void si_load_system_value(struct si_shader_context *ctx,
 			  unsigned index,
 			  const struct tgsi_full_declaration *decl);
-void si_declare_compute_memory(struct si_shader_context *ctx,
-			       const struct tgsi_full_declaration *decl);
+void si_declare_compute_memory(struct si_shader_context *ctx);
+void si_tgsi_declare_compute_memory(struct si_shader_context *ctx,
+				    const struct tgsi_full_declaration *decl);
 
 void si_llvm_load_input_vs(
 	struct si_shader_context *ctx,

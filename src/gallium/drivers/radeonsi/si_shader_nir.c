@@ -857,6 +857,10 @@ bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 	ctx->num_samplers = util_last_bit(info->samplers_declared);
 	ctx->num_images = util_last_bit(info->images_declared);
 
+	if (ctx->shader->selector->local_size) {
+		assert(nir->info.stage == MESA_SHADER_COMPUTE);
+		si_declare_compute_memory(ctx);
+	}
 	ac_nir_translate(&ctx->ac, &ctx->abi, nir, NULL);
 
 	return true;

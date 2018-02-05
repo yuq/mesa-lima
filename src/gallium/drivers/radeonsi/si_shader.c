@@ -2231,16 +2231,13 @@ void si_load_system_value(struct si_shader_context *ctx,
 	ctx->system_values[index] = value;
 }
 
-void si_declare_compute_memory(struct si_shader_context *ctx,
-			       const struct tgsi_full_declaration *decl)
+void si_declare_compute_memory(struct si_shader_context *ctx)
 {
 	struct si_shader_selector *sel = ctx->shader->selector;
 
 	LLVMTypeRef i8p = LLVMPointerType(ctx->i8, AC_LOCAL_ADDR_SPACE);
 	LLVMValueRef var;
 
-	assert(decl->Declaration.MemType == TGSI_MEMORY_TYPE_SHARED);
-	assert(decl->Range.First == decl->Range.Last);
 	assert(!ctx->ac.lds);
 
 	var = LLVMAddGlobalInAddressSpace(ctx->ac.module,
@@ -2250,6 +2247,15 @@ void si_declare_compute_memory(struct si_shader_context *ctx,
 	LLVMSetAlignment(var, 4);
 
 	ctx->ac.lds = LLVMBuildBitCast(ctx->ac.builder, var, i8p, "");
+}
+
+void si_tgsi_declare_compute_memory(struct si_shader_context *ctx,
+				    const struct tgsi_full_declaration *decl)
+{
+	assert(decl->Declaration.MemType == TGSI_MEMORY_TYPE_SHARED);
+	assert(decl->Range.First == decl->Range.Last);
+
+	si_declare_compute_memory(ctx);
 }
 
 static LLVMValueRef load_const_buffer_desc(struct si_shader_context *ctx, int i)
