@@ -2026,7 +2026,7 @@ static void evergreen_emit_cb_misc_state(struct r600_context *rctx, struct r600_
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_cb_misc_state *a = (struct r600_cb_misc_state*)atom;
 	unsigned fb_colormask = (1ULL << ((unsigned)a->nr_cbufs * 4)) - 1;
-	unsigned ps_colormask = (1ULL << ((unsigned)a->nr_ps_color_outputs * 4)) - 1;
+	unsigned ps_colormask = a->ps_color_export_mask;
 	unsigned rat_colormask = evergreen_construct_rat_mask(rctx, a, a->nr_cbufs);
 	radeon_set_context_reg_seq(cs, R_028238_CB_TARGET_MASK, 2);
 	radeon_emit(cs, (a->blend_colormask & fb_colormask) | rat_colormask); /* R_028238_CB_TARGET_MASK */
@@ -3373,6 +3373,7 @@ void evergreen_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader
 		exports_ps = 2;
 	}
 	shader->nr_ps_color_outputs = num_cout;
+	shader->ps_color_export_mask = rshader->ps_color_export_mask;
 	if (ninterp == 0) {
 		ninterp = 1;
 		have_perspective = TRUE;

@@ -1526,7 +1526,7 @@ static void r600_emit_cb_misc_state(struct r600_context *rctx, struct r600_atom 
 		radeon_set_context_reg(cs, R_028808_CB_COLOR_CONTROL, a->cb_color_control);
 	} else {
 		unsigned fb_colormask = (1ULL << ((unsigned)a->nr_cbufs * 4)) - 1;
-		unsigned ps_colormask = (1ULL << ((unsigned)a->nr_ps_color_outputs * 4)) - 1;
+		unsigned ps_colormask = a->ps_color_export_mask;
 		unsigned multiwrite = a->multiwrite && a->nr_cbufs > 1;
 
 		radeon_set_context_reg_seq(cs, R_028238_CB_TARGET_MASK, 2);

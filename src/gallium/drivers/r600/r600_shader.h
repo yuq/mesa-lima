@@ -84,6 +84,7 @@ struct r600_shader {
 	unsigned		nr_ps_max_color_exports;
 	/* Real number of ps color exports compiled in the bytecode */
 	unsigned		nr_ps_color_exports;
+	unsigned                ps_color_export_mask;
 	/* bit n is set if the shader writes gl_ClipDistance[n] */
 	unsigned		cc_dist_mask;
 	unsigned		clip_dist_write;
@@ -172,6 +173,8 @@ struct r600_pipe_shader {
 	unsigned		flatshade;
 	unsigned		pa_cl_vs_out_cntl;
 	unsigned		nr_ps_color_outputs;
+	unsigned                ps_color_export_mask;
+	
 	union r600_shader_key	key;
 	unsigned		db_shader_control;
 	unsigned		ps_depth_export;

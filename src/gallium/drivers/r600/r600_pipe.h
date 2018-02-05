@@ -153,6 +153,7 @@ struct r600_cb_misc_state {
 	unsigned blend_colormask; /* 8*4 bits for 8 RGBA colorbuffers */
 	unsigned nr_cbufs;
 	unsigned nr_ps_color_outputs;
+	unsigned ps_color_export_mask;
 	unsigned image_rat_enabled_mask;
 	unsigned buffer_rat_enabled_mask;
 	bool multiwrite;

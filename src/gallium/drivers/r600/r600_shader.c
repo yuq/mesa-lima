@@ -3875,6 +3875,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 					output[j].array_base = shader->output[i].sid;
 					output[j].type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_PIXEL;
 					shader->nr_ps_color_exports++;
+					shader->ps_color_export_mask |= (0xf << (shader->output[i].sid * 4));
 					if (shader->fs_write_all && (rscreen->b.chip_class >= EVERGREEN)) {
 						for (k = 1; k < max_color_exports; k++) {
 							j++;
@@ -3890,6 +3891,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 							output[j].op = CF_OP_EXPORT;
 							output[j].type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_PIXEL;
 							shader->nr_ps_color_exports++;
+							shader->ps_color_export_mask |= (0xf << (j * 4));
 						}
 					}
 				} else if (shader->output[i].name == TGSI_SEMANTIC_POSITION) {
@@ -3978,6 +3980,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			output[j].op = CF_OP_EXPORT;
 			j++;
 			shader->nr_ps_color_exports++;
+			shader->ps_color_export_mask = 0xf;
 		}
 
 		noutput = j;
