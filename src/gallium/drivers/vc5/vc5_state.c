@@ -538,11 +538,16 @@ vc5_create_sampler_state(struct pipe_context *pctx,
                 sampler.mag_filter_nearest =
                         cso->mag_img_filter == PIPE_TEX_FILTER_NEAREST;
                 sampler.mip_filter_nearest =
-                        cso->min_mip_filter == PIPE_TEX_MIPFILTER_NEAREST;
+                        cso->min_mip_filter != PIPE_TEX_MIPFILTER_LINEAR;
 
                 sampler.min_level_of_detail = MIN2(MAX2(0, cso->min_lod),
                                                    15);
                 sampler.max_level_of_detail = MIN2(cso->max_lod, 15);
+
+                if (cso->min_mip_filter == PIPE_TEX_MIPFILTER_NONE) {
+                        sampler.min_level_of_detail = 0;
+                        sampler.max_level_of_detail = 0;
+                }
 
                 if (cso->max_anisotropy) {
                         sampler.anisotropy_enable = true;
