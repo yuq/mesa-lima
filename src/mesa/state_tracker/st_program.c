@@ -1654,6 +1654,8 @@ st_translate_compute_program(struct st_context *st,
    struct ureg_program *ureg;
    struct pipe_shader_state prog;
 
+   stcp->tgsi.req_local_mem = stcp->Base.info.cs.shared_size;
+
    if (stcp->shader_program) {
       /* no compute variants: */
       st_finalize_nir(st, &stcp->Base, stcp->shader_program,
@@ -1670,7 +1672,6 @@ st_translate_compute_program(struct st_context *st,
                                PIPE_SHADER_COMPUTE, &prog);
 
    stcp->tgsi.ir_type = PIPE_SHADER_IR_TGSI;
-   stcp->tgsi.req_local_mem = stcp->Base.info.cs.shared_size;
    stcp->tgsi.req_private_mem = 0;
    stcp->tgsi.req_input_mem = 0;
 
