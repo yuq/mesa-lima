@@ -626,7 +626,7 @@ st_Bitmap(struct gl_context *ctx, GLint x, GLint y,
    if ((st->dirty | ctx->NewDriverState) & ~ST_NEW_CONSTANTS &
        ST_PIPELINE_RENDER_STATE_MASK ||
        st->gfx_shaders_may_be_dirty) {
-      st_validate_state(st, ST_PIPELINE_RENDER);
+      st_validate_state(st, ST_PIPELINE_META);
    }
 
    if (UseBitmapCache && accum_bitmap(ctx, x, y, width, height, unpack, bitmap))
@@ -681,7 +681,7 @@ st_DrawAtlasBitmaps(struct gl_context *ctx,
 
    st_flush_bitmap_cache(st);
 
-   st_validate_state(st, ST_PIPELINE_RENDER);
+   st_validate_state(st, ST_PIPELINE_META);
    st_invalidate_readpix_cache(st);
 
    sv = st_create_texture_sampler_view(pipe, stObj->pt);
