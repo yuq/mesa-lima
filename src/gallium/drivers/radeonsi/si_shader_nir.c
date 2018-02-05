@@ -276,14 +276,22 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 		unsigned attrib_count = glsl_count_attribute_slots(type,
 								   nir->info.stage == MESA_SHADER_VERTEX);
 
+		i = variable->data.driver_location;
+
 		/* Vertex shader inputs don't have semantics. The state
 		 * tracker has already mapped them to attributes via
 		 * variable->data.driver_location.
 		 */
 		if (nir->info.stage == MESA_SHADER_VERTEX) {
-			if (glsl_type_is_dual_slot(variable->type))
+			/* TODO: gather the actual input useage and remove this. */
+			info->input_usage_mask[i] = TGSI_WRITEMASK_XYZW;
+
+			if (glsl_type_is_dual_slot(variable->type)) {
 				num_inputs += 2;
-			else
+
+				/* TODO: gather the actual input useage and remove this. */
+				info->input_usage_mask[i+1] = TGSI_WRITEMASK_XYZW;
+			} else
 				num_inputs++;
 			continue;
 		}
@@ -298,8 +306,6 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 			num_inputs++;
 			continue;
 		}
-
-		i = variable->data.driver_location;
 
 		for (unsigned j = 0; j < attrib_count; j++, i++) {
 
