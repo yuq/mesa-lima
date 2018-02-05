@@ -4540,7 +4540,7 @@ static int egcm_int_to_double(struct r600_shader_ctx *ctx)
 				alu.dst.sel = temp_reg;
 				alu.dst.chan = i;
 				alu.dst.write = 1;
-				if (ctx.bc->chip_class == CAYMAN)
+				if (ctx->bc->chip_class == CAYMAN)
 					alu.last = i == dchan + 1;
 				else
 					alu.last = 1; /* trans only ops on evergreen */
