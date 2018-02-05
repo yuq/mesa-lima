@@ -4563,11 +4563,6 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = LLVMBuildSExt(ctx->ac.builder, tmp, ctx->ac.i32, "");
 		break;
 	}
-	case nir_intrinsic_vote_ieq: {
-		LLVMValueRef tmp = ac_build_vote_eq(&ctx->ac, get_src(ctx, instr->src[0]));
-		result = LLVMBuildSExt(ctx->ac.builder, tmp, ctx->ac.i32, "");
-		break;
-	}
 	default:
 		fprintf(stderr, "Unknown intrinsic: ");
 		nir_print_instr(&instr->instr, stderr);
@@ -6756,6 +6751,9 @@ void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 {
 	struct ac_nir_context ctx = {};
 	struct nir_function *func;
+
+	/* Last minute passes for both radv & radeonsi */
+	ac_lower_subgroups(nir);
 
 	ctx.ac = *ac;
 	ctx.abi = abi;
