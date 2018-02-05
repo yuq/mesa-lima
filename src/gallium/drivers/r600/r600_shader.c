@@ -2136,7 +2136,7 @@ static int emit_streamout(struct r600_shader_ctx *ctx, struct pipe_stream_output
 	for (i = 0; i < so->num_outputs; i++) {
 		struct r600_bytecode_output output;
 
-		if (stream != -1 && stream != so->output[i].output_buffer)
+		if (stream != -1 && stream != so->output[i].stream)
 			continue;
 
 		memset(&output, 0, sizeof(struct r600_bytecode_output));
