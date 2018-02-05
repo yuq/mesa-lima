@@ -68,6 +68,7 @@ static const struct debug_named_value debug_options[] = {
    {"zero",           ETNA_DBG_ZERO, "Zero all resources after allocation"},
    {"draw_stall",     ETNA_DBG_DRAW_STALL, "Stall FE/PE after each rendered primitive"},
    {"shaderdb",       ETNA_DBG_SHADERDB, "Enable shaderdb output"},
+   {"no_singlebuffer",ETNA_DBG_NO_SINGLEBUF, "Disable single buffer feature"},
    DEBUG_NAMED_VALUE_END
 };
 
@@ -963,6 +964,8 @@ etna_screen_create(struct etna_device *dev, struct etna_gpu *gpu,
       screen->features[viv_chipMinorFeatures1] &= ~chipMinorFeatures1_AUTO_DISABLE;
    if (DBG_ENABLED(ETNA_DBG_NO_SUPERTILE))
       screen->specs.can_supertile = 0;
+   if (DBG_ENABLED(ETNA_DBG_NO_SINGLEBUF))
+      screen->specs.single_buffer = 0;
 
    pscreen->destroy = etna_screen_destroy;
    pscreen->get_param = etna_screen_get_param;
