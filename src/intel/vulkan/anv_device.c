@@ -1331,7 +1331,7 @@ VkResult anv_CreateDevice(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
 
-   struct anv_device_extension_table enabled_extensions;
+   struct anv_device_extension_table enabled_extensions = { };
    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
       int idx;
       for (idx = 0; idx < ANV_DEVICE_EXTENSION_COUNT; idx++) {
