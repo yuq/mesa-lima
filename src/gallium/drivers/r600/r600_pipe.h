@@ -152,6 +152,7 @@ struct r600_cb_misc_state {
 	unsigned cb_color_control; /* this comes from blend state */
 	unsigned blend_colormask; /* 8*4 bits for 8 RGBA colorbuffers */
 	unsigned nr_cbufs;
+	unsigned bound_cbufs_target_mask;
 	unsigned nr_ps_color_outputs;
 	unsigned ps_color_export_mask;
 	unsigned image_rat_enabled_mask;

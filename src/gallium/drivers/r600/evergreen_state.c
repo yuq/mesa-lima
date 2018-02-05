@@ -1436,7 +1436,7 @@ static void evergreen_set_framebuffer_state(struct pipe_context *ctx,
 	struct r600_surface *surf;
 	struct r600_texture *rtex;
 	uint32_t i, log_samples;
-
+	uint32_t target_mask = 0;
 	/* Flush TC when changing the framebuffer state, because the only
 	 * client not using TC that can change textures is the framebuffer.
 	 * Other places don't typically have to flush TC.
@@ -1462,6 +1462,8 @@ static void evergreen_set_framebuffer_state(struct pipe_context *ctx,
 		surf = (struct r600_surface*)state->cbufs[i];
 		if (!surf)
 			continue;
+
+		target_mask |= (0xf << (i * 4));
 
 		rtex = (struct r600_texture*)surf->base.texture;
 
@@ -1528,7 +1530,9 @@ static void evergreen_set_framebuffer_state(struct pipe_context *ctx,
 		r600_mark_atom_dirty(rctx, &rctx->db_misc_state.atom);
 	}
 
-	if (rctx->cb_misc_state.nr_cbufs != state->nr_cbufs) {
+	if (rctx->cb_misc_state.nr_cbufs != state->nr_cbufs ||
+	    rctx->cb_misc_state.bound_cbufs_target_mask != target_mask) {
+		rctx->cb_misc_state.bound_cbufs_target_mask = target_mask;
 		rctx->cb_misc_state.nr_cbufs = state->nr_cbufs;
 		r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
 	}
@@ -2025,7 +2029,7 @@ static void evergreen_emit_cb_misc_state(struct r600_context *rctx, struct r600_
 {
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	struct r600_cb_misc_state *a = (struct r600_cb_misc_state*)atom;
-	unsigned fb_colormask = (1ULL << ((unsigned)a->nr_cbufs * 4)) - 1;
+	unsigned fb_colormask = a->bound_cbufs_target_mask;
 	unsigned ps_colormask = a->ps_color_export_mask;
 	unsigned rat_colormask = evergreen_construct_rat_mask(rctx, a, a->nr_cbufs);
 	radeon_set_context_reg_seq(cs, R_028238_CB_TARGET_MASK, 2);
