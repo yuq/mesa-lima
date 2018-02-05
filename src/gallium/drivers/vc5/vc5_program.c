@@ -35,6 +35,7 @@
 #include "compiler/v3d_compiler.h"
 #include "vc5_context.h"
 #include "broadcom/cle/v3d_packet_v33_pack.h"
+#include "mesa/state_tracker/st_glsl_types.h"
 
 static gl_varying_slot
 vc5_get_slot_for_driver_location(nir_shader *s, uint32_t driver_location)
@@ -128,6 +129,12 @@ type_size(const struct glsl_type *type)
         return glsl_count_attribute_slots(type, false);
 }
 
+static int
+uniforms_type_size(const struct glsl_type *type)
+{
+        return st_glsl_storage_type_size(type, false);
+}
+
 static void *
 vc5_shader_state_create(struct pipe_context *pctx,
                         const struct pipe_shader_state *cso)
@@ -147,7 +154,11 @@ vc5_shader_state_create(struct pipe_context *pctx,
                  */
                 s = cso->ir.nir;
 
-                NIR_PASS_V(s, nir_lower_io, nir_var_all, type_size,
+                NIR_PASS_V(s, nir_lower_io, nir_var_all & ~nir_var_uniform,
+                           type_size,
+                           (nir_lower_io_options)0);
+                NIR_PASS_V(s, nir_lower_io, nir_var_uniform,
+                           uniforms_type_size,
                            (nir_lower_io_options)0);
         } else {
                 assert(cso->type == PIPE_SHADER_IR_TGSI);
