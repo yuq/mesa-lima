@@ -8680,6 +8680,33 @@ static int tgsi_atomic_op_gds(struct r600_shader_ctx *ctx)
 	if (r)
 		return r;
 
+	if (gds_op == FETCH_OP_GDS_CMP_XCHG_RET) {
+		if (inst->Src[3].Register.File == TGSI_FILE_IMMEDIATE) {
+			int value = (ctx->literals[4 * inst->Src[3].Register.Index + inst->Src[3].Register.SwizzleX]);
+			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+			alu.op = ALU_OP1_MOV;
+			alu.dst.sel = ctx->temp_reg;
+			alu.dst.chan = is_cm ? 2 : 1;
+			alu.src[0].sel = V_SQ_ALU_SRC_LITERAL;
+			alu.src[0].value = value;
+			alu.last = 1;
+			alu.dst.write = 1;
+			r = r600_bytecode_add_alu(ctx->bc, &alu);
+			if (r)
+				return r;
+		} else {
+			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+			alu.op = ALU_OP1_MOV;
+			alu.dst.sel = ctx->temp_reg;
+			alu.dst.chan = is_cm ? 2 : 1;
+			r600_bytecode_src(&alu.src[0], &ctx->src[3], 0);
+			alu.last = 1;
+			alu.dst.write = 1;
+			r = r600_bytecode_add_alu(ctx->bc, &alu);
+			if (r)
+				return r;
+		}
+	}
 	if (inst->Src[2].Register.File == TGSI_FILE_IMMEDIATE) {
 		int value = (ctx->literals[4 * inst->Src[2].Register.Index + inst->Src[2].Register.SwizzleX]);
 		int abs_value = abs(value);
@@ -8719,7 +8746,10 @@ static int tgsi_atomic_op_gds(struct r600_shader_ctx *ctx)
 	gds.src_gpr2 = 0;
 	gds.src_sel_x = is_cm ? 0 : 4;
 	gds.src_sel_y = is_cm ? 1 : 0;
-	gds.src_sel_z = 7;
+	if (gds_op == FETCH_OP_GDS_CMP_XCHG_RET)
+		gds.src_sel_z = is_cm ? 2 : 1;
+	else
+		gds.src_sel_z = 7;
 	gds.dst_sel_x = 0;
 	gds.dst_sel_y = 7;
 	gds.dst_sel_z = 7;
