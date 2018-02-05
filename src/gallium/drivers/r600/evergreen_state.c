@@ -4060,7 +4060,8 @@ static void evergreen_set_shader_buffers(struct pipe_context *ctx,
 		r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
 	}
 
-	r600_mark_atom_dirty(rctx, &istate->atom);
+	if (shader == PIPE_SHADER_FRAGMENT)
+		r600_mark_atom_dirty(rctx, &istate->atom);
 }
 
 static void evergreen_set_shader_images(struct pipe_context *ctx,
@@ -4236,7 +4237,8 @@ static void evergreen_set_shader_images(struct pipe_context *ctx,
 		r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
 	}
 
-	r600_mark_atom_dirty(rctx, &istate->atom);
+	if (shader == PIPE_SHADER_FRAGMENT)
+		r600_mark_atom_dirty(rctx, &istate->atom);
 }
 
 static void evergreen_get_pipe_constant_buffer(struct r600_context *rctx,
