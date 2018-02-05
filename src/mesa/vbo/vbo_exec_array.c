@@ -332,7 +332,7 @@ recalculate_input_bindings(struct gl_context *ctx)
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_exec_context *exec = &vbo->exec;
    const struct gl_vertex_array_object *vao = ctx->Array.VAO;
-   const struct gl_vertex_array *vertexAttrib = vao->_VertexAttrib;
+   const struct gl_vertex_array *vertexAttrib = vao->_VertexArray;
    const struct gl_vertex_array **inputs = &exec->array.inputs[0];
 
    /* May shuffle the position and generic0 bits around */

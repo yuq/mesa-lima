@@ -1603,9 +1603,9 @@ struct gl_vertex_array_object
     * Derived vertex attribute arrays
     *
     * This is a legacy data structure created from gl_array_attributes and
-    * gl_vertex_buffer_binding, for compatibility with existing driver code.
+    * gl_vertex_buffer_binding, only used by the VBO module at this time.
     */
-   struct gl_vertex_array _VertexAttrib[VERT_ATTRIB_MAX];
+   struct gl_vertex_array _VertexArray[VERT_ATTRIB_MAX];
 
    /** Vertex attribute arrays */
    struct gl_array_attributes VertexAttrib[VERT_ATTRIB_MAX];
