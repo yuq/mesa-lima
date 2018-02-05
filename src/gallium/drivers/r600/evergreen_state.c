@@ -3369,7 +3369,7 @@ void evergreen_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader
 			exports_ps |= 1;
 	}
 
-	num_cout = rshader->nr_ps_color_exports;
+	num_cout = rshader->ps_export_highest + 1;
 
 	exports_ps |= S_02884C_EXPORT_COLORS(num_cout);
 	if (!exports_ps) {

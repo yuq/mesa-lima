@@ -85,6 +85,7 @@ struct r600_shader {
 	/* Real number of ps color exports compiled in the bytecode */
 	unsigned		nr_ps_color_exports;
 	unsigned                ps_color_export_mask;
+	unsigned                ps_export_highest;
 	/* bit n is set if the shader writes gl_ClipDistance[n] */
 	unsigned		cc_dist_mask;
 	unsigned		clip_dist_write;

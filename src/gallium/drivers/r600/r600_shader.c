@@ -3876,6 +3876,16 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 					output[j].type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_PIXEL;
 					shader->nr_ps_color_exports++;
 					shader->ps_color_export_mask |= (0xf << (shader->output[i].sid * 4));
+
+					/* If the i-th target format is set, all previous target formats must
+					 * be non-zero to avoid hangs. - from radeonsi, seems to apply to eg as well.
+					 */
+					if (shader->output[i].sid > 0)
+						for (unsigned x = 0; x < shader->output[i].sid; x++)
+							shader->ps_color_export_mask |= (1 << (x*4));
+
+					if (shader->output[i].sid > shader->ps_export_highest)
+						shader->ps_export_highest = shader->output[i].sid;
 					if (shader->fs_write_all && (rscreen->b.chip_class >= EVERGREEN)) {
 						for (k = 1; k < max_color_exports; k++) {
 							j++;
