@@ -51,7 +51,7 @@ endif
 
 libgallium_dri = shared_library(
   'gallium_dri',
-  files('target.c'),
+  [files('target.c'), xmlpool_options_h],
   include_directories : [
     inc_common, inc_util, inc_dri_common, inc_gallium_drivers,
     inc_gallium_winsys, include_directories('../../state_trackers/dri'),
