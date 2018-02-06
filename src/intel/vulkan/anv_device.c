@@ -1467,6 +1467,15 @@ VkResult anv_CreateDevice(
       }
    }
 
+   /* Check requested queues and fail if we are requested to create any
+    * queues with flags we don't support.
+    */
+   assert(pCreateInfo->queueCreateInfoCount > 0);
+   for (uint32_t i = 0; i < pCreateInfo->queueCreateInfoCount; i++) {
+      if (pCreateInfo->pQueueCreateInfos[i].flags != 0)
+         return vk_error(VK_ERROR_INITIALIZATION_FAILED);
+   }
+
    /* Check if client specified queue priority. */
    const VkDeviceQueueGlobalPriorityCreateInfoEXT *queue_priority =
       vk_find_struct_const(pCreateInfo->pQueueCreateInfos[0].pNext,
