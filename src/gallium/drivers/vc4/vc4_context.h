@@ -377,6 +377,10 @@ struct vc4_context {
 
         struct u_upload_mgr *uploader;
 
+        struct pipe_shader_state *yuv_linear_blit_vs;
+        struct pipe_shader_state *yuv_linear_blit_fs_8bit;
+        struct pipe_shader_state *yuv_linear_blit_fs_16bit;
+
         /** @{ Current pipeline state objects */
         struct pipe_scissor_state scissor;
         struct pipe_blend_state *blend;
