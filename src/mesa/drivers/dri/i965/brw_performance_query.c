@@ -1871,6 +1871,7 @@ init_oa_configs(struct brw_context *brw, const char *sysfs_dev_dir)
 
       /* Don't recreate already loaded configs. */
       if (read_file_uint64(config_path, &config_id)) {
+         DBG("metric set: %s (already loaded)\n", query->guid);
          register_oa_config(brw, query, config_id);
          continue;
       }
@@ -1896,6 +1897,7 @@ init_oa_configs(struct brw_context *brw, const char *sysfs_dev_dir)
       }
 
       register_oa_config(brw, query, config_id);
+      DBG("metric set: %s (added)\n", query->guid);
    }
 }
 
