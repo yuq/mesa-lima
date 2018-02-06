@@ -92,6 +92,9 @@ ac_llvm_context_init(struct ac_llvm_context *ctx, LLVMContextRef context,
 int
 ac_get_llvm_num_components(LLVMValueRef value);
 
+int
+ac_get_elem_bits(struct ac_llvm_context *ctx, LLVMTypeRef type);
+
 LLVMValueRef
 ac_llvm_extract_elem(struct ac_llvm_context *ac,
 		     LLVMValueRef value,

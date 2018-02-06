@@ -128,6 +128,25 @@ ac_llvm_extract_elem(struct ac_llvm_context *ac,
 				       LLVMConstInt(ac->i32, index, false), "");
 }
 
+int
+ac_get_elem_bits(struct ac_llvm_context *ctx, LLVMTypeRef type)
+{
+	if (LLVMGetTypeKind(type) == LLVMVectorTypeKind)
+		type = LLVMGetElementType(type);
+
+	if (LLVMGetTypeKind(type) == LLVMIntegerTypeKind)
+		return LLVMGetIntTypeWidth(type);
+
+	if (type == ctx->f16)
+		return 16;
+	if (type == ctx->f32)
+		return 32;
+	if (type == ctx->f64)
+		return 64;
+
+	unreachable("Unhandled type kind in get_elem_bits");
+}
+
 unsigned
 ac_get_type_size(LLVMTypeRef type)
 {

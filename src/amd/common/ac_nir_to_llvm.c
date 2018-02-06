@@ -329,24 +329,6 @@ create_llvm_function(LLVMContextRef ctx, LLVMModuleRef module,
 	return main_function;
 }
 
-static int get_elem_bits(struct ac_llvm_context *ctx, LLVMTypeRef type)
-{
-	if (LLVMGetTypeKind(type) == LLVMVectorTypeKind)
-		type = LLVMGetElementType(type);
-
-	if (LLVMGetTypeKind(type) == LLVMIntegerTypeKind)
-		return LLVMGetIntTypeWidth(type);
-
-	if (type == ctx->f16)
-		return 16;
-	if (type == ctx->f32)
-		return 32;
-	if (type == ctx->f64)
-		return 64;
-
-	unreachable("Unhandled type kind in get_elem_bits");
-}
-
 static LLVMValueRef unpack_param(struct ac_llvm_context *ctx,
 				 LLVMValueRef param, unsigned rshift,
 				 unsigned bitwidth)
@@ -1267,7 +1249,7 @@ static LLVMValueRef emit_intrin_1f_param(struct ac_llvm_context *ctx,
 	};
 
 	MAYBE_UNUSED const int length = snprintf(name, sizeof(name), "%s.f%d", intrin,
-						 get_elem_bits(ctx, result_type));
+						 ac_get_elem_bits(ctx, result_type));
 	assert(length < sizeof(name));
 	return ac_build_intrinsic(ctx, name, result_type, params, 1, AC_FUNC_ATTR_READNONE);
 }
@@ -1284,7 +1266,7 @@ static LLVMValueRef emit_intrin_2f_param(struct ac_llvm_context *ctx,
 	};
 
 	MAYBE_UNUSED const int length = snprintf(name, sizeof(name), "%s.f%d", intrin,
-						 get_elem_bits(ctx, result_type));
+						 ac_get_elem_bits(ctx, result_type));
 	assert(length < sizeof(name));
 	return ac_build_intrinsic(ctx, name, result_type, params, 2, AC_FUNC_ATTR_READNONE);
 }
@@ -1302,7 +1284,7 @@ static LLVMValueRef emit_intrin_3f_param(struct ac_llvm_context *ctx,
 	};
 
 	MAYBE_UNUSED const int length = snprintf(name, sizeof(name), "%s.f%d", intrin,
-						 get_elem_bits(ctx, result_type));
+						 ac_get_elem_bits(ctx, result_type));
 	assert(length < sizeof(name));
 	return ac_build_intrinsic(ctx, name, result_type, params, 3, AC_FUNC_ATTR_READNONE);
 }
@@ -1917,7 +1899,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		result = ac_build_intrinsic(&ctx->ac, "llvm.bitreverse.i32", ctx->ac.i32, src, 1, AC_FUNC_ATTR_READNONE);
 		break;
 	case nir_op_bit_count:
-		if (get_elem_bits(&ctx->ac, LLVMTypeOf(src[0])) == 32)
+		if (ac_get_elem_bits(&ctx->ac, LLVMTypeOf(src[0])) == 32)
 			result = ac_build_intrinsic(&ctx->ac, "llvm.ctpop.i32", ctx->ac.i32, src, 1, AC_FUNC_ATTR_READNONE);
 		else {
 			result = ac_build_intrinsic(&ctx->ac, "llvm.ctpop.i64", ctx->ac.i64, src, 1, AC_FUNC_ATTR_READNONE);
@@ -1961,7 +1943,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 	case nir_op_u2u32:
 	case nir_op_u2u64:
 		src[0] = ac_to_integer(&ctx->ac, src[0]);
-		if (get_elem_bits(&ctx->ac, LLVMTypeOf(src[0])) < get_elem_bits(&ctx->ac, def_type))
+		if (ac_get_elem_bits(&ctx->ac, LLVMTypeOf(src[0])) < ac_get_elem_bits(&ctx->ac, def_type))
 			result = LLVMBuildZExt(ctx->ac.builder, src[0], def_type, "");
 		else
 			result = LLVMBuildTrunc(ctx->ac.builder, src[0], def_type, "");
@@ -1969,7 +1951,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 	case nir_op_i2i32:
 	case nir_op_i2i64:
 		src[0] = ac_to_integer(&ctx->ac, src[0]);
-		if (get_elem_bits(&ctx->ac, LLVMTypeOf(src[0])) < get_elem_bits(&ctx->ac, def_type))
+		if (ac_get_elem_bits(&ctx->ac, LLVMTypeOf(src[0])) < ac_get_elem_bits(&ctx->ac, def_type))
 			result = LLVMBuildSExt(ctx->ac.builder, src[0], def_type, "");
 		else
 			result = LLVMBuildTrunc(ctx->ac.builder, src[0], def_type, "");
@@ -2464,7 +2446,7 @@ static void visit_store_ssbo(struct ac_nir_context *ctx,
 	const char *store_name;
 	LLVMValueRef src_data = get_src(ctx, instr->src[0]);
 	LLVMTypeRef data_type = ctx->ac.f32;
-	int elem_size_mult = get_elem_bits(&ctx->ac, LLVMTypeOf(src_data)) / 32;
+	int elem_size_mult = ac_get_elem_bits(&ctx->ac, LLVMTypeOf(src_data)) / 32;
 	int components_32bit = elem_size_mult * instr->num_components;
 	unsigned writemask = nir_intrinsic_write_mask(instr);
 	LLVMValueRef base_data, base_offset;
@@ -3273,7 +3255,7 @@ visit_store_var(struct ac_nir_context *ctx,
 	get_deref_offset(ctx, instr->variables[0], false,
 		         NULL, NULL, &const_index, &indir_index);
 
-	if (get_elem_bits(&ctx->ac, LLVMTypeOf(src)) == 64) {
+	if (ac_get_elem_bits(&ctx->ac, LLVMTypeOf(src)) == 64) {
 
 		src = LLVMBuildBitCast(ctx->ac.builder, src,
 		                       LLVMVectorType(ctx->ac.f32, ac_get_llvm_num_components(src) * 2),
