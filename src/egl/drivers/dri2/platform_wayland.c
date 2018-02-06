@@ -68,26 +68,39 @@ enum wl_drm_format_flags {
 static const struct {
    const char *format_name;
    enum wl_drm_format_flags has_format;
+   uint32_t wl_drm_format;
+   uint32_t wl_shm_format;
+   int dri_image_format;
    unsigned int rgba_masks[4];
 } dri2_wl_visuals[] = {
    {
      "XRGB2101010", HAS_XRGB2101010,
+     WL_DRM_FORMAT_XRGB2101010, WL_SHM_FORMAT_XRGB2101010,
+     __DRI_IMAGE_FORMAT_XRGB2101010,
      { 0x3ff00000, 0x000ffc00, 0x000003ff, 0x00000000 }
    },
    {
      "ARGB2101010", HAS_ARGB2101010,
+     WL_DRM_FORMAT_ARGB2101010, WL_SHM_FORMAT_ARGB2101010,
+     __DRI_IMAGE_FORMAT_ARGB2101010,
      { 0x3ff00000, 0x000ffc00, 0x000003ff, 0xc0000000 }
    },
    {
      "XRGB8888", HAS_XRGB8888,
+     WL_DRM_FORMAT_XRGB8888, WL_SHM_FORMAT_XRGB8888,
+     __DRI_IMAGE_FORMAT_XRGB8888,
      { 0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000 }
    },
    {
      "ARGB8888", HAS_ARGB8888,
+     WL_DRM_FORMAT_ARGB8888, WL_SHM_FORMAT_ARGB8888,
+     __DRI_IMAGE_FORMAT_ARGB8888,
      { 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000 }
    },
    {
      "RGB565", HAS_RGB565,
+     WL_DRM_FORMAT_RGB565, WL_SHM_FORMAT_RGB565,
+     __DRI_IMAGE_FORMAT_RGB565,
      { 0xf800, 0x07e0, 0x001f, 0x0000 }
    },
 };
