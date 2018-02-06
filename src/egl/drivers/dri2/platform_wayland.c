@@ -71,36 +71,37 @@ static const struct dri2_wl_visual {
    uint32_t wl_drm_format;
    uint32_t wl_shm_format;
    int dri_image_format;
+   int bpp;
    unsigned int rgba_masks[4];
 } dri2_wl_visuals[] = {
    {
      "XRGB2101010", HAS_XRGB2101010,
      WL_DRM_FORMAT_XRGB2101010, WL_SHM_FORMAT_XRGB2101010,
-     __DRI_IMAGE_FORMAT_XRGB2101010,
+     __DRI_IMAGE_FORMAT_XRGB2101010, 32,
      { 0x3ff00000, 0x000ffc00, 0x000003ff, 0x00000000 }
    },
    {
      "ARGB2101010", HAS_ARGB2101010,
      WL_DRM_FORMAT_ARGB2101010, WL_SHM_FORMAT_ARGB2101010,
-     __DRI_IMAGE_FORMAT_ARGB2101010,
+     __DRI_IMAGE_FORMAT_ARGB2101010, 32,
      { 0x3ff00000, 0x000ffc00, 0x000003ff, 0xc0000000 }
    },
    {
      "XRGB8888", HAS_XRGB8888,
      WL_DRM_FORMAT_XRGB8888, WL_SHM_FORMAT_XRGB8888,
-     __DRI_IMAGE_FORMAT_XRGB8888,
+     __DRI_IMAGE_FORMAT_XRGB8888, 32,
      { 0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000 }
    },
    {
      "ARGB8888", HAS_ARGB8888,
      WL_DRM_FORMAT_ARGB8888, WL_SHM_FORMAT_ARGB8888,
-     __DRI_IMAGE_FORMAT_ARGB8888,
+     __DRI_IMAGE_FORMAT_ARGB8888, 32,
      { 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000 }
    },
    {
      "RGB565", HAS_RGB565,
      WL_DRM_FORMAT_RGB565, WL_SHM_FORMAT_RGB565,
-     __DRI_IMAGE_FORMAT_RGB565,
+     __DRI_IMAGE_FORMAT_RGB565, 16,
      { 0xf800, 0x07e0, 0x001f, 0x0000 }
    },
 };
@@ -685,22 +686,10 @@ dri2_wl_get_buffers(__DRIdrawable * driDrawable,
    struct dri2_egl_surface *dri2_surf = loaderPrivate;
    unsigned int *attachments_with_format;
    __DRIbuffer *buffer;
-   unsigned int bpp;
+   int visual_idx = dri2_wl_visual_idx_from_fourcc(dri2_surf->format);
 
-   switch (dri2_surf->format) {
-   case WL_DRM_FORMAT_ARGB2101010:
-   case WL_DRM_FORMAT_XRGB2101010:
-   case WL_DRM_FORMAT_ARGB8888:
-   case WL_DRM_FORMAT_XRGB8888:
-      bpp = 32;
-      break;
-   case WL_DRM_FORMAT_RGB565:
-      bpp = 16;
-      break;
-   default:
-      /* format is not supported */
+   if (visual_idx == -1)
       return NULL;
-   }
 
    attachments_with_format = calloc(count, 2 * sizeof(unsigned int));
    if (!attachments_with_format) {
@@ -710,7 +699,7 @@ dri2_wl_get_buffers(__DRIdrawable * driDrawable,
 
    for (int i = 0; i < count; ++i) {
       attachments_with_format[2*i] = attachments[i];
-      attachments_with_format[2*i + 1] = bpp;
+      attachments_with_format[2*i + 1] = dri2_wl_visuals[visual_idx].bpp;
    }
 
    buffer =
@@ -1515,10 +1504,9 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
 static int
 dri2_wl_swrast_get_stride_for_format(int format, int w)
 {
-   if (format == WL_SHM_FORMAT_RGB565)
-      return 2 * w;
-   else /* ARGB8888 || XRGB8888 || ARGB2101010 || XRGB2101010 */
-      return 4 * w;
+   int visual_idx = dri2_wl_visual_idx_from_shm_format(format);
+
+   return w * (dri2_wl_visuals[visual_idx].bpp / 8);
 }
 
 /*
