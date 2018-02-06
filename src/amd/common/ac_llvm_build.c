@@ -2001,6 +2001,20 @@ LLVMValueRef ac_find_lsb(struct ac_llvm_context *ctx,
 			 LLVMTypeRef dst_type,
 			 LLVMValueRef src0)
 {
+	unsigned src0_bitsize = ac_get_elem_bits(ctx, LLVMTypeOf(src0));
+	const char *intrin_name;
+	LLVMTypeRef type;
+	LLVMValueRef zero;
+	if (src0_bitsize == 64) {
+		intrin_name = "llvm.cttz.i64";
+		type = ctx->i64;
+		zero = ctx->i64_0;
+	} else {
+		intrin_name = "llvm.cttz.i32";
+		type = ctx->i32;
+		zero = ctx->i32_0;
+	}
+
 	LLVMValueRef params[2] = {
 		src0,
 
@@ -2016,15 +2030,19 @@ LLVMValueRef ac_find_lsb(struct ac_llvm_context *ctx,
 		LLVMConstInt(ctx->i1, 1, false),
 	};
 
-	LLVMValueRef lsb = ac_build_intrinsic(ctx, "llvm.cttz.i32", ctx->i32,
+	LLVMValueRef lsb = ac_build_intrinsic(ctx, intrin_name, type,
 					      params, 2,
 					      AC_FUNC_ATTR_READNONE);
+
+	if (src0_bitsize == 64) {
+		lsb = LLVMBuildTrunc(ctx->builder, lsb, ctx->i32, "");
+	}
 
 	/* TODO: We need an intrinsic to skip this conditional. */
 	/* Check for zero: */
 	return LLVMBuildSelect(ctx->builder, LLVMBuildICmp(ctx->builder,
 							   LLVMIntEQ, src0,
-							   ctx->i32_0, ""),
+							   zero, ""),
 			       LLVMConstInt(ctx->i32, -1, 0), lsb, "");
 }
 
