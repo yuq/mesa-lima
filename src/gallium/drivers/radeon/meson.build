@@ -35,6 +35,7 @@ files_libradeon = files(
   'radeon_vcn_enc.h',
   'radeon_vcn_dec.c',
   'radeon_vcn_dec.h',
+  'radeon_uvd_enc_1_1.c',
   'radeon_uvd_enc.h',
   'radeon_vce_40_2_2.c',
   'radeon_vce_50.c',
