@@ -839,6 +839,8 @@ struct anv_queue {
     struct anv_device *                         device;
 
     struct anv_state_pool *                     pool;
+
+    VkDeviceQueueCreateFlags                    flags;
 };
 
 struct anv_pipeline_cache {
