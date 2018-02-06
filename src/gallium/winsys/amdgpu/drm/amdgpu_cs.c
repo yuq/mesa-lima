@@ -376,6 +376,7 @@ static bool amdgpu_cs_has_user_fence(struct amdgpu_cs_context *cs)
 {
    return cs->ib[IB_MAIN].ip_type != AMDGPU_HW_IP_UVD &&
           cs->ib[IB_MAIN].ip_type != AMDGPU_HW_IP_VCE &&
+          cs->ib[IB_MAIN].ip_type != AMDGPU_HW_IP_UVD_ENC &&
           cs->ib[IB_MAIN].ip_type != AMDGPU_HW_IP_VCN_DEC &&
           cs->ib[IB_MAIN].ip_type != AMDGPU_HW_IP_VCN_ENC;
 }
@@ -816,6 +817,10 @@ static bool amdgpu_init_cs_context(struct amdgpu_cs_context *cs,
 
    case RING_UVD:
       cs->ib[IB_MAIN].ip_type = AMDGPU_HW_IP_UVD;
+      break;
+
+   case RING_UVD_ENC:
+      cs->ib[IB_MAIN].ip_type = AMDGPU_HW_IP_UVD_ENC;
       break;
 
    case RING_VCE:
@@ -1533,6 +1538,7 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       ws->gfx_ib_size_counter += (rcs->prev_dw + rcs->current.cdw) * 4;
       break;
    case RING_UVD:
+   case RING_UVD_ENC:
       while (rcs->current.cdw & 15)
          radeon_emit(rcs, 0x80000000); /* type2 nop packet */
       break;
