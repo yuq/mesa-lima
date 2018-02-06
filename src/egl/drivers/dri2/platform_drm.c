@@ -90,6 +90,44 @@ has_free_buffers(struct gbm_surface *_surf)
    return 0;
 }
 
+static bool
+dri2_drm_config_is_compatible(struct dri2_egl_display *dri2_dpy,
+                              const __DRIconfig *config,
+                              struct gbm_surface *surface)
+{
+   const struct gbm_dri_visual *visual;
+   unsigned int red, green, blue, alpha;
+   int i;
+
+   /* Check that the EGLConfig being used to render to the surface is
+    * compatible with the surface format. Since mixing ARGB and XRGB of
+    * otherwise-compatible formats is relatively common, explicitly allow
+    * this.
+    */
+   dri2_dpy->core->getConfigAttrib(config, __DRI_ATTRIB_RED_MASK, &red);
+   dri2_dpy->core->getConfigAttrib(config, __DRI_ATTRIB_GREEN_MASK, &green);
+   dri2_dpy->core->getConfigAttrib(config, __DRI_ATTRIB_BLUE_MASK, &blue);
+   dri2_dpy->core->getConfigAttrib(config, __DRI_ATTRIB_ALPHA_MASK, &alpha);
+
+   for (i = 0; i < dri2_dpy->gbm_dri->num_visuals; i++) {
+      visual = &dri2_dpy->gbm_dri->visual_table[i];
+      if (visual->gbm_format == surface->format)
+         break;
+   }
+
+   if (i == dri2_dpy->gbm_dri->num_visuals)
+      return false;
+
+   if (red != visual->rgba_masks[0] ||
+       green != visual->rgba_masks[1] ||
+       blue != visual->rgba_masks[2] ||
+       (alpha && visual->rgba_masks[3] && alpha != visual->rgba_masks[3])) {
+      return false;
+   }
+
+   return true;
+}
+
 static _EGLSurface *
 dri2_drm_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
                                _EGLConfig *conf, void *native_surface,
@@ -110,17 +148,23 @@ dri2_drm_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
       return NULL;
    }
 
-   if (!dri2_init_surface(&dri2_surf->base, disp, EGL_WINDOW_BIT, conf, attrib_list, false))
+   if (!dri2_init_surface(&dri2_surf->base, disp, EGL_WINDOW_BIT, conf,
+                          attrib_list, false))
       goto cleanup_surf;
+
+   config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
+                                dri2_surf->base.GLColorspace);
+
+   if (!dri2_drm_config_is_compatible(dri2_dpy, config, surface)) {
+      _eglError(EGL_BAD_MATCH, "EGL config not compatible with GBM format");
+      goto cleanup_surf;
+   }
 
    surf = gbm_dri_surface(surface);
    dri2_surf->gbm_surf = surf;
    dri2_surf->base.Width =  surf->base.width;
    dri2_surf->base.Height = surf->base.height;
    surf->dri_private = dri2_surf;
-
-   config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
-                                dri2_surf->base.GLColorspace);
 
    if (dri2_dpy->dri2) {
       dri2_surf->dri_drawable =
