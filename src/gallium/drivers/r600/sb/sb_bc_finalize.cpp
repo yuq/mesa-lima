@@ -778,8 +778,15 @@ void bc_finalizer::finalize_cf(cf_node* c) {
 		int reg = -1;
 		unsigned mask = 0;
 
+
 		for (unsigned chan = 0; chan < 4; ++chan) {
-			value *v = c->src[chan];
+			value *v;
+			if (ctx.hw_class == HW_CLASS_R600 && c->bc.op == CF_OP_MEM_SCRATCH &&
+			    (c->bc.type == 2 || c->bc.type == 3))
+				v = c->dst[chan];
+			else
+				v = c->src[chan];
+
 			if (!v || v->is_undef())
 				continue;
 

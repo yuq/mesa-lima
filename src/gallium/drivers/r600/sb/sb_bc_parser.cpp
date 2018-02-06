@@ -832,12 +832,23 @@ int bc_parser::prepare_ir() {
 
 			do {
 
-				c->src.resize(4);
-
-				for(int s = 0; s < 4; ++s) {
-					if (c->bc.comp_mask & (1 << s))
-						c->src[s] =
+				if (ctx.hw_class == HW_CLASS_R600 && c->bc.op == CF_OP_MEM_SCRATCH &&
+				    (c->bc.type == 2 || c->bc.type == 3)) {
+					c->dst.resize(4);
+					for(int s = 0; s < 4; ++s) {
+						if (c->bc.comp_mask & (1 << s))
+							c->dst[s] =
 								sh->get_gpr_value(true, c->bc.rw_gpr, s, false);
+					}
+				} else {
+					c->src.resize(4);
+
+				
+					for(int s = 0; s < 4; ++s) {
+						if (c->bc.comp_mask & (1 << s))
+							c->src[s] =
+								sh->get_gpr_value(true, c->bc.rw_gpr, s, false);
+					}
 				}
 
 				if (((flags & CF_RAT) || (!(flags & CF_STRM))) && (c->bc.type & 1)) { // indexed write
