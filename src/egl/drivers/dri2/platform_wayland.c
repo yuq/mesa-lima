@@ -432,9 +432,14 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    struct dri2_egl_display *dri2_dpy =
       dri2_egl_display(dri2_surf->base.Resource.Display);
    int use_flags;
+   int visual_idx;
    unsigned int dri_image_format;
    uint64_t *modifiers;
    int num_modifiers;
+
+   visual_idx = dri2_wl_visual_idx_from_fourcc(dri2_surf->format);
+   assert(visual_idx != -1);
+   dri_image_format = dri2_wl_visuals[visual_idx].dri_image_format;
 
    /* currently supports five WL DRM formats,
     * WL_DRM_FORMAT_ARGB2101010, WL_DRM_FORMAT_XRGB2101010,
@@ -443,27 +448,22 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
     */
    switch (dri2_surf->format) {
    case WL_DRM_FORMAT_ARGB2101010:
-      dri_image_format = __DRI_IMAGE_FORMAT_ARGB2101010;
       modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.argb2101010);
       num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.argb2101010);
       break;
    case WL_DRM_FORMAT_XRGB2101010:
-      dri_image_format = __DRI_IMAGE_FORMAT_XRGB2101010;
       modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.xrgb2101010);
       num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.xrgb2101010);
       break;
    case WL_DRM_FORMAT_ARGB8888:
-      dri_image_format = __DRI_IMAGE_FORMAT_ARGB8888;
       modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.argb8888);
       num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.argb8888);
       break;
    case WL_DRM_FORMAT_XRGB8888:
-      dri_image_format = __DRI_IMAGE_FORMAT_XRGB8888;
       modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.xrgb8888);
       num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.xrgb8888);
       break;
    case WL_DRM_FORMAT_RGB565:
-      dri_image_format = __DRI_IMAGE_FORMAT_RGB565;
       modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.rgb565);
       num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.rgb565);
       break;
@@ -786,6 +786,7 @@ get_fourcc(struct dri2_egl_display *dri2_dpy,
 {
    EGLBoolean query;
    int dri_format;
+   int visual_idx;
 
    query = dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FOURCC,
                                        fourcc);
@@ -797,16 +798,12 @@ get_fourcc(struct dri2_egl_display *dri2_dpy,
    if (!query)
       return false;
 
-   switch (dri_format) {
-   case __DRI_IMAGE_FORMAT_ARGB8888:
-      *fourcc = __DRI_IMAGE_FOURCC_ARGB8888;
-      return true;
-   case __DRI_IMAGE_FORMAT_XRGB8888:
-      *fourcc = __DRI_IMAGE_FOURCC_XRGB8888;
-      return true;
-   default:
+   visual_idx = dri2_wl_visual_idx_from_dri_image_format(dri_format);
+   if (visual_idx == -1)
       return false;
-   }
+
+   *fourcc = dri2_wl_visuals[visual_idx].wl_drm_format;
+   return true;
 }
 
 static struct wl_buffer *
