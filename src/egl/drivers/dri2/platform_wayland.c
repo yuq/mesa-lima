@@ -67,7 +67,7 @@ enum wl_drm_format_flags {
 
 static const struct {
    const char *format_name;
-   int has_format;
+   enum wl_drm_format_flags has_format;
    unsigned int rgba_masks[4];
 } dri2_wl_visuals[] = {
    {
