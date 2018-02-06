@@ -65,7 +65,7 @@ enum wl_drm_format_flags {
    HAS_XRGB2101010 = 16,
 };
 
-static const struct {
+static const struct dri2_wl_visual {
    const char *format_name;
    enum wl_drm_format_flags has_format;
    uint32_t wl_drm_format;
@@ -104,6 +104,31 @@ static const struct {
      { 0xf800, 0x07e0, 0x001f, 0x0000 }
    },
 };
+
+static int
+dri2_wl_visual_idx_from_config(struct dri2_egl_display *dri2_dpy,
+                               const __DRIconfig *config)
+{
+   unsigned int red, green, blue, alpha;
+
+   dri2_dpy->core->getConfigAttrib(config, __DRI_ATTRIB_RED_MASK, &red);
+   dri2_dpy->core->getConfigAttrib(config, __DRI_ATTRIB_GREEN_MASK, &green);
+   dri2_dpy->core->getConfigAttrib(config, __DRI_ATTRIB_BLUE_MASK, &blue);
+   dri2_dpy->core->getConfigAttrib(config, __DRI_ATTRIB_ALPHA_MASK, &alpha);
+
+   for (int i = 0; i < ARRAY_SIZE(dri2_wl_visuals); i++) {
+      const struct dri2_wl_visual *wl_visual = &dri2_wl_visuals[i];
+
+      if (red == wl_visual->rgba_masks[0] &&
+          green == wl_visual->rgba_masks[1] &&
+          blue == wl_visual->rgba_masks[2] &&
+          alpha == wl_visual->rgba_masks[3]) {
+         return i;
+      }
+   }
+
+   return -1;
+}
 
 static int
 roundtrip(struct dri2_egl_display *dri2_dpy)
@@ -176,6 +201,7 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
    struct dri2_egl_config *dri2_conf = dri2_egl_config(conf);
    struct wl_egl_window *window = native_window;
    struct dri2_egl_surface *dri2_surf;
+   int visual_idx;
    const __DRIconfig *config;
 
    dri2_surf = calloc(1, sizeof *dri2_surf);
@@ -184,32 +210,20 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
       return NULL;
    }
 
-   if (!dri2_init_surface(&dri2_surf->base, disp, EGL_WINDOW_BIT, conf, attrib_list, false))
+   if (!dri2_init_surface(&dri2_surf->base, disp, EGL_WINDOW_BIT, conf,
+                          attrib_list, false))
       goto cleanup_surf;
 
+   config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
+                                dri2_surf->base.GLColorspace);
+   visual_idx = dri2_wl_visual_idx_from_config(dri2_dpy, config);
+   assert(visual_idx != -1);
+
    if (dri2_dpy->wl_dmabuf || dri2_dpy->wl_drm) {
-      if (conf->RedSize == 5)
-         dri2_surf->format = WL_DRM_FORMAT_RGB565;
-      else if (conf->RedSize == 8 && conf->AlphaSize == 0)
-         dri2_surf->format = WL_DRM_FORMAT_XRGB8888;
-      else if (conf->RedSize == 8)
-         dri2_surf->format = WL_DRM_FORMAT_ARGB8888;
-      else if (conf->RedSize == 10 && conf->AlphaSize == 0)
-         dri2_surf->format = WL_DRM_FORMAT_XRGB2101010;
-      else if (conf->RedSize == 10)
-         dri2_surf->format = WL_DRM_FORMAT_ARGB2101010;
+      dri2_surf->format = dri2_wl_visuals[visual_idx].wl_drm_format;
    } else {
       assert(dri2_dpy->wl_shm);
-      if (conf->RedSize == 5)
-         dri2_surf->format = WL_SHM_FORMAT_RGB565;
-      else if (conf->RedSize == 8 && conf->AlphaSize == 0)
-         dri2_surf->format = WL_SHM_FORMAT_XRGB8888;
-      else if (conf->RedSize == 8)
-         dri2_surf->format = WL_SHM_FORMAT_ARGB8888;
-      else if (conf->RedSize == 10 && conf->AlphaSize == 0)
-         dri2_surf->format = WL_SHM_FORMAT_XRGB2101010;
-      else if (conf->RedSize == 10)
-         dri2_surf->format = WL_SHM_FORMAT_ARGB2101010;
+      dri2_surf->format = dri2_wl_visuals[visual_idx].wl_shm_format;
    }
 
    dri2_surf->wl_queue = wl_display_create_queue(dri2_dpy->wl_dpy);
@@ -249,9 +263,6 @@ dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
    dri2_surf->wl_win->destroy_window_callback = destroy_window_callback;
    if (dri2_dpy->flush)
       dri2_surf->wl_win->resize_callback = resize_callback;
-
-   config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
-                                dri2_surf->base.GLColorspace);
 
    if (dri2_dpy->image_driver)
       createNewDrawable = dri2_dpy->image_driver->createNewDrawable;
