@@ -572,37 +572,36 @@ static EGLBoolean
 drm_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   static const struct {
-      int format;
-      unsigned int red_mask;
-      unsigned int alpha_mask;
-   } visuals[] = {
-      { GBM_FORMAT_XRGB2101010, 0x3ff00000, 0x00000000 },
-      { GBM_FORMAT_ARGB2101010, 0x3ff00000, 0xc0000000 },
-      { GBM_FORMAT_XRGB8888,    0x00ff0000, 0x00000000 },
-      { GBM_FORMAT_ARGB8888,    0x00ff0000, 0xff000000 },
-      { GBM_FORMAT_RGB565,      0x0000f800, 0x00000000 },
-   };
-
-   unsigned int format_count[ARRAY_SIZE(visuals)] = { 0 };
+   const struct gbm_dri_visual *visuals = dri2_dpy->gbm_dri->visual_table;
+   int num_visuals = dri2_dpy->gbm_dri->num_visuals;
+   unsigned int format_count[num_visuals];
    unsigned int config_count = 0;
 
+   memset(format_count, 0, num_visuals * sizeof(unsigned int));
+
    for (unsigned i = 0; dri2_dpy->driver_configs[i]; i++) {
-      unsigned int red, alpha;
+      unsigned int red, green, blue, alpha;
 
       dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[i],
                                       __DRI_ATTRIB_RED_MASK, &red);
       dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[i],
+                                      __DRI_ATTRIB_GREEN_MASK, &green);
+      dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[i],
+                                      __DRI_ATTRIB_BLUE_MASK, &blue);
+      dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[i],
                                       __DRI_ATTRIB_ALPHA_MASK, &alpha);
 
-      for (unsigned j = 0; j < ARRAY_SIZE(visuals); j++) {
+      for (unsigned j = 0; j < num_visuals; j++) {
          struct dri2_egl_config *dri2_conf;
 
-         if (visuals[j].red_mask != red || visuals[j].alpha_mask != alpha)
+         if (visuals[j].rgba_masks[0] != red ||
+             visuals[j].rgba_masks[1] != green ||
+             visuals[j].rgba_masks[2] != blue ||
+	     visuals[j].rgba_masks[3] != alpha)
             continue;
 
          const EGLint attr_list[] = {
-            EGL_NATIVE_VISUAL_ID,  visuals[j].format,
+            EGL_NATIVE_VISUAL_ID, visuals[j].gbm_format,
             EGL_NONE,
          };
 
@@ -619,7 +618,7 @@ drm_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
    for (unsigned i = 0; i < ARRAY_SIZE(format_count); i++) {
       if (!format_count[i]) {
          _eglLog(_EGL_DEBUG, "No DRI config supports native format 0x%x",
-                 visuals[i].format);
+                 visuals[i].gbm_format);
       }
    }
 
