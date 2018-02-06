@@ -361,25 +361,26 @@ _mesa_get_compressed_formats(struct gl_context *ctx, GLint *formats)
     *    "Interactions with OpenGL 4.2
     *
     *        OpenGL 4.2 supports the feature that compressed textures can be
-    *        compressed online, by passing the compressed texture format enum as
-    *        the internal format when uploading a texture using TexImage1D,
+    *        compressed online, by passing the compressed texture format enum
+    *        as the internal format when uploading a texture using TexImage1D,
     *        TexImage2D or TexImage3D (see Section 3.9.3, Texture Image
     *        Specification, subsection Encoding of Special Internal Formats).
     *
-    *        Due to the complexity of the ASTC compression algorithm, it is not
-    *        usually suitable for online use, and therefore ASTC support will be
-    *        limited to pre-compressed textures only. Where on-device compression
-    *        is required, a domain-specific limited compressor will typically
-    *        be used, and this is therefore not suitable for implementation in
-    *        the driver.
+    *        Due to the complexity of the ASTC compression algorithm, it is
+    *        not usually suitable for online use, and therefore ASTC support
+    *        will be limited to pre-compressed textures only. Where on-device
+    *        compression is required, a domain-specific limited compressor
+    *        will typically be used, and this is therefore not suitable for
+    *        implementation in the driver.
     *
     *        In particular, the ASTC format specifiers will not be added to
     *        Table 3.14, and thus will not be accepted by the TexImage*D
     *        functions, and will not be returned by the (already deprecated)
     *        COMPRESSED_TEXTURE_FORMATS query."
     *
-    * The ES and the desktop specs diverge here. In OpenGL ES, the COMPRESSED_TEXTURE_FORMATS
-    * query returns the set of supported specific compressed formats.
+    * The ES and the desktop specs diverge here. In OpenGL ES, the
+    * COMPRESSED_TEXTURE_FORMATS query returns the set of supported specific
+    * compressed formats.
     */
    if (ctx->API == API_OPENGLES2 &&
        ctx->Extensions.KHR_texture_compression_astc_ldr) {
@@ -642,7 +643,8 @@ _mesa_glenum_to_compressed_format(GLenum format)
  * internal format unchanged.
  */
 GLenum
-_mesa_compressed_format_to_glenum(struct gl_context *ctx, mesa_format mesaFormat)
+_mesa_compressed_format_to_glenum(struct gl_context *ctx,
+                                  mesa_format mesaFormat)
 {
    switch (mesaFormat) {
    case MESA_FORMAT_RGB_FXT1:
@@ -900,7 +902,7 @@ _mesa_decompress_image(mesa_format format, GLuint width, GLuint height,
       _mesa_problem(NULL, "Unexpected format in _mesa_decompress_image()");
       return;
    }
- 
+
    stride = srcRowStride * bh / bytes;
 
    for (j = 0; j < height; j++) {
