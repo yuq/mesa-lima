@@ -1832,21 +1832,8 @@ kernel_has_dynamic_config_support(struct brw_context *brw,
 
       /* Look for the test config, which we know we can't replace. */
       if (read_file_uint64(config_path, &config_id) && config_id == 1) {
-         uint32_t mux_regs[] = { 0x9888 /* NOA_WRITE */, 0x0 };
-         struct drm_i915_perf_oa_config config;
-
-         memset(&config, 0, sizeof(config));
-
-         memcpy(config.uuid, query->guid, sizeof(config.uuid));
-
-         config.n_mux_regs = 1;
-         config.mux_regs_ptr = (uintptr_t) mux_regs;
-
-         if (drmIoctl(screen->fd, DRM_IOCTL_I915_PERF_REMOVE_CONFIG, &config_id) < 0 &&
-             errno == ENOENT)
-            return true;
-
-         break;
+         return drmIoctl(screen->fd, DRM_IOCTL_I915_PERF_REMOVE_CONFIG,
+                         &config_id) < 0 && errno == ENOENT;
       }
    }
 
