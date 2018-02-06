@@ -3075,7 +3075,7 @@ load_gs_input(struct ac_shader_abi *abi,
 		}
 	}
 	result = ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
-
+	result = ac_to_integer(&ctx->ac, result);
 	return result;
 }
 
