@@ -57,17 +57,12 @@
 #define DRM_FORMAT_MOD_LINEAR 0
 #endif
 
-enum wl_drm_format_flags {
-   HAS_ARGB8888 = 1,
-   HAS_XRGB8888 = 2,
-   HAS_RGB565 = 4,
-   HAS_ARGB2101010 = 8,
-   HAS_XRGB2101010 = 16,
-};
-
+/*
+ * The index of entries in this table is used as a bitmask in
+ * dri2_dpy->formats, which tracks the formats supported by our server.
+ */
 static const struct dri2_wl_visual {
    const char *format_name;
-   enum wl_drm_format_flags has_format;
    uint32_t wl_drm_format;
    uint32_t wl_shm_format;
    int dri_image_format;
@@ -75,31 +70,31 @@ static const struct dri2_wl_visual {
    unsigned int rgba_masks[4];
 } dri2_wl_visuals[] = {
    {
-     "XRGB2101010", HAS_XRGB2101010,
+     "XRGB2101010",
      WL_DRM_FORMAT_XRGB2101010, WL_SHM_FORMAT_XRGB2101010,
      __DRI_IMAGE_FORMAT_XRGB2101010, 32,
      { 0x3ff00000, 0x000ffc00, 0x000003ff, 0x00000000 }
    },
    {
-     "ARGB2101010", HAS_ARGB2101010,
+     "ARGB2101010",
      WL_DRM_FORMAT_ARGB2101010, WL_SHM_FORMAT_ARGB2101010,
      __DRI_IMAGE_FORMAT_ARGB2101010, 32,
      { 0x3ff00000, 0x000ffc00, 0x000003ff, 0xc0000000 }
    },
    {
-     "XRGB8888", HAS_XRGB8888,
+     "XRGB8888",
      WL_DRM_FORMAT_XRGB8888, WL_SHM_FORMAT_XRGB8888,
      __DRI_IMAGE_FORMAT_XRGB8888, 32,
      { 0x00ff0000, 0x0000ff00, 0x000000ff, 0x00000000 }
    },
    {
-     "ARGB8888", HAS_ARGB8888,
+     "ARGB8888",
      WL_DRM_FORMAT_ARGB8888, WL_SHM_FORMAT_ARGB8888,
      __DRI_IMAGE_FORMAT_ARGB8888, 32,
      { 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000 }
    },
    {
-     "RGB565", HAS_RGB565,
+     "RGB565",
      WL_DRM_FORMAT_RGB565, WL_SHM_FORMAT_RGB565,
      __DRI_IMAGE_FORMAT_RGB565, 16,
      { 0xf800, 0x07e0, 0x001f, 0x0000 }
@@ -1071,7 +1066,7 @@ dri2_wl_create_wayland_buffer_from_image(_EGLDriver *drv,
    if (visual_idx == -1)
       goto bad_format;
 
-   if (!(dri2_dpy->formats & dri2_wl_visuals[visual_idx].has_format))
+   if (!(dri2_dpy->formats & (1 << visual_idx)))
       goto bad_format;
 
    buffer = create_wl_buffer(dri2_dpy, NULL, image);
@@ -1152,7 +1147,7 @@ drm_handle_format(void *data, struct wl_drm *drm, uint32_t format)
    if (visual_idx == -1)
       return;
 
-   dri2_dpy->formats |= dri2_wl_visuals[visual_idx].has_format;
+   dri2_dpy->formats |= (1 << visual_idx);
 }
 
 static void
@@ -1221,7 +1216,7 @@ dmabuf_handle_modifier(void *data, struct zwp_linux_dmabuf_v1 *dmabuf,
    if (!mod)
       return;
 
-   dri2_dpy->formats |= dri2_wl_visuals[visual_idx].has_format;
+   dri2_dpy->formats |= (1 << visual_idx);
    *mod = (uint64_t) modifier_hi << 32;
    *mod |= (uint64_t) (modifier_lo & 0xffffffff);
 }
@@ -1318,7 +1313,7 @@ dri2_wl_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
       for (unsigned j = 0; j < ARRAY_SIZE(dri2_wl_visuals); j++) {
          struct dri2_egl_config *dri2_conf;
 
-         if (!(dri2_dpy->formats & dri2_wl_visuals[j].has_format))
+         if (!(dri2_dpy->formats & (1 << j)))
             continue;
 
          dri2_conf = dri2_add_config(disp, dri2_dpy->driver_configs[i],
@@ -1933,7 +1928,7 @@ shm_handle_format(void *data, struct wl_shm *shm, uint32_t format)
    if (visual_idx == -1)
       return;
 
-   dri2_dpy->formats |= dri2_wl_visuals[visual_idx].has_format;
+   dri2_dpy->formats |= (1 << visual_idx);
 }
 
 static const struct wl_shm_listener shm_listener = {
