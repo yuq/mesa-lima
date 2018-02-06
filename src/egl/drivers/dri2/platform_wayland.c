@@ -436,37 +436,8 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    visual_idx = dri2_wl_visual_idx_from_fourcc(dri2_surf->format);
    assert(visual_idx != -1);
    dri_image_format = dri2_wl_visuals[visual_idx].dri_image_format;
-
-   /* currently supports five WL DRM formats,
-    * WL_DRM_FORMAT_ARGB2101010, WL_DRM_FORMAT_XRGB2101010,
-    * WL_DRM_FORMAT_ARGB8888, WL_DRM_FORMAT_XRGB8888,
-    * and WL_DRM_FORMAT_RGB565
-    */
-   switch (dri2_surf->format) {
-   case WL_DRM_FORMAT_ARGB2101010:
-      modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.argb2101010);
-      num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.argb2101010);
-      break;
-   case WL_DRM_FORMAT_XRGB2101010:
-      modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.xrgb2101010);
-      num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.xrgb2101010);
-      break;
-   case WL_DRM_FORMAT_ARGB8888:
-      modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.argb8888);
-      num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.argb8888);
-      break;
-   case WL_DRM_FORMAT_XRGB8888:
-      modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.xrgb8888);
-      num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.xrgb8888);
-      break;
-   case WL_DRM_FORMAT_RGB565:
-      modifiers = u_vector_tail(&dri2_dpy->wl_modifiers.rgb565);
-      num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers.rgb565);
-      break;
-   default:
-      /* format is not supported */
-      return -1;
-   }
+   modifiers = u_vector_tail(&dri2_dpy->wl_modifiers[visual_idx]);
+   num_modifiers = u_vector_length(&dri2_dpy->wl_modifiers[visual_idx]);
 
    /* There might be a buffer release already queued that wasn't processed */
    wl_display_dispatch_queue_pending(dri2_dpy->wl_dpy, dri2_surf->wl_queue);
@@ -1187,36 +1158,18 @@ dmabuf_handle_modifier(void *data, struct zwp_linux_dmabuf_v1 *dmabuf,
 {
    struct dri2_egl_display *dri2_dpy = data;
    int visual_idx = dri2_wl_visual_idx_from_fourcc(format);
-   uint64_t *mod = NULL;
+   uint64_t *mod;
+
+   if (visual_idx == -1)
+      return;
 
    if (modifier_hi == (DRM_FORMAT_MOD_INVALID >> 32) &&
        modifier_lo == (DRM_FORMAT_MOD_INVALID & 0xffffffff))
       return;
 
-   switch (format) {
-   case WL_DRM_FORMAT_ARGB2101010:
-      mod = u_vector_add(&dri2_dpy->wl_modifiers.argb2101010);
-      break;
-   case WL_DRM_FORMAT_XRGB2101010:
-      mod = u_vector_add(&dri2_dpy->wl_modifiers.xrgb2101010);
-      break;
-   case WL_DRM_FORMAT_ARGB8888:
-      mod = u_vector_add(&dri2_dpy->wl_modifiers.argb8888);
-      break;
-   case WL_DRM_FORMAT_XRGB8888:
-      mod = u_vector_add(&dri2_dpy->wl_modifiers.xrgb8888);
-      break;
-   case WL_DRM_FORMAT_RGB565:
-      mod = u_vector_add(&dri2_dpy->wl_modifiers.rgb565);
-      break;
-   default:
-      break;
-   }
-
-   if (!mod)
-      return;
-
    dri2_dpy->formats |= (1 << visual_idx);
+
+   mod = u_vector_add(&dri2_dpy->wl_modifiers[visual_idx]);
    *mod = (uint64_t) modifier_hi << 32;
    *mod |= (uint64_t) (modifier_lo & 0xffffffff);
 }
@@ -1358,12 +1311,13 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
       dri2_dpy->wl_dpy = disp->PlatformDisplay;
    }
 
-   if (!u_vector_init(&dri2_dpy->wl_modifiers.xrgb2101010, sizeof(uint64_t), 32) ||
-       !u_vector_init(&dri2_dpy->wl_modifiers.argb2101010, sizeof(uint64_t), 32) ||
-       !u_vector_init(&dri2_dpy->wl_modifiers.xrgb8888, sizeof(uint64_t), 32) ||
-       !u_vector_init(&dri2_dpy->wl_modifiers.argb8888, sizeof(uint64_t), 32) ||
-       !u_vector_init(&dri2_dpy->wl_modifiers.rgb565, sizeof(uint64_t), 32)) {
+   dri2_dpy->wl_modifiers =
+      calloc(ARRAY_SIZE(dri2_wl_visuals), sizeof(*dri2_dpy->wl_modifiers));
+   if (!dri2_dpy->wl_modifiers)
       goto cleanup;
+   for (int i = 0; i < ARRAY_SIZE(dri2_wl_visuals); i++) {
+      if (!u_vector_init(&dri2_dpy->wl_modifiers[i], sizeof(uint64_t), 32))
+         goto cleanup;
    }
 
    dri2_dpy->wl_queue = wl_display_create_queue(dri2_dpy->wl_dpy);
@@ -2094,11 +2048,11 @@ dri2_teardown_wayland(struct dri2_egl_display *dri2_dpy)
       wl_event_queue_destroy(dri2_dpy->wl_queue);
    if (dri2_dpy->wl_dpy_wrapper)
       wl_proxy_wrapper_destroy(dri2_dpy->wl_dpy_wrapper);
-   u_vector_finish(&dri2_dpy->wl_modifiers.argb2101010);
-   u_vector_finish(&dri2_dpy->wl_modifiers.xrgb2101010);
-   u_vector_finish(&dri2_dpy->wl_modifiers.argb8888);
-   u_vector_finish(&dri2_dpy->wl_modifiers.xrgb8888);
-   u_vector_finish(&dri2_dpy->wl_modifiers.rgb565);
+
+   for (int i = 0; dri2_dpy->wl_modifiers && i < ARRAY_SIZE(dri2_wl_visuals); i++)
+      u_vector_finish(&dri2_dpy->wl_modifiers[i]);
+   free(dri2_dpy->wl_modifiers);
+
    if (dri2_dpy->own_device)
       wl_display_disconnect(dri2_dpy->wl_dpy);
 }
