@@ -65,6 +65,18 @@ enum wl_drm_format_flags {
    HAS_XRGB2101010 = 16,
 };
 
+static const struct {
+   const char *format_name;
+   int has_format;
+   unsigned int rgba_masks[4];
+} dri2_wl_visuals[] = {
+   { "XRGB2101010", HAS_XRGB2101010, { 0x3ff00000, 0xffc00, 0x3ff, 0 } },
+   { "ARGB2101010", HAS_ARGB2101010, { 0x3ff00000, 0xffc00, 0x3ff, 0xc0000000 } },
+   { "XRGB8888", HAS_XRGB8888, { 0xff0000, 0xff00, 0x00ff, 0 } },
+   { "ARGB8888", HAS_ARGB8888, { 0xff0000, 0xff00, 0x00ff, 0xff000000 } },
+   { "RGB565",   HAS_RGB565,   { 0x00f800, 0x07e0, 0x001f, 0 } },
+};
+
 static int
 roundtrip(struct dri2_egl_display *dri2_dpy)
 {
@@ -1267,29 +1279,18 @@ static EGLBoolean
 dri2_wl_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   static const struct {
-      const char *format_name;
-      int has_format;
-      unsigned int rgba_masks[4];
-   } visuals[] = {
-      { "XRGB2101010", HAS_XRGB2101010, { 0x3ff00000, 0xffc00, 0x3ff, 0 } },
-      { "ARGB2101010", HAS_ARGB2101010, { 0x3ff00000, 0xffc00, 0x3ff, 0xc0000000 } },
-      { "XRGB8888", HAS_XRGB8888, { 0xff0000, 0xff00, 0x00ff, 0 } },
-      { "ARGB8888", HAS_ARGB8888, { 0xff0000, 0xff00, 0x00ff, 0xff000000 } },
-      { "RGB565",   HAS_RGB565,   { 0x00f800, 0x07e0, 0x001f, 0 } },
-   };
-   unsigned int format_count[ARRAY_SIZE(visuals)] = { 0 };
+   unsigned int format_count[ARRAY_SIZE(dri2_wl_visuals)] = { 0 };
    unsigned int count = 0;
 
    for (unsigned i = 0; dri2_dpy->driver_configs[i]; i++) {
-      for (unsigned j = 0; j < ARRAY_SIZE(visuals); j++) {
+      for (unsigned j = 0; j < ARRAY_SIZE(dri2_wl_visuals); j++) {
          struct dri2_egl_config *dri2_conf;
 
-         if (!(dri2_dpy->formats & visuals[j].has_format))
+         if (!(dri2_dpy->formats & dri2_wl_visuals[j].has_format))
             continue;
 
          dri2_conf = dri2_add_config(disp, dri2_dpy->driver_configs[i],
-               count + 1, EGL_WINDOW_BIT, NULL, visuals[j].rgba_masks);
+               count + 1, EGL_WINDOW_BIT, NULL, dri2_wl_visuals[j].rgba_masks);
          if (dri2_conf) {
             if (dri2_conf->base.ConfigID == count + 1)
                count++;
@@ -1301,7 +1302,7 @@ dri2_wl_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
    for (unsigned i = 0; i < ARRAY_SIZE(format_count); i++) {
       if (!format_count[i]) {
          _eglLog(_EGL_DEBUG, "No DRI config supports native format %s",
-                 visuals[i].format_name);
+                 dri2_wl_visuals[i].format_name);
       }
    }
 
