@@ -3344,41 +3344,38 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.file_offset[TGSI_FILE_CONSTANT] = 512;
 
 	ctx.file_offset[TGSI_FILE_IMMEDIATE] = V_SQ_ALU_SRC_LITERAL;
-	ctx.bc->ar_reg = ctx.file_offset[TGSI_FILE_TEMPORARY] +
-			ctx.info.file_max[TGSI_FILE_TEMPORARY] + 1;
-	ctx.bc->index_reg[0] = ctx.bc->ar_reg + 1;
-	ctx.bc->index_reg[1] = ctx.bc->ar_reg + 2;
+
+	int regno = ctx.file_offset[TGSI_FILE_TEMPORARY] +
+			ctx.info.file_max[TGSI_FILE_TEMPORARY];
+	ctx.bc->ar_reg = ++regno;
+	ctx.bc->index_reg[0] = ++regno;
+	ctx.bc->index_reg[1] = ++regno;
 
 	if (ctx.type == PIPE_SHADER_TESS_CTRL) {
-		ctx.tess_input_info = ctx.bc->ar_reg + 3;
-		ctx.tess_output_info = ctx.bc->ar_reg + 4;
-		ctx.temp_reg = ctx.bc->ar_reg + 5;
+		ctx.tess_input_info = ++regno;
+		ctx.tess_output_info = ++regno;
 	} else if (ctx.type == PIPE_SHADER_TESS_EVAL) {
 		ctx.tess_input_info = 0;
-		ctx.tess_output_info = ctx.bc->ar_reg + 3;
-		ctx.temp_reg = ctx.bc->ar_reg + 4;
+		ctx.tess_output_info = ++regno;
 	} else if (ctx.type == PIPE_SHADER_GEOMETRY) {
-		ctx.gs_export_gpr_tregs[0] = ctx.bc->ar_reg + 3;
-		ctx.gs_export_gpr_tregs[1] = ctx.bc->ar_reg + 4;
-		ctx.gs_export_gpr_tregs[2] = ctx.bc->ar_reg + 5;
-		ctx.gs_export_gpr_tregs[3] = ctx.bc->ar_reg + 6;
-		ctx.temp_reg = ctx.bc->ar_reg + 7;
+		ctx.gs_export_gpr_tregs[0] = ++regno;
+		ctx.gs_export_gpr_tregs[1] = ++regno;
+		ctx.gs_export_gpr_tregs[2] = ++regno;
+		ctx.gs_export_gpr_tregs[3] = ++regno;
 		if (ctx.shader->gs_tri_strip_adj_fix) {
-			ctx.gs_rotated_input[0] = ctx.bc->ar_reg + 7;
-			ctx.gs_rotated_input[1] = ctx.bc->ar_reg + 8;
-			ctx.temp_reg += 2;
+			ctx.gs_rotated_input[0] = ++regno;
+			ctx.gs_rotated_input[1] = ++regno;
 		} else {
 			ctx.gs_rotated_input[0] = 0;
 			ctx.gs_rotated_input[1] = 1;
 		}
-	} else {
-		ctx.temp_reg = ctx.bc->ar_reg + 3;
 	}
 
 	if (shader->uses_images) {
-		ctx.thread_id_gpr = ctx.temp_reg++;
+		ctx.thread_id_gpr = ++regno;
 		ctx.thread_id_gpr_loaded = false;
 	}
+	ctx.temp_reg = ++regno;
 
 	shader->max_arrays = 0;
 	shader->num_arrays = 0;
