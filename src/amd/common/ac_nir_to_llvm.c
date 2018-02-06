@@ -5738,27 +5738,6 @@ setup_shared(struct ac_nir_context *ctx,
 	}
 }
 
-static LLVMValueRef
-emit_float_saturate(struct ac_llvm_context *ctx, LLVMValueRef v, float lo, float hi)
-{
-	v = ac_to_float(ctx, v);
-	v = emit_intrin_2f_param(ctx, "llvm.maxnum", ctx->f32, v, LLVMConstReal(ctx->f32, lo));
-	return emit_intrin_2f_param(ctx, "llvm.minnum", ctx->f32, v, LLVMConstReal(ctx->f32, hi));
-}
-
-
-static LLVMValueRef emit_pack_int16(struct nir_to_llvm_context *ctx,
-					LLVMValueRef src0, LLVMValueRef src1)
-{
-	LLVMValueRef const16 = LLVMConstInt(ctx->ac.i32, 16, false);
-	LLVMValueRef comp[2];
-
-	comp[0] = LLVMBuildAnd(ctx->builder, src0, LLVMConstInt(ctx->ac.i32, 65535, 0), "");
-	comp[1] = LLVMBuildAnd(ctx->builder, src1, LLVMConstInt(ctx->ac.i32, 65535, 0), "");
-	comp[1] = LLVMBuildShl(ctx->builder, comp[1], const16, "");
-	return LLVMBuildOr(ctx->builder, comp[0], comp[1], "");
-}
-
 /* Initialize arguments for the shader export intrinsic */
 static void
 si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
@@ -5788,11 +5767,15 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 		return;
 
 	if (ctx->stage == MESA_SHADER_FRAGMENT && target >= V_008DFC_SQ_EXP_MRT) {
-		LLVMValueRef val[4];
 		unsigned index = target - V_008DFC_SQ_EXP_MRT;
 		unsigned col_format = (ctx->options->key.fs.col_format >> (4 * index)) & 0xf;
 		bool is_int8 = (ctx->options->key.fs.is_int8 >> index) & 1;
 		bool is_int10 = (ctx->options->key.fs.is_int10 >> index) & 1;
+		unsigned chan;
+
+		LLVMValueRef (*packf)(struct ac_llvm_context *ctx, LLVMValueRef args[2]) = NULL;
+		LLVMValueRef (*packi)(struct ac_llvm_context *ctx, LLVMValueRef args[2],
+				      unsigned bits, bool hi) = NULL;
 
 		switch(col_format) {
 		case V_028714_SPI_SHADER_ZERO:
@@ -5818,101 +5801,66 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 			break;
 
 		case V_028714_SPI_SHADER_FP16_ABGR:
-			args->compr = 1;
-
-			for (unsigned chan = 0; chan < 2; chan++) {
-				LLVMValueRef pack_args[2] = {
-					values[2 * chan],
-					values[2 * chan + 1]
-				};
-				LLVMValueRef packed;
-
-				packed = ac_build_cvt_pkrtz_f16(&ctx->ac, pack_args);
-				args->out[chan] = packed;
-			}
+			packf = ac_build_cvt_pkrtz_f16;
 			break;
 
 		case V_028714_SPI_SHADER_UNORM16_ABGR:
-			for (unsigned chan = 0; chan < 4; chan++) {
-				val[chan] = ac_build_clamp(&ctx->ac, values[chan]);
-				val[chan] = LLVMBuildFMul(ctx->builder, val[chan],
-							LLVMConstReal(ctx->ac.f32, 65535), "");
-				val[chan] = LLVMBuildFAdd(ctx->builder, val[chan],
-							LLVMConstReal(ctx->ac.f32, 0.5), "");
-				val[chan] = LLVMBuildFPToUI(ctx->builder, val[chan],
-							ctx->ac.i32, "");
-			}
-
-			args->compr = 1;
-			args->out[0] = emit_pack_int16(ctx, val[0], val[1]);
-			args->out[1] = emit_pack_int16(ctx, val[2], val[3]);
+			packf = ac_build_cvt_pknorm_u16;
 			break;
 
 		case V_028714_SPI_SHADER_SNORM16_ABGR:
-			for (unsigned chan = 0; chan < 4; chan++) {
-				val[chan] = emit_float_saturate(&ctx->ac, values[chan], -1, 1);
-				val[chan] = LLVMBuildFMul(ctx->builder, val[chan],
-							LLVMConstReal(ctx->ac.f32, 32767), "");
-
-				/* If positive, add 0.5, else add -0.5. */
-				val[chan] = LLVMBuildFAdd(ctx->builder, val[chan],
-						LLVMBuildSelect(ctx->builder,
-							LLVMBuildFCmp(ctx->builder, LLVMRealOGE,
-								val[chan], ctx->ac.f32_0, ""),
-							LLVMConstReal(ctx->ac.f32, 0.5),
-							LLVMConstReal(ctx->ac.f32, -0.5), ""), "");
-				val[chan] = LLVMBuildFPToSI(ctx->builder, val[chan], ctx->ac.i32, "");
-			}
-
-			args->compr = 1;
-			args->out[0] = emit_pack_int16(ctx, val[0], val[1]);
-			args->out[1] = emit_pack_int16(ctx, val[2], val[3]);
+			packf = ac_build_cvt_pknorm_i16;
 			break;
 
-		case V_028714_SPI_SHADER_UINT16_ABGR: {
-			LLVMValueRef max_rgb = LLVMConstInt(ctx->ac.i32,
-							    is_int8 ? 255 : is_int10 ? 1023 : 65535, 0);
-			LLVMValueRef max_alpha = !is_int10 ? max_rgb : LLVMConstInt(ctx->ac.i32, 3, 0);
-
-			for (unsigned chan = 0; chan < 4; chan++) {
-				val[chan] = ac_to_integer(&ctx->ac, values[chan]);
-				val[chan] = emit_minmax_int(&ctx->ac, LLVMIntULT, val[chan], chan == 3 ? max_alpha : max_rgb);
-			}
-
-			args->compr = 1;
-			args->out[0] = emit_pack_int16(ctx, val[0], val[1]);
-			args->out[1] = emit_pack_int16(ctx, val[2], val[3]);
+		case V_028714_SPI_SHADER_UINT16_ABGR:
+			packi = ac_build_cvt_pk_u16;
 			break;
-		}
 
-		case V_028714_SPI_SHADER_SINT16_ABGR: {
-			LLVMValueRef max_rgb = LLVMConstInt(ctx->ac.i32,
-							    is_int8 ? 127 : is_int10 ? 511 : 32767, 0);
-			LLVMValueRef min_rgb = LLVMConstInt(ctx->ac.i32,
-							    is_int8 ? -128 : is_int10 ? -512 : -32768, 0);
-			LLVMValueRef max_alpha = !is_int10 ? max_rgb : ctx->ac.i32_1;
-			LLVMValueRef min_alpha = !is_int10 ? min_rgb : LLVMConstInt(ctx->ac.i32, -2, 0);
-
-			/* Clamp. */
-			for (unsigned chan = 0; chan < 4; chan++) {
-				val[chan] = ac_to_integer(&ctx->ac, values[chan]);
-				val[chan] = emit_minmax_int(&ctx->ac, LLVMIntSLT, val[chan], chan == 3 ? max_alpha : max_rgb);
-				val[chan] = emit_minmax_int(&ctx->ac, LLVMIntSGT, val[chan], chan == 3 ? min_alpha : min_rgb);
-			}
-
-			args->compr = 1;
-			args->out[0] = emit_pack_int16(ctx, val[0], val[1]);
-			args->out[1] = emit_pack_int16(ctx, val[2], val[3]);
+		case V_028714_SPI_SHADER_SINT16_ABGR:
+			packi = ac_build_cvt_pk_i16;
 			break;
-		}
 
 		default:
 		case V_028714_SPI_SHADER_32_ABGR:
 			memcpy(&args->out[0], values, sizeof(values[0]) * 4);
 			break;
 		}
-	} else
-		memcpy(&args->out[0], values, sizeof(values[0]) * 4);
+
+		/* Pack f16 or norm_i16/u16. */
+		if (packf) {
+			for (chan = 0; chan < 2; chan++) {
+				LLVMValueRef pack_args[2] = {
+					values[2 * chan],
+					values[2 * chan + 1]
+				};
+				LLVMValueRef packed;
+
+				packed = packf(&ctx->ac, pack_args);
+				args->out[chan] = ac_to_float(&ctx->ac, packed);
+			}
+			args->compr = 1; /* COMPR flag */
+		}
+
+		/* Pack i16/u16. */
+		if (packi) {
+			for (chan = 0; chan < 2; chan++) {
+				LLVMValueRef pack_args[2] = {
+					ac_to_integer(&ctx->ac, values[2 * chan]),
+					ac_to_integer(&ctx->ac, values[2 * chan + 1])
+				};
+				LLVMValueRef packed;
+
+				packed = packi(&ctx->ac, pack_args,
+					       is_int8 ? 8 : is_int10 ? 10 : 16,
+					       chan == 1);
+				args->out[chan] = ac_to_float(&ctx->ac, packed);
+			}
+			args->compr = 1; /* COMPR flag */
+		}
+		return;
+	}
+
+	memcpy(&args->out[0], values, sizeof(values[0]) * 4);
 
 	for (unsigned i = 0; i < 4; ++i)
 		args->out[i] = ac_to_float(&ctx->ac, args->out[i]);
