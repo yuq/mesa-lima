@@ -341,6 +341,9 @@ dump_perf_query_callback(GLuint id, void *query_void, void *brw_void)
           o->Active ? "Active," : (o->Ready ? "Ready," : "Pending,"),
           obj->pipeline_stats.bo ? "yes" : "no");
       break;
+   default:
+      unreachable("Unknown query type");
+      break;
    }
 }
 
@@ -436,6 +439,10 @@ brw_get_perf_query_info(struct gl_context *ctx,
 
    case PIPELINE_STATS:
       *n_active = brw->perfquery.n_active_pipeline_stats_queries;
+      break;
+
+   default:
+      unreachable("Unknown query type");
       break;
    }
 }
@@ -1265,6 +1272,10 @@ brw_begin_perf_query(struct gl_context *ctx,
 
       ++brw->perfquery.n_active_pipeline_stats_queries;
       break;
+
+   default:
+      unreachable("Unknown query type");
+      break;
    }
 
    if (INTEL_DEBUG & DEBUG_PERFMON)
@@ -1321,6 +1332,10 @@ brw_end_perf_query(struct gl_context *ctx,
                                     STATS_BO_END_OFFSET_BYTES);
       --brw->perfquery.n_active_pipeline_stats_queries;
       break;
+
+   default:
+      unreachable("Unknown query type");
+      break;
    }
 }
 
@@ -1340,6 +1355,10 @@ brw_wait_perf_query(struct gl_context *ctx, struct gl_perf_query_object *o)
 
    case PIPELINE_STATS:
       bo = obj->pipeline_stats.bo;
+      break;
+
+   default:
+      unreachable("Unknown query type");
       break;
    }
 
@@ -1386,9 +1405,12 @@ brw_is_perf_query_ready(struct gl_context *ctx,
       return (obj->pipeline_stats.bo &&
               !brw_batch_references(&brw->batch, obj->pipeline_stats.bo) &&
               !brw_bo_busy(obj->pipeline_stats.bo));
+
+   default:
+      unreachable("Unknown query type");
+      break;
    }
 
-   unreachable("missing ready check for unknown query kind");
    return false;
 }
 
@@ -1502,6 +1524,10 @@ brw_get_perf_query_data(struct gl_context *ctx,
    case PIPELINE_STATS:
       written = get_pipeline_stats_data(brw, obj, data_size, (uint8_t *)data);
       break;
+
+   default:
+      unreachable("Unknown query type");
+      break;
    }
 
    if (bytes_written)
@@ -1566,6 +1592,10 @@ brw_delete_perf_query(struct gl_context *ctx,
          brw_bo_unreference(obj->pipeline_stats.bo);
          obj->pipeline_stats.bo = NULL;
       }
+      break;
+
+   default:
+      unreachable("Unknown query type");
       break;
    }
 
