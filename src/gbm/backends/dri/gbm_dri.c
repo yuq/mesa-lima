@@ -543,11 +543,7 @@ dri_screen_create_sw(struct gbm_dri_device *dri)
    return dri_screen_create_swrast(dri);
 }
 
-static const struct {
-   uint32_t gbm_format;
-   int dri_image_format;
-   uint32_t rgba_masks[4];
-} gbm_to_dri_image_formats[] = {
+static const struct gbm_dri_visual gbm_dri_visuals_table[] = {
    {
      GBM_FORMAT_R8, __DRI_IMAGE_FORMAT_R8,
      { 0x000000ff, 0x00000000, 0x00000000, 0x00000000 },
@@ -608,9 +604,9 @@ gbm_format_to_dri_format(uint32_t gbm_format)
    int i;
 
    gbm_format = gbm_format_canonicalize(gbm_format);
-   for (i = 0; i < ARRAY_SIZE(gbm_to_dri_image_formats); i++) {
-      if (gbm_to_dri_image_formats[i].gbm_format == gbm_format)
-         return gbm_to_dri_image_formats[i].dri_image_format;
+   for (i = 0; i < ARRAY_SIZE(gbm_dri_visuals_table); i++) {
+      if (gbm_dri_visuals_table[i].gbm_format == gbm_format)
+         return gbm_dri_visuals_table[i].dri_image_format;
    }
 
    return 0;
@@ -621,9 +617,9 @@ gbm_dri_to_gbm_format(int dri_format)
 {
    int i;
 
-   for (i = 0; i < ARRAY_SIZE(gbm_to_dri_image_formats); i++) {
-      if (gbm_to_dri_image_formats[i].dri_image_format == dri_format)
-         return gbm_to_dri_image_formats[i].gbm_format;
+   for (i = 0; i < ARRAY_SIZE(gbm_dri_visuals_table); i++) {
+      if (gbm_dri_visuals_table[i].dri_image_format == dri_format)
+         return gbm_dri_visuals_table[i].gbm_format;
    }
 
    return 0;
@@ -1417,6 +1413,9 @@ dri_device_create(int fd)
    dri->base.surface_destroy = gbm_dri_surface_destroy;
 
    dri->base.name = "drm";
+
+   dri->visual_table = gbm_dri_visuals_table;
+   dri->num_visuals = ARRAY_SIZE(gbm_dri_visuals_table);
 
    mtx_init(&dri->mutex, mtx_plain);
 
