@@ -1338,7 +1338,7 @@ static void TessellationStages(
             tsData.ppIndices,
             tsData.NumPrimitives,
             tsState.postDSTopology,
-            numVertsPerPrim);
+            NumVertsPerPrim(tsState.postDSTopology, false));
 
         while (tessPa.HasWork())
         {
@@ -1431,7 +1431,7 @@ static void TessellationStages(
                         pfnClipFunc(pDC, tessPa, workerId, prim_simd16, GenMask(numPrims), primID, vViewportIdx, vRtIdx);
                     }
 #else
-                    // Gather data from the SVG if provided.
+                    // Gather data from the SGV if provided.
                     simdscalari vViewportIdx = SIMD::setzero_si();
                     simdscalari vRtIdx = SIMD::setzero_si();
                     SIMD::Vec4 svgAttrib[4];
