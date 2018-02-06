@@ -116,7 +116,7 @@ dri2_wl_visual_idx_from_config(struct dri2_egl_display *dri2_dpy,
    dri2_dpy->core->getConfigAttrib(config, __DRI_ATTRIB_BLUE_MASK, &blue);
    dri2_dpy->core->getConfigAttrib(config, __DRI_ATTRIB_ALPHA_MASK, &alpha);
 
-   for (int i = 0; i < ARRAY_SIZE(dri2_wl_visuals); i++) {
+   for (unsigned int i = 0; i < ARRAY_SIZE(dri2_wl_visuals); i++) {
       const struct dri2_wl_visual *wl_visual = &dri2_wl_visuals[i];
 
       if (red == wl_visual->rgba_masks[0] &&
@@ -125,6 +125,17 @@ dri2_wl_visual_idx_from_config(struct dri2_egl_display *dri2_dpy,
           alpha == wl_visual->rgba_masks[3]) {
          return i;
       }
+   }
+
+   return -1;
+}
+
+static int
+dri2_wl_visual_idx_from_dri_image_format(uint32_t dri_image_format)
+{
+   for (int i = 0; i < ARRAY_SIZE(dri2_wl_visuals); i++) {
+      if (dri2_wl_visuals[i].dri_image_format == dri_image_format)
+         return i;
    }
 
    return -1;
@@ -1042,29 +1053,16 @@ dri2_wl_create_wayland_buffer_from_image(_EGLDriver *drv,
    struct dri2_egl_image *dri2_img = dri2_egl_image(img);
    __DRIimage *image = dri2_img->dri_image;
    struct wl_buffer *buffer;
-   int format;
+   int format, visual_idx;
 
+   /* Check the upstream display supports this buffer's format. */
    dri2_dpy->image->queryImage(image, __DRI_IMAGE_ATTRIB_FORMAT, &format);
-   switch (format) {
-   case __DRI_IMAGE_FORMAT_ARGB2101010:
-      if (!(dri2_dpy->formats & HAS_ARGB2101010))
-         goto bad_format;
-      break;
-   case __DRI_IMAGE_FORMAT_XRGB2101010:
-      if (!(dri2_dpy->formats & HAS_XRGB2101010))
-         goto bad_format;
-      break;
-   case __DRI_IMAGE_FORMAT_ARGB8888:
-      if (!(dri2_dpy->formats & HAS_ARGB8888))
-         goto bad_format;
-      break;
-   case __DRI_IMAGE_FORMAT_XRGB8888:
-      if (!(dri2_dpy->formats & HAS_XRGB8888))
-         goto bad_format;
-      break;
-   default:
+   visual_idx = dri2_wl_visual_idx_from_dri_image_format(format);
+   if (visual_idx == -1)
       goto bad_format;
-   }
+
+   if (!(dri2_dpy->formats & dri2_wl_visuals[visual_idx].has_format))
+      goto bad_format;
 
    buffer = create_wl_buffer(dri2_dpy, NULL, image);
 
