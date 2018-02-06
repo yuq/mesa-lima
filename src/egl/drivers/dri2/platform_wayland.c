@@ -131,10 +131,34 @@ dri2_wl_visual_idx_from_config(struct dri2_egl_display *dri2_dpy,
 }
 
 static int
+dri2_wl_visual_idx_from_fourcc(uint32_t fourcc)
+{
+   for (int i = 0; i < ARRAY_SIZE(dri2_wl_visuals); i++) {
+      /* wl_drm format codes overlap with DRIImage FourCC codes for all formats
+       * we support. */
+      if (dri2_wl_visuals[i].wl_drm_format == fourcc)
+         return i;
+   }
+
+   return -1;
+}
+
+static int
 dri2_wl_visual_idx_from_dri_image_format(uint32_t dri_image_format)
 {
    for (int i = 0; i < ARRAY_SIZE(dri2_wl_visuals); i++) {
       if (dri2_wl_visuals[i].dri_image_format == dri_image_format)
+         return i;
+   }
+
+   return -1;
+}
+
+static int
+dri2_wl_visual_idx_from_shm_format(uint32_t shm_format)
+{
+   for (int i = 0; i < ARRAY_SIZE(dri2_wl_visuals); i++) {
+      if (dri2_wl_visuals[i].wl_shm_format == shm_format)
          return i;
    }
 
@@ -1137,24 +1161,12 @@ static void
 drm_handle_format(void *data, struct wl_drm *drm, uint32_t format)
 {
    struct dri2_egl_display *dri2_dpy = data;
+   int visual_idx = dri2_wl_visual_idx_from_fourcc(format);
 
-   switch (format) {
-   case WL_DRM_FORMAT_ARGB2101010:
-      dri2_dpy->formats |= HAS_ARGB2101010;
-      break;
-   case WL_DRM_FORMAT_XRGB2101010:
-      dri2_dpy->formats |= HAS_XRGB2101010;
-      break;
-   case WL_DRM_FORMAT_ARGB8888:
-      dri2_dpy->formats |= HAS_ARGB8888;
-      break;
-   case WL_DRM_FORMAT_XRGB8888:
-      dri2_dpy->formats |= HAS_XRGB8888;
-      break;
-   case WL_DRM_FORMAT_RGB565:
-      dri2_dpy->formats |= HAS_RGB565;
-      break;
-   }
+   if (visual_idx == -1)
+      return;
+
+   dri2_dpy->formats |= dri2_wl_visuals[visual_idx].has_format;
 }
 
 static void
@@ -1193,6 +1205,7 @@ dmabuf_handle_modifier(void *data, struct zwp_linux_dmabuf_v1 *dmabuf,
                        uint32_t modifier_lo)
 {
    struct dri2_egl_display *dri2_dpy = data;
+   int visual_idx = dri2_wl_visual_idx_from_fourcc(format);
    uint64_t *mod = NULL;
 
    if (modifier_hi == (DRM_FORMAT_MOD_INVALID >> 32) &&
@@ -1202,23 +1215,18 @@ dmabuf_handle_modifier(void *data, struct zwp_linux_dmabuf_v1 *dmabuf,
    switch (format) {
    case WL_DRM_FORMAT_ARGB2101010:
       mod = u_vector_add(&dri2_dpy->wl_modifiers.argb2101010);
-      dri2_dpy->formats |= HAS_ARGB2101010;
       break;
    case WL_DRM_FORMAT_XRGB2101010:
       mod = u_vector_add(&dri2_dpy->wl_modifiers.xrgb2101010);
-      dri2_dpy->formats |= HAS_XRGB2101010;
       break;
    case WL_DRM_FORMAT_ARGB8888:
       mod = u_vector_add(&dri2_dpy->wl_modifiers.argb8888);
-      dri2_dpy->formats |= HAS_ARGB8888;
       break;
    case WL_DRM_FORMAT_XRGB8888:
       mod = u_vector_add(&dri2_dpy->wl_modifiers.xrgb8888);
-      dri2_dpy->formats |= HAS_XRGB8888;
       break;
    case WL_DRM_FORMAT_RGB565:
       mod = u_vector_add(&dri2_dpy->wl_modifiers.rgb565);
-      dri2_dpy->formats |= HAS_RGB565;
       break;
    default:
       break;
@@ -1227,6 +1235,7 @@ dmabuf_handle_modifier(void *data, struct zwp_linux_dmabuf_v1 *dmabuf,
    if (!mod)
       return;
 
+   dri2_dpy->formats |= dri2_wl_visuals[visual_idx].has_format;
    *mod = (uint64_t) modifier_hi << 32;
    *mod |= (uint64_t) (modifier_lo & 0xffffffff);
 }
@@ -1934,24 +1943,12 @@ static void
 shm_handle_format(void *data, struct wl_shm *shm, uint32_t format)
 {
    struct dri2_egl_display *dri2_dpy = data;
+   int visual_idx = dri2_wl_visual_idx_from_shm_format(format);
 
-   switch (format) {
-   case WL_SHM_FORMAT_ARGB2101010:
-      dri2_dpy->formats |= HAS_ARGB2101010;
-      break;
-   case WL_SHM_FORMAT_XRGB2101010:
-      dri2_dpy->formats |= HAS_XRGB2101010;
-      break;
-   case WL_SHM_FORMAT_ARGB8888:
-      dri2_dpy->formats |= HAS_ARGB8888;
-      break;
-   case WL_SHM_FORMAT_XRGB8888:
-      dri2_dpy->formats |= HAS_XRGB8888;
-      break;
-   case WL_SHM_FORMAT_RGB565:
-      dri2_dpy->formats |= HAS_RGB565;
-      break;
-   }
+   if (visual_idx == -1)
+      return;
+
+   dri2_dpy->formats |= dri2_wl_visuals[visual_idx].has_format;
 }
 
 static const struct wl_shm_listener shm_listener = {
