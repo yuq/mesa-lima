@@ -603,8 +603,8 @@ util_blit_pixels_tex(struct blit_state *ctx,
    cso_set_sampler_views(ctx->cso, PIPE_SHADER_FRAGMENT, 1, &src_sampler_view);
 
    /* shaders */
-   set_fragment_shader(ctx, src_xrbias,
-                       src_sampler_view->format,
+   set_fragment_shader(ctx, src_sampler_view->format,
+                       src_xrbias,
                        src_sampler_view->texture->target);
    set_vertex_shader(ctx);
    cso_set_tessctrl_shader_handle(ctx->cso, NULL);
