@@ -1416,6 +1416,14 @@ vbo_exec_MultiDrawElementsBaseVertex(GLenum mode,
 }
 
 
+/**
+ * Draw a GL primitive using a vertex count obtained from transform feedback.
+ * \param mode  the type of GL primitive to draw
+ * \param obj  the transform feedback object to use
+ * \param stream  index of the transform feedback stream from which to
+ *                get the primitive count.
+ * \param numInstances  number of instances to draw
+ */
 static void
 vbo_draw_transform_feedback(struct gl_context *ctx, GLenum mode,
                             struct gl_transform_feedback_object *obj,
