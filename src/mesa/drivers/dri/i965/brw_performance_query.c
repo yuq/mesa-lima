@@ -1720,7 +1720,8 @@ read_file_uint64(const char *file, uint64_t *val)
     fd = open(file, 0);
     if (fd < 0)
 	return false;
-    n = read(fd, buf, sizeof (buf) - 1);
+    while ((n = read(fd, buf, sizeof (buf) - 1)) < 0 &&
+           errno == EINTR);
     close(fd);
     if (n < 0)
 	return false;
