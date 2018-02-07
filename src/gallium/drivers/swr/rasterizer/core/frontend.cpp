@@ -733,7 +733,7 @@ template<typename SIMD_T, uint32_t SimdWidth>
 void TransposeSOAtoAOS(uint8_t* pDst, uint8_t* pSrc, uint32_t numVerts, uint32_t numAttribs)
 {
     uint32_t srcVertexStride = numAttribs * sizeof(float) * 4;
-    uint32_t dstVertexStride = numAttribs * sizeof(typename SIMD_T::Float) * 4;
+    uint32_t dstVertexStride = numAttribs * sizeof(Float<SIMD_T>) * 4;
 
     OSALIGNSIMD16(uint32_t) gatherOffsets[SimdWidth];
 
@@ -741,7 +741,7 @@ void TransposeSOAtoAOS(uint8_t* pDst, uint8_t* pSrc, uint32_t numVerts, uint32_t
     {
         gatherOffsets[i] = srcVertexStride * i;
     }
-    auto vGatherOffsets = SIMD_T::load_si((typename SIMD_T::Integer*)&gatherOffsets[0]);
+    auto vGatherOffsets = SIMD_T::load_si((Integer<SIMD_T>*)&gatherOffsets[0]);
 
     uint32_t numSimd = AlignUp(numVerts, SimdWidth) / SimdWidth;
     uint32_t remainingVerts = numVerts;
@@ -759,18 +759,18 @@ void TransposeSOAtoAOS(uint8_t* pDst, uint8_t* pSrc, uint32_t numVerts, uint32_t
 
         for (uint32_t a = 0; a < numAttribs; ++a)
         {
-            auto attribGatherX = SIMD_T::template mask_i32gather_ps<typename SIMD_T::ScaleFactor(1)>(SIMD_T::setzero_ps(), (const float*)pSrcBase, vGatherOffsets, vMask);
-            auto attribGatherY = SIMD_T::template mask_i32gather_ps<typename SIMD_T::ScaleFactor(1)>(SIMD_T::setzero_ps(), (const float*)(pSrcBase + sizeof(float)), vGatherOffsets, vMask);
-            auto attribGatherZ = SIMD_T::template mask_i32gather_ps<typename SIMD_T::ScaleFactor(1)>(SIMD_T::setzero_ps(), (const float*)(pSrcBase + sizeof(float) * 2), vGatherOffsets, vMask);
-            auto attribGatherW = SIMD_T::template mask_i32gather_ps<typename SIMD_T::ScaleFactor(1)>(SIMD_T::setzero_ps(), (const float*)(pSrcBase + sizeof(float) * 3), vGatherOffsets, vMask);
+            auto attribGatherX = SIMD_T::template mask_i32gather_ps<ScaleFactor<SIMD_T>(1)>(SIMD_T::setzero_ps(), (const float*)pSrcBase, vGatherOffsets, vMask);
+            auto attribGatherY = SIMD_T::template mask_i32gather_ps<ScaleFactor<SIMD_T>(1)>(SIMD_T::setzero_ps(), (const float*)(pSrcBase + sizeof(float)), vGatherOffsets, vMask);
+            auto attribGatherZ = SIMD_T::template mask_i32gather_ps<ScaleFactor<SIMD_T>(1)>(SIMD_T::setzero_ps(), (const float*)(pSrcBase + sizeof(float) * 2), vGatherOffsets, vMask);
+            auto attribGatherW = SIMD_T::template mask_i32gather_ps<ScaleFactor<SIMD_T>(1)>(SIMD_T::setzero_ps(), (const float*)(pSrcBase + sizeof(float) * 3), vGatherOffsets, vMask);
 
             SIMD_T::maskstore_ps((float*)pDstBase, viMask, attribGatherX);
-            SIMD_T::maskstore_ps((float*)(pDstBase + sizeof(typename SIMD_T::Float)), viMask, attribGatherY);
-            SIMD_T::maskstore_ps((float*)(pDstBase + sizeof(typename SIMD_T::Float) * 2), viMask, attribGatherZ);
-            SIMD_T::maskstore_ps((float*)(pDstBase + sizeof(typename SIMD_T::Float) * 3), viMask, attribGatherW);
+            SIMD_T::maskstore_ps((float*)(pDstBase + sizeof(Float<SIMD_T>)), viMask, attribGatherY);
+            SIMD_T::maskstore_ps((float*)(pDstBase + sizeof(Float<SIMD_T>) * 2), viMask, attribGatherZ);
+            SIMD_T::maskstore_ps((float*)(pDstBase + sizeof(Float<SIMD_T>) * 3), viMask, attribGatherW);
 
             pSrcBase += sizeof(float) * 4;
-            pDstBase += sizeof(typename SIMD_T::Float) * 4;
+            pDstBase += sizeof(Float<SIMD_T>) * 4;
         }
         remainingVerts -= SimdWidth;
     }
@@ -1101,7 +1101,7 @@ static INLINE void AllocateGsBuffers(DRAW_CONTEXT* pDC, const API_STATE& state, 
 
     // Allocate storage for transposed GS output
     uint32_t numSimdBatches = AlignUp(gsState.maxNumVerts, SIMD_WIDTH) / SIMD_WIDTH;
-    uint32_t transposedBufferSize = numSimdBatches * gsState.outputVertexSize * sizeof(typename SIMD_T::Vec4);
+    uint32_t transposedBufferSize = numSimdBatches * gsState.outputVertexSize * sizeof(Vec4<SIMD_T>);
     pGsBuffers->pGsTransposed = (uint8_t*)pArena->AllocAligned(transposedBufferSize, 32);
 
     // Allocate storage to hold temporary stream->cut buffer, if necessary
