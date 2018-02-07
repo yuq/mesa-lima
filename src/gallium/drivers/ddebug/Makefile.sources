@@ -1,7 +1,7 @@
-DDEBUG_SOURCES := \
-	$(top_srcdir)/src/gallium/drivers/ddebug/dd_context.c \
-	$(top_srcdir)/src/gallium/drivers/ddebug/dd_draw.c \
-	$(top_srcdir)/src/gallium/drivers/ddebug/dd_pipe.h \
-	$(top_srcdir)/src/gallium/drivers/ddebug/dd_public.h \
-	$(top_srcdir)/src/gallium/drivers/ddebug/dd_screen.c \
-	$(top_srcdir)/src/gallium/drivers/ddebug/dd_util.h
+C_SOURCES := \
+	dd_context.c \
+	dd_draw.c \
+	dd_pipe.h \
+	dd_public.h \
+	dd_screen.c \
+	dd_util.h

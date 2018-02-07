@@ -35,7 +35,9 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/gallium/state_trackers/glx/xlib \
 	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_srcdir)/src/gallium/winsys \
-	-DGALLIUM_SOFTPIPE
+	-DGALLIUM_SOFTPIPE \
+	-DGALLIUM_RBUG \
+	-DGALLIUM_TRACE
 
 AM_CFLAGS = $(X11_INCLUDES)
 
@@ -59,6 +61,8 @@ lib@GL_LIB@_la_LIBADD = \
 	$(top_builddir)/src/gallium/state_trackers/glx/xlib/libxlib.la \
 	$(top_builddir)/src/gallium/winsys/sw/xlib/libws_xlib.la \
 	$(top_builddir)/src/gallium/drivers/softpipe/libsoftpipe.la \
+	$(top_builddir)/src/gallium/drivers/trace/libtrace.la \
+	$(top_builddir)/src/gallium/drivers/rbug/librbug.la \
 	$(top_builddir)/src/mapi/glapi/libglapi.la \
 	$(top_builddir)/src/mesa/libmesagallium.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \

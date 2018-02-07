@@ -1,13 +1,13 @@
-TRACE_SOURCES := \
-	$(top_srcdir)/src/gallium/drivers/trace/tr_context.c \
-	$(top_srcdir)/src/gallium/drivers/trace/tr_context.h \
-	$(top_srcdir)/src/gallium/drivers/trace/tr_dump.c \
-	$(top_srcdir)/src/gallium/drivers/trace/tr_dump_defines.h \
-	$(top_srcdir)/src/gallium/drivers/trace/tr_dump.h \
-	$(top_srcdir)/src/gallium/drivers/trace/tr_dump_state.c \
-	$(top_srcdir)/src/gallium/drivers/trace/tr_dump_state.h \
-	$(top_srcdir)/src/gallium/drivers/trace/tr_public.h \
-	$(top_srcdir)/src/gallium/drivers/trace/tr_screen.c \
-	$(top_srcdir)/src/gallium/drivers/trace/tr_screen.h \
-	$(top_srcdir)/src/gallium/drivers/trace/tr_texture.c \
-	$(top_srcdir)/src/gallium/drivers/trace/tr_texture.h
+C_SOURCES := \
+	tr_context.c \
+	tr_context.h \
+	tr_dump.c \
+	tr_dump_defines.h \
+	tr_dump.h \
+	tr_dump_state.c \
+	tr_dump_state.h \
+	tr_public.h \
+	tr_screen.c \
+	tr_screen.h \
+	tr_texture.c \
+	tr_texture.h

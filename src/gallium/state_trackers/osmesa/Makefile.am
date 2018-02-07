@@ -33,7 +33,8 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/gallium/winsys \
 	-I$(top_srcdir)/src/gallium/state_trackers/glx/xlib \
 	-I$(top_srcdir)/src/gallium/auxiliary \
-	-DGALLIUM_SOFTPIPE
+	-DGALLIUM_SOFTPIPE \
+	-DGALLIUM_TRACE
 
 noinst_LTLIBRARIES = libosmesa.la
 

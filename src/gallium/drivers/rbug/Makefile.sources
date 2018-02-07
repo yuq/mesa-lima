@@ -1,9 +1,9 @@
-RBUG_SOURCES := \
-	$(top_srcdir)/src/gallium/drivers/rbug/rbug_context.c \
-	$(top_srcdir)/src/gallium/drivers/rbug/rbug_context.h \
-	$(top_srcdir)/src/gallium/drivers/rbug/rbug_core.c \
-	$(top_srcdir)/src/gallium/drivers/rbug/rbug_objects.c \
-	$(top_srcdir)/src/gallium/drivers/rbug/rbug_objects.h \
-	$(top_srcdir)/src/gallium/drivers/rbug/rbug_public.h \
-	$(top_srcdir)/src/gallium/drivers/rbug/rbug_screen.c \
-	$(top_srcdir)/src/gallium/drivers/rbug/rbug_screen.h
+C_SOURCES := \
+	rbug_context.c \
+	rbug_context.h \
+	rbug_core.c \
+	rbug_objects.c \
+	rbug_objects.h \
+	rbug_public.h \
+	rbug_screen.c \
+	rbug_screen.h
