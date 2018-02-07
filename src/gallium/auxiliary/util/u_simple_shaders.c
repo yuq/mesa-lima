@@ -222,6 +222,53 @@ ureg_load_tex(struct ureg_program *ureg, struct ureg_dst out,
 }
 
 /**
+ * Make simple fragment texture shader, with xrbias->float conversion:
+ *  IMM {1023/510, -384/510, 0, 1}
+ *  TEX TEMP[0], IN[0], SAMP[0], 2D;
+ *  MAD TEMP[0].xyz TEMP[0], IMM[0].xxxx, IMM[0].yyyy
+ *  MOV OUT[0], TEMP[0]
+ *  END;
+ *
+ * \param tex_target  one of PIPE_TEXTURE_x
+ */
+void *
+util_make_fragment_tex_shader_xrbias(struct pipe_context *pipe,
+                                     enum tgsi_texture_type tex_target)
+{
+   struct ureg_program *ureg;
+   struct ureg_src sampler;
+   struct ureg_src coord;
+   struct ureg_dst temp;
+   struct ureg_dst out;
+   struct ureg_src imm;
+   enum tgsi_return_type stype = TGSI_RETURN_TYPE_FLOAT;
+
+   ureg = ureg_create(PIPE_SHADER_FRAGMENT);
+   if (!ureg)
+      return NULL;
+
+   imm = ureg_imm4f(ureg, 1023.0f/510.0f, -384.0f/510.0f, 0.0f, 1.0f);
+   sampler = ureg_DECL_sampler(ureg, 0);
+   ureg_DECL_sampler_view(ureg, 0, tex_target, stype, stype, stype, stype);
+   coord = ureg_DECL_fs_input(ureg,
+                              TGSI_SEMANTIC_GENERIC, 0,
+                              TGSI_INTERPOLATE_LINEAR);
+   out = ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0);
+   temp = ureg_DECL_temporary(ureg);
+
+   ureg_TEX(ureg, temp, tex_target, coord, sampler);
+   ureg_MAD(ureg, ureg_writemask(temp, TGSI_WRITEMASK_XYZ),
+            ureg_src(temp),
+            ureg_scalar(imm, TGSI_SWIZZLE_X),
+            ureg_scalar(imm, TGSI_SWIZZLE_Y));
+   ureg_MOV(ureg, out, ureg_src(temp));
+   ureg_END(ureg);
+
+   return ureg_create_shader_and_destroy(ureg, pipe);
+}
+
+
+/**
  * Make simple fragment texture shader:
  *  IMM {0,0,0,1}                         // (if writemask != 0xf)
  *  MOV TEMP[0], IMM[0]                   // (if writemask != 0xf)

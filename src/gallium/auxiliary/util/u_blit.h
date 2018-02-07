@@ -72,7 +72,8 @@ util_blit_pixels_tex(struct blit_state *ctx,
                      struct pipe_surface *dst,
                      int dstX0, int dstY0,
                      int dstX1, int dstY1,
-                     float z, uint filter);
+                     float z, uint filter,
+                     boolean src_xrbias);
 
 #ifdef __cplusplus
 }

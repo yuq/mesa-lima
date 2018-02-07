@@ -65,7 +65,7 @@ struct blit_state
    struct pipe_vertex_element velem[2];
 
    void *vs;
-   void *fs[PIPE_MAX_TEXTURE_TYPES][TGSI_WRITEMASK_XYZW + 1][3];
+   void *fs[PIPE_MAX_TEXTURE_TYPES][4];
 
    struct pipe_resource *vbuf;  /**< quad vertices */
    unsigned vbuf_slot;
@@ -135,17 +135,15 @@ void
 util_destroy_blit(struct blit_state *ctx)
 {
    struct pipe_context *pipe = ctx->pipe;
-   unsigned i, j, k;
+   unsigned i, j;
 
    if (ctx->vs)
       pipe->delete_vs_state(pipe, ctx->vs);
 
    for (i = 0; i < ARRAY_SIZE(ctx->fs); i++) {
       for (j = 0; j < ARRAY_SIZE(ctx->fs[i]); j++) {
-         for (k = 0; k < ARRAY_SIZE(ctx->fs[i][j]); k++) {
-            if (ctx->fs[i][j][k])
-               pipe->delete_fs_state(pipe, ctx->fs[i][j][k]);
-         }
+         if (ctx->fs[i][j])
+            pipe->delete_fs_state(pipe, ctx->fs[i][j]);
       }
    }
 
@@ -159,8 +157,9 @@ util_destroy_blit(struct blit_state *ctx)
  * Helper function to set the fragment shaders.
  */
 static inline void
-set_fragment_shader(struct blit_state *ctx, uint writemask,
+set_fragment_shader(struct blit_state *ctx,
                     enum pipe_format format,
+                    boolean src_xrbias,
                     enum pipe_texture_target pipe_tex)
 {
    enum tgsi_return_type stype;
@@ -177,19 +176,29 @@ set_fragment_shader(struct blit_state *ctx, uint writemask,
       idx = 2;
    }
 
-   if (!ctx->fs[pipe_tex][writemask][idx]) {
+   if (src_xrbias) {
+      assert(stype == TGSI_RETURN_TYPE_FLOAT);
+      idx = 3;
+      if (!ctx->fs[pipe_tex][idx]) {
+         enum tgsi_texture_type tgsi_tex = util_pipe_tex_to_tgsi_tex(pipe_tex, 0);
+         ctx->fs[pipe_tex][idx] =
+            util_make_fragment_tex_shader_xrbias(ctx->pipe, tgsi_tex);
+      }
+   }
+
+   else if (!ctx->fs[pipe_tex][idx]) {
       unsigned tgsi_tex = util_pipe_tex_to_tgsi_tex(pipe_tex, 0);
 
       /* OpenGL does not allow blits from signed to unsigned integer
        * or vice versa. */
-      ctx->fs[pipe_tex][writemask][idx] =
+      ctx->fs[pipe_tex][idx] =
          util_make_fragment_tex_shader_writemask(ctx->pipe, tgsi_tex,
                                                  TGSI_INTERPOLATE_LINEAR,
-                                                 writemask,
+                                                 TGSI_WRITEMASK_XYZW,
                                                  stype, stype, false, false);
    }
 
-   cso_set_fragment_shader_handle(ctx->cso, ctx->fs[pipe_tex][writemask][idx]);
+   cso_set_fragment_shader_handle(ctx->cso, ctx->fs[pipe_tex][idx]);
 }
 
 
@@ -491,8 +500,8 @@ util_blit_pixels(struct blit_state *ctx,
  * The sampler view's first_layer indicate the layer to use, but for
  * cube maps it must point to the first face.  Face is passed in src_face.
  *
- * The main advantage over util_blit_pixels is that it allows to specify swizzles in
- * pipe_sampler_view::swizzle_?.
+ * The main advantage over util_blit_pixels is that it allows to specify
+ * swizzles in pipe_sampler_view::swizzle_?.
  *
  * But there is no control over blitting Z and/or stencil.
  */
@@ -505,7 +514,8 @@ util_blit_pixels_tex(struct blit_state *ctx,
                      struct pipe_surface *dst,
                      int dstX0, int dstY0,
                      int dstX1, int dstY1,
-                     float z, uint filter)
+                     float z, uint filter,
+                     boolean src_xrbias)
 {
    boolean normalized = src_sampler_view->texture->target != PIPE_TEXTURE_RECT;
    struct pipe_framebuffer_state fb;
@@ -593,7 +603,7 @@ util_blit_pixels_tex(struct blit_state *ctx,
    cso_set_sampler_views(ctx->cso, PIPE_SHADER_FRAGMENT, 1, &src_sampler_view);
 
    /* shaders */
-   set_fragment_shader(ctx, TGSI_WRITEMASK_XYZW,
+   set_fragment_shader(ctx, src_xrbias,
                        src_sampler_view->format,
                        src_sampler_view->texture->target);
    set_vertex_shader(ctx);
