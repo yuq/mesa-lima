@@ -30,6 +30,8 @@
 #include "math/m_eval.h"
 #include "main/vtxfmt.h"
 #include "main/api_arrayelt.h"
+#include "main/arrayobj.h"
+#include "main/varray.h"
 #include "vbo.h"
 #include "vbo_private.h"
 
@@ -252,6 +254,11 @@ _vbo_CreateContext(struct gl_context *ctx)
    if (ctx->API == API_OPENGL_COMPAT)
       vbo_save_init(ctx);
 
+   vbo->VAO = _mesa_new_vao(ctx, ~((GLuint)0));
+   /* The exec VAO assumes to have all arributes bound to binding 0 */
+   for (unsigned i = 0; i < VERT_ATTRIB_MAX; ++i)
+      _mesa_vertex_attrib_binding(ctx, vbo->VAO, i, 0, false);
+
    _math_init_eval();
 
    return GL_TRUE;
@@ -278,6 +285,7 @@ _vbo_DestroyContext(struct gl_context *ctx)
       vbo_exec_destroy(ctx);
       if (ctx->API == API_OPENGL_COMPAT)
          vbo_save_destroy(ctx);
+      _mesa_reference_vao(ctx, &vbo->VAO, NULL);
       free(vbo);
       ctx->vbo_context = NULL;
    }

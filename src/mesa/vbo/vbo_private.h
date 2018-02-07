@@ -48,6 +48,8 @@ struct vbo_context {
    /* The array of inputs used for _DrawVAO draws. */
    struct vbo_inputs draw_arrays;
 
+   struct gl_vertex_array_object *VAO;
+
    struct vbo_exec_context exec;
    struct vbo_save_context save;
 
