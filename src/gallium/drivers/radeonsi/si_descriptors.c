@@ -115,14 +115,14 @@ static void si_init_descriptor_list(uint32_t *desc_list,
 }
 
 static void si_init_descriptors(struct si_descriptors *desc,
-				unsigned shader_userdata_index,
+				short shader_userdata_rel_index,
 				unsigned element_dw_size,
 				unsigned num_elements)
 {
 	desc->list = CALLOC(num_elements, element_dw_size * 4);
 	desc->element_dw_size = element_dw_size;
 	desc->num_elements = num_elements;
-	desc->shader_userdata_offset = shader_userdata_index * 4;
+	desc->shader_userdata_offset = shader_userdata_rel_index * 4;
 	desc->slot_index_to_bind_directly = -1;
 }
 
@@ -916,7 +916,7 @@ static void si_bind_sampler_states(struct pipe_context *ctx,
 static void si_init_buffer_resources(struct si_buffer_resources *buffers,
 				     struct si_descriptors *descs,
 				     unsigned num_buffers,
-				     unsigned shader_userdata_index,
+				     short shader_userdata_rel_index,
 				     enum radeon_bo_usage shader_usage,
 				     enum radeon_bo_usage shader_usage_constbuf,
 				     enum radeon_bo_priority priority,
@@ -928,7 +928,7 @@ static void si_init_buffer_resources(struct si_buffer_resources *buffers,
 	buffers->priority_constbuf = priority_constbuf;
 	buffers->buffers = CALLOC(num_buffers, sizeof(struct pipe_resource*));
 
-	si_init_descriptors(descs, shader_userdata_index, 4, num_buffers);
+	si_init_descriptors(descs, shader_userdata_rel_index, 4, num_buffers);
 }
 
 static void si_release_buffer_resources(struct si_buffer_resources *buffers,
@@ -2132,12 +2132,12 @@ void si_emit_compute_shader_pointers(struct si_context *sctx)
 
 static void si_init_bindless_descriptors(struct si_context *sctx,
 					 struct si_descriptors *desc,
-					 unsigned shader_userdata_index,
+					 short shader_userdata_rel_index,
 					 unsigned num_elements)
 {
 	MAYBE_UNUSED unsigned desc_slot;
 
-	si_init_descriptors(desc, shader_userdata_index, 16, num_elements);
+	si_init_descriptors(desc, shader_userdata_rel_index, 16, num_elements);
 	sctx->bindless_descriptors.num_active_slots = num_elements;
 
 	/* The first bindless descriptor is stored at slot 1, because 0 is not

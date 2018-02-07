@@ -271,9 +271,9 @@ struct si_descriptors {
 	uint32_t first_active_slot;
 	uint32_t num_active_slots;
 
-	/* The SGPR index where the 64-bit pointer to the descriptor array will
-	 * be stored. */
-	ubyte shader_userdata_offset;
+	/* The SH register offset relative to USER_DATA*_0 where the pointer
+	 * to the descriptor array will be stored. */
+	short shader_userdata_offset;
 	/* The size of one descriptor. */
 	ubyte element_dw_size;
 	/* If there is only one slot enabled, bind it directly instead of
