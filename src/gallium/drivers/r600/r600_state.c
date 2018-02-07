@@ -1088,6 +1088,7 @@ static void r600_set_framebuffer_state(struct pipe_context *ctx,
 	struct r600_surface *surf;
 	struct r600_texture *rtex;
 	unsigned i;
+	uint32_t target_mask = 0;
 
 	/* Flush TC when changing the framebuffer state, because the only
 	 * client not using TC that can change textures is the framebuffer.
@@ -1127,6 +1128,8 @@ static void r600_set_framebuffer_state(struct pipe_context *ctx,
 
 		rtex = (struct r600_texture*)surf->base.texture;
 		r600_context_add_resource_size(ctx, state->cbufs[i]->texture);
+
+		target_mask |= (0xf << (i * 4));
 
 		if (!surf->color_initialized || force_cmask_fmask) {
 			r600_init_color_surface(rctx, surf, force_cmask_fmask);
@@ -1187,7 +1190,9 @@ static void r600_set_framebuffer_state(struct pipe_context *ctx,
 		r600_mark_atom_dirty(rctx, &rctx->db_misc_state.atom);
 	}
 
-	if (rctx->cb_misc_state.nr_cbufs != state->nr_cbufs) {
+	if (rctx->cb_misc_state.nr_cbufs != state->nr_cbufs ||
+	    rctx->cb_misc_state.bound_cbufs_target_mask != target_mask) {
+		rctx->cb_misc_state.bound_cbufs_target_mask = target_mask;
 		rctx->cb_misc_state.nr_cbufs = state->nr_cbufs;
 		r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
 	}
