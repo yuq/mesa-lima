@@ -6484,8 +6484,7 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx)
 	if (depth || stencil || samplemask)
 		radv_export_mrt_z(ctx, depth, stencil, samplemask);
 	else if (!index) {
-		si_export_mrt_color(ctx, NULL, V_008DFC_SQ_EXP_NULL, true, &color_args[0]);
-		ac_build_export(&ctx->ac, &color_args[0]);
+		ac_build_export_null(&ctx->ac);
 	}
 }
 
