@@ -112,7 +112,7 @@ struct ureg_program
    int next_shader_processor;
 
    struct {
-      unsigned semantic_name;
+      enum tgsi_semantic semantic_name;
       unsigned semantic_index;
       enum tgsi_interpolate_mode interp;
       unsigned char cylindrical_wrap;
@@ -127,13 +127,13 @@ struct ureg_program
    unsigned vs_inputs[PIPE_MAX_ATTRIBS/32];
 
    struct {
-      unsigned semantic_name;
+      enum tgsi_semantic semantic_name;
       unsigned semantic_index;
    } system_value[UREG_MAX_SYSTEM_VALUE];
    unsigned nr_system_values;
 
    struct {
-      unsigned semantic_name;
+      enum tgsi_semantic semantic_name;
       unsigned semantic_index;
       unsigned streams;
       unsigned usage_mask; /* = TGSI_WRITEMASK_* */
@@ -281,7 +281,7 @@ ureg_property(struct ureg_program *ureg, unsigned name, unsigned value)
 
 struct ureg_src
 ureg_DECL_fs_input_cyl_centroid_layout(struct ureg_program *ureg,
-                       unsigned semantic_name,
+                       enum tgsi_semantic semantic_name,
                        unsigned semantic_index,
                        enum tgsi_interpolate_mode interp_mode,
                        unsigned cylindrical_wrap,
@@ -334,7 +334,7 @@ out:
 
 struct ureg_src
 ureg_DECL_fs_input_cyl_centroid(struct ureg_program *ureg,
-                       unsigned semantic_name,
+                       enum tgsi_semantic semantic_name,
                        unsigned semantic_index,
                        enum tgsi_interpolate_mode interp_mode,
                        unsigned cylindrical_wrap,
@@ -363,7 +363,7 @@ ureg_DECL_vs_input( struct ureg_program *ureg,
 
 struct ureg_src
 ureg_DECL_input_layout(struct ureg_program *ureg,
-                unsigned semantic_name,
+                enum tgsi_semantic semantic_name,
                 unsigned semantic_index,
                 unsigned index,
                 unsigned usage_mask,
@@ -378,7 +378,7 @@ ureg_DECL_input_layout(struct ureg_program *ureg,
 
 struct ureg_src
 ureg_DECL_input(struct ureg_program *ureg,
-                unsigned semantic_name,
+                enum tgsi_semantic semantic_name,
                 unsigned semantic_index,
                 unsigned array_id,
                 unsigned array_size)
@@ -390,7 +390,7 @@ ureg_DECL_input(struct ureg_program *ureg,
 
 struct ureg_src
 ureg_DECL_system_value(struct ureg_program *ureg,
-                       unsigned semantic_name,
+                       enum tgsi_semantic semantic_name,
                        unsigned semantic_index)
 {
    unsigned i;
@@ -418,7 +418,7 @@ out:
 
 struct ureg_dst
 ureg_DECL_output_layout(struct ureg_program *ureg,
-                        unsigned semantic_name,
+                        enum tgsi_semantic semantic_name,
                         unsigned semantic_index,
                         unsigned streams,
                         unsigned index,
@@ -492,7 +492,7 @@ ureg_DECL_output(struct ureg_program *ureg,
 
 struct ureg_dst
 ureg_DECL_output_array(struct ureg_program *ureg,
-                       unsigned semantic_name,
+                       enum tgsi_semantic semantic_name,
                        unsigned semantic_index,
                        unsigned array_id,
                        unsigned array_size)
@@ -1505,7 +1505,7 @@ emit_decl_semantic(struct ureg_program *ureg,
                    unsigned file,
                    unsigned first,
                    unsigned last,
-                   unsigned semantic_name,
+                   enum tgsi_semantic semantic_name,
                    unsigned semantic_index,
                    unsigned streams,
                    unsigned usage_mask,
@@ -1574,7 +1574,7 @@ emit_decl_fs(struct ureg_program *ureg,
              unsigned file,
              unsigned first,
              unsigned last,
-             unsigned semantic_name,
+             enum tgsi_semantic semantic_name,
              unsigned semantic_index,
              enum tgsi_interpolate_mode interpolate,
              unsigned cylindrical_wrap,

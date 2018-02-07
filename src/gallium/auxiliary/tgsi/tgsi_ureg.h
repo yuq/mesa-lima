@@ -168,7 +168,7 @@ ureg_property(struct ureg_program *ureg, unsigned name, unsigned value);
 
 struct ureg_src
 ureg_DECL_fs_input_cyl_centroid_layout(struct ureg_program *,
-                       unsigned semantic_name,
+                       enum tgsi_semantic semantic_name,
                        unsigned semantic_index,
                        enum tgsi_interpolate_mode interp_mode,
                        unsigned cylindrical_wrap,
@@ -180,7 +180,7 @@ ureg_DECL_fs_input_cyl_centroid_layout(struct ureg_program *,
 
 struct ureg_src
 ureg_DECL_fs_input_cyl_centroid(struct ureg_program *,
-                       unsigned semantic_name,
+                       enum tgsi_semantic semantic_name,
                        unsigned semantic_index,
                        enum tgsi_interpolate_mode interp_mode,
                        unsigned cylindrical_wrap,
@@ -190,7 +190,7 @@ ureg_DECL_fs_input_cyl_centroid(struct ureg_program *,
 
 static inline struct ureg_src
 ureg_DECL_fs_input_cyl(struct ureg_program *ureg,
-                       unsigned semantic_name,
+                       enum tgsi_semantic semantic_name,
                        unsigned semantic_index,
                        enum tgsi_interpolate_mode interp_mode,
                        unsigned cylindrical_wrap)
@@ -205,7 +205,7 @@ ureg_DECL_fs_input_cyl(struct ureg_program *ureg,
 
 static inline struct ureg_src
 ureg_DECL_fs_input(struct ureg_program *ureg,
-                   unsigned semantic_name,
+                   enum tgsi_semantic semantic_name,
                    unsigned semantic_index,
                    enum tgsi_interpolate_mode interp_mode)
 {
@@ -222,7 +222,7 @@ ureg_DECL_vs_input( struct ureg_program *,
 
 struct ureg_src
 ureg_DECL_input_layout(struct ureg_program *,
-                unsigned semantic_name,
+                enum tgsi_semantic semantic_name,
                 unsigned semantic_index,
                 unsigned index,
                 unsigned usage_mask,
@@ -231,19 +231,19 @@ ureg_DECL_input_layout(struct ureg_program *,
 
 struct ureg_src
 ureg_DECL_input(struct ureg_program *,
-                unsigned semantic_name,
+                enum tgsi_semantic semantic_name,
                 unsigned semantic_index,
                 unsigned array_id,
                 unsigned array_size);
 
 struct ureg_src
 ureg_DECL_system_value(struct ureg_program *,
-                       unsigned semantic_name,
+                       enum tgsi_semantic semantic_name,
                        unsigned semantic_index);
 
 struct ureg_dst
 ureg_DECL_output_layout(struct ureg_program *,
-                        unsigned semantic_name,
+                        enum tgsi_semantic semantic_name,
                         unsigned semantic_index,
                         unsigned streams,
                         unsigned index,
@@ -253,7 +253,7 @@ ureg_DECL_output_layout(struct ureg_program *,
 
 struct ureg_dst
 ureg_DECL_output_masked(struct ureg_program *,
-                        unsigned semantic_name,
+                        enum tgsi_semantic semantic_name,
                         unsigned semantic_index,
                         unsigned usage_mask,
                         unsigned array_id,
@@ -261,12 +261,12 @@ ureg_DECL_output_masked(struct ureg_program *,
 
 struct ureg_dst
 ureg_DECL_output(struct ureg_program *,
-                 unsigned semantic_name,
+                 enum tgsi_semantic semantic_name,
                  unsigned semantic_index);
 
 struct ureg_dst
 ureg_DECL_output_array(struct ureg_program *ureg,
-                       unsigned semantic_name,
+                       enum tgsi_semantic semantic_name,
                        unsigned semantic_index,
                        unsigned array_id,
                        unsigned array_size);
