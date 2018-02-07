@@ -60,6 +60,7 @@ enum SWR_CLIPCODES
 };
 
 #define GUARDBAND_CLIP_MASK (FRUSTUM_NEAR|FRUSTUM_FAR|GUARDBAND_LEFT|GUARDBAND_TOP|GUARDBAND_RIGHT|GUARDBAND_BOTTOM|NEGW)
+#define FRUSTUM_CLIP_MASK (FRUSTUM_NEAR|FRUSTUM_FAR|FRUSTUM_LEFT|FRUSTUM_RIGHT|FRUSTUM_TOP|FRUSTUM_BOTTOM)
 
 template<typename SIMD_T>
 void ComputeClipCodes(const API_STATE &state, const Vec4<SIMD_T> &vertex, Float<SIMD_T> &clipCodes, Integer<SIMD_T> const &viewportIndexes)
@@ -708,15 +709,18 @@ public:
             primMask &= ~ComputeUserClipCullMask(pa, prim);
         }
 
-        // cull prims outside view frustum
         Float<SIMD_T> clipIntersection = ComputeClipCodeIntersection();
+        // Mask out non-frustum codes
+        clipIntersection = SIMD_T::and_ps(clipIntersection, SIMD_T::castsi_ps(SIMD_T::set1_epi32(FRUSTUM_CLIP_MASK)));
+
+        // cull prims outside view frustum
         int validMask = primMask & SimdHelper<SIMD_T>::cmpeq_ps_mask(clipIntersection, SIMD_T::setzero_ps());
 
         // skip clipping for points
         uint32_t clipMask = 0;
         if (NumVertsPerPrim != 1)
         {
-            clipMask = primMask & ComputeClipMask();
+            clipMask = validMask & ComputeClipMask();
         }
 
         AR_EVENT(ClipInfoEvent(numInvoc, validMask, clipMask));
@@ -726,7 +730,7 @@ public:
             RDTSC_BEGIN(FEGuardbandClip, pa.pDC->drawId);
             // we have to clip tris, execute the clipper, which will also
             // call the binner
-            ClipSimd(prim, SIMD_T::vmask_ps(primMask), SIMD_T::vmask_ps(clipMask), pa, primId, viewportIdx, rtIdx);
+            ClipSimd(prim, SIMD_T::vmask_ps(validMask), SIMD_T::vmask_ps(clipMask), pa, primId, viewportIdx, rtIdx);
             RDTSC_END(FEGuardbandClip, 1);
         }
         else if (validMask)
