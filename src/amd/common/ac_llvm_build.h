@@ -279,6 +279,8 @@ struct ac_export_args {
 
 void ac_build_export(struct ac_llvm_context *ctx, struct ac_export_args *a);
 
+void ac_build_export_null(struct ac_llvm_context *ctx);
+
 enum ac_image_opcode {
 	ac_image_sample,
 	ac_image_gather4,

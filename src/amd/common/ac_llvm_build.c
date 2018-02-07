@@ -1347,6 +1347,23 @@ void ac_build_export(struct ac_llvm_context *ctx, struct ac_export_args *a)
 			   AC_FUNC_ATTR_LEGACY);
 }
 
+void ac_build_export_null(struct ac_llvm_context *ctx)
+{
+	struct ac_export_args args;
+
+	args.enabled_channels = 0x0; /* enabled channels */
+	args.valid_mask = 1; /* whether the EXEC mask is valid */
+	args.done = 1; /* DONE bit */
+	args.target = V_008DFC_SQ_EXP_NULL;
+	args.compr = 0; /* COMPR flag (0 = 32-bit export) */
+	args.out[0] = LLVMGetUndef(ctx->f32); /* R */
+	args.out[1] = LLVMGetUndef(ctx->f32); /* G */
+	args.out[2] = LLVMGetUndef(ctx->f32); /* B */
+	args.out[3] = LLVMGetUndef(ctx->f32); /* A */
+
+	ac_build_export(ctx, &args);
+}
+
 LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 				   struct ac_image_args *a)
 {

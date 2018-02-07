@@ -3725,25 +3725,6 @@ static void si_emit_ps_exports(struct si_shader_context *ctx,
 		ac_build_export(&ctx->ac, &exp->args[i]);
 }
 
-static void si_export_null(struct lp_build_tgsi_context *bld_base)
-{
-	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct lp_build_context *base = &bld_base->base;
-	struct ac_export_args args;
-
-	args.enabled_channels = 0x0; /* enabled channels */
-	args.valid_mask = 1; /* whether the EXEC mask is valid */
-	args.done = 1; /* DONE bit */
-	args.target = V_008DFC_SQ_EXP_NULL;
-	args.compr = 0; /* COMPR flag (0 = 32-bit export) */
-	args.out[0] = base->undef; /* R */
-	args.out[1] = base->undef; /* G */
-	args.out[2] = base->undef; /* B */
-	args.out[3] = base->undef; /* A */
-
-	ac_build_export(&ctx->ac, &args);
-}
-
 /**
  * Return PS outputs in this order:
  *
@@ -7735,7 +7716,7 @@ static void si_build_ps_epilog_function(struct si_shader_context *ctx,
 	if (depth || stencil || samplemask)
 		si_export_mrt_z(bld_base, depth, stencil, samplemask, &exp);
 	else if (last_color_export == -1)
-		si_export_null(bld_base);
+		ac_build_export_null(&ctx->ac);
 
 	if (exp.num)
 		si_emit_ps_exports(ctx, &exp);
