@@ -225,7 +225,7 @@ anv_entrypoint_is_enabled(int index, uint32_t core_version,
       return ${e.core_version.c_vk_version()} <= core_version;
    % elif e.extension:
       % if e.extension.type == 'instance':
-      return instance->${e.extension.name[3:]};
+      return !device && instance->${e.extension.name[3:]};
       % else:
       return !device || device->${e.extension.name[3:]};
       % endif
