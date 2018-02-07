@@ -129,6 +129,11 @@ namespace SwrJit
         return vResult;
     }
 
+    Value* Builder::OFFSET_TO_NEXT_COMPONENT(Value* base, Constant *offset)
+    {
+        return GEP(base, offset);
+    }
+
     //////////////////////////////////////////////////////////////////////////
     /// @brief Generate a masked gather operation in LLVM IR.  If not  
     /// supported on the underlying platform, emulate it with loads
@@ -396,7 +401,7 @@ namespace SwrJit
             if (info.numComps > 2)
             {
                 // offset base to the next components(zw) in the vertex to gather
-                pSrcBase = GEP(pSrcBase, C((char)4));
+                pSrcBase = OFFSET_TO_NEXT_COMPONENT(pSrcBase, C((intptr_t)4));
 
                 vGatherResult[1] = GATHERPS(vGatherMaskedVal, pSrcBase, byteOffsets, vMask);
                 // e.g. result of second 8x32bit integer gather for 16bit components
@@ -429,7 +434,7 @@ namespace SwrJit
                 vGatherComponents[swizzleIndex] = GATHERPS(vGatherComponents[swizzleIndex], pSrcBase, byteOffsets, vMask);
 
                 // offset base to the next component to gather
-                pSrcBase = GEP(pSrcBase, C((char)4));
+                pSrcBase = OFFSET_TO_NEXT_COMPONENT(pSrcBase, C((intptr_t)4));
             }
         }
         break;
@@ -474,7 +479,7 @@ namespace SwrJit
             if (info.numComps > 2)
             {
                 // offset base to the next components(zw) in the vertex to gather
-                pSrcBase = GEP(pSrcBase, C((char)4));
+                pSrcBase = OFFSET_TO_NEXT_COMPONENT(pSrcBase, C((intptr_t)4));
 
                 vGatherResult[1] = GATHERDD(vGatherMaskedVal, pSrcBase, byteOffsets, vMask);
                 // e.g. result of second 8x32bit integer gather for 16bit components
@@ -508,7 +513,7 @@ namespace SwrJit
                 vGatherComponents[swizzleIndex] = GATHERDD(vGatherComponents[swizzleIndex], pSrcBase, byteOffsets, vMask);
 
                 // offset base to the next component to gather
-                pSrcBase = GEP(pSrcBase, C((char)4));
+                pSrcBase = OFFSET_TO_NEXT_COMPONENT(pSrcBase, C((intptr_t)4));
             }
         }
         break;

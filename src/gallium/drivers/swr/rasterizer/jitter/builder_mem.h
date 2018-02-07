@@ -44,6 +44,8 @@ Value *MASKLOADD(Value* src, Value* mask);
 void Gather4(const SWR_FORMAT format, Value* pSrcBase, Value* byteOffsets,
     Value* mask, Value* vGatherComponents[], bool bPackedOutput);
 
+virtual Value* OFFSET_TO_NEXT_COMPONENT(Value* base, Constant *offset);
+
 virtual Value *GATHERPS(Value *src, Value *pBase, Value *indices, Value *mask, uint8_t scale = 1);
 Value *GATHERPS_16(Value *src, Value *pBase, Value *indices, Value *mask, uint8_t scale = 1);
 
