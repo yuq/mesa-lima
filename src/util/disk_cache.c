@@ -101,6 +101,9 @@ struct disk_cache {
    /* Driver cache keys. */
    uint8_t *driver_keys_blob;
    size_t driver_keys_blob_size;
+
+   disk_cache_put_cb blob_put_cb;
+   disk_cache_get_cb blob_get_cb;
 };
 
 struct disk_cache_put_job {
@@ -1012,6 +1015,11 @@ disk_cache_put(struct disk_cache *cache, const cache_key key,
                const void *data, size_t size,
                struct cache_item_metadata *cache_item_metadata)
 {
+   if (cache->blob_put_cb) {
+      cache->blob_put_cb(key, CACHE_KEY_SIZE, data, size);
+      return;
+   }
+
    /* Initialize path if not initialized yet. */
    if (cache->path_init_failed ||
        (!cache->path && !disk_cache_path_init(cache)))
@@ -1078,6 +1086,28 @@ disk_cache_get(struct disk_cache *cache, const cache_key key, size_t *size)
 
    if (size)
       *size = 0;
+
+   if (cache->blob_get_cb) {
+      /* This is what Android EGL defines as the maxValueSize in egl_cache_t
+       * class implementation.
+       */
+      const signed long max_blob_size = 64 * 1024;
+      void *blob = malloc(max_blob_size);
+      if (!blob)
+         return NULL;
+
+      signed long bytes =
+         cache->blob_get_cb(key, CACHE_KEY_SIZE, blob, max_blob_size);
+
+      if (!bytes) {
+         free(blob);
+         return NULL;
+      }
+
+      if (size)
+         *size = bytes;
+      return blob;
+   }
 
    filename = get_cache_file(cache, key);
    if (filename == NULL)
@@ -1194,6 +1224,11 @@ disk_cache_put_key(struct disk_cache *cache, const cache_key key)
    int i = CPU_TO_LE32(*key_chunk) & CACHE_INDEX_KEY_MASK;
    unsigned char *entry;
 
+   if (cache->blob_put_cb) {
+      cache->blob_put_cb(key, CACHE_KEY_SIZE, key_chunk, sizeof(uint32_t));
+      return;
+   }
+
    if (!cache->path) {
       assert(!"disk_cache_put_key called with no path set");
       return;
@@ -1218,6 +1253,11 @@ disk_cache_has_key(struct disk_cache *cache, const cache_key key)
    int i = CPU_TO_LE32(*key_chunk) & CACHE_INDEX_KEY_MASK;
    unsigned char *entry;
 
+   if (cache->blob_get_cb) {
+      uint32_t blob;
+      return cache->blob_get_cb(key, CACHE_KEY_SIZE, &blob, sizeof(uint32_t));
+   }
+
    /* Initialize path if not initialized yet. */
    if (cache->path_init_failed ||
        (!cache->path && !disk_cache_path_init(cache)))
@@ -1239,6 +1279,14 @@ disk_cache_compute_key(struct disk_cache *cache, const void *data, size_t size,
                      cache->driver_keys_blob_size);
    _mesa_sha1_update(&ctx, data, size);
    _mesa_sha1_final(&ctx, key);
+}
+
+void
+disk_cache_set_callbacks(struct disk_cache *cache, disk_cache_put_cb put,
+                         disk_cache_get_cb get)
+{
+   cache->blob_put_cb = put;
+   cache->blob_get_cb = get;
 }
 
 #endif /* ENABLE_SHADER_CACHE */
