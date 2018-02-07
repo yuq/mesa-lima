@@ -187,7 +187,7 @@ set_fragment_shader(struct blit_state *ctx,
    }
 
    else if (!ctx->fs[pipe_tex][idx]) {
-      unsigned tgsi_tex = util_pipe_tex_to_tgsi_tex(pipe_tex, 0);
+      enum tgsi_texture_type tgsi_tex = util_pipe_tex_to_tgsi_tex(pipe_tex, 0);
 
       /* OpenGL does not allow blits from signed to unsigned integer
        * or vice versa. */
@@ -259,7 +259,7 @@ get_next_slot( struct blit_state *ctx )
  */
 static unsigned
 setup_vertex_data_tex(struct blit_state *ctx,
-                      unsigned src_target,
+                      enum pipe_texture_target src_target,
                       unsigned src_face,
                       float x0, float y0, float x1, float y1,
                       float s0, float t0, float s1, float t1,
@@ -380,7 +380,8 @@ util_blit_pixels(struct blit_state *ctx,
                  struct pipe_surface *dst,
                  int dstX0, int dstY0,
                  int dstX1, int dstY1,
-                 MAYBE_UNUSED float z, uint filter,
+                 MAYBE_UNUSED float z,
+                 enum pipe_tex_filter filter,
                  uint writemask)
 {
    struct pipe_context *pipe = ctx->pipe;
@@ -514,7 +515,7 @@ util_blit_pixels_tex(struct blit_state *ctx,
                      struct pipe_surface *dst,
                      int dstX0, int dstY0,
                      int dstX1, int dstY1,
-                     float z, uint filter,
+                     float z, enum pipe_tex_filter filter,
                      boolean src_xrbias)
 {
    boolean normalized = src_sampler_view->texture->target != PIPE_TEXTURE_RECT;
