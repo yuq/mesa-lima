@@ -196,7 +196,7 @@ static void *
 make_passthrough_vertex_shader(struct st_context *st, 
                                GLboolean passColor)
 {
-   const unsigned texcoord_semantic = st->needs_texcoord_semantic ?
+   const enum tgsi_semantic texcoord_semantic = st->needs_texcoord_semantic ?
       TGSI_SEMANTIC_TEXCOORD : TGSI_SEMANTIC_GENERIC;
 
    if (!st->drawpix.vert_shaders[passColor]) {
