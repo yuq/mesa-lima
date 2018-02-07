@@ -202,7 +202,8 @@ void *util_make_layered_clear_geometry_shader(struct pipe_context *pipe)
 static void
 ureg_load_tex(struct ureg_program *ureg, struct ureg_dst out,
               struct ureg_src coord, struct ureg_src sampler,
-              unsigned tex_target, bool load_level_zero, bool use_txf)
+              enum tgsi_texture_type tex_target,
+              bool load_level_zero, bool use_txf)
 {
    if (use_txf) {
       struct ureg_dst temp = ureg_DECL_temporary(ureg);
@@ -277,14 +278,14 @@ util_make_fragment_tex_shader_xrbias(struct pipe_context *pipe,
  *  MOV OUT[0], TEMP[0]
  *  END;
  *
- * \param tex_target  one of PIPE_TEXTURE_x
+ * \param tex_target  one of TGSI_TEXTURE_x
  * \parma interp_mode  either TGSI_INTERPOLATE_LINEAR or PERSPECTIVE
  * \param writemask  mask of TGSI_WRITEMASK_x
  */
 void *
 util_make_fragment_tex_shader_writemask(struct pipe_context *pipe,
-                                        unsigned tex_target,
-                                        unsigned interp_mode,
+                                        enum tgsi_texture_type tex_target,
+                                        enum tgsi_interpolate_mode interp_mode,
                                         unsigned writemask,
                                         enum tgsi_return_type stype,
                                         enum tgsi_return_type dtype,
@@ -357,11 +358,12 @@ util_make_fragment_tex_shader_writemask(struct pipe_context *pipe,
 /**
  * Make a simple fragment shader that sets the output color to a color
  * taken from a texture.
- * \param tex_target  one of PIPE_TEXTURE_x
+ * \param tex_target  one of TGSI_TEXTURE_x
  */
 void *
-util_make_fragment_tex_shader(struct pipe_context *pipe, unsigned tex_target,
-                              unsigned interp_mode,
+util_make_fragment_tex_shader(struct pipe_context *pipe,
+                              enum tgsi_texture_type tex_target,
+                              enum tgsi_interpolate_mode interp_mode,
                               enum tgsi_return_type stype,
                               enum tgsi_return_type dtype,
                               bool load_level_zero,
@@ -382,8 +384,8 @@ util_make_fragment_tex_shader(struct pipe_context *pipe, unsigned tex_target,
  */
 void *
 util_make_fragment_tex_shader_writedepth(struct pipe_context *pipe,
-                                         unsigned tex_target,
-                                         unsigned interp_mode,
+                                         enum tgsi_texture_type tex_target,
+                                         enum tgsi_interpolate_mode interp_mode,
                                          bool load_level_zero,
                                          bool use_txf)
 {
@@ -435,10 +437,10 @@ util_make_fragment_tex_shader_writedepth(struct pipe_context *pipe,
  */
 void *
 util_make_fragment_tex_shader_writedepthstencil(struct pipe_context *pipe,
-                                                unsigned tex_target,
-                                                unsigned interp_mode,
-                                                bool load_level_zero,
-                                                bool use_txf)
+                                         enum tgsi_texture_type tex_target,
+                                         enum tgsi_interpolate_mode interp_mode,
+                                         bool load_level_zero,
+                                         bool use_txf)
 {
    struct ureg_program *ureg;
    struct ureg_src depth_sampler, stencil_sampler;
@@ -499,10 +501,10 @@ util_make_fragment_tex_shader_writedepthstencil(struct pipe_context *pipe,
  */
 void *
 util_make_fragment_tex_shader_writestencil(struct pipe_context *pipe,
-                                           unsigned tex_target,
-                                           unsigned interp_mode,
-                                           bool load_level_zero,
-                                           bool use_txf)
+                                         enum tgsi_texture_type tex_target,
+                                         enum tgsi_interpolate_mode interp_mode,
+                                         bool load_level_zero,
+                                         bool use_txf)
 {
    struct ureg_program *ureg;
    struct ureg_src stencil_sampler;
