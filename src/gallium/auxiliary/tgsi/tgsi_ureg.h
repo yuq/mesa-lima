@@ -170,9 +170,9 @@ struct ureg_src
 ureg_DECL_fs_input_cyl_centroid_layout(struct ureg_program *,
                        unsigned semantic_name,
                        unsigned semantic_index,
-                       unsigned interp_mode,
+                       enum tgsi_interpolate_mode interp_mode,
                        unsigned cylindrical_wrap,
-                       unsigned interp_location,
+                       enum tgsi_interpolate_loc interp_location,
                        unsigned index,
                        unsigned usage_mask,
                        unsigned array_id,
@@ -182,9 +182,9 @@ struct ureg_src
 ureg_DECL_fs_input_cyl_centroid(struct ureg_program *,
                        unsigned semantic_name,
                        unsigned semantic_index,
-                       unsigned interp_mode,
+                       enum tgsi_interpolate_mode interp_mode,
                        unsigned cylindrical_wrap,
-                       unsigned interp_location,
+                       enum tgsi_interpolate_loc interp_location,
                        unsigned array_id,
                        unsigned array_size);
 
@@ -192,7 +192,7 @@ static inline struct ureg_src
 ureg_DECL_fs_input_cyl(struct ureg_program *ureg,
                        unsigned semantic_name,
                        unsigned semantic_index,
-                       unsigned interp_mode,
+                       enum tgsi_interpolate_mode interp_mode,
                        unsigned cylindrical_wrap)
 {
    return ureg_DECL_fs_input_cyl_centroid(ureg,
@@ -200,20 +200,20 @@ ureg_DECL_fs_input_cyl(struct ureg_program *ureg,
                                  semantic_index,
                                  interp_mode,
                                  cylindrical_wrap,
-                                 0, 0, 1);
+                                 TGSI_INTERPOLATE_LOC_CENTER, 0, 1);
 }
 
 static inline struct ureg_src
 ureg_DECL_fs_input(struct ureg_program *ureg,
                    unsigned semantic_name,
                    unsigned semantic_index,
-                   unsigned interp_mode)
+                   enum tgsi_interpolate_mode interp_mode)
 {
    return ureg_DECL_fs_input_cyl_centroid(ureg,
                                  semantic_name,
                                  semantic_index,
                                  interp_mode,
-                                 0, 0, 0, 1);
+                                 0, TGSI_INTERPOLATE_LOC_CENTER, 0, 1);
 }
 
 struct ureg_src
@@ -361,16 +361,16 @@ ureg_DECL_sampler( struct ureg_program *,
 struct ureg_src
 ureg_DECL_sampler_view(struct ureg_program *,
                        unsigned index,
-                       unsigned target,
-                       unsigned return_type_x,
-                       unsigned return_type_y,
-                       unsigned return_type_z,
-                       unsigned return_type_w );
+                       enum tgsi_texture_type target,
+                       enum tgsi_return_type return_type_x,
+                       enum tgsi_return_type return_type_y,
+                       enum tgsi_return_type return_type_z,
+                       enum tgsi_return_type return_type_w );
 
 struct ureg_src
 ureg_DECL_image(struct ureg_program *ureg,
                 unsigned index,
-                unsigned target,
+                enum tgsi_texture_type target,
                 unsigned format,
                 boolean wr,
                 boolean raw);
@@ -562,8 +562,8 @@ ureg_tex_insn(struct ureg_program *ureg,
               unsigned opcode,
               const struct ureg_dst *dst,
               unsigned nr_dst,
-              unsigned target,
-              unsigned return_type,
+              enum tgsi_texture_type target,
+              enum tgsi_return_type return_type,
               const struct tgsi_texture_offset *texoffsets,
               unsigned nr_offset,
               const struct ureg_src *src,
@@ -606,7 +606,9 @@ ureg_emit_label(struct ureg_program *ureg,
 void
 ureg_emit_texture(struct ureg_program *ureg,
                   unsigned insn_token,
-                  unsigned target, unsigned return_type, unsigned num_offsets);
+                  enum tgsi_texture_type target,
+                  enum tgsi_return_type return_type,
+                  unsigned num_offsets);
 
 void
 ureg_emit_texture_offset(struct ureg_program *ureg,
@@ -760,12 +762,12 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
 #define OP12_TEX( op )                                                  \
 static inline void ureg_##op( struct ureg_program *ureg,                \
                               struct ureg_dst dst,                      \
-                              unsigned target,                          \
+                              enum tgsi_texture_type target,            \
                               struct ureg_src src0,                     \
                               struct ureg_src src1 )                    \
 {                                                                       \
    unsigned opcode = TGSI_OPCODE_##op;                                  \
-   unsigned return_type = TGSI_RETURN_TYPE_UNKNOWN;                     \
+   enum tgsi_return_type return_type = TGSI_RETURN_TYPE_UNKNOWN;        \
    struct ureg_emit_insn_result insn;                                   \
    if (ureg_dst_is_empty(dst))                                          \
       return;                                                           \
@@ -810,14 +812,14 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
 #define OP14_TEX( op )                                                  \
 static inline void ureg_##op( struct ureg_program *ureg,                \
                               struct ureg_dst dst,                      \
-                              unsigned target,                          \
+                              enum tgsi_texture_type target,            \
                               struct ureg_src src0,                     \
                               struct ureg_src src1,                     \
                               struct ureg_src src2,                     \
                               struct ureg_src src3 )                    \
 {                                                                       \
    unsigned opcode = TGSI_OPCODE_##op;                                  \
-   unsigned return_type = TGSI_RETURN_TYPE_UNKNOWN;                     \
+   enum tgsi_return_type return_type = TGSI_RETURN_TYPE_UNKNOWN;        \
    struct ureg_emit_insn_result insn;                                   \
    if (ureg_dst_is_empty(dst))                                          \
       return;                                                           \
