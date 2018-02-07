@@ -567,8 +567,8 @@ vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
 
         so->base = *cso;
 
-        pipe_reference(NULL, &prsc->reference);
-        so->base.texture = prsc;
+        so->base.texture = NULL;
+        pipe_resource_reference(&so->base.texture, prsc);
         so->base.reference.count = 1;
         so->base.context = pctx;
 
