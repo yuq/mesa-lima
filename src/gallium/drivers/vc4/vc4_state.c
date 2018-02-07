@@ -386,8 +386,6 @@ vc4_set_constant_buffer(struct pipe_context *pctx,
         struct vc4_context *vc4 = vc4_context(pctx);
         struct vc4_constbuf_stateobj *so = &vc4->constbuf[shader];
 
-        assert(index == 0);
-
         /* Note that the state tracker can unbind constant buffers by
          * passing NULL here.
          */
@@ -397,7 +395,10 @@ vc4_set_constant_buffer(struct pipe_context *pctx,
                 return;
         }
 
-        assert(!cb->buffer);
+        if (index == 1 && so->cb[index].buffer_size != cb->buffer_size)
+                vc4->dirty |= VC4_DIRTY_UBO_1_SIZE;
+
+        pipe_resource_reference(&so->cb[index].buffer, cb->buffer);
         so->cb[index].buffer_offset = cb->buffer_offset;
         so->cb[index].buffer_size   = cb->buffer_size;
         so->cb[index].user_buffer   = cb->user_buffer;

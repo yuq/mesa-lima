@@ -137,6 +137,32 @@ indirect_uniform_load(struct vc4_compile *c, nir_intrinsic_instr *intr)
         return qir_TEX_RESULT(c);
 }
 
+static struct qreg
+vc4_ubo_load(struct vc4_compile *c, nir_intrinsic_instr *intr)
+{
+        nir_const_value *buffer_index =
+                nir_src_as_const_value(intr->src[0]);
+        assert(buffer_index->u32[0] == 1);
+        assert(c->stage == QSTAGE_FRAG);
+
+        struct qreg offset = ntq_get_src(c, intr->src[1], 0);
+
+        /* Clamp to [0, array size).  Note that MIN/MAX are signed. */
+        offset = qir_MAX(c, offset, qir_uniform_ui(c, 0));
+        offset = qir_MIN_NOIMM(c, offset,
+                               qir_uniform_ui(c, c->fs_key->ubo_1_size - 4));
+
+        qir_ADD_dest(c, qir_reg(QFILE_TEX_S_DIRECT, 0),
+                     offset,
+                     qir_uniform(c, QUNIFORM_UBO_ADDR, buffer_index->u32[0]));
+
+        c->num_texture_samples++;
+
+        ntq_emit_thrsw(c);
+
+        return qir_TEX_RESULT(c);
+}
+
 nir_ssa_def *
 vc4_nir_get_swizzled_channel(nir_builder *b, nir_ssa_def **srcs, int swiz)
 {
@@ -1775,6 +1801,11 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 }
                 break;
 
+        case nir_intrinsic_load_ubo:
+                assert(instr->num_components == 1);
+                ntq_store_dest(c, &instr->dest, 0, vc4_ubo_load(c, instr));
+                break;
+
         case nir_intrinsic_load_user_clip_plane:
                 for (int i = 0; i < instr->num_components; i++) {
                         ntq_store_dest(c, &instr->dest, i,
@@ -2726,7 +2757,8 @@ vc4_update_compiled_fs(struct vc4_context *vc4, uint8_t prim_mode)
                             VC4_DIRTY_RASTERIZER |
                             VC4_DIRTY_SAMPLE_MASK |
                             VC4_DIRTY_FRAGTEX |
-                            VC4_DIRTY_UNCOMPILED_FS))) {
+                            VC4_DIRTY_UNCOMPILED_FS |
+                            VC4_DIRTY_UBO_1_SIZE))) {
                 return;
         }
 
@@ -2770,6 +2802,7 @@ vc4_update_compiled_fs(struct vc4_context *vc4, uint8_t prim_mode)
                          PIPE_SPRITE_COORD_UPPER_LEFT);
         }
 
+        key->ubo_1_size = vc4->constbuf[PIPE_SHADER_FRAGMENT].cb[1].buffer_size;
         key->light_twoside = vc4->rasterizer->base.light_twoside;
 
         struct vc4_compiled_shader *old_fs = vc4->prog.fs;

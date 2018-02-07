@@ -78,6 +78,7 @@
 #define VC4_DIRTY_COMPILED_VS   (1 << 24)
 #define VC4_DIRTY_COMPILED_FS   (1 << 25)
 #define VC4_DIRTY_FS_INPUTS     (1 << 26)
+#define VC4_DIRTY_UBO_1_SIZE    (1 << 27)
 
 struct vc4_sampler_view {
         struct pipe_sampler_view base;
