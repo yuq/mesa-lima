@@ -523,8 +523,8 @@ struct SWR_CONTEXT
 #define UPDATE_STAT_FE(name, count) if (GetApiState(pDC).enableStatsFE) { pDC->dynState.statsFE.name += count; }
 
 // ArchRast instrumentation framework
-#define AR_WORKER_CTX  pContext->pArContext[workerId]
-#define AR_API_CTX     pContext->pArContext[pContext->NumWorkerThreads]
+#define AR_WORKER_CTX  pDC->pContext->pArContext[workerId]
+#define AR_API_CTX     pDC->pContext->pArContext[pContext->NumWorkerThreads]
 
 #ifdef KNOB_ENABLE_RDTSC
 #define RDTSC_BEGIN(type, drawid) RDTSC_START(type)

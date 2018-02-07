@@ -40,8 +40,6 @@
 template<typename T>
 void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y, SWR_TRIANGLE_DESC &work, RenderOutputBuffers &renderBuffers)
 {
-    SWR_CONTEXT *pContext = pDC->pContext;
-
     RDTSC_BEGIN(BESampleRateBackend, pDC->drawId);
     RDTSC_BEGIN(BESetup, pDC->drawId);
 

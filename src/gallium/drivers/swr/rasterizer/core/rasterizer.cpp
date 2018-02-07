@@ -43,7 +43,6 @@ PFN_WORK_FUNC gRasterizerFuncs[SWR_MULTISAMPLE_TYPE_COUNT][2][2][SWR_INPUT_COVER
 
 void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData)
 {
-    SWR_CONTEXT *pContext = pDC->pContext;
     const TRIANGLE_WORK_DESC &workDesc = *((TRIANGLE_WORK_DESC*)pData);
 #if KNOB_ENABLE_TOSS_POINTS
     if (KNOB_TOSS_BIN_TRIS)
@@ -251,8 +250,6 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
 
 void RasterizeSimplePoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void* pData)
 {
-    SWR_CONTEXT *pContext = pDC->pContext;
-
 #if KNOB_ENABLE_TOSS_POINTS
     if (KNOB_TOSS_BIN_TRIS)
     {

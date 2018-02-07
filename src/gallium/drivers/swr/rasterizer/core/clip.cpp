@@ -163,7 +163,6 @@ int ClipTriToPlane( const float *pInPts, int numInPts,
 void ClipTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask,
                    simdscalari const &primId, simdscalari const &viewportIdx, simdscalari const &rtIdx)
 {
-    SWR_CONTEXT *pContext = pDC->pContext;
     RDTSC_BEGIN(FEClipTriangles, pDC->drawId);
     Clipper<SIMD256, 3> clipper(workerId, pDC);
     clipper.ExecuteStage(pa, prims, primMask, primId, viewportIdx, rtIdx);
@@ -173,7 +172,6 @@ void ClipTriangles(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvecto
 void ClipLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask,
                simdscalari const &primId, simdscalari const &viewportIdx, simdscalari const &rtIdx)
 {
-    SWR_CONTEXT *pContext = pDC->pContext;
     RDTSC_BEGIN(FEClipLines, pDC->drawId);
     Clipper<SIMD256, 2> clipper(workerId, pDC);
     clipper.ExecuteStage(pa, prims, primMask, primId, viewportIdx, rtIdx);
@@ -183,7 +181,6 @@ void ClipLines(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector pr
 void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector prims[], uint32_t primMask,
                 simdscalari const &primId, simdscalari const &viewportIdx, simdscalari const &rtIdx)
 {
-    SWR_CONTEXT *pContext = pDC->pContext;
     RDTSC_BEGIN(FEClipPoints, pDC->drawId);
     Clipper<SIMD256, 1> clipper(workerId, pDC);
     clipper.ExecuteStage(pa, prims, primMask, primId, viewportIdx, rtIdx);
@@ -194,7 +191,6 @@ void ClipPoints(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simdvector p
 void SIMDCALL ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask,
                                    simd16scalari const &primId, simd16scalari const &viewportIdx, simd16scalari const &rtIdx)
 {
-    SWR_CONTEXT *pContext = pDC->pContext;
     RDTSC_BEGIN(FEClipTriangles, pDC->drawId);
 
     enum { VERTS_PER_PRIM = 3 };
@@ -210,7 +206,6 @@ void SIMDCALL ClipTriangles_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t wor
 void SIMDCALL ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask,
                                simd16scalari const &primId, simd16scalari const &viewportIdx, simd16scalari const &rtIdx)
 {
-    SWR_CONTEXT *pContext = pDC->pContext;
     RDTSC_BEGIN(FEClipLines, pDC->drawId);
 
     enum { VERTS_PER_PRIM = 2 };
@@ -226,7 +221,6 @@ void SIMDCALL ClipLines_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerI
 void SIMDCALL ClipPoints_simd16(DRAW_CONTEXT *pDC, PA_STATE& pa, uint32_t workerId, simd16vector prims[], uint32_t primMask,
                                 simd16scalari const &primId, simd16scalari const &viewportIdx, simd16scalari const &rtIdx)
 {
-    SWR_CONTEXT *pContext = pDC->pContext;
     RDTSC_BEGIN(FEClipPoints, pDC->drawId);
 
     enum { VERTS_PER_PRIM = 1 };

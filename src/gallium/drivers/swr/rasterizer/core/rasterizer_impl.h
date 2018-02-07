@@ -772,8 +772,6 @@ struct GenerateSVInnerCoverage<RT, AllEdgesValidT, InnerConservativeCoverageT>
 {
     INLINE GenerateSVInnerCoverage(DRAW_CONTEXT* pDC, uint32_t workerId, EDGE* pRastEdges, double* pStartQuadEdges,  uint64_t &innerCoverageMask)
     {
-        SWR_CONTEXT *pContext = pDC->pContext;
-
         double startQuadEdgesAdj[RT::NumEdgesT::value];
         for(uint32_t e = 0; e < RT::NumEdgesT::value; ++e)
         {
@@ -839,7 +837,6 @@ struct UpdateEdgeMasksInnerConservative<RT, ValidEdgeMaskT, InnerConservativeCov
 template <typename RT>
 void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile, void* pDesc)
 {
-    SWR_CONTEXT *pContext = pDC->pContext;
     const TRIANGLE_WORK_DESC &workDesc = *((TRIANGLE_WORK_DESC*)pDesc);
 #if KNOB_ENABLE_TOSS_POINTS
     if (KNOB_TOSS_BIN_TRIS)

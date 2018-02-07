@@ -687,8 +687,6 @@ public:
     {
         SWR_ASSERT(pa.pDC != nullptr);
 
-        SWR_CONTEXT *pContext = pa.pDC->pContext;
-
         BinnerChooser<SIMD_T> binner(pa.binTopology, pa.pDC->pState->state.rastState.conservativeRast);
 
         // update clipper invocations pipeline stat

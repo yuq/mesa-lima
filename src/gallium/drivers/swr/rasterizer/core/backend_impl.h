@@ -569,7 +569,6 @@ struct PixelRateZTestLoop
     uint32_t operator()(simdscalar& activeLanes, SWR_PS_CONTEXT& psContext, 
                         const CORE_BUCKETS BEDepthBucket, uint32_t currentSimdIn8x8 = 0)
     {
-        SWR_CONTEXT *pContext = pDC->pContext;
 
         uint32_t statCount = 0;
         simdscalar anyDepthSamplePassed = _simd_setzero_ps();
@@ -866,8 +865,6 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
 {
     ///@todo: Need to move locals off stack to prevent __chkstk's from being generated for the backend
 
-
-    SWR_CONTEXT *pContext = pDC->pContext;
 
     RDTSC_BEGIN(BEPixelRateBackend, pDC->drawId);
     RDTSC_BEGIN(BESetup, pDC->drawId);
