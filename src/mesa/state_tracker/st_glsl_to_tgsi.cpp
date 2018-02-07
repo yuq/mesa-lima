@@ -5456,7 +5456,7 @@ struct st_translate {
 };
 
 /** Map Mesa's SYSTEM_VALUE_x to TGSI_SEMANTIC_x */
-unsigned
+enum tgsi_semantic
 _mesa_sysval_to_semantic(unsigned sysval)
 {
    switch (sysval) {
@@ -6379,7 +6379,8 @@ st_translate_program(
          }
 
          src = ureg_DECL_fs_input_cyl_centroid_layout(ureg,
-                  inputSemanticName[slot], inputSemanticIndex[slot],
+                  (enum tgsi_semantic) inputSemanticName[slot],
+                  inputSemanticIndex[slot],
                   interp_mode, 0, interp_location, slot, tgsi_usage_mask,
                   decl->array_id, decl->size);
 
@@ -6433,7 +6434,8 @@ st_translate_program(
          }
 
          dst = ureg_DECL_output_layout(ureg,
-                     outputSemanticName[slot], outputSemanticIndex[slot],
+                     (enum tgsi_semantic) outputSemanticName[slot],
+                     outputSemanticIndex[slot],
                      decl->gs_out_streams,
                      slot, tgsi_usage_mask, decl->array_id, decl->size);
 
@@ -6535,7 +6537,7 @@ st_translate_program(
 
       for (i = 0; sysInputs; i++) {
          if (sysInputs & (1 << i)) {
-            unsigned semName = _mesa_sysval_to_semantic(i);
+            enum tgsi_semantic semName = _mesa_sysval_to_semantic(i);
 
             t->systemValues[i] = ureg_DECL_system_value(ureg, semName, 0);
 
