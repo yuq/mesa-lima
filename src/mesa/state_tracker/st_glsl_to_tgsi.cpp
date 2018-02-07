@@ -191,7 +191,7 @@ public:
    glsl_base_type sampler_types[PIPE_MAX_SAMPLERS];
    enum tgsi_texture_type sampler_targets[PIPE_MAX_SAMPLERS];
    int images_used;
-   int image_targets[PIPE_MAX_SHADER_IMAGES];
+   enum tgsi_texture_type image_targets[PIPE_MAX_SHADER_IMAGES];
    enum pipe_format image_formats[PIPE_MAX_SHADER_IMAGES];
    bool indirect_addr_consts;
    int wpos_transform_const;
@@ -5863,7 +5863,7 @@ compile_tgsi_instruction(struct st_translate *t,
 
    int num_dst;
    int num_src;
-   unsigned tex_target = 0;
+   enum tgsi_texture_type tex_target;
 
    num_dst = num_inst_dst_regs(inst);
    num_src = num_inst_src_regs(inst);
@@ -6249,7 +6249,7 @@ sort_inout_decls_by_slot(struct inout_decl *decls,
    std::sort(decls, decls + count, sorter);
 }
 
-static unsigned
+static enum tgsi_interpolate_mode
 st_translate_interp(enum glsl_interp_mode glsl_qual, GLuint varying)
 {
    switch (glsl_qual) {
@@ -6367,15 +6367,15 @@ st_translate_program(
                tgsi_usage_mask = TGSI_WRITEMASK_XYZW;
          }
 
-         unsigned interp_mode = 0;
-         unsigned interp_location = 0;
+         enum tgsi_interpolate_mode interp_mode = TGSI_INTERPOLATE_CONSTANT;
+         enum tgsi_interpolate_loc interp_location = TGSI_INTERPOLATE_LOC_CENTER;
          if (procType == PIPE_SHADER_FRAGMENT) {
             assert(interpMode);
             interp_mode = interpMode[slot] != TGSI_INTERPOLATE_COUNT ?
-               interpMode[slot] :
+               (enum tgsi_interpolate_mode) interpMode[slot] :
                st_translate_interp(decl->interp, inputSlotToAttr[slot]);
 
-            interp_location = decl->interp_loc;
+            interp_location = (enum tgsi_interpolate_loc) decl->interp_loc;
          }
 
          src = ureg_DECL_fs_input_cyl_centroid_layout(ureg,
