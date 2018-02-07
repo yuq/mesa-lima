@@ -572,6 +572,8 @@ blorp_emit_vs_config(struct blorp_batch *batch,
                      const struct blorp_params *params)
 {
    struct brw_vs_prog_data *vs_prog_data = params->vs_prog_data;
+   assert(!vs_prog_data || GEN_GEN < 11 ||
+          vs_prog_data->base.dispatch_mode == DISPATCH_MODE_SIMD8);
 
    blorp_emit(batch, GENX(3DSTATE_VS), vs) {
       if (vs_prog_data) {

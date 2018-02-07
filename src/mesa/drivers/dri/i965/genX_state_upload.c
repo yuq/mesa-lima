@@ -2050,6 +2050,8 @@ genX(upload_vs_state)(struct brw_context *brw)
 
    assert(vue_prog_data->dispatch_mode == DISPATCH_MODE_SIMD8 ||
           vue_prog_data->dispatch_mode == DISPATCH_MODE_4X2_DUAL_OBJECT);
+   assert(GEN_GEN < 11 ||
+          vue_prog_data->dispatch_mode == DISPATCH_MODE_SIMD8);
 
 #if GEN_GEN == 6
    /* From the BSpec, 3D Pipeline > Geometry > Vertex Shader > State,
@@ -3967,6 +3969,9 @@ genX(upload_ds_state)(struct brw_context *brw)
    if (!tes_prog_data) {
       brw_batch_emit(brw, GENX(3DSTATE_DS), ds);
    } else {
+      assert(GEN_GEN < 11 ||
+             vue_prog_data->dispatch_mode == DISPATCH_MODE_SIMD8);
+
       brw_batch_emit(brw, GENX(3DSTATE_DS), ds) {
          INIT_THREAD_DISPATCH_FIELDS(ds, Patch);
 
