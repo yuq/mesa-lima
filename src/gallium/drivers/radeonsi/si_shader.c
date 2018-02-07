@@ -6750,18 +6750,6 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			si_build_tcs_epilog_function(&ctx, &tcs_epilog_key);
 			parts[3] = ctx.main_fn;
 
-			/* VS prolog */
-			if (vs_needs_prolog) {
-				union si_shader_part_key vs_prolog_key;
-				si_get_vs_prolog_key(&ls->info,
-						     shader->info.num_input_sgprs,
-						     &shader->key.part.tcs.ls_prolog,
-						     shader, &vs_prolog_key);
-				vs_prolog_key.vs_prolog.is_monolithic = true;
-				si_build_vs_prolog_function(&ctx, &vs_prolog_key);
-				parts[0] = ctx.main_fn;
-			}
-
 			/* VS as LS main part */
 			struct si_shader shader_ls = {};
 			shader_ls.selector = ls;
@@ -6776,6 +6764,18 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			}
 			shader->info.uses_instanceid |= ls->info.uses_instanceid;
 			parts[1] = ctx.main_fn;
+
+			/* LS prolog */
+			if (vs_needs_prolog) {
+				union si_shader_part_key vs_prolog_key;
+				si_get_vs_prolog_key(&ls->info,
+						     shader_ls.info.num_input_sgprs,
+						     &shader->key.part.tcs.ls_prolog,
+						     shader, &vs_prolog_key);
+				vs_prolog_key.vs_prolog.is_monolithic = true;
+				si_build_vs_prolog_function(&ctx, &vs_prolog_key);
+				parts[0] = ctx.main_fn;
+			}
 
 			/* Reset the shader context. */
 			ctx.shader = shader;
@@ -6814,18 +6814,6 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			si_build_gs_prolog_function(&ctx, &gs_prolog_key);
 			gs_prolog = ctx.main_fn;
 
-			/* ES prolog */
-			if (es->vs_needs_prolog) {
-				union si_shader_part_key vs_prolog_key;
-				si_get_vs_prolog_key(&es->info,
-						     shader->info.num_input_sgprs,
-						     &shader->key.part.gs.vs_prolog,
-						     shader, &vs_prolog_key);
-				vs_prolog_key.vs_prolog.is_monolithic = true;
-				si_build_vs_prolog_function(&ctx, &vs_prolog_key);
-				es_prolog = ctx.main_fn;
-			}
-
 			/* ES main part */
 			struct si_shader shader_es = {};
 			shader_es.selector = es;
@@ -6840,6 +6828,18 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			}
 			shader->info.uses_instanceid |= es->info.uses_instanceid;
 			es_main = ctx.main_fn;
+
+			/* ES prolog */
+			if (es->vs_needs_prolog) {
+				union si_shader_part_key vs_prolog_key;
+				si_get_vs_prolog_key(&es->info,
+						     shader_es.info.num_input_sgprs,
+						     &shader->key.part.gs.vs_prolog,
+						     shader, &vs_prolog_key);
+				vs_prolog_key.vs_prolog.is_monolithic = true;
+				si_build_vs_prolog_function(&ctx, &vs_prolog_key);
+				es_prolog = ctx.main_fn;
+			}
 
 			/* Reset the shader context. */
 			ctx.shader = shader;
