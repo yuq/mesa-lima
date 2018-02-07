@@ -279,6 +279,11 @@ struct brw_perf_query_object
          uint64_t accumulator[MAX_OA_REPORT_COUNTERS];
 
          /**
+          * Hw ID used by the context on which the query was running.
+          */
+         uint32_t hw_id;
+
+         /**
           * false while in the unaccumulated_elements list, and set to
           * true when the final, end MI_RPC snapshot has been
           * accumulated.
@@ -844,7 +849,6 @@ accumulate_oa_reports(struct brw_context *brw,
    uint32_t *end;
    struct exec_node *first_samples_node;
    bool in_ctx = true;
-   uint32_t ctx_id;
    int out_duration = 0;
 
    assert(o->Ready);
@@ -862,7 +866,7 @@ accumulate_oa_reports(struct brw_context *brw,
       goto error;
    }
 
-   ctx_id = start[2];
+   obj->oa.hw_id = start[2];
 
    /* See if we have any periodic reports to accumulate too... */
 
@@ -917,11 +921,11 @@ accumulate_oa_reports(struct brw_context *brw,
              * of OA counters while any other context is acctive.
              */
             if (devinfo->gen >= 8) {
-               if (in_ctx && report[2] != ctx_id) {
+               if (in_ctx && report[2] != obj->oa.hw_id) {
                   DBG("i915 perf: Switch AWAY (observed by ID change)\n");
                   in_ctx = false;
                   out_duration = 0;
-               } else if (in_ctx == false && report[2] == ctx_id) {
+               } else if (in_ctx == false && report[2] == obj->oa.hw_id) {
                   DBG("i915 perf: Switch TO\n");
                   in_ctx = true;
 
@@ -938,10 +942,10 @@ accumulate_oa_reports(struct brw_context *brw,
                   if (out_duration >= 1)
                      add = false;
                } else if (in_ctx) {
-                  assert(report[2] == ctx_id);
+                  assert(report[2] == obj->oa.hw_id);
                   DBG("i915 perf: Continuation IN\n");
                } else {
-                  assert(report[2] != ctx_id);
+                  assert(report[2] != obj->oa.hw_id);
                   DBG("i915 perf: Continuation OUT\n");
                   add = false;
                   out_duration++;
@@ -1251,6 +1255,7 @@ brw_begin_perf_query(struct gl_context *ctx,
        */
       buf->refcount++;
 
+      obj->oa.hw_id = 0xffffffff;
       memset(obj->oa.accumulator, 0, sizeof(obj->oa.accumulator));
       obj->oa.results_accumulated = false;
 
