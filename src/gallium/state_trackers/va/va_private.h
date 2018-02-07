@@ -233,6 +233,7 @@ typedef struct {
    struct vl_compositor_state cstate;
    vl_csc_matrix csc;
    mtx_t mutex;
+   char vendor_string[256];
 } vlVaDriver;
 
 typedef struct {
