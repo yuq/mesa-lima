@@ -24,6 +24,7 @@
 #    Jason Ekstrand (jason@jlekstrand.net)
 
 import nir_algebraic
+import itertools
 
 # Convenience variables
 a = 'a'
@@ -544,6 +545,14 @@ optimizations = [
                                            127.0))),
      'options->lower_unpack_snorm_4x8'),
 ]
+
+invert = {'feq': 'fne', 'fne': 'feq', 'fge': 'flt', 'flt': 'fge' }
+
+for left, right in list(itertools.combinations(invert.keys(), 2)) + zip(invert.keys(), invert.keys()):
+   optimizations.append((('inot', ('ior(is_used_once)', (left, a, b), (right, c, d))),
+                         ('iand', (invert[left], a, b), (invert[right], c, d))))
+   optimizations.append((('inot', ('iand(is_used_once)', (left, a, b), (right, c, d))),
+                         ('ior', (invert[left], a, b), (invert[right], c, d))))
 
 def fexp2i(exp, bits):
    # We assume that exp is already in the right range.
