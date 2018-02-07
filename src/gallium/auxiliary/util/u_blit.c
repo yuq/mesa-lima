@@ -28,7 +28,7 @@
 /**
  * @file
  * Copy/blit pixel rect between surfaces
- *  
+ *
  * @author Brian Paul
  */
 
@@ -180,12 +180,12 @@ set_fragment_shader(struct blit_state *ctx,
       assert(stype == TGSI_RETURN_TYPE_FLOAT);
       idx = 3;
       if (!ctx->fs[pipe_tex][idx]) {
-         enum tgsi_texture_type tgsi_tex = util_pipe_tex_to_tgsi_tex(pipe_tex, 0);
+         enum tgsi_texture_type tgsi_tex =
+            util_pipe_tex_to_tgsi_tex(pipe_tex, 0);
          ctx->fs[pipe_tex][idx] =
             util_make_fragment_tex_shader_xrbias(ctx->pipe, tgsi_tex);
       }
    }
-
    else if (!ctx->fs[pipe_tex][idx]) {
       enum tgsi_texture_type tgsi_tex = util_pipe_tex_to_tgsi_tex(pipe_tex, 0);
 
@@ -228,7 +228,7 @@ set_vertex_shader(struct blit_state *ctx)
  * Get offset of next free slot in vertex buffer for quad vertices.
  */
 static unsigned
-get_next_slot( struct blit_state *ctx )
+get_next_slot(struct blit_state *ctx)
 {
    const unsigned max_slots = 4096 / sizeof ctx->vertices;
 
@@ -243,7 +243,7 @@ get_next_slot( struct blit_state *ctx )
                                      PIPE_USAGE_STREAM,
                                      max_slots * sizeof ctx->vertices);
    }
-   
+
    return ctx->vbuf_slot++ * sizeof ctx->vertices;
 }
 
@@ -298,14 +298,15 @@ setup_vertex_data_tex(struct blit_state *ctx,
    if (src_target == PIPE_TEXTURE_CUBE ||
        src_target == PIPE_TEXTURE_CUBE_ARRAY) {
       /* Map cubemap texture coordinates inplace. */
-      const unsigned stride = sizeof ctx->vertices[0] / sizeof ctx->vertices[0][0][0];
+      const unsigned stride =
+         sizeof ctx->vertices[0] / sizeof ctx->vertices[0][0][0];
       util_map_texcoords2d_onto_cubemap(src_face,
                                         &ctx->vertices[0][1][0], stride,
                                         &ctx->vertices[0][1][0], stride,
                                         TRUE);
    }
 
-   offset = get_next_slot( ctx );
+   offset = get_next_slot(ctx);
 
    if (ctx->vbuf) {
       pipe_buffer_write_nooverlap(ctx->pipe, ctx->vbuf,
@@ -536,8 +537,7 @@ util_blit_pixels_tex(struct blit_state *ctx,
    t0 = (float) srcY0;
    t1 = (float) srcY1;
 
-   if(normalized)
-   {
+   if (normalized) {
       /* normalize according to the mipmap level's size */
       int level = src_sampler_view->u.tex.first_level;
       float w = (float) u_minify(tex->width0, level);
