@@ -275,7 +275,7 @@ util_make_fragment_tex_shader_writemask(struct pipe_context *pipe,
    if (writemask != TGSI_WRITEMASK_XYZW) {
       struct ureg_src imm = ureg_imm4f( ureg, 0, 0, 0, 1 );
 
-      ureg_MOV( ureg, out, imm );
+      ureg_MOV(ureg, temp, imm);
    }
 
    if (tex_target == TGSI_TEXTURE_BUFFER)
