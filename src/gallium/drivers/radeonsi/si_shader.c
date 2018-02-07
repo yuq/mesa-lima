@@ -6600,9 +6600,13 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 
 			if (is_sgpr)
 				lp_add_function_attr(parts[part], param_idx + 1, LP_FUNC_ATTR_INREG);
+			else if (out_idx < num_out_sgpr) {
+				/* Skip returned SGPRs the current part doesn't
+				 * declare on the input. */
+				out_idx = num_out_sgpr;
+			}
 
 			assert(out_idx + param_size <= (is_sgpr ? num_out_sgpr : num_out));
-			assert(is_sgpr || out_idx >= num_out_sgpr);
 
 			if (param_size == 1)
 				arg = out[out_idx];
