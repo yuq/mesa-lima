@@ -319,6 +319,47 @@ brw_perf_query(struct gl_perf_query_object *o)
 /******************************************************************************/
 
 static bool
+read_file_uint64(const char *file, uint64_t *val)
+{
+    char buf[32];
+    int fd, n;
+
+    fd = open(file, 0);
+    if (fd < 0)
+       return false;
+    while ((n = read(fd, buf, sizeof (buf) - 1)) < 0 &&
+           errno == EINTR);
+    close(fd);
+    if (n < 0)
+       return false;
+
+    buf[n] = '\0';
+    *val = strtoull(buf, NULL, 0);
+
+    return true;
+}
+
+static bool
+read_sysfs_drm_device_file_uint64(struct brw_context *brw,
+                                  const char *file,
+                                  uint64_t *value)
+{
+   char buf[512];
+   int len;
+
+   len = snprintf(buf, sizeof(buf), "%s/%s",
+                  brw->perfquery.sysfs_dev_dir, file);
+   if (len < 0 || len >= sizeof(buf)) {
+      DBG("Failed to concatenate sys filename to read u64 from\n");
+      return false;
+   }
+
+   return read_file_uint64(buf, value);
+}
+
+/******************************************************************************/
+
+static bool
 brw_is_perf_query_ready(struct gl_context *ctx,
                         struct gl_perf_query_object *o);
 
@@ -1746,27 +1787,6 @@ init_pipeline_statistic_query_registers(struct brw_context *brw)
    query->data_size = sizeof(uint64_t) * query->n_counters;
 }
 
-static bool
-read_file_uint64(const char *file, uint64_t *val)
-{
-    char buf[32];
-    int fd, n;
-
-    fd = open(file, 0);
-    if (fd < 0)
-	return false;
-    while ((n = read(fd, buf, sizeof (buf) - 1)) < 0 &&
-           errno == EINTR);
-    close(fd);
-    if (n < 0)
-	return false;
-
-    buf[n] = '\0';
-    *val = strtoull(buf, NULL, 0);
-
-    return true;
-}
-
 static void
 register_oa_config(struct brw_context *brw,
                    const struct brw_perf_query_info *query,
@@ -1780,14 +1800,14 @@ register_oa_config(struct brw_context *brw,
 }
 
 static void
-enumerate_sysfs_metrics(struct brw_context *brw, const char *sysfs_dev_dir)
+enumerate_sysfs_metrics(struct brw_context *brw)
 {
    char buf[256];
    DIR *metricsdir = NULL;
    struct dirent *metric_entry;
    int len;
 
-   len = snprintf(buf, sizeof(buf), "%s/metrics", sysfs_dev_dir);
+   len = snprintf(buf, sizeof(buf), "%s/metrics", brw->perfquery.sysfs_dev_dir);
    if (len < 0 || len >= sizeof(buf)) {
       DBG("Failed to concatenate path to sysfs metrics/ directory\n");
       return;
@@ -1814,7 +1834,7 @@ enumerate_sysfs_metrics(struct brw_context *brw, const char *sysfs_dev_dir)
          uint64_t id;
 
          len = snprintf(buf, sizeof(buf), "%s/metrics/%s/id",
-                        sysfs_dev_dir, metric_entry->d_name);
+                        brw->perfquery.sysfs_dev_dir, metric_entry->d_name);
          if (len < 0 || len >= sizeof(buf)) {
             DBG("Failed to concatenate path to sysfs metric id file\n");
             continue;
@@ -1834,37 +1854,18 @@ enumerate_sysfs_metrics(struct brw_context *brw, const char *sysfs_dev_dir)
 }
 
 static bool
-read_sysfs_drm_device_file_uint64(struct brw_context *brw,
-                                  const char *sysfs_dev_dir,
-                                  const char *file,
-                                  uint64_t *value)
-{
-   char buf[512];
-   int len;
-
-   len = snprintf(buf, sizeof(buf), "%s/%s", sysfs_dev_dir, file);
-   if (len < 0 || len >= sizeof(buf)) {
-      DBG("Failed to concatenate sys filename to read u64 from\n");
-      return false;
-   }
-
-   return read_file_uint64(buf, value);
-}
-
-static bool
-kernel_has_dynamic_config_support(struct brw_context *brw,
-                                  const char *sysfs_dev_dir)
+kernel_has_dynamic_config_support(struct brw_context *brw)
 {
    __DRIscreen *screen = brw->screen->driScrnPriv;
    struct hash_entry *entry;
 
    hash_table_foreach(brw->perfquery.oa_metrics_table, entry) {
       struct brw_perf_query_info *query = entry->data;
-      char config_path[256];
+      char config_path[280];
       uint64_t config_id;
 
-      snprintf(config_path, sizeof(config_path),
-               "%s/metrics/%s/id", sysfs_dev_dir, query->guid);
+      snprintf(config_path, sizeof(config_path), "%s/metrics/%s/id",
+               brw->perfquery.sysfs_dev_dir, query->guid);
 
       /* Look for the test config, which we know we can't replace. */
       if (read_file_uint64(config_path, &config_id) && config_id == 1) {
@@ -1877,7 +1878,7 @@ kernel_has_dynamic_config_support(struct brw_context *brw,
 }
 
 static void
-init_oa_configs(struct brw_context *brw, const char *sysfs_dev_dir)
+init_oa_configs(struct brw_context *brw)
 {
    __DRIscreen *screen = brw->screen->driScrnPriv;
    struct hash_entry *entry;
@@ -1885,12 +1886,12 @@ init_oa_configs(struct brw_context *brw, const char *sysfs_dev_dir)
    hash_table_foreach(brw->perfquery.oa_metrics_table, entry) {
       const struct brw_perf_query_info *query = entry->data;
       struct drm_i915_perf_oa_config config;
-      char config_path[256];
+      char config_path[280];
       uint64_t config_id;
       int ret;
 
-      snprintf(config_path, sizeof(config_path),
-               "%s/metrics/%s/id", sysfs_dev_dir, query->guid);
+      snprintf(config_path, sizeof(config_path), "%s/metrics/%s/id",
+               brw->perfquery.sysfs_dev_dir, query->guid);
 
       /* Don't recreate already loaded configs. */
       if (read_file_uint64(config_path, &config_id)) {
@@ -1925,20 +1926,16 @@ init_oa_configs(struct brw_context *brw, const char *sysfs_dev_dir)
 }
 
 static bool
-init_oa_sys_vars(struct brw_context *brw, const char *sysfs_dev_dir)
+init_oa_sys_vars(struct brw_context *brw)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    uint64_t min_freq_mhz = 0, max_freq_mhz = 0;
    __DRIscreen *screen = brw->screen->driScrnPriv;
 
-   if (!read_sysfs_drm_device_file_uint64(brw, sysfs_dev_dir,
-                                          "gt_min_freq_mhz",
-                                          &min_freq_mhz))
+   if (!read_sysfs_drm_device_file_uint64(brw, "gt_min_freq_mhz", &min_freq_mhz))
       return false;
 
-   if (!read_sysfs_drm_device_file_uint64(brw, sysfs_dev_dir,
-                                          "gt_max_freq_mhz",
-                                          &max_freq_mhz))
+   if (!read_sysfs_drm_device_file_uint64(brw,  "gt_max_freq_mhz", &max_freq_mhz))
       return false;
 
    brw->perfquery.sys_vars.gt_min_freq = min_freq_mhz * 1000000;
@@ -2023,9 +2020,7 @@ init_oa_sys_vars(struct brw_context *brw, const char *sysfs_dev_dir)
 }
 
 static bool
-get_sysfs_dev_dir(struct brw_context *brw,
-                  char *path_buf,
-                  int path_buf_len)
+get_sysfs_dev_dir(struct brw_context *brw)
 {
    __DRIscreen *screen = brw->screen->driScrnPriv;
    struct stat sb;
@@ -2034,9 +2029,7 @@ get_sysfs_dev_dir(struct brw_context *brw,
    struct dirent *drm_entry;
    int len;
 
-   assert(path_buf);
-   assert(path_buf_len);
-   path_buf[0] = '\0';
+   brw->perfquery.sysfs_dev_dir[0] = '\0';
 
    if (fstat(screen->fd, &sb)) {
       DBG("Failed to stat DRM fd\n");
@@ -2051,16 +2044,17 @@ get_sysfs_dev_dir(struct brw_context *brw,
       return false;
    }
 
-   len = snprintf(path_buf, path_buf_len,
+   len = snprintf(brw->perfquery.sysfs_dev_dir,
+                  sizeof(brw->perfquery.sysfs_dev_dir),
                   "/sys/dev/char/%d:%d/device/drm", maj, min);
-   if (len < 0 || len >= path_buf_len) {
+   if (len < 0 || len >= sizeof(brw->perfquery.sysfs_dev_dir)) {
       DBG("Failed to concatenate sysfs path to drm device\n");
       return false;
    }
 
-   drmdir = opendir(path_buf);
+   drmdir = opendir(brw->perfquery.sysfs_dev_dir);
    if (!drmdir) {
-      DBG("Failed to open %s: %m\n", path_buf);
+      DBG("Failed to open %s: %m\n", brw->perfquery.sysfs_dev_dir);
       return false;
    }
 
@@ -2069,11 +2063,12 @@ get_sysfs_dev_dir(struct brw_context *brw,
            drm_entry->d_type == DT_LNK) &&
           strncmp(drm_entry->d_name, "card", 4) == 0)
       {
-         len = snprintf(path_buf, path_buf_len,
+         len = snprintf(brw->perfquery.sysfs_dev_dir,
+                        sizeof(brw->perfquery.sysfs_dev_dir),
                         "/sys/dev/char/%d:%d/device/drm/%s",
                         maj, min, drm_entry->d_name);
          closedir(drmdir);
-         if (len < 0 || len >= path_buf_len)
+         if (len < 0 || len >= sizeof(brw->perfquery.sysfs_dev_dir))
             return false;
          else
             return true;
@@ -2134,7 +2129,6 @@ brw_init_perf_query_info(struct gl_context *ctx)
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    bool i915_perf_oa_available = false;
    struct stat sb;
-   char sysfs_dev_dir[128];
    perf_register_oa_queries_t oa_register;
 
    if (brw->perfquery.n_queries)
@@ -2166,8 +2160,8 @@ brw_init_perf_query_info(struct gl_context *ctx)
 
    if (i915_perf_oa_available &&
        oa_register &&
-       get_sysfs_dev_dir(brw, sysfs_dev_dir, sizeof(sysfs_dev_dir)) &&
-       init_oa_sys_vars(brw, sysfs_dev_dir))
+       get_sysfs_dev_dir(brw) &&
+       init_oa_sys_vars(brw))
    {
       brw->perfquery.oa_metrics_table =
          _mesa_hash_table_create(NULL, _mesa_key_hash_string,
@@ -2179,10 +2173,10 @@ brw_init_perf_query_info(struct gl_context *ctx)
       oa_register(brw);
 
       if (likely((INTEL_DEBUG & DEBUG_NO_OACONFIG) == 0) &&
-          kernel_has_dynamic_config_support(brw, sysfs_dev_dir))
-         init_oa_configs(brw, sysfs_dev_dir);
+          kernel_has_dynamic_config_support(brw))
+         init_oa_configs(brw);
       else
-         enumerate_sysfs_metrics(brw, sysfs_dev_dir);
+         enumerate_sysfs_metrics(brw);
    }
 
    brw->perfquery.unaccumulated =

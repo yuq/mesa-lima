@@ -1189,6 +1189,9 @@ struct brw_context
        */
       struct hash_table *oa_metrics_table;
 
+      /* Location of the device's sysfs entry. */
+      char sysfs_dev_dir[256];
+
       struct brw_perf_query_info *queries;
       int n_queries;
 
