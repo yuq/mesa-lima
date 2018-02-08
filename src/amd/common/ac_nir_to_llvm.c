@@ -3817,7 +3817,7 @@ static LLVMValueRef visit_image_size(struct ac_nir_context *ctx,
 #define LGKM_CNT 0x07f
 #define VM_CNT 0xf70
 
-static void emit_membar(struct nir_to_llvm_context *ctx,
+static void emit_membar(struct ac_llvm_context *ac,
 			const nir_intrinsic_instr *instr)
 {
 	unsigned waitcnt = NOOP_WAITCNT;
@@ -3839,7 +3839,7 @@ static void emit_membar(struct nir_to_llvm_context *ctx,
 		break;
 	}
 	if (waitcnt != NOOP_WAITCNT)
-		ac_build_waitcnt(&ctx->ac, waitcnt);
+		ac_build_waitcnt(ac, waitcnt);
 }
 
 static void emit_barrier(struct ac_llvm_context *ac, gl_shader_stage stage)
@@ -4438,7 +4438,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	case nir_intrinsic_memory_barrier_buffer:
 	case nir_intrinsic_memory_barrier_image:
 	case nir_intrinsic_memory_barrier_shared:
-		emit_membar(ctx->nctx, instr);
+		emit_membar(&ctx->ac, instr);
 		break;
 	case nir_intrinsic_barrier:
 		emit_barrier(&ctx->ac, ctx->stage);
