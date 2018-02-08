@@ -371,7 +371,8 @@ ureg_DECL_input_layout(struct ureg_program *ureg,
                 unsigned array_size)
 {
    return ureg_DECL_fs_input_cyl_centroid_layout(ureg,
-               semantic_name, semantic_index, 0, 0, 0,
+               semantic_name, semantic_index,
+               TGSI_INTERPOLATE_CONSTANT, 0, TGSI_INTERPOLATE_LOC_CENTER,
                index, usage_mask, array_id, array_size);
 }
 
@@ -384,7 +385,9 @@ ureg_DECL_input(struct ureg_program *ureg,
                 unsigned array_size)
 {
    return ureg_DECL_fs_input_cyl_centroid(ureg, semantic_name, semantic_index,
-                                          0, 0, 0, array_id, array_size);
+                                          TGSI_INTERPOLATE_CONSTANT, 0,
+                                          TGSI_INTERPOLATE_LOC_CENTER,
+                                          array_id, array_size);
 }
 
 
