@@ -296,6 +296,42 @@ void value::delete_uses() {
 	uses.erase(uses.begin(), uses.end());
 }
 
+bool value::no_reladdr_conflict_with(value *src)
+{
+	/*  if the register is not relative, it can't create an relative access conflict */
+	if (!src->is_rel())
+		return true;
+
+	/* If the destination is AR then we accept the copy propagation, because the
+	 * scheduler actually re-creates the address loading operation and will
+	 * signal interference if there is an address register load and it will fail
+	 * because of this.
+	 */
+	if (gvalue()->is_AR())
+		return true;
+
+	/* For all nodes that use this value test whether the operation uses another
+	 * relative access with a different address value. If found, signal conflict.
+	 */
+	for (uselist::const_iterator N = uses.begin(); N != uses.end(); ++N) {
+		for (vvec::const_iterator V = (*N)->src.begin(); V != (*N)->src.end(); ++V) {
+			if (*V) {
+				value *v = (*V)->gvalue();
+				if (v != src && v->is_rel() && v->rel != src->rel)
+					return false;
+			}
+		}
+		for (vvec::const_iterator V = (*N)->dst.begin(); V != (*N)->dst.end(); ++V) {
+			if (*V) {
+				value *v = (*V)->gvalue();
+				if (v && v != src && v->is_rel() && (v->rel != src->rel))
+					return false;
+			}
+		}
+	}
+	return true;
+}
+
 void ra_constraint::update_values() {
 	for (vvec::iterator I = values.begin(), E = values.end(); I != E; ++I) {
 		assert(!(*I)->constraint);

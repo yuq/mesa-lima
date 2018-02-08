@@ -616,6 +616,12 @@ public:
 		}
 	}
 
+	/* Check whether copy-propagation of src into this would create an access
+	 * conflict with relative addressing, i.e. an operation that tries to access
+	 * array elements with different address register values.
+	 */
+	bool no_reladdr_conflict_with(value *src);
+
 	val_set interferences;
 	unsigned uid;
 };
