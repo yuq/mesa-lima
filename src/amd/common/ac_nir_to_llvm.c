@@ -513,8 +513,21 @@ static bool needs_view_index_sgpr(struct nir_to_llvm_context *ctx,
 	return false;
 }
 
+static uint8_t
+count_vs_user_sgprs(struct nir_to_llvm_context *ctx)
+{
+	uint8_t count = 0;
+
+	count += ctx->shader_info->info.vs.has_vertex_buffers ? 2 : 0;
+	count += ctx->shader_info->info.vs.needs_draw_id ? 3 : 2;
+
+	return count;
+}
+
 static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
 				gl_shader_stage stage,
+				bool has_previous_stage,
+				gl_shader_stage previous_stage,
 				bool needs_view_index,
 				struct user_sgpr_info *user_sgpr_info)
 {
@@ -537,7 +550,6 @@ static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
 		user_sgpr_info->sgpr_count += 2;
 	}
 
-	/* FIXME: fix the number of user sgprs for merged shaders on GFX9 */
 	switch (stage) {
 	case MESA_SHADER_COMPUTE:
 		if (ctx->shader_info->info.cs.uses_grid_size)
@@ -547,24 +559,30 @@ static void allocate_user_sgprs(struct nir_to_llvm_context *ctx,
 		user_sgpr_info->sgpr_count += ctx->shader_info->info.ps.needs_sample_positions;
 		break;
 	case MESA_SHADER_VERTEX:
-		if (!ctx->is_gs_copy_shader) {
-			user_sgpr_info->sgpr_count += ctx->shader_info->info.vs.has_vertex_buffers ? 2 : 0;
-			if (ctx->shader_info->info.vs.needs_draw_id) {
-				user_sgpr_info->sgpr_count += 3;
-			} else {
-				user_sgpr_info->sgpr_count += 2;
-			}
-		}
+		if (!ctx->is_gs_copy_shader)
+			user_sgpr_info->sgpr_count += count_vs_user_sgprs(ctx);
 		if (ctx->options->key.vs.as_ls)
 			user_sgpr_info->sgpr_count++;
 		break;
 	case MESA_SHADER_TESS_CTRL:
+		if (has_previous_stage) {
+			if (previous_stage == MESA_SHADER_VERTEX)
+				user_sgpr_info->sgpr_count += count_vs_user_sgprs(ctx);
+			user_sgpr_info->sgpr_count++;
+		}
 		user_sgpr_info->sgpr_count += 4;
 		break;
 	case MESA_SHADER_TESS_EVAL:
 		user_sgpr_info->sgpr_count += 1;
 		break;
 	case MESA_SHADER_GEOMETRY:
+		if (has_previous_stage) {
+			if (previous_stage == MESA_SHADER_VERTEX) {
+				user_sgpr_info->sgpr_count += count_vs_user_sgprs(ctx);
+			} else {
+				user_sgpr_info->sgpr_count++;
+			}
+		}
 		user_sgpr_info->sgpr_count += 2;
 		break;
 	default:
@@ -746,7 +764,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	struct arg_info args = {};
 	LLVMValueRef desc_sets;
 	bool needs_view_index = needs_view_index_sgpr(ctx, stage);
-	allocate_user_sgprs(ctx, stage, needs_view_index, &user_sgpr_info);
+	allocate_user_sgprs(ctx, stage, has_previous_stage,
+			    previous_stage, needs_view_index, &user_sgpr_info);
 
 	if (user_sgpr_info.need_ring_offsets && !ctx->options->supports_spill) {
 		add_arg(&args, ARG_SGPR, ac_array_in_const_addr_space(ctx->ac.v4i32),
