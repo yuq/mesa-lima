@@ -179,9 +179,6 @@ struct ac_shader_variant_info {
 			uint32_t flat_shaded_mask;
 			bool has_pcoord;
 			bool can_discard;
-			bool writes_z;
-			bool writes_stencil;
-			bool writes_sample_mask;
 			bool early_fragment_test;
 			bool prim_id_input;
 			bool layer_input;

@@ -6443,15 +6443,12 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx)
 			continue;
 
 		if (i == FRAG_RESULT_DEPTH) {
-			ctx->shader_info->fs.writes_z = true;
 			depth = ac_to_float(&ctx->ac, LLVMBuildLoad(ctx->builder,
 							    ctx->nir->outputs[radeon_llvm_reg_index_soa(i, 0)], ""));
 		} else if (i == FRAG_RESULT_STENCIL) {
-			ctx->shader_info->fs.writes_stencil = true;
 			stencil = ac_to_float(&ctx->ac, LLVMBuildLoad(ctx->builder,
 							      ctx->nir->outputs[radeon_llvm_reg_index_soa(i, 0)], ""));
 		} else if (i == FRAG_RESULT_SAMPLE_MASK) {
-			ctx->shader_info->fs.writes_sample_mask = true;
 			samplemask = ac_to_float(&ctx->ac, LLVMBuildLoad(ctx->builder,
 								  ctx->nir->outputs[radeon_llvm_reg_index_soa(i, 0)], ""));
 		} else {
@@ -6460,7 +6457,9 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx)
 				values[j] = ac_to_float(&ctx->ac, LLVMBuildLoad(ctx->builder,
 									ctx->nir->outputs[radeon_llvm_reg_index_soa(i, j)], ""));
 
-			if (!ctx->shader_info->fs.writes_z && !ctx->shader_info->fs.writes_stencil && !ctx->shader_info->fs.writes_sample_mask)
+			if (!ctx->shader_info->info.ps.writes_z &&
+			    !ctx->shader_info->info.ps.writes_stencil &&
+			    !ctx->shader_info->info.ps.writes_sample_mask)
 				last = ctx->output_mask <= ((1ull << (i + 1)) - 1);
 
 			bool ret = si_export_mrt_color(ctx, values, V_008DFC_SQ_EXP_MRT + (i - FRAG_RESULT_DATA0), last, &color_args[index]);
