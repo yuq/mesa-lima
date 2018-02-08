@@ -6027,14 +6027,7 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 			continue;
 
 		si_llvm_init_export_args(ctx, values, target, &args);
-
-		if (target >= V_008DFC_SQ_EXP_POS &&
-		    target <= (V_008DFC_SQ_EXP_POS + 3)) {
-			memcpy(&pos_args[target - V_008DFC_SQ_EXP_POS],
-			       &args, sizeof(args));
-		} else {
-			ac_build_export(&ctx->ac, &args);
-		}
+		ac_build_export(&ctx->ac, &args);
 	}
 
 	if (export_prim_id) {
