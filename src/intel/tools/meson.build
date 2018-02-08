@@ -26,7 +26,8 @@ aubinator = executable(
   include_directories : [inc_common, inc_intel],
   link_with : [libintel_common, libintel_compiler, libmesa_util],
   c_args : [c_vis_args, no_override_init_args],
-  build_by_default : false,
+  build_by_default : with_tools.contains('intel'),
+  install : with_tools.contains('intel'),
 )
 
 aubinator_error_decode = executable(
@@ -37,5 +38,6 @@ aubinator_error_decode = executable(
   include_directories : [inc_common, inc_intel],
   link_with : [libintel_common, libintel_compiler, libmesa_util],
   c_args : [c_vis_args, no_override_init_args],
-  build_by_default : false,
+  build_by_default : with_tools.contains('intel'),
+  install : with_tools.contains('intel'),
 )

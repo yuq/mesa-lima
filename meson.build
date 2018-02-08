@@ -48,6 +48,10 @@ with_libunwind = get_option('libunwind')
 with_asm = get_option('asm')
 with_osmesa = get_option('osmesa')
 with_swr_arches = get_option('swr-arches').split(',')
+with_tools = get_option('tools').split(',')
+if with_tools.contains('all')
+  with_tools = ['freedreno', 'glsl', 'intel', 'nir', 'nouveau']
+endif
 if get_option('texture-float')
   pre_args += '-DTEXTURE_FLOAT_ENABLED'
   message('WARNING: Floating-point texture enabled. Please consult docs/patents.txt and your lawyer before building mesa.')

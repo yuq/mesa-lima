@@ -249,5 +249,6 @@ ir3_compiler = executable(
     libglsl_standalone,
     libmesa_util,
   ],
-  build_by_default : true,
+  build_by_default : with_tools.contains('freedreno'),
+  install : with_tools.contains('freedreno'),
 )

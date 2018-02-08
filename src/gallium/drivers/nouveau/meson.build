@@ -219,7 +219,8 @@ nouveau_compiler = executable(
   include_directories : [inc_src, inc_include, inc_gallium, inc_gallium_aux],
   dependencies : [dep_libdrm, dep_libdrm_nouveau],
   link_with : [libnouveau, libgallium, libmesa_util],
-  build_by_default : false,
+  build_by_default : with_tools.contains('nouveau'),
+  install : with_tools.contains('nouveau'),
 )
 
 driver_nouveau = declare_dependency(
