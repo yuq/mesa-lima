@@ -3914,6 +3914,46 @@ visit_load_local_invocation_index(struct ac_nir_context *ctx)
 	return LLVMBuildAdd(ctx->ac.builder, result, thread_id, "");
 }
 
+static LLVMValueRef
+visit_load_shared(struct ac_nir_context *ctx,
+		   const nir_intrinsic_instr *instr)
+{
+	LLVMValueRef values[4], derived_ptr, index, ret;
+
+	LLVMValueRef ptr = get_memory_ptr(ctx, instr->src[0]);
+
+	for (int chan = 0; chan < instr->num_components; chan++) {
+		index = LLVMConstInt(ctx->ac.i32, chan, 0);
+		derived_ptr = LLVMBuildGEP(ctx->ac.builder, ptr, &index, 1, "");
+		values[chan] = LLVMBuildLoad(ctx->ac.builder, derived_ptr, "");
+	}
+
+	ret = ac_build_gather_values(&ctx->ac, values, instr->num_components);
+	return LLVMBuildBitCast(ctx->ac.builder, ret, get_def_type(ctx, &instr->dest.ssa), "");
+}
+
+static void
+visit_store_shared(struct ac_nir_context *ctx,
+		   const nir_intrinsic_instr *instr)
+{
+	LLVMValueRef derived_ptr, data,index;
+	LLVMBuilderRef builder = ctx->ac.builder;
+
+	LLVMValueRef ptr = get_memory_ptr(ctx, instr->src[1]);
+	LLVMValueRef src = get_src(ctx, instr->src[0]);
+
+	int writemask = nir_intrinsic_write_mask(instr);
+	for (int chan = 0; chan < 4; chan++) {
+		if (!(writemask & (1 << chan))) {
+			continue;
+		}
+		data = ac_llvm_extract_elem(&ctx->ac, src, chan);
+		index = LLVMConstInt(ctx->ac.i32, chan, 0);
+		derived_ptr = LLVMBuildGEP(builder, ptr, &index, 1, "");
+		LLVMBuildStore(builder, data, derived_ptr);
+	}
+}
+
 static LLVMValueRef visit_var_atomic(struct ac_nir_context *ctx,
 				     const nir_intrinsic_instr *instr,
 				     LLVMValueRef ptr)
@@ -4438,6 +4478,12 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		break;
 	case nir_intrinsic_store_var:
 		visit_store_var(ctx, instr);
+		break;
+	case nir_intrinsic_load_shared:
+		result = visit_load_shared(ctx, instr);
+		break;
+	case nir_intrinsic_store_shared:
+		visit_store_shared(ctx, instr);
 		break;
 	case nir_intrinsic_image_load:
 		result = visit_image_load(ctx, instr);
