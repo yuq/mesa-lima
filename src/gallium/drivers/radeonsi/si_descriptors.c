@@ -2136,7 +2136,7 @@ void si_emit_graphics_shader_pointers(struct si_context *sctx,
 			if (sctx->tes_shader.cso)
 				sh_dw_offset = GFX9_TCS_NUM_USER_SGPR;
 			else if (sctx->gs_shader.cso)
-				sh_dw_offset = GFX9_GS_NUM_USER_SGPR;
+				sh_dw_offset = GFX9_VSGS_NUM_USER_SGPR;
 		}
 
 		unsigned sh_offset = sh_base[PIPE_SHADER_VERTEX] + sh_dw_offset * 4;

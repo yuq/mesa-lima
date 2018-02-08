@@ -212,7 +212,13 @@ enum {
 
 	/* GS limits */
 	GFX6_GS_NUM_USER_SGPR = SI_NUM_RESOURCE_SGPRS,
-	GFX9_GS_NUM_USER_SGPR = GFX9_MERGED_NUM_USER_SGPR,
+#if HAVE_32BIT_POINTERS
+	GFX9_VSGS_NUM_USER_SGPR = SI_VS_NUM_USER_SGPR,
+	GFX9_TESGS_NUM_USER_SGPR = SI_TES_NUM_USER_SGPR,
+#else
+	GFX9_VSGS_NUM_USER_SGPR = GFX9_MERGED_NUM_USER_SGPR,
+	GFX9_TESGS_NUM_USER_SGPR = GFX9_MERGED_NUM_USER_SGPR,
+#endif
 	SI_GSCOPY_NUM_USER_SGPR = SI_SGPR_RW_BUFFERS + (HAVE_32BIT_POINTERS ? 1 : 2),
 
 	/* PS only */
@@ -425,6 +431,7 @@ struct si_tcs_epilog_bits {
 
 struct si_gs_prolog_bits {
 	unsigned	tri_strip_adj_fix:1;
+	unsigned	gfx9_prev_is_vs:1;
 };
 
 /* Common PS bits between the shader key and the prolog key. */

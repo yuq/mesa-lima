@@ -785,9 +785,9 @@ static void si_shader_gs(struct si_screen *sscreen, struct si_shader *shader)
 
 		unsigned num_user_sgprs;
 		if (es_type == PIPE_SHADER_VERTEX)
-			num_user_sgprs = si_get_num_vs_user_sgprs(GFX9_GS_NUM_USER_SGPR);
+			num_user_sgprs = si_get_num_vs_user_sgprs(GFX9_VSGS_NUM_USER_SGPR);
 		else
-			num_user_sgprs = GFX9_GS_NUM_USER_SGPR;
+			num_user_sgprs = GFX9_TESGS_NUM_USER_SGPR;
 
 		gfx9_get_gs_info(shader->key.part.gs.es, sel, &gs_info);
 
@@ -1317,6 +1317,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 				si_shader_selector_key_vs(sctx, sctx->vs_shader.cso,
 							  key, &key->part.gs.vs_prolog);
 				key->part.gs.es = sctx->vs_shader.cso;
+				key->part.gs.prolog.gfx9_prev_is_vs = 1;
 			}
 
 			/* Merged ES-GS can have unbalanced wave usage.

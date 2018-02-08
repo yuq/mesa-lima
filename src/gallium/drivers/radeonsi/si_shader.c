@@ -3430,7 +3430,12 @@ static void si_set_es_return_value_for_gs(struct si_shader_context *ctx)
 				  8 + GFX9_SGPR_2ND_SAMPLERS_AND_IMAGES);
 #endif
 
-	unsigned vgpr = 8 + GFX9_GS_NUM_USER_SGPR;
+	unsigned vgpr;
+	if (ctx->type == PIPE_SHADER_VERTEX)
+		vgpr = 8 + GFX9_VSGS_NUM_USER_SGPR;
+	else
+		vgpr = 8 + GFX9_TESGS_NUM_USER_SGPR;
+
 	for (unsigned i = 0; i < 5; i++) {
 		unsigned param = ctx->param_gs_vtx01_offset + i;
 		ret = si_insert_input_ret_float(ctx, ret, param, vgpr++);
@@ -4789,12 +4794,13 @@ static void create_function(struct si_shader_context *ctx)
 		if (ctx->type == PIPE_SHADER_VERTEX) {
 			declare_vs_specific_input_sgprs(ctx, &fninfo);
 		} else {
-			/* TESS_EVAL (and also GEOMETRY):
-			 * Declare as many input SGPRs as the VS has. */
 			ctx->param_tcs_offchip_layout = add_arg(&fninfo, ARG_SGPR, ctx->i32);
 			ctx->param_tes_offchip_addr = add_arg(&fninfo, ARG_SGPR, ctx->i32);
-			add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
-			ctx->param_vs_state_bits = add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
+			if (!HAVE_32BIT_POINTERS) {
+				/* Declare as many input SGPRs as the VS has. */
+				add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
+				ctx->param_vs_state_bits = add_arg(&fninfo, ARG_SGPR, ctx->i32); /* unused */
+			}
 		}
 
 		if (!HAVE_32BIT_POINTERS) {
@@ -4822,8 +4828,15 @@ static void create_function(struct si_shader_context *ctx)
 
 		if (ctx->type == PIPE_SHADER_VERTEX ||
 		    ctx->type == PIPE_SHADER_TESS_EVAL) {
+			unsigned num_user_sgprs;
+
+			if (ctx->type == PIPE_SHADER_VERTEX)
+				num_user_sgprs = GFX9_VSGS_NUM_USER_SGPR;
+			else
+				num_user_sgprs = GFX9_TESGS_NUM_USER_SGPR;
+
 			/* ES return values are inputs to GS. */
-			for (i = 0; i < 8 + GFX9_GS_NUM_USER_SGPR; i++)
+			for (i = 0; i < 8 + num_user_sgprs; i++)
 				returns[num_returns++] = ctx->i32; /* SGPRs */
 			for (i = 0; i < 5; i++)
 				returns[num_returns++] = ctx->f32; /* VGPRs */
@@ -6342,7 +6355,10 @@ static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 	si_init_function_info(&fninfo);
 
 	if (ctx->screen->info.chip_class >= GFX9) {
-		num_sgprs = 8 + GFX9_GS_NUM_USER_SGPR;
+		if (key->gs_prolog.states.gfx9_prev_is_vs)
+			num_sgprs = 8 + GFX9_VSGS_NUM_USER_SGPR;
+		else
+			num_sgprs = 8 + GFX9_TESGS_NUM_USER_SGPR;
 		num_vgprs = 5; /* ES inputs are not needed by GS */
 	} else {
 		num_sgprs = GFX6_GS_NUM_USER_SGPR + 2;
