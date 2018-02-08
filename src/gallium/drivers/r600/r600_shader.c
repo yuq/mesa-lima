@@ -7497,6 +7497,168 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 		}
 	}
 
+	if (inst->Instruction.Opcode == TGSI_OPCODE_TG4) {
+		/* Gather4 should follow the same rules as bilinear filtering, but the hardware
+		 * incorrectly forces nearest filtering if the texture format is integer.
+		 * The only effect it has on Gather4, which always returns 4 texels for
+		 * bilinear filtering, is that the final coordinates are off by 0.5 of
+		 * the texel size.
+		 *
+		 * The workaround is to subtract 0.5 from the unnormalized coordinates,
+		 * or (0.5 / size) from the normalized coordinates.
+		 */
+		if (inst->Texture.ReturnType == TGSI_RETURN_TYPE_SINT ||
+		    inst->Texture.ReturnType == TGSI_RETURN_TYPE_UINT) {
+			int treg = r600_get_temp(ctx);
+
+			/* mov array and comparison oordinate to temp_reg if needed */
+			if ((inst->Texture.Texture == TGSI_TEXTURE_SHADOW2D ||
+			     inst->Texture.Texture == TGSI_TEXTURE_2D_ARRAY ||
+			     inst->Texture.Texture == TGSI_TEXTURE_SHADOW2D_ARRAY) && !src_loaded) {
+				int end = inst->Texture.Texture == TGSI_TEXTURE_SHADOW2D_ARRAY ? 3 : 2;
+				for (i = 2; i <= end; i++) {
+					memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+					alu.op = ALU_OP1_MOV;
+					alu.dst.sel = ctx->temp_reg;
+					alu.dst.chan = i;
+					alu.dst.write = 1;
+					alu.last = (i == end);
+					r600_bytecode_src(&alu.src[0], &ctx->src[0], i);
+					r = r600_bytecode_add_alu(ctx->bc, &alu);
+					if (r)
+						return r;
+				}
+			}
+
+			if (inst->Texture.Texture == TGSI_TEXTURE_RECT ||
+			    inst->Texture.Texture == TGSI_TEXTURE_SHADOWRECT) {
+				for (i = 0; i < 2; i++) {
+					memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+					alu.op = ALU_OP2_ADD;
+					alu.dst.sel = ctx->temp_reg;
+					alu.dst.chan = i;
+					alu.dst.write = 1;
+					alu.last = i == 1;
+					if (src_loaded) {
+						alu.src[0].sel = ctx->temp_reg;
+						alu.src[0].chan = i;
+					} else
+						r600_bytecode_src(&alu.src[0], &ctx->src[0], i);
+					alu.src[1].sel = V_SQ_ALU_SRC_0_5;
+					alu.src[1].neg = 1;
+					r = r600_bytecode_add_alu(ctx->bc, &alu);
+					if (r)
+						return r;
+				}
+			} else {
+				/* execute a TXQ */
+				memset(&tex, 0, sizeof(struct r600_bytecode_tex));
+				tex.op = FETCH_OP_GET_TEXTURE_RESINFO;
+				tex.sampler_id = tgsi_tex_get_src_gpr(ctx, sampler_src_reg);
+				tex.sampler_index_mode = sampler_index_mode;
+				tex.resource_id = tex.sampler_id + R600_MAX_CONST_BUFFERS;
+				tex.resource_index_mode = sampler_index_mode;
+				tex.dst_gpr = treg;
+				tex.src_sel_x = 4;
+				tex.src_sel_y = 4;
+				tex.src_sel_z = 4;
+				tex.src_sel_w = 4;
+				tex.dst_sel_x = 0;
+				tex.dst_sel_y = 1;
+				tex.dst_sel_z = 7;
+				tex.dst_sel_w = 7;
+				r = r600_bytecode_add_tex(ctx->bc, &tex);
+				if (r)
+					return r;
+
+				/* coord.xy = -0.5 * (1.0/int_to_flt(size)) + coord.xy */
+				if (ctx->bc->chip_class == CAYMAN) {
+					/* */
+					for (i = 0; i < 2; i++) {
+						memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+						alu.op = ALU_OP1_INT_TO_FLT;
+						alu.dst.sel = treg;
+						alu.dst.chan = i;
+						alu.dst.write = 1;
+						alu.src[0].sel = treg;
+						alu.src[0].chan = i;
+						alu.last = (i == 1) ? 1 : 0;
+						r = r600_bytecode_add_alu(ctx->bc, &alu);
+						if (r)
+							return r;
+					}
+					for (j = 0; j < 2; j++) {
+						for (i = 0; i < 3; i++) {
+							memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+							alu.op = ALU_OP1_RECIP_IEEE;
+							alu.src[0].sel = treg;
+							alu.src[0].chan = j;
+							alu.dst.sel = treg;
+							alu.dst.chan = i;
+							if (i == 2)
+								alu.last = 1;
+							if (i == j)
+								alu.dst.write = 1;
+							r = r600_bytecode_add_alu(ctx->bc, &alu);
+							if (r)
+								return r;
+						}
+					}
+				} else {
+					for (i = 0; i < 2; i++) {
+						memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+						alu.op = ALU_OP1_INT_TO_FLT;
+						alu.dst.sel = treg;
+						alu.dst.chan = i;
+						alu.dst.write = 1;
+						alu.src[0].sel = treg;
+						alu.src[0].chan = i;
+						alu.last = 1;
+						r = r600_bytecode_add_alu(ctx->bc, &alu);
+						if (r)
+							return r;
+					}
+					for (i = 0; i < 2; i++) {
+						memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+						alu.op = ALU_OP1_RECIP_IEEE;
+						alu.src[0].sel = treg;
+						alu.src[0].chan = i;
+						alu.dst.sel = treg;
+						alu.dst.chan = i;
+						alu.last = 1;
+						alu.dst.write = 1;
+						r = r600_bytecode_add_alu(ctx->bc, &alu);
+						if (r)
+							return r;
+					}
+				}
+				for (i = 0; i < 2; i++) {
+					memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+					alu.op = ALU_OP3_MULADD;
+					alu.is_op3 = 1;
+					alu.dst.sel = ctx->temp_reg;
+					alu.dst.chan = i;
+					alu.dst.write = 1;
+					alu.last = i == 1;
+					alu.src[0].sel = treg;
+					alu.src[0].chan = i;
+					alu.src[1].sel = V_SQ_ALU_SRC_0_5;
+					alu.src[1].neg = 1;
+					if (src_loaded) {
+						alu.src[2].sel = ctx->temp_reg;
+						alu.src[2].chan = i;
+					} else
+						r600_bytecode_src(&alu.src[2], &ctx->src[0], i);
+					r = r600_bytecode_add_alu(ctx->bc, &alu);
+					if (r)
+						return r;
+				}
+			}
+			src_loaded = TRUE;
+			src_gpr = ctx->temp_reg;
+		}
+	}
+
 	if (src_requires_loading && !src_loaded) {
 		for (i = 0; i < 4; i++) {
 			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
