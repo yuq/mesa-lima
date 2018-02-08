@@ -276,6 +276,11 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 		info->properties[TGSI_PROPERTY_GS_INVOCATIONS] = nir->info.gs.invocations;
 	}
 
+	if (nir->info.stage == MESA_SHADER_FRAGMENT) {
+		info->properties[TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL] = nir->info.fs.early_fragment_tests;
+		info->properties[TGSI_PROPERTY_FS_POST_DEPTH_COVERAGE] = nir->info.fs.post_depth_coverage;
+	}
+
 	if (nir->info.stage == MESA_SHADER_COMPUTE) {
 		info->properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] = nir->info.cs.local_size[0];
 		info->properties[TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT] = nir->info.cs.local_size[1];
