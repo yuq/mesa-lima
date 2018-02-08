@@ -150,7 +150,6 @@ struct ac_vs_output_info {
 	bool writes_layer;
 	bool writes_viewport_index;
 	bool export_prim_id;
-	uint32_t export_mask;
 	unsigned pos_exports;
 };
 

@@ -6019,7 +6019,6 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 			outinfo->vs_output_param_offset[VARYING_SLOT_PRIMITIVE_ID] = param_count;
 			param_count++;
 		} else if (i >= VARYING_SLOT_VAR0) {
-			outinfo->export_mask |= 1u << (i - VARYING_SLOT_VAR0);
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
 			outinfo->vs_output_param_offset[i] = param_count;
 			param_count++;
