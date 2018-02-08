@@ -374,6 +374,10 @@ TEST_P(validation_test, dst_horizontal_stride_0)
 
    clear_instructions(p);
 
+   /* Align16 does not exist on Gen11+ */
+   if (devinfo.gen >= 11)
+      return;
+
    brw_set_default_access_mode(p, BRW_ALIGN_16);
 
    brw_ADD(p, g0, g0, g0);
@@ -421,6 +425,10 @@ TEST_P(validation_test, must_not_cross_grf_boundary_in_a_width)
 /* Destination Horizontal must be 1 in Align16 */
 TEST_P(validation_test, dst_hstride_on_align16_must_be_1)
 {
+   /* Align16 does not exist on Gen11+ */
+   if (devinfo.gen >= 11)
+      return;
+
    brw_set_default_access_mode(p, BRW_ALIGN_16);
 
    brw_ADD(p, g0, g0, g0);
@@ -439,6 +447,10 @@ TEST_P(validation_test, dst_hstride_on_align16_must_be_1)
 /* VertStride must be 0 or 4 in Align16 */
 TEST_P(validation_test, vstride_on_align16_must_be_0_or_4)
 {
+   /* Align16 does not exist on Gen11+ */
+   if (devinfo.gen >= 11)
+      return;
+
    const struct {
       enum brw_vertical_stride vstride;
       bool expected_result;
@@ -1417,6 +1429,10 @@ TEST_P(validation_test, align16_64_bit_integer)
 
    /* 64-bit integer types exist on Gen8+ */
    if (devinfo.gen < 8)
+      return;
+
+   /* Align16 does not exist on Gen11+ */
+   if (devinfo.gen >= 11)
       return;
 
    brw_set_default_access_mode(p, BRW_ALIGN_16);
