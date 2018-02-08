@@ -107,7 +107,7 @@ struct hw_atomic_decl {
 
 struct ureg_program
 {
-   unsigned processor;
+   enum pipe_shader_type processor;
    bool supports_any_inout_decl_range;
    int next_shader_processor;
 
@@ -2070,6 +2070,8 @@ const struct tgsi_token *ureg_finalize( struct ureg_program *ureg )
                        PIPE_SHADER_FRAGMENT :
                        ureg->next_shader_processor);
       break;
+   default:
+      ; /* nothing */
    }
 
    emit_header( ureg );
@@ -2163,14 +2165,15 @@ void ureg_free_tokens( const struct tgsi_token *tokens )
 
 
 struct ureg_program *
-ureg_create(unsigned processor)
+ureg_create(enum pipe_shader_type processor)
 {
    return ureg_create_with_screen(processor, NULL);
 }
 
 
 struct ureg_program *
-ureg_create_with_screen(unsigned processor, struct pipe_screen *screen)
+ureg_create_with_screen(enum pipe_shader_type processor,
+                        struct pipe_screen *screen)
 {
    int i;
    struct ureg_program *ureg = CALLOC_STRUCT( ureg_program );

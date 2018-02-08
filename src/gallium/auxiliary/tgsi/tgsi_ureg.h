@@ -93,10 +93,11 @@ struct ureg_dst
 struct pipe_context;
 
 struct ureg_program *
-ureg_create(unsigned processor);
+ureg_create(enum pipe_shader_type processor);
 
 struct ureg_program *
-ureg_create_with_screen(unsigned processor, struct pipe_screen *screen);
+ureg_create_with_screen(enum pipe_shader_type processor,
+                        struct pipe_screen *screen);
 
 const struct tgsi_token *
 ureg_finalize( struct ureg_program * );
