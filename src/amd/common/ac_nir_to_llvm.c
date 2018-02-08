@@ -5864,6 +5864,17 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 }
 
 static void
+radv_export_param(struct nir_to_llvm_context *ctx, unsigned index,
+		  LLVMValueRef *values)
+{
+	struct ac_export_args args;
+
+	si_llvm_init_export_args(ctx, values,
+				 V_008DFC_SQ_EXP_PARAM + index, &args);
+	ac_build_export(&ctx->ac, &args);
+}
+
+static void
 handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 		       bool export_prim_id,
 		       struct ac_vs_output_info *outinfo)
@@ -6006,42 +6017,32 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 		if (!(ctx->output_mask & (1ull << i)))
 			continue;
 
+		if (i != VARYING_SLOT_LAYER &&
+		    i != VARYING_SLOT_PRIMITIVE_ID &&
+		    i < VARYING_SLOT_VAR0)
+			continue;
+
 		for (unsigned j = 0; j < 4; j++)
 			values[j] = ac_to_float(&ctx->ac, LLVMBuildLoad(ctx->builder,
 					        ctx->nir->outputs[radeon_llvm_reg_index_soa(i, j)], ""));
 
-		if (i == VARYING_SLOT_LAYER) {
-			target = V_008DFC_SQ_EXP_PARAM + param_count;
-			outinfo->vs_output_param_offset[VARYING_SLOT_LAYER] = param_count;
-			param_count++;
-		} else if (i == VARYING_SLOT_PRIMITIVE_ID) {
-			target = V_008DFC_SQ_EXP_PARAM + param_count;
-			outinfo->vs_output_param_offset[VARYING_SLOT_PRIMITIVE_ID] = param_count;
-			param_count++;
-		} else if (i >= VARYING_SLOT_VAR0) {
-			target = V_008DFC_SQ_EXP_PARAM + param_count;
-			outinfo->vs_output_param_offset[i] = param_count;
-			param_count++;
-		} else
-			continue;
+		radv_export_param(ctx, param_count, values);
 
-		si_llvm_init_export_args(ctx, values, target, &args);
-		ac_build_export(&ctx->ac, &args);
+		outinfo->vs_output_param_offset[i] = param_count++;
 	}
 
 	if (export_prim_id) {
 		LLVMValueRef values[4];
-		target = V_008DFC_SQ_EXP_PARAM + param_count;
-		outinfo->vs_output_param_offset[VARYING_SLOT_PRIMITIVE_ID] = param_count;
-		param_count++;
 
 		values[0] = ctx->vs_prim_id;
 		ctx->shader_info->vs.vgpr_comp_cnt = MAX2(2,
 							  ctx->shader_info->vs.vgpr_comp_cnt);
 		for (unsigned j = 1; j < 4; j++)
 			values[j] = ctx->ac.f32_0;
-		si_llvm_init_export_args(ctx, values, target, &args);
-		ac_build_export(&ctx->ac, &args);
+
+		radv_export_param(ctx, param_count, values);
+
+		outinfo->vs_output_param_offset[VARYING_SLOT_PRIMITIVE_ID] = param_count++;
 		outinfo->export_prim_id = true;
 	}
 
