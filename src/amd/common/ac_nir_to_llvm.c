@@ -5874,6 +5874,15 @@ radv_export_param(struct nir_to_llvm_context *ctx, unsigned index,
 	ac_build_export(&ctx->ac, &args);
 }
 
+static LLVMValueRef
+radv_load_output(struct nir_to_llvm_context *ctx, unsigned index, unsigned chan)
+{
+	LLVMValueRef output =
+		ctx->nir->outputs[radeon_llvm_reg_index_soa(index, chan)];
+
+	return LLVMBuildLoad(ctx->builder, output, "");
+}
+
 static void
 handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 		       bool export_prim_id,
@@ -5910,8 +5919,7 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 
 		i = VARYING_SLOT_CLIP_DIST0;
 		for (j = 0; j < ctx->num_output_clips + ctx->num_output_culls; j++)
-			slots[j] = ac_to_float(&ctx->ac, LLVMBuildLoad(ctx->builder,
-							       ctx->nir->outputs[radeon_llvm_reg_index_soa(i, j)], ""));
+			slots[j] = ac_to_float(&ctx->ac, radv_load_output(ctx, i, j));
 
 		for (i = ctx->num_output_clips + ctx->num_output_culls; i < 8; i++)
 			slots[i] = LLVMGetUndef(ctx->ac.f32);
@@ -5933,27 +5941,23 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 	LLVMValueRef pos_values[4] = {ctx->ac.f32_0, ctx->ac.f32_0, ctx->ac.f32_0, ctx->ac.f32_1};
 	if (ctx->output_mask & (1ull << VARYING_SLOT_POS)) {
 		for (unsigned j = 0; j < 4; j++)
-			pos_values[j] = LLVMBuildLoad(ctx->builder,
-			                         ctx->nir->outputs[radeon_llvm_reg_index_soa(VARYING_SLOT_POS, j)], "");
+			pos_values[j] = radv_load_output(ctx, VARYING_SLOT_POS, j);
 	}
 	si_llvm_init_export_args(ctx, pos_values, V_008DFC_SQ_EXP_POS, &pos_args[0]);
 
 	if (ctx->output_mask & (1ull << VARYING_SLOT_PSIZ)) {
 		outinfo->writes_pointsize = true;
-		psize_value = LLVMBuildLoad(ctx->builder,
-		                            ctx->nir->outputs[radeon_llvm_reg_index_soa(VARYING_SLOT_PSIZ, 0)], "");
+		psize_value = radv_load_output(ctx, VARYING_SLOT_PSIZ, 0);
 	}
 
 	if (ctx->output_mask & (1ull << VARYING_SLOT_LAYER)) {
 		outinfo->writes_layer = true;
-		layer_value = LLVMBuildLoad(ctx->builder,
-		                            ctx->nir->outputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)], "");
+		layer_value = radv_load_output(ctx, VARYING_SLOT_LAYER, 0);
 	}
 
 	if (ctx->output_mask & (1ull << VARYING_SLOT_VIEWPORT)) {
 		outinfo->writes_viewport_index = true;
-		viewport_index_value = LLVMBuildLoad(ctx->builder,
-		                                     ctx->nir->outputs[radeon_llvm_reg_index_soa(VARYING_SLOT_VIEWPORT, 0)], "");
+		viewport_index_value = radv_load_output(ctx, VARYING_SLOT_VIEWPORT, 0);
 	}
 
 	if (outinfo->writes_pointsize ||
@@ -6023,8 +6027,7 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 			continue;
 
 		for (unsigned j = 0; j < 4; j++)
-			values[j] = ac_to_float(&ctx->ac, LLVMBuildLoad(ctx->builder,
-					        ctx->nir->outputs[radeon_llvm_reg_index_soa(i, j)], ""));
+			values[j] = ac_to_float(&ctx->ac, radv_load_output(ctx, i, j));
 
 		radv_export_param(ctx, param_count, values);
 
@@ -6443,19 +6446,16 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx)
 			continue;
 
 		if (i == FRAG_RESULT_DEPTH) {
-			depth = ac_to_float(&ctx->ac, LLVMBuildLoad(ctx->builder,
-							    ctx->nir->outputs[radeon_llvm_reg_index_soa(i, 0)], ""));
+			depth = ac_to_float(&ctx->ac, radv_load_output(ctx, i, 0));
 		} else if (i == FRAG_RESULT_STENCIL) {
-			stencil = ac_to_float(&ctx->ac, LLVMBuildLoad(ctx->builder,
-							      ctx->nir->outputs[radeon_llvm_reg_index_soa(i, 0)], ""));
+			stencil = ac_to_float(&ctx->ac, radv_load_output(ctx, i, 0));
 		} else if (i == FRAG_RESULT_SAMPLE_MASK) {
-			samplemask = ac_to_float(&ctx->ac, LLVMBuildLoad(ctx->builder,
-								  ctx->nir->outputs[radeon_llvm_reg_index_soa(i, 0)], ""));
+			samplemask = ac_to_float(&ctx->ac, radv_load_output(ctx, i, 0));
 		} else {
 			bool last = false;
 			for (unsigned j = 0; j < 4; j++)
-				values[j] = ac_to_float(&ctx->ac, LLVMBuildLoad(ctx->builder,
-									ctx->nir->outputs[radeon_llvm_reg_index_soa(i, j)], ""));
+				values[j] = ac_to_float(&ctx->ac,
+							radv_load_output(ctx, i, j));
 
 			if (!ctx->shader_info->info.ps.writes_z &&
 			    !ctx->shader_info->info.ps.writes_stencil &&
