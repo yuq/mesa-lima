@@ -486,7 +486,7 @@ ureg_DECL_output_masked(struct ureg_program *ureg,
 
 struct ureg_dst 
 ureg_DECL_output(struct ureg_program *ureg,
-                 unsigned name,
+                 enum tgsi_semantic name,
                  unsigned index)
 {
    return ureg_DECL_output_masked(ureg, name, index, TGSI_WRITEMASK_XYZW,
