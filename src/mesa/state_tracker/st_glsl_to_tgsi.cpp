@@ -5863,7 +5863,7 @@ compile_tgsi_instruction(struct st_translate *t,
 
    int num_dst;
    int num_src;
-   enum tgsi_texture_type tex_target;
+   enum tgsi_texture_type tex_target = TGSI_TEXTURE_BUFFER;
 
    num_dst = num_inst_dst_regs(inst);
    num_src = num_inst_src_regs(inst);
