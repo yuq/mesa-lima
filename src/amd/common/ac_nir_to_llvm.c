@@ -6404,12 +6404,12 @@ handle_tcs_outputs_post(struct nir_to_llvm_context *ctx)
 
 static bool
 si_export_mrt_color(struct nir_to_llvm_context *ctx,
-		    LLVMValueRef *color, unsigned param, bool is_last,
+		    LLVMValueRef *color, unsigned index, bool is_last,
 		    struct ac_export_args *args)
 {
 	/* Export */
-	si_llvm_init_export_args(ctx, color, param,
-				 args);
+	si_llvm_init_export_args(ctx, color,
+				 V_008DFC_SQ_EXP_MRT + index, args);
 
 	if (is_last) {
 		args->valid_mask = 1; /* whether the EXEC mask is valid */
@@ -6441,40 +6441,52 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx)
 
 	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
 		LLVMValueRef values[4];
+		bool last = false;
 
 		if (!(ctx->output_mask & (1ull << i)))
 			continue;
 
-		if (i == FRAG_RESULT_DEPTH) {
-			depth = ac_to_float(&ctx->ac, radv_load_output(ctx, i, 0));
-		} else if (i == FRAG_RESULT_STENCIL) {
-			stencil = ac_to_float(&ctx->ac, radv_load_output(ctx, i, 0));
-		} else if (i == FRAG_RESULT_SAMPLE_MASK) {
-			samplemask = ac_to_float(&ctx->ac, radv_load_output(ctx, i, 0));
-		} else {
-			bool last = false;
-			for (unsigned j = 0; j < 4; j++)
-				values[j] = ac_to_float(&ctx->ac,
-							radv_load_output(ctx, i, j));
+		if (i < FRAG_RESULT_DATA0)
+			continue;
 
-			if (!ctx->shader_info->info.ps.writes_z &&
-			    !ctx->shader_info->info.ps.writes_stencil &&
-			    !ctx->shader_info->info.ps.writes_sample_mask)
-				last = ctx->output_mask <= ((1ull << (i + 1)) - 1);
+		for (unsigned j = 0; j < 4; j++)
+			values[j] = ac_to_float(&ctx->ac,
+						radv_load_output(ctx, i, j));
 
-			bool ret = si_export_mrt_color(ctx, values, V_008DFC_SQ_EXP_MRT + (i - FRAG_RESULT_DATA0), last, &color_args[index]);
-			if (ret)
-				index++;
-		}
+		if (!ctx->shader_info->info.ps.writes_z &&
+		    !ctx->shader_info->info.ps.writes_stencil &&
+		    !ctx->shader_info->info.ps.writes_sample_mask)
+			last = ctx->output_mask <= ((1ull << (i + 1)) - 1);
+
+		bool ret = si_export_mrt_color(ctx, values,
+					       i - FRAG_RESULT_DATA0,
+					       last, &color_args[index]);
+		if (ret)
+			index++;
 	}
 
+	/* Process depth, stencil, samplemask. */
+	if (ctx->shader_info->info.ps.writes_z) {
+		depth = ac_to_float(&ctx->ac,
+				    radv_load_output(ctx, FRAG_RESULT_DEPTH, 0));
+	}
+	if (ctx->shader_info->info.ps.writes_stencil) {
+		stencil = ac_to_float(&ctx->ac,
+				      radv_load_output(ctx, FRAG_RESULT_STENCIL, 0));
+	}
+	if (ctx->shader_info->info.ps.writes_sample_mask) {
+		samplemask = ac_to_float(&ctx->ac,
+					 radv_load_output(ctx, FRAG_RESULT_SAMPLE_MASK, 0));
+	}
+
+	/* Export PS outputs. */
 	for (unsigned i = 0; i < index; i++)
 		ac_build_export(&ctx->ac, &color_args[i]);
+
 	if (depth || stencil || samplemask)
 		radv_export_mrt_z(ctx, depth, stencil, samplemask);
-	else if (!index) {
+	else if (!index)
 		ac_build_export_null(&ctx->ac);
-	}
 }
 
 static void
