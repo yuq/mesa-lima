@@ -4243,8 +4243,7 @@ load_tess_coord(struct ac_shader_abi *abi, LLVMTypeRef type,
 		coord[2] = LLVMBuildFSub(ctx->builder, ctx->ac.f32_1,
 					LLVMBuildFAdd(ctx->builder, coord[0], coord[1], ""), "");
 
-	LLVMValueRef result = ac_build_gather_values(&ctx->ac, coord, num_components);
-	return LLVMBuildBitCast(ctx->builder, result, type, "");
+	return ac_build_gather_values(&ctx->ac, coord, 3);
 }
 
 static LLVMValueRef
@@ -4487,13 +4486,9 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	case nir_intrinsic_end_primitive:
 		ctx->abi->emit_primitive(ctx->abi, nir_intrinsic_stream_id(instr));
 		break;
-	case nir_intrinsic_load_tess_coord: {
-		LLVMTypeRef type = ctx->nctx ?
-			get_def_type(ctx->nctx->nir, &instr->dest.ssa) :
-			NULL;
-		result = ctx->abi->load_tess_coord(ctx->abi, type, instr->num_components);
+	case nir_intrinsic_load_tess_coord:
+		result = ctx->abi->load_tess_coord(ctx->abi, NULL, 0);
 		break;
-	}
 	case nir_intrinsic_load_tess_level_outer:
 		result = ctx->abi->load_tess_level(ctx->abi, VARYING_SLOT_TESS_LEVEL_OUTER);
 		break;
