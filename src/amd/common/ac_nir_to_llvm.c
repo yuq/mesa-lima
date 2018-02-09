@@ -83,9 +83,6 @@ struct nir_to_llvm_context {
 	LLVMBuilderRef builder;
 	LLVMValueRef main_function;
 
-	struct hash_table *defs;
-	struct hash_table *phis;
-
 	LLVMValueRef descriptor_sets[AC_UD_MAX_SETS];
 	LLVMValueRef ring_offsets;
 	LLVMValueRef push_constants;
