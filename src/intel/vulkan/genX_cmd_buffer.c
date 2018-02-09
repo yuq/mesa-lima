@@ -3344,7 +3344,7 @@ cmd_buffer_subpass_transition_layouts(struct anv_cmd_buffer * const cmd_buffer,
                                      iview->planes[0].isl.base_level);
          } else {
             base_layer = iview->planes[0].isl.base_array_layer;
-            layer_count = iview->planes[0].isl.array_len;
+            layer_count = cmd_state->framebuffer->layers;
          }
 
          transition_color_buffer(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
