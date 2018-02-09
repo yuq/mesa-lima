@@ -1453,43 +1453,42 @@ static LLVMValueRef emit_i2b(struct ac_llvm_context *ctx,
 			     ctx->i32, "");
 }
 
-static LLVMValueRef emit_f2f16(struct nir_to_llvm_context *ctx,
+static LLVMValueRef emit_f2f16(struct ac_llvm_context *ctx,
 			       LLVMValueRef src0)
 {
 	LLVMValueRef result;
 	LLVMValueRef cond = NULL;
 
-	src0 = ac_to_float(&ctx->ac, src0);
-	result = LLVMBuildFPTrunc(ctx->builder, src0, ctx->ac.f16, "");
+	src0 = ac_to_float(ctx, src0);
+	result = LLVMBuildFPTrunc(ctx->builder, src0, ctx->f16, "");
 
-	if (ctx->options->chip_class >= VI) {
+	if (ctx->chip_class >= VI) {
 		LLVMValueRef args[2];
 		/* Check if the result is a denormal - and flush to 0 if so. */
 		args[0] = result;
-		args[1] = LLVMConstInt(ctx->ac.i32, N_SUBNORMAL | P_SUBNORMAL, false);
-		cond = ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.class.f16", ctx->ac.i1, args, 2, AC_FUNC_ATTR_READNONE);
+		args[1] = LLVMConstInt(ctx->i32, N_SUBNORMAL | P_SUBNORMAL, false);
+		cond = ac_build_intrinsic(ctx, "llvm.amdgcn.class.f16", ctx->i1, args, 2, AC_FUNC_ATTR_READNONE);
 	}
 
 	/* need to convert back up to f32 */
-	result = LLVMBuildFPExt(ctx->builder, result, ctx->ac.f32, "");
+	result = LLVMBuildFPExt(ctx->builder, result, ctx->f32, "");
 
-	if (ctx->options->chip_class >= VI)
-		result = LLVMBuildSelect(ctx->builder, cond, ctx->ac.f32_0, result, "");
+	if (ctx->chip_class >= VI)
+		result = LLVMBuildSelect(ctx->builder, cond, ctx->f32_0, result, "");
 	else {
 		/* for SI/CIK */
 		/* 0x38800000 is smallest half float value (2^-14) in 32-bit float,
 		 * so compare the result and flush to 0 if it's smaller.
 		 */
 		LLVMValueRef temp, cond2;
-		temp = emit_intrin_1f_param(&ctx->ac, "llvm.fabs",
-					    ctx->ac.f32, result);
+		temp = emit_intrin_1f_param(ctx, "llvm.fabs", ctx->f32, result);
 		cond = LLVMBuildFCmp(ctx->builder, LLVMRealUGT,
-				     LLVMBuildBitCast(ctx->builder, LLVMConstInt(ctx->ac.i32, 0x38800000, false), ctx->ac.f32, ""),
+				     LLVMBuildBitCast(ctx->builder, LLVMConstInt(ctx->i32, 0x38800000, false), ctx->f32, ""),
 				     temp, "");
 		cond2 = LLVMBuildFCmp(ctx->builder, LLVMRealUNE,
-				      temp, ctx->ac.f32_0, "");
+				      temp, ctx->f32_0, "");
 		cond = LLVMBuildAnd(ctx->builder, cond, cond2, "");
-		result = LLVMBuildSelect(ctx->builder, cond, ctx->ac.f32_0, result, "");
+		result = LLVMBuildSelect(ctx->builder, cond, ctx->f32_0, result, "");
 	}
 	return result;
 }
@@ -2011,7 +2010,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		result = emit_i2b(&ctx->ac, src[0]);
 		break;
 	case nir_op_fquantize2f16:
-		result = emit_f2f16(ctx->nctx, src[0]);
+		result = emit_f2f16(&ctx->ac, src[0]);
 		break;
 	case nir_op_umul_high:
 		src[0] = ac_to_integer(&ctx->ac, src[0]);
