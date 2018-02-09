@@ -75,3 +75,4 @@ Value* pScatterStackSrc{ nullptr };
 Value* pScatterStackOffsets{ nullptr };
 
 
+virtual Value* TRANSLATE_ADDRESS(Value* address) { return address; }
