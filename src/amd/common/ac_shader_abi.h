@@ -115,9 +115,7 @@ struct ac_shader_abi {
 				  bool is_compact,
 				  unsigned writemask);
 
-	LLVMValueRef (*load_tess_coord)(struct ac_shader_abi *abi,
-					LLVMTypeRef type,
-					unsigned num_components);
+	LLVMValueRef (*load_tess_coord)(struct ac_shader_abi *abi);
 
 	LLVMValueRef (*load_patch_vertices_in)(struct ac_shader_abi *abi);
 

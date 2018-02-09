@@ -1939,9 +1939,7 @@ static LLVMValueRef load_sample_mask_in(struct ac_shader_abi *abi)
 	return abi->sample_coverage;
 }
 
-static LLVMValueRef si_load_tess_coord(struct ac_shader_abi *abi,
-				       LLVMTypeRef type,
-				       unsigned num_components)
+static LLVMValueRef si_load_tess_coord(struct ac_shader_abi *abi)
 {
 	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	struct lp_build_context *bld = &ctx->bld_base.base;
@@ -2116,7 +2114,7 @@ void si_load_system_value(struct si_shader_context *ctx,
 		break;
 
 	case TGSI_SEMANTIC_TESSCOORD:
-		value = si_load_tess_coord(&ctx->abi, NULL, 4);
+		value = si_load_tess_coord(&ctx->abi);
 		break;
 
 	case TGSI_SEMANTIC_VERTICESIN:

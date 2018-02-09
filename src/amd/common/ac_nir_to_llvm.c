@@ -4227,8 +4227,7 @@ visit_end_primitive(struct ac_shader_abi *abi, unsigned stream)
 }
 
 static LLVMValueRef
-load_tess_coord(struct ac_shader_abi *abi, LLVMTypeRef type,
-		unsigned num_components)
+load_tess_coord(struct ac_shader_abi *abi)
 {
 	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
 
@@ -4487,7 +4486,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		ctx->abi->emit_primitive(ctx->abi, nir_intrinsic_stream_id(instr));
 		break;
 	case nir_intrinsic_load_tess_coord:
-		result = ctx->abi->load_tess_coord(ctx->abi, NULL, 0);
+		result = ctx->abi->load_tess_coord(ctx->abi);
 		break;
 	case nir_intrinsic_load_tess_level_outer:
 		result = ctx->abi->load_tess_level(ctx->abi, VARYING_SLOT_TESS_LEVEL_OUTER);
