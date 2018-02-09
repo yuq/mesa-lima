@@ -642,7 +642,8 @@ static void si_disk_cache_create(struct si_screen *sscreen)
 				sscreen->debug_flags &
 				(DBG(FS_CORRECT_DERIVS_AFTER_KILL) |
 				 DBG(SI_SCHED) |
-				 DBG(UNSAFE_MATH));
+				 DBG(UNSAFE_MATH) |
+				 DBG(NIR));
 
 			sscreen->disk_shader_cache =
 				disk_cache_create(si_get_family_name(sscreen),
