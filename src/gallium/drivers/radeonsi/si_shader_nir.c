@@ -517,6 +517,12 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 				info->reads_pervertex_outputs = true;
 			}
 		}
+
+		unsigned loc = variable->data.location;
+		if (loc == FRAG_RESULT_COLOR &&
+		    nir->info.outputs_written & (1ull << loc)) {
+			info->properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] = true;
+		}
 	}
 
 	info->num_outputs = num_outputs;
