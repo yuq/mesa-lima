@@ -3899,14 +3899,14 @@ visit_load_helper_invocation(struct ac_nir_context *ctx)
 }
 
 static LLVMValueRef
-visit_load_local_invocation_index(struct nir_to_llvm_context *ctx)
+visit_load_local_invocation_index(struct ac_nir_context *ctx)
 {
 	LLVMValueRef result;
 	LLVMValueRef thread_id = ac_get_thread_id(&ctx->ac);
-	result = LLVMBuildAnd(ctx->builder, ctx->abi.tg_size,
+	result = LLVMBuildAnd(ctx->ac.builder, ctx->abi->tg_size,
 			      LLVMConstInt(ctx->ac.i32, 0xfc0, false), "");
 
-	return LLVMBuildAdd(ctx->builder, result, thread_id, "");
+	return LLVMBuildAdd(ctx->ac.builder, result, thread_id, "");
 }
 
 static LLVMValueRef visit_var_atomic(struct nir_to_llvm_context *ctx,
@@ -4377,7 +4377,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = ctx->abi->num_work_groups;
 		break;
 	case nir_intrinsic_load_local_invocation_index:
-		result = visit_load_local_invocation_index(ctx->nctx);
+		result = visit_load_local_invocation_index(ctx);
 		break;
 	case nir_intrinsic_load_push_constant:
 		result = visit_load_push_constant(ctx->nctx, instr);
