@@ -201,6 +201,8 @@ wsi_create_native_image(const struct wsi_swapchain *chain,
    VkResult result;
 
    memset(image, 0, sizeof(*image));
+   for (int i = 0; i < ARRAY_SIZE(image->fds); i++)
+      image->fds[i] = -1;
 
    const struct wsi_image_create_info image_wsi_info = {
       .sType = VK_STRUCTURE_TYPE_WSI_IMAGE_CREATE_INFO_MESA,
@@ -289,10 +291,11 @@ wsi_create_native_image(const struct wsi_swapchain *chain,
    if (result != VK_SUCCESS)
       goto fail;
 
-   image->size = reqs.size;
-   image->row_pitch = image_layout.rowPitch;
-   image->offset = 0;
-   image->fd = fd;
+   image->num_planes = 1;
+   image->sizes[0] = reqs.size;
+   image->row_pitches[0] = image_layout.rowPitch;
+   image->offsets[0] = 0;
+   image->fds[0] = fd;
 
    return VK_SUCCESS;
 
@@ -491,10 +494,11 @@ wsi_create_prime_image(const struct wsi_swapchain *chain,
    if (result != VK_SUCCESS)
       goto fail;
 
-   image->size = linear_size;
-   image->row_pitch = linear_stride;
-   image->offset = 0;
-   image->fd = fd;
+   image->num_planes = 1;
+   image->sizes[0] = linear_size;
+   image->row_pitches[0] = linear_stride;
+   image->offsets[0] = 0;
+   image->fds[0] = fd;
 
    return VK_SUCCESS;
 

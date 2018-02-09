@@ -712,15 +712,18 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain,
    if (result != VK_SUCCESS)
       return result;
 
+   /* Without passing modifiers, we can't have multi-plane RGB images. */
+   assert(image->base.num_planes == 1);
+
    image->buffer = wl_drm_create_prime_buffer(chain->drm_wrapper,
-                                              image->base.fd, /* name */
+                                              image->base.fds[0], /* name */
                                               chain->extent.width,
                                               chain->extent.height,
                                               chain->drm_format,
-                                              image->base.offset,
-                                              image->base.row_pitch,
+                                              image->base.offsets[0],
+                                              image->base.row_pitches[0],
                                               0, 0, 0, 0 /* unused */);
-   close(image->base.fd);
+   close(image->base.fds[0]);
 
    if (!image->buffer)
       goto fail_image;

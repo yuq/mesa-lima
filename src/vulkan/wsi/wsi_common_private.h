@@ -35,10 +35,11 @@ struct wsi_image {
       VkCommandBuffer *blit_cmd_buffers;
    } prime;
 
-   uint32_t size;
-   uint32_t offset;
-   uint32_t row_pitch;
-   int fd;
+   int num_planes;
+   uint32_t sizes[4];
+   uint32_t offsets[4];
+   uint32_t row_pitches[4];
+   int fds[4];
 };
 
 struct wsi_swapchain {
