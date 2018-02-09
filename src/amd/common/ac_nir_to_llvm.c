@@ -5641,7 +5641,7 @@ handle_shader_output_decl(struct ac_nir_context *ctx,
 }
 
 static LLVMTypeRef
-glsl_base_to_llvm_type(struct nir_to_llvm_context *ctx,
+glsl_base_to_llvm_type(struct ac_llvm_context *ac,
 		       enum glsl_base_type type)
 {
 	switch (type) {
@@ -5649,42 +5649,42 @@ glsl_base_to_llvm_type(struct nir_to_llvm_context *ctx,
 	case GLSL_TYPE_UINT:
 	case GLSL_TYPE_BOOL:
 	case GLSL_TYPE_SUBROUTINE:
-		return ctx->ac.i32;
+		return ac->i32;
 	case GLSL_TYPE_FLOAT: /* TODO handle mediump */
-		return ctx->ac.f32;
+		return ac->f32;
 	case GLSL_TYPE_INT64:
 	case GLSL_TYPE_UINT64:
-		return ctx->ac.i64;
+		return ac->i64;
 	case GLSL_TYPE_DOUBLE:
-		return ctx->ac.f64;
+		return ac->f64;
 	default:
 		unreachable("unknown GLSL type");
 	}
 }
 
 static LLVMTypeRef
-glsl_to_llvm_type(struct nir_to_llvm_context *ctx,
+glsl_to_llvm_type(struct ac_llvm_context *ac,
 		  const struct glsl_type *type)
 {
 	if (glsl_type_is_scalar(type)) {
-		return glsl_base_to_llvm_type(ctx, glsl_get_base_type(type));
+		return glsl_base_to_llvm_type(ac, glsl_get_base_type(type));
 	}
 
 	if (glsl_type_is_vector(type)) {
 		return LLVMVectorType(
-		   glsl_base_to_llvm_type(ctx, glsl_get_base_type(type)),
+		   glsl_base_to_llvm_type(ac, glsl_get_base_type(type)),
 		   glsl_get_vector_elements(type));
 	}
 
 	if (glsl_type_is_matrix(type)) {
 		return LLVMArrayType(
-		   glsl_to_llvm_type(ctx, glsl_get_column_type(type)),
+		   glsl_to_llvm_type(ac, glsl_get_column_type(type)),
 		   glsl_get_matrix_columns(type));
 	}
 
 	if (glsl_type_is_array(type)) {
 		return LLVMArrayType(
-		   glsl_to_llvm_type(ctx, glsl_get_array_element(type)),
+		   glsl_to_llvm_type(ac, glsl_get_array_element(type)),
 		   glsl_get_length(type));
 	}
 
@@ -5694,11 +5694,11 @@ glsl_to_llvm_type(struct nir_to_llvm_context *ctx,
 
 	for (unsigned i = 0; i < glsl_get_length(type); i++) {
 		member_types[i] =
-			glsl_to_llvm_type(ctx,
+			glsl_to_llvm_type(ac,
 					  glsl_get_struct_field(type, i));
 	}
 
-	return LLVMStructTypeInContext(ctx->context, member_types,
+	return LLVMStructTypeInContext(ac->context, member_types,
 				       glsl_get_length(type), false);
 }
 
@@ -5733,7 +5733,7 @@ setup_shared(struct ac_nir_context *ctx,
 	nir_foreach_variable(variable, &nir->shared) {
 		LLVMValueRef shared =
 			LLVMAddGlobalInAddressSpace(
-			   ctx->ac.module, glsl_to_llvm_type(ctx->nctx, variable->type),
+			   ctx->ac.module, glsl_to_llvm_type(&ctx->ac, variable->type),
 			   variable->name ? variable->name : "",
 			   AC_LOCAL_ADDR_SPACE);
 		_mesa_hash_table_insert(ctx->vars, variable, shared);
