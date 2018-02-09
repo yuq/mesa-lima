@@ -4022,9 +4022,12 @@ static LLVMValueRef load_sample_pos(struct ac_nir_context *ctx)
 	return ac_build_gather_values(&ctx->ac, values, 2);
 }
 
-static LLVMValueRef load_sample_mask_in(struct ac_nir_context *ctx)
+static LLVMValueRef load_sample_mask_in(struct ac_shader_abi *abi)
 {
-	uint8_t log2_ps_iter_samples = ctx->nctx->shader_info->info.ps.force_persample ? ctx->nctx->options->key.fs.log2_num_samples : ctx->nctx->options->key.fs.log2_ps_iter_samples;
+	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
+	uint8_t log2_ps_iter_samples = ctx->shader_info->info.ps.force_persample ?
+		ctx->options->key.fs.log2_num_samples :
+		ctx->options->key.fs.log2_ps_iter_samples;
 
 	/* The bit pattern matches that used by fixed function fragment
 	 * processing. */
@@ -4040,9 +4043,9 @@ static LLVMValueRef load_sample_mask_in(struct ac_nir_context *ctx)
 	uint32_t ps_iter_mask = ps_iter_masks[log2_ps_iter_samples];
 
 	LLVMValueRef result, sample_id;
-	sample_id = unpack_param(&ctx->ac, ctx->abi->ancillary, 8, 4);
+	sample_id = unpack_param(&ctx->ac, abi->ancillary, 8, 4);
 	sample_id = LLVMBuildShl(ctx->ac.builder, LLVMConstInt(ctx->ac.i32, ps_iter_mask, false), sample_id, "");
-	result = LLVMBuildAnd(ctx->ac.builder, sample_id, ctx->abi->sample_coverage, "");
+	result = LLVMBuildAnd(ctx->ac.builder, sample_id, abi->sample_coverage, "");
 	return result;
 }
 
@@ -4353,10 +4356,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = load_sample_pos(ctx);
 		break;
 	case nir_intrinsic_load_sample_mask_in:
-		if (ctx->nctx)
-			result = load_sample_mask_in(ctx);
-		else
-			result = ctx->abi->sample_coverage;
+		result = ctx->abi->load_sample_mask_in(ctx->abi);
 		break;
 	case nir_intrinsic_load_frag_coord: {
 		LLVMValueRef values[4] = {
@@ -6827,6 +6827,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			shader_info->fs.can_discard = shaders[i]->info.fs.uses_discard;
 			ctx.abi.lookup_interp_param = lookup_interp_param;
 			ctx.abi.load_sample_position = load_sample_position;
+			ctx.abi.load_sample_mask_in = load_sample_mask_in;
 		}
 
 		if (i)

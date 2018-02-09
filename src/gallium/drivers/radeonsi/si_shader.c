@@ -1934,6 +1934,11 @@ static LLVMValueRef load_sample_position(struct ac_shader_abi *abi, LLVMValueRef
 	return lp_build_gather_values(&ctx->gallivm, pos, 4);
 }
 
+static LLVMValueRef load_sample_mask_in(struct ac_shader_abi *abi)
+{
+	return abi->sample_coverage;
+}
+
 static LLVMValueRef si_load_tess_coord(struct ac_shader_abi *abi,
 				       LLVMTypeRef type,
 				       unsigned num_components)
@@ -5960,6 +5965,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		bld_base->emit_epilogue = si_tgsi_emit_epilogue;
 		ctx->abi.lookup_interp_param = si_nir_lookup_interp_param;
 		ctx->abi.load_sample_position = load_sample_position;
+		ctx->abi.load_sample_mask_in = load_sample_mask_in;
 		break;
 	case PIPE_SHADER_COMPUTE:
 		ctx->abi.load_local_group_size = get_block_size;
