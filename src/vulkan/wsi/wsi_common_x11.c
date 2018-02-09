@@ -929,7 +929,8 @@ x11_image_init(VkDevice device_h, struct x11_swapchain *chain,
    if (chain->base.use_prime_blit) {
       result = wsi_create_prime_image(&chain->base, pCreateInfo, &image->base);
    } else {
-      result = wsi_create_native_image(&chain->base, pCreateInfo, &image->base);
+      result = wsi_create_native_image(&chain->base, pCreateInfo,
+                                       0, NULL, NULL, &image->base);
    }
    if (result != VK_SUCCESS)
       return result;

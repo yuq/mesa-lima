@@ -708,7 +708,8 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain,
 {
    VkResult result;
 
-   result = wsi_create_native_image(&chain->base, pCreateInfo, &image->base);
+   result = wsi_create_native_image(&chain->base, pCreateInfo,
+                                    0, NULL, NULL, &image->base);
    if (result != VK_SUCCESS)
       return result;
 
