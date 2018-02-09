@@ -79,7 +79,6 @@ struct nir_to_llvm_context {
 
 	unsigned max_workgroup_size;
 	LLVMContextRef context;
-	LLVMModuleRef module;
 	LLVMValueRef main_function;
 
 	LLVMValueRef descriptor_sets[AC_UD_MAX_SETS];
@@ -1020,7 +1019,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	}
 
 	ctx->main_function = create_llvm_function(
-	    ctx->context, ctx->module, ctx->ac.builder, NULL, 0, &args,
+	    ctx->context, ctx->ac.module, ctx->ac.builder, NULL, 0, &args,
 	    ctx->max_workgroup_size,
 	    ctx->options->unsafe_math);
 	set_llvm_calling_convention(ctx->main_function, stage);
@@ -6538,7 +6537,7 @@ static void ac_llvm_finalize_module(struct nir_to_llvm_context * ctx)
 	LLVMPassManagerRef passmgr;
 	/* Create the pass manager */
 	passmgr = LLVMCreateFunctionPassManagerForModule(
-							ctx->module);
+							ctx->ac.module);
 
 	/* This pass should eliminate all the load and store instructions */
 	LLVMAddPromoteMemoryToRegisterPass(passmgr);
@@ -6733,16 +6732,15 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	ctx.options = options;
 	ctx.shader_info = shader_info;
 	ctx.context = LLVMContextCreate();
-	ctx.module = LLVMModuleCreateWithNameInContext("shader", ctx.context);
 
 	ac_llvm_context_init(&ctx.ac, ctx.context, options->chip_class,
 			     options->family);
-	ctx.ac.module = ctx.module;
-	LLVMSetTarget(ctx.module, options->supports_spill ? "amdgcn-mesa-mesa3d" : "amdgcn--");
+	ctx.ac.module = LLVMModuleCreateWithNameInContext("shader", ctx.context);
+	LLVMSetTarget(ctx.ac.module, options->supports_spill ? "amdgcn-mesa-mesa3d" : "amdgcn--");
 
 	LLVMTargetDataRef data_layout = LLVMCreateTargetDataLayout(tm);
 	char *data_layout_str = LLVMCopyStringRepOfTargetData(data_layout);
-	LLVMSetDataLayout(ctx.module, data_layout_str);
+	LLVMSetDataLayout(ctx.ac.module, data_layout_str);
 	LLVMDisposeTargetData(data_layout);
 	LLVMDisposeMessage(data_layout_str);
 
@@ -6884,14 +6882,14 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	LLVMBuildRetVoid(ctx.ac.builder);
 
 	if (options->dump_preoptir)
-		ac_dump_module(ctx.module);
+		ac_dump_module(ctx.ac.module);
 
 	ac_llvm_finalize_module(&ctx);
 
 	if (shader_count == 1)
 		ac_nir_eliminate_const_vs_outputs(&ctx);
 
-	return ctx.module;
+	return ctx.ac.module;
 }
 
 static void ac_diagnostic_handler(LLVMDiagnosticInfoRef di, void *context)
@@ -7151,16 +7149,15 @@ void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
 {
 	struct nir_to_llvm_context ctx = {0};
 	ctx.context = LLVMContextCreate();
-	ctx.module = LLVMModuleCreateWithNameInContext("shader", ctx.context);
 	ctx.options = options;
 	ctx.shader_info = shader_info;
 
 	ac_llvm_context_init(&ctx.ac, ctx.context, options->chip_class,
 			     options->family);
-	ctx.ac.module = ctx.module;
+	ctx.ac.module = LLVMModuleCreateWithNameInContext("shader", ctx.context);
 
 	ctx.is_gs_copy_shader = true;
-	LLVMSetTarget(ctx.module, "amdgcn--");
+	LLVMSetTarget(ctx.ac.module, "amdgcn--");
 
 	enum ac_float_mode float_mode =
 		options->unsafe_math ? AC_FLOAT_MODE_UNSAFE_FP_MATH :
@@ -7197,7 +7194,7 @@ void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
 
 	ac_llvm_finalize_module(&ctx);
 
-	ac_compile_llvm_module(tm, ctx.module, binary, config, shader_info,
+	ac_compile_llvm_module(tm, ctx.ac.module, binary, config, shader_info,
 			       MESA_SHADER_VERTEX,
 			       dump_shader, options->supports_spill);
 }
