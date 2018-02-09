@@ -54,6 +54,8 @@ if with_platform_wayland
   files_vulkan_wsi += [
     wayland_drm_client_protocol_h,
     wayland_drm_protocol_c,
+    linux_dmabuf_unstable_v1_client_protocol_h,
+    linux_dmabuf_unstable_v1_protocol_c,
   ]
 endif
 
