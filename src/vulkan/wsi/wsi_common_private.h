@@ -35,6 +35,7 @@ struct wsi_image {
       VkCommandBuffer *blit_cmd_buffers;
    } prime;
 
+   uint64_t drm_modifier;
    int num_planes;
    uint32_t sizes[4];
    uint32_t offsets[4];

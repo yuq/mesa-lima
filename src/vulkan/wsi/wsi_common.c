@@ -22,6 +22,7 @@
  */
 
 #include "wsi_common_private.h"
+#include "drm_fourcc.h"
 #include "util/macros.h"
 #include "vk_util.h"
 
@@ -291,6 +292,7 @@ wsi_create_native_image(const struct wsi_swapchain *chain,
    if (result != VK_SUCCESS)
       goto fail;
 
+   image->drm_modifier = DRM_FORMAT_MOD_INVALID;
    image->num_planes = 1;
    image->sizes[0] = reqs.size;
    image->row_pitches[0] = image_layout.rowPitch;
@@ -494,6 +496,7 @@ wsi_create_prime_image(const struct wsi_swapchain *chain,
    if (result != VK_SUCCESS)
       goto fail;
 
+   image->drm_modifier = DRM_FORMAT_MOD_LINEAR;
    image->num_planes = 1;
    image->sizes[0] = linear_size;
    image->row_pitches[0] = linear_stride;
