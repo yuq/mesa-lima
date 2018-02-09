@@ -46,8 +46,6 @@ enum radeon_llvm_calling_convention {
 #define RADEON_LLVM_MAX_INPUTS (VARYING_SLOT_VAR31 + 1)
 #define RADEON_LLVM_MAX_OUTPUTS (VARYING_SLOT_VAR31 + 1)
 
-struct nir_to_llvm_context;
-
 struct ac_nir_context {
 	struct ac_llvm_context ac;
 	struct ac_shader_abi *abi;
@@ -66,8 +64,6 @@ struct ac_nir_context {
 
 	int num_locals;
 	LLVMValueRef *locals;
-
-	struct nir_to_llvm_context *nctx; /* TODO get rid of this */
 };
 
 struct nir_to_llvm_context {
@@ -6679,7 +6675,6 @@ void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 	ctx.ac = *ac;
 	ctx.abi = abi;
 
-	ctx.nctx = nctx;
 	if (nctx)
 		nctx->nir = &ctx;
 
@@ -7178,7 +7173,6 @@ void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
 	nir_ctx.ac = ctx.ac;
 	nir_ctx.abi = &ctx.abi;
 
-	nir_ctx.nctx = &ctx;
 	ctx.nir = &nir_ctx;
 
 	nir_foreach_variable(variable, &geom_shader->outputs) {
