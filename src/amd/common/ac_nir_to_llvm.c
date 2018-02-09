@@ -85,7 +85,6 @@ struct nir_to_llvm_context {
 
 	LLVMValueRef descriptor_sets[AC_UD_MAX_SETS];
 	LLVMValueRef ring_offsets;
-	LLVMValueRef push_constants;
 	LLVMValueRef view_index;
 
 	LLVMValueRef vertex_buffers;
@@ -633,7 +632,7 @@ declare_global_input_sgprs(struct nir_to_llvm_context *ctx,
 
 	if (ctx->shader_info->info.loads_push_constants) {
 		/* 1 for push constants and dynamic descriptors */
-		add_array_arg(args, type, &ctx->push_constants);
+		add_array_arg(args, type, &ctx->abi.push_constants);
 	}
 }
 
@@ -2367,7 +2366,7 @@ static LLVMValueRef visit_vulkan_resource_index(struct nir_to_llvm_context *ctx,
 	    layout->binding[binding].type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
 		unsigned idx = pipeline_layout->set[desc_set].dynamic_offset_start +
 			layout->binding[binding].dynamic_offset_offset;
-		desc_ptr = ctx->push_constants;
+		desc_ptr = ctx->abi.push_constants;
 		base_offset = pipeline_layout->push_constant_size + 16 * idx;
 		stride = LLVMConstInt(ctx->ac.i32, 16, false);
 	} else
@@ -2403,7 +2402,7 @@ static LLVMValueRef visit_load_push_constant(struct nir_to_llvm_context *ctx,
 	addr = LLVMConstInt(ctx->ac.i32, nir_intrinsic_base(instr), 0);
 	addr = LLVMBuildAdd(ctx->builder, addr, get_src(ctx->nir, instr->src[0]), "");
 
-	ptr = ac_build_gep0(&ctx->ac, ctx->push_constants, addr);
+	ptr = ac_build_gep0(&ctx->ac, ctx->abi.push_constants, addr);
 	ptr = cast_ptr(ctx, ptr, get_def_type(ctx->nir, &instr->dest.ssa));
 
 	return LLVMBuildLoad(ctx->builder, ptr, "");
