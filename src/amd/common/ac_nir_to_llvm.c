@@ -87,7 +87,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef ring_offsets;
 	LLVMValueRef push_constants;
 	LLVMValueRef view_index;
-	LLVMValueRef tg_size;
 
 	LLVMValueRef vertex_buffers;
 	LLVMValueRef rel_auto_id;
@@ -789,7 +788,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		}
 
 		if (ctx->shader_info->info.cs.uses_local_invocation_idx)
-			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->tg_size);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->abi.tg_size);
 		add_arg(&args, ARG_VGPR, ctx->ac.v3i32,
 			&ctx->abi.local_invocation_ids);
 		break;
@@ -3906,7 +3905,7 @@ visit_load_local_invocation_index(struct nir_to_llvm_context *ctx)
 {
 	LLVMValueRef result;
 	LLVMValueRef thread_id = ac_get_thread_id(&ctx->ac);
-	result = LLVMBuildAnd(ctx->builder, ctx->tg_size,
+	result = LLVMBuildAnd(ctx->builder, ctx->abi.tg_size,
 			      LLVMConstInt(ctx->ac.i32, 0xfc0, false), "");
 
 	return LLVMBuildAdd(ctx->builder, result, thread_id, "");

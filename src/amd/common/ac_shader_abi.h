@@ -58,6 +58,7 @@ struct ac_shader_abi {
 	LLVMValueRef local_invocation_ids;
 	LLVMValueRef num_work_groups;
 	LLVMValueRef workgroup_ids[3];
+	LLVMValueRef tg_size;
 
 	/* For VS and PS: pre-loaded shader inputs.
 	 *
