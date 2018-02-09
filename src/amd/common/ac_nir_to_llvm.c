@@ -2042,7 +2042,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		break;
 
 	case nir_op_unpack_64_2x32_split_x: {
-		assert(instr->src[0].src.ssa->num_components == 1);
+		assert(ac_get_llvm_num_components(src[0]) == 1);
 		LLVMValueRef tmp = LLVMBuildBitCast(ctx->ac.builder, src[0],
 						    ctx->ac.v2i32,
 						    "");
@@ -2052,7 +2052,7 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 	}
 
 	case nir_op_unpack_64_2x32_split_y: {
-		assert(instr->src[0].src.ssa->num_components == 1);
+		assert(ac_get_llvm_num_components(src[0]) == 1);
 		LLVMValueRef tmp = LLVMBuildBitCast(ctx->ac.builder, src[0],
 						    ctx->ac.v2i32,
 						    "");
