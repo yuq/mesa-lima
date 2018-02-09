@@ -85,7 +85,6 @@ struct nir_to_llvm_context {
 
 	LLVMValueRef descriptor_sets[AC_UD_MAX_SETS];
 	LLVMValueRef ring_offsets;
-	LLVMValueRef view_index;
 
 	LLVMValueRef vertex_buffers;
 	LLVMValueRef rel_auto_id;
@@ -799,7 +798,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 						previous_stage, &args);
 
 		if (needs_view_index)
-			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->view_index);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->abi.view_index);
 		if (ctx->options->key.vs.as_es)
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->es2gs_offset);
@@ -844,7 +844,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 				&ctx->tcs_in_layout);
 			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
-					&ctx->view_index);
+					&ctx->abi.view_index);
 
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
 				&ctx->abi.tcs_patch_id);
@@ -869,7 +869,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 				&ctx->tcs_in_layout);
 			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
-					&ctx->view_index);
+					&ctx->abi.view_index);
 
 			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->oc_lds);
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
@@ -887,7 +887,8 @@ static void create_function(struct nir_to_llvm_context *ctx,
 
 		add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->tcs_offchip_layout);
 		if (needs_view_index)
-			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->view_index);
+			add_arg(&args, ARG_SGPR, ctx->ac.i32,
+				&ctx->abi.view_index);
 
 		if (ctx->options->key.tes.as_es) {
 			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->oc_lds);
@@ -935,7 +936,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 				&ctx->gsvs_num_entries);
 			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
-					&ctx->view_index);
+					&ctx->abi.view_index);
 
 			add_arg(&args, ARG_VGPR, ctx->ac.i32,
 				&ctx->gs_vtx_offset[0]);
@@ -966,7 +967,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 				&ctx->gsvs_num_entries);
 			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
-					&ctx->view_index);
+					&ctx->abi.view_index);
 
 			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->gs2vs_offset);
 			add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->gs_wave_id);
@@ -1068,7 +1069,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	case MESA_SHADER_VERTEX:
 		set_vs_specific_input_locs(ctx, stage, has_previous_stage,
 					   previous_stage, &user_sgpr_idx);
-		if (ctx->view_index)
+		if (ctx->abi.view_index)
 			set_loc_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
 		if (ctx->options->key.vs.as_ls) {
 			set_loc_shader(ctx, AC_UD_VS_LS_TCS_IN_LAYOUT,
@@ -1084,13 +1085,13 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			set_loc_shader(ctx, AC_UD_VS_LS_TCS_IN_LAYOUT,
 				       &user_sgpr_idx, 1);
 		set_loc_shader(ctx, AC_UD_TCS_OFFCHIP_LAYOUT, &user_sgpr_idx, 4);
-		if (ctx->view_index)
+		if (ctx->abi.view_index)
 			set_loc_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
 		ac_declare_lds_as_pointer(&ctx->ac);
 		break;
 	case MESA_SHADER_TESS_EVAL:
 		set_loc_shader(ctx, AC_UD_TES_OFFCHIP_LAYOUT, &user_sgpr_idx, 1);
-		if (ctx->view_index)
+		if (ctx->abi.view_index)
 			set_loc_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
 		break;
 	case MESA_SHADER_GEOMETRY:
@@ -1106,7 +1107,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		}
 		set_loc_shader(ctx, AC_UD_GS_VS_RING_STRIDE_ENTRIES,
 			       &user_sgpr_idx, 2);
-		if (ctx->view_index)
+		if (ctx->abi.view_index)
 			set_loc_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
 		if (has_previous_stage)
 			ac_declare_lds_as_pointer(&ctx->ac);
@@ -4327,7 +4328,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = ctx->abi->draw_id;
 		break;
 	case nir_intrinsic_load_view_index:
-		result = ctx->nctx->view_index ? ctx->nctx->view_index : ctx->ac.i32_0;
+		result = ctx->abi->view_index;
 		break;
 	case nir_intrinsic_load_invocation_id:
 		if (ctx->stage == MESA_SHADER_TESS_CTRL)
@@ -5523,7 +5524,7 @@ handle_fs_inputs(struct nir_to_llvm_context *ctx,
 	ctx->shader_info->fs.input_mask = ctx->input_mask >> VARYING_SLOT_VAR0;
 
 	if (ctx->shader_info->info.needs_multiview_view_index)
-		ctx->view_index = ctx->inputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)];
+		ctx->abi.view_index = ctx->inputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)];
 }
 
 static LLVMValueRef
@@ -5905,7 +5906,7 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 				            si_build_alloca_undef(&ctx->ac, ctx->ac.f32, "");
 		}
 
-		LLVMBuildStore(ctx->builder, ac_to_float(&ctx->ac, ctx->view_index),  *tmp_out);
+		LLVMBuildStore(ctx->builder, ac_to_float(&ctx->ac, ctx->abi.view_index),  *tmp_out);
 		ctx->output_mask |= 1ull << VARYING_SLOT_LAYER;
 	}
 

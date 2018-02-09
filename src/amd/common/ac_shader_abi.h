@@ -60,7 +60,9 @@ struct ac_shader_abi {
 	LLVMValueRef workgroup_ids[3];
 	LLVMValueRef tg_size;
 
-	LLVMValueRef push_constants; /* Vulkan only */
+	/* Vulkan only */
+	LLVMValueRef push_constants;
+	LLVMValueRef view_index;
 
 	/* For VS and PS: pre-loaded shader inputs.
 	 *
