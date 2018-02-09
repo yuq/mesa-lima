@@ -182,19 +182,46 @@ concatenate_and_mkdir(void *ctx, const char *path, const char *name)
       return NULL;
 }
 
-static bool
-disk_cache_path_init(struct disk_cache *cache)
+#define DRV_KEY_CPY(_dst, _src, _src_size) \
+do {                                       \
+   memcpy(_dst, _src, _src_size);          \
+   _dst += _src_size;                      \
+} while (0);
+
+struct disk_cache *
+disk_cache_create(const char *gpu_name, const char *timestamp,
+                  uint64_t driver_flags)
 {
-   void *local = NULL;
-   char *path;
+   void *local;
+   struct disk_cache *cache = NULL;
+   char *path, *max_size_str;
+   uint64_t max_size;
    int fd = -1;
    struct stat sb;
    size_t size;
+
+   uint8_t cache_version = CACHE_VERSION;
+   size_t cv_size = sizeof(cache_version);
+
+   /* If running as a users other than the real user disable cache */
+   if (geteuid() != getuid())
+      return NULL;
 
    /* A ralloc context for transient data during this invocation. */
    local = ralloc_context(NULL);
    if (local == NULL)
       goto fail;
+
+   /* At user request, disable shader cache entirely. */
+   if (env_var_as_boolean("MESA_GLSL_CACHE_DISABLE", false))
+      goto fail;
+
+   cache = rzalloc(NULL, struct disk_cache);
+   if (cache == NULL)
+      goto fail;
+
+   /* Assume failure. */
+   cache->path_init_failed = true;
 
    /* Determine path for cache based on the first defined name as follows:
     *
@@ -205,11 +232,11 @@ disk_cache_path_init(struct disk_cache *cache)
    path = getenv("MESA_GLSL_CACHE_DIR");
    if (path) {
       if (mkdir_if_needed(path) == -1)
-         goto fail;
+         goto path_fail;
 
       path = concatenate_and_mkdir(local, path, CACHE_DIR_NAME);
       if (path == NULL)
-         goto fail;
+         goto path_fail;
    }
 
    if (path == NULL) {
@@ -217,11 +244,11 @@ disk_cache_path_init(struct disk_cache *cache)
 
       if (xdg_cache_home) {
          if (mkdir_if_needed(xdg_cache_home) == -1)
-            goto fail;
+            goto path_fail;
 
          path = concatenate_and_mkdir(local, xdg_cache_home, CACHE_DIR_NAME);
          if (path == NULL)
-            goto fail;
+            goto path_fail;
       }
    }
 
@@ -247,39 +274,39 @@ disk_cache_path_init(struct disk_cache *cache)
             buf = NULL;
             buf_size *= 2;
          } else {
-            goto fail;
+            goto path_fail;
          }
       }
 
       path = concatenate_and_mkdir(local, pwd.pw_dir, ".cache");
       if (path == NULL)
-         goto fail;
+         goto path_fail;
 
       path = concatenate_and_mkdir(local, path, CACHE_DIR_NAME);
       if (path == NULL)
-         goto fail;
+         goto path_fail;
    }
 
    cache->path = ralloc_strdup(cache, path);
    if (cache->path == NULL)
-      goto fail;
+      goto path_fail;
 
    path = ralloc_asprintf(local, "%s/index", cache->path);
    if (path == NULL)
-      goto fail;
+      goto path_fail;
 
    fd = open(path, O_RDWR | O_CREAT | O_CLOEXEC, 0644);
    if (fd == -1)
-      goto fail;
+      goto path_fail;
 
    if (fstat(fd, &sb) == -1)
-      goto fail;
+      goto path_fail;
 
    /* Force the index file to be the expected size. */
    size = sizeof(*cache->size) + CACHE_INDEX_MAX_KEYS * CACHE_KEY_SIZE;
    if (sb.st_size != size) {
       if (ftruncate(fd, size) == -1)
-         goto fail;
+         goto path_fail;
    }
 
    /* We map this shared so that other processes see updates that we
@@ -300,65 +327,13 @@ disk_cache_path_init(struct disk_cache *cache)
    cache->index_mmap = mmap(NULL, size, PROT_READ | PROT_WRITE,
                             MAP_SHARED, fd, 0);
    if (cache->index_mmap == MAP_FAILED)
-      goto fail;
+      goto path_fail;
    cache->index_mmap_size = size;
 
    close(fd);
 
    cache->size = (uint64_t *) cache->index_mmap;
    cache->stored_keys = cache->index_mmap + sizeof(uint64_t);
-
-   /* 1 thread was chosen because we don't really care about getting things
-    * to disk quickly just that it's not blocking other tasks.
-    *
-    * The queue will resize automatically when it's full, so adding new jobs
-    * doesn't stall.
-    */
-   util_queue_init(&cache->cache_queue, "disk_cache", 32, 1,
-                   UTIL_QUEUE_INIT_RESIZE_IF_FULL |
-                   UTIL_QUEUE_INIT_USE_MINIMUM_PRIORITY);
-
-   ralloc_free(local);
-
-   return true;
-
- fail:
-   if (fd != -1)
-      close(fd);
-
-   if (local)
-      ralloc_free(local);
-
-   cache->path_init_failed = true;
-
-   return false;
-}
-
-#define DRV_KEY_CPY(_dst, _src, _src_size) \
-do {                                       \
-   memcpy(_dst, _src, _src_size);          \
-   _dst += _src_size;                      \
-} while (0);
-
-struct disk_cache *
-disk_cache_create(const char *gpu_name, const char *timestamp,
-                  uint64_t driver_flags)
-{
-   struct disk_cache *cache = NULL;
-   char *max_size_str;
-   uint64_t max_size;
-
-   /* If running as a users other than the real user disable cache */
-   if (geteuid() != getuid())
-      return NULL;
-
-   /* At user request, disable shader cache entirely. */
-   if (env_var_as_boolean("MESA_GLSL_CACHE_DISABLE", false))
-      return NULL;
-
-   cache = rzalloc(NULL, struct disk_cache);
-   if (cache == NULL)
-      return NULL;
 
    max_size = 0;
 
@@ -395,8 +370,20 @@ disk_cache_create(const char *gpu_name, const char *timestamp,
 
    cache->max_size = max_size;
 
-   uint8_t cache_version = CACHE_VERSION;
-   size_t cv_size = sizeof(cache_version);
+   /* 1 thread was chosen because we don't really care about getting things
+    * to disk quickly just that it's not blocking other tasks.
+    *
+    * The queue will resize automatically when it's full, so adding new jobs
+    * doesn't stall.
+    */
+   util_queue_init(&cache->cache_queue, "disk_cache", 32, 1,
+                   UTIL_QUEUE_INIT_RESIZE_IF_FULL |
+                   UTIL_QUEUE_INIT_USE_MINIMUM_PRIORITY);
+
+   cache->path_init_failed = false;
+
+ path_fail:
+
    cache->driver_keys_blob_size = cv_size;
 
    /* Create driver id keys */
@@ -417,10 +404,8 @@ disk_cache_create(const char *gpu_name, const char *timestamp,
 
    cache->driver_keys_blob =
       ralloc_size(cache, cache->driver_keys_blob_size);
-   if (!cache->driver_keys_blob) {
-      ralloc_free(cache);
-      return NULL;
-   }
+   if (!cache->driver_keys_blob)
+      goto fail;
 
    uint8_t *drv_key_blob = cache->driver_keys_blob;
    DRV_KEY_CPY(drv_key_blob, &cache_version, cv_size)
@@ -432,13 +417,24 @@ disk_cache_create(const char *gpu_name, const char *timestamp,
    /* Seed our rand function */
    s_rand_xorshift128plus(cache->seed_xorshift128plus, true);
 
+   ralloc_free(local);
+
    return cache;
+
+ fail:
+   if (fd != -1)
+      close(fd);
+   if (cache)
+      ralloc_free(cache);
+   ralloc_free(local);
+
+   return NULL;
 }
 
 void
 disk_cache_destroy(struct disk_cache *cache)
 {
-   if (cache && cache->index_mmap) {
+   if (cache && !cache->path_init_failed) {
       util_queue_destroy(&cache->cache_queue);
       munmap(cache->index_mmap, cache->index_mmap_size);
    }
@@ -457,7 +453,7 @@ get_cache_file(struct disk_cache *cache, const cache_key key)
    char buf[41];
    char *filename;
 
-   if (!cache->path)
+   if (cache->path_init_failed)
       return NULL;
 
    _mesa_sha1_format(buf, key);
@@ -1020,9 +1016,7 @@ disk_cache_put(struct disk_cache *cache, const cache_key key,
       return;
    }
 
-   /* Initialize path if not initialized yet. */
-   if (cache->path_init_failed ||
-       (!cache->path && !disk_cache_path_init(cache)))
+   if (cache->path_init_failed)
       return;
 
    struct disk_cache_put_job *dc_job =
@@ -1229,10 +1223,8 @@ disk_cache_put_key(struct disk_cache *cache, const cache_key key)
       return;
    }
 
-   if (!cache->path) {
-      assert(!"disk_cache_put_key called with no path set");
+   if (cache->path_init_failed)
       return;
-   }
 
    entry = &cache->stored_keys[i * CACHE_KEY_SIZE];
 
@@ -1258,9 +1250,7 @@ disk_cache_has_key(struct disk_cache *cache, const cache_key key)
       return cache->blob_get_cb(key, CACHE_KEY_SIZE, &blob, sizeof(uint32_t));
    }
 
-   /* Initialize path if not initialized yet. */
-   if (cache->path_init_failed ||
-       (!cache->path && !disk_cache_path_init(cache)))
+   if (cache->path_init_failed)
       return false;
 
    entry = &cache->stored_keys[i * CACHE_KEY_SIZE];
