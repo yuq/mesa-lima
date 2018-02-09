@@ -2114,7 +2114,7 @@ static void visit_load_const(struct ac_nir_context *ctx,
 	_mesa_hash_table_insert(ctx->defs, &instr->def, value);
 }
 
-static LLVMValueRef cast_ptr(struct nir_to_llvm_context *ctx, LLVMValueRef ptr,
+static LLVMValueRef cast_ptr(struct ac_llvm_context *ctx, LLVMValueRef ptr,
                              LLVMTypeRef type)
 {
 	int addr_space = LLVMGetPointerAddressSpace(LLVMTypeOf(ptr));
@@ -2376,7 +2376,7 @@ radv_load_resource(struct ac_shader_abi *abi, LLVMValueRef index,
 	offset = LLVMBuildAdd(ctx->builder, offset, index, "");
 	
 	desc_ptr = ac_build_gep0(&ctx->ac, desc_ptr, offset);
-	desc_ptr = cast_ptr(ctx, desc_ptr, ctx->ac.v4i32);
+	desc_ptr = cast_ptr(&ctx->ac, desc_ptr, ctx->ac.v4i32);
 	LLVMSetMetadata(desc_ptr, ctx->ac.uniform_md_kind, ctx->ac.empty_md);
 
 	return desc_ptr;
@@ -2402,7 +2402,7 @@ static LLVMValueRef visit_load_push_constant(struct nir_to_llvm_context *ctx,
 	addr = LLVMBuildAdd(ctx->builder, addr, get_src(ctx->nir, instr->src[0]), "");
 
 	ptr = ac_build_gep0(&ctx->ac, ctx->abi.push_constants, addr);
-	ptr = cast_ptr(ctx, ptr, get_def_type(ctx->nir, &instr->dest.ssa));
+	ptr = cast_ptr(&ctx->ac, ptr, get_def_type(ctx->nir, &instr->dest.ssa));
 
 	return LLVMBuildLoad(ctx->builder, ptr, "");
 }
