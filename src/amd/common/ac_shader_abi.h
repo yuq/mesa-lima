@@ -156,6 +156,18 @@ struct ac_shader_abi {
 					  enum ac_descriptor_type desc_type,
 					  bool image, bool write);
 
+	/**
+	 * Load a Vulkan-specific resource.
+	 *
+	 * \param index resource index
+	 * \param desc_set descriptor set
+	 * \param binding descriptor set binding
+	 */
+	LLVMValueRef (*load_resource)(struct ac_shader_abi *abi,
+				      LLVMValueRef index,
+				      unsigned desc_set,
+				      unsigned binding);
+
 	LLVMValueRef (*lookup_interp_param)(struct ac_shader_abi *abi,
 					    enum glsl_interp_mode interp,
 					    unsigned location);

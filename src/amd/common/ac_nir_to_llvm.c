@@ -2351,12 +2351,11 @@ static LLVMValueRef build_tex_intrinsic(struct ac_nir_context *ctx,
 	return ac_build_image_opcode(&ctx->ac, args);
 }
 
-static LLVMValueRef visit_vulkan_resource_index(struct nir_to_llvm_context *ctx,
-                                                nir_intrinsic_instr *instr)
+static LLVMValueRef
+radv_load_resource(struct ac_shader_abi *abi, LLVMValueRef index,
+		   unsigned desc_set, unsigned binding)
 {
-	LLVMValueRef index = get_src(ctx->nir, instr->src[0]);
-	unsigned desc_set = nir_intrinsic_desc_set(instr);
-	unsigned binding = nir_intrinsic_binding(instr);
+	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
 	LLVMValueRef desc_ptr = ctx->descriptor_sets[desc_set];
 	struct radv_pipeline_layout *pipeline_layout = ctx->options->layout;
 	struct radv_descriptor_set_layout *layout = pipeline_layout->set[desc_set].layout;
@@ -4386,9 +4385,15 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	case nir_intrinsic_load_push_constant:
 		result = visit_load_push_constant(ctx->nctx, instr);
 		break;
-	case nir_intrinsic_vulkan_resource_index:
-		result = visit_vulkan_resource_index(ctx->nctx, instr);
+	case nir_intrinsic_vulkan_resource_index: {
+		LLVMValueRef index = get_src(ctx, instr->src[0]);
+		unsigned desc_set = nir_intrinsic_desc_set(instr);
+		unsigned binding = nir_intrinsic_binding(instr);
+
+		result = ctx->abi->load_resource(ctx->abi, index, desc_set,
+						 binding);
 		break;
+	}
 	case nir_intrinsic_vulkan_resource_reindex:
 		result = visit_vulkan_resource_reindex(ctx->nctx, instr);
 		break;
@@ -6781,6 +6786,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	ctx.abi.load_ubo = radv_load_ubo;
 	ctx.abi.load_ssbo = radv_load_ssbo;
 	ctx.abi.load_sampler_desc = radv_get_sampler_desc;
+	ctx.abi.load_resource = radv_load_resource;
 	ctx.abi.clamp_shadow_reference = false;
 
 	if (shader_count >= 2)
