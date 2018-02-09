@@ -2393,18 +2393,19 @@ static LLVMValueRef visit_vulkan_resource_reindex(struct nir_to_llvm_context *ct
 	return result;
 }
 
-static LLVMValueRef visit_load_push_constant(struct nir_to_llvm_context *ctx,
+static LLVMValueRef visit_load_push_constant(struct ac_nir_context *ctx,
                                              nir_intrinsic_instr *instr)
 {
 	LLVMValueRef ptr, addr;
 
 	addr = LLVMConstInt(ctx->ac.i32, nir_intrinsic_base(instr), 0);
-	addr = LLVMBuildAdd(ctx->builder, addr, get_src(ctx->nir, instr->src[0]), "");
+	addr = LLVMBuildAdd(ctx->ac.builder, addr,
+			    get_src(ctx, instr->src[0]), "");
 
-	ptr = ac_build_gep0(&ctx->ac, ctx->abi.push_constants, addr);
-	ptr = cast_ptr(&ctx->ac, ptr, get_def_type(ctx->nir, &instr->dest.ssa));
+	ptr = ac_build_gep0(&ctx->ac, ctx->abi->push_constants, addr);
+	ptr = cast_ptr(&ctx->ac, ptr, get_def_type(ctx, &instr->dest.ssa));
 
-	return LLVMBuildLoad(ctx->builder, ptr, "");
+	return LLVMBuildLoad(ctx->ac.builder, ptr, "");
 }
 
 static LLVMValueRef visit_get_buffer_size(struct ac_nir_context *ctx,
@@ -4380,7 +4381,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = visit_load_local_invocation_index(ctx);
 		break;
 	case nir_intrinsic_load_push_constant:
-		result = visit_load_push_constant(ctx->nctx, instr);
+		result = visit_load_push_constant(ctx, instr);
 		break;
 	case nir_intrinsic_vulkan_resource_index: {
 		LLVMValueRef index = get_src(ctx, instr->src[0]);
