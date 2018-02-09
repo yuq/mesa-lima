@@ -3910,16 +3910,16 @@ visit_load_local_invocation_index(struct ac_nir_context *ctx)
 	return LLVMBuildAdd(ctx->ac.builder, result, thread_id, "");
 }
 
-static LLVMValueRef visit_var_atomic(struct nir_to_llvm_context *ctx,
+static LLVMValueRef visit_var_atomic(struct ac_nir_context *ctx,
 				     const nir_intrinsic_instr *instr)
 {
 	LLVMValueRef ptr, result;
-	LLVMValueRef src = get_src(ctx->nir, instr->src[0]);
-	ptr = build_gep_for_deref(ctx->nir, instr->variables[0]);
+	LLVMValueRef src = get_src(ctx, instr->src[0]);
+	ptr = build_gep_for_deref(ctx, instr->variables[0]);
 
 	if (instr->intrinsic == nir_intrinsic_var_atomic_comp_swap) {
-		LLVMValueRef src1 = get_src(ctx->nir, instr->src[1]);
-		result = LLVMBuildAtomicCmpXchg(ctx->builder,
+		LLVMValueRef src1 = get_src(ctx, instr->src[1]);
+		result = LLVMBuildAtomicCmpXchg(ctx->ac.builder,
 						ptr, src, src1,
 						LLVMAtomicOrderingSequentiallyConsistent,
 						LLVMAtomicOrderingSequentiallyConsistent,
@@ -3958,7 +3958,7 @@ static LLVMValueRef visit_var_atomic(struct nir_to_llvm_context *ctx,
 			return NULL;
 		}
 
-		result = LLVMBuildAtomicRMW(ctx->builder, op, ptr, ac_to_integer(&ctx->ac, src),
+		result = LLVMBuildAtomicRMW(ctx->ac.builder, op, ptr, ac_to_integer(&ctx->ac, src),
 					    LLVMAtomicOrderingSequentiallyConsistent,
 					    false);
 	}
@@ -4472,7 +4472,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	case nir_intrinsic_var_atomic_xor:
 	case nir_intrinsic_var_atomic_exchange:
 	case nir_intrinsic_var_atomic_comp_swap:
-		result = visit_var_atomic(ctx->nctx, instr);
+		result = visit_var_atomic(ctx, instr);
 		break;
 	case nir_intrinsic_interp_var_at_centroid:
 	case nir_intrinsic_interp_var_at_sample:
