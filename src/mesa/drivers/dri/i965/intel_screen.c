@@ -315,7 +315,7 @@ modifier_is_supported(const struct gen_device_info *devinfo,
    int i;
 
    /* ISL had better know about the modifier */
-   if (!fmt || !modinfo)
+   if (!modinfo)
       return false;
 
    if (modinfo->aux_usage == ISL_AUX_USAGE_CCS_E) {
