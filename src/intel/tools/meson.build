@@ -41,3 +41,28 @@ aubinator_error_decode = executable(
   build_by_default : with_tools.contains('intel'),
   install : with_tools.contains('intel'),
 )
+
+if with_tools.contains('intel')
+  sanitize_data = configuration_data()
+  sanitize_data.set(
+    'install_libexecdir',
+    join_paths(get_option('prefix'), get_option('libexecdir'))
+  )
+  configure_file(
+    input: 'intel_sanitize_gpu.in',
+    output: '@BASENAME@',
+    install_dir: get_option('bindir'),
+    configuration: sanitize_data,
+  )
+
+  libintel_sanitize_gpu = shared_library(
+    'intel_sanitize_gpu',
+    files('intel_sanitize_gpu.c'),
+    dependencies : [dep_dl, dep_thread],
+    include_directories : [inc_common, inc_intel, inc_drm_uapi],
+    link_with : [libintel_common, libmesa_util],
+    c_args : [c_vis_args, no_override_init_args],
+    install_dir: get_option('libexecdir'),
+    install: true,
+  )
+endif
