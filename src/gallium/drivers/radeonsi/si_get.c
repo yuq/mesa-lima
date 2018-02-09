@@ -389,9 +389,6 @@ static int si_get_shader_param(struct pipe_screen* pscreen,
 		break;
 	case PIPE_SHADER_COMPUTE:
 		switch (param) {
-		case PIPE_SHADER_CAP_PREFERRED_IR:
-			return PIPE_SHADER_IR_NATIVE;
-
 		case PIPE_SHADER_CAP_SUPPORTED_IRS: {
 			int ir = 1 << PIPE_SHADER_IR_NATIVE;
 
