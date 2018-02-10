@@ -294,6 +294,8 @@ anv_physical_device_init(struct anv_physical_device *device,
    assert(strlen(path) < ARRAY_SIZE(device->path));
    strncpy(device->path, path, ARRAY_SIZE(device->path));
 
+   device->no_hw = getenv("INTEL_NO_HW") != NULL;
+
    device->chipset_id = anv_gem_get_param(fd, I915_PARAM_CHIPSET_ID);
    if (!device->chipset_id) {
       result = vk_error(VK_ERROR_INCOMPATIBLE_DRIVER);
@@ -1368,6 +1370,7 @@ VkResult anv_CreateDevice(
    device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    device->instance = physical_device->instance;
    device->chipset_id = physical_device->chipset_id;
+   device->no_hw = physical_device->no_hw;
    device->lost = false;
 
    if (pAllocator)

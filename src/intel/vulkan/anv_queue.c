@@ -39,7 +39,7 @@ anv_device_execbuf(struct anv_device *device,
                    struct drm_i915_gem_execbuffer2 *execbuf,
                    struct anv_bo **execbuf_bos)
 {
-   int ret = anv_gem_execbuffer(device, execbuf);
+   int ret = device->no_hw ? 0 : anv_gem_execbuffer(device, execbuf);
    if (ret != 0) {
       /* We don't know the real error. */
       device->lost = true;

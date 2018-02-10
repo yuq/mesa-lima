@@ -749,6 +749,7 @@ struct anv_physical_device {
 
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;
+    bool                                        no_hw;
     char                                        path[20];
     const char *                                name;
     struct gen_device_info                      info;
@@ -852,6 +853,7 @@ struct anv_device {
 
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;
+    bool                                        no_hw;
     struct gen_device_info                      info;
     struct isl_device                           isl_dev;
     int                                         context_id;
