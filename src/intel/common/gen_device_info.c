@@ -30,8 +30,13 @@
 #include "compiler/shader_enums.h"
 #include "util/macros.h"
 
-static int
-parse_devid_override(const char *devid_override)
+/**
+ * Get the PCI ID for the device name.
+ *
+ * Returns -1 if the device is not known.
+ */
+int
+gen_device_name_to_pci_device_id(const char *name)
 {
    static const struct {
       const char *name;
@@ -54,11 +59,11 @@ parse_devid_override(const char *devid_override)
    };
 
    for (unsigned i = 0; i < ARRAY_SIZE(name_map); i++) {
-      if (!strcmp(name_map[i].name, devid_override))
+      if (!strcmp(name_map[i].name, name))
          return name_map[i].pci_id;
    }
 
-   return strtol(devid_override, NULL, 0);
+   return -1;
 }
 
 /**
@@ -72,8 +77,10 @@ gen_get_pci_device_id_override(void)
 {
    if (geteuid() == getuid()) {
       const char *devid_override = getenv("INTEL_DEVID_OVERRIDE");
-      if (devid_override)
-         return parse_devid_override(devid_override);
+      if (devid_override) {
+         const int id = gen_device_name_to_pci_device_id(devid_override);
+         return id >= 0 ? id : strtol(devid_override, NULL, 0);
+      }
    }
 
    return -1;

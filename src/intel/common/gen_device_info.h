@@ -200,6 +200,7 @@ struct gen_device_info
    ((devinfo)->is_broxton || (devinfo)->is_geminilake)
 
 int gen_get_pci_device_id_override(void);
+int gen_device_name_to_pci_device_id(const char *name);
 bool gen_get_device_info(int devid, struct gen_device_info *devinfo);
 const char *gen_get_device_name(int devid);
 
