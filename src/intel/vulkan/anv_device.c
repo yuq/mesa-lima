@@ -110,7 +110,7 @@ anv_physical_device_init_heaps(struct anv_physical_device *device, int fd)
    device->supports_48bit_addresses =
       (device->info.gen >= 8) && anv_gem_supports_48b_addresses(fd);
 
-   uint64_t heap_size;
+   uint64_t heap_size = 0;
    VkResult result = anv_compute_heap_size(fd, &heap_size);
    if (result != VK_SUCCESS)
       return result;
