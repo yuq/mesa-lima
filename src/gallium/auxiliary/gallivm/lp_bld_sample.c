@@ -275,7 +275,7 @@ lp_build_rho(struct lp_build_sample_context *bld,
       rho = lp_build_mul(rho_bld, cubesize, rho);
    }
    else if (derivs) {
-      LLVMValueRef ddmax[3], ddx[3], ddy[3];
+      LLVMValueRef ddmax[3] = { NULL }, ddx[3] = { NULL }, ddy[3] = { NULL };
       for (i = 0; i < dims; i++) {
          LLVMValueRef floatdim;
          LLVMValueRef indexi = lp_build_const_int32(gallivm, i);
