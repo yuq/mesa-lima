@@ -303,6 +303,7 @@ radv_physical_device_init(struct radv_physical_device *device,
 				  device->rad_info.family == CHIP_RAVEN;
 
 	radv_physical_device_init_mem_types(device);
+	radv_fill_device_extension_table(device, &device->supported_extensions);
 
 	result = radv_init_wsi(device);
 	if (result != VK_SUCCESS) {
@@ -2240,6 +2241,65 @@ VkResult radv_DeviceWaitIdle(
 		}
 	}
 	return VK_SUCCESS;
+}
+
+bool
+radv_instance_extension_supported(const char *name)
+{
+	for (unsigned i = 0; i < RADV_INSTANCE_EXTENSION_COUNT; ++i) {
+		if (strcmp(name, radv_instance_extensions[i].extensionName) == 0)
+			return radv_supported_instance_extensions.extensions[i];
+	}
+	return false;
+}
+
+VkResult radv_EnumerateInstanceExtensionProperties(
+    const char*                                 pLayerName,
+    uint32_t*                                   pPropertyCount,
+    VkExtensionProperties*                      pProperties)
+{
+	VK_OUTARRAY_MAKE(out, pProperties, pPropertyCount);
+
+	for (int i = 0; i < RADV_INSTANCE_EXTENSION_COUNT; i++) {
+		if (radv_supported_instance_extensions.extensions[i]) {
+			vk_outarray_append(&out, prop) {
+				*prop = radv_instance_extensions[i];
+			}
+		}
+	}
+
+	return vk_outarray_status(&out);
+}
+
+bool
+radv_physical_device_extension_supported(struct radv_physical_device *device,
+                                        const char *name)
+{
+	for (unsigned i = 0; i < RADV_DEVICE_EXTENSION_COUNT; ++i) {
+		if (strcmp(name, radv_device_extensions[i].extensionName) == 0)
+			return device->supported_extensions.extensions[i];
+	}
+	return false;
+}
+
+VkResult radv_EnumerateDeviceExtensionProperties(
+    VkPhysicalDevice                            physicalDevice,
+    const char*                                 pLayerName,
+    uint32_t*                                   pPropertyCount,
+    VkExtensionProperties*                      pProperties)
+{
+	RADV_FROM_HANDLE(radv_physical_device, device, physicalDevice);
+	VK_OUTARRAY_MAKE(out, pProperties, pPropertyCount);
+
+	for (int i = 0; i < RADV_DEVICE_EXTENSION_COUNT; i++) {
+		if (device->supported_extensions.extensions[i]) {
+			vk_outarray_append(&out, prop) {
+				*prop = radv_device_extensions[i];
+			}
+		}
+	}
+
+	return vk_outarray_status(&out);
 }
 
 PFN_vkVoidFunction radv_GetInstanceProcAddr(

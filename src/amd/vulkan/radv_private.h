@@ -57,6 +57,7 @@
 #include "ac_gpu_info.h"
 #include "ac_surface.h"
 #include "radv_descriptor_set.h"
+#include "radv_extensions.h"
 
 #include <llvm-c/TargetMachine.h>
 
@@ -285,6 +286,8 @@ struct radv_physical_device {
 
 	VkPhysicalDeviceMemoryProperties memory_properties;
 	enum radv_mem_type mem_type_indices[RADV_MEM_TYPE_COUNT];
+
+	struct radv_device_extension_table supported_extensions;
 };
 
 struct radv_instance {
