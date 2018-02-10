@@ -1426,8 +1426,8 @@ brw_blorp_clear_depth_stencil(struct brw_context *brw,
       } else {
          level = irb->mt_level;
          start_layer = irb->mt_layer;
-         num_layers = fb->MaxNumLayers ? irb->layer_count : 1;
       }
+      num_layers = fb->MaxNumLayers ? irb->layer_count : 1;
 
       stencil_mask = ctx->Stencil.WriteMask[0] & 0xff;
 
