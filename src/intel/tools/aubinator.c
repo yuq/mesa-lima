@@ -549,22 +549,6 @@ int main(int argc, char *argv[])
    struct aub_file *file;
    int c, i;
    bool help = false, pager = true;
-   const struct {
-      const char *name;
-      int pci_id;
-   } gens[] = {
-      { "ilk", 0x0046 }, /* Intel(R) Ironlake Mobile */
-      { "snb", 0x0126 }, /* Intel(R) Sandybridge Mobile GT2 */
-      { "ivb", 0x0166 }, /* Intel(R) Ivybridge Mobile GT2 */
-      { "hsw", 0x0416 }, /* Intel(R) Haswell Mobile GT2 */
-      { "byt", 0x0155 }, /* Intel(R) Bay Trail */
-      { "bdw", 0x1616 }, /* Intel(R) HD Graphics 5500 (Broadwell GT2) */
-      { "chv", 0x22B3 }, /* Intel(R) HD Graphics (Cherryview) */
-      { "skl", 0x1912 }, /* Intel(R) HD Graphics 530 (Skylake GT2) */
-      { "kbl", 0x591D }, /* Intel(R) Kabylake GT2 */
-      { "bxt", 0x0A84 },  /* Intel(R) HD Graphics (Broxton) */
-      { "cnl", 0x5A52 },  /* Intel(R) HD Graphics (Cannonlake) */
-   };
    const struct option aubinator_opts[] = {
       { "help",       no_argument,       (int *) &help,                 true },
       { "no-pager",   no_argument,       (int *) &pager,                false },
@@ -581,19 +565,17 @@ int main(int argc, char *argv[])
    i = 0;
    while ((c = getopt_long(argc, argv, "", aubinator_opts, &i)) != -1) {
       switch (c) {
-      case 'g':
-         for (i = 0; i < ARRAY_SIZE(gens); i++) {
-            if (!strcmp(optarg, gens[i].name)) {
-               pci_id = gens[i].pci_id;
-               break;
-            }
-         }
-         if (i == ARRAY_SIZE(gens)) {
+      case 'g': {
+         const int id = gen_device_name_to_pci_device_id(optarg);
+         if (id < 0) {
             fprintf(stderr, "can't parse gen: '%s', expected ivb, byt, hsw, "
                                    "bdw, chv, skl, kbl or bxt\n", optarg);
             exit(EXIT_FAILURE);
+         } else {
+            pci_id = id;
          }
          break;
+      }
       case 'c':
          if (optarg == NULL || strcmp(optarg, "always") == 0)
             option_color = COLOR_ALWAYS;
