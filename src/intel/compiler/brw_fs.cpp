@@ -7223,7 +7223,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
    fs_visitor *v8 = NULL, *v16 = NULL, *v32 = NULL;
    cfg_t *cfg = NULL;
    const char *fail_msg = NULL;
-   unsigned promoted_constants;
+   unsigned promoted_constants = 0;
 
    /* Now the main event: Visit the shader IR and generate our CS IR for it.
     */
