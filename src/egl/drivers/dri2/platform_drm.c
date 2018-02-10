@@ -95,7 +95,7 @@ dri2_drm_config_is_compatible(struct dri2_egl_display *dri2_dpy,
                               const __DRIconfig *config,
                               struct gbm_surface *surface)
 {
-   const struct gbm_dri_visual *visual;
+   const struct gbm_dri_visual *visual = NULL;
    unsigned int red, green, blue, alpha;
    int i;
 
