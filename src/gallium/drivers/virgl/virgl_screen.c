@@ -113,11 +113,13 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_MAX_TEXTURE_ARRAY_LAYERS:
       return vscreen->caps.caps.v1.max_texture_array_layers;
    case PIPE_CAP_MIN_TEXEL_OFFSET:
+      return vscreen->caps.caps.v2.min_texel_offset;
    case PIPE_CAP_MIN_TEXTURE_GATHER_OFFSET:
-      return -8;
+      return vscreen->caps.caps.v2.min_texture_gather_offset;
    case PIPE_CAP_MAX_TEXEL_OFFSET:
+      return vscreen->caps.caps.v2.max_texel_offset;
    case PIPE_CAP_MAX_TEXTURE_GATHER_OFFSET:
-      return 7;
+      return vscreen->caps.caps.v2.max_texture_gather_offset;
    case PIPE_CAP_CONDITIONAL_RENDER:
       return vscreen->caps.caps.v1.bset.conditional_render;
    case PIPE_CAP_TEXTURE_BARRIER:
@@ -182,9 +184,9 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_TGSI_VS_LAYER_VIEWPORT:
       return 0;
    case PIPE_CAP_MAX_GEOMETRY_OUTPUT_VERTICES:
-      return 256;
+      return vscreen->caps.caps.v2.max_geom_output_vertices;
    case PIPE_CAP_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS:
-      return 16384;
+      return vscreen->caps.caps.v2.max_geom_total_output_components;
    case PIPE_CAP_TEXTURE_QUERY_LOD:
       return vscreen->caps.caps.v1.bset.texture_query_lod;
    case PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS:
@@ -310,11 +312,13 @@ virgl_get_shader_param(struct pipe_screen *screen,
          return 1;
       case PIPE_SHADER_CAP_MAX_INPUTS:
          if (vscreen->caps.caps.v1.glsl_level < 150)
-            return 16;
+            return vscreen->caps.caps.v2.max_vertex_attribs;
          return (shader == PIPE_SHADER_VERTEX ||
-                 shader == PIPE_SHADER_GEOMETRY) ? 16 : 32;
+                 shader == PIPE_SHADER_GEOMETRY) ? vscreen->caps.caps.v2.max_vertex_attribs : 32;
       case PIPE_SHADER_CAP_MAX_OUTPUTS:
-         return 32;
+         if (shader == PIPE_SHADER_FRAGMENT)
+            return vscreen->caps.caps.v1.max_render_targets;
+         return vscreen->caps.caps.v2.max_vertex_outputs;
      // case PIPE_SHADER_CAP_MAX_CONSTS:
      //    return 4096;
       case PIPE_SHADER_CAP_MAX_TEMPS:
@@ -350,19 +354,20 @@ virgl_get_shader_param(struct pipe_screen *screen,
 static float
 virgl_get_paramf(struct pipe_screen *screen, enum pipe_capf param)
 {
+   struct virgl_screen *vscreen = virgl_screen(screen);
    switch (param) {
    case PIPE_CAPF_MAX_LINE_WIDTH:
-      /* fall-through */
+      return vscreen->caps.caps.v2.max_aliased_line_width;
    case PIPE_CAPF_MAX_LINE_WIDTH_AA:
-      return 255.0; /* arbitrary */
+      return vscreen->caps.caps.v2.max_smooth_line_width;
    case PIPE_CAPF_MAX_POINT_WIDTH:
-      /* fall-through */
+      return vscreen->caps.caps.v2.max_aliased_point_size;
    case PIPE_CAPF_MAX_POINT_WIDTH_AA:
-      return 255.0; /* arbitrary */
+      return vscreen->caps.caps.v2.max_smooth_point_size;
    case PIPE_CAPF_MAX_TEXTURE_ANISOTROPY:
       return 16.0;
    case PIPE_CAPF_MAX_TEXTURE_LOD_BIAS:
-      return 16.0; /* arbitrary */
+      return vscreen->caps.caps.v2.max_texture_lod_bias;
    case PIPE_CAPF_GUARD_BAND_LEFT:
    case PIPE_CAPF_GUARD_BAND_TOP:
    case PIPE_CAPF_GUARD_BAND_RIGHT:
