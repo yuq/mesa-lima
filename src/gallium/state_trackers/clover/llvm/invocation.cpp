@@ -201,17 +201,17 @@ namespace {
 module
 clover::llvm::compile_program(const std::string &source,
                               const header_map &headers,
-                              const std::string &target,
+                              const device &dev,
                               const std::string &opts,
                               std::string &r_log) {
    if (has_flag(debug::clc))
       debug::log(".cl", "// Options: " + opts + '\n' + source);
 
    auto ctx = create_context(r_log);
-   auto c = create_compiler_instance(target, tokenize(opts + " input.cl"),
-                                     r_log);
-   auto mod = compile(*ctx, *c, "input.cl", source, headers, target, opts,
-                      r_log);
+   auto c = create_compiler_instance(dev.ir_target(),
+                                     tokenize(opts + " input.cl"), r_log);
+   auto mod = compile(*ctx, *c, "input.cl", source, headers, dev.ir_target(),
+                      opts, r_log);
 
    if (has_flag(debug::llvm))
       debug::log(".ll", print_module_bitcode(*mod));
@@ -269,14 +269,14 @@ namespace {
 
 module
 clover::llvm::link_program(const std::vector<module> &modules,
-                           enum pipe_shader_ir ir, const std::string &target,
+                           const device &dev,
                            const std::string &opts, std::string &r_log) {
    std::vector<std::string> options = tokenize(opts + " input.cl");
    const bool create_library = count("-create-library", options);
    erase_if(equals("-create-library"), options);
 
    auto ctx = create_context(r_log);
-   auto c = create_compiler_instance(target, options, r_log);
+   auto c = create_compiler_instance(dev.ir_target(), options, r_log);
    auto mod = link(*ctx, *c, modules, r_log);
 
    optimize(*mod, c->getCodeGenOpts().OptimizationLevel, !create_library);
@@ -291,11 +291,11 @@ clover::llvm::link_program(const std::vector<module> &modules,
    if (create_library) {
       return build_module_library(*mod, module::section::text_library);
 
-   } else if (ir == PIPE_SHADER_IR_NATIVE) {
+   } else if (dev.ir_format() == PIPE_SHADER_IR_NATIVE) {
       if (has_flag(debug::native))
-         debug::log(id +  ".asm", print_module_native(*mod, target));
+         debug::log(id +  ".asm", print_module_native(*mod, dev.ir_target()));
 
-      return build_module_native(*mod, target, *c, r_log);
+      return build_module_native(*mod, dev.ir_target(), *c, r_log);
 
    } else {
       unreachable("Unsupported IR.");
