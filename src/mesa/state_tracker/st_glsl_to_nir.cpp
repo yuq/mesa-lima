@@ -471,8 +471,6 @@ st_nir_get_mesa_program(struct gl_context *ctx,
                         struct gl_linked_shader *shader)
 {
    struct st_context *st = st_context(ctx);
-   const nir_shader_compiler_options *options =
-      ctx->Const.ShaderCompilerOptions[shader->Program->info.stage].NirOptions;
    struct gl_program *prog;
 
    validate_ir_tree(shader->ir);
