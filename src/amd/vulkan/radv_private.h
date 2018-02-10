@@ -303,6 +303,8 @@ struct radv_instance {
 	uint64_t perftest_flags;
 
 	struct vk_debug_report_instance             debug_report_callbacks;
+
+	struct radv_instance_extension_table enabled_extensions;
 };
 
 VkResult radv_init_wsi(struct radv_physical_device *physical_device);
@@ -639,6 +641,8 @@ struct radv_device {
 
 	/* For detecting VM faults reported by dmesg. */
 	uint64_t dmesg_timestamp;
+
+	struct radv_device_extension_table enabled_extensions;
 };
 
 struct radv_device_memory {

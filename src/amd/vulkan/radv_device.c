@@ -414,6 +414,16 @@ radv_handle_per_app_options(struct radv_instance *instance,
 	}
 }
 
+static int radv_get_instance_extension_index(const char *name)
+{
+	for (unsigned i = 0; i < RADV_INSTANCE_EXTENSION_COUNT; ++i) {
+		if (strcmp(name, radv_instance_extensions[i].extensionName) == 0)
+			return i;
+	}
+	return -1;
+}
+
+
 VkResult radv_CreateInstance(
 	const VkInstanceCreateInfo*                 pCreateInfo,
 	const VkAllocationCallbacks*                pAllocator,
@@ -441,12 +451,6 @@ VkResult radv_CreateInstance(
 				 VK_VERSION_PATCH(client_version));
 	}
 
-	for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-	        const char *ext_name = pCreateInfo->ppEnabledExtensionNames[i];
-		if (!radv_instance_extension_supported(ext_name))
-			return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
-	}
-
 	instance = vk_zalloc2(&default_alloc, pAllocator, sizeof(*instance), 8,
 			      VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
 	if (!instance)
@@ -461,6 +465,18 @@ VkResult radv_CreateInstance(
 
 	instance->apiVersion = client_version;
 	instance->physicalDeviceCount = -1;
+
+	for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+		const char *ext_name = pCreateInfo->ppEnabledExtensionNames[i];
+		int index = radv_get_instance_extension_index(ext_name);
+
+		if (index < 0 || !radv_supported_instance_extensions.extensions[index]) {
+			vk_free2(&default_alloc, pAllocator, instance);
+			return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
+		}
+
+		instance->enabled_extensions.extensions[index] = true;
+	}
 
 	result = vk_debug_report_instance_init(&instance->debug_report_callbacks);
 	if (result != VK_SUCCESS) {
@@ -1091,6 +1107,15 @@ radv_device_init_gs_info(struct radv_device *device)
 	}
 }
 
+static int radv_get_device_extension_index(const char *name)
+{
+	for (unsigned i = 0; i < RADV_DEVICE_EXTENSION_COUNT; ++i) {
+		if (strcmp(name, radv_device_extensions[i].extensionName) == 0)
+			return i;
+	}
+	return -1;
+}
+
 VkResult radv_CreateDevice(
 	VkPhysicalDevice                            physicalDevice,
 	const VkDeviceCreateInfo*                   pCreateInfo,
@@ -1102,15 +1127,6 @@ VkResult radv_CreateDevice(
 	struct radv_device *device;
 
 	bool keep_shader_info = false;
-
-	for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-		const char *ext_name = pCreateInfo->ppEnabledExtensionNames[i];
-		if (!radv_physical_device_extension_supported(physical_device, ext_name))
-			return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
-
-		if (strcmp(ext_name, VK_AMD_SHADER_INFO_EXTENSION_NAME) == 0)
-			keep_shader_info = true;
-	}
 
 	/* Check enabled features */
 	if (pCreateInfo->pEnabledFeatures) {
@@ -1140,6 +1156,19 @@ VkResult radv_CreateDevice(
 		device->alloc = *pAllocator;
 	else
 		device->alloc = physical_device->instance->alloc;
+
+	for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
+		const char *ext_name = pCreateInfo->ppEnabledExtensionNames[i];
+		int index = radv_get_device_extension_index(ext_name);
+		if (index < 0 || !physical_device->supported_extensions.extensions[index]) {
+			vk_free(&device->alloc, device);
+			return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
+		}
+
+		device->enabled_extensions.extensions[index] = true;
+	}
+
+	keep_shader_info = device->enabled_extensions.AMD_shader_info;
 
 	mtx_init(&device->shader_slab_mutex, mtx_plain);
 	list_inithead(&device->shader_slabs);
@@ -2243,16 +2272,6 @@ VkResult radv_DeviceWaitIdle(
 	return VK_SUCCESS;
 }
 
-bool
-radv_instance_extension_supported(const char *name)
-{
-	for (unsigned i = 0; i < RADV_INSTANCE_EXTENSION_COUNT; ++i) {
-		if (strcmp(name, radv_instance_extensions[i].extensionName) == 0)
-			return radv_supported_instance_extensions.extensions[i];
-	}
-	return false;
-}
-
 VkResult radv_EnumerateInstanceExtensionProperties(
     const char*                                 pLayerName,
     uint32_t*                                   pPropertyCount,
@@ -2269,17 +2288,6 @@ VkResult radv_EnumerateInstanceExtensionProperties(
 	}
 
 	return vk_outarray_status(&out);
-}
-
-bool
-radv_physical_device_extension_supported(struct radv_physical_device *device,
-                                        const char *name)
-{
-	for (unsigned i = 0; i < RADV_DEVICE_EXTENSION_COUNT; ++i) {
-		if (strcmp(name, radv_device_extensions[i].extensionName) == 0)
-			return device->supported_extensions.extensions[i];
-	}
-	return false;
 }
 
 VkResult radv_EnumerateDeviceExtensionProperties(
