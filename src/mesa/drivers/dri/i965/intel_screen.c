@@ -2359,57 +2359,6 @@ shader_perf_log_mesa(void *data, const char *fmt, ...)
    va_end(args);
 }
 
-static int
-parse_devid_override(const char *devid_override)
-{
-   static const struct {
-      const char *name;
-      int pci_id;
-   } name_map[] = {
-      { "brw", 0x2a02 },
-      { "g4x", 0x2a42 },
-      { "ilk", 0x0042 },
-      { "snb", 0x0126 },
-      { "ivb", 0x016a },
-      { "hsw", 0x0d2e },
-      { "byt", 0x0f33 },
-      { "bdw", 0x162e },
-      { "chv", 0x22B3 },
-      { "skl", 0x1912 },
-      { "bxt", 0x5A85 },
-      { "kbl", 0x5912 },
-      { "glk", 0x3185 },
-      { "cnl", 0x5a52 },
-   };
-
-   for (unsigned i = 0; i < ARRAY_SIZE(name_map); i++) {
-      if (!strcmp(name_map[i].name, devid_override))
-         return name_map[i].pci_id;
-   }
-
-   return strtol(devid_override, NULL, 0);
-}
-
-/**
- * Get the PCI ID for the device.  This can be overridden by setting the
- * INTEL_DEVID_OVERRIDE environment variable to the desired ID.
- *
- * Returns -1 on ioctl failure.
- */
-static int
-get_pci_device_id(struct intel_screen *screen)
-{
-   if (geteuid() == getuid()) {
-      char *devid_override = getenv("INTEL_DEVID_OVERRIDE");
-      if (devid_override) {
-         screen->no_hw = true;
-         return parse_devid_override(devid_override);
-      }
-   }
-
-   return intel_get_integer(screen, I915_PARAM_CHIPSET_ID);
-}
-
 /**
  * This is the driver specific part of the createNewScreen entry point.
  * Called when using DRI2.
@@ -2447,7 +2396,11 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    screen->driScrnPriv = dri_screen;
    dri_screen->driverPrivate = (void *) screen;
 
-   screen->deviceID = get_pci_device_id(screen);
+   screen->deviceID = gen_get_pci_device_id_override();
+   if (screen->deviceID < 0)
+      screen->deviceID = intel_get_integer(screen, I915_PARAM_CHIPSET_ID);
+   else
+      screen->no_hw = true;
 
    if (!gen_get_device_info(screen->deviceID, &screen->devinfo))
       return NULL;
