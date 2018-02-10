@@ -3070,7 +3070,7 @@ fs_visitor::emit_repclear_shader()
                .MOV(vec4(brw_message_reg(color_mrf)), fs_reg(reg));
    }
 
-   fs_inst *write;
+   fs_inst *write = NULL;
    if (key->nr_color_regions == 1) {
       write = bld.emit(FS_OPCODE_REP_FB_WRITE);
       write->saturate = key->clamp_fragment_color;
