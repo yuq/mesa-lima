@@ -296,10 +296,16 @@ anv_physical_device_init(struct anv_physical_device *device,
 
    device->no_hw = getenv("INTEL_NO_HW") != NULL;
 
-   device->chipset_id = anv_gem_get_param(fd, I915_PARAM_CHIPSET_ID);
-   if (!device->chipset_id) {
-      result = vk_error(VK_ERROR_INCOMPATIBLE_DRIVER);
-      goto fail;
+   const int pci_id_override = gen_get_pci_device_id_override();
+   if (pci_id_override < 0) {
+      device->chipset_id = anv_gem_get_param(fd, I915_PARAM_CHIPSET_ID);
+      if (!device->chipset_id) {
+         result = vk_error(VK_ERROR_INCOMPATIBLE_DRIVER);
+         goto fail;
+      }
+   } else {
+      device->chipset_id = pci_id_override;
+      device->no_hw = true;
    }
 
    device->name = gen_get_device_name(device->chipset_id);
