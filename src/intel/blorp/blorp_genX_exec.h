@@ -1388,7 +1388,7 @@ blorp_emit_surface_states(struct blorp_batch *batch,
                           const struct blorp_params *params)
 {
    const struct isl_device *isl_dev = batch->blorp->isl_dev;
-   uint32_t bind_offset, surface_offsets[2];
+   uint32_t bind_offset = 0, surface_offsets[2];
    void *surface_maps[2];
 
    MAYBE_UNUSED bool has_indirect_clear_color = false;
