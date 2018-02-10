@@ -6171,7 +6171,7 @@ handle_es_outputs_post(struct nir_to_llvm_context *ctx,
 	}
 
 	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
-		LLVMValueRef dw_addr;
+		LLVMValueRef dw_addr = NULL;
 		LLVMValueRef *out_ptr = &ctx->nir->outputs[i * 4];
 		int param_index;
 		int length = 4;
