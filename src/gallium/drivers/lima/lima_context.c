@@ -35,11 +35,38 @@
 #include "lima_submit.h"
 
 #include <lima_drm.h>
+#include <xf86drm.h>
+
+static int
+lima_context_create_drm_ctx(struct lima_screen *screen)
+{
+   struct drm_lima_ctx req = {
+      .op = LIMA_CTX_OP_CREATE,
+   };
+
+   int ret = drmIoctl(screen->fd, DRM_IOCTL_LIMA_CTX, &req);
+   if (ret)
+      return errno;
+
+   return req.id;
+}
+
+static void
+lima_context_free_drm_ctx(struct lima_screen *screen, int id)
+{
+   struct drm_lima_ctx req = {
+      .op = LIMA_CTX_OP_FREE,
+      .id = id,
+   };
+
+   drmIoctl(screen->fd, DRM_IOCTL_LIMA_CTX, &req);
+}
 
 static void
 lima_context_destroy(struct pipe_context *pctx)
 {
    struct lima_context *ctx = lima_context(pctx);
+   struct lima_screen *screen = lima_screen(pctx->screen);
 
    lima_state_fini(ctx);
 
@@ -63,6 +90,8 @@ lima_context_destroy(struct pipe_context *pctx)
    if (ctx->pp_buffer)
       lima_bo_free(ctx->pp_buffer);
 
+   lima_context_free_drm_ctx(screen, ctx->id);
+
    FREE(ctx);
 }
 
@@ -75,6 +104,12 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    ctx = CALLOC_STRUCT(lima_context);
    if (!ctx)
       return NULL;
+
+   ctx->id = lima_context_create_drm_ctx(screen);
+   if (ctx->id < 0) {
+      FREE(ctx);
+      return NULL;
+   }
 
    ctx->base.screen = pscreen;
    ctx->base.destroy = lima_context_destroy;
@@ -106,7 +141,7 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    for (int i = 0; i < max_plb; i++)
       plbu_stream[i] = ctx->share_buffer->va + sh_plb_offset + block_size * i;
 
-   ctx->gp_submit = lima_submit_create(screen, LIMA_PIPE_GP);
+   ctx->gp_submit = lima_submit_create(screen, ctx->id, LIMA_PIPE_GP);
    if (!ctx->gp_submit)
       goto err_out;
 
@@ -128,7 +163,7 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    pp_frame_rsw[9] = ctx->pp_buffer->va + pp_clear_program_offset;
    pp_frame_rsw[13] = 0x00000100;
 
-   ctx->pp_submit = lima_submit_create(screen, LIMA_PIPE_PP);
+   ctx->pp_submit = lima_submit_create(screen, ctx->id, LIMA_PIPE_PP);
    if (!ctx->pp_submit)
       goto err_out;
 
