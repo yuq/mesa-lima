@@ -34,7 +34,7 @@
 
 #define VOID2U64(x) ((uint64_t)(unsigned long)(x))
 
-struct lima_submit *lima_submit_create(struct lima_screen *screen, uint32_t pipe)
+struct lima_submit *lima_submit_create(struct lima_screen *screen, uint32_t ctx, uint32_t pipe)
 {
    struct lima_submit *s;
 
@@ -44,6 +44,7 @@ struct lima_submit *lima_submit_create(struct lima_screen *screen, uint32_t pipe
 
    s->screen = screen;
    s->pipe = pipe;
+   s->ctx = ctx;
    return s;
 }
 
@@ -95,6 +96,7 @@ bool lima_submit_start(struct lima_submit *submit)
       .bos = VOID2U64(submit->gem_bos),
       .frame = VOID2U64(submit->frame),
       .frame_size = submit->frame_size,
+      .ctx = submit->ctx,
    };
 
    bool ret = drmIoctl(submit->screen->fd, DRM_IOCTL_LIMA_GEM_SUBMIT, &req) == 0;
@@ -113,6 +115,7 @@ bool lima_submit_wait(struct lima_submit *submit, uint64_t timeout_ns, bool rela
       .pipe = submit->pipe,
       .fence = submit->fence,
       .timeout_ns = timeout_ns,
+      .ctx = submit->ctx,
    };
 
    if (lima_get_absolute_timeout(&req.timeout_ns, relative))

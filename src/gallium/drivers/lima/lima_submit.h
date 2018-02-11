@@ -34,6 +34,7 @@ struct lima_submit {
    struct lima_screen *screen;
    uint32_t pipe;
    uint32_t fence;
+   uint32_t ctx;
 
    struct lima_bo **bos;
    struct drm_lima_gem_submit_bo *gem_bos;
@@ -44,7 +45,7 @@ struct lima_submit {
    uint32_t frame_size;
 };
 
-struct lima_submit *lima_submit_create(struct lima_screen *screen, uint32_t pipe);
+struct lima_submit *lima_submit_create(struct lima_screen *screen, uint32_t ctx, uint32_t pipe);
 void lima_submit_delete(struct lima_submit *submit);
 bool lima_submit_add_bo(struct lima_submit *submit, struct lima_bo *bo, uint32_t flags);
 
