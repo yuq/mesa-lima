@@ -1375,8 +1375,7 @@ setup_execbuf_for_cmd_buffer(struct anv_execbuf *execbuf,
       .num_cliprects = 0,
       .DR1 = 0,
       .DR4 = 0,
-      .flags = I915_EXEC_HANDLE_LUT | I915_EXEC_RENDER |
-               I915_EXEC_CONSTANTS_REL_GENERAL,
+      .flags = I915_EXEC_HANDLE_LUT | I915_EXEC_RENDER,
       .rsvd1 = cmd_buffer->device->context_id,
       .rsvd2 = 0,
    };
