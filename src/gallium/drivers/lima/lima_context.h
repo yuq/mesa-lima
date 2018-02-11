@@ -218,6 +218,8 @@ struct lima_context {
 
    struct lima_submit *gp_submit;
    struct lima_submit *pp_submit;
+
+   int id;
 };
 
 static inline struct lima_context *
