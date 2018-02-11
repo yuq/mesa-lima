@@ -2311,10 +2311,15 @@ VkResult radv_EnumerateDeviceExtensionProperties(
 }
 
 PFN_vkVoidFunction radv_GetInstanceProcAddr(
-	VkInstance                                  instance,
+	VkInstance                                  _instance,
 	const char*                                 pName)
 {
-	return radv_lookup_entrypoint(pName);
+	RADV_FROM_HANDLE(radv_instance, instance, _instance);
+
+	return radv_lookup_entrypoint_checked(pName,
+	                                      instance ? instance->apiVersion : 0,
+	                                      instance ? &instance->enabled_extensions : NULL,
+	                                      NULL);
 }
 
 /* The loader wants us to expose a second GetInstanceProcAddr function
@@ -2334,10 +2339,15 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_icdGetInstanceProcAddr(
 }
 
 PFN_vkVoidFunction radv_GetDeviceProcAddr(
-	VkDevice                                    device,
+	VkDevice                                    _device,
 	const char*                                 pName)
 {
-	return radv_lookup_entrypoint(pName);
+	RADV_FROM_HANDLE(radv_device, device, _device);
+
+	return radv_lookup_entrypoint_checked(pName,
+	                                      device->instance->apiVersion,
+	                                      &device->instance->enabled_extensions,
+	                                      &device->enabled_extensions);
 }
 
 bool radv_get_memory_fd(struct radv_device *device,

@@ -185,7 +185,45 @@ static const uint16_t map[] = {
 % endfor
 };
 
-void *
+/** Return true if the core version or extension in which the given entrypoint
+ * is defined is enabled.
+ *
+ * If instance is NULL, we only allow the 3 commands explicitly allowed by the vk
+ * spec.
+ *
+ * If device is NULL, all device extensions are considered enabled.
+ */
+static bool
+radv_entrypoint_is_enabled(int index, uint32_t core_version,
+                          const struct radv_instance_extension_table *instance,
+                          const struct radv_device_extension_table *device)
+{
+   switch (index) {
+% for e in entrypoints:
+   case ${e.num}:
+   % if not e.device_command:
+      if (device) return false;
+   % endif
+   % if e.name == 'vkCreateInstance' or e.name == 'vkEnumerateInstanceExtensionProperties' or e.name == 'vkEnumerateInstanceLayerProperties':
+      return !device;
+   % elif e.core_version:
+      return instance && ${e.core_version.c_vk_version()} <= core_version;
+   % elif e.extension:
+      % if e.extension.type == 'instance':
+      return instance && instance->${e.extension.name[3:]};
+      % else:
+      return instance && (!device || device->${e.extension.name[3:]});
+      % endif
+   % else:
+      return instance;
+   % endif
+% endfor
+   default:
+      return false;
+   }
+}
+
+static int
 radv_lookup_entrypoint(const char *name)
 {
    static const uint32_t prime_factor = ${prime_factor};
@@ -202,15 +240,36 @@ radv_lookup_entrypoint(const char *name)
    do {
       i = map[h & ${hash_mask}];
       if (i == none)
-         return NULL;
+         return -1;
       e = &entrypoints[i];
       h += prime_step;
    } while (e->hash != hash);
 
    if (strcmp(name, strings + e->name) != 0)
-      return NULL;
+      return -1;
 
-   return radv_resolve_entrypoint(i);
+   return i;
+}
+
+void *
+radv_lookup_entrypoint_unchecked(const char *name)
+{
+   int index = radv_lookup_entrypoint(name);
+   if (index < 0)
+      return NULL;
+   return radv_resolve_entrypoint(index);
+}
+
+void *
+radv_lookup_entrypoint_checked(const char *name,
+                               uint32_t core_version,
+                               const struct radv_instance_extension_table *instance,
+                               const struct radv_device_extension_table *device)
+{
+   int index = radv_lookup_entrypoint(name);
+   if (index < 0 || !radv_entrypoint_is_enabled(index, core_version, instance, device))
+      return NULL;
+   return radv_resolve_entrypoint(index);
 }""", output_encoding='utf-8')
 
 NONE = 0xffff
@@ -239,6 +298,7 @@ class Entrypoint(object):
         # Extensions which require this entrypoint
         self.core_version = None
         self.extension = None
+        self.device_command = len(params) > 0 and (params[0].type == 'VkDevice' or params[0].type == 'VkQueue' or params[0].type == 'VkCommandBuffer')
 
     def prefixed_name(self, prefix):
         assert self.name.startswith('vk')
