@@ -4017,6 +4017,7 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
    }
 
    if (var->data.fb_fetch_output) {
+      var->data.assigned = true;
       var->data.memory_coherent = !qual->flags.q.non_coherent;
 
       /* From the EXT_shader_framebuffer_fetch spec:
