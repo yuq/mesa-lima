@@ -140,6 +140,7 @@ namespace SwrJit
     Value *Builder::GATHERPS(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale)
     {
         Value *vGather;
+        Value *pBasePtr = INT_TO_PTR(pBase, PointerType::get(mInt8Ty, 0));
 
         // use avx2 gather instruction if available
         if (JM()->mArch.AVX2())
@@ -147,7 +148,7 @@ namespace SwrJit
             // force mask to <N x float>, required by vgather
             Value *mask = BITCAST(VMASK(vMask), mSimdFP32Ty);
 
-            vGather = VGATHERPS(vSrc, pBase, vIndices, mask, C(scale));
+            vGather = VGATHERPS(vSrc, pBasePtr, vIndices, mask, C(scale));
         }
         else
         {
@@ -165,7 +166,7 @@ namespace SwrJit
                 // single component byte index
                 Value *offset = VEXTRACT(vOffsets, C(i));
                 // byte pointer to component
-                Value *loadAddress = GEP(pBase, offset);
+                Value *loadAddress = GEP(pBasePtr, offset);
                 loadAddress = BITCAST(loadAddress, PointerType::get(mFP32Ty, 0));
                 // pointer to the value to load if we're masking off a component
                 Value *maskLoadAddress = GEP(vSrcPtr, { C(0), C(i) });
