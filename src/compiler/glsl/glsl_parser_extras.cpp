@@ -1011,7 +1011,7 @@ _mesa_ast_process_interface_block(YYLTYPE *locp,
                            "an instance name are not allowed");
    }
 
-   uint64_t interface_type_mask;
+   ast_type_qualifier::bitset_t interface_type_mask;
    struct ast_type_qualifier temp_type_qualifier;
 
    /* Get a bitmask containing only the in/out/uniform/buffer
@@ -1030,7 +1030,7 @@ _mesa_ast_process_interface_block(YYLTYPE *locp,
     * production rule guarantees that only one bit will be set (and
     * it will be in/out/uniform).
     */
-   uint64_t block_interface_qualifier = q.flags.i;
+   ast_type_qualifier::bitset_t block_interface_qualifier = q.flags.i;
 
    block->default_layout.flags.i |= block_interface_qualifier;
 
