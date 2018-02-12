@@ -635,6 +635,11 @@ struct ast_type_qualifier {
          unsigned bound_sampler:1;
          unsigned bound_image:1;
          /** \} */
+
+         /** \name Layout qualifiers for GL_EXT_shader_framebuffer_fetch_non_coherent */
+         /** \{ */
+         unsigned non_coherent:1;
+         /** \} */
       }
       /** \brief Set of flags, accessed by name. */
       q;

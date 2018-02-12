@@ -1194,6 +1194,7 @@ builtin_variable_generator::generate_fs_special_vars()
       var->data.precision = GLSL_PRECISION_MEDIUM;
       var->data.read_only = 1;
       var->data.fb_fetch_output = 1;
+      var->data.memory_coherent = 1;
    }
 
    if (state->es_shader && state->language_version == 100 && state->EXT_blend_func_extended_enable) {
