@@ -6744,7 +6744,7 @@ static void prepare_gs_input_vgprs(struct nir_to_llvm_context *ctx)
 }
 
 void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
-		      struct nir_shader *nir, struct nir_to_llvm_context *nctx)
+		      struct nir_shader *nir)
 {
 	struct ac_nir_context ctx = {};
 	struct nir_function *func;
@@ -6924,7 +6924,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		nir_foreach_variable(variable, &shaders[i]->outputs)
 			scan_shader_output_decl(&ctx, variable, shaders[i], shaders[i]->info.stage);
 
-		ac_nir_translate(&ctx.ac, &ctx.abi, shaders[i], &ctx);
+		ac_nir_translate(&ctx.ac, &ctx.abi, shaders[i]);
 
 		if (shader_count >= 2) {
 			LLVMBuildBr(ctx.ac.builder, merge_block);

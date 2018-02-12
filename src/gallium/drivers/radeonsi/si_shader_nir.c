@@ -861,7 +861,7 @@ bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 		assert(nir->info.stage == MESA_SHADER_COMPUTE);
 		si_declare_compute_memory(ctx);
 	}
-	ac_nir_translate(&ctx->ac, &ctx->abi, nir, NULL);
+	ac_nir_translate(&ctx->ac, &ctx->abi, nir);
 
 	return true;
 }
