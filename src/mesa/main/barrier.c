@@ -134,5 +134,5 @@ _mesa_BlendBarrier(void)
       return;
    }
 
-   ctx->Driver.BlendBarrier(ctx);
+   ctx->Driver.FramebufferFetchBarrier(ctx);
 }
