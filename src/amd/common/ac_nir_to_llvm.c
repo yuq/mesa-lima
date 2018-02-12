@@ -3786,12 +3786,10 @@ static LLVMValueRef visit_image_size(struct ac_nir_context *ctx,
 {
 	LLVMValueRef res;
 	const nir_variable *var = instr->variables[0]->var;
-	const struct glsl_type *type = instr->variables[0]->var->type;
-	bool da = glsl_sampler_type_is_array(var->type) ||
-		  glsl_get_sampler_dim(var->type) == GLSL_SAMPLER_DIM_CUBE ||
-		  glsl_get_sampler_dim(var->type) == GLSL_SAMPLER_DIM_3D;
-	if(instr->variables[0]->deref.child)
-		type = instr->variables[0]->deref.child->type;
+	const struct glsl_type *type = glsl_without_array(var->type);
+	bool da = glsl_sampler_type_is_array(type) ||
+		  glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE ||
+		  glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_3D;
 
 	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_BUF)
 		return get_buffer_size(ctx,
