@@ -420,11 +420,6 @@ llvmpipe_get_paramf(struct pipe_screen *screen, enum pipe_capf param)
       return 16.0; /* not actually signficant at this time */
    case PIPE_CAPF_MAX_TEXTURE_LOD_BIAS:
       return 16.0; /* arbitrary */
-   case PIPE_CAPF_GUARD_BAND_LEFT:
-   case PIPE_CAPF_GUARD_BAND_TOP:
-   case PIPE_CAPF_GUARD_BAND_RIGHT:
-   case PIPE_CAPF_GUARD_BAND_BOTTOM:
-      return 0.0;
    }
    /* should only get here on unhandled cases */
    debug_printf("Unexpected PIPE_CAP %d query\n", param);

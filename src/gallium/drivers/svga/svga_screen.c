@@ -167,11 +167,6 @@ svga_get_paramf(struct pipe_screen *screen, enum pipe_capf param)
    case PIPE_CAPF_MAX_TEXTURE_LOD_BIAS:
       return 15.0;
 
-   case PIPE_CAPF_GUARD_BAND_LEFT:
-   case PIPE_CAPF_GUARD_BAND_TOP:
-   case PIPE_CAPF_GUARD_BAND_RIGHT:
-   case PIPE_CAPF_GUARD_BAND_BOTTOM:
-      return 0.0;
    }
 
    debug_printf("Unexpected PIPE_CAPF_ query %u\n", param);

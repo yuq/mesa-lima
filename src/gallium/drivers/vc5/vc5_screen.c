@@ -332,11 +332,6 @@ vc5_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
                 return 0.0f;
         case PIPE_CAPF_MAX_TEXTURE_LOD_BIAS:
                 return 16.0f;
-        case PIPE_CAPF_GUARD_BAND_LEFT:
-        case PIPE_CAPF_GUARD_BAND_TOP:
-        case PIPE_CAPF_GUARD_BAND_RIGHT:
-        case PIPE_CAPF_GUARD_BAND_BOTTOM:
-                return 0.0f;
         default:
                 fprintf(stderr, "unknown paramf %d\n", param);
                 return 0;

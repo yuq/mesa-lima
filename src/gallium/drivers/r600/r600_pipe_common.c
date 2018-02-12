@@ -910,11 +910,6 @@ static float r600_get_paramf(struct pipe_screen* pscreen,
 		return 16.0f;
 	case PIPE_CAPF_MAX_TEXTURE_LOD_BIAS:
 		return 16.0f;
-	case PIPE_CAPF_GUARD_BAND_LEFT:
-	case PIPE_CAPF_GUARD_BAND_TOP:
-	case PIPE_CAPF_GUARD_BAND_RIGHT:
-	case PIPE_CAPF_GUARD_BAND_BOTTOM:
-		return 0.0f;
 	}
 	return 0.0f;
 }

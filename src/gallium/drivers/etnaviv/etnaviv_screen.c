@@ -367,11 +367,6 @@ etna_screen_get_paramf(struct pipe_screen *pscreen, enum pipe_capf param)
       return 16.0f;
    case PIPE_CAPF_MAX_TEXTURE_LOD_BIAS:
       return util_last_bit(screen->specs.max_texture_size);
-   case PIPE_CAPF_GUARD_BAND_LEFT:
-   case PIPE_CAPF_GUARD_BAND_TOP:
-   case PIPE_CAPF_GUARD_BAND_RIGHT:
-   case PIPE_CAPF_GUARD_BAND_BOTTOM:
-      return 0.0f;
    }
 
    debug_printf("unknown paramf %d", param);

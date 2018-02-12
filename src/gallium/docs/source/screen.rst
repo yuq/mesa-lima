@@ -431,10 +431,6 @@ The floating-point capabilities are:
   applied to anisotropically filtered textures.
 * ``PIPE_CAPF_MAX_TEXTURE_LOD_BIAS``: The maximum :term:`LOD` bias that may be applied
   to filtered textures.
-* ``PIPE_CAPF_GUARD_BAND_LEFT``,
-  ``PIPE_CAPF_GUARD_BAND_TOP``,
-  ``PIPE_CAPF_GUARD_BAND_RIGHT``,
-  ``PIPE_CAPF_GUARD_BAND_BOTTOM``: TODO
 
 
 .. _pipe_shader_cap:
