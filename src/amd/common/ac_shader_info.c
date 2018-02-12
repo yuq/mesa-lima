@@ -180,12 +180,27 @@ gather_info_block(const nir_shader *nir, const nir_block *block,
 }
 
 static void
+gather_info_input_decl_ps(const nir_shader *nir, const nir_variable *var,
+			  struct ac_shader_info *info)
+{
+	const struct glsl_type *type = glsl_without_array(var->type);
+
+	if (glsl_get_base_type(type) == GLSL_TYPE_FLOAT) {
+		if (var->data.sample)
+			info->ps.force_persample = true;
+	}
+}
+
+static void
 gather_info_input_decl(const nir_shader *nir, const nir_variable *var,
 		       struct ac_shader_info *info)
 {
 	switch (nir->info.stage) {
 	case MESA_SHADER_VERTEX:
 		info->vs.has_vertex_buffers = true;
+		break;
+	case MESA_SHADER_FRAGMENT:
+		gather_info_input_decl_ps(nir, var, info);
 		break;
 	default:
 		break;

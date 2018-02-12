@@ -5499,10 +5499,9 @@ handle_fs_input_decl(struct nir_to_llvm_context *ctx,
 
 	if (glsl_get_base_type(glsl_without_array(variable->type)) == GLSL_TYPE_FLOAT) {
 		unsigned interp_type;
-		if (variable->data.sample) {
+		if (variable->data.sample)
 			interp_type = INTERP_SAMPLE;
-			ctx->shader_info->info.ps.force_persample = true;
-		} else if (variable->data.centroid)
+		else if (variable->data.centroid)
 			interp_type = INTERP_CENTROID;
 		else
 			interp_type = INTERP_CENTER;
