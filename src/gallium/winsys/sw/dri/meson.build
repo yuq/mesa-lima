@@ -1,4 +1,5 @@
 # Copyright © 2017 Dylan Baker
+# Copyright © 2018 Intel Corporation
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,5 +24,4 @@ libswdri = static_library(
   files('dri_sw_winsys.c', 'dri_sw_winsys.h'),
   c_args : c_vis_args,
   include_directories : [inc_gallium, inc_include, inc_src, inc_gallium_aux],
-  build_by_default : false,
 )
