@@ -1032,7 +1032,7 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
       brw_wm_prog_data(brw->wm.base.prog_data);
 
    if (wm_prog_data->has_render_target_reads &&
-       !ctx->Extensions.MESA_shader_framebuffer_fetch) {
+       !ctx->Extensions.EXT_shader_framebuffer_fetch) {
       /* _NEW_BUFFERS */
       const struct gl_framebuffer *fb = ctx->DrawBuffer;
 

@@ -575,7 +575,7 @@ static const int extra_core_ARB_color_buffer_float_and_new_buffers[] = {
 static const int extra_EXT_shader_framebuffer_fetch[] = {
    EXTRA_API_ES2,
    EXTRA_API_ES3,
-   EXT(MESA_shader_framebuffer_fetch),
+   EXT(EXT_shader_framebuffer_fetch),
    EXTRA_END
 };
 

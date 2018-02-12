@@ -513,7 +513,7 @@ brw_predraw_resolve_framebuffer(struct brw_context *brw,
    }
 
    /* Resolve color buffers for non-coherent framebuffer fetch. */
-   if (!ctx->Extensions.MESA_shader_framebuffer_fetch &&
+   if (!ctx->Extensions.EXT_shader_framebuffer_fetch &&
        ctx->FragmentProgram._Current &&
        ctx->FragmentProgram._Current->info.outputs_read) {
       const struct gl_framebuffer *fb = ctx->DrawBuffer;

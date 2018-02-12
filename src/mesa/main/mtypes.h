@@ -4351,8 +4351,8 @@ struct gl_extensions
    GLboolean KHR_texture_compression_astc_sliced_3d;
    GLboolean MESA_tile_raster_order;
    GLboolean MESA_pack_invert;
-   GLboolean MESA_shader_framebuffer_fetch;
-   GLboolean MESA_shader_framebuffer_fetch_non_coherent;
+   GLboolean EXT_shader_framebuffer_fetch;
+   GLboolean EXT_shader_framebuffer_fetch_non_coherent;
    GLboolean MESA_shader_integer_functions;
    GLboolean MESA_ycbcr_texture;
    GLboolean NV_conditional_render;

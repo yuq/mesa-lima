@@ -573,7 +573,7 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
    key->program_string_id = fp->id;
 
    /* Whether reads from the framebuffer should behave coherently. */
-   key->coherent_fb_fetch = ctx->Extensions.MESA_shader_framebuffer_fetch;
+   key->coherent_fb_fetch = ctx->Extensions.EXT_shader_framebuffer_fetch;
 }
 
 void
@@ -645,7 +645,7 @@ brw_fs_precompile(struct gl_context *ctx, struct gl_program *prog)
    key.program_string_id = bfp->id;
 
    /* Whether reads from the framebuffer should behave coherently. */
-   key.coherent_fb_fetch = ctx->Extensions.MESA_shader_framebuffer_fetch;
+   key.coherent_fb_fetch = ctx->Extensions.EXT_shader_framebuffer_fetch;
 
    uint32_t old_prog_offset = brw->wm.base.prog_offset;
    struct brw_stage_prog_data *old_prog_data = brw->wm.base.prog_data;
