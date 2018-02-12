@@ -920,6 +920,8 @@ static int map_tgsi_reg_index_to_r600_gpr(struct r600_shader_ctx *ctx, unsigned 
 			}
 		}
 
+		if (tgsi_reg_index < ctx->array_infos[i].range.First)
+			break;
 		if (ctx->spilled_arrays[i]) {
 			spilled_size += ctx->array_infos[i].range.Last - ctx->array_infos[i].range.First + 1;
 		}
