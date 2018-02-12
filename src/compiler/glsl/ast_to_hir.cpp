@@ -3994,8 +3994,13 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
    else if (qual->flags.q.shared_storage)
       var->data.mode = ir_var_shader_shared;
 
-   var->data.fb_fetch_output = state->stage == MESA_SHADER_FRAGMENT &&
-                               qual->flags.q.in && qual->flags.q.out;
+   if (!is_parameter && state->has_framebuffer_fetch() &&
+       state->stage == MESA_SHADER_FRAGMENT) {
+      if (state->is_version(130, 300))
+         var->data.fb_fetch_output = qual->flags.q.in && qual->flags.q.out;
+      else
+         var->data.fb_fetch_output = (strcmp(var->name, "gl_LastFragData") == 0);
+   }
 
    if (!is_parameter && is_varying_var(var, state->stage)) {
       /* User-defined ins/outs are not permitted in compute shaders. */
