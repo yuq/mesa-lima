@@ -800,7 +800,7 @@ brw_inst_##reg##_type(const struct gen_device_info *devinfo,                  \
                       const brw_inst *inst)                                   \
 {                                                                             \
    unsigned file = __builtin_strcmp("dst", #reg) == 0 ?                       \
-                   BRW_GENERAL_REGISTER_FILE :                                \
+                   (unsigned) BRW_GENERAL_REGISTER_FILE :                     \
                    brw_inst_##reg##_reg_file(devinfo, inst);                  \
    unsigned hw_type = brw_inst_##reg##_reg_hw_type(devinfo, inst);            \
    return brw_hw_type_to_reg_type(devinfo, (enum brw_reg_file)file, hw_type); \
