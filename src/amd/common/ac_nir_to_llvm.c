@@ -68,7 +68,6 @@ struct nir_to_llvm_context {
 	const struct ac_nir_compiler_options *options;
 	struct ac_shader_variant_info *shader_info;
 	struct ac_shader_abi abi;
-	struct ac_nir_context *nir;
 
 	unsigned max_workgroup_size;
 	LLVMContextRef context;
@@ -6753,9 +6752,6 @@ void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 	ctx.ac = *ac;
 	ctx.abi = abi;
 
-	if (nctx)
-		nctx->nir = &ctx;
-
 	ctx.stage = nir->info.stage;
 
 	ctx.main_function = LLVMGetBasicBlockParent(LLVMGetInsertBlock(ctx.ac.builder));
@@ -6788,9 +6784,6 @@ void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 	ralloc_free(ctx.defs);
 	ralloc_free(ctx.phis);
 	ralloc_free(ctx.vars);
-
-	if (nctx)
-		nctx->nir = NULL;
 }
 
 static
@@ -7251,16 +7244,12 @@ void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
 	nir_ctx.ac = ctx.ac;
 	nir_ctx.abi = &ctx.abi;
 
-	ctx.nir = &nir_ctx;
-
 	nir_foreach_variable(variable, &geom_shader->outputs) {
 		scan_shader_output_decl(&ctx, variable, geom_shader, MESA_SHADER_VERTEX);
 		handle_shader_output_decl(&nir_ctx, geom_shader, variable);
 	}
 
 	ac_gs_copy_shader_emit(&ctx);
-
-	ctx.nir = NULL;
 
 	LLVMBuildRetVoid(ctx.ac.builder);
 
