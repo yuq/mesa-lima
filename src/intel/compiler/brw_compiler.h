@@ -1274,7 +1274,7 @@ encode_slm_size(unsigned gen, uint32_t bytes)
  * '2^n - 1' for some n.
  */
 static inline bool
-brw_stage_has_packed_dispatch(const struct gen_device_info *devinfo,
+brw_stage_has_packed_dispatch(MAYBE_UNUSED const struct gen_device_info *devinfo,
                               gl_shader_stage stage,
                               const struct brw_stage_prog_data *prog_data)
 {

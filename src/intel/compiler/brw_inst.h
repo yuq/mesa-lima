@@ -343,7 +343,7 @@ REG_TYPE(src2)
  *  @{
  */
 static inline uint16_t
-brw_inst_3src_a1_src0_imm(const struct gen_device_info *devinfo,
+brw_inst_3src_a1_src0_imm(MAYBE_UNUSED const struct gen_device_info *devinfo,
                           const brw_inst *insn)
 {
    assert(devinfo->gen >= 10);
@@ -351,7 +351,7 @@ brw_inst_3src_a1_src0_imm(const struct gen_device_info *devinfo,
 }
 
 static inline uint16_t
-brw_inst_3src_a1_src2_imm(const struct gen_device_info *devinfo,
+brw_inst_3src_a1_src2_imm(MAYBE_UNUSED const struct gen_device_info *devinfo,
                           const brw_inst *insn)
 {
    assert(devinfo->gen >= 10);
@@ -359,7 +359,7 @@ brw_inst_3src_a1_src2_imm(const struct gen_device_info *devinfo,
 }
 
 static inline void
-brw_inst_set_3src_a1_src0_imm(const struct gen_device_info *devinfo,
+brw_inst_set_3src_a1_src0_imm(MAYBE_UNUSED const struct gen_device_info *devinfo,
                               brw_inst *insn, uint16_t value)
 {
    assert(devinfo->gen >= 10);
@@ -367,7 +367,7 @@ brw_inst_set_3src_a1_src0_imm(const struct gen_device_info *devinfo,
 }
 
 static inline void
-brw_inst_set_3src_a1_src2_imm(const struct gen_device_info *devinfo,
+brw_inst_set_3src_a1_src2_imm(MAYBE_UNUSED const struct gen_device_info *devinfo,
                               brw_inst *insn, uint16_t value)
 {
    assert(devinfo->gen >= 10);
@@ -700,7 +700,8 @@ brw_inst_imm_ud(const struct gen_device_info *devinfo, const brw_inst *insn)
 }
 
 static inline uint64_t
-brw_inst_imm_uq(const struct gen_device_info *devinfo, const brw_inst *insn)
+brw_inst_imm_uq(MAYBE_UNUSED const struct gen_device_info *devinfo,
+                const brw_inst *insn)
 {
    assert(devinfo->gen >= 8);
    return brw_inst_bits(insn, 127, 64);
