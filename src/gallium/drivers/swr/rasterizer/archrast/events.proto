@@ -21,6 +21,14 @@
 #
 # Provides definitions for events.
 
+enum AR_DRAW_TYPE
+{
+    Instanced = 0,
+    IndexedInstanced = 1,
+    InstancedSplit = 2,
+    IndexedInstancedSplit = 3
+};
+
 event ThreadStartApiEvent
 {
 };
@@ -29,20 +37,12 @@ event ThreadStartWorkerEvent
 {
 };
 
-event DrawInstancedEvent
+event DrawInfoEvent
 {
     uint32_t drawId;
+    AR_DRAW_TYPE type;
     uint32_t topology;
     uint32_t numVertices;
-    int32_t  startVertex;
-    uint32_t numInstances;
-    uint32_t startInstance;
-};
-
-event DrawIndexedInstancedEvent
-{
-    uint32_t drawId;
-    uint32_t topology;
     uint32_t numIndices;
     int32_t  indexOffset;
     int32_t  baseVertex;
@@ -62,18 +62,6 @@ event FrameEndEvent
 {
     uint32_t frameId;
     uint32_t nextDrawId;
-};
-
-///@brief API Stat: Split draw event for DrawInstanced. In certain cases, Rasty can split draws up into smaller draws.
-event DrawInstancedSplitEvent
-{
-    uint32_t drawId;
-};
-
-///@brief API Stat: Split draw event for DrawIndexedInstanced.
-event DrawIndexedInstancedSplitEvent
-{
-    uint32_t drawId;
 };
 
 ///@brief API Stat: Synchonization event.

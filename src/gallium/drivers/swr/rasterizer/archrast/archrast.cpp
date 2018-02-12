@@ -173,6 +173,34 @@ namespace ArchRast
             mClipper.trivialAcceptCount += _mm_popcnt_u32(event.data.validMask & ~event.data.clipMask);
         }
 
+        virtual void Handle(const DrawInstancedEvent& event)
+        {
+            DrawInfoEvent e(event.data.drawId, event.data.type, event.data.topology, event.data.numVertices, 0, 0, event.data.startVertex, event.data.numInstances, event.data.startInstance);
+
+            EventHandlerFile::Handle(e);
+        }
+
+        virtual void Handle(const DrawIndexedInstancedEvent& event)
+        {
+            DrawInfoEvent e(event.data.drawId, event.data.type, event.data.topology, 0, event.data.numIndices, event.data.indexOffset, event.data.baseVertex, event.data.numInstances, event.data.startInstance);
+
+            EventHandlerFile::Handle(e);
+        }
+
+        virtual void Handle(const DrawInstancedSplitEvent& event)
+        {
+            DrawInfoEvent e(event.data.drawId, event.data.type, 0, 0, 0, 0, 0, 0, 0);
+
+            EventHandlerFile::Handle(e);
+        }
+
+        virtual void Handle(const DrawIndexedInstancedSplitEvent& event)
+        {
+            DrawInfoEvent e(event.data.drawId, event.data.type, 0, 0, 0, 0, 0, 0, 0);
+
+            EventHandlerFile::Handle(e);
+        }
+
         // Flush cached events for this draw
         virtual void FlushDraw(uint32_t drawId)
         {
