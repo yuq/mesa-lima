@@ -252,7 +252,7 @@ MUST_CHECK void *brw_bo_map(struct brw_context *brw, struct brw_bo *bo, unsigned
  * Reduces the refcount on the userspace mapping of the buffer
  * object.
  */
-static inline int brw_bo_unmap(struct brw_bo *bo) { return 0; }
+static inline int brw_bo_unmap(UNUSED struct brw_bo *bo) { return 0; }
 
 /** Write data into an object. */
 int brw_bo_subdata(struct brw_bo *bo, uint64_t offset,
