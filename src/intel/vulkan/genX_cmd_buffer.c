@@ -883,8 +883,12 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
       if (image->samples == 1) {
          for (uint32_t l = 0; l < level_count; l++) {
             const uint32_t level = base_level + l;
+
+            uint32_t aux_layers = anv_image_aux_layers(image, aspect, level);
+            if (base_layer >= aux_layers)
+               break; /* We will only get fewer layers as level increases */
             uint32_t level_layer_count =
-               MIN2(layer_count, anv_image_aux_layers(image, aspect, level));
+               MIN2(layer_count, aux_layers - base_layer);
 
             anv_image_ccs_op(cmd_buffer, image, aspect, level,
                              base_layer, level_layer_count,
@@ -972,8 +976,12 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
 
    for (uint32_t l = 0; l < level_count; l++) {
       uint32_t level = base_level + l;
+
+      uint32_t aux_layers = anv_image_aux_layers(image, aspect, level);
+      if (base_layer >= aux_layers)
+         break; /* We will only get fewer layers as level increases */
       uint32_t level_layer_count =
-         MIN2(layer_count, anv_image_aux_layers(image, aspect, level));
+         MIN2(layer_count, aux_layers - base_layer);
 
       for (uint32_t a = 0; a < level_layer_count; a++) {
          uint32_t array_layer = base_layer + a;
