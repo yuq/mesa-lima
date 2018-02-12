@@ -28,6 +28,8 @@
 
 #include "compiler/shader_enums.h"
 
+#define AC_LLVM_MAX_OUTPUTS (VARYING_SLOT_VAR31 + 1)
+
 enum ac_descriptor_type {
 	AC_DESC_IMAGE,
 	AC_DESC_FMASK,
@@ -63,6 +65,8 @@ struct ac_shader_abi {
 	/* Vulkan only */
 	LLVMValueRef push_constants;
 	LLVMValueRef view_index;
+
+	LLVMValueRef outputs[AC_LLVM_MAX_OUTPUTS * 4];
 
 	/* For VS and PS: pre-loaded shader inputs.
 	 *

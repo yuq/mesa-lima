@@ -44,7 +44,6 @@ enum radeon_llvm_calling_convention {
 };
 
 #define RADEON_LLVM_MAX_INPUTS (VARYING_SLOT_VAR31 + 1)
-#define RADEON_LLVM_MAX_OUTPUTS (VARYING_SLOT_VAR31 + 1)
 
 struct ac_nir_context {
 	struct ac_llvm_context ac;
@@ -59,8 +58,6 @@ struct ac_nir_context {
 	LLVMValueRef main_function;
 	LLVMBasicBlockRef continue_block;
 	LLVMBasicBlockRef break_block;
-
-	LLVMValueRef outputs[RADEON_LLVM_MAX_OUTPUTS * 4];
 
 	int num_locals;
 	LLVMValueRef *locals;
@@ -3240,7 +3237,7 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 						instr->variables[0]->var->type, false);
 				count -= chan / 4;
 				LLVMValueRef tmp_vec = ac_build_gather_values_extended(
-						&ctx->ac, ctx->outputs + idx + chan, count,
+						&ctx->ac, ctx->abi->outputs + idx + chan, count,
 						stride, true, true);
 
 				values[chan] = LLVMBuildExtractElement(ctx->ac.builder,
@@ -3248,7 +3245,7 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 								       indir_index, "");
 			} else {
 				values[chan] = LLVMBuildLoad(ctx->ac.builder,
-						     ctx->outputs[idx + chan + const_index * stride],
+						     ctx->abi->outputs[idx + chan + const_index * stride],
 						     "");
 			}
 		}
@@ -3320,16 +3317,16 @@ visit_store_var(struct ac_nir_context *ctx,
 						instr->variables[0]->var->type, false);
 				count -= chan / 4;
 				LLVMValueRef tmp_vec = ac_build_gather_values_extended(
-						&ctx->ac, ctx->outputs + idx + chan, count,
+						&ctx->ac, ctx->abi->outputs + idx + chan, count,
 						stride, true, true);
 
 				tmp_vec = LLVMBuildInsertElement(ctx->ac.builder, tmp_vec,
 							         value, indir_index, "");
-				build_store_values_extended(&ctx->ac, ctx->outputs + idx + chan,
+				build_store_values_extended(&ctx->ac, ctx->abi->outputs + idx + chan,
 							    count, stride, tmp_vec);
 
 			} else {
-				temp_ptr = ctx->outputs[idx + chan + const_index * stride];
+				temp_ptr = ctx->abi->outputs[idx + chan + const_index * stride];
 
 				LLVMBuildStore(ctx->ac.builder, value, temp_ptr);
 			}
@@ -4234,7 +4231,7 @@ visit_emit_vertex(struct ac_shader_abi *abi, unsigned stream, LLVMValueRef *addr
 
 	/* loop num outputs */
 	idx = 0;
-	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
+	for (unsigned i = 0; i < AC_LLVM_MAX_OUTPUTS; ++i) {
 		LLVMValueRef *out_ptr = &addrs[i * 4];
 		int length = 4;
 		int slot = idx;
@@ -4556,7 +4553,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		result = visit_interp(ctx, instr);
 		break;
 	case nir_intrinsic_emit_vertex:
-		ctx->abi->emit_vertex(ctx->abi, nir_intrinsic_stream_id(instr), ctx->outputs);
+		ctx->abi->emit_vertex(ctx->abi, nir_intrinsic_stream_id(instr), ctx->abi->outputs);
 		break;
 	case nir_intrinsic_end_primitive:
 		ctx->abi->emit_primitive(ctx->abi, nir_intrinsic_stream_id(instr));
@@ -5709,7 +5706,7 @@ handle_shader_output_decl(struct ac_nir_context *ctx,
 
 	for (unsigned i = 0; i < attrib_count; ++i) {
 		for (unsigned chan = 0; chan < 4; chan++) {
-			ctx->outputs[radeon_llvm_reg_index_soa(output_loc + i, chan)] =
+			ctx->abi->outputs[radeon_llvm_reg_index_soa(output_loc + i, chan)] =
 		                       si_build_alloca_undef(&ctx->ac, ctx->ac.f32, "");
 		}
 	}
@@ -5955,7 +5952,7 @@ static LLVMValueRef
 radv_load_output(struct nir_to_llvm_context *ctx, unsigned index, unsigned chan)
 {
 	LLVMValueRef output =
-		ctx->nir->outputs[radeon_llvm_reg_index_soa(index, chan)];
+		ctx->abi.outputs[radeon_llvm_reg_index_soa(index, chan)];
 
 	return LLVMBuildLoad(ctx->ac.builder, output, "");
 }
@@ -5973,10 +5970,10 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 	int i;
 
 	if (ctx->options->key.has_multiview_view_index) {
-		LLVMValueRef* tmp_out = &ctx->nir->outputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)];
+		LLVMValueRef* tmp_out = &ctx->abi.outputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)];
 		if(!*tmp_out) {
 			for(unsigned i = 0; i < 4; ++i)
-				ctx->nir->outputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, i)] =
+				ctx->abi.outputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, i)] =
 				            si_build_alloca_undef(&ctx->ac, ctx->ac.f32, "");
 		}
 
@@ -6093,7 +6090,7 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
 		ac_build_export(&ctx->ac, &pos_args[i]);
 	}
 
-	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
+	for (unsigned i = 0; i < AC_LLVM_MAX_OUTPUTS; ++i) {
 		LLVMValueRef values[4];
 		if (!(ctx->output_mask & (1ull << i)))
 			continue;
@@ -6138,7 +6135,7 @@ handle_es_outputs_post(struct nir_to_llvm_context *ctx,
 	uint64_t max_output_written = 0;
 	LLVMValueRef lds_base = NULL;
 
-	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
+	for (unsigned i = 0; i < AC_LLVM_MAX_OUTPUTS; ++i) {
 		int param_index;
 		int length = 4;
 
@@ -6168,9 +6165,9 @@ handle_es_outputs_post(struct nir_to_llvm_context *ctx,
 					LLVMConstInt(ctx->ac.i32, itemsize_dw, 0), "");
 	}
 
-	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
+	for (unsigned i = 0; i < AC_LLVM_MAX_OUTPUTS; ++i) {
 		LLVMValueRef dw_addr = NULL;
-		LLVMValueRef *out_ptr = &ctx->nir->outputs[i * 4];
+		LLVMValueRef *out_ptr = &ctx->abi.outputs[i * 4];
 		int param_index;
 		int length = 4;
 
@@ -6215,8 +6212,8 @@ handle_ls_outputs_post(struct nir_to_llvm_context *ctx)
 	LLVMValueRef base_dw_addr = LLVMBuildMul(ctx->ac.builder, vertex_id,
 						 vertex_dw_stride, "");
 
-	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
-		LLVMValueRef *out_ptr = &ctx->nir->outputs[i * 4];
+	for (unsigned i = 0; i < AC_LLVM_MAX_OUTPUTS; ++i) {
+		LLVMValueRef *out_ptr = &ctx->abi.outputs[i * 4];
 		int length = 4;
 
 		if (!(ctx->output_mask & (1ull << i)))
@@ -6516,7 +6513,7 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx)
 	LLVMValueRef depth = NULL, stencil = NULL, samplemask = NULL;
 	struct ac_export_args color_args[8];
 
-	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
+	for (unsigned i = 0; i < AC_LLVM_MAX_OUTPUTS; ++i) {
 		LLVMValueRef values[4];
 		bool last = false;
 
@@ -6784,8 +6781,8 @@ void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 	phi_post_pass(&ctx);
 
 	if (nir->info.stage != MESA_SHADER_COMPUTE)
-		ctx.abi->emit_outputs(ctx.abi, RADEON_LLVM_MAX_OUTPUTS,
-				      ctx.outputs);
+		ctx.abi->emit_outputs(ctx.abi, AC_LLVM_MAX_OUTPUTS,
+				      ctx.abi->outputs);
 
 	free(ctx.locals);
 	ralloc_free(ctx.defs);
@@ -7181,7 +7178,7 @@ ac_gs_copy_shader_emit(struct nir_to_llvm_context *ctx)
 			     LLVMConstInt(ctx->ac.i32, 4, false), "");
 	int idx = 0;
 
-	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
+	for (unsigned i = 0; i < AC_LLVM_MAX_OUTPUTS; ++i) {
 		int length = 4;
 		int slot = idx;
 		int slot_inc = 1;
@@ -7208,7 +7205,7 @@ ac_gs_copy_shader_emit(struct nir_to_llvm_context *ctx)
 						     0, 1, 1, true, false);
 
 			LLVMBuildStore(ctx->ac.builder,
-				       ac_to_float(&ctx->ac, value), ctx->nir->outputs[radeon_llvm_reg_index_soa(i, j)]);
+				       ac_to_float(&ctx->ac, value), ctx->abi.outputs[radeon_llvm_reg_index_soa(i, j)]);
 		}
 		idx += slot_inc;
 	}
