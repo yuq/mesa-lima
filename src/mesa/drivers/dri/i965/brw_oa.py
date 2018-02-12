@@ -260,7 +260,7 @@ def output_counter_read(set, counter, counter_vars):
 
     c("static " + ret_type)
     read_sym = "{0}__{1}__{2}__read".format(set.get('chipset').lower(), set.get('underscore_name'), counter.get('underscore_name'))
-    c(read_sym + "(struct brw_context *brw,\n")
+    c(read_sym + "(MAYBE_UNUSED struct brw_context *brw,\n")
     c_indent(len(read_sym) + 1)
     c("const struct brw_perf_query_info *query,\n")
     c("uint64_t *accumulator)\n")
