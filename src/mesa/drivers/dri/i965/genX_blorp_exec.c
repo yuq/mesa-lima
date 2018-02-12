@@ -166,6 +166,15 @@ blorp_alloc_vertex_buffer(struct blorp_batch *batch, uint32_t size,
       .buffer = brw->batch.state.bo,
       .offset = offset,
 
+      /* The VF cache designers apparently cut corners, and made the cache
+       * only consider the bottom 32 bits of memory addresses.  If you happen
+       * to have two vertex buffers which get placed exactly 4 GiB apart and
+       * use them in back-to-back draw calls, you can get collisions.  To work
+       * around this problem, we restrict vertex buffers to the low 32 bits of
+       * the address space.
+       */
+      .reloc_flags = RELOC_32BIT,
+
 #if GEN_GEN == 10
       .mocs = CNL_MOCS_WB,
 #elif GEN_GEN == 9

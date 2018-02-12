@@ -119,6 +119,7 @@ struct brw_bufmgr {
    bool has_llc:1;
    bool has_mmap_wc:1;
    bool bo_reuse:1;
+   bool supports_48b_addresses:1;
 };
 
 static int bo_set_tiling_internal(struct brw_bo *bo, uint32_t tiling_mode,
@@ -409,6 +410,8 @@ retry:
    bo->reusable = true;
    bo->cache_coherent = bufmgr->has_llc;
    bo->index = -1;
+   if (bufmgr->supports_48b_addresses)
+      bo->kflags = EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
 
    mtx_unlock(&bufmgr->lock);
 
@@ -1385,6 +1388,24 @@ gem_param(int fd, int name)
    return v;
 }
 
+static bool
+gem_supports_48b_addresses(int fd)
+{
+   struct drm_i915_gem_exec_object2 obj = {
+      .flags = EXEC_OBJECT_SUPPORTS_48B_ADDRESS,
+   };
+
+   struct drm_i915_gem_execbuffer2 execbuf = {
+      .buffers_ptr = (uintptr_t)&obj,
+      .buffer_count = 1,
+      .rsvd1 = 0xffffffu,
+   };
+
+   int ret = drmIoctl(fd, DRM_IOCTL_I915_GEM_EXECBUFFER2, &execbuf);
+
+   return ret == -1 && errno == ENOENT;
+}
+
 /**
  * Initializes the GEM buffer manager, which uses the kernel to allocate, map,
  * and manage map buffer objections.
@@ -1418,6 +1439,8 @@ brw_bufmgr_init(struct gen_device_info *devinfo, int fd)
 
    bufmgr->has_llc = devinfo->has_llc;
    bufmgr->has_mmap_wc = gem_param(fd, I915_PARAM_MMAP_VERSION) > 0;
+   bufmgr->supports_48b_addresses =
+      devinfo->gen >= 8 && gem_supports_48b_addresses(fd);
 
    init_cache_buckets(bufmgr);
 

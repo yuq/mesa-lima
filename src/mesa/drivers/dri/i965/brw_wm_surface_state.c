@@ -205,12 +205,23 @@ brw_emit_surface_state(struct brw_context *brw,
        * FIXME: move to the point of assignment.
        */
       assert((aux_offset & 0xfff) == 0);
-      uint32_t *aux_addr = state + brw->isl_dev.ss.aux_addr_offset;
-      *aux_addr = brw_state_reloc(&brw->batch,
-                                  *surf_offset +
-                                  brw->isl_dev.ss.aux_addr_offset,
-                                  aux_bo, *aux_addr,
-                                  reloc_flags);
+
+      if (devinfo->gen >= 8) {
+         uint64_t *aux_addr = state + brw->isl_dev.ss.aux_addr_offset;
+         *aux_addr = brw_state_reloc(&brw->batch,
+                                     *surf_offset +
+                                     brw->isl_dev.ss.aux_addr_offset,
+                                     aux_bo, *aux_addr,
+                                     reloc_flags);
+      } else {
+         uint32_t *aux_addr = state + brw->isl_dev.ss.aux_addr_offset;
+         *aux_addr = brw_state_reloc(&brw->batch,
+                                     *surf_offset +
+                                     brw->isl_dev.ss.aux_addr_offset,
+                                     aux_bo, *aux_addr,
+                                     reloc_flags);
+
+      }
    }
 }
 

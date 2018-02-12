@@ -1095,6 +1095,21 @@ emit_reloc(struct intel_batchbuffer *batch,
    unsigned int index = add_exec_bo(batch, target);
    struct drm_i915_gem_exec_object2 *entry = &batch->validation_list[index];
 
+   if (reloc_flags & RELOC_32BIT) {
+      /* Restrict this buffer to the low 32 bits of the address space.
+       *
+       * Altering the validation list flags restricts it for this batch,
+       * but we also alter the BO's kflags to restrict it permanently
+       * (until the BO is destroyed and put back in the cache).  Buffers
+       * may stay bound across batches, and we want keep it constrained.
+       */
+      target->kflags &= ~EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
+      entry->flags &= ~EXEC_OBJECT_SUPPORTS_48B_ADDRESS;
+
+      /* RELOC_32BIT is not an EXEC_OBJECT_* flag, so get rid of it. */
+      reloc_flags &= ~RELOC_32BIT;
+   }
+
    if (reloc_flags)
       entry->flags |= reloc_flags & batch->valid_reloc_flags;
 

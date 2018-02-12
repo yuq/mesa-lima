@@ -101,7 +101,7 @@ __gen_combine_address(struct brw_context *brw, void *location,
    }
 }
 
-static struct brw_address
+UNUSED static struct brw_address
 rw_bo(struct brw_bo *bo, uint32_t offset)
 {
    return (struct brw_address) {
@@ -117,6 +117,26 @@ ro_bo(struct brw_bo *bo, uint32_t offset)
    return (struct brw_address) {
             .bo = bo,
             .offset = offset,
+   };
+}
+
+static struct brw_address
+rw_32_bo(struct brw_bo *bo, uint32_t offset)
+{
+   return (struct brw_address) {
+            .bo = bo,
+            .offset = offset,
+            .reloc_flags = RELOC_WRITE | RELOC_32BIT,
+   };
+}
+
+static struct brw_address
+ro_32_bo(struct brw_bo *bo, uint32_t offset)
+{
+   return (struct brw_address) {
+            .bo = bo,
+            .offset = offset,
+            .reloc_flags = RELOC_32BIT,
    };
 }
 
@@ -317,7 +337,15 @@ genX(emit_vertex_buffer_state)(struct brw_context *brw,
    struct GENX(VERTEX_BUFFER_STATE) buf_state = {
       .VertexBufferIndex = buffer_nr,
       .BufferPitch = stride,
-      .BufferStartingAddress = ro_bo(bo, start_offset),
+
+      /* The VF cache designers apparently cut corners, and made the cache
+       * only consider the bottom 32 bits of memory addresses.  If you happen
+       * to have two vertex buffers which get placed exactly 4 GiB apart and
+       * use them in back-to-back draw calls, you can get collisions.  To work
+       * around this problem, we restrict vertex buffers to the low 32 bits of
+       * the address space.
+       */
+      .BufferStartingAddress = ro_32_bo(bo, start_offset),
 #if GEN_GEN >= 8
       .BufferSize = end_offset - start_offset,
 #endif
@@ -858,7 +886,15 @@ genX(emit_index_buffer)(struct brw_context *brw)
       ib.CutIndexEnable = brw->prim_restart.enable_cut_index;
 #endif
       ib.IndexFormat = brw_get_index_type(index_buffer->index_size);
-      ib.BufferStartingAddress = ro_bo(brw->ib.bo, 0);
+
+      /* The VF cache designers apparently cut corners, and made the cache
+       * only consider the bottom 32 bits of memory addresses.  If you happen
+       * to have two index buffers which get placed exactly 4 GiB apart and
+       * use them in back-to-back draw calls, you can get collisions.  To work
+       * around this problem, we restrict index buffers to the low 32 bits of
+       * the address space.
+       */
+      ib.BufferStartingAddress = ro_32_bo(brw->ib.bo, 0);
 #if GEN_GEN >= 8
       ib.IndexBufferMOCS = GEN_GEN >= 9 ? SKL_MOCS_WB : BDW_MOCS_WB;
       ib.BufferSize = brw->ib.size;
@@ -1895,7 +1931,7 @@ genX(upload_wm)(struct brw_context *brw)
 #endif
 
       if (wm_prog_data->base.total_scratch) {
-         wm.ScratchSpaceBasePointer = rw_bo(stage_state->scratch_bo, 0);
+         wm.ScratchSpaceBasePointer = rw_32_bo(stage_state->scratch_bo, 0);
          wm.PerThreadScratchSpace =
             ffs(stage_state->per_thread_scratch) - 11;
       }
@@ -2014,6 +2050,14 @@ static const struct brw_tracked_state genX(wm_state) = {
 
 /* ---------------------------------------------------------------------- */
 
+/* We restrict scratch buffers to the bottom 32 bits of the address space
+ * by using rw_32_bo().
+ *
+ * General State Base Address is a bit broken.  If the address + size as
+ * seen by STATE_BASE_ADDRESS overflows 48 bits, the GPU appears to treat
+ * all accesses to the buffer as being out of bounds and returns zero.
+ */
+
 #define INIT_THREAD_DISPATCH_FIELDS(pkt, prefix) \
    pkt.KernelStartPointer = KSP(brw, stage_state->prog_offset);           \
    pkt.SamplerCount       =                                               \
@@ -2023,7 +2067,7 @@ static const struct brw_tracked_state genX(wm_state) = {
    pkt.FloatingPointMode  = stage_prog_data->use_alt_mode;                \
                                                                           \
    if (stage_prog_data->total_scratch) {                                  \
-      pkt.ScratchSpaceBasePointer = rw_bo(stage_state->scratch_bo, 0);    \
+      pkt.ScratchSpaceBasePointer = rw_32_bo(stage_state->scratch_bo, 0); \
       pkt.PerThreadScratchSpace =                                         \
          ffs(stage_state->per_thread_scratch) - 11;                       \
    }                                                                      \
@@ -3894,8 +3938,8 @@ genX(upload_ps)(struct brw_context *brw)
 
       if (prog_data->base.total_scratch) {
          ps.ScratchSpaceBasePointer =
-            rw_bo(stage_state->scratch_bo,
-                  ffs(stage_state->per_thread_scratch) - 11);
+            rw_32_bo(stage_state->scratch_bo,
+                     ffs(stage_state->per_thread_scratch) - 11);
       }
    }
 }
@@ -4216,7 +4260,7 @@ genX(upload_cs_state)(struct brw_context *brw)
              */
             per_thread_scratch_value = stage_state->per_thread_scratch / 1024 - 1;
          }
-         vfe.ScratchSpaceBasePointer = rw_bo(stage_state->scratch_bo, 0);
+         vfe.ScratchSpaceBasePointer = rw_32_bo(stage_state->scratch_bo, 0);
          vfe.PerThreadScratchSpace = per_thread_scratch_value;
       }
 
