@@ -630,7 +630,7 @@ si_lower_nir(struct si_shader_selector* sel)
 
 	const nir_lower_subgroups_options subgroups_options = {
 		.subgroup_size = 64,
-		.ballot_bit_size = 32,
+		.ballot_bit_size = 64,
 		.lower_to_scalar = true,
 		.lower_subgroup_masks = true,
 		.lower_vote_trivial = false,
