@@ -758,6 +758,17 @@ st_init_driver_functions(struct pipe_screen *screen,
 
    /* GL_ARB_get_program_binary */
    functions->GetProgramBinaryDriverSHA1 = st_get_program_binary_driver_sha1;
-   functions->ProgramBinarySerializeDriverBlob = st_serialise_tgsi_program;
-   functions->ProgramBinaryDeserializeDriverBlob = st_deserialise_tgsi_program;
+
+   enum pipe_shader_ir preferred_ir = (enum pipe_shader_ir)
+      screen->get_shader_param(screen, PIPE_SHADER_VERTEX,
+                               PIPE_SHADER_CAP_PREFERRED_IR);
+   if (preferred_ir == PIPE_SHADER_IR_NIR) {
+      functions->ProgramBinarySerializeDriverBlob = st_serialise_nir_program;
+      functions->ProgramBinaryDeserializeDriverBlob =
+         st_deserialise_nir_program;
+   } else {
+      functions->ProgramBinarySerializeDriverBlob = st_serialise_tgsi_program;
+      functions->ProgramBinaryDeserializeDriverBlob =
+         st_deserialise_tgsi_program;
+   }
 }
