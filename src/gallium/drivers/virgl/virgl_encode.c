@@ -417,7 +417,10 @@ int virgl_encoder_set_index_buffer(struct virgl_context *ctx,
 int virgl_encoder_draw_vbo(struct virgl_context *ctx,
                           const struct pipe_draw_info *info)
 {
-   virgl_encoder_write_cmd_dword(ctx, VIRGL_CMD0(VIRGL_CCMD_DRAW_VBO, 0, VIRGL_DRAW_VBO_SIZE));
+   uint32_t length = VIRGL_DRAW_VBO_SIZE;
+   if (info->indirect)
+      length = VIRGL_DRAW_VBO_SIZE_INDIRECT;
+   virgl_encoder_write_cmd_dword(ctx, VIRGL_CMD0(VIRGL_CCMD_DRAW_VBO, 0, length));
    virgl_encoder_write_dword(ctx->cbuf, info->start);
    virgl_encoder_write_dword(ctx->cbuf, info->count);
    virgl_encoder_write_dword(ctx->cbuf, info->mode);
@@ -433,6 +436,16 @@ int virgl_encoder_draw_vbo(struct virgl_context *ctx,
       virgl_encoder_write_dword(ctx->cbuf, info->count_from_stream_output->buffer_size);
    else
       virgl_encoder_write_dword(ctx->cbuf, 0);
+   if (length == VIRGL_DRAW_VBO_SIZE_INDIRECT) {
+      virgl_encoder_write_dword(ctx->cbuf, 0); /* vertices per patch */
+      virgl_encoder_write_dword(ctx->cbuf, 0); /* drawid */
+      virgl_encoder_write_res(ctx, virgl_resource(info->indirect->buffer));
+      virgl_encoder_write_dword(ctx->cbuf, info->indirect->offset);
+      virgl_encoder_write_dword(ctx->cbuf, 0); /* indirect stride */
+      virgl_encoder_write_dword(ctx->cbuf, 0); /* indirect draw count */
+      virgl_encoder_write_dword(ctx->cbuf, 0); /* indirect draw count offset */
+      virgl_encoder_write_dword(ctx->cbuf, 0); /* indirect draw count handle */
+   }
    return 0;
 }
 
