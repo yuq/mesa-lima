@@ -3781,6 +3781,26 @@ static LLVMValueRef visit_image_atomic(struct ac_nir_context *ctx,
 	return ac_build_intrinsic(&ctx->ac, intrinsic_name, ctx->ac.i32, params, param_count, 0);
 }
 
+static LLVMValueRef visit_image_samples(struct ac_nir_context *ctx,
+					const nir_intrinsic_instr *instr)
+{
+	const nir_variable *var = instr->variables[0]->var;
+	const struct glsl_type *type = glsl_without_array(var->type);
+	bool da = glsl_sampler_type_is_array(type) ||
+		  glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE ||
+		  glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_3D;
+
+	struct ac_image_args args = { 0 };
+	args.da = da;
+	args.dmask = 0xf;
+	args.resource = get_sampler_desc(ctx, instr->variables[0],
+					 AC_DESC_IMAGE, NULL, true, false);
+	args.opcode = ac_image_get_resinfo;
+	args.addr = ctx->ac.i32_0;
+
+	return ac_build_image_opcode(&ctx->ac, &args);
+}
+
 static LLVMValueRef visit_image_size(struct ac_nir_context *ctx,
 				     const nir_intrinsic_instr *instr)
 {
@@ -4478,6 +4498,9 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		break;
 	case nir_intrinsic_store_shared:
 		visit_store_shared(ctx, instr);
+		break;
+	case nir_intrinsic_image_samples:
+		result = visit_image_samples(ctx, instr);
 		break;
 	case nir_intrinsic_image_load:
 		result = visit_image_load(ctx, instr);
