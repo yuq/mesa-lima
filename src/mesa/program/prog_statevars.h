@@ -27,6 +27,7 @@
 
 
 #include "main/glheader.h"
+#include "compiler/shader_enums.h"
 
 
 #ifdef __cplusplus
