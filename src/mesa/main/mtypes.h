@@ -1068,7 +1068,7 @@ struct gl_texture_object
    GLbyte _MaxLevel;           /**< actual max mipmap level (q in the spec) */
    GLfloat _MaxLambda;         /**< = _MaxLevel - BaseLevel (q - p in spec) */
    GLint CropRect[4];          /**< GL_OES_draw_texture */
-   GLenum16 Swizzle[4];        /**< GL_EXT_texture_swizzle */
+   GLenum Swizzle[4];          /**< GL_EXT_texture_swizzle */
    GLushort _Swizzle;          /**< same as Swizzle, but SWIZZLE_* format */
    GLbyte ImmutableLevels;     /**< ES 3.0 / ARB_texture_view */
    GLboolean GenerateMipmap;   /**< GL_SGIS_generate_mipmap */
