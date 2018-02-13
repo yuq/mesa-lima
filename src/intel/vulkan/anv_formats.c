@@ -671,9 +671,18 @@ get_wsi_format_modifier_properties_list(const struct anv_physical_device *physic
       DRM_FORMAT_MOD_LINEAR,
       I915_FORMAT_MOD_X_TILED,
       I915_FORMAT_MOD_Y_TILED,
+      I915_FORMAT_MOD_Y_TILED_CCS,
    };
 
    for (uint32_t i = 0; i < ARRAY_SIZE(modifiers); i++) {
+      const struct isl_drm_modifier_info *mod_info =
+         isl_drm_modifier_get_info(modifiers[i]);
+
+      if (mod_info->aux_usage == ISL_AUX_USAGE_CCS_E &&
+          !isl_format_supports_ccs_e(&physical_device->info,
+                                     anv_format->planes[0].isl_format))
+         continue;
+
       vk_outarray_append(&out, mod_props) {
          mod_props->modifier = modifiers[i];
          if (isl_drm_modifier_has_aux(modifiers[i]))

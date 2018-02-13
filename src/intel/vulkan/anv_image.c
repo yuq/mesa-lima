@@ -519,6 +519,7 @@ score_drm_format_mod(uint64_t modifier)
    case DRM_FORMAT_MOD_LINEAR: return 1;
    case I915_FORMAT_MOD_X_TILED: return 2;
    case I915_FORMAT_MOD_Y_TILED: return 3;
+   case I915_FORMAT_MOD_Y_TILED_CCS: return 4;
    default: unreachable("bad DRM format modifier");
    }
 }
@@ -750,8 +751,14 @@ void anv_GetImageSubresourceLayout(
     VkSubresourceLayout*                        layout)
 {
    ANV_FROM_HANDLE(anv_image, image, _image);
-   const struct anv_surface *surface =
-      get_surface(image, subresource->aspectMask);
+
+   const struct anv_surface *surface;
+   if (subresource->aspectMask == VK_IMAGE_ASPECT_PLANE_1_BIT_KHR &&
+       image->drm_format_mod != DRM_FORMAT_MOD_INVALID &&
+       isl_drm_modifier_has_aux(image->drm_format_mod))
+      surface = &image->planes[0].aux_surface;
+   else
+      surface = get_surface(image, subresource->aspectMask);
 
    assert(__builtin_popcount(subresource->aspectMask) == 1);
 
@@ -866,25 +873,20 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
       }
 
 
-   case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+   case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR: {
       assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
 
-      /* On SKL+, the render buffer can be decompressed by the presentation
-       * engine. Support for this feature has not yet landed in the wider
-       * ecosystem. TODO: Update this code when support lands.
-       *
-       * From the BDW PRM, Vol 7, Render Target Resolve:
-       *
-       *    If the MCS is enabled on a non-multisampled render target, the
-       *    render target must be resolved before being used for other
-       *    purposes (display, texture, CPU lock) The clear value from
-       *    SURFACE_STATE is written into pixels in the render target
-       *    indicated as clear in the MCS.
-       *
-       * Pre-SKL, the render buffer must be resolved before being used for
-       * presentation. We can infer that the auxiliary buffer is not used.
+      /* When handing the image off to the presentation engine, we need to
+       * ensure that things are properly resolved.  For images with no
+       * modifier, we assume that they follow the old rules and always need
+       * a full resolve because the PE doesn't understand any form of
+       * compression.  For images with modifiers, we use the aux usage from
+       * the modifier.
        */
-      return ISL_AUX_USAGE_NONE;
+      const struct isl_drm_modifier_info *mod_info =
+         isl_drm_modifier_get_info(image->drm_format_mod);
+      return mod_info ? mod_info->aux_usage : ISL_AUX_USAGE_NONE;
+   }
 
 
    /* Rendering Layouts */
@@ -966,8 +968,18 @@ anv_layout_to_fast_clear_type(const struct gen_device_info * const devinfo,
    case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
       return ANV_FAST_CLEAR_ANY;
 
-   case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+   case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR: {
+      assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+#ifndef NDEBUG
+      /* We do not yet support any modifiers which support clear color so we
+       * just always return NONE.  One day, this will change.
+       */
+      const struct isl_drm_modifier_info *mod_info =
+         isl_drm_modifier_get_info(image->drm_format_mod);
+      assert(!mod_info || !mod_info->supports_clear_color);
+#endif
       return ANV_FAST_CLEAR_NONE;
+   }
 
    default:
       /* If the image has MCS or CCS_E enabled all the time then we can use
