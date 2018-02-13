@@ -254,7 +254,8 @@ brw_nir_lower_patch_vertices_in_to_uniform(nir_shader *nir)
       gl_state_index16 tokens[STATE_LENGTH] = {
          STATE_INTERNAL,
          nir->info.stage == MESA_SHADER_TESS_CTRL ?
-            STATE_TCS_PATCH_VERTICES_IN : STATE_TES_PATCH_VERTICES_IN,
+            (gl_state_index16)STATE_TCS_PATCH_VERTICES_IN :
+            (gl_state_index16)STATE_TES_PATCH_VERTICES_IN,
       };
       var->num_state_slots = 1;
       var->state_slots =
