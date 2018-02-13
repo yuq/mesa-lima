@@ -153,6 +153,15 @@ optimizations = [
 
    (('fge', ('fneg', ('b2f', a)), 0.0), ('inot', a)),
 
+   (('~flt', ('fadd', a, b), a), ('flt', b, 0.0)),
+   (('~fge', ('fadd', a, b), a), ('fge', b, 0.0)),
+   (('~feq', ('fadd', a, b), a), ('feq', b, 0.0)),
+   (('~fne', ('fadd', a, b), a), ('fne', b, 0.0)),
+
+   # Cannot remove the addition from ilt or ige due to overflow.
+   (('ieq', ('iadd', a, b), a), ('ieq', b, 0)),
+   (('ine', ('iadd', a, b), a), ('ine', b, 0)),
+
    # fmin(-b2f(a), b) >= 0.0
    # -b2f(a) >= 0.0 && b >= 0.0
    # -b2f(a) == 0.0 && b >= 0.0    -b2f can only be 0 or -1, never >0
