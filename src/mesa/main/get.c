@@ -1224,6 +1224,11 @@ check_extra(struct gl_context *ctx, const char *func, const struct value_desc *d
          if (version >= 32)
             api_found = GL_TRUE;
          break;
+      case EXTRA_VERSION_40:
+         api_check = GL_TRUE;
+         if (version >= 40)
+            api_found = GL_TRUE;
+         break;
       case EXTRA_NEW_FRAG_CLAMP:
          if (ctx->NewState & (_NEW_BUFFERS | _NEW_FRAG_CLAMP))
             _mesa_update_state(ctx);
