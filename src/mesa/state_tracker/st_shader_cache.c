@@ -408,3 +408,17 @@ st_deserialise_tgsi_program(struct gl_context *ctx,
 {
    st_deserialise_ir_program(ctx, shProg, prog, false);
 }
+
+void
+st_serialise_nir_program(struct gl_context *ctx, struct gl_program *prog)
+{
+   st_serialise_ir_program(ctx, prog, true);
+}
+
+void
+st_deserialise_nir_program(struct gl_context *ctx,
+                           struct gl_shader_program *shProg,
+                           struct gl_program *prog)
+{
+   st_deserialise_ir_program(ctx, shProg, prog, true);
+}
