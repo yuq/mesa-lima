@@ -35,7 +35,8 @@ extern "C" {
 #endif
 
 enum {
-	AC_CONST_ADDR_SPACE = 2, /* CONST is the only address space that selects SMEM loads */
+	/* CONST is the only address space that selects SMEM loads */
+	AC_CONST_ADDR_SPACE = HAVE_LLVM >= 0x700 ? 4 : 2,
 	AC_LOCAL_ADDR_SPACE = 3,
 };
 
