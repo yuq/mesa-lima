@@ -965,36 +965,35 @@ typedef enum
  */
 struct gl_texture_image
 {
-   struct gl_texture_object *TexObject;  /**< Pointer back to parent object */
-
-   GLenum16 InternalFormat;	/**< Internal format as given by the user */
+   GLint InternalFormat;	/**< Internal format as given by the user */
    GLenum16 _BaseFormat;	/**< Either GL_RGB, GL_RGBA, GL_ALPHA,
-				 *   GL_LUMINANCE, GL_LUMINANCE_ALPHA,
-				 *   GL_INTENSITY, GL_DEPTH_COMPONENT or
-				 *   GL_DEPTH_STENCIL_EXT only. Used for
-				 *   choosing TexEnv arithmetic.
-				 */
-   mesa_format TexFormat:16;    /**< The actual texture memory format */
+                                 *   GL_LUMINANCE, GL_LUMINANCE_ALPHA,
+                                 *   GL_INTENSITY, GL_DEPTH_COMPONENT or
+                                 *   GL_DEPTH_STENCIL_EXT only. Used for
+                                 *   choosing TexEnv arithmetic.
+                                 */
+   mesa_format TexFormat;         /**< The actual texture memory format */
 
-   GLushort Width;		/**< = 2^WidthLog2 + 2*Border */
-   GLushort Height;		/**< = 2^HeightLog2 + 2*Border */
-   GLushort Depth;		/**< = 2^DepthLog2 + 2*Border */
-   GLushort Width2;		/**< = Width - 2*Border */
-   GLushort Height2;		/**< = Height - 2*Border */
-   GLushort Depth2;		/**< = Depth - 2*Border */
-   GLubyte WidthLog2;		/**< = log2(Width2) */
-   GLubyte HeightLog2;		/**< = log2(Height2) */
-   GLubyte DepthLog2;		/**< = log2(Depth2) */
-   GLubyte Border;		/**< 0 or 1 */
-   GLubyte MaxNumLevels;	/**< = maximum possible number of mipmap
+   GLuint Border;		/**< 0 or 1 */
+   GLuint Width;		/**< = 2^WidthLog2 + 2*Border */
+   GLuint Height;		/**< = 2^HeightLog2 + 2*Border */
+   GLuint Depth;		/**< = 2^DepthLog2 + 2*Border */
+   GLuint Width2;		/**< = Width - 2*Border */
+   GLuint Height2;		/**< = Height - 2*Border */
+   GLuint Depth2;		/**< = Depth - 2*Border */
+   GLuint WidthLog2;		/**< = log2(Width2) */
+   GLuint HeightLog2;		/**< = log2(Height2) */
+   GLuint DepthLog2;		/**< = log2(Depth2) */
+   GLuint MaxNumLevels;		/**< = maximum possible number of mipmap
                                        levels, computed from the dimensions */
 
-   GLubyte Level;                /**< Which mipmap level am I? */
+   struct gl_texture_object *TexObject;  /**< Pointer back to parent object */
+   GLuint Level;                /**< Which mipmap level am I? */
    /** Cube map face: index into gl_texture_object::Image[] array */
-   GLubyte Face;
+   GLuint Face;
 
    /** GL_ARB_texture_multisample */
-   GLubyte NumSamples;            /**< Sample count, or 0 for non-multisample */
+   GLuint NumSamples;            /**< Sample count, or 0 for non-multisample */
    GLboolean FixedSampleLocations; /**< Same sample locations for all pixels? */
 };
 
