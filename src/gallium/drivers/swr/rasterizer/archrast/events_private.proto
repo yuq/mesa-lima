@@ -117,7 +117,6 @@ event ClipInfoEvent
 event DrawInstancedEvent
 {
     uint32_t drawId;
-    AR_DRAW_TYPE type;
     uint32_t topology;
     uint32_t numVertices;
     int32_t  startVertex;
@@ -128,7 +127,6 @@ event DrawInstancedEvent
 event DrawIndexedInstancedEvent
 {
     uint32_t drawId;
-    AR_DRAW_TYPE type;
     uint32_t topology;
     uint32_t numIndices;
     int32_t  indexOffset;
@@ -141,12 +139,10 @@ event DrawIndexedInstancedEvent
 event DrawInstancedSplitEvent
 {
     uint32_t drawId;
-    AR_DRAW_TYPE type;
 };
 
 ///@brief API Stat: Split draw event for DrawIndexedInstanced.
 event DrawIndexedInstancedSplitEvent
 {
     uint32_t drawId;
-    AR_DRAW_TYPE type;
 };
