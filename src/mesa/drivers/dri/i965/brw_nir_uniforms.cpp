@@ -251,7 +251,7 @@ brw_nir_lower_patch_vertices_in_to_uniform(nir_shader *nir)
       if (var->data.location != SYSTEM_VALUE_VERTICES_IN)
          continue;
 
-      gl_state_index tokens[STATE_LENGTH] = {
+      gl_state_index16 tokens[STATE_LENGTH] = {
          STATE_INTERNAL,
          nir->info.stage == MESA_SHADER_TESS_CTRL ?
             STATE_TCS_PATCH_VERTICES_IN : STATE_TES_PATCH_VERTICES_IN,
