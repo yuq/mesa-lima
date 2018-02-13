@@ -57,7 +57,7 @@ namespace SwrJit
 
             // Compute debug metadata
             llvm::DIBuilder builder(*pJitMgr->mpCurrentModule);
-            llvm::DIFile* pFile = builder.createFile("${input_file}", "${input_dir}");
+            llvm::DIFile* pFile = builder.createFile("${input_file}", "${os.path.normpath(input_dir).replace('\\', '/')}");
 
             std::vector<std::pair<std::string, uint32_t>> dbgMembers;
             %for member in type['members']:
@@ -79,6 +79,7 @@ namespace SwrJit
 } // ns SwrJit
 
 <%! # Global function definitions
+    import os
     def calc_max_len(fields):
         max_type_len = 0
         max_name_len = 0
