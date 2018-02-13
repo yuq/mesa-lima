@@ -285,6 +285,7 @@ dri3_create_image_khr_pixmap(_EGLDisplay *disp, _EGLContext *ctx,
    dri2_img = malloc(sizeof *dri2_img);
    if (!dri2_img) {
       _eglError(EGL_BAD_ALLOC, "dri3_create_image_khr");
+      free(bp_reply);
       return EGL_NO_IMAGE_KHR;
    }
 
