@@ -180,7 +180,8 @@ int virgl_encode_rasterizer_state(struct virgl_context *ctx,
       VIRGL_OBJ_RS_S0_LINE_STIPPLE_ENABLE(state->line_stipple_enable) |
       VIRGL_OBJ_RS_S0_LINE_LAST_PIXEL(state->line_last_pixel) |
       VIRGL_OBJ_RS_S0_HALF_PIXEL_CENTER(state->half_pixel_center) |
-      VIRGL_OBJ_RS_S0_BOTTOM_EDGE_RULE(state->bottom_edge_rule);
+      VIRGL_OBJ_RS_S0_BOTTOM_EDGE_RULE(state->bottom_edge_rule) |
+      VIRGL_OBJ_RS_S0_FORCE_PERSAMPLE_INTERP(state->force_persample_interp);
 
    virgl_encoder_write_dword(ctx->cbuf, tmp); /* S0 */
    virgl_encoder_write_dword(ctx->cbuf, fui(state->point_size)); /* S1 */
