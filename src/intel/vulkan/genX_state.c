@@ -121,7 +121,7 @@ genX(init_device_state)(struct anv_device *device)
    }
 #endif
 
-#if GEN_GEN == 10
+#if GEN_GEN == 10 || GEN_GEN == 11
    uint32_t cache_mode_ss;
    anv_pack_struct(&cache_mode_ss, GENX(CACHE_MODE_SS),
                    .FloatBlendOptimizationEnable = true,
