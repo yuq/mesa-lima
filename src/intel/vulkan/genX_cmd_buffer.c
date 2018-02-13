@@ -202,24 +202,6 @@ add_image_view_relocs(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
-static bool
-color_is_zero_one(VkClearColorValue value, enum isl_format format)
-{
-   if (isl_format_has_int_channel(format)) {
-      for (unsigned i = 0; i < 4; i++) {
-         if (value.int32[i] != 0 && value.int32[i] != 1)
-            return false;
-      }
-   } else {
-      for (unsigned i = 0; i < 4; i++) {
-         if (value.float32[i] != 0.0f && value.float32[i] != 1.0f)
-            return false;
-      }
-   }
-
-   return true;
-}
-
 static void
 color_attachment_compute_aux_usage(struct anv_device * device,
                                    struct anv_cmd_state * cmd_state,
@@ -283,13 +265,25 @@ color_attachment_compute_aux_usage(struct anv_device * device,
 
    assert(iview->image->planes[0].aux_surface.isl.usage & ISL_SURF_USAGE_CCS_BIT);
 
+   const struct isl_format_layout *view_fmtl =
+      isl_format_get_layout(iview->planes[0].isl.format);
+   union isl_color_value clear_color = {};
+
+#define COPY_CLEAR_COLOR_CHANNEL(c, i) \
+   if (view_fmtl->channels.c.bits) \
+      clear_color.u32[i] = att_state->clear_value.color.uint32[i]
+
+   COPY_CLEAR_COLOR_CHANNEL(r, 0);
+   COPY_CLEAR_COLOR_CHANNEL(g, 1);
+   COPY_CLEAR_COLOR_CHANNEL(b, 2);
+   COPY_CLEAR_COLOR_CHANNEL(a, 3);
+
+#undef COPY_CLEAR_COLOR_CHANNEL
+
    att_state->clear_color_is_zero_one =
-      color_is_zero_one(att_state->clear_value.color, iview->planes[0].isl.format);
+      isl_color_value_is_zero_one(clear_color, iview->planes[0].isl.format);
    att_state->clear_color_is_zero =
-      att_state->clear_value.color.uint32[0] == 0 &&
-      att_state->clear_value.color.uint32[1] == 0 &&
-      att_state->clear_value.color.uint32[2] == 0 &&
-      att_state->clear_value.color.uint32[3] == 0;
+      isl_color_value_is_zero(clear_color, iview->planes[0].isl.format);
 
    if (att_state->pending_clear_aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
       /* Start off assuming fast clears are possible */
@@ -341,10 +335,8 @@ color_attachment_compute_aux_usage(struct anv_device * device,
                        "LOAD_OP_CLEAR.  Only fast-clearing the first slice");
       }
 
-      if (att_state->fast_clear) {
-         memcpy(fast_clear_color->u32, att_state->clear_value.color.uint32,
-                sizeof(fast_clear_color->u32));
-      }
+      if (att_state->fast_clear)
+         *fast_clear_color = clear_color;
    } else {
       att_state->fast_clear = false;
    }
