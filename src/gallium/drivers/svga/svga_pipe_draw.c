@@ -75,17 +75,14 @@ retry_draw_range_elements(struct svga_context *svga,
                             svga->curr.rast->templ.flatshade_first);
 
    for (unsigned try = 0; try < 2; try++) {
-      ret = svga_update_state(svga, SVGA_STATE_HW_DRAW);
-      if (ret == PIPE_OK) {
-         ret = svga_hwtnl_draw_range_elements(svga->hwtnl,
-                                              index_buffer, index_size,
-                                              index_bias,
-                                              min_index, max_index,
-                                              prim, start, count,
-                                              start_instance, instance_count);
-         if (ret == PIPE_OK)
-            break;
-      }
+      ret = svga_hwtnl_draw_range_elements(svga->hwtnl,
+                                           index_buffer, index_size,
+                                           index_bias,
+                                           min_index, max_index,
+                                           prim, start, count,
+                                           start_instance, instance_count);
+      if (ret == PIPE_OK)
+         break;
       svga_context_flush(svga, NULL);
    }
 
@@ -114,13 +111,10 @@ retry_draw_arrays(struct svga_context *svga,
                             svga->curr.rast->templ.flatshade_first);
 
    for (unsigned try = 0; try < 2; try++) {
-      ret = svga_update_state(svga, SVGA_STATE_HW_DRAW);
-      if (ret == PIPE_OK) {
-         ret = svga_hwtnl_draw_arrays(svga->hwtnl, prim, start, count,
-                                      start_instance, instance_count);
-         if (ret == PIPE_OK)
-            break;
-      }
+      ret = svga_hwtnl_draw_arrays(svga->hwtnl, prim, start, count,
+                                   start_instance, instance_count);
+      if (ret == PIPE_OK)
+         break;
       svga_context_flush(svga, NULL);
    }
 
@@ -229,6 +223,13 @@ svga_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       ret = svga_swtnl_draw_vbo(svga, info, indexbuf, index_offset);
    }
    else {
+      ret = svga_update_state(svga, SVGA_STATE_HW_DRAW);
+      if (ret != PIPE_OK) {
+         svga_context_flush(svga, NULL);
+         ret = svga_update_state(svga, SVGA_STATE_HW_DRAW);
+         assert(ret == PIPE_OK);
+      }
+
       if (info->index_size && indexbuf) {
          unsigned offset;
 
