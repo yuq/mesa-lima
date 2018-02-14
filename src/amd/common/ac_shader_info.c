@@ -27,7 +27,7 @@
 static void mark_sampler_desc(const nir_variable *var,
 			      struct ac_shader_info *info)
 {
-	info->desc_set_used_mask = (1 << var->data.descriptor_set);
+	info->desc_set_used_mask |= (1 << var->data.descriptor_set);
 }
 
 static void
