@@ -522,7 +522,7 @@ validate_array(struct gl_context *ctx, const char *func,
       return;
    }
 
-   if (ctx->API == API_OPENGL_CORE && ctx->Version >= 44 &&
+   if (_mesa_is_desktop_gl(ctx) && ctx->Version >= 44 &&
        stride > ctx->Const.MaxVertexAttribStride) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(stride=%d > "
                   "GL_MAX_VERTEX_ATTRIB_STRIDE)", func, stride);
@@ -2166,7 +2166,7 @@ vertex_array_vertex_buffer_err(struct gl_context *ctx,
       return;
    }
 
-   if (((ctx->API == API_OPENGL_CORE && ctx->Version >= 44) || _mesa_is_gles31(ctx)) &&
+   if (((_mesa_is_desktop_gl(ctx) && ctx->Version >= 44) || _mesa_is_gles31(ctx)) &&
        stride > ctx->Const.MaxVertexAttribStride) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(stride=%d > "
                   "GL_MAX_VERTEX_ATTRIB_STRIDE)", func, stride);
@@ -2320,7 +2320,7 @@ vertex_array_vertex_buffers(struct gl_context *ctx,
             continue;
          }
 
-         if (ctx->API == API_OPENGL_CORE && ctx->Version >= 44 &&
+         if (_mesa_is_desktop_gl(ctx) && ctx->Version >= 44 &&
              strides[i] > ctx->Const.MaxVertexAttribStride) {
             _mesa_error(ctx, GL_INVALID_VALUE,
                         "%s(strides[%u]=%d > "

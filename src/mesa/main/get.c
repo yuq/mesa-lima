@@ -2555,7 +2555,7 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
    case GL_SAMPLER_BINDING: {
       struct gl_sampler_object *samp;
 
-      if (ctx->API != API_OPENGL_CORE)
+      if (!_mesa_is_desktop_gl(ctx) || ctx->Version < 33)
          goto invalid_enum;
       if (index >= _mesa_max_tex_unit(ctx))
          goto invalid_value;
