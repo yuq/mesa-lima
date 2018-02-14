@@ -1329,25 +1329,34 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
                                       VK_IMAGE_ASPECT_COLOR_BIT,
                                       ANV_IMAGE_LAYOUT_EXPLICIT_AUX,
                                       dst_aux_usage, &dst_surf);
+
+         uint32_t base_src_layer = src_iview->planes[0].isl.base_array_layer;
+         uint32_t base_dst_layer = dst_iview->planes[0].isl.base_array_layer;
+
+         assert(src_iview->planes[0].isl.array_len >= fb->layers);
+         assert(dst_iview->planes[0].isl.array_len >= fb->layers);
+
          anv_cmd_buffer_mark_image_written(cmd_buffer, dst_iview->image,
                                            VK_IMAGE_ASPECT_COLOR_BIT,
                                            dst_surf.aux_usage,
                                            dst_iview->planes[0].isl.base_level,
-                                           dst_iview->planes[0].isl.base_array_layer, 1);
+                                           base_dst_layer, fb->layers);
 
          assert(!src_iview->image->format->can_ycbcr);
          assert(!dst_iview->image->format->can_ycbcr);
 
-         resolve_surface(&batch,
-                         &src_surf,
-                         src_iview->planes[0].isl.base_level,
-                         src_iview->planes[0].isl.base_array_layer,
-                         &dst_surf,
-                         dst_iview->planes[0].isl.base_level,
-                         dst_iview->planes[0].isl.base_array_layer,
-                         render_area.offset.x, render_area.offset.y,
-                         render_area.offset.x, render_area.offset.y,
-                         render_area.extent.width, render_area.extent.height);
+         for (uint32_t i = 0; i < fb->layers; i++) {
+            resolve_surface(&batch,
+                            &src_surf,
+                            src_iview->planes[0].isl.base_level,
+                            base_src_layer + i,
+                            &dst_surf,
+                            dst_iview->planes[0].isl.base_level,
+                            base_dst_layer + i,
+                            render_area.offset.x, render_area.offset.y,
+                            render_area.offset.x, render_area.offset.y,
+                            render_area.extent.width, render_area.extent.height);
+         }
       }
 
       blorp_batch_finish(&batch);
