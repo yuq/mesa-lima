@@ -610,7 +610,8 @@ declare_global_input_sgprs(struct radv_shader_context *ctx,
 	/* 1 for each descriptor set */
 	if (!user_sgpr_info->indirect_all_descriptor_sets) {
 		for (unsigned i = 0; i < num_sets; ++i) {
-			if (ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
+			if ((ctx->shader_info->info.desc_set_used_mask & (1 << i)) &&
+			    ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
 				add_array_arg(args, type,
 					      &ctx->descriptor_sets[i]);
 			}
@@ -687,7 +688,8 @@ set_global_input_locs(struct radv_shader_context *ctx, gl_shader_stage stage,
 
 	if (!user_sgpr_info->indirect_all_descriptor_sets) {
 		for (unsigned i = 0; i < num_sets; ++i) {
-			if (ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
+			if ((ctx->shader_info->info.desc_set_used_mask & (1 << i)) &&
+			    ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
 				set_loc_desc(ctx, i, user_sgpr_idx, 0);
 			} else
 				ctx->descriptor_sets[i] = NULL;
@@ -697,7 +699,8 @@ set_global_input_locs(struct radv_shader_context *ctx, gl_shader_stage stage,
 			       user_sgpr_idx, 2);
 
 		for (unsigned i = 0; i < num_sets; ++i) {
-			if (ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
+			if ((ctx->shader_info->info.desc_set_used_mask & (1 << i)) &&
+			    ctx->options->layout->set[i].layout->shader_stages & stage_mask) {
 				set_loc_desc(ctx, i, user_sgpr_idx, i * 8);
 				ctx->descriptor_sets[i] =
 					ac_build_load_to_sgpr(&ctx->ac,
