@@ -99,7 +99,8 @@ process_glsl_ir(struct brw_context *brw,
 
    ralloc_adopt(mem_ctx, shader->ir);
 
-   lower_blend_equation_advanced(shader);
+   lower_blend_equation_advanced(
+      shader, ctx->Extensions.KHR_blend_equation_advanced_coherent);
 
    /* lower_packing_builtins() inserts arithmetic instructions, so it
     * must precede lower_instructions().
