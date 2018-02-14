@@ -115,6 +115,10 @@ get_compiled_dummy_shader(struct svga_context *svga,
    FREE((void *) fs->base.tokens);
    fs->base.tokens = dummy;
 
+   tgsi_scan_shader(fs->base.tokens, &fs->base.info);
+   fs->generic_inputs = svga_get_generic_inputs_mask(&fs->base.info);
+   svga_remap_generics(fs->generic_inputs, fs->generic_remap_table);
+
    variant = translate_fragment_program(svga, fs, key);
    return variant;
 }

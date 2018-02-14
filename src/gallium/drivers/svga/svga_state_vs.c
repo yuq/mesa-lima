@@ -105,6 +105,9 @@ get_compiled_dummy_vertex_shader(struct svga_context *svga,
    FREE((void *) vs->base.tokens);
    vs->base.tokens = dummy;
 
+   tgsi_scan_shader(vs->base.tokens, &vs->base.info);
+   vs->generic_outputs = svga_get_generic_outputs_mask(&vs->base.info);
+
    variant = translate_vertex_program(svga, vs, key);
    return variant;
 }
