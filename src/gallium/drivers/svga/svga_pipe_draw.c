@@ -64,16 +64,6 @@ retry_draw_range_elements(struct svga_context *svga,
 
    SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_DRAWELEMENTS);
 
-   svga_hwtnl_set_fillmode(svga->hwtnl, svga->curr.rast->hw_fillmode);
-
-   /** determine if flatshade is to be used after svga_update_state()
-    *  in case the fragment shader is changed.
-    */
-   svga_hwtnl_set_flatshade(svga->hwtnl,
-                            svga->curr.rast->templ.flatshade ||
-                            is_using_flat_shading(svga),
-                            svga->curr.rast->templ.flatshade_first);
-
    for (unsigned try = 0; try < 2; try++) {
       ret = svga_hwtnl_draw_range_elements(svga->hwtnl,
                                            index_buffer, index_size,
@@ -99,16 +89,6 @@ retry_draw_arrays(struct svga_context *svga,
    enum pipe_error ret;
 
    SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_DRAWARRAYS);
-
-   svga_hwtnl_set_fillmode(svga->hwtnl, svga->curr.rast->hw_fillmode);
-
-   /** determine if flatshade is to be used after svga_update_state()
-    *  in case the fragment shader is changed.
-    */
-   svga_hwtnl_set_flatshade(svga->hwtnl,
-                            svga->curr.rast->templ.flatshade ||
-                            is_using_flat_shading(svga),
-                            svga->curr.rast->templ.flatshade_first);
 
    for (unsigned try = 0; try < 2; try++) {
       ret = svga_hwtnl_draw_arrays(svga->hwtnl, prim, start, count,
@@ -229,6 +209,16 @@ svga_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
          ret = svga_update_state(svga, SVGA_STATE_HW_DRAW);
          assert(ret == PIPE_OK);
       }
+
+      svga_hwtnl_set_fillmode(svga->hwtnl, svga->curr.rast->hw_fillmode);
+
+      /** determine if flatshade is to be used after svga_update_state()
+       *  in case the fragment shader is changed.
+       */
+      svga_hwtnl_set_flatshade(svga->hwtnl,
+                               svga->curr.rast->templ.flatshade ||
+                               is_using_flat_shading(svga),
+                               svga->curr.rast->templ.flatshade_first);
 
       if (info->index_size && indexbuf) {
          unsigned offset;
