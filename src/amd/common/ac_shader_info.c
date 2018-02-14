@@ -180,6 +180,16 @@ gather_info_block(const nir_shader *nir, const nir_block *block,
 }
 
 static void
+gather_info_input_decl_vs(const nir_shader *nir, const nir_variable *var,
+			  struct ac_shader_info *info)
+{
+	int idx = var->data.location;
+
+	if (idx >= VERT_ATTRIB_GENERIC0 && idx <= VERT_ATTRIB_GENERIC15)
+		info->vs.has_vertex_buffers = true;
+}
+
+static void
 gather_info_input_decl_ps(const nir_shader *nir, const nir_variable *var,
 			  struct ac_shader_info *info)
 {
@@ -197,7 +207,7 @@ gather_info_input_decl(const nir_shader *nir, const nir_variable *var,
 {
 	switch (nir->info.stage) {
 	case MESA_SHADER_VERTEX:
-		info->vs.has_vertex_buffers = true;
+		gather_info_input_decl_vs(nir, var, info);
 		break;
 	case MESA_SHADER_FRAGMENT:
 		gather_info_input_decl_ps(nir, var, info);
