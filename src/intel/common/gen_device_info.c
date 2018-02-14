@@ -311,12 +311,16 @@ static const struct gen_device_info gen_device_info_hsw_gt3 = {
    },
 };
 
+/* It's unclear how well supported sampling from the hiz buffer is on GEN8,
+ * so keep things conservative for now and set has_sample_with_hiz = false.
+ */
 #define GEN8_FEATURES                               \
    .gen = 8,                                        \
    .has_hiz_and_separate_stencil = true,            \
    .has_resource_streamer = true,                   \
    .must_use_separate_stencil = true,               \
    .has_llc = true,                                 \
+   .has_sample_with_hiz = false,                    \
    .has_pln = true,                                 \
    .supports_simd16_3src = true,                    \
    .has_surface_tile_offset = true,                 \
@@ -451,6 +455,7 @@ static const struct gen_device_info gen_device_info_chv = {
    GEN9_HW_INFO,                                   \
    .gt = 1,                                        \
    .has_llc = false,                               \
+   .has_sample_with_hiz = true,                    \
    .num_slices = 1,                                \
    .num_thread_per_eu = 6,                         \
    .max_vs_threads = 112,                          \
@@ -502,6 +507,7 @@ static const struct gen_device_info gen_device_info_chv = {
 #define GEN9_FEATURES                               \
    GEN8_FEATURES,                                   \
    GEN9_HW_INFO,                                    \
+   .has_sample_with_hiz = true,                     \
    .num_thread_per_eu = 7
 
 static const struct gen_device_info gen_device_info_skl_gt1 = {
@@ -695,6 +701,7 @@ static const struct gen_device_info gen_device_info_cfl_gt3 = {
 #define GEN10_FEATURES(_gt, _slices, _subslices, _l3) \
    GEN8_FEATURES,                                   \
    GEN10_HW_INFO,                                   \
+   .has_sample_with_hiz = true,                     \
    .gt = _gt,                                       \
    .num_slices = _slices,                           \
    .num_subslices = _subslices,                     \

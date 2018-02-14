@@ -1911,10 +1911,7 @@ intel_miptree_sample_with_hiz(struct brw_context *brw,
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
-   /* It's unclear how well supported sampling from the hiz buffer is on GEN8,
-    * so keep things conservative for now and never enable it unless we're SKL+.
-    */
-   if (devinfo->gen < 9) {
+   if (!devinfo->has_sample_with_hiz) {
       return false;
    }
 

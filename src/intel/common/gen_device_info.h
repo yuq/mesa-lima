@@ -55,7 +55,7 @@ struct gen_device_info
 
    bool has_hiz_and_separate_stencil;
    bool must_use_separate_stencil;
-
+   bool has_sample_with_hiz;
    bool has_llc;
 
    bool has_pln;
