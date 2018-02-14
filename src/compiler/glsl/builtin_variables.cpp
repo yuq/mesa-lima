@@ -441,7 +441,7 @@ private:
 builtin_variable_generator::builtin_variable_generator(
    exec_list *instructions, struct _mesa_glsl_parse_state *state)
    : instructions(instructions), state(state), symtab(state->symbols),
-     compatibility(state->compat_shader || !state->is_version(140, 100)),
+     compatibility(state->compat_shader || state->ARB_compatibility_enable),
      bool_t(glsl_type::bool_type), int_t(glsl_type::int_type),
      uint_t(glsl_type::uint_type),
      uint64_t(glsl_type::uint64_t_type),

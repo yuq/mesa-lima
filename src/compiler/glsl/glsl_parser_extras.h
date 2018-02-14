@@ -609,6 +609,8 @@ struct _mesa_glsl_parse_state {
    bool ARB_arrays_of_arrays_warn;
    bool ARB_bindless_texture_enable;
    bool ARB_bindless_texture_warn;
+   bool ARB_compatibility_enable;
+   bool ARB_compatibility_warn;
    bool ARB_compute_shader_enable;
    bool ARB_compute_shader_warn;
    bool ARB_compute_variable_group_size_enable;

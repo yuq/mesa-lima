@@ -40,6 +40,7 @@ EXT(ARB_clear_buffer_object                 , dummy_true                        
 EXT(ARB_clear_texture                       , ARB_clear_texture                      , GLL, GLC,  x ,  x , 2013)
 EXT(ARB_clip_control                        , ARB_clip_control                       , GLL, GLC,  x ,  x , 2014)
 EXT(ARB_color_buffer_float                  , ARB_color_buffer_float                 , GLL, GLC,  x ,  x , 2004)
+EXT(ARB_compatibility                       , ARB_compatibility                      , GLL,  x ,  x ,  x , 2009)
 EXT(ARB_compressed_texture_pixel_storage    , dummy_true                             , GLL, GLC,  x ,  x , 2011)
 EXT(ARB_compute_shader                      , ARB_compute_shader                     , GLL, GLC,  x ,  x , 2012)
 EXT(ARB_compute_variable_group_size         , ARB_compute_variable_group_size        , GLL, GLC,  x ,  x , 2013)

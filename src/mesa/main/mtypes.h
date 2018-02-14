@@ -4177,6 +4177,7 @@ struct gl_extensions
    GLboolean ARB_clear_texture;
    GLboolean ARB_clip_control;
    GLboolean ARB_color_buffer_float;
+   GLboolean ARB_compatibility;
    GLboolean ARB_compute_shader;
    GLboolean ARB_compute_variable_group_size;
    GLboolean ARB_conditional_render_inverted;
