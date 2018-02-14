@@ -69,6 +69,26 @@ namespace SwrJit
         return IN_BOUNDS_GEP(ptr, indices);
     }
 
+    LoadInst* Builder::LOAD(Value *Ptr, const char *Name)
+    {
+        return IRB()->CreateLoad(Ptr, Name);
+    }
+
+    LoadInst* Builder::LOAD(Value *Ptr, const Twine &Name)
+    {
+        return IRB()->CreateLoad(Ptr, Name);
+    }
+
+    LoadInst* Builder::LOAD(Type *Ty, Value *Ptr, const Twine &Name)
+    {
+        return IRB()->CreateLoad(Ty, Ptr, Name);
+    }
+
+    LoadInst* Builder::LOAD(Value *Ptr, bool isVolatile, const Twine &Name)
+    {
+        return IRB()->CreateLoad(Ptr, isVolatile, Name);
+    }
+
     LoadInst *Builder::LOAD(Value *basePtr, const std::initializer_list<uint32_t> &indices, const llvm::Twine& name)
     {
         std::vector<Value*> valIndices;
