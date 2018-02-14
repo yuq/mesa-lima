@@ -270,7 +270,7 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       assert(surf_fmtl->bh == view_fmtl->bh);
    }
 
-   s.SurfaceFormat = (enum GENX(SURFACE_FORMAT)) info->view->format;
+   s.SurfaceFormat = info->view->format;
 
 #if GEN_GEN <= 5
    s.ColorBufferComponentWriteDisables = info->write_disables;
@@ -718,7 +718,7 @@ isl_genX(buffer_fill_state_s)(void *state,
    struct GENX(RENDER_SURFACE_STATE) s = { 0, };
 
    s.SurfaceType = SURFTYPE_BUFFER;
-   s.SurfaceFormat = (enum GENX(SURFACE_FORMAT)) info->format;
+   s.SurfaceFormat = info->format;
 
 #if GEN_GEN >= 6
    s.SurfaceVerticalAlignment = isl_to_gen_valign[4];
@@ -776,7 +776,7 @@ isl_genX(null_fill_state)(void *state, struct isl_extent3d size)
 {
    struct GENX(RENDER_SURFACE_STATE) s = {
       .SurfaceType = SURFTYPE_NULL,
-      .SurfaceFormat = (enum GENX(SURFACE_FORMAT)) ISL_FORMAT_B8G8R8A8_UNORM,
+      .SurfaceFormat = ISL_FORMAT_B8G8R8A8_UNORM,
 #if GEN_GEN >= 7
       .SurfaceArray = size.depth > 0,
 #endif

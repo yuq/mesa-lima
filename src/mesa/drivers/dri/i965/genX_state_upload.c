@@ -572,7 +572,7 @@ genX(emit_vertices)(struct brw_context *brw)
                            1 + GENX(VERTEX_ELEMENT_STATE_length));
       struct GENX(VERTEX_ELEMENT_STATE) elem = {
          .Valid = true,
-         .SourceElementFormat = (enum GENX(SURFACE_FORMAT)) ISL_FORMAT_R32G32B32A32_FLOAT,
+         .SourceElementFormat = ISL_FORMAT_R32G32B32A32_FLOAT,
          .Component0Control = VFCOMP_STORE_0,
          .Component1Control = VFCOMP_STORE_0,
          .Component2Control = VFCOMP_STORE_0,
@@ -766,13 +766,13 @@ genX(emit_vertices)(struct brw_context *brw)
       if (vs_prog_data->uses_basevertex ||
           vs_prog_data->uses_baseinstance) {
          elem_state.VertexBufferIndex = brw->vb.nr_buffers;
-         elem_state.SourceElementFormat = (enum GENX(SURFACE_FORMAT)) ISL_FORMAT_R32G32_UINT;
+         elem_state.SourceElementFormat = ISL_FORMAT_R32G32_UINT;
          elem_state.Component0Control = VFCOMP_STORE_SRC;
          elem_state.Component1Control = VFCOMP_STORE_SRC;
       }
 #else
       elem_state.VertexBufferIndex = brw->vb.nr_buffers;
-      elem_state.SourceElementFormat = (enum GENX(SURFACE_FORMAT)) ISL_FORMAT_R32G32_UINT;
+      elem_state.SourceElementFormat = ISL_FORMAT_R32G32_UINT;
       if (vs_prog_data->uses_basevertex)
          elem_state.Component0Control = VFCOMP_STORE_SRC;
 
@@ -794,7 +794,7 @@ genX(emit_vertices)(struct brw_context *brw)
       struct GENX(VERTEX_ELEMENT_STATE) elem_state = {
          .Valid = true,
          .VertexBufferIndex = brw->vb.nr_buffers + 1,
-         .SourceElementFormat = (enum GENX(SURFACE_FORMAT)) ISL_FORMAT_R32_UINT,
+         .SourceElementFormat = ISL_FORMAT_R32_UINT,
          .Component0Control = VFCOMP_STORE_SRC,
          .Component1Control = VFCOMP_STORE_0,
          .Component2Control = VFCOMP_STORE_0,

@@ -172,7 +172,7 @@ genX(cmd_buffer_so_memcpy)(struct anv_cmd_buffer *cmd_buffer,
       &(struct GENX(VERTEX_ELEMENT_STATE)) {
          .VertexBufferIndex = 32,
          .Valid = true,
-         .SourceElementFormat = (enum GENX(SURFACE_FORMAT)) format,
+         .SourceElementFormat = format,
          .SourceElementOffset = 0,
          .Component0Control = (bs >= 4) ? VFCOMP_STORE_SRC : VFCOMP_STORE_0,
          .Component1Control = (bs >= 8) ? VFCOMP_STORE_SRC : VFCOMP_STORE_0,
