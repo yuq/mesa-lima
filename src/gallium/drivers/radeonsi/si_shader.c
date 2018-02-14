@@ -1254,11 +1254,20 @@ static LLVMValueRef si_nir_load_tcs_varyings(struct ac_shader_abi *abi,
 		param_index = LLVMConstInt(ctx->i32, const_index, 0);
 	}
 
+	ubyte *names;
+	ubyte *indices;
+	if (load_input) {
+		names = info->input_semantic_name;
+		indices = info->input_semantic_index;
+	} else {
+		names = info->output_semantic_name;
+		indices = info->output_semantic_index;
+	}
+
 	dw_addr = get_dw_address_from_generic_indices(ctx, stride, dw_addr,
 						      vertex_index, param_index,
 						      driver_location,
-						      info->input_semantic_name,
-						      info->input_semantic_index,
+						      names, indices,
 						      is_patch);
 
 	LLVMValueRef value[4];
