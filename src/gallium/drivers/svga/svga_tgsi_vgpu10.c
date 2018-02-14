@@ -6484,7 +6484,7 @@ struct svga_shader_variant *
 svga_tgsi_vgpu10_translate(struct svga_context *svga,
                            const struct svga_shader *shader,
                            const struct svga_compile_key *key,
-                           unsigned unit)
+                           enum pipe_shader_type unit)
 {
    struct svga_shader_variant *variant = NULL;
    struct svga_shader_emitter_v10 *emit;
