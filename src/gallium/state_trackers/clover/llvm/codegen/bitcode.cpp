@@ -66,7 +66,7 @@ namespace {
    emit_code(const ::llvm::Module &mod) {
       ::llvm::SmallVector<char, 1024> data;
       ::llvm::raw_svector_ostream os { data };
-      WriteBitcodeToFile(&mod, os);
+      compat::write_bitcode_to_file(mod, os);
       return { os.str().begin(), os.str().end() };
    }
 }
