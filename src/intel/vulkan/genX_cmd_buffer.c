@@ -2001,6 +2001,26 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
  out:
    anv_state_flush(cmd_buffer->device, *bt_state);
 
+#if GEN_GEN >= 11
+   /* The PIPE_CONTROL command description says:
+    *
+    *    "Whenever a Binding Table Index (BTI) used by a Render Taget Message
+    *     points to a different RENDER_SURFACE_STATE, SW must issue a Render
+    *     Target Cache Flush by enabling this bit. When render target flush
+    *     is set due to new association of BTI, PS Scoreboard Stall bit must
+    *     be set in this packet."
+    *
+    * FINISHME: Currently we shuffle around the surface states in the binding
+    * table based on if they are getting used or not. So, we've to do below
+    * pipe control flush for every binding table upload. Make changes so
+    * that we do it only when we modify render target surface states.
+    */
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+      pc.RenderTargetCacheFlushEnable  = true;
+      pc.StallAtPixelScoreboard        = true;
+   }
+#endif
+
    return VK_SUCCESS;
 }
 
