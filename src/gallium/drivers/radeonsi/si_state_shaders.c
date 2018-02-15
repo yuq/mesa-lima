@@ -26,6 +26,7 @@
 #include "gfx9d.h"
 #include "radeon/r600_cs.h"
 
+#include "compiler/nir/nir_serialize.h"
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_ureg.h"
 #include "util/hash_table.h"
@@ -42,22 +43,40 @@
 /* SHADER_CACHE */
 
 /**
- * Return the TGSI binary in a buffer. The first 4 bytes contain its size as
- * integer.
+ * Return the IR binary in a buffer. For TGSI the first 4 bytes contain its
+ * size as integer.
  */
-static void *si_get_tgsi_binary(struct si_shader_selector *sel)
+static void *si_get_ir_binary(struct si_shader_selector *sel)
 {
-	unsigned tgsi_size = tgsi_num_tokens(sel->tokens) *
-			     sizeof(struct tgsi_token);
-	unsigned size = 4 + tgsi_size + sizeof(sel->so);
-	char *result = (char*)MALLOC(size);
+	struct blob blob;
+	unsigned ir_size;
+	void *ir_binary;
 
+	if (sel->tokens) {
+		ir_binary = sel->tokens;
+		ir_size = tgsi_num_tokens(sel->tokens) *
+					  sizeof(struct tgsi_token);
+	} else {
+		assert(sel->nir);
+
+		blob_init(&blob);
+		nir_serialize(&blob, sel->nir);
+		ir_binary = blob.data;
+		ir_size = blob.size;
+	}
+
+	unsigned size = 4 + ir_size + sizeof(sel->so);
+	char *result = (char*)MALLOC(size);
 	if (!result)
 		return NULL;
 
 	*((uint32_t*)result) = size;
-	memcpy(result + 4, sel->tokens, tgsi_size);
-	memcpy(result + 4 + tgsi_size, &sel->so, sizeof(sel->so));
+	memcpy(result + 4, ir_binary, ir_size);
+	memcpy(result + 4 + ir_size, &sel->so, sizeof(sel->so));
+
+	if (sel->nir)
+		blob_finish(&blob);
+
 	return result;
 }
 
@@ -1813,8 +1832,8 @@ static void si_init_shader_selector_async(void *job, int thread_index)
 					      sel->so.num_outputs != 0,
 					      &shader->key);
 
-		if (sel->tokens)
-			ir_binary = si_get_tgsi_binary(sel);
+		if (sel->tokens || sel->nir)
+			ir_binary = si_get_ir_binary(sel);
 
 		/* Try to load the shader from the shader cache. */
 		mtx_lock(&sscreen->shader_cache_mutex);
