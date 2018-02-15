@@ -186,7 +186,7 @@ static void *
 cache_exists(struct disk_cache *cache)
 {
    uint8_t dummy_key[20];
-   char *data = "some test data";
+   char data[] = "some test data";
 
    if (!cache)
       return NULL;
