@@ -1452,6 +1452,8 @@ dri2_wl_swrast_get_stride_for_format(int format, int w)
 {
    int visual_idx = dri2_wl_visual_idx_from_shm_format(format);
 
+   assume(visual_idx != -1);
+
    return w * (dri2_wl_visuals[visual_idx].bpp / 8);
 }
 
