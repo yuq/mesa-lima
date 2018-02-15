@@ -182,10 +182,10 @@ static bool si_load_shader_binary(struct si_shader *shader, void *binary)
  * Insert a shader into the cache. It's assumed the shader is not in the cache.
  * Use si_shader_cache_load_shader before calling this.
  *
- * Returns false on failure, in which case the tgsi_binary should be freed.
+ * Returns false on failure, in which case the ir_binary should be freed.
  */
 static bool si_shader_cache_insert_shader(struct si_screen *sscreen,
-					  void *tgsi_binary,
+					  void *ir_binary,
 					  struct si_shader *shader,
 					  bool insert_into_disk_cache)
 {
@@ -193,7 +193,7 @@ static bool si_shader_cache_insert_shader(struct si_screen *sscreen,
 	struct hash_entry *entry;
 	uint8_t key[CACHE_KEY_SIZE];
 
-	entry = _mesa_hash_table_search(sscreen->shader_cache, tgsi_binary);
+	entry = _mesa_hash_table_search(sscreen->shader_cache, ir_binary);
 	if (entry)
 		return false; /* already added */
 
@@ -201,15 +201,15 @@ static bool si_shader_cache_insert_shader(struct si_screen *sscreen,
 	if (!hw_binary)
 		return false;
 
-	if (_mesa_hash_table_insert(sscreen->shader_cache, tgsi_binary,
+	if (_mesa_hash_table_insert(sscreen->shader_cache, ir_binary,
 				    hw_binary) == NULL) {
 		FREE(hw_binary);
 		return false;
 	}
 
 	if (sscreen->disk_shader_cache && insert_into_disk_cache) {
-		disk_cache_compute_key(sscreen->disk_shader_cache, tgsi_binary,
-				       *((uint32_t *)tgsi_binary), key);
+		disk_cache_compute_key(sscreen->disk_shader_cache, ir_binary,
+				       *((uint32_t *)ir_binary), key);
 		disk_cache_put(sscreen->disk_shader_cache, key, hw_binary,
 			       *((uint32_t *) hw_binary), NULL);
 	}
@@ -218,18 +218,18 @@ static bool si_shader_cache_insert_shader(struct si_screen *sscreen,
 }
 
 static bool si_shader_cache_load_shader(struct si_screen *sscreen,
-					void *tgsi_binary,
+					void *ir_binary,
 				        struct si_shader *shader)
 {
 	struct hash_entry *entry =
-		_mesa_hash_table_search(sscreen->shader_cache, tgsi_binary);
+		_mesa_hash_table_search(sscreen->shader_cache, ir_binary);
 	if (!entry) {
 		if (sscreen->disk_shader_cache) {
 			unsigned char sha1[CACHE_KEY_SIZE];
-			size_t tg_size = *((uint32_t *) tgsi_binary);
+			size_t tg_size = *((uint32_t *) ir_binary);
 
 			disk_cache_compute_key(sscreen->disk_shader_cache,
-					       tgsi_binary, tg_size, sha1);
+					       ir_binary, tg_size, sha1);
 
 			size_t binary_size;
 			uint8_t *buffer =
@@ -260,15 +260,15 @@ static bool si_shader_cache_load_shader(struct si_screen *sscreen,
 			}
 			free(buffer);
 
-			if (!si_shader_cache_insert_shader(sscreen, tgsi_binary,
+			if (!si_shader_cache_insert_shader(sscreen, ir_binary,
 							   shader, false))
-				FREE(tgsi_binary);
+				FREE(ir_binary);
 		} else {
 			return false;
 		}
 	} else {
 		if (si_load_shader_binary(shader, entry->data))
-			FREE(tgsi_binary);
+			FREE(ir_binary);
 		else
 			return false;
 	}
@@ -1797,7 +1797,7 @@ static void si_init_shader_selector_async(void *job, int thread_index)
 	 */
 	if (!sscreen->use_monolithic_shaders) {
 		struct si_shader *shader = CALLOC_STRUCT(si_shader);
-		void *tgsi_binary = NULL;
+		void *ir_binary = NULL;
 
 		if (!shader) {
 			fprintf(stderr, "radeonsi: can't allocate a main shader part\n");
@@ -1814,13 +1814,13 @@ static void si_init_shader_selector_async(void *job, int thread_index)
 					      &shader->key);
 
 		if (sel->tokens)
-			tgsi_binary = si_get_tgsi_binary(sel);
+			ir_binary = si_get_tgsi_binary(sel);
 
 		/* Try to load the shader from the shader cache. */
 		mtx_lock(&sscreen->shader_cache_mutex);
 
-		if (tgsi_binary &&
-		    si_shader_cache_load_shader(sscreen, tgsi_binary, shader)) {
+		if (ir_binary &&
+		    si_shader_cache_load_shader(sscreen, ir_binary, shader)) {
 			mtx_unlock(&sscreen->shader_cache_mutex);
 			si_shader_dump_stats_for_shader_db(shader, debug);
 		} else {
@@ -1830,15 +1830,15 @@ static void si_init_shader_selector_async(void *job, int thread_index)
 			if (si_compile_tgsi_shader(sscreen, tm, shader, false,
 						   debug) != 0) {
 				FREE(shader);
-				FREE(tgsi_binary);
+				FREE(ir_binary);
 				fprintf(stderr, "radeonsi: can't compile a main shader part\n");
 				return;
 			}
 
-			if (tgsi_binary) {
+			if (ir_binary) {
 				mtx_lock(&sscreen->shader_cache_mutex);
-				if (!si_shader_cache_insert_shader(sscreen, tgsi_binary, shader, true))
-					FREE(tgsi_binary);
+				if (!si_shader_cache_insert_shader(sscreen, ir_binary, shader, true))
+					FREE(ir_binary);
 				mtx_unlock(&sscreen->shader_cache_mutex);
 			}
 		}
