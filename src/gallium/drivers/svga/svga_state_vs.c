@@ -227,16 +227,15 @@ svga_reemit_vs_bindings(struct svga_context *svga)
    if (!svga_need_to_rebind_resources(svga)) {
       ret =  svga->swc->resource_rebind(svga->swc, NULL, gbshader,
                                         SVGA_RELOC_READ);
-      goto out;
+   }
+   else {
+      if (svga_have_vgpu10(svga))
+         ret = SVGA3D_vgpu10_SetShader(svga->swc, SVGA3D_SHADERTYPE_VS,
+                                       gbshader, shaderId);
+      else
+         ret = SVGA3D_SetGBShader(svga->swc, SVGA3D_SHADERTYPE_VS, gbshader);
    }
 
-   if (svga_have_vgpu10(svga))
-      ret = SVGA3D_vgpu10_SetShader(svga->swc, SVGA3D_SHADERTYPE_VS,
-                                    gbshader, shaderId);
-   else
-      ret = SVGA3D_SetGBShader(svga->swc, SVGA3D_SHADERTYPE_VS, gbshader);
-
- out:
    if (ret != PIPE_OK)
       return ret;
 
