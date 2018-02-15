@@ -519,6 +519,8 @@ static int virgl_vtest_get_caps(struct virgl_winsys *vws,
                                 struct virgl_drm_caps *caps)
 {
    struct virgl_vtest_winsys *vtws = virgl_vtest_winsys(vws);
+
+   virgl_ws_fill_new_caps_defaults(caps);
    return virgl_vtest_send_get_caps(vtws, caps);
 }
 

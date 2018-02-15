@@ -705,46 +705,28 @@ static int virgl_drm_get_caps(struct virgl_winsys *vws,
    struct virgl_drm_winsys *vdws = virgl_drm_winsys(vws);
    struct drm_virtgpu_get_caps args;
    int ret;
-   bool fill_v2 = false;
+
+   virgl_ws_fill_new_caps_defaults(caps);
 
    memset(&args, 0, sizeof(args));
-
-   args.cap_set_id = 1;
+   if (vdws->has_capset_query_fix) {
+      /* if we have the query fix - try and get cap set id 2 first */
+      args.cap_set_id = 2;
+      args.size = sizeof(union virgl_caps);
+   } else {
+      args.cap_set_id = 1;
+      args.size = sizeof(struct virgl_caps_v1);
+   }
    args.addr = (unsigned long)&caps->caps;
-   args.size = sizeof(union virgl_caps);
 
    ret = drmIoctl(vdws->fd, DRM_IOCTL_VIRTGPU_GET_CAPS, &args);
-
    if (ret == -1 && errno == EINVAL) {
       /* Fallback to v1 */
+      args.cap_set_id = 1;
       args.size = sizeof(struct virgl_caps_v1);
       ret = drmIoctl(vdws->fd, DRM_IOCTL_VIRTGPU_GET_CAPS, &args);
       if (ret == -1)
           return ret;
-      fill_v2 = true;
-   }
-   if (caps->caps.max_version == 1)
-       fill_v2 = true;
-
-   if (fill_v2) {
-      caps->caps.v2.min_aliased_point_size = 0.f;
-      caps->caps.v2.max_aliased_point_size = 255.f;
-      caps->caps.v2.min_smooth_point_size = 0.f;
-      caps->caps.v2.max_smooth_point_size = 255.f;
-      caps->caps.v2.min_aliased_line_width = 0.f;
-      caps->caps.v2.max_aliased_line_width = 255.f;
-      caps->caps.v2.min_smooth_line_width = 0.f;
-      caps->caps.v2.max_smooth_line_width = 255.f;
-      caps->caps.v2.max_texture_lod_bias = 16.0f;
-      caps->caps.v2.max_geom_output_vertices = 256;
-      caps->caps.v2.max_geom_total_output_components = 16384;
-      caps->caps.v2.max_vertex_outputs = 32;
-      caps->caps.v2.max_vertex_attribs = 16;
-      caps->caps.v2.max_shader_patch_varyings = 0;
-      caps->caps.v2.min_texel_offset = -8;
-      caps->caps.v2.max_texel_offset = 7;
-      caps->caps.v2.min_texture_gather_offset = -8;
-      caps->caps.v2.max_texture_gather_offset = 7;
    }
    return ret;
 }
@@ -813,6 +795,8 @@ static struct virgl_winsys *
 virgl_drm_winsys_create(int drmFD)
 {
    struct virgl_drm_winsys *qdws;
+   int ret;
+   struct drm_virtgpu_getparam getparam = {0};
 
    qdws = CALLOC_STRUCT(virgl_drm_winsys);
    if (!qdws)
@@ -847,6 +831,16 @@ virgl_drm_winsys_create(int drmFD)
    qdws->base.fence_reference = virgl_fence_reference;
 
    qdws->base.get_caps = virgl_drm_get_caps;
+
+   uint32_t value;
+   getparam.param = VIRTGPU_PARAM_CAPSET_QUERY_FIX;
+   getparam.value = (uint64_t)(uintptr_t)&value;
+   ret = drmIoctl(qdws->fd, DRM_IOCTL_VIRTGPU_GETPARAM, &getparam);
+   if (ret == 0) {
+      if (value == 1)
+         qdws->has_capset_query_fix = true;
+   }
+
    return &qdws->base;
 
 }
