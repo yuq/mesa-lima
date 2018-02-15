@@ -704,7 +704,14 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.AllowMappedBuffersDuringExecution = true;
 
    /* GL_ARB_get_program_binary */
-   ctx->Const.NumProgramBinaryFormats = 1;
+   /* The QT framework has a bug in their shader program cache, which is built
+    * on GL_ARB_get_program_binary. In an effort to allow them to fix the bug
+    * we don't enable more than 1 binary format for compatibility profiles.
+    * This is only being done on the 18.0 release branch.
+    */
+   if (ctx->API != API_OPENGL_COMPAT) {
+      ctx->Const.NumProgramBinaryFormats = 1;
+   }
 }
 
 static void
