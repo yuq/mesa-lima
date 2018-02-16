@@ -317,8 +317,20 @@ enum ac_image_opcode {
 	ac_image_get_resinfo,
 };
 
+enum ac_image_dim {
+	ac_image_1d,
+	ac_image_2d,
+	ac_image_3d,
+	ac_image_cube, // includes cube arrays
+	ac_image_1darray,
+	ac_image_2darray,
+	ac_image_2dmsaa,
+	ac_image_2darraymsaa,
+};
+
 struct ac_image_args {
 	enum ac_image_opcode opcode;
+	enum ac_image_dim dim;
 	bool level_zero;
 	bool bias;
 	bool lod;
@@ -331,7 +343,6 @@ struct ac_image_args {
 	LLVMValueRef addr;
 	unsigned dmask;
 	bool unorm;
-	bool da;
 };
 
 LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,

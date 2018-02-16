@@ -1456,6 +1456,12 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 	bool sample = a->opcode == ac_image_sample ||
 		      a->opcode == ac_image_gather4 ||
 		      a->opcode == ac_image_get_lod;
+	bool da = a->dim == ac_image_cube ||
+		  a->dim == ac_image_1darray ||
+		  a->dim == ac_image_2darray ||
+		  a->dim == ac_image_2darraymsaa;
+	if (a->opcode == ac_image_get_lod)
+		da = false;
 
 	if (sample)
 		args[num_args++] = ac_to_float(ctx, a->addr);
@@ -1471,7 +1477,7 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 	args[num_args++] = ctx->i1false; /* glc */
 	args[num_args++] = ctx->i1false; /* slc */
 	args[num_args++] = ctx->i1false; /* lwe */
-	args[num_args++] = LLVMConstInt(ctx->i1, a->da, 0);
+	args[num_args++] = LLVMConstInt(ctx->i1, da, 0);
 
 	switch (a->opcode) {
 	case ac_image_sample:
@@ -2473,7 +2479,7 @@ void ac_apply_fmask_to_sample(struct ac_llvm_context *ac, LLVMValueRef fmask,
 	fmask_load.opcode = ac_image_load;
 	fmask_load.resource = fmask;
 	fmask_load.dmask = 0xf;
-	fmask_load.da = is_array_tex;
+	fmask_load.dim = is_array_tex ? ac_image_2darray : ac_image_2d;
 
 	LLVMValueRef fmask_addr[4];
 	memcpy(fmask_addr, addr, sizeof(fmask_addr[0]) * 3);

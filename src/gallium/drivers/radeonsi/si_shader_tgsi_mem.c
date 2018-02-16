@@ -101,6 +101,44 @@ static bool tgsi_is_array_image(unsigned target)
 	       target == TGSI_TEXTURE_2D_ARRAY_MSAA;
 }
 
+static enum ac_image_dim
+ac_texture_dim_from_tgsi_target(struct si_screen *screen, enum tgsi_texture_type target)
+{
+	switch (target) {
+	case TGSI_TEXTURE_1D:
+	case TGSI_TEXTURE_SHADOW1D:
+		if (screen->info.chip_class >= GFX9)
+			return ac_image_2d;
+		return ac_image_1d;
+	case TGSI_TEXTURE_2D:
+	case TGSI_TEXTURE_SHADOW2D:
+	case TGSI_TEXTURE_RECT:
+	case TGSI_TEXTURE_SHADOWRECT:
+		return ac_image_2d;
+	case TGSI_TEXTURE_3D:
+		return ac_image_3d;
+	case TGSI_TEXTURE_CUBE:
+	case TGSI_TEXTURE_SHADOWCUBE:
+	case TGSI_TEXTURE_CUBE_ARRAY:
+	case TGSI_TEXTURE_SHADOWCUBE_ARRAY:
+		return ac_image_cube;
+	case TGSI_TEXTURE_1D_ARRAY:
+	case TGSI_TEXTURE_SHADOW1D_ARRAY:
+		if (screen->info.chip_class >= GFX9)
+			return ac_image_2darray;
+		return ac_image_1darray;
+	case TGSI_TEXTURE_2D_ARRAY:
+	case TGSI_TEXTURE_SHADOW2D_ARRAY:
+		return ac_image_2darray;
+	case TGSI_TEXTURE_2D_MSAA:
+		return ac_image_2dmsaa;
+	case TGSI_TEXTURE_2D_ARRAY_MSAA:
+		return ac_image_2darraymsaa;
+	default:
+		unreachable("unhandled texture type");
+	}
+}
+
 /**
  * Given a 256-bit resource descriptor, force the DCC enable bit to off.
  *
@@ -986,12 +1024,12 @@ static void set_tex_fetch_args(struct si_shader_context *ctx,
 	else
 		args.addr = param[0];
 
+	args.dim = ac_texture_dim_from_tgsi_target(ctx->screen, target);
 	args.resource = res_ptr;
 	args.sampler = samp_ptr;
 	args.dmask = dmask;
 	args.unorm = target == TGSI_TEXTURE_RECT ||
 		     target == TGSI_TEXTURE_SHADOWRECT;
-	args.da = tgsi_is_array_sampler(target);
 
 	/* Ugly, but we seem to have no other choice right now. */
 	STATIC_ASSERT(sizeof(args) <= sizeof(emit_data->args));
@@ -1925,7 +1963,15 @@ static void si_llvm_emit_fbfetch(const struct lp_build_tgsi_action *action,
 	args.resource = image;
 	args.addr = addr_vec;
 	args.dmask = 0xf;
-	args.da = ctx->shader->key.mono.u.ps.fbfetch_layered;
+	if (ctx->shader->key.mono.u.ps.fbfetch_msaa)
+		args.dim = ctx->shader->key.mono.u.ps.fbfetch_layered ?
+			ac_image_2darraymsaa : ac_image_2dmsaa;
+	else if (ctx->shader->key.mono.u.ps.fbfetch_is_1D)
+		args.dim = ctx->shader->key.mono.u.ps.fbfetch_layered ?
+			ac_image_1darray : ac_image_1d;
+	else
+		args.dim = ctx->shader->key.mono.u.ps.fbfetch_layered ?
+			ac_image_2darray : ac_image_2d;
 
 	emit_data->output[emit_data->chan] =
 		ac_build_image_opcode(&ctx->ac, &args);

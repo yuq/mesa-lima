@@ -76,6 +76,45 @@ build_store_values_extended(struct ac_llvm_context *ac,
 	}
 }
 
+static enum ac_image_dim
+get_ac_sampler_dim(const struct ac_llvm_context *ctx, enum glsl_sampler_dim dim,
+		   bool is_array)
+{
+	switch (dim) {
+	case GLSL_SAMPLER_DIM_1D:
+		if (ctx->chip_class >= GFX9)
+			return is_array ? ac_image_2darray : ac_image_2d;
+		return is_array ? ac_image_1darray : ac_image_1d;
+	case GLSL_SAMPLER_DIM_2D:
+	case GLSL_SAMPLER_DIM_RECT:
+	case GLSL_SAMPLER_DIM_SUBPASS:
+	case GLSL_SAMPLER_DIM_EXTERNAL:
+		return is_array ? ac_image_2darray : ac_image_2d;
+	case GLSL_SAMPLER_DIM_3D:
+		return ac_image_3d;
+	case GLSL_SAMPLER_DIM_CUBE:
+		return ac_image_cube;
+	case GLSL_SAMPLER_DIM_MS:
+	case GLSL_SAMPLER_DIM_SUBPASS_MS:
+		return is_array ? ac_image_2darraymsaa : ac_image_2dmsaa;
+	default:
+		unreachable("bad sampler dim");
+	}
+}
+
+static enum ac_image_dim
+get_ac_image_dim(const struct ac_llvm_context *ctx, enum glsl_sampler_dim sdim,
+		 bool is_array)
+{
+	enum ac_image_dim dim = get_ac_sampler_dim(ctx, sdim, is_array);
+
+	if (dim == ac_image_cube ||
+	    (ctx->chip_class <= VI && dim == ac_image_3d))
+		dim = ac_image_2darray;
+
+	return dim;
+}
+
 static LLVMTypeRef get_def_type(struct ac_nir_context *ctx,
                                 const nir_ssa_def *def)
 {
@@ -1124,7 +1163,7 @@ static LLVMValueRef lower_gather4_integer(struct ac_llvm_context *ctx,
 	{
 		struct ac_image_args txq_args = { 0 };
 
-		txq_args.da = instr->is_array || instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE;
+		txq_args.dim = get_ac_sampler_dim(ctx, instr->sampler_dim, instr->is_array);
 		txq_args.opcode = ac_image_get_resinfo;
 		txq_args.dmask = 0xf;
 		txq_args.addr = ctx->i32_0;
@@ -2055,7 +2094,7 @@ static LLVMValueRef adjust_sample_index_using_fmask(struct ac_llvm_context *ctx,
 	struct ac_image_args args = {0};
 
 	args.opcode = ac_image_load;
-	args.da = coord_z ? true : false;
+	args.dim = coord_z ? ac_image_2darray : ac_image_2d;
 	args.resource = fmask_desc_ptr;
 	args.dmask = 0xf;
 	args.addr = ac_build_gather_values(ctx, fmask_load_address, coord_z ? 4 : 2);
@@ -2402,7 +2441,8 @@ static LLVMValueRef visit_image_samples(struct ac_nir_context *ctx,
 	const struct glsl_type *type = glsl_without_array(var->type);
 
 	struct ac_image_args args = { 0 };
-	args.da = glsl_is_array_image(type);
+	args.dim = get_ac_sampler_dim(&ctx->ac, glsl_get_sampler_dim(type),
+				      glsl_sampler_type_is_array(type));
 	args.dmask = 0xf;
 	args.resource = get_sampler_desc(ctx, instr->variables[0],
 					 AC_DESC_IMAGE, NULL, true, false);
@@ -2426,7 +2466,8 @@ static LLVMValueRef visit_image_size(struct ac_nir_context *ctx,
 
 	struct ac_image_args args = { 0 };
 
-	args.da = glsl_is_array_image(type);
+	args.dim = get_ac_image_dim(&ctx->ac, glsl_get_sampler_dim(type),
+				    glsl_sampler_type_is_array(type));
 	args.dmask = 0xf;
 	args.resource = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE, NULL, true, false);
 	args.opcode = ac_image_get_resinfo;
@@ -3185,10 +3226,7 @@ static void set_tex_fetch_args(struct ac_llvm_context *ctx,
 			       unsigned dmask)
 {
 	unsigned is_rect = 0;
-	bool da = instr->is_array || instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE;
 
-	if (op == nir_texop_lod)
-		da = false;
 	/* Pad to power of two vector */
 	while (count < util_next_power_of_two(count))
 		param[count++] = LLVMGetUndef(ctx->i32);
@@ -3208,7 +3246,7 @@ static void set_tex_fetch_args(struct ac_llvm_context *ctx,
 
 	args->dmask = dmask;
 	args->unorm = is_rect;
-	args->da = da;
+	args->dim = get_ac_sampler_dim(&ctx->ac, instr->sampler_dim, instr->is_array);
 }
 
 /* Disable anisotropic filtering if BASE_LEVEL == LAST_LEVEL.
