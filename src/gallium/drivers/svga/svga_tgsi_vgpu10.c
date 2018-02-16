@@ -2053,11 +2053,15 @@ emit_decl_instruction(struct svga_shader_emitter_v10 *emit,
  */
 static void
 emit_input_declaration(struct svga_shader_emitter_v10 *emit,
-                       VGPU10_OPCODE_TYPE opcodeType, unsigned operandType,
-                       unsigned dim, unsigned index, unsigned size,
-                       unsigned name, unsigned numComp,
-                       unsigned selMode, unsigned usageMask,
-                       unsigned interpMode)
+                       VGPU10_OPCODE_TYPE opcodeType,
+                       VGPU10_OPERAND_TYPE operandType,
+                       VGPU10_OPERAND_INDEX_DIMENSION dim,
+                       unsigned index, unsigned size,
+                       VGPU10_SYSTEM_NAME name,
+                       VGPU10_OPERAND_NUM_COMPONENTS numComp,
+                       VGPU10_OPERAND_4_COMPONENT_SELECTION_MODE selMode,
+                       unsigned usageMask,
+                       VGPU10_INTERPOLATION_MODE interpMode)
 {
    VGPU10OpcodeToken0 opcode0;
    VGPU10OperandToken0 operand0;
@@ -2117,8 +2121,9 @@ emit_input_declaration(struct svga_shader_emitter_v10 *emit,
  */
 static void
 emit_output_declaration(struct svga_shader_emitter_v10 *emit,
-                        unsigned type, unsigned index,
-                        unsigned name, unsigned usageMask)
+                        VGPU10_OPCODE_TYPE type, unsigned index,
+                        VGPU10_SYSTEM_NAME name,
+                        unsigned usageMask)
 {
    VGPU10OpcodeToken0 opcode0;
    VGPU10OperandToken0 operand0;
@@ -2352,7 +2357,9 @@ emit_input_declarations(struct svga_shader_emitter_v10 *emit)
          enum tgsi_semantic semantic_name = emit->info.input_semantic_name[i];
          unsigned usage_mask = emit->info.input_usage_mask[i];
          unsigned index = emit->linkage.input_map[i];
-         unsigned type, interpolationMode, name;
+         VGPU10_OPCODE_TYPE type;
+         VGPU10_INTERPOLATION_MODE interpolationMode;
+         VGPU10_SYSTEM_NAME name;
 
          if (usage_mask == 0)
             continue;  /* register is not actually used */
@@ -2412,9 +2419,10 @@ emit_input_declarations(struct svga_shader_emitter_v10 *emit)
          unsigned usage_mask = emit->info.input_usage_mask[i];
          unsigned index = emit->linkage.input_map[i];
          VGPU10_OPCODE_TYPE opcodeType, operandType;
-         unsigned numComp, selMode;
-         unsigned name;
-         unsigned dim;
+         VGPU10_OPERAND_NUM_COMPONENTS numComp;
+         VGPU10_OPERAND_4_COMPONENT_SELECTION_MODE selMode;
+         VGPU10_SYSTEM_NAME name;
+         VGPU10_OPERAND_INDEX_DIMENSION dim;
 
          if (usage_mask == 0)
             continue;  /* register is not actually used */
@@ -2548,7 +2556,8 @@ emit_output_declarations(struct svga_shader_emitter_v10 *emit)
       }
       else {
          /* VS or GS */
-         unsigned name, type;
+         VGPU10_COMPONENT_NAME name;
+         VGPU10_OPCODE_TYPE type;
          unsigned writemask = VGPU10_OPERAND_4_COMPONENT_MASK_ALL;
 
          switch (semantic_name) {
