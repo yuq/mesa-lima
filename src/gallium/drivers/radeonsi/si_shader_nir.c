@@ -281,6 +281,11 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 			nir->info.fs.early_fragment_tests | nir->info.fs.post_depth_coverage;
 		info->properties[TGSI_PROPERTY_FS_POST_DEPTH_COVERAGE] = nir->info.fs.post_depth_coverage;
 
+		if (nir->info.fs.pixel_center_integer) {
+			info->properties[TGSI_PROPERTY_FS_COORD_PIXEL_CENTER] =
+				TGSI_FS_COORD_PIXEL_CENTER_INTEGER;
+		}
+
 		if (nir->info.fs.depth_layout != FRAG_DEPTH_LAYOUT_NONE) {
 			switch (nir->info.fs.depth_layout) {
 			case FRAG_DEPTH_LAYOUT_ANY:
