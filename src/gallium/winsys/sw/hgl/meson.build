@@ -1,4 +1,4 @@
-# Copyright © 2017 Intel Corporation
+# Copyright © 2017 Dylan Baker
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -18,43 +18,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-es2_glapi_mapi_tmp_h = custom_target(
-  'es2_glapi_mapi_tmp.h',
-  input : [mapi_abi_py, gl_and_es_api_files],
-  output : 'glapi_mapi_tmp.h',
-  command : [prog_python2, '@INPUT0@', '--printer', 'es2api', '@INPUT1@'],
-  depend_files : api_xml_files,
-  capture : true,
-)
-
-libgles2 = shared_library(
-  'GLESv2',
-  ['../entry.c', es2_glapi_mapi_tmp_h],
-  c_args : [
-    c_msvc_compat_args, c_vis_args, '-DMAPI_MODE_BRIDGE',
-    '-DMAPI_ABI_HEADER="@0@"'.format(es2_glapi_mapi_tmp_h.full_path()),
+libswhgl = static_library(
+  'swhgl',
+  files('hgl_sw_winsys.c'),
+  c_args : c_vis_args,
+  include_directories : [inc_gallium, inc_include, inc_src, inc_gallium_aux,
+    include_directories('../../../state_trackers/hgl')
   ],
-  link_args : [ld_args_gc_sections],
-  include_directories : [inc_src, inc_include, inc_mapi],
-  link_with : libglapi,
-  dependencies : [dep_thread, dep_libdrm, dep_m, dep_dl],
-  version : '2.0.0',
-  install : true,
+  build_by_default : false,
 )
-
-pkg.generate(
-  name : 'glesv2',
-  filebase : 'glesv2',
-  description : 'Mesa OpenGL ES 2.0 library',
-  version : meson.project_version(),
-  libraries : libgles2,
-  libraries_private : gl_priv_libs,
-)
-
-if with_tests
-  test(
-    'es2-ABI-check',
-    find_program('ABI-check'),
-    args : libgles2
-  )
-endif

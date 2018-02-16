@@ -21,9 +21,8 @@
 c_args_for_egl = []
 link_for_egl = []
 deps_for_egl = []
-incs_for_egl = [
-  inc_include, inc_src, inc_loader, inc_gbm, include_directories('main'),
-]
+incs_for_egl = [inc_include, inc_src, include_directories('main')]
+
 files_egl = files(
   'main/eglapi.c',
   'main/eglapi.h',
@@ -53,9 +52,6 @@ files_egl = files(
   'main/eglsync.h',
   'main/eglentrypoint.h',
   'main/egltypedefs.h',
-  'drivers/dri2/egl_dri2.c',
-  'drivers/dri2/egl_dri2.h',
-  'drivers/dri2/egl_dri2_fallbacks.h',
 )
 
 g_egldispatchstubs_c = custom_target(
@@ -86,6 +82,18 @@ g_egldispatchstubs_h = custom_target(
   capture : true,
 )
 
+if with_dri2
+  files_egl += files(
+    'drivers/dri2/egl_dri2.c',
+    'drivers/dri2/egl_dri2.h',
+    'drivers/dri2/egl_dri2_fallbacks.h',
+  )
+  c_args_for_egl += [
+    '-DDEFAULT_DRIVER_DIR="@0@"'.format(dri_search_path),
+    '-D_EGL_BUILT_IN_DRIVER_DRI2',
+  ]
+endif
+
 if with_platform_x11
   files_egl += files('drivers/dri2/platform_x11.c')
   if with_dri3
@@ -96,8 +104,9 @@ if with_platform_x11
 endif
 if with_platform_drm
   files_egl += files('drivers/dri2/platform_drm.c')
-  link_for_egl += libgbm
-  incs_for_egl += include_directories('../gbm/main')
+  link_for_egl += [libloader, libgbm, libxmlconfig]
+  incs_for_egl += [inc_loader, inc_gbm, include_directories('../gbm/main')]
+  deps_for_egl += dep_libdrm
 endif
 if with_platform_surfaceless
   files_egl += files('drivers/dri2/platform_surfaceless.c')
@@ -118,6 +127,15 @@ endif
 if with_platform_android
   deps_for_egl += dep_android
   files_egl += files('drivers/dri2/platform_android.c')
+endif
+if with_platform_haiku
+  incs_for_egl += inc_haikugl
+  c_args_for_egl += [
+    '-D_EGL_BUILT_IN_DRIVER_HAIKU',
+  ]
+  files_egl += files('drivers/haiku/egl_haiku.cpp')
+  link_for_egl += libgl
+  deps_for_egl += cpp.find_library('be')
 endif
 
 # TODO: glvnd
@@ -146,8 +164,6 @@ libegl = shared_library(
   c_args : [
     c_vis_args,
     c_args_for_egl,
-    '-DDEFAULT_DRIVER_DIR="@0@"'.format(dri_search_path),
-    '-D_EGL_BUILT_IN_DRIVER_DRI2',
     '-D_EGL_NATIVE_PLATFORM=_EGL_PLATFORM_@0@'.format(egl_native_platform.to_upper()),
   ],
   include_directories : incs_for_egl,

@@ -103,7 +103,7 @@ if _drivers == 'auto'
     else
       error('Unknown architecture. Please pass -Ddri-drivers to set driver options. Patches gladly accepted to fix this.')
     endif
-  elif ['darwin', 'windows', 'cygwin'].contains(host_machine.system())
+  elif ['darwin', 'windows', 'cygwin', 'haiku'].contains(host_machine.system())
     # only swrast would make sense here, but gallium swrast is a much better default
     _drivers = ''
   else
@@ -148,7 +148,7 @@ if _drivers == 'auto'
     else
       error('Unknown architecture. Please pass -Dgallium-drivers to set driver options. Patches gladly accepted to fix this.')
     endif
-  elif ['darwin', 'windows', 'cygwin'].contains(host_machine.system())
+  elif ['darwin', 'windows', 'cygwin', 'haiku'].contains(host_machine.system())
     _drivers = 'swrast'
   else
     error('Unknown OS. Please pass -Dgallium-drivers to set driver options. Patches gladly accepted to fix this.')
@@ -185,7 +185,7 @@ if _vulkan_drivers == 'auto'
     else
       error('Unknown architecture. Please pass -Dvulkan-drivers to set driver options. Patches gladly accepted to fix this.')
     endif
-  elif ['darwin', 'windows', 'cygwin'].contains(host_machine.system())
+  elif ['darwin', 'windows', 'cygwin', 'haiku'].contains(host_machine.system())
     # No vulkan driver supports windows or macOS currently
     _vulkan_drivers = ''
   else
@@ -246,6 +246,8 @@ if _platforms == 'auto'
     _platforms = 'x11,wayland,drm,surfaceless'
   elif ['darwin', 'windows', 'cygwin'].contains(host_machine.system())
     _platforms = 'x11,surfaceless'
+  elif ['haiku'].contains(host_machine.system())
+    _platforms = 'haiku'
   else
     error('Unknown OS. Please pass -Dplatforms to set platforms. Patches gladly accepted to fix this.')
   endif
@@ -256,6 +258,7 @@ if _platforms != ''
   with_platform_x11 = _split.contains('x11')
   with_platform_wayland = _split.contains('wayland')
   with_platform_drm = _split.contains('drm')
+  with_platform_haiku = _split.contains('haiku')
   with_platform_surfaceless = _split.contains('surfaceless')
   egl_native_platform = _split[0]
 endif
@@ -264,6 +267,8 @@ with_glx = get_option('glx')
 if with_glx == 'auto'
   if with_dri
     with_glx = 'dri'
+  elif with_platform_haiku
+    with_glx = 'disabled'
   elif with_gallium
     # Even when building just gallium drivers the user probably wants dri
     with_glx = 'dri'
@@ -379,7 +384,7 @@ if with_any_vk and (with_platform_x11 and not with_dri3)
   error('Vulkan drivers require dri3 for X11 support')
 endif
 if with_dri or with_gallium
-  if with_glx == 'disabled' and not with_egl
+  if with_glx == 'disabled' and not with_egl and not with_platform_haiku
     error('building dri or gallium drivers require at least one window system')
   endif
 endif
@@ -639,6 +644,9 @@ if with_platform_android
     dependency('sync'),
   ]
   pre_args += '-DHAVE_ANDROID_PLATFORM'
+endif
+if with_platform_haiku
+  pre_args += '-DHAVE_HAIKU_PLATFORM'
 endif
 
 prog_python2 = find_program('python2')

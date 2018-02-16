@@ -18,43 +18,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-es1_glapi_mapi_tmp_h = custom_target(
-  'es1_glapi_mapi_tmp.h',
-  input : [mapi_abi_py, gl_and_es_api_files],
-  output : 'glapi_mapi_tmp.h',
-  command : [prog_python2, '@INPUT0@', '--printer', 'es1api', '@INPUT1@'],
-  depend_files : api_xml_files,
-  capture : true,
-)
-
-libglesv1_cm = shared_library(
-  'GLESv1_CM',
-  ['../entry.c', es1_glapi_mapi_tmp_h],
-  c_args : [
-    c_msvc_compat_args, c_vis_args, '-DMAPI_MODE_BRIDGE',
-    '-DMAPI_ABI_HEADER="@0@"'.format(es1_glapi_mapi_tmp_h.full_path()),
+libgl = shared_library(
+  'GL',
+  files(
+    'GLView.cpp', 'GLRenderer.cpp', 'GLRendererRoster.cpp', 'GLDispatcher.cpp',
+  ),
+  link_args : [ld_args_bsymbolic, ld_args_gc_sections],
+  include_directories : [
+    inc_src, inc_mapi, inc_mesa, inc_include, inc_glapi, inc_haikugl,
+    inc_gl_internal, include_directories('/system/develop/headers/private')
   ],
-  link_args : [ld_args_gc_sections],
-  include_directories : [inc_src, inc_include, inc_mapi],
-  link_with : libglapi,
-  dependencies : [dep_thread, dep_libdrm, dep_m, dep_dl],
-  version : '1.0.0',
+  link_with : [libglapi_static, libglapi],
+  dependencies : cpp.find_library('be'),
   install : true,
 )
 
-pkg.generate(
-  name : 'glesv1_cm',
-  filebase : 'glesv1_cm',
-  description : 'Mesa OpenGL ES 1.1 CM library',
-  version : meson.project_version(),
-  libraries : libglesv1_cm,
-  libraries_private : gl_priv_libs,
-)
-
-if with_tests
-  test(
-    'es1-ABI-check',
-    find_program('ABI-check'),
-    args : libglesv1_cm
-  )
-endif
+# TODO: We need some tests here
