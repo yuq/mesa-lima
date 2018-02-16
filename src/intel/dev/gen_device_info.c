@@ -823,6 +823,7 @@ static const struct gen_device_info gen_device_info_cnl_5x8 = {
    GEN11_HW_INFO,                                     \
    .has_64bit_types = false,                          \
    .has_integer_dword_mul = false,                    \
+   .has_sample_with_hiz = false,                      \
    .gt = _gt, .num_slices = _slices, .l3_banks = _l3, \
    .num_subslices = _subslices
 
