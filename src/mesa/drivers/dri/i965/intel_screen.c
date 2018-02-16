@@ -2660,6 +2660,9 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    if (devinfo->gen >= 8 || screen->cmd_parser_version >= 5)
       screen->kernel_features |= KERNEL_ALLOWS_COMPUTE_DISPATCH;
 
+   if (intel_get_boolean(screen, I915_PARAM_HAS_CONTEXT_ISOLATION))
+      screen->kernel_features |= KERNEL_ALLOWS_CONTEXT_ISOLATION;
+
    const char *force_msaa = getenv("INTEL_FORCE_MSAA");
    if (force_msaa) {
       screen->winsys_msaa_samples_override =

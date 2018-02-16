@@ -739,9 +739,10 @@ brw_finish_batch(struct brw_context *brw)
    if (brw->batch.ring == RENDER_RING) {
       /* Work around L3 state leaks into contexts set MI_RESTORE_INHIBIT which
        * assume that the L3 cache is configured according to the hardware
-       * defaults.
+       * defaults.  On Kernel 4.16+, we no longer need to do this.
        */
-      if (devinfo->gen >= 7)
+      if (devinfo->gen >= 7 &&
+          !(brw->screen->kernel_features & KERNEL_ALLOWS_CONTEXT_ISOLATION))
          gen7_restore_default_l3_config(brw);
 
       if (devinfo->is_haswell) {
