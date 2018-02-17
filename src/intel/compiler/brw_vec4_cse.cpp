@@ -104,6 +104,25 @@ operands_match(const vec4_instruction *a, const vec4_instruction *b)
       return xs[0].equals(ys[0]) &&
              ((xs[1].equals(ys[1]) && xs[2].equals(ys[2])) ||
               (xs[2].equals(ys[1]) && xs[1].equals(ys[2])));
+   } else if (a->opcode == BRW_OPCODE_MOV &&
+              xs[0].file == IMM &&
+              xs[0].type == BRW_REGISTER_TYPE_VF) {
+      src_reg tmp_x = xs[0];
+      src_reg tmp_y = ys[0];
+
+      /* Smash out the values that are not part of the writemask.  Otherwise
+       * the equals operator will fail due to mismatches in unused components.
+       */
+      const unsigned ab_writemask = a->dst.writemask & b->dst.writemask;
+      const uint32_t mask = ((ab_writemask & WRITEMASK_X) ? 0x000000ff : 0) |
+                            ((ab_writemask & WRITEMASK_Y) ? 0x0000ff00 : 0) |
+                            ((ab_writemask & WRITEMASK_Z) ? 0x00ff0000 : 0) |
+                            ((ab_writemask & WRITEMASK_W) ? 0xff000000 : 0);
+
+      tmp_x.ud &= mask;
+      tmp_y.ud &= mask;
+
+      return tmp_x.equals(tmp_y);
    } else if (!a->is_commutative()) {
       return xs[0].equals(ys[0]) && xs[1].equals(ys[1]) && xs[2].equals(ys[2]);
    } else {
