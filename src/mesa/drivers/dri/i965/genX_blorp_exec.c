@@ -203,7 +203,8 @@ blorp_get_workaround_page(struct blorp_batch *batch)
 #endif
 
 static void
-blorp_flush_range(struct blorp_batch *batch, void *start, size_t size)
+blorp_flush_range(UNUSED struct blorp_batch *batch, UNUSED void *start,
+                  UNUSED size_t size)
 {
    /* All allocated states come from the batch which we will flush before we
     * submit it.  There's nothing for us to do here.
@@ -212,7 +213,8 @@ blorp_flush_range(struct blorp_batch *batch, void *start, size_t size)
 
 static void
 blorp_emit_urb_config(struct blorp_batch *batch,
-                      unsigned vs_entry_size, unsigned sf_entry_size)
+                      unsigned vs_entry_size,
+                      MAYBE_UNUSED unsigned sf_entry_size)
 {
    assert(batch->blorp->driver_ctx == batch->driver_batch);
    struct brw_context *brw = batch->driver_batch;

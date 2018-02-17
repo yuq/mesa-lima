@@ -529,8 +529,7 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
 
 /* 3DSTATE_VIEWPORT_STATE_POINTERS */
 static uint32_t
-blorp_emit_cc_viewport(struct blorp_batch *batch,
-                       const struct blorp_params *params)
+blorp_emit_cc_viewport(struct blorp_batch *batch)
 {
    uint32_t cc_vp_offset;
    blorp_emit_dynamic(batch, GENX(CC_VIEWPORT), vp, 32, &cc_vp_offset) {
@@ -553,8 +552,7 @@ blorp_emit_cc_viewport(struct blorp_batch *batch,
 }
 
 static uint32_t
-blorp_emit_sampler_state(struct blorp_batch *batch,
-                         const struct blorp_params *params)
+blorp_emit_sampler_state(struct blorp_batch *batch)
 {
    uint32_t offset;
    blorp_emit_dynamic(batch, GENX(SAMPLER_STATE), sampler, 32, &offset) {
@@ -1013,7 +1011,7 @@ blorp_emit_blend_state(struct blorp_batch *batch,
 
 static uint32_t
 blorp_emit_color_calc_state(struct blorp_batch *batch,
-                            const struct blorp_params *params)
+                            MAYBE_UNUSED const struct blorp_params *params)
 {
    uint32_t offset;
    blorp_emit_dynamic(batch, GENX(COLOR_CALC_STATE), cc, 64, &offset) {
@@ -1204,7 +1202,7 @@ blorp_emit_pipeline(struct blorp_batch *batch,
    blorp_emit(batch, GENX(3DSTATE_CONSTANT_PS), ps);
 
    if (params->src.enabled)
-      blorp_emit_sampler_state(batch, params);
+      blorp_emit_sampler_state(batch);
 
    blorp_emit_3dstate_multisample(batch, params);
 
@@ -1238,7 +1236,7 @@ blorp_emit_pipeline(struct blorp_batch *batch,
    blorp_emit_sf_config(batch, params);
    blorp_emit_ps_config(batch, params);
 
-   blorp_emit_cc_viewport(batch, params);
+   blorp_emit_cc_viewport(batch);
 }
 
 /******** This is the end of the pipeline setup code ********/
