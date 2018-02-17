@@ -112,6 +112,14 @@ operands_match(const vec4_instruction *a, const vec4_instruction *b)
    }
 }
 
+/**
+ * Checks if instructions match, exactly for sources, but loosely for
+ * destination writemasks.
+ *
+ * \param 'a' is the generating expression from the AEB entry.
+ * \param 'b' is the second occurrence of the expression that we're
+ *        considering eliminating.
+ */
 static bool
 instructions_match(vec4_instruction *a, vec4_instruction *b)
 {
@@ -127,7 +135,7 @@ instructions_match(vec4_instruction *a, vec4_instruction *b)
           a->base_mrf == b->base_mrf &&
           a->header_size == b->header_size &&
           a->shadow_compare == b->shadow_compare &&
-          a->dst.writemask == b->dst.writemask &&
+          ((a->dst.writemask & b->dst.writemask) == a->dst.writemask) &&
           a->force_writemask_all == b->force_writemask_all &&
           a->size_written == b->size_written &&
           a->exec_size == b->exec_size &&
