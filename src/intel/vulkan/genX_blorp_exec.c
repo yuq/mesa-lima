@@ -200,6 +200,16 @@ genX(blorp_exec)(struct blorp_batch *batch,
       genX(cmd_buffer_config_l3)(cmd_buffer, cfg);
    }
 
+#if GEN_GEN == 7
+   /* The MI_LOAD/STORE_REGISTER_MEM commands which BLORP uses to implement
+    * indirect fast-clear colors can cause GPU hangs if we don't stall first.
+    * See genX(cmd_buffer_mi_memcpy) for more details.
+    */
+   assert(params->src.clear_color_addr.buffer == NULL);
+   if (params->dst.clear_color_addr.buffer)
+      cmd_buffer->state.pending_pipe_bits |= ANV_PIPE_CS_STALL_BIT;
+#endif
+
    genX(cmd_buffer_apply_pipe_flushes)(cmd_buffer);
 
    genX(flush_pipeline_select_3d)(cmd_buffer);
