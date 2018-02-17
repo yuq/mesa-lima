@@ -26,6 +26,8 @@
 #include "util/u_format.h"
 #include "util/u_debug.h"
 #include "util/u_half.h"
+#include "util/u_helpers.h"
+#include "util/u_inlines.h"
 #include "util/hash_table.h"
 
 #include "lima_context.h"
@@ -256,7 +258,11 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    vs_cmd[i++] = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_varying_info);
    vs_cmd[i++] = 0x20000008 | (num_varryings << 17); /* VARYINGS_ADDRESS */
 
-   vs_cmd[i++] = (info->count << 24) | (info->index_size ? 1 : 0);
+   if (info->index_size)
+      vs_cmd[i++] = ((info->max_index + 1) << 24) | (info->index_size ? 1 : 0);
+   else
+      vs_cmd[i++] = (info->count << 24) | (info->index_size ? 1 : 0);
+
    vs_cmd[i++] = 0x00000000 | (info->count >> 8); /* DRAW */
 
    vs_cmd[i++] = 0x00000000;
@@ -374,11 +380,27 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       plbu_cmd[i++] = gl_position_va;
       plbu_cmd[i++] = 0x10000100; /* INDEXED_DEST */
 
-      struct lima_resource *res = lima_resource(info->index.resource);
+      plbu_cmd[i++] = 0x00010001; /* ARRAYS_SEMAPHORE_END */
+      plbu_cmd[i++] = 0x60000000; /* ARRAYS_SEMAPHORE */
+
+      struct pipe_resource *indexbuf = NULL;
+      unsigned index_offset = 0;
+      struct lima_resource *res;
+      if (info->has_user_indices) {
+         util_upload_index_buffer(&ctx->base, info, &indexbuf, &index_offset);
+         res = lima_resource(indexbuf);
+      }
+      else
+         res = lima_resource(info->index.resource);
+
       lima_bo_update(res->bo, false, true);
+      lima_submit_add_bo(ctx->gp_submit, res->bo, LIMA_SUBMIT_BO_READ);
       plbu_cmd[i++] = res->bo->va + info->start +
-         info->start_instance * info->index_size;
+         info->start_instance * info->index_size + index_offset;
       plbu_cmd[i++] = 0x10000101; /* INDICES */
+
+      if (indexbuf)
+         pipe_resource_reference(&indexbuf, NULL);
    }
    else {
       /* can this make the attribute info static? */
@@ -387,8 +409,10 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
          ((info->mode & 0x1F) << 16) | (info->count >> 8); /* DRAW | DRAW_ARRAYS */
    }
 
-   plbu_cmd[i++] = 0x00010001; /* ARRAYS_SEMAPHORE_END */
-   plbu_cmd[i++] = 0x60000000; /* ARRAYS_SEMAPHORE */
+   if (!info->index_size) {
+      plbu_cmd[i++] = 0x00010001; /* ARRAYS_SEMAPHORE_END */
+      plbu_cmd[i++] = 0x60000000; /* ARRAYS_SEMAPHORE */
+   }
 
    if (info->index_size) {
       plbu_cmd[i++] = (info->count << 24) | info->start;
