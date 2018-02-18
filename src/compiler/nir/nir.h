@@ -250,6 +250,12 @@ typedef struct nir_variable {
       unsigned fb_fetch_output:1;
 
       /**
+       * Non-zero if this variable is considered bindless as defined by
+       * ARB_bindless_texture.
+       */
+      unsigned bindless:1;
+
+      /**
        * \brief Layout qualifier for gl_FragDepth.
        *
        * This is not equal to \c ir_depth_layout_none if and only if this
