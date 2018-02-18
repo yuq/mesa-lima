@@ -124,6 +124,15 @@ static void scan_instruction(struct tgsi_shader_info *info,
 		case nir_intrinsic_load_tess_level_outer:
 			info->reads_tess_factors = true;
 			break;
+		case nir_intrinsic_image_var_load:
+		case nir_intrinsic_image_var_size:
+		case nir_intrinsic_image_var_samples: {
+			nir_variable *var = intr->variables[0]->var;
+			if (var->data.bindless)
+				info->uses_bindless_images = true;
+
+			break;
+		}
 		case nir_intrinsic_image_var_store:
 		case nir_intrinsic_image_var_atomic_add:
 		case nir_intrinsic_image_var_atomic_min:
@@ -132,7 +141,13 @@ static void scan_instruction(struct tgsi_shader_info *info,
 		case nir_intrinsic_image_var_atomic_or:
 		case nir_intrinsic_image_var_atomic_xor:
 		case nir_intrinsic_image_var_atomic_exchange:
-		case nir_intrinsic_image_var_atomic_comp_swap:
+		case nir_intrinsic_image_var_atomic_comp_swap: {
+			nir_variable *var = intr->variables[0]->var;
+			if (var->data.bindless)
+				info->uses_bindless_images = true;
+
+			/* fall-through */
+		}
 		case nir_intrinsic_store_ssbo:
 		case nir_intrinsic_ssbo_atomic_add:
 		case nir_intrinsic_ssbo_atomic_imin:
