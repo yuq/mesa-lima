@@ -27,93 +27,154 @@
 #include "xf86drm.h"
 #include "lima_drm.h"
 
+#include "util/list.h"
+#include "util/ralloc.h"
+#include "util/u_dynarray.h"
+
 #include "lima_screen.h"
+#include "lima_context.h"
 #include "lima_submit.h"
 #include "lima_bo.h"
 #include "lima_util.h"
 
+struct lima_submit_job {
+   struct list_head list;
+   uint32_t fence;
+
+   struct util_dynarray bos;
+   struct util_dynarray gem_bos;
+};
+
+struct lima_submit {
+   struct lima_screen *screen;
+   uint32_t pipe;
+   uint32_t ctx;
+
+   struct list_head busy_job_list;
+   struct list_head free_job_list;
+   struct lima_submit_job *current_job;
+};
+
+
 #define VOID2U64(x) ((uint64_t)(unsigned long)(x))
 
-struct lima_submit *lima_submit_create(struct lima_screen *screen, uint32_t ctx, uint32_t pipe)
+struct lima_submit *lima_submit_create(struct lima_context *ctx, uint32_t pipe)
 {
    struct lima_submit *s;
 
-   s = calloc(1, sizeof(*s));
+   s = rzalloc(ctx, struct lima_submit);
    if (!s)
       return NULL;
 
-   s->screen = screen;
+   s->screen = lima_screen(ctx->base.screen);
    s->pipe = pipe;
-   s->ctx = ctx;
+   s->ctx = ctx->id;
+   list_inithead(&s->busy_job_list);
+   list_inithead(&s->free_job_list);
    return s;
 }
 
-void lima_submit_delete(struct lima_submit *submit)
+static struct lima_submit_job *lima_submit_job_alloc(struct lima_submit *submit)
 {
-   if (submit->bos)
-      free(submit->bos);
-   free(submit);
+   struct lima_submit_job *job;
+
+   if (list_empty(&submit->free_job_list)) {
+      job = rzalloc(submit, struct lima_submit_job);
+      if (!job)
+         return NULL;
+      util_dynarray_init(&job->bos, job);
+      util_dynarray_init(&job->gem_bos, job);
+   }
+   else {
+      job = list_first_entry(&submit->free_job_list, struct lima_submit_job, list);
+      list_del(&job->list);
+   }
+
+   return job;
+}
+
+static void lima_submit_job_free(struct lima_submit *submit,
+                                 struct lima_submit_job *job)
+{
+   util_dynarray_foreach(&job->bos, struct lima_bo *, bo) {
+      lima_bo_free(*bo);
+   }
+   util_dynarray_clear(&job->bos);
+   util_dynarray_clear(&job->gem_bos);
+   list_add(&job->list, &submit->free_job_list);
 }
 
 bool lima_submit_add_bo(struct lima_submit *submit, struct lima_bo *bo, uint32_t flags)
 {
-   uint32_t i, new_bos = 8;
+   if (!submit->current_job)
+      submit->current_job = lima_submit_job_alloc(submit);
 
-   for (i = 0; i < submit->nr_bos; i++) {
-      if (submit->bos[i] == bo)
+   struct lima_submit_job *job = submit->current_job;
+
+   util_dynarray_foreach(&job->bos, struct lima_bo *, jbo) {
+      if (*jbo == bo)
          return true;
-   }
-
-   if (submit->bos && submit->max_bos == submit->nr_bos)
-      new_bos = submit->max_bos * 2;
-
-   if (new_bos > submit->max_bos) {
-      void *bos = realloc(submit->bos,
-         (sizeof(*submit->bos) + sizeof(*submit->gem_bos)) * new_bos);
-      if (!bos)
-         return false;
-      submit->max_bos = new_bos;
-      submit->bos = bos;
-      submit->gem_bos = bos + sizeof(*submit->bos) * new_bos;
    }
 
    /* prevent bo from being freed when submit start */
    lima_bo_reference(bo);
 
-   submit->bos[submit->nr_bos] = bo;
-   submit->gem_bos[submit->nr_bos].handle = bo->handle;
-   submit->gem_bos[submit->nr_bos].flags = flags;
-   submit->nr_bos++;
+   struct lima_bo **jbo = util_dynarray_grow(&job->bos, sizeof(*jbo));
+   *jbo = bo;
+
+   struct drm_lima_gem_submit_bo *submit_bo =
+      util_dynarray_grow(&job->gem_bos, sizeof(*submit_bo));
+   submit_bo->handle = bo->handle;
+   submit_bo->flags = flags;
    return true;
 }
 
-bool lima_submit_start(struct lima_submit *submit)
+bool lima_submit_start(struct lima_submit *submit, void *frame, uint32_t size)
 {
-   struct drm_lima_gem_submit req = {
-      .fence = 0,
-      .pipe = submit->pipe,
-      .nr_bos = submit->nr_bos,
-      .bos = VOID2U64(submit->gem_bos),
-      .frame = VOID2U64(submit->frame),
-      .frame_size = submit->frame_size,
-      .ctx = submit->ctx,
+   struct lima_submit_job *job = submit->current_job;
+   union drm_lima_gem_submit req = {
+      .in = {
+         .ctx = submit->ctx,
+         .pipe = submit->pipe,
+         .nr_bos = job->gem_bos.size / sizeof(struct drm_lima_gem_submit_bo),
+         .bos = VOID2U64(util_dynarray_begin(&job->gem_bos)),
+         .frame = VOID2U64(frame),
+         .frame_size = size,
+      },
    };
 
    bool ret = drmIoctl(submit->screen->fd, DRM_IOCTL_LIMA_GEM_SUBMIT, &req) == 0;
 
-   for (int i = 0; i < submit->nr_bos; i++)
-      lima_bo_free(submit->bos[i]);
+   if (ret) {
+      job->fence = req.out.fence;
+      list_add(&job->list, &submit->busy_job_list);
 
-   submit->nr_bos = 0;
-   submit->fence = req.fence;
+      int i = 0;
+      list_for_each_entry_safe(struct lima_submit_job, j,
+                               &submit->busy_job_list, list) {
+         if (i++ >= req.out.done) {
+            list_del(&j->list);
+            lima_submit_job_free(submit, j);
+         }
+      }
+   }
+   else
+      lima_submit_job_free(submit, job);
+
+   submit->current_job = NULL;
    return ret;
 }
 
 bool lima_submit_wait(struct lima_submit *submit, uint64_t timeout_ns, bool relative)
 {
+   if (list_empty(&submit->busy_job_list))
+      return true;
+
+   struct lima_submit_job *job =
+      list_first_entry(&submit->busy_job_list, struct lima_submit_job, list);
    struct drm_lima_wait_fence req = {
       .pipe = submit->pipe,
-      .fence = submit->fence,
+      .fence = job->fence,
       .timeout_ns = timeout_ns,
       .ctx = submit->ctx,
    };
@@ -121,5 +182,13 @@ bool lima_submit_wait(struct lima_submit *submit, uint64_t timeout_ns, bool rela
    if (lima_get_absolute_timeout(&req.timeout_ns, relative))
       return false;
 
-   return drmIoctl(submit->screen->fd, DRM_IOCTL_LIMA_WAIT_FENCE, &req) == 0;
+   bool ret = drmIoctl(submit->screen->fd, DRM_IOCTL_LIMA_WAIT_FENCE, &req) == 0;
+   if (ret) {
+      list_for_each_entry_safe(struct lima_submit_job, j,
+                               &submit->busy_job_list, list) {
+         list_del(&j->list);
+         lima_submit_job_free(submit, j);
+      }
+   }
+   return ret;
 }
