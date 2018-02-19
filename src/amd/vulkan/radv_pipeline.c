@@ -68,7 +68,6 @@ struct radv_tessellation_state {
 	uint32_t offchip_layout;
 	unsigned num_patches;
 	unsigned lds_size;
-	unsigned num_tcs_input_cp;
 	uint32_t tf_param;
 };
 
@@ -1397,7 +1396,6 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 		S_028B58_HS_NUM_INPUT_CP(num_tcs_input_cp) |
 		S_028B58_HS_NUM_OUTPUT_CP(num_tcs_output_cp);
 	tess.num_patches = num_patches;
-	tess.num_tcs_input_cp = num_tcs_input_cp;
 
 	struct radv_shader_variant *tes = radv_get_tess_eval_shader(pipeline);
 	unsigned type = 0, partitioning = 0, topology = 0, distribution_mode = 0;
@@ -2621,8 +2619,7 @@ radv_pipeline_generate_tess_shaders(struct radeon_winsys_cs *cs,
 		radeon_set_sh_reg_seq(cs, base_reg + loc->sgpr_idx * 4, 4);
 		radeon_emit(cs, tess->offchip_layout);
 		radeon_emit(cs, tess->tcs_out_offsets);
-		radeon_emit(cs, tess->tcs_out_layout |
-			    tess->num_tcs_input_cp << 26);
+		radeon_emit(cs, tess->tcs_out_layout);
 		radeon_emit(cs, tess->tcs_in_layout);
 	}
 
