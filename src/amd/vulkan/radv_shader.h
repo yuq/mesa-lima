@@ -63,7 +63,8 @@ struct radv_vs_variant_key {
 struct radv_tes_variant_key {
 	uint32_t as_es:1;
 	uint32_t export_prim_id:1;
-	uint32_t num_patches;
+	uint8_t num_patches;
+	uint8_t tcs_num_outputs;
 };
 
 struct radv_tcs_variant_key {
@@ -123,7 +124,6 @@ enum radv_ud_index {
 	AC_UD_GS_VS_RING_STRIDE_ENTRIES = AC_UD_VS_MAX_UD,
 	AC_UD_GS_MAX_UD,
 	AC_UD_TCS_MAX_UD,
-	AC_UD_TES_OFFCHIP_LAYOUT = AC_UD_SHADER_START,
 	AC_UD_TES_MAX_UD,
 	AC_UD_MAX_UD = AC_UD_TCS_MAX_UD,
 };

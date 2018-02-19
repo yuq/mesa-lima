@@ -62,7 +62,6 @@ struct radv_blend_state {
 
 struct radv_tessellation_state {
 	uint32_t ls_hs_config;
-	uint32_t offchip_layout;
 	unsigned num_patches;
 	unsigned lds_size;
 	uint32_t tf_param;
@@ -1378,9 +1377,6 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 
 	tess.lds_size = lds_size;
 
-	tess.offchip_layout = (pervertex_output_patch_size * num_patches << 16) |
-		num_patches;
-
 	tess.ls_hs_config = S_028B58_NUM_PATCHES(num_patches) |
 		S_028B58_HS_NUM_INPUT_CP(num_tcs_input_cp) |
 		S_028B58_HS_NUM_OUTPUT_CP(num_tcs_output_cp);
@@ -1786,6 +1782,7 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 		}
 		modules[MESA_SHADER_VERTEX] = NULL;
 		keys[MESA_SHADER_TESS_EVAL].tes.num_patches = pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.num_patches;
+		keys[MESA_SHADER_TESS_EVAL].tes.tcs_num_outputs = util_last_bit64(pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.info.tcs.outputs_written);
 	}
 
 	if (device->physical_device->rad_info.chip_class >= GFX9 && modules[MESA_SHADER_GEOMETRY]) {
@@ -1807,6 +1804,7 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 			}
 			if (i == MESA_SHADER_TESS_EVAL) {
 				keys[MESA_SHADER_TESS_EVAL].tes.num_patches = pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.num_patches;
+				keys[MESA_SHADER_TESS_EVAL].tes.tcs_num_outputs = util_last_bit64(pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.info.tcs.outputs_written);
 			}
 			pipeline->shaders[i] = radv_shader_variant_create(device, modules[i], &nir[i], 1,
 									  pipeline->layout,
@@ -2605,18 +2603,6 @@ radv_pipeline_generate_tess_shaders(struct radeon_winsys_cs *cs,
 	else
 		radeon_set_context_reg(cs, R_028B58_VGT_LS_HS_CONFIG,
 				       tess->ls_hs_config);
-
-	struct radv_userdata_info *loc;
-
-	loc = radv_lookup_user_sgpr(pipeline, MESA_SHADER_TESS_EVAL, AC_UD_TES_OFFCHIP_LAYOUT);
-	if (loc->sgpr_idx != -1) {
-		uint32_t base_reg = pipeline->user_data_0[MESA_SHADER_TESS_EVAL];
-		assert(loc->num_sgprs == 1);
-		assert(!loc->indirect);
-
-		radeon_set_sh_reg(cs, base_reg + loc->sgpr_idx * 4,
-				  tess->offchip_layout);
-	}
 }
 
 static void

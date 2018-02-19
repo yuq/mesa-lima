@@ -62,7 +62,6 @@ struct radv_shader_context {
 	LLVMValueRef vs_prim_id;
 	LLVMValueRef es2gs_offset;
 
-	LLVMValueRef tcs_offchip_layout;
 	LLVMValueRef oc_lds;
 	LLVMValueRef merged_wave_info;
 	LLVMValueRef tess_factor_offset;
@@ -533,14 +532,11 @@ static void allocate_user_sgprs(struct radv_shader_context *ctx,
 		}
 		break;
 	case MESA_SHADER_TESS_EVAL:
-		user_sgpr_info->sgpr_count += 1;
 		break;
 	case MESA_SHADER_GEOMETRY:
 		if (has_previous_stage) {
 			if (previous_stage == MESA_SHADER_VERTEX) {
 				user_sgpr_info->sgpr_count += count_vs_user_sgprs(ctx);
-			} else {
-				user_sgpr_info->sgpr_count++;
 			}
 		}
 		user_sgpr_info->sgpr_count += 2;
@@ -861,7 +857,6 @@ static void create_function(struct radv_shader_context *ctx,
 					   previous_stage, &user_sgpr_info,
 					   &args, &desc_sets);
 
-		add_arg(&args, ARG_SGPR, ctx->ac.i32, &ctx->tcs_offchip_layout);
 		if (needs_view_index)
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->abi.view_index);
@@ -896,10 +891,7 @@ static void create_function(struct radv_shader_context *ctx,
 						   &user_sgpr_info, &args,
 						   &desc_sets);
 
-			if (previous_stage == MESA_SHADER_TESS_EVAL) {
-				add_arg(&args, ARG_SGPR, ctx->ac.i32,
-					&ctx->tcs_offchip_layout);
-			} else {
+			if (previous_stage != MESA_SHADER_TESS_EVAL) {
 				declare_vs_specific_input_sgprs(ctx, stage,
 								has_previous_stage,
 								previous_stage,
@@ -1055,7 +1047,6 @@ static void create_function(struct radv_shader_context *ctx,
 			set_loc_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
 		break;
 	case MESA_SHADER_TESS_EVAL:
-		set_loc_shader(ctx, AC_UD_TES_OFFCHIP_LAYOUT, &user_sgpr_idx, 1);
 		if (ctx->abi.view_index)
 			set_loc_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
 		break;
@@ -1066,9 +1057,6 @@ static void create_function(struct radv_shader_context *ctx,
 							   has_previous_stage,
 							   previous_stage,
 							   &user_sgpr_idx);
-			else
-				set_loc_shader(ctx, AC_UD_TES_OFFCHIP_LAYOUT,
-					       &user_sgpr_idx, 1);
 		}
 		set_loc_shader(ctx, AC_UD_GS_VS_RING_STRIDE_ENTRIES,
 			       &user_sgpr_idx, 2);
@@ -1149,35 +1137,27 @@ radv_load_resource(struct ac_shader_abi *abi, LLVMValueRef index,
  */
 static LLVMValueRef get_non_vertex_index_offset(struct radv_shader_context *ctx)
 {
-	if (ctx->stage == MESA_SHADER_TESS_CTRL) {
-		uint32_t num_tcs_outputs = util_last_bit64(ctx->shader_info->info.tcs.outputs_written);
-		uint32_t output_vertex_size = num_tcs_outputs * 16;
-		uint32_t pervertex_output_patch_size = ctx->tcs_vertices_per_patch * output_vertex_size;
-		uint32_t num_patches = ctx->tcs_num_patches;
+	uint32_t num_patches = ctx->tcs_num_patches;
+	uint32_t num_tcs_outputs;
+	if (ctx->stage == MESA_SHADER_TESS_CTRL)
+		num_tcs_outputs = util_last_bit64(ctx->shader_info->info.tcs.outputs_written);
+	else
+		num_tcs_outputs = ctx->options->key.tes.tcs_num_outputs;
 
-		return LLVMConstInt(ctx->ac.i32, pervertex_output_patch_size * num_patches, false);
-	} else
-		return ac_unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 16, 16);
+	uint32_t output_vertex_size = num_tcs_outputs * 16;
+	uint32_t pervertex_output_patch_size = ctx->tcs_vertices_per_patch * output_vertex_size;
+
+	return LLVMConstInt(ctx->ac.i32, pervertex_output_patch_size * num_patches, false);
 }
 
 static LLVMValueRef calc_param_stride(struct radv_shader_context *ctx,
 				      LLVMValueRef vertex_index)
 {
 	LLVMValueRef param_stride;
-	if (ctx->stage == MESA_SHADER_TESS_CTRL) {
-		if (vertex_index)
-			param_stride = LLVMConstInt(ctx->ac.i32, ctx->tcs_vertices_per_patch * ctx->tcs_num_patches, false);
-		else
-			param_stride = LLVMConstInt(ctx->ac.i32, ctx->tcs_num_patches, false);
-	} else {
-		LLVMValueRef num_patches = LLVMConstInt(ctx->ac.i32, ctx->tcs_num_patches, false);
-		LLVMValueRef vertices_per_patch = LLVMConstInt(ctx->ac.i32, ctx->tcs_vertices_per_patch, false);
-		if (vertex_index)
-			param_stride = LLVMBuildMul(ctx->ac.builder, vertices_per_patch,
-					    num_patches, "");
-		else
-			param_stride = num_patches;
-	}
+	if (vertex_index)
+		param_stride = LLVMConstInt(ctx->ac.i32, ctx->tcs_vertices_per_patch * ctx->tcs_num_patches, false);
+	else
+		param_stride = LLVMConstInt(ctx->ac.i32, ctx->tcs_num_patches, false);
 	return param_stride;
 }
 
