@@ -27,36 +27,13 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-struct lima_screen;
+struct lima_context;
+struct lima_submit;
 struct lima_bo;
 
-struct lima_submit {
-   struct lima_screen *screen;
-   uint32_t pipe;
-   uint32_t fence;
-   uint32_t ctx;
-
-   struct lima_bo **bos;
-   struct drm_lima_gem_submit_bo *gem_bos;
-   uint32_t max_bos;
-   uint32_t nr_bos;
-
-   void *frame;
-   uint32_t frame_size;
-};
-
-struct lima_submit *lima_submit_create(struct lima_screen *screen, uint32_t ctx, uint32_t pipe);
-void lima_submit_delete(struct lima_submit *submit);
+struct lima_submit *lima_submit_create(struct lima_context *ctx, uint32_t pipe);
 bool lima_submit_add_bo(struct lima_submit *submit, struct lima_bo *bo, uint32_t flags);
-
-static inline void lima_submit_set_frame(struct lima_submit *submit,
-                                         void *frame, uint32_t size)
-{
-   submit->frame = frame;
-   submit->frame_size = size;
-}
-
-bool lima_submit_start(struct lima_submit *submit);
+bool lima_submit_start(struct lima_submit *submit, void *frame, uint32_t size);
 bool lima_submit_wait(struct lima_submit *submit, uint64_t timeout_ns, bool relative);
 
 #endif
