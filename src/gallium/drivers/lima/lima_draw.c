@@ -962,8 +962,7 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
       .tile_heap_end = ctx->gp_buffer->va + gp_buffer_size,
    };
 
-   lima_submit_set_frame(ctx->gp_submit, &gp_frame, sizeof(gp_frame));
-   if (!lima_submit_start(ctx->gp_submit))
+   if (!lima_submit_start(ctx->gp_submit, &gp_frame, sizeof(gp_frame)))
       fprintf(stderr, "gp submit error\n");
 
    if (lima_dump_command_stream) {
@@ -1054,9 +1053,7 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
    for (int i = 0; i < num_pp; i++)
       pp_frame.plbu_array_address[i] = ctx->pp_buffer->va + pp_plb_offset(i, num_pp);
 
-   lima_submit_set_frame(ctx->pp_submit, &pp_frame, sizeof(pp_frame));
-
-   if (!lima_submit_start(ctx->pp_submit))
+   if (!lima_submit_start(ctx->pp_submit, &pp_frame, sizeof(pp_frame)))
       fprintf(stderr, "pp submit error\n");
 
    ctx->num_draws = 0;
