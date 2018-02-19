@@ -2771,14 +2771,12 @@ static LLVMValueRef get_tcs_tes_buffer_address(struct radv_shader_context *ctx,
                                                LLVMValueRef vertex_index,
                                                LLVMValueRef param_index)
 {
-	LLVMValueRef base_addr, vertices_per_patch, num_patches, total_vertices;
+	LLVMValueRef base_addr, vertices_per_patch, num_patches;
 	LLVMValueRef param_stride, constant16;
 	LLVMValueRef rel_patch_id = get_rel_patch_id(ctx);
 
 	vertices_per_patch = unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 9, 6);
 	num_patches = unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 0, 9);
-	total_vertices = LLVMBuildMul(ctx->ac.builder, vertices_per_patch,
-	                              num_patches, "");
 
 	constant16 = LLVMConstInt(ctx->ac.i32, 16, false);
 	if (vertex_index) {
@@ -2788,7 +2786,8 @@ static LLVMValueRef get_tcs_tes_buffer_address(struct radv_shader_context *ctx,
 		base_addr = LLVMBuildAdd(ctx->ac.builder, base_addr,
 		                         vertex_index, "");
 
-		param_stride = total_vertices;
+		param_stride = LLVMBuildMul(ctx->ac.builder, vertices_per_patch,
+					    num_patches, "");
 	} else {
 		base_addr = rel_patch_id;
 		param_stride = num_patches;
