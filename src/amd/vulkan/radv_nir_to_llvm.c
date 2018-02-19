@@ -106,6 +106,7 @@ struct radv_shader_context {
 	uint64_t tcs_outputs_read;
 	uint32_t tcs_vertices_per_patch;
 	uint32_t tcs_num_inputs;
+	uint32_t tcs_num_patches;
 };
 
 enum radeon_llvm_calling_convention {
@@ -134,6 +135,46 @@ static LLVMValueRef get_rel_patch_id(struct radv_shader_context *ctx)
 	default:
 		unreachable("Illegal stage");
 	}
+}
+
+static unsigned
+get_tcs_num_patches(struct radv_shader_context *ctx)
+{
+	unsigned num_tcs_input_cp = ctx->options->key.tcs.input_vertices;
+	unsigned num_tcs_output_cp = ctx->tcs_vertices_per_patch;
+	uint32_t input_vertex_size = ctx->tcs_num_inputs * 16;
+	uint32_t input_patch_size = ctx->options->key.tcs.input_vertices * input_vertex_size;
+	uint32_t num_tcs_outputs = util_last_bit64(ctx->shader_info->info.tcs.outputs_written);
+	uint32_t num_tcs_patch_outputs = util_last_bit64(ctx->shader_info->info.tcs.patch_outputs_written);
+	uint32_t output_vertex_size = num_tcs_outputs * 16;
+	uint32_t pervertex_output_patch_size = ctx->tcs_vertices_per_patch * output_vertex_size;
+	uint32_t output_patch_size = pervertex_output_patch_size + num_tcs_patch_outputs * 16;
+	unsigned num_patches;
+	unsigned hardware_lds_size;
+
+	/* Ensure that we only need one wave per SIMD so we don't need to check
+	 * resource usage. Also ensures that the number of tcs in and out
+	 * vertices per threadgroup are at most 256.
+	 */
+	num_patches = 64 / MAX2(num_tcs_input_cp, num_tcs_output_cp) * 4;
+	/* Make sure that the data fits in LDS. This assumes the shaders only
+	 * use LDS for the inputs and outputs.
+	 */
+	hardware_lds_size = ctx->options->chip_class >= CIK ? 65536 : 32768;
+	num_patches = MIN2(num_patches, hardware_lds_size / (input_patch_size + output_patch_size));
+	/* Make sure the output data fits in the offchip buffer */
+	num_patches = MIN2(num_patches, (ctx->options->tess_offchip_block_dw_size * 4) / output_patch_size);
+	/* Not necessary for correctness, but improves performance. The
+	 * specific value is taken from the proprietary driver.
+	 */
+	num_patches = MIN2(num_patches, 40);
+
+	/* SI bug workaround - limit LS-HS threadgroups to only one wave. */
+	if (ctx->options->chip_class == SI) {
+		unsigned one_wave = 64 / MAX2(num_tcs_input_cp, num_tcs_output_cp);
+		num_patches = MIN2(num_patches, one_wave);
+	}
+	return num_patches;
 }
 
 /* Tessellation shaders pass outputs to the next shader using LDS.
@@ -195,17 +236,17 @@ get_tcs_out_patch0_offset(struct radv_shader_context *ctx)
 	uint32_t input_vertex_size = ctx->tcs_num_inputs * 16;
 	uint32_t input_patch_size = ctx->options->key.tcs.input_vertices * input_vertex_size;
 	uint32_t output_patch0_offset = input_patch_size;
-	LLVMValueRef num_patches = ac_unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 0, 9);
+	unsigned num_patches = ctx->tcs_num_patches;
 
+	output_patch0_offset *= num_patches;
 	output_patch0_offset /= 4;
-	return LLVMBuildMul(ctx->ac.builder,
-			    num_patches,
-			    LLVMConstInt(ctx->ac.i32, output_patch0_offset, false), "");
+	return LLVMConstInt(ctx->ac.i32, output_patch0_offset, false);
 }
 
 static LLVMValueRef
 get_tcs_out_patch0_patch_data_offset(struct radv_shader_context *ctx)
 {
+	assert (ctx->stage == MESA_SHADER_TESS_CTRL);
 	uint32_t input_vertex_size = ctx->tcs_num_inputs * 16;
 	uint32_t input_patch_size = ctx->options->key.tcs.input_vertices * input_vertex_size;
 	uint32_t output_patch0_offset = input_patch_size;
@@ -213,15 +254,12 @@ get_tcs_out_patch0_patch_data_offset(struct radv_shader_context *ctx)
 	uint32_t num_tcs_outputs = util_last_bit64(ctx->shader_info->info.tcs.outputs_written);
 	uint32_t output_vertex_size = num_tcs_outputs * 16;
 	uint32_t pervertex_output_patch_size = ctx->tcs_vertices_per_patch * output_vertex_size;
-	LLVMValueRef num_patches = ac_unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 0, 9);
+	unsigned num_patches = ctx->tcs_num_patches;
 
+	output_patch0_offset *= num_patches;
+	output_patch0_offset += pervertex_output_patch_size;
 	output_patch0_offset /= 4;
-	LLVMValueRef value = LLVMBuildMul(ctx->ac.builder,
-					  num_patches,
-					  LLVMConstInt(ctx->ac.i32, output_patch0_offset, false), "");
-	return LLVMBuildAdd(ctx->ac.builder,
-			    value,
-			    LLVMConstInt(ctx->ac.i32, pervertex_output_patch_size / 4, false), "");
+	return LLVMConstInt(ctx->ac.i32, output_patch0_offset, false);
 }
 
 static LLVMValueRef
@@ -493,7 +531,6 @@ static void allocate_user_sgprs(struct radv_shader_context *ctx,
 			if (previous_stage == MESA_SHADER_VERTEX)
 				user_sgpr_info->sgpr_count += count_vs_user_sgprs(ctx);
 		}
-		user_sgpr_info->sgpr_count += 1;
 		break;
 	case MESA_SHADER_TESS_EVAL:
 		user_sgpr_info->sgpr_count += 1;
@@ -789,8 +826,6 @@ static void create_function(struct radv_shader_context *ctx,
 							has_previous_stage,
 							previous_stage, &args);
 
-			add_arg(&args, ARG_SGPR, ctx->ac.i32,
-				&ctx->tcs_offchip_layout);
 			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
 					&ctx->abi.view_index);
@@ -808,8 +843,6 @@ static void create_function(struct radv_shader_context *ctx,
 						   &user_sgpr_info, &args,
 						   &desc_sets);
 
-			add_arg(&args, ARG_SGPR, ctx->ac.i32,
-				&ctx->tcs_offchip_layout);
 			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
 					&ctx->abi.view_index);
@@ -1018,7 +1051,6 @@ static void create_function(struct radv_shader_context *ctx,
 	case MESA_SHADER_TESS_CTRL:
 		set_vs_specific_input_locs(ctx, stage, has_previous_stage,
 					   previous_stage, &user_sgpr_idx);
-		set_loc_shader(ctx, AC_UD_TCS_OFFCHIP_LAYOUT, &user_sgpr_idx, 1);
 		if (ctx->abi.view_index)
 			set_loc_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
 		break;
@@ -1115,30 +1147,58 @@ radv_load_resource(struct ac_shader_abi *abi, LLVMValueRef index,
  *
  * Note that every attribute has 4 components.
  */
+static LLVMValueRef get_non_vertex_index_offset(struct radv_shader_context *ctx)
+{
+	if (ctx->stage == MESA_SHADER_TESS_CTRL) {
+		uint32_t num_tcs_outputs = util_last_bit64(ctx->shader_info->info.tcs.outputs_written);
+		uint32_t output_vertex_size = num_tcs_outputs * 16;
+		uint32_t pervertex_output_patch_size = ctx->tcs_vertices_per_patch * output_vertex_size;
+		uint32_t num_patches = ctx->tcs_num_patches;
+
+		return LLVMConstInt(ctx->ac.i32, pervertex_output_patch_size * num_patches, false);
+	} else
+		return ac_unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 16, 16);
+}
+
+static LLVMValueRef calc_param_stride(struct radv_shader_context *ctx,
+				      LLVMValueRef vertex_index)
+{
+	LLVMValueRef param_stride;
+	if (ctx->stage == MESA_SHADER_TESS_CTRL) {
+		if (vertex_index)
+			param_stride = LLVMConstInt(ctx->ac.i32, ctx->tcs_vertices_per_patch * ctx->tcs_num_patches, false);
+		else
+			param_stride = LLVMConstInt(ctx->ac.i32, ctx->tcs_num_patches, false);
+	} else {
+		LLVMValueRef num_patches = ac_unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 0, 9);
+		LLVMValueRef vertices_per_patch = LLVMConstInt(ctx->ac.i32, ctx->tcs_vertices_per_patch, false);
+		if (vertex_index)
+			param_stride = LLVMBuildMul(ctx->ac.builder, vertices_per_patch,
+					    num_patches, "");
+		else
+			param_stride = num_patches;
+	}
+	return param_stride;
+}
+
 static LLVMValueRef get_tcs_tes_buffer_address(struct radv_shader_context *ctx,
                                                LLVMValueRef vertex_index,
                                                LLVMValueRef param_index)
 {
-	LLVMValueRef base_addr, vertices_per_patch, num_patches;
+	LLVMValueRef base_addr;
 	LLVMValueRef param_stride, constant16;
 	LLVMValueRef rel_patch_id = get_rel_patch_id(ctx);
-
-	vertices_per_patch = LLVMConstInt(ctx->ac.i32, ctx->tcs_vertices_per_patch, false);
-	num_patches = ac_unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 0, 9);
-
+	LLVMValueRef vertices_per_patch = LLVMConstInt(ctx->ac.i32, ctx->tcs_vertices_per_patch, false);
 	constant16 = LLVMConstInt(ctx->ac.i32, 16, false);
+	param_stride = calc_param_stride(ctx, vertex_index);
 	if (vertex_index) {
 		base_addr = LLVMBuildMul(ctx->ac.builder, rel_patch_id,
 		                         vertices_per_patch, "");
 
 		base_addr = LLVMBuildAdd(ctx->ac.builder, base_addr,
 		                         vertex_index, "");
-
-		param_stride = LLVMBuildMul(ctx->ac.builder, vertices_per_patch,
-					    num_patches, "");
 	} else {
 		base_addr = rel_patch_id;
-		param_stride = num_patches;
 	}
 
 	base_addr = LLVMBuildAdd(ctx->ac.builder, base_addr,
@@ -1148,8 +1208,7 @@ static LLVMValueRef get_tcs_tes_buffer_address(struct radv_shader_context *ctx,
 	base_addr = LLVMBuildMul(ctx->ac.builder, base_addr, constant16, "");
 
 	if (!vertex_index) {
-		LLVMValueRef patch_data_offset =
-		           ac_unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 16, 16);
+		LLVMValueRef patch_data_offset = get_non_vertex_index_offset(ctx);
 
 		base_addr = LLVMBuildAdd(ctx->ac.builder, base_addr,
 		                         patch_data_offset, "");
@@ -3043,6 +3102,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 				ctx.tcs_num_inputs = ctx.options->key.tcs.num_inputs;
 			else
 				ctx.tcs_num_inputs = util_last_bit64(shader_info->info.vs.ls_outputs_written);
+			ctx.tcs_num_patches = get_tcs_num_patches(&ctx);
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_EVAL) {
 			ctx.tes_primitive_mode = shaders[i]->info.tess.primitive_mode;
 			ctx.abi.load_tess_varyings = load_tes_input;
