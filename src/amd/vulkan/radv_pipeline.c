@@ -62,7 +62,6 @@ struct radv_blend_state {
 
 struct radv_tessellation_state {
 	uint32_t ls_hs_config;
-	uint32_t tcs_in_layout;
 	uint32_t tcs_out_layout;
 	uint32_t tcs_out_offsets;
 	uint32_t offchip_layout;
@@ -1383,8 +1382,6 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 
 	tess.lds_size = lds_size;
 
-	tess.tcs_in_layout = (input_patch_size / 4) |
-		((input_vertex_size / 4) << 13);
 	tess.tcs_out_layout = (output_patch_size / 4) |
 		((output_vertex_size / 4) << 13);
 	tess.tcs_out_offsets = (output_patch0_offset / 16) |
@@ -1597,6 +1594,7 @@ radv_fill_shader_keys(struct radv_shader_variant_key *keys,
 
 	if (nir[MESA_SHADER_TESS_CTRL]) {
 		keys[MESA_SHADER_VERTEX].vs.as_ls = true;
+		keys[MESA_SHADER_TESS_CTRL].tcs.num_inputs = 0;
 		keys[MESA_SHADER_TESS_CTRL].tcs.input_vertices = key->tess_input_vertices;
 		keys[MESA_SHADER_TESS_CTRL].tcs.primitive_mode = nir[MESA_SHADER_TESS_EVAL]->info.tess.primitive_mode;
 
@@ -1811,6 +1809,9 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 
 	for (int i = 0; i < MESA_SHADER_STAGES; ++i) {
 		if(modules[i] && !pipeline->shaders[i]) {
+			if (i == MESA_SHADER_TESS_CTRL) {
+				keys[MESA_SHADER_TESS_CTRL].tcs.num_inputs = util_last_bit64(pipeline->shaders[MESA_SHADER_VERTEX]->info.info.vs.ls_outputs_written);
+			}
 			pipeline->shaders[i] = radv_shader_variant_create(device, modules[i], &nir[i], 1,
 									  pipeline->layout,
 									  keys + i, &codes[i],
@@ -2614,13 +2615,12 @@ radv_pipeline_generate_tess_shaders(struct radeon_winsys_cs *cs,
 	loc = radv_lookup_user_sgpr(pipeline, MESA_SHADER_TESS_CTRL, AC_UD_TCS_OFFCHIP_LAYOUT);
 	if (loc->sgpr_idx != -1) {
 		uint32_t base_reg = pipeline->user_data_0[MESA_SHADER_TESS_CTRL];
-		assert(loc->num_sgprs == 4);
+		assert(loc->num_sgprs == 3);
 		assert(!loc->indirect);
-		radeon_set_sh_reg_seq(cs, base_reg + loc->sgpr_idx * 4, 4);
+		radeon_set_sh_reg_seq(cs, base_reg + loc->sgpr_idx * 4, 3);
 		radeon_emit(cs, tess->offchip_layout);
 		radeon_emit(cs, tess->tcs_out_offsets);
 		radeon_emit(cs, tess->tcs_out_layout);
-		radeon_emit(cs, tess->tcs_in_layout);
 	}
 
 	loc = radv_lookup_user_sgpr(pipeline, MESA_SHADER_TESS_EVAL, AC_UD_TES_OFFCHIP_LAYOUT);

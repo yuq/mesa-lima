@@ -65,7 +65,6 @@ struct radv_shader_context {
 	LLVMValueRef tcs_offchip_layout;
 	LLVMValueRef tcs_out_offsets;
 	LLVMValueRef tcs_out_layout;
-	LLVMValueRef tcs_in_layout;
 	LLVMValueRef oc_lds;
 	LLVMValueRef merged_wave_info;
 	LLVMValueRef tess_factor_offset;
@@ -108,6 +107,7 @@ struct radv_shader_context {
 	uint32_t tcs_patch_outputs_read;
 	uint64_t tcs_outputs_read;
 	uint32_t tcs_vertices_per_patch;
+	uint32_t tcs_num_inputs;
 };
 
 enum radeon_llvm_calling_convention {
@@ -162,7 +162,11 @@ static LLVMValueRef
 get_tcs_in_patch_stride(struct radv_shader_context *ctx)
 {
 	assert (ctx->stage == MESA_SHADER_TESS_CTRL);
-	return ac_unpack_param(&ctx->ac, ctx->tcs_in_layout, 0, 13);
+	uint32_t input_vertex_size = ctx->tcs_num_inputs * 16;
+	uint32_t input_patch_size = ctx->options->key.tcs.input_vertices * input_vertex_size;
+
+	input_patch_size /= 4;
+	return LLVMConstInt(ctx->ac.i32, input_patch_size, false);
 }
 
 static LLVMValueRef
@@ -462,7 +466,7 @@ static void allocate_user_sgprs(struct radv_shader_context *ctx,
 			if (previous_stage == MESA_SHADER_VERTEX)
 				user_sgpr_info->sgpr_count += count_vs_user_sgprs(ctx);
 		}
-		user_sgpr_info->sgpr_count += 4;
+		user_sgpr_info->sgpr_count += 3;
 		break;
 	case MESA_SHADER_TESS_EVAL:
 		user_sgpr_info->sgpr_count += 1;
@@ -764,8 +768,6 @@ static void create_function(struct radv_shader_context *ctx,
 				&ctx->tcs_out_offsets);
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->tcs_out_layout);
-			add_arg(&args, ARG_SGPR, ctx->ac.i32,
-				&ctx->tcs_in_layout);
 			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
 					&ctx->abi.view_index);
@@ -789,8 +791,6 @@ static void create_function(struct radv_shader_context *ctx,
 				&ctx->tcs_out_offsets);
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->tcs_out_layout);
-			add_arg(&args, ARG_SGPR, ctx->ac.i32,
-				&ctx->tcs_in_layout);
 			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
 					&ctx->abi.view_index);
@@ -999,7 +999,7 @@ static void create_function(struct radv_shader_context *ctx,
 	case MESA_SHADER_TESS_CTRL:
 		set_vs_specific_input_locs(ctx, stage, has_previous_stage,
 					   previous_stage, &user_sgpr_idx);
-		set_loc_shader(ctx, AC_UD_TCS_OFFCHIP_LAYOUT, &user_sgpr_idx, 4);
+		set_loc_shader(ctx, AC_UD_TCS_OFFCHIP_LAYOUT, &user_sgpr_idx, 3);
 		if (ctx->abi.view_index)
 			set_loc_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
 		break;
@@ -1226,7 +1226,8 @@ load_tcs_varyings(struct ac_shader_abi *abi,
 	unsigned param = shader_io_get_unique_index(location);
 
 	if (load_input) {
-		stride = ac_unpack_param(&ctx->ac, ctx->tcs_in_layout, 13, 8);
+		uint32_t input_vertex_size = (ctx->tcs_num_inputs * 16) / 4;
+		stride = LLVMConstInt(ctx->ac.i32, input_vertex_size, false);
 		dw_addr = get_tcs_in_current_patch_offset(ctx);
 	} else {
 		if (!is_patch) {
@@ -3019,6 +3020,10 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			ctx.abi.load_patch_vertices_in = load_patch_vertices_in;
 			ctx.abi.store_tcs_outputs = store_tcs_output;
 			ctx.tcs_vertices_per_patch = shaders[i]->info.tess.tcs_vertices_out;
+			if (shader_count == 1)
+				ctx.tcs_num_inputs = ctx.options->key.tcs.num_inputs;
+			else
+				ctx.tcs_num_inputs = util_last_bit64(shader_info->info.vs.ls_outputs_written);
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_EVAL) {
 			ctx.tes_primitive_mode = shaders[i]->info.tess.primitive_mode;
 			ctx.abi.load_tess_varyings = load_tes_input;
@@ -3092,8 +3097,11 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_CTRL) {
 			shader_info->tcs.outputs_written = ctx.tess_outputs_written;
 			shader_info->tcs.patch_outputs_written = ctx.tess_patch_outputs_written;
+			assert(ctx.tess_outputs_written == ctx.shader_info->info.tcs.outputs_written);
+			assert(ctx.tess_patch_outputs_written == ctx.shader_info->info.tcs.patch_outputs_written);
 		} else if (shaders[i]->info.stage == MESA_SHADER_VERTEX && ctx.options->key.vs.as_ls) {
 			shader_info->vs.outputs_written = ctx.tess_outputs_written;
+			assert(ctx.tess_outputs_written == ctx.shader_info->info.vs.ls_outputs_written);
 		}
 	}
 
