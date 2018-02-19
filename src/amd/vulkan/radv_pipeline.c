@@ -62,7 +62,6 @@ struct radv_blend_state {
 
 struct radv_tessellation_state {
 	uint32_t ls_hs_config;
-	uint32_t tcs_out_offsets;
 	uint32_t offchip_layout;
 	unsigned num_patches;
 	unsigned lds_size;
@@ -1314,7 +1313,6 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 	unsigned input_vertex_size, output_vertex_size, pervertex_output_patch_size;
 	unsigned input_patch_size, output_patch_size, output_patch0_offset;
 	unsigned lds_size, hardware_lds_size;
-	unsigned perpatch_output_offset;
 	unsigned num_patches;
 	struct radv_tessellation_state tess = {0};
 
@@ -1366,7 +1364,6 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 	}
 
 	output_patch0_offset = input_patch_size * num_patches;
-	perpatch_output_offset = output_patch0_offset + pervertex_output_patch_size;
 
 	lds_size = output_patch0_offset + output_patch_size * num_patches;
 
@@ -1381,8 +1378,6 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 
 	tess.lds_size = lds_size;
 
-	tess.tcs_out_offsets = (output_patch0_offset / 16) |
-		((perpatch_output_offset / 16) << 16);
 	tess.offchip_layout = (pervertex_output_patch_size * num_patches << 16) |
 		num_patches;
 
@@ -2612,11 +2607,10 @@ radv_pipeline_generate_tess_shaders(struct radeon_winsys_cs *cs,
 	loc = radv_lookup_user_sgpr(pipeline, MESA_SHADER_TESS_CTRL, AC_UD_TCS_OFFCHIP_LAYOUT);
 	if (loc->sgpr_idx != -1) {
 		uint32_t base_reg = pipeline->user_data_0[MESA_SHADER_TESS_CTRL];
-		assert(loc->num_sgprs == 2);
+		assert(loc->num_sgprs == 1);
 		assert(!loc->indirect);
-		radeon_set_sh_reg_seq(cs, base_reg + loc->sgpr_idx * 4, 2);
+		radeon_set_sh_reg_seq(cs, base_reg + loc->sgpr_idx * 4, 1);
 		radeon_emit(cs, tess->offchip_layout);
-		radeon_emit(cs, tess->tcs_out_offsets);
 	}
 
 	loc = radv_lookup_user_sgpr(pipeline, MESA_SHADER_TESS_EVAL, AC_UD_TES_OFFCHIP_LAYOUT);
