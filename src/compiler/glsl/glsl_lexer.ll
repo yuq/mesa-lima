@@ -491,6 +491,8 @@ void		return VOID_TOK;
 
 layout		{
 		  if ((yyextra->is_version(140, 300))
+		      || yyextra->ARB_bindless_texture_enable
+		      || yyextra->KHR_blend_equation_advanced_enable
 		      || yyextra->AMD_conservative_depth_enable
 		      || yyextra->ARB_conservative_depth_enable
 		      || yyextra->ARB_explicit_attrib_location_enable
