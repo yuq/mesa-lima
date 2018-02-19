@@ -1391,7 +1391,7 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 	tess.tcs_out_offsets = (output_patch0_offset / 16) |
 		((perpatch_output_offset / 16) << 16);
 	tess.offchip_layout = (pervertex_output_patch_size * num_patches << 16) |
-		(num_tcs_output_cp << 9) | num_patches;
+		num_patches;
 
 	tess.ls_hs_config = S_028B58_NUM_PATCHES(num_patches) |
 		S_028B58_HS_NUM_INPUT_CP(num_tcs_input_cp) |

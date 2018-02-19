@@ -127,6 +127,7 @@ struct radv_shader_context {
 
 	uint32_t tcs_patch_outputs_read;
 	uint64_t tcs_outputs_read;
+	uint32_t tcs_vertices_per_patch;
 };
 
 static inline struct radv_shader_context *
@@ -2781,7 +2782,7 @@ static LLVMValueRef get_tcs_tes_buffer_address(struct radv_shader_context *ctx,
 	LLVMValueRef param_stride, constant16;
 	LLVMValueRef rel_patch_id = get_rel_patch_id(ctx);
 
-	vertices_per_patch = unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 9, 6);
+	vertices_per_patch = LLVMConstInt(ctx->ac.i32, ctx->tcs_vertices_per_patch, false);
 	num_patches = unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 0, 9);
 
 	constant16 = LLVMConstInt(ctx->ac.i32, 16, false);
@@ -6905,11 +6906,13 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			ctx.abi.load_tess_varyings = load_tcs_varyings;
 			ctx.abi.load_patch_vertices_in = load_patch_vertices_in;
 			ctx.abi.store_tcs_outputs = store_tcs_output;
+			ctx.tcs_vertices_per_patch = shaders[i]->info.tess.tcs_vertices_out;
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_EVAL) {
 			ctx.tes_primitive_mode = shaders[i]->info.tess.primitive_mode;
 			ctx.abi.load_tess_varyings = load_tes_input;
 			ctx.abi.load_tess_coord = load_tess_coord;
 			ctx.abi.load_patch_vertices_in = load_patch_vertices_in;
+			ctx.tcs_vertices_per_patch = shaders[i]->info.tess.tcs_vertices_out;
 		} else if (shaders[i]->info.stage == MESA_SHADER_VERTEX) {
 			if (shader_info->info.vs.needs_instance_id) {
 				if (ctx.options->key.vs.as_ls) {
