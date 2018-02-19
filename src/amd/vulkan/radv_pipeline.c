@@ -1785,6 +1785,7 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 			                                                                      &code_sizes[MESA_SHADER_TESS_CTRL]);
 		}
 		modules[MESA_SHADER_VERTEX] = NULL;
+		keys[MESA_SHADER_TESS_EVAL].tes.num_patches = pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.num_patches;
 	}
 
 	if (device->physical_device->rad_info.chip_class >= GFX9 && modules[MESA_SHADER_GEOMETRY]) {
@@ -1803,6 +1804,9 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 		if(modules[i] && !pipeline->shaders[i]) {
 			if (i == MESA_SHADER_TESS_CTRL) {
 				keys[MESA_SHADER_TESS_CTRL].tcs.num_inputs = util_last_bit64(pipeline->shaders[MESA_SHADER_VERTEX]->info.info.vs.ls_outputs_written);
+			}
+			if (i == MESA_SHADER_TESS_EVAL) {
+				keys[MESA_SHADER_TESS_EVAL].tes.num_patches = pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.num_patches;
 			}
 			pipeline->shaders[i] = radv_shader_variant_create(device, modules[i], &nir[i], 1,
 									  pipeline->layout,

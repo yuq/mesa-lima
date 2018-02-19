@@ -63,6 +63,7 @@ struct radv_vs_variant_key {
 struct radv_tes_variant_key {
 	uint32_t as_es:1;
 	uint32_t export_prim_id:1;
+	uint32_t num_patches;
 };
 
 struct radv_tcs_variant_key {
@@ -237,7 +238,7 @@ struct radv_shader_variant_info {
 			uint64_t outputs_written;
 			/* Which patch outputs are actually written */
 			uint32_t patch_outputs_written;
-
+			uint32_t num_patches;
 		} tcs;
 		struct {
 			struct radv_vs_output_info outinfo;

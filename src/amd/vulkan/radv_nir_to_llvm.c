@@ -1170,7 +1170,7 @@ static LLVMValueRef calc_param_stride(struct radv_shader_context *ctx,
 		else
 			param_stride = LLVMConstInt(ctx->ac.i32, ctx->tcs_num_patches, false);
 	} else {
-		LLVMValueRef num_patches = ac_unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 0, 9);
+		LLVMValueRef num_patches = LLVMConstInt(ctx->ac.i32, ctx->tcs_num_patches, false);
 		LLVMValueRef vertices_per_patch = LLVMConstInt(ctx->ac.i32, ctx->tcs_vertices_per_patch, false);
 		if (vertex_index)
 			param_stride = LLVMBuildMul(ctx->ac.builder, vertices_per_patch,
@@ -3109,6 +3109,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			ctx.abi.load_tess_coord = load_tess_coord;
 			ctx.abi.load_patch_vertices_in = load_patch_vertices_in;
 			ctx.tcs_vertices_per_patch = shaders[i]->info.tess.tcs_vertices_out;
+			ctx.tcs_num_patches = ctx.options->key.tes.num_patches;
 		} else if (shaders[i]->info.stage == MESA_SHADER_VERTEX) {
 			if (shader_info->info.vs.needs_instance_id) {
 				if (ctx.options->key.vs.as_ls) {
@@ -3176,6 +3177,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_CTRL) {
 			shader_info->tcs.outputs_written = ctx.tess_outputs_written;
 			shader_info->tcs.patch_outputs_written = ctx.tess_patch_outputs_written;
+			shader_info->tcs.num_patches = ctx.tcs_num_patches;
 			assert(ctx.tess_outputs_written == ctx.shader_info->info.tcs.outputs_written);
 			assert(ctx.tess_patch_outputs_written == ctx.shader_info->info.tcs.patch_outputs_written);
 		} else if (shaders[i]->info.stage == MESA_SHADER_VERTEX && ctx.options->key.vs.as_ls) {
