@@ -133,6 +133,7 @@ struct radv_shader_info {
 	bool uses_invocation_id;
 	bool uses_prim_id;
 	struct {
+		uint64_t ls_outputs_written;
 		uint8_t input_usage_mask[VERT_ATTRIB_MAX];
 		uint8_t output_usage_mask[VARYING_SLOT_VAR31 + 1];
 		bool has_vertex_buffers; /* needs vertex buffers and base/start */
@@ -160,6 +161,10 @@ struct radv_shader_info {
 		bool uses_thread_id[3];
 		bool uses_local_invocation_idx;
 	} cs;
+	struct {
+		uint64_t outputs_written;
+		uint64_t patch_outputs_written;
+	} tcs;
 };
 
 struct radv_userdata_info {
