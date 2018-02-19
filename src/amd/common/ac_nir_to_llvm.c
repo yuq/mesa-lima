@@ -6360,8 +6360,8 @@ write_tess_factors(struct radv_shader_context *ctx)
 	struct ac_build_if_state if_ctx, inner_if_ctx;
 	LLVMValueRef invocation_id = unpack_param(&ctx->ac, ctx->abi.tcs_rel_ids, 8, 5);
 	LLVMValueRef rel_patch_id = unpack_param(&ctx->ac, ctx->abi.tcs_rel_ids, 0, 8);
-	unsigned tess_inner_index, tess_outer_index;
-	LLVMValueRef lds_base, lds_inner, lds_outer, byteoffset, buffer;
+	unsigned tess_inner_index = 0, tess_outer_index;
+	LLVMValueRef lds_base, lds_inner = NULL, lds_outer, byteoffset, buffer;
 	LLVMValueRef out[6], vec0, vec1, tf_base, inner[4], outer[4];
 	int i;
 	emit_barrier(&ctx->ac, ctx->stage);
@@ -6390,14 +6390,17 @@ write_tess_factors(struct radv_shader_context *ctx)
 			LLVMBuildICmp(ctx->ac.builder, LLVMIntEQ,
 				      invocation_id, ctx->ac.i32_0, ""));
 
-	tess_inner_index = shader_io_get_unique_index(VARYING_SLOT_TESS_LEVEL_INNER);
-	tess_outer_index = shader_io_get_unique_index(VARYING_SLOT_TESS_LEVEL_OUTER);
-
-	mark_tess_output(ctx, true, tess_inner_index);
-	mark_tess_output(ctx, true, tess_outer_index);
 	lds_base = get_tcs_out_current_patch_data_offset(ctx);
-	lds_inner = LLVMBuildAdd(ctx->ac.builder, lds_base,
-				 LLVMConstInt(ctx->ac.i32, tess_inner_index * 4, false), "");
+
+	if (inner_comps) {
+		tess_inner_index = shader_io_get_unique_index(VARYING_SLOT_TESS_LEVEL_INNER);
+		mark_tess_output(ctx, true, tess_inner_index);
+		lds_inner = LLVMBuildAdd(ctx->ac.builder, lds_base,
+					 LLVMConstInt(ctx->ac.i32, tess_inner_index * 4, false), "");
+	}
+
+	tess_outer_index = shader_io_get_unique_index(VARYING_SLOT_TESS_LEVEL_OUTER);
+	mark_tess_output(ctx, true, tess_outer_index);
 	lds_outer = LLVMBuildAdd(ctx->ac.builder, lds_base,
 				 LLVMConstInt(ctx->ac.i32, tess_outer_index * 4, false), "");
 
