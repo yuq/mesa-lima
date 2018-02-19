@@ -27,6 +27,7 @@
 #include "util/u_math.h"
 #include "util/u_debug.h"
 #include "util/u_transfer.h"
+#include "util/ralloc.h"
 
 #include "lima_screen.h"
 #include "lima_context.h"
@@ -75,12 +76,6 @@ lima_context_destroy(struct pipe_context *pctx)
 
    slab_destroy_child(&ctx->transfer_pool);
 
-   if (ctx->gp_submit)
-      lima_submit_delete(ctx->gp_submit);
-
-   if (ctx->pp_submit)
-      lima_submit_delete(ctx->pp_submit);
-
    if (ctx->share_buffer)
       lima_bo_free(ctx->share_buffer);
 
@@ -92,7 +87,7 @@ lima_context_destroy(struct pipe_context *pctx)
 
    lima_context_free_drm_ctx(screen, ctx->id);
 
-   FREE(ctx);
+   ralloc_free(ctx);
 }
 
 struct pipe_context *
@@ -101,13 +96,13 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    struct lima_screen *screen = lima_screen(pscreen);
    struct lima_context *ctx;
 
-   ctx = CALLOC_STRUCT(lima_context);
+   ctx = rzalloc(screen, struct lima_context);
    if (!ctx)
       return NULL;
 
    ctx->id = lima_context_create_drm_ctx(screen);
    if (ctx->id < 0) {
-      FREE(ctx);
+      ralloc_free(ctx);
       return NULL;
    }
 
@@ -141,7 +136,7 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    for (int i = 0; i < max_plb; i++)
       plbu_stream[i] = ctx->share_buffer->va + sh_plb_offset + block_size * i;
 
-   ctx->gp_submit = lima_submit_create(screen, ctx->id, LIMA_PIPE_GP);
+   ctx->gp_submit = lima_submit_create(ctx, LIMA_PIPE_GP);
    if (!ctx->gp_submit)
       goto err_out;
 
@@ -163,7 +158,7 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    pp_frame_rsw[9] = ctx->pp_buffer->va + pp_clear_program_offset;
    pp_frame_rsw[13] = 0x00000100;
 
-   ctx->pp_submit = lima_submit_create(screen, ctx->id, LIMA_PIPE_PP);
+   ctx->pp_submit = lima_submit_create(ctx, LIMA_PIPE_PP);
    if (!ctx->pp_submit)
       goto err_out;
 
