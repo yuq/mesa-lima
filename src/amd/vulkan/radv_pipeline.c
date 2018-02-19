@@ -2632,16 +2632,6 @@ radv_pipeline_generate_tess_shaders(struct radeon_winsys_cs *cs,
 		radeon_set_sh_reg(cs, base_reg + loc->sgpr_idx * 4,
 				  tess->offchip_layout);
 	}
-
-	loc = radv_lookup_user_sgpr(pipeline, MESA_SHADER_VERTEX, AC_UD_VS_LS_TCS_IN_LAYOUT);
-	if (loc->sgpr_idx != -1) {
-		uint32_t base_reg = pipeline->user_data_0[MESA_SHADER_VERTEX];
-		assert(loc->num_sgprs == 1);
-		assert(!loc->indirect);
-
-		radeon_set_sh_reg(cs, base_reg + loc->sgpr_idx * 4,
-				  tess->tcs_in_layout);
-	}
 }
 
 static void

@@ -60,7 +60,6 @@ struct radv_shader_context {
 	LLVMValueRef vertex_buffers;
 	LLVMValueRef rel_auto_id;
 	LLVMValueRef vs_prim_id;
-	LLVMValueRef ls_out_layout;
 	LLVMValueRef es2gs_offset;
 
 	LLVMValueRef tcs_offchip_layout;
@@ -162,14 +161,8 @@ static LLVMValueRef get_rel_patch_id(struct radv_shader_context *ctx)
 static LLVMValueRef
 get_tcs_in_patch_stride(struct radv_shader_context *ctx)
 {
-	if (ctx->stage == MESA_SHADER_VERTEX)
-		return ac_unpack_param(&ctx->ac, ctx->ls_out_layout, 0, 13);
-	else if (ctx->stage == MESA_SHADER_TESS_CTRL)
-		return ac_unpack_param(&ctx->ac, ctx->tcs_in_layout, 0, 13);
-	else {
-		assert(0);
-		return NULL;
-	}
+	assert (ctx->stage == MESA_SHADER_TESS_CTRL);
+	return ac_unpack_param(&ctx->ac, ctx->tcs_in_layout, 0, 13);
 }
 
 static LLVMValueRef
@@ -463,14 +456,11 @@ static void allocate_user_sgprs(struct radv_shader_context *ctx,
 	case MESA_SHADER_VERTEX:
 		if (!ctx->is_gs_copy_shader)
 			user_sgpr_info->sgpr_count += count_vs_user_sgprs(ctx);
-		if (ctx->options->key.vs.as_ls)
-			user_sgpr_info->sgpr_count++;
 		break;
 	case MESA_SHADER_TESS_CTRL:
 		if (has_previous_stage) {
 			if (previous_stage == MESA_SHADER_VERTEX)
 				user_sgpr_info->sgpr_count += count_vs_user_sgprs(ctx);
-			user_sgpr_info->sgpr_count++;
 		}
 		user_sgpr_info->sgpr_count += 4;
 		break;
@@ -743,9 +733,6 @@ static void create_function(struct radv_shader_context *ctx,
 		if (ctx->options->key.vs.as_es)
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->es2gs_offset);
-		else if (ctx->options->key.vs.as_ls)
-			add_arg(&args, ARG_SGPR, ctx->ac.i32,
-				&ctx->ls_out_layout);
 
 		declare_vs_input_vgprs(ctx, &args);
 		break;
@@ -770,9 +757,6 @@ static void create_function(struct radv_shader_context *ctx,
 			declare_vs_specific_input_sgprs(ctx, stage,
 							has_previous_stage,
 							previous_stage, &args);
-
-			add_arg(&args, ARG_SGPR, ctx->ac.i32,
-				&ctx->ls_out_layout);
 
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->tcs_offchip_layout);
@@ -1011,17 +995,10 @@ static void create_function(struct radv_shader_context *ctx,
 					   previous_stage, &user_sgpr_idx);
 		if (ctx->abi.view_index)
 			set_loc_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
-		if (ctx->options->key.vs.as_ls) {
-			set_loc_shader(ctx, AC_UD_VS_LS_TCS_IN_LAYOUT,
-				       &user_sgpr_idx, 1);
-		}
 		break;
 	case MESA_SHADER_TESS_CTRL:
 		set_vs_specific_input_locs(ctx, stage, has_previous_stage,
 					   previous_stage, &user_sgpr_idx);
-		if (has_previous_stage)
-			set_loc_shader(ctx, AC_UD_VS_LS_TCS_IN_LAYOUT,
-				       &user_sgpr_idx, 1);
 		set_loc_shader(ctx, AC_UD_TCS_OFFCHIP_LAYOUT, &user_sgpr_idx, 4);
 		if (ctx->abi.view_index)
 			set_loc_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
@@ -2411,7 +2388,8 @@ static void
 handle_ls_outputs_post(struct radv_shader_context *ctx)
 {
 	LLVMValueRef vertex_id = ctx->rel_auto_id;
-	LLVMValueRef vertex_dw_stride = ac_unpack_param(&ctx->ac, ctx->ls_out_layout, 13, 8);
+	uint32_t num_tcs_inputs = util_last_bit64(ctx->shader_info->info.vs.ls_outputs_written);
+	LLVMValueRef vertex_dw_stride = LLVMConstInt(ctx->ac.i32, num_tcs_inputs * 4, false);
 	LLVMValueRef base_dw_addr = LLVMBuildMul(ctx->ac.builder, vertex_id,
 						 vertex_dw_stride, "");
 
