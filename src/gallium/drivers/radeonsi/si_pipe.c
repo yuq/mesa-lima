@@ -357,7 +357,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	if (sctx->b.chip_class == CIK) {
 		sctx->null_const_buf.buffer =
 			si_aligned_buffer_create(screen,
-						   R600_RESOURCE_FLAG_UNMAPPABLE,
+						 R600_RESOURCE_FLAG_32BIT,
 						   PIPE_USAGE_DEFAULT, 16,
 						   sctx->screen->info.tcc_cache_line_size);
 		if (!sctx->null_const_buf.buffer)
