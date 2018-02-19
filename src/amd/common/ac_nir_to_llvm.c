@@ -383,6 +383,12 @@ get_tcs_out_patch_stride(struct radv_shader_context *ctx)
 }
 
 static LLVMValueRef
+get_tcs_out_vertex_stride(struct radv_shader_context *ctx)
+{
+	return unpack_param(&ctx->ac, ctx->tcs_out_layout, 13, 8);
+}
+
+static LLVMValueRef
 get_tcs_out_patch0_offset(struct radv_shader_context *ctx)
 {
 	return LLVMBuildMul(ctx->ac.builder,
@@ -2899,7 +2905,7 @@ load_tcs_varyings(struct ac_shader_abi *abi,
 		dw_addr = get_tcs_in_current_patch_offset(ctx);
 	} else {
 		if (!is_patch) {
-			stride = unpack_param(&ctx->ac, ctx->tcs_out_layout, 13, 8);
+			stride = get_tcs_out_vertex_stride(ctx);
 			dw_addr = get_tcs_out_current_patch_offset(ctx);
 		} else {
 			dw_addr = get_tcs_out_current_patch_data_offset(ctx);
@@ -2955,7 +2961,7 @@ store_tcs_output(struct ac_shader_abi *abi,
 	}
 
 	if (!is_patch) {
-		stride = unpack_param(&ctx->ac, ctx->tcs_out_layout, 13, 8);
+		stride = get_tcs_out_vertex_stride(ctx);
 		dw_addr = get_tcs_out_current_patch_offset(ctx);
 	} else {
 		dw_addr = get_tcs_out_current_patch_data_offset(ctx);
