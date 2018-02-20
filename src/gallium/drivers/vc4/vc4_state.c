@@ -583,12 +583,17 @@ vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
              (cso->u.tex.first_level != cso->u.tex.last_level)) ||
             rsc->vc4_format == VC4_TEXTURE_TYPE_RGBA32R) {
                 struct vc4_resource *shadow_parent = rsc;
-                struct pipe_resource tmpl = *prsc;
-
-                tmpl.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET;
-                tmpl.width0 = u_minify(tmpl.width0, cso->u.tex.first_level);
-                tmpl.height0 = u_minify(tmpl.height0, cso->u.tex.first_level);
-                tmpl.last_level = cso->u.tex.last_level - cso->u.tex.first_level;
+                struct pipe_resource tmpl = {
+                        .target = prsc->target,
+                        .format = prsc->format,
+                        .width0 = u_minify(prsc->width0,
+                                           cso->u.tex.first_level),
+                        .height0 = u_minify(prsc->height0,
+                                            cso->u.tex.first_level),
+                        .bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET,
+                        .last_level = cso->u.tex.last_level - cso->u.tex.first_level,
+                        .nr_samples = prsc->nr_samples,
+                };
 
                 /* Create the shadow texture.  The rest of the texture
                  * parameter setup will use the shadow.
