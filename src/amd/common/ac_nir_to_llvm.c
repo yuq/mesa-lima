@@ -3428,6 +3428,19 @@ static int image_type_to_components_count(enum glsl_sampler_dim dim, bool array)
 	return 0;
 }
 
+static bool
+glsl_is_array_image(const struct glsl_type *type)
+{
+	const enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
+
+	if (glsl_sampler_type_is_array(type))
+		return true;
+
+	return dim == GLSL_SAMPLER_DIM_CUBE ||
+	       dim == GLSL_SAMPLER_DIM_3D ||
+	       dim == GLSL_SAMPLER_DIM_SUBPASS ||
+	       dim == GLSL_SAMPLER_DIM_SUBPASS_MS;
+}
 
 
 /* Adjust the sample index according to FMASK.
@@ -3632,12 +3645,7 @@ static LLVMValueRef visit_image_load(struct ac_nir_context *ctx,
 		res = trim_vector(&ctx->ac, res, instr->dest.ssa.num_components);
 		res = ac_to_integer(&ctx->ac, res);
 	} else {
-		bool is_da = glsl_sampler_type_is_array(type) ||
-			     dim == GLSL_SAMPLER_DIM_CUBE ||
-			     dim == GLSL_SAMPLER_DIM_3D ||
-			     dim == GLSL_SAMPLER_DIM_SUBPASS ||
-			     dim == GLSL_SAMPLER_DIM_SUBPASS_MS;
-		LLVMValueRef da = is_da ? ctx->ac.i1true : ctx->ac.i1false;
+		LLVMValueRef da = glsl_is_array_image(type) ? ctx->ac.i1true : ctx->ac.i1false;
 		LLVMValueRef glc = ctx->ac.i1false;
 		LLVMValueRef slc = ctx->ac.i1false;
 
@@ -3685,10 +3693,7 @@ static void visit_image_store(struct ac_nir_context *ctx,
 		ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.buffer.store.format.v4f32", ctx->ac.voidt,
 				   params, 6, 0);
 	} else {
-		bool is_da = glsl_sampler_type_is_array(type) ||
-			     dim == GLSL_SAMPLER_DIM_CUBE ||
-			     dim == GLSL_SAMPLER_DIM_3D;
-		LLVMValueRef da = is_da ? ctx->ac.i1true : ctx->ac.i1false;
+		LLVMValueRef da = glsl_is_array_image(type) ? ctx->ac.i1true : ctx->ac.i1false;
 		LLVMValueRef slc = ctx->ac.i1false;
 
 		params[0] = ac_to_float(&ctx->ac, get_src(ctx, instr->src[2]));
@@ -3772,15 +3777,11 @@ static LLVMValueRef visit_image_atomic(struct ac_nir_context *ctx,
 	} else {
 		char coords_type[8];
 
-		bool da = glsl_sampler_type_is_array(type) ||
-		          glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE ||
-		          glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_3D;
-
 		LLVMValueRef coords = params[param_count++] = get_image_coords(ctx, instr);
 		params[param_count++] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE,
 							 NULL, true, true);
 		params[param_count++] = ctx->ac.i1false; /* r128 */
-		params[param_count++] = da ? ctx->ac.i1true : ctx->ac.i1false;      /* da */
+		params[param_count++] = glsl_is_array_image(type) ? ctx->ac.i1true : ctx->ac.i1false;      /* da */
 		params[param_count++] = ctx->ac.i1false;  /* slc */
 
 		build_int_type_name(LLVMTypeOf(coords),
@@ -3799,12 +3800,9 @@ static LLVMValueRef visit_image_samples(struct ac_nir_context *ctx,
 {
 	const nir_variable *var = instr->variables[0]->var;
 	const struct glsl_type *type = glsl_without_array(var->type);
-	bool da = glsl_sampler_type_is_array(type) ||
-		  glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE ||
-		  glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_3D;
 
 	struct ac_image_args args = { 0 };
-	args.da = da;
+	args.da = glsl_is_array_image(type);
 	args.dmask = 0xf;
 	args.resource = get_sampler_desc(ctx, instr->variables[0],
 					 AC_DESC_IMAGE, NULL, true, false);
@@ -3820,9 +3818,6 @@ static LLVMValueRef visit_image_size(struct ac_nir_context *ctx,
 	LLVMValueRef res;
 	const nir_variable *var = instr->variables[0]->var;
 	const struct glsl_type *type = glsl_without_array(var->type);
-	bool da = glsl_sampler_type_is_array(type) ||
-		  glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE ||
-		  glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_3D;
 
 	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_BUF)
 		return get_buffer_size(ctx,
@@ -3831,7 +3826,7 @@ static LLVMValueRef visit_image_size(struct ac_nir_context *ctx,
 
 	struct ac_image_args args = { 0 };
 
-	args.da = da;
+	args.da = glsl_is_array_image(type);
 	args.dmask = 0xf;
 	args.resource = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE, NULL, true, false);
 	args.opcode = ac_image_get_resinfo;
