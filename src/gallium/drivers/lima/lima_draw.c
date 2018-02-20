@@ -213,12 +213,8 @@ lima_pipe_format_to_attrib_type(enum pipe_format format)
 static void
 lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
 {
-   ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].offset +=
-      ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].size;
-
-   int i = 0;
-   uint32_t *vs_cmd = ctx->gp_buffer->map + gp_vs_cmd_offset +
-      ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].offset;
+   int i = 0, max_n = 24;
+   uint32_t *vs_cmd = util_dynarray_enlarge(&ctx->vs_cmd_array, max_n * 4);
 
    if (!info->index_size) {
       vs_cmd[i++] = 0x00028000; /* ARRAYS_SEMAPHORE_BEGIN_1 */
@@ -228,8 +224,7 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    }
 
    int uniform_size = ctx->const_buffer[PIPE_SHADER_VERTEX].size + ctx->vs->constant_size;
-   vs_cmd[i++] = ctx->gp_buffer->va + gp_uniform_offset +
-      ctx->buffer_state[lima_ctx_buff_gp_uniform].offset;
+   vs_cmd[i++] = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_uniform);
    vs_cmd[i++] = 0x30000000 | (align(uniform_size, 16) << 12); /* UNIFORMS_ADDRESS */
 
    vs_cmd[i++] = ctx->vs->bo->va;
@@ -247,12 +242,10 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    vs_cmd[i++] = 0x00000003;
    vs_cmd[i++] = 0x10000041; /* ?? */
 
-   vs_cmd[i++] = ctx->gp_buffer->va + gp_attribute_info_offset +
-      ctx->buffer_state[lima_ctx_buff_gp_attribute_info].offset;
+   vs_cmd[i++] = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_attribute_info);
    vs_cmd[i++] = 0x20000000 | (num_attributes << 17); /* ATTRIBUTES_ADDRESS */
 
-   vs_cmd[i++] = ctx->gp_buffer->va + gp_varying_info_offset +
-      ctx->buffer_state[lima_ctx_buff_gp_varying_info].offset;
+   vs_cmd[i++] = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_varying_info);
    vs_cmd[i++] = 0x20000008 | (num_varryings << 17); /* VARYINGS_ADDRESS */
 
    vs_cmd[i++] = (info->count << 24) | (info->index_size ? 1 : 0);
@@ -264,14 +257,13 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    vs_cmd[i++] = info->index_size ? 0x00018000 : 0x00000000; /* ARRAYS_SEMAPHORE_NEXT : ARRAYS_SEMAPHORE_END */
    vs_cmd[i++] = 0x50000000; /* ARRAYS_SEMAPHORE */
 
+   assert(i <= max_n);
+   ctx->vs_cmd_array.size += i * 4;
+
    if (lima_dump_command_stream) {
-      printf("lima add vs cmd at va %x\n",
-             ctx->gp_buffer->va + gp_vs_cmd_offset +
-             ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].offset);
+      printf("lima add vs cmd\n");
       lima_dump_blob(vs_cmd, i * 4, false);
    }
-
-   ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].size = i * 4;
 }
 
 static bool
@@ -289,15 +281,11 @@ lima_is_scissor_zero(struct lima_context *ctx)
 static void
 lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
 {
-   ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].offset +=
-      ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].size;
-
-   int i = 0;
-   uint32_t *plbu_cmd = ctx->gp_buffer->map + gp_plbu_cmd_offset +
-      ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].offset;
+   int i = 0, max_n = 40;
+   uint32_t *plbu_cmd = util_dynarray_enlarge(&ctx->plbu_cmd_array, max_n * 4);
 
    /* first draw need create a PLBU command header */
-   if (!ctx->num_draws) {
+   if (!ctx->plbu_cmd_array.size) {
       struct lima_context_framebuffer *fb = &ctx->framebuffer;
 
       plbu_cmd[i++] = 0x00000200;
@@ -350,15 +338,13 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       (info->index_size == 2 ? 0x00000400 : 0);
    plbu_cmd[i++] = 0x1000010B; /* PRIMITIVE_SETUP */
 
-   uint32_t gl_position_va = ctx->share_buffer->va + sh_gl_pos_offset +
-      ctx->buffer_state[lima_ctx_buff_sh_gl_pos].offset;
-   plbu_cmd[i++] = ctx->pp_buffer->va + pp_plb_rsw_offset +
-      ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].offset +
-      ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].size;
+   uint32_t gl_position_va = lima_ctx_buff_va(ctx, lima_ctx_buff_sh_gl_pos);
+   plbu_cmd[i++] = lima_ctx_buff_va(ctx, lima_ctx_buff_pp_plb_rsw);
    plbu_cmd[i++] = 0x80000000 | (gl_position_va >> 4); /* RSW_VERTEX_ARRAY */
 
    /* TODO
-    * - we should set it only for the first draw that enabled the scissor and for latter draw only if scissor is dirty
+    * - we should set it only for the first draw that enabled the scissor and for
+    *   latter draw only if scissor is dirty
     * - check why scissor is not affecting bounds of region cleared by glClear
     */
    if (ctx->rasterizer->base.scissor) {
@@ -403,14 +389,13 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    }
 
 done:
+   assert(i <= max_n);
+   ctx->plbu_cmd_array.size += i * 4;
+
    if (lima_dump_command_stream) {
-      printf("lima add plbu cmd at va %x\n",
-             ctx->gp_buffer->va + gp_plbu_cmd_offset +
-             ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].offset);
+      printf("lima add plbu cmd\n");
       lima_dump_blob(plbu_cmd, i * 4, false);
    }
-
-   ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].size = i * 4;
 }
 
 struct lima_render_state {
@@ -534,11 +519,9 @@ lima_stencil_op(enum pipe_stencil_op pipe)
 static void
 lima_pack_render_state(struct lima_context *ctx)
 {
-   ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].offset +=
-      ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].size;
-
-   struct lima_render_state *render = ctx->pp_buffer->map + pp_plb_rsw_offset +
-      ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].offset;
+   struct lima_render_state *render =
+      lima_ctx_buff_alloc(ctx, lima_ctx_buff_pp_plb_rsw,
+                          sizeof(*render), LIMA_CTX_BUFF_SUBMIT_PP, true);
 
    /* do hw support RGBA independ blend?
     * PIPE_CAP_INDEP_BLEND_ENABLE
@@ -627,24 +610,21 @@ lima_pack_render_state(struct lima_context *ctx)
    render->aux1 = 0x00003000;
 
    if (ctx->tex_stateobj.num_samplers) {
-      render->textures_address = ctx->pp_buffer->va + pp_tex_descs_offset +
-         ctx->buffer_state[lima_ctx_buff_pp_tex_desc].offset;
+      render->textures_address = lima_ctx_buff_va(ctx, lima_ctx_buff_pp_tex_desc);
       render->aux0 |= ctx->tex_stateobj.num_samplers << 14;
       render->aux0 |= 0x20;
    }
 
-   if (ctx->buffer_state[lima_ctx_buff_pp_uniform].size) {
-       render->uniforms_address = ctx->pp_buffer->va + pp_uniform_array_offset +
-          ctx->buffer_state[lima_ctx_buff_pp_uniform_array].offset;
-       render->uniforms_address |= ((ctx->buffer_state[lima_ctx_buff_pp_uniform].size) / 4 - 1);
-       render->aux0 |= 0x80;
-       render->aux1 |= 0x10000;
+   if (ctx->const_buffer[PIPE_SHADER_FRAGMENT].buffer) {
+      render->uniforms_address = lima_ctx_buff_va(ctx, lima_ctx_buff_pp_uniform_array);
+      render->uniforms_address |= ((ctx->buffer_state[lima_ctx_buff_pp_uniform].size) / 4 - 1);
+      render->aux0 |= 0x80;
+      render->aux1 |= 0x10000;
    }
 
    if (ctx->vs->num_varying > 1) {
       render->varying_types = 0x00000000;
-      render->varyings_address = ctx->share_buffer->va + sh_varying_offset +
-         ctx->buffer_state[lima_ctx_buff_sh_varying].offset;
+      render->varyings_address = lima_ctx_buff_va(ctx, lima_ctx_buff_sh_varying);
       for (int i = 1; i < ctx->vs->num_varying; i++) {
          int val;
 
@@ -672,27 +652,22 @@ lima_pack_render_state(struct lima_context *ctx)
 
    if (lima_dump_command_stream) {
       printf("lima: add render state at va %x\n",
-             ctx->pp_buffer->va + pp_plb_rsw_offset +
-             ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].offset);
+             lima_ctx_buff_va(ctx, lima_ctx_buff_pp_plb_rsw));
       lima_dump_blob(render, sizeof(*render), false);
    }
-
-   ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].size = sizeof(*render);
 }
 
 static void
 lima_update_gp_attribute_info(struct lima_context *ctx, const struct pipe_draw_info *info)
 {
-   ctx->buffer_state[lima_ctx_buff_gp_attribute_info].offset +=
-      ctx->buffer_state[lima_ctx_buff_gp_attribute_info].size;
-
-   uint32_t *attribute = ctx->gp_buffer->map + gp_attribute_info_offset +
-      ctx->buffer_state[lima_ctx_buff_gp_attribute_info].offset;
-   int n = 0;
-
    struct lima_vertex_element_state *ve = ctx->vertex_elements;
    struct lima_context_vertex_buffer *vb = &ctx->vertex_buffers;
 
+   uint32_t *attribute =
+      lima_ctx_buff_alloc(ctx, lima_ctx_buff_gp_attribute_info,
+                          ve->num_elements * 8, LIMA_CTX_BUFF_SUBMIT_GP, true);
+
+   int n = 0;
    for (int i = 0; i < ve->num_elements; i++) {
       struct pipe_vertex_element *pve = ve->pipe + i;
 
@@ -714,94 +689,76 @@ lima_update_gp_attribute_info(struct lima_context *ctx, const struct pipe_draw_i
 
    if (lima_dump_command_stream) {
       printf("lima: update attribute info at va %x\n",
-             ctx->gp_buffer->va + gp_attribute_info_offset +
-             ctx->buffer_state[lima_ctx_buff_gp_attribute_info].offset);
+             lima_ctx_buff_va(ctx, lima_ctx_buff_gp_attribute_info));
       lima_dump_blob(attribute, n * 4, false);
    }
-
-   ctx->buffer_state[lima_ctx_buff_gp_attribute_info].size = align(n * 4, 0x40);
 }
 
 static void
 lima_update_gp_uniform(struct lima_context *ctx)
 {
-   ctx->buffer_state[lima_ctx_buff_gp_uniform].offset +=
-      ctx->buffer_state[lima_ctx_buff_gp_uniform].size;
-   ctx->buffer_state[lima_ctx_buff_gp_uniform].size = 0;
-
-   void *vs_const_buff = ctx->gp_buffer->map + gp_uniform_offset +
-      ctx->buffer_state[lima_ctx_buff_gp_uniform].offset;
-
-   struct lima_context_constant_buffer *cbs = ctx->const_buffer + PIPE_SHADER_VERTEX;
-   if (cbs->buffer) {
-      memcpy(vs_const_buff, cbs->buffer, cbs->size);
-      ctx->buffer_state[lima_ctx_buff_gp_uniform].size += cbs->size;
-   }
-
+   struct lima_context_constant_buffer *ccb =
+      ctx->const_buffer + PIPE_SHADER_VERTEX;
    struct lima_vs_shader_state *vs = ctx->vs;
-   if (vs->constant) {
-      memcpy(vs_const_buff + cbs->size, vs->constant, vs->constant_size);
-      ctx->buffer_state[lima_ctx_buff_gp_uniform].size += vs->constant_size;
-   }
 
-   ctx->buffer_state[lima_ctx_buff_gp_uniform].size =
-      align(ctx->buffer_state[lima_ctx_buff_gp_uniform].size, 0x40);
+   void *vs_const_buff =
+      lima_ctx_buff_alloc(ctx, lima_ctx_buff_gp_uniform,
+                          ccb->size + vs->constant_size,
+                          LIMA_CTX_BUFF_SUBMIT_GP, true);
+
+   if (ccb->buffer)
+      memcpy(vs_const_buff, ccb->buffer, ccb->size);
+
+   if (vs->constant)
+      memcpy(vs_const_buff + ccb->size, vs->constant, vs->constant_size);
 }
 
 static void
 lima_update_pp_uniform(struct lima_context *ctx)
 {
-   ctx->buffer_state[lima_ctx_buff_pp_uniform].offset +=
-      ctx->buffer_state[lima_ctx_buff_pp_uniform].size;
-   ctx->buffer_state[lima_ctx_buff_pp_uniform].size = 0;
-   ctx->buffer_state[lima_ctx_buff_pp_uniform_array].offset +=
-      ctx->buffer_state[lima_ctx_buff_pp_uniform_array].size;
-   ctx->buffer_state[lima_ctx_buff_pp_uniform_array].size = 0;
-
-   uint16_t *fp16_const_buff = ctx->pp_buffer->map + pp_uniform_offset +
-      ctx->buffer_state[lima_ctx_buff_pp_uniform].offset;
    const float *const_buff = ctx->const_buffer[PIPE_SHADER_FRAGMENT].buffer;
    size_t const_buff_size = ctx->const_buffer[PIPE_SHADER_FRAGMENT].size / sizeof(float);
 
    if (!const_buff)
-       return;
+      return;
+
+   uint16_t *fp16_const_buff =
+      lima_ctx_buff_alloc(ctx, lima_ctx_buff_pp_uniform,
+                          const_buff_size * sizeof(uint16_t),
+                          LIMA_CTX_BUFF_SUBMIT_PP, true);
+
+   uint32_t *array =
+      lima_ctx_buff_alloc(ctx, lima_ctx_buff_pp_uniform_array,
+                          4, LIMA_CTX_BUFF_SUBMIT_PP, true);
 
    for (int i = 0; i < const_buff_size; i++)
        fp16_const_buff[i] = util_float_to_half(const_buff[i]);
 
-   ctx->buffer_state[lima_ctx_buff_pp_uniform].size =
-      align(const_buff_size * sizeof(uint16_t), 0x4);
-
-   uint32_t *array = ctx->pp_buffer->map + pp_uniform_array_offset +
-      ctx->buffer_state[lima_ctx_buff_pp_uniform_array].offset;
-   *array = ctx->pp_buffer->va + pp_uniform_offset +
-      ctx->buffer_state[lima_ctx_buff_pp_uniform].offset;
-   ctx->buffer_state[lima_ctx_buff_pp_uniform_array].size = 0x40;
+   *array = lima_ctx_buff_va(ctx, lima_ctx_buff_pp_uniform);
 }
 
 static void
 lima_update_varying(struct lima_context *ctx, const struct pipe_draw_info *info)
 {
-   ctx->buffer_state[lima_ctx_buff_gp_varying_info].offset +=
-      ctx->buffer_state[lima_ctx_buff_gp_varying_info].size;
+   struct lima_vs_shader_state *vs = ctx->vs;
 
-   ctx->buffer_state[lima_ctx_buff_sh_varying].offset +=
-      ctx->buffer_state[lima_ctx_buff_sh_varying].size;
-
-   ctx->buffer_state[lima_ctx_buff_sh_gl_pos].offset +=
-      ctx->buffer_state[lima_ctx_buff_sh_gl_pos].size;
-
-   uint32_t *varying = ctx->gp_buffer->map + gp_varying_info_offset +
-      ctx->buffer_state[lima_ctx_buff_gp_varying_info].offset;
+   uint32_t *varying =
+      lima_ctx_buff_alloc(ctx, lima_ctx_buff_gp_varying_info,
+                          vs->num_varying * 8, LIMA_CTX_BUFF_SUBMIT_GP, true);
    int n = 0;
 
+   /* should be LIMA_SUBMIT_BO_WRITE for GP, but each draw will use
+    * different part of this bo, so no need to set exclusive constraint */
+   lima_ctx_buff_alloc(ctx, lima_ctx_buff_sh_gl_pos,
+                       4 * 4 * info->count,
+                       LIMA_CTX_BUFF_SUBMIT_GP | LIMA_CTX_BUFF_SUBMIT_PP,
+                       false);
+
    /* for gl_Position */
-   varying[n++] = ctx->share_buffer->va + sh_gl_pos_offset +
-      ctx->buffer_state[lima_ctx_buff_sh_gl_pos].offset;
+   varying[n++] = lima_ctx_buff_va(ctx, lima_ctx_buff_sh_gl_pos);
    varying[n++] = 0x8020;
 
    int offset = 0;
-   struct lima_vs_shader_state *vs = ctx->vs;
    for (int i = 1; i < vs->num_varying; i++) {
       struct lima_varying_info *v = vs->varying + i;
 
@@ -815,28 +772,26 @@ lima_update_varying(struct lima_context *ctx, const struct pipe_draw_info *info)
       v->offset = offset;
       offset += size;
    }
-
    vs->varying_stride = align(offset, 8);
+
+   if (vs->num_varying > 1)
+      lima_ctx_buff_alloc(ctx, lima_ctx_buff_sh_varying,
+                          vs->varying_stride * info->count,
+                          LIMA_CTX_BUFF_SUBMIT_GP | LIMA_CTX_BUFF_SUBMIT_PP,
+                          false);
+
    for (int i = 1; i < vs->num_varying; i++) {
       struct lima_varying_info *v = vs->varying + i;
-      varying[n++] = ctx->share_buffer->va + sh_varying_offset +
-         ctx->buffer_state[lima_ctx_buff_sh_varying].offset + v->offset;
+      varying[n++] = lima_ctx_buff_va(ctx, lima_ctx_buff_sh_varying) + v->offset;
       varying[n++] = (vs->varying_stride << 11) | (v->components - 1) |
          (v->component_size == 2 ? 0x0C : 0);
    }
 
    if (lima_dump_command_stream) {
       printf("lima: update varying info at va %x\n",
-             ctx->gp_buffer->va + gp_varying_info_offset +
-             ctx->buffer_state[lima_ctx_buff_gp_varying_info].offset);
+             lima_ctx_buff_va(ctx, lima_ctx_buff_gp_varying_info));
       lima_dump_blob(varying, n * 4, false);
    }
-
-   ctx->buffer_state[lima_ctx_buff_gp_varying_info].size = align(n * 4, 0x40);
-   ctx->buffer_state[lima_ctx_buff_sh_varying].size =
-      align(vs->varying_stride * info->count, 0x40);
-   ctx->buffer_state[lima_ctx_buff_sh_gl_pos].size =
-      align(4 * 4 * info->count, 0x40);
 }
 
 static void
@@ -857,17 +812,9 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    lima_submit_add_bo(ctx->gp_submit, ctx->vs->bo, LIMA_SUBMIT_BO_READ);
    lima_submit_add_bo(ctx->pp_submit, ctx->fs->bo, LIMA_SUBMIT_BO_READ);
 
-   lima_bo_wait(ctx->gp_buffer, LIMA_GEM_WAIT_WRITE, 1000000000, true);
-
-   /* TODO:
-    *   1. dynamic command stream buffers
-    *   2. reuse buffer across draws of different frame
-    */
-
    lima_update_gp_attribute_info(ctx, info);
 
-   if (!ctx->num_draws ||
-       (ctx->dirty & LIMA_CONTEXT_DIRTY_CONST_BUFF &&
+   if ((ctx->dirty & LIMA_CONTEXT_DIRTY_CONST_BUFF &&
         ctx->const_buffer[PIPE_SHADER_VERTEX].dirty) ||
        ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_VERT) {
       lima_update_gp_uniform(ctx);
@@ -880,10 +827,6 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    if (!lima_is_scissor_zero(ctx))
       lima_pack_vs_cmd(ctx, info);
 
-   lima_pack_plbu_cmd(ctx, info);
-
-   lima_bo_wait(ctx->pp_buffer, LIMA_GEM_WAIT_WRITE, 1000000000, true);
-
    /* TODO: handle fb change case */
    if (ctx->dirty & LIMA_CONTEXT_DIRTY_FRAMEBUFFER) {
       struct lima_context_framebuffer *fb = &ctx->framebuffer;
@@ -894,9 +837,8 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       }
    }
 
-   if (!ctx->num_draws ||
-       (ctx->dirty & LIMA_CONTEXT_DIRTY_CONST_BUFF &&
-        ctx->const_buffer[PIPE_SHADER_FRAGMENT].dirty)) {
+   if (ctx->dirty & LIMA_CONTEXT_DIRTY_CONST_BUFF &&
+       ctx->const_buffer[PIPE_SHADER_FRAGMENT].dirty) {
       lima_update_pp_uniform(ctx);
       ctx->const_buffer[PIPE_SHADER_FRAGMENT].dirty = false;
    }
@@ -907,6 +849,7 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    }
 
    lima_pack_render_state(ctx);
+   lima_pack_plbu_cmd(ctx, info);
 
    ctx->dirty = 0;
    ctx->num_draws++;
@@ -915,17 +858,13 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 static void
 lima_finish_plbu_cmd(struct lima_context *ctx)
 {
-   ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].offset +=
-      ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].size;
-
-   uint32_t *plbu_cmd = ctx->gp_buffer->map + gp_plbu_cmd_offset +
-      ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].offset;
    int i = 0;
+   uint32_t *plbu_cmd = util_dynarray_enlarge(&ctx->plbu_cmd_array, 2 * 4);
 
    plbu_cmd[i++] = 0x00000000;
    plbu_cmd[i++] = 0x50000000; /* END */
 
-   ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].size = i * 4;
+   ctx->plbu_cmd_array.size += i * 4;
 }
 
 static void
@@ -943,21 +882,33 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 
    lima_finish_plbu_cmd(ctx);
 
+   int vs_cmd_size = ctx->vs_cmd_array.size;
+   int plbu_cmd_size = ctx->plbu_cmd_array.size;
+
+   void *vs_cmd =
+      lima_ctx_buff_alloc(ctx, lima_ctx_buff_gp_vs_cmd, vs_cmd_size,
+                          LIMA_CTX_BUFF_SUBMIT_GP, true);
+   memcpy(vs_cmd, util_dynarray_begin(&ctx->vs_cmd_array), vs_cmd_size);
+   util_dynarray_clear(&ctx->vs_cmd_array);
+
+   void *plbu_cmd =
+      lima_ctx_buff_alloc(ctx, lima_ctx_buff_gp_plbu_cmd, plbu_cmd_size,
+                          LIMA_CTX_BUFF_SUBMIT_GP, true);
+   memcpy(plbu_cmd, util_dynarray_begin(&ctx->plbu_cmd_array), plbu_cmd_size);
+   util_dynarray_clear(&ctx->plbu_cmd_array);
+
    lima_submit_add_bo(ctx->gp_submit, ctx->gp_buffer,
                       LIMA_SUBMIT_BO_READ|LIMA_SUBMIT_BO_WRITE);
    lima_submit_add_bo(ctx->gp_submit, ctx->share_buffer,
                       LIMA_SUBMIT_BO_WRITE);
 
-   int vs_cmd_size = ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].offset +
-      ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].size;
-   int plbu_cmd_size = ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].offset +
-      ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].size;
-
+   uint32_t vs_cmd_va = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_vs_cmd);
+   uint32_t plbu_cmd_va = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_plbu_cmd);
    struct drm_lima_m400_gp_frame gp_frame = {
-      .vs_cmd_start = ctx->gp_buffer->va + gp_vs_cmd_offset,
-      .vs_cmd_end = ctx->gp_buffer->va + gp_vs_cmd_offset + vs_cmd_size,
-      .plbu_cmd_start = ctx->gp_buffer->va + gp_plbu_cmd_offset,
-      .plbu_cmd_end = ctx->gp_buffer->va + gp_plbu_cmd_offset + plbu_cmd_size,
+      .vs_cmd_start = vs_cmd_va,
+      .vs_cmd_end = vs_cmd_va + vs_cmd_size,
+      .plbu_cmd_start = plbu_cmd_va,
+      .plbu_cmd_end = plbu_cmd_va + plbu_cmd_size,
       .tile_heap_start = ctx->gp_buffer->va + gp_tile_heap_offset,
       .tile_heap_end = ctx->gp_buffer->va + gp_buffer_size,
    };
@@ -970,17 +921,6 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
          fprintf(stderr, "gp submit wait error\n");
 
       lima_bo_update(ctx->share_buffer, true, false);
-
-      float *varying = ctx->share_buffer->map + sh_varying_offset;
-      printf("lima varying dump at va %x\n",
-             ctx->share_buffer->va + sh_varying_offset);
-      lima_dump_blob(varying, 4 * 4 * 16, true);
-
-      varying = ctx->share_buffer->map + sh_gl_pos_offset;
-      printf("lima gl_pos dump at va %x\n",
-             ctx->share_buffer->va + sh_gl_pos_offset);
-      lima_dump_blob(varying, 4 * 4 * 16, true);
-
       uint32_t *plb = ctx->share_buffer->map + sh_plb_offset;
       debug_printf("plb %x %x %x %x %x %x %x %x\n",
                    plb[0], plb[1], plb[2], plb[3],
@@ -1057,32 +997,6 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
       fprintf(stderr, "pp submit error\n");
 
    ctx->num_draws = 0;
-
-   assert(ctx->buffer_state[lima_ctx_buff_sh_varying].offset +
-          ctx->buffer_state[lima_ctx_buff_sh_varying].size <=
-          sh_gl_pos_offset - sh_varying_offset);
-   assert(ctx->buffer_state[lima_ctx_buff_sh_gl_pos].offset +
-          ctx->buffer_state[lima_ctx_buff_sh_gl_pos].size <=
-          sh_buffer_size - sh_gl_pos_offset);
-   assert(ctx->buffer_state[lima_ctx_buff_gp_varying_info].offset +
-          ctx->buffer_state[lima_ctx_buff_gp_varying_info].size <=
-          gp_attribute_info_offset - gp_varying_info_offset);
-   assert(ctx->buffer_state[lima_ctx_buff_gp_attribute_info].offset +
-          ctx->buffer_state[lima_ctx_buff_gp_attribute_info].size <=
-          gp_uniform_offset - gp_attribute_info_offset);
-   assert(ctx->buffer_state[lima_ctx_buff_gp_uniform].offset +
-          ctx->buffer_state[lima_ctx_buff_gp_uniform].size <=
-          gp_vs_cmd_offset - gp_uniform_offset);
-   assert(ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].offset +
-          ctx->buffer_state[lima_ctx_buff_gp_vs_cmd].size <=
-          gp_plbu_cmd_offset - gp_vs_cmd_offset);
-   assert(ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].offset +
-          ctx->buffer_state[lima_ctx_buff_gp_plbu_cmd].size <=
-          gp_tile_heap_offset - gp_plbu_cmd_offset);
-   assert(ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].offset +
-          ctx->buffer_state[lima_ctx_buff_pp_plb_rsw].size <=
-          pp_plb_offset_start - pp_plb_rsw_offset);
-   memset(ctx->buffer_state, 0, sizeof(ctx->buffer_state));
 }
 
 void

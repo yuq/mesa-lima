@@ -26,6 +26,7 @@
 #define H_LIMA_CONTEXT
 
 #include "util/slab.h"
+#include "util/u_dynarray.h"
 
 #include "pipe/p_context.h"
 #include "pipe/p_state.h"
@@ -127,6 +128,7 @@ enum lima_ctx_buff {
 };
 
 struct lima_ctx_buff_state {
+   struct pipe_resource *res;
    unsigned offset;
    unsigned size;
 };
@@ -160,6 +162,7 @@ struct lima_context {
    } dirty;
 
    struct u_upload_mgr *uploader;
+   struct u_suballocator *suballocator;
 
    struct slab_child_pool transfer_pool;
 
@@ -182,37 +185,28 @@ struct lima_context {
    struct lima_bo *share_buffer;
    #define sh_plb_offset             0x00000
    /* max_plb = 512, block_size = 0x200, size = block_size * max_plb */
-   #define sh_varying_offset         0x40000
-   #define sh_gl_pos_offset          0x41000
-   #define sh_buffer_size            0x42000
+   #define sh_buffer_size            0x40000
 
    struct lima_bo *gp_buffer;
    #define gp_plbu_plb_offset        0x0000
-   #define gp_varying_info_offset    0x0800
-   #define gp_attribute_info_offset  0x1000
-   /* max_attr/varying_info = 16, each_info = 8, size = max * each */
-   #define gp_uniform_offset         0x2000
-   #define gp_vs_cmd_offset          0x3000
-   #define gp_plbu_cmd_offset        0x3800
-   #define gp_tile_heap_offset       0x4000
-   #define gp_buffer_size            0x6000
+   #define gp_tile_heap_offset       0x0800
+   #define gp_buffer_size            0x2000
 
    struct lima_bo *pp_buffer;
-   #define pp_uniform_array_offset   0x00000
-   #define pp_uniform_offset         0x00400
-   #define pp_tex_descs_offset       0x01400
-   #define pp_frame_rsw_offset       0x02400
-   #define pp_clear_program_offset   0x02440
-   #define pp_plb_rsw_offset         0x02480
-   #define pp_plb_offset_start       0x03000
+   #define pp_frame_rsw_offset       0x00000
+   #define pp_clear_program_offset   0x00040
+   #define pp_plb_offset_start       0x00080
    /* max_screen_w/h_size = 2048, max_pp = 4, plb_stream_size = ((max >> 4)^2 + max_pp) * 16 */
-   #define pp_stack_offset           0x43100
-   #define pp_buffer_size            0x45000
+   #define pp_stack_offset           0x40180
+   #define pp_buffer_size            0x42000
    #define pp_plb_offset(i, n)       \
       (pp_plb_offset_start + i * ((pp_stack_offset - pp_plb_offset_start) / n))
 
 
    struct lima_ctx_buff_state buffer_state[lima_ctx_buff_num];
+
+   struct util_dynarray vs_cmd_array;
+   struct util_dynarray plbu_cmd_array;
 
    unsigned num_draws;
 
@@ -247,6 +241,14 @@ lima_sampler_view(struct pipe_sampler_view *psview)
 {
    return (struct lima_sampler_view *)psview;
 }
+
+#define LIMA_CTX_BUFF_SUBMIT_GP (1 << 0)
+#define LIMA_CTX_BUFF_SUBMIT_PP (1 << 1)
+
+uint32_t lima_ctx_buff_va(struct lima_context *ctx, enum lima_ctx_buff buff);
+void *lima_ctx_buff_map(struct lima_context *ctx, enum lima_ctx_buff buff);
+void *lima_ctx_buff_alloc(struct lima_context *ctx, enum lima_ctx_buff buff,
+                          unsigned size, unsigned submit, bool uploader);
 
 void lima_state_init(struct lima_context *ctx);
 void lima_state_fini(struct lima_context *ctx);
