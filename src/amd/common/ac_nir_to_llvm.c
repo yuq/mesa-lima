@@ -2885,6 +2885,7 @@ get_dw_address(struct radv_shader_context *ctx,
 
 static LLVMValueRef
 load_tcs_varyings(struct ac_shader_abi *abi,
+		  LLVMTypeRef type,
 		  LLVMValueRef vertex_index,
 		  LLVMValueRef indir_index,
 		  unsigned const_index,
@@ -3008,6 +3009,7 @@ store_tcs_output(struct ac_shader_abi *abi,
 
 static LLVMValueRef
 load_tes_input(struct ac_shader_abi *abi,
+	       LLVMTypeRef type,
 	       LLVMValueRef vertex_index,
 	       LLVMValueRef param_index,
 	       unsigned const_index,
@@ -3146,12 +3148,21 @@ static LLVMValueRef load_tess_varyings(struct ac_nir_context *ctx,
 			 false, NULL, is_patch ? NULL : &vertex_index,
 			 &const_index, &indir_index);
 
-	result = ctx->abi->load_tess_varyings(ctx->abi, vertex_index, indir_index,
+	LLVMTypeRef dest_type = get_def_type(ctx, &instr->dest.ssa);
+
+	LLVMTypeRef src_component_type;
+	if (LLVMGetTypeKind(dest_type) == LLVMVectorTypeKind)
+		src_component_type = LLVMGetElementType(dest_type);
+	else
+		src_component_type = dest_type;
+
+	result = ctx->abi->load_tess_varyings(ctx->abi, src_component_type,
+					      vertex_index, indir_index,
 					      const_index, location, driver_location,
 					      instr->variables[0]->var->data.location_frac,
 					      instr->num_components,
 					      is_patch, is_compact, load_inputs);
-	return LLVMBuildBitCast(ctx->ac.builder, result, get_def_type(ctx, &instr->dest.ssa), "");
+	return LLVMBuildBitCast(ctx->ac.builder, result, dest_type, "");
 }
 
 static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,

@@ -268,6 +268,7 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 				unsigned swizzle);
 
 LLVMValueRef si_nir_load_input_tes(struct ac_shader_abi *abi,
+				   LLVMTypeRef type,
 				   LLVMValueRef vertex_index,
 				   LLVMValueRef param_index,
 				   unsigned const_index,

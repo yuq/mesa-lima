@@ -1215,6 +1215,7 @@ static LLVMValueRef fetch_input_tcs(
 }
 
 static LLVMValueRef si_nir_load_tcs_varyings(struct ac_shader_abi *abi,
+					     LLVMTypeRef type,
 					     LLVMValueRef vertex_index,
 					     LLVMValueRef param_index,
 					     unsigned const_index,
@@ -1316,6 +1317,7 @@ static LLVMValueRef fetch_input_tes(
 }
 
 LLVMValueRef si_nir_load_input_tes(struct ac_shader_abi *abi,
+				   LLVMTypeRef type,
 				   LLVMValueRef vertex_index,
 				   LLVMValueRef param_index,
 				   unsigned const_index,
