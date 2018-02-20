@@ -174,6 +174,38 @@ get_tcs_num_patches(struct radv_shader_context *ctx)
 	return num_patches;
 }
 
+static unsigned
+calculate_tess_lds_size(struct radv_shader_context *ctx)
+{
+	unsigned num_tcs_input_cp = ctx->options->key.tcs.input_vertices;
+	unsigned num_tcs_output_cp;
+	unsigned num_tcs_outputs, num_tcs_patch_outputs;
+	unsigned input_vertex_size, output_vertex_size;
+	unsigned input_patch_size, output_patch_size;
+	unsigned pervertex_output_patch_size;
+	unsigned output_patch0_offset;
+	unsigned num_patches;
+	unsigned lds_size;
+
+	num_tcs_output_cp = ctx->tcs_vertices_per_patch;
+	num_tcs_outputs = util_last_bit64(ctx->shader_info->info.tcs.outputs_written);
+	num_tcs_patch_outputs = util_last_bit64(ctx->shader_info->info.tcs.patch_outputs_written);
+
+	input_vertex_size = ctx->tcs_num_inputs * 16;
+	output_vertex_size = num_tcs_outputs * 16;
+
+	input_patch_size = num_tcs_input_cp * input_vertex_size;
+
+	pervertex_output_patch_size = num_tcs_output_cp * output_vertex_size;
+	output_patch_size = pervertex_output_patch_size + num_tcs_patch_outputs * 16;
+
+	num_patches = ctx->tcs_num_patches;
+	output_patch0_offset = input_patch_size * num_patches;
+
+	lds_size = output_patch0_offset + output_patch_size * num_patches;
+	return lds_size;
+}
+
 /* Tessellation shaders pass outputs to the next shader using LDS.
  *
  * LS outputs = TCS inputs
@@ -3130,6 +3162,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 				shaders[i]->info.gs.vertices_out;
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_CTRL) {
 			shader_info->tcs.num_patches = ctx.tcs_num_patches;
+			shader_info->tcs.lds_size = calculate_tess_lds_size(&ctx);
 		}
 	}
 

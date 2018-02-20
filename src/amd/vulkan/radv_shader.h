@@ -234,6 +234,7 @@ struct radv_shader_variant_info {
 		struct {
 			unsigned tcs_vertices_out;
 			uint32_t num_patches;
+			uint32_t lds_size;
 		} tcs;
 		struct {
 			struct radv_vs_output_info outinfo;

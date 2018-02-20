@@ -1306,38 +1306,17 @@ static struct radv_tessellation_state
 calculate_tess_state(struct radv_pipeline *pipeline,
 		     const VkGraphicsPipelineCreateInfo *pCreateInfo)
 {
-	unsigned num_tcs_input_cp = pCreateInfo->pTessellationState->patchControlPoints;
-	unsigned num_tcs_output_cp, num_tcs_inputs, num_tcs_outputs;
-	unsigned num_tcs_patch_outputs;
-	unsigned input_vertex_size, output_vertex_size, pervertex_output_patch_size;
-	unsigned input_patch_size, output_patch_size, output_patch0_offset;
+	unsigned num_tcs_input_cp;
+	unsigned num_tcs_output_cp;
 	unsigned lds_size;
 	unsigned num_patches;
 	struct radv_tessellation_state tess = {0};
 
-	/* This calculates how shader inputs and outputs among VS, TCS, and TES
-	 * are laid out in LDS. */
-	num_tcs_inputs = util_last_bit64(radv_get_vertex_shader(pipeline)->info.info.vs.ls_outputs_written);
-	num_tcs_outputs = util_last_bit64(pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.info.tcs.outputs_written); //tcs->outputs_written
+	num_tcs_input_cp = pCreateInfo->pTessellationState->patchControlPoints;
 	num_tcs_output_cp = pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.tcs_vertices_out; //TCS VERTICES OUT
-	num_tcs_patch_outputs = util_last_bit64(pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.info.tcs.patch_outputs_written);
-
-	/* Ensure that we only need one wave per SIMD so we don't need to check
-	 * resource usage. Also ensures that the number of tcs in and out
-	 * vertices per threadgroup are at most 256.
-	 */
-	input_vertex_size = num_tcs_inputs * 16;
-	output_vertex_size = num_tcs_outputs * 16;
-
-	input_patch_size = num_tcs_input_cp * input_vertex_size;
-
-	pervertex_output_patch_size = num_tcs_output_cp * output_vertex_size;
-	output_patch_size = pervertex_output_patch_size + num_tcs_patch_outputs * 16;
-
 	num_patches = pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.num_patches;
-	output_patch0_offset = input_patch_size * num_patches;
 
-	lds_size = output_patch0_offset + output_patch_size * num_patches;
+	lds_size = pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.lds_size;
 
 	if (pipeline->device->physical_device->rad_info.chip_class >= CIK) {
 		assert(lds_size <= 65536);
