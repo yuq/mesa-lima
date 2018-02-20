@@ -1314,7 +1314,8 @@ static LLVMValueRef emit_bcsel(struct ac_llvm_context *ctx,
 {
 	LLVMValueRef v = LLVMBuildICmp(ctx->builder, LLVMIntNE, src0,
 				       ctx->i32_0, "");
-	return LLVMBuildSelect(ctx->builder, v, src1, src2, "");
+	return LLVMBuildSelect(ctx->builder, v, ac_to_integer(ctx, src1),
+			       ac_to_integer(ctx, src2), "");
 }
 
 static LLVMValueRef emit_minmax_int(struct ac_llvm_context *ctx,
