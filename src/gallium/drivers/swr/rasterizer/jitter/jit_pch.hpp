@@ -105,12 +105,8 @@ using PassManager = llvm::legacy::PassManager;
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Config/llvm-config.h"
 
-#if LLVM_VERSION_MAJOR < 4
-#include "llvm/Bitcode/ReaderWriter.h"
-#else
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeReader.h"
-#endif
 
 #if LLVM_USE_INTEL_JITEVENTS
 #include "llvm/ExecutionEngine/JITEventListener.h"
