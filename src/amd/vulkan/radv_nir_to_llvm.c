@@ -69,7 +69,6 @@ struct radv_shader_context {
 	LLVMValueRef tes_u;
 	LLVMValueRef tes_v;
 
-	LLVMValueRef gsvs_ring_stride;
 	LLVMValueRef gs2vs_offset;
 	LLVMValueRef gs_wave_id;
 	LLVMValueRef gs_vtx_offset[6];
@@ -103,6 +102,8 @@ struct radv_shader_context {
 	uint32_t tcs_vertices_per_patch;
 	uint32_t tcs_num_inputs;
 	uint32_t tcs_num_patches;
+	uint32_t max_gsvs_emit_size;
+	uint32_t gsvs_vertex_size;
 };
 
 enum radeon_llvm_calling_convention {
@@ -568,7 +569,6 @@ static void allocate_user_sgprs(struct radv_shader_context *ctx,
 				user_sgpr_info->sgpr_count += count_vs_user_sgprs(ctx);
 			}
 		}
-		user_sgpr_info->sgpr_count += 1;
 		break;
 	default:
 		break;
@@ -927,8 +927,6 @@ static void create_function(struct radv_shader_context *ctx,
 								&args);
 			}
 
-			add_arg(&args, ARG_SGPR, ctx->ac.i32,
-				&ctx->gsvs_ring_stride);
 			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
 					&ctx->abi.view_index);
@@ -956,8 +954,6 @@ static void create_function(struct radv_shader_context *ctx,
 						   &user_sgpr_info, &args,
 						   &desc_sets);
 
-			add_arg(&args, ARG_SGPR, ctx->ac.i32,
-				&ctx->gsvs_ring_stride);
 			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
 					&ctx->abi.view_index);
@@ -1083,8 +1079,6 @@ static void create_function(struct radv_shader_context *ctx,
 							   previous_stage,
 							   &user_sgpr_idx);
 		}
-		set_loc_shader(ctx, AC_UD_GS_VS_RING_STRIDE_ENTRIES,
-			       &user_sgpr_idx, 1);
 		if (ctx->abi.view_index)
 			set_loc_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
 		break;
@@ -2929,6 +2923,8 @@ ac_setup_rings(struct radv_shader_context *ctx)
 	if (ctx->stage == MESA_SHADER_GEOMETRY) {
 		LLVMValueRef tmp;
 		uint32_t num_entries = 64;
+		LLVMValueRef gsvs_ring_stride = LLVMConstInt(ctx->ac.i32, ctx->max_gsvs_emit_size, false);
+		LLVMValueRef gsvs_ring_desc = LLVMConstInt(ctx->ac.i32, ctx->max_gsvs_emit_size << 16, false);
 		ctx->esgs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->ac.i32, RING_ESGS_GS, false));
 		ctx->gsvs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->ac.i32, RING_GSVS_GS, false));
 
@@ -2936,10 +2932,10 @@ ac_setup_rings(struct radv_shader_context *ctx)
 
 		tmp = LLVMConstInt(ctx->ac.i32, num_entries, false);
 		if (ctx->options->chip_class >= VI)
-			tmp = LLVMBuildMul(ctx->ac.builder, LLVMBuildLShr(ctx->ac.builder, ctx->gsvs_ring_stride, LLVMConstInt(ctx->ac.i32, 16, false), ""), tmp, "");
+			tmp = LLVMBuildMul(ctx->ac.builder, gsvs_ring_stride, tmp, "");
 		ctx->gsvs_ring = LLVMBuildInsertElement(ctx->ac.builder, ctx->gsvs_ring, tmp, LLVMConstInt(ctx->ac.i32, 2, false), "");
 		tmp = LLVMBuildExtractElement(ctx->ac.builder, ctx->gsvs_ring, ctx->ac.i32_1, "");
-		tmp = LLVMBuildOr(ctx->ac.builder, tmp, ctx->gsvs_ring_stride, "");
+		tmp = LLVMBuildOr(ctx->ac.builder, tmp, gsvs_ring_desc, "");
 		ctx->gsvs_ring = LLVMBuildInsertElement(ctx->ac.builder, ctx->gsvs_ring, tmp, ctx->ac.i32_1, "");
 	}
 
@@ -3117,6 +3113,17 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		if (i)
 			ac_emit_barrier(&ctx.ac, ctx.stage);
 
+		nir_foreach_variable(variable, &shaders[i]->outputs)
+			scan_shader_output_decl(&ctx, variable, shaders[i], shaders[i]->info.stage);
+
+		if (shaders[i]->info.stage == MESA_SHADER_GEOMETRY) {
+			unsigned addclip = shaders[i]->info.clip_distance_array_size +
+					shaders[i]->info.cull_distance_array_size > 4;
+			ctx.gsvs_vertex_size = (util_bitcount64(ctx.output_mask) + addclip) * 16;
+			ctx.max_gsvs_emit_size = ctx.gsvs_vertex_size *
+				shaders[i]->info.gs.vertices_out;
+		}
+
 		ac_setup_rings(&ctx);
 
 		LLVMBasicBlockRef merge_block;
@@ -3143,9 +3150,6 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		else if(shader_count >= 2 && shaders[i]->info.stage == MESA_SHADER_GEOMETRY)
 			prepare_gs_input_vgprs(&ctx);
 
-		nir_foreach_variable(variable, &shaders[i]->outputs)
-			scan_shader_output_decl(&ctx, variable, shaders[i], shaders[i]->info.stage);
-
 		ac_nir_translate(&ctx.ac, &ctx.abi, shaders[i]);
 
 		if (shader_count >= 2) {
@@ -3154,11 +3158,8 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		}
 
 		if (shaders[i]->info.stage == MESA_SHADER_GEOMETRY) {
-			unsigned addclip = shaders[i]->info.clip_distance_array_size +
-					shaders[i]->info.cull_distance_array_size > 4;
-			shader_info->gs.gsvs_vertex_size = (util_bitcount64(ctx.output_mask) + addclip) * 16;
-			shader_info->gs.max_gsvs_emit_size = shader_info->gs.gsvs_vertex_size *
-				shaders[i]->info.gs.vertices_out;
+			shader_info->gs.gsvs_vertex_size = ctx.gsvs_vertex_size;
+			shader_info->gs.max_gsvs_emit_size = ctx.max_gsvs_emit_size;
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_CTRL) {
 			shader_info->tcs.num_patches = ctx.tcs_num_patches;
 			shader_info->tcs.lds_size = calculate_tess_lds_size(&ctx);
