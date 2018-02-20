@@ -73,14 +73,6 @@ struct vc4_bo *vc4_bo_open_dmabuf(struct vc4_screen *screen, int fd,
 bool vc4_bo_flink(struct vc4_bo *bo, uint32_t *name);
 int vc4_bo_get_dmabuf(struct vc4_bo *bo);
 
-static inline void
-vc4_bo_set_reference(struct vc4_bo **old_bo, struct vc4_bo *new_bo)
-{
-        if (pipe_reference(&(*old_bo)->reference, &new_bo->reference))
-                vc4_bo_last_unreference(*old_bo);
-        *old_bo = new_bo;
-}
-
 static inline struct vc4_bo *
 vc4_bo_reference(struct vc4_bo *bo)
 {
