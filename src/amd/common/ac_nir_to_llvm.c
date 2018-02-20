@@ -3030,6 +3030,7 @@ static LLVMValueRef get_sampler_desc(struct ac_nir_context *ctx,
 	unsigned constant_index = 0;
 	unsigned descriptor_set;
 	unsigned base_index;
+	bool bindless = false;
 
 	if (!deref) {
 		assert(tex_instr && !image);
@@ -3063,14 +3064,20 @@ static LLVMValueRef get_sampler_desc(struct ac_nir_context *ctx,
 			tail = &child->deref;
 		}
 		descriptor_set = deref->var->data.descriptor_set;
-		base_index = deref->var->data.binding;
+
+		if (deref->var->data.bindless) {
+			bindless = deref->var->data.bindless;
+			base_index = deref->var->data.driver_location;
+		} else {
+			base_index = deref->var->data.binding;
+		}
 	}
 
 	return ctx->abi->load_sampler_desc(ctx->abi,
 					  descriptor_set,
 					  base_index,
 					  constant_index, index,
-					  desc_type, image, write);
+					  desc_type, image, write, bindless);
 }
 
 static void set_tex_fetch_args(struct ac_llvm_context *ctx,
