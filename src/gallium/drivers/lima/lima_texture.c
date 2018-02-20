@@ -179,33 +179,23 @@ lima_update_textures(struct lima_context *ctx)
    if (!lima_tex->num_samplers)
       return;
 
-   ctx->buffer_state[lima_ctx_buff_pp_tex_desc].offset +=
-      ctx->buffer_state[lima_ctx_buff_pp_tex_desc].size;
-   ctx->buffer_state[lima_ctx_buff_pp_tex_desc].size = 0;
-
-   uint32_t *descs = ctx->pp_buffer->map + pp_tex_descs_offset +
-                     ctx->buffer_state[lima_ctx_buff_pp_tex_desc].offset;
-   ctx->buffer_state[lima_ctx_buff_pp_tex_desc].size += lima_tex_list_size;
+   unsigned size = lima_tex_list_size + lima_tex->num_samplers * lima_tex_desc_size;
+   uint32_t *descs =
+      lima_ctx_buff_alloc(ctx, lima_ctx_buff_pp_tex_desc,
+                          size, LIMA_CTX_BUFF_SUBMIT_PP, true);
 
    for (int i = 0; i < lima_tex->num_samplers; i++) {
-      off_t offset = ctx->buffer_state[lima_ctx_buff_pp_tex_desc].offset +
-                     pp_tex_descs_offset + lima_tex_desc_size * i +
-                     lima_tex_list_size;
+      off_t offset = lima_tex_desc_size * i + lima_tex_list_size;
       struct lima_sampler_state *sampler = lima_sampler_state(lima_tex->samplers[i]);
       struct lima_sampler_view *texture = lima_sampler_view(lima_tex->textures[i]);
 
-      descs[i] = ctx->pp_buffer->va + offset;
-      lima_update_tex_desc(ctx, sampler, texture, ctx->pp_buffer->map + offset);
-      ctx->buffer_state[lima_ctx_buff_pp_tex_desc].size += lima_tex_desc_size;
+      descs[i] = lima_ctx_buff_va(ctx, lima_ctx_buff_pp_tex_desc) + offset;
+      lima_update_tex_desc(ctx, sampler, texture, (void *)descs + offset);
    }
 
    if (lima_dump_command_stream) {
-      unsigned tex_desc_oft = pp_tex_descs_offset +
-                           ctx->buffer_state[lima_ctx_buff_pp_tex_desc].offset;
       printf("lima: add textures_desc at va %x\n",
-              ctx->pp_buffer->va + tex_desc_oft);
-      lima_dump_blob(ctx->pp_buffer->map + tex_desc_oft,
-                     ctx->buffer_state[lima_ctx_buff_pp_tex_desc].size,
-                     false);
+             lima_ctx_buff_va(ctx, lima_ctx_buff_pp_tex_desc));
+      lima_dump_blob(descs, size, false);
    }
 }
