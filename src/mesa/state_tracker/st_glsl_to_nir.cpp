@@ -271,7 +271,8 @@ st_nir_assign_uniform_locations(struct gl_context *ctx,
           uniform->interface_type != NULL)
          continue;
 
-      if (uniform->type->is_sampler() || uniform->type->is_image()) {
+      if (!uniform->data.bindless &&
+          (uniform->type->is_sampler() || uniform->type->is_image())) {
          if (uniform->type->is_sampler())
             loc = shaderidx++;
          else
