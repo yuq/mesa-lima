@@ -2622,16 +2622,9 @@ radv_pipeline_generate_geometry_shader(struct radeon_winsys_cs *cs,
 							     AC_UD_GS_VS_RING_STRIDE_ENTRIES);
 	if (loc->sgpr_idx != -1) {
 		uint32_t stride = gs->info.gs.max_gsvs_emit_size;
-		uint32_t num_entries = 64;
-		bool is_vi = pipeline->device->physical_device->rad_info.chip_class >= VI;
-
-		if (is_vi)
-			num_entries *= stride;
-
 		stride = S_008F04_STRIDE(stride);
-		radeon_set_sh_reg_seq(cs, R_00B230_SPI_SHADER_USER_DATA_GS_0 + loc->sgpr_idx * 4, 2);
+		radeon_set_sh_reg_seq(cs, R_00B230_SPI_SHADER_USER_DATA_GS_0 + loc->sgpr_idx * 4, 1);
 		radeon_emit(cs, stride);
-		radeon_emit(cs, num_entries);
 	}
 }
 

@@ -70,7 +70,6 @@ struct radv_shader_context {
 	LLVMValueRef tes_v;
 
 	LLVMValueRef gsvs_ring_stride;
-	LLVMValueRef gsvs_num_entries;
 	LLVMValueRef gs2vs_offset;
 	LLVMValueRef gs_wave_id;
 	LLVMValueRef gs_vtx_offset[6];
@@ -569,7 +568,7 @@ static void allocate_user_sgprs(struct radv_shader_context *ctx,
 				user_sgpr_info->sgpr_count += count_vs_user_sgprs(ctx);
 			}
 		}
-		user_sgpr_info->sgpr_count += 2;
+		user_sgpr_info->sgpr_count += 1;
 		break;
 	default:
 		break;
@@ -930,8 +929,6 @@ static void create_function(struct radv_shader_context *ctx,
 
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->gsvs_ring_stride);
-			add_arg(&args, ARG_SGPR, ctx->ac.i32,
-				&ctx->gsvs_num_entries);
 			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
 					&ctx->abi.view_index);
@@ -961,8 +958,6 @@ static void create_function(struct radv_shader_context *ctx,
 
 			add_arg(&args, ARG_SGPR, ctx->ac.i32,
 				&ctx->gsvs_ring_stride);
-			add_arg(&args, ARG_SGPR, ctx->ac.i32,
-				&ctx->gsvs_num_entries);
 			if (needs_view_index)
 				add_arg(&args, ARG_SGPR, ctx->ac.i32,
 					&ctx->abi.view_index);
@@ -1089,7 +1084,7 @@ static void create_function(struct radv_shader_context *ctx,
 							   &user_sgpr_idx);
 		}
 		set_loc_shader(ctx, AC_UD_GS_VS_RING_STRIDE_ENTRIES,
-			       &user_sgpr_idx, 2);
+			       &user_sgpr_idx, 1);
 		if (ctx->abi.view_index)
 			set_loc_shader(ctx, AC_UD_VIEW_INDEX, &user_sgpr_idx, 1);
 		break;
@@ -2933,12 +2928,16 @@ ac_setup_rings(struct radv_shader_context *ctx)
 	}
 	if (ctx->stage == MESA_SHADER_GEOMETRY) {
 		LLVMValueRef tmp;
+		uint32_t num_entries = 64;
 		ctx->esgs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->ac.i32, RING_ESGS_GS, false));
 		ctx->gsvs_ring = ac_build_load_to_sgpr(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->ac.i32, RING_GSVS_GS, false));
 
 		ctx->gsvs_ring = LLVMBuildBitCast(ctx->ac.builder, ctx->gsvs_ring, ctx->ac.v4i32, "");
 
-		ctx->gsvs_ring = LLVMBuildInsertElement(ctx->ac.builder, ctx->gsvs_ring, ctx->gsvs_num_entries, LLVMConstInt(ctx->ac.i32, 2, false), "");
+		tmp = LLVMConstInt(ctx->ac.i32, num_entries, false);
+		if (ctx->options->chip_class >= VI)
+			tmp = LLVMBuildMul(ctx->ac.builder, LLVMBuildLShr(ctx->ac.builder, ctx->gsvs_ring_stride, LLVMConstInt(ctx->ac.i32, 16, false), ""), tmp, "");
+		ctx->gsvs_ring = LLVMBuildInsertElement(ctx->ac.builder, ctx->gsvs_ring, tmp, LLVMConstInt(ctx->ac.i32, 2, false), "");
 		tmp = LLVMBuildExtractElement(ctx->ac.builder, ctx->gsvs_ring, ctx->ac.i32_1, "");
 		tmp = LLVMBuildOr(ctx->ac.builder, tmp, ctx->gsvs_ring_stride, "");
 		ctx->gsvs_ring = LLVMBuildInsertElement(ctx->ac.builder, ctx->gsvs_ring, tmp, ctx->ac.i32_1, "");
