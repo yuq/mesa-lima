@@ -62,10 +62,8 @@ static INLINE simdmask ComputeUserClipMask(uint8_t clipMask, float* pUserClipBuf
         simdscalar vB = _simd_broadcast_ss(pUserClipBuffer++);
         simdscalar vC = _simd_broadcast_ss(pUserClipBuffer++);
 
-        simdscalar vK = _simd_sub_ps(_simd_sub_ps(_simd_set1_ps(1.0f), vI), vJ);
-
         // interpolate
-        simdscalar vInterp = vplaneps(vA, vB, _simd_mul_ps(vK, vC), vI, vJ);
+        simdscalar vInterp = vplaneps(vA, vB, vC, vI, vJ);
 
         // clip if interpolated clip distance is < 0 || NAN
         simdscalar vCull = _simd_cmp_ps(_simd_setzero_ps(), vInterp, _CMP_NLE_UQ);

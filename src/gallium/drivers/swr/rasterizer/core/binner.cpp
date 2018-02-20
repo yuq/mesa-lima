@@ -256,12 +256,27 @@ void ProcessUserClipDist(const SWR_BACKEND_STATE& state, PA_STATE& pa, uint32_t 
         simd4scalar primClipDist[3];
         pa.AssembleSingle(clipAttribSlot, primIndex, primClipDist);
 
+        float vertClipDist[NumVerts];
         for (uint32_t e = 0; e < NumVerts; ++e)
         {
             OSALIGNSIMD(float) aVertClipDist[4];
             SIMD128::store_ps(aVertClipDist, primClipDist[e]);
-            *(pUserClipBuffer++) = aVertClipDist[clipComp];
+            vertClipDist[e] = aVertClipDist[clipComp];
         };
+
+        // setup plane equations for barycentric interpolation in the backend
+        float baryCoeff[NumVerts];
+        float last = vertClipDist[NumVerts - 1] * pRecipW[NumVerts - 1];
+        for (uint32_t e = 0; e < NumVerts - 1; ++e)
+        {
+            baryCoeff[e] = vertClipDist[e] * pRecipW[e] - last;
+        }
+        baryCoeff[NumVerts - 1] = last;
+
+        for (uint32_t e = 0; e < NumVerts; ++e)
+        {
+            *(pUserClipBuffer++) = baryCoeff[e];
+        }
     }
 }
 
