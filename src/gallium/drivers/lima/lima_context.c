@@ -29,6 +29,8 @@
 #include "util/u_debug.h"
 #include "util/u_transfer.h"
 #include "util/ralloc.h"
+#include "util/u_inlines.h"
+#include "util/u_suballoc.h"
 
 #include "lima_screen.h"
 #include "lima_context.h"
@@ -38,6 +40,49 @@
 
 #include <lima_drm.h>
 #include <xf86drm.h>
+
+uint32_t
+lima_ctx_buff_va(struct lima_context *ctx, enum lima_ctx_buff buff)
+{
+   struct lima_ctx_buff_state *cbs = ctx->buffer_state + buff;
+   struct lima_resource *res = lima_resource(cbs->res);
+   lima_bo_update(res->bo, false, true);
+   return res->bo->va + cbs->offset;
+}
+
+void *
+lima_ctx_buff_map(struct lima_context *ctx, enum lima_ctx_buff buff)
+{
+   struct lima_ctx_buff_state *cbs = ctx->buffer_state + buff;
+   struct lima_resource *res = lima_resource(cbs->res);
+   lima_bo_update(res->bo, true, false);
+   return res->bo->map + cbs->offset;
+}
+
+void *
+lima_ctx_buff_alloc(struct lima_context *ctx, enum lima_ctx_buff buff,
+                    unsigned size, unsigned submit, bool uploader)
+{
+   struct lima_ctx_buff_state *cbs = ctx->buffer_state + buff;
+   void *ret = NULL;
+
+   cbs->size = align(size, 0x40);
+
+   if (uploader)
+      u_upload_alloc(ctx->uploader, 0, cbs->size, 0x40, &cbs->offset,
+                     &cbs->res, &ret);
+   else
+      u_suballocator_alloc(ctx->suballocator, cbs->size, 0x10,
+                           &cbs->offset, &cbs->res);
+
+   struct lima_resource *res = lima_resource(cbs->res);
+   if (submit & LIMA_CTX_BUFF_SUBMIT_GP)
+      lima_submit_add_bo(ctx->gp_submit, res->bo, LIMA_SUBMIT_BO_READ);
+   if (submit & LIMA_CTX_BUFF_SUBMIT_PP)
+      lima_submit_add_bo(ctx->pp_submit, res->bo, LIMA_SUBMIT_BO_READ);
+
+   return ret;
+}
 
 static int
 lima_context_create_drm_ctx(struct lima_screen *screen)
@@ -70,12 +115,18 @@ lima_context_destroy(struct pipe_context *pctx)
    struct lima_context *ctx = lima_context(pctx);
    struct lima_screen *screen = lima_screen(pctx->screen);
 
+   for (int i = 0; i < lima_ctx_buff_num; i++)
+      pipe_resource_reference(&ctx->buffer_state[i].res, NULL);
+
    lima_state_fini(ctx);
+
+   slab_destroy_child(&ctx->transfer_pool);
+
+   if (ctx->suballocator)
+      u_suballocator_destroy(ctx->suballocator);
 
    if (ctx->uploader)
       u_upload_destroy(ctx->uploader);
-
-   slab_destroy_child(&ctx->transfer_pool);
 
    if (ctx->share_buffer)
       lima_bo_free(ctx->share_buffer);
@@ -116,12 +167,24 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    lima_program_init(ctx);
    lima_query_init(ctx);
 
+   slab_create_child(&ctx->transfer_pool, &screen->transfer_pool);
+
    ctx->uploader = u_upload_create_default(&ctx->base);
+   if (!ctx->uploader)
+      goto err_out;
    ctx->base.stream_uploader = ctx->uploader;
    ctx->base.const_uploader = ctx->uploader;
    ctx->base.texture_subdata = u_default_texture_subdata;
 
-   slab_create_child(&ctx->transfer_pool, &screen->transfer_pool);
+   /* for varying output which need not mmap */
+   ctx->suballocator =
+      u_suballocator_create(&ctx->base, 1024 * 1024, 0,
+                            PIPE_USAGE_STREAM, 0, false);
+   if (!ctx->suballocator)
+      goto err_out;
+
+   util_dynarray_init(&ctx->vs_cmd_array, ctx);
+   util_dynarray_init(&ctx->plbu_cmd_array, ctx);
 
    ctx->share_buffer = lima_bo_create(screen, sh_buffer_size, 0, false, true);
    if (!ctx->share_buffer)
