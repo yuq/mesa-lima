@@ -245,9 +245,6 @@ lima_transfer_map(struct pipe_context *pctx,
    if (usage & PIPE_TRANSFER_WRITE)
       bo_op |= LIMA_GEM_WAIT_WRITE;
 
-   if (!lima_bo_wait(bo, bo_op, 1000000000, true))
-      return NULL;
-
    if (!lima_bo_update(bo, true, false))
       return NULL;
 
