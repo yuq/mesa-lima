@@ -3882,16 +3882,21 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
 
    case nir_intrinsic_load_uniform: {
-      /* Offsets are in bytes but they should always be multiples of 4 */
-      assert(instr->const_index[0] % 4 == 0);
+      /* Offsets are in bytes but they should always aligned to
+       * the type size
+       */
+      assert(instr->const_index[0] % 4 == 0 ||
+             instr->const_index[0] % type_sz(dest.type) == 0);
 
       fs_reg src(UNIFORM, instr->const_index[0] / 4, dest.type);
 
       nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
       if (const_offset) {
-         /* Offsets are in bytes but they should always be multiples of 4 */
-         assert(const_offset->u32[0] % 4 == 0);
-         src.offset = const_offset->u32[0];
+         assert(const_offset->u32[0] % type_sz(dest.type) == 0);
+         /* For 16-bit types we add the module of the const_index[0]
+          * offset to access to not 32-bit aligned element
+          */
+         src.offset = const_offset->u32[0] + instr->const_index[0] % 4;
 
          for (unsigned j = 0; j < instr->num_components; j++) {
             bld.MOV(offset(dest, bld, j), offset(src, bld, j));
