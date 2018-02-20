@@ -1317,11 +1317,10 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 
 	/* This calculates how shader inputs and outputs among VS, TCS, and TES
 	 * are laid out in LDS. */
-	num_tcs_inputs = util_last_bit64(radv_get_vertex_shader(pipeline)->info.vs.outputs_written);
-
-	num_tcs_outputs = util_last_bit64(pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.outputs_written); //tcs->outputs_written
+	num_tcs_inputs = util_last_bit64(radv_get_vertex_shader(pipeline)->info.info.vs.ls_outputs_written);
+	num_tcs_outputs = util_last_bit64(pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.info.tcs.outputs_written); //tcs->outputs_written
 	num_tcs_output_cp = pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.tcs_vertices_out; //TCS VERTICES OUT
-	num_tcs_patch_outputs = util_last_bit64(pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.patch_outputs_written);
+	num_tcs_patch_outputs = util_last_bit64(pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.info.tcs.patch_outputs_written);
 
 	/* Ensure that we only need one wave per SIMD so we don't need to check
 	 * resource usage. Also ensures that the number of tcs in and out

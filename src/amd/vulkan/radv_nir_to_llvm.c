@@ -98,8 +98,6 @@ struct radv_shader_context {
 	unsigned gs_max_out_vertices;
 
 	unsigned tes_primitive_mode;
-	uint64_t tess_outputs_written;
-	uint64_t tess_patch_outputs_written;
 
 	uint32_t tcs_patch_outputs_read;
 	uint64_t tcs_outputs_read;
@@ -1216,18 +1214,6 @@ static LLVMValueRef get_tcs_tes_buffer_address_params(struct radv_shader_context
 	return get_tcs_tes_buffer_address(ctx, vertex_index, param_index);
 }
 
-static void
-mark_tess_output(struct radv_shader_context *ctx,
-		 bool is_patch, uint32_t param, int num_slots)
-
-{
-	uint64_t slot_mask = (1ull << num_slots) - 1;
-	if (is_patch) {
-		ctx->tess_patch_outputs_written |= (slot_mask << param);
-	} else
-		ctx->tess_outputs_written |= (slot_mask << param);
-}
-
 static LLVMValueRef
 get_dw_address(struct radv_shader_context *ctx,
 	       LLVMValueRef dw_addr,
@@ -1323,7 +1309,6 @@ store_tcs_output(struct ac_shader_abi *abi,
 	const unsigned component = var->data.location_frac;
 	const bool is_patch = var->data.patch;
 	const bool is_compact = var->data.compact;
-	const unsigned count = glsl_count_attribute_slots(var->type, false);
 	LLVMValueRef dw_addr;
 	LLVMValueRef stride = NULL;
 	LLVMValueRef buf_addr = NULL;
@@ -1351,11 +1336,6 @@ store_tcs_output(struct ac_shader_abi *abi,
 	} else {
 		dw_addr = get_tcs_out_current_patch_data_offset(ctx);
 	}
-
-	if (param_index)
-		mark_tess_output(ctx, is_patch, param, count);
-	else
-		mark_tess_output(ctx, is_patch, param, 1);
 
 	dw_addr = get_dw_address(ctx, dw_addr, param, const_index, is_compact, vertex_index, stride,
 				 param_index);
@@ -2462,9 +2442,6 @@ handle_ls_outputs_post(struct radv_shader_context *ctx)
 		if (i == VARYING_SLOT_CLIP_DIST0)
 			length = ctx->num_output_clips + ctx->num_output_culls;
 		int param = shader_io_get_unique_index(i);
-		mark_tess_output(ctx, false, param, 1);
-		if (length > 4)
-			mark_tess_output(ctx, false, param + 1, 1);
 		LLVMValueRef dw_addr = LLVMBuildAdd(ctx->ac.builder, base_dw_addr,
 						    LLVMConstInt(ctx->ac.i32, param * 4, false),
 						    "");
@@ -2608,13 +2585,11 @@ write_tess_factors(struct radv_shader_context *ctx)
 
 	if (inner_comps) {
 		tess_inner_index = shader_io_get_unique_index(VARYING_SLOT_TESS_LEVEL_INNER);
-		mark_tess_output(ctx, true, tess_inner_index, 1);
 		lds_inner = LLVMBuildAdd(ctx->ac.builder, lds_base,
 					 LLVMConstInt(ctx->ac.i32, tess_inner_index * 4, false), "");
 	}
 
 	tess_outer_index = shader_io_get_unique_index(VARYING_SLOT_TESS_LEVEL_OUTER);
-	mark_tess_output(ctx, true, tess_outer_index, 1);
 	lds_outer = LLVMBuildAdd(ctx->ac.builder, lds_base,
 				 LLVMConstInt(ctx->ac.i32, tess_outer_index * 4, false), "");
 
@@ -3062,7 +3037,6 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	for(int i = 0; i < shader_count; ++i) {
 		ctx.stage = shaders[i]->info.stage;
 		ctx.output_mask = 0;
-		ctx.tess_outputs_written = 0;
 		ctx.num_output_clips = shaders[i]->info.clip_distance_array_size;
 		ctx.num_output_culls = shaders[i]->info.cull_distance_array_size;
 
@@ -3155,14 +3129,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			shader_info->gs.max_gsvs_emit_size = shader_info->gs.gsvs_vertex_size *
 				shaders[i]->info.gs.vertices_out;
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_CTRL) {
-			shader_info->tcs.outputs_written = ctx.tess_outputs_written;
-			shader_info->tcs.patch_outputs_written = ctx.tess_patch_outputs_written;
 			shader_info->tcs.num_patches = ctx.tcs_num_patches;
-			assert(ctx.tess_outputs_written == ctx.shader_info->info.tcs.outputs_written);
-			assert(ctx.tess_patch_outputs_written == ctx.shader_info->info.tcs.patch_outputs_written);
-		} else if (shaders[i]->info.stage == MESA_SHADER_VERTEX && ctx.options->key.vs.as_ls) {
-			shader_info->vs.outputs_written = ctx.tess_outputs_written;
-			assert(ctx.tess_outputs_written == ctx.shader_info->info.vs.ls_outputs_written);
 		}
 	}
 

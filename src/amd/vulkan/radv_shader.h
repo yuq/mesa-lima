@@ -211,7 +211,6 @@ struct radv_shader_variant_info {
 			unsigned vgpr_comp_cnt;
 			bool as_es;
 			bool as_ls;
-			uint64_t outputs_written;
 		} vs;
 		struct {
 			unsigned num_interp;
@@ -234,10 +233,6 @@ struct radv_shader_variant_info {
 		} gs;
 		struct {
 			unsigned tcs_vertices_out;
-			/* Which outputs are actually written */
-			uint64_t outputs_written;
-			/* Which patch outputs are actually written */
-			uint32_t patch_outputs_written;
 			uint32_t num_patches;
 		} tcs;
 		struct {
