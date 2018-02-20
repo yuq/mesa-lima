@@ -3773,7 +3773,8 @@ static LLVMValueRef visit_image_atomic(struct ac_nir_context *ctx,
 		char coords_type[8];
 
 		bool da = glsl_sampler_type_is_array(type) ||
-		          glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE;
+		          glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE ||
+		          glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_3D;
 
 		LLVMValueRef coords = params[param_count++] = get_image_coords(ctx, instr);
 		params[param_count++] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE,
