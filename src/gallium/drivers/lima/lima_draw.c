@@ -920,6 +920,16 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
       if (!lima_submit_wait(ctx->gp_submit, 1000000000, true))
          fprintf(stderr, "gp submit wait error\n");
 
+      float *varying = lima_ctx_buff_map(ctx, lima_ctx_buff_sh_varying);
+      printf("lima varying dump at va %x\n",
+             lima_ctx_buff_va(ctx, lima_ctx_buff_sh_varying));
+      lima_dump_blob(varying, 4 * 4 * 16, true);
+
+      varying = lima_ctx_buff_map(ctx, lima_ctx_buff_sh_gl_pos);
+      printf("lima gl_pos dump at va %x\n",
+             lima_ctx_buff_va(ctx, lima_ctx_buff_sh_gl_pos));
+      lima_dump_blob(varying, 4 * 4 * 16, true);
+
       lima_bo_update(ctx->share_buffer, true, false);
       uint32_t *plb = ctx->share_buffer->map + sh_plb_offset;
       debug_printf("plb %x %x %x %x %x %x %x %x\n",
