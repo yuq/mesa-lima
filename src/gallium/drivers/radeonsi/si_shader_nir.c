@@ -56,6 +56,9 @@ static void scan_instruction(struct tgsi_shader_info *info,
 		if (!tex->texture) {
 			info->samplers_declared |=
 				u_bit_consecutive(tex->sampler_index, 1);
+		} else {
+			if (tex->texture->var->data.bindless)
+				info->uses_bindless_samplers = true;
 		}
 
 		switch (tex->op) {
