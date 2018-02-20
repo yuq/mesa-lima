@@ -1311,7 +1311,7 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 	unsigned num_tcs_patch_outputs;
 	unsigned input_vertex_size, output_vertex_size, pervertex_output_patch_size;
 	unsigned input_patch_size, output_patch_size, output_patch0_offset;
-	unsigned lds_size, hardware_lds_size;
+	unsigned lds_size;
 	unsigned num_patches;
 	struct radv_tessellation_state tess = {0};
 
@@ -1334,34 +1334,8 @@ calculate_tess_state(struct radv_pipeline *pipeline,
 
 	pervertex_output_patch_size = num_tcs_output_cp * output_vertex_size;
 	output_patch_size = pervertex_output_patch_size + num_tcs_patch_outputs * 16;
-	/* Ensure that we only need one wave per SIMD so we don't need to check
-	 * resource usage. Also ensures that the number of tcs in and out
-	 * vertices per threadgroup are at most 256.
-	 */
-	num_patches = 64 / MAX2(num_tcs_input_cp, num_tcs_output_cp) * 4;
 
-	/* Make sure that the data fits in LDS. This assumes the shaders only
-	 * use LDS for the inputs and outputs.
-	 */
-	hardware_lds_size = pipeline->device->physical_device->rad_info.chip_class >= CIK ? 65536 : 32768;
-	num_patches = MIN2(num_patches, hardware_lds_size / (input_patch_size + output_patch_size));
-
-	/* Make sure the output data fits in the offchip buffer */
-	num_patches = MIN2(num_patches,
-			    (pipeline->device->tess_offchip_block_dw_size * 4) /
-			    output_patch_size);
-
-	/* Not necessary for correctness, but improves performance. The
-	 * specific value is taken from the proprietary driver.
-	 */
-	num_patches = MIN2(num_patches, 40);
-
-	/* SI bug workaround - limit LS-HS threadgroups to only one wave. */
-	if (pipeline->device->physical_device->rad_info.chip_class == SI) {
-		unsigned one_wave = 64 / MAX2(num_tcs_input_cp, num_tcs_output_cp);
-		num_patches = MIN2(num_patches, one_wave);
-	}
-
+	num_patches = pipeline->shaders[MESA_SHADER_TESS_CTRL]->info.tcs.num_patches;
 	output_patch0_offset = input_patch_size * num_patches;
 
 	lds_size = output_patch0_offset + output_patch_size * num_patches;
