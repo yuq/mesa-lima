@@ -361,6 +361,7 @@ reg_cp(struct ir3_cp_ctx *ctx, struct ir3_instruction *instr,
 			instr->barrier_conflict |= src->barrier_conflict;
 
 			unuse(src);
+			reg->instr->use_count++;
 		}
 
 	} else if (is_same_type_mov(src) &&
