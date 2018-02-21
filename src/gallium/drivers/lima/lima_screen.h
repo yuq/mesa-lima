@@ -61,6 +61,16 @@ struct lima_screen {
    struct slab_parent_pool transfer_pool;
 
    struct ra_regs *pp_ra;
+
+   struct lima_bo *gp_buffer;
+   #define gp_tile_heap_offset       0x0000
+   #define gp_buffer_size            0x2000
+
+   struct lima_bo *pp_buffer;
+   #define pp_frame_rsw_offset       0x0000
+   #define pp_clear_program_offset   0x0040
+   #define pp_stack_offset           0x0080
+   #define pp_buffer_size            0x2000
 };
 
 static inline struct lima_screen *
