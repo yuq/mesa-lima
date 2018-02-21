@@ -3438,9 +3438,12 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                                                      VK_IMAGE_ASPECT_STENCIL_BIT)) {
          if (att_state->fast_clear) {
             /* We currently only support HiZ for single-layer images */
-            assert(iview->planes[0].isl.base_level == 0);
-            assert(iview->planes[0].isl.base_array_layer == 0);
-            assert(fb->layers == 1);
+            if (att_state->pending_clear_aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
+               assert(iview->image->planes[0].aux_usage == ISL_AUX_USAGE_HIZ);
+               assert(iview->planes[0].isl.base_level == 0);
+               assert(iview->planes[0].isl.base_array_layer == 0);
+               assert(fb->layers == 1);
+            }
 
             anv_image_hiz_clear(cmd_buffer, image,
                                 att_state->pending_clear_aspects,
