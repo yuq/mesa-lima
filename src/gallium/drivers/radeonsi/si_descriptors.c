@@ -1064,9 +1064,9 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 			continue;
 		}
 
-		int offset = (int)vb->buffer_offset + (int)velems->src_offset[i];
-		int64_t va = (int64_t)rbuffer->gpu_address + offset;
-		assert(va > 0);
+		int64_t offset = (int64_t)((int)vb->buffer_offset) +
+				 velems->src_offset[i];
+		uint64_t va = rbuffer->gpu_address + offset;
 
 		int64_t num_records = (int64_t)rbuffer->b.b.width0 - offset;
 		if (sctx->b.chip_class != VI && vb->stride) {
