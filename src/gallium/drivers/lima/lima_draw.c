@@ -898,10 +898,10 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
    memcpy(plbu_cmd, util_dynarray_begin(&ctx->plbu_cmd_array), plbu_cmd_size);
    util_dynarray_clear(&ctx->plbu_cmd_array);
 
-   lima_submit_add_bo(ctx->gp_submit, ctx->gp_buffer,
-                      LIMA_SUBMIT_BO_READ|LIMA_SUBMIT_BO_WRITE);
-   lima_submit_add_bo(ctx->gp_submit, ctx->share_buffer,
-                      LIMA_SUBMIT_BO_WRITE);
+   struct lima_screen *screen = lima_screen(pctx->screen);
+   lima_submit_add_bo(ctx->gp_submit, ctx->gp_buffer, LIMA_SUBMIT_BO_READ);
+   lima_submit_add_bo(ctx->gp_submit, ctx->share_buffer, LIMA_SUBMIT_BO_WRITE);
+   lima_submit_add_bo(ctx->gp_submit, screen->gp_buffer, LIMA_SUBMIT_BO_READ);
 
    uint32_t vs_cmd_va = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_vs_cmd);
    uint32_t plbu_cmd_va = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_plbu_cmd);
@@ -910,8 +910,8 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
       .vs_cmd_end = vs_cmd_va + vs_cmd_size,
       .plbu_cmd_start = plbu_cmd_va,
       .plbu_cmd_end = plbu_cmd_va + plbu_cmd_size,
-      .tile_heap_start = ctx->gp_buffer->va + gp_tile_heap_offset,
-      .tile_heap_end = ctx->gp_buffer->va + gp_buffer_size,
+      .tile_heap_start = screen->gp_buffer->va + gp_tile_heap_offset,
+      .tile_heap_end = screen->gp_buffer->va + gp_buffer_size,
    };
 
    if (!lima_submit_start(ctx->gp_submit, &gp_frame, sizeof(gp_frame)))
@@ -938,20 +938,19 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
                    plb[4], plb[5], plb[6], plb[7]);
    }
 
-   struct lima_screen *screen = lima_screen(pctx->screen);
    struct lima_resource *res = lima_resource(ctx->framebuffer.cbuf->texture);
    lima_bo_update(res->bo, false, true);
 
    lima_submit_add_bo(ctx->pp_submit, res->bo, LIMA_SUBMIT_BO_WRITE);
    lima_submit_add_bo(ctx->pp_submit, ctx->share_buffer, LIMA_SUBMIT_BO_READ);
-   lima_submit_add_bo(ctx->pp_submit, ctx->pp_buffer,
-                      LIMA_SUBMIT_BO_READ|LIMA_SUBMIT_BO_WRITE);
+   lima_submit_add_bo(ctx->pp_submit, ctx->pp_buffer, LIMA_SUBMIT_BO_READ);
+   lima_submit_add_bo(ctx->pp_submit, screen->pp_buffer, LIMA_SUBMIT_BO_READ);
 
    int num_pp = screen->num_pp;
    struct drm_lima_m400_pp_frame pp_frame = {
       .frame = {
          .plbu_array_address = 0,
-         .render_address = ctx->pp_buffer->va + pp_frame_rsw_offset,
+         .render_address = screen->pp_buffer->va + pp_frame_rsw_offset,
          .unused_0 = 0,
          .flags = 0x02,
          //.clear_value_depth = ctx->clear.depth,
