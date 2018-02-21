@@ -1911,6 +1911,100 @@ init_oa_configs(struct brw_context *brw)
 }
 
 static bool
+query_topology(struct brw_context *brw)
+{
+   __DRIscreen *screen = brw->screen->driScrnPriv;
+   struct drm_i915_query_item item = {
+      .query_id = DRM_I915_QUERY_TOPOLOGY_INFO,
+   };
+   struct drm_i915_query query = {
+      .num_items = 1,
+      .items_ptr = (uintptr_t) &item,
+   };
+
+   if (drmIoctl(screen->fd, DRM_IOCTL_I915_QUERY, &query))
+      return false;
+
+   struct drm_i915_query_topology_info *topo_info =
+      (struct drm_i915_query_topology_info *) calloc(1, item.length);
+   item.data_ptr = (uintptr_t) topo_info;
+
+   if (drmIoctl(screen->fd, DRM_IOCTL_I915_QUERY, &query) ||
+       item.length <= 0)
+      return false;
+
+   gen_device_info_update_from_topology(&brw->screen->devinfo,
+                                        topo_info);
+
+   free(topo_info);
+
+   return true;
+}
+
+static bool
+getparam_topology(struct brw_context *brw)
+{
+   __DRIscreen *screen = brw->screen->driScrnPriv;
+   drm_i915_getparam_t gp;
+   int ret;
+
+   int slice_mask = 0;
+   gp.param = I915_PARAM_SLICE_MASK;
+   gp.value = &slice_mask;
+   ret = drmIoctl(screen->fd, DRM_IOCTL_I915_GETPARAM, &gp);
+   if (ret)
+      return false;
+
+   int subslice_mask = 0;
+   gp.param = I915_PARAM_SUBSLICE_MASK;
+   gp.value = &subslice_mask;
+   ret = drmIoctl(screen->fd, DRM_IOCTL_I915_GETPARAM, &gp);
+   if (ret)
+      return false;
+
+   gen_device_info_update_from_masks(&brw->screen->devinfo,
+                                     slice_mask,
+                                     subslice_mask,
+                                     brw->screen->eu_total);
+
+   return true;
+}
+
+static void
+compute_topology_builtins(struct brw_context *brw)
+{
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
+   brw->perfquery.sys_vars.slice_mask = devinfo->slice_masks;
+   brw->perfquery.sys_vars.n_eu_slices = devinfo->num_slices;
+
+   for (int i = 0; i < sizeof(devinfo->subslice_masks[i]); i++) {
+      brw->perfquery.sys_vars.n_eu_sub_slices +=
+         _mesa_bitcount(devinfo->subslice_masks[i]);
+   }
+
+   for (int i = 0; i < sizeof(devinfo->eu_masks); i++)
+      brw->perfquery.sys_vars.n_eus += _mesa_bitcount(devinfo->eu_masks[i]);
+
+   brw->perfquery.sys_vars.eu_threads_count =
+      brw->perfquery.sys_vars.n_eus * devinfo->num_thread_per_eu;
+
+   /* At the moment the subslice mask builtin has groups of 3bits for each
+    * slice.
+    *
+    * Ideally equations would be updated to have a slice/subslice query
+    * function/operator.
+    */
+   brw->perfquery.sys_vars.subslice_mask = 0;
+   for (int s = 0; s < util_last_bit(devinfo->slice_masks); s++) {
+      for (int ss = 0; ss < (devinfo->subslice_slice_stride * 8); ss++) {
+         if (gen_device_info_subslice_available(devinfo, s, ss))
+            brw->perfquery.sys_vars.subslice_mask |= 1UL << (s * 3 + ss);
+      }
+   }
+}
+
+static bool
 init_oa_sys_vars(struct brw_context *brw)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
@@ -1923,83 +2017,28 @@ init_oa_sys_vars(struct brw_context *brw)
    if (!read_sysfs_drm_device_file_uint64(brw,  "gt_max_freq_mhz", &max_freq_mhz))
       return false;
 
+   if (!query_topology(brw)) {
+      /* We need the i915 query uAPI on CNL+ (kernel 4.17+). */
+      if (devinfo->gen >= 10)
+         return false;
+
+      if (!getparam_topology(brw)) {
+         /* We need the SLICE_MASK/SUBSLICE_MASK on gen8+ (kernel 4.13+). */
+         if (devinfo->gen >= 8)
+            return false;
+
+         /* On Haswell, the values are already computed for us in
+          * gen_device_info.
+          */
+      }
+   }
+
+   memset(&brw->perfquery.sys_vars, 0, sizeof(brw->perfquery.sys_vars));
    brw->perfquery.sys_vars.gt_min_freq = min_freq_mhz * 1000000;
    brw->perfquery.sys_vars.gt_max_freq = max_freq_mhz * 1000000;
    brw->perfquery.sys_vars.timestamp_frequency = devinfo->timestamp_frequency;
-
    brw->perfquery.sys_vars.revision = intel_device_get_revision(screen->fd);
-   brw->perfquery.sys_vars.n_eu_slices = devinfo->num_slices;
-   /* Assuming uniform distribution of subslices per slices. */
-   brw->perfquery.sys_vars.n_eu_sub_slices = devinfo->num_subslices[0];
-
-   if (devinfo->is_haswell) {
-      brw->perfquery.sys_vars.slice_mask = 0;
-      brw->perfquery.sys_vars.subslice_mask = 0;
-
-      for (int s = 0; s < devinfo->num_slices; s++)
-         brw->perfquery.sys_vars.slice_mask |= 1U << s;
-      for (int ss = 0; ss < devinfo->num_subslices[0]; ss++)
-         brw->perfquery.sys_vars.subslice_mask |= 1U << ss;
-
-      if (devinfo->gt == 1) {
-         brw->perfquery.sys_vars.n_eus = 10;
-      } else if (devinfo->gt == 2) {
-         brw->perfquery.sys_vars.n_eus = 20;
-      } else if (devinfo->gt == 3) {
-         brw->perfquery.sys_vars.n_eus = 40;
-      } else
-         unreachable("not reached");
-   } else {
-      drm_i915_getparam_t gp;
-      int ret;
-      int slice_mask = 0;
-      int ss_mask = 0;
-      /* maximum number of slices */
-      int s_max = devinfo->num_slices;
-      /* maximum number of subslices per slice (assuming uniform subslices per
-       * slices)
-       */
-      int ss_max = devinfo->num_subslices[0];
-      uint64_t subslice_mask = 0;
-      int s;
-
-      gp.param = I915_PARAM_SLICE_MASK;
-      gp.value = &slice_mask;
-      ret = drmIoctl(screen->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-      if (ret)
-         return false;
-
-      gp.param = I915_PARAM_SUBSLICE_MASK;
-      gp.value = &ss_mask;
-      ret = drmIoctl(screen->fd, DRM_IOCTL_I915_GETPARAM, &gp);
-      if (ret)
-         return false;
-
-      brw->perfquery.sys_vars.n_eus = brw->screen->eu_total;
-      brw->perfquery.sys_vars.n_eu_slices = __builtin_popcount(slice_mask);
-      brw->perfquery.sys_vars.slice_mask = slice_mask;
-
-      /* Note: the _SUBSLICE_MASK param only reports a global subslice mask
-       * which applies to all slices.
-       *
-       * Note: some of the metrics we have (as described in XML) are
-       * conditional on a $SubsliceMask variable which is expected to also
-       * reflect the slice mask by packing together subslice masks for each
-       * slice in one value..
-       */
-      for (s = 0; s < s_max; s++) {
-         if (slice_mask & (1<<s)) {
-            subslice_mask |= ss_mask << (ss_max * s);
-         }
-      }
-
-      brw->perfquery.sys_vars.subslice_mask = subslice_mask;
-      brw->perfquery.sys_vars.n_eu_sub_slices =
-         __builtin_popcount(subslice_mask);
-   }
-
-   brw->perfquery.sys_vars.eu_threads_count =
-      brw->perfquery.sys_vars.n_eus * devinfo->num_thread_per_eu;
+   compute_topology_builtins(brw);
 
    return true;
 }

@@ -247,6 +247,14 @@ struct gen_device_info
 #define gen_device_info_is_9lp(devinfo) \
    ((devinfo)->is_broxton || (devinfo)->is_geminilake)
 
+static inline bool
+gen_device_info_subslice_available(const struct gen_device_info *devinfo,
+                                   int slice, int subslice)
+{
+   return (devinfo->subslice_masks[slice * devinfo->subslice_slice_stride +
+                                   subslice / 8] & (1U << (subslice % 8))) != 0;
+}
+
 int gen_get_pci_device_id_override(void);
 int gen_device_name_to_pci_device_id(const char *name);
 bool gen_get_device_info(int devid, struct gen_device_info *devinfo);
