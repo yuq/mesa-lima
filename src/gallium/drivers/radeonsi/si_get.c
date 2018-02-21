@@ -441,6 +441,8 @@ static int si_get_shader_param(struct pipe_screen* pscreen,
 	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
 		return SI_NUM_IMAGES;
 	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
+		if (sscreen->debug_flags & DBG(NIR))
+			return 0;
 		return 32;
 	case PIPE_SHADER_CAP_PREFERRED_IR:
 		if (sscreen->debug_flags & DBG(NIR))
