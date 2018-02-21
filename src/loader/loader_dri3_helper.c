@@ -196,7 +196,7 @@ dri3_fence_await(xcb_connection_t *c, struct loader_dri3_drawable *draw,
 static void
 dri3_update_num_back(struct loader_dri3_drawable *draw)
 {
-   if (draw->flipping)
+   if (draw->last_present_mode == XCB_PRESENT_COMPLETE_MODE_FLIP)
       draw->num_back = 3;
    else
       draw->num_back = 2;
@@ -369,14 +369,8 @@ dri3_handle_present_event(struct loader_dri3_drawable *draw,
          draw->recv_sbc = (draw->send_sbc & 0xffffffff00000000LL) | ce->serial;
          if (draw->recv_sbc > draw->send_sbc)
             draw->recv_sbc -= 0x100000000;
-         switch (ce->mode) {
-         case XCB_PRESENT_COMPLETE_MODE_FLIP:
-            draw->flipping = true;
-            break;
-         case XCB_PRESENT_COMPLETE_MODE_COPY:
-            draw->flipping = false;
-            break;
-         }
+
+         draw->last_present_mode = ce->mode;
 
          if (draw->vtable->show_fps)
             draw->vtable->show_fps(draw, ce->ust);
