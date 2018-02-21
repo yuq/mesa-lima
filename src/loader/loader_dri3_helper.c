@@ -33,6 +33,7 @@
 #include <X11/Xlib-xcb.h>
 
 #include "loader_dri3_helper.h"
+#include "util/macros.h"
 
 /* From xmlpool/options.h, user exposed so should be stable */
 #define DRI_CONF_VBLANK_NEVER 0
@@ -233,7 +234,7 @@ loader_dri3_drawable_fini(struct loader_dri3_drawable *draw)
 
    draw->ext->core->destroyDrawable(draw->dri_drawable);
 
-   for (i = 0; i < LOADER_DRI3_NUM_BUFFERS; i++) {
+   for (i = 0; i < ARRAY_SIZE(draw->buffers); i++) {
       if (draw->buffers[i])
          dri3_free_render_buffer(draw, draw->buffers[i]);
    }
@@ -392,7 +393,7 @@ dri3_handle_present_event(struct loader_dri3_drawable *draw,
       xcb_present_idle_notify_event_t *ie = (void *) ge;
       int b;
 
-      for (b = 0; b < sizeof(draw->buffers) / sizeof(draw->buffers[0]); b++) {
+      for (b = 0; b < ARRAY_SIZE(draw->buffers); b++) {
          struct loader_dri3_buffer *buf = draw->buffers[b];
 
          if (buf && buf->pixmap == ie->pixmap)
