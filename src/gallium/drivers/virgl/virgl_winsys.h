@@ -114,17 +114,17 @@ struct virgl_winsys {
  */
 static inline void virgl_ws_fill_new_caps_defaults(struct virgl_drm_caps *caps)
 {
-   caps->caps.v2.min_aliased_point_size = 0.f;
+   caps->caps.v2.min_aliased_point_size = 1.f;
    caps->caps.v2.max_aliased_point_size = 255.f;
-   caps->caps.v2.min_smooth_point_size = 0.f;
-   caps->caps.v2.max_smooth_point_size = 255.f;
-   caps->caps.v2.min_aliased_line_width = 0.f;
-   caps->caps.v2.max_aliased_line_width = 255.f;
+   caps->caps.v2.min_smooth_point_size = 1.f;
+   caps->caps.v2.max_smooth_point_size = 190.f;
+   caps->caps.v2.min_aliased_line_width = 1.f;
+   caps->caps.v2.max_aliased_line_width = 10.f;
    caps->caps.v2.min_smooth_line_width = 0.f;
-   caps->caps.v2.max_smooth_line_width = 255.f;
-   caps->caps.v2.max_texture_lod_bias = 16.0f;
+   caps->caps.v2.max_smooth_line_width = 10.f;
+   caps->caps.v2.max_texture_lod_bias = 15.0f;
    caps->caps.v2.max_geom_output_vertices = 256;
-   caps->caps.v2.max_geom_total_output_components = 16384;
+   caps->caps.v2.max_geom_total_output_components = 1024;
    caps->caps.v2.max_vertex_outputs = 32;
    caps->caps.v2.max_vertex_attribs = 16;
    caps->caps.v2.max_shader_patch_varyings = 0;
