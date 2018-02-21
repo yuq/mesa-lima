@@ -1724,6 +1724,14 @@ struct anv_attachment_state {
    VkClearValue                                 clear_value;
    bool                                         clear_color_is_zero_one;
    bool                                         clear_color_is_zero;
+
+   /* When multiview is active, attachments with a renderpass clear
+    * operation have their respective layers cleared on the first
+    * subpass that uses them, and only in that subpass. We keep track
+    * of this using a bitfield to indicate which layers of an attachment
+    * have not been cleared yet when multiview is active.
+    */
+   uint32_t                                     pending_clear_views;
 };
 
 /** State tracking for particular pipeline bind point

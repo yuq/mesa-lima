@@ -1250,6 +1250,9 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
          anv_assert(iview->vk_format == att->format);
          anv_assert(iview->n_planes == 1);
 
+         const uint32_t num_layers = iview->planes[0].isl.array_len;
+         state->attachments[i].pending_clear_views = (1 << num_layers) - 1;
+
          union isl_color_value clear_color = { .u32 = { 0, } };
          if (att_aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
             assert(att_aspects == VK_IMAGE_ASPECT_COLOR_BIT);
@@ -3414,6 +3417,42 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->state.hiz_enabled = info.hiz_usage == ISL_AUX_USAGE_HIZ;
 }
 
+/**
+ * This ANDs the view mask of the current subpass with the pending clear
+ * views in the attachment to get the mask of views active in the subpass
+ * that still need to be cleared.
+ */
+static inline uint32_t
+get_multiview_subpass_clear_mask(const struct anv_cmd_state *cmd_state,
+                                 const struct anv_attachment_state *att_state)
+{
+   return cmd_state->subpass->view_mask & att_state->pending_clear_views;
+}
+
+static inline bool
+do_first_layer_clear(const struct anv_cmd_state *cmd_state,
+                     const struct anv_attachment_state *att_state)
+{
+   if (!cmd_state->subpass->view_mask)
+      return true;
+
+   uint32_t pending_clear_mask =
+      get_multiview_subpass_clear_mask(cmd_state, att_state);
+
+   return pending_clear_mask & 1;
+}
+
+static inline bool
+current_subpass_is_last_for_attachment(const struct anv_cmd_state *cmd_state,
+                                       uint32_t att_idx)
+{
+   const uint32_t last_subpass_idx =
+      cmd_state->pass->attachments[att_idx].last_subpass_idx;
+   const struct anv_subpass *last_subpass =
+      &cmd_state->pass->subpasses[last_subpass_idx];
+   return last_subpass == cmd_state->subpass;
+}
+
 static void
 cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                          uint32_t subpass_id)
@@ -3451,6 +3490,8 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
 
    VkRect2D render_area = cmd_buffer->state.render_area;
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
+
+   bool is_multiview = subpass->view_mask != 0;
 
    for (uint32_t i = 0; i < subpass->attachment_count; ++i) {
       const uint32_t a = subpass->attachments[i].attachment;
@@ -3519,7 +3560,8 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
          uint32_t base_clear_layer = iview->planes[0].isl.base_array_layer;
          uint32_t clear_layer_count = fb->layers;
 
-         if (att_state->fast_clear) {
+         if (att_state->fast_clear &&
+             do_first_layer_clear(cmd_state, att_state)) {
             /* We only support fast-clears on the first layer */
             assert(iview->planes[0].isl.base_level == 0);
             assert(iview->planes[0].isl.base_array_layer == 0);
@@ -3533,6 +3575,8 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
             }
             base_clear_layer++;
             clear_layer_count--;
+            if (is_multiview)
+               att_state->pending_clear_views &= ~1;
 
             genX(copy_fast_clear_dwords)(cmd_buffer, att_state->color.state,
                                          image, VK_IMAGE_ASPECT_COLOR_BIT,
@@ -3554,7 +3598,39 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
             }
          }
 
-         if (clear_layer_count > 0) {
+         /* From the VkFramebufferCreateInfo spec:
+          *
+          * "If the render pass uses multiview, then layers must be one and each
+          *  attachment requires a number of layers that is greater than the
+          *  maximum bit index set in the view mask in the subpasses in which it
+          *  is used."
+          *
+          * So if multiview is active we ignore the number of layers in the
+          * framebuffer and instead we honor the view mask from the subpass.
+          */
+         if (is_multiview) {
+            assert(image->n_planes == 1);
+            uint32_t pending_clear_mask =
+               get_multiview_subpass_clear_mask(cmd_state, att_state);
+
+            uint32_t layer_idx;
+            for_each_bit(layer_idx, pending_clear_mask) {
+               uint32_t layer =
+                  iview->planes[0].isl.base_array_layer + layer_idx;
+
+               anv_image_clear_color(cmd_buffer, image,
+                                     VK_IMAGE_ASPECT_COLOR_BIT,
+                                     att_state->aux_usage,
+                                     iview->planes[0].isl.format,
+                                     iview->planes[0].isl.swizzle,
+                                     iview->planes[0].isl.base_level,
+                                     layer, 1,
+                                     render_area,
+                                     vk_to_isl_color(att_state->clear_value.color));
+            }
+
+            att_state->pending_clear_views &= ~pending_clear_mask;
+         } else if (clear_layer_count > 0) {
             assert(image->n_planes == 1);
             anv_image_clear_color(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
                                   att_state->aux_usage,
@@ -3656,7 +3732,16 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
          }
       }
 
-      att_state->pending_clear_aspects = 0;
+      /* If multiview is enabled, then we are only done clearing when we no
+       * longer have pending layers to clear, or when we have processed the
+       * last subpass that uses this attachment.
+       */
+      if (!is_multiview ||
+          att_state->pending_clear_views == 0 ||
+          current_subpass_is_last_for_attachment(cmd_state, a)) {
+         att_state->pending_clear_aspects = 0;
+      }
+
       att_state->pending_load_aspects = 0;
    }
 
