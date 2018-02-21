@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2011-2013 Luc Verhaegen <libv@skynet.be>
  * Copyright (c) 2017 Lima Project
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -48,6 +49,12 @@ lima_screen_destroy(struct pipe_screen *pscreen)
 
    if (screen->ro)
       free(screen->ro);
+
+   if (screen->gp_buffer)
+      lima_bo_free(screen->gp_buffer);
+
+   if (screen->pp_buffer)
+      lima_bo_free(screen->pp_buffer);
 
    lima_bo_table_fini(screen);
    lima_vamgr_fini(screen);
@@ -325,11 +332,33 @@ lima_screen_create(int fd, struct renderonly *ro)
    if (!lima_screen_query_info(screen))
       goto err_out2;
 
+   screen->gp_buffer = lima_bo_create(screen, gp_buffer_size, 0, false, true);
+   if (!screen->gp_buffer)
+      goto err_out2;
+
+   screen->pp_buffer = lima_bo_create(screen, pp_buffer_size, 0, true, true);
+   if (!screen->pp_buffer)
+      goto err_out3;
+
+   /* fs program for clear buffer? */
+   static uint32_t pp_program[] = {
+      0x00020425, 0x0000000c, 0x01e007cf, 0xb0000000, /* 0x00000000 */
+      0x000005f5, 0x00000000, 0x00000000, 0x00000000, /* 0x00000010 */
+   };
+   memcpy(screen->pp_buffer->map + pp_clear_program_offset, pp_program, sizeof(pp_program));
+
+   /* is pp frame render state static? */
+   uint32_t *pp_frame_rsw = screen->pp_buffer->map + pp_frame_rsw_offset;
+   memset(pp_frame_rsw, 0, 0x40);
+   pp_frame_rsw[8] = 0x0000f008;
+   pp_frame_rsw[9] = screen->pp_buffer->va + pp_clear_program_offset;
+   pp_frame_rsw[13] = 0x00000100;
+
    if (ro) {
       screen->ro = renderonly_dup(ro);
       if (!screen->ro) {
          fprintf(stderr, "Failed to dup renderonly object\n");
-         goto err_out2;
+         goto err_out4;
       }
    }
 
@@ -378,6 +407,10 @@ lima_screen_create(int fd, struct renderonly *ro)
 
    return &screen->base;
 
+err_out4:
+   lima_bo_free(screen->pp_buffer);
+err_out3:
+   lima_bo_free(screen->gp_buffer);
 err_out2:
    lima_bo_table_fini(screen);
 err_out1:
