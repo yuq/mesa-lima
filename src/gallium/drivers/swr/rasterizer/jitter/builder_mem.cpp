@@ -137,6 +137,7 @@ namespace SwrJit
         }
         else
         {
+            // maskload intrinsic expects integer mask operand in llvm >= 3.8
             mask = BITCAST(mask, VectorType::get(mInt32Ty, mVWidth));
             Function *func = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::x86_avx_maskload_ps_256);
             vResult = BITCAST(CALL(func, { src,mask }), VectorType::get(mInt32Ty, mVWidth));
