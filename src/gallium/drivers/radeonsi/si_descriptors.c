@@ -96,7 +96,13 @@ static uint32_t null_image_descriptor[8] = {
 
 static uint64_t si_desc_extract_buffer_address(uint32_t *desc)
 {
-	return desc[0] | ((uint64_t)G_008F04_BASE_ADDRESS_HI(desc[1]) << 32);
+	uint64_t va = desc[0] |
+		      ((uint64_t)G_008F04_BASE_ADDRESS_HI(desc[1]) << 32);
+
+	/* Sign-extend the 48-bit address. */
+	if (va & (1ull << 47))
+		va |= 0xffffull << 48;
+	return va;
 }
 
 static void si_init_descriptor_list(uint32_t *desc_list,
