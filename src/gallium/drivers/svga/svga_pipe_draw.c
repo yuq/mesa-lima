@@ -203,11 +203,11 @@ svga_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       ret = svga_swtnl_draw_vbo(svga, info, indexbuf, index_offset);
    }
    else {
-      ret = svga_update_state(svga, SVGA_STATE_HW_DRAW);
-      if (ret != PIPE_OK) {
-         svga_context_flush(svga, NULL);
-         ret = svga_update_state(svga, SVGA_STATE_HW_DRAW);
-         assert(ret == PIPE_OK);
+      if (!svga_update_state_retry(svga, SVGA_STATE_HW_DRAW)) {
+         static const char *msg = "State update failed, skipping draw call";
+         debug_printf("%s\n", msg);
+         pipe_debug_message(&svga->debug.callback, INFO, "%s", msg);
+         goto done;
       }
 
       svga_hwtnl_set_fillmode(svga->hwtnl, svga->curr.rast->hw_fillmode);
