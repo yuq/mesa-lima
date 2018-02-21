@@ -135,9 +135,6 @@ unsigned si_gfx_write_fence_dwords(struct si_screen *screen)
 	    screen->info.chip_class == VI)
 		dwords *= 2;
 
-	if (!screen->info.has_virtual_memory)
-		dwords += 2;
-
 	return dwords;
 }
 
@@ -222,18 +219,15 @@ void si_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 					      RADEON_USAGE_WRITE)))
 		r600_dma_emit_wait_idle(ctx);
 
-	/* If GPUVM is not supported, the CS checker needs 2 entries
-	 * in the buffer list per packet, which has to be done manually.
-	 */
-	if (ctx->screen->info.has_virtual_memory) {
-		if (dst)
-			radeon_add_to_buffer_list(ctx, &ctx->dma, dst,
-						  RADEON_USAGE_WRITE,
-						  RADEON_PRIO_SDMA_BUFFER);
-		if (src)
-			radeon_add_to_buffer_list(ctx, &ctx->dma, src,
-						  RADEON_USAGE_READ,
-						  RADEON_PRIO_SDMA_BUFFER);
+	if (dst) {
+		radeon_add_to_buffer_list(ctx, &ctx->dma, dst,
+					  RADEON_USAGE_WRITE,
+					  RADEON_PRIO_SDMA_BUFFER);
+	}
+	if (src) {
+		radeon_add_to_buffer_list(ctx, &ctx->dma, src,
+					  RADEON_USAGE_READ,
+					  RADEON_PRIO_SDMA_BUFFER);
 	}
 
 	/* this function is called before all DMA calls, so increment this. */
