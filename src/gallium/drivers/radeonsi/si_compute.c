@@ -331,7 +331,7 @@ static void si_initialize_compute(struct si_context *sctx)
 	if (sctx->b.chip_class >= CIK) {
 		radeon_set_uconfig_reg_seq(cs, R_030E00_TA_CS_BC_BASE_ADDR, 2);
 		radeon_emit(cs, bc_va >> 8);  /* R_030E00_TA_CS_BC_BASE_ADDR */
-		radeon_emit(cs, bc_va >> 40); /* R_030E04_TA_CS_BC_BASE_ADDR_HI */
+		radeon_emit(cs, S_030E04_ADDRESS(bc_va >> 40)); /* R_030E04_TA_CS_BC_BASE_ADDR_HI */
 	} else {
 		if (sctx->screen->info.drm_major == 3 ||
 		    (sctx->screen->info.drm_major == 2 &&
@@ -468,7 +468,7 @@ static bool si_switch_compute_shader(struct si_context *sctx,
 
 	radeon_set_sh_reg_seq(cs, R_00B830_COMPUTE_PGM_LO, 2);
 	radeon_emit(cs, shader_va >> 8);
-	radeon_emit(cs, shader_va >> 40);
+	radeon_emit(cs, S_00B834_DATA(shader_va >> 40));
 
 	radeon_set_sh_reg_seq(cs, R_00B848_COMPUTE_PGM_RSRC1, 2);
 	radeon_emit(cs, config->rsrc1);
