@@ -189,7 +189,7 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    if (!ctx->share_buffer)
       goto err_out;
 
-   ctx->gp_buffer = lima_bo_create(screen, gp_buffer_size, 0, true, true);
+   ctx->gp_buffer = lima_bo_create(screen, gp_ctx_buffer_size, 0, true, true);
    if (!ctx->gp_buffer)
       goto err_out;
 
@@ -203,23 +203,9 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    if (!ctx->gp_submit)
       goto err_out;
 
-   ctx->pp_buffer = lima_bo_create(screen, pp_buffer_size, 0, true, true);
+   ctx->pp_buffer = lima_bo_create(screen, pp_ctx_buffer_size, 0, true, true);
    if (!ctx->pp_buffer)
       goto err_out;
-
-   /* fs program for clear buffer? */
-   static uint32_t pp_program[] = {
-      0x00020425, 0x0000000c, 0x01e007cf, 0xb0000000, /* 0x00000000 */
-      0x000005f5, 0x00000000, 0x00000000, 0x00000000, /* 0x00000010 */
-   };
-   memcpy(ctx->pp_buffer->map + pp_clear_program_offset, pp_program, sizeof(pp_program));
-
-   /* is pp frame render state static? */
-   uint32_t *pp_frame_rsw = ctx->pp_buffer->map + pp_frame_rsw_offset;
-   memset(pp_frame_rsw, 0, 0x40);
-   pp_frame_rsw[8] = 0x0000f008;
-   pp_frame_rsw[9] = ctx->pp_buffer->va + pp_clear_program_offset;
-   pp_frame_rsw[13] = 0x00000100;
 
    ctx->pp_submit = lima_submit_create(ctx, LIMA_PIPE_PP);
    if (!ctx->pp_submit)

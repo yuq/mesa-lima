@@ -189,18 +189,13 @@ struct lima_context {
 
    struct lima_bo *gp_buffer;
    #define gp_plbu_plb_offset        0x0000
-   #define gp_tile_heap_offset       0x0800
-   #define gp_buffer_size            0x2000
+   #define gp_ctx_buffer_size        0x1000
 
    struct lima_bo *pp_buffer;
-   #define pp_frame_rsw_offset       0x00000
-   #define pp_clear_program_offset   0x00040
-   #define pp_plb_offset_start       0x00080
+   #define pp_plb_offset_start       0x00000
    /* max_screen_w/h_size = 2048, max_pp = 4, plb_stream_size = ((max >> 4)^2 + max_pp) * 16 */
-   #define pp_stack_offset           0x40180
-   #define pp_buffer_size            0x42000
-   #define pp_plb_offset(i, n)       \
-      (pp_plb_offset_start + i * ((pp_stack_offset - pp_plb_offset_start) / n))
+   #define pp_ctx_buffer_size        0x41000
+   #define pp_plb_offset(i, n)       (i * (pp_ctx_buffer_size / n))
 
 
    struct lima_ctx_buff_state buffer_state[lima_ctx_buff_num];
