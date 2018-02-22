@@ -191,6 +191,7 @@ public:
    fs_reg resolve_source_modifiers(const fs_reg &src);
    void emit_discard_jump();
    bool opt_peephole_sel();
+   bool opt_peephole_csel();
    bool opt_peephole_predicated_break();
    bool opt_saturate_propagation();
    bool opt_cmod_propagation();
