@@ -120,6 +120,18 @@ def emit_umin(tmp_id, args):
     c("uint64_t tmp{0} = MIN({1}, {2});".format(tmp_id, args[1], args[0]))
     return tmp_id + 1
 
+def emit_lshft(tmp_id, args):
+    c("uint64_t tmp{0} = {1} << {2};".format(tmp_id, args[1], args[0]))
+    return tmp_id + 1
+
+def emit_rshft(tmp_id, args):
+    c("uint64_t tmp{0} = {1} >> {2};".format(tmp_id, args[1], args[0]))
+    return tmp_id + 1
+
+def emit_and(tmp_id, args):
+    c("uint64_t tmp{0} = {1} & {2};".format(tmp_id, args[1], args[0]))
+    return tmp_id + 1
+
 ops = {}
 #             (n operands, emitter)
 ops["FADD"] = (2, emit_fadd)
@@ -133,6 +145,9 @@ ops["UDIV"] = (2, emit_udiv)
 ops["UMUL"] = (2, emit_umul)
 ops["USUB"] = (2, emit_usub)
 ops["UMIN"] = (2, emit_umin)
+ops["<<"]   = (2, emit_lshft)
+ops[">>"]   = (2, emit_rshft)
+ops["AND"]  = (2, emit_and)
 
 def brkt(subexp):
     if " " in subexp:
