@@ -409,6 +409,7 @@ optimizations = [
 
    # Conversions
    (('i2b', ('b2i', a)), a),
+   (('i2b', 'a@bool'), a),
    (('f2i32', ('ftrunc', a)), ('f2i32', a)),
    (('f2u32', ('ftrunc', a)), ('f2u32', a)),
    (('i2b', ('ineg', a)), ('i2b', a)),
