@@ -158,7 +158,7 @@ KSP(struct brw_context *brw, uint32_t offset)
 }
 #else
 static uint32_t
-KSP(struct brw_context *brw, uint32_t offset)
+KSP(UNUSED struct brw_context *brw, uint32_t offset)
 {
    return offset;
 }
@@ -330,9 +330,9 @@ genX(emit_vertex_buffer_state)(struct brw_context *brw,
                                unsigned buffer_nr,
                                struct brw_bo *bo,
                                unsigned start_offset,
-                               unsigned end_offset,
+                               MAYBE_UNUSED unsigned end_offset,
                                unsigned stride,
-                               unsigned step_rate)
+                               MAYBE_UNUSED unsigned step_rate)
 {
    struct GENX(VERTEX_BUFFER_STATE) buf_state = {
       .VertexBufferIndex = buffer_nr,
@@ -4732,8 +4732,8 @@ genX(emit_mi_report_perf_count)(struct brw_context *brw,
  * Emit a 3DSTATE_SAMPLER_STATE_POINTERS_{VS,HS,GS,DS,PS} packet.
  */
 static void
-genX(emit_sampler_state_pointers_xs)(struct brw_context *brw,
-                                     struct brw_stage_state *stage_state)
+genX(emit_sampler_state_pointers_xs)(MAYBE_UNUSED struct brw_context *brw,
+                                     MAYBE_UNUSED struct brw_stage_state *stage_state)
 {
 #if GEN_GEN >= 7
    static const uint16_t packet_headers[] = {
@@ -4773,7 +4773,7 @@ has_component(mesa_format format, int i)
 static void
 genX(upload_default_color)(struct brw_context *brw,
                            const struct gl_sampler_object *sampler,
-                           mesa_format format, GLenum base_format,
+                           MAYBE_UNUSED mesa_format format, GLenum base_format,
                            bool is_integer_format, bool is_stencil_sampling,
                            uint32_t *sdc_offset)
 {
@@ -4949,7 +4949,7 @@ genX(upload_default_color)(struct brw_context *brw,
 }
 
 static uint32_t
-translate_wrap_mode(struct brw_context *brw, GLenum wrap, bool using_nearest)
+translate_wrap_mode(GLenum wrap, MAYBE_UNUSED bool using_nearest)
 {
    switch (wrap) {
    case GL_REPEAT:
@@ -5014,8 +5014,7 @@ genX(update_sampler_state)(struct brw_context *brw,
                            mesa_format format, GLenum base_format,
                            const struct gl_texture_object *texObj,
                            const struct gl_sampler_object *sampler,
-                           uint32_t *sampler_state,
-                           uint32_t batch_offset_for_sampler_state)
+                           uint32_t *sampler_state)
 {
    struct GENX(SAMPLER_STATE) samp_st = { 0 };
 
@@ -5083,9 +5082,9 @@ genX(update_sampler_state)(struct brw_context *brw,
 
    bool either_nearest =
       sampler->MinFilter == GL_NEAREST || sampler->MagFilter == GL_NEAREST;
-   unsigned wrap_s = translate_wrap_mode(brw, sampler->WrapS, either_nearest);
-   unsigned wrap_t = translate_wrap_mode(brw, sampler->WrapT, either_nearest);
-   unsigned wrap_r = translate_wrap_mode(brw, sampler->WrapR, either_nearest);
+   unsigned wrap_s = translate_wrap_mode(sampler->WrapS, either_nearest);
+   unsigned wrap_t = translate_wrap_mode(sampler->WrapT, either_nearest);
+   unsigned wrap_r = translate_wrap_mode(sampler->WrapR, either_nearest);
 
    if (target == GL_TEXTURE_CUBE_MAP ||
        target == GL_TEXTURE_CUBE_MAP_ARRAY) {
@@ -5178,8 +5177,7 @@ genX(update_sampler_state)(struct brw_context *brw,
 static void
 update_sampler_state(struct brw_context *brw,
                      int unit,
-                     uint32_t *sampler_state,
-                     uint32_t batch_offset_for_sampler_state)
+                     uint32_t *sampler_state)
 {
    struct gl_context *ctx = &brw->ctx;
    const struct gl_texture_unit *texUnit = &ctx->Texture.Unit[unit];
@@ -5196,7 +5194,7 @@ update_sampler_state(struct brw_context *brw,
                               texUnit->LodBias,
                               firstImage->TexFormat, firstImage->_BaseFormat,
                               texObj, sampler,
-                              sampler_state, batch_offset_for_sampler_state);
+                              sampler_state);
 }
 
 static void
@@ -5221,19 +5219,15 @@ genX(upload_sampler_state_table)(struct brw_context *brw,
                                              32, &stage_state->sampler_offset);
    /* memset(sampler_state, 0, sampler_count * size_in_bytes); */
 
-   uint32_t batch_offset_for_sampler_state = stage_state->sampler_offset;
-
    for (unsigned s = 0; s < sampler_count; s++) {
       if (SamplersUsed & (1 << s)) {
          const unsigned unit = prog->SamplerUnits[s];
          if (ctx->Texture.Unit[unit]._Current) {
-            update_sampler_state(brw, unit, sampler_state,
-                                 batch_offset_for_sampler_state);
+            update_sampler_state(brw, unit, sampler_state);
          }
       }
 
       sampler_state += dwords;
-      batch_offset_for_sampler_state += size_in_bytes;
    }
 
    if (GEN_GEN >= 7 && stage_state->stage != MESA_SHADER_COMPUTE) {
