@@ -171,4 +171,5 @@ i965_oa_xml_FILES = \
 	brw_oa_kblgt3.xml \
 	brw_oa_glk.xml \
 	brw_oa_cflgt2.xml \
-	brw_oa_cflgt3.xml
+	brw_oa_cflgt3.xml \
+	brw_oa_cnl.xml

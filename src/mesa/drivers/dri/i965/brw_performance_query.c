@@ -2142,6 +2142,8 @@ get_register_queries_function(const struct gen_device_info *devinfo)
       if (devinfo->gt == 3)
          return brw_oa_register_queries_cflgt3;
    }
+   if (devinfo->is_cannonlake)
+      return brw_oa_register_queries_cnl;
 
    return NULL;
 }
