@@ -167,11 +167,10 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	}
 
 	uint32_t *ptr;
-	int buffer_offset;
-	u_upload_alloc(sctx->b.b.const_uploader, 0, upload_size,
+	unsigned buffer_offset;
+	u_upload_alloc(sctx->b.b.const_uploader, first_slot_offset, upload_size,
 		       si_optimal_tcc_alignment(sctx, upload_size),
-		       (unsigned*)&buffer_offset,
-		       (struct pipe_resource**)&desc->buffer,
+		       &buffer_offset, (struct pipe_resource**)&desc->buffer,
 		       (void**)&ptr);
 	if (!desc->buffer) {
 		desc->gpu_address = 0;
