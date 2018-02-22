@@ -3399,7 +3399,9 @@ brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst,
           */
          inst = brw_FBL(p, vec1(dst), exec_mask);
       } else {
-         const struct brw_reg flag = brw_flag_reg(1, 0);
+         const struct brw_reg flag = brw_flag_reg(
+            brw_inst_flag_reg_nr(devinfo, p->current),
+            brw_inst_flag_subreg_nr(devinfo, p->current));
 
          brw_set_default_exec_size(p, BRW_EXECUTE_1);
          brw_MOV(p, retype(flag, BRW_REGISTER_TYPE_UD), brw_imm_ud(0));
@@ -3418,7 +3420,6 @@ brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst,
             brw_inst_set_mask_control(devinfo, inst, BRW_MASK_ENABLE);
             brw_inst_set_group(devinfo, inst, lower_size * i + 8 * qtr_control);
             brw_inst_set_cond_modifier(devinfo, inst, BRW_CONDITIONAL_Z);
-            brw_inst_set_flag_reg_nr(devinfo, inst, 1);
             brw_inst_set_exec_size(devinfo, inst, cvt(lower_size) - 1);
          }
 

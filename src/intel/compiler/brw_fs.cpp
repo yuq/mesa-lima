@@ -931,7 +931,8 @@ fs_inst::flags_written() const
    if ((conditional_mod && (opcode != BRW_OPCODE_SEL &&
                             opcode != BRW_OPCODE_IF &&
                             opcode != BRW_OPCODE_WHILE)) ||
-       opcode == FS_OPCODE_MOV_DISPATCH_TO_FLAGS) {
+       opcode == FS_OPCODE_MOV_DISPATCH_TO_FLAGS ||
+       opcode == SHADER_OPCODE_FIND_LIVE_CHANNEL) {
       return flag_mask(this);
    } else {
       return flag_mask(dst, size_written);

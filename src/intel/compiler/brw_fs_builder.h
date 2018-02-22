@@ -406,7 +406,7 @@ namespace brw {
          const dst_reg chan_index = vgrf(BRW_REGISTER_TYPE_UD);
          const dst_reg dst = vgrf(src.type);
 
-         ubld.emit(SHADER_OPCODE_FIND_LIVE_CHANNEL, chan_index);
+         ubld.emit(SHADER_OPCODE_FIND_LIVE_CHANNEL, chan_index)->flag_subreg = 2;
          ubld.emit(SHADER_OPCODE_BROADCAST, dst, src, component(chan_index, 0));
 
          return src_reg(component(dst, 0));
