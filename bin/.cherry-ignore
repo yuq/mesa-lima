@@ -3,4 +3,4 @@
 ac4437b20b87c7285b89466f05b51518ae616873 automake: small cleanup after the meson.build inclusion
 
 # stable: The KHX extension is disabled all together in the stable branches.
-bee9270853c34aa8e4b3d19a125608ee67c87b86 radv: Don't expose VK_KHX_multiview on android.
+2ffe395cba0f7b3c1f1c41062f4376eae3a188b5 radv: Don't expose VK_KHX_multiview on android.
