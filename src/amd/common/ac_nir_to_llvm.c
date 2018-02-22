@@ -3657,13 +3657,13 @@ static LLVMValueRef visit_image_load(struct ac_nir_context *ctx,
 		res = ac_to_integer(&ctx->ac, res);
 	} else {
 		LLVMValueRef da = glsl_is_array_image(type) ? ctx->ac.i1true : ctx->ac.i1false;
-		LLVMValueRef glc = ctx->ac.i1false;
 		LLVMValueRef slc = ctx->ac.i1false;
 
 		params[0] = get_image_coords(ctx, instr);
 		params[1] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE, NULL, true, false);
 		params[2] = LLVMConstInt(ctx->ac.i32, 15, false); /* dmask */
-		params[3] = glc;
+		params[3] = (var->data.image._volatile || var->data.image.coherent) ?
+			    ctx->ac.i1true : ctx->ac.i1false;
 		params[4] = slc;
 		params[5] = ctx->ac.i1false;
 		params[6] = da;
@@ -3711,7 +3711,8 @@ static void visit_image_store(struct ac_nir_context *ctx,
 		params[1] = get_image_coords(ctx, instr); /* coords */
 		params[2] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_IMAGE, NULL, true, true);
 		params[3] = LLVMConstInt(ctx->ac.i32, 15, false); /* dmask */
-		params[4] = glc;
+		params[4] = (force_glc || var->data.image._volatile || var->data.image.coherent) ?
+			    ctx->ac.i1true : ctx->ac.i1false;
 		params[5] = slc;
 		params[6] = ctx->ac.i1false;
 		params[7] = da;
