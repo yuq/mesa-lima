@@ -683,12 +683,9 @@ vtn_type_block_size(struct vtn_builder *b, struct vtn_type *type)
       if (cols > 1) {
          vtn_assert(type->stride > 0);
          return type->stride * cols;
-      } else if (base_type == GLSL_TYPE_DOUBLE ||
-		 base_type == GLSL_TYPE_UINT64 ||
-		 base_type == GLSL_TYPE_INT64) {
-         return glsl_get_vector_elements(type->type) * 8;
       } else {
-         return glsl_get_vector_elements(type->type) * 4;
+         unsigned type_size = glsl_get_bit_size(type->type) / 8;
+         return glsl_get_vector_elements(type->type) * type_size;
       }
    }
 
