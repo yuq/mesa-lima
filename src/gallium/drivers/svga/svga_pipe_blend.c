@@ -361,7 +361,7 @@ static void svga_delete_blend_state(struct pipe_context *pipe,
    struct svga_blend_state *bs =
       (struct svga_blend_state *) blend;
 
-   if (bs->id != SVGA3D_INVALID_ID) {
+   if (svga_have_vgpu10(svga) && bs->id != SVGA3D_INVALID_ID) {
       enum pipe_error ret;
 
       ret = SVGA3D_vgpu10_DestroyBlendState(svga->swc, bs->id);
