@@ -218,10 +218,21 @@ bool si_alloc_resource(struct si_screen *sscreen,
 	old_buf = res->buf;
 	res->buf = new_buf; /* should be atomic */
 
-	if (sscreen->info.has_virtual_memory)
+	if (sscreen->info.has_virtual_memory) {
 		res->gpu_address = sscreen->ws->buffer_get_virtual_address(res->buf);
-	else
+
+		if (res->flags & RADEON_FLAG_32BIT) {
+			uint64_t start = res->gpu_address;
+			uint64_t last = start + res->bo_size - 1;
+			(void)start;
+			(void)last;
+
+			assert((start >> 32) == sscreen->info.address32_hi);
+			assert((last >> 32) == sscreen->info.address32_hi);
+		}
+	} else {
 		res->gpu_address = 0;
+	}
 
 	pb_reference(&old_buf, NULL);
 

@@ -188,6 +188,10 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	buffer_offset -= first_slot_offset;
 	desc->gpu_address = desc->buffer->gpu_address + buffer_offset;
 
+	assert(desc->buffer->flags & RADEON_FLAG_32BIT);
+	assert((desc->buffer->gpu_address >> 32) == sctx->screen->info.address32_hi);
+	assert((desc->gpu_address >> 32) == sctx->screen->info.address32_hi);
+
 	si_mark_atom_dirty(sctx, &sctx->shader_pointers.atom);
 	return true;
 }
@@ -2016,7 +2020,7 @@ static void si_emit_shader_pointer_body(struct si_screen *sscreen,
 	radeon_emit(cs, va);
 
 	if (HAVE_32BIT_POINTERS)
-		assert((va >> 32) == sscreen->info.address32_hi);
+		assert(va == 0 || (va >> 32) == sscreen->info.address32_hi);
 	else
 		radeon_emit(cs, va >> 32);
 }
