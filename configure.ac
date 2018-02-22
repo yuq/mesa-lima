@@ -1770,13 +1770,6 @@ if test "x$with_platforms" = xauto; then
     with_platforms=$with_egl_platforms
 fi
 
-PKG_CHECK_MODULES([WAYLAND_SCANNER], [wayland-scanner],
-        WAYLAND_SCANNER=`$PKG_CONFIG --variable=wayland_scanner wayland-scanner`,
-        WAYLAND_SCANNER='')
-if test "x$WAYLAND_SCANNER" = x; then
-    AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner], [:])
-fi
-
 # Do per platform setups and checks
 platforms=`IFS=', '; echo $with_platforms`
 for plat in $platforms; do
@@ -1787,6 +1780,13 @@ for plat in $platforms; do
         PKG_CHECK_MODULES([WAYLAND_SERVER], [wayland-server >= $WAYLAND_REQUIRED])
         PKG_CHECK_MODULES([WAYLAND_PROTOCOLS], [wayland-protocols >= $WAYLAND_PROTOCOLS_REQUIRED])
         WAYLAND_PROTOCOLS_DATADIR=`$PKG_CONFIG --variable=pkgdatadir wayland-protocols`
+
+        PKG_CHECK_MODULES([WAYLAND_SCANNER], [wayland-scanner],
+                          WAYLAND_SCANNER=`$PKG_CONFIG --variable=wayland_scanner wayland-scanner`,
+                          WAYLAND_SCANNER='')
+        if test "x$WAYLAND_SCANNER" = x; then
+            AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner], [:])
+        fi
 
         if test "x$WAYLAND_SCANNER" = "x:"; then
                 AC_MSG_ERROR([wayland-scanner is needed to compile the wayland platform])
