@@ -856,9 +856,9 @@ emit_dst_register(struct svga_shader_emitter_v10 *emit,
    const enum tgsi_semantic sem_name = emit->info.output_semantic_name[index];
    const unsigned sem_index = emit->info.output_semantic_index[index];
    unsigned writemask = reg->Register.WriteMask;
-   const unsigned indirect = reg->Register.Indirect;
+   const boolean indirect = reg->Register.Indirect;
    const unsigned tempArrayId = get_temp_array_id(emit, file, index);
-   const unsigned index2d = reg->Register.Dimension;
+   const boolean index2d = reg->Register.Dimension;
    VGPU10OperandToken0 operand0;
 
    if (file == TGSI_FILE_OUTPUT) {
@@ -971,15 +971,15 @@ emit_src_register(struct svga_shader_emitter_v10 *emit,
 {
    enum tgsi_file_type file = reg->Register.File;
    unsigned index = reg->Register.Index;
-   const unsigned indirect = reg->Register.Indirect;
+   const boolean indirect = reg->Register.Indirect;
    const unsigned tempArrayId = get_temp_array_id(emit, file, index);
-   const unsigned index2d = reg->Register.Dimension;
+   const boolean index2d = reg->Register.Dimension;
    const unsigned swizzleX = reg->Register.SwizzleX;
    const unsigned swizzleY = reg->Register.SwizzleY;
    const unsigned swizzleZ = reg->Register.SwizzleZ;
    const unsigned swizzleW = reg->Register.SwizzleW;
-   const unsigned absolute = reg->Register.Absolute;
-   const unsigned negate = reg->Register.Negate;
+   const boolean absolute = reg->Register.Absolute;
+   const boolean negate = reg->Register.Negate;
    bool is_prim_id = FALSE;
 
    VGPU10OperandToken0 operand0;
