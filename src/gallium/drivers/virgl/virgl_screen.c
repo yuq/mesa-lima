@@ -140,7 +140,7 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_USER_VERTEX_BUFFERS:
       return 0;
    case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:
-      return 16;
+      return vscreen->caps.caps.v2.uniform_buffer_offset_alignment;
    case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
    case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
       return vscreen->caps.caps.v1.bset.streamout_pause_resume;
@@ -163,7 +163,7 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_TEXTURE_BUFFER_OBJECTS:
       return vscreen->caps.caps.v1.max_tbo_size > 0;
    case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
-      return 0;
+      return vscreen->caps.caps.v2.texture_buffer_offset_alignment;
    case PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY:
       return 0;
    case PIPE_CAP_CUBE_MAP_ARRAY:
