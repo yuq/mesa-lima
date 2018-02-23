@@ -256,6 +256,12 @@ event TessPrims
     uint64_t primCount;
 };
 
+event RasterTiles
+{
+    uint32_t drawId;
+    uint32_t rastTileCount;
+};
+
 event ClipperEvent
 {
     uint32_t drawId;

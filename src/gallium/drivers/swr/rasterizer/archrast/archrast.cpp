@@ -68,6 +68,11 @@ namespace ArchRast
         uint32_t vertsInput;
     };
 
+    struct RastStats
+    {
+        uint32_t rasterTiles = 0;
+    };
+
     //////////////////////////////////////////////////////////////////////////
     /// @brief Event handler that saves stat events to event files. This
     ///        handler filters out unwanted events.
@@ -227,12 +232,16 @@ namespace ArchRast
             EventHandlerFile::Handle(EarlyZNullPS(drawId, mDSNullPS.earlyZTestPassCount, mDSNullPS.earlyZTestFailCount));
             EventHandlerFile::Handle(EarlyStencilNullPS(drawId, mDSNullPS.earlyStencilTestPassCount, mDSNullPS.earlyStencilTestFailCount));
 
+            // Rasterized Subspans
+            EventHandlerFile::Handle(RasterTiles(drawId, rastStats.rasterTiles));
+
             //Reset Internal Counters
             mDSSingleSample = {};
             mDSSampleRate = {};
             mDSPixelRate = {};
             mDSNullPS = {};
 
+            rastStats = {};
             mNeedFlush = false;
         }
 
@@ -267,6 +276,11 @@ namespace ArchRast
             mTS.inputPrims += event.data.primCount;
         }
 
+        virtual void Handle(const RasterTileCount& event)
+        {
+            rastStats.rasterTiles += event.data.rasterTiles;
+        }
+
     protected:
         bool mNeedFlush;
         // Per draw stats
@@ -278,6 +292,7 @@ namespace ArchRast
         CStats mClipper = {};
         TEStats mTS = {};
         GSStats mGS = {};
+        RastStats rastStats = {};
 
     };
 

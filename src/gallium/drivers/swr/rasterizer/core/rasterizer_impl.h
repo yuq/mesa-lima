@@ -1268,6 +1268,9 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
                     UnrollerL<1, RT::MT::numSamples, 1>::step(copyCoverage);
                 }
 
+                // Track rasterized subspans
+                AR_EVENT(RasterTileCount(pDC->drawId, 1));
+
                 RDTSC_BEGIN(BEPixelBackend, pDC->drawId);
                 backendFuncs.pfnBackend(pDC, workerId, tileX << KNOB_TILE_X_DIM_SHIFT, tileY << KNOB_TILE_Y_DIM_SHIFT, triDesc, renderBuffers);
                 RDTSC_END(BEPixelBackend, 0);

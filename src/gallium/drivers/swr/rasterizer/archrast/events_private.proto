@@ -95,6 +95,12 @@ event TessPrimCount
     uint64_t primCount;
 };
 
+event RasterTileCount
+{
+    uint32_t drawId;
+    uint64_t rasterTiles;
+};
+
 event GSPrimInfo
 {
     uint64_t inputPrimCount;
