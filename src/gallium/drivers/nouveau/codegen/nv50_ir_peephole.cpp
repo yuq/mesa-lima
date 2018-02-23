@@ -1055,7 +1055,8 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
       } else
       if (s == 1 && !imm0.isNegative() && imm0.isPow2() &&
           !isFloatType(i->dType) &&
-          target->isOpSupported(OP_SHLADD, i->dType)) {
+          target->isOpSupported(OP_SHLADD, i->dType) &&
+          !i->subOp) {
          i->op = OP_SHLADD;
          imm0.applyLog2();
          i->setSrc(1, new_ImmediateValue(prog, imm0.reg.data.u32));
