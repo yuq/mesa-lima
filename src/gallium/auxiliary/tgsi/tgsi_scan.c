@@ -267,7 +267,6 @@ scan_src_operand(struct tgsi_shader_info *info,
       const unsigned index = src->Register.Index;
 
       assert(fullinst->Instruction.Texture);
-      assert(index < ARRAY_SIZE(info->is_msaa_sampler));
       assert(index < PIPE_MAX_SAMPLERS);
 
       if (is_texture_inst(fullinst->Instruction.Opcode)) {
@@ -285,11 +284,6 @@ scan_src_operand(struct tgsi_shader_info *info,
              * agrees with the sampler view declaration.
              */
             assert(info->sampler_targets[index] == target);
-         }
-         /* MSAA samplers */
-         if (target == TGSI_TEXTURE_2D_MSAA ||
-             target == TGSI_TEXTURE_2D_ARRAY_MSAA) {
-            info->is_msaa_sampler[src->Register.Index] = TRUE;
          }
       }
    }
