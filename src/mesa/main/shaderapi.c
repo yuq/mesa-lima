@@ -2069,6 +2069,8 @@ use_program(GLuint program, bool no_error)
             _mesa_BindProgramPipeline(ctx->Pipeline.Current->Name);
       }
    }
+
+   _mesa_update_vertex_processing_mode(ctx);
 }
 
 
