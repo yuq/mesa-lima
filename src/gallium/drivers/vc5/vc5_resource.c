@@ -488,8 +488,7 @@ vc5_setup_slices(struct vc5_resource *rsc)
                 slice->padded_height = level_height;
                 slice->size = level_height * slice->stride;
 
-                offset += slice->size * level_depth;
-
+                uint32_t slice_total_size = slice->size * level_depth;
 
                 /* The HW aligns level 1's base to a page if any of level 1 or
                  * below could be UIF XOR.  The lower levels then inherit the
@@ -499,8 +498,12 @@ vc5_setup_slices(struct vc5_resource *rsc)
                 if (i == 1 &&
                     level_width > 4 * uif_block_w &&
                     level_height > PAGE_CACHE_MINUS_1_5_UB_ROWS * uif_block_h) {
-                        offset = align(offset, VC5_UIFCFG_PAGE_SIZE);
+                        slice_total_size = align(slice_total_size,
+                                                 VC5_UIFCFG_PAGE_SIZE);
                 }
+
+                offset += slice_total_size;
+
         }
         rsc->size = offset;
 
