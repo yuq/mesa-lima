@@ -426,7 +426,6 @@ vc5_screen_is_format_supported(struct pipe_screen *pscreen,
                                unsigned usage)
 {
         struct vc5_screen *screen = vc5_screen(pscreen);
-        unsigned retval = 0;
 
         if (sample_count > 1 && sample_count != VC5_MAX_SAMPLES)
                 return FALSE;
@@ -482,49 +481,39 @@ vc5_screen_is_format_supported(struct pipe_screen *pscreen,
                 case PIPE_FORMAT_R8G8B8_SSCALED:
                 case PIPE_FORMAT_R8G8_SSCALED:
                 case PIPE_FORMAT_R8_SSCALED:
-                        retval |= PIPE_BIND_VERTEX_BUFFER;
                         break;
                 default:
-                        break;
+                        return FALSE;
                 }
         }
 
         if ((usage & PIPE_BIND_RENDER_TARGET) &&
-            vc5_rt_format_supported(&screen->devinfo, format)) {
-                retval |= PIPE_BIND_RENDER_TARGET;
+            !vc5_rt_format_supported(&screen->devinfo, format)) {
+                return FALSE;
         }
 
         if ((usage & PIPE_BIND_SAMPLER_VIEW) &&
-            vc5_tex_format_supported(&screen->devinfo, format)) {
-                retval |= PIPE_BIND_SAMPLER_VIEW;
+            !vc5_tex_format_supported(&screen->devinfo, format)) {
+                return FALSE;
         }
 
         if ((usage & PIPE_BIND_DEPTH_STENCIL) &&
-            (format == PIPE_FORMAT_S8_UINT_Z24_UNORM ||
-             format == PIPE_FORMAT_X8Z24_UNORM ||
-             format == PIPE_FORMAT_Z16_UNORM ||
-             format == PIPE_FORMAT_Z32_FLOAT ||
-             format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)) {
-                retval |= PIPE_BIND_DEPTH_STENCIL;
+            !(format == PIPE_FORMAT_S8_UINT_Z24_UNORM ||
+              format == PIPE_FORMAT_X8Z24_UNORM ||
+              format == PIPE_FORMAT_Z16_UNORM ||
+              format == PIPE_FORMAT_Z32_FLOAT ||
+              format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)) {
+                return FALSE;
         }
 
         if ((usage & PIPE_BIND_INDEX_BUFFER) &&
-            (format == PIPE_FORMAT_I8_UINT ||
-             format == PIPE_FORMAT_I16_UINT ||
-             format == PIPE_FORMAT_I32_UINT)) {
-                retval |= PIPE_BIND_INDEX_BUFFER;
+            !(format == PIPE_FORMAT_I8_UINT ||
+              format == PIPE_FORMAT_I16_UINT ||
+              format == PIPE_FORMAT_I32_UINT)) {
+                return FALSE;
         }
 
-#if 0
-        if (retval != usage) {
-                fprintf(stderr,
-                        "not supported: format=%s, target=%d, sample_count=%d, "
-                        "usage=0x%x, retval=0x%x\n", util_format_name(format),
-                        target, sample_count, usage, retval);
-        }
-#endif
-
-        return retval == usage;
+        return TRUE;
 }
 
 #define PTR_TO_UINT(x) ((unsigned)((intptr_t)(x)))
