@@ -204,6 +204,7 @@ if with_tests
   else
     test('egl-symbols-check',
       find_program('egl-symbols-check'),
+      env : env_test,
       args : libegl
     )
   endif

@@ -1256,6 +1256,9 @@ endif
 
 pkg = import('pkgconfig')
 
+env_test = environment()
+env_test.set('NM', find_program('nm').path())
+
 subdir('include')
 subdir('bin')
 subdir('src')

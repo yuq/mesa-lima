@@ -55,6 +55,7 @@ if with_tests
   test(
     'es2-ABI-check',
     find_program('ABI-check'),
+    env : env_test,
     args : libgles2
   )
 endif
