@@ -184,6 +184,32 @@ vc4_blitter_save(struct vc4_context *vc4)
 }
 
 static bool
+vc4_yuv_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
+{
+        struct vc4_resource *src = vc4_resource(info->src.resource);
+        struct vc4_resource *dst = vc4_resource(info->dst.resource);
+        bool ok;
+
+        if (src->tiled)
+                return false;
+        if (src->base.format != PIPE_FORMAT_R8_UNORM &&
+            src->base.format != PIPE_FORMAT_R8G8_UNORM)
+                return false;
+
+        /* YUV blits always turn raster-order to tiled */
+        assert(dst->base.format == src->base.format);
+        assert(dst->tiled);
+
+        /* Do an immediate SW fallback, since the render blit path
+         * would just recurse.
+         */
+        ok = util_try_blit_via_copy_region(pctx, info);
+        assert(ok); (void)ok;
+
+        return true;
+}
+
+static bool
 vc4_render_blit(struct pipe_context *ctx, struct pipe_blit_info *info)
 {
         struct vc4_context *vc4 = vc4_context(ctx);
@@ -217,6 +243,9 @@ void
 vc4_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 {
         struct pipe_blit_info info = *blit_info;
+
+        if (vc4_yuv_blit(pctx, blit_info))
+                return;
 
         if (vc4_tile_blit(pctx, blit_info))
                 return;

@@ -564,8 +564,10 @@ get_resource_texture_format(struct pipe_resource *prsc)
                 if (prsc->nr_samples > 1) {
                         return ~0;
                 } else {
-                        assert(format == VC4_TEXTURE_TYPE_RGBA8888);
-                        return VC4_TEXTURE_TYPE_RGBA32R;
+                        if (format == VC4_TEXTURE_TYPE_RGBA8888)
+                                return VC4_TEXTURE_TYPE_RGBA32R;
+                        else
+                                return ~0;
                 }
         }
 
