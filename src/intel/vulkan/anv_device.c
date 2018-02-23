@@ -797,7 +797,7 @@ void anv_GetPhysicalDeviceFeatures2KHR(
 
          features->storageBuffer16BitAccess = pdevice->info.gen >= 8;
          features->uniformAndStorageBuffer16BitAccess = pdevice->info.gen >= 8;
-         features->storagePushConstant16 = false;
+         features->storagePushConstant16 = pdevice->info.gen >= 8;
          features->storageInputOutput16 = false;
          break;
       }
