@@ -371,11 +371,11 @@ if with_vulkan_icd_dir == ''
 endif
 
 with_dri2 = (with_dri or with_any_vk) and with_dri_platform == 'drm'
-with_dri3 = get_option('dri3')
-if with_dri3 == 'auto'
+_dri3 = get_option('dri3')
+if _dri3 == 'auto'
   with_dri3 = system_has_kms_drm and with_dri2
 else
-  with_dri3 = with_dri3 == 'true'
+  with_dri3 = _dri3 == 'true'
 endif
 
 if with_any_vk and (with_platform_x11 and not with_dri3)
