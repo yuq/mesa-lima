@@ -294,16 +294,14 @@ if not (with_dri or with_gallium or with_glx == 'xlib' or with_glx == 'gallium-x
   with_shared_glapi = false
 endif
 
-with_gbm = get_option('gbm')
-if with_gbm == 'auto' and with_dri  # TODO: or gallium
-  with_gbm = system_has_kms_drm
-elif with_gbm == 'true'
-  if not system_has_kms_drm
-    error('GBM only supports DRM/KMS platforms')
-  endif
-  with_gbm = true
+_gbm = get_option('gbm')
+if _gbm == 'auto'
+  with_gbm = system_has_kms_drm and with_dri
 else
-  with_gbm = false
+  with_gbm = _gbm == 'true'
+endif
+if with_gbm and not system_has_kms_drm
+  error('GBM only supports DRM/KMS platforms')
 endif
 
 _egl = get_option('egl')
