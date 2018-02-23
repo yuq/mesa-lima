@@ -116,7 +116,8 @@ class VkVersion:
         return '.'.join(ver_list)
 
     def c_vk_version(self):
-        ver_list = [str(self.major), str(self.minor), str(self.patch)]
+        patch = self.patch if self.patch is not None else 0
+        ver_list = [str(self.major), str(self.minor), str(patch)]
         return 'VK_MAKE_VERSION(' + ', '.join(ver_list) + ')'
 
     def __int_ver(self):
