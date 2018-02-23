@@ -550,6 +550,8 @@ vc4_screen_is_format_supported(struct pipe_screen *pscreen,
                 retval |= PIPE_BIND_INDEX_BUFFER;
         }
 
+        retval |= usage & PIPE_BIND_DISPLAY_TARGET;
+
 #if 0
         if (retval != usage) {
                 fprintf(stderr,
