@@ -1207,11 +1207,7 @@ static LLVMValueRef get_alu_src(struct ac_nir_context *ctx,
 	bool need_swizzle = false;
 
 	assert(value);
-	LLVMTypeRef type = LLVMTypeOf(value);
-	unsigned src_components = LLVMGetTypeKind(type) == LLVMVectorTypeKind
-	                              ? LLVMGetVectorSize(type)
-	                              : 1;
-
+	unsigned src_components = ac_get_llvm_num_components(value);
 	for (unsigned i = 0; i < num_components; ++i) {
 		assert(src.swizzle[i] < src_components);
 		if (src.swizzle[i] != i)
