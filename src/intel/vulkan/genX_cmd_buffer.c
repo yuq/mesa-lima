@@ -235,14 +235,9 @@ color_attachment_compute_aux_usage(struct anv_device * device,
     */
    assert(att_state->aux_usage != ISL_AUX_USAGE_NONE);
 
-   if (att_state->aux_usage == ISL_AUX_USAGE_MCS) {
-      att_state->input_aux_usage = ISL_AUX_USAGE_MCS;
-      att_state->fast_clear = false;
-      return;
-   }
-
-   if (att_state->aux_usage == ISL_AUX_USAGE_CCS_E) {
-      att_state->input_aux_usage = ISL_AUX_USAGE_CCS_E;
+   if (att_state->aux_usage == ISL_AUX_USAGE_CCS_E ||
+       att_state->aux_usage == ISL_AUX_USAGE_MCS) {
+      att_state->input_aux_usage = att_state->aux_usage;
    } else {
       /* From the Sky Lake PRM, RENDER_SURFACE_STATE::AuxiliarySurfaceMode:
        *
@@ -274,7 +269,8 @@ color_attachment_compute_aux_usage(struct anv_device * device,
       }
    }
 
-   assert(iview->image->planes[0].aux_surface.isl.usage & ISL_SURF_USAGE_CCS_BIT);
+   assert(iview->image->planes[0].aux_surface.isl.usage &
+          (ISL_SURF_USAGE_CCS_BIT | ISL_SURF_USAGE_MCS_BIT));
 
    const struct isl_format_layout *view_fmtl =
       isl_format_get_layout(iview->planes[0].isl.format);
