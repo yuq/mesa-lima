@@ -952,8 +952,10 @@ anv_layout_to_fast_clear_type(const struct gen_device_info * const devinfo,
 
    assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
 
-   /* Multisample fast-clear is not yet supported. */
-   if (image->samples > 1)
+   /* We don't support MSAA fast-clears on Ivybridge or Bay Trail because they
+    * lack the MI ALU which we need to determine the predicates.
+    */
+   if (devinfo->gen == 7 && !devinfo->is_haswell && image->samples > 1)
       return ANV_FAST_CLEAR_NONE;
 
    switch (layout) {
@@ -964,12 +966,13 @@ anv_layout_to_fast_clear_type(const struct gen_device_info * const devinfo,
       return ANV_FAST_CLEAR_NONE;
 
    default:
-      /* If the image has CCS_E enabled all the time then we can use
+      /* If the image has MCS or CCS_E enabled all the time then we can use
        * fast-clear as long as the clear color is the default value of zero
        * since this is the default value we program into every surface state
        * used for texturing.
        */
-      if (image->planes[plane].aux_usage == ISL_AUX_USAGE_CCS_E)
+      if (image->planes[plane].aux_usage == ISL_AUX_USAGE_MCS ||
+          image->planes[plane].aux_usage == ISL_AUX_USAGE_CCS_E)
          return ANV_FAST_CLEAR_DEFAULT_VALUE;
       else
          return ANV_FAST_CLEAR_NONE;
