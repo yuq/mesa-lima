@@ -30,15 +30,19 @@
 #include "util/ralloc.h"
 #include "util/u_inlines.h"
 #include "util/u_suballoc.h"
+#include "util/hash_table.h"
 
 #include "lima_screen.h"
 #include "lima_context.h"
 #include "lima_resource.h"
 #include "lima_bo.h"
 #include "lima_submit.h"
+#include "lima_util.h"
 
 #include <lima_drm.h>
 #include <xf86drm.h>
+
+int lima_ctx_num_plb = LIMA_CTX_PLB_DEF_NUM;
 
 uint32_t
 lima_ctx_buff_va(struct lima_context *ctx, enum lima_ctx_buff buff)
@@ -127,18 +131,32 @@ lima_context_destroy(struct pipe_context *pctx)
    if (ctx->uploader)
       u_upload_destroy(ctx->uploader);
 
-   if (ctx->share_buffer)
-      lima_bo_free(ctx->share_buffer);
+   for (int i = 0; i < LIMA_CTX_PLB_MAX_NUM; i++) {
+      if (ctx->plb[i])
+         lima_bo_free(ctx->plb[i]);
+   }
 
-   if (ctx->gp_buffer)
-      lima_bo_free(ctx->gp_buffer);
+   if (ctx->plb_gp_stream)
+      lima_bo_free(ctx->plb_gp_stream);
 
-   if (ctx->pp_buffer)
-      lima_bo_free(ctx->pp_buffer);
+   if (ctx->plb_pp_stream)
+      assert(!_mesa_hash_table_num_entries(ctx->plb_pp_stream));
 
    lima_context_free_drm_ctx(screen, ctx->id);
 
    ralloc_free(ctx);
+}
+
+static uint32_t
+plb_pp_stream_hash(const void *key)
+{
+   return _mesa_hash_data(key, sizeof(struct lima_ctx_plb_pp_stream_key));
+}
+
+static bool
+plb_pp_stream_compare(const void *key1, const void *key2)
+{
+   return memcmp(key1, key2, sizeof(struct lima_ctx_plb_pp_stream_key)) == 0;
 }
 
 struct pipe_context *
@@ -185,26 +203,34 @@ lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    util_dynarray_init(&ctx->vs_cmd_array, ctx);
    util_dynarray_init(&ctx->plbu_cmd_array, ctx);
 
-   ctx->share_buffer = lima_bo_create(screen, sh_buffer_size, 0, false, true);
-   if (!ctx->share_buffer)
+   for (int i = 0; i < lima_ctx_num_plb; i++) {
+      ctx->plb[i] = lima_bo_create(screen, LIMA_CTX_PLB_SIZE, 0, false, true);
+      if (!ctx->plb[i])
+         goto err_out;
+   }
+
+   unsigned plb_gp_stream_size =
+      align(LIMA_CTX_PLB_GP_SIZE * lima_ctx_num_plb, LIMA_PAGE_SIZE);
+   ctx->plb_gp_stream =
+      lima_bo_create(screen, plb_gp_stream_size, 0, true, true);
+   if (!ctx->plb_gp_stream)
       goto err_out;
 
-   ctx->gp_buffer = lima_bo_create(screen, gp_ctx_buffer_size, 0, true, true);
-   if (!ctx->gp_buffer)
-      goto err_out;
+   /* plb gp stream is static for any framebuffer */
+   for (int i = 0; i < lima_ctx_num_plb; i++) {
+      uint32_t *plb_gp_stream =
+         ctx->plb_gp_stream->map + i * LIMA_CTX_PLB_GP_SIZE;
+      for (int j = 0; j < LIMA_CTX_PLB_MAX_BLK; j++)
+         plb_gp_stream[j] = ctx->plb[i]->va + LIMA_CTX_PLB_BLK_SIZE * j;
+   }
 
-   /* plb address stream for plbu is static for any framebuffer */
-   int max_plb = 512, block_size = 0x200;
-   uint32_t *plbu_stream = ctx->gp_buffer->map + gp_plbu_plb_offset;
-   for (int i = 0; i < max_plb; i++)
-      plbu_stream[i] = ctx->share_buffer->va + sh_plb_offset + block_size * i;
+   ctx->plb_pp_stream = _mesa_hash_table_create(
+      ctx, plb_pp_stream_hash, plb_pp_stream_compare);
+   if (!ctx->plb_pp_stream)
+      goto err_out;
 
    ctx->gp_submit = lima_submit_create(ctx, LIMA_PIPE_GP);
    if (!ctx->gp_submit)
-      goto err_out;
-
-   ctx->pp_buffer = lima_bo_create(screen, pp_ctx_buffer_size, 0, true, true);
-   if (!ctx->pp_buffer)
       goto err_out;
 
    ctx->pp_submit = lima_submit_create(ctx, LIMA_PIPE_PP);
