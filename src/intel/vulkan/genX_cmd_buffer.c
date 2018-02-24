@@ -754,6 +754,29 @@ anv_cmd_predicated_ccs_resolve(struct anv_cmd_buffer *cmd_buffer,
                     array_layer, 1, resolve_op, true);
 }
 
+static void
+anv_cmd_predicated_mcs_resolve(struct anv_cmd_buffer *cmd_buffer,
+                               const struct anv_image *image,
+                               VkImageAspectFlagBits aspect,
+                               uint32_t array_layer,
+                               enum isl_aux_op resolve_op,
+                               enum anv_fast_clear_type fast_clear_supported)
+{
+   assert(aspect == VK_IMAGE_ASPECT_COLOR_BIT);
+   assert(resolve_op == ISL_AUX_OP_PARTIAL_RESOLVE);
+
+#if GEN_GEN >= 8 || GEN_IS_HASWELL
+   anv_cmd_compute_resolve_predicate(cmd_buffer, image,
+                                     aspect, 0, array_layer,
+                                     resolve_op, fast_clear_supported);
+
+   anv_image_mcs_op(cmd_buffer, image, aspect,
+                    array_layer, 1, resolve_op, true);
+#else
+   unreachable("MCS resolves are unsupported on Ivybridge and Bay Trail");
+#endif
+}
+
 void
 genX(cmd_buffer_mark_image_written)(struct anv_cmd_buffer *cmd_buffer,
                                     const struct anv_image *image,
@@ -1096,9 +1119,15 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
 
       for (uint32_t a = 0; a < level_layer_count; a++) {
          uint32_t array_layer = base_layer + a;
-         anv_cmd_predicated_ccs_resolve(cmd_buffer, image, aspect,
-                                        level, array_layer, resolve_op,
-                                        final_fast_clear);
+         if (image->samples == 1) {
+            anv_cmd_predicated_ccs_resolve(cmd_buffer, image, aspect,
+                                           level, array_layer, resolve_op,
+                                           final_fast_clear);
+         } else {
+            anv_cmd_predicated_mcs_resolve(cmd_buffer, image, aspect,
+                                           array_layer, resolve_op,
+                                           final_fast_clear);
+         }
       }
    }
 
@@ -3448,8 +3477,13 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
             assert(iview->planes[0].isl.base_level == 0);
             assert(iview->planes[0].isl.base_array_layer == 0);
 
-            anv_image_ccs_op(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
-                             0, 0, 1, ISL_AUX_OP_FAST_CLEAR, false);
+            if (iview->image->samples == 1) {
+               anv_image_ccs_op(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
+                                0, 0, 1, ISL_AUX_OP_FAST_CLEAR, false);
+            } else {
+               anv_image_mcs_op(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
+                                0, 1, ISL_AUX_OP_FAST_CLEAR, false);
+            }
             base_clear_layer++;
             clear_layer_count--;
 
