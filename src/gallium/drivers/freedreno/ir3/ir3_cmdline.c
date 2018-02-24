@@ -443,6 +443,13 @@ int main(int argc, char **argv)
 		nir = ir3_tgsi_to_nir(toks);
 	} else if (from_spirv) {
 		nir = load_spirv(filenames[0], entry, stage);
+
+		NIR_PASS_V(nir, nir_lower_io, nir_var_all, ir3_glsl_type_size,
+				(nir_lower_io_options)0);
+
+		/* TODO do this somewhere else */
+		nir_lower_int64(nir, ~0);
+		nir_lower_system_values(nir);
 	} else if (num_files > 0) {
 		nir = load_glsl(num_files, filenames, stage);
 	} else {
