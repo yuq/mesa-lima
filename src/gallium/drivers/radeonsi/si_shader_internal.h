@@ -227,8 +227,6 @@ si_shader_context_from_abi(struct ac_shader_abi *abi)
 	return container_of(abi, ctx, abi);
 }
 
-void si_llvm_add_attribute(LLVMValueRef F, const char *name, int value);
-
 unsigned si_llvm_compile(LLVMModuleRef M, struct ac_shader_binary *binary,
 			 LLVMTargetMachineRef tm,
 			 struct pipe_debug_callback *debug);

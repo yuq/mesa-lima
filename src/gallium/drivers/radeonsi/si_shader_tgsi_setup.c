@@ -57,14 +57,6 @@ enum si_llvm_calling_convention {
 	RADEON_LLVM_AMDGPU_HS = 93,
 };
 
-void si_llvm_add_attribute(LLVMValueRef F, const char *name, int value)
-{
-	char str[16];
-
-	snprintf(str, sizeof(str), "%i", value);
-	LLVMAddTargetDependentFunctionAttr(F, name, str);
-}
-
 struct si_llvm_diagnostics {
 	struct pipe_debug_callback *debug;
 	unsigned retval;

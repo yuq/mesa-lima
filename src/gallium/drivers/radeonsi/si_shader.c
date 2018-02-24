@@ -4463,8 +4463,9 @@ static void si_create_function(struct si_shader_context *ctx,
 	}
 
 	if (max_workgroup_size) {
-		si_llvm_add_attribute(ctx->main_fn, "amdgpu-max-work-group-size",
-				      max_workgroup_size);
+		ac_llvm_add_target_dep_function_attr(ctx->main_fn,
+						     "amdgpu-max-work-group-size",
+						     max_workgroup_size);
 	}
 	LLVMAddTargetDependentFunctionAttr(ctx->main_fn,
 					   "no-signed-zeros-fp-math",
@@ -5006,17 +5007,17 @@ static void create_function(struct si_shader_context *ctx)
 	/* Reserve register locations for VGPR inputs the PS prolog may need. */
 	if (ctx->type == PIPE_SHADER_FRAGMENT &&
 	    ctx->separate_prolog) {
-		si_llvm_add_attribute(ctx->main_fn,
-				      "InitialPSInputAddr",
-				      S_0286D0_PERSP_SAMPLE_ENA(1) |
-				      S_0286D0_PERSP_CENTER_ENA(1) |
-				      S_0286D0_PERSP_CENTROID_ENA(1) |
-				      S_0286D0_LINEAR_SAMPLE_ENA(1) |
-				      S_0286D0_LINEAR_CENTER_ENA(1) |
-				      S_0286D0_LINEAR_CENTROID_ENA(1) |
-				      S_0286D0_FRONT_FACE_ENA(1) |
-				      S_0286D0_ANCILLARY_ENA(1) |
-				      S_0286D0_POS_FIXED_PT_ENA(1));
+		ac_llvm_add_target_dep_function_attr(ctx->main_fn,
+						     "InitialPSInputAddr",
+						     S_0286D0_PERSP_SAMPLE_ENA(1) |
+						     S_0286D0_PERSP_CENTER_ENA(1) |
+						     S_0286D0_PERSP_CENTROID_ENA(1) |
+						     S_0286D0_LINEAR_SAMPLE_ENA(1) |
+						     S_0286D0_LINEAR_CENTER_ENA(1) |
+						     S_0286D0_LINEAR_CENTROID_ENA(1) |
+						     S_0286D0_FRONT_FACE_ENA(1) |
+						     S_0286D0_ANCILLARY_ENA(1) |
+						     S_0286D0_POS_FIXED_PT_ENA(1));
 	}
 
 	shader->info.num_input_sgprs = 0;
@@ -7791,8 +7792,8 @@ static void si_build_ps_epilog_function(struct si_shader_context *ctx,
 	/* Create the function. */
 	si_create_function(ctx, "ps_epilog", NULL, 0, &fninfo, 0);
 	/* Disable elimination of unused inputs. */
-	si_llvm_add_attribute(ctx->main_fn,
-				  "InitialPSInputAddr", 0xffffff);
+	ac_llvm_add_target_dep_function_attr(ctx->main_fn,
+					     "InitialPSInputAddr", 0xffffff);
 
 	/* Process colors. */
 	unsigned vgpr = fninfo.num_sgpr_params;
