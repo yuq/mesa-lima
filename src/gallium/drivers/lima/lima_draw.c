@@ -26,6 +26,7 @@
 #include "util/u_format.h"
 #include "util/u_debug.h"
 #include "util/u_half.h"
+#include "util/hash_table.h"
 
 #include "lima_context.h"
 #include "lima_screen.h"
@@ -105,10 +106,17 @@ hilbert_coords(int n, int d, int *x, int *y)
 }
 
 static void
-lima_update_plb(struct lima_context *ctx)
+lima_update_plb(struct lima_context *ctx, struct lima_ctx_plb_pp_stream *s)
 {
    struct lima_context_framebuffer *fb = &ctx->framebuffer;
    struct lima_screen *screen = lima_screen(ctx->base.screen);
+
+   if (s->bo)
+      return;
+
+   unsigned size =
+      align(fb->tiled_w * fb->tiled_h * 16 + screen->num_pp * 8, LIMA_PAGE_SIZE);
+   s->bo = lima_bo_create(screen, size, 0, true, true);
 
    /* use hilbert_coords to generates 1D to 2D relationship.
     * 1D for pp stream index and 2D for plb block x/y on framebuffer.
@@ -123,7 +131,7 @@ lima_update_plb(struct lima_context *ctx)
    uint32_t *stream[4];
 
    for (i = 0; i < num_pp; i++)
-      stream[i] = ctx->pp_buffer->map + pp_plb_offset(i, num_pp);
+      stream[i] = s->bo->map + s->bo->size / num_pp * i;
 
    for (i = 0; i < count; i++) {
       int x, y;
@@ -131,7 +139,7 @@ lima_update_plb(struct lima_context *ctx)
       if (x < fb->tiled_w && y < fb->tiled_h) {
          int pp = index % num_pp;
          int offset = ((y >> fb->shift_h) * fb->block_w + (x >> fb->shift_w)) * 512;
-         int plb_va = ctx->share_buffer->va + sh_plb_offset + offset;
+         int plb_va = ctx->plb[s->key.plb_index]->va + offset;
 
          stream[pp][0] = 0;
          stream[pp][1] = 0xB8000000 | x | (y << 8);
@@ -300,7 +308,7 @@ lima_pack_plbu_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       plbu_cmd[i++] = fb->block_w;
       plbu_cmd[i++] = 0x30000000; /* PLBU_BLOCK_STRIDE */
 
-      plbu_cmd[i++] = ctx->gp_buffer->va + gp_plbu_plb_offset;
+      plbu_cmd[i++] = ctx->plb_gp_stream->va + ctx->plb_index * LIMA_CTX_PLB_GP_SIZE;
       plbu_cmd[i++] = 0x28000000 | (fb->block_w * fb->block_h - 1); /* PLBU_ARRAY_ADDRESS */
 
       plbu_cmd[i++] = fui(ctx->viewport.x);
@@ -827,16 +835,6 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    if (!lima_is_scissor_zero(ctx))
       lima_pack_vs_cmd(ctx, info);
 
-   /* TODO: handle fb change case */
-   if (ctx->dirty & LIMA_CONTEXT_DIRTY_FRAMEBUFFER) {
-      struct lima_context_framebuffer *fb = &ctx->framebuffer;
-
-      if (fb->dirty_dim) {
-         lima_update_plb(ctx);
-         fb->dirty_dim = false;
-      }
-   }
-
    if (ctx->dirty & LIMA_CONTEXT_DIRTY_CONST_BUFF &&
        ctx->const_buffer[PIPE_SHADER_FRAGMENT].dirty) {
       lima_update_pp_uniform(ctx);
@@ -898,8 +896,8 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
    util_dynarray_clear(&ctx->plbu_cmd_array);
 
    struct lima_screen *screen = lima_screen(pctx->screen);
-   lima_submit_add_bo(ctx->gp_submit, ctx->gp_buffer, LIMA_SUBMIT_BO_READ);
-   lima_submit_add_bo(ctx->gp_submit, ctx->share_buffer, LIMA_SUBMIT_BO_WRITE);
+   lima_submit_add_bo(ctx->gp_submit, ctx->plb_gp_stream, LIMA_SUBMIT_BO_READ);
+   lima_submit_add_bo(ctx->gp_submit, ctx->plb[ctx->plb_index], LIMA_SUBMIT_BO_WRITE);
    lima_submit_add_bo(ctx->gp_submit, screen->gp_buffer, LIMA_SUBMIT_BO_READ);
 
    uint32_t vs_cmd_va = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_vs_cmd);
@@ -930,19 +928,29 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
              lima_ctx_buff_va(ctx, lima_ctx_buff_sh_gl_pos));
       lima_dump_blob(varying, 4 * 4 * 16, true);
 
-      lima_bo_update(ctx->share_buffer, true, false);
-      uint32_t *plb = ctx->share_buffer->map + sh_plb_offset;
+      lima_bo_update(ctx->plb[ctx->plb_index], true, false);
+      uint32_t *plb = ctx->plb[ctx->plb_index]->map;
       debug_printf("plb %x %x %x %x %x %x %x %x\n",
                    plb[0], plb[1], plb[2], plb[3],
                    plb[4], plb[5], plb[6], plb[7]);
    }
 
+   struct lima_ctx_plb_pp_stream_key key = {
+      .plb_index = ctx->plb_index,
+      .tiled_w = ctx->framebuffer.tiled_w,
+      .tiled_h = ctx->framebuffer.tiled_h,
+   };
+   struct hash_entry *entry =
+         _mesa_hash_table_search(ctx->plb_pp_stream, &key);
+   struct lima_ctx_plb_pp_stream *s = entry->data;
+   lima_update_plb(ctx, s);
+
    struct lima_resource *res = lima_resource(ctx->framebuffer.cbuf->texture);
    lima_bo_update(res->bo, false, true);
 
    lima_submit_add_bo(ctx->pp_submit, res->bo, LIMA_SUBMIT_BO_WRITE);
-   lima_submit_add_bo(ctx->pp_submit, ctx->share_buffer, LIMA_SUBMIT_BO_READ);
-   lima_submit_add_bo(ctx->pp_submit, ctx->pp_buffer, LIMA_SUBMIT_BO_READ);
+   lima_submit_add_bo(ctx->pp_submit, ctx->plb[ctx->plb_index], LIMA_SUBMIT_BO_READ);
+   lima_submit_add_bo(ctx->pp_submit, s->bo, LIMA_SUBMIT_BO_READ);
    lima_submit_add_bo(ctx->pp_submit, screen->pp_buffer, LIMA_SUBMIT_BO_READ);
 
    int num_pp = screen->num_pp;
@@ -1000,12 +1008,13 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
    };
 
    for (int i = 0; i < num_pp; i++)
-      pp_frame.plbu_array_address[i] = ctx->pp_buffer->va + pp_plb_offset(i, num_pp);
+      pp_frame.plbu_array_address[i] = s->bo->va + s->bo->size / num_pp * i;
 
    if (!lima_submit_start(ctx->pp_submit, &pp_frame, sizeof(pp_frame)))
       fprintf(stderr, "pp submit error\n");
 
    ctx->num_draws = 0;
+   ctx->plb_index = (ctx->plb_index + 1) % lima_ctx_num_plb;
 }
 
 void

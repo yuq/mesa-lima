@@ -28,6 +28,7 @@
 #include "util/u_math.h"
 #include "util/u_debug.h"
 #include "util/u_transfer.h"
+#include "util/hash_table.h"
 #include "renderonly/renderonly.h"
 
 #include "state_tracker/drm_driver.h"
@@ -209,6 +210,35 @@ lima_surface_create(struct pipe_context *pctx,
    psurf->u.tex.first_layer = surf_tmpl->u.tex.first_layer;
    psurf->u.tex.last_layer = surf_tmpl->u.tex.last_layer;
 
+   surf->tiled_w = align(psurf->width, 16) >> 4;
+   surf->tiled_h = align(psurf->height, 16) >> 4;
+
+   struct lima_context *ctx = lima_context(pctx);
+   struct lima_ctx_plb_pp_stream_key key = {
+      .tiled_w = surf->tiled_w,
+      .tiled_h = surf->tiled_h,
+   };
+   for (int i = 0; i < lima_ctx_num_plb; i++) {
+      key.plb_index = i;
+
+      struct hash_entry *entry =
+         _mesa_hash_table_search(ctx->plb_pp_stream, &key);
+      if (entry) {
+         struct lima_ctx_plb_pp_stream *s = entry->data;
+         s->refcnt++;
+      }
+      else {
+         struct lima_ctx_plb_pp_stream *s =
+            ralloc(ctx->plb_pp_stream, struct lima_ctx_plb_pp_stream);
+         s->key.plb_index = i;
+         s->key.tiled_w = surf->tiled_w;
+         s->key.tiled_h = surf->tiled_h;
+         s->refcnt = 1;
+         s->bo = NULL;
+         _mesa_hash_table_insert(ctx->plb_pp_stream, &s->key, s);
+      }
+   }
+
    debug_printf("%s: pres=%p psurf=%p\n", __func__, pres, psurf);
 
    return &surf->base;
@@ -218,6 +248,25 @@ static void
 lima_surface_destroy(struct pipe_context *pctx, struct pipe_surface *psurf)
 {
    struct lima_surface *surf = lima_surface(psurf);
+
+   struct lima_context *ctx = lima_context(pctx);
+   struct lima_ctx_plb_pp_stream_key key = {
+      .tiled_w = surf->tiled_w,
+      .tiled_h = surf->tiled_h,
+   };
+   for (int i = 0; i < lima_ctx_num_plb; i++) {
+      key.plb_index = i;
+
+      struct hash_entry *entry =
+         _mesa_hash_table_search(ctx->plb_pp_stream, &key);
+      struct lima_ctx_plb_pp_stream *s = entry->data;
+      if (--s->refcnt == 0) {
+         if (s->bo)
+            lima_bo_free(s->bo);
+         _mesa_hash_table_remove(ctx->plb_pp_stream, entry);
+         ralloc_free(s);
+      }
+   }
 
    pipe_resource_reference(&psurf->texture, NULL);
    FREE(surf);
