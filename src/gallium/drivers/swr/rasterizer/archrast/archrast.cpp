@@ -90,6 +90,15 @@ namespace ArchRast
             //earlyStencil test compute
             mDSSingleSample.earlyStencilTestPassCount += _mm_popcnt_u32(event.data.stencilPassMask);
             mDSSingleSample.earlyStencilTestFailCount += _mm_popcnt_u32((!event.data.stencilPassMask) & event.data.coverageMask);
+
+            //earlyZ test single and multi sample
+            mDSCombined.earlyZTestPassCount += _mm_popcnt_u32(event.data.depthPassMask);
+            mDSCombined.earlyZTestFailCount += _mm_popcnt_u32((!event.data.depthPassMask) & event.data.coverageMask);
+
+            //earlyStencil test single and multi sample
+            mDSCombined.earlyStencilTestPassCount += _mm_popcnt_u32(event.data.stencilPassMask);
+            mDSCombined.earlyStencilTestFailCount += _mm_popcnt_u32((!event.data.stencilPassMask) & event.data.coverageMask);
+
             mNeedFlush = true;
         }
 
@@ -102,6 +111,15 @@ namespace ArchRast
             //earlyStencil test compute
             mDSSampleRate.earlyStencilTestPassCount += _mm_popcnt_u32(event.data.stencilPassMask);
             mDSSampleRate.earlyStencilTestFailCount += _mm_popcnt_u32((!event.data.stencilPassMask) & event.data.coverageMask);
+
+            //earlyZ test single and multi sample
+            mDSCombined.earlyZTestPassCount  += _mm_popcnt_u32(event.data.depthPassMask);
+            mDSCombined.earlyZTestFailCount += _mm_popcnt_u32((!event.data.depthPassMask) & event.data.coverageMask);
+
+            //earlyStencil test single and multi sample
+            mDSCombined.earlyStencilTestPassCount += _mm_popcnt_u32(event.data.stencilPassMask);
+            mDSCombined.earlyStencilTestFailCount += _mm_popcnt_u32((!event.data.stencilPassMask) & event.data.coverageMask);
+
             mNeedFlush = true;
         }
 
@@ -126,6 +144,15 @@ namespace ArchRast
             //lateStencil test compute
             mDSSingleSample.lateStencilTestPassCount += _mm_popcnt_u32(event.data.stencilPassMask);
             mDSSingleSample.lateStencilTestFailCount += _mm_popcnt_u32((!event.data.stencilPassMask) & event.data.coverageMask);
+
+            //lateZ test single and multi sample
+            mDSCombined.lateZTestPassCount += _mm_popcnt_u32(event.data.depthPassMask);
+            mDSCombined.lateZTestFailCount += _mm_popcnt_u32((!event.data.depthPassMask) & event.data.coverageMask);
+
+            //lateStencil test single and multi sample
+            mDSCombined.lateStencilTestPassCount += _mm_popcnt_u32(event.data.stencilPassMask);
+            mDSCombined.lateStencilTestFailCount += _mm_popcnt_u32((!event.data.stencilPassMask) & event.data.coverageMask);
+
             mNeedFlush = true;
         }
 
@@ -138,6 +165,16 @@ namespace ArchRast
             //lateStencil test compute
             mDSSampleRate.lateStencilTestPassCount += _mm_popcnt_u32(event.data.stencilPassMask);
             mDSSampleRate.lateStencilTestFailCount += _mm_popcnt_u32((!event.data.stencilPassMask) & event.data.coverageMask);
+
+
+            //lateZ test single and multi sample
+            mDSCombined.lateZTestPassCount += _mm_popcnt_u32(event.data.depthPassMask);
+            mDSCombined.lateZTestFailCount += _mm_popcnt_u32((!event.data.depthPassMask) & event.data.coverageMask);
+
+            //lateStencil test single and multi sample
+            mDSCombined.lateStencilTestPassCount += _mm_popcnt_u32(event.data.stencilPassMask);
+            mDSCombined.lateStencilTestFailCount += _mm_popcnt_u32((!event.data.stencilPassMask) & event.data.coverageMask);
+
             mNeedFlush = true;
         }
 
@@ -223,6 +260,12 @@ namespace ArchRast
             EventHandlerFile::Handle(EarlyStencilSampleRate(drawId, mDSSampleRate.earlyStencilTestPassCount, mDSSampleRate.earlyStencilTestFailCount));
             EventHandlerFile::Handle(LateStencilSampleRate(drawId, mDSSampleRate.lateStencilTestPassCount, mDSSampleRate.lateStencilTestFailCount));
 
+            //combined
+            EventHandlerFile::Handle(EarlyZ(drawId, mDSCombined.earlyZTestPassCount, mDSCombined.earlyZTestFailCount));
+            EventHandlerFile::Handle(LateZ(drawId, mDSCombined.lateZTestPassCount, mDSCombined.lateZTestFailCount));
+            EventHandlerFile::Handle(EarlyStencil(drawId, mDSCombined.earlyStencilTestPassCount, mDSCombined.earlyStencilTestFailCount));
+            EventHandlerFile::Handle(LateStencil(drawId, mDSCombined.lateStencilTestPassCount, mDSCombined.lateStencilTestFailCount));
+
             //pixelRate
             EventHandlerFile::Handle(EarlyZPixelRate(drawId, mDSPixelRate.earlyZTestPassCount, mDSPixelRate.earlyZTestFailCount));
             EventHandlerFile::Handle(LateZPixelRate(drawId, mDSPixelRate.lateZTestPassCount, mDSPixelRate.lateZTestFailCount));
@@ -238,6 +281,7 @@ namespace ArchRast
             //Reset Internal Counters
             mDSSingleSample = {};
             mDSSampleRate = {};
+            mDSCombined = {};
             mDSPixelRate = {};
             mDSNullPS = {};
 
@@ -287,6 +331,7 @@ namespace ArchRast
         DepthStencilStats mDSSingleSample = {};
         DepthStencilStats mDSSampleRate = {};
         DepthStencilStats mDSPixelRate = {};
+        DepthStencilStats mDSCombined = {};
         DepthStencilStats mDSNullPS = {};
         DepthStencilStats mDSOmZ = {};
         CStats mClipper = {};

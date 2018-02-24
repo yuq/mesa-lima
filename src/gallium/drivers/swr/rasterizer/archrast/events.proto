@@ -175,6 +175,34 @@ event LateStencilSampleRate
     uint64_t failCount;
 };
 
+event EarlyZ
+{
+    uint32_t drawId;
+    uint64_t passCount;
+    uint64_t failCount;
+};	
+
+event LateZ
+{
+    uint32_t drawId;
+    uint64_t passCount;
+    uint64_t failCount;
+};
+
+event EarlyStencil
+{
+    uint32_t drawId; 
+    uint64_t passCount;
+    uint64_t failCount;
+};
+
+event LateStencil
+{
+    uint32_t drawId; 
+    uint64_t passCount;
+    uint64_t failCount;
+};
+
 event EarlyZNullPS
 {
     uint32_t drawId;
