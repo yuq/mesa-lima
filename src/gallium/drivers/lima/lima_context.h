@@ -38,7 +38,6 @@ struct lima_context_framebuffer {
    int shift_w, shift_h;
    int block_w, block_h;
    int shift_max;
-   bool dirty_dim;
 };
 
 struct lima_context_clear {
@@ -140,6 +139,18 @@ struct lima_texture_stateobj {
    unsigned num_samplers;
 };
 
+struct lima_ctx_plb_pp_stream_key {
+   uint32_t plb_index;
+   uint32_t tiled_w;
+   uint32_t tiled_h;
+};
+
+struct lima_ctx_plb_pp_stream {
+   struct lima_ctx_plb_pp_stream_key key;
+   uint32_t refcnt;
+   struct lima_bo *bo;
+};
+
 struct lima_context {
    struct pipe_context base;
 
@@ -182,21 +193,18 @@ struct lima_context {
    struct lima_context_constant_buffer const_buffer[PIPE_SHADER_TYPES];
    struct lima_texture_stateobj tex_stateobj;
 
-   struct lima_bo *share_buffer;
-   #define sh_plb_offset             0x00000
-   /* max_plb = 512, block_size = 0x200, size = block_size * max_plb */
-   #define sh_buffer_size            0x40000
+   #define LIMA_CTX_PLB_MIN_NUM  1
+   #define LIMA_CTX_PLB_MAX_NUM  4
+   #define LIMA_CTX_PLB_DEF_NUM  2
+   #define LIMA_CTX_PLB_MAX_BLK  512
+   #define LIMA_CTX_PLB_BLK_SIZE 512
+   #define LIMA_CTX_PLB_SIZE     (LIMA_CTX_PLB_MAX_BLK * LIMA_CTX_PLB_BLK_SIZE)
+   #define LIMA_CTX_PLB_GP_SIZE  (LIMA_CTX_PLB_MAX_BLK * 4)
 
-   struct lima_bo *gp_buffer;
-   #define gp_plbu_plb_offset        0x0000
-   #define gp_ctx_buffer_size        0x1000
-
-   struct lima_bo *pp_buffer;
-   #define pp_plb_offset_start       0x00000
-   /* max_screen_w/h_size = 2048, max_pp = 4, plb_stream_size = ((max >> 4)^2 + max_pp) * 16 */
-   #define pp_ctx_buffer_size        0x41000
-   #define pp_plb_offset(i, n)       (i * (pp_ctx_buffer_size / n))
-
+   struct lima_bo *plb[LIMA_CTX_PLB_MAX_NUM];
+   struct lima_bo *plb_gp_stream;
+   struct hash_table *plb_pp_stream;
+   uint32_t plb_index;
 
    struct lima_ctx_buff_state buffer_state[lima_ctx_buff_num];
 
