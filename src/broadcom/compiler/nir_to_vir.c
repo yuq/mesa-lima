@@ -1929,6 +1929,7 @@ vir_remove_thrsw(struct v3d_compile *c)
                                 vir_remove_instruction(c, inst);
                 }
         }
+        vir_calculate_live_intervals(c);
 
         c->last_thrsw = NULL;
 }
