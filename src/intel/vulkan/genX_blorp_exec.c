@@ -205,8 +205,8 @@ genX(blorp_exec)(struct blorp_batch *batch,
     * indirect fast-clear colors can cause GPU hangs if we don't stall first.
     * See genX(cmd_buffer_mi_memcpy) for more details.
     */
-   assert(params->src.clear_color_addr.buffer == NULL);
-   if (params->dst.clear_color_addr.buffer)
+   if (params->src.clear_color_addr.buffer ||
+       params->dst.clear_color_addr.buffer)
       cmd_buffer->state.pending_pipe_bits |= ANV_PIPE_CS_STALL_BIT;
 #endif
 
