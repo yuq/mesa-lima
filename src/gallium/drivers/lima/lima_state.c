@@ -88,8 +88,6 @@ lima_set_framebuffer_state(struct pipe_context *pctx,
       debug_printf("fb dim change tiled=%d/%d block=%d/%d shift=%d/%d\n",
                    fb->tiled_w, fb->tiled_h, fb->block_w, fb->block_h,
                    fb->shift_w, fb->shift_h);
-
-      fb->dirty_dim = true;
    }
 
    ctx->dirty |= LIMA_CONTEXT_DIRTY_FRAMEBUFFER;
