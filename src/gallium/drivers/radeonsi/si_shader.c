@@ -4456,8 +4456,11 @@ static void si_create_function(struct si_shader_context *ctx,
 			*fninfo->assign[i] = LLVMGetParam(ctx->main_fn, i);
 	}
 
-	si_llvm_add_attribute(ctx->main_fn, "amdgpu-32bit-address-high-bits",
-			      ctx->screen->info.address32_hi);
+	if (ctx->screen->info.address32_hi) {
+		ac_llvm_add_target_dep_function_attr(ctx->main_fn,
+						     "amdgpu-32bit-address-high-bits",
+						     ctx->screen->info.address32_hi);
+	}
 
 	if (max_workgroup_size) {
 		si_llvm_add_attribute(ctx->main_fn, "amdgpu-max-work-group-size",

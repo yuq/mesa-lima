@@ -202,11 +202,11 @@ ac_dump_module(LLVMModuleRef module)
 
 void
 ac_llvm_add_target_dep_function_attr(LLVMValueRef F,
-				     const char *name, int value)
+				     const char *name, unsigned value)
 {
 	char str[16];
 
-	snprintf(str, sizeof(str), "%i", value);
+	snprintf(str, sizeof(str), "0x%x", value);
 	LLVMAddTargetDependentFunctionAttr(F, name, str);
 }
 

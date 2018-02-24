@@ -87,7 +87,7 @@ LLVMBuilderRef ac_create_builder(LLVMContextRef ctx,
 
 void
 ac_llvm_add_target_dep_function_attr(LLVMValueRef F,
-				     const char *name, int value);
+				     const char *name, unsigned value);
 
 static inline unsigned
 ac_get_load_intr_attribs(bool can_speculate)
