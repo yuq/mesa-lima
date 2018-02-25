@@ -341,6 +341,8 @@ static void
 lima_flush_resource(struct pipe_context *pctx, struct pipe_resource *resource)
 {
    debug_checkpoint();
+
+   debug_printf("flush res=%p\n", resource);
 }
 
 void
