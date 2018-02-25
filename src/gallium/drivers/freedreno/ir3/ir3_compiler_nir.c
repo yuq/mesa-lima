@@ -1475,7 +1475,7 @@ emit_intrinsic_load_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 	unsigned base;
 
 	offset = get_src(ctx, &intr->src[0])[0];
-	base   = intr->const_index[0];
+	base   = nir_intrinsic_base(intr);
 
 	ldl = ir3_LDL(b, offset, 0, create_immed(b, intr->num_components), 0);
 	ldl->cat6.src_offset = base;
@@ -1500,8 +1500,8 @@ emit_intrinsic_store_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	value  = get_src(ctx, &intr->src[0]);
 	offset = get_src(ctx, &intr->src[1])[0];
 
-	base   = intr->const_index[0];
-	wrmask = intr->const_index[1];
+	base   = nir_intrinsic_base(intr);
+	wrmask = nir_intrinsic_write_mask(intr);
 
 	/* Combine groups of consecutive enabled channels in one write
 	 * message. We use ffs to find the first enabled channel and then ffs on
