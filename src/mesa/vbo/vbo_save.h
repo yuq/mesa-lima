@@ -62,7 +62,6 @@ struct vbo_save_copied_vtx {
  */
 struct vbo_save_vertex_list {
    GLubyte attrsz[VBO_ATTRIB_MAX];
-   GLenum16 attrtype[VBO_ATTRIB_MAX];
    GLuint vertex_size;  /**< size in GLfloats */
    struct gl_vertex_array_object *VAO[VP_MODE_MAX];
 

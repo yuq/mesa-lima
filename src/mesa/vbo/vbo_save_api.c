@@ -545,8 +545,6 @@ compile_vertex_list(struct gl_context *ctx)
     */
    STATIC_ASSERT(sizeof(node->attrsz) == sizeof(save->attrsz));
    memcpy(node->attrsz, save->attrsz, sizeof(node->attrsz));
-   STATIC_ASSERT(sizeof(node->attrtype) == sizeof(save->attrtype));
-   memcpy(node->attrtype, save->attrtype, sizeof(node->attrtype));
    node->vertex_size = save->vertex_size;
    node->buffer_offset =
       (save->buffer_map - save->vertex_store->buffer_map) * sizeof(GLfloat);
@@ -582,7 +580,7 @@ compile_vertex_list(struct gl_context *ctx)
       update_vao(ctx, vpm, &save->VAO[vpm],
                  save->vertex_store->bufferobj, buffer_offset,
                  node->vertex_size*sizeof(GLfloat), save->enabled,
-                 node->attrsz, node->attrtype, offsets);
+                 node->attrsz, save->attrtype, offsets);
       /* Reference the vao in the dlist */
       node->VAO[vpm] = NULL;
       _mesa_reference_vao(ctx, &node->VAO[vpm], save->VAO[vpm]);
