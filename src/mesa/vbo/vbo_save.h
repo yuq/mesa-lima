@@ -149,7 +149,6 @@ struct vbo_save_context {
 
    GLboolean out_of_memory;  /**< True if last VBO allocation failed */
 
-   GLuint wrap_count;
    GLbitfield replay_flags;
 
    struct _mesa_prim *prims;
