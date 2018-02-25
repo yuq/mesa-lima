@@ -213,8 +213,8 @@ vbo_save_playback_vertex_list(struct gl_context *ctx, void *data)
       assert(ctx->NewState == 0);
 
       if (node->vertex_count > 0) {
-         GLuint min_index = node->start_vertex;
-         GLuint max_index = min_index + node->vertex_count - 1;
+         GLuint min_index = _vbo_save_get_min_index(node);
+         GLuint max_index = _vbo_save_get_max_index(node);
          vbo->draw_prims(ctx,
                          node->prims,
                          node->prim_count,

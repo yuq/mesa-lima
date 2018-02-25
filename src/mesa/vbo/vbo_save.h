@@ -71,7 +71,6 @@ struct vbo_save_vertex_list {
    fi_type *current_data;
 
    GLuint buffer_offset;        /**< in bytes */
-   GLuint start_vertex;         /**< first vertex used by any primitive */
    GLuint vertex_count;         /**< number of vertices in this list */
    GLuint wrap_count;		/* number of copied vertices at start */
 
