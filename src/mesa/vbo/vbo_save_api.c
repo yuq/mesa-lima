@@ -641,6 +641,22 @@ compile_vertex_list(struct gl_context *ctx)
 
    merge_prims(node->prims, &node->prim_count);
 
+   /* Correct the primitive starts, we can only do this here as copy_vertices
+    * and convert_line_loop_to_strip above consume the uncorrected starts.
+    * On the other hand the _vbo_loopback_vertex_list call below needs the
+    * primitves to be corrected already.
+    */
+   if (aligned_vertex_buffer_offset(node)) {
+      const unsigned start_offset =
+         node->buffer_offset / (node->vertex_size * sizeof(GLfloat));
+      for (unsigned i = 0; i < node->prim_count; i++) {
+         node->prims[i].start += start_offset;
+      }
+      node->start_vertex = start_offset;
+   } else {
+      node->start_vertex = 0;
+   }
+
    /* Deal with GL_COMPILE_AND_EXECUTE:
     */
    if (ctx->ExecuteFlag) {
@@ -648,13 +664,8 @@ compile_vertex_list(struct gl_context *ctx)
 
       _glapi_set_dispatch(ctx->Exec);
 
-      const GLfloat *buffer = (const GLfloat *)
-         ((const char *) save->vertex_store->buffer_map +
-          node->buffer_offset);
-
-      vbo_loopback_vertex_list(ctx, buffer,
-                               node->attrsz, node->prims, node->prim_count,
-                               node->wrap_count, node->vertex_size);
+      /* Note that the range of referenced vertices must be mapped already */
+      _vbo_loopback_vertex_list(ctx, node);
 
       _glapi_set_dispatch(dispatch);
    }
@@ -691,23 +702,6 @@ compile_vertex_list(struct gl_context *ctx)
       save->prim_store->refcount--;
       assert(save->prim_store->refcount != 0);
       save->prim_store = alloc_prim_store();
-   }
-
-   /*
-    * If the vertex buffer offset is a multiple of the vertex size,
-    * we can use the _mesa_prim::start value to indicate where the
-    * vertices starts, instead of the buffer offset.  Also see the
-    * bind_vertex_list() function.
-    */
-   if (aligned_vertex_buffer_offset(node)) {
-      const unsigned start_offset =
-         node->buffer_offset / (node->vertex_size * sizeof(GLfloat));
-      for (unsigned i = 0; i < save->prim_count; i++) {
-         save->prims[i].start += start_offset;
-      }
-      node->start_vertex = start_offset;
-   } else {
-      node->start_vertex = 0;
    }
 
    /* Reset our structures for the next run of vertices:

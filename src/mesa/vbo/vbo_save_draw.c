@@ -144,26 +144,14 @@ static void
 loopback_vertex_list(struct gl_context *ctx,
                      const struct vbo_save_vertex_list *list)
 {
-   const char *buffer =
-      ctx->Driver.MapBufferRange(ctx, 0,
-                                 list->vertex_store->bufferobj->Size,
-                                 GL_MAP_READ_BIT, /* ? */
-                                 list->vertex_store->bufferobj,
-                                 MAP_INTERNAL);
+   struct gl_buffer_object *bo = list->VAO[0]->BufferBinding[0].BufferObj;
+   ctx->Driver.MapBufferRange(ctx, 0, bo->Size, GL_MAP_READ_BIT, /* ? */
+                              bo, MAP_INTERNAL);
 
-   unsigned buffer_offset =
-      aligned_vertex_buffer_offset(list) ? 0 : list->buffer_offset;
+   /* Note that the range of referenced vertices must be mapped already */
+   _vbo_loopback_vertex_list(ctx, list);
 
-   vbo_loopback_vertex_list(ctx,
-                            (const GLfloat *) (buffer + buffer_offset),
-                            list->attrsz,
-                            list->prims,
-                            list->prim_count,
-                            list->wrap_count,
-                            list->vertex_size);
-
-   ctx->Driver.UnmapBuffer(ctx, list->vertex_store->bufferobj,
-                           MAP_INTERNAL);
+   ctx->Driver.UnmapBuffer(ctx, bo, MAP_INTERNAL);
 }
 
 
