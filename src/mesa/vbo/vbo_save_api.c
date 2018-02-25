@@ -543,7 +543,6 @@ compile_vertex_list(struct gl_context *ctx)
 
    /* Duplicate our template, increment refcounts to the storage structs:
     */
-   node->enabled = save->enabled;
    STATIC_ASSERT(sizeof(node->attrsz) == sizeof(save->attrsz));
    memcpy(node->attrsz, save->attrsz, sizeof(node->attrsz));
    STATIC_ASSERT(sizeof(node->attrtype) == sizeof(save->attrtype));
@@ -582,7 +581,7 @@ compile_vertex_list(struct gl_context *ctx)
       /* create or reuse the vao */
       update_vao(ctx, vpm, &save->VAO[vpm],
                  save->vertex_store->bufferobj, buffer_offset,
-                 node->vertex_size*sizeof(GLfloat), node->enabled,
+                 node->vertex_size*sizeof(GLfloat), save->enabled,
                  node->attrsz, node->attrtype, offsets);
       /* Reference the vao in the dlist */
       node->VAO[vpm] = NULL;

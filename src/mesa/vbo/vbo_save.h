@@ -61,7 +61,6 @@ struct vbo_save_copied_vtx {
  * compiled using the fallback opcode mechanism provided by dlist.c.
  */
 struct vbo_save_vertex_list {
-   GLbitfield64 enabled; /**< mask of enabled vbo arrays. */
    GLubyte attrsz[VBO_ATTRIB_MAX];
    GLenum16 attrtype[VBO_ATTRIB_MAX];
    GLuint vertex_size;  /**< size in GLfloats */
