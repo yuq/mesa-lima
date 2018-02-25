@@ -527,7 +527,6 @@ compile_vertex_list(struct gl_context *ctx)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
    struct vbo_save_vertex_list *node;
-   GLintptr buffer_offset = 0;
 
    /* Allocate space for this structure in the display list currently
     * being compiled.
@@ -543,10 +542,12 @@ compile_vertex_list(struct gl_context *ctx)
 
    /* Duplicate our template, increment refcounts to the storage structs:
     */
+   const GLsizei stride = save->vertex_size*sizeof(GLfloat);
    node->vertex_size = save->vertex_size;
-   node->buffer_offset =
-      (save->buffer_map - save->vertex_store->buffer_map) * sizeof(GLfloat);
-   if (aligned_vertex_buffer_offset(node)) {
+   GLintptr buffer_offset =
+       (save->buffer_map - save->vertex_store->buffer_map) * sizeof(GLfloat);
+   GLuint start_offset = 0;
+   if (0 < buffer_offset && 0 < stride && buffer_offset % stride == 0) {
       /* The vertex size is an exact multiple of the buffer offset.
        * This means that we can use zero-based vertex attribute pointers
        * and specify the start of the primitive with the _mesa_prim::start
@@ -555,9 +556,11 @@ compile_vertex_list(struct gl_context *ctx)
        * changes in drivers.  In particular, the Gallium CSO module will
        * filter out redundant vertex buffer changes.
        */
+      /* We cannot immediately update the primitives as some methods below
+       * still need the uncorrected start vertices
+       */
+      start_offset = buffer_offset/stride;
       buffer_offset = 0;
-   } else {
-      buffer_offset = node->buffer_offset;
    }
    GLuint offsets[VBO_ATTRIB_MAX];
    for (unsigned i = 0, offset = 0; i < VBO_ATTRIB_MAX; ++i) {
@@ -596,7 +599,7 @@ compile_vertex_list(struct gl_context *ctx)
       if (current_size) {
          node->current_data = malloc(current_size * sizeof(GLfloat));
          if (node->current_data) {
-            const char *buffer = (const char *) save->vertex_store->buffer_map;
+            const char *buffer = (const char *)save->buffer_map;
             unsigned attr_offset = save->attrsz[0] * sizeof(GLfloat);
             unsigned vertex_offset = 0;
 
@@ -604,8 +607,7 @@ compile_vertex_list(struct gl_context *ctx)
                vertex_offset =
                   (node->vertex_count - 1) * node->vertex_size * sizeof(GLfloat);
 
-            memcpy(node->current_data,
-                   buffer + node->buffer_offset + vertex_offset + attr_offset,
+            memcpy(node->current_data, buffer + vertex_offset + attr_offset,
                    current_size * sizeof(GLfloat));
          } else {
             _mesa_error(ctx, GL_OUT_OF_MEMORY, "Current value allocation");
@@ -636,12 +638,8 @@ compile_vertex_list(struct gl_context *ctx)
     * On the other hand the _vbo_loopback_vertex_list call below needs the
     * primitves to be corrected already.
     */
-   if (aligned_vertex_buffer_offset(node)) {
-      const unsigned start_offset =
-         node->buffer_offset / (node->vertex_size * sizeof(GLfloat));
-      for (unsigned i = 0; i < node->prim_count; i++) {
-         node->prims[i].start += start_offset;
-      }
+   for (unsigned i = 0; i < node->prim_count; i++) {
+      node->prims[i].start += start_offset;
    }
 
    /* Deal with GL_COMPILE_AND_EXECUTE:

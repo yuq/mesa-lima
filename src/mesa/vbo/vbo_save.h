@@ -70,7 +70,6 @@ struct vbo_save_vertex_list {
     */
    fi_type *current_data;
 
-   GLuint buffer_offset;        /**< in bytes */
    GLuint vertex_count;         /**< number of vertices in this list */
    GLuint wrap_count;		/* number of copied vertices at start */
 
@@ -79,19 +78,6 @@ struct vbo_save_vertex_list {
 
    struct vbo_save_primitive_store *prim_store;
 };
-
-
-/**
- * Is the vertex list's buffer offset an exact multiple of the
- * vertex size (in bytes)?  This is used to check for a vertex array /
- * drawing optimization.
- */
-static inline bool
-aligned_vertex_buffer_offset(const struct vbo_save_vertex_list *node)
-{
-   unsigned vertex_size = node->vertex_size * sizeof(GLfloat); /* in bytes */
-   return vertex_size != 0 && node->buffer_offset % vertex_size == 0;
-}
 
 
 /**
