@@ -42,6 +42,42 @@
 #include "vbo_private.h"
 
 
+static void
+copy_vao(struct gl_context *ctx, const struct gl_vertex_array_object *vao,
+         GLbitfield mask, GLbitfield state, int shift, fi_type **data)
+{
+   struct vbo_context *vbo = vbo_context(ctx);
+
+   mask &= vao->_Enabled;
+   while (mask) {
+      const int i = u_bit_scan(&mask);
+      const struct gl_array_attributes *attrib = &vao->VertexAttrib[i];
+      struct gl_vertex_array *currval = &vbo->currval[shift + i];
+      const GLubyte size = attrib->Size;
+      const GLenum16 type = attrib->Type;
+      fi_type tmp[4];
+
+      COPY_CLEAN_4V_TYPE_AS_UNION(tmp, size, *data, type);
+
+      if (type != currval->Type ||
+          memcmp(currval->Ptr, tmp, 4 * sizeof(GLfloat)) != 0) {
+         memcpy((fi_type*)currval->Ptr, tmp, 4 * sizeof(GLfloat));
+
+         currval->Size = size;
+         currval->_ElementSize = size * sizeof(GLfloat);
+         currval->Type = type;
+         currval->Integer = vbo_attrtype_to_integer_flag(type);
+         currval->Doubles = vbo_attrtype_to_double_flag(type);
+         currval->Normalized = GL_FALSE;
+         currval->Format = GL_RGBA;
+
+         ctx->NewState |= state;
+      }
+
+      *data += size;
+   }
+}
+
 /**
  * After playback, copy everything but the position from the
  * last vertex to the saved state
@@ -50,64 +86,16 @@ static void
 playback_copy_to_current(struct gl_context *ctx,
                          const struct vbo_save_vertex_list *node)
 {
-   struct vbo_context *vbo = vbo_context(ctx);
-   fi_type vertex[VBO_ATTRIB_MAX * 4];
-   fi_type *data;
-   GLbitfield64 mask;
-
-   if (node->current_size == 0)
+   if (!node->current_data)
       return;
 
-   if (node->current_data) {
-      data = node->current_data;
-   }
-   else {
-      /* Position of last vertex */
-      const GLuint pos = node->vertex_count > 0 ? node->vertex_count - 1 : 0;
-      /* Offset to last vertex in the vertex buffer */
-      const GLuint offset = node->buffer_offset
-         + pos * node->vertex_size * sizeof(GLfloat);
-
-      data = vertex;
-
-      ctx->Driver.GetBufferSubData(ctx, offset,
-                                   node->vertex_size * sizeof(GLfloat),
-                                   data, node->vertex_store->bufferobj);
-
-      data += node->attrsz[0]; /* skip vertex position */
-   }
-
-   mask = node->enabled & (~BITFIELD64_BIT(VBO_ATTRIB_POS));
-   while (mask) {
-      const int i = u_bit_scan64(&mask);
-      fi_type *current = (fi_type *)vbo->currval[i].Ptr;
-      fi_type tmp[4];
-      assert(node->attrsz[i]);
-
-      COPY_CLEAN_4V_TYPE_AS_UNION(tmp,
-                                  node->attrsz[i],
-                                  data,
-                                  node->attrtype[i]);
-
-      if (node->attrtype[i] != vbo->currval[i].Type ||
-          memcmp(current, tmp, 4 * sizeof(GLfloat)) != 0) {
-         memcpy(current, tmp, 4 * sizeof(GLfloat));
-
-         vbo->currval[i].Size = node->attrsz[i];
-         vbo->currval[i]._ElementSize = vbo->currval[i].Size * sizeof(GLfloat);
-         vbo->currval[i].Type = node->attrtype[i];
-         vbo->currval[i].Integer =
-            vbo_attrtype_to_integer_flag(node->attrtype[i]);
-
-         if (i >= VBO_ATTRIB_FIRST_MATERIAL &&
-             i <= VBO_ATTRIB_LAST_MATERIAL)
-            ctx->NewState |= _NEW_LIGHT;
-
-         ctx->NewState |= _NEW_CURRENT_ATTRIB;
-      }
-
-      data += node->attrsz[i];
-   }
+   fi_type *data = node->current_data;
+   /* Copy conventional attribs and generics except pos */
+   copy_vao(ctx, node->VAO[VP_MODE_SHADER], ~VERT_BIT_POS & VERT_BIT_ALL,
+            _NEW_CURRENT_ATTRIB, 0, &data);
+   /* Copy materials */
+   copy_vao(ctx, node->VAO[VP_MODE_FF], VERT_BIT_MAT_ALL,
+            _NEW_CURRENT_ATTRIB | _NEW_LIGHT, VBO_MATERIAL_SHIFT, &data);
 
    /* Colormaterial -- this kindof sucks.
     */

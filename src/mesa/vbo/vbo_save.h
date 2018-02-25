@@ -72,7 +72,6 @@ struct vbo_save_vertex_list {
     * map/unmap of the VBO when updating GL current data.
     */
    fi_type *current_data;
-   GLuint current_size;
 
    GLuint buffer_offset;        /**< in bytes */
    GLuint start_vertex;         /**< first vertex used by any primitive */
