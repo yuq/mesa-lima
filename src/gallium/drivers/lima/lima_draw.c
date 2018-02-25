@@ -866,14 +866,9 @@ lima_finish_plbu_cmd(struct lima_context *ctx)
    ctx->plbu_cmd_array.size += i * 4;
 }
 
-static void
-lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
-           unsigned flags)
+void
+lima_flush(struct lima_context *ctx)
 {
-   debug_checkpoint();
-   debug_printf("%s: flags=%x\n", __FUNCTION__, flags);
-
-   struct lima_context *ctx = lima_context(pctx);
    if (!ctx->num_draws) {
       debug_printf("%s: do nothing\n", __FUNCTION__);
       return;
@@ -896,7 +891,7 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
    memcpy(plbu_cmd, util_dynarray_begin(&ctx->plbu_cmd_array), plbu_cmd_size);
    util_dynarray_clear(&ctx->plbu_cmd_array);
 
-   struct lima_screen *screen = lima_screen(pctx->screen);
+   struct lima_screen *screen = lima_screen(ctx->base.screen);
    lima_submit_add_bo(ctx->gp_submit, ctx->plb_gp_stream, LIMA_SUBMIT_BO_READ);
    lima_submit_add_bo(ctx->gp_submit, ctx->plb[ctx->plb_index], LIMA_SUBMIT_BO_WRITE);
    lima_submit_add_bo(ctx->gp_submit, screen->gp_buffer, LIMA_SUBMIT_BO_READ);
@@ -1018,10 +1013,21 @@ lima_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
    ctx->plb_index = (ctx->plb_index + 1) % lima_ctx_num_plb;
 }
 
+static void
+lima_pipe_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
+                unsigned flags)
+{
+   debug_checkpoint();
+   debug_printf("%s: flags=%x\n", __FUNCTION__, flags);
+
+   struct lima_context *ctx = lima_context(pctx);
+   lima_flush(ctx);
+}
+
 void
 lima_draw_init(struct lima_context *ctx)
 {
    ctx->base.clear = lima_clear;
    ctx->base.draw_vbo = lima_draw_vbo;
-   ctx->base.flush = lima_flush;
+   ctx->base.flush = lima_pipe_flush;
 }
