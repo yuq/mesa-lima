@@ -222,7 +222,6 @@ alloc_vertex_store(struct gl_context *ctx)
 
    vertex_store->buffer_map = NULL;
    vertex_store->used = 0;
-   vertex_store->refcount = 1;
 
    return vertex_store;
 }
@@ -574,7 +573,6 @@ compile_vertex_list(struct gl_context *ctx)
    node->wrap_count = save->copied.nr;
    node->prims = save->prims;
    node->prim_count = save->prim_count;
-   node->vertex_store = save->vertex_store;
    node->prim_store = save->prim_store;
 
    /* Create a pair of VAOs for the possible VERTEX_PROCESSING_MODEs
@@ -583,7 +581,7 @@ compile_vertex_list(struct gl_context *ctx)
    for (gl_vertex_processing_mode vpm = VP_MODE_FF; vpm < VP_MODE_MAX; ++vpm) {
       /* create or reuse the vao */
       update_vao(ctx, vpm, &save->VAO[vpm],
-                 node->vertex_store->bufferobj, buffer_offset,
+                 save->vertex_store->bufferobj, buffer_offset,
                  node->vertex_size*sizeof(GLfloat), node->enabled,
                  node->attrsz, node->attrtype, offsets);
       /* Reference the vao in the dlist */
@@ -591,7 +589,6 @@ compile_vertex_list(struct gl_context *ctx)
       _mesa_reference_vao(ctx, &node->VAO[vpm], save->VAO[vpm]);
    }
 
-   node->vertex_store->refcount++;
    node->prim_store->refcount++;
 
    if (node->prims[0].no_current_update) {
@@ -680,8 +677,7 @@ compile_vertex_list(struct gl_context *ctx)
 
       /* Release old reference:
        */
-      save->vertex_store->refcount--;
-      assert(save->vertex_store->refcount != 0);
+      free_vertex_store(ctx, save->vertex_store);
       save->vertex_store = NULL;
 
       /* Allocate and map new store:
@@ -1817,9 +1813,6 @@ vbo_destroy_vertex_list(struct gl_context *ctx, void *data)
    for (gl_vertex_processing_mode vpm = VP_MODE_FF; vpm < VP_MODE_MAX; ++vpm)
       _mesa_reference_vao(ctx, &node->VAO[vpm], NULL);
 
-   if (--node->vertex_store->refcount == 0)
-      free_vertex_store(ctx, node->vertex_store);
-
    if (--node->prim_store->refcount == 0)
       free(node->prim_store);
 
@@ -1833,8 +1826,7 @@ vbo_print_vertex_list(struct gl_context *ctx, void *data, FILE *f)
 {
    struct vbo_save_vertex_list *node = (struct vbo_save_vertex_list *) data;
    GLuint i;
-   struct gl_buffer_object *buffer = node->vertex_store ?
-      node->vertex_store->bufferobj : NULL;
+   struct gl_buffer_object *buffer = node->VAO[0]->BufferBinding[0].BufferObj;
    (void) ctx;
 
    fprintf(f, "VBO-VERTEX-LIST, %u vertices, %d primitives, %d vertsize, "

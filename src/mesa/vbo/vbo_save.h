@@ -81,7 +81,6 @@ struct vbo_save_vertex_list {
    struct _mesa_prim *prims;
    GLuint prim_count;
 
-   struct vbo_save_vertex_store *vertex_store;
    struct vbo_save_primitive_store *prim_store;
 };
 
@@ -163,15 +162,14 @@ _vbo_save_get_vertex_count(const struct vbo_save_vertex_list *node)
 
 #define VBO_SAVE_FALLBACK    0x10000000
 
-/* Storage to be shared among several vertex_lists.
- */
 struct vbo_save_vertex_store {
    struct gl_buffer_object *bufferobj;
    fi_type *buffer_map;
    GLuint used;           /**< Number of 4-byte words used in buffer */
-   GLuint refcount;
 };
 
+/* Storage to be shared among several vertex_lists.
+ */
 struct vbo_save_primitive_store {
    struct _mesa_prim prims[VBO_SAVE_PRIM_SIZE];
    GLuint used;
