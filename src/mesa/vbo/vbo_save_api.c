@@ -529,8 +529,6 @@ compile_vertex_list(struct gl_context *ctx)
    struct vbo_save_context *save = &vbo_context(ctx)->save;
    struct vbo_save_vertex_list *node;
    GLintptr buffer_offset = 0;
-   GLuint offset;
-   unsigned i;
 
    /* Allocate space for this structure in the display list currently
     * being compiled.
@@ -563,13 +561,14 @@ compile_vertex_list(struct gl_context *ctx)
        * changes in drivers.  In particular, the Gallium CSO module will
        * filter out redundant vertex buffer changes.
        */
-      offset = 0;
+      buffer_offset = 0;
    } else {
-      offset = node->buffer_offset;
+      buffer_offset = node->buffer_offset;
    }
-   for (i = 0; i < VBO_ATTRIB_MAX; ++i) {
-      node->offsets[i] = offset;
-      offset += node->attrsz[i] * sizeof(GLfloat);
+   GLuint offsets[VBO_ATTRIB_MAX];
+   for (unsigned i = 0, offset = 0; i < VBO_ATTRIB_MAX; ++i) {
+      offsets[i] = offset;
+      offset += save->attrsz[i] * sizeof(GLfloat);
    }
    node->vertex_count = save->vert_count;
    node->wrap_count = save->copied.nr;
@@ -586,7 +585,7 @@ compile_vertex_list(struct gl_context *ctx)
       update_vao(ctx, vpm, &save->VAO[vpm],
                  node->vertex_store->bufferobj, buffer_offset,
                  node->vertex_size*sizeof(GLfloat), node->enabled,
-                 node->attrsz, node->attrtype, node->offsets);
+                 node->attrsz, node->attrtype, offsets);
       /* Reference the vao in the dlist */
       node->VAO[vpm] = NULL;
       _mesa_reference_vao(ctx, &node->VAO[vpm], save->VAO[vpm]);
