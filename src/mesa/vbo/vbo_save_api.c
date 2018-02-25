@@ -543,8 +543,6 @@ compile_vertex_list(struct gl_context *ctx)
 
    /* Duplicate our template, increment refcounts to the storage structs:
     */
-   STATIC_ASSERT(sizeof(node->attrsz) == sizeof(save->attrsz));
-   memcpy(node->attrsz, save->attrsz, sizeof(node->attrsz));
    node->vertex_size = save->vertex_size;
    node->buffer_offset =
       (save->buffer_map - save->vertex_store->buffer_map) * sizeof(GLfloat);
@@ -580,7 +578,7 @@ compile_vertex_list(struct gl_context *ctx)
       update_vao(ctx, vpm, &save->VAO[vpm],
                  save->vertex_store->bufferobj, buffer_offset,
                  node->vertex_size*sizeof(GLfloat), save->enabled,
-                 node->attrsz, save->attrtype, offsets);
+                 save->attrsz, save->attrtype, offsets);
       /* Reference the vao in the dlist */
       node->VAO[vpm] = NULL;
       _mesa_reference_vao(ctx, &node->VAO[vpm], save->VAO[vpm]);
@@ -592,14 +590,14 @@ compile_vertex_list(struct gl_context *ctx)
       node->current_data = NULL;
    }
    else {
-      GLuint current_size = node->vertex_size - node->attrsz[0];
+      GLuint current_size = node->vertex_size - save->attrsz[0];
       node->current_data = NULL;
 
       if (current_size) {
          node->current_data = malloc(current_size * sizeof(GLfloat));
          if (node->current_data) {
             const char *buffer = (const char *) save->vertex_store->buffer_map;
-            unsigned attr_offset = node->attrsz[0] * sizeof(GLfloat);
+            unsigned attr_offset = save->attrsz[0] * sizeof(GLfloat);
             unsigned vertex_offset = 0;
 
             if (node->vertex_count)
@@ -615,7 +613,7 @@ compile_vertex_list(struct gl_context *ctx)
       }
    }
 
-   assert(node->attrsz[VBO_ATTRIB_POS] != 0 || node->vertex_count == 0);
+   assert(save->attrsz[VBO_ATTRIB_POS] != 0 || node->vertex_count == 0);
 
    if (save->dangling_attr_ref)
       ctx->ListState.CurrentList->Flags |= DLIST_DANGLING_REFS;
