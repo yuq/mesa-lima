@@ -573,7 +573,6 @@ compile_vertex_list(struct gl_context *ctx)
    }
    node->vertex_count = save->vert_count;
    node->wrap_count = save->copied.nr;
-   node->dangling_attr_ref = save->dangling_attr_ref;
    node->prims = save->prims;
    node->prim_count = save->prim_count;
    node->vertex_store = save->vertex_store;
