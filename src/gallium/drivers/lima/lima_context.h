@@ -262,4 +262,6 @@ void lima_query_init(struct lima_context *ctx);
 struct pipe_context *
 lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags);
 
+void lima_flush(struct lima_context *ctx);
+
 #endif

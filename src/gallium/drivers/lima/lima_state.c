@@ -39,10 +39,14 @@ lima_set_framebuffer_state(struct pipe_context *pctx,
 {
    debug_checkpoint();
 
-   debug_printf("%s: psurf color=%p z=%p\n", __func__,
-                framebuffer->cbufs[0], framebuffer->zsbuf);
+   debug_printf("psurf color=%p z=%p\n", framebuffer->cbufs[0],
+                framebuffer->zsbuf);
 
    struct lima_context *ctx = lima_context(pctx);
+
+   /* submit need framebuffer info, flush before change it */
+   lima_flush(ctx);
+
    struct lima_context_framebuffer *fb = &ctx->framebuffer;
 
    pipe_surface_reference(&fb->cbuf, framebuffer->cbufs[0]);
