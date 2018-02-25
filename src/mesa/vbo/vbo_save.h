@@ -61,7 +61,6 @@ struct vbo_save_copied_vtx {
  * compiled using the fallback opcode mechanism provided by dlist.c.
  */
 struct vbo_save_vertex_list {
-   GLuint vertex_size;  /**< size in GLfloats */
    struct gl_vertex_array_object *VAO[VP_MODE_MAX];
 
    /* Copy of the final vertex from node->vertex_store->bufferobj.

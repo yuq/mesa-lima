@@ -543,7 +543,6 @@ compile_vertex_list(struct gl_context *ctx)
    /* Duplicate our template, increment refcounts to the storage structs:
     */
    const GLsizei stride = save->vertex_size*sizeof(GLfloat);
-   node->vertex_size = save->vertex_size;
    GLintptr buffer_offset =
        (save->buffer_map - save->vertex_store->buffer_map) * sizeof(GLfloat);
    GLuint start_offset = 0;
@@ -579,9 +578,8 @@ compile_vertex_list(struct gl_context *ctx)
    for (gl_vertex_processing_mode vpm = VP_MODE_FF; vpm < VP_MODE_MAX; ++vpm) {
       /* create or reuse the vao */
       update_vao(ctx, vpm, &save->VAO[vpm],
-                 save->vertex_store->bufferobj, buffer_offset,
-                 node->vertex_size*sizeof(GLfloat), save->enabled,
-                 save->attrsz, save->attrtype, offsets);
+                 save->vertex_store->bufferobj, buffer_offset, stride,
+                 save->enabled, save->attrsz, save->attrtype, offsets);
       /* Reference the vao in the dlist */
       node->VAO[vpm] = NULL;
       _mesa_reference_vao(ctx, &node->VAO[vpm], save->VAO[vpm]);
@@ -593,7 +591,7 @@ compile_vertex_list(struct gl_context *ctx)
       node->current_data = NULL;
    }
    else {
-      GLuint current_size = node->vertex_size - save->attrsz[0];
+      GLuint current_size = save->vertex_size - save->attrsz[0];
       node->current_data = NULL;
 
       if (current_size) {
@@ -604,8 +602,7 @@ compile_vertex_list(struct gl_context *ctx)
             unsigned vertex_offset = 0;
 
             if (node->vertex_count)
-               vertex_offset =
-                  (node->vertex_count - 1) * node->vertex_size * sizeof(GLfloat);
+               vertex_offset = (node->vertex_count - 1) * stride;
 
             memcpy(node->current_data, buffer + vertex_offset + attr_offset,
                    current_size * sizeof(GLfloat));
@@ -1817,11 +1814,12 @@ vbo_print_vertex_list(struct gl_context *ctx, void *data, FILE *f)
    struct vbo_save_vertex_list *node = (struct vbo_save_vertex_list *) data;
    GLuint i;
    struct gl_buffer_object *buffer = node->VAO[0]->BufferBinding[0].BufferObj;
+   const GLuint vertex_size = _vbo_save_get_stride(node)/sizeof(GLfloat);
    (void) ctx;
 
    fprintf(f, "VBO-VERTEX-LIST, %u vertices, %d primitives, %d vertsize, "
            "buffer %p\n",
-           node->vertex_count, node->prim_count, node->vertex_size,
+           node->vertex_count, node->prim_count, vertex_size,
            buffer);
 
    for (i = 0; i < node->prim_count; i++) {
