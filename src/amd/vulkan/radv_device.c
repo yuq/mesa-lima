@@ -880,7 +880,6 @@ static void radv_get_physical_device_queue_family_properties(
 	int num_queue_families = 1;
 	int idx;
 	if (pdevice->rad_info.num_compute_rings > 0 &&
-	    pdevice->rad_info.chip_class >= CIK &&
 	    !(pdevice->instance->debug_flags & RADV_DEBUG_NO_COMPUTE_QUEUE))
 		num_queue_families++;
 
@@ -907,7 +906,6 @@ static void radv_get_physical_device_queue_family_properties(
 	}
 
 	if (pdevice->rad_info.num_compute_rings > 0 &&
-	    pdevice->rad_info.chip_class >= CIK &&
 	    !(pdevice->instance->debug_flags & RADV_DEBUG_NO_COMPUTE_QUEUE)) {
 		if (*pCount > idx) {
 			*pQueueFamilyProperties[idx] = (VkQueueFamilyProperties) {
