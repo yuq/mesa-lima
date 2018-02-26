@@ -67,7 +67,7 @@ from operator import itemgetter
 
 #include <stdint.h>
 
-#include "common/gen_device_info.h"
+#include "dev/gen_device_info.h"
 #include "util/macros.h"
 
 <%def name="emit_per_gen_prop_func(item, prop)">

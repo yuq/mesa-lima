@@ -27,7 +27,7 @@
 #include <assert.h>
 #include <strings.h>
 
-#include "common/gen_device_info.h"
+#include "dev/gen_device_info.h"
 #include "util/macros.h"
 
 #include "isl.h"

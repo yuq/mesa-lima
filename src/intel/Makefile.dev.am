@@ -1,4 +1,4 @@
-# Copyright 2015-2017 Intel Corporation
+# Copyright © 2016 Intel Corporation
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -19,49 +19,13 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-noinst_PROGRAMS += \
-	tools/aubinator \
-	tools/aubinator_error_decode
+noinst_LTLIBRARIES += dev/libintel_dev.la
 
-tools_aubinator_SOURCES = \
-	tools/aubinator.c \
-	tools/disasm.c \
-	tools/gen_batch_decoder.c \
-	tools/gen_disasm.h \
-	tools/intel_aub.h
+dev_libintel_dev_la_CFLAGS = $(AM_CFLAGS) $(LIBDRM_CFLAGS) $(EXPAT_CFLAGS)
+dev_libintel_dev_la_SOURCES = $(DEV_FILES)
+dev_libintel_dev_la_LIBADD = $(EXPAT_LIBS)
 
-tools_aubinator_CFLAGS = \
-	$(AM_CFLAGS) \
-	$(ZLIB_CFLAGS)
-
-tools_aubinator_LDADD = \
-	common/libintel_common.la \
-	compiler/libintel_compiler.la \
-	dev/libintel_dev.la \
-	isl/libisl.la \
-	$(top_builddir)/src/util/libmesautil.la \
-	$(PER_GEN_LIBS) \
-	$(PTHREAD_LIBS) \
-	$(DLOPEN_LIBS) \
-	$(ZLIB_LIBS) \
-	-lm
-
-
-tools_aubinator_error_decode_SOURCES = \
-	tools/aubinator_error_decode.c \
-	tools/disasm.c \
-	tools/gen_batch_decoder.c \
-	tools/gen_disasm.h
-
-tools_aubinator_error_decode_LDADD = \
-	common/libintel_common.la \
-	compiler/libintel_compiler.la \
-	dev/libintel_dev.la \
-	isl/libisl.la \
-	$(top_builddir)/src/util/libmesautil.la \
-	$(PTHREAD_LIBS) \
-	$(ZLIB_LIBS)
-
-tools_aubinator_error_decode_CFLAGS = \
-	$(AM_CFLAGS) \
-	$(ZLIB_CFLAGS)
+if HAVE_PLATFORM_ANDROID
+dev_libintel_dev_la_CFLAGS += $(ANDROID_CFLAGS)
+dev_libintel_dev_la_LIBADD += $(ANDROID_LIBS)
+endif

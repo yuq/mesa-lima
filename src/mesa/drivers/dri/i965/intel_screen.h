@@ -34,7 +34,7 @@
 #include "isl/isl.h"
 #include "dri_util.h"
 #include "brw_bufmgr.h"
-#include "common/gen_device_info.h"
+#include "dev/gen_device_info.h"
 #include "i915_drm.h"
 #include "util/xmlconfig.h"
 

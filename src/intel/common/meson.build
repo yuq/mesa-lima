@@ -26,8 +26,6 @@ files_libintel_common = files(
   'gen_debug.h',
   'gen_decoder.c',
   'gen_decoder.h',
-  'gen_device_info.c',
-  'gen_device_info.h',
   'gen_l3_config.c',
   'gen_l3_config.h',
   'gen_urb_config.c',

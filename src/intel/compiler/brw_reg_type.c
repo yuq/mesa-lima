@@ -23,7 +23,7 @@
 
 #include "brw_reg.h"
 #include "brw_eu_defines.h"
-#include "common/gen_device_info.h"
+#include "dev/gen_device_info.h"
 
 #define INVALID (-1)
 

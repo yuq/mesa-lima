@@ -28,7 +28,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "common/gen_device_info.h"
+#include "dev/gen_device_info.h"
 #include "util/hash_table.h"
 
 #ifdef __cplusplus

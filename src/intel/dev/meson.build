@@ -18,15 +18,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_intel = include_directories('.')
+# TODO: android?
 
-subdir('blorp')
-subdir('dev')
-subdir('genxml')
-subdir('common')
-subdir('isl')
-subdir('compiler')
-subdir('tools')
-if with_intel_vk
-  subdir('vulkan')
-endif
+files_libintel_dev = files(
+  'gen_device_info.c',
+  'gen_device_info.h',
+)
+
+libintel_dev = static_library(
+  ['intel_dev'],
+  files_libintel_dev,
+  include_directories : [inc_common, inc_intel],
+  c_args : [c_vis_args, no_override_init_args],
+)

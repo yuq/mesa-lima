@@ -152,6 +152,7 @@ VULKAN_LIB_DEPS = \
 	$(VULKAN_PER_GEN_LIBS) \
 	compiler/libintel_compiler.la \
 	common/libintel_common.la \
+	dev/libintel_dev.la \
 	isl/libisl.la \
 	blorp/libblorp.la \
 	$(top_builddir)/src/vulkan/libvulkan_util.la \

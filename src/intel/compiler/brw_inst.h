@@ -36,7 +36,7 @@
 
 #include "brw_eu_defines.h"
 #include "brw_reg_type.h"
-#include "common/gen_device_info.h"
+#include "dev/gen_device_info.h"
 
 #ifdef __cplusplus
 extern "C" {

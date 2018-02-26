@@ -80,7 +80,7 @@ check_PROGRAMS += isl/tests/isl_surf_get_image_offset_test
 TESTS += $(check_PROGRAMS)
 
 isl_tests_isl_surf_get_image_offset_test_LDADD = \
-	common/libintel_common.la \
+	dev/libintel_dev.la \
 	isl/libisl.la \
 	-lm
 

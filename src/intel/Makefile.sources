@@ -14,8 +14,6 @@ COMMON_FILES = \
 	common/gen_decoder.c \
 	common/gen_decoder.h \
 	common/gen_defines.h \
-	common/gen_device_info.c \
-	common/gen_device_info.h \
 	common/gen_l3_config.c \
 	common/gen_l3_config.h \
 	common/gen_urb_config.c \
@@ -123,6 +121,10 @@ COMPILER_FILES = \
 
 COMPILER_GENERATED_FILES = \
 	compiler/brw_nir_trig_workarounds.c
+
+DEV_FILES = \
+	dev/gen_device_info.c \
+	dev/gen_device_info.h
 
 GENXML_XML_FILES = \
 	genxml/gen4.xml \

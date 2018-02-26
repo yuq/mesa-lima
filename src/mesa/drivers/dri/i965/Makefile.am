@@ -99,6 +99,7 @@ libi965_dri_la_SOURCES = \
 	$(i965_oa_GENERATED_FILES)
 libi965_dri_la_LIBADD = \
 	$(top_builddir)/src/intel/common/libintel_common.la \
+	$(top_builddir)/src/intel/dev/libintel_dev.la \
 	$(top_builddir)/src/intel/isl/libisl.la \
 	$(top_builddir)/src/intel/compiler/libintel_compiler.la \
 	$(top_builddir)/src/intel/blorp/libblorp.la \
