@@ -1169,7 +1169,6 @@ void DrawInstanced(
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
     RDTSC_BEGIN(APIDraw, pDC->drawId);
-    AR_API_EVENT(DrawInstancedEvent(pDC->drawId, topology, numVertices, startVertex, numInstances, startInstance));
 
     uint32_t maxVertsPerDraw = MaxVertsPerDraw(pDC, numVertices, topology);
     uint32_t primsPerDraw = GetNumPrims(topology, maxVertsPerDraw);
@@ -1221,7 +1220,8 @@ void DrawInstanced(
         //enqueue DC
         QueueDraw(pContext);
 
-        AR_API_EVENT(DrawInstancedSplitEvent(pDC->drawId));
+        AR_API_EVENT(DrawInstancedEvent(pDC->drawId, topology, numVertsForDraw, startVertex, numInstances,
+            startInstance, pState->tsState.tsEnable, pState->gsState.gsEnable, pState->soState.soEnable, draw));
 
         remainingVerts -= numVertsForDraw;
         draw++;
@@ -1297,7 +1297,6 @@ void DrawIndexedInstance(
     API_STATE* pState = &pDC->pState->state;
 
     RDTSC_BEGIN(APIDrawIndexed, pDC->drawId);
-    AR_API_EVENT(DrawIndexedInstancedEvent(pDC->drawId, topology, numIndices, indexOffset, baseVertex, numInstances, startInstance));
 
     uint32_t maxIndicesPerDraw = MaxVertsPerDraw(pDC, numIndices, topology);
     uint32_t primsPerDraw = GetNumPrims(topology, maxIndicesPerDraw);
@@ -1366,7 +1365,8 @@ void DrawIndexedInstance(
         //enqueue DC
         QueueDraw(pContext);
 
-        AR_API_EVENT(DrawIndexedInstancedSplitEvent(pDC->drawId));
+        AR_API_EVENT(DrawIndexedInstancedEvent(pDC->drawId, topology, numIndicesForDraw, indexOffset, baseVertex,
+            numInstances, startInstance, pState->tsState.tsEnable, pState->gsState.gsEnable, pState->soState.soEnable, draw));
 
         pIB += maxIndicesPerDraw * indexSize;
         remainingIndices -= numIndicesForDraw;

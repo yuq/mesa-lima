@@ -85,28 +85,18 @@ namespace ArchRast
 
         virtual void Handle(const DrawInstancedEvent& event)
         {
-            DrawInfoEvent e(event.data.drawId, ArchRast::Instanced, event.data.topology, event.data.numVertices, 0, 0, event.data.startVertex, event.data.numInstances, event.data.startInstance);
+            DrawInfoEvent e(event.data.drawId, ArchRast::Instanced, event.data.topology, 
+                event.data.numVertices, 0, 0, event.data.startVertex, event.data.numInstances, 
+                event.data.startInstance, event.data.tsEnable, event.data.gsEnable, event.data.soEnable, event.data.splitId);
 
             EventHandlerFile::Handle(e);
         }
 
         virtual void Handle(const DrawIndexedInstancedEvent& event)
         {
-            DrawInfoEvent e(event.data.drawId, ArchRast::IndexedInstanced, event.data.topology, 0, event.data.numIndices, event.data.indexOffset, event.data.baseVertex, event.data.numInstances, event.data.startInstance);
-
-            EventHandlerFile::Handle(e);
-        }
-
-        virtual void Handle(const DrawInstancedSplitEvent& event)
-        {
-            DrawInfoEvent e(event.data.drawId, ArchRast::InstancedSplit, 0, 0, 0, 0, 0, 0, 0);
-
-            EventHandlerFile::Handle(e);
-        }
-
-        virtual void Handle(const DrawIndexedInstancedSplitEvent& event)
-        {
-            DrawInfoEvent e(event.data.drawId, ArchRast::IndexedInstancedSplit, 0, 0, 0, 0, 0, 0, 0);
+            DrawInfoEvent e(event.data.drawId, ArchRast::IndexedInstanced, event.data.topology, 0,
+                event.data.numIndices, event.data.indexOffset, event.data.baseVertex, event.data.numInstances,
+                event.data.startInstance, event.data.tsEnable, event.data.gsEnable, event.data.soEnable, event.data.splitId);
 
             EventHandlerFile::Handle(e);
         }

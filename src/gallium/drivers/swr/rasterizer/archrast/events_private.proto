@@ -128,6 +128,10 @@ event DrawInstancedEvent
     int32_t  startVertex;
     uint32_t numInstances;
     uint32_t startInstance;
+    uint32_t tsEnable;
+    uint32_t gsEnable;
+    uint32_t soEnable;
+    uint32_t splitId; // Split draw count or id.
 };
 
 event DrawIndexedInstancedEvent
@@ -139,16 +143,8 @@ event DrawIndexedInstancedEvent
     int32_t  baseVertex;
     uint32_t numInstances;
     uint32_t startInstance;
-};
-
-///@brief API Stat: Split draw event for DrawInstanced. In certain cases, Rasty can split draws up into smaller draws.
-event DrawInstancedSplitEvent
-{
-    uint32_t drawId;
-};
-
-///@brief API Stat: Split draw event for DrawIndexedInstanced.
-event DrawIndexedInstancedSplitEvent
-{
-    uint32_t drawId;
+    uint32_t tsEnable;
+    uint32_t gsEnable;
+    uint32_t soEnable;
+    uint32_t splitId; // Split draw count or id.
 };

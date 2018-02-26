@@ -48,6 +48,10 @@ event DrawInfoEvent
     int32_t  baseVertex;
     uint32_t numInstances;
     uint32_t startInstance;
+    uint32_t tsEnable;
+    uint32_t gsEnable;
+    uint32_t soEnable;
+    uint32_t splitId; // Split draw count or id.
 };
 
 event DispatchEvent
