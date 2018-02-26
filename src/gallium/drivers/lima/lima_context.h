@@ -204,6 +204,7 @@ struct lima_context {
    struct lima_bo *plb[LIMA_CTX_PLB_MAX_NUM];
    struct lima_bo *plb_gp_stream;
    struct hash_table *plb_pp_stream;
+   struct lima_ctx_plb_pp_stream *current_plb_pp_stream;
    uint32_t plb_index;
 
    struct lima_ctx_buff_state buffer_state[lima_ctx_buff_num];
@@ -263,5 +264,7 @@ struct pipe_context *
 lima_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags);
 
 void lima_flush(struct lima_context *ctx);
+
+bool lima_need_flush(struct lima_context *ctx, struct lima_bo *bo, bool write);
 
 #endif
