@@ -2316,7 +2316,7 @@ do_untyped_vector_read(const fs_builder &bld,
          shuffle_32bit_load_result_to_16bit_data(bld,
                retype(dest, BRW_REGISTER_TYPE_W),
                retype(read_result, BRW_REGISTER_TYPE_D),
-               num_components);
+               0, num_components);
       } else {
          assert(num_components == 1);
          /* scalar 16-bit are read using one byte_scattered_read message */
@@ -4912,6 +4912,7 @@ void
 shuffle_32bit_load_result_to_16bit_data(const fs_builder &bld,
                                         const fs_reg &dst,
                                         const fs_reg &src,
+                                        uint32_t first_component,
                                         uint32_t components)
 {
    assert(type_sz(src.type) == 4);
@@ -4926,7 +4927,8 @@ shuffle_32bit_load_result_to_16bit_data(const fs_builder &bld,
 
    for (unsigned i = 0; i < components; i++) {
       const fs_reg component_i =
-         subscript(offset(src, bld, i / 2), dst.type, i % 2);
+         subscript(offset(src, bld, (first_component + i) / 2), dst.type,
+                   (first_component + i) % 2);
 
       bld.MOV(offset(tmp, bld, i % 2), component_i);
 

@@ -505,6 +505,7 @@ fs_reg shuffle_64bit_data_for_32bit_write(const brw::fs_builder &bld,
 void shuffle_32bit_load_result_to_16bit_data(const brw::fs_builder &bld,
                                              const fs_reg &dst,
                                              const fs_reg &src,
+                                             uint32_t first_component,
                                              uint32_t components);
 
 void shuffle_16bit_data_for_32bit_write(const brw::fs_builder &bld,

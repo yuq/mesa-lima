@@ -194,7 +194,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
    fs_reg dw = offset(vec4_result, bld, (const_offset & 0xf) / 4);
    switch (type_sz(dst.type)) {
    case 2:
-      shuffle_32bit_load_result_to_16bit_data(bld, dst, dw, 1);
+      shuffle_32bit_load_result_to_16bit_data(bld, dst, dw, 0, 1);
       bld.MOV(dst, subscript(dw, dst.type, (const_offset / 2) & 1));
       break;
    case 4:
