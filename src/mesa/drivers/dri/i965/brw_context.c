@@ -1011,6 +1011,13 @@ brwCreateContext(gl_api api,
       return false;
    }
 
+   if (devinfo->gen == 11) {
+      fprintf(stderr,
+              "WARNING: i965 does not fully support Gen11 yet.\n"
+              "Instability or lower performance might occur.\n");
+
+   }
+
    brw_init_state(brw);
 
    intelInitExtensions(ctx);
