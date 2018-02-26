@@ -333,6 +333,12 @@ static void print_src(sb_ostream &s, bc_alu &alu, unsigned idx)
 		case ALU_SRC_0:
 			s << "0";
 			break;
+		case ALU_SRC_TIME_LO:
+			s << "TIME_LO";
+			break;
+		case ALU_SRC_TIME_HI:
+			s << "TIME_HI";
+			break;
 		case ALU_SRC_MASK_LO:
 			s << "MASK_LO";
 			break;

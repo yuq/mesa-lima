@@ -2009,6 +2009,12 @@ static int print_src(struct r600_bytecode_alu *alu, unsigned idx)
 			o += fprintf(stderr, "LDS_OQ_B_POP");
 			need_chan = 1;
 			break;
+		case EG_V_SQ_ALU_SRC_TIME_LO:
+			o += fprintf(stderr, "TIME_LO");
+			break;
+		case EG_V_SQ_ALU_SRC_TIME_HI:
+			o += fprintf(stderr, "TIME_HI");
+			break;
 		case EG_V_SQ_ALU_SRC_SE_ID:
 			o += fprintf(stderr, "SE_ID");
 			break;
