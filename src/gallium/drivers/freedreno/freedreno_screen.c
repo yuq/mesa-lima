@@ -633,16 +633,17 @@ fd_get_compute_param(struct pipe_screen *pscreen, enum pipe_shader_ir ir_type,
 	if (!has_compute(screen))
 		return 0;
 
+#define RET(x) do {                  \
+   if (ret)                          \
+      memcpy(ret, x, sizeof(x));     \
+   return sizeof(x);                 \
+} while (0)
+
 	switch (param) {
 	case PIPE_COMPUTE_CAP_ADDRESS_BITS:
-		if (ret) {
-			uint32_t *address_bits = ret;
-			address_bits[0] = 32;
-
-			if (is_a5xx(screen))
-				address_bits[0] = 64;
-		}
-		return 1 * sizeof(uint32_t);
+		if (is_a5xx(screen))
+			RET((uint32_t []){ 64 });
+		RET((uint32_t []){ 32 });
 
 	case PIPE_COMPUTE_CAP_IR_TARGET:
 		if (ret)
@@ -650,53 +651,27 @@ fd_get_compute_param(struct pipe_screen *pscreen, enum pipe_shader_ir ir_type,
 		return strlen(ir) * sizeof(char);
 
 	case PIPE_COMPUTE_CAP_GRID_DIMENSION:
-		if (ret) {
-			uint64_t *grid_dimension = ret;
-			grid_dimension[0] = 3;
-		}
-		return 1 * sizeof(uint64_t);
+		RET((uint64_t []) { 3 });
 
 	case PIPE_COMPUTE_CAP_MAX_GRID_SIZE:
-		if (ret) {
-			uint64_t *grid_size = ret;
-			grid_size[0] = 65535;
-			grid_size[1] = 65535;
-			grid_size[2] = 65535;
-		}
-		return 3 * sizeof(uint64_t) ;
+		RET(((uint64_t []) { 65535, 65535, 65535 }));
 
 	case PIPE_COMPUTE_CAP_MAX_BLOCK_SIZE:
-		if (ret) {
-			uint64_t *block_size = ret;
-			block_size[0] = 1024;
-			block_size[1] = 1024;
-			block_size[2] = 64;
-		}
-		return 3 * sizeof(uint64_t) ;
+		RET(((uint64_t []) { 1024, 1024, 64 }));
 
 	case PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK:
-		if (ret) {
-			uint64_t *max_threads_per_block = ret;
-			*max_threads_per_block = 1024;
-		}
-		return sizeof(uint64_t);
+		RET((uint64_t []) { 1024 });
 
 	case PIPE_COMPUTE_CAP_MAX_GLOBAL_SIZE:
 	case PIPE_COMPUTE_CAP_MAX_LOCAL_SIZE:
-		if (ret) {
-			uint64_t *local_size = ret;
-			*local_size = 32768;
-		}
-		return sizeof(uint64_t);
+		RET((uint64_t []) { 32768 });
+
 	case PIPE_COMPUTE_CAP_MAX_PRIVATE_SIZE:
 	case PIPE_COMPUTE_CAP_MAX_INPUT_SIZE:
 		break;
 	case PIPE_COMPUTE_CAP_MAX_MEM_ALLOC_SIZE:
-		if (ret) {
-			uint64_t *max = ret;
-			*max = 32768;
-		}
-		return sizeof(uint64_t);
+		RET((uint64_t []) { 32768 });
+
 	case PIPE_COMPUTE_CAP_MAX_CLOCK_FREQUENCY:
 	case PIPE_COMPUTE_CAP_MAX_COMPUTE_UNITS:
 	case PIPE_COMPUTE_CAP_IMAGES_SUPPORTED:
