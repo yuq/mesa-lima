@@ -1291,7 +1291,11 @@ static LLVMValueRef si_nir_load_tcs_varyings(struct ac_shader_abi *abi,
 
 	LLVMValueRef value[4];
 	for (unsigned i = 0; i < num_components + component; i++) {
-		value[i] = lds_load(bld_base, type, i, dw_addr);
+		unsigned offset = i;
+		if (llvm_type_is_64bit(ctx, type))
+			offset *= 2;
+
+		value[i] = lds_load(bld_base, type, offset, dw_addr);
 	}
 
 	return ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
@@ -1374,7 +1378,11 @@ LLVMValueRef si_nir_load_input_tes(struct ac_shader_abi *abi,
 	 */
 	LLVMValueRef value[4];
 	for (unsigned i = component; i < num_components + component; i++) {
-		value[i] = buffer_load(&ctx->bld_base, type, i,
+		unsigned offset = i;
+		if (llvm_type_is_64bit(ctx, type))
+			offset *= 2;
+
+		value[i] = buffer_load(&ctx->bld_base, type, offset,
 				       ctx->tess_offchip_ring, base, addr, true);
 	}
 
