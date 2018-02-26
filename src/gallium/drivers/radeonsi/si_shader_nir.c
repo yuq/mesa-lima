@@ -244,6 +244,9 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 	info->num_tokens = 2; /* indicate that the shader is non-empty */
 	info->num_instructions = 2;
 
+	info->properties[TGSI_PROPERTY_NEXT_SHADER] =
+		pipe_shader_type_from_mesa(nir->info.next_stage);
+
 	if (nir->info.stage == MESA_SHADER_TESS_CTRL) {
 		info->properties[TGSI_PROPERTY_TCS_VERTICES_OUT] =
 			nir->info.tess.tcs_vertices_out;
