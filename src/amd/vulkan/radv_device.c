@@ -2946,8 +2946,17 @@ VkResult radv_WaitForFences(
 		if (fence->signalled)
 			continue;
 
-		if (!fence->submitted)
-			return VK_TIMEOUT;
+		if (!fence->submitted) {
+			while(radv_get_current_time() <= timeout && !fence->submitted)
+				/* Do nothing */;
+
+			if (!fence->submitted)
+				return VK_TIMEOUT;
+
+			/* Recheck as it may have been set by submitting operations. */
+			if (fence->signalled)
+				continue;
+		}
 
 		expired = device->ws->fence_wait(device->ws, fence->fence, true, timeout);
 		if (!expired)
