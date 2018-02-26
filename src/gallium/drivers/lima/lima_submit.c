@@ -111,9 +111,11 @@ bool lima_submit_add_bo(struct lima_submit *submit, struct lima_bo *bo, uint32_t
 
    struct lima_submit_job *job = submit->current_job;
 
-   util_dynarray_foreach(&job->bos, struct lima_bo *, jbo) {
-      if (*jbo == bo)
+   util_dynarray_foreach(&job->gem_bos, struct drm_lima_gem_submit_bo, gem_bo) {
+      if (bo->handle == gem_bo->handle) {
+         gem_bo->flags |= flags;
          return true;
+      }
    }
 
    /* prevent bo from being freed when submit start */
