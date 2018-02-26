@@ -244,3 +244,10 @@ err_out:
    lima_context_destroy(&ctx->base);
    return NULL;
 }
+
+bool
+lima_need_flush(struct lima_context *ctx, struct lima_bo *bo, bool write)
+{
+   return lima_submit_has_bo(ctx->gp_submit, bo, write) ||
+      lima_submit_has_bo(ctx->pp_submit, bo, write);
+}

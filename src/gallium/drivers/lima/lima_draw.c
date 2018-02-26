@@ -804,6 +804,37 @@ lima_update_varying(struct lima_context *ctx, const struct pipe_draw_info *info)
 }
 
 static void
+lima_update_submit_bo(struct lima_context *ctx)
+{
+   lima_submit_add_bo(ctx->gp_submit, ctx->vs->bo, LIMA_SUBMIT_BO_READ);
+   lima_submit_add_bo(ctx->pp_submit, ctx->fs->bo, LIMA_SUBMIT_BO_READ);
+
+   if (!ctx->num_draws) {
+      struct lima_screen *screen = lima_screen(ctx->base.screen);
+      lima_submit_add_bo(ctx->gp_submit, ctx->plb_gp_stream, LIMA_SUBMIT_BO_READ);
+      lima_submit_add_bo(ctx->gp_submit, ctx->plb[ctx->plb_index], LIMA_SUBMIT_BO_WRITE);
+      lima_submit_add_bo(ctx->gp_submit, screen->gp_buffer, LIMA_SUBMIT_BO_READ);
+
+      struct lima_ctx_plb_pp_stream_key key = {
+         .plb_index = ctx->plb_index,
+         .tiled_w = ctx->framebuffer.tiled_w,
+         .tiled_h = ctx->framebuffer.tiled_h,
+      };
+      struct hash_entry *entry =
+         _mesa_hash_table_search(ctx->plb_pp_stream, &key);
+      struct lima_ctx_plb_pp_stream *s = entry->data;
+      lima_update_plb(ctx, s);
+      ctx->current_plb_pp_stream = s;
+
+      struct lima_resource *res = lima_resource(ctx->framebuffer.cbuf->texture);
+      lima_submit_add_bo(ctx->pp_submit, res->bo, LIMA_SUBMIT_BO_WRITE);
+      lima_submit_add_bo(ctx->pp_submit, ctx->plb[ctx->plb_index], LIMA_SUBMIT_BO_READ);
+      lima_submit_add_bo(ctx->pp_submit, s->bo, LIMA_SUBMIT_BO_READ);
+      lima_submit_add_bo(ctx->pp_submit, screen->pp_buffer, LIMA_SUBMIT_BO_READ);
+   }
+}
+
+static void
 lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
    debug_checkpoint();
@@ -818,8 +849,7 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
    if (!lima_update_vs_state(ctx) || !lima_update_fs_state(ctx))
       return;
 
-   lima_submit_add_bo(ctx->gp_submit, ctx->vs->bo, LIMA_SUBMIT_BO_READ);
-   lima_submit_add_bo(ctx->pp_submit, ctx->fs->bo, LIMA_SUBMIT_BO_READ);
+   lima_update_submit_bo(ctx);
 
    lima_update_gp_attribute_info(ctx, info);
 
@@ -892,10 +922,6 @@ lima_flush(struct lima_context *ctx)
    util_dynarray_clear(&ctx->plbu_cmd_array);
 
    struct lima_screen *screen = lima_screen(ctx->base.screen);
-   lima_submit_add_bo(ctx->gp_submit, ctx->plb_gp_stream, LIMA_SUBMIT_BO_READ);
-   lima_submit_add_bo(ctx->gp_submit, ctx->plb[ctx->plb_index], LIMA_SUBMIT_BO_WRITE);
-   lima_submit_add_bo(ctx->gp_submit, screen->gp_buffer, LIMA_SUBMIT_BO_READ);
-
    uint32_t vs_cmd_va = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_vs_cmd);
    uint32_t plbu_cmd_va = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_plbu_cmd);
    struct drm_lima_m400_gp_frame gp_frame = {
@@ -931,23 +957,8 @@ lima_flush(struct lima_context *ctx)
                    plb[4], plb[5], plb[6], plb[7]);
    }
 
-   struct lima_ctx_plb_pp_stream_key key = {
-      .plb_index = ctx->plb_index,
-      .tiled_w = ctx->framebuffer.tiled_w,
-      .tiled_h = ctx->framebuffer.tiled_h,
-   };
-   struct hash_entry *entry =
-         _mesa_hash_table_search(ctx->plb_pp_stream, &key);
-   struct lima_ctx_plb_pp_stream *s = entry->data;
-   lima_update_plb(ctx, s);
-
    struct lima_resource *res = lima_resource(ctx->framebuffer.cbuf->texture);
    lima_bo_update(res->bo, false, true);
-
-   lima_submit_add_bo(ctx->pp_submit, res->bo, LIMA_SUBMIT_BO_WRITE);
-   lima_submit_add_bo(ctx->pp_submit, ctx->plb[ctx->plb_index], LIMA_SUBMIT_BO_READ);
-   lima_submit_add_bo(ctx->pp_submit, s->bo, LIMA_SUBMIT_BO_READ);
-   lima_submit_add_bo(ctx->pp_submit, screen->pp_buffer, LIMA_SUBMIT_BO_READ);
 
    int num_pp = screen->num_pp;
    struct drm_lima_m400_pp_frame pp_frame = {
@@ -1003,6 +1014,7 @@ lima_flush(struct lima_context *ctx)
       .num_pp = num_pp,
    };
 
+   struct lima_ctx_plb_pp_stream *s = ctx->current_plb_pp_stream;
    for (int i = 0; i < num_pp; i++)
       pp_frame.plbu_array_address[i] = s->bo->va + s->bo->size / num_pp * i;
 
@@ -1011,6 +1023,7 @@ lima_flush(struct lima_context *ctx)
 
    ctx->num_draws = 0;
    ctx->plb_index = (ctx->plb_index + 1) % lima_ctx_num_plb;
+   ctx->current_plb_pp_stream = NULL;
 }
 
 static void
