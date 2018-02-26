@@ -10742,6 +10742,7 @@ static int tgsi_clock(struct r600_shader_ctx *ctx)
 	alu.op = ALU_OP1_MOV;
 	tgsi_dst(ctx, &inst->Dst[0], 1, &alu.dst);
 	alu.src[0].sel = EG_V_SQ_ALU_SRC_TIME_HI;
+	alu.last = 1;
 	r = r600_bytecode_add_alu(ctx->bc, &alu);
 	if (r)
 		return r;
