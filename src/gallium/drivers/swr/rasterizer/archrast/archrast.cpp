@@ -74,12 +74,52 @@ namespace ArchRast
     };
 
     //////////////////////////////////////////////////////////////////////////
-    /// @brief Event handler that saves stat events to event files. This
-    ///        handler filters out unwanted events.
-    class EventHandlerStatsFile : public EventHandlerFile
+    /// @brief Event handler that handles API thread events. This is shared
+    ///        between the API and its caller (e.g. driver shim) but typically
+    ///        there is only a single API thread per context. So you can save
+    ///        information in the class to be used for other events.
+    class EventHandlerApiStats : public EventHandlerFile
     {
     public:
-        EventHandlerStatsFile(uint32_t id) : EventHandlerFile(id), mNeedFlush(false) {}
+        EventHandlerApiStats(uint32_t id) : EventHandlerFile(id) {}
+
+        virtual void Handle(const DrawInstancedEvent& event)
+        {
+            DrawInfoEvent e(event.data.drawId, ArchRast::Instanced, event.data.topology, event.data.numVertices, 0, 0, event.data.startVertex, event.data.numInstances, event.data.startInstance);
+
+            EventHandlerFile::Handle(e);
+        }
+
+        virtual void Handle(const DrawIndexedInstancedEvent& event)
+        {
+            DrawInfoEvent e(event.data.drawId, ArchRast::IndexedInstanced, event.data.topology, 0, event.data.numIndices, event.data.indexOffset, event.data.baseVertex, event.data.numInstances, event.data.startInstance);
+
+            EventHandlerFile::Handle(e);
+        }
+
+        virtual void Handle(const DrawInstancedSplitEvent& event)
+        {
+            DrawInfoEvent e(event.data.drawId, ArchRast::InstancedSplit, 0, 0, 0, 0, 0, 0, 0);
+
+            EventHandlerFile::Handle(e);
+        }
+
+        virtual void Handle(const DrawIndexedInstancedSplitEvent& event)
+        {
+            DrawInfoEvent e(event.data.drawId, ArchRast::IndexedInstancedSplit, 0, 0, 0, 0, 0, 0, 0);
+
+            EventHandlerFile::Handle(e);
+        }
+    };
+
+    //////////////////////////////////////////////////////////////////////////
+    /// @brief Event handler that handles worker thread events. There is one
+    ///        event handler per thread. The python script will need to sum
+    ///        up counters across all of the threads.
+    class EventHandlerWorkerStats : public EventHandlerFile
+    {
+    public:
+        EventHandlerWorkerStats(uint32_t id) : EventHandlerFile(id), mNeedFlush(false) {}
 
         virtual void Handle(const EarlyDepthStencilInfoSingleSample& event)
         {
@@ -215,34 +255,6 @@ namespace ArchRast
             mClipper.trivialAcceptCount += _mm_popcnt_u32(event.data.validMask & ~event.data.clipMask);
         }
 
-        virtual void Handle(const DrawInstancedEvent& event)
-        {
-            DrawInfoEvent e(event.data.drawId, ArchRast::Instanced, event.data.topology, event.data.numVertices, 0, 0, event.data.startVertex, event.data.numInstances, event.data.startInstance);
-
-            EventHandlerFile::Handle(e);
-        }
-
-        virtual void Handle(const DrawIndexedInstancedEvent& event)
-        {
-            DrawInfoEvent e(event.data.drawId, ArchRast::IndexedInstanced, event.data.topology, 0, event.data.numIndices, event.data.indexOffset, event.data.baseVertex, event.data.numInstances, event.data.startInstance);
-
-            EventHandlerFile::Handle(e);
-        }
-
-        virtual void Handle(const DrawInstancedSplitEvent& event)
-        {
-            DrawInfoEvent e(event.data.drawId, ArchRast::InstancedSplit, 0, 0, 0, 0, 0, 0, 0);
-
-            EventHandlerFile::Handle(e);
-        }
-
-        virtual void Handle(const DrawIndexedInstancedSplitEvent& event)
-        {
-            DrawInfoEvent e(event.data.drawId, ArchRast::IndexedInstancedSplit, 0, 0, 0, 0, 0, 0, 0);
-
-            EventHandlerFile::Handle(e);
-        }
-
         // Flush cached events for this draw
         virtual void FlushDraw(uint32_t drawId)
         {
@@ -354,20 +366,24 @@ namespace ArchRast
         uint32_t id = counter.fetch_add(1);
 
         EventManager* pManager = new EventManager();
-        EventHandlerFile* pHandler = new EventHandlerStatsFile(id);
 
-        if (pManager && pHandler)
+        if (pManager)
         {
-            pManager->Attach(pHandler);
+            EventHandlerFile* pHandler = nullptr;
 
             if (type == AR_THREAD::API)
             {
+                pHandler = new EventHandlerApiStats(id);
+                pManager->Attach(pHandler);
                 pHandler->Handle(ThreadStartApiEvent());
             }
             else
             {
+                pHandler = new EventHandlerWorkerStats(id);
+                pManager->Attach(pHandler);
                 pHandler->Handle(ThreadStartWorkerEvent());
             }
+
             pHandler->MarkHeader();
 
             return pManager;
