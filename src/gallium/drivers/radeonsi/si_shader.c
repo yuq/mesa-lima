@@ -1563,7 +1563,7 @@ static void si_nir_store_output_tcs(struct ac_shader_abi *abi,
 
 		/* Skip LDS stores if there is no LDS read of this output. */
 		if (!skip_lds_store)
-			ac_lds_store(&ctx->ac, dw_addr, value);
+			lds_store(ctx, chan, dw_addr, value);
 
 		value = ac_to_integer(&ctx->ac, value);
 		values[chan] = value;
