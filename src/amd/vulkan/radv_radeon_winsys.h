@@ -270,6 +270,11 @@ struct radeon_winsys {
 			   struct radeon_winsys_fence *fence,
 			   bool absolute,
 			   uint64_t timeout);
+	bool (*fences_wait)(struct radeon_winsys *ws,
+			    struct radeon_winsys_fence *const *fences,
+			    uint32_t fence_count,
+			    bool wait_all,
+			    uint64_t timeout);
 
 	/* old semaphores - non shareable */
 	struct radeon_winsys_sem *(*create_sem)(struct radeon_winsys *ws);
