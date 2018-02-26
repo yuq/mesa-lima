@@ -5638,12 +5638,6 @@ handle_fs_inputs(struct radv_shader_context *ctx,
 		}
 	}
 	ctx->shader_info->fs.num_interp = index;
-	if (ctx->input_mask & (1 << VARYING_SLOT_PNTC))
-		ctx->shader_info->fs.has_pcoord = true;
-	if (ctx->input_mask & (1 << VARYING_SLOT_PRIMITIVE_ID))
-		ctx->shader_info->fs.prim_id_input = true;
-	if (ctx->input_mask & (1 << VARYING_SLOT_LAYER))
-		ctx->shader_info->fs.layer_input = true;
 	ctx->shader_info->fs.input_mask = ctx->input_mask >> VARYING_SLOT_VAR0;
 
 	if (ctx->shader_info->info.needs_multiview_view_index)
