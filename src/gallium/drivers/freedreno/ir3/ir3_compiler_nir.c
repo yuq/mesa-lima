@@ -2599,6 +2599,7 @@ emit_jump(struct ir3_context *ctx, nir_jump_instr *jump)
 	switch (jump->type) {
 	case nir_jump_break:
 	case nir_jump_continue:
+	case nir_jump_return:
 		/* I *think* we can simply just ignore this, and use the
 		 * successor block link to figure out where we need to
 		 * jump to for break/continue
