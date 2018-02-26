@@ -4389,7 +4389,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		break;
 	}
 	case nir_intrinsic_load_base_vertex: {
-		result = ctx->abi->base_vertex;
+		result = ctx->abi->load_base_vertex(ctx->abi);
 		break;
 	}
 	case nir_intrinsic_load_local_group_size:
@@ -4632,6 +4632,11 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	if (result) {
 		_mesa_hash_table_insert(ctx->defs, &instr->dest.ssa, result);
 	}
+}
+
+static LLVMValueRef radv_load_base_vertex(struct ac_shader_abi *abi)
+{
+	return abi->base_vertex;
 }
 
 static LLVMValueRef radv_load_ssbo(struct ac_shader_abi *abi,
@@ -6908,6 +6913,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			ctx.gs_max_out_vertices = shaders[i]->info.gs.vertices_out;
 			ctx.abi.load_inputs = load_gs_input;
 			ctx.abi.emit_primitive = visit_end_primitive;
+			ctx.abi.load_base_vertex = radv_load_base_vertex;
 		} else if (shaders[i]->info.stage == MESA_SHADER_TESS_CTRL) {
 			ctx.tcs_outputs_read = shaders[i]->info.outputs_read;
 			ctx.tcs_patch_outputs_read = shaders[i]->info.patch_outputs_read;

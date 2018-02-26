@@ -6021,6 +6021,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		else
 			ctx->abi.emit_outputs = si_llvm_emit_vs_epilogue;
 		bld_base->emit_epilogue = si_tgsi_emit_epilogue;
+		ctx->abi.load_base_vertex = get_base_vertex;
 		break;
 	case PIPE_SHADER_TESS_CTRL:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_tcs;
