@@ -1332,8 +1332,8 @@ static void radv_amdgpu_signal_syncobj(struct radeon_winsys *_ws,
 	amdgpu_cs_syncobj_signal(ws->dev, &handle, 1);
 }
 
-static bool radv_amdgpu_wait_syncobj(struct radeon_winsys *_ws,
-				    uint32_t handle, uint64_t timeout)
+static bool radv_amdgpu_wait_syncobj(struct radeon_winsys *_ws, const uint32_t *handles,
+                                     uint32_t handle_count, bool wait_all, uint64_t timeout)
 {
 	struct radv_amdgpu_winsys *ws = radv_amdgpu_winsys(_ws);
 	uint32_t tmp;
@@ -1341,9 +1341,9 @@ static bool radv_amdgpu_wait_syncobj(struct radeon_winsys *_ws,
 	/* The timeouts are signed, while vulkan timeouts are unsigned. */
 	timeout = MIN2(timeout, INT64_MAX);
 
-	int ret = amdgpu_cs_syncobj_wait(ws->dev, &handle, 1, timeout,
+	int ret = amdgpu_cs_syncobj_wait(ws->dev, (uint32_t*)handles, handle_count, timeout,
 					 DRM_SYNCOBJ_WAIT_FLAGS_WAIT_FOR_SUBMIT |
-					 DRM_SYNCOBJ_WAIT_FLAGS_WAIT_ALL,
+					 (wait_all ? DRM_SYNCOBJ_WAIT_FLAGS_WAIT_ALL : 0),
 					 &tmp);
 	if (ret == 0) {
 		return true;

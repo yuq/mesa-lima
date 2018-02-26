@@ -2928,6 +2928,22 @@ VkResult radv_WaitForFences(
 	RADV_FROM_HANDLE(radv_device, device, _device);
 	timeout = radv_get_absolute_timeout(timeout);
 
+	if (device->always_use_syncobj) {
+		uint32_t *handles = malloc(sizeof(uint32_t) * fenceCount);
+		if (!handles)
+			return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+		for (uint32_t i = 0; i < fenceCount; ++i) {
+			RADV_FROM_HANDLE(radv_fence, fence, pFences[i]);
+			handles[i] = fence->temp_syncobj ? fence->temp_syncobj : fence->syncobj;
+		}
+
+		bool success = device->ws->wait_syncobj(device->ws, handles, fenceCount, waitAll, timeout);
+
+		free(handles);
+		return success ? VK_SUCCESS : VK_TIMEOUT;
+	}
+
 	if (!waitAll && fenceCount > 1) {
 		/* Not doing this by default for waitAll, due to needing to allocate twice. */
 		if (device->physical_device->rad_info.drm_minor >= 10 && radv_all_fences_plain_and_submitted(fenceCount, pFences)) {
@@ -2968,13 +2984,13 @@ VkResult radv_WaitForFences(
 		bool expired = false;
 
 		if (fence->temp_syncobj) {
-			if (!device->ws->wait_syncobj(device->ws, fence->temp_syncobj, timeout))
+			if (!device->ws->wait_syncobj(device->ws, &fence->temp_syncobj, 1, true, timeout))
 				return VK_TIMEOUT;
 			continue;
 		}
 
 		if (fence->syncobj) {
-			if (!device->ws->wait_syncobj(device->ws, fence->syncobj, timeout))
+			if (!device->ws->wait_syncobj(device->ws, &fence->syncobj, 1, true, timeout))
 				return VK_TIMEOUT;
 			continue;
 		}
@@ -3035,12 +3051,12 @@ VkResult radv_GetFenceStatus(VkDevice _device, VkFence _fence)
 	RADV_FROM_HANDLE(radv_fence, fence, _fence);
 
 	if (fence->temp_syncobj) {
-			bool success = device->ws->wait_syncobj(device->ws, fence->temp_syncobj, 0);
+			bool success = device->ws->wait_syncobj(device->ws, &fence->temp_syncobj, 1, true, 0);
 			return success ? VK_SUCCESS : VK_NOT_READY;
 	}
 
 	if (fence->syncobj) {
-			bool success = device->ws->wait_syncobj(device->ws, fence->syncobj, 0);
+			bool success = device->ws->wait_syncobj(device->ws, &fence->syncobj, 1, true, 0);
 			return success ? VK_SUCCESS : VK_NOT_READY;
 	}
 
