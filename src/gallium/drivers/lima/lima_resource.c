@@ -84,9 +84,9 @@ lima_resource_create(struct pipe_screen *pscreen,
          goto err_out1;
    }
 
-   debug_printf("%s: pres=%p width=%u height=%u depth=%u target=%d bind=%x\n",
+   debug_printf("%s: pres=%p width=%u height=%u depth=%u target=%d bind=%x usage=%d\n",
                 __func__, &res->base, pres->width0, pres->height0, pres->depth0,
-                pres->target, pres->bind);
+                pres->target, pres->bind, pres->usage);
 
    return pres;
 
@@ -285,14 +285,21 @@ lima_transfer_map(struct pipe_context *pctx,
    struct lima_bo *bo = res->bo;
    struct lima_transfer *trans;
    struct pipe_transfer *ptrans;
-   unsigned bo_op = 0;
 
    debug_printf("%s: pres=%p\n", __func__, pres);
 
-   if (usage & PIPE_TRANSFER_READ)
-      bo_op |= LIMA_GEM_WAIT_READ;
-   if (usage & PIPE_TRANSFER_WRITE)
-      bo_op |= LIMA_GEM_WAIT_WRITE;
+   /* use once buffers are made sure to not read/write overlapped
+    * range, so no need to sync */
+   if (pres->usage != PIPE_USAGE_STREAM) {
+      if (usage & PIPE_TRANSFER_READ_WRITE) {
+         if (lima_need_flush(ctx, bo, usage & PIPE_TRANSFER_WRITE))
+            lima_flush(ctx);
+
+         unsigned op = usage & PIPE_TRANSFER_WRITE ?
+            LIMA_GEM_WAIT_WRITE : LIMA_GEM_WAIT_READ;
+         lima_bo_wait(bo, op, PIPE_TIMEOUT_INFINITE, false);
+      }
+   }
 
    if (!lima_bo_update(bo, true, false))
       return NULL;

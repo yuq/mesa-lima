@@ -192,3 +192,21 @@ bool lima_submit_wait(struct lima_submit *submit, uint64_t timeout_ns, bool rela
    }
    return ret;
 }
+
+bool lima_submit_has_bo(struct lima_submit *submit, struct lima_bo *bo, bool all)
+{
+   struct lima_submit_job *job = submit->current_job;
+   if (!job)
+      return false;
+
+   util_dynarray_foreach(&job->gem_bos, struct drm_lima_gem_submit_bo, gem_bo) {
+      if (bo->handle == gem_bo->handle) {
+         if (all)
+            return true;
+         else
+            return gem_bo->flags & LIMA_SUBMIT_BO_WRITE;
+      }
+   }
+
+   return false;
+}
