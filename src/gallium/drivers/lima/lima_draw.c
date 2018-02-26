@@ -871,10 +871,8 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       ctx->const_buffer[PIPE_SHADER_FRAGMENT].dirty = false;
    }
 
-   if (!ctx->num_draws ||
-      (ctx->dirty & LIMA_CONTEXT_DIRTY_TEXTURES)) {
+   if (ctx->dirty & LIMA_CONTEXT_DIRTY_TEXTURES)
       lima_update_textures(ctx);
-   }
 
    lima_pack_render_state(ctx);
    lima_pack_plbu_cmd(ctx, info);
