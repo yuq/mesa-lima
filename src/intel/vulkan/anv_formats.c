@@ -842,6 +842,19 @@ anv_get_image_format_properties(
        */
    }
 
+   /* From the bspec section entitled "Surface Layout and Tiling",
+    * pre-gen9 has a 2 GB limitation of the size in bytes,
+    * gen9 and gen10 have a 256 GB limitation and gen11+
+    * has a 16 TB limitation.
+    */
+   uint64_t maxResourceSize = 0;
+   if (devinfo->gen < 9)
+      maxResourceSize = (uint64_t) 1 << 31;
+   else if (devinfo->gen < 11)
+      maxResourceSize = (uint64_t) 1 << 38;
+   else
+      maxResourceSize = (uint64_t) 1 << 44;
+
    *pImageFormatProperties = (VkImageFormatProperties) {
       .maxExtent = maxExtent,
       .maxMipLevels = maxMipLevels,
@@ -851,7 +864,7 @@ anv_get_image_format_properties(
       /* FINISHME: Accurately calculate
        * VkImageFormatProperties::maxResourceSize.
        */
-      .maxResourceSize = UINT32_MAX,
+      .maxResourceSize = maxResourceSize,
    };
 
    if (pYcbcrImageFormatProperties) {
