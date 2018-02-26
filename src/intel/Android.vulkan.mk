@@ -85,6 +85,12 @@ ANV_INCLUDES := \
 	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_vulkan_common,,)/vulkan \
 	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_vulkan_util,,)/util
 
+ANV_SHARED_LIBRARIES := libdrm
+
+ifeq ($(filter $(MESA_ANDROID_MAJOR_VERSION), 4 5 6 7),)
+ANV_SHARED_LIBRARIES += libnativewindow
+endif
+
 #
 # libanv for gen7
 #
@@ -100,7 +106,7 @@ LOCAL_C_INCLUDES := $(ANV_INCLUDES)
 
 LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_anv_entrypoints libmesa_genxml
 
-LOCAL_SHARED_LIBRARIES := libdrm
+LOCAL_SHARED_LIBRARIES := $(ANV_SHARED_LIBRARIES)
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
@@ -120,7 +126,7 @@ LOCAL_C_INCLUDES := $(ANV_INCLUDES)
 
 LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_anv_entrypoints libmesa_genxml
 
-LOCAL_SHARED_LIBRARIES := libdrm
+LOCAL_SHARED_LIBRARIES := $(ANV_SHARED_LIBRARIES)
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
@@ -140,7 +146,7 @@ LOCAL_C_INCLUDES := $(ANV_INCLUDES)
 
 LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_anv_entrypoints libmesa_genxml
 
-LOCAL_SHARED_LIBRARIES := libdrm
+LOCAL_SHARED_LIBRARIES := $(ANV_SHARED_LIBRARIES)
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
@@ -160,7 +166,7 @@ LOCAL_C_INCLUDES := $(ANV_INCLUDES)
 
 LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_anv_entrypoints libmesa_genxml
 
-LOCAL_SHARED_LIBRARIES := libdrm
+LOCAL_SHARED_LIBRARIES := $(ANV_SHARED_LIBRARIES)
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
@@ -180,7 +186,7 @@ LOCAL_C_INCLUDES := $(ANV_INCLUDES)
 
 LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_anv_entrypoints libmesa_genxml
 
-LOCAL_SHARED_LIBRARIES := libdrm
+LOCAL_SHARED_LIBRARIES := $(ANV_SHARED_LIBRARIES)
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
@@ -200,7 +206,7 @@ LOCAL_C_INCLUDES := $(ANV_INCLUDES)
 
 LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_anv_entrypoints libmesa_genxml
 
-LOCAL_SHARED_LIBRARIES := libdrm
+LOCAL_SHARED_LIBRARIES := $(ANV_SHARED_LIBRARIES)
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
@@ -256,7 +262,7 @@ $(intermediates)/vulkan/anv_extensions.h:
 		--xml $(MESA_TOP)/src/vulkan/registry/vk_android_native_buffer.xml \
 		--out-h $@
 
-LOCAL_SHARED_LIBRARIES := libdrm
+LOCAL_SHARED_LIBRARIES := $(ANV_SHARED_LIBRARIES)
 
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
@@ -304,7 +310,7 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libmesa_intel_compiler \
 	libmesa_anv_entrypoints
 
-LOCAL_SHARED_LIBRARIES := libdrm libz libsync liblog
+LOCAL_SHARED_LIBRARIES := $(ANV_SHARED_LIBRARIES) libz libsync liblog
 
 include $(MESA_COMMON_MK)
 include $(BUILD_SHARED_LIBRARY)
