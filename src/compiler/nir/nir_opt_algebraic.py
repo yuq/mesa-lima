@@ -168,8 +168,8 @@ optimizations = [
    (('flt(is_not_used_by_conditional)', ('fadd(is_used_once)', a, ('fneg', b)), 0.0), ('flt', a, b)),
 
    (('fge', ('fneg', ('fabs', a)), 0.0), ('feq', a, 0.0)),
-   (('bcsel', ('flt', b, a), b, a), ('fmin', a, b)),
-   (('bcsel', ('flt', a, b), b, a), ('fmax', a, b)),
+   (('~bcsel', ('flt', b, a), b, a), ('fmin', a, b)),
+   (('~bcsel', ('flt', a, b), b, a), ('fmax', a, b)),
    (('~bcsel', ('fge', a, b), b, a), ('fmin', a, b)),
    (('~bcsel', ('fge', b, a), b, a), ('fmax', a, b)),
    (('bcsel', ('inot', a), b, c), ('bcsel', a, c, b)),
