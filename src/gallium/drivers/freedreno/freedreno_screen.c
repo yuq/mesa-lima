@@ -40,9 +40,10 @@
 
 #include "util/os_time.h"
 
-#include <stdio.h>
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <sys/sysinfo.h>
 
 #include "freedreno_screen.h"
 #include "freedreno_resource.h"
@@ -666,21 +667,32 @@ fd_get_compute_param(struct pipe_screen *pscreen, enum pipe_shader_ir ir_type,
 		RET((uint64_t []) { 1024 });
 
 	case PIPE_COMPUTE_CAP_MAX_GLOBAL_SIZE:
+		RET((uint64_t []) { screen->ram_size });
+
 	case PIPE_COMPUTE_CAP_MAX_LOCAL_SIZE:
 		RET((uint64_t []) { 32768 });
 
 	case PIPE_COMPUTE_CAP_MAX_PRIVATE_SIZE:
 	case PIPE_COMPUTE_CAP_MAX_INPUT_SIZE:
-		break;
+		RET((uint64_t []) { 4096 });
+
 	case PIPE_COMPUTE_CAP_MAX_MEM_ALLOC_SIZE:
-		RET((uint64_t []) { 32768 });
+		RET((uint64_t []) { screen->ram_size });
 
 	case PIPE_COMPUTE_CAP_MAX_CLOCK_FREQUENCY:
+		RET((uint32_t []) { screen->max_freq / 1000000 });
+
 	case PIPE_COMPUTE_CAP_MAX_COMPUTE_UNITS:
+		RET((uint32_t []) { 9999 });  // TODO
+
 	case PIPE_COMPUTE_CAP_IMAGES_SUPPORTED:
+		RET((uint32_t []) { 1 });
+
 	case PIPE_COMPUTE_CAP_SUBGROUP_SIZE:
+		RET((uint32_t []) { 32 });  // TODO
+
 	case PIPE_COMPUTE_CAP_MAX_VARIABLE_THREADS_PER_BLOCK:
-		break;
+		RET((uint64_t []) { 1024 }); // TODO
 	}
 
 	return 0;
@@ -823,6 +835,10 @@ fd_screen_create(struct fd_device *dev)
 		/* # of rings equates to number of unique priority values: */
 		screen->priority_mask = (1 << val) - 1;
 	}
+
+	struct sysinfo si;
+	sysinfo(&si);
+	screen->ram_size = si.totalram;
 
 	DBG("Pipe Info:");
 	DBG(" GPU-id:          %d", screen->gpu_id);
