@@ -1437,8 +1437,9 @@ static LLVMValueRef emit_f2b(struct ac_llvm_context *ctx,
 			     LLVMValueRef src0)
 {
 	src0 = ac_to_float(ctx, src0);
+	LLVMValueRef zero = LLVMConstNull(LLVMTypeOf(src0));
 	return LLVMBuildSExt(ctx->builder,
-			     LLVMBuildFCmp(ctx->builder, LLVMRealUNE, src0, ctx->f32_0, ""),
+			     LLVMBuildFCmp(ctx->builder, LLVMRealUNE, src0, zero, ""),
 			     ctx->i32, "");
 }
 
@@ -1457,8 +1458,9 @@ static LLVMValueRef emit_b2i(struct ac_llvm_context *ctx,
 static LLVMValueRef emit_i2b(struct ac_llvm_context *ctx,
 			     LLVMValueRef src0)
 {
+	LLVMValueRef zero = LLVMConstNull(LLVMTypeOf(src0));
 	return LLVMBuildSExt(ctx->builder,
-			     LLVMBuildICmp(ctx->builder, LLVMIntNE, src0, ctx->i32_0, ""),
+			     LLVMBuildICmp(ctx->builder, LLVMIntNE, src0, zero, ""),
 			     ctx->i32, "");
 }
 
