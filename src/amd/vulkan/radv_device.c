@@ -2890,13 +2890,17 @@ void radv_DestroyFence(
 	vk_free2(&device->alloc, pAllocator, fence);
 }
 
+
+static uint64_t radv_get_current_time()
+{
+	struct timespec tv;
+	clock_gettime(CLOCK_MONOTONIC, &tv);
+	return tv.tv_nsec + tv.tv_sec*1000000000ull;
+}
+
 static uint64_t radv_get_absolute_timeout(uint64_t timeout)
 {
-	uint64_t current_time;
-	struct timespec tv;
-
-	clock_gettime(CLOCK_MONOTONIC, &tv);
-	current_time = tv.tv_nsec + tv.tv_sec*1000000000ull;
+	uint64_t current_time = radv_get_current_time();
 
 	timeout = MIN2(UINT64_MAX - current_time, timeout);
 
@@ -2914,7 +2918,13 @@ VkResult radv_WaitForFences(
 	timeout = radv_get_absolute_timeout(timeout);
 
 	if (!waitAll && fenceCount > 1) {
-		fprintf(stderr, "radv: WaitForFences without waitAll not implemented yet\n");
+		while(radv_get_current_time() <= timeout) {
+			for (uint32_t i = 0; i < fenceCount; ++i) {
+				if (radv_GetFenceStatus(_device, pFences[i]) == VK_SUCCESS)
+					return VK_SUCCESS;
+			}
+		}
+		return VK_TIMEOUT;
 	}
 
 	for (uint32_t i = 0; i < fenceCount; ++i) {
