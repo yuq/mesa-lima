@@ -719,6 +719,12 @@ lima_update_gp_uniform(struct lima_context *ctx)
 
    if (vs->constant)
       memcpy(vs_const_buff + ccb->size, vs->constant, vs->constant_size);
+
+   if (lima_dump_command_stream) {
+      printf("lima: update gp uniform at va %x\n",
+             lima_ctx_buff_va(ctx, lima_ctx_buff_gp_uniform));
+      lima_dump_blob(vs_const_buff, ccb->size + vs->constant_size, true);
+   }
 }
 
 static void
@@ -937,15 +943,10 @@ lima_flush(struct lima_context *ctx)
       if (!lima_submit_wait(ctx->gp_submit, 1000000000, true))
          fprintf(stderr, "gp submit wait error\n");
 
-      float *varying = lima_ctx_buff_map(ctx, lima_ctx_buff_sh_varying);
-      printf("lima varying dump at va %x\n",
-             lima_ctx_buff_va(ctx, lima_ctx_buff_sh_varying));
-      lima_dump_blob(varying, 4 * 4 * 16, true);
-
-      varying = lima_ctx_buff_map(ctx, lima_ctx_buff_sh_gl_pos);
+      float *pos = lima_ctx_buff_map(ctx, lima_ctx_buff_sh_gl_pos);
       printf("lima gl_pos dump at va %x\n",
              lima_ctx_buff_va(ctx, lima_ctx_buff_sh_gl_pos));
-      lima_dump_blob(varying, 4 * 4 * 16, true);
+      lima_dump_blob(pos, 4 * 4 * 16, true);
 
       lima_bo_update(ctx->plb[ctx->plb_index], true, false);
       uint32_t *plb = ctx->plb[ctx->plb_index]->map;
