@@ -100,7 +100,6 @@ lima_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_ACCELERATED:
    case PIPE_CAP_UMA:
    case PIPE_CAP_ALLOW_MAPPED_BUFFERS_DURING_EXECUTION:
-   case PIPE_CAP_TGSI_VS_LOWER_VIEWPORT_TRANSFORM:
       return 1;
 
    case PIPE_CAP_MAX_TEXTURE_2D_LEVELS:
