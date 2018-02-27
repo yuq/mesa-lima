@@ -151,7 +151,7 @@ if _drivers == 'auto'
     if ['x86', 'x86_64'].contains(host_machine.cpu_family())
       _drivers = 'r300,r600,radeonsi,nouveau,virgl,svga,swrast'
     elif ['arm', 'aarch64'].contains(host_machine.cpu_family())
-      _drivers = 'pl111,vc4,vc5,freedreno,etnaviv,imx,nouveau,tegra,virgl,svga,swrast'
+      _drivers = 'pl111,vc4,vc5,freedreno,etnaviv,imx,nouveau,tegra,virgl,swrast'
     else
       error('Unknown architecture. Please pass -Dgallium-drivers to set driver options. Patches gladly accepted to fix this.')
     endif
