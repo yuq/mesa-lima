@@ -395,7 +395,7 @@ public:
 
    void enable_debug(const char *shader_name);
    int generate_code(const cfg_t *cfg, int dispatch_width);
-   const unsigned *get_assembly(unsigned int *assembly_size);
+   const unsigned *get_assembly();
 
 private:
    void fire_fb_write(fs_inst *inst,

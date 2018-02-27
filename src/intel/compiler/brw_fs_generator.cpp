@@ -2318,7 +2318,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 }
 
 const unsigned *
-fs_generator::get_assembly(unsigned int *assembly_size)
+fs_generator::get_assembly()
 {
-   return brw_get_program(p, assembly_size);
+   return brw_get_program(p, &prog_data->program_size);
 }

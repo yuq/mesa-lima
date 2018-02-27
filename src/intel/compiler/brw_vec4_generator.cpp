@@ -2222,8 +2222,7 @@ brw_vec4_generate_assembly(const struct brw_compiler *compiler,
                            void *mem_ctx,
                            const nir_shader *nir,
                            struct brw_vue_prog_data *prog_data,
-                           const struct cfg_t *cfg,
-                           unsigned *out_assembly_size)
+                           const struct cfg_t *cfg)
 {
    struct brw_codegen *p = rzalloc(mem_ctx, struct brw_codegen);
    brw_init_codegen(compiler->devinfo, p, mem_ctx);
@@ -2231,5 +2230,5 @@ brw_vec4_generate_assembly(const struct brw_compiler *compiler,
 
    generate_code(p, compiler, log_data, nir, prog_data, cfg);
 
-   return brw_get_program(p, out_assembly_size);
+   return brw_get_program(p, &prog_data->base.program_size);
 }

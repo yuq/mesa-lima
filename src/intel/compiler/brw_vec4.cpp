@@ -2883,7 +2883,7 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
          g.enable_debug(debug_name);
       }
       g.generate_code(v.cfg, 8);
-      assembly = g.get_assembly(&prog_data->base.base.program_size);
+      assembly = g.get_assembly();
    }
 
    if (!assembly) {
@@ -2899,8 +2899,7 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
       }
 
       assembly = brw_vec4_generate_assembly(compiler, log_data, mem_ctx,
-                                            shader, &prog_data->base, v.cfg,
-                                            &prog_data->base.base.program_size);
+                                            shader, &prog_data->base, v.cfg);
    }
 
    return assembly;
