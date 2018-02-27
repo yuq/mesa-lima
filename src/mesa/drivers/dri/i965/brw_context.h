@@ -718,6 +718,14 @@ struct brw_perf_query_info
    uint32_t n_b_counter_regs;
 };
 
+struct brw_uploader {
+   struct brw_bufmgr *bufmgr;
+   struct brw_bo *bo;
+   void *map;
+   uint32_t next_offset;
+   unsigned default_size;
+};
+
 /**
  * brw_context is derived from gl_context.
  */
@@ -786,11 +794,7 @@ struct brw_context
 
    struct intel_batchbuffer batch;
 
-   struct {
-      struct brw_bo *bo;
-      void *map;
-      uint32_t next_offset;
-   } upload;
+   struct brw_uploader upload;
 
    /**
     * Set if rendering has occurred to the drawable's front buffer.

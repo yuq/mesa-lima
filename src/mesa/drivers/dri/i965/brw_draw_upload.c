@@ -412,10 +412,10 @@ copy_array_to_vbo_array(struct brw_context *brw,
     * to replicate it out.
     */
    if (src_stride == 0) {
-      intel_upload_data(brw, element->glarray->Ptr,
-                        element->glarray->_ElementSize,
-                        element->glarray->_ElementSize,
-			&buffer->bo, &buffer->offset);
+      brw_upload_data(&brw->upload, element->glarray->Ptr,
+                      element->glarray->_ElementSize,
+                      element->glarray->_ElementSize,
+                      &buffer->bo, &buffer->offset);
 
       buffer->stride = 0;
       buffer->size = element->glarray->_ElementSize;
@@ -425,8 +425,8 @@ copy_array_to_vbo_array(struct brw_context *brw,
    const unsigned char *src = element->glarray->Ptr + min * src_stride;
    int count = max - min + 1;
    GLuint size = count * dst_stride;
-   uint8_t *dst = intel_upload_space(brw, size, dst_stride,
-                                     &buffer->bo, &buffer->offset);
+   uint8_t *dst = brw_upload_space(&brw->upload, size, dst_stride,
+                                   &buffer->bo, &buffer->offset);
 
    /* The GL 4.5 spec says:
     *      "If any enabled array’s buffer binding is zero when DrawArrays or
@@ -699,15 +699,17 @@ brw_prepare_shader_draw_parameters(struct brw_context *brw)
    /* For non-indirect draws, upload gl_BaseVertex. */
    if ((vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance) &&
        brw->draw.draw_params_bo == NULL) {
-      intel_upload_data(brw, &brw->draw.params, sizeof(brw->draw.params), 4,
-			&brw->draw.draw_params_bo,
-                        &brw->draw.draw_params_offset);
+      brw_upload_data(&brw->upload,
+                      &brw->draw.params, sizeof(brw->draw.params), 4,
+                      &brw->draw.draw_params_bo,
+                      &brw->draw.draw_params_offset);
    }
 
    if (vs_prog_data->uses_drawid) {
-      intel_upload_data(brw, &brw->draw.gl_drawid, sizeof(brw->draw.gl_drawid), 4,
-                        &brw->draw.draw_id_bo,
-                        &brw->draw.draw_id_offset);
+      brw_upload_data(&brw->upload,
+                      &brw->draw.gl_drawid, sizeof(brw->draw.gl_drawid), 4,
+                      &brw->draw.draw_id_bo,
+                      &brw->draw.draw_id_offset);
    }
 }
 
@@ -734,8 +736,8 @@ brw_upload_indices(struct brw_context *brw)
    if (!_mesa_is_bufferobj(bufferobj)) {
       /* Get new bufferobj, offset:
        */
-      intel_upload_data(brw, index_buffer->ptr, ib_size, ib_type_size,
-			&brw->ib.bo, &offset);
+      brw_upload_data(&brw->upload, index_buffer->ptr, ib_size, ib_type_size,
+                      &brw->ib.bo, &offset);
       brw->ib.size = brw->ib.bo->size;
    } else {
       offset = (GLuint) (unsigned long) index_buffer->ptr;

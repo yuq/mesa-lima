@@ -1018,6 +1018,8 @@ brwCreateContext(gl_api api,
 
    }
 
+   brw_upload_init(&brw->upload, brw->bufmgr, 65536);
+
    brw_init_state(brw);
 
    intelInitExtensions(ctx);

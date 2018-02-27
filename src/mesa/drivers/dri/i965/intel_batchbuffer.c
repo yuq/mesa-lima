@@ -1017,7 +1017,7 @@ _intel_batchbuffer_flush_fence(struct brw_context *brw,
    assert(!brw->batch.no_wrap);
 
    brw_finish_batch(brw);
-   intel_upload_finish(brw);
+   brw_upload_finish(&brw->upload);
 
    finish_growing_bos(&brw->batch.batch);
    finish_growing_bos(&brw->batch.state);
