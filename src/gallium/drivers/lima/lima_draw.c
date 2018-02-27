@@ -231,7 +231,7 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
       vs_cmd[i++] = 0x50000000; /* ARRAYS_SEMAPHORE */
    }
 
-   int uniform_size = ctx->const_buffer[PIPE_SHADER_VERTEX].size + ctx->vs->constant_size;
+   int uniform_size = ctx->const_buffer[PIPE_SHADER_VERTEX].size + ctx->vs->constant_size + 32;
    vs_cmd[i++] = lima_ctx_buff_va(ctx, lima_ctx_buff_gp_uniform);
    vs_cmd[i++] = 0x30000000 | (align(uniform_size, 16) << 12); /* UNIFORMS_ADDRESS */
 
@@ -711,19 +711,24 @@ lima_update_gp_uniform(struct lima_context *ctx)
 
    void *vs_const_buff =
       lima_ctx_buff_alloc(ctx, lima_ctx_buff_gp_uniform,
-                          ccb->size + vs->constant_size,
+                          ccb->size + vs->constant_size + 32,
                           LIMA_CTX_BUFF_SUBMIT_GP, true);
 
    if (ccb->buffer)
       memcpy(vs_const_buff, ccb->buffer, ccb->size);
 
+   memcpy(vs_const_buff + ccb->size, ctx->viewport.transform.scale,
+          sizeof(ctx->viewport.transform.scale));
+   memcpy(vs_const_buff + ccb->size + 16, ctx->viewport.transform.translate,
+          sizeof(ctx->viewport.transform.translate));
+
    if (vs->constant)
-      memcpy(vs_const_buff + ccb->size, vs->constant, vs->constant_size);
+      memcpy(vs_const_buff + ccb->size + 32, vs->constant, vs->constant_size);
 
    if (lima_dump_command_stream) {
       printf("lima: update gp uniform at va %x\n",
              lima_ctx_buff_va(ctx, lima_ctx_buff_gp_uniform));
-      lima_dump_blob(vs_const_buff, ccb->size + vs->constant_size, true);
+      lima_dump_blob(vs_const_buff, ccb->size + vs->constant_size + 32, true);
    }
 }
 
@@ -860,6 +865,7 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    if ((ctx->dirty & LIMA_CONTEXT_DIRTY_CONST_BUFF &&
         ctx->const_buffer[PIPE_SHADER_VERTEX].dirty) ||
+       ctx->dirty & LIMA_CONTEXT_DIRTY_VIEWPORT ||
        ctx->dirty & LIMA_CONTEXT_DIRTY_SHADER_VERT) {
       lima_update_gp_uniform(ctx);
       ctx->const_buffer[PIPE_SHADER_VERTEX].dirty = false;

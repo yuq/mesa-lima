@@ -27,6 +27,103 @@
 #include "gpir.h"
 #include "lima_context.h"
 
+static gpir_node *
+gpir_lower_create_insert_node(gpir_node *parent, gpir_node *child,
+                              gpir_node *child2, gpir_op op)
+{
+   gpir_node *node = gpir_node_create(parent->block, op);
+   if (!node)
+      return NULL;
+
+   gpir_alu_node *alu = gpir_node_to_alu(node);
+   alu->children[0] = child;
+   alu->children[1] = child2;
+   alu->num_child = 2;
+   gpir_node_insert_child(parent, child, node);
+   gpir_node_add_dep(node, child2, GPIR_DEP_INPUT);
+   list_addtail(&node->list, &parent->list);
+   return node;
+}
+
+static bool gpir_lower_viewport_transform(gpir_compiler *comp)
+{
+   gpir_node *rcpw = NULL;
+
+   /* rcpw = 1 / w */
+   list_for_each_entry(gpir_block, block, &comp->block_list, list) {
+      list_for_each_entry(gpir_node, node, &block->node_list, list) {
+         if (node->op == gpir_op_store_varying) {
+            gpir_store_node *store = gpir_node_to_store(node);
+            if (store->index == 0 && store->component == 3) {
+               gpir_node *w = store->child;
+
+               rcpw = gpir_node_create(block, gpir_op_rcp);
+               if (!rcpw)
+                  return false;
+               list_addtail(&rcpw->list, &node->list);
+
+               gpir_alu_node *alu = gpir_node_to_alu(rcpw);
+               alu->children[0] = w;
+               alu->num_child = 1;
+               store->child = rcpw;
+
+               gpir_node_insert_child(node, w, rcpw);
+               goto found;
+            }
+         }
+      }
+   }
+
+found:
+   assert(rcpw);
+
+   /* xyz = xyz * rcpw * scale + transition */
+   list_for_each_entry(gpir_block, block, &comp->block_list, list) {
+      list_for_each_entry(gpir_node, node, &block->node_list, list) {
+         if (node->op == gpir_op_store_varying) {
+            gpir_store_node *store = gpir_node_to_store(node);
+            if (store->index == 0 && store->component < 3) {
+               gpir_node *xyz = store->child;
+
+               gpir_node *mul1 =
+                  gpir_lower_create_insert_node(node, xyz, rcpw, gpir_op_mul);
+               if (!mul1)
+                  return false;
+
+               gpir_load_node *scale = gpir_node_create(block, gpir_op_load_uniform);
+               if (!scale)
+                  return false;
+               scale->index = comp->constant_base;
+               scale->component = store->component;
+               list_addtail(&scale->node.list, &node->list);
+
+               gpir_node *mul2 =
+                  gpir_lower_create_insert_node(node, mul1, &scale->node, gpir_op_mul);
+               if (!mul2)
+                  return false;
+
+               gpir_load_node *translate = gpir_node_create(block, gpir_op_load_uniform);
+               if (!translate)
+                  return false;
+               translate->index = comp->constant_base + 1;
+               translate->component = store->component;
+               list_addtail(&translate->node.list, &node->list);
+
+               gpir_node *add =
+                  gpir_lower_create_insert_node(node, mul2, &translate->node, gpir_op_add);
+               if (!add)
+                  return false;
+
+               store->child = add;
+            }
+         }
+      }
+   }
+
+   comp->constant_base += 2;
+   return true;
+}
+
 static bool gpir_lower_const(gpir_compiler *comp)
 {
    int num_constant = 0;
@@ -277,6 +374,9 @@ static bool (*gpir_lower_funcs[gpir_op_num])(gpir_block *, gpir_node *) = {
 
 bool gpir_pre_rsched_lower_prog(gpir_compiler *comp)
 {
+   if (!gpir_lower_viewport_transform(comp))
+      return false;
+
    if (!gpir_lower_const(comp))
       return false;
 
