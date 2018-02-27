@@ -1881,7 +1881,7 @@ Value* FetchJit::GetSimdValid32bitIndices(Value* pIndices, Value* pLastIndex)
     //     vIndexMask    -1-1-1-1 0 0 0 0 : offsets < max pass
     //     vLoadedIndices 0 1 2 3 0 0 0 0 : offsets >= max masked to 0
     Value* vMaxIndex = VBROADCAST(numIndicesLeft);
-    Value* vIndexMask = VPCMPGTD(vMaxIndex,vIndexOffsets);
+    Value* vIndexMask = VPCMPGTD(vMaxIndex, vIndexOffsets);
 
     // VMASKLOAD takes an *i8 src pointer
     pIndices = BITCAST(pIndices,PointerType::get(mInt8Ty,0));
