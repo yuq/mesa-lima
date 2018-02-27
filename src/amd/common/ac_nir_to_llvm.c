@@ -1613,9 +1613,9 @@ static LLVMValueRef emit_ddxy(struct ac_nir_context *ctx,
 	int idx;
 	LLVMValueRef result;
 
-	if (op == nir_op_fddx_fine || op == nir_op_fddx)
+	if (op == nir_op_fddx_fine)
 		mask = AC_TID_MASK_LEFT;
-	else if (op == nir_op_fddy_fine || op == nir_op_fddy)
+	else if (op == nir_op_fddy_fine)
 		mask = AC_TID_MASK_TOP;
 	else
 		mask = AC_TID_MASK_TOP_LEFT;
