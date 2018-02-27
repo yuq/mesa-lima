@@ -1907,6 +1907,13 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		result = emit_intrin_3f_param(&ctx->ac, "llvm.fmuladd",
 		                              ac_to_float_type(&ctx->ac, def_type), src[0], src[1], src[2]);
 		break;
+	case nir_op_ldexp:
+		src[0] = ac_to_float(&ctx->ac, src[0]);
+		if (ac_get_elem_bits(&ctx->ac, LLVMTypeOf(src[0])) == 32)
+			result = ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.ldexp.f32", ctx->ac.f32, src, 2, AC_FUNC_ATTR_READNONE);
+		else
+			result = ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.ldexp.f64", ctx->ac.f64, src, 2, AC_FUNC_ATTR_READNONE);
+		break;
 	case nir_op_ibitfield_extract:
 		result = emit_bitfield_extract(&ctx->ac, true, src);
 		break;
