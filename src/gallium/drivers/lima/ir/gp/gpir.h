@@ -340,6 +340,7 @@ void gpir_node_remove_dep(gpir_node *succ, gpir_node *pred);
 void gpir_node_replace_succ(gpir_node *dst, gpir_node *src);
 void gpir_node_replace_pred(gpir_dep *dep, gpir_node *new_pred);
 void gpir_node_replace_child(gpir_node *parent, gpir_node *old_child, gpir_node *new_child);
+void gpir_node_insert_child(gpir_node *parent, gpir_node *child, gpir_node *insert_child);
 void gpir_node_delete(gpir_node *node);
 void gpir_node_print_prog_dep(gpir_compiler *comp);
 void gpir_node_print_prog_seq(gpir_compiler *comp);
