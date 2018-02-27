@@ -1410,6 +1410,8 @@ isl_format_get_layout(enum isl_format fmt)
    return &isl_format_layouts[fmt];
 }
 
+bool isl_format_is_valid(enum isl_format);
+
 static inline const char * ATTRIBUTE_CONST
 isl_format_get_name(enum isl_format fmt)
 {
