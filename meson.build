@@ -104,6 +104,8 @@ if _drivers == 'auto'
     # TODO: PPC, Sparc
     if ['x86', 'x86_64'].contains(host_machine.cpu_family())
       _drivers = 'i915,i965,r100,r200,nouveau'
+    elif ['arm', 'aarch64'].contains(host_machine.cpu_family())
+      _drivers = ''
     else
       error('Unknown architecture. Please pass -Ddri-drivers to set driver options. Patches gladly accepted to fix this.')
     endif
