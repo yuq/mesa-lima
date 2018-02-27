@@ -583,18 +583,20 @@ _mesa_get_viewport_xform(struct gl_context *ctx, unsigned i,
    double n = ctx->ViewportArray[i].Near;
    double f = ctx->ViewportArray[i].Far;
 
-   if (scale) {
-      scale[0] = half_width;
-      scale[1] = ctx->Transform.ClipOrigin == GL_UPPER_LEFT ?
-         -half_height : half_height;
-      scale[2] = ctx->Transform.ClipDepthMode == GL_NEGATIVE_ONE_TO_ONE ?
-         0.5 * (f - n) : f - n;
+   scale[0] = half_width;
+   translate[0] = half_width + x;
+   if (ctx->Transform.ClipOrigin == GL_UPPER_LEFT) {
+      scale[1] = -half_height;
+   } else {
+      scale[1] = half_height;
    }
+   translate[1] = half_height + y;
 
-   if (translate) {
-      translate[0] = half_width + x;
-      translate[1] = half_height + y;
-      translate[2] = ctx->Transform.ClipDepthMode == GL_NEGATIVE_ONE_TO_ONE ?
-         0.5 * (n + f) : n;
+   if (ctx->Transform.ClipDepthMode == GL_NEGATIVE_ONE_TO_ONE) {
+      scale[2] = 0.5 * (f - n);
+      translate[2] = 0.5 * (n + f);
+   } else {
+      scale[2] = f - n;
+      translate[2] = n;
    }
 }
