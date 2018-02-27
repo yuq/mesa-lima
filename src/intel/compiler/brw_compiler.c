@@ -41,6 +41,7 @@
    .lower_usub_borrow = true,                                                 \
    .lower_fdiv = true,                                                        \
    .lower_flrp64 = true,                                                      \
+   .lower_ldexp = true,                                                       \
    .native_integers = true,                                                   \
    .use_interpolated_input_intrinsics = true,                                 \
    .vertex_id_zero_based = true

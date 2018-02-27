@@ -2188,6 +2188,7 @@ static const nir_shader_compiler_options nir_options = {
         .lower_fpow = true,
         .lower_fsat = true,
         .lower_fsqrt = true,
+        .lower_ldexp = true,
         .lower_negate = true,
         .native_integers = true,
         .max_unroll_iterations = 32,
