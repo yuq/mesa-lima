@@ -87,7 +87,9 @@ brw_upload_space(struct brw_uploader *upload,
    if (!upload->bo) {
       upload->bo = brw_bo_alloc(upload->bufmgr, "streamed data",
                                 MAX2(upload->default_size, size), 4096);
-      upload->map = brw_bo_map(NULL, upload->bo, MAP_READ | MAP_WRITE);
+      upload->map = brw_bo_map(NULL, upload->bo,
+                               MAP_READ | MAP_WRITE |
+                               MAP_PERSISTENT | MAP_ASYNC);
    }
 
    upload->next_offset = offset + size;
