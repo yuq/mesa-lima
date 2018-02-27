@@ -4395,6 +4395,10 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	case nir_intrinsic_load_local_group_size:
 		result = ctx->abi->load_local_group_size(ctx->abi);
 		break;
+	case nir_intrinsic_load_vertex_id:
+		result = LLVMBuildAdd(ctx->ac.builder, ctx->abi->vertex_id,
+				      ctx->abi->base_vertex, "");
+		break;
 	case nir_intrinsic_load_vertex_id_zero_base: {
 		result = ctx->abi->vertex_id;
 		break;
