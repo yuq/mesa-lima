@@ -1353,7 +1353,7 @@ _mesa_test_proxy_teximage(struct gl_context *ctx, GLenum target,
  * Return true if the format is only valid for glCompressedTexImage.
  */
 static bool
-compressedteximage_only_format(const struct gl_context *ctx, GLenum format)
+compressedteximage_only_format(GLenum format)
 {
    switch (format) {
    case GL_PALETTE4_RGB8_OES:
@@ -1376,11 +1376,11 @@ compressedteximage_only_format(const struct gl_context *ctx, GLenum format)
  * Return true if the format doesn't support online compression.
  */
 bool
-_mesa_format_no_online_compression(const struct gl_context *ctx, GLenum format)
+_mesa_format_no_online_compression(GLenum format)
 {
    return _mesa_is_astc_format(format) ||
           _mesa_is_etc2_format(format) ||
-          compressedteximage_only_format(ctx, format);
+          compressedteximage_only_format(format);
 }
 
 /* Writes to an GL error pointer if non-null and returns whether or not the
@@ -1980,7 +1980,7 @@ texture_error_check( struct gl_context *ctx,
                      "glTexImage%dD(target can't be compressed)", dimensions);
          return GL_TRUE;
       }
-      if (_mesa_format_no_online_compression(ctx, internalFormat)) {
+      if (_mesa_format_no_online_compression(internalFormat)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "glTexImage%dD(no compression for format)", dimensions);
          return GL_TRUE;
@@ -2253,7 +2253,7 @@ texsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
    }
 
    if (_mesa_is_format_compressed(texImage->TexFormat)) {
-      if (_mesa_format_no_online_compression(ctx, texImage->InternalFormat)) {
+      if (_mesa_format_no_online_compression(texImage->InternalFormat)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                "%s(no compression for format)", callerName);
          return GL_TRUE;
@@ -2530,7 +2530,7 @@ copytexture_error_check( struct gl_context *ctx, GLuint dimensions,
                      "glCopyTexImage%dD(target can't be compressed)", dimensions);
          return GL_TRUE;
       }
-      if (_mesa_format_no_online_compression(ctx, internalFormat)) {
+      if (_mesa_format_no_online_compression(internalFormat)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                "glCopyTexImage%dD(no compression for format)", dimensions);
          return GL_TRUE;
@@ -2612,7 +2612,7 @@ copytexsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
    }
 
    if (_mesa_is_format_compressed(texImage->TexFormat)) {
-      if (_mesa_format_no_online_compression(ctx, texImage->InternalFormat)) {
+      if (_mesa_format_no_online_compression(texImage->InternalFormat)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                "%s(no compression for format)", caller);
          return GL_TRUE;
@@ -4848,7 +4848,7 @@ compressed_subtexture_error_check(struct gl_context *ctx, GLint dims,
       return GL_TRUE;
    }
 
-   if (compressedteximage_only_format(ctx, format)) {
+   if (compressedteximage_only_format(format)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(format=%s cannot be updated)",
                   callerName, _mesa_enum_to_string(format));
       return GL_TRUE;
