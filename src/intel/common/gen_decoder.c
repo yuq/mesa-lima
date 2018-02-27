@@ -35,6 +35,7 @@
 
 #include "gen_decoder.h"
 
+#include "isl/isl.h"
 #include "genxml/genX_xml.h"
 
 #define XML_BUFFER_SIZE 4096
@@ -954,6 +955,13 @@ iter_decode_field(struct gen_field_iterator *iter)
       int length = strlen(iter->value);
       snprintf(iter->value + length, sizeof(iter->value) - length,
                " (%s)", enum_name);
+   } else if (strcmp(iter->name, "Surface Format") == 0) {
+      if (isl_format_is_valid((enum isl_format)v.qw)) {
+         const char *fmt_name = isl_format_get_name((enum isl_format)v.qw);
+         int length = strlen(iter->value);
+         snprintf(iter->value + length, sizeof(iter->value) - length,
+                  " (%s)", fmt_name);
+      }
    }
 }
 

@@ -38,5 +38,6 @@ libintel_common = static_library(
   files_libintel_common,
   include_directories : [inc_common, inc_intel],
   c_args : [c_vis_args, no_override_init_args],
+  link_with : [libisl],
   dependencies : [dep_expat, dep_libdrm, dep_thread],
 )
