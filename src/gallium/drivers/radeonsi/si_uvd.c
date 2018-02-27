@@ -150,7 +150,7 @@ struct pipe_video_codec *si_uvd_create_decoder(struct pipe_context *context,
 
 	if (templ->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
 		if (vcn) {
-			radeon_create_encoder(context, templ, ctx->b.ws, si_vce_get_buffer);
+			return radeon_create_encoder(context, templ, ctx->b.ws, si_vce_get_buffer);
 		} else {
 			if (u_reduce_video_profile(templ->profile) == PIPE_VIDEO_FORMAT_HEVC)
 				return radeon_uvd_create_encoder(context, templ, ctx->b.ws, si_vce_get_buffer);
