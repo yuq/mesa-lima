@@ -1077,12 +1077,26 @@ uint32_t MaxVertsPerDraw(
 {
     API_STATE& state = pDC->pState->state;
 
-    uint32_t vertsPerDraw = totalVerts;
-
+    // We can not split draws that have streamout enabled because there is no practical way
+    // to support multiple threads generating SO data for a single set of buffers.
     if (state.soState.soEnable)
     {
         return totalVerts;
     }
+
+    // The Primitive Assembly code can only handle 1 RECT at a time. Specified with only 3 verts.
+    if (topology == TOP_RECT_LIST)
+    {
+        return 3;
+    }
+
+    // Is split drawing disabled?
+    if (KNOB_DISABLE_SPLIT_DRAW)
+    {
+        return totalVerts;
+    }
+
+    uint32_t vertsPerDraw = totalVerts;
 
     switch (topology)
     {
@@ -1129,12 +1143,6 @@ uint32_t MaxVertsPerDraw(
             vertsPerDraw = vertsPerPrim * KNOB_MAX_TESS_PRIMS_PER_DRAW;
         }
         break;
-
-    // The Primitive Assembly code can only handle 1 RECT at a time.
-    case TOP_RECT_LIST:
-        vertsPerDraw = 3;
-        break;
-
     default:
         // We are not splitting up draws for other topologies.
         break;

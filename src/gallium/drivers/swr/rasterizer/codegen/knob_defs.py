@@ -270,4 +270,14 @@ KNOBS = [
         'category'  : 'perf_adv',
     }],
     
+    ['DISABLE_SPLIT_DRAW', {
+        'type'      : 'bool',
+        'default'   : 'false',
+        'desc'      : ['Don\'t split large draws into smaller draws.,',
+                       'MAX_PRIMS_PER_DRAW and MAX_TESS_PRIMS_PER_DRAW can be used to control split size.',
+                       '',
+                       'Useful to disable split draws for gathering archrast stats.'],
+        'category'  : 'perf_adv',
+    }],
+
     ]
