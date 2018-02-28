@@ -748,7 +748,6 @@ VkResult radv_CreateQueryPool(
 	VkQueryPool*                                pQueryPool)
 {
 	RADV_FROM_HANDLE(radv_device, device, _device);
-	uint64_t size;
 	struct radv_query_pool *pool = vk_alloc2(&device->alloc, pAllocator,
 					       sizeof(*pool), 8,
 					       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -774,12 +773,12 @@ VkResult radv_CreateQueryPool(
 	pool->type = pCreateInfo->queryType;
 	pool->pipeline_stats_mask = pCreateInfo->pipelineStatistics;
 	pool->availability_offset = pool->stride * pCreateInfo->queryCount;
-	size = pool->availability_offset;
+	pool->size = pool->availability_offset;
 	if (pCreateInfo->queryType == VK_QUERY_TYPE_TIMESTAMP ||
 	    pCreateInfo->queryType == VK_QUERY_TYPE_PIPELINE_STATISTICS)
-		size += 4 * pCreateInfo->queryCount;
+		pool->size += 4 * pCreateInfo->queryCount;
 
-	pool->bo = device->ws->buffer_create(device->ws, size,
+	pool->bo = device->ws->buffer_create(device->ws, pool->size,
 					     64, RADEON_DOMAIN_GTT, RADEON_FLAG_NO_INTERPROCESS_SHARING);
 
 	if (!pool->bo) {
@@ -794,7 +793,7 @@ VkResult radv_CreateQueryPool(
 		vk_free2(&device->alloc, pAllocator, pool);
 		return vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
 	}
-	memset(pool->ptr, 0, size);
+	memset(pool->ptr, 0, pool->size);
 
 	*pQueryPool = radv_query_pool_to_handle(pool);
 	return VK_SUCCESS;

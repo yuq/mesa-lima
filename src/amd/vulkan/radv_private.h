@@ -1606,6 +1606,7 @@ struct radv_query_pool {
 	struct radeon_winsys_bo *bo;
 	uint32_t stride;
 	uint32_t availability_offset;
+	uint64_t size;
 	char *ptr;
 	VkQueryType type;
 	uint32_t pipeline_stats_mask;
