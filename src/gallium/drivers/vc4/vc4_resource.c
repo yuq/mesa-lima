@@ -22,6 +22,7 @@
  * IN THE SOFTWARE.
  */
 
+#include "pipe/p_defines.h"
 #include "util/u_blit.h"
 #include "util/u_memory.h"
 #include "util/u_format.h"
