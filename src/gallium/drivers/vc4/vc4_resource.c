@@ -37,10 +37,6 @@
 #include "vc4_resource.h"
 #include "vc4_tiling.h"
 
-#ifndef DRM_FORMAT_MOD_INVALID
-#define DRM_FORMAT_MOD_INVALID ((1ULL << 56) - 1)
-#endif
-
 static bool
 vc4_resource_bo_alloc(struct vc4_resource *rsc)
 {

@@ -39,10 +39,6 @@
 #include "vc5_tiling.h"
 #include "broadcom/cle/v3d_packet_v33_pack.h"
 
-#ifndef DRM_FORMAT_MOD_INVALID
-#define DRM_FORMAT_MOD_INVALID ((1ULL << 56) - 1)
-#endif
-
 static void
 vc5_debug_resource_layout(struct vc5_resource *rsc, const char *caller)
 {
