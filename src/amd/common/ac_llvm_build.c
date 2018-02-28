@@ -407,8 +407,7 @@ ac_build_ballot(struct ac_llvm_context *ctx,
 	 */
 	ac_build_optimization_barrier(ctx, &args[0]);
 
-	if (LLVMTypeOf(args[0]) != ctx->i32)
-		args[0] = LLVMBuildBitCast(ctx->builder, args[0], ctx->i32, "");
+	args[0] = ac_to_integer(ctx, args[0]);
 
 	return ac_build_intrinsic(ctx,
 				  "llvm.amdgcn.icmp.i32",
@@ -1291,23 +1290,40 @@ ac_build_umsb(struct ac_llvm_context *ctx,
 	      LLVMValueRef arg,
 	      LLVMTypeRef dst_type)
 {
-	LLVMValueRef args[2] = {
+	const char *intrin_name;
+	LLVMTypeRef type;
+	LLVMValueRef highest_bit;
+	LLVMValueRef zero;
+
+	if (ac_get_elem_bits(ctx, LLVMTypeOf(arg)) == 64) {
+		intrin_name = "llvm.ctlz.i64";
+		type = ctx->i64;
+		highest_bit = LLVMConstInt(ctx->i64, 63, false);
+		zero = ctx->i64_0;
+	} else {
+		intrin_name = "llvm.ctlz.i32";
+		type = ctx->i32;
+		highest_bit = LLVMConstInt(ctx->i32, 31, false);
+		zero = ctx->i32_0;
+	}
+
+	LLVMValueRef params[2] = {
 		arg,
 		ctx->i1true,
 	};
-	LLVMValueRef msb = ac_build_intrinsic(ctx, "llvm.ctlz.i32",
-					      dst_type, args, ARRAY_SIZE(args),
+
+	LLVMValueRef msb = ac_build_intrinsic(ctx, intrin_name, type,
+					      params, 2,
 					      AC_FUNC_ATTR_READNONE);
 
 	/* The HW returns the last bit index from MSB, but TGSI/NIR wants
 	 * the index from LSB. Invert it by doing "31 - msb". */
-	msb = LLVMBuildSub(ctx->builder, LLVMConstInt(ctx->i32, 31, false),
-			   msb, "");
+	msb = LLVMBuildSub(ctx->builder, highest_bit, msb, "");
+	msb = LLVMBuildTruncOrBitCast(ctx->builder, msb, ctx->i32, "");
 
 	/* check for zero */
 	return LLVMBuildSelect(ctx->builder,
-			       LLVMBuildICmp(ctx->builder, LLVMIntEQ, arg,
-					     LLVMConstInt(ctx->i32, 0, 0), ""),
+			       LLVMBuildICmp(ctx->builder, LLVMIntEQ, arg, zero, ""),
 			       LLVMConstInt(ctx->i32, -1, true), msb, "");
 }
 
