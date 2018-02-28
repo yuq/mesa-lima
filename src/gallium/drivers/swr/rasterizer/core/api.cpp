@@ -1221,7 +1221,7 @@ void DrawInstanced(
         QueueDraw(pContext);
 
         AR_API_EVENT(DrawInstancedEvent(pDC->drawId, topology, numVertsForDraw, startVertex, numInstances,
-            startInstance, pState->tsState.tsEnable, pState->gsState.gsEnable, pState->soState.soEnable, draw));
+            startInstance, pState->tsState.tsEnable, pState->gsState.gsEnable, pState->soState.soEnable, pState->gsState.outputTopology, draw));
 
         remainingVerts -= numVertsForDraw;
         draw++;
@@ -1366,7 +1366,7 @@ void DrawIndexedInstance(
         QueueDraw(pContext);
 
         AR_API_EVENT(DrawIndexedInstancedEvent(pDC->drawId, topology, numIndicesForDraw, indexOffset, baseVertex,
-            numInstances, startInstance, pState->tsState.tsEnable, pState->gsState.gsEnable, pState->soState.soEnable, draw));
+            numInstances, startInstance, pState->tsState.tsEnable, pState->gsState.gsEnable, pState->soState.soEnable, pState->gsState.outputTopology, draw));
 
         pIB += maxIndicesPerDraw * indexSize;
         remainingIndices -= numIndicesForDraw;

@@ -87,8 +87,8 @@ namespace ArchRast
         {
             DrawInfoEvent e(event.data.drawId, ArchRast::Instanced, event.data.topology, 
                 event.data.numVertices, 0, 0, event.data.startVertex, event.data.numInstances, 
-                event.data.startInstance, event.data.tsEnable, event.data.gsEnable, event.data.soEnable, event.data.splitId);
-
+                event.data.startInstance, event.data.tsEnable, event.data.gsEnable, event.data.soEnable, event.data.soTopology, event.data.splitId);
+            
             EventHandlerFile::Handle(e);
         }
 
@@ -96,7 +96,7 @@ namespace ArchRast
         {
             DrawInfoEvent e(event.data.drawId, ArchRast::IndexedInstanced, event.data.topology, 0,
                 event.data.numIndices, event.data.indexOffset, event.data.baseVertex, event.data.numInstances,
-                event.data.startInstance, event.data.tsEnable, event.data.gsEnable, event.data.soEnable, event.data.splitId);
+                event.data.startInstance, event.data.tsEnable, event.data.gsEnable, event.data.soEnable, event.data.soTopology, event.data.splitId);
 
             EventHandlerFile::Handle(e);
         }
