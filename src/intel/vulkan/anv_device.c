@@ -374,9 +374,7 @@ anv_physical_device_init(struct anv_physical_device *device,
    device->has_syncobj = anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_FENCE_ARRAY);
    device->has_syncobj_wait = device->has_syncobj &&
                               anv_gem_supports_syncobj_wait(fd);
-
-   if (anv_gem_has_context_priority(fd))
-      device->has_context_priority = true;
+   device->has_context_priority = anv_gem_has_context_priority(fd);
 
    bool swizzled = anv_gem_get_bit6_swizzle(fd, I915_TILING_X);
 
