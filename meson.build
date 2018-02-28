@@ -1,4 +1,4 @@
-# Copyright © 2017 Intel Corporation
+# Copyright © 2017-2018 Intel Corporation
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,8 @@ project(
   meson_version : '>= 0.42',
   default_options : ['buildtype=debugoptimized', 'c_std=c99', 'cpp_std=c++11']
 )
+
+system_has_kms_drm = ['openbsd', 'netbsd', 'freebsd', 'dragonfly', 'linux'].contains(host_machine.system())
 
 # Arguments for the preprocessor, put these in a separate array from the C and
 # C++ (cpp in meson terminology) arguments since they need to be added to the
@@ -172,6 +174,13 @@ if _drivers != ''
   with_gallium_virgl = _split.contains('virgl')
   with_gallium_swr = _split.contains('swr')
   with_gallium = true
+  if system_has_kms_drm
+    _glx = get_option('glx')
+    _egl = get_option('egl')
+    if _glx == 'dri' or _egl == 'true' or (_glx == 'disabled' and _egl != 'false')
+      with_dri = true
+    endif
+  endif
 endif
 
 with_intel_vk = false
@@ -216,8 +225,6 @@ dep_libdrm_intel = []
 if with_dri_i915 or with_gallium_i915
   dep_libdrm_intel = dependency('libdrm_intel', version : '>= 2.4.75')
 endif
-
-system_has_kms_drm = ['openbsd', 'netbsd', 'freebsd', 'dragonfly', 'linux'].contains(host_machine.system())
 
 if host_machine.system() == 'darwin'
   with_dri_platform = 'apple'
@@ -272,6 +279,7 @@ if with_glx == 'auto'
   elif with_gallium
     # Even when building just gallium drivers the user probably wants dri
     with_glx = 'dri'
+    with_dri = true
   elif with_platform_x11 and with_any_opengl and not with_any_vk
     # The automatic behavior should not be to turn on xlib based glx when
     # building only vulkan drivers
@@ -279,11 +287,6 @@ if with_glx == 'auto'
   else
     with_glx = 'disabled'
   endif
-endif
-if with_glx == 'dri'
-   if with_gallium
-      with_dri = true
-   endif
 endif
 
 if not (with_dri or with_gallium or with_glx == 'xlib' or with_glx == 'gallium-xlib')
@@ -314,6 +317,8 @@ elif _egl == 'true'
     error('EGL requires shared-glapi')
   elif egl_native_platform == ''
     error('No platforms specified, consider -Dplatforms=drm,x11 at least')
+  elif not ['disabled', 'dri'].contains(with_glx)
+    error('EGL requires dri, but a GLX is being built without dri')
   endif
   with_egl = true
 else
@@ -633,7 +638,7 @@ endif
 
 gl_pkgconfig_c_flags = []
 if with_platform_x11
-  if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
+  if with_any_vk or with_egl or (with_glx == 'dri' and with_dri_platform == 'drm')
     pre_args += '-DHAVE_X11_PLATFORM'
   endif
   if with_glx == 'xlib' or with_glx == 'gallium-xlib'
@@ -1219,7 +1224,7 @@ if with_platform_x11
     dep_xcb = dependency('xcb')
     dep_x11_xcb = dependency('x11-xcb')
   endif
-  if with_any_vk or (with_glx == 'dri' and with_dri_platform == 'drm')
+  if with_any_vk or with_egl or (with_glx == 'dri' and with_dri_platform == 'drm')
     dep_xcb_dri2 = dependency('xcb-dri2', version : '>= 1.8')
 
     if with_dri3
