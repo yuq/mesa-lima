@@ -3418,7 +3418,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 			so->varying_in++;
 			so->inputs[i].compmask = (1 << maxcomp) - 1;
 			inloc += maxcomp;
-		} else {
+		} else if (!so->inputs[i].sysval){
 			so->inputs[i].compmask = compmask;
 		}
 		so->inputs[i].regid = regid;

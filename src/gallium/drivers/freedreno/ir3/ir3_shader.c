@@ -70,26 +70,35 @@ delete_variant(struct ir3_shader_variant *v)
 static void
 fixup_regfootprint(struct ir3_shader_variant *v)
 {
-	if (v->type == SHADER_VERTEX) {
-		unsigned i;
-		for (i = 0; i < v->inputs_count; i++) {
-			/* skip frag inputs fetch via bary.f since their reg's are
-			 * not written by gpu before shader starts (and in fact the
-			 * regid's might not even be valid)
-			 */
-			if (v->inputs[i].bary)
-				continue;
+	unsigned i;
 
-			if (v->inputs[i].compmask) {
-				int32_t regid = (v->inputs[i].regid + 3) >> 2;
-				v->info.max_reg = MAX2(v->info.max_reg, regid);
-			}
-		}
-		for (i = 0; i < v->outputs_count; i++) {
-			int32_t regid = (v->outputs[i].regid + 3) >> 2;
+	for (i = 0; i < v->inputs_count; i++) {
+		/* skip frag inputs fetch via bary.f since their reg's are
+		 * not written by gpu before shader starts (and in fact the
+		 * regid's might not even be valid)
+		 */
+		if (v->inputs[i].bary)
+			continue;
+
+		/* ignore high regs that are global to all threads in a warp
+		 * (they exist by default) (a5xx+)
+		 */
+		if (v->inputs[i].regid >= regid(48,0))
+			continue;
+
+		if (v->inputs[i].compmask) {
+			unsigned n = util_last_bit(v->inputs[i].compmask) - 1;
+			int32_t regid = (v->inputs[i].regid + n) >> 2;
 			v->info.max_reg = MAX2(v->info.max_reg, regid);
 		}
-	} else if (v->type == SHADER_FRAGMENT) {
+	}
+
+	for (i = 0; i < v->outputs_count; i++) {
+		int32_t regid = (v->outputs[i].regid + 3) >> 2;
+		v->info.max_reg = MAX2(v->info.max_reg, regid);
+	}
+
+	if (v->type == SHADER_FRAGMENT) {
 		/* NOTE: not sure how to turn pos_regid off..  but this could
 		 * be, for example, r1.x while max reg used by the shader is
 		 * r0.*, in which case we need to fixup the reg footprint:
