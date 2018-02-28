@@ -5105,7 +5105,7 @@ static void visit_tex(struct ac_nir_context *ctx, nir_tex_instr *instr)
 			     instr->sampler_dim == GLSL_SAMPLER_DIM_SUBPASS ||
 			     instr->sampler_dim == GLSL_SAMPLER_DIM_SUBPASS_MS) &&
 			    instr->is_array &&
-			    instr->op != nir_texop_txf) {
+			    instr->op != nir_texop_txf && instr->op != nir_texop_txf_ms) {
 				coords[2] = apply_round_slice(&ctx->ac, coords[2]);
 			}
 			address[count++] = coords[2];
