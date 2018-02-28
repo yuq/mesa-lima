@@ -1241,7 +1241,9 @@ if with_platform_x11
     endif
     dep_glproto = dependency('glproto', version : '>= 1.4.14')
   endif
-  if with_egl
+  if (with_egl or (
+      with_gallium_vdpau or with_gallium_xvmc or with_gallium_xa or
+      with_gallium_omx != 'disabled'))
     dep_xcb_xfixes = dependency('xcb-xfixes')
   endif
 endif
