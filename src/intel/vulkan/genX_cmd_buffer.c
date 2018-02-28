@@ -3643,7 +3643,7 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
          }
       } else if (att_state->pending_clear_aspects & (VK_IMAGE_ASPECT_DEPTH_BIT |
                                                      VK_IMAGE_ASPECT_STENCIL_BIT)) {
-         if (att_state->fast_clear) {
+         if (att_state->fast_clear && !is_multiview) {
             /* We currently only support HiZ for single-layer images */
             if (att_state->pending_clear_aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
                assert(iview->image->planes[0].aux_usage == ISL_AUX_USAGE_HIZ);
@@ -3658,6 +3658,26 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                                 iview->planes[0].isl.base_array_layer,
                                 fb->layers, render_area,
                                 att_state->clear_value.depthStencil.stencil);
+         } else if (is_multiview) {
+            uint32_t pending_clear_mask =
+              get_multiview_subpass_clear_mask(cmd_state, att_state);
+
+            uint32_t layer_idx;
+            for_each_bit(layer_idx, pending_clear_mask) {
+               uint32_t layer =
+                  iview->planes[0].isl.base_array_layer + layer_idx;
+
+               anv_image_clear_depth_stencil(cmd_buffer, image,
+                                             att_state->pending_clear_aspects,
+                                             att_state->aux_usage,
+                                             iview->planes[0].isl.base_level,
+                                             layer, 1,
+                                             render_area,
+                                             att_state->clear_value.depthStencil.depth,
+                                             att_state->clear_value.depthStencil.stencil);
+            }
+
+            att_state->pending_clear_views &= ~pending_clear_mask;
          } else {
             anv_image_clear_depth_stencil(cmd_buffer, image,
                                           att_state->pending_clear_aspects,
