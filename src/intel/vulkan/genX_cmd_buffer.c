@@ -272,20 +272,8 @@ color_attachment_compute_aux_usage(struct anv_device * device,
    assert(iview->image->planes[0].aux_surface.isl.usage &
           (ISL_SURF_USAGE_CCS_BIT | ISL_SURF_USAGE_MCS_BIT));
 
-   const struct isl_format_layout *view_fmtl =
-      isl_format_get_layout(iview->planes[0].isl.format);
    union isl_color_value clear_color = {};
-
-#define COPY_CLEAR_COLOR_CHANNEL(c, i) \
-   if (view_fmtl->channels.c.bits) \
-      clear_color.u32[i] = att_state->clear_value.color.uint32[i]
-
-   COPY_CLEAR_COLOR_CHANNEL(r, 0);
-   COPY_CLEAR_COLOR_CHANNEL(g, 1);
-   COPY_CLEAR_COLOR_CHANNEL(b, 2);
-   COPY_CLEAR_COLOR_CHANNEL(a, 3);
-
-#undef COPY_CLEAR_COLOR_CHANNEL
+   anv_clear_color_from_att_state(&clear_color, att_state, iview);
 
    att_state->clear_color_is_zero_one =
       isl_color_value_is_zero_one(clear_color, iview->planes[0].isl.format);
