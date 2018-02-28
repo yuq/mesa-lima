@@ -3991,10 +3991,10 @@ visit_store_shared(struct ac_nir_context *ctx,
 
 static LLVMValueRef visit_var_atomic(struct ac_nir_context *ctx,
 				     const nir_intrinsic_instr *instr,
-				     LLVMValueRef ptr)
+				     LLVMValueRef ptr, int src_idx)
 {
 	LLVMValueRef result;
-	LLVMValueRef src = get_src(ctx, instr->src[0]);
+	LLVMValueRef src = get_src(ctx, instr->src[src_idx]);
 
 	if (instr->intrinsic == nir_intrinsic_var_atomic_comp_swap ||
 	    instr->intrinsic == nir_intrinsic_shared_atomic_comp_swap) {
@@ -4574,8 +4574,8 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	case nir_intrinsic_shared_atomic_xor:
 	case nir_intrinsic_shared_atomic_exchange:
 	case nir_intrinsic_shared_atomic_comp_swap: {
-		LLVMValueRef ptr = get_memory_ptr(ctx, instr->src[1]);
-		result = visit_var_atomic(ctx, instr, ptr);
+		LLVMValueRef ptr = get_memory_ptr(ctx, instr->src[0]);
+		result = visit_var_atomic(ctx, instr, ptr, 1);
 		break;
 	}
 	case nir_intrinsic_var_atomic_add:
@@ -4589,7 +4589,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 	case nir_intrinsic_var_atomic_exchange:
 	case nir_intrinsic_var_atomic_comp_swap: {
 		LLVMValueRef ptr = build_gep_for_deref(ctx, instr->variables[0]);
-		result = visit_var_atomic(ctx, instr, ptr);
+		result = visit_var_atomic(ctx, instr, ptr, 0);
 		break;
 	}
 	case nir_intrinsic_interp_var_at_centroid:
