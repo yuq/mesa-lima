@@ -1092,11 +1092,15 @@ void radv_CmdBeginQuery(
 	radv_cs_add_buffer(cmd_buffer->device->ws, cs, pool->bo, 8);
 
 	if (cmd_buffer->pending_reset_query) {
-		/* Make sure to flush caches if the query pool has been
-		 * previously resetted using the compute shader path.
-		 */
-		si_emit_cache_flush(cmd_buffer);
-		cmd_buffer->pending_reset_query = false;
+		if (pool->size >= RADV_BUFFER_OPS_CS_THRESHOLD) {
+			/* Only need to flush caches if the query pool size is
+			 * large enough to be resetted using the compute shader
+			 * path. Small pools don't need any cache flushes
+			 * because we use a CP dma clear.
+			 */
+			si_emit_cache_flush(cmd_buffer);
+			cmd_buffer->pending_reset_query = false;
+		}
 	}
 
 	switch (pool->type) {
