@@ -407,8 +407,10 @@ void cso_destroy_context( struct cso_context *ctx )
          ctx->pipe->set_stream_output_targets(ctx->pipe, 0, NULL, NULL);
    }
 
-   for (i = 0; i < PIPE_MAX_SHADER_SAMPLER_VIEWS; i++) {
+   for (i = 0; i < ctx->nr_fragment_views; i++) {
       pipe_sampler_view_reference(&ctx->fragment_views[i], NULL);
+   }
+   for (i = 0; i < ctx->nr_fragment_views_saved; i++) {
       pipe_sampler_view_reference(&ctx->fragment_views_saved[i], NULL);
    }
 
