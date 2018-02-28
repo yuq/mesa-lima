@@ -5003,7 +5003,7 @@ static void visit_tex(struct ac_nir_context *ctx, nir_tex_instr *instr)
 			/* This seems like a bit of a hack - but it passes Vulkan CTS with it */
 			if (instr->sampler_dim != GLSL_SAMPLER_DIM_3D &&
 			    instr->sampler_dim != GLSL_SAMPLER_DIM_CUBE &&
-			    instr->op != nir_texop_txf) {
+			    instr->op != nir_texop_txf && instr->op != nir_texop_txf_ms) {
 				coords[2] = apply_round_slice(&ctx->ac, coords[2]);
 			}
 			address[count++] = coords[2];
