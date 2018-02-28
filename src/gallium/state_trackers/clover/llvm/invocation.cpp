@@ -197,6 +197,7 @@ namespace {
          map(std::mem_fn(&std::string::c_str), opts);
 
       const target &target = dev.ir_target();
+      const std::string &device_clc_version = dev.device_clc_version();
 
       if (!clang::CompilerInvocation::CreateFromArgs(
              c->getInvocation(), copts.data(), copts.data() + copts.size(), diag))
@@ -218,7 +219,7 @@ namespace {
       compat::set_lang_defaults(c->getInvocation(), c->getLangOpts(),
                                 compat::ik_opencl, ::llvm::Triple(target.triple),
                                 c->getPreprocessorOpts(),
-                                clang::LangStandard::lang_opencl11);
+                                get_language_version(opts, device_clc_version));
 
       c->createDiagnostics(new clang::TextDiagnosticPrinter(
                               *new raw_string_ostream(r_log),
@@ -249,7 +250,9 @@ namespace {
       c.getPreprocessorOpts().Includes.push_back("clc/clc.h");
 
       // Add definition for the OpenCL version
-      c.getPreprocessorOpts().addMacroDef("__OPENCL_VERSION__=110");
+      c.getPreprocessorOpts().addMacroDef("__OPENCL_VERSION__=" +
+              std::to_string(get_cl_version(
+                                  dev.device_version()).version_number));
 
       // clc.h requires that this macro be defined:
       c.getPreprocessorOpts().addMacroDef("cl_clang_storage_class_specifiers");
