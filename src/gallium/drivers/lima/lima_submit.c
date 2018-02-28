@@ -181,7 +181,7 @@ bool lima_submit_wait(struct lima_submit *submit, uint64_t timeout_ns, bool rela
       .ctx = submit->ctx,
    };
 
-   if (lima_get_absolute_timeout(&req.timeout_ns, relative))
+   if (!lima_get_absolute_timeout(&req.timeout_ns, relative))
       return false;
 
    bool ret = drmIoctl(submit->screen->fd, DRM_IOCTL_LIMA_WAIT_FENCE, &req) == 0;
