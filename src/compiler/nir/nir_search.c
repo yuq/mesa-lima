@@ -27,6 +27,7 @@
 
 #include <inttypes.h>
 #include "nir_search.h"
+#include "util/half_float.h"
 
 struct match_state {
    bool inexact_match;
@@ -194,6 +195,9 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
          for (unsigned i = 0; i < num_components; ++i) {
             double val;
             switch (load->def.bit_size) {
+            case 16:
+               val = _mesa_half_to_float(load->value.u16[new_swizzle[i]]);
+               break;
             case 32:
                val = load->value.f32[new_swizzle[i]];
                break;
@@ -213,6 +217,22 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
       case nir_type_uint:
       case nir_type_bool32:
          switch (load->def.bit_size) {
+         case 8:
+            for (unsigned i = 0; i < num_components; ++i) {
+               if (load->value.u8[new_swizzle[i]] !=
+                   (uint8_t)const_val->data.u)
+                  return false;
+            }
+            return true;
+
+         case 16:
+            for (unsigned i = 0; i < num_components; ++i) {
+               if (load->value.u16[new_swizzle[i]] !=
+                   (uint16_t)const_val->data.u)
+                  return false;
+            }
+            return true;
+
          case 32:
             for (unsigned i = 0; i < num_components; ++i) {
                if (load->value.u32[new_swizzle[i]] !=
