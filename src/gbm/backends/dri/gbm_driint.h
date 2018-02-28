@@ -43,7 +43,12 @@ struct gbm_dri_bo;
 struct gbm_dri_visual {
    uint32_t gbm_format;
    int dri_image_format;
-   uint32_t rgba_masks[4];
+   struct {
+      uint32_t red;
+      uint32_t green;
+      uint32_t blue;
+      uint32_t alpha;
+   } rgba_masks;
 };
 
 struct gbm_dri_device {

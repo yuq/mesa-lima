@@ -118,10 +118,10 @@ dri2_drm_config_is_compatible(struct dri2_egl_display *dri2_dpy,
    if (i == dri2_dpy->gbm_dri->num_visuals)
       return false;
 
-   if (red != visual->rgba_masks[0] ||
-       green != visual->rgba_masks[1] ||
-       blue != visual->rgba_masks[2] ||
-       (alpha && visual->rgba_masks[3] && alpha != visual->rgba_masks[3])) {
+   if (red != visual->rgba_masks.red ||
+       green != visual->rgba_masks.green ||
+       blue != visual->rgba_masks.blue ||
+       (alpha && visual->rgba_masks.alpha && alpha != visual->rgba_masks.alpha)) {
       return false;
    }
 
@@ -638,10 +638,10 @@ drm_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
       for (unsigned j = 0; j < num_visuals; j++) {
          struct dri2_egl_config *dri2_conf;
 
-         if (visuals[j].rgba_masks[0] != red ||
-             visuals[j].rgba_masks[1] != green ||
-             visuals[j].rgba_masks[2] != blue ||
-	     visuals[j].rgba_masks[3] != alpha)
+         if (visuals[j].rgba_masks.red != red ||
+             visuals[j].rgba_masks.green != green ||
+             visuals[j].rgba_masks.blue != blue ||
+             visuals[j].rgba_masks.alpha != alpha)
             continue;
 
          const EGLint attr_list[] = {
