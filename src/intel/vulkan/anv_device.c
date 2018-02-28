@@ -1433,8 +1433,9 @@ VkResult anv_CreateDevice(
     * is returned.
     */
    if (physical_device->has_context_priority) {
-      int err =
-         anv_gem_set_context_priority(device, vk_priority_to_gen(priority));
+      int err = anv_gem_set_context_param(device->fd, device->context_id,
+                                          I915_CONTEXT_PARAM_PRIORITY,
+                                          vk_priority_to_gen(priority));
       if (err != 0 && priority > VK_QUEUE_GLOBAL_PRIORITY_MEDIUM_EXT) {
          result = vk_error(VK_ERROR_NOT_PERMITTED_EXT);
          goto fail_fd;

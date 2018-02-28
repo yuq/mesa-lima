@@ -303,15 +303,6 @@ close_and_return:
    return swizzled;
 }
 
-int
-anv_gem_set_context_priority(struct anv_device *device,
-                             int priority)
-{
-   return anv_gem_set_context_param(device->fd, device->context_id,
-                                    I915_CONTEXT_PARAM_PRIORITY,
-                                    priority);
-}
-
 bool
 anv_gem_has_context_priority(int fd)
 {

@@ -925,7 +925,6 @@ int anv_gem_set_tiling(struct anv_device *device, uint32_t gem_handle,
                        uint32_t stride, uint32_t tiling);
 int anv_gem_create_context(struct anv_device *device);
 bool anv_gem_has_context_priority(int fd);
-int anv_gem_set_context_priority(struct anv_device *device, int priority);
 int anv_gem_destroy_context(struct anv_device *device, int context);
 int anv_gem_set_context_param(int fd, int context, uint32_t param,
                               uint64_t value);
