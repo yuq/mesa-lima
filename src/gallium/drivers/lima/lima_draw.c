@@ -947,19 +947,20 @@ lima_flush(struct lima_context *ctx)
       fprintf(stderr, "gp submit error\n");
 
    if (lima_dump_command_stream) {
-      if (!lima_submit_wait(ctx->gp_submit, 1000000000, true))
+      if (lima_submit_wait(ctx->gp_submit, PIPE_TIMEOUT_INFINITE, false)) {
+         float *pos = lima_ctx_buff_map(ctx, lima_ctx_buff_sh_gl_pos);
+         printf("lima gl_pos dump at va %x\n",
+                lima_ctx_buff_va(ctx, lima_ctx_buff_sh_gl_pos));
+         lima_dump_blob(pos, 4 * 4 * 16, true);
+
+         lima_bo_update(ctx->plb[ctx->plb_index], true, false);
+         uint32_t *plb = ctx->plb[ctx->plb_index]->map;
+         debug_printf("plb %x %x %x %x %x %x %x %x\n",
+                      plb[0], plb[1], plb[2], plb[3],
+                      plb[4], plb[5], plb[6], plb[7]);
+      }
+      else
          fprintf(stderr, "gp submit wait error\n");
-
-      float *pos = lima_ctx_buff_map(ctx, lima_ctx_buff_sh_gl_pos);
-      printf("lima gl_pos dump at va %x\n",
-             lima_ctx_buff_va(ctx, lima_ctx_buff_sh_gl_pos));
-      lima_dump_blob(pos, 4 * 4 * 16, true);
-
-      lima_bo_update(ctx->plb[ctx->plb_index], true, false);
-      uint32_t *plb = ctx->plb[ctx->plb_index]->map;
-      debug_printf("plb %x %x %x %x %x %x %x %x\n",
-                   plb[0], plb[1], plb[2], plb[3],
-                   plb[4], plb[5], plb[6], plb[7]);
    }
 
    struct lima_resource *res = lima_resource(ctx->framebuffer.cbuf->texture);
