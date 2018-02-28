@@ -1930,6 +1930,13 @@ VkResult radv_BeginCommandBuffer(
 
 	cmd_buffer->status = RADV_CMD_BUFFER_STATUS_RECORDING;
 
+	/* Force cache flushes before starting a new query in case the
+	 * corresponding pool has been resetted from a different command
+	 * buffer. This is because we have to flush caches between reset and
+	 * begin if the compute shader path has been used.
+	 */
+	cmd_buffer->pending_reset_query = true;
+
 	return result;
 }
 

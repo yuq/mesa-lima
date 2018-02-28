@@ -1003,6 +1003,11 @@ struct radv_cmd_buffer {
 	uint32_t gfx9_fence_offset;
 	struct radeon_winsys_bo *gfx9_fence_bo;
 	uint32_t gfx9_fence_idx;
+
+	/**
+	 * Whether a query pool has been resetted and we have to flush caches.
+	 */
+	bool pending_reset_query;
 };
 
 struct radv_image;
