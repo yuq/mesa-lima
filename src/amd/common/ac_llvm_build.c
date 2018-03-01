@@ -1777,6 +1777,7 @@ void ac_get_image_intr_name(const char *base_name,
 }
 
 #define AC_EXP_TARGET (HAVE_LLVM >= 0x0500 ? 0 : 3)
+#define AC_EXP_ENABLED_CHANNELS (HAVE_LLVM >= 0x0500 ? 1 : 0)
 #define AC_EXP_OUT0 (HAVE_LLVM >= 0x0500 ? 2 : 5)
 
 enum ac_ir_type {
@@ -1849,7 +1850,8 @@ static bool ac_eliminate_const_output(uint8_t *vs_output_param_offset,
 	return true;
 }
 
-static bool ac_eliminate_duplicated_output(uint8_t *vs_output_param_offset,
+static bool ac_eliminate_duplicated_output(struct ac_llvm_context *ctx,
+					   uint8_t *vs_output_param_offset,
 					   uint32_t num_outputs,
 					   struct ac_vs_exports *processed,
 				           struct ac_vs_exp_inst *exp)
@@ -1901,6 +1903,10 @@ static bool ac_eliminate_duplicated_output(uint8_t *vs_output_param_offset,
 	 */
 	struct ac_vs_exp_inst *match = &processed->exp[p];
 
+	/* Get current enabled channels mask. */
+	LLVMValueRef arg = LLVMGetOperand(match->inst, AC_EXP_ENABLED_CHANNELS);
+	unsigned enabled_channels = LLVMConstIntGetZExtValue(arg);
+
 	while (copy_back_channels) {
 		unsigned chan = u_bit_scan(&copy_back_channels);
 
@@ -1908,6 +1914,13 @@ static bool ac_eliminate_duplicated_output(uint8_t *vs_output_param_offset,
 		LLVMSetOperand(match->inst, AC_EXP_OUT0 + chan,
 			       exp->chan[chan].value);
 		match->chan[chan] = exp->chan[chan];
+
+		/* Update number of enabled channels because the original mask
+		 * is not always 0xf.
+		 */
+		enabled_channels |= (1 << chan);
+		LLVMSetOperand(match->inst, AC_EXP_ENABLED_CHANNELS,
+			       LLVMConstInt(ctx->i32, enabled_channels, 0));
 	}
 
 	/* The PARAM export is duplicated. Kill it. */
@@ -1995,7 +2008,8 @@ void ac_optimize_vs_outputs(struct ac_llvm_context *ctx,
 			/* Eliminate constant and duplicated PARAM exports. */
 			if (ac_eliminate_const_output(vs_output_param_offset,
 						      num_outputs, &exp) ||
-			    ac_eliminate_duplicated_output(vs_output_param_offset,
+			    ac_eliminate_duplicated_output(ctx,
+							   vs_output_param_offset,
 							   num_outputs, &exports,
 							   &exp)) {
 				removed_any = true;
