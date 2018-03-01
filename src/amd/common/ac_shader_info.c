@@ -146,6 +146,24 @@ gather_intrinsic_info(const nir_shader *nir, const nir_intrinsic_instr *instr,
 			}
 		}
 		break;
+	case nir_intrinsic_store_var: {
+		nir_deref_var *dvar = instr->variables[0];
+		nir_variable *var = dvar->var;
+
+		if (var->data.mode == nir_var_shader_out) {
+			unsigned idx = var->data.location;
+			unsigned comp = var->data.location_frac;
+
+			if (nir->info.stage == MESA_SHADER_VERTEX) {
+				info->vs.output_usage_mask[idx] |=
+					instr->const_index[0] << comp;
+			} else if (nir->info.stage == MESA_SHADER_TESS_EVAL) {
+				info->tes.output_usage_mask[idx] |=
+					instr->const_index[0] << comp;
+			}
+		}
+		break;
+	}
 	default:
 		break;
 	}
