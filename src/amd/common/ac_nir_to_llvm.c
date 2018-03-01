@@ -5928,11 +5928,11 @@ si_llvm_init_export_args(struct radv_shader_context *ctx,
 
 static void
 radv_export_param(struct radv_shader_context *ctx, unsigned index,
-		  LLVMValueRef *values)
+		  LLVMValueRef *values, unsigned enabled_channels)
 {
 	struct ac_export_args args;
 
-	si_llvm_init_export_args(ctx, values, 0xf,
+	si_llvm_init_export_args(ctx, values, enabled_channels,
 				 V_008DFC_SQ_EXP_PARAM + index, &args);
 	ac_build_export(&ctx->ac, &args);
 }
@@ -6092,7 +6092,23 @@ handle_vs_outputs_post(struct radv_shader_context *ctx,
 		for (unsigned j = 0; j < 4; j++)
 			values[j] = ac_to_float(&ctx->ac, radv_load_output(ctx, i, j));
 
-		radv_export_param(ctx, param_count, values);
+		unsigned output_usage_mask;
+
+		if (ctx->stage == MESA_SHADER_VERTEX &&
+		    !ctx->is_gs_copy_shader) {
+			output_usage_mask =
+				ctx->shader_info->info.vs.output_usage_mask[i];
+		} else if (ctx->stage == MESA_SHADER_TESS_EVAL) {
+			output_usage_mask =
+				ctx->shader_info->info.tes.output_usage_mask[i];
+		} else {
+			/* Enable all channels for the GS copy shader because
+			 * we don't know the output usage mask currently.
+			 */
+			output_usage_mask = 0xf;
+		}
+
+		radv_export_param(ctx, param_count, values, output_usage_mask);
 
 		outinfo->vs_output_param_offset[i] = param_count++;
 	}
@@ -6106,7 +6122,7 @@ handle_vs_outputs_post(struct radv_shader_context *ctx,
 		for (unsigned j = 1; j < 4; j++)
 			values[j] = ctx->ac.f32_0;
 
-		radv_export_param(ctx, param_count, values);
+		radv_export_param(ctx, param_count, values, 0xf);
 
 		outinfo->vs_output_param_offset[VARYING_SLOT_PRIMITIVE_ID] = param_count++;
 		outinfo->export_prim_id = true;
