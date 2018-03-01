@@ -525,6 +525,9 @@ construct_value(const nir_search_value *value,
       case nir_type_float:
          load->def.name = ralloc_asprintf(load, "%f", c->data.d);
          switch (bitsize->dest_size) {
+         case 16:
+            load->value.u16[0] = _mesa_float_to_half(c->data.d);
+            break;
          case 32:
             load->value.f32[0] = c->data.d;
             break;
@@ -539,6 +542,12 @@ construct_value(const nir_search_value *value,
       case nir_type_int:
          load->def.name = ralloc_asprintf(load, "%" PRIi64, c->data.i);
          switch (bitsize->dest_size) {
+         case 8:
+            load->value.i8[0] = c->data.i;
+            break;
+         case 16:
+            load->value.i16[0] = c->data.i;
+            break;
          case 32:
             load->value.i32[0] = c->data.i;
             break;
@@ -553,6 +562,12 @@ construct_value(const nir_search_value *value,
       case nir_type_uint:
          load->def.name = ralloc_asprintf(load, "%" PRIu64, c->data.u);
          switch (bitsize->dest_size) {
+         case 8:
+            load->value.u8[0] = c->data.u;
+            break;
+         case 16:
+            load->value.u16[0] = c->data.u;
+            break;
          case 32:
             load->value.u32[0] = c->data.u;
             break;
