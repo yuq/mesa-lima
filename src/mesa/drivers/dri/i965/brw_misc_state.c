@@ -573,15 +573,6 @@ brw_upload_invariant_state(struct brw_context *brw)
    BEGIN_BATCH(1);
    OUT_BATCH(_3DSTATE_VF_STATISTICS << 16 | 1);
    ADVANCE_BATCH();
-
-   if (devinfo->gen >= 8) {
-      BEGIN_BATCH(4);
-      OUT_BATCH(_3DSTATE_DRAWING_RECTANGLE << 16 | 1);
-      OUT_BATCH(0);
-      OUT_BATCH(~0);
-      OUT_BATCH(0);
-      ADVANCE_BATCH();
-   }
 }
 
 /**
