@@ -5800,11 +5800,12 @@ setup_shared(struct ac_nir_context *ctx,
 static void
 si_llvm_init_export_args(struct radv_shader_context *ctx,
 			 LLVMValueRef *values,
+			 unsigned enabled_channels,
 			 unsigned target,
 			 struct ac_export_args *args)
 {
-	/* Default is 0xf. Adjusted below depending on the format. */
-	args->enabled_channels = 0xf;
+	/* Specify the channels that are enabled. */
+	args->enabled_channels = enabled_channels;
 
 	/* Specify whether the EXEC mask represents the valid mask */
 	args->valid_mask = 0;
@@ -5917,8 +5918,12 @@ si_llvm_init_export_args(struct radv_shader_context *ctx,
 
 	memcpy(&args->out[0], values, sizeof(values[0]) * 4);
 
-	for (unsigned i = 0; i < 4; ++i)
+	for (unsigned i = 0; i < 4; ++i) {
+		if (!(args->enabled_channels & (1 << i)))
+			continue;
+
 		args->out[i] = ac_to_float(&ctx->ac, args->out[i]);
+	}
 }
 
 static void
@@ -5927,7 +5932,7 @@ radv_export_param(struct radv_shader_context *ctx, unsigned index,
 {
 	struct ac_export_args args;
 
-	si_llvm_init_export_args(ctx, values,
+	si_llvm_init_export_args(ctx, values, 0xf,
 				 V_008DFC_SQ_EXP_PARAM + index, &args);
 	ac_build_export(&ctx->ac, &args);
 }
@@ -5984,13 +5989,13 @@ handle_vs_outputs_post(struct radv_shader_context *ctx,
 
 		if (ctx->num_output_clips + ctx->num_output_culls > 4) {
 			target = V_008DFC_SQ_EXP_POS + 3;
-			si_llvm_init_export_args(ctx, &slots[4], target, &args);
+			si_llvm_init_export_args(ctx, &slots[4], 0xf, target, &args);
 			memcpy(&pos_args[target - V_008DFC_SQ_EXP_POS],
 			       &args, sizeof(args));
 		}
 
 		target = V_008DFC_SQ_EXP_POS + 2;
-		si_llvm_init_export_args(ctx, &slots[0], target, &args);
+		si_llvm_init_export_args(ctx, &slots[0], 0xf, target, &args);
 		memcpy(&pos_args[target - V_008DFC_SQ_EXP_POS],
 		       &args, sizeof(args));
 
@@ -6001,7 +6006,7 @@ handle_vs_outputs_post(struct radv_shader_context *ctx,
 		for (unsigned j = 0; j < 4; j++)
 			pos_values[j] = radv_load_output(ctx, VARYING_SLOT_POS, j);
 	}
-	si_llvm_init_export_args(ctx, pos_values, V_008DFC_SQ_EXP_POS, &pos_args[0]);
+	si_llvm_init_export_args(ctx, pos_values, 0xf, V_008DFC_SQ_EXP_POS, &pos_args[0]);
 
 	if (ctx->output_mask & (1ull << VARYING_SLOT_PSIZ)) {
 		outinfo->writes_pointsize = true;
@@ -6469,7 +6474,7 @@ si_export_mrt_color(struct radv_shader_context *ctx,
 		    struct ac_export_args *args)
 {
 	/* Export */
-	si_llvm_init_export_args(ctx, color,
+	si_llvm_init_export_args(ctx, color, 0xf,
 				 V_008DFC_SQ_EXP_MRT + index, args);
 
 	if (is_last) {
