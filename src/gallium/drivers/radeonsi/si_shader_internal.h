@@ -337,13 +337,4 @@ void si_llvm_load_input_fs(
 
 bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir);
 
-LLVMValueRef si_nir_load_input_gs(struct ac_shader_abi *abi,
-				  unsigned location,
-				  unsigned driver_location,
-				  unsigned component,
-				  unsigned num_components,
-				  unsigned vertex_index,
-				  unsigned const_index,
-				  LLVMTypeRef type);
-
 #endif

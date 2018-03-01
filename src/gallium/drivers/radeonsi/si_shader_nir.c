@@ -731,26 +731,6 @@ static void declare_nir_input_fs(struct si_shader_context *ctx,
 	si_llvm_load_input_fs(ctx, input_index, out);
 }
 
-LLVMValueRef si_nir_load_input_gs(struct ac_shader_abi *abi,
-				  unsigned location,
-				  unsigned driver_location,
-				  unsigned component,
-				  unsigned num_components,
-				  unsigned vertex_index,
-				  unsigned const_index,
-				  LLVMTypeRef type)
-{
-	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
-
-	LLVMValueRef value[8];
-	for (unsigned i = component; i < num_components + component; i++) {
-		value[i] = si_llvm_load_input_gs(&ctx->abi, driver_location  / 4,
-						 vertex_index, type, i);
-	}
-
-	return ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
-}
-
 LLVMValueRef
 si_nir_lookup_interp_param(struct ac_shader_abi *abi,
 			   enum glsl_interp_mode interp, unsigned location)

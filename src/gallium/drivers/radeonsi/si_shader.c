@@ -1682,6 +1682,26 @@ LLVMValueRef si_llvm_load_input_gs(struct ac_shader_abi *abi,
 	return LLVMBuildBitCast(ctx->ac.builder, value, type, "");
 }
 
+static LLVMValueRef si_nir_load_input_gs(struct ac_shader_abi *abi,
+					 unsigned location,
+					 unsigned driver_location,
+					 unsigned component,
+					 unsigned num_components,
+					 unsigned vertex_index,
+					 unsigned const_index,
+					 LLVMTypeRef type)
+{
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+
+	LLVMValueRef value[8];
+	for (unsigned i = component; i < num_components + component; i++) {
+		value[i] = si_llvm_load_input_gs(&ctx->abi, driver_location  / 4,
+						 vertex_index, type, i);
+	}
+
+	return ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
+}
+
 static LLVMValueRef fetch_input_gs(
 	struct lp_build_tgsi_context *bld_base,
 	const struct tgsi_full_src_register *reg,
