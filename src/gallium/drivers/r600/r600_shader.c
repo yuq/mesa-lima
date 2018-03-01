@@ -3768,7 +3768,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 				alu.dst.sel = shader->input[ctx.fragcoord_input].gpr;
 				alu.dst.chan = j;
 				alu.dst.write = (j == 3);
-				alu.last = 1;
+				alu.last = (j == 3);
 				if ((r = r600_bytecode_add_alu(ctx.bc, &alu)))
 					return r;
 			}
