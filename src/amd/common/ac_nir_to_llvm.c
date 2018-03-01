@@ -6800,7 +6800,8 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
                                        struct nir_shader *const *shaders,
                                        int shader_count,
                                        struct ac_shader_variant_info *shader_info,
-                                       const struct ac_nir_compiler_options *options)
+                                       const struct ac_nir_compiler_options *options,
+				       bool dump_shader)
 {
 	struct radv_shader_context ctx = {0};
 	unsigned i;
@@ -6966,6 +6967,11 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 
 	if (shader_count == 1)
 		ac_nir_eliminate_const_vs_outputs(&ctx);
+
+	if (dump_shader) {
+		ctx.shader_info->private_mem_vgprs =
+			ac_count_scratch_private_memory(ctx.main_function);
+	}
 
 	return ctx.ac.module;
 }
@@ -7160,7 +7166,7 @@ void ac_compile_nir_shader(LLVMTargetMachineRef tm,
 {
 
 	LLVMModuleRef llvm_module = ac_translate_nir_to_llvm(tm, nir, nir_count, shader_info,
-	                                                     options);
+	                                                     options, dump_shader);
 
 	ac_compile_llvm_module(tm, llvm_module, binary, config, shader_info, nir[0]->info.stage, dump_shader, options->supports_spill);
 	for (int i = 0; i < nir_count; ++i)

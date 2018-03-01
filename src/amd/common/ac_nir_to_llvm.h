@@ -163,6 +163,7 @@ struct ac_shader_variant_info {
 	unsigned num_user_sgprs;
 	unsigned num_input_sgprs;
 	unsigned num_input_vgprs;
+	unsigned private_mem_vgprs;
 	bool need_indirect_descriptor_sets;
 	struct {
 		struct {
