@@ -1693,10 +1693,14 @@ static LLVMValueRef si_nir_load_input_gs(struct ac_shader_abi *abi,
 {
 	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 
-	LLVMValueRef value[8];
+	LLVMValueRef value[4];
 	for (unsigned i = component; i < num_components + component; i++) {
+		unsigned offset = i;
+		if (llvm_type_is_64bit(ctx, type))
+			offset *= 2;
+
 		value[i] = si_llvm_load_input_gs(&ctx->abi, driver_location  / 4,
-						 vertex_index, type, i);
+						 vertex_index, type, offset);
 	}
 
 	return ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
