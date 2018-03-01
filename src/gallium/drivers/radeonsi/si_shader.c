@@ -5981,32 +5981,6 @@ static void si_optimize_vs_outputs(struct si_shader_context *ctx)
 			       &shader->info.nr_param_exports);
 }
 
-static void si_count_scratch_private_memory(struct si_shader_context *ctx)
-{
-	ctx->shader->config.private_mem_vgprs = 0;
-
-	/* Process all LLVM instructions. */
-	LLVMBasicBlockRef bb = LLVMGetFirstBasicBlock(ctx->main_fn);
-	while (bb) {
-		LLVMValueRef next = LLVMGetFirstInstruction(bb);
-
-		while (next) {
-			LLVMValueRef inst = next;
-			next = LLVMGetNextInstruction(next);
-
-			if (LLVMGetInstructionOpcode(inst) != LLVMAlloca)
-				continue;
-
-			LLVMTypeRef type = LLVMGetElementType(LLVMTypeOf(inst));
-			/* No idea why LLVM aligns allocas to 4 elements. */
-			unsigned alignment = LLVMGetAlignment(inst);
-			unsigned dw_size = align(ac_get_type_size(type) / 4, alignment);
-			ctx->shader->config.private_mem_vgprs += dw_size;
-		}
-		bb = LLVMGetNextBasicBlock(bb);
-	}
-}
-
 static void si_init_exec_from_input(struct si_shader_context *ctx,
 				    unsigned param, unsigned bitoffset)
 {
@@ -6953,8 +6927,10 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	si_optimize_vs_outputs(&ctx);
 
 	if ((debug && debug->debug_message) ||
-	    si_can_dump_shader(sscreen, ctx.type))
-		si_count_scratch_private_memory(&ctx);
+	    si_can_dump_shader(sscreen, ctx.type)) {
+		ctx.shader->config.private_mem_vgprs =
+			ac_count_scratch_private_memory(ctx.main_fn);
+	}
 
 	/* Compile to bytecode. */
 	r = si_compile_llvm(sscreen, &shader->binary, &shader->config, tm,

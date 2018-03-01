@@ -105,6 +105,9 @@ ac_get_store_intr_attribs(bool writeonly_memory)
 				  AC_FUNC_ATTR_WRITEONLY;
 }
 
+unsigned
+ac_count_scratch_private_memory(LLVMValueRef function);
+
 #ifdef __cplusplus
 }
 #endif
