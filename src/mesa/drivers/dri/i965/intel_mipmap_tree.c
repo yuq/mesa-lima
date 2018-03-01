@@ -969,6 +969,23 @@ create_ccs_buf_for_image(struct brw_context *brw,
       return false;
    }
 
+   /* On gen10+ we start using an extra space in the aux buffer to store the
+    * indirect clear color. However, if we imported an image from the window
+    * system with CCS, we don't have the extra space at the end of the aux
+    * buffer. So create a new bo here that will store that clear color.
+    */
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+   if (devinfo->gen >= 10) {
+      mt->mcs_buf->clear_color_bo =
+         brw_bo_alloc(brw->bufmgr, "clear_color_bo",
+                      brw->isl_dev.ss.clear_color_state_size);
+      if (!mt->mcs_buf->clear_color_bo) {
+         free(mt->mcs_buf);
+         mt->mcs_buf = NULL;
+         return false;
+      }
+   }
+
    mt->mcs_buf->bo = image->bo;
    brw_bo_reference(image->bo);
 
