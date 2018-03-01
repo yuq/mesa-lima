@@ -1333,7 +1333,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 // But, we know that elements must be aligned for FETCH. :)
                                 // Right shift the offset by a bit and then scale by 2 to remove the sign extension.
                                 Value *shiftedOffsets16 = LSHR(vOffsets16, 1);
-                                pVtxSrc2[currentVertexElement++] = GATHERPS_16(gatherSrc16, pStreamBase, shiftedOffsets16, vGatherMask16, 2);
+                                pVtxSrc2[currentVertexElement++] = GATHERPS_16(gatherSrc16, pStreamBaseGFX, shiftedOffsets16, vGatherMask16, 2);
                             }
                             else
                             {
@@ -1350,9 +1350,6 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 currentVertexElement = 0;
                             }
                         }
-
-                        // offset base to the next component in the vertex to gather
-                        pStreamBase = GEP(pStreamBase, C((char)4));
 #else
                         if (isComponentEnabled(compMask, i))
                         {
@@ -1383,11 +1380,11 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 currentVertexElement = 0;
                             }
                         }
+#endif
 
                         // offset base to the next component in the vertex to gather
                         pStreamBase = GEP(pStreamBase, C((char)4));
                         pStreamBaseGFX = ADD(pStreamBaseGFX, C((int64_t)4));
-#endif
                     }
                 }
                     break;

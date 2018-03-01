@@ -52,9 +52,10 @@ void Gather4(const SWR_FORMAT format, Value* pSrcBase, Value* byteOffsets,
 virtual Value* OFFSET_TO_NEXT_COMPONENT(Value* base, Constant *offset);
 
 virtual Value *GATHERPS(Value *src, Value *pBase, Value *indices, Value *mask, uint8_t scale = 1);
+
 Value *GATHERPS_16(Value *src, Value *pBase, Value *indices, Value *mask, uint8_t scale = 1);
 
-virtual void GATHER4PS(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
+void GATHER4PS(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
     Value* mask, Value* vGatherComponents[], bool bPackedOutput);
 
 virtual Value *GATHERDD(Value* src, Value* pBase, Value* indices, Value* mask, uint8_t scale = 1);
