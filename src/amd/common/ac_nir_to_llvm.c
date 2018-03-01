@@ -3136,8 +3136,8 @@ static LLVMValueRef visit_load_var(struct ac_nir_context *ctx,
 
 			return ctx->abi->load_inputs(ctx->abi, instr->variables[0]->var->data.location,
 						     instr->variables[0]->var->data.driver_location,
-						     instr->variables[0]->var->data.location_frac, ve,
-						     vertex_index, const_index, type);
+						     instr->variables[0]->var->data.location_frac,
+						     instr->num_components, vertex_index, const_index, type);
 		}
 
 		for (unsigned chan = comp; chan < ve + comp; chan++) {
