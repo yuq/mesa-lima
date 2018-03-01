@@ -627,13 +627,15 @@ generate_shader_stats(struct radv_device *device,
 				   "VGPRS: %d\n"
 				   "Spilled SGPRs: %d\n"
 				   "Spilled VGPRs: %d\n"
+				   "PrivMem VGPRS: %d\n"
 				   "Code Size: %d bytes\n"
 				   "LDS: %d blocks\n"
 				   "Scratch: %d bytes per wave\n"
 				   "Max Waves: %d\n"
 				   "********************\n\n\n",
 				   conf->num_sgprs, conf->num_vgprs,
-				   conf->spilled_sgprs, conf->spilled_vgprs, variant->code_size,
+				   conf->spilled_sgprs, conf->spilled_vgprs,
+				   variant->info.private_mem_vgprs, variant->code_size,
 				   conf->lds_size, conf->scratch_bytes_per_wave,
 				   max_simd_waves);
 }
