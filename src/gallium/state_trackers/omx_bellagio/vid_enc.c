@@ -1098,6 +1098,8 @@ static void enc_HandleTask(omx_base_PortType *port, struct encode_task *task,
 
    picture.picture_type = picture_type;
    picture.pic_order_cnt = task->pic_order_cnt;
+   picture.base.profile = enc_TranslateOMXProfileToPipe(priv->profile_level.eProfile);
+   picture.base.entry_point = PIPE_VIDEO_ENTRYPOINT_ENCODE;
    if (priv->restricted_b_frames && picture_type == PIPE_H264_ENC_PICTURE_TYPE_B)
       picture.not_referenced = true;
    enc_ControlPicture(port, &picture);
