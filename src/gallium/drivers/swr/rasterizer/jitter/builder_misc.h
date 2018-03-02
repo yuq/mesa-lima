@@ -148,6 +148,7 @@ CallInst *PRINT(const std::string &printStr);
 CallInst *PRINT(const std::string &printStr,const std::initializer_list<Value*> &printArgs);
 
 Value* POPCNT(Value* a);
+Value* VPOPCNT(Value* a);
 
 Value* DEBUGTRAP();
 Value* INT3() { return DEBUGTRAP(); }
