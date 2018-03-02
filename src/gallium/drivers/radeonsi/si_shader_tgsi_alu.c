@@ -348,24 +348,17 @@ static void emit_ssg(const struct lp_build_tgsi_action *action,
 		     struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	LLVMBuilderRef builder = ctx->ac.builder;
 
-	LLVMValueRef cmp, val;
+	LLVMValueRef  val;
 
 	if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_I64SSG) {
 		val = ac_build_isign(&ctx->ac, emit_data->args[0], 64);
 	} else if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_ISSG) {
 		val = ac_build_isign(&ctx->ac, emit_data->args[0], 32);
 	} else if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_DSSG) {
-		cmp = LLVMBuildFCmp(builder, LLVMRealOGT, emit_data->args[0], bld_base->dbl_bld.zero, "");
-		val = LLVMBuildSelect(builder, cmp, bld_base->dbl_bld.one, emit_data->args[0], "");
-		cmp = LLVMBuildFCmp(builder, LLVMRealOGE, val, bld_base->dbl_bld.zero, "");
-		val = LLVMBuildSelect(builder, cmp, val, LLVMConstReal(bld_base->dbl_bld.elem_type, -1), "");
-	} else { // float SSG
-		cmp = LLVMBuildFCmp(builder, LLVMRealOGT, emit_data->args[0], ctx->ac.f32_0, "");
-		val = LLVMBuildSelect(builder, cmp, ctx->ac.f32_1, emit_data->args[0], "");
-		cmp = LLVMBuildFCmp(builder, LLVMRealOGE, val, ctx->ac.f32_0, "");
-		val = LLVMBuildSelect(builder, cmp, val, LLVMConstReal(ctx->f32, -1), "");
+		val = ac_build_fsign(&ctx->ac, emit_data->args[0], 64);
+	} else {
+		val = ac_build_fsign(&ctx->ac, emit_data->args[0], 32);
 	}
 
 	emit_data->output[emit_data->chan] = val;
