@@ -98,7 +98,7 @@ swr_generate_sampler_key(const struct lp_tgsi_info &info,
       key.nr_sampler_views =
          info.base.file_max[TGSI_FILE_SAMPLER_VIEW] + 1;
       for (unsigned i = 0; i < key.nr_sampler_views; i++) {
-         if (info.base.file_mask[TGSI_FILE_SAMPLER_VIEW] & (1 << i)) {
+         if (info.base.file_mask[TGSI_FILE_SAMPLER_VIEW] & (1u << (i & 31))) {
             const struct pipe_sampler_view *view =
                ctx->sampler_views[shader_type][i];
             lp_sampler_static_texture_state(
