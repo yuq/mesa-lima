@@ -353,15 +353,9 @@ static void emit_ssg(const struct lp_build_tgsi_action *action,
 	LLVMValueRef cmp, val;
 
 	if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_I64SSG) {
-		cmp = LLVMBuildICmp(builder, LLVMIntSGT, emit_data->args[0], bld_base->int64_bld.zero, "");
-		val = LLVMBuildSelect(builder, cmp, bld_base->int64_bld.one, emit_data->args[0], "");
-		cmp = LLVMBuildICmp(builder, LLVMIntSGE, val, bld_base->int64_bld.zero, "");
-		val = LLVMBuildSelect(builder, cmp, val, LLVMConstInt(ctx->i64, -1, true), "");
+		val = ac_build_isign(&ctx->ac, emit_data->args[0], 64);
 	} else if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_ISSG) {
-		cmp = LLVMBuildICmp(builder, LLVMIntSGT, emit_data->args[0], ctx->i32_0, "");
-		val = LLVMBuildSelect(builder, cmp, ctx->i32_1, emit_data->args[0], "");
-		cmp = LLVMBuildICmp(builder, LLVMIntSGE, val, ctx->i32_0, "");
-		val = LLVMBuildSelect(builder, cmp, val, LLVMConstInt(ctx->i32, -1, true), "");
+		val = ac_build_isign(&ctx->ac, emit_data->args[0], 32);
 	} else if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_DSSG) {
 		cmp = LLVMBuildFCmp(builder, LLVMRealOGT, emit_data->args[0], bld_base->dbl_bld.zero, "");
 		val = LLVMBuildSelect(builder, cmp, bld_base->dbl_bld.one, emit_data->args[0], "");

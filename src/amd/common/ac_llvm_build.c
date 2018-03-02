@@ -1708,6 +1708,29 @@ LLVMValueRef ac_build_fract(struct ac_llvm_context *ctx, LLVMValueRef src0,
 	return LLVMBuildFSub(ctx->builder, src0, floor, "");
 }
 
+LLVMValueRef ac_build_isign(struct ac_llvm_context *ctx, LLVMValueRef src0,
+			    unsigned bitsize)
+{
+	LLVMValueRef cmp, val, zero, one;
+	LLVMTypeRef type;
+
+	if (bitsize == 32) {
+		type = ctx->i32;
+		zero = ctx->i32_0;
+		one = ctx->i32_1;
+	} else {
+		type = ctx->i64;
+		zero = ctx->i64_0;
+		one = ctx->i64_1;
+	}
+
+	cmp = LLVMBuildICmp(ctx->builder, LLVMIntSGT, src0, zero, "");
+	val = LLVMBuildSelect(ctx->builder, cmp, one, src0, "");
+	cmp = LLVMBuildICmp(ctx->builder, LLVMIntSGE, val, zero, "");
+	val = LLVMBuildSelect(ctx->builder, cmp, val, LLVMConstInt(type, -1, true), "");
+	return val;
+}
+
 void ac_get_image_intr_name(const char *base_name,
 			    LLVMTypeRef data_type,
 			    LLVMTypeRef coords_type,
