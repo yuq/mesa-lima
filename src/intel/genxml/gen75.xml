@@ -3062,4 +3062,11 @@
     <field name="Buffer Length (in pages - 1)" start="12" end="20" type="uint"/>
   </register>
 
+  <register name="INSTPM" length="1" num="0x20c0">
+    <field name="3D State Instruction Disable" start="1" end="1" type="bool"/>
+    <field name="3D Rendering Instruction Disable" start="2" end="2" type="bool"/>
+    <field name="Media Instruction Disable" start="3" end="3" type="bool"/>
+    <field name="CONSTANT_BUFFER Address Offset Disable" start="6" end="6" type="bool"/>
+  </register>
+
 </genxml>
