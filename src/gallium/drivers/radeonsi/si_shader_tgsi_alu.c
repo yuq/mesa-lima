@@ -400,22 +400,19 @@ static void emit_frac(const struct lp_build_tgsi_action *action,
 		      struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	char *intr;
+	unsigned bitsize;
 
 	if (emit_data->info->opcode == TGSI_OPCODE_FRC)
-		intr = "llvm.floor.f32";
+		bitsize = 32;
 	else if (emit_data->info->opcode == TGSI_OPCODE_DFRAC)
-		intr = "llvm.floor.f64";
+		bitsize = 64;
 	else {
 		assert(0);
 		return;
 	}
 
-	LLVMValueRef floor = lp_build_intrinsic(ctx->ac.builder, intr, emit_data->dst_type,
-						&emit_data->args[0], 1,
-						LP_FUNC_ATTR_READNONE);
-	emit_data->output[emit_data->chan] = LLVMBuildFSub(ctx->ac.builder,
-			emit_data->args[0], floor, "");
+	emit_data->output[emit_data->chan] =
+		ac_build_fract(&ctx->ac, emit_data->args[0], bitsize);
 }
 
 static void emit_f2i(const struct lp_build_tgsi_action *action,
