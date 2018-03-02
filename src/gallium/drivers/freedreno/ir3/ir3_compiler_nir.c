@@ -472,6 +472,14 @@ get_src(struct ir3_context *ctx, nir_src *src)
 static void
 put_dst(struct ir3_context *ctx, nir_dest *dst)
 {
+	unsigned bit_size = nir_dest_bit_size(*dst);
+
+	if (bit_size < 32) {
+		for (unsigned i = 0; i < ctx->last_dst_n; i++) {
+			ctx->last_dst[i]->regs[0]->flags |= IR3_REG_HALF;
+		}
+	}
+
 	if (!dst->is_ssa) {
 		nir_register *reg = dst->reg.reg;
 		struct ir3_array *arr = get_array(ctx, reg);
