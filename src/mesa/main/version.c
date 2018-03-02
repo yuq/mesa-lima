@@ -134,8 +134,8 @@ create_version_string(struct gl_context *ctx, const char *prefix)
 }
 
 /**
- * Override the context's version and/or API type if the
- * environment variable MESA_GL_VERSION_OVERRIDE is set.
+ * Override the context's version and/or API type if the environment variables
+ * MESA_GL_VERSION_OVERRIDE or MESA_GLES_VERSION_OVERRIDE are set.
  *
  * Example uses of MESA_GL_VERSION_OVERRIDE:
  *
@@ -148,6 +148,12 @@ create_version_string(struct gl_context *ctx, const char *prefix)
  * X.Y: override GL version to X.Y without changing the profile.
  * X.YFC: select a Core+Forward Compatible profile with GL version X.Y.
  * X.YCOMPAT: select a Compatibility profile with GL version X.Y.
+ *
+ * Example uses of MESA_GLES_VERSION_OVERRIDE:
+ *
+ * 2.0: select GLES version 2.0.
+ * 3.0: select GLES version 3.0.
+ * 3.1: select GLES version 3.1.
  */
 bool
 _mesa_override_gl_version_contextless(struct gl_constants *consts,
