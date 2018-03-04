@@ -1459,7 +1459,7 @@ gl_clip_plane *brw_select_clip_planes(struct gl_context *ctx);
 
 /* brw_draw_upload.c */
 unsigned brw_get_vertex_surface_type(struct brw_context *brw,
-                                     const struct gl_vertex_array *glarray);
+                                     const struct gl_array_attributes *glattr);
 
 static inline unsigned
 brw_get_index_type(unsigned index_size)

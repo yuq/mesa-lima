@@ -30,6 +30,7 @@
 
 #include "main/bufferobj.h"
 #include "main/glformats.h"
+#include "main/varray.h"
 #include "main/image.h"
 
 /* Arbitrary pushbuf length we can assume we can get with a single
@@ -43,17 +44,20 @@ static int
 get_array_stride(struct gl_context *ctx, const struct gl_vertex_array *a)
 {
 	struct nouveau_render_state *render = to_render_state(ctx);
+	const struct gl_vertex_buffer_binding *binding = a->BufferBinding;
 
-	if (render->mode == VBO && !_mesa_is_bufferobj(a->BufferObj))
+	if (render->mode == VBO && !_mesa_is_bufferobj(binding->BufferObj)) {
+		const struct gl_array_attributes *attrib = a->VertexAttrib;
 		/* Pack client buffers. */
-		return align(_mesa_sizeof_type(a->Type) * a->Size, 4);
-	else
-		return a->StrideB;
+		return align(_mesa_sizeof_type(attrib->Type) * attrib->Size, 4);
+	} else {
+		return binding->Stride;
+	}
 }
 
 static void
 vbo_init_arrays(struct gl_context *ctx, const struct _mesa_index_buffer *ib,
-		const struct gl_vertex_array **arrays)
+		const struct gl_vertex_array *arrays)
 {
 	struct nouveau_render_state *render = to_render_state(ctx);
 	GLboolean imm = (render->mode == IMM);
@@ -74,19 +78,23 @@ vbo_init_arrays(struct gl_context *ctx, const struct _mesa_index_buffer *ib,
 	}
 
 	FOR_EACH_BOUND_ATTR(render, i, attr) {
-		const struct gl_vertex_array *array = arrays[attr];
+		const struct gl_vertex_array *array = &arrays[attr];
+		const struct gl_vertex_buffer_binding *binding =
+			array->BufferBinding;
+		const struct gl_array_attributes *attrib = array->VertexAttrib;
+		const GLubyte *p = _mesa_vertex_attrib_address(attrib, binding);
 
 		nouveau_init_array(&render->attrs[attr], attr,
 				   get_array_stride(ctx, array),
-				   array->Size, array->Type,
-				   imm ? array->BufferObj : NULL,
-				   array->Ptr, imm, ctx);
+				   attrib->Size, attrib->Type,
+				   imm ? binding->BufferObj : NULL,
+				   p, imm, ctx);
 	}
 }
 
 static void
 vbo_deinit_arrays(struct gl_context *ctx, const struct _mesa_index_buffer *ib,
-		  const struct gl_vertex_array **arrays)
+		  const struct gl_vertex_array *arrays)
 {
 	struct nouveau_render_state *render = to_render_state(ctx);
 	int i, attr;
@@ -110,7 +118,7 @@ vbo_deinit_arrays(struct gl_context *ctx, const struct _mesa_index_buffer *ib,
 /* Make some rendering decisions from the GL context. */
 
 static void
-vbo_choose_render_mode(struct gl_context *ctx, const struct gl_vertex_array **arrays)
+vbo_choose_render_mode(struct gl_context *ctx, const struct gl_vertex_array *arrays)
 {
 	struct nouveau_render_state *render = to_render_state(ctx);
 	int i;
@@ -119,7 +127,7 @@ vbo_choose_render_mode(struct gl_context *ctx, const struct gl_vertex_array **ar
 
 	if (ctx->Light.Enabled) {
 		for (i = 0; i < VERT_ATTRIB_MAT_MAX; i++) {
-			if (arrays[VERT_ATTRIB_MAT(i)]->StrideB) {
+			if (arrays[VERT_ATTRIB_MAT(i)].BufferBinding->Stride) {
 				render->mode = IMM;
 				break;
 			}
@@ -128,23 +136,26 @@ vbo_choose_render_mode(struct gl_context *ctx, const struct gl_vertex_array **ar
 }
 
 static void
-vbo_emit_attr(struct gl_context *ctx, const struct gl_vertex_array **arrays,
+vbo_emit_attr(struct gl_context *ctx, const struct gl_vertex_array *arrays,
 	      int attr)
 {
 	struct nouveau_pushbuf *push = context_push(ctx);
 	struct nouveau_render_state *render = to_render_state(ctx);
-	const struct gl_vertex_array *array = arrays[attr];
+	const struct gl_vertex_array *array = &arrays[attr];
+	const struct gl_vertex_buffer_binding *binding = array->BufferBinding;
+	const struct gl_array_attributes *attrib = array->VertexAttrib;
+	const GLubyte *p = _mesa_vertex_attrib_address(attrib, binding);
 	struct nouveau_array *a = &render->attrs[attr];
 	RENDER_LOCALS(ctx);
 
-	if (!array->StrideB) {
+	if (!binding->Stride) {
 		if (attr >= VERT_ATTRIB_MAT(0))
 			/* nouveau_update_state takes care of materials. */
 			return;
 
 		/* Constant attribute. */
-		nouveau_init_array(a, attr, array->StrideB, array->Size,
-				   array->Type, array->BufferObj, array->Ptr,
+		nouveau_init_array(a, attr, binding->Stride, attrib->Size,
+				   attrib->Type, binding->BufferObj, p,
 				   GL_TRUE, ctx);
 		EMIT_IMM(ctx, a, 0);
 		nouveau_deinit_array(a);
@@ -155,7 +166,7 @@ vbo_emit_attr(struct gl_context *ctx, const struct gl_vertex_array **arrays,
 
 		if (render->mode == VBO) {
 			render->map[info->vbo_index] = attr;
-			render->vertex_size += array->_ElementSize;
+			render->vertex_size += attrib->_ElementSize;
 			render->attr_count = MAX2(render->attr_count,
 						  info->vbo_index + 1);
 		} else {
@@ -168,7 +179,7 @@ vbo_emit_attr(struct gl_context *ctx, const struct gl_vertex_array **arrays,
 #define MAT(a) VERT_ATTRIB_MAT(MAT_ATTRIB_##a)
 
 static void
-vbo_choose_attrs(struct gl_context *ctx, const struct gl_vertex_array **arrays)
+vbo_choose_attrs(struct gl_context *ctx, const struct gl_vertex_array *arrays)
 {
 	struct nouveau_render_state *render = to_render_state(ctx);
 	int i;
@@ -211,15 +222,15 @@ vbo_choose_attrs(struct gl_context *ctx, const struct gl_vertex_array **arrays)
 }
 
 static int
-get_max_client_stride(struct gl_context *ctx, const struct gl_vertex_array **arrays)
+get_max_client_stride(struct gl_context *ctx, const struct gl_vertex_array *arrays)
 {
 	struct nouveau_render_state *render = to_render_state(ctx);
 	int i, attr, s = 0;
 
 	FOR_EACH_BOUND_ATTR(render, i, attr) {
-		const struct gl_vertex_array *a = arrays[attr];
+		const struct gl_vertex_array *a = &arrays[attr];
 
-		if (!_mesa_is_bufferobj(a->BufferObj))
+		if (!_mesa_is_bufferobj(a->BufferBinding->BufferObj))
 			s = MAX2(s, get_array_stride(ctx, a));
 	}
 
@@ -237,7 +248,7 @@ TAG(vbo_render_prims)(struct gl_context *ctx,
 		      struct gl_buffer_object *indirect);
 
 static GLboolean
-vbo_maybe_split(struct gl_context *ctx, const struct gl_vertex_array **arrays,
+vbo_maybe_split(struct gl_context *ctx, const struct gl_vertex_array *arrays,
 	    const struct _mesa_prim *prims, GLuint nr_prims,
 	    const struct _mesa_index_buffer *ib,
 	    GLuint min_index, GLuint max_index)
@@ -297,7 +308,7 @@ check_update_array(struct nouveau_array *a, unsigned offset,
 }
 
 static void
-vbo_bind_vertices(struct gl_context *ctx, const struct gl_vertex_array **arrays,
+vbo_bind_vertices(struct gl_context *ctx, const struct gl_vertex_array *arrays,
 		  int base, unsigned min_index, unsigned max_index, int *pdelta)
 {
 	struct nouveau_render_state *render = to_render_state(ctx);
@@ -311,22 +322,26 @@ vbo_bind_vertices(struct gl_context *ctx, const struct gl_vertex_array **arrays,
 	*pdelta = -1;
 
 	FOR_EACH_BOUND_ATTR(render, i, attr) {
-		const struct gl_vertex_array *array = arrays[attr];
-		struct gl_buffer_object *obj = array->BufferObj;
+		const struct gl_vertex_array *array = &arrays[attr];
+		const struct gl_vertex_buffer_binding *binding =
+			array->BufferBinding;
+		const struct gl_array_attributes *attrib = array->VertexAttrib;
+		const GLubyte *p = _mesa_vertex_attrib_address(attrib, binding);
+		struct gl_buffer_object *obj = binding->BufferObj;
 		struct nouveau_array *a = &render->attrs[attr];
-		unsigned delta = (base + min_index) * array->StrideB;
+		unsigned delta = (base + min_index) * binding->Stride;
 
 		bo[i] = NULL;
 
 		if (nouveau_bufferobj_hw(obj)) {
 			/* Array in a buffer obj. */
 			nouveau_bo_ref(to_nouveau_bufferobj(obj)->bo, &bo[i]);
-			offset[i] = delta + (intptr_t)array->Ptr;
+			offset[i] = delta + (intptr_t)p;
 
 		} else {
 			int n = max_index - min_index + 1;
 			char *sp = (char *)ADD_POINTERS(
-				nouveau_bufferobj_sys(obj), array->Ptr) + delta;
+				nouveau_bufferobj_sys(obj), p) + delta;
 			char *dp  = nouveau_get_scratch(ctx, n * a->stride,
 							&bo[i], &offset[i]);
 
@@ -334,7 +349,7 @@ vbo_bind_vertices(struct gl_context *ctx, const struct gl_vertex_array **arrays,
 			 * scratch buffer obj. */
 			for (j = 0; j < n; j++)
 				memcpy(dp + j * a->stride,
-				       sp + j * array->StrideB,
+				       sp + j * binding->Stride,
 				       a->stride);
 		}
 
@@ -365,7 +380,7 @@ vbo_bind_vertices(struct gl_context *ctx, const struct gl_vertex_array **arrays,
 }
 
 static void
-vbo_draw_vbo(struct gl_context *ctx, const struct gl_vertex_array **arrays,
+vbo_draw_vbo(struct gl_context *ctx, const struct gl_vertex_array *arrays,
 	     const struct _mesa_prim *prims, GLuint nr_prims,
 	     const struct _mesa_index_buffer *ib, GLuint min_index,
 	     GLuint max_index)
@@ -415,7 +430,7 @@ extract_id(struct nouveau_array *a, int i, int j)
 }
 
 static void
-vbo_draw_imm(struct gl_context *ctx, const struct gl_vertex_array **arrays,
+vbo_draw_imm(struct gl_context *ctx, const struct gl_vertex_array *arrays,
 	     const struct _mesa_prim *prims, GLuint nr_prims,
 	     const struct _mesa_index_buffer *ib, GLuint min_index,
 	     GLuint max_index)
@@ -470,7 +485,7 @@ TAG(vbo_render_prims)(struct gl_context *ctx,
 		      struct gl_buffer_object *indirect)
 {
 	struct nouveau_render_state *render = to_render_state(ctx);
-	const struct gl_vertex_array **arrays = ctx->Array._DrawArrays;
+	const struct gl_vertex_array *arrays = ctx->Array._DrawArrays;
 
 	if (!index_bounds_valid)
 		vbo_get_minmax_indices(ctx, prims, ib, &min_index, &max_index,
