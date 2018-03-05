@@ -2647,18 +2647,6 @@ glXAssociateDMPbufferSGIX(Display *dpy, GLXPbufferSGIX pbuffer,
 #endif
 
 
-/*** GLX_SGIX_swap_group ***/
-
-PUBLIC void
-glXJoinSwapGroupSGIX(Display *dpy, GLXDrawable drawable, GLXDrawable member)
-{
-   (void) dpy;
-   (void) drawable;
-   (void) member;
-}
-
-
-
 /*** GLX_SUN_get_transparent_index ***/
 
 PUBLIC Status
