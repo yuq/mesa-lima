@@ -52,9 +52,9 @@ gallium_dri_la_LIBADD = \
 	$(top_builddir)/src/gallium/drivers/rbug/librbug.la \
 	$(top_builddir)/src/gallium/drivers/trace/libtrace.la \
 	$(top_builddir)/src/mapi/shared-glapi/libglapi.la \
+	$(LIBDRM_LIBS) \
 	$(SELINUX_LIBS) \
 	$(EXPAT_LIBS) \
-	$(LIBDRM_LIBS) \
 	$(GALLIUM_COMMON_LIB_DEPS)
 
 EXTRA_gallium_dri_la_DEPENDENCIES = \
