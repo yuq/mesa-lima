@@ -164,9 +164,6 @@ struct _glxapi_table {
    void *AssociciateDMPbufferSGIX;
 #endif
 
-   /*** GLX_SGIX_swap_group ***/
-   void (*JoinSwapGroupSGIX)(Display *, GLXDrawable, GLXDrawable);
-
    /*** GLX_SUN_get_transparent_index ***/
    Status (*GetTransparentIndexSUN)(Display *, Window, Window, long *);
 

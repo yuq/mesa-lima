@@ -2683,18 +2683,6 @@ Fake_glXAssociateDMPbufferSGIX(Display *dpy, GLXPbufferSGIX pbuffer, DMparams *p
 #endif
 
 
-/*** GLX_SGIX_swap_group ***/
-
-static void
-Fake_glXJoinSwapGroupSGIX(Display *dpy, GLXDrawable drawable, GLXDrawable member)
-{
-   (void) dpy;
-   (void) drawable;
-   (void) member;
-}
-
-
-
 /*** GLX_SUN_get_transparent_index ***/
 
 static Status
@@ -2934,9 +2922,6 @@ _mesa_GetGLXDispatchTable(void)
 #if defined(_DM_BUFFER_H_)
    glx.AssociateDMPbufferSGIX = NULL;
 #endif
-
-   /*** GLX_SGIX_swap_group ***/
-   glx.JoinSwapGroupSGIX = Fake_glXJoinSwapGroupSGIX;
 
    /*** GLX_SUN_get_transparent_index ***/
    glx.GetTransparentIndexSUN = Fake_glXGetTransparentIndexSUN;
