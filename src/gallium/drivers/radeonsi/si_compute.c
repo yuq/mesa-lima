@@ -107,7 +107,7 @@ static void si_create_compute_state_async(void *job, int thread_index)
 		sel.nir = program->ir.nir;
 
 		si_nir_scan_shader(sel.nir, &sel.info);
-		si_lower_nir(&sel);
+		si_lower_nir(&sel, program->compiler_ctx_state.chip_class);
 	}
 
 

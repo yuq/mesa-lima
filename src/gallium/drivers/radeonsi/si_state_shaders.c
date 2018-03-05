@@ -1999,7 +1999,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		si_nir_scan_shader(sel->nir, &sel->info);
 		si_nir_scan_tess_ctrl(sel->nir, &sel->info, &sel->tcs_info);
 
-		si_lower_nir(sel);
+		si_lower_nir(sel, sctx->b.chip_class);
 	}
 
 	sel->type = sel->info.processor;
