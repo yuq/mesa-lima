@@ -7312,3 +7312,40 @@ void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
 			       MESA_SHADER_VERTEX,
 			       dump_shader, options->supports_spill);
 }
+
+void
+ac_lower_indirect_derefs(struct nir_shader *nir, enum chip_class chip_class)
+{
+	/* While it would be nice not to have this flag, we are constrained
+	 * by the reality that LLVM 5.0 doesn't have working VGPR indexing
+	 * on GFX9.
+	 */
+	bool llvm_has_working_vgpr_indexing = chip_class <= VI;
+
+	/* TODO: Indirect indexing of GS inputs is unimplemented.
+	 *
+	 * TCS and TES load inputs directly from LDS or offchip memory, so
+	 * indirect indexing is trivial.
+	 */
+	nir_variable_mode indirect_mask = 0;
+	if (nir->info.stage == MESA_SHADER_GEOMETRY ||
+	    (nir->info.stage != MESA_SHADER_TESS_CTRL &&
+	     nir->info.stage != MESA_SHADER_TESS_EVAL &&
+	     !llvm_has_working_vgpr_indexing)) {
+		indirect_mask |= nir_var_shader_in;
+	}
+	if (!llvm_has_working_vgpr_indexing &&
+	    nir->info.stage != MESA_SHADER_TESS_CTRL)
+		indirect_mask |= nir_var_shader_out;
+
+	/* TODO: We shouldn't need to do this, however LLVM isn't currently
+	 * smart enough to handle indirects without causing excess spilling
+	 * causing the gpu to hang.
+	 *
+	 * See the following thread for more details of the problem:
+	 * https://lists.freedesktop.org/archives/mesa-dev/2017-July/162106.html
+	 */
+	indirect_mask |= nir_var_local;
+
+	nir_lower_indirect_derefs(nir, indirect_mask);
+}
