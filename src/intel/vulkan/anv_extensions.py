@@ -68,7 +68,7 @@ EXTENSIONS = [
     Extension('VK_KHR_get_physical_device_properties2',   1, True),
     Extension('VK_KHR_get_surface_capabilities2',         1, 'ANV_HAS_SURFACE'),
     Extension('VK_KHR_image_format_list',                 1, True),
-    Extension('VK_KHR_incremental_present',               1, True),
+    Extension('VK_KHR_incremental_present',               1, 'ANV_HAS_SURFACE'),
     Extension('VK_KHR_maintenance1',                      1, True),
     Extension('VK_KHR_maintenance2',                      1, True),
     Extension('VK_KHR_push_descriptor',                   1, True),
