@@ -2037,19 +2037,6 @@ glXGetFBConfigFromVisualSGIX(Display * dpy, XVisualInfo * vis)
 
 #ifndef GLX_USE_APPLEGL
 /*
-** GLX_SGIX_swap_group
-*/
-static void
-__glXJoinSwapGroupSGIX(Display * dpy, GLXDrawable drawable,
-                       GLXDrawable member)
-{
-   (void) dpy;
-   (void) drawable;
-   (void) member;
-}
-
-
-/*
 ** GLX_OML_sync_control
 */
 static Bool
@@ -2519,9 +2506,6 @@ static const struct name_address_pair GLX_functions[] = {
    GLX_FUNCTION(glXQueryGLXPbufferSGIX),
    GLX_FUNCTION(glXSelectEventSGIX),
    GLX_FUNCTION(glXGetSelectedEventSGIX),
-
-   /*** GLX_SGIX_swap_group ***/
-   GLX_FUNCTION2(glXJoinSwapGroupSGIX, __glXJoinSwapGroupSGIX),
 
    /*** GLX_MESA_copy_sub_buffer ***/
    GLX_FUNCTION2(glXCopySubBufferMESA, __glXCopySubBufferMESA),

@@ -50,18 +50,6 @@ glXWaitVideoSyncSGI(int divisor, int remainder, unsigned int *count)
 
 
 /*
-** GLX_SGIX_swap_group
-*/
-void
-glXJoinSwapGroupSGIX(Display * dpy, GLXDrawable drawable, GLXDrawable member)
-{
-   (void) dpy;
-   (void) drawable;
-   (void) member;
-}
-
-
-/*
 ** GLX_OML_sync_control
 */
 Bool
