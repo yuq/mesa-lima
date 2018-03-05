@@ -2525,6 +2525,7 @@ void r600_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader *sha
 	}
 
 	shader->nr_ps_color_outputs = num_cout;
+	shader->ps_color_export_mask = rshader->ps_color_export_mask;
 
 	spi_ps_in_control_0 = S_0286CC_NUM_INTERP(rshader->ninput) |
 				S_0286CC_PERSP_GRADIENT_ENA(1)|
