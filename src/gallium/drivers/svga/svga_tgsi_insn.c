@@ -40,7 +40,7 @@ static boolean emit_ps_postamble( struct svga_shader_emitter *emit );
 
 
 static unsigned
-translate_opcode(uint opcode)
+translate_opcode(enum tgsi_opcode opcode)
 {
    switch (opcode) {
    case TGSI_OPCODE_ADD:        return SVGA3DOP_ADD;
