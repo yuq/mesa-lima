@@ -307,6 +307,8 @@ struct si_shader;
 
 /* State of the context creating the shader object. */
 struct si_compiler_ctx_state {
+	enum chip_class			chip_class;
+
 	/* Should only be used by si_init_shader_selector_async and
 	 * si_build_shader_variant if thread_index == -1 (non-threaded). */
 	LLVMTargetMachineRef		tm;

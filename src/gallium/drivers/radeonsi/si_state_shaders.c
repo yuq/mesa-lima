@@ -3121,6 +3121,7 @@ bool si_update_shaders(struct si_context *sctx)
 		old_ps ? old_ps->key.part.ps.epilog.spi_shader_col_format : 0;
 	int r;
 
+	compiler_state.chip_class = sctx->b.chip_class;
 	compiler_state.tm = sctx->tm;
 	compiler_state.debug = sctx->debug;
 	compiler_state.is_debug_context = sctx->is_debug;

@@ -186,6 +186,7 @@ static void *si_create_compute_state(
 			program->ir.nir = (struct nir_shader *) cso->prog;
 		}
 
+		program->compiler_ctx_state.chip_class = sctx->b.chip_class;
 		program->compiler_ctx_state.debug = sctx->debug;
 		program->compiler_ctx_state.is_debug_context = sctx->is_debug;
 		p_atomic_inc(&sscreen->num_shaders_created);
