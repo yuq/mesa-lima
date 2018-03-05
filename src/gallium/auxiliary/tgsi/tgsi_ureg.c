@@ -1234,7 +1234,7 @@ ureg_emit_dst( struct ureg_program *ureg,
 }
 
 
-static void validate( unsigned opcode,
+static void validate( enum tgsi_opcode opcode,
                       unsigned nr_dst,
                       unsigned nr_src )
 {
@@ -1250,7 +1250,7 @@ static void validate( unsigned opcode,
 
 struct ureg_emit_insn_result
 ureg_emit_insn(struct ureg_program *ureg,
-               unsigned opcode,
+               enum tgsi_opcode opcode,
                boolean saturate,
                unsigned precise,
                unsigned num_dst,
@@ -1392,7 +1392,7 @@ ureg_fixup_insn_size(struct ureg_program *ureg,
 
 void
 ureg_insn(struct ureg_program *ureg,
-          unsigned opcode,
+          enum tgsi_opcode opcode,
           const struct ureg_dst *dst,
           unsigned nr_dst,
           const struct ureg_src *src,
@@ -1427,7 +1427,7 @@ ureg_insn(struct ureg_program *ureg,
 
 void
 ureg_tex_insn(struct ureg_program *ureg,
-              unsigned opcode,
+              enum tgsi_opcode opcode,
               const struct ureg_dst *dst,
               unsigned nr_dst,
               enum tgsi_texture_type target,
@@ -1472,7 +1472,7 @@ ureg_tex_insn(struct ureg_program *ureg,
 
 void
 ureg_memory_insn(struct ureg_program *ureg,
-                 unsigned opcode,
+                 enum tgsi_opcode opcode,
                  const struct ureg_dst *dst,
                  unsigned nr_dst,
                  const struct ureg_src *src,

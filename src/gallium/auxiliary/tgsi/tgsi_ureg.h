@@ -550,7 +550,7 @@ ureg_fixup_label(struct ureg_program *ureg,
  */
 void
 ureg_insn(struct ureg_program *ureg,
-          unsigned opcode,
+          enum tgsi_opcode opcode,
           const struct ureg_dst *dst,
           unsigned nr_dst,
           const struct ureg_src *src,
@@ -560,7 +560,7 @@ ureg_insn(struct ureg_program *ureg,
 
 void
 ureg_tex_insn(struct ureg_program *ureg,
-              unsigned opcode,
+              enum tgsi_opcode opcode,
               const struct ureg_dst *dst,
               unsigned nr_dst,
               enum tgsi_texture_type target,
@@ -573,7 +573,7 @@ ureg_tex_insn(struct ureg_program *ureg,
 
 void
 ureg_memory_insn(struct ureg_program *ureg,
-                 unsigned opcode,
+                 enum tgsi_opcode opcode,
                  const struct ureg_dst *dst,
                  unsigned nr_dst,
                  const struct ureg_src *src,
@@ -593,7 +593,7 @@ struct ureg_emit_insn_result {
 
 struct ureg_emit_insn_result
 ureg_emit_insn(struct ureg_program *ureg,
-               unsigned opcode,
+               enum tgsi_opcode opcode,
                boolean saturate,
                unsigned precise,
                unsigned num_dst,
@@ -638,7 +638,7 @@ ureg_fixup_insn_size(struct ureg_program *ureg,
 #define OP00( op )                                              \
 static inline void ureg_##op( struct ureg_program *ureg )       \
 {                                                               \
-   unsigned opcode = TGSI_OPCODE_##op;                          \
+   enum tgsi_opcode opcode = TGSI_OPCODE_##op;                  \
    struct ureg_emit_insn_result insn;                           \
    insn = ureg_emit_insn(ureg,                                  \
                          opcode,                                \
@@ -653,7 +653,7 @@ static inline void ureg_##op( struct ureg_program *ureg )       \
 static inline void ureg_##op( struct ureg_program *ureg,        \
                               struct ureg_src src )             \
 {                                                               \
-   unsigned opcode = TGSI_OPCODE_##op;                          \
+   enum tgsi_opcode opcode = TGSI_OPCODE_##op;                  \
    struct ureg_emit_insn_result insn;                           \
    insn = ureg_emit_insn(ureg,                                  \
                          opcode,                                \
@@ -669,7 +669,7 @@ static inline void ureg_##op( struct ureg_program *ureg,        \
 static inline void ureg_##op( struct ureg_program *ureg,        \
                               unsigned *label_token )           \
 {                                                               \
-   unsigned opcode = TGSI_OPCODE_##op;                          \
+   enum tgsi_opcode opcode = TGSI_OPCODE_##op;                  \
    struct ureg_emit_insn_result insn;                           \
    insn = ureg_emit_insn(ureg,                                  \
                          opcode,                                \
@@ -686,7 +686,7 @@ static inline void ureg_##op( struct ureg_program *ureg,        \
                               struct ureg_src src,              \
                               unsigned *label_token )          \
 {                                                               \
-   unsigned opcode = TGSI_OPCODE_##op;                          \
+   enum tgsi_opcode opcode = TGSI_OPCODE_##op;                  \
    struct ureg_emit_insn_result insn;                           \
    insn = ureg_emit_insn(ureg,                                  \
                          opcode,                                \
@@ -703,7 +703,7 @@ static inline void ureg_##op( struct ureg_program *ureg,        \
 static inline void ureg_##op( struct ureg_program *ureg,                \
                               struct ureg_dst dst )                     \
 {                                                                       \
-   unsigned opcode = TGSI_OPCODE_##op;                                  \
+   enum tgsi_opcode opcode = TGSI_OPCODE_##op;                          \
    struct ureg_emit_insn_result insn;                                   \
    if (ureg_dst_is_empty(dst))                                          \
       return;                                                           \
@@ -723,7 +723,7 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
                               struct ureg_dst dst,                      \
                               struct ureg_src src )                     \
 {                                                                       \
-   unsigned opcode = TGSI_OPCODE_##op;                                  \
+   enum tgsi_opcode opcode = TGSI_OPCODE_##op;                          \
    struct ureg_emit_insn_result insn;                                   \
    if (ureg_dst_is_empty(dst))                                          \
       return;                                                           \
@@ -744,7 +744,7 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
                               struct ureg_src src0,                     \
                               struct ureg_src src1 )                    \
 {                                                                       \
-   unsigned opcode = TGSI_OPCODE_##op;                                  \
+   enum tgsi_opcode opcode = TGSI_OPCODE_##op;                          \
    struct ureg_emit_insn_result insn;                                   \
    if (ureg_dst_is_empty(dst))                                          \
       return;                                                           \
@@ -767,7 +767,7 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
                               struct ureg_src src0,                     \
                               struct ureg_src src1 )                    \
 {                                                                       \
-   unsigned opcode = TGSI_OPCODE_##op;                                  \
+   enum tgsi_opcode opcode = TGSI_OPCODE_##op;                          \
    enum tgsi_return_type return_type = TGSI_RETURN_TYPE_UNKNOWN;        \
    struct ureg_emit_insn_result insn;                                   \
    if (ureg_dst_is_empty(dst))                                          \
@@ -793,7 +793,7 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
                               struct ureg_src src1,                     \
                               struct ureg_src src2 )                    \
 {                                                                       \
-   unsigned opcode = TGSI_OPCODE_##op;                                  \
+   enum tgsi_opcode opcode = TGSI_OPCODE_##op;                          \
    struct ureg_emit_insn_result insn;                                   \
    if (ureg_dst_is_empty(dst))                                          \
       return;                                                           \
@@ -819,7 +819,7 @@ static inline void ureg_##op( struct ureg_program *ureg,                \
                               struct ureg_src src2,                     \
                               struct ureg_src src3 )                    \
 {                                                                       \
-   unsigned opcode = TGSI_OPCODE_##op;                                  \
+   enum tgsi_opcode opcode = TGSI_OPCODE_##op;                          \
    enum tgsi_return_type return_type = TGSI_RETURN_TYPE_UNKNOWN;        \
    struct ureg_emit_insn_result insn;                                   \
    if (ureg_dst_is_empty(dst))                                          \
