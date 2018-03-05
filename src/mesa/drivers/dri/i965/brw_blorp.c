@@ -154,11 +154,11 @@ blorp_surf_for_miptree(struct brw_context *brw,
       .aux_usage = aux_usage,
    };
 
-   struct isl_surf *aux_surf = NULL;
+   struct intel_miptree_aux_buffer *aux_buf = NULL;
    if (mt->mcs_buf)
-      aux_surf = &mt->mcs_buf->surf;
+      aux_buf = mt->mcs_buf;
    else if (mt->hiz_buf)
-      aux_surf = &mt->hiz_buf->surf;
+      aux_buf = mt->hiz_buf;
 
    if (mt->format == MESA_FORMAT_S_UINT8 && is_render_target &&
        devinfo->gen <= 7)
@@ -174,22 +174,14 @@ blorp_surf_for_miptree(struct brw_context *brw,
        */
       surf->clear_color = mt->fast_clear_color;
 
-      surf->aux_surf = aux_surf;
+      surf->aux_surf = &aux_buf->surf;
       surf->aux_addr = (struct blorp_address) {
          .reloc_flags = is_render_target ? EXEC_OBJECT_WRITE : 0,
          .mocs = surf->addr.mocs,
       };
 
-      if (mt->mcs_buf) {
-         surf->aux_addr.buffer = mt->mcs_buf->bo;
-         surf->aux_addr.offset = mt->mcs_buf->offset;
-      } else {
-         assert(mt->hiz_buf);
-         assert(surf->aux_usage == ISL_AUX_USAGE_HIZ);
-
-         surf->aux_addr.buffer = mt->hiz_buf->bo;
-         surf->aux_addr.offset = mt->hiz_buf->offset;
-      }
+      surf->aux_addr.buffer = aux_buf->bo;
+      surf->aux_addr.offset = aux_buf->offset;
    } else {
       surf->aux_addr = (struct blorp_address) {
          .buffer = NULL,
