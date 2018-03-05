@@ -150,10 +150,6 @@ static struct name_address_pair GLX_functions[] = {
    /*** GLX_SGIX_swap_group ***/
    { "glXJoinSwapGroupSGIX", (__GLXextFuncPtr) glXJoinSwapGroupSGIX },
 
-   /*** GLX_SGIX_swap_barrier ***/
-   { "glXBindSwapBarrierSGIX", (__GLXextFuncPtr) glXBindSwapBarrierSGIX },
-   { "glXQueryMaxSwapBarriersSGIX", (__GLXextFuncPtr) glXQueryMaxSwapBarriersSGIX },
-
    /*** GLX_SUN_get_transparent_index ***/
    { "glXGetTransparentIndexSUN", (__GLXextFuncPtr) glXGetTransparentIndexSUN },
 

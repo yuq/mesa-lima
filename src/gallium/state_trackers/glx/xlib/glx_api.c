@@ -2659,27 +2659,6 @@ glXJoinSwapGroupSGIX(Display *dpy, GLXDrawable drawable, GLXDrawable member)
 
 
 
-/*** GLX_SGIX_swap_barrier ***/
-
-PUBLIC void
-glXBindSwapBarrierSGIX(Display *dpy, GLXDrawable drawable, int barrier)
-{
-   (void) dpy;
-   (void) drawable;
-   (void) barrier;
-}
-
-PUBLIC Bool
-glXQueryMaxSwapBarriersSGIX(Display *dpy, int screen, int *max)
-{
-   (void) dpy;
-   (void) screen;
-   (void) max;
-   return False;
-}
-
-
-
 /*** GLX_SUN_get_transparent_index ***/
 
 PUBLIC Status
