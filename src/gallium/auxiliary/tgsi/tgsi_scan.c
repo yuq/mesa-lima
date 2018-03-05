@@ -55,7 +55,7 @@ is_memory_file(unsigned file)
 
 
 static bool
-is_mem_query_inst(unsigned opcode)
+is_mem_query_inst(enum tgsi_opcode opcode)
 {
    return opcode == TGSI_OPCODE_RESQ ||
           opcode == TGSI_OPCODE_TXQ ||
@@ -68,7 +68,7 @@ is_mem_query_inst(unsigned opcode)
  * texture map?
  */
 static bool
-is_texture_inst(unsigned opcode)
+is_texture_inst(enum tgsi_opcode opcode)
 {
    return (!is_mem_query_inst(opcode) &&
            tgsi_get_opcode_info(opcode)->is_tex);
@@ -80,7 +80,7 @@ is_texture_inst(unsigned opcode)
  * implicitly?
  */
 static bool
-computes_derivative(unsigned opcode)
+computes_derivative(enum tgsi_opcode opcode)
 {
    if (tgsi_get_opcode_info(opcode)->is_tex) {
       return opcode != TGSI_OPCODE_TG4 &&

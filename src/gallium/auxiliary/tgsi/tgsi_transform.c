@@ -169,7 +169,7 @@ tgsi_transform_shader(const struct tgsi_token *tokens_in,
          {
             struct tgsi_full_instruction *fullinst
                = &parse.FullToken.FullInstruction;
-            unsigned opcode = fullinst->Instruction.Opcode;
+            enum tgsi_opcode opcode = fullinst->Instruction.Opcode;
 
             if (first_instruction && ctx->prolog) {
                ctx->prolog(ctx);
