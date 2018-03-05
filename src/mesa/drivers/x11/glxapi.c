@@ -923,30 +923,6 @@ glXJoinSwapGroupSGIX(Display *dpy, GLXDrawable drawable, GLXDrawable member)
 }
 
 
-/*** GLX_SGIX_swap_barrier ***/
-
-void PUBLIC
-glXBindSwapBarrierSGIX(Display *dpy, GLXDrawable drawable, int barrier)
-{
-   struct _glxapi_table *t;
-   GET_DISPATCH(dpy, t);
-   if (!t)
-      return;
-   t->BindSwapBarrierSGIX(dpy, drawable, barrier);
-}
-
-Bool PUBLIC
-glXQueryMaxSwapBarriersSGIX(Display *dpy, int screen, int *max)
-{
-   struct _glxapi_table *t;
-   GET_DISPATCH(dpy, t);
-   if (!t)
-      return False;
-   return t->QueryMaxSwapBarriersSGIX(dpy, screen, max);
-}
-
-
-
 /*** GLX_SUN_get_transparent_index ***/
 
 Status PUBLIC
@@ -1203,10 +1179,6 @@ static struct name_address_pair GLX_functions[] = {
 
    /*** GLX_SGIX_swap_group ***/
    { "glXJoinSwapGroupSGIX", (__GLXextFuncPtr) glXJoinSwapGroupSGIX },
-
-   /*** GLX_SGIX_swap_barrier ***/
-   { "glXBindSwapBarrierSGIX", (__GLXextFuncPtr) glXBindSwapBarrierSGIX },
-   { "glXQueryMaxSwapBarriersSGIX", (__GLXextFuncPtr) glXQueryMaxSwapBarriersSGIX },
 
    /*** GLX_SUN_get_transparent_index ***/
    { "glXGetTransparentIndexSUN", (__GLXextFuncPtr) glXGetTransparentIndexSUN },

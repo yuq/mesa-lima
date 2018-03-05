@@ -167,10 +167,6 @@ struct _glxapi_table {
    /*** GLX_SGIX_swap_group ***/
    void (*JoinSwapGroupSGIX)(Display *, GLXDrawable, GLXDrawable);
 
-   /*** GLX_SGIX_swap_barrier ***/
-   void (*BindSwapBarrierSGIX)(Display *, GLXDrawable, int);
-   Bool (*QueryMaxSwapBarriersSGIX)(Display *, int, int *);
-
    /*** GLX_SUN_get_transparent_index ***/
    Status (*GetTransparentIndexSUN)(Display *, Window, Window, long *);
 
