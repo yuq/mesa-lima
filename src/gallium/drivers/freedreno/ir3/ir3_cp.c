@@ -607,7 +607,7 @@ ir3_cp(struct ir3 *ir, struct ir3_shader_variant *so)
 		list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
 			struct ir3_instruction *src;
 
-			/* by the way, we don't acount for false-dep's, so the CP
+			/* by the way, we don't account for false-dep's, so the CP
 			 * pass should always happen before false-dep's are inserted
 			 */
 			debug_assert(instr->deps_count == 0);

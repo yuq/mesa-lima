@@ -133,13 +133,18 @@ ir3_insert_by_depth(struct ir3_instruction *instr, struct list_head *list)
 }
 
 static void
-ir3_instr_depth(struct ir3_instruction *instr, unsigned boost)
+ir3_instr_depth(struct ir3_instruction *instr, unsigned boost, bool falsedep)
 {
 	struct ir3_instruction *src;
 
 	/* if we've already visited this instruction, bail now: */
-	if (ir3_instr_check_mark(instr))
+	if (falsedep) {
+		/* don't mark falsedep's as used, but process them normally: */
+		if (instr->flags & IR3_INSTR_MARK)
+			return;
+	} else if (ir3_instr_check_mark(instr)) {
 		return;
+	}
 
 	instr->depth = 0;
 
@@ -147,7 +152,7 @@ ir3_instr_depth(struct ir3_instruction *instr, unsigned boost)
 		unsigned sd;
 
 		/* visit child to compute it's depth: */
-		ir3_instr_depth(src, boost);
+		ir3_instr_depth(src, boost, __is_false_dep(instr, i));
 
 		/* for array writes, no need to delay on previous write: */
 		if (i == 0)
@@ -165,9 +170,10 @@ ir3_instr_depth(struct ir3_instruction *instr, unsigned boost)
 	ir3_insert_by_depth(instr, &instr->block->instr_list);
 }
 
-static void
+static bool
 remove_unused_by_block(struct ir3_block *block)
 {
+	bool progress = false;
 	list_for_each_entry_safe (struct ir3_instruction, instr, &block->instr_list, node) {
 		if (!ir3_instr_check_mark(instr)) {
 			if (instr->opc == OPC_END)
@@ -178,32 +184,35 @@ remove_unused_by_block(struct ir3_block *block)
 			instr->flags |= IR3_INSTR_UNUSED;
 			/* and remove from instruction list: */
 			list_delinit(&instr->node);
+			progress = true;
 		}
 	}
+	return progress;
 }
 
-void
-ir3_depth(struct ir3 *ir)
+static bool
+compute_depth_and_remove_unused(struct ir3 *ir)
 {
 	unsigned i;
+	bool progress = false;
 
 	ir3_clear_mark(ir);
 	for (i = 0; i < ir->noutputs; i++)
 		if (ir->outputs[i])
-			ir3_instr_depth(ir->outputs[i], 0);
+			ir3_instr_depth(ir->outputs[i], 0, false);
 
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
 		for (i = 0; i < block->keeps_count; i++)
-			ir3_instr_depth(block->keeps[i], 0);
+			ir3_instr_depth(block->keeps[i], 0, false);
 
 		/* We also need to account for if-condition: */
 		if (block->condition)
-			ir3_instr_depth(block->condition, 6);
+			ir3_instr_depth(block->condition, 6, false);
 	}
 
 	/* mark un-used instructions: */
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
-		remove_unused_by_block(block);
+		progress |= remove_unused_by_block(block);
 	}
 
 	/* note that we can end up with unused indirects, but we should
@@ -221,4 +230,15 @@ ir3_depth(struct ir3 *ir)
 		if (in && (in->flags & IR3_INSTR_UNUSED))
 			ir->inputs[i] = NULL;
 	}
+
+	return progress;
+}
+
+void
+ir3_depth(struct ir3 *ir)
+{
+	bool progress;
+	do {
+		progress = compute_depth_and_remove_unused(ir);
+	} while (progress);
 }
