@@ -21,8 +21,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "si_shader.h"
 #include "si_shader_internal.h"
+#include "si_pipe.h"
 
 #include "ac_nir_to_llvm.h"
 
@@ -623,7 +623,7 @@ void si_nir_scan_shader(const struct nir_shader *nir,
  * selector is created.
  */
 void
-si_lower_nir(struct si_shader_selector* sel, enum chip_class chip_class)
+si_lower_nir(struct si_shader_selector* sel)
 {
 	/* Adjust the driver location of inputs and outputs. The state tracker
 	 * interprets them as slots, while the ac/nir backend interprets them
@@ -673,7 +673,7 @@ si_lower_nir(struct si_shader_selector* sel, enum chip_class chip_class)
 	};
 	NIR_PASS_V(sel->nir, nir_lower_subgroups, &subgroups_options);
 
-	ac_lower_indirect_derefs(sel->nir, chip_class);
+	ac_lower_indirect_derefs(sel->nir, sel->screen->info.chip_class);
 
 	bool progress;
 	do {

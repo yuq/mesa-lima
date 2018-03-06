@@ -107,7 +107,7 @@ static void si_create_compute_state_async(void *job, int thread_index)
 		sel.nir = program->ir.nir;
 
 		si_nir_scan_shader(sel.nir, &sel.info);
-		si_lower_nir(&sel, program->compiler_ctx_state.chip_class);
+		si_lower_nir(&sel);
 	}
 
 
@@ -186,7 +186,6 @@ static void *si_create_compute_state(
 			program->ir.nir = (struct nir_shader *) cso->prog;
 		}
 
-		program->compiler_ctx_state.chip_class = sctx->b.chip_class;
 		program->compiler_ctx_state.debug = sctx->debug;
 		program->compiler_ctx_state.is_debug_context = sctx->is_debug;
 		p_atomic_inc(&sscreen->num_shaders_created);

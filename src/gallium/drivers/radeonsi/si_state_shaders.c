@@ -1999,7 +1999,7 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		si_nir_scan_shader(sel->nir, &sel->info);
 		si_nir_scan_tess_ctrl(sel->nir, &sel->info, &sel->tcs_info);
 
-		si_lower_nir(sel, sctx->b.chip_class);
+		si_lower_nir(sel);
 	}
 
 	sel->type = sel->info.processor;
@@ -3121,7 +3121,6 @@ bool si_update_shaders(struct si_context *sctx)
 		old_ps ? old_ps->key.part.ps.epilog.spi_shader_col_format : 0;
 	int r;
 
-	compiler_state.chip_class = sctx->b.chip_class;
 	compiler_state.tm = sctx->tm;
 	compiler_state.debug = sctx->debug;
 	compiler_state.is_debug_context = sctx->is_debug;

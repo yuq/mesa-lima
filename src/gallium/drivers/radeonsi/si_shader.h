@@ -307,8 +307,6 @@ struct si_shader;
 
 /* State of the context creating the shader object. */
 struct si_compiler_ctx_state {
-	enum chip_class			chip_class;
-
 	/* Should only be used by si_init_shader_selector_async and
 	 * si_build_shader_variant if thread_index == -1 (non-threaded). */
 	LLVMTargetMachineRef		tm;
@@ -674,7 +672,7 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 void si_nir_scan_tess_ctrl(const struct nir_shader *nir,
 			   const struct tgsi_shader_info *info,
 			   struct tgsi_tessctrl_info *out);
-void si_lower_nir(struct si_shader_selector *sel, enum chip_class chip_class);
+void si_lower_nir(struct si_shader_selector *sel);
 
 /* Inline helpers. */
 
