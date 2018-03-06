@@ -949,7 +949,9 @@ ir3_emit_cs_consts(const struct ir3_shader_variant *v, struct fd_ringbuffer *rin
 				[IR3_DP_NUM_WORK_GROUPS_X] = info->grid[0],
 				[IR3_DP_NUM_WORK_GROUPS_Y] = info->grid[1],
 				[IR3_DP_NUM_WORK_GROUPS_Z] = info->grid[2],
-				/* do we need work-group-size? */
+				[IR3_DP_LOCAL_GROUP_SIZE_X] = info->block[0],
+				[IR3_DP_LOCAL_GROUP_SIZE_Y] = info->block[1],
+				[IR3_DP_LOCAL_GROUP_SIZE_Z] = info->block[2],
 			};
 
 			ctx->emit_const(ring, SHADER_COMPUTE, offset * 4, 0,
