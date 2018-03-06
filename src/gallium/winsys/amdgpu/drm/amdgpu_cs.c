@@ -1528,6 +1528,7 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       }
       break;
    case RING_GFX:
+   case RING_COMPUTE:
       /* pad GFX ring to 8 DWs to meet CP fetch alignment requirements */
       if (ws->info.gfx_ib_pad_with_type2) {
          while (rcs->current.cdw & 7)
@@ -1536,7 +1537,8 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
          while (rcs->current.cdw & 7)
             radeon_emit(rcs, 0xffff1000); /* type3 nop packet */
       }
-      ws->gfx_ib_size_counter += (rcs->prev_dw + rcs->current.cdw) * 4;
+      if (cs->ring_type == RING_GFX)
+         ws->gfx_ib_size_counter += (rcs->prev_dw + rcs->current.cdw) * 4;
       break;
    case RING_UVD:
    case RING_UVD_ENC:
