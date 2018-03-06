@@ -750,7 +750,7 @@ anv_cmd_predicated_ccs_resolve(struct anv_cmd_buffer *cmd_buffer,
       resolve_op = ISL_AUX_OP_FULL_RESOLVE;
 
    anv_image_ccs_op(cmd_buffer, image, aspect, level,
-                    array_layer, 1, resolve_op, true);
+                    array_layer, 1, resolve_op, NULL, true);
 }
 
 static void
@@ -770,7 +770,7 @@ anv_cmd_predicated_mcs_resolve(struct anv_cmd_buffer *cmd_buffer,
                                      resolve_op, fast_clear_supported);
 
    anv_image_mcs_op(cmd_buffer, image, aspect,
-                    array_layer, 1, resolve_op, true);
+                    array_layer, 1, resolve_op, NULL, true);
 #else
    unreachable("MCS resolves are unsupported on Ivybridge and Bay Trail");
 #endif
@@ -1026,7 +1026,7 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
 
             anv_image_ccs_op(cmd_buffer, image, aspect, level,
                              base_layer, level_layer_count,
-                             ISL_AUX_OP_AMBIGUATE, false);
+                             ISL_AUX_OP_AMBIGUATE, NULL, false);
 
             if (image->planes[plane].aux_usage == ISL_AUX_USAGE_CCS_E) {
                set_image_compressed_bit(cmd_buffer, image, aspect,
@@ -1044,7 +1044,7 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
          assert(base_level == 0 && level_count == 1);
          anv_image_mcs_op(cmd_buffer, image, aspect,
                           base_layer, layer_count,
-                          ISL_AUX_OP_FAST_CLEAR, false);
+                          ISL_AUX_OP_FAST_CLEAR, NULL, false);
       }
       return;
    }
@@ -1133,34 +1133,6 @@ transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
 
    cmd_buffer->state.pending_pipe_bits |=
       ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
-}
-
-static void
-update_fast_clear_color(struct anv_cmd_buffer *cmd_buffer,
-                        const struct anv_attachment_state *att_state,
-                        const struct anv_image_view *iview)
-{
-   assert(GEN_GEN >= 10);
-   assert(iview->image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
-
-   struct anv_address clear_address =
-      anv_image_get_clear_color_addr(cmd_buffer->device, iview->image,
-                                     VK_IMAGE_ASPECT_COLOR_BIT);
-   union isl_color_value clear_color;
-   anv_clear_color_from_att_state(&clear_color, att_state, iview);
-
-   /* Clear values are stored at the same bo as the aux surface, right
-    * after the surface.
-    */
-   for (int i = 0; i < 4; i++) {
-      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
-         sdi.Address = (struct anv_address) {
-            .bo = clear_address.bo,
-            .offset = clear_address.offset + i * 4,
-         };
-         sdi.ImmediateData = clear_color.u32[i];
-      }
-   }
 }
 
 /**
@@ -3594,25 +3566,23 @@ cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
             assert(iview->planes[0].isl.base_level == 0);
             assert(iview->planes[0].isl.base_array_layer == 0);
 
+            union isl_color_value clear_color = {};
+            anv_clear_color_from_att_state(&clear_color, att_state, iview);
             if (iview->image->samples == 1) {
                anv_image_ccs_op(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
-                                0, 0, 1, ISL_AUX_OP_FAST_CLEAR, false);
+                                0, 0, 1, ISL_AUX_OP_FAST_CLEAR,
+                                &clear_color,
+                                false);
             } else {
                anv_image_mcs_op(cmd_buffer, image, VK_IMAGE_ASPECT_COLOR_BIT,
-                                0, 1, ISL_AUX_OP_FAST_CLEAR, false);
+                                0, 1, ISL_AUX_OP_FAST_CLEAR,
+                                &clear_color,
+                                false);
             }
             base_clear_layer++;
             clear_layer_count--;
             if (is_multiview)
                att_state->pending_clear_views &= ~1;
-
-            if (GEN_GEN < 10) {
-               genX(copy_fast_clear_dwords)(cmd_buffer, att_state->color.state,
-                                            image, VK_IMAGE_ASPECT_COLOR_BIT,
-                                            true /* copy from ss */);
-            } else {
-               update_fast_clear_color(cmd_buffer, att_state, iview);
-            }
 
             if (att_state->clear_color_is_zero) {
                /* This image has the auxiliary buffer enabled. We can mark the

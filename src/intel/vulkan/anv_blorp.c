@@ -222,6 +222,28 @@ get_blorp_surf_for_anv_image(const struct anv_device *device,
          .mocs = device->default_mocs,
       };
       blorp_surf->aux_usage = aux_usage;
+
+      /* If we're doing a partial resolve, then we need the indirect clear
+       * color.  If we are doing a fast clear and want to store/update the
+       * clear color, we also pass the address to blorp, otherwise it will only
+       * stomp the CCS to a particular value and won't care about format or
+       * clear value
+       */
+      if (aspect & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV) {
+         const struct anv_address clear_color_addr =
+            anv_image_get_clear_color_addr(device, image, aspect);
+         blorp_surf->clear_color_addr = anv_to_blorp_address(clear_color_addr);
+      } else if (aspect & VK_IMAGE_ASPECT_DEPTH_BIT
+                 && device->info.gen >= 10) {
+         /* Vulkan always clears to 1.0. On gen < 10, we set that directly in
+          * the state packet. For gen >= 10, must provide the clear value in a
+          * buffer. We have a single global buffer that stores the 1.0 value.
+          */
+         const struct anv_address clear_color_addr = (struct anv_address) {
+            .bo = (struct anv_bo *)&device->hiz_clear_bo
+         };
+         blorp_surf->clear_color_addr = anv_to_blorp_address(clear_color_addr);
+      }
    }
 }
 
@@ -1594,7 +1616,8 @@ anv_image_mcs_op(struct anv_cmd_buffer *cmd_buffer,
                  const struct anv_image *image,
                  VkImageAspectFlagBits aspect,
                  uint32_t base_layer, uint32_t layer_count,
-                 enum isl_aux_op mcs_op, bool predicate)
+                 enum isl_aux_op mcs_op, union isl_color_value *clear_value,
+                 bool predicate)
 {
    assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
    assert(image->samples > 1);
@@ -1612,14 +1635,18 @@ anv_image_mcs_op(struct anv_cmd_buffer *cmd_buffer,
                                 ANV_IMAGE_LAYOUT_EXPLICIT_AUX,
                                 ISL_AUX_USAGE_MCS, &surf);
 
-   if (mcs_op == ISL_AUX_OP_PARTIAL_RESOLVE) {
-      /* If we're doing a partial resolve, then we need the indirect clear
-       * color.  The clear operation just stomps the CCS to a particular value
-       * and don't care about format or clear value.
-       */
-      const struct anv_address clear_color_addr =
-         anv_image_get_clear_color_addr(cmd_buffer->device, image, aspect);
-      surf.clear_color_addr = anv_to_blorp_address(clear_color_addr);
+   /* Blorp will store the clear color for us if we provide the clear color
+    * address and we are doing a fast clear. So we save the clear value into
+    * the blorp surface. However, in some situations we want to do a fast clear
+    * without changing the clear value stored in the state buffer. For those
+    * cases, we set the clear color address pointer to NULL, so blorp will not
+    * try to store a garbage color.
+    */
+   if (mcs_op == ISL_AUX_OP_FAST_CLEAR) {
+      if (clear_value)
+         surf.clear_color = *clear_value;
+      else
+         surf.clear_color_addr.buffer = NULL;
    }
 
    /* From the Sky Lake PRM Vol. 7, "Render Target Fast Clear":
@@ -1667,7 +1694,8 @@ anv_image_ccs_op(struct anv_cmd_buffer *cmd_buffer,
                  const struct anv_image *image,
                  VkImageAspectFlagBits aspect, uint32_t level,
                  uint32_t base_layer, uint32_t layer_count,
-                 enum isl_aux_op ccs_op, bool predicate)
+                 enum isl_aux_op ccs_op, union isl_color_value *clear_value,
+                 bool predicate)
 {
    assert(image->aspects & VK_IMAGE_ASPECT_ANY_COLOR_BIT_ANV);
    assert(image->samples == 1);
@@ -1693,15 +1721,18 @@ anv_image_ccs_op(struct anv_cmd_buffer *cmd_buffer,
                                 fast_clear_aux_usage(image, aspect),
                                 &surf);
 
-   if (ccs_op == ISL_AUX_OP_FULL_RESOLVE ||
-       ccs_op == ISL_AUX_OP_PARTIAL_RESOLVE) {
-      /* If we're doing a resolve operation, then we need the indirect clear
-       * color.  The clear and ambiguate operations just stomp the CCS to a
-       * particular value and don't care about format or clear value.
-       */
-      const struct anv_address clear_color_addr =
-         anv_image_get_clear_color_addr(cmd_buffer->device, image, aspect);
-      surf.clear_color_addr = anv_to_blorp_address(clear_color_addr);
+   /* Blorp will store the clear color for us if we provide the clear color
+    * address and we are doing a fast clear. So we save the clear value into
+    * the blorp surface. However, in some situations we want to do a fast clear
+    * without changing the clear value stored in the state buffer. For those
+    * cases, we set the clear color address pointer to NULL, so blorp will not
+    * try to store a garbage color.
+    */
+   if (ccs_op == ISL_AUX_OP_FAST_CLEAR) {
+      if (clear_value)
+         surf.clear_color = *clear_value;
+      else
+         surf.clear_color_addr.buffer = NULL;
    }
 
    /* From the Sky Lake PRM Vol. 7, "Render Target Fast Clear":
