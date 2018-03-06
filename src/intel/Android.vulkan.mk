@@ -300,6 +300,7 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libmesa_blorp \
 	libmesa_compiler \
 	libmesa_intel_common \
+	libmesa_intel_dev \
 	libmesa_vulkan_common \
 	libmesa_anv_gen7 \
 	libmesa_anv_gen75 \
