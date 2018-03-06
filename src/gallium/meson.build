@@ -170,7 +170,7 @@ if with_gallium_xvmc
   subdir('state_trackers/xvmc')
   subdir('targets/xvmc')
 endif
-if with_gallium_omx
+if with_gallium_omx != 'disabled'
   subdir('state_trackers/omx')
   subdir('targets/omx')
 endif

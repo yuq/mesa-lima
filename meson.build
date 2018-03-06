@@ -464,42 +464,63 @@ endif
 
 _omx = get_option('gallium-omx')
 if not system_has_kms_drm
-  if _omx != 'disabled'
-    error('OMX state tracker can only be built on unix-like OSes.')
-  else
+  if ['auto', 'disabled'].contains(_omx)
     _omx = 'disabled'
+  else
+    error('OMX state tracker can only be built on unix-like OSes.')
   endif
 elif not (with_platform_x11 or with_platform_drm)
-  if _omx != 'disabled'
-    error('OMX state tracker requires X11 or drm platform support.')
-  else
+  if ['auto', 'disabled'].contains(_omx)
     _omx = 'disabled'
+  else
+    error('OMX state tracker requires X11 or drm platform support.')
   endif
 elif not (with_gallium_r600 or with_gallium_radeonsi or with_gallium_nouveau)
-  if _omx != 'disabled'
-    error('OMX state tracker requires at least one of the following gallium drivers: r600, radeonsi, nouveau.')
-  else
+  if ['auto', 'disabled'].contains(_omx)
     _omx = 'disabled'
+  else
+    error('OMX state tracker requires at least one of the following gallium drivers: r600, radeonsi, nouveau.')
   endif
 endif
-with_gallium_omx = _omx != 'disabled'
-gallium_omx = _omx
+with_gallium_omx = _omx
 dep_omx = []
 dep_omx_other = []
-if gallium_omx == 'bellagio'
-  pre_args += '-DENABLE_ST_OMX_BELLAGIO'
-  dep_omx = dependency('libomxil-bellagio')
-elif gallium_omx == 'tizonia'
-  pre_args += '-DENABLE_ST_OMX_TIZONIA'
-  dep_omx = dependency('libtizonia', version : '>= 0.10.0')
-  dep_omx_other = [
-    dependency('libtizplatform'),
-    dependency('tizilheaders')
-  ]
+if with_gallium_omx == 'bellagio' or with_gallium_omx == 'auto'
+  dep_omx = dependency(
+    'libomxil-bellagio', required : with_gallium_omx == 'bellagio'
+  )
+  if dep_omx.found()
+    pre_args += '-DENABLE_ST_OMX_BELLAGIO'
+    with_gallium_omx = 'bellagio'
+  endif
+endif
+if with_gallium_omx == 'tizonia' or with_gallium_omx == 'auto'
+  if not (with_dri and with_egl)
+    if with_gallium_omx == 'tizonia'
+      error('OMX-Tizonia state tracker requires dri and egl')
+    else
+      with_gallium_omx == 'disabled'
+    endif
+  else
+    dep_omx = dependency(
+      'libtizonia', version : '>= 0.10.0',
+      required : with_gallium_omx == 'tizonia',
+    )
+    dep_omx_other = [
+      dependency('libtizplatform', required : with_gallium_omx == 'tizonia'),
+      dependency('tizilheaders', required : with_gallium_omx == 'tizonia'),
+    ]
+    if dep_omx.found() and dep_omx_other[0].found() and dep_omx_other[1].found()
+      pre_args += '-DENABLE_ST_OMX_TIZONIA'
+      with_gallium_omx = 'tizonia'
+    else
+      with_gallium_omx = 'disabled'
+    endif
+  endif
 endif
 
 omx_drivers_path = get_option('omx-libs-path')
-if with_gallium_omx
+if with_gallium_omx != 'disabled'
   # Figure out where to put the omx driver.
   # FIXME: this could all be vastly simplified by adding a 'defined_variable'
   # argument to meson's get_pkgconfig_variable method.
@@ -1193,8 +1214,8 @@ if with_platform_x11
     dep_xxf86vm = dependency('xxf86vm', required : false)
   endif
   if (with_any_vk or with_glx == 'dri' or
-       (with_gallium_vdpau or with_gallium_xvmc or with_gallium_omx or
-        with_gallium_xa))
+       (with_gallium_vdpau or with_gallium_xvmc or with_gallium_va or
+        with_gallium_omx != 'disabled'))
     dep_xcb = dependency('xcb')
     dep_x11_xcb = dependency('x11-xcb')
   endif

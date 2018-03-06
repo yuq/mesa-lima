@@ -28,7 +28,7 @@ files_omx = files(
 	'vid_omx_common.c'
 )
 
-if gallium_omx == 'bellagio'
+if with_gallium_omx == 'bellagio'
 files_omx += files(
   'bellagio/entrypoint.c',
   'bellagio/vid_dec.c',
@@ -37,16 +37,16 @@ files_omx += files(
   'bellagio/vid_dec_h265.c',
   'bellagio/vid_enc.c'
 )
-elif gallium_omx == 'tizonia'
+elif with_gallium_omx == 'tizonia'
 files_omx += files(
   'tizonia/entrypoint.c',
-	'tizonia/h264d.c',
-	'tizonia/h264dprc.c',
-	'tizonia/h264dinport.c',
-	'tizonia/h264e.c',
-	'tizonia/h264eprc.c',
-	'tizonia/h264einport.c',
-	'tizonia/h264eoutport.c'
+        'tizonia/h264d.c',
+        'tizonia/h264dprc.c',
+        'tizonia/h264dinport.c',
+        'tizonia/h264e.c',
+        'tizonia/h264eprc.c',
+        'tizonia/h264einport.c',
+        'tizonia/h264eoutport.c'
 )
 inc_st_omx = [
   inc_st_omx,

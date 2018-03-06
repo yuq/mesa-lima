@@ -90,8 +90,8 @@ option(
 option(
   'gallium-omx',
   type : 'combo',
-  value : 'tizonia',
-  choices : ['disabled', 'bellagio', 'tizonia'],
+  value : 'auto',
+  choices : ['auto', 'disabled', 'bellagio', 'tizonia'],
   description : 'enable gallium omx state tracker.',
 )
 option(
