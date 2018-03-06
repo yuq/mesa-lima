@@ -2396,7 +2396,7 @@ emit_input_declarations(struct svga_shader_emitter_v10 *emit)
                                        emit->info.input_interpolate_loc[i]);
 
             /* keeps track if flat interpolation mode is being used */
-            emit->uses_flat_interp = emit->uses_flat_interp ||
+            emit->uses_flat_interp |=
                (interpolationMode == VGPU10_INTERPOLATION_CONSTANT);
 
             name = VGPU10_NAME_UNDEFINED;
