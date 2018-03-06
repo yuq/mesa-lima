@@ -54,6 +54,7 @@ inc_st_omx = [
   include_directories('../../state_trackers/dri'),
   include_directories('../../../egl/drivers/dri2'),
   include_directories('../../../egl/main'),
+  include_directories('../../../egl'),
   include_directories('../../../gbm/backends/dri'),
   include_directories('../../../gbm/main'),
   include_directories('../../../loader')
