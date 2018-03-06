@@ -43,6 +43,8 @@ enum {
 	AC_CONST_32BIT_ADDR_SPACE = 6, /* same as CONST, but the pointer type has 32 bits */
 };
 
+struct ac_llvm_flow;
+
 struct ac_llvm_context {
 	LLVMContextRef context;
 	LLVMModuleRef module;
@@ -77,6 +79,10 @@ struct ac_llvm_context {
 	LLVMValueRef i1true;
 	LLVMValueRef i1false;
 
+	struct ac_llvm_flow *flow;
+	unsigned flow_depth;
+	unsigned flow_depth_max;
+
 	unsigned range_md_kind;
 	unsigned invariant_load_md_kind;
 	unsigned uniform_md_kind;
@@ -93,6 +99,9 @@ struct ac_llvm_context {
 void
 ac_llvm_context_init(struct ac_llvm_context *ctx, LLVMContextRef context,
 		     enum chip_class chip_class, enum radeon_family family);
+
+void
+ac_llvm_context_dispose(struct ac_llvm_context *ctx);
 
 int
 ac_get_llvm_num_components(LLVMValueRef value);
@@ -369,6 +378,17 @@ LLVMValueRef ac_find_lsb(struct ac_llvm_context *ctx,
 
 LLVMTypeRef ac_array_in_const_addr_space(LLVMTypeRef elem_type);
 LLVMTypeRef ac_array_in_const32_addr_space(LLVMTypeRef elem_type);
+
+void ac_build_bgnloop(struct ac_llvm_context *ctx, int lable_id);
+void ac_build_break(struct ac_llvm_context *ctx);
+void ac_build_continue(struct ac_llvm_context *ctx);
+void ac_build_else(struct ac_llvm_context *ctx, int lable_id);
+void ac_build_endif(struct ac_llvm_context *ctx, int lable_id);
+void ac_build_endloop(struct ac_llvm_context *ctx, int lable_id);
+void ac_build_if(struct ac_llvm_context *ctx, LLVMValueRef value,
+		 int lable_id);
+void ac_build_uif(struct ac_llvm_context *ctx, LLVMValueRef value,
+		  int lable_id);
 
 #ifdef __cplusplus
 }

@@ -41,6 +41,16 @@
 
 #include "shader_enums.h"
 
+#define AC_LLVM_INITIAL_CF_DEPTH 4
+
+/* Data for if/else/endif and bgnloop/endloop control flow structures.
+ */
+struct ac_llvm_flow {
+	/* Loop exit or next part of if/else/endif. */
+	LLVMBasicBlockRef next_block;
+	LLVMBasicBlockRef loop_entry_block;
+};
+
 /* Initialize module-independent parts of the context.
  *
  * The caller is responsible for initializing ctx::module and ctx::builder.
@@ -103,6 +113,14 @@ ac_llvm_context_init(struct ac_llvm_context *ctx, LLVMContextRef context,
 							"amdgpu.uniform", 14);
 
 	ctx->empty_md = LLVMMDNodeInContext(ctx->context, NULL, 0);
+}
+
+void
+ac_llvm_context_dispose(struct ac_llvm_context *ctx)
+{
+	free(ctx->flow);
+	ctx->flow = NULL;
+	ctx->flow_depth_max = 0;
 }
 
 int
@@ -2145,4 +2163,175 @@ LLVMTypeRef ac_array_in_const32_addr_space(LLVMTypeRef elem_type)
 
 	return LLVMPointerType(LLVMArrayType(elem_type, 0),
 			       AC_CONST_32BIT_ADDR_SPACE);
+}
+
+static struct ac_llvm_flow *
+get_current_flow(struct ac_llvm_context *ctx)
+{
+	if (ctx->flow_depth > 0)
+		return &ctx->flow[ctx->flow_depth - 1];
+	return NULL;
+}
+
+static struct ac_llvm_flow *
+get_innermost_loop(struct ac_llvm_context *ctx)
+{
+	for (unsigned i = ctx->flow_depth; i > 0; --i) {
+		if (ctx->flow[i - 1].loop_entry_block)
+			return &ctx->flow[i - 1];
+	}
+	return NULL;
+}
+
+static struct ac_llvm_flow *
+push_flow(struct ac_llvm_context *ctx)
+{
+	struct ac_llvm_flow *flow;
+
+	if (ctx->flow_depth >= ctx->flow_depth_max) {
+		unsigned new_max = MAX2(ctx->flow_depth << 1,
+					AC_LLVM_INITIAL_CF_DEPTH);
+
+		ctx->flow = realloc(ctx->flow, new_max * sizeof(*ctx->flow));
+		ctx->flow_depth_max = new_max;
+	}
+
+	flow = &ctx->flow[ctx->flow_depth];
+	ctx->flow_depth++;
+
+	flow->next_block = NULL;
+	flow->loop_entry_block = NULL;
+	return flow;
+}
+
+static void set_basicblock_name(LLVMBasicBlockRef bb, const char *base,
+				int label_id)
+{
+	char buf[32];
+	snprintf(buf, sizeof(buf), "%s%d", base, label_id);
+	LLVMSetValueName(LLVMBasicBlockAsValue(bb), buf);
+}
+
+/* Append a basic block at the level of the parent flow.
+ */
+static LLVMBasicBlockRef append_basic_block(struct ac_llvm_context *ctx,
+					    const char *name)
+{
+	assert(ctx->flow_depth >= 1);
+
+	if (ctx->flow_depth >= 2) {
+		struct ac_llvm_flow *flow = &ctx->flow[ctx->flow_depth - 2];
+
+		return LLVMInsertBasicBlockInContext(ctx->context,
+						     flow->next_block, name);
+	}
+
+	LLVMValueRef main_fn =
+		LLVMGetBasicBlockParent(LLVMGetInsertBlock(ctx->builder));
+	return LLVMAppendBasicBlockInContext(ctx->context, main_fn, name);
+}
+
+/* Emit a branch to the given default target for the current block if
+ * applicable -- that is, if the current block does not already contain a
+ * branch from a break or continue.
+ */
+static void emit_default_branch(LLVMBuilderRef builder,
+				LLVMBasicBlockRef target)
+{
+	if (!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(builder)))
+		 LLVMBuildBr(builder, target);
+}
+
+void ac_build_bgnloop(struct ac_llvm_context *ctx, int label_id)
+{
+	struct ac_llvm_flow *flow = push_flow(ctx);
+	flow->loop_entry_block = append_basic_block(ctx, "LOOP");
+	flow->next_block = append_basic_block(ctx, "ENDLOOP");
+	set_basicblock_name(flow->loop_entry_block, "loop", label_id);
+	LLVMBuildBr(ctx->builder, flow->loop_entry_block);
+	LLVMPositionBuilderAtEnd(ctx->builder, flow->loop_entry_block);
+}
+
+void ac_build_break(struct ac_llvm_context *ctx)
+{
+	struct ac_llvm_flow *flow = get_innermost_loop(ctx);
+	LLVMBuildBr(ctx->builder, flow->next_block);
+}
+
+void ac_build_continue(struct ac_llvm_context *ctx)
+{
+	struct ac_llvm_flow *flow = get_innermost_loop(ctx);
+	LLVMBuildBr(ctx->builder, flow->loop_entry_block);
+}
+
+void ac_build_else(struct ac_llvm_context *ctx, int label_id)
+{
+	struct ac_llvm_flow *current_branch = get_current_flow(ctx);
+	LLVMBasicBlockRef endif_block;
+
+	assert(!current_branch->loop_entry_block);
+
+	endif_block = append_basic_block(ctx, "ENDIF");
+	emit_default_branch(ctx->builder, endif_block);
+
+	LLVMPositionBuilderAtEnd(ctx->builder, current_branch->next_block);
+	set_basicblock_name(current_branch->next_block, "else", label_id);
+
+	current_branch->next_block = endif_block;
+}
+
+void ac_build_endif(struct ac_llvm_context *ctx, int label_id)
+{
+	struct ac_llvm_flow *current_branch = get_current_flow(ctx);
+
+	assert(!current_branch->loop_entry_block);
+
+	emit_default_branch(ctx->builder, current_branch->next_block);
+	LLVMPositionBuilderAtEnd(ctx->builder, current_branch->next_block);
+	set_basicblock_name(current_branch->next_block, "endif", label_id);
+
+	ctx->flow_depth--;
+}
+
+void ac_build_endloop(struct ac_llvm_context *ctx, int label_id)
+{
+	struct ac_llvm_flow *current_loop = get_current_flow(ctx);
+
+	assert(current_loop->loop_entry_block);
+
+	emit_default_branch(ctx->builder, current_loop->loop_entry_block);
+
+	LLVMPositionBuilderAtEnd(ctx->builder, current_loop->next_block);
+	set_basicblock_name(current_loop->next_block, "endloop", label_id);
+	ctx->flow_depth--;
+}
+
+static void if_cond_emit(struct ac_llvm_context *ctx, LLVMValueRef cond,
+			 int label_id)
+{
+	struct ac_llvm_flow *flow = push_flow(ctx);
+	LLVMBasicBlockRef if_block;
+
+	if_block = append_basic_block(ctx, "IF");
+	flow->next_block = append_basic_block(ctx, "ELSE");
+	set_basicblock_name(if_block, "if", label_id);
+	LLVMBuildCondBr(ctx->builder, cond, if_block, flow->next_block);
+	LLVMPositionBuilderAtEnd(ctx->builder, if_block);
+}
+
+void ac_build_if(struct ac_llvm_context *ctx, LLVMValueRef value,
+		 int label_id)
+{
+	LLVMValueRef cond = LLVMBuildFCmp(ctx->builder, LLVMRealUNE,
+					  value, ctx->f32_0, "");
+	if_cond_emit(ctx, cond, label_id);
+}
+
+void ac_build_uif(struct ac_llvm_context *ctx, LLVMValueRef value,
+		  int label_id)
+{
+	LLVMValueRef cond = LLVMBuildICmp(ctx->builder, LLVMIntNE,
+					  ac_to_integer(ctx, value),
+					  ctx->i32_0, "");
+	if_cond_emit(ctx, cond, label_id);
 }

@@ -6709,6 +6709,8 @@ static void ac_llvm_finalize_module(struct radv_shader_context *ctx)
 
 	LLVMDisposeBuilder(ctx->ac.builder);
 	LLVMDisposePassManager(passmgr);
+
+	ac_llvm_context_dispose(&ctx->ac);
 }
 
 static void
