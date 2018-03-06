@@ -290,6 +290,10 @@ struct brw_perf_query_object
           */
          bool results_accumulated;
 
+         /**
+          * Number of reports accumulated to produce the results.
+          */
+         uint32_t reports_accumulated;
       } oa;
 
       struct {
@@ -657,6 +661,8 @@ add_deltas(struct brw_context *brw,
    uint64_t *accumulator = obj->oa.accumulator;
    int idx = 0;
    int i;
+
+   obj->oa.reports_accumulated++;
 
    switch (query->oa_format) {
    case I915_OA_FORMAT_A32u40_A4u32_B8_C8:
