@@ -18,10 +18,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+inc_egl = include_directories('.', 'main')
+inc_egl_dri2 = include_directories('drivers/dri2')
+
 c_args_for_egl = []
 link_for_egl = []
 deps_for_egl = []
-incs_for_egl = [inc_include, inc_src, include_directories('main')]
+incs_for_egl = [inc_include, inc_src, inc_egl]
 
 files_egl = files(
   'main/eglapi.c',

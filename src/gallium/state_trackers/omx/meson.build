@@ -51,13 +51,11 @@ files_omx += files(
 inc_st_omx = [
   inc_st_omx,
   inc_dri_common,
-  include_directories('../../state_trackers/dri'),
-  include_directories('../../../egl/drivers/dri2'),
-  include_directories('../../../egl/main'),
-  include_directories('../../../egl'),
-  include_directories('../../../gbm/backends/dri'),
-  include_directories('../../../gbm/main'),
-  include_directories('../../../loader')
+  inc_loader,
+  inc_gbm,
+  inc_st_dri,
+  inc_egl,
+  inc_egl_dri2,
 ]
 dep_st_omx = [dep_st_omx, dep_omx_other, dep_libdrm]
 endif

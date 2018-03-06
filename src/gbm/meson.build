@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-inc_gbm = include_directories('.', 'backends/dri')
+inc_gbm = include_directories('.', 'main', 'backends/dri')
 
 files_gbm = files(
   'main/backend.c',
