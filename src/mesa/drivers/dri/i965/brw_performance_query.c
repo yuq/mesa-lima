@@ -613,15 +613,6 @@ drop_from_unaccumulated_query_list(struct brw_context *brw,
    reap_old_sample_buffers(brw);
 }
 
-static uint64_t
-timebase_scale(struct brw_context *brw, uint32_t u32_time_delta)
-{
-   const struct gen_device_info *devinfo = &brw->screen->devinfo;
-   uint64_t tmp = ((uint64_t)u32_time_delta) * 1000000000ull;
-
-   return tmp ? tmp / devinfo->timestamp_frequency : 0;
-}
-
 static void
 accumulate_uint32(const uint32_t *report0,
                   const uint32_t *report1,
@@ -943,13 +934,13 @@ accumulate_oa_reports(struct brw_context *brw,
             /* Ignore reports that come before the start marker.
              * (Note: takes care to allow overflow of 32bit timestamps)
              */
-            if (timebase_scale(brw, report[1] - start[1]) > 5000000000)
+            if (brw_timebase_scale(brw, report[1] - start[1]) > 5000000000)
                continue;
 
             /* Ignore reports that come after the end marker.
              * (Note: takes care to allow overflow of 32bit timestamps)
              */
-            if (timebase_scale(brw, report[1] - end[1]) <= 5000000000)
+            if (brw_timebase_scale(brw, report[1] - end[1]) <= 5000000000)
                goto end;
 
             /* For Gen8+ since the counters continue while other
