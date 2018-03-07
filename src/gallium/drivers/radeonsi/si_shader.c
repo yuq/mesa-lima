@@ -2427,12 +2427,25 @@ static LLVMValueRef fetch_constant(
 		 * addresses generates horrible VALU code with very high
 		 * VGPR usage and very low SIMD occupancy.
 		 */
-		ptr = LLVMBuildPtrToInt(ctx->ac.builder, ptr, ctx->i64, "");
-		ptr = LLVMBuildBitCast(ctx->ac.builder, ptr, ctx->v2i32, "");
+		ptr = LLVMBuildPtrToInt(ctx->ac.builder, ptr, ctx->ac.intptr, "");
+
+		LLVMValueRef desc0, desc1;
+		if (HAVE_32BIT_POINTERS) {
+			desc0 = ptr;
+			desc1 = LLVMConstInt(ctx->i32,
+					     S_008F04_BASE_ADDRESS_HI(ctx->screen->info.address32_hi), 0);
+		} else {
+			ptr = LLVMBuildBitCast(ctx->ac.builder, ptr, ctx->v2i32, "");
+			desc0 = LLVMBuildExtractElement(ctx->ac.builder, ptr, ctx->i32_0, "");
+			desc1 = LLVMBuildExtractElement(ctx->ac.builder, ptr, ctx->i32_1, "");
+			/* Mask out all bits except BASE_ADDRESS_HI. */
+			desc1 = LLVMBuildAnd(ctx->ac.builder, desc1,
+					     LLVMConstInt(ctx->i32, ~C_008F04_BASE_ADDRESS_HI, 0), "");
+		}
 
 		LLVMValueRef desc_elems[] = {
-			LLVMBuildExtractElement(ctx->ac.builder, ptr, ctx->i32_0, ""),
-			LLVMBuildExtractElement(ctx->ac.builder, ptr, ctx->i32_1, ""),
+			desc0,
+			desc1,
 			LLVMConstInt(ctx->i32, (sel->info.const_file_max[0] + 1) * 16, 0),
 			LLVMConstInt(ctx->i32,
 				S_008F0C_DST_SEL_X(V_008F0C_SQ_SEL_X) |
