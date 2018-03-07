@@ -5070,8 +5070,7 @@ static void visit_tex(struct ac_nir_context *ctx, nir_tex_instr *instr)
 	}
 
 	/* Pack LOD */
-	if (lod && ((instr->op == nir_texop_txl && !lod_is_zero) ||
-		    instr->op == nir_texop_txf)) {
+	if (lod && ((instr->op == nir_texop_txl || instr->op == nir_texop_txf) && !lod_is_zero)) {
 		address[count++] = lod;
 	} else if (instr->op == nir_texop_txf_ms && sample_index) {
 		address[count++] = sample_index;
