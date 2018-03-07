@@ -180,6 +180,7 @@ event LateStencilSampleRate
     uint64_t failCount;
 };
 
+// Total Early-Z counts, SingleSample and SampleRate
 event EarlyZ
 {
     uint32_t drawId;
@@ -187,6 +188,7 @@ event EarlyZ
     uint64_t failCount;
 };	
 
+// Total LateZ counts, SingleSample and SampleRate
 event LateZ
 {
     uint32_t drawId;
@@ -194,6 +196,7 @@ event LateZ
     uint64_t failCount;
 };
 
+// Total EarlyStencil counts, SingleSample and SampleRate
 event EarlyStencil
 {
     uint32_t drawId; 
@@ -201,6 +204,7 @@ event EarlyStencil
     uint64_t failCount;
 };
 
+// Total LateStencil counts, SingleSample and SampleRate
 event LateStencil
 {
     uint32_t drawId; 
@@ -302,3 +306,18 @@ event ClipperEvent
     uint32_t trivialAcceptCount;
     uint32_t mustClipCount;
 };
+
+event CullEvent
+{
+    uint32_t drawId;
+    uint64_t backfacePrimCount;
+    uint64_t degeneratePrimCount;
+};
+
+event AlphaEvent
+{
+    uint32_t drawId;
+    uint32_t alphaTestCount;
+    uint32_t alphaBlendCount;
+};
+

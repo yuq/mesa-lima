@@ -709,8 +709,8 @@ static INLINE void CalcSampleBarycentrics(const BarycentricCoeffs& coeffs, SWR_P
 }
 
 // Merge Output to 4x2 SIMD Tile Format
-INLINE void OutputMerger4x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_RENDERTARGETS], uint32_t sample, const SWR_BLEND_STATE *pBlendState,
-    const PFN_BLEND_JIT_FUNC (&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar const &depthPassMask, uint32_t renderTargetMask)
+INLINE void OutputMerger4x2(DRAW_CONTEXT *pDC, SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_RENDERTARGETS], uint32_t sample, const SWR_BLEND_STATE *pBlendState,
+    const PFN_BLEND_JIT_FUNC (&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar const &depthPassMask, uint32_t renderTargetMask, uint32_t workerId)
 {
     // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
     const uint32_t rasterTileColorOffset = RasterTileColorOffset(sample);
@@ -747,6 +747,9 @@ INLINE void OutputMerger4x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SW
             }
         }
 
+        // Track alpha events
+        AR_EVENT(AlphaInfoEvent(pDC->drawId, blendContext.isAlphaTested, blendContext.isAlphaBlended));
+
         // final write mask 
         simdscalari outputMask = _simd_castps_si(_simd_and_ps(coverageMask, depthPassMask));
 
@@ -777,8 +780,8 @@ INLINE void OutputMerger4x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SW
 
 #if USE_8x2_TILE_BACKEND
 // Merge Output to 8x2 SIMD16 Tile Format
-INLINE void OutputMerger8x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_RENDERTARGETS], uint32_t sample, const SWR_BLEND_STATE *pBlendState,
-    const PFN_BLEND_JIT_FUNC(&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar const &depthPassMask, uint32_t renderTargetMask, bool useAlternateOffset)
+INLINE void OutputMerger8x2(DRAW_CONTEXT *pDC, SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_RENDERTARGETS], uint32_t sample, const SWR_BLEND_STATE *pBlendState,
+    const PFN_BLEND_JIT_FUNC(&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar const &depthPassMask, uint32_t renderTargetMask, bool useAlternateOffset, uint32_t workerId)
 {
     // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
     uint32_t rasterTileColorOffset = RasterTileColorOffset(sample);
@@ -835,6 +838,9 @@ INLINE void OutputMerger8x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SW
                 pfnBlendFunc[rt](&blendContext);
             }
         }
+
+        // Track alpha events
+        AR_EVENT(AlphaInfoEvent(pDC->drawId, blendContext.isAlphaTested, blendContext.isAlphaBlended));
 
         // final write mask 
         simdscalari outputMask = _simd_castps_si(_simd_and_ps(coverageMask, depthPassMask));
@@ -1003,9 +1009,9 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                 
                 // broadcast the results of the PS to all passing pixels
 #if USE_8x2_TILE_BACKEND
-                OutputMerger8x2(psContext, psContext.pColorBuffer, sample, &state.blendState,state.pfnBlendFunc, coverageMask, depthMask, state.psState.renderTargetMask, useAlternateOffset);
+                OutputMerger8x2(pDC, psContext, psContext.pColorBuffer, sample, &state.blendState,state.pfnBlendFunc, coverageMask, depthMask, state.psState.renderTargetMask, useAlternateOffset, workerId);
 #else // USE_8x2_TILE_BACKEND
-                OutputMerger4x2(psContext, psContext.pColorBuffer, sample, &state.blendState, state.pfnBlendFunc, coverageMask, depthMask, state.psState.renderTargetMask);
+                OutputMerger4x2(pDC, psContext, psContext.pColorBuffer, sample, &state.blendState, state.pfnBlendFunc, coverageMask, depthMask, state.psState.renderTargetMask, workerId);
 #endif // USE_8x2_TILE_BACKEND
 
                 if(!state.psState.forceEarlyZ && !T::bForcedSampleCount)

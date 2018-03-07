@@ -181,9 +181,9 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                 // output merger
                 RDTSC_BEGIN(BEOutputMerger, pDC->drawId);
 #if USE_8x2_TILE_BACKEND
-                OutputMerger8x2(psContext, psContext.pColorBuffer, 0, &state.blendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, state.psState.renderTargetMask, useAlternateOffset);
+                OutputMerger8x2(pDC, psContext, psContext.pColorBuffer, 0, &state.blendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, state.psState.renderTargetMask, useAlternateOffset, workerId);
 #else
-                OutputMerger4x2(psContext, psContext.pColorBuffer, 0, &state.blendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, state.psState.renderTargetMask);
+                OutputMerger4x2(pDC, psContext, psContext.pColorBuffer, 0, &state.blendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, state.psState.renderTargetMask, workerId, workerId);
 #endif
 
                 // do final depth write after all pixel kills

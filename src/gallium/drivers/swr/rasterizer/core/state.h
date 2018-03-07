@@ -887,6 +887,8 @@ struct SWR_BLEND_CONTEXT
     simdvector*             result;
     simdscalari*            oMask;
     simdscalari*            pMask;
+    uint32_t                isAlphaTested;
+    uint32_t                isAlphaBlended;
 };
 
 //////////////////////////////////////////////////////////////////////////

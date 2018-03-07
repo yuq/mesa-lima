@@ -120,6 +120,21 @@ event ClipInfoEvent
     uint32_t clipMask;
 };
 
+event CullInfoEvent
+{
+    uint32_t drawId;
+    uint64_t degeneratePrimMask;
+    uint64_t backfacePrimMask;
+    uint32_t validMask;
+};
+
+event AlphaInfoEvent
+{
+    uint32_t drawId;
+    uint32_t alphaTestEnable;
+    uint32_t alphaBlendEnable;
+};
+
 event DrawInstancedEvent
 {
     uint32_t drawId;

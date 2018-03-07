@@ -557,6 +557,8 @@ struct BlendJit : public Builder
         ppoMask->setName("ppoMask");
         Value* ppMask = LOAD(pBlendContext, { 0, SWR_BLEND_CONTEXT_pMask });
         ppMask->setName("pMask");
+        Value* AlphaTest1 = LOAD(pBlendContext, { 0, SWR_BLEND_CONTEXT_isAlphaBlended });
+        ppMask->setName("AlphaTest1");
 
         static_assert(KNOB_COLOR_HOT_TILE_FORMAT == R32G32B32A32_FLOAT, "Unsupported hot tile format");
         Value* dst[4];
@@ -590,12 +592,22 @@ struct BlendJit : public Builder
         // alpha test
         if (state.desc.alphaTestEnable)
         {
+            // Gather for archrast stats
+            STORE(C(1), pBlendContext, { 0, SWR_BLEND_CONTEXT_isAlphaTested });
             AlphaTest(state, pBlendState, pSrc0Alpha, ppMask);
+        }
+        else
+        {
+            // Gather for archrast stats
+            STORE(C(0), pBlendContext, { 0, SWR_BLEND_CONTEXT_isAlphaTested });
         }
 
         // color blend
         if (state.blendState.blendEnable)
         {
+            // Gather for archrast stats
+            STORE(C(1), pBlendContext, { 0, SWR_BLEND_CONTEXT_isAlphaBlended });
+
             // clamp sources
             Clamp(state.format, src);
             Clamp(state.format, src1);
@@ -646,6 +658,11 @@ struct BlendJit : public Builder
             {
                 STORE(result[i], pResult, { 0, i });
             }
+        }
+        else
+        {
+            // Gather for archrast stats
+            STORE(C(0), pBlendContext, { 0, SWR_BLEND_CONTEXT_isAlphaBlended });
         }
         
         if(state.blendState.logicOpEnable)
