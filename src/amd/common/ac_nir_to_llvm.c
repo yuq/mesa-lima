@@ -5300,17 +5300,15 @@ static void visit_ssa_undef(struct ac_nir_context *ctx,
 	_mesa_hash_table_insert(ctx->defs, &instr->def, undef);
 }
 
-static void visit_jump(struct ac_nir_context *ctx,
+static void visit_jump(struct ac_llvm_context *ctx,
 		       const nir_jump_instr *instr)
 {
 	switch (instr->type) {
 	case nir_jump_break:
-		LLVMBuildBr(ctx->ac.builder, ctx->break_block);
-		LLVMClearInsertionPosition(ctx->ac.builder);
+		ac_build_break(ctx);
 		break;
 	case nir_jump_continue:
-		LLVMBuildBr(ctx->ac.builder, ctx->continue_block);
-		LLVMClearInsertionPosition(ctx->ac.builder);
+		ac_build_continue(ctx);
 		break;
 	default:
 		fprintf(stderr, "Unknown NIR jump instr: ");
@@ -5348,7 +5346,7 @@ static void visit_block(struct ac_nir_context *ctx, nir_block *block)
 			visit_ssa_undef(ctx, nir_instr_as_ssa_undef(instr));
 			break;
 		case nir_instr_type_jump:
-			visit_jump(ctx, nir_instr_as_jump(instr));
+			visit_jump(&ctx->ac, nir_instr_as_jump(instr));
 			break;
 		default:
 			fprintf(stderr, "Unknown NIR instr type: ");
@@ -5365,56 +5363,34 @@ static void visit_if(struct ac_nir_context *ctx, nir_if *if_stmt)
 {
 	LLVMValueRef value = get_src(ctx, if_stmt->condition);
 
-	LLVMValueRef fn = LLVMGetBasicBlockParent(LLVMGetInsertBlock(ctx->ac.builder));
-	LLVMBasicBlockRef merge_block =
-	    LLVMAppendBasicBlockInContext(ctx->ac.context, fn, "");
-	LLVMBasicBlockRef if_block =
-	    LLVMAppendBasicBlockInContext(ctx->ac.context, fn, "");
-	LLVMBasicBlockRef else_block = merge_block;
-	if (!exec_list_is_empty(&if_stmt->else_list))
-		else_block = LLVMAppendBasicBlockInContext(
-		    ctx->ac.context, fn, "");
+	nir_block *then_block =
+		(nir_block *) exec_list_get_head(&if_stmt->then_list);
 
-	LLVMValueRef cond = LLVMBuildICmp(ctx->ac.builder, LLVMIntNE, value,
-	                                  ctx->ac.i32_0, "");
-	LLVMBuildCondBr(ctx->ac.builder, cond, if_block, else_block);
+	ac_build_uif(&ctx->ac, value, then_block->index);
 
-	LLVMPositionBuilderAtEnd(ctx->ac.builder, if_block);
 	visit_cf_list(ctx, &if_stmt->then_list);
-	if (LLVMGetInsertBlock(ctx->ac.builder))
-		LLVMBuildBr(ctx->ac.builder, merge_block);
 
 	if (!exec_list_is_empty(&if_stmt->else_list)) {
-		LLVMPositionBuilderAtEnd(ctx->ac.builder, else_block);
+		nir_block *else_block =
+			(nir_block *) exec_list_get_head(&if_stmt->else_list);
+
+		ac_build_else(&ctx->ac, else_block->index);
 		visit_cf_list(ctx, &if_stmt->else_list);
-		if (LLVMGetInsertBlock(ctx->ac.builder))
-			LLVMBuildBr(ctx->ac.builder, merge_block);
 	}
 
-	LLVMPositionBuilderAtEnd(ctx->ac.builder, merge_block);
+	ac_build_endif(&ctx->ac, then_block->index);
 }
 
 static void visit_loop(struct ac_nir_context *ctx, nir_loop *loop)
 {
-	LLVMValueRef fn = LLVMGetBasicBlockParent(LLVMGetInsertBlock(ctx->ac.builder));
-	LLVMBasicBlockRef continue_parent = ctx->continue_block;
-	LLVMBasicBlockRef break_parent = ctx->break_block;
+	nir_block *first_loop_block =
+		(nir_block *) exec_list_get_head(&loop->body);
 
-	ctx->continue_block =
-	    LLVMAppendBasicBlockInContext(ctx->ac.context, fn, "");
-	ctx->break_block =
-	    LLVMAppendBasicBlockInContext(ctx->ac.context, fn, "");
+	ac_build_bgnloop(&ctx->ac, first_loop_block->index);
 
-	LLVMBuildBr(ctx->ac.builder, ctx->continue_block);
-	LLVMPositionBuilderAtEnd(ctx->ac.builder, ctx->continue_block);
 	visit_cf_list(ctx, &loop->body);
 
-	if (LLVMGetInsertBlock(ctx->ac.builder))
-		LLVMBuildBr(ctx->ac.builder, ctx->continue_block);
-	LLVMPositionBuilderAtEnd(ctx->ac.builder, ctx->break_block);
-
-	ctx->continue_block = continue_parent;
-	ctx->break_block = break_parent;
+	ac_build_endloop(&ctx->ac, first_loop_block->index);
 }
 
 static void visit_cf_list(struct ac_nir_context *ctx,
