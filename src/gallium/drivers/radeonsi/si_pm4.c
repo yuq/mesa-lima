@@ -167,8 +167,9 @@ void si_pm4_upload_indirect_buffer(struct si_context *sctx,
 
 	r600_resource_reference(&state->indirect_buffer, NULL);
 	state->indirect_buffer = (struct r600_resource*)
-		pipe_buffer_create(screen, 0,
-				   PIPE_USAGE_DEFAULT, aligned_ndw * 4);
+		si_aligned_buffer_create(screen, 0,
+					 PIPE_USAGE_DEFAULT, aligned_ndw * 4,
+					 sctx->screen->info.ib_start_alignment);
 	if (!state->indirect_buffer)
 		return;
 
