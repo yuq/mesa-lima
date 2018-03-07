@@ -53,20 +53,10 @@ static void kill_if_fetch_args(struct lp_build_tgsi_context *bld_base,
 	emit_data->args[0] = conds[0];
 }
 
-static void kil_emit(const struct lp_build_tgsi_action *action,
-		     struct lp_build_tgsi_context *bld_base,
-		     struct lp_build_emit_data *emit_data)
+void si_llvm_emit_kill(struct ac_shader_abi *abi, LLVMValueRef visible)
 {
-	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	LLVMBuilderRef builder = ctx->ac.builder;
-	LLVMValueRef visible;
-
-	if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_KILL_IF) {
-		visible = emit_data->args[0];
-	} else {
-		assert(emit_data->inst->Instruction.Opcode == TGSI_OPCODE_KILL);
-		visible = LLVMConstInt(ctx->i1, false, 0);
-	}
 
 	if (ctx->shader->selector->force_correct_derivs_after_kill) {
 		/* LLVM 6.0 can kill immediately while maintaining WQM. */
@@ -82,6 +72,23 @@ static void kil_emit(const struct lp_build_tgsi_action *action,
 	}
 
 	ac_build_kill_if_false(&ctx->ac, visible);
+}
+
+static void kil_emit(const struct lp_build_tgsi_action *action,
+		     struct lp_build_tgsi_context *bld_base,
+		     struct lp_build_emit_data *emit_data)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	LLVMValueRef visible;
+
+	if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_KILL_IF) {
+		visible = emit_data->args[0];
+	} else {
+		assert(emit_data->inst->Instruction.Opcode == TGSI_OPCODE_KILL);
+		visible = LLVMConstInt(ctx->i1, false, 0);
+	}
+
+	si_llvm_emit_kill(&ctx->abi, visible);
 }
 
 static void emit_icmp(const struct lp_build_tgsi_action *action,
