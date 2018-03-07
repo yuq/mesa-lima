@@ -1014,8 +1014,6 @@ end:
 
    DBG("Marking %d accumulated - results gathered\n", o->Id);
 
-   brw_bo_unmap(obj->oa.bo);
-   obj->oa.map = NULL;
    obj->oa.results_accumulated = true;
    drop_from_unaccumulated_query_list(brw, obj);
    dec_n_oa_users(brw);
@@ -1024,8 +1022,6 @@ end:
 
 error:
 
-   brw_bo_unmap(obj->oa.bo);
-   obj->oa.map = NULL;
    discard_all_queries(brw);
 }
 
@@ -1470,6 +1466,9 @@ get_oa_counter_data(struct brw_context *brw,
    if (!obj->oa.results_accumulated) {
       accumulate_oa_reports(brw, obj);
       assert(obj->oa.results_accumulated);
+
+      brw_bo_unmap(obj->oa.bo);
+      obj->oa.map = NULL;
    }
 
    for (int i = 0; i < n_counters; i++) {
