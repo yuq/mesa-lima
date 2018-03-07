@@ -27,6 +27,7 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/src/mesa \
 	-I$(top_builddir)/src/mesa/drivers/dri/common \
 	-I$(top_srcdir)/src/mesa/drivers/dri/common \
+	-I$(top_srcdir)/src/egl \
 	-I$(top_srcdir)/src/egl/drivers/dri2 \
 	-I$(top_srcdir)/src/egl/wayland/wayland-egl \
 	-I$(top_srcdir)/src/egl/main \
