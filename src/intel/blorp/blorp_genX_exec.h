@@ -1283,6 +1283,7 @@ blorp_emit_memcpy(struct blorp_batch *batch,
 static void
 blorp_emit_surface_state(struct blorp_batch *batch,
                          const struct brw_blorp_surface_info *surface,
+                         enum isl_aux_op op,
                          void *state, uint32_t state_offset,
                          const bool color_write_disables[4],
                          bool is_render_target)
@@ -1346,10 +1347,12 @@ blorp_emit_surface_state(struct blorp_batch *batch,
                           isl_dev->ss.clear_color_state_offset,
                           surface->clear_color_addr, *clear_addr);
 #elif GEN_GEN >= 7
-      struct blorp_address dst_addr = blorp_get_surface_base_address(batch);
-      dst_addr.offset += state_offset + isl_dev->ss.clear_value_offset;
-      blorp_emit_memcpy(batch, dst_addr, surface->clear_color_addr,
-                        isl_dev->ss.clear_value_size);
+      if (op == ISL_AUX_OP_FULL_RESOLVE || op == ISL_AUX_OP_PARTIAL_RESOLVE) {
+         struct blorp_address dst_addr = blorp_get_surface_base_address(batch);
+         dst_addr.offset += state_offset + isl_dev->ss.clear_value_offset;
+         blorp_emit_memcpy(batch, dst_addr, surface->clear_color_addr,
+                           isl_dev->ss.clear_value_size);
+      }
 #else
       unreachable("Fast clears are only supported on gen7+");
 #endif
@@ -1411,6 +1414,7 @@ blorp_emit_surface_states(struct blorp_batch *batch,
 
       if (params->dst.enabled) {
          blorp_emit_surface_state(batch, &params->dst,
+                                  params->fast_clear_op,
                                   surface_maps[BLORP_RENDERBUFFER_BT_INDEX],
                                   surface_offsets[BLORP_RENDERBUFFER_BT_INDEX],
                                   params->color_write_disable, true);
@@ -1426,6 +1430,7 @@ blorp_emit_surface_states(struct blorp_batch *batch,
 
       if (params->src.enabled) {
          blorp_emit_surface_state(batch, &params->src,
+                                  params->fast_clear_op,
                                   surface_maps[BLORP_TEXTURE_BT_INDEX],
                                   surface_offsets[BLORP_TEXTURE_BT_INDEX],
                                   NULL, false);
