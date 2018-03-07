@@ -6062,6 +6062,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		ctx->abi.lookup_interp_param = si_nir_lookup_interp_param;
 		ctx->abi.load_sample_position = load_sample_position;
 		ctx->abi.load_sample_mask_in = load_sample_mask_in;
+		ctx->abi.emit_kill = si_llvm_emit_kill;
 		break;
 	case PIPE_SHADER_COMPUTE:
 		ctx->abi.load_local_group_size = get_block_size;

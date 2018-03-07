@@ -3872,6 +3872,12 @@ static void emit_barrier(struct ac_llvm_context *ac, gl_shader_stage stage)
 			   ac->voidt, NULL, 0, AC_FUNC_ATTR_CONVERGENT);
 }
 
+static void radv_emit_kill(struct ac_shader_abi *abi, LLVMValueRef visible)
+{
+	struct radv_shader_context *ctx = radv_shader_context_from_abi(abi);
+	ac_build_kill_if_false(&ctx->ac, visible);
+}
+
 static void emit_discard(struct ac_nir_context *ctx,
 			 const nir_intrinsic_instr *instr)
 {
@@ -3886,7 +3892,7 @@ static void emit_discard(struct ac_nir_context *ctx,
 		cond = LLVMConstInt(ctx->ac.i1, false, 0);
 	}
 
-	ac_build_kill_if_false(&ctx->ac, cond);
+	ctx->abi->emit_kill(ctx->abi, cond);
 }
 
 static LLVMValueRef
@@ -6955,6 +6961,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 			ctx.abi.lookup_interp_param = lookup_interp_param;
 			ctx.abi.load_sample_position = load_sample_position;
 			ctx.abi.load_sample_mask_in = load_sample_mask_in;
+			ctx.abi.emit_kill = radv_emit_kill;
 		}
 
 		if (i)
