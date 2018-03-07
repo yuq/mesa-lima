@@ -1333,7 +1333,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 // But, we know that elements must be aligned for FETCH. :)
                                 // Right shift the offset by a bit and then scale by 2 to remove the sign extension.
                                 Value *shiftedOffsets16 = LSHR(vOffsets16, 1);
-                                pVtxSrc2[currentVertexElement++] = GATHERPS_16(gatherSrc16, pStreamBaseGFX, shiftedOffsets16, vGatherMask16, 2);
+                                pVtxSrc2[currentVertexElement++] = GATHERPS_16(gatherSrc16, pStreamBaseGFX, shiftedOffsets16, vGatherMask16, 2, GFX_MEM_CLIENT_FETCH);
                             }
                             else
                             {
@@ -1362,7 +1362,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 // But, we know that elements must be aligned for FETCH. :)
                                 // Right shift the offset by a bit and then scale by 2 to remove the sign extension.
                                 Value *vShiftedOffsets = LSHR(vOffsets, 1);
-                                vVertexElements[currentVertexElement++] = GATHERPS(gatherSrc, pStreamBaseGFX, vShiftedOffsets, vGatherMask, 2);
+                                vVertexElements[currentVertexElement++] = GATHERPS(gatherSrc, pStreamBaseGFX, vShiftedOffsets, vGatherMask, 2, GFX_MEM_CLIENT_FETCH);
                             }
                             else
                             {
@@ -1838,7 +1838,7 @@ Value* FetchJit::GetSimdValid16bitIndices(Value* pIndices, Value* pLastIndex)
 
         // if valid, load the index. if not, load 0 from the stack
         Value* pValid = SELECT(mask, pIndex, pZeroIndex);
-        Value *index = LOAD(pValid, "valid index");
+        Value *index = LOAD(pValid, "valid index", GFX_MEM_CLIENT_FETCH);
 
         // zero extended index to 32 bits and insert into the correct simd lane
         index = Z_EXT(index, mInt32Ty);

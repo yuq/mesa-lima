@@ -36,6 +36,9 @@
 
 namespace SwrJit
 {
+    void Builder::AssertMemoryUsageParams(Value* ptr, JIT_MEM_CLIENT usage)
+    {
+    }
 
     Value *Builder::GEP(Value* ptr, const std::initializer_list<Value*> &indexList)
     {
@@ -69,28 +72,33 @@ namespace SwrJit
         return IN_BOUNDS_GEP(ptr, indices);
     }
 
-    LoadInst* Builder::LOAD(Value *Ptr, const char *Name)
+    LoadInst* Builder::LOAD(Value *Ptr, const char *Name, JIT_MEM_CLIENT usage)
     {
+        AssertMemoryUsageParams(Ptr, usage);
         return IRB()->CreateLoad(Ptr, Name);
     }
 
-    LoadInst* Builder::LOAD(Value *Ptr, const Twine &Name)
+    LoadInst* Builder::LOAD(Value *Ptr, const Twine &Name, JIT_MEM_CLIENT usage)
     {
+        AssertMemoryUsageParams(Ptr, usage);
         return IRB()->CreateLoad(Ptr, Name);
     }
 
-    LoadInst* Builder::LOAD(Type *Ty, Value *Ptr, const Twine &Name)
+    LoadInst* Builder::LOAD(Type *Ty, Value *Ptr, const Twine &Name, JIT_MEM_CLIENT usage)
     {
+        AssertMemoryUsageParams(Ptr, usage);
         return IRB()->CreateLoad(Ty, Ptr, Name);
     }
 
-    LoadInst* Builder::LOAD(Value *Ptr, bool isVolatile, const Twine &Name)
+    LoadInst* Builder::LOAD(Value *Ptr, bool isVolatile, const Twine &Name, JIT_MEM_CLIENT usage)
     {
+        AssertMemoryUsageParams(Ptr, usage);
         return IRB()->CreateLoad(Ptr, isVolatile, Name);
     }
 
-    LoadInst *Builder::LOAD(Value *basePtr, const std::initializer_list<uint32_t> &indices, const llvm::Twine& name)
+    LoadInst *Builder::LOAD(Value *basePtr, const std::initializer_list<uint32_t> &indices, const llvm::Twine& name, JIT_MEM_CLIENT usage)
     {
+        AssertMemoryUsageParams(basePtr, usage);
         std::vector<Value*> valIndices;
         for (auto i : indices)
             valIndices.push_back(C(i));
@@ -158,8 +166,10 @@ namespace SwrJit
     /// @param vIndices - SIMD wide value of VB byte offsets
     /// @param vMask - SIMD wide mask that controls whether to access memory or the src values
     /// @param scale - value to scale indices by
-    Value *Builder::GATHERPS(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale)
+    Value *Builder::GATHERPS(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale, JIT_MEM_CLIENT usage)
     {
+        AssertMemoryUsageParams(pBase, usage);
+
         Value *vGather;
         Value *pBasePtr = INT_TO_PTR(pBase, PointerType::get(mInt8Ty, 0));
 
@@ -204,8 +214,10 @@ namespace SwrJit
         return vGather;
     }
 
-    Value *Builder::GATHERPS_16(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale)
+    Value *Builder::GATHERPS_16(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale, JIT_MEM_CLIENT usage)
     {
+        AssertMemoryUsageParams(pBase, usage);
+
         Value *vGather = VUNDEF_F_16();
 
         // use AVX512F gather instruction if available
@@ -244,8 +256,10 @@ namespace SwrJit
     /// @param vIndices - SIMD wide value of VB byte offsets
     /// @param vMask - SIMD wide mask that controls whether to access memory or the src values
     /// @param scale - value to scale indices by
-    Value *Builder::GATHERDD(Value* vSrc, Value* pBase, Value* vIndices, Value* vMask, uint8_t scale)
+    Value *Builder::GATHERDD(Value* vSrc, Value* pBase, Value* vIndices, Value* vMask, uint8_t scale, JIT_MEM_CLIENT usage)
     {
+        AssertMemoryUsageParams(pBase, usage);
+
         Value* vGather;
 
         // use avx2 gather instruction if available
@@ -286,8 +300,10 @@ namespace SwrJit
         return vGather;
     }
 
-    Value *Builder::GATHERDD_16(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale)
+    Value *Builder::GATHERDD_16(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale, JIT_MEM_CLIENT usage)
     {
+        AssertMemoryUsageParams(pBase, usage);
+
         Value *vGather = VUNDEF_I_16();
 
         // use AVX512F gather instruction if available
@@ -380,21 +396,21 @@ namespace SwrJit
     }
 
     void Builder::Gather4(const SWR_FORMAT format, Value* pSrcBase, Value* byteOffsets,
-        Value* mask, Value* vGatherComponents[], bool bPackedOutput)
+        Value* mask, Value* vGatherComponents[], bool bPackedOutput, JIT_MEM_CLIENT usage)
     {
         const SWR_FORMAT_INFO &info = GetFormatInfo(format);
         if (info.type[0] == SWR_TYPE_FLOAT && info.bpc[0] == 32)
         {
-            GATHER4PS(info, pSrcBase, byteOffsets, mask, vGatherComponents, bPackedOutput);
+            GATHER4PS(info, pSrcBase, byteOffsets, mask, vGatherComponents, bPackedOutput, usage);
         }
         else
         {
-            GATHER4DD(info, pSrcBase, byteOffsets, mask, vGatherComponents, bPackedOutput);
+            GATHER4DD(info, pSrcBase, byteOffsets, mask, vGatherComponents, bPackedOutput, usage);
         }
     }
 
     void Builder::GATHER4PS(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
-        Value* vMask, Value* vGatherComponents[], bool bPackedOutput)
+        Value* vMask, Value* vGatherComponents[], bool bPackedOutput, JIT_MEM_CLIENT usage)
     {
         switch (info.bpp / info.numComps)
         {
@@ -407,7 +423,7 @@ namespace SwrJit
 
             // always have at least one component out of x or y to fetch
 
-            vGatherResult[0] = GATHERPS(vGatherMaskedVal, pSrcBase, byteOffsets, vMask);
+            vGatherResult[0] = GATHERPS(vGatherMaskedVal, pSrcBase, byteOffsets, vMask, 1, usage);
             // e.g. result of first 8x32bit integer gather for 16bit components
             // 256i - 0    1    2    3    4    5    6    7
             //        xyxy xyxy xyxy xyxy xyxy xyxy xyxy xyxy
@@ -419,7 +435,7 @@ namespace SwrJit
                 // offset base to the next components(zw) in the vertex to gather
                 pSrcBase = OFFSET_TO_NEXT_COMPONENT(pSrcBase, C((intptr_t)4));
 
-                vGatherResult[1] = GATHERPS(vGatherMaskedVal, pSrcBase, byteOffsets, vMask);
+                vGatherResult[1] = GATHERPS(vGatherMaskedVal, pSrcBase, byteOffsets, vMask, 1, usage);
                 // e.g. result of second 8x32bit integer gather for 16bit components
                 // 256i - 0    1    2    3    4    5    6    7
                 //        zwzw zwzw zwzw zwzw zwzw zwzw zwzw zwzw 
@@ -447,7 +463,7 @@ namespace SwrJit
                 uint32_t swizzleIndex = info.swizzle[i];
 
                 // Gather a SIMD of components
-                vGatherComponents[swizzleIndex] = GATHERPS(vGatherComponents[swizzleIndex], pSrcBase, byteOffsets, vMask);
+                vGatherComponents[swizzleIndex] = GATHERPS(vGatherComponents[swizzleIndex], pSrcBase, byteOffsets, vMask, 1, usage);
 
                 // offset base to the next component to gather
                 pSrcBase = OFFSET_TO_NEXT_COMPONENT(pSrcBase, C((intptr_t)4));
@@ -461,14 +477,14 @@ namespace SwrJit
     }
 
     void Builder::GATHER4DD(const SWR_FORMAT_INFO &info, Value* pSrcBase, Value* byteOffsets,
-        Value* vMask, Value* vGatherComponents[], bool bPackedOutput)
+        Value* vMask, Value* vGatherComponents[], bool bPackedOutput, JIT_MEM_CLIENT usage)
     {
         switch (info.bpp / info.numComps)
         {
         case 8:
         {
             Value* vGatherMaskedVal = VIMMED1((int32_t)0);
-            Value* vGatherResult = GATHERDD(vGatherMaskedVal, pSrcBase, byteOffsets, vMask);
+            Value* vGatherResult = GATHERDD(vGatherMaskedVal, pSrcBase, byteOffsets, vMask, 1, usage);
             // e.g. result of an 8x32bit integer gather for 8bit components
             // 256i - 0    1    2    3    4    5    6    7
             //        xyzw xyzw xyzw xyzw xyzw xyzw xyzw xyzw 
@@ -485,7 +501,7 @@ namespace SwrJit
 
             // always have at least one component out of x or y to fetch
 
-            vGatherResult[0] = GATHERDD(vGatherMaskedVal, pSrcBase, byteOffsets, vMask);
+            vGatherResult[0] = GATHERDD(vGatherMaskedVal, pSrcBase, byteOffsets, vMask, 1, usage);
             // e.g. result of first 8x32bit integer gather for 16bit components
             // 256i - 0    1    2    3    4    5    6    7
             //        xyxy xyxy xyxy xyxy xyxy xyxy xyxy xyxy
@@ -497,7 +513,7 @@ namespace SwrJit
                 // offset base to the next components(zw) in the vertex to gather
                 pSrcBase = OFFSET_TO_NEXT_COMPONENT(pSrcBase, C((intptr_t)4));
 
-                vGatherResult[1] = GATHERDD(vGatherMaskedVal, pSrcBase, byteOffsets, vMask);
+                vGatherResult[1] = GATHERDD(vGatherMaskedVal, pSrcBase, byteOffsets, vMask, 1, usage);
                 // e.g. result of second 8x32bit integer gather for 16bit components
                 // 256i - 0    1    2    3    4    5    6    7
                 //        zwzw zwzw zwzw zwzw zwzw zwzw zwzw zwzw 
@@ -526,7 +542,7 @@ namespace SwrJit
                 uint32_t swizzleIndex = info.swizzle[i];
 
                 // Gather a SIMD of components
-                vGatherComponents[swizzleIndex] = GATHERDD(vGatherComponents[swizzleIndex], pSrcBase, byteOffsets, vMask);
+                vGatherComponents[swizzleIndex] = GATHERDD(vGatherComponents[swizzleIndex], pSrcBase, byteOffsets, vMask, 1, usage);
 
                 // offset base to the next component to gather
                 pSrcBase = OFFSET_TO_NEXT_COMPONENT(pSrcBase, C((intptr_t)4));
