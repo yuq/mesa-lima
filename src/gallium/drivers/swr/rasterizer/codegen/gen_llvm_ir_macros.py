@@ -71,6 +71,7 @@ intrinsics = [
         ['VFMADDPS', 'x86_fma_vfmadd_ps_256', ['a', 'b', 'c']],
         ['VMOVMSKPS', 'x86_avx_movmsk_ps_256', ['a']],
         ['INTERRUPT', 'x86_int', ['a']],
+        ['VPHADDD', 'x86_avx2_phadd_d', ['a', 'b']],
     ]
 
 this_dir = os.path.dirname(os.path.abspath(__file__))

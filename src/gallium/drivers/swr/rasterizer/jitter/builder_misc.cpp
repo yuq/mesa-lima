@@ -756,6 +756,18 @@ namespace SwrJit
         return SELECT(cmp, a, b);
     }
 
+    Value *Builder::PMAXUD(Value* a, Value* b)
+    {
+        Value* cmp = ICMP_UGT(a, b);
+        return SELECT(cmp, a, b);
+    }
+
+    Value *Builder::PMINUD(Value* a, Value* b)
+    {
+        Value* cmp = ICMP_ULT(a, b);
+        return SELECT(cmp, a, b);
+    }
+
     // Helper function to create alloca in entry block of function
     Value* Builder::CreateEntryAlloca(Function* pFunc, Type* pType)
     {

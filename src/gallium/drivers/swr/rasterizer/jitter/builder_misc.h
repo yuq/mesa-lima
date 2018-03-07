@@ -128,6 +128,8 @@ Value *CVTPH2PS(Value* a, const llvm::Twine& name = "");
 Value *CVTPS2PH(Value* a, Value* rounding);
 Value *PMAXSD(Value* a, Value* b);
 Value *PMINSD(Value* a, Value* b);
+Value *PMAXUD(Value* a, Value* b);
+Value *PMINUD(Value* a, Value* b);
 Value *VABSPS(Value* a);
 Value *FMADDPS(Value* a, Value* b, Value* c);
 
