@@ -288,6 +288,7 @@ DIType* JitManager::GetDebugIntegerType(Type* pTy)
     case 16: return builder.createBasicType("int16", 16, dwarf::DW_ATE_signed); break;
     case 32: return builder.createBasicType("int", 32, dwarf::DW_ATE_signed); break;
     case 64: return builder.createBasicType("int64", 64, dwarf::DW_ATE_signed); break;
+    case 128: return builder.createBasicType("int128", 128, dwarf::DW_ATE_signed); break;
     default: SWR_ASSERT(false, "Unimplemented integer bit width");
     }
     return nullptr;
