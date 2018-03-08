@@ -214,9 +214,7 @@ radv_shader_compile_to_nir(struct radv_device *device,
 				.multiview = true,
 				.subgroup_basic = true,
 				.variable_pointers = true,
-			},
-			.exts = {
-				.AMD_gcn_shader = true,
+				.gcn_shader = true,
 			},
 		};
 		entry_point = spirv_to_nir(spirv, module->size / 4,
