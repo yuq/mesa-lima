@@ -18,10 +18,10 @@ BUILT_SOURCES = wayland-drm-protocol.c \
 CLEANFILES = $(BUILT_SOURCES)
 
 %-protocol.c : %.xml
-	$(AM_V_GEN)$(WAYLAND_SCANNER) code < $< > $@
+	$(AM_V_GEN)$(WAYLAND_SCANNER) code $< $@
 
 %-server-protocol.h : %.xml
-	$(AM_V_GEN)$(WAYLAND_SCANNER) server-header < $< > $@
+	$(AM_V_GEN)$(WAYLAND_SCANNER) server-header $< $@
 
 %-client-protocol.h : %.xml
-	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
+	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header $< $@
