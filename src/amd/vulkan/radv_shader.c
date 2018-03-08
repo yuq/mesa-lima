@@ -152,6 +152,7 @@ radv_optimize_nir(struct nir_shader *shader)
         } while (progress);
 
         NIR_PASS(progress, shader, nir_opt_shrink_load);
+        NIR_PASS(progress, shader, nir_opt_move_load_ubo);
 }
 
 nir_shader *
