@@ -42,6 +42,7 @@ struct ra_regs;
 struct lima_screen {
    struct pipe_screen base;
    struct renderonly *ro;
+   bool contiguous_scanout;
 
    int refcnt;
    void *winsys_priv;
@@ -81,6 +82,6 @@ lima_screen(struct pipe_screen *pscreen)
 }
 
 struct pipe_screen *
-lima_screen_create(int fd, struct renderonly *ro);
+lima_screen_create(int fd, struct renderonly *ro, bool contiguous_scanout);
 
 #endif

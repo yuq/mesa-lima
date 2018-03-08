@@ -348,13 +348,15 @@ lima_screen_parse_env(void)
 }
 
 struct pipe_screen *
-lima_screen_create(int fd, struct renderonly *ro)
+lima_screen_create(int fd, struct renderonly *ro, bool contiguous_scanout)
 {
    struct lima_screen *screen;
 
    screen = rzalloc(NULL, struct lima_screen);
    if (!screen)
       return NULL;
+
+   screen->contiguous_scanout = contiguous_scanout;
 
    if (!lima_vamgr_init(screen))
       goto err_out0;
