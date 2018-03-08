@@ -876,6 +876,19 @@ struct SWR_BLEND_STATE
 };
 static_assert(sizeof(SWR_BLEND_STATE) == 36, "Invalid SWR_BLEND_STATE size");
 
+struct SWR_BLEND_CONTEXT
+{
+    const SWR_BLEND_STATE*  pBlendState;
+    simdvector*             src;
+    simdvector*             src1;
+    simdvector*             src0alpha;
+    uint32_t                sampleNum;
+    simdvector*             pDst;
+    simdvector*             result;
+    simdscalari*            oMask;
+    simdscalari*            pMask;
+};
+
 //////////////////////////////////////////////////////////////////////////
 /// FUNCTION POINTERS FOR SHADERS
 
@@ -892,9 +905,7 @@ typedef void(__cdecl *PFN_CS_FUNC)(HANDLE hPrivateData, SWR_CS_CONTEXT* pCsConte
 typedef void(__cdecl *PFN_SO_FUNC)(SWR_STREAMOUT_CONTEXT& soContext);
 typedef void(__cdecl *PFN_PIXEL_KERNEL)(HANDLE hPrivateData, SWR_PS_CONTEXT *pContext);
 typedef void(__cdecl *PFN_CPIXEL_KERNEL)(HANDLE hPrivateData, SWR_PS_CONTEXT *pContext);
-typedef void(__cdecl *PFN_BLEND_JIT_FUNC)(const SWR_BLEND_STATE*,
-    simdvector& vSrc, simdvector& vSrc1, simdscalar& vSrc0Alpha, uint32_t sample,
-    uint8_t* pDst, simdvector& vResult, simdscalari* vOMask, simdscalari* vCoverageMask);
+typedef void(__cdecl *PFN_BLEND_JIT_FUNC)(SWR_BLEND_CONTEXT*);
 typedef simdscalar(*PFN_QUANTIZE_DEPTH)(simdscalar const &);
 
 

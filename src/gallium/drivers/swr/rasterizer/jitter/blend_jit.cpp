@@ -448,7 +448,7 @@ struct BlendJit : public Builder
         Value* pRef = VBROADCAST(LOAD(pBlendState, { 0, SWR_BLEND_STATE_alphaTestReference }));
         
         // load alpha
-        Value* pAlpha = LOAD(ppAlpha);
+        Value* pAlpha = LOAD(ppAlpha, { 0, 0 });
 
         Value* pTest = nullptr;
         if (state.alphaTestFormat == ALPHA_TEST_UNORM8)
@@ -517,19 +517,15 @@ struct BlendJit : public Builder
         fnName << ComputeCRC(0, &state, sizeof(state));
 
         // blend function signature
-        //typedef void(*PFN_BLEND_JIT_FUNC)(const SWR_BLEND_STATE*, simdvector&, simdvector&, uint32_t, uint8_t*, simdvector&, simdscalari*, simdscalari*);
+        //typedef void(*PFN_BLEND_JIT_FUNC)(const SWR_BLEND_CONTEXT*);
 
         std::vector<Type*> args{
-            PointerType::get(Gen_SWR_BLEND_STATE(JM()), 0), // SWR_BLEND_STATE*
-            PointerType::get(mSimdFP32Ty, 0),               // simdvector& src
-            PointerType::get(mSimdFP32Ty, 0),               // simdvector& src1
-            PointerType::get(mSimdFP32Ty, 0),               // src0alpha
-            Type::getInt32Ty(JM()->mContext),               // sampleNum
-            PointerType::get(mSimdFP32Ty, 0),               // uint8_t* pDst
-            PointerType::get(mSimdFP32Ty, 0),               // simdvector& result
-            PointerType::get(mSimdInt32Ty, 0),              // simdscalari* oMask
-            PointerType::get(mSimdInt32Ty, 0),              // simdscalari* pMask
+            PointerType::get(Gen_SWR_BLEND_CONTEXT(JM()), 0) // SWR_BLEND_CONTEXT*
         };
+
+        //std::vector<Type*> args{
+        //    PointerType::get(Gen_SWR_BLEND_CONTEXT(JM()), 0), // SWR_BLEND_CONTEXT*
+        //};
 
         FunctionType* fTy = FunctionType::get(IRB()->getVoidTy(), args, false);
         Function* blendFunc = Function::Create(fTy, GlobalValue::ExternalLinkage, fnName.str(), JM()->mpCurrentModule);
@@ -541,23 +537,25 @@ struct BlendJit : public Builder
 
         // arguments
         auto argitr = blendFunc->arg_begin();
-        Value* pBlendState = &*argitr++;
+        Value* pBlendContext = &*argitr++;
+        pBlendContext->setName("pBlendContext");
+        Value* pBlendState = LOAD(pBlendContext, { 0, SWR_BLEND_CONTEXT_pBlendState });
         pBlendState->setName("pBlendState");
-        Value* pSrc = &*argitr++;
+        Value* pSrc = LOAD(pBlendContext, { 0, SWR_BLEND_CONTEXT_src });
         pSrc->setName("src");
-        Value* pSrc1 = &*argitr++;
+        Value* pSrc1 = LOAD(pBlendContext, { 0, SWR_BLEND_CONTEXT_src1 });
         pSrc1->setName("src1");
-        Value* pSrc0Alpha = &*argitr++;
+        Value* pSrc0Alpha = LOAD(pBlendContext, { 0, SWR_BLEND_CONTEXT_src0alpha });
         pSrc0Alpha->setName("src0alpha");
-        Value* sampleNum = &*argitr++;
+        Value* sampleNum = LOAD(pBlendContext, { 0, SWR_BLEND_CONTEXT_sampleNum });
         sampleNum->setName("sampleNum");
-        Value* pDst = &*argitr++;
+        Value* pDst = LOAD(pBlendContext, { 0, SWR_BLEND_CONTEXT_pDst });
         pDst->setName("pDst");
-        Value* pResult = &*argitr++;
+        Value* pResult = LOAD(pBlendContext, { 0, SWR_BLEND_CONTEXT_result });
         pResult->setName("result");
-        Value* ppoMask = &*argitr++;
+        Value* ppoMask = LOAD(pBlendContext, { 0, SWR_BLEND_CONTEXT_oMask });
         ppoMask->setName("ppoMask");
-        Value* ppMask = &*argitr++;
+        Value* ppMask = LOAD(pBlendContext, { 0, SWR_BLEND_CONTEXT_pMask });
         ppMask->setName("pMask");
 
         static_assert(KNOB_COLOR_HOT_TILE_FORMAT == R32G32B32A32_FLOAT, "Unsupported hot tile format");
@@ -569,16 +567,16 @@ struct BlendJit : public Builder
         for (uint32_t i = 0; i < 4; ++i)
         {
             // load hot tile
-            dst[i] = LOAD(pDst, { i });
+            dst[i] = LOAD(pDst, { 0, i });
 
             // load constant color
             constantColor[i] = VBROADCAST(LOAD(pBlendState, { 0, SWR_BLEND_STATE_constantColor, i }));
-
+        
             // load src
-            src[i] = LOAD(pSrc, { i });
+            src[i] = LOAD(pSrc, { 0, i });
 
             // load src1
-            src1[i] = LOAD(pSrc1, { i });
+            src1[i] = LOAD(pSrc1, { 0, i });
         }
         Value* currentSampleMask = VIMMED1(-1);
         if (state.desc.alphaToCoverageEnable)
@@ -646,7 +644,7 @@ struct BlendJit : public Builder
             // store results out
             for (uint32_t i = 0; i < 4; ++i)
             {
-                STORE(result[i], pResult, { i });
+                STORE(result[i], pResult, { 0, i });
             }
         }
         
@@ -756,7 +754,7 @@ struct BlendJit : public Builder
                     break;
                 }
 
-                STORE(result[i], pResult, {i});
+                STORE(result[i], pResult, {0, i});
             }
         }
 

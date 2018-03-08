@@ -724,24 +724,26 @@ INLINE void OutputMerger4x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SW
 
         const SWR_RENDER_TARGET_BLEND_STATE *pRTBlend = &pBlendState->renderTarget[rt];
 
+        SWR_BLEND_CONTEXT blendContext = { 0 };
         {
             // pfnBlendFunc may not update all channels.  Initialize with PS output.
             /// TODO: move this into the blend JIT.
             blendOut = psContext.shaded[rt];
 
+            blendContext.pBlendState = pBlendState;
+            blendContext.src = &psContext.shaded[rt];
+            blendContext.src1 = &psContext.shaded[1];
+            blendContext.src0alpha = reinterpret_cast<simdvector *>(&psContext.shaded[0].w);
+            blendContext.sampleNum = sample;
+            blendContext.pDst = (simdvector *) &pColorSample;
+            blendContext.result = &blendOut;
+            blendContext.oMask = &psContext.oMask;
+            blendContext.pMask = reinterpret_cast<simdscalari *>(&coverageMask);
+
             // Blend outputs and update coverage mask for alpha test
             if(pfnBlendFunc[rt] != nullptr)
             {
-                pfnBlendFunc[rt](
-                    pBlendState,
-                    psContext.shaded[rt],
-                    psContext.shaded[1],
-                    psContext.shaded[0].w,
-                    sample,
-                    pColorSample,
-                    blendOut,
-                    &psContext.oMask,
-                    (simdscalari*)&coverageMask);
+                pfnBlendFunc[rt](&blendContext);
             }
         }
 
@@ -811,24 +813,26 @@ INLINE void OutputMerger8x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SW
             pColorSample = nullptr;
         }
 
+        SWR_BLEND_CONTEXT blendContext = { 0 };
         {
             // pfnBlendFunc may not update all channels.  Initialize with PS output.
             /// TODO: move this into the blend JIT.
             blendOut = psContext.shaded[rt];
 
+            blendContext.pBlendState    = pBlendState;
+            blendContext.src            = &psContext.shaded[rt];
+            blendContext.src1           = &psContext.shaded[1];
+            blendContext.src0alpha      = reinterpret_cast<simdvector *>(&psContext.shaded[0].w);
+            blendContext.sampleNum      = sample;
+            blendContext.pDst           = &blendSrc;
+            blendContext.result         = &blendOut;
+            blendContext.oMask          = &psContext.oMask;
+            blendContext.pMask          = reinterpret_cast<simdscalari *>(&coverageMask);
+
             // Blend outputs and update coverage mask for alpha test
             if(pfnBlendFunc[rt] != nullptr)
             {
-                pfnBlendFunc[rt](
-                    pBlendState,
-                    psContext.shaded[rt],
-                    psContext.shaded[1],
-                    psContext.shaded[0].w,
-                    sample,
-                    reinterpret_cast<uint8_t *>(&blendSrc),
-                    blendOut,
-                    &psContext.oMask,
-                    reinterpret_cast<simdscalari *>(&coverageMask));
+                pfnBlendFunc[rt](&blendContext);
             }
         }
 
