@@ -47,7 +47,7 @@ static struct pipe_screen *rockchip_screen_create_lima(int fd)
    if (ro.gpu_fd < 0)
       return NULL;
 
-   struct pipe_screen *screen = lima_drm_screen_create_renderonly(&ro);
+   struct pipe_screen *screen = lima_drm_screen_create_renderonly(&ro, true);
    if (!screen)
       close(ro.gpu_fd);
 
