@@ -963,6 +963,60 @@ static void visit_alu(struct ac_nir_context *ctx, const nir_alu_instr *instr)
 		break;
 	}
 
+	case nir_op_fmin3:
+		result = emit_intrin_2f_param(&ctx->ac, "llvm.minnum",
+						ac_to_float_type(&ctx->ac, def_type), src[0], src[1]);
+		result = emit_intrin_2f_param(&ctx->ac, "llvm.minnum",
+						ac_to_float_type(&ctx->ac, def_type), result, src[2]);
+		break;
+	case nir_op_umin3:
+		result = emit_minmax_int(&ctx->ac, LLVMIntULT, src[0], src[1]);
+		result = emit_minmax_int(&ctx->ac, LLVMIntULT, result, src[2]);
+		break;
+	case nir_op_imin3:
+		result = emit_minmax_int(&ctx->ac, LLVMIntSLT, src[0], src[1]);
+		result = emit_minmax_int(&ctx->ac, LLVMIntSLT, result, src[2]);
+		break;
+	case nir_op_fmax3:
+		result = emit_intrin_2f_param(&ctx->ac, "llvm.maxnum",
+						ac_to_float_type(&ctx->ac, def_type), src[0], src[1]);
+		result = emit_intrin_2f_param(&ctx->ac, "llvm.maxnum",
+						ac_to_float_type(&ctx->ac, def_type), result, src[2]);
+		break;
+	case nir_op_umax3:
+		result = emit_minmax_int(&ctx->ac, LLVMIntUGT, src[0], src[1]);
+		result = emit_minmax_int(&ctx->ac, LLVMIntUGT, result, src[2]);
+		break;
+	case nir_op_imax3:
+		result = emit_minmax_int(&ctx->ac, LLVMIntSGT, src[0], src[1]);
+		result = emit_minmax_int(&ctx->ac, LLVMIntSGT, result, src[2]);
+		break;
+	case nir_op_fmed3: {
+		LLVMValueRef tmp1 = emit_intrin_2f_param(&ctx->ac, "llvm.minnum",
+						ac_to_float_type(&ctx->ac, def_type), src[0], src[1]);
+		LLVMValueRef tmp2 = emit_intrin_2f_param(&ctx->ac, "llvm.maxnum",
+						ac_to_float_type(&ctx->ac, def_type), src[0], src[1]);
+		tmp2 = emit_intrin_2f_param(&ctx->ac, "llvm.minnum",
+						ac_to_float_type(&ctx->ac, def_type), tmp2, src[2]);
+		result = emit_intrin_2f_param(&ctx->ac, "llvm.maxnum",
+						ac_to_float_type(&ctx->ac, def_type), tmp1, tmp2);
+		break;
+	}
+	case nir_op_imed3: {
+		LLVMValueRef tmp1 = emit_minmax_int(&ctx->ac, LLVMIntSLT, src[0], src[1]);
+		LLVMValueRef tmp2 = emit_minmax_int(&ctx->ac, LLVMIntSGT, src[0], src[1]);
+		tmp2 = emit_minmax_int(&ctx->ac, LLVMIntSLT, tmp2, src[2]);
+		result = emit_minmax_int(&ctx->ac, LLVMIntSGT, tmp1, tmp2);
+		break;
+	}
+	case nir_op_umed3: {
+		LLVMValueRef tmp1 = emit_minmax_int(&ctx->ac, LLVMIntULT, src[0], src[1]);
+		LLVMValueRef tmp2 = emit_minmax_int(&ctx->ac, LLVMIntUGT, src[0], src[1]);
+		tmp2 = emit_minmax_int(&ctx->ac, LLVMIntULT, tmp2, src[2]);
+		result = emit_minmax_int(&ctx->ac, LLVMIntUGT, tmp1, tmp2);
+		break;
+	}
+
 	default:
 		fprintf(stderr, "Unknown NIR alu instr: ");
 		nir_print_instr(&instr->instr, stderr);
