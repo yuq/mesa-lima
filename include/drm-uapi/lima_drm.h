@@ -36,6 +36,8 @@ struct drm_lima_info {
 	__u32 num_pp;  /* out */
 };
 
+#define LIMA_GEM_CREATE_CONTIGUOUS (1 << 0)
+
 struct drm_lima_gem_create {
 	__u32 size;    /* in */
 	__u32 flags;   /* in */
