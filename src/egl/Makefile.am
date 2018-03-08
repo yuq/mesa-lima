@@ -70,11 +70,11 @@ WL_DMABUF_XML = $(WAYLAND_PROTOCOLS_DATADIR)/unstable/linux-dmabuf/linux-dmabuf-
 
 drivers/dri2/linux-dmabuf-unstable-v1-protocol.c: $(WL_DMABUF_XML)
 	$(MKDIR_GEN)
-	$(AM_V_GEN)$(WAYLAND_SCANNER) code < $< > $@
+	$(AM_V_GEN)$(WAYLAND_SCANNER) code $< $@
 
 drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h: $(WL_DMABUF_XML)
 	$(MKDIR_GEN)
-	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
+	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header $< $@
 
 if HAVE_PLATFORM_WAYLAND
 drivers/dri2/linux-dmabuf-unstable-v1-protocol.lo: drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h
