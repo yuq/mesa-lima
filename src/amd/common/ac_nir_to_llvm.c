@@ -6539,17 +6539,13 @@ handle_tcs_outputs_post(struct radv_shader_context *ctx)
 
 static bool
 si_export_mrt_color(struct radv_shader_context *ctx,
-		    LLVMValueRef *color, unsigned index, bool is_last,
+		    LLVMValueRef *color, unsigned index,
 		    struct ac_export_args *args)
 {
 	/* Export */
 	si_llvm_init_export_args(ctx, color, 0xf,
 				 V_008DFC_SQ_EXP_MRT + index, args);
-
-	if (is_last) {
-		args->valid_mask = 1; /* whether the EXEC mask is valid */
-		args->done = 1; /* DONE bit */
-	} else if (!args->enabled_channels)
+	if (!args->enabled_channels)
 		return false; /* unnecessary NULL export */
 
 	return true;
@@ -6576,7 +6572,6 @@ handle_fs_outputs_post(struct radv_shader_context *ctx)
 
 	for (unsigned i = 0; i < AC_LLVM_MAX_OUTPUTS; ++i) {
 		LLVMValueRef values[4];
-		bool last = false;
 
 		if (!(ctx->output_mask & (1ull << i)))
 			continue;
@@ -6588,14 +6583,9 @@ handle_fs_outputs_post(struct radv_shader_context *ctx)
 			values[j] = ac_to_float(&ctx->ac,
 						radv_load_output(ctx, i, j));
 
-		if (!ctx->shader_info->info.ps.writes_z &&
-		    !ctx->shader_info->info.ps.writes_stencil &&
-		    !ctx->shader_info->info.ps.writes_sample_mask)
-			last = ctx->output_mask <= ((1ull << (i + 1)) - 1);
-
 		bool ret = si_export_mrt_color(ctx, values,
 					       i - FRAG_RESULT_DATA0,
-					       last, &color_args[index]);
+					       &color_args[index]);
 		if (ret)
 			index++;
 	}
@@ -6612,6 +6602,19 @@ handle_fs_outputs_post(struct radv_shader_context *ctx)
 	if (ctx->shader_info->info.ps.writes_sample_mask) {
 		samplemask = ac_to_float(&ctx->ac,
 					 radv_load_output(ctx, FRAG_RESULT_SAMPLE_MASK, 0));
+	}
+
+	/* Set the DONE bit on last non-null color export only if Z isn't
+	 * exported.
+	 */
+	if (index > 0 &&
+	    !ctx->shader_info->info.ps.writes_z &&
+	    !ctx->shader_info->info.ps.writes_stencil &&
+	    !ctx->shader_info->info.ps.writes_sample_mask) {
+		unsigned last = index - 1;
+
+               color_args[last].valid_mask = 1; /* whether the EXEC mask is valid */
+               color_args[last].done = 1; /* DONE bit */
 	}
 
 	/* Export PS outputs. */
