@@ -275,7 +275,6 @@ radv_shader_compile_to_nir(struct radv_device *device,
 	nir_lower_var_copies(nir);
 	nir_lower_global_vars_to_local(nir);
 	nir_remove_dead_variables(nir, nir_var_local);
-	ac_lower_indirect_derefs(nir, device->physical_device->rad_info.chip_class);
 	nir_lower_subgroups(nir, &(struct nir_lower_subgroups_options) {
 			.subgroup_size = 64,
 			.ballot_bit_size = 64,
@@ -285,6 +284,14 @@ radv_shader_compile_to_nir(struct radv_device *device,
 			.lower_quad =  1,
 		});
 
+	radv_optimize_nir(nir);
+
+	/* Indirect lowering must be called after the radv_optimize_nir() loop
+	 * has been called at least once. Otherwise indirect lowering can
+	 * bloat the instruction count of the loop and cause it to be
+	 * considered too large for unrolling.
+	 */
+	ac_lower_indirect_derefs(nir, device->physical_device->rad_info.chip_class);
 	radv_optimize_nir(nir);
 
 	return nir;
