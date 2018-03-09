@@ -314,28 +314,11 @@ create_llvm_function(LLVMContextRef ctx, LLVMModuleRef module,
 	return main_function;
 }
 
-static LLVMValueRef unpack_param(struct ac_llvm_context *ctx,
-				 LLVMValueRef param, unsigned rshift,
-				 unsigned bitwidth)
-{
-	LLVMValueRef value = param;
-	if (rshift)
-		value = LLVMBuildLShr(ctx->builder, value,
-				      LLVMConstInt(ctx->i32, rshift, false), "");
-
-	if (rshift + bitwidth < 32) {
-		unsigned mask = (1 << bitwidth) - 1;
-		value = LLVMBuildAnd(ctx->builder, value,
-				     LLVMConstInt(ctx->i32, mask, false), "");
-	}
-	return value;
-}
-
 static LLVMValueRef get_rel_patch_id(struct radv_shader_context *ctx)
 {
 	switch (ctx->stage) {
 	case MESA_SHADER_TESS_CTRL:
-		return unpack_param(&ctx->ac, ctx->abi.tcs_rel_ids, 0, 8);
+		return ac_unpack_param(&ctx->ac, ctx->abi.tcs_rel_ids, 0, 8);
 	case MESA_SHADER_TESS_EVAL:
 		return ctx->tes_rel_patch_id;
 		break;
@@ -368,9 +351,9 @@ static LLVMValueRef
 get_tcs_in_patch_stride(struct radv_shader_context *ctx)
 {
 	if (ctx->stage == MESA_SHADER_VERTEX)
-		return unpack_param(&ctx->ac, ctx->ls_out_layout, 0, 13);
+		return ac_unpack_param(&ctx->ac, ctx->ls_out_layout, 0, 13);
 	else if (ctx->stage == MESA_SHADER_TESS_CTRL)
-		return unpack_param(&ctx->ac, ctx->tcs_in_layout, 0, 13);
+		return ac_unpack_param(&ctx->ac, ctx->tcs_in_layout, 0, 13);
 	else {
 		assert(0);
 		return NULL;
@@ -380,20 +363,20 @@ get_tcs_in_patch_stride(struct radv_shader_context *ctx)
 static LLVMValueRef
 get_tcs_out_patch_stride(struct radv_shader_context *ctx)
 {
-	return unpack_param(&ctx->ac, ctx->tcs_out_layout, 0, 13);
+	return ac_unpack_param(&ctx->ac, ctx->tcs_out_layout, 0, 13);
 }
 
 static LLVMValueRef
 get_tcs_out_vertex_stride(struct radv_shader_context *ctx)
 {
-	return unpack_param(&ctx->ac, ctx->tcs_out_layout, 13, 8);
+	return ac_unpack_param(&ctx->ac, ctx->tcs_out_layout, 13, 8);
 }
 
 static LLVMValueRef
 get_tcs_out_patch0_offset(struct radv_shader_context *ctx)
 {
 	return LLVMBuildMul(ctx->ac.builder,
-			    unpack_param(&ctx->ac, ctx->tcs_out_offsets, 0, 16),
+			    ac_unpack_param(&ctx->ac, ctx->tcs_out_offsets, 0, 16),
 			    LLVMConstInt(ctx->ac.i32, 4, false), "");
 }
 
@@ -401,7 +384,7 @@ static LLVMValueRef
 get_tcs_out_patch0_patch_data_offset(struct radv_shader_context *ctx)
 {
 	return LLVMBuildMul(ctx->ac.builder,
-			    unpack_param(&ctx->ac, ctx->tcs_out_offsets, 16, 16),
+			    ac_unpack_param(&ctx->ac, ctx->tcs_out_offsets, 16, 16),
 			    LLVMConstInt(ctx->ac.i32, 4, false), "");
 }
 
@@ -2719,7 +2702,7 @@ static LLVMValueRef get_tcs_tes_buffer_address(struct radv_shader_context *ctx,
 	LLVMValueRef rel_patch_id = get_rel_patch_id(ctx);
 
 	vertices_per_patch = LLVMConstInt(ctx->ac.i32, ctx->tcs_vertices_per_patch, false);
-	num_patches = unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 0, 9);
+	num_patches = ac_unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 0, 9);
 
 	constant16 = LLVMConstInt(ctx->ac.i32, 16, false);
 	if (vertex_index) {
@@ -2744,7 +2727,7 @@ static LLVMValueRef get_tcs_tes_buffer_address(struct radv_shader_context *ctx,
 
 	if (!vertex_index) {
 		LLVMValueRef patch_data_offset =
-		           unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 16, 16);
+		           ac_unpack_param(&ctx->ac, ctx->tcs_offchip_layout, 16, 16);
 
 		base_addr = LLVMBuildAdd(ctx->ac.builder, base_addr,
 		                         patch_data_offset, "");
@@ -2839,7 +2822,7 @@ load_tcs_varyings(struct ac_shader_abi *abi,
 	unsigned param = shader_io_get_unique_index(location);
 
 	if (load_input) {
-		stride = unpack_param(&ctx->ac, ctx->tcs_in_layout, 13, 8);
+		stride = ac_unpack_param(&ctx->ac, ctx->tcs_in_layout, 13, 8);
 		dw_addr = get_tcs_in_current_patch_offset(ctx);
 	} else {
 		if (!is_patch) {
@@ -4116,7 +4099,7 @@ static LLVMValueRef load_sample_mask_in(struct ac_shader_abi *abi)
 	uint32_t ps_iter_mask = ps_iter_masks[log2_ps_iter_samples];
 
 	LLVMValueRef result, sample_id;
-	sample_id = unpack_param(&ctx->ac, abi->ancillary, 8, 4);
+	sample_id = ac_unpack_param(&ctx->ac, abi->ancillary, 8, 4);
 	sample_id = LLVMBuildShl(ctx->ac.builder, LLVMConstInt(ctx->ac.i32, ps_iter_mask, false), sample_id, "");
 	result = LLVMBuildAnd(ctx->ac.builder, sample_id, abi->sample_coverage, "");
 	return result;
@@ -4410,7 +4393,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		break;
 	case nir_intrinsic_load_invocation_id:
 		if (ctx->stage == MESA_SHADER_TESS_CTRL)
-			result = unpack_param(&ctx->ac, ctx->abi->tcs_rel_ids, 8, 5);
+			result = ac_unpack_param(&ctx->ac, ctx->abi->tcs_rel_ids, 8, 5);
 		else
 			result = ctx->abi->gs_invocation_id;
 		break;
@@ -4425,7 +4408,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 			fprintf(stderr, "Unknown primitive id intrinsic: %d", ctx->stage);
 		break;
 	case nir_intrinsic_load_sample_id:
-		result = unpack_param(&ctx->ac, ctx->abi->ancillary, 8, 4);
+		result = ac_unpack_param(&ctx->ac, ctx->abi->ancillary, 8, 4);
 		break;
 	case nir_intrinsic_load_sample_pos:
 		result = load_sample_pos(ctx);
@@ -6208,7 +6191,7 @@ static void
 handle_ls_outputs_post(struct radv_shader_context *ctx)
 {
 	LLVMValueRef vertex_id = ctx->rel_auto_id;
-	LLVMValueRef vertex_dw_stride = unpack_param(&ctx->ac, ctx->ls_out_layout, 13, 8);
+	LLVMValueRef vertex_dw_stride = ac_unpack_param(&ctx->ac, ctx->ls_out_layout, 13, 8);
 	LLVMValueRef base_dw_addr = LLVMBuildMul(ctx->ac.builder, vertex_id,
 						 vertex_dw_stride, "");
 
@@ -6332,8 +6315,8 @@ write_tess_factors(struct radv_shader_context *ctx)
 {
 	unsigned stride, outer_comps, inner_comps;
 	struct ac_build_if_state if_ctx, inner_if_ctx;
-	LLVMValueRef invocation_id = unpack_param(&ctx->ac, ctx->abi.tcs_rel_ids, 8, 5);
-	LLVMValueRef rel_patch_id = unpack_param(&ctx->ac, ctx->abi.tcs_rel_ids, 0, 8);
+	LLVMValueRef invocation_id = ac_unpack_param(&ctx->ac, ctx->abi.tcs_rel_ids, 8, 5);
+	LLVMValueRef rel_patch_id = ac_unpack_param(&ctx->ac, ctx->abi.tcs_rel_ids, 0, 8);
 	unsigned tess_inner_index = 0, tess_outer_index;
 	LLVMValueRef lds_base, lds_inner = NULL, lds_outer, byteoffset, buffer;
 	LLVMValueRef out[6], vec0, vec1, tf_base, inner[4], outer[4];

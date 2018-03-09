@@ -401,6 +401,9 @@ LLVMValueRef ac_cast_ptr(struct ac_llvm_context *ctx, LLVMValueRef ptr,
 LLVMValueRef ac_trim_vector(struct ac_llvm_context *ctx, LLVMValueRef value,
 			    unsigned count);
 
+LLVMValueRef ac_unpack_param(struct ac_llvm_context *ctx, LLVMValueRef param,
+			     unsigned rshift, unsigned bitwidth);
+
 #ifdef __cplusplus
 }
 #endif
