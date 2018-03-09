@@ -390,6 +390,11 @@ void ac_build_if(struct ac_llvm_context *ctx, LLVMValueRef value,
 void ac_build_uif(struct ac_llvm_context *ctx, LLVMValueRef value,
 		  int lable_id);
 
+LLVMValueRef ac_build_alloca(struct ac_llvm_context *ac, LLVMTypeRef type,
+			     const char *name);
+LLVMValueRef ac_build_alloca_undef(struct ac_llvm_context *ac, LLVMTypeRef type,
+				   const char *name);
+
 #ifdef __cplusplus
 }
 #endif

@@ -5635,42 +5635,6 @@ handle_fs_inputs(struct radv_shader_context *ctx,
 		ctx->abi.view_index = ctx->inputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)];
 }
 
-static LLVMValueRef
-ac_build_alloca(struct ac_llvm_context *ac,
-                LLVMTypeRef type,
-                const char *name)
-{
-	LLVMBuilderRef builder = ac->builder;
-	LLVMBasicBlockRef current_block = LLVMGetInsertBlock(builder);
-	LLVMValueRef function = LLVMGetBasicBlockParent(current_block);
-	LLVMBasicBlockRef first_block = LLVMGetEntryBasicBlock(function);
-	LLVMValueRef first_instr = LLVMGetFirstInstruction(first_block);
-	LLVMBuilderRef first_builder = LLVMCreateBuilderInContext(ac->context);
-	LLVMValueRef res;
-
-	if (first_instr) {
-		LLVMPositionBuilderBefore(first_builder, first_instr);
-	} else {
-		LLVMPositionBuilderAtEnd(first_builder, first_block);
-	}
-
-	res = LLVMBuildAlloca(first_builder, type, name);
-	LLVMBuildStore(builder, LLVMConstNull(type), res);
-
-	LLVMDisposeBuilder(first_builder);
-
-	return res;
-}
-
-static LLVMValueRef si_build_alloca_undef(struct ac_llvm_context *ac,
-					  LLVMTypeRef type,
-					  const char *name)
-{
-	LLVMValueRef ptr = ac_build_alloca(ac, type, name);
-	LLVMBuildStore(ac->builder, LLVMGetUndef(type), ptr);
-	return ptr;
-}
-
 static void
 scan_shader_output_decl(struct radv_shader_context *ctx,
 			struct nir_variable *variable,
@@ -5744,7 +5708,7 @@ handle_shader_output_decl(struct ac_nir_context *ctx,
 	for (unsigned i = 0; i < attrib_count; ++i) {
 		for (unsigned chan = 0; chan < 4; chan++) {
 			ctx->abi->outputs[radeon_llvm_reg_index_soa(output_loc + i, chan)] =
-		                       si_build_alloca_undef(&ctx->ac, ctx->ac.f32, "");
+		                       ac_build_alloca_undef(&ctx->ac, ctx->ac.f32, "");
 		}
 	}
 }
@@ -5830,7 +5794,7 @@ setup_locals(struct ac_nir_context *ctx,
 	for (i = 0; i < ctx->num_locals; i++) {
 		for (j = 0; j < 4; j++) {
 			ctx->locals[i * 4 + j] =
-				si_build_alloca_undef(&ctx->ac, ctx->ac.f32, "temp");
+				ac_build_alloca_undef(&ctx->ac, ctx->ac.f32, "temp");
 		}
 	}
 }
@@ -6021,7 +5985,7 @@ handle_vs_outputs_post(struct radv_shader_context *ctx,
 		if(!*tmp_out) {
 			for(unsigned i = 0; i < 4; ++i)
 				ctx->abi.outputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, i)] =
-				            si_build_alloca_undef(&ctx->ac, ctx->ac.f32, "");
+				            ac_build_alloca_undef(&ctx->ac, ctx->ac.f32, "");
 		}
 
 		LLVMBuildStore(ctx->ac.builder, ac_to_float(&ctx->ac, ctx->abi.view_index),  *tmp_out);

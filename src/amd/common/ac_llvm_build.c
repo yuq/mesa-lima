@@ -2335,3 +2335,36 @@ void ac_build_uif(struct ac_llvm_context *ctx, LLVMValueRef value,
 					  ctx->i32_0, "");
 	if_cond_emit(ctx, cond, label_id);
 }
+
+LLVMValueRef ac_build_alloca(struct ac_llvm_context *ac, LLVMTypeRef type,
+			     const char *name)
+{
+	LLVMBuilderRef builder = ac->builder;
+	LLVMBasicBlockRef current_block = LLVMGetInsertBlock(builder);
+	LLVMValueRef function = LLVMGetBasicBlockParent(current_block);
+	LLVMBasicBlockRef first_block = LLVMGetEntryBasicBlock(function);
+	LLVMValueRef first_instr = LLVMGetFirstInstruction(first_block);
+	LLVMBuilderRef first_builder = LLVMCreateBuilderInContext(ac->context);
+	LLVMValueRef res;
+
+	if (first_instr) {
+		LLVMPositionBuilderBefore(first_builder, first_instr);
+	} else {
+		LLVMPositionBuilderAtEnd(first_builder, first_block);
+	}
+
+	res = LLVMBuildAlloca(first_builder, type, name);
+	LLVMBuildStore(builder, LLVMConstNull(type), res);
+
+	LLVMDisposeBuilder(first_builder);
+
+	return res;
+}
+
+LLVMValueRef ac_build_alloca_undef(struct ac_llvm_context *ac,
+				   LLVMTypeRef type, const char *name)
+{
+	LLVMValueRef ptr = ac_build_alloca(ac, type, name);
+	LLVMBuildStore(ac->builder, LLVMGetUndef(type), ptr);
+	return ptr;
+}
