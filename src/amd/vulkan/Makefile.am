@@ -172,7 +172,7 @@ dev_icd.json : radv_extensions.py radv_icd.py
 	$(AM_V_GEN)$(PYTHON2) $(srcdir)/radv_icd.py \
 		--lib-path="${abs_top_builddir}/${LIB_DIR}" --out $@
 
-vulkan/radeon_icd.@host_cpu@.json : radv_extensions.py radv_icd.py
+radeon_icd.@host_cpu@.json : radv_extensions.py radv_icd.py
 	$(AM_V_GEN)$(PYTHON2) $(srcdir)/radv_icd.py \
 		--lib-path="${libdir}" --out $@
 
