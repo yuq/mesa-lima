@@ -3809,7 +3809,7 @@ static void emit_membar(struct ac_llvm_context *ac,
 		ac_build_waitcnt(ac, waitcnt);
 }
 
-static void emit_barrier(struct ac_llvm_context *ac, gl_shader_stage stage)
+void ac_emit_barrier(struct ac_llvm_context *ac, gl_shader_stage stage)
 {
 	/* SI only (thanks to a hw bug workaround):
 	 * The real barrier instruction isn’t needed, because an entire patch
@@ -4534,7 +4534,7 @@ static void visit_intrinsic(struct ac_nir_context *ctx,
 		emit_membar(&ctx->ac, instr);
 		break;
 	case nir_intrinsic_barrier:
-		emit_barrier(&ctx->ac, ctx->stage);
+		ac_emit_barrier(&ctx->ac, ctx->stage);
 		break;
 	case nir_intrinsic_shared_atomic_add:
 	case nir_intrinsic_shared_atomic_imin:
@@ -6318,7 +6318,7 @@ write_tess_factors(struct radv_shader_context *ctx)
 	LLVMValueRef lds_base, lds_inner = NULL, lds_outer, byteoffset, buffer;
 	LLVMValueRef out[6], vec0, vec1, tf_base, inner[4], outer[4];
 	int i;
-	emit_barrier(&ctx->ac, ctx->stage);
+	ac_emit_barrier(&ctx->ac, ctx->stage);
 
 	switch (ctx->options->key.tcs.primitive_mode) {
 	case GL_ISOLINES:
@@ -6891,7 +6891,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 		}
 
 		if (i)
-			emit_barrier(&ctx.ac, ctx.stage);
+			ac_emit_barrier(&ctx.ac, ctx.stage);
 
 		ac_setup_rings(&ctx);
 
