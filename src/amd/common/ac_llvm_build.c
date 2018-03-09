@@ -2368,3 +2368,11 @@ LLVMValueRef ac_build_alloca_undef(struct ac_llvm_context *ac,
 	LLVMBuildStore(ac->builder, LLVMGetUndef(type), ptr);
 	return ptr;
 }
+
+LLVMValueRef ac_cast_ptr(struct ac_llvm_context *ctx, LLVMValueRef ptr,
+                         LLVMTypeRef type)
+{
+	int addr_space = LLVMGetPointerAddressSpace(LLVMTypeOf(ptr));
+	return LLVMBuildBitCast(ctx->builder, ptr,
+	                        LLVMPointerType(type, addr_space), "");
+}

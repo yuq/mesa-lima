@@ -395,6 +395,9 @@ LLVMValueRef ac_build_alloca(struct ac_llvm_context *ac, LLVMTypeRef type,
 LLVMValueRef ac_build_alloca_undef(struct ac_llvm_context *ac, LLVMTypeRef type,
 				   const char *name);
 
+LLVMValueRef ac_cast_ptr(struct ac_llvm_context *ctx, LLVMValueRef ptr,
+			 LLVMTypeRef type);
+
 #ifdef __cplusplus
 }
 #endif
