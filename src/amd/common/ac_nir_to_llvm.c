@@ -5635,20 +5635,22 @@ scan_shader_output_decl(struct radv_shader_context *ctx,
 }
 
 static void
-handle_shader_output_decl(struct ac_nir_context *ctx,
+handle_shader_output_decl(struct ac_llvm_context *ctx,
+			  struct ac_shader_abi *abi,
 			  struct nir_shader *nir,
-			  struct nir_variable *variable)
+			  struct nir_variable *variable,
+			  gl_shader_stage stage)
 {
 	unsigned output_loc = variable->data.driver_location / 4;
 	unsigned attrib_count = glsl_count_attribute_slots(variable->type, false);
 
 	/* tess ctrl has it's own load/store paths for outputs */
-	if (ctx->stage == MESA_SHADER_TESS_CTRL)
+	if (stage == MESA_SHADER_TESS_CTRL)
 		return;
 
-	if (ctx->stage == MESA_SHADER_VERTEX ||
-	    ctx->stage == MESA_SHADER_TESS_EVAL ||
-	    ctx->stage == MESA_SHADER_GEOMETRY) {
+	if (stage == MESA_SHADER_VERTEX ||
+	    stage == MESA_SHADER_TESS_EVAL ||
+	    stage == MESA_SHADER_GEOMETRY) {
 		int idx = variable->data.location + variable->data.index;
 		if (idx == VARYING_SLOT_CLIP_DIST0) {
 			int length = nir->info.clip_distance_array_size +
@@ -5663,8 +5665,8 @@ handle_shader_output_decl(struct ac_nir_context *ctx,
 
 	for (unsigned i = 0; i < attrib_count; ++i) {
 		for (unsigned chan = 0; chan < 4; chan++) {
-			ctx->abi->outputs[radeon_llvm_reg_index_soa(output_loc + i, chan)] =
-		                       ac_build_alloca_undef(&ctx->ac, ctx->ac.f32, "");
+			abi->outputs[radeon_llvm_reg_index_soa(output_loc + i, chan)] =
+		                       ac_build_alloca_undef(ctx, ctx->f32, "");
 		}
 	}
 }
@@ -6752,7 +6754,8 @@ void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 	ctx.main_function = LLVMGetBasicBlockParent(LLVMGetInsertBlock(ctx.ac.builder));
 
 	nir_foreach_variable(variable, &nir->outputs)
-		handle_shader_output_decl(&ctx, nir, variable);
+		handle_shader_output_decl(&ctx.ac, ctx.abi, nir, variable,
+					  ctx.stage);
 
 	ctx.defs = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
 	                                   _mesa_key_pointer_equal);
@@ -7245,13 +7248,10 @@ void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
 	ctx.num_output_clips = geom_shader->info.clip_distance_array_size;
 	ctx.num_output_culls = geom_shader->info.cull_distance_array_size;
 
-	struct ac_nir_context nir_ctx = {};
-	nir_ctx.ac = ctx.ac;
-	nir_ctx.abi = &ctx.abi;
-
 	nir_foreach_variable(variable, &geom_shader->outputs) {
 		scan_shader_output_decl(&ctx, variable, geom_shader, MESA_SHADER_VERTEX);
-		handle_shader_output_decl(&nir_ctx, geom_shader, variable);
+		handle_shader_output_decl(&ctx.ac, &ctx.abi, geom_shader,
+					  variable, MESA_SHADER_VERTEX);
 	}
 
 	ac_gs_copy_shader_emit(&ctx);
