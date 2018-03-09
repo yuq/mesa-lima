@@ -32,12 +32,6 @@
 #include "compiler/nir_types.h"
 
 
-static int
-type_size(const struct glsl_type *type)
-{
-   return glsl_count_attribute_slots(type, false);
-}
-
 static void scan_instruction(struct tgsi_shader_info *info,
 			     nir_instr *instr)
 {
@@ -650,10 +644,6 @@ si_lower_nir(struct si_shader_selector* sel)
 	 * - ensure constant offsets for texture instructions are folded
 	 *   and copy-propagated
 	 */
-	NIR_PASS_V(sel->nir, nir_lower_io, nir_var_uniform, type_size,
-		   (nir_lower_io_options)0);
-	NIR_PASS_V(sel->nir, nir_lower_uniforms_to_ubo);
-
 	NIR_PASS_V(sel->nir, nir_lower_returns);
 	NIR_PASS_V(sel->nir, nir_lower_vars_to_ssa);
 	NIR_PASS_V(sel->nir, nir_lower_alu_to_scalar);
