@@ -1127,25 +1127,6 @@ static void create_function(struct radv_shader_context *ctx,
 	ctx->shader_info->num_user_sgprs = user_sgpr_idx;
 }
 
-static LLVMValueRef trim_vector(struct ac_llvm_context *ctx,
-                                LLVMValueRef value, unsigned count)
-{
-	unsigned num_components = ac_get_llvm_num_components(value);
-	if (count == num_components)
-		return value;
-
-	LLVMValueRef masks[] = {
-	    LLVMConstInt(ctx->i32, 0, false), LLVMConstInt(ctx->i32, 1, false),
-	    LLVMConstInt(ctx->i32, 2, false), LLVMConstInt(ctx->i32, 3, false)};
-
-	if (count == 1)
-		return LLVMBuildExtractElement(ctx->builder, value, masks[0],
-		                               "");
-
-	LLVMValueRef swizzle = LLVMConstVector(masks, count);
-	return LLVMBuildShuffleVector(ctx->builder, value, value, swizzle, "");
-}
-
 static void
 build_store_values_extended(struct ac_llvm_context *ac,
 			     LLVMValueRef *values,
@@ -2447,7 +2428,7 @@ static void visit_store_ssbo(struct ac_nir_context *ctx,
 	writemask = widen_mask(writemask, elem_size_mult);
 
 	base_data = ac_to_float(&ctx->ac, src_data);
-	base_data = trim_vector(&ctx->ac, base_data, instr->num_components);
+	base_data = ac_trim_vector(&ctx->ac, base_data, instr->num_components);
 	base_data = LLVMBuildBitCast(ctx->ac.builder, base_data,
 				     data_type, "");
 	base_offset = get_src(ctx, instr->src[2]);      /* voffset */
@@ -2626,7 +2607,7 @@ static LLVMValueRef visit_load_ubo_buffer(struct ac_nir_context *ctx,
 
 	ret = ac_build_buffer_load(&ctx->ac, rsrc, num_components, NULL, offset,
 				   NULL, 0, false, false, true, true);
-	ret = trim_vector(&ctx->ac, ret, num_components);
+	ret = ac_trim_vector(&ctx->ac, ret, num_components);
 	return LLVMBuildBitCast(ctx->ac.builder, ret,
 	                        get_def_type(ctx, &instr->dest.ssa), "");
 }
@@ -2994,7 +2975,7 @@ load_tes_input(struct ac_shader_abi *abi,
 
 	result = ac_build_buffer_load(&ctx->ac, ctx->hs_ring_tess_offchip, num_components, NULL,
 				      buf_addr, ctx->oc_lds, is_compact ? (4 * const_index) : 0, 1, 0, true, false);
-	result = trim_vector(&ctx->ac, result, num_components);
+	result = ac_trim_vector(&ctx->ac, result, num_components);
 	return result;
 }
 
@@ -3608,7 +3589,7 @@ static LLVMValueRef visit_image_load(struct ac_nir_context *ctx,
 						  false, false);
 		res = ac_build_expand_to_vec4(&ctx->ac, res, num_channels);
 
-		res = trim_vector(&ctx->ac, res, instr->dest.ssa.num_components);
+		res = ac_trim_vector(&ctx->ac, res, instr->dest.ssa.num_components);
 		res = ac_to_integer(&ctx->ac, res);
 	} else {
 		LLVMValueRef da = glsl_is_array_image(type) ? ctx->ac.i1true : ctx->ac.i1false;
@@ -5241,7 +5222,7 @@ static void visit_tex(struct ac_nir_context *ctx, nir_tex_instr *instr)
 		result = LLVMBuildInsertElement(ctx->ac.builder, result, layers,
 						ctx->ac.i32_1, "");
 	} else if (instr->dest.ssa.num_components != 4)
-		result = trim_vector(&ctx->ac, result, instr->dest.ssa.num_components);
+		result = ac_trim_vector(&ctx->ac, result, instr->dest.ssa.num_components);
 
 write_result:
 	if (result) {

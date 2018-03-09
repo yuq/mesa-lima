@@ -2376,3 +2376,22 @@ LLVMValueRef ac_cast_ptr(struct ac_llvm_context *ctx, LLVMValueRef ptr,
 	return LLVMBuildBitCast(ctx->builder, ptr,
 	                        LLVMPointerType(type, addr_space), "");
 }
+
+LLVMValueRef ac_trim_vector(struct ac_llvm_context *ctx, LLVMValueRef value,
+			    unsigned count)
+{
+	unsigned num_components = ac_get_llvm_num_components(value);
+	if (count == num_components)
+		return value;
+
+	LLVMValueRef masks[] = {
+	    LLVMConstInt(ctx->i32, 0, false), LLVMConstInt(ctx->i32, 1, false),
+	    LLVMConstInt(ctx->i32, 2, false), LLVMConstInt(ctx->i32, 3, false)};
+
+	if (count == 1)
+		return LLVMBuildExtractElement(ctx->builder, value, masks[0],
+		                               "");
+
+	LLVMValueRef swizzle = LLVMConstVector(masks, count);
+	return LLVMBuildShuffleVector(ctx->builder, value, value, swizzle, "");
+}
