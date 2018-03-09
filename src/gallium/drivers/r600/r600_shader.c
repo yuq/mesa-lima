@@ -372,7 +372,7 @@ struct r600_shader_tgsi_instruction {
 static int emit_gs_ring_writes(struct r600_shader_ctx *ctx, const struct pipe_stream_output_info *so, int stream, bool ind);
 static const struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[], eg_shader_tgsi_instruction[], cm_shader_tgsi_instruction[];
 static int tgsi_helper_tempx_replicate(struct r600_shader_ctx *ctx);
-static inline void callstack_push(struct r600_shader_ctx *ctx, unsigned reason);
+static inline int callstack_push(struct r600_shader_ctx *ctx, unsigned reason);
 static void fc_pushlevel(struct r600_shader_ctx *ctx, int type);
 static int tgsi_else(struct r600_shader_ctx *ctx);
 static int tgsi_endif(struct r600_shader_ctx *ctx);
@@ -387,6 +387,15 @@ static void r600_bytecode_src(struct r600_bytecode_alu_src *bc_src,
 			unsigned chan);
 static int do_lds_fetch_values(struct r600_shader_ctx *ctx, unsigned temp_reg,
 			       unsigned dst_reg, unsigned mask);
+
+static bool ctx_needs_stack_workaround_8xx(struct r600_shader_ctx *ctx)
+{
+	if (ctx->bc->family == CHIP_HEMLOCK ||
+	    ctx->bc->family == CHIP_CYPRESS ||
+	    ctx->bc->family == CHIP_JUNIPER)
+		return false;
+	return true;
+}
 
 static int tgsi_last_instruction(unsigned writemask)
 {
@@ -9635,7 +9644,7 @@ static int pops(struct r600_shader_ctx *ctx, int pops)
 	return 0;
 }
 
-static inline void callstack_update_max_depth(struct r600_shader_ctx *ctx,
+static inline int callstack_update_max_depth(struct r600_shader_ctx *ctx,
                                               unsigned reason)
 {
 	struct r600_stack_info *stack = &ctx->bc->stack;
@@ -9653,7 +9662,7 @@ static inline void callstack_update_max_depth(struct r600_shader_ctx *ctx,
 		/* pre-r8xx: if any non-WQM PUSH instruction is invoked, 2 elements on
 		 * the stack must be reserved to hold the current active/continue
 		 * masks */
-		if (reason == FC_PUSH_VPM) {
+		if (reason == FC_PUSH_VPM || stack->push > 0) {
 			elements += 2;
 		}
 		break;
@@ -9679,7 +9688,7 @@ static inline void callstack_update_max_depth(struct r600_shader_ctx *ctx,
 		 *    NOTE: it seems we also need to reserve additional element in some
 		 *    other cases, e.g. when we have 4 levels of PUSH_VPM in the shader,
 		 *    then STACK_SIZE should be 2 instead of 1 */
-		if (reason == FC_PUSH_VPM) {
+		if (reason == FC_PUSH_VPM || stack->push > 0) {
 			elements += 1;
 		}
 		break;
@@ -9698,6 +9707,7 @@ static inline void callstack_update_max_depth(struct r600_shader_ctx *ctx,
 
 	if (entries > stack->max_entries)
 		stack->max_entries = entries;
+	return elements;
 }
 
 static inline void callstack_pop(struct r600_shader_ctx *ctx, unsigned reason)
@@ -9721,7 +9731,7 @@ static inline void callstack_pop(struct r600_shader_ctx *ctx, unsigned reason)
 	}
 }
 
-static inline void callstack_push(struct r600_shader_ctx *ctx, unsigned reason)
+static inline int callstack_push(struct r600_shader_ctx *ctx, unsigned reason)
 {
 	switch (reason) {
 	case FC_PUSH_VPM:
@@ -9729,6 +9739,7 @@ static inline void callstack_push(struct r600_shader_ctx *ctx, unsigned reason)
 		break;
 	case FC_PUSH_WQM:
 		++ctx->bc->stack.push_wqm;
+		break;
 	case FC_LOOP:
 		++ctx->bc->stack.loop;
 		break;
@@ -9736,7 +9747,7 @@ static inline void callstack_push(struct r600_shader_ctx *ctx, unsigned reason)
 		assert(0);
 	}
 
-	callstack_update_max_depth(ctx, reason);
+	return callstack_update_max_depth(ctx, reason);
 }
 
 static void fc_set_mid(struct r600_shader_ctx *ctx, int fc_sp)
@@ -9819,12 +9830,25 @@ static void break_loop_on_flag(struct r600_shader_ctx *ctx, unsigned fc_sp)
 static int emit_if(struct r600_shader_ctx *ctx, int opcode)
 {
 	int alu_type = CF_OP_ALU_PUSH_BEFORE;
+	bool needs_workaround = false;
+	int elems = callstack_push(ctx, FC_PUSH_VPM);
+
+	if (ctx->bc->chip_class == CAYMAN && ctx->bc->stack.loop > 1)
+		needs_workaround = true;
+
+	if (ctx->bc->chip_class == EVERGREEN && ctx_needs_stack_workaround_8xx(ctx)) {
+		unsigned dmod1 = (elems - 1) % ctx->bc->stack.entry_size;
+		unsigned dmod2 = (elems) % ctx->bc->stack.entry_size;
+
+		if (elems && (!dmod1 || !dmod2))
+			needs_workaround = true;
+	}
 
 	/* There is a hardware bug on Cayman where a BREAK/CONTINUE followed by
 	 * LOOP_STARTxxx for nested loops may put the branch stack into a state
 	 * such that ALU_PUSH_BEFORE doesn't work as expected. Workaround this
 	 * by replacing the ALU_PUSH_BEFORE with a PUSH + ALU */
-	if (ctx->bc->chip_class == CAYMAN && ctx->bc->stack.loop > 1) {
+	if (needs_workaround) {
 		r600_bytecode_add_cfinst(ctx->bc, CF_OP_PUSH);
 		ctx->bc->cf_last->cf_addr = ctx->bc->cf_last->id + 2;
 		alu_type = CF_OP_ALU;
@@ -9836,7 +9860,6 @@ static int emit_if(struct r600_shader_ctx *ctx, int opcode)
 
 	fc_pushlevel(ctx, FC_IF);
 
-	callstack_push(ctx, FC_PUSH_VPM);
 	return 0;
 }
 
