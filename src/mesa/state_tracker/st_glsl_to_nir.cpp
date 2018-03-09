@@ -762,7 +762,7 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog,
                                 PIPE_SHADER_CAP_MAX_INSTRUCTIONS) > 0) {
       NIR_PASS_V(nir, nir_lower_io, nir_var_uniform, type_size,
                  (nir_lower_io_options)0);
-      NIR_PASS_V(nir, st_nir_lower_uniforms_to_ubo);
+      NIR_PASS_V(nir, st_nir_lower_uniforms_to_ubo, prog->Parameters);
    }
 
    if (screen->get_param(screen, PIPE_CAP_NIR_SAMPLERS_AS_DEREF))
