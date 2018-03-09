@@ -166,10 +166,11 @@ void si_pm4_upload_indirect_buffer(struct si_context *sctx,
 	assert(aligned_ndw <= SI_PM4_MAX_DW);
 
 	r600_resource_reference(&state->indirect_buffer, NULL);
+	/* TODO: this hangs with 1024 or higher alignment on GFX9. */
 	state->indirect_buffer = (struct r600_resource*)
 		si_aligned_buffer_create(screen, 0,
 					 PIPE_USAGE_DEFAULT, aligned_ndw * 4,
-					 sctx->screen->info.ib_start_alignment);
+					 256);
 	if (!state->indirect_buffer)
 		return;
 
