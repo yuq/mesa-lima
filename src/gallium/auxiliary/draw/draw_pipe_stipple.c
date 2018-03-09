@@ -150,7 +150,6 @@ stipple_line(struct draw_stage *stage, struct prim_header *header)
    if (header->flags & DRAW_PIPE_RESET_STIPPLE)
       stipple->counter = 0;
 
-
    /* XXX ToDo: instead of iterating pixel-by-pixel, use a look-up table.
     */
    for (i = 0; i < length; i++) {

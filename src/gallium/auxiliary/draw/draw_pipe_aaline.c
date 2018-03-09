@@ -370,7 +370,30 @@ aaline_line(struct draw_stage *stage, struct prim_header *header)
    float t_l, t_w;
    uint i;
 
-   half_length = 0.5f * sqrtf(dx * dx + dy * dy) + 0.5f;
+   half_length = 0.5f * sqrtf(dx * dx + dy * dy);
+
+   if (half_length < 0.5f) {
+      /*
+       * The logic we use for "normal" sized segments is incorrect
+       * for very short segments (basically because we only have
+       * one value to interpolate, not a distance to each endpoint).
+       * Therefore, we calculate half_length differently, so that for
+       * original line length (near) 0, we get alpha 0 - otherwise
+       * max alpha would still be 0.5. This also prevents us from
+       * artifacts due to degenerated lines (the endpoints being
+       * identical, which would still receive anywhere from alpha
+       * 0-0.5 otherwise) (at least the pstipple stage may generate
+       * such lines due to float inaccuracies if line length is very
+       * close to a integer).
+       * Might not be fully accurate neither (because the "strength" of
+       * the line is going to be determined by how close to the pixel
+       * center those 1 or 2 fragments are) but it's probably the best
+       * we can do.
+       */
+      half_length = 2.0f * half_length;
+   } else {
+      half_length = half_length + 0.5f;
+   }
 
    t_w = half_width;
    t_l = 0.5f;
