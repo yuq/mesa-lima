@@ -253,7 +253,13 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
                                                : vIndices2 = GetSimdValid32bitIndices(indices2, pLastIndex);
 #endif
             break; // incoming type is already 32bit int
-        default: SWR_INVALID("Unsupported index type"); vIndices = nullptr; break;
+        default:
+            SWR_INVALID("Unsupported index type");
+            vIndices = nullptr;
+#if USE_SIMD16_SHADERS
+            vIndices2 = nullptr;
+#endif
+            break;
     }
 
     if(fetchState.bForceSequentialAccessEnable)
@@ -434,6 +440,10 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* str
         }
         else if (ied.InstanceStrideEnable)
         {
+            // silence unused variable warnings
+            startOffset = C(0);
+            vCurIndices = vIndices;
+
             SWR_ASSERT((0), "TODO: Fill out more once driver sends this down.");
         }
         else
