@@ -219,23 +219,6 @@ static inline unsigned radeon_llvm_reg_index_soa(unsigned index, unsigned chan)
 	return (index * 4) + chan;
 }
 
-void ac_compile_nir_shader(LLVMTargetMachineRef tm,
-                           struct ac_shader_binary *binary,
-                           struct ac_shader_config *config,
-                           struct ac_shader_variant_info *shader_info,
-                           struct nir_shader *const *nir,
-                           int nir_count,
-                           const struct ac_nir_compiler_options *options,
-			   bool dump_shader);
-
-void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
-			      struct nir_shader *geom_shader,
-			      struct ac_shader_binary *binary,
-			      struct ac_shader_config *config,
-			      struct ac_shader_variant_info *shader_info,
-			      const struct ac_nir_compiler_options *options,
-			      bool dump_shader);
-
 void ac_lower_indirect_derefs(struct nir_shader *nir, enum chip_class);
 
 void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,

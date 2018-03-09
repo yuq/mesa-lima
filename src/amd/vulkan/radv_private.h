@@ -1677,6 +1677,24 @@ struct radv_fence {
 	uint32_t temp_syncobj;
 };
 
+/* radv_nir_to_llvm.c */
+void radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
+				 struct nir_shader *geom_shader,
+				 struct ac_shader_binary *binary,
+				 struct ac_shader_config *config,
+				 struct ac_shader_variant_info *shader_info,
+				 const struct ac_nir_compiler_options *options,
+				 bool dump_shader);
+
+void radv_compile_nir_shader(LLVMTargetMachineRef tm,
+			     struct ac_shader_binary *binary,
+			     struct ac_shader_config *config,
+			     struct ac_shader_variant_info *shader_info,
+			     struct nir_shader *const *nir,
+			     int nir_count,
+			     const struct ac_nir_compiler_options *options,
+			     bool dump_shader);
+
 struct radeon_winsys_sem;
 
 #define RADV_DEFINE_HANDLE_CASTS(__radv_type, __VkType)		\

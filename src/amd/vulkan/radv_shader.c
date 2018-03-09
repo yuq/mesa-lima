@@ -473,12 +473,13 @@ shader_variant_create(struct radv_device *device,
 
 	if (gs_copy_shader) {
 		assert(shader_count == 1);
-		ac_create_gs_copy_shader(tm, *shaders, &binary, &variant->config,
-					 &variant->info, options, dump_shaders);
+		radv_compile_gs_copy_shader(tm, *shaders, &binary,
+					    &variant->config, &variant->info,
+					    options, dump_shaders);
 	} else {
-		ac_compile_nir_shader(tm, &binary, &variant->config,
-				      &variant->info, shaders, shader_count, options,
-				      dump_shaders);
+		radv_compile_nir_shader(tm, &binary, &variant->config,
+					&variant->info, shaders, shader_count,
+					options, dump_shaders);
 	}
 
 	LLVMDisposeTargetMachine(tm);
