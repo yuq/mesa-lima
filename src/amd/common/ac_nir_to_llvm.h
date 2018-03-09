@@ -214,6 +214,11 @@ struct ac_shader_variant_info {
 	};
 };
 
+static inline unsigned radeon_llvm_reg_index_soa(unsigned index, unsigned chan)
+{
+	return (index * 4) + chan;
+}
+
 void ac_compile_nir_shader(LLVMTargetMachineRef tm,
                            struct ac_shader_binary *binary,
                            struct ac_shader_config *config,

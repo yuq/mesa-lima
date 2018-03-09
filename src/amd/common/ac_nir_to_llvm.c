@@ -143,11 +143,6 @@ static LLVMValueRef get_sampler_desc(struct ac_nir_context *ctx,
 				     const nir_tex_instr *instr,
 				     bool image, bool write);
 
-static unsigned radeon_llvm_reg_index_soa(unsigned index, unsigned chan)
-{
-	return (index * 4) + chan;
-}
-
 static unsigned shader_io_get_unique_index(gl_varying_slot slot)
 {
 	/* handle patch indices separate */
