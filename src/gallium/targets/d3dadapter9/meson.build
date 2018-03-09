@@ -72,4 +72,5 @@ pkg.generate(
   description : 'Native D3D driver modules',
   version : '.'.join(nine_version),
   requires_private : 'libdrm >= 2.4.75',
+  variables : ['moduledir=${prefix}/@0@'.format(d3d_drivers_path)],
 )
