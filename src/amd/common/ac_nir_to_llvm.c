@@ -5634,12 +5634,12 @@ scan_shader_output_decl(struct radv_shader_context *ctx,
 	ctx->output_mask |= mask_attribs;
 }
 
-static void
-handle_shader_output_decl(struct ac_llvm_context *ctx,
-			  struct ac_shader_abi *abi,
-			  struct nir_shader *nir,
-			  struct nir_variable *variable,
-			  gl_shader_stage stage)
+void
+ac_handle_shader_output_decl(struct ac_llvm_context *ctx,
+			     struct ac_shader_abi *abi,
+			     struct nir_shader *nir,
+			     struct nir_variable *variable,
+			     gl_shader_stage stage)
 {
 	unsigned output_loc = variable->data.driver_location / 4;
 	unsigned attrib_count = glsl_count_attribute_slots(variable->type, false);
@@ -6754,8 +6754,8 @@ void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 	ctx.main_function = LLVMGetBasicBlockParent(LLVMGetInsertBlock(ctx.ac.builder));
 
 	nir_foreach_variable(variable, &nir->outputs)
-		handle_shader_output_decl(&ctx.ac, ctx.abi, nir, variable,
-					  ctx.stage);
+		ac_handle_shader_output_decl(&ctx.ac, ctx.abi, nir, variable,
+					     ctx.stage);
 
 	ctx.defs = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
 	                                   _mesa_key_pointer_equal);
@@ -7250,8 +7250,8 @@ void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
 
 	nir_foreach_variable(variable, &geom_shader->outputs) {
 		scan_shader_output_decl(&ctx, variable, geom_shader, MESA_SHADER_VERTEX);
-		handle_shader_output_decl(&ctx.ac, &ctx.abi, geom_shader,
-					  variable, MESA_SHADER_VERTEX);
+		ac_handle_shader_output_decl(&ctx.ac, &ctx.abi, geom_shader,
+					     variable, MESA_SHADER_VERTEX);
 	}
 
 	ac_gs_copy_shader_emit(&ctx);

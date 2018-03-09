@@ -34,6 +34,7 @@
 struct ac_shader_binary;
 struct ac_shader_config;
 struct nir_shader;
+struct nir_variable;
 struct radv_pipeline_layout;
 
 struct ac_llvm_context;
@@ -234,6 +235,13 @@ void ac_lower_indirect_derefs(struct nir_shader *nir, enum chip_class);
 
 void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 		      struct nir_shader *nir);
+
+void
+ac_handle_shader_output_decl(struct ac_llvm_context *ctx,
+			     struct ac_shader_abi *abi,
+			     struct nir_shader *nir,
+			     struct nir_variable *variable,
+			     gl_shader_stage stage);
 
 bool ac_lower_subgroups(struct nir_shader *shader);
 
