@@ -366,6 +366,7 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	ib_align = MAX2(ib_align, vce.ib_start_alignment);
 	ib_align = MAX2(ib_align, vcn_dec.ib_start_alignment);
 	ib_align = MAX2(ib_align, vcn_enc.ib_start_alignment);
+       assert(ib_align);
 	info->ib_start_alignment = ib_align;
 
 	return true;
@@ -422,6 +423,7 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("has_virtual_memory = %i\n", info->has_virtual_memory);
 	printf("gfx_ib_pad_with_type2 = %i\n", info->gfx_ib_pad_with_type2);
 	printf("has_hw_decode = %u\n", info->has_hw_decode);
+       printf("ib_start_alignment = %u\n", info->ib_start_alignment);
 	printf("num_sdma_rings = %i\n", info->num_sdma_rings);
 	printf("num_compute_rings = %u\n", info->num_compute_rings);
 	printf("uvd_fw_version = %u\n", info->uvd_fw_version);
