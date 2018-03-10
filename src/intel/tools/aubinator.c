@@ -248,6 +248,9 @@ handle_memtrace_reg_write(uint32_t *p)
    int engine;
    static int render_elsp_writes = 0;
    static int blitter_elsp_writes = 0;
+   static int render_elsq0 = 0;
+   static int blitter_elsq0 = 0;
+   uint8_t *pphwsp;
 
    if (offset == 0x2230) {
       render_elsp_writes++;
@@ -255,18 +258,29 @@ handle_memtrace_reg_write(uint32_t *p)
    } else if (offset == 0x22230) {
       blitter_elsp_writes++;
       engine = GEN_ENGINE_BLITTER;
+   } else if (offset == 0x2510) {
+      render_elsq0 = value;
+   } else if (offset == 0x22510) {
+      blitter_elsq0 = value;
+   } else if (offset == 0x2550 || offset == 0x22550) {
+      /* nothing */;
    } else {
       return;
    }
 
-   if (render_elsp_writes > 3)
-      render_elsp_writes = 0;
-   else if (blitter_elsp_writes > 3)
-      blitter_elsp_writes = 0;
-   else
+   if (render_elsp_writes > 3 || blitter_elsp_writes > 3) {
+      render_elsp_writes = blitter_elsp_writes = 0;
+      pphwsp = (uint8_t*)gtt + (value & 0xfffff000);
+   } else if (offset == 0x2550) {
+      engine = GEN_ENGINE_RENDER;
+      pphwsp = (uint8_t*)gtt + (render_elsq0 & 0xfffff000);
+   } else if (offset == 0x22550) {
+      engine = GEN_ENGINE_BLITTER;
+      pphwsp = (uint8_t*)gtt + (blitter_elsq0 & 0xfffff000);
+   } else {
       return;
+   }
 
-   uint8_t *pphwsp = (uint8_t*)gtt + (value & 0xfffff000);
    const uint32_t pphwsp_size = 4096;
    uint32_t *context = (uint32_t*)(pphwsp + pphwsp_size);
    uint32_t ring_buffer_head = context[5];
