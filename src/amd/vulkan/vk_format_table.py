@@ -125,7 +125,7 @@ def write_format_table(formats):
         print "   },"
 
     for format in formats:
-        print 'const struct vk_format_description'
+        print 'static const struct vk_format_description'
         print 'vk_format_%s_description = {' % (format.short_name(),)
         print "   %s," % (format.name,)
         print "   \"%s\"," % (format.name,)
