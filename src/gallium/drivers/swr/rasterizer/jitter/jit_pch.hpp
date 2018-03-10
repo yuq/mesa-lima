@@ -1,5 +1,5 @@
 /****************************************************************************
-* Copyright (C) 2017 Intel Corporation.   All Rights Reserved.
+* Copyright (C) 2017-2018 Intel Corporation.   All Rights Reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
 * copy of this software and associated documentation files (the "Software"),
@@ -110,6 +110,22 @@ using PassManager = llvm::legacy::PassManager;
 
 #if LLVM_USE_INTEL_JITEVENTS
 #include "llvm/ExecutionEngine/JITEventListener.h"
+#endif
+
+#if LLVM_VERSION_MAJOR >= 5
+static const auto Sync_CrossThread = llvm::SyncScope::System;
+static const auto Attrib_FunctionIndex = llvm::AttributeList::FunctionIndex;
+static inline llvm::AttributeSet GetFuncAttribSet(llvm::LLVMContext& ctx, const llvm::AttrBuilder &b)
+{
+    return llvm::AttributeSet::get(ctx, b);
+}
+#else
+static const auto Sync_CrossThread = llvm::SynchronizationScope::CrossThread;
+static const auto Attrib_FunctionIndex = llvm::AttributeSet::FunctionIndex;
+static inline llvm::AttributeSet GetFuncAttribSet(llvm::LLVMContext& ctx, const llvm::AttrBuilder &b)
+{
+    return llvm::AttributeSet::get(ctx, Attrib_FunctionIndex, b);
+}
 #endif
 
 #pragma pop_macro("DEBUG")
