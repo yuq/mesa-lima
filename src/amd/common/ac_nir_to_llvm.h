@@ -59,6 +59,4 @@ ac_handle_shader_output_decl(struct ac_llvm_context *ctx,
 
 void ac_emit_barrier(struct ac_llvm_context *ac, gl_shader_stage stage);
 
-bool ac_lower_subgroups(struct nir_shader *shader);
-
 #endif /* AC_NIR_TO_LLVM_H */

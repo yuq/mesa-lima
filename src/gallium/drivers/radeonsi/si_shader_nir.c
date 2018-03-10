@@ -670,6 +670,7 @@ si_lower_nir(struct si_shader_selector* sel)
 		.lower_to_scalar = true,
 		.lower_subgroup_masks = true,
 		.lower_vote_trivial = false,
+		.lower_vote_eq_to_ballot = true,
 	};
 	NIR_PASS_V(sel->nir, nir_lower_subgroups, &subgroups_options);
 

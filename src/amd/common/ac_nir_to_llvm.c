@@ -3812,9 +3812,6 @@ void ac_nir_translate(struct ac_llvm_context *ac, struct ac_shader_abi *abi,
 	struct ac_nir_context ctx = {};
 	struct nir_function *func;
 
-	/* Last minute passes for both radv & radeonsi */
-	ac_lower_subgroups(nir);
-
 	ctx.ac = *ac;
 	ctx.abi = abi;
 
