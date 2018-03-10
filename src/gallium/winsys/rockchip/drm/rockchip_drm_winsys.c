@@ -39,7 +39,7 @@ static struct pipe_screen *rockchip_screen_create_lima(int fd)
        * PRIME buffer sharing.  The lima BO must be linear, which the SCANOUT
        * flag on allocation will have ensured.
        */
-      .create_for_resource = renderonly_create_gpu_import_for_resource,
+      .create_for_resource = renderonly_create_kms_dumb_buffer_for_resource,
       .kms_fd = fd,
       .gpu_fd = drmOpenWithType("lima", NULL, DRM_NODE_RENDER),
    };
@@ -47,7 +47,7 @@ static struct pipe_screen *rockchip_screen_create_lima(int fd)
    if (ro.gpu_fd < 0)
       return NULL;
 
-   struct pipe_screen *screen = lima_drm_screen_create_renderonly(&ro, true);
+   struct pipe_screen *screen = lima_drm_screen_create_renderonly(&ro, false);
    if (!screen)
       close(ro.gpu_fd);
 
