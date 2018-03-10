@@ -1935,7 +1935,7 @@ nine_ff_load_lights(struct NineDevice9 *device)
         dst[38 + l * 8].x = cosf(light->Theta * 0.5f);
         dst[38 + l * 8].y = cosf(light->Phi * 0.5f);
         dst[38 + l * 8].z = 1.0f / (dst[38 + l * 8].x - dst[38 + l * 8].y);
-        dst[39 + l * 8].w = (l + 1) == context->ff.num_lights_active;
+        dst[39 + l * 8].w = (float)((l + 1) == context->ff.num_lights_active);
     }
 }
 
