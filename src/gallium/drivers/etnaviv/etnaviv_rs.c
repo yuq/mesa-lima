@@ -801,7 +801,7 @@ etna_blit_rs(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 void
 etna_clear_blit_rs_init(struct pipe_context *pctx)
 {
-   DBG("etnaviv: Using RS blit engine\n");
+   DBG("etnaviv: Using RS blit engine");
    pctx->clear = etna_clear_rs;
    pctx->blit = etna_blit_rs;
 }

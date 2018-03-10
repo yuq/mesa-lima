@@ -556,7 +556,7 @@ etna_blit_blt(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 void
 etna_clear_blit_blt_init(struct pipe_context *pctx)
 {
-   DBG("etnaviv: Using BLT blit engine\n");
+   DBG("etnaviv: Using BLT blit engine");
    pctx->clear = etna_clear_blt;
    pctx->blit = etna_blit_blt;
 }

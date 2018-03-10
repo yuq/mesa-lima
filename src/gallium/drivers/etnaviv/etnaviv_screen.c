@@ -703,9 +703,9 @@ etna_get_specs(struct etna_screen *screen)
    else
       screen->specs.halti = -1; /* GC7000nanolite / pre-GC2000 except GC880 */
    if (screen->specs.halti >= 0)
-      DBG("etnaviv: GPU arch: HALTI%d\n", screen->specs.halti);
+      DBG("etnaviv: GPU arch: HALTI%d", screen->specs.halti);
    else
-      DBG("etnaviv: GPU arch: pre-HALTI\n");
+      DBG("etnaviv: GPU arch: pre-HALTI");
 
    screen->specs.can_supertile =
       VIV_FEATURE(screen, chipMinorFeatures0, SUPER_TILED);
@@ -821,7 +821,7 @@ etna_get_specs(struct etna_screen *screen)
 
    screen->specs.single_buffer = VIV_FEATURE(screen, chipMinorFeatures4, SINGLE_BUFFER);
    if (screen->specs.single_buffer)
-      DBG("etnaviv: Single buffer mode enabled with %d pixel pipes\n", screen->specs.pixel_pipes);
+      DBG("etnaviv: Single buffer mode enabled with %d pixel pipes", screen->specs.pixel_pipes);
 
    screen->specs.tex_astc = VIV_FEATURE(screen, chipMinorFeatures4, TEXTURE_ASTC);
 
