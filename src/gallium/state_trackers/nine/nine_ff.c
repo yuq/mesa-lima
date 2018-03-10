@@ -2474,7 +2474,7 @@ nine_d3d_matrix_inverse(D3DMATRIX *D, const D3DMATRIX *M)
         M->m[2][0] * D->m[0][2] +
         M->m[3][0] * D->m[0][3];
 
-    if (det < 1e-30) {/* non inversible */
+    if (fabsf(det) < 1e-30) {/* non inversible */
         *D = *M; /* wine tests */
         return;
     }
