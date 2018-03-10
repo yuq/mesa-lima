@@ -41,11 +41,49 @@
 #include "lima_drm.h"
 
 static struct pipe_resource *
-lima_resource_create(struct pipe_screen *pscreen,
-                     const struct pipe_resource *templat)
+lima_resource_create_scanout(struct pipe_screen *pscreen,
+                             const struct pipe_resource *templat,
+                             unsigned width, unsigned height)
+{
+   struct lima_screen *screen = lima_screen(pscreen);
+   struct renderonly_scanout *scanout;
+   struct winsys_handle handle;
+   struct pipe_resource *pres;
+
+   struct pipe_resource scanout_templat = *templat;
+   scanout_templat.width0 = width;
+   scanout_templat.height0 = height;
+   scanout_templat.screen = pscreen;
+
+   scanout = renderonly_scanout_for_resource(&scanout_templat,
+                                             screen->ro, &handle);
+   if (!scanout)
+      return NULL;
+
+   assert(handle.type == DRM_API_HANDLE_TYPE_FD);
+   pres = pscreen->resource_from_handle(pscreen, templat, &handle,
+                                        PIPE_HANDLE_USAGE_WRITE);
+
+   close(handle.handle);
+   if (!pres) {
+      renderonly_scanout_destroy(scanout, screen->ro);
+      return NULL;
+   }
+
+   struct lima_resource *res = lima_resource(pres);
+   res->scanout = scanout;
+
+   return pres;
+}
+
+static struct pipe_resource *
+lima_resource_create_bo(struct pipe_screen *pscreen,
+                        const struct pipe_resource *templat,
+                        unsigned width, unsigned height)
 {
    struct lima_screen *screen = lima_screen(pscreen);
    struct lima_resource *res;
+   struct pipe_resource *pres;
 
    res = CALLOC_STRUCT(lima_resource);
    if (!res)
@@ -56,17 +94,7 @@ lima_resource_create(struct pipe_screen *pscreen,
    pipe_reference_init(&res->base.reference, 1);
 
    /* TODO: mipmap */
-   struct pipe_resource *pres = &res->base;
-   unsigned width, height;
-   if (pres->bind & PIPE_BIND_RENDER_TARGET) {
-      width = align(pres->width0, 16);
-      height = align(pres->height0, 16);
-   }
-   else {
-      width = pres->width0;
-      height = pres->height0;
-   }
-
+   pres = &res->base;
    res->stride = util_format_get_stride(pres->format, width);
 
    uint32_t size = res->stride *
@@ -79,27 +107,44 @@ lima_resource_create(struct pipe_screen *pscreen,
       flags |= LIMA_GEM_CREATE_CONTIGUOUS;
 
    res->bo = lima_bo_create(screen, size, flags, false, false);
-   if (!res->bo)
-      goto err_out0;
-
-   if (screen->ro && templat->bind & PIPE_BIND_SCANOUT) {
-      res->scanout =
-         renderonly_scanout_for_resource(pres, screen->ro, NULL);
-      if (!res->scanout)
-         goto err_out1;
+   if (!res->bo) {
+      FREE(res);
+      return NULL;
    }
 
+   return pres;
+}
+
+static struct pipe_resource *
+lima_resource_create(struct pipe_screen *pscreen,
+                     const struct pipe_resource *templat)
+{
+   struct lima_screen *screen = lima_screen(pscreen);
+   unsigned width, height;
+
+   if (templat->bind & PIPE_BIND_RENDER_TARGET) {
+      width = align(templat->width0, 16);
+      height = align(templat->height0, 16);
+   }
+   else {
+      width = templat->width0;
+      height = templat->height0;
+   }
+
+   struct pipe_resource *pres;
+   if (screen->ro && templat->bind & PIPE_BIND_SCANOUT)
+      pres = lima_resource_create_scanout(pscreen, templat, width, height);
+   else
+      pres = lima_resource_create_bo(pscreen, templat, width, height);
+
+   if (!pres)
+      return NULL;
+
    debug_printf("%s: pres=%p width=%u height=%u depth=%u target=%d bind=%x usage=%d\n",
-                __func__, &res->base, pres->width0, pres->height0, pres->depth0,
+                __func__, pres, pres->width0, pres->height0, pres->depth0,
                 pres->target, pres->bind, pres->usage);
 
    return pres;
-
-err_out1:
-   lima_bo_free(res->bo);
-err_out0:
-   FREE(res);
-   return NULL;
 }
 
 static void
