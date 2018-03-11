@@ -139,8 +139,22 @@ static const char *array_mode_to_string(struct si_screen *sscreen,
 					struct radeon_surf *surf)
 {
 	if (sscreen->info.chip_class >= GFX9) {
-		/* TODO */
-		return "       UNKNOWN";
+		switch (surf->u.gfx9.surf.swizzle_mode) {
+		case 0:
+			return "  LINEAR";
+		case 21:
+			return " 4KB_S_X";
+		case 22:
+			return " 4KB_D_X";
+		case 25:
+			return "64KB_S_X";
+		case 26:
+			return "64KB_D_X";
+		default:
+			printf("Unhandled swizzle mode = %u\n",
+			       surf->u.gfx9.surf.swizzle_mode);
+			return " UNKNOWN";
+		}
 	} else {
 		switch (surf->u.legacy.level[0].mode) {
 		case RADEON_SURF_MODE_LINEAR_ALIGNED:
