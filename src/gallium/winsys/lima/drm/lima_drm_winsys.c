@@ -99,7 +99,7 @@ lima_drm_screen_create(int fd)
    } else {
       int dup_fd = fcntl(fd, F_DUPFD_CLOEXEC, 3);
 
-      pscreen = lima_screen_create(dup_fd, NULL, true);
+      pscreen = lima_screen_create(dup_fd, NULL);
       if (pscreen) {
          util_hash_table_set(fd_tab, intptr_to_pointer(dup_fd), pscreen);
 
@@ -118,8 +118,7 @@ unlock:
 }
 
 struct pipe_screen *
-lima_drm_screen_create_renderonly(struct renderonly *ro, bool contiguous_scanout)
+lima_drm_screen_create_renderonly(struct renderonly *ro)
 {
-   return lima_screen_create(fcntl(ro->gpu_fd, F_DUPFD_CLOEXEC, 3),
-                             ro, contiguous_scanout);
+   return lima_screen_create(fcntl(ro->gpu_fd, F_DUPFD_CLOEXEC, 3), ro);
 }
