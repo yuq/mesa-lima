@@ -30,7 +30,6 @@ struct pipe_screen;
 struct renderonly;
 
 struct pipe_screen *lima_drm_screen_create(int drmFD);
-struct pipe_screen *lima_drm_screen_create_renderonly(
-   struct renderonly *ro, bool contiguous_scanout);
+struct pipe_screen *lima_drm_screen_create_renderonly(struct renderonly *ro);
 
 #endif /* __LIMA_DRM_PUBLIC_H__ */
