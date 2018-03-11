@@ -46,7 +46,7 @@ struct pipe_screen *sun4i_screen_create(int fd)
    if (ro.gpu_fd < 0)
       return NULL;
 
-   struct pipe_screen *screen = lima_drm_screen_create_renderonly(&ro, false);
+   struct pipe_screen *screen = lima_drm_screen_create_renderonly(&ro);
    if (!screen)
       close(ro.gpu_fd);
 

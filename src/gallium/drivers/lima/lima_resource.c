@@ -102,11 +102,7 @@ lima_resource_create_bo(struct pipe_screen *pscreen,
       pres->array_size * pres->depth0;
    size = align(size, LIMA_PAGE_SIZE);
 
-   uint32_t flags = 0;
-   if (screen->contiguous_scanout && templat->bind & PIPE_BIND_SCANOUT)
-      flags |= LIMA_GEM_CREATE_CONTIGUOUS;
-
-   res->bo = lima_bo_create(screen, size, flags, false, false);
+   res->bo = lima_bo_create(screen, size, 0, false, false);
    if (!res->bo) {
       FREE(res);
       return NULL;
