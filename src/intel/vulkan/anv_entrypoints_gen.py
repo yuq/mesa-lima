@@ -233,9 +233,14 @@ string_map_lookup(const char *str)
     % if e.params[0].type == 'VkDevice':
       ANV_FROM_HANDLE(anv_device, anv_device, ${e.params[0].name});
       return anv_device->dispatch.${e.name}(${e.call_params()});
-    % else:
+    % elif e.params[0].type == 'VkCommandBuffer':
       ANV_FROM_HANDLE(anv_cmd_buffer, anv_cmd_buffer, ${e.params[0].name});
       return anv_cmd_buffer->device->dispatch.${e.name}(${e.call_params()});
+    % elif e.params[0].type == 'VkQueue':
+      ANV_FROM_HANDLE(anv_queue, anv_queue, ${e.params[0].name});
+      return anv_queue->device->dispatch.${e.name}(${e.call_params()});
+    % else:
+      assert(!"Unhandled device child trampoline case: ${e.params[0].type}");
     % endif
   }
   % if e.guard is not None:
@@ -423,7 +428,7 @@ class Entrypoint(EntrypointBase):
         self.guard = guard
 
     def is_device_entrypoint(self):
-        return self.params[0].type in ('VkDevice', 'VkCommandBuffer')
+        return self.params[0].type in ('VkDevice', 'VkCommandBuffer', 'VkQueue')
 
     def prefixed_name(self, prefix):
         assert self.name.startswith('vk')
