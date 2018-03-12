@@ -35,7 +35,9 @@ DECL_TYPE(void,   GL_INVALID_ENUM, GLSL_TYPE_VOID,  0, 0)
    DECL_TYPE(stype,      etype ##__VA_ARGS__,         btype, 1, 1)   \
    DECL_TYPE(vtype ## 2, etype ##_VEC2 ##__VA_ARGS__, btype, 2, 1)   \
    DECL_TYPE(vtype ## 3, etype ##_VEC3 ##__VA_ARGS__, btype, 3, 1)   \
-   DECL_TYPE(vtype ## 4, etype ##_VEC4 ##__VA_ARGS__, btype, 4, 1)
+   DECL_TYPE(vtype ## 4, etype ##_VEC4 ##__VA_ARGS__, btype, 4, 1)   \
+   DECL_TYPE(vtype ## 8,  0, btype, 8, 1)   \
+   DECL_TYPE(vtype ## 16, 0, btype, 16, 1)
 
 DECL_VEC_TYPE(bool,      bvec,   GLSL_TYPE_BOOL,    GL_BOOL)
 DECL_VEC_TYPE(int,       ivec,   GLSL_TYPE_INT,     GL_INT)

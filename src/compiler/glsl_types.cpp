@@ -498,7 +498,12 @@ glsl_type::vec(unsigned components, const glsl_type *const ts[])
 {
    unsigned n = components;
 
-   if (n == 0 || n > 4)
+   if (components == 8)
+      n = 5;
+   else if (components == 16)
+      n = 6;
+
+   if (n == 0 || n > 6)
       return error_type;
 
    return ts[n - 1];
@@ -508,6 +513,7 @@ glsl_type::vec(unsigned components, const glsl_type *const ts[])
       static const glsl_type *const ts[] = {     \
          sname ## _type, vname ## 2_type,        \
          vname ## 3_type, vname ## 4_type,       \
+         vname ## 8_type, vname ## 16_type,      \
       };                                         \
       glsl_type::vec(components, ts);            \
    })
