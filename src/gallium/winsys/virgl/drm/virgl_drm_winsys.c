@@ -620,8 +620,12 @@ static void virgl_drm_add_res(struct virgl_drm_winsys *qdws,
    unsigned hash = res->res_handle & (sizeof(cbuf->is_handle_added)-1);
 
    if (cbuf->cres > cbuf->nres) {
-      fprintf(stderr,"failure to add relocation\n");
-      return;
+      cbuf->nres += 256;
+      cbuf->res_bo = realloc(cbuf->res_bo, cbuf->nres * sizeof(struct virgl_hw_buf*));
+      if (!cbuf->res_bo) {
+          fprintf(stderr,"failure to add relocation %d, %d\n", cbuf->cres, cbuf->nres);
+          return;
+      }
    }
 
    cbuf->res_bo[cbuf->cres] = NULL;
