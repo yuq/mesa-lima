@@ -96,15 +96,6 @@ CallInst *CALL(Value *Callee, Value* arg);
 CallInst *CALL2(Value *Callee, Value* arg1, Value* arg2);
 CallInst *CALL3(Value *Callee, Value* arg1, Value* arg2, Value* arg3);
 
-Value *VCMPPS_EQ(Value* a, Value* b)    { return VCMPPS(a, b, C((uint8_t)_CMP_EQ_OQ)); }
-Value *VCMPPS_LT(Value* a, Value* b)    { return VCMPPS(a, b, C((uint8_t)_CMP_LT_OQ)); }
-Value *VCMPPS_LE(Value* a, Value* b)    { return VCMPPS(a, b, C((uint8_t)_CMP_LE_OQ)); }
-Value *VCMPPS_ISNAN(Value* a, Value* b) { return VCMPPS(a, b, C((uint8_t)_CMP_UNORD_Q)); }
-Value *VCMPPS_NEQ(Value* a, Value* b)   { return VCMPPS(a, b, C((uint8_t)_CMP_NEQ_OQ)); }
-Value *VCMPPS_GE(Value* a, Value* b)    { return VCMPPS(a, b, C((uint8_t)_CMP_GE_OQ)); }
-Value *VCMPPS_GT(Value* a, Value* b)    { return VCMPPS(a, b, C((uint8_t)_CMP_GT_OQ)); }
-Value *VCMPPS_NOTNAN(Value* a, Value* b){ return VCMPPS(a, b, C((uint8_t)_CMP_ORD_Q)); }
-
 Value *MASK(Value *vmask);
 Value *MASK_16(Value *vmask);
 
