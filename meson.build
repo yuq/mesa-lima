@@ -230,11 +230,6 @@ if with_gallium_tegra and not with_gallium_nouveau
   error('tegra driver requires nouveau driver')
 endif
 
-dep_libdrm_intel = []
-if with_dri_i915 or with_gallium_i915
-  dep_libdrm_intel = dependency('libdrm_intel', version : '>= 2.4.75')
-endif
-
 if host_machine.system() == 'darwin'
   with_dri_platform = 'apple'
 elif ['windows', 'cygwin'].contains(host_machine.system())
@@ -1005,16 +1000,6 @@ else
   dep_clock = cc.find_library('rt')
 endif
 
-with_gallium_drisw_kms = false
-dep_libdrm = dependency('libdrm', version : '>= 2.4.75',
-                        required : with_dri2 or with_dri3)
-if dep_libdrm.found()
-  pre_args += '-DHAVE_LIBDRM'
-  if with_dri_platform == 'drm' and with_dri
-    with_gallium_drisw_kms = true
-  endif
-endif
-
 # TODO: some of these may be conditional
 dep_zlib = dependency('zlib', version : '>= 1.2.3')
 pre_args += '-DHAVE_ZLIB'
@@ -1040,6 +1025,10 @@ dep_libdrm_radeon = []
 dep_libdrm_nouveau = []
 dep_libdrm_etnaviv = []
 dep_libdrm_freedreno = []
+dep_libdrm_intel = []
+if with_dri_i915 or with_gallium_i915
+  dep_libdrm_intel = dependency('libdrm_intel', version : '>= 2.4.75')
+endif
 if with_amd_vk or with_gallium_radeonsi
   dep_libdrm_amdgpu = dependency('libdrm_amdgpu', version : '>= 2.4.91')
 endif
@@ -1055,6 +1044,16 @@ if with_gallium_etnaviv
 endif
 if with_gallium_freedreno
   dep_libdrm_freedreno = dependency('libdrm_freedreno', version : '>= 2.4.91')
+endif
+
+with_gallium_drisw_kms = false
+dep_libdrm = dependency('libdrm', version : '>= 2.4.75',
+                        required : with_dri2 or with_dri3)
+if dep_libdrm.found()
+  pre_args += '-DHAVE_LIBDRM'
+  if with_dri_platform == 'drm' and with_dri
+    with_gallium_drisw_kms = true
+  endif
 endif
 
 llvm_modules = ['bitwriter', 'engine', 'mcdisassembler', 'mcjit']
