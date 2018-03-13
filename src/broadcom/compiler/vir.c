@@ -418,7 +418,16 @@ vir_branch_inst(enum v3d_qpu_branch_cond cond, struct qreg src)
 static void
 vir_emit(struct v3d_compile *c, struct qinst *inst)
 {
-        list_addtail(&inst->link, &c->cur_block->instructions);
+        switch (c->cursor.mode) {
+        case vir_cursor_add:
+                list_add(&inst->link, c->cursor.link);
+                break;
+        case vir_cursor_addtail:
+                list_addtail(&inst->link, c->cursor.link);
+                break;
+        }
+
+        c->cursor = vir_after_inst(inst);
 }
 
 /* Updates inst to write to a new temporary, emits it, and notes the def. */
@@ -468,6 +477,7 @@ void
 vir_set_emit_block(struct v3d_compile *c, struct qblock *block)
 {
         c->cur_block = block;
+        c->cursor = vir_after_block(block);
         list_addtail(&block->link, &c->blocks);
 }
 
@@ -791,6 +801,8 @@ vir_remove_instruction(struct v3d_compile *c, struct qinst *qinst)
         if (qinst->dst.file == QFILE_TEMP)
                 c->defs[qinst->dst.index] = NULL;
 
+        assert(&qinst->link != c->cursor.link);
+
         list_del(&qinst->link);
         free(qinst);
 }
@@ -818,6 +830,10 @@ vir_follow_movs(struct v3d_compile *c, struct qreg reg)
 void
 vir_compile_destroy(struct v3d_compile *c)
 {
+        /* Defuse the assert that we aren't removing the cursor's instruction.
+         */
+        c->cursor.link = NULL;
+
         vir_for_each_block(block, c) {
                 while (!list_empty(&block->instructions)) {
                         struct qinst *qinst =
@@ -867,8 +883,17 @@ vir_PF(struct v3d_compile *c, struct qreg src, enum v3d_qpu_pf pf)
 {
         struct qinst *last_inst = NULL;
 
-        if (!list_empty(&c->cur_block->instructions))
+        if (!list_empty(&c->cur_block->instructions)) {
                 last_inst = (struct qinst *)c->cur_block->instructions.prev;
+
+                /* Can't stuff the PF into the last last inst if our cursor
+                 * isn't pointing after it.
+                 */
+                struct vir_cursor after_inst = vir_after_inst(last_inst);
+                if (c->cursor.mode != after_inst.mode ||
+                    c->cursor.link != after_inst.link)
+                        last_inst = NULL;
+        }
 
         if (src.file != QFILE_TEMP ||
             !c->defs[src.index] ||

@@ -198,14 +198,11 @@ ntq_store_dest(struct v3d_compile *c, nir_dest *dest, int chan,
                 if (c->execute.file != QFILE_NULL) {
                         last_inst->dst.index = qregs[chan].index;
 
-                        /* Set the flags to the current exec mask.  To insert
-                         * the flags push, we temporarily remove our SSA
-                         * instruction.
+                        /* Set the flags to the current exec mask.
                          */
-                        list_del(&last_inst->link);
+                        c->cursor = vir_before_inst(last_inst);
                         vir_PF(c, c->execute, V3D_QPU_PF_PUSHZ);
-                        list_addtail(&last_inst->link,
-                                     &c->cur_block->instructions);
+                        c->cursor = vir_after_inst(last_inst);
 
                         vir_set_cond(last_inst, V3D_QPU_COND_IFA);
                         last_inst->cond_is_exec_mask = true;

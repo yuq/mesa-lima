@@ -384,6 +384,48 @@ struct qblock {
         /** @} */
 };
 
+/** Which util/list.h add mode we should use when inserting an instruction. */
+enum vir_cursor_mode {
+        vir_cursor_add,
+        vir_cursor_addtail,
+};
+
+/**
+ * Tracking structure for where new instructions should be inserted.  Create
+ * with one of the vir_after_inst()-style helper functions.
+ *
+ * This does not protect against removal of the block or instruction, so we
+ * have an assert in instruction removal to try to catch it.
+ */
+struct vir_cursor {
+        enum vir_cursor_mode mode;
+        struct list_head *link;
+};
+
+static inline struct vir_cursor
+vir_before_inst(struct qinst *inst)
+{
+        return (struct vir_cursor){ vir_cursor_addtail, &inst->link };
+}
+
+static inline struct vir_cursor
+vir_after_inst(struct qinst *inst)
+{
+        return (struct vir_cursor){ vir_cursor_add, &inst->link };
+}
+
+static inline struct vir_cursor
+vir_before_block(struct qblock *block)
+{
+        return (struct vir_cursor){ vir_cursor_add, &block->instructions };
+}
+
+static inline struct vir_cursor
+vir_after_block(struct qblock *block)
+{
+        return (struct vir_cursor){ vir_cursor_addtail, &block->instructions };
+}
+
 /**
  * Compiler state saved across compiler invocations, for any expensive global
  * setup.
@@ -500,6 +542,7 @@ struct v3d_compile {
         struct qreg undef;
         uint32_t num_temps;
 
+        struct vir_cursor cursor;
         struct list_head blocks;
         int next_block_index;
         struct qblock *cur_block;
