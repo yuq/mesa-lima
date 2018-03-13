@@ -1047,7 +1047,7 @@ x11_image_init(VkDevice device_h, struct x11_swapchain *chain,
    image->pixmap = xcb_generate_id(chain->conn);
 
    if (image->base.drm_modifier != DRM_FORMAT_MOD_INVALID) {
-      /* If the image has a modifier, we must have DRI3 v1.1. */
+      /* If the image has a modifier, we must have DRI3 v1.2. */
       assert(chain->has_dri3_modifiers);
 
       cookie =
