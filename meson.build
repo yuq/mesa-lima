@@ -1235,7 +1235,7 @@ if with_platform_x11
     dep_xcb_dri2 = dependency('xcb-dri2', version : '>= 1.8')
 
     if with_dri3
-      pre_args += '-DHAVE_DRI3'
+      pre_args += '-DHAVE_DRI3 -DHAVE_DRI3_MODIFIERS'
       dep_xcb_dri3 = dependency('xcb-dri3', version : '>= 1.13')
       dep_xcb_present = dependency('xcb-present', version: '>= 1.13')
       dep_xcb_sync = dependency('xcb-sync')

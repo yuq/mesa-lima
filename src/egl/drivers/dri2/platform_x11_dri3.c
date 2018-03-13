@@ -327,6 +327,7 @@ dri3_create_image_khr_pixmap_from_buffers(_EGLDisplay *disp, _EGLContext *ctx,
                                           EGLClientBuffer buffer,
                                           const EGLint *attr_list)
 {
+#ifdef HAVE_DRI3_MODIFIERS
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_image *dri2_img;
    xcb_dri3_buffers_from_pixmap_cookie_t bp_cookie;
@@ -376,6 +377,9 @@ dri3_create_image_khr_pixmap_from_buffers(_EGLDisplay *disp, _EGLContext *ctx,
    }
 
    return &dri2_img->base;
+#else
+   return NULL;
+#endif
 }
 
 static _EGLImage *
