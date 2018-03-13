@@ -267,6 +267,21 @@ vc5_get_compiled_shader(struct vc5_context *vc5, struct v3d_key *key)
         memcpy(dup_key, key, key_size);
         _mesa_hash_table_insert(ht, dup_key, shader);
 
+        if (shader->prog_data.base->spill_size >
+            vc5->prog.spill_size_per_thread) {
+                /* Max 4 QPUs per slice, 3 slices per core. We only do single
+                 * core so far.  This overallocates memory on smaller cores.
+                 */
+                int total_spill_size =
+                        4 * 3 * shader->prog_data.base->spill_size;
+
+                vc5_bo_unreference(&vc5->prog.spill_bo);
+                vc5->prog.spill_bo = vc5_bo_alloc(vc5->screen,
+                                                  total_spill_size, "spill");
+                vc5->prog.spill_size_per_thread =
+                        shader->prog_data.base->spill_size;
+        }
+
         return shader;
 }
 

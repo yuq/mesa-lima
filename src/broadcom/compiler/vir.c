@@ -354,10 +354,17 @@ vir_get_temp(struct v3d_compile *c)
         if (c->num_temps > c->defs_array_size) {
                 uint32_t old_size = c->defs_array_size;
                 c->defs_array_size = MAX2(old_size * 2, 16);
+
                 c->defs = reralloc(c, c->defs, struct qinst *,
                                    c->defs_array_size);
                 memset(&c->defs[old_size], 0,
                        sizeof(c->defs[0]) * (c->defs_array_size - old_size));
+
+                c->spillable = reralloc(c, c->spillable,
+                                        BITSET_WORD,
+                                        BITSET_WORDS(c->defs_array_size));
+                for (int i = old_size; i < c->defs_array_size; i++)
+                        BITSET_SET(c->spillable, i);
         }
 
         return reg;
@@ -653,6 +660,7 @@ v3d_set_prog_data(struct v3d_compile *c,
 {
         prog_data->threads = c->threads;
         prog_data->single_seg = !c->last_thrsw;
+        prog_data->spill_size = c->spill_size;
 
         v3d_set_prog_data_uniforms(c, prog_data);
         v3d_set_prog_data_ubo(c, prog_data);

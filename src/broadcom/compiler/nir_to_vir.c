@@ -1919,12 +1919,11 @@ vir_remove_thrsw(struct v3d_compile *c)
                                 vir_remove_instruction(c, inst);
                 }
         }
-        vir_calculate_live_intervals(c);
 
         c->last_thrsw = NULL;
 }
 
-static void
+void
 vir_emit_last_thrsw(struct v3d_compile *c)
 {
         /* On V3D before 4.1, we need a TMU op to be outstanding when thread
@@ -2012,16 +2011,16 @@ v3d_nir_to_vir(struct v3d_compile *c)
                 fprintf(stderr, "\n");
         }
 
-        /* Compute the live ranges so we can figure out interference. */
-        vir_calculate_live_intervals(c);
-
         /* Attempt to allocate registers for the temporaries.  If we fail,
          * reduce thread count and try again.
          */
         int min_threads = (c->devinfo->ver >= 41) ? 2 : 1;
         struct qpu_reg *temp_registers;
         while (true) {
-                temp_registers = v3d_register_allocate(c);
+                bool spilled;
+                temp_registers = v3d_register_allocate(c, &spilled);
+                if (spilled)
+                        continue;
 
                 if (temp_registers)
                         break;

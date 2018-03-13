@@ -154,6 +154,9 @@ struct vc5_compiled_shader {
 struct vc5_program_stateobj {
         struct vc5_uncompiled_shader *bind_vs, *bind_fs;
         struct vc5_compiled_shader *cs, *vs, *fs;
+
+        struct vc5_bo *spill_bo;
+        int spill_size_per_thread;
 };
 
 struct vc5_constbuf_stateobj {
