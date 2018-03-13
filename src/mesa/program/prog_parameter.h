@@ -128,6 +128,11 @@ _mesa_add_unnamed_constant(struct gl_program_parameter_list *paramList,
 }
 
 extern GLint
+_mesa_add_sized_state_reference(struct gl_program_parameter_list *paramList,
+                                const gl_state_index16 stateTokens[STATE_LENGTH],
+                                const unsigned size, bool pad_and_align);
+
+extern GLint
 _mesa_add_state_reference(struct gl_program_parameter_list *paramList,
                           const gl_state_index16 stateTokens[]);
 

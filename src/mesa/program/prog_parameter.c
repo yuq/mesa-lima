@@ -362,21 +362,11 @@ _mesa_add_typed_unnamed_constant(struct gl_program_parameter_list *paramList,
    return pos;
 }
 
-
-/**
- * Add a new state reference to the parameter list.
- * This will be used when the program contains something like this:
- *    PARAM ambient = state.material.front.ambient;
- *
- * \param paramList  the parameter list
- * \param stateTokens  an array of 5 (STATE_LENGTH) state tokens
- * \return index of the new parameter.
- */
 GLint
-_mesa_add_state_reference(struct gl_program_parameter_list *paramList,
-                          const gl_state_index16 stateTokens[STATE_LENGTH])
+_mesa_add_sized_state_reference(struct gl_program_parameter_list *paramList,
+                                const gl_state_index16 stateTokens[STATE_LENGTH],
+                                const unsigned size, bool pad_and_align)
 {
-   const GLuint size = 4; /* XXX fix */
    char *name;
    GLint index;
 
@@ -391,11 +381,29 @@ _mesa_add_state_reference(struct gl_program_parameter_list *paramList,
 
    name = _mesa_program_state_string(stateTokens);
    index = _mesa_add_parameter(paramList, PROGRAM_STATE_VAR, name,
-                               size, GL_NONE, NULL, stateTokens, true);
+                               size, GL_NONE, NULL, stateTokens,
+                               pad_and_align);
    paramList->StateFlags |= _mesa_program_state_flags(stateTokens);
 
    /* free name string here since we duplicated it in add_parameter() */
    free(name);
 
    return index;
+}
+
+
+/**
+ * Add a new state reference to the parameter list.
+ * This will be used when the program contains something like this:
+ *    PARAM ambient = state.material.front.ambient;
+ *
+ * \param paramList  the parameter list
+ * \param stateTokens  an array of 5 (STATE_LENGTH) state tokens
+ * \return index of the new parameter.
+ */
+GLint
+_mesa_add_state_reference(struct gl_program_parameter_list *paramList,
+                          const gl_state_index16 stateTokens[STATE_LENGTH])
+{
+   return _mesa_add_sized_state_reference(paramList, stateTokens, 4, true);
 }
