@@ -204,6 +204,9 @@ brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
       table = gen4_hw_type;
    }
 
+   assert(devinfo->has_64bit_types || brw_reg_type_to_size(type) < 8 ||
+          type == BRW_REGISTER_TYPE_NF);
+
    if (file == BRW_IMMEDIATE_VALUE) {
       assert(table[type].imm_type != (enum hw_imm_type)INVALID);
       return table[type].imm_type;
