@@ -1227,6 +1227,9 @@ struct pipe_video_codec *radeon_create_decoder(struct pipe_context *context,
 	case PIPE_VIDEO_FORMAT_HEVC:
 		stream_type = RDECODE_CODEC_H265;
 		break;
+	case PIPE_VIDEO_FORMAT_VP9:
+		stream_type = RDECODE_CODEC_VP9;
+		break;
 	default:
 		assert(0);
 		break;
