@@ -1019,6 +1019,12 @@ static unsigned calc_dpb_size(struct radeon_decoder *dec)
 		dpb_size = MAX2(dpb_size, 30 * 1024 * 1024);
 		break;
 
+	case PIPE_VIDEO_FORMAT_VP9:
+		max_references = MAX2(max_references, 9);
+
+		dpb_size = (4096 * 3000 * 3 / 2) * max_references;
+		break;
+
 	default:
 		// something is missing here
 		assert(0);
