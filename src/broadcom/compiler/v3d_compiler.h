@@ -916,6 +916,13 @@ vir_LDTMU(struct v3d_compile *c)
         }
 }
 
+static inline struct qreg
+vir_UMUL(struct v3d_compile *c, struct qreg src0, struct qreg src1)
+{
+        vir_MULTOP(c, src0, src1);
+        return vir_UMUL24(c, src0, src1);
+}
+
 /*
 static inline struct qreg
 vir_LOAD_IMM(struct v3d_compile *c, uint32_t val)

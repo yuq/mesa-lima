@@ -256,13 +256,6 @@ vir_SAT(struct v3d_compile *c, struct qreg val)
 }
 
 static struct qreg
-ntq_umul(struct v3d_compile *c, struct qreg src0, struct qreg src1)
-{
-        vir_MULTOP(c, src0, src1);
-        return vir_UMUL24(c, src0, src1);
-}
-
-static struct qreg
 ntq_minify(struct v3d_compile *c, struct qreg size, struct qreg level)
 {
         return vir_MAX(c, vir_SHR(c, size, level), vir_uniform_ui(c, 1));
@@ -765,7 +758,7 @@ ntq_emit_alu(struct v3d_compile *c, nir_alu_instr *instr)
                 break;
 
         case nir_op_imul:
-                result = ntq_umul(c, src[0], src[1]);
+                result = vir_UMUL(c, src[0], src[1]);
                 break;
 
         case nir_op_seq:
