@@ -1398,7 +1398,7 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
       }
    }
 
-   for (int i = 0; i < 2; i++)
+   for (int i = 0; i < ARRAY_SIZE(modifiers); i++)
       vk_free(pAllocator, modifiers[i]);
    *swapchain_out = &chain->base;
 
@@ -1409,7 +1409,7 @@ fail_init_images:
       x11_image_finish(chain, pAllocator, &chain->images[j]);
 
 fail_register:
-   for (int i = 0; i < 2; i++)
+   for (int i = 0; i < ARRAY_SIZE(modifiers); i++)
       vk_free(pAllocator, modifiers[i]);
 
    xcb_unregister_for_special_event(chain->conn, chain->special_event);
