@@ -390,7 +390,7 @@ namespace SwrJit
     /// @param pVecPassthru - SIMD wide vector of values to load when lane is inactive
     Value* Builder::GATHER_PTR(Value* pVecSrcPtr, Value* pVecMask, Value* pVecPassthru)
     {
-        Function* pMaskedGather = llvm::Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::masked_gather, { pVecPassthru->getType() });
+        Function* pMaskedGather = llvm::Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::masked_gather, { pVecPassthru->getType(), pVecSrcPtr->getType() });
 
         return CALL(pMaskedGather, { pVecSrcPtr, C(0), pVecMask, pVecPassthru });
     }
