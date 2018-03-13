@@ -1239,7 +1239,7 @@ get_dw_address(struct radv_shader_context *ctx,
 						    LLVMConstInt(ctx->ac.i32, 4, false), ""), "");
 	else if (const_index && !compact_const_index)
 		dw_addr = LLVMBuildAdd(ctx->ac.builder, dw_addr,
-				       LLVMConstInt(ctx->ac.i32, const_index, false), "");
+				       LLVMConstInt(ctx->ac.i32, const_index * 4, false), "");
 
 	dw_addr = LLVMBuildAdd(ctx->ac.builder, dw_addr,
 			       LLVMConstInt(ctx->ac.i32, param * 4, false), "");
