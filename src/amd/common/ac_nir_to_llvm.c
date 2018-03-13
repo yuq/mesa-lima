@@ -2066,7 +2066,7 @@ static LLVMValueRef get_image_coords(struct ac_nir_context *ctx,
 					LLVMBuildAdd(ctx->ac.builder, fmask_load_address[chan],
 						LLVMBuildFPToUI(ctx->ac.builder, ctx->abi->frag_pos[chan],
 								ctx->ac.i32, ""), "");
-			fmask_load_address[2] = ac_to_integer(&ctx->ac, ctx->abi->inputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)]);
+			fmask_load_address[2] = ac_to_integer(&ctx->ac, ctx->abi->inputs[ac_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)]);
 		}
 		sample_index = adjust_sample_index_using_fmask(&ctx->ac,
 							       fmask_load_address[0],
@@ -2091,7 +2091,7 @@ static LLVMValueRef get_image_coords(struct ac_nir_context *ctx,
 			for (chan = 0; chan < 2; ++chan)
 				coords[chan] = LLVMBuildAdd(ctx->ac.builder, coords[chan], LLVMBuildFPToUI(ctx->ac.builder, ctx->abi->frag_pos[chan],
 						ctx->ac.i32, ""), "");
-			coords[2] = ac_to_integer(&ctx->ac, ctx->abi->inputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)]);
+			coords[2] = ac_to_integer(&ctx->ac, ctx->abi->inputs[ac_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)]);
 			count++;
 		}
 
@@ -3700,7 +3700,7 @@ ac_handle_shader_output_decl(struct ac_llvm_context *ctx,
 
 	for (unsigned i = 0; i < attrib_count; ++i) {
 		for (unsigned chan = 0; chan < 4; chan++) {
-			abi->outputs[radeon_llvm_reg_index_soa(output_loc + i, chan)] =
+			abi->outputs[ac_llvm_reg_index_soa(output_loc + i, chan)] =
 		                       ac_build_alloca_undef(ctx, ctx->f32, "");
 		}
 	}

@@ -1795,7 +1795,7 @@ handle_vs_input_decl(struct radv_shader_context *ctx,
 
 		for (unsigned chan = 0; chan < 4; chan++) {
 			LLVMValueRef llvm_chan = LLVMConstInt(ctx->ac.i32, chan, false);
-			ctx->inputs[radeon_llvm_reg_index_soa(idx, chan)] =
+			ctx->inputs[ac_llvm_reg_index_soa(idx, chan)] =
 				ac_to_integer(&ctx->ac, LLVMBuildExtractElement(ctx->ac.builder,
 							input, llvm_chan, ""));
 		}
@@ -1878,7 +1878,7 @@ handle_fs_input_decl(struct radv_shader_context *ctx,
 		interp = NULL;
 
 	for (unsigned i = 0; i < attrib_count; ++i)
-		ctx->inputs[radeon_llvm_reg_index_soa(idx + i, 0)] = interp;
+		ctx->inputs[ac_llvm_reg_index_soa(idx + i, 0)] = interp;
 
 }
 
@@ -1933,7 +1933,7 @@ handle_fs_inputs(struct radv_shader_context *ctx,
 
 	for (unsigned i = 0; i < RADEON_LLVM_MAX_INPUTS; ++i) {
 		LLVMValueRef interp_param;
-		LLVMValueRef *inputs = ctx->inputs +radeon_llvm_reg_index_soa(i, 0);
+		LLVMValueRef *inputs = ctx->inputs +ac_llvm_reg_index_soa(i, 0);
 
 		if (!(ctx->input_mask & (1ull << i)))
 			continue;
@@ -1959,7 +1959,7 @@ handle_fs_inputs(struct radv_shader_context *ctx,
 	ctx->shader_info->fs.input_mask = ctx->input_mask >> VARYING_SLOT_VAR0;
 
 	if (ctx->shader_info->info.needs_multiview_view_index)
-		ctx->abi.view_index = ctx->inputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)];
+		ctx->abi.view_index = ctx->inputs[ac_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)];
 }
 
 static void
@@ -2156,7 +2156,7 @@ static LLVMValueRef
 radv_load_output(struct radv_shader_context *ctx, unsigned index, unsigned chan)
 {
 	LLVMValueRef output =
-		ctx->abi.outputs[radeon_llvm_reg_index_soa(index, chan)];
+		ctx->abi.outputs[ac_llvm_reg_index_soa(index, chan)];
 
 	return LLVMBuildLoad(ctx->ac.builder, output, "");
 }
@@ -2174,10 +2174,10 @@ handle_vs_outputs_post(struct radv_shader_context *ctx,
 	int i;
 
 	if (ctx->options->key.has_multiview_view_index) {
-		LLVMValueRef* tmp_out = &ctx->abi.outputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)];
+		LLVMValueRef* tmp_out = &ctx->abi.outputs[ac_llvm_reg_index_soa(VARYING_SLOT_LAYER, 0)];
 		if(!*tmp_out) {
 			for(unsigned i = 0; i < 4; ++i)
-				ctx->abi.outputs[radeon_llvm_reg_index_soa(VARYING_SLOT_LAYER, i)] =
+				ctx->abi.outputs[ac_llvm_reg_index_soa(VARYING_SLOT_LAYER, i)] =
 				            ac_build_alloca_undef(&ctx->ac, ctx->ac.f32, "");
 		}
 
@@ -3396,7 +3396,7 @@ ac_gs_copy_shader_emit(struct radv_shader_context *ctx)
 						     0, 1, 1, true, false);
 
 			LLVMBuildStore(ctx->ac.builder,
-				       ac_to_float(&ctx->ac, value), ctx->abi.outputs[radeon_llvm_reg_index_soa(i, j)]);
+				       ac_to_float(&ctx->ac, value), ctx->abi.outputs[ac_llvm_reg_index_soa(i, j)]);
 		}
 		idx += slot_inc;
 	}

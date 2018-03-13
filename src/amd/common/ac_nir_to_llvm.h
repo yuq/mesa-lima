@@ -40,7 +40,7 @@ struct ac_shader_abi;
 #define INTERP_CENTROID 1
 #define INTERP_SAMPLE 2
 
-static inline unsigned radeon_llvm_reg_index_soa(unsigned index, unsigned chan)
+static inline unsigned ac_llvm_reg_index_soa(unsigned index, unsigned chan)
 {
 	return (index * 4) + chan;
 }
