@@ -1046,9 +1046,9 @@ static void build_int_type_name(
 		strcpy(buf, "i32");
 }
 
-static LLVMValueRef radv_lower_gather4_integer(struct ac_llvm_context *ctx,
-					       struct ac_image_args *args,
-					       const nir_tex_instr *instr)
+static LLVMValueRef lower_gather4_integer(struct ac_llvm_context *ctx,
+					  struct ac_image_args *args,
+					  const nir_tex_instr *instr)
 {
 	enum glsl_base_type stype = glsl_get_sampler_result_type(instr->texture->var->type);
 	LLVMValueRef coord = args->addr;
@@ -1225,7 +1225,7 @@ static LLVMValueRef build_tex_intrinsic(struct ac_nir_context *ctx,
 	if (instr->op == nir_texop_tg4 && ctx->ac.chip_class <= VI) {
 		enum glsl_base_type stype = glsl_get_sampler_result_type(instr->texture->var->type);
 		if (stype == GLSL_TYPE_UINT || stype == GLSL_TYPE_INT) {
-			return radv_lower_gather4_integer(&ctx->ac, args, instr);
+			return lower_gather4_integer(&ctx->ac, args, instr);
 		}
 	}
 	return ac_build_image_opcode(&ctx->ac, args);
