@@ -2639,8 +2639,24 @@ _mesa_associate_uniform_storage(struct gl_context *ctx,
           */
          if (propagate_to_storage) {
             unsigned array_elements = MAX2(1, storage->array_elements);
-            _mesa_propagate_uniforms_to_driver_storage(storage, 0,
-                                                       array_elements);
+            if (ctx->Const.PackedDriverUniformStorage && !prog->is_arb_asm &&
+                (storage->is_bindless || !storage->type->contains_opaque())) {
+               const int dmul = storage->type->is_64bit() ? 2 : 1;
+               const unsigned components =
+                  storage->type->vector_elements *
+                  storage->type->matrix_columns;
+
+               for (unsigned s = 0; s < storage->num_driver_storage; s++) {
+                  gl_constant_value *uni_storage = (gl_constant_value *)
+                     storage->driver_storage[s].data;
+                  memcpy(uni_storage, storage->storage,
+                         sizeof(storage->storage[0]) * components *
+                         array_elements * dmul);
+               }
+            } else {
+               _mesa_propagate_uniforms_to_driver_storage(storage, 0,
+                                                          array_elements);
+            }
          }
 
 	      last_location = location;
