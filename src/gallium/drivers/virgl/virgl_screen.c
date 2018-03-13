@@ -196,6 +196,8 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_SAMPLE_SHADING:
    case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
       return vscreen->caps.caps.v1.bset.has_sample_shading;
+   case PIPE_CAP_CULL_DISTANCE:
+      return vscreen->caps.caps.v1.bset.has_cull;
    case PIPE_CAP_TEXTURE_GATHER_SM5:
    case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
    case PIPE_CAP_FAKE_SW_MSAA:
@@ -239,7 +241,6 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_PCI_FUNCTION:
    case PIPE_CAP_FRAMEBUFFER_NO_ATTACHMENT:
    case PIPE_CAP_ROBUST_BUFFER_ACCESS_BEHAVIOR:
-   case PIPE_CAP_CULL_DISTANCE:
    case PIPE_CAP_PRIMITIVE_RESTART_FOR_PATCHES:
    case PIPE_CAP_TGSI_VOTE:
    case PIPE_CAP_MAX_WINDOW_RECTANGLES:
