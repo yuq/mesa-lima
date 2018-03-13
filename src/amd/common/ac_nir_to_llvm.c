@@ -27,13 +27,9 @@
 #include "ac_binary.h"
 #include "sid.h"
 #include "nir/nir.h"
-#include "../vulkan/radv_descriptor_set.h"
 #include "util/bitscan.h"
-#include <llvm-c/Transforms/Scalar.h>
 #include "ac_shader_abi.h"
-#include "ac_shader_info.h"
 #include "ac_shader_util.h"
-#include "ac_exp_param.h"
 
 struct ac_nir_context {
 	struct ac_llvm_context ac;

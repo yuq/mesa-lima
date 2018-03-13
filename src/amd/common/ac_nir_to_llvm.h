@@ -28,14 +28,10 @@
 #include "llvm-c/Core.h"
 #include "llvm-c/TargetMachine.h"
 #include "amd_family.h"
-#include "../vulkan/radv_descriptor_set.h"
 #include "compiler/shader_enums.h"
-struct ac_shader_binary;
-struct ac_shader_config;
+
 struct nir_shader;
 struct nir_variable;
-struct radv_pipeline_layout;
-
 struct ac_llvm_context;
 struct ac_shader_abi;
 
