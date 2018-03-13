@@ -26,6 +26,7 @@
  */
 
 #include "radv_private.h"
+#include "radv_shader.h"
 #include "nir/nir.h"
 
 #include <llvm-c/Core.h>
@@ -46,14 +47,14 @@
 struct radv_shader_context {
 	struct ac_llvm_context ac;
 	const struct ac_nir_compiler_options *options;
-	struct ac_shader_variant_info *shader_info;
+	struct radv_shader_variant_info *shader_info;
 	struct ac_shader_abi abi;
 
 	unsigned max_workgroup_size;
 	LLVMContextRef context;
 	LLVMValueRef main_function;
 
-	LLVMValueRef descriptor_sets[AC_UD_MAX_SETS];
+	LLVMValueRef descriptor_sets[RADV_UD_MAX_SETS];
 	LLVMValueRef ring_offsets;
 
 	LLVMValueRef vertex_buffers;
@@ -352,7 +353,7 @@ create_llvm_function(LLVMContextRef ctx, LLVMModuleRef module,
 
 
 static void
-set_loc(struct ac_userdata_info *ud_info, uint8_t *sgpr_idx, uint8_t num_sgprs,
+set_loc(struct radv_userdata_info *ud_info, uint8_t *sgpr_idx, uint8_t num_sgprs,
 	uint32_t indirect_offset)
 {
 	ud_info->sgpr_idx = *sgpr_idx;
@@ -366,7 +367,7 @@ static void
 set_loc_shader(struct radv_shader_context *ctx, int idx, uint8_t *sgpr_idx,
 	       uint8_t num_sgprs)
 {
-	struct ac_userdata_info *ud_info =
+	struct radv_userdata_info *ud_info =
 		&ctx->shader_info->user_sgprs_locs.shader_data[idx];
 	assert(ud_info);
 
@@ -377,7 +378,7 @@ static void
 set_loc_desc(struct radv_shader_context *ctx, int idx,  uint8_t *sgpr_idx,
 	     uint32_t indirect_offset)
 {
-	struct ac_userdata_info *ud_info =
+	struct radv_userdata_info *ud_info =
 		&ctx->shader_info->user_sgprs_locs.descriptor_sets[idx];
 	assert(ud_info);
 
@@ -2163,7 +2164,7 @@ radv_load_output(struct radv_shader_context *ctx, unsigned index, unsigned chan)
 static void
 handle_vs_outputs_post(struct radv_shader_context *ctx,
 		       bool export_prim_id,
-		       struct ac_vs_output_info *outinfo)
+		       struct radv_vs_output_info *outinfo)
 {
 	uint32_t param_count = 0;
 	unsigned target;
@@ -2348,7 +2349,7 @@ handle_vs_outputs_post(struct radv_shader_context *ctx,
 
 static void
 handle_es_outputs_post(struct radv_shader_context *ctx,
-		       struct ac_es_output_info *outinfo)
+		       struct radv_es_output_info *outinfo)
 {
 	int j;
 	uint64_t max_output_written = 0;
@@ -2862,7 +2863,7 @@ static void ac_llvm_finalize_module(struct radv_shader_context *ctx)
 static void
 ac_nir_eliminate_const_vs_outputs(struct radv_shader_context *ctx)
 {
-	struct ac_vs_output_info *outinfo;
+	struct radv_vs_output_info *outinfo;
 
 	switch (ctx->stage) {
 	case MESA_SHADER_FRAGMENT:
@@ -2976,7 +2977,7 @@ static
 LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
                                        struct nir_shader *const *shaders,
                                        int shader_count,
-                                       struct ac_shader_variant_info *shader_info,
+                                       struct radv_shader_variant_info *shader_info,
                                        const struct ac_nir_compiler_options *options,
 				       bool dump_shader)
 {
@@ -3008,7 +3009,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	for(int i = 0; i < shader_count; ++i)
 		ac_nir_shader_info_pass(shaders[i], options, &shader_info->info);
 
-	for (i = 0; i < AC_UD_MAX_SETS; i++)
+	for (i = 0; i < RADV_UD_MAX_SETS; i++)
 		shader_info->user_sgprs_locs.descriptor_sets[i].sgpr_idx = -1;
 	for (i = 0; i < AC_UD_MAX_UD; i++)
 		shader_info->user_sgprs_locs.shader_data[i].sgpr_idx = -1;
@@ -3216,7 +3217,7 @@ static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
 				   LLVMModuleRef llvm_module,
 				   struct ac_shader_binary *binary,
 				   struct ac_shader_config *config,
-				   struct ac_shader_variant_info *shader_info,
+				   struct radv_shader_variant_info *shader_info,
 				   gl_shader_stage stage,
 				   bool dump_shader, bool supports_spill)
 {
@@ -3295,7 +3296,7 @@ static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
 }
 
 static void
-ac_fill_shader_info(struct ac_shader_variant_info *shader_info, struct nir_shader *nir, const struct ac_nir_compiler_options *options)
+ac_fill_shader_info(struct radv_shader_variant_info *shader_info, struct nir_shader *nir, const struct ac_nir_compiler_options *options)
 {
         switch (nir->info.stage) {
         case MESA_SHADER_COMPUTE:
@@ -3337,7 +3338,7 @@ void
 radv_compile_nir_shader(LLVMTargetMachineRef tm,
 			struct ac_shader_binary *binary,
 			struct ac_shader_config *config,
-			struct ac_shader_variant_info *shader_info,
+			struct radv_shader_variant_info *shader_info,
 			struct nir_shader *const *nir,
 			int nir_count,
 			const struct ac_nir_compiler_options *options,
@@ -3407,7 +3408,7 @@ radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
 			    struct nir_shader *geom_shader,
 			    struct ac_shader_binary *binary,
 			    struct ac_shader_config *config,
-			    struct ac_shader_variant_info *shader_info,
+			    struct radv_shader_variant_info *shader_info,
 			    const struct ac_nir_compiler_options *options,
 			    bool dump_shader)
 {

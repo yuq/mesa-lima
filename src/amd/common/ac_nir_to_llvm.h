@@ -89,13 +89,6 @@ struct ac_nir_compiler_options {
 	enum chip_class chip_class;
 };
 
-struct ac_userdata_info {
-	int8_t sgpr_idx;
-	uint8_t num_sgprs;
-	bool indirect;
-	uint32_t indirect_offset;
-};
-
 enum ac_ud_index {
 	AC_UD_SCRATCH_RING_OFFSETS = 0,
 	AC_UD_PUSH_CONSTANTS = 1,
@@ -123,96 +116,6 @@ enum ac_ud_index {
 #define INTERP_CENTER 0
 #define INTERP_CENTROID 1
 #define INTERP_SAMPLE 2
-
-/* descriptor index into scratch ring offsets */
-#define RING_SCRATCH 0
-#define RING_ESGS_VS 1
-#define RING_ESGS_GS 2
-#define RING_GSVS_VS 3
-#define RING_GSVS_GS 4
-#define RING_HS_TESS_FACTOR 5
-#define RING_HS_TESS_OFFCHIP 6
-#define RING_PS_SAMPLE_POSITIONS 7
-
-// Match MAX_SETS from radv_descriptor_set.h
-#define AC_UD_MAX_SETS MAX_SETS
-
-struct ac_userdata_locations {
-	struct ac_userdata_info descriptor_sets[AC_UD_MAX_SETS];
-	struct ac_userdata_info shader_data[AC_UD_MAX_UD];
-};
-
-struct ac_vs_output_info {
-	uint8_t	vs_output_param_offset[VARYING_SLOT_MAX];
-	uint8_t clip_dist_mask;
-	uint8_t cull_dist_mask;
-	uint8_t param_exports;
-	bool writes_pointsize;
-	bool writes_layer;
-	bool writes_viewport_index;
-	bool export_prim_id;
-	unsigned pos_exports;
-};
-
-struct ac_es_output_info {
-	uint32_t esgs_itemsize;
-};
-
-struct ac_shader_variant_info {
-	struct ac_userdata_locations user_sgprs_locs;
-	struct ac_shader_info info;
-	unsigned num_user_sgprs;
-	unsigned num_input_sgprs;
-	unsigned num_input_vgprs;
-	unsigned private_mem_vgprs;
-	bool need_indirect_descriptor_sets;
-	struct {
-		struct {
-			struct ac_vs_output_info outinfo;
-			struct ac_es_output_info es_info;
-			unsigned vgpr_comp_cnt;
-			bool as_es;
-			bool as_ls;
-			uint64_t outputs_written;
-		} vs;
-		struct {
-			unsigned num_interp;
-			uint32_t input_mask;
-			uint32_t flat_shaded_mask;
-			bool can_discard;
-			bool early_fragment_test;
-		} fs;
-		struct {
-			unsigned block_size[3];
-		} cs;
-		struct {
-			unsigned vertices_in;
-			unsigned vertices_out;
-			unsigned output_prim;
-			unsigned invocations;
-			unsigned gsvs_vertex_size;
-			unsigned max_gsvs_emit_size;
-			unsigned es_type; /* GFX9: VS or TES */
-		} gs;
-		struct {
-			unsigned tcs_vertices_out;
-			/* Which outputs are actually written */
-			uint64_t outputs_written;
-			/* Which patch outputs are actually written */
-			uint32_t patch_outputs_written;
-
-		} tcs;
-		struct {
-			struct ac_vs_output_info outinfo;
-			struct ac_es_output_info es_info;
-			bool as_es;
-			unsigned primitive_mode;
-			enum gl_tess_spacing spacing;
-			bool ccw;
-			bool point_mode;
-		} tes;
-	};
-};
 
 static inline unsigned radeon_llvm_reg_index_soa(unsigned index, unsigned chan)
 {
