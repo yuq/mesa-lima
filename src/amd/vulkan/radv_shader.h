@@ -53,6 +53,77 @@ struct radv_shader_module {
 	char data[0];
 };
 
+struct radv_vs_variant_key {
+	uint32_t instance_rate_inputs;
+	uint32_t as_es:1;
+	uint32_t as_ls:1;
+	uint32_t export_prim_id:1;
+};
+
+struct radv_tes_variant_key {
+	uint32_t as_es:1;
+	uint32_t export_prim_id:1;
+};
+
+struct radv_tcs_variant_key {
+	struct radv_vs_variant_key vs_key;
+	unsigned primitive_mode;
+	unsigned input_vertices;
+	uint32_t tes_reads_tess_factors:1;
+};
+
+struct radv_fs_variant_key {
+	uint32_t col_format;
+	uint8_t log2_ps_iter_samples;
+	uint8_t log2_num_samples;
+	uint32_t is_int8;
+	uint32_t is_int10;
+	uint32_t multisample : 1;
+};
+
+struct radv_shader_variant_key {
+	union {
+		struct radv_vs_variant_key vs;
+		struct radv_fs_variant_key fs;
+		struct radv_tes_variant_key tes;
+		struct radv_tcs_variant_key tcs;
+	};
+	bool has_multiview_view_index;
+};
+
+struct radv_nir_compiler_options {
+	struct radv_pipeline_layout *layout;
+	struct radv_shader_variant_key key;
+	bool unsafe_math;
+	bool supports_spill;
+	bool clamp_shadow_reference;
+	bool dump_preoptir;
+	enum radeon_family family;
+	enum chip_class chip_class;
+};
+
+enum radv_ud_index {
+	AC_UD_SCRATCH_RING_OFFSETS = 0,
+	AC_UD_PUSH_CONSTANTS = 1,
+	AC_UD_INDIRECT_DESCRIPTOR_SETS = 2,
+	AC_UD_VIEW_INDEX = 3,
+	AC_UD_SHADER_START = 4,
+	AC_UD_VS_VERTEX_BUFFERS = AC_UD_SHADER_START,
+	AC_UD_VS_BASE_VERTEX_START_INSTANCE,
+	AC_UD_VS_LS_TCS_IN_LAYOUT,
+	AC_UD_VS_MAX_UD,
+	AC_UD_PS_SAMPLE_POS_OFFSET = AC_UD_SHADER_START,
+	AC_UD_PS_MAX_UD,
+	AC_UD_CS_GRID_SIZE = AC_UD_SHADER_START,
+	AC_UD_CS_MAX_UD,
+	AC_UD_GS_VS_RING_STRIDE_ENTRIES = AC_UD_VS_MAX_UD,
+	AC_UD_GS_MAX_UD,
+	AC_UD_TCS_OFFCHIP_LAYOUT = AC_UD_VS_MAX_UD,
+	AC_UD_TCS_MAX_UD,
+	AC_UD_TES_OFFCHIP_LAYOUT = AC_UD_SHADER_START,
+	AC_UD_TES_MAX_UD,
+	AC_UD_MAX_UD = AC_UD_TCS_MAX_UD,
+};
 struct radv_shader_info {
 	bool loads_push_constants;
 	uint32_t desc_set_used_mask;
@@ -224,7 +295,7 @@ radv_shader_variant_create(struct radv_device *device,
 			   struct nir_shader *const *shaders,
 			   int shader_count,
 			   struct radv_pipeline_layout *layout,
-			   const struct ac_shader_variant_key *key,
+			   const struct radv_shader_variant_key *key,
 			   void **code_out,
 			   unsigned *code_size_out);
 

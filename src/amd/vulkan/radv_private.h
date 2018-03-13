@@ -1679,13 +1679,14 @@ struct radv_fence {
 
 /* radv_nir_to_llvm.c */
 struct radv_shader_variant_info;
+struct radv_nir_compiler_options;
 
 void radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
 				 struct nir_shader *geom_shader,
 				 struct ac_shader_binary *binary,
 				 struct ac_shader_config *config,
 				 struct radv_shader_variant_info *shader_info,
-				 const struct ac_nir_compiler_options *options,
+				 const struct radv_nir_compiler_options *options,
 				 bool dump_shader);
 
 void radv_compile_nir_shader(LLVMTargetMachineRef tm,
@@ -1694,14 +1695,14 @@ void radv_compile_nir_shader(LLVMTargetMachineRef tm,
 			     struct radv_shader_variant_info *shader_info,
 			     struct nir_shader *const *nir,
 			     int nir_count,
-			     const struct ac_nir_compiler_options *options,
+			     const struct radv_nir_compiler_options *options,
 			     bool dump_shader);
 
 /* radv_shader_info.h */
 struct radv_shader_info;
 
 void radv_nir_shader_info_pass(const struct nir_shader *nir,
-			       const struct ac_nir_compiler_options *options,
+			       const struct radv_nir_compiler_options *options,
 			       struct radv_shader_info *info);
 
 struct radeon_winsys_sem;

@@ -46,7 +46,7 @@
 
 struct radv_shader_context {
 	struct ac_llvm_context ac;
-	const struct ac_nir_compiler_options *options;
+	const struct radv_nir_compiler_options *options;
 	struct radv_shader_variant_info *shader_info;
 	struct ac_shader_abi abi;
 
@@ -2978,7 +2978,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
                                        struct nir_shader *const *shaders,
                                        int shader_count,
                                        struct radv_shader_variant_info *shader_info,
-                                       const struct ac_nir_compiler_options *options,
+                                       const struct radv_nir_compiler_options *options,
 				       bool dump_shader)
 {
 	struct radv_shader_context ctx = {0};
@@ -3296,7 +3296,7 @@ static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
 }
 
 static void
-ac_fill_shader_info(struct radv_shader_variant_info *shader_info, struct nir_shader *nir, const struct ac_nir_compiler_options *options)
+ac_fill_shader_info(struct radv_shader_variant_info *shader_info, struct nir_shader *nir, const struct radv_nir_compiler_options *options)
 {
         switch (nir->info.stage) {
         case MESA_SHADER_COMPUTE:
@@ -3341,7 +3341,7 @@ radv_compile_nir_shader(LLVMTargetMachineRef tm,
 			struct radv_shader_variant_info *shader_info,
 			struct nir_shader *const *nir,
 			int nir_count,
-			const struct ac_nir_compiler_options *options,
+			const struct radv_nir_compiler_options *options,
 			bool dump_shader)
 {
 
@@ -3409,7 +3409,7 @@ radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
 			    struct ac_shader_binary *binary,
 			    struct ac_shader_config *config,
 			    struct radv_shader_variant_info *shader_info,
-			    const struct ac_nir_compiler_options *options,
+			    const struct radv_nir_compiler_options *options,
 			    bool dump_shader)
 {
 	struct radv_shader_context ctx = {0};

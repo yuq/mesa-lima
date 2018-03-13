@@ -444,7 +444,7 @@ shader_variant_create(struct radv_device *device,
 		      struct nir_shader * const *shaders,
 		      int shader_count,
 		      gl_shader_stage stage,
-		      struct ac_nir_compiler_options *options,
+		      struct radv_nir_compiler_options *options,
 		      bool gs_copy_shader,
 		      void **code_out,
 		      unsigned *code_size_out)
@@ -517,11 +517,11 @@ radv_shader_variant_create(struct radv_device *device,
 			   struct nir_shader *const *shaders,
 			   int shader_count,
 			   struct radv_pipeline_layout *layout,
-			   const struct ac_shader_variant_key *key,
+			   const struct radv_shader_variant_key *key,
 			   void **code_out,
 			   unsigned *code_size_out)
 {
-	struct ac_nir_compiler_options options = {0};
+	struct radv_nir_compiler_options options = {0};
 
 	options.layout = layout;
 	if (key)
@@ -541,7 +541,7 @@ radv_create_gs_copy_shader(struct radv_device *device,
 			   unsigned *code_size_out,
 			   bool multiview)
 {
-	struct ac_nir_compiler_options options = {0};
+	struct radv_nir_compiler_options options = {0};
 
 	options.key.has_multiview_view_index = multiview;
 

@@ -1589,7 +1589,7 @@ radv_generate_graphics_pipeline_key(struct radv_pipeline *pipeline,
 }
 
 static void
-radv_fill_shader_keys(struct ac_shader_variant_key *keys,
+radv_fill_shader_keys(struct radv_shader_variant_key *keys,
                       const struct radv_pipeline_key *key,
                       nir_shader **nir)
 {
@@ -1672,7 +1672,7 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 	nir_shader *nir[MESA_SHADER_STAGES] = {0};
 	void *codes[MESA_SHADER_STAGES] = {0};
 	unsigned code_sizes[MESA_SHADER_STAGES] = {0};
-	struct ac_shader_variant_key keys[MESA_SHADER_STAGES] = {{{{0}}}};
+	struct radv_shader_variant_key keys[MESA_SHADER_STAGES] = {{{{0}}}};
 	unsigned char hash[20], gs_copy_hash[20];
 
 	for (unsigned i = 0; i < MESA_SHADER_STAGES; ++i) {
@@ -1787,7 +1787,7 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 	if (device->physical_device->rad_info.chip_class >= GFX9 && modules[MESA_SHADER_TESS_CTRL]) {
 		if (!pipeline->shaders[MESA_SHADER_TESS_CTRL]) {
 			struct nir_shader *combined_nir[] = {nir[MESA_SHADER_VERTEX], nir[MESA_SHADER_TESS_CTRL]};
-			struct ac_shader_variant_key key = keys[MESA_SHADER_TESS_CTRL];
+			struct radv_shader_variant_key key = keys[MESA_SHADER_TESS_CTRL];
 			key.tcs.vs_key = keys[MESA_SHADER_VERTEX].vs;
 			pipeline->shaders[MESA_SHADER_TESS_CTRL] = radv_shader_variant_create(device, modules[MESA_SHADER_TESS_CTRL], combined_nir, 2,
 			                                                                      pipeline->layout,

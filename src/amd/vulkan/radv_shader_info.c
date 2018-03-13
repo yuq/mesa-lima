@@ -288,7 +288,7 @@ gather_info_output_decl(const nir_shader *nir, const nir_variable *var,
 
 void
 radv_nir_shader_info_pass(const struct nir_shader *nir,
-			  const struct ac_nir_compiler_options *options,
+			  const struct radv_nir_compiler_options *options,
 			  struct radv_shader_info *info)
 {
 	struct nir_function *func =
