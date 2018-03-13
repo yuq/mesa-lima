@@ -124,15 +124,6 @@ Value *PMINUD(Value* a, Value* b);
 Value *VABSPS(Value* a);
 Value *FMADDPS(Value* a, Value* b, Value* c);
 
-// LLVM removed VPCMPGTD x86 intrinsic.  This emulates that behavior
-Value *VPCMPGTD(Value* a, Value* b)
-{
-    Value* vIndexMask = ICMP_UGT(a,b);
-
-    // need to set the high bit for x86 intrinsic masks
-    return S_EXT(vIndexMask,VectorType::get(mInt32Ty,JM()->mVWidth));
-}
-
 Value *ICLAMP(Value* src, Value* low, Value* high, const llvm::Twine& name = "");
 Value *FCLAMP(Value* src, Value* low, Value* high);
 Value *FCLAMP(Value* src, float low, float high);
@@ -140,10 +131,8 @@ Value *FCLAMP(Value* src, float low, float high);
 CallInst *PRINT(const std::string &printStr);
 CallInst *PRINT(const std::string &printStr,const std::initializer_list<Value*> &printArgs);
 
-Value* POPCNT(Value* a);
 Value* VPOPCNT(Value* a);
 
-Value* DEBUGTRAP();
 Value* INT3() { return DEBUGTRAP(); }
 
 

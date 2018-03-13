@@ -35,15 +35,27 @@
 //============================================================================
 // Auto-generated ${comment}
 //============================================================================
-
 %for func in functions:
+<%argList = ', '.join(func['args'])%>\
 ${func['decl']}
 {
 %if isX86:
-    Function *pFunc = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::${func['intrin']});
-    return CALL(pFunc, std::initializer_list<Value*>{${func['args']}}, name);
+    Function * pFunc = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::${func['intrin']});
+    return CALL(pFunc, std::initializer_list<Value*>{${argList}}, name);
+%elif isIntrin:
+    %if len(func['types']) != 0:
+    SmallVector<Type*, ${len(func['types'])}> args;
+    %for arg in func['types']:
+    args.push_back(${arg}->getType());
+    %endfor
+    Function * pFunc = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::${func['intrin']}, args);
+    return CALL(pFunc, std::initializer_list<Value*>{${argList}}, name);
+    %else:
+    Function * pFunc = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::${func['intrin']});
+    return CALL(pFunc, std::initializer_list<Value*>{${argList}}, name);
+    %endif
 %else:
-    return IRB()->${func['intrin']}(${func['args']});
+    return IRB()->${func['intrin']}(${argList});
 %endif
 }
 

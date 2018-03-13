@@ -48,3 +48,14 @@ gen_builder_x86_hpp = custom_target(
   depend_files : swr_gen_builder_depends,
 )
 
+gen_builder_intrin_hpp = custom_target(
+  'gen_builder_intrin.hpp',
+  input : '../codegen/gen_llvm_ir_macros.py',
+  output : 'gen_builder_intrin.hpp',
+  command : [
+    prog_python2, '@INPUT0@', '--gen_intrin_h', '--output', '@OUTPUT@',
+    '--output-dir', '@OUTDIR@'
+  ],
+  depend_files : swr_gen_builder_depends,
+)
+

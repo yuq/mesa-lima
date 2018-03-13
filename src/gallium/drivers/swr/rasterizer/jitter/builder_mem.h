@@ -60,8 +60,6 @@ LoadInst *LOADV(Value *BasePtr, const std::initializer_list<Value*> &offset, con
 StoreInst *STORE(Value *Val, Value *BasePtr, const std::initializer_list<uint32_t> &offset);
 StoreInst *STOREV(Value *Val, Value *BasePtr, const std::initializer_list<Value*> &offset);
 
-Value *MASKLOADD(Value* src, Value* mask);
-
 void Gather4(const SWR_FORMAT format, Value* pSrcBase, Value* byteOffsets,
     Value* mask, Value* vGatherComponents[], bool bPackedOutput, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
 
@@ -86,9 +84,6 @@ void SCATTERPS(Value* pDst, Value* vSrc, Value* vOffsets, Value* vMask);
 
 void Shuffle8bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInput, Value* vGatherOutput[], bool bPackedOutput);
 void Shuffle16bpcGather4(const SWR_FORMAT_INFO &info, Value* vGatherInput[], Value* vGatherOutput[], bool bPackedOutput);
-
-Value* STACKSAVE();
-void STACKRESTORE(Value* pSaved);
 
 // Static stack allocations for scatter operations
 Value* pScatterStackSrc{ nullptr };

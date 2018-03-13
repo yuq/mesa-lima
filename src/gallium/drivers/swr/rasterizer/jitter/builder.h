@@ -92,6 +92,7 @@ namespace SwrJit
 
 #include "gen_builder.hpp"
 #include "gen_builder_x86.hpp"
+#include "gen_builder_intrin.hpp"
 #include "builder_misc.h"
 #include "builder_math.h"
 #include "builder_mem.h"

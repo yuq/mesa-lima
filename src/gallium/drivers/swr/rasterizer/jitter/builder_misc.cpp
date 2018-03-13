@@ -335,13 +335,6 @@ namespace SwrJit
         return CALLA(Callee, args);
     }
 
-    //////////////////////////////////////////////////////////////////////////
-    Value *Builder::DEBUGTRAP()
-    {
-        Function *func = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::debugtrap);
-        return CALL(func);
-    }
-
     Value *Builder::VRCP(Value *va, const llvm::Twine& name)
     {
         return FDIV(VIMMED1(1.0f), va, name);  // 1 / a
@@ -839,12 +832,6 @@ namespace SwrJit
             vOut = FADD(FMUL(a, b), c);
         }
         return vOut;
-    }
-
-    Value* Builder::POPCNT(Value* a)
-    {
-        Function* pCtPop = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::ctpop, { a->getType() });
-        return CALL(pCtPop, std::initializer_list<Value*>{a});
     }
 
     //////////////////////////////////////////////////////////////////////////

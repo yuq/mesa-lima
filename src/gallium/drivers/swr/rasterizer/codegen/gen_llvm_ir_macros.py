@@ -42,32 +42,40 @@ inst_aliases = {
 }
 
 intrinsics = [
-        ['VGATHERPD', 'x86_avx2_gather_d_pd_256', ['src', 'pBase', 'indices', 'mask', 'scale']],
-        ['VGATHERPS', 'x86_avx2_gather_d_ps_256', ['src', 'pBase', 'indices', 'mask', 'scale']],
-        ['VGATHERPS_16', 'x86_avx512_gather_dps_512', ['src', 'pBase', 'indices', 'mask', 'scale']],
-        ['VGATHERDD', 'x86_avx2_gather_d_d_256', ['src', 'pBase', 'indices', 'mask', 'scale']],
-        ['VGATHERDD_16', 'x86_avx512_gather_dpi_512', ['src', 'pBase', 'indices', 'mask', 'scale']],
-        ['VSQRTPS', 'x86_avx_sqrt_ps_256', ['a']],
-        ['VRSQRTPS', 'x86_avx_rsqrt_ps_256', ['a']],
-        ['VRCPPS', 'x86_avx_rcp_ps_256', ['a']],
-        ['VMINPS', 'x86_avx_min_ps_256', ['a', 'b']],
-        ['VMAXPS', 'x86_avx_max_ps_256', ['a', 'b']],
-        ['VROUND', 'x86_avx_round_ps_256', ['a', 'rounding']],
-        ['BEXTR_32', 'x86_bmi_bextr_32', ['src', 'control']],
-        ['VPSHUFB', 'x86_avx2_pshuf_b', ['a', 'b']],
-        ['VPERMD', 'x86_avx2_permd', ['a', 'idx']],
-        ['VPERMPS', 'x86_avx2_permps', ['idx', 'a']],
-        ['VCVTPD2PS', 'x86_avx_cvt_pd2_ps_256', ['a']],
-        ['VCVTPH2PS', 'x86_vcvtph2ps_256', ['a']],
-        ['VCVTPS2PH', 'x86_vcvtps2ph_256', ['a', 'round']],
-        ['VHSUBPS', 'x86_avx_hsub_ps_256', ['a', 'b']],
-        ['VPTESTC', 'x86_avx_ptestc_256', ['a', 'b']],
-        ['VPTESTZ', 'x86_avx_ptestz_256', ['a', 'b']],
-        ['VFMADDPS', 'x86_fma_vfmadd_ps_256', ['a', 'b', 'c']],
-        ['VMOVMSKPS', 'x86_avx_movmsk_ps_256', ['a']],
-        ['INTERRUPT', 'x86_int', ['a']],
-        ['VPHADDD', 'x86_avx2_phadd_d', ['a', 'b']],
-    ]
+    ['VGATHERPD', 'x86_avx2_gather_d_pd_256', ['src', 'pBase', 'indices', 'mask', 'scale']],
+    ['VGATHERPS', 'x86_avx2_gather_d_ps_256', ['src', 'pBase', 'indices', 'mask', 'scale']],
+    ['VGATHERPS_16', 'x86_avx512_gather_dps_512', ['src', 'pBase', 'indices', 'mask', 'scale']],
+    ['VGATHERDD', 'x86_avx2_gather_d_d_256', ['src', 'pBase', 'indices', 'mask', 'scale']],
+    ['VGATHERDD_16', 'x86_avx512_gather_dpi_512', ['src', 'pBase', 'indices', 'mask', 'scale']],
+    ['VRCPPS', 'x86_avx_rcp_ps_256', ['a']],
+    ['VROUND', 'x86_avx_round_ps_256', ['a', 'rounding']],
+    ['BEXTR_32', 'x86_bmi_bextr_32', ['src', 'control']],
+    ['VPSHUFB', 'x86_avx2_pshuf_b', ['a', 'b']],
+    ['VPERMD', 'x86_avx2_permd', ['a', 'idx']],
+    ['VPERMPS', 'x86_avx2_permps', ['idx', 'a']],
+    ['VCVTPD2PS', 'x86_avx_cvt_pd2_ps_256', ['a']],
+    ['VCVTPH2PS', 'x86_vcvtph2ps_256', ['a']],
+    ['VCVTPS2PH', 'x86_vcvtps2ph_256', ['a', 'round']],
+    ['VHSUBPS', 'x86_avx_hsub_ps_256', ['a', 'b']],
+    ['VPTESTC', 'x86_avx_ptestc_256', ['a', 'b']],
+    ['VPTESTZ', 'x86_avx_ptestz_256', ['a', 'b']],
+    ['VFMADDPS', 'x86_fma_vfmadd_ps_256', ['a', 'b', 'c']],
+    ['VMOVMSKPS', 'x86_avx_movmsk_ps_256', ['a']],
+    ['INTERRUPT', 'x86_int', ['a']],
+    ['VPHADDD', 'x86_avx2_phadd_d', ['a', 'b']],
+]
+
+llvm_intrinsics = [
+    ['CTTZ', 'cttz', ['a', 'flag'], ['a']],
+    ['CTLZ', 'ctlz', ['a', 'flag'], ['a']],
+    ['VSQRTPS', 'sqrt', ['a'], ['a']],
+    ['STACKSAVE', 'stacksave', [], []],
+    ['STACKRESTORE', 'stackrestore', ['a'], []],
+    ['VMINPS', 'minnum', ['a', 'b'], ['a']],
+    ['VMAXPS', 'maxnum', ['a', 'b'], ['a']],
+    ['DEBUGTRAP', 'debugtrap', [], []],
+    ['POPCNT', 'ctpop', ['a'], ['a']]
+]
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 template = os.path.join(this_dir, 'templates', 'gen_builder.hpp')
@@ -195,7 +203,7 @@ def generate_gen_h(functions, output_dir):
         templfuncs.append({
             'decl'      : decl,
             'intrin'    : func['name'],
-            'args'      : ', '.join(func['arg_names']),
+            'args'      : func['arg_names'],
         })
 
     MakoTemplateWriter.to_file(
@@ -205,7 +213,7 @@ def generate_gen_h(functions, output_dir):
         comment='Builder IR Wrappers',
         filename=filename,
         functions=templfuncs,
-        isX86=False)
+        isX86=False, isIntrin=False)
 
 '''
     Auto-generates macros for LLVM IR
@@ -221,8 +229,8 @@ def generate_x86_h(output_dir):
 
         functions.append({
             'decl'      : 'Value* %s(%s, const llvm::Twine& name = "")' % (inst[0], declargs),
-            'args'      : ', '.join(inst[2]),
             'intrin'    : inst[1],
+            'args'      : inst[2],
         })
 
     MakoTemplateWriter.to_file(
@@ -232,8 +240,36 @@ def generate_x86_h(output_dir):
         comment='x86 intrinsics',
         filename=filename,
         functions=functions,
-        isX86=True)
+        isX86=True, isIntrin=False)
 
+def generate_intrin_h(output_dir):
+    filename = 'gen_builder_intrin.hpp'
+    output_filename = os.path.join(output_dir, filename)
+
+    functions = []
+    for inst in llvm_intrinsics:
+        #print('Inst: %s, x86: %s numArgs: %d' % (inst[0], inst[1], len(inst[2])))
+        if len(inst[2]) != 0:
+            declargs = 'Value* ' + ', Value* '.join(inst[2])
+            decl = 'Value* %s(%s, const llvm::Twine& name = "")' % (inst[0], declargs)
+        else:
+            decl = 'Value* %s(const llvm::Twine& name = "")' % (inst[0])
+
+        functions.append({
+            'decl'      : decl,
+            'intrin'    : inst[1],
+            'args'      : inst[2],
+            'types'     : inst[3],
+        })
+
+    MakoTemplateWriter.to_file(
+        template,
+        output_filename,
+        cmdline=sys.argv,
+        comment='llvm intrinsics',
+        filename=filename,
+        functions=functions,
+        isX86=False, isIntrin=True)
 '''
     Function which is invoked when this script is started from a command line.
     Will present and consume a set of arguments which will tell this script how
@@ -247,6 +283,7 @@ def main():
     parser.add_argument('--output-dir', '-o', action='store', dest='output', help='Path to output directory', required=True)
     parser.add_argument('--gen_h', help='Generate builder_gen.h', action='store_true', default=False)
     parser.add_argument('--gen_x86_h', help='Generate x86 intrinsics. No input is needed.', action='store_true', default=False)
+    parser.add_argument('--gen_intrin_h', help='Generate llvm intrinsics. No input is needed.', action='store_true', default=False)
     args = parser.parse_args()
 
     if not os.path.exists(args.output):
@@ -263,6 +300,9 @@ def main():
 
     if args.gen_x86_h:
         generate_x86_h(args.output)
+
+    if args.gen_intrin_h:
+        generate_intrin_h(args.output)
 
 if __name__ == '__main__':
     main()

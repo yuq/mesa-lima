@@ -129,30 +129,6 @@ namespace SwrJit
         return STORE(val, GEPA(basePtr, valIndices));
     }
 
-    //////////////////////////////////////////////////////////////////////////
-    /// @brief Generate an i32 masked load operation in LLVM IR.  If not  
-    /// supported on the underlying platform, emulate it with float masked load
-    /// @param src - base address pointer for the load
-    /// @param vMask - SIMD wide mask that controls whether to access memory load 0
-    Value *Builder::MASKLOADD(Value* src, Value* mask)
-    {
-        Value* vResult;
-        // use avx2 gather instruction is available
-        if (JM()->mArch.AVX2())
-        {
-            Function *func = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::x86_avx2_maskload_d_256);
-            vResult = CALL(func, { src,mask });
-        }
-        else
-        {
-            // maskload intrinsic expects integer mask operand in llvm >= 3.8
-            mask = BITCAST(mask, VectorType::get(mInt32Ty, mVWidth));
-            Function *func = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::x86_avx_maskload_ps_256);
-            vResult = BITCAST(CALL(func, { src,mask }), VectorType::get(mInt32Ty, mVWidth));
-        }
-        return vResult;
-    }
-
     Value* Builder::OFFSET_TO_NEXT_COMPONENT(Value* base, Constant *offset)
     {
         return GEP(base, offset);
@@ -390,9 +366,7 @@ namespace SwrJit
     /// @param pVecPassthru - SIMD wide vector of values to load when lane is inactive
     Value* Builder::GATHER_PTR(Value* pVecSrcPtr, Value* pVecMask, Value* pVecPassthru)
     {
-        Function* pMaskedGather = llvm::Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::masked_gather, { pVecPassthru->getType(), pVecSrcPtr->getType() });
-
-        return CALL(pMaskedGather, { pVecSrcPtr, C(0), pVecMask, pVecPassthru });
+        return MASKED_GATHER(pVecSrcPtr, 4, pVecMask, pVecPassthru);
     }
 
     void Builder::Gather4(const SWR_FORMAT format, Value* pSrcBase, Value* byteOffsets,
@@ -791,14 +765,11 @@ namespace SwrJit
 
         Value* pMask = VMOVMSKPS(BITCAST(vMask, mSimdFP32Ty));
 
-        // Get cttz function
-        Function* pfnCttz = Intrinsic::getDeclaration(mpJitMgr->mpCurrentModule, Intrinsic::cttz, { mInt32Ty });
-
         // Setup loop basic block
         BasicBlock* pLoop = BasicBlock::Create(mpJitMgr->mContext, "Scatter_Loop", pFunc);
 
         // compute first set bit
-        Value* pIndex = CALL(pfnCttz, { pMask, C(false) });
+        Value* pIndex = CTTZ(pMask, C(false));
 
         Value* pIsUndef = ICMP_EQ(pIndex, C(32));
 
@@ -835,7 +806,7 @@ namespace SwrJit
         Value* pNewMask = AND(pMaskPhi, NOT(SHL(C(1), pIndexPhi)));
 
         // Terminator
-        Value* pNewIndex = CALL(pfnCttz, { pNewMask, C(false) });
+        Value* pNewIndex = CTTZ(pNewMask, C(false));
 
         pIsUndef = ICMP_EQ(pNewIndex, C(32));
         COND_BR(pIsUndef, pPostLoop, pLoop);
@@ -846,21 +817,6 @@ namespace SwrJit
 
         // Move builder to beginning of post loop
         IRB()->SetInsertPoint(pPostLoop, pPostLoop->begin());
-    }
-
-    //////////////////////////////////////////////////////////////////////////
-    /// @brief save/restore stack, providing ability to push/pop the stack and 
-    ///        reduce overall stack requirements for temporary stack use
-    Value* Builder::STACKSAVE()
-    {
-        Function* pfnStackSave = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::stacksave);
-        return CALLA(pfnStackSave);
-    }
-
-    void Builder::STACKRESTORE(Value* pSaved)
-    {
-        Function* pfnStackRestore = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::stackrestore);
-        CALL(pfnStackRestore, std::initializer_list<Value*>{pSaved});
     }
 
 }

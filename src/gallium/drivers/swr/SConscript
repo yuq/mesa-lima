@@ -85,6 +85,15 @@ Depends('rasterizer/jitter/gen_builder.hpp',
         swrroot + 'rasterizer/codegen/templates/gen_builder.hpp')
 
 env.CodeGenerate(
+    target = 'rasterizer/jitter/gen_builder_intrin.hpp',
+    script = swrroot + 'rasterizer/codegen/gen_llvm_ir_macros.py',
+    source = '',
+    command = python_cmd + ' $SCRIPT --output ' + bldroot + '/rasterizer/jitter --gen_intrin_h'
+)
+Depends('rasterizer/jitter/gen_builder.hpp',
+        swrroot + 'rasterizer/codegen/templates/gen_builder.hpp')
+
+env.CodeGenerate(
     target = './gen_swr_context_llvm.h',
     script = swrroot + 'rasterizer/codegen/gen_llvm_types.py',
     source = 'swr_context.h',

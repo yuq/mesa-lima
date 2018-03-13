@@ -300,7 +300,7 @@ endif
 libmesaswr = static_library(
   'mesaswr',
   [files_swr_mesa, files_swr_common, gen_knobs_h, gen_knobs_cpp,
-   gen_builder_hpp, gen_builder_x86_hpp],
+   gen_builder_hpp, gen_builder_x86_hpp, gen_builder_intrin_hpp],
   cpp_args : [cpp_vis_args, swr_cpp_args, swr_avx_args, swr_arch_defines],
   include_directories : [inc_common, swr_incs],
   dependencies : dep_llvm,
