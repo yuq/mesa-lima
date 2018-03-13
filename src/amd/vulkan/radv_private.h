@@ -1697,6 +1697,13 @@ void radv_compile_nir_shader(LLVMTargetMachineRef tm,
 			     const struct ac_nir_compiler_options *options,
 			     bool dump_shader);
 
+/* radv_shader_info.h */
+struct radv_shader_info;
+
+void radv_nir_shader_info_pass(const struct nir_shader *nir,
+			       const struct ac_nir_compiler_options *options,
+			       struct radv_shader_info *info);
+
 struct radeon_winsys_sem;
 
 #define RADV_DEFINE_HANDLE_CASTS(__radv_type, __VkType)		\

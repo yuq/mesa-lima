@@ -383,7 +383,7 @@ radv_fill_shader_variant(struct radv_device *device,
 	case MESA_SHADER_FRAGMENT:
 		break;
 	case MESA_SHADER_COMPUTE: {
-		struct ac_shader_info *info = &variant->info.info;
+		struct radv_shader_info *info = &variant->info.info;
 		variant->rsrc2 |=
 			S_00B84C_TGID_X_EN(info->cs.uses_block_id[0]) |
 			S_00B84C_TGID_Y_EN(info->cs.uses_block_id[1]) |
@@ -401,7 +401,7 @@ radv_fill_shader_variant(struct radv_device *device,
 
 	if (device->physical_device->rad_info.chip_class >= GFX9 &&
 	    stage == MESA_SHADER_GEOMETRY) {
-		struct ac_shader_info *info = &variant->info.info;
+		struct radv_shader_info *info = &variant->info.info;
 		unsigned es_type = variant->info.gs.es_type;
 		unsigned gs_vgpr_comp_cnt, es_vgpr_comp_cnt;
 

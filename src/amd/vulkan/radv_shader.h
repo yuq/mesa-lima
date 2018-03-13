@@ -53,6 +53,42 @@ struct radv_shader_module {
 	char data[0];
 };
 
+struct radv_shader_info {
+	bool loads_push_constants;
+	uint32_t desc_set_used_mask;
+	bool needs_multiview_view_index;
+	bool uses_invocation_id;
+	bool uses_prim_id;
+	struct {
+		uint8_t input_usage_mask[VERT_ATTRIB_MAX];
+		uint8_t output_usage_mask[VARYING_SLOT_VAR31 + 1];
+		bool has_vertex_buffers; /* needs vertex buffers and base/start */
+		bool needs_draw_id;
+		bool needs_instance_id;
+	} vs;
+	struct {
+		uint8_t output_usage_mask[VARYING_SLOT_VAR31 + 1];
+	} tes;
+	struct {
+		bool force_persample;
+		bool needs_sample_positions;
+		bool uses_input_attachments;
+		bool writes_memory;
+		bool writes_z;
+		bool writes_stencil;
+		bool writes_sample_mask;
+		bool has_pcoord;
+		bool prim_id_input;
+		bool layer_input;
+	} ps;
+	struct {
+		bool uses_grid_size;
+		bool uses_block_id[3];
+		bool uses_thread_id[3];
+		bool uses_local_invocation_idx;
+	} cs;
+};
+
 struct radv_userdata_info {
 	int8_t sgpr_idx;
 	uint8_t num_sgprs;
@@ -83,7 +119,7 @@ struct radv_es_output_info {
 
 struct radv_shader_variant_info {
 	struct radv_userdata_locations user_sgprs_locs;
-	struct ac_shader_info info;
+	struct radv_shader_info info;
 	unsigned num_user_sgprs;
 	unsigned num_input_sgprs;
 	unsigned num_input_vgprs;

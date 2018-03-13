@@ -3007,7 +3007,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	memset(shader_info, 0, sizeof(*shader_info));
 
 	for(int i = 0; i < shader_count; ++i)
-		ac_nir_shader_info_pass(shaders[i], options, &shader_info->info);
+		radv_nir_shader_info_pass(shaders[i], options, &shader_info->info);
 
 	for (i = 0; i < RADV_UD_MAX_SETS; i++)
 		shader_info->user_sgprs_locs.descriptor_sets[i].sgpr_idx = -1;
