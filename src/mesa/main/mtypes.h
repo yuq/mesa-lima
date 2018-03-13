@@ -1861,9 +1861,6 @@ struct gl_transform_feedback_buffer
 /** Post-link transform feedback info. */
 struct gl_transform_feedback_info
 {
-   /* Was xfb enabled via the api or in shader layout qualifiers */
-   bool api_enabled;
-
    unsigned NumOutputs;
 
    /* Bitmask of active buffer indices. */
