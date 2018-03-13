@@ -753,14 +753,8 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog,
    st_nir_assign_uniform_locations(st->ctx, prog, shader_program,
                                    &nir->uniforms, &nir->num_uniforms);
 
-   /* Below is a quick hack so that uniform lowering only runs on radeonsi
-    * (the only NIR backend that currently supports tess) once we enable
-    * uniform packing support we will just use
-    * ctx->Const.PackedDriverUniformStorage for this check.
-    */
-   if (screen->get_shader_param(screen, PIPE_SHADER_TESS_CTRL,
-                                PIPE_SHADER_CAP_MAX_INSTRUCTIONS) > 0) {
-      NIR_PASS_V(nir, nir_lower_io, nir_var_uniform, type_size,
+   if (st->ctx->Const.PackedDriverUniformStorage) {
+      NIR_PASS_V(nir, nir_lower_io, nir_var_uniform, st_glsl_type_dword_size,
                  (nir_lower_io_options)0);
       NIR_PASS_V(nir, st_nir_lower_uniforms_to_ubo, prog->Parameters);
    }
