@@ -573,6 +573,7 @@ struct radv_queue {
 	enum radeon_ctx_priority                     priority;
 	uint32_t queue_family_index;
 	int queue_idx;
+	VkDeviceQueueCreateFlags flags;
 
 	uint32_t scratch_size;
 	uint32_t compute_scratch_size;
