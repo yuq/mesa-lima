@@ -42,6 +42,7 @@
 #define FB_BUFFER_OFFSET		0x1000
 #define FB_BUFFER_SIZE			2048
 #define IT_SCALING_TABLE_SIZE		992
+#define VP9_PROBS_TABLE_SIZE		(RDECODE_VP9_PROBS_DATA_SIZE + 256)
 #define RDECODE_SESSION_CONTEXT_SIZE	(128 * 1024)
 
 #define RDECODE_GPCOM_VCPU_CMD		0x2070c
@@ -68,9 +69,10 @@ struct radeon_decoder {
 	void				*msg;
 	uint32_t			*fb;
 	uint8_t				*it;
+	uint8_t				*probs;
 	void				*bs_ptr;
 
-	struct rvid_buffer		msg_fb_it_buffers[NUM_BUFFERS];
+	struct rvid_buffer		msg_fb_it_probs_buffers[NUM_BUFFERS];
 	struct rvid_buffer		bs_buffers[NUM_BUFFERS];
 	struct rvid_buffer		dpb;
 	struct rvid_buffer		ctx;
@@ -807,14 +809,20 @@ static bool have_it(struct radeon_decoder *dec)
 		dec->stream_type == RDECODE_CODEC_H265;
 }
 
+/* do the codec needs an probs buffer? */
+static bool have_probs(struct radeon_decoder *dec)
+{
+	return dec->stream_type == RDECODE_CODEC_VP9;
+}
+
 /* map the next available message/feedback/itscaling buffer */
-static void map_msg_fb_it_buf(struct radeon_decoder *dec)
+static void map_msg_fb_it_probs_buf(struct radeon_decoder *dec)
 {
 	struct rvid_buffer* buf;
 	uint8_t *ptr;
 
 	/* grab the current message/feedback buffer */
-	buf = &dec->msg_fb_it_buffers[dec->cur_buffer];
+	buf = &dec->msg_fb_it_probs_buffers[dec->cur_buffer];
 
 	/* and map it for CPU access */
 	ptr = dec->ws->buffer_map(buf->res->buf, dec->cs, PIPE_TRANSFER_WRITE);
@@ -825,6 +833,8 @@ static void map_msg_fb_it_buf(struct radeon_decoder *dec)
 	dec->fb = (uint32_t *)(ptr + FB_BUFFER_OFFSET);
 	if (have_it(dec))
 		dec->it = (uint8_t *)(ptr + FB_BUFFER_OFFSET + FB_BUFFER_SIZE);
+	else if (have_probs(dec))
+		dec->probs = (uint8_t *)(ptr + FB_BUFFER_OFFSET + FB_BUFFER_SIZE);
 }
 
 /* unmap and send a message command to the VCPU */
@@ -837,13 +847,14 @@ static void send_msg_buf(struct radeon_decoder *dec)
 		return;
 
 	/* grab the current message buffer */
-	buf = &dec->msg_fb_it_buffers[dec->cur_buffer];
+	buf = &dec->msg_fb_it_probs_buffers[dec->cur_buffer];
 
 	/* unmap the buffer */
 	dec->ws->buffer_unmap(buf->res->buf);
 	dec->msg = NULL;
 	dec->fb = NULL;
 	dec->it = NULL;
+	dec->probs = NULL;
 
 	if (dec->sessionctx.res)
 		send_cmd(dec, RDECODE_CMD_SESSION_CONTEXT_BUFFER,
@@ -1046,7 +1057,7 @@ static void radeon_dec_destroy(struct pipe_video_codec *decoder)
 
 	assert(decoder);
 
-	map_msg_fb_it_buf(dec);
+	map_msg_fb_it_probs_buf(dec);
 	rvcn_dec_message_destroy(dec);
 	send_msg_buf(dec);
 
@@ -1055,7 +1066,7 @@ static void radeon_dec_destroy(struct pipe_video_codec *decoder)
 	dec->ws->cs_destroy(dec->cs);
 
 	for (i = 0; i < NUM_BUFFERS; ++i) {
-		si_vid_destroy_buffer(&dec->msg_fb_it_buffers[i]);
+		si_vid_destroy_buffer(&dec->msg_fb_it_probs_buffers[i]);
 		si_vid_destroy_buffer(&dec->bs_buffers[i]);
 	}
 
@@ -1153,20 +1164,20 @@ static void radeon_dec_end_frame(struct pipe_video_codec *decoder,
 {
 	struct radeon_decoder *dec = (struct radeon_decoder*)decoder;
 	struct pb_buffer *dt;
-	struct rvid_buffer *msg_fb_it_buf, *bs_buf;
+	struct rvid_buffer *msg_fb_it_probs_buf, *bs_buf;
 
 	assert(decoder);
 
 	if (!dec->bs_ptr)
 		return;
 
-	msg_fb_it_buf = &dec->msg_fb_it_buffers[dec->cur_buffer];
+	msg_fb_it_probs_buf = &dec->msg_fb_it_probs_buffers[dec->cur_buffer];
 	bs_buf = &dec->bs_buffers[dec->cur_buffer];
 
 	memset(dec->bs_ptr, 0, align(dec->bs_size, 128) - dec->bs_size);
 	dec->ws->buffer_unmap(bs_buf->res->buf);
 
-	map_msg_fb_it_buf(dec);
+	map_msg_fb_it_probs_buf(dec);
 	dt = rvcn_dec_message_decode(dec, target, picture);
 	rvcn_dec_message_feedback(dec);
 	send_msg_buf(dec);
@@ -1180,10 +1191,13 @@ static void radeon_dec_end_frame(struct pipe_video_codec *decoder,
 		 0, RADEON_USAGE_READ, RADEON_DOMAIN_GTT);
 	send_cmd(dec, RDECODE_CMD_DECODING_TARGET_BUFFER, dt, 0,
 		 RADEON_USAGE_WRITE, RADEON_DOMAIN_VRAM);
-	send_cmd(dec, RDECODE_CMD_FEEDBACK_BUFFER, msg_fb_it_buf->res->buf,
+	send_cmd(dec, RDECODE_CMD_FEEDBACK_BUFFER, msg_fb_it_probs_buf->res->buf,
 		 FB_BUFFER_OFFSET, RADEON_USAGE_WRITE, RADEON_DOMAIN_GTT);
 	if (have_it(dec))
-		send_cmd(dec, RDECODE_CMD_IT_SCALING_TABLE_BUFFER, msg_fb_it_buf->res->buf,
+		send_cmd(dec, RDECODE_CMD_IT_SCALING_TABLE_BUFFER, msg_fb_it_probs_buf->res->buf,
+			 FB_BUFFER_OFFSET + FB_BUFFER_SIZE, RADEON_USAGE_READ, RADEON_DOMAIN_GTT);
+	else if (have_probs(dec))
+		send_cmd(dec, RDECODE_CMD_PROB_TBL_BUFFER, msg_fb_it_probs_buf->res->buf,
 			 FB_BUFFER_OFFSET + FB_BUFFER_SIZE, RADEON_USAGE_READ, RADEON_DOMAIN_GTT);
 	set_reg(dec, RDECODE_ENGINE_CNTL, 1);
 
@@ -1272,12 +1286,14 @@ struct pipe_video_codec *radeon_create_decoder(struct pipe_context *context,
 		dec->render_pic_list[i] = NULL;
 	bs_buf_size = width * height * (512 / (16 * 16));
 	for (i = 0; i < NUM_BUFFERS; ++i) {
-		unsigned msg_fb_it_size = FB_BUFFER_OFFSET + FB_BUFFER_SIZE;
+		unsigned msg_fb_it_probs_size = FB_BUFFER_OFFSET + FB_BUFFER_SIZE;
 		if (have_it(dec))
-			msg_fb_it_size += IT_SCALING_TABLE_SIZE;
+			msg_fb_it_probs_size += IT_SCALING_TABLE_SIZE;
+		else if (have_probs(dec))
+			msg_fb_it_probs_size += VP9_PROBS_TABLE_SIZE;
 		/* use vram to improve performance, workaround an unknown bug */
-		if (!si_vid_create_buffer(dec->screen, &dec->msg_fb_it_buffers[i],
-                                          msg_fb_it_size, PIPE_USAGE_DEFAULT)) {
+		if (!si_vid_create_buffer(dec->screen, &dec->msg_fb_it_probs_buffers[i],
+                                          msg_fb_it_probs_size, PIPE_USAGE_DEFAULT)) {
 			RVID_ERR("Can't allocated message buffers.\n");
 			goto error;
 		}
@@ -1288,7 +1304,7 @@ struct pipe_video_codec *radeon_create_decoder(struct pipe_context *context,
 			goto error;
 		}
 
-		si_vid_clear_buffer(context, &dec->msg_fb_it_buffers[i]);
+		si_vid_clear_buffer(context, &dec->msg_fb_it_probs_buffers[i]);
 		si_vid_clear_buffer(context, &dec->bs_buffers[i]);
 	}
 
@@ -1318,7 +1334,7 @@ struct pipe_video_codec *radeon_create_decoder(struct pipe_context *context,
 	}
 	si_vid_clear_buffer(context, &dec->sessionctx);
 
-	map_msg_fb_it_buf(dec);
+	map_msg_fb_it_probs_buf(dec);
 	rvcn_dec_message_create(dec);
 	send_msg_buf(dec);
 	r = flush(dec, 0);
@@ -1333,7 +1349,7 @@ error:
 	if (dec->cs) dec->ws->cs_destroy(dec->cs);
 
 	for (i = 0; i < NUM_BUFFERS; ++i) {
-		si_vid_destroy_buffer(&dec->msg_fb_it_buffers[i]);
+		si_vid_destroy_buffer(&dec->msg_fb_it_probs_buffers[i]);
 		si_vid_destroy_buffer(&dec->bs_buffers[i]);
 	}
 
