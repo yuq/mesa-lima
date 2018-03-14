@@ -61,8 +61,9 @@ intrinsics = [
     ['VPTESTZ', 'x86_avx_ptestz_256', ['a', 'b']],
     ['VFMADDPS', 'x86_fma_vfmadd_ps_256', ['a', 'b', 'c']],
     ['VMOVMSKPS', 'x86_avx_movmsk_ps_256', ['a']],
-    ['INTERRUPT', 'x86_int', ['a']],
     ['VPHADDD', 'x86_avx2_phadd_d', ['a', 'b']],
+    ['PDEP32', 'x86_bmi_pdep_32', ['a', 'b']],
+    ['RDTSC', 'x86_rdtsc', []],
 ]
 
 llvm_intrinsics = [
@@ -74,7 +75,11 @@ llvm_intrinsics = [
     ['VMINPS', 'minnum', ['a', 'b'], ['a']],
     ['VMAXPS', 'maxnum', ['a', 'b'], ['a']],
     ['DEBUGTRAP', 'debugtrap', [], []],
-    ['POPCNT', 'ctpop', ['a'], ['a']]
+    ['POPCNT', 'ctpop', ['a'], ['a']],
+    ['LOG2', 'log2', ['a'], ['a']],
+    ['FABS', 'fabs', ['a'], ['a']],
+    ['EXP2', 'exp2', ['a'], ['a']],
+    ['POW', 'pow', ['a', 'b'], ['a', 'b']]
 ]
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
@@ -225,10 +230,14 @@ def generate_x86_h(output_dir):
     functions = []
     for inst in intrinsics:
         #print('Inst: %s, x86: %s numArgs: %d' % (inst[0], inst[1], len(inst[2])))
-        declargs = 'Value* ' + ', Value* '.join(inst[2])
+        if len(inst[2]) != 0:
+            declargs = 'Value* ' + ', Value* '.join(inst[2])
+            decl = 'Value* %s(%s, const llvm::Twine& name = "")' % (inst[0], declargs)
+        else:
+            decl = 'Value* %s(const llvm::Twine& name = "")' % (inst[0])
 
         functions.append({
-            'decl'      : 'Value* %s(%s, const llvm::Twine& name = "")' % (inst[0], declargs),
+            'decl'      : decl,
             'intrin'    : inst[1],
             'args'      : inst[2],
         })
