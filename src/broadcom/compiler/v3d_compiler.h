@@ -548,6 +548,7 @@ struct v3d_compile {
 
         /* Live ranges of temps. */
         int *temp_start, *temp_end;
+        bool live_intervals_valid;
 
         uint32_t *uniform_data;
         enum quniform_contents *uniform_contents;

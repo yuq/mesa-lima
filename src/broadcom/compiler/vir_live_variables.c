@@ -347,4 +347,6 @@ vir_calculate_live_intervals(struct v3d_compile *c)
                 ;
 
         vir_compute_start_end(c, c->num_temps);
+
+        c->live_intervals_valid = true;
 }

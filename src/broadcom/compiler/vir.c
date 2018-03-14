@@ -435,6 +435,7 @@ vir_emit(struct v3d_compile *c, struct qinst *inst)
         }
 
         c->cursor = vir_after_inst(inst);
+        c->live_intervals_valid = false;
 }
 
 /* Updates inst to write to a new temporary, emits it, and notes the def. */
@@ -813,6 +814,8 @@ vir_remove_instruction(struct v3d_compile *c, struct qinst *qinst)
 
         list_del(&qinst->link);
         free(qinst);
+
+        c->live_intervals_valid = false;
 }
 
 struct qreg
