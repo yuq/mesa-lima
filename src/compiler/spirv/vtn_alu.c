@@ -355,9 +355,43 @@ vtn_nir_alu_op_for_spirv_opcode(struct vtn_builder *b,
    case SpvOpConvertSToF:
    case SpvOpConvertUToF:
    case SpvOpSConvert:
-   case SpvOpFConvert:
-      return nir_type_conversion_op(src, dst, nir_rounding_mode_undef);
+   case SpvOpFConvert: {
+      nir_alu_type src_type;
+      nir_alu_type dst_type;
 
+      switch (opcode) {
+      case SpvOpConvertFToS:
+         src_type = nir_type_float;
+         dst_type = nir_type_int;
+         break;
+      case SpvOpConvertFToU:
+         src_type = nir_type_float;
+         dst_type = nir_type_uint;
+         break;
+      case SpvOpFConvert:
+         src_type = dst_type = nir_type_float;
+         break;
+      case SpvOpConvertSToF:
+         src_type = nir_type_int;
+         dst_type = nir_type_float;
+         break;
+      case SpvOpSConvert:
+         src_type = dst_type = nir_type_int;
+         break;
+      case SpvOpConvertUToF:
+         src_type = nir_type_uint;
+         dst_type = nir_type_float;
+         break;
+      case SpvOpUConvert:
+         src_type = dst_type = nir_type_uint;
+         break;
+      default:
+         unreachable("Invalid opcode");
+      }
+      src_type |= nir_alu_type_get_type_size(src);
+      dst_type |= nir_alu_type_get_type_size(dst);
+      return nir_type_conversion_op(src_type, dst_type, nir_rounding_mode_undef);
+   }
    /* Derivatives: */
    case SpvOpDPdx:         return nir_op_fddx;
    case SpvOpDPdy:         return nir_op_fddy;
