@@ -3229,6 +3229,13 @@ static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
 		ac_dump_module(llvm_module);
 
 	memset(binary, 0, sizeof(*binary));
+
+	if (options->record_llvm_ir) {
+		char *llvm_ir = LLVMPrintModuleToString(llvm_module);
+		binary->llvm_ir_string = strdup(llvm_ir);
+		LLVMDisposeMessage(llvm_ir);
+	}
+
 	int v = ac_llvm_compile(llvm_module, binary, tm);
 	if (v) {
 		fprintf(stderr, "compile failed\n");

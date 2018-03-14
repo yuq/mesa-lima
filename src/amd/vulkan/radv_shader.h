@@ -99,6 +99,7 @@ struct radv_nir_compiler_options {
 	bool clamp_shadow_reference;
 	bool dump_shader;
 	bool dump_preoptir;
+	bool record_llvm_ir;
 	enum radeon_family family;
 	enum chip_class chip_class;
 };
@@ -261,6 +262,7 @@ struct radv_shader_variant {
 	uint32_t spirv_size;
 	struct nir_shader *nir;
 	char *disasm_string;
+	char *llvm_ir_string;
 
 	struct list_head slab_list;
 };

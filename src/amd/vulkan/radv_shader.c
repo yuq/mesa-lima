@@ -462,6 +462,7 @@ shader_variant_create(struct radv_device *device,
 	options->dump_shader = radv_can_dump_shader(device, module);
 	options->dump_preoptir = options->dump_shader &&
 				 device->instance->debug_flags & RADV_DEBUG_PREOPTIR;
+	options->record_llvm_ir = device->keep_shader_info;
 
 	if (options->supports_spill)
 		tm_options |= AC_TM_SUPPORTS_SPILL;
@@ -497,6 +498,7 @@ shader_variant_create(struct radv_device *device,
 
 	if (device->keep_shader_info) {
 		variant->disasm_string = binary.disasm_string;
+		variant->llvm_ir_string = binary.llvm_ir_string;
 		if (!gs_copy_shader && !module->nir) {
 			variant->nir = *shaders;
 			variant->spirv = (uint32_t *)module->data;
@@ -560,6 +562,7 @@ radv_shader_variant_destroy(struct radv_device *device,
 
 	ralloc_free(variant->nir);
 	free(variant->disasm_string);
+	free(variant->llvm_ir_string);
 	free(variant);
 }
 
