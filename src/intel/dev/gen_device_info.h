@@ -28,9 +28,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "util/macros.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define GEN_DEVICE_MAX_SLICES           (6)  /* Maximum on gen10 */
+#define GEN_DEVICE_MAX_SUBSLICES        (8)  /* Maximum on gen11 */
+#define GEN_DEVICE_MAX_EUS_PER_SUBSLICE (10) /* Maximum on Haswell */
 
 /**
  * Intel hardware information and quirks
@@ -112,7 +118,7 @@ struct gen_device_info
    /**
     * Number of subslices for each slice (used to be uniform until CNL).
     */
-   unsigned num_subslices[3];
+   unsigned num_subslices[GEN_DEVICE_MAX_SUBSLICES];
 
    /**
     * Number of EU per subslice.
@@ -123,6 +129,37 @@ struct gen_device_info
     * Number of threads per eu, varies between 4 and 8 between generations.
     */
    unsigned num_thread_per_eu;
+
+   /**
+    * A bit mask of the slices available.
+    */
+   uint8_t slice_masks;
+
+   /**
+    * An array of bit mask of the subslices available, use subslice_slice_stride
+    * to access this array.
+    */
+   uint8_t subslice_masks[GEN_DEVICE_MAX_SLICES *
+                          DIV_ROUND_UP(GEN_DEVICE_MAX_SUBSLICES, 8)];
+
+   /**
+    * An array of bit mask of EUs available, use eu_slice_stride &
+    * eu_subslice_stride to access this array.
+    */
+   uint8_t eu_masks[GEN_DEVICE_MAX_SLICES *
+                    GEN_DEVICE_MAX_SUBSLICES *
+                    DIV_ROUND_UP(GEN_DEVICE_MAX_EUS_PER_SUBSLICE, 8)];
+
+   /**
+    * Stride to access subslice_masks[].
+    */
+   uint16_t subslice_slice_stride;
+
+   /**
+    * Strides to access eu_masks[].
+    */
+   uint16_t eu_slice_stride;
+   uint16_t eu_subslice_stride;
 
    unsigned l3_banks;
    unsigned max_vs_threads;   /**< Maximum Vertex Shader threads */

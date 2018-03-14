@@ -874,6 +874,57 @@ static const struct gen_device_info gen_device_info_icl_1x8 = {
    GEN11_FEATURES(1, 1, subslices(1), 6),
 };
 
+static void
+gen_device_info_set_eu_mask(struct gen_device_info *devinfo,
+                            unsigned slice,
+                            unsigned subslice,
+                            unsigned eu_mask)
+{
+   unsigned subslice_offset = slice * devinfo->eu_slice_stride +
+      subslice * devinfo->eu_subslice_stride;
+
+   for (unsigned b_eu = 0; b_eu < devinfo->eu_subslice_stride; b_eu++) {
+      devinfo->eu_masks[subslice_offset + b_eu] =
+         (((1U << devinfo->num_eu_per_subslice) - 1) >> (b_eu * 8)) & 0xff;
+   }
+}
+
+/* Generate slice/subslice/eu masks from number of
+ * slices/subslices/eu_per_subslices in the per generation/gt gen_device_info
+ * structure.
+ *
+ * These can be overridden with values reported by the kernel either from
+ * getparam SLICE_MASK/SUBSLICE_MASK values or from the kernel version 4.17+
+ * through the i915 query uapi.
+ */
+static void
+fill_masks(struct gen_device_info *devinfo)
+{
+   devinfo->slice_masks = (1U << devinfo->num_slices) - 1;
+
+   /* Subslice masks */
+   unsigned max_subslices = 0;
+   for (int s = 0; s < devinfo->num_slices; s++)
+      max_subslices = MAX2(devinfo->num_subslices[s], max_subslices);
+   devinfo->subslice_slice_stride = DIV_ROUND_UP(max_subslices, 8);
+
+   for (int s = 0; s < devinfo->num_slices; s++) {
+      devinfo->subslice_masks[s * devinfo->subslice_slice_stride] =
+         (1U << devinfo->num_subslices[s]) - 1;
+   }
+
+   /* EU masks */
+   devinfo->eu_subslice_stride = DIV_ROUND_UP(devinfo->num_eu_per_subslice, 8);
+   devinfo->eu_slice_stride = max_subslices * devinfo->eu_subslice_stride;
+
+   for (int s = 0; s < devinfo->num_slices; s++) {
+      for (int ss = 0; ss < devinfo->num_subslices[s]; ss++) {
+         gen_device_info_set_eu_mask(devinfo, s, ss,
+                                     (1U << devinfo->num_eu_per_subslice) - 1);
+      }
+   }
+}
+
 bool
 gen_get_device_info(int devid, struct gen_device_info *devinfo)
 {
@@ -886,6 +937,8 @@ gen_get_device_info(int devid, struct gen_device_info *devinfo)
       fprintf(stderr, "i965_dri.so does not support the 0x%x PCI ID.\n", devid);
       return false;
    }
+
+   fill_masks(devinfo);
 
    /* From the Skylake PRM, 3DSTATE_PS::Scratch Space Base Pointer:
     *
