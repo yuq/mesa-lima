@@ -593,7 +593,7 @@ radv_dump_dmesg(FILE *f)
 	pclose(p);
 }
 
-static void
+void
 radv_dump_enabled_options(struct radv_device *device, FILE *f)
 {
 	uint64_t mask;

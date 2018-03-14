@@ -1322,10 +1322,15 @@ VkResult radv_CreateDevice(
 		device->physical_device->rad_info.max_se >= 2;
 
 	if (getenv("RADV_TRACE_FILE")) {
+		const char *filename = getenv("RADV_TRACE_FILE");
+
 		keep_shader_info = true;
 
 		if (!radv_init_trace(device))
 			goto fail;
+
+		fprintf(stderr, "Trace file will be dumped to %s\n", filename);
+		radv_dump_enabled_options(device, stderr);
 	}
 
 	device->keep_shader_info = keep_shader_info;
