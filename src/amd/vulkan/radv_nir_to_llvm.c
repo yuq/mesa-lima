@@ -1296,18 +1296,18 @@ load_tcs_varyings(struct ac_shader_abi *abi,
 
 static void
 store_tcs_output(struct ac_shader_abi *abi,
+		 const nir_variable *var,
 		 LLVMValueRef vertex_index,
 		 LLVMValueRef param_index,
 		 unsigned const_index,
-		 unsigned location,
-		 unsigned driver_location,
 		 LLVMValueRef src,
-		 unsigned component,
-		 bool is_patch,
-		 bool is_compact,
 		 unsigned writemask)
 {
 	struct radv_shader_context *ctx = radv_shader_context_from_abi(abi);
+	const unsigned location = var->data.location;
+	const unsigned component = var->data.location_frac;
+	const bool is_patch = var->data.patch;
+	const bool is_compact = var->data.compact;
 	LLVMValueRef dw_addr;
 	LLVMValueRef stride = NULL;
 	LLVMValueRef buf_addr = NULL;

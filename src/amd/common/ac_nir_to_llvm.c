@@ -1804,19 +1804,15 @@ visit_store_var(struct ac_nir_context *ctx,
 			LLVMValueRef vertex_index = NULL;
 			LLVMValueRef indir_index = NULL;
 			unsigned const_index = 0;
-			const unsigned location = instr->variables[0]->var->data.location;
-			const unsigned driver_location = instr->variables[0]->var->data.driver_location;
-			const unsigned comp = instr->variables[0]->var->data.location_frac;
 			const bool is_patch = instr->variables[0]->var->data.patch;
-			const bool is_compact = instr->variables[0]->var->data.compact;
 
 			get_deref_offset(ctx, instr->variables[0],
 					 false, NULL, is_patch ? NULL : &vertex_index,
 					 &const_index, &indir_index);
 
-			ctx->abi->store_tcs_outputs(ctx->abi, vertex_index, indir_index,
-						    const_index, location, driver_location,
-						    src, comp, is_patch, is_compact, writemask);
+			ctx->abi->store_tcs_outputs(ctx->abi, instr->variables[0]->var,
+						    vertex_index, indir_index,
+						    const_index, src, writemask);
 			return;
 		}
 
