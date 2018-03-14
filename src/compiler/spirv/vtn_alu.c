@@ -275,7 +275,7 @@ vtn_handle_bitcast(struct vtn_builder *b, struct vtn_ssa_value *dest,
 nir_op
 vtn_nir_alu_op_for_spirv_opcode(struct vtn_builder *b,
                                 SpvOp opcode, bool *swap,
-                                nir_alu_type src, nir_alu_type dst)
+                                unsigned src_bit_size, unsigned dst_bit_size)
 {
    /* Indicates that the first two arguments should be swapped.  This is
     * used for implementing greater-than and less-than-or-equal.
@@ -388,8 +388,8 @@ vtn_nir_alu_op_for_spirv_opcode(struct vtn_builder *b,
       default:
          unreachable("Invalid opcode");
       }
-      src_type |= nir_alu_type_get_type_size(src);
-      dst_type |= nir_alu_type_get_type_size(dst);
+      src_type |= src_bit_size;
+      dst_type |= dst_bit_size;
       return nir_type_conversion_op(src_type, dst_type, nir_rounding_mode_undef);
    }
    /* Derivatives: */
@@ -575,10 +575,10 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    case SpvOpFUnordLessThanEqual:
    case SpvOpFUnordGreaterThanEqual: {
       bool swap;
-      nir_alu_type src_alu_type = nir_get_nir_type_for_glsl_type(vtn_src[0]->type);
-      nir_alu_type dst_alu_type = nir_get_nir_type_for_glsl_type(type);
+      unsigned src_bit_size = glsl_get_bit_size(vtn_src[0]->type);
+      unsigned dst_bit_size = glsl_get_bit_size(type);
       nir_op op = vtn_nir_alu_op_for_spirv_opcode(b, opcode, &swap,
-                                                  src_alu_type, dst_alu_type);
+                                                  src_bit_size, dst_bit_size);
 
       if (swap) {
          nir_ssa_def *tmp = src[0];
@@ -602,10 +602,10 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    case SpvOpFOrdLessThanEqual:
    case SpvOpFOrdGreaterThanEqual: {
       bool swap;
-      nir_alu_type src_alu_type = nir_get_nir_type_for_glsl_type(vtn_src[0]->type);
-      nir_alu_type dst_alu_type = nir_get_nir_type_for_glsl_type(type);
+      unsigned src_bit_size = glsl_get_bit_size(vtn_src[0]->type);
+      unsigned dst_bit_size = glsl_get_bit_size(type);
       nir_op op = vtn_nir_alu_op_for_spirv_opcode(b, opcode, &swap,
-                                                  src_alu_type, dst_alu_type);
+                                                  src_bit_size, dst_bit_size);
 
       if (swap) {
          nir_ssa_def *tmp = src[0];
@@ -640,10 +640,10 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
 
    default: {
       bool swap;
-      nir_alu_type src_alu_type = nir_get_nir_type_for_glsl_type(vtn_src[0]->type);
-      nir_alu_type dst_alu_type = nir_get_nir_type_for_glsl_type(type);
+      unsigned src_bit_size = glsl_get_bit_size(vtn_src[0]->type);
+      unsigned dst_bit_size = glsl_get_bit_size(type);
       nir_op op = vtn_nir_alu_op_for_spirv_opcode(b, opcode, &swap,
-                                                  src_alu_type, dst_alu_type);
+                                                  src_bit_size, dst_bit_size);
 
       if (swap) {
          nir_ssa_def *tmp = src[0];

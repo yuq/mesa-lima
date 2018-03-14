@@ -1725,8 +1725,8 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
          };
 
          nir_op op = vtn_nir_alu_op_for_spirv_opcode(b, opcode, &swap,
-                                                     src_alu_type,
-                                                     dst_alu_type);
+                                                     nir_alu_type_get_type_size(src_alu_type),
+                                                     nir_alu_type_get_type_size(dst_alu_type));
          nir_const_value src[4];
 
          for (unsigned i = 0; i < count - 4; i++) {
