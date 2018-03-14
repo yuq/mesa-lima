@@ -936,6 +936,32 @@ static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec,
 
 		memcpy(codec, (void*)&vp9, sizeof(rvcn_dec_message_vp9_t));
 		index->message_id = RDECODE_MESSAGE_VP9;
+
+		if (dec->ctx.res == NULL) {
+			unsigned ctx_size;
+			uint8_t *ptr;
+
+			/* default probability + probability data */
+			ctx_size = 2304 * 5;
+
+			/* SRE collocated context data */
+			ctx_size += 32 * 2 * 64 * 64;
+
+			/* SMP collocated context data */
+			ctx_size += 9 * 64 * 2 * 64 * 64;
+
+			/* SDB left tile pixel */
+			ctx_size += 8 * 2 * 4096;
+
+			if (!si_vid_create_buffer(dec->screen, &dec->ctx, ctx_size, PIPE_USAGE_DEFAULT))
+				RVID_ERR("Can't allocated context buffer.\n");
+			si_vid_clear_buffer(dec->base.context, &dec->ctx);
+
+			/* ctx needs probs table */
+			ptr = dec->ws->buffer_map(dec->ctx.res->buf, dec->cs, PIPE_TRANSFER_WRITE);
+			fill_probs_table(ptr);
+			dec->ws->buffer_unmap(dec->ctx.res->buf);
+		}
 		break;
 	}
 	default:
