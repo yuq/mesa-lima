@@ -900,7 +900,6 @@ vir_PF(struct v3d_compile *c, struct qreg src, enum v3d_qpu_pf pf)
             last_inst != c->defs[src.index]) {
                 /* XXX: Make the MOV be the appropriate type */
                 last_inst = vir_MOV_dest(c, vir_reg(QFILE_NULL, 0), src);
-                last_inst = (struct qinst *)c->cur_block->instructions.prev;
         }
 
         vir_set_pf(last_inst, pf);
