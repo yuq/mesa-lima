@@ -303,7 +303,7 @@ handleVASliceDataBufferType(vlVaContext *context, vlVaBuffer *buf)
    case PIPE_VIDEO_FORMAT_JPEG:
       break;
    case PIPE_VIDEO_FORMAT_VP9:
-      /* TODO */
+      vlVaDecoderVP9BitstreamHeader(context, buf);
       break;
    default:
       break;

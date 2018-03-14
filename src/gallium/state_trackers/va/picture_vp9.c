@@ -25,6 +25,7 @@
  *
  **************************************************************************/
 
+#include "vl/vl_vlc.h"
 #include "va_private.h"
 
 void vlVaHandlePictureParameterBufferVP9(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *buf)
@@ -107,5 +108,241 @@ void vlVaHandleSliceParameterBufferVP9(vlVaContext *context, vlVaBuffer *buf)
       context->desc.vp9.slice_parameter.seg_param[i].luma_dc_quant_scale = vp9->seg_param[i].luma_dc_quant_scale;
       context->desc.vp9.slice_parameter.seg_param[i].chroma_ac_quant_scale = vp9->seg_param[i].chroma_ac_quant_scale;
       context->desc.vp9.slice_parameter.seg_param[i].chroma_dc_quant_scale = vp9->seg_param[i].chroma_dc_quant_scale;
+   }
+}
+
+static unsigned vp9_u(struct vl_vlc *vlc, unsigned n)
+{
+   unsigned valid = vl_vlc_valid_bits(vlc);
+
+   if (n == 0)
+      return 0;
+
+   if (valid < 32)
+      vl_vlc_fillbits(vlc);
+
+   return vl_vlc_get_uimsbf(vlc, n);
+}
+
+static signed vp9_s(struct vl_vlc *vlc, unsigned n)
+{
+   unsigned v;
+   bool s;
+
+   v = vp9_u(vlc, n);
+   s = vp9_u(vlc, 1);
+
+   return s ? -v : v;
+}
+
+static void bitdepth_colorspace_sampling(struct vl_vlc *vlc, unsigned profile)
+{
+   unsigned cs;
+
+   if (profile == 2)
+      /* bit_depth */
+      vp9_u(vlc, 1);
+
+   cs = vp9_u(vlc, 3);
+   if (cs != 7)
+      /* yuv_range_flag */
+      vp9_u(vlc, 1);
+}
+
+static void frame_size(struct vl_vlc *vlc)
+{
+      /* width_minus_one */
+      vp9_u(vlc, 16);
+      /* height_minus_one */
+      vp9_u(vlc, 16);
+
+      /* has_scaling */
+      if (vp9_u(vlc, 1)) {
+         /* render_width_minus_one */
+         vp9_u(vlc, 16);
+         /* render_height_minus_one */
+         vp9_u(vlc, 16);
+      }
+}
+
+void vlVaDecoderVP9BitstreamHeader(vlVaContext *context, vlVaBuffer *buf)
+{
+   struct vl_vlc vlc;
+   unsigned profile;
+   bool frame_type, show_frame, error_resilient_mode;
+   bool mode_ref_delta_enabled, mode_ref_delta_update = false;
+   int i;
+
+   vl_vlc_init(&vlc, 1, (const void * const*)&buf->data,
+      (const unsigned *)&context->desc.vp9.picture_parameter.frame_header_length_in_bytes);
+
+   /* frame_marker */
+   if (vp9_u(&vlc, 2) != 0x2)
+      return;
+
+   profile = vp9_u(&vlc, 1) | vp9_u(&vlc, 1) << 1;
+
+   if (profile == 3)
+      profile += vp9_u(&vlc, 1);
+
+   if (profile != 0 && profile != 2)
+      return;
+
+   /* show_existing_frame */
+   if (vp9_u(&vlc, 1))
+      return;
+
+   frame_type = vp9_u(&vlc, 1);
+   show_frame = vp9_u(&vlc, 1);
+   error_resilient_mode = vp9_u(&vlc, 1);
+
+   if (frame_type == 0) {
+      /* sync_code */
+      if (vp9_u(&vlc, 24) != 0x498342)
+         return;
+
+      bitdepth_colorspace_sampling(&vlc, profile);
+      frame_size(&vlc);
+   } else {
+      bool intra_only, size_in_refs = false;
+
+      intra_only = show_frame ? 0 : vp9_u(&vlc, 1);
+      if (!error_resilient_mode)
+         /* reset_frame_context */
+         vp9_u(&vlc, 2);
+
+      if (intra_only) {
+         /* sync_code */
+         if (vp9_u(&vlc, 24) != 0x498342)
+            return;
+
+         bitdepth_colorspace_sampling(&vlc, profile);
+         /* refresh_frame_flags */
+         vp9_u(&vlc, 8);
+         frame_size(&vlc);
+      } else {
+         /* refresh_frame_flags */
+         vp9_u(&vlc, 8);
+
+         for (i = 0; i < 3; ++i) {
+            /* frame refs */
+            vp9_u(&vlc, 3);
+            vp9_u(&vlc, 1);
+         }
+
+         for (i = 0; i < 3; ++i) {
+            size_in_refs = vp9_u(&vlc, 1);
+            if (size_in_refs)
+               break;
+         }
+
+         if (!size_in_refs) {
+            /* width/height_minus_one */
+            vp9_u(&vlc, 16);
+            vp9_u(&vlc, 16);
+         }
+
+         if (vp9_u(&vlc, 1)) {
+            /* render_width/height_minus_one */
+            vp9_u(&vlc, 16);
+            vp9_u(&vlc, 16);
+         }
+
+         /* high_precision_mv */
+         vp9_u(&vlc, 1);
+         /* filter_switchable */
+         if (!vp9_u(&vlc, 1))
+            /* filter_index */
+            vp9_u(&vlc, 2);
+      }
+   }
+   if (!error_resilient_mode) {
+      /* refresh_frame_context */
+      vp9_u(&vlc, 1);
+      /* frame_parallel_decoding_mode */
+      vp9_u(&vlc, 1);
+   }
+   /* frame_context_index */
+   vp9_u(&vlc, 2);
+
+   /* loop filter */
+
+   /* filter_level */
+   vp9_u(&vlc, 6);
+   /* sharpness_level */
+   vp9_u(&vlc, 3);
+
+   mode_ref_delta_enabled = vp9_u(&vlc, 1);
+   if (mode_ref_delta_enabled) {
+      mode_ref_delta_update = vp9_u(&vlc, 1);
+      if (mode_ref_delta_update) {
+         for (i = 0; i < 4; ++i) {
+            /* update_ref_delta */
+            if (vp9_u(&vlc, 1))
+               /* ref_deltas */
+               vp9_s(&vlc, 6);
+         }
+         for (i = 0; i < 2; ++i) {
+            /* update_mode_delta */
+            if (vp9_u(&vlc, 1))
+               /* mode_deltas */
+               vp9_s(&vlc, 6);
+         }
+      }
+   }
+   context->desc.vp9.picture_parameter.mode_ref_delta_enabled = mode_ref_delta_enabled;
+   context->desc.vp9.picture_parameter.mode_ref_delta_update = mode_ref_delta_update;
+
+   /* quantization */
+
+   context->desc.vp9.picture_parameter.base_qindex = vp9_u(&vlc, 8);
+   context->desc.vp9.picture_parameter.y_dc_delta_q = vp9_u(&vlc, 1) ? vp9_s(&vlc, 4) : 0;
+   context->desc.vp9.picture_parameter.uv_ac_delta_q = vp9_u(&vlc, 1) ? vp9_s(&vlc, 4) : 0;
+   context->desc.vp9.picture_parameter.uv_dc_delta_q = vp9_u(&vlc, 1) ? vp9_s(&vlc, 4) : 0;
+
+   /* segmentation */
+
+   /* enabled */
+   if (!vp9_u(&vlc, 1))
+      return;
+
+   /* update_map */
+   if (vp9_u(&vlc, 1)) {
+      for (i = 0; i < 7; ++i) {
+         /* tree_probs_set */
+         if (vp9_u(&vlc, 1)) {
+            /* tree_probs */
+            vp9_u(&vlc, 8);
+         }
+      }
+
+      /* temporal_update */
+      if (vp9_u(&vlc, 1)) {
+         for (i = 0; i < 3; ++i) {
+            /* pred_probs_set */
+            if (vp9_u(&vlc, 1))
+               /* pred_probs */
+               vp9_u(&vlc, 8);
+         }
+      }
+   }
+
+   /* update_data */
+   if (vp9_u(&vlc, 1)) {
+      /* abs_delta */
+      vp9_u(&vlc, 1);
+      for (i = 0; i < 8; ++i) {
+         /* Use alternate quantizer */
+         if ((context->desc.vp9.slice_parameter.seg_param[i].alt_quant_enabled = vp9_u(&vlc, 1)))
+            context->desc.vp9.slice_parameter.seg_param[i].alt_quant = vp9_s(&vlc, 8);
+         /* Use alternate loop filter value */
+         if ((context->desc.vp9.slice_parameter.seg_param[i].alt_lf_enabled = vp9_u(&vlc, 1)))
+            context->desc.vp9.slice_parameter.seg_param[i].alt_lf = vp9_s(&vlc, 6);
+         /* Optional Segment reference frame */
+         if (vp9_u(&vlc, 1))
+            vp9_u(&vlc, 2);
+         /* Optional Segment skip mode */
+         vp9_u(&vlc, 1);
+      }
    }
 }
