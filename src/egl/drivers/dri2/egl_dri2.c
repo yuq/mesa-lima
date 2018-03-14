@@ -48,6 +48,7 @@
 #include <sys/stat.h>
 
 #ifdef HAVE_WAYLAND_PLATFORM
+#include <wayland-client.h>
 #include "wayland-drm.h"
 #include "wayland-drm-client-protocol.h"
 #include "linux-dmabuf-unstable-v1-client-protocol.h"

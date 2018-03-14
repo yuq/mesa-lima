@@ -43,9 +43,15 @@
 #endif
 
 #ifdef HAVE_WAYLAND_PLATFORM
-#include <wayland-client.h>
-#include "wayland/wayland-egl/wayland-egl-backend.h"
-/* forward declarations of protocol elements */
+/* forward declarations to avoid pulling wayland headers everywhere */
+struct wl_egl_window;
+struct wl_event_queue;
+struct wl_callback;
+struct wl_display;
+struct wl_drm;
+struct wl_registry;
+struct wl_shm;
+struct wl_surface;
 struct zwp_linux_dmabuf_v1;
 #endif
 
