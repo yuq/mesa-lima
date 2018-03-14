@@ -2983,8 +2983,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
                                        struct nir_shader *const *shaders,
                                        int shader_count,
                                        struct radv_shader_variant_info *shader_info,
-                                       const struct radv_nir_compiler_options *options,
-				       bool dump_shader)
+                                       const struct radv_nir_compiler_options *options)
 {
 	struct radv_shader_context ctx = {0};
 	unsigned i;
@@ -3152,7 +3151,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	if (shader_count == 1)
 		ac_nir_eliminate_const_vs_outputs(&ctx);
 
-	if (dump_shader) {
+	if (options->dump_shader) {
 		ctx.shader_info->private_mem_vgprs =
 			ac_count_scratch_private_memory(ctx.main_function);
 	}
@@ -3224,10 +3223,9 @@ static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
 				   struct ac_shader_config *config,
 				   struct radv_shader_variant_info *shader_info,
 				   gl_shader_stage stage,
-				   bool dump_shader,
 				   const struct radv_nir_compiler_options *options)
 {
-	if (dump_shader)
+	if (options->dump_shader)
 		ac_dump_module(llvm_module);
 
 	memset(binary, 0, sizeof(*binary));
@@ -3236,7 +3234,7 @@ static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
 		fprintf(stderr, "compile failed\n");
 	}
 
-	if (dump_shader)
+	if (options->dump_shader)
 		fprintf(stderr, "disasm:\n%s\n", binary->disasm_string);
 
 	ac_shader_binary_read_config(binary, config, 0, options->supports_spill);
@@ -3347,15 +3345,16 @@ radv_compile_nir_shader(LLVMTargetMachineRef tm,
 			struct radv_shader_variant_info *shader_info,
 			struct nir_shader *const *nir,
 			int nir_count,
-			const struct radv_nir_compiler_options *options,
-			bool dump_shader)
+			const struct radv_nir_compiler_options *options)
 {
 
-	LLVMModuleRef llvm_module = ac_translate_nir_to_llvm(tm, nir, nir_count, shader_info,
-	                                                     options, dump_shader);
+	LLVMModuleRef llvm_module;
+
+	llvm_module = ac_translate_nir_to_llvm(tm, nir, nir_count, shader_info,
+	                                       options);
 
 	ac_compile_llvm_module(tm, llvm_module, binary, config, shader_info,
-			       nir[0]->info.stage, dump_shader, options);
+			       nir[0]->info.stage, options);
 
 	for (int i = 0; i < nir_count; ++i)
 		ac_fill_shader_info(shader_info, nir[i], options);
@@ -3417,8 +3416,7 @@ radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
 			    struct ac_shader_binary *binary,
 			    struct ac_shader_config *config,
 			    struct radv_shader_variant_info *shader_info,
-			    const struct radv_nir_compiler_options *options,
-			    bool dump_shader)
+			    const struct radv_nir_compiler_options *options)
 {
 	struct radv_shader_context ctx = {0};
 	ctx.context = LLVMContextCreate();
@@ -3460,5 +3458,5 @@ radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
 	ac_llvm_finalize_module(&ctx);
 
 	ac_compile_llvm_module(tm, ctx.ac.module, binary, config, shader_info,
-			       MESA_SHADER_VERTEX, dump_shader, options);
+			       MESA_SHADER_VERTEX, options);
 }

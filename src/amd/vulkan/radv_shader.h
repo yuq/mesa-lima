@@ -97,6 +97,7 @@ struct radv_nir_compiler_options {
 	bool unsafe_math;
 	bool supports_spill;
 	bool clamp_shadow_reference;
+	bool dump_shader;
 	bool dump_preoptir;
 	enum radeon_family family;
 	enum chip_class chip_class;

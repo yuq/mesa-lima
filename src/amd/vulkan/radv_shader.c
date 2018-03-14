@@ -448,7 +448,6 @@ shader_variant_create(struct radv_device *device,
 		      unsigned *code_size_out)
 {
 	enum radeon_family chip_family = device->physical_device->rad_info.family;
-	bool dump_shaders = radv_can_dump_shader(device, module);
 	enum ac_target_machine_options tm_options = 0;
 	struct radv_shader_variant *variant;
 	struct ac_shader_binary binary;
@@ -460,7 +459,8 @@ shader_variant_create(struct radv_device *device,
 
 	options->family = chip_family;
 	options->chip_class = device->physical_device->rad_info.chip_class;
-	options->dump_preoptir = radv_can_dump_shader(device, module) &&
+	options->dump_shader = radv_can_dump_shader(device, module);
+	options->dump_preoptir = options->dump_shader &&
 				 device->instance->debug_flags & RADV_DEBUG_PREOPTIR;
 
 	if (options->supports_spill)
@@ -473,11 +473,11 @@ shader_variant_create(struct radv_device *device,
 		assert(shader_count == 1);
 		radv_compile_gs_copy_shader(tm, *shaders, &binary,
 					    &variant->config, &variant->info,
-					    options, dump_shaders);
+					    options);
 	} else {
 		radv_compile_nir_shader(tm, &binary, &variant->config,
 					&variant->info, shaders, shader_count,
-					options, dump_shaders);
+					options);
 	}
 
 	LLVMDisposeTargetMachine(tm);

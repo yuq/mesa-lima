@@ -1687,8 +1687,7 @@ void radv_compile_gs_copy_shader(LLVMTargetMachineRef tm,
 				 struct ac_shader_binary *binary,
 				 struct ac_shader_config *config,
 				 struct radv_shader_variant_info *shader_info,
-				 const struct radv_nir_compiler_options *options,
-				 bool dump_shader);
+				 const struct radv_nir_compiler_options *option);
 
 void radv_compile_nir_shader(LLVMTargetMachineRef tm,
 			     struct ac_shader_binary *binary,
@@ -1696,8 +1695,7 @@ void radv_compile_nir_shader(LLVMTargetMachineRef tm,
 			     struct radv_shader_variant_info *shader_info,
 			     struct nir_shader *const *nir,
 			     int nir_count,
-			     const struct radv_nir_compiler_options *options,
-			     bool dump_shader);
+			     const struct radv_nir_compiler_options *options);
 
 /* radv_shader_info.h */
 struct radv_shader_info;
