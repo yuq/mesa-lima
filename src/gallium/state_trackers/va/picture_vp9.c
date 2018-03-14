@@ -84,5 +84,28 @@ void vlVaHandlePictureParameterBufferVP9(vlVaDriver *drv, vlVaContext *context, 
 
 void vlVaHandleSliceParameterBufferVP9(vlVaContext *context, vlVaBuffer *buf)
 {
-   /* TODO */
+   VASliceParameterBufferVP9 *vp9 = buf->data;
+   int i;
+
+   assert(buf->size >= sizeof(VASliceParameterBufferVP9) && buf->num_elements == 1);
+
+   context->desc.vp9.slice_parameter.slice_data_size = vp9->slice_data_size;
+   context->desc.vp9.slice_parameter.slice_data_offset = vp9->slice_data_offset;
+   context->desc.vp9.slice_parameter.slice_data_flag = vp9->slice_data_flag;
+
+   for (i = 0; i < 8; ++i) {
+      context->desc.vp9.slice_parameter.seg_param[i].segment_flags.segment_reference_enabled =
+         vp9->seg_param[i].segment_flags.fields.segment_reference_enabled;
+      context->desc.vp9.slice_parameter.seg_param[i].segment_flags.segment_reference =
+         vp9->seg_param[i].segment_flags.fields.segment_reference;
+      context->desc.vp9.slice_parameter.seg_param[i].segment_flags.segment_reference_skipped =
+         vp9->seg_param[i].segment_flags.fields.segment_reference_skipped;
+
+      memcpy(context->desc.vp9.slice_parameter.seg_param[i].filter_level, vp9->seg_param[i].filter_level, 4 * 2);
+
+      context->desc.vp9.slice_parameter.seg_param[i].luma_ac_quant_scale = vp9->seg_param[i].luma_ac_quant_scale;
+      context->desc.vp9.slice_parameter.seg_param[i].luma_dc_quant_scale = vp9->seg_param[i].luma_dc_quant_scale;
+      context->desc.vp9.slice_parameter.seg_param[i].chroma_ac_quant_scale = vp9->seg_param[i].chroma_ac_quant_scale;
+      context->desc.vp9.slice_parameter.seg_param[i].chroma_dc_quant_scale = vp9->seg_param[i].chroma_dc_quant_scale;
+   }
 }
