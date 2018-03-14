@@ -2608,6 +2608,14 @@ if test -n "$with_gallium_drivers"; then
             HAVE_GALLIUM_RADEONSI=yes
             PKG_CHECK_MODULES([RADEON], [libdrm >= $LIBDRM_RADEON_REQUIRED libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             PKG_CHECK_MODULES([AMDGPU], [libdrm >= $LIBDRM_AMDGPU_REQUIRED libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
+
+            # Blacklist libdrm_amdgpu 2.4.90 because it causes a crash in older
+            # radeonsi with pretty much any app.
+            libdrm_version=`pkg-config libdrm_amdgpu --modversion`
+            if test "x$libdrm_version" = x2.4.90; then
+                AC_MSG_ERROR([radeonsi can't use libdrm 2.4.90 due to a compatibility issue. Use a newer or older version.])
+            fi
+
             require_libdrm "radeonsi"
             radeon_llvm_check $LLVM_REQUIRED_RADEONSI "radeonsi"
             if test "x$enable_egl" = xyes; then
