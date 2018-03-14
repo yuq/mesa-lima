@@ -648,6 +648,10 @@ static int si_get_video_param(struct pipe_screen *screen,
 				return false;
 			}
 			return true;
+		case PIPE_VIDEO_FORMAT_VP9:
+			if (sscreen->info.family < CHIP_RAVEN)
+				return false;
+			return true;
 		default:
 			return false;
 		}
