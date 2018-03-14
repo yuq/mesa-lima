@@ -2936,18 +2936,18 @@ load_tcs_varyings(struct ac_shader_abi *abi,
 
 static void
 store_tcs_output(struct ac_shader_abi *abi,
+		 const nir_variable *var,
 		 LLVMValueRef vertex_index,
 		 LLVMValueRef param_index,
 		 unsigned const_index,
-		 unsigned location,
-		 unsigned driver_location,
 		 LLVMValueRef src,
-		 unsigned component,
-		 bool is_patch,
-		 bool is_compact,
 		 unsigned writemask)
 {
 	struct nir_to_llvm_context *ctx = nir_to_llvm_context_from_abi(abi);
+	const unsigned location = var->data.location;
+	const unsigned component = var->data.location_frac;
+	const bool is_patch = var->data.patch;
+	const bool is_compact = var->data.compact;
 	LLVMValueRef dw_addr;
 	LLVMValueRef stride = NULL;
 	LLVMValueRef buf_addr = NULL;
@@ -3307,19 +3307,15 @@ visit_store_var(struct ac_nir_context *ctx,
 			LLVMValueRef vertex_index = NULL;
 			LLVMValueRef indir_index = NULL;
 			unsigned const_index = 0;
-			const unsigned location = instr->variables[0]->var->data.location;
-			const unsigned driver_location = instr->variables[0]->var->data.driver_location;
-			const unsigned comp = instr->variables[0]->var->data.location_frac;
 			const bool is_patch = instr->variables[0]->var->data.patch;
-			const bool is_compact = instr->variables[0]->var->data.compact;
 
 			get_deref_offset(ctx, instr->variables[0],
 					 false, NULL, is_patch ? NULL : &vertex_index,
 					 &const_index, &indir_index);
 
-			ctx->abi->store_tcs_outputs(ctx->abi, vertex_index, indir_index,
-						    const_index, location, driver_location,
-						    src, comp, is_patch, is_compact, writemask);
+			ctx->abi->store_tcs_outputs(ctx->abi, instr->variables[0]->var,
+						    vertex_index, indir_index,
+						    const_index, src, writemask);
 			return;
 		}
 
