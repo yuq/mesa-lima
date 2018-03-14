@@ -62,7 +62,8 @@ opt_cmod_propagation_local(const gen_device_info *devinfo, bblock_t *block)
            inst->opcode != BRW_OPCODE_MOV) ||
           inst->predicate != BRW_PREDICATE_NONE ||
           !inst->dst.is_null() ||
-          inst->src[0].file != VGRF ||
+          (inst->src[0].file != VGRF && inst->src[0].file != ATTR &&
+           inst->src[0].file != UNIFORM) ||
           inst->src[0].abs)
          continue;
 
