@@ -28,7 +28,10 @@
 #include <unistd.h>
 #include "gen_device_info.h"
 #include "compiler/shader_enums.h"
+#include "util/bitscan.h"
 #include "util/macros.h"
+
+#include <i915_drm.h>
 
 /**
  * Get the PCI ID for the device name.
@@ -923,6 +926,129 @@ fill_masks(struct gen_device_info *devinfo)
                                      (1U << devinfo->num_eu_per_subslice) - 1);
       }
    }
+}
+
+void
+gen_device_info_update_from_masks(struct gen_device_info *devinfo,
+                                  uint32_t slice_mask,
+                                  uint32_t subslice_mask,
+                                  uint32_t n_eus)
+{
+   struct {
+      struct drm_i915_query_topology_info base;
+      uint8_t data[100];
+   } topology;
+
+   assert((slice_mask & 0xff) == slice_mask);
+
+   memset(&topology, 0, sizeof(topology));
+
+   topology.base.max_slices = util_last_bit(slice_mask);
+   topology.base.max_subslices = util_last_bit(subslice_mask);
+
+   topology.base.subslice_offset = DIV_ROUND_UP(topology.base.max_slices, 8);
+   topology.base.subslice_stride = DIV_ROUND_UP(topology.base.max_subslices, 8);
+
+   uint32_t n_subslices = __builtin_popcount(slice_mask) *
+      __builtin_popcount(subslice_mask);
+   uint32_t num_eu_per_subslice = DIV_ROUND_UP(n_eus, n_subslices);
+   uint32_t eu_mask = (1U << num_eu_per_subslice) - 1;
+
+   topology.base.eu_offset = topology.base.subslice_offset +
+      DIV_ROUND_UP(topology.base.max_subslices, 8);
+   topology.base.eu_stride = DIV_ROUND_UP(num_eu_per_subslice, 8);
+
+   /* Set slice mask in topology */
+   for (int b = 0; b < topology.base.subslice_offset; b++)
+      topology.base.data[b] = (slice_mask >> (b * 8)) & 0xff;
+
+   for (int s = 0; s < topology.base.max_slices; s++) {
+
+      /* Set subslice mask in topology */
+      for (int b = 0; b < topology.base.subslice_stride; b++) {
+         int subslice_offset = topology.base.subslice_offset +
+            s * topology.base.subslice_stride + b;
+
+         topology.base.data[subslice_offset] = (subslice_mask >> (b * 8)) & 0xff;
+      }
+
+      /* Set eu mask in topology */
+      for (int ss = 0; ss < topology.base.max_subslices; ss++) {
+         for (int b = 0; b < topology.base.eu_stride; b++) {
+            int eu_offset = topology.base.eu_offset +
+               (s * topology.base.max_subslices + ss) * topology.base.eu_stride + b;
+
+            topology.base.data[eu_offset] = (eu_mask >> (b * 8)) & 0xff;
+         }
+      }
+   }
+
+   gen_device_info_update_from_topology(devinfo, &topology.base);
+}
+
+static void
+reset_masks(struct gen_device_info *devinfo)
+{
+   devinfo->subslice_slice_stride = 0;
+   devinfo->eu_subslice_stride = 0;
+   devinfo->eu_slice_stride = 0;
+
+   devinfo->num_slices = 0;
+   devinfo->num_eu_per_subslice = 0;
+   memset(devinfo->num_subslices, 0, sizeof(devinfo->num_subslices));
+
+   memset(&devinfo->slice_masks, 0, sizeof(devinfo->slice_masks));
+   memset(devinfo->subslice_masks, 0, sizeof(devinfo->subslice_masks));
+   memset(devinfo->eu_masks, 0, sizeof(devinfo->eu_masks));
+}
+
+void
+gen_device_info_update_from_topology(struct gen_device_info *devinfo,
+                                     const struct drm_i915_query_topology_info *topology)
+{
+   reset_masks(devinfo);
+
+   devinfo->subslice_slice_stride = topology->subslice_stride;
+
+   devinfo->eu_subslice_stride = DIV_ROUND_UP(topology->max_eus_per_subslice, 8);
+   devinfo->eu_slice_stride = topology->max_subslices * devinfo->eu_subslice_stride;
+
+   assert(sizeof(devinfo->slice_masks) >= DIV_ROUND_UP(topology->max_slices, 8));
+   memcpy(&devinfo->slice_masks, topology->data, DIV_ROUND_UP(topology->max_slices, 8));
+   devinfo->num_slices = __builtin_popcount(devinfo->slice_masks);
+
+   uint32_t subslice_mask_len =
+      topology->max_slices * topology->subslice_stride;
+   assert(sizeof(devinfo->subslice_masks) >= subslice_mask_len);
+   memcpy(devinfo->subslice_masks, &topology->data[topology->subslice_offset],
+          subslice_mask_len);
+
+   uint32_t n_subslices = 0;
+   for (int s = 0; s < topology->max_slices; s++) {
+      if ((devinfo->slice_masks & (1UL << s)) == 0)
+         continue;
+
+      for (int b = 0; b < devinfo->subslice_slice_stride; b++) {
+         devinfo->num_subslices[s] +=
+            __builtin_popcount(devinfo->subslice_masks[b]);
+      }
+      n_subslices += devinfo->num_subslices[s];
+   }
+
+   uint32_t eu_mask_len =
+      topology->eu_stride * topology->max_subslices * topology->max_slices;
+   assert(sizeof(devinfo->eu_masks) >= eu_mask_len);
+   memcpy(devinfo->eu_masks, &topology->data[topology->eu_offset], eu_mask_len);
+
+   uint32_t n_eus = 0;
+   for (int b = 0; b < eu_mask_len; b++)
+      n_eus += __builtin_popcount(devinfo->eu_masks[b]);
+
+   /* We expect the total number of EUs to be uniformly distributed throughout
+    * the subslices.
+    */
+   assert((n_eus % n_subslices) == 0);
+   devinfo->num_eu_per_subslice = n_eus / n_subslices;
 }
 
 bool

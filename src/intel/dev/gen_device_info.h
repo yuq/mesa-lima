@@ -34,6 +34,8 @@
 extern "C" {
 #endif
 
+struct drm_i915_query_topology_info;
+
 #define GEN_DEVICE_MAX_SLICES           (6)  /* Maximum on gen10 */
 #define GEN_DEVICE_MAX_SUBSLICES        (8)  /* Maximum on gen11 */
 #define GEN_DEVICE_MAX_EUS_PER_SUBSLICE (10) /* Maximum on Haswell */
@@ -121,7 +123,9 @@ struct gen_device_info
    unsigned num_subslices[GEN_DEVICE_MAX_SUBSLICES];
 
    /**
-    * Number of EU per subslice.
+    * Upper bound of number of EU per subslice (some SKUs might have just 1 EU
+    * fused across all subslices, like 47 EUs, in which case this number won't
+    * be acurate for one subslice).
     */
    unsigned num_eu_per_subslice;
 
@@ -247,6 +251,15 @@ int gen_get_pci_device_id_override(void);
 int gen_device_name_to_pci_device_id(const char *name);
 bool gen_get_device_info(int devid, struct gen_device_info *devinfo);
 const char *gen_get_device_name(int devid);
+
+/* Used with SLICE_MASK/SUBSLICE_MASK values from DRM_I915_GETPARAM. */
+void gen_device_info_update_from_masks(struct gen_device_info *devinfo,
+                                       uint32_t slice_mask,
+                                       uint32_t subslice_mask,
+                                       uint32_t n_eus);
+/* Used with DRM_IOCTL_I915_QUERY & DRM_I915_QUERY_TOPOLOGY_INFO. */
+void gen_device_info_update_from_topology(struct gen_device_info *devinfo,
+                                          const struct drm_i915_query_topology_info *topology);
 
 #ifdef __cplusplus
 }
