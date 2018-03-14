@@ -662,7 +662,8 @@ static int si_get_video_param(struct pipe_screen *screen,
 	case PIPE_VIDEO_CAP_MAX_HEIGHT:
 		return (sscreen->info.family < CHIP_TONGA) ? 1152 : 4096;
 	case PIPE_VIDEO_CAP_PREFERED_FORMAT:
-		if (profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10)
+		if (profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10 ||
+		    profile == PIPE_VIDEO_PROFILE_VP9_PROFILE2)
 			return PIPE_FORMAT_P016;
 		else
 			return PIPE_FORMAT_NV12;
