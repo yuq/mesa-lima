@@ -675,6 +675,8 @@ static int si_get_video_param(struct pipe_screen *screen,
 			return false; //The firmware doesn't support interlaced HEVC.
 		else if (format == PIPE_VIDEO_FORMAT_JPEG)
 			return false;
+		else if (format == PIPE_VIDEO_FORMAT_VP9)
+			return false;
 		return true;
 	}
 	case PIPE_VIDEO_CAP_SUPPORTS_PROGRESSIVE:
