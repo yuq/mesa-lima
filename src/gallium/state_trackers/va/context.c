@@ -288,6 +288,10 @@ vlVaCreateContext(VADriverContextP ctx, VAConfigID config_id, int picture_width,
          }
          break;
 
+      case PIPE_VIDEO_FORMAT_VP9:
+         context->templat.max_references = num_render_targets;
+         break;
+
       default:
          break;
       }
