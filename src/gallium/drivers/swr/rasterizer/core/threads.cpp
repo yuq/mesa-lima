@@ -36,6 +36,11 @@
 #include <unistd.h>
 #endif
 
+#ifdef __APPLE__
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#endif
+
 #include "common/os.h"
 #include "context.h"
 #include "frontend.h"
@@ -219,6 +224,56 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes, uint32_t& out_numThread
 
 #elif defined(__APPLE__)
 
+    auto numProcessors = 0;
+    auto numCores = 0;
+    auto numPhysicalIds = 0;
+
+    int value;
+    size_t size = sizeof(value);
+
+    int result = sysctlbyname("hw.packages", &value, &size, NULL, 0);
+    SWR_ASSERT(result == 0);
+    numPhysicalIds = value;
+
+    result = sysctlbyname("hw.logicalcpu", &value, &size, NULL, 0);
+    SWR_ASSERT(result == 0);
+    numProcessors = value;
+
+    result = sysctlbyname("hw.physicalcpu", &value, &size, NULL, 0);
+    SWR_ASSERT(result == 0);
+    numCores = value;
+
+    out_nodes.resize(numPhysicalIds);
+
+    for (auto physId = 0; physId < numPhysicalIds; ++physId)
+    {
+        auto &numaNode = out_nodes[physId];
+        auto procId = 0;
+
+        numaNode.cores.resize(numCores);
+
+        while (procId < numProcessors)
+        {
+            for (auto coreId = 0; coreId < numaNode.cores.size(); ++coreId, ++procId)
+            {
+                auto &core = numaNode.cores[coreId];
+
+                core.procGroup = coreId;
+                core.threadIds.push_back(procId);
+            }
+        }
+    }
+
+    out_numThreadsPerProcGroup = 0;
+
+    for (auto &node : out_nodes)
+    {
+        for (auto &core : node.cores)
+        {
+            out_numThreadsPerProcGroup += core.threadIds.size();
+        }
+    }
+
 #else
 
 #error Unsupported platform
@@ -252,7 +307,6 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes, uint32_t& out_numThread
         }
     }
 }
-
 
 void bindThread(SWR_CONTEXT* pContext, uint32_t threadId, uint32_t procGroupId = 0, bool bindProcGroup=false)
 {
