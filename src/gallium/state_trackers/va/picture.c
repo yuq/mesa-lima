@@ -134,6 +134,10 @@ handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *
       vlVaHandlePictureParameterBufferMJPEG(drv, context, buf);
       break;
 
+  case PIPE_VIDEO_FORMAT_VP9:
+      vlVaHandlePictureParameterBufferVP9(drv, context, buf);
+      break;
+
    default:
       break;
    }
@@ -223,6 +227,10 @@ handleSliceParameterBuffer(vlVaContext *context, vlVaBuffer *buf)
       vlVaHandleSliceParameterBufferMJPEG(context, buf);
       break;
 
+   case PIPE_VIDEO_FORMAT_VP9:
+      vlVaHandleSliceParameterBufferVP9(context, buf);
+      break;
+
    default:
       break;
    }
@@ -293,6 +301,9 @@ handleVASliceDataBufferType(vlVaContext *context, vlVaBuffer *buf)
       sizes[num_buffers++] = context->mpeg4.start_code_size;
       break;
    case PIPE_VIDEO_FORMAT_JPEG:
+      break;
+   case PIPE_VIDEO_FORMAT_VP9:
+      /* TODO */
       break;
    default:
       break;
