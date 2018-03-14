@@ -1205,13 +1205,14 @@ static LLVMValueRef get_tcs_tes_buffer_address_params(struct radv_shader_context
 
 static void
 mark_tess_output(struct radv_shader_context *ctx,
-		 bool is_patch, uint32_t param)
+		 bool is_patch, uint32_t param, int num_slots)
 
 {
+	uint64_t slot_mask = (1ull << num_slots) - 1;
 	if (is_patch) {
-		ctx->tess_patch_outputs_written |= (1ull << param);
+		ctx->tess_patch_outputs_written |= (slot_mask << param);
 	} else
-		ctx->tess_outputs_written |= (1ull << param);
+		ctx->tess_outputs_written |= (slot_mask << param);
 }
 
 static LLVMValueRef
@@ -1308,6 +1309,7 @@ store_tcs_output(struct ac_shader_abi *abi,
 	const unsigned component = var->data.location_frac;
 	const bool is_patch = var->data.patch;
 	const bool is_compact = var->data.compact;
+	const unsigned count = glsl_count_attribute_slots(var->type, false);
 	LLVMValueRef dw_addr;
 	LLVMValueRef stride = NULL;
 	LLVMValueRef buf_addr = NULL;
@@ -1336,7 +1338,10 @@ store_tcs_output(struct ac_shader_abi *abi,
 		dw_addr = get_tcs_out_current_patch_data_offset(ctx);
 	}
 
-	mark_tess_output(ctx, is_patch, param);
+	if (param_index)
+		mark_tess_output(ctx, is_patch, param, count);
+	else
+		mark_tess_output(ctx, is_patch, param, 1);
 
 	dw_addr = get_dw_address(ctx, dw_addr, param, const_index, is_compact, vertex_index, stride,
 				 param_index);
@@ -2442,9 +2447,9 @@ handle_ls_outputs_post(struct radv_shader_context *ctx)
 		if (i == VARYING_SLOT_CLIP_DIST0)
 			length = ctx->num_output_clips + ctx->num_output_culls;
 		int param = shader_io_get_unique_index(i);
-		mark_tess_output(ctx, false, param);
+		mark_tess_output(ctx, false, param, 1);
 		if (length > 4)
-			mark_tess_output(ctx, false, param + 1);
+			mark_tess_output(ctx, false, param + 1, 1);
 		LLVMValueRef dw_addr = LLVMBuildAdd(ctx->ac.builder, base_dw_addr,
 						    LLVMConstInt(ctx->ac.i32, param * 4, false),
 						    "");
@@ -2588,13 +2593,13 @@ write_tess_factors(struct radv_shader_context *ctx)
 
 	if (inner_comps) {
 		tess_inner_index = shader_io_get_unique_index(VARYING_SLOT_TESS_LEVEL_INNER);
-		mark_tess_output(ctx, true, tess_inner_index);
+		mark_tess_output(ctx, true, tess_inner_index, 1);
 		lds_inner = LLVMBuildAdd(ctx->ac.builder, lds_base,
 					 LLVMConstInt(ctx->ac.i32, tess_inner_index * 4, false), "");
 	}
 
 	tess_outer_index = shader_io_get_unique_index(VARYING_SLOT_TESS_LEVEL_OUTER);
-	mark_tess_output(ctx, true, tess_outer_index);
+	mark_tess_output(ctx, true, tess_outer_index, 1);
 	lds_outer = LLVMBuildAdd(ctx->ac.builder, lds_base,
 				 LLVMConstInt(ctx->ac.i32, tess_outer_index * 4, false), "");
 
