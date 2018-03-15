@@ -953,10 +953,6 @@ r600_texture_create_object(struct pipe_screen *screen,
 		r600_init_resource_fields(rscreen, resource, rtex->size,
 					  rtex->surface.surf_alignment);
 
-		/* Displayable surfaces are not suballocated. */
-		if (resource->b.b.bind & PIPE_BIND_SCANOUT)
-			resource->flags |= RADEON_FLAG_NO_SUBALLOC;
-
 		if (!r600_alloc_resource(rscreen, resource)) {
 			FREE(rtex);
 			return NULL;

@@ -167,20 +167,14 @@ void r600_init_resource_fields(struct r600_common_screen *rscreen,
 			 RADEON_FLAG_GTT_WC;
 	}
 
-	/* Only displayable single-sample textures can be shared between
-	 * processes. */
-	if (res->b.b.target == PIPE_BUFFER ||
-	    res->b.b.nr_samples >= 2 ||
-	    (rtex->surface.micro_tile_mode != RADEON_MICRO_MODE_DISPLAY &&
-	     /* Raven doesn't use display micro mode for 32bpp, so check this: */
-	     !(res->b.b.bind & PIPE_BIND_SCANOUT)))
+	/* Displayable and shareable surfaces are not suballocated. */
+	if (res->b.b.bind & (PIPE_BIND_SHARED | PIPE_BIND_SCANOUT))
+		res->flags |= RADEON_FLAG_NO_SUBALLOC; /* shareable */
+	else
 		res->flags |= RADEON_FLAG_NO_INTERPROCESS_SHARING;
 
 	if (rscreen->debug_flags & DBG_NO_WC)
 		res->flags &= ~RADEON_FLAG_GTT_WC;
-
-	if (res->b.b.bind & PIPE_BIND_SHARED)
-		res->flags |= RADEON_FLAG_NO_SUBALLOC;
 
 	/* Set expected VRAM and GART usage for the buffer. */
 	res->vram_usage = 0;
