@@ -38,6 +38,7 @@
 #include "radeonsi/si_pipe.h"
 #include "radeon_video.h"
 #include "radeon_vcn_dec.h"
+#include "vl/vl_probs_table.h"
 
 #define FB_BUFFER_OFFSET		0x1000
 #define FB_BUFFER_SIZE			2048
@@ -358,6 +359,32 @@ static rvcn_dec_message_hevc_t get_h265_msg(struct radeon_decoder *dec,
 	}
 
 	return result;
+}
+
+static void fill_probs_table(void *ptr)
+{
+	rvcn_dec_vp9_probs_t *probs = (rvcn_dec_vp9_probs_t *)ptr;
+
+	memcpy(&probs->coef_probs[0], default_coef_probs_4x4, sizeof(default_coef_probs_4x4));
+	memcpy(&probs->coef_probs[1], default_coef_probs_8x8, sizeof(default_coef_probs_8x8));
+	memcpy(&probs->coef_probs[2], default_coef_probs_16x16, sizeof(default_coef_probs_16x16));
+	memcpy(&probs->coef_probs[3], default_coef_probs_32x32, sizeof(default_coef_probs_32x32));
+	memcpy(probs->y_mode_prob, default_if_y_probs, sizeof(default_if_y_probs));
+	memcpy(probs->uv_mode_prob, default_if_uv_probs, sizeof(default_if_uv_probs));
+	memcpy(probs->single_ref_prob, default_single_ref_p, sizeof(default_single_ref_p));
+	memcpy(probs->switchable_interp_prob, default_switchable_interp_prob, sizeof(default_switchable_interp_prob));
+	memcpy(probs->partition_prob, default_partition_probs, sizeof(default_partition_probs));
+	memcpy(probs->inter_mode_probs, default_inter_mode_probs, sizeof(default_inter_mode_probs));
+	memcpy(probs->mbskip_probs, default_skip_probs, sizeof(default_skip_probs));
+	memcpy(probs->intra_inter_prob, default_intra_inter_p, sizeof(default_intra_inter_p));
+	memcpy(probs->comp_inter_prob, default_comp_inter_p, sizeof(default_comp_inter_p));
+	memcpy(probs->comp_ref_prob, default_comp_ref_p, sizeof(default_comp_ref_p));
+	memcpy(probs->tx_probs_32x32, default_tx_probs_32x32, sizeof(default_tx_probs_32x32));
+	memcpy(probs->tx_probs_16x16, default_tx_probs_16x16, sizeof(default_tx_probs_16x16));
+	memcpy(probs->tx_probs_8x8, default_tx_probs_8x8, sizeof(default_tx_probs_8x8));
+	memcpy(probs->mv_joints, default_nmv_joints, sizeof(default_nmv_joints));
+	memcpy(&probs->mv_comps[0], default_nmv_components, sizeof(default_nmv_components));
+	memset(&probs->nmvc_mask, 0, sizeof(rvcn_dec_vp9_nmv_ctx_mask_t));
 }
 
 static unsigned calc_ctx_size_h265_main(struct radeon_decoder *dec)
@@ -1306,6 +1333,17 @@ struct pipe_video_codec *radeon_create_decoder(struct pipe_context *context,
 
 		si_vid_clear_buffer(context, &dec->msg_fb_it_probs_buffers[i]);
 		si_vid_clear_buffer(context, &dec->bs_buffers[i]);
+
+		if (have_probs(dec)) {
+			struct rvid_buffer* buf;
+			void *ptr;
+
+			buf = &dec->msg_fb_it_probs_buffers[i];
+			ptr = dec->ws->buffer_map(buf->res->buf, dec->cs, PIPE_TRANSFER_WRITE);
+			ptr += FB_BUFFER_OFFSET + FB_BUFFER_SIZE;
+			fill_probs_table(ptr);
+			dec->ws->buffer_unmap(buf->res->buf);
+		}
 	}
 
 	dpb_size = calc_dpb_size(dec);
