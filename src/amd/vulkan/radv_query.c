@@ -1178,6 +1178,25 @@ void radv_CmdBeginQuery(
 	va += pool->stride * query;
 
 	emit_begin_query(cmd_buffer, va, pool->type);
+
+	/*
+	 * For multiview we have to emit a query for each bit in the mask,
+	 * however the first query we emit will get the totals for all the
+	 * operations, so we don't want to get a real value in the other
+	 * queries. This emits a fake begin/end sequence so the waiting
+	 * code gets a completed query value and doesn't hang, but the
+	 * query returns 0.
+	 */
+	if (cmd_buffer->state.subpass && cmd_buffer->state.subpass->view_mask) {
+		uint64_t avail_va = va + pool->availability_offset + 4 * query;
+
+		for (unsigned i = 0; i < util_bitcount(cmd_buffer->state.subpass->view_mask); i++) {
+			va += pool->stride;
+			avail_va += 4;
+			emit_begin_query(cmd_buffer, va, pool->type);
+			emit_end_query(cmd_buffer, va, avail_va, pool->type);
+		}
+	}
 }
 
 
