@@ -163,9 +163,12 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
 
                     // execute pixel shader
                     RDTSC_BEGIN(BEPixelShader, pDC->drawId);
-                    UPDATE_STAT_BE(PsInvocations, _mm_popcnt_u32(_simd_movemask_ps(vCoverageMask)));
                     state.psState.pfnPixelShader(GetPrivateState(pDC), &psContext);
                     RDTSC_END(BEPixelShader, 0);
+
+                    // update stats
+                    UPDATE_STAT_BE(PsInvocations, _mm_popcnt_u32(_simd_movemask_ps(vCoverageMask)));
+                    AR_EVENT(PSStats(psContext.stats.numInstExecuted));
 
                     vCoverageMask = _simd_castsi_ps(psContext.activeMask);
 

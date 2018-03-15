@@ -115,6 +115,36 @@ event FrontendStatsEvent
     uint64_t SoNumPrimsWritten3;
 };
 
+event VSStats
+{
+    uint32_t numInstExecuted;
+};
+
+event HSStats
+{
+    uint32_t numInstExecuted;
+};
+
+event DSStats
+{
+    uint32_t numInstExecuted;
+};
+
+event GSStats
+{
+    uint32_t numInstExecuted;
+};
+
+event PSStats
+{
+    uint32_t numInstExecuted;
+};
+
+event CSStats
+{
+    uint32_t numInstExecuted;
+};
+
 event BackendStatsEvent
 {
     uint32_t drawId;

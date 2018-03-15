@@ -81,6 +81,7 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     state.pfnCsFunc(GetPrivateState(pDC), &csContext);
 
     UPDATE_STAT_BE(CsInvocations, state.totalThreadsInGroup);
+    AR_EVENT(CSStats(csContext.stats.numInstExecuted));
 
     RDTSC_END(BEDispatch, 1);
 }

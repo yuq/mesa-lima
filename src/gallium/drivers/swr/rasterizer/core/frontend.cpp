@@ -851,6 +851,7 @@ static void GeometryShaderStage(
 
         // execute the geometry shader
         state.pfnGsFunc(GetPrivateState(pDC), &gsContext);
+        AR_EVENT(GSStats(gsContext.stats.numInstExecuted));
 
         for (uint32_t i = 0; i < KNOB_SIMD_WIDTH; ++i)
         {
@@ -1253,6 +1254,7 @@ static void TessellationStages(
     RDTSC_END(FEHullShader, 0);
 
     UPDATE_STAT_FE(HsInvocations, numPrims);
+    AR_EVENT(HSStats(hsContext.stats.numInstExecuted));
 
     const uint32_t* pPrimId = (const uint32_t*)&primID;
 
@@ -1315,6 +1317,8 @@ static void TessellationStages(
             RDTSC_BEGIN(FEDomainShader, pDC->drawId);
             state.pfnDsFunc(GetPrivateState(pDC), &dsContext);
             RDTSC_END(FEDomainShader, 0);
+
+            AR_EVENT(DSStats(dsContext.stats.numInstExecuted));
 
             dsInvocations += KNOB_SIMD_WIDTH;
         }
@@ -1793,12 +1797,15 @@ void ProcessDraw(
                     RDTSC_BEGIN(FEVertexShader, pDC->drawId);
 #if USE_SIMD16_VS
                     state.pfnVertexFunc(GetPrivateState(pDC), &vsContext_lo);
+                    AR_EVENT(VSStats(vsContext_lo.stats.numInstExecuted));
 #else
                     state.pfnVertexFunc(GetPrivateState(pDC), &vsContext_lo);
+                    AR_EVENT(VSStats(vsContext_lo.stats.numInstExecuted));
 
                     if ((i + KNOB_SIMD_WIDTH) < endVertex)  // 1/2 of KNOB_SIMD16_WIDTH
                     {
                         state.pfnVertexFunc(GetPrivateState(pDC), &vsContext_hi);
+                        AR_EVENT(VSStats(vsContext_hi.stats.numInstExecuted));
                     }
 #endif
                     RDTSC_END(FEVertexShader, 0);
@@ -2016,6 +2023,7 @@ void ProcessDraw(
                     RDTSC_END(FEVertexShader, 0);
 
                     UPDATE_STAT_FE(VsInvocations, GetNumInvocations(i, endVertex));
+                    AR_EVENT(VSStats(vsContext.stats.numInstExecuted));
                 }
             }
 

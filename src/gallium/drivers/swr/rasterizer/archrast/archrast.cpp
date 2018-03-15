@@ -61,7 +61,7 @@ namespace ArchRast
         //@todo:: Change this to numPatches. Assumed: 1 patch per prim. If holds, its fine.
     };
 
-    struct GSStats
+    struct GSInfo
     {
         uint32_t inputPrimCount;
         uint32_t primGeneratedCount;
@@ -369,7 +369,7 @@ namespace ArchRast
         DepthStencilStats mDSOmZ = {};
         CStats mClipper = {};
         TEStats mTS = {};
-        GSStats mGS = {};
+        GSInfo mGS = {};
         RastStats rastStats = {};
         CullStats mCullStats = {};
         AlphaStats mAlphaStats = {};
