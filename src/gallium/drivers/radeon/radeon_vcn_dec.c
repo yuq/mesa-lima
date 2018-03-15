@@ -549,6 +549,17 @@ static rvcn_dec_message_vp9_t get_vp9_msg(struct radeon_decoder *dec,
 	result.frame_refs[2] = result.ref_frame_map[pic->picture_parameter.pic_fields.alt_ref_frame];
 	result.ref_frame_sign_bias[2] = pic->picture_parameter.pic_fields.alt_ref_frame_sign_bias;
 
+	if (pic->base.profile == PIPE_VIDEO_PROFILE_VP9_PROFILE2) {
+		if (target->buffer_format == PIPE_FORMAT_P016) {
+			result.p010_mode = 1;
+			result.msb_mode = 1;
+		} else {
+			result.p010_mode = 0;
+			result.luma_10to8 = 1;
+			result.chroma_10to8 = 1;
+		}
+	}
+
 	return result;
 }
 
@@ -953,6 +964,9 @@ static struct pb_buffer *rvcn_dec_message_decode(struct radeon_decoder *dec,
 			/* SDB left tile pixel */
 			ctx_size += 8 * 2 * 4096;
 
+			if (dec->base.profile == PIPE_VIDEO_PROFILE_VP9_PROFILE2)
+				ctx_size += 8 * 2 * 4096;
+
 			if (!si_vid_create_buffer(dec->screen, &dec->ctx, ctx_size, PIPE_USAGE_DEFAULT))
 				RVID_ERR("Can't allocated context buffer.\n");
 			si_vid_clear_buffer(dec->base.context, &dec->ctx);
@@ -1260,6 +1274,8 @@ static unsigned calc_dpb_size(struct radeon_decoder *dec)
 		max_references = MAX2(max_references, 9);
 
 		dpb_size = (4096 * 3000 * 3 / 2) * max_references;
+		if (dec->base.profile == PIPE_VIDEO_PROFILE_VP9_PROFILE2)
+			dpb_size *= (3 / 2);
 		break;
 
 	default:
