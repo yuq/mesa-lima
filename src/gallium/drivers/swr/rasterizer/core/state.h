@@ -214,6 +214,15 @@ struct SIMDVERTEX_T
 };
 
 //////////////////////////////////////////////////////////////////////////
+/// SWR_SHADER_STATS
+/// @brief Structure passed to shader for stats collection.
+/////////////////////////////////////////////////////////////////////////
+struct SWR_SHADER_STATS
+{
+    uint32_t numInstExecuted; // This is roughly the API instructions executed and not x86.
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// SWR_VS_CONTEXT
 /// @brief Input to vertex shader
 /////////////////////////////////////////////////////////////////////////
@@ -232,6 +241,7 @@ struct SWR_VS_CONTEXT
     simd16scalari VertexID16;   // IN: Vertex ID (16-wide)
 #endif
 #endif
+    SWR_SHADER_STATS stats;     // OUT: shader statistics used for archrast.
 };
 
 /////////////////////////////////////////////////////////////////////////
@@ -281,6 +291,7 @@ struct SWR_HS_CONTEXT
     simdscalari mask;           // IN: Active mask for shader
     ScalarPatch* pCPout;        // OUT: Output control point patch
                                 // SIMD-sized-array of SCALAR patches
+    SWR_SHADER_STATS stats;     // OUT: shader statistics used for archrast.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -298,6 +309,7 @@ struct SWR_DS_CONTEXT
     simdscalar*     pDomainV;       // IN: (SIMD) Domain Point V coords
     simdscalari     mask;           // IN: Active mask for shader
     simdscalar*     pOutputData;    // OUT: (SIMD) Vertex Attributes (2D array of vectors, one row per attribute-component)
+    SWR_SHADER_STATS stats;         // OUT: shader statistics used for archrast.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -312,6 +324,7 @@ struct SWR_GS_CONTEXT
     uint32_t InstanceID;                // IN: input instance ID
     simdscalari mask;                   // IN: Active mask for shader
     uint8_t* pStreams[KNOB_SIMD_WIDTH]; // OUT: output stream (contains vertices for all output streams)
+    SWR_SHADER_STATS stats;             // OUT: shader statistics used for archrast.
 };
 
 struct PixelPositions
@@ -358,6 +371,8 @@ struct SWR_PS_CONTEXT
     uint32_t rasterizerSampleCount;     // IN: sample count used by the rasterizer
 
     uint8_t* pColorBuffer[SWR_NUM_RENDERTARGETS]; // IN: Pointers to render target hottiles
+
+    SWR_SHADER_STATS stats;             // OUT: shader statistics used for archrast.
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -391,14 +406,13 @@ struct SWR_CS_CONTEXT
     // Dispatch dimensions used by shader to compute system values from the tile counter.
     uint32_t dispatchDims[3];
 
-    uint8_t* pTGSM;  // Thread Group Shared Memory pointer.
-
-    uint8_t* pSpillFillBuffer;  // Spill/fill buffer for barrier support
-
-    uint8_t* pScratchSpace;     // Pointer to scratch space buffer used by the shader, shader is responsible
-                                // for subdividing scratch space per instance/simd
-
+    uint8_t* pTGSM;               // Thread Group Shared Memory pointer.
+    uint8_t* pSpillFillBuffer;    // Spill/fill buffer for barrier support
+    uint8_t* pScratchSpace;       // Pointer to scratch space buffer used by the shader, shader is responsible
+                                  // for subdividing scratch space per instance/simd
     uint32_t scratchSpacePerSimd; // Scratch space per work item x SIMD_WIDTH
+
+    SWR_SHADER_STATS stats;       // OUT: shader statistics used for archrast.
 };
 
 // enums
