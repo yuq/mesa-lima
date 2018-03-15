@@ -79,7 +79,7 @@ llvm_intrinsics = [
     ['LOG2', 'log2', ['a'], ['a']],
     ['FABS', 'fabs', ['a'], ['a']],
     ['EXP2', 'exp2', ['a'], ['a']],
-    ['POW', 'pow', ['a', 'b'], ['a', 'b']]
+    ['POW', 'pow', ['a', 'b'], ['a']]
 ]
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
