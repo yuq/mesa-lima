@@ -967,6 +967,15 @@ lima_flush(struct lima_context *ctx)
    lima_bo_update(res->bo, false, true);
 
    int num_pp = screen->num_pp;
+   bool swap_channels = false;
+   switch (ctx->framebuffer.cbuf->format) {
+   case PIPE_FORMAT_R8G8B8A8_UNORM:
+   case PIPE_FORMAT_R8G8B8X8_UNORM:
+      swap_channels = true;
+      break;
+   default:
+      break;
+   }
    struct drm_lima_m400_pp_frame pp_frame = {
       .frame = {
          .plbu_array_address = 0,
@@ -1001,11 +1010,11 @@ lima_flush(struct lima_context *ctx)
       .wb[0] = {
          .type = 0x02, /* 1 for depth, stencil */
          .address = res->bo->va,
-         .pixel_format = 0x03, /* RGBA8888 */
+         .pixel_format = 0x03, /* BGRA8888 */
          .downsample_factor = 0,
          .pixel_layout = 0,
          .pitch = res->stride / 8,
-         .mrt_bits = 0,
+         .mrt_bits = swap_channels ? 0x4 : 0x0,
          .mrt_pitch = 0,
          .zero = 0,
          .unused0 = 0,
