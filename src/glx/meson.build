@@ -137,7 +137,7 @@ gl_lib_cargs = [
   '-DDEFAULT_DRIVER_DIR="@0@"'.format(dri_search_path),
 ]
 
-if dep_xxf86vm != [] and dep_xxf86vm.found()
+if dep_xxf86vm.found()
   gl_lib_cargs += '-DHAVE_XF86VIDMODE'
 endif
 

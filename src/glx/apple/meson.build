@@ -46,7 +46,7 @@ files_libappleglx = files(
   'glx_empty.c',
 )
 
-dep_xplugin = []
+dep_xplugin = null_dep
 if with_dri_platform == 'apple'
   dep_xplugin = meson.get_compiler('c').find_library('Xplugin')
 endif
