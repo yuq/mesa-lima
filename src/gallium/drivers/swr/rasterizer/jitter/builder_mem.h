@@ -60,6 +60,8 @@ LoadInst *LOADV(Value *BasePtr, const std::initializer_list<Value*> &offset, con
 StoreInst *STORE(Value *Val, Value *BasePtr, const std::initializer_list<uint32_t> &offset);
 StoreInst *STOREV(Value *Val, Value *BasePtr, const std::initializer_list<Value*> &offset);
 
+Value* MEM_ADD(Value* i32Incr, Value* basePtr, const std::initializer_list<uint32_t> &indices, const llvm::Twine& name = "");
+
 void Gather4(const SWR_FORMAT format, Value* pSrcBase, Value* byteOffsets,
     Value* mask, Value* vGatherComponents[], bool bPackedOutput, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
 

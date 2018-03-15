@@ -134,6 +134,13 @@ namespace SwrJit
         return GEP(base, offset);
     }
 
+    Value* Builder::MEM_ADD(Value* i32Incr, Value* basePtr, const std::initializer_list<uint32_t> &indices, const llvm::Twine& name)
+    {
+        Value* i32Value = LOAD(GEP(basePtr, indices), name);
+        Value* i32Result = ADD(i32Value, i32Incr);
+        return STORE(i32Result, GEP(basePtr, indices));
+    }
+
     //////////////////////////////////////////////////////////////////////////
     /// @brief Generate a masked gather operation in LLVM IR.  If not  
     /// supported on the underlying platform, emulate it with loads
