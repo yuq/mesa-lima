@@ -156,14 +156,7 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     mpFetchInfo->setName("fetchInfo");
     Value*    pVtxOut = &*argitr;
     pVtxOut->setName("vtxOutput");
-    // this is just shorthand to tell LLVM to get a pointer to the base address of simdvertex
-    // index 0(just the pointer to the simdvertex structure
-    // index 1(which element of the simdvertex structure to offset to(in this case 0)
-    // so the indices being i32's doesn't matter
-    // TODO: generated this GEP with a VECTOR structure type so this makes sense
-    std::vector<Value*>    vtxInputIndices(2, C(0));
-    // GEP
-    pVtxOut = GEP(pVtxOut, C(0));
+
 #if USE_SIMD16_SHADERS
 #if 0// USE_SIMD16_BUILDER
     pVtxOut = BITCAST(pVtxOut, PointerType::get(VectorType::get(mFP32Ty, mVWidth16), 0));
