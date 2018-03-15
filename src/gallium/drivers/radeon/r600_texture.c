@@ -701,6 +701,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		if (sscreen->ws->buffer_is_suballocated(res->buf) ||
 		    rtex->surface.tile_swizzle ||
 		    (rtex->resource.flags & RADEON_FLAG_NO_INTERPROCESS_SHARING &&
+		     sscreen->info.has_local_buffers &&
 		     whandle->type != DRM_API_HANDLE_TYPE_KMS)) {
 			assert(!res->b.is_shared);
 			r600_reallocate_texture_inplace(rctx, rtex,
@@ -762,7 +763,8 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		/* Move a suballocated buffer into a non-suballocated allocation. */
 		if (sscreen->ws->buffer_is_suballocated(res->buf) ||
 		    /* A DMABUF export always fails if the BO is local. */
-		    rtex->resource.flags & RADEON_FLAG_NO_INTERPROCESS_SHARING) {
+		    (rtex->resource.flags & RADEON_FLAG_NO_INTERPROCESS_SHARING &&
+		     sscreen->info.has_local_buffers)) {
 			assert(!res->b.is_shared);
 
 			/* Allocate a new buffer with PIPE_BIND_SHARED. */

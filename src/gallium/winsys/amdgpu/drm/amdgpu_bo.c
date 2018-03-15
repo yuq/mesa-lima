@@ -423,10 +423,9 @@ static struct amdgpu_winsys_bo *amdgpu_create_bo(struct amdgpu_winsys *ws,
       request.flags |= AMDGPU_GEM_CREATE_NO_CPU_ACCESS;
    if (flags & RADEON_FLAG_GTT_WC)
       request.flags |= AMDGPU_GEM_CREATE_CPU_GTT_USWC;
-   /* TODO: Enable this once the kernel handles it efficiently. */
-   /*if (flags & RADEON_FLAG_NO_INTERPROCESS_SHARING &&
-       ws->info.drm_minor >= 20)
-      request.flags |= AMDGPU_GEM_CREATE_VM_ALWAYS_VALID;*/
+   if (flags & RADEON_FLAG_NO_INTERPROCESS_SHARING &&
+       ws->info.has_local_buffers)
+      request.flags |= AMDGPU_GEM_CREATE_VM_ALWAYS_VALID;
 
    r = amdgpu_bo_alloc(ws->dev, &request, &buf_handle);
    if (r) {
