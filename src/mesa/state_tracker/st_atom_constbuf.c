@@ -196,7 +196,7 @@ st_update_cs_constants(struct st_context *st)
 
 static void
 st_bind_ubos(struct st_context *st, struct gl_program *prog,
-             unsigned shader_type)
+             enum pipe_shader_type shader_type)
 {
    unsigned i;
    struct pipe_constant_buffer cb = { 0 };
