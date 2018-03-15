@@ -501,7 +501,6 @@ anv_pipeline_add_compiled_stage(struct anv_pipeline *pipeline,
                                 struct anv_shader_bin *shader)
 {
    pipeline->shaders[stage] = shader;
-   pipeline->active_stages |= mesa_to_vk_shader_stage(stage);
 }
 
 static VkResult
@@ -1334,10 +1333,17 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    const VkPipelineShaderStageCreateInfo *pStages[MESA_SHADER_STAGES] = {};
    struct anv_shader_module *modules[MESA_SHADER_STAGES] = {};
    for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
-      gl_shader_stage stage = ffs(pCreateInfo->pStages[i].stage) - 1;
+      VkShaderStageFlagBits vk_stage = pCreateInfo->pStages[i].stage;
+      gl_shader_stage stage = vk_to_mesa_shader_stage(vk_stage);
       pStages[stage] = &pCreateInfo->pStages[i];
       modules[stage] = anv_shader_module_from_handle(pStages[stage]->module);
+      pipeline->active_stages |= vk_stage;
    }
+
+   if (pipeline->active_stages & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT)
+      pipeline->active_stages |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+
+   assert(pipeline->active_stages & VK_SHADER_STAGE_VERTEX_BIT);
 
    if (modules[MESA_SHADER_VERTEX]) {
       result = anv_pipeline_compile_vs(pipeline, cache, pCreateInfo,
@@ -1378,7 +1384,7 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
          goto compile_fail;
    }
 
-   assert(pipeline->active_stages & VK_SHADER_STAGE_VERTEX_BIT);
+   assert(pipeline->shaders[MESA_SHADER_VERTEX]);
 
    anv_pipeline_setup_l3_config(pipeline, false);
 
