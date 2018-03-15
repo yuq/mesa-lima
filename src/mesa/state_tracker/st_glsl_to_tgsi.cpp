@@ -5450,7 +5450,7 @@ struct st_translate {
    const ubyte *inputMapping;
    const ubyte *outputMapping;
 
-   unsigned procType;  /**< PIPE_SHADER_VERTEX/FRAGMENT */
+   enum pipe_shader_type procType;  /**< PIPE_SHADER_VERTEX/FRAGMENT */
    bool need_uarl;
 };
 
@@ -6290,7 +6290,7 @@ st_translate_interp(enum glsl_interp_mode glsl_qual, GLuint varying)
 extern "C" enum pipe_error
 st_translate_program(
    struct gl_context *ctx,
-   uint procType,
+   enum pipe_shader_type procType,
    struct ureg_program *ureg,
    glsl_to_tgsi_visitor *program,
    const struct gl_program *proginfo,
@@ -6723,6 +6723,8 @@ st_translate_program(
          }
       }
       break;
+   default:
+      ; /* nothing - silence compiler warning */
    }
 
 out:
