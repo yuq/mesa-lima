@@ -514,13 +514,6 @@ VkResult anv_CreateInstance(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO);
 
-   /* Check if user passed a debug report callback to be used during
-    * Create/Destroy of instance.
-    */
-   const VkDebugReportCallbackCreateInfoEXT *ctor_cb =
-      vk_find_struct_const(pCreateInfo->pNext,
-                           DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT);
-
    struct anv_instance_extension_table enabled_extensions = {};
    for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
       int idx;
