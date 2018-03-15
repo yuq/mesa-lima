@@ -945,16 +945,7 @@ typedef struct {
    struct nir_function *callee;
 } nir_call_instr;
 
-#define INTRINSIC(name, num_srcs, src_components, has_dest, dest_components, \
-                  num_variables, num_indices, idx0, idx1, idx2, flags) \
-   nir_intrinsic_##name,
-
-#define LAST_INTRINSIC(name) nir_last_intrinsic = nir_intrinsic_##name,
-
-typedef enum {
 #include "nir_intrinsics.h"
-   nir_num_intrinsics = nir_last_intrinsic + 1
-} nir_intrinsic_op;
 
 #define NIR_INTRINSIC_MAX_CONST_INDEX 3
 
