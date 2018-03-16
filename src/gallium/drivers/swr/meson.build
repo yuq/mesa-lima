@@ -79,6 +79,7 @@ files_swr_mesa = files(
   'rasterizer/jitter/JitManager.h',
   'rasterizer/jitter/streamout_jit.cpp',
   'rasterizer/jitter/streamout_jit.h',
+  'rasterizer/jitter/shader_lib/DebugOutput.cpp',
 )
 
 files_swr_arch = files(

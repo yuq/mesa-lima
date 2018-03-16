@@ -33,10 +33,10 @@
 
 #include <cstdarg>
 
+extern "C" void CallPrint(const char* fmt, ...);
+
 namespace SwrJit
 {
-    void __cdecl CallPrint(const char* fmt, ...);
-
     //////////////////////////////////////////////////////////////////////////
     /// @brief Convert an IEEE 754 32-bit single precision float to an
     ///        16 bit float with 5 exponent bits and a variable
@@ -845,24 +845,6 @@ namespace SwrJit
     //////////////////////////////////////////////////////////////////////////
     /// @brief C functions called by LLVM IR
     //////////////////////////////////////////////////////////////////////////
-
-    //////////////////////////////////////////////////////////////////////////
-    /// @brief called in JIT code, inserted by PRINT
-    /// output to both stdout and visual studio debug console
-    void __cdecl CallPrint(const char* fmt, ...)
-    {
-        va_list args;
-        va_start(args, fmt);
-        vprintf(fmt, args);
-
-    #if defined( _WIN32 )
-        char strBuf[1024];
-        vsnprintf_s(strBuf, _TRUNCATE, fmt, args);
-        OutputDebugStringA(strBuf);
-    #endif
-
-        va_end(args);
-    }
 
     Value *Builder::VEXTRACTI128(Value* a, Constant* imm8)
     {
