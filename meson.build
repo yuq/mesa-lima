@@ -503,7 +503,6 @@ if ['auto', 'bellagio'].contains(_omx)
     'libomxil-bellagio', required : _omx == 'bellagio'
   )
   if dep_omx.found()
-    pre_args += '-DENABLE_ST_OMX_BELLAGIO'
     with_gallium_omx = 'bellagio'
   endif
 endif
@@ -518,7 +517,6 @@ if ['auto', 'tizonia'].contains(_omx)
       dependency('tizilheaders', required : _omx == 'tizonia'),
     ]
     if dep_omx.found() and dep_omx_other[0].found() and dep_omx_other[1].found()
-      pre_args += '-DENABLE_ST_OMX_TIZONIA'
       with_gallium_omx = 'tizonia'
     endif
   elif _omx == 'tizonia'
@@ -531,7 +529,14 @@ else
   with_gallium_omx = _omx
 endif
 
+pre_args += [
+  '-DENABLE_ST_OMX_BELLAGIO=' + (with_gallium_omx == 'bellagio' ? '1' : '0'),
+  '-DENABLE_ST_OMX_TIZONIA=' + (with_gallium_omx == 'tizonia' ? '1' : '0'),
+]
+
+
 omx_drivers_path = get_option('omx-libs-path')
+
 if with_gallium_omx != 'disabled'
   # Figure out where to put the omx driver.
   # FIXME: this could all be vastly simplified by adding a 'defined_variable'
