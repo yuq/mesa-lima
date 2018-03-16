@@ -31,6 +31,9 @@
 #include "util/macros.h"
 #include "util/mesa-sha1.h"
 
+#include "compiler/brw_eu.h"
+#include "common/gen_debug.h"
+
 #include "brw_context.h"
 #include "brw_program.h"
 #include "brw_cs.h"
@@ -38,6 +41,16 @@
 #include "brw_state.h"
 #include "brw_vs.h"
 #include "brw_wm.h"
+
+static bool
+debug_enabled_for_stage(gl_shader_stage stage)
+{
+   static const uint64_t stage_debug_flags[] = {
+      DEBUG_VS, DEBUG_TCS, DEBUG_TES, DEBUG_GS, DEBUG_WM, DEBUG_CS,
+   };
+   assert((int)stage >= 0 && stage < ARRAY_SIZE(stage_debug_flags));
+   return (INTEL_DEBUG & stage_debug_flags[stage]) != 0;
+}
 
 static void
 gen_shader_sha1(struct brw_context *brw, struct gl_program *prog,
@@ -229,6 +242,19 @@ read_and_upload(struct brw_context *brw, struct disk_cache *cache,
    }
 
    brw_alloc_stage_scratch(brw, stage_state, prog_data->total_scratch);
+
+   if (unlikely(debug_enabled_for_stage(stage))) {
+      fprintf(stderr, "NIR for %s program %d loaded from disk shader cache:\n",
+              _mesa_shader_stage_to_abbrev(stage), brw_program(prog)->id);
+      brw_program_deserialize_nir(&brw->ctx, prog, stage);
+      nir_shader *nir = prog->nir;
+      nir_print_shader(nir, stderr);
+      fprintf(stderr, "Native code for %s %s shader %s from disk cache:\n",
+              nir->info.label ? nir->info.label : "unnamed",
+              _mesa_shader_stage_to_string(nir->info.stage), nir->info.name);
+      brw_disassemble(&brw->screen->devinfo, program, 0,
+                      prog_data->program_size, stderr);
+   }
 
    brw_upload_cache(&brw->cache, cache_id, &prog_key, brw_prog_key_size(stage),
                     program, prog_data->program_size, prog_data,
