@@ -466,6 +466,20 @@ set_new_array(struct gl_context *ctx)
 }
 
 
+static void
+set_vertex_processing_mode(struct gl_context *ctx, gl_vertex_processing_mode m)
+{
+   if (ctx->VertexProgram._VPMode == m)
+      return;
+
+   /* On change we may get new maps into the current values */
+   set_new_array(ctx);
+
+   /* Finally memorize the value */
+   ctx->VertexProgram._VPMode = m;
+}
+
+
 /**
  * Update ctx->VertexProgram._VPMode.
  * This is to distinguish whether we're running
@@ -477,11 +491,11 @@ void
 _mesa_update_vertex_processing_mode(struct gl_context *ctx)
 {
    if (ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX])
-      ctx->VertexProgram._VPMode = VP_MODE_SHADER;
+      set_vertex_processing_mode(ctx, VP_MODE_SHADER);
    else if (_mesa_arb_vertex_program_enabled(ctx))
-      ctx->VertexProgram._VPMode = VP_MODE_SHADER;
+      set_vertex_processing_mode(ctx, VP_MODE_SHADER);
    else
-      ctx->VertexProgram._VPMode = VP_MODE_FF;
+      set_vertex_processing_mode(ctx, VP_MODE_FF);
 }
 
 
