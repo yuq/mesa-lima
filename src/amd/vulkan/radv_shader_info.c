@@ -90,6 +90,8 @@ gather_intrinsic_info(const nir_shader *nir, const nir_intrinsic_instr *instr,
 		break;
 	case nir_intrinsic_load_view_index:
 		info->needs_multiview_view_index = true;
+		if (nir->info.stage == MESA_SHADER_FRAGMENT)
+			info->ps.layer_input = true;
 		break;
 	case nir_intrinsic_load_invocation_id:
 		info->uses_invocation_id = true;

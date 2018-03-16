@@ -58,11 +58,13 @@ struct radv_vs_variant_key {
 	uint32_t as_es:1;
 	uint32_t as_ls:1;
 	uint32_t export_prim_id:1;
+	uint32_t export_layer_id:1;
 };
 
 struct radv_tes_variant_key {
 	uint32_t as_es:1;
 	uint32_t export_prim_id:1;
+	uint32_t export_layer_id:1;
 	uint8_t num_patches;
 	uint8_t tcs_num_outputs;
 };

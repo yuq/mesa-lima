@@ -1718,8 +1718,12 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 		/* TODO: These are no longer used as keys we should refactor this */
 		keys[MESA_SHADER_VERTEX].vs.export_prim_id =
 		        pipeline->shaders[MESA_SHADER_FRAGMENT]->info.info.ps.prim_id_input;
+		keys[MESA_SHADER_VERTEX].vs.export_layer_id =
+		        pipeline->shaders[MESA_SHADER_FRAGMENT]->info.info.ps.layer_input;
 		keys[MESA_SHADER_TESS_EVAL].tes.export_prim_id =
 		        pipeline->shaders[MESA_SHADER_FRAGMENT]->info.info.ps.prim_id_input;
+		keys[MESA_SHADER_TESS_EVAL].tes.export_layer_id =
+		        pipeline->shaders[MESA_SHADER_FRAGMENT]->info.info.ps.layer_input;
 	}
 
 	if (device->physical_device->rad_info.chip_class >= GFX9 && modules[MESA_SHADER_TESS_CTRL]) {

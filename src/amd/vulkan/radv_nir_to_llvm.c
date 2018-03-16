@@ -2183,7 +2183,7 @@ radv_load_output(struct radv_shader_context *ctx, unsigned index, unsigned chan)
 
 static void
 handle_vs_outputs_post(struct radv_shader_context *ctx,
-		       bool export_prim_id,
+		       bool export_prim_id, bool export_layer_id,
 		       struct radv_vs_output_info *outinfo)
 {
 	uint32_t param_count = 0;
@@ -2361,6 +2361,18 @@ handle_vs_outputs_post(struct radv_shader_context *ctx,
 
 		outinfo->vs_output_param_offset[VARYING_SLOT_PRIMITIVE_ID] = param_count++;
 		outinfo->export_prim_id = true;
+	}
+
+	if (export_layer_id) {
+		LLVMValueRef values[4];
+
+		values[0] = layer_value;
+		for (unsigned j = 1; j < 4; j++)
+			values[j] = ctx->ac.f32_0;
+
+		radv_export_param(ctx, param_count, values, 0x1);
+
+		outinfo->vs_output_param_offset[VARYING_SLOT_LAYER] = param_count++;
 	}
 
 	outinfo->pos_exports = num_pos_exports;
@@ -2825,6 +2837,7 @@ handle_shader_outputs_post(struct ac_shader_abi *abi, unsigned max_outputs,
 			handle_es_outputs_post(ctx, &ctx->shader_info->vs.es_info);
 		else
 			handle_vs_outputs_post(ctx, ctx->options->key.vs.export_prim_id,
+					       ctx->options->key.vs.export_layer_id,
 					       &ctx->shader_info->vs.outinfo);
 		break;
 	case MESA_SHADER_FRAGMENT:
@@ -2841,6 +2854,7 @@ handle_shader_outputs_post(struct ac_shader_abi *abi, unsigned max_outputs,
 			handle_es_outputs_post(ctx, &ctx->shader_info->tes.es_info);
 		else
 			handle_vs_outputs_post(ctx, ctx->options->key.tes.export_prim_id,
+					       ctx->options->key.tes.export_layer_id,
 					       &ctx->shader_info->tes.outinfo);
 		break;
 	default:
@@ -3439,7 +3453,7 @@ ac_gs_copy_shader_emit(struct radv_shader_context *ctx)
 		}
 		idx += slot_inc;
 	}
-	handle_vs_outputs_post(ctx, false, &ctx->shader_info->vs.outinfo);
+	handle_vs_outputs_post(ctx, false, false, &ctx->shader_info->vs.outinfo);
 }
 
 void
