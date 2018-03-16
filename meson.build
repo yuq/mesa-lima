@@ -496,41 +496,39 @@ elif not (with_gallium_r600 or with_gallium_radeonsi or with_gallium_nouveau)
     error('OMX state tracker requires at least one of the following gallium drivers: r600, radeonsi, nouveau.')
   endif
 endif
-with_gallium_omx = _omx
 dep_omx = []
 dep_omx_other = []
-if with_gallium_omx == 'bellagio' or with_gallium_omx == 'auto'
+if ['auto', 'bellagio'].contains(_omx)
   dep_omx = dependency(
-    'libomxil-bellagio', required : with_gallium_omx == 'bellagio'
+    'libomxil-bellagio', required : _omx == 'bellagio'
   )
   if dep_omx.found()
     pre_args += '-DENABLE_ST_OMX_BELLAGIO'
     with_gallium_omx = 'bellagio'
   endif
 endif
-if with_gallium_omx == 'tizonia' or with_gallium_omx == 'auto'
-  if not (with_dri and with_egl)
-    if with_gallium_omx == 'tizonia'
-      error('OMX-Tizonia state tracker requires dri and egl')
-    else
-      with_gallium_omx == 'disabled'
-    endif
-  else
+if ['auto', 'tizonia'].contains(_omx)
+  if with_dri and with_egl
     dep_omx = dependency(
       'libtizonia', version : '>= 0.10.0',
-      required : with_gallium_omx == 'tizonia',
+      required : _omx == 'tizonia',
     )
     dep_omx_other = [
-      dependency('libtizplatform', required : with_gallium_omx == 'tizonia'),
-      dependency('tizilheaders', required : with_gallium_omx == 'tizonia'),
+      dependency('libtizplatform', required : _omx == 'tizonia'),
+      dependency('tizilheaders', required : _omx == 'tizonia'),
     ]
     if dep_omx.found() and dep_omx_other[0].found() and dep_omx_other[1].found()
       pre_args += '-DENABLE_ST_OMX_TIZONIA'
       with_gallium_omx = 'tizonia'
-    else
-      with_gallium_omx = 'disabled'
     endif
+  elif _omx == 'tizonia'
+    error('OMX-Tizonia state tracker requires dri and egl')
   endif
+endif
+if _omx == 'auto'
+  with_gallium_omx = 'disabled'
+else
+  with_gallium_omx = _omx
 endif
 
 omx_drivers_path = get_option('omx-libs-path')
