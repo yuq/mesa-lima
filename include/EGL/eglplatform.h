@@ -130,11 +130,13 @@ typedef Window   EGLNativeWindowType;
 
 #endif /* MESA_EGL_NO_X11_HEADERS */
 
-#elif __HAIKU__
+#elif defined(__HAIKU__)
+
 #include <kernel/image.h>
-typedef void				*EGLNativeDisplayType;
-typedef khronos_uintptr_t	 EGLNativePixmapType;
-typedef khronos_uintptr_t	 EGLNativeWindowType;
+
+typedef void              *EGLNativeDisplayType;
+typedef khronos_uintptr_t  EGLNativePixmapType;
+typedef khronos_uintptr_t  EGLNativeWindowType;
 
 #else
 #error "Platform not recognized"
