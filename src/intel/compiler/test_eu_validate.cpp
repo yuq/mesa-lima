@@ -43,6 +43,7 @@ static const struct gen_info {
    { "glk", },
    { "cfl", },
    { "cnl", },
+   { "icl", },
 };
 
 class validation_test: public ::testing::TestWithParam<struct gen_info> {
