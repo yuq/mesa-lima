@@ -206,16 +206,8 @@ vbo_exec_invalidate_state(struct gl_context *ctx)
    struct vbo_exec_context *exec = &vbo->exec;
 
    if (ctx->NewState & (_NEW_PROGRAM | _NEW_ARRAY)) {
-      exec->array.recalculate_inputs = GL_TRUE;
-
       _ae_invalidate_state(ctx);
    }
-   /* If _mesa_update_state is called in a non draw code path,
-    * changes in the VAO need to be captured.
-    */
-   if (ctx->Array.VAO->NewArrays)
-      exec->array.recalculate_inputs = GL_TRUE;
-
    if (ctx->NewState & _NEW_EVAL)
       exec->eval.recalculate_maps = GL_TRUE;
 }
