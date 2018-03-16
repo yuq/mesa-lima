@@ -2274,7 +2274,21 @@ nir_instr_insert_after_cf_list(struct exec_list *list, nir_instr *after)
    nir_instr_insert(nir_after_cf_list(list), after);
 }
 
-void nir_instr_remove(nir_instr *instr);
+void nir_instr_remove_v(nir_instr *instr);
+
+static inline nir_cursor
+nir_instr_remove(nir_instr *instr)
+{
+   nir_cursor cursor;
+   nir_instr *prev = nir_instr_prev(instr);
+   if (prev) {
+      cursor = nir_after_instr(prev);
+   } else {
+      cursor = nir_before_block(instr->block);
+   }
+   nir_instr_remove_v(instr);
+   return cursor;
+}
 
 /** @} */
 
