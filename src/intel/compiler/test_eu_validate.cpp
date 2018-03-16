@@ -1066,6 +1066,10 @@ TEST_P(validation_test, qword_low_power_align1_regioning_restrictions)
       return;
 
    for (unsigned i = 0; i < sizeof(inst) / sizeof(inst[0]); i++) {
+      if (!devinfo.has_64bit_types &&
+          (type_sz(inst[i].dst_type) == 8 || type_sz(inst[i].src_type) == 8))
+         continue;
+
       if (inst[i].opcode == BRW_OPCODE_MOV) {
          brw_MOV(p, retype(g0, inst[i].dst_type),
                     retype(g0, inst[i].src_type));
@@ -1186,6 +1190,10 @@ TEST_P(validation_test, qword_low_power_no_indirect_addressing)
       return;
 
    for (unsigned i = 0; i < sizeof(inst) / sizeof(inst[0]); i++) {
+      if (!devinfo.has_64bit_types &&
+          (type_sz(inst[i].dst_type) == 8 || type_sz(inst[i].src_type) == 8))
+         continue;
+
       if (inst[i].opcode == BRW_OPCODE_MOV) {
          brw_MOV(p, retype(g0, inst[i].dst_type),
                     retype(g0, inst[i].src_type));
@@ -1322,6 +1330,10 @@ TEST_P(validation_test, qword_low_power_no_64bit_arf)
       return;
 
    for (unsigned i = 0; i < sizeof(inst) / sizeof(inst[0]); i++) {
+      if (!devinfo.has_64bit_types &&
+          (type_sz(inst[i].dst_type) == 8 || type_sz(inst[i].src_type) == 8))
+         continue;
+
       if (inst[i].opcode == BRW_OPCODE_MOV) {
          brw_MOV(p, retype(inst[i].dst, inst[i].dst_type),
                     retype(inst[i].src, inst[i].src_type));
@@ -1349,6 +1361,9 @@ TEST_P(validation_test, qword_low_power_no_64bit_arf)
 
       clear_instructions(p);
    }
+
+   if (!devinfo.has_64bit_types)
+      return;
 
    /* MAC implicitly reads the accumulator */
    brw_MAC(p, retype(g0, BRW_REGISTER_TYPE_DF),
@@ -1520,6 +1535,10 @@ TEST_P(validation_test, qword_low_power_no_depctrl)
       return;
 
    for (unsigned i = 0; i < sizeof(inst) / sizeof(inst[0]); i++) {
+      if (!devinfo.has_64bit_types &&
+          (type_sz(inst[i].dst_type) == 8 || type_sz(inst[i].src_type) == 8))
+         continue;
+
       if (inst[i].opcode == BRW_OPCODE_MOV) {
          brw_MOV(p, retype(g0, inst[i].dst_type),
                     retype(g0, inst[i].src_type));
