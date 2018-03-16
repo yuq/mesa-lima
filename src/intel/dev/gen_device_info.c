@@ -55,6 +55,7 @@ gen_device_name_to_pci_device_id(const char *name)
       { "bxt", 0x5A85 },
       { "kbl", 0x5912 },
       { "glk", 0x3185 },
+      { "cfl", 0x3E9B },
       { "cnl", 0x5a52 },
       { "icl", 0x8a52 },
    };
