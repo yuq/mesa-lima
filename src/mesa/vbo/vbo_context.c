@@ -317,7 +317,6 @@ vbo_bind_arrays(struct gl_context *ctx)
    if (exec->array.recalculate_inputs) {
       /* Finally update the inputs array */
       _vbo_update_inputs(ctx, &vbo->draw_arrays);
-      ctx->NewDriverState |= ctx->DriverFlags.NewArray;
       exec->array.recalculate_inputs = GL_FALSE;
    }
 
