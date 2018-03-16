@@ -208,7 +208,6 @@ vbo_save_playback_vertex_list(struct gl_context *ctx, void *data)
 
       /* Finally update the inputs array */
       _vbo_update_inputs(ctx, &vbo->draw_arrays);
-      _mesa_set_drawing_arrays(ctx, vbo->draw_arrays.inputs);
 
       assert(ctx->NewState == 0);
 

@@ -309,6 +309,31 @@ vbo_set_indirect_draw_func(struct gl_context *ctx,
 }
 
 
+/**
+ * Examine the enabled vertex arrays to set the exec->array.inputs[] values.
+ * These will point to the arrays to actually use for drawing.  Some will
+ * be user-provided arrays, other will be zero-stride const-valued arrays.
+ */
+static void
+vbo_bind_arrays(struct gl_context *ctx)
+{
+   struct vbo_context *vbo = vbo_context(ctx);
+   struct vbo_exec_context *exec = &vbo->exec;
+
+   _mesa_set_drawing_arrays(ctx, vbo->draw_arrays.inputs);
+
+   if (exec->array.recalculate_inputs) {
+      /* Finally update the inputs array */
+      _vbo_update_inputs(ctx, &vbo->draw_arrays);
+      ctx->NewDriverState |= ctx->DriverFlags.NewArray;
+      exec->array.recalculate_inputs = GL_FALSE;
+   }
+
+   assert(ctx->NewState == 0);
+   assert(ctx->Array._DrawVAO->NewArrays == 0);
+}
+
+
 void
 _vbo_draw(struct gl_context *ctx, const struct _mesa_prim *prims,
                GLuint nr_prims, const struct _mesa_index_buffer *ib,
@@ -317,6 +342,7 @@ _vbo_draw(struct gl_context *ctx, const struct _mesa_prim *prims,
                unsigned tfb_stream, struct gl_buffer_object *indirect)
 {
    struct vbo_context *vbo = vbo_context(ctx);
+   vbo_bind_arrays(ctx);
    vbo->draw_prims(ctx, prims, nr_prims, ib, index_bounds_valid,
                    min_index, max_index, tfb_vertcount, tfb_stream, indirect);
 }
@@ -332,6 +358,7 @@ _vbo_draw_indirect(struct gl_context *ctx, GLuint mode,
                         const struct _mesa_index_buffer *ib)
 {
    struct vbo_context *vbo = vbo_context(ctx);
+   vbo_bind_arrays(ctx);
    vbo->draw_indirect_prims(ctx, mode, indirect_data, indirect_offset,
                             draw_count, stride, indirect_draw_count_buffer,
                             indirect_draw_count_offset, ib);

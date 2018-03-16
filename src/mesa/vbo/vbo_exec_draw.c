@@ -238,7 +238,6 @@ vbo_exec_bind_arrays(struct gl_context *ctx)
    /* The exec VAO is not immutable, so we need to set manually */
    ctx->NewDriverState |= ctx->DriverFlags.NewArray;
 
-   _mesa_set_drawing_arrays(ctx, vbo->draw_arrays.inputs);
    /* Finally update the inputs array */
    _vbo_update_inputs(ctx, &vbo->draw_arrays);
 }
