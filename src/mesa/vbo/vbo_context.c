@@ -307,3 +307,32 @@ vbo_set_indirect_draw_func(struct gl_context *ctx,
    struct vbo_context *vbo = vbo_context(ctx);
    vbo->draw_indirect_prims = func;
 }
+
+
+void
+_vbo_draw(struct gl_context *ctx, const struct _mesa_prim *prims,
+               GLuint nr_prims, const struct _mesa_index_buffer *ib,
+               GLboolean index_bounds_valid, GLuint min_index, GLuint max_index,
+               struct gl_transform_feedback_object *tfb_vertcount,
+               unsigned tfb_stream, struct gl_buffer_object *indirect)
+{
+   struct vbo_context *vbo = vbo_context(ctx);
+   vbo->draw_prims(ctx, prims, nr_prims, ib, index_bounds_valid,
+                   min_index, max_index, tfb_vertcount, tfb_stream, indirect);
+}
+
+
+void
+_vbo_draw_indirect(struct gl_context *ctx, GLuint mode,
+                        struct gl_buffer_object *indirect_data,
+                        GLsizeiptr indirect_offset, unsigned draw_count,
+                        unsigned stride,
+                        struct gl_buffer_object *indirect_draw_count_buffer,
+                        GLsizeiptr indirect_draw_count_offset,
+                        const struct _mesa_index_buffer *ib)
+{
+   struct vbo_context *vbo = vbo_context(ctx);
+   vbo->draw_indirect_prims(ctx, mode, indirect_data, indirect_offset,
+                            draw_count, stride, indirect_draw_count_buffer,
+                            indirect_draw_count_offset, ib);
+}
