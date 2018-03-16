@@ -293,6 +293,15 @@ struct vbo_inputs
 
 
 /**
+ * Set the recalculate_inputs flag.
+ * The method should in the longer run be replaced with listening for the
+ * DriverFlags.NewArray flag in NewDriverState. But for now ...
+ */
+void
+_vbo_set_recalculate_inputs(struct gl_context *ctx);
+
+
+/**
  * Initialize inputs.
  */
 void

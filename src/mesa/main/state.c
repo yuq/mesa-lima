@@ -458,6 +458,14 @@ _mesa_set_vp_override(struct gl_context *ctx, GLboolean flag)
 }
 
 
+static void
+set_new_array(struct gl_context *ctx)
+{
+   _vbo_set_recalculate_inputs(ctx);
+   ctx->NewDriverState |= ctx->DriverFlags.NewArray;
+}
+
+
 /**
  * Update ctx->VertexProgram._VPMode.
  * This is to distinguish whether we're running
@@ -490,23 +498,28 @@ _mesa_set_draw_vao(struct gl_context *ctx, struct gl_vertex_array_object *vao,
                    GLbitfield filter)
 {
    struct gl_vertex_array_object **ptr = &ctx->Array._DrawVAO;
+   bool new_array = false;
    if (*ptr != vao) {
       _mesa_reference_vao_(ctx, ptr, vao);
 
-      ctx->NewDriverState |= ctx->DriverFlags.NewArray;
+      new_array = true;
    }
 
    if (vao->NewArrays) {
       _mesa_update_vao_derived_arrays(ctx, vao);
       vao->NewArrays = 0;
 
-      ctx->NewDriverState |= ctx->DriverFlags.NewArray;
+      new_array = true;
    }
 
    /* May shuffle the position and generic0 bits around, filter out unwanted */
    const GLbitfield enabled = filter & _mesa_get_vao_vp_inputs(vao);
    if (ctx->Array._DrawVAOEnabledAttribs != enabled)
-      ctx->NewDriverState |= ctx->DriverFlags.NewArray;
+      new_array = true;
+
+   if (new_array)
+      set_new_array(ctx);
+
    ctx->Array._DrawVAOEnabledAttribs = enabled;
    _mesa_set_varying_vp_inputs(ctx, enabled);
 }
