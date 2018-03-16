@@ -360,9 +360,6 @@ _mesa_update_state_locked( struct gl_context *ctx )
          update_program(ctx);
    }
 
-   if (new_state & _NEW_ARRAY)
-      _mesa_update_vao_derived_arrays(ctx, ctx->Array.VAO);
-
  out:
    new_prog_state |= update_program_constants(ctx);
 
@@ -377,7 +374,6 @@ _mesa_update_state_locked( struct gl_context *ctx )
     */
    ctx->Driver.UpdateState(ctx);
    ctx->NewState = 0;
-   ctx->Array.VAO->NewArrays = 0x0;
 }
 
 
@@ -496,8 +492,14 @@ _mesa_set_draw_vao(struct gl_context *ctx, struct gl_vertex_array_object *vao,
    struct gl_vertex_array_object **ptr = &ctx->Array._DrawVAO;
    if (*ptr != vao) {
       _mesa_reference_vao_(ctx, ptr, vao);
+
       ctx->NewDriverState |= ctx->DriverFlags.NewArray;
-   } else if (vao->NewArrays) {
+   }
+
+   if (vao->NewArrays) {
+      _mesa_update_vao_derived_arrays(ctx, vao);
+      vao->NewArrays = 0;
+
       ctx->NewDriverState |= ctx->DriverFlags.NewArray;
    }
 

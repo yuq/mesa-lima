@@ -231,9 +231,6 @@ vbo_exec_bind_arrays(struct gl_context *ctx)
    assert(!_mesa_is_bufferobj(exec->vtx.bufferobj) ||
           (vao_enabled & ~vao->VertexAttribBufferMask) == 0);
 
-   _mesa_update_vao_derived_arrays(ctx, vao);
-   vao->NewArrays = 0;
-
    _mesa_set_draw_vao(ctx, vao, _vbo_get_vao_filter(mode));
    /* The exec VAO is not immutable, so we need to set manually */
    ctx->NewDriverState |= ctx->DriverFlags.NewArray;
