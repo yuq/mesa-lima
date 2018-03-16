@@ -206,9 +206,6 @@ vbo_save_playback_vertex_list(struct gl_context *ctx, void *data)
          return;
       }
 
-      /* Finally update the inputs array */
-      _vbo_update_inputs(ctx, &vbo->draw_arrays);
-
       assert(ctx->NewState == 0);
 
       if (node->vertex_count > 0) {
