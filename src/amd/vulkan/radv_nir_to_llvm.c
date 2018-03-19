@@ -2363,7 +2363,7 @@ handle_vs_outputs_post(struct radv_shader_context *ctx,
 		outinfo->export_prim_id = true;
 	}
 
-	if (export_layer_id) {
+	if (export_layer_id && layer_value) {
 		LLVMValueRef values[4];
 
 		values[0] = layer_value;
