@@ -1233,42 +1233,49 @@ void radv_CmdWriteTimestamp(
 
 	radv_cs_add_buffer(cmd_buffer->device->ws, cs, pool->bo, 5);
 
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 28);
+	int num_queries = 1;
+	if (cmd_buffer->state.subpass && cmd_buffer->state.subpass->view_mask)
+		num_queries = util_bitcount(cmd_buffer->state.subpass->view_mask);
 
-	switch(pipelineStage) {
-	case VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT:
-		radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
-		radeon_emit(cs, COPY_DATA_COUNT_SEL | COPY_DATA_WR_CONFIRM |
-		                COPY_DATA_SRC_SEL(COPY_DATA_TIMESTAMP) |
-		                COPY_DATA_DST_SEL(V_370_MEM_ASYNC));
-		radeon_emit(cs, 0);
-		radeon_emit(cs, 0);
-		radeon_emit(cs, query_va);
-		radeon_emit(cs, query_va >> 32);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 28 * num_queries);
 
-		radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
-		radeon_emit(cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
-		                S_370_WR_CONFIRM(1) |
-		                S_370_ENGINE_SEL(V_370_ME));
-		radeon_emit(cs, avail_va);
-		radeon_emit(cs, avail_va >> 32);
-		radeon_emit(cs, 1);
-		break;
-	default:
-		si_cs_emit_write_event_eop(cs,
-					   false,
-					   cmd_buffer->device->physical_device->rad_info.chip_class,
-					   mec,
-					   V_028A90_BOTTOM_OF_PIPE_TS, 0,
-					   3, query_va, 0, 0);
-		si_cs_emit_write_event_eop(cs,
-					   false,
-					   cmd_buffer->device->physical_device->rad_info.chip_class,
-					   mec,
-					   V_028A90_BOTTOM_OF_PIPE_TS, 0,
-					   1, avail_va, 0, 1);
-		break;
+	for (unsigned i = 0; i < num_queries; i++) {
+		switch(pipelineStage) {
+		case VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT:
+			radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
+			radeon_emit(cs, COPY_DATA_COUNT_SEL | COPY_DATA_WR_CONFIRM |
+				    COPY_DATA_SRC_SEL(COPY_DATA_TIMESTAMP) |
+				    COPY_DATA_DST_SEL(V_370_MEM_ASYNC));
+			radeon_emit(cs, 0);
+			radeon_emit(cs, 0);
+			radeon_emit(cs, query_va);
+			radeon_emit(cs, query_va >> 32);
+
+			radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
+			radeon_emit(cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
+				    S_370_WR_CONFIRM(1) |
+				    S_370_ENGINE_SEL(V_370_ME));
+			radeon_emit(cs, avail_va);
+			radeon_emit(cs, avail_va >> 32);
+			radeon_emit(cs, 1);
+			break;
+		default:
+			si_cs_emit_write_event_eop(cs,
+						   false,
+						   cmd_buffer->device->physical_device->rad_info.chip_class,
+						   mec,
+						   V_028A90_BOTTOM_OF_PIPE_TS, 0,
+						   3, query_va, 0, 0);
+			si_cs_emit_write_event_eop(cs,
+						   false,
+						   cmd_buffer->device->physical_device->rad_info.chip_class,
+						   mec,
+						   V_028A90_BOTTOM_OF_PIPE_TS, 0,
+						   1, avail_va, 0, 1);
+			break;
+		}
+		query_va += pool->stride;
+		avail_va += 4;
 	}
-
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 }
