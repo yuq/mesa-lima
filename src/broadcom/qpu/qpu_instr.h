@@ -445,7 +445,9 @@ bool v3d_qpu_writes_r4(const struct v3d_device_info *devinfo,
 bool v3d_qpu_writes_r5(const struct v3d_device_info *devinfo,
                        const struct v3d_qpu_instr *instr) ATTRIBUTE_CONST;
 bool v3d_qpu_uses_mux(const struct v3d_qpu_instr *inst, enum v3d_qpu_mux mux);
-bool v3d_qpu_uses_vpm(const struct v3d_qpu_instr *inst);
+bool v3d_qpu_uses_vpm(const struct v3d_qpu_instr *inst) ATTRIBUTE_CONST;
+bool v3d_qpu_reads_vpm(const struct v3d_qpu_instr *inst) ATTRIBUTE_CONST;
+bool v3d_qpu_writes_vpm(const struct v3d_qpu_instr *inst) ATTRIBUTE_CONST;
 bool v3d_qpu_sig_writes_address(const struct v3d_device_info *devinfo,
                                 const struct v3d_qpu_sig *sig) ATTRIBUTE_CONST;
 

@@ -535,7 +535,7 @@ v3d_qpu_magic_waddr_is_tsy(enum v3d_qpu_waddr waddr)
 }
 
 static bool
-v3d_qpu_add_op_uses_vpm(enum  v3d_qpu_add_op op)
+v3d_qpu_add_op_reads_vpm(enum  v3d_qpu_add_op op)
 {
         switch (op) {
         case V3D_QPU_A_VPMSETUP:
@@ -547,6 +547,18 @@ v3d_qpu_add_op_uses_vpm(enum  v3d_qpu_add_op op)
         case V3D_QPU_A_LDVPMP:
         case V3D_QPU_A_LDVPMG_IN:
         case V3D_QPU_A_LDVPMG_OUT:
+                return true;
+        default:
+                return false;
+        }
+}
+
+static bool
+v3d_qpu_add_op_writes_vpm(enum  v3d_qpu_add_op op)
+{
+        switch (op) {
+        case V3D_QPU_A_VPMSETUP:
+        case V3D_QPU_A_VPMWT:
         case V3D_QPU_A_STVPMV:
         case V3D_QPU_A_STVPMD:
         case V3D_QPU_A_STVPMP:
@@ -567,13 +579,24 @@ v3d_qpu_writes_tmu(const struct v3d_qpu_instr *inst)
 }
 
 bool
-v3d_qpu_uses_vpm(const struct v3d_qpu_instr *inst)
+v3d_qpu_reads_vpm(const struct v3d_qpu_instr *inst)
 {
         if (inst->sig.ldvpm)
                 return true;
 
         if (inst->type == V3D_QPU_INSTR_TYPE_ALU) {
-                if (v3d_qpu_add_op_uses_vpm(inst->alu.add.op))
+                if (v3d_qpu_add_op_reads_vpm(inst->alu.add.op))
+                        return true;
+        }
+
+        return false;
+}
+
+bool
+v3d_qpu_writes_vpm(const struct v3d_qpu_instr *inst)
+{
+        if (inst->type == V3D_QPU_INSTR_TYPE_ALU) {
+                if (v3d_qpu_add_op_writes_vpm(inst->alu.add.op))
                         return true;
 
                 if (inst->alu.add.magic_write &&
@@ -588,6 +611,12 @@ v3d_qpu_uses_vpm(const struct v3d_qpu_instr *inst)
         }
 
         return false;
+}
+
+bool
+v3d_qpu_uses_vpm(const struct v3d_qpu_instr *inst)
+{
+        return v3d_qpu_reads_vpm(inst) || v3d_qpu_writes_vpm(inst);
 }
 
 bool
