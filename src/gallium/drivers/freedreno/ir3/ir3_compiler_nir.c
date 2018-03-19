@@ -1826,28 +1826,28 @@ emit_intrinsic_atomic_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	src2 = get_image_offset(ctx, var, coords, false);
 
 	switch (intr->intrinsic) {
-	case nir_intrinsic_image_atomic_add:
+	case nir_intrinsic_image_var_atomic_add:
 		atomic = ir3_ATOMIC_ADD_G(b, image, 0, src0, 0, src1, 0, src2, 0);
 		break;
-	case nir_intrinsic_image_atomic_min:
+	case nir_intrinsic_image_var_atomic_min:
 		atomic = ir3_ATOMIC_MIN_G(b, image, 0, src0, 0, src1, 0, src2, 0);
 		break;
-	case nir_intrinsic_image_atomic_max:
+	case nir_intrinsic_image_var_atomic_max:
 		atomic = ir3_ATOMIC_MAX_G(b, image, 0, src0, 0, src1, 0, src2, 0);
 		break;
-	case nir_intrinsic_image_atomic_and:
+	case nir_intrinsic_image_var_atomic_and:
 		atomic = ir3_ATOMIC_AND_G(b, image, 0, src0, 0, src1, 0, src2, 0);
 		break;
-	case nir_intrinsic_image_atomic_or:
+	case nir_intrinsic_image_var_atomic_or:
 		atomic = ir3_ATOMIC_OR_G(b, image, 0, src0, 0, src1, 0, src2, 0);
 		break;
-	case nir_intrinsic_image_atomic_xor:
+	case nir_intrinsic_image_var_atomic_xor:
 		atomic = ir3_ATOMIC_XOR_G(b, image, 0, src0, 0, src1, 0, src2, 0);
 		break;
-	case nir_intrinsic_image_atomic_exchange:
+	case nir_intrinsic_image_var_atomic_exchange:
 		atomic = ir3_ATOMIC_XCHG_G(b, image, 0, src0, 0, src1, 0, src2, 0);
 		break;
-	case nir_intrinsic_image_atomic_comp_swap:
+	case nir_intrinsic_image_var_atomic_comp_swap:
 		/* for cmpxchg, src0 is [ui]vec2(data, compare): */
 		src0 = create_collect(b, (struct ir3_instruction*[]){
 			src0,
@@ -2084,23 +2084,23 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	case nir_intrinsic_shared_atomic_comp_swap:
 		dst[0] = emit_intrinsic_atomic_shared(ctx, intr);
 		break;
-	case nir_intrinsic_image_load:
+	case nir_intrinsic_image_var_load:
 		emit_intrinsic_load_image(ctx, intr, dst);
 		break;
-	case nir_intrinsic_image_store:
+	case nir_intrinsic_image_var_store:
 		emit_intrinsic_store_image(ctx, intr);
 		break;
-	case nir_intrinsic_image_size:
+	case nir_intrinsic_image_var_size:
 		emit_intrinsic_image_size(ctx, intr, dst);
 		break;
-	case nir_intrinsic_image_atomic_add:
-	case nir_intrinsic_image_atomic_min:
-	case nir_intrinsic_image_atomic_max:
-	case nir_intrinsic_image_atomic_and:
-	case nir_intrinsic_image_atomic_or:
-	case nir_intrinsic_image_atomic_xor:
-	case nir_intrinsic_image_atomic_exchange:
-	case nir_intrinsic_image_atomic_comp_swap:
+	case nir_intrinsic_image_var_atomic_add:
+	case nir_intrinsic_image_var_atomic_min:
+	case nir_intrinsic_image_var_atomic_max:
+	case nir_intrinsic_image_var_atomic_and:
+	case nir_intrinsic_image_var_atomic_or:
+	case nir_intrinsic_image_var_atomic_xor:
+	case nir_intrinsic_image_var_atomic_exchange:
+	case nir_intrinsic_image_var_atomic_comp_swap:
 		dst[0] = emit_intrinsic_atomic_image(ctx, intr);
 		break;
 	case nir_intrinsic_barrier:

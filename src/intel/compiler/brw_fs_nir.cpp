@@ -1697,23 +1697,23 @@ static unsigned
 get_image_atomic_op(nir_intrinsic_op op, const glsl_type *type)
 {
    switch (op) {
-   case nir_intrinsic_image_atomic_add:
+   case nir_intrinsic_image_var_atomic_add:
       return BRW_AOP_ADD;
-   case nir_intrinsic_image_atomic_min:
+   case nir_intrinsic_image_var_atomic_min:
       return (get_image_base_type(type) == BRW_REGISTER_TYPE_D ?
               BRW_AOP_IMIN : BRW_AOP_UMIN);
-   case nir_intrinsic_image_atomic_max:
+   case nir_intrinsic_image_var_atomic_max:
       return (get_image_base_type(type) == BRW_REGISTER_TYPE_D ?
               BRW_AOP_IMAX : BRW_AOP_UMAX);
-   case nir_intrinsic_image_atomic_and:
+   case nir_intrinsic_image_var_atomic_and:
       return BRW_AOP_AND;
-   case nir_intrinsic_image_atomic_or:
+   case nir_intrinsic_image_var_atomic_or:
       return BRW_AOP_OR;
-   case nir_intrinsic_image_atomic_xor:
+   case nir_intrinsic_image_var_atomic_xor:
       return BRW_AOP_XOR;
-   case nir_intrinsic_image_atomic_exchange:
+   case nir_intrinsic_image_var_atomic_exchange:
       return BRW_AOP_MOV;
-   case nir_intrinsic_image_atomic_comp_swap:
+   case nir_intrinsic_image_var_atomic_comp_swap:
       return BRW_AOP_CMPWR;
    default:
       unreachable("Not reachable.");
@@ -3795,20 +3795,20 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       dest = get_nir_dest(instr->dest);
 
    switch (instr->intrinsic) {
-   case nir_intrinsic_image_load:
-   case nir_intrinsic_image_store:
-   case nir_intrinsic_image_atomic_add:
-   case nir_intrinsic_image_atomic_min:
-   case nir_intrinsic_image_atomic_max:
-   case nir_intrinsic_image_atomic_and:
-   case nir_intrinsic_image_atomic_or:
-   case nir_intrinsic_image_atomic_xor:
-   case nir_intrinsic_image_atomic_exchange:
-   case nir_intrinsic_image_atomic_comp_swap: {
+   case nir_intrinsic_image_var_load:
+   case nir_intrinsic_image_var_store:
+   case nir_intrinsic_image_var_atomic_add:
+   case nir_intrinsic_image_var_atomic_min:
+   case nir_intrinsic_image_var_atomic_max:
+   case nir_intrinsic_image_var_atomic_and:
+   case nir_intrinsic_image_var_atomic_or:
+   case nir_intrinsic_image_var_atomic_xor:
+   case nir_intrinsic_image_var_atomic_exchange:
+   case nir_intrinsic_image_var_atomic_comp_swap: {
       using namespace image_access;
 
       if (stage == MESA_SHADER_FRAGMENT &&
-          instr->intrinsic != nir_intrinsic_image_load)
+          instr->intrinsic != nir_intrinsic_image_var_load)
          brw_wm_prog_data(prog_data)->has_side_effects = true;
 
       /* Get the referenced image variable and type. */
@@ -3835,10 +3835,10 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       fs_reg tmp;
 
       /* Emit an image load, store or atomic op. */
-      if (instr->intrinsic == nir_intrinsic_image_load)
+      if (instr->intrinsic == nir_intrinsic_image_var_load)
          tmp = emit_image_load(bld, image, addr, surf_dims, arr_dims, format);
 
-      else if (instr->intrinsic == nir_intrinsic_image_store)
+      else if (instr->intrinsic == nir_intrinsic_image_var_store)
          emit_image_store(bld, image, addr, src0, surf_dims, arr_dims,
                           var->data.image.write_only ? GL_NONE : format);
 
@@ -3897,7 +3897,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
-   case nir_intrinsic_image_size: {
+   case nir_intrinsic_image_var_size: {
       /* Get the referenced image variable and type. */
       const nir_variable *var = instr->variables[0]->var;
       const glsl_type *type = var->type->without_array();
@@ -3941,7 +3941,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
-   case nir_intrinsic_image_samples:
+   case nir_intrinsic_image_var_samples:
       /* The driver does not support multi-sampled images. */
       bld.MOV(retype(dest, BRW_REGISTER_TYPE_D), brw_imm_d(1));
       break;
