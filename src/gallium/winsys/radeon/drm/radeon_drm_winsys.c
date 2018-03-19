@@ -439,22 +439,22 @@ static bool do_winsys_init(struct radeon_drm_winsys *ws)
             radeon_get_drm_value(ws->fd, RADEON_INFO_SI_BACKEND_ENABLED_MASK, NULL,
                                  &ws->info.enabled_rb_mask);
 
-        ws->info.has_virtual_memory = false;
+        ws->info.r600_has_virtual_memory = false;
         if (ws->info.drm_minor >= 13) {
             uint32_t ib_vm_max_size;
 
-            ws->info.has_virtual_memory = true;
+            ws->info.r600_has_virtual_memory = true;
             if (!radeon_get_drm_value(ws->fd, RADEON_INFO_VA_START, NULL,
                                       &ws->va_start))
-                ws->info.has_virtual_memory = false;
+                ws->info.r600_has_virtual_memory = false;
             if (!radeon_get_drm_value(ws->fd, RADEON_INFO_IB_VM_MAX_SIZE, NULL,
                                       &ib_vm_max_size))
-                ws->info.has_virtual_memory = false;
+                ws->info.r600_has_virtual_memory = false;
             radeon_get_drm_value(ws->fd, RADEON_INFO_VA_UNMAP_WORKING, NULL,
                                  &ws->va_unmap_working);
         }
 	if (ws->gen == DRV_R600 && !debug_get_bool_option("RADEON_VA", false))
-		ws->info.has_virtual_memory = false;
+		ws->info.r600_has_virtual_memory = false;
     }
 
     /* Get max pipes, this is only needed for compute shaders.  All evergreen+
@@ -544,7 +544,7 @@ static void radeon_winsys_destroy(struct radeon_winsys *rws)
     mtx_destroy(&ws->hyperz_owner_mutex);
     mtx_destroy(&ws->cmask_owner_mutex);
 
-    if (ws->info.has_virtual_memory)
+    if (ws->info.r600_has_virtual_memory)
         pb_slabs_deinit(&ws->bo_slabs);
     pb_cache_deinit(&ws->bo_cache);
 
@@ -773,7 +773,7 @@ radeon_drm_winsys_create(int fd, const struct pipe_screen_config *config,
                   radeon_bo_destroy,
                   radeon_bo_can_reclaim);
 
-    if (ws->info.has_virtual_memory) {
+    if (ws->info.r600_has_virtual_memory) {
         /* There is no fundamental obstacle to using slab buffer allocation
          * without GPUVM, but enabling it requires making sure that the drivers
          * honor the address offset.
@@ -877,7 +877,7 @@ radeon_drm_winsys_create(int fd, const struct pipe_screen_config *config,
     return &ws->base;
 
 fail_slab:
-    if (ws->info.has_virtual_memory)
+    if (ws->info.r600_has_virtual_memory)
         pb_slabs_deinit(&ws->bo_slabs);
 fail_cache:
     pb_cache_deinit(&ws->bo_cache);

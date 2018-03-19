@@ -331,7 +331,7 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 		info->pipe_interleave_bytes =
 			256 << G_0098F8_PIPE_INTERLEAVE_SIZE_GFX6(amdinfo->gb_addr_cfg);
 	}
-	info->has_virtual_memory = true;
+	info->r600_has_virtual_memory = true;
 
 	assert(util_is_power_of_two_or_zero(dma.available_rings + 1));
 	assert(util_is_power_of_two_or_zero(compute.available_rings + 1));

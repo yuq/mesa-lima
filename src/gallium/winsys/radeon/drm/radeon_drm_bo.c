@@ -371,7 +371,7 @@ void radeon_bo_destroy(struct pb_buffer *_buf)
     if (bo->u.real.ptr)
         os_munmap(bo->u.real.ptr, bo->base.size);
 
-    if (rws->info.has_virtual_memory) {
+    if (rws->info.r600_has_virtual_memory) {
         if (rws->va_unmap_working) {
             struct drm_radeon_gem_va va;
 
@@ -679,7 +679,7 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
                             heap);
     }
 
-    if (rws->info.has_virtual_memory) {
+    if (rws->info.r600_has_virtual_memory) {
         struct drm_radeon_gem_va va;
         unsigned va_gap_size;
 
@@ -974,7 +974,7 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
     /* Sub-allocate small buffers from slabs. */
     if (!(flags & RADEON_FLAG_NO_SUBALLOC) &&
         size <= (1 << RADEON_SLAB_MAX_SIZE_LOG2) &&
-        ws->info.has_virtual_memory &&
+        ws->info.r600_has_virtual_memory &&
         alignment <= MAX2(1 << RADEON_SLAB_MIN_SIZE_LOG2, util_next_power_of_two(size))) {
         struct pb_slab_entry *entry;
         int heap = radeon_get_heap_index(domain, flags);
@@ -1027,7 +1027,7 @@ no_slab:
     bo = radeon_create_bo(ws, size, alignment, domain, flags, heap);
     if (!bo) {
         /* Clear the cache and try again. */
-        if (ws->info.has_virtual_memory)
+        if (ws->info.r600_has_virtual_memory)
             pb_slabs_reclaim(&ws->bo_slabs);
         pb_cache_release_all_buffers(&ws->bo_cache);
         bo = radeon_create_bo(ws, size, alignment, domain, flags, heap);
@@ -1089,7 +1089,7 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
 
     mtx_unlock(&ws->bo_handles_mutex);
 
-    if (ws->info.has_virtual_memory) {
+    if (ws->info.r600_has_virtual_memory) {
         struct drm_radeon_gem_va va;
 
         bo->va = radeon_bomgr_find_va64(ws, bo->base.size, 1 << 20);
@@ -1232,7 +1232,7 @@ done:
     if (offset)
         *offset = whandle->offset;
 
-    if (ws->info.has_virtual_memory && !bo->va) {
+    if (ws->info.r600_has_virtual_memory && !bo->va) {
         struct drm_radeon_gem_va va;
 
         bo->va = radeon_bomgr_find_va64(ws, bo->base.size, 1 << 20);
