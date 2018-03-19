@@ -882,7 +882,7 @@ dri2_setup_extensions(_EGLDisplay *disp)
    if (!dri2_bind_extensions(dri2_dpy, mandatory_core_extensions, extensions, false))
       return EGL_FALSE;
 
-#ifdef HAVE_DRI3
+#ifdef HAVE_DRI3_MODIFIERS
    dri2_dpy->multibuffers_available =
       (dri2_dpy->dri3_major_version > 1 || (dri2_dpy->dri3_major_version == 1 &&
                                             dri2_dpy->dri3_minor_version >= 2)) &&
