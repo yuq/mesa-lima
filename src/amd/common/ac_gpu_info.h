@@ -50,6 +50,12 @@ struct radeon_info {
 	uint32_t                    pci_id;
 	enum radeon_family          family;
 	enum chip_class             chip_class;
+	uint32_t                    num_compute_rings;
+	uint32_t                    num_sdma_rings;
+	uint32_t                    clock_crystal_freq;
+	uint32_t                    tcc_cache_line_size;
+
+	/* Memory info. */
 	uint32_t                    pte_fragment_size;
 	uint32_t                    gart_page_size;
 	uint64_t                    gart_size;
@@ -62,23 +68,23 @@ struct radeon_info {
 	uint32_t                    address32_hi;
 	bool                        has_dedicated_vram;
 	bool                        r600_has_virtual_memory;
+
+	/* CP info. */
 	bool                        gfx_ib_pad_with_type2;
-	bool                        has_hw_decode;
 	unsigned                    ib_start_alignment;
-	uint32_t                    num_sdma_rings;
-	uint32_t                    num_compute_rings;
-	uint32_t                    uvd_fw_version;
-	uint32_t                    vce_fw_version;
-	bool                        uvd_enc_supported;
 	uint32_t                    me_fw_version;
 	uint32_t                    me_fw_feature;
 	uint32_t                    pfp_fw_version;
 	uint32_t                    pfp_fw_feature;
 	uint32_t                    ce_fw_version;
 	uint32_t                    ce_fw_feature;
+
+	/* Multimedia info. */
+	bool                        has_hw_decode;
+	bool                        uvd_enc_supported;
+	uint32_t                    uvd_fw_version;
+	uint32_t                    vce_fw_version;
 	uint32_t                    vce_harvest_config;
-	uint32_t                    clock_crystal_freq;
-	uint32_t                    tcc_cache_line_size;
 
 	/* Kernel info. */
 	uint32_t                    drm_major; /* version */
@@ -108,8 +114,8 @@ struct radeon_info {
 	uint32_t                    num_tile_pipes; /* pipe count from PIPE_CONFIG */
 	uint32_t                    pipe_interleave_bytes;
 	uint32_t                    enabled_rb_mask; /* GCN harvest config */
-
 	uint64_t                    max_alignment; /* from addrlib */
+
 	/* Tile modes. */
 	uint32_t                    si_tile_mode_array[32];
 	uint32_t                    cik_macrotile_mode_array[16];
