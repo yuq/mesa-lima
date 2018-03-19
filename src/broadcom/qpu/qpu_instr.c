@@ -569,6 +569,9 @@ v3d_qpu_writes_tmu(const struct v3d_qpu_instr *inst)
 bool
 v3d_qpu_uses_vpm(const struct v3d_qpu_instr *inst)
 {
+        if (inst->sig.ldvpm)
+                return true;
+
         if (inst->type == V3D_QPU_INSTR_TYPE_ALU) {
                 if (v3d_qpu_add_op_uses_vpm(inst->alu.add.op))
                         return true;
