@@ -70,8 +70,10 @@ struct kms_sw_displaytarget
 
    uint32_t handle;
    void *mapped;
+   void *ro_mapped;
 
    int ref_count;
+   int map_count;
    struct list_head link;
 };
 
@@ -170,6 +172,10 @@ kms_sw_displaytarget_destroy(struct sw_winsys *ws,
    if (kms_sw_dt->ref_count > 0)
       return;
 
+   if (kms_sw_dt->map_count > 0) {
+      DEBUG_PRINT("KMS-DEBUG: leaked map buffer %u\n", kms_sw_dt->handle);
+   }
+
    memset(&destroy_req, 0, sizeof destroy_req);
    destroy_req.handle = kms_sw_dt->handle;
    drmIoctl(kms_sw->fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy_req);
@@ -198,16 +204,21 @@ kms_sw_displaytarget_map(struct sw_winsys *ws,
       return NULL;
 
    prot = (flags == PIPE_TRANSFER_READ) ? PROT_READ : (PROT_READ | PROT_WRITE);
-   kms_sw_dt->mapped = mmap(0, kms_sw_dt->size, prot, MAP_SHARED,
-                            kms_sw->fd, map_req.offset);
-
-   if (kms_sw_dt->mapped == MAP_FAILED)
-      return NULL;
+   void **ptr = (flags == PIPE_TRANSFER_READ) ? &kms_sw_dt->ro_mapped : &kms_sw_dt->mapped;
+   if (!*ptr) {
+      void *tmp = mmap(0, kms_sw_dt->size, prot, MAP_SHARED,
+                       kms_sw->fd, map_req.offset);
+      if (tmp == MAP_FAILED)
+         return NULL;
+      *ptr = tmp;
+   }
 
    DEBUG_PRINT("KMS-DEBUG: mapped buffer %u (size %u) at %p\n",
-         kms_sw_dt->handle, kms_sw_dt->size, kms_sw_dt->mapped);
+         kms_sw_dt->handle, kms_sw_dt->size, *ptr);
 
-   return kms_sw_dt->mapped;
+   kms_sw_dt->map_count++;
+
+   return *ptr;
 }
 
 static struct kms_sw_displaytarget *
@@ -277,10 +288,23 @@ kms_sw_displaytarget_unmap(struct sw_winsys *ws,
 {
    struct kms_sw_displaytarget *kms_sw_dt = kms_sw_displaytarget(dt);
 
+   if (!kms_sw_dt->map_count)  {
+      DEBUG_PRINT("KMS-DEBUG: ignore duplicated unmap %u", kms_sw_dt->handle);
+      return;
+   }
+   kms_sw_dt->map_count--;
+   if (kms_sw_dt->map_count) {
+      DEBUG_PRINT("KMS-DEBUG: ignore unmap for busy buffer %u", kms_sw_dt->handle);
+      return;
+   }
+
    DEBUG_PRINT("KMS-DEBUG: unmapped buffer %u (was %p)\n", kms_sw_dt->handle, kms_sw_dt->mapped);
+   DEBUG_PRINT("KMS-DEBUG: unmapped buffer %u (was %p)\n", kms_sw_dt->handle, kms_sw_dt->ro_mapped);
 
    munmap(kms_sw_dt->mapped, kms_sw_dt->size);
    kms_sw_dt->mapped = NULL;
+   munmap(kms_sw_dt->ro_mapped, kms_sw_dt->size);
+   kms_sw_dt->ro_mapped = NULL;
 }
 
 static struct sw_displaytarget *
