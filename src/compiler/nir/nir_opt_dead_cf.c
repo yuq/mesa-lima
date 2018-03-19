@@ -171,20 +171,19 @@ def_not_live_out(nir_ssa_def *def, void *state)
 }
 
 /*
- * Test if a loop is dead. A loop is dead if:
+ * Test if a loop is dead. A loop node is dead if:
  *
  * 1) It has no side effects (i.e. intrinsics which could possibly affect the
  * state of the program aside from producing an SSA value, indicated by a lack
  * of NIR_INTRINSIC_CAN_ELIMINATE).
  *
- * 2) It has no phi nodes after it, since those indicate values inside the
- * loop being used after the loop.
+ * 2) It has no phi instructions after it, since those indicate values inside
+ * the node being used after the node.
  *
- * 3) If there are no phi nodes after the loop, then the only way a value
- * defined inside the loop can be used outside the loop is if its definition
- * dominates the block after the loop. If none of the definitions that
- * dominate the loop exit are used outside the loop, then the loop is dead
- * and it can be deleted.
+ * 3) None of the values defined inside the node is used outside the node,
+ * i.e. none of the definitions that dominate the node exit are used outside.
+ *
+ * If those conditions hold, then the node is dead and can be deleted.
  */
 
 static bool
