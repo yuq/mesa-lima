@@ -42,7 +42,7 @@ void anv_GetDescriptorSetLayoutSupport(
 {
    uint32_t surface_count[MESA_SHADER_STAGES] = { 0, };
 
-   for (uint32_t b = 0; b <= pCreateInfo->bindingCount; b++) {
+   for (uint32_t b = 0; b < pCreateInfo->bindingCount; b++) {
       const VkDescriptorSetLayoutBinding *binding = &pCreateInfo->pBindings[b];
 
       switch (binding->descriptorType) {
