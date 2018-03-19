@@ -422,7 +422,6 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("min_alloc_size = %u\n", info->min_alloc_size);
 	printf("address32_hi = %u\n", info->address32_hi);
 	printf("has_dedicated_vram = %u\n", info->has_dedicated_vram);
-	printf("has_virtual_memory = %i\n", info->has_virtual_memory);
 	printf("gfx_ib_pad_with_type2 = %i\n", info->gfx_ib_pad_with_type2);
 	printf("has_hw_decode = %u\n", info->has_hw_decode);
        printf("ib_start_alignment = %u\n", info->ib_start_alignment);
@@ -445,15 +444,11 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("has_syncobj = %u\n", info->has_syncobj);
 	printf("has_fence_to_handle = %u\n", info->has_fence_to_handle);
 
-	printf("r600_max_quad_pipes = %i\n", info->r600_max_quad_pipes);
 	printf("max_shader_clock = %i\n", info->max_shader_clock);
 	printf("num_good_compute_units = %i\n", info->num_good_compute_units);
 	printf("max_se = %i\n", info->max_se);
 	printf("max_sh_per_se = %i\n", info->max_sh_per_se);
 
-	printf("r600_gb_backend_map = %i\n", info->r600_gb_backend_map);
-	printf("r600_gb_backend_map_valid = %i\n", info->r600_gb_backend_map_valid);
-	printf("r600_num_banks = %i\n", info->r600_num_banks);
 	printf("num_render_backends = %i\n", info->num_render_backends);
 	printf("num_tile_pipes = %i\n", info->num_tile_pipes);
 	printf("pipe_interleave_bytes = %i\n", info->pipe_interleave_bytes);
