@@ -569,6 +569,28 @@ v3d_qpu_add_op_writes_vpm(enum  v3d_qpu_add_op op)
 }
 
 bool
+v3d_qpu_uses_tlb(const struct v3d_qpu_instr *inst)
+{
+        if (inst->sig.ldtlb ||
+            inst->sig.ldtlbu)
+                return true;
+
+        if (inst->type == V3D_QPU_INSTR_TYPE_ALU) {
+                if (inst->alu.add.magic_write &&
+                    v3d_qpu_magic_waddr_is_tlb(inst->alu.add.waddr)) {
+                        return true;
+                }
+
+                if (inst->alu.mul.magic_write &&
+                    v3d_qpu_magic_waddr_is_tlb(inst->alu.mul.waddr)) {
+                        return true;
+                }
+        }
+
+        return false;
+}
+
+bool
 v3d_qpu_writes_tmu(const struct v3d_qpu_instr *inst)
 {
         return (inst->type == V3D_QPU_INSTR_TYPE_ALU &&
