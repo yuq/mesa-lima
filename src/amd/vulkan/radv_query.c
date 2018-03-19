@@ -1077,33 +1077,12 @@ void radv_CmdResetQueryPool(
 	}
 }
 
-void radv_CmdBeginQuery(
-    VkCommandBuffer                             commandBuffer,
-    VkQueryPool                                 queryPool,
-    uint32_t                                    query,
-    VkQueryControlFlags                         flags)
+static void emit_begin_query(struct radv_cmd_buffer *cmd_buffer,
+			     uint64_t va,
+			     VkQueryType query_type)
 {
-	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-	RADV_FROM_HANDLE(radv_query_pool, pool, queryPool);
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
-	uint64_t va = radv_buffer_get_va(pool->bo);
-	va += pool->stride * query;
-
-	radv_cs_add_buffer(cmd_buffer->device->ws, cs, pool->bo, 8);
-
-	if (cmd_buffer->pending_reset_query) {
-		if (pool->size >= RADV_BUFFER_OPS_CS_THRESHOLD) {
-			/* Only need to flush caches if the query pool size is
-			 * large enough to be resetted using the compute shader
-			 * path. Small pools don't need any cache flushes
-			 * because we use a CP dma clear.
-			 */
-			si_emit_cache_flush(cmd_buffer);
-			cmd_buffer->pending_reset_query = false;
-		}
-	}
-
-	switch (pool->type) {
+	switch (query_type) {
 	case VK_QUERY_TYPE_OCCLUSION:
 		radeon_check_space(cmd_buffer->device->ws, cs, 7);
 
@@ -1127,26 +1106,15 @@ void radv_CmdBeginQuery(
 	default:
 		unreachable("beginning unhandled query type");
 	}
+
 }
 
-
-void radv_CmdEndQuery(
-    VkCommandBuffer                             commandBuffer,
-    VkQueryPool                                 queryPool,
-    uint32_t                                    query)
+static void emit_end_query(struct radv_cmd_buffer *cmd_buffer,
+			   uint64_t va, uint64_t avail_va,
+			   VkQueryType query_type)
 {
-	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-	RADV_FROM_HANDLE(radv_query_pool, pool, queryPool);
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
-	uint64_t va = radv_buffer_get_va(pool->bo);
-	uint64_t avail_va = va + pool->availability_offset + 4 * query;
-	va += pool->stride * query;
-
-	/* Do not need to add the pool BO to the list because the query must
-	 * currently be active, which means the BO is already in the list.
-	 */
-
-	switch (pool->type) {
+	switch (query_type) {
 	case VK_QUERY_TYPE_OCCLUSION:
 		radeon_check_space(cmd_buffer->device->ws, cs, 14);
 
@@ -1180,6 +1148,54 @@ void radv_CmdEndQuery(
 	default:
 		unreachable("ending unhandled query type");
 	}
+}
+
+void radv_CmdBeginQuery(
+    VkCommandBuffer                             commandBuffer,
+    VkQueryPool                                 queryPool,
+    uint32_t                                    query,
+    VkQueryControlFlags                         flags)
+{
+	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	RADV_FROM_HANDLE(radv_query_pool, pool, queryPool);
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
+	uint64_t va = radv_buffer_get_va(pool->bo);
+
+	radv_cs_add_buffer(cmd_buffer->device->ws, cs, pool->bo, 8);
+
+	if (cmd_buffer->pending_reset_query) {
+		if (pool->size >= RADV_BUFFER_OPS_CS_THRESHOLD) {
+			/* Only need to flush caches if the query pool size is
+			 * large enough to be resetted using the compute shader
+			 * path. Small pools don't need any cache flushes
+			 * because we use a CP dma clear.
+			 */
+			si_emit_cache_flush(cmd_buffer);
+			cmd_buffer->pending_reset_query = false;
+		}
+	}
+
+	va += pool->stride * query;
+
+	emit_begin_query(cmd_buffer, va, pool->type);
+}
+
+
+void radv_CmdEndQuery(
+    VkCommandBuffer                             commandBuffer,
+    VkQueryPool                                 queryPool,
+    uint32_t                                    query)
+{
+	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	RADV_FROM_HANDLE(radv_query_pool, pool, queryPool);
+	uint64_t va = radv_buffer_get_va(pool->bo);
+	uint64_t avail_va = va + pool->availability_offset + 4 * query;
+	va += pool->stride * query;
+
+	/* Do not need to add the pool BO to the list because the query must
+	 * currently be active, which means the BO is already in the list.
+	 */
+	emit_end_query(cmd_buffer, va, avail_va, pool->type);
 }
 
 void radv_CmdWriteTimestamp(
