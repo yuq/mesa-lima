@@ -414,7 +414,7 @@ st_glsl_to_nir_post_opts(struct st_context *st, struct gl_program *prog,
    st_set_prog_affected_state_flags(prog);
 
    NIR_PASS_V(nir, st_nir_lower_builtin);
-   NIR_PASS_V(nir, nir_lower_atomics, shader_program);
+   NIR_PASS_V(nir, nir_lower_atomics, shader_program, true);
 
    if (st->ctx->_Shader->Flags & GLSL_DUMP) {
       _mesa_log("\n");
