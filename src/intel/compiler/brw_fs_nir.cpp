@@ -4146,7 +4146,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       if (const_offset) {
          offset_reg = brw_imm_ud(const_offset->u32[0]);
       } else {
-         offset_reg = get_nir_src(instr->src[1]);
+         offset_reg = retype(get_nir_src(instr->src[1]), BRW_REGISTER_TYPE_UD);
       }
 
       /* Read the vector */
