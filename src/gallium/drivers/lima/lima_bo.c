@@ -125,9 +125,11 @@ void lima_bo_free(struct lima_bo *bo)
 
    struct lima_screen *screen = bo->screen;
    mtx_lock(&screen->bo_table_lock);
-   util_hash_table_remove(screen->bo_handles, (void *)bo->handle);
+   util_hash_table_remove(screen->bo_handles,
+                          (void *)(uintptr_t)bo->handle);
    if (bo->flink_name)
-      util_hash_table_remove(screen->bo_flink_names, (void *)bo->flink_name);
+      util_hash_table_remove(screen->bo_flink_names,
+                             (void *)(uintptr_t)bo->flink_name);
    mtx_unlock(&screen->bo_table_lock);
 
    if (bo->va) {
@@ -239,7 +241,8 @@ bool lima_bo_export(struct lima_bo *bo, struct winsys_handle *handle)
          bo->flink_name = flink.name;
 
          mtx_lock(&screen->bo_table_lock);
-         util_hash_table_set(screen->bo_flink_names, (void *)bo->flink_name, bo);
+         util_hash_table_set(screen->bo_flink_names,
+                             (void *)(uintptr_t)bo->flink_name, bo);
          mtx_unlock(&screen->bo_table_lock);
       }
       handle->handle = bo->flink_name;
@@ -247,7 +250,8 @@ bool lima_bo_export(struct lima_bo *bo, struct winsys_handle *handle)
 
    case DRM_API_HANDLE_TYPE_KMS:
       mtx_lock(&screen->bo_table_lock);
-      util_hash_table_set(screen->bo_handles, (void *)bo->handle, bo);
+      util_hash_table_set(screen->bo_handles,
+                          (void *)(uintptr_t)bo->handle, bo);
       mtx_unlock(&screen->bo_table_lock);
 
       handle->handle = bo->handle;
@@ -259,7 +263,8 @@ bool lima_bo_export(struct lima_bo *bo, struct winsys_handle *handle)
          return false;
 
       mtx_lock(&screen->bo_table_lock);
-      util_hash_table_set(screen->bo_handles, (void *)bo->handle, bo);
+      util_hash_table_set(screen->bo_handles,
+                          (void *)(uintptr_t)bo->handle, bo);
       mtx_unlock(&screen->bo_table_lock);
       return true;
 
@@ -304,11 +309,13 @@ struct lima_bo *lima_bo_import(struct lima_screen *screen,
 
    switch (handle->type) {
    case DRM_API_HANDLE_TYPE_SHARED:
-      bo = util_hash_table_get(screen->bo_flink_names, (void *)h);
+      bo = util_hash_table_get(screen->bo_flink_names,
+                               (void *)(uintptr_t)h);
       break;
    case DRM_API_HANDLE_TYPE_KMS:
    case DRM_API_HANDLE_TYPE_FD:
-      bo = util_hash_table_get(screen->bo_handles, (void *)h);
+      bo = util_hash_table_get(screen->bo_handles,
+                               (void *)(uintptr_t)h);
       break;
    default:
       mtx_unlock(&screen->bo_table_lock);
@@ -343,7 +350,8 @@ struct lima_bo *lima_bo_import(struct lima_screen *screen,
       bo->flink_name = h;
       bo->size = req.size;
 
-      util_hash_table_set(screen->bo_flink_names, (void *)bo->flink_name, bo);
+      util_hash_table_set(screen->bo_flink_names,
+                          (void *)(uintptr_t)bo->flink_name, bo);
       break;
    case DRM_API_HANDLE_TYPE_FD:
       bo->handle = h;
@@ -354,7 +362,8 @@ struct lima_bo *lima_bo_import(struct lima_screen *screen,
       assert(0);
    }
 
-   util_hash_table_set(screen->bo_handles, (void*)bo->handle, bo);
+   util_hash_table_set(screen->bo_handles,
+                       (void*)(uintptr_t)bo->handle, bo);
    mtx_unlock(&screen->bo_table_lock);
 
    return bo;
@@ -362,14 +371,14 @@ struct lima_bo *lima_bo_import(struct lima_screen *screen,
 
 bool lima_bo_wait(struct lima_bo *bo, uint32_t op, uint64_t timeout_ns, bool relative)
 {
+   if (!lima_get_absolute_timeout(&timeout_ns, relative))
+      return false;
+
    struct drm_lima_gem_wait req = {
       .handle = bo->handle,
       .op = op,
       .timeout_ns = timeout_ns,
    };
-
-   if (!lima_get_absolute_timeout(&req.timeout_ns, relative))
-      return false;
 
    return drmIoctl(bo->screen->fd, DRM_IOCTL_LIMA_GEM_WAIT, &req) == 0;
 }
