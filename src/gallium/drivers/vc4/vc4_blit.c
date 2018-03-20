@@ -24,7 +24,7 @@
 #include "util/u_format.h"
 #include "util/u_surface.h"
 #include "util/u_blitter.h"
-#include "nir_builder.h"
+#include "compiler/nir/nir_builder.h"
 #include "vc4_context.h"
 
 static struct pipe_surface *
