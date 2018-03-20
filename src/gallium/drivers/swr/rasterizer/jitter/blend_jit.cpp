@@ -32,6 +32,7 @@
 #include "jit_api.h"
 #include "blend_jit.h"
 #include "gen_state_llvm.h"
+#include "functionpasses/passes.h"
 
 // components with bit-widths <= the QUANTIZE_THRESHOLD will be quantized
 #define QUANTIZE_THRESHOLD 2
@@ -819,6 +820,8 @@ struct BlendJit : public Builder
         passes.add(createConstantPropagationPass());
         passes.add(createSCCPPass());
         passes.add(createAggressiveDCEPass());
+
+        passes.add(createLowerX86Pass(JM(), this));
 
         passes.run(*blendFunc);
 

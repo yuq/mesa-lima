@@ -32,6 +32,7 @@
 #include "jit_api.h"
 #include "fetch_jit.h"
 #include "gen_state_llvm.h"
+#include "functionpasses/passes.h"
 
 //#define FETCH_DUMP_VERTEX 1
 using namespace llvm;
@@ -356,6 +357,8 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     optPasses.add(createAggressiveDCEPass());
 
     optPasses.run(*fetch);
+
+    optPasses.add(createLowerX86Pass(JM(), this));
     optPasses.run(*fetch);
 
     JitManager::DumpToFile(fetch, "opt");

@@ -65,6 +65,8 @@ namespace SwrJit
         mInt32PtrTy = PointerType::get(mInt32Ty, 0);
         mInt64Ty    = Type::getInt64Ty(pJitMgr->mContext);
 
+        mSimd4FP64Ty = VectorType::get(mDoubleTy, 4);
+
         // Built in types: simd8
 
         mSimdInt1Ty     = VectorType::get(mInt1Ty,  mVWidth);
@@ -86,6 +88,8 @@ namespace SwrJit
         mSimd16FP32Ty       = VectorType::get(mFP32Ty,  mVWidth16);
         mSimd16VectorTy     = ArrayType::get(mSimd16FP32Ty, 4);
         mSimd16VectorTRTy   = ArrayType::get(mSimd16FP32Ty, 5);
+
+        mSimd32Int8Ty       = VectorType::get(mInt8Ty, 32);
 
         if (sizeof(uint32_t*) == 4)
         {

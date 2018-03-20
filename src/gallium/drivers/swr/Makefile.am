@@ -80,7 +80,7 @@ BUILT_SOURCES = \
 	rasterizer/codegen/gen_knobs.h \
 	rasterizer/jitter/gen_state_llvm.h \
 	rasterizer/jitter/gen_builder.hpp \
-	rasterizer/jitter/gen_builder_x86.hpp \
+	rasterizer/jitter/gen_builder_meta.hpp \
 	rasterizer/jitter/gen_builder_intrin.hpp \
 	rasterizer/archrast/gen_ar_event.hpp \
 	rasterizer/archrast/gen_ar_event.cpp \
@@ -134,12 +134,12 @@ rasterizer/jitter/gen_builder.hpp: rasterizer/codegen/gen_llvm_ir_macros.py rast
 		--output rasterizer/jitter \
 		--gen_h
 
-rasterizer/jitter/gen_builder_x86.hpp: rasterizer/codegen/gen_llvm_ir_macros.py rasterizer/codegen/templates/gen_builder.hpp rasterizer/codegen/gen_common.py
+rasterizer/jitter/gen_builder_meta.hpp: rasterizer/codegen/gen_llvm_ir_macros.py rasterizer/codegen/templates/gen_builder.hpp rasterizer/codegen/gen_common.py
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/codegen/gen_llvm_ir_macros.py \
 		--output rasterizer/jitter \
-		--gen_x86_h
+		--gen_meta_h
 
 rasterizer/jitter/gen_builder_intrin.hpp: rasterizer/codegen/gen_llvm_ir_macros.py rasterizer/codegen/templates/gen_builder.hpp rasterizer/codegen/gen_common.py
 	$(MKDIR_GEN)

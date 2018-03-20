@@ -44,7 +44,7 @@ gen_knobs_h = custom_target(
 # The generators above this are needed individually, while the below generators
 # are all inputs to the same lib, so they don't need unique names.
 files_swr_common += [
-  gen_builder_hpp, gen_builder_x86_hpp, gen_knobs_h, gen_knobs_cpp
+  gen_builder_hpp, gen_builder_meta_hpp, gen_knobs_h, gen_knobs_cpp
 ]
 
 foreach x : [[swr_context_files, 'gen_swr_context_llvm.h'],

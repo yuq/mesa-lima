@@ -40,7 +40,16 @@
 ${func['decl']}
 {
 %if isX86:
-    Function * pFunc = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::${func['intrin']});
+    %if len(func['args']) != 0:
+    SmallVector<Type*, ${len(func['args'])}> argTypes;
+    %for arg in func['args']:
+    argTypes.push_back(${arg}->getType());
+    %endfor
+    FunctionType* pFuncTy = FunctionType::get(${ func['returnType'] }, argTypes, false);
+    %else:
+    FunctionType* pFuncTy = FunctionType::get(${ func['returnType'] }, {}, false);
+    %endif:
+    Function* pFunc = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("meta.intrinsic.${func['name']}", pFuncTy));
     return CALL(pFunc, std::initializer_list<Value*>{${argList}}, name);
 %elif isIntrin:
     %if len(func['types']) != 0:

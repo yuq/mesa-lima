@@ -159,10 +159,7 @@ namespace SwrJit
         // use avx2 gather instruction if available
         if (JM()->mArch.AVX2())
         {
-            // force mask to <N x float>, required by vgather
-            Value *mask = BITCAST(VMASK(vMask), mSimdFP32Ty);
-
-            vGather = VGATHERPS(vSrc, pBasePtr, vIndices, mask, C(scale));
+            vGather = VGATHERPS(vSrc, pBasePtr, vIndices, vMask, C(scale));
         }
         else
         {

@@ -66,6 +66,8 @@ namespace SwrJit
         Type*                mInt16PtrTy;
         Type*                mInt32PtrTy;
 
+        Type*                mSimd4FP64Ty;
+
         // Built in types: simd8
 
         Type*                mSimdFP16Ty;
@@ -90,8 +92,10 @@ namespace SwrJit
         Type*                mSimd16VectorTy;
         Type*                mSimd16VectorTRTy;
 
+        Type*                mSimd32Int8Ty;
+
 #include "gen_builder.hpp"
-#include "gen_builder_x86.hpp"
+#include "gen_builder_meta.hpp"
 #include "gen_builder_intrin.hpp"
 #include "builder_misc.h"
 #include "builder_math.h"

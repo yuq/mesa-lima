@@ -32,6 +32,7 @@
 #include "jit_api.h"
 #include "streamout_jit.h"
 #include "gen_state_llvm.h"
+#include "functionpasses/passes.h"
 
 using namespace llvm;
 using namespace SwrJit;
@@ -305,6 +306,8 @@ struct StreamOutJit : public Builder
         passes.add(createConstantPropagationPass());
         passes.add(createSCCPPass());
         passes.add(createAggressiveDCEPass());
+
+        passes.add(createLowerX86Pass(JM(), this));
 
         passes.run(*soFunc);
 
