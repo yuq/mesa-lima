@@ -32,19 +32,16 @@ c_file = None
 _c_indent = 0
 
 def c(*args):
-    if c_file:
-        code = ' '.join(map(str,args))
-        for line in code.splitlines():
-            text = ''.rjust(_c_indent) + line
-            c_file.write(text.rstrip() + "\n")
+    code = ' '.join(map(str,args))
+    for line in code.splitlines():
+        text = ''.rjust(_c_indent) + line
+        c_file.write(text.rstrip() + "\n")
 
 # indented, but no trailing newline...
 def c_line_start(code):
-    if c_file:
-        c_file.write(''.rjust(_c_indent) + code)
+    c_file.write(''.rjust(_c_indent) + code)
 def c_raw(code):
-    if c_file:
-        c_file.write(code)
+    c_file.write(code)
 
 def c_indent(n):
     global _c_indent
@@ -57,11 +54,10 @@ header_file = None
 _h_indent = 0
 
 def h(*args):
-    if header_file:
-        code = ' '.join(map(str,args))
-        for line in code.splitlines():
-            text = ''.rjust(_h_indent) + line
-            header_file.write(text.rstrip() + "\n")
+    code = ' '.join(map(str,args))
+    for line in code.splitlines():
+        text = ''.rjust(_h_indent) + line
+        header_file.write(text.rstrip() + "\n")
 
 def h_indent(n):
     global _c_indent
@@ -556,17 +552,14 @@ def main():
     global header_file
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--header", help="Header file to write")
-    parser.add_argument("--code", help="C file to write")
+    parser.add_argument("--header", help="Header file to write", required=True)
+    parser.add_argument("--code", help="C file to write", required=True)
     parser.add_argument("xml_files", nargs='+', help="List of xml metrics files to process")
 
     args = parser.parse_args()
 
-    if args.header:
-        header_file = open(args.header, 'w')
-
-    if args.code:
-        c_file = open(args.code, 'w')
+    header_file = open(args.header, 'w')
+    c_file = open(args.code, 'w')
 
     gens = []
     for xml_file in args.xml_files:
