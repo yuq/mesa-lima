@@ -555,7 +555,7 @@ namespace SwrJit
             // 256i - 0    1    2    3    4    5    6    7
             //        xxxx xxxx yyyy yyyy xxxx xxxx yyyy yyyy
 
-            Value* vi128XY = BITCAST(PERMD(vShufResult, C<int32_t>({ 0, 1, 4, 5, 2, 3, 6, 7 })), v128bitTy);
+            Value* vi128XY = BITCAST(VPERMD(vShufResult, C<int32_t>({ 0, 1, 4, 5, 2, 3, 6, 7 })), v128bitTy);
             // after PERMD: move and pack xy components into each 128bit lane
             // 256i - 0    1    2    3    4    5    6    7
             //        xxxx xxxx xxxx xxxx yyyy yyyy yyyy yyyy
@@ -565,7 +565,7 @@ namespace SwrJit
             if (info.numComps > 2)
             {
                 Value* vShufResult = BITCAST(PSHUFB(BITCAST(vGatherInput[1], v32x8Ty), vConstMask), vGatherTy);
-                vi128ZW = BITCAST(PERMD(vShufResult, C<int32_t>({ 0, 1, 4, 5, 2, 3, 6, 7 })), v128bitTy);
+                vi128ZW = BITCAST(VPERMD(vShufResult, C<int32_t>({ 0, 1, 4, 5, 2, 3, 6, 7 })), v128bitTy);
             }
 
             for (uint32_t i = 0; i < 4; i++)
@@ -644,7 +644,7 @@ namespace SwrJit
             // 256i - 0    1    2    3    4    5    6    7
             //        xxxx yyyy zzzz wwww xxxx yyyy zzzz wwww
 
-            Value* vi128XY = BITCAST(PERMD(vShufResult, C<int32_t>({ 0, 4, 0, 0, 1, 5, 0, 0 })), v128Ty);
+            Value* vi128XY = BITCAST(VPERMD(vShufResult, C<int32_t>({ 0, 4, 0, 0, 1, 5, 0, 0 })), v128Ty);
             // after PERMD: move and pack xy and zw components in low 64 bits of each 128bit lane
             // 256i - 0    1    2    3    4    5    6    7
             //        xxxx xxxx dcdc dcdc yyyy yyyy dcdc dcdc (dc - don't care)
@@ -653,7 +653,7 @@ namespace SwrJit
             Value* vi128ZW = nullptr;
             if (info.numComps > 2)
             {
-                vi128ZW = BITCAST(PERMD(vShufResult, C<int32_t>({ 2, 6, 0, 0, 3, 7, 0, 0 })), v128Ty);
+                vi128ZW = BITCAST(VPERMD(vShufResult, C<int32_t>({ 2, 6, 0, 0, 3, 7, 0, 0 })), v128Ty);
             }
 
             // sign extend all enabled components. If we have a fill vVertexElements, output to current simdvertex

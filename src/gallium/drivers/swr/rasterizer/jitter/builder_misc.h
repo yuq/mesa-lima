@@ -113,8 +113,6 @@ Value *JOIN_16(Value *a, Value *b);
 Value *PSHUFB(Value* a, Value* b);
 Value *PMOVSXBD(Value* a);
 Value *PMOVSXWD(Value* a);
-Value *PERMD(Value* a, Value* idx);
-Value *PERMPS(Value* a, Value* idx);
 Value *CVTPH2PS(Value* a, const llvm::Twine& name = "");
 Value *CVTPS2PH(Value* a, Value* rounding);
 Value *PMAXSD(Value* a, Value* b);
