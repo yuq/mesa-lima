@@ -319,7 +319,8 @@ vc5_vertex_state_create(struct pipe_context *pctx, unsigned num_elements,
 
                         attr.normalized_int_type = desc->channel[0].normalized;
                         attr.read_as_int_uint = desc->channel[0].pure_integer;
-                        attr.instance_divisor = elem->instance_divisor;
+                        attr.instance_divisor = MIN2(elem->instance_divisor,
+                                                     0xffff);
 
                         switch (desc->channel[0].type) {
                         case UTIL_FORMAT_TYPE_FLOAT:
