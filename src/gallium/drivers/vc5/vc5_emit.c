@@ -597,10 +597,13 @@ v3dX(emit_state)(struct pipe_context *pctx)
                         for (int i = 0; i < so->num_targets; i++) {
                                 const struct pipe_stream_output_target *target =
                                         so->targets[i];
-                                struct vc5_resource *rsc =
-                                        vc5_resource(target->buffer);
+                                struct vc5_resource *rsc = target ?
+                                        vc5_resource(target->buffer) : NULL;
 
 #if V3D_VERSION >= 40
+                                if (!target)
+                                        continue;
+
                                 cl_emit(&job->bcl, TRANSFORM_FEEDBACK_BUFFER, output) {
                                         output.buffer_address =
                                                 cl_address(rsc->bo,
@@ -611,13 +614,17 @@ v3dX(emit_state)(struct pipe_context *pctx)
                                 }
 #else /* V3D_VERSION < 40 */
                                 cl_emit(&job->bcl, TRANSFORM_FEEDBACK_OUTPUT_ADDRESS, output) {
-                                        output.address =
-                                                cl_address(rsc->bo,
-                                                           target->buffer_offset);
+                                        if (target) {
+                                                output.address =
+                                                        cl_address(rsc->bo,
+                                                                   target->buffer_offset);
+                                        }
                                 };
 #endif /* V3D_VERSION < 40 */
-                                vc5_job_add_write_resource(vc5->job,
-                                                           target->buffer);
+                                if (target) {
+                                        vc5_job_add_write_resource(vc5->job,
+                                                                   target->buffer);
+                                }
                                 /* XXX: buffer_size? */
                         }
                 } else {
