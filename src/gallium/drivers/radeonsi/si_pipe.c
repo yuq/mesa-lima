@@ -88,6 +88,7 @@ static const struct debug_named_value debug_options[] = {
 	{ "nodccfb", DBG(NO_DCC_FB), "Disable separate DCC on the main framebuffer" },
 	{ "nodccmsaa", DBG(NO_DCC_MSAA), "Disable DCC for MSAA" },
 	{ "dccmsaa", DBG(DCC_MSAA), "Enable DCC for MSAA" },
+	{ "nofmask", DBG(NO_FMASK), "Disable MSAA compression" },
 
 	/* Tests: */
 	{ "testdma", DBG(TEST_DMA), "Invoke SDMA tests and exit." },

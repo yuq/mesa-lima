@@ -110,6 +110,7 @@ enum {
 	DBG_NO_DCC_FB,
 	DBG_NO_DCC_MSAA,
 	DBG_DCC_MSAA,
+	DBG_NO_FMASK,
 
 	/* Tests: */
 	DBG_TEST_DMA,

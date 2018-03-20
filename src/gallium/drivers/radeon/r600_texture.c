@@ -1268,12 +1268,13 @@ r600_texture_create_object(struct pipe_screen *screen,
 				r600_texture_allocate_htile(sscreen, rtex);
 		}
 	} else {
-		if (base->nr_samples > 1) {
-			if (!buf) {
-				r600_texture_allocate_fmask(sscreen, rtex);
-				r600_texture_allocate_cmask(sscreen, rtex);
-				rtex->cmask_buffer = &rtex->resource;
-			}
+		if (base->nr_samples > 1 &&
+		    !buf &&
+		    !(sscreen->debug_flags & DBG(NO_FMASK))) {
+			r600_texture_allocate_fmask(sscreen, rtex);
+			r600_texture_allocate_cmask(sscreen, rtex);
+			rtex->cmask_buffer = &rtex->resource;
+
 			if (!rtex->fmask.size || !rtex->cmask.size) {
 				FREE(rtex);
 				return NULL;
