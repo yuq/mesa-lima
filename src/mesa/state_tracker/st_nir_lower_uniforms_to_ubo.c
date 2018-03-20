@@ -29,8 +29,8 @@
  * point by 1.
  */
 
-#include "nir.h"
-#include "nir_builder.h"
+#include "compiler/nir/nir.h"
+#include "compiler/nir/nir_builder.h"
 #include "st_nir.h"
 
 #include "program/prog_parameter.h"
