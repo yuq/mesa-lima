@@ -648,7 +648,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 
 	case TGSI_FILE_TEMPORARY:
 	{
-		char name[16] = "";
+		char name[18] = "";
 		LLVMValueRef array_alloca = NULL;
 		unsigned decl_size;
 		unsigned writemask = decl->Declaration.UsageMask;
