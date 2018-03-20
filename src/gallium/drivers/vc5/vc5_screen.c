@@ -271,9 +271,8 @@ vc5_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
                 /* Texturing. */
         case PIPE_CAP_MAX_TEXTURE_2D_LEVELS:
         case PIPE_CAP_MAX_TEXTURE_CUBE_LEVELS:
-                return VC5_MAX_MIP_LEVELS;
         case PIPE_CAP_MAX_TEXTURE_3D_LEVELS:
-                return 256;
+                return VC5_MAX_MIP_LEVELS;
         case PIPE_CAP_MAX_TEXTURE_ARRAY_LAYERS:
                 return 2048;
 
