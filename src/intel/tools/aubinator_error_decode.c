@@ -120,7 +120,7 @@ static int ring_name_to_class(const char *ring_name,
       [VECS] = "vecs",
    };
    for (size_t i = 0; i < ARRAY_SIZE(class_names); i++) {
-      if (strcmp(ring_name, class_names[i]))
+      if (strncmp(ring_name, class_names[i], strlen(class_names[i])))
          continue;
 
       *class = i;
