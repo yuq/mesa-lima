@@ -377,14 +377,6 @@ vc5_job_submit(struct vc5_context *vc5, struct vc5_job *job)
         if (!job->needs_flush)
                 goto done;
 
-        /* The RCL setup would choke if the draw bounds cause no drawing, so
-         * just drop the drawing if that's the case.
-         */
-        if (job->draw_max_x <= job->draw_min_x ||
-            job->draw_max_y <= job->draw_min_y) {
-                goto done;
-        }
-
         if (vc5->screen->devinfo.ver >= 41)
                 v3d41_emit_rcl(job);
         else
