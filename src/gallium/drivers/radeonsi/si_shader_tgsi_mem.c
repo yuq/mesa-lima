@@ -1506,80 +1506,10 @@ static void tex_fetch_args(
 	for (chan = 0; chan < count; chan++)
 		address[chan] = ac_to_integer(&ctx->ac, address[chan]);
 
-	/* Adjust the sample index according to FMASK.
-	 *
-	 * For uncompressed MSAA surfaces, FMASK should return 0x76543210,
-	 * which is the identity mapping. Each nibble says which physical sample
-	 * should be fetched to get that sample.
-	 *
-	 * For example, 0x11111100 means there are only 2 samples stored and
-	 * the second sample covers 3/4 of the pixel. When reading samples 0
-	 * and 1, return physical sample 0 (determined by the first two 0s
-	 * in FMASK), otherwise return physical sample 1.
-	 *
-	 * The sample index should be adjusted as follows:
-	 *   sample_index = (fmask >> (sample_index * 4)) & 0xF;
-	 */
 	if (target == TGSI_TEXTURE_2D_MSAA ||
 	    target == TGSI_TEXTURE_2D_ARRAY_MSAA) {
-		struct lp_build_emit_data txf_emit_data = *emit_data;
-		LLVMValueRef txf_address[4];
-		/* We only need .xy for non-arrays, and .xyz for arrays. */
-		unsigned txf_count = target == TGSI_TEXTURE_2D_MSAA ? 2 : 3;
-		struct tgsi_full_instruction inst = {};
-
-		memcpy(txf_address, address, sizeof(txf_address));
-
-		/* Read FMASK using TXF_LZ. */
-		inst.Instruction.Opcode = TGSI_OPCODE_TXF_LZ;
-		inst.Texture.Texture = target;
-		txf_emit_data.inst = &inst;
-		txf_emit_data.chan = 0;
-		set_tex_fetch_args(ctx, &txf_emit_data,
-				   target, fmask_ptr, NULL,
-				   txf_address, txf_count, 0xf);
-		build_tex_intrinsic(&tex_action, bld_base, &txf_emit_data);
-
-		/* Initialize some constants. */
-		LLVMValueRef four = LLVMConstInt(ctx->i32, 4, 0);
-		LLVMValueRef F = LLVMConstInt(ctx->i32, 0xF, 0);
-
-		/* Apply the formula. */
-		LLVMValueRef fmask =
-			LLVMBuildExtractElement(ctx->ac.builder,
-						txf_emit_data.output[0],
-						ctx->i32_0, "");
-
-		unsigned sample_chan = txf_count; /* the sample index is last */
-
-		LLVMValueRef sample_index4 =
-			LLVMBuildMul(ctx->ac.builder, address[sample_chan], four, "");
-
-		LLVMValueRef shifted_fmask =
-			LLVMBuildLShr(ctx->ac.builder, fmask, sample_index4, "");
-
-		LLVMValueRef final_sample =
-			LLVMBuildAnd(ctx->ac.builder, shifted_fmask, F, "");
-
-		/* Don't rewrite the sample index if WORD1.DATA_FORMAT of the FMASK
-		 * resource descriptor is 0 (invalid),
-		 */
-		LLVMValueRef fmask_desc =
-			LLVMBuildBitCast(ctx->ac.builder, fmask_ptr,
-					 ctx->v8i32, "");
-
-		LLVMValueRef fmask_word1 =
-			LLVMBuildExtractElement(ctx->ac.builder, fmask_desc,
-						ctx->i32_1, "");
-
-		LLVMValueRef word1_is_nonzero =
-			LLVMBuildICmp(ctx->ac.builder, LLVMIntNE,
-				      fmask_word1, ctx->i32_0, "");
-
-		/* Replace the MSAA sample index. */
-		address[sample_chan] =
-			LLVMBuildSelect(ctx->ac.builder, word1_is_nonzero,
-					final_sample, address[sample_chan], "");
+		ac_apply_fmask_to_sample(&ctx->ac, fmask_ptr, address,
+					 target == TGSI_TEXTURE_2D_ARRAY_MSAA);
 	}
 
 	if (opcode == TGSI_OPCODE_TXF ||
