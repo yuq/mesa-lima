@@ -114,11 +114,7 @@ EXTRA_DIST = \
 	$(i965_oa_xml_FILES) \
 	meson.build
 
-# Note: we avoid using a multi target rule here and outputting both the
-# .c and .h files in one go so we don't hit problems with parallel
-# make and multiple invocations of the same script trying to write
-# to the same files.
-brw_oa_metrics.h: brw_oa.py $(i965_oa_xml_FILES)
-	$(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/brw_oa.py --header=$(builddir)/brw_oa_metrics.h $(i965_oa_xml_FILES)
 brw_oa_metrics.c: brw_oa.py $(i965_oa_xml_FILES)
-	$(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/brw_oa.py --code=$(builddir)/brw_oa_metrics.c $(i965_oa_xml_FILES)
+	$(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/brw_oa.py --code=$(builddir)/brw_oa_metrics.c --header=$(builddir)/brw_oa_metrics.h $(i965_oa_xml_FILES)
+
+brw_oa_metrics.h: brw_oa_metrics.c

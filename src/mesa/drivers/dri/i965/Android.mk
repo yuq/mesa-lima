@@ -312,15 +312,12 @@ LOCAL_GENERATED_SOURCES += $(addprefix $(intermediates)/, \
 i965_oa_xml_FILES := $(addprefix $(LOCAL_PATH)/, \
 	$(i965_oa_xml_FILES))
 
-$(intermediates)/brw_oa_metrics.h: $(LOCAL_PATH)/brw_oa.py $(i965_oa_xml_FILES)
-	@echo "target Generated: $(PRIVATE_MODULE) <= $(notdir $(@))"
-	@mkdir -p $(dir $@)
-	$(hide) $(MESA_PYTHON2) $< --header=$@ $(i965_oa_xml_FILES)
-
 $(intermediates)/brw_oa_metrics.c: $(LOCAL_PATH)/brw_oa.py $(i965_oa_xml_FILES)
 	@echo "target Generated: $(PRIVATE_MODULE) <= $(notdir $(@))"
 	@mkdir -p $(dir $@)
-	$(hide) $(MESA_PYTHON2) $< --code=$@ $(i965_oa_xml_FILES)
+	$(hide) $(MESA_PYTHON2) $< --code=$@ $(i965_oa_xml_FILES) --header=$@ $(i965_oa_xml_FILES)
+
+$(intermediates)/brw_oa_metrics.h: $(intermediates)/brw_oa_metrics.c
 
 include $(MESA_COMMON_MK)
 include $(BUILD_SHARED_LIBRARY)
