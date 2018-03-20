@@ -96,7 +96,9 @@ typedef struct {
    /* bitset of registers we have currently found; used to check uniqueness */
    BITSET_WORD *regs_found;
 
-   /* map of local variable -> function implementation where it is defined */
+   /* map of variable -> function implementation where it is defined or NULL
+    * if it is a global variable
+    */
    struct hash_table *var_defs;
 
    /* map of instruction/var/etc to failed assert string */
@@ -450,12 +452,10 @@ validate_deref_chain(nir_deref *deref, nir_variable_mode mode,
 static void
 validate_var_use(nir_variable *var, validate_state *state)
 {
-   if (var->data.mode == nir_var_local) {
-      struct hash_entry *entry = _mesa_hash_table_search(state->var_defs, var);
-
-      validate_assert(state, entry);
+   struct hash_entry *entry = _mesa_hash_table_search(state->var_defs, var);
+   validate_assert(state, entry);
+   if (var->data.mode == nir_var_local)
       validate_assert(state, (nir_function_impl *) entry->data == state->impl);
-   }
 }
 
 static void
@@ -1002,9 +1002,8 @@ validate_var_decl(nir_variable *var, bool is_global, validate_state *state)
     * support)
     */
 
-   if (!is_global) {
-      _mesa_hash_table_insert(state->var_defs, var, state->impl);
-   }
+   _mesa_hash_table_insert(state->var_defs, var,
+                           is_global ? NULL : state->impl);
 
    state->var = NULL;
 }
