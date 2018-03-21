@@ -572,10 +572,18 @@ v3dX(emit_state)(struct pipe_context *pctx)
         /* Set up the transform feedback data specs (which VPM entries to
          * output to which buffers).
          */
-        if (vc5->dirty & VC5_DIRTY_STREAMOUT) {
+        if (vc5->dirty & (VC5_DIRTY_STREAMOUT |
+                          VC5_DIRTY_RASTERIZER |
+                          VC5_DIRTY_PRIM_MODE)) {
                 struct vc5_streamout_stateobj *so = &vc5->streamout;
 
                 if (so->num_targets) {
+                        bool psiz_per_vertex = (vc5->prim_mode == PIPE_PRIM_POINTS &&
+                                                vc5->rasterizer->base.point_size_per_vertex);
+                        uint16_t *tf_specs = (psiz_per_vertex ?
+                                              vc5->prog.bind_vs->tf_specs_psiz :
+                                              vc5->prog.bind_vs->tf_specs);
+
 #if V3D_VERSION >= 40
                         cl_emit(&job->bcl, TRANSFORM_FEEDBACK_SPECS, tfe) {
                                 tfe.number_of_16_bit_output_data_specs_following =
@@ -593,8 +601,7 @@ v3dX(emit_state)(struct pipe_context *pctx)
                         };
 #endif /* V3D_VERSION < 40 */
                         for (int i = 0; i < vc5->prog.bind_vs->num_tf_specs; i++) {
-                                cl_emit_prepacked(&job->bcl,
-                                                  &vc5->prog.bind_vs->tf_specs[i]);
+                                cl_emit_prepacked(&job->bcl, &tf_specs[i]);
                         }
                 }
         }

@@ -127,8 +127,19 @@ vc5_set_transform_feedback_outputs(struct vc5_uncompiled_shader *so,
 
                         assert(so->num_tf_specs != ARRAY_SIZE(so->tf_specs));
                         V3D33_TRANSFORM_FEEDBACK_OUTPUT_DATA_SPEC_pack(NULL,
-                                                                       (void *)&so->tf_specs[so->num_tf_specs++],
+                                                                       (void *)&so->tf_specs[so->num_tf_specs],
                                                                        &unpacked);
+
+                        /* If point size is being written by the shader, then
+                         * all the VPM start offsets are shifted up by one.
+                         * We won't know that until the variant is compiled,
+                         * though.
+                         */
+                        unpacked.first_shaded_vertex_value_to_output++;
+                        V3D33_TRANSFORM_FEEDBACK_OUTPUT_DATA_SPEC_pack(NULL,
+                                                                       (void *)&so->tf_specs_psiz[so->num_tf_specs],
+                                                                       &unpacked);
+                        so->num_tf_specs++;
                         vpm_start_offset += write_size;
                         vpm_size -= write_size;
                 }

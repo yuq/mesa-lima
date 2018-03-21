@@ -131,6 +131,7 @@ struct vc5_uncompiled_shader {
         uint32_t num_tf_outputs;
         struct v3d_varying_slot *tf_outputs;
         uint16_t tf_specs[16];
+        uint16_t tf_specs_psiz[16];
         uint32_t num_tf_specs;
 
         /**
