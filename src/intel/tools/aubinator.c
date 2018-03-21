@@ -548,7 +548,7 @@ print_help(const char *progname, FILE *file)
            "Decode aub file contents from either FILE or the standard input.\n\n"
            "A valid --gen option must be provided.\n\n"
            "      --help          display this help and exit\n"
-           "      --gen=platform  decode for given platform (ivb, byt, hsw, bdw, chv, skl, kbl, bxt or cnl)\n"
+           "      --gen=platform  decode for given platform (3 letter platform name)\n"
            "      --headers       decode only command headers\n"
            "      --color[=WHEN]  colorize the output; WHEN can be 'auto' (default\n"
            "                        if omitted), 'always', or 'never'\n"
