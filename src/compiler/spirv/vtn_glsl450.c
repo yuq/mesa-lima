@@ -514,7 +514,7 @@ vtn_nir_alu_op_for_spirv_glsl_opcode(struct vtn_builder *b,
    }
 }
 
-#define NIR_IMM_FP(n, v) (src[0]->bit_size == 64 ? nir_imm_double(n, v) : nir_imm_float(n, v))
+#define NIR_IMM_FP(n, v) (nir_imm_floatN_t(n, v, src[0]->bit_size))
 
 static void
 handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
