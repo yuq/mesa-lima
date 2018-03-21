@@ -3504,6 +3504,29 @@
     <field name="MA1 Done SS0" start="26" end="26" type="bool"/>
   </register>
 
+  <register name="SAMPLER_INSTDONE" length="1" num="0xe160">
+    <field name="IME Done" start="0" end="0" type="bool"/>
+    <field name="PL0 Done" start="1" end="1" type="bool"/>
+    <field name="SO0 Done" start="2" end="2" type="bool"/>
+    <field name="DG0 Done" start="3" end="3" type="bool"/>
+    <field name="FT0 Done" start="4" end="4" type="bool"/>
+    <field name="DM0 Done" start="5" end="5" type="bool"/>
+    <field name="SC Done" start="6" end="6" type="bool"/>
+    <field name="FL0 Done" start="7" end="7" type="bool"/>
+    <field name="QC Done" start="8" end="8" type="bool"/>
+    <field name="SVSM Done" start="9" end="9" type="bool"/>
+    <field name="SI0 Done" start="10" end="10" type="bool"/>
+    <field name="MT0 Done" start="11" end="11" type="bool"/>
+    <field name="AVS Done" start="12" end="12" type="bool"/>
+    <field name="IEF Done" start="13" end="13" type="bool"/>
+    <field name="CRE Done" start="14" end="14" type="bool"/>
+    <field name="SVSM_ARB_SIFM" start="15" end="15" type="bool"/>
+    <field name="SVSM ARB2" start="16" end="16" type="bool"/>
+    <field name="SVSM ARB1" start="17" end="17" type="bool"/>
+    <field name="SVSM Adapter" start="18" end="18" type="bool"/>
+    <field name="BDM Done" start="19" end="19" type="bool"/>
+  </register>
+
   <register name="L3CNTLREG" length="1" num="0x7034">
     <field name="SLM Enable" start="0" end="0" type="uint"/>
     <field name="URB Allocation" start="1" end="7" type="uint"/>
