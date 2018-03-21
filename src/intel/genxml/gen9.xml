@@ -3406,6 +3406,32 @@
     <field name="GAM Done" start="31" end="31" type="bool"/>
   </register>
 
+  <register name="SC_INSTDONE" length="1" num="0x7100">
+    <field name="SVL Done" start="0" end="0" type="bool"/>
+    <field name="WMFE Done" start="1" end="1" type="bool"/>
+    <field name="WMBE Done" start="2" end="2" type="bool"/>
+    <field name="HIZ Done" start="3" end="3" type="bool"/>
+    <field name="STC Done" start="4" end="4" type="bool"/>
+    <field name="IZ Done" start="5" end="5" type="bool"/>
+    <field name="SBE Done" start="6" end="6" type="bool"/>
+    <field name="RCZ Done" start="8" end="8" type="bool"/>
+    <field name="RCC Done" start="9" end="9" type="bool"/>
+    <field name="RCPBE Done" start="10" end="10" type="bool"/>
+    <field name="RCPFE Done" start="11" end="11" type="bool"/>
+    <field name="DAPB Done" start="12" end="12" type="bool"/>
+    <field name="DAPRBE Done" start="13" end="13" type="bool"/>
+    <field name="SARB Done" start="15" end="15" type="bool"/>
+    <field name="DC0 Done" start="16" end="16" type="bool"/>
+    <field name="DC1 Done" start="17" end="17" type="bool"/>
+    <field name="DC2 Done" start="18" end="18" type="bool"/>
+    <field name="DC3 Done" start="19" end="19" type="bool"/>
+    <field name="GW0 Done" start="20" end="20" type="bool"/>
+    <field name="GW1 Done" start="21" end="21" type="bool"/>
+    <field name="GW2 Done" start="22" end="22" type="bool"/>
+    <field name="GW3 Done" start="23" end="23" type="bool"/>
+    <field name="TDC Done" start="24" end="24" type="bool"/>
+  </register>
+
   <register name="L3CNTLREG" length="1" num="0x7034">
     <field name="SLM Enable" start="0" end="0" type="uint"/>
     <field name="URB Allocation" start="1" end="7" type="uint"/>
