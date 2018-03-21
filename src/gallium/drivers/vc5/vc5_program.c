@@ -49,6 +49,14 @@ vc5_get_slot_for_driver_location(nir_shader *s, uint32_t driver_location)
         return -1;
 }
 
+/**
+ * Precomputes the TRANSFORM_FEEDBACK_OUTPUT_DATA_SPEC array for the shader.
+ *
+ * A shader can have 16 of these specs, and each one of them can write up to
+ * 16 dwords.  Since we allow a total of 64 transform feedback output
+ * components (not 16 vectors), we have to group the writes of multiple
+ * varyings together in a single data spec.
+ */
 static void
 vc5_set_transform_feedback_outputs(struct vc5_uncompiled_shader *so,
                                    const struct pipe_stream_output_info *stream_output)
@@ -102,19 +110,28 @@ vc5_set_transform_feedback_outputs(struct vc5_uncompiled_shader *so,
                 if (!vpm_size)
                         continue;
 
-                struct V3D33_TRANSFORM_FEEDBACK_OUTPUT_DATA_SPEC unpacked = {
-                        /* We need the offset from the coordinate shader's VPM
-                         * output block, which has the [X, Y, Z, W, Xs, Ys]
-                         * values at the start.  Note that this will need some
-                         * shifting when PSIZ is also present.
-                         */
-                        .first_shaded_vertex_value_to_output = vpm_start + 6,
-                        .number_of_consecutive_vertex_values_to_output_as_32_bit_values_minus_1 = vpm_size - 1,
-                        .output_buffer_to_write_to = buffer,
-                };
-                V3D33_TRANSFORM_FEEDBACK_OUTPUT_DATA_SPEC_pack(NULL,
-                                                               (void *)&so->tf_specs[so->num_tf_specs++],
-                                                               &unpacked);
+                uint32_t vpm_start_offset = vpm_start + 6;
+
+                while (vpm_size) {
+                        uint32_t write_size = MIN2(vpm_size, 1 << 4);
+
+                        struct V3D33_TRANSFORM_FEEDBACK_OUTPUT_DATA_SPEC unpacked = {
+                                /* We need the offset from the coordinate shader's VPM
+                                 * output block, which has the [X, Y, Z, W, Xs, Ys]
+                                 * values at the start.
+                                 */
+                                .first_shaded_vertex_value_to_output = vpm_start_offset,
+                                .number_of_consecutive_vertex_values_to_output_as_32_bit_values_minus_1 = write_size - 1,
+                                .output_buffer_to_write_to = buffer,
+                        };
+
+                        assert(so->num_tf_specs != ARRAY_SIZE(so->tf_specs));
+                        V3D33_TRANSFORM_FEEDBACK_OUTPUT_DATA_SPEC_pack(NULL,
+                                                                       (void *)&so->tf_specs[so->num_tf_specs++],
+                                                                       &unpacked);
+                        vpm_start_offset += write_size;
+                        vpm_size -= write_size;
+                }
         }
 
         so->num_tf_outputs = slot_count;

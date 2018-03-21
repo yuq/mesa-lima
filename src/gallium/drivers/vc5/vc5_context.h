@@ -130,7 +130,7 @@ struct vc5_uncompiled_shader {
         struct pipe_shader_state base;
         uint32_t num_tf_outputs;
         struct v3d_varying_slot *tf_outputs;
-        uint16_t tf_specs[PIPE_MAX_SO_BUFFERS];
+        uint16_t tf_specs[16];
         uint32_t num_tf_specs;
 
         /**
