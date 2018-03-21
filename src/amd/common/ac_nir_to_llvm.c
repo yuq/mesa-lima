@@ -1793,7 +1793,7 @@ visit_store_var(struct ac_nir_context *ctx,
 	int idx = instr->variables[0]->var->data.driver_location;
 	unsigned comp = instr->variables[0]->var->data.location_frac;
 	LLVMValueRef src = ac_to_float(&ctx->ac, get_src(ctx, instr->src[0]));
-	int writemask = instr->const_index[0] << comp;
+	int writemask = instr->const_index[0];
 	LLVMValueRef indir_index;
 	unsigned const_index;
 	get_deref_offset(ctx, instr->variables[0], false,
@@ -1807,6 +1807,8 @@ visit_store_var(struct ac_nir_context *ctx,
 
 		writemask = widen_mask(writemask, 2);
 	}
+
+	writemask = writemask << comp;
 
 	switch (instr->variables[0]->var->data.mode) {
 	case nir_var_shader_out:
