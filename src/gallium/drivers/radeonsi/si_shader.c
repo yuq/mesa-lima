@@ -1290,12 +1290,13 @@ static LLVMValueRef si_nir_load_tcs_varyings(struct ac_shader_abi *abi,
 						      is_patch);
 
 	LLVMValueRef value[4];
-	for (unsigned i = 0; i < num_components + component; i++) {
+	for (unsigned i = 0; i < num_components; i++) {
 		unsigned offset = i;
 		if (llvm_type_is_64bit(ctx, type))
 			offset *= 2;
 
-		value[i] = lds_load(bld_base, type, offset, dw_addr);
+		offset += component;
+		value[i + component] = lds_load(bld_base, type, offset, dw_addr);
 	}
 
 	return ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
@@ -1377,13 +1378,14 @@ LLVMValueRef si_nir_load_input_tes(struct ac_shader_abi *abi,
 	 * between the NIR and TGSI backends.
 	 */
 	LLVMValueRef value[4];
-	for (unsigned i = component; i < num_components + component; i++) {
+	for (unsigned i = 0; i < num_components; i++) {
 		unsigned offset = i;
 		if (llvm_type_is_64bit(ctx, type))
 			offset *= 2;
 
-		value[i] = buffer_load(&ctx->bld_base, type, offset,
-				       ctx->tess_offchip_ring, base, addr, true);
+		offset += component;
+		value[i + component] = buffer_load(&ctx->bld_base, type, offset,
+						   ctx->tess_offchip_ring, base, addr, true);
 	}
 
 	return ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
@@ -1693,13 +1695,14 @@ static LLVMValueRef si_nir_load_input_gs(struct ac_shader_abi *abi,
 	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 
 	LLVMValueRef value[4];
-	for (unsigned i = component; i < num_components + component; i++) {
+	for (unsigned i = 0; i < num_components; i++) {
 		unsigned offset = i;
 		if (llvm_type_is_64bit(ctx, type))
 			offset *= 2;
 
-		value[i] = si_llvm_load_input_gs(&ctx->abi, driver_location  / 4,
-						 vertex_index, type, offset);
+		offset += component;
+		value[i + component] = si_llvm_load_input_gs(&ctx->abi, driver_location  / 4,
+							     vertex_index, type, offset);
 	}
 
 	return ac_build_varying_gather_values(&ctx->ac, value, num_components, component);
