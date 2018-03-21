@@ -141,16 +141,23 @@ st_nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
          type = glsl_get_array_element(type);
       }
 
+      unsigned var_size = type_size(type);
+
       /* Builtins don't allow component packing so we only need to worry about
        * user defined varyings sharing the same location.
        */
       bool processed = false;
       if (var->data.location >= base) {
          unsigned glsl_location = var->data.location - base;
-         if (processed_locs[var->data.index] & ((uint64_t)1 << glsl_location))
-            processed = true;
-         else
-            processed_locs[var->data.index] |= ((uint64_t)1 << glsl_location);
+
+         for (unsigned i = 0; i < var_size; i++) {
+            if (processed_locs[var->data.index] &
+                ((uint64_t)1 << (glsl_location + i)))
+               processed = true;
+            else
+               processed_locs[var->data.index] |=
+                  ((uint64_t)1 << (glsl_location + i));
+         }
       }
 
       /* Because component packing allows varyings to share the same location
@@ -162,9 +169,12 @@ st_nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
          continue;
       }
 
-      assigned_locations[var->data.location] = location;
+      for (unsigned i = 0; i < var_size; i++) {
+         assigned_locations[var->data.location + i] = location + i;
+      }
+
       var->data.driver_location = location;
-      location += type_size(type);
+      location += var_size;
    }
 
    *size += location;
