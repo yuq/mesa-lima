@@ -481,6 +481,14 @@ vc5_screen_is_format_supported(struct pipe_screen *pscreen,
                 case PIPE_FORMAT_R8G8B8_SSCALED:
                 case PIPE_FORMAT_R8G8_SSCALED:
                 case PIPE_FORMAT_R8_SSCALED:
+                case PIPE_FORMAT_R10G10B10A2_UNORM:
+                case PIPE_FORMAT_B10G10R10A2_UNORM:
+                case PIPE_FORMAT_R10G10B10A2_SNORM:
+                case PIPE_FORMAT_B10G10R10A2_SNORM:
+                case PIPE_FORMAT_R10G10B10A2_USCALED:
+                case PIPE_FORMAT_B10G10R10A2_USCALED:
+                case PIPE_FORMAT_R10G10B10A2_SSCALED:
+                case PIPE_FORMAT_B10G10R10A2_SSCALED:
                         break;
                 default:
                         return FALSE;
