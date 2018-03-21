@@ -756,6 +756,36 @@ v3d_set_fs_prog_data_inputs(struct v3d_compile *c,
         }
 }
 
+static void
+v3d_fixup_fs_output_types(struct v3d_compile *c)
+{
+        nir_foreach_variable(var, &c->s->outputs) {
+                uint32_t mask = 0;
+
+                switch (var->data.location) {
+                case FRAG_RESULT_COLOR:
+                        mask = ~0;
+                        break;
+                case FRAG_RESULT_DATA0:
+                case FRAG_RESULT_DATA1:
+                case FRAG_RESULT_DATA2:
+                case FRAG_RESULT_DATA3:
+                        mask = 1 << (var->data.location - FRAG_RESULT_DATA0);
+                        break;
+                }
+
+                if (c->fs_key->int_color_rb & mask) {
+                        var->type =
+                                glsl_vector_type(GLSL_TYPE_INT,
+                                                 glsl_get_components(var->type));
+                } else if (c->fs_key->uint_color_rb & mask) {
+                        var->type =
+                                glsl_vector_type(GLSL_TYPE_UINT,
+                                                 glsl_get_components(var->type));
+                }
+        }
+}
+
 uint64_t *v3d_compile_fs(const struct v3d_compiler *compiler,
                          struct v3d_fs_key *key,
                          struct v3d_fs_prog_data *prog_data,
@@ -767,6 +797,9 @@ uint64_t *v3d_compile_fs(const struct v3d_compiler *compiler,
                                                  program_id, variant_id);
 
         c->fs_key = key;
+
+        if (key->int_color_rb || key->uint_color_rb)
+                v3d_fixup_fs_output_types(c);
 
         v3d_lower_nir(c);
 
