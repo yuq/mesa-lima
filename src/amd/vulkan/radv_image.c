@@ -91,18 +91,14 @@ radv_image_is_tc_compat_htile(struct radv_device *device,
 	    pCreateInfo->format == VK_FORMAT_D32_SFLOAT_S8_UINT)
 		return false;
 
-	if (device->physical_device->rad_info.chip_class >= GFX9) {
-		/* GFX9 supports both 32-bit and 16-bit depth surfaces. */
-		if (pCreateInfo->format != VK_FORMAT_D32_SFLOAT_S8_UINT &&
-		    pCreateInfo->format != VK_FORMAT_D32_SFLOAT &&
-		    pCreateInfo->format != VK_FORMAT_D16_UNORM)
-			return false;
-	} else {
-		/* GFX8 only supports 32-bit depth surfaces. */
-		if (pCreateInfo->format != VK_FORMAT_D32_SFLOAT_S8_UINT &&
-		    pCreateInfo->format != VK_FORMAT_D32_SFLOAT)
-			return false;
-	}
+	/* GFX9 supports both 32-bit and 16-bit depth surfaces, while GFX8 only
+	 * supports 32-bit. Though, it's possible to enable TC-compat for
+	 * 16-bit depth surfaces if no Z planes are compressed.
+	 */
+	if (pCreateInfo->format != VK_FORMAT_D32_SFLOAT_S8_UINT &&
+	    pCreateInfo->format != VK_FORMAT_D32_SFLOAT &&
+	    pCreateInfo->format != VK_FORMAT_D16_UNORM)
+		return false;
 
 	return true;
 }

@@ -3615,12 +3615,22 @@ radv_calc_decompress_on_z_planes(struct radv_device *device,
 
 		max_zplanes = max_zplanes + 1;
 	} else {
-		if (iview->image->info.samples <= 1)
-			max_zplanes = 5;
-		else if (iview->image->info.samples <= 4)
-			max_zplanes = 3;
-		else
-			max_zplanes = 2;
+		if (iview->vk_format == VK_FORMAT_D16_UNORM) {
+			/* Do not enable Z plane compression for 16-bit depth
+			 * surfaces because isn't supported on GFX8. Only
+			 * 32-bit depth surfaces are supported by the hardware.
+			 * This allows to maintain shader compatibility and to
+			 * reduce the number of depth decompressions.
+			 */
+			max_zplanes = 1;
+		} else {
+			if (iview->image->info.samples <= 1)
+				max_zplanes = 5;
+			else if (iview->image->info.samples <= 4)
+				max_zplanes = 3;
+			else
+				max_zplanes = 2;
+		}
 	}
 
 	return max_zplanes;
