@@ -143,26 +143,6 @@ struct JitManager
     uint32_t                mVWidth;
 
 
-    // Built in types.
-    llvm::Type*             mInt8Ty;
-    llvm::Type*             mInt32Ty;
-    llvm::Type*             mInt64Ty;
-    llvm::Type*             mFP32Ty;
-
-    llvm::Type*             mSimtFP32Ty;
-    llvm::Type*             mSimtInt32Ty;
-
-    llvm::Type*             mSimdVectorInt32Ty;
-    llvm::Type*             mSimdVectorTy;
-
-#if USE_SIMD16_SHADERS
-    llvm::Type*             mSimd16FP32Ty;
-    llvm::Type*             mSimd16Int32Ty;
-
-    llvm::Type*             mSimd16VectorFP32Ty;
-    llvm::Type*             mSimd16VectorInt32Ty;
-
-#endif
     // fetch shader types
     llvm::FunctionType*     mFetchShaderTy;
 

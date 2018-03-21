@@ -110,11 +110,6 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
     mpExec->RegisterJITEventListener(vTune);
 #endif
 
-    mFP32Ty = Type::getFloatTy(mContext);   // float type
-    mInt8Ty = Type::getInt8Ty(mContext);
-    mInt32Ty = Type::getInt32Ty(mContext);   // int type
-    mInt64Ty = Type::getInt64Ty(mContext);   // int type
-
     // fetch function signature
 #if USE_SIMD16_SHADERS
     // typedef void(__cdecl *PFN_FETCH_FUNC)(SWR_FETCH_CONTEXT& fetchInfo, simd16vertex& out);
@@ -135,20 +130,6 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
 
     mFetchShaderTy = FunctionType::get(Type::getVoidTy(mContext), fsArgs, false);
 
-    mSimtFP32Ty = VectorType::get(mFP32Ty, mVWidth);
-    mSimtInt32Ty = VectorType::get(mInt32Ty, mVWidth);
-
-    mSimdVectorTy = ArrayType::get(mSimtFP32Ty, 4);
-    mSimdVectorInt32Ty = ArrayType::get(mSimtInt32Ty, 4);
-
-#if USE_SIMD16_SHADERS
-    mSimd16FP32Ty = ArrayType::get(mSimtFP32Ty, 2);
-    mSimd16Int32Ty = ArrayType::get(mSimtInt32Ty, 2);
-
-    mSimd16VectorFP32Ty = ArrayType::get(mSimd16FP32Ty, 4);
-    mSimd16VectorInt32Ty = ArrayType::get(mSimd16Int32Ty, 4);
-
-#endif
 #if defined(_WIN32)
     // explicitly instantiate used symbols from potentially staticly linked libs
     sys::DynamicLibrary::AddSymbol("exp2f", &exp2f);

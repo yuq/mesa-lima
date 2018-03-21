@@ -68,7 +68,7 @@ namespace SwrJit
 
         Type*                mSimd4FP64Ty;
 
-        // Built in types: simd8
+        // Built in types: target SIMD
 
         Type*                mSimdFP16Ty;
         Type*                mSimdFP32Ty;
@@ -79,6 +79,7 @@ namespace SwrJit
         Type*                mSimdIntPtrTy;
         Type*                mSimdVectorTy;
         Type*                mSimdVectorTRTy;
+        Type*                mSimdVectorIntTy;
 
         // Built in types: simd16
 

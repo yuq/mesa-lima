@@ -42,10 +42,8 @@ namespace SwrJit
         : mpJitMgr(pJitMgr),
           mpPrivateContext(nullptr)
     {
-        SWR_ASSERT(pJitMgr->mVWidth == 8);
-
         mVWidth = pJitMgr->mVWidth;
-        mVWidth16 = pJitMgr->mVWidth * 2;
+        mVWidth16 = 16;
 
         mpIRBuilder = &pJitMgr->mBuilder;
 
@@ -67,7 +65,7 @@ namespace SwrJit
 
         mSimd4FP64Ty = VectorType::get(mDoubleTy, 4);
 
-        // Built in types: simd8
+        // Built in types: target simd
 
         mSimdInt1Ty     = VectorType::get(mInt1Ty,  mVWidth);
         mSimdInt16Ty    = VectorType::get(mInt16Ty, mVWidth);
@@ -76,6 +74,7 @@ namespace SwrJit
         mSimdFP16Ty     = VectorType::get(mFP16Ty,  mVWidth);
         mSimdFP32Ty     = VectorType::get(mFP32Ty,  mVWidth);
         mSimdVectorTy   = ArrayType::get(mSimdFP32Ty, 4);
+        mSimdVectorIntTy= ArrayType::get(mSimdInt32Ty, 4);
         mSimdVectorTRTy = ArrayType::get(mSimdFP32Ty, 5);
 
         // Built in types: simd16
