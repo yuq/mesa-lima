@@ -520,6 +520,18 @@ struct dri2_egl_display_vtbl dri3_x11_display_vtbl = {
    .close_screen_notify = dri3_close_screen_notify,
 };
 
+/* Only request versions of these protocols which we actually support. */
+#define DRI3_SUPPORTED_MAJOR 1
+#define PRESENT_SUPPORTED_MAJOR 1
+
+#ifdef HAVE_DRI3_MODIFIERS
+#define DRI3_SUPPORTED_MINOR 2
+#define PRESENT_SUPPORTED_MINOR 2
+#else
+#define PRESENT_SUPPORTED_MINOR 0
+#define DRI3_SUPPORTED_MINOR 0
+#endif
+
 EGLBoolean
 dri3_x11_connect(struct dri2_egl_display *dri2_dpy)
 {
@@ -542,12 +554,12 @@ dri3_x11_connect(struct dri2_egl_display *dri2_dpy)
       return EGL_FALSE;
 
    dri3_query_cookie = xcb_dri3_query_version(dri2_dpy->conn,
-                                              XCB_DRI3_MAJOR_VERSION,
-                                              XCB_DRI3_MINOR_VERSION);
+                                              DRI3_SUPPORTED_MAJOR,
+                                              DRI3_SUPPORTED_MINOR);
 
    present_query_cookie = xcb_present_query_version(dri2_dpy->conn,
-                                                    XCB_PRESENT_MAJOR_VERSION,
-                                                    XCB_PRESENT_MINOR_VERSION);
+                                                    PRESENT_SUPPORTED_MAJOR,
+                                                    PRESENT_SUPPORTED_MINOR);
 
    dri3_query =
       xcb_dri3_query_version_reply(dri2_dpy->conn, dri3_query_cookie, &error);

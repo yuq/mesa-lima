@@ -1026,6 +1026,18 @@ dri3_destroy_display(__GLXDRIdisplay * dpy)
    free(dpy);
 }
 
+/* Only request versions of these protocols which we actually support. */
+#define DRI3_SUPPORTED_MAJOR 1
+#define PRESENT_SUPPORTED_MAJOR 1
+
+#ifdef HAVE_DRI3_MODIFIERS
+#define DRI3_SUPPORTED_MINOR 2
+#define PRESENT_SUPPORTED_MINOR 2
+#else
+#define PRESENT_SUPPORTED_MINOR 0
+#define DRI3_SUPPORTED_MINOR 0
+#endif
+
 /** dri3_create_display
  *
  * Allocate, initialize and return a __DRIdisplayPrivate object.
@@ -1057,13 +1069,11 @@ dri3_create_display(Display * dpy)
       return NULL;
 
    dri3_cookie = xcb_dri3_query_version(c,
-                                        XCB_DRI3_MAJOR_VERSION,
-                                        XCB_DRI3_MINOR_VERSION);
-
-
+                                        DRI3_SUPPORTED_MAJOR,
+                                        DRI3_SUPPORTED_MINOR);
    present_cookie = xcb_present_query_version(c,
-                                   XCB_PRESENT_MAJOR_VERSION,
-                                   XCB_PRESENT_MINOR_VERSION);
+                                              PRESENT_SUPPORTED_MAJOR,
+                                              PRESENT_SUPPORTED_MINOR);
 
    pdp = malloc(sizeof *pdp);
    if (pdp == NULL)
