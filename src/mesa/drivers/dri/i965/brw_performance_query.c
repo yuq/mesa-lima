@@ -1905,7 +1905,7 @@ init_oa_configs(struct brw_context *brw)
          continue;
       }
 
-      register_oa_config(brw, query, config_id);
+      register_oa_config(brw, query, ret);
       DBG("metric set: %s (added)\n", query->guid);
    }
 }
