@@ -115,8 +115,29 @@ lima_update_plb(struct lima_context *ctx, struct lima_ctx_plb_pp_stream *s)
    if (s->bo)
       return;
 
-   unsigned size =
-      align(fb->tiled_w * fb->tiled_h * 16 + screen->num_pp * 8, LIMA_PAGE_SIZE);
+   /* carefully calculate each stream start address:
+    * 1. overflow: each stream size may be different due to
+    *    fb->tiled_w * fb->tiled_h can't be divided by num_pp,
+    *    extra size should be added to the preceeding stream
+    * 2. alignment: each stream address should be 0x20 aligned
+    */
+   int i, num_pp = screen->num_pp;
+   int delta = fb->tiled_w * fb->tiled_h / num_pp * 16 + 8;
+   int remain = fb->tiled_w * fb->tiled_h % num_pp;
+   int offset = 0;
+
+   for (i = 0; i < num_pp; i++) {
+      s->offset[i] = offset;
+
+      offset += delta;
+      if (remain) {
+         offset += 16;
+         remain--;
+      }
+      offset = align(offset, 0x20);
+   }
+
+   unsigned size = align(offset, LIMA_PAGE_SIZE);
    s->bo = lima_bo_create(screen, size, 0, true, true);
 
    /* use hilbert_coords to generates 1D to 2D relationship.
@@ -127,12 +148,11 @@ lima_update_plb(struct lima_context *ctx, struct lima_ctx_plb_pp_stream *s)
    int max = MAX2(fb->tiled_w, fb->tiled_h);
    int dim = util_logbase2_ceil(max);
    int count = 1 << (dim + dim);
-   int index = 0, i;
-   int num_pp = screen->num_pp;
+   int index = 0;
    uint32_t *stream[4];
 
    for (i = 0; i < num_pp; i++)
-      stream[i] = s->bo->map + s->bo->size / num_pp * i;
+      stream[i] = s->bo->map + s->offset[i];
 
    for (i = 0; i < count; i++) {
       int x, y;
@@ -1031,7 +1051,7 @@ lima_flush(struct lima_context *ctx)
 
    struct lima_ctx_plb_pp_stream *s = ctx->current_plb_pp_stream;
    for (int i = 0; i < num_pp; i++)
-      pp_frame.plbu_array_address[i] = s->bo->va + s->bo->size / num_pp * i;
+      pp_frame.plbu_array_address[i] = s->bo->va + s->offset[i];
 
    if (!lima_submit_start(ctx->pp_submit, &pp_frame, sizeof(pp_frame)))
       fprintf(stderr, "pp submit error\n");
