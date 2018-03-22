@@ -153,79 +153,14 @@ namespace SwrJit
     {
         AssertMemoryUsageParams(pBase, usage);
 
-        Value *vGather;
-        Value *pBasePtr = INT_TO_PTR(pBase, PointerType::get(mInt8Ty, 0));
-
-        // use avx2 gather instruction if available
-        if (JM()->mArch.AVX2())
-        {
-            vGather = VGATHERPS(vSrc, pBasePtr, vIndices, vMask, C(scale));
-        }
-        else
-        {
-            Value* pStack = STACKSAVE();
-
-            // store vSrc on the stack.  this way we can select between a valid load address and the vSrc address
-            Value* vSrcPtr = ALLOCA(vSrc->getType());
-            STORE(vSrc, vSrcPtr);
-
-            vGather = VUNDEF_F();
-            Value *vScaleVec = VIMMED1((uint32_t)scale);
-            Value *vOffsets = MUL(vIndices, vScaleVec);
-            for (uint32_t i = 0; i < mVWidth; ++i)
-            {
-                // single component byte index
-                Value *offset = VEXTRACT(vOffsets, C(i));
-                // byte pointer to component
-                Value *loadAddress = GEP(pBasePtr, offset);
-                loadAddress = BITCAST(loadAddress, PointerType::get(mFP32Ty, 0));
-                // pointer to the value to load if we're masking off a component
-                Value *maskLoadAddress = GEP(vSrcPtr, { C(0), C(i) });
-                Value *selMask = VEXTRACT(vMask, C(i));
-                // switch in a safe address to load if we're trying to access a vertex 
-                Value *validAddress = SELECT(selMask, loadAddress, maskLoadAddress);
-                Value *val = LOAD(validAddress);
-                vGather = VINSERT(vGather, val, C(i));
-            }
-
-            STACKRESTORE(pStack);
-        }
-
-        return vGather;
+        return VGATHERPS(vSrc, pBase, vIndices, vMask, C(scale));
     }
 
     Value *Builder::GATHERPS_16(Value *vSrc, Value *pBase, Value *vIndices, Value *vMask, uint8_t scale, JIT_MEM_CLIENT usage)
     {
         AssertMemoryUsageParams(pBase, usage);
 
-        Value *vGather = VUNDEF_F_16();
-
-        // use AVX512F gather instruction if available
-        if (JM()->mArch.AVX512F())
-        {
-            // force mask to <N-bit Integer>, required by vgather2
-            Value *mask = BITCAST(vMask, mInt16Ty);
-
-            vGather = VGATHERPS_16(vSrc, pBase, vIndices, mask, C((uint32_t)scale));
-        }
-        else
-        {
-            Value *src0 = EXTRACT_16(vSrc, 0);
-            Value *src1 = EXTRACT_16(vSrc, 1);
-
-            Value *indices0 = EXTRACT_16(vIndices, 0);
-            Value *indices1 = EXTRACT_16(vIndices, 1);
-
-            Value *mask0 = EXTRACT_16(vMask, 0);
-            Value *mask1 = EXTRACT_16(vMask, 1);
-
-            Value *gather0 = GATHERPS(src0, pBase, indices0, mask0, scale);
-            Value *gather1 = GATHERPS(src1, pBase, indices1, mask1, scale);
-
-            vGather = JOIN_16(gather0, gather1);
-        }
-
-        return vGather;
+        return VGATHERPS_16(vSrc, pBase, vIndices, vMask, C(scale));
     }
 
     //////////////////////////////////////////////////////////////////////////
