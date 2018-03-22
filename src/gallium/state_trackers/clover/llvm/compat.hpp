@@ -89,8 +89,10 @@ namespace clover {
 
 #if HAVE_LLVM >= 0x0500
          const clang::InputKind ik_opencl = clang::InputKind::OpenCL;
+         const clang::LangStandard::Kind lang_opencl10 = clang::LangStandard::lang_opencl10;
 #else
          const clang::InputKind ik_opencl = clang::IK_OpenCL;
+         const clang::LangStandard::Kind lang_opencl10 = clang::LangStandard::lang_opencl;
 #endif
 
          inline void

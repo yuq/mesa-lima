@@ -85,7 +85,7 @@ namespace {
     };
 
     const clc_version_lang_std cl_version_lang_stds[] = {
-       { 100, clang::LangStandard::lang_opencl10},
+       { 100, compat::lang_opencl10},
        { 110, clang::LangStandard::lang_opencl11},
        { 120, clang::LangStandard::lang_opencl12},
        { 200, clang::LangStandard::lang_opencl20},
