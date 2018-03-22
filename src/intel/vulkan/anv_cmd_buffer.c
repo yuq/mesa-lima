@@ -332,6 +332,9 @@ VkResult anv_ResetCommandBuffer(
    case 10:                                        \
       gen10_##func(__VA_ARGS__);                   \
       break;                                       \
+   case 11:                                        \
+      gen11_##func(__VA_ARGS__);                   \
+      break;                                       \
    default:                                        \
       assert(!"Unknown hardware generation");      \
    }
