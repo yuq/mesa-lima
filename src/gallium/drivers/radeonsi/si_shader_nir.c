@@ -885,14 +885,12 @@ si_nir_load_sampler_desc(struct ac_shader_abi *abi,
 	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	LLVMBuilderRef builder = ctx->ac.builder;
 	LLVMValueRef list = LLVMGetParam(ctx->main_fn, ctx->param_samplers_and_images);
-	LLVMValueRef index = dynamic_index;
+	LLVMValueRef index;
 
 	assert(!descriptor_set);
 
-	if (!index)
-		index = ctx->ac.i32_0;
-
-	index = LLVMBuildAdd(builder, index,
+	dynamic_index = dynamic_index ? dynamic_index : ctx->ac.i32_0;
+	index = LLVMBuildAdd(builder, dynamic_index,
 			     LLVMConstInt(ctx->ac.i32, base_index + constant_index, false),
 			     "");
 
