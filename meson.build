@@ -764,9 +764,7 @@ if ['linux', 'cygwin'].contains(host_machine.system())
   pre_args += '-D_GNU_SOURCE'
 endif
 
-# Check for generic C/C++ arguments
-cpp = meson.get_compiler('cpp')
-cpp_args = []
+# Check for generic C arguments
 c_args = []
 foreach a : ['-Wall', '-Werror=implicit-function-declaration',
              '-Werror=missing-prototypes', '-fno-math-errno',
@@ -774,14 +772,21 @@ foreach a : ['-Wall', '-Werror=implicit-function-declaration',
   if cc.has_argument(a)
     c_args += a
   endif
-  if cpp.has_argument(a)
-    cpp_args += a
-  endif
 endforeach
 c_vis_args = []
 if cc.has_argument('-fvisibility=hidden')
   c_vis_args += '-fvisibility=hidden'
 endif
+
+# Check for generic C++ arguments
+cpp = meson.get_compiler('cpp')
+cpp_args = []
+foreach a : ['-Wall', '-fno-math-errno', '-fno-trapping-math',
+             '-Qunused-arguments']
+  if cpp.has_argument(a)
+    cpp_args += a
+  endif
+endforeach
 
 # For some reason, the test for -Wno-foo always succeeds with gcc, even if the
 # option is not supported. Hence, check for -Wfoo instead.
