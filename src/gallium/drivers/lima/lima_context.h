@@ -149,6 +149,7 @@ struct lima_ctx_plb_pp_stream {
    struct lima_ctx_plb_pp_stream_key key;
    uint32_t refcnt;
    struct lima_bo *bo;
+   uint32_t offset[4];
 };
 
 struct lima_context {
