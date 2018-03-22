@@ -322,6 +322,7 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 		info->clock_crystal_freq = 1;
 	}
 	info->tcc_cache_line_size = 64; /* TC L2 line size on GCN */
+	info->gb_addr_config = amdinfo->gb_addr_cfg;
 	if (info->chip_class == GFX9) {
 		info->num_tile_pipes = 1 << G_0098F8_NUM_PIPES(amdinfo->gb_addr_cfg);
 		info->pipe_interleave_bytes =
@@ -469,4 +470,53 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("    pipe_interleave_bytes = %i\n", info->pipe_interleave_bytes);
 	printf("    enabled_rb_mask = 0x%x\n", info->enabled_rb_mask);
 	printf("    max_alignment = %u\n", (unsigned)info->max_alignment);
+
+	printf("GB_ADDR_CONFIG:\n");
+	if (info->chip_class >= GFX9) {
+		printf("    num_pipes = %u\n",
+		       1 << G_0098F8_NUM_PIPES(info->gb_addr_config));
+		printf("    pipe_interleave_size = %u\n",
+		       256 << G_0098F8_PIPE_INTERLEAVE_SIZE_GFX9(info->gb_addr_config));
+		printf("    max_compressed_frags = %u\n",
+		       1 << G_0098F8_MAX_COMPRESSED_FRAGS(info->gb_addr_config));
+		printf("    bank_interleave_size = %u\n",
+		       1 << G_0098F8_BANK_INTERLEAVE_SIZE(info->gb_addr_config));
+		printf("    num_banks = %u\n",
+		       1 << G_0098F8_NUM_BANKS(info->gb_addr_config));
+		printf("    shader_engine_tile_size = %u\n",
+		       16 << G_0098F8_SHADER_ENGINE_TILE_SIZE(info->gb_addr_config));
+		printf("    num_shader_engines = %u\n",
+		       1 << G_0098F8_NUM_SHADER_ENGINES_GFX9(info->gb_addr_config));
+		printf("    num_gpus = %u (raw)\n",
+		       G_0098F8_NUM_GPUS_GFX9(info->gb_addr_config));
+		printf("    multi_gpu_tile_size = %u (raw)\n",
+		       G_0098F8_MULTI_GPU_TILE_SIZE(info->gb_addr_config));
+		printf("    num_rb_per_se = %u\n",
+		       1 << G_0098F8_NUM_RB_PER_SE(info->gb_addr_config));
+		printf("    row_size = %u\n",
+		       1024 << G_0098F8_ROW_SIZE(info->gb_addr_config));
+		printf("    num_lower_pipes = %u (raw)\n",
+		       G_0098F8_NUM_LOWER_PIPES(info->gb_addr_config));
+		printf("    se_enable = %u (raw)\n",
+		       G_0098F8_SE_ENABLE(info->gb_addr_config));
+	} else {
+		printf("    num_pipes = %u\n",
+		       1 << G_0098F8_NUM_PIPES(info->gb_addr_config));
+		printf("    pipe_interleave_size = %u\n",
+		       256 << G_0098F8_PIPE_INTERLEAVE_SIZE_GFX6(info->gb_addr_config));
+		printf("    bank_interleave_size = %u\n",
+		       1 << G_0098F8_BANK_INTERLEAVE_SIZE(info->gb_addr_config));
+		printf("    num_shader_engines = %u\n",
+		       1 << G_0098F8_NUM_SHADER_ENGINES_GFX6(info->gb_addr_config));
+		printf("    shader_engine_tile_size = %u\n",
+		       16 << G_0098F8_SHADER_ENGINE_TILE_SIZE(info->gb_addr_config));
+		printf("    num_gpus = %u (raw)\n",
+		       G_0098F8_NUM_GPUS_GFX6(info->gb_addr_config));
+		printf("    multi_gpu_tile_size = %u (raw)\n",
+		       G_0098F8_MULTI_GPU_TILE_SIZE(info->gb_addr_config));
+		printf("    row_size = %u\n",
+		       1024 << G_0098F8_ROW_SIZE(info->gb_addr_config));
+		printf("    num_lower_pipes = %u (raw)\n",
+		       G_0098F8_NUM_LOWER_PIPES(info->gb_addr_config));
+	}
 }
