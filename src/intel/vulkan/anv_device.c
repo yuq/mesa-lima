@@ -1367,6 +1367,9 @@ anv_device_init_dispatch(struct anv_device *device)
 {
    const struct anv_dispatch_table *genX_table;
    switch (device->info.gen) {
+   case 11:
+      genX_table = &gen11_dispatch_table;
+      break;
    case 10:
       genX_table = &gen10_dispatch_table;
       break;
