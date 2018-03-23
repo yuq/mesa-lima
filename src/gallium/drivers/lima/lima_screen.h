@@ -64,8 +64,8 @@ struct lima_screen {
    struct ra_regs *pp_ra;
 
    struct lima_bo *gp_buffer;
-   #define gp_tile_heap_offset       0x0000
-   #define gp_buffer_size            0x2000
+   #define gp_tile_heap_offset       0x000000
+   #define gp_buffer_size            0x100000
 
    struct lima_bo *pp_buffer;
    #define pp_frame_rsw_offset       0x0000
