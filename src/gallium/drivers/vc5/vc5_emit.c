@@ -604,6 +604,13 @@ v3dX(emit_state)(struct pipe_context *pctx)
                         for (int i = 0; i < vc5->prog.bind_vs->num_tf_specs; i++) {
                                 cl_emit_prepacked(&job->bcl, &tf_specs[i]);
                         }
+                } else if (job->tf_enabled) {
+#if V3D_VERSION >= 40
+                        cl_emit(&job->bcl, TRANSFORM_FEEDBACK_SPECS, tfe) {
+                                tfe.enable = false;
+                        };
+                        job->tf_enabled = false;
+#endif /* V3D_VERSION >= 40 */
                 }
         }
 
