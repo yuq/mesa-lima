@@ -256,9 +256,9 @@ static LLVMValueRef unpack_llvm_param(struct si_shader_context *ctx,
 	return value;
 }
 
-static LLVMValueRef unpack_param(struct si_shader_context *ctx,
-				 unsigned param, unsigned rshift,
-				 unsigned bitwidth)
+LLVMValueRef si_unpack_param(struct si_shader_context *ctx,
+			     unsigned param, unsigned rshift,
+			     unsigned bitwidth)
 {
 	LLVMValueRef value = LLVMGetParam(ctx->main_fn, param);
 
@@ -305,7 +305,7 @@ static LLVMValueRef get_rel_patch_id(struct si_shader_context *ctx)
 static LLVMValueRef
 get_tcs_in_patch_stride(struct si_shader_context *ctx)
 {
-	return unpack_param(ctx, ctx->param_vs_state_bits, 8, 13);
+	return si_unpack_param(ctx, ctx->param_vs_state_bits, 8, 13);
 }
 
 static unsigned get_tcs_out_vertex_dw_stride_constant(struct si_shader_context *ctx)
@@ -328,7 +328,7 @@ static LLVMValueRef get_tcs_out_vertex_dw_stride(struct si_shader_context *ctx)
 static LLVMValueRef get_tcs_out_patch_stride(struct si_shader_context *ctx)
 {
 	if (ctx->shader->key.mono.u.ff_tcs_inputs_to_copy)
-		return unpack_param(ctx, ctx->param_tcs_out_lds_layout, 0, 13);
+		return si_unpack_param(ctx, ctx->param_tcs_out_lds_layout, 0, 13);
 
 	const struct tgsi_shader_info *info = &ctx->shader->selector->info;
 	unsigned tcs_out_vertices = info->properties[TGSI_PROPERTY_TCS_VERTICES_OUT];
@@ -343,7 +343,7 @@ static LLVMValueRef
 get_tcs_out_patch0_offset(struct si_shader_context *ctx)
 {
 	return lp_build_mul_imm(&ctx->bld_base.uint_bld,
-				unpack_param(ctx,
+				si_unpack_param(ctx,
 					     ctx->param_tcs_out_lds_offsets,
 					     0, 16),
 				4);
@@ -353,7 +353,7 @@ static LLVMValueRef
 get_tcs_out_patch0_patch_data_offset(struct si_shader_context *ctx)
 {
 	return lp_build_mul_imm(&ctx->bld_base.uint_bld,
-				unpack_param(ctx,
+				si_unpack_param(ctx,
 					     ctx->param_tcs_out_lds_offsets,
 					     16, 16),
 				4);
@@ -405,7 +405,7 @@ static LLVMValueRef get_num_tcs_out_vertices(struct si_shader_context *ctx)
 	if (ctx->type == PIPE_SHADER_TESS_CTRL && tcs_out_vertices)
 		return LLVMConstInt(ctx->i32, tcs_out_vertices, 0);
 
-	return unpack_param(ctx, ctx->param_tcs_offchip_layout, 6, 6);
+	return si_unpack_param(ctx, ctx->param_tcs_offchip_layout, 6, 6);
 }
 
 static LLVMValueRef get_tcs_in_vertex_dw_stride(struct si_shader_context *ctx)
@@ -423,7 +423,7 @@ static LLVMValueRef get_tcs_in_vertex_dw_stride(struct si_shader_context *ctx)
 			stride = util_last_bit64(ctx->shader->key.part.tcs.ls->outputs_written);
 			return LLVMConstInt(ctx->i32, stride * 4, 0);
 		}
-		return unpack_param(ctx, ctx->param_vs_state_bits, 24, 8);
+		return si_unpack_param(ctx, ctx->param_vs_state_bits, 24, 8);
 
 	default:
 		assert(0);
@@ -966,7 +966,7 @@ static LLVMValueRef get_tcs_tes_buffer_address(struct si_shader_context *ctx,
 	LLVMValueRef param_stride, constant16;
 
 	vertices_per_patch = get_num_tcs_out_vertices(ctx);
-	num_patches = unpack_param(ctx, ctx->param_tcs_offchip_layout, 0, 6);
+	num_patches = si_unpack_param(ctx, ctx->param_tcs_offchip_layout, 0, 6);
 	total_vertices = LLVMBuildMul(ctx->ac.builder, vertices_per_patch,
 	                              num_patches, "");
 
@@ -992,7 +992,7 @@ static LLVMValueRef get_tcs_tes_buffer_address(struct si_shader_context *ctx,
 
 	if (!vertex_index) {
 		LLVMValueRef patch_data_offset =
-		           unpack_param(ctx, ctx->param_tcs_offchip_layout, 12, 20);
+		           si_unpack_param(ctx, ctx->param_tcs_offchip_layout, 12, 20);
 
 		base_addr = LLVMBuildAdd(ctx->ac.builder, base_addr,
 		                         patch_data_offset, "");
@@ -1629,15 +1629,15 @@ LLVMValueRef si_llvm_load_input_gs(struct ac_shader_abi *abi,
 
 		switch (index / 2) {
 		case 0:
-			vtx_offset = unpack_param(ctx, ctx->param_gs_vtx01_offset,
+			vtx_offset = si_unpack_param(ctx, ctx->param_gs_vtx01_offset,
 						  index % 2 ? 16 : 0, 16);
 			break;
 		case 1:
-			vtx_offset = unpack_param(ctx, ctx->param_gs_vtx23_offset,
+			vtx_offset = si_unpack_param(ctx, ctx->param_gs_vtx23_offset,
 						  index % 2 ? 16 : 0, 16);
 			break;
 		case 2:
-			vtx_offset = unpack_param(ctx, ctx->param_gs_vtx45_offset,
+			vtx_offset = si_unpack_param(ctx, ctx->param_gs_vtx45_offset,
 						  index % 2 ? 16 : 0, 16);
 			break;
 		default:
@@ -1931,7 +1931,7 @@ static void declare_input_fs(
 
 static LLVMValueRef get_sample_id(struct si_shader_context *ctx)
 {
-	return unpack_param(ctx, SI_PARAM_ANCILLARY, 8, 4);
+	return si_unpack_param(ctx, SI_PARAM_ANCILLARY, 8, 4);
 }
 
 static LLVMValueRef get_base_vertex(struct ac_shader_abi *abi)
@@ -2080,7 +2080,7 @@ static LLVMValueRef si_load_patch_vertices_in(struct ac_shader_abi *abi)
 {
 	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
 	if (ctx->type == PIPE_SHADER_TESS_CTRL)
-		return unpack_param(ctx, ctx->param_tcs_out_lds_layout, 13, 6);
+		return si_unpack_param(ctx, ctx->param_tcs_out_lds_layout, 13, 6);
 	else if (ctx->type == PIPE_SHADER_TESS_EVAL)
 		return get_num_tcs_out_vertices(ctx);
 	else
@@ -2801,7 +2801,7 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 
 	/* Get bits [22:16], i.e. (so_param >> 16) & 127; */
 	LLVMValueRef so_vtx_count =
-		unpack_param(ctx, ctx->param_streamout_config, 16, 7);
+		si_unpack_param(ctx, ctx->param_streamout_config, 16, 7);
 
 	LLVMValueRef tid = ac_get_thread_id(&ctx->ac);
 
@@ -3577,7 +3577,7 @@ static void si_llvm_emit_es_epilogue(struct ac_shader_abi *abi,
 	if (ctx->screen->info.chip_class >= GFX9 && info->num_outputs) {
 		unsigned itemsize_dw = es->selector->esgs_itemsize / 4;
 		LLVMValueRef vertex_idx = ac_get_thread_id(&ctx->ac);
-		LLVMValueRef wave_idx = unpack_param(ctx, ctx->param_merged_wave_info, 24, 4);
+		LLVMValueRef wave_idx = si_unpack_param(ctx, ctx->param_merged_wave_info, 24, 4);
 		vertex_idx = LLVMBuildOr(ctx->ac.builder, vertex_idx,
 					 LLVMBuildMul(ctx->ac.builder, wave_idx,
 						      LLVMConstInt(ctx->i32, 64, false), ""), "");
@@ -3620,7 +3620,7 @@ static void si_llvm_emit_es_epilogue(struct ac_shader_abi *abi,
 static LLVMValueRef si_get_gs_wave_id(struct si_shader_context *ctx)
 {
 	if (ctx->screen->info.chip_class >= GFX9)
-		return unpack_param(ctx, ctx->param_merged_wave_info, 16, 8);
+		return si_unpack_param(ctx, ctx->param_merged_wave_info, 16, 8);
 	else
 		return LLVMGetParam(ctx->main_fn, ctx->param_gs_wave_id);
 }
@@ -5183,8 +5183,8 @@ static void si_llvm_emit_polygon_stipple(struct si_shader_context *ctx,
 	 * Since the stipple pattern is 32x32 and it repeats, just get 5 bits
 	 * per coordinate to get the repeating effect.
 	 */
-	address[0] = unpack_param(ctx, param_pos_fixed_pt, 0, 5);
-	address[1] = unpack_param(ctx, param_pos_fixed_pt, 16, 5);
+	address[0] = si_unpack_param(ctx, param_pos_fixed_pt, 0, 5);
+	address[1] = si_unpack_param(ctx, param_pos_fixed_pt, 16, 5);
 
 	/* Load the buffer descriptor. */
 	slot = LLVMConstInt(ctx->i32, SI_PS_CONST_POLY_STIPPLE, 0);
@@ -5761,7 +5761,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	LLVMValueRef stream_id;
 
 	if (gs_selector->so.num_outputs)
-		stream_id = unpack_param(&ctx, ctx.param_streamout_config, 24, 2);
+		stream_id = si_unpack_param(&ctx, ctx.param_streamout_config, 24, 2);
 	else
 		stream_id = ctx.i32_0;
 
@@ -6141,7 +6141,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 			 */
 			si_llvm_emit_barrier(NULL, bld_base, NULL);
 
-			LLVMValueRef num_threads = unpack_param(ctx, ctx->param_merged_wave_info, 8, 8);
+			LLVMValueRef num_threads = si_unpack_param(ctx, ctx->param_merged_wave_info, 8, 8);
 			LLVMValueRef ena =
 				LLVMBuildICmp(ctx->ac.builder, LLVMIntULT,
 					    ac_get_thread_id(&ctx->ac), num_threads, "");
@@ -6463,8 +6463,8 @@ static void si_build_gs_prolog_function(struct si_shader_context *ctx,
 
 		if (ctx->screen->info.chip_class >= GFX9) {
 			for (unsigned i = 0; i < 3; i++) {
-				vtx_in[i*2] = unpack_param(ctx, gfx9_vtx_params[i], 0, 16);
-				vtx_in[i*2+1] = unpack_param(ctx, gfx9_vtx_params[i], 16, 16);
+				vtx_in[i*2] = si_unpack_param(ctx, gfx9_vtx_params[i], 0, 16);
+				vtx_in[i*2+1] = si_unpack_param(ctx, gfx9_vtx_params[i], 16, 16);
 			}
 		} else {
 			for (unsigned i = 0; i < 6; i++)
@@ -7248,7 +7248,7 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 			 */
 			LLVMValueRef has_hs_threads =
 				LLVMBuildICmp(ctx->ac.builder, LLVMIntNE,
-				    unpack_param(ctx, 3, 8, 8),
+				    si_unpack_param(ctx, 3, 8, 8),
 				    ctx->i32_0, "");
 
 			for (i = 4; i > 0; --i) {
@@ -7760,7 +7760,7 @@ static void si_build_ps_prolog_function(struct si_shader_context *ctx,
 		uint32_t ps_iter_mask = ps_iter_masks[key->ps_prolog.states.samplemask_log_ps_iter];
 		unsigned ancillary_vgpr = key->ps_prolog.num_input_sgprs +
 					  key->ps_prolog.ancillary_vgpr_index;
-		LLVMValueRef sampleid = unpack_param(ctx, ancillary_vgpr, 8, 4);
+		LLVMValueRef sampleid = si_unpack_param(ctx, ancillary_vgpr, 8, 4);
 		LLVMValueRef samplemask = LLVMGetParam(func, ancillary_vgpr + 1);
 
 		samplemask = ac_to_integer(&ctx->ac, samplemask);

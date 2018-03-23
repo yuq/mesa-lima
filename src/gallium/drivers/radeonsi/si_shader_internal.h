@@ -329,4 +329,8 @@ void si_llvm_load_input_fs(
 
 bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir);
 
+LLVMValueRef si_unpack_param(struct si_shader_context *ctx,
+			     unsigned param, unsigned rshift,
+			     unsigned bitwidth);
+
 #endif
