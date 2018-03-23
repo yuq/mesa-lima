@@ -569,6 +569,9 @@ v3dX(emit_state)(struct pipe_context *pctx)
                 }
         }
 
+        /* Set up the transform feedback data specs (which VPM entries to
+         * output to which buffers).
+         */
         if (vc5->dirty & VC5_DIRTY_STREAMOUT) {
                 struct vc5_streamout_stateobj *so = &vc5->streamout;
 
@@ -593,42 +596,44 @@ v3dX(emit_state)(struct pipe_context *pctx)
                                 cl_emit_prepacked(&job->bcl,
                                                   &vc5->prog.bind_vs->tf_specs[i]);
                         }
+                }
+        }
 
-                        for (int i = 0; i < so->num_targets; i++) {
-                                const struct pipe_stream_output_target *target =
-                                        so->targets[i];
-                                struct vc5_resource *rsc = target ?
-                                        vc5_resource(target->buffer) : NULL;
+        /* Set up the trasnform feedback buffers. */
+        if (vc5->dirty & VC5_DIRTY_STREAMOUT) {
+                struct vc5_streamout_stateobj *so = &vc5->streamout;
+                for (int i = 0; i < so->num_targets; i++) {
+                        const struct pipe_stream_output_target *target =
+                                so->targets[i];
+                        struct vc5_resource *rsc = target ?
+                                vc5_resource(target->buffer) : NULL;
 
 #if V3D_VERSION >= 40
-                                if (!target)
-                                        continue;
+                        if (!target)
+                                continue;
 
-                                cl_emit(&job->bcl, TRANSFORM_FEEDBACK_BUFFER, output) {
-                                        output.buffer_address =
+                        cl_emit(&job->bcl, TRANSFORM_FEEDBACK_BUFFER, output) {
+                                output.buffer_address =
+                                        cl_address(rsc->bo,
+                                                   target->buffer_offset);
+                                output.buffer_size_in_32_bit_words =
+                                        target->buffer_size >> 2;
+                                output.buffer_number = i;
+                        }
+#else /* V3D_VERSION < 40 */
+                        cl_emit(&job->bcl, TRANSFORM_FEEDBACK_OUTPUT_ADDRESS, output) {
+                                if (target) {
+                                        output.address =
                                                 cl_address(rsc->bo,
                                                            target->buffer_offset);
-                                        output.buffer_size_in_32_bit_words =
-                                                target->buffer_size >> 2;
-                                        output.buffer_number = i;
                                 }
-#else /* V3D_VERSION < 40 */
-                                cl_emit(&job->bcl, TRANSFORM_FEEDBACK_OUTPUT_ADDRESS, output) {
-                                        if (target) {
-                                                output.address =
-                                                        cl_address(rsc->bo,
-                                                                   target->buffer_offset);
-                                        }
-                                };
+                        };
 #endif /* V3D_VERSION < 40 */
-                                if (target) {
-                                        vc5_job_add_write_resource(vc5->job,
-                                                                   target->buffer);
-                                }
-                                /* XXX: buffer_size? */
+                        if (target) {
+                                vc5_job_add_write_resource(vc5->job,
+                                                           target->buffer);
                         }
-                } else {
-                        /* XXX? */
+                        /* XXX: buffer_size? */
                 }
         }
 
