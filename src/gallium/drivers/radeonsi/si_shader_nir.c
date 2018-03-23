@@ -852,7 +852,7 @@ bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 				/* Packed components share the same location so skip
 				 * them if we have already processed the location.
 				 */
-				if (processed_inputs & ((uint64_t)1 << loc)) {
+				if (processed_inputs & ((uint64_t)1 << (loc + i))) {
 					input_idx += 4;
 					continue;
 				}
@@ -870,8 +870,7 @@ bool si_nir_build_llvm(struct si_shader_context *ctx, struct nir_shader *nir)
 					bitcast_inputs(ctx, data, input_idx);
 				}
 
-				processed_inputs |= ((uint64_t)1 << loc);
-				loc++;
+				processed_inputs |= ((uint64_t)1 << (loc + i));
 				input_idx += 4;
 			}
 		}
