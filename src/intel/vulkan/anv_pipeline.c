@@ -186,10 +186,12 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
    assert(exec_list_length(&nir->functions) == 1);
    entry_point->name = ralloc_strdup(entry_point, "main");
 
-   /* Make sure we lower constant initializers on output variables so that
-    * nir_remove_dead_variables below sees the corresponding stores
+   /* Now that we've deleted all but the main function, we can go ahead and
+    * lower the rest of the constant initializers.  We do this here so that
+    * nir_remove_dead_variables and split_per_member_structs below see the
+    * corresponding stores.
     */
-   NIR_PASS_V(nir, nir_lower_constant_initializers, nir_var_shader_out);
+   NIR_PASS_V(nir, nir_lower_constant_initializers, ~0);
 
    NIR_PASS_V(nir, nir_remove_dead_variables,
               nir_var_shader_in | nir_var_shader_out | nir_var_system_value);
@@ -197,10 +199,6 @@ anv_shader_compile_to_nir(struct anv_pipeline *pipeline,
    if (stage == MESA_SHADER_FRAGMENT)
       NIR_PASS_V(nir, nir_lower_wpos_center, pipeline->sample_shading_enable);
 
-   /* Now that we've deleted all but the main function, we can go ahead and
-    * lower the rest of the constant initializers.
-    */
-   NIR_PASS_V(nir, nir_lower_constant_initializers, ~0);
    NIR_PASS_V(nir, nir_propagate_invariant);
    NIR_PASS_V(nir, nir_lower_io_to_temporaries,
               entry_point->impl, true, false);
