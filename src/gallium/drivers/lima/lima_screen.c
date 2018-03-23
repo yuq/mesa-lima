@@ -104,6 +104,12 @@ lima_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_TGSI_VS_LOWER_VIEWPORT_TRANSFORM:
       return 1;
 
+   /* Unimplemented, but for exporting OpenGL 2.0 */
+   case PIPE_CAP_OCCLUSION_QUERY:
+   case PIPE_CAP_POINT_SPRITE:
+   case PIPE_CAP_TWO_SIDED_STENCIL:
+      return 1;
+
    case PIPE_CAP_MAX_TEXTURE_2D_LEVELS:
       return LIMA_MAX_MIP_LEVELS;
 
