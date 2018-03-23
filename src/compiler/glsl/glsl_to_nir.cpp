@@ -445,8 +445,8 @@ nir_visitor::visit(ir_variable *ir)
 
    var->num_state_slots = ir->get_num_state_slots();
    if (var->num_state_slots > 0) {
-      var->state_slots = ralloc_array(var, nir_state_slot,
-                                      var->num_state_slots);
+      var->state_slots = rzalloc_array(var, nir_state_slot,
+                                       var->num_state_slots);
 
       ir_state_slot *state_slots = ir->get_state_slots();
       for (unsigned i = 0; i < var->num_state_slots; i++) {
