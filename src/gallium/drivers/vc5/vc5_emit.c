@@ -382,13 +382,16 @@ v3dX(emit_state)(struct pipe_context *pctx)
 
                         config.blend_enable = vc5->blend->rt[0].blend_enable;
 
-                        config.early_z_updates_enable = true;
+                        /* Note: EZ state may update based on the compiled FS,
+                         * along with ZSA
+                         */
+                        config.early_z_updates_enable =
+                                (job->ez_state != VC5_EZ_DISABLED);
                         if (vc5->zsa->base.depth.enabled) {
                                 config.z_updates_enable =
                                         vc5->zsa->base.depth.writemask;
                                 config.early_z_enable =
-                                        (vc5->zsa->early_z_enable &&
-                                         !vc5->prog.fs->prog_data.fs->writes_z);
+                                        config.early_z_updates_enable;
                                 config.depth_test_function =
                                         vc5->zsa->base.depth.func;
                         } else {

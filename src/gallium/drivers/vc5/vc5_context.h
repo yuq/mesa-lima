@@ -199,6 +199,13 @@ struct vc5_job_key {
         struct pipe_surface *zsbuf;
 };
 
+enum vc5_ez_state {
+        VC5_EZ_UNDECIDED = 0,
+        VC5_EZ_GT_GE,
+        VC5_EZ_LT_LE,
+        VC5_EZ_DISABLED,
+};
+
 /**
  * A complete bin/render job.
  *
@@ -300,7 +307,16 @@ struct vc5_job {
          */
         bool tf_enabled;
 
-        bool uses_early_z;
+        /**
+         * Current EZ state for drawing. Updated at the start of draw after
+         * we've decided on the shader being rendered.
+         */
+        enum vc5_ez_state ez_state;
+        /**
+         * The first EZ state that was used for drawing with a decided EZ
+         * direction (so either UNDECIDED, GT, or LT).
+         */
+        enum vc5_ez_state first_ez_state;
 
         /**
          * Number of draw calls (not counting full buffer clears) queued in
@@ -429,7 +445,7 @@ struct vc5_rasterizer_state {
 struct vc5_depth_stencil_alpha_state {
         struct pipe_depth_stencil_alpha_state base;
 
-        bool early_z_enable;
+        enum vc5_ez_state ez_state;
 
         /** Uniforms for stencil state.
          *

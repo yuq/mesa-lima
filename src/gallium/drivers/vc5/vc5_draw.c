@@ -327,6 +327,49 @@ vc5_tf_statistics_record(struct vc5_context *vc5,
 }
 
 static void
+vc5_update_job_ez(struct vc5_context *vc5, struct vc5_job *job)
+{
+        switch (vc5->zsa->ez_state) {
+        case VC5_EZ_UNDECIDED:
+                /* If the Z/S state didn't pick a direction but didn't
+                 * disable, then go along with the current EZ state.  This
+                 * allows EZ optimization for Z func == EQUAL or NEVER.
+                 */
+                break;
+
+        case VC5_EZ_LT_LE:
+        case VC5_EZ_GT_GE:
+                /* If the Z/S state picked a direction, then it needs to match
+                 * the current direction if we've decided on one.
+                 */
+                if (job->ez_state == VC5_EZ_UNDECIDED)
+                        job->ez_state = vc5->zsa->ez_state;
+                else if (job->ez_state != vc5->zsa->ez_state)
+                        job->ez_state = VC5_EZ_DISABLED;
+                break;
+
+        case VC5_EZ_DISABLED:
+                /* If the current Z/S state disables EZ because of a bad Z
+                 * func or stencil operation, then we can't do any more EZ in
+                 * this frame.
+                 */
+                job->ez_state = VC5_EZ_DISABLED;
+                break;
+        }
+
+        /* If the FS affects the Z of the pixels, then it may update against
+         * the chosen EZ direction (though we could use
+         * ARB_conservative_depth's hints to avoid this)
+         */
+        if (vc5->prog.fs->prog_data.fs->writes_z) {
+                job->ez_state = VC5_EZ_DISABLED;
+        }
+
+        if (job->first_ez_state == VC5_EZ_UNDECIDED)
+                job->first_ez_state = job->ez_state;
+}
+
+static void
 vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
         struct vc5_context *vc5 = vc5_context(pctx);
@@ -384,6 +427,7 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
         vc5_start_draw(vc5);
         vc5_update_compiled_shaders(vc5, info->mode);
+        vc5_update_job_ez(vc5, job);
 
 #if V3D_VERSION >= 41
         v3d41_emit_state(pctx);
@@ -515,9 +559,6 @@ vc5_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 if (vc5->zsa->base.depth.enabled) {
                         job->resolve |= PIPE_CLEAR_DEPTH;
                         rsc->initialized_buffers = PIPE_CLEAR_DEPTH;
-
-                        if (vc5->zsa->early_z_enable)
-                                job->uses_early_z = true;
                 }
 
                 if (vc5->zsa->base.stencil[0].enabled) {

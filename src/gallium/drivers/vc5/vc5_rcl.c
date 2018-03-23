@@ -481,7 +481,21 @@ v3dX(emit_rcl)(struct vc5_job *job)
 
                 /* XXX: Early D/S clear */
 
-                config.early_z_disable = !job->uses_early_z;
+                switch (job->first_ez_state) {
+                case VC5_EZ_UNDECIDED:
+                case VC5_EZ_LT_LE:
+                        config.early_z_disable = false;
+                        config.early_z_test_and_update_direction =
+                                EARLY_Z_DIRECTION_LT_LE;
+                        break;
+                case VC5_EZ_GT_GE:
+                        config.early_z_disable = false;
+                        config.early_z_test_and_update_direction =
+                                EARLY_Z_DIRECTION_GT_GE;
+                        break;
+                case VC5_EZ_DISABLED:
+                        config.early_z_disable = true;
+                }
 
                 config.image_width_pixels = job->draw_width;
                 config.image_height_pixels = job->draw_height;

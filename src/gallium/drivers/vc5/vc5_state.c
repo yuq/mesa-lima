@@ -158,19 +158,35 @@ vc5_create_depth_stencil_alpha_state(struct pipe_context *pctx,
         so->base = *cso;
 
         if (cso->depth.enabled) {
-                /* We only handle early Z in the < direction because otherwise
-                 * we'd have to runtime guess which direction to set in the
-                 * render config.
+                switch (cso->depth.func) {
+                case PIPE_FUNC_LESS:
+                case PIPE_FUNC_LEQUAL:
+                        so->ez_state = VC5_EZ_LT_LE;
+                        break;
+                case PIPE_FUNC_GREATER:
+                case PIPE_FUNC_GEQUAL:
+                        so->ez_state = VC5_EZ_GT_GE;
+                        break;
+                case PIPE_FUNC_NEVER:
+                case PIPE_FUNC_EQUAL:
+                        so->ez_state = VC5_EZ_UNDECIDED;
+                        break;
+                default:
+                        so->ez_state = VC5_EZ_DISABLED;
+                        break;
+                }
+
+                /* If stencil is enabled and it's not a no-op, then it would
+                 * break EZ updates.
                  */
-                so->early_z_enable =
-                        ((cso->depth.func == PIPE_FUNC_LESS ||
-                          cso->depth.func == PIPE_FUNC_LEQUAL) &&
-                         (!cso->stencil[0].enabled ||
-                          (cso->stencil[0].zfail_op == PIPE_STENCIL_OP_KEEP &&
-                           cso->stencil[0].func == PIPE_FUNC_ALWAYS &&
-                           (!cso->stencil[1].enabled ||
-                            (cso->stencil[1].zfail_op == PIPE_STENCIL_OP_KEEP &&
-                             cso->stencil[1].func == PIPE_FUNC_ALWAYS)))));
+                if (cso->stencil[0].enabled &&
+                    (cso->stencil[0].zfail_op != PIPE_STENCIL_OP_KEEP ||
+                     cso->stencil[0].func != PIPE_FUNC_ALWAYS ||
+                     (cso->stencil[1].enabled &&
+                      (cso->stencil[1].zfail_op != PIPE_STENCIL_OP_KEEP &&
+                       cso->stencil[1].func != PIPE_FUNC_ALWAYS)))) {
+                        so->ez_state = VC5_EZ_DISABLED;
+                }
         }
 
         const struct pipe_stencil_state *front = &cso->stencil[0];
