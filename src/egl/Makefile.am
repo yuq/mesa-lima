@@ -50,6 +50,7 @@ libEGL_common_la_LIBADD = \
 	$(EGL_LIB_DEPS)
 
 dri2_backend_FILES =
+dri2_backend_GENERATED_FILES =
 dri3_backend_FILES =
 
 if HAVE_PLATFORM_X11
@@ -87,7 +88,8 @@ AM_CFLAGS += $(WAYLAND_SERVER_CFLAGS)
 libEGL_common_la_LIBADD += $(top_builddir)/src/egl/wayland/wayland-drm/libwayland-drm.la
 libEGL_common_la_LIBADD += $(WAYLAND_SERVER_LIBS)
 dri2_backend_FILES += \
-	drivers/dri2/platform_wayland.c	\
+	drivers/dri2/platform_wayland.c
+dri2_backend_GENERATED_FILES += \
 	drivers/dri2/linux-dmabuf-unstable-v1-protocol.c \
 	drivers/dri2/linux-dmabuf-unstable-v1-client-protocol.h
 endif
@@ -117,6 +119,9 @@ AM_CFLAGS += \
 	-I$(top_srcdir)/src/egl/wayland/wayland-drm \
 	-DDEFAULT_DRIVER_DIR=\"$(DRI_DRIVER_SEARCH_DIR)\" \
 	-D_EGL_BUILT_IN_DRIVER_DRI2
+
+nodist_libEGL_common_la_SOURCES = \
+	$(dri2_backend_GENERATED_FILES)
 
 libEGL_common_la_SOURCES += \
 	$(dri2_backend_core_FILES) \
@@ -148,7 +153,10 @@ g_egldispatchstubs.h: $(GLVND_GEN_DEPS)
 		$(top_srcdir)/src/egl/generate/egl_other.xml > $@
 
 BUILT_SOURCES += g_egldispatchstubs.c g_egldispatchstubs.h
-CLEANFILES = $(BUILT_SOURCES)
+
+CLEANFILES = \
+	$(BUILT_SOURCES) \
+	$(dri2_backend_GENERATED_FILES)
 
 if USE_LIBGLVND
 AM_CFLAGS += \
