@@ -695,8 +695,11 @@ vec4_visitor::pack_uniform_registers()
           * the next part of our packing algorithm.
           */
          int reg = inst->src[0].nr;
-         for (unsigned i = 0; i < vec4s_read; i++)
+         int channel_size = type_sz(inst->src[0].type) / 4;
+         for (unsigned i = 0; i < vec4s_read; i++) {
             chans_used[reg + i] = 4;
+            channel_sizes[reg + i] = MAX2(channel_sizes[reg + i], channel_size);
+         }
       }
    }
 
