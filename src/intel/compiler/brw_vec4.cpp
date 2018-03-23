@@ -1952,6 +1952,30 @@ is_align1_df(vec4_instruction *inst)
    }
 }
 
+/**
+ * Three source instruction must have a GRF/MRF destination register.
+ * ARF NULL is not allowed.  Fix that up by allocating a temporary GRF.
+ */
+void
+vec4_visitor::fixup_3src_null_dest()
+{
+   bool progress = false;
+
+   foreach_block_and_inst_safe (block, vec4_instruction, inst, cfg) {
+      if (inst->is_3src(devinfo) && inst->dst.is_null()) {
+         const unsigned size_written = type_sz(inst->dst.type);
+         const unsigned num_regs = DIV_ROUND_UP(size_written, REG_SIZE);
+
+         inst->dst = retype(dst_reg(VGRF, alloc.allocate(num_regs)),
+                            inst->dst.type);
+         progress = true;
+      }
+   }
+
+   if (progress)
+      invalidate_live_intervals();
+}
+
 void
 vec4_visitor::convert_to_hw_regs()
 {
@@ -2702,6 +2726,8 @@ vec4_visitor::run()
        */
       OPT(scalarize_df);
    }
+
+   fixup_3src_null_dest();
 
    bool allocated_without_spills = reg_allocate();
 
