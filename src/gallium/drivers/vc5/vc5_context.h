@@ -294,6 +294,12 @@ struct vc5_job {
          */
         bool oq_enabled;
 
+        /**
+         * Set when a packet enabling TF on all further primitives has been
+         * emitted.
+         */
+        bool tf_enabled;
+
         bool uses_early_z;
 
         /**

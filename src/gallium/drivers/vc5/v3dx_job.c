@@ -33,8 +33,12 @@
 void v3dX(bcl_epilogue)(struct vc5_context *vc5, struct vc5_job *job)
 {
                 vc5_cl_ensure_space_with_branch(&job->bcl,
-                                                7 +
-                                                cl_packet_length(OCCLUSION_QUERY_COUNTER));
+                                                cl_packet_length(OCCLUSION_QUERY_COUNTER) +
+#if V3D_VERSION >= 41
+                                                cl_packet_length(TRANSFORM_FEEDBACK_SPECS) +
+#endif
+                                                cl_packet_length(INCREMENT_SEMAPHORE) +
+                                                cl_packet_length(FLUSH_ALL_STATE));
 
                 if (job->oq_enabled) {
                         /* Disable the OQ at the end of the CL, so that the
@@ -43,6 +47,19 @@ void v3dX(bcl_epilogue)(struct vc5_context *vc5, struct vc5_job *job)
                          */
                         cl_emit(&job->bcl, OCCLUSION_QUERY_COUNTER, counter);
                 }
+
+                /* Disable TF at the end of the CL, so that the next job to be
+                 * run doesn't start out trying to write TF primitives.  On
+                 * V3D 3.x, it's only the TF primitive mode that triggers TF
+                 * writes.
+                 */
+#if V3D_VERSION >= 41
+                if (job->tf_enabled) {
+                        cl_emit(&job->bcl, TRANSFORM_FEEDBACK_SPECS, tfe) {
+                                tfe.enable = false;
+                        };
+                }
+#endif /* V3D_VERSION >= 41 */
 
                 /* Increment the semaphore indicating that binning is done and
                  * unblocking the render thread.  Note that this doesn't act

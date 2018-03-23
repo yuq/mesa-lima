@@ -585,12 +585,13 @@ v3dX(emit_state)(struct pipe_context *pctx)
                                               vc5->prog.bind_vs->tf_specs);
 
 #if V3D_VERSION >= 40
+                        job->tf_enabled = (vc5->prog.bind_vs->num_tf_specs != 0 &&
+                                           vc5->active_queries);
+
                         cl_emit(&job->bcl, TRANSFORM_FEEDBACK_SPECS, tfe) {
                                 tfe.number_of_16_bit_output_data_specs_following =
                                         vc5->prog.bind_vs->num_tf_specs;
-                                tfe.enable =
-                                        (vc5->prog.bind_vs->num_tf_specs != 0 &&
-                                         vc5->active_queries);
+                                tfe.enable = job->tf_enabled;
                         };
 #else /* V3D_VERSION < 40 */
                         cl_emit(&job->bcl, TRANSFORM_FEEDBACK_ENABLE, tfe) {
