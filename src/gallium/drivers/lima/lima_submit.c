@@ -172,6 +172,9 @@ bool lima_submit_wait(struct lima_submit *submit, uint64_t timeout_ns, bool rela
    if (list_empty(&submit->busy_job_list))
       return true;
 
+   if (!lima_get_absolute_timeout(&timeout_ns, relative))
+      return false;
+
    struct lima_submit_job *job =
       list_first_entry(&submit->busy_job_list, struct lima_submit_job, list);
    struct drm_lima_wait_fence req = {
@@ -180,9 +183,6 @@ bool lima_submit_wait(struct lima_submit *submit, uint64_t timeout_ns, bool rela
       .timeout_ns = timeout_ns,
       .ctx = submit->ctx,
    };
-
-   if (!lima_get_absolute_timeout(&req.timeout_ns, relative))
-      return false;
 
    bool ret = drmIoctl(submit->screen->fd, DRM_IOCTL_LIMA_WAIT_FENCE, &req) == 0;
    if (ret) {
