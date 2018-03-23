@@ -133,6 +133,7 @@ st_nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
    const int base = stage == MESA_SHADER_FRAGMENT ?
       (int) FRAG_RESULT_DATA0 : (int) VARYING_SLOT_VAR0;
 
+   int UNUSED last_loc = 0;
    nir_foreach_variable(var, var_list) {
 
       const struct glsl_type *type = var->type;
@@ -164,8 +165,29 @@ st_nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
        * we may have already have processed this location.
        */
       if (processed) {
-         var->data.driver_location = assigned_locations[var->data.location];
+         unsigned driver_location = assigned_locations[var->data.location];
+         var->data.driver_location = driver_location;
          *size += type_size(type);
+
+         /* An array may be packed such that is crosses multiple other arrays
+          * or variables, we need to make sure we have allocated the elements
+          * consecutively if the previously proccessed var was shorter than
+          * the current array we are processing.
+          *
+          * NOTE: The code below assumes the var list is ordered in ascending
+          * location order.
+          */
+         assert(last_loc <= var->data.location);
+         last_loc = var->data.location;
+         unsigned last_slot_location = driver_location + var_size;
+         if (last_slot_location > location) {
+            unsigned num_unallocated_slots = last_slot_location - location;
+            unsigned first_unallocated_slot = var_size - num_unallocated_slots;
+            for (unsigned i = first_unallocated_slot; i < num_unallocated_slots; i++) {
+               assigned_locations[var->data.location + i] = location;
+               location++;
+            }
+         }
          continue;
       }
 
