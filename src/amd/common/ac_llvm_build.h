@@ -331,18 +331,18 @@ enum ac_image_dim {
 struct ac_image_args {
 	enum ac_image_opcode opcode;
 	enum ac_image_dim dim;
-	bool level_zero;
-	bool bias;
-	bool lod;
-	bool deriv;
-	bool compare;
-	bool offset;
 
 	LLVMValueRef resource;
 	LLVMValueRef sampler;
-	LLVMValueRef addr;
+	LLVMValueRef offset;
+	LLVMValueRef bias;
+	LLVMValueRef compare;
+	LLVMValueRef derivs[6];
+	LLVMValueRef coords[4];
+	LLVMValueRef lod; // also used by ac_image_get_resinfo
 	unsigned dmask;
 	bool unorm;
+	bool level_zero;
 };
 
 LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,

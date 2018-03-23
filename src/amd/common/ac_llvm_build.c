@@ -37,6 +37,7 @@
 #include "util/bitscan.h"
 #include "util/macros.h"
 #include "util/u_atomic.h"
+#include "util/u_math.h"
 #include "sid.h"
 
 #include "shader_enums.h"
@@ -1445,13 +1446,60 @@ void ac_build_export_null(struct ac_llvm_context *ctx)
 	ac_build_export(ctx, &args);
 }
 
+static unsigned ac_num_coords(enum ac_image_dim dim)
+{
+	switch (dim) {
+	case ac_image_1d:
+		return 1;
+	case ac_image_2d:
+	case ac_image_1darray:
+		 return 2;
+	case ac_image_3d:
+	case ac_image_cube:
+	case ac_image_2darray:
+	case ac_image_2dmsaa:
+		return 3;
+	case ac_image_2darraymsaa:
+		return 4;
+	default:
+		unreachable("ac_num_coords: bad dim");
+	}
+}
+
+static unsigned ac_num_derivs(enum ac_image_dim dim)
+{
+	switch (dim) {
+	case ac_image_1d:
+	case ac_image_1darray:
+		return 2;
+	case ac_image_2d:
+	case ac_image_2darray:
+	case ac_image_cube:
+		return 4;
+	case ac_image_3d:
+		return 6;
+	case ac_image_2dmsaa:
+	case ac_image_2darraymsaa:
+	default:
+		unreachable("derivatives not supported");
+	}
+}
+
 LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 				   struct ac_image_args *a)
 {
-	LLVMValueRef args[11];
-	unsigned num_args = 0;
+	LLVMValueRef args[16];
 	const char *name = NULL;
 	char intr_name[128], type[64];
+
+	assert(!a->lod || a->lod == ctx->i32_0 || a->lod == ctx->f32_0 ||
+	       !a->level_zero);
+	assert((a->opcode != ac_image_get_resinfo && a->opcode != ac_image_load_mip) ||
+	       a->lod);
+	assert((a->bias ? 1 : 0) +
+	       (a->lod ? 1 : 0) +
+	       (a->level_zero ? 1 : 0) +
+	       (a->derivs[0] ? 1 : 0) <= 1);
 
 	bool sample = a->opcode == ac_image_sample ||
 		      a->opcode == ac_image_gather4 ||
@@ -1463,10 +1511,38 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 	if (a->opcode == ac_image_get_lod)
 		da = false;
 
+	unsigned num_coords =
+		a->opcode != ac_image_get_resinfo ? ac_num_coords(a->dim) : 0;
+	LLVMValueRef addr;
+	unsigned num_addr = 0;
+
+	if (a->offset)
+		args[num_addr++] = ac_to_integer(ctx, a->offset);
+	if (a->bias)
+		args[num_addr++] = ac_to_integer(ctx, a->bias);
+	if (a->compare)
+		args[num_addr++] = ac_to_integer(ctx, a->compare);
+	if (a->derivs[0]) {
+		unsigned num_derivs = ac_num_derivs(a->dim);
+		for (unsigned i = 0; i < num_derivs; ++i)
+			args[num_addr++] = ac_to_integer(ctx, a->derivs[i]);
+	}
+	for (unsigned i = 0; i < num_coords; ++i)
+		args[num_addr++] = ac_to_integer(ctx, a->coords[i]);
+	if (a->lod)
+		args[num_addr++] = ac_to_integer(ctx, a->lod);
+
+	unsigned pad_goal = util_next_power_of_two(num_addr);
+	while (num_addr < pad_goal)
+		args[num_addr++] = LLVMGetUndef(ctx->i32);
+
+	addr = ac_build_gather_values(ctx, args, num_addr);
+
+	unsigned num_args = 0;
 	if (sample)
-		args[num_args++] = ac_to_float(ctx, a->addr);
+		args[num_args++] = ac_to_float(ctx, addr);
 	else
-		args[num_args++] = a->addr;
+		args[num_args++] = ac_to_integer(ctx, addr);
 
 	args[num_args++] = a->resource;
 	if (sample)
@@ -1505,12 +1581,15 @@ LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
 	ac_build_type_name_for_intr(LLVMTypeOf(args[0]), type,
 				    sizeof(type));
 
+	bool lod_suffix =
+		a->lod && (a->opcode == ac_image_sample || a->opcode == ac_image_gather4);
+
 	snprintf(intr_name, sizeof(intr_name), "%s%s%s%s.v4f32.%s.v8i32",
 		name,
 		a->compare ? ".c" : "",
 		a->bias ? ".b" :
-		a->lod ? ".l" :
-		a->deriv ? ".d" :
+		lod_suffix ? ".l" :
+		a->derivs[0] ? ".d" :
 		a->level_zero ? ".lz" : "",
 		a->offset ? ".o" : "",
 		type);
@@ -2481,12 +2560,10 @@ void ac_apply_fmask_to_sample(struct ac_llvm_context *ac, LLVMValueRef fmask,
 	fmask_load.dmask = 0xf;
 	fmask_load.dim = is_array_tex ? ac_image_2darray : ac_image_2d;
 
-	LLVMValueRef fmask_addr[4];
-	memcpy(fmask_addr, addr, sizeof(fmask_addr[0]) * 3);
-	fmask_addr[3] = LLVMGetUndef(ac->i32);
-
-	fmask_load.addr = ac_build_gather_values(ac, fmask_addr,
-						 is_array_tex ? 4 : 2);
+	fmask_load.coords[0] = addr[0];
+	fmask_load.coords[1] = addr[1];
+	if (is_array_tex)
+		fmask_load.coords[2] = addr[2];
 
 	LLVMValueRef fmask_value = ac_build_image_opcode(ac, &fmask_load);
 	fmask_value = LLVMBuildExtractElement(ac->builder, fmask_value,
