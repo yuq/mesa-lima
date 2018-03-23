@@ -66,16 +66,7 @@ namespace SwrJit
         mSimd4FP64Ty = VectorType::get(mDoubleTy, 4);
 
         // Built in types: target simd
-
-        mSimdInt1Ty     = VectorType::get(mInt1Ty,  mVWidth);
-        mSimdInt16Ty    = VectorType::get(mInt16Ty, mVWidth);
-        mSimdInt32Ty    = VectorType::get(mInt32Ty, mVWidth);
-        mSimdInt64Ty    = VectorType::get(mInt64Ty, mVWidth);
-        mSimdFP16Ty     = VectorType::get(mFP16Ty,  mVWidth);
-        mSimdFP32Ty     = VectorType::get(mFP32Ty,  mVWidth);
-        mSimdVectorTy   = ArrayType::get(mSimdFP32Ty, 4);
-        mSimdVectorIntTy= ArrayType::get(mSimdInt32Ty, 4);
-        mSimdVectorTRTy = ArrayType::get(mSimdFP32Ty, 5);
+        SetTargetWidth(pJitMgr->mVWidth);
 
         // Built in types: simd16
 
@@ -104,5 +95,20 @@ namespace SwrJit
             mSimdIntPtrTy = mSimdInt64Ty;
             mSimd16IntPtrTy = mSimd16Int64Ty;
         }
+    }
+
+    void Builder::SetTargetWidth(uint32_t width)
+    {
+        mVWidth = width;
+
+        mSimdInt1Ty = VectorType::get(mInt1Ty, mVWidth);
+        mSimdInt16Ty = VectorType::get(mInt16Ty, mVWidth);
+        mSimdInt32Ty = VectorType::get(mInt32Ty, mVWidth);
+        mSimdInt64Ty = VectorType::get(mInt64Ty, mVWidth);
+        mSimdFP16Ty = VectorType::get(mFP16Ty, mVWidth);
+        mSimdFP32Ty = VectorType::get(mFP32Ty, mVWidth);
+        mSimdVectorTy = ArrayType::get(mSimdFP32Ty, 4);
+        mSimdVectorIntTy = ArrayType::get(mSimdInt32Ty, 4);
+        mSimdVectorTRTy = ArrayType::get(mSimdFP32Ty, 5);
     }
 }

@@ -46,7 +46,7 @@ namespace SwrJit
         JitManager *mpJitMgr;
         IRBuilder<> *mpIRBuilder;
 
-        uint32_t             mVWidth;   // vector width simd8
+        uint32_t             mVWidth;   // vector width target simd
         uint32_t             mVWidth16; // vector width simd16
 
         // Built in types: scalar
@@ -94,6 +94,8 @@ namespace SwrJit
         Type*                mSimd16VectorTRTy;
 
         Type*                mSimd32Int8Ty;
+
+        void SetTargetWidth(uint32_t width);
 
 #include "gen_builder.hpp"
 #include "gen_builder_meta.hpp"
