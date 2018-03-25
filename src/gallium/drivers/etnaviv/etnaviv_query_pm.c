@@ -108,6 +108,69 @@ static const struct etna_perfmon_config query_config[] = {
       .source = (const struct etna_perfmon_source[]) {
          { "PE", "PIXEL_COUNT_DRAWN_BY_DEPTH_PIPE" }
       }
+   },
+   {
+      .name = "sh-shader-cycles",
+      .type = ETNA_QUERY_SH_SHADER_CYCLES,
+      .source = (const struct etna_perfmon_source[]) {
+         { "SH", "SHADER_CYCLES" }
+      }
+   },
+   {
+      .name = "sh-ps-inst-counter",
+      .type = ETNA_QUERY_SH_PS_INST_COUNTER,
+      .source = (const struct etna_perfmon_source[]) {
+         { "SH", "PS_INST_COUNTER" }
+      }
+   },
+   {
+      .name = "sh-rendered-pixel-counter",
+      .type = ETNA_QUERY_SH_RENDERED_PIXEL_COUNTER,
+      .source = (const struct etna_perfmon_source[]) {
+         { "SH", "RENDERED_PIXEL_COUNTER" }
+      }
+   },
+   {
+      .name = "sh-vs-inst-counter",
+      .type = ETNA_QUERY_SH_VS_INST_COUNTER,
+      .source = (const struct etna_perfmon_source[]) {
+         { "SH", "VS_INST_COUNTER" }
+      }
+   },
+   {
+      .name = "sh-rendered-vertice-counter",
+      .type = ETNA_QUERY_SH_RENDERED_VERTICE_COUNTER,
+      .source = (const struct etna_perfmon_source[]) {
+         { "SH", "RENDERED_VERTICE_COUNTER" }
+      }
+   },
+   {
+      .name = "sh-vtx-branch-inst-counter",
+      .type = ETNA_QUERY_SH_RENDERED_VERTICE_COUNTER,
+      .source = (const struct etna_perfmon_source[]) {
+         { "SH", "VTX_BRANCH_INST_COUNTER" }
+      }
+   },
+   {
+      .name = "sh-vtx-texld-inst-counter",
+      .type = ETNA_QUERY_SH_RENDERED_VERTICE_COUNTER,
+      .source = (const struct etna_perfmon_source[]) {
+         { "SH", "VTX_TEXLD_INST_COUNTER" }
+      }
+   },
+   {
+      .name = "sh-plx-branch-inst-counter",
+      .type = ETNA_QUERY_SH_RENDERED_VERTICE_COUNTER,
+      .source = (const struct etna_perfmon_source[]) {
+         { "SH", "PXL_BRANCH_INST_COUNTER" }
+      }
+   },
+   {
+      .name = "sh-plx-texld-inst-counter",
+      .type = ETNA_QUERY_SH_RENDERED_VERTICE_COUNTER,
+      .source = (const struct etna_perfmon_source[]) {
+         { "SH", "PXL_TEXLD_INST_COUNTER" }
+      }
    }
 };
 

@@ -45,6 +45,16 @@ struct etna_screen;
 #define ETNA_QUERY_PE_PIXEL_COUNT_DRAWN_BY_DEPTH_PIPE    (ETNA_PM_QUERY_BASE + 8)
 #define ETNA_QUERY_PE_PIXELS_RENDERED_2D                 (ETNA_PM_QUERY_BASE + 9)
 
+#define ETNA_QUERY_SH_SHADER_CYCLES                      (ETNA_PM_QUERY_BASE + 10)
+#define ETNA_QUERY_SH_PS_INST_COUNTER                    (ETNA_PM_QUERY_BASE + 11)
+#define ETNA_QUERY_SH_RENDERED_PIXEL_COUNTER             (ETNA_PM_QUERY_BASE + 12)
+#define ETNA_QUERY_SH_VS_INST_COUNTER                    (ETNA_PM_QUERY_BASE + 13)
+#define ETNA_QUERY_SH_RENDERED_VERTICE_COUNTER           (ETNA_PM_QUERY_BASE + 14)
+#define ETNA_QUERY_SH_VTX_BRANCH_INST_COUNTER            (ETNA_PM_QUERY_BASE + 15)
+#define ETNA_QUERY_SH_VTX_TEXLD_INST_COUNTER             (ETNA_PM_QUERY_BASE + 16)
+#define ETNA_QUERY_SH_PXL_BRANCH_INST_COUNTER            (ETNA_PM_QUERY_BASE + 17)
+#define ETNA_QUERY_SH_PXL_TEXLD_INST_COUNTER             (ETNA_PM_QUERY_BASE + 18)
+
 struct etna_pm_query {
    struct etna_query base;
    struct etna_perfmon_signal *signal;
