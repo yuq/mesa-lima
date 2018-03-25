@@ -65,6 +65,14 @@ struct etna_screen;
 #define ETNA_QUERY_SE_CULLED_TRIANGLE_COUNT              (ETNA_PM_QUERY_BASE + 25)
 #define ETNA_QUERY_SE_CULLED_LINES_COUNT                 (ETNA_PM_QUERY_BASE + 26)
 
+#define ETNA_QUERY_RA_VALID_PIXEL_COUNT                  (ETNA_PM_QUERY_BASE + 27)
+#define ETNA_QUERY_RA_TOTAL_QUAD_COUNT                   (ETNA_PM_QUERY_BASE + 28)
+#define ETNA_QUERY_RA_VALID_QUAD_COUNT_AFTER_EARLY_Z     (ETNA_PM_QUERY_BASE + 29)
+#define ETNA_QUERY_RA_TOTAL_PRIMITIVE_COUNT              (ETNA_PM_QUERY_BASE + 30)
+#define ETNA_QUERY_RA_PIPE_CACHE_MISS_COUNTER            (ETNA_PM_QUERY_BASE + 31)
+#define ETNA_QUERY_RA_PREFETCH_CACHE_MISS_COUNTER        (ETNA_PM_QUERY_BASE + 32)
+#define ETNA_QUERY_RA_CULLED_QUAD_COUNT                  (ETNA_PM_QUERY_BASE + 33)
+
 struct etna_pm_query {
    struct etna_query base;
    struct etna_perfmon_signal *signal;
