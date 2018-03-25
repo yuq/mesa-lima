@@ -33,6 +33,12 @@
 
 struct etna_screen;
 
+#define ETNA_QUERY_HI_TOTAL_CYCLES                       (ETNA_PM_QUERY_BASE + 0)
+#define ETNA_QUERY_HI_IDLE_CYCLES                        (ETNA_PM_QUERY_BASE + 1)
+#define ETNA_QUERY_HI_AXI_CYCLES_READ_REQUEST_STALLED    (ETNA_PM_QUERY_BASE + 2)
+#define ETNA_QUERY_HI_AXI_CYCLES_WRITE_REQUEST_STALLED   (ETNA_PM_QUERY_BASE + 3)
+#define ETNA_QUERY_HI_AXI_CYCLES_WRITE_DATA_STALLED      (ETNA_PM_QUERY_BASE + 4)
+
 struct etna_pm_query {
    struct etna_query base;
    struct etna_perfmon_signal *signal;
