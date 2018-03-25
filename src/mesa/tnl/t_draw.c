@@ -486,10 +486,10 @@ void _tnl_draw_prims(struct gl_context *ctx,
       /* This will split the buffers one way or another and
        * recursively call back into this function.
        */
-      vbo_split_prims( ctx, arrays, prim, nr_prims, ib, 
-		       0, max_index + prim->basevertex,
-		       _tnl_draw_prims,
-		       &limits );
+      _tnl_split_prims( ctx, arrays, prim, nr_prims, ib,
+                        0, max_index + prim->basevertex,
+                        _tnl_draw_prims,
+                        &limits );
    }
    else {
       /* May need to map a vertex buffer object for every attribute plus

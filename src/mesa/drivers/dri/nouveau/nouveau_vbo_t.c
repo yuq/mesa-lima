@@ -277,8 +277,8 @@ vbo_maybe_split(struct gl_context *ctx, const struct gl_vertex_array *arrays,
 			.max_vb_size = ~0,
 		};
 
-		vbo_split_prims(ctx, arrays, prims, nr_prims, ib, min_index,
-				max_index, TAG(vbo_render_prims), &limits);
+		_tnl_split_prims(ctx, arrays, prims, nr_prims, ib, min_index,
+				 max_index, TAG(vbo_render_prims), &limits);
 		return GL_TRUE;
 	}
 
