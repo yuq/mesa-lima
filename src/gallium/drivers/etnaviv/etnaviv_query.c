@@ -32,6 +32,7 @@
 #include "etnaviv_query.h"
 #include "etnaviv_query_hw.h"
 #include "etnaviv_query_sw.h"
+#include "etnaviv_query_pm.h"
 
 static struct pipe_query *
 etna_create_query(struct pipe_context *pctx, unsigned query_type,
@@ -43,6 +44,8 @@ etna_create_query(struct pipe_context *pctx, unsigned query_type,
    q = etna_sw_create_query(ctx, query_type);
    if (!q)
       q = etna_hw_create_query(ctx, query_type);
+   if (!q)
+      q = etna_pm_create_query(ctx, query_type);
 
    return (struct pipe_query *)q;
 }
@@ -103,11 +106,15 @@ etna_get_driver_query_info(struct pipe_screen *pscreen, unsigned index,
                            struct pipe_driver_query_info *info)
 {
    int nr_sw_queries = etna_sw_get_driver_query_info(pscreen, 0, NULL);
+   int nr_pm_queries = etna_pm_get_driver_query_info(pscreen, 0, NULL);
 
    if (!info)
-      return nr_sw_queries;
+      return nr_sw_queries + nr_pm_queries;
 
-   return etna_sw_get_driver_query_info(pscreen, index, info);
+   if (index < nr_sw_queries)
+      return etna_sw_get_driver_query_info(pscreen, index, info);
+
+   return etna_pm_get_driver_query_info(pscreen, index - nr_sw_queries, info);
 }
 
 static int

@@ -49,6 +49,7 @@
 
 #define ETNA_DRM_VERSION(major, minor) ((major) << 16 | (minor))
 #define ETNA_DRM_VERSION_FENCE_FD      ETNA_DRM_VERSION(1, 1)
+#define ETNA_DRM_VERSION_PERFMON       ETNA_DRM_VERSION(1, 2)
 
 static const struct debug_named_value debug_options[] = {
    {"dbg_msgs",       ETNA_DBG_MSGS, "Print debug messages"},
@@ -79,6 +80,9 @@ static void
 etna_screen_destroy(struct pipe_screen *pscreen)
 {
    struct etna_screen *screen = etna_screen(pscreen);
+
+   if (screen->perfmon)
+      etna_perfmon_del(screen->perfmon);
 
    if (screen->pipe)
       etna_pipe_del(screen->pipe);
@@ -986,7 +990,11 @@ etna_screen_create(struct etna_device *dev, struct etna_gpu *gpu,
    etna_query_screen_init(pscreen);
    etna_resource_screen_init(pscreen);
 
+   util_dynarray_init(&screen->supported_pm_queries, NULL);
    slab_create_parent(&screen->transfer_pool, sizeof(struct etna_transfer), 16);
+
+   if (screen->drm_version >= ETNA_DRM_VERSION_PERFMON)
+      etna_pm_query_setup(screen);
 
    return pscreen;
 
