@@ -55,6 +55,13 @@ struct etna_screen;
 #define ETNA_QUERY_SH_PXL_BRANCH_INST_COUNTER            (ETNA_PM_QUERY_BASE + 17)
 #define ETNA_QUERY_SH_PXL_TEXLD_INST_COUNTER             (ETNA_PM_QUERY_BASE + 18)
 
+#define ETNA_QUERY_PA_INPUT_VTX_COUNTER                  (ETNA_PM_QUERY_BASE + 19)
+#define ETNA_QUERY_PA_INPUT_PRIM_COUNTER                 (ETNA_PM_QUERY_BASE + 20)
+#define ETNA_QUERY_PA_OUTPUT_PRIM_COUNTER                (ETNA_PM_QUERY_BASE + 21)
+#define ETNA_QUERY_PA_DEPTH_CLIPPED_COUNTER              (ETNA_PM_QUERY_BASE + 22)
+#define ETNA_QUERY_PA_TRIVIAL_REJECTED_COUNTER           (ETNA_PM_QUERY_BASE + 23)
+#define ETNA_QUERY_PA_CULLED_COUNTER                     (ETNA_PM_QUERY_BASE + 24)
+
 struct etna_pm_query {
    struct etna_query base;
    struct etna_perfmon_signal *signal;

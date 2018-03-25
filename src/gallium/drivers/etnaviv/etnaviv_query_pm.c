@@ -171,6 +171,48 @@ static const struct etna_perfmon_config query_config[] = {
       .source = (const struct etna_perfmon_source[]) {
          { "SH", "PXL_TEXLD_INST_COUNTER" }
       }
+   },
+   {
+      .name = "pa-input-vtx-counter",
+      .type = ETNA_QUERY_PA_INPUT_VTX_COUNTER,
+      .source = (const struct etna_perfmon_source[]) {
+         { "PA", "INPUT_VTX_COUNTER" }
+      }
+   },
+   {
+      .name = "pa-input-prim-counter",
+      .type = ETNA_QUERY_PA_INPUT_PRIM_COUNTER,
+      .source = (const struct etna_perfmon_source[]) {
+         { "PA", "INPUT_PRIM_COUNTER" }
+      }
+   },
+   {
+      .name = "pa-output-prim-counter",
+      .type = ETNA_QUERY_PA_OUTPUT_PRIM_COUNTER,
+      .source = (const struct etna_perfmon_source[]) {
+         { "PA", "OUTPUT_PRIM_COUNTER" }
+      }
+   },
+   {
+      .name = "pa-depth-clipped-counter",
+      .type = ETNA_QUERY_PA_DEPTH_CLIPPED_COUNTER,
+      .source = (const struct etna_perfmon_source[]) {
+         { "PA", "DEPTH_CLIPPED_COUNTER" }
+      }
+   },
+   {
+      .name = "pa-trivial-rejected-counter",
+      .type = ETNA_QUERY_PA_TRIVIAL_REJECTED_COUNTER,
+      .source = (const struct etna_perfmon_source[]) {
+         { "PA", "TRIVIAL_REJECTED_COUNTER" }
+      }
+   },
+   {
+      .name = "pa-culled-counter",
+      .type = ETNA_QUERY_PA_CULLED_COUNTER,
+      .source = (const struct etna_perfmon_source[]) {
+         { "PA", "CULLED_COUNTER" }
+      }
    }
 };
 
