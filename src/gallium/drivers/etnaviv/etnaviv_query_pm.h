@@ -33,6 +33,15 @@
 
 struct etna_screen;
 
+#define ETNA_QUERY_HI_GROUP_ID                           1
+#define ETNA_QUERY_PE_GROUP_ID                           2
+#define ETNA_QUERY_SH_GROUP_ID                           3
+#define ETNA_QUERY_PA_GROUP_ID                           4
+#define ETNA_QUERY_SE_GROUP_ID                           5
+#define ETNA_QUERY_RA_GROUP_ID                           6
+#define ETNA_QUERY_TX_GROUP_ID                           7
+#define ETNA_QUERY_MC_GROUP_ID                           8
+
 #define ETNA_QUERY_HI_TOTAL_CYCLES                       (ETNA_PM_QUERY_BASE + 0)
 #define ETNA_QUERY_HI_IDLE_CYCLES                        (ETNA_PM_QUERY_BASE + 1)
 #define ETNA_QUERY_HI_AXI_CYCLES_READ_REQUEST_STALLED    (ETNA_PM_QUERY_BASE + 2)

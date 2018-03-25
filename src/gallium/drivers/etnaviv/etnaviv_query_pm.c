@@ -42,6 +42,7 @@ struct etna_perfmon_config
 {
    const char *name;
    unsigned type;
+   unsigned group_id;
    const struct etna_perfmon_source *source;
 };
 
@@ -49,6 +50,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "hi-total-cyles",
       .type = ETNA_QUERY_HI_TOTAL_CYCLES,
+      .group_id = ETNA_QUERY_HI_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "HI", "TOTAL_CYCLES" }
       }
@@ -56,6 +58,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "hi-idle-cyles",
       .type = ETNA_QUERY_HI_IDLE_CYCLES,
+      .group_id = ETNA_QUERY_HI_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "HI", "IDLE_CYCLES" }
       }
@@ -63,6 +66,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "hi-axi-cycles-read-request-stalled",
       .type = ETNA_QUERY_HI_AXI_CYCLES_READ_REQUEST_STALLED,
+      .group_id = ETNA_QUERY_HI_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "HI", "AXI_CYCLES_READ_REQUEST_STALLED" }
       }
@@ -70,6 +74,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "hi-axi-cycles-write-request-stalled",
       .type = ETNA_QUERY_HI_AXI_CYCLES_WRITE_REQUEST_STALLED,
+      .group_id = ETNA_QUERY_HI_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "HI", "AXI_CYCLES_WRITE_REQUEST_STALLED" }
       }
@@ -77,6 +82,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "hi-axi-cycles-write-data-stalled",
       .type = ETNA_QUERY_HI_AXI_CYCLES_WRITE_DATA_STALLED,
+      .group_id = ETNA_QUERY_HI_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "HI", "AXI_CYCLES_WRITE_DATA_STALLED" }
       }
@@ -84,6 +90,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "pe-pixel-count-killed-by-color-pipe",
       .type = ETNA_QUERY_PE_PIXEL_COUNT_KILLED_BY_COLOR_PIPE,
+      .group_id = ETNA_QUERY_PE_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "PE", "PIXEL_COUNT_KILLED_BY_COLOR_PIPE" }
       }
@@ -91,6 +98,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "pe-pixel-count-killed-by-depth-pipe",
       .type = ETNA_QUERY_PE_PIXEL_COUNT_KILLED_BY_DEPTH_PIPE,
+      .group_id = ETNA_QUERY_PE_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "PE", "PIXEL_COUNT_KILLED_BY_DEPTH_PIPE" }
       }
@@ -98,6 +106,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "pe-pixel-count-drawn-by-color-pipe",
       .type = ETNA_QUERY_PE_PIXEL_COUNT_DRAWN_BY_COLOR_PIPE,
+      .group_id = ETNA_QUERY_PE_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "PE", "PIXEL_COUNT_DRAWN_BY_COLOR_PIPE" }
       }
@@ -105,6 +114,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "pe-pixel-count-drawn-by-depth-pipe",
       .type = ETNA_QUERY_PE_PIXEL_COUNT_DRAWN_BY_DEPTH_PIPE,
+      .group_id = ETNA_QUERY_PE_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "PE", "PIXEL_COUNT_DRAWN_BY_DEPTH_PIPE" }
       }
@@ -112,6 +122,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "sh-shader-cycles",
       .type = ETNA_QUERY_SH_SHADER_CYCLES,
+      .group_id = ETNA_QUERY_SH_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "SH", "SHADER_CYCLES" }
       }
@@ -119,6 +130,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "sh-ps-inst-counter",
       .type = ETNA_QUERY_SH_PS_INST_COUNTER,
+      .group_id = ETNA_QUERY_SH_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "SH", "PS_INST_COUNTER" }
       }
@@ -126,6 +138,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "sh-rendered-pixel-counter",
       .type = ETNA_QUERY_SH_RENDERED_PIXEL_COUNTER,
+      .group_id = ETNA_QUERY_SH_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "SH", "RENDERED_PIXEL_COUNTER" }
       }
@@ -133,6 +146,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "sh-vs-inst-counter",
       .type = ETNA_QUERY_SH_VS_INST_COUNTER,
+      .group_id = ETNA_QUERY_SH_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "SH", "VS_INST_COUNTER" }
       }
@@ -140,6 +154,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "sh-rendered-vertice-counter",
       .type = ETNA_QUERY_SH_RENDERED_VERTICE_COUNTER,
+      .group_id = ETNA_QUERY_SH_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "SH", "RENDERED_VERTICE_COUNTER" }
       }
@@ -147,6 +162,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "sh-vtx-branch-inst-counter",
       .type = ETNA_QUERY_SH_RENDERED_VERTICE_COUNTER,
+      .group_id = ETNA_QUERY_SH_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "SH", "VTX_BRANCH_INST_COUNTER" }
       }
@@ -154,6 +170,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "sh-vtx-texld-inst-counter",
       .type = ETNA_QUERY_SH_RENDERED_VERTICE_COUNTER,
+      .group_id = ETNA_QUERY_SH_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "SH", "VTX_TEXLD_INST_COUNTER" }
       }
@@ -161,6 +178,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "sh-plx-branch-inst-counter",
       .type = ETNA_QUERY_SH_RENDERED_VERTICE_COUNTER,
+      .group_id = ETNA_QUERY_SH_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "SH", "PXL_BRANCH_INST_COUNTER" }
       }
@@ -168,6 +186,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "sh-plx-texld-inst-counter",
       .type = ETNA_QUERY_SH_RENDERED_VERTICE_COUNTER,
+      .group_id = ETNA_QUERY_SH_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "SH", "PXL_TEXLD_INST_COUNTER" }
       }
@@ -175,6 +194,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "pa-input-vtx-counter",
       .type = ETNA_QUERY_PA_INPUT_VTX_COUNTER,
+      .group_id = ETNA_QUERY_PA_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "PA", "INPUT_VTX_COUNTER" }
       }
@@ -182,6 +202,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "pa-input-prim-counter",
       .type = ETNA_QUERY_PA_INPUT_PRIM_COUNTER,
+      .group_id = ETNA_QUERY_PA_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "PA", "INPUT_PRIM_COUNTER" }
       }
@@ -189,6 +210,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "pa-output-prim-counter",
       .type = ETNA_QUERY_PA_OUTPUT_PRIM_COUNTER,
+      .group_id = ETNA_QUERY_PA_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "PA", "OUTPUT_PRIM_COUNTER" }
       }
@@ -196,6 +218,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "pa-depth-clipped-counter",
       .type = ETNA_QUERY_PA_DEPTH_CLIPPED_COUNTER,
+      .group_id = ETNA_QUERY_PA_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "PA", "DEPTH_CLIPPED_COUNTER" }
       }
@@ -203,6 +226,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "pa-trivial-rejected-counter",
       .type = ETNA_QUERY_PA_TRIVIAL_REJECTED_COUNTER,
+      .group_id = ETNA_QUERY_PA_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "PA", "TRIVIAL_REJECTED_COUNTER" }
       }
@@ -210,6 +234,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "pa-culled-counter",
       .type = ETNA_QUERY_PA_CULLED_COUNTER,
+      .group_id = ETNA_QUERY_PA_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "PA", "CULLED_COUNTER" }
       }
@@ -217,6 +242,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "se-culled-triangle-count",
       .type = ETNA_QUERY_SE_CULLED_TRIANGLE_COUNT,
+      .group_id = ETNA_QUERY_SE_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "SE", "CULLED_TRIANGLE_COUNT" }
       }
@@ -224,6 +250,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "se-culled-lines-count",
       .type = ETNA_QUERY_SE_CULLED_LINES_COUNT,
+      .group_id = ETNA_QUERY_SE_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "SE", "CULLED_LINES_COUNT" }
       }
@@ -231,6 +258,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "ra-valid-pixel-count",
       .type = ETNA_QUERY_RA_VALID_PIXEL_COUNT,
+      .group_id = ETNA_QUERY_RA_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "RA", "VALID_PIXEL_COUNT" }
       }
@@ -238,6 +266,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "ra-total-quad-count",
       .type = ETNA_QUERY_RA_TOTAL_QUAD_COUNT,
+      .group_id = ETNA_QUERY_RA_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "RA", "TOTAL_QUAD_COUNT" }
       }
@@ -245,6 +274,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "ra-valid-quad-count-after-early-z",
       .type = ETNA_QUERY_RA_VALID_QUAD_COUNT_AFTER_EARLY_Z,
+      .group_id = ETNA_QUERY_RA_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "RA", "VALID_QUAD_COUNT_AFTER_EARLY_Z" }
       }
@@ -252,6 +282,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "ra-total-primitive-count",
       .type = ETNA_QUERY_RA_TOTAL_PRIMITIVE_COUNT,
+      .group_id = ETNA_QUERY_RA_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "RA", "TOTAL_PRIMITIVE_COUNT" }
       }
@@ -259,6 +290,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "ra-pipe-cache-miss-counter",
       .type = ETNA_QUERY_RA_PIPE_CACHE_MISS_COUNTER,
+      .group_id = ETNA_QUERY_RA_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "RA", "PIPE_CACHE_MISS_COUNTER" }
       }
@@ -266,6 +298,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "ra-prefetch-cache-miss-counter",
       .type = ETNA_QUERY_RA_PREFETCH_CACHE_MISS_COUNTER,
+      .group_id = ETNA_QUERY_RA_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "RA", "PREFETCH_CACHE_MISS_COUNTER" }
       }
@@ -273,6 +306,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "ra-pculled-quad-count",
       .type = ETNA_QUERY_RA_CULLED_QUAD_COUNT,
+      .group_id = ETNA_QUERY_RA_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "RA", "CULLED_QUAD_COUNT" }
       }
@@ -280,6 +314,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "tx-total-bilinear-requests",
       .type = ETNA_QUERY_TX_TOTAL_BILINEAR_REQUESTS,
+      .group_id = ETNA_QUERY_TX_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "TX", "TOTAL_BILINEAR_REQUESTS" }
       }
@@ -287,6 +322,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "tx-total-trilinear-requests",
       .type = ETNA_QUERY_TX_TOTAL_TRILINEAR_REQUESTS,
+      .group_id = ETNA_QUERY_TX_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "TX", "TOTAL_TRILINEAR_REQUESTS" }
       }
@@ -294,6 +330,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "tx-total-discarded-texture-requests",
       .type = ETNA_QUERY_TX_TOTAL_DISCARDED_TEXTURE_REQUESTS,
+      .group_id = ETNA_QUERY_TX_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "TX", "TOTAL_DISCARDED_TEXTURE_REQUESTS" }
       }
@@ -301,6 +338,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "tx-total-texture-requests",
       .type = ETNA_QUERY_TX_TOTAL_TEXTURE_REQUESTS,
+      .group_id = ETNA_QUERY_TX_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "TX", "TOTAL_TEXTURE_REQUESTS" }
       }
@@ -308,6 +346,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "tx-mem-read-count",
       .type = ETNA_QUERY_TX_MEM_READ_COUNT,
+      .group_id = ETNA_QUERY_TX_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "TX", "MEM_READ_COUNT" }
       }
@@ -315,6 +354,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "tx-mem-read-in-8b-count",
       .type = ETNA_QUERY_TX_MEM_READ_IN_8B_COUNT,
+      .group_id = ETNA_QUERY_TX_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "TX", "MEM_READ_IN_8B_COUNT" }
       }
@@ -322,6 +362,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "tx-cache-miss-count",
       .type = ETNA_QUERY_TX_CACHE_MISS_COUNT,
+      .group_id = ETNA_QUERY_TX_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "TX", "CACHE_MISS_COUNT" }
       }
@@ -329,6 +370,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "tx-cache-hit-texel-count",
       .type = ETNA_QUERY_TX_CACHE_HIT_TEXEL_COUNT,
+      .group_id = ETNA_QUERY_TX_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "TX", "CACHE_HIT_TEXEL_COUNT" }
       }
@@ -336,6 +378,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "tx-cache-miss-texel-count",
       .type = ETNA_QUERY_TX_CACHE_MISS_TEXEL_COUNT,
+      .group_id = ETNA_QUERY_TX_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "TX", "CACHE_MISS_TEXEL_COUNT" }
       }
@@ -343,6 +386,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "mc-total-read-req-8b-from-pipeline",
       .type = ETNA_QUERY_MC_TOTAL_READ_REQ_8B_FROM_PIPELINE,
+      .group_id = ETNA_QUERY_MC_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "MC", "TOTAL_READ_REQ_8B_FROM_PIPELINE" }
       }
@@ -350,6 +394,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "mc-total-read-req-8b-from-ip",
       .type = ETNA_QUERY_MC_TOTAL_READ_REQ_8B_FROM_IP,
+      .group_id = ETNA_QUERY_MC_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "MC", "TOTAL_READ_REQ_8B_FROM_IP" }
       }
@@ -357,6 +402,7 @@ static const struct etna_perfmon_config query_config[] = {
    {
       .name = "mc-total-write-req-8b-from-pipeline",
       .type = ETNA_QUERY_MC_TOTAL_WRITE_REQ_8B_FROM_PIPELINE,
+      .group_id = ETNA_QUERY_MC_GROUP_ID,
       .source = (const struct etna_perfmon_source[]) {
          { "MC", "TOTAL_WRITE_REQ_8B_FROM_PIPELINE" }
       }
@@ -581,7 +627,7 @@ etna_pm_get_driver_query_info(struct pipe_screen *pscreen, unsigned index,
 
    info->name = query_config[i].name;
    info->query_type = query_config[i].type;
-   info->group_id = 0;
+   info->group_id = query_config[i].group_id;
 
    return 1;
 }
