@@ -186,7 +186,6 @@ _vbo_CreateContext(struct gl_context *ctx)
    init_legacy_currval(ctx);
    init_generic_currval(ctx);
    init_mat_currval(ctx);
-   _vbo_init_inputs(&vbo->draw_arrays);
 
    /* make sure all VBO_ATTRIB_ values can fit in an unsigned byte */
    STATIC_ASSERT(VBO_ATTRIB_MAX <= 255);
@@ -231,52 +230,6 @@ _vbo_DestroyContext(struct gl_context *ctx)
       free(vbo);
       ctx->vbo_context = NULL;
    }
-}
-
-
-void
-vbo_set_draw_func(struct gl_context *ctx, vbo_draw_func func)
-{
-   struct vbo_context *vbo = vbo_context(ctx);
-   vbo->draw_prims = func;
-}
-
-
-/**
- * Examine the enabled vertex arrays to set the exec->array.inputs[] values.
- * These will point to the arrays to actually use for drawing.  Some will
- * be user-provided arrays, other will be zero-stride const-valued arrays.
- */
-static void
-vbo_bind_arrays(struct gl_context *ctx)
-{
-   struct vbo_context *vbo = vbo_context(ctx);
-   struct vbo_exec_context *exec = &vbo->exec;
-
-   _mesa_set_drawing_arrays(ctx, vbo->draw_arrays.inputs);
-
-   if (exec->array.recalculate_inputs) {
-      /* Finally update the inputs array */
-      _vbo_update_inputs(ctx, &vbo->draw_arrays);
-      exec->array.recalculate_inputs = GL_FALSE;
-   }
-
-   assert(ctx->NewState == 0);
-   assert(ctx->Array._DrawVAO->NewArrays == 0);
-}
-
-
-void
-_vbo_draw(struct gl_context *ctx, const struct _mesa_prim *prims,
-               GLuint nr_prims, const struct _mesa_index_buffer *ib,
-               GLboolean index_bounds_valid, GLuint min_index, GLuint max_index,
-               struct gl_transform_feedback_object *tfb_vertcount,
-               unsigned tfb_stream, struct gl_buffer_object *indirect)
-{
-   struct vbo_context *vbo = vbo_context(ctx);
-   vbo_bind_arrays(ctx);
-   vbo->draw_prims(ctx, prims, nr_prims, ib, index_bounds_valid,
-                   min_index, max_index, tfb_vertcount, tfb_stream, indirect);
 }
 
 
