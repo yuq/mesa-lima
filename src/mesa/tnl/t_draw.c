@@ -35,6 +35,7 @@
 #include "main/mtypes.h"
 #include "main/macros.h"
 #include "main/enums.h"
+#include "main/varray.h"
 #include "util/half_float.h"
 
 #include "t_context.h"
@@ -422,9 +423,7 @@ static void unmap_vbos( struct gl_context *ctx,
 }
 
 
-/* This is the main entrypoint into the slimmed-down software tnl
- * module.  In a regular swtnl driver, this can be plugged straight
- * into the vbo->Driver.DrawPrims() callback.
+/* This is the main workhorse doing all the rendering work.
  */
 void _tnl_draw_prims(struct gl_context *ctx,
 			 const struct _mesa_prim *prim,
@@ -537,3 +536,40 @@ void _tnl_draw_prims(struct gl_context *ctx,
    }
 }
 
+
+void
+_tnl_bind_inputs( struct gl_context *ctx )
+{
+   TNLcontext *tnl = TNL_CONTEXT(ctx);
+   _mesa_set_drawing_arrays(ctx, tnl->draw_arrays.inputs);
+   _vbo_update_inputs(ctx, &tnl->draw_arrays);
+}
+
+
+/* This is the main entrypoint into the slimmed-down software tnl
+ * module.  In a regular swtnl driver, this can be plugged straight
+ * into the ctx->Driver.Draw() callback.
+ */
+void
+_tnl_draw(struct gl_context *ctx,
+          const struct _mesa_prim *prim, GLuint nr_prims,
+          const struct _mesa_index_buffer *ib,
+          GLboolean index_bounds_valid, GLuint min_index, GLuint max_index,
+          struct gl_transform_feedback_object *tfb_vertcount,
+          unsigned stream, struct gl_buffer_object *indirect)
+{
+   /* Update TNLcontext::draw_arrays and set that pointer
+    * into Array._DrawArrays.
+    */
+   _tnl_bind_inputs(ctx);
+
+   _tnl_draw_prims(ctx, prim, nr_prims, ib, index_bounds_valid,
+                   min_index, max_index, tfb_vertcount, stream, indirect);
+}
+
+
+void
+_tnl_init_driver_draw_function(struct dd_function_table *functions)
+{
+   functions->Draw = _tnl_draw;
+}

@@ -969,8 +969,8 @@ brw_draw_prims(struct gl_context *ctx,
                  _mesa_enum_to_string(ctx->RenderMode));
       _swsetup_Wakeup(ctx);
       _tnl_wakeup(ctx);
-      _tnl_draw_prims(ctx, prims, nr_prims, ib,
-                      index_bounds_valid, min_index, max_index, NULL, 0, NULL);
+      _tnl_draw(ctx, prims, nr_prims, ib,
+                index_bounds_valid, min_index, max_index, NULL, 0, NULL);
       return;
    }
 

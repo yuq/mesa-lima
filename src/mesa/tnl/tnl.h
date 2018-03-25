@@ -48,6 +48,9 @@ _tnl_DestroyContext( struct gl_context *ctx );
 extern void
 _tnl_InvalidateState( struct gl_context *ctx, GLuint new_state );
 
+extern void
+_tnl_init_driver_draw_function(struct dd_function_table *functions);
+
 /* Functions to revive the tnl module after being unhooked from
  * dispatch and/or driver callbacks.
  */
@@ -59,6 +62,9 @@ _tnl_wakeup( struct gl_context *ctx );
  */
 extern void
 _tnl_need_projected_coords( struct gl_context *ctx, GLboolean flag );
+
+extern void
+_tnl_bind_inputs( struct gl_context *ctx );
 
 
 /* Control whether T&L does per-vertex fog
@@ -86,6 +92,14 @@ _tnl_draw_prims(struct gl_context *ctx,
 		     struct gl_transform_feedback_object *tfb_vertcount,
                      unsigned stream,
 		     struct gl_buffer_object *indirect );
+
+void
+_tnl_draw(struct gl_context *ctx,
+          const struct _mesa_prim *prim, GLuint nr_prims,
+          const struct _mesa_index_buffer *ib,
+          GLboolean index_bounds_valid, GLuint min_index, GLuint max_index,
+          struct gl_transform_feedback_object *tfb_vertcount, unsigned stream,
+          struct gl_buffer_object *indirect);
 
 extern void
 _tnl_RasterPos(struct gl_context *ctx, const GLfloat vObj[4]);

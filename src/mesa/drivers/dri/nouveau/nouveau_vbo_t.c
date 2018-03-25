@@ -537,6 +537,24 @@ TAG(vbo_check_render_prims)(struct gl_context *ctx,
 				tfb_vertcount, stream, indirect);
 }
 
+static void
+TAG(vbo_draw)(struct gl_context *ctx,
+	      const struct _mesa_prim *prims, GLuint nr_prims,
+	      const struct _mesa_index_buffer *ib,
+	      GLboolean index_bounds_valid,
+	      GLuint min_index, GLuint max_index,
+	      struct gl_transform_feedback_object *tfb_vertcount,
+	      unsigned stream,
+	      struct gl_buffer_object *indirect)
+{
+	/* Borrow and update the inputs list from the tnl context */
+	_tnl_bind_inputs(ctx);
+
+	TAG(vbo_check_render_prims)(ctx, prims, nr_prims, ib,
+				    index_bounds_valid, min_index, max_index,
+				    tfb_vertcount, stream, indirect);
+}
+
 void
 TAG(vbo_init)(struct gl_context *ctx)
 {
@@ -546,7 +564,8 @@ TAG(vbo_init)(struct gl_context *ctx)
 	for (i = 0; i < VERT_ATTRIB_MAX; i++)
 		render->map[i] = -1;
 
-	vbo_set_draw_func(ctx, TAG(vbo_check_render_prims));
+	/* Overwrite our draw function */
+	ctx->Driver.Draw = TAG(vbo_draw);
 	vbo_use_buffer_objects(ctx);
 }
 
