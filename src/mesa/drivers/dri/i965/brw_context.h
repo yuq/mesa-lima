@@ -36,6 +36,7 @@
 #include <stdbool.h>
 #include "main/macros.h"
 #include "main/mtypes.h"
+#include "vbo/vbo.h"
 #include "brw_structs.h"
 #include "brw_pipe_control.h"
 #include "compiler/brw_compiler.h"
@@ -954,6 +955,9 @@ struct brw_context
        * These bitfields indicate which workarounds are needed.
        */
       uint8_t attrib_wa_flags[VERT_ATTRIB_MAX];
+
+      /* For the initial pushdown, keep the list of vbo inputs. */
+      struct vbo_inputs draw_arrays;
    } vb;
 
    struct {

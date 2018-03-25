@@ -34,6 +34,7 @@
 #include "main/macros.h"
 #include "main/transformfeedback.h"
 #include "main/framebuffer.h"
+#include "main/varray.h"
 #include "tnl/tnl.h"
 #include "vbo/vbo.h"
 #include "swrast/swrast.h"
@@ -941,10 +942,15 @@ brw_draw_prims(struct gl_context *ctx,
 {
    unsigned i;
    struct brw_context *brw = brw_context(ctx);
-   const struct gl_vertex_array *arrays = ctx->Array._DrawArrays;
+   const struct gl_vertex_array *arrays;
    int predicate_state = brw->predicate.state;
    struct brw_transform_feedback_object *xfb_obj =
       (struct brw_transform_feedback_object *) gl_xfb_obj;
+
+   /* The initial pushdown of the inputs array into the drivers */
+   _mesa_set_drawing_arrays(ctx, brw->vb.draw_arrays.inputs);
+   arrays = ctx->Array._DrawArrays;
+   _vbo_update_inputs(ctx, &brw->vb.draw_arrays);
 
    if (!brw_check_conditional_render(brw))
       return;
@@ -1075,14 +1081,19 @@ brw_draw_indirect_prims(struct gl_context *ctx,
 }
 
 void
-brw_draw_init(struct brw_context *brw)
+brw_init_draw_functions(struct dd_function_table *functions)
 {
-   struct gl_context *ctx = &brw->ctx;
-
    /* Register our drawing function:
     */
-   vbo_set_draw_func(ctx, brw_draw_prims);
-   vbo_set_indirect_draw_func(ctx, brw_draw_indirect_prims);
+   functions->Draw = brw_draw_prims;
+   functions->DrawIndirect = brw_draw_indirect_prims;
+}
+
+void
+brw_draw_init(struct brw_context *brw)
+{
+   /* Keep our list of gl_vertex_array inputs */
+   _vbo_init_inputs(&brw->vb.draw_arrays);
 
    for (int i = 0; i < VERT_ATTRIB_MAX; i++)
       brw->vb.inputs[i].buffer = -1;

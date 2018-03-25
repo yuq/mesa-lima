@@ -284,6 +284,7 @@ brw_init_driver_functions(struct brw_context *brw,
    functions->GetString = intel_get_string;
    functions->UpdateState = intel_update_state;
 
+   brw_init_draw_functions(functions);
    intelInitTextureFuncs(functions);
    intelInitTextureImageFuncs(functions);
    intelInitTextureCopyImageFuncs(functions);
