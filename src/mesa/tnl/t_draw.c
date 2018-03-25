@@ -426,6 +426,7 @@ static void unmap_vbos( struct gl_context *ctx,
 /* This is the main workhorse doing all the rendering work.
  */
 void _tnl_draw_prims(struct gl_context *ctx,
+                     const struct gl_vertex_array *arrays,
 			 const struct _mesa_prim *prim,
 			 GLuint nr_prims,
 			 const struct _mesa_index_buffer *ib,
@@ -437,7 +438,6 @@ void _tnl_draw_prims(struct gl_context *ctx,
 			 struct gl_buffer_object *indirect)
 {
    TNLcontext *tnl = TNL_CONTEXT(ctx);
-   const struct gl_vertex_array *arrays = ctx->Array._DrawArrays;
    const GLuint TEST_SPLIT = 0;
    const GLint max = TEST_SPLIT ? 8 : tnl->vb.Size - MAX_CLIPPED_VERTICES;
    GLint max_basevertex = prim->basevertex;
@@ -563,8 +563,9 @@ _tnl_draw(struct gl_context *ctx,
     */
    _tnl_bind_inputs(ctx);
 
-   _tnl_draw_prims(ctx, prim, nr_prims, ib, index_bounds_valid,
-                   min_index, max_index, tfb_vertcount, stream, indirect);
+   _tnl_draw_prims(ctx, ctx->Array._DrawArrays, prim, nr_prims, ib,
+                   index_bounds_valid, min_index, max_index,
+                   tfb_vertcount, stream, indirect);
 }
 
 

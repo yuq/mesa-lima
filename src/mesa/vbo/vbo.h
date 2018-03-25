@@ -145,6 +145,7 @@ vbo_save_EndCallList(struct gl_context *ctx);
  * Draw a number of primitives.
  * \param prims  array [nr_prims] describing what to draw (prim type,
  *               vertex count, first index, instance count, etc).
+ * \param arrays array of vertex arrays for draw
  * \param ib  index buffer for indexed drawing, NULL for array drawing
  * \param index_bounds_valid  are min_index and max_index valid?
  * \param min_index  lowest vertex index used
@@ -158,6 +159,7 @@ vbo_save_EndCallList(struct gl_context *ctx);
  *                  This may be deprecated in the future
  */
 typedef void (*vbo_draw_func)(struct gl_context *ctx,
+                              const struct gl_vertex_array* arrays,
                               const struct _mesa_prim *prims,
                               GLuint nr_prims,
                               const struct _mesa_index_buffer *ib,

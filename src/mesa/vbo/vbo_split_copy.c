@@ -179,7 +179,6 @@ static void
 flush(struct copy_context *copy)
 {
    struct gl_context *ctx = copy->ctx;
-   const struct gl_vertex_array *saved_arrays = ctx->Array._DrawArrays;
    GLuint i;
 
    /* Set some counters:
@@ -198,10 +197,8 @@ flush(struct copy_context *copy)
    (void) dump_draw_info;
 #endif
 
-   ctx->Array._DrawArrays = copy->dstarray;
-   ctx->NewDriverState |= ctx->DriverFlags.NewArray;
-
    copy->draw(ctx,
+              copy->dstarray,
               copy->dstprim,
               copy->dstprim_nr,
               &copy->dstib,
@@ -209,9 +206,6 @@ flush(struct copy_context *copy)
               0,
               copy->dstbuf_nr - 1,
               NULL, 0, NULL);
-
-   ctx->Array._DrawArrays = saved_arrays;
-   ctx->NewDriverState |= ctx->DriverFlags.NewArray;
 
    /* Reset all pointers:
     */

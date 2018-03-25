@@ -115,7 +115,6 @@ void t_rebase_prims( struct gl_context *ctx,
 
    struct _mesa_index_buffer tmp_ib;
    struct _mesa_prim *tmp_prims = NULL;
-   const struct gl_vertex_array *saved_arrays = ctx->Array._DrawArrays;
    void *tmp_indices = NULL;
    GLuint i;
 
@@ -233,10 +232,8 @@ void t_rebase_prims( struct gl_context *ctx,
    
    /* Re-issue the draw call.
     */
-   ctx->Array._DrawArrays = tmp_arrays;
-   ctx->NewDriverState |= ctx->DriverFlags.NewArray;
-
-   draw( ctx, 
+   draw( ctx,
+         tmp_arrays,
 	 prim,
 	 nr_prims, 
 	 ib, 
@@ -245,9 +242,6 @@ void t_rebase_prims( struct gl_context *ctx,
 	 max_index - min_index,
 	 NULL, 0, NULL );
 
-   ctx->Array._DrawArrays = saved_arrays;
-   ctx->NewDriverState |= ctx->DriverFlags.NewArray;
-   
    free(tmp_indices);
    
    free(tmp_prims);
