@@ -46,6 +46,17 @@ struct etna_perfmon_config
    const struct etna_perfmon_source *source;
 };
 
+static const char *group_names[] = {
+   [ETNA_QUERY_HI_GROUP_ID] = "HI",
+   [ETNA_QUERY_PE_GROUP_ID] = "PE",
+   [ETNA_QUERY_SH_GROUP_ID] = "SH",
+   [ETNA_QUERY_PA_GROUP_ID] = "PA",
+   [ETNA_QUERY_SE_GROUP_ID] = "SE",
+   [ETNA_QUERY_RA_GROUP_ID] = "RA",
+   [ETNA_QUERY_TX_GROUP_ID] = "TX",
+   [ETNA_QUERY_MC_GROUP_ID] = "MC",
+};
+
 static const struct etna_perfmon_config query_config[] = {
    {
       .name = "hi-total-cyles",
@@ -628,6 +639,40 @@ etna_pm_get_driver_query_info(struct pipe_screen *pscreen, unsigned index,
    info->name = query_config[i].name;
    info->query_type = query_config[i].type;
    info->group_id = query_config[i].group_id;
+
+   return 1;
+}
+
+static
+unsigned query_count(unsigned group)
+{
+   unsigned count = 0;
+
+   for (unsigned i = 0; i < ARRAY_SIZE(query_config); i++)
+      if (query_config[i].group_id == group)
+         count++;
+
+   assert(count);
+
+   return count;
+}
+
+int
+etna_pm_get_driver_query_group_info(struct pipe_screen *pscreen,
+                                    unsigned index,
+                                    struct pipe_driver_query_group_info *info)
+{
+   if (!info)
+      return ARRAY_SIZE(group_names);
+
+   if (index >= ARRAY_SIZE(group_names))
+      return 0;
+
+   unsigned count = query_count(index);
+
+   info->name = group_names[index];
+   info->max_active_queries = count;
+   info->num_queries = count;
 
    return 1;
 }

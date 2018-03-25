@@ -121,4 +121,9 @@ int
 etna_pm_get_driver_query_info(struct pipe_screen *pscreen, unsigned index,
                               struct pipe_driver_query_info *info);
 
+int
+etna_pm_get_driver_query_group_info(struct pipe_screen *pscreen,
+                                    unsigned index,
+                                    struct pipe_driver_query_group_info *info);
+
 #endif
