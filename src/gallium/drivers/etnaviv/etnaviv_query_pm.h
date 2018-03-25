@@ -83,6 +83,10 @@ struct etna_screen;
 #define ETNA_QUERY_TX_CACHE_HIT_TEXEL_COUNT              (ETNA_PM_QUERY_BASE + 41)
 #define ETNA_QUERY_TX_CACHE_MISS_TEXEL_COUNT             (ETNA_PM_QUERY_BASE + 42)
 
+#define ETNA_QUERY_MC_TOTAL_READ_REQ_8B_FROM_PIPELINE    (ETNA_PM_QUERY_BASE + 43)
+#define ETNA_QUERY_MC_TOTAL_READ_REQ_8B_FROM_IP          (ETNA_PM_QUERY_BASE + 44)
+#define ETNA_QUERY_MC_TOTAL_WRITE_REQ_8B_FROM_PIPELINE   (ETNA_PM_QUERY_BASE + 45)
+
 struct etna_pm_query {
    struct etna_query base;
    struct etna_perfmon_signal *signal;
