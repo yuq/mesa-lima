@@ -122,11 +122,15 @@ etna_get_driver_query_group_info(struct pipe_screen *pscreen, unsigned index,
                                  struct pipe_driver_query_group_info *info)
 {
    int nr_sw_groups = etna_sw_get_driver_query_group_info(pscreen, 0, NULL);
+   int nr_pm_groups = etna_pm_get_driver_query_group_info(pscreen, 0, NULL);
 
    if (!info)
-      return nr_sw_groups;
+      return nr_sw_groups + nr_pm_groups;
 
-   return etna_sw_get_driver_query_group_info(pscreen, index, info);
+   if (index < nr_sw_groups)
+      return etna_sw_get_driver_query_group_info(pscreen, index, info);
+
+   return etna_pm_get_driver_query_group_info(pscreen, index, info);
 }
 
 static void
