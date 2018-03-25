@@ -276,6 +276,69 @@ static const struct etna_perfmon_config query_config[] = {
       .source = (const struct etna_perfmon_source[]) {
          { "RA", "CULLED_QUAD_COUNT" }
       }
+   },
+   {
+      .name = "tx-total-bilinear-requests",
+      .type = ETNA_QUERY_TX_TOTAL_BILINEAR_REQUESTS,
+      .source = (const struct etna_perfmon_source[]) {
+         { "TX", "TOTAL_BILINEAR_REQUESTS" }
+      }
+   },
+   {
+      .name = "tx-total-trilinear-requests",
+      .type = ETNA_QUERY_TX_TOTAL_TRILINEAR_REQUESTS,
+      .source = (const struct etna_perfmon_source[]) {
+         { "TX", "TOTAL_TRILINEAR_REQUESTS" }
+      }
+   },
+   {
+      .name = "tx-total-discarded-texture-requests",
+      .type = ETNA_QUERY_TX_TOTAL_DISCARDED_TEXTURE_REQUESTS,
+      .source = (const struct etna_perfmon_source[]) {
+         { "TX", "TOTAL_DISCARDED_TEXTURE_REQUESTS" }
+      }
+   },
+   {
+      .name = "tx-total-texture-requests",
+      .type = ETNA_QUERY_TX_TOTAL_TEXTURE_REQUESTS,
+      .source = (const struct etna_perfmon_source[]) {
+         { "TX", "TOTAL_TEXTURE_REQUESTS" }
+      }
+   },
+   {
+      .name = "tx-mem-read-count",
+      .type = ETNA_QUERY_TX_MEM_READ_COUNT,
+      .source = (const struct etna_perfmon_source[]) {
+         { "TX", "MEM_READ_COUNT" }
+      }
+   },
+   {
+      .name = "tx-mem-read-in-8b-count",
+      .type = ETNA_QUERY_TX_MEM_READ_IN_8B_COUNT,
+      .source = (const struct etna_perfmon_source[]) {
+         { "TX", "MEM_READ_IN_8B_COUNT" }
+      }
+   },
+   {
+      .name = "tx-cache-miss-count",
+      .type = ETNA_QUERY_TX_CACHE_MISS_COUNT,
+      .source = (const struct etna_perfmon_source[]) {
+         { "TX", "CACHE_MISS_COUNT" }
+      }
+   },
+   {
+      .name = "tx-cache-hit-texel-count",
+      .type = ETNA_QUERY_TX_CACHE_HIT_TEXEL_COUNT,
+      .source = (const struct etna_perfmon_source[]) {
+         { "TX", "CACHE_HIT_TEXEL_COUNT" }
+      }
+   },
+   {
+      .name = "tx-cache-miss-texel-count",
+      .type = ETNA_QUERY_TX_CACHE_MISS_TEXEL_COUNT,
+      .source = (const struct etna_perfmon_source[]) {
+         { "TX", "CACHE_MISS_TEXEL_COUNT" }
+      }
    }
 };
 

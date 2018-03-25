@@ -73,6 +73,16 @@ struct etna_screen;
 #define ETNA_QUERY_RA_PREFETCH_CACHE_MISS_COUNTER        (ETNA_PM_QUERY_BASE + 32)
 #define ETNA_QUERY_RA_CULLED_QUAD_COUNT                  (ETNA_PM_QUERY_BASE + 33)
 
+#define ETNA_QUERY_TX_TOTAL_BILINEAR_REQUESTS            (ETNA_PM_QUERY_BASE + 34)
+#define ETNA_QUERY_TX_TOTAL_TRILINEAR_REQUESTS           (ETNA_PM_QUERY_BASE + 35)
+#define ETNA_QUERY_TX_TOTAL_DISCARDED_TEXTURE_REQUESTS   (ETNA_PM_QUERY_BASE + 36)
+#define ETNA_QUERY_TX_TOTAL_TEXTURE_REQUESTS             (ETNA_PM_QUERY_BASE + 37)
+#define ETNA_QUERY_TX_MEM_READ_COUNT                     (ETNA_PM_QUERY_BASE + 38)
+#define ETNA_QUERY_TX_MEM_READ_IN_8B_COUNT               (ETNA_PM_QUERY_BASE + 39)
+#define ETNA_QUERY_TX_CACHE_MISS_COUNT                   (ETNA_PM_QUERY_BASE + 40)
+#define ETNA_QUERY_TX_CACHE_HIT_TEXEL_COUNT              (ETNA_PM_QUERY_BASE + 41)
+#define ETNA_QUERY_TX_CACHE_MISS_TEXEL_COUNT             (ETNA_PM_QUERY_BASE + 42)
+
 struct etna_pm_query {
    struct etna_query base;
    struct etna_perfmon_signal *signal;
