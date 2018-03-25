@@ -62,6 +62,9 @@ struct etna_screen;
 #define ETNA_QUERY_PA_TRIVIAL_REJECTED_COUNTER           (ETNA_PM_QUERY_BASE + 23)
 #define ETNA_QUERY_PA_CULLED_COUNTER                     (ETNA_PM_QUERY_BASE + 24)
 
+#define ETNA_QUERY_SE_CULLED_TRIANGLE_COUNT              (ETNA_PM_QUERY_BASE + 25)
+#define ETNA_QUERY_SE_CULLED_LINES_COUNT                 (ETNA_PM_QUERY_BASE + 26)
+
 struct etna_pm_query {
    struct etna_query base;
    struct etna_perfmon_signal *signal;
