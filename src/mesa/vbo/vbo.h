@@ -169,34 +169,6 @@ typedef void (*vbo_draw_func)(struct gl_context *ctx,
                               struct gl_buffer_object *indirect);
 
 
-/**
- * Draw a primitive, getting the vertex count, instance count, start
- * vertex, etc. from a buffer object.
- * \param mode  GL_POINTS, GL_LINES, GL_TRIANGLE_STRIP, etc.
- * \param indirect_data  buffer to get "DrawArrays/ElementsIndirectCommand" data
- * \param indirect_offset  offset of first primitive in indrect_data buffer
- * \param draw_count  number of primitives to draw
- * \param stride  stride, in bytes, between "DrawArrays/ElementsIndirectCommand"
- *                objects
- * \param indirect_draw_count_buffer  if non-NULL specifies a buffer to get the
- *                                    real draw_count value.  Used for
- *                                    GL_ARB_indirect_parameters.
- * \param indirect_draw_count_offset  offset to the draw_count value in
- *                                    indirect_draw_count_buffer
- * \param ib  index buffer for indexed drawing, NULL otherwise.
- */
-typedef void (*vbo_indirect_draw_func)(
-   struct gl_context *ctx,
-   GLuint mode,
-   struct gl_buffer_object *indirect_data,
-   GLsizeiptr indirect_offset,
-   unsigned draw_count,
-   unsigned stride,
-   struct gl_buffer_object *indirect_draw_count_buffer,
-   GLsizeiptr indirect_draw_count_offset,
-   const struct _mesa_index_buffer *ib);
-
-
 
 
 /* Utility function to cope with various constraints on tnl modules or
@@ -260,10 +232,6 @@ vbo_always_unmap_buffers(struct gl_context *ctx);
 
 void
 vbo_set_draw_func(struct gl_context *ctx, vbo_draw_func func);
-
-void
-vbo_set_indirect_draw_func(struct gl_context *ctx,
-                           vbo_indirect_draw_func func);
 
 void
 vbo_sw_primitive_restart(struct gl_context *ctx,
