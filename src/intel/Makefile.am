@@ -66,6 +66,7 @@ EXTRA_DIST = \
 	blorp/meson.build \
 	common/meson.build \
 	compiler/meson.build \
+	dev/meson.build \
 	genxml/meson.build \
 	isl/meson.build \
 	tools/meson.build \
