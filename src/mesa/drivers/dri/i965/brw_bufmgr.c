@@ -269,7 +269,7 @@ bo_alloc_internal(struct brw_bufmgr *bufmgr,
                   uint64_t size,
                   unsigned flags,
                   uint32_t tiling_mode,
-                  uint32_t stride, uint64_t alignment)
+                  uint32_t stride)
 {
    struct brw_bo *bo;
    unsigned int page_size = getpagesize();
@@ -320,9 +320,8 @@ retry:
          bo = LIST_ENTRY(struct brw_bo, bucket->head.prev, head);
          list_del(&bo->head);
          alloc_from_cache = true;
-         bo->align = alignment;
+         bo->align = 0;
       } else {
-         assert(alignment == 0);
          /* For non-render-target BOs (where we're probably
           * going to map it first thing in order to fill it
           * with data), check if the last BO in the cache is
@@ -382,7 +381,7 @@ retry:
       bo->gem_handle = create.handle;
 
       bo->bufmgr = bufmgr;
-      bo->align = alignment;
+      bo->align = 0;
 
       bo->tiling_mode = I915_TILING_NONE;
       bo->swizzle_mode = I915_BIT_6_SWIZZLE_NONE;
@@ -431,7 +430,7 @@ struct brw_bo *
 brw_bo_alloc(struct brw_bufmgr *bufmgr,
              const char *name, uint64_t size, uint64_t alignment)
 {
-   return bo_alloc_internal(bufmgr, name, size, 0, I915_TILING_NONE, 0, 0);
+   return bo_alloc_internal(bufmgr, name, size, 0, I915_TILING_NONE, 0);
 }
 
 struct brw_bo *
@@ -439,7 +438,7 @@ brw_bo_alloc_tiled(struct brw_bufmgr *bufmgr, const char *name,
                    uint64_t size, uint32_t tiling_mode, uint32_t pitch,
                    unsigned flags)
 {
-   return bo_alloc_internal(bufmgr, name, size, flags, tiling_mode, pitch, 0);
+   return bo_alloc_internal(bufmgr, name, size, flags, tiling_mode, pitch);
 }
 
 struct brw_bo *
@@ -480,7 +479,7 @@ brw_bo_alloc_tiled_2d(struct brw_bufmgr *bufmgr, const char *name,
    if (tiling == I915_TILING_NONE)
       stride = 0;
 
-   return bo_alloc_internal(bufmgr, name, size, flags, tiling, stride, 0);
+   return bo_alloc_internal(bufmgr, name, size, flags, tiling, stride);
 }
 
 /**
