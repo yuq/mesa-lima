@@ -820,7 +820,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
                         devinfo->gen >= 6 ? depth_only_format : format,
                         0, 0, width, height, depth, 1, ISL_TILING_Y0_BIT,
                         ISL_SURF_USAGE_DEPTH_BIT | ISL_SURF_USAGE_TEXTURE_BIT,
-                        BO_ALLOC_BUSY, pitch, bo);
+                        0, pitch, bo);
       if (!mt)
          return NULL;
 
@@ -836,7 +836,7 @@ intel_miptree_create_for_bo(struct brw_context *brw,
                         ISL_TILING_W_BIT,
                         ISL_SURF_USAGE_STENCIL_BIT |
                         ISL_SURF_USAGE_TEXTURE_BIT,
-                        BO_ALLOC_BUSY, pitch, bo);
+                        0, pitch, bo);
       if (!mt)
          return NULL;
 
