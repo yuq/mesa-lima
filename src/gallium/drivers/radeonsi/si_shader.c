@@ -2374,7 +2374,14 @@ static LLVMValueRef load_const_buffer_desc(struct si_shader_context *ctx, int i)
 static LLVMValueRef load_ubo(struct ac_shader_abi *abi, LLVMValueRef index)
 {
 	struct si_shader_context *ctx = si_shader_context_from_abi(abi);
+	struct si_shader_selector *sel = ctx->shader->selector;
+
 	LLVMValueRef ptr = LLVMGetParam(ctx->main_fn, ctx->param_const_and_shader_buffers);
+
+	if (sel->info.const_buffers_declared == 1 &&
+	    sel->info.shader_buffers_declared == 0) {
+		return load_const_buffer_desc_fast_path(ctx);
+	}
 
 	index = si_llvm_bound_index(ctx, index, ctx->num_const_buffers);
 	index = LLVMBuildAdd(ctx->ac.builder, index,
