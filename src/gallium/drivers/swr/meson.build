@@ -70,6 +70,8 @@ files_swr_mesa = files(
   'rasterizer/jitter/builder_math.h',
   'rasterizer/jitter/builder_mem.cpp',
   'rasterizer/jitter/builder_mem.h',
+  'rasterizer/jitter/builder_gfx_mem.cpp',
+  'rasterizer/jitter/builder_gfx_mem.h',
   'rasterizer/jitter/builder_misc.cpp',
   'rasterizer/jitter/builder_misc.h',
   'rasterizer/jitter/fetch_jit.cpp',

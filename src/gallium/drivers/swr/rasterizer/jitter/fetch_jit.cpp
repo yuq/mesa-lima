@@ -28,7 +28,7 @@
 *
 ******************************************************************************/
 #include "jit_pch.hpp"
-#include "builder.h"
+#include "builder_gfx_mem.h"
 #include "jit_api.h"
 #include "fetch_jit.h"
 #include "gen_state_llvm.h"
@@ -56,11 +56,10 @@ enum ConversionType
 //////////////////////////////////////////////////////////////////////////
 /// Interface to Jitting a fetch shader
 //////////////////////////////////////////////////////////////////////////
-struct FetchJit : 
-    public Builder
+struct FetchJit : public BuilderGfxMem
 {
     FetchJit(JitManager* pJitMgr) :
-        Builder(pJitMgr)
+        BuilderGfxMem(pJitMgr)
     {}
 
     Function* Create(const FETCH_COMPILE_STATE& fetchState);
