@@ -490,7 +490,11 @@ v3dX(emit_state)(struct pipe_context *pctx)
                 }
         }
 
-        if (vc5->dirty & VC5_DIRTY_BLEND_COLOR) {
+        /* GFXH-1431: On V3D 3.x, writing BLEND_CONFIG resets the constant
+         * color.
+         */
+        if (vc5->dirty & VC5_DIRTY_BLEND_COLOR ||
+            (V3D_VERSION < 41 && (vc5->dirty & VC5_DIRTY_BLEND))) {
                 cl_emit(&job->bcl, BLEND_CONSTANT_COLOUR, colour) {
                         colour.red_f16 = (vc5->swap_color_rb ?
                                           vc5->blend_color.hf[2] :
