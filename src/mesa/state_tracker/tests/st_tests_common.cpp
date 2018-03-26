@@ -43,7 +43,7 @@ using std::tuple;
 /* Implementation of helper and test classes */
 void *FakeCodeline::mem_ctx = nullptr;
 
-FakeCodeline::FakeCodeline(unsigned _op, const vector<int>& _dst,
+FakeCodeline::FakeCodeline(tgsi_opcode _op, const vector<int>& _dst,
                            const vector<int>& _src, const vector<int>&_to):
    op(_op),
    max_temp_id(0)
@@ -59,7 +59,7 @@ FakeCodeline::FakeCodeline(unsigned _op, const vector<int>& _dst,
 
 }
 
-FakeCodeline::FakeCodeline(unsigned _op, const vector<pair<int,int>>& _dst,
+FakeCodeline::FakeCodeline(tgsi_opcode _op, const vector<pair<int,int>>& _dst,
                            const vector<pair<int, const char *>>& _src,
                            const vector<pair<int, const char *>>&_to,
                            SWZ with_swizzle):
@@ -84,7 +84,7 @@ FakeCodeline::FakeCodeline(unsigned _op, const vector<pair<int,int>>& _dst,
    });
 }
 
-FakeCodeline::FakeCodeline(unsigned _op, const vector<tuple<int,int,int>>& _dst,
+FakeCodeline::FakeCodeline(tgsi_opcode _op, const vector<tuple<int,int,int>>& _dst,
                            const vector<tuple<int,int,int>>& _src,
                            const vector<tuple<int,int,int>>&_to, RA with_reladdr):
    op(_op),

@@ -40,15 +40,15 @@ struct RA {};
 
 /* A line to describe a TGSI instruction for building mock shaders. */
 struct FakeCodeline {
-   FakeCodeline(unsigned _op): op(_op), max_temp_id(0) {}
-   FakeCodeline(unsigned _op, const std::vector<int>& _dst, const std::vector<int>& _src,
+   FakeCodeline(tgsi_opcode _op): op(_op), max_temp_id(0) {}
+   FakeCodeline(tgsi_opcode _op, const std::vector<int>& _dst, const std::vector<int>& _src,
                 const std::vector<int>&_to);
 
-   FakeCodeline(unsigned _op, const std::vector<std::pair<int,int>>& _dst,
+   FakeCodeline(tgsi_opcode _op, const std::vector<std::pair<int,int>>& _dst,
                 const std::vector<std::pair<int, const char *>>& _src,
                 const std::vector<std::pair<int, const char *>>&_to, SWZ with_swizzle);
 
-   FakeCodeline(unsigned _op, const std::vector<std::tuple<int,int,int>>& _dst,
+   FakeCodeline(tgsi_opcode _op, const std::vector<std::tuple<int,int,int>>& _dst,
                 const std::vector<std::tuple<int,int,int>>& _src,
                 const std::vector<std::tuple<int,int,int>>&_to, RA with_reladdr);
 
@@ -78,7 +78,7 @@ private:
    template <typename st_reg>
    void read_reg(const st_reg& s);
 
-   unsigned op;
+   tgsi_opcode op;
    std::vector<st_dst_reg> dst;
    std::vector<st_src_reg> src;
    std::vector<st_src_reg> tex_offsets;
