@@ -342,7 +342,7 @@ brw_get_scratch_bo(struct brw_context *brw,
    }
 
    if (!old_bo) {
-      *scratch_bo = brw_bo_alloc(brw->bufmgr, "scratch bo", size, 4096);
+      *scratch_bo = brw_bo_alloc(brw->bufmgr, "scratch bo", size);
    }
 }
 
@@ -437,7 +437,7 @@ brw_alloc_stage_scratch(struct brw_context *brw,
 
    stage_state->scratch_bo =
       brw_bo_alloc(brw->bufmgr, "shader scratch space",
-                   per_thread_size * thread_count, 4096);
+                   per_thread_size * thread_count);
 }
 
 void brwInitFragProgFuncs( struct dd_function_table *functions )
@@ -466,7 +466,7 @@ brw_init_shader_time(struct brw_context *brw)
    const int max_entries = 2048;
    brw->shader_time.bo =
       brw_bo_alloc(brw->bufmgr, "shader time",
-                   max_entries * BRW_SHADER_TIME_STRIDE * 3, 4096);
+                   max_entries * BRW_SHADER_TIME_STRIDE * 3);
    brw->shader_time.names = rzalloc_array(brw, const char *, max_entries);
    brw->shader_time.ids = rzalloc_array(brw, int, max_entries);
    brw->shader_time.types = rzalloc_array(brw, enum shader_time_shader_type,

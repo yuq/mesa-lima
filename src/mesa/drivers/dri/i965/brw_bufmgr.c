@@ -428,7 +428,7 @@ err:
 
 struct brw_bo *
 brw_bo_alloc(struct brw_bufmgr *bufmgr,
-             const char *name, uint64_t size, uint64_t alignment)
+             const char *name, uint64_t size)
 {
    return bo_alloc_internal(bufmgr, name, size, 0, I915_TILING_NONE, 0);
 }

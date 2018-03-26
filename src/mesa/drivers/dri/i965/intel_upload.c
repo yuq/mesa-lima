@@ -86,7 +86,7 @@ brw_upload_space(struct brw_uploader *upload,
    assert((upload->bo == NULL) == (upload->map == NULL));
    if (!upload->bo) {
       upload->bo = brw_bo_alloc(upload->bufmgr, "streamed data",
-                                MAX2(upload->default_size, size), 4096);
+                                MAX2(upload->default_size, size));
       upload->map = brw_bo_map(NULL, upload->bo,
                                MAP_READ | MAP_WRITE |
                                MAP_PERSISTENT | MAP_ASYNC);

@@ -175,7 +175,7 @@ struct brw_bo {
  * using brw_bo_map() to be used by the CPU.
  */
 struct brw_bo *brw_bo_alloc(struct brw_bufmgr *bufmgr, const char *name,
-                            uint64_t size, uint64_t alignment);
+                            uint64_t size);
 
 /**
  * Allocate a tiled buffer object.
