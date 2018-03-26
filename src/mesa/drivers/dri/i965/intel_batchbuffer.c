@@ -170,7 +170,6 @@ add_exec_bo(struct intel_batchbuffer *batch, struct brw_bo *bo)
    batch->validation_list[batch->exec_count] =
       (struct drm_i915_gem_exec_object2) {
          .handle = bo->gem_handle,
-         .alignment = bo->align,
          .offset = bo->gtt_offset,
          .flags = bo->kflags,
       };

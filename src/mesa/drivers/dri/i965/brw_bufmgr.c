@@ -320,7 +320,6 @@ retry:
          bo = LIST_ENTRY(struct brw_bo, bucket->head.prev, head);
          list_del(&bo->head);
          alloc_from_cache = true;
-         bo->align = 0;
       } else {
          /* For non-render-target BOs (where we're probably
           * going to map it first thing in order to fill it
@@ -381,7 +380,6 @@ retry:
       bo->gem_handle = create.handle;
 
       bo->bufmgr = bufmgr;
-      bo->align = 0;
 
       bo->tiling_mode = I915_TILING_NONE;
       bo->swizzle_mode = I915_BIT_6_SWIZZLE_NONE;
