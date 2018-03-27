@@ -22,9 +22,12 @@
  */
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <time.h>
 
 #include "lima_util.h"
+
+FILE *lima_dump_command_stream = NULL;
 
 bool lima_get_absolute_timeout(uint64_t *timeout, bool relative)
 {
@@ -42,18 +45,32 @@ bool lima_get_absolute_timeout(uint64_t *timeout, bool relative)
    return true;
 }
 
-void lima_dump_blob(void *data, int size, bool is_float)
+void lima_dump_blob(FILE *fp, void *data, int size, bool is_float)
 {
-   if (is_float) {
-      float *blob = data;
-      for (int i = 0; i * 4 < size; i += 4)
-         printf ("%04x: %f %f %f %f\n", i * 4,
-                 blob[i], blob[i + 1], blob[i + 2], blob[i + 3]);
+   for (int i = 0; i * 4 < size; i++) {
+      if (i % 4 == 0) {
+         if (i) fprintf(fp, "\n");
+         fprintf(fp, "%04x:", i * 4);
+      }
+
+      if (is_float)
+         fprintf(fp, " %f", ((float *)data)[i]);
+      else
+         fprintf(fp, " 0x%08x", ((uint32_t *)data)[i]);
    }
-   else {
-      uint32_t *blob = data;
-      for (int i = 0; i * 4 < size; i += 4)
-         printf ("%04x: 0x%08x 0x%08x 0x%08x 0x%08x\n", i * 4,
-                 blob[i], blob[i + 1], blob[i + 2], blob[i + 3]);
+   fprintf(fp, "\n");
+}
+
+void
+lima_dump_command_stream_print(void *data, int size, bool is_float,
+                               const char *fmt, ...)
+{
+   if (lima_dump_command_stream) {
+      va_list ap;
+      va_start(ap, fmt);
+      vfprintf(lima_dump_command_stream, fmt, ap);
+      va_end(ap);
+
+      lima_dump_blob(lima_dump_command_stream, data, size, is_float);
    }
 }
