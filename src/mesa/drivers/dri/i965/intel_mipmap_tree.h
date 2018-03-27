@@ -731,32 +731,15 @@ bool
 intel_miptree_sample_with_hiz(struct brw_context *brw,
                               struct intel_mipmap_tree *mt);
 
-
-static inline bool
+bool
 intel_miptree_set_clear_color(struct brw_context *brw,
                               struct intel_mipmap_tree *mt,
-                              union isl_color_value clear_color)
-{
-   if (memcmp(&mt->fast_clear_color, &clear_color, sizeof(clear_color)) != 0) {
-      mt->fast_clear_color = clear_color;
-      brw->ctx.NewDriverState |= BRW_NEW_AUX_STATE;
-      return true;
-   }
-   return false;
-}
+                              union isl_color_value clear_color);
 
-static inline bool
+bool
 intel_miptree_set_depth_clear_value(struct brw_context *brw,
                                     struct intel_mipmap_tree *mt,
-                                    float clear_value)
-{
-   if (mt->fast_clear_color.f32[0] != clear_value) {
-      mt->fast_clear_color.f32[0] = clear_value;
-      brw->ctx.NewDriverState |= BRW_NEW_AUX_STATE;
-      return true;
-   }
-   return false;
-}
+                                    float clear_value);
 
 #ifdef __cplusplus
 }
