@@ -25,13 +25,15 @@
 #ifndef H_LIMA_SCREEN
 #define H_LIMA_SCREEN
 
+#include <stdio.h>
+
 #include "util/slab.h"
 #include "util/list.h"
 #include "os/os_thread.h"
 
 #include "pipe/p_screen.h"
 
-extern bool lima_dump_command_stream;
+extern FILE *lima_dump_command_stream;
 extern int lima_ctx_num_plb;
 
 /* max texture size is 4096x4096 */
