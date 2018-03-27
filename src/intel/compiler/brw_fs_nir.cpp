@@ -3848,9 +3848,12 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                                  get_image_atomic_op(instr->intrinsic, type));
 
       /* Assign the result. */
-      for (unsigned c = 0; c < info->dest_components; ++c)
-         bld.MOV(offset(retype(dest, base_type), bld, c),
-                 offset(tmp, bld, c));
+      if (nir_intrinsic_infos[instr->intrinsic].has_dest) {
+         for (unsigned c = 0; c < info->dest_components; ++c) {
+            bld.MOV(offset(retype(dest, base_type), bld, c),
+                    offset(tmp, bld, c));
+         }
+      }
       break;
    }
 
