@@ -51,6 +51,7 @@
 /* options */
 
 static bool option_full_decode = true;
+static bool option_print_all_bb = false;
 static bool option_print_offsets = true;
 static enum { COLOR_AUTO, COLOR_ALWAYS, COLOR_NEVER } option_color;
 static char *xml_path = NULL;
@@ -446,6 +447,7 @@ read_data_file(FILE *file)
             { "hw status", "HW status" },
             { "wa context", "WA context" },
             { "wa batchbuffer", "WA batch" },
+            { "NULL context", "Kernel context" },
             { "user", "user" },
             { "semaphores", "semaphores", },
             { "guc log buffer", "GuC log", },
@@ -602,7 +604,8 @@ read_data_file(FILE *file)
              (unsigned) (sections[s].gtt_offset >> 32),
              (unsigned) sections[s].gtt_offset);
 
-      if (strcmp(sections[s].buffer_name, "batch buffer") == 0 ||
+      if (option_print_all_bb ||
+          strcmp(sections[s].buffer_name, "batch buffer") == 0 ||
           strcmp(sections[s].buffer_name, "ring buffer") == 0 ||
           strcmp(sections[s].buffer_name, "HW Context") == 0) {
          gen_print_batch(&batch_ctx, sections[s].data, sections[s].count,
@@ -660,7 +663,8 @@ print_help(const char *progname, FILE *file)
            "                        if omitted), 'always', or 'never'\n"
            "      --no-pager      don't launch pager\n"
            "      --no-offsets    don't print instruction offsets\n"
-           "      --xml=DIR       load hardware xml description from directory DIR\n",
+           "      --xml=DIR       load hardware xml description from directory DIR\n"
+           "      --all-bb        print out all batchbuffers\n",
            progname);
 }
 
@@ -679,6 +683,7 @@ main(int argc, char *argv[])
       { "headers",    no_argument,       (int *) &option_full_decode,   false },
       { "color",      required_argument, NULL,                          'c' },
       { "xml",        required_argument, NULL,                          'x' },
+      { "all-bb",     no_argument,       (int *) &option_print_all_bb,  true },
       { NULL,         0,                 NULL,                          0 }
    };
 
