@@ -45,6 +45,11 @@ lima_screen_destroy(struct pipe_screen *pscreen)
 {
    struct lima_screen *screen = lima_screen(pscreen);
 
+   if (lima_dump_command_stream) {
+      fclose(lima_dump_command_stream);
+      lima_dump_command_stream = NULL;
+   }
+
    slab_destroy_parent(&screen->transfer_pool);
 
    if (screen->ro)
@@ -341,8 +346,11 @@ lima_screen_parse_env(void)
 
    const char *dump_command = debug_get_option("LIMA_DUMP_COMMAND_STREAM", NULL);
    if (dump_command) {
-      printf("lima: dump command stream enabled\n");
-      lima_dump_command_stream = true;
+      printf("lima: dump command stream to file %s\n", dump_command);
+      lima_dump_command_stream = fopen(dump_command, "w");
+      if (!lima_dump_command_stream)
+         fprintf(stderr, "lima: fail to open command stream log file %s\n",
+                 dump_command);
    }
 
    lima_ctx_num_plb = debug_get_num_option("LIMA_CTX_NUM_PLB", LIMA_CTX_PLB_DEF_NUM);

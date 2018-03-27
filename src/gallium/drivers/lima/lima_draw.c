@@ -40,8 +40,6 @@
 
 #include <lima_drm.h>
 
-bool lima_dump_command_stream = false;
-
 static void
 lima_clear(struct pipe_context *pctx, unsigned buffers,
            const union pipe_color_union *color, double depth, unsigned stencil)
@@ -150,6 +148,7 @@ lima_update_plb(struct lima_context *ctx, struct lima_ctx_plb_pp_stream *s)
    int count = 1 << (dim + dim);
    int index = 0;
    uint32_t *stream[4];
+   int si[4] = {0};
 
    for (i = 0; i < num_pp; i++)
       stream[i] = s->bo->map + s->offset[i];
@@ -162,19 +161,22 @@ lima_update_plb(struct lima_context *ctx, struct lima_ctx_plb_pp_stream *s)
          int offset = ((y >> fb->shift_h) * fb->block_w + (x >> fb->shift_w)) * 512;
          int plb_va = ctx->plb[s->key.plb_index]->va + offset;
 
-         stream[pp][0] = 0;
-         stream[pp][1] = 0xB8000000 | x | (y << 8);
-         stream[pp][2] = 0xE0000002 | ((plb_va >> 3) & ~0xE0000003);
-         stream[pp][3] = 0xB0000000;
+         stream[pp][si[pp]++] = 0;
+         stream[pp][si[pp]++] = 0xB8000000 | x | (y << 8);
+         stream[pp][si[pp]++] = 0xE0000002 | ((plb_va >> 3) & ~0xE0000003);
+         stream[pp][si[pp]++] = 0xB0000000;
 
-         stream[pp] += 4;
          index++;
       }
    }
 
    for (i = 0; i < num_pp; i++) {
-      stream[i][0] = 0;
-      stream[i][1] = 0xBC000000;
+      stream[i][si[i]++] = 0;
+      stream[i][si[i]++] = 0xBC000000;
+
+      lima_dump_command_stream_print(
+         stream[i], si[i] * 4, false, "pp plb stream %d at va %x\n",
+         i, s->bo->va + s->offset[i]);
    }
 }
 
@@ -289,10 +291,7 @@ lima_pack_vs_cmd(struct lima_context *ctx, const struct pipe_draw_info *info)
    assert(i <= max_n);
    ctx->vs_cmd_array.size += i * 4;
 
-   if (lima_dump_command_stream) {
-      printf("lima add vs cmd\n");
-      lima_dump_blob(vs_cmd, i * 4, false);
-   }
+   lima_dump_command_stream_print(vs_cmd, i * 4, false, "add vs cmd\n");
 }
 
 static bool
@@ -421,10 +420,7 @@ done:
    assert(i <= max_n);
    ctx->plbu_cmd_array.size += i * 4;
 
-   if (lima_dump_command_stream) {
-      printf("lima add plbu cmd\n");
-      lima_dump_blob(plbu_cmd, i * 4, false);
-   }
+   lima_dump_command_stream_print(plbu_cmd, i * 4, false, "add plbu cmd\n");
 }
 
 struct lima_render_state {
@@ -679,11 +675,9 @@ lima_pack_render_state(struct lima_context *ctx)
       render->varyings_address = 0x00000000;
    }
 
-   if (lima_dump_command_stream) {
-      printf("lima: add render state at va %x\n",
-             lima_ctx_buff_va(ctx, lima_ctx_buff_pp_plb_rsw));
-      lima_dump_blob(render, sizeof(*render), false);
-   }
+   lima_dump_command_stream_print(
+      render, sizeof(*render), false, "add render state at va %x\n",
+      lima_ctx_buff_va(ctx, lima_ctx_buff_pp_plb_rsw));
 }
 
 static void
@@ -716,11 +710,9 @@ lima_update_gp_attribute_info(struct lima_context *ctx, const struct pipe_draw_i
          (util_format_get_nr_components(pve->src_format) - 1);
    }
 
-   if (lima_dump_command_stream) {
-      printf("lima: update attribute info at va %x\n",
-             lima_ctx_buff_va(ctx, lima_ctx_buff_gp_attribute_info));
-      lima_dump_blob(attribute, n * 4, false);
-   }
+   lima_dump_command_stream_print(
+      attribute, n * 4, false, "update attribute info at va %x\n",
+      lima_ctx_buff_va(ctx, lima_ctx_buff_gp_attribute_info));
 }
 
 static void
@@ -746,11 +738,10 @@ lima_update_gp_uniform(struct lima_context *ctx)
    if (vs->constant)
       memcpy(vs_const_buff + ccb->size + 32, vs->constant, vs->constant_size);
 
-   if (lima_dump_command_stream) {
-      printf("lima: update gp uniform at va %x\n",
-             lima_ctx_buff_va(ctx, lima_ctx_buff_gp_uniform));
-      lima_dump_blob(vs_const_buff, ccb->size + vs->constant_size + 32, true);
-   }
+   lima_dump_command_stream_print(
+      vs_const_buff, ccb->size + vs->constant_size + 32, true,
+      "update gp uniform at va %x\n",
+      lima_ctx_buff_va(ctx, lima_ctx_buff_gp_uniform));
 }
 
 static void
@@ -775,6 +766,13 @@ lima_update_pp_uniform(struct lima_context *ctx)
        fp16_const_buff[i] = util_float_to_half(const_buff[i]);
 
    *array = lima_ctx_buff_va(ctx, lima_ctx_buff_pp_uniform);
+
+   lima_dump_command_stream_print(
+      fp16_const_buff, const_buff_size * 2, false, "add pp uniform data at va %x\n",
+      lima_ctx_buff_va(ctx, lima_ctx_buff_pp_uniform));
+   lima_dump_command_stream_print(
+      array, 4, false, "add pp uniform info at va %x\n",
+      lima_ctx_buff_va(ctx, lima_ctx_buff_pp_uniform_array));
 }
 
 static void
@@ -827,11 +825,9 @@ lima_update_varying(struct lima_context *ctx, const struct pipe_draw_info *info)
          (v->component_size == 2 ? 0x0C : 0);
    }
 
-   if (lima_dump_command_stream) {
-      printf("lima: update varying info at va %x\n",
-             lima_ctx_buff_va(ctx, lima_ctx_buff_gp_varying_info));
-      lima_dump_blob(varying, n * 4, false);
-   }
+   lima_dump_command_stream_print(
+      varying, n * 4, false, "update varying info at va %x\n",
+      lima_ctx_buff_va(ctx, lima_ctx_buff_gp_varying_info));
 }
 
 static void
@@ -845,6 +841,11 @@ lima_update_submit_bo(struct lima_context *ctx)
       lima_submit_add_bo(ctx->gp_submit, ctx->plb_gp_stream, LIMA_SUBMIT_BO_READ);
       lima_submit_add_bo(ctx->gp_submit, ctx->plb[ctx->plb_index], LIMA_SUBMIT_BO_WRITE);
       lima_submit_add_bo(ctx->gp_submit, screen->gp_buffer, LIMA_SUBMIT_BO_READ);
+
+      lima_dump_command_stream_print(
+         ctx->plb_gp_stream->map + ctx->plb_index * LIMA_CTX_PLB_GP_SIZE,
+         LIMA_CTX_PLB_GP_SIZE, false, "gp plb stream at va %x\n",
+         ctx->plb_gp_stream->va + ctx->plb_index * LIMA_CTX_PLB_GP_SIZE);
 
       struct lima_ctx_plb_pp_stream_key key = {
          .plb_index = ctx->plb_index,
@@ -879,6 +880,14 @@ lima_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
    if (!lima_update_vs_state(ctx) || !lima_update_fs_state(ctx))
       return;
+
+   lima_dump_command_stream_print(
+      ctx->vs->bo->map, ctx->vs->shader_size, false,
+      "add vs at va %x\n", ctx->vs->bo->va);
+
+   lima_dump_command_stream_print(
+      ctx->fs->bo->map, ctx->fs->shader_size, false,
+      "add fs at va %x\n", ctx->fs->bo->va);
 
    lima_update_submit_bo(ctx);
 
@@ -963,21 +972,30 @@ lima_flush(struct lima_context *ctx)
       .tile_heap_end = screen->gp_buffer->va + gp_buffer_size,
    };
 
+   lima_dump_command_stream_print(
+      vs_cmd, vs_cmd_size, false, "flush vs cmd at va %x\n", vs_cmd_va);
+
+   lima_dump_command_stream_print(
+      plbu_cmd, plbu_cmd_size, false, "flush plbu cmd at va %x\n", plbu_cmd_va);
+
+   lima_dump_command_stream_print(
+      &gp_frame, sizeof(gp_frame), false, "add gp frame\n");
+
    if (!lima_submit_start(ctx->gp_submit, &gp_frame, sizeof(gp_frame)))
       fprintf(stderr, "gp submit error\n");
 
    if (lima_dump_command_stream) {
       if (lima_submit_wait(ctx->gp_submit, PIPE_TIMEOUT_INFINITE, false)) {
          float *pos = lima_ctx_buff_map(ctx, lima_ctx_buff_sh_gl_pos);
-         printf("lima gl_pos dump at va %x\n",
-                lima_ctx_buff_va(ctx, lima_ctx_buff_sh_gl_pos));
-         lima_dump_blob(pos, 4 * 4 * 16, true);
+         lima_dump_command_stream_print(
+            pos, 4 * 4 * 16, true, "gl_pos dump at va %x\n",
+            lima_ctx_buff_va(ctx, lima_ctx_buff_sh_gl_pos));
 
          lima_bo_update(ctx->plb[ctx->plb_index], true, false);
          uint32_t *plb = ctx->plb[ctx->plb_index]->map;
-         debug_printf("plb %x %x %x %x %x %x %x %x\n",
-                      plb[0], plb[1], plb[2], plb[3],
-                      plb[4], plb[5], plb[6], plb[7]);
+         lima_dump_command_stream_print(
+            plb, LIMA_CTX_PLB_SIZE, false, "plb dump at va %x\n",
+            ctx->plb[ctx->plb_index]->va);
       }
       else
          fprintf(stderr, "gp submit wait error\n");
@@ -1052,6 +1070,9 @@ lima_flush(struct lima_context *ctx)
    struct lima_ctx_plb_pp_stream *s = ctx->current_plb_pp_stream;
    for (int i = 0; i < num_pp; i++)
       pp_frame.plbu_array_address[i] = s->bo->va + s->offset[i];
+
+   lima_dump_command_stream_print(
+      &pp_frame, sizeof(pp_frame), false, "add pp frame\n");
 
    if (!lima_submit_start(ctx->pp_submit, &pp_frame, sizeof(pp_frame)))
       fprintf(stderr, "pp submit error\n");
