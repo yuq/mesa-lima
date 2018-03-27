@@ -222,9 +222,7 @@ static const GLuint byte_types_scale[5] = {
 };
 
 static GLuint
-double_types(struct brw_context *brw,
-             int size,
-             GLboolean doubles)
+double_types(int size, GLboolean doubles)
 {
    /* From the BDW PRM, Volume 2d, page 588 (VERTEX_ELEMENT_STATE):
     * "When SourceElementFormat is set to one of the *64*_PASSTHRU formats,
@@ -292,7 +290,7 @@ brw_get_vertex_surface_type(struct brw_context *brw,
       return ISL_FORMAT_R11G11B10_FLOAT;
    } else if (glattrib->Normalized) {
       switch (glattrib->Type) {
-      case GL_DOUBLE: return double_types(brw, size, glattrib->Doubles);
+      case GL_DOUBLE: return double_types(size, glattrib->Doubles);
       case GL_FLOAT: return float_types[size];
       case GL_HALF_FLOAT:
       case GL_HALF_FLOAT_OES:
@@ -371,7 +369,7 @@ brw_get_vertex_surface_type(struct brw_context *brw,
       }
       assert(glattrib->Format == GL_RGBA); /* sanity check */
       switch (glattrib->Type) {
-      case GL_DOUBLE: return double_types(brw, size, glattrib->Doubles);
+      case GL_DOUBLE: return double_types(size, glattrib->Doubles);
       case GL_FLOAT: return float_types[size];
       case GL_HALF_FLOAT:
       case GL_HALF_FLOAT_OES:
