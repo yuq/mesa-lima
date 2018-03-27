@@ -2752,6 +2752,12 @@
     <field name="MI Command Opcode" start="23" end="28" type="uint" default="5"/>
   </instruction>
 
+  <instruction name="MI_ARB_ON_OFF" bias="1" length="1">
+    <field name="Command Type" start="29" end="31" type="uint" default="0"/>
+    <field name="MI Command Opcode" start="23" end="28" type="uint" default="8"/>
+    <field name="Arbitration Enable" start="0" end="0" type="bool" default="1"/>
+  </instruction>
+
   <instruction name="MI_ATOMIC" bias="2" length="3">
     <field name="Command Type" start="29" end="31" type="uint" default="0"/>
     <field name="MI Command Opcode" start="23" end="28" type="uint" default="47"/>
