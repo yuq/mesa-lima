@@ -29,18 +29,22 @@ const nir_intrinsic_info nir_intrinsic_infos[nir_num_intrinsics] = {
 {
    .name = "${name}",
    .num_srcs = ${opcode.num_srcs},
+% if opcode.src_components:
    .src_components = {
       ${", ".join(str(comp) for comp in opcode.src_components)}
    },
+% endif
    .has_dest = ${"true" if opcode.has_dest else "false"},
    .dest_components = ${opcode.dest_components},
    .num_variables = ${opcode.num_variables},
    .num_indices = ${opcode.num_indices},
+% if opcode.indices:
    .index_map = {
 % for i in range(len(opcode.indices)):
       [${opcode.indices[i]}] = ${i + 1},
 % endfor
     },
+% endif
    .flags = ${"0" if len(opcode.flags) == 0 else " | ".join(opcode.flags)},
 },
 % endfor
