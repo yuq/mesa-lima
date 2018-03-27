@@ -267,8 +267,12 @@ add_aux_state_tracking_buffer(struct anv_image *image,
              (image->planes[plane].offset + image->planes[plane].size));
    }
 
+   const unsigned clear_color_state_size = device->info.gen >= 10 ?
+      device->isl_dev.ss.clear_color_state_size :
+      device->isl_dev.ss.clear_value_size;
+
    /* Clear color and fast clear type */
-   unsigned state_size = device->isl_dev.ss.clear_value_size + 4;
+   unsigned state_size = clear_color_state_size + 4;
 
    /* We only need to track compression on CCS_E surfaces. */
    if (image->planes[plane].aux_usage == ISL_AUX_USAGE_CCS_E) {

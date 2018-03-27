@@ -963,6 +963,12 @@ struct isl_device {
       uint8_t aux_addr_offset;
 
       /* Rounded up to the nearest dword to simplify GPU memcpy operations. */
+
+      /* size of the state buffer used to store the clear color + extra
+       * additional space used by the hardware */
+      uint8_t clear_color_state_size;
+      uint8_t clear_color_state_offset;
+      /* size of the clear color itself - used to copy it to/from a BO */
       uint8_t clear_value_size;
       uint8_t clear_value_offset;
    } ss;

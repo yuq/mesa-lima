@@ -826,35 +826,36 @@ init_fast_clear_color(struct anv_cmd_buffer *cmd_buffer,
     */
    struct anv_address addr =
       anv_image_get_clear_color_addr(cmd_buffer->device, image, aspect);
-   unsigned i = 0;
-   for (; i < cmd_buffer->device->isl_dev.ss.clear_value_size; i += 4) {
-      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
-         sdi.Address = addr;
 
-         if (GEN_GEN >= 9) {
+   if (GEN_GEN >= 9) {
+      for (unsigned i = 0; i < 4; i++) {
+         anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
+            sdi.Address = addr;
+            sdi.Address.offset += i * 4;
             /* MCS buffers on SKL+ can only have 1/0 clear colors. */
             assert(image->samples > 1);
             sdi.ImmediateData = 0;
-         } else if (GEN_VERSIONx10 >= 75) {
+         }
+      }
+   } else {
+      anv_batch_emit(&cmd_buffer->batch, GENX(MI_STORE_DATA_IMM), sdi) {
+         sdi.Address = addr;
+         if (GEN_GEN >= 8 || GEN_IS_HASWELL) {
             /* Pre-SKL, the dword containing the clear values also contains
              * other fields, so we need to initialize those fields to match the
              * values that would be in a color attachment.
              */
-            assert(i == 0);
             sdi.ImmediateData = ISL_CHANNEL_SELECT_RED   << 25 |
                                 ISL_CHANNEL_SELECT_GREEN << 22 |
                                 ISL_CHANNEL_SELECT_BLUE  << 19 |
                                 ISL_CHANNEL_SELECT_ALPHA << 16;
-         }  else if (GEN_VERSIONx10 == 70) {
+         } else if (GEN_GEN == 7) {
             /* On IVB, the dword containing the clear values also contains
              * other fields that must be zero or can be zero.
              */
-            assert(i == 0);
             sdi.ImmediateData = 0;
          }
       }
-
-      addr.offset += 4;
    }
 }
 

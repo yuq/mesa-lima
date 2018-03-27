@@ -310,10 +310,11 @@ blorp_emit_vertex_buffers(struct blorp_batch *batch,
 
    uint32_t num_vbs = 2;
    if (params->dst_clear_color_as_input) {
+      const unsigned clear_color_size =
+         GEN_GEN < 10 ? batch->blorp->isl_dev->ss.clear_value_size : 4 * 4;
       blorp_fill_vertex_buffer_state(batch, vb, num_vbs++,
                                      params->dst.clear_color_addr,
-                                     batch->blorp->isl_dev->ss.clear_value_size,
-                                     0);
+                                     clear_color_size, 0);
    }
 
    const unsigned num_dwords = 1 + num_vbs * GENX(VERTEX_BUFFER_STATE_length);
