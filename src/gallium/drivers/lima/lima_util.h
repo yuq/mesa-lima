@@ -30,6 +30,8 @@
 #define LIMA_PAGE_SIZE 4096
 
 bool lima_get_absolute_timeout(uint64_t *timeout, bool relative);
-void lima_dump_blob(void *data, int size, bool is_float);
+void lima_dump_blob(FILE *fp, void *data, int size, bool is_float);
+void lima_dump_command_stream_print(void *data, int size, bool is_float,
+                                    const char *fmt, ...);
 
 #endif
