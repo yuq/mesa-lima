@@ -586,6 +586,16 @@
     <field name="Alpha Clear Color" start="480" end="511" type="int"/>
   </struct>
 
+  <struct name="CLEAR_COLOR" length="8">
+    <field name="Raw Clear Color Red" start="0" end="31" type="int"/>
+    <field name="Raw Clear Color Green" start="32" end="63" type="int"/>
+    <field name="Raw Clear Color Blue" start="64" end="95" type="int"/>
+    <field name="Raw Clear Color Alpha" start="96" end="127" type="int"/>
+    <!-- This field is used only by the hardware -->
+    <field name="Converted Clear Value Hi/Low" start="128" end="191" type="uint"/>
+    <!-- Reserved - MBZ -->
+  </struct>
+
   <struct name="SAMPLER_INDIRECT_STATE_BORDER_COLOR" length="4">
     <field name="Border Color Red As S31" start="0" end="31" type="int"/>
     <field name="Border Color Red As U32" start="0" end="31" type="uint"/>
