@@ -120,8 +120,8 @@ static const struct vc5_format format_table[] = {
 
         FORMAT(R16_SINT,          R16I,         R16I,        SWIZ_X001, 16, 0),
         FORMAT(R16_UINT,          R16UI,        R16UI,       SWIZ_X001, 16, 0),
-        FORMAT(R16G16_SINT,       RG16I,        R16I,        SWIZ_XY01, 16, 0),
-        FORMAT(R16G16_UINT,       RG16UI,       R16UI,       SWIZ_XY01, 16, 0),
+        FORMAT(R16G16_SINT,       RG16I,        RG16I,       SWIZ_XY01, 16, 0),
+        FORMAT(R16G16_UINT,       RG16UI,       RG16UI,      SWIZ_XY01, 16, 0),
         FORMAT(R16G16B16A16_SINT, RGBA16I,      RGBA16I,     SWIZ_XYZW, 16, 0),
         FORMAT(R16G16B16A16_UINT, RGBA16UI,     RGBA16UI,    SWIZ_XYZW, 16, 0),
 
