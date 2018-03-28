@@ -1175,12 +1175,21 @@ static LLVMValueRef build_tex_intrinsic(struct ac_nir_context *ctx,
 	if (instr->sampler_dim == GLSL_SAMPLER_DIM_BUF) {
 		unsigned mask = nir_ssa_def_components_read(&instr->dest.ssa);
 
-		return ac_build_buffer_load_format(&ctx->ac,
-						   args->resource,
-						   args->addr,
-						   ctx->ac.i32_0,
-						   util_last_bit(mask),
-						   false, true);
+		if (ctx->abi->gfx9_stride_size_workaround) {
+			return ac_build_buffer_load_format_gfx9_safe(&ctx->ac,
+			                                             args->resource,
+			                                             args->addr,
+			                                             ctx->ac.i32_0,
+			                                             util_last_bit(mask),
+			                                             false, true);
+		} else {
+			return ac_build_buffer_load_format(&ctx->ac,
+			                                   args->resource,
+			                                   args->addr,
+			                                   ctx->ac.i32_0,
+			                                   util_last_bit(mask),
+			                                   false, true);
+		}
 	}
 
 	args->opcode = ac_image_sample;
@@ -2198,8 +2207,23 @@ static void visit_image_store(struct ac_nir_context *ctx,
 		glc = ctx->ac.i1true;
 
 	if (dim == GLSL_SAMPLER_DIM_BUF) {
+		LLVMValueRef rsrc = get_sampler_desc(ctx, instr->variables[0], AC_DESC_BUFFER, NULL, true, true);
+
+		if (ctx->abi->gfx9_stride_size_workaround) {
+			LLVMValueRef elem_count = LLVMBuildExtractElement(ctx->ac.builder, rsrc, LLVMConstInt(ctx->ac.i32, 2, 0), "");
+			LLVMValueRef stride = LLVMBuildExtractElement(ctx->ac.builder, rsrc, LLVMConstInt(ctx->ac.i32, 1, 0), "");
+			stride = LLVMBuildLShr(ctx->ac.builder, stride, LLVMConstInt(ctx->ac.i32, 16, 0), "");
+
+			LLVMValueRef new_elem_count = LLVMBuildSelect(ctx->ac.builder,
+			                                              LLVMBuildICmp(ctx->ac.builder, LLVMIntUGT, elem_count, stride, ""),
+			                                              elem_count, stride, "");
+
+			rsrc = LLVMBuildInsertElement(ctx->ac.builder, rsrc, new_elem_count,
+			                              LLVMConstInt(ctx->ac.i32, 2, 0), "");
+		}
+
 		params[0] = ac_to_float(&ctx->ac, get_src(ctx, instr->src[2])); /* data */
-		params[1] = get_sampler_desc(ctx, instr->variables[0], AC_DESC_BUFFER, NULL, true, true);
+		params[1] = rsrc;
 		params[2] = LLVMBuildExtractElement(ctx->ac.builder, get_src(ctx, instr->src[0]),
 						    ctx->ac.i32_0, ""); /* vindex */
 		params[3] = ctx->ac.i32_0; /* voffset */
