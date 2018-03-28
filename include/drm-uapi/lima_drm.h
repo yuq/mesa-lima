@@ -32,8 +32,10 @@ extern "C" {
 #define LIMA_INFO_GPU_MALI450 0x01
 
 struct drm_lima_info {
-	__u32 gpu_id;  /* out */
-	__u32 num_pp;  /* out */
+	__u32 gpu_id;   /* out */
+	__u32 num_pp;   /* out */
+	__u64 va_start; /* out */
+	__u64 va_end;   /* out */
 };
 
 struct drm_lima_gem_create {
