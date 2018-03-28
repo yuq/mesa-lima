@@ -27,11 +27,13 @@
 #include "JitManager.h"
 #include "llvm-c/Core.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/IR/LegacyPassManager.h"
 #pragma pop_macro("DEBUG")
 
 #include "state.h"
 #include "gen_state_llvm.h"
 #include "builder.h"
+#include "functionpasses/passes.h"
 
 #include "tgsi/tgsi_strings.h"
 #include "util/u_format.h"
@@ -1388,6 +1390,11 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
    gallivm_verify_function(gallivm, wrap(pFunction));
 
    gallivm_compile_module(gallivm);
+
+   // after the gallivm passes, we have to lower the core's intrinsics
+   llvm::legacy::FunctionPassManager lowerPass(JM()->mpCurrentModule);
+   lowerPass.add(createLowerX86Pass(mpJitMgr, this));
+   lowerPass.run(*pFunction);
 
    PFN_PIXEL_KERNEL kernel =
       (PFN_PIXEL_KERNEL)gallivm_jit_function(gallivm, wrap(pFunction));
