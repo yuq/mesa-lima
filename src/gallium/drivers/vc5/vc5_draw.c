@@ -633,10 +633,10 @@ vc5_clear(struct pipe_context *pctx, unsigned buffers,
                         break;
                 case V3D_INTERNAL_TYPE_8I:
                 case V3D_INTERNAL_TYPE_8UI:
-                        job->clear_color[i][0] = ((uc.ui[0] & 0xff) |
-                                                  (uc.ui[1] & 0xff) << 8 |
-                                                  (uc.ui[2] & 0xff) << 16 |
-                                                  (uc.ui[3] & 0xff) << 24);
+                        job->clear_color[i][0] = ((color->ui[0] & 0xff) |
+                                                  (color->ui[1] & 0xff) << 8 |
+                                                  (color->ui[2] & 0xff) << 16 |
+                                                  (color->ui[3] & 0xff) << 24);
                         break;
                 case V3D_INTERNAL_TYPE_16F:
                         util_pack_color(color->f, PIPE_FORMAT_R16G16B16A16_FLOAT,
@@ -645,10 +645,10 @@ vc5_clear(struct pipe_context *pctx, unsigned buffers,
                         break;
                 case V3D_INTERNAL_TYPE_16I:
                 case V3D_INTERNAL_TYPE_16UI:
-                        job->clear_color[i][0] = ((uc.ui[0] & 0xffff) |
-                                                  uc.ui[1] << 16);
-                        job->clear_color[i][1] = ((uc.ui[2] & 0xffff) |
-                                                  uc.ui[3] << 16);
+                        job->clear_color[i][0] = ((color->ui[0] & 0xffff) |
+                                                  color->ui[1] << 16);
+                        job->clear_color[i][1] = ((color->ui[2] & 0xffff) |
+                                                  color->ui[3] << 16);
                         break;
                 case V3D_INTERNAL_TYPE_32F:
                 case V3D_INTERNAL_TYPE_32I:
