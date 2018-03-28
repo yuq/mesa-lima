@@ -233,26 +233,20 @@ _vbo_DestroyContext(struct gl_context *ctx)
 }
 
 
-void
-_vbo_draw_indirect(struct gl_context *ctx, GLuint mode,
-                        struct gl_buffer_object *indirect_data,
-                        GLsizeiptr indirect_offset, unsigned draw_count,
-                        unsigned stride,
-                        struct gl_buffer_object *indirect_draw_count_buffer,
-                        GLsizeiptr indirect_draw_count_offset,
-                        const struct _mesa_index_buffer *ib)
+/*
+ * Helper function for _vbo_draw_indirect below that additionally takes a zero
+ * initialized array of _mesa_prim scratch space memory as the last argument.
+ */
+static void
+draw_indirect(struct gl_context *ctx, GLuint mode,
+              struct gl_buffer_object *indirect_data,
+              GLsizeiptr indirect_offset, unsigned draw_count,
+              unsigned stride,
+              struct gl_buffer_object *indirect_draw_count_buffer,
+              GLsizeiptr indirect_draw_count_offset,
+              const struct _mesa_index_buffer *ib,
+              struct _mesa_prim *prim)
 {
-   struct _mesa_prim *prim;
-
-   prim = calloc(draw_count, sizeof(*prim));
-   if (prim == NULL) {
-      _mesa_error(ctx, GL_OUT_OF_MEMORY, "gl%sDraw%sIndirect%s",
-                  (draw_count > 1) ? "Multi" : "",
-                  ib ? "Elements" : "Arrays",
-                  indirect_data ? "CountARB" : "");
-      return;
-   }
-
    prim[0].begin = 1;
    prim[draw_count - 1].end = 1;
    for (unsigned i = 0; i < draw_count; ++i, indirect_offset += stride) {
@@ -266,10 +260,47 @@ _vbo_draw_indirect(struct gl_context *ctx, GLuint mode,
    /* This should always be true at this time */
    assert(indirect_data == ctx->DrawIndirectBuffer);
 
-   ctx->Driver.Draw(ctx, prim, draw_count,
-                   ib, false, 0, ~0,
-                   NULL, 0,
-                   indirect_data);
+   ctx->Driver.Draw(ctx, prim, draw_count, ib, false, 0u, ~0u,
+                    NULL, 0, indirect_data);
+}
 
-   free(prim);
+
+/*
+ * Function to be put into dd_function_table::DrawIndirect as fallback.
+ * Calls into dd_function_table::Draw past adapting call arguments.
+ * See dd_function_table::DrawIndirect for call argument documentation.
+ */
+void
+_vbo_draw_indirect(struct gl_context *ctx, GLuint mode,
+                   struct gl_buffer_object *indirect_data,
+                   GLsizeiptr indirect_offset, unsigned draw_count,
+                   unsigned stride,
+                   struct gl_buffer_object *indirect_draw_count_buffer,
+                   GLsizeiptr indirect_draw_count_offset,
+                   const struct _mesa_index_buffer *ib)
+{
+   /* Use alloca for the prim space if we are somehow in bounds. */
+   if (draw_count*sizeof(struct _mesa_prim) < 1024) {
+      struct _mesa_prim *space = alloca(draw_count*sizeof(struct _mesa_prim));
+      memset(space, 0, draw_count*sizeof(struct _mesa_prim));
+
+      draw_indirect(ctx, mode, indirect_data, indirect_offset, draw_count,
+                    stride, indirect_draw_count_buffer,
+                    indirect_draw_count_offset, ib, space);
+   } else {
+      struct _mesa_prim *space = calloc(draw_count, sizeof(struct _mesa_prim));
+      if (space == NULL) {
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "gl%sDraw%sIndirect%s",
+                     (draw_count > 1) ? "Multi" : "",
+                     ib ? "Elements" : "Arrays",
+                     indirect_data ? "CountARB" : "");
+         return;
+      }
+
+      draw_indirect(ctx, mode, indirect_data, indirect_offset, draw_count,
+                    stride, indirect_draw_count_buffer,
+                    indirect_draw_count_offset, ib, space);
+
+      free(space);
+   }
 }
