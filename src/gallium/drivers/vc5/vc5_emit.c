@@ -308,6 +308,7 @@ v3dX(emit_state)(struct pipe_context *pctx)
 {
         struct vc5_context *vc5 = vc5_context(pctx);
         struct vc5_job *job = vc5->job;
+        bool rasterizer_discard = vc5->rasterizer->base.rasterizer_discard;
 
         if (vc5->dirty & (VC5_DIRTY_SCISSOR | VC5_DIRTY_VIEWPORT |
                           VC5_DIRTY_RASTERIZER)) {
@@ -344,6 +345,18 @@ v3dX(emit_state)(struct pipe_context *pctx)
                         clip.clip_window_bottom_pixel_coordinate = miny;
                         clip.clip_window_width_in_pixels = maxx - minx;
                         clip.clip_window_height_in_pixels = maxy - miny;
+
+#if V3D_VERSION < 41
+                        /* The HW won't entirely clip out when scissor w/h is
+                         * 0.  Just treat it the same as rasterizer discard.
+                         */
+                        if (clip.clip_window_width_in_pixels == 0 ||
+                            clip.clip_window_height_in_pixels == 0) {
+                                rasterizer_discard = true;
+                                clip.clip_window_width_in_pixels = 1;
+                                clip.clip_window_height_in_pixels = 1;
+                        }
+#endif
                 }
 
                 job->draw_min_x = MIN2(job->draw_min_x, minx);
@@ -358,11 +371,11 @@ v3dX(emit_state)(struct pipe_context *pctx)
                           VC5_DIRTY_COMPILED_FS)) {
                 cl_emit(&job->bcl, CONFIGURATION_BITS, config) {
                         config.enable_forward_facing_primitive =
-                                !vc5->rasterizer->base.rasterizer_discard &&
+                                !rasterizer_discard &&
                                 !(vc5->rasterizer->base.cull_face &
                                   PIPE_FACE_FRONT);
                         config.enable_reverse_facing_primitive =
-                                !vc5->rasterizer->base.rasterizer_discard &&
+                                !rasterizer_discard &&
                                 !(vc5->rasterizer->base.cull_face &
                                   PIPE_FACE_BACK);
                         /* This seems backwards, but it's what gets the
