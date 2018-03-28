@@ -2044,11 +2044,7 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	int idx, comp;
 
 	if (info->has_dest) {
-		unsigned n;
-		if (info->dest_components)
-			n = info->dest_components;
-		else
-			n = intr->num_components;
+		unsigned n = nir_intrinsic_dest_components(intr);
 		dst = get_dst(ctx, &intr->dest, n);
 	} else {
 		dst = NULL;
