@@ -657,22 +657,22 @@ void si_nir_scan_shader(const struct nir_shader *nir,
 		 * eliminated struct dereferences.
 		 */
 		if (base_type == GLSL_TYPE_SAMPLER) {
-			info->samplers_declared |=
-				u_bit_consecutive(variable->data.binding, aoa_size);
-
 			if (variable->data.bindless) {
 				info->const_buffers_declared |= 1;
 				info->const_file_max[0] +=
 					glsl_count_attribute_slots(type, false);
+			} else {
+				info->samplers_declared |=
+					u_bit_consecutive(variable->data.binding, aoa_size);
 			}
 		} else if (base_type == GLSL_TYPE_IMAGE) {
-			info->images_declared |=
-				u_bit_consecutive(variable->data.binding, aoa_size);
-
 			if (variable->data.bindless) {
 				info->const_buffers_declared |= 1;
 				info->const_file_max[0] +=
 					glsl_count_attribute_slots(type, false);
+			} else {
+				info->images_declared |=
+					u_bit_consecutive(variable->data.binding, aoa_size);
 			}
 		} else if (base_type != GLSL_TYPE_ATOMIC_UINT) {
 			if (strncmp(variable->name, "state.", 6) == 0 ||
