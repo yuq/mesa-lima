@@ -627,18 +627,8 @@ vc5_clear(struct pipe_context *pctx, unsigned buffers,
 
                 switch (surf->internal_type) {
                 case V3D_INTERNAL_TYPE_8:
-                        if (surf->format == PIPE_FORMAT_B4G4R4A4_UNORM ||
-                            surf->format == PIPE_FORMAT_B4G4R4A4_UNORM) {
-                                /* Our actual hardware layout is ABGR4444, but
-                                 * we apply a swizzle when texturing to flip
-                                 * things back around.
-                                 */
-                                util_pack_color(color->f, PIPE_FORMAT_A8R8G8B8_UNORM,
-                                                &uc);
-                        } else {
-                                util_pack_color(color->f, PIPE_FORMAT_R8G8B8A8_UNORM,
-                                                &uc);
-                        }
+                        util_pack_color(color->f, PIPE_FORMAT_R8G8B8A8_UNORM,
+                                        &uc);
                         memcpy(job->clear_color[i], uc.ui, internal_size);
                         break;
                 case V3D_INTERNAL_TYPE_8I:
