@@ -143,6 +143,7 @@ def gen_llvm_types(input_file, output_file):
                     is_llvm_typedef = re.search(r'@llvm_typedef', line)
                     if is_llvm_typedef is not None:
                         is_llvm_typedef = True
+                        continue
                     else:
                         is_llvm_typedef = False
 
