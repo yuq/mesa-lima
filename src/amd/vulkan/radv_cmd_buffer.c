@@ -1171,10 +1171,24 @@ radv_emit_index_buffer(struct radv_cmd_buffer *cmd_buffer)
 
 void radv_set_db_count_control(struct radv_cmd_buffer *cmd_buffer)
 {
+	struct radv_pipeline *pipeline = cmd_buffer->state.pipeline;
+	uint32_t pa_sc_mode_cntl_1 =
+		pipeline ? pipeline->graphics.ms.pa_sc_mode_cntl_1 : 0;
 	uint32_t db_count_control;
 
 	if(!cmd_buffer->state.active_occlusion_queries) {
 		if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK) {
+			if (G_028A4C_OUT_OF_ORDER_PRIMITIVE_ENABLE(pa_sc_mode_cntl_1) &&
+			    pipeline->graphics.disable_out_of_order_rast_for_occlusion) {
+				/* Re-enable out-of-order rasterization if the
+				 * bound pipeline supports it and if it's has
+				 * been disabled before starting occlusion
+				 * queries.
+				 */
+				radeon_set_context_reg(cmd_buffer->cs,
+						       R_028A4C_PA_SC_MODE_CNTL_1,
+						       pa_sc_mode_cntl_1);
+			}
 			db_count_control = 0;
 		} else {
 			db_count_control = S_028004_ZPASS_INCREMENT_DISABLE(1);
@@ -1189,6 +1203,20 @@ void radv_set_db_count_control(struct radv_cmd_buffer *cmd_buffer)
 				S_028004_ZPASS_ENABLE(1) |
 				S_028004_SLICE_EVEN_ENABLE(1) |
 				S_028004_SLICE_ODD_ENABLE(1);
+
+			if (G_028A4C_OUT_OF_ORDER_PRIMITIVE_ENABLE(pa_sc_mode_cntl_1) &&
+			    pipeline->graphics.disable_out_of_order_rast_for_occlusion) {
+				/* If the bound pipeline has enabled
+				 * out-of-order rasterization, we should
+				 * disable it before starting occlusion
+				 * queries.
+				 */
+				pa_sc_mode_cntl_1 &= C_028A4C_OUT_OF_ORDER_PRIMITIVE_ENABLE;
+
+				radeon_set_context_reg(cmd_buffer->cs,
+						       R_028A4C_PA_SC_MODE_CNTL_1,
+						       pa_sc_mode_cntl_1);
+			}
 		} else {
 			db_count_control = S_028004_PERFECT_ZPASS_COUNTS(1) |
 				S_028004_SAMPLE_RATE(sample_rate);

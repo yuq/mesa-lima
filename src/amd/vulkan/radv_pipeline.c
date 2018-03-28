@@ -63,8 +63,23 @@ struct radv_blend_state {
 	uint32_t cb_shader_mask;
 	uint32_t db_alpha_to_mask;
 
+	uint32_t commutative_4bit;
+
 	bool single_cb_enable;
 	bool mrt0_is_dual_src;
+};
+
+struct radv_dsa_order_invariance {
+	/* Whether the final result in Z/S buffers is guaranteed to be
+	 * invariant under changes to the order in which fragments arrive.
+	 */
+	bool zs;
+
+	/* Whether the set of fragments that pass the combined Z/S test is
+	 * guaranteed to be invariant under changes to the order in which
+	 * fragments arrive.
+	 */
+	bool pass_set;
 };
 
 struct radv_tessellation_state {
@@ -530,6 +545,40 @@ radv_pipeline_compute_get_int_clamp(const VkGraphicsPipelineCreateInfo *pCreateI
 	}
 }
 
+static void
+radv_blend_check_commutativity(struct radv_blend_state *blend,
+			       VkBlendOp op, VkBlendFactor src,
+			       VkBlendFactor dst, unsigned chanmask)
+{
+	/* Src factor is allowed when it does not depend on Dst. */
+	static const uint32_t src_allowed =
+		(1u << VK_BLEND_FACTOR_ONE) |
+		(1u << VK_BLEND_FACTOR_SRC_COLOR) |
+		(1u << VK_BLEND_FACTOR_SRC_ALPHA) |
+		(1u << VK_BLEND_FACTOR_SRC_ALPHA_SATURATE) |
+		(1u << VK_BLEND_FACTOR_CONSTANT_COLOR) |
+		(1u << VK_BLEND_FACTOR_CONSTANT_ALPHA) |
+		(1u << VK_BLEND_FACTOR_SRC1_COLOR) |
+		(1u << VK_BLEND_FACTOR_SRC1_ALPHA) |
+		(1u << VK_BLEND_FACTOR_ZERO) |
+		(1u << VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR) |
+		(1u << VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA) |
+		(1u << VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR) |
+		(1u << VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA) |
+		(1u << VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR) |
+		(1u << VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA);
+
+	if (dst == VK_BLEND_FACTOR_ONE &&
+	    (src_allowed && (1u << src))) {
+		/* Addition is commutative, but floating point addition isn't
+		 * associative: subtle changes can be introduced via different
+		 * rounding. Be conservative, only enable for min and max.
+		 */
+		if (op == VK_BLEND_OP_MAX || op == VK_BLEND_OP_MIN)
+			blend->commutative_4bit |= chanmask;
+	}
+}
+
 static struct radv_blend_state
 radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 			       const VkGraphicsPipelineCreateInfo *pCreateInfo,
@@ -599,6 +648,11 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 			srcA = VK_BLEND_FACTOR_ONE;
 			dstA = VK_BLEND_FACTOR_ONE;
 		}
+
+		radv_blend_check_commutativity(&blend, eqRGB, srcRGB, dstRGB,
+					       0x7 << (4 * i));
+		radv_blend_check_commutativity(&blend, eqA, srcA, dstA,
+					       0x8 << (4 * i));
 
 		/* Blending optimizations for RB+.
 		 * These transformations don't change the behavior.
@@ -750,13 +804,182 @@ static uint8_t radv_pipeline_get_ps_iter_samples(const VkPipelineMultisampleStat
 	return ps_iter_samples;
 }
 
+static bool
+radv_is_depth_write_enabled(const VkPipelineDepthStencilStateCreateInfo *pCreateInfo)
+{
+	return pCreateInfo->depthTestEnable &&
+	       pCreateInfo->depthWriteEnable &&
+	       pCreateInfo->depthCompareOp != VK_COMPARE_OP_NEVER;
+}
+
+static bool
+radv_writes_stencil(const VkStencilOpState *state)
+{
+	return state->writeMask &&
+	       (state->failOp != VK_STENCIL_OP_KEEP ||
+		state->passOp != VK_STENCIL_OP_KEEP ||
+		state->depthFailOp != VK_STENCIL_OP_KEEP);
+}
+
+static bool
+radv_is_stencil_write_enabled(const VkPipelineDepthStencilStateCreateInfo *pCreateInfo)
+{
+	return pCreateInfo->stencilTestEnable &&
+	       (radv_writes_stencil(&pCreateInfo->front) ||
+		radv_writes_stencil(&pCreateInfo->back));
+}
+
+static bool
+radv_is_ds_write_enabled(const VkPipelineDepthStencilStateCreateInfo *pCreateInfo)
+{
+	return radv_is_depth_write_enabled(pCreateInfo) ||
+	       radv_is_stencil_write_enabled(pCreateInfo);
+}
+
+static bool
+radv_order_invariant_stencil_op(VkStencilOp op)
+{
+	/* REPLACE is normally order invariant, except when the stencil
+	 * reference value is written by the fragment shader. Tracking this
+	 * interaction does not seem worth the effort, so be conservative.
+	 */
+	return op != VK_STENCIL_OP_INCREMENT_AND_CLAMP &&
+	       op != VK_STENCIL_OP_DECREMENT_AND_CLAMP &&
+	       op != VK_STENCIL_OP_REPLACE;
+}
+
+static bool
+radv_order_invariant_stencil_state(const VkStencilOpState *state)
+{
+	/* Compute whether, assuming Z writes are disabled, this stencil state
+	 * is order invariant in the sense that the set of passing fragments as
+	 * well as the final stencil buffer result does not depend on the order
+	 * of fragments.
+	 */
+	return !state->writeMask ||
+	       /* The following assumes that Z writes are disabled. */
+	       (state->compareOp == VK_COMPARE_OP_ALWAYS &&
+		radv_order_invariant_stencil_op(state->passOp) &&
+		radv_order_invariant_stencil_op(state->depthFailOp)) ||
+	       (state->compareOp == VK_COMPARE_OP_NEVER &&
+		radv_order_invariant_stencil_op(state->failOp));
+}
+
+static bool
+radv_pipeline_out_of_order_rast(struct radv_pipeline *pipeline,
+				struct radv_blend_state *blend,
+				const VkGraphicsPipelineCreateInfo *pCreateInfo)
+{
+	RADV_FROM_HANDLE(radv_render_pass, pass, pCreateInfo->renderPass);
+	struct radv_subpass *subpass = pass->subpasses + pCreateInfo->subpass;
+	unsigned colormask = blend->cb_target_enabled_4bit;
+
+	if (!pipeline->device->physical_device->out_of_order_rast_allowed)
+		return false;
+
+	/* Be conservative if a logic operation is enabled with color buffers. */
+	if (colormask && pCreateInfo->pColorBlendState->logicOpEnable)
+		return false;
+
+	/* Default depth/stencil invariance when no attachment is bound. */
+	struct radv_dsa_order_invariance dsa_order_invariant = {
+		.zs = true, .pass_set = true
+	};
+
+	if (pCreateInfo->pDepthStencilState &&
+	    subpass->depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED) {
+		const VkPipelineDepthStencilStateCreateInfo *vkds =
+			pCreateInfo->pDepthStencilState;
+		struct radv_render_pass_attachment *attachment =
+			pass->attachments + subpass->depth_stencil_attachment.attachment;
+		bool has_stencil = vk_format_is_stencil(attachment->format);
+		struct radv_dsa_order_invariance order_invariance[2];
+		struct radv_shader_variant *ps =
+			pipeline->shaders[MESA_SHADER_FRAGMENT];
+
+		/* Compute depth/stencil order invariance in order to know if
+		 * it's safe to enable out-of-order.
+		 */
+		bool zfunc_is_ordered =
+			vkds->depthCompareOp == VK_COMPARE_OP_NEVER ||
+			vkds->depthCompareOp == VK_COMPARE_OP_LESS ||
+			vkds->depthCompareOp == VK_COMPARE_OP_LESS_OR_EQUAL ||
+			vkds->depthCompareOp == VK_COMPARE_OP_GREATER ||
+			vkds->depthCompareOp == VK_COMPARE_OP_GREATER_OR_EQUAL;
+
+		bool nozwrite_and_order_invariant_stencil =
+			!radv_is_ds_write_enabled(vkds) ||
+			(!radv_is_depth_write_enabled(vkds) &&
+			 radv_order_invariant_stencil_state(&vkds->front) &&
+			 radv_order_invariant_stencil_state(&vkds->back));
+
+		order_invariance[1].zs =
+			nozwrite_and_order_invariant_stencil ||
+			(!radv_is_stencil_write_enabled(vkds) &&
+			 zfunc_is_ordered);
+		order_invariance[0].zs =
+			!radv_is_depth_write_enabled(vkds) || zfunc_is_ordered;
+
+		order_invariance[1].pass_set =
+			nozwrite_and_order_invariant_stencil ||
+			(!radv_is_stencil_write_enabled(vkds) &&
+			 (vkds->depthCompareOp == VK_COMPARE_OP_ALWAYS ||
+			  vkds->depthCompareOp == VK_COMPARE_OP_NEVER));
+		order_invariance[0].pass_set =
+			!radv_is_depth_write_enabled(vkds) ||
+			(vkds->depthCompareOp == VK_COMPARE_OP_ALWAYS ||
+			 vkds->depthCompareOp == VK_COMPARE_OP_NEVER);
+
+		dsa_order_invariant = order_invariance[has_stencil];
+		if (!dsa_order_invariant.zs)
+			return false;
+
+		/* The set of PS invocations is always order invariant,
+		 * except when early Z/S tests are requested.
+		 */
+		if (ps &&
+		    ps->info.info.ps.writes_memory &&
+		    ps->info.fs.early_fragment_test &&
+		    !dsa_order_invariant.pass_set)
+			return false;
+
+		/* Determine if out-of-order rasterization should be disabled
+		 * when occlusion queries are used.
+		 */
+		pipeline->graphics.disable_out_of_order_rast_for_occlusion =
+			!dsa_order_invariant.pass_set;
+	}
+
+	/* No color buffers are enabled for writing. */
+	if (!colormask)
+		return true;
+
+	unsigned blendmask = colormask & blend->blend_enable_4bit;
+
+	if (blendmask) {
+		/* Only commutative blending. */
+		if (blendmask & ~blend->commutative_4bit)
+			return false;
+
+		if (!dsa_order_invariant.pass_set)
+			return false;
+	}
+
+	if (colormask & ~blendmask)
+		return false;
+
+	return true;
+}
+
 static void
 radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
+				     struct radv_blend_state *blend,
 				     const VkGraphicsPipelineCreateInfo *pCreateInfo)
 {
 	const VkPipelineMultisampleStateCreateInfo *vkms = pCreateInfo->pMultisampleState;
 	struct radv_multisample_state *ms = &pipeline->graphics.ms;
 	unsigned num_tile_pipes = pipeline->device->physical_device->rad_info.num_tile_pipes;
+	bool out_of_order_rast = false;
 	int ps_iter_samples = 1;
 	uint32_t mask = 0xffff;
 
@@ -808,8 +1031,21 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 	const struct VkPipelineRasterizationStateRasterizationOrderAMD *raster_order =
 		vk_find_struct_const(pCreateInfo->pRasterizationState->pNext, PIPELINE_RASTERIZATION_STATE_RASTERIZATION_ORDER_AMD);
 	if (raster_order && raster_order->rasterizationOrder == VK_RASTERIZATION_ORDER_RELAXED_AMD) {
+		/* Out-of-order rasterization is explicitly enabled by the
+		 * application.
+		 */
+		out_of_order_rast = true;
+	} else {
+		/* Determine if the driver can enable out-of-order
+		 * rasterization internally.
+		 */
+		out_of_order_rast =
+			radv_pipeline_out_of_order_rast(pipeline, blend, pCreateInfo);
+	}
+
+	if (out_of_order_rast) {
 		ms->pa_sc_mode_cntl_1 |= S_028A4C_OUT_OF_ORDER_PRIMITIVE_ENABLE(1) |
-					S_028A4C_OUT_OF_ORDER_WATER_MARK(0x7);
+					 S_028A4C_OUT_OF_ORDER_WATER_MARK(0x7);
 	}
 
 	if (vkms && vkms->pSampleMask) {
@@ -3094,7 +3330,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	                    pStages);
 
 	pipeline->graphics.spi_baryc_cntl = S_0286E0_FRONT_FACE_ALL_BITS(1);
-	radv_pipeline_init_multisample_state(pipeline, pCreateInfo);
+	radv_pipeline_init_multisample_state(pipeline, &blend, pCreateInfo);
 	uint32_t gs_out;
 	uint32_t prim = si_translate_prim(pCreateInfo->pInputAssemblyState->topology);
 
