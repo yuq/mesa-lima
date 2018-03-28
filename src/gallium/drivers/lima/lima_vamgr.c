@@ -46,8 +46,8 @@ bool lima_vamgr_init(struct lima_screen *screen)
    if (!hole)
       return false;
 
-   hole->offset = 0;
-   hole->size = 0x100000000;
+   hole->offset = screen->va_start;
+   hole->size = screen->va_end;
    list_add(&hole->list, &screen->va_holes);
    return true;
 }

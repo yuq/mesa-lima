@@ -315,6 +315,8 @@ lima_screen_query_info(struct lima_screen *screen)
    }
 
    screen->num_pp = drm_info.num_pp;
+   screen->va_start = drm_info.va_start;
+   screen->va_end = drm_info.va_end;
    return true;
 }
 
@@ -372,6 +374,11 @@ lima_screen_create(int fd, struct renderonly *ro)
    if (!screen)
       return NULL;
 
+   screen->fd = fd;
+
+   if (!lima_screen_query_info(screen))
+      goto err_out0;
+
    if (!lima_vamgr_init(screen))
       goto err_out0;
 
@@ -380,11 +387,6 @@ lima_screen_create(int fd, struct renderonly *ro)
 
    screen->pp_ra = ppir_regalloc_init(screen);
    if (!screen->pp_ra)
-      goto err_out2;
-
-   screen->fd = fd;
-
-   if (!lima_screen_query_info(screen))
       goto err_out2;
 
    screen->gp_buffer = lima_bo_create(screen, gp_buffer_size, 0, false, true);
