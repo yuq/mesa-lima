@@ -50,6 +50,9 @@
 #include "ac_shader_util.h"
 
 struct radv_blend_state {
+	uint32_t blend_enable;
+	uint32_t need_src_alpha;
+
 	uint32_t cb_color_control;
 	uint32_t cb_target_mask;
 	uint32_t sx_mrt_blend_opt[8];
@@ -58,6 +61,9 @@ struct radv_blend_state {
 	uint32_t spi_shader_col_format;
 	uint32_t cb_shader_mask;
 	uint32_t db_alpha_to_mask;
+
+	bool single_cb_enable;
+	bool mrt0_is_dual_src;
 };
 
 struct radv_tessellation_state {
@@ -435,17 +441,13 @@ static unsigned si_choose_spi_color_format(VkFormat vk_format,
 static void
 radv_pipeline_compute_spi_color_formats(struct radv_pipeline *pipeline,
 					const VkGraphicsPipelineCreateInfo *pCreateInfo,
-					uint32_t blend_enable,
-					uint32_t blend_need_alpha,
-					bool single_cb_enable,
-					bool blend_mrt0_is_dual_src,
 					struct radv_blend_state *blend)
 {
 	RADV_FROM_HANDLE(radv_render_pass, pass, pCreateInfo->renderPass);
 	struct radv_subpass *subpass = pass->subpasses + pCreateInfo->subpass;
 	unsigned col_format = 0;
 
-	for (unsigned i = 0; i < (single_cb_enable ? 1 : subpass->color_count); ++i) {
+	for (unsigned i = 0; i < (blend->single_cb_enable ? 1 : subpass->color_count); ++i) {
 		unsigned cf;
 
 		if (subpass->color_attachments[i].attachment == VK_ATTACHMENT_UNUSED) {
@@ -454,8 +456,8 @@ radv_pipeline_compute_spi_color_formats(struct radv_pipeline *pipeline,
 			struct radv_render_pass_attachment *attachment = pass->attachments + subpass->color_attachments[i].attachment;
 
 			cf = si_choose_spi_color_format(attachment->format,
-			                                blend_enable & (1 << i),
-			                                blend_need_alpha & (1 << i));
+			                                blend->blend_enable & (1 << i),
+			                                blend->need_src_alpha & (1 << i));
 		}
 
 		col_format |= cf << (4 * i);
@@ -463,7 +465,7 @@ radv_pipeline_compute_spi_color_formats(struct radv_pipeline *pipeline,
 
 	blend->cb_shader_mask = ac_get_cb_shader_mask(col_format);
 
-	if (blend_mrt0_is_dual_src)
+	if (blend->mrt0_is_dual_src)
 		col_format |= (col_format & 0xf) << 4;
 	blend->spi_shader_col_format = col_format;
 }
@@ -534,16 +536,13 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 	const VkPipelineMultisampleStateCreateInfo *vkms = pCreateInfo->pMultisampleState;
 	struct radv_blend_state blend = {0};
 	unsigned mode = V_028808_CB_NORMAL;
-	uint32_t blend_enable = 0, blend_need_alpha = 0;
-	bool blend_mrt0_is_dual_src = false;
 	int i;
-	bool single_cb_enable = false;
 
 	if (!vkblend)
 		return blend;
 
 	if (extra && extra->custom_blend_mode) {
-		single_cb_enable = true;
+		blend.single_cb_enable = true;
 		mode = extra->custom_blend_mode;
 	}
 	blend.cb_color_control = 0;
@@ -586,7 +585,7 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 
 		if (is_dual_src(srcRGB) || is_dual_src(dstRGB) || is_dual_src(srcA) || is_dual_src(dstA))
 			if (i == 0)
-				blend_mrt0_is_dual_src = true;
+				blend.mrt0_is_dual_src = true;
 
 		if (eqRGB == VK_BLEND_OP_MIN || eqRGB == VK_BLEND_OP_MAX) {
 			srcRGB = VK_BLEND_FACTOR_ONE;
@@ -654,7 +653,7 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 		}
 		blend.cb_blend_control[i] = blend_cntl;
 
-		blend_enable |= 1 << i;
+		blend.blend_enable |= 1 << i;
 
 		if (srcRGB == VK_BLEND_FACTOR_SRC_ALPHA ||
 		    dstRGB == VK_BLEND_FACTOR_SRC_ALPHA ||
@@ -662,7 +661,7 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 		    dstRGB == VK_BLEND_FACTOR_SRC_ALPHA_SATURATE ||
 		    srcRGB == VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA ||
 		    dstRGB == VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA)
-			blend_need_alpha |= 1 << i;
+			blend.need_src_alpha |= 1 << i;
 	}
 	for (i = vkblend->attachmentCount; i < 8; i++) {
 		blend.cb_blend_control[i] = 0;
@@ -671,7 +670,7 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 
 	if (pipeline->device->physical_device->has_rbplus) {
 		/* Disable RB+ blend optimizations for dual source blending. */
-		if (blend_mrt0_is_dual_src) {
+		if (blend.mrt0_is_dual_src) {
 			for (i = 0; i < 8; i++) {
 				blend.sx_mrt_blend_opt[i] =
 					S_028760_COLOR_COMB_FCN(V_028760_OPT_COMB_NONE) |
@@ -682,7 +681,7 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 		/* RB+ doesn't work with dual source blending, logic op and
 		 * RESOLVE.
 		 */
-		if (blend_mrt0_is_dual_src || vkblend->logicOpEnable ||
+		if (blend.mrt0_is_dual_src || vkblend->logicOpEnable ||
 		    mode == V_028808_CB_RESOLVE)
 			blend.cb_color_control |= S_028808_DISABLE_DUAL_QUAD(1);
 	}
@@ -692,9 +691,7 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 	else
 		blend.cb_color_control |= S_028808_MODE(V_028808_CB_DISABLE);
 
-	radv_pipeline_compute_spi_color_formats(pipeline, pCreateInfo,
-						blend_enable, blend_need_alpha, single_cb_enable, blend_mrt0_is_dual_src,
-						&blend);
+	radv_pipeline_compute_spi_color_formats(pipeline, pCreateInfo, &blend);
 	return blend;
 }
 
