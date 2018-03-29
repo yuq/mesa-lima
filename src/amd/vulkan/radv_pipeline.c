@@ -55,6 +55,7 @@ struct radv_blend_state {
 
 	uint32_t cb_color_control;
 	uint32_t cb_target_mask;
+	uint32_t cb_target_enabled_4bit;
 	uint32_t sx_mrt_blend_opt[8];
 	uint32_t cb_blend_control[8];
 
@@ -578,6 +579,7 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 			continue;
 
 		blend.cb_target_mask |= (unsigned)att->colorWriteMask << (4 * i);
+		blend.cb_target_enabled_4bit |= 0xf << (4 * i);
 		if (!att->blendEnable) {
 			blend.cb_blend_control[i] = blend_cntl;
 			continue;
