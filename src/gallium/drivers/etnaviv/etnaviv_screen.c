@@ -621,7 +621,7 @@ etna_screen_query_dmabuf_modifiers(struct pipe_screen *pscreen,
       if (modifiers)
          modifiers[num_modifiers] = supported_modifiers[i];
       if (external_only)
-         external_only[num_modifiers] = 0;
+         external_only[num_modifiers] = util_format_is_yuv(format) ? 1 : 0;
       num_modifiers++;
    }
 
