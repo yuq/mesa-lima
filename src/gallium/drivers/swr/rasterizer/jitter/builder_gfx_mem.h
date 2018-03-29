@@ -51,6 +51,8 @@ namespace SwrJit
 
         virtual Value *GATHERDD(Value* src, Value* pBase, Value* indices, Value* mask, uint8_t scale = 1, JIT_MEM_CLIENT usage = MEM_CLIENT_INTERNAL);
 
+        Value* TranlsateGfxAddress(Value* xpGfxAddress);
+
     protected:
 
         void AssertGFXMemoryParams(Value* ptr, Builder::JIT_MEM_CLIENT usage);

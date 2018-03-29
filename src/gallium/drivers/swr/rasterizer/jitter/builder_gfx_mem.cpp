@@ -133,4 +133,9 @@ namespace SwrJit
         return Builder::LOAD(BasePtr, offset, name);
     }
 
+    Value* BuilderGfxMem::TranlsateGfxAddress(Value* xpGfxAddress)
+    {
+        return INT_TO_PTR(xpGfxAddress, PointerType::get(mInt8Ty, 0));
+    }
+
 }
