@@ -669,9 +669,23 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 		blend.sx_mrt_blend_opt[i] = S_028760_COLOR_COMB_FCN(V_028760_OPT_COMB_BLEND_DISABLED) | S_028760_ALPHA_COMB_FCN(V_028760_OPT_COMB_BLEND_DISABLED);
 	}
 
-	/* disable RB+ for now */
-	if (pipeline->device->physical_device->has_rbplus)
-		blend.cb_color_control |= S_028808_DISABLE_DUAL_QUAD(1);
+	if (pipeline->device->physical_device->has_rbplus) {
+		/* Disable RB+ blend optimizations for dual source blending. */
+		if (blend_mrt0_is_dual_src) {
+			for (i = 0; i < 8; i++) {
+				blend.sx_mrt_blend_opt[i] =
+					S_028760_COLOR_COMB_FCN(V_028760_OPT_COMB_NONE) |
+					S_028760_ALPHA_COMB_FCN(V_028760_OPT_COMB_NONE);
+			}
+		}
+
+		/* RB+ doesn't work with dual source blending, logic op and
+		 * RESOLVE.
+		 */
+		if (blend_mrt0_is_dual_src || vkblend->logicOpEnable ||
+		    mode == V_028808_CB_RESOLVE)
+			blend.cb_color_control |= S_028808_DISABLE_DUAL_QUAD(1);
+	}
 
 	if (blend.cb_target_mask)
 		blend.cb_color_control |= S_028808_MODE(mode);
