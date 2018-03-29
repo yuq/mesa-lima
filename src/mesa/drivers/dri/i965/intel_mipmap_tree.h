@@ -734,7 +734,7 @@ intel_miptree_sample_with_hiz(struct brw_context *brw,
 bool
 intel_miptree_set_clear_color(struct brw_context *brw,
                               struct intel_mipmap_tree *mt,
-                              union isl_color_value clear_color);
+                              const union gl_color_union *color);
 
 bool
 intel_miptree_set_depth_clear_value(struct brw_context *brw,
