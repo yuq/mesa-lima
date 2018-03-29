@@ -50,7 +50,7 @@
 #include "ac_shader_util.h"
 
 struct radv_blend_state {
-	uint32_t blend_enable;
+	uint32_t blend_enable_4bit;
 	uint32_t need_src_alpha;
 
 	uint32_t cb_color_control;
@@ -455,9 +455,11 @@ radv_pipeline_compute_spi_color_formats(struct radv_pipeline *pipeline,
 			cf = V_028714_SPI_SHADER_ZERO;
 		} else {
 			struct radv_render_pass_attachment *attachment = pass->attachments + subpass->color_attachments[i].attachment;
+			bool blend_enable =
+				blend->blend_enable_4bit & (0xfu << (i * 4));
 
 			cf = si_choose_spi_color_format(attachment->format,
-			                                blend->blend_enable & (1 << i),
+			                                blend_enable,
 			                                blend->need_src_alpha & (1 << i));
 		}
 
@@ -655,7 +657,7 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 		}
 		blend.cb_blend_control[i] = blend_cntl;
 
-		blend.blend_enable |= 1 << i;
+		blend.blend_enable_4bit |= 0xfu << (i * 4);
 
 		if (srcRGB == VK_BLEND_FACTOR_SRC_ALPHA ||
 		    dstRGB == VK_BLEND_FACTOR_SRC_ALPHA ||
