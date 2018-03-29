@@ -953,32 +953,29 @@ static struct disk_cache *si_get_disk_shader_cache(struct pipe_screen *pscreen)
 static void si_init_renderer_string(struct si_screen *sscreen)
 {
 	struct radeon_winsys *ws = sscreen->ws;
-	char family_name[32] = {}, llvm_string[32] = {}, kernel_version[128] = {};
+	char family_name[32] = {}, kernel_version[128] = {};
 	struct utsname uname_data;
 
 	const char *chip_name = si_get_marketing_name(ws);
 
 	if (chip_name)
-		snprintf(family_name, sizeof(family_name), "%s / ",
+		snprintf(family_name, sizeof(family_name), "%s, ",
 			 si_get_family_name(sscreen) + 4);
 	else
 		chip_name = si_get_family_name(sscreen);
 
 	if (uname(&uname_data) == 0)
 		snprintf(kernel_version, sizeof(kernel_version),
-			 " / %s", uname_data.release);
-
-	if (HAVE_LLVM > 0) {
-		snprintf(llvm_string, sizeof(llvm_string),
-			 ", LLVM %i.%i.%i", (HAVE_LLVM >> 8) & 0xff,
-			 HAVE_LLVM & 0xff, MESA_LLVM_VERSION_PATCH);
-	}
+			 ", %s", uname_data.release);
 
 	snprintf(sscreen->renderer_string, sizeof(sscreen->renderer_string),
-		 "%s (%sDRM %i.%i.%i%s%s)",
+		 "%s (%sDRM %i.%i.%i%s, LLVM %i.%i.%i)",
 		 chip_name, family_name, sscreen->info.drm_major,
 		 sscreen->info.drm_minor, sscreen->info.drm_patchlevel,
-		 kernel_version, llvm_string);
+		 kernel_version,
+		 (HAVE_LLVM >> 8) & 0xff,
+		 HAVE_LLVM & 0xff,
+		 MESA_LLVM_VERSION_PATCH);
 }
 
 void si_init_screen_get_functions(struct si_screen *sscreen)
