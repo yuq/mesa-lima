@@ -34,8 +34,26 @@
 
 #define PIPE_FIRST_COLOR_BUFFER_BIT (ffs(PIPE_CLEAR_COLOR0) - 1)
 
+/* The HW queues up the load until the tile coordinates show up, but can only
+ * track one at a time.  If we need to do more than one load, then we need to
+ * flush out the previous load by emitting the tile coordinates and doing a
+ * dummy store.
+ */
 static void
-load_general(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer)
+flush_last_load(struct vc5_cl *cl)
+{
+        if (V3D_VERSION >= 40)
+                return;
+
+        cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
+        cl_emit(cl, STORE_TILE_BUFFER_GENERAL, store) {
+                store.buffer_to_store = NONE;
+        }
+}
+
+static void
+load_general(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer,
+             uint32_t pipe_bit, uint32_t *loads_pending)
 {
         struct vc5_surface *surf = vc5_surface(psurf);
         bool separate_stencil = surf->separate_stencil && buffer == STENCIL;
@@ -78,6 +96,10 @@ load_general(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer)
                         surf->padded_height_of_output_image_in_uif_blocks;
 #endif /* V3D_VERSION < 40 */
         }
+
+        *loads_pending &= ~pipe_bit;
+        if (*loads_pending)
+                flush_last_load(cl);
 }
 
 static void
@@ -171,23 +193,6 @@ zs_buffer_from_pipe_bits(int pipe_clear_bits)
         }
 }
 
-/* The HW queues up the load until the tile coordinates show up, but can only
- * track one at a time.  If we need to do more than one load, then we need to
- * flush out the previous load by emitting the tile coordinates and doing a
- * dummy store.
- */
-static void
-flush_last_load(struct vc5_cl *cl)
-{
-        if (V3D_VERSION >= 40)
-                return;
-
-        cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
-        cl_emit(cl, STORE_TILE_BUFFER_GENERAL, store) {
-                store.buffer_to_store = NONE;
-        }
-}
-
 static void
 vc5_rcl_emit_loads(struct vc5_job *job, struct vc5_cl *cl)
 {
@@ -204,21 +209,17 @@ vc5_rcl_emit_loads(struct vc5_job *job, struct vc5_cl *cl)
                         continue;
                 }
 
-                load_general(cl, psurf, RENDER_TARGET_0 + i);
-                loads_pending &= ~bit;
-
-                if (loads_pending)
-                        flush_last_load(cl);
+                load_general(cl, psurf, RENDER_TARGET_0 + i,
+                             bit, &loads_pending);
         }
 
-        if (loads_pending & PIPE_CLEAR_DEPTHSTENCIL &&
+        if ((loads_pending & PIPE_CLEAR_DEPTHSTENCIL) &&
             (V3D_VERSION >= 40 ||
              (job->zsbuf && job->zsbuf->texture->nr_samples > 1))) {
                 load_general(cl, job->zsbuf,
-                             zs_buffer_from_pipe_bits(loads_pending));
-                loads_pending &= ~PIPE_CLEAR_DEPTHSTENCIL;
-                if (loads_pending)
-                        cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
+                             zs_buffer_from_pipe_bits(loads_pending),
+                             PIPE_CLEAR_DEPTHSTENCIL,
+                             &loads_pending);
         }
 
 #if V3D_VERSION < 40
