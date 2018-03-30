@@ -33,6 +33,7 @@ env.Prepend(LIBS = [
     mesa,
     glsl,
     nir,
+    spirv,
     gallium,
 ])
 

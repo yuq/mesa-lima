@@ -18,7 +18,11 @@ env.Append(LIBS = [
     'ws2_32',
 ])
 
-env.Prepend(LIBS = [mesautil])
+env.Prepend(LIBS = [
+    mesautil,
+    nir,
+    spirv
+])
 
 sources = ['libgl_gdi.c']
 drivers = []
