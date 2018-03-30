@@ -69,6 +69,10 @@ load_general(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer)
 
                 /* XXX: MSAA */
 #else /* V3D_VERSION < 40 */
+                /* Can't do raw ZSTENCIL loads -- need to load/store them to
+                 * separate buffers for Z and stencil.
+                 */
+                assert(buffer != ZSTENCIL);
                 load.raw_mode = true;
                 load.padded_height_of_output_image_in_uif_blocks =
                         surf->padded_height_of_output_image_in_uif_blocks;
@@ -119,6 +123,10 @@ store_general(struct vc5_job *job,
                         store.height_in_ub_or_stride = slice->stride;
                 }
 #else /* V3D_VERSION < 40 */
+                /* Can't do raw ZSTENCIL stores -- need to load/store them to
+                 * separate buffers for Z and stencil.
+                 */
+                assert(buffer != ZSTENCIL);
                 store.raw_mode = true;
                 if (!last_store) {
                         store.disable_colour_buffers_clear_on_write = true;
