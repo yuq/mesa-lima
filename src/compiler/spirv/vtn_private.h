@@ -71,8 +71,10 @@ void _vtn_warn(struct vtn_builder *b, const char *file, unsigned line,
  * So long as these two things continue to hold, we can easily longjmp back to
  * spirv_to_nir(), clean up the builder, and return NULL.
  */
-void _vtn_fail(struct vtn_builder *b, const char *file, unsigned line,
-               const char *fmt, ...) NORETURN PRINTFLIKE(4, 5);
+NORETURN void
+_vtn_fail(struct vtn_builder *b, const char *file, unsigned line,
+             const char *fmt, ...) PRINTFLIKE(4, 5);
+
 #define vtn_fail(...) _vtn_fail(b, __FILE__, __LINE__, __VA_ARGS__)
 
 /** Fail if the given expression evaluates to true */
