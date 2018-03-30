@@ -291,31 +291,42 @@ vc5_rcl_emit_stores(struct vc5_job *job, struct vc5_cl *cl)
 
         if (job->resolve & PIPE_CLEAR_DEPTHSTENCIL && job->zsbuf &&
             !(V3D_VERSION < 40 && job->zsbuf->texture->nr_samples <= 1)) {
-                stores_pending &= ~PIPE_CLEAR_DEPTHSTENCIL;
-
                 struct vc5_resource *rsc = vc5_resource(job->zsbuf->texture);
                 if (rsc->separate_stencil) {
                         if (job->resolve & PIPE_CLEAR_DEPTH) {
+                                stores_pending &= ~PIPE_CLEAR_DEPTH;
                                 store_general(job, cl, job->zsbuf, Z,
                                               PIPE_CLEAR_DEPTH,
                                               !stores_pending,
                                               general_color_clear);
+                                if (V3D_VERSION < 40 && stores_pending) {
+                                        cl_emit(cl, TILE_COORDINATES_IMPLICIT,
+                                                coords);
+                                }
                         }
+
                         if (job->resolve & PIPE_CLEAR_STENCIL) {
+                                stores_pending &= ~PIPE_CLEAR_STENCIL;
                                 store_general(job, cl, job->zsbuf, STENCIL,
                                               PIPE_CLEAR_STENCIL,
                                               !stores_pending,
                                               general_color_clear);
+                                if (V3D_VERSION < 40 && stores_pending) {
+                                        cl_emit(cl, TILE_COORDINATES_IMPLICIT,
+                                                coords);
+                                }
                         }
                 } else {
+                        stores_pending &= ~PIPE_CLEAR_DEPTHSTENCIL;
                         store_general(job, cl, job->zsbuf,
                                       zs_buffer_from_pipe_bits(job->resolve),
                                       job->resolve & PIPE_CLEAR_DEPTHSTENCIL,
                                       !stores_pending, general_color_clear);
+                        if (V3D_VERSION < 40 && stores_pending) {
+                                cl_emit(cl, TILE_COORDINATES_IMPLICIT,
+                                        coords);
+                        }
                 }
-
-                if (V3D_VERSION < 40 && stores_pending)
-                        cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
         }
 
         if (stores_pending) {
