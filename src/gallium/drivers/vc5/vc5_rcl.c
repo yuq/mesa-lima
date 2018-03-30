@@ -191,11 +191,11 @@ flush_last_load(struct vc5_cl *cl)
 static void
 vc5_rcl_emit_loads(struct vc5_job *job, struct vc5_cl *cl)
 {
-        uint32_t read_but_not_cleared = job->resolve & ~job->cleared;
+        uint32_t loads_pending = job->resolve & ~job->cleared;
 
         for (int i = 0; i < VC5_MAX_DRAW_BUFFERS; i++) {
                 uint32_t bit = PIPE_CLEAR_COLOR0 << i;
-                if (!(read_but_not_cleared & bit))
+                if (!(loads_pending & bit))
                         continue;
 
                 struct pipe_surface *psurf = job->cbufs[i];
@@ -205,19 +205,19 @@ vc5_rcl_emit_loads(struct vc5_job *job, struct vc5_cl *cl)
                 }
 
                 load_general(cl, psurf, RENDER_TARGET_0 + i);
-                read_but_not_cleared &= ~bit;
+                loads_pending &= ~bit;
 
-                if (read_but_not_cleared)
+                if (loads_pending)
                         flush_last_load(cl);
         }
 
-        if (read_but_not_cleared & PIPE_CLEAR_DEPTHSTENCIL &&
+        if (loads_pending & PIPE_CLEAR_DEPTHSTENCIL &&
             (V3D_VERSION >= 40 ||
              (job->zsbuf && job->zsbuf->texture->nr_samples > 1))) {
                 load_general(cl, job->zsbuf,
-                             zs_buffer_from_pipe_bits(read_but_not_cleared));
-                read_but_not_cleared &= ~PIPE_CLEAR_DEPTHSTENCIL;
-                if (read_but_not_cleared)
+                             zs_buffer_from_pipe_bits(loads_pending));
+                loads_pending &= ~PIPE_CLEAR_DEPTHSTENCIL;
+                if (loads_pending)
                         cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
         }
 
@@ -225,20 +225,20 @@ vc5_rcl_emit_loads(struct vc5_job *job, struct vc5_cl *cl)
         /* The initial reload will be queued until we get the
          * tile coordinates.
          */
-        if (read_but_not_cleared) {
+        if (loads_pending) {
                 cl_emit(cl, RELOAD_TILE_COLOUR_BUFFER, load) {
                         load.disable_colour_buffer_load =
-                                (~read_but_not_cleared &
+                                (~loads_pending &
                                  PIPE_CLEAR_COLOR_BUFFERS) >>
                                 PIPE_FIRST_COLOR_BUFFER_BIT;
                         load.enable_z_load =
-                                read_but_not_cleared & PIPE_CLEAR_DEPTH;
+                                loads_pending & PIPE_CLEAR_DEPTH;
                         load.enable_stencil_load =
-                                read_but_not_cleared & PIPE_CLEAR_STENCIL;
+                                loads_pending & PIPE_CLEAR_STENCIL;
                 }
         }
 #else /* V3D_VERSION >= 40 */
-        assert(!read_but_not_cleared);
+        assert(!loads_pending);
         cl_emit(cl, END_OF_LOADS, end);
 #endif
 }
