@@ -565,8 +565,10 @@ vc5_resource_setup(struct pipe_screen *pscreen,
         pipe_reference_init(&prsc->reference, 1);
         prsc->screen = pscreen;
 
-        if (prsc->nr_samples <= 1) {
-                rsc->cpp = util_format_get_blocksize(prsc->format);
+        if (prsc->nr_samples <= 1 ||
+            util_format_is_depth_or_stencil(prsc->format)) {
+                rsc->cpp = util_format_get_blocksize(prsc->format) *
+                        MAX2(prsc->nr_samples, 1);
         } else {
                 assert(vc5_rt_format_supported(&screen->devinfo, prsc->format));
                 uint32_t output_image_format =
