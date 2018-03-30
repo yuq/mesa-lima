@@ -103,6 +103,71 @@ radv_use_tc_compat_htile_for_image(struct radv_device *device,
 	return true;
 }
 
+static bool
+radv_use_dcc_for_image(struct radv_device *device,
+		       const struct radv_image_create_info *create_info,
+		       const VkImageCreateInfo *pCreateInfo)
+{
+	bool dcc_compatible_formats;
+	bool blendable;
+
+	/* DCC (Delta Color Compression) is only available for GFX8+. */
+	if (device->physical_device->rad_info.chip_class < VI)
+		return false;
+
+	if (device->instance->debug_flags & RADV_DEBUG_NO_DCC)
+		return false;
+
+	/* TODO: Enable DCC for storage images. */
+	if ((pCreateInfo->usage & VK_IMAGE_USAGE_STORAGE_BIT) ||
+	    (pCreateInfo->flags & VK_IMAGE_CREATE_EXTENDED_USAGE_BIT_KHR))
+		return false;
+
+	if (pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR)
+		return false;
+
+	/* TODO: Enable DCC for mipmaps and array layers. */
+	if (pCreateInfo->mipLevels > 1 || pCreateInfo->arrayLayers > 1)
+		return false;
+
+	if (create_info->scanout)
+		return false;
+
+	/* TODO: Enable DCC for MSAA textures. */
+	if (pCreateInfo->samples >= 2)
+		return false;
+
+	/* Determine if the formats are DCC compatible. */
+	dcc_compatible_formats =
+		radv_is_colorbuffer_format_supported(pCreateInfo->format,
+						     &blendable);
+
+	if (pCreateInfo->flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
+		const struct VkImageFormatListCreateInfoKHR *format_list =
+			(const struct  VkImageFormatListCreateInfoKHR *)
+				vk_find_struct_const(pCreateInfo->pNext,
+						     IMAGE_FORMAT_LIST_CREATE_INFO_KHR);
+
+		/* We have to ignore the existence of the list if viewFormatCount = 0 */
+		if (format_list && format_list->viewFormatCount) {
+			/* compatibility is transitive, so we only need to check
+			 * one format with everything else. */
+			for (unsigned i = 0; i < format_list->viewFormatCount; ++i) {
+				if (!radv_dcc_formats_compatible(pCreateInfo->format,
+				                                 format_list->pViewFormats[i]))
+					dcc_compatible_formats = false;
+			}
+		} else {
+			dcc_compatible_formats = false;
+		}
+	}
+
+	if (!dcc_compatible_formats)
+		return false;
+
+	return true;
+}
+
 static int
 radv_init_surface(struct radv_device *device,
 		  struct radeon_surf *surface,
@@ -112,7 +177,7 @@ radv_init_surface(struct radv_device *device,
 	unsigned array_mode = radv_choose_tiling(device, create_info);
 	const struct vk_format_description *desc =
 		vk_format_description(pCreateInfo->format);
-	bool is_depth, is_stencil, blendable;
+	bool is_depth, is_stencil;
 
 	is_depth = vk_format_has_depth(desc);
 	is_stencil = vk_format_has_stencil(desc);
@@ -158,36 +223,9 @@ radv_init_surface(struct radv_device *device,
 
 	surface->flags |= RADEON_SURF_OPTIMIZE_FOR_SPACE;
 
-	bool dcc_compatible_formats = radv_is_colorbuffer_format_supported(pCreateInfo->format, &blendable);
-	if (pCreateInfo->flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
-		const struct  VkImageFormatListCreateInfoKHR *format_list =
-		          (const struct  VkImageFormatListCreateInfoKHR *)
-		                vk_find_struct_const(pCreateInfo->pNext,
-		                                     IMAGE_FORMAT_LIST_CREATE_INFO_KHR);
-
-		/* We have to ignore the existence of the list if viewFormatCount = 0 */
-		if (format_list && format_list->viewFormatCount) {
-			/* compatibility is transitive, so we only need to check
-			 * one format with everything else. */
-			for (unsigned i = 0; i < format_list->viewFormatCount; ++i) {
-				if (!radv_dcc_formats_compatible(pCreateInfo->format,
-				                                 format_list->pViewFormats[i]))
-					dcc_compatible_formats = false;
-			}
-		} else {
-			dcc_compatible_formats = false;
-		}
-	}
-
-	if ((pCreateInfo->usage & VK_IMAGE_USAGE_STORAGE_BIT) ||
-	    (pCreateInfo->flags & VK_IMAGE_CREATE_EXTENDED_USAGE_BIT_KHR) ||
-	    !dcc_compatible_formats ||
-            (pCreateInfo->tiling == VK_IMAGE_TILING_LINEAR) ||
-            pCreateInfo->mipLevels > 1 || pCreateInfo->arrayLayers > 1 ||
-            device->physical_device->rad_info.chip_class < VI ||
-            create_info->scanout || (device->instance->debug_flags & RADV_DEBUG_NO_DCC) ||
-	    pCreateInfo->samples >= 2)
+	if (!radv_use_dcc_for_image(device, create_info, pCreateInfo))
 		surface->flags |= RADEON_SURF_DISABLE_DCC;
+
 	if (create_info->scanout)
 		surface->flags |= RADEON_SURF_SCANOUT;
 	return 0;
