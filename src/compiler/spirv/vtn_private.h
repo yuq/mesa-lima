@@ -230,7 +230,7 @@ struct vtn_function {
    SpvFunctionControlMask control;
 };
 
-typedef bool (*vtn_instruction_handler)(struct vtn_builder *, uint32_t,
+typedef bool (*vtn_instruction_handler)(struct vtn_builder *, SpvOp,
                                         const uint32_t *, unsigned);
 
 void vtn_build_cfg(struct vtn_builder *b, const uint32_t *words,
@@ -718,7 +718,7 @@ void vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
 void vtn_handle_subgroup(struct vtn_builder *b, SpvOp opcode,
                          const uint32_t *w, unsigned count);
 
-bool vtn_handle_glsl450_instruction(struct vtn_builder *b, uint32_t ext_opcode,
+bool vtn_handle_glsl450_instruction(struct vtn_builder *b, SpvOp ext_opcode,
                                     const uint32_t *words, unsigned count);
 
 struct vtn_builder* vtn_create_builder(const uint32_t *words, size_t word_count,
@@ -744,9 +744,9 @@ vtn_u64_literal(const uint32_t *w)
    return (uint64_t)w[1] << 32 | w[0];
 }
 
-bool vtn_handle_amd_gcn_shader_instruction(struct vtn_builder *b, uint32_t ext_opcode,
+bool vtn_handle_amd_gcn_shader_instruction(struct vtn_builder *b, SpvOp ext_opcode,
                                            const uint32_t *words, unsigned count);
 
-bool vtn_handle_amd_shader_trinary_minmax_instruction(struct vtn_builder *b, uint32_t ext_opcode,
+bool vtn_handle_amd_shader_trinary_minmax_instruction(struct vtn_builder *b, SpvOp ext_opcode,
 						      const uint32_t *words, unsigned count);
 #endif /* _VTN_PRIVATE_H_ */
