@@ -59,7 +59,7 @@ extern "C" {
 #define BITFIELD_BIT(b)      ((GLbitfield)1 << (b))
 /** Set all bits up to excluding bit b */
 #define BITFIELD_MASK(b)      \
-   ((b) == 32 ? (~(GLbitfield)0) : BITFIELD_BIT(b) - 1)
+   ((b) == 32 ? (~(GLbitfield)0) : BITFIELD_BIT((b) % 32) - 1)
 /** Set count bits starting from bit b  */
 #define BITFIELD_RANGE(b, count) \
    (BITFIELD_MASK((b) + (count)) & ~BITFIELD_MASK(b))
