@@ -83,7 +83,7 @@ load_general(struct vc5_cl *cl, struct pipe_surface *psurf, int buffer)
 static void
 store_general(struct vc5_job *job,
               struct vc5_cl *cl, struct pipe_surface *psurf, int buffer,
-              int pipe_bit, bool last_store, bool general_color_clear)
+              int pipe_bit, uint32_t *stores_pending, bool general_color_clear)
 {
         struct vc5_surface *surf = vc5_surface(psurf);
         bool separate_stencil = surf->separate_stencil && buffer == STENCIL;
@@ -91,6 +91,9 @@ store_general(struct vc5_job *job,
                 psurf = surf->separate_stencil;
                 surf = vc5_surface(psurf);
         }
+
+        *stores_pending &= ~pipe_bit;
+        bool last_store = !(*stores_pending);
 
         struct vc5_resource *rsc = vc5_resource(psurf->texture);
 
@@ -145,6 +148,11 @@ store_general(struct vc5_job *job,
                 store.padded_height_of_output_image_in_uif_blocks =
                         surf->padded_height_of_output_image_in_uif_blocks;
 #endif /* V3D_VERSION < 40 */
+        }
+
+        /* There must be a TILE_COORDINATES_IMPLICIT between each store. */
+        if (V3D_VERSION < 40 && !last_store) {
+                cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
         }
 }
 
@@ -282,11 +290,8 @@ vc5_rcl_emit_stores(struct vc5_job *job, struct vc5_cl *cl)
                         continue;
                 }
 
-                stores_pending &= ~bit;
                 store_general(job, cl, psurf, RENDER_TARGET_0 + i, bit,
-                              !stores_pending, general_color_clear);
-                if (V3D_VERSION < 40 && stores_pending)
-                        cl_emit(cl, TILE_COORDINATES_IMPLICIT, coords);
+                              &stores_pending, general_color_clear);
         }
 
         if (job->resolve & PIPE_CLEAR_DEPTHSTENCIL && job->zsbuf &&
@@ -294,38 +299,23 @@ vc5_rcl_emit_stores(struct vc5_job *job, struct vc5_cl *cl)
                 struct vc5_resource *rsc = vc5_resource(job->zsbuf->texture);
                 if (rsc->separate_stencil) {
                         if (job->resolve & PIPE_CLEAR_DEPTH) {
-                                stores_pending &= ~PIPE_CLEAR_DEPTH;
                                 store_general(job, cl, job->zsbuf, Z,
                                               PIPE_CLEAR_DEPTH,
-                                              !stores_pending,
+                                              &stores_pending,
                                               general_color_clear);
-                                if (V3D_VERSION < 40 && stores_pending) {
-                                        cl_emit(cl, TILE_COORDINATES_IMPLICIT,
-                                                coords);
-                                }
                         }
 
                         if (job->resolve & PIPE_CLEAR_STENCIL) {
-                                stores_pending &= ~PIPE_CLEAR_STENCIL;
                                 store_general(job, cl, job->zsbuf, STENCIL,
                                               PIPE_CLEAR_STENCIL,
-                                              !stores_pending,
+                                              &stores_pending,
                                               general_color_clear);
-                                if (V3D_VERSION < 40 && stores_pending) {
-                                        cl_emit(cl, TILE_COORDINATES_IMPLICIT,
-                                                coords);
-                                }
                         }
                 } else {
-                        stores_pending &= ~PIPE_CLEAR_DEPTHSTENCIL;
                         store_general(job, cl, job->zsbuf,
                                       zs_buffer_from_pipe_bits(job->resolve),
                                       job->resolve & PIPE_CLEAR_DEPTHSTENCIL,
-                                      !stores_pending, general_color_clear);
-                        if (V3D_VERSION < 40 && stores_pending) {
-                                cl_emit(cl, TILE_COORDINATES_IMPLICIT,
-                                        coords);
-                        }
+                                      &stores_pending, general_color_clear);
                 }
         }
 
