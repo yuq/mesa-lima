@@ -995,6 +995,7 @@ reg_assign(struct ir3_ra_ctx *ctx, struct ir3_register *reg,
 			reg->array.offset = num;
 		} else {
 			reg->num = num;
+			reg->flags &= ~IR3_REG_SSA;
 		}
 
 		reg->flags &= ~IR3_REG_ARRAY;
