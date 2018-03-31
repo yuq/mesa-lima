@@ -940,4 +940,21 @@ static inline unsigned si_get_ps_iter_samples(struct si_context *sctx)
 	return sctx->ps_iter_samples;
 }
 
+static inline unsigned si_get_total_colormask(struct si_context *sctx)
+{
+	if (sctx->queued.named.rasterizer->rasterizer_discard)
+		return 0;
+
+	struct si_shader_selector *ps = sctx->ps_shader.cso;
+	unsigned colormask = sctx->framebuffer.colorbuf_enabled_4bit &
+			     sctx->queued.named.blend->cb_target_mask;
+
+	if (!ps->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS])
+		colormask &= ps->colors_written_4bit;
+	else if (!ps->colors_written_4bit)
+		colormask = 0; /* color0 writes all cbufs, but it's not written */
+
+	return colormask;
+}
+
 #endif
