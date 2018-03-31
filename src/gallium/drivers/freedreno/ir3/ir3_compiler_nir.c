@@ -649,9 +649,10 @@ create_uniform_indirect(struct ir3_context *ctx, int n,
 }
 
 static struct ir3_instruction *
-create_collect(struct ir3_block *block, struct ir3_instruction *const *arr,
+create_collect(struct ir3_context *ctx, struct ir3_instruction *const *arr,
 		unsigned arrsz)
 {
+	struct ir3_block *block = ctx->block;
 	struct ir3_instruction *collect;
 
 	if (arrsz == 0)
@@ -1272,7 +1273,7 @@ emit_intrinsic_load_ubo(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 		carry->cat2.condition = IR3_COND_LT;
 		base_hi = ir3_ADD_S(b, base_hi, 0, carry, 0);
 
-		addr = create_collect(b, (struct ir3_instruction*[]){ addr, base_hi }, 2);
+		addr = create_collect(ctx, (struct ir3_instruction*[]){ addr, base_hi }, 2);
 	}
 
 	for (int i = 0; i < intr->num_components; i++) {
@@ -1300,7 +1301,7 @@ emit_intrinsic_load_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 	offset = get_src(ctx, &intr->src[1])[0];
 
 	/* src0 is uvec2(offset*4, 0), src1 is offset.. nir already *= 4: */
-	src0 = create_collect(b, (struct ir3_instruction*[]){
+	src0 = create_collect(ctx, (struct ir3_instruction*[]){
 		offset,
 		create_immed(b, 0),
 	}, 2);
@@ -1341,9 +1342,9 @@ emit_intrinsic_store_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	/* src0 is value, src1 is offset, src2 is uvec2(offset*4, 0)..
 	 * nir already *= 4:
 	 */
-	src0 = create_collect(b, get_src(ctx, &intr->src[0]), ncomp);
+	src0 = create_collect(ctx, get_src(ctx, &intr->src[0]), ncomp);
 	src1 = ir3_SHR_B(b, offset, 0, create_immed(b, 2), 0);
-	src2 = create_collect(b, (struct ir3_instruction*[]){
+	src2 = create_collect(ctx, (struct ir3_instruction*[]){
 		offset,
 		create_immed(b, 0),
 	}, 2);
@@ -1414,7 +1415,7 @@ emit_intrinsic_atomic_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	 */
 	src0 = get_src(ctx, &intr->src[2])[0];
 	src1 = ir3_SHR_B(b, offset, 0, create_immed(b, 2), 0);
-	src2 = create_collect(b, (struct ir3_instruction*[]){
+	src2 = create_collect(ctx, (struct ir3_instruction*[]){
 		offset,
 		create_immed(b, 0),
 	}, 2);
@@ -1451,7 +1452,7 @@ emit_intrinsic_atomic_ssbo(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_ssbo_atomic_comp_swap:
 		/* for cmpxchg, src0 is [ui]vec2(data, compare): */
-		src0 = create_collect(b, (struct ir3_instruction*[]){
+		src0 = create_collect(ctx, (struct ir3_instruction*[]){
 			src0,
 			get_src(ctx, &intr->src[3])[0],
 		}, 2);
@@ -1523,7 +1524,7 @@ emit_intrinsic_store_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 		unsigned length = ffs(~(wrmask >> first_component)) - 1;
 
 		stl = ir3_STL(b, offset, 0,
-			create_collect(b, &value[first_component], length), 0,
+			create_collect(ctx, &value[first_component], length), 0,
 			create_immed(b, length), 0);
 		stl->cat6.dst_offset = first_component + base;
 		stl->cat6.type = TYPE_U32;
@@ -1597,7 +1598,7 @@ emit_intrinsic_atomic_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_shared_atomic_comp_swap:
 		/* for cmpxchg, src1 is [ui]vec2(data, compare): */
-		src1 = create_collect(b, (struct ir3_instruction*[]){
+		src1 = create_collect(ctx, (struct ir3_instruction*[]){
 			get_src(ctx, &intr->src[2])[0],
 			src1,
 		}, 2);
@@ -1714,7 +1715,7 @@ get_image_offset(struct ir3_context *ctx, const nir_variable *var,
 		offset = ir3_SHR_B(b, offset, 0, create_immed(b, 2), 0);
 	}
 
-	return create_collect(b, (struct ir3_instruction*[]){
+	return create_collect(ctx, (struct ir3_instruction*[]){
 		offset,
 		create_immed(b, 0),
 	}, 2);
@@ -1738,7 +1739,7 @@ emit_intrinsic_load_image(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 		flags |= IR3_INSTR_3D;
 
 	sam = ir3_SAM(b, OPC_ISAM, type, TGSI_WRITEMASK_XYZW, flags,
-			tex_idx, tex_idx, create_collect(b, coords, ncoords), NULL);
+			tex_idx, tex_idx, create_collect(ctx, coords, ncoords), NULL);
 
 	sam->barrier_class = IR3_BARRIER_IMAGE_R;
 	sam->barrier_conflict = IR3_BARRIER_IMAGE_W;
@@ -1771,8 +1772,8 @@ emit_intrinsic_store_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	 */
 
 	stib = ir3_STIB(b, create_immed(b, tex_idx), 0,
-			create_collect(b, value, 4), 0,
-			create_collect(b, coords, ncoords), 0,
+			create_collect(ctx, value, 4), 0,
+			create_collect(ctx, coords, ncoords), 0,
 			offset, 0);
 	stib->cat6.iim_val = 4;
 	stib->cat6.d = ncoords;
@@ -1822,7 +1823,7 @@ emit_intrinsic_atomic_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 	 * src2 is 64b byte offset
 	 */
 	src0 = get_src(ctx, &intr->src[2])[0];
-	src1 = create_collect(b, coords, ncoords);
+	src1 = create_collect(ctx, coords, ncoords);
 	src2 = get_image_offset(ctx, var, coords, false);
 
 	switch (intr->intrinsic) {
@@ -1849,7 +1850,7 @@ emit_intrinsic_atomic_image(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_image_var_atomic_comp_swap:
 		/* for cmpxchg, src0 is [ui]vec2(data, compare): */
-		src0 = create_collect(b, (struct ir3_instruction*[]){
+		src0 = create_collect(ctx, (struct ir3_instruction*[]){
 			src0,
 			get_src(ctx, &intr->src[3])[0],
 		}, 2);
@@ -2036,7 +2037,7 @@ emit_intrinsic(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 		} else {
 			src = get_src(ctx, &intr->src[0]);
 			struct ir3_instruction *collect =
-					create_collect(b, ctx->ir->inputs, ctx->ir->ninputs);
+					create_collect(ctx, ctx->ir->inputs, ctx->ir->ninputs);
 			struct ir3_instruction *addr = get_addr(ctx, src[0], 4);
 			for (int i = 0; i < intr->num_components; i++) {
 				unsigned n = idx * 4 + i + comp;
@@ -2497,8 +2498,8 @@ emit_tex(struct ir3_context *ctx, nir_tex_instr *tex)
 
 	ctx->max_texture_index = MAX2(ctx->max_texture_index, tex_idx);
 
-	struct ir3_instruction *col0 = create_collect(b, src0, nsrc0);
-	struct ir3_instruction *col1 = create_collect(b, src1, nsrc1);
+	struct ir3_instruction *col0 = create_collect(ctx, src0, nsrc0);
+	struct ir3_instruction *col1 = create_collect(ctx, src1, nsrc1);
 
 	sam = ir3_SAM(b, opc, type, TGSI_WRITEMASK_XYZW, flags,
 			tex_idx, tex_idx, col0, col1);
