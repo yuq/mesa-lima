@@ -1049,7 +1049,12 @@ ir3_COV(struct ir3_block *block, struct ir3_instruction *src,
 		type_t src_type, type_t dst_type)
 {
 	struct ir3_instruction *instr = ir3_instr_create(block, OPC_MOV);
-	ir3_reg_create(instr, 0, 0);   /* dst */
+	unsigned dst_flags = (type_size(dst_type) < 32) ? IR3_REG_HALF : 0;
+	unsigned src_flags = (type_size(src_type) < 32) ? IR3_REG_HALF : 0;
+
+	debug_assert((src->regs[0]->flags & IR3_REG_HALF) == src_flags);
+
+	ir3_reg_create(instr, 0, dst_flags);   /* dst */
 	__ssa_src(instr, src, 0);
 	instr->cat1.src_type = src_type;
 	instr->cat1.dst_type = dst_type;

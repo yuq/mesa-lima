@@ -404,6 +404,22 @@ create_array_store(struct ir3_context *ctx, struct ir3_array *arr, int n,
 	array_insert(block, block->keeps, mov);
 }
 
+static inline type_t utype_for_size(unsigned bit_size)
+{
+	switch (bit_size) {
+	case 32: return TYPE_U32;
+	case 16: return TYPE_U16;
+	case  8: return TYPE_U8;
+	default: unreachable("bad bitsize"); return ~0;
+	}
+}
+
+static inline type_t utype_src(nir_src src)
+{ return utype_for_size(nir_src_bit_size(src)); }
+
+static inline type_t utype_dst(nir_dest dst)
+{ return utype_for_size(nir_dest_bit_size(dst)); }
+
 /* allocate a n element value array (to be populated by caller) and
  * insert in def_ht
  */
@@ -665,10 +681,14 @@ create_collect(struct ir3_context *ctx, struct ir3_instruction *const *arr,
 	if (arrsz == 0)
 		return NULL;
 
+	unsigned flags = arr[0]->regs[0]->flags & IR3_REG_HALF;
+
 	collect = ir3_instr_create2(block, OPC_META_FI, 1 + arrsz);
-	ir3_reg_create(collect, 0, 0);     /* dst */
-	for (unsigned i = 0; i < arrsz; i++)
-		ir3_reg_create(collect, 0, IR3_REG_SSA)->instr = arr[i];
+	ir3_reg_create(collect, 0, flags);     /* dst */
+	for (unsigned i = 0; i < arrsz; i++) {
+		compile_assert(ctx, (arr[i]->regs[0]->flags & IR3_REG_HALF) == flags);
+		ir3_reg_create(collect, 0, IR3_REG_SSA | flags)->instr = arr[i];
+	}
 
 	return collect;
 }
@@ -1495,7 +1515,7 @@ emit_intrinsic_load_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr,
 
 	ldl = ir3_LDL(b, offset, 0, create_immed(b, intr->num_components), 0);
 	ldl->cat6.src_offset = base;
-	ldl->cat6.type = TYPE_U32;
+	ldl->cat6.type = utype_dst(intr->dest);
 	ldl->regs[0]->wrmask = MASK(intr->num_components);
 
 	ldl->barrier_class = IR3_BARRIER_SHARED_R;
@@ -1534,7 +1554,7 @@ emit_intrinsic_store_shared(struct ir3_context *ctx, nir_intrinsic_instr *intr)
 			create_collect(ctx, &value[first_component], length), 0,
 			create_immed(b, length), 0);
 		stl->cat6.dst_offset = first_component + base;
-		stl->cat6.type = TYPE_U32;
+		stl->cat6.type = utype_src(intr->src[0]);
 		stl->barrier_class = IR3_BARRIER_SHARED_W;
 		stl->barrier_conflict = IR3_BARRIER_SHARED_R | IR3_BARRIER_SHARED_W;
 
@@ -2250,8 +2270,10 @@ emit_load_const(struct ir3_context *ctx, nir_load_const_instr *instr)
 {
 	struct ir3_instruction **dst = get_dst_ssa(ctx, &instr->def,
 			instr->def.num_components);
+	type_t type = (instr->def.bit_size < 32) ? TYPE_U16 : TYPE_U32;
+
 	for (int i = 0; i < instr->def.num_components; i++)
-		dst[i] = create_immed(ctx->block, instr->value.u32[i]);
+		dst[i] = create_immed_typed(ctx->block, instr->value.u32[i], type);
 }
 
 static void
@@ -2259,11 +2281,13 @@ emit_undef(struct ir3_context *ctx, nir_ssa_undef_instr *undef)
 {
 	struct ir3_instruction **dst = get_dst_ssa(ctx, &undef->def,
 			undef->def.num_components);
+	type_t type = (undef->def.bit_size < 32) ? TYPE_U16 : TYPE_U32;
+
 	/* backend doesn't want undefined instructions, so just plug
 	 * in 0.0..
 	 */
 	for (int i = 0; i < undef->def.num_components; i++)
-		dst[i] = create_immed(ctx->block, fui(0.0));
+		dst[i] = create_immed_typed(ctx->block, fui(0.0), type);
 }
 
 /*
