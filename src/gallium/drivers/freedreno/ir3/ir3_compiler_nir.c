@@ -686,8 +686,39 @@ create_collect(struct ir3_context *ctx, struct ir3_instruction *const *arr,
 	collect = ir3_instr_create2(block, OPC_META_FI, 1 + arrsz);
 	ir3_reg_create(collect, 0, flags);     /* dst */
 	for (unsigned i = 0; i < arrsz; i++) {
-		compile_assert(ctx, (arr[i]->regs[0]->flags & IR3_REG_HALF) == flags);
-		ir3_reg_create(collect, 0, IR3_REG_SSA | flags)->instr = arr[i];
+		struct ir3_instruction *elem = arr[i];
+
+		/* Since arrays are pre-colored in RA, we can't assume that
+		 * things will end up in the right place.  (Ie. if a collect
+		 * joins elements from two different arrays.)  So insert an
+		 * extra mov.
+		 *
+		 * We could possibly skip this if all the collected elements
+		 * are contiguous elements in a single array.. not sure how
+		 * likely that is to happen.
+		 *
+		 * Fixes a problem with glamor shaders, that in effect do
+		 * something like:
+		 *
+		 *   if (foo)
+		 *     texcoord = ..
+		 *   else
+		 *     texcoord = ..
+		 *   color = texture2D(tex, texcoord);
+		 *
+		 * In this case, texcoord will end up as nir registers (which
+		 * translate to ir3 array's of length 1.  And we can't assume
+		 * the two (or more) arrays will get allocated in consecutive
+		 * scalar registers.
+		 *
+		 */
+		if (elem->regs[0]->flags & IR3_REG_ARRAY) {
+			type_t type = (flags & IR3_REG_HALF) ? TYPE_U16 : TYPE_U32;
+			elem = ir3_MOV(block, elem, type);
+		}
+
+		compile_assert(ctx, (elem->regs[0]->flags & IR3_REG_HALF) == flags);
+		ir3_reg_create(collect, 0, IR3_REG_SSA | flags)->instr = elem;
 	}
 
 	return collect;

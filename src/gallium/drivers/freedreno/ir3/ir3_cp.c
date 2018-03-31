@@ -59,6 +59,9 @@ static bool is_eligible_mov(struct ir3_instruction *instr, bool allow_flags)
 		if (src->flags & IR3_REG_RELATIV)
 			return false;
 
+		if (src->flags & IR3_REG_ARRAY)
+			return false;
+
 		if (!allow_flags)
 			if (src->flags & (IR3_REG_FABS | IR3_REG_FNEG |
 					IR3_REG_SABS | IR3_REG_SNEG | IR3_REG_BNOT))
