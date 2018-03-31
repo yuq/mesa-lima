@@ -863,10 +863,16 @@ ra_add_interference(struct ir3_ra_ctx *ctx)
 		list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
 			struct ir3_ra_block_data *bd = block->data;
 			debug_printf("block%u:\n", block_id(block));
-			print_bitset("def", bd->def, ctx->alloc_count);
-			print_bitset("use", bd->use, ctx->alloc_count);
-			print_bitset("l/i", bd->livein, ctx->alloc_count);
-			print_bitset("l/o", bd->liveout, ctx->alloc_count);
+			print_bitset("  def", bd->def, ctx->alloc_count);
+			print_bitset("  use", bd->use, ctx->alloc_count);
+			print_bitset("  l/i", bd->livein, ctx->alloc_count);
+			print_bitset("  l/o", bd->liveout, ctx->alloc_count);
+		}
+		list_for_each_entry (struct ir3_array, arr, &ir->array_list, node) {
+			debug_printf("array%u:\n", arr->id);
+			debug_printf("  length:   %u\n", arr->length);
+			debug_printf("  start_ip: %u\n", arr->start_ip);
+			debug_printf("  end_ip:   %u\n", arr->end_ip);
 		}
 	}
 
