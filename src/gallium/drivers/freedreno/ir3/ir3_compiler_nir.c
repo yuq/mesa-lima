@@ -505,17 +505,24 @@ put_dst(struct ir3_context *ctx, nir_dest *dst)
 }
 
 static struct ir3_instruction *
-create_immed(struct ir3_block *block, uint32_t val)
+create_immed_typed(struct ir3_block *block, uint32_t val, type_t type)
 {
 	struct ir3_instruction *mov;
+	unsigned flags = (type_size(type) < 32) ? IR3_REG_HALF : 0;
 
 	mov = ir3_instr_create(block, OPC_MOV);
-	mov->cat1.src_type = TYPE_U32;
-	mov->cat1.dst_type = TYPE_U32;
-	ir3_reg_create(mov, 0, 0);
+	mov->cat1.src_type = type;
+	mov->cat1.dst_type = type;
+	ir3_reg_create(mov, 0, flags);
 	ir3_reg_create(mov, 0, IR3_REG_IMMED)->uim_val = val;
 
 	return mov;
+}
+
+static struct ir3_instruction *
+create_immed(struct ir3_block *block, uint32_t val)
+{
+	return create_immed_typed(block, val, TYPE_U32);
 }
 
 static struct ir3_instruction *
