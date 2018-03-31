@@ -393,14 +393,16 @@ bool gpir_compile_nir(struct lima_vs_shader_state *prog, struct nir_shader *nir)
       goto err_out0;
 
    nir_foreach_variable(var, &nir->outputs) {
-      assert(var->data.driver_location == prog->num_varying);
-      if (!prog->num_varying)
-         assert(var->data.location == VARYING_SLOT_POS);
+      if (var->data.location == VARYING_SLOT_POS)
+         assert(var->data.driver_location == 0);
 
-      struct lima_varying_info *v = prog->varying + prog->num_varying;
-      v->components = glsl_get_components(var->type);
-      v->component_size = gpir_glsl_type_size(glsl_get_base_type(var->type));
-      prog->num_varying++;
+      struct lima_varying_info *v = prog->varying + var->data.driver_location;
+      if (!v->components) {
+         v->component_size = gpir_glsl_type_size(glsl_get_base_type(var->type));
+         prog->num_varying++;
+      }
+
+      v->components += glsl_get_components(var->type);
    }
 
    ralloc_free(comp);
