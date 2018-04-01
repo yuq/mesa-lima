@@ -425,12 +425,6 @@ void si_replace_buffer_storage(struct pipe_context *ctx,
 void si_init_screen_buffer_functions(struct si_screen *sscreen);
 void si_init_buffer_functions(struct si_context *sctx);
 
-/* r600_gpu_load.c */
-void si_gpu_load_kill_thread(struct si_screen *sscreen);
-uint64_t si_begin_counter(struct si_screen *sscreen, unsigned type);
-unsigned si_end_counter(struct si_screen *sscreen, unsigned type,
-			uint64_t begin);
-
 /* r600_perfcounters.c */
 void si_perfcounters_destroy(struct si_screen *sscreen);
 

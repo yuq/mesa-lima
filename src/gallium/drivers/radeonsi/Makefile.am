@@ -29,7 +29,9 @@ AM_CFLAGS = \
 	-I$(top_builddir)/src/compiler/nir \
 	-I$(top_srcdir)/src/amd/common \
 	$(RADEON_CFLAGS) \
-	$(LLVM_CFLAGS)
+	$(LLVM_CFLAGS) \
+	-Wstrict-overflow=0
+# ^^ disable warnings about overflows (os_time_timeout)
 
 noinst_LTLIBRARIES = libradeonsi.la
 

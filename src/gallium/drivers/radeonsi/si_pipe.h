@@ -831,6 +831,12 @@ void si_flush_gfx_cs(struct si_context *ctx, unsigned flags,
 void si_begin_new_gfx_cs(struct si_context *ctx);
 void si_need_gfx_cs_space(struct si_context *ctx);
 
+/* r600_gpu_load.c */
+void si_gpu_load_kill_thread(struct si_screen *sscreen);
+uint64_t si_begin_counter(struct si_screen *sscreen, unsigned type);
+unsigned si_end_counter(struct si_screen *sscreen, unsigned type,
+			uint64_t begin);
+
 /* si_compute.c */
 void si_init_compute_functions(struct si_context *sctx);
 
