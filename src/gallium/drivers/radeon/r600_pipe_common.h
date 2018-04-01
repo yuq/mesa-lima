@@ -521,7 +521,4 @@ vi_dcc_enabled(struct r600_texture *tex, unsigned level)
 	return tex->dcc_offset && level < tex->surface.num_dcc_levels;
 }
 
-#define R600_ERR(fmt, args...) \
-	fprintf(stderr, "EE %s:%d %s - " fmt, __FILE__, __LINE__, __func__, ##args)
-
 #endif

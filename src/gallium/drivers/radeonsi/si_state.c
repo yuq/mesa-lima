@@ -293,7 +293,7 @@ static uint32_t si_translate_blend_function(int blend_func)
 	case PIPE_BLEND_MAX:
 		return V_028780_COMB_MAX_DST_SRC;
 	default:
-		R600_ERR("Unknown blend function %d\n", blend_func);
+		PRINT_ERR("Unknown blend function %d\n", blend_func);
 		assert(0);
 		break;
 	}
@@ -342,7 +342,7 @@ static uint32_t si_translate_blend_factor(int blend_fact)
 	case PIPE_BLENDFACTOR_INV_SRC1_ALPHA:
 		return V_028780_BLEND_INV_SRC1_ALPHA;
 	default:
-		R600_ERR("Bad blend factor %d not supported!\n", blend_fact);
+		PRINT_ERR("Bad blend factor %d not supported!\n", blend_fact);
 		assert(0);
 		break;
 	}
@@ -1133,7 +1133,7 @@ static uint32_t si_translate_stencil_op(int s_op)
 	case PIPE_STENCIL_OP_INVERT:
 		return V_02842C_STENCIL_INVERT;
 	default:
-		R600_ERR("Unknown stencil op %d", s_op);
+		PRINT_ERR("Unknown stencil op %d", s_op);
 		assert(0);
 		break;
 	}
@@ -2143,7 +2143,7 @@ static boolean si_is_format_supported(struct pipe_screen *screen,
 	unsigned retval = 0;
 
 	if (target >= PIPE_MAX_TEXTURE_TYPES) {
-		R600_ERR("r600: unsupported texture type %d\n", target);
+		PRINT_ERR("r600: unsupported texture type %d\n", target);
 		return false;
 	}
 
@@ -2381,7 +2381,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 
 	format = si_translate_colorformat(surf->base.format);
 	if (format == V_028C70_COLOR_INVALID) {
-		R600_ERR("Invalid CB format: %d, disabling CB.\n", surf->base.format);
+		PRINT_ERR("Invalid CB format: %d, disabling CB.\n", surf->base.format);
 	}
 	assert(format != V_028C70_COLOR_INVALID);
 	swap = si_translate_colorswap(surf->base.format, false);
@@ -2513,7 +2513,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 
 	assert(format != V_028040_Z_INVALID);
 	if (format == V_028040_Z_INVALID)
-		R600_ERR("Invalid DB format: %d, disabling DB.\n", rtex->resource.b.b.format);
+		PRINT_ERR("Invalid DB format: %d, disabling DB.\n", rtex->resource.b.b.format);
 
 	surf->db_depth_view = S_028008_SLICE_START(surf->base.u.tex.first_layer) |
 			      S_028008_SLICE_MAX(surf->base.u.tex.last_layer);
@@ -2934,7 +2934,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 			constbuf.user_buffer = sctx->sample_locations_16x;
 			break;
 		default:
-			R600_ERR("Requested an invalid number of samples %i.\n",
+			PRINT_ERR("Requested an invalid number of samples %i.\n",
 				 sctx->framebuffer.nr_samples);
 			assert(0);
 		}

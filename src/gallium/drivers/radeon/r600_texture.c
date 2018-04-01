@@ -868,13 +868,13 @@ void si_texture_get_fmask_info(struct si_screen *sscreen,
 		bpe = 4;
 		break;
 	default:
-		R600_ERR("Invalid sample count for FMASK allocation.\n");
+		PRINT_ERR("Invalid sample count for FMASK allocation.\n");
 		return;
 	}
 
 	if (sscreen->ws->surface_init(sscreen->ws, &templ, flags, bpe,
 				      RADEON_SURF_MODE_2D, &fmask)) {
-		R600_ERR("Got error in surface_init while allocating FMASK.\n");
+		PRINT_ERR("Got error in surface_init while allocating FMASK.\n");
 		return;
 	}
 
@@ -1573,7 +1573,7 @@ bool si_init_flushed_depth_texture(struct pipe_context *ctx,
 
 	*flushed_depth_texture = (struct r600_texture *)ctx->screen->resource_create(ctx->screen, &resource);
 	if (*flushed_depth_texture == NULL) {
-		R600_ERR("failed to create temporary texture to hold flushed depth\n");
+		PRINT_ERR("failed to create temporary texture to hold flushed depth\n");
 		return false;
 	}
 	return true;
@@ -1735,7 +1735,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 			si_init_temp_resource_from_box(&resource, texture, box, level, 0);
 
 			if (!si_init_flushed_depth_texture(ctx, &resource, &staging_depth)) {
-				R600_ERR("failed to create temporary texture to hold untiled copy\n");
+				PRINT_ERR("failed to create temporary texture to hold untiled copy\n");
 				FREE(trans);
 				return NULL;
 			}
@@ -1743,7 +1743,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 			if (usage & PIPE_TRANSFER_READ) {
 				struct pipe_resource *temp = ctx->screen->resource_create(ctx->screen, &resource);
 				if (!temp) {
-					R600_ERR("failed to create a temporary depth texture\n");
+					PRINT_ERR("failed to create a temporary depth texture\n");
 					FREE(trans);
 					return NULL;
 				}
@@ -1762,7 +1762,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 			/* XXX: only readback the rectangle which is being mapped? */
 			/* XXX: when discard is true, no need to read back from depth texture */
 			if (!si_init_flushed_depth_texture(ctx, texture, &staging_depth)) {
-				R600_ERR("failed to create temporary texture to hold untiled copy\n");
+				PRINT_ERR("failed to create temporary texture to hold untiled copy\n");
 				FREE(trans);
 				return NULL;
 			}
@@ -1792,7 +1792,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 		/* Create the temporary texture. */
 		staging = (struct r600_texture*)ctx->screen->resource_create(ctx->screen, &resource);
 		if (!staging) {
-			R600_ERR("failed to create temporary texture to hold untiled copy\n");
+			PRINT_ERR("failed to create temporary texture to hold untiled copy\n");
 			FREE(trans);
 			return NULL;
 		}

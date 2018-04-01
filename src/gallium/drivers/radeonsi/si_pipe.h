@@ -1063,4 +1063,7 @@ static inline unsigned si_get_total_colormask(struct si_context *sctx)
 	return colormask;
 }
 
+#define PRINT_ERR(fmt, args...) \
+	fprintf(stderr, "EE %s:%d %s - " fmt, __FILE__, __LINE__, __func__, ##args)
+
 #endif

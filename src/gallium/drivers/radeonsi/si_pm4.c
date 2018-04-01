@@ -69,7 +69,7 @@ void si_pm4_set_reg(struct si_pm4_state *state, unsigned reg, uint32_t val)
 		reg -= CIK_UCONFIG_REG_OFFSET;
 
 	} else {
-		R600_ERR("Invalid register offset %08x!\n", reg);
+		PRINT_ERR("Invalid register offset %08x!\n", reg);
 		return;
 	}
 

@@ -1511,7 +1511,7 @@ static void si_build_shader_variant(struct si_shader *shader,
 
 	r = si_shader_create(sscreen, tm, shader, debug);
 	if (unlikely(r)) {
-		R600_ERR("Failed to build shader variant (type=%u) %d\n",
+		PRINT_ERR("Failed to build shader variant (type=%u) %d\n",
 			 sel->type, r);
 		shader->compilation_failed = true;
 		return;
