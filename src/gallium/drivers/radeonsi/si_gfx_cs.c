@@ -63,10 +63,9 @@ void si_need_gfx_cs_space(struct si_context *ctx)
 		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 }
 
-void si_flush_gfx_cs(void *context, unsigned flags,
+void si_flush_gfx_cs(struct si_context *ctx, unsigned flags,
 		     struct pipe_fence_handle **fence)
 {
-	struct si_context *ctx = context;
 	struct radeon_winsys_cs *cs = ctx->b.gfx_cs;
 	struct radeon_winsys *ws = ctx->b.ws;
 

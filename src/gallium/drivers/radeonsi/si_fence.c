@@ -64,13 +64,13 @@ struct si_multi_fence {
  * \param old_value	Previous fence value (for a bug workaround)
  * \param new_value	Fence value to write for this event.
  */
-void si_gfx_write_event_eop(struct r600_common_context *ctx,
+void si_gfx_write_event_eop(struct si_context *ctx,
 			    unsigned event, unsigned event_flags,
 			    unsigned data_sel,
 			    struct r600_resource *buf, uint64_t va,
 			    uint32_t new_fence, unsigned query_type)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_winsys_cs *cs = ctx->b.gfx_cs;
 	unsigned op = EVENT_TYPE(event) |
 		      EVENT_INDEX(5) |
 		      event_flags;
@@ -81,7 +81,7 @@ void si_gfx_write_event_eop(struct r600_common_context *ctx,
 	if (data_sel != EOP_DATA_SEL_DISCARD)
 		sel |= EOP_INT_SEL(EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM);
 
-	if (ctx->chip_class >= GFX9) {
+	if (ctx->b.chip_class >= GFX9) {
 		/* A ZPASS_DONE or PIXEL_STAT_DUMP_EVENT (of the DB occlusion
 		 * counters) must immediately precede every timestamp event to
 		 * prevent a GPU hang on GFX9.
@@ -89,20 +89,20 @@ void si_gfx_write_event_eop(struct r600_common_context *ctx,
 		 * Occlusion queries don't need to do it here, because they
 		 * always do ZPASS_DONE before the timestamp.
 		 */
-		if (ctx->chip_class == GFX9 &&
+		if (ctx->b.chip_class == GFX9 &&
 		    query_type != PIPE_QUERY_OCCLUSION_COUNTER &&
 		    query_type != PIPE_QUERY_OCCLUSION_PREDICATE &&
 		    query_type != PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE) {
-			struct r600_resource *scratch = ctx->eop_bug_scratch;
+			struct r600_resource *scratch = ctx->b.eop_bug_scratch;
 
-			assert(16 * ctx->screen->info.num_render_backends <=
+			assert(16 * ctx->b.screen->info.num_render_backends <=
 			       scratch->b.b.width0);
 			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
 			radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_ZPASS_DONE) | EVENT_INDEX(1));
 			radeon_emit(cs, scratch->gpu_address);
 			radeon_emit(cs, scratch->gpu_address >> 32);
 
-			radeon_add_to_buffer_list(ctx, ctx->gfx_cs, scratch,
+			radeon_add_to_buffer_list(&ctx->b, ctx->b.gfx_cs, scratch,
 						  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 		}
 
@@ -115,9 +115,9 @@ void si_gfx_write_event_eop(struct r600_common_context *ctx,
 		radeon_emit(cs, 0); /* immediate data hi */
 		radeon_emit(cs, 0); /* unused */
 	} else {
-		if (ctx->chip_class == CIK ||
-		    ctx->chip_class == VI) {
-			struct r600_resource *scratch = ctx->eop_bug_scratch;
+		if (ctx->b.chip_class == CIK ||
+		    ctx->b.chip_class == VI) {
+			struct r600_resource *scratch = ctx->b.eop_bug_scratch;
 			uint64_t va = scratch->gpu_address;
 
 			/* Two EOP events are required to make all engines go idle
@@ -131,7 +131,7 @@ void si_gfx_write_event_eop(struct r600_common_context *ctx,
 			radeon_emit(cs, 0); /* immediate data */
 			radeon_emit(cs, 0); /* unused */
 
-			radeon_add_to_buffer_list(ctx, ctx->gfx_cs, scratch,
+			radeon_add_to_buffer_list(&ctx->b, ctx->b.gfx_cs, scratch,
 						  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 		}
 
@@ -144,7 +144,7 @@ void si_gfx_write_event_eop(struct r600_common_context *ctx,
 	}
 
 	if (buf) {
-		radeon_add_to_buffer_list(ctx, ctx->gfx_cs, buf, RADEON_USAGE_WRITE,
+		radeon_add_to_buffer_list(&ctx->b, ctx->b.gfx_cs, buf, RADEON_USAGE_WRITE,
 					  RADEON_PRIO_QUERY);
 	}
 }
@@ -160,10 +160,10 @@ unsigned si_gfx_write_fence_dwords(struct si_screen *screen)
 	return dwords;
 }
 
-void si_gfx_wait_fence(struct r600_common_context *ctx,
+void si_gfx_wait_fence(struct si_context *ctx,
 		       uint64_t va, uint32_t ref, uint32_t mask)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_winsys_cs *cs = ctx->b.gfx_cs;
 
 	radeon_emit(cs, PKT3(PKT3_WAIT_REG_MEM, 5, 0));
 	radeon_emit(cs, WAIT_REG_MEM_EQUAL | WAIT_REG_MEM_MEM_SPACE(1));
@@ -277,7 +277,7 @@ static void si_fine_fence_set(struct si_context *ctx,
 		radeon_emit(cs, fence_va >> 32);
 		radeon_emit(cs, 0x80000000);
 	} else if (flags & PIPE_FLUSH_BOTTOM_OF_PIPE) {
-		si_gfx_write_event_eop(&ctx->b, V_028A90_BOTTOM_OF_PIPE_TS, 0,
+		si_gfx_write_event_eop(ctx, V_028A90_BOTTOM_OF_PIPE_TS, 0,
 				       EOP_DATA_SEL_VALUE_32BIT,
 				       NULL, fence_va, 0x80000000,
 				       PIPE_QUERY_GPU_FINISHED);
@@ -376,7 +376,7 @@ static boolean si_fence_finish(struct pipe_screen *screen,
 			 * not going to wait.
 			 */
 			threaded_context_unwrap_sync(ctx);
-			si_flush_gfx_cs(&sctx->b, timeout ? 0 : PIPE_FLUSH_ASYNC, NULL);
+			si_flush_gfx_cs(sctx, timeout ? 0 : PIPE_FLUSH_ASYNC, NULL);
 			rfence->gfx_unflushed.ctx = NULL;
 
 			if (!timeout)

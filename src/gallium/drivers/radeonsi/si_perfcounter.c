@@ -579,12 +579,13 @@ static void si_pc_emit_start(struct r600_common_context *ctx,
 static void si_pc_emit_stop(struct r600_common_context *ctx,
 			    struct r600_resource *buffer, uint64_t va)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct si_context *sctx = (struct si_context*)ctx;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 
-	si_gfx_write_event_eop(ctx, V_028A90_BOTTOM_OF_PIPE_TS, 0,
-				 EOP_DATA_SEL_VALUE_32BIT,
-				 buffer, va, 0, SI_NOT_QUERY);
-	si_gfx_wait_fence(ctx, va, 0, 0xffffffff);
+	si_gfx_write_event_eop(sctx, V_028A90_BOTTOM_OF_PIPE_TS, 0,
+			       EOP_DATA_SEL_VALUE_32BIT,
+			       buffer, va, 0, SI_NOT_QUERY);
+	si_gfx_wait_fence(sctx, va, 0, 0xffffffff);
 
 	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 	radeon_emit(cs, EVENT_TYPE(V_028A90_PERFCOUNTER_SAMPLE) | EVENT_INDEX(0));

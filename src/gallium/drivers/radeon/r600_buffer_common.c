@@ -65,10 +65,10 @@ void *si_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 	    ctx->ws->cs_is_buffer_referenced(ctx->gfx_cs,
 					     resource->buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
-			si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
+			si_flush_gfx_cs(sctx, PIPE_FLUSH_ASYNC, NULL);
 			return NULL;
 		} else {
-			si_flush_gfx_cs(ctx, 0, NULL);
+			si_flush_gfx_cs(sctx, 0, NULL);
 			busy = true;
 		}
 	}

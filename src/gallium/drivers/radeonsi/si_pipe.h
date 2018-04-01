@@ -730,13 +730,13 @@ void si_screen_clear_buffer(struct si_screen *sscreen, struct pipe_resource *dst
 			    uint64_t offset, uint64_t size, unsigned value);
 
 /* si_fence.c */
-void si_gfx_write_event_eop(struct r600_common_context *ctx,
+void si_gfx_write_event_eop(struct si_context *ctx,
 			    unsigned event, unsigned event_flags,
 			    unsigned data_sel,
 			    struct r600_resource *buf, uint64_t va,
 			    uint32_t new_fence, unsigned query_type);
 unsigned si_gfx_write_fence_dwords(struct si_screen *screen);
-void si_gfx_wait_fence(struct r600_common_context *ctx,
+void si_gfx_wait_fence(struct si_context *ctx,
 		       uint64_t va, uint32_t ref, uint32_t mask);
 void si_init_fence_functions(struct si_context *ctx);
 void si_init_screen_fence_functions(struct si_screen *screen);
@@ -748,7 +748,7 @@ const char *si_get_family_name(const struct si_screen *sscreen);
 void si_init_screen_get_functions(struct si_screen *sscreen);
 
 /* si_gfx_cs.c */
-void si_flush_gfx_cs(void *context, unsigned flags,
+void si_flush_gfx_cs(struct si_context *ctx, unsigned flags,
 		     struct pipe_fence_handle **fence);
 void si_begin_new_gfx_cs(struct si_context *ctx);
 void si_need_gfx_cs_space(struct si_context *ctx);
@@ -781,13 +781,13 @@ void si_init_viewport_functions(struct si_context *ctx);
 static inline void
 si_context_add_resource_size(struct pipe_context *ctx, struct pipe_resource *r)
 {
-	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+	struct si_context *sctx = (struct si_context *)ctx;
 	struct r600_resource *res = (struct r600_resource *)r;
 
 	if (res) {
 		/* Add memory usage for need_gfx_cs_space */
-		rctx->vram += res->vram_usage;
-		rctx->gtt += res->gart_usage;
+		sctx->b.vram += res->vram_usage;
+		sctx->b.gtt += res->gart_usage;
 	}
 }
 

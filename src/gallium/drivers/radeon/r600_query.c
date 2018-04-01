@@ -827,7 +827,8 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 				       struct r600_resource *buffer,
 				       uint64_t va)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct si_context *sctx = (struct si_context*)ctx;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	uint64_t fence_va = 0;
 
 	switch (query->b.type) {
@@ -858,9 +859,9 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 		va += 8;
 		/* fall through */
 	case PIPE_QUERY_TIMESTAMP:
-		si_gfx_write_event_eop(ctx, V_028A90_BOTTOM_OF_PIPE_TS,
-					 0, EOP_DATA_SEL_TIMESTAMP, NULL, va,
-					 0, query->b.type);
+		si_gfx_write_event_eop(sctx, V_028A90_BOTTOM_OF_PIPE_TS,
+				       0, EOP_DATA_SEL_TIMESTAMP, NULL, va,
+				       0, query->b.type);
 		fence_va = va + 8;
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS: {
@@ -882,10 +883,10 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 				  RADEON_PRIO_QUERY);
 
 	if (fence_va)
-		si_gfx_write_event_eop(ctx, V_028A90_BOTTOM_OF_PIPE_TS, 0,
-					 EOP_DATA_SEL_VALUE_32BIT,
-					 query->buffer.buf, fence_va, 0x80000000,
-					 query->b.type);
+		si_gfx_write_event_eop(sctx, V_028A90_BOTTOM_OF_PIPE_TS, 0,
+				       EOP_DATA_SEL_VALUE_32BIT,
+				       query->buffer.buf, fence_va, 0x80000000,
+				       query->b.type);
 }
 
 static void r600_query_hw_emit_stop(struct r600_common_context *ctx,
@@ -1626,6 +1627,7 @@ static void r600_query_hw_get_result_resource(struct r600_common_context *rctx,
                                               struct pipe_resource *resource,
                                               unsigned offset)
 {
+	struct si_context *sctx = (struct si_context*)rctx;
 	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
 	struct r600_query_buffer *qbuf;
 	struct r600_query_buffer *qbuf_prev;
@@ -1756,7 +1758,7 @@ static void r600_query_hw_get_result_resource(struct r600_common_context *rctx,
 			va = qbuf->buf->gpu_address + qbuf->results_end - query->result_size;
 			va += params.fence_offset;
 
-			si_gfx_wait_fence(rctx, va, 0x80000000, 0x80000000);
+			si_gfx_wait_fence(sctx, va, 0x80000000, 0x80000000);
 		}
 
 		rctx->b.launch_grid(&rctx->b, &grid);

@@ -286,7 +286,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	}
 
 	sctx->b.gfx_cs = ws->cs_create(sctx->b.ctx, RING_GFX,
-				       si_flush_gfx_cs, sctx);
+				       (void*)si_flush_gfx_cs, sctx);
 
 	/* Border colors. */
 	sctx->border_color_table = malloc(SI_MAX_BORDER_COLORS *
