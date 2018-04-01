@@ -786,7 +786,7 @@ static void r600_query_hw_do_emit_start(struct si_context *sctx,
 	default:
 		assert(0);
 	}
-	radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs, query->buffer.buf, RADEON_USAGE_WRITE,
+	radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs, query->buffer.buf, RADEON_USAGE_WRITE,
 				  RADEON_PRIO_QUERY);
 }
 
@@ -878,7 +878,7 @@ static void r600_query_hw_do_emit_stop(struct si_context *sctx,
 	default:
 		assert(0);
 	}
-	radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs, query->buffer.buf, RADEON_USAGE_WRITE,
+	radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs, query->buffer.buf, RADEON_USAGE_WRITE,
 				  RADEON_PRIO_QUERY);
 
 	if (fence_va)
@@ -930,7 +930,7 @@ static void emit_set_predicate(struct si_context *ctx,
 		radeon_emit(cs, va);
 		radeon_emit(cs, op | ((va >> 32) & 0xFF));
 	}
-	radeon_add_to_buffer_list(&ctx->b, ctx->b.gfx_cs, buf, RADEON_USAGE_READ,
+	radeon_add_to_buffer_list(ctx, ctx->b.gfx_cs, buf, RADEON_USAGE_READ,
 				  RADEON_PRIO_QUERY);
 }
 

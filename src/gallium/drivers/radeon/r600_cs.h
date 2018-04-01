@@ -64,14 +64,14 @@ radeon_cs_memory_below_limit(struct si_screen *screen,
  * The buffer list becomes empty after every context flush and must be
  * rebuilt.
  */
-static inline void radeon_add_to_buffer_list(struct r600_common_context *rctx,
+static inline void radeon_add_to_buffer_list(struct si_context *sctx,
 					     struct radeon_winsys_cs *cs,
 					     struct r600_resource *rbo,
 					     enum radeon_bo_usage usage,
 					     enum radeon_bo_priority priority)
 {
 	assert(usage);
-	rctx->ws->cs_add_buffer(
+	sctx->b.ws->cs_add_buffer(
 		cs, rbo->buf,
 		(enum radeon_bo_usage)(usage | RADEON_USAGE_SYNCHRONIZED),
 		rbo->domains, priority);
@@ -107,7 +107,7 @@ radeon_add_to_gfx_buffer_list_check_mem(struct si_context *sctx,
 					  sctx->b.gtt + rbo->gart_usage))
 		si_flush_gfx_cs(sctx, PIPE_FLUSH_ASYNC, NULL);
 
-	radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs, rbo, usage, priority);
+	radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs, rbo, usage, priority);
 }
 
 static inline void radeon_set_config_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)

@@ -102,7 +102,7 @@ void si_gfx_write_event_eop(struct si_context *ctx,
 			radeon_emit(cs, scratch->gpu_address);
 			radeon_emit(cs, scratch->gpu_address >> 32);
 
-			radeon_add_to_buffer_list(&ctx->b, ctx->b.gfx_cs, scratch,
+			radeon_add_to_buffer_list(ctx, ctx->b.gfx_cs, scratch,
 						  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 		}
 
@@ -131,7 +131,7 @@ void si_gfx_write_event_eop(struct si_context *ctx,
 			radeon_emit(cs, 0); /* immediate data */
 			radeon_emit(cs, 0); /* unused */
 
-			radeon_add_to_buffer_list(&ctx->b, ctx->b.gfx_cs, scratch,
+			radeon_add_to_buffer_list(ctx, ctx->b.gfx_cs, scratch,
 						  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 		}
 
@@ -144,7 +144,7 @@ void si_gfx_write_event_eop(struct si_context *ctx,
 	}
 
 	if (buf) {
-		radeon_add_to_buffer_list(&ctx->b, ctx->b.gfx_cs, buf, RADEON_USAGE_WRITE,
+		radeon_add_to_buffer_list(ctx, ctx->b.gfx_cs, buf, RADEON_USAGE_WRITE,
 					  RADEON_PRIO_QUERY);
 	}
 }
@@ -263,7 +263,7 @@ static void si_fine_fence_set(struct si_context *ctx,
 
 	uint64_t fence_va = fine->buf->gpu_address + fine->offset;
 
-	radeon_add_to_buffer_list(&ctx->b, ctx->b.gfx_cs, fine->buf,
+	radeon_add_to_buffer_list(ctx, ctx->b.gfx_cs, fine->buf,
 				  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 	if (flags & PIPE_FLUSH_TOP_OF_PIPE) {
 		struct radeon_winsys_cs *cs = ctx->b.gfx_cs;

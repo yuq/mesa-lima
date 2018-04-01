@@ -555,7 +555,7 @@ static void si_pc_emit_start(struct si_context *sctx,
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 
-	radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs, buffer,
+	radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs, buffer,
 				  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 
 	radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));

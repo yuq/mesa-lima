@@ -674,7 +674,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		radeon_emit(cs, R_028B2C_VGT_STRMOUT_DRAW_OPAQUE_BUFFER_FILLED_SIZE >> 2);
 		radeon_emit(cs, 0); /* unused */
 
-		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
+		radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs,
 				      t->buf_filled_size, RADEON_USAGE_READ,
 				      RADEON_PRIO_SO_FILLED_SIZE);
 	}
@@ -719,7 +719,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 				  index_size;
 		index_va = r600_resource(indexbuf)->gpu_address + index_offset;
 
-		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
+		radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs,
 				      (struct r600_resource *)indexbuf,
 				      RADEON_USAGE_READ, RADEON_PRIO_INDEX_BUFFER);
 	} else {
@@ -742,7 +742,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		radeon_emit(cs, indirect_va);
 		radeon_emit(cs, indirect_va >> 32);
 
-		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
+		radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs,
 				      (struct r600_resource *)indirect->buffer,
 				      RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 
@@ -776,7 +776,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 					(struct r600_resource *)indirect->indirect_draw_count;
 
 				radeon_add_to_buffer_list(
-					&sctx->b, sctx->b.gfx_cs, params_buf,
+					sctx, sctx->b.gfx_cs, params_buf,
 					RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 
 				count_va = params_buf->gpu_address + indirect->indirect_draw_count_offset;

@@ -175,11 +175,11 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 
 	/* This must be done after need_cs_space. */
 	if (!(user_flags & SI_CPDMA_SKIP_BO_LIST_UPDATE)) {
-		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
+		radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs,
 					  (struct r600_resource*)dst,
 					  RADEON_USAGE_WRITE, RADEON_PRIO_CP_DMA);
 		if (src)
-			radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
+			radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs,
 						  (struct r600_resource*)src,
 						  RADEON_USAGE_READ, RADEON_PRIO_CP_DMA);
 	}

@@ -126,7 +126,7 @@ void si_pm4_emit(struct si_context *sctx, struct si_pm4_state *state)
 	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 
 	for (int i = 0; i < state->nbo; ++i) {
-		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs, state->bo[i],
+		radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs, state->bo[i],
 				      state->bo_usage[i], state->bo_priority[i]);
 	}
 
@@ -135,7 +135,7 @@ void si_pm4_emit(struct si_context *sctx, struct si_pm4_state *state)
 	} else {
 		struct r600_resource *ib = state->indirect_buffer;
 
-		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs, ib,
+		radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs, ib,
 					  RADEON_USAGE_READ,
                                           RADEON_PRIO_IB2);
 

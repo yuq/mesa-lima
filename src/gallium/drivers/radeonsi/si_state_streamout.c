@@ -291,7 +291,7 @@ static void si_emit_streamout_begin(struct si_context *sctx, struct r600_atom *a
 			radeon_emit(cs, va); /* src address lo */
 			radeon_emit(cs, va >> 32); /* src address hi */
 
-			radeon_add_to_buffer_list(&sctx->b,  sctx->b.gfx_cs,
+			radeon_add_to_buffer_list(sctx,  sctx->b.gfx_cs,
 						  t[i]->buf_filled_size,
 						  RADEON_USAGE_READ,
 						  RADEON_PRIO_SO_FILLED_SIZE);
@@ -333,7 +333,7 @@ void si_emit_streamout_end(struct si_context *sctx)
 		radeon_emit(cs, 0); /* unused */
 		radeon_emit(cs, 0); /* unused */
 
-		radeon_add_to_buffer_list(&sctx->b,  sctx->b.gfx_cs,
+		radeon_add_to_buffer_list(sctx,  sctx->b.gfx_cs,
 					  t[i]->buf_filled_size,
 					  RADEON_USAGE_WRITE,
 					  RADEON_PRIO_SO_FILLED_SIZE);

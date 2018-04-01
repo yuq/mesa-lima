@@ -3338,7 +3338,7 @@ static void si_emit_scratch_state(struct si_context *sctx,
 			       sctx->spi_tmpring_size);
 
 	if (sctx->scratch_buffer) {
-		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
+		radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs,
 				      sctx->scratch_buffer, RADEON_USAGE_READWRITE,
 				      RADEON_PRIO_SCRATCH_BUFFER);
 	}

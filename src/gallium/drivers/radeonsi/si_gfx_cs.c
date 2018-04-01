@@ -174,7 +174,7 @@ static void si_begin_gfx_cs_debug(struct si_context *ctx)
 
 	si_trace_emit(ctx);
 
-	radeon_add_to_buffer_list(&ctx->b, ctx->b.gfx_cs, ctx->current_saved_cs->trace_buf,
+	radeon_add_to_buffer_list(ctx, ctx->b.gfx_cs, ctx->current_saved_cs->trace_buf,
 			      RADEON_USAGE_READWRITE, RADEON_PRIO_TRACE);
 }
 

@@ -438,7 +438,7 @@ static bool si_switch_compute_shader(struct si_context *sctx,
 			    config->scratch_bytes_per_wave *
 			    sctx->scratch_waves);
 
-		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
+		radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs,
 			      shader->scratch_bo, RADEON_USAGE_READWRITE,
 			      RADEON_PRIO_SCRATCH_BUFFER);
 	}
@@ -462,7 +462,7 @@ static bool si_switch_compute_shader(struct si_context *sctx,
 		shader_va += sizeof(amd_kernel_code_t);
 	}
 
-	radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs, shader->bo,
+	radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs, shader->bo,
 	                          RADEON_USAGE_READ, RADEON_PRIO_SHADER_BINARY);
 
 	radeon_set_sh_reg_seq(cs, R_00B830_COMPUTE_PGM_LO, 2);
@@ -586,7 +586,7 @@ static void si_setup_user_sgprs_co_v2(struct si_context *sctx,
 			fprintf(stderr, "Error: Failed to allocate dispatch "
 					"packet.");
 		}
-		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs, dispatch_buf,
+		radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs, dispatch_buf,
 				  RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER);
 
 		dispatch_va = dispatch_buf->gpu_address + dispatch_offset;
@@ -669,7 +669,7 @@ static bool si_upload_compute_input(struct si_context *sctx,
 	}
 
 
-	radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs, input_buffer,
+	radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs, input_buffer,
 				  RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER);
 
 	if (code_object) {
@@ -703,7 +703,7 @@ static void si_setup_tgsi_grid(struct si_context *sctx,
 			uint64_t va = base_va + info->indirect_offset;
 			int i;
 
-			radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
+			radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs,
 					 (struct r600_resource *)info->indirect,
 					 RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 
@@ -774,7 +774,7 @@ static void si_emit_dispatch_packets(struct si_context *sctx,
 	if (info->indirect) {
 		uint64_t base_va = r600_resource(info->indirect)->gpu_address;
 
-		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
+		radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs,
 		                 (struct r600_resource *)info->indirect,
 		                 RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 
@@ -883,7 +883,7 @@ static void si_launch_grid(
 		if (!buffer) {
 			continue;
 		}
-		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs, buffer,
+		radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs, buffer,
 					  RADEON_USAGE_READWRITE,
 					  RADEON_PRIO_COMPUTE_GLOBAL);
 	}
