@@ -512,10 +512,6 @@ struct r600_common_context {
 					  bool old_perfect_enable);
 
 	void (*save_qbo_state)(struct pipe_context *ctx, struct r600_qbo_state *st);
-
-	/* This ensures there is enough space in the command stream. */
-	void (*need_gfx_cs_space)(struct pipe_context *ctx, unsigned num_dw,
-				  bool include_draw_vbo);
 };
 
 /* r600_buffer_common.c */

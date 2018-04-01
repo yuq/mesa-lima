@@ -4523,12 +4523,6 @@ static void *si_create_blend_custom(struct si_context *sctx, unsigned mode)
 	return si_create_blend_state_mode(&sctx->b.b, &blend, mode);
 }
 
-static void si_need_gfx_cs_space(struct pipe_context *ctx, unsigned num_dw,
-				 bool include_draw_vbo)
-{
-	si_need_cs_space((struct si_context*)ctx);
-}
-
 static void si_init_config(struct si_context *sctx);
 
 void si_init_state_functions(struct si_context *sctx)
@@ -4596,7 +4590,6 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->b.b.set_active_query_state = si_set_active_query_state;
 	sctx->b.set_occlusion_query_state = si_set_occlusion_query_state;
 	sctx->b.save_qbo_state = si_save_qbo_state;
-	sctx->b.need_gfx_cs_space = si_need_gfx_cs_space;
 
 	sctx->b.b.draw_vbo = si_draw_vbo;
 

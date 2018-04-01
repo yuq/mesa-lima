@@ -807,8 +807,7 @@ static void r600_query_hw_emit_start(struct r600_common_context *ctx,
 	r600_update_occlusion_query_state(ctx, query->b.type, 1);
 	si_update_prims_generated_query_state((void*)ctx, query->b.type, 1);
 
-	ctx->need_gfx_cs_space(&ctx->b, query->num_cs_dw_begin + query->num_cs_dw_end,
-			       true);
+	si_need_cs_space((struct si_context*)ctx);
 
 	/* Get a new query buffer if needed. */
 	if (query->buffer.results_end + query->result_size > query->buffer.buf->b.b.width0) {
@@ -904,9 +903,8 @@ static void r600_query_hw_emit_stop(struct r600_common_context *ctx,
 		return; // previous buffer allocation failure
 
 	/* The queries which need begin already called this in begin_query. */
-	if (query->flags & R600_QUERY_HW_FLAG_NO_START) {
-		ctx->need_gfx_cs_space(&ctx->b, query->num_cs_dw_end, false);
-	}
+	if (query->flags & R600_QUERY_HW_FLAG_NO_START)
+		si_need_cs_space((struct si_context*)ctx);
 
 	/* emit end query */
 	va = query->buffer.buf->gpu_address + query->buffer.results_end;
@@ -1876,7 +1874,7 @@ void si_resume_queries(struct r600_common_context *ctx)
 	assert(ctx->num_cs_dw_queries_suspend == 0);
 
 	/* Check CS space here. Resuming must not be interrupted by flushes. */
-	ctx->need_gfx_cs_space(&ctx->b, num_cs_dw, true);
+	si_need_cs_space((struct si_context*)ctx);
 
 	LIST_FOR_EACH_ENTRY(query, &ctx->active_queries, list) {
 		r600_query_hw_emit_start(ctx, query);
