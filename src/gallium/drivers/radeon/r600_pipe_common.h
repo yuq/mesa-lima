@@ -515,9 +515,6 @@ bool si_common_context_init(struct r600_common_context *rctx,
 			    struct si_screen *sscreen,
 			    unsigned context_flags);
 void si_common_context_cleanup(struct r600_common_context *rctx);
-void si_save_cs(struct radeon_winsys *ws, struct radeon_winsys_cs *cs,
-		struct radeon_saved_cs *saved, bool get_buffer_list);
-void si_clear_saved_cs(struct radeon_saved_cs *saved);
 bool si_check_device_reset(struct r600_common_context *rctx);
 
 /* r600_gpu_load.c */
