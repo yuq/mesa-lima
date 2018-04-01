@@ -191,7 +191,7 @@ static ppir_node *ppir_emit_intrinsic(ppir_block *block, nir_instr *ni)
          return NULL;
 
       lnode->num_components = instr->num_components;
-      lnode->index = nir_intrinsic_base(instr);
+      lnode->index = nir_intrinsic_base(instr) * 4 + nir_intrinsic_component(instr);
       return &lnode->node;
 
    case nir_intrinsic_load_uniform:
