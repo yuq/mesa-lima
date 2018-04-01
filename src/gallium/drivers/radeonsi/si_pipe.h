@@ -728,7 +728,7 @@ struct pipe_fence_handle *si_create_fence(struct pipe_context *ctx,
 const char *si_get_family_name(const struct si_screen *sscreen);
 void si_init_screen_get_functions(struct si_screen *sscreen);
 
-/* si_hw_context.c */
+/* si_gfx_cs.c */
 void si_flush_gfx_cs(void *context, unsigned flags,
 		     struct pipe_fence_handle **fence);
 void si_begin_new_gfx_cs(struct si_context *ctx);
