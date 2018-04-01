@@ -325,7 +325,7 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 
 static void si_emit_dpbb_disable(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
+	struct radeon_winsys_cs *cs = sctx->gfx_cs;
 
 	radeon_set_context_reg(cs, R_028C44_PA_SC_BINNER_CNTL_0,
 			       S_028C44_BINNING_MODE(V_028C44_DISABLE_BINNING_USE_LEGACY_SC) |
@@ -341,7 +341,7 @@ void si_emit_dpbb_state(struct si_context *sctx, struct r600_atom *state)
 	struct si_state_dsa *dsa = sctx->queued.named.dsa;
 	unsigned db_shader_control = sctx->ps_db_shader_control;
 
-	assert(sctx->b.chip_class >= GFX9);
+	assert(sctx->chip_class >= GFX9);
 
 	if (!sscreen->dpbb_allowed || !blend || !dsa) {
 		si_emit_dpbb_disable(sctx);
@@ -411,7 +411,7 @@ void si_emit_dpbb_state(struct si_context *sctx, struct r600_atom *state)
 	unsigned persistent_states_per_bin; /* allowed range: [0, 31] */
 	unsigned fpovs_per_batch; /* allowed range: [0, 255], 0 = unlimited */
 
-	switch (sctx->b.family) {
+	switch (sctx->family) {
 	case CHIP_VEGA10:
 	case CHIP_VEGA12:
 	case CHIP_RAVEN:
@@ -431,7 +431,7 @@ void si_emit_dpbb_state(struct si_context *sctx, struct r600_atom *state)
 	if (bin_size.y >= 32)
 		bin_size_extend.y = util_logbase2(bin_size.y) - 5;
 
-	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
+	struct radeon_winsys_cs *cs = sctx->gfx_cs;
 	radeon_set_context_reg(cs, R_028C44_PA_SC_BINNER_CNTL_0,
 			       S_028C44_BINNING_MODE(V_028C44_BINNING_ALLOWED) |
 			       S_028C44_BIN_SIZE_X(bin_size.x == 16) |

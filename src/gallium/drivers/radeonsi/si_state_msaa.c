@@ -190,16 +190,16 @@ void si_init_msaa_functions(struct si_context *sctx)
 {
 	int i;
 
-	sctx->b.b.get_sample_position = si_get_sample_position;
+	sctx->b.get_sample_position = si_get_sample_position;
 
-	si_get_sample_position(&sctx->b.b, 1, 0, sctx->sample_locations_1x[0]);
+	si_get_sample_position(&sctx->b, 1, 0, sctx->sample_locations_1x[0]);
 
 	for (i = 0; i < 2; i++)
-		si_get_sample_position(&sctx->b.b, 2, i, sctx->sample_locations_2x[i]);
+		si_get_sample_position(&sctx->b, 2, i, sctx->sample_locations_2x[i]);
 	for (i = 0; i < 4; i++)
-		si_get_sample_position(&sctx->b.b, 4, i, sctx->sample_locations_4x[i]);
+		si_get_sample_position(&sctx->b, 4, i, sctx->sample_locations_4x[i]);
 	for (i = 0; i < 8; i++)
-		si_get_sample_position(&sctx->b.b, 8, i, sctx->sample_locations_8x[i]);
+		si_get_sample_position(&sctx->b, 8, i, sctx->sample_locations_8x[i]);
 	for (i = 0; i < 16; i++)
-		si_get_sample_position(&sctx->b.b, 16, i, sctx->sample_locations_16x[i]);
+		si_get_sample_position(&sctx->b, 16, i, sctx->sample_locations_16x[i]);
 }

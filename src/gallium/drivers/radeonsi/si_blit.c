@@ -74,12 +74,12 @@ void si_blitter_begin(struct si_context *sctx, enum si_blitter_op op)
 	}
 
 	if (op & SI_DISABLE_RENDER_COND)
-		sctx->b.render_cond_force_off = true;
+		sctx->render_cond_force_off = true;
 }
 
 void si_blitter_end(struct si_context *sctx)
 {
-	sctx->b.render_cond_force_off = false;
+	sctx->render_cond_force_off = false;
 
 	/* Restore shader pointers because the VS blit shader changed all
 	 * non-global VS user SGPRs. */
@@ -132,10 +132,10 @@ si_blit_dbcb_copy(struct si_context *sctx,
 			surf_tmpl.u.tex.first_layer = layer;
 			surf_tmpl.u.tex.last_layer = layer;
 
-			zsurf = sctx->b.b.create_surface(&sctx->b.b, &src->resource.b.b, &surf_tmpl);
+			zsurf = sctx->b.create_surface(&sctx->b, &src->resource.b.b, &surf_tmpl);
 
 			surf_tmpl.format = dst->resource.b.b.format;
-			cbsurf = sctx->b.b.create_surface(&sctx->b.b, &dst->resource.b.b, &surf_tmpl);
+			cbsurf = sctx->b.create_surface(&sctx->b, &dst->resource.b.b, &surf_tmpl);
 
 			for (sample = first_sample; sample <= last_sample; sample++) {
 				if (sample != sctx->dbcb_copy_sample) {
@@ -230,7 +230,7 @@ si_blit_decompress_zs_planes_in_place(struct si_context *sctx,
 			surf_tmpl.u.tex.first_layer = layer;
 			surf_tmpl.u.tex.last_layer = layer;
 
-			zsurf = sctx->b.b.create_surface(&sctx->b.b, &texture->resource.b.b, &surf_tmpl);
+			zsurf = sctx->b.create_surface(&sctx->b, &texture->resource.b.b, &surf_tmpl);
 
 			si_blitter_begin(sctx, SI_DECOMPRESS);
 			util_blitter_custom_depth_stencil(sctx->blitter, zsurf, NULL, ~0,
@@ -330,8 +330,8 @@ si_decompress_depth(struct si_context *sctx,
 		}
 	}
 
-	if (unlikely(sctx->b.log))
-		u_log_printf(sctx->b.log,
+	if (unlikely(sctx->log))
+		u_log_printf(sctx->log,
 			     "\n------------------------------------------------\n"
 			     "Decompress Depth (levels %u - %u, levels Z: 0x%x S: 0x%x)\n\n",
 			     first_level, last_level, levels_z, levels_s);
@@ -341,7 +341,7 @@ si_decompress_depth(struct si_context *sctx,
 	 */
 	if (copy_planes &&
 	    (tex->flushed_depth_texture ||
-	     si_init_flushed_depth_texture(&sctx->b.b, &tex->resource.b.b, NULL))) {
+	     si_init_flushed_depth_texture(&sctx->b, &tex->resource.b.b, NULL))) {
 		struct r600_texture *dst = tex->flushed_depth_texture;
 		unsigned fully_copied_levels;
 		unsigned levels = 0;
@@ -454,8 +454,8 @@ static void si_blit_decompress_color(struct si_context *sctx,
 	if (!level_mask)
 		return;
 
-	if (unlikely(sctx->b.log))
-		u_log_printf(sctx->b.log,
+	if (unlikely(sctx->log))
+		u_log_printf(sctx->log,
 			     "\n------------------------------------------------\n"
 			     "Decompress Color (levels %u - %u, mask 0x%x)\n\n",
 			     first_level, last_level, level_mask);
@@ -493,12 +493,12 @@ static void si_blit_decompress_color(struct si_context *sctx,
 			surf_tmpl.u.tex.level = level;
 			surf_tmpl.u.tex.first_layer = layer;
 			surf_tmpl.u.tex.last_layer = layer;
-			cbsurf = sctx->b.b.create_surface(&sctx->b.b, &rtex->resource.b.b, &surf_tmpl);
+			cbsurf = sctx->b.create_surface(&sctx->b, &rtex->resource.b.b, &surf_tmpl);
 
 			/* Required before and after FMASK and DCC_DECOMPRESS. */
 			if (custom_blend == sctx->custom_blend_fmask_decompress ||
 			    custom_blend == sctx->custom_blend_dcc_decompress)
-				sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB;
+				sctx->flags |= SI_CONTEXT_FLUSH_AND_INV_CB;
 
 			si_blitter_begin(sctx, SI_DECOMPRESS);
 			util_blitter_custom_color(sctx->blitter, cbsurf, custom_blend);
@@ -506,7 +506,7 @@ static void si_blit_decompress_color(struct si_context *sctx,
 
 			if (custom_blend == sctx->custom_blend_fmask_decompress ||
 			    custom_blend == sctx->custom_blend_dcc_decompress)
-				sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB;
+				sctx->flags |= SI_CONTEXT_FLUSH_AND_INV_CB;
 
 			pipe_surface_reference(&cbsurf, NULL);
 		}
@@ -775,8 +775,8 @@ void si_decompress_textures(struct si_context *sctx, unsigned shader_mask)
 
 	/* Update the compressed_colortex_mask if necessary. */
 	compressed_colortex_counter = p_atomic_read(&sctx->screen->compressed_colortex_counter);
-	if (compressed_colortex_counter != sctx->b.last_compressed_colortex_counter) {
-		sctx->b.last_compressed_colortex_counter = compressed_colortex_counter;
+	if (compressed_colortex_counter != sctx->last_compressed_colortex_counter) {
+		sctx->last_compressed_colortex_counter = compressed_colortex_counter;
 		si_update_needs_color_decompress_masks(sctx);
 	}
 
@@ -1067,7 +1067,7 @@ static void si_do_CB_resolve(struct si_context *sctx,
 			     enum pipe_format format)
 {
 	/* Required before and after CB_RESOLVE. */
-	sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB;
+	sctx->flags |= SI_CONTEXT_FLUSH_AND_INV_CB;
 
 	si_blitter_begin(sctx, SI_COLOR_RESOLVE |
 			 (info->render_condition_enable ? 0 : SI_DISABLE_RENDER_COND));
@@ -1147,7 +1147,7 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 		 */
 		if (vi_dcc_enabled(dst, info->dst.level)) {
 			/* TODO: Implement per-level DCC clears for GFX9. */
-			if (sctx->b.chip_class >= GFX9 &&
+			if (sctx->chip_class >= GFX9 &&
 			    info->dst.resource->last_level != 0)
 				goto resolve_to_temp;
 
@@ -1225,9 +1225,9 @@ static void si_blit(struct pipe_context *ctx,
 	 * on failure (recursion).
 	 */
 	if (rdst->surface.is_linear &&
-	    sctx->b.dma_copy &&
+	    sctx->dma_copy &&
 	    util_can_blit_via_copy_region(info, false)) {
-		sctx->b.dma_copy(ctx, info->dst.resource, info->dst.level,
+		sctx->dma_copy(ctx, info->dst.resource, info->dst.level,
 				 info->dst.box.x, info->dst.box.y,
 				 info->dst.box.z,
 				 info->src.resource, info->src.level,
@@ -1335,8 +1335,8 @@ void si_decompress_dcc(struct si_context *sctx, struct r600_texture *rtex)
 
 void si_init_blit_functions(struct si_context *sctx)
 {
-	sctx->b.b.resource_copy_region = si_resource_copy_region;
-	sctx->b.b.blit = si_blit;
-	sctx->b.b.flush_resource = si_flush_resource;
-	sctx->b.b.generate_mipmap = si_generate_mipmap;
+	sctx->b.resource_copy_region = si_resource_copy_region;
+	sctx->b.blit = si_blit;
+	sctx->b.flush_resource = si_flush_resource;
+	sctx->b.generate_mipmap = si_generate_mipmap;
 }

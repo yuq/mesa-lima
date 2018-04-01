@@ -320,8 +320,8 @@ void si_test_dma(struct si_screen *sscreen)
 			int width, height, depth;
 			int srcx, srcy, srcz, dstx, dsty, dstz;
 			struct pipe_box box;
-			unsigned old_num_draw_calls = sctx->b.num_draw_calls;
-			unsigned old_num_dma_calls = sctx->b.num_dma_calls;
+			unsigned old_num_draw_calls = sctx->num_draw_calls;
+			unsigned old_num_dma_calls = sctx->num_dma_calls;
 
 			if (!do_partial_copies) {
 				/* copy whole src to dst */
@@ -376,11 +376,11 @@ void si_test_dma(struct si_screen *sscreen)
 
 			/* GPU copy */
 			u_box_3d(srcx, srcy, srcz, width, height, depth, &box);
-			sctx->b.dma_copy(ctx, dst, 0, dstx, dsty, dstz, src, 0, &box);
+			sctx->dma_copy(ctx, dst, 0, dstx, dsty, dstz, src, 0, &box);
 
 			/* See which engine was used. */
-			gfx_blits += sctx->b.num_draw_calls > old_num_draw_calls;
-			dma_blits += sctx->b.num_dma_calls > old_num_dma_calls;
+			gfx_blits += sctx->num_draw_calls > old_num_draw_calls;
+			dma_blits += sctx->num_dma_calls > old_num_dma_calls;
 
 			/* CPU copy */
 			util_copy_box(dst_cpu.ptr, tdst.format, dst_cpu.stride,

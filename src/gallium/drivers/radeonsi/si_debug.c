@@ -284,11 +284,11 @@ file_error:
 static void si_dump_mmapped_reg(struct si_context *sctx, FILE *f,
 				unsigned offset)
 {
-	struct radeon_winsys *ws = sctx->b.ws;
+	struct radeon_winsys *ws = sctx->ws;
 	uint32_t value;
 
 	if (ws->read_registers(ws, offset, 1, &value))
-		ac_dump_reg(f, sctx->b.chip_class, offset, value, ~0);
+		ac_dump_reg(f, sctx->chip_class, offset, value, ~0);
 }
 
 static void si_dump_debug_registers(struct si_context *sctx, FILE *f)
@@ -314,7 +314,7 @@ static void si_dump_debug_registers(struct si_context *sctx, FILE *f)
 	si_dump_mmapped_reg(sctx, f, R_00803C_GRBM_STATUS_SE3);
 	si_dump_mmapped_reg(sctx, f, R_00D034_SDMA0_STATUS_REG);
 	si_dump_mmapped_reg(sctx, f, R_00D834_SDMA1_STATUS_REG);
-	if (sctx->b.chip_class <= VI) {
+	if (sctx->chip_class <= VI) {
 		si_dump_mmapped_reg(sctx, f, R_000E50_SRBM_STATUS);
 		si_dump_mmapped_reg(sctx, f, R_000E4C_SRBM_STATUS2);
 		si_dump_mmapped_reg(sctx, f, R_000E54_SRBM_STATUS3);
@@ -399,7 +399,7 @@ static void si_log_chunk_type_cs_print(void *data, FILE *f)
 	 * waited for the context, so this buffer should be idle.
 	 * If the GPU is hung, there is no point in waiting for it.
 	 */
-	uint32_t *map = ctx->b.ws->buffer_map(scs->trace_buf->buf,
+	uint32_t *map = ctx->ws->buffer_map(scs->trace_buf->buf,
 					      NULL,
 					      PIPE_TRANSFER_UNSYNCHRONIZED |
 					      PIPE_TRANSFER_READ);
@@ -410,25 +410,25 @@ static void si_log_chunk_type_cs_print(void *data, FILE *f)
 		if (chunk->gfx_begin == 0) {
 			if (ctx->init_config)
 				ac_parse_ib(f, ctx->init_config->pm4, ctx->init_config->ndw,
-					    NULL, 0, "IB2: Init config", ctx->b.chip_class,
+					    NULL, 0, "IB2: Init config", ctx->chip_class,
 					    NULL, NULL);
 
 			if (ctx->init_config_gs_rings)
 				ac_parse_ib(f, ctx->init_config_gs_rings->pm4,
 					    ctx->init_config_gs_rings->ndw,
-					    NULL, 0, "IB2: Init GS rings", ctx->b.chip_class,
+					    NULL, 0, "IB2: Init GS rings", ctx->chip_class,
 					    NULL, NULL);
 		}
 
 		if (scs->flushed) {
 			ac_parse_ib(f, scs->gfx.ib + chunk->gfx_begin,
 				    chunk->gfx_end - chunk->gfx_begin,
-				    &last_trace_id, map ? 1 : 0, "IB", ctx->b.chip_class,
+				    &last_trace_id, map ? 1 : 0, "IB", ctx->chip_class,
 				    NULL, NULL);
 		} else {
-			si_parse_current_ib(f, ctx->b.gfx_cs, chunk->gfx_begin,
+			si_parse_current_ib(f, ctx->gfx_cs, chunk->gfx_begin,
 					    chunk->gfx_end, &last_trace_id, map ? 1 : 0,
-					    "IB", ctx->b.chip_class);
+					    "IB", ctx->chip_class);
 		}
 	}
 
@@ -451,7 +451,7 @@ static void si_log_cs(struct si_context *ctx, struct u_log_context *log,
 	assert(ctx->current_saved_cs);
 
 	struct si_saved_cs *scs = ctx->current_saved_cs;
-	unsigned gfx_cur = ctx->b.gfx_cs->prev_dw + ctx->b.gfx_cs->current.cdw;
+	unsigned gfx_cur = ctx->gfx_cs->prev_dw + ctx->gfx_cs->current.cdw;
 
 	if (!dump_bo_list &&
 	    gfx_cur == scs->gfx_last_dw)
@@ -478,10 +478,10 @@ void si_auto_log_cs(void *data, struct u_log_context *log)
 
 void si_log_hw_flush(struct si_context *sctx)
 {
-	if (!sctx->b.log)
+	if (!sctx->log)
 		return;
 
-	si_log_cs(sctx, sctx->b.log, true);
+	si_log_cs(sctx, sctx->log, true);
 }
 
 static const char *priority_to_string(enum radeon_bo_priority priority)
@@ -1044,8 +1044,8 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 
-	if (sctx->b.log)
-		u_log_flush(sctx->b.log);
+	if (sctx->log)
+		u_log_flush(sctx->log);
 
 	if (flags & PIPE_DUMP_DEVICE_STATUS_REGISTERS) {
 		si_dump_debug_registers(sctx, f);
@@ -1112,12 +1112,12 @@ static void si_dump_dma(struct si_context *sctx,
 void si_check_vm_faults(struct si_context *sctx,
 			struct radeon_saved_cs *saved, enum ring_type ring)
 {
-	struct pipe_screen *screen = sctx->b.b.screen;
+	struct pipe_screen *screen = sctx->b.screen;
 	FILE *f;
 	uint64_t addr;
 	char cmd_line[4096];
 
-	if (!ac_vm_fault_occured(sctx->b.chip_class,
+	if (!ac_vm_fault_occured(sctx->chip_class,
 				 &sctx->dmesg_timestamp, &addr))
 		return;
 
@@ -1166,12 +1166,12 @@ void si_check_vm_faults(struct si_context *sctx,
 
 void si_init_debug_functions(struct si_context *sctx)
 {
-	sctx->b.b.dump_debug_state = si_dump_debug_state;
+	sctx->b.dump_debug_state = si_dump_debug_state;
 
 	/* Set the initial dmesg timestamp for this context, so that
 	 * only new messages will be checked for VM faults.
 	 */
 	if (sctx->screen->debug_flags & DBG(CHECK_VM))
-		ac_vm_fault_occured(sctx->b.chip_class,
+		ac_vm_fault_occured(sctx->chip_class,
 				    &sctx->dmesg_timestamp, NULL);
 }

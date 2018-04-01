@@ -45,7 +45,7 @@
 /* The max number of bytes that can be copied per packet. */
 static inline unsigned cp_dma_max_byte_count(struct si_context *sctx)
 {
-	unsigned max = sctx->b.chip_class >= GFX9 ?
+	unsigned max = sctx->chip_class >= GFX9 ?
 			       S_414_BYTE_COUNT_GFX9(~0u) :
 			       S_414_BYTE_COUNT_GFX6(~0u);
 
@@ -62,13 +62,13 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 			   uint64_t src_va, unsigned size, unsigned flags,
 			   enum si_coherency coher)
 {
-	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
+	struct radeon_winsys_cs *cs = sctx->gfx_cs;
 	uint32_t header = 0, command = 0;
 
 	assert(size);
 	assert(size <= cp_dma_max_byte_count(sctx));
 
-	if (sctx->b.chip_class >= GFX9)
+	if (sctx->chip_class >= GFX9)
 		command |= S_414_BYTE_COUNT_GFX9(size);
 	else
 		command |= S_414_BYTE_COUNT_GFX6(size);
@@ -77,7 +77,7 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 	if (flags & CP_DMA_SYNC)
 		header |= S_411_CP_SYNC(1);
 	else {
-		if (sctx->b.chip_class >= GFX9)
+		if (sctx->chip_class >= GFX9)
 			command |= S_414_DISABLE_WR_CONFIRM_GFX9(1);
 		else
 			command |= S_414_DISABLE_WR_CONFIRM_GFX6(1);
@@ -87,7 +87,7 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 		command |= S_414_RAW_WAIT(1);
 
 	/* Src and dst flags. */
-	if (sctx->b.chip_class >= GFX9 && !(flags & CP_DMA_CLEAR) &&
+	if (sctx->chip_class >= GFX9 && !(flags & CP_DMA_CLEAR) &&
 	    src_va == dst_va)
 		header |= S_411_DSL_SEL(V_411_NOWHERE); /* prefetch only */
 	else if (flags & CP_DMA_USE_L2)
@@ -98,7 +98,7 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 	else if (flags & CP_DMA_USE_L2)
 		header |= S_411_SRC_SEL(V_411_SRC_ADDR_TC_L2);
 
-	if (sctx->b.chip_class >= CIK) {
+	if (sctx->chip_class >= CIK) {
 		radeon_emit(cs, PKT3(PKT3_DMA_DATA, 5, 0));
 		radeon_emit(cs, header);
 		radeon_emit(cs, src_va);	/* SRC_ADDR_LO [31:0] */
@@ -137,7 +137,7 @@ static unsigned get_flush_flags(struct si_context *sctx, enum si_coherency coher
 	case SI_COHERENCY_SHADER:
 		return SI_CONTEXT_INV_SMEM_L1 |
 		       SI_CONTEXT_INV_VMEM_L1 |
-		       (sctx->b.chip_class == SI ? SI_CONTEXT_INV_GLOBAL_L2 : 0);
+		       (sctx->chip_class == SI ? SI_CONTEXT_INV_GLOBAL_L2 : 0);
 	case SI_COHERENCY_CB_META:
 		return SI_CONTEXT_FLUSH_AND_INV_CB;
 	}
@@ -145,8 +145,8 @@ static unsigned get_flush_flags(struct si_context *sctx, enum si_coherency coher
 
 static unsigned get_tc_l2_flag(struct si_context *sctx, enum si_coherency coher)
 {
-	if ((sctx->b.chip_class >= GFX9 && coher == SI_COHERENCY_CB_META) ||
-	    (sctx->b.chip_class >= CIK && coher == SI_COHERENCY_SHADER))
+	if ((sctx->chip_class >= GFX9 && coher == SI_COHERENCY_CB_META) ||
+	    (sctx->chip_class >= CIK && coher == SI_COHERENCY_SHADER))
 		return CP_DMA_USE_L2;
 
 	return 0;
@@ -175,11 +175,11 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 
 	/* This must be done after need_cs_space. */
 	if (!(user_flags & SI_CPDMA_SKIP_BO_LIST_UPDATE)) {
-		radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs,
+		radeon_add_to_buffer_list(sctx, sctx->gfx_cs,
 					  (struct r600_resource*)dst,
 					  RADEON_USAGE_WRITE, RADEON_PRIO_CP_DMA);
 		if (src)
-			radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs,
+			radeon_add_to_buffer_list(sctx, sctx->gfx_cs,
 						  (struct r600_resource*)src,
 						  RADEON_USAGE_READ, RADEON_PRIO_CP_DMA);
 	}
@@ -187,7 +187,7 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 	/* Flush the caches for the first copy only.
 	 * Also wait for the previous CP DMA operations.
 	 */
-	if (!(user_flags & SI_CPDMA_SKIP_GFX_SYNC) && sctx->b.flags)
+	if (!(user_flags & SI_CPDMA_SKIP_GFX_SYNC) && sctx->flags)
 		si_emit_cache_flush(sctx);
 
 	if (!(user_flags & SI_CPDMA_SKIP_SYNC_BEFORE) && *is_first)
@@ -207,7 +207,7 @@ void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 		     uint64_t offset, uint64_t size, unsigned value,
 		     enum si_coherency coher)
 {
-	struct radeon_winsys *ws = sctx->b.ws;
+	struct radeon_winsys *ws = sctx->ws;
 	struct r600_resource *rdst = r600_resource(dst);
 	unsigned tc_l2_flag = get_tc_l2_flag(sctx, coher);
 	unsigned flush_flags = get_flush_flags(sctx, coher);
@@ -227,7 +227,7 @@ void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 
 	/* dma_clear_buffer can use clear_buffer on failure. Make sure that
 	 * doesn't happen. We don't want an infinite recursion: */
-	if (sctx->b.dma_cs &&
+	if (sctx->dma_cs &&
 	    !(dst->flags & PIPE_RESOURCE_FLAG_SPARSE) &&
 	    (offset % 4 == 0) &&
 	    /* CP DMA is very slow. Always use SDMA for big clears. This
@@ -239,9 +239,9 @@ void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 	      * si_emit_framebuffer_state (in a draw call) adds them.
 	      * For example, DeusEx:MD has 21 buffer clears per frame and all
 	      * of them are moved to SDMA thanks to this. */
-	     !ws->cs_is_buffer_referenced(sctx->b.gfx_cs, rdst->buf,
+	     !ws->cs_is_buffer_referenced(sctx->gfx_cs, rdst->buf,
 				          RADEON_USAGE_READWRITE))) {
-		sctx->b.dma_clear_buffer(sctx, dst, offset, dma_clear_size, value);
+		sctx->dma_clear_buffer(sctx, dst, offset, dma_clear_size, value);
 
 		offset += dma_clear_size;
 		size -= dma_clear_size;
@@ -252,7 +252,7 @@ void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 		size -= dma_clear_size;
 
 		/* Flush the caches. */
-		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
+		sctx->flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
 				 SI_CONTEXT_CS_PARTIAL_FLUSH | flush_flags;
 
 		while (dma_clear_size) {
@@ -274,7 +274,7 @@ void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 
 		/* If it's not a framebuffer fast clear... */
 		if (coher == SI_COHERENCY_SHADER)
-			sctx->b.num_cp_dma_calls++;
+			sctx->num_cp_dma_calls++;
 	}
 
 	if (size) {
@@ -285,7 +285,7 @@ void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 		assert(dst->target == PIPE_BUFFER);
 		assert(size < 4);
 
-		pipe_buffer_write(&sctx->b.b, dst, offset, size, &value);
+		pipe_buffer_write(&sctx->b, dst, offset, size, &value);
 	}
 }
 
@@ -422,8 +422,8 @@ void si_copy_buffer(struct si_context *sctx,
 	src_offset += r600_resource(src)->gpu_address;
 
 	/* The workarounds aren't needed on Fiji and beyond. */
-	if (sctx->b.family <= CHIP_CARRIZO ||
-	    sctx->b.family == CHIP_STONEY) {
+	if (sctx->family <= CHIP_CARRIZO ||
+	    sctx->family == CHIP_STONEY) {
 		/* If the size is not aligned, we must add a dummy copy at the end
 		 * just to align the internal counter. Otherwise, the DMA engine
 		 * would slow down by an order of magnitude for following copies.
@@ -445,7 +445,7 @@ void si_copy_buffer(struct si_context *sctx,
 
 	/* Flush the caches. */
 	if (!(user_flags & SI_CPDMA_SKIP_GFX_SYNC))
-		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
+		sctx->flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
 				 SI_CONTEXT_CS_PARTIAL_FLUSH | flush_flags;
 
 	/* This is the main part doing the copying. Src is always aligned. */
@@ -490,13 +490,13 @@ void si_copy_buffer(struct si_context *sctx,
 
 	/* If it's not a prefetch... */
 	if (dst_offset != src_offset)
-		sctx->b.num_cp_dma_calls++;
+		sctx->num_cp_dma_calls++;
 }
 
 void cik_prefetch_TC_L2_async(struct si_context *sctx, struct pipe_resource *buf,
 			      uint64_t offset, unsigned size)
 {
-	assert(sctx->b.chip_class >= CIK);
+	assert(sctx->chip_class >= CIK);
 
 	si_copy_buffer(sctx, buf, buf, offset, offset, size, SI_CPDMA_SKIP_ALL);
 }
@@ -523,7 +523,7 @@ static void cik_prefetch_VBO_descriptors(struct si_context *sctx)
 void cik_emit_prefetch_L2(struct si_context *sctx)
 {
 	/* Prefetch shaders and VBO descriptors to TC L2. */
-	if (sctx->b.chip_class >= GFX9) {
+	if (sctx->chip_class >= GFX9) {
 		/* Choose the right spot for the VBO prefetch. */
 		if (sctx->tes_shader.cso) {
 			if (sctx->prefetch_L2_mask & SI_PREFETCH_HS)
@@ -588,5 +588,5 @@ void cik_emit_prefetch_L2(struct si_context *sctx)
 
 void si_init_cp_dma_functions(struct si_context *sctx)
 {
-	sctx->b.b.clear_buffer = si_pipe_clear_buffer;
+	sctx->b.clear_buffer = si_pipe_clear_buffer;
 }

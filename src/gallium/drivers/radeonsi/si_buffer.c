@@ -32,11 +32,11 @@ bool si_rings_is_buffer_referenced(struct si_context *sctx,
 				   struct pb_buffer *buf,
 				   enum radeon_bo_usage usage)
 {
-	if (sctx->b.ws->cs_is_buffer_referenced(sctx->b.gfx_cs, buf, usage)) {
+	if (sctx->ws->cs_is_buffer_referenced(sctx->gfx_cs, buf, usage)) {
 		return true;
 	}
-	if (radeon_emitted(sctx->b.dma_cs, 0) &&
-	    sctx->b.ws->cs_is_buffer_referenced(sctx->b.dma_cs, buf, usage)) {
+	if (radeon_emitted(sctx->dma_cs, 0) &&
+	    sctx->ws->cs_is_buffer_referenced(sctx->dma_cs, buf, usage)) {
 		return true;
 	}
 	return false;
@@ -52,7 +52,7 @@ void *si_buffer_map_sync_with_rings(struct si_context *sctx,
 	assert(!(resource->flags & RADEON_FLAG_SPARSE));
 
 	if (usage & PIPE_TRANSFER_UNSYNCHRONIZED) {
-		return sctx->b.ws->buffer_map(resource->buf, NULL, usage);
+		return sctx->ws->buffer_map(resource->buf, NULL, usage);
 	}
 
 	if (!(usage & PIPE_TRANSFER_WRITE)) {
@@ -60,8 +60,8 @@ void *si_buffer_map_sync_with_rings(struct si_context *sctx,
 		rusage = RADEON_USAGE_WRITE;
 	}
 
-	if (radeon_emitted(sctx->b.gfx_cs, sctx->b.initial_gfx_cs_size) &&
-	    sctx->b.ws->cs_is_buffer_referenced(sctx->b.gfx_cs,
+	if (radeon_emitted(sctx->gfx_cs, sctx->initial_gfx_cs_size) &&
+	    sctx->ws->cs_is_buffer_referenced(sctx->gfx_cs,
 						resource->buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
 			si_flush_gfx_cs(sctx, PIPE_FLUSH_ASYNC, NULL);
@@ -71,8 +71,8 @@ void *si_buffer_map_sync_with_rings(struct si_context *sctx,
 			busy = true;
 		}
 	}
-	if (radeon_emitted(sctx->b.dma_cs, 0) &&
-	    sctx->b.ws->cs_is_buffer_referenced(sctx->b.dma_cs,
+	if (radeon_emitted(sctx->dma_cs, 0) &&
+	    sctx->ws->cs_is_buffer_referenced(sctx->dma_cs,
 						resource->buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
 			si_flush_dma_cs(sctx, PIPE_FLUSH_ASYNC, NULL);
@@ -83,20 +83,20 @@ void *si_buffer_map_sync_with_rings(struct si_context *sctx,
 		}
 	}
 
-	if (busy || !sctx->b.ws->buffer_wait(resource->buf, 0, rusage)) {
+	if (busy || !sctx->ws->buffer_wait(resource->buf, 0, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
 			return NULL;
 		} else {
 			/* We will be wait for the GPU. Wait for any offloaded
 			 * CS flush to complete to avoid busy-waiting in the winsys. */
-			sctx->b.ws->cs_sync_flush(sctx->b.gfx_cs);
-			if (sctx->b.dma_cs)
-				sctx->b.ws->cs_sync_flush(sctx->b.dma_cs);
+			sctx->ws->cs_sync_flush(sctx->gfx_cs);
+			if (sctx->dma_cs)
+				sctx->ws->cs_sync_flush(sctx->dma_cs);
 		}
 	}
 
 	/* Setting the CS to NULL will prevent doing checks we have done already. */
-	return sctx->b.ws->buffer_map(resource->buf, NULL, usage);
+	return sctx->ws->buffer_map(resource->buf, NULL, usage);
 }
 
 void si_init_resource_fields(struct si_screen *sscreen,
@@ -280,7 +280,7 @@ si_invalidate_buffer(struct si_context *sctx,
 
 	/* Check if mapping this buffer would cause waiting for the GPU. */
 	if (si_rings_is_buffer_referenced(sctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
-	    !sctx->b.ws->buffer_wait(rbuffer->buf, 0, RADEON_USAGE_READWRITE)) {
+	    !sctx->ws->buffer_wait(rbuffer->buf, 0, RADEON_USAGE_READWRITE)) {
 		uint64_t old_va = rbuffer->gpu_address;
 
 		/* Reallocate the buffer in the same pipe_resource. */
@@ -342,9 +342,9 @@ static void *si_buffer_get_transfer(struct pipe_context *ctx,
 	struct r600_transfer *transfer;
 
 	if (usage & TC_TRANSFER_MAP_THREADED_UNSYNC)
-		transfer = slab_alloc(&sctx->b.pool_transfers_unsync);
+		transfer = slab_alloc(&sctx->pool_transfers_unsync);
 	else
-		transfer = slab_alloc(&sctx->b.pool_transfers);
+		transfer = slab_alloc(&sctx->pool_transfers);
 
 	transfer->b.b.resource = NULL;
 	pipe_resource_reference(&transfer->b.b.resource, resource);
@@ -445,7 +445,7 @@ static void *si_buffer_transfer_map(struct pipe_context *ctx,
 		if (rbuffer->flags & RADEON_FLAG_SPARSE ||
 		    force_discard_range ||
 		    si_rings_is_buffer_referenced(sctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
-		    !sctx->b.ws->buffer_wait(rbuffer->buf, 0, RADEON_USAGE_READWRITE)) {
+		    !sctx->ws->buffer_wait(rbuffer->buf, 0, RADEON_USAGE_READWRITE)) {
 			/* Do a wait-free write-only transfer using a temporary buffer. */
 			unsigned offset;
 			struct r600_resource *staging = NULL;
@@ -482,7 +482,7 @@ static void *si_buffer_transfer_map(struct pipe_context *ctx,
 				box->width + (box->x % SI_MAP_BUFFER_ALIGNMENT));
 		if (staging) {
 			/* Copy the VRAM buffer to the staging buffer. */
-			sctx->b.dma_copy(ctx, &staging->b.b, 0,
+			sctx->dma_copy(ctx, &staging->b.b, 0,
 				       box->x % SI_MAP_BUFFER_ALIGNMENT,
 				       0, 0, resource, 0, box);
 
@@ -568,7 +568,7 @@ static void si_buffer_transfer_unmap(struct pipe_context *ctx,
 
 	/* Don't use pool_transfers_unsync. We are always in the driver
 	 * thread. */
-	slab_free(&sctx->b.pool_transfers, transfer);
+	slab_free(&sctx->pool_transfers, transfer);
 }
 
 static void si_buffer_subdata(struct pipe_context *ctx,
@@ -722,23 +722,23 @@ static bool si_resource_commit(struct pipe_context *pctx,
 	 * (b) wait for threaded submit to finish, including those that were
 	 *     triggered by some other, earlier operation.
 	 */
-	if (radeon_emitted(ctx->b.gfx_cs, ctx->b.initial_gfx_cs_size) &&
-	    ctx->b.ws->cs_is_buffer_referenced(ctx->b.gfx_cs,
+	if (radeon_emitted(ctx->gfx_cs, ctx->initial_gfx_cs_size) &&
+	    ctx->ws->cs_is_buffer_referenced(ctx->gfx_cs,
 					       res->buf, RADEON_USAGE_READWRITE)) {
 		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 	}
-	if (radeon_emitted(ctx->b.dma_cs, 0) &&
-	    ctx->b.ws->cs_is_buffer_referenced(ctx->b.dma_cs,
+	if (radeon_emitted(ctx->dma_cs, 0) &&
+	    ctx->ws->cs_is_buffer_referenced(ctx->dma_cs,
 					       res->buf, RADEON_USAGE_READWRITE)) {
 		si_flush_dma_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 	}
 
-	ctx->b.ws->cs_sync_flush(ctx->b.dma_cs);
-	ctx->b.ws->cs_sync_flush(ctx->b.gfx_cs);
+	ctx->ws->cs_sync_flush(ctx->dma_cs);
+	ctx->ws->cs_sync_flush(ctx->gfx_cs);
 
 	assert(resource->target == PIPE_BUFFER);
 
-	return ctx->b.ws->buffer_commit(res->buf, box->x, box->width, commit);
+	return ctx->ws->buffer_commit(res->buf, box->x, box->width, commit);
 }
 
 void si_init_screen_buffer_functions(struct si_screen *sscreen)
@@ -750,11 +750,11 @@ void si_init_screen_buffer_functions(struct si_screen *sscreen)
 
 void si_init_buffer_functions(struct si_context *sctx)
 {
-	sctx->b.b.invalidate_resource = si_invalidate_resource;
-	sctx->b.b.transfer_map = u_transfer_map_vtbl;
-	sctx->b.b.transfer_flush_region = u_transfer_flush_region_vtbl;
-	sctx->b.b.transfer_unmap = u_transfer_unmap_vtbl;
-	sctx->b.b.texture_subdata = u_default_texture_subdata;
-	sctx->b.b.buffer_subdata = si_buffer_subdata;
-	sctx->b.b.resource_commit = si_resource_commit;
+	sctx->b.invalidate_resource = si_invalidate_resource;
+	sctx->b.transfer_map = u_transfer_map_vtbl;
+	sctx->b.transfer_flush_region = u_transfer_flush_region_vtbl;
+	sctx->b.transfer_unmap = u_transfer_unmap_vtbl;
+	sctx->b.texture_subdata = u_default_texture_subdata;
+	sctx->b.buffer_subdata = si_buffer_subdata;
+	sctx->b.resource_commit = si_resource_commit;
 }

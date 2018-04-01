@@ -26,10 +26,10 @@
 
 static void si_dma_emit_wait_idle(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->b.dma_cs;
+	struct radeon_winsys_cs *cs = sctx->dma_cs;
 
 	/* NOP waits for idle on Evergreen and later. */
-	if (sctx->b.chip_class >= CIK)
+	if (sctx->chip_class >= CIK)
 		radeon_emit(cs, 0x00000000); /* NOP */
 	else
 		radeon_emit(cs, 0xf0000000); /* NOP */
@@ -38,8 +38,8 @@ static void si_dma_emit_wait_idle(struct si_context *sctx)
 void si_need_dma_space(struct si_context *ctx, unsigned num_dw,
 		       struct r600_resource *dst, struct r600_resource *src)
 {
-	uint64_t vram = ctx->b.dma_cs->used_vram;
-	uint64_t gtt = ctx->b.dma_cs->used_gart;
+	uint64_t vram = ctx->dma_cs->used_vram;
+	uint64_t gtt = ctx->dma_cs->used_gart;
 
 	if (dst) {
 		vram += dst->vram_usage;
@@ -51,12 +51,12 @@ void si_need_dma_space(struct si_context *ctx, unsigned num_dw,
 	}
 
 	/* Flush the GFX IB if DMA depends on it. */
-	if (radeon_emitted(ctx->b.gfx_cs, ctx->b.initial_gfx_cs_size) &&
+	if (radeon_emitted(ctx->gfx_cs, ctx->initial_gfx_cs_size) &&
 	    ((dst &&
-	      ctx->b.ws->cs_is_buffer_referenced(ctx->b.gfx_cs, dst->buf,
+	      ctx->ws->cs_is_buffer_referenced(ctx->gfx_cs, dst->buf,
 						 RADEON_USAGE_READWRITE)) ||
 	     (src &&
-	      ctx->b.ws->cs_is_buffer_referenced(ctx->b.gfx_cs, src->buf,
+	      ctx->ws->cs_is_buffer_referenced(ctx->gfx_cs, src->buf,
 						 RADEON_USAGE_WRITE))))
 		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 
@@ -73,64 +73,64 @@ void si_need_dma_space(struct si_context *ctx, unsigned num_dw,
 	 * engine busy while uploads are being submitted.
 	 */
 	num_dw++; /* for emit_wait_idle below */
-	if (!ctx->b.ws->cs_check_space(ctx->b.dma_cs, num_dw) ||
-	    ctx->b.dma_cs->used_vram + ctx->b.dma_cs->used_gart > 64 * 1024 * 1024 ||
-	    !radeon_cs_memory_below_limit(ctx->screen, ctx->b.dma_cs, vram, gtt)) {
+	if (!ctx->ws->cs_check_space(ctx->dma_cs, num_dw) ||
+	    ctx->dma_cs->used_vram + ctx->dma_cs->used_gart > 64 * 1024 * 1024 ||
+	    !radeon_cs_memory_below_limit(ctx->screen, ctx->dma_cs, vram, gtt)) {
 		si_flush_dma_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
-		assert((num_dw + ctx->b.dma_cs->current.cdw) <= ctx->b.dma_cs->current.max_dw);
+		assert((num_dw + ctx->dma_cs->current.cdw) <= ctx->dma_cs->current.max_dw);
 	}
 
 	/* Wait for idle if either buffer has been used in the IB before to
 	 * prevent read-after-write hazards.
 	 */
 	if ((dst &&
-	     ctx->b.ws->cs_is_buffer_referenced(ctx->b.dma_cs, dst->buf,
+	     ctx->ws->cs_is_buffer_referenced(ctx->dma_cs, dst->buf,
 						RADEON_USAGE_READWRITE)) ||
 	    (src &&
-	     ctx->b.ws->cs_is_buffer_referenced(ctx->b.dma_cs, src->buf,
+	     ctx->ws->cs_is_buffer_referenced(ctx->dma_cs, src->buf,
 						RADEON_USAGE_WRITE)))
 		si_dma_emit_wait_idle(ctx);
 
 	if (dst) {
-		radeon_add_to_buffer_list(ctx, ctx->b.dma_cs, dst,
+		radeon_add_to_buffer_list(ctx, ctx->dma_cs, dst,
 					  RADEON_USAGE_WRITE,
 					  RADEON_PRIO_SDMA_BUFFER);
 	}
 	if (src) {
-		radeon_add_to_buffer_list(ctx, ctx->b.dma_cs, src,
+		radeon_add_to_buffer_list(ctx, ctx->dma_cs, src,
 					  RADEON_USAGE_READ,
 					  RADEON_PRIO_SDMA_BUFFER);
 	}
 
 	/* this function is called before all DMA calls, so increment this. */
-	ctx->b.num_dma_calls++;
+	ctx->num_dma_calls++;
 }
 
 void si_flush_dma_cs(struct si_context *ctx, unsigned flags,
 		     struct pipe_fence_handle **fence)
 {
-	struct radeon_winsys_cs *cs = ctx->b.dma_cs;
+	struct radeon_winsys_cs *cs = ctx->dma_cs;
 	struct radeon_saved_cs saved;
 	bool check_vm = (ctx->screen->debug_flags & DBG(CHECK_VM)) != 0;
 
 	if (!radeon_emitted(cs, 0)) {
 		if (fence)
-			ctx->b.ws->fence_reference(fence, ctx->b.last_sdma_fence);
+			ctx->ws->fence_reference(fence, ctx->last_sdma_fence);
 		return;
 	}
 
 	if (check_vm)
-		si_save_cs(ctx->b.ws, cs, &saved, true);
+		si_save_cs(ctx->ws, cs, &saved, true);
 
-	ctx->b.ws->cs_flush(cs, flags, &ctx->b.last_sdma_fence);
+	ctx->ws->cs_flush(cs, flags, &ctx->last_sdma_fence);
 	if (fence)
-		ctx->b.ws->fence_reference(fence, ctx->b.last_sdma_fence);
+		ctx->ws->fence_reference(fence, ctx->last_sdma_fence);
 
 	if (check_vm) {
 		/* Use conservative timeout 800ms, after which we won't wait any
 		 * longer and assume the GPU is hung.
 		 */
-		ctx->b.ws->fence_wait(ctx->b.ws, ctx->b.last_sdma_fence, 800*1000*1000);
+		ctx->ws->fence_wait(ctx->ws, ctx->last_sdma_fence, 800*1000*1000);
 
 		si_check_vm_faults(ctx, &saved, RING_DMA);
 		si_clear_saved_cs(&saved);
@@ -143,7 +143,7 @@ void si_screen_clear_buffer(struct si_screen *sscreen, struct pipe_resource *dst
 	struct si_context *ctx = (struct si_context*)sscreen->aux_context;
 
 	mtx_lock(&sscreen->aux_context_lock);
-	ctx->b.dma_clear_buffer(ctx, dst, offset, size, value);
+	ctx->dma_clear_buffer(ctx, dst, offset, size, value);
 	sscreen->aux_context->flush(sscreen->aux_context, NULL, 0);
 	mtx_unlock(&sscreen->aux_context_lock);
 }

@@ -437,7 +437,7 @@ struct pipe_video_codec *si_vce_create_encoder(struct pipe_context *context,
 
 	enc->screen = context->screen;
 	enc->ws = ws;
-	enc->cs = ws->cs_create(sctx->b.ctx, RING_VCE, rvce_cs_flush, enc);
+	enc->cs = ws->cs_create(sctx->ctx, RING_VCE, rvce_cs_flush, enc);
 	if (!enc->cs) {
 		RVID_ERR("Can't get command submission context.\n");
 		goto error;

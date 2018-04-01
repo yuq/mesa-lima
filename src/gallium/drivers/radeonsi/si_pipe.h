@@ -506,7 +506,26 @@ struct si_saved_cs {
 };
 
 struct si_context {
-	struct r600_common_context	b;
+	struct pipe_context		b; /* base class */
+
+	enum radeon_family		family;
+	enum chip_class			chip_class;
+
+	struct radeon_winsys		*ws;
+	struct radeon_winsys_ctx	*ctx;
+	struct radeon_winsys_cs		*gfx_cs;
+	struct radeon_winsys_cs		*dma_cs;
+	struct pipe_fence_handle	*last_gfx_fence;
+	struct pipe_fence_handle	*last_sdma_fence;
+	struct r600_resource		*eop_bug_scratch;
+	struct u_upload_mgr		*cached_gtt_allocator;
+	struct threaded_context		*tc;
+	struct u_suballocator		*allocator_zeroed_memory;
+	struct slab_child_pool		pool_transfers;
+	struct slab_child_pool		pool_transfers_unsync; /* for threaded_context */
+	struct pipe_device_reset_callback device_reset_callback;
+	struct u_log_context		*log;
+	void				*query_result_shader;
 	struct blitter_context		*blitter;
 	void				*custom_dsa_flush;
 	void				*custom_blend_resolve;
@@ -528,6 +547,17 @@ struct si_context {
 
 	bool				gfx_flush_in_progress:1;
 	bool				compute_is_busy:1;
+
+	unsigned			num_gfx_cs_flushes;
+	unsigned			initial_gfx_cs_size;
+	unsigned			gpu_reset_counter;
+	unsigned			last_dirty_tex_counter;
+	unsigned			last_compressed_colortex_counter;
+	unsigned			last_num_draw_calls;
+	unsigned			flags; /* flush flags */
+	/* Current unaccounted memory usage. */
+	uint64_t			vram;
+	uint64_t			gtt;
 
 	/* Atoms (direct states). */
 	union si_state_atoms		atoms;
@@ -713,6 +743,72 @@ struct si_context {
 	float			sample_locations_4x[4][2];
 	float			sample_locations_8x[8][2];
 	float			sample_locations_16x[16][2];
+
+	/* Misc stats. */
+	unsigned			num_draw_calls;
+	unsigned			num_decompress_calls;
+	unsigned			num_mrt_draw_calls;
+	unsigned			num_prim_restart_calls;
+	unsigned			num_spill_draw_calls;
+	unsigned			num_compute_calls;
+	unsigned			num_spill_compute_calls;
+	unsigned			num_dma_calls;
+	unsigned			num_cp_dma_calls;
+	unsigned			num_vs_flushes;
+	unsigned			num_ps_flushes;
+	unsigned			num_cs_flushes;
+	unsigned			num_cb_cache_flushes;
+	unsigned			num_db_cache_flushes;
+	unsigned			num_L2_invalidates;
+	unsigned			num_L2_writebacks;
+	unsigned			num_resident_handles;
+	uint64_t			num_alloc_tex_transfer_bytes;
+	unsigned			last_tex_ps_draw_ratio; /* for query */
+
+	/* Queries. */
+	/* Maintain the list of active queries for pausing between IBs. */
+	int				num_occlusion_queries;
+	int				num_perfect_occlusion_queries;
+	struct list_head		active_queries;
+	unsigned			num_cs_dw_queries_suspend;
+
+	/* Render condition. */
+	struct r600_atom		render_cond_atom;
+	struct pipe_query		*render_cond;
+	unsigned			render_cond_mode;
+	bool				render_cond_invert;
+	bool				render_cond_force_off; /* for u_blitter */
+
+	/* Statistics gathering for the DCC enablement heuristic. It can't be
+	 * in r600_texture because r600_texture can be shared by multiple
+	 * contexts. This is for back buffers only. We shouldn't get too many
+	 * of those.
+	 *
+	 * X11 DRI3 rotates among a finite set of back buffers. They should
+	 * all fit in this array. If they don't, separate DCC might never be
+	 * enabled by DCC stat gathering.
+	 */
+	struct {
+		struct r600_texture		*tex;
+		/* Query queue: 0 = usually active, 1 = waiting, 2 = readback. */
+		struct pipe_query		*ps_stats[3];
+		/* If all slots are used and another slot is needed,
+		 * the least recently used slot is evicted based on this. */
+		int64_t				last_use_timestamp;
+		bool				query_active;
+	} dcc_stats[5];
+
+	/* Copy one resource to another using async DMA. */
+	void (*dma_copy)(struct pipe_context *ctx,
+			 struct pipe_resource *dst,
+			 unsigned dst_level,
+			 unsigned dst_x, unsigned dst_y, unsigned dst_z,
+			 struct pipe_resource *src,
+			 unsigned src_level,
+			 const struct pipe_box *src_box);
+
+	void (*dma_clear_buffer)(struct si_context *sctx, struct pipe_resource *dst,
+				 uint64_t offset, uint64_t size, unsigned value);
 };
 
 /* cik_sdma.c */
@@ -955,8 +1051,8 @@ si_context_add_resource_size(struct si_context *sctx, struct pipe_resource *r)
 
 	if (res) {
 		/* Add memory usage for need_gfx_cs_space */
-		sctx->b.vram += res->vram_usage;
-		sctx->b.gtt += res->gart_usage;
+		sctx->vram += res->vram_usage;
+		sctx->gtt += res->gart_usage;
 	}
 }
 
@@ -1067,21 +1163,21 @@ static inline void
 si_make_CB_shader_coherent(struct si_context *sctx, unsigned num_samples,
 			   bool shaders_read_metadata)
 {
-	sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
-			 SI_CONTEXT_INV_VMEM_L1;
+	sctx->flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
+		       SI_CONTEXT_INV_VMEM_L1;
 
-	if (sctx->b.chip_class >= GFX9) {
+	if (sctx->chip_class >= GFX9) {
 		/* Single-sample color is coherent with shaders on GFX9, but
 		 * L2 metadata must be flushed if shaders read metadata.
 		 * (DCC, CMASK).
 		 */
 		if (num_samples >= 2)
-			sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
+			sctx->flags |= SI_CONTEXT_INV_GLOBAL_L2;
 		else if (shaders_read_metadata)
-			sctx->b.flags |= SI_CONTEXT_INV_L2_METADATA;
+			sctx->flags |= SI_CONTEXT_INV_L2_METADATA;
 	} else {
 		/* SI-CI-VI */
-		sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
+		sctx->flags |= SI_CONTEXT_INV_GLOBAL_L2;
 	}
 }
 
@@ -1089,21 +1185,21 @@ static inline void
 si_make_DB_shader_coherent(struct si_context *sctx, unsigned num_samples,
 			   bool include_stencil, bool shaders_read_metadata)
 {
-	sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_DB |
-			 SI_CONTEXT_INV_VMEM_L1;
+	sctx->flags |= SI_CONTEXT_FLUSH_AND_INV_DB |
+		       SI_CONTEXT_INV_VMEM_L1;
 
-	if (sctx->b.chip_class >= GFX9) {
+	if (sctx->chip_class >= GFX9) {
 		/* Single-sample depth (not stencil) is coherent with shaders
 		 * on GFX9, but L2 metadata must be flushed if shaders read
 		 * metadata.
 		 */
 		if (num_samples >= 2 || include_stencil)
-			sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
+			sctx->flags |= SI_CONTEXT_INV_GLOBAL_L2;
 		else if (shaders_read_metadata)
-			sctx->b.flags |= SI_CONTEXT_INV_L2_METADATA;
+			sctx->flags |= SI_CONTEXT_INV_L2_METADATA;
 	} else {
 		/* SI-CI-VI */
-		sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
+		sctx->flags |= SI_CONTEXT_INV_GLOBAL_L2;
 	}
 }
 
@@ -1192,7 +1288,7 @@ static inline void radeon_add_to_buffer_list(struct si_context *sctx,
 					     enum radeon_bo_priority priority)
 {
 	assert(usage);
-	sctx->b.ws->cs_add_buffer(
+	sctx->ws->cs_add_buffer(
 		cs, rbo->buf,
 		(enum radeon_bo_usage)(usage | RADEON_USAGE_SYNCHRONIZED),
 		rbo->domains, priority);
@@ -1223,12 +1319,12 @@ radeon_add_to_gfx_buffer_list_check_mem(struct si_context *sctx,
 					bool check_mem)
 {
 	if (check_mem &&
-	    !radeon_cs_memory_below_limit(sctx->screen, sctx->b.gfx_cs,
-					  sctx->b.vram + rbo->vram_usage,
-					  sctx->b.gtt + rbo->gart_usage))
+	    !radeon_cs_memory_below_limit(sctx->screen, sctx->gfx_cs,
+					  sctx->vram + rbo->vram_usage,
+					  sctx->gtt + rbo->gart_usage))
 		si_flush_gfx_cs(sctx, PIPE_FLUSH_ASYNC, NULL);
 
-	radeon_add_to_buffer_list(sctx, sctx->b.gfx_cs, rbo, usage, priority);
+	radeon_add_to_buffer_list(sctx, sctx->gfx_cs, rbo, usage, priority);
 }
 
 #define PRINT_ERR(fmt, args...) \

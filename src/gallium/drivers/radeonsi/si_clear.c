@@ -208,7 +208,7 @@ void vi_dcc_clear_level(struct si_context *sctx,
 		dcc_offset = rtex->dcc_offset;
 	}
 
-	if (sctx->b.chip_class >= GFX9) {
+	if (sctx->chip_class >= GFX9) {
 		/* Mipmap level clears aren't implemented. */
 		assert(rtex->resource.b.b.last_level == 0);
 		/* MSAA needs a different clear size. */
@@ -354,7 +354,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 	return;
 #endif
 
-	if (sctx->b.render_cond)
+	if (sctx->render_cond)
 		return;
 
 	for (i = 0; i < fb->nr_cbufs; i++) {
@@ -396,7 +396,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 			continue;
 
 		/* fast color clear with 1D tiling doesn't work on old kernels and CIK */
-		if (sctx->b.chip_class == CIK &&
+		if (sctx->chip_class == CIK &&
 		    tex->surface.u.legacy.level[0].mode == RADEON_SURF_MODE_1D &&
 		    sctx->screen->info.drm_major == 2 &&
 		    sctx->screen->info.drm_minor < 38) {
@@ -406,7 +406,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		/* Fast clear is the most appropriate place to enable DCC for
 		 * displayable surfaces.
 		 */
-		if (sctx->b.chip_class >= VI &&
+		if (sctx->chip_class >= VI &&
 		    !(sctx->screen->debug_flags & DBG(NO_DCC_FB))) {
 			vi_separate_dcc_try_enable(sctx, tex);
 
@@ -416,7 +416,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 			 * enable separate DCC.
 			 */
 			if (tex->dcc_gather_statistics &&
-			    sctx->b.family == CHIP_STONEY)
+			    sctx->family == CHIP_STONEY)
 				tex->num_slow_clears++;
 		}
 
@@ -441,7 +441,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 				continue;
 
 			/* This can only occur with MSAA. */
-			if (sctx->b.chip_class == VI &&
+			if (sctx->chip_class == VI &&
 			    !tex->surface.u.legacy.level[level].dcc_fast_clear_size)
 				continue;
 
@@ -481,7 +481,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 			}
 
 			/* RB+ doesn't work with CMASK fast clear on Stoney. */
-			if (sctx->b.family == CHIP_STONEY)
+			if (sctx->family == CHIP_STONEY)
 				continue;
 
 			/* ensure CMASK is enabled */
@@ -601,7 +601,7 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 		 * This hack decreases back-to-back ClearDepth performance.
 		 */
 		if (sctx->screen->clear_db_cache_before_clear) {
-			sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_DB;
+			sctx->flags |= SI_CONTEXT_FLUSH_AND_INV_DB;
 		}
 	}
 
@@ -727,8 +727,8 @@ static void si_clear_texture(struct pipe_context *pipe,
 
 void si_init_clear_functions(struct si_context *sctx)
 {
-	sctx->b.b.clear = si_clear;
-	sctx->b.b.clear_render_target = si_clear_render_target;
-	sctx->b.b.clear_depth_stencil = si_clear_depth_stencil;
-	sctx->b.b.clear_texture = si_clear_texture;
+	sctx->b.clear = si_clear;
+	sctx->b.clear_render_target = si_clear_render_target;
+	sctx->b.clear_depth_stencil = si_clear_depth_stencil;
+	sctx->b.clear_texture = si_clear_texture;
 }

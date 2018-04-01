@@ -50,7 +50,7 @@ bool si_prepare_for_dma_blit(struct si_context *sctx,
 			     unsigned src_level,
 			     const struct pipe_box *src_box)
 {
-	if (!sctx->b.dma_cs)
+	if (!sctx->dma_cs)
 		return false;
 
 	if (rdst->surface.bpe != rsrc->surface.bpe)
@@ -94,7 +94,7 @@ bool si_prepare_for_dma_blit(struct si_context *sctx,
 
 	/* All requirements are met. Prepare textures for SDMA. */
 	if (rsrc->cmask.size && rsrc->dirty_level_mask & (1 << src_level))
-		sctx->b.b.flush_resource(&sctx->b.b, &rsrc->resource.b.b);
+		sctx->b.flush_resource(&sctx->b, &rsrc->resource.b.b);
 
 	assert(!(rsrc->dirty_level_mask & (1 << src_level)));
 	assert(!(rdst->dirty_level_mask & (1 << dst_level)));
@@ -150,7 +150,7 @@ static void si_copy_to_staging_texture(struct pipe_context *ctx, struct r600_tra
 		return;
 	}
 
-	sctx->b.dma_copy(ctx, dst, 0, 0, 0, 0, src, transfer->level,
+	sctx->dma_copy(ctx, dst, 0, 0, 0, 0, src, transfer->level,
 		       &transfer->box);
 }
 
@@ -172,7 +172,7 @@ static void si_copy_from_staging_texture(struct pipe_context *ctx, struct r600_t
 		return;
 	}
 
-	sctx->b.dma_copy(ctx, dst, transfer->level,
+	sctx->dma_copy(ctx, dst, transfer->level,
 		       transfer->box.x, transfer->box.y, transfer->box.z,
 		       src, 0, &sbox);
 }
@@ -385,16 +385,16 @@ void si_eliminate_fast_color_clear(struct si_context *sctx,
 				   struct r600_texture *rtex)
 {
 	struct si_screen *sscreen = sctx->screen;
-	struct pipe_context *ctx = &sctx->b.b;
+	struct pipe_context *ctx = &sctx->b;
 
 	if (ctx == sscreen->aux_context)
 		mtx_lock(&sscreen->aux_context_lock);
 
-	unsigned n = sctx->b.num_decompress_calls;
+	unsigned n = sctx->num_decompress_calls;
 	ctx->flush_resource(ctx, &rtex->resource.b.b);
 
 	/* Flush only if any fast clear elimination took place. */
-	if (n != sctx->b.num_decompress_calls)
+	if (n != sctx->num_decompress_calls)
 		ctx->flush(ctx, NULL, 0);
 
 	if (ctx == sscreen->aux_context)
@@ -477,14 +477,14 @@ bool si_texture_disable_dcc(struct si_context *sctx,
 	if (!si_can_disable_dcc(rtex))
 		return false;
 
-	if (&sctx->b.b == sscreen->aux_context)
+	if (&sctx->b == sscreen->aux_context)
 		mtx_lock(&sscreen->aux_context_lock);
 
 	/* Decompress DCC. */
 	si_decompress_dcc(sctx, rtex);
-	sctx->b.b.flush(&sctx->b.b, NULL, 0);
+	sctx->b.flush(&sctx->b, NULL, 0);
 
-	if (&sctx->b.b == sscreen->aux_context)
+	if (&sctx->b == sscreen->aux_context)
 		mtx_unlock(&sscreen->aux_context_lock);
 
 	return si_texture_discard_dcc(sscreen, rtex);
@@ -495,7 +495,7 @@ static void si_reallocate_texture_inplace(struct si_context *sctx,
 					  unsigned new_bind_flag,
 					  bool invalidate_storage)
 {
-	struct pipe_screen *screen = sctx->b.b.screen;
+	struct pipe_screen *screen = sctx->b.screen;
 	struct r600_texture *new_tex;
 	struct pipe_resource templ = rtex->resource.b.b;
 	unsigned i;
@@ -528,7 +528,7 @@ static void si_reallocate_texture_inplace(struct si_context *sctx,
 				 u_minify(templ.width0, i), u_minify(templ.height0, i),
 				 util_num_layers(&templ, i), &box);
 
-			sctx->b.dma_copy(&sctx->b.b, &new_tex->resource.b.b, i, 0, 0, 0,
+			sctx->dma_copy(&sctx->b, &new_tex->resource.b.b, i, 0, 0, 0,
 				       &rtex->resource.b.b, i, &box);
 		}
 	}
@@ -780,11 +780,11 @@ static boolean si_texture_get_handle(struct pipe_screen* screen,
 			/* Copy the old buffer contents to the new one. */
 			struct pipe_box box;
 			u_box_1d(0, newb->width0, &box);
-			sctx->b.b.resource_copy_region(&sctx->b.b, newb, 0, 0, 0, 0,
+			sctx->b.resource_copy_region(&sctx->b, newb, 0, 0, 0, 0,
 						     &res->b.b, 0, &box);
 			flush = true;
 			/* Move the new buffer storage to the old pipe_resource. */
-			si_replace_buffer_storage(&sctx->b.b, &res->b.b, newb);
+			si_replace_buffer_storage(&sctx->b, &res->b.b, newb);
 			pipe_resource_reference(&newb, NULL);
 
 			assert(res->b.b.bind & PIPE_BIND_SHARED);
@@ -798,7 +798,7 @@ static boolean si_texture_get_handle(struct pipe_screen* screen,
 	}
 
 	if (flush)
-		sctx->b.b.flush(&sctx->b.b, NULL, 0);
+		sctx->b.flush(&sctx->b, NULL, 0);
 
 	if (res->b.is_shared) {
 		/* USAGE_EXPLICIT_FLUSH must be cleared if at least one user
@@ -1638,7 +1638,7 @@ static void si_texture_invalidate_storage(struct si_context *sctx,
 
 	p_atomic_inc(&sscreen->dirty_tex_counter);
 
-	sctx->b.num_alloc_tex_transfer_bytes += rtex->size;
+	sctx->num_alloc_tex_transfer_bytes += rtex->size;
 }
 
 static void *si_texture_transfer_map(struct pipe_context *ctx,
@@ -1696,7 +1696,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 		/* Write & linear only: */
 		else if (si_rings_is_buffer_referenced(sctx, rtex->resource.buf,
 						       RADEON_USAGE_READWRITE) ||
-			 !sctx->b.ws->buffer_wait(rtex->resource.buf, 0,
+			 !sctx->ws->buffer_wait(rtex->resource.buf, 0,
 						RADEON_USAGE_READWRITE)) {
 			/* It's busy. */
 			if (si_can_invalidate_texture(sctx->screen, rtex,
@@ -1846,7 +1846,7 @@ static void si_texture_transfer_unmap(struct pipe_context *ctx,
 	}
 
 	if (rtransfer->staging) {
-		sctx->b.num_alloc_tex_transfer_bytes += rtransfer->staging->buf->size;
+		sctx->num_alloc_tex_transfer_bytes += rtransfer->staging->buf->size;
 		r600_resource_reference(&rtransfer->staging, NULL);
 	}
 
@@ -1863,9 +1863,9 @@ static void si_texture_transfer_unmap(struct pipe_context *ctx,
 	 *
 	 * The result is that the kernel memory manager is never a bottleneck.
 	 */
-	if (sctx->b.num_alloc_tex_transfer_bytes > sctx->screen->info.gart_size / 4) {
+	if (sctx->num_alloc_tex_transfer_bytes > sctx->screen->info.gart_size / 4) {
 		si_flush_gfx_cs(sctx, PIPE_FLUSH_ASYNC, NULL);
-		sctx->b.num_alloc_tex_transfer_bytes = 0;
+		sctx->num_alloc_tex_transfer_bytes = 0;
 	}
 
 	pipe_resource_reference(&transfer->resource, NULL);
@@ -2122,18 +2122,18 @@ static void vi_dcc_clean_up_context_slot(struct si_context *sctx,
 {
 	int i;
 
-	if (sctx->b.dcc_stats[slot].query_active)
+	if (sctx->dcc_stats[slot].query_active)
 		vi_separate_dcc_stop_query(sctx,
-					   sctx->b.dcc_stats[slot].tex);
+					   sctx->dcc_stats[slot].tex);
 
-	for (i = 0; i < ARRAY_SIZE(sctx->b.dcc_stats[slot].ps_stats); i++)
-		if (sctx->b.dcc_stats[slot].ps_stats[i]) {
-			sctx->b.b.destroy_query(&sctx->b.b,
-					      sctx->b.dcc_stats[slot].ps_stats[i]);
-			sctx->b.dcc_stats[slot].ps_stats[i] = NULL;
+	for (i = 0; i < ARRAY_SIZE(sctx->dcc_stats[slot].ps_stats); i++)
+		if (sctx->dcc_stats[slot].ps_stats[i]) {
+			sctx->b.destroy_query(&sctx->b,
+					      sctx->dcc_stats[slot].ps_stats[i]);
+			sctx->dcc_stats[slot].ps_stats[i] = NULL;
 		}
 
-	r600_texture_reference(&sctx->b.dcc_stats[slot].tex, NULL);
+	r600_texture_reference(&sctx->dcc_stats[slot].tex, NULL);
 }
 
 /**
@@ -2145,21 +2145,21 @@ static unsigned vi_get_context_dcc_stats_index(struct si_context *sctx,
 	int i, empty_slot = -1;
 
 	/* Remove zombie textures (textures kept alive by this array only). */
-	for (i = 0; i < ARRAY_SIZE(sctx->b.dcc_stats); i++)
-		if (sctx->b.dcc_stats[i].tex &&
-		    sctx->b.dcc_stats[i].tex->resource.b.b.reference.count == 1)
+	for (i = 0; i < ARRAY_SIZE(sctx->dcc_stats); i++)
+		if (sctx->dcc_stats[i].tex &&
+		    sctx->dcc_stats[i].tex->resource.b.b.reference.count == 1)
 			vi_dcc_clean_up_context_slot(sctx, i);
 
 	/* Find the texture. */
-	for (i = 0; i < ARRAY_SIZE(sctx->b.dcc_stats); i++) {
+	for (i = 0; i < ARRAY_SIZE(sctx->dcc_stats); i++) {
 		/* Return if found. */
-		if (sctx->b.dcc_stats[i].tex == tex) {
-			sctx->b.dcc_stats[i].last_use_timestamp = os_time_get();
+		if (sctx->dcc_stats[i].tex == tex) {
+			sctx->dcc_stats[i].last_use_timestamp = os_time_get();
 			return i;
 		}
 
 		/* Record the first seen empty slot. */
-		if (empty_slot == -1 && !sctx->b.dcc_stats[i].tex)
+		if (empty_slot == -1 && !sctx->dcc_stats[i].tex)
 			empty_slot = i;
 	}
 
@@ -2168,9 +2168,9 @@ static unsigned vi_get_context_dcc_stats_index(struct si_context *sctx,
 		int oldest_slot = 0;
 
 		/* Find the oldest slot. */
-		for (i = 1; i < ARRAY_SIZE(sctx->b.dcc_stats); i++)
-			if (sctx->b.dcc_stats[oldest_slot].last_use_timestamp >
-			    sctx->b.dcc_stats[i].last_use_timestamp)
+		for (i = 1; i < ARRAY_SIZE(sctx->dcc_stats); i++)
+			if (sctx->dcc_stats[oldest_slot].last_use_timestamp >
+			    sctx->dcc_stats[i].last_use_timestamp)
 				oldest_slot = i;
 
 		/* Clean up the oldest slot. */
@@ -2179,8 +2179,8 @@ static unsigned vi_get_context_dcc_stats_index(struct si_context *sctx,
 	}
 
 	/* Add the texture to the new slot. */
-	r600_texture_reference(&sctx->b.dcc_stats[empty_slot].tex, tex);
-	sctx->b.dcc_stats[empty_slot].last_use_timestamp = os_time_get();
+	r600_texture_reference(&sctx->dcc_stats[empty_slot].tex, tex);
+	sctx->dcc_stats[empty_slot].last_use_timestamp = os_time_get();
 	return empty_slot;
 }
 
@@ -2188,7 +2188,7 @@ static struct pipe_query *
 vi_create_resuming_pipestats_query(struct si_context *sctx)
 {
 	struct si_query_hw *query = (struct si_query_hw*)
-		sctx->b.b.create_query(&sctx->b.b, PIPE_QUERY_PIPELINE_STATISTICS, 0);
+		sctx->b.create_query(&sctx->b, PIPE_QUERY_PIPELINE_STATISTICS, 0);
 
 	query->flags |= SI_QUERY_HW_FLAG_BEGIN_RESUMES;
 	return (struct pipe_query*)query;
@@ -2202,14 +2202,14 @@ void vi_separate_dcc_start_query(struct si_context *sctx,
 {
 	unsigned i = vi_get_context_dcc_stats_index(sctx, tex);
 
-	assert(!sctx->b.dcc_stats[i].query_active);
+	assert(!sctx->dcc_stats[i].query_active);
 
-	if (!sctx->b.dcc_stats[i].ps_stats[0])
-		sctx->b.dcc_stats[i].ps_stats[0] = vi_create_resuming_pipestats_query(sctx);
+	if (!sctx->dcc_stats[i].ps_stats[0])
+		sctx->dcc_stats[i].ps_stats[0] = vi_create_resuming_pipestats_query(sctx);
 
 	/* begin or resume the query */
-	sctx->b.b.begin_query(&sctx->b.b, sctx->b.dcc_stats[i].ps_stats[0]);
-	sctx->b.dcc_stats[i].query_active = true;
+	sctx->b.begin_query(&sctx->b, sctx->dcc_stats[i].ps_stats[0]);
+	sctx->dcc_stats[i].query_active = true;
 }
 
 /**
@@ -2220,12 +2220,12 @@ void vi_separate_dcc_stop_query(struct si_context *sctx,
 {
 	unsigned i = vi_get_context_dcc_stats_index(sctx, tex);
 
-	assert(sctx->b.dcc_stats[i].query_active);
-	assert(sctx->b.dcc_stats[i].ps_stats[0]);
+	assert(sctx->dcc_stats[i].query_active);
+	assert(sctx->dcc_stats[i].ps_stats[0]);
 
 	/* pause or end the query */
-	sctx->b.b.end_query(&sctx->b.b, sctx->b.dcc_stats[i].ps_stats[0]);
-	sctx->b.dcc_stats[i].query_active = false;
+	sctx->b.end_query(&sctx->b, sctx->dcc_stats[i].ps_stats[0]);
+	sctx->dcc_stats[i].query_active = false;
 }
 
 static bool vi_should_enable_separate_dcc(struct r600_texture *tex)
@@ -2274,7 +2274,7 @@ void vi_separate_dcc_try_enable(struct si_context *sctx,
 		tex->last_dcc_separate_buffer = NULL;
 	} else {
 		tex->dcc_separate_buffer = (struct r600_resource*)
-			si_aligned_buffer_create(sctx->b.b.screen,
+			si_aligned_buffer_create(sctx->b.screen,
 						   SI_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT,
 						   tex->surface.dcc_size,
@@ -2301,24 +2301,24 @@ void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct pipe_query *tmp;
 	unsigned i = vi_get_context_dcc_stats_index(sctx, tex);
-	bool query_active = sctx->b.dcc_stats[i].query_active;
+	bool query_active = sctx->dcc_stats[i].query_active;
 	bool disable = false;
 
-	if (sctx->b.dcc_stats[i].ps_stats[2]) {
+	if (sctx->dcc_stats[i].ps_stats[2]) {
 		union pipe_query_result result;
 
 		/* Read the results. */
-		ctx->get_query_result(ctx, sctx->b.dcc_stats[i].ps_stats[2],
+		ctx->get_query_result(ctx, sctx->dcc_stats[i].ps_stats[2],
 				      true, &result);
 		si_query_hw_reset_buffers(sctx,
 					  (struct si_query_hw*)
-					  sctx->b.dcc_stats[i].ps_stats[2]);
+					  sctx->dcc_stats[i].ps_stats[2]);
 
 		/* Compute the approximate number of fullscreen draws. */
 		tex->ps_draw_ratio =
 			result.pipeline_statistics.ps_invocations /
 			(tex->resource.b.b.width0 * tex->resource.b.b.height0);
-		sctx->b.last_tex_ps_draw_ratio = tex->ps_draw_ratio;
+		sctx->last_tex_ps_draw_ratio = tex->ps_draw_ratio;
 
 		disable = tex->dcc_separate_buffer &&
 			  !vi_should_enable_separate_dcc(tex);
@@ -2331,10 +2331,10 @@ void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 		vi_separate_dcc_stop_query(sctx, tex);
 
 	/* Move the queries in the queue by one. */
-	tmp = sctx->b.dcc_stats[i].ps_stats[2];
-	sctx->b.dcc_stats[i].ps_stats[2] = sctx->b.dcc_stats[i].ps_stats[1];
-	sctx->b.dcc_stats[i].ps_stats[1] = sctx->b.dcc_stats[i].ps_stats[0];
-	sctx->b.dcc_stats[i].ps_stats[0] = tmp;
+	tmp = sctx->dcc_stats[i].ps_stats[2];
+	sctx->dcc_stats[i].ps_stats[2] = sctx->dcc_stats[i].ps_stats[1];
+	sctx->dcc_stats[i].ps_stats[1] = sctx->dcc_stats[i].ps_stats[0];
+	sctx->dcc_stats[i].ps_stats[0] = tmp;
 
 	/* create and start a new query as ps_stats[0] */
 	if (query_active)
@@ -2494,6 +2494,6 @@ void si_init_screen_texture_functions(struct si_screen *sscreen)
 
 void si_init_context_texture_functions(struct si_context *sctx)
 {
-	sctx->b.b.create_surface = si_create_surface;
-	sctx->b.b.surface_destroy = si_surface_destroy;
+	sctx->b.create_surface = si_create_surface;
+	sctx->b.surface_destroy = si_surface_destroy;
 }

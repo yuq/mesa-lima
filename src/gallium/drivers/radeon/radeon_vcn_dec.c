@@ -1199,7 +1199,7 @@ struct pipe_video_codec *radeon_create_decoder(struct pipe_context *context,
 					     const struct pipe_video_codec *templ)
 {
 	struct si_context *sctx = (struct si_context*)context;
-	struct radeon_winsys *ws = sctx->b.ws;
+	struct radeon_winsys *ws = sctx->ws;
 	unsigned width = templ->width, height = templ->height;
 	unsigned dpb_size, bs_buf_size, stream_type = 0;
 	struct radeon_decoder *dec;
@@ -1253,7 +1253,7 @@ struct pipe_video_codec *radeon_create_decoder(struct pipe_context *context,
 	dec->stream_handle = si_vid_alloc_stream_handle();
 	dec->screen = context->screen;
 	dec->ws = ws;
-	dec->cs = ws->cs_create(sctx->b.ctx, RING_VCN_DEC, NULL, NULL);
+	dec->cs = ws->cs_create(sctx->ctx, RING_VCN_DEC, NULL, NULL);
 	if (!dec->cs) {
 		RVID_ERR("Can't get command submission context.\n");
 		goto error;

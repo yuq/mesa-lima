@@ -121,8 +121,8 @@ void si_vid_clear_buffer(struct pipe_context *context, struct rvid_buffer* buffe
 {
 	struct si_context *sctx = (struct si_context*)context;
 
-	sctx->b.dma_clear_buffer(sctx, &buffer->res->b.b, 0,
-				 buffer->res->buf->size, 0);
+	sctx->dma_clear_buffer(sctx, &buffer->res->b.b, 0,
+			       buffer->res->buf->size, 0);
 	context->flush(context, NULL, 0);
 }
 
@@ -134,7 +134,7 @@ void si_vid_join_surfaces(struct si_context *sctx,
 			  struct pb_buffer** buffers[VL_NUM_COMPONENTS],
 			  struct radeon_surf *surfaces[VL_NUM_COMPONENTS])
 {
-	struct radeon_winsys *ws = sctx->b.ws;;
+	struct radeon_winsys *ws = sctx->ws;;
 	unsigned best_tiling, best_wh, off;
 	unsigned size, alignment;
 	struct pb_buffer *pb;
@@ -146,7 +146,7 @@ void si_vid_join_surfaces(struct si_context *sctx,
 		if (!surfaces[i])
 			continue;
 
-		if (sctx->b.chip_class < GFX9) {
+		if (sctx->chip_class < GFX9) {
 			/* choose the smallest bank w/h for now */
 			wh = surfaces[i]->u.legacy.bankw * surfaces[i]->u.legacy.bankh;
 			if (wh < best_wh) {
@@ -163,7 +163,7 @@ void si_vid_join_surfaces(struct si_context *sctx,
 		/* adjust the texture layer offsets */
 		off = align(off, surfaces[i]->surf_alignment);
 
-		if (sctx->b.chip_class < GFX9) {
+		if (sctx->chip_class < GFX9) {
 			/* copy the tiling parameters */
 			surfaces[i]->u.legacy.bankw = surfaces[best_tiling]->u.legacy.bankw;
 			surfaces[i]->u.legacy.bankh = surfaces[best_tiling]->u.legacy.bankh;

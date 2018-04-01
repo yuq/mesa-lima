@@ -35,7 +35,7 @@ static void si_dma_copy_buffer(struct si_context *ctx,
 				uint64_t src_offset,
 				uint64_t size)
 {
-	struct radeon_winsys_cs *cs = ctx->b.dma_cs;
+	struct radeon_winsys_cs *cs = ctx->dma_cs;
 	unsigned i, ncopy, count, max_size, sub_cmd, shift;
 	struct r600_resource *rdst = (struct r600_resource*)dst;
 	struct r600_resource *rsrc = (struct r600_resource*)src;
@@ -83,13 +83,13 @@ static void si_dma_clear_buffer(struct si_context *sctx,
 				uint64_t size,
 				unsigned clear_value)
 {
-	struct radeon_winsys_cs *cs = sctx->b.dma_cs;
+	struct radeon_winsys_cs *cs = sctx->dma_cs;
 	unsigned i, ncopy, csize;
 	struct r600_resource *rdst = r600_resource(dst);
 
 	if (!cs || offset % 4 != 0 || size % 4 != 0 ||
 	    dst->flags & PIPE_RESOURCE_FLAG_SPARSE) {
-		sctx->b.b.clear_buffer(&sctx->b.b, dst, offset, size, &clear_value, 4);
+		sctx->b.clear_buffer(&sctx->b, dst, offset, size, &clear_value, 4);
 		return;
 	}
 
@@ -131,7 +131,7 @@ static void si_dma_copy_tile(struct si_context *ctx,
 			     unsigned pitch,
 			     unsigned bpp)
 {
-	struct radeon_winsys_cs *cs = ctx->b.dma_cs;
+	struct radeon_winsys_cs *cs = ctx->dma_cs;
 	struct r600_texture *rsrc = (struct r600_texture*)src;
 	struct r600_texture *rdst = (struct r600_texture*)dst;
 	unsigned dst_mode = rdst->surface.u.legacy.level[dst_level].mode;
@@ -232,7 +232,7 @@ static void si_dma_copy(struct pipe_context *ctx,
 	unsigned src_x, src_y;
 	unsigned dst_x = dstx, dst_y = dsty, dst_z = dstz;
 
-	if (sctx->b.dma_cs == NULL ||
+	if (sctx->dma_cs == NULL ||
 	    src->flags & PIPE_RESOURCE_FLAG_SPARSE ||
 	    dst->flags & PIPE_RESOURCE_FLAG_SPARSE) {
 		goto fallback;
@@ -324,6 +324,6 @@ fallback:
 
 void si_init_dma_functions(struct si_context *sctx)
 {
-	sctx->b.dma_copy = si_dma_copy;
-	sctx->b.dma_clear_buffer = si_dma_clear_buffer;
+	sctx->dma_copy = si_dma_copy;
+	sctx->dma_clear_buffer = si_dma_clear_buffer;
 }

@@ -262,7 +262,7 @@ struct pipe_video_codec *radeon_create_encoder(struct pipe_context *context,
 		radeon_enc_get_buffer get_buffer)
 {
 	struct si_screen *sscreen = (struct si_screen *)context->screen;
-	struct r600_common_context *rctx = (struct r600_common_context*)context;
+	struct si_context *sctx = (struct si_context*)context;
 	struct radeon_encoder *enc;
 	struct pipe_video_buffer *tmp_buf, templat = {};
 	struct radeon_surf *tmp_surf;
@@ -286,7 +286,7 @@ struct pipe_video_codec *radeon_create_encoder(struct pipe_context *context,
 	enc->bits_in_shifter = 0;
 	enc->screen = context->screen;
 	enc->ws = ws;
-	enc->cs = ws->cs_create(rctx->ctx, RING_VCN_ENC, radeon_enc_cs_flush, enc);
+	enc->cs = ws->cs_create(sctx->ctx, RING_VCN_ENC, radeon_enc_cs_flush, enc);
 
 	if (!enc->cs) {
 		RVID_ERR("Can't get command submission context.\n");
