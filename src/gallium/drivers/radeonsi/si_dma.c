@@ -77,20 +77,19 @@ static void si_dma_copy_buffer(struct si_context *ctx,
 	}
 }
 
-static void si_dma_clear_buffer(struct pipe_context *ctx,
+static void si_dma_clear_buffer(struct si_context *sctx,
 				struct pipe_resource *dst,
 				uint64_t offset,
 				uint64_t size,
 				unsigned clear_value)
 {
-	struct si_context *sctx = (struct si_context *)ctx;
 	struct radeon_winsys_cs *cs = sctx->b.dma_cs;
 	unsigned i, ncopy, csize;
 	struct r600_resource *rdst = r600_resource(dst);
 
 	if (!cs || offset % 4 != 0 || size % 4 != 0 ||
 	    dst->flags & PIPE_RESOURCE_FLAG_SPARSE) {
-		ctx->clear_buffer(ctx, dst, offset, size, &clear_value, 4);
+		sctx->b.b.clear_buffer(&sctx->b.b, dst, offset, size, &clear_value, 4);
 		return;
 	}
 

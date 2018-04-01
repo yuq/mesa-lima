@@ -144,7 +144,7 @@ void si_screen_clear_buffer(struct si_screen *sscreen, struct pipe_resource *dst
 	struct si_context *ctx = (struct si_context*)sscreen->aux_context;
 
 	mtx_lock(&sscreen->aux_context_lock);
-	ctx->b.dma_clear_buffer(&ctx->b.b, dst, offset, size, value);
+	ctx->b.dma_clear_buffer(ctx, dst, offset, size, value);
 	sscreen->aux_context->flush(sscreen->aux_context, NULL, 0);
 	mtx_unlock(&sscreen->aux_context_lock);
 }

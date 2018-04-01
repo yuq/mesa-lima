@@ -2732,7 +2732,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 
 		rtex = (struct r600_texture*)sctx->framebuffer.state.cbufs[i]->texture;
 		if (rtex->dcc_gather_statistics)
-			vi_separate_dcc_stop_query(ctx, rtex);
+			vi_separate_dcc_stop_query(sctx, rtex);
 	}
 
 	/* Disable DCC if the formats are incompatible. */
@@ -2875,7 +2875,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		if (rtex->dcc_gather_statistics) {
 			/* Dirty tracking must be enabled for DCC usage analysis. */
 			sctx->framebuffer.compressed_cb_mask |= 1 << i;
-			vi_separate_dcc_start_query(ctx, rtex);
+			vi_separate_dcc_start_query(sctx, rtex);
 		}
 	}
 

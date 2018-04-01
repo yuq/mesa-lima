@@ -121,8 +121,8 @@ void si_vid_clear_buffer(struct pipe_context *context, struct rvid_buffer* buffe
 {
 	struct si_context *sctx = (struct si_context*)context;
 
-	sctx->b.dma_clear_buffer(context, &buffer->res->b.b, 0,
-			       buffer->res->buf->size, 0);
+	sctx->b.dma_clear_buffer(sctx, &buffer->res->b.b, 0,
+				 buffer->res->buf->size, 0);
 	context->flush(context, NULL, 0);
 }
 

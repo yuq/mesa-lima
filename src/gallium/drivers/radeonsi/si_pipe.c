@@ -383,7 +383,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 				 &sctx->null_const_buf);
 
 		/* Clear the NULL constant buffer, because loads should return zeros. */
-		si_clear_buffer(&sctx->b.b, sctx->null_const_buf.buffer, 0,
+		si_clear_buffer(sctx, sctx->null_const_buf.buffer, 0,
 				sctx->null_const_buf.buffer->width0, 0,
 				R600_COHERENCY_SHADER);
 	}
@@ -602,7 +602,7 @@ static void si_test_vmfault(struct si_screen *sscreen)
 		puts("VM fault test: CP - done.");
 	}
 	if (sscreen->debug_flags & DBG(TEST_VMFAULT_SDMA)) {
-		sctx->b.dma_clear_buffer(ctx, buf, 0, 4, 0);
+		sctx->b.dma_clear_buffer(sctx, buf, 0, 4, 0);
 		ctx->flush(ctx, NULL, 0);
 		puts("VM fault test: SDMA - done.");
 	}

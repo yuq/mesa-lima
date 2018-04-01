@@ -477,7 +477,7 @@ struct r600_common_context {
 			 unsigned src_level,
 			 const struct pipe_box *src_box);
 
-	void (*dma_clear_buffer)(struct pipe_context *ctx, struct pipe_resource *dst,
+	void (*dma_clear_buffer)(struct si_context *sctx, struct pipe_resource *dst,
 				 uint64_t offset, uint64_t size, unsigned value);
 };
 
@@ -569,9 +569,9 @@ struct pipe_surface *si_create_surface_custom(struct pipe_context *pipe,
 unsigned si_translate_colorswap(enum pipe_format format, bool do_endian_swap);
 void vi_separate_dcc_try_enable(struct si_context *sctx,
 				struct r600_texture *tex);
-void vi_separate_dcc_start_query(struct pipe_context *ctx,
+void vi_separate_dcc_start_query(struct si_context *sctx,
 				 struct r600_texture *tex);
-void vi_separate_dcc_stop_query(struct pipe_context *ctx,
+void vi_separate_dcc_stop_query(struct si_context *sctx,
 				struct r600_texture *tex);
 void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 					     struct r600_texture *tex);

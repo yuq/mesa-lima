@@ -204,11 +204,10 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 		*packet_flags |= CP_DMA_SYNC;
 }
 
-void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
+void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 		     uint64_t offset, uint64_t size, unsigned value,
 		     enum r600_coherency coher)
 {
-	struct si_context *sctx = (struct si_context*)ctx;
 	struct radeon_winsys *ws = sctx->b.ws;
 	struct r600_resource *rdst = r600_resource(dst);
 	unsigned tc_l2_flag = get_tc_l2_flag(sctx, coher);
@@ -243,7 +242,7 @@ void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	      * of them are moved to SDMA thanks to this. */
 	     !ws->cs_is_buffer_referenced(sctx->b.gfx_cs, rdst->buf,
 				          RADEON_USAGE_READWRITE))) {
-		sctx->b.dma_clear_buffer(ctx, dst, offset, dma_clear_size, value);
+		sctx->b.dma_clear_buffer(sctx, dst, offset, dma_clear_size, value);
 
 		offset += dma_clear_size;
 		size -= dma_clear_size;
@@ -287,7 +286,7 @@ void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 		assert(dst->target == PIPE_BUFFER);
 		assert(size < 4);
 
-		pipe_buffer_write(ctx, dst, offset, size, &value);
+		pipe_buffer_write(&sctx->b.b, dst, offset, size, &value);
 	}
 }
 
@@ -347,7 +346,7 @@ static void si_pipe_clear_buffer(struct pipe_context *ctx,
 		dword_value = *(uint32_t*)clear_value_ptr;
 	}
 
-	si_clear_buffer(ctx, dst, offset, size, dword_value,
+	si_clear_buffer(sctx, dst, offset, size, dword_value,
 			R600_COHERENCY_SHADER);
 }
 

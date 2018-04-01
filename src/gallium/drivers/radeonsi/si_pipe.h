@@ -694,7 +694,7 @@ enum r600_coherency {
 	R600_COHERENCY_CB_META,
 };
 
-void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
+void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 		     uint64_t offset, uint64_t size, unsigned value,
 		     enum r600_coherency coher);
 void si_copy_buffer(struct si_context *sctx,

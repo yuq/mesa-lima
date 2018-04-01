@@ -2124,7 +2124,7 @@ static void vi_dcc_clean_up_context_slot(struct si_context *sctx,
 	int i;
 
 	if (sctx->b.dcc_stats[slot].query_active)
-		vi_separate_dcc_stop_query(&sctx->b.b,
+		vi_separate_dcc_stop_query(sctx,
 					   sctx->b.dcc_stats[slot].tex);
 
 	for (i = 0; i < ARRAY_SIZE(sctx->b.dcc_stats[slot].ps_stats); i++)
@@ -2186,10 +2186,10 @@ static unsigned vi_get_context_dcc_stats_index(struct si_context *sctx,
 }
 
 static struct pipe_query *
-vi_create_resuming_pipestats_query(struct pipe_context *ctx)
+vi_create_resuming_pipestats_query(struct si_context *sctx)
 {
 	struct r600_query_hw *query = (struct r600_query_hw*)
-		ctx->create_query(ctx, PIPE_QUERY_PIPELINE_STATISTICS, 0);
+		sctx->b.b.create_query(&sctx->b.b, PIPE_QUERY_PIPELINE_STATISTICS, 0);
 
 	query->flags |= R600_QUERY_HW_FLAG_BEGIN_RESUMES;
 	return (struct pipe_query*)query;
@@ -2198,36 +2198,34 @@ vi_create_resuming_pipestats_query(struct pipe_context *ctx)
 /**
  * Called when binding a color buffer.
  */
-void vi_separate_dcc_start_query(struct pipe_context *ctx,
+void vi_separate_dcc_start_query(struct si_context *sctx,
 				 struct r600_texture *tex)
 {
-	struct si_context *sctx = (struct si_context*)ctx;
 	unsigned i = vi_get_context_dcc_stats_index(sctx, tex);
 
 	assert(!sctx->b.dcc_stats[i].query_active);
 
 	if (!sctx->b.dcc_stats[i].ps_stats[0])
-		sctx->b.dcc_stats[i].ps_stats[0] = vi_create_resuming_pipestats_query(ctx);
+		sctx->b.dcc_stats[i].ps_stats[0] = vi_create_resuming_pipestats_query(sctx);
 
 	/* begin or resume the query */
-	ctx->begin_query(ctx, sctx->b.dcc_stats[i].ps_stats[0]);
+	sctx->b.b.begin_query(&sctx->b.b, sctx->b.dcc_stats[i].ps_stats[0]);
 	sctx->b.dcc_stats[i].query_active = true;
 }
 
 /**
  * Called when unbinding a color buffer.
  */
-void vi_separate_dcc_stop_query(struct pipe_context *ctx,
+void vi_separate_dcc_stop_query(struct si_context *sctx,
 				struct r600_texture *tex)
 {
-	struct si_context *sctx = (struct si_context*)ctx;
 	unsigned i = vi_get_context_dcc_stats_index(sctx, tex);
 
 	assert(sctx->b.dcc_stats[i].query_active);
 	assert(sctx->b.dcc_stats[i].ps_stats[0]);
 
 	/* pause or end the query */
-	ctx->end_query(ctx, sctx->b.dcc_stats[i].ps_stats[0]);
+	sctx->b.b.end_query(&sctx->b.b, sctx->b.dcc_stats[i].ps_stats[0]);
 	sctx->b.dcc_stats[i].query_active = false;
 }
 
@@ -2258,7 +2256,7 @@ void vi_separate_dcc_try_enable(struct si_context *sctx,
 	/* Enable the DCC stat gathering. */
 	if (!tex->dcc_gather_statistics) {
 		tex->dcc_gather_statistics = true;
-		vi_separate_dcc_start_query(&sctx->b.b, tex);
+		vi_separate_dcc_start_query(sctx, tex);
 	}
 
 	if (!vi_should_enable_separate_dcc(tex))
@@ -2331,7 +2329,7 @@ void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 
 	/* stop the statistics query for ps_stats[0] */
 	if (query_active)
-		vi_separate_dcc_stop_query(ctx, tex);
+		vi_separate_dcc_stop_query(sctx, tex);
 
 	/* Move the queries in the queue by one. */
 	tmp = sctx->b.dcc_stats[i].ps_stats[2];
@@ -2341,7 +2339,7 @@ void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 
 	/* create and start a new query as ps_stats[0] */
 	if (query_active)
-		vi_separate_dcc_start_query(ctx, tex);
+		vi_separate_dcc_start_query(sctx, tex);
 
 	if (disable) {
 		assert(!tex->last_dcc_separate_buffer);
