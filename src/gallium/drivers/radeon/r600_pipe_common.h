@@ -499,12 +499,6 @@ struct r600_common_context {
 	/* Reallocate the buffer and update all resource bindings where
 	 * the buffer is bound, including all resource descriptors. */
 	void (*invalidate_buffer)(struct pipe_context *ctx, struct pipe_resource *buf);
-
-	/* Update all resource bindings where the buffer is bound, including
-	 * all resource descriptors. This is invalidate_buffer without
-	 * the invalidation. */
-	void (*rebind_buffer)(struct pipe_context *ctx, struct pipe_resource *buf,
-			      uint64_t old_gpu_address);
 };
 
 /* r600_buffer_common.c */

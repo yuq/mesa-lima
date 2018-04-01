@@ -288,7 +288,6 @@ void si_replace_buffer_storage(struct pipe_context *ctx,
 				 struct pipe_resource *dst,
 				 struct pipe_resource *src)
 {
-	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct r600_resource *rdst = r600_resource(dst);
 	struct r600_resource *rsrc = r600_resource(src);
 	uint64_t old_gpu_address = rdst->gpu_address;
@@ -306,7 +305,7 @@ void si_replace_buffer_storage(struct pipe_context *ctx,
 	assert(rdst->bo_alignment == rsrc->bo_alignment);
 	assert(rdst->domains == rsrc->domains);
 
-	rctx->rebind_buffer(ctx, dst, old_gpu_address);
+	si_rebind_buffer(ctx, dst, old_gpu_address);
 }
 
 static void si_invalidate_resource(struct pipe_context *ctx,

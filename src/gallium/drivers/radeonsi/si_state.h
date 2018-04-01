@@ -369,7 +369,8 @@ struct pb_slab *si_bindless_descriptor_slab_alloc(void *priv, unsigned heap,
 						  unsigned entry_size,
 						  unsigned group_index);
 void si_bindless_descriptor_slab_free(void *priv, struct pb_slab *pslab);
-
+void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf,
+		      uint64_t old_va);
 /* si_state.c */
 struct si_shader_selector;
 
