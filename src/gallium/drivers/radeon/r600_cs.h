@@ -64,17 +64,17 @@ radeon_cs_memory_below_limit(struct si_screen *screen,
  * The buffer list becomes empty after every context flush and must be
  * rebuilt.
  */
-static inline unsigned radeon_add_to_buffer_list(struct r600_common_context *rctx,
-						 struct r600_ring *ring,
-						 struct r600_resource *rbo,
-						 enum radeon_bo_usage usage,
-						 enum radeon_bo_priority priority)
+static inline void radeon_add_to_buffer_list(struct r600_common_context *rctx,
+					     struct r600_ring *ring,
+					     struct r600_resource *rbo,
+					     enum radeon_bo_usage usage,
+					     enum radeon_bo_priority priority)
 {
 	assert(usage);
-	return rctx->ws->cs_add_buffer(
+	rctx->ws->cs_add_buffer(
 		ring->cs, rbo->buf,
 		(enum radeon_bo_usage)(usage | RADEON_USAGE_SYNCHRONIZED),
-		rbo->domains, priority) * 4;
+		rbo->domains, priority);
 }
 
 /**
@@ -94,7 +94,7 @@ static inline unsigned radeon_add_to_buffer_list(struct r600_common_context *rct
  * - if shader resource "enabled_mask" is not up-to-date or there is
  *   a different constraint disallowing a context flush
  */
-static inline unsigned
+static inline void
 radeon_add_to_buffer_list_check_mem(struct r600_common_context *rctx,
 				    struct r600_ring *ring,
 				    struct r600_resource *rbo,
@@ -108,7 +108,7 @@ radeon_add_to_buffer_list_check_mem(struct r600_common_context *rctx,
 					  rctx->gtt + rbo->gart_usage))
 		ring->flush(rctx, PIPE_FLUSH_ASYNC, NULL);
 
-	return radeon_add_to_buffer_list(rctx, ring, rbo, usage, priority);
+	radeon_add_to_buffer_list(rctx, ring, rbo, usage, priority);
 }
 
 static inline void radeon_set_config_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
