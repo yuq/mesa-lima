@@ -348,7 +348,6 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	slab_create_child(&sctx->b.pool_transfers, &sscreen->pool_transfers);
 	slab_create_child(&sctx->b.pool_transfers_unsync, &sscreen->pool_transfers);
 
-	sctx->b.screen = sscreen;
 	sctx->b.ws = sscreen->ws;
 	sctx->b.family = sscreen->info.family;
 	sctx->b.chip_class = sscreen->info.chip_class;

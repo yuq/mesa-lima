@@ -553,7 +553,7 @@ static void si_dump_bo_list(struct si_context *sctx,
 
 	for (i = 0; i < saved->bo_count; i++) {
 		/* Note: Buffer sizes are expected to be aligned to 4k by the winsys. */
-		const unsigned page_size = sctx->b.screen->info.gart_page_size;
+		const unsigned page_size = sctx->screen->info.gart_page_size;
 		uint64_t va = saved->bo_list[i].vm_address;
 		uint64_t size = saved->bo_list[i].bo_size;
 		bool hit = false;
@@ -599,14 +599,14 @@ static void si_dump_framebuffer(struct si_context *sctx, struct u_log_context *l
 
 		rtex = (struct r600_texture*)state->cbufs[i]->texture;
 		u_log_printf(log, COLOR_YELLOW "Color buffer %i:" COLOR_RESET "\n", i);
-		si_print_texture_info(sctx->b.screen, rtex, log);
+		si_print_texture_info(sctx->screen, rtex, log);
 		u_log_printf(log, "\n");
 	}
 
 	if (state->zsbuf) {
 		rtex = (struct r600_texture*)state->zsbuf->texture;
 		u_log_printf(log, COLOR_YELLOW "Depth-stencil buffer:" COLOR_RESET "\n");
-		si_print_texture_info(sctx->b.screen, rtex, log);
+		si_print_texture_info(sctx->screen, rtex, log);
 		u_log_printf(log, "\n");
 	}
 }

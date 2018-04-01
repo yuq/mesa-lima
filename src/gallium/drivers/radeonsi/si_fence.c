@@ -95,7 +95,7 @@ void si_gfx_write_event_eop(struct si_context *ctx,
 		    query_type != PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE) {
 			struct r600_resource *scratch = ctx->b.eop_bug_scratch;
 
-			assert(16 * ctx->b.screen->info.num_render_backends <=
+			assert(16 * ctx->screen->info.num_render_backends <=
 			       scratch->b.b.width0);
 			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
 			radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_ZPASS_DONE) | EVENT_INDEX(1));

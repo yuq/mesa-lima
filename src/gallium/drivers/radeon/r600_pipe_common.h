@@ -300,7 +300,6 @@ struct radeon_saved_cs {
 struct r600_common_context {
 	struct pipe_context b; /* base class */
 
-	struct si_screen		*screen;
 	struct radeon_winsys		*ws;
 	struct radeon_winsys_ctx	*ctx;
 	enum radeon_family		family;

@@ -104,7 +104,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 		sctx->tcs_shader.cso ? sctx->tcs_shader.cso : sctx->tes_shader.cso;
 	unsigned tess_uses_primid = sctx->ia_multi_vgt_param_key.u.tess_uses_prim_id;
 	bool has_primid_instancing_bug = sctx->b.chip_class == SI &&
-					 sctx->b.screen->info.max_se == 1;
+					 sctx->screen->info.max_se == 1;
 	unsigned tes_sh_base = sctx->shader_pointers.sh_base[PIPE_SHADER_TESS_EVAL];
 	unsigned num_tcs_input_cp = info->vertices_per_patch;
 	unsigned num_tcs_output_cp, num_tcs_inputs, num_tcs_outputs;
@@ -1249,7 +1249,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	}
 
 	/* Recompute and re-emit the texture resource states if needed. */
-	dirty_tex_counter = p_atomic_read(&sctx->b.screen->dirty_tex_counter);
+	dirty_tex_counter = p_atomic_read(&sctx->screen->dirty_tex_counter);
 	if (unlikely(dirty_tex_counter != sctx->b.last_dirty_tex_counter)) {
 		sctx->b.last_dirty_tex_counter = dirty_tex_counter;
 		sctx->framebuffer.dirty_cbufs |=
