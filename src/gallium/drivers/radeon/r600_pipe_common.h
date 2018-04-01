@@ -127,7 +127,6 @@ enum {
 
 #define SI_MAX_VARIABLE_THREADS_PER_BLOCK 1024
 
-struct r600_common_context;
 struct r600_perfcounters;
 struct tgsi_shader_info;
 struct r600_qbo_state;

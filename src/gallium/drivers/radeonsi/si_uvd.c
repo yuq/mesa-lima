@@ -87,7 +87,7 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 		pbs[i] = &resources[i]->resource.buf;
 	}
 
-	si_vid_join_surfaces(&ctx->b, pbs, surfaces);
+	si_vid_join_surfaces(ctx, pbs, surfaces);
 
 	for (i = 0; i < VL_NUM_COMPONENTS; ++i) {
 		if (!resources[i])
