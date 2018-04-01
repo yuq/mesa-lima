@@ -522,9 +522,9 @@ void si_perfcounters_destroy(struct si_screen *sscreen);
 
 /* r600_query.c */
 void si_init_screen_query_functions(struct si_screen *sscreen);
-void si_init_query_functions(struct r600_common_context *rctx);
-void si_suspend_queries(struct r600_common_context *ctx);
-void si_resume_queries(struct r600_common_context *ctx);
+void si_init_query_functions(struct si_context *sctx);
+void si_suspend_queries(struct si_context *sctx);
+void si_resume_queries(struct si_context *sctx);
 
 /* r600_texture.c */
 bool si_prepare_for_dma_blit(struct si_context *sctx,

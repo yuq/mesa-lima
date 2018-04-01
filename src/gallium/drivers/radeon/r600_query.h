@@ -30,8 +30,8 @@ struct pipe_context;
 struct pipe_query;
 struct pipe_resource;
 
-struct r600_common_context;
 struct si_screen;
+struct si_context;
 struct r600_query;
 struct r600_query_hw;
 struct r600_resource;
@@ -119,12 +119,12 @@ enum {
 
 struct r600_query_ops {
 	void (*destroy)(struct si_screen *, struct r600_query *);
-	bool (*begin)(struct r600_common_context *, struct r600_query *);
-	bool (*end)(struct r600_common_context *, struct r600_query *);
-	bool (*get_result)(struct r600_common_context *,
+	bool (*begin)(struct si_context *, struct r600_query *);
+	bool (*end)(struct si_context *, struct r600_query *);
+	bool (*get_result)(struct si_context *,
 			   struct r600_query *, bool wait,
 			   union pipe_query_result *result);
-	void (*get_result_resource)(struct r600_common_context *,
+	void (*get_result_resource)(struct si_context *,
 				    struct r600_query *, bool wait,
 				    enum pipe_query_value_type result_type,
 				    int index,
@@ -151,10 +151,10 @@ struct r600_query_hw_ops {
 	bool (*prepare_buffer)(struct si_screen *,
 			       struct r600_query_hw *,
 			       struct r600_resource *);
-	void (*emit_start)(struct r600_common_context *,
+	void (*emit_start)(struct si_context *,
 			   struct r600_query_hw *,
 			   struct r600_resource *buffer, uint64_t va);
-	void (*emit_stop)(struct r600_common_context *,
+	void (*emit_stop)(struct si_context *,
 			  struct r600_query_hw *,
 			  struct r600_resource *buffer, uint64_t va);
 	void (*clear_result)(struct r600_query_hw *, union pipe_query_result *);
@@ -200,11 +200,11 @@ bool si_query_hw_init(struct si_screen *sscreen,
 		      struct r600_query_hw *query);
 void si_query_hw_destroy(struct si_screen *sscreen,
 			 struct r600_query *rquery);
-bool si_query_hw_begin(struct r600_common_context *rctx,
+bool si_query_hw_begin(struct si_context *sctx,
 		       struct r600_query *rquery);
-bool si_query_hw_end(struct r600_common_context *rctx,
+bool si_query_hw_end(struct si_context *sctx,
 		     struct r600_query *rquery);
-bool si_query_hw_get_result(struct r600_common_context *rctx,
+bool si_query_hw_get_result(struct si_context *sctx,
 			    struct r600_query *rquery,
 			    bool wait,
 			    union pipe_query_result *result);
@@ -266,17 +266,17 @@ struct r600_perfcounters {
 	const char * const *shader_type_suffixes;
 	const unsigned *shader_type_bits;
 
-	void (*emit_instance)(struct r600_common_context *,
+	void (*emit_instance)(struct si_context *,
 			      int se, int instance);
-	void (*emit_shaders)(struct r600_common_context *, unsigned shaders);
-	void (*emit_select)(struct r600_common_context *,
+	void (*emit_shaders)(struct si_context *, unsigned shaders);
+	void (*emit_select)(struct si_context *,
 			    struct r600_perfcounter_block *,
 			    unsigned count, unsigned *selectors);
-	void (*emit_start)(struct r600_common_context *,
+	void (*emit_start)(struct si_context *,
 			  struct r600_resource *buffer, uint64_t va);
-	void (*emit_stop)(struct r600_common_context *,
+	void (*emit_stop)(struct si_context *,
 			  struct r600_resource *buffer, uint64_t va);
-	void (*emit_read)(struct r600_common_context *,
+	void (*emit_read)(struct si_context *,
 			  struct r600_perfcounter_block *,
 			  unsigned count, unsigned *selectors,
 			  struct r600_resource *buffer, uint64_t va);
@@ -305,7 +305,7 @@ void si_perfcounters_add_block(struct si_screen *,
 			       unsigned counters, unsigned selectors,
 			       unsigned instances, void *data);
 void si_perfcounters_do_destroy(struct r600_perfcounters *);
-void si_query_hw_reset_buffers(struct r600_common_context *rctx,
+void si_query_hw_reset_buffers(struct si_context *sctx,
 			       struct r600_query_hw *query);
 
 struct r600_qbo_state {

@@ -134,7 +134,7 @@ bool si_common_context_init(struct r600_common_context *rctx,
 	rctx->b.set_device_reset_callback = r600_set_device_reset_callback;
 
 	si_init_context_texture_functions(sctx);
-	si_init_query_functions(rctx);
+	si_init_query_functions(sctx);
 
 	if (rctx->chip_class == CIK ||
 	    rctx->chip_class == VI ||

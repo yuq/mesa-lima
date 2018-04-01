@@ -119,18 +119,18 @@ static bool r600_pc_query_prepare_buffer(struct si_screen *screen,
 	return true;
 }
 
-static void r600_pc_query_emit_start(struct r600_common_context *ctx,
+static void r600_pc_query_emit_start(struct si_context *sctx,
 				     struct r600_query_hw *hwquery,
 				     struct r600_resource *buffer, uint64_t va)
 {
-	struct r600_perfcounters *pc = ctx->screen->perfcounters;
+	struct r600_perfcounters *pc = sctx->screen->perfcounters;
 	struct r600_query_pc *query = (struct r600_query_pc *)hwquery;
 	struct r600_pc_group *group;
 	int current_se = -1;
 	int current_instance = -1;
 
 	if (query->shaders)
-		pc->emit_shaders(ctx, query->shaders);
+		pc->emit_shaders(sctx, query->shaders);
 
 	for (group = query->groups; group; group = group->next) {
 		struct r600_perfcounter_block *block = group->block;
@@ -138,27 +138,27 @@ static void r600_pc_query_emit_start(struct r600_common_context *ctx,
 		if (group->se != current_se || group->instance != current_instance) {
 			current_se = group->se;
 			current_instance = group->instance;
-			pc->emit_instance(ctx, group->se, group->instance);
+			pc->emit_instance(sctx, group->se, group->instance);
 		}
 
-		pc->emit_select(ctx, block, group->num_counters, group->selectors);
+		pc->emit_select(sctx, block, group->num_counters, group->selectors);
 	}
 
 	if (current_se != -1 || current_instance != -1)
-		pc->emit_instance(ctx, -1, -1);
+		pc->emit_instance(sctx, -1, -1);
 
-	pc->emit_start(ctx, buffer, va);
+	pc->emit_start(sctx, buffer, va);
 }
 
-static void r600_pc_query_emit_stop(struct r600_common_context *ctx,
+static void r600_pc_query_emit_stop(struct si_context *sctx,
 				    struct r600_query_hw *hwquery,
 				    struct r600_resource *buffer, uint64_t va)
 {
-	struct r600_perfcounters *pc = ctx->screen->perfcounters;
+	struct r600_perfcounters *pc = sctx->screen->perfcounters;
 	struct r600_query_pc *query = (struct r600_query_pc *)hwquery;
 	struct r600_pc_group *group;
 
-	pc->emit_stop(ctx, buffer, va);
+	pc->emit_stop(sctx, buffer, va);
 
 	for (group = query->groups; group; group = group->next) {
 		struct r600_perfcounter_block *block = group->block;
@@ -166,14 +166,14 @@ static void r600_pc_query_emit_stop(struct r600_common_context *ctx,
 		unsigned se_end = se + 1;
 
 		if ((block->flags & R600_PC_BLOCK_SE) && (group->se < 0))
-			se_end = ctx->screen->info.max_se;
+			se_end = sctx->screen->info.max_se;
 
 		do {
 			unsigned instance = group->instance >= 0 ? group->instance : 0;
 
 			do {
-				pc->emit_instance(ctx, se, instance);
-				pc->emit_read(ctx, block,
+				pc->emit_instance(sctx, se, instance);
+				pc->emit_read(sctx, block,
 					      group->num_counters, group->selectors,
 					      buffer, va);
 				va += sizeof(uint64_t) * group->num_counters;
@@ -181,7 +181,7 @@ static void r600_pc_query_emit_stop(struct r600_common_context *ctx,
 		} while (++se < se_end);
 	}
 
-	pc->emit_instance(ctx, -1, -1);
+	pc->emit_instance(sctx, -1, -1);
 }
 
 static void r600_pc_query_clear_result(struct r600_query_hw *hwquery,

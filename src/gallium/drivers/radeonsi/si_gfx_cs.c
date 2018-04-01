@@ -94,7 +94,7 @@ void si_flush_gfx_cs(struct si_context *ctx, unsigned flags,
 	ctx->gfx_flush_in_progress = true;
 
 	if (!LIST_IS_EMPTY(&ctx->b.active_queries))
-		si_suspend_queries(&ctx->b);
+		si_suspend_queries(ctx);
 
 	ctx->streamout.suspended = false;
 	if (ctx->streamout.begin_emitted) {
@@ -272,7 +272,7 @@ void si_begin_new_gfx_cs(struct si_context *ctx)
 	}
 
 	if (!LIST_IS_EMPTY(&ctx->b.active_queries))
-		si_resume_queries(&ctx->b);
+		si_resume_queries(ctx);
 
 	assert(!ctx->b.gfx_cs->prev_dw);
 	ctx->b.initial_gfx_cs_size = ctx->b.gfx_cs->current.cdw;

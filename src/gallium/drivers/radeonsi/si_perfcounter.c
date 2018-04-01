@@ -423,10 +423,10 @@ static struct si_pc_block groups_gfx9[] = {
 	{ &cik_CPC, 35 },
 };
 
-static void si_pc_emit_instance(struct r600_common_context *ctx,
+static void si_pc_emit_instance(struct si_context *sctx,
 				int se, int instance)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	unsigned value = S_030800_SH_BROADCAST_WRITES(1);
 
 	if (se >= 0) {
@@ -444,23 +444,23 @@ static void si_pc_emit_instance(struct r600_common_context *ctx,
 	radeon_set_uconfig_reg(cs, R_030800_GRBM_GFX_INDEX, value);
 }
 
-static void si_pc_emit_shaders(struct r600_common_context *ctx,
+static void si_pc_emit_shaders(struct si_context *sctx,
 			       unsigned shaders)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 
 	radeon_set_uconfig_reg_seq(cs, R_036780_SQ_PERFCOUNTER_CTRL, 2);
 	radeon_emit(cs, shaders & 0x7f);
 	radeon_emit(cs, 0xffffffff);
 }
 
-static void si_pc_emit_select(struct r600_common_context *ctx,
+static void si_pc_emit_select(struct si_context *sctx,
 		        struct r600_perfcounter_block *group,
 		        unsigned count, unsigned *selectors)
 {
 	struct si_pc_block *sigroup = (struct si_pc_block *)group->data;
 	struct si_pc_block_base *regs = sigroup->b;
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	unsigned idx;
 	unsigned layout_multi = regs->layout & SI_PC_MULTI_MASK;
 	unsigned dw;
@@ -550,12 +550,12 @@ static void si_pc_emit_select(struct r600_common_context *ctx,
 	}
 }
 
-static void si_pc_emit_start(struct r600_common_context *ctx,
+static void si_pc_emit_start(struct si_context *sctx,
 			     struct r600_resource *buffer, uint64_t va)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 
-	radeon_add_to_buffer_list(ctx, ctx->gfx_cs, buffer,
+	radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs, buffer,
 				  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 
 	radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
@@ -576,10 +576,9 @@ static void si_pc_emit_start(struct r600_common_context *ctx,
 
 /* Note: The buffer was already added in si_pc_emit_start, so we don't have to
  * do it again in here. */
-static void si_pc_emit_stop(struct r600_common_context *ctx,
+static void si_pc_emit_stop(struct si_context *sctx,
 			    struct r600_resource *buffer, uint64_t va)
 {
-	struct si_context *sctx = (struct si_context*)ctx;
 	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 
 	si_gfx_write_event_eop(sctx, V_028A90_BOTTOM_OF_PIPE_TS, 0,
@@ -596,14 +595,14 @@ static void si_pc_emit_stop(struct r600_common_context *ctx,
 			       S_036020_PERFMON_SAMPLE_ENABLE(1));
 }
 
-static void si_pc_emit_read(struct r600_common_context *ctx,
+static void si_pc_emit_read(struct si_context *sctx,
 			    struct r600_perfcounter_block *group,
 			    unsigned count, unsigned *selectors,
 			    struct r600_resource *buffer, uint64_t va)
 {
 	struct si_pc_block *sigroup = (struct si_pc_block *)group->data;
 	struct si_pc_block_base *regs = sigroup->b;
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	unsigned idx;
 	unsigned reg = regs->counter0_lo;
 	unsigned reg_delta = 8;
