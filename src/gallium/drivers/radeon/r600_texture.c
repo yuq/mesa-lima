@@ -1647,6 +1647,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 				       const struct pipe_box *box,
 				       struct pipe_transfer **ptransfer)
 {
+	struct si_context *sctx = (struct si_context*)ctx;
 	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
 	struct r600_texture *rtex = (struct r600_texture*)texture;
 	struct r600_transfer *trans;
@@ -1693,8 +1694,8 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 				rtex->resource.domains & RADEON_DOMAIN_VRAM ||
 				rtex->resource.flags & RADEON_FLAG_GTT_WC;
 		/* Write & linear only: */
-		else if (si_rings_is_buffer_referenced(rctx, rtex->resource.buf,
-							 RADEON_USAGE_READWRITE) ||
+		else if (si_rings_is_buffer_referenced(sctx, rtex->resource.buf,
+						       RADEON_USAGE_READWRITE) ||
 			 !rctx->ws->buffer_wait(rtex->resource.buf, 0,
 						RADEON_USAGE_READWRITE)) {
 			/* It's busy. */
@@ -1815,7 +1816,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		buf = &rtex->resource;
 	}
 
-	if (!(map = si_buffer_map_sync_with_rings(rctx, buf, usage))) {
+	if (!(map = si_buffer_map_sync_with_rings(sctx, buf, usage))) {
 		r600_resource_reference(&trans->staging, NULL);
 		FREE(trans);
 		return NULL;

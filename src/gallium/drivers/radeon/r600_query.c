@@ -1049,6 +1049,7 @@ static boolean r600_begin_query(struct pipe_context *ctx,
 void si_query_hw_reset_buffers(struct r600_common_context *rctx,
 			       struct r600_query_hw *query)
 {
+	struct si_context *sctx = (struct si_context*)rctx;
 	struct r600_query_buffer *prev = query->buffer.previous;
 
 	/* Discard the old query buffers. */
@@ -1063,7 +1064,7 @@ void si_query_hw_reset_buffers(struct r600_common_context *rctx,
 	query->buffer.previous = NULL;
 
 	/* Obtain a new buffer if the current one can't be mapped without a stall. */
-	if (si_rings_is_buffer_referenced(rctx, query->buffer.buf->buf, RADEON_USAGE_READWRITE) ||
+	if (si_rings_is_buffer_referenced(sctx, query->buffer.buf->buf, RADEON_USAGE_READWRITE) ||
 	    !rctx->ws->buffer_wait(query->buffer.buf->buf, 0, RADEON_USAGE_READWRITE)) {
 		r600_resource_reference(&query->buffer.buf, NULL);
 		query->buffer.buf = r600_new_query_buffer(rctx->screen, query);
@@ -1355,6 +1356,7 @@ bool si_query_hw_get_result(struct r600_common_context *rctx,
 			    struct r600_query *rquery,
 			    bool wait, union pipe_query_result *result)
 {
+	struct si_context *sctx = (struct si_context*)rctx;
 	struct si_screen *sscreen = rctx->screen;
 	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
 	struct r600_query_buffer *qbuf;
@@ -1370,7 +1372,7 @@ bool si_query_hw_get_result(struct r600_common_context *rctx,
 		if (rquery->b.flushed)
 			map = rctx->ws->buffer_map(qbuf->buf->buf, NULL, usage);
 		else
-			map = si_buffer_map_sync_with_rings(rctx, qbuf->buf, usage);
+			map = si_buffer_map_sync_with_rings(sctx, qbuf->buf, usage);
 
 		if (!map)
 			return false;

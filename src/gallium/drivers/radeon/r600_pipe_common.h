@@ -482,10 +482,10 @@ struct r600_common_context {
 };
 
 /* r600_buffer_common.c */
-bool si_rings_is_buffer_referenced(struct r600_common_context *ctx,
+bool si_rings_is_buffer_referenced(struct si_context *sctx,
 				   struct pb_buffer *buf,
 				   enum radeon_bo_usage usage);
-void *si_buffer_map_sync_with_rings(struct r600_common_context *ctx,
+void *si_buffer_map_sync_with_rings(struct si_context *sctx,
 				    struct r600_resource *resource,
 				    unsigned usage);
 void si_init_resource_fields(struct si_screen *sscreen,
