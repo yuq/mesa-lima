@@ -244,8 +244,8 @@ bool si_alloc_resource(struct si_screen *sscreen,
 	return true;
 }
 
-static void r600_buffer_destroy(struct pipe_screen *screen,
-				struct pipe_resource *buf)
+static void si_buffer_destroy(struct pipe_screen *screen,
+			      struct pipe_resource *buf)
 {
 	struct r600_resource *rbuffer = r600_resource(buf);
 
@@ -331,13 +331,13 @@ static void si_invalidate_resource(struct pipe_context *ctx,
 		(void)si_invalidate_buffer(sctx, rbuffer);
 }
 
-static void *r600_buffer_get_transfer(struct pipe_context *ctx,
-				      struct pipe_resource *resource,
-                                      unsigned usage,
-                                      const struct pipe_box *box,
-				      struct pipe_transfer **ptransfer,
-				      void *data, struct r600_resource *staging,
-				      unsigned offset)
+static void *si_buffer_get_transfer(struct pipe_context *ctx,
+				    struct pipe_resource *resource,
+				    unsigned usage,
+				    const struct pipe_box *box,
+				    struct pipe_transfer **ptransfer,
+				    void *data, struct r600_resource *staging,
+				    unsigned offset)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct r600_transfer *transfer;
@@ -361,12 +361,12 @@ static void *r600_buffer_get_transfer(struct pipe_context *ctx,
 	return data;
 }
 
-static void *r600_buffer_transfer_map(struct pipe_context *ctx,
-                                      struct pipe_resource *resource,
-                                      unsigned level,
-                                      unsigned usage,
-                                      const struct pipe_box *box,
-                                      struct pipe_transfer **ptransfer)
+static void *si_buffer_transfer_map(struct pipe_context *ctx,
+				    struct pipe_resource *resource,
+				    unsigned level,
+				    unsigned usage,
+				    const struct pipe_box *box,
+				    struct pipe_transfer **ptransfer)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct r600_resource *rbuffer = r600_resource(resource);
@@ -459,7 +459,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 
 			if (staging) {
 				data += box->x % R600_MAP_BUFFER_ALIGNMENT;
-				return r600_buffer_get_transfer(ctx, resource, usage, box,
+				return si_buffer_get_transfer(ctx, resource, usage, box,
 								ptransfer, data, staging, offset);
 			} else if (rbuffer->flags & RADEON_FLAG_SPARSE) {
 				return NULL;
@@ -495,7 +495,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 			}
 			data += box->x % R600_MAP_BUFFER_ALIGNMENT;
 
-			return r600_buffer_get_transfer(ctx, resource, usage, box,
+			return si_buffer_get_transfer(ctx, resource, usage, box,
 							ptransfer, data, staging, 0);
 		} else if (rbuffer->flags & RADEON_FLAG_SPARSE) {
 			return NULL;
@@ -508,13 +508,13 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	}
 	data += box->x;
 
-	return r600_buffer_get_transfer(ctx, resource, usage, box,
+	return si_buffer_get_transfer(ctx, resource, usage, box,
 					ptransfer, data, NULL, 0);
 }
 
-static void r600_buffer_do_flush_region(struct pipe_context *ctx,
-					struct pipe_transfer *transfer,
-				        const struct pipe_box *box)
+static void si_buffer_do_flush_region(struct pipe_context *ctx,
+				      struct pipe_transfer *transfer,
+				      const struct pipe_box *box)
 {
 	struct r600_transfer *rtransfer = (struct r600_transfer*)transfer;
 	struct r600_resource *rbuffer = r600_resource(transfer->resource);
@@ -538,9 +538,9 @@ static void r600_buffer_do_flush_region(struct pipe_context *ctx,
 		       box->x + box->width);
 }
 
-static void r600_buffer_flush_region(struct pipe_context *ctx,
-				     struct pipe_transfer *transfer,
-				     const struct pipe_box *rel_box)
+static void si_buffer_flush_region(struct pipe_context *ctx,
+				   struct pipe_transfer *transfer,
+				   const struct pipe_box *rel_box)
 {
 	unsigned required_usage = PIPE_TRANSFER_WRITE |
 				  PIPE_TRANSFER_FLUSH_EXPLICIT;
@@ -549,19 +549,19 @@ static void r600_buffer_flush_region(struct pipe_context *ctx,
 		struct pipe_box box;
 
 		u_box_1d(transfer->box.x + rel_box->x, rel_box->width, &box);
-		r600_buffer_do_flush_region(ctx, transfer, &box);
+		si_buffer_do_flush_region(ctx, transfer, &box);
 	}
 }
 
-static void r600_buffer_transfer_unmap(struct pipe_context *ctx,
-				       struct pipe_transfer *transfer)
+static void si_buffer_transfer_unmap(struct pipe_context *ctx,
+				     struct pipe_transfer *transfer)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct r600_transfer *rtransfer = (struct r600_transfer*)transfer;
 
 	if (transfer->usage & PIPE_TRANSFER_WRITE &&
 	    !(transfer->usage & PIPE_TRANSFER_FLUSH_EXPLICIT))
-		r600_buffer_do_flush_region(ctx, transfer, &transfer->box);
+		si_buffer_do_flush_region(ctx, transfer, &transfer->box);
 
 	r600_resource_reference(&rtransfer->staging, NULL);
 	assert(rtransfer->b.staging == NULL); /* for threaded context only */
@@ -582,7 +582,7 @@ static void si_buffer_subdata(struct pipe_context *ctx,
 	uint8_t *map = NULL;
 
 	u_box_1d(offset, size, &box);
-	map = r600_buffer_transfer_map(ctx, buffer, 0,
+	map = si_buffer_transfer_map(ctx, buffer, 0,
 				       PIPE_TRANSFER_WRITE |
 				       PIPE_TRANSFER_DISCARD_RANGE |
 				       usage,
@@ -591,21 +591,21 @@ static void si_buffer_subdata(struct pipe_context *ctx,
 		return;
 
 	memcpy(map, data, size);
-	r600_buffer_transfer_unmap(ctx, transfer);
+	si_buffer_transfer_unmap(ctx, transfer);
 }
 
-static const struct u_resource_vtbl r600_buffer_vtbl =
+static const struct u_resource_vtbl si_buffer_vtbl =
 {
 	NULL,				/* get_handle */
-	r600_buffer_destroy,		/* resource_destroy */
-	r600_buffer_transfer_map,	/* transfer_map */
-	r600_buffer_flush_region,	/* transfer_flush_region */
-	r600_buffer_transfer_unmap,	/* transfer_unmap */
+	si_buffer_destroy,		/* resource_destroy */
+	si_buffer_transfer_map,	/* transfer_map */
+	si_buffer_flush_region,	/* transfer_flush_region */
+	si_buffer_transfer_unmap,	/* transfer_unmap */
 };
 
 static struct r600_resource *
-r600_alloc_buffer_struct(struct pipe_screen *screen,
-			 const struct pipe_resource *templ)
+si_alloc_buffer_struct(struct pipe_screen *screen,
+		       const struct pipe_resource *templ)
 {
 	struct r600_resource *rbuffer;
 
@@ -616,7 +616,7 @@ r600_alloc_buffer_struct(struct pipe_screen *screen,
 	pipe_reference_init(&rbuffer->b.b.reference, 1);
 	rbuffer->b.b.screen = screen;
 
-	rbuffer->b.vtbl = &r600_buffer_vtbl;
+	rbuffer->b.vtbl = &si_buffer_vtbl;
 	threaded_resource_init(&rbuffer->b.b);
 
 	rbuffer->buf = NULL;
@@ -631,7 +631,7 @@ static struct pipe_resource *si_buffer_create(struct pipe_screen *screen,
 					      unsigned alignment)
 {
 	struct si_screen *sscreen = (struct si_screen*)screen;
-	struct r600_resource *rbuffer = r600_alloc_buffer_struct(screen, templ);
+	struct r600_resource *rbuffer = si_alloc_buffer_struct(screen, templ);
 
 	if (templ->flags & PIPE_RESOURCE_FLAG_SPARSE)
 		rbuffer->b.b.flags |= R600_RESOURCE_FLAG_UNMAPPABLE;
@@ -676,7 +676,7 @@ si_buffer_from_user_memory(struct pipe_screen *screen,
 {
 	struct si_screen *sscreen = (struct si_screen*)screen;
 	struct radeon_winsys *ws = sscreen->ws;
-	struct r600_resource *rbuffer = r600_alloc_buffer_struct(screen, templ);
+	struct r600_resource *rbuffer = si_alloc_buffer_struct(screen, templ);
 
 	rbuffer->domains = RADEON_DOMAIN_GTT;
 	rbuffer->flags = 0;

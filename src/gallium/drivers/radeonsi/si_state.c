@@ -1359,7 +1359,7 @@ void si_set_occlusion_query_state(struct si_context *sctx,
 		si_mark_atom_dirty(sctx, &sctx->msaa_config);
 }
 
-void si_save_qbo_state(struct si_context *sctx, struct r600_qbo_state *st)
+void si_save_qbo_state(struct si_context *sctx, struct si_qbo_state *st)
 {
 	st->saved_compute = sctx->cs_shader_state.program;
 

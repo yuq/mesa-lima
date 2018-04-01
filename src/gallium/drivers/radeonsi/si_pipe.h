@@ -153,11 +153,11 @@ struct si_screen {
 	/* GPU load thread. */
 	mtx_t				gpu_load_mutex;
 	thrd_t				gpu_load_thread;
-	union r600_mmio_counters	mmio_counters;
+	union si_mmio_counters	mmio_counters;
 	volatile unsigned		gpu_load_stop_thread; /* bool */
 
 	/* Performance counters. */
-	struct r600_perfcounters	*perfcounters;
+	struct si_perfcounters	*perfcounters;
 
 	/* If pipe_screen wants to recompute and re-emit the framebuffer,
 	 * sampler, and image states of all contexts, it should atomically

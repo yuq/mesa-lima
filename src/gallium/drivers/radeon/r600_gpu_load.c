@@ -77,8 +77,8 @@
 			p_atomic_inc(&counters->named.field.idle);	\
 	} while (0)
 
-static void r600_update_mmio_counters(struct si_screen *sscreen,
-				      union r600_mmio_counters *counters)
+static void si_update_mmio_counters(struct si_screen *sscreen,
+				    union si_mmio_counters *counters)
 {
 	uint32_t value = 0;
 	bool gui_busy, sdma_busy = false;
@@ -129,7 +129,7 @@ static void r600_update_mmio_counters(struct si_screen *sscreen,
 #undef UPDATE_COUNTER
 
 static int
-r600_gpu_load_thread(void *param)
+si_gpu_load_thread(void *param)
 {
 	struct si_screen *sscreen = (struct si_screen*)param;
 	const int period_us = 1000000 / SAMPLES_PER_SEC;
@@ -154,7 +154,7 @@ r600_gpu_load_thread(void *param)
 		last_time = cur_time;
 
 		/* Update the counters. */
-		r600_update_mmio_counters(sscreen, &sscreen->mmio_counters);
+		si_update_mmio_counters(sscreen, &sscreen->mmio_counters);
 	}
 	p_atomic_dec(&sscreen->gpu_load_stop_thread);
 	return 0;
@@ -170,8 +170,8 @@ void si_gpu_load_kill_thread(struct si_screen *sscreen)
 	sscreen->gpu_load_thread = 0;
 }
 
-static uint64_t r600_read_mmio_counter(struct si_screen *sscreen,
-				       unsigned busy_index)
+static uint64_t si_read_mmio_counter(struct si_screen *sscreen,
+				     unsigned busy_index)
 {
 	/* Start the thread if needed. */
 	if (!sscreen->gpu_load_thread) {
@@ -179,7 +179,7 @@ static uint64_t r600_read_mmio_counter(struct si_screen *sscreen,
 		/* Check again inside the mutex. */
 		if (!sscreen->gpu_load_thread)
 			sscreen->gpu_load_thread =
-				u_thread_create(r600_gpu_load_thread, sscreen);
+				u_thread_create(si_gpu_load_thread, sscreen);
 		mtx_unlock(&sscreen->gpu_load_mutex);
 	}
 
@@ -189,10 +189,10 @@ static uint64_t r600_read_mmio_counter(struct si_screen *sscreen,
 	return busy | ((uint64_t)idle << 32);
 }
 
-static unsigned r600_end_mmio_counter(struct si_screen *sscreen,
-				      uint64_t begin, unsigned busy_index)
+static unsigned si_end_mmio_counter(struct si_screen *sscreen,
+				    uint64_t begin, unsigned busy_index)
 {
-	uint64_t end = r600_read_mmio_counter(sscreen, busy_index);
+	uint64_t end = si_read_mmio_counter(sscreen, busy_index);
 	unsigned busy = (end & 0xffffffff) - (begin & 0xffffffff);
 	unsigned idle = (end >> 32) - (begin >> 32);
 
@@ -205,10 +205,10 @@ static unsigned r600_end_mmio_counter(struct si_screen *sscreen,
 	if (idle || busy) {
 		return busy*100 / (busy + idle);
 	} else {
-		union r600_mmio_counters counters;
+		union si_mmio_counters counters;
 
 		memset(&counters, 0, sizeof(counters));
-		r600_update_mmio_counters(sscreen, &counters);
+		si_update_mmio_counters(sscreen, &counters);
 		return counters.array[busy_index] ? 100 : 0;
 	}
 }
@@ -270,12 +270,12 @@ static unsigned busy_index_from_type(struct si_screen *sscreen,
 uint64_t si_begin_counter(struct si_screen *sscreen, unsigned type)
 {
 	unsigned busy_index = busy_index_from_type(sscreen, type);
-	return r600_read_mmio_counter(sscreen, busy_index);
+	return si_read_mmio_counter(sscreen, busy_index);
 }
 
 unsigned si_end_counter(struct si_screen *sscreen, unsigned type,
 			uint64_t begin)
 {
 	unsigned busy_index = busy_index_from_type(sscreen, type);
-	return r600_end_mmio_counter(sscreen, begin, busy_index);
+	return si_end_mmio_counter(sscreen, begin, busy_index);
 }

@@ -127,9 +127,9 @@ enum {
 
 #define SI_MAX_VARIABLE_THREADS_PER_BLOCK 1024
 
-struct r600_perfcounters;
+struct si_perfcounters;
 struct tgsi_shader_info;
-struct r600_qbo_state;
+struct si_qbo_state;
 
 /* Only 32-bit buffer allocations are supported, gallium doesn't support more
  * at the moment.
@@ -314,42 +314,42 @@ struct r600_surface {
 	unsigned db_htile_surface;
 };
 
-struct r600_mmio_counter {
+struct si_mmio_counter {
 	unsigned busy;
 	unsigned idle;
 };
 
-union r600_mmio_counters {
+union si_mmio_counters {
 	struct {
 		/* For global GPU load including SDMA. */
-		struct r600_mmio_counter gpu;
+		struct si_mmio_counter gpu;
 
 		/* GRBM_STATUS */
-		struct r600_mmio_counter spi;
-		struct r600_mmio_counter gui;
-		struct r600_mmio_counter ta;
-		struct r600_mmio_counter gds;
-		struct r600_mmio_counter vgt;
-		struct r600_mmio_counter ia;
-		struct r600_mmio_counter sx;
-		struct r600_mmio_counter wd;
-		struct r600_mmio_counter bci;
-		struct r600_mmio_counter sc;
-		struct r600_mmio_counter pa;
-		struct r600_mmio_counter db;
-		struct r600_mmio_counter cp;
-		struct r600_mmio_counter cb;
+		struct si_mmio_counter spi;
+		struct si_mmio_counter gui;
+		struct si_mmio_counter ta;
+		struct si_mmio_counter gds;
+		struct si_mmio_counter vgt;
+		struct si_mmio_counter ia;
+		struct si_mmio_counter sx;
+		struct si_mmio_counter wd;
+		struct si_mmio_counter bci;
+		struct si_mmio_counter sc;
+		struct si_mmio_counter pa;
+		struct si_mmio_counter db;
+		struct si_mmio_counter cp;
+		struct si_mmio_counter cb;
 
 		/* SRBM_STATUS2 */
-		struct r600_mmio_counter sdma;
+		struct si_mmio_counter sdma;
 
 		/* CP_STAT */
-		struct r600_mmio_counter pfp;
-		struct r600_mmio_counter meq;
-		struct r600_mmio_counter me;
-		struct r600_mmio_counter surf_sync;
-		struct r600_mmio_counter cp_dma;
-		struct r600_mmio_counter scratch_ram;
+		struct si_mmio_counter pfp;
+		struct si_mmio_counter meq;
+		struct si_mmio_counter me;
+		struct si_mmio_counter surf_sync;
+		struct si_mmio_counter cp_dma;
+		struct si_mmio_counter scratch_ram;
 	} named;
 	unsigned array[0];
 };

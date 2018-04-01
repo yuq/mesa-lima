@@ -32,7 +32,7 @@
  * pipe_context
  */
 
-static enum pipe_reset_status r600_get_reset_status(struct pipe_context *ctx)
+static enum pipe_reset_status si_get_reset_status(struct pipe_context *ctx)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	unsigned latest = sctx->b.ws->query_value(sctx->b.ws,
@@ -45,7 +45,7 @@ static enum pipe_reset_status r600_get_reset_status(struct pipe_context *ctx)
 	return PIPE_UNKNOWN_CONTEXT_RESET;
 }
 
-static void r600_set_device_reset_callback(struct pipe_context *ctx,
+static void si_set_device_reset_callback(struct pipe_context *ctx,
 					   const struct pipe_device_reset_callback *cb)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
@@ -75,10 +75,10 @@ bool si_check_device_reset(struct si_context *sctx)
 	return true;
 }
 
-static bool r600_resource_commit(struct pipe_context *pctx,
-				 struct pipe_resource *resource,
-				 unsigned level, struct pipe_box *box,
-				 bool commit)
+static bool si_resource_commit(struct pipe_context *pctx,
+			       struct pipe_resource *resource,
+			       unsigned level, struct pipe_box *box,
+			       bool commit)
 {
 	struct si_context *ctx = (struct si_context *)pctx;
 	struct r600_resource *res = r600_resource(resource);
@@ -122,16 +122,16 @@ bool si_common_context_init(struct si_context *sctx,
 	sctx->b.family = sscreen->info.family;
 	sctx->b.chip_class = sscreen->info.chip_class;
 
-	sctx->b.b.resource_commit = r600_resource_commit;
+	sctx->b.b.resource_commit = si_resource_commit;
 
 	if (sscreen->info.drm_major == 2 && sscreen->info.drm_minor >= 43) {
-		sctx->b.b.get_device_reset_status = r600_get_reset_status;
+		sctx->b.b.get_device_reset_status = si_get_reset_status;
 		sctx->b.gpu_reset_counter =
 				sctx->b.ws->query_value(sctx->b.ws,
 							RADEON_GPU_RESET_COUNTER);
 	}
 
-	sctx->b.b.set_device_reset_callback = r600_set_device_reset_callback;
+	sctx->b.b.set_device_reset_callback = si_set_device_reset_callback;
 
 	si_init_context_texture_functions(sctx);
 	si_init_query_functions(sctx);

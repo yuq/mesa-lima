@@ -39,8 +39,8 @@
 #include "amd/common/sid.h"
 
 static enum radeon_surf_mode
-r600_choose_tiling(struct si_screen *sscreen,
-		   const struct pipe_resource *templ);
+si_choose_tiling(struct si_screen *sscreen,
+		 const struct pipe_resource *templ);
 
 
 bool si_prepare_for_dma_blit(struct si_context *sctx,
@@ -104,13 +104,13 @@ bool si_prepare_for_dma_blit(struct si_context *sctx,
 }
 
 /* Same as resource_copy_region, except that both upsampling and downsampling are allowed. */
-static void r600_copy_region_with_blit(struct pipe_context *pipe,
-				       struct pipe_resource *dst,
-                                       unsigned dst_level,
-                                       unsigned dstx, unsigned dsty, unsigned dstz,
-                                       struct pipe_resource *src,
-                                       unsigned src_level,
-                                       const struct pipe_box *src_box)
+static void si_copy_region_with_blit(struct pipe_context *pipe,
+				     struct pipe_resource *dst,
+				     unsigned dst_level,
+				     unsigned dstx, unsigned dsty, unsigned dstz,
+				     struct pipe_resource *src,
+				     unsigned src_level,
+				     const struct pipe_box *src_box)
 {
 	struct pipe_blit_info blit;
 
@@ -138,7 +138,7 @@ static void r600_copy_region_with_blit(struct pipe_context *pipe,
 }
 
 /* Copy from a full GPU texture to a transfer's staging one. */
-static void r600_copy_to_staging_texture(struct pipe_context *ctx, struct r600_transfer *rtransfer)
+static void si_copy_to_staging_texture(struct pipe_context *ctx, struct r600_transfer *rtransfer)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct pipe_transfer *transfer = (struct pipe_transfer*)rtransfer;
@@ -146,7 +146,7 @@ static void r600_copy_to_staging_texture(struct pipe_context *ctx, struct r600_t
 	struct pipe_resource *src = transfer->resource;
 
 	if (src->nr_samples > 1) {
-		r600_copy_region_with_blit(ctx, dst, 0, 0, 0, 0,
+		si_copy_region_with_blit(ctx, dst, 0, 0, 0, 0,
 					   src, transfer->level, &transfer->box);
 		return;
 	}
@@ -156,7 +156,7 @@ static void r600_copy_to_staging_texture(struct pipe_context *ctx, struct r600_t
 }
 
 /* Copy from a transfer's staging texture to a full GPU one. */
-static void r600_copy_from_staging_texture(struct pipe_context *ctx, struct r600_transfer *rtransfer)
+static void si_copy_from_staging_texture(struct pipe_context *ctx, struct r600_transfer *rtransfer)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct pipe_transfer *transfer = (struct pipe_transfer*)rtransfer;
@@ -167,7 +167,7 @@ static void r600_copy_from_staging_texture(struct pipe_context *ctx, struct r600
 	u_box_3d(0, 0, 0, transfer->box.width, transfer->box.height, transfer->box.depth, &sbox);
 
 	if (dst->nr_samples > 1) {
-		r600_copy_region_with_blit(ctx, dst, transfer->level,
+		si_copy_region_with_blit(ctx, dst, transfer->level,
 					   transfer->box.x, transfer->box.y, transfer->box.z,
 					   src, 0, &sbox);
 		return;
@@ -178,11 +178,11 @@ static void r600_copy_from_staging_texture(struct pipe_context *ctx, struct r600
 		       src, 0, &sbox);
 }
 
-static unsigned r600_texture_get_offset(struct si_screen *sscreen,
-					struct r600_texture *rtex, unsigned level,
-					const struct pipe_box *box,
-					unsigned *stride,
-					unsigned *layer_stride)
+static unsigned si_texture_get_offset(struct si_screen *sscreen,
+				      struct r600_texture *rtex, unsigned level,
+				      const struct pipe_box *box,
+				      unsigned *stride,
+				      unsigned *layer_stride)
 {
 	if (sscreen->info.chip_class >= GFX9) {
 		*stride = rtex->surface.u.gfx9.surf_pitch * rtex->surface.bpe;
@@ -217,16 +217,16 @@ static unsigned r600_texture_get_offset(struct si_screen *sscreen,
 	}
 }
 
-static int r600_init_surface(struct si_screen *sscreen,
-			     struct radeon_surf *surface,
-			     const struct pipe_resource *ptex,
-			     enum radeon_surf_mode array_mode,
-			     unsigned pitch_in_bytes_override,
-			     unsigned offset,
-			     bool is_imported,
-			     bool is_scanout,
-			     bool is_flushed_depth,
-			     bool tc_compatible_htile)
+static int si_init_surface(struct si_screen *sscreen,
+			   struct radeon_surf *surface,
+			   const struct pipe_resource *ptex,
+			   enum radeon_surf_mode array_mode,
+			   unsigned pitch_in_bytes_override,
+			   unsigned offset,
+			   bool is_imported,
+			   bool is_scanout,
+			   bool is_flushed_depth,
+			   bool tc_compatible_htile)
 {
 	const struct util_format_description *desc =
 		util_format_description(ptex->format);
@@ -321,9 +321,9 @@ static int r600_init_surface(struct si_screen *sscreen,
 	return 0;
 }
 
-static void r600_texture_init_metadata(struct si_screen *sscreen,
-				       struct r600_texture *rtex,
-				       struct radeon_bo_metadata *metadata)
+static void si_texture_init_metadata(struct si_screen *sscreen,
+				     struct r600_texture *rtex,
+				     struct radeon_bo_metadata *metadata)
 {
 	struct radeon_surf *surface = &rtex->surface;
 
@@ -347,11 +347,11 @@ static void r600_texture_init_metadata(struct si_screen *sscreen,
 	}
 }
 
-static void r600_surface_import_metadata(struct si_screen *sscreen,
-					 struct radeon_surf *surf,
-					 struct radeon_bo_metadata *metadata,
-					 enum radeon_surf_mode *array_mode,
-					 bool *is_scanout)
+static void si_surface_import_metadata(struct si_screen *sscreen,
+				       struct radeon_surf *surf,
+				       struct radeon_bo_metadata *metadata,
+				       enum radeon_surf_mode *array_mode,
+				       bool *is_scanout)
 {
 	if (sscreen->info.chip_class >= GFX9) {
 		if (metadata->u.gfx9.swizzle_mode > 0)
@@ -425,7 +425,7 @@ void si_texture_discard_cmask(struct si_screen *sscreen,
 	p_atomic_inc(&sscreen->compressed_colortex_counter);
 }
 
-static bool r600_can_disable_dcc(struct r600_texture *rtex)
+static bool si_can_disable_dcc(struct r600_texture *rtex)
 {
 	/* We can't disable DCC if it can be written by another process. */
 	return rtex->dcc_offset &&
@@ -433,10 +433,10 @@ static bool r600_can_disable_dcc(struct r600_texture *rtex)
 		!(rtex->resource.external_usage & PIPE_HANDLE_USAGE_WRITE));
 }
 
-static bool r600_texture_discard_dcc(struct si_screen *sscreen,
-				     struct r600_texture *rtex)
+static bool si_texture_discard_dcc(struct si_screen *sscreen,
+				   struct r600_texture *rtex)
 {
-	if (!r600_can_disable_dcc(rtex))
+	if (!si_can_disable_dcc(rtex))
 		return false;
 
 	assert(rtex->dcc_separate_buffer == NULL);
@@ -475,7 +475,7 @@ bool si_texture_disable_dcc(struct si_context *sctx,
 {
 	struct si_screen *sscreen = sctx->screen;
 
-	if (!r600_can_disable_dcc(rtex))
+	if (!si_can_disable_dcc(rtex))
 		return false;
 
 	if (&sctx->b.b == sscreen->aux_context)
@@ -488,13 +488,13 @@ bool si_texture_disable_dcc(struct si_context *sctx,
 	if (&sctx->b.b == sscreen->aux_context)
 		mtx_unlock(&sscreen->aux_context_lock);
 
-	return r600_texture_discard_dcc(sscreen, rtex);
+	return si_texture_discard_dcc(sscreen, rtex);
 }
 
-static void r600_reallocate_texture_inplace(struct si_context *sctx,
-					    struct r600_texture *rtex,
-					    unsigned new_bind_flag,
-					    bool invalidate_storage)
+static void si_reallocate_texture_inplace(struct si_context *sctx,
+					  struct r600_texture *rtex,
+					  unsigned new_bind_flag,
+					  bool invalidate_storage)
 {
 	struct pipe_screen *screen = sctx->b.b.screen;
 	struct r600_texture *new_tex;
@@ -511,7 +511,7 @@ static void r600_reallocate_texture_inplace(struct si_context *sctx,
 			return;
 
 		/* This fails with MSAA, depth, and compressed textures. */
-		if (r600_choose_tiling(sctx->screen, &templ) !=
+		if (si_choose_tiling(sctx->screen, &templ) !=
 		    RADEON_SURF_MODE_LINEAR_ALIGNED)
 			return;
 	}
@@ -536,7 +536,7 @@ static void r600_reallocate_texture_inplace(struct si_context *sctx,
 
 	if (new_bind_flag == PIPE_BIND_LINEAR) {
 		si_texture_discard_cmask(sctx->screen, rtex);
-		r600_texture_discard_dcc(sctx->screen, rtex);
+		si_texture_discard_dcc(sctx->screen, rtex);
 	}
 
 	/* Replace the structure fields of rtex. */
@@ -674,11 +674,11 @@ static void si_apply_opaque_metadata(struct si_screen *sscreen,
 	rtex->dcc_offset = 0;
 }
 
-static boolean r600_texture_get_handle(struct pipe_screen* screen,
-				       struct pipe_context *ctx,
-				       struct pipe_resource *resource,
-				       struct winsys_handle *whandle,
-                                       unsigned usage)
+static boolean si_texture_get_handle(struct pipe_screen* screen,
+				     struct pipe_context *ctx,
+				     struct pipe_resource *resource,
+				     struct winsys_handle *whandle,
+				     unsigned usage)
 {
 	struct si_screen *sscreen = (struct si_screen*)screen;
 	struct si_context *sctx;
@@ -706,7 +706,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		     sscreen->info.has_local_buffers &&
 		     whandle->type != DRM_API_HANDLE_TYPE_KMS)) {
 			assert(!res->b.is_shared);
-			r600_reallocate_texture_inplace(sctx, rtex,
+			si_reallocate_texture_inplace(sctx, rtex,
 							PIPE_BIND_SHARED, false);
 			flush = true;
 			assert(res->b.b.bind & PIPE_BIND_SHARED);
@@ -743,7 +743,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 
 		/* Set metadata. */
 		if (!res->b.is_shared || update_metadata) {
-			r600_texture_init_metadata(sscreen, rtex, &metadata);
+			si_texture_init_metadata(sscreen, rtex, &metadata);
 			si_query_opaque_metadata(sscreen, rtex, &metadata);
 
 			sscreen->ws->buffer_set_metadata(res->buf, &metadata);
@@ -817,8 +817,8 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 					      slice_size, whandle);
 }
 
-static void r600_texture_destroy(struct pipe_screen *screen,
-				 struct pipe_resource *ptex)
+static void si_texture_destroy(struct pipe_screen *screen,
+			       struct pipe_resource *ptex)
 {
 	struct r600_texture *rtex = (struct r600_texture*)ptex;
 	struct r600_resource *resource = &rtex->resource;
@@ -834,7 +834,7 @@ static void r600_texture_destroy(struct pipe_screen *screen,
 	FREE(rtex);
 }
 
-static const struct u_resource_vtbl r600_texture_vtbl;
+static const struct u_resource_vtbl si_texture_vtbl;
 
 /* The number of samples can be specified independently of the texture. */
 void si_texture_get_fmask_info(struct si_screen *sscreen,
@@ -892,8 +892,8 @@ void si_texture_get_fmask_info(struct si_screen *sscreen,
 	out->size = fmask.surf_size;
 }
 
-static void r600_texture_allocate_fmask(struct si_screen *sscreen,
-					struct r600_texture *rtex)
+static void si_texture_allocate_fmask(struct si_screen *sscreen,
+				      struct r600_texture *rtex)
 {
 	si_texture_get_fmask_info(sscreen, rtex,
 				    rtex->resource.b.b.nr_samples, &rtex->fmask);
@@ -956,8 +956,8 @@ void si_texture_get_cmask_info(struct si_screen *sscreen,
 		    align(slice_bytes, base_align);
 }
 
-static void r600_texture_allocate_cmask(struct si_screen *sscreen,
-					struct r600_texture *rtex)
+static void si_texture_allocate_cmask(struct si_screen *sscreen,
+				      struct r600_texture *rtex)
 {
 	si_texture_get_cmask_info(sscreen, rtex, &rtex->cmask);
 
@@ -967,8 +967,8 @@ static void r600_texture_allocate_cmask(struct si_screen *sscreen,
 	rtex->cb_color_info |= S_028C70_FAST_CLEAR(1);
 }
 
-static void r600_texture_get_htile_size(struct si_screen *sscreen,
-					struct r600_texture *rtex)
+static void si_texture_get_htile_size(struct si_screen *sscreen,
+				      struct r600_texture *rtex)
 {
 	unsigned cl_width, cl_height, width, height;
 	unsigned slice_elements, slice_bytes, pipe_interleave_bytes, base_align;
@@ -1035,11 +1035,11 @@ static void r600_texture_get_htile_size(struct si_screen *sscreen,
 		align(slice_bytes, base_align);
 }
 
-static void r600_texture_allocate_htile(struct si_screen *sscreen,
-					struct r600_texture *rtex)
+static void si_texture_allocate_htile(struct si_screen *sscreen,
+				      struct r600_texture *rtex)
 {
 	if (sscreen->info.chip_class <= VI && !rtex->tc_compatible_htile)
-		r600_texture_get_htile_size(sscreen, rtex);
+		si_texture_get_htile_size(sscreen, rtex);
 
 	if (!rtex->surface.htile_size)
 		return;
@@ -1198,10 +1198,10 @@ void si_print_texture_info(struct si_screen *sscreen,
 
 /* Common processing for r600_texture_create and r600_texture_from_handle */
 static struct r600_texture *
-r600_texture_create_object(struct pipe_screen *screen,
-			   const struct pipe_resource *base,
-			   struct pb_buffer *buf,
-			   struct radeon_surf *surface)
+si_texture_create_object(struct pipe_screen *screen,
+			 const struct pipe_resource *base,
+			 struct pb_buffer *buf,
+			 struct radeon_surf *surface)
 {
 	struct r600_texture *rtex;
 	struct r600_resource *resource;
@@ -1214,7 +1214,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 	resource = &rtex->resource;
 	resource->b.b = *base;
 	resource->b.b.next = NULL;
-	resource->b.vtbl = &r600_texture_vtbl;
+	resource->b.vtbl = &si_texture_vtbl;
 	pipe_reference_init(&resource->b.b.reference, 1);
 	resource->b.b.screen = screen;
 
@@ -1267,14 +1267,14 @@ r600_texture_create_object(struct pipe_screen *screen,
 			rtex->db_compatible = true;
 
 			if (!(sscreen->debug_flags & DBG(NO_HYPERZ)))
-				r600_texture_allocate_htile(sscreen, rtex);
+				si_texture_allocate_htile(sscreen, rtex);
 		}
 	} else {
 		if (base->nr_samples > 1 &&
 		    !buf &&
 		    !(sscreen->debug_flags & DBG(NO_FMASK))) {
-			r600_texture_allocate_fmask(sscreen, rtex);
-			r600_texture_allocate_cmask(sscreen, rtex);
+			si_texture_allocate_fmask(sscreen, rtex);
+			si_texture_allocate_cmask(sscreen, rtex);
 			rtex->cmask_buffer = &rtex->resource;
 
 			if (!rtex->fmask.size || !rtex->cmask.size) {
@@ -1369,7 +1369,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 }
 
 static enum radeon_surf_mode
-r600_choose_tiling(struct si_screen *sscreen,
+si_choose_tiling(struct si_screen *sscreen,
 		   const struct pipe_resource *templ)
 {
 	const struct util_format_description *desc = util_format_description(templ->format);
@@ -1453,8 +1453,8 @@ struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 
 	int r;
 
-	r = r600_init_surface(sscreen, &surface, templ,
-			      r600_choose_tiling(sscreen, templ), 0, 0,
+	r = si_init_surface(sscreen, &surface, templ,
+			      si_choose_tiling(sscreen, templ), 0, 0,
 			      false, false, is_flushed_depth,
 			      tc_compatible_htile);
 	if (r) {
@@ -1462,13 +1462,13 @@ struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 	}
 
 	return (struct pipe_resource *)
-	       r600_texture_create_object(screen, templ, NULL, &surface);
+	       si_texture_create_object(screen, templ, NULL, &surface);
 }
 
-static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen,
-						      const struct pipe_resource *templ,
-						      struct winsys_handle *whandle,
-                                                      unsigned usage)
+static struct pipe_resource *si_texture_from_handle(struct pipe_screen *screen,
+						    const struct pipe_resource *templ,
+						    struct winsys_handle *whandle,
+						    unsigned usage)
 {
 	struct si_screen *sscreen = (struct si_screen*)screen;
 	struct pb_buffer *buf = NULL;
@@ -1490,16 +1490,16 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 		return NULL;
 
 	sscreen->ws->buffer_get_metadata(buf, &metadata);
-	r600_surface_import_metadata(sscreen, &surface, &metadata,
+	si_surface_import_metadata(sscreen, &surface, &metadata,
 				     &array_mode, &is_scanout);
 
-	r = r600_init_surface(sscreen, &surface, templ, array_mode, stride,
+	r = si_init_surface(sscreen, &surface, templ, array_mode, stride,
 			      offset, true, is_scanout, false, false);
 	if (r) {
 		return NULL;
 	}
 
-	rtex = r600_texture_create_object(screen, templ, buf, &surface);
+	rtex = si_texture_create_object(screen, templ, buf, &surface);
 	if (!rtex)
 		return NULL;
 
@@ -1584,10 +1584,10 @@ bool si_init_flushed_depth_texture(struct pipe_context *ctx,
  * which is supposed to hold a subregion of the texture "orig" at the given
  * mipmap level.
  */
-static void r600_init_temp_resource_from_box(struct pipe_resource *res,
-					     struct pipe_resource *orig,
-					     const struct pipe_box *box,
-					     unsigned level, unsigned flags)
+static void si_init_temp_resource_from_box(struct pipe_resource *res,
+					   struct pipe_resource *orig,
+					   const struct pipe_box *box,
+					   unsigned level, unsigned flags)
 {
 	memset(res, 0, sizeof(*res));
 	res->format = orig->format;
@@ -1607,10 +1607,10 @@ static void r600_init_temp_resource_from_box(struct pipe_resource *res,
 	}
 }
 
-static bool r600_can_invalidate_texture(struct si_screen *sscreen,
-					struct r600_texture *rtex,
-					unsigned transfer_usage,
-					const struct pipe_box *box)
+static bool si_can_invalidate_texture(struct si_screen *sscreen,
+				      struct r600_texture *rtex,
+				      unsigned transfer_usage,
+				      const struct pipe_box *box)
 {
 	return !rtex->resource.b.is_shared &&
 		!(transfer_usage & PIPE_TRANSFER_READ) &&
@@ -1621,8 +1621,8 @@ static bool r600_can_invalidate_texture(struct si_screen *sscreen,
 						 box->depth);
 }
 
-static void r600_texture_invalidate_storage(struct si_context *sctx,
-					    struct r600_texture *rtex)
+static void si_texture_invalidate_storage(struct si_context *sctx,
+					  struct r600_texture *rtex)
 {
 	struct si_screen *sscreen = sctx->screen;
 
@@ -1642,12 +1642,12 @@ static void r600_texture_invalidate_storage(struct si_context *sctx,
 	sctx->b.num_alloc_tex_transfer_bytes += rtex->size;
 }
 
-static void *r600_texture_transfer_map(struct pipe_context *ctx,
-				       struct pipe_resource *texture,
-				       unsigned level,
-				       unsigned usage,
-				       const struct pipe_box *box,
-				       struct pipe_transfer **ptransfer)
+static void *si_texture_transfer_map(struct pipe_context *ctx,
+				     struct pipe_resource *texture,
+				     unsigned level,
+				     unsigned usage,
+				     const struct pipe_box *box,
+				     struct pipe_transfer **ptransfer)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct r600_texture *rtex = (struct r600_texture*)texture;
@@ -1671,10 +1671,10 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		    box->width >= 4 && box->height >= 4 &&
 		    p_atomic_inc_return(&rtex->num_level0_transfers) == 10) {
 			bool can_invalidate =
-				r600_can_invalidate_texture(sctx->screen, rtex,
+				si_can_invalidate_texture(sctx->screen, rtex,
 							    usage, box);
 
-			r600_reallocate_texture_inplace(sctx, rtex,
+			si_reallocate_texture_inplace(sctx, rtex,
 							PIPE_BIND_LINEAR,
 							can_invalidate);
 		}
@@ -1700,9 +1700,9 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 			 !sctx->b.ws->buffer_wait(rtex->resource.buf, 0,
 						RADEON_USAGE_READWRITE)) {
 			/* It's busy. */
-			if (r600_can_invalidate_texture(sctx->screen, rtex,
+			if (si_can_invalidate_texture(sctx->screen, rtex,
 							usage, box))
-				r600_texture_invalidate_storage(sctx, rtex);
+				si_texture_invalidate_storage(sctx, rtex);
 			else
 				use_staging_texture = true;
 		}
@@ -1732,7 +1732,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 			 */
 			struct pipe_resource resource;
 
-			r600_init_temp_resource_from_box(&resource, texture, box, level, 0);
+			si_init_temp_resource_from_box(&resource, texture, box, level, 0);
 
 			if (!si_init_flushed_depth_texture(ctx, &resource, &staging_depth)) {
 				R600_ERR("failed to create temporary texture to hold untiled copy\n");
@@ -1748,14 +1748,14 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 					return NULL;
 				}
 
-				r600_copy_region_with_blit(ctx, temp, 0, 0, 0, 0, texture, level, box);
+				si_copy_region_with_blit(ctx, temp, 0, 0, 0, 0, texture, level, box);
 				si_blit_decompress_depth(ctx, (struct r600_texture*)temp, staging_depth,
 							 0, 0, 0, box->depth, 0, 0);
 				pipe_resource_reference(&temp, NULL);
 			}
 
 			/* Just get the strides. */
-			r600_texture_get_offset(sctx->screen, staging_depth, level, NULL,
+			si_texture_get_offset(sctx->screen, staging_depth, level, NULL,
 						&trans->b.b.stride,
 						&trans->b.b.layer_stride);
 		} else {
@@ -1772,7 +1772,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 						 box->z, box->z + box->depth - 1,
 						 0, 0);
 
-			offset = r600_texture_get_offset(sctx->screen, staging_depth,
+			offset = si_texture_get_offset(sctx->screen, staging_depth,
 							 level, box,
 							 &trans->b.b.stride,
 							 &trans->b.b.layer_stride);
@@ -1784,7 +1784,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		struct pipe_resource resource;
 		struct r600_texture *staging;
 
-		r600_init_temp_resource_from_box(&resource, texture, box, level,
+		si_init_temp_resource_from_box(&resource, texture, box, level,
 						 R600_RESOURCE_FLAG_TRANSFER);
 		resource.usage = (usage & PIPE_TRANSFER_READ) ?
 			PIPE_USAGE_STAGING : PIPE_USAGE_STREAM;
@@ -1799,19 +1799,19 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		trans->staging = &staging->resource;
 
 		/* Just get the strides. */
-		r600_texture_get_offset(sctx->screen, staging, 0, NULL,
+		si_texture_get_offset(sctx->screen, staging, 0, NULL,
 					&trans->b.b.stride,
 					&trans->b.b.layer_stride);
 
 		if (usage & PIPE_TRANSFER_READ)
-			r600_copy_to_staging_texture(ctx, trans);
+			si_copy_to_staging_texture(ctx, trans);
 		else
 			usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
 
 		buf = trans->staging;
 	} else {
 		/* the resource is mapped directly */
-		offset = r600_texture_get_offset(sctx->screen, rtex, level, box,
+		offset = si_texture_get_offset(sctx->screen, rtex, level, box,
 						 &trans->b.b.stride,
 						 &trans->b.b.layer_stride);
 		buf = &rtex->resource;
@@ -1827,8 +1827,8 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 	return map + offset;
 }
 
-static void r600_texture_transfer_unmap(struct pipe_context *ctx,
-					struct pipe_transfer* transfer)
+static void si_texture_transfer_unmap(struct pipe_context *ctx,
+				      struct pipe_transfer* transfer)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct r600_transfer *rtransfer = (struct r600_transfer*)transfer;
@@ -1842,7 +1842,7 @@ static void r600_texture_transfer_unmap(struct pipe_context *ctx,
 						  &rtransfer->staging->b.b, transfer->level,
 						  &transfer->box);
 		} else {
-			r600_copy_from_staging_texture(ctx, rtransfer);
+			si_copy_from_staging_texture(ctx, rtransfer);
 		}
 	}
 
@@ -1873,13 +1873,13 @@ static void r600_texture_transfer_unmap(struct pipe_context *ctx,
 	FREE(transfer);
 }
 
-static const struct u_resource_vtbl r600_texture_vtbl =
+static const struct u_resource_vtbl si_texture_vtbl =
 {
 	NULL,				/* get_handle */
-	r600_texture_destroy,		/* resource_destroy */
-	r600_texture_transfer_map,	/* transfer_map */
+	si_texture_destroy,		/* resource_destroy */
+	si_texture_transfer_map,	/* transfer_map */
 	u_default_transfer_flush_region, /* transfer_flush_region */
-	r600_texture_transfer_unmap,	/* transfer_unmap */
+	si_texture_transfer_unmap,	/* transfer_unmap */
 };
 
 /* DCC channel type categories within which formats can be reinterpreted
@@ -2011,9 +2011,9 @@ struct pipe_surface *si_create_surface_custom(struct pipe_context *pipe,
 	return &surface->base;
 }
 
-static struct pipe_surface *r600_create_surface(struct pipe_context *pipe,
-						struct pipe_resource *tex,
-						const struct pipe_surface *templ)
+static struct pipe_surface *si_create_surface(struct pipe_context *pipe,
+					      struct pipe_resource *tex,
+					      const struct pipe_surface *templ)
 {
 	unsigned level = templ->u.tex.level;
 	unsigned width = u_minify(tex->width0, level);
@@ -2049,8 +2049,8 @@ static struct pipe_surface *r600_create_surface(struct pipe_context *pipe,
 					  width, height);
 }
 
-static void r600_surface_destroy(struct pipe_context *pipe,
-				 struct pipe_surface *surface)
+static void si_surface_destroy(struct pipe_context *pipe,
+			       struct pipe_surface *surface)
 {
 	pipe_resource_reference(&surface->texture, NULL);
 	FREE(surface);
@@ -2188,7 +2188,7 @@ static unsigned vi_get_context_dcc_stats_index(struct si_context *sctx,
 static struct pipe_query *
 vi_create_resuming_pipestats_query(struct si_context *sctx)
 {
-	struct r600_query_hw *query = (struct r600_query_hw*)
+	struct si_query_hw *query = (struct si_query_hw*)
 		sctx->b.b.create_query(&sctx->b.b, PIPE_QUERY_PIPELINE_STATISTICS, 0);
 
 	query->flags |= R600_QUERY_HW_FLAG_BEGIN_RESUMES;
@@ -2312,7 +2312,7 @@ void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 		ctx->get_query_result(ctx, sctx->b.dcc_stats[i].ps_stats[2],
 				      true, &result);
 		si_query_hw_reset_buffers(sctx,
-					  (struct r600_query_hw*)
+					  (struct si_query_hw*)
 					  sctx->b.dcc_stats[i].ps_stats[2]);
 
 		/* Compute the approximate number of fullscreen draws. */
@@ -2353,9 +2353,9 @@ void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 }
 
 static struct pipe_memory_object *
-r600_memobj_from_handle(struct pipe_screen *screen,
-			struct winsys_handle *whandle,
-			bool dedicated)
+si_memobj_from_handle(struct pipe_screen *screen,
+		      struct winsys_handle *whandle,
+		      bool dedicated)
 {
 	struct si_screen *sscreen = (struct si_screen*)screen;
 	struct r600_memory_object *memobj = CALLOC_STRUCT(r600_memory_object);
@@ -2382,8 +2382,8 @@ r600_memobj_from_handle(struct pipe_screen *screen,
 }
 
 static void
-r600_memobj_destroy(struct pipe_screen *screen,
-		    struct pipe_memory_object *_memobj)
+si_memobj_destroy(struct pipe_screen *screen,
+		  struct pipe_memory_object *_memobj)
 {
 	struct r600_memory_object *memobj = (struct r600_memory_object *)_memobj;
 
@@ -2392,10 +2392,10 @@ r600_memobj_destroy(struct pipe_screen *screen,
 }
 
 static struct pipe_resource *
-r600_texture_from_memobj(struct pipe_screen *screen,
-			 const struct pipe_resource *templ,
-			 struct pipe_memory_object *_memobj,
-			 uint64_t offset)
+si_texture_from_memobj(struct pipe_screen *screen,
+		       const struct pipe_resource *templ,
+		       struct pipe_memory_object *_memobj,
+		       uint64_t offset)
 {
 	int r;
 	struct si_screen *sscreen = (struct si_screen*)screen;
@@ -2409,7 +2409,7 @@ r600_texture_from_memobj(struct pipe_screen *screen,
 
 	if (memobj->b.dedicated) {
 		sscreen->ws->buffer_get_metadata(memobj->buf, &metadata);
-		r600_surface_import_metadata(sscreen, &surface, &metadata,
+		si_surface_import_metadata(sscreen, &surface, &metadata,
 				     &array_mode, &is_scanout);
 	} else {
 		/**
@@ -2439,14 +2439,14 @@ r600_texture_from_memobj(struct pipe_screen *screen,
 
 	}
 
-	r = r600_init_surface(sscreen, &surface, templ,
+	r = si_init_surface(sscreen, &surface, templ,
 			      array_mode, memobj->stride,
 			      offset, true, is_scanout,
 			      false, false);
 	if (r)
 		return NULL;
 
-	rtex = r600_texture_create_object(screen, templ, memobj->buf, &surface);
+	rtex = si_texture_create_object(screen, templ, memobj->buf, &surface);
 	if (!rtex)
 		return NULL;
 
@@ -2485,16 +2485,16 @@ static bool si_check_resource_capability(struct pipe_screen *screen,
 
 void si_init_screen_texture_functions(struct si_screen *sscreen)
 {
-	sscreen->b.resource_from_handle = r600_texture_from_handle;
-	sscreen->b.resource_get_handle = r600_texture_get_handle;
-	sscreen->b.resource_from_memobj = r600_texture_from_memobj;
-	sscreen->b.memobj_create_from_handle = r600_memobj_from_handle;
-	sscreen->b.memobj_destroy = r600_memobj_destroy;
+	sscreen->b.resource_from_handle = si_texture_from_handle;
+	sscreen->b.resource_get_handle = si_texture_get_handle;
+	sscreen->b.resource_from_memobj = si_texture_from_memobj;
+	sscreen->b.memobj_create_from_handle = si_memobj_from_handle;
+	sscreen->b.memobj_destroy = si_memobj_destroy;
 	sscreen->b.check_resource_capability = si_check_resource_capability;
 }
 
 void si_init_context_texture_functions(struct si_context *sctx)
 {
-	sctx->b.b.create_surface = r600_create_surface;
-	sctx->b.b.surface_destroy = r600_surface_destroy;
+	sctx->b.b.create_surface = si_create_surface;
+	sctx->b.b.surface_destroy = si_surface_destroy;
 }

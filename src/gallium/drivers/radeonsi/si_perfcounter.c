@@ -456,7 +456,7 @@ static void si_pc_emit_shaders(struct si_context *sctx,
 }
 
 static void si_pc_emit_select(struct si_context *sctx,
-		        struct r600_perfcounter_block *group,
+		        struct si_perfcounter_block *group,
 		        unsigned count, unsigned *selectors)
 {
 	struct si_pc_block *sigroup = (struct si_pc_block *)group->data;
@@ -597,7 +597,7 @@ static void si_pc_emit_stop(struct si_context *sctx,
 }
 
 static void si_pc_emit_read(struct si_context *sctx,
-			    struct r600_perfcounter_block *group,
+			    struct si_perfcounter_block *group,
 			    unsigned count, unsigned *selectors,
 			    struct r600_resource *buffer, uint64_t va)
 {
@@ -650,7 +650,7 @@ static void si_pc_cleanup(struct si_screen *sscreen)
 
 void si_init_perfcounters(struct si_screen *screen)
 {
-	struct r600_perfcounters *pc;
+	struct si_perfcounters *pc;
 	struct si_pc_block *blocks;
 	unsigned num_blocks;
 	unsigned i;
@@ -680,7 +680,7 @@ void si_init_perfcounters(struct si_screen *screen)
 			screen->info.max_sh_per_se);
 	}
 
-	pc = CALLOC_STRUCT(r600_perfcounters);
+	pc = CALLOC_STRUCT(si_perfcounters);
 	if (!pc)
 		return;
 

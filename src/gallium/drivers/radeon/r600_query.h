@@ -33,8 +33,8 @@ struct pipe_resource;
 
 struct si_screen;
 struct si_context;
-struct r600_query;
-struct r600_query_hw;
+struct si_query;
+struct si_query_hw;
 struct r600_resource;
 
 enum {
@@ -118,24 +118,24 @@ enum {
 	R600_NUM_SW_QUERY_GROUPS
 };
 
-struct r600_query_ops {
-	void (*destroy)(struct si_screen *, struct r600_query *);
-	bool (*begin)(struct si_context *, struct r600_query *);
-	bool (*end)(struct si_context *, struct r600_query *);
+struct si_query_ops {
+	void (*destroy)(struct si_screen *, struct si_query *);
+	bool (*begin)(struct si_context *, struct si_query *);
+	bool (*end)(struct si_context *, struct si_query *);
 	bool (*get_result)(struct si_context *,
-			   struct r600_query *, bool wait,
+			   struct si_query *, bool wait,
 			   union pipe_query_result *result);
 	void (*get_result_resource)(struct si_context *,
-				    struct r600_query *, bool wait,
+				    struct si_query *, bool wait,
 				    enum pipe_query_value_type result_type,
 				    int index,
 				    struct pipe_resource *resource,
 				    unsigned offset);
 };
 
-struct r600_query {
+struct si_query {
 	struct threaded_query b;
-	struct r600_query_ops *ops;
+	struct si_query_ops *ops;
 
 	/* The type of query */
 	unsigned type;
@@ -148,23 +148,23 @@ enum {
 	R600_QUERY_HW_FLAG_BEGIN_RESUMES = (1 << 2),
 };
 
-struct r600_query_hw_ops {
+struct si_query_hw_ops {
 	bool (*prepare_buffer)(struct si_screen *,
-			       struct r600_query_hw *,
+			       struct si_query_hw *,
 			       struct r600_resource *);
 	void (*emit_start)(struct si_context *,
-			   struct r600_query_hw *,
+			   struct si_query_hw *,
 			   struct r600_resource *buffer, uint64_t va);
 	void (*emit_stop)(struct si_context *,
-			  struct r600_query_hw *,
+			  struct si_query_hw *,
 			  struct r600_resource *buffer, uint64_t va);
-	void (*clear_result)(struct r600_query_hw *, union pipe_query_result *);
+	void (*clear_result)(struct si_query_hw *, union pipe_query_result *);
 	void (*add_result)(struct si_screen *screen,
-			   struct r600_query_hw *, void *buffer,
+			   struct si_query_hw *, void *buffer,
 			   union pipe_query_result *result);
 };
 
-struct r600_query_buffer {
+struct si_query_buffer {
 	/* The buffer where query results are stored. */
 	struct r600_resource		*buf;
 	/* Offset of the next free result after current query data */
@@ -172,16 +172,16 @@ struct r600_query_buffer {
 	/* If a query buffer is full, a new buffer is created and the old one
 	 * is put in here. When we calculate the result, we sum up the samples
 	 * from all buffers. */
-	struct r600_query_buffer	*previous;
+	struct si_query_buffer	*previous;
 };
 
-struct r600_query_hw {
-	struct r600_query b;
-	struct r600_query_hw_ops *ops;
+struct si_query_hw {
+	struct si_query b;
+	struct si_query_hw_ops *ops;
 	unsigned flags;
 
 	/* The query buffer and how many results are in it. */
-	struct r600_query_buffer buffer;
+	struct si_query_buffer buffer;
 	/* Size of the result in memory for both begin_query and end_query,
 	 * this can be one or two numbers, or it could even be a size of a structure. */
 	unsigned result_size;
@@ -198,15 +198,15 @@ struct r600_query_hw {
 };
 
 bool si_query_hw_init(struct si_screen *sscreen,
-		      struct r600_query_hw *query);
+		      struct si_query_hw *query);
 void si_query_hw_destroy(struct si_screen *sscreen,
-			 struct r600_query *rquery);
+			 struct si_query *rquery);
 bool si_query_hw_begin(struct si_context *sctx,
-		       struct r600_query *rquery);
+		       struct si_query *rquery);
 bool si_query_hw_end(struct si_context *sctx,
-		     struct r600_query *rquery);
+		     struct si_query *rquery);
 bool si_query_hw_get_result(struct si_context *sctx,
-			    struct r600_query *rquery,
+			    struct si_query *rquery,
 			    bool wait,
 			    union pipe_query_result *result);
 
@@ -238,7 +238,7 @@ enum {
  *  (c) expose one performance counter group per instance, but summed over all
  *      shader engines.
  */
-struct r600_perfcounter_block {
+struct si_perfcounter_block {
 	const char *basename;
 	unsigned flags;
 	unsigned num_counters;
@@ -255,10 +255,10 @@ struct r600_perfcounter_block {
 	void *data;
 };
 
-struct r600_perfcounters {
+struct si_perfcounters {
 	unsigned num_groups;
 	unsigned num_blocks;
-	struct r600_perfcounter_block *blocks;
+	struct si_perfcounter_block *blocks;
 
 	unsigned num_stop_cs_dwords;
 	unsigned num_instance_cs_dwords;
@@ -271,14 +271,14 @@ struct r600_perfcounters {
 			      int se, int instance);
 	void (*emit_shaders)(struct si_context *, unsigned shaders);
 	void (*emit_select)(struct si_context *,
-			    struct r600_perfcounter_block *,
+			    struct si_perfcounter_block *,
 			    unsigned count, unsigned *selectors);
 	void (*emit_start)(struct si_context *,
 			  struct r600_resource *buffer, uint64_t va);
 	void (*emit_stop)(struct si_context *,
 			  struct r600_resource *buffer, uint64_t va);
 	void (*emit_read)(struct si_context *,
-			  struct r600_perfcounter_block *,
+			  struct si_perfcounter_block *,
 			  unsigned count, unsigned *selectors,
 			  struct r600_resource *buffer, uint64_t va);
 
@@ -299,17 +299,17 @@ int si_get_perfcounter_group_info(struct si_screen *,
 				  unsigned index,
 				  struct pipe_driver_query_group_info *info);
 
-bool si_perfcounters_init(struct r600_perfcounters *, unsigned num_blocks);
+bool si_perfcounters_init(struct si_perfcounters *, unsigned num_blocks);
 void si_perfcounters_add_block(struct si_screen *,
-			       struct r600_perfcounters *,
+			       struct si_perfcounters *,
 			       const char *name, unsigned flags,
 			       unsigned counters, unsigned selectors,
 			       unsigned instances, void *data);
-void si_perfcounters_do_destroy(struct r600_perfcounters *);
+void si_perfcounters_do_destroy(struct si_perfcounters *);
 void si_query_hw_reset_buffers(struct si_context *sctx,
-			       struct r600_query_hw *query);
+			       struct si_query_hw *query);
 
-struct r600_qbo_state {
+struct si_qbo_state {
 	void *saved_compute;
 	struct pipe_constant_buffer saved_const0;
 	struct pipe_shader_buffer saved_ssbo[3];

@@ -84,10 +84,10 @@ static inline void radeon_add_to_buffer_list(struct si_context *sctx,
  *
  * When this SHOULD NOT be used:
  *
- * - if r600_context_add_resource_size has been called for the buffer
+ * - if si_context_add_resource_size has been called for the buffer
  *   followed by *_need_cs_space for checking the memory usage
  *
- * - if r600_need_dma_space has been called for the buffer
+ * - if si_need_dma_space has been called for the buffer
  *
  * - when emitting state packets and draw packets (because preceding packets
  *   can't be re-emitted at that point)
