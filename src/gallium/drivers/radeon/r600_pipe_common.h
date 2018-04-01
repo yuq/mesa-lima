@@ -364,7 +364,7 @@ struct r600_memory_object {
 /* This encapsulates a state or an operation which can emitted into the GPU
  * command stream. */
 struct r600_atom {
-	void (*emit)(struct r600_common_context *ctx, struct r600_atom *state);
+	void (*emit)(struct si_context *ctx, struct r600_atom *state);
 	unsigned short		id;
 };
 

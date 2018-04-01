@@ -914,13 +914,13 @@ static void r600_query_hw_emit_stop(struct r600_common_context *ctx,
 	si_update_prims_generated_query_state((void*)ctx, query->b.type, -1);
 }
 
-static void emit_set_predicate(struct r600_common_context *ctx,
+static void emit_set_predicate(struct si_context *ctx,
 			       struct r600_resource *buf, uint64_t va,
 			       uint32_t op)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx_cs;
+	struct radeon_winsys_cs *cs = ctx->b.gfx_cs;
 
-	if (ctx->chip_class >= GFX9) {
+	if (ctx->b.chip_class >= GFX9) {
 		radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 2, 0));
 		radeon_emit(cs, op);
 		radeon_emit(cs, va);
@@ -930,14 +930,14 @@ static void emit_set_predicate(struct r600_common_context *ctx,
 		radeon_emit(cs, va);
 		radeon_emit(cs, op | ((va >> 32) & 0xFF));
 	}
-	radeon_add_to_buffer_list(ctx, ctx->gfx_cs, buf, RADEON_USAGE_READ,
+	radeon_add_to_buffer_list(&ctx->b, ctx->b.gfx_cs, buf, RADEON_USAGE_READ,
 				  RADEON_PRIO_QUERY);
 }
 
-static void r600_emit_query_predication(struct r600_common_context *ctx,
+static void r600_emit_query_predication(struct si_context *ctx,
 					struct r600_atom *atom)
 {
-	struct r600_query_hw *query = (struct r600_query_hw *)ctx->render_cond;
+	struct r600_query_hw *query = (struct r600_query_hw *)ctx->b.render_cond;
 	struct r600_query_buffer *qbuf;
 	uint32_t op;
 	bool flag_wait, invert;
@@ -945,9 +945,9 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 	if (!query)
 		return;
 
-	invert = ctx->render_cond_invert;
-	flag_wait = ctx->render_cond_mode == PIPE_RENDER_COND_WAIT ||
-		    ctx->render_cond_mode == PIPE_RENDER_COND_BY_REGION_WAIT;
+	invert = ctx->b.render_cond_invert;
+	flag_wait = ctx->b.render_cond_mode == PIPE_RENDER_COND_WAIT ||
+		    ctx->b.render_cond_mode == PIPE_RENDER_COND_BY_REGION_WAIT;
 
 	if (query->workaround_buf) {
 		op = PRED_OP(PREDICATION_OP_BOOL64);

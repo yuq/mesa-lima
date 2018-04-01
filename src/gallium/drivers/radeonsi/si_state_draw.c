@@ -1184,7 +1184,7 @@ static void si_emit_all_states(struct si_context *sctx, const struct pipe_draw_i
 	while (mask) {
 		struct r600_atom *atom = sctx->atoms.array[u_bit_scan(&mask)];
 
-		atom->emit(&sctx->b, atom);
+		atom->emit(sctx, atom);
 	}
 	sctx->dirty_atoms &= skip_atom_mask;
 
@@ -1451,9 +1451,9 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 
 		/* Set shader pointers after descriptors are uploaded. */
 		if (si_is_atom_dirty(sctx, shader_pointers))
-			shader_pointers->emit(&sctx->b, NULL);
+			shader_pointers->emit(sctx, NULL);
 		if (si_is_atom_dirty(sctx, &sctx->b.render_cond_atom))
-			sctx->b.render_cond_atom.emit(&sctx->b, NULL);
+			sctx->b.render_cond_atom.emit(sctx, NULL);
 		sctx->dirty_atoms = 0;
 
 		si_emit_draw_packets(sctx, info, indexbuf, index_size, index_offset);

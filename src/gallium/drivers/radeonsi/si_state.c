@@ -48,7 +48,7 @@ void si_init_atom(struct si_context *sctx, struct r600_atom *atom,
 		  struct r600_atom **list_elem,
 		  void (*emit_func)(struct si_context *ctx, struct r600_atom *state))
 {
-	atom->emit = (void*)emit_func;
+	atom->emit = emit_func;
 	atom->id = list_elem - sctx->atoms.array;
 	*list_elem = atom;
 }
