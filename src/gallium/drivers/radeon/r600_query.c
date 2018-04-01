@@ -1832,7 +1832,7 @@ static void r600_render_condition(struct pipe_context *ctx,
 	rctx->render_cond_invert = condition;
 	rctx->render_cond_mode = mode;
 
-	rctx->set_atom_dirty(rctx, atom, query != NULL);
+	si_set_atom_dirty((struct si_context*)rctx, atom, query != NULL);
 }
 
 void si_suspend_queries(struct r600_common_context *ctx)

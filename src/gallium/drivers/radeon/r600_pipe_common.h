@@ -516,9 +516,6 @@ struct r600_common_context {
 	/* This ensures there is enough space in the command stream. */
 	void (*need_gfx_cs_space)(struct pipe_context *ctx, unsigned num_dw,
 				  bool include_draw_vbo);
-
-	void (*set_atom_dirty)(struct r600_common_context *ctx,
-			       struct r600_atom *atom, bool dirty);
 };
 
 /* r600_buffer_common.c */
