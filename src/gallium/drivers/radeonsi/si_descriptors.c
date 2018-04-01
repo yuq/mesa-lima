@@ -1811,25 +1811,6 @@ void si_rebind_buffer(struct pipe_context *ctx, struct pipe_resource *buf,
 	}
 }
 
-/* Reallocate a buffer a update all resource bindings where the buffer is
- * bound.
- *
- * This is used to avoid CPU-GPU synchronizations, because it makes the buffer
- * idle by discarding its contents. Apps usually tell us when to do this using
- * map_buffer flags, for example.
- */
-static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource *buf)
-{
-	struct si_context *sctx = (struct si_context*)ctx;
-	struct r600_resource *rbuffer = r600_resource(buf);
-	uint64_t old_va = rbuffer->gpu_address;
-
-	/* Reallocate the buffer in the same pipe_resource. */
-	si_alloc_resource(sctx->screen, rbuffer);
-
-	si_rebind_buffer(ctx, buf, old_va);
-}
-
 static void si_upload_bindless_descriptor(struct si_context *sctx,
 					  unsigned desc_slot,
 					  unsigned num_dwords)
@@ -2786,7 +2767,6 @@ void si_init_all_descriptors(struct si_context *sctx)
 	sctx->b.b.create_image_handle = si_create_image_handle;
 	sctx->b.b.delete_image_handle = si_delete_image_handle;
 	sctx->b.b.make_image_handle_resident = si_make_image_handle_resident;
-	sctx->b.invalidate_buffer = si_invalidate_buffer;
 
 	/* Shader user data. */
 	si_init_atom(sctx, &sctx->shader_pointers.atom, &sctx->atoms.s.shader_pointers,

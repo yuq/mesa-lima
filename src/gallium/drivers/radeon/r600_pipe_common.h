@@ -495,10 +495,6 @@ struct r600_common_context {
 
 	void (*decompress_dcc)(struct pipe_context *ctx,
 			       struct r600_texture *rtex);
-
-	/* Reallocate the buffer and update all resource bindings where
-	 * the buffer is bound, including all resource descriptors. */
-	void (*invalidate_buffer)(struct pipe_context *ctx, struct pipe_resource *buf);
 };
 
 /* r600_buffer_common.c */

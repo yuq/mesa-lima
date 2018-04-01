@@ -254,6 +254,12 @@ static void r600_buffer_destroy(struct pipe_screen *screen,
 	FREE(rbuffer);
 }
 
+/* Reallocate the buffer a update all resource bindings where the buffer is
+ * bound.
+ *
+ * This is used to avoid CPU-GPU synchronizations, because it makes the buffer
+ * idle by discarding its contents.
+ */
 static bool
 r600_invalidate_buffer(struct r600_common_context *rctx,
 		       struct r600_resource *rbuffer)
@@ -275,7 +281,11 @@ r600_invalidate_buffer(struct r600_common_context *rctx,
 	/* Check if mapping this buffer would cause waiting for the GPU. */
 	if (si_rings_is_buffer_referenced(rctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
 	    !rctx->ws->buffer_wait(rbuffer->buf, 0, RADEON_USAGE_READWRITE)) {
-		rctx->invalidate_buffer(&rctx->b, &rbuffer->b.b);
+		uint64_t old_va = rbuffer->gpu_address;
+
+		/* Reallocate the buffer in the same pipe_resource. */
+		si_alloc_resource(rctx->screen, rbuffer);
+		si_rebind_buffer(&rctx->b, &rbuffer->b.b, old_va);
 	} else {
 		util_range_set_empty(&rbuffer->valid_buffer_range);
 	}
