@@ -89,19 +89,19 @@ static bool r600_resource_commit(struct pipe_context *pctx,
 	 * (b) wait for threaded submit to finish, including those that were
 	 *     triggered by some other, earlier operation.
 	 */
-	if (radeon_emitted(ctx->gfx.cs, ctx->initial_gfx_cs_size) &&
-	    ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs,
+	if (radeon_emitted(ctx->gfx_cs, ctx->initial_gfx_cs_size) &&
+	    ctx->ws->cs_is_buffer_referenced(ctx->gfx_cs,
 					     res->buf, RADEON_USAGE_READWRITE)) {
 		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 	}
-	if (radeon_emitted(ctx->dma.cs, 0) &&
-	    ctx->ws->cs_is_buffer_referenced(ctx->dma.cs,
+	if (radeon_emitted(ctx->dma_cs, 0) &&
+	    ctx->ws->cs_is_buffer_referenced(ctx->dma_cs,
 					     res->buf, RADEON_USAGE_READWRITE)) {
 		si_flush_dma_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 	}
 
-	ctx->ws->cs_sync_flush(ctx->dma.cs);
-	ctx->ws->cs_sync_flush(ctx->gfx.cs);
+	ctx->ws->cs_sync_flush(ctx->dma_cs);
+	ctx->ws->cs_sync_flush(ctx->gfx_cs);
 
 	assert(resource->target == PIPE_BUFFER);
 
@@ -174,7 +174,7 @@ bool si_common_context_init(struct r600_common_context *rctx,
 		return false;
 
 	if (sscreen->info.num_sdma_rings && !(sscreen->debug_flags & DBG(NO_ASYNC_DMA))) {
-		rctx->dma.cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
+		rctx->dma_cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
 						   si_flush_dma_cs,
 						   rctx);
 	}
@@ -201,10 +201,10 @@ void si_common_context_cleanup(struct r600_common_context *rctx)
 	if (rctx->query_result_shader)
 		rctx->b.delete_compute_state(&rctx->b, rctx->query_result_shader);
 
-	if (rctx->gfx.cs)
-		rctx->ws->cs_destroy(rctx->gfx.cs);
-	if (rctx->dma.cs)
-		rctx->ws->cs_destroy(rctx->dma.cs);
+	if (rctx->gfx_cs)
+		rctx->ws->cs_destroy(rctx->gfx_cs);
+	if (rctx->dma_cs)
+		rctx->ws->cs_destroy(rctx->dma_cs);
 	if (rctx->ctx)
 		rctx->ws->ctx_destroy(rctx->ctx);
 

@@ -70,7 +70,7 @@ void si_gfx_write_event_eop(struct r600_common_context *ctx,
 			    struct r600_resource *buf, uint64_t va,
 			    uint32_t new_fence, unsigned query_type)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 	unsigned op = EVENT_TYPE(event) |
 		      EVENT_INDEX(5) |
 		      event_flags;
@@ -102,7 +102,7 @@ void si_gfx_write_event_eop(struct r600_common_context *ctx,
 			radeon_emit(cs, scratch->gpu_address);
 			radeon_emit(cs, scratch->gpu_address >> 32);
 
-			radeon_add_to_buffer_list(ctx, &ctx->gfx, scratch,
+			radeon_add_to_buffer_list(ctx, ctx->gfx_cs, scratch,
 						  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 		}
 
@@ -131,7 +131,7 @@ void si_gfx_write_event_eop(struct r600_common_context *ctx,
 			radeon_emit(cs, 0); /* immediate data */
 			radeon_emit(cs, 0); /* unused */
 
-			radeon_add_to_buffer_list(ctx, &ctx->gfx, scratch,
+			radeon_add_to_buffer_list(ctx, ctx->gfx_cs, scratch,
 						  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 		}
 
@@ -144,7 +144,7 @@ void si_gfx_write_event_eop(struct r600_common_context *ctx,
 	}
 
 	if (buf) {
-		radeon_add_to_buffer_list(ctx, &ctx->gfx, buf, RADEON_USAGE_WRITE,
+		radeon_add_to_buffer_list(ctx, ctx->gfx_cs, buf, RADEON_USAGE_WRITE,
 					  RADEON_PRIO_QUERY);
 	}
 }
@@ -163,7 +163,7 @@ unsigned si_gfx_write_fence_dwords(struct si_screen *screen)
 void si_gfx_wait_fence(struct r600_common_context *ctx,
 		       uint64_t va, uint32_t ref, uint32_t mask)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 
 	radeon_emit(cs, PKT3(PKT3_WAIT_REG_MEM, 5, 0));
 	radeon_emit(cs, WAIT_REG_MEM_EQUAL | WAIT_REG_MEM_MEM_SPACE(1));
@@ -179,9 +179,9 @@ static void si_add_fence_dependency(struct r600_common_context *rctx,
 {
 	struct radeon_winsys *ws = rctx->ws;
 
-	if (rctx->dma.cs)
-		ws->cs_add_fence_dependency(rctx->dma.cs, fence);
-	ws->cs_add_fence_dependency(rctx->gfx.cs, fence);
+	if (rctx->dma_cs)
+		ws->cs_add_fence_dependency(rctx->dma_cs, fence);
+	ws->cs_add_fence_dependency(rctx->gfx_cs, fence);
 }
 
 static void si_add_syncobj_signal(struct r600_common_context *rctx,
@@ -189,7 +189,7 @@ static void si_add_syncobj_signal(struct r600_common_context *rctx,
 {
 	struct radeon_winsys *ws = rctx->ws;
 
-	ws->cs_add_syncobj_signal(rctx->gfx.cs, fence);
+	ws->cs_add_syncobj_signal(rctx->gfx_cs, fence);
 }
 
 static void si_fence_reference(struct pipe_screen *screen,
@@ -265,10 +265,10 @@ static void si_fine_fence_set(struct si_context *ctx,
 
 	uint64_t fence_va = fine->buf->gpu_address + fine->offset;
 
-	radeon_add_to_buffer_list(&ctx->b, &ctx->b.gfx, fine->buf,
+	radeon_add_to_buffer_list(&ctx->b, ctx->b.gfx_cs, fine->buf,
 				  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 	if (flags & PIPE_FLUSH_TOP_OF_PIPE) {
-		struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
+		struct radeon_winsys_cs *cs = ctx->b.gfx_cs;
 		radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
 		radeon_emit(cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
 			S_370_WR_CONFIRM(1) |
@@ -515,14 +515,14 @@ static void si_flush_from_st(struct pipe_context *ctx,
 	}
 
 	/* DMA IBs are preambles to gfx IBs, therefore must be flushed first. */
-	if (rctx->dma.cs)
+	if (rctx->dma_cs)
 		si_flush_dma_cs(rctx, rflags, fence ? &sdma_fence : NULL);
 
-	if (!radeon_emitted(rctx->gfx.cs, rctx->initial_gfx_cs_size)) {
+	if (!radeon_emitted(rctx->gfx_cs, rctx->initial_gfx_cs_size)) {
 		if (fence)
 			ws->fence_reference(&gfx_fence, rctx->last_gfx_fence);
 		if (!(flags & PIPE_FLUSH_DEFERRED))
-			ws->cs_sync_flush(rctx->gfx.cs);
+			ws->cs_sync_flush(rctx->gfx_cs);
 	} else {
 		/* Instead of flushing, create a deferred fence. Constraints:
 		 * - The state tracker must allow a deferred flush.
@@ -533,7 +533,7 @@ static void si_flush_from_st(struct pipe_context *ctx,
 		if (flags & PIPE_FLUSH_DEFERRED &&
 		    !(flags & PIPE_FLUSH_FENCE_FD) &&
 		    fence) {
-			gfx_fence = rctx->ws->cs_get_next_fence(rctx->gfx.cs);
+			gfx_fence = rctx->ws->cs_get_next_fence(rctx->gfx_cs);
 			deferred_fence = true;
 		} else {
 			si_flush_gfx_cs(rctx, rflags, fence ? &gfx_fence : NULL);
@@ -579,9 +579,9 @@ static void si_flush_from_st(struct pipe_context *ctx,
 	assert(!fine.buf);
 finish:
 	if (!(flags & PIPE_FLUSH_DEFERRED)) {
-		if (rctx->dma.cs)
-			ws->cs_sync_flush(rctx->dma.cs);
-		ws->cs_sync_flush(rctx->gfx.cs);
+		if (rctx->dma_cs)
+			ws->cs_sync_flush(rctx->dma_cs);
+		ws->cs_sync_flush(rctx->gfx_cs);
 	}
 }
 

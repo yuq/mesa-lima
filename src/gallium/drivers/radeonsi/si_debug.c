@@ -425,7 +425,7 @@ static void si_log_chunk_type_cs_print(void *data, FILE *f)
 				    &last_trace_id, map ? 1 : 0, "IB", ctx->b.chip_class,
 				    NULL, NULL);
 		} else {
-			si_parse_current_ib(f, ctx->b.gfx.cs, chunk->gfx_begin,
+			si_parse_current_ib(f, ctx->b.gfx_cs, chunk->gfx_begin,
 					    chunk->gfx_end, &last_trace_id, map ? 1 : 0,
 					    "IB", ctx->b.chip_class);
 		}
@@ -450,7 +450,7 @@ static void si_log_cs(struct si_context *ctx, struct u_log_context *log,
 	assert(ctx->current_saved_cs);
 
 	struct si_saved_cs *scs = ctx->current_saved_cs;
-	unsigned gfx_cur = ctx->b.gfx.cs->prev_dw + ctx->b.gfx.cs->current.cdw;
+	unsigned gfx_cur = ctx->b.gfx_cs->prev_dw + ctx->b.gfx_cs->current.cdw;
 
 	if (!dump_bo_list &&
 	    gfx_cur == scs->gfx_last_dw)

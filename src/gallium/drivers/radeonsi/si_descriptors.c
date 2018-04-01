@@ -181,7 +181,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 				upload_size);
 	desc->gpu_list = ptr - first_slot_offset / 4;
 
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc->buffer,
+	radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs, desc->buffer,
                             RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
 
 	/* The shader pointer should point to slot 0. */
@@ -202,7 +202,7 @@ si_descriptors_begin_new_cs(struct si_context *sctx, struct si_descriptors *desc
 	if (!desc->buffer)
 		return;
 
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc->buffer,
+	radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs, desc->buffer,
 				  RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
 }
 
@@ -926,7 +926,7 @@ void si_update_ps_colorbuf0_slot(struct si_context *sctx)
 		si_set_shader_image_desc(sctx, &view, true, desc, desc + 8);
 
 		pipe_resource_reference(&buffers->buffers[slot], &tex->resource.b.b);
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
 					  &tex->resource, RADEON_USAGE_READ,
 					  RADEON_PRIO_SHADER_RW_IMAGE);
 		buffers->enabled_mask |= 1u << slot;
@@ -1031,7 +1031,7 @@ static void si_buffer_resources_begin_new_cs(struct si_context *sctx,
 	while (mask) {
 		int i = u_bit_scan(&mask);
 
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
 			r600_resource(buffers->buffers[i]),
 			i < SI_NUM_SHADER_BUFFERS ? buffers->shader_usage :
 						    buffers->shader_usage_constbuf,
@@ -1076,14 +1076,14 @@ static void si_vertex_buffers_begin_new_cs(struct si_context *sctx)
 		if (!sctx->vertex_buffer[vb].buffer.resource)
 			continue;
 
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
 				      (struct r600_resource*)sctx->vertex_buffer[vb].buffer.resource,
 				      RADEON_USAGE_READ, RADEON_PRIO_VERTEX_BUFFER);
 	}
 
 	if (!sctx->vb_descriptors_buffer)
 		return;
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+	radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
 				  sctx->vb_descriptors_buffer, RADEON_USAGE_READ,
 				  RADEON_PRIO_DESCRIPTORS);
 }
@@ -1124,7 +1124,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	}
 
 	sctx->vb_descriptors_gpu_list = ptr;
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+	radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
 				  sctx->vb_descriptors_buffer, RADEON_USAGE_READ,
 				  RADEON_PRIO_DESCRIPTORS);
 
@@ -1162,7 +1162,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 		desc[3] = velems->rsrc_word3[i];
 
 		if (first_vb_use_mask & (1 << i)) {
-			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+			radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
 					      (struct r600_resource*)vb->buffer.resource,
 					      RADEON_USAGE_READ, RADEON_PRIO_VERTEX_BUFFER);
 		}
@@ -1474,7 +1474,7 @@ void si_set_ring_buffer(struct pipe_context *ctx, uint slot,
 			desc[3] |= S_008F0C_ELEMENT_SIZE(element_size);
 
 		pipe_resource_reference(&buffers->buffers[slot], buffer);
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
 				      (struct r600_resource*)buffer,
 				      buffers->shader_usage, buffers->priority);
 		buffers->enabled_mask |= 1u << slot;
@@ -1814,7 +1814,7 @@ static void si_upload_bindless_descriptor(struct si_context *sctx,
 					  unsigned num_dwords)
 {
 	struct si_descriptors *desc = &sctx->bindless_descriptors;
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	unsigned desc_slot_offset = desc_slot * 16;
 	uint32_t *data;
 	uint64_t va;
@@ -2084,7 +2084,7 @@ static void si_emit_shader_pointer(struct si_context *sctx,
 				   struct si_descriptors *desc,
 				   unsigned sh_base)
 {
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	unsigned sh_offset = sh_base + desc->shader_userdata_offset;
 
 	si_emit_shader_pointer_head(cs, sh_offset, 1);
@@ -2098,7 +2098,7 @@ static void si_emit_consecutive_shader_pointers(struct si_context *sctx,
 	if (!sh_base)
 		return;
 
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	unsigned mask = sctx->shader_pointers_dirty & pointer_mask;
 
 	while (mask) {
@@ -2122,7 +2122,7 @@ static void si_emit_disjoint_shader_pointers(struct si_context *sctx,
 	if (!sh_base)
 		return;
 
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	unsigned mask = sctx->shader_pointers_dirty & pointer_mask;
 
 	while (mask) {
@@ -2190,7 +2190,7 @@ void si_emit_graphics_shader_pointers(struct si_context *sctx,
 		~u_bit_consecutive(SI_DESCS_RW_BUFFERS, SI_DESCS_FIRST_COMPUTE);
 
 	if (sctx->vertex_buffer_pointer_dirty) {
-		struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+		struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 
 		/* Find the location of the VB descriptor pointer. */
 		/* TODO: In the future, the pointer will be packed in unused

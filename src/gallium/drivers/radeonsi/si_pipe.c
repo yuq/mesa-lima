@@ -285,7 +285,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 		sctx->b.b.create_video_buffer = vl_video_buffer_create;
 	}
 
-	sctx->b.gfx.cs = ws->cs_create(sctx->b.ctx, RING_GFX,
+	sctx->b.gfx_cs = ws->cs_create(sctx->b.ctx, RING_GFX,
 				       si_flush_gfx_cs, sctx);
 
 	/* Border colors. */
@@ -340,7 +340,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 			goto fail;
 
 		/* Initialize the memory. */
-		struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+		struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 		radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
 		radeon_emit(cs, S_370_DST_SEL(V_370_MEMORY_SYNC) |
 			    S_370_WR_CONFIRM(1) |

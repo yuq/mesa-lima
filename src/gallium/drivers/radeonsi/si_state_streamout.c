@@ -231,7 +231,7 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 
 static void si_flush_vgt_streamout(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	unsigned reg_strmout_cntl;
 
 	/* The register is at different places on different ASICs. */
@@ -258,7 +258,7 @@ static void si_flush_vgt_streamout(struct si_context *sctx)
 static void si_emit_streamout_begin(struct r600_common_context *rctx, struct r600_atom *atom)
 {
 	struct si_context *sctx = (struct si_context*)rctx;
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	struct si_streamout_target **t = sctx->streamout.targets;
 	uint16_t *stride_in_dw = sctx->streamout.stride_in_dw;
 	unsigned i;
@@ -292,7 +292,7 @@ static void si_emit_streamout_begin(struct r600_common_context *rctx, struct r60
 			radeon_emit(cs, va); /* src address lo */
 			radeon_emit(cs, va >> 32); /* src address hi */
 
-			radeon_add_to_buffer_list(&sctx->b,  &sctx->b.gfx,
+			radeon_add_to_buffer_list(&sctx->b,  sctx->b.gfx_cs,
 						  t[i]->buf_filled_size,
 						  RADEON_USAGE_READ,
 						  RADEON_PRIO_SO_FILLED_SIZE);
@@ -313,7 +313,7 @@ static void si_emit_streamout_begin(struct r600_common_context *rctx, struct r60
 
 void si_emit_streamout_end(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	struct si_streamout_target **t = sctx->streamout.targets;
 	unsigned i;
 	uint64_t va;
@@ -334,7 +334,7 @@ void si_emit_streamout_end(struct si_context *sctx)
 		radeon_emit(cs, 0); /* unused */
 		radeon_emit(cs, 0); /* unused */
 
-		radeon_add_to_buffer_list(&sctx->b,  &sctx->b.gfx,
+		radeon_add_to_buffer_list(&sctx->b,  sctx->b.gfx_cs,
 					  t[i]->buf_filled_size,
 					  RADEON_USAGE_WRITE,
 					  RADEON_PRIO_SO_FILLED_SIZE);
@@ -363,14 +363,14 @@ static void si_emit_streamout_enable(struct r600_common_context *rctx,
 {
 	struct si_context *sctx = (struct si_context*)rctx;
 
-	radeon_set_context_reg_seq(sctx->b.gfx.cs, R_028B94_VGT_STRMOUT_CONFIG, 2);
-	radeon_emit(sctx->b.gfx.cs,
+	radeon_set_context_reg_seq(sctx->b.gfx_cs, R_028B94_VGT_STRMOUT_CONFIG, 2);
+	radeon_emit(sctx->b.gfx_cs,
 		    S_028B94_STREAMOUT_0_EN(si_get_strmout_en(sctx)) |
 		    S_028B94_RAST_STREAM(0) |
 		    S_028B94_STREAMOUT_1_EN(si_get_strmout_en(sctx)) |
 		    S_028B94_STREAMOUT_2_EN(si_get_strmout_en(sctx)) |
 		    S_028B94_STREAMOUT_3_EN(si_get_strmout_en(sctx)));
-	radeon_emit(sctx->b.gfx.cs,
+	radeon_emit(sctx->b.gfx_cs,
 		    sctx->streamout.hw_enabled_mask &
 		    sctx->streamout.enabled_stream_buffers_mask);
 }

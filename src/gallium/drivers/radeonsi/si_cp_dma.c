@@ -62,7 +62,7 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 			   uint64_t src_va, unsigned size, unsigned flags,
 			   enum r600_coherency coher)
 {
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	uint32_t header = 0, command = 0;
 
 	assert(size);
@@ -175,11 +175,11 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 
 	/* This must be done after need_cs_space. */
 	if (!(user_flags & SI_CPDMA_SKIP_BO_LIST_UPDATE)) {
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
 					  (struct r600_resource*)dst,
 					  RADEON_USAGE_WRITE, RADEON_PRIO_CP_DMA);
 		if (src)
-			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+			radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
 						  (struct r600_resource*)src,
 						  RADEON_USAGE_READ, RADEON_PRIO_CP_DMA);
 	}
@@ -228,7 +228,7 @@ void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 
 	/* dma_clear_buffer can use clear_buffer on failure. Make sure that
 	 * doesn't happen. We don't want an infinite recursion: */
-	if (sctx->b.dma.cs &&
+	if (sctx->b.dma_cs &&
 	    !(dst->flags & PIPE_RESOURCE_FLAG_SPARSE) &&
 	    (offset % 4 == 0) &&
 	    /* CP DMA is very slow. Always use SDMA for big clears. This
@@ -240,7 +240,7 @@ void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	      * si_emit_framebuffer_state (in a draw call) adds them.
 	      * For example, DeusEx:MD has 21 buffer clears per frame and all
 	      * of them are moved to SDMA thanks to this. */
-	     !ws->cs_is_buffer_referenced(sctx->b.gfx.cs, rdst->buf,
+	     !ws->cs_is_buffer_referenced(sctx->b.gfx_cs, rdst->buf,
 				          RADEON_USAGE_READWRITE))) {
 		sctx->b.dma_clear_buffer(ctx, dst, offset, dma_clear_size, value);
 

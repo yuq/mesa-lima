@@ -326,7 +326,7 @@ static struct uvec2 si_get_depth_bin_size(struct si_context *sctx)
 
 static void si_emit_dpbb_disable(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 
 	radeon_set_context_reg(cs, R_028C44_PA_SC_BINNER_CNTL_0,
 			       S_028C44_BINNING_MODE(V_028C44_DISABLE_BINNING_USE_LEGACY_SC) |
@@ -432,7 +432,7 @@ void si_emit_dpbb_state(struct si_context *sctx, struct r600_atom *state)
 	if (bin_size.y >= 32)
 		bin_size_extend.y = util_logbase2(bin_size.y) - 5;
 
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	radeon_set_context_reg(cs, R_028C44_PA_SC_BINNER_CNTL_0,
 			       S_028C44_BINNING_MODE(V_028C44_BINNING_ALLOWED) |
 			       S_028C44_BIN_SIZE_X(bin_size.x == 16) |

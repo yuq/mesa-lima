@@ -368,10 +368,6 @@ struct r600_atom {
 	unsigned short		id;
 };
 
-struct r600_ring {
-	struct radeon_winsys_cs		*cs;
-};
-
 /* Saved CS data for debugging features. */
 struct radeon_saved_cs {
 	uint32_t			*ib;
@@ -389,8 +385,8 @@ struct r600_common_context {
 	struct radeon_winsys_ctx	*ctx;
 	enum radeon_family		family;
 	enum chip_class			chip_class;
-	struct r600_ring		gfx;
-	struct r600_ring		dma;
+	struct radeon_winsys_cs		*gfx_cs;
+	struct radeon_winsys_cs		*dma_cs;
 	struct pipe_fence_handle	*last_gfx_fence;
 	struct pipe_fence_handle	*last_sdma_fence;
 	struct r600_resource		*eop_bug_scratch;

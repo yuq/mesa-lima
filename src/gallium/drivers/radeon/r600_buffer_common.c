@@ -32,11 +32,11 @@ bool si_rings_is_buffer_referenced(struct r600_common_context *ctx,
 				   struct pb_buffer *buf,
 				   enum radeon_bo_usage usage)
 {
-	if (ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs, buf, usage)) {
+	if (ctx->ws->cs_is_buffer_referenced(ctx->gfx_cs, buf, usage)) {
 		return true;
 	}
-	if (radeon_emitted(ctx->dma.cs, 0) &&
-	    ctx->ws->cs_is_buffer_referenced(ctx->dma.cs, buf, usage)) {
+	if (radeon_emitted(ctx->dma_cs, 0) &&
+	    ctx->ws->cs_is_buffer_referenced(ctx->dma_cs, buf, usage)) {
 		return true;
 	}
 	return false;
@@ -60,8 +60,8 @@ void *si_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 		rusage = RADEON_USAGE_WRITE;
 	}
 
-	if (radeon_emitted(ctx->gfx.cs, ctx->initial_gfx_cs_size) &&
-	    ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs,
+	if (radeon_emitted(ctx->gfx_cs, ctx->initial_gfx_cs_size) &&
+	    ctx->ws->cs_is_buffer_referenced(ctx->gfx_cs,
 					     resource->buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
 			si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
@@ -71,8 +71,8 @@ void *si_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 			busy = true;
 		}
 	}
-	if (radeon_emitted(ctx->dma.cs, 0) &&
-	    ctx->ws->cs_is_buffer_referenced(ctx->dma.cs,
+	if (radeon_emitted(ctx->dma_cs, 0) &&
+	    ctx->ws->cs_is_buffer_referenced(ctx->dma_cs,
 					     resource->buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
 			si_flush_dma_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
@@ -89,9 +89,9 @@ void *si_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 		} else {
 			/* We will be wait for the GPU. Wait for any offloaded
 			 * CS flush to complete to avoid busy-waiting in the winsys. */
-			ctx->ws->cs_sync_flush(ctx->gfx.cs);
-			if (ctx->dma.cs)
-				ctx->ws->cs_sync_flush(ctx->dma.cs);
+			ctx->ws->cs_sync_flush(ctx->gfx_cs);
+			if (ctx->dma_cs)
+				ctx->ws->cs_sync_flush(ctx->dma_cs);
 		}
 	}
 

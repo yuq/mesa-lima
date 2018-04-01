@@ -96,7 +96,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 				       const struct pipe_draw_info *info,
 				       unsigned *num_patches)
 {
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	struct si_shader *ls_current;
 	struct si_shader_selector *ls;
 	/* The TES pointer will only be used for sctx->last_tcs.
@@ -535,7 +535,7 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 /* rast_prim is the primitive type after GS. */
 static void si_emit_rasterizer_prim_state(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	enum pipe_prim_type rast_prim = sctx->current_rast_prim;
 	struct si_state_rasterizer *rs = sctx->emitted.named.rasterizer;
 
@@ -575,7 +575,7 @@ static void si_emit_vs_state(struct si_context *sctx,
 	}
 
 	if (sctx->current_vs_state != sctx->last_vs_state) {
-		struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+		struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 
 		radeon_set_sh_reg(cs,
 			sctx->shader_pointers.sh_base[PIPE_SHADER_VERTEX] +
@@ -590,7 +590,7 @@ static void si_emit_draw_registers(struct si_context *sctx,
 				   const struct pipe_draw_info *info,
 				   unsigned num_patches)
 {
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	unsigned prim = si_conv_pipe_prim(info->mode);
 	unsigned gs_out_prim = si_conv_prim_to_gs_out(sctx->current_rast_prim);
 	unsigned ia_multi_vgt_param;
@@ -650,7 +650,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 				 unsigned index_offset)
 {
 	struct pipe_draw_indirect_info *indirect = info->indirect;
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	unsigned sh_base_reg = sctx->shader_pointers.sh_base[PIPE_SHADER_VERTEX];
 	bool render_cond_bit = sctx->b.render_cond && !sctx->b.render_cond_force_off;
 	uint32_t index_max_size = 0;
@@ -674,7 +674,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		radeon_emit(cs, R_028B2C_VGT_STRMOUT_DRAW_OPAQUE_BUFFER_FILLED_SIZE >> 2);
 		radeon_emit(cs, 0); /* unused */
 
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
 				      t->buf_filled_size, RADEON_USAGE_READ,
 				      RADEON_PRIO_SO_FILLED_SIZE);
 	}
@@ -719,7 +719,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 				  index_size;
 		index_va = r600_resource(indexbuf)->gpu_address + index_offset;
 
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
 				      (struct r600_resource *)indexbuf,
 				      RADEON_USAGE_READ, RADEON_PRIO_INDEX_BUFFER);
 	} else {
@@ -742,7 +742,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		radeon_emit(cs, indirect_va);
 		radeon_emit(cs, indirect_va >> 32);
 
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+		radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs,
 				      (struct r600_resource *)indirect->buffer,
 				      RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 
@@ -776,7 +776,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 					(struct r600_resource *)indirect->indirect_draw_count;
 
 				radeon_add_to_buffer_list(
-					&sctx->b, &sctx->b.gfx, params_buf,
+					&sctx->b, sctx->b.gfx_cs, params_buf,
 					RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 
 				count_va = params_buf->gpu_address + indirect->indirect_draw_count_offset;
@@ -852,7 +852,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 static void si_emit_surface_sync(struct r600_common_context *rctx,
 				 unsigned cp_coher_cntl)
 {
-	struct radeon_winsys_cs *cs = rctx->gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->gfx_cs;
 
 	if (rctx->chip_class >= GFX9) {
 		/* Flush caches and wait for the caches to assert idle. */
@@ -876,7 +876,7 @@ static void si_emit_surface_sync(struct r600_common_context *rctx,
 void si_emit_cache_flush(struct si_context *sctx)
 {
 	struct r600_common_context *rctx = &sctx->b;
-	struct radeon_winsys_cs *cs = rctx->gfx.cs;
+	struct radeon_winsys_cs *cs = rctx->gfx_cs;
 	uint32_t cp_coher_cntl = 0;
 	uint32_t flush_cb_db = rctx->flags & (SI_CONTEXT_FLUSH_AND_INV_CB |
 					      SI_CONTEXT_FLUSH_AND_INV_DB);
@@ -1557,7 +1557,7 @@ void si_draw_rectangle(struct blitter_context *blitter,
 
 void si_trace_emit(struct si_context *sctx)
 {
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	uint64_t va = sctx->current_saved_cs->trace_buf->gpu_address;
 	uint32_t trace_id = ++sctx->current_saved_cs->trace_id;
 

@@ -65,14 +65,14 @@ radeon_cs_memory_below_limit(struct si_screen *screen,
  * rebuilt.
  */
 static inline void radeon_add_to_buffer_list(struct r600_common_context *rctx,
-					     struct r600_ring *ring,
+					     struct radeon_winsys_cs *cs,
 					     struct r600_resource *rbo,
 					     enum radeon_bo_usage usage,
 					     enum radeon_bo_priority priority)
 {
 	assert(usage);
 	rctx->ws->cs_add_buffer(
-		ring->cs, rbo->buf,
+		cs, rbo->buf,
 		(enum radeon_bo_usage)(usage | RADEON_USAGE_SYNCHRONIZED),
 		rbo->domains, priority);
 }
@@ -102,12 +102,12 @@ radeon_add_to_gfx_buffer_list_check_mem(struct si_context *sctx,
 					bool check_mem)
 {
 	if (check_mem &&
-	    !radeon_cs_memory_below_limit(sctx->screen, sctx->b.gfx.cs,
+	    !radeon_cs_memory_below_limit(sctx->screen, sctx->b.gfx_cs,
 					  sctx->b.vram + rbo->vram_usage,
 					  sctx->b.gtt + rbo->gart_usage))
 		si_flush_gfx_cs(&sctx->b, PIPE_FLUSH_ASYNC, NULL);
 
-	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, rbo, usage, priority);
+	radeon_add_to_buffer_list(&sctx->b, sctx->b.gfx_cs, rbo, usage, priority);
 }
 
 static inline void radeon_set_config_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)

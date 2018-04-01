@@ -743,7 +743,7 @@ static void r600_query_hw_do_emit_start(struct r600_common_context *ctx,
 					struct r600_resource *buffer,
 					uint64_t va)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 
 	switch (query->b.type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER:
@@ -786,7 +786,7 @@ static void r600_query_hw_do_emit_start(struct r600_common_context *ctx,
 	default:
 		assert(0);
 	}
-	radeon_add_to_buffer_list(ctx, &ctx->gfx, query->buffer.buf, RADEON_USAGE_WRITE,
+	radeon_add_to_buffer_list(ctx, ctx->gfx_cs, query->buffer.buf, RADEON_USAGE_WRITE,
 				  RADEON_PRIO_QUERY);
 }
 
@@ -827,7 +827,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 				       struct r600_resource *buffer,
 				       uint64_t va)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 	uint64_t fence_va = 0;
 
 	switch (query->b.type) {
@@ -878,7 +878,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 	default:
 		assert(0);
 	}
-	radeon_add_to_buffer_list(ctx, &ctx->gfx, query->buffer.buf, RADEON_USAGE_WRITE,
+	radeon_add_to_buffer_list(ctx, ctx->gfx_cs, query->buffer.buf, RADEON_USAGE_WRITE,
 				  RADEON_PRIO_QUERY);
 
 	if (fence_va)
@@ -918,7 +918,7 @@ static void emit_set_predicate(struct r600_common_context *ctx,
 			       struct r600_resource *buf, uint64_t va,
 			       uint32_t op)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 
 	if (ctx->chip_class >= GFX9) {
 		radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 2, 0));
@@ -930,7 +930,7 @@ static void emit_set_predicate(struct r600_common_context *ctx,
 		radeon_emit(cs, va);
 		radeon_emit(cs, op | ((va >> 32) & 0xFF));
 	}
-	radeon_add_to_buffer_list(ctx, &ctx->gfx, buf, RADEON_USAGE_READ,
+	radeon_add_to_buffer_list(ctx, ctx->gfx_cs, buf, RADEON_USAGE_READ,
 				  RADEON_PRIO_QUERY);
 }
 

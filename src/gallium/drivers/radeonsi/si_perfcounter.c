@@ -426,7 +426,7 @@ static struct si_pc_block groups_gfx9[] = {
 static void si_pc_emit_instance(struct r600_common_context *ctx,
 				int se, int instance)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 	unsigned value = S_030800_SH_BROADCAST_WRITES(1);
 
 	if (se >= 0) {
@@ -447,7 +447,7 @@ static void si_pc_emit_instance(struct r600_common_context *ctx,
 static void si_pc_emit_shaders(struct r600_common_context *ctx,
 			       unsigned shaders)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 
 	radeon_set_uconfig_reg_seq(cs, R_036780_SQ_PERFCOUNTER_CTRL, 2);
 	radeon_emit(cs, shaders & 0x7f);
@@ -460,7 +460,7 @@ static void si_pc_emit_select(struct r600_common_context *ctx,
 {
 	struct si_pc_block *sigroup = (struct si_pc_block *)group->data;
 	struct si_pc_block_base *regs = sigroup->b;
-	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 	unsigned idx;
 	unsigned layout_multi = regs->layout & SI_PC_MULTI_MASK;
 	unsigned dw;
@@ -553,9 +553,9 @@ static void si_pc_emit_select(struct r600_common_context *ctx,
 static void si_pc_emit_start(struct r600_common_context *ctx,
 			     struct r600_resource *buffer, uint64_t va)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 
-	radeon_add_to_buffer_list(ctx, &ctx->gfx, buffer,
+	radeon_add_to_buffer_list(ctx, ctx->gfx_cs, buffer,
 				  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 
 	radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
@@ -579,7 +579,7 @@ static void si_pc_emit_start(struct r600_common_context *ctx,
 static void si_pc_emit_stop(struct r600_common_context *ctx,
 			    struct r600_resource *buffer, uint64_t va)
 {
-	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 
 	si_gfx_write_event_eop(ctx, V_028A90_BOTTOM_OF_PIPE_TS, 0,
 				 EOP_DATA_SEL_VALUE_32BIT,
@@ -602,7 +602,7 @@ static void si_pc_emit_read(struct r600_common_context *ctx,
 {
 	struct si_pc_block *sigroup = (struct si_pc_block *)group->data;
 	struct si_pc_block_base *regs = sigroup->b;
-	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	struct radeon_winsys_cs *cs = ctx->gfx_cs;
 	unsigned idx;
 	unsigned reg = regs->counter0_lo;
 	unsigned reg_delta = 8;
