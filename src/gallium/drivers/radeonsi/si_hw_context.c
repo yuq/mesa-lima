@@ -59,10 +59,14 @@ void si_need_cs_space(struct si_context *ctx)
 	ctx->b.gtt = 0;
 	ctx->b.vram = 0;
 
-	/* If the CS is sufficiently large, don't count the space needed
+	/* If the IB is sufficiently large, don't count the space needed
 	 * and just flush if there is not enough space left.
+	 *
+	 * Also reserve space for stopping queries at the end of IB, because
+	 * the number of active queries is mostly unlimited.
 	 */
-	if (!ctx->b.ws->cs_check_space(cs, 2048))
+	unsigned need_dwords = 2048 + ctx->b.num_cs_dw_queries_suspend;
+	if (!ctx->b.ws->cs_check_space(cs, need_dwords))
 		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 }
 
