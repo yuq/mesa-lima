@@ -83,7 +83,7 @@ void si_flush_gfx_cs(struct si_context *ctx, unsigned flags,
 	if (ctx->screen->debug_flags & DBG(CHECK_VM))
 		flags &= ~PIPE_FLUSH_ASYNC;
 
-	/* If the state tracker is flushing the GFX IB, r600_flush_from_st is
+	/* If the state tracker is flushing the GFX IB, si_flush_from_st is
 	 * responsible for flushing the DMA IB and merging the fences from both.
 	 * This code is only needed when the driver flushes the GFX IB
 	 * internally, and it never asks for a fence handle.

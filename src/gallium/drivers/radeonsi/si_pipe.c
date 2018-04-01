@@ -528,7 +528,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 		/* Clear the NULL constant buffer, because loads should return zeros. */
 		si_clear_buffer(sctx, sctx->null_const_buf.buffer, 0,
 				sctx->null_const_buf.buffer->width0, 0,
-				R600_COHERENCY_SHADER);
+				SI_COHERENCY_SHADER);
 	}
 
 	uint64_t max_threads_per_block;

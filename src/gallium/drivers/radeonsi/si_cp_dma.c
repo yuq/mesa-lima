@@ -61,7 +61,7 @@ static inline unsigned cp_dma_max_byte_count(struct si_context *sctx)
  */
 static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 			   uint64_t src_va, unsigned size, unsigned flags,
-			   enum r600_coherency coher)
+			   enum si_coherency coher)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 	uint32_t header = 0, command = 0;
@@ -123,31 +123,31 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 	 * indices. If we wanted to execute CP DMA in PFP, this packet
 	 * should precede it.
 	 */
-	if (coher == R600_COHERENCY_SHADER && flags & CP_DMA_SYNC) {
+	if (coher == SI_COHERENCY_SHADER && flags & CP_DMA_SYNC) {
 		radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
 		radeon_emit(cs, 0);
 	}
 }
 
-static unsigned get_flush_flags(struct si_context *sctx, enum r600_coherency coher)
+static unsigned get_flush_flags(struct si_context *sctx, enum si_coherency coher)
 {
 	switch (coher) {
 	default:
-	case R600_COHERENCY_NONE:
+	case SI_COHERENCY_NONE:
 		return 0;
-	case R600_COHERENCY_SHADER:
+	case SI_COHERENCY_SHADER:
 		return SI_CONTEXT_INV_SMEM_L1 |
 		       SI_CONTEXT_INV_VMEM_L1 |
 		       (sctx->b.chip_class == SI ? SI_CONTEXT_INV_GLOBAL_L2 : 0);
-	case R600_COHERENCY_CB_META:
+	case SI_COHERENCY_CB_META:
 		return SI_CONTEXT_FLUSH_AND_INV_CB;
 	}
 }
 
-static unsigned get_tc_l2_flag(struct si_context *sctx, enum r600_coherency coher)
+static unsigned get_tc_l2_flag(struct si_context *sctx, enum si_coherency coher)
 {
-	if ((sctx->b.chip_class >= GFX9 && coher == R600_COHERENCY_CB_META) ||
-	    (sctx->b.chip_class >= CIK && coher == R600_COHERENCY_SHADER))
+	if ((sctx->b.chip_class >= GFX9 && coher == SI_COHERENCY_CB_META) ||
+	    (sctx->b.chip_class >= CIK && coher == SI_COHERENCY_SHADER))
 		return CP_DMA_USE_L2;
 
 	return 0;
@@ -206,7 +206,7 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 
 void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 		     uint64_t offset, uint64_t size, unsigned value,
-		     enum r600_coherency coher)
+		     enum si_coherency coher)
 {
 	struct radeon_winsys *ws = sctx->b.ws;
 	struct r600_resource *rdst = r600_resource(dst);
@@ -274,7 +274,7 @@ void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 			rdst->TC_L2_dirty = true;
 
 		/* If it's not a framebuffer fast clear... */
-		if (coher == R600_COHERENCY_SHADER)
+		if (coher == SI_COHERENCY_SHADER)
 			sctx->b.num_cp_dma_calls++;
 	}
 
@@ -347,7 +347,7 @@ static void si_pipe_clear_buffer(struct pipe_context *ctx,
 	}
 
 	si_clear_buffer(sctx, dst, offset, size, dword_value,
-			R600_COHERENCY_SHADER);
+			SI_COHERENCY_SHADER);
 }
 
 /**
@@ -388,7 +388,7 @@ static void si_cp_dma_realign_engine(struct si_context *sctx, unsigned size,
 
 	va = sctx->scratch_buffer->gpu_address;
 	si_emit_cp_dma(sctx, va, va + SI_CPDMA_ALIGNMENT, size, dma_flags,
-		       R600_COHERENCY_SHADER);
+		       SI_COHERENCY_SHADER);
 }
 
 /**
@@ -404,8 +404,8 @@ void si_copy_buffer(struct si_context *sctx,
 	uint64_t main_dst_offset, main_src_offset;
 	unsigned skipped_size = 0;
 	unsigned realign_size = 0;
-	unsigned tc_l2_flag = get_tc_l2_flag(sctx, R600_COHERENCY_SHADER);
-	unsigned flush_flags = get_flush_flags(sctx, R600_COHERENCY_SHADER);
+	unsigned tc_l2_flag = get_tc_l2_flag(sctx, SI_COHERENCY_SHADER);
+	unsigned flush_flags = get_flush_flags(sctx, SI_COHERENCY_SHADER);
 	bool is_first = true;
 
 	if (!size)
@@ -462,7 +462,7 @@ void si_copy_buffer(struct si_context *sctx,
 				  user_flags, &is_first, &dma_flags);
 
 		si_emit_cp_dma(sctx, main_dst_offset, main_src_offset,
-			       byte_count, dma_flags, R600_COHERENCY_SHADER);
+			       byte_count, dma_flags, SI_COHERENCY_SHADER);
 
 		size -= byte_count;
 		main_src_offset += byte_count;
@@ -478,7 +478,7 @@ void si_copy_buffer(struct si_context *sctx,
 				  &is_first, &dma_flags);
 
 		si_emit_cp_dma(sctx, dst_offset, src_offset, skipped_size,
-			       dma_flags, R600_COHERENCY_SHADER);
+			       dma_flags, SI_COHERENCY_SHADER);
 	}
 
 	/* Finally, realign the engine if the size wasn't aligned. */

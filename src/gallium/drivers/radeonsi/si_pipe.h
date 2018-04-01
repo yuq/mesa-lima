@@ -764,15 +764,15 @@ void si_init_clear_functions(struct si_context *sctx);
 			   SI_CPDMA_SKIP_GFX_SYNC | \
 			   SI_CPDMA_SKIP_BO_LIST_UPDATE)
 
-enum r600_coherency {
-	R600_COHERENCY_NONE, /* no cache flushes needed */
-	R600_COHERENCY_SHADER,
-	R600_COHERENCY_CB_META,
+enum si_coherency {
+	SI_COHERENCY_NONE, /* no cache flushes needed */
+	SI_COHERENCY_SHADER,
+	SI_COHERENCY_CB_META,
 };
 
 void si_clear_buffer(struct si_context *sctx, struct pipe_resource *dst,
 		     uint64_t offset, uint64_t size, unsigned value,
-		     enum r600_coherency coher);
+		     enum si_coherency coher);
 void si_copy_buffer(struct si_context *sctx,
 		    struct pipe_resource *dst, struct pipe_resource *src,
 		    uint64_t dst_offset, uint64_t src_offset, unsigned size,
