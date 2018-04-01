@@ -13,6 +13,7 @@ C_SOURCES := \
 	si_debug.c \
 	si_descriptors.c \
 	si_dma.c \
+	si_dma_cs.c \
 	si_fence.c \
 	si_get.c \
 	si_gfx_cs.c \

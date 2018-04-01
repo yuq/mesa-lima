@@ -718,6 +718,13 @@ bool si_replace_shader(unsigned num, struct ac_shader_binary *binary);
 /* si_dma.c */
 void si_init_dma_functions(struct si_context *sctx);
 
+/* si_dma_cs.c */
+void si_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
+		       struct r600_resource *dst, struct r600_resource *src);
+void si_flush_dma_cs(void *ctx, unsigned flags, struct pipe_fence_handle **fence);
+void si_screen_clear_buffer(struct si_screen *sscreen, struct pipe_resource *dst,
+			    uint64_t offset, uint64_t size, unsigned value);
+
 /* si_fence.c */
 void si_gfx_write_event_eop(struct r600_common_context *ctx,
 			    unsigned event, unsigned event_flags,
