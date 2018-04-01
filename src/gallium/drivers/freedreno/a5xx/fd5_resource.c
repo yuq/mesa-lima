@@ -81,7 +81,7 @@ setup_slices(struct fd_resource *rsc, uint32_t alignment, enum pipe_format forma
 			 * The pitch is already sufficiently aligned, but height
 			 * may not be:
 			 */
-			if (level == prsc->last_level)
+			if ((level == prsc->last_level) && (prsc->target != PIPE_BUFFER))
 				aligned_height = align(aligned_height, 32);
 		}
 
