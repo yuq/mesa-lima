@@ -1747,8 +1747,8 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 				}
 
 				r600_copy_region_with_blit(ctx, temp, 0, 0, 0, 0, texture, level, box);
-				rctx->blit_decompress_depth(ctx, (struct r600_texture*)temp, staging_depth,
-							    0, 0, 0, box->depth, 0, 0);
+				si_blit_decompress_depth(ctx, (struct r600_texture*)temp, staging_depth,
+							 0, 0, 0, box->depth, 0, 0);
 				pipe_resource_reference(&temp, NULL);
 			}
 
@@ -1765,10 +1765,10 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 				return NULL;
 			}
 
-			rctx->blit_decompress_depth(ctx, rtex, staging_depth,
-						    level, level,
-						    box->z, box->z + box->depth - 1,
-						    0, 0);
+			si_blit_decompress_depth(ctx, rtex, staging_depth,
+						 level, level,
+						 box->z, box->z + box->depth - 1,
+						 0, 0);
 
 			offset = r600_texture_get_offset(rctx->screen, staging_depth,
 							 level, box,

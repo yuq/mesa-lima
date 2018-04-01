@@ -168,12 +168,12 @@ si_blit_dbcb_copy(struct si_context *sctx,
 	return fully_copied_levels;
 }
 
-static void si_blit_decompress_depth(struct pipe_context *ctx,
-				     struct r600_texture *texture,
-				     struct r600_texture *staging,
-				     unsigned first_level, unsigned last_level,
-				     unsigned first_layer, unsigned last_layer,
-				     unsigned first_sample, unsigned last_sample)
+void si_blit_decompress_depth(struct pipe_context *ctx,
+			      struct r600_texture *texture,
+			      struct r600_texture *staging,
+			      unsigned first_level, unsigned last_level,
+			      unsigned first_layer, unsigned last_layer,
+			      unsigned first_sample, unsigned last_sample)
 {
 	const struct util_format_description *desc;
 	unsigned planes = 0;
@@ -1341,5 +1341,4 @@ void si_init_blit_functions(struct si_context *sctx)
 	sctx->b.b.blit = si_blit;
 	sctx->b.b.flush_resource = si_flush_resource;
 	sctx->b.b.generate_mipmap = si_generate_mipmap;
-	sctx->b.blit_decompress_depth = si_blit_decompress_depth;
 }

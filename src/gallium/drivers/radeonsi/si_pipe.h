@@ -661,6 +661,12 @@ void si_resource_copy_region(struct pipe_context *ctx,
 			     unsigned src_level,
 			     const struct pipe_box *src_box);
 void si_decompress_dcc(struct pipe_context *ctx, struct r600_texture *rtex);
+void si_blit_decompress_depth(struct pipe_context *ctx,
+			      struct r600_texture *texture,
+			      struct r600_texture *staging,
+			      unsigned first_level, unsigned last_level,
+			      unsigned first_layer, unsigned last_layer,
+			      unsigned first_sample, unsigned last_sample);
 
 /* si_clear.c */
 void vi_dcc_clear_level(struct si_context *sctx,
