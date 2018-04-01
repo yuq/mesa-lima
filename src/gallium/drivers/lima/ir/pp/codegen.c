@@ -49,13 +49,10 @@ static void ppir_codegen_encode_varying(ppir_node *node, void *code)
       f->imm.alignment = alignment;
       f->imm.offset_vector = 0xf;
 
-      /* TODO: we can combine varyings into one slot, i.e. vec1 and vec3
-       * can be one vec4. Now we just make one slot for each varying
-       */
       if (alignment == 3)
-         f->imm.index = load->index;
+         f->imm.index = load->index >> 2;
       else
-         f->imm.index = load->index << (2 - alignment);
+         f->imm.index = load->index >> alignment;
    }
 }
 
@@ -153,9 +150,11 @@ static void ppir_codegen_encode_scl_mul(ppir_node *node, void *code)
    ppir_alu_node *alu = ppir_node_to_alu(node);
 
    ppir_dest *dest = &alu->dest;
+   int dest_component = ffs(dest->write_mask) - 1;
+   assert(dest_component >= 0);
+
    if (dest->type != ppir_target_pipeline) {
-      int index = ppir_target_get_dest_reg_index(dest);
-      f->dest = index;
+      f->dest = ppir_target_get_dest_reg_index(dest) + dest_component;
       f->output_en = true;
    }
    f->dest_modifier = dest->modifier;
@@ -175,15 +174,13 @@ static void ppir_codegen_encode_scl_mul(ppir_node *node, void *code)
    }
 
    ppir_src *src = alu->src;
-   int index = ppir_target_get_src_reg_index(src);
-   f->arg0_source = index;
+   f->arg0_source = ppir_target_get_src_reg_index(src);
    f->arg0_absolute = src->absolute;
    f->arg0_negate = src->negate;
 
    if (alu->num_src == 2) {
       src = alu->src + 1;
-      index = ppir_target_get_src_reg_index(src);
-      f->arg1_source = index;
+      f->arg1_source = ppir_target_get_src_reg_index(src);
       f->arg1_absolute = src->absolute;
       f->arg1_negate = src->negate;
    }
@@ -249,8 +246,10 @@ static void ppir_codegen_encode_scl_add(ppir_node *node, void *code)
    ppir_alu_node *alu = ppir_node_to_alu(node);
 
    ppir_dest *dest = &alu->dest;
-   int index = ppir_target_get_dest_reg_index(dest);
-   f->dest = index;
+   int dest_component = ffs(dest->write_mask) - 1;
+   assert(dest_component >= 0);
+
+   f->dest = ppir_target_get_dest_reg_index(dest) + dest_component;
    f->output_en = true;
    f->dest_modifier = dest->modifier;
 
