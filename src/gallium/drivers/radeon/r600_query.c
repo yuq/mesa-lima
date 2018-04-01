@@ -1660,7 +1660,7 @@ static void r600_query_hw_get_result_resource(struct r600_common_context *rctx,
 			return;
 	}
 
-	rctx->save_qbo_state(&rctx->b, &saved_state);
+	si_save_qbo_state(&rctx->b, &saved_state);
 
 	r600_get_hw_query_params(rctx, query, index >= 0 ? index : 0, &params);
 	consts.end_offset = params.end_offset - params.start_offset;

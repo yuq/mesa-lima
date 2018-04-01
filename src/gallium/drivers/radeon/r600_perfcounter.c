@@ -354,7 +354,7 @@ struct pipe_query *si_create_batch_query(struct pipe_context *ctx,
 	i = 0;
 	for (group = query->groups; group; group = group->next) {
 		struct r600_perfcounter_block *block = group->block;
-		unsigned select_dw, read_dw;
+		unsigned read_dw;
 		unsigned instances = 1;
 
 		if ((block->flags & R600_PC_BLOCK_SE) && group->se < 0)
