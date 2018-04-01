@@ -2191,7 +2191,7 @@ vi_create_resuming_pipestats_query(struct si_context *sctx)
 	struct si_query_hw *query = (struct si_query_hw*)
 		sctx->b.b.create_query(&sctx->b.b, PIPE_QUERY_PIPELINE_STATISTICS, 0);
 
-	query->flags |= R600_QUERY_HW_FLAG_BEGIN_RESUMES;
+	query->flags |= SI_QUERY_HW_FLAG_BEGIN_RESUMES;
 	return (struct pipe_query*)query;
 }
 

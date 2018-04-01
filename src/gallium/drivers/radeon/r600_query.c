@@ -69,26 +69,26 @@ static void si_query_sw_destroy(struct si_screen *sscreen,
 static enum radeon_value_id winsys_id_from_type(unsigned type)
 {
 	switch (type) {
-	case R600_QUERY_REQUESTED_VRAM: return RADEON_REQUESTED_VRAM_MEMORY;
-	case R600_QUERY_REQUESTED_GTT: return RADEON_REQUESTED_GTT_MEMORY;
-	case R600_QUERY_MAPPED_VRAM: return RADEON_MAPPED_VRAM;
-	case R600_QUERY_MAPPED_GTT: return RADEON_MAPPED_GTT;
-	case R600_QUERY_BUFFER_WAIT_TIME: return RADEON_BUFFER_WAIT_TIME_NS;
-	case R600_QUERY_NUM_MAPPED_BUFFERS: return RADEON_NUM_MAPPED_BUFFERS;
-	case R600_QUERY_NUM_GFX_IBS: return RADEON_NUM_GFX_IBS;
-	case R600_QUERY_NUM_SDMA_IBS: return RADEON_NUM_SDMA_IBS;
-	case R600_QUERY_GFX_BO_LIST_SIZE: return RADEON_GFX_BO_LIST_COUNTER;
-	case R600_QUERY_GFX_IB_SIZE: return RADEON_GFX_IB_SIZE_COUNTER;
-	case R600_QUERY_NUM_BYTES_MOVED: return RADEON_NUM_BYTES_MOVED;
-	case R600_QUERY_NUM_EVICTIONS: return RADEON_NUM_EVICTIONS;
-	case R600_QUERY_NUM_VRAM_CPU_PAGE_FAULTS: return RADEON_NUM_VRAM_CPU_PAGE_FAULTS;
-	case R600_QUERY_VRAM_USAGE: return RADEON_VRAM_USAGE;
-	case R600_QUERY_VRAM_VIS_USAGE: return RADEON_VRAM_VIS_USAGE;
-	case R600_QUERY_GTT_USAGE: return RADEON_GTT_USAGE;
-	case R600_QUERY_GPU_TEMPERATURE: return RADEON_GPU_TEMPERATURE;
-	case R600_QUERY_CURRENT_GPU_SCLK: return RADEON_CURRENT_SCLK;
-	case R600_QUERY_CURRENT_GPU_MCLK: return RADEON_CURRENT_MCLK;
-	case R600_QUERY_CS_THREAD_BUSY: return RADEON_CS_THREAD_TIME;
+	case SI_QUERY_REQUESTED_VRAM: return RADEON_REQUESTED_VRAM_MEMORY;
+	case SI_QUERY_REQUESTED_GTT: return RADEON_REQUESTED_GTT_MEMORY;
+	case SI_QUERY_MAPPED_VRAM: return RADEON_MAPPED_VRAM;
+	case SI_QUERY_MAPPED_GTT: return RADEON_MAPPED_GTT;
+	case SI_QUERY_BUFFER_WAIT_TIME: return RADEON_BUFFER_WAIT_TIME_NS;
+	case SI_QUERY_NUM_MAPPED_BUFFERS: return RADEON_NUM_MAPPED_BUFFERS;
+	case SI_QUERY_NUM_GFX_IBS: return RADEON_NUM_GFX_IBS;
+	case SI_QUERY_NUM_SDMA_IBS: return RADEON_NUM_SDMA_IBS;
+	case SI_QUERY_GFX_BO_LIST_SIZE: return RADEON_GFX_BO_LIST_COUNTER;
+	case SI_QUERY_GFX_IB_SIZE: return RADEON_GFX_IB_SIZE_COUNTER;
+	case SI_QUERY_NUM_BYTES_MOVED: return RADEON_NUM_BYTES_MOVED;
+	case SI_QUERY_NUM_EVICTIONS: return RADEON_NUM_EVICTIONS;
+	case SI_QUERY_NUM_VRAM_CPU_PAGE_FAULTS: return RADEON_NUM_VRAM_CPU_PAGE_FAULTS;
+	case SI_QUERY_VRAM_USAGE: return RADEON_VRAM_USAGE;
+	case SI_QUERY_VRAM_VIS_USAGE: return RADEON_VRAM_VIS_USAGE;
+	case SI_QUERY_GTT_USAGE: return RADEON_GTT_USAGE;
+	case SI_QUERY_GPU_TEMPERATURE: return RADEON_GPU_TEMPERATURE;
+	case SI_QUERY_CURRENT_GPU_SCLK: return RADEON_CURRENT_SCLK;
+	case SI_QUERY_CURRENT_GPU_MCLK: return RADEON_CURRENT_MCLK;
+	case SI_QUERY_CS_THREAD_BUSY: return RADEON_CS_THREAD_TIME;
 	default: unreachable("query type does not correspond to winsys id");
 	}
 }
@@ -103,146 +103,146 @@ static bool si_query_sw_begin(struct si_context *sctx,
 	case PIPE_QUERY_TIMESTAMP_DISJOINT:
 	case PIPE_QUERY_GPU_FINISHED:
 		break;
-	case R600_QUERY_DRAW_CALLS:
+	case SI_QUERY_DRAW_CALLS:
 		query->begin_result = sctx->b.num_draw_calls;
 		break;
-	case R600_QUERY_DECOMPRESS_CALLS:
+	case SI_QUERY_DECOMPRESS_CALLS:
 		query->begin_result = sctx->b.num_decompress_calls;
 		break;
-	case R600_QUERY_MRT_DRAW_CALLS:
+	case SI_QUERY_MRT_DRAW_CALLS:
 		query->begin_result = sctx->b.num_mrt_draw_calls;
 		break;
-	case R600_QUERY_PRIM_RESTART_CALLS:
+	case SI_QUERY_PRIM_RESTART_CALLS:
 		query->begin_result = sctx->b.num_prim_restart_calls;
 		break;
-	case R600_QUERY_SPILL_DRAW_CALLS:
+	case SI_QUERY_SPILL_DRAW_CALLS:
 		query->begin_result = sctx->b.num_spill_draw_calls;
 		break;
-	case R600_QUERY_COMPUTE_CALLS:
+	case SI_QUERY_COMPUTE_CALLS:
 		query->begin_result = sctx->b.num_compute_calls;
 		break;
-	case R600_QUERY_SPILL_COMPUTE_CALLS:
+	case SI_QUERY_SPILL_COMPUTE_CALLS:
 		query->begin_result = sctx->b.num_spill_compute_calls;
 		break;
-	case R600_QUERY_DMA_CALLS:
+	case SI_QUERY_DMA_CALLS:
 		query->begin_result = sctx->b.num_dma_calls;
 		break;
-	case R600_QUERY_CP_DMA_CALLS:
+	case SI_QUERY_CP_DMA_CALLS:
 		query->begin_result = sctx->b.num_cp_dma_calls;
 		break;
-	case R600_QUERY_NUM_VS_FLUSHES:
+	case SI_QUERY_NUM_VS_FLUSHES:
 		query->begin_result = sctx->b.num_vs_flushes;
 		break;
-	case R600_QUERY_NUM_PS_FLUSHES:
+	case SI_QUERY_NUM_PS_FLUSHES:
 		query->begin_result = sctx->b.num_ps_flushes;
 		break;
-	case R600_QUERY_NUM_CS_FLUSHES:
+	case SI_QUERY_NUM_CS_FLUSHES:
 		query->begin_result = sctx->b.num_cs_flushes;
 		break;
-	case R600_QUERY_NUM_CB_CACHE_FLUSHES:
+	case SI_QUERY_NUM_CB_CACHE_FLUSHES:
 		query->begin_result = sctx->b.num_cb_cache_flushes;
 		break;
-	case R600_QUERY_NUM_DB_CACHE_FLUSHES:
+	case SI_QUERY_NUM_DB_CACHE_FLUSHES:
 		query->begin_result = sctx->b.num_db_cache_flushes;
 		break;
-	case R600_QUERY_NUM_L2_INVALIDATES:
+	case SI_QUERY_NUM_L2_INVALIDATES:
 		query->begin_result = sctx->b.num_L2_invalidates;
 		break;
-	case R600_QUERY_NUM_L2_WRITEBACKS:
+	case SI_QUERY_NUM_L2_WRITEBACKS:
 		query->begin_result = sctx->b.num_L2_writebacks;
 		break;
-	case R600_QUERY_NUM_RESIDENT_HANDLES:
+	case SI_QUERY_NUM_RESIDENT_HANDLES:
 		query->begin_result = sctx->b.num_resident_handles;
 		break;
-	case R600_QUERY_TC_OFFLOADED_SLOTS:
+	case SI_QUERY_TC_OFFLOADED_SLOTS:
 		query->begin_result = sctx->b.tc ? sctx->b.tc->num_offloaded_slots : 0;
 		break;
-	case R600_QUERY_TC_DIRECT_SLOTS:
+	case SI_QUERY_TC_DIRECT_SLOTS:
 		query->begin_result = sctx->b.tc ? sctx->b.tc->num_direct_slots : 0;
 		break;
-	case R600_QUERY_TC_NUM_SYNCS:
+	case SI_QUERY_TC_NUM_SYNCS:
 		query->begin_result = sctx->b.tc ? sctx->b.tc->num_syncs : 0;
 		break;
-	case R600_QUERY_REQUESTED_VRAM:
-	case R600_QUERY_REQUESTED_GTT:
-	case R600_QUERY_MAPPED_VRAM:
-	case R600_QUERY_MAPPED_GTT:
-	case R600_QUERY_VRAM_USAGE:
-	case R600_QUERY_VRAM_VIS_USAGE:
-	case R600_QUERY_GTT_USAGE:
-	case R600_QUERY_GPU_TEMPERATURE:
-	case R600_QUERY_CURRENT_GPU_SCLK:
-	case R600_QUERY_CURRENT_GPU_MCLK:
-	case R600_QUERY_BACK_BUFFER_PS_DRAW_RATIO:
-	case R600_QUERY_NUM_MAPPED_BUFFERS:
+	case SI_QUERY_REQUESTED_VRAM:
+	case SI_QUERY_REQUESTED_GTT:
+	case SI_QUERY_MAPPED_VRAM:
+	case SI_QUERY_MAPPED_GTT:
+	case SI_QUERY_VRAM_USAGE:
+	case SI_QUERY_VRAM_VIS_USAGE:
+	case SI_QUERY_GTT_USAGE:
+	case SI_QUERY_GPU_TEMPERATURE:
+	case SI_QUERY_CURRENT_GPU_SCLK:
+	case SI_QUERY_CURRENT_GPU_MCLK:
+	case SI_QUERY_BACK_BUFFER_PS_DRAW_RATIO:
+	case SI_QUERY_NUM_MAPPED_BUFFERS:
 		query->begin_result = 0;
 		break;
-	case R600_QUERY_BUFFER_WAIT_TIME:
-	case R600_QUERY_GFX_IB_SIZE:
-	case R600_QUERY_NUM_GFX_IBS:
-	case R600_QUERY_NUM_SDMA_IBS:
-	case R600_QUERY_NUM_BYTES_MOVED:
-	case R600_QUERY_NUM_EVICTIONS:
-	case R600_QUERY_NUM_VRAM_CPU_PAGE_FAULTS: {
+	case SI_QUERY_BUFFER_WAIT_TIME:
+	case SI_QUERY_GFX_IB_SIZE:
+	case SI_QUERY_NUM_GFX_IBS:
+	case SI_QUERY_NUM_SDMA_IBS:
+	case SI_QUERY_NUM_BYTES_MOVED:
+	case SI_QUERY_NUM_EVICTIONS:
+	case SI_QUERY_NUM_VRAM_CPU_PAGE_FAULTS: {
 		enum radeon_value_id ws_id = winsys_id_from_type(query->b.type);
 		query->begin_result = sctx->b.ws->query_value(sctx->b.ws, ws_id);
 		break;
 	}
-	case R600_QUERY_GFX_BO_LIST_SIZE:
+	case SI_QUERY_GFX_BO_LIST_SIZE:
 		ws_id = winsys_id_from_type(query->b.type);
 		query->begin_result = sctx->b.ws->query_value(sctx->b.ws, ws_id);
 		query->begin_time = sctx->b.ws->query_value(sctx->b.ws,
 							  RADEON_NUM_GFX_IBS);
 		break;
-	case R600_QUERY_CS_THREAD_BUSY:
+	case SI_QUERY_CS_THREAD_BUSY:
 		ws_id = winsys_id_from_type(query->b.type);
 		query->begin_result = sctx->b.ws->query_value(sctx->b.ws, ws_id);
 		query->begin_time = os_time_get_nano();
 		break;
-	case R600_QUERY_GALLIUM_THREAD_BUSY:
+	case SI_QUERY_GALLIUM_THREAD_BUSY:
 		query->begin_result =
 			sctx->b.tc ? util_queue_get_thread_time_nano(&sctx->b.tc->queue, 0) : 0;
 		query->begin_time = os_time_get_nano();
 		break;
-	case R600_QUERY_GPU_LOAD:
-	case R600_QUERY_GPU_SHADERS_BUSY:
-	case R600_QUERY_GPU_TA_BUSY:
-	case R600_QUERY_GPU_GDS_BUSY:
-	case R600_QUERY_GPU_VGT_BUSY:
-	case R600_QUERY_GPU_IA_BUSY:
-	case R600_QUERY_GPU_SX_BUSY:
-	case R600_QUERY_GPU_WD_BUSY:
-	case R600_QUERY_GPU_BCI_BUSY:
-	case R600_QUERY_GPU_SC_BUSY:
-	case R600_QUERY_GPU_PA_BUSY:
-	case R600_QUERY_GPU_DB_BUSY:
-	case R600_QUERY_GPU_CP_BUSY:
-	case R600_QUERY_GPU_CB_BUSY:
-	case R600_QUERY_GPU_SDMA_BUSY:
-	case R600_QUERY_GPU_PFP_BUSY:
-	case R600_QUERY_GPU_MEQ_BUSY:
-	case R600_QUERY_GPU_ME_BUSY:
-	case R600_QUERY_GPU_SURF_SYNC_BUSY:
-	case R600_QUERY_GPU_CP_DMA_BUSY:
-	case R600_QUERY_GPU_SCRATCH_RAM_BUSY:
+	case SI_QUERY_GPU_LOAD:
+	case SI_QUERY_GPU_SHADERS_BUSY:
+	case SI_QUERY_GPU_TA_BUSY:
+	case SI_QUERY_GPU_GDS_BUSY:
+	case SI_QUERY_GPU_VGT_BUSY:
+	case SI_QUERY_GPU_IA_BUSY:
+	case SI_QUERY_GPU_SX_BUSY:
+	case SI_QUERY_GPU_WD_BUSY:
+	case SI_QUERY_GPU_BCI_BUSY:
+	case SI_QUERY_GPU_SC_BUSY:
+	case SI_QUERY_GPU_PA_BUSY:
+	case SI_QUERY_GPU_DB_BUSY:
+	case SI_QUERY_GPU_CP_BUSY:
+	case SI_QUERY_GPU_CB_BUSY:
+	case SI_QUERY_GPU_SDMA_BUSY:
+	case SI_QUERY_GPU_PFP_BUSY:
+	case SI_QUERY_GPU_MEQ_BUSY:
+	case SI_QUERY_GPU_ME_BUSY:
+	case SI_QUERY_GPU_SURF_SYNC_BUSY:
+	case SI_QUERY_GPU_CP_DMA_BUSY:
+	case SI_QUERY_GPU_SCRATCH_RAM_BUSY:
 		query->begin_result = si_begin_counter(sctx->screen,
 							 query->b.type);
 		break;
-	case R600_QUERY_NUM_COMPILATIONS:
+	case SI_QUERY_NUM_COMPILATIONS:
 		query->begin_result = p_atomic_read(&sctx->screen->num_compilations);
 		break;
-	case R600_QUERY_NUM_SHADERS_CREATED:
+	case SI_QUERY_NUM_SHADERS_CREATED:
 		query->begin_result = p_atomic_read(&sctx->screen->num_shaders_created);
 		break;
-	case R600_QUERY_NUM_SHADER_CACHE_HITS:
+	case SI_QUERY_NUM_SHADER_CACHE_HITS:
 		query->begin_result =
 			p_atomic_read(&sctx->screen->num_shader_cache_hits);
 		break;
-	case R600_QUERY_GPIN_ASIC_ID:
-	case R600_QUERY_GPIN_NUM_SIMD:
-	case R600_QUERY_GPIN_NUM_RB:
-	case R600_QUERY_GPIN_NUM_SPI:
-	case R600_QUERY_GPIN_NUM_SE:
+	case SI_QUERY_GPIN_ASIC_ID:
+	case SI_QUERY_GPIN_NUM_SIMD:
+	case SI_QUERY_GPIN_NUM_RB:
+	case SI_QUERY_GPIN_NUM_SPI:
+	case SI_QUERY_GPIN_NUM_SE:
 		break;
 	default:
 		unreachable("si_query_sw_begin: bad query type");
@@ -263,148 +263,148 @@ static bool si_query_sw_end(struct si_context *sctx,
 	case PIPE_QUERY_GPU_FINISHED:
 		sctx->b.b.flush(&sctx->b.b, &query->fence, PIPE_FLUSH_DEFERRED);
 		break;
-	case R600_QUERY_DRAW_CALLS:
+	case SI_QUERY_DRAW_CALLS:
 		query->end_result = sctx->b.num_draw_calls;
 		break;
-	case R600_QUERY_DECOMPRESS_CALLS:
+	case SI_QUERY_DECOMPRESS_CALLS:
 		query->end_result = sctx->b.num_decompress_calls;
 		break;
-	case R600_QUERY_MRT_DRAW_CALLS:
+	case SI_QUERY_MRT_DRAW_CALLS:
 		query->end_result = sctx->b.num_mrt_draw_calls;
 		break;
-	case R600_QUERY_PRIM_RESTART_CALLS:
+	case SI_QUERY_PRIM_RESTART_CALLS:
 		query->end_result = sctx->b.num_prim_restart_calls;
 		break;
-	case R600_QUERY_SPILL_DRAW_CALLS:
+	case SI_QUERY_SPILL_DRAW_CALLS:
 		query->end_result = sctx->b.num_spill_draw_calls;
 		break;
-	case R600_QUERY_COMPUTE_CALLS:
+	case SI_QUERY_COMPUTE_CALLS:
 		query->end_result = sctx->b.num_compute_calls;
 		break;
-	case R600_QUERY_SPILL_COMPUTE_CALLS:
+	case SI_QUERY_SPILL_COMPUTE_CALLS:
 		query->end_result = sctx->b.num_spill_compute_calls;
 		break;
-	case R600_QUERY_DMA_CALLS:
+	case SI_QUERY_DMA_CALLS:
 		query->end_result = sctx->b.num_dma_calls;
 		break;
-	case R600_QUERY_CP_DMA_CALLS:
+	case SI_QUERY_CP_DMA_CALLS:
 		query->end_result = sctx->b.num_cp_dma_calls;
 		break;
-	case R600_QUERY_NUM_VS_FLUSHES:
+	case SI_QUERY_NUM_VS_FLUSHES:
 		query->end_result = sctx->b.num_vs_flushes;
 		break;
-	case R600_QUERY_NUM_PS_FLUSHES:
+	case SI_QUERY_NUM_PS_FLUSHES:
 		query->end_result = sctx->b.num_ps_flushes;
 		break;
-	case R600_QUERY_NUM_CS_FLUSHES:
+	case SI_QUERY_NUM_CS_FLUSHES:
 		query->end_result = sctx->b.num_cs_flushes;
 		break;
-	case R600_QUERY_NUM_CB_CACHE_FLUSHES:
+	case SI_QUERY_NUM_CB_CACHE_FLUSHES:
 		query->end_result = sctx->b.num_cb_cache_flushes;
 		break;
-	case R600_QUERY_NUM_DB_CACHE_FLUSHES:
+	case SI_QUERY_NUM_DB_CACHE_FLUSHES:
 		query->end_result = sctx->b.num_db_cache_flushes;
 		break;
-	case R600_QUERY_NUM_L2_INVALIDATES:
+	case SI_QUERY_NUM_L2_INVALIDATES:
 		query->end_result = sctx->b.num_L2_invalidates;
 		break;
-	case R600_QUERY_NUM_L2_WRITEBACKS:
+	case SI_QUERY_NUM_L2_WRITEBACKS:
 		query->end_result = sctx->b.num_L2_writebacks;
 		break;
-	case R600_QUERY_NUM_RESIDENT_HANDLES:
+	case SI_QUERY_NUM_RESIDENT_HANDLES:
 		query->end_result = sctx->b.num_resident_handles;
 		break;
-	case R600_QUERY_TC_OFFLOADED_SLOTS:
+	case SI_QUERY_TC_OFFLOADED_SLOTS:
 		query->end_result = sctx->b.tc ? sctx->b.tc->num_offloaded_slots : 0;
 		break;
-	case R600_QUERY_TC_DIRECT_SLOTS:
+	case SI_QUERY_TC_DIRECT_SLOTS:
 		query->end_result = sctx->b.tc ? sctx->b.tc->num_direct_slots : 0;
 		break;
-	case R600_QUERY_TC_NUM_SYNCS:
+	case SI_QUERY_TC_NUM_SYNCS:
 		query->end_result = sctx->b.tc ? sctx->b.tc->num_syncs : 0;
 		break;
-	case R600_QUERY_REQUESTED_VRAM:
-	case R600_QUERY_REQUESTED_GTT:
-	case R600_QUERY_MAPPED_VRAM:
-	case R600_QUERY_MAPPED_GTT:
-	case R600_QUERY_VRAM_USAGE:
-	case R600_QUERY_VRAM_VIS_USAGE:
-	case R600_QUERY_GTT_USAGE:
-	case R600_QUERY_GPU_TEMPERATURE:
-	case R600_QUERY_CURRENT_GPU_SCLK:
-	case R600_QUERY_CURRENT_GPU_MCLK:
-	case R600_QUERY_BUFFER_WAIT_TIME:
-	case R600_QUERY_GFX_IB_SIZE:
-	case R600_QUERY_NUM_MAPPED_BUFFERS:
-	case R600_QUERY_NUM_GFX_IBS:
-	case R600_QUERY_NUM_SDMA_IBS:
-	case R600_QUERY_NUM_BYTES_MOVED:
-	case R600_QUERY_NUM_EVICTIONS:
-	case R600_QUERY_NUM_VRAM_CPU_PAGE_FAULTS: {
+	case SI_QUERY_REQUESTED_VRAM:
+	case SI_QUERY_REQUESTED_GTT:
+	case SI_QUERY_MAPPED_VRAM:
+	case SI_QUERY_MAPPED_GTT:
+	case SI_QUERY_VRAM_USAGE:
+	case SI_QUERY_VRAM_VIS_USAGE:
+	case SI_QUERY_GTT_USAGE:
+	case SI_QUERY_GPU_TEMPERATURE:
+	case SI_QUERY_CURRENT_GPU_SCLK:
+	case SI_QUERY_CURRENT_GPU_MCLK:
+	case SI_QUERY_BUFFER_WAIT_TIME:
+	case SI_QUERY_GFX_IB_SIZE:
+	case SI_QUERY_NUM_MAPPED_BUFFERS:
+	case SI_QUERY_NUM_GFX_IBS:
+	case SI_QUERY_NUM_SDMA_IBS:
+	case SI_QUERY_NUM_BYTES_MOVED:
+	case SI_QUERY_NUM_EVICTIONS:
+	case SI_QUERY_NUM_VRAM_CPU_PAGE_FAULTS: {
 		enum radeon_value_id ws_id = winsys_id_from_type(query->b.type);
 		query->end_result = sctx->b.ws->query_value(sctx->b.ws, ws_id);
 		break;
 	}
-	case R600_QUERY_GFX_BO_LIST_SIZE:
+	case SI_QUERY_GFX_BO_LIST_SIZE:
 		ws_id = winsys_id_from_type(query->b.type);
 		query->end_result = sctx->b.ws->query_value(sctx->b.ws, ws_id);
 		query->end_time = sctx->b.ws->query_value(sctx->b.ws,
 							RADEON_NUM_GFX_IBS);
 		break;
-	case R600_QUERY_CS_THREAD_BUSY:
+	case SI_QUERY_CS_THREAD_BUSY:
 		ws_id = winsys_id_from_type(query->b.type);
 		query->end_result = sctx->b.ws->query_value(sctx->b.ws, ws_id);
 		query->end_time = os_time_get_nano();
 		break;
-	case R600_QUERY_GALLIUM_THREAD_BUSY:
+	case SI_QUERY_GALLIUM_THREAD_BUSY:
 		query->end_result =
 			sctx->b.tc ? util_queue_get_thread_time_nano(&sctx->b.tc->queue, 0) : 0;
 		query->end_time = os_time_get_nano();
 		break;
-	case R600_QUERY_GPU_LOAD:
-	case R600_QUERY_GPU_SHADERS_BUSY:
-	case R600_QUERY_GPU_TA_BUSY:
-	case R600_QUERY_GPU_GDS_BUSY:
-	case R600_QUERY_GPU_VGT_BUSY:
-	case R600_QUERY_GPU_IA_BUSY:
-	case R600_QUERY_GPU_SX_BUSY:
-	case R600_QUERY_GPU_WD_BUSY:
-	case R600_QUERY_GPU_BCI_BUSY:
-	case R600_QUERY_GPU_SC_BUSY:
-	case R600_QUERY_GPU_PA_BUSY:
-	case R600_QUERY_GPU_DB_BUSY:
-	case R600_QUERY_GPU_CP_BUSY:
-	case R600_QUERY_GPU_CB_BUSY:
-	case R600_QUERY_GPU_SDMA_BUSY:
-	case R600_QUERY_GPU_PFP_BUSY:
-	case R600_QUERY_GPU_MEQ_BUSY:
-	case R600_QUERY_GPU_ME_BUSY:
-	case R600_QUERY_GPU_SURF_SYNC_BUSY:
-	case R600_QUERY_GPU_CP_DMA_BUSY:
-	case R600_QUERY_GPU_SCRATCH_RAM_BUSY:
+	case SI_QUERY_GPU_LOAD:
+	case SI_QUERY_GPU_SHADERS_BUSY:
+	case SI_QUERY_GPU_TA_BUSY:
+	case SI_QUERY_GPU_GDS_BUSY:
+	case SI_QUERY_GPU_VGT_BUSY:
+	case SI_QUERY_GPU_IA_BUSY:
+	case SI_QUERY_GPU_SX_BUSY:
+	case SI_QUERY_GPU_WD_BUSY:
+	case SI_QUERY_GPU_BCI_BUSY:
+	case SI_QUERY_GPU_SC_BUSY:
+	case SI_QUERY_GPU_PA_BUSY:
+	case SI_QUERY_GPU_DB_BUSY:
+	case SI_QUERY_GPU_CP_BUSY:
+	case SI_QUERY_GPU_CB_BUSY:
+	case SI_QUERY_GPU_SDMA_BUSY:
+	case SI_QUERY_GPU_PFP_BUSY:
+	case SI_QUERY_GPU_MEQ_BUSY:
+	case SI_QUERY_GPU_ME_BUSY:
+	case SI_QUERY_GPU_SURF_SYNC_BUSY:
+	case SI_QUERY_GPU_CP_DMA_BUSY:
+	case SI_QUERY_GPU_SCRATCH_RAM_BUSY:
 		query->end_result = si_end_counter(sctx->screen,
 						     query->b.type,
 						     query->begin_result);
 		query->begin_result = 0;
 		break;
-	case R600_QUERY_NUM_COMPILATIONS:
+	case SI_QUERY_NUM_COMPILATIONS:
 		query->end_result = p_atomic_read(&sctx->screen->num_compilations);
 		break;
-	case R600_QUERY_NUM_SHADERS_CREATED:
+	case SI_QUERY_NUM_SHADERS_CREATED:
 		query->end_result = p_atomic_read(&sctx->screen->num_shaders_created);
 		break;
-	case R600_QUERY_BACK_BUFFER_PS_DRAW_RATIO:
+	case SI_QUERY_BACK_BUFFER_PS_DRAW_RATIO:
 		query->end_result = sctx->b.last_tex_ps_draw_ratio;
 		break;
-	case R600_QUERY_NUM_SHADER_CACHE_HITS:
+	case SI_QUERY_NUM_SHADER_CACHE_HITS:
 		query->end_result =
 			p_atomic_read(&sctx->screen->num_shader_cache_hits);
 		break;
-	case R600_QUERY_GPIN_ASIC_ID:
-	case R600_QUERY_GPIN_NUM_SIMD:
-	case R600_QUERY_GPIN_NUM_RB:
-	case R600_QUERY_GPIN_NUM_SPI:
-	case R600_QUERY_GPIN_NUM_SE:
+	case SI_QUERY_GPIN_ASIC_ID:
+	case SI_QUERY_GPIN_NUM_SIMD:
+	case SI_QUERY_GPIN_NUM_RB:
+	case SI_QUERY_GPIN_NUM_SPI:
+	case SI_QUERY_GPIN_NUM_SE:
 		break;
 	default:
 		unreachable("si_query_sw_end: bad query type");
@@ -436,28 +436,28 @@ static bool si_query_sw_get_result(struct si_context *sctx,
 		return result->b;
 	}
 
-	case R600_QUERY_GFX_BO_LIST_SIZE:
+	case SI_QUERY_GFX_BO_LIST_SIZE:
 		result->u64 = (query->end_result - query->begin_result) /
 			      (query->end_time - query->begin_time);
 		return true;
-	case R600_QUERY_CS_THREAD_BUSY:
-	case R600_QUERY_GALLIUM_THREAD_BUSY:
+	case SI_QUERY_CS_THREAD_BUSY:
+	case SI_QUERY_GALLIUM_THREAD_BUSY:
 		result->u64 = (query->end_result - query->begin_result) * 100 /
 			      (query->end_time - query->begin_time);
 		return true;
-	case R600_QUERY_GPIN_ASIC_ID:
+	case SI_QUERY_GPIN_ASIC_ID:
 		result->u32 = 0;
 		return true;
-	case R600_QUERY_GPIN_NUM_SIMD:
+	case SI_QUERY_GPIN_NUM_SIMD:
 		result->u32 = sctx->screen->info.num_good_compute_units;
 		return true;
-	case R600_QUERY_GPIN_NUM_RB:
+	case SI_QUERY_GPIN_NUM_RB:
 		result->u32 = sctx->screen->info.num_render_backends;
 		return true;
-	case R600_QUERY_GPIN_NUM_SPI:
+	case SI_QUERY_GPIN_NUM_SPI:
 		result->u32 = 1; /* all supported chips have one SPI per SE */
 		return true;
-	case R600_QUERY_GPIN_NUM_SE:
+	case SI_QUERY_GPIN_NUM_SE:
 		result->u32 = sctx->screen->info.max_se;
 		return true;
 	}
@@ -465,12 +465,12 @@ static bool si_query_sw_get_result(struct si_context *sctx,
 	result->u64 = query->end_result - query->begin_result;
 
 	switch (query->b.type) {
-	case R600_QUERY_BUFFER_WAIT_TIME:
-	case R600_QUERY_GPU_TEMPERATURE:
+	case SI_QUERY_BUFFER_WAIT_TIME:
+	case SI_QUERY_GPU_TEMPERATURE:
 		result->u64 /= 1000;
 		break;
-	case R600_QUERY_CURRENT_GPU_SCLK:
-	case R600_QUERY_CURRENT_GPU_MCLK:
+	case SI_QUERY_CURRENT_GPU_SCLK:
+	case SI_QUERY_CURRENT_GPU_MCLK:
 		result->u64 *= 1000000;
 		break;
 	}
@@ -656,7 +656,7 @@ static struct pipe_query *si_query_hw_create(struct si_screen *sscreen,
 	case PIPE_QUERY_TIMESTAMP:
 		query->result_size = 16;
 		query->num_cs_dw_end = 8 + si_gfx_write_fence_dwords(sscreen);
-		query->flags = R600_QUERY_HW_FLAG_NO_START;
+		query->flags = SI_QUERY_HW_FLAG_NO_START;
 		break;
 	case PIPE_QUERY_PRIMITIVES_EMITTED:
 	case PIPE_QUERY_PRIMITIVES_GENERATED:
@@ -899,7 +899,7 @@ static void si_query_hw_emit_stop(struct si_context *sctx,
 		return; // previous buffer allocation failure
 
 	/* The queries which need begin already called this in begin_query. */
-	if (query->flags & R600_QUERY_HW_FLAG_NO_START)
+	if (query->flags & SI_QUERY_HW_FLAG_NO_START)
 		si_need_gfx_cs_space(sctx);
 
 	/* emit end query */
@@ -909,7 +909,7 @@ static void si_query_hw_emit_stop(struct si_context *sctx,
 
 	query->buffer.results_end += query->result_size;
 
-	if (!(query->flags & R600_QUERY_HW_FLAG_NO_START))
+	if (!(query->flags & SI_QUERY_HW_FLAG_NO_START))
 		sctx->b.num_cs_dw_queries_suspend -= query->num_cs_dw_end;
 
 	si_update_occlusion_query_state(sctx, query->b.type, -1);
@@ -1079,12 +1079,12 @@ bool si_query_hw_begin(struct si_context *sctx,
 {
 	struct si_query_hw *query = (struct si_query_hw *)rquery;
 
-	if (query->flags & R600_QUERY_HW_FLAG_NO_START) {
+	if (query->flags & SI_QUERY_HW_FLAG_NO_START) {
 		assert(0);
 		return false;
 	}
 
-	if (!(query->flags & R600_QUERY_HW_FLAG_BEGIN_RESUMES))
+	if (!(query->flags & SI_QUERY_HW_FLAG_BEGIN_RESUMES))
 		si_query_hw_reset_buffers(sctx, query);
 
 	r600_resource_reference(&query->workaround_buf, NULL);
@@ -1110,12 +1110,12 @@ bool si_query_hw_end(struct si_context *sctx,
 {
 	struct si_query_hw *query = (struct si_query_hw *)rquery;
 
-	if (query->flags & R600_QUERY_HW_FLAG_NO_START)
+	if (query->flags & SI_QUERY_HW_FLAG_NO_START)
 		si_query_hw_reset_buffers(sctx, query);
 
 	si_query_hw_emit_stop(sctx, query);
 
-	if (!(query->flags & R600_QUERY_HW_FLAG_NO_START))
+	if (!(query->flags & SI_QUERY_HW_FLAG_NO_START))
 		LIST_DELINIT(&query->list);
 
 	if (!query->buffer.buf)
@@ -1856,7 +1856,7 @@ void si_resume_queries(struct si_context *sctx)
 #define XFULL(name_, query_type_, type_, result_type_, group_id_) \
 	{ \
 		.name = name_, \
-		.query_type = R600_QUERY_##query_type_, \
+		.query_type = SI_QUERY_##query_type_, \
 		.type = PIPE_DRIVER_QUERY_TYPE_##type_, \
 		.result_type = PIPE_DRIVER_QUERY_RESULT_TYPE_##result_type_, \
 		.group_id = group_id_ \
@@ -1866,7 +1866,7 @@ void si_resume_queries(struct si_context *sctx)
 	XFULL(name_, query_type_, type_, result_type_, ~(unsigned)0)
 
 #define XG(group_, name_, query_type_, type_, result_type_) \
-	XFULL(name_, query_type_, type_, result_type_, R600_QUERY_GROUP_##group_)
+	XFULL(name_, query_type_, type_, result_type_, SI_QUERY_GROUP_##group_)
 
 static struct pipe_driver_query_info si_driver_query_list[] = {
 	X("num-compilations",		NUM_COMPILATIONS,	UINT64, CUMULATIVE),
@@ -1990,20 +1990,20 @@ static int si_get_driver_query_info(struct pipe_screen *screen,
 	*info = si_driver_query_list[index];
 
 	switch (info->query_type) {
-	case R600_QUERY_REQUESTED_VRAM:
-	case R600_QUERY_VRAM_USAGE:
-	case R600_QUERY_MAPPED_VRAM:
+	case SI_QUERY_REQUESTED_VRAM:
+	case SI_QUERY_VRAM_USAGE:
+	case SI_QUERY_MAPPED_VRAM:
 		info->max_value.u64 = sscreen->info.vram_size;
 		break;
-	case R600_QUERY_REQUESTED_GTT:
-	case R600_QUERY_GTT_USAGE:
-	case R600_QUERY_MAPPED_GTT:
+	case SI_QUERY_REQUESTED_GTT:
+	case SI_QUERY_GTT_USAGE:
+	case SI_QUERY_MAPPED_GTT:
 		info->max_value.u64 = sscreen->info.gart_size;
 		break;
-	case R600_QUERY_GPU_TEMPERATURE:
+	case SI_QUERY_GPU_TEMPERATURE:
 		info->max_value.u64 = 125;
 		break;
-	case R600_QUERY_VRAM_VIS_USAGE:
+	case SI_QUERY_VRAM_VIS_USAGE:
 		info->max_value.u64 = sscreen->info.vram_vis_size;
 		break;
 	}
@@ -2029,13 +2029,13 @@ static int si_get_driver_query_group_info(struct pipe_screen *screen,
 		num_pc_groups = sscreen->perfcounters->num_groups;
 
 	if (!info)
-		return num_pc_groups + R600_NUM_SW_QUERY_GROUPS;
+		return num_pc_groups + SI_NUM_SW_QUERY_GROUPS;
 
 	if (index < num_pc_groups)
 		return si_get_perfcounter_group_info(sscreen, index, info);
 
 	index -= num_pc_groups;
-	if (index >= R600_NUM_SW_QUERY_GROUPS)
+	if (index >= SI_NUM_SW_QUERY_GROUPS)
 		return 0;
 
 	info->name = "GPIN";

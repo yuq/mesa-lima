@@ -98,7 +98,7 @@ static const unsigned si_pc_shader_type_bits[] = {
 static struct si_pc_block_base cik_CB = {
 	.name = "CB",
 	.num_counters = 4,
-	.flags = R600_PC_BLOCK_SE | R600_PC_BLOCK_INSTANCE_GROUPS,
+	.flags = SI_PC_BLOCK_SE | SI_PC_BLOCK_INSTANCE_GROUPS,
 
 	.select0 = R_037000_CB_PERFCOUNTER_FILTER,
 	.counter0_lo = R_035018_CB_PERFCOUNTER0_LO,
@@ -145,7 +145,7 @@ static struct si_pc_block_base cik_CPG = {
 static struct si_pc_block_base cik_DB = {
 	.name = "DB",
 	.num_counters = 4,
-	.flags = R600_PC_BLOCK_SE | R600_PC_BLOCK_INSTANCE_GROUPS,
+	.flags = SI_PC_BLOCK_SE | SI_PC_BLOCK_INSTANCE_GROUPS,
 
 	.select0 = R_037100_DB_PERFCOUNTER0_SELECT,
 	.counter0_lo = R_035100_DB_PERFCOUNTER0_LO,
@@ -196,7 +196,7 @@ static struct si_pc_block_base cik_IA = {
 static struct si_pc_block_base cik_PA_SC = {
 	.name = "PA_SC",
 	.num_counters = 8,
-	.flags = R600_PC_BLOCK_SE,
+	.flags = SI_PC_BLOCK_SE,
 
 	.select0 = R_036500_PA_SC_PERFCOUNTER0_SELECT,
 	.counter0_lo = R_034500_PA_SC_PERFCOUNTER0_LO,
@@ -208,7 +208,7 @@ static struct si_pc_block_base cik_PA_SC = {
 static struct si_pc_block_base cik_PA_SU = {
 	.name = "PA_SU",
 	.num_counters = 4,
-	.flags = R600_PC_BLOCK_SE,
+	.flags = SI_PC_BLOCK_SE,
 
 	.select0 = R_036400_PA_SU_PERFCOUNTER0_SELECT,
 	.counter0_lo = R_034400_PA_SU_PERFCOUNTER0_LO,
@@ -219,7 +219,7 @@ static struct si_pc_block_base cik_PA_SU = {
 static struct si_pc_block_base cik_SPI = {
 	.name = "SPI",
 	.num_counters = 6,
-	.flags = R600_PC_BLOCK_SE,
+	.flags = SI_PC_BLOCK_SE,
 
 	.select0 = R_036600_SPI_PERFCOUNTER0_SELECT,
 	.counter0_lo = R_034604_SPI_PERFCOUNTER0_LO,
@@ -230,7 +230,7 @@ static struct si_pc_block_base cik_SPI = {
 static struct si_pc_block_base cik_SQ = {
 	.name = "SQ",
 	.num_counters = 16,
-	.flags = R600_PC_BLOCK_SE | R600_PC_BLOCK_SHADER,
+	.flags = SI_PC_BLOCK_SE | SI_PC_BLOCK_SHADER,
 
 	.select0 = R_036700_SQ_PERFCOUNTER0_SELECT,
 	.select_or = S_036700_SQC_BANK_MASK(15) |
@@ -242,7 +242,7 @@ static struct si_pc_block_base cik_SQ = {
 static struct si_pc_block_base cik_SX = {
 	.name = "SX",
 	.num_counters = 4,
-	.flags = R600_PC_BLOCK_SE,
+	.flags = SI_PC_BLOCK_SE,
 
 	.select0 = R_036900_SX_PERFCOUNTER0_SELECT,
 	.counter0_lo = R_034900_SX_PERFCOUNTER0_LO,
@@ -253,7 +253,7 @@ static struct si_pc_block_base cik_SX = {
 static struct si_pc_block_base cik_TA = {
 	.name = "TA",
 	.num_counters = 2,
-	.flags = R600_PC_BLOCK_SE | R600_PC_BLOCK_INSTANCE_GROUPS | R600_PC_BLOCK_SHADER_WINDOWED,
+	.flags = SI_PC_BLOCK_SE | SI_PC_BLOCK_INSTANCE_GROUPS | SI_PC_BLOCK_SHADER_WINDOWED,
 
 	.select0 = R_036B00_TA_PERFCOUNTER0_SELECT,
 	.counter0_lo = R_034B00_TA_PERFCOUNTER0_LO,
@@ -264,7 +264,7 @@ static struct si_pc_block_base cik_TA = {
 static struct si_pc_block_base cik_TD = {
 	.name = "TD",
 	.num_counters = 2,
-	.flags = R600_PC_BLOCK_SE | R600_PC_BLOCK_INSTANCE_GROUPS | R600_PC_BLOCK_SHADER_WINDOWED,
+	.flags = SI_PC_BLOCK_SE | SI_PC_BLOCK_INSTANCE_GROUPS | SI_PC_BLOCK_SHADER_WINDOWED,
 
 	.select0 = R_036C00_TD_PERFCOUNTER0_SELECT,
 	.counter0_lo = R_034C00_TD_PERFCOUNTER0_LO,
@@ -275,7 +275,7 @@ static struct si_pc_block_base cik_TD = {
 static struct si_pc_block_base cik_TCA = {
 	.name = "TCA",
 	.num_counters = 4,
-	.flags = R600_PC_BLOCK_INSTANCE_GROUPS,
+	.flags = SI_PC_BLOCK_INSTANCE_GROUPS,
 
 	.select0 = R_036E40_TCA_PERFCOUNTER0_SELECT,
 	.counter0_lo = R_034E40_TCA_PERFCOUNTER0_LO,
@@ -286,7 +286,7 @@ static struct si_pc_block_base cik_TCA = {
 static struct si_pc_block_base cik_TCC = {
 	.name = "TCC",
 	.num_counters = 4,
-	.flags = R600_PC_BLOCK_INSTANCE_GROUPS,
+	.flags = SI_PC_BLOCK_INSTANCE_GROUPS,
 
 	.select0 = R_036E00_TCC_PERFCOUNTER0_SELECT,
 	.counter0_lo = R_034E00_TCC_PERFCOUNTER0_LO,
@@ -297,7 +297,7 @@ static struct si_pc_block_base cik_TCC = {
 static struct si_pc_block_base cik_TCP = {
 	.name = "TCP",
 	.num_counters = 4,
-	.flags = R600_PC_BLOCK_SE | R600_PC_BLOCK_INSTANCE_GROUPS | R600_PC_BLOCK_SHADER_WINDOWED,
+	.flags = SI_PC_BLOCK_SE | SI_PC_BLOCK_INSTANCE_GROUPS | SI_PC_BLOCK_SHADER_WINDOWED,
 
 	.select0 = R_036D00_TCP_PERFCOUNTER0_SELECT,
 	.counter0_lo = R_034D00_TCP_PERFCOUNTER0_LO,
@@ -308,7 +308,7 @@ static struct si_pc_block_base cik_TCP = {
 static struct si_pc_block_base cik_VGT = {
 	.name = "VGT",
 	.num_counters = 4,
-	.flags = R600_PC_BLOCK_SE,
+	.flags = SI_PC_BLOCK_SE,
 
 	.select0 = R_036230_VGT_PERFCOUNTER0_SELECT,
 	.counter0_lo = R_034240_VGT_PERFCOUNTER0_LO,
