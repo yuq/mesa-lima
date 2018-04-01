@@ -708,6 +708,40 @@ static struct pipe_resource *si_resource_create(struct pipe_screen *screen,
 	}
 }
 
+static bool si_resource_commit(struct pipe_context *pctx,
+			       struct pipe_resource *resource,
+			       unsigned level, struct pipe_box *box,
+			       bool commit)
+{
+	struct si_context *ctx = (struct si_context *)pctx;
+	struct r600_resource *res = r600_resource(resource);
+
+	/*
+	 * Since buffer commitment changes cannot be pipelined, we need to
+	 * (a) flush any pending commands that refer to the buffer we're about
+	 *     to change, and
+	 * (b) wait for threaded submit to finish, including those that were
+	 *     triggered by some other, earlier operation.
+	 */
+	if (radeon_emitted(ctx->b.gfx_cs, ctx->b.initial_gfx_cs_size) &&
+	    ctx->b.ws->cs_is_buffer_referenced(ctx->b.gfx_cs,
+					       res->buf, RADEON_USAGE_READWRITE)) {
+		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
+	}
+	if (radeon_emitted(ctx->b.dma_cs, 0) &&
+	    ctx->b.ws->cs_is_buffer_referenced(ctx->b.dma_cs,
+					       res->buf, RADEON_USAGE_READWRITE)) {
+		si_flush_dma_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
+	}
+
+	ctx->b.ws->cs_sync_flush(ctx->b.dma_cs);
+	ctx->b.ws->cs_sync_flush(ctx->b.gfx_cs);
+
+	assert(resource->target == PIPE_BUFFER);
+
+	return ctx->b.ws->buffer_commit(res->buf, box->x, box->width, commit);
+}
+
 void si_init_screen_buffer_functions(struct si_screen *sscreen)
 {
 	sscreen->b.resource_create = si_resource_create;
@@ -723,4 +757,5 @@ void si_init_buffer_functions(struct si_context *sctx)
 	sctx->b.b.transfer_unmap = u_transfer_unmap_vtbl;
 	sctx->b.b.texture_subdata = u_default_texture_subdata;
 	sctx->b.b.buffer_subdata = si_buffer_subdata;
+	sctx->b.b.resource_commit = si_resource_commit;
 }

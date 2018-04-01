@@ -761,6 +761,9 @@ void si_init_compute_functions(struct si_context *sctx);
 /* si_perfcounters.c */
 void si_init_perfcounters(struct si_screen *screen);
 
+/* si_pipe.c */
+bool si_check_device_reset(struct si_context *sctx);
+
 /* si_test_dma.c */
 void si_test_dma(struct si_screen *sscreen);
 
