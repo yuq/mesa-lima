@@ -134,7 +134,7 @@ static void si_emit_one_scissor(struct si_context *ctx,
 }
 
 /* the range is [-MAX, MAX] */
-#define GET_MAX_VIEWPORT_RANGE(rctx) (32768)
+#define SI_MAX_VIEWPORT_RANGE 32768
 
 static void si_emit_guardband(struct si_context *ctx,
 			      struct si_signed_scissor *vp_as_scissor)
@@ -165,7 +165,7 @@ static void si_emit_guardband(struct si_context *ctx,
 	 *
 	 * Use a limit one pixel smaller to allow for some precision error.
 	 */
-	max_range = GET_MAX_VIEWPORT_RANGE(ctx) - 1;
+	max_range = SI_MAX_VIEWPORT_RANGE - 1;
 	left   = (-max_range - vp.translate[0]) / vp.scale[0];
 	right  = ( max_range - vp.translate[0]) / vp.scale[0];
 	top    = (-max_range - vp.translate[1]) / vp.scale[1];
