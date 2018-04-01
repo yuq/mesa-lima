@@ -746,6 +746,29 @@ void si_blit_decompress_depth(struct pipe_context *ctx,
 			      unsigned first_layer, unsigned last_layer,
 			      unsigned first_sample, unsigned last_sample);
 
+/* si_buffer.c */
+bool si_rings_is_buffer_referenced(struct si_context *sctx,
+				   struct pb_buffer *buf,
+				   enum radeon_bo_usage usage);
+void *si_buffer_map_sync_with_rings(struct si_context *sctx,
+				    struct r600_resource *resource,
+				    unsigned usage);
+void si_init_resource_fields(struct si_screen *sscreen,
+			     struct r600_resource *res,
+			     uint64_t size, unsigned alignment);
+bool si_alloc_resource(struct si_screen *sscreen,
+		       struct r600_resource *res);
+struct pipe_resource *si_aligned_buffer_create(struct pipe_screen *screen,
+					       unsigned flags,
+					       unsigned usage,
+					       unsigned size,
+					       unsigned alignment);
+void si_replace_buffer_storage(struct pipe_context *ctx,
+			       struct pipe_resource *dst,
+			       struct pipe_resource *src);
+void si_init_screen_buffer_functions(struct si_screen *sscreen);
+void si_init_buffer_functions(struct si_context *sctx);
+
 /* si_clear.c */
 void vi_dcc_clear_level(struct si_context *sctx,
 			struct r600_texture *rtex,
@@ -865,6 +888,60 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
 /* si_viewport.c */
 void si_update_vs_viewport_state(struct si_context *ctx);
 void si_init_viewport_functions(struct si_context *ctx);
+
+/* r600_texture.c */
+bool si_prepare_for_dma_blit(struct si_context *sctx,
+			     struct r600_texture *rdst,
+			     unsigned dst_level, unsigned dstx,
+			     unsigned dsty, unsigned dstz,
+			     struct r600_texture *rsrc,
+			     unsigned src_level,
+			     const struct pipe_box *src_box);
+void si_texture_get_fmask_info(struct si_screen *sscreen,
+			       struct r600_texture *rtex,
+			       unsigned nr_samples,
+			       struct r600_fmask_info *out);
+void si_texture_get_cmask_info(struct si_screen *sscreen,
+			       struct r600_texture *rtex,
+			       struct r600_cmask_info *out);
+void si_eliminate_fast_color_clear(struct si_context *sctx,
+				   struct r600_texture *rtex);
+void si_texture_discard_cmask(struct si_screen *sscreen,
+			      struct r600_texture *rtex);
+bool si_init_flushed_depth_texture(struct pipe_context *ctx,
+				   struct pipe_resource *texture,
+				   struct r600_texture **staging);
+void si_print_texture_info(struct si_screen *sscreen,
+			   struct r600_texture *rtex, struct u_log_context *log);
+struct pipe_resource *si_texture_create(struct pipe_screen *screen,
+					const struct pipe_resource *templ);
+bool vi_dcc_formats_compatible(enum pipe_format format1,
+			       enum pipe_format format2);
+bool vi_dcc_formats_are_incompatible(struct pipe_resource *tex,
+				     unsigned level,
+				     enum pipe_format view_format);
+void vi_disable_dcc_if_incompatible_format(struct si_context *sctx,
+					   struct pipe_resource *tex,
+					   unsigned level,
+					   enum pipe_format view_format);
+struct pipe_surface *si_create_surface_custom(struct pipe_context *pipe,
+					      struct pipe_resource *texture,
+					      const struct pipe_surface *templ,
+					      unsigned width0, unsigned height0,
+					      unsigned width, unsigned height);
+unsigned si_translate_colorswap(enum pipe_format format, bool do_endian_swap);
+void vi_separate_dcc_try_enable(struct si_context *sctx,
+				struct r600_texture *tex);
+void vi_separate_dcc_start_query(struct si_context *sctx,
+				 struct r600_texture *tex);
+void vi_separate_dcc_stop_query(struct si_context *sctx,
+				struct r600_texture *tex);
+void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
+					     struct r600_texture *tex);
+bool si_texture_disable_dcc(struct si_context *sctx,
+			    struct r600_texture *rtex);
+void si_init_screen_texture_functions(struct si_screen *sscreen);
+void si_init_context_texture_functions(struct si_context *sctx);
 
 
 /*
