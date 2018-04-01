@@ -201,7 +201,7 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 			/* Set the resource. */
 			pipe_resource_reference(&buffers->buffers[bufidx],
 						buffer);
-			radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
+			radeon_add_to_gfx_buffer_list_check_mem(sctx,
 							    (struct r600_resource*)buffer,
 							    buffers->shader_usage,
 							    RADEON_PRIO_SHADER_RW_BUFFER,

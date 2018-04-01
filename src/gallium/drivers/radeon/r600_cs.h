@@ -95,20 +95,19 @@ static inline void radeon_add_to_buffer_list(struct r600_common_context *rctx,
  *   a different constraint disallowing a context flush
  */
 static inline void
-radeon_add_to_buffer_list_check_mem(struct r600_common_context *rctx,
-				    struct r600_ring *ring,
-				    struct r600_resource *rbo,
-				    enum radeon_bo_usage usage,
-				    enum radeon_bo_priority priority,
-				    bool check_mem)
+radeon_add_to_gfx_buffer_list_check_mem(struct si_context *sctx,
+					struct r600_resource *rbo,
+					enum radeon_bo_usage usage,
+					enum radeon_bo_priority priority,
+					bool check_mem)
 {
 	if (check_mem &&
-	    !radeon_cs_memory_below_limit(rctx->screen, ring->cs,
-					  rctx->vram + rbo->vram_usage,
-					  rctx->gtt + rbo->gart_usage))
-		ring->flush(rctx, PIPE_FLUSH_ASYNC, NULL);
+	    !radeon_cs_memory_below_limit(sctx->screen, sctx->b.gfx.cs,
+					  sctx->b.vram + rbo->vram_usage,
+					  sctx->b.gtt + rbo->gart_usage))
+		si_flush_gfx_cs(&sctx->b, PIPE_FLUSH_ASYNC, NULL);
 
-	radeon_add_to_buffer_list(rctx, ring, rbo, usage, priority);
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, rbo, usage, priority);
 }
 
 static inline void radeon_set_config_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
