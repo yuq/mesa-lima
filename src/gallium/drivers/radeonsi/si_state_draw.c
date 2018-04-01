@@ -849,12 +849,12 @@ static void si_emit_draw_packets(struct si_context *sctx,
 	}
 }
 
-static void si_emit_surface_sync(struct r600_common_context *rctx,
+static void si_emit_surface_sync(struct si_context *sctx,
 				 unsigned cp_coher_cntl)
 {
-	struct radeon_winsys_cs *cs = rctx->gfx_cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
 
-	if (rctx->chip_class >= GFX9) {
+	if (sctx->b.chip_class >= GFX9) {
 		/* Flush caches and wait for the caches to assert idle. */
 		radeon_emit(cs, PKT3(PKT3_ACQUIRE_MEM, 5, 0));
 		radeon_emit(cs, cp_coher_cntl);	/* CP_COHER_CNTL */
@@ -875,15 +875,15 @@ static void si_emit_surface_sync(struct r600_common_context *rctx,
 
 void si_emit_cache_flush(struct si_context *sctx)
 {
-	struct r600_common_context *rctx = &sctx->b;
-	struct radeon_winsys_cs *cs = rctx->gfx_cs;
+	struct radeon_winsys_cs *cs = sctx->b.gfx_cs;
+	uint32_t flags = sctx->b.flags;
 	uint32_t cp_coher_cntl = 0;
-	uint32_t flush_cb_db = rctx->flags & (SI_CONTEXT_FLUSH_AND_INV_CB |
-					      SI_CONTEXT_FLUSH_AND_INV_DB);
+	uint32_t flush_cb_db = flags & (SI_CONTEXT_FLUSH_AND_INV_CB |
+					SI_CONTEXT_FLUSH_AND_INV_DB);
 
-	if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB)
+	if (flags & SI_CONTEXT_FLUSH_AND_INV_CB)
 		sctx->b.num_cb_cache_flushes++;
-	if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB)
+	if (flags & SI_CONTEXT_FLUSH_AND_INV_DB)
 		sctx->b.num_db_cache_flushes++;
 
 	/* SI has a bug that it always flushes ICACHE and KCACHE if either
@@ -894,13 +894,13 @@ void si_emit_cache_flush(struct si_context *sctx)
 	 * to add a workaround for it.
 	 */
 
-	if (rctx->flags & SI_CONTEXT_INV_ICACHE)
+	if (flags & SI_CONTEXT_INV_ICACHE)
 		cp_coher_cntl |= S_0085F0_SH_ICACHE_ACTION_ENA(1);
-	if (rctx->flags & SI_CONTEXT_INV_SMEM_L1)
+	if (flags & SI_CONTEXT_INV_SMEM_L1)
 		cp_coher_cntl |= S_0085F0_SH_KCACHE_ACTION_ENA(1);
 
-	if (rctx->chip_class <= VI) {
-		if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB) {
+	if (sctx->b.chip_class <= VI) {
+		if (flags & SI_CONTEXT_FLUSH_AND_INV_CB) {
 			cp_coher_cntl |= S_0085F0_CB_ACTION_ENA(1) |
 					 S_0085F0_CB0_DEST_BASE_ENA(1) |
 					 S_0085F0_CB1_DEST_BASE_ENA(1) |
@@ -912,23 +912,23 @@ void si_emit_cache_flush(struct si_context *sctx)
 					 S_0085F0_CB7_DEST_BASE_ENA(1);
 
 			/* Necessary for DCC */
-			if (rctx->chip_class == VI)
-				si_gfx_write_event_eop(rctx, V_028A90_FLUSH_AND_INV_CB_DATA_TS,
-							 0, EOP_DATA_SEL_DISCARD, NULL,
-							 0, 0, SI_NOT_QUERY);
+			if (sctx->b.chip_class == VI)
+				si_gfx_write_event_eop(&sctx->b, V_028A90_FLUSH_AND_INV_CB_DATA_TS,
+						       0, EOP_DATA_SEL_DISCARD, NULL,
+						       0, 0, SI_NOT_QUERY);
 		}
-		if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB)
+		if (flags & SI_CONTEXT_FLUSH_AND_INV_DB)
 			cp_coher_cntl |= S_0085F0_DB_ACTION_ENA(1) |
 					 S_0085F0_DB_DEST_BASE_ENA(1);
 	}
 
-	if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB) {
+	if (flags & SI_CONTEXT_FLUSH_AND_INV_CB) {
 		/* Flush CMASK/FMASK/DCC. SURFACE_SYNC will wait for idle. */
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_CB_META) | EVENT_INDEX(0));
 	}
-	if (rctx->flags & (SI_CONTEXT_FLUSH_AND_INV_DB |
-			   SI_CONTEXT_FLUSH_AND_INV_DB_META)) {
+	if (flags & (SI_CONTEXT_FLUSH_AND_INV_DB |
+		     SI_CONTEXT_FLUSH_AND_INV_DB_META)) {
 		/* Flush HTILE. SURFACE_SYNC will wait for idle. */
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_DB_META) | EVENT_INDEX(0));
@@ -939,35 +939,35 @@ void si_emit_cache_flush(struct si_context *sctx)
 	 * for everything including CB/DB cache flushes.
 	 */
 	if (!flush_cb_db) {
-		if (rctx->flags & SI_CONTEXT_PS_PARTIAL_FLUSH) {
+		if (flags & SI_CONTEXT_PS_PARTIAL_FLUSH) {
 			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 			radeon_emit(cs, EVENT_TYPE(V_028A90_PS_PARTIAL_FLUSH) | EVENT_INDEX(4));
 			/* Only count explicit shader flushes, not implicit ones
 			 * done by SURFACE_SYNC.
 			 */
-			rctx->num_vs_flushes++;
-			rctx->num_ps_flushes++;
-		} else if (rctx->flags & SI_CONTEXT_VS_PARTIAL_FLUSH) {
+			sctx->b.num_vs_flushes++;
+			sctx->b.num_ps_flushes++;
+		} else if (flags & SI_CONTEXT_VS_PARTIAL_FLUSH) {
 			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 			radeon_emit(cs, EVENT_TYPE(V_028A90_VS_PARTIAL_FLUSH) | EVENT_INDEX(4));
-			rctx->num_vs_flushes++;
+			sctx->b.num_vs_flushes++;
 		}
 	}
 
-	if (rctx->flags & SI_CONTEXT_CS_PARTIAL_FLUSH &&
+	if (flags & SI_CONTEXT_CS_PARTIAL_FLUSH &&
 	    sctx->compute_is_busy) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_CS_PARTIAL_FLUSH | EVENT_INDEX(4)));
-		rctx->num_cs_flushes++;
+		sctx->b.num_cs_flushes++;
 		sctx->compute_is_busy = false;
 	}
 
 	/* VGT state synchronization. */
-	if (rctx->flags & SI_CONTEXT_VGT_FLUSH) {
+	if (flags & SI_CONTEXT_VGT_FLUSH) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_VGT_FLUSH) | EVENT_INDEX(0));
 	}
-	if (rctx->flags & SI_CONTEXT_VGT_STREAMOUT_SYNC) {
+	if (flags & SI_CONTEXT_VGT_STREAMOUT_SYNC) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_VGT_STREAMOUT_SYNC) | EVENT_INDEX(0));
 	}
@@ -1006,21 +1006,21 @@ void si_emit_cache_flush(struct si_context *sctx)
 		 */
 		tc_flags = 0;
 
-		if (rctx->flags & SI_CONTEXT_INV_L2_METADATA) {
+		if (flags & SI_CONTEXT_INV_L2_METADATA) {
 			tc_flags = EVENT_TC_ACTION_ENA |
 				   EVENT_TC_MD_ACTION_ENA;
 		}
 
 		/* Ideally flush TC together with CB/DB. */
-		if (rctx->flags & SI_CONTEXT_INV_GLOBAL_L2) {
+		if (flags & SI_CONTEXT_INV_GLOBAL_L2) {
 			/* Writeback and invalidate everything in L2 & L1. */
 			tc_flags = EVENT_TC_ACTION_ENA |
 				   EVENT_TC_WB_ACTION_ENA;
 
 			/* Clear the flags. */
-			rctx->flags &= ~(SI_CONTEXT_INV_GLOBAL_L2 |
-					 SI_CONTEXT_WRITEBACK_GLOBAL_L2 |
-					 SI_CONTEXT_INV_VMEM_L1);
+			flags &= ~(SI_CONTEXT_INV_GLOBAL_L2 |
+				   SI_CONTEXT_WRITEBACK_GLOBAL_L2 |
+				   SI_CONTEXT_INV_VMEM_L1);
 			sctx->b.num_L2_invalidates++;
 		}
 
@@ -1028,18 +1028,18 @@ void si_emit_cache_flush(struct si_context *sctx)
 		va = sctx->wait_mem_scratch->gpu_address;
 		sctx->wait_mem_number++;
 
-		si_gfx_write_event_eop(rctx, cb_db_event, tc_flags,
-					 EOP_DATA_SEL_VALUE_32BIT,
-					 sctx->wait_mem_scratch, va,
-					 sctx->wait_mem_number, SI_NOT_QUERY);
-		si_gfx_wait_fence(rctx, va, sctx->wait_mem_number, 0xffffffff);
+		si_gfx_write_event_eop(&sctx->b, cb_db_event, tc_flags,
+				       EOP_DATA_SEL_VALUE_32BIT,
+				       sctx->wait_mem_scratch, va,
+				       sctx->wait_mem_number, SI_NOT_QUERY);
+		si_gfx_wait_fence(&sctx->b, va, sctx->wait_mem_number, 0xffffffff);
 	}
 
 	/* Make sure ME is idle (it executes most packets) before continuing.
 	 * This prevents read-after-write hazards between PFP and ME.
 	 */
 	if (cp_coher_cntl ||
-	    (rctx->flags & (SI_CONTEXT_CS_PARTIAL_FLUSH |
+	    (flags & (SI_CONTEXT_CS_PARTIAL_FLUSH |
 			    SI_CONTEXT_INV_VMEM_L1 |
 			    SI_CONTEXT_INV_GLOBAL_L2 |
 			    SI_CONTEXT_WRITEBACK_GLOBAL_L2))) {
@@ -1056,38 +1056,38 @@ void si_emit_cache_flush(struct si_context *sctx)
 	 *
 	 * SI-CIK don't support L2 write-back.
 	 */
-	if (rctx->flags & SI_CONTEXT_INV_GLOBAL_L2 ||
-	    (rctx->chip_class <= CIK &&
-	     (rctx->flags & SI_CONTEXT_WRITEBACK_GLOBAL_L2))) {
+	if (flags & SI_CONTEXT_INV_GLOBAL_L2 ||
+	    (sctx->b.chip_class <= CIK &&
+	     (flags & SI_CONTEXT_WRITEBACK_GLOBAL_L2))) {
 		/* Invalidate L1 & L2. (L1 is always invalidated on SI)
 		 * WB must be set on VI+ when TC_ACTION is set.
 		 */
-		si_emit_surface_sync(rctx, cp_coher_cntl |
+		si_emit_surface_sync(sctx, cp_coher_cntl |
 				     S_0085F0_TC_ACTION_ENA(1) |
 				     S_0085F0_TCL1_ACTION_ENA(1) |
-				     S_0301F0_TC_WB_ACTION_ENA(rctx->chip_class >= VI));
+				     S_0301F0_TC_WB_ACTION_ENA(sctx->b.chip_class >= VI));
 		cp_coher_cntl = 0;
 		sctx->b.num_L2_invalidates++;
 	} else {
 		/* L1 invalidation and L2 writeback must be done separately,
 		 * because both operations can't be done together.
 		 */
-		if (rctx->flags & SI_CONTEXT_WRITEBACK_GLOBAL_L2) {
+		if (flags & SI_CONTEXT_WRITEBACK_GLOBAL_L2) {
 			/* WB = write-back
 			 * NC = apply to non-coherent MTYPEs
 			 *      (i.e. MTYPE <= 1, which is what we use everywhere)
 			 *
 			 * WB doesn't work without NC.
 			 */
-			si_emit_surface_sync(rctx, cp_coher_cntl |
+			si_emit_surface_sync(sctx, cp_coher_cntl |
 					     S_0301F0_TC_WB_ACTION_ENA(1) |
 					     S_0301F0_TC_NC_ACTION_ENA(1));
 			cp_coher_cntl = 0;
 			sctx->b.num_L2_writebacks++;
 		}
-		if (rctx->flags & SI_CONTEXT_INV_VMEM_L1) {
+		if (flags & SI_CONTEXT_INV_VMEM_L1) {
 			/* Invalidate per-CU VMEM L1. */
-			si_emit_surface_sync(rctx, cp_coher_cntl |
+			si_emit_surface_sync(sctx, cp_coher_cntl |
 					     S_0085F0_TCL1_ACTION_ENA(1));
 			cp_coher_cntl = 0;
 		}
@@ -1095,19 +1095,19 @@ void si_emit_cache_flush(struct si_context *sctx)
 
 	/* If TC flushes haven't cleared this... */
 	if (cp_coher_cntl)
-		si_emit_surface_sync(rctx, cp_coher_cntl);
+		si_emit_surface_sync(sctx, cp_coher_cntl);
 
-	if (rctx->flags & SI_CONTEXT_START_PIPELINE_STATS) {
+	if (flags & SI_CONTEXT_START_PIPELINE_STATS) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_PIPELINESTAT_START) |
 			        EVENT_INDEX(0));
-	} else if (rctx->flags & SI_CONTEXT_STOP_PIPELINE_STATS) {
+	} else if (flags & SI_CONTEXT_STOP_PIPELINE_STATS) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_PIPELINESTAT_STOP) |
 			        EVENT_INDEX(0));
 	}
 
-	rctx->flags = 0;
+	sctx->b.flags = 0;
 }
 
 static void si_get_draw_start_count(struct si_context *sctx,
