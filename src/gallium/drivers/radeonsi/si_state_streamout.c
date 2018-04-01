@@ -153,7 +153,7 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 		if (!targets[i])
 			continue;
 
-		si_context_add_resource_size(ctx, targets[i]->buffer);
+		si_context_add_resource_size(sctx, targets[i]->buffer);
 		enabled_mask |= 1 << i;
 
 		if (offsets[i] == ((unsigned)-1))

@@ -836,11 +836,11 @@ static void si_launch_grid(
 	si_decompress_textures(sctx, 1 << PIPE_SHADER_COMPUTE);
 
 	/* Add buffer sizes for memory checking in need_cs_space. */
-	si_context_add_resource_size(ctx, &program->shader.bo->b.b);
+	si_context_add_resource_size(sctx, &program->shader.bo->b.b);
 	/* TODO: add the scratch buffer */
 
 	if (info->indirect) {
-		si_context_add_resource_size(ctx, info->indirect);
+		si_context_add_resource_size(sctx, info->indirect);
 
 		/* Indirect buffers use TC L2 on GFX9, but not older hw. */
 		if (sctx->b.chip_class <= VI &&

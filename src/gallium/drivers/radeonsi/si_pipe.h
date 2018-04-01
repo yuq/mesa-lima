@@ -781,9 +781,8 @@ void si_init_viewport_functions(struct si_context *ctx);
  */
 
 static inline void
-si_context_add_resource_size(struct pipe_context *ctx, struct pipe_resource *r)
+si_context_add_resource_size(struct si_context *sctx, struct pipe_resource *r)
 {
-	struct si_context *sctx = (struct si_context *)ctx;
 	struct r600_resource *res = (struct r600_resource *)r;
 
 	if (res) {

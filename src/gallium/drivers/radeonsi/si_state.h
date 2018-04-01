@@ -338,7 +338,7 @@ void si_get_shader_buffers(struct si_context *sctx,
 			   enum pipe_shader_type shader,
 			   uint start_slot, uint count,
 			   struct pipe_shader_buffer *sbuf);
-void si_set_ring_buffer(struct pipe_context *ctx, uint slot,
+void si_set_ring_buffer(struct si_context *sctx, uint slot,
 			struct pipe_resource *buffer,
 			unsigned stride, unsigned num_records,
 			bool add_tid, bool swizzle,
@@ -405,8 +405,8 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 			      unsigned force_level);
 void si_update_fb_dirtiness_after_rendering(struct si_context *sctx);
 void si_update_ps_iter_samples(struct si_context *sctx);
-void si_save_qbo_state(struct pipe_context *ctx, struct r600_qbo_state *st);
-void si_set_occlusion_query_state(struct pipe_context *ctx,
+void si_save_qbo_state(struct si_context *sctx, struct r600_qbo_state *st);
+void si_set_occlusion_query_state(struct si_context *sctx,
 				  bool old_perfect_enable);
 
 /* si_state_binning.c */

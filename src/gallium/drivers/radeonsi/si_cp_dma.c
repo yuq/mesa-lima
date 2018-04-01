@@ -166,9 +166,9 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 
 	if (!(user_flags & SI_CPDMA_SKIP_BO_LIST_UPDATE)) {
 		/* Count memory usage in so that need_cs_space can take it into account. */
-		si_context_add_resource_size(&sctx->b.b, dst);
+		si_context_add_resource_size(sctx, dst);
 		if (src)
-			si_context_add_resource_size(&sctx->b.b, src);
+			si_context_add_resource_size(sctx, src);
 	}
 
 	if (!(user_flags & SI_CPDMA_SKIP_CHECK_CS_SPACE))

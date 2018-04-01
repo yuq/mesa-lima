@@ -1388,7 +1388,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		struct pipe_draw_indirect_info *indirect = info->indirect;
 
 		/* Add the buffer size for memory checking in need_cs_space. */
-		si_context_add_resource_size(ctx, indirect->buffer);
+		si_context_add_resource_size(sctx, indirect->buffer);
 
 		/* Indirect buffers use TC L2 on GFX9, but not older hw. */
 		if (sctx->b.chip_class <= VI) {

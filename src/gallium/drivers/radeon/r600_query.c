@@ -715,7 +715,7 @@ static void r600_update_occlusion_query_state(struct si_context *sctx,
 		perfect_enable = sctx->b.num_perfect_occlusion_queries != 0;
 
 		if (enable != old_enable || perfect_enable != old_perfect_enable) {
-			si_set_occlusion_query_state(&sctx->b.b, old_perfect_enable);
+			si_set_occlusion_query_state(sctx, old_perfect_enable);
 		}
 	}
 }
@@ -1661,7 +1661,7 @@ static void r600_query_hw_get_result_resource(struct si_context *sctx,
 			return;
 	}
 
-	si_save_qbo_state(&sctx->b.b, &saved_state);
+	si_save_qbo_state(sctx, &saved_state);
 
 	r600_get_hw_query_params(sctx, query, index >= 0 ? index : 0, &params);
 	consts.end_offset = params.end_offset - params.start_offset;

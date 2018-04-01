@@ -1348,11 +1348,9 @@ static void si_set_active_query_state(struct pipe_context *ctx, boolean enable)
 	}
 }
 
-void si_set_occlusion_query_state(struct pipe_context *ctx,
+void si_set_occlusion_query_state(struct si_context *sctx,
 				  bool old_perfect_enable)
 {
-	struct si_context *sctx = (struct si_context*)ctx;
-
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
 
 	bool perfect_enable = sctx->b.num_perfect_occlusion_queries != 0;
@@ -1361,10 +1359,8 @@ void si_set_occlusion_query_state(struct pipe_context *ctx,
 		si_mark_atom_dirty(sctx, &sctx->msaa_config);
 }
 
-void si_save_qbo_state(struct pipe_context *ctx, struct r600_qbo_state *st)
+void si_save_qbo_state(struct si_context *sctx, struct r600_qbo_state *st)
 {
-	struct si_context *sctx = (struct si_context*)ctx;
-
 	st->saved_compute = sctx->cs_shader_state.program;
 
 	si_get_pipe_constant_buffer(sctx, PIPE_SHADER_COMPUTE, 0, &st->saved_const0);
@@ -2872,7 +2868,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		if (vi_dcc_enabled(rtex, surf->base.u.tex.level))
 			sctx->framebuffer.CB_has_shader_readable_metadata = true;
 
-		si_context_add_resource_size(ctx, surf->base.texture);
+		si_context_add_resource_size(sctx, surf->base.texture);
 
 		p_atomic_inc(&rtex->framebuffers_bound);
 
@@ -2896,7 +2892,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		if (vi_tc_compat_htile_enabled(zstex, surf->base.u.tex.level))
 			sctx->framebuffer.DB_has_shader_readable_metadata = true;
 
-		si_context_add_resource_size(ctx, surf->base.texture);
+		si_context_add_resource_size(sctx, surf->base.texture);
 	}
 
 	si_update_ps_colorbuf0_slot(sctx);
@@ -4411,7 +4407,7 @@ static void si_set_vertex_buffers(struct pipe_context *ctx,
 			pipe_resource_reference(&dsti->buffer.resource, buf);
 			dsti->buffer_offset = src->buffer_offset;
 			dsti->stride = src->stride;
-			si_context_add_resource_size(ctx, buf);
+			si_context_add_resource_size(sctx, buf);
 			if (buf)
 				r600_resource(buf)->bind_history |= PIPE_BIND_VERTEX_BUFFER;
 		}

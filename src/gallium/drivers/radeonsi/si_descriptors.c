@@ -1393,13 +1393,12 @@ void si_get_shader_buffers(struct si_context *sctx,
 
 /* RING BUFFERS */
 
-void si_set_ring_buffer(struct pipe_context *ctx, uint slot,
+void si_set_ring_buffer(struct si_context *sctx, uint slot,
 			struct pipe_resource *buffer,
 			unsigned stride, unsigned num_records,
 			bool add_tid, bool swizzle,
 			unsigned element_size, unsigned index_stride, uint64_t offset)
 {
-	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_buffer_resources *buffers = &sctx->rw_buffers;
 	struct si_descriptors *descs = &sctx->descriptors[SI_DESCS_RW_BUFFERS];
 

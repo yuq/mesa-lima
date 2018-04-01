@@ -2781,15 +2781,15 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 	/* Set ring bindings. */
 	if (sctx->esgs_ring) {
 		assert(sctx->b.chip_class <= VI);
-		si_set_ring_buffer(&sctx->b.b, SI_ES_RING_ESGS,
+		si_set_ring_buffer(sctx, SI_ES_RING_ESGS,
 				   sctx->esgs_ring, 0, sctx->esgs_ring->width0,
 				   true, true, 4, 64, 0);
-		si_set_ring_buffer(&sctx->b.b, SI_GS_RING_ESGS,
+		si_set_ring_buffer(sctx, SI_GS_RING_ESGS,
 				   sctx->esgs_ring, 0, sctx->esgs_ring->width0,
 				   false, false, 0, 0, 0);
 	}
 	if (sctx->gsvs_ring) {
-		si_set_ring_buffer(&sctx->b.b, SI_RING_GSVS,
+		si_set_ring_buffer(sctx, SI_RING_GSVS,
 				   sctx->gsvs_ring, 0, sctx->gsvs_ring->width0,
 				   false, false, 0, 0, 0);
 	}
@@ -2983,7 +2983,7 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 				return false;
 
 			si_mark_atom_dirty(sctx, &sctx->scratch_state);
-			si_context_add_resource_size(&sctx->b.b,
+			si_context_add_resource_size(sctx,
 						     &sctx->scratch_buffer->b.b);
 		}
 
@@ -3348,7 +3348,6 @@ static void si_emit_scratch_state(struct si_context *sctx,
 void *si_get_blit_vs(struct si_context *sctx, enum blitter_attrib_type type,
 		     unsigned num_layers)
 {
-	struct pipe_context *pipe = &sctx->b.b;
 	unsigned vs_blit_property;
 	void **vs;
 
@@ -3406,7 +3405,7 @@ void *si_get_blit_vs(struct si_context *sctx, enum blitter_attrib_type type,
 	}
 	ureg_END(ureg);
 
-	*vs = ureg_create_shader_and_destroy(ureg, pipe);
+	*vs = ureg_create_shader_and_destroy(ureg, &sctx->b.b);
 	return *vs;
 }
 
