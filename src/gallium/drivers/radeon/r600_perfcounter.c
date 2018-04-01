@@ -23,7 +23,7 @@
  */
 
 #include "util/u_memory.h"
-#include "r600_query.h"
+#include "radeonsi/si_query.h"
 #include "radeonsi/si_pipe.h"
 #include "amd/common/sid.h"
 

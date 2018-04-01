@@ -840,6 +840,12 @@ void si_init_perfcounters(struct si_screen *screen);
 /* si_pipe.c */
 bool si_check_device_reset(struct si_context *sctx);
 
+/* si_query.c */
+void si_init_screen_query_functions(struct si_screen *sscreen);
+void si_init_query_functions(struct si_context *sctx);
+void si_suspend_queries(struct si_context *sctx);
+void si_resume_queries(struct si_context *sctx);
+
 /* si_test_dma.c */
 void si_test_dma(struct si_screen *sscreen);
 

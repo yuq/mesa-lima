@@ -33,7 +33,7 @@
  */
 
 #include "radeonsi/si_pipe.h"
-#include "r600_query.h"
+#include "radeonsi/si_query.h"
 #include "util/os_time.h"
 
 /* For good accuracy at 1000 fps or lower. This will be inaccurate for higher

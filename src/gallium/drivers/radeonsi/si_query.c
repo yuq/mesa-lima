@@ -24,8 +24,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "radeonsi/si_pipe.h"
-#include "r600_query.h"
+#include "si_pipe.h"
+#include "si_query.h"
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
 #include "util/os_time.h"
