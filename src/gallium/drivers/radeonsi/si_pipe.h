@@ -719,6 +719,14 @@ bool si_replace_shader(unsigned num, struct ac_shader_binary *binary);
 void si_init_dma_functions(struct si_context *sctx);
 
 /* si_fence.c */
+void si_gfx_write_event_eop(struct r600_common_context *ctx,
+			    unsigned event, unsigned event_flags,
+			    unsigned data_sel,
+			    struct r600_resource *buf, uint64_t va,
+			    uint32_t new_fence, unsigned query_type);
+unsigned si_gfx_write_fence_dwords(struct si_screen *screen);
+void si_gfx_wait_fence(struct r600_common_context *ctx,
+		       uint64_t va, uint32_t ref, uint32_t mask);
 void si_init_fence_functions(struct si_context *ctx);
 void si_init_screen_fence_functions(struct si_screen *screen);
 struct pipe_fence_handle *si_create_fence(struct pipe_context *ctx,

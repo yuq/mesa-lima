@@ -511,14 +511,6 @@ void si_init_screen_buffer_functions(struct si_screen *sscreen);
 void si_init_buffer_functions(struct si_context *sctx);
 
 /* r600_common_pipe.c */
-void si_gfx_write_event_eop(struct r600_common_context *ctx,
-			    unsigned event, unsigned event_flags,
-			    unsigned data_sel,
-			    struct r600_resource *buf, uint64_t va,
-			    uint32_t new_fence, unsigned query_type);
-unsigned si_gfx_write_fence_dwords(struct si_screen *screen);
-void si_gfx_wait_fence(struct r600_common_context *ctx,
-		       uint64_t va, uint32_t ref, uint32_t mask);
 bool si_common_context_init(struct r600_common_context *rctx,
 			    struct si_screen *sscreen,
 			    unsigned context_flags);

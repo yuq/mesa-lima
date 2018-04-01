@@ -53,6 +53,127 @@ struct si_multi_fence {
 	struct si_fine_fence fine;
 };
 
+/**
+ * Write an EOP event.
+ *
+ * \param event		EVENT_TYPE_*
+ * \param event_flags	Optional cache flush flags (TC)
+ * \param data_sel	1 = fence, 3 = timestamp
+ * \param buf		Buffer
+ * \param va		GPU address
+ * \param old_value	Previous fence value (for a bug workaround)
+ * \param new_value	Fence value to write for this event.
+ */
+void si_gfx_write_event_eop(struct r600_common_context *ctx,
+			    unsigned event, unsigned event_flags,
+			    unsigned data_sel,
+			    struct r600_resource *buf, uint64_t va,
+			    uint32_t new_fence, unsigned query_type)
+{
+	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	unsigned op = EVENT_TYPE(event) |
+		      EVENT_INDEX(5) |
+		      event_flags;
+	unsigned sel = EOP_DATA_SEL(data_sel);
+
+	/* Wait for write confirmation before writing data, but don't send
+	 * an interrupt. */
+	if (data_sel != EOP_DATA_SEL_DISCARD)
+		sel |= EOP_INT_SEL(EOP_INT_SEL_SEND_DATA_AFTER_WR_CONFIRM);
+
+	if (ctx->chip_class >= GFX9) {
+		/* A ZPASS_DONE or PIXEL_STAT_DUMP_EVENT (of the DB occlusion
+		 * counters) must immediately precede every timestamp event to
+		 * prevent a GPU hang on GFX9.
+		 *
+		 * Occlusion queries don't need to do it here, because they
+		 * always do ZPASS_DONE before the timestamp.
+		 */
+		if (ctx->chip_class == GFX9 &&
+		    query_type != PIPE_QUERY_OCCLUSION_COUNTER &&
+		    query_type != PIPE_QUERY_OCCLUSION_PREDICATE &&
+		    query_type != PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE) {
+			struct r600_resource *scratch = ctx->eop_bug_scratch;
+
+			assert(16 * ctx->screen->info.num_render_backends <=
+			       scratch->b.b.width0);
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
+			radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_ZPASS_DONE) | EVENT_INDEX(1));
+			radeon_emit(cs, scratch->gpu_address);
+			radeon_emit(cs, scratch->gpu_address >> 32);
+
+			radeon_add_to_buffer_list(ctx, &ctx->gfx, scratch,
+						  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
+		}
+
+		radeon_emit(cs, PKT3(PKT3_RELEASE_MEM, 6, 0));
+		radeon_emit(cs, op);
+		radeon_emit(cs, sel);
+		radeon_emit(cs, va);		/* address lo */
+		radeon_emit(cs, va >> 32);	/* address hi */
+		radeon_emit(cs, new_fence);	/* immediate data lo */
+		radeon_emit(cs, 0); /* immediate data hi */
+		radeon_emit(cs, 0); /* unused */
+	} else {
+		if (ctx->chip_class == CIK ||
+		    ctx->chip_class == VI) {
+			struct r600_resource *scratch = ctx->eop_bug_scratch;
+			uint64_t va = scratch->gpu_address;
+
+			/* Two EOP events are required to make all engines go idle
+			 * (and optional cache flushes executed) before the timestamp
+			 * is written.
+			 */
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
+			radeon_emit(cs, op);
+			radeon_emit(cs, va);
+			radeon_emit(cs, ((va >> 32) & 0xffff) | sel);
+			radeon_emit(cs, 0); /* immediate data */
+			radeon_emit(cs, 0); /* unused */
+
+			radeon_add_to_buffer_list(ctx, &ctx->gfx, scratch,
+						  RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
+		}
+
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
+		radeon_emit(cs, op);
+		radeon_emit(cs, va);
+		radeon_emit(cs, ((va >> 32) & 0xffff) | sel);
+		radeon_emit(cs, new_fence); /* immediate data */
+		radeon_emit(cs, 0); /* unused */
+	}
+
+	if (buf) {
+		radeon_add_to_buffer_list(ctx, &ctx->gfx, buf, RADEON_USAGE_WRITE,
+					  RADEON_PRIO_QUERY);
+	}
+}
+
+unsigned si_gfx_write_fence_dwords(struct si_screen *screen)
+{
+	unsigned dwords = 6;
+
+	if (screen->info.chip_class == CIK ||
+	    screen->info.chip_class == VI)
+		dwords *= 2;
+
+	return dwords;
+}
+
+void si_gfx_wait_fence(struct r600_common_context *ctx,
+		       uint64_t va, uint32_t ref, uint32_t mask)
+{
+	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+
+	radeon_emit(cs, PKT3(PKT3_WAIT_REG_MEM, 5, 0));
+	radeon_emit(cs, WAIT_REG_MEM_EQUAL | WAIT_REG_MEM_MEM_SPACE(1));
+	radeon_emit(cs, va);
+	radeon_emit(cs, va >> 32);
+	radeon_emit(cs, ref); /* reference value */
+	radeon_emit(cs, mask); /* mask */
+	radeon_emit(cs, 4); /* poll interval */
+}
+
 static void si_add_fence_dependency(struct r600_common_context *rctx,
 				    struct pipe_fence_handle *fence)
 {
