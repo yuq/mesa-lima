@@ -505,11 +505,6 @@ struct r600_common_context {
 	 * the invalidation. */
 	void (*rebind_buffer)(struct pipe_context *ctx, struct pipe_resource *buf,
 			      uint64_t old_gpu_address);
-
-	/* Enable or disable occlusion queries. */
-	void (*set_occlusion_query_state)(struct pipe_context *ctx,
-					  bool old_enable,
-					  bool old_perfect_enable);
 };
 
 /* r600_buffer_common.c */

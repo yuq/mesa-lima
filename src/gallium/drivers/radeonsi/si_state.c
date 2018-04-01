@@ -1347,9 +1347,8 @@ static void si_set_active_query_state(struct pipe_context *ctx, boolean enable)
 	}
 }
 
-static void si_set_occlusion_query_state(struct pipe_context *ctx,
-					 bool old_enable,
-					 bool old_perfect_enable)
+void si_set_occlusion_query_state(struct pipe_context *ctx,
+				  bool old_perfect_enable)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 
@@ -4588,7 +4587,6 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->b.b.set_tess_state = si_set_tess_state;
 
 	sctx->b.b.set_active_query_state = si_set_active_query_state;
-	sctx->b.set_occlusion_query_state = si_set_occlusion_query_state;
 
 	sctx->b.b.draw_vbo = si_draw_vbo;
 

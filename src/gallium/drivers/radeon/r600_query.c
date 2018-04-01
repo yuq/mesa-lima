@@ -713,8 +713,7 @@ static void r600_update_occlusion_query_state(struct r600_common_context *rctx,
 		perfect_enable = rctx->num_perfect_occlusion_queries != 0;
 
 		if (enable != old_enable || perfect_enable != old_perfect_enable) {
-			rctx->set_occlusion_query_state(&rctx->b, old_enable,
-							old_perfect_enable);
+			si_set_occlusion_query_state(&rctx->b, old_perfect_enable);
 		}
 	}
 }

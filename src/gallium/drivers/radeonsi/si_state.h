@@ -404,6 +404,8 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 void si_update_fb_dirtiness_after_rendering(struct si_context *sctx);
 void si_update_ps_iter_samples(struct si_context *sctx);
 void si_save_qbo_state(struct pipe_context *ctx, struct r600_qbo_state *st);
+void si_set_occlusion_query_state(struct pipe_context *ctx,
+				  bool old_perfect_enable);
 
 /* si_state_binning.c */
 void si_emit_dpbb_state(struct si_context *sctx, struct r600_atom *state);
