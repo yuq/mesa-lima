@@ -184,8 +184,7 @@ struct r600_query_hw {
 	/* Size of the result in memory for both begin_query and end_query,
 	 * this can be one or two numbers, or it could even be a size of a structure. */
 	unsigned result_size;
-	/* The number of dwords for begin_query or end_query. */
-	unsigned num_cs_dw_begin;
+	/* The number of dwords for end_query. */
 	unsigned num_cs_dw_end;
 	/* Linked list of queries */
 	struct list_head list;
@@ -260,18 +259,12 @@ struct r600_perfcounters {
 	unsigned num_blocks;
 	struct r600_perfcounter_block *blocks;
 
-	unsigned num_start_cs_dwords;
 	unsigned num_stop_cs_dwords;
 	unsigned num_instance_cs_dwords;
-	unsigned num_shaders_cs_dwords;
 
 	unsigned num_shader_types;
 	const char * const *shader_type_suffixes;
 	const unsigned *shader_type_bits;
-
-	void (*get_size)(struct r600_perfcounter_block *,
-			 unsigned count, unsigned *selectors,
-			 unsigned *num_select_dw, unsigned *num_read_dw);
 
 	void (*emit_instance)(struct r600_common_context *,
 			      int se, int instance);

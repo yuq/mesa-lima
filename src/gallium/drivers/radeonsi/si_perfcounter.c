@@ -423,35 +423,6 @@ static struct si_pc_block groups_gfx9[] = {
 	{ &cik_CPC, 35 },
 };
 
-static void si_pc_get_size(struct r600_perfcounter_block *group,
-			unsigned count, unsigned *selectors,
-			unsigned *num_select_dw, unsigned *num_read_dw)
-{
-	struct si_pc_block *sigroup = (struct si_pc_block *)group->data;
-	struct si_pc_block_base *regs = sigroup->b;
-	unsigned layout_multi = regs->layout & SI_PC_MULTI_MASK;
-
-	if (regs->layout & SI_PC_FAKE) {
-		*num_select_dw = 0;
-	} else if (layout_multi == SI_PC_MULTI_BLOCK) {
-		if (count < regs->num_multi)
-			*num_select_dw = 2 * (count + 2) + regs->num_prelude;
-		else
-			*num_select_dw = 2 + count + regs->num_multi + regs->num_prelude;
-	} else if (layout_multi == SI_PC_MULTI_TAIL) {
-		*num_select_dw = 4 + count + MIN2(count, regs->num_multi) + regs->num_prelude;
-	} else if (layout_multi == SI_PC_MULTI_CUSTOM) {
-		assert(regs->num_prelude == 0);
-		*num_select_dw = 3 * (count + MIN2(count, regs->num_multi));
-	} else {
-		assert(layout_multi == SI_PC_MULTI_ALTERNATE);
-
-		*num_select_dw = 2 + count + MIN2(count, regs->num_multi) + regs->num_prelude;
-	}
-
-	*num_read_dw = 6 * count;
-}
-
 static void si_pc_emit_instance(struct r600_common_context *ctx,
 				int se, int instance)
 {
@@ -712,16 +683,13 @@ void si_init_perfcounters(struct si_screen *screen)
 	if (!pc)
 		return;
 
-	pc->num_start_cs_dwords = 14;
 	pc->num_stop_cs_dwords = 14 + si_gfx_write_fence_dwords(screen);
 	pc->num_instance_cs_dwords = 3;
-	pc->num_shaders_cs_dwords = 4;
 
 	pc->num_shader_types = ARRAY_SIZE(si_pc_shader_type_bits);
 	pc->shader_type_suffixes = si_pc_shader_type_suffixes;
 	pc->shader_type_bits = si_pc_shader_type_bits;
 
-	pc->get_size = si_pc_get_size;
 	pc->emit_instance = si_pc_emit_instance;
 	pc->emit_shaders = si_pc_emit_shaders;
 	pc->emit_select = si_pc_emit_select;

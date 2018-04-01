@@ -348,10 +348,7 @@ struct pipe_query *si_create_batch_query(struct pipe_context *ctx,
 	}
 
 	/* Compute result bases and CS size per group */
-	query->b.num_cs_dw_begin = pc->num_start_cs_dwords;
 	query->b.num_cs_dw_end = pc->num_stop_cs_dwords;
-
-	query->b.num_cs_dw_begin += pc->num_instance_cs_dwords; /* conservative */
 	query->b.num_cs_dw_end += pc->num_instance_cs_dwords;
 
 	i = 0;
@@ -369,18 +366,14 @@ struct pipe_query *si_create_batch_query(struct pipe_context *ctx,
 		query->b.result_size += sizeof(uint64_t) * instances * group->num_counters;
 		i += instances * group->num_counters;
 
-		pc->get_size(block, group->num_counters, group->selectors,
-			     &select_dw, &read_dw);
-		query->b.num_cs_dw_begin += select_dw;
+		read_dw = 6 * group->num_counters;
 		query->b.num_cs_dw_end += instances * read_dw;
-		query->b.num_cs_dw_begin += pc->num_instance_cs_dwords; /* conservative */
 		query->b.num_cs_dw_end += instances * pc->num_instance_cs_dwords;
 	}
 
 	if (query->shaders) {
 		if (query->shaders == R600_PC_SHADERS_WINDOWING)
 			query->shaders = 0xffffffff;
-		query->b.num_cs_dw_begin += pc->num_shaders_cs_dwords;
 	}
 
 	/* Map user-supplied query array to result indices */

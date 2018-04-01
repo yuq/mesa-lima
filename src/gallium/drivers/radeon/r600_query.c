@@ -645,12 +645,10 @@ static struct pipe_query *r600_query_hw_create(struct si_screen *sscreen,
 	case PIPE_QUERY_OCCLUSION_PREDICATE_CONSERVATIVE:
 		query->result_size = 16 * sscreen->info.num_render_backends;
 		query->result_size += 16; /* for the fence + alignment */
-		query->num_cs_dw_begin = 6;
 		query->num_cs_dw_end = 6 + si_gfx_write_fence_dwords(sscreen);
 		break;
 	case PIPE_QUERY_TIME_ELAPSED:
 		query->result_size = 24;
-		query->num_cs_dw_begin = 8;
 		query->num_cs_dw_end = 8 + si_gfx_write_fence_dwords(sscreen);
 		break;
 	case PIPE_QUERY_TIMESTAMP:
@@ -664,21 +662,18 @@ static struct pipe_query *r600_query_hw_create(struct si_screen *sscreen,
 	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
 		/* NumPrimitivesWritten, PrimitiveStorageNeeded. */
 		query->result_size = 32;
-		query->num_cs_dw_begin = 6;
 		query->num_cs_dw_end = 6;
 		query->stream = index;
 		break;
 	case PIPE_QUERY_SO_OVERFLOW_ANY_PREDICATE:
 		/* NumPrimitivesWritten, PrimitiveStorageNeeded. */
 		query->result_size = 32 * R600_MAX_STREAMS;
-		query->num_cs_dw_begin = 6 * R600_MAX_STREAMS;
 		query->num_cs_dw_end = 6 * R600_MAX_STREAMS;
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
 		/* 11 values on GCN. */
 		query->result_size = 11 * 16;
 		query->result_size += 8; /* for the fence + alignment */
-		query->num_cs_dw_begin = 6;
 		query->num_cs_dw_end = 6 + si_gfx_write_fence_dwords(sscreen);
 		break;
 	default:
@@ -1843,33 +1838,9 @@ void si_suspend_queries(struct r600_common_context *ctx)
 	assert(ctx->num_cs_dw_queries_suspend == 0);
 }
 
-static unsigned r600_queries_num_cs_dw_for_resuming(struct r600_common_context *ctx,
-						    struct list_head *query_list)
-{
-	struct r600_query_hw *query;
-	unsigned num_dw = 0;
-
-	LIST_FOR_EACH_ENTRY(query, query_list, list) {
-		/* begin + end */
-		num_dw += query->num_cs_dw_begin + query->num_cs_dw_end;
-
-		/* Workaround for the fact that
-		 * num_cs_dw_nontimer_queries_suspend is incremented for every
-		 * resumed query, which raises the bar in need_cs_space for
-		 * queries about to be resumed.
-		 */
-		num_dw += query->num_cs_dw_end;
-	}
-	/* guess for ZPASS enable or PERFECT_ZPASS_COUNT enable updates */
-	num_dw += 13;
-
-	return num_dw;
-}
-
 void si_resume_queries(struct r600_common_context *ctx)
 {
 	struct r600_query_hw *query;
-	unsigned num_cs_dw = r600_queries_num_cs_dw_for_resuming(ctx, &ctx->active_queries);
 
 	assert(ctx->num_cs_dw_queries_suspend == 0);
 
