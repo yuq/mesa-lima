@@ -53,7 +53,7 @@ void si_need_cs_space(struct si_context *ctx)
 						   ctx->b.vram, ctx->b.gtt))) {
 		ctx->b.gtt = 0;
 		ctx->b.vram = 0;
-		ctx->b.gfx.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
+		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 		return;
 	}
 	ctx->b.gtt = 0;
@@ -63,11 +63,11 @@ void si_need_cs_space(struct si_context *ctx)
 	 * and just flush if there is not enough space left.
 	 */
 	if (!ctx->b.ws->cs_check_space(cs, 2048))
-		ctx->b.gfx.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
+		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 }
 
-void si_context_gfx_flush(void *context, unsigned flags,
-			  struct pipe_fence_handle **fence)
+void si_flush_gfx_cs(void *context, unsigned flags,
+		     struct pipe_fence_handle **fence)
 {
 	struct si_context *ctx = context;
 	struct radeon_winsys_cs *cs = ctx->b.gfx.cs;
@@ -92,7 +92,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	 */
 	if (radeon_emitted(ctx->b.dma.cs, 0)) {
 		assert(fence == NULL); /* internal flushes only */
-		ctx->b.dma.flush(ctx, flags, NULL);
+		si_flush_dma_cs(ctx, flags, NULL);
 	}
 
 	ctx->gfx_flush_in_progress = true;

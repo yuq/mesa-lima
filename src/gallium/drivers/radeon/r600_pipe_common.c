@@ -186,7 +186,7 @@ void si_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 	     (src &&
 	      ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs, src->buf,
 					       RADEON_USAGE_WRITE))))
-		ctx->gfx.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
+		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 
 	/* Flush if there's not enough space, or if the memory usage per IB
 	 * is too large.
@@ -204,7 +204,7 @@ void si_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 	if (!ctx->ws->cs_check_space(ctx->dma.cs, num_dw) ||
 	    ctx->dma.cs->used_vram + ctx->dma.cs->used_gart > 64 * 1024 * 1024 ||
 	    !radeon_cs_memory_below_limit(ctx->screen, ctx->dma.cs, vram, gtt)) {
-		ctx->dma.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
+		si_flush_dma_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 		assert((num_dw + ctx->dma.cs->current.cdw) <= ctx->dma.cs->current.max_dw);
 	}
 
@@ -234,8 +234,7 @@ void si_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 	ctx->num_dma_calls++;
 }
 
-static void r600_flush_dma_ring(void *ctx, unsigned flags,
-				struct pipe_fence_handle **fence)
+void si_flush_dma_cs(void *ctx, unsigned flags, struct pipe_fence_handle **fence)
 {
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct radeon_winsys_cs *cs = rctx->dma.cs;
@@ -380,12 +379,12 @@ static bool r600_resource_commit(struct pipe_context *pctx,
 	if (radeon_emitted(ctx->gfx.cs, ctx->initial_gfx_cs_size) &&
 	    ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs,
 					     res->buf, RADEON_USAGE_READWRITE)) {
-		ctx->gfx.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
+		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 	}
 	if (radeon_emitted(ctx->dma.cs, 0) &&
 	    ctx->ws->cs_is_buffer_referenced(ctx->dma.cs,
 					     res->buf, RADEON_USAGE_READWRITE)) {
-		ctx->dma.flush(ctx, PIPE_FLUSH_ASYNC, NULL);
+		si_flush_dma_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 	}
 
 	ctx->ws->cs_sync_flush(ctx->dma.cs);
@@ -463,9 +462,9 @@ bool si_common_context_init(struct r600_common_context *rctx,
 
 	if (sscreen->info.num_sdma_rings && !(sscreen->debug_flags & DBG(NO_ASYNC_DMA))) {
 		rctx->dma.cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
-						   r600_flush_dma_ring,
+						   si_flush_dma_cs,
 						   rctx);
-		rctx->dma.flush = r600_flush_dma_ring;
+		rctx->dma.flush = si_flush_dma_cs;
 	}
 
 	return true;

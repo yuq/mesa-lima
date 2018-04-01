@@ -1863,7 +1863,7 @@ static void r600_texture_transfer_unmap(struct pipe_context *ctx,
 	 * The result is that the kernel memory manager is never a bottleneck.
 	 */
 	if (rctx->num_alloc_tex_transfer_bytes > rctx->screen->info.gart_size / 4) {
-		rctx->gfx.flush(rctx, PIPE_FLUSH_ASYNC, NULL);
+		si_flush_gfx_cs(rctx, PIPE_FLUSH_ASYNC, NULL);
 		rctx->num_alloc_tex_transfer_bytes = 0;
 	}
 

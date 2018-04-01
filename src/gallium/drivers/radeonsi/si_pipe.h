@@ -722,8 +722,8 @@ void si_init_screen_get_functions(struct si_screen *sscreen);
 
 /* si_hw_context.c */
 void si_destroy_saved_cs(struct si_saved_cs *scs);
-void si_context_gfx_flush(void *context, unsigned flags,
-			  struct pipe_fence_handle **fence);
+void si_flush_gfx_cs(void *context, unsigned flags,
+		     struct pipe_fence_handle **fence);
 void si_begin_new_cs(struct si_context *ctx);
 void si_need_cs_space(struct si_context *ctx);
 
