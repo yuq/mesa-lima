@@ -29,10 +29,8 @@
 #include "util/u_upload_mgr.h"
 
 #include "amd_kernel_code_t.h"
-#include "radeon/r600_cs.h"
-#include "si_pipe.h"
+#include "si_build_pm4.h"
 #include "si_compute.h"
-#include "sid.h"
 
 #define COMPUTE_DBG(rscreen, fmt, args...) \
 	do { \

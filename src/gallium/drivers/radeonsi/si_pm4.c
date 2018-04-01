@@ -22,7 +22,6 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "radeon/r600_cs.h"
 #include "util/u_memory.h"
 #include "si_pipe.h"
 #include "sid.h"

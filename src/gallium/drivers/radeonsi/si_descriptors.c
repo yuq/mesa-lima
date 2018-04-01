@@ -53,7 +53,6 @@
  * Sampler states are never unbound except when FMASK is bound.
  */
 
-#include "radeon/r600_cs.h"
 #include "si_pipe.h"
 #include "sid.h"
 #include "gfx9d.h"

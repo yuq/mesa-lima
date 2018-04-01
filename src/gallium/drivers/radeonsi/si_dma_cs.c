@@ -23,7 +23,6 @@
  */
 
 #include "si_pipe.h"
-#include "radeon/r600_cs.h"
 
 static void si_dma_emit_wait_idle(struct si_context *sctx)
 {

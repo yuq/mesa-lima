@@ -22,9 +22,7 @@
  * SOFTWARE.
  */
 
-#include "si_pipe.h"
-#include "sid.h"
-#include "radeon/r600_cs.h"
+#include "si_build_pm4.h"
 
 /* For MSAA sample positions. */
 #define FILL_SREG(s0x, s0y, s1x, s1y, s2x, s2y, s3x, s3y)  \

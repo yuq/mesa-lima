@@ -23,7 +23,6 @@
  */
 
 #include "radeonsi/si_pipe.h"
-#include "r600_cs.h"
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
 #include <inttypes.h>

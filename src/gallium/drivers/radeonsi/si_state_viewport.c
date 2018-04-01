@@ -22,9 +22,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "si_pipe.h"
-#include "sid.h"
-#include "radeon/r600_cs.h"
+#include "si_build_pm4.h"
 #include "util/u_viewport.h"
 #include "tgsi/tgsi_scan.h"
 

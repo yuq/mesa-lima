@@ -24,7 +24,6 @@
 
 #include "si_pipe.h"
 #include "sid.h"
-#include "radeon/r600_cs.h"
 
 /* Recommended maximum sizes for optimal performance.
  * Fall back to compute or SDMA if the size is greater.

@@ -22,10 +22,7 @@
  * SOFTWARE.
  */
 
-#include "si_pipe.h"
-#include "si_state.h"
-#include "sid.h"
-#include "radeon/r600_cs.h"
+#include "si_build_pm4.h"
 
 #include "util/u_memory.h"
 

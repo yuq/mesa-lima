@@ -30,8 +30,7 @@
 #include "util/u_queue.h"
 #include "util/u_upload_mgr.h"
 
-#include "si_pipe.h"
-#include "radeon/r600_cs.h"
+#include "si_build_pm4.h"
 
 struct si_fine_fence {
 	struct r600_resource *buf;

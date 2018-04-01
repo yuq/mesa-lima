@@ -22,12 +22,10 @@
  * SOFTWARE.
  */
 
-#include "radeon/r600_cs.h"
+#include "si_build_pm4.h"
 #include "radeon/r600_query.h"
 #include "util/u_memory.h"
 
-#include "si_pipe.h"
-#include "sid.h"
 
 enum si_pc_reg_layout {
 	/* All secondary selector dwords follow as one block after the primary

@@ -24,7 +24,6 @@
  */
 
 #include "radeonsi/si_pipe.h"
-#include "r600_cs.h"
 #include "r600_query.h"
 #include "util/u_format.h"
 #include "util/u_log.h"

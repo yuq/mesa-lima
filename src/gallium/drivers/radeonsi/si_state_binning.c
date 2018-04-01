@@ -24,10 +24,8 @@
 
 /* This file handles register programming of primitive binning. */
 
-#include "si_pipe.h"
-#include "sid.h"
+#include "si_build_pm4.h"
 #include "gfx9d.h"
-#include "radeon/r600_cs.h"
 
 struct uvec2 {
 	unsigned x, y;
