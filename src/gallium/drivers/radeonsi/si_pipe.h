@@ -714,7 +714,7 @@ void si_log_hw_flush(struct si_context *sctx);
 void si_log_draw_state(struct si_context *sctx, struct u_log_context *log);
 void si_log_compute_state(struct si_context *sctx, struct u_log_context *log);
 void si_init_debug_functions(struct si_context *sctx);
-void si_check_vm_faults(struct r600_common_context *ctx,
+void si_check_vm_faults(struct si_context *sctx,
 			struct radeon_saved_cs *saved, enum ring_type ring);
 bool si_replace_shader(unsigned num, struct ac_shader_binary *binary);
 
@@ -722,9 +722,10 @@ bool si_replace_shader(unsigned num, struct ac_shader_binary *binary);
 void si_init_dma_functions(struct si_context *sctx);
 
 /* si_dma_cs.c */
-void si_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
+void si_need_dma_space(struct si_context *ctx, unsigned num_dw,
 		       struct r600_resource *dst, struct r600_resource *src);
-void si_flush_dma_cs(void *ctx, unsigned flags, struct pipe_fence_handle **fence);
+void si_flush_dma_cs(struct si_context *ctx, unsigned flags,
+		     struct pipe_fence_handle **fence);
 void si_screen_clear_buffer(struct si_screen *sscreen, struct pipe_resource *dst,
 			    uint64_t offset, uint64_t size, unsigned value);
 

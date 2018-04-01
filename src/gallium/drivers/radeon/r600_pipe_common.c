@@ -79,7 +79,7 @@ static bool r600_resource_commit(struct pipe_context *pctx,
 				 unsigned level, struct pipe_box *box,
 				 bool commit)
 {
-	struct r600_common_context *ctx = (struct r600_common_context *)pctx;
+	struct si_context *ctx = (struct si_context *)pctx;
 	struct r600_resource *res = r600_resource(resource);
 
 	/*
@@ -89,23 +89,23 @@ static bool r600_resource_commit(struct pipe_context *pctx,
 	 * (b) wait for threaded submit to finish, including those that were
 	 *     triggered by some other, earlier operation.
 	 */
-	if (radeon_emitted(ctx->gfx_cs, ctx->initial_gfx_cs_size) &&
-	    ctx->ws->cs_is_buffer_referenced(ctx->gfx_cs,
-					     res->buf, RADEON_USAGE_READWRITE)) {
+	if (radeon_emitted(ctx->b.gfx_cs, ctx->b.initial_gfx_cs_size) &&
+	    ctx->b.ws->cs_is_buffer_referenced(ctx->b.gfx_cs,
+					       res->buf, RADEON_USAGE_READWRITE)) {
 		si_flush_gfx_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 	}
-	if (radeon_emitted(ctx->dma_cs, 0) &&
-	    ctx->ws->cs_is_buffer_referenced(ctx->dma_cs,
-					     res->buf, RADEON_USAGE_READWRITE)) {
+	if (radeon_emitted(ctx->b.dma_cs, 0) &&
+	    ctx->b.ws->cs_is_buffer_referenced(ctx->b.dma_cs,
+					       res->buf, RADEON_USAGE_READWRITE)) {
 		si_flush_dma_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
 	}
 
-	ctx->ws->cs_sync_flush(ctx->dma_cs);
-	ctx->ws->cs_sync_flush(ctx->gfx_cs);
+	ctx->b.ws->cs_sync_flush(ctx->b.dma_cs);
+	ctx->b.ws->cs_sync_flush(ctx->b.gfx_cs);
 
 	assert(resource->target == PIPE_BUFFER);
 
-	return ctx->ws->buffer_commit(res->buf, box->x, box->width, commit);
+	return ctx->b.ws->buffer_commit(res->buf, box->x, box->width, commit);
 }
 
 bool si_common_context_init(struct r600_common_context *rctx,
@@ -175,7 +175,7 @@ bool si_common_context_init(struct r600_common_context *rctx,
 
 	if (sscreen->info.num_sdma_rings && !(sscreen->debug_flags & DBG(NO_ASYNC_DMA))) {
 		rctx->dma_cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
-						   si_flush_dma_cs,
+						   (void*)si_flush_dma_cs,
 						   rctx);
 	}
 

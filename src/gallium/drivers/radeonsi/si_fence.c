@@ -46,7 +46,7 @@ struct si_multi_fence {
 
 	/* If the context wasn't flushed at fence creation, this is non-NULL. */
 	struct {
-		struct r600_common_context *ctx;
+		struct si_context *ctx;
 		unsigned ib_index;
 	} gfx_unflushed;
 
@@ -174,14 +174,14 @@ void si_gfx_wait_fence(struct r600_common_context *ctx,
 	radeon_emit(cs, 4); /* poll interval */
 }
 
-static void si_add_fence_dependency(struct r600_common_context *rctx,
+static void si_add_fence_dependency(struct si_context *sctx,
 				    struct pipe_fence_handle *fence)
 {
-	struct radeon_winsys *ws = rctx->ws;
+	struct radeon_winsys *ws = sctx->b.ws;
 
-	if (rctx->dma_cs)
-		ws->cs_add_fence_dependency(rctx->dma_cs, fence);
-	ws->cs_add_fence_dependency(rctx->gfx_cs, fence);
+	if (sctx->b.dma_cs)
+		ws->cs_add_fence_dependency(sctx->b.dma_cs, fence);
+	ws->cs_add_fence_dependency(sctx->b.gfx_cs, fence);
 }
 
 static void si_add_syncobj_signal(struct r600_common_context *rctx,
@@ -351,7 +351,7 @@ static boolean si_fence_finish(struct pipe_screen *screen,
 		struct si_context *sctx;
 
 		sctx = (struct si_context *)threaded_context_unwrap_unsync(ctx);
-		if (rfence->gfx_unflushed.ctx == &sctx->b &&
+		if (rfence->gfx_unflushed.ctx == sctx &&
 		    rfence->gfx_unflushed.ib_index == sctx->b.num_gfx_cs_flushes) {
 			/* Section 4.1.2 (Signaling) of the OpenGL 4.6 (Core profile)
 			 * spec says:
@@ -496,8 +496,8 @@ static void si_flush_from_st(struct pipe_context *ctx,
 			     unsigned flags)
 {
 	struct pipe_screen *screen = ctx->screen;
-	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-	struct radeon_winsys *ws = rctx->ws;
+	struct si_context *sctx = (struct si_context *)ctx;
+	struct radeon_winsys *ws = sctx->b.ws;
 	struct pipe_fence_handle *gfx_fence = NULL;
 	struct pipe_fence_handle *sdma_fence = NULL;
 	bool deferred_fence = false;
@@ -511,18 +511,18 @@ static void si_flush_from_st(struct pipe_context *ctx,
 		assert(flags & PIPE_FLUSH_DEFERRED);
 		assert(fence);
 
-		si_fine_fence_set((struct si_context *)rctx, &fine, flags);
+		si_fine_fence_set(sctx, &fine, flags);
 	}
 
 	/* DMA IBs are preambles to gfx IBs, therefore must be flushed first. */
-	if (rctx->dma_cs)
-		si_flush_dma_cs(rctx, rflags, fence ? &sdma_fence : NULL);
+	if (sctx->b.dma_cs)
+		si_flush_dma_cs(sctx, rflags, fence ? &sdma_fence : NULL);
 
-	if (!radeon_emitted(rctx->gfx_cs, rctx->initial_gfx_cs_size)) {
+	if (!radeon_emitted(sctx->b.gfx_cs, sctx->b.initial_gfx_cs_size)) {
 		if (fence)
-			ws->fence_reference(&gfx_fence, rctx->last_gfx_fence);
+			ws->fence_reference(&gfx_fence, sctx->b.last_gfx_fence);
 		if (!(flags & PIPE_FLUSH_DEFERRED))
-			ws->cs_sync_flush(rctx->gfx_cs);
+			ws->cs_sync_flush(sctx->b.gfx_cs);
 	} else {
 		/* Instead of flushing, create a deferred fence. Constraints:
 		 * - The state tracker must allow a deferred flush.
@@ -533,10 +533,10 @@ static void si_flush_from_st(struct pipe_context *ctx,
 		if (flags & PIPE_FLUSH_DEFERRED &&
 		    !(flags & PIPE_FLUSH_FENCE_FD) &&
 		    fence) {
-			gfx_fence = rctx->ws->cs_get_next_fence(rctx->gfx_cs);
+			gfx_fence = sctx->b.ws->cs_get_next_fence(sctx->b.gfx_cs);
 			deferred_fence = true;
 		} else {
-			si_flush_gfx_cs(rctx, rflags, fence ? &gfx_fence : NULL);
+			si_flush_gfx_cs(sctx, rflags, fence ? &gfx_fence : NULL);
 		}
 	}
 
@@ -564,8 +564,8 @@ static void si_flush_from_st(struct pipe_context *ctx,
 		multi_fence->sdma = sdma_fence;
 
 		if (deferred_fence) {
-			multi_fence->gfx_unflushed.ctx = rctx;
-			multi_fence->gfx_unflushed.ib_index = rctx->num_gfx_cs_flushes;
+			multi_fence->gfx_unflushed.ctx = sctx;
+			multi_fence->gfx_unflushed.ib_index = sctx->b.num_gfx_cs_flushes;
 		}
 
 		multi_fence->fine = fine;
@@ -579,9 +579,9 @@ static void si_flush_from_st(struct pipe_context *ctx,
 	assert(!fine.buf);
 finish:
 	if (!(flags & PIPE_FLUSH_DEFERRED)) {
-		if (rctx->dma_cs)
-			ws->cs_sync_flush(rctx->dma_cs);
-		ws->cs_sync_flush(rctx->gfx_cs);
+		if (sctx->b.dma_cs)
+			ws->cs_sync_flush(sctx->b.dma_cs);
+		ws->cs_sync_flush(sctx->b.gfx_cs);
 	}
 }
 
@@ -615,14 +615,14 @@ static void si_fence_server_signal(struct pipe_context *ctx,
 static void si_fence_server_sync(struct pipe_context *ctx,
 				 struct pipe_fence_handle *fence)
 {
-	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_multi_fence *rfence = (struct si_multi_fence *)fence;
 
 	util_queue_fence_wait(&rfence->ready);
 
 	/* Unflushed fences from the same context are no-ops. */
 	if (rfence->gfx_unflushed.ctx &&
-	    rfence->gfx_unflushed.ctx == rctx)
+	    rfence->gfx_unflushed.ctx == sctx)
 		return;
 
 	/* All unflushed commands will not start execution before
@@ -633,9 +633,9 @@ static void si_fence_server_sync(struct pipe_context *ctx,
 	si_flush_from_st(ctx, NULL, PIPE_FLUSH_ASYNC);
 
 	if (rfence->sdma)
-		si_add_fence_dependency(rctx, rfence->sdma);
+		si_add_fence_dependency(sctx, rfence->sdma);
 	if (rfence->gfx)
-		si_add_fence_dependency(rctx, rfence->gfx);
+		si_add_fence_dependency(sctx, rfence->gfx);
 }
 
 void si_init_fence_functions(struct si_context *ctx)

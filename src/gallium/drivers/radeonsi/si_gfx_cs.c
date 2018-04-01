@@ -139,7 +139,7 @@ void si_flush_gfx_cs(void *context, unsigned flags,
 		 */
 		ctx->b.ws->fence_wait(ctx->b.ws, ctx->b.last_gfx_fence, 800*1000*1000);
 
-		si_check_vm_faults(&ctx->b, &ctx->current_saved_cs->gfx, RING_GFX);
+		si_check_vm_faults(ctx, &ctx->current_saved_cs->gfx, RING_GFX);
 	}
 
 	if (ctx->current_saved_cs)

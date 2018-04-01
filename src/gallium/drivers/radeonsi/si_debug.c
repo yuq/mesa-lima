@@ -1108,10 +1108,9 @@ static void si_dump_dma(struct si_context *sctx,
 	fprintf(f, "SDMA Dump Done.\n");
 }
 
-void si_check_vm_faults(struct r600_common_context *ctx,
+void si_check_vm_faults(struct si_context *sctx,
 			struct radeon_saved_cs *saved, enum ring_type ring)
 {
-	struct si_context *sctx = (struct si_context *)ctx;
 	struct pipe_screen *screen = sctx->b.b.screen;
 	FILE *f;
 	uint64_t addr;

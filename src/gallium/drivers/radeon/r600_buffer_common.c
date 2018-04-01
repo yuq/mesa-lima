@@ -46,6 +46,7 @@ void *si_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 				    struct r600_resource *resource,
 				    unsigned usage)
 {
+	struct si_context *sctx = (struct si_context*)ctx;
 	enum radeon_bo_usage rusage = RADEON_USAGE_READWRITE;
 	bool busy = false;
 
@@ -75,10 +76,10 @@ void *si_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 	    ctx->ws->cs_is_buffer_referenced(ctx->dma_cs,
 					     resource->buf, rusage)) {
 		if (usage & PIPE_TRANSFER_DONTBLOCK) {
-			si_flush_dma_cs(ctx, PIPE_FLUSH_ASYNC, NULL);
+			si_flush_dma_cs(sctx, PIPE_FLUSH_ASYNC, NULL);
 			return NULL;
 		} else {
-			si_flush_dma_cs(ctx, 0, NULL);
+			si_flush_dma_cs(sctx, 0, NULL);
 			busy = true;
 		}
 	}
