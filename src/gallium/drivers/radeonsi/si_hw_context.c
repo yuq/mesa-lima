@@ -152,11 +152,11 @@ void si_flush_gfx_cs(void *context, unsigned flags,
 	if (ctx->current_saved_cs)
 		si_saved_cs_reference(&ctx->current_saved_cs, NULL);
 
-	si_begin_new_cs(ctx);
+	si_begin_new_gfx_cs(ctx);
 	ctx->gfx_flush_in_progress = false;
 }
 
-static void si_begin_cs_debug(struct si_context *ctx)
+static void si_begin_gfx_cs_debug(struct si_context *ctx)
 {
 	static const uint32_t zeros[1];
 	assert(!ctx->current_saved_cs);
@@ -186,10 +186,10 @@ static void si_begin_cs_debug(struct si_context *ctx)
 			      RADEON_USAGE_READWRITE, RADEON_PRIO_TRACE);
 }
 
-void si_begin_new_cs(struct si_context *ctx)
+void si_begin_new_gfx_cs(struct si_context *ctx)
 {
 	if (ctx->is_debug)
-		si_begin_cs_debug(ctx);
+		si_begin_gfx_cs_debug(ctx);
 
 	/* Flush read caches at the beginning of CS not flushed by the kernel. */
 	if (ctx->b.chip_class >= CIK)

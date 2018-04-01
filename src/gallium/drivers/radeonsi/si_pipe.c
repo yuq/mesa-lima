@@ -332,7 +332,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->sample_mask.sample_mask = 0xffff;
 
 	/* these must be last */
-	si_begin_new_cs(sctx);
+	si_begin_new_gfx_cs(sctx);
 
 	if (sctx->b.chip_class >= GFX9) {
 		sctx->wait_mem_scratch = (struct r600_resource*)
