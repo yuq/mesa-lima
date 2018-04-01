@@ -1109,7 +1109,6 @@ void si_check_vm_faults(struct r600_common_context *ctx,
 void si_init_debug_functions(struct si_context *sctx)
 {
 	sctx->b.b.dump_debug_state = si_dump_debug_state;
-	sctx->b.check_vm_faults = si_check_vm_faults;
 
 	/* Set the initial dmesg timestamp for this context, so that
 	 * only new messages will be checked for VM faults.

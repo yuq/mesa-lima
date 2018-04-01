@@ -239,9 +239,7 @@ void si_flush_dma_cs(void *ctx, unsigned flags, struct pipe_fence_handle **fence
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct radeon_winsys_cs *cs = rctx->dma.cs;
 	struct radeon_saved_cs saved;
-	bool check_vm =
-		(rctx->screen->debug_flags & DBG(CHECK_VM)) &&
-		rctx->check_vm_faults;
+	bool check_vm = (rctx->screen->debug_flags & DBG(CHECK_VM));
 
 	if (!radeon_emitted(cs, 0)) {
 		if (fence)
@@ -262,7 +260,7 @@ void si_flush_dma_cs(void *ctx, unsigned flags, struct pipe_fence_handle **fence
 		 */
 		rctx->ws->fence_wait(rctx->ws, rctx->last_sdma_fence, 800*1000*1000);
 
-		rctx->check_vm_faults(rctx, &saved, RING_DMA);
+		si_check_vm_faults(rctx, &saved, RING_DMA);
 		si_clear_saved_cs(&saved);
 	}
 }
