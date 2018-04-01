@@ -2760,7 +2760,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		}
 
 		if (vi_dcc_enabled(rtex, surf->base.u.tex.level))
-			if (!si_texture_disable_dcc(&sctx->b, rtex))
+			if (!si_texture_disable_dcc(sctx, rtex))
 				si_decompress_dcc(ctx, rtex);
 
 		surf->dcc_incompatible = false;

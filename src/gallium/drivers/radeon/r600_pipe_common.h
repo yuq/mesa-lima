@@ -527,7 +527,7 @@ void si_suspend_queries(struct r600_common_context *ctx);
 void si_resume_queries(struct r600_common_context *ctx);
 
 /* r600_texture.c */
-bool si_prepare_for_dma_blit(struct r600_common_context *rctx,
+bool si_prepare_for_dma_blit(struct si_context *sctx,
 			     struct r600_texture *rdst,
 			     unsigned dst_level, unsigned dstx,
 			     unsigned dsty, unsigned dstz,
@@ -541,7 +541,7 @@ void si_texture_get_fmask_info(struct si_screen *sscreen,
 void si_texture_get_cmask_info(struct si_screen *sscreen,
 			       struct r600_texture *rtex,
 			       struct r600_cmask_info *out);
-void si_eliminate_fast_color_clear(struct r600_common_context *rctx,
+void si_eliminate_fast_color_clear(struct si_context *sctx,
 				   struct r600_texture *rtex);
 void si_texture_discard_cmask(struct si_screen *sscreen,
 			      struct r600_texture *rtex);
@@ -557,7 +557,7 @@ bool vi_dcc_formats_compatible(enum pipe_format format1,
 bool vi_dcc_formats_are_incompatible(struct pipe_resource *tex,
 				     unsigned level,
 				     enum pipe_format view_format);
-void vi_disable_dcc_if_incompatible_format(struct r600_common_context *rctx,
+void vi_disable_dcc_if_incompatible_format(struct si_context *sctx,
 					   struct pipe_resource *tex,
 					   unsigned level,
 					   enum pipe_format view_format);
@@ -567,7 +567,7 @@ struct pipe_surface *si_create_surface_custom(struct pipe_context *pipe,
 					      unsigned width0, unsigned height0,
 					      unsigned width, unsigned height);
 unsigned si_translate_colorswap(enum pipe_format format, bool do_endian_swap);
-void vi_separate_dcc_try_enable(struct r600_common_context *rctx,
+void vi_separate_dcc_try_enable(struct si_context *sctx,
 				struct r600_texture *tex);
 void vi_separate_dcc_start_query(struct pipe_context *ctx,
 				 struct r600_texture *tex);
@@ -575,10 +575,10 @@ void vi_separate_dcc_stop_query(struct pipe_context *ctx,
 				struct r600_texture *tex);
 void vi_separate_dcc_process_and_reset_stats(struct pipe_context *ctx,
 					     struct r600_texture *tex);
-bool si_texture_disable_dcc(struct r600_common_context *rctx,
+bool si_texture_disable_dcc(struct si_context *sctx,
 			    struct r600_texture *rtex);
 void si_init_screen_texture_functions(struct si_screen *sscreen);
-void si_init_context_texture_functions(struct r600_common_context *rctx);
+void si_init_context_texture_functions(struct si_context *sctx);
 
 
 /* Inline helpers. */

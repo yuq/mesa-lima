@@ -616,7 +616,7 @@ static void si_check_render_feedback_texture(struct si_context *sctx,
 	}
 
 	if (render_feedback)
-		si_texture_disable_dcc(&sctx->b, tex);
+		si_texture_disable_dcc(sctx, tex);
 }
 
 static void si_check_render_feedback_textures(struct si_context *sctx,
@@ -1033,9 +1033,9 @@ void si_resource_copy_region(struct pipe_context *ctx,
 		}
 	}
 
-	vi_disable_dcc_if_incompatible_format(&sctx->b, dst, dst_level,
+	vi_disable_dcc_if_incompatible_format(sctx, dst, dst_level,
 					      dst_templ.format);
-	vi_disable_dcc_if_incompatible_format(&sctx->b, src, src_level,
+	vi_disable_dcc_if_incompatible_format(sctx, src, src_level,
 					      src_templ.format);
 
 	/* Initialize the surface. */
@@ -1242,10 +1242,10 @@ static void si_blit(struct pipe_context *ctx,
 
 	/* The driver doesn't decompress resources automatically while
 	 * u_blitter is rendering. */
-	vi_disable_dcc_if_incompatible_format(&sctx->b, info->src.resource,
+	vi_disable_dcc_if_incompatible_format(sctx, info->src.resource,
 					      info->src.level,
 					      info->src.format);
-	vi_disable_dcc_if_incompatible_format(&sctx->b, info->dst.resource,
+	vi_disable_dcc_if_incompatible_format(sctx, info->dst.resource,
 					      info->dst.level,
 					      info->dst.format);
 	si_decompress_subresource(ctx, info->src.resource, info->mask,
@@ -1277,7 +1277,7 @@ static boolean si_generate_mipmap(struct pipe_context *ctx,
 
 	/* The driver doesn't decompress resources automatically while
 	 * u_blitter is rendering. */
-	vi_disable_dcc_if_incompatible_format(&sctx->b, tex, base_level,
+	vi_disable_dcc_if_incompatible_format(sctx, tex, base_level,
 					      format);
 	si_decompress_subresource(ctx, tex, PIPE_MASK_RGBAZS,
 				  base_level, first_layer, last_layer);

@@ -407,7 +407,7 @@ static void si_do_fast_color_clear(struct si_context *sctx,
 		 */
 		if (sctx->b.chip_class >= VI &&
 		    !(sctx->screen->debug_flags & DBG(NO_DCC_FB))) {
-			vi_separate_dcc_try_enable(&sctx->b, tex);
+			vi_separate_dcc_try_enable(sctx, tex);
 
 			/* RB+ isn't supported with a CMASK clear only on Stoney,
 			 * so all clears are considered to be hypothetically slow

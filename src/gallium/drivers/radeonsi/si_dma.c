@@ -258,8 +258,8 @@ static void si_dma_copy(struct pipe_context *ctx,
 	goto fallback;
 
 	if (src_box->depth > 1 ||
-	    !si_prepare_for_dma_blit(&sctx->b, rdst, dst_level, dstx, dsty,
-					dstz, rsrc, src_level, src_box))
+	    !si_prepare_for_dma_blit(sctx, rdst, dst_level, dstx, dsty,
+				     dstz, rsrc, src_level, src_box))
 		goto fallback;
 
 	src_x = util_format_get_nblocksx(src->format, src_box->x);

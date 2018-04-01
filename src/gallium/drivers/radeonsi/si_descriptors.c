@@ -441,7 +441,7 @@ static void si_set_sampler_view_desc(struct si_context *sctx,
 
 	if (unlikely(!is_buffer && sview->dcc_incompatible)) {
 		if (vi_dcc_enabled(rtex, view->u.tex.first_level))
-			if (!si_texture_disable_dcc(&sctx->b, rtex))
+			if (!si_texture_disable_dcc(sctx, rtex))
 				si_decompress_dcc(&sctx->b.b, rtex);
 
 		sview->dcc_incompatible = false;
@@ -729,7 +729,7 @@ static void si_set_shader_image_desc(struct si_context *ctx,
 			 * The decompression is relatively cheap if the surface
 			 * has been decompressed already.
 			 */
-			if (!si_texture_disable_dcc(&ctx->b, tex))
+			if (!si_texture_disable_dcc(ctx, tex))
 				si_decompress_dcc(&ctx->b.b, tex);
 		}
 
@@ -904,12 +904,12 @@ void si_update_ps_colorbuf0_slot(struct si_context *sctx)
 		/* Disable DCC, because the texture is used as both a sampler
 		 * and color buffer.
 		 */
-		si_texture_disable_dcc(&sctx->b, tex);
+		si_texture_disable_dcc(sctx, tex);
 
 		if (tex->resource.b.b.nr_samples <= 1 && tex->cmask_buffer) {
 			/* Disable CMASK. */
 			assert(tex->cmask_buffer != &tex->resource);
-			si_eliminate_fast_color_clear(&sctx->b, tex);
+			si_eliminate_fast_color_clear(sctx, tex);
 			si_texture_discard_cmask(sctx->screen, tex);
 		}
 

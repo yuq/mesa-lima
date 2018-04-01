@@ -112,6 +112,8 @@ bool si_common_context_init(struct r600_common_context *rctx,
 			    struct si_screen *sscreen,
 			    unsigned context_flags)
 {
+	struct si_context *sctx = (struct si_context*)rctx;
+
 	slab_create_child(&rctx->pool_transfers, &sscreen->pool_transfers);
 	slab_create_child(&rctx->pool_transfers_unsync, &sscreen->pool_transfers);
 
@@ -131,7 +133,7 @@ bool si_common_context_init(struct r600_common_context *rctx,
 
 	rctx->b.set_device_reset_callback = r600_set_device_reset_callback;
 
-	si_init_context_texture_functions(rctx);
+	si_init_context_texture_functions(sctx);
 	si_init_query_functions(rctx);
 
 	if (rctx->chip_class == CIK ||
