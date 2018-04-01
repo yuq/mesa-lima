@@ -1174,8 +1174,8 @@ resolve_to_temp:
 	templ.depth0 = 1;
 	templ.array_size = 1;
 	templ.usage = PIPE_USAGE_DEFAULT;
-	templ.flags = R600_RESOURCE_FLAG_FORCE_TILING |
-		      R600_RESOURCE_FLAG_DISABLE_DCC;
+	templ.flags = SI_RESOURCE_FLAG_FORCE_TILING |
+		      SI_RESOURCE_FLAG_DISABLE_DCC;
 
 	/* The src and dst microtile modes must be the same. */
 	if (src->surface.micro_tile_mode == RADEON_MICRO_MODE_DISPLAY)

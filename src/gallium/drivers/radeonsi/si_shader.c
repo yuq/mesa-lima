@@ -5350,7 +5350,7 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 	shader->bo = (struct r600_resource*)
 		     si_aligned_buffer_create(&sscreen->b,
 					      sscreen->cpdma_prefetch_writes_memory ?
-						0 : R600_RESOURCE_FLAG_READ_ONLY,
+						0 : SI_RESOURCE_FLAG_READ_ONLY,
                                               PIPE_USAGE_IMMUTABLE,
                                               align(bo_size, SI_CPDMA_ALIGNMENT),
                                               256);

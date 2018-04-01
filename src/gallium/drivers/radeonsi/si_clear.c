@@ -48,7 +48,7 @@ static void si_alloc_separate_cmask(struct si_screen *sscreen,
 
 	rtex->cmask_buffer = (struct r600_resource *)
 		si_aligned_buffer_create(&sscreen->b,
-					 R600_RESOURCE_FLAG_UNMAPPABLE,
+					 SI_RESOURCE_FLAG_UNMAPPABLE,
 					 PIPE_USAGE_DEFAULT,
 					 rtex->cmask.size,
 					 rtex->cmask.alignment);

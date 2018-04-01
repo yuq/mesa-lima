@@ -160,7 +160,7 @@ void si_init_resource_fields(struct si_screen *sscreen,
 
 	/* Tiled textures are unmappable. Always put them in VRAM. */
 	if ((res->b.b.target != PIPE_BUFFER && !rtex->surface.is_linear) ||
-	    res->b.b.flags & R600_RESOURCE_FLAG_UNMAPPABLE) {
+	    res->b.b.flags & SI_RESOURCE_FLAG_UNMAPPABLE) {
 		res->domains = RADEON_DOMAIN_VRAM;
 		res->flags |= RADEON_FLAG_NO_CPU_ACCESS |
 			 RADEON_FLAG_GTT_WC;
@@ -175,10 +175,10 @@ void si_init_resource_fields(struct si_screen *sscreen,
 	if (sscreen->debug_flags & DBG(NO_WC))
 		res->flags &= ~RADEON_FLAG_GTT_WC;
 
-	if (res->b.b.flags & R600_RESOURCE_FLAG_READ_ONLY)
+	if (res->b.b.flags & SI_RESOURCE_FLAG_READ_ONLY)
 		res->flags |= RADEON_FLAG_READ_ONLY;
 
-	if (res->b.b.flags & R600_RESOURCE_FLAG_32BIT)
+	if (res->b.b.flags & SI_RESOURCE_FLAG_32BIT)
 		res->flags |= RADEON_FLAG_32BIT;
 
 	/* Set expected VRAM and GART usage for the buffer. */
@@ -452,13 +452,13 @@ static void *si_buffer_transfer_map(struct pipe_context *ctx,
 			struct r600_resource *staging = NULL;
 
 			u_upload_alloc(ctx->stream_uploader, 0,
-                                       box->width + (box->x % R600_MAP_BUFFER_ALIGNMENT),
+                                       box->width + (box->x % SI_MAP_BUFFER_ALIGNMENT),
 				       sctx->screen->info.tcc_cache_line_size,
 				       &offset, (struct pipe_resource**)&staging,
                                        (void**)&data);
 
 			if (staging) {
-				data += box->x % R600_MAP_BUFFER_ALIGNMENT;
+				data += box->x % SI_MAP_BUFFER_ALIGNMENT;
 				return si_buffer_get_transfer(ctx, resource, usage, box,
 								ptransfer, data, staging, offset);
 			} else if (rbuffer->flags & RADEON_FLAG_SPARSE) {
@@ -480,11 +480,11 @@ static void *si_buffer_transfer_map(struct pipe_context *ctx,
 		assert(!(usage & TC_TRANSFER_MAP_THREADED_UNSYNC));
 		staging = (struct r600_resource*) pipe_buffer_create(
 				ctx->screen, 0, PIPE_USAGE_STAGING,
-				box->width + (box->x % R600_MAP_BUFFER_ALIGNMENT));
+				box->width + (box->x % SI_MAP_BUFFER_ALIGNMENT));
 		if (staging) {
 			/* Copy the VRAM buffer to the staging buffer. */
 			sctx->b.dma_copy(ctx, &staging->b.b, 0,
-				       box->x % R600_MAP_BUFFER_ALIGNMENT,
+				       box->x % SI_MAP_BUFFER_ALIGNMENT,
 				       0, 0, resource, 0, box);
 
 			data = si_buffer_map_sync_with_rings(sctx, staging,
@@ -493,7 +493,7 @@ static void *si_buffer_transfer_map(struct pipe_context *ctx,
 				r600_resource_reference(&staging, NULL);
 				return NULL;
 			}
-			data += box->x % R600_MAP_BUFFER_ALIGNMENT;
+			data += box->x % SI_MAP_BUFFER_ALIGNMENT;
 
 			return si_buffer_get_transfer(ctx, resource, usage, box,
 							ptransfer, data, staging, 0);
@@ -526,7 +526,7 @@ static void si_buffer_do_flush_region(struct pipe_context *ctx,
 
 		dst = transfer->resource;
 		src = &rtransfer->staging->b.b;
-		soffset = rtransfer->offset + box->x % R600_MAP_BUFFER_ALIGNMENT;
+		soffset = rtransfer->offset + box->x % SI_MAP_BUFFER_ALIGNMENT;
 
 		u_box_1d(soffset, box->width, &dma_box);
 
@@ -634,7 +634,7 @@ static struct pipe_resource *si_buffer_create(struct pipe_screen *screen,
 	struct r600_resource *rbuffer = si_alloc_buffer_struct(screen, templ);
 
 	if (templ->flags & PIPE_RESOURCE_FLAG_SPARSE)
-		rbuffer->b.b.flags |= R600_RESOURCE_FLAG_UNMAPPABLE;
+		rbuffer->b.b.flags |= SI_RESOURCE_FLAG_UNMAPPABLE;
 
 	si_init_resource_fields(sscreen, rbuffer, templ->width0, alignment);
 

@@ -267,7 +267,7 @@ static int si_init_surface(struct si_screen *sscreen,
 	}
 
 	if (sscreen->info.chip_class >= VI &&
-	    (ptex->flags & R600_RESOURCE_FLAG_DISABLE_DCC ||
+	    (ptex->flags & SI_RESOURCE_FLAG_DISABLE_DCC ||
 	     ptex->format == PIPE_FORMAT_R9G9B9E5_FLOAT ||
 	     /* DCC MSAA array textures are disallowed due to incomplete clear impl. */
 	     (ptex->nr_samples >= 2 &&
@@ -289,7 +289,7 @@ static int si_init_surface(struct si_screen *sscreen,
 		flags |= RADEON_SURF_SHAREABLE;
 	if (is_imported)
 		flags |= RADEON_SURF_IMPORTED | RADEON_SURF_SHAREABLE;
-	if (!(ptex->flags & R600_RESOURCE_FLAG_FORCE_TILING))
+	if (!(ptex->flags & SI_RESOURCE_FLAG_FORCE_TILING))
 		flags |= RADEON_SURF_OPTIMIZE_FOR_SPACE;
 
 	r = sscreen->ws->surface_init(sscreen->ws, ptex, flags, bpe,
@@ -1262,8 +1262,8 @@ si_texture_create_object(struct pipe_screen *screen,
 			rtex->can_sample_s = !rtex->surface.u.legacy.stencil_adjusted;
 		}
 
-		if (!(base->flags & (R600_RESOURCE_FLAG_TRANSFER |
-				     R600_RESOURCE_FLAG_FLUSHED_DEPTH))) {
+		if (!(base->flags & (SI_RESOURCE_FLAG_TRANSFER |
+				     SI_RESOURCE_FLAG_FLUSHED_DEPTH))) {
 			rtex->db_compatible = true;
 
 			if (!(sscreen->debug_flags & DBG(NO_HYPERZ)))
@@ -1373,16 +1373,16 @@ si_choose_tiling(struct si_screen *sscreen,
 		   const struct pipe_resource *templ)
 {
 	const struct util_format_description *desc = util_format_description(templ->format);
-	bool force_tiling = templ->flags & R600_RESOURCE_FLAG_FORCE_TILING;
+	bool force_tiling = templ->flags & SI_RESOURCE_FLAG_FORCE_TILING;
 	bool is_depth_stencil = util_format_is_depth_or_stencil(templ->format) &&
-				!(templ->flags & R600_RESOURCE_FLAG_FLUSHED_DEPTH);
+				!(templ->flags & SI_RESOURCE_FLAG_FLUSHED_DEPTH);
 
 	/* MSAA resources must be 2D tiled. */
 	if (templ->nr_samples > 1)
 		return RADEON_SURF_MODE_2D;
 
 	/* Transfer resources should be linear. */
-	if (templ->flags & R600_RESOURCE_FLAG_TRANSFER)
+	if (templ->flags & SI_RESOURCE_FLAG_TRANSFER)
 		return RADEON_SURF_MODE_LINEAR_ALIGNED;
 
 	/* Avoid Z/S decompress blits by forcing TC-compatible HTILE on VI,
@@ -1442,7 +1442,7 @@ struct pipe_resource *si_texture_create(struct pipe_screen *screen,
 {
 	struct si_screen *sscreen = (struct si_screen*)screen;
 	struct radeon_surf surface = {0};
-	bool is_flushed_depth = templ->flags & R600_RESOURCE_FLAG_FLUSHED_DEPTH;
+	bool is_flushed_depth = templ->flags & SI_RESOURCE_FLAG_FLUSHED_DEPTH;
 	bool tc_compatible_htile =
 		sscreen->info.chip_class >= VI &&
 		(templ->flags & PIPE_RESOURCE_FLAG_TEXTURING_MORE_LIKELY) &&
@@ -1566,10 +1566,10 @@ bool si_init_flushed_depth_texture(struct pipe_context *ctx,
 	resource.nr_samples = texture->nr_samples;
 	resource.usage = staging ? PIPE_USAGE_STAGING : PIPE_USAGE_DEFAULT;
 	resource.bind = texture->bind & ~PIPE_BIND_DEPTH_STENCIL;
-	resource.flags = texture->flags | R600_RESOURCE_FLAG_FLUSHED_DEPTH;
+	resource.flags = texture->flags | SI_RESOURCE_FLAG_FLUSHED_DEPTH;
 
 	if (staging)
-		resource.flags |= R600_RESOURCE_FLAG_TRANSFER;
+		resource.flags |= SI_RESOURCE_FLAG_TRANSFER;
 
 	*flushed_depth_texture = (struct r600_texture *)ctx->screen->resource_create(ctx->screen, &resource);
 	if (*flushed_depth_texture == NULL) {
@@ -1595,7 +1595,7 @@ static void si_init_temp_resource_from_box(struct pipe_resource *res,
 	res->height0 = box->height;
 	res->depth0 = 1;
 	res->array_size = 1;
-	res->usage = flags & R600_RESOURCE_FLAG_TRANSFER ? PIPE_USAGE_STAGING : PIPE_USAGE_DEFAULT;
+	res->usage = flags & SI_RESOURCE_FLAG_TRANSFER ? PIPE_USAGE_STAGING : PIPE_USAGE_DEFAULT;
 	res->flags = flags;
 
 	/* We must set the correct texture target and dimensions for a 3D box. */
@@ -1657,7 +1657,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 	char *map;
 	bool use_staging_texture = false;
 
-	assert(!(texture->flags & R600_RESOURCE_FLAG_TRANSFER));
+	assert(!(texture->flags & SI_RESOURCE_FLAG_TRANSFER));
 	assert(box->width && box->height && box->depth);
 
 	/* Depth textures use staging unconditionally. */
@@ -1785,7 +1785,7 @@ static void *si_texture_transfer_map(struct pipe_context *ctx,
 		struct r600_texture *staging;
 
 		si_init_temp_resource_from_box(&resource, texture, box, level,
-						 R600_RESOURCE_FLAG_TRANSFER);
+						 SI_RESOURCE_FLAG_TRANSFER);
 		resource.usage = (usage & PIPE_TRANSFER_READ) ?
 			PIPE_USAGE_STAGING : PIPE_USAGE_STREAM;
 
@@ -2276,7 +2276,7 @@ void vi_separate_dcc_try_enable(struct si_context *sctx,
 	} else {
 		tex->dcc_separate_buffer = (struct r600_resource*)
 			si_aligned_buffer_create(sctx->b.b.screen,
-						   R600_RESOURCE_FLAG_UNMAPPABLE,
+						   SI_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT,
 						   tex->surface.dcc_size,
 						   tex->surface.dcc_alignment);

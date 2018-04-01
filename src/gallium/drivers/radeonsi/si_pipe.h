@@ -36,19 +36,19 @@
 #define SI_BIG_ENDIAN 0
 #endif
 
-#define ATI_VENDOR_ID 0x1002
+#define ATI_VENDOR_ID			0x1002
 
-#define SI_NOT_QUERY		0xffffffff
+#define SI_NOT_QUERY			0xffffffff
 
 /* The base vertex and primitive restart can be any number, but we must pick
  * one which will mean "unknown" for the purpose of state tracking and
  * the number shouldn't be a commonly-used one. */
-#define SI_BASE_VERTEX_UNKNOWN INT_MIN
-#define SI_RESTART_INDEX_UNKNOWN INT_MIN
-#define SI_NUM_SMOOTH_AA_SAMPLES 8
-#define SI_GS_PER_ES 128
+#define SI_BASE_VERTEX_UNKNOWN		INT_MIN
+#define SI_RESTART_INDEX_UNKNOWN	INT_MIN
+#define SI_NUM_SMOOTH_AA_SAMPLES	8
+#define SI_GS_PER_ES			128
 /* Alignment for optimal CP DMA performance. */
-#define SI_CPDMA_ALIGNMENT	32
+#define SI_CPDMA_ALIGNMENT		32
 
 /* Pipeline & streamout query controls. */
 #define SI_CONTEXT_START_PIPELINE_STATS	(1 << 0)
@@ -87,9 +87,85 @@
 #define SI_PREFETCH_VS			(1 << 5)
 #define SI_PREFETCH_PS			(1 << 6)
 
-#define SI_MAX_BORDER_COLORS	4096
-#define SI_MAX_VIEWPORTS        16
-#define SIX_BITS		0x3F
+#define SI_MAX_BORDER_COLORS		4096
+#define SI_MAX_VIEWPORTS		16
+#define SIX_BITS			0x3F
+#define SI_MAP_BUFFER_ALIGNMENT		64
+#define SI_MAX_VARIABLE_THREADS_PER_BLOCK 1024
+
+#define SI_RESOURCE_FLAG_TRANSFER	(PIPE_RESOURCE_FLAG_DRV_PRIV << 0)
+#define SI_RESOURCE_FLAG_FLUSHED_DEPTH	(PIPE_RESOURCE_FLAG_DRV_PRIV << 1)
+#define SI_RESOURCE_FLAG_FORCE_TILING	(PIPE_RESOURCE_FLAG_DRV_PRIV << 2)
+#define SI_RESOURCE_FLAG_DISABLE_DCC	(PIPE_RESOURCE_FLAG_DRV_PRIV << 3)
+#define SI_RESOURCE_FLAG_UNMAPPABLE	(PIPE_RESOURCE_FLAG_DRV_PRIV << 4)
+#define SI_RESOURCE_FLAG_READ_ONLY	(PIPE_RESOURCE_FLAG_DRV_PRIV << 5)
+#define SI_RESOURCE_FLAG_32BIT		(PIPE_RESOURCE_FLAG_DRV_PRIV << 6)
+
+/* Debug flags. */
+enum {
+	/* Shader logging options: */
+	DBG_VS = PIPE_SHADER_VERTEX,
+	DBG_PS = PIPE_SHADER_FRAGMENT,
+	DBG_GS = PIPE_SHADER_GEOMETRY,
+	DBG_TCS = PIPE_SHADER_TESS_CTRL,
+	DBG_TES = PIPE_SHADER_TESS_EVAL,
+	DBG_CS = PIPE_SHADER_COMPUTE,
+	DBG_NO_IR,
+	DBG_NO_TGSI,
+	DBG_NO_ASM,
+	DBG_PREOPT_IR,
+
+	/* Shader compiler options the shader cache should be aware of: */
+	DBG_FS_CORRECT_DERIVS_AFTER_KILL,
+	DBG_UNSAFE_MATH,
+	DBG_SI_SCHED,
+
+	/* Shader compiler options (with no effect on the shader cache): */
+	DBG_CHECK_IR,
+	DBG_NIR,
+	DBG_MONOLITHIC_SHADERS,
+	DBG_NO_OPT_VARIANT,
+
+	/* Information logging options: */
+	DBG_INFO,
+	DBG_TEX,
+	DBG_COMPUTE,
+	DBG_VM,
+
+	/* Driver options: */
+	DBG_FORCE_DMA,
+	DBG_NO_ASYNC_DMA,
+	DBG_NO_WC,
+	DBG_CHECK_VM,
+	DBG_RESERVE_VMID,
+
+	/* 3D engine options: */
+	DBG_SWITCH_ON_EOP,
+	DBG_NO_OUT_OF_ORDER,
+	DBG_NO_DPBB,
+	DBG_NO_DFSM,
+	DBG_DPBB,
+	DBG_DFSM,
+	DBG_NO_HYPERZ,
+	DBG_NO_RB_PLUS,
+	DBG_NO_2D_TILING,
+	DBG_NO_TILING,
+	DBG_NO_DCC,
+	DBG_NO_DCC_CLEAR,
+	DBG_NO_DCC_FB,
+	DBG_NO_DCC_MSAA,
+	DBG_DCC_MSAA,
+	DBG_NO_FMASK,
+
+	/* Tests: */
+	DBG_TEST_DMA,
+	DBG_TEST_VMFAULT_CP,
+	DBG_TEST_VMFAULT_SDMA,
+	DBG_TEST_VMFAULT_SHADER,
+};
+
+#define DBG_ALL_SHADERS		(((1 << (DBG_CS + 1)) - 1))
+#define DBG(name)		(1ull << DBG_##name)
 
 struct si_compute;
 struct hash_table;

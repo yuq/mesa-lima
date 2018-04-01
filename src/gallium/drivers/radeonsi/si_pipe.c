@@ -383,15 +383,15 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 
 	sctx->b.b.stream_uploader = u_upload_create(&sctx->b.b, 1024 * 1024,
 						    0, PIPE_USAGE_STREAM,
-						    R600_RESOURCE_FLAG_READ_ONLY);
+						    SI_RESOURCE_FLAG_READ_ONLY);
 	if (!sctx->b.b.stream_uploader)
 		goto fail;
 
 	sctx->b.b.const_uploader = u_upload_create(&sctx->b.b, 128 * 1024,
 						   0, PIPE_USAGE_DEFAULT,
-						   R600_RESOURCE_FLAG_32BIT |
+						   SI_RESOURCE_FLAG_32BIT |
 						   (sscreen->cpdma_prefetch_writes_memory ?
-							    0 : R600_RESOURCE_FLAG_READ_ONLY));
+							    0 : SI_RESOURCE_FLAG_READ_ONLY));
 	if (!sctx->b.b.const_uploader)
 		goto fail;
 
@@ -500,7 +500,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	if (sctx->b.chip_class == CIK) {
 		sctx->null_const_buf.buffer =
 			si_aligned_buffer_create(screen,
-						 R600_RESOURCE_FLAG_32BIT,
+						 SI_RESOURCE_FLAG_32BIT,
 						   PIPE_USAGE_DEFAULT, 16,
 						   sctx->screen->info.tcc_cache_line_size);
 		if (!sctx->null_const_buf.buffer)

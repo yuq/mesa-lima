@@ -373,7 +373,7 @@ static void si_cp_dma_realign_engine(struct si_context *sctx, unsigned size,
 		r600_resource_reference(&sctx->scratch_buffer, NULL);
 		sctx->scratch_buffer = (struct r600_resource*)
 			si_aligned_buffer_create(&sctx->screen->b,
-						   R600_RESOURCE_FLAG_UNMAPPABLE,
+						   SI_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT,
 						   scratch_size, 256);
 		if (!sctx->scratch_buffer)

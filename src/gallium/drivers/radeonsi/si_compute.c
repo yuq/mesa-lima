@@ -360,7 +360,7 @@ static bool si_setup_compute_scratch_buffer(struct si_context *sctx,
 
 		sctx->compute_scratch_buffer = (struct r600_resource*)
 			si_aligned_buffer_create(&sctx->screen->b,
-						   R600_RESOURCE_FLAG_UNMAPPABLE,
+						   SI_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT,
 						   scratch_needed, 256);
 
