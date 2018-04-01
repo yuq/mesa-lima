@@ -370,8 +370,6 @@ struct r600_atom {
 
 struct r600_ring {
 	struct radeon_winsys_cs		*cs;
-	void (*flush)(void *ctx, unsigned flags,
-		      struct pipe_fence_handle **fence);
 };
 
 /* Saved CS data for debugging features. */

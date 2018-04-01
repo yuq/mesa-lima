@@ -177,7 +177,6 @@ bool si_common_context_init(struct r600_common_context *rctx,
 		rctx->dma.cs = rctx->ws->cs_create(rctx->ctx, RING_DMA,
 						   si_flush_dma_cs,
 						   rctx);
-		rctx->dma.flush = si_flush_dma_cs;
 	}
 
 	return true;

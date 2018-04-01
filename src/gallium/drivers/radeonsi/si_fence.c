@@ -376,7 +376,7 @@ static boolean si_fence_finish(struct pipe_screen *screen,
 			 * not going to wait.
 			 */
 			threaded_context_unwrap_sync(ctx);
-			sctx->b.gfx.flush(&sctx->b, timeout ? 0 : PIPE_FLUSH_ASYNC, NULL);
+			si_flush_gfx_cs(&sctx->b, timeout ? 0 : PIPE_FLUSH_ASYNC, NULL);
 			rfence->gfx_unflushed.ctx = NULL;
 
 			if (!timeout)
@@ -516,7 +516,7 @@ static void si_flush_from_st(struct pipe_context *ctx,
 
 	/* DMA IBs are preambles to gfx IBs, therefore must be flushed first. */
 	if (rctx->dma.cs)
-		rctx->dma.flush(rctx, rflags, fence ? &sdma_fence : NULL);
+		si_flush_dma_cs(rctx, rflags, fence ? &sdma_fence : NULL);
 
 	if (!radeon_emitted(rctx->gfx.cs, rctx->initial_gfx_cs_size)) {
 		if (fence)
@@ -536,7 +536,7 @@ static void si_flush_from_st(struct pipe_context *ctx,
 			gfx_fence = rctx->ws->cs_get_next_fence(rctx->gfx.cs);
 			deferred_fence = true;
 		} else {
-			rctx->gfx.flush(rctx, rflags, fence ? &gfx_fence : NULL);
+			si_flush_gfx_cs(rctx, rflags, fence ? &gfx_fence : NULL);
 		}
 	}
 
